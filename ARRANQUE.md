@@ -36,8 +36,9 @@ clonado y **se borra cuando termina la sesión**.
 |---|---|
 | Chromium para Playwright | `/opt/pw-browsers/chromium` |
 | Node | v22 |
-| Python 3 + Pillow | para tocar imágenes |
+| Python 3 | Pillow **no** viene: `pip install pillow` |
 | git | el repo ya está clonado y en su rama |
+| docker | el binario está, `dockerd` hay que arrancarlo a mano |
 
 **Nunca corras `npx playwright install`.** La versión que baja no coincide con
 la que está y falla con *"Executable doesn't exist"*. Siempre:

@@ -33,3 +33,53 @@ docker exec -d -u neko -e DISPLAY=:99.0 neko-prueba blender casita.blend    # la
    mueve normal. En modo Solid es instantáneo desde el arranque.
 4. Draco avisa que no está (`libextern_draco.so`); el GLB sale igual, sin
    comprimir.
+
+---
+
+# La animación: `pelota.py`
+
+Una pelota que rebota cuatro veces y cruza el cuadro, con squash & stretch.
+60 cuadros a 24 fps — dos segundos y medio.
+
+```sh
+docker exec -u neko -e MOTOR=CYCLES -e MUESTRAS=64 -e ANCHO=800 -e ALTO=450 \
+  -e DESDE=1 -e HASTA=60 -e RENDERIZAR=1 -e SALIDA=/tmp/pelota/f_ \
+  neko-prueba blender --background --python /tmp/pelota.py
+docker exec -u neko neko-prueba blender --background --python /tmp/armar_video.py
+```
+
+El motor, las muestras, el tamaño y el rango salen del entorno **para poder
+medir un cuadro suelto antes de largar los sesenta**. En CPU sin GPU, elegir
+mal cuesta una hora.
+
+| | |
+|---|---|
+| Geometría | pelota de 48x24 + 3 conos + piso |
+| Render | Cycles CPU, 64 muestras, 800x450, sin denoise |
+| Por cuadro | **6,5 s** (24 muestras a 640x360: 1,75 s) |
+| Los 60 cuadros | ~6 min 30 s |
+| `pelota.mp4` | 126 KB, H.264 |
+
+## Lo que costó encontrar
+
+1. **El origen de la pelota va en el polo sur, no en el centro.** Con el origen
+   en el centro, escalar en Z para el squash hunde la pelota medio radio y
+   atraviesa el piso justo en el cuadro que más se mira. Se baja con
+   `mesh.transform(Matrix.Translation((0,0,R)))` y después `location.z = 0`.
+2. **La curva de altura necesita asas `VECTOR` en el toque.** Una parábola que
+   rebota tiene una esquina ahí; con asas suaves (`AUTO`) la pelota parece
+   flotar sobre el piso en vez de golpearlo. En la cima sí va `AUTO`.
+3. **Blender 4.3 mapea con AgX y desatura fuerte.** El naranja
+   `(0.95, 0.35, 0.10)` salía durazno pálido. `look = "AgX - Punchy"` le
+   devuelve la saturación sin quemar las luces, que es lo que pasa con el
+   transform `Standard`. El nombre del look cambió entre versiones: va con
+   `try/except`.
+4. **El encuadre no se calcula, se mide.** La pelota va en `y=0` y los conos en
+   `y=2.4`: al estar más cerca de la cámara, la pelota se abre mucho más hacia
+   los bordes. Con un recorrido de ±5 quedaba cortada por el borde derecho en
+   los últimos diez cuadros **aunque el cono de x=3.4 se viera entero**. Quedó
+   en ±3.6 con lente de 44 mm, comprobado renderizando los cuadros 1 y 60.
+5. **No hay ffmpeg**, ni en el contenedor de la sesión ni en el Neko. Pero
+   Blender trae su propio codificador: `armar_video.py` lee los PNG con el
+   editor de video y los codifica en segundos. Volver a renderizar con salida
+   `FFMPEG` costaría los 6 minutos y medio de nuevo.
