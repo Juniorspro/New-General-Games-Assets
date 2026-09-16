@@ -658,3 +658,118 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   .parada .disco { width: 54px; height: 54px; font-size: 21px; }
   .parada .rotulo { font-size: 10px; max-width: 80px; }
 }
+
+
+/* ───────────── pantalla de idioma ─────────────
+   Aparece una sola vez, antes del menu. No trae imagenes a proposito: es lo
+   primero que se ve y todavia no cargo ningun asset. */
+.caja-idioma h2 { margin: 0 0 18px; font-size: 19px; font-weight: 700; }
+.caja-idioma .botones button { justify-content: flex-start; gap: 12px; font-size: 17px; }
+.bandera {
+  display: inline-block; min-width: 38px; padding: 3px 7px; border-radius: 6px;
+  background: rgba(255,255,255,.1); border: 1px solid var(--borde);
+  font-size: 12px; font-weight: 800; letter-spacing: .5px; color: var(--acento);
+}
+#aj-idioma button { font-size: 12px; }
+
+/* ───────────── el panel de ganar ─────────────
+   Ganar y perder compartian el mismo cuadro y eso hacia que terminar un nivel
+   no se sintiera como nada. Toda esta decoracion cuelga de `.res.ganado`: el
+   panel perdido no hereda ni una linea, y queda sobrio a proposito.
+
+   Los papelitos y los rayos los mueve el compositor —solo transform y
+   opacity—, asi que no cuestan cuadros; igual el bucle del juego esta
+   detenido cuando este panel esta puesto. */
+.res { position: relative; overflow: hidden; }
+.res-rayos, .res-confeti, .res-heroe, .res-estrellas { display: none; }
+
+.res.ganado {
+  border-color: rgba(94,216,138,.5);
+  background: radial-gradient(120% 90% at 50% 0%, #27384a 0%, var(--panel) 62%);
+  box-shadow: 0 10px 0 rgba(0,0,0,.35), 0 0 60px rgba(94,216,138,.18);
+}
+/* Los rayos: un abanico conico detras de todo, girando despacio. Es la unica
+   forma barata de dar el brillo de "conseguiste algo" sin una imagen. */
+.res.ganado .res-rayos {
+  /* El abanico gira alrededor de SU CENTRO, asi que el centro tiene que caer
+     donde nacen los rayos: el borde de arriba del panel. Puesto con `inset`
+     el centro quedaba en el medio del panel y no se veian rayos sino una
+     banda diagonal cruzando la lista. La mascara los apaga hacia afuera para
+     que no compitan con los numeros. */
+  display: block; position: absolute; left: 50%; top: 0;
+  width: 880px; height: 880px; margin: -440px 0 0 -440px;
+  background: conic-gradient(from 0deg, rgba(255,212,71,.14) 0 3deg, transparent 3deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0 14%, rgba(0,0,0,.35) 30%, transparent 52%);
+  mask-image: radial-gradient(circle, #000 0 14%, rgba(0,0,0,.35) 30%, transparent 52%);
+  animation: rayos 40s linear infinite;
+  pointer-events: none; z-index: 0;
+}
+@keyframes rayos { to { transform: rotate(360deg); } }
+
+.res > *:not(.res-rayos) { position: relative; z-index: 1; }
+
+/* La cinta del titulo. */
+.res.ganado .res-cinta {
+  margin: -8px -34px 10px; padding: 10px 34px;
+  background: linear-gradient(180deg, #2f9f63, #1d7a4a);
+  border-top: 2px solid rgba(255,255,255,.25);
+  border-bottom: 3px solid rgba(0,0,0,.35);
+  transform: rotate(-1.2deg);
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
+}
+.res.ganado .res-cinta h2 {
+  /* Se achica con la pantalla: "Você chegou!" a 32 px no entra en un telefono
+     angosto y la cinta se lo comia por los costados. */
+  font-size: clamp(21px, 6.8vw, 32px);
+  color: #fff; text-shadow: 0 3px 0 rgba(0,0,0,.35);
+  animation: entra-cinta .45s cubic-bezier(.2,1.5,.4,1) both;
+}
+@keyframes entra-cinta { from { transform: scale(.6); opacity: 0; } }
+
+.res.ganado .res-heroe {
+  display: block; width: 74px; height: 74px; margin: 6px auto -4px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,.45));
+  animation: saltito 1.1s infinite ease-in-out;
+}
+
+.res.ganado .res-estrellas { display: flex; justify-content: center; gap: 10px; margin: 6px 0 2px; }
+.res-estrellas .estrella {
+  font-size: 30px; line-height: 1; color: #3b4258;
+  text-shadow: 0 2px 0 rgba(0,0,0,.4);
+}
+.res-estrellas .estrella.ok {
+  color: var(--acento);
+  text-shadow: 0 0 14px rgba(255,180,58,.8), 0 2px 0 rgba(0,0,0,.4);
+  animation: pum-estrella .5s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes pum-estrella { from { transform: scale(0) rotate(-140deg); opacity: 0; } }
+
+/* Los papelitos. Caen desde arriba del panel y se van por abajo. */
+.res.ganado .res-confeti {
+  display: block; position: absolute; inset: 0; overflow: hidden;
+  pointer-events: none; z-index: 2;
+}
+.res-confeti i {
+  position: absolute; top: -14px; width: 7px; height: 12px; border-radius: 1px;
+  animation-name: papel; animation-timing-function: linear; animation-iteration-count: 2;
+  animation-fill-mode: forwards;
+}
+@keyframes papel {
+  from { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  to   { transform: translateY(420px) rotate(var(--giro, 360deg)); opacity: 0; }
+}
+
+/* Las lineas que marcan un logro: la cinco de cinco, el record, lo que se
+   desbloquea. Sin esto la lista es una planilla donde todo pesa igual. */
+.lista li.hito { border-bottom-color: rgba(255,180,58,.45); }
+.lista li.hito .k { color: var(--acento); font-weight: 600; }
+.lista li.hito .v { color: var(--acento); }
+
+/* Con el telefono acostado el panel de ganar no entra entero: se achica todo
+   lo decorativo antes que los numeros, que son lo que se viene a leer. */
+@media (max-height: 460px) {
+  .res.ganado .res-heroe { width: 46px; height: 46px; margin: 2px auto -2px; }
+  .res-estrellas .estrella { font-size: 21px; }
+  .res.ganado .res-cinta { margin: -6px -30px 6px; padding: 5px 30px; }
+}

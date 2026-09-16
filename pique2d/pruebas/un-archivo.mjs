@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { pasarIdioma } from "./_idioma.mjs";
 import path from "path";
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const pg = await nav.newPage({ viewport: { width: 900, height: 560 } });
@@ -8,6 +9,7 @@ pg.on("console", m => { if (m.type()==="error") err.push("consola: "+m.text().sl
 const ok=[], mal=[]; const ch=(n,c,x="")=>(c?ok:mal).push(n+(x?` — ${x}`:""));
 await pg.goto("file://" + path.resolve("pique-en-un-archivo.html"));
 await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
+await pasarIdioma(pg);
 ch("abre desde file:// y arranca", true);
 // El numero NO se escribe a mano: se pregunta cuantas hojas pide el juego.
 // Escrito a mano, agregar una hoja deja la prueba en verde contando las de

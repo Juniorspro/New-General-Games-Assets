@@ -9,6 +9,7 @@ import { despertar, efe, pararMusica, volumen, cargarPistas } from "./audio.js";
 import { cargarTodas } from "./sprites.js";
 import { registrarPiezas } from "./dibujo.js";
 import { ruta } from "./assets.js";
+import { t, tituloNivel } from "./idioma.js";
 
 const $ = UI.$;
 const lienzo = $("#lienzo");
@@ -192,12 +193,15 @@ function alMapa() {
   UI.mostrar("p-mapa");
 }
 
-function empezar(m, n) {
+async function empezar(m, n) {
   cfgActual = buscarNivel(m, n);
   tierActualN = tierActual(idNivel(m, n));
-  $("#gen-nivel").textContent = `${idNivel(m, n)} · ${cfgActual.titulo}`;
-  $("#gen-detalle").textContent = "Armando y comprobando que se pueda terminar…";
+  $("#gen-nivel").textContent = `${idNivel(m, n)} · ${tituloNivel(cfgActual)}`;
+  $("#gen-detalle").textContent = t("gen.armando");
   UI.mostrar("p-generando");
+  // El fondo del tema, si todavia no esta. Tarda unos milisegundos la primera
+  // vez y nada las siguientes; la pantalla "Armando…" ya esta puesta.
+  await capasDe(cfgActual.tema);
   // Dos cuadros de espera antes de generar: generar bloquea el hilo hasta un
   // segundo, y sin ceder el control la pantalla "generando" no llega a
   // pintarse nunca — el jugador ve un cuelgue en vez de un aviso.
@@ -206,13 +210,15 @@ function empezar(m, n) {
     const t0 = performance.now();
     const nv = generarNivel(cfgActual, tierActualN);
     const ms = Math.round(performance.now() - t0);
-    partida = new Partida(nv, tierActualN, hojas, patrones[nv.tema] || null, capas[nv.tema] || {});
+    partida = new Partida(nv, tierActualN, hojas, patrones[nv.tema] || null,
+                          capasCache.get(nv.tema) || {});
     partida.escenaHongo = escenaHongo;
-    $("#hud-nivel").textContent = `Mundo ${m}-${n} · ${cfgActual.titulo}`;
+    $("#hud-nivel").textContent = `${t("comun.mundo")} ${m}-${n} · ${tituloNivel(cfgActual)}`;
   $("#hud-num").textContent = String((m - 1) * 4 + n);
     $("#hud-gen").textContent = nv.validacion.fallo
-      ? "sin validar"
-      : `validado en ${nv.validacion.intentos} ${nv.validacion.intentos === 1 ? "intento" : "intentos"} · ${ms} ms`;
+      ? t("gen.sinvalidar")
+      : `${nv.validacion.intentos === 1 ? t("gen.validado1")
+                                        : t("gen.validadoN", { n: nv.validacion.intentos })} · ${ms} ms`;
     UI.mostrar("p-juego");
     } catch (e) {
       // Sin esto, un error armando el nivel deja la pantalla "Armando y
@@ -241,7 +247,7 @@ function seRompio(e, donde) {
   const p = partida;
   partida = null;
   try {
-    $("#res-titulo").textContent = "Se rompió algo";
+    $("#res-titulo").textContent = t("res.roto");
     $("#res-sub").textContent = `${e && e.message ? e.message : e} (en ${donde})`;
     $("#res-panel").className = "res perdido";
     $("#res-lista").innerHTML = "";
@@ -409,19 +415,21 @@ const TEMAS_TILE = ["llano", "subte", "castillo", "desierto", "cielo", "nave", "
  * banda YA venia recortada, el degradado no cambia nada visible porque arriba
  * no hay nada que desvanecer.
  */
-function desvanecerArriba(img, frac = 0.34) {
+function desvanecerArriba(img, frac = 0.34, altoMax = 0) {
   try {
+    const esc = altoMax > 0 ? Math.min(1, altoMax / img.height) : 1;
     const l = document.createElement("canvas");
-    l.width = img.width; l.height = img.height;
+    l.width = Math.max(1, Math.round(img.width * esc));
+    l.height = Math.max(1, Math.round(img.height * esc));
     const c = l.getContext("2d");
-    c.drawImage(img, 0, 0);
-    const g = c.createLinearGradient(0, 0, 0, img.height * frac);
+    c.drawImage(img, 0, 0, l.width, l.height);
+    const g = c.createLinearGradient(0, 0, 0, l.height * frac);
     g.addColorStop(0, "rgba(0,0,0,1)");
     g.addColorStop(0.55, "rgba(0,0,0,0.45)");
     g.addColorStop(1, "rgba(0,0,0,0)");
     c.globalCompositeOperation = "destination-out";
     c.fillStyle = g;
-    c.fillRect(0, 0, img.width, img.height * frac);
+    c.fillRect(0, 0, l.width, l.height * frac);
     return l;
   } catch (e) {
     return img;          // sin canvas auxiliar, mejor la banda dura que nada
@@ -454,6 +462,53 @@ function hacerPatron(img) {
   return pat;
 }
 
+// --- los fondos, de a un tema por vez ------------------------------------
+//
+// SE CARGABAN LOS OCHO TEMAS AL ARRANCAR, Y ESO ERA EL LAG.
+//
+// Son veinticuatro imagenes de 1024x572. Decodificadas ocupan 2,3 MB cada una
+// —un pixel son cuatro bytes, siempre, sin importar lo que pese el archivo—,
+// o sea 56 MB. Y las dieciseis bandas se copian ademas a un lienzo para
+// desvanecerles el borde de arriba: otros 37 MB. Mas las hojas de sprites, que
+// se midieron en 23. Pasa de cien megas de mapas de bits vivos al mismo
+// tiempo, en un telefono, para dibujar UN tema.
+//
+// Cuando la memoria de graficos se llena, el navegador empieza a tirar mapas
+// de bits y a volver a decodificarlos cuando los necesita: eso es un tiron de
+// decenas de milisegundos EN MEDIO DEL CUADRO, y se siente como lo que se
+// reporto — que va lento aunque el juego no este haciendo nada raro.
+//
+// Ahora se carga el tema que se va a jugar, y se guardan los dos ultimos: 6 MB
+// en vez de 93. Volver a un tema reciente sigue siendo instantaneo.
+const capasCache = new Map();
+const capasOrden = [];
+
+function capasDe(tema) {
+  const guardado = capasCache.get(tema);
+  if (guardado) return Promise.resolve(guardado);
+  const c = {};
+  const p = Promise.all(["cielo", "lejos", "cerca"].map((cp) => new Promise((ok) => {
+    const img = new Image();
+    img.onload = () => {
+      // La banda se guarda ya achicada a lo MAS GRANDE que se va a dibujar.
+      // Guardar el original de 1024 no agrega un pixel de detalle —nunca se
+      // dibuja a mas de 220 pixeles de juego de alto— y cuesta cinco veces
+      // mas memoria.
+      c[cp] = cp === "cielo" ? img : desvanecerArriba(img, 0.34, 220 * GRAF.esc);
+      ok();
+    };
+    img.onerror = () => ok();
+    img.src = ruta(`assets/fondo/${tema}_${cp}.webp`);
+  }))).then(() => {
+    capasCache.set(tema, c);
+    capasOrden.push(tema);
+    while (capasOrden.length > 2) capasCache.delete(capasOrden.shift());
+    capas[tema] = c;
+    return c;
+  });
+  return p;
+}
+
 function cargarPatron(tema) {
   return new Promise((ok) => {
     const img = new Image();
@@ -474,7 +529,7 @@ function calidad(esc) {
   esc = Math.max(1, Math.min(3, Math.round(esc)));
   if (esc === GRAF.esc) return;
   GRAF.esc = esc;
-  for (const t of TEMAS_TILE) if (imgsTile[t]) patrones[t] = hacerPatron(imgsTile[t]);
+  for (const tm of TEMAS_TILE) if (imgsTile[tm]) patrones[tm] = hacerPatron(imgsTile[tm]);
   if (partida) partida.patron = patrones[partida.nv.tema] || null;
   redimensionar();
 }
@@ -488,10 +543,18 @@ function calidad(esc) {
     GRAF.esc = g === "auto" ? (cargar().ajustes.graficoAuto || 2)
                             : Math.max(1, Math.min(3, Number(g) || 2));
   }
-  $("#carga-detalle").textContent = "Cargando sprites…";
+  // EL IDIOMA SE ELIGE MIENTRAS CARGA, no antes. Las dos cosas arrancan a la
+  // vez: el que elige rapido no espera dos veces, y el que se toma su tiempo
+  // encuentra el juego ya cargado. Si todavia falta cuando elige, vuelve la
+  // pantalla de carga para que vea que algo sigue pasando.
+  let cargado = false;
+  const eligiendo = UI.elegirIdioma();
+  eligiendo.then((eligio) => { if (eligio && !cargado) UI.mostrar("p-carga"); });
+
+  $("#carga-detalle").textContent = t("carga.sprites");
   hojas = await cargarTodas(HOJAS.map(([k, c, f]) => [k, `assets/hojas/${k}.webp`, c, f]));
   const faltan = HOJAS.filter(([k]) => !hojas[k]).map(([k]) => k);
-  await Promise.all(TEMAS_TILE.map(async (t) => { patrones[t] = await cargarPatron(t); }));
+  await Promise.all(TEMAS_TILE.map(async (tm) => { patrones[tm] = await cargarPatron(tm); }));
   // Las piezas sueltas: tubos e iconos del HUD.
   const PIEZAS = ["tubo_boca", "tubo_cuerpo", "plataforma",
                  "icono_moneda", "icono_burbuja", "icono_reloj", "ficha_heroe"];
@@ -503,18 +566,10 @@ function calidad(esc) {
     img.src = ruta(`assets/piezas/${k}.webp`);
   })));
   registrarPiezas(ps);
-  // Los fondos: tres capas por tema. Se cargan todas al arrancar porque el
-  // jugador puede saltar a cualquier mundo desde el mapa.
-  $("#carga-detalle").textContent = "Cargando fondos…";
-  await Promise.all(TEMAS_TILE.flatMap((tema) => {
-    capas[tema] = {};
-    return ["cielo", "lejos", "cerca"].map((cp) => new Promise((ok) => {
-      const img = new Image();
-      img.onload = () => { capas[tema][cp] = cp === "cielo" ? img : desvanecerArriba(img); ok(); };
-      img.onerror = () => ok();
-      img.src = ruta(`assets/fondo/${tema}_${cp}.webp`);
-    }));
-  }));
+  // Los fondos NO se cargan todos aca: ver capasDe(). Se carga el del primer
+  // tema nada mas, para que el primer nivel entre sin esperar.
+  $("#carga-detalle").textContent = t("carga.fondos");
+  await capasDe("llano");
   // La escena del hongo arcoiris: veinticuatro fotogramas sacados de un video
   // generado, en una grilla de 4x6. No pasa por cargarHoja a proposito: esa
   // mide el recorte leyendo el alfa de la hoja entera, y aca son fotogramas
@@ -531,7 +586,11 @@ function calidad(esc) {
   // cuando llega. Bloquear el arranque por 400 KB es regalar el primer segundo.
   cargarPistas({ llano: "assets/snd/llano.mp3", subte: "assets/snd/subte.mp3",
                  castillo: "assets/snd/castillo.mp3" });
-  UI.montarAjustes((g) => calidad(g === "auto" ? (cargar().ajustes.graficoAuto || 2) : g));
+  UI.montarAjustes(
+    (g) => calidad(g === "auto" ? (cargar().ajustes.graficoAuto || 2) : g),
+    // Cambiar de idioma no alcanza con reescribir los `data-t`: el menu y el
+    // mapa arman sus textos en JavaScript y hay que volver a pintarlos.
+    () => { if (!$("#p-mapa").hidden) UI.pintarMapa(empezar); UI.pintarInicio(); });
   // El arte de portada, de fondo del menu.
   const arte = new Image();
   arte.onload = () => { $("#p-inicio").style.backgroundImage = `url(${arte.src})`; };
@@ -545,13 +604,21 @@ function calidad(esc) {
     $("#p-inicio .logo").hidden = true;
   };
   lg.src = ruta("assets/logo.webp");
-  UI.mostrar("p-inicio");
+  cargado = true;
   redimensionar();
   requestAnimationFrame(bucle);
+  // PIQUE se publica ANTES de esperar la eleccion de idioma y no despues.
+  // Las pruebas —y cualquier cosa de afuera— esperan a que exista para saber
+  // que el juego cargo; si se publicara despues, un guardado vacio lo dejaria
+  // colgado en la pantalla de idiomas para siempre sin que nadie sepa que ya
+  // estaba todo listo.
   window.PIQUE = {
     get partida() { return partida; }, get cfg() { return cfgActual; },
     empezar, alMapa, entrada, NIVELES, hojas, faltan, calidad, GRAF, VIG, vigilar,
+    get capas() { return Object.fromEntries(capasCache); },
   };
+  await eligiendo;
+  UI.mostrar("p-inicio");
 })();
 
 

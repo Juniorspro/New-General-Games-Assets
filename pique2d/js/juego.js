@@ -164,7 +164,14 @@ export class Partida {
       this.chispas(j.x, j.y - 6, "#ffe08a", 10);
       this.texto(j.x, j.y - 24, "¡triple!", "#ffd447");
     }
-    if (ev.resorte) efe.resorte();
+    if (ev.resorte) {
+      efe.resorte();
+      // Marcarlo es lo que hace que el resorte se dibuje comprimiendose: sin
+      // esto rebotaba sin moverse un pixel y parecia que el salto salia de la
+      // nada.
+      this.marcarTile(Math.floor(j.x / T), Math.floor((j.y + 1) / T));
+      this.chispas(j.x, j.y, "#ffe08a", 6);
+    }
     if (ev.saltoLargo) { efe.resorte(); this.texto(j.x, j.y - 22, "¡largo!", "#6aa8f0"); }
     if (ev.voltereta) { efe.saltoAlto(); this.texto(j.x, j.y - 22, "¡arriba!", "#d28ae8"); }
     if (ev.pausa) efe.pausa();

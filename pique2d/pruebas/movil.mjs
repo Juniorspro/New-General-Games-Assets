@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { pasarIdioma } from "./_idioma.mjs";
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const ok=[], mal=[]; const ch=(n,c,x="")=>(c?ok:mal).push(n+(x?` — ${x}`:""));
 for (const [w,h,nom] of [[844,390,"acostado"],[390,844,"parado"]]) {
@@ -6,6 +7,7 @@ for (const [w,h,nom] of [[844,390,"acostado"],[390,844,"parado"]]) {
   const err=[]; pg.on("pageerror", e=>err.push(e.message));
   await pg.goto("http://127.0.0.1:8802/index.html");
   await pg.waitForFunction(()=>!!window.PIQUE,{timeout:60000});
+  await pasarIdioma(pg);
   ch(`${nom} sin scroll horizontal`,
      (await pg.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth))<=0);
   for (const s of ["#btn-jugar","#btn-niveles","#btn-comojuego","#btn-ajustes"]) {

@@ -23,8 +23,11 @@ un `return {X: a, ...}`. No se toca nada mas de su codigo.
 import base64, json, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["assets", "mundo", "azar", "guardado", "audio", "sprites", "fisica",
-         "piezas", "entidades", "dibujo", "generador", "juego", "interfaz"]
+# El orden importa: cada modulo se envuelve en una funcion que ya tiene que
+# poder leer las exportaciones de los que dependen de el. "ayuda" va antes que
+# "idioma" porque idioma.js importa la tabla de textos largos.
+ORDEN = ["assets", "ayuda", "idioma", "mundo", "azar", "guardado", "audio", "sprites",
+         "fisica", "piezas", "entidades", "dibujo", "generador", "juego", "interfaz"]
 ENTRADA = "main"
 VENDOR = []          # el 2D no usa ninguna biblioteca
 VENDOR_ALIAS = {}

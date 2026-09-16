@@ -16,8 +16,12 @@ const vacio = () => ({
   // en vez de hacer sufrir los primeros segundos en cada partida.
   // auto: true = corredor clasico (corre solo, la cruceta solo corrige).
   //       false = libre: parado quieto hasta que se le diga para donde ir.
+  // idioma: null = todavia no eligio. Es la diferencia entre "no eligio" y
+  // "eligio ingles", y de eso depende si la pantalla de idiomas aparece: con
+  // "en" por defecto no habria forma de distinguirlas y el selector no se
+  // mostraria nunca.
   ajustes: { sonido: true, musica: true, sacudida: true, mandos: true, auto: false,
-             grafico: "auto", graficoAuto: 0 },
+             grafico: "auto", graficoAuto: 0, idioma: null },
 });
 
 let cache = null;

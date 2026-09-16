@@ -6,6 +6,7 @@
 // responde una de cada tres veces es peor que no tenerlo. Por eso cada caso
 // toca de verdad y despues mira el estado del juego.
 import { chromium } from "playwright";
+import { pasarIdioma } from "./_idioma.mjs";
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const pg = await nav.newPage({ viewport: { width: 390, height: 780 }, hasTouch: true, isMobile: true });
 const err = []; pg.on("pageerror", e => err.push(e.message));
@@ -13,6 +14,7 @@ await pg.goto("http://127.0.0.1:8802/index.html");
 await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
 await pg.evaluate(() => localStorage.clear());
 await pg.reload(); await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
+await pasarIdioma(pg);
 
 let ok = 0, mal = 0;
 const ch = (n, c, d = "") => { c ? (ok++, console.log(`  ✓ ${n}${d ? " — " + d : ""}`))

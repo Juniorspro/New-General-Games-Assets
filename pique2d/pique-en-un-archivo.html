@@ -668,6 +668,121 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   .parada .rotulo { font-size: 10px; max-width: 80px; }
 }
 
+
+/* ───────────── pantalla de idioma ─────────────
+   Aparece una sola vez, antes del menu. No trae imagenes a proposito: es lo
+   primero que se ve y todavia no cargo ningun asset. */
+.caja-idioma h2 { margin: 0 0 18px; font-size: 19px; font-weight: 700; }
+.caja-idioma .botones button { justify-content: flex-start; gap: 12px; font-size: 17px; }
+.bandera {
+  display: inline-block; min-width: 38px; padding: 3px 7px; border-radius: 6px;
+  background: rgba(255,255,255,.1); border: 1px solid var(--borde);
+  font-size: 12px; font-weight: 800; letter-spacing: .5px; color: var(--acento);
+}
+#aj-idioma button { font-size: 12px; }
+
+/* ───────────── el panel de ganar ─────────────
+   Ganar y perder compartian el mismo cuadro y eso hacia que terminar un nivel
+   no se sintiera como nada. Toda esta decoracion cuelga de `.res.ganado`: el
+   panel perdido no hereda ni una linea, y queda sobrio a proposito.
+
+   Los papelitos y los rayos los mueve el compositor —solo transform y
+   opacity—, asi que no cuestan cuadros; igual el bucle del juego esta
+   detenido cuando este panel esta puesto. */
+.res { position: relative; overflow: hidden; }
+.res-rayos, .res-confeti, .res-heroe, .res-estrellas { display: none; }
+
+.res.ganado {
+  border-color: rgba(94,216,138,.5);
+  background: radial-gradient(120% 90% at 50% 0%, #27384a 0%, var(--panel) 62%);
+  box-shadow: 0 10px 0 rgba(0,0,0,.35), 0 0 60px rgba(94,216,138,.18);
+}
+/* Los rayos: un abanico conico detras de todo, girando despacio. Es la unica
+   forma barata de dar el brillo de "conseguiste algo" sin una imagen. */
+.res.ganado .res-rayos {
+  /* El abanico gira alrededor de SU CENTRO, asi que el centro tiene que caer
+     donde nacen los rayos: el borde de arriba del panel. Puesto con `inset`
+     el centro quedaba en el medio del panel y no se veian rayos sino una
+     banda diagonal cruzando la lista. La mascara los apaga hacia afuera para
+     que no compitan con los numeros. */
+  display: block; position: absolute; left: 50%; top: 0;
+  width: 880px; height: 880px; margin: -440px 0 0 -440px;
+  background: conic-gradient(from 0deg, rgba(255,212,71,.14) 0 3deg, transparent 3deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0 14%, rgba(0,0,0,.35) 30%, transparent 52%);
+  mask-image: radial-gradient(circle, #000 0 14%, rgba(0,0,0,.35) 30%, transparent 52%);
+  animation: rayos 40s linear infinite;
+  pointer-events: none; z-index: 0;
+}
+@keyframes rayos { to { transform: rotate(360deg); } }
+
+.res > *:not(.res-rayos) { position: relative; z-index: 1; }
+
+/* La cinta del titulo. */
+.res.ganado .res-cinta {
+  margin: -8px -34px 10px; padding: 10px 34px;
+  background: linear-gradient(180deg, #2f9f63, #1d7a4a);
+  border-top: 2px solid rgba(255,255,255,.25);
+  border-bottom: 3px solid rgba(0,0,0,.35);
+  transform: rotate(-1.2deg);
+  box-shadow: 0 6px 18px rgba(0,0,0,.4);
+}
+.res.ganado .res-cinta h2 {
+  /* Se achica con la pantalla: "Você chegou!" a 32 px no entra en un telefono
+     angosto y la cinta se lo comia por los costados. */
+  font-size: clamp(21px, 6.8vw, 32px);
+  color: #fff; text-shadow: 0 3px 0 rgba(0,0,0,.35);
+  animation: entra-cinta .45s cubic-bezier(.2,1.5,.4,1) both;
+}
+@keyframes entra-cinta { from { transform: scale(.6); opacity: 0; } }
+
+.res.ganado .res-heroe {
+  display: block; width: 74px; height: 74px; margin: 6px auto -4px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,.45));
+  animation: saltito 1.1s infinite ease-in-out;
+}
+
+.res.ganado .res-estrellas { display: flex; justify-content: center; gap: 10px; margin: 6px 0 2px; }
+.res-estrellas .estrella {
+  font-size: 30px; line-height: 1; color: #3b4258;
+  text-shadow: 0 2px 0 rgba(0,0,0,.4);
+}
+.res-estrellas .estrella.ok {
+  color: var(--acento);
+  text-shadow: 0 0 14px rgba(255,180,58,.8), 0 2px 0 rgba(0,0,0,.4);
+  animation: pum-estrella .5s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes pum-estrella { from { transform: scale(0) rotate(-140deg); opacity: 0; } }
+
+/* Los papelitos. Caen desde arriba del panel y se van por abajo. */
+.res.ganado .res-confeti {
+  display: block; position: absolute; inset: 0; overflow: hidden;
+  pointer-events: none; z-index: 2;
+}
+.res-confeti i {
+  position: absolute; top: -14px; width: 7px; height: 12px; border-radius: 1px;
+  animation-name: papel; animation-timing-function: linear; animation-iteration-count: 2;
+  animation-fill-mode: forwards;
+}
+@keyframes papel {
+  from { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  to   { transform: translateY(420px) rotate(var(--giro, 360deg)); opacity: 0; }
+}
+
+/* Las lineas que marcan un logro: la cinco de cinco, el record, lo que se
+   desbloquea. Sin esto la lista es una planilla donde todo pesa igual. */
+.lista li.hito { border-bottom-color: rgba(255,180,58,.45); }
+.lista li.hito .k { color: var(--acento); font-weight: 600; }
+.lista li.hito .v { color: var(--acento); }
+
+/* Con el telefono acostado el panel de ganar no entra entero: se achica todo
+   lo decorativo antes que los numeros, que son lo que se viene a leer. */
+@media (max-height: 460px) {
+  .res.ganado .res-heroe { width: 46px; height: 46px; margin: 2px auto -2px; }
+  .res-estrellas .estrella { font-size: 21px; }
+  .res.ganado .res-cinta { margin: -6px -30px 6px; padding: 5px 30px; }
+}
+
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23d8402f'/><circle cx='8' cy='6' r='3' fill='%23f0c090'/><rect x='5' y='9' width='6' height='5' rx='1' fill='%232b4a8f'/></svg>">
 </head>
@@ -676,28 +791,51 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
      Adentro de #p-juego quedaba despues del HUD en el orden del documento, y
      como #p-juego crea su propio contexto de apilamiento (z-index 2), el
      canvas con z-index 0 se pintaba ENCIMA del HUD. El HUD existia, se podia
-     tocar, tenia su fondo aplicado — y no se veia. -->
+     tocar, tenia su fondo aplicado — y no se veia.
+
+     LOS TEXTOS EN CASTELLANO QUE SIGUEN SON EL RESPALDO, no lo que se
+     muestra: js/idioma.js los reescribe en el idioma elegido apenas carga,
+     usando los `data-t`. Quedan escritos igual para que la pagina se pueda
+     leer si el modulo no carga. -->
 <canvas id="lienzo" width="256" height="144" aria-label="El nivel"></canvas>
 
 <!-- ───────────── inicio ───────────── -->
 <main id="p-carga" class="pantalla centrado">
   <div class="caja"><div class="girador" aria-hidden="true"></div>
-  <h2>Pique</h2><p id="carga-detalle" class="bajada">Arrancando…</p></div>
+  <h2>Pique</h2><p id="carga-detalle" class="bajada" data-t="carga.arrancando">Arrancando…</p></div>
+</main>
+
+<!-- ───────────── idioma ─────────────
+     Va ANTES del menu y una sola vez: la primera vez que se abre el juego.
+     Despues se cambia en Ajustes. Preguntar en cada arranque seria un peaje;
+     no preguntar nunca deja al que no lee ingles adivinando cual de los
+     cuatro botones es "Jugar". -->
+<main id="p-idioma" class="pantalla centrado" hidden>
+  <div class="caja caja-idioma">
+    <h1 class="logo">Pique</h1>
+    <h2 data-t="idioma.titulo">Elegí tu idioma</h2>
+    <div class="botones" id="idiomas">
+      <button class="grande" data-idioma="en"><span class="bandera" aria-hidden="true">EN</span> English</button>
+      <button class="grande" data-idioma="es"><span class="bandera" aria-hidden="true">ES</span> Español</button>
+      <button class="grande" data-idioma="pt"><span class="bandera" aria-hidden="true">PT</span> Português</button>
+    </div>
+    <p class="pie" data-t="idioma.bajada">Se puede cambiar después en Ajustes.</p>
+  </div>
 </main>
 
 <main id="p-inicio" class="pantalla centrado" hidden>
   <div class="caja caja-inicio">
     <img id="logo-img" class="logo-img" alt="Pique" hidden>
     <h1 class="logo">Pique</h1>
-    <p class="bajada">Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.</p>
+    <p class="bajada" data-t-html="inicio.bajada">Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.</p>
 
     <!-- La vitrina: lo que llevás hecho, de un vistazo. Un menu que no dice
          nada de tu partida es una puerta; uno que la muestra es un lugar al
          que volvés. -->
     <div class="vitrina">
-      <div class="vit"><img id="ico-vit-moneda" alt="" class="ico"><b id="vit-monedas">0</b><span>monedas</span></div>
-      <div class="vit"><b id="vit-niveles">0/24</b><span>niveles</span></div>
-      <div class="vit"><b id="vit-color">0/72</b><span>de color</span></div>
+      <div class="vit"><img id="ico-vit-moneda" alt="" class="ico"><b id="vit-monedas">0</b><span data-t="inicio.monedas">monedas</span></div>
+      <div class="vit"><b id="vit-niveles">0/24</b><span data-t="inicio.niveles">niveles</span></div>
+      <div class="vit"><b id="vit-color">0/72</b><span data-t="inicio.color">de color</span></div>
     </div>
     <div class="barra-progreso"><i id="vit-barra"></i></div>
 
@@ -706,22 +844,22 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
         <span class="bt-linea"><span class="bt-ico" aria-hidden="true">▶</span> <span id="bt-jugar-txt">Jugar</span></span>
         <small id="bt-jugar-sub">Mundo 1-1</small>
       </button>
-      <button id="btn-niveles" class="grande"><span class="bt-ico" aria-hidden="true">▦</span> Niveles</button>
-      <button id="btn-comojuego" class="grande"><span class="bt-ico" aria-hidden="true">?</span> Cómo se juega</button>
-      <button id="btn-ajustes" class="grande"><span class="bt-ico" aria-hidden="true">⚙</span> Ajustes</button>
+      <button id="btn-niveles" class="grande"><span class="bt-ico" aria-hidden="true">▦</span> <span data-t="inicio.btn-niveles">Niveles</span></button>
+      <button id="btn-comojuego" class="grande"><span class="bt-ico" aria-hidden="true">?</span> <span data-t="inicio.btn-ayuda">Cómo se juega</span></button>
+      <button id="btn-ajustes" class="grande"><span class="bt-ico" aria-hidden="true">⚙</span> <span data-t="inicio.btn-ajustes">Ajustes</span></button>
     </div>
-    <p class="pie">24 niveles · generados por código · ninguno dibujado a mano</p>
+    <p class="pie" data-t="inicio.pie">24 niveles · generados por código · ninguno dibujado a mano</p>
   </div>
 </main>
 
 <!-- ───────────── mapa ───────────── -->
 <main id="p-mapa" class="pantalla" hidden>
   <header class="barra">
-    <button data-volver="p-inicio" class="chico">← Atrás</button>
+    <button data-volver="p-inicio" class="chico" data-t="comun.atras">← Atrás</button>
     <div class="marcadores">
-      <span title="monedas juntadas">🪙 <b id="total-monedas">0</b></span>
-      <span title="niveles terminados">🏁 <b id="total-niveles">0/24</b></span>
-      <span title="monedas de color: rosa · violeta · negra">🎯 <b id="total-color">0/24</b></span>
+      <span data-t-attr="title:mapa.t-monedas" title="monedas juntadas">🪙 <b id="total-monedas">0</b></span>
+      <span data-t-attr="title:mapa.t-niveles" title="niveles terminados">🏁 <b id="total-niveles">0/24</b></span>
+      <span data-t-attr="title:mapa.t-color" title="monedas de color: rosa · violeta · negra">🎯 <b id="total-color">0/24</b></span>
     </div>
   </header>
   <div id="mapa" class="mapa"></div>
@@ -732,18 +870,18 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   <div class="caja">
     <div class="girador" aria-hidden="true"></div>
     <h2 id="gen-nivel">—</h2>
-    <p id="gen-detalle" class="bajada">Armando…</p>
+    <p id="gen-detalle" class="bajada" data-t="gen.armando">Armando…</p>
   </div>
 </main>
 
 <!-- ───────────── juego ───────────── -->
 <main id="p-juego" class="pantalla juego" hidden>
   <div class="hud">
-    <button id="hud-salir" class="hud-btn" aria-label="Pausa / volver al mapa">
+    <button id="hud-salir" class="hud-btn" data-t-attr="aria-label:hud.pausa" aria-label="Pausa / volver al mapa">
       <span class="pausa"></span>
     </button>
     <div class="hud-titulo">
-      <span class="hud-curso">Nivel</span>
+      <span class="hud-curso" data-t="hud.nivel">Nivel</span>
       <span id="hud-num" class="hud-num">1</span>
     </div>
     <div class="hud-monedas">
@@ -761,110 +899,88 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
     <span id="hud-nivel" class="hud-mundo">—</span>
     <span id="hud-gen" class="hud-gen">—</span>
   </div>
-  <button id="hud-pantalla" class="hud-btn hud-pantalla" aria-label="Pantalla completa">⛶</button>
+  <button id="hud-pantalla" class="hud-btn hud-pantalla" data-t-attr="aria-label:hud.pantalla" aria-label="Pantalla completa">⛶</button>
 
   <!-- Los mandos. Tocar el lienzo sigue saltando: estos botones no
        reemplazan nada, le ponen un lugar fijo y visible a lo que ya se
        podia hacer, y agregan el unico control que faltaba: darse vuelta. -->
   <div id="mandos" class="mandos">
     <div class="cruceta" id="cruceta">
-      <button class="mando dir izq" data-dir="izq" aria-label="Ir a la izquierda">◀</button>
-      <button class="mando dir der" data-dir="der" aria-label="Ir a la derecha">▶</button>
+      <button class="mando dir izq" data-dir="izq" data-t-attr="aria-label:hud.izq" aria-label="Ir a la izquierda">◀</button>
+      <button class="mando dir der" data-dir="der" data-t-attr="aria-label:hud.der" aria-label="Ir a la derecha">▶</button>
     </div>
-    <button id="mando-saltar" class="mando mando-saltar" aria-label="Saltar">
+    <button id="mando-saltar" class="mando mando-saltar" data-t-attr="aria-label:hud.saltar" aria-label="Saltar">
       <span aria-hidden="true">A</span>
     </button>
   </div>
 </main>
 
-<!-- ───────────── resultado ───────────── -->
+<!-- ───────────── resultado ─────────────
+     GANAR Y PERDER NO SE VEN IGUAL. Antes compartian el mismo cuadro gris y
+     lo unico que cambiaba era el titulo: terminar un nivel se sentia como un
+     error de sistema. Ahora el panel ganado trae rayos, cinta, estrellas,
+     papelitos y al heroe; el perdido se queda quieto y sobrio a proposito.
+     Todo lo decorativo es aria-hidden y solo existe cuando se gana. -->
 <main id="p-resultado" class="pantalla centrado" hidden>
   <div id="res-panel" class="caja res">
-    <h2 id="res-titulo">—</h2>
+    <div class="res-rayos" aria-hidden="true"></div>
+    <div id="res-confeti" class="res-confeti" aria-hidden="true"></div>
+    <div class="res-cinta"><h2 id="res-titulo">—</h2></div>
+    <img id="res-heroe" class="res-heroe" alt="" hidden>
+    <div id="res-estrellas" class="res-estrellas" aria-hidden="true"></div>
     <p id="res-sub" class="bajada">—</p>
     <ul id="res-lista" class="lista"></ul>
     <div class="botones fila">
-      <button id="res-seguir" class="primario">Siguiente</button>
-      <button id="res-repetir">De nuevo</button>
-      <button id="res-mapa">Al mapa</button>
+      <button id="res-seguir" class="primario" data-t="res.seguir">Siguiente</button>
+      <button id="res-repetir" data-t="res.repetir">De nuevo</button>
+      <button id="res-mapa" data-t="res.mapa">Al mapa</button>
     </div>
   </div>
 </main>
 
 <!-- ───────────── ayuda ───────────── -->
 <main id="p-ayuda" class="pantalla" hidden>
-  <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
-  <div class="texto">
-    <p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora. Lo demás sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás. Las flechas <b>◀ ▶</b> de la izquierda mandan para dónde vas.</p>
-
-    <h3>Los movimientos</h3>
-    <dl class="movs">
-      <dt>Salto corto</dt><dd>Un toque seco: sube unos 2 tiles y medio.</dd>
-      <dt>Salto alto</dt><dd>Mantenerlo apretado: casi 5 tiles. Se corta en cuanto soltás.</dd>
-      <dt>Vault</dt><dd><b>Solo.</b> Los obstáculos de un tile y los huecos de uno o dos se pasan sin tocar nada. De tres para arriba hay que saltar.</dd>
-      <dt>Vault con toque</dt><dd>Tocar <em>justo</em> mientras vaulteás: salto más alto y te llevás puesto al enemigo. Es la maniobra que más paga.</dd>
-      <dt>Trepada</dt><dd><b>Sola.</b> Si caés justo sobre el filo de una plataforma, te subís en vez de rebotar contra el costado.</dd>
-      <dt>Los botones</dt><dd><b>◀ ▶</b> te mueven y <b>A</b> salta — tocar la pantalla también. Sin tocar nada te quedás quieto. Si preferís que corra solo —como las primeras versiones— está en Ajustes → Movimiento → Corredor.</dd>
-      <dt>Salto de pared</dt><dd>Tocar pegado a una pared: rebotás y <b>das vuelta la carrera</b>. Así se suben los pozos y las torres, en zigzag.</dd>
-      <dt>Doble salto</dt><dd>Tocar otra vez en el aire: segundo impulso, con su propia vuelta de carnero.</dd>
-      <dt>Triple salto</dt><dd>Y una tercera vez: el más alto de los tres, con un backflip. Encadenados llegan a 9 tiles. Pisar un enemigo te devuelve los dos saltos de aire.</dd>
-      <dt>Tobogán</dt><dd>Caer sobre una bajada: acelerás y arrasás con lo que se cruce.</dd>
-    </dl>
-
-    <h3>Los bloques</h3>
-    <dl class="movs">
-      <dt class="b-pausa">Pausa</dt><dd>Parado encima te frena a vos <b>y al reloj</b>. Tocá para salir. Es el único lugar donde podés pensar.</dd>
-      <dt class="b-preg">?</dt><dd>Monedas, y a veces una burbuja o un <b>hongo</b>. Cada bloque da siempre lo mismo: el nivel se puede aprender.</dd>
-      <dt class="b-tiempo">Reloj</dt><dd>Suma 10 segundos, hasta 99.</dd>
-      <dt class="b-largo">Salto largo</dt><dd>Arco bajo y lejos: cruza huecos que ningún salto normal cruza.</dd>
-      <dt class="b-volt">Voltereta</dt><dd>La subida más alta del juego. Para lo que quedó arriba de todo.</dd>
-    </dl>
-
-    <h3>Los hongos</h3>
-    <p>Salen de los bloques <code>?</code> y <b>vuelan hasta vos</b>: no se escapan. Uno de cada cuatro bloques tiene uno, y siempre el mismo bloque: el nivel se puede aprender. El común te hace grande, y estando grande un golpe no te cuesta una burbuja — solo volvés a tamaño normal.</p>
-    <p>El <b>hongo arcoíris</b> es otra cosa: hay <b>uno solo por mundo</b>, en el primer nivel de cada uno, y te hace gigante por nueve segundos. Arrasás con bloques, tubos y enemigos con solo caminar. El pozo y el reloj te matan igual, seas del tamaño que seas.</p>
-
-    <h3>Las burbujas</h3>
-    <p>No hay vidas. Cuando te matan entrás en una <b>burbuja</b> que vuelve para atrás y perdés 5 monedas; tocá para pincharla donde quieras. Arrancás con dos y los bloques <code>?</code> a veces dan más. Sin burbujas, se terminó.</p>
-
-    <h3>Las monedas de color</h3>
-    <p>Cinco por nivel, escondidas. Juntá las cinco <b class="c-rosa">rosas</b> en una sola corrida y se habilitan las <b class="c-violeta">violetas</b>, que están peor puestas; con esas, las <b class="c-negra">negras</b>. Es el mismo nivel tres veces, cada vez más exigente.</p>
-
-    <h3>El mástil</h3>
-    <p>Cuanto más alto lo agarrás, más monedas: hasta 10. En los niveles de jefe el mástil está <b>trabado</b> hasta que lo derrotes.</p>
-
-    <h3>De dónde salen los niveles</h3>
-    <p>Ninguno está dibujado a mano. Cada uno se arma con piezas parametrizadas a partir de un número —el mismo número siempre, así que el 3-2 es siempre el 3-2— y después <b>se juega entero por dentro</b> con una búsqueda que corre la física de verdad, para comprobar que se puede terminar y que las cinco monedas se pueden alcanzar. Si no pasa, se tira y se arma otro. El tiempo límite sale de lo que tarda ese camino, no de un número inventado.</p>
+  <header class="barra"><button data-volver="p-inicio" class="chico" data-t="comun.atras">← Atrás</button><h2 data-t="ayuda.titulo">Cómo se juega</h2></header>
+  <div class="texto" data-t-html="ayuda.cuerpo">
+    <p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora.</p>
   </div>
 </main>
 
 <!-- ───────────── ajustes ───────────── -->
 <main id="p-ajustes" class="pantalla" hidden>
-  <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Ajustes</h2></header>
+  <header class="barra"><button data-volver="p-inicio" class="chico" data-t="comun.atras">← Atrás</button><h2 data-t="aj.titulo">Ajustes</h2></header>
   <div class="texto">
-    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Efectos de sonido</span></label>
-    <label class="opcion"><input type="checkbox" id="aj-musica"> <span>Música</span></label>
-    <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span>Sacudida de pantalla</span></label>
-    <label class="opcion"><input type="checkbox" id="aj-mandos"> <span>Botones en pantalla</span></label>
     <div class="opcion opcion-grupo">
-      <span>Movimiento</span>
+      <span data-t="aj.idioma">Idioma</span>
+      <div class="grupo" id="aj-idioma">
+        <button data-idioma="en" class="chico">English</button>
+        <button data-idioma="es" class="chico">Español</button>
+        <button data-idioma="pt" class="chico">Português</button>
+      </div>
+    </div>
+    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span data-t="aj.sonido">Efectos de sonido</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-musica"> <span data-t="aj.musica">Música</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span data-t="aj.sacudida">Sacudida de pantalla</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-mandos"> <span data-t="aj.mandos">Botones en pantalla</span></label>
+    <div class="opcion opcion-grupo">
+      <span data-t="aj.movimiento">Movimiento</span>
       <div class="grupo" id="aj-modo">
-        <button data-modo="libre" class="chico">Libre</button>
-        <button data-modo="auto" class="chico">Corredor</button>
+        <button data-modo="libre" class="chico" data-t="aj.libre">Libre</button>
+        <button data-modo="auto" class="chico" data-t="aj.corredor">Corredor</button>
       </div>
     </div>
-    <p class="nota">En <b>libre</b> el personaje se queda quieto hasta que le decís para dónde ir con la cruceta. En <b>corredor</b> corre solo y la cruceta nada más lo corrige, como en las primeras versiones.</p>
+    <p class="nota" data-t-html="aj.nota-mov">En <b>libre</b> el personaje se queda quieto hasta que le decís para dónde ir con la cruceta. En <b>corredor</b> corre solo y la cruceta nada más lo corrige, como en las primeras versiones.</p>
     <div class="opcion opcion-grupo">
-      <span>Gráficos</span>
+      <span data-t="aj.graficos">Gráficos</span>
       <div class="grupo" id="aj-grafico">
-        <button data-graf="auto" class="chico">Automático</button>
-        <button data-graf="2" class="chico">Nítido</button>
-        <button data-graf="1" class="chico">Rápido</button>
+        <button data-graf="auto" class="chico" data-t="aj.auto">Automático</button>
+        <button data-graf="2" class="chico" data-t="aj.nitido">Nítido</button>
+        <button data-graf="1" class="chico" data-t="aj.rapido">Rápido</button>
       </div>
     </div>
-    <p class="nota" id="aj-graf-nota">En automático el juego mide cómo va en tu teléfono y baja la resolución solo si no llega a 60 cuadros por segundo.</p>
-    <p class="nota">Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.</p>
-    <button id="aj-borrar" class="peligro">Borrar todo el progreso</button>
+    <p class="nota" id="aj-graf-nota" data-t="aj.nota-graf">En automático el juego mide cómo va en tu teléfono y baja la resolución solo si no llega a 60 cuadros por segundo.</p>
+    <p class="nota" data-t="aj.nota-datos">Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.</p>
+    <button id="aj-borrar" class="peligro" data-t="aj.borrar">Borrar todo el progreso</button>
   </div>
 </main>
 
@@ -879,6 +995,549 @@ let MAPA = {};
 const ruta = (u) => MAPA[u] ?? u;
 function registrar(m) { MAPA = m; }
 return { ruta, registrar };
+})();
+
+/* ── ayuda ── */
+const M_ayuda = (() => {
+// El texto largo de "Cómo se juega", en los tres idiomas.
+//
+// Vive aparte de idioma.js porque es mas texto que todo el resto de la tabla
+// junto, y mezclarlo con los botones y los rotulos hacia imposible encontrar
+// nada. Se inserta como HTML —tiene <dl>, <b> y <code> adentro— y por eso
+// TIENE QUE SEGUIR SIENDO TEXTO NUESTRO: nada de esto viene del jugador.
+
+const AYUDA = {
+es: `
+<p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora. Lo demás sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás. Las flechas <b>◀ ▶</b> de la izquierda mandan para dónde vas.</p>
+
+<h3>Los movimientos</h3>
+<dl class="movs">
+  <dt>Salto corto</dt><dd>Un toque seco: sube unos 2 tiles y medio.</dd>
+  <dt>Salto alto</dt><dd>Mantenerlo apretado: casi 5 tiles. Se corta en cuanto soltás.</dd>
+  <dt>Vault</dt><dd><b>Solo.</b> Los obstáculos de un tile y los huecos de uno o dos se pasan sin tocar nada. De tres para arriba hay que saltar.</dd>
+  <dt>Vault con toque</dt><dd>Tocar <em>justo</em> mientras vaulteás: salto más alto y te llevás puesto al enemigo. Es la maniobra que más paga.</dd>
+  <dt>Trepada</dt><dd><b>Sola.</b> Si caés justo sobre el filo de una plataforma, te subís en vez de rebotar contra el costado.</dd>
+  <dt>Los botones</dt><dd><b>◀ ▶</b> te mueven y <b>A</b> salta — tocar la pantalla también. Sin tocar nada te quedás quieto. Si preferís que corra solo —como las primeras versiones— está en Ajustes → Movimiento → Corredor.</dd>
+  <dt>Salto de pared</dt><dd>Tocar pegado a una pared: rebotás y <b>das vuelta la carrera</b>. Así se suben los pozos y las torres, en zigzag.</dd>
+  <dt>Doble salto</dt><dd>Tocar otra vez en el aire: segundo impulso, con su propia vuelta de carnero.</dd>
+  <dt>Triple salto</dt><dd>Y una tercera vez: el más alto de los tres, con un backflip. Encadenados llegan a 9 tiles. Pisar un enemigo te devuelve los dos saltos de aire.</dd>
+  <dt>Tobogán</dt><dd>Caer sobre una bajada: acelerás y arrasás con lo que se cruce.</dd>
+  <dt>Resorte</dt><dd>Pisarlo te dispara para arriba: casi 7 tiles, más que cualquier salto.</dd>
+</dl>
+
+<h3>Los bloques</h3>
+<dl class="movs">
+  <dt class="b-pausa">Pausa</dt><dd>Parado encima te frena a vos <b>y al reloj</b>. Tocá para salir. Es el único lugar donde podés pensar.</dd>
+  <dt class="b-preg">?</dt><dd>Monedas, y a veces una burbuja o un <b>hongo</b>. Cada bloque da siempre lo mismo: el nivel se puede aprender.</dd>
+  <dt class="b-tiempo">Reloj</dt><dd>Suma 10 segundos, hasta 99.</dd>
+  <dt class="b-largo">Salto largo</dt><dd>Arco bajo y lejos: cruza huecos que ningún salto normal cruza.</dd>
+  <dt class="b-volt">Voltereta</dt><dd>La subida más alta del juego. Para lo que quedó arriba de todo.</dd>
+</dl>
+
+<h3>Los hongos</h3>
+<p>Salen de los bloques <code>?</code> y <b>vuelan hasta vos</b>: no se escapan. Uno de cada cuatro bloques tiene uno, y siempre el mismo bloque: el nivel se puede aprender. El común te hace grande, y estando grande un golpe no te cuesta una burbuja — solo volvés a tamaño normal.</p>
+<p>El <b>hongo arcoíris</b> es otra cosa: hay <b>uno solo por mundo</b>, en el primer nivel de cada uno, y te hace gigante por nueve segundos. Arrasás con bloques, tubos y enemigos con solo caminar. El pozo y el reloj te matan igual, seas del tamaño que seas.</p>
+
+<h3>Las burbujas</h3>
+<p>No hay vidas. Cuando te matan entrás en una <b>burbuja</b> que vuelve para atrás y perdés 5 monedas; tocá para pincharla donde quieras. Arrancás con dos y los bloques <code>?</code> a veces dan más. Sin burbujas, se terminó.</p>
+
+<h3>Las monedas de color</h3>
+<p>Cinco por nivel, escondidas. Juntá las cinco <b class="c-rosa">rosas</b> en una sola corrida y se habilitan las <b class="c-violeta">violetas</b>, que están peor puestas; con esas, las <b class="c-negra">negras</b>. Es el mismo nivel tres veces, cada vez más exigente.</p>
+
+<h3>El mástil</h3>
+<p>Cuanto más alto lo agarrás, más monedas: hasta 10. En los niveles de jefe el mástil está <b>trabado</b> hasta que lo derrotes.</p>
+
+<h3>De dónde salen los niveles</h3>
+<p>Ninguno está dibujado a mano. Cada uno se arma con piezas parametrizadas a partir de un número —el mismo número siempre, así que el 3-2 es siempre el 3-2— y después <b>se juega entero por dentro</b> con una búsqueda que corre la física de verdad, para comprobar que se puede terminar y que las cinco monedas se pueden alcanzar. Si no pasa, se tira y se arma otro. El tiempo límite sale de lo que tarda ese camino, no de un número inventado.</p>
+`,
+
+en: `
+<p class="destacado">Almost everything comes out of the <b>jump button</b>: tap the screen, the <b>A</b> button, or the spacebar. The rest comes from how long you hold it and where you are standing when you press it. The <b>◀ ▶</b> arrows on the left say which way you go.</p>
+
+<h3>The moves</h3>
+<dl class="movs">
+  <dt>Short jump</dt><dd>A quick tap: about two and a half tiles up.</dd>
+  <dt>High jump</dt><dd>Hold it down: almost 5 tiles. It cuts off the moment you let go.</dd>
+  <dt>Vault</dt><dd><b>Automatic.</b> One-tile obstacles and gaps of one or two are cleared without touching anything. Three or more and you have to jump.</dd>
+  <dt>Vault with a tap</dt><dd>Tap <em>right</em> while vaulting: a higher jump, and you take the enemy with you. It is the move that pays the most.</dd>
+  <dt>Ledge climb</dt><dd><b>Automatic.</b> If you land right on the edge of a platform you pull yourself up instead of bouncing off the side.</dd>
+  <dt>The buttons</dt><dd><b>◀ ▶</b> move you and <b>A</b> jumps — tapping the screen works too. Touch nothing and you stand still. If you would rather it ran on its own —like the earliest versions— it is under Settings → Movement → Runner.</dd>
+  <dt>Wall jump</dt><dd>Tap while hugging a wall: you bounce off and <b>turn your run around</b>. That is how pits and towers are climbed, in a zigzag.</dd>
+  <dt>Double jump</dt><dd>Tap again in mid-air: a second push, with a somersault of its own.</dd>
+  <dt>Triple jump</dt><dd>And a third time: the highest of the three, with a backflip. Chained together they reach 9 tiles. Stomping an enemy gives both air jumps back.</dd>
+  <dt>Slide</dt><dd>Land on a slope going down: you pick up speed and flatten whatever gets in the way.</dd>
+  <dt>Spring</dt><dd>Step on it and it fires you up: nearly 7 tiles, higher than any jump.</dd>
+</dl>
+
+<h3>The blocks</h3>
+<dl class="movs">
+  <dt class="b-pausa">Pause</dt><dd>Standing on it stops you <b>and the clock</b>. Tap to leave. It is the only place where you get to think.</dd>
+  <dt class="b-preg">?</dt><dd>Coins, and sometimes a bubble or a <b>mushroom</b>. Each block always gives the same thing: the level can be learned.</dd>
+  <dt class="b-tiempo">Clock</dt><dd>Adds 10 seconds, up to 99.</dd>
+  <dt class="b-largo">Long jump</dt><dd>A low, far arc: it crosses gaps no normal jump crosses.</dd>
+  <dt class="b-volt">Somersault</dt><dd>The highest climb in the game. For whatever is left up at the top.</dd>
+</dl>
+
+<h3>The mushrooms</h3>
+<p>They come out of the <code>?</code> blocks and <b>fly to you</b>: they do not get away. One block in four has one, and always the same block: the level can be learned. The plain one makes you big, and while big a hit does not cost you a bubble — you just go back to normal size.</p>
+<p>The <b>rainbow mushroom</b> is another matter: there is <b>only one per world</b>, in its first level, and it makes you gigantic for nine seconds. You flatten blocks, pipes and enemies just by walking. The pit and the clock still kill you, whatever size you are.</p>
+
+<h3>The bubbles</h3>
+<p>There are no lives. When you are killed you go into a <b>bubble</b> that floats back the way you came and you lose 5 coins; tap to pop it wherever you like. You start with two and the <code>?</code> blocks sometimes give more. Out of bubbles, it is over.</p>
+
+<h3>The coloured coins</h3>
+<p>Five per level, hidden. Collect all five <b class="c-rosa">pink</b> ones in a single run and the <b class="c-violeta">purple</b> ones open up, which are worse placed; with those, the <b class="c-negra">black</b> ones. It is the same level three times, harder each time.</p>
+
+<h3>The flagpole</h3>
+<p>The higher you grab it, the more coins: up to 10. In boss levels the flagpole is <b>locked</b> until you beat the boss.</p>
+
+<h3>Where the levels come from</h3>
+<p>None of them is drawn by hand. Each one is assembled from parameterised pieces starting from a number —always the same number, so 3-2 is always 3-2— and then <b>played all the way through internally</b> by a search that runs the real physics, to prove that it can be finished and that all five coins can be reached. If it does not pass, it is thrown away and another is built. The time limit comes from how long that path takes, not from a number someone made up.</p>
+`,
+
+pt: `
+<p class="destacado">Quase tudo sai do <b>botão de pular</b>: tocar a tela, o botão <b>A</b>, ou a barra de espaço. O resto vem de quanto tempo você segura e de onde está quando aperta. As setas <b>◀ ▶</b> da esquerda mandam para onde você vai.</p>
+
+<h3>Os movimentos</h3>
+<dl class="movs">
+  <dt>Pulo curto</dt><dd>Um toque seco: sobe uns dois tiles e meio.</dd>
+  <dt>Pulo alto</dt><dd>Segurando: quase 5 tiles. Corta assim que você solta.</dd>
+  <dt>Vault</dt><dd><b>Sozinho.</b> Obstáculos de um tile e buracos de um ou dois passam sem tocar em nada. De três para cima tem que pular.</dd>
+  <dt>Vault com toque</dt><dd>Tocar <em>na hora certa</em> durante o vault: pulo mais alto e você leva o inimigo junto. É a manobra que mais rende.</dd>
+  <dt>Escalada de beirada</dt><dd><b>Sozinha.</b> Se você cai bem na beirada de uma plataforma, sobe em vez de bater na lateral.</dd>
+  <dt>Os botões</dt><dd><b>◀ ▶</b> movem e <b>A</b> pula — tocar a tela também. Sem tocar nada você fica parado. Se preferir que corra sozinho —como nas primeiras versões— está em Ajustes → Movimento → Corredor.</dd>
+  <dt>Pulo de parede</dt><dd>Tocar colado numa parede: você rebate e <b>inverte a corrida</b>. É assim que se sobem os poços e as torres, em ziguezague.</dd>
+  <dt>Pulo duplo</dt><dd>Tocar de novo no ar: segundo impulso, com a sua própria cambalhota.</dd>
+  <dt>Pulo triplo</dt><dd>E uma terceira vez: o mais alto dos três, com um backflip. Encadeados chegam a 9 tiles. Pisar num inimigo devolve os dois pulos de ar.</dd>
+  <dt>Escorregada</dt><dd>Cair numa descida: você acelera e atropela o que aparecer.</dd>
+  <dt>Mola</dt><dd>Pisar nela te dispara para cima: quase 7 tiles, mais que qualquer pulo.</dd>
+</dl>
+
+<h3>Os blocos</h3>
+<dl class="movs">
+  <dt class="b-pausa">Pausa</dt><dd>Em cima dele você para <b>e o relógio também</b>. Toque para sair. É o único lugar onde dá para pensar.</dd>
+  <dt class="b-preg">?</dt><dd>Moedas, e às vezes uma bolha ou um <b>cogumelo</b>. Cada bloco dá sempre a mesma coisa: a fase pode ser aprendida.</dd>
+  <dt class="b-tiempo">Relógio</dt><dd>Soma 10 segundos, até 99.</dd>
+  <dt class="b-largo">Pulo longo</dt><dd>Arco baixo e longe: cruza buracos que nenhum pulo normal cruza.</dd>
+  <dt class="b-volt">Cambalhota</dt><dd>A subida mais alta do jogo. Para o que ficou lá em cima.</dd>
+</dl>
+
+<h3>Os cogumelos</h3>
+<p>Saem dos blocos <code>?</code> e <b>voam até você</b>: não escapam. Um em cada quatro blocos tem um, e sempre o mesmo bloco: a fase pode ser aprendida. O comum te deixa grande, e estando grande um golpe não custa uma bolha — você só volta ao tamanho normal.</p>
+<p>O <b>cogumelo arco-íris</b> é outra coisa: há <b>um só por mundo</b>, na primeira fase de cada um, e te deixa gigante por nove segundos. Você atropela blocos, canos e inimigos só de andar. O poço e o relógio matam do mesmo jeito, seja qual for o tamanho.</p>
+
+<h3>As bolhas</h3>
+<p>Não há vidas. Quando você morre entra numa <b>bolha</b> que volta pelo caminho e perde 5 moedas; toque para estourá-la onde quiser. Você começa com duas e os blocos <code>?</code> às vezes dão mais. Sem bolhas, acabou.</p>
+
+<h3>As moedas coloridas</h3>
+<p>Cinco por fase, escondidas. Junte as cinco <b class="c-rosa">rosas</b> numa única corrida e liberam-se as <b class="c-violeta">roxas</b>, que estão pior colocadas; com essas, as <b class="c-negra">pretas</b>. É a mesma fase três vezes, cada vez mais exigente.</p>
+
+<h3>O mastro</h3>
+<p>Quanto mais alto você agarra, mais moedas: até 10. Nas fases de chefe o mastro fica <b>travado</b> até você vencê-lo.</p>
+
+<h3>De onde saem as fases</h3>
+<p>Nenhuma é desenhada à mão. Cada uma é montada com peças parametrizadas a partir de um número —sempre o mesmo número, então a 3-2 é sempre a 3-2— e depois <b>é jogada inteira por dentro</b> por uma busca que roda a física de verdade, para provar que dá para terminar e que as cinco moedas dá para alcançar. Se não passa, joga-se fora e monta-se outra. O tempo limite sai do que esse caminho demora, não de um número inventado.</p>
+`,
+};
+return { AYUDA };
+})();
+
+/* ── idioma ── */
+const M_idioma = (() => {
+// Los textos del juego, en los tres idiomas.
+//
+// POR QUE UNA TABLA Y NO TRES HTML. Un juego traducido copiando el index.html
+// tres veces se desincroniza a la primera correccion: se arregla un boton en
+// uno y quedan dos con el texto viejo. Aca el HTML tiene UN texto por lugar
+// —marcado con `data-t`— y la tabla decide cual se escribe. Lo que no esta
+// traducido se nota al instante porque cae al ingles, que es el idioma base.
+//
+// EL IDIOMA POR DEFECTO ES INGLES, no el del navegador. La primera vez el
+// juego pregunta, y esa eleccion se guarda; adivinar por `navigator.language`
+// suena mejor pero le pone el idioma del sistema operativo a alguien que
+// quizas quiere jugar en otro, y despues hay que buscar donde cambiarlo.
+//
+// El texto del HTML queda en castellano igual: si el modulo no carga, el
+// juego se lee. Un fallback vacio seria peor que uno en un idioma equivocado.
+
+const { AYUDA } = M_ayuda;
+const IDIOMAS = { en: "English", es: "Español", pt: "Português" };
+
+// Los titulos de los 24 niveles. Viven aca y no en mundo.js porque mundo.js
+// lo comparte el validador, que corre sin DOM y sin idioma.
+const NIV = {
+  es: ["Primeros pasos", "Abajo de todo", "Entre las nubes", "El primer portón",
+       "Campo abierto", "No mires atrás", "Saltos de altura", "A bordo",
+       "Arena caliente", "Lluvia de balas", "Caparazones", "Barras de fuego",
+       "Para arriba", "Cuesta abajo", "Alto y bajo", "Los cañones",
+       "Sin piso", "Cactus en fila", "Bajo llave", "Anillos de fuego",
+       "Tierra de púas", "El interruptor", "Por la borda", "El último puente"],
+  en: ["First steps", "Way down below", "Among the clouds", "The first gate",
+       "Open field", "Don't look back", "High jumps", "On board",
+       "Hot sand", "Bullet rain", "Shells", "Fire bars",
+       "Straight up", "Downhill", "High and low", "The cannons",
+       "No floor", "Cactus row", "Under lock", "Rings of fire",
+       "Land of spikes", "The switch", "Overboard", "The last bridge"],
+  pt: ["Primeiros passos", "Lá embaixo", "Entre as nuvens", "O primeiro portão",
+       "Campo aberto", "Não olhe para trás", "Saltos de altura", "A bordo",
+       "Areia quente", "Chuva de balas", "Cascos", "Barras de fogo",
+       "Para cima", "Ladeira abaixo", "Alto e baixo", "Os canhões",
+       "Sem chão", "Cactos em fila", "A sete chaves", "Anéis de fogo",
+       "Terra de espinhos", "O interruptor", "Ao mar", "A última ponte"],
+};
+
+const TEMA = {
+  es: { llano: "Llanura", subte: "Subterráneo", cielo: "Cielo", castillo: "Castillo",
+        fantasma: "Casa fantasma", desierto: "Desierto", nave: "Nave", torre: "Torre" },
+  en: { llano: "Plains", subte: "Underground", cielo: "Sky", castillo: "Castle",
+        fantasma: "Ghost house", desierto: "Desert", nave: "Airship", torre: "Tower" },
+  pt: { llano: "Planície", subte: "Subterrâneo", cielo: "Céu", castillo: "Castelo",
+        fantasma: "Casa mal-assombrada", desierto: "Deserto", nave: "Nave", torre: "Torre" },
+};
+
+const ES = {
+  "doc.titulo": "Pique — un corredor pixel art",
+  "doc.desc": "Un corredor 2D con niveles generados por código y comprobados uno por uno antes de dejarte jugarlos.",
+
+  "idioma.titulo": "Elegí tu idioma",
+  "idioma.bajada": "Se puede cambiar después en Ajustes.",
+  "idioma.seguir": "Seguir",
+
+  "carga.arrancando": "Arrancando…",
+  "carga.sprites": "Cargando sprites…",
+  "carga.fondos": "Cargando fondos…",
+
+  "inicio.bajada": "Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.",
+  "inicio.monedas": "monedas",
+  "inicio.niveles": "niveles",
+  "inicio.color": "de color",
+  "inicio.jugar": "Jugar",
+  "inicio.seguir": "Seguir",
+  "inicio.btn-niveles": "Niveles",
+  "inicio.btn-ayuda": "Cómo se juega",
+  "inicio.btn-ajustes": "Ajustes",
+  "inicio.pie": "24 niveles · generados por código · ninguno dibujado a mano",
+
+  "comun.atras": "← Atrás",
+  "comun.mundo": "Mundo",
+  "comun.jefe": "jefe",
+  "comun.terminado": "terminado",
+  "comun.cerrado": "cerrado",
+  "comun.aqui": "estás acá",
+
+  "mapa.t-monedas": "monedas juntadas",
+  "mapa.t-niveles": "niveles terminados",
+  "mapa.t-color": "monedas de color: rosa · violeta · negra",
+
+  "gen.armando": "Armando y comprobando que se pueda terminar…",
+  "gen.sinvalidar": "sin validar",
+  "gen.validado1": "validado en 1 intento",
+  "gen.validadoN": "validado en {n} intentos",
+
+  "hud.nivel": "Nivel",
+  "hud.pausa": "Pausa / volver al mapa",
+  "hud.pantalla": "Pantalla completa",
+  "hud.izq": "Ir a la izquierda",
+  "hud.der": "Ir a la derecha",
+  "hud.saltar": "Saltar",
+
+  "res.gano": "¡Llegaste!",
+  "res.perdio": "Se acabó",
+  "res.roto": "Se rompió algo",
+  "res.causa.tiempo": "Se terminó el tiempo",
+  "res.causa.pozo": "Al vacío",
+  "res.causa.pinche": "Las púas",
+  "res.causa.jefe": "El jefe te ganó",
+  "res.causa.otro": "Un enemigo te ganó",
+  "res.monedas": "Monedas",
+  "res.bonus": "Bonus del mástil",
+  "res.color": "Monedas de color",
+  "res.burbujas": "Burbujas que quedaron",
+  "res.tiempo": "Tiempo",
+  "res.tiempoDe": "{a}s de {b}",
+  "res.abierto": "Desbloqueado",
+  "tier.rosa": "rosa",
+  "tier.violeta": "violeta",
+  "tier.negra": "negra",
+  "res.abre.violeta": "monedas violetas",
+  "res.abre.negra": "monedas negras",
+  "res.abre.todo": "todo hecho",
+  "res.seguir": "Siguiente",
+  "res.repetir": "De nuevo",
+  "res.mapa": "Al mapa",
+  "res.perfecto": "¡Todas las de color!",
+  "res.record": "Nuevo récord",
+  "res.total": "Total juntado",
+
+  "ayuda.titulo": "Cómo se juega",
+
+  "aj.titulo": "Ajustes",
+  "aj.sonido": "Efectos de sonido",
+  "aj.musica": "Música",
+  "aj.sacudida": "Sacudida de pantalla",
+  "aj.mandos": "Botones en pantalla",
+  "aj.idioma": "Idioma",
+  "aj.movimiento": "Movimiento",
+  "aj.libre": "Libre",
+  "aj.corredor": "Corredor",
+  "aj.nota-mov": "En <b>libre</b> el personaje se queda quieto hasta que le decís para dónde ir con la cruceta. En <b>corredor</b> corre solo y la cruceta nada más lo corrige, como en las primeras versiones.",
+  "aj.graficos": "Gráficos",
+  "aj.auto": "Automático",
+  "aj.nitido": "Nítido",
+  "aj.rapido": "Rápido",
+  "aj.nota-graf": "En automático el juego mide cómo va en tu teléfono y baja la resolución solo si no llega a 60 cuadros por segundo.",
+  "aj.nota-datos": "Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.",
+  "aj.borrar": "Borrar todo el progreso",
+  "aj.confirmar": "¿Borrar todo el progreso? No se puede deshacer.",
+};
+
+const EN = {
+  "doc.titulo": "Pique — a pixel art runner",
+  "doc.desc": "A 2D runner with levels generated by code and checked one by one before you get to play them.",
+
+  "idioma.titulo": "Choose your language",
+  "idioma.bajada": "You can change it later in Settings.",
+  "idioma.seguir": "Continue",
+
+  "carga.arrancando": "Starting up…",
+  "carga.sprites": "Loading sprites…",
+  "carga.fondos": "Loading backgrounds…",
+
+  "inicio.bajada": "You run on your own. All you do is jump — but <em>when</em> and <em>how long</em> is the whole game.",
+  "inicio.monedas": "coins",
+  "inicio.niveles": "levels",
+  "inicio.color": "coloured",
+  "inicio.jugar": "Play",
+  "inicio.seguir": "Continue",
+  "inicio.btn-niveles": "Levels",
+  "inicio.btn-ayuda": "How to play",
+  "inicio.btn-ajustes": "Settings",
+  "inicio.pie": "24 levels · generated by code · none drawn by hand",
+
+  "comun.atras": "← Back",
+  "comun.mundo": "World",
+  "comun.jefe": "boss",
+  "comun.terminado": "finished",
+  "comun.cerrado": "locked",
+  "comun.aqui": "you are here",
+
+  "mapa.t-monedas": "coins collected",
+  "mapa.t-niveles": "levels finished",
+  "mapa.t-color": "coloured coins: pink · purple · black",
+
+  "gen.armando": "Building it and checking that it can be finished…",
+  "gen.sinvalidar": "unvalidated",
+  "gen.validado1": "validated in 1 try",
+  "gen.validadoN": "validated in {n} tries",
+
+  "hud.nivel": "Level",
+  "hud.pausa": "Pause / back to the map",
+  "hud.pantalla": "Fullscreen",
+  "hud.izq": "Go left",
+  "hud.der": "Go right",
+  "hud.saltar": "Jump",
+
+  "res.gano": "You made it!",
+  "res.perdio": "Game over",
+  "res.roto": "Something broke",
+  "res.causa.tiempo": "Time ran out",
+  "res.causa.pozo": "Into the void",
+  "res.causa.pinche": "The spikes",
+  "res.causa.jefe": "The boss got you",
+  "res.causa.otro": "An enemy got you",
+  "res.monedas": "Coins",
+  "res.bonus": "Flagpole bonus",
+  "res.color": "Coloured coins",
+  "res.burbujas": "Bubbles left",
+  "res.tiempo": "Time",
+  "res.tiempoDe": "{a}s out of {b}",
+  "res.abierto": "Unlocked",
+  "tier.rosa": "pink",
+  "tier.violeta": "purple",
+  "tier.negra": "black",
+  "res.abre.violeta": "purple coins",
+  "res.abre.negra": "black coins",
+  "res.abre.todo": "all done",
+  "res.seguir": "Next",
+  "res.repetir": "Again",
+  "res.mapa": "To the map",
+  "res.perfecto": "Every coloured coin!",
+  "res.record": "New record",
+  "res.total": "Total collected",
+
+  "ayuda.titulo": "How to play",
+
+  "aj.titulo": "Settings",
+  "aj.sonido": "Sound effects",
+  "aj.musica": "Music",
+  "aj.sacudida": "Screen shake",
+  "aj.mandos": "On-screen buttons",
+  "aj.idioma": "Language",
+  "aj.movimiento": "Movement",
+  "aj.libre": "Free",
+  "aj.corredor": "Runner",
+  "aj.nota-mov": "In <b>free</b> the character stands still until you tell it where to go with the pad. In <b>runner</b> it runs on its own and the pad only steers it, like the earliest versions.",
+  "aj.graficos": "Graphics",
+  "aj.auto": "Automatic",
+  "aj.nitido": "Sharp",
+  "aj.rapido": "Fast",
+  "aj.nota-graf": "On automatic the game measures how it runs on your phone and only lowers the resolution if it can't hold 60 frames per second.",
+  "aj.nota-datos": "None of this leaves your browser: progress is saved on this device and there is no server and no account.",
+  "aj.borrar": "Erase all progress",
+  "aj.confirmar": "Erase all progress? This cannot be undone.",
+};
+
+const PT = {
+  "doc.titulo": "Pique — um corredor em pixel art",
+  "doc.desc": "Um corredor 2D com fases geradas por código e testadas uma por uma antes de deixar você jogar.",
+
+  "idioma.titulo": "Escolha o seu idioma",
+  "idioma.bajada": "Dá para mudar depois em Ajustes.",
+  "idioma.seguir": "Continuar",
+
+  "carga.arrancando": "Iniciando…",
+  "carga.sprites": "Carregando sprites…",
+  "carga.fondos": "Carregando fundos…",
+
+  "inicio.bajada": "Você corre sozinho. Tudo o que faz é pular — mas <em>quando</em> e <em>por quanto tempo</em> é o jogo inteiro.",
+  "inicio.monedas": "moedas",
+  "inicio.niveles": "fases",
+  "inicio.color": "coloridas",
+  "inicio.jugar": "Jogar",
+  "inicio.seguir": "Continuar",
+  "inicio.btn-niveles": "Fases",
+  "inicio.btn-ayuda": "Como se joga",
+  "inicio.btn-ajustes": "Ajustes",
+  "inicio.pie": "24 fases · geradas por código · nenhuma desenhada à mão",
+
+  "comun.atras": "← Voltar",
+  "comun.mundo": "Mundo",
+  "comun.jefe": "chefe",
+  "comun.terminado": "concluída",
+  "comun.cerrado": "trancada",
+  "comun.aqui": "você está aqui",
+
+  "mapa.t-monedas": "moedas juntadas",
+  "mapa.t-niveles": "fases concluídas",
+  "mapa.t-color": "moedas coloridas: rosa · roxa · preta",
+
+  "gen.armando": "Montando e conferindo que dá para terminar…",
+  "gen.sinvalidar": "sem validar",
+  "gen.validado1": "validada em 1 tentativa",
+  "gen.validadoN": "validada em {n} tentativas",
+
+  "hud.nivel": "Fase",
+  "hud.pausa": "Pausa / voltar ao mapa",
+  "hud.pantalla": "Tela cheia",
+  "hud.izq": "Ir para a esquerda",
+  "hud.der": "Ir para a direita",
+  "hud.saltar": "Pular",
+
+  "res.gano": "Você chegou!",
+  "res.perdio": "Acabou",
+  "res.roto": "Alguma coisa quebrou",
+  "res.causa.tiempo": "O tempo acabou",
+  "res.causa.pozo": "No vazio",
+  "res.causa.pinche": "Os espinhos",
+  "res.causa.jefe": "O chefe te venceu",
+  "res.causa.otro": "Um inimigo te venceu",
+  "res.monedas": "Moedas",
+  "res.bonus": "Bônus do mastro",
+  "res.color": "Moedas coloridas",
+  "res.burbujas": "Bolhas que sobraram",
+  "res.tiempo": "Tempo",
+  "res.tiempoDe": "{a}s de {b}",
+  "res.abierto": "Desbloqueado",
+  "tier.rosa": "rosa",
+  "tier.violeta": "roxa",
+  "tier.negra": "preta",
+  "res.abre.violeta": "moedas roxas",
+  "res.abre.negra": "moedas pretas",
+  "res.abre.todo": "tudo feito",
+  "res.seguir": "Próxima",
+  "res.repetir": "De novo",
+  "res.mapa": "Ao mapa",
+  "res.perfecto": "Todas as coloridas!",
+  "res.record": "Novo recorde",
+  "res.total": "Total juntado",
+
+  "ayuda.titulo": "Como se joga",
+
+  "aj.titulo": "Ajustes",
+  "aj.sonido": "Efeitos sonoros",
+  "aj.musica": "Música",
+  "aj.sacudida": "Tremor de tela",
+  "aj.mandos": "Botões na tela",
+  "aj.idioma": "Idioma",
+  "aj.movimiento": "Movimento",
+  "aj.libre": "Livre",
+  "aj.corredor": "Corredor",
+  "aj.nota-mov": "No <b>livre</b> o personagem fica parado até você dizer para onde ir com o direcional. No <b>corredor</b> ele corre sozinho e o direcional só corrige, como nas primeiras versões.",
+  "aj.graficos": "Gráficos",
+  "aj.auto": "Automático",
+  "aj.nitido": "Nítido",
+  "aj.rapido": "Rápido",
+  "aj.nota-graf": "No automático o jogo mede como está indo no seu celular e só baixa a resolução se não alcançar 60 quadros por segundo.",
+  "aj.nota-datos": "Nada disso sai do seu navegador: o progresso fica guardado neste aparelho e não há servidor nem conta.",
+  "aj.borrar": "Apagar todo o progresso",
+  "aj.confirmar": "Apagar todo o progresso? Não dá para desfazer.",
+};
+
+// El texto largo de la ayuda se pega aca y no se escribe en cada diccionario:
+// es un solo bloque por idioma y asi ayuda.js queda como el unico lugar donde
+// se lo edita.
+for (const [cod, tab] of [["es", ES], ["en", EN], ["pt", PT]])
+  tab["ayuda.cuerpo"] = AYUDA[cod];
+
+const TABLA = { es: ES, en: EN, pt: PT };
+
+let actual = "en";
+
+const idioma = () => actual;
+
+function ponerIdioma(cod) {
+  actual = TABLA[cod] ? cod : "en";
+  document.documentElement.lang = { es: "es-AR", en: "en", pt: "pt-BR" }[actual];
+  return actual;
+}
+
+/**
+ * El texto de una clave. Lo que falte en el idioma elegido cae al ingles, y
+ * lo que falte tambien ahi devuelve la clave: un `res.gano` en pantalla se ve
+ * mal a proposito, y asi se encuentra sin tener que leer los tres diccionarios.
+ */
+function t(clave, vars) {
+  let s = TABLA[actual][clave] ?? EN[clave] ?? clave;
+  if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+  return s;
+}
+
+const tituloNivel = (cfg) => NIV[actual]?.[(cfg.m - 1) * 4 + cfg.n - 1] ?? cfg.titulo;
+const nombreTema = (tema, porDefecto) => TEMA[actual]?.[tema] ?? porDefecto ?? tema;
+
+/**
+ * Escribe todos los textos marcados del documento.
+ *
+ * `data-t` pone texto plano; `data-t-html` pone HTML —lo usan los parrafos
+ * con <b> y <em> adentro, y el texto largo de la ayuda—; `data-t-attr` pone
+ * atributos con la forma "aria-label:hud.saltar, title:mapa.t-monedas".
+ *
+ * El HTML de la tabla es NUESTRO, no entra nada del jugador: no hay superficie
+ * de inyeccion. Si algun dia un texto viniera de afuera, esto tiene que pasar
+ * a textContent.
+ */
+function aplicar(raiz = document) {
+  for (const e of raiz.querySelectorAll("[data-t]")) e.textContent = t(e.dataset.t);
+  for (const e of raiz.querySelectorAll("[data-t-html]")) e.innerHTML = t(e.dataset.tHtml);
+  for (const e of raiz.querySelectorAll("[data-t-attr]"))
+    for (const par of e.dataset.tAttr.split(",")) {
+      const [at, clave] = par.split(":").map((s) => s.trim());
+      if (at && clave) e.setAttribute(at, t(clave));
+    }
+  const tit = document.querySelector("title");
+  if (tit) tit.textContent = t("doc.titulo");
+}
+return { IDIOMAS, idioma, ponerIdioma, t, tituloNivel, nombreTema, aplicar };
 })();
 
 /* ── mundo ── */
@@ -1008,9 +1667,18 @@ const V = {
 // que hace el jugador cambia por donde se puede caminar, asi que "validado"
 // vuelve a significar algo. Ademas es lo que hace el juego de referencia: ahi
 // los ladrillos rebotan y sueltan monedas, no se rompen.
+// EL RESORTE TIENE QUE ESTAR ACA, Y NO ESTABA: POR ESO NUNCA FUNCIONO.
+//
+// El rebote se dispara mirando el tile que hay DEBAJO DE LOS PIES cuando el
+// jugador aterriza. Si el resorte no es solido, el jugador nunca aterriza
+// sobre el: lo atraviesa como si fuera aire y el tile de abajo es el piso
+// comun. Se midio con una auditoria que prueba item por item: el resorte
+// levantaba 29 pixeles puesto en el piso y 0 puesto donde lo pone el
+// generador, contra los 110 que da su velocidad. Era el unico item del juego
+// que no hacia nada.
 const SOLIDOS = new Set([V.SOLIDO, V.LADRILLO, V.PREGUNTA, V.PAUSA,
                                 V.TIEMPO, V.TUBO, V.USADO, V.LARGO, V.VOLTERETA,
-                                V.RAJADO]);
+                                V.RAJADO, V.RESORTE]);
 // Los que solo frenan desde arriba.
 const SEMI = new Set([V.PLATAFORMA]);
 const MATAN = new Set([V.PINCHE, V.LAVA]);
@@ -1210,8 +1878,12 @@ const vacio = () => ({
   // en vez de hacer sufrir los primeros segundos en cada partida.
   // auto: true = corredor clasico (corre solo, la cruceta solo corrige).
   //       false = libre: parado quieto hasta que se le diga para donde ir.
+  // idioma: null = todavia no eligio. Es la diferencia entre "no eligio" y
+  // "eligio ingles", y de eso depende si la pantalla de idiomas aparece: con
+  // "en" por defecto no habria forma de distinguirlas y el selector no se
+  // mostraria nunca.
   ajustes: { sonido: true, musica: true, sacudida: true, mandos: true, auto: false,
-             grafico: "auto", graficoAuto: 0 },
+             grafico: "auto", graficoAuto: 0, idioma: null },
 });
 
 let cache = null;
@@ -2292,8 +2964,12 @@ const PIEZAS = [
   armar(p) {
     const w = p.rnd.entero(8, 12); p.ancho = w;
     p.suelo(0, 3); p.suelo(w - 3, w, p.piso - p.rnd.entero(0, 3));
-    p.set(3, p.piso - 1, V.RESORTE);
+    // A RAS DEL PISO, no un tile mas arriba. Puesto arriba, el jugador pasa
+    // por al lado y el tile que tiene debajo de los pies sigue siendo el piso
+    // comun: el rebote no se dispara nunca. Poniendolo COMO la tapa del piso,
+    // pisarlo es aterrizar sobre el.
     p.suelo(3, 4);
+    p.set(3, p.piso, V.RESORTE);
     for (let i = 0; i < 4; i++) p.moneda(4 + i, p.piso - 7 - i);
     p.marcarColor(5, p.piso - 11, "alto");
     for (let i = 4; i < w - 3; i++) if (p.tema === "castillo") p.set(i, ALTO_TILES - 2, V.LAVA);
@@ -3812,7 +4488,14 @@ class Partida {
       this.chispas(j.x, j.y - 6, "#ffe08a", 10);
       this.texto(j.x, j.y - 24, "¡triple!", "#ffd447");
     }
-    if (ev.resorte) efe.resorte();
+    if (ev.resorte) {
+      efe.resorte();
+      // Marcarlo es lo que hace que el resorte se dibuje comprimiendose: sin
+      // esto rebotaba sin moverse un pixel y parecia que el salto salia de la
+      // nada.
+      this.marcarTile(Math.floor(j.x / T), Math.floor((j.y + 1) / T));
+      this.chispas(j.x, j.y, "#ffe08a", 6);
+    }
     if (ev.saltoLargo) { efe.resorte(); this.texto(j.x, j.y - 22, "¡largo!", "#6aa8f0"); }
     if (ev.voltereta) { efe.saltoAlto(); this.texto(j.x, j.y - 22, "¡arriba!", "#d28ae8"); }
     if (ev.pausa) efe.pausa();
@@ -4620,6 +5303,7 @@ const { NIVELES, idNivel, TEMAS } = M_mundo;
 const { cargar, guardar, datosNivel, tierActual, borrarTodo, abierto, abrirSiguiente, indiceNivel, proximoNivel } = M_guardado;
 const { efe, despertar, volumen } = M_audio;
 const { ruta } = M_assets;
+const { t, tituloNivel, nombreTema, IDIOMAS, ponerIdioma, aplicar } = M_idioma;
 const $ = (s) => document.querySelector(s);
 const crear = (tag, clase, texto) => {
   const e = document.createElement(tag);
@@ -4662,8 +5346,9 @@ function pintarInicio() {
   // seguir, y despues de tres sesiones uno no se acuerda por donde iba.
   const { m, n } = proximoNivel();
   const cfg = NIVELES.find((c) => c.m === m && c.n === n);
-  poner("#bt-jugar-txt", hechos ? "Seguir" : "Jugar");
-  poner("#bt-jugar-sub", cfg ? `Mundo ${m}-${n} · ${cfg.titulo}` : `Mundo ${m}-${n}`);
+  poner("#bt-jugar-txt", hechos ? t("inicio.seguir") : t("inicio.jugar"));
+  const donde = `${t("comun.mundo")} ${m}-${n}`;
+  poner("#bt-jugar-sub", cfg ? `${donde} · ${tituloNivel(cfg)}` : donde);
 }
 
 // --- mapa de mundos ------------------------------------------------------
@@ -4696,7 +5381,7 @@ function pintarMapa(alElegir) {
     const temaMundo = NIVELES.find((c) => c.m === m).tema;
 
     const cab = crear("header", "cab-mundo");
-    cab.append(crear("h2", null, `Mundo ${m}`));
+    cab.append(crear("h2", null, `${t("comun.mundo")} ${m}`));
     const hechosM = [1, 2, 3, 4].filter((n) => datosNivel(idNivel(m, n)).hecho).length;
     const av = crear("div", "avance");
     const avi = crear("i"); avi.style.width = `${hechosM / 4 * 100}%`;
@@ -4754,10 +5439,11 @@ function pintarMapa(alElegir) {
       // otra, en el orden en que se juegan. Es lo que da la sensacion de
       // recorrido en vez de la de lista.
       b.style.setProperty("--tarde", `${(m - 1) * 60 + n * 70}ms`);
-      b.title = `${id} · ${cfg.titulo}`;
+      b.title = `${id} · ${tituloNivel(cfg)}`;
       b.setAttribute("aria-label",
-        `${id}, ${cfg.titulo}, ${TEMAS[cfg.tema].nombre}${cfg.jefe ? ", jefe" : ""}` +
-        (libre ? (dn.hecho ? ", terminado" : "") : ", cerrado"));
+        `${id}, ${tituloNivel(cfg)}, ${nombreTema(cfg.tema, TEMAS[cfg.tema].nombre)}` +
+        (cfg.jefe ? ", " + t("comun.jefe") : "") +
+        (libre ? (dn.hecho ? ", " + t("comun.terminado") : "") : ", " + t("comun.cerrado")));
 
       const disco = crear("span", "disco");
       // La postal del propio nivel, adentro del disco: es el mismo fondo que
@@ -4771,7 +5457,7 @@ function pintarMapa(alElegir) {
       }
       disco.append(crear("b", null, cfg.jefe ? "★" : String(n)));
       b.append(disco);
-      b.append(crear("span", "rotulo", cfg.titulo));
+      b.append(crear("span", "rotulo", tituloNivel(cfg)));
       const pips = crear("span", "colores");
       for (const k of ["rosa", "violeta", "negra"])
         pips.append(crear("i", "pip " + k + (dn.color[k] ? " ok" : "")));
@@ -4785,7 +5471,7 @@ function pintarMapa(alElegir) {
         // superponia al numero y al rotulo — y ademas quedaba a merced del
         // origen del transform.
         const h = crear("img", "heroe-ficha");
-        h.alt = ""; h.title = "estás acá";
+        h.alt = ""; h.title = t("comun.aqui");
         h.src = ruta("assets/piezas/ficha_heroe.webp");
         b.append(h);
       }
@@ -4889,16 +5575,43 @@ function pintarHud(p) {
 }
 
 // --- resultado -----------------------------------------------------------
+/**
+ * Los papelitos del panel de ganar.
+ *
+ * Son divs con una animacion de CSS y no particulas en el canvas: el canvas ya
+ * no se esta dibujando cuando aparece este panel —el bucle esta detenido— asi
+ * que hacerlo ahi obligaria a mantenerlo vivo solo para esto. Treinta y dos
+ * elementos con `animation` los mueve el compositor, sin JavaScript por cuadro.
+ *
+ * Se crean de nuevo en cada victoria porque hay que REINICIAR la animacion:
+ * dejarlos puestos hace que la segunda vez el panel aparezca con los papelitos
+ * ya caidos.
+ */
+const COLORES_PAPEL = ["#ffd447", "#ff6b6b", "#5ad2ff", "#8affc1", "#c48aff", "#ffffff"];
+function papelitos(caja) {
+  caja.innerHTML = "";
+  for (let i = 0; i < 32; i++) {
+    const c = crear("i");
+    c.style.left = `${(i * 97) % 100}%`;
+    c.style.background = COLORES_PAPEL[i % COLORES_PAPEL.length];
+    c.style.animationDelay = `${(i % 8) * 0.14}s`;
+    c.style.animationDuration = `${1.6 + (i % 5) * 0.28}s`;
+    c.style.setProperty("--giro", `${(i % 2 ? 1 : -1) * (180 + i * 23)}deg`);
+    caja.append(c);
+  }
+}
+
 function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
   const id = idNivel(cfg.m, cfg.n);
   const dn = datosNivel(id);
   const d = cargar();
 
   const todas = p.color.every((m) => m.tomada);
+  const usado = Math.round((p.segundos * 60 - p.reloj) / 60);
+  const record = gano && dn.hecho && dn.mejorTiempo && usado < dn.mejorTiempo;
   if (gano) {
     d.monedas += p.monedas;
-    const t = Math.round((p.segundos * 60 - p.reloj) / 60);
-    if (!dn.hecho || t < dn.mejorTiempo || !dn.mejorTiempo) dn.mejorTiempo = t;
+    if (!dn.hecho || usado < dn.mejorTiempo || !dn.mejorTiempo) dn.mejorTiempo = usado;
     dn.monedas = Math.max(dn.monedas, p.monedas);
     dn.hecho = true;
     if (todas) dn.color[p.tier] = true;
@@ -4909,22 +5622,53 @@ function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
     guardar();
   }
 
-  $("#res-titulo").textContent = gano ? "¡Llegaste!" : "Se acabó";
-  $("#res-sub").textContent = gano
-    ? `${cfg.titulo} · ${id}`
-    : { tiempo: "Se terminó el tiempo", pozo: "Al vacío", pinche: "Las púas",
-        jefe: "El jefe te ganó" }[p.causa] || "Un enemigo te ganó";
+  $("#res-titulo").textContent = gano ? t("res.gano") : t("res.perdio");
+  // Una causa que no tenga texto propio cae a "un enemigo te gano". `t`
+  // devuelve la clave cuando no la encuentra, y eso es justo lo que se mira.
+  const causa = "res.causa." + p.causa;
+  $("#res-sub").textContent = gano ? `${tituloNivel(cfg)} · ${id}`
+                                   : (t(causa) === causa ? t("res.causa.otro") : t(causa));
   $("#res-panel").className = gano ? "res ganado" : "res perdido";
 
+  // LAS TRES ESTRELLAS. Terminar da una; las cinco monedas de color, otra; y
+  // sobrar mas del 40% del reloj, la tercera. Tres criterios que el jugador
+  // puede deducir mirando la lista de abajo, no un puntaje secreto.
+  const estrellas = gano ? 1 + (todas ? 1 : 0) + (p.reloj > p.segundos * 60 * 0.4 ? 1 : 0) : 0;
+  const est = $("#res-estrellas");
+  if (est) {
+    est.innerHTML = "";
+    est.hidden = !gano;
+    for (let i = 0; i < 3; i++) {
+      const e = crear("span", "estrella" + (i < estrellas ? " ok" : ""), "★");
+      e.style.animationDelay = `${0.25 + i * 0.22}s`;
+      est.append(e);
+    }
+  }
+  const heroe = $("#res-heroe");
+  if (heroe) {
+    heroe.hidden = !gano;
+    if (gano && !heroe.src) heroe.src = ruta("assets/piezas/ficha_heroe.webp");
+  }
+  const conf = $("#res-confeti");
+  if (conf) { if (gano) papelitos(conf); else conf.innerHTML = ""; }
+
   const l = $("#res-lista"); l.innerHTML = "";
-  const item = (k, v) => { const li = crear("li"); li.append(crear("span", "k", k), crear("span", "v", String(v))); l.append(li); };
-  item("Monedas", p.monedas);
-  if (gano) item("Bonus del mástil", "+" + (p.premio ?? 0));
-  item("Monedas de color", `${p.color.filter((m) => m.tomada).length}/5 ${p.tier}`);
-  item("Burbujas que quedaron", p.burbujas);
-  if (gano) item("Tiempo", `${Math.round((p.segundos * 60 - p.reloj) / 60)}s de ${p.segundos}`);
-  if (gano && todas) item("Desbloqueado", p.tier === "rosa" ? "monedas violetas"
-                                        : p.tier === "violeta" ? "monedas negras" : "todo hecho");
+  const item = (k, v, clase) => {
+    const li = crear("li", clase);
+    li.append(crear("span", "k", k), crear("span", "v", String(v)));
+    l.append(li);
+  };
+  item(t("res.monedas"), p.monedas);
+  if (gano) item(t("res.bonus"), "+" + (p.premio ?? 0));
+  item(t("res.color"), `${p.color.filter((m) => m.tomada).length}/5 ${t("tier." + p.tier)}`,
+       gano && todas ? "hito" : null);
+  item(t("res.burbujas"), p.burbujas);
+  if (gano) item(t("res.tiempo"), t("res.tiempoDe", { a: usado, b: p.segundos }),
+                 record ? "hito" : null);
+  if (gano) item(t("res.total"), d.monedas);
+  if (gano && todas) item(t("res.abierto"), p.tier === "rosa" ? t("res.abre.violeta")
+                                          : p.tier === "violeta" ? t("res.abre.negra")
+                                          : t("res.abre.todo"), "hito");
 
   $("#res-seguir").hidden = !gano;
   $("#res-seguir").onclick = () => { efe.menu(); alSeguir(); };
@@ -4934,8 +5678,50 @@ function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
 }
 
 // --- ajustes -------------------------------------------------------------
-function montarAjustes(alCambiarGrafico) {
+/**
+ * La pantalla de idioma, la primera vez y nada mas.
+ *
+ * Devuelve una promesa que se resuelve cuando ya hay idioma: si el jugador ya
+ * eligio alguna vez, se resuelve al instante y la pantalla ni aparece. Asi el
+ * que arranca por segunda vez no paga el peaje de volver a elegir.
+ */
+function elegirIdioma() {
   const d = cargar();
+  const guardado = d.ajustes.idioma;
+  if (guardado && IDIOMAS[guardado]) { ponerIdioma(guardado); aplicar(); return Promise.resolve(false); }
+  ponerIdioma("en"); aplicar();
+  mostrar("p-idioma");
+  return new Promise((listo) => {
+    for (const b of document.querySelectorAll("#idiomas [data-idioma]"))
+      b.addEventListener("click", () => {
+        despertar(); efe.menu();
+        d.ajustes.idioma = ponerIdioma(b.dataset.idioma);
+        guardar(); aplicar();
+        listo(true);
+      }, { once: true });
+  });
+}
+
+// El selector de idioma de Ajustes. Cambiar de idioma repinta TODO lo que ya
+// esta escrito —incluido el menu, que tiene textos armados en JavaScript— y
+// por eso avisa con `alCambiarIdioma` en vez de tocar el DOM del mapa desde
+// aca: quien sabe repintar cada pantalla es la pantalla.
+function montarAjustes(alCambiarGrafico, alCambiarIdioma) {
+  const d = cargar();
+  const idm = $("#aj-idioma");
+  if (idm) {
+    const pintarIdm = () => {
+      for (const b of idm.querySelectorAll("[data-idioma]"))
+        b.classList.toggle("puesto", (d.ajustes.idioma || "en") === b.dataset.idioma);
+    };
+    for (const b of idm.querySelectorAll("[data-idioma]"))
+      b.addEventListener("click", () => {
+        d.ajustes.idioma = ponerIdioma(b.dataset.idioma);
+        guardar(); aplicar(); pintarIdm();
+        if (alCambiarIdioma) alCambiarIdioma(d.ajustes.idioma);
+      });
+    pintarIdm();
+  }
   // El selector de graficos. Quien sabe aplicar el cambio es main.js —es el
   // que tiene el lienzo y los patrones—, asi que aca solo se guarda y se
   // avisa.
@@ -4982,12 +5768,12 @@ function montarAjustes(alCambiarGrafico) {
   };
   for (const e of [sonido, musica, sac, mandos]) if (e) e.addEventListener("change", aplicar);
   $("#aj-borrar").addEventListener("click", () => {
-    if (!confirm("¿Borrar todo el progreso? No se puede deshacer.")) return;
+    if (!confirm(t("aj.confirmar"))) return;
     borrarTodo(); location.reload();
   });
   aplicar();
 }
-return { mostrar, pintarInicio, pintarMapa, pantallaCompleta, ponerIconos, pintarHud, pintarResultado, montarAjustes, $, crear };
+return { mostrar, pintarInicio, pintarMapa, pantallaCompleta, ponerIconos, pintarHud, pintarResultado, elegirIdioma, montarAjustes, $, crear };
 })();
 
 /* ── assets embebidos ── */
@@ -4995,6 +5781,8 @@ M_assets.registrar({"assets/hojas/aleta_volar.webp": "data:image/webp;base64,Ukl
 
 /* ── modulos visibles para las pruebas ── */
 window.M_assets = M_assets;
+window.M_ayuda = M_ayuda;
+window.M_idioma = M_idioma;
 window.M_mundo = M_mundo;
 window.M_azar = M_azar;
 window.M_guardado = M_guardado;
@@ -5021,6 +5809,7 @@ const { despertar, efe, pararMusica, volumen, cargarPistas } = M_audio;
 const { cargarTodas } = M_sprites;
 const { registrarPiezas } = M_dibujo;
 const { ruta } = M_assets;
+const { t, tituloNivel } = M_idioma;
 const $ = UI.$;
 const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
@@ -5203,12 +5992,15 @@ function alMapa() {
   UI.mostrar("p-mapa");
 }
 
-function empezar(m, n) {
+async function empezar(m, n) {
   cfgActual = buscarNivel(m, n);
   tierActualN = tierActual(idNivel(m, n));
-  $("#gen-nivel").textContent = `${idNivel(m, n)} · ${cfgActual.titulo}`;
-  $("#gen-detalle").textContent = "Armando y comprobando que se pueda terminar…";
+  $("#gen-nivel").textContent = `${idNivel(m, n)} · ${tituloNivel(cfgActual)}`;
+  $("#gen-detalle").textContent = t("gen.armando");
   UI.mostrar("p-generando");
+  // El fondo del tema, si todavia no esta. Tarda unos milisegundos la primera
+  // vez y nada las siguientes; la pantalla "Armando…" ya esta puesta.
+  await capasDe(cfgActual.tema);
   // Dos cuadros de espera antes de generar: generar bloquea el hilo hasta un
   // segundo, y sin ceder el control la pantalla "generando" no llega a
   // pintarse nunca — el jugador ve un cuelgue en vez de un aviso.
@@ -5217,13 +6009,15 @@ function empezar(m, n) {
     const t0 = performance.now();
     const nv = generarNivel(cfgActual, tierActualN);
     const ms = Math.round(performance.now() - t0);
-    partida = new Partida(nv, tierActualN, hojas, patrones[nv.tema] || null, capas[nv.tema] || {});
+    partida = new Partida(nv, tierActualN, hojas, patrones[nv.tema] || null,
+                          capasCache.get(nv.tema) || {});
     partida.escenaHongo = escenaHongo;
-    $("#hud-nivel").textContent = `Mundo ${m}-${n} · ${cfgActual.titulo}`;
+    $("#hud-nivel").textContent = `${t("comun.mundo")} ${m}-${n} · ${tituloNivel(cfgActual)}`;
   $("#hud-num").textContent = String((m - 1) * 4 + n);
     $("#hud-gen").textContent = nv.validacion.fallo
-      ? "sin validar"
-      : `validado en ${nv.validacion.intentos} ${nv.validacion.intentos === 1 ? "intento" : "intentos"} · ${ms} ms`;
+      ? t("gen.sinvalidar")
+      : `${nv.validacion.intentos === 1 ? t("gen.validado1")
+                                        : t("gen.validadoN", { n: nv.validacion.intentos })} · ${ms} ms`;
     UI.mostrar("p-juego");
     } catch (e) {
       // Sin esto, un error armando el nivel deja la pantalla "Armando y
@@ -5252,7 +6046,7 @@ function seRompio(e, donde) {
   const p = partida;
   partida = null;
   try {
-    $("#res-titulo").textContent = "Se rompió algo";
+    $("#res-titulo").textContent = t("res.roto");
     $("#res-sub").textContent = `${e && e.message ? e.message : e} (en ${donde})`;
     $("#res-panel").className = "res perdido";
     $("#res-lista").innerHTML = "";
@@ -5420,19 +6214,21 @@ const TEMAS_TILE = ["llano", "subte", "castillo", "desierto", "cielo", "nave", "
  * banda YA venia recortada, el degradado no cambia nada visible porque arriba
  * no hay nada que desvanecer.
  */
-function desvanecerArriba(img, frac = 0.34) {
+function desvanecerArriba(img, frac = 0.34, altoMax = 0) {
   try {
+    const esc = altoMax > 0 ? Math.min(1, altoMax / img.height) : 1;
     const l = document.createElement("canvas");
-    l.width = img.width; l.height = img.height;
+    l.width = Math.max(1, Math.round(img.width * esc));
+    l.height = Math.max(1, Math.round(img.height * esc));
     const c = l.getContext("2d");
-    c.drawImage(img, 0, 0);
-    const g = c.createLinearGradient(0, 0, 0, img.height * frac);
+    c.drawImage(img, 0, 0, l.width, l.height);
+    const g = c.createLinearGradient(0, 0, 0, l.height * frac);
     g.addColorStop(0, "rgba(0,0,0,1)");
     g.addColorStop(0.55, "rgba(0,0,0,0.45)");
     g.addColorStop(1, "rgba(0,0,0,0)");
     c.globalCompositeOperation = "destination-out";
     c.fillStyle = g;
-    c.fillRect(0, 0, img.width, img.height * frac);
+    c.fillRect(0, 0, l.width, l.height * frac);
     return l;
   } catch (e) {
     return img;          // sin canvas auxiliar, mejor la banda dura que nada
@@ -5465,6 +6261,53 @@ function hacerPatron(img) {
   return pat;
 }
 
+// --- los fondos, de a un tema por vez ------------------------------------
+//
+// SE CARGABAN LOS OCHO TEMAS AL ARRANCAR, Y ESO ERA EL LAG.
+//
+// Son veinticuatro imagenes de 1024x572. Decodificadas ocupan 2,3 MB cada una
+// —un pixel son cuatro bytes, siempre, sin importar lo que pese el archivo—,
+// o sea 56 MB. Y las dieciseis bandas se copian ademas a un lienzo para
+// desvanecerles el borde de arriba: otros 37 MB. Mas las hojas de sprites, que
+// se midieron en 23. Pasa de cien megas de mapas de bits vivos al mismo
+// tiempo, en un telefono, para dibujar UN tema.
+//
+// Cuando la memoria de graficos se llena, el navegador empieza a tirar mapas
+// de bits y a volver a decodificarlos cuando los necesita: eso es un tiron de
+// decenas de milisegundos EN MEDIO DEL CUADRO, y se siente como lo que se
+// reporto — que va lento aunque el juego no este haciendo nada raro.
+//
+// Ahora se carga el tema que se va a jugar, y se guardan los dos ultimos: 6 MB
+// en vez de 93. Volver a un tema reciente sigue siendo instantaneo.
+const capasCache = new Map();
+const capasOrden = [];
+
+function capasDe(tema) {
+  const guardado = capasCache.get(tema);
+  if (guardado) return Promise.resolve(guardado);
+  const c = {};
+  const p = Promise.all(["cielo", "lejos", "cerca"].map((cp) => new Promise((ok) => {
+    const img = new Image();
+    img.onload = () => {
+      // La banda se guarda ya achicada a lo MAS GRANDE que se va a dibujar.
+      // Guardar el original de 1024 no agrega un pixel de detalle —nunca se
+      // dibuja a mas de 220 pixeles de juego de alto— y cuesta cinco veces
+      // mas memoria.
+      c[cp] = cp === "cielo" ? img : desvanecerArriba(img, 0.34, 220 * GRAF.esc);
+      ok();
+    };
+    img.onerror = () => ok();
+    img.src = ruta(`assets/fondo/${tema}_${cp}.webp`);
+  }))).then(() => {
+    capasCache.set(tema, c);
+    capasOrden.push(tema);
+    while (capasOrden.length > 2) capasCache.delete(capasOrden.shift());
+    capas[tema] = c;
+    return c;
+  });
+  return p;
+}
+
 function cargarPatron(tema) {
   return new Promise((ok) => {
     const img = new Image();
@@ -5485,7 +6328,7 @@ function calidad(esc) {
   esc = Math.max(1, Math.min(3, Math.round(esc)));
   if (esc === GRAF.esc) return;
   GRAF.esc = esc;
-  for (const t of TEMAS_TILE) if (imgsTile[t]) patrones[t] = hacerPatron(imgsTile[t]);
+  for (const tm of TEMAS_TILE) if (imgsTile[tm]) patrones[tm] = hacerPatron(imgsTile[tm]);
   if (partida) partida.patron = patrones[partida.nv.tema] || null;
   redimensionar();
 }
@@ -5499,10 +6342,18 @@ function calidad(esc) {
     GRAF.esc = g === "auto" ? (cargar().ajustes.graficoAuto || 2)
                             : Math.max(1, Math.min(3, Number(g) || 2));
   }
-  $("#carga-detalle").textContent = "Cargando sprites…";
+  // EL IDIOMA SE ELIGE MIENTRAS CARGA, no antes. Las dos cosas arrancan a la
+  // vez: el que elige rapido no espera dos veces, y el que se toma su tiempo
+  // encuentra el juego ya cargado. Si todavia falta cuando elige, vuelve la
+  // pantalla de carga para que vea que algo sigue pasando.
+  let cargado = false;
+  const eligiendo = UI.elegirIdioma();
+  eligiendo.then((eligio) => { if (eligio && !cargado) UI.mostrar("p-carga"); });
+
+  $("#carga-detalle").textContent = t("carga.sprites");
   hojas = await cargarTodas(HOJAS.map(([k, c, f]) => [k, `assets/hojas/${k}.webp`, c, f]));
   const faltan = HOJAS.filter(([k]) => !hojas[k]).map(([k]) => k);
-  await Promise.all(TEMAS_TILE.map(async (t) => { patrones[t] = await cargarPatron(t); }));
+  await Promise.all(TEMAS_TILE.map(async (tm) => { patrones[tm] = await cargarPatron(tm); }));
   // Las piezas sueltas: tubos e iconos del HUD.
   const PIEZAS = ["tubo_boca", "tubo_cuerpo", "plataforma",
                  "icono_moneda", "icono_burbuja", "icono_reloj", "ficha_heroe"];
@@ -5514,18 +6365,10 @@ function calidad(esc) {
     img.src = ruta(`assets/piezas/${k}.webp`);
   })));
   registrarPiezas(ps);
-  // Los fondos: tres capas por tema. Se cargan todas al arrancar porque el
-  // jugador puede saltar a cualquier mundo desde el mapa.
-  $("#carga-detalle").textContent = "Cargando fondos…";
-  await Promise.all(TEMAS_TILE.flatMap((tema) => {
-    capas[tema] = {};
-    return ["cielo", "lejos", "cerca"].map((cp) => new Promise((ok) => {
-      const img = new Image();
-      img.onload = () => { capas[tema][cp] = cp === "cielo" ? img : desvanecerArriba(img); ok(); };
-      img.onerror = () => ok();
-      img.src = ruta(`assets/fondo/${tema}_${cp}.webp`);
-    }));
-  }));
+  // Los fondos NO se cargan todos aca: ver capasDe(). Se carga el del primer
+  // tema nada mas, para que el primer nivel entre sin esperar.
+  $("#carga-detalle").textContent = t("carga.fondos");
+  await capasDe("llano");
   // La escena del hongo arcoiris: veinticuatro fotogramas sacados de un video
   // generado, en una grilla de 4x6. No pasa por cargarHoja a proposito: esa
   // mide el recorte leyendo el alfa de la hoja entera, y aca son fotogramas
@@ -5542,7 +6385,11 @@ function calidad(esc) {
   // cuando llega. Bloquear el arranque por 400 KB es regalar el primer segundo.
   cargarPistas({ llano: "assets/snd/llano.mp3", subte: "assets/snd/subte.mp3",
                  castillo: "assets/snd/castillo.mp3" });
-  UI.montarAjustes((g) => calidad(g === "auto" ? (cargar().ajustes.graficoAuto || 2) : g));
+  UI.montarAjustes(
+    (g) => calidad(g === "auto" ? (cargar().ajustes.graficoAuto || 2) : g),
+    // Cambiar de idioma no alcanza con reescribir los `data-t`: el menu y el
+    // mapa arman sus textos en JavaScript y hay que volver a pintarlos.
+    () => { if (!$("#p-mapa").hidden) UI.pintarMapa(empezar); UI.pintarInicio(); });
   // El arte de portada, de fondo del menu.
   const arte = new Image();
   arte.onload = () => { $("#p-inicio").style.backgroundImage = `url(${arte.src})`; };
@@ -5556,13 +6403,21 @@ function calidad(esc) {
     $("#p-inicio .logo").hidden = true;
   };
   lg.src = ruta("assets/logo.webp");
-  UI.mostrar("p-inicio");
+  cargado = true;
   redimensionar();
   requestAnimationFrame(bucle);
+  // PIQUE se publica ANTES de esperar la eleccion de idioma y no despues.
+  // Las pruebas —y cualquier cosa de afuera— esperan a que exista para saber
+  // que el juego cargo; si se publicara despues, un guardado vacio lo dejaria
+  // colgado en la pantalla de idiomas para siempre sin que nadie sepa que ya
+  // estaba todo listo.
   window.PIQUE = {
     get partida() { return partida; }, get cfg() { return cfgActual; },
     empezar, alMapa, entrada, NIVELES, hojas, faltan, calidad, GRAF, VIG, vigilar,
+    get capas() { return Object.fromEntries(capasCache); },
   };
+  await eligiendo;
+  UI.mostrar("p-inicio");
 })();
 
 

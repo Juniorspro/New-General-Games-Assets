@@ -7,6 +7,7 @@
 // el telefono, y ahi el juego se arrastra. Lo que se prueba es la salida: que
 // el juego MIDA como va y baje solo, y que el jugador pueda fijarlo a mano.
 import { chromium } from "playwright";
+import { pasarIdioma } from "./_idioma.mjs";
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const pg = await nav.newPage({ viewport: { width: 390, height: 844 } });
 const err = []; pg.on("pageerror", e => err.push(e.message));
@@ -14,6 +15,7 @@ await pg.goto("http://127.0.0.1:8802/index.html");
 await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
 await pg.evaluate(() => localStorage.clear());
 await pg.reload(); await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
+await pasarIdioma(pg);
 
 let ok = 0, mal = 0;
 const ch = (n, c, d = "") => { c ? (ok++, console.log(`  ✓ ${n}${d ? " — " + d : ""}`))
@@ -41,6 +43,7 @@ ch("y lo deja anotado para la proxima", tras.guardado === 1, `graficoAuto=${tras
 // Y con cuadros rapidos NO la baja.
 await pg.evaluate(() => localStorage.clear());
 await pg.reload(); await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
+await pasarIdioma(pg);
 await pg.evaluate(() => window.PIQUE.empezar(1, 1));
 await pg.waitForSelector("#p-juego:not([hidden])", { timeout: 40000 });
 const rapido = await pg.evaluate(() => {
@@ -69,6 +72,7 @@ ch("el boton elegido queda marcado",
 // Y que lo elegido a mano sobreviva a recargar.
 await pg.click('[data-graf="1"]');
 await pg.reload(); await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
+await pasarIdioma(pg);
 const m3 = await lienzo();
 ch("y sobrevive a recargar la pagina", m3.esc === 1, `esc ${m3.esc}`);
 

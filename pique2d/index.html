@@ -14,28 +14,51 @@
      Adentro de #p-juego quedaba despues del HUD en el orden del documento, y
      como #p-juego crea su propio contexto de apilamiento (z-index 2), el
      canvas con z-index 0 se pintaba ENCIMA del HUD. El HUD existia, se podia
-     tocar, tenia su fondo aplicado — y no se veia. -->
+     tocar, tenia su fondo aplicado — y no se veia.
+
+     LOS TEXTOS EN CASTELLANO QUE SIGUEN SON EL RESPALDO, no lo que se
+     muestra: js/idioma.js los reescribe en el idioma elegido apenas carga,
+     usando los `data-t`. Quedan escritos igual para que la pagina se pueda
+     leer si el modulo no carga. -->
 <canvas id="lienzo" width="256" height="144" aria-label="El nivel"></canvas>
 
 <!-- ───────────── inicio ───────────── -->
 <main id="p-carga" class="pantalla centrado">
   <div class="caja"><div class="girador" aria-hidden="true"></div>
-  <h2>Pique</h2><p id="carga-detalle" class="bajada">Arrancando…</p></div>
+  <h2>Pique</h2><p id="carga-detalle" class="bajada" data-t="carga.arrancando">Arrancando…</p></div>
+</main>
+
+<!-- ───────────── idioma ─────────────
+     Va ANTES del menu y una sola vez: la primera vez que se abre el juego.
+     Despues se cambia en Ajustes. Preguntar en cada arranque seria un peaje;
+     no preguntar nunca deja al que no lee ingles adivinando cual de los
+     cuatro botones es "Jugar". -->
+<main id="p-idioma" class="pantalla centrado" hidden>
+  <div class="caja caja-idioma">
+    <h1 class="logo">Pique</h1>
+    <h2 data-t="idioma.titulo">Elegí tu idioma</h2>
+    <div class="botones" id="idiomas">
+      <button class="grande" data-idioma="en"><span class="bandera" aria-hidden="true">EN</span> English</button>
+      <button class="grande" data-idioma="es"><span class="bandera" aria-hidden="true">ES</span> Español</button>
+      <button class="grande" data-idioma="pt"><span class="bandera" aria-hidden="true">PT</span> Português</button>
+    </div>
+    <p class="pie" data-t="idioma.bajada">Se puede cambiar después en Ajustes.</p>
+  </div>
 </main>
 
 <main id="p-inicio" class="pantalla centrado" hidden>
   <div class="caja caja-inicio">
     <img id="logo-img" class="logo-img" alt="Pique" hidden>
     <h1 class="logo">Pique</h1>
-    <p class="bajada">Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.</p>
+    <p class="bajada" data-t-html="inicio.bajada">Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.</p>
 
     <!-- La vitrina: lo que llevás hecho, de un vistazo. Un menu que no dice
          nada de tu partida es una puerta; uno que la muestra es un lugar al
          que volvés. -->
     <div class="vitrina">
-      <div class="vit"><img id="ico-vit-moneda" alt="" class="ico"><b id="vit-monedas">0</b><span>monedas</span></div>
-      <div class="vit"><b id="vit-niveles">0/24</b><span>niveles</span></div>
-      <div class="vit"><b id="vit-color">0/72</b><span>de color</span></div>
+      <div class="vit"><img id="ico-vit-moneda" alt="" class="ico"><b id="vit-monedas">0</b><span data-t="inicio.monedas">monedas</span></div>
+      <div class="vit"><b id="vit-niveles">0/24</b><span data-t="inicio.niveles">niveles</span></div>
+      <div class="vit"><b id="vit-color">0/72</b><span data-t="inicio.color">de color</span></div>
     </div>
     <div class="barra-progreso"><i id="vit-barra"></i></div>
 
@@ -44,22 +67,22 @@
         <span class="bt-linea"><span class="bt-ico" aria-hidden="true">▶</span> <span id="bt-jugar-txt">Jugar</span></span>
         <small id="bt-jugar-sub">Mundo 1-1</small>
       </button>
-      <button id="btn-niveles" class="grande"><span class="bt-ico" aria-hidden="true">▦</span> Niveles</button>
-      <button id="btn-comojuego" class="grande"><span class="bt-ico" aria-hidden="true">?</span> Cómo se juega</button>
-      <button id="btn-ajustes" class="grande"><span class="bt-ico" aria-hidden="true">⚙</span> Ajustes</button>
+      <button id="btn-niveles" class="grande"><span class="bt-ico" aria-hidden="true">▦</span> <span data-t="inicio.btn-niveles">Niveles</span></button>
+      <button id="btn-comojuego" class="grande"><span class="bt-ico" aria-hidden="true">?</span> <span data-t="inicio.btn-ayuda">Cómo se juega</span></button>
+      <button id="btn-ajustes" class="grande"><span class="bt-ico" aria-hidden="true">⚙</span> <span data-t="inicio.btn-ajustes">Ajustes</span></button>
     </div>
-    <p class="pie">24 niveles · generados por código · ninguno dibujado a mano</p>
+    <p class="pie" data-t="inicio.pie">24 niveles · generados por código · ninguno dibujado a mano</p>
   </div>
 </main>
 
 <!-- ───────────── mapa ───────────── -->
 <main id="p-mapa" class="pantalla" hidden>
   <header class="barra">
-    <button data-volver="p-inicio" class="chico">← Atrás</button>
+    <button data-volver="p-inicio" class="chico" data-t="comun.atras">← Atrás</button>
     <div class="marcadores">
-      <span title="monedas juntadas">🪙 <b id="total-monedas">0</b></span>
-      <span title="niveles terminados">🏁 <b id="total-niveles">0/24</b></span>
-      <span title="monedas de color: rosa · violeta · negra">🎯 <b id="total-color">0/24</b></span>
+      <span data-t-attr="title:mapa.t-monedas" title="monedas juntadas">🪙 <b id="total-monedas">0</b></span>
+      <span data-t-attr="title:mapa.t-niveles" title="niveles terminados">🏁 <b id="total-niveles">0/24</b></span>
+      <span data-t-attr="title:mapa.t-color" title="monedas de color: rosa · violeta · negra">🎯 <b id="total-color">0/24</b></span>
     </div>
   </header>
   <div id="mapa" class="mapa"></div>
@@ -70,18 +93,18 @@
   <div class="caja">
     <div class="girador" aria-hidden="true"></div>
     <h2 id="gen-nivel">—</h2>
-    <p id="gen-detalle" class="bajada">Armando…</p>
+    <p id="gen-detalle" class="bajada" data-t="gen.armando">Armando…</p>
   </div>
 </main>
 
 <!-- ───────────── juego ───────────── -->
 <main id="p-juego" class="pantalla juego" hidden>
   <div class="hud">
-    <button id="hud-salir" class="hud-btn" aria-label="Pausa / volver al mapa">
+    <button id="hud-salir" class="hud-btn" data-t-attr="aria-label:hud.pausa" aria-label="Pausa / volver al mapa">
       <span class="pausa"></span>
     </button>
     <div class="hud-titulo">
-      <span class="hud-curso">Nivel</span>
+      <span class="hud-curso" data-t="hud.nivel">Nivel</span>
       <span id="hud-num" class="hud-num">1</span>
     </div>
     <div class="hud-monedas">
@@ -99,110 +122,88 @@
     <span id="hud-nivel" class="hud-mundo">—</span>
     <span id="hud-gen" class="hud-gen">—</span>
   </div>
-  <button id="hud-pantalla" class="hud-btn hud-pantalla" aria-label="Pantalla completa">⛶</button>
+  <button id="hud-pantalla" class="hud-btn hud-pantalla" data-t-attr="aria-label:hud.pantalla" aria-label="Pantalla completa">⛶</button>
 
   <!-- Los mandos. Tocar el lienzo sigue saltando: estos botones no
        reemplazan nada, le ponen un lugar fijo y visible a lo que ya se
        podia hacer, y agregan el unico control que faltaba: darse vuelta. -->
   <div id="mandos" class="mandos">
     <div class="cruceta" id="cruceta">
-      <button class="mando dir izq" data-dir="izq" aria-label="Ir a la izquierda">◀</button>
-      <button class="mando dir der" data-dir="der" aria-label="Ir a la derecha">▶</button>
+      <button class="mando dir izq" data-dir="izq" data-t-attr="aria-label:hud.izq" aria-label="Ir a la izquierda">◀</button>
+      <button class="mando dir der" data-dir="der" data-t-attr="aria-label:hud.der" aria-label="Ir a la derecha">▶</button>
     </div>
-    <button id="mando-saltar" class="mando mando-saltar" aria-label="Saltar">
+    <button id="mando-saltar" class="mando mando-saltar" data-t-attr="aria-label:hud.saltar" aria-label="Saltar">
       <span aria-hidden="true">A</span>
     </button>
   </div>
 </main>
 
-<!-- ───────────── resultado ───────────── -->
+<!-- ───────────── resultado ─────────────
+     GANAR Y PERDER NO SE VEN IGUAL. Antes compartian el mismo cuadro gris y
+     lo unico que cambiaba era el titulo: terminar un nivel se sentia como un
+     error de sistema. Ahora el panel ganado trae rayos, cinta, estrellas,
+     papelitos y al heroe; el perdido se queda quieto y sobrio a proposito.
+     Todo lo decorativo es aria-hidden y solo existe cuando se gana. -->
 <main id="p-resultado" class="pantalla centrado" hidden>
   <div id="res-panel" class="caja res">
-    <h2 id="res-titulo">—</h2>
+    <div class="res-rayos" aria-hidden="true"></div>
+    <div id="res-confeti" class="res-confeti" aria-hidden="true"></div>
+    <div class="res-cinta"><h2 id="res-titulo">—</h2></div>
+    <img id="res-heroe" class="res-heroe" alt="" hidden>
+    <div id="res-estrellas" class="res-estrellas" aria-hidden="true"></div>
     <p id="res-sub" class="bajada">—</p>
     <ul id="res-lista" class="lista"></ul>
     <div class="botones fila">
-      <button id="res-seguir" class="primario">Siguiente</button>
-      <button id="res-repetir">De nuevo</button>
-      <button id="res-mapa">Al mapa</button>
+      <button id="res-seguir" class="primario" data-t="res.seguir">Siguiente</button>
+      <button id="res-repetir" data-t="res.repetir">De nuevo</button>
+      <button id="res-mapa" data-t="res.mapa">Al mapa</button>
     </div>
   </div>
 </main>
 
 <!-- ───────────── ayuda ───────────── -->
 <main id="p-ayuda" class="pantalla" hidden>
-  <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
-  <div class="texto">
-    <p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora. Lo demás sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás. Las flechas <b>◀ ▶</b> de la izquierda mandan para dónde vas.</p>
-
-    <h3>Los movimientos</h3>
-    <dl class="movs">
-      <dt>Salto corto</dt><dd>Un toque seco: sube unos 2 tiles y medio.</dd>
-      <dt>Salto alto</dt><dd>Mantenerlo apretado: casi 5 tiles. Se corta en cuanto soltás.</dd>
-      <dt>Vault</dt><dd><b>Solo.</b> Los obstáculos de un tile y los huecos de uno o dos se pasan sin tocar nada. De tres para arriba hay que saltar.</dd>
-      <dt>Vault con toque</dt><dd>Tocar <em>justo</em> mientras vaulteás: salto más alto y te llevás puesto al enemigo. Es la maniobra que más paga.</dd>
-      <dt>Trepada</dt><dd><b>Sola.</b> Si caés justo sobre el filo de una plataforma, te subís en vez de rebotar contra el costado.</dd>
-      <dt>Los botones</dt><dd><b>◀ ▶</b> te mueven y <b>A</b> salta — tocar la pantalla también. Sin tocar nada te quedás quieto. Si preferís que corra solo —como las primeras versiones— está en Ajustes → Movimiento → Corredor.</dd>
-      <dt>Salto de pared</dt><dd>Tocar pegado a una pared: rebotás y <b>das vuelta la carrera</b>. Así se suben los pozos y las torres, en zigzag.</dd>
-      <dt>Doble salto</dt><dd>Tocar otra vez en el aire: segundo impulso, con su propia vuelta de carnero.</dd>
-      <dt>Triple salto</dt><dd>Y una tercera vez: el más alto de los tres, con un backflip. Encadenados llegan a 9 tiles. Pisar un enemigo te devuelve los dos saltos de aire.</dd>
-      <dt>Tobogán</dt><dd>Caer sobre una bajada: acelerás y arrasás con lo que se cruce.</dd>
-    </dl>
-
-    <h3>Los bloques</h3>
-    <dl class="movs">
-      <dt class="b-pausa">Pausa</dt><dd>Parado encima te frena a vos <b>y al reloj</b>. Tocá para salir. Es el único lugar donde podés pensar.</dd>
-      <dt class="b-preg">?</dt><dd>Monedas, y a veces una burbuja o un <b>hongo</b>. Cada bloque da siempre lo mismo: el nivel se puede aprender.</dd>
-      <dt class="b-tiempo">Reloj</dt><dd>Suma 10 segundos, hasta 99.</dd>
-      <dt class="b-largo">Salto largo</dt><dd>Arco bajo y lejos: cruza huecos que ningún salto normal cruza.</dd>
-      <dt class="b-volt">Voltereta</dt><dd>La subida más alta del juego. Para lo que quedó arriba de todo.</dd>
-    </dl>
-
-    <h3>Los hongos</h3>
-    <p>Salen de los bloques <code>?</code> y <b>vuelan hasta vos</b>: no se escapan. Uno de cada cuatro bloques tiene uno, y siempre el mismo bloque: el nivel se puede aprender. El común te hace grande, y estando grande un golpe no te cuesta una burbuja — solo volvés a tamaño normal.</p>
-    <p>El <b>hongo arcoíris</b> es otra cosa: hay <b>uno solo por mundo</b>, en el primer nivel de cada uno, y te hace gigante por nueve segundos. Arrasás con bloques, tubos y enemigos con solo caminar. El pozo y el reloj te matan igual, seas del tamaño que seas.</p>
-
-    <h3>Las burbujas</h3>
-    <p>No hay vidas. Cuando te matan entrás en una <b>burbuja</b> que vuelve para atrás y perdés 5 monedas; tocá para pincharla donde quieras. Arrancás con dos y los bloques <code>?</code> a veces dan más. Sin burbujas, se terminó.</p>
-
-    <h3>Las monedas de color</h3>
-    <p>Cinco por nivel, escondidas. Juntá las cinco <b class="c-rosa">rosas</b> en una sola corrida y se habilitan las <b class="c-violeta">violetas</b>, que están peor puestas; con esas, las <b class="c-negra">negras</b>. Es el mismo nivel tres veces, cada vez más exigente.</p>
-
-    <h3>El mástil</h3>
-    <p>Cuanto más alto lo agarrás, más monedas: hasta 10. En los niveles de jefe el mástil está <b>trabado</b> hasta que lo derrotes.</p>
-
-    <h3>De dónde salen los niveles</h3>
-    <p>Ninguno está dibujado a mano. Cada uno se arma con piezas parametrizadas a partir de un número —el mismo número siempre, así que el 3-2 es siempre el 3-2— y después <b>se juega entero por dentro</b> con una búsqueda que corre la física de verdad, para comprobar que se puede terminar y que las cinco monedas se pueden alcanzar. Si no pasa, se tira y se arma otro. El tiempo límite sale de lo que tarda ese camino, no de un número inventado.</p>
+  <header class="barra"><button data-volver="p-inicio" class="chico" data-t="comun.atras">← Atrás</button><h2 data-t="ayuda.titulo">Cómo se juega</h2></header>
+  <div class="texto" data-t-html="ayuda.cuerpo">
+    <p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora.</p>
   </div>
 </main>
 
 <!-- ───────────── ajustes ───────────── -->
 <main id="p-ajustes" class="pantalla" hidden>
-  <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Ajustes</h2></header>
+  <header class="barra"><button data-volver="p-inicio" class="chico" data-t="comun.atras">← Atrás</button><h2 data-t="aj.titulo">Ajustes</h2></header>
   <div class="texto">
-    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Efectos de sonido</span></label>
-    <label class="opcion"><input type="checkbox" id="aj-musica"> <span>Música</span></label>
-    <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span>Sacudida de pantalla</span></label>
-    <label class="opcion"><input type="checkbox" id="aj-mandos"> <span>Botones en pantalla</span></label>
     <div class="opcion opcion-grupo">
-      <span>Movimiento</span>
+      <span data-t="aj.idioma">Idioma</span>
+      <div class="grupo" id="aj-idioma">
+        <button data-idioma="en" class="chico">English</button>
+        <button data-idioma="es" class="chico">Español</button>
+        <button data-idioma="pt" class="chico">Português</button>
+      </div>
+    </div>
+    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span data-t="aj.sonido">Efectos de sonido</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-musica"> <span data-t="aj.musica">Música</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span data-t="aj.sacudida">Sacudida de pantalla</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-mandos"> <span data-t="aj.mandos">Botones en pantalla</span></label>
+    <div class="opcion opcion-grupo">
+      <span data-t="aj.movimiento">Movimiento</span>
       <div class="grupo" id="aj-modo">
-        <button data-modo="libre" class="chico">Libre</button>
-        <button data-modo="auto" class="chico">Corredor</button>
+        <button data-modo="libre" class="chico" data-t="aj.libre">Libre</button>
+        <button data-modo="auto" class="chico" data-t="aj.corredor">Corredor</button>
       </div>
     </div>
-    <p class="nota">En <b>libre</b> el personaje se queda quieto hasta que le decís para dónde ir con la cruceta. En <b>corredor</b> corre solo y la cruceta nada más lo corrige, como en las primeras versiones.</p>
+    <p class="nota" data-t-html="aj.nota-mov">En <b>libre</b> el personaje se queda quieto hasta que le decís para dónde ir con la cruceta. En <b>corredor</b> corre solo y la cruceta nada más lo corrige, como en las primeras versiones.</p>
     <div class="opcion opcion-grupo">
-      <span>Gráficos</span>
+      <span data-t="aj.graficos">Gráficos</span>
       <div class="grupo" id="aj-grafico">
-        <button data-graf="auto" class="chico">Automático</button>
-        <button data-graf="2" class="chico">Nítido</button>
-        <button data-graf="1" class="chico">Rápido</button>
+        <button data-graf="auto" class="chico" data-t="aj.auto">Automático</button>
+        <button data-graf="2" class="chico" data-t="aj.nitido">Nítido</button>
+        <button data-graf="1" class="chico" data-t="aj.rapido">Rápido</button>
       </div>
     </div>
-    <p class="nota" id="aj-graf-nota">En automático el juego mide cómo va en tu teléfono y baja la resolución solo si no llega a 60 cuadros por segundo.</p>
-    <p class="nota">Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.</p>
-    <button id="aj-borrar" class="peligro">Borrar todo el progreso</button>
+    <p class="nota" id="aj-graf-nota" data-t="aj.nota-graf">En automático el juego mide cómo va en tu teléfono y baja la resolución solo si no llega a 60 cuadros por segundo.</p>
+    <p class="nota" data-t="aj.nota-datos">Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.</p>
+    <button id="aj-borrar" class="peligro" data-t="aj.borrar">Borrar todo el progreso</button>
   </div>
 </main>
 

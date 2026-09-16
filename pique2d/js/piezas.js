@@ -320,8 +320,12 @@ export const PIEZAS = [
   armar(p) {
     const w = p.rnd.entero(8, 12); p.ancho = w;
     p.suelo(0, 3); p.suelo(w - 3, w, p.piso - p.rnd.entero(0, 3));
-    p.set(3, p.piso - 1, V.RESORTE);
+    // A RAS DEL PISO, no un tile mas arriba. Puesto arriba, el jugador pasa
+    // por al lado y el tile que tiene debajo de los pies sigue siendo el piso
+    // comun: el rebote no se dispara nunca. Poniendolo COMO la tapa del piso,
+    // pisarlo es aterrizar sobre el.
     p.suelo(3, 4);
+    p.set(3, p.piso, V.RESORTE);
     for (let i = 0; i < 4; i++) p.moneda(4 + i, p.piso - 7 - i);
     p.marcarColor(5, p.piso - 11, "alto");
     for (let i = 4; i < w - 3; i++) if (p.tema === "castillo") p.set(i, ALTO_TILES - 2, V.LAVA);

@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { pasarIdioma } from "./_idioma.mjs";
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const pg = await nav.newPage({ viewport:{width:390,height:844}, hasTouch:true, isMobile:true, deviceScaleFactor:2 });
 pg.on("pageerror", e=>console.log("ERR:",e.message));
@@ -6,6 +7,7 @@ await pg.goto("http://127.0.0.1:8802/index.html");
 await pg.waitForFunction(()=>!!window.PIQUE,{timeout:90000});
 await pg.evaluate(()=>localStorage.setItem("pique.v1",JSON.stringify({monedas:0,desbloqueado:6,niveles:{},ajustes:{sonido:false,musica:false,sacudida:true}})));
 await pg.reload(); await pg.waitForFunction(()=>!!window.PIQUE,{timeout:90000});
+await pasarIdioma(pg);
 await pg.screenshot({path:"/tmp/p5/menu.png"});
 await pg.click("#btn-niveles"); await pg.waitForSelector("#p-mapa:not([hidden])");
 await pg.screenshot({path:"/tmp/p5/mapa.png"});

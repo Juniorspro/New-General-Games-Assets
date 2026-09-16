@@ -1,5 +1,6 @@
 // Desbloqueo y recuperacion ante errores.
 import { chromium } from "playwright";
+import { pasarIdioma } from "./_idioma.mjs";
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const pg = await nav.newPage({ viewport:{width:390,height:780}, hasTouch:true, isMobile:true });
 const err=[]; pg.on("pageerror", e=>err.push(e.message));
@@ -8,6 +9,7 @@ await pg.goto("http://127.0.0.1:8802/index.html");
 await pg.waitForFunction(()=>!!window.PIQUE,{timeout:60000});
 await pg.evaluate(()=>localStorage.clear());
 await pg.reload(); await pg.waitForFunction(()=>!!window.PIQUE,{timeout:60000});
+await pasarIdioma(pg);
 
 // JUGAR ENTRA DERECHO, sin pasar por el mapa. Es el cambio que se pidio:
 // el mapa era un peaje entre un nivel y el siguiente.

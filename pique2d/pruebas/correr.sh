@@ -24,6 +24,12 @@ echo
 echo "── los botones en pantalla ───────────────────────────────────"
 node pruebas/mandos.mjs
 echo
+echo "── que cada item y cada bicho hagan lo suyo ──────────────────"
+node pruebas/items.mjs
+echo
+echo "── los tres idiomas y el panel de ganar ──────────────────────"
+node pruebas/idioma.mjs
+echo
 echo "── calidad de dibujo y costo por cuadro ──────────────────────"
 node pruebas/rendimiento.mjs
 echo

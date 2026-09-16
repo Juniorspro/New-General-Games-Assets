@@ -9,6 +9,7 @@ import { NIVELES, idNivel, TEMAS } from "./mundo.js";
 import { cargar, guardar, datosNivel, tierActual, borrarTodo, abierto, abrirSiguiente, indiceNivel, proximoNivel } from "./guardado.js";
 import { efe, despertar, volumen } from "./audio.js";
 import { ruta } from "./assets.js";
+import { t, tituloNivel, nombreTema, IDIOMAS, ponerIdioma, aplicar } from "./idioma.js";
 
 const $ = (s) => document.querySelector(s);
 const crear = (tag, clase, texto) => {
@@ -52,8 +53,9 @@ export function pintarInicio() {
   // seguir, y despues de tres sesiones uno no se acuerda por donde iba.
   const { m, n } = proximoNivel();
   const cfg = NIVELES.find((c) => c.m === m && c.n === n);
-  poner("#bt-jugar-txt", hechos ? "Seguir" : "Jugar");
-  poner("#bt-jugar-sub", cfg ? `Mundo ${m}-${n} · ${cfg.titulo}` : `Mundo ${m}-${n}`);
+  poner("#bt-jugar-txt", hechos ? t("inicio.seguir") : t("inicio.jugar"));
+  const donde = `${t("comun.mundo")} ${m}-${n}`;
+  poner("#bt-jugar-sub", cfg ? `${donde} · ${tituloNivel(cfg)}` : donde);
 }
 
 // --- mapa de mundos ------------------------------------------------------
@@ -86,7 +88,7 @@ export function pintarMapa(alElegir) {
     const temaMundo = NIVELES.find((c) => c.m === m).tema;
 
     const cab = crear("header", "cab-mundo");
-    cab.append(crear("h2", null, `Mundo ${m}`));
+    cab.append(crear("h2", null, `${t("comun.mundo")} ${m}`));
     const hechosM = [1, 2, 3, 4].filter((n) => datosNivel(idNivel(m, n)).hecho).length;
     const av = crear("div", "avance");
     const avi = crear("i"); avi.style.width = `${hechosM / 4 * 100}%`;
@@ -144,10 +146,11 @@ export function pintarMapa(alElegir) {
       // otra, en el orden en que se juegan. Es lo que da la sensacion de
       // recorrido en vez de la de lista.
       b.style.setProperty("--tarde", `${(m - 1) * 60 + n * 70}ms`);
-      b.title = `${id} · ${cfg.titulo}`;
+      b.title = `${id} · ${tituloNivel(cfg)}`;
       b.setAttribute("aria-label",
-        `${id}, ${cfg.titulo}, ${TEMAS[cfg.tema].nombre}${cfg.jefe ? ", jefe" : ""}` +
-        (libre ? (dn.hecho ? ", terminado" : "") : ", cerrado"));
+        `${id}, ${tituloNivel(cfg)}, ${nombreTema(cfg.tema, TEMAS[cfg.tema].nombre)}` +
+        (cfg.jefe ? ", " + t("comun.jefe") : "") +
+        (libre ? (dn.hecho ? ", " + t("comun.terminado") : "") : ", " + t("comun.cerrado")));
 
       const disco = crear("span", "disco");
       // La postal del propio nivel, adentro del disco: es el mismo fondo que
@@ -161,7 +164,7 @@ export function pintarMapa(alElegir) {
       }
       disco.append(crear("b", null, cfg.jefe ? "★" : String(n)));
       b.append(disco);
-      b.append(crear("span", "rotulo", cfg.titulo));
+      b.append(crear("span", "rotulo", tituloNivel(cfg)));
       const pips = crear("span", "colores");
       for (const k of ["rosa", "violeta", "negra"])
         pips.append(crear("i", "pip " + k + (dn.color[k] ? " ok" : "")));
@@ -175,7 +178,7 @@ export function pintarMapa(alElegir) {
         // superponia al numero y al rotulo — y ademas quedaba a merced del
         // origen del transform.
         const h = crear("img", "heroe-ficha");
-        h.alt = ""; h.title = "estás acá";
+        h.alt = ""; h.title = t("comun.aqui");
         h.src = ruta("assets/piezas/ficha_heroe.webp");
         b.append(h);
       }
@@ -279,16 +282,43 @@ export function pintarHud(p) {
 }
 
 // --- resultado -----------------------------------------------------------
+/**
+ * Los papelitos del panel de ganar.
+ *
+ * Son divs con una animacion de CSS y no particulas en el canvas: el canvas ya
+ * no se esta dibujando cuando aparece este panel —el bucle esta detenido— asi
+ * que hacerlo ahi obligaria a mantenerlo vivo solo para esto. Treinta y dos
+ * elementos con `animation` los mueve el compositor, sin JavaScript por cuadro.
+ *
+ * Se crean de nuevo en cada victoria porque hay que REINICIAR la animacion:
+ * dejarlos puestos hace que la segunda vez el panel aparezca con los papelitos
+ * ya caidos.
+ */
+const COLORES_PAPEL = ["#ffd447", "#ff6b6b", "#5ad2ff", "#8affc1", "#c48aff", "#ffffff"];
+function papelitos(caja) {
+  caja.innerHTML = "";
+  for (let i = 0; i < 32; i++) {
+    const c = crear("i");
+    c.style.left = `${(i * 97) % 100}%`;
+    c.style.background = COLORES_PAPEL[i % COLORES_PAPEL.length];
+    c.style.animationDelay = `${(i % 8) * 0.14}s`;
+    c.style.animationDuration = `${1.6 + (i % 5) * 0.28}s`;
+    c.style.setProperty("--giro", `${(i % 2 ? 1 : -1) * (180 + i * 23)}deg`);
+    caja.append(c);
+  }
+}
+
 export function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
   const id = idNivel(cfg.m, cfg.n);
   const dn = datosNivel(id);
   const d = cargar();
 
   const todas = p.color.every((m) => m.tomada);
+  const usado = Math.round((p.segundos * 60 - p.reloj) / 60);
+  const record = gano && dn.hecho && dn.mejorTiempo && usado < dn.mejorTiempo;
   if (gano) {
     d.monedas += p.monedas;
-    const t = Math.round((p.segundos * 60 - p.reloj) / 60);
-    if (!dn.hecho || t < dn.mejorTiempo || !dn.mejorTiempo) dn.mejorTiempo = t;
+    if (!dn.hecho || usado < dn.mejorTiempo || !dn.mejorTiempo) dn.mejorTiempo = usado;
     dn.monedas = Math.max(dn.monedas, p.monedas);
     dn.hecho = true;
     if (todas) dn.color[p.tier] = true;
@@ -299,22 +329,53 @@ export function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
     guardar();
   }
 
-  $("#res-titulo").textContent = gano ? "¡Llegaste!" : "Se acabó";
-  $("#res-sub").textContent = gano
-    ? `${cfg.titulo} · ${id}`
-    : { tiempo: "Se terminó el tiempo", pozo: "Al vacío", pinche: "Las púas",
-        jefe: "El jefe te ganó" }[p.causa] || "Un enemigo te ganó";
+  $("#res-titulo").textContent = gano ? t("res.gano") : t("res.perdio");
+  // Una causa que no tenga texto propio cae a "un enemigo te gano". `t`
+  // devuelve la clave cuando no la encuentra, y eso es justo lo que se mira.
+  const causa = "res.causa." + p.causa;
+  $("#res-sub").textContent = gano ? `${tituloNivel(cfg)} · ${id}`
+                                   : (t(causa) === causa ? t("res.causa.otro") : t(causa));
   $("#res-panel").className = gano ? "res ganado" : "res perdido";
 
+  // LAS TRES ESTRELLAS. Terminar da una; las cinco monedas de color, otra; y
+  // sobrar mas del 40% del reloj, la tercera. Tres criterios que el jugador
+  // puede deducir mirando la lista de abajo, no un puntaje secreto.
+  const estrellas = gano ? 1 + (todas ? 1 : 0) + (p.reloj > p.segundos * 60 * 0.4 ? 1 : 0) : 0;
+  const est = $("#res-estrellas");
+  if (est) {
+    est.innerHTML = "";
+    est.hidden = !gano;
+    for (let i = 0; i < 3; i++) {
+      const e = crear("span", "estrella" + (i < estrellas ? " ok" : ""), "★");
+      e.style.animationDelay = `${0.25 + i * 0.22}s`;
+      est.append(e);
+    }
+  }
+  const heroe = $("#res-heroe");
+  if (heroe) {
+    heroe.hidden = !gano;
+    if (gano && !heroe.src) heroe.src = ruta("assets/piezas/ficha_heroe.webp");
+  }
+  const conf = $("#res-confeti");
+  if (conf) { if (gano) papelitos(conf); else conf.innerHTML = ""; }
+
   const l = $("#res-lista"); l.innerHTML = "";
-  const item = (k, v) => { const li = crear("li"); li.append(crear("span", "k", k), crear("span", "v", String(v))); l.append(li); };
-  item("Monedas", p.monedas);
-  if (gano) item("Bonus del mástil", "+" + (p.premio ?? 0));
-  item("Monedas de color", `${p.color.filter((m) => m.tomada).length}/5 ${p.tier}`);
-  item("Burbujas que quedaron", p.burbujas);
-  if (gano) item("Tiempo", `${Math.round((p.segundos * 60 - p.reloj) / 60)}s de ${p.segundos}`);
-  if (gano && todas) item("Desbloqueado", p.tier === "rosa" ? "monedas violetas"
-                                        : p.tier === "violeta" ? "monedas negras" : "todo hecho");
+  const item = (k, v, clase) => {
+    const li = crear("li", clase);
+    li.append(crear("span", "k", k), crear("span", "v", String(v)));
+    l.append(li);
+  };
+  item(t("res.monedas"), p.monedas);
+  if (gano) item(t("res.bonus"), "+" + (p.premio ?? 0));
+  item(t("res.color"), `${p.color.filter((m) => m.tomada).length}/5 ${t("tier." + p.tier)}`,
+       gano && todas ? "hito" : null);
+  item(t("res.burbujas"), p.burbujas);
+  if (gano) item(t("res.tiempo"), t("res.tiempoDe", { a: usado, b: p.segundos }),
+                 record ? "hito" : null);
+  if (gano) item(t("res.total"), d.monedas);
+  if (gano && todas) item(t("res.abierto"), p.tier === "rosa" ? t("res.abre.violeta")
+                                          : p.tier === "violeta" ? t("res.abre.negra")
+                                          : t("res.abre.todo"), "hito");
 
   $("#res-seguir").hidden = !gano;
   $("#res-seguir").onclick = () => { efe.menu(); alSeguir(); };
@@ -324,8 +385,50 @@ export function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
 }
 
 // --- ajustes -------------------------------------------------------------
-export function montarAjustes(alCambiarGrafico) {
+/**
+ * La pantalla de idioma, la primera vez y nada mas.
+ *
+ * Devuelve una promesa que se resuelve cuando ya hay idioma: si el jugador ya
+ * eligio alguna vez, se resuelve al instante y la pantalla ni aparece. Asi el
+ * que arranca por segunda vez no paga el peaje de volver a elegir.
+ */
+export function elegirIdioma() {
   const d = cargar();
+  const guardado = d.ajustes.idioma;
+  if (guardado && IDIOMAS[guardado]) { ponerIdioma(guardado); aplicar(); return Promise.resolve(false); }
+  ponerIdioma("en"); aplicar();
+  mostrar("p-idioma");
+  return new Promise((listo) => {
+    for (const b of document.querySelectorAll("#idiomas [data-idioma]"))
+      b.addEventListener("click", () => {
+        despertar(); efe.menu();
+        d.ajustes.idioma = ponerIdioma(b.dataset.idioma);
+        guardar(); aplicar();
+        listo(true);
+      }, { once: true });
+  });
+}
+
+// El selector de idioma de Ajustes. Cambiar de idioma repinta TODO lo que ya
+// esta escrito —incluido el menu, que tiene textos armados en JavaScript— y
+// por eso avisa con `alCambiarIdioma` en vez de tocar el DOM del mapa desde
+// aca: quien sabe repintar cada pantalla es la pantalla.
+export function montarAjustes(alCambiarGrafico, alCambiarIdioma) {
+  const d = cargar();
+  const idm = $("#aj-idioma");
+  if (idm) {
+    const pintarIdm = () => {
+      for (const b of idm.querySelectorAll("[data-idioma]"))
+        b.classList.toggle("puesto", (d.ajustes.idioma || "en") === b.dataset.idioma);
+    };
+    for (const b of idm.querySelectorAll("[data-idioma]"))
+      b.addEventListener("click", () => {
+        d.ajustes.idioma = ponerIdioma(b.dataset.idioma);
+        guardar(); aplicar(); pintarIdm();
+        if (alCambiarIdioma) alCambiarIdioma(d.ajustes.idioma);
+      });
+    pintarIdm();
+  }
   // El selector de graficos. Quien sabe aplicar el cambio es main.js —es el
   // que tiene el lienzo y los patrones—, asi que aca solo se guarda y se
   // avisa.
@@ -372,7 +475,7 @@ export function montarAjustes(alCambiarGrafico) {
   };
   for (const e of [sonido, musica, sac, mandos]) if (e) e.addEventListener("change", aplicar);
   $("#aj-borrar").addEventListener("click", () => {
-    if (!confirm("¿Borrar todo el progreso? No se puede deshacer.")) return;
+    if (!confirm(t("aj.confirmar"))) return;
     borrarTodo(); location.reload();
   });
   aplicar();

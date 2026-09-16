@@ -123,9 +123,18 @@ export const V = {
 // que hace el jugador cambia por donde se puede caminar, asi que "validado"
 // vuelve a significar algo. Ademas es lo que hace el juego de referencia: ahi
 // los ladrillos rebotan y sueltan monedas, no se rompen.
+// EL RESORTE TIENE QUE ESTAR ACA, Y NO ESTABA: POR ESO NUNCA FUNCIONO.
+//
+// El rebote se dispara mirando el tile que hay DEBAJO DE LOS PIES cuando el
+// jugador aterriza. Si el resorte no es solido, el jugador nunca aterriza
+// sobre el: lo atraviesa como si fuera aire y el tile de abajo es el piso
+// comun. Se midio con una auditoria que prueba item por item: el resorte
+// levantaba 29 pixeles puesto en el piso y 0 puesto donde lo pone el
+// generador, contra los 110 que da su velocidad. Era el unico item del juego
+// que no hacia nada.
 export const SOLIDOS = new Set([V.SOLIDO, V.LADRILLO, V.PREGUNTA, V.PAUSA,
                                 V.TIEMPO, V.TUBO, V.USADO, V.LARGO, V.VOLTERETA,
-                                V.RAJADO]);
+                                V.RAJADO, V.RESORTE]);
 // Los que solo frenan desde arriba.
 export const SEMI = new Set([V.PLATAFORMA]);
 export const MATAN = new Set([V.PINCHE, V.LAVA]);
