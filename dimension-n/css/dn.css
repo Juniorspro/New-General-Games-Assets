@@ -1,0 +1,199 @@
+/* Dimensión Ñ — hoja única.
+   Vertical y nada más: el juego se dibuja en 360x640 y se escala entero, así
+   que la interfaz también vive dentro de ese rectángulo. Las medidas van en
+   svh y no en vh porque en un teléfono vh incluye la barra del navegador y el
+   último renglón queda siempre tapado. */
+
+:root {
+  --fondo: #0b0e18;
+  --panel: #161c2b;
+  --borde: #2b3449;
+  --texto: #e9eef7;
+  --tenue: #93a0bb;
+  --verde: #a8e063;
+  --cian: #8fe3f5;
+  --amarillo: #f5d341;
+  --mal: #ff6b6b;
+  --r: 14px;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--fondo); color: var(--texto);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%; overscroll-behavior: none;
+}
+body { min-height: 100svh; display: flex; align-items: center; justify-content: center; }
+button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* El lienzo se centra y queda quieto. `touch-action: none` es obligatorio: sin
+   eso el navegador se queda el arrastre para hacer scroll y el reactor recibe
+   un solo evento antes de que le corten el dedo. */
+#lienzo {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  touch-action: none; display: block; z-index: 0;
+  box-shadow: 0 0 0 100vmax var(--fondo);
+}
+
+/* La pantalla ocupa el mismo rectángulo que el lienzo y no la ventana: en una
+   compu, un menú de 1600 px de ancho arriba de un juego de 360 se ve como dos
+   cosas distintas puestas una encima de la otra. */
+.pantalla {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  /* --an y --al las escribe main.js: son el tamano exacto del lienzo. */
+  width: var(--an, min(360px, 100vw)); height: var(--al, min(640px, 100svh));
+  display: flex; flex-direction: column; z-index: 2;
+}
+.pantalla[hidden] { display: none; }
+.centrado { align-items: center; justify-content: center; padding: 18px; }
+
+/* El menu no puede ser negro liso: atras del lienzo no hay nada dibujado
+   —el juego no corre— y sin esto la pantalla de inicio parece un error de
+   carga. El degrade imita la boca del pozo. */
+#p-menu, #p-fin, #p-como { background: radial-gradient(130% 60% at 50% 0%, #1d2740 0%, var(--fondo) 72%); }
+
+.caja {
+  background: rgba(16,21,34,.94); border: 1px solid var(--borde);
+  border-radius: var(--r); padding: 22px 20px; width: 100%;
+  text-align: center; box-shadow: 0 16px 44px rgba(0,0,0,.55);
+  max-height: 100%; overflow-y: auto;
+}
+
+.logo {
+  margin: 0 0 8px; font-size: 40px; font-weight: 900; letter-spacing: -1.5px;
+  line-height: 1;
+}
+.logo span {
+  display: inline-block; margin-left: 6px; padding: 0 10px;
+  border-radius: 10px; background: linear-gradient(135deg, var(--verde), var(--cian));
+  color: #10200c; transform: rotate(-4deg);
+}
+.bajada { color: var(--tenue); margin: 0 0 18px; font-size: 14px; }
+.bajada b { color: var(--texto); }
+.record { color: var(--tenue); font-size: 13px; margin: 14px 0 6px; }
+.record b { color: var(--verde); }
+
+.botones { display: flex; flex-direction: column; gap: 9px; }
+.botones.fila { flex-direction: row; justify-content: center; }
+button {
+  font: inherit; color: var(--texto); background: #1e2537;
+  border: 1px solid var(--borde); border-radius: 11px;
+  padding: 11px 14px; min-height: 46px; cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0,0,0,.45);
+}
+button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45); }
+.grande { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 52px; font-size: 16px; }
+.grande small { color: var(--tenue); font-size: 12px; }
+.primario {
+  background: linear-gradient(135deg, var(--verde), #7ec850);
+  border-color: var(--verde); color: #10200c; font-weight: 800;
+}
+.primario small { color: rgba(16,32,12,.65); }
+.chico { padding: 7px 12px; font-size: 13px; min-height: 36px; }
+.peligro { border-color: #5e2b33; color: #ff9b9b; background: transparent; box-shadow: none; }
+.opcion {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 10px 0; color: var(--tenue); font-size: 14px;
+}
+.opcion input { width: 20px; height: 20px; accent-color: var(--verde); }
+
+/* --- texto largo --- */
+.barra {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  background: rgba(10,14,24,.95); border-bottom: 2px solid var(--borde);
+}
+.barra h2 { margin: 0; font-size: 17px; }
+.texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
+.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--verde); }
+.texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
+.texto p b { color: var(--texto); }
+.destacado {
+  background: var(--panel); border-left: 3px solid var(--cian);
+  padding: 11px 12px; border-radius: 0 8px 8px 0;
+}
+.texto dl { margin: 0; }
+.texto dt { font-weight: 700; margin-top: 10px; font-size: 14px; }
+.texto dd { margin: 2px 0 0; color: var(--tenue); font-size: 13.5px; }
+.texto dd b { color: var(--texto); }
+
+/* --- HUD --- */
+.juego { pointer-events: none; }
+.juego button, .juego .dialogo { pointer-events: auto; }
+.hud {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 10px 0; font-size: 13px;
+}
+.hud-btn {
+  width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 9px;
+  background: rgba(10,14,24,.7); font-size: 15px; line-height: 1;
+}
+.barra-int {
+  flex: 1; height: 13px; border-radius: 7px; overflow: hidden;
+  background: rgba(10,14,24,.75); border: 1px solid var(--borde);
+}
+.barra-int i {
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, var(--verde), var(--cian));
+  transition: width .12s linear;
+}
+.barra-int i.medio { background: linear-gradient(90deg, var(--amarillo), #ffa63a); }
+.barra-int i.mal { background: linear-gradient(90deg, var(--mal), #ff9b4a); }
+.hud-dato {
+  background: rgba(10,14,24,.7); border-radius: 8px; padding: 4px 8px;
+  font-variant-numeric: tabular-nums; font-weight: 700;
+}
+.hud-dato.chat span { color: var(--verde); margin-right: 3px; }
+.capitulo {
+  margin: 6px 10px 0; align-self: flex-start;
+  background: rgba(10,14,24,.6); border-radius: 7px; padding: 3px 9px;
+  font-size: 12px; color: var(--tenue); letter-spacing: .3px;
+}
+
+/* El cartel de diálogo. Va abajo y chico a propósito: el juego no se frena
+   para hablar, así que no puede taparte lo que viene. */
+.dialogo {
+  margin: auto 12px 96px; background: rgba(10,14,24,.88);
+  border: 1px solid var(--borde); border-left: 4px solid var(--cian);
+  border-radius: 10px; padding: 9px 11px; font-size: 13.5px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  animation: entra .22s ease-out;
+}
+.dialogo[data-quien="tito"] { border-left-color: var(--amarillo); }
+.dialogo b { color: var(--cian); margin-right: 6px; }
+.dialogo[data-quien="tito"] b { color: var(--amarillo); }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+
+.bolita {
+  position: absolute; right: 16px; bottom: 20px;
+  width: 78px; height: 78px; min-height: 78px; border-radius: 50%;
+  padding: 0; font-size: 26px; color: var(--cian);
+  background: rgba(20,30,48,.72); border: 2px solid rgba(143,227,245,.45);
+  touch-action: none;
+}
+.bolita:active { background: rgba(143,227,245,.3); }
+
+/* --- final --- */
+.fin h2 { margin: 0 0 10px; font-size: 26px; color: var(--verde); }
+.charla { text-align: left; margin: 0 0 14px; }
+.charla p { margin: 0 0 6px; font-size: 13.5px; color: var(--tenue); }
+.charla b { color: var(--cian); margin-right: 5px; }
+.charla p[data-quien="tito"] b { color: var(--amarillo); }
+.lista { list-style: none; padding: 0; margin: 0 0 16px; text-align: left; }
+.lista li {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 7px 2px; border-bottom: 1px solid var(--borde); font-size: 14px;
+}
+.lista span { color: var(--tenue); }
+.lista b { font-variant-numeric: tabular-nums; }
+
+/* Pantalla baja: el teléfono acostado. El juego es vertical, pero si alguien
+   lo gira igual tiene que poder volver al menú. */
+@media (max-height: 470px) {
+  .caja { padding: 14px 16px; }
+  .logo { font-size: 30px; }
+  .bajada { font-size: 12.5px; margin-bottom: 12px; }
+  .grande { min-height: 44px; font-size: 14px; }
+  .bolita { width: 62px; height: 62px; min-height: 62px; bottom: 12px; }
+  .dialogo { margin-bottom: 78px; }
+}

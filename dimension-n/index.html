@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0e18">
+<title>Dimensión Ñ</title>
+<meta name="description" content="Un juego de caída con ragdoll de verdad: dos cuerpos articulados atados por una soga, física de Verlet y todo dibujado con vectores.">
+<link rel="stylesheet" href="css/dn.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0e18'/><ellipse cx='8' cy='9' rx='6' ry='2.6' fill='%23a8e063'/><circle cx='8' cy='5' r='2.6' fill='%238fe3f5'/></svg>">
+</head>
+<body>
+
+<!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego queda
+     despues del HUD en el orden del documento, y como #p-juego crea su propio
+     contexto de apilamiento, el lienzo se pintaria ENCIMA del HUD. -->
+<canvas id="lienzo" width="360" height="640" aria-label="El pozo"></canvas>
+
+<!-- ───────────── menú ───────────── -->
+<main id="p-menu" class="pantalla centrado">
+  <div class="caja">
+    <h1 class="logo">Dimensión<span>Ñ</span></h1>
+    <p class="bajada">Un viejo, su nieto, una soga y un pozo de 104&nbsp;metros.
+      Lo único que hacés es <b>empujar</b> — la física hace el resto.</p>
+    <div class="botones">
+      <button id="m-seguir" class="grande" hidden>
+        <span>▼ Seguir</span><small id="m-seguir-sub">—</small>
+      </button>
+      <button id="m-jugar" class="grande primario"><span>▶ Empezar de cero</span></button>
+      <button id="m-como" class="grande"><span>? Cómo se juega</span></button>
+    </div>
+    <p class="record">Mejor caída: <b id="m-record">0 m</b></p>
+    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Sonido</span></label>
+    <button id="m-borrar" class="chico peligro">Borrar progreso</button>
+  </div>
+</main>
+
+<!-- ───────────── cómo se juega ───────────── -->
+<main id="p-como" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
+  <div class="texto">
+    <p class="destacado">Tocá la pantalla <b>donde sea</b>: el reactor de Rilo empuja hacia tu dedo.
+      Cuanto más lejos el dedo, más fuerte el empujón. Soltá y caés derecho.</p>
+
+    <h3>Los dos</h3>
+    <dl>
+      <dt>Rilo</dt><dd>El abuelo. Es el que manejás. Si se desarma, se acabó.</dd>
+      <dt>Tito</dt><dd>El nieto. Cuelga de una soga de tu mano izquierda y <b>pesa</b>:
+        te arrastra en las curvas y se lleva puesto lo que vos esquivaste.</dd>
+    </dl>
+
+    <h3>Lo que hay</h3>
+    <dl>
+      <dt>Integridad</dt><dd>La barra de arriba. Cada golpe fuerte te come un pedazo.
+        Los golpes flojos no cuestan nada: se puede bajar entero.</dd>
+      <dt>Bolita</dt><dd>El botón de abajo a la derecha, un segundo dedo, o la barra
+        espaciadora. El cuerpo se hace un ovillo y el golpe se reparte entre once puntos
+        en vez de clavar la cabeza: <b>descuenta dos tercios del daño</b>.</dd>
+      <dt>Portales</dt><dd>Uno al final de cada capítulo. Es punto de guardado y te
+        devuelve 26 de integridad. Si te desarmás, volvés al último.</dd>
+      <dt>Púas</dt><dd>Duelen sin necesidad de que vengas rápido. Esquivalas.</dd>
+      <dt>Resortes</dt><dd>Te devuelven para arriba. A veces conviene.</dd>
+      <dt>Gelatina</dt><dd>Adentro se cae en cámara lenta. Es el único lugar donde
+        podés acomodarte.</dd>
+      <dt>Chatarra</dt><dd>27 pedazos escondidos en los siete capítulos. No sirven
+        para nada y por eso están.</dd>
+    </dl>
+
+    <h3>De qué está hecho</h3>
+    <p>Los dos cuerpos son <b>ragdolls de verdad</b>: once puntos cada uno, unidos por
+      huesos que no se estiran, resueltos con integración de Verlet. No hay animaciones:
+      cada pose que ves es la física resolviéndose. El dibujo sale de las mismas
+      articulaciones, así que lo que se ve y lo que choca son siempre lo mismo.</p>
+    <p>No hay una sola imagen ni un solo archivo de audio: todo es vectores y
+      osciladores. Por eso el juego entero entra en un mail.</p>
+  </div>
+</main>
+
+<!-- ───────────── juego ───────────── -->
+<main id="p-juego" class="pantalla juego" hidden>
+  <div class="hud">
+    <button id="j-salir" class="hud-btn" aria-label="Volver al menú">✕</button>
+    <div class="barra-int"><i id="h-barra"></i></div>
+    <div class="hud-dato"><b id="h-metros">0 m</b></div>
+    <div class="hud-dato chat"><span>◆</span><b id="h-chatarra">0</b></div>
+  </div>
+  <div id="h-cap" class="capitulo">—</div>
+
+  <div id="dialogo" class="dialogo" hidden>
+    <b id="d-quien">—</b><span id="d-que">—</span>
+  </div>
+
+  <button id="btn-bolita" class="bolita" aria-label="Hacerse bolita">
+    <span aria-hidden="true">●</span>
+  </button>
+</main>
+
+<!-- ───────────── final ───────────── -->
+<main id="p-fin" class="pantalla centrado" hidden>
+  <div class="caja fin">
+    <h2>Llegaron</h2>
+    <div id="f-dialogo" class="charla"></div>
+    <ul id="f-lista" class="lista"></ul>
+    <div class="botones fila">
+      <button id="f-otra" class="primario">Otra vez</button>
+      <button id="f-menu">Al menú</button>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

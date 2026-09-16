@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0e18">
+<title>Dimensión Ñ</title>
+<meta name="description" content="Un juego de caída con ragdoll de verdad: dos cuerpos articulados atados por una soga, física de Verlet y todo dibujado con vectores.">
+<style>
+/* Dimensión Ñ — hoja única.
+   Vertical y nada más: el juego se dibuja en 360x640 y se escala entero, así
+   que la interfaz también vive dentro de ese rectángulo. Las medidas van en
+   svh y no en vh porque en un teléfono vh incluye la barra del navegador y el
+   último renglón queda siempre tapado. */
+
+:root {
+  --fondo: #0b0e18;
+  --panel: #161c2b;
+  --borde: #2b3449;
+  --texto: #e9eef7;
+  --tenue: #93a0bb;
+  --verde: #a8e063;
+  --cian: #8fe3f5;
+  --amarillo: #f5d341;
+  --mal: #ff6b6b;
+  --r: 14px;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--fondo); color: var(--texto);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%; overscroll-behavior: none;
+}
+body { min-height: 100svh; display: flex; align-items: center; justify-content: center; }
+button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* El lienzo se centra y queda quieto. `touch-action: none` es obligatorio: sin
+   eso el navegador se queda el arrastre para hacer scroll y el reactor recibe
+   un solo evento antes de que le corten el dedo. */
+#lienzo {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  touch-action: none; display: block; z-index: 0;
+  box-shadow: 0 0 0 100vmax var(--fondo);
+}
+
+/* La pantalla ocupa el mismo rectángulo que el lienzo y no la ventana: en una
+   compu, un menú de 1600 px de ancho arriba de un juego de 360 se ve como dos
+   cosas distintas puestas una encima de la otra. */
+.pantalla {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  /* --an y --al las escribe main.js: son el tamano exacto del lienzo. */
+  width: var(--an, min(360px, 100vw)); height: var(--al, min(640px, 100svh));
+  display: flex; flex-direction: column; z-index: 2;
+}
+.pantalla[hidden] { display: none; }
+.centrado { align-items: center; justify-content: center; padding: 18px; }
+
+/* El menu no puede ser negro liso: atras del lienzo no hay nada dibujado
+   —el juego no corre— y sin esto la pantalla de inicio parece un error de
+   carga. El degrade imita la boca del pozo. */
+#p-menu, #p-fin, #p-como { background: radial-gradient(130% 60% at 50% 0%, #1d2740 0%, var(--fondo) 72%); }
+
+.caja {
+  background: rgba(16,21,34,.94); border: 1px solid var(--borde);
+  border-radius: var(--r); padding: 22px 20px; width: 100%;
+  text-align: center; box-shadow: 0 16px 44px rgba(0,0,0,.55);
+  max-height: 100%; overflow-y: auto;
+}
+
+.logo {
+  margin: 0 0 8px; font-size: 40px; font-weight: 900; letter-spacing: -1.5px;
+  line-height: 1;
+}
+.logo span {
+  display: inline-block; margin-left: 6px; padding: 0 10px;
+  border-radius: 10px; background: linear-gradient(135deg, var(--verde), var(--cian));
+  color: #10200c; transform: rotate(-4deg);
+}
+.bajada { color: var(--tenue); margin: 0 0 18px; font-size: 14px; }
+.bajada b { color: var(--texto); }
+.record { color: var(--tenue); font-size: 13px; margin: 14px 0 6px; }
+.record b { color: var(--verde); }
+
+.botones { display: flex; flex-direction: column; gap: 9px; }
+.botones.fila { flex-direction: row; justify-content: center; }
+button {
+  font: inherit; color: var(--texto); background: #1e2537;
+  border: 1px solid var(--borde); border-radius: 11px;
+  padding: 11px 14px; min-height: 46px; cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0,0,0,.45);
+}
+button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45); }
+.grande { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 52px; font-size: 16px; }
+.grande small { color: var(--tenue); font-size: 12px; }
+.primario {
+  background: linear-gradient(135deg, var(--verde), #7ec850);
+  border-color: var(--verde); color: #10200c; font-weight: 800;
+}
+.primario small { color: rgba(16,32,12,.65); }
+.chico { padding: 7px 12px; font-size: 13px; min-height: 36px; }
+.peligro { border-color: #5e2b33; color: #ff9b9b; background: transparent; box-shadow: none; }
+.opcion {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 10px 0; color: var(--tenue); font-size: 14px;
+}
+.opcion input { width: 20px; height: 20px; accent-color: var(--verde); }
+
+/* --- texto largo --- */
+.barra {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  background: rgba(10,14,24,.95); border-bottom: 2px solid var(--borde);
+}
+.barra h2 { margin: 0; font-size: 17px; }
+.texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
+.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--verde); }
+.texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
+.texto p b { color: var(--texto); }
+.destacado {
+  background: var(--panel); border-left: 3px solid var(--cian);
+  padding: 11px 12px; border-radius: 0 8px 8px 0;
+}
+.texto dl { margin: 0; }
+.texto dt { font-weight: 700; margin-top: 10px; font-size: 14px; }
+.texto dd { margin: 2px 0 0; color: var(--tenue); font-size: 13.5px; }
+.texto dd b { color: var(--texto); }
+
+/* --- HUD --- */
+.juego { pointer-events: none; }
+.juego button, .juego .dialogo { pointer-events: auto; }
+.hud {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 10px 0; font-size: 13px;
+}
+.hud-btn {
+  width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 9px;
+  background: rgba(10,14,24,.7); font-size: 15px; line-height: 1;
+}
+.barra-int {
+  flex: 1; height: 13px; border-radius: 7px; overflow: hidden;
+  background: rgba(10,14,24,.75); border: 1px solid var(--borde);
+}
+.barra-int i {
+  display: block; height: 100%; width: 100%;
+  background: linear-gradient(90deg, var(--verde), var(--cian));
+  transition: width .12s linear;
+}
+.barra-int i.medio { background: linear-gradient(90deg, var(--amarillo), #ffa63a); }
+.barra-int i.mal { background: linear-gradient(90deg, var(--mal), #ff9b4a); }
+.hud-dato {
+  background: rgba(10,14,24,.7); border-radius: 8px; padding: 4px 8px;
+  font-variant-numeric: tabular-nums; font-weight: 700;
+}
+.hud-dato.chat span { color: var(--verde); margin-right: 3px; }
+.capitulo {
+  margin: 6px 10px 0; align-self: flex-start;
+  background: rgba(10,14,24,.6); border-radius: 7px; padding: 3px 9px;
+  font-size: 12px; color: var(--tenue); letter-spacing: .3px;
+}
+
+/* El cartel de diálogo. Va abajo y chico a propósito: el juego no se frena
+   para hablar, así que no puede taparte lo que viene. */
+.dialogo {
+  margin: auto 12px 96px; background: rgba(10,14,24,.88);
+  border: 1px solid var(--borde); border-left: 4px solid var(--cian);
+  border-radius: 10px; padding: 9px 11px; font-size: 13.5px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  animation: entra .22s ease-out;
+}
+.dialogo[data-quien="tito"] { border-left-color: var(--amarillo); }
+.dialogo b { color: var(--cian); margin-right: 6px; }
+.dialogo[data-quien="tito"] b { color: var(--amarillo); }
+@keyframes entra { from { opacity: 0; transform: translateY(8px); } }
+
+.bolita {
+  position: absolute; right: 16px; bottom: 20px;
+  width: 78px; height: 78px; min-height: 78px; border-radius: 50%;
+  padding: 0; font-size: 26px; color: var(--cian);
+  background: rgba(20,30,48,.72); border: 2px solid rgba(143,227,245,.45);
+  touch-action: none;
+}
+.bolita:active { background: rgba(143,227,245,.3); }
+
+/* --- final --- */
+.fin h2 { margin: 0 0 10px; font-size: 26px; color: var(--verde); }
+.charla { text-align: left; margin: 0 0 14px; }
+.charla p { margin: 0 0 6px; font-size: 13.5px; color: var(--tenue); }
+.charla b { color: var(--cian); margin-right: 5px; }
+.charla p[data-quien="tito"] b { color: var(--amarillo); }
+.lista { list-style: none; padding: 0; margin: 0 0 16px; text-align: left; }
+.lista li {
+  display: flex; justify-content: space-between; gap: 10px;
+  padding: 7px 2px; border-bottom: 1px solid var(--borde); font-size: 14px;
+}
+.lista span { color: var(--tenue); }
+.lista b { font-variant-numeric: tabular-nums; }
+
+/* Pantalla baja: el teléfono acostado. El juego es vertical, pero si alguien
+   lo gira igual tiene que poder volver al menú. */
+@media (max-height: 470px) {
+  .caja { padding: 14px 16px; }
+  .logo { font-size: 30px; }
+  .bajada { font-size: 12.5px; margin-bottom: 12px; }
+  .grande { min-height: 44px; font-size: 14px; }
+  .bolita { width: 62px; height: 62px; min-height: 62px; bottom: 12px; }
+  .dialogo { margin-bottom: 78px; }
+}
+
+</style>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0e18'/><ellipse cx='8' cy='9' rx='6' ry='2.6' fill='%23a8e063'/><circle cx='8' cy='5' r='2.6' fill='%238fe3f5'/></svg>">
+</head>
+<body>
+
+<!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego queda
+     despues del HUD en el orden del documento, y como #p-juego crea su propio
+     contexto de apilamiento, el lienzo se pintaria ENCIMA del HUD. -->
+<canvas id="lienzo" width="360" height="640" aria-label="El pozo"></canvas>
+
+<!-- ───────────── menú ───────────── -->
+<main id="p-menu" class="pantalla centrado">
+  <div class="caja">
+    <h1 class="logo">Dimensión<span>Ñ</span></h1>
+    <p class="bajada">Un viejo, su nieto, una soga y un pozo de 104&nbsp;metros.
+      Lo único que hacés es <b>empujar</b> — la física hace el resto.</p>
+    <div class="botones">
+      <button id="m-seguir" class="grande" hidden>
+        <span>▼ Seguir</span><small id="m-seguir-sub">—</small>
+      </button>
+      <button id="m-jugar" class="grande primario"><span>▶ Empezar de cero</span></button>
+      <button id="m-como" class="grande"><span>? Cómo se juega</span></button>
+    </div>
+    <p class="record">Mejor caída: <b id="m-record">0 m</b></p>
+    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Sonido</span></label>
+    <button id="m-borrar" class="chico peligro">Borrar progreso</button>
+  </div>
+</main>
+
+<!-- ───────────── cómo se juega ───────────── -->
+<main id="p-como" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
+  <div class="texto">
+    <p class="destacado">Tocá la pantalla <b>donde sea</b>: el reactor de Rilo empuja hacia tu dedo.
+      Cuanto más lejos el dedo, más fuerte el empujón. Soltá y caés derecho.</p>
+
+    <h3>Los dos</h3>
+    <dl>
+      <dt>Rilo</dt><dd>El abuelo. Es el que manejás. Si se desarma, se acabó.</dd>
+      <dt>Tito</dt><dd>El nieto. Cuelga de una soga de tu mano izquierda y <b>pesa</b>:
+        te arrastra en las curvas y se lleva puesto lo que vos esquivaste.</dd>
+    </dl>
+
+    <h3>Lo que hay</h3>
+    <dl>
+      <dt>Integridad</dt><dd>La barra de arriba. Cada golpe fuerte te come un pedazo.
+        Los golpes flojos no cuestan nada: se puede bajar entero.</dd>
+      <dt>Bolita</dt><dd>El botón de abajo a la derecha, un segundo dedo, o la barra
+        espaciadora. El cuerpo se hace un ovillo y el golpe se reparte entre once puntos
+        en vez de clavar la cabeza: <b>descuenta dos tercios del daño</b>.</dd>
+      <dt>Portales</dt><dd>Uno al final de cada capítulo. Es punto de guardado y te
+        devuelve 26 de integridad. Si te desarmás, volvés al último.</dd>
+      <dt>Púas</dt><dd>Duelen sin necesidad de que vengas rápido. Esquivalas.</dd>
+      <dt>Resortes</dt><dd>Te devuelven para arriba. A veces conviene.</dd>
+      <dt>Gelatina</dt><dd>Adentro se cae en cámara lenta. Es el único lugar donde
+        podés acomodarte.</dd>
+      <dt>Chatarra</dt><dd>27 pedazos escondidos en los siete capítulos. No sirven
+        para nada y por eso están.</dd>
+    </dl>
+
+    <h3>De qué está hecho</h3>
+    <p>Los dos cuerpos son <b>ragdolls de verdad</b>: once puntos cada uno, unidos por
+      huesos que no se estiran, resueltos con integración de Verlet. No hay animaciones:
+      cada pose que ves es la física resolviéndose. El dibujo sale de las mismas
+      articulaciones, así que lo que se ve y lo que choca son siempre lo mismo.</p>
+    <p>No hay una sola imagen ni un solo archivo de audio: todo es vectores y
+      osciladores. Por eso el juego entero entra en un mail.</p>
+  </div>
+</main>
+
+<!-- ───────────── juego ───────────── -->
+<main id="p-juego" class="pantalla juego" hidden>
+  <div class="hud">
+    <button id="j-salir" class="hud-btn" aria-label="Volver al menú">✕</button>
+    <div class="barra-int"><i id="h-barra"></i></div>
+    <div class="hud-dato"><b id="h-metros">0 m</b></div>
+    <div class="hud-dato chat"><span>◆</span><b id="h-chatarra">0</b></div>
+  </div>
+  <div id="h-cap" class="capitulo">—</div>
+
+  <div id="dialogo" class="dialogo" hidden>
+    <b id="d-quien">—</b><span id="d-que">—</span>
+  </div>
+
+  <button id="btn-bolita" class="bolita" aria-label="Hacerse bolita">
+    <span aria-hidden="true">●</span>
+  </button>
+</main>
+
+<!-- ───────────── final ───────────── -->
+<main id="p-fin" class="pantalla centrado" hidden>
+  <div class="caja fin">
+    <h2>Llegaron</h2>
+    <div id="f-dialogo" class="charla"></div>
+    <ul id="f-lista" class="lista"></ul>
+    <div class="botones fila">
+      <button id="f-otra" class="primario">Otra vez</button>
+      <button id="f-menu">Al menú</button>
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+/* ── verlet.js ── */
+const M_verlet = (() => {
+  // El motor: integracion de Verlet con restricciones de distancia.
+  //
+  // POR QUE VERLET Y NO UN MOTOR DE FUERZAS. Un ragdoll es una docena de puntos
+  // unidos por huesos que no se estiran. Con un motor clasico eso se escribe
+  // como fuerzas de resorte, y un resorte rigido explota: para que el hueso no
+  // se estire hay que subirle la constante, y cuanto mas alta, mas chico tiene
+  // que ser el paso de tiempo o el sistema se va a infinito en tres cuadros.
+  //
+  // Verlet no guarda velocidad: la velocidad ES la diferencia entre la posicion
+  // de ahora y la del cuadro anterior. Entonces una restriccion se cumple
+  // MOVIENDO los puntos, no empujandolos, y mover un punto le cambia la
+  // velocidad solo, gratis y de forma consistente. Un hueso se vuelve "poneme
+  // estos dos puntos a 14 pixeles" repetido unas cuantas veces por cuadro, y eso
+  // es estable por construccion: no hay constante que ajustar ni nada que pueda
+  // divergir.
+  //
+  // El precio es que las restricciones se cumplen POR APROXIMACION: cada vuelta
+  // del solucionador acerca el sistema a la respuesta sin llegar nunca. Con
+  // pocas vueltas el muneco queda de goma; con muchas, rigido y caro. Seis es
+  // donde se ve articulado y no elastico, medido en pruebas/fisica.mjs.
+
+  const G = 0.46;          // gravedad, en pixeles por cuadro al cuadrado
+  const ROCE_AIRE = 0.994; // lo que conserva de velocidad cada cuadro
+  const VUELTAS = 6;       // pasadas del solucionador de restricciones
+  // LA VELOCIDAD MAXIMA DE CAIDA, y es un numero de diseno, no de fisica. Sin
+  // tope, el roce del aire deja una terminal de 76 px por cuadro: el pasillo
+  // entero pasa en medio segundo y no hay forma humana de meterse en un hueco.
+  // Con 7,6 se cruza la pantalla en un segundo y medio, que es el tiempo que
+  // hace falta para ver un obstaculo y corregir. Solo limita la CAIDA: para los
+  // costados y para arriba no hay tope, asi que un resorte sigue disparando.
+  const TOPE_CAIDA = 7.6;
+
+  function punto(x, y, opc = {}) {
+    return {
+      x, y, px: x, py: y,          // posicion de ahora y la del cuadro anterior
+      radio: opc.radio ?? 4,
+      masa: opc.masa ?? 1,
+      fijo: !!opc.fijo,
+      roce: opc.roce ?? 0.72,      // cuanto frena al rozar una superficie
+      rebote: opc.rebote ?? 0.24,
+      nombre: opc.nombre || "",
+      tocando: false,              // si este cuadro toco algo solido
+      golpe: 0,                    // la velocidad con la que llego al choque
+    };
+  }
+
+  /** El largo de un palo se mide al crearlo: asi el cuerpo define su propia forma. */
+  function palo(a, b, opc = {}) {
+    const largo = opc.largo ?? Math.hypot(a.x - b.x, a.y - b.y);
+    return { a, b, largo, rigidez: opc.rigidez ?? 1, tipo: opc.tipo || "hueso" };
+  }
+
+  const vel = (p) => ({ x: p.x - p.px, y: p.y - p.py });
+  const rapidez = (p) => Math.hypot(p.x - p.px, p.y - p.py);
+
+  /** Mover un punto SIN que cuente como velocidad: se arrastra tambien el pasado. */
+  function teletransportar(p, dx, dy) {
+    p.x += dx; p.y += dy; p.px += dx; p.py += dy;
+  }
+
+  function empujar(p, fx, fy) {
+    // Un empujon es un cambio de velocidad, y en Verlet la velocidad es la
+    // distancia al pasado: para acelerar hay que ALEJAR el pasado.
+    p.px -= fx / p.masa;
+    p.py -= fy / p.masa;
+  }
+
+  /**
+   * Un paso de integracion.
+   *
+   * El tope de velocidad no es cosmetico: un punto que en un cuadro se mueve mas
+   * que el grosor de una pared la atraviesa entera y aparece del otro lado, y
+   * despues la restriccion del hueso lo arrastra a la nada. Con 22 px por cuadro
+   * de tope, nada del nivel es mas fino que un paso.
+   */
+  function integrar(puntos, gravedad = G, tope = 22) {
+    for (const p of puntos) {
+      p.tocando = false; p.golpe = 0;
+      if (p.fijo) { p.px = p.x; p.py = p.y; continue; }
+      let vx = (p.x - p.px) * ROCE_AIRE;
+      let vy = (p.y - p.py) * ROCE_AIRE + gravedad;
+      const v = Math.hypot(vx, vy);
+      if (v > tope) { vx = vx / v * tope; vy = vy / v * tope; }
+      // El tope se aplica DESPUES de sumar la gravedad. Aplicado antes, cada
+      // cuadro le vuelve a sumar los 0,46 de la gravedad encima del tope y la
+      // caida real termina siendo tope + gravedad: el numero del codigo y el
+      // numero medido no coinciden, que es la peor clase de constante.
+      if (vy > TOPE_CAIDA) vy = TOPE_CAIDA;
+      p.px = p.x; p.py = p.y;
+      p.x += vx;
+      p.y += vy;
+    }
+  }
+
+  /**
+   * Cumplir las restricciones.
+   *
+   * "hueso" mantiene una distancia exacta; "cuerda" SOLO tira cuando se estiro
+   * de mas —una soga empuja nada— y "resorte" es un hueso blando que se usa para
+   * las articulaciones que tienen que ceder un poco.
+   */
+  function resolver(palos, vueltas = VUELTAS) {
+    for (let v = 0; v < vueltas; v++) {
+      for (const s of palos) {
+        const { a, b } = s;
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d = Math.hypot(dx, dy);
+        if (d < 0.0001) { dx = 0.01; d = 0.01; }
+        if (s.tipo === "cuerda" && d <= s.largo) continue;
+        const dif = (s.largo - d) / d * s.rigidez * 0.5;
+        const ox = dx * dif, oy = dy * dif;
+        // El reparto va por masa invertida: la cabeza pesa mas que una mano y
+        // tiene que moverse menos cuando el cuello tira de las dos.
+        const ia = a.fijo ? 0 : 1 / a.masa, ib = b.fijo ? 0 : 1 / b.masa;
+        const tot = ia + ib;
+        if (tot === 0) continue;
+        a.x -= ox * (ia / tot) * 2; a.y -= oy * (ia / tot) * 2;
+        b.x += ox * (ib / tot) * 2; b.y += oy * (ib / tot) * 2;
+      }
+    }
+  }
+
+  /**
+   * Chocar un punto contra un rectangulo, sacandolo por el lado mas cercano.
+   *
+   * Sale por el lado MENOS hundido y no por el de arriba siempre: un punto que
+   * entra por el costado de una repisa y se lo saca para arriba aparece parado
+   * encima de la nada, y es la diferencia entre una repisa y un ascensor.
+   *
+   * Devuelve la rapidez con la que llego, para que quien llame decida si eso
+   * fue un golpe o un apoyo.
+   */
+  function contraCaja(p, x, y, an, al, opc = {}) {
+    const r = p.radio;
+    if (p.x + r < x || p.x - r > x + an || p.y + r < y || p.y - r > y + al) return 0;
+    const izq = (p.x + r) - x, der = (x + an) - (p.x - r);
+    const arr = (p.y + r) - y, aba = (y + al) - (p.y - r);
+    const min = Math.min(izq, der, arr, aba);
+    const llego = rapidez(p);
+    const rebote = opc.rebote ?? p.rebote, roce = opc.roce ?? p.roce;
+    let vx = p.x - p.px, vy = p.y - p.py;
+    if (min === arr)      { p.y = y - r;      if (vy > 0) vy = -vy * rebote; vx *= roce; }
+    else if (min === aba) { p.y = y + al + r; if (vy < 0) vy = -vy * rebote; vx *= roce; }
+    else if (min === izq) { p.x = x - r;      if (vx > 0) vx = -vx * rebote; vy *= roce; }
+    else                  { p.x = x + an + r; if (vx < 0) vx = -vx * rebote; vy *= roce; }
+    p.px = p.x - vx; p.py = p.y - vy;
+    p.tocando = true; p.golpe = Math.max(p.golpe, llego);
+    return llego;
+  }
+
+  /** Chocar un punto contra un segmento grueso: es lo que son las aspas. */
+  function contraSegmento(p, x1, y1, x2, y2, grosor, opc = {}) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len2 = dx * dx + dy * dy || 1;
+    let t = ((p.x - x1) * dx + (p.y - y1) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const cx = x1 + dx * t, cy = y1 + dy * t;
+    let nx = p.x - cx, ny = p.y - cy;
+    let d = Math.hypot(nx, ny);
+    const min = grosor + p.radio;
+    if (d >= min) return 0;
+    if (d < 0.0001) { nx = 0; ny = -1; d = 1; }
+    const llego = rapidez(p);
+    nx /= d; ny /= d;
+    p.x = cx + nx * min; p.y = cy + ny * min;
+    // Se le suma la velocidad de la propia aspa en ese punto: sin esto el aspa
+    // atraviesa al muneco sin despeinarlo, que es lo contrario de lo que hace
+    // un aspa.
+    const emp = opc.empuje ?? 0;
+    p.px = p.x - (p.x - p.px) * (opc.roce ?? 0.5) - nx * emp;
+    p.py = p.y - (p.y - p.py) * (opc.roce ?? 0.5) - ny * emp;
+    p.tocando = true; p.golpe = Math.max(p.golpe, llego);
+    return llego;
+  }
+
+  return { G, ROCE_AIRE, VUELTAS, TOPE_CAIDA, punto, palo, vel, rapidez, teletransportar, empujar, integrar, resolver, contraCaja, contraSegmento };
+})();
+
+/* ── cuerpo.js ── */
+const M_cuerpo = (() => {
+  // Los cuerpos: como se arman y como se dibujan.
+  //
+  // TODO ES VECTOR, no hay una sola imagen en el juego. No es capricho: un
+  // ragdoll no tiene poses, tiene articulaciones, y no existe la hoja de sprites
+  // que cubra las infinitas formas en las que un muneco se puede caer por una
+  // escalera. Dibujando de las articulaciones para afuera —un brazo es una linea
+  // gruesa entre dos puntos— el dibujo SIEMPRE coincide con la fisica, porque es
+  // la misma informacion mirada de otra forma.
+  //
+  // El esqueleto tiene once puntos. Menos que eso y las rodillas no se doblan;
+  // mas, y el solucionador empieza a pelearse consigo mismo sin que se note la
+  // diferencia en pantalla.
+  //
+  // LOS PALOS DE FORMA. Un ragdoll hecho solo con los huesos que unen partes
+  // vecinas se dobla al medio como una toalla: nada impide que la cabeza toque
+  // los pies. Los palos "forma" —cabeza a cadera, pecho a rodillas, codo a
+  // codo— son restricciones flojas que no se ven, y son la diferencia entre una
+  // persona que cae y una bolsa de papas.
+
+  const { punto, palo } = M_verlet;
+  // El esqueleto, en pixeles y con el (0,0) en la cabeza. Cambiarlo cambia la
+  // forma del muneco y nada mas: los huesos miden su largo de aca.
+  const HUESOS = [
+    ["cabeza", 0, 0, 7.0, 2.4],
+    ["pecho", 0, 15, 5.5, 3.0],
+    ["cadera", 0, 27, 5.0, 2.6],
+    ["codoIzq", -9, 21, 3.0, 0.9], ["manoIzq", -14, 31, 3.0, 0.7],
+    ["codoDer", 9, 21, 3.0, 0.9], ["manoDer", 14, 31, 3.0, 0.7],
+    ["rodIzq", -6, 39, 3.5, 1.1], ["pieIzq", -7, 51, 3.8, 0.9],
+    ["rodDer", 6, 39, 3.5, 1.1], ["pieDer", 7, 51, 3.8, 0.9],
+  ];
+
+  const ALTO_CUERPO = 58;
+
+  function crearCuerpo(x, y, pinta) {
+    const p = {};
+    const puntos = [];
+    for (const [n, dx, dy, r, m] of HUESOS) {
+      const pt = punto(x + dx, y + dy, { radio: r, masa: m, nombre: n });
+      p[n] = pt; puntos.push(pt);
+    }
+    const palos = [];
+    const unir = (a, b, opc) => palos.push(palo(p[a], p[b], opc));
+    unir("cabeza", "pecho");            // cuello
+    unir("pecho", "cadera");            // columna
+    unir("pecho", "codoIzq"); unir("codoIzq", "manoIzq");
+    unir("pecho", "codoDer"); unir("codoDer", "manoDer");
+    unir("cadera", "rodIzq"); unir("rodIzq", "pieIzq");
+    unir("cadera", "rodDer"); unir("rodDer", "pieDer");
+
+    // Los flojos. Se guardan aparte porque hacerse bolita los acorta.
+    const forma = [];
+    const dar = (a, b, rig) => {
+      const s = palo(p[a], p[b], { rigidez: rig, tipo: "forma" });
+      s.base = s.largo; palos.push(s); forma.push(s);
+    };
+    dar("cabeza", "cadera", 0.14);
+    dar("pecho", "rodIzq", 0.07); dar("pecho", "rodDer", 0.07);
+    dar("codoIzq", "codoDer", 0.06);
+    dar("rodIzq", "rodDer", 0.05);
+    dar("cabeza", "manoIzq", 0.03); dar("cabeza", "manoDer", 0.03);
+    // Estos dos casi no existen mientras el cuerpo esta suelto —rigidez 0,02 no
+    // corrige nada— y son los que doblan al muneco al medio cuando se hace
+    // bolita: son los unicos que unen la cabeza con los pies, que es la
+    // distancia que hay que acortar para que un cuerpo se vuelva una pelota.
+    dar("cabeza", "pieIzq", 0.02); dar("cabeza", "pieDer", 0.02);
+
+    return { puntos, palos, forma, p, pinta, bolita: 0, mirada: 0 };
+  }
+
+  /**
+   * Hacerse bolita: los palos de forma se acortan y se endurecen.
+   *
+   * Es la unica defensa que tiene el jugador contra un golpe, y funciona porque
+   * un cuerpo hecho un ovillo reparte el golpe entre once puntos en vez de
+   * clavar la cabeza sola contra el piso. La fisica lo hace sola: no hay un
+   * "modo invulnerable", hay un cuerpo con otra forma.
+   */
+  function ovillar(c, cuanto) {
+    c.bolita += (cuanto - c.bolita) * 0.22;
+    const k = 1 - c.bolita * 0.55;
+    for (const s of c.forma) {
+      s.largo = s.base * k;
+      // La rigidez sube casi hasta la de un hueso: un palo de forma flojo
+      // acortado no encoge nada, lo tironea el hueso de al lado y gana el hueso.
+      // Se queda por debajo de la rigidez de un hueso (1) a proposito: si la
+      // pasa, el palo de forma le gana al hueso y el brazo se comprime a la
+      // mitad — el ovillo queda bien y los brazos quedan cortos.
+      s.rigidez = 0.06 + c.bolita * 0.42;
+    }
+  }
+
+  function centro(c) {
+    return { x: (c.p.pecho.x + c.p.cadera.x) / 2, y: (c.p.pecho.y + c.p.cadera.y) / 2 };
+  }
+
+  // --- dibujo --------------------------------------------------------------
+
+  const linea = (ctx, a, b, gr, color) => {
+    ctx.strokeStyle = color; ctx.lineWidth = gr; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  };
+
+  /** Los hombros y las caderas salen de la columna, girados 90 grados. */
+  function ejes(c) {
+    const dx = c.p.cadera.x - c.p.pecho.x, dy = c.p.cadera.y - c.p.pecho.y;
+    const d = Math.hypot(dx, dy) || 1;
+    return { nx: -dy / d, ny: dx / d };
+  }
+
+  function dibujarCuerpo(ctx, c) {
+    const { p, pinta } = c;
+    const { nx, ny } = ejes(c);
+
+    // Las piernas y los brazos de atras primero: el orden de pintado es la
+    // unica profundidad que tiene un dibujo plano.
+    linea(ctx, p.cadera, p.rodDer, 7, pinta.pantalon);
+    linea(ctx, p.rodDer, p.pieDer, 6, pinta.pantalon);
+    linea(ctx, p.cadera, p.rodIzq, 7, pinta.pantalon);
+    linea(ctx, p.rodIzq, p.pieIzq, 6, pinta.pantalon);
+    for (const pie of [p.pieDer, p.pieIzq]) {
+      ctx.fillStyle = pinta.zapato;
+      ctx.beginPath(); ctx.ellipse(pie.x, pie.y + 1, 5.5, 3.6, 0, 0, 7); ctx.fill();
+    }
+
+    // El torso: un cuadrilatero entre hombros y caderas, no un rectangulo. Al
+    // doblarse la columna el tronco se dobla con ella.
+    const ho = 9, ca = 7;
+    ctx.fillStyle = pinta.torso;
+    ctx.beginPath();
+    ctx.moveTo(p.pecho.x + nx * ho, p.pecho.y + ny * ho);
+    ctx.lineTo(p.cadera.x + nx * ca, p.cadera.y + ny * ca);
+    ctx.lineTo(p.cadera.x - nx * ca, p.cadera.y - ny * ca);
+    ctx.lineTo(p.pecho.x - nx * ho, p.pecho.y - ny * ho);
+    ctx.closePath(); ctx.fill();
+    if (pinta.solapa) {
+      // El guardapolvo abierto: dos solapas y una linea al medio. Es lo que
+      // hace que de lejos se lea "cientifico" y no "tipo de remera blanca".
+      ctx.strokeStyle = pinta.solapa; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(p.pecho.x, p.pecho.y); ctx.lineTo(p.cadera.x, p.cadera.y);
+      ctx.stroke();
+      ctx.fillStyle = pinta.solapa;
+      ctx.beginPath();
+      ctx.moveTo(p.pecho.x + nx * ho, p.pecho.y + ny * ho);
+      ctx.lineTo(p.pecho.x + nx * 2, p.pecho.y + ny * 2 + 9);
+      ctx.lineTo(p.pecho.x + nx * ho * 0.6, p.pecho.y + ny * ho * 0.6 + 2);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(p.pecho.x - nx * ho, p.pecho.y - ny * ho);
+      ctx.lineTo(p.pecho.x - nx * 2, p.pecho.y - ny * 2 + 9);
+      ctx.lineTo(p.pecho.x - nx * ho * 0.6, p.pecho.y - ny * ho * 0.6 + 2);
+      ctx.closePath(); ctx.fill();
+    }
+
+    linea(ctx, p.pecho, p.codoDer, 5.5, pinta.brazo);
+    linea(ctx, p.codoDer, p.manoDer, 5, pinta.brazo);
+    linea(ctx, p.pecho, p.codoIzq, 5.5, pinta.brazo);
+    linea(ctx, p.codoIzq, p.manoIzq, 5, pinta.brazo);
+    for (const mano of [p.manoDer, p.manoIzq]) {
+      ctx.fillStyle = pinta.piel;
+      ctx.beginPath(); ctx.arc(mano.x, mano.y, 3.4, 0, 7); ctx.fill();
+    }
+
+    // El cuello, para que la cabeza no flote.
+    linea(ctx, p.pecho, p.cabeza, 5, pinta.piel);
+
+    // La cabeza. El angulo sale del vector cuello→cabeza: la cara mira para
+    // donde apunta el cuello, siempre, sin guardar ningun estado.
+    const ax = p.cabeza.x - p.pecho.x, ay = p.cabeza.y - p.pecho.y;
+    const ang = Math.atan2(ay, ax) + Math.PI / 2;
+    ctx.save();
+    ctx.translate(p.cabeza.x, p.cabeza.y);
+    ctx.rotate(ang);
+    if (pinta.pelo === "pinchos") {
+      // El pelo del viejo: nueve pinchos alrededor de la media cabeza de
+      // arriba. Se dibujan antes que la cara para que salgan de atras.
+      ctx.fillStyle = pinta.pelocolor;
+      ctx.beginPath();
+      for (let i = 0; i <= 10; i++) {
+        const a = Math.PI + (i / 10) * Math.PI;
+        const r = i % 2 ? 15.5 : 8;
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r - 1);
+      }
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = pinta.piel;
+    ctx.beginPath(); ctx.arc(0, 0, 7.6, 0, 7); ctx.fill();
+    if (pinta.pelo === "tazon") {
+      // El flequillo del pibe: un casquete que le tapa media frente.
+      ctx.fillStyle = pinta.pelocolor;
+      ctx.beginPath();
+      ctx.arc(0, -0.5, 8, Math.PI, 0);
+      ctx.lineTo(8, -0.5); ctx.lineTo(-8, -0.5);
+      ctx.closePath(); ctx.fill();
+    }
+    // Los ojos miran para donde va el cuerpo. Es el detalle mas barato que hay
+    // y el que mas hace: un ragdoll con los ojos quietos parece un maniqui.
+    const m = Math.max(-1, Math.min(1, c.mirada));
+    for (const s of [-1, 1]) {
+      ctx.fillStyle = "#fff";
+      ctx.beginPath(); ctx.ellipse(s * 3.1, 0.5, 2.9, 3.3, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "#13161f";
+      ctx.beginPath(); ctx.arc(s * 3.1 + m * 1.3, 1.1, 1.35, 0, 7); ctx.fill();
+    }
+    if (pinta.ceja) {
+      ctx.strokeStyle = pinta.pelocolor; ctx.lineWidth = 1.4; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(-6, -3.6); ctx.lineTo(-1.2, -4.6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(1.2, -5.2); ctx.lineTo(6, -3.2); ctx.stroke();
+    }
+    ctx.strokeStyle = "#7a3b46"; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(0, 4, 2.4, 0.25, Math.PI - 0.25); ctx.stroke();
+    if (pinta.baba) {
+      // La babita. Es un personaje, no un muneco de pruebas.
+      ctx.fillStyle = "rgba(180,230,255,.75)";
+      ctx.beginPath(); ctx.ellipse(2.6, 6.4, 1, 2.1, 0, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Las dos pintas del juego. Son originales a proposito: homenaje, no calco.
+  const RILO = {
+    torso: "#eef2f7", solapa: "#cdd6e2", brazo: "#eef2f7", piel: "#d9b48f",
+    pantalon: "#3a4a63", zapato: "#22293a", pelo: "pinchos", pelocolor: "#8fe3f5",
+    ceja: true, baba: true,
+  };
+  const TITO = {
+    torso: "#f5d341", solapa: null, brazo: "#f5d341", piel: "#e2b483",
+    pantalon: "#2f4d7a", zapato: "#2a2f3d", pelo: "tazon", pelocolor: "#7a4a2a",
+    ceja: false, baba: false,
+  };
+
+  return { ALTO_CUERPO, crearCuerpo, ovillar, centro, dibujarCuerpo, RILO, TITO };
+})();
+
+/* ── nivel.js ── */
+const M_nivel = (() => {
+  // El pozo: siete capitulos, uno atras del otro, y la historia que los cuenta.
+  //
+  // EL NIVEL ES UNO SOLO Y ES SIEMPRE EL MISMO. La semilla esta escrita aca
+  // adentro, asi que "la fabrica de jarabe" tiene siempre las mismas aspas en el
+  // mismo lugar: se puede aprender, que es lo unico que hace que valga la pena
+  // repetir un tramo. Lo que se genera no es la sorpresa, es el tedio de escribir
+  // doscientas repisas a mano.
+  //
+  // LA GARANTIA DE QUE SE PUEDE PASAR. Cada fila de obstaculos se arma alrededor
+  // de un HUECO que se elige primero: las repisas se ponen a los costados del
+  // hueco y nunca encima. Por construccion no existe una fila tapada, y
+  // pruebas/nivel.mjs lo verifica fila por fila en vez de creerme.
+
+  const ANCHO = 360;
+
+  // Un generador chico y propio. Math.random no sirve: el nivel tiene que ser
+  // el mismo hoy y el mes que viene.
+  function azar(semilla) {
+    let s = semilla >>> 0;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  const CAPITULOS = [
+    { nombre: "El garaje", alto: 1300, tipo: "simple",
+      cielo: ["#161c2b", "#28324d"], pared: "#3c4866",
+      dice: [["Rilo", "Bueno Tito, el portal quedó en el piso. Saltá."],
+             ["Tito", "¿Y qué hay abajo, abuelo?"],
+             ["Rilo", "Sí."]] },
+    { nombre: "Las cañerías", alto: 1500, tipo: "repisas",
+      cielo: ["#10201e", "#1d3a38"], pared: "#2f5c58",
+      dice: [["Tito", "¡Esto son caños! ¡Caños de qué!"],
+             ["Rilo", "De la dimensión Ñ. Acá el agua va para arriba."],
+             ["Tito", "Eso no contesta nada."]] },
+    { nombre: "La fábrica de jarabe", alto: 1600, tipo: "aspas",
+      cielo: ["#2a1020", "#4d1f38"], pared: "#75304f",
+      dice: [["Rilo", "No toques las aspas."],
+             ["Tito", "¿Y si me tocan ellas a mí?"],
+             ["Rilo", "Ahí sí es problema tuyo."]] },
+    { nombre: "El vacío", alto: 1500, tipo: "islas",
+      cielo: ["#0a0f22", "#141d3d"], pared: "#243055",
+      dice: [["Tito", "No hay paredes. ¡No hay paredes!"],
+             ["Rilo", "Apuntá bien entonces."]] },
+    { nombre: "La panza", alto: 1500, tipo: "gelatina",
+      cielo: ["#2b1a10", "#54331f"], pared: "#7a4c2c",
+      dice: [["Tito", "Abuelo… esto late."],
+             ["Rilo", "Es una panza, Tito. Tarde o temprano pasa."]] },
+    { nombre: "El basural de dimensiones", alto: 1600, tipo: "mezcla",
+      cielo: ["#1c1c12", "#3a3a22", "#4a4a2c"], pared: "#5e5e36",
+      dice: [["Rilo", "Acá tiran las realidades que no funcionaron."],
+             ["Tito", "Hay como cuarenta vos tirados ahí."],
+             ["Rilo", "Treinta y ocho. Seguí."]] },
+    { nombre: "La heladera", alto: 1400, tipo: "final",
+      cielo: ["#0d2530", "#1b4a5c"], pared: "#2c7086",
+      dice: [["Rilo", "Llegamos."],
+             ["Tito", "¿Todo esto por una heladera?"],
+             ["Rilo", "Por lo que hay adentro. Abrila."]] },
+  ];
+
+  const FINAL = [
+    ["Tito", "…es un sánguche."],
+    ["Rilo", "Es EL sánguche, Tito. En noventa realidades no existe."],
+    ["Tito", "¿Y por qué me trajiste a mí?"],
+    ["Rilo", "Porque lo vamos a comer a la mitad. No soy un monstruo."],
+  ];
+
+  /**
+   * Armar el pozo entero. Devuelve todo lo que el juego necesita del nivel y
+   * nada mas: quien dibuja y quien choca leen de aca, no calculan nada propio.
+   */
+  function construirNivel() {
+    const r = azar(137);
+    const caps = [];
+    const obst = [];
+    const chatarra = [];
+    const portales = [];
+    const perfil = [];            // las paredes, muestreadas cada 100 px
+    let y0 = 0;
+
+    for (let i = 0; i < CAPITULOS.length; i++) {
+      const c = CAPITULOS[i];
+      const desde = y0, hasta = y0 + c.alto;
+      caps.push({ ...c, i, desde, hasta });
+
+      // Las paredes serpentean, pero nunca dejan el pasillo mas angosto que 150
+      // px: con menos, el muneco extendido no entra ni de costado.
+      for (let y = desde; y <= hasta; y += 100) {
+        const t = (y - desde) / c.alto;
+        const onda = Math.sin(y / 420 + i) * 34 + Math.sin(y / 170) * 12;
+        // Cada capitulo tiene su ancho: el basural aprieta, el vacio se abre.
+        // Con el mismo pasillo siempre, las paredes dejan de ser un obstaculo y
+        // pasan a ser un marco.
+        const ap = [0, 26, 14, -26, 38, 30, 18][i] || 0;
+        let izq = 34 + onda + ap, der = ANCHO - 34 + onda - ap;
+        if (c.tipo === "islas") { izq -= 24; der += 24; }
+        izq = Math.max(6, Math.min(140, izq));
+        der = Math.min(ANCHO - 6, Math.max(izq + 150, der));
+        perfil.push({ y, izq, der, cap: i, t });
+      }
+
+      // Las filas. El hueco se elige PRIMERO y todo lo demas se acomoda a el.
+      const paso = c.tipo === "islas" ? 300 : c.tipo === "aspas" ? 260 : 235;
+      for (let y = desde + 150; y < hasta - 170; y += paso) {
+        // Una de cada cuatro filas queda vacia. Un pozo con un obstaculo cada
+        // 260 px sin excepcion no es dificil, es agotador: los respiros son lo
+        // que hace que los tramos apretados se noten.
+        if (r() < 0.15) { if (r() < 0.5) chatarra.push({ x: 0, y, tomada: false, centrar: true }); continue; }
+        const w = paredEn(perfil, y);
+        const HUECO = 108;
+        const hx = w.izq + 16 + r() * Math.max(10, (w.der - w.izq) - 32 - HUECO);
+        const izqAn = hx - w.izq, derAn = w.der - (hx + HUECO);
+
+        if (c.tipo === "aspas" && r() < 0.62) {
+          // Un aspa no tapa la fila: gira en el centro y hay que pasarle al lado
+          // o cronometrarla. El largo se limita a un tercio del pasillo.
+          const largo = Math.min(58, (w.der - w.izq) * 0.3);
+          obst.push({ t: "aspa", x: (w.izq + w.der) / 2, y, largo,
+                      vel: (r() < 0.5 ? -1 : 1) * (0.018 + r() * 0.016),
+                      fase: r() * 6.28, grosor: 5 });
+          if (r() < 0.5) chatarra.push({ x: hx + HUECO / 2, y: y - 60, tomada: false });
+          continue;
+        }
+        const tipoIzq = elegir(c, r), tipoDer = elegir(c, r);
+        if (izqAn > 24) obst.push({ t: tipoIzq, x: w.izq, y, an: izqAn, al: 16 });
+        if (derAn > 24) obst.push({ t: tipoDer, x: hx + HUECO, y, an: derAn, al: 16 });
+        if (c.tipo === "gelatina" && r() < 0.5)
+          obst.push({ t: "gel", x: hx + HUECO / 2, y: y + 70, r: 40 + r() * 26 });
+        if (r() < 0.55) chatarra.push({ x: hx + HUECO / 2, y: y - 46, tomada: false });
+      }
+
+      // El portal del final del capitulo, con SU PROPIO PISO alrededor.
+      //
+      // Sin el piso, el portal es un adorno que se puede errar por treinta
+      // pixeles: se sigue de largo al capitulo siguiente sin punto de guardado,
+      // sin el dialogo que cuenta la historia y —en el ultimo— sin final. Con
+      // el piso, la unica forma de bajar es el agujero, asi que la historia no
+      // se puede saltear por accidente.
+      const py = hasta - 70;
+      const wp = paredEn(perfil, py);
+      const px = (wp.izq + wp.der) / 2;
+      portales.push({ x: px, y: py, cap: i, r: 30, usado: false,
+                      ultimo: i === CAPITULOS.length - 1 });
+      const HP = 74;
+      obst.push({ t: "repisa", x: 0, y: py + 14, an: px - HP / 2, al: 18 });
+      obst.push({ t: "repisa", x: px + HP / 2, y: py + 14, an: ANCHO - (px + HP / 2), al: 18 });
+      y0 = hasta;
+    }
+
+    // La chatarra de las filas vacias se centra recien aca, con las paredes ya
+    // calculadas para esa altura.
+    for (const ch of chatarra) if (ch.centrar) {
+      const w = paredEn(perfil, ch.y); ch.x = (w.izq + w.der) / 2; ch.centrar = false;
+    }
+
+    // El piso del final. Existe para que el ultimo portal no se pueda saltear
+    // cayendo de largo por el costado.
+    const wf = paredEn(perfil, y0 - 10);
+    obst.push({ t: "repisa", x: 0, y: y0, an: ANCHO, al: 40 });
+    return { alto: y0, caps, obst, chatarra, portales, perfil, wf };
+  }
+
+  function elegir(c, r) {
+    const x = r();
+    if (c.tipo === "simple") return "repisa";
+    if (c.tipo === "repisas") return x < 0.18 ? "pincho" : x < 0.34 ? "resorte" : "repisa";
+    if (c.tipo === "aspas") return x < 0.3 ? "pincho" : "repisa";
+    if (c.tipo === "islas") return "repisa";
+    if (c.tipo === "gelatina") return x < 0.22 ? "resorte" : "repisa";
+    if (c.tipo === "mezcla") return x < 0.3 ? "pincho" : x < 0.5 ? "resorte" : "repisa";
+    return x < 0.2 ? "pincho" : "repisa";
+  }
+
+  /** Las paredes a una altura: interpolacion lineal entre las dos muestras. */
+  function paredEn(perfil, y) {
+    const i = Math.max(0, Math.min(perfil.length - 2, Math.floor(y / 100)));
+    const a = perfil[i], b = perfil[i + 1] || a;
+    const t = Math.max(0, Math.min(1, (y - a.y) / ((b.y - a.y) || 1)));
+    return { izq: a.izq + (b.izq - a.izq) * t, der: a.der + (b.der - a.der) * t };
+  }
+
+  const capituloEn = (nv, y) =>
+    nv.caps.find((c) => y >= c.desde && y < c.hasta) || nv.caps[nv.caps.length - 1];
+
+  return { ANCHO, CAPITULOS, FINAL, construirNivel, paredEn, capituloEn };
+})();
+
+/* ── juego.js ── */
+const M_juego = (() => {
+  // La partida: los dos cuerpos, lo que chocan y lo que les pasa cuando chocan.
+
+  const { integrar, resolver, palo, contraCaja, contraSegmento, empujar, teletransportar, rapidez, G } = M_verlet;
+  const { crearCuerpo, ovillar, centro, RILO, TITO, ALTO_CUERPO } = M_cuerpo;
+  const { paredEn, capituloEn, ANCHO } = M_nivel;
+  const VISTA = { ancho: 360, alto: 640 };
+
+  // El golpe que se aguanta sin pagar nada, contra los 7,6 px por cuadro que da
+  // la caida a fondo: rozar una pared o apoyarse en una repisa despacio sale
+  // gratis, llegar a una repisa cayendo derecho cuesta.
+  const UMBRAL = 5.8;
+  // Un cobro por vez. Un ragdoll que cae de costado apoya once puntos en el
+  // mismo cuadro y la fisica se resuelve tres veces por cuadro: cobrando cada
+  // contacto, una caida comun descuenta treinta y tres veces y la barra se
+  // vacia en dos segundos. Se guarda EL PEOR golpe del cuadro y se cobra ese, y
+  // despues no se vuelve a cobrar por doce cuadros — lo que dura un rebote.
+  const ESPERA = 12;
+
+  class Partida {
+    constructor(nv) {
+      this.nv = nv;
+      this.reiniciarEn(0);
+    }
+
+    /** Arrancar —o volver— desde el portal `cap`. */
+    reiniciarEn(cap) {
+      const nv = this.nv;
+      const y = cap === 0 ? 40 : nv.portales[cap - 1].y + 40;
+      const w = paredEn(nv.perfil, y);
+      const x = (w.izq + w.der) / 2;
+
+      this.rilo = crearCuerpo(x - 12, y, RILO);
+      this.tito = crearCuerpo(x + 18, y - 6, TITO);
+      // LA SOGA. Tito no es decoracion: cuelga de Rilo con una restriccion que
+      // solo tira cuando se estira, asi que es peso muerto que arrastra en las
+      // curvas — que es exactamente lo que es un nieto atado con una soga.
+      //
+      // VA DE PECHO A PECHO Y NO DE MANO A MANO, y esa es toda la diferencia.
+      // Una mano pesa 0,7 contra los 14 del cuerpo entero: atando la soga ahi,
+      // el tiron sale disparado al punto liviano, el antebrazo se estira —medido,
+      // 32% de mas— y el tiron recien llega al cuerpo un par de cuadros despues,
+      // por los huesos. De pecho a pecho tira del peso de una sola vez y ningun
+      // hueso paga el viaje.
+      this.soga = palo(this.rilo.p.pecho, this.tito.p.pecho,
+                       { largo: 56, tipo: "cuerda", rigidez: 1 });
+      // Y esta, floja, es la que acerca las dos manos para que la soga DIBUJADA
+      // salga de una mano y no del esternon. No aguanta peso: si lo aguantara,
+      // volveriamos al brazo de goma.
+      this.mano = palo(this.rilo.p.manoIzq, this.tito.p.manoDer,
+                       { largo: 26, tipo: "cuerda", rigidez: 0.28 });
+      this.puntos = [...this.rilo.puntos, ...this.tito.puntos];
+      this.palos = [...this.rilo.palos, ...this.tito.palos, this.mano, this.soga];
+
+      this.desdeCap = cap;
+      this.integridad = cap === 0 ? 100 : 72;
+      this.estado = "jugando";           // jugando | roto | gano
+      this.peor = null;                  // el golpe mas fuerte de este cuadro
+      this.espera = 0;
+      this.cuenta = 0;
+      this.cam = centro(this.rilo).y - VISTA.alto * 0.34;
+      this.sacude = 0;
+      this.chispas = [];
+      this.prof = y;
+      this.marca = y;
+      this.t = 0;
+      this.dicho = null;                 // el cartel de dialogo que esta puesto
+      this.dichoT = 0;
+      this.decir(nv.caps[cap].dice, nv.caps[cap].nombre);
+      for (const c of nv.chatarra) if (c.y > y) c.tomada = false;
+    }
+
+    decir(lineas, titulo) {
+      this.dicho = { lineas, titulo, i: 0 };
+      this.dichoT = 0;
+    }
+
+    // --- un cuadro ---------------------------------------------------------
+    paso(ent) {
+      this.t++;
+      // Los avisos del cuadro. La partida NO suena nada: no sabe que existe el
+      // audio. Deja anotado que paso y main.js decide. Asi se puede correr la
+      // fisica entera en una prueba, sin navegador y sin sonido.
+      this.ev = { golpe: 0, pincho: false, resorte: false, portal: false,
+                  chatarra: 0, roto: false, gano: false, capitulo: null };
+      if (this.sacude > 0) this.sacude *= 0.88;
+      if (this.dicho) {
+        this.dichoT++;
+        // Cada linea se queda dos segundos y medio. No frena el juego: se sigue
+        // cayendo mientras hablan, que es medio el chiste.
+        if (this.dichoT > 150) { this.dichoT = 0; this.dicho.i++;
+                                 if (this.dicho.i >= this.dicho.lineas.length) this.dicho = null; }
+      }
+
+      if (this.estado === "roto") {
+        this.cuenta++;
+        this.fisica(ent, true);
+        if (this.cuenta > 110) this.reiniciarEn(this.desdeCap);
+        return;
+      }
+      if (this.estado === "gano") { this.fisica(ent, true); return; }
+
+      this.fisica(ent, false);
+
+      const c = centro(this.rilo);
+      this.prof = Math.max(this.prof, c.y);
+      this.marca = c.y;
+      // La camara persigue con retraso y mira un poco mas abajo que el muneco:
+      // en un juego de caer, lo que importa es lo que VIENE.
+      const obj = c.y - VISTA.alto * 0.34;
+      this.cam += (obj - this.cam) * 0.14;
+
+      this.portales(c);
+      this.juntar();
+      if (this.integridad <= 0) {
+        this.integridad = 0; this.estado = "roto"; this.cuenta = 0; this.sacude = 14;
+        this.ev.roto = true;
+      }
+      for (const ch of this.chispas) {
+        ch.x += ch.vx; ch.y += ch.vy; ch.vy += 0.18; ch.vida--;
+      }
+      this.chispas = this.chispas.filter((ch) => ch.vida > 0);
+    }
+
+    fisica(ent, suelto) {
+      const r = this.rilo, t = this.tito;
+      // EL REACTOR. El unico control del juego: un empujon lateral al pecho de
+      // Rilo. Va al pecho y no al centro de masa porque empujar el pecho hace
+      // que el cuerpo se incline y las piernas queden atras, que es como se ve
+      // alguien empujado. Un empujon al centro de masa mueve un ladrillo.
+      if (!suelto && ent.mover) {
+        // EL EMPUJON VA A TODO EL CUERPO, repartido por masa, y encima un extra
+        // al pecho. Puesto solo en el pecho —que es lo que parecia mas natural—
+        // el reactor tiene que arrastrar por los huesos los otros diez puntos de
+        // Rilo mas los once de Tito: la aceleracion real daba 0,11 px por cuadro
+        // al cuadrado y cruzar el pasillo llevaba cuatro segundos, o sea que
+        // esquivar era imposible. Repartido, la aceleracion es la que dice el
+        // numero; el extra del pecho es lo que hace que el cuerpo se incline y
+        // las piernas queden atras, que es como se ve alguien empujado.
+        const a = ent.mover * 0.34;
+        for (const pt of r.puntos) empujar(pt, a * pt.masa, 0);
+        empujar(r.p.pecho, ent.mover * 0.5, 0);
+        empujar(r.p.cabeza, ent.mover * 0.2, 0);
+        r.mirada = ent.mover;
+        if (this.t % 3 === 0)
+          this.chispa(r.p.cadera.x - ent.mover * 8, r.p.cadera.y + 6, "#8fe3f5", 1, -ent.mover * 2);
+      } else {
+        r.mirada += (0 - r.mirada) * 0.08;
+      }
+      const bol = suelto ? 0 : (ent.bolita ? 1 : 0);
+      ovillar(r, bol);
+      ovillar(t, bol * 0.85);
+      t.mirada = Math.max(-1, Math.min(1, (t.p.pecho.x - t.px0 || 0)));
+      t.px0 = t.p.pecho.x;
+
+      this.peor = null;
+      if (this.espera > 0) this.espera--;
+      integrar(this.puntos);
+      // Resolver y chocar intercalados. Resolver todo y despues chocar deja al
+      // muneco medio hundido en el piso: la ultima palabra la tiene el hueso, y
+      // el hueso no sabe que abajo hay una repisa. Tres rondas cortas alcanzan.
+      // EL CUADRO TERMINA CON LOS HUESOS ENTEROS. Antes las aspas y la ultima
+      // ronda de choques movian puntos DESPUES del ultimo resolver, y el cuadro
+      // quedaba dibujado con los huesos violados —medido, hasta 41% de
+      // diferencia— aunque el cuadro siguiente lo arreglara. Ahora todo lo que
+      // mueve puntos pasa adentro del bucle y afuera queda un resolver final. A
+      // cambio, un punto puede terminar uno o dos pixeles adentro de una
+      // repisa, que no lo ve nadie.
+      this.aspasMover();
+      for (let k = 0; k < 3; k++) {
+        resolver(this.palos, 2);
+        for (const p of this.puntos) this.chocarPunto(p);
+        this.aspasChocar();
+      }
+      resolver(this.palos, 5);
+      this.cobrar();
+    }
+
+    chocarPunto(p) {
+      const nv = this.nv;
+      const w = paredEn(nv.perfil, p.y);
+      // La velocidad se saca ANTES de mover el punto. Calculada despues, `p.x -
+      // p.px` mezcla la posicion corregida con el pasado viejo y sale un numero
+      // que no es la velocidad de nada: el punto salia disparado de la pared y
+      // de ahi venian estirones de hueso del 50%.
+      if (p.x - p.radio < w.izq || p.x + p.radio > w.der) {
+        const vx = p.x - p.px, vy = p.y - p.py;
+        const v = Math.hypot(vx, vy);
+        p.x = p.x - p.radio < w.izq ? w.izq + p.radio : w.der - p.radio;
+        p.px = p.x + vx * 0.25;      // rebota poco: la pared no es un resorte
+        p.py = p.y - vy * 0.9;       // y frena un poco al raspar
+        p.tocando = true; this.pegar(p, v * 0.5);
+      }
+      for (const o of nv.obst) {
+        if (o.t === "aspa") continue;
+        if (o.t === "gel") {
+          const d = Math.hypot(p.x - o.x, p.y - o.y);
+          if (d < o.r + p.radio) {
+            // La gelatina no choca: frena. Se le come velocidad y buena parte de
+            // la gravedad del cuadro, asi que adentro se cae en camara lenta.
+            p.px = p.x - (p.x - p.px) * 0.80;
+            p.py = p.y - (p.y - p.py) * 0.74 - G * 0.5;
+          }
+          continue;
+        }
+        if (p.y + p.radio < o.y - 2 || p.y - p.radio > o.y + o.al + 2) continue;
+        // Las repisas son RESBALOSAS a proposito. Con roce de verdad, un cuerpo
+        // caido encima tarda cinco segundos en arrastrarse cien pixeles y el
+        // juego se detiene; ademas este no es un juego de pararse en las
+        // plataformas, es uno de pasarlas de largo. Ojo que el roce se aplica
+        // una vez por ronda de colision, tres veces por cuadro: 0,93 al cubo es
+        // 0,80, que es el roce real por cuadro.
+        const opc = o.t === "resorte" ? { rebote: 1.22, roce: 0.95 } : { roce: 0.93 };
+        const v = contraCaja(p, o.x, o.y, o.an, o.al, opc);
+        if (!v) continue;
+        if (o.t === "pincho") { this.pegar(p, v, 13); if (this.ev) this.ev.pincho = true; }
+        else if (o.t === "resorte") {
+          if (v > 4) { this.chispa(p.x, p.y, "#7dffb0", 3, -2); if (this.ev) this.ev.resorte = true; }
+        }
+        else this.pegar(p, v);
+      }
+    }
+
+    /** Girar las aspas: UNA vez por cuadro, aunque la fisica corra tres rondas. */
+    aspasMover() {
+      for (const o of this.nv.obst) {
+        if (o.t !== "aspa") continue;
+        const a = o.fase + this.t * o.vel;
+        o.ax = o.x + Math.cos(a) * o.largo; o.ay = o.y + Math.sin(a) * o.largo;
+        o.bx = o.x - Math.cos(a) * o.largo; o.by = o.y - Math.sin(a) * o.largo;
+      }
+    }
+
+    aspasChocar() {
+      for (const o of this.nv.obst) {
+        if (o.t !== "aspa" || o.ax === undefined) continue;
+        for (const p of this.puntos) {
+          if (Math.abs(p.y - o.y) > o.largo + 20) continue;
+          const v = contraSegmento(p, o.ax, o.ay, o.bx, o.by, o.grosor,
+                                   { empuje: Math.abs(o.vel) * o.largo * 0.9, roce: 0.6 });
+          if (v) this.pegar(p, v, 6);
+        }
+      }
+    }
+
+    /**
+     * Anotar un golpe. NO cobra: solo se queda con el peor del cuadro.
+     *
+     * La cabeza cuesta casi el doble que el cuerpo y un pie casi nada, asi que
+     * caer parado es barato y caer de cabeza es caro — que es la unica razon
+     * por la que vale la pena aprender a acomodarse en el aire.
+     */
+    pegar(p, v, extra = 0) {
+      if (this.estado !== "jugando") return;
+      if (v < UMBRAL && !extra) return;
+      const parte = p.nombre === "cabeza" ? 1.7 : p.nombre.startsWith("pie") ? 0.5 : 1;
+      const d = (Math.max(0, v - UMBRAL) * 2.6 + extra) * parte;
+      if (!this.peor || d > this.peor.d) this.peor = { d, v, p, extra };
+    }
+
+    /**
+     * Cobrar el peor golpe del cuadro.
+     *
+     * Hacerse bolita descuenta dos tercios, y no es un escudo: es que once
+     * puntos apretados llegan todos juntos en vez de clavar la cabeza sola, asi
+     * que el golpe se reparte. Igual se paga, porque llegar rapido cuesta.
+     */
+    cobrar() {
+      const g = this.peor;
+      if (!g || this.espera > 0) return;
+      const bol = Math.max(0, this.rilo.bolita);
+      const d = g.d * (1 - bol * 0.66);
+      if (d < 0.6) return;
+      this.espera = ESPERA;
+      this.integridad -= d;
+      if (this.ev) this.ev.golpe = Math.max(this.ev.golpe, g.v);
+      this.sacude = Math.min(12, this.sacude + d * 0.4);
+      this.chispa(g.p.x, g.p.y, g.extra ? "#ff6b6b" : "#ffd447", Math.min(8, 2 + d * 0.35));
+    }
+
+    chispa(x, y, color, n = 3, vx0 = 0) {
+      for (let i = 0; i < n; i++)
+        this.chispas.push({ x, y, vx: vx0 + (Math.random() - 0.5) * 3,
+                            vy: (Math.random() - 0.7) * 2.4, color, vida: 16 + Math.random() * 14 });
+    }
+
+    portales(c) {
+      for (const po of this.nv.portales) {
+        // La zona es un rectangulo y no un circulo: se entra cayendo a siete
+        // pixeles por cuadro, asi que la ventana de altura tiene que durar
+        // varios cuadros o el portal se puede atravesar entre dos posiciones.
+        if (po.usado) continue;
+        if (Math.abs(c.x - po.x) > po.r + 8 || Math.abs(c.y - po.y) > 34) continue;
+        po.usado = true;
+        this.sacude = 6;
+        this.chispa(po.x, po.y, "#8fe3f5", 16);
+        if (this.ev) this.ev.portal = true;
+        if (po.ultimo) { this.estado = "gano"; if (this.ev) this.ev.gano = true; return; }
+        if (this.ev) this.ev.capitulo = po.cap + 1;
+        this.desdeCap = po.cap + 1;
+        this.integridad = Math.min(100, this.integridad + 26);
+        const sig = this.nv.caps[po.cap + 1];
+        this.decir(sig.dice, sig.nombre);
+      }
+    }
+
+    juntar() {
+      for (const p of this.puntos) {
+        for (const ch of this.nv.chatarra) {
+          if (ch.tomada || Math.abs(ch.y - p.y) > 14 || Math.abs(ch.x - p.x) > 14) continue;
+          ch.tomada = true;
+          if (this.ev) this.ev.chatarra++;
+          this.chispa(ch.x, ch.y, "#7dffb0", 6);
+        }
+      }
+    }
+
+    get juntada() { return this.nv.chatarra.filter((c) => c.tomada).length; }
+    get metros() { return Math.max(0, Math.round(this.prof / 100)); }
+    get total() { return Math.round(this.nv.alto / 100); }
+    get capitulo() { return capituloEn(this.nv, this.marca); }
+  }
+
+  return { VISTA, Partida };
+})();
+
+/* ── dibujo.js ── */
+const M_dibujo = (() => {
+  // Pintar el mundo. Todo vectorial: no hay una sola imagen en el juego.
+
+  const { VISTA } = M_juego;
+  const { paredEn, capituloEn, ANCHO } = M_nivel;
+  const { dibujarCuerpo } = M_cuerpo;
+  const mezclar = (a, b, t) => {
+    const p = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b);
+    const r = Math.round(r1 + (r2 - r1) * t), g = Math.round(g1 + (g2 - g1) * t), bb = Math.round(b1 + (b2 - b1) * t);
+    return `rgb(${r},${g},${bb})`;
+  };
+
+  // El polvo del fondo. Se calcula una vez: son quinientos numeros que no
+  // cambian nunca y recalcularlos cada cuadro es regalar tiempo.
+  // La parte decimal, bien: `x % 1` en JavaScript devuelve NEGATIVO cuando x lo
+  // es, y de ahi salia un radio de -1 que hacia tirar excepcion a arc() sesenta
+  // veces por segundo. La consola del navegador lo cazo, la prueba lo mira.
+  const frac = (x) => x - Math.floor(x);
+  const POLVO = [];
+  for (let i = 0; i < 500; i++) {
+    const a = frac(Math.sin(i * 12.9898) * 43758.5453);
+    const b = frac(Math.sin(i * 78.233) * 43758.5453);
+    const c = frac(Math.sin(i * 3.1234) * 17231.1);
+    POLVO.push({ x: a * ANCHO, y: b * 13000, r: 0.6 + c * 1.6 });
+  }
+
+  function dibujar(ctx, p) {
+    const cam = p.cam;
+    const nv = p.nv;
+    const capA = capituloEn(nv, cam + VISTA.alto * 0.4);
+    // El cruce entre capitulos se hace en los ultimos 260 px: si no, el fondo
+    // cambia de color de golpe en un cuadro y parece un corte de edicion.
+    const sig = nv.caps[capA.i + 1] || capA;
+    const t = Math.max(0, Math.min(1, (cam + VISTA.alto * 0.4 - (capA.hasta - 260)) / 260));
+    const c0 = mezclar(capA.cielo[0], sig.cielo[0], t);
+    const c1 = mezclar(capA.cielo[1], sig.cielo[1], t);
+    const paredColor = mezclar(capA.pared, sig.pared, t);
+
+    const g = ctx.createLinearGradient(0, 0, 0, VISTA.alto);
+    g.addColorStop(0, c0); g.addColorStop(1, c1);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
+
+    // El polvo, a un tercio de velocidad: es lo unico que da sensacion de
+    // profundidad en un pozo donde todo lo demas esta a la misma distancia.
+    ctx.fillStyle = "rgba(255,255,255,.14)";
+    for (const d of POLVO) {
+      const y = d.y - cam * 0.34;
+      const yy = ((y % 13000) + 13000) % 13000;
+      if (yy < -10 || yy > VISTA.alto + 10) continue;
+      ctx.beginPath(); ctx.arc(d.x, yy, d.r, 0, 7); ctx.fill();
+    }
+
+    ctx.save();
+    if (p.sacude > 0.3)
+      ctx.translate((Math.random() - 0.5) * p.sacude, (Math.random() - 0.5) * p.sacude);
+    ctx.translate(0, -cam);
+
+    paredes(ctx, p, cam, paredColor);
+    for (const o of nv.obst) {
+      if (o.y - cam < -120 || o.y - cam > VISTA.alto + 120) continue;
+      obstaculo(ctx, o, p.t);
+    }
+    for (const ch of nv.chatarra) {
+      if (ch.tomada || ch.y - cam < -30 || ch.y - cam > VISTA.alto + 30) continue;
+      chatarra(ctx, ch, p.t);
+    }
+    for (const po of nv.portales) {
+      if (po.y - cam < -80 || po.y - cam > VISTA.alto + 80) continue;
+      portal(ctx, po, p.t);
+    }
+    // La soga, antes que los cuerpos, para que salga por atras de las manos.
+    // Se dibuja de mano a mano —que es lo que se entiende— aunque la
+    // restriccion que aguanta el peso vaya de pecho a pecho.
+    const a = p.mano.a, b = p.mano.b;
+    ctx.strokeStyle = "#c98f4a"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    // La panza: cuanto menos estirada, mas cuelga. Una linea recta entre dos
+    // manos no es una soga, es una barra.
+    ctx.quadraticCurveTo(mx, my + Math.max(0, p.mano.largo - d) * 0.8 + 3, b.x, b.y);
+    ctx.stroke();
+
+    dibujarCuerpo(ctx, p.tito);
+    dibujarCuerpo(ctx, p.rilo);
+
+    for (const ch of p.chispas) {
+      ctx.globalAlpha = Math.min(1, ch.vida / 14);
+      ctx.fillStyle = ch.color;
+      ctx.fillRect(ch.x - 1.5, ch.y - 1.5, 3, 3);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (p.estado === "roto") {
+      ctx.fillStyle = "rgba(20,6,10,.5)";
+      ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
+    }
+  }
+
+  function paredes(ctx, p, cam, color) {
+    const nv = p.nv;
+    const y0 = cam - 60, y1 = cam + VISTA.alto + 60;
+    const mues = [];
+    for (let y = y0; y <= y1; y += 50) mues.push({ y, ...paredEn(nv.perfil, y) });
+    if (!mues.length) return;
+
+    for (const lado of ["izq", "der"]) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(lado === "izq" ? -20 : ANCHO + 20, y0);
+      for (const m of mues) ctx.lineTo(m[lado], m.y);
+      ctx.lineTo(lado === "izq" ? -20 : ANCHO + 20, y1);
+      ctx.closePath(); ctx.fill();
+      // El filo iluminado. Sin esto la pared y el fondo se leen como una sola
+      // mancha y no se ve donde termina el pasillo.
+      ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      mues.forEach((m, i) => i ? ctx.lineTo(m[lado], m.y) : ctx.moveTo(m[lado], m.y));
+      ctx.stroke();
+    }
+    // Las costillas del tunel: marcan que uno se mueve. Sin algo repetido y
+    // regular en la pared, caer rapido y caer despacio se ven igual.
+    ctx.strokeStyle = "rgba(0,0,0,.20)"; ctx.lineWidth = 3;
+    for (let y = Math.floor(y0 / 90) * 90; y < y1; y += 90) {
+      const w = paredEn(nv.perfil, y);
+      ctx.beginPath();
+      ctx.moveTo(w.izq - 16, y); ctx.lineTo(w.izq + 9, y + 4); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(w.der + 16, y); ctx.lineTo(w.der - 9, y + 4); ctx.stroke();
+    }
+  }
+
+  function obstaculo(ctx, o, t) {
+    if (o.t === "aspa") {
+      ctx.strokeStyle = "#ff7a59"; ctx.lineWidth = o.grosor * 2; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(o.ax ?? o.x, o.ay ?? o.y); ctx.lineTo(o.bx ?? o.x, o.by ?? o.y); ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(o.ax ?? o.x, o.ay ?? o.y); ctx.lineTo(o.bx ?? o.x, o.by ?? o.y); ctx.stroke();
+      ctx.fillStyle = "#3a2030";
+      ctx.beginPath(); ctx.arc(o.x, o.y, 6, 0, 7); ctx.fill();
+      return;
+    }
+    if (o.t === "gel") {
+      const pulso = 1 + Math.sin(t / 26 + o.x) * 0.05;
+      ctx.fillStyle = "rgba(120,220,150,.22)";
+      ctx.beginPath(); ctx.arc(o.x, o.y, o.r * pulso, 0, 7); ctx.fill();
+      ctx.strokeStyle = "rgba(160,255,190,.5)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(o.x, o.y, o.r * pulso, 0, 7); ctx.stroke();
+      return;
+    }
+    if (o.t === "pincho") {
+      ctx.fillStyle = "#5a2530";
+      ctx.fillRect(o.x, o.y + 6, o.an, o.al - 6);
+      ctx.fillStyle = "#ff6b6b";
+      const n = Math.max(1, Math.round(o.an / 11));
+      for (let i = 0; i < n; i++) {
+        const x = o.x + (i + 0.5) * (o.an / n);
+        ctx.beginPath();
+        ctx.moveTo(x - o.an / n / 2, o.y + 8); ctx.lineTo(x, o.y - 5);
+        ctx.lineTo(x + o.an / n / 2, o.y + 8); ctx.closePath(); ctx.fill();
+      }
+      return;
+    }
+    if (o.t === "resorte") {
+      ctx.fillStyle = "#1f3a2c"; ctx.fillRect(o.x, o.y + 7, o.an, o.al - 7);
+      ctx.strokeStyle = "#7dffb0"; ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let x = o.x; x <= o.x + o.an; x += 8)
+        ctx.lineTo(x, o.y + 4 + (Math.floor(x / 8) % 2 ? 5 : 0));
+      ctx.stroke();
+      return;
+    }
+    ctx.fillStyle = "#2b3348"; ctx.fillRect(o.x, o.y, o.an, o.al);
+    ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.fillRect(o.x, o.y, o.an, 3);
+  }
+
+  function chatarra(ctx, ch, t) {
+    const b = Math.sin(t / 14 + ch.x) * 2;
+    ctx.save(); ctx.translate(ch.x, ch.y + b); ctx.rotate(t / 40);
+    // El halo primero: una chatarra del tamano de la fisica se pierde contra el
+    // fondo y el jugador no la ve hasta que ya paso de largo.
+    ctx.fillStyle = "rgba(125,255,176,.18)";
+    ctx.beginPath(); ctx.arc(0, 0, 14, 0, 7); ctx.fill();
+    ctx.fillStyle = "#7dffb0";
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      ctx.lineTo(Math.cos(a) * (i % 2 ? 4 : 9), Math.sin(a) * (i % 2 ? 4 : 9));
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.7)"; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.restore();
+  }
+
+  function portal(ctx, po, t) {
+    const r = po.r + Math.sin(t / 18) * 2;
+    ctx.save(); ctx.translate(po.x, po.y);
+    // El agujero: un ovalo aplastado, porque se lo mira desde arriba al caer.
+    const g = ctx.createRadialGradient(0, 0, 2, 0, 0, r);
+    g.addColorStop(0, po.usado ? "rgba(140,255,190,.9)" : "rgba(200,255,120,.95)");
+    g.addColorStop(0.7, po.usado ? "rgba(60,160,110,.5)" : "rgba(90,200,70,.55)");
+    g.addColorStop(1, "rgba(30,90,50,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.42, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = po.usado ? "rgba(180,255,210,.6)" : "rgba(220,255,150,.95)";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.42, 0, 0, 7); ctx.stroke();
+    // Las chispas del borde, girando.
+    ctx.fillStyle = "rgba(230,255,180,.85)";
+    for (let i = 0; i < 7; i++) {
+      const a = t / 22 + (i / 7) * Math.PI * 2;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * r, Math.sin(a) * r * 0.42, 1.8, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  return { dibujar };
+})();
+
+/* ── audio.js ── */
+const M_audio = (() => {
+  // El sonido, sintetizado. No hay un solo archivo de audio en el juego.
+  //
+  // POR QUE. El juego entero pesa lo que pesa un mail justamente porque no
+  // carga nada: el dibujo es vectorial y el sonido son osciladores. Un golpe no
+  // es un .wav, es ruido filtrado con una envolvente de sesenta milisegundos, y
+  // se puede afinar cambiando un numero en vez de volver a grabarlo.
+  //
+  // EL CONTEXTO NO SE CREA AL ARRANCAR. Los navegadores no dejan sonar nada
+  // hasta que hubo un gesto del usuario, y un AudioContext creado antes queda
+  // "suspended" para siempre aunque despues se toque la pantalla. Se crea en el
+  // primer toque y recien ahi.
+
+  let ac = null, maestro = null, prendido = true;
+
+  function despertar() {
+    if (ac) { if (ac.state === "suspended") ac.resume(); return ac; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ac = new AC();
+    maestro = ac.createGain();
+    maestro.gain.value = 0.5;
+    maestro.connect(ac.destination);
+    return ac;
+  }
+
+  const sonando = (v) => { prendido = v; if (maestro) maestro.gain.value = v ? 0.5 : 0; };
+
+  function env(nodo, a, d, pico) {
+    const g = ac.createGain();
+    const t = ac.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(pico, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    nodo.connect(g); g.connect(maestro);
+    return { g, t, fin: t + a + d };
+  }
+
+  function ruido(dur) {
+    const n = Math.floor(ac.sampleRate * dur);
+    const buf = ac.createBuffer(1, n, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = ac.createBufferSource(); s.buffer = buf;
+    return s;
+  }
+
+  function tono(tipo, f0, f1, a, d, pico) {
+    if (!ac || !prendido) return;
+    const o = ac.createOscillator();
+    o.type = tipo;
+    o.frequency.setValueAtTime(f0, ac.currentTime);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, ac.currentTime + a + d);
+    const e = env(o, a, d, pico);
+    o.start(); o.stop(e.fin + 0.02);
+  }
+
+  // Un tope de golpes por cuadro: un ragdoll que cae de costado toca once puntos
+  // a la vez y once ruidos juntos no suenan a golpe, suenan a distorsion.
+  let ultimoGolpe = 0;
+
+  const efe = {
+    golpe(fuerza) {
+      if (!ac || !prendido) return;
+      const ahora = ac.currentTime;
+      if (ahora - ultimoGolpe < 0.06) return;
+      ultimoGolpe = ahora;
+      const s = ruido(0.09);
+      const f = ac.createBiquadFilter();
+      f.type = "lowpass";
+      f.frequency.value = 260 + Math.min(1, fuerza / 16) * 1400;
+      s.connect(f);
+      const e = env(f, 0.004, 0.08, Math.min(0.5, 0.1 + fuerza * 0.02));
+      s.start(); s.stop(e.fin + 0.02);
+    },
+    pincho() { tono("square", 620, 90, 0.005, 0.22, 0.22); },
+    resorte() { tono("triangle", 220, 760, 0.01, 0.16, 0.22); },
+    chatarra() { tono("square", 880, 1320, 0.005, 0.1, 0.13); },
+    portal() {
+      tono("sawtooth", 140, 900, 0.02, 0.5, 0.18);
+      tono("sine", 320, 1400, 0.03, 0.55, 0.12);
+    },
+    roto() { tono("sawtooth", 300, 45, 0.01, 0.8, 0.28); },
+    gano() {
+      [0, 0.12, 0.24, 0.42].forEach((d, i) => setTimeout(() =>
+        tono("triangle", [392, 523, 659, 784][i], [392, 523, 659, 784][i], 0.01, 0.35, 0.2), d * 1000));
+    },
+    menu() { tono("square", 520, 700, 0.005, 0.07, 0.1); },
+  };
+
+  // El zumbido del pozo: dos osciladores desafinados que cambian de nota al
+  // cambiar de capitulo. Es todo lo que hay de musica y alcanza, porque el juego
+  // suena a golpes.
+  let drone = null;
+  function zumbido(nota) {
+    if (!ac || !prendido) return;
+    if (!drone) {
+      const g = ac.createGain(); g.gain.value = 0.045; g.connect(maestro);
+      const a = ac.createOscillator(), b = ac.createOscillator();
+      a.type = b.type = "sawtooth";
+      const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 320;
+      a.connect(f); b.connect(f); f.connect(g);
+      a.start(); b.start();
+      drone = { a, b, g };
+    }
+    drone.a.frequency.linearRampToValueAtTime(nota, ac.currentTime + 1.2);
+    drone.b.frequency.linearRampToValueAtTime(nota * 1.01, ac.currentTime + 1.2);
+  }
+  function callar() { if (drone) drone.g.gain.value = 0; }
+  function volverASonar() { if (drone && prendido) drone.g.gain.value = 0.045; }
+
+  return { despertar, sonando, efe, zumbido, callar, volverASonar };
+})();
+
+/* ── guardado.js ── */
+const M_guardado = (() => {
+  // Lo poco que se guarda: hasta que capitulo llego, el record y los ajustes.
+  //
+  // localStorage TIRA EXCEPCION en modo privado o con el almacenamiento
+  // bloqueado: no devuelve vacio. Por eso cada acceso va envuelto — un juego que
+  // no arranca porque no pudo leer un record es peor que uno sin record.
+
+  const LLAVE = "dimension-n.v1";
+  const vacio = () => ({ capitulo: 0, mejorProf: 0, mejorChatarra: 0,
+                         ajustes: { sonido: true } });
+  let cache = null;
+
+  function cargar() {
+    if (cache) return cache;
+    try {
+      const c = localStorage.getItem(LLAVE);
+      cache = c ? { ...vacio(), ...JSON.parse(c) } : vacio();
+      cache.ajustes = { ...vacio().ajustes, ...(cache.ajustes || {}) };
+    } catch (e) { cache = vacio(); }
+    return cache;
+  }
+  function guardar() {
+    try { localStorage.setItem(LLAVE, JSON.stringify(cargar())); } catch (e) {}
+  }
+  function borrar() {
+    try { localStorage.removeItem(LLAVE); } catch (e) {}
+    cache = null;
+  }
+
+  return { cargar, guardar, borrar };
+})();
+
+/* ── main.js ── */
+// Arranque, entrada y bucle.
+
+const { construirNivel, CAPITULOS, FINAL } = M_nivel;
+const { Partida, VISTA } = M_juego;
+const { dibujar } = M_dibujo;
+const { despertar, efe, sonando, zumbido } = M_audio;
+const { cargar, guardar, borrar } = M_guardado;
+const $ = (s) => document.querySelector(s);
+const lienzo = $("#lienzo");
+const ctx = lienzo.getContext("2d", { alpha: false });
+
+let nivel = construirNivel();
+let partida = null;
+let capSonando = -1;
+
+// --- tamano --------------------------------------------------------------
+// EL ANCHO ES FIJO Y EL ALTO NO, y esa asimetria es la regla de justicia del
+// juego. El pasillo mide 360 unidades en todos los aparatos: si se escalara
+// para llenar la pantalla en las dos direcciones, en un telefono ancho el
+// hueco de 108 px seria proporcionalmente el mismo pero en uno angosto habria
+// que cruzar mas pasillo en el mismo tiempo. Con el ancho clavado, esquivar
+// cuesta igual en todos lados.
+//
+// El alto, en cambio, se estira hasta donde llegue la pantalla. Ver un poco
+// mas o un poco menos de pozo no cambia la dificultad —se cae siempre a la
+// misma velocidad— y a cambio el juego llena el telefono en vez de dejar dos
+// franjas negras de setenta pixeles arriba y abajo.
+let esc = 1;
+function redimensionar() {
+  const w = innerWidth, h = innerHeight;
+  esc = Math.min(w / VISTA.ancho, h / 560);   // nunca menos de 560 de alto util
+  let alto = h / esc;
+  if (alto > 1000) { esc = h / 1000; alto = 1000; }   // ni mas de 1000
+  VISTA.alto = Math.round(alto);
+  const anCSS = VISTA.ancho * esc, alCSS = VISTA.alto * esc;
+  const dpr = Math.min(devicePixelRatio || 1, 2.5);
+  lienzo.width = Math.round(anCSS * dpr);
+  lienzo.height = Math.round(alCSS * dpr);
+  lienzo.style.width = `${anCSS}px`;
+  lienzo.style.height = `${alCSS}px`;
+  ctx.setTransform(esc * dpr, 0, 0, esc * dpr, 0, 0);
+  // La interfaz vive exactamente sobre el lienzo: un menu del ancho de la
+  // ventana arriba de un juego de 360 se lee como dos cosas distintas.
+  document.documentElement.style.setProperty("--an", `${anCSS}px`);
+  document.documentElement.style.setProperty("--al", `${alCSS}px`);
+}
+addEventListener("resize", redimensionar);
+addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
+redimensionar();
+
+// --- entrada -------------------------------------------------------------
+// UN DEDO ALCANZA. Se toca donde sea y el reactor empuja HACIA el dedo: no hay
+// que buscar un boton, el boton es la pantalla entera. El empujon es analogico
+// —cuanto mas lejos esta el dedo del muneco, mas fuerte— asi que se puede
+// corregir de a poco en vez de ir siempre a fondo.
+const entrada = { mover: 0, bolita: false, dedoX: null };
+let dedoDir = null, dedoBol = null;
+
+function aMundo(ev) {
+  const r = lienzo.getBoundingClientRect();
+  return { x: (ev.clientX - r.left) / esc, y: (ev.clientY - r.top) / esc };
+}
+
+lienzo.addEventListener("pointerdown", (ev) => {
+  despertar();
+  if (dedoDir === null) { dedoDir = ev.pointerId; entrada.dedoX = aMundo(ev).x; }
+  else entrada.bolita = true;          // el segundo dedo hace bolita
+  // setPointerCapture TIRA EXCEPCION si el puntero ya no esta activo —pasa si
+  // el dedo se levanta entre el evento y esta linea, y pasa siempre con
+  // eventos sinteticos—. Sin el try, una excepcion aca deja el toque a medio
+  // registrar: el reactor se queda prendido y el muneco empuja para siempre.
+  try { lienzo.setPointerCapture(ev.pointerId); } catch (e) {}
+  ev.preventDefault();
+});
+lienzo.addEventListener("pointermove", (ev) => {
+  if (ev.pointerId === dedoDir) entrada.dedoX = aMundo(ev).x;
+});
+const soltar = (ev) => {
+  if (ev.pointerId === dedoDir) { dedoDir = null; entrada.dedoX = null; }
+  else entrada.bolita = false;
+};
+lienzo.addEventListener("pointerup", soltar);
+lienzo.addEventListener("pointercancel", soltar);
+
+// El boton de bolita, por si se prefiere el pulgar en un lugar fijo.
+const btnBol = $("#btn-bolita");
+btnBol.addEventListener("pointerdown", (ev) => {
+  despertar(); dedoBol = ev.pointerId; entrada.bolita = true;
+  try { btnBol.setPointerCapture(ev.pointerId); } catch (e) {}
+  ev.preventDefault();
+});
+const soltarBol = (ev) => { if (ev.pointerId === dedoBol) { dedoBol = null; entrada.bolita = false; } };
+btnBol.addEventListener("pointerup", soltarBol);
+btnBol.addEventListener("pointercancel", soltarBol);
+
+const teclas = {};
+addEventListener("keydown", (e) => {
+  teclas[e.code] = true;
+  if (["Space", "ArrowLeft", "ArrowRight", "ArrowDown"].includes(e.code)) e.preventDefault();
+  if (e.code === "Enter" && !$("#p-fin").hidden) alMenu();
+});
+addEventListener("keyup", (e) => { teclas[e.code] = false; });
+
+function leerEntrada() {
+  if (teclas.ArrowLeft) entrada.mover = -1;
+  else if (teclas.ArrowRight) entrada.mover = 1;
+  else if (entrada.dedoX != null && partida) {
+    // El empujon es proporcional a la distancia, con un tope: a 70 px del
+    // muneco ya esta a fondo. Con menos de 8 px se considera cero, porque si
+    // no el dedo quieto encima del personaje lo hace vibrar.
+    const d = entrada.dedoX - partida.rilo.p.pecho.x;
+    entrada.mover = Math.abs(d) < 8 ? 0 : Math.max(-1, Math.min(1, d / 70));
+  } else entrada.mover = 0;
+  entrada.bolita = entrada.bolita || !!teclas.Space || !!teclas.ArrowDown;
+}
+
+// --- pantallas -----------------------------------------------------------
+function mostrar(id) {
+  for (const p of document.querySelectorAll(".pantalla")) p.hidden = true;
+  $("#" + id).hidden = false;
+}
+
+function alMenu() {
+  partida = null;
+  const d = cargar();
+  $("#m-record").textContent = `${d.mejorProf} m · ${d.mejorChatarra} chatarras`;
+  $("#m-seguir").hidden = d.capitulo === 0;
+  $("#m-seguir-sub").textContent = CAPITULOS[Math.min(d.capitulo, CAPITULOS.length - 1)].nombre;
+  mostrar("p-menu");
+}
+
+function jugar(cap) {
+  nivel = construirNivel();          // el nivel se rearma para limpiar portales y chatarra
+  partida = new Partida(nivel);
+  if (cap > 0) partida.reiniciarEn(cap);
+  capSonando = -1;
+  mostrar("p-juego");
+}
+
+$("#m-jugar").addEventListener("click", () => { despertar(); efe.menu(); jugar(0); });
+$("#m-seguir").addEventListener("click", () => { despertar(); efe.menu(); jugar(cargar().capitulo); });
+$("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); });
+$("#m-borrar").addEventListener("click", () => {
+  if (!confirm("¿Borrar el progreso y el récord?")) return;
+  borrar(); alMenu();
+});
+$("#aj-sonido").addEventListener("change", (e) => {
+  const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
+});
+for (const b of document.querySelectorAll("[data-volver]"))
+  b.addEventListener("click", () => { efe.menu(); alMenu(); });
+$("#f-otra").addEventListener("click", () => { efe.menu(); jugar(0); });
+$("#f-menu").addEventListener("click", () => { efe.menu(); alMenu(); });
+$("#j-salir").addEventListener("click", () => { efe.menu(); alMenu(); });
+
+// --- HUD -----------------------------------------------------------------
+// Se escribe SOLO cuando cambia. Esta funcion corre sesenta veces por segundo
+// y tocar el DOM en cada cuadro es de las cosas mas caras que se pueden hacer
+// en un telefono, para escribir los mismos numeros que ya estaban.
+const ultimo = {};
+function pintarHud(p) {
+  const poner = (sel, v) => { if (ultimo[sel] === v) return; ultimo[sel] = v; $(sel).textContent = v; };
+  poner("#h-metros", `${p.metros} m`);
+  poner("#h-chatarra", String(p.juntada));
+  poner("#h-cap", p.capitulo.nombre);
+  const i = Math.round(p.integridad);
+  if (ultimo.integridad !== i) {
+    ultimo.integridad = i;
+    $("#h-barra").style.width = `${i}%`;
+    $("#h-barra").className = i < 30 ? "mal" : i < 60 ? "medio" : "";
+  }
+  const hay = !!p.dicho;
+  if (ultimo.hayDicho !== hay) { ultimo.hayDicho = hay; $("#dialogo").hidden = !hay; }
+  if (hay) {
+    const [quien, que] = p.dicho.lineas[p.dicho.i];
+    poner("#d-quien", quien);
+    poner("#d-que", que);
+    if (ultimo.dQuien !== quien) { ultimo.dQuien = quien;
+      $("#dialogo").dataset.quien = quien.toLowerCase(); }
+  }
+}
+
+function sonar(p) {
+  const e = p.ev;
+  if (!e) return;
+  if (e.golpe > 9) efe.golpe(e.golpe);
+  if (e.pincho) efe.pincho();
+  if (e.resorte) efe.resorte();
+  if (e.chatarra) efe.chatarra();
+  if (e.portal) efe.portal();
+  if (e.roto) efe.roto();
+  if (e.gano) efe.gano();
+  if (e.capitulo != null) {
+    const d = cargar();
+    if (e.capitulo > d.capitulo) { d.capitulo = e.capitulo; guardar(); }
+  }
+  const ci = p.capitulo.i;
+  if (ci !== capSonando) {
+    capSonando = ci;
+    zumbido([55, 49, 62, 41, 58, 46, 65][ci] || 55);
+  }
+}
+
+function terminar(p) {
+  const d = cargar();
+  d.mejorProf = Math.max(d.mejorProf, p.metros);
+  d.mejorChatarra = Math.max(d.mejorChatarra, p.juntada);
+  d.capitulo = 0;                    // terminarlo lo deja listo para empezar de cero
+  guardar();
+  $("#f-lista").innerHTML = "";
+  const item = (k, v) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${k}</span><b>${v}</b>`;
+    $("#f-lista").append(li);
+  };
+  item("Profundidad", `${p.metros} m`);
+  item("Chatarra", `${p.juntada} de ${nivel.chatarra.length}`);
+  item("Integridad final", `${Math.round(p.integridad)}%`);
+  // Cada uno con su color, igual que en el juego: en un ida y vuelta de
+  // cuatro lineas, saber quien habla sin leer el nombre es la mitad del chiste.
+  $("#f-dialogo").innerHTML = FINAL
+    .map(([q, t]) => `<p data-quien="${q.toLowerCase()}"><b>${q}</b> ${t}</p>`).join("");
+  partida = null;
+  mostrar("p-fin");
+}
+
+// --- bucle ---------------------------------------------------------------
+// Paso fijo con acumulador. Con dt variable la fisica cambia segun los hercios
+// del monitor, y un ragdoll con paso variable no es "un poco distinto": es
+// otro juego, porque las restricciones se resuelven un numero fijo de veces
+// por paso.
+const PASO = 1000 / 60;
+let previo = performance.now(), sobra = 0, fallas = 0;
+
+function bucle(ahora) {
+  requestAnimationFrame(bucle);
+  let dt = ahora - previo; previo = ahora;
+  if (dt > 250) dt = 250;            // volver de otra pestana no adelanta diez segundos
+  sobra += dt;
+  let n = 0;
+  while (sobra >= PASO && n < 5) {
+    sobra -= PASO; n++;
+    if (!partida) continue;
+    try {
+      leerEntrada();
+      partida.paso(entrada);
+      sonar(partida);
+      if (partida.estado === "gano" && partida.cuenta++ > 60) { terminar(partida); break; }
+    } catch (e) {
+      // Sin esto, un error adentro del bucle se repite sesenta veces por
+      // segundo: la pantalla queda quieta y no se puede ni salir.
+      if (fallas++ === 0) console.error("Dimensión Ñ se rompió:", e);
+      partida = null; alMenu();
+    }
+  }
+  if (partida) {
+    dibujar(ctx, partida);
+    pintarHud(partida);
+  }
+}
+
+// --- arranque ------------------------------------------------------------
+{
+  const d = cargar();
+  $("#aj-sonido").checked = d.ajustes.sonido;
+  sonando(d.ajustes.sonido);
+  alMenu();
+  requestAnimationFrame(bucle);
+  // Para poder auditar el juego desde afuera: las pruebas corren la fisica de
+  // verdad, no una copia.
+  window.DN = {
+    get partida() { return partida; }, get nivel() { return nivel; },
+    jugar, alMenu, entrada, VISTA, CAPITULOS, construirNivel,
+  };
+}
+
+
+})();
+</script>
+</body>
+</html>
