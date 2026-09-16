@@ -19,17 +19,19 @@
 <!-- ───────────── menú ───────────── -->
 <main id="p-menu" class="pantalla centrado">
   <div class="tapa">
-    <h1 class="logo"><span>Para</span><em>guas</em></h1>
-    <p class="bajada">Un pozo sin fondo. <b>Apretá</b> y se cierra: caés rápido
-      y pasás por cualquier lado. <b>Soltá</b> y se abre: caés lento y ocupás el doble.</p>
+    <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Paraguas" width="413" height="150"></h1>
+    <p class="bajada"><b>Apretá</b>: se cierra, caés rápido y pasás por cualquier
+      lado. <b>Soltá</b>: se abre, caés lento y ocupás el doble.</p>
 
-    <!-- EL BOTON DE CAER ES UN PORTAL, no un rectángulo con texto. Es lo único
-         que se toca en esta pantalla y lo primero que se ve: merece ser el
-         objeto más grande y el único que se mueve. El remolino es un
-         conic-gradient girando — cero imágenes, cero kilobytes. -->
+    <!-- EL BOTON DE CAER ES UN PORTAL DIBUJADO, no un rectángulo con texto. Es
+         lo único que se toca en esta pantalla y lo primero que se ve: merece
+         ser el objeto más grande y el único que se mueve. Son dos imágenes
+         girando en sentidos opuestos —el remolino y la salpicadura de afuera—
+         y el giro lo pone el CSS, así que alcanzan dos dibujos quietos para
+         que parezca una animación. -->
     <button id="m-jugar" class="portal" aria-label="Caer">
+      <span class="salpicadura" aria-hidden="true"></span>
       <span class="remolino" aria-hidden="true"></span>
-      <span class="remolino dos" aria-hidden="true"></span>
       <span class="portal-txt">CAER</span>
     </button>
 
@@ -106,6 +108,7 @@
     <h2 id="f-metros">0 m</h2>
     <ul id="f-lista" class="lista"></ul>
     <button id="f-otra" class="portal chico-portal" aria-label="Otra vez">
+      <span class="salpicadura" aria-hidden="true"></span>
       <span class="remolino" aria-hidden="true"></span>
       <span class="portal-txt">OTRA</span>
     </button>

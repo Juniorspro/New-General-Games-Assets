@@ -22,5 +22,35 @@
     "output_path": "assets/paraguas_abierto-g3.png",
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/paraguas/assets/paraguas_abierto-g3.png"
+  },
+  "ui_portal": {
+    "task_id": "gtask-c63b145cc1d043cc88cb",
+    "output_path": "assets/ui_portal-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/ui_portal-g1.png"
+  },
+  "ui_chispas": {
+    "task_id": "gtask-074f2b2021ae4d55a72e",
+    "output_path": "assets/ui_chispas-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/ui_chispas-g1.png"
+  },
+  "ui_logo": {
+    "task_id": "gtask-90e62ed94bb14743a57a",
+    "output_path": "assets/ui_logo-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/ui_logo-g1.png"
+  },
+  "ui_marco": {
+    "task_id": "gtask-967674481cbe458cab2e",
+    "output_path": "assets/ui_marco-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/ui_marco-g1.png"
+  },
+  "ui_chapa": {
+    "task_id": "gtask-93aca6dfe9cb431b9df9",
+    "output_path": "assets/ui_chapa-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/ui_chapa-g1.png"
   }
 }

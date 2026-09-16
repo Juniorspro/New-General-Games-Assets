@@ -23,6 +23,34 @@ const sueltos = await pg.evaluate(() => [...document.querySelectorAll("link[href
   .map((e) => e.getAttribute("href") || e.getAttribute("src")).filter((u) => u && !u.startsWith("data:")));
 ch("no pide ni un archivo suelto", sueltos.length === 0, sueltos.join(", "));
 
+// EL VESTIDO TIENE QUE CARGAR DE VERDAD, y esto no se ve mirando el archivo.
+// El marco, la chapa y el remolino los pide el CSS con `url(...)`, no el
+// JavaScript: si el empaquetador no les cambia la ruta por el data: URI, el
+// pedido sale 404 contra file://, el navegador no tira ningún error y la
+// pantalla se ve igual de bien —sin marco, sin título y sin botón— porque atrás
+// hay un degradé que la tapa. La única forma de saberlo es decodificar cada
+// imagen y contarlas.
+const vestido = await pg.evaluate(async () => {
+  const urls = new Set();
+  for (const hoja of document.styleSheets)
+    for (const r of hoja.cssRules)
+      for (const u of (r.style?.cssText || "").matchAll(/url\("?([^")]+)"?\)/g)) urls.add(u[1]);
+  for (const im of document.querySelectorAll("img[src]")) urls.add(im.src);
+  // Y TIENEN QUE SER data:. Cargar no alcanza: el archivo único se prueba
+  // parado al lado de la carpeta assets, así que una ruta relativa sin
+  // reescribir encuentra el archivo igual y la prueba pasaría estando roto
+  // para cualquiera que se lleve sólo el HTML.
+  const fuera = { total: urls.size, rotas: [...urls].filter((u) => !u.startsWith("data:")) };
+  await Promise.all([...urls].map((u) => new Promise((listo) => {
+    const i = new Image();
+    i.onload = () => listo(); i.onerror = () => { fuera.rotas.push("no carga: " + u.slice(0, 40)); listo(); };
+    i.src = u;
+  })));
+  return fuera;
+});
+ch("las imágenes del vestido van incrustadas y cargan", vestido.total >= 5 && vestido.rotas.length === 0,
+   `${vestido.total - vestido.rotas.length}/${vestido.total} ${vestido.rotas.join(" ")}`);
+
 await pg.click("#m-jugar");
 await pg.waitForTimeout(600);
 ch("arranca la caída", await pg.evaluate(() => !!window.PARAGUAS.partida));

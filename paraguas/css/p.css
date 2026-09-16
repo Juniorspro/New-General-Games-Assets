@@ -58,7 +58,7 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
 
 .bajada { color: var(--tenue); margin: 0 0 18px; font-size: 14px; }
 .bajada b { color: var(--texto); }
-.record { color: var(--tenue); font-size: 13px; margin: 14px 0 6px; }
+.record { color: var(--tenue); font-size: 13px; margin: 0 0 6px; }
 .record b { color: var(--portal-claro); }
 .tenue { color: var(--tenue); opacity: .7; }
 
@@ -131,7 +131,7 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
    gira igual tiene que poder volver al menú. */
 @media (max-height: 470px) {
   .caja { padding: 12px 16px; }
-  .logo { font-size: 26px; }
+  .logo img { width: min(60%, 180px); }
   .bajada { display: none; }
   .grande { min-height: 44px; font-size: 14px; }
   .fin h2 { font-size: 30px; margin-bottom: 6px; }
@@ -162,60 +162,104 @@ body.borroso #lienzo { filter: blur(6px) saturate(1.4) brightness(1.06); }
 
 /* La tapa: en vez de una caja opaca, un velo. Atrás se tiene que seguir viendo
    que alguien está cayendo. */
+/* EL MARCO ES UNA IMAGEN CORTADA EN NUEVE (`border-image`), no un borde.
+   Un dibujo de chapa con baba verde no se puede estirar entero: las esquinas
+   quedarían deformes y los remaches ovalados. `border-image` deja las cuatro
+   esquinas del tamaño original y estira sólo los cuatro lados, así que el mismo
+   dibujo de 320×320 sirve para el panel alto del menú y para el bajo del final.
+   El relleno NO se dibuja (sin `fill`): el centro de la pieza es transparente y
+   lo que se ve ahí es el degradé de abajo, y a través suyo el pozo desenfocado.
+   Los lados van `round` y no `stretch`: estirados, los chorretes de baba se
+   convertían en dos rayas verdes de medio metro por los costados del panel.
+   Repetidos, siguen pareciendo gotas. */
 .tapa {
-  width: 100%; text-align: center; padding: 20px 18px;
-  border-radius: 18px;
-  background: radial-gradient(120% 90% at 50% 10%, rgba(18,28,22,.72), rgba(7,10,16,.86));
-  border: 2px solid rgba(151,206,76,.28);
-  box-shadow: 0 0 48px rgba(151,206,76,.14), 0 18px 50px rgba(0,0,0,.6);
+  width: 100%; text-align: center;
+  padding: 14px 10px 10px;
+  border: 30px solid transparent;
+  border-image: url(../assets/arte/ui_marco.webp) 30% / 30px / 0 round;
+  background: radial-gradient(120% 90% at 50% 10%, rgba(18,30,22,.38), rgba(7,10,16,.66));
+  background-clip: padding-box;
+  filter: drop-shadow(0 12px 26px rgba(0,0,0,.6));
   max-height: 100%; overflow-y: auto;
 }
 
-.logo {
-  margin: 0 0 6px; font-size: 42px; font-weight: 900; line-height: .95;
-  letter-spacing: -1.5px; text-transform: uppercase;
-  text-shadow: 0 3px 0 #0b1408, 0 0 26px rgba(151,206,76,.55);
+/* El título es un dibujo, no texto con sombras: las letras de la serie son
+   irregulares a mano y ninguna fuente del sistema las imita. El `alt` lleva la
+   palabra, así que el lector de pantalla sigue leyendo "Paraguas". */
+.logo { margin: 0 0 2px; line-height: 0; }
+.logo img {
+  width: min(84%, 250px); height: auto;
+  filter: drop-shadow(0 0 16px rgba(151,206,76,.45));
+  animation: colgar 4.5s ease-in-out infinite;
 }
-.logo span { color: #eaf6dc; }
-.logo em {
-  font-style: normal; color: var(--portal);
-  display: inline-block; transform: rotate(-3deg);
-}
+@keyframes colgar { 50% { transform: rotate(-1.6deg) translateY(2px); } }
 
 /* ── el botón portal ──
    Es el único objeto grande de la pantalla y el único que se mueve. Dos
-   remolinos girando en sentidos opuestos: uno rápido y fino, otro lento y
-   ancho. Un conic-gradient girando no cuesta nada y no carga nada. */
+   DIBUJOS girando en sentidos opuestos: el remolino adentro, despacio y en su
+   sentido; la salpicadura afuera, más rápido y al revés. Girar dos imágenes
+   quietas cuesta lo mismo que girar una y da una animación que ningún gradiente
+   imita: la baba que salta del borde tiene forma de baba, no de porción. */
 .portal {
   position: relative; display: grid; place-items: center;
-  width: 176px; height: 176px; margin: 14px auto 6px;
+  width: 168px; height: 168px; margin: 10px auto 28px;
   padding: 0; border: none; background: none; box-shadow: none;
   border-radius: 50%; cursor: pointer;
-  filter: drop-shadow(0 0 22px rgba(151,206,76,.55));
+  filter: drop-shadow(0 0 20px rgba(151,206,76,.5));
+}
+/* Los dos remolinos son FONDOS y no etiquetas <img> por una razón del
+   empaquetado: el botón aparece dos veces (menú y final), y cada <img> metía la
+   imagen entera otra vez en base64. Como fondo, el dibujo vive una sola vez en
+   la hoja de estilo y el archivo único pesó 300 KB menos. */
+.portal .remolino, .portal .salpicadura {
+  position: absolute; left: 50%; top: 50%; width: 100%; height: 100%;
+  background: center / contain no-repeat;
+  /* El giro y el centrado van en la MISMA transformación: si el centrado se
+     hiciera con `inset`, `rotate()` seguiría girando sobre el centro de la caja
+     y quedaría igual, pero la salpicadura mide más que el botón y ahí sí se
+     bamboleaba. Centrar con translate y girar después lo deja clavado. */
+  transform-origin: 50% 50%; pointer-events: none;
 }
 .portal .remolino {
-  position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(from 0deg,
-    var(--portal-hondo) 0deg, var(--portal) 40deg, var(--portal-claro) 70deg,
-    var(--portal) 110deg, var(--portal-hondo) 160deg, var(--portal) 220deg,
-    var(--portal-claro) 260deg, var(--portal) 310deg, var(--portal-hondo) 360deg);
-  animation: girar 7s linear infinite;
-  -webkit-mask-image: radial-gradient(circle, transparent 26%, #000 40%, #000 92%, transparent 100%);
-  mask-image: radial-gradient(circle, transparent 26%, #000 40%, #000 92%, transparent 100%);
+  background-image: url(../assets/arte/ui_portal.webp);
+  animation: girar-portal 9s linear infinite;
 }
-.portal .remolino.dos {
-  inset: 12px; opacity: .75; animation: girar 4.2s linear infinite reverse;
-  filter: blur(2px);
+.portal .salpicadura {
+  background-image: url(../assets/arte/ui_chispas.webp);
+  width: 130%; height: 130%; animation: girar-portal 5.5s linear infinite reverse;
 }
-@keyframes girar { to { transform: rotate(360deg); } }
+@keyframes girar-portal {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+/* LA PALABRA VA CLARA Y CON CONTORNO NEGRO, no oscura. Oscura se leía sobre el
+   centro pálido del remolino y desaparecía sobre los brazos verdes — y el
+   remolino gira, así que el fondo de la letra cambia todo el tiempo. Un
+   contorno la hace legible sobre cualquier cuadro del giro. */
 .portal .portal-txt {
   position: relative; z-index: 1;
-  font-size: 30px; font-weight: 900; letter-spacing: 2px; color: #123006;
-  text-shadow: 0 2px 0 rgba(220,255,180,.55);
+  font-size: 30px; font-weight: 900; letter-spacing: 2px; color: #f6ffe4;
+  text-shadow: 2px 2px 0 #0d1c05, -2px 2px 0 #0d1c05, 2px -2px 0 #0d1c05,
+               -2px -2px 0 #0d1c05, 0 0 14px rgba(5,12,2,.9);
 }
 .portal:active { transform: scale(.95); }
-.portal.chico-portal { width: 122px; height: 122px; margin: 10px auto 4px; }
-.portal.chico-portal .portal-txt { font-size: 21px; }
+.portal.chico-portal { width: 116px; height: 116px; margin: 6px auto 20px; }
+.portal.chico-portal .portal-txt { font-size: 20px; }
+
+/* ── los botones chicos: una chapa de laboratorio ──
+   La misma imagen de 192×192 para todos, cortada en nueve. El centro SI se
+   dibuja (`fill`) porque ahí está la chapa; en el marco no, porque ahí hay un
+   agujero. */
+.chico, .hud-btn {
+  background: none; box-shadow: none; border: 12px solid transparent;
+  border-image: url(../assets/arte/ui_chapa.webp) 30% fill / 12px / 0 stretch;
+  color: #dff0c6;
+}
+.chico:active, .hud-btn:active { transform: translateY(2px); box-shadow: none; }
+/* El de borrar lleva la MISMA chapa y sólo cambia el color de la letra: teñir
+   la imagen con `hue-rotate` teñía también el texto y quedaban los dos del
+   mismo color, que es justo lo que había que distinguir. */
+.peligro { color: #ff8f8f; }
 
 /* El resto de los botones se achica y se corre al pie: en esta pantalla hay UNA
    cosa para hacer y el resto es administración. */
@@ -257,5 +301,5 @@ body.borroso #lienzo { filter: blur(6px) saturate(1.4) brightness(1.06); }
   .portal { width: 104px; height: 104px; margin: 6px auto 2px; }
   .portal .portal-txt { font-size: 19px; }
   .portal.chico-portal { width: 86px; height: 86px; }
-  .logo { font-size: 24px; }
+  .tapa { border-width: 22px; border-image-width: 22px; padding: 6px; }
 }

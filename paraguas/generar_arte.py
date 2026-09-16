@@ -27,17 +27,75 @@ ESTILO = ("Flat 2D TV cartoon animation style, thin clean black outline of even 
           "background, the whole object inside the image with room to spare, nothing cropped. "
           "No drop shadow, no ground, no text, no frame, no hands, no person.")
 
+# Las piezas del VESTIDO (menú, botones, marco) se piden aparte porque no se
+# preparan igual: el marco y la chapa se usan con `border-image`, que corta la
+# imagen en nueve pedazos por porcentaje, así que tienen que salir del tamaño
+# exacto que espera el CSS y NO se les puede respetar la proporción.
+ESTILO_UI = ("Flat 2D TV cartoon style with a thick black outline and completely flat solid "
+             "colours, no gradients, no shading, no photorealism. Isolated on a fully "
+             "transparent background. No drop shadow, no ground, no frame around the image.")
+
 PIEZAS = {
-  "paraguas_abierto": ("A single OPEN umbrella seen straight from the front, perfectly symmetrical, "
-                       "in the style of a sci-fi cartoon gadget: the canopy is spread wide with six "
-                       "panels alternating ACID LIME GREEN and dark teal, a thin glowing lime rim "
-                       "along the bottom edge, and a small glowing green orb as the finial on top. "
-                       "A straight metallic grey shaft hangs down from the centre with a curved "
-                       "handle at the bottom. " + ESTILO),
-  "paraguas_cerrado": ("A single CLOSED umbrella, furled tight, in the style of a sci-fi cartoon "
-                       "gadget: acid lime green and dark teal fabric wrapped narrow around a "
-                       "straight metallic grey shaft, a small glowing green orb on top and a curved "
-                       "handle at the bottom. Vertical, thin, seen from the front. " + ESTILO),
+  "paraguas_abierto": {
+    "alto": 320,
+    "prompt": ("A single OPEN umbrella seen straight from the front, perfectly symmetrical, "
+               "in the style of a sci-fi cartoon gadget: the canopy is spread wide with six "
+               "panels alternating ACID LIME GREEN and dark teal, a thin glowing lime rim "
+               "along the bottom edge, and a small glowing green orb as the finial on top. "
+               "A straight metallic grey shaft hangs down from the centre with a curved "
+               "handle at the bottom. " + ESTILO)},
+  "paraguas_cerrado": {
+    "alto": 320,
+    "prompt": ("A single CLOSED umbrella, furled tight, in the style of a sci-fi cartoon "
+               "gadget: acid lime green and dark teal fabric wrapped narrow around a "
+               "straight metallic grey shaft, a small glowing green orb on top and a curved "
+               "handle at the bottom. Vertical, thin, seen from the front. " + ESTILO)},
+
+  # EL BOTON. Gira entero, así que tiene que ser REDONDO y estar centrado: si el
+  # recorte lo deja descentrado un par de píxeles, al girar se bambolea.
+  "ui_portal": {
+    "medida": (352, 352),
+    "prompt": ("A swirling green portal vortex seen face-on, perfectly circular and perfectly "
+               "centred, filling the image edge to edge. Concentric spiral arms of acid lime "
+               "green, bright yellow-green and dark forest green spinning around a bright "
+               "pale-green glowing core in the exact centre. The outer rim is ragged and "
+               "splashy with a few round green droplets flying off it. Cartoon sci-fi "
+               "interdimensional portal. " + ESTILO_UI)},
+  # El halo de atrás: se pone MAS GRANDE que el portal y gira al revés, y es lo
+  # que hace que el botón parezca vivo sin que haya que animar el portal mismo.
+  "ui_chispas": {
+    "medida": (352, 352), "damero": True,
+    "prompt": ("A ring of glowing acid-green energy splashes and round droplets arranged in a "
+               "circle, like liquid flung outwards from a spinning portal. The very centre of "
+               "the image is completely empty and transparent. Irregular, asymmetric, some "
+               "splashes longer than others. Cartoon sci-fi. " + ESTILO_UI)},
+  # El título. Es la única pieza con letras, así que va con otro estilo: pedirle
+  # "no text" al resto es justamente lo que evita que aparezcan garabatos.
+  "ui_logo": {
+    "alto": 150,
+    "prompt": ('A cartoon logo wordmark of the single word "PARAGUAS" in capital letters, one '
+               'line, spelled exactly P-A-R-A-G-U-A-S. Chunky rounded hand-drawn letters with a '
+               'thick black outline and a lime-green to pale-yellow fill, slightly tilted and '
+               'bouncy like an adult cartoon title card, with a thin acid-green glow behind the '
+               'letters. Nothing else in the image: no characters, no umbrella, no frame, no '
+               'other words. Isolated on a fully transparent background, flat colours, no '
+               'gradients other than the letter fill, no drop shadow.')},
+  # El marco y la chapa se cortan con `border-image`: el centro tiene que quedar
+  # VACIO de verdad, si no tapa el juego desenfocado que corre atrás.
+  "ui_marco": {
+    "medida": (320, 320),
+    "prompt": ("A square picture frame made of dripping acid-green slime and riveted dark "
+               "gunmetal panels, cartoon sci-fi laboratory style, with small glowing green "
+               "lights at the four corners and slime drips running down the inner edge. The "
+               "border is thick and even on all four sides; the entire middle of the square is "
+               "completely empty and transparent — a hole, not a surface. " + ESTILO_UI)},
+  "ui_chapa": {
+    "medida": (192, 192),
+    "prompt": ("A small horizontal rounded rectangular metal plate, cartoon sci-fi laboratory "
+               "equipment: dark gunmetal blue-grey surface with four rivets, a thin bright "
+               "acid-green light strip running along the bottom edge and a green outline. Blank "
+               "surface with nothing written on it. Seen straight from the front. "
+               + ESTILO_UI)},
 }
 
 
@@ -76,11 +134,11 @@ def pedir(rehacer=False):
                 d[f"{k}.viejo{len([x for x in d if x.startswith(k + '.viejo')])}"] = d.pop(k)
         REG.write_text(json.dumps(d, indent=2, ensure_ascii=False))
     d = cargar()
-    for k, prompt in PIEZAS.items():
+    for k, cfg in PIEZAS.items():
         if d.get(k, {}).get("task_id"):
             print(f"  · {k} ya pedido"); continue
         r = rz("submit_image_generation", {
-            "project_id": PROYECTO, "output_path": f"assets/{k}.png", "prompt": prompt,
+            "project_id": PROYECTO, "output_path": f"assets/{k}.png", "prompt": cfg["prompt"],
             "model": MODELO, "size": "1024x1024", "transparent": True})
         if "task_id" not in r:
             print(f"  ✗ {k}: {r}"); continue
@@ -117,6 +175,26 @@ def bajar():
         anotar(k, x)
 
 
+def sin_damero(im):
+    """Borra el damero gris que el generador DIBUJA cuando le pedís un agujero.
+
+    Al pedir "el centro completamente transparente" el modelo entiende la
+    convención de la interfaz y pinta el cuadriculado gris y blanco con el que
+    los editores muestran la transparencia — píxeles opacos de verdad. Se
+    reconocen porque no tienen color: el resto de la pieza es verde saturado o
+    negro, así que un pixel claro y sin saturación sólo puede ser el damero.
+    """
+    from PIL import Image
+    px = im.load()
+    an, al = im.size
+    for y in range(al):
+        for x in range(an):
+            r, g, b, a = px[x, y]
+            if a and min(r, g, b) > 140 and max(r, g, b) - min(r, g, b) < 26:
+                px[x, y] = (r, g, b, 0)
+    return im
+
+
 def preparar():
     """Recortar al contenido, achicar y pasar a WebP; traer las piezas del cuerpo."""
     from PIL import Image
@@ -124,7 +202,7 @@ def preparar():
     destino.mkdir(parents=True, exist_ok=True)
     total = 0
     reg = cargar()
-    for k in PIEZAS:
+    for k, cfg in PIEZAS.items():
         # El archivo sale del REGISTRO, no de adivinar el sufijo. El servidor le
         # pone un número de generación al nombre, así que el segundo pedido de
         # una pieza cae en `-g2`: buscando `-g1` a mano, `preparar` seguía
@@ -141,9 +219,17 @@ def preparar():
         caja = m.getbbox()
         if caja:
             im = im.crop(caja)
-        alto = 320
-        if im.height > alto:
-            im = im.resize((max(1, round(im.width * alto / im.height)), alto), Image.LANCZOS)
+        if cfg.get("damero"):
+            im = sin_damero(im)
+        # `medida` fuerza el tamaño exacto SIN respetar la proporción: las piezas
+        # que se usan con `border-image` se parten en nueve por porcentaje, y el
+        # CSS necesita saber de antemano dónde caen los cortes.
+        if cfg.get("medida"):
+            im = im.resize(cfg["medida"], Image.LANCZOS)
+        else:
+            alto = cfg.get("alto", 320)
+            if im.height > alto:
+                im = im.resize((max(1, round(im.width * alto / im.height)), alto), Image.LANCZOS)
         salida = destino / f"{k}.webp"
         im.save(salida, "WEBP", quality=90, method=6)
         kb = salida.stat().st_size / 1024; total += kb

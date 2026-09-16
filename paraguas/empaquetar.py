@@ -11,7 +11,7 @@ de dependencias, resuelto a mano: por eso el ORDEN de la lista importa —un
 módulo tiene que estar armado antes de que otro lo lea— y por eso no hay
 ciclos.
 
-LOS BINARIOS VAN EN BASE64, y son diez. Base64 infla un 37%, así que cada
+LOS BINARIOS VAN EN BASE64, y son quince: diez del juego y cinco del vestido. Base64 infla un 37%, así que cada
 kilobyte que se ahorra preparando vale 1,37 acá — por eso el arte se guarda a
 320 px de alto y no a 1024.
 
@@ -88,19 +88,43 @@ def envolver(nombre, src):
 
 
 def binarios():
-    """Los archivos que el juego pide por `ruta()`, como data: URIs."""
-    mapa, crudo = {}, 0
+    """Los binarios, en dos mapas: los que pide el juego y los que pide el vestido.
+
+    VAN SEPARADOS PARA QUE NINGUNO ENTRE DOS VECES. Los del juego se buscan en
+    tiempo de ejecución por `ruta()`, así que tienen que estar en ARCHIVOS; los
+    del vestido los pide el CSS por su URL y se reemplazan en el texto. Si una
+    pieza estuviera en los dos lados, su base64 —que para el portal son 60 KB—
+    quedaría escrito dos veces en el mismo archivo.
+    """
+    juego, vestido, crudo = {}, {}, 0
     for sub in ["arte"]:
         for f in sorted((AQUI / "assets" / sub).glob("*")):
             if f.suffix.lower() not in (".webp", ".png"):
                 continue
-            mapa[f"assets/{sub}/{f.name}"] = data_uri(f); crudo += f.stat().st_size
-    return mapa, crudo
+            destino = vestido if f.name.startswith("ui_") else juego
+            destino[f"assets/{sub}/{f.name}"] = data_uri(f); crudo += f.stat().st_size
+    return juego, vestido, crudo
 
 
 def data_uri(f):
     tipo = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
     return f"data:{tipo};base64," + base64.b64encode(f.read_bytes()).decode()
+
+
+def incrustar_rutas(texto, mapa, prefijos):
+    """Cambia las rutas a archivos por su data: URI, en el CSS y en el HTML.
+
+    LOS MODULOS PIDEN SUS IMAGENES POR `ruta()` y las encuentran en ARCHIVOS,
+    pero el vestido no pasa por JavaScript: el marco lo pide el CSS con
+    `url(../assets/...)` y el logo el HTML con `src="assets/..."`. Sin esto el
+    archivo único quedaba sin marco, sin título y sin botón —los tres pedidos
+    salían 404— y el juego se veía bien, que es lo que hace que no se note.
+    """
+    for clave, uri in mapa.items():
+        corto = clave.split("/")[-1]
+        for pre in prefijos:
+            texto = texto.replace(pre + clave, uri).replace(pre + corto, uri)
+    return texto
 
 
 def main():
@@ -115,7 +139,7 @@ def main():
     src = RE_IMP_TODO.sub(lambda m: f"const {m.group(1)} = M_{modulo_de(m.group(2))};", src)
     partes.append(f"/* ── {ENTRADA}.js ── */\n{src}\n")
 
-    mapa, crudo = binarios()
+    mapa, vestido, crudo = binarios()
     # El mapa va PRIMERO, antes de cualquier módulo: `assets.js` lo lee al
     # resolver una ruta y los módulos se ejecutan en orden al definirse.
     partes.insert(0, "/* ── archivos ── */\nglobalThis.ARCHIVOS = "
@@ -123,8 +147,12 @@ def main():
 
     html = (AQUI / "index.html").read_text(encoding="utf-8")
     css = (AQUI / "css" / "p.css").read_text(encoding="utf-8")
+    # El CSS entra con las rutas ya resueltas; el HTML se resuelve después, con
+    # el CSS adentro, así que alcanza una sola pasada para los dos.
+    css = incrustar_rutas(css, vestido, ["../"])
     html = html.replace('<link rel="stylesheet" href="css/p.css">',
                         f"<style>\n{css}\n</style>")
+    html = incrustar_rutas(html, vestido, [""])
     # Sin `type="module"` no hay ámbito de módulo, así que todo va adentro de
     # una función: si no, cada `const` del juego queda colgado de window.
     html = html.replace('<script type="module" src="js/main.js"></script>',
@@ -133,7 +161,7 @@ def main():
     destino.write_text(html, encoding="utf-8")
     kb = len(html.encode()) / 1024
     print(f"{destino.name}: {kb:.0f} KB · {len(ORDEN) + 1} módulos + "
-          f"{len(mapa)} binarios ({crudo // 1024} KB crudos)")
+          f"{len(mapa)} binarios + {len(vestido)} de vestido ({crudo // 1024} KB crudos)")
 
 
 if __name__ == "__main__":
