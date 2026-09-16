@@ -39,6 +39,7 @@ Todo esto sale de `./pruebas/correr.sh`, no de una estimación.
 | niveles generados y validados | **72/72** (24 niveles × 3 colores) |
 | caminos del validador rehechos dentro del juego real | **72/72** |
 | comprobaciones de interfaz | **43/43** (compu y teléfono) |
+| el archivo único, desde `file://` | **9/9** |
 | peor tiempo de generación | **1075 ms** · típico ~100 ms |
 | camino óptimo | 13,5 a 24 s según el nivel |
 | tamaño total | ~170 KB, sin una sola dependencia |
@@ -94,6 +95,27 @@ atrás y perdés 5 monedas; tocás para pincharla donde quieras. Arrancás con d
 
 **Cinco monedas de color por nivel.** Las cinco rosas en una corrida habilitan
 las violetas, y esas las negras. Es el mismo nivel tres veces.
+
+## Un solo archivo
+
+```sh
+python3 empaquetar.py      # -> pique-en-un-archivo.html
+```
+
+**129 KB** (39 comprimido) con todo adentro: se abre con doble clic, sin
+servidor, sin internet y sin pedir un solo archivo suelto. Es lo que hay que
+mandarle a alguien que quiere jugar y nada más.
+
+No se pueden pegar los módulos uno atrás del otro: `crear` existe en
+`entidades.js` **y** en `interfaz.js`, y `moneda`, `paso` y `tiles` también
+chocan. Pegados, el último se come al primero y el juego rompe en un lugar que
+no tiene nada que ver con la causa. `empaquetar.py` envuelve cada módulo en una
+función que devuelve sus exportaciones y reescribe los `import` como lecturas
+de ese objeto.
+
+`pruebas/un-archivo.mjs` lo prueba **desde `file://`, no desde `http://`**: si
+se probara por HTTP se estaría probando otra cosa, y el CORS de los módulos
+—que es lo que el empaquetado viene a resolver— no aparecería nunca.
 
 ## Correr y probar
 

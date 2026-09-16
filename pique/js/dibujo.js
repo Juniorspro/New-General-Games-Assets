@@ -182,8 +182,6 @@ export function moneda(c, cx, cy, t, col = "#ffd447", oscuro = "#c48f10", fase =
   c.fillStyle = col; c.beginPath(); c.ellipse(cx, cy, w, 5.6, 0, 0, pi2); c.fill();
 }
 
-const COLOR_TIER = { rosa: ["#ff7ac0", "#c4407f"], violeta: ["#b07 aff", "#6a3fbf"],
-                     negra: ["#3a3a46", "#18181f"] };
 export function monedaColor(c, cx, cy, t, tier) {
   const [a, b] = tier === "violeta" ? ["#b07aff", "#6a3fbf"]
                : tier === "negra" ? ["#4a4a58", "#16161c"] : ["#ff7ac0", "#c4407f"];

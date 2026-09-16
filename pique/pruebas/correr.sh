@@ -16,3 +16,7 @@ node pruebas/niveles.mjs
 echo
 echo "── interfaz: que los botones se puedan tocar de verdad ─────"
 node pruebas/interfaz.mjs
+echo
+echo "── el archivo unico, abierto desde file:// ─────────────────"
+python3 empaquetar.py
+node pruebas/un-archivo.mjs
