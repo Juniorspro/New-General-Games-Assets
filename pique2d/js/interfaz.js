@@ -6,7 +6,7 @@
 // juego; la interfaz es HTML.
 
 import { NIVELES, idNivel, TEMAS } from "./mundo.js";
-import { cargar, guardar, datosNivel, tierActual, borrarTodo, abierto, abrirSiguiente, indiceNivel } from "./guardado.js";
+import { cargar, guardar, datosNivel, tierActual, borrarTodo, abierto, abrirSiguiente, indiceNivel, proximoNivel } from "./guardado.js";
 import { efe, despertar, volumen } from "./audio.js";
 import { ruta } from "./assets.js";
 
@@ -21,6 +21,39 @@ const crear = (tag, clase, texto) => {
 export function mostrar(pantalla) {
   for (const p of document.querySelectorAll(".pantalla")) p.hidden = true;
   $("#" + pantalla).hidden = false;
+  if (pantalla === "p-inicio") pintarInicio();
+}
+
+/**
+ * La vitrina del menu: monedas, niveles hechos, monedas de color, y a que
+ * nivel entra el boton Jugar.
+ *
+ * Se repinta cada vez que se vuelve al menu y no una sola vez al arrancar:
+ * si no, despues de jugar un nivel el menu sigue mostrando los numeros de
+ * antes, que es peor que no mostrarlos.
+ */
+export function pintarInicio() {
+  const d = cargar();
+  let hechos = 0, color = 0;
+  for (const cfg of NIVELES) {
+    const n = datosNivel(idNivel(cfg.m, cfg.n));
+    if (n.hecho) hechos++;
+    for (const c of ["rosa", "violeta", "negra"]) if (n.color[c]) color++;
+  }
+  const poner = (sel, txt) => { const e = $(sel); if (e && e.textContent !== txt) e.textContent = txt; };
+  poner("#vit-monedas", String(d.monedas ?? 0));
+  poner("#vit-niveles", `${hechos}/${NIVELES.length}`);
+  poner("#vit-color", `${color}/${NIVELES.length * 3}`);
+  const barra = $("#vit-barra");
+  if (barra) barra.style.width = `${Math.round((hechos / NIVELES.length) * 100)}%`;
+  const ico = $("#ico-vit-moneda");
+  if (ico && !ico.src) ico.src = ruta("assets/piezas/icono_moneda.webp");
+  // El boton Jugar dice A DONDE entra. "Jugar" solo no distingue empezar de
+  // seguir, y despues de tres sesiones uno no se acuerda por donde iba.
+  const { m, n } = proximoNivel();
+  const cfg = NIVELES.find((c) => c.m === m && c.n === n);
+  poner("#bt-jugar-txt", hechos ? "Seguir" : "Jugar");
+  poner("#bt-jugar-sub", cfg ? `Mundo ${m}-${n} · ${cfg.titulo}` : `Mundo ${m}-${n}`);
 }
 
 // --- mapa de mundos ------------------------------------------------------

@@ -109,13 +109,30 @@ export function actualizar(e, nv, j, ev, nuevos) {
       caer(e, nv); if (e.suelo) caminar(e, nv, e.vel); break;
 
     case "fauces": {
-      // Sale y se esconde. Y se queda escondida si el jugador esta encima del
-      // tubo: salir justo abajo del jugador es una muerte que no se puede ver
-      // venir, y esas no van.
+      // SALE DE A POCO, y esa es la correccion.
+      //
+      // El ciclo era `min(1, (70 - ciclo) / 22)`: en el cuadro en que el ciclo
+      // vuelve a cero eso da 1 de una, o sea que la planta APARECIA entera en
+      // un solo cuadro y despues bajaba despacio. Salia de la nada. Se
+      // reporto como "la flor solamente spawnea y es raro", y era exactamente
+      // eso: de los dos movimientos, el juego animaba nada mas el de volver.
+      //
+      // El ciclo ahora dice las cuatro partes por su nombre: sube, se queda,
+      // baja, espera. Subir y bajar tardan lo mismo.
       const ciclo = (e.t + e.fase) % 150;
       const cerca = Math.abs(j.x - e.x) < 22;
-      const fuera = ciclo < 70 && !cerca;
-      e.salida = fuera ? Math.min(1, (70 - ciclo) / 22) : Math.max(0, (e.salida ?? 0) - 0.08);
+      let obj;
+      if (ciclo < 20) obj = ciclo / 20;              // sube
+      else if (ciclo < 60) obj = 1;                  // afuera, mordiendo
+      else if (ciclo < 80) obj = (80 - ciclo) / 20;  // baja
+      else obj = 0;                                  // escondida
+      // Con el jugador encima del tubo se esconde y no sale: aparecer justo
+      // abajo de sus pies es una muerte que no se puede ver venir.
+      if (cerca) obj = 0;
+      // Se persigue el objetivo en vez de saltar a el, asi el corte por
+      // "jugador encima" tampoco se ve como un parpadeo.
+      const v0 = e.salida ?? 0;
+      e.salida = v0 + Math.max(-0.07, Math.min(0.07, obj - v0));
       // LA PLANTA NO SE MUEVE: CRECE. Antes se corria la entera hacia arriba
       // (`y = baseY - salida * 20`) y escondida quedaba veinte pixeles mas
       // abajo, flotando delante del tubo. Ahora el pie queda clavado en la

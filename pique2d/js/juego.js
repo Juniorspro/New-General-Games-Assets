@@ -425,9 +425,26 @@ export class Partida {
     return true;
   }
 
+  // LA BAJADA DEL MASTIL TIENE UN TOPE DE CUADROS, Y ESO ES EL ARREGLO.
+  //
+  // Bajaba a 2,4 pixeles por cuadro desde donde hubiera agarrado el mastil.
+  // Agarrandolo arriba de todo —diez tiles, que es lo que mas paga— son 160
+  // pixeles: casi setenta cuadros, mas de un segundo en el que no se mueve
+  // NADA salvo la bandera, y despues otros novecientos milisegundos hasta que
+  // aparece el cartel. Dos segundos de pantalla quieta al terminar un nivel se
+  // sienten como que el juego se colgo, y asi se reporto.
+  //
+  // Ahora la bajada dura siempre lo mismo —veinticuatro cuadros, cuatro
+  // decimas— sin importar de que altura salga. Y hay un tope duro por si el
+  // piso del mastil saliera raro: pasados cuarenta cuadros se gana igual. Un
+  // estado del que no se puede salir es la unica forma de colgar de verdad.
   pasoMastil() {
-    this.mastilY += 2.4;
     const suelo = this.nv.pisoMastil * T;
+    this.mastilT = (this.mastilT ?? 0) + 1;
+    if (this.mastilPaso === undefined)
+      this.mastilPaso = Math.max(3, (suelo - this.mastilY) / 24);
+    this.mastilY += this.mastilPaso;
+    if (this.mastilT > 40) this.mastilY = suelo;
     if (this.mastilY >= suelo) {
       this.mastilY = suelo;
       if (!this.premioDado) {

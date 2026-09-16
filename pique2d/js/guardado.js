@@ -46,11 +46,17 @@ export function guardar() {
 
 export function datosNivel(id) {
   const d = cargar();
-  if (!d.niveles[id]) {
-    d.niveles[id] = { hecho: false, mejorTiempo: 0, monedas: 0,
-                      color: { rosa: false, violeta: false, negra: false } };
-  }
-  return d.niveles[id];
+  // Se completan los campos que FALTEN, no solo el registro entero. Un
+  // guardado hecho con una version anterior —o tocado a mano— tiene el nivel
+  // pero sin `monedas` ni `mejorTiempo`, y el mapa mostraba "undefined 🪙 ·
+  // undefineds" en la tarjeta. Rellenar solo cuando no existe el registro
+  // deja pasar justo ese caso.
+  const vacio = { hecho: false, mejorTiempo: 0, monedas: 0,
+                  color: { rosa: false, violeta: false, negra: false } };
+  const n = { ...vacio, ...(d.niveles[id] || {}) };
+  n.color = { ...vacio.color, ...(n.color || {}) };
+  d.niveles[id] = n;
+  return n;
 }
 
 // Que color de moneda toca en este nivel. Se arranca por la rosa; la violeta

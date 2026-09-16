@@ -51,7 +51,7 @@ let hojas = {}, patrones = {}, capas = {}, escenaHongo = null;
 //
 // Ahora la BAJADA deja un pedido anotado que el bucle consume cuando le toca,
 // pase lo que pase con el dedo en el medio.
-const entrada = { apoyado: false, previo: false, volver: false, pedido: false };
+const entrada = { apoyado: false, previo: false, pedido: false, izq: false, der: false, frenar: false };
 const abajo = (e) => {
   despertar();
   entrada.apoyado = true;
@@ -75,7 +75,7 @@ for (const ev of ["pointerup", "pointercancel", "touchend", "mouseup", "mouselea
 // dos cosas el navegador se queda el toque para hacer scroll o para el gesto
 // de "volver atras", y el boton responde una de cada tres veces.
 function montarMando(sel, alApretar, alSoltar) {
-  const b = $(sel);
+  const b = document.querySelector(sel);
   if (!b) return;
   const abajoM = (e) => {
     despertar();
@@ -89,21 +89,35 @@ function montarMando(sel, alApretar, alSoltar) {
   for (const ev of ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel"])
     b.addEventListener(ev, arribaM);
 }
-montarMando("#mando-saltar", () => { entrada.apoyado = true; entrada.pedido = true; },
-            () => { entrada.apoyado = false; });
-// El de darse vuelta es de flanco: se anota el pedido y el bucle lo consume en
-// el proximo cuadro. Aplicandolo en el evento, dos toques dentro del mismo
-// cuadro se comerian uno y el jugador quedaria mirando para donde no quiso.
-montarMando("#mando-volver", () => { entrada.volver = true; });
+const saltar = [() => { entrada.apoyado = true; entrada.pedido = true; },
+                () => { entrada.apoyado = false; }];
+montarMando("#mando-saltar", ...saltar);
+montarMando('[data-dir="arriba"]', ...saltar);
+montarMando('[data-dir="izq"]', () => { entrada.izq = true; }, () => { entrada.izq = false; });
+montarMando('[data-dir="der"]', () => { entrada.der = true; }, () => { entrada.der = false; });
+montarMando('[data-dir="abajo"]', () => { entrada.frenar = true; }, () => { entrada.frenar = false; });
+// Soltar el dedo FUERA del boton tambien lo suelta. Sin esto, arrastrar el
+// pulgar de una flecha a otra deja la primera apretada para siempre y el
+// jugador queda corriendo contra una pared sin entender por que.
+for (const ev of ["pointerup", "pointercancel", "touchend", "touchcancel", "blur"])
+  window.addEventListener(ev, () => {
+    entrada.izq = entrada.der = entrada.frenar = false;
+    for (const b of document.querySelectorAll(".mando.apretado")) b.classList.remove("apretado");
+  });
 
 addEventListener("keydown", (e) => {
   if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) { abajo(e); }
   if (e.code === "Escape" && partida) alMapa();
-  if ((e.code === "ArrowLeft" || e.code === "ArrowDown") && partida) entrada.volver = true;
+  if (e.code === "ArrowLeft") entrada.izq = true;
+  if (e.code === "ArrowRight") entrada.der = true;
+  if (e.code === "ArrowDown") entrada.frenar = true;
   if (e.code === "KeyR" && partida) empezar(cfgActual.m, cfgActual.n);
 });
 addEventListener("keyup", (e) => {
   if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) arriba();
+  if (e.code === "ArrowLeft") entrada.izq = false;
+  if (e.code === "ArrowRight") entrada.der = false;
+  if (e.code === "ArrowDown") entrada.frenar = false;
 });
 // Perder el foco con el dedo apoyado dejaba al jugador saltando para siempre.
 addEventListener("blur", arriba);
@@ -126,6 +140,7 @@ function empezar(m, n) {
   // segundo, y sin ceder el control la pantalla "generando" no llega a
   // pintarse nunca — el jugador ve un cuelgue en vez de un aviso.
   requestAnimationFrame(() => requestAnimationFrame(() => {
+    try {
     const t0 = performance.now();
     const nv = generarNivel(cfgActual, tierActualN);
     const ms = Math.round(performance.now() - t0);
@@ -137,6 +152,11 @@ function empezar(m, n) {
       ? "sin validar"
       : `validado en ${nv.validacion.intentos} ${nv.validacion.intentos === 1 ? "intento" : "intentos"} · ${ms} ms`;
     UI.mostrar("p-juego");
+    } catch (e) {
+      // Sin esto, un error armando el nivel deja la pantalla "Armando y
+      // comprobando…" puesta para siempre: ni cartel, ni juego, ni salida.
+      seRompio(e, "armar el nivel");
+    }
   }));
 }
 
@@ -219,11 +239,13 @@ function bucle(ahora) {
   while (acumulado >= PASO && pasos < 5) {
     acumulado -= PASO; pasos++;
     if (partida) {
+      // Las dos flechas juntas se anulan: pasa al arrastrar el pulgar y, sin
+      // esto, gana la que se leyo ultima y el personaje tiembla.
       const ent = { toque: entrada.apoyado,
                     toqueNuevo: entrada.pedido || (entrada.apoyado && !entrada.previo),
-                    volver: entrada.volver };
+                    x: (entrada.der ? 1 : 0) + (entrada.izq ? -1 : 0),
+                    frenar: entrada.frenar };
       entrada.previo = entrada.apoyado;
-      entrada.volver = false;
       entrada.pedido = false;
       const antes = partida.estado;
       try { partida.actualizar(ent); }
@@ -233,7 +255,7 @@ function bucle(ahora) {
           (partida.estado === ESTADO.GANADO || partida.estado === ESTADO.PERDIDO)) {
         terminar(partida.estado === ESTADO.GANADO);
       }
-    } else { entrada.previo = entrada.apoyado; entrada.pedido = false; entrada.volver = false; }
+    } else { entrada.previo = entrada.apoyado; entrada.pedido = false; }
   }
   if (partida) {
     try { partida.dibujar(ctx); UI.pintarHud(partida); }
@@ -243,7 +265,14 @@ function bucle(ahora) {
 
 function terminar(gano) {
   const p = partida;
+  // Menos espera, y ENVUELTA. Eran 900 ms al ganar y 700 al perder, encima de
+  // la bajada del mastil: el jugador veia hasta dos segundos de pantalla
+  // quieta y lo leia como un cuelgue. Y si pintarResultado tirara una
+  // excepcion, `partida = null` no corria nunca: el bucle seguia dibujando la
+  // partida terminada para siempre, sin cartel y sin forma de salir. Eso si
+  // es colgarse, y por eso va con red.
   setTimeout(() => {
+    try {
     UI.pintarResultado(p, cfgActual, gano,
       () => {   // siguiente
         const i = NIVELES.indexOf(cfgActual);
@@ -252,8 +281,12 @@ function terminar(gano) {
       },
       () => empezar(cfgActual.m, cfgActual.n),
       alMapa);
+    } catch (e) {
+      console.error("no se pudo pintar el resultado:", e);
+      alMapa();
+    }
     partida = null;
-  }, gano ? 900 : 700);
+  }, gano ? 420 : 340);
 }
 
 // --- botones -------------------------------------------------------------

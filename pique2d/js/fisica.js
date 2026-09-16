@@ -94,18 +94,19 @@ export function paso(j, nv, ent, ev = {}) {
   }
 
   if (j.flip > 0) j.flip++;
-  // DARSE VUELTA. Es el unico control que el juego no tenia: se corre solo y
-  // hasta ahora la unica forma de cambiar de lado era chocarse una pared.
-  // Volver cuesta tiempo —el reloj no para— asi que no hace falta limitarlo
-  // de ninguna otra forma: el costo ya esta puesto.
+  // LA CRUCETA. El jugador manda para donde corre, y frena si quiere.
   //
-  // El validador no manda nunca este campo, asi que lo que demostro sigue
-  // valiendo: esto SUMA opciones, no le saca ninguna.
-  if (ent.volver) {
-    j.dir = -j.dir;
-    j.vx = j.dir * F.VEL;
-    j.impulso = 0;
-    ev.darVuelta = true;
+  // SIN TOCAR NADA SIGUE CORRIENDO SOLO, y eso no es pereza: es lo que hace
+  // que el juego se pueda jugar con un dedo, que es como esta pensado. La
+  // cruceta no reemplaza la carrera, la dirige.
+  //
+  // El validador NUNCA manda estos campos, asi que lo que demostro sigue
+  // valiendo tal cual: esto SUMA opciones —ir para atras, frenar, corregir un
+  // salto en el aire— y no le saca ninguna. Un nivel que se terminaba
+  // corriendo solo se sigue terminando sin tocar la cruceta.
+  if (ent.x === 1 || ent.x === -1) {
+    if (j.dir !== ent.x) ev.darVuelta = true;
+    j.dir = ent.x;
   }
   if (ent.toqueNuevo) j.buffer = F.BUFFER;
   if (j.buffer > 0) j.buffer--;
@@ -170,6 +171,10 @@ export function paso(j, nv, ent, ev = {}) {
   // rebote de una pared, y solo por unos cuadros.
   if (j.impulso > 0) j.vx += (j.dir * F.VEL - j.vx) * 0.12;
   else j.vx = j.dir * F.VEL;
+  // Frenar es solo en el piso. En el aire cambiaria el arco de los saltos, y
+  // los arcos son justo lo que el validador midio para decir que el nivel se
+  // puede terminar.
+  if (ent.frenar && j.suelo) j.vx = 0;
   // En bajada se acelera: la pendiente se siente como pendiente.
   if (j.rampa === -1 && j.suelo) j.vx *= 1.35;
   if (j.largo > 0 && !j.suelo) j.vx *= F.LARGO_BOOST;

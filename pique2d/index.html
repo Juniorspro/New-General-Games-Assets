@@ -28,11 +28,25 @@
     <img id="logo-img" class="logo-img" alt="Pique" hidden>
     <h1 class="logo">Pique</h1>
     <p class="bajada">Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.</p>
+
+    <!-- La vitrina: lo que llevás hecho, de un vistazo. Un menu que no dice
+         nada de tu partida es una puerta; uno que la muestra es un lugar al
+         que volvés. -->
+    <div class="vitrina">
+      <div class="vit"><img id="ico-vit-moneda" alt="" class="ico"><b id="vit-monedas">0</b><span>monedas</span></div>
+      <div class="vit"><b id="vit-niveles">0/24</b><span>niveles</span></div>
+      <div class="vit"><b id="vit-color">0/72</b><span>de color</span></div>
+    </div>
+    <div class="barra-progreso"><i id="vit-barra"></i></div>
+
     <div class="botones">
-      <button id="btn-jugar" class="grande primario">Jugar</button>
-      <button id="btn-niveles" class="grande">Niveles</button>
-      <button id="btn-comojuego" class="grande">Cómo se juega</button>
-      <button id="btn-ajustes" class="grande">Ajustes</button>
+      <button id="btn-jugar" class="grande primario">
+        <span class="bt-linea"><span class="bt-ico" aria-hidden="true">▶</span> <span id="bt-jugar-txt">Jugar</span></span>
+        <small id="bt-jugar-sub">Mundo 1-1</small>
+      </button>
+      <button id="btn-niveles" class="grande"><span class="bt-ico" aria-hidden="true">▦</span> Niveles</button>
+      <button id="btn-comojuego" class="grande"><span class="bt-ico" aria-hidden="true">?</span> Cómo se juega</button>
+      <button id="btn-ajustes" class="grande"><span class="bt-ico" aria-hidden="true">⚙</span> Ajustes</button>
     </div>
     <p class="pie">24 niveles · generados por código · ninguno dibujado a mano</p>
   </div>
@@ -91,11 +105,15 @@
        reemplazan nada, le ponen un lugar fijo y visible a lo que ya se
        podia hacer, y agregan el unico control que faltaba: darse vuelta. -->
   <div id="mandos" class="mandos">
-    <button id="mando-volver" class="mando mando-volver" aria-label="Darse vuelta">
-      <span aria-hidden="true">⟲</span>
-    </button>
+    <div class="cruceta" id="cruceta">
+      <button class="mando dir arriba" data-dir="arriba" aria-label="Saltar">▲</button>
+      <button class="mando dir izq"    data-dir="izq"    aria-label="Ir a la izquierda">◀</button>
+      <button class="mando dir der"    data-dir="der"    aria-label="Ir a la derecha">▶</button>
+      <button class="mando dir abajo"  data-dir="abajo"  aria-label="Frenar">▼</button>
+      <span class="cruceta-centro" aria-hidden="true"></span>
+    </div>
     <button id="mando-saltar" class="mando mando-saltar" aria-label="Saltar">
-      <span aria-hidden="true">▲</span>
+      <span aria-hidden="true">A</span>
     </button>
   </div>
 </main>
@@ -118,7 +136,7 @@
 <main id="p-ayuda" class="pantalla" hidden>
   <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
   <div class="texto">
-    <p class="destacado">Casi todo sale de <b>un solo botón</b>: tocar la pantalla, el botón <b>▲</b>, o la barra espaciadora. El resto sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás. El otro botón, <b>⟲</b>, te da vuelta.</p>
+    <p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora. Lo demás sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás. La <b>cruceta</b> de la izquierda manda para dónde vas.</p>
 
     <h3>Los movimientos</h3>
     <dl class="movs">
@@ -127,7 +145,7 @@
       <dt>Vault</dt><dd><b>Solo.</b> Los obstáculos de un tile y los huecos de uno o dos se pasan sin tocar nada. De tres para arriba hay que saltar.</dd>
       <dt>Vault con toque</dt><dd>Tocar <em>justo</em> mientras vaulteás: salto más alto y te llevás puesto al enemigo. Es la maniobra que más paga.</dd>
       <dt>Trepada</dt><dd><b>Sola.</b> Si caés justo sobre el filo de una plataforma, te subís en vez de rebotar contra el costado.</dd>
-      <dt>Darse vuelta</dt><dd>El botón <b>⟲</b> de abajo a la izquierda te da vuelta y salís corriendo para el otro lado. Sirve para volver a buscar una moneda que quedó atrás — pero el reloj no para.</dd>
+      <dt>La cruceta</dt><dd><b>◀ ▶</b> mandan para dónde corrés — sirve para volver a buscar una moneda que quedó atrás, pero el reloj no para. <b>▼</b> frena en seco. <b>▲</b> y <b>A</b> saltan. Si no tocás ninguna flecha seguís corriendo solo, como siempre.</dd>
       <dt>Salto de pared</dt><dd>Tocar pegado a una pared: rebotás y <b>das vuelta la carrera</b>. Así se suben los pozos y las torres, en zigzag.</dd>
       <dt>Doble salto</dt><dd>Tocar otra vez en el aire: segundo impulso, con su propia vuelta de carnero.</dd>
       <dt>Triple salto</dt><dd>Y una tercera vez: el más alto de los tres, con un backflip. Encadenados llegan a 9 tiles. Pisar un enemigo te devuelve los dos saltos de aire.</dd>

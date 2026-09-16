@@ -60,7 +60,12 @@ def main():
     # El ancho de celda sale de la pantalla: en vertical el lienzo mide 416 px
     # de ancho (208 de juego por 2 de supermuestreo). Mas grande es peso de
     # mas que nadie ve.
-    ANCHO = 224
+    # Se saca al DOBLE de lo que se va a mostrar y despues lo achica
+    # pixelar.py. Sacandolo ya en la medida final, el unico remuestreo es el de
+    # ffmpeg —que promedia— y los bordes quedan con medios tonos; sacandolo
+    # grande, el achique lo hace el pixelador con su prefiltro y su NEAREST, que
+    # es lo que produce bordes limpios de un pixel.
+    ANCHO = 448
     # Se deja afuera el ultimo 4%: los generadores suelen cerrar con un
     # fundido, y un fotograma negro al final se ve como un parpadeo.
     tiempos = [(dur * 0.96) * (i / (n - 1)) for i in range(n)]
@@ -73,7 +78,10 @@ def main():
             im = im.resize((cw, ch), Image.LANCZOS)
         hoja.paste(im, ((i % cols) * cw, (i // cols) * ch))
     salida.parent.mkdir(parents=True, exist_ok=True)
-    hoja.save(salida, "WEBP", quality=74, method=6)
+    # Calidad alta: esta hoja es un PASO INTERMEDIO, no lo que se reparte.
+    # Comprimirla fuerte aca le mete ruido que despues el pixelador convierte
+    # en pixeles de colores equivocados, y esos ya no se sacan.
+    hoja.save(salida, "WEBP", quality=95, method=6)
     print(f"video {dur:.2f} s · {n} cuadros de {cw}x{ch} · hoja {hoja.width}x{hoja.height}")
     print(f"→ {salida} ({salida.stat().st_size // 1024} KB)")
 

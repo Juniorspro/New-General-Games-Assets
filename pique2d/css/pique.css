@@ -212,6 +212,15 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   background: transparent; pointer-events: none;
   display: block; padding: 0;
 }
+/* ESTA LINEA NO SE PUEDE SACAR, y el motivo es de especificidad.
+ *
+ * `.pantalla[hidden] { display: none }` vale 0-2-0 y `#p-juego { display:
+ * block }` vale 1-0-0: gana el id. O sea que la pantalla de juego NUNCA se
+ * ocultaba, por mas que el codigo le pusiera el atributo hidden. Quedaba
+ * dibujada encima del menu y del mapa: por eso se veian la cruceta y el boton
+ * de salto arriba del menu principal. Hace falta una regla con el mismo id
+ * para poder ganarle a la otra regla con el mismo id. */
+#p-juego[hidden] { display: none; }
 /* Todo el HUD deja pasar el toque salvo sus botones: si capturara la franja de
    arriba, el jugador perderia el salto justo cuando mira el reloj. */
 #p-juego > * { pointer-events: none; }
@@ -292,12 +301,12 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 .hud-abajo {
   /* Por encima de los mandos, no por detras. El nombre del nivel quedaba
      cruzado por el boton de saltar y no se leia ni uno ni el otro. */
-  position: absolute; right: 12px; bottom: calc(126px + env(safe-area-inset-bottom));
+  position: absolute; right: 12px; bottom: calc(184px + env(safe-area-inset-bottom));
   text-align: right;
   display: flex; flex-direction: column; gap: 2px;
 }
 @media (max-height: 520px) {
-  .hud-abajo { bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .hud-abajo { bottom: calc(146px + env(safe-area-inset-bottom)); }
 }
 .hud-mundo {
   font-size: 15px; font-weight: 800; color: #fff;
@@ -305,7 +314,9 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
                2px 2px 0 #1b2436, -2px 2px 0 #1b2436, 2px -2px 0 #1b2436, -2px -2px 0 #1b2436;
 }
 .hud-gen { font-size: 10px; color: rgba(255,255,255,.6); text-shadow: 0 1px 3px rgba(0,0,0,.9); }
-.hud-pantalla { position: absolute; left: 12px; bottom: 12px; }
+/* ARRIBA, no abajo: abajo cae justo encima de la cruceta. Se puso al lado
+   del boton de pausa, que es el otro boton de sistema. */
+.hud-pantalla { position: absolute; left: 12px; top: calc(66px + env(safe-area-inset-top)); }
 
 @media (max-width: 420px) {
   .hud-num { font-size: 27px; }
@@ -415,6 +426,11 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
  * Se acomodan en DOS COLUMNAS. Dos filas de dos entran siempre, y de paso los
  * botones quedan mas anchos, que acostado es lo que sobra. */
 @media (max-height: 520px) {
+  /* Acostado no entra todo: se van la vitrina, la barra y la bajada, que son
+     adorno, y quedan el logo y los botones, que son el menu. La prueba de
+     interfaz lo mide como "#btn-ajustes tapado por -". */
+  .vitrina, .barra-progreso, .caja-inicio .bajada, .caja-inicio .pie { display: none; }
+  .botones .primario small { display: none; }
   .caja-inicio { padding: 14px 18px 12px; max-height: 96vh; overflow-y: auto; }
   .caja-inicio .logo { font-size: 34px; margin-bottom: 0; }
   .caja-inicio .bajada { font-size: 12px; margin-bottom: 9px; }
@@ -483,32 +499,78 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 
 
 /* ───────────── mandos en pantalla ─────────────
-   Van FUERA del camino del pulgar hacia el centro y grandes: 96 px es mas
-   del doble del minimo tactil, porque en un juego de correr se tocan sin
-   mirar. Semitransparentes para no tapar el nivel, y con `touch-action:none`
-   o el navegador se queda el toque para hacer scroll. */
+   Cruceta a la izquierda y boton de salto a la derecha, como una consola.
+   Van FUERA del camino del pulgar hacia el centro y grandes: cada tecla pasa
+   los 44 px del minimo tactil por bastante, porque en un juego de correr se
+   tocan sin mirar. Con `touch-action: none` o el navegador se queda el toque
+   para hacer scroll. */
 .mandos {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 3;
   display: flex; justify-content: space-between; align-items: flex-end;
-  padding: 0 16px calc(18px + env(safe-area-inset-bottom)) 16px;
+  padding: 0 14px calc(16px + env(safe-area-inset-bottom)) 14px;
   pointer-events: none;                 /* el hueco del medio deja pasar el toque */
 }
 .mandos[hidden] { display: none; }
+
+.cruceta {
+  position: relative; width: 156px; height: 156px;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+}
+.cruceta-centro {
+  grid-area: 2 / 2; align-self: center; justify-self: center;
+  width: 26px; height: 26px; border-radius: 6px;
+  background: rgba(14,18,30,.5); border: 2px solid rgba(255,255,255,.14);
+}
 .mando {
   pointer-events: auto; touch-action: none; -webkit-tap-highlight-color: transparent;
-  width: 96px; height: 96px; border-radius: 50%;
-  border: 3px solid rgba(255,255,255,.35);
-  background: rgba(14,18,30,.42); backdrop-filter: blur(2px);
-  color: #fff; font-size: 34px; line-height: 1;
+  color: #f4e4c1; font-size: 22px; line-height: 1; font-weight: 800;
   display: grid; place-items: center;
-  box-shadow: 0 4px 0 rgba(0,0,0,.35);
+  border: 3px solid rgba(255,255,255,.22);
+  background: rgba(20,26,40,.5); backdrop-filter: blur(2px);
+  box-shadow: 0 4px 0 rgba(0,0,0,.4);
   transition: transform .06s, background .06s;
+  border-radius: 12px;
 }
-.mando-volver { width: 74px; height: 74px; font-size: 28px; opacity: .8; }
-.mando-saltar { background: rgba(255,180,58,.34); border-color: rgba(255,220,150,.6); }
-.mando.apretado { transform: translateY(3px) scale(.94); background: rgba(255,212,71,.55); }
+.dir.arriba { grid-area: 1 / 2; border-radius: 12px 12px 4px 4px; }
+.dir.izq    { grid-area: 2 / 1; border-radius: 12px 4px 4px 12px; }
+.dir.der    { grid-area: 2 / 3; border-radius: 4px 12px 12px 4px; }
+.dir.abajo  { grid-area: 3 / 2; border-radius: 4px 4px 12px 12px; }
+.mando-saltar {
+  width: 104px; height: 104px; border-radius: 50%; font-size: 30px;
+  background: rgba(255,180,58,.42); border-color: rgba(255,226,160,.66);
+  color: #2a1a06;
+}
+.mando.apretado { transform: translateY(3px) scale(.95); background: rgba(255,212,71,.62); color: #2a1a06; }
 @media (max-height: 520px) {
-  .mando { width: 78px; height: 78px; font-size: 28px; }
-  .mando-volver { width: 62px; height: 62px; font-size: 24px; }
-  .mandos { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+  .cruceta { width: 126px; height: 126px; }
+  .mando { font-size: 18px; }
+  .mando-saltar { width: 86px; height: 86px; font-size: 26px; }
+  .mandos { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 }
+
+
+/* ───────────── vitrina del menu ───────────── */
+.vitrina { display: flex; gap: 8px; margin: 2px 0 8px; }
+.vit {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: rgba(10,14,24,.5); border: 2px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 7px 4px;
+}
+.vit .ico { width: 18px; height: 18px; image-rendering: pixelated; }
+.vit b { font-size: 17px; font-weight: 800; color: #ffd447; line-height: 1.1; }
+.vit span { font-size: 10px; color: var(--tenue); letter-spacing: .02em; }
+.barra-progreso {
+  height: 8px; border-radius: 99px; overflow: hidden; margin-bottom: 12px;
+  background: rgba(10,14,24,.6); border: 2px solid rgba(255,255,255,.1);
+}
+.barra-progreso i { display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, #ffb43a, #7fe39c); transition: width .5s; }
+/* En fila: el icono al lado del texto. En columna quedaba arriba, solo y
+   centrado, como si fuera un adorno aparte. El primario si va en columna
+   porque abajo lleva el nombre del nivel. */
+.botones .grande { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 9px; }
+.botones .primario { flex-direction: column; gap: 1px; }
+.bt-linea { display: inline-flex; align-items: center; gap: 9px; }
+.bt-ico { opacity: .8; font-size: .9em; }
+.botones .grande small { font-size: 11px; font-weight: 600; opacity: .72; letter-spacing: .01em; }
+.botones .primario small { color: #6b4a10; opacity: .8; }
