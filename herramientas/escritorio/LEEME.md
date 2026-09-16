@@ -109,15 +109,18 @@ de `Failed to look up notification icon`. Los avisos de **AT-SPI** y de
 
 ## La IA local
 
-- Modelo: **Qwen2.5 3B Instruct**, cuantizado Q4_K_M, 2,1 GB.
-- Motor: `llama-cpp-python` 0.3.35 compilado acá, en un venv en `/opt/ia`
-  (Ubuntu 24.04 tiene PEP 668, un `pip install` a secas se niega).
-- **Medido: 6,2 tok/s** con 4 núcleos y sin GPU.
+Corre en la máquina, sin API y sin salir a internet una vez bajado el modelo.
+Motor: `llama-cpp-python` 0.3.35 compilado acá, en un venv en `/opt/ia` (Ubuntu
+24.04 tiene PEP 668, un `pip install` a secas se niega).
+
+**Cuál conviene y cuál no está medido en `herramientas/ia-local/LEEME.md`.** El
+resumen: DeepSeek-Coder-V2-Lite (16B MoE, 8,38 tok/s) le gana a todo lo demás,
+incluso al Qwen de 3B, porque activa sólo 2,4B parámetros por token. Los
+destilados de R1 andan pero no sirven para trabajar: se gastan el presupuesto
+de tokens razonando antes de contestar.
 
 ```bash
-/opt/ia/bin/python herramientas/ia-local/probar.py "tu pregunta"
+herramientas/ia-local/instalar.sh coder
+/opt/ia/bin/python herramientas/ia-local/probar.py \
+  /opt/ia/modelos/DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf "tu pregunta"
 ```
-
-Sirve para cosas chicas y offline (clasificar, reescribir, generar variantes de
-texto de relleno) sin gastar créditos ni salir a internet. Para algo que
-requiera calidad, no alcanza: 3B es 3B.
