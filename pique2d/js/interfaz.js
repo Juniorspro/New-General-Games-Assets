@@ -6,7 +6,7 @@
 // juego; la interfaz es HTML.
 
 import { NIVELES, idNivel, TEMAS } from "./mundo.js";
-import { cargar, guardar, datosNivel, tierActual, borrarTodo } from "./guardado.js";
+import { cargar, guardar, datosNivel, tierActual, borrarTodo, abierto, abrirSiguiente, indiceNivel } from "./guardado.js";
 import { efe, despertar, volumen } from "./audio.js";
 import { ruta } from "./assets.js";
 
@@ -31,12 +31,13 @@ export function pintarMapa(alElegir) {
   let hechos = 0;
 
   for (let m = 1; m <= 6; m++) {
-    const abierto = m <= d.desbloqueado;
-    const mundo = crear("section", "mundo" + (abierto ? "" : " cerrado"));
+    // El mundo esta abierto si al menos su primer nivel lo esta.
+    const mundoAbierto = abierto(m, 1);
+    const mundo = crear("section", "mundo" + (mundoAbierto ? "" : " cerrado"));
     const cab = crear("header", "cab-mundo");
     cab.append(crear("h2", null, `Mundo ${m}`));
     const av = crear("div", "avance"); av.append(crear("i")); cab.append(av);
-    if (!abierto) cab.append(crear("span", "candado", "🔒 terminá el mundo " + (m - 1)));
+    if (!mundoAbierto) cab.append(crear("span", "candado", "🔒"));
     mundo.append(cab);
 
     const fila = crear("div", "niveles");
@@ -48,7 +49,9 @@ export function pintarMapa(alElegir) {
       for (const k of ["rosa", "violeta", "negra"]) if (dn.color[k]) totalColor[k]++;
 
       const b = crear("button", "nivel" + (dn.hecho ? " hecho" : "") + (cfg.jefe ? " jefe" : ""));
-      b.disabled = !abierto;
+      const libre = abierto(m, n);
+      b.disabled = !libre;
+      if (!libre) b.classList.add("cerrado");
       b.dataset.nivel = id;
       b.style.setProperty("--tema", TEMAS[cfg.tema].cielo[0]);
       // La postal del tema: es el mismo fondo que ve el jugador adentro del
@@ -70,6 +73,7 @@ export function pintarMapa(alElegir) {
       }
       b.append(monedas);
       if (dn.hecho) b.append(crear("span", "mejor", `${dn.monedas} 🪙 · ${dn.mejorTiempo}s`));
+      else if (!libre) b.append(crear("span", "mejor", "terminá el anterior"));
       b.addEventListener("click", () => { despertar(); efe.menu(); alElegir(m, n); });
       fila.append(b);
     }
@@ -85,6 +89,7 @@ export function pintarMapa(alElegir) {
   }
   $("#total-monedas").textContent = d.monedas;
   $("#total-niveles").textContent = `${hechos}/24`;
+  $("#total-abiertos") && ($("#total-abiertos").textContent = `${Math.min(24, d.desbloqueado)}/24`);
   $("#total-color").textContent =
     `${totalColor.rosa}/24 · ${totalColor.violeta}/24 · ${totalColor.negra}/24`;
 }
@@ -146,8 +151,10 @@ export function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
     dn.monedas = Math.max(dn.monedas, p.monedas);
     dn.hecho = true;
     if (todas) dn.color[p.tier] = true;
-    // Terminar el ultimo nivel de un mundo abre el siguiente.
-    if (cfg.n === 4 && d.desbloqueado === cfg.m) d.desbloqueado = Math.min(6, cfg.m + 1);
+    // Terminar un nivel abre EL SIGUIENTE, no el mundo entero. Antes habia
+    // que ganar el cuarto nivel de un mundo para que se abriera el siguiente,
+    // asi que los tres del medio no abrian nada y el mapa parecia trabado.
+    abrirSiguiente(cfg.m, cfg.n);
     guardar();
   }
 

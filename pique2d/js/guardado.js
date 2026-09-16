@@ -10,7 +10,7 @@ const LLAVE = "pique.v1";
 const vacio = () => ({
   monedas: 0,
   niveles: {},          // "1-1": {hecho, mejorTiempo, monedas, color:{rosa,violeta,negra}}
-  desbloqueado: 1,      // hasta que mundo llego
+  desbloqueado: 1,      // hasta que NIVEL llego, de 1 a 24
   ajustes: { sonido: true, musica: true, sacudida: true },
 });
 
@@ -54,6 +54,24 @@ export function tierActual(id) {
   if (!c.rosa) return "rosa";
   if (!c.violeta) return "violeta";
   return "negra";
+}
+
+// El indice global de un nivel: 1-1 es 1, 1-4 es 4, 2-1 es 5, 6-4 es 24.
+// Se guarda uno solo y no un mapa de "cual esta abierto": con un numero, el
+// estado no puede quedar inconsistente — no existe un 3-2 abierto con el 3-1
+// cerrado.
+export const indiceNivel = (m, n) => (m - 1) * 4 + n;
+
+export function abierto(m, n) {
+  return indiceNivel(m, n) <= cargar().desbloqueado;
+}
+
+/** Terminar un nivel abre el SIGUIENTE, no el mundo entero. */
+export function abrirSiguiente(m, n) {
+  const d = cargar();
+  d.desbloqueado = Math.max(d.desbloqueado, Math.min(24, indiceNivel(m, n) + 1));
+  guardar();
+  return d.desbloqueado;
 }
 
 export function borrarTodo() {

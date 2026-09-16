@@ -447,3 +447,13 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   background: linear-gradient(90deg, #ffb43a, #5ed88a);
   transition: width .3s;
 }
+
+/* Nivel cerrado: se ve que existe pero no se puede entrar. Ocultarlo del todo
+   deja al jugador sin saber cuanto falta. */
+.nivel.cerrado { opacity: .55; }
+.nivel.cerrado::after {
+  content: "🔒"; position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+  font-size: 26px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.8));
+}
+.nivel.cerrado .mejor { color: var(--tenue); font-style: italic; }
+.cab-mundo .candado { font-size: 16px; }

@@ -15,6 +15,9 @@ echo
 echo "── niveles: 24 x 3 colores, y que no quede una moneda fuera ──"
 node pruebas/niveles.mjs
 echo
+echo "── desbloqueo y recuperacion ante errores ────────────────"
+node pruebas/progreso.mjs
+echo
 echo "── celular: acostado y parado ────────────────────────────────"
 node pruebas/movil.mjs
 echo

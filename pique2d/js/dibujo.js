@@ -7,6 +7,7 @@
 
 import { T, V, ALTO_TILES, ALTOS, F, TEMAS } from "./mundo.js";
 import { dibujarCuadro, cuadroDe } from "./sprites.js";
+const dibujarCuadroTile = (c, h, i, x, y, alto) => dibujarCuadro(c, h, i, x, y, alto);
 
 const pi2 = Math.PI * 2;
 const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x | 0, y | 0, Math.ceil(w), Math.ceil(h)); };
@@ -85,7 +86,7 @@ export function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
 // de veinte tiles se lea como veinte estampillas repetidas: el ojo cuenta los
 // cubos. Con el patron corrido, la textura corre continua y el muro parece un
 // muro.
-export function tiles(c, nv, camX, camY, t, ancho, alto, patron) {
+export function tiles(c, nv, camX, camY, t, ancho, alto, patron, anim = null, hojas = {}) {
   const tm = TEMAS[nv.tema];
   const tx0 = Math.max(0, Math.floor(camX / T) - 1);
   const tx1 = Math.min(nv.ancho - 1, Math.ceil((camX + ancho) / T));
@@ -124,13 +125,24 @@ export function tiles(c, nv, camX, camY, t, ancho, alto, patron) {
     for (let tx = tx0; tx <= tx1; tx++) {
       const v = lee(tx, ty);
       if (v === V.NADA || v === V.SOLIDO) continue;
-      dibujarTile(c, v, tx * T - camX, ty * T - camY, tm, t, tx, ty,
-                  lee(tx, ty - 1) === V.NADA, patron, (dx) => lee(tx + dx, ty));
+      // Golpe: el tile salta y vuelve. Diez cuadros, y la curva es un seno —
+      // sube rapido y baja frenando, que es como se siente un golpe.
+      let dy = 0;
+      if (anim) {
+        const t0 = anim.get(`${tx},${ty}`);
+        if (t0 !== undefined) {
+          const e = t - t0;
+          if (e < 10) dy = -Math.sin((e / 10) * Math.PI) * 5;
+          else anim.delete(`${tx},${ty}`);
+        }
+      }
+      dibujarTile(c, v, tx * T - camX, ty * T - camY + dy, tm, t, tx, ty,
+                  lee(tx, ty - 1) === V.NADA, patron, (dx) => lee(tx + dx, ty), hojas, anim);
     }
   }
 }
 
-function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = () => 0) {
+function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = () => 0, hojas = {}, anim = null) {
   switch (v) {
     case V.LADRILLO:
       // Con la textura del tema y no con un color plano: un rectangulo liso al
@@ -209,6 +221,24 @@ function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = ()
       const o = Math.round(Math.sin(t / 12 + tx * 0.7) * 2);
       R(c, x, y + 3, T, T - 3, "#e8541e");
       R(c, x, y + 2 + o, T, 3, "#ffb03a"); R(c, x, y + 1 + o, T, 1, "#ffe08a");
+      break;
+    }
+    case V.RESORTE: {
+      // El resorte usa su hoja: quieto muestra el primer cuadro, y al pisarlo
+      // corre la animacion una vez. Dibujado con rectangulos no se notaba que
+      // habia funcionado.
+      const h = hojas.resorte_saltar;
+      if (h) {
+        let i = 0;
+        const t0 = anim && anim.get(`${tx},${ty}`);
+        if (t0 !== undefined && t0 !== false && t0 !== null) {
+          const e = t - t0;
+          i = e < 16 ? Math.min(h.n - 1, Math.floor(e * 0.9)) : 0;
+        }
+        dibujarCuadroTile(c, h, i, x + T / 2, y + T + 1, 15);
+      } else {
+        R(c, x + 2, y + 9, T - 4, 6, "#9aa3b2"); R(c, x + 1, y + 6, T - 2, 4, "#d24b4b");
+      }
       break;
     }
     case V.MASTIL: R(c, x + 7, y, 2, T, "#cfd6e0"); R(c, x + 7, y, 1, T, "#ffffff"); break;

@@ -457,6 +457,16 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   transition: width .3s;
 }
 
+/* Nivel cerrado: se ve que existe pero no se puede entrar. Ocultarlo del todo
+   deja al jugador sin saber cuanto falta. */
+.nivel.cerrado { opacity: .55; }
+.nivel.cerrado::after {
+  content: "🔒"; position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
+  font-size: 26px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.8));
+}
+.nivel.cerrado .mejor { color: var(--tenue); font-style: italic; }
+.cab-mundo .candado { font-size: 16px; }
+
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23d8402f'/><circle cx='8' cy='6' r='3' fill='%23f0c090'/><rect x='5' y='9' width='6' height='5' rx='1' fill='%232b4a8f'/></svg>">
 </head>
@@ -888,7 +898,7 @@ const LLAVE = "pique.v1";
 const vacio = () => ({
   monedas: 0,
   niveles: {},          // "1-1": {hecho, mejorTiempo, monedas, color:{rosa,violeta,negra}}
-  desbloqueado: 1,      // hasta que mundo llego
+  desbloqueado: 1,      // hasta que NIVEL llego, de 1 a 24
   ajustes: { sonido: true, musica: true, sacudida: true },
 });
 
@@ -934,11 +944,29 @@ function tierActual(id) {
   return "negra";
 }
 
+// El indice global de un nivel: 1-1 es 1, 1-4 es 4, 2-1 es 5, 6-4 es 24.
+// Se guarda uno solo y no un mapa de "cual esta abierto": con un numero, el
+// estado no puede quedar inconsistente — no existe un 3-2 abierto con el 3-1
+// cerrado.
+const indiceNivel = (m, n) => (m - 1) * 4 + n;
+
+function abierto(m, n) {
+  return indiceNivel(m, n) <= cargar().desbloqueado;
+}
+
+/** Terminar un nivel abre el SIGUIENTE, no el mundo entero. */
+function abrirSiguiente(m, n) {
+  const d = cargar();
+  d.desbloqueado = Math.max(d.desbloqueado, Math.min(24, indiceNivel(m, n) + 1));
+  guardar();
+  return d.desbloqueado;
+}
+
 function borrarTodo() {
   try { localStorage.removeItem(LLAVE); } catch (e) {}
   cache = null;
 }
-return { cargar, guardar, datosNivel, tierActual, borrarTodo };
+return { cargar, guardar, datosNivel, tierActual, indiceNivel, abierto, abrirSiguiente, borrarTodo };
 })();
 
 /* ── audio ── */
@@ -2176,6 +2204,8 @@ const M_dibujo = (() => {
 
 const { T, V, ALTO_TILES, ALTOS, F, TEMAS } = M_mundo;
 const { dibujarCuadro, cuadroDe } = M_sprites;
+const dibujarCuadroTile = (c, h, i, x, y, alto) => dibujarCuadro(c, h, i, x, y, alto);
+
 const pi2 = Math.PI * 2;
 const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x | 0, y | 0, Math.ceil(w), Math.ceil(h)); };
 
@@ -2253,7 +2283,7 @@ function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
 // de veinte tiles se lea como veinte estampillas repetidas: el ojo cuenta los
 // cubos. Con el patron corrido, la textura corre continua y el muro parece un
 // muro.
-function tiles(c, nv, camX, camY, t, ancho, alto, patron) {
+function tiles(c, nv, camX, camY, t, ancho, alto, patron, anim = null, hojas = {}) {
   const tm = TEMAS[nv.tema];
   const tx0 = Math.max(0, Math.floor(camX / T) - 1);
   const tx1 = Math.min(nv.ancho - 1, Math.ceil((camX + ancho) / T));
@@ -2292,13 +2322,24 @@ function tiles(c, nv, camX, camY, t, ancho, alto, patron) {
     for (let tx = tx0; tx <= tx1; tx++) {
       const v = lee(tx, ty);
       if (v === V.NADA || v === V.SOLIDO) continue;
-      dibujarTile(c, v, tx * T - camX, ty * T - camY, tm, t, tx, ty,
-                  lee(tx, ty - 1) === V.NADA, patron, (dx) => lee(tx + dx, ty));
+      // Golpe: el tile salta y vuelve. Diez cuadros, y la curva es un seno —
+      // sube rapido y baja frenando, que es como se siente un golpe.
+      let dy = 0;
+      if (anim) {
+        const t0 = anim.get(`${tx},${ty}`);
+        if (t0 !== undefined) {
+          const e = t - t0;
+          if (e < 10) dy = -Math.sin((e / 10) * Math.PI) * 5;
+          else anim.delete(`${tx},${ty}`);
+        }
+      }
+      dibujarTile(c, v, tx * T - camX, ty * T - camY + dy, tm, t, tx, ty,
+                  lee(tx, ty - 1) === V.NADA, patron, (dx) => lee(tx + dx, ty), hojas, anim);
     }
   }
 }
 
-function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = () => 0) {
+function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = () => 0, hojas = {}, anim = null) {
   switch (v) {
     case V.LADRILLO:
       // Con la textura del tema y no con un color plano: un rectangulo liso al
@@ -2377,6 +2418,24 @@ function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = ()
       const o = Math.round(Math.sin(t / 12 + tx * 0.7) * 2);
       R(c, x, y + 3, T, T - 3, "#e8541e");
       R(c, x, y + 2 + o, T, 3, "#ffb03a"); R(c, x, y + 1 + o, T, 1, "#ffe08a");
+      break;
+    }
+    case V.RESORTE: {
+      // El resorte usa su hoja: quieto muestra el primer cuadro, y al pisarlo
+      // corre la animacion una vez. Dibujado con rectangulos no se notaba que
+      // habia funcionado.
+      const h = hojas.resorte_saltar;
+      if (h) {
+        let i = 0;
+        const t0 = anim && anim.get(`${tx},${ty}`);
+        if (t0 !== undefined && t0 !== false && t0 !== null) {
+          const e = t - t0;
+          i = e < 16 ? Math.min(h.n - 1, Math.floor(e * 0.9)) : 0;
+        }
+        dibujarCuadroTile(c, h, i, x + T / 2, y + T + 1, 15);
+      } else {
+        R(c, x + 2, y + 9, T - 4, 6, "#9aa3b2"); R(c, x + 1, y + 6, T - 2, 4, "#d24b4b");
+      }
       break;
     }
     case V.MASTIL: R(c, x + 7, y, 2, T, "#cfd6e0"); R(c, x + 7, y, 1, T, "#ffffff"); break;
@@ -2835,6 +2894,10 @@ class Partida {
     this.part = [];
     this.camX = 0; this.camY = 0;
     this.t = 0;
+    // Animaciones puntuales de tiles: clave -> cuadro en que empezo. Un bloque
+    // golpeado o un resorte pisado tienen que MOVERSE; sin eso el jugador no
+    // sabe si el golpe conto.
+    this.animTiles = new Map();
     this.monedas = 0;
     this.color = nv.monedasColor.map((m) => ({ ...m, tomada: false }));
     this.burbujas = 2;             // igual que el original: dos, y despues se pierde
@@ -2973,9 +3036,14 @@ class Partida {
     }
   }
 
+  // Marca un tile para que se anime una vez: el golpe de un bloque o el
+  // pisoton de un resorte. Sin el rebote, el jugador no sabe si conto.
+  marcarTile(tx, ty) { this.animTiles.set(`${tx},${ty}`, this.t); }
+
   golpearBloque(tx, ty) {
     const v = tileXY(this.nv, tx, ty);
     const i = ty * this.nv.ancho + tx;
+    this.marcarTile(tx, ty);
     if (v === V.LADRILLO) {
       this.nv.grilla[i] = V.NADA; efe.ladrillo();
       this.chispas(tx * T + 8, ty * T + 8, TEMAS[this.nv.tema].tierra, 8);
@@ -3093,6 +3161,30 @@ class Partida {
     const minY2 = Math.min(0, ALTO_TILES * T - VISTA.alto);
     this.camY = Math.max(minY2, Math.min(Math.max(minY2, ALTO_TILES * T - VISTA.alto), this.burbY - VISTA.alto * 0.5));
     const seguro = this.libre(this.burbX, this.burbY);
+    // RESCATE. La version anterior hacia `if (!seguro) return;` despues del
+    // pinchado automatico: si la burbuja quedaba en un lugar donde `libre()`
+    // nunca daba true —pegada a una pared, adentro de un tubo— el jugador se
+    // quedaba en la burbuja PARA SIEMPRE. No tiraba error, no mostraba nada:
+    // la pantalla quedaba quieta, que desde afuera es un cuelgue.
+    //
+    // Ahora, pasados cinco segundos, se busca un lugar seguro hacia arriba y
+    // hacia atras, y si no aparece ninguno se vuelve a la largada del nivel.
+    // Reaparecer al principio es malo; no reaparecer nunca es peor.
+    if (this.burbujaT > 300) {
+      let x = this.burbX, y = this.burbY, hallado = false;
+      for (let intento = 0; intento < 40 && !hallado; intento++) {
+        y -= T;
+        if (y < 2 * T) { y = (ALTO_TILES - 8) * T; x -= 4 * T; }
+        if (x < 2 * T) break;
+        if (this.libre(x, y)) hallado = true;
+      }
+      if (!hallado) { x = this.nv.inicio.x; y = this.nv.inicio.y; }
+      this.burbX = x; this.burbY = y;
+      efe.burbuja();
+      this.j = nuevoJugador(x, y);
+      this.estado = ESTADO.JUGANDO;
+      return;
+    }
     if ((ent.toqueNuevo && seguro && this.burbujaT > 20) || this.burbujaT > 190) {
       if (!seguro) return;
       efe.burbuja();
@@ -3149,7 +3241,8 @@ class Partida {
     const sy = this.sacudida ? Math.round((Math.random() - 0.5) * this.sacudida * 0.5) : 0;
     c.save(); c.translate(sx, sy);
     D.fondo(c, this.nv.tema, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, this.capas);
-    D.tiles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, this.patron);
+    D.tiles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto,
+            this.patron, this.animTiles, H);
     D.monedasVisibles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, H.moneda_girar);
 
     // mastil
@@ -3308,7 +3401,7 @@ const M_interfaz = (() => {
 // juego; la interfaz es HTML.
 
 const { NIVELES, idNivel, TEMAS } = M_mundo;
-const { cargar, guardar, datosNivel, tierActual, borrarTodo } = M_guardado;
+const { cargar, guardar, datosNivel, tierActual, borrarTodo, abierto, abrirSiguiente, indiceNivel } = M_guardado;
 const { efe, despertar, volumen } = M_audio;
 const { ruta } = M_assets;
 const $ = (s) => document.querySelector(s);
@@ -3332,12 +3425,13 @@ function pintarMapa(alElegir) {
   let hechos = 0;
 
   for (let m = 1; m <= 6; m++) {
-    const abierto = m <= d.desbloqueado;
-    const mundo = crear("section", "mundo" + (abierto ? "" : " cerrado"));
+    // El mundo esta abierto si al menos su primer nivel lo esta.
+    const mundoAbierto = abierto(m, 1);
+    const mundo = crear("section", "mundo" + (mundoAbierto ? "" : " cerrado"));
     const cab = crear("header", "cab-mundo");
     cab.append(crear("h2", null, `Mundo ${m}`));
     const av = crear("div", "avance"); av.append(crear("i")); cab.append(av);
-    if (!abierto) cab.append(crear("span", "candado", "🔒 terminá el mundo " + (m - 1)));
+    if (!mundoAbierto) cab.append(crear("span", "candado", "🔒"));
     mundo.append(cab);
 
     const fila = crear("div", "niveles");
@@ -3349,7 +3443,9 @@ function pintarMapa(alElegir) {
       for (const k of ["rosa", "violeta", "negra"]) if (dn.color[k]) totalColor[k]++;
 
       const b = crear("button", "nivel" + (dn.hecho ? " hecho" : "") + (cfg.jefe ? " jefe" : ""));
-      b.disabled = !abierto;
+      const libre = abierto(m, n);
+      b.disabled = !libre;
+      if (!libre) b.classList.add("cerrado");
       b.dataset.nivel = id;
       b.style.setProperty("--tema", TEMAS[cfg.tema].cielo[0]);
       // La postal del tema: es el mismo fondo que ve el jugador adentro del
@@ -3371,6 +3467,7 @@ function pintarMapa(alElegir) {
       }
       b.append(monedas);
       if (dn.hecho) b.append(crear("span", "mejor", `${dn.monedas} 🪙 · ${dn.mejorTiempo}s`));
+      else if (!libre) b.append(crear("span", "mejor", "terminá el anterior"));
       b.addEventListener("click", () => { despertar(); efe.menu(); alElegir(m, n); });
       fila.append(b);
     }
@@ -3386,6 +3483,7 @@ function pintarMapa(alElegir) {
   }
   $("#total-monedas").textContent = d.monedas;
   $("#total-niveles").textContent = `${hechos}/24`;
+  $("#total-abiertos") && ($("#total-abiertos").textContent = `${Math.min(24, d.desbloqueado)}/24`);
   $("#total-color").textContent =
     `${totalColor.rosa}/24 · ${totalColor.violeta}/24 · ${totalColor.negra}/24`;
 }
@@ -3447,8 +3545,10 @@ function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
     dn.monedas = Math.max(dn.monedas, p.monedas);
     dn.hecho = true;
     if (todas) dn.color[p.tier] = true;
-    // Terminar el ultimo nivel de un mundo abre el siguiente.
-    if (cfg.n === 4 && d.desbloqueado === cfg.m) d.desbloqueado = Math.min(6, cfg.m + 1);
+    // Terminar un nivel abre EL SIGUIENTE, no el mundo entero. Antes habia
+    // que ganar el cuarto nivel de un mundo para que se abriera el siguiente,
+    // asi que los tres del medio no abrian nada y el mapa parecia trabado.
+    abrirSiguiente(cfg.m, cfg.n);
     guardar();
   }
 
@@ -3616,6 +3716,30 @@ function empezar(m, n) {
 const PASO = 1000 / 60;
 let ultimo = performance.now(), acumulado = 0;
 
+// Guardia contra cuelgues. Si algo tira una excepcion adentro del bucle, sin
+// esto se repite sesenta veces por segundo: la pantalla queda quieta, la
+// consola se llena y el jugador no puede hacer NADA — ni volver al mapa.
+// Envuelto, un error termina el nivel y devuelve al mapa con un aviso. Un
+// juego que se recupera mal es mejor que uno que no se recupera.
+let fallas = 0;
+function seRompio(e, donde) {
+  fallas++;
+  console.error(`Pique se rompio en ${donde}:`, e);
+  const p = partida;
+  partida = null;
+  try {
+    $("#res-titulo").textContent = "Se rompió algo";
+    $("#res-sub").textContent = `${e && e.message ? e.message : e} (en ${donde})`;
+    $("#res-panel").className = "res perdido";
+    $("#res-lista").innerHTML = "";
+    $("#res-seguir").hidden = true;
+    $("#res-repetir").onclick = () => empezar(cfgActual.m, cfgActual.n);
+    $("#res-mapa").onclick = alMapa;
+    UI.mostrar("p-resultado");
+  } catch (e2) { alMapa(); }
+}
+addEventListener("error", (ev) => { if (fallas === 0) seRompio(ev.error || ev.message, "la pagina"); });
+
 function bucle(ahora) {
   requestAnimationFrame(bucle);
   let dt = ahora - ultimo; ultimo = ahora;
@@ -3628,7 +3752,9 @@ function bucle(ahora) {
       const ent = { toque: entrada.apoyado, toqueNuevo: entrada.apoyado && !entrada.previo };
       entrada.previo = entrada.apoyado;
       const antes = partida.estado;
-      partida.actualizar(ent);
+      try { partida.actualizar(ent); }
+      catch (e) { seRompio(e, "la logica"); break; }
+      if (!partida) break;
       if (antes !== partida.estado &&
           (partida.estado === ESTADO.GANADO || partida.estado === ESTADO.PERDIDO)) {
         terminar(partida.estado === ESTADO.GANADO);
@@ -3636,8 +3762,8 @@ function bucle(ahora) {
     } else entrada.previo = entrada.apoyado;
   }
   if (partida) {
-    partida.dibujar(ctx);
-    UI.pintarHud(partida);
+    try { partida.dibujar(ctx); UI.pintarHud(partida); }
+    catch (e) { seRompio(e, "el dibujo"); }
   }
 }
 

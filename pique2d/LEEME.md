@@ -78,6 +78,32 @@ fondos van en tres capas y valen la pena.
 La cámara puede subir **por encima del nivel** para mostrar cielo. Clavarla en
 cero dejaba el nivel pegado arriba y una franja vacía abajo.
 
+## El progreso se abre nivel por nivel
+
+Cada nivel abre **el siguiente**, no el mundo entero. Antes había que ganar el
+cuarto nivel de un mundo para que se abriera el siguiente, así que los tres del
+medio no abrían nada y el mapa parecía trabado. Los cerrados se ven —con
+candado y "terminá el anterior"—, porque esconderlos deja al jugador sin saber
+cuánto falta.
+
+Se guarda **un número**, no un mapa de "cuál está abierto": con un número el
+estado no puede quedar inconsistente — no existe un 3-2 abierto con el 3-1
+cerrado.
+
+## Guardia contra cuelgues
+
+Si algo tira una excepción dentro del bucle, sin guardia se repite sesenta
+veces por segundo: la pantalla queda quieta y el jugador **no puede hacer
+nada**, ni volver al mapa. Envuelto, un error termina el nivel y muestra una
+pantalla de la que se puede salir. Un juego que se recupera mal es mejor que
+uno que no se recupera.
+
+Y la burbuja ya no se traba: pasados cinco segundos busca un lugar seguro y,
+si no encuentra ninguno, devuelve a la largada. **Reaparecer al principio es
+malo; no reaparecer nunca es peor** — antes, si la burbuja quedaba donde
+`libre()` nunca daba true, el jugador se quedaba ahí para siempre sin ningún
+error que lo explicara.
+
 ## Menú y mapa
 
 El menú lleva un **logo dibujado** y una escena de portada generada. El mapa

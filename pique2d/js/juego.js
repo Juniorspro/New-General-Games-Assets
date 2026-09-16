@@ -26,6 +26,10 @@ export class Partida {
     this.part = [];
     this.camX = 0; this.camY = 0;
     this.t = 0;
+    // Animaciones puntuales de tiles: clave -> cuadro en que empezo. Un bloque
+    // golpeado o un resorte pisado tienen que MOVERSE; sin eso el jugador no
+    // sabe si el golpe conto.
+    this.animTiles = new Map();
     this.monedas = 0;
     this.color = nv.monedasColor.map((m) => ({ ...m, tomada: false }));
     this.burbujas = 2;             // igual que el original: dos, y despues se pierde
@@ -164,9 +168,14 @@ export class Partida {
     }
   }
 
+  // Marca un tile para que se anime una vez: el golpe de un bloque o el
+  // pisoton de un resorte. Sin el rebote, el jugador no sabe si conto.
+  marcarTile(tx, ty) { this.animTiles.set(`${tx},${ty}`, this.t); }
+
   golpearBloque(tx, ty) {
     const v = tileXY(this.nv, tx, ty);
     const i = ty * this.nv.ancho + tx;
+    this.marcarTile(tx, ty);
     if (v === V.LADRILLO) {
       this.nv.grilla[i] = V.NADA; efe.ladrillo();
       this.chispas(tx * T + 8, ty * T + 8, TEMAS[this.nv.tema].tierra, 8);
@@ -284,6 +293,30 @@ export class Partida {
     const minY2 = Math.min(0, ALTO_TILES * T - VISTA.alto);
     this.camY = Math.max(minY2, Math.min(Math.max(minY2, ALTO_TILES * T - VISTA.alto), this.burbY - VISTA.alto * 0.5));
     const seguro = this.libre(this.burbX, this.burbY);
+    // RESCATE. La version anterior hacia `if (!seguro) return;` despues del
+    // pinchado automatico: si la burbuja quedaba en un lugar donde `libre()`
+    // nunca daba true —pegada a una pared, adentro de un tubo— el jugador se
+    // quedaba en la burbuja PARA SIEMPRE. No tiraba error, no mostraba nada:
+    // la pantalla quedaba quieta, que desde afuera es un cuelgue.
+    //
+    // Ahora, pasados cinco segundos, se busca un lugar seguro hacia arriba y
+    // hacia atras, y si no aparece ninguno se vuelve a la largada del nivel.
+    // Reaparecer al principio es malo; no reaparecer nunca es peor.
+    if (this.burbujaT > 300) {
+      let x = this.burbX, y = this.burbY, hallado = false;
+      for (let intento = 0; intento < 40 && !hallado; intento++) {
+        y -= T;
+        if (y < 2 * T) { y = (ALTO_TILES - 8) * T; x -= 4 * T; }
+        if (x < 2 * T) break;
+        if (this.libre(x, y)) hallado = true;
+      }
+      if (!hallado) { x = this.nv.inicio.x; y = this.nv.inicio.y; }
+      this.burbX = x; this.burbY = y;
+      efe.burbuja();
+      this.j = nuevoJugador(x, y);
+      this.estado = ESTADO.JUGANDO;
+      return;
+    }
     if ((ent.toqueNuevo && seguro && this.burbujaT > 20) || this.burbujaT > 190) {
       if (!seguro) return;
       efe.burbuja();
@@ -340,7 +373,8 @@ export class Partida {
     const sy = this.sacudida ? Math.round((Math.random() - 0.5) * this.sacudida * 0.5) : 0;
     c.save(); c.translate(sx, sy);
     D.fondo(c, this.nv.tema, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, this.capas);
-    D.tiles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, this.patron);
+    D.tiles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto,
+            this.patron, this.animTiles, H);
     D.monedasVisibles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, H.moneda_girar);
 
     // mastil

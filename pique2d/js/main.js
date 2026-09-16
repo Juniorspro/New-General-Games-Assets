@@ -97,6 +97,30 @@ function empezar(m, n) {
 const PASO = 1000 / 60;
 let ultimo = performance.now(), acumulado = 0;
 
+// Guardia contra cuelgues. Si algo tira una excepcion adentro del bucle, sin
+// esto se repite sesenta veces por segundo: la pantalla queda quieta, la
+// consola se llena y el jugador no puede hacer NADA — ni volver al mapa.
+// Envuelto, un error termina el nivel y devuelve al mapa con un aviso. Un
+// juego que se recupera mal es mejor que uno que no se recupera.
+let fallas = 0;
+function seRompio(e, donde) {
+  fallas++;
+  console.error(`Pique se rompio en ${donde}:`, e);
+  const p = partida;
+  partida = null;
+  try {
+    $("#res-titulo").textContent = "Se rompió algo";
+    $("#res-sub").textContent = `${e && e.message ? e.message : e} (en ${donde})`;
+    $("#res-panel").className = "res perdido";
+    $("#res-lista").innerHTML = "";
+    $("#res-seguir").hidden = true;
+    $("#res-repetir").onclick = () => empezar(cfgActual.m, cfgActual.n);
+    $("#res-mapa").onclick = alMapa;
+    UI.mostrar("p-resultado");
+  } catch (e2) { alMapa(); }
+}
+addEventListener("error", (ev) => { if (fallas === 0) seRompio(ev.error || ev.message, "la pagina"); });
+
 function bucle(ahora) {
   requestAnimationFrame(bucle);
   let dt = ahora - ultimo; ultimo = ahora;
@@ -109,7 +133,9 @@ function bucle(ahora) {
       const ent = { toque: entrada.apoyado, toqueNuevo: entrada.apoyado && !entrada.previo };
       entrada.previo = entrada.apoyado;
       const antes = partida.estado;
-      partida.actualizar(ent);
+      try { partida.actualizar(ent); }
+      catch (e) { seRompio(e, "la logica"); break; }
+      if (!partida) break;
       if (antes !== partida.estado &&
           (partida.estado === ESTADO.GANADO || partida.estado === ESTADO.PERDIDO)) {
         terminar(partida.estado === ESTADO.GANADO);
@@ -117,8 +143,8 @@ function bucle(ahora) {
     } else entrada.previo = entrada.apoyado;
   }
   if (partida) {
-    partida.dibujar(ctx);
-    UI.pintarHud(partida);
+    try { partida.dibujar(ctx); UI.pintarHud(partida); }
+    catch (e) { seRompio(e, "el dibujo"); }
   }
 }
 
