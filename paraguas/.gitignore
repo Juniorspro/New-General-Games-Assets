@@ -1,0 +1,6 @@
+node_modules
+
+# Lo crudo que devuelve el generador. Al repo va lo preparado:
+# assets/arte/*.webp (61 KB). Se vuelve a bajar con
+# `python3 generar_arte.py bajar && python3 generar_arte.py preparar`.
+assets/*.png

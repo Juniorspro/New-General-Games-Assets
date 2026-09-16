@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0e18">
+<title>Paraguas</title>
+<meta name="description" content="Un pozo sin fondo y un paraguas. Apretado cae rápido y es angosto; suelto cae lento y es ancho. Los huecos deciden cuál necesitás.">
+<link rel="stylesheet" href="css/p.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0e18'/><path d='M2 8a6 6 0 0112 0z' fill='%23e08b2c'/><path d='M8 8v5' stroke='%235a3a1c' stroke-width='1.4'/></svg>">
+</head>
+<body>
+
+<!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego queda
+     después del HUD en el orden del documento, y como #p-juego crea su propio
+     contexto de apilamiento, se pintaría ENCIMA del HUD. -->
+<canvas id="lienzo" width="360" height="640" aria-label="El pozo"></canvas>
+
+<!-- ───────────── menú ───────────── -->
+<main id="p-menu" class="pantalla centrado">
+  <div class="caja">
+    <h1 class="logo">Paraguas</h1>
+    <p class="bajada">Un pozo sin fondo. Apretá y el paraguas se cierra:
+      caés rápido y pasás por cualquier lado. Soltá y se abre: caés lento y
+      ocupás el doble.</p>
+    <div class="botones">
+      <button id="m-jugar" class="grande primario"><span>▼ Caer</span></button>
+      <button id="m-como" class="grande"><span>? Cómo se juega</span></button>
+    </div>
+    <p class="record">Mejor caída: <b id="m-mejor">0 m</b> <span id="m-caidas" class="tenue"></span></p>
+    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Sonido</span></label>
+    <button id="m-borrar" class="chico peligro">Borrar récord</button>
+  </div>
+</main>
+
+<!-- ───────────── cómo se juega ───────────── -->
+<main id="p-como" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
+  <div class="texto">
+    <p class="destacado">Un dedo hace todo. <b>Apoyado</b>, el paraguas se cierra —caés
+      rápido— y vas hacia donde está el dedo. <b>Soltando</b>, se abre, caés lento y
+      planeás con lo que traías.</p>
+
+    <h3>El truco</h3>
+    <p>El paraguas <b>tarda nueve cuadros en cerrarse</b>. Un toquecito corto te deja
+      apuntar sin llegar a cerrarlo: te movés con la maniobra del paraguas abierto y
+      seguís cayendo lento. Apretones largos para bajar, toquecitos para acomodarte.
+      Eso es el juego entero.</p>
+
+    <h3>Lo que hay</h3>
+    <dl>
+      <dt>Los huecos anchos</dt><dd>Pasan con el paraguas abierto. Tomate tu tiempo.</dd>
+      <dt>Los huecos angostos</dt><dd>Marcados en naranja y con dos flechas. Ahí <b>no
+        entrás abierto</b>: hay que cerrar, y cerrando caés al triple. Cerrá antes de
+        llegar, no cuando llegaste.</dd>
+      <dt>Las varillas</dt><dd>Arriba a la derecha. Cada viga que te comés rompe una.
+        Sin varillas, se terminó.</dd>
+      <dt>Las púas</dt><dd>Rojas. No perdonan ninguna.</dd>
+      <dt>La chatarra</dt><dd>Marca por dónde conviene pasar y suma puntos.</dd>
+      <dt>Al ras</dt><dd>Pasar a menos de siete píxeles del borde paga diez. El pozo
+        premia al que pasa justo, no al que pasa lejos.</dd>
+    </dl>
+
+    <h3>El puntaje</h3>
+    <p>Son los <b>metros</b>, y los metros los ganás cayendo. Cerrar el paraguas no es
+      sólo para pasar por los huecos angostos: es la única forma de bajar rápido. El
+      juego te ofrece todo el tiempo el mismo trato, y vos decidís cuánto lo aceptás.</p>
+
+    <h3>De qué está hecho</h3>
+    <p>El pozo se genera para siempre, y <b>cada hueco se pone dentro de lo que se puede
+      alcanzar desde el anterior</b> a la velocidad a la que vas a llegar. No es un
+      detalle: un generador infinito falla poniendo dos huecos que no se alcanzan, y eso
+      no se ve como un error — se ve como que perdiste otra vez.</p>
+    <p>Todo es vectorial menos el paraguas y el personaje. El sonido son osciladores: el
+      viento que escuchás es ruido blanco pasado por un filtro que se abre con la
+      velocidad de caída.</p>
+  </div>
+</main>
+
+<!-- ───────────── juego ───────────── -->
+<main id="p-juego" class="pantalla juego" hidden>
+  <div class="hud">
+    <button id="j-salir" class="hud-btn" aria-label="Volver al menú">✕</button>
+    <b id="h-metros" class="metros">0 m</b>
+    <div class="hud-dato"><span>◆</span><b id="h-monedas">0</b></div>
+    <b id="h-varillas" class="varillas">☂☂☂</b>
+  </div>
+  <div id="h-tramo" class="tramo">—</div>
+</main>
+
+<!-- ───────────── final ───────────── -->
+<main id="p-fin" class="pantalla centrado" hidden>
+  <div class="caja fin">
+    <p id="f-record" class="record-nuevo" hidden>¡Récord!</p>
+    <h2 id="f-metros">0 m</h2>
+    <ul id="f-lista" class="lista"></ul>
+    <div class="botones fila">
+      <button id="f-otra" class="primario">Otra vez</button>
+      <button id="f-menu">Al menú</button>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

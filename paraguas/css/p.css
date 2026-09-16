@@ -1,0 +1,141 @@
+/* Paraguas — hoja única.
+   Vertical y nada más: el juego se dibuja en 360 de ancho y se escala entero,
+   así que la interfaz vive dentro de ese rectángulo. Las medidas van en svh y
+   no en vh porque en un teléfono vh incluye la barra del navegador y el último
+   renglón queda siempre tapado. */
+
+:root {
+  --fondo: #0b0e18;
+  --panel: #161c2b;
+  --borde: #2b3449;
+  --texto: #e9eef7;
+  --tenue: #93a0bb;
+  --ambar: #e08b2c;
+  --cian: #8fe3f5;
+  --verde: #7dffb0;
+  --mal: #ff6b6b;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--fondo); color: var(--texto);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%; overscroll-behavior: none;
+}
+body { min-height: 100svh; display: flex; align-items: center; justify-content: center; }
+button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* `touch-action: none` es obligatorio: sin eso el navegador se queda el
+   arrastre para hacer scroll y el dedo —que acá es el juego entero— llega una
+   vez de cada tres. */
+#lienzo {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  touch-action: none; display: block; z-index: 0;
+  box-shadow: 0 0 0 100vmax var(--fondo);
+}
+
+.pantalla {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: var(--an, min(360px, 100vw)); height: var(--al, min(640px, 100svh));
+  display: flex; flex-direction: column; z-index: 2;
+}
+.pantalla[hidden] { display: none; }
+.centrado { align-items: center; justify-content: center; padding: 18px; overflow-y: auto; }
+
+#p-menu, #p-fin, #p-como { background: radial-gradient(130% 60% at 50% 0%, #1d2740 0%, var(--fondo) 72%); }
+
+.caja {
+  background: rgba(16,21,34,.94); border: 1px solid var(--borde); border-radius: 14px;
+  padding: 22px 20px; width: 100%; text-align: center;
+  box-shadow: 0 16px 44px rgba(0,0,0,.55); max-height: 100%; overflow-y: auto;
+}
+.logo {
+  margin: 0 0 8px; font-size: 40px; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
+  background: linear-gradient(135deg, var(--ambar), #ffcf6a 60%, var(--cian));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.bajada { color: var(--tenue); margin: 0 0 18px; font-size: 14px; }
+.bajada b { color: var(--texto); }
+.record { color: var(--tenue); font-size: 13px; margin: 14px 0 6px; }
+.record b { color: var(--ambar); }
+.tenue { color: var(--tenue); opacity: .7; }
+
+.botones { display: flex; flex-direction: column; gap: 9px; }
+.botones.fila { flex-direction: row; justify-content: center; }
+button {
+  font: inherit; color: var(--texto); background: #1e2537;
+  border: 1px solid var(--borde); border-radius: 11px;
+  padding: 11px 14px; min-height: 46px; cursor: pointer;
+  box-shadow: 0 3px 0 rgba(0,0,0,.45);
+}
+button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45); }
+.grande { min-height: 52px; font-size: 16px; }
+.primario {
+  background: linear-gradient(135deg, var(--ambar), #f0a94a);
+  border-color: var(--ambar); color: #2a1a00; font-weight: 800;
+}
+.chico { padding: 7px 12px; font-size: 13px; min-height: 36px; }
+.peligro { border-color: #5e2b33; color: #ff9b9b; background: transparent; box-shadow: none; }
+.opcion { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 0; color: var(--tenue); font-size: 14px; }
+.opcion input { width: 20px; height: 20px; accent-color: var(--ambar); }
+
+/* --- texto largo --- */
+.barra { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+         background: rgba(10,14,24,.95); border-bottom: 2px solid var(--borde); }
+.barra h2 { margin: 0; font-size: 17px; }
+.texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
+.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--ambar); }
+.texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
+.texto p b { color: var(--texto); }
+.destacado { background: var(--panel); border-left: 3px solid var(--cian);
+             padding: 11px 12px; border-radius: 0 8px 8px 0; }
+.texto dl { margin: 0; }
+.texto dt { font-weight: 700; margin-top: 10px; font-size: 14px; }
+.texto dd { margin: 2px 0 0; color: var(--tenue); font-size: 13.5px; }
+.texto dd b { color: var(--texto); }
+
+/* --- HUD --- */
+.juego { pointer-events: none; }
+.juego button { pointer-events: auto; }
+.hud { display: flex; align-items: center; gap: 8px; padding: 10px 10px 0; }
+.hud-btn { width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 9px;
+           background: rgba(10,14,24,.7); font-size: 15px; line-height: 1; }
+.metros {
+  flex: 1; text-align: left; font-size: 21px; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 6px rgba(0,0,0,.8);
+}
+.hud-dato { background: rgba(10,14,24,.7); border-radius: 8px; padding: 4px 8px;
+            font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; }
+.hud-dato span { color: var(--verde); margin-right: 3px; }
+.varillas { font-size: 17px; color: var(--ambar); letter-spacing: -1px;
+            text-shadow: 0 2px 6px rgba(0,0,0,.8); }
+.varillas.poca { color: var(--mal); animation: latir .6s infinite; }
+@keyframes latir { 50% { opacity: .35; } }
+.tramo { margin: 6px 10px 0; align-self: flex-start;
+         background: rgba(10,14,24,.6); border-radius: 7px; padding: 3px 9px;
+         font-size: 12px; color: var(--tenue); }
+
+/* --- final --- */
+.fin h2 { margin: 0 0 12px; font-size: 44px; font-weight: 900; color: var(--ambar);
+          font-variant-numeric: tabular-nums; }
+.record-nuevo { margin: 0 0 4px; color: var(--verde); font-weight: 800; letter-spacing: 1px;
+                animation: pum .5s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes pum { from { transform: scale(.4); opacity: 0; } }
+.lista { list-style: none; padding: 0; margin: 0 0 16px; text-align: left; }
+.lista li { display: flex; justify-content: space-between; gap: 10px;
+            padding: 7px 2px; border-bottom: 1px solid var(--borde); font-size: 14px; }
+.lista span { color: var(--tenue); }
+.lista b { font-variant-numeric: tabular-nums; }
+
+/* Pantalla baja: el teléfono acostado. El juego es vertical, pero si alguien lo
+   gira igual tiene que poder volver al menú. */
+@media (max-height: 470px) {
+  .caja { padding: 12px 16px; }
+  .logo { font-size: 26px; }
+  .bajada { display: none; }
+  .grande { min-height: 44px; font-size: 14px; }
+  .fin h2 { font-size: 30px; margin-bottom: 6px; }
+  .lista li { padding: 4px 2px; font-size: 12.5px; }
+}
