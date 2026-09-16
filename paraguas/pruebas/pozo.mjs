@@ -10,7 +10,7 @@
 import { Pozo } from "../js/pozo.js";
 import { Partida } from "../js/juego.js";
 import { F } from "../js/mundo.js";
-import { bajar } from "./_piloto.mjs";
+import { bajar, bajarConDedo } from "./_piloto.mjs";
 
 let ok = 0, mal = 0;
 const ch = (n, c, d = "") => { c ? (ok++, console.log(`  ✓ ${n}${d ? " — " + d : ""}`))
@@ -67,6 +67,22 @@ ch("el piloto automático baja más de 250 m en las 20 semillas", peor >= 250,
 // diez líneas baja para siempre no tiene curva de dificultad.
 ch("y ninguna corrida es eterna: la dificultad sube de verdad",
    corridas.every((c) => !c.vivo), `${corridas.filter((c) => c.vivo).length} sobrevivieron al tope`);
+
+// Y CON EL CONTROL DE VERDAD, que es otra cosa. Arriba el robot puede cerrar
+// el paraguas y moverse por separado: eso prueba que los huecos se alcancen.
+// Acá maneja con UN dedo, con la misma máquina que `main.js` — arrastrar abre
+// el paraguas y maniobra, el dedo quieto lo cierra y hace caer— y eso prueba
+// algo más difícil: que el pozo se baje con el control que tiene el jugador.
+// Es la prueba que más veces atrapó un cambio de control que se sentía bien
+// mirando el gameplay y hacía el juego imposible dos filas más abajo.
+{
+  const conDedo = [];
+  for (let s = 1; s <= 30; s++) conDedo.push(bajarConDedo(Partida, s, 20000).metros);
+  const peorD = Math.min(...conDedo);
+  const promD = Math.round(conDedo.reduce((a, b) => a + b) / conDedo.length);
+  ch("con UN dedo —el control de verdad— el robot baja más de 200 m siempre",
+     peorD >= 200, `el peor bajó ${peorD} m, promedio ${promD} m`);
+}
 
 // El paraguas tiene que servir: cerrado se baja mucho más rápido.
 {

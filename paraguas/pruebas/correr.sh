@@ -18,3 +18,6 @@ echo
 echo "── el archivo único, desde file:// ───────────────────────────"
 python3 empaquetar.py
 node pruebas/un-archivo.mjs
+echo
+echo "── los tres idiomas ──────────────────────────────────────────"
+node pruebas/idiomas.mjs

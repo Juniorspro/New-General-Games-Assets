@@ -5,7 +5,12 @@
 // record es peor que uno sin record.
 
 const LLAVE = "paraguas.v1";
-const vacio = () => ({ mejor: 0, mejorMonedas: 0, partidas: 0, ajustes: { sonido: true } });
+// `idioma: null` quiere decir "nunca eligió", que NO es lo mismo que "eligió
+// inglés": es lo único que distingue al que abre el juego por primera vez —y
+// hay que preguntarle— del que ya eligió inglés y no quiere que le pregunten
+// más.
+const vacio = () => ({ mejor: 0, mejorMonedas: 0, partidas: 0,
+                       ajustes: { sonido: true, idioma: null } });
 let cache = null;
 
 export function cargar() {

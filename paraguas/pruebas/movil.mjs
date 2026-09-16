@@ -19,10 +19,27 @@ for (const [w, h, nom] of [[390, 844, "parado"], [360, 640, "chico"], [844, 390,
   await pg.waitForFunction(() => !!window.PARAGUAS, { timeout: 30000 });
   await pg.evaluate(() => localStorage.clear());
   await pg.reload(); await pg.waitForFunction(() => !!window.PARAGUAS, { timeout: 30000 });
+  // Con el almacenamiento recién borrado, la primera pantalla es la de idiomas.
+  // Se elige uno y recién ahí empieza la prueba del teléfono: los botones del
+  // menú existen igual, pero están tapados y no se pueden tocar.
+  const idi = await pg.$('#p-idioma:not([hidden]) [data-idioma="es"]');
+  if (idi) { await idi.click(); await pg.waitForTimeout(250); }
+  ch(`${nom} la pantalla de idiomas tapa el menú hasta que se elige`, !!idi);
+
+  // LA TAPA NO PUEDE TENER BARRA DE DESPLAZAMIENTO. Si el contenido no entra,
+  // `overflow-y: auto` lo esconde en vez de romper el diseño: la pantalla se ve
+  // bien y los botones del pie quedan abajo del corte. Nadie desplaza un menú
+  // de cuatro botones — asume que no hay más.
+  const desborde = await pg.evaluate(() => {
+    const t = document.querySelector("#p-menu .tapa");
+    return { sobra: t.scrollHeight - t.clientHeight, alto: t.clientHeight };
+  });
+  ch(`${nom} el menú entra entero, sin desplazar`, desborde.sobra <= 1,
+     `sobran ${desborde.sobra} px de ${desborde.alto}`);
 
   ch(`${nom} sin scroll horizontal`,
      (await pg.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)) <= 0);
-  for (const sel of ["#m-jugar", "#m-como"]) {
+  for (const sel of ["#m-jugar", "#m-como", "#m-idioma"]) {
     const t = await pg.evaluate((s) => {
       const e = document.querySelector(s), r = e.getBoundingClientRect();
       const en = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
@@ -60,15 +77,34 @@ for (const [w, h, nom] of [[390, 844, "parado"], [360, 640, "chico"], [844, 390,
   ch(`${nom} y NO se mueve de costado por tocar`, Math.abs(conDedo.x - antesX) < 12,
      `${Math.round(antesX)} → ${Math.round(conDedo.x)}`);
 
-  // Arrastrando sí: lo que manda es cuánto se corrió el dedo, no dónde está.
-  await pg.mouse.move(r.x + r.width * 0.85 - 90, r.y + r.height * 0.6, { steps: 10 });
+  // ARRASTRANDO SE MUEVE Y EL PARAGUAS SE ABRE. Son dos gestos distintos con el
+  // mismo dedo: apoyado quieto cierra —caer rápido— y arrastrando maniobra. Que
+  // arrastrar cerrara era el peor defecto del control: correrse de costado
+  // aceleraba al triple justo en el momento en que menos se quiere acelerar, y
+  // no había forma de pedir una cosa sin la otra. Se arrastra despacio y en
+  // muchos pasos, como un pulgar de verdad.
+  for (let i = 1; i <= 12; i++) {
+    await pg.mouse.move(r.x + r.width * 0.85 - i * 8, r.y + r.height * 0.6);
+    await pg.waitForTimeout(28);
+  }
+  const arrastrando = await pg.evaluate(() => ({ x: window.PARAGUAS.partida.x,
+                                                 abierto: window.PARAGUAS.partida.abierto }));
+  ch(`${nom} arrastrando sí se mueve`, arrastrando.x < conDedo.x - 25,
+     `${Math.round(conDedo.x)} → ${Math.round(arrastrando.x)}`);
+  ch(`${nom} y arrastrando NO se cierra el paraguas`, arrastrando.abierto > 0.55,
+     `abierto=${arrastrando.abierto.toFixed(2)}`);
+
+  // Y parando el dedo SIN soltarlo, vuelve a cerrar: el gesto completo es
+  // arrastrar para apuntar y frenar la mano para caer.
   await pg.waitForTimeout(450);
-  const arrastrado = await pg.evaluate(() => window.PARAGUAS.partida.x);
-  ch(`${nom} arrastrando sí se mueve`, arrastrado < conDedo.x - 25,
-     `${Math.round(conDedo.x)} → ${Math.round(arrastrado)}`);
+  const frenado = await pg.evaluate(() => window.PARAGUAS.partida.abierto);
+  ch(`${nom} y frenando el dedo sin soltar, cierra de nuevo`, frenado < 0.25,
+     `abierto=${frenado.toFixed(2)}`);
+  const arrastrado = arrastrando.x;
 
   await pg.mouse.up();
   await pg.waitForTimeout(700);
+  void arrastrado;
   const suelto = await pg.evaluate(() => ({ abierto: window.PARAGUAS.partida.abierto,
                                             vy: window.PARAGUAS.partida.vy }));
   ch(`${nom} soltando se abre y frena`, suelto.abierto > 0.8 && suelto.vy < conDedo.vy,

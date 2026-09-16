@@ -19,6 +19,12 @@ await pg.goto("file://" + path.resolve("paraguas-en-un-archivo.html"));
 await pg.waitForFunction(() => !!window.PARAGUAS, { timeout: 30000 });
 ch("abre desde file:// y arranca", true);
 
+// La primera pantalla es la de idiomas. Se elige castellano y de acá para
+// abajo la prueba es la de siempre.
+const idi = await pg.$('#p-idioma:not([hidden]) [data-idioma="es"]');
+ch("pregunta el idioma antes de nada", !!idi);
+if (idi) { await idi.click(); await pg.waitForTimeout(250); }
+
 const sueltos = await pg.evaluate(() => [...document.querySelectorAll("link[href],script[src],img[src]")]
   .map((e) => e.getAttribute("href") || e.getAttribute("src")).filter((u) => u && !u.startsWith("data:")));
 ch("no pide ni un archivo suelto", sueltos.length === 0, sueltos.join(", "));

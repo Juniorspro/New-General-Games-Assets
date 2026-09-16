@@ -1,7 +1,11 @@
 # Paraguas
 
-Un pozo sin fondo y un paraguas. **Apretá** y el paraguas se cierra: caés rápido
-y pasás por cualquier lado. **Soltá** y se abre: caés lento y ocupás el doble.
+Un pozo sin fondo y un paraguas. **Dedo quieto** y el paraguas se cierra: caés
+rápido y pasás por cualquier lado. **Arrastrando** se abre: caés lento y
+maniobrás con precisión. Un dedo hace las dos cosas, y son dos gestos
+distintos — mover la mano nunca te acelera.
+
+Tres idiomas (inglés, español, portugués) y pregunta cuál la primera vez.
 Eso es todo el juego.
 
 **Abrilo:** `paraguas-en-un-archivo.html`, doble clic. 159 KB, sin servidor, sin

@@ -9,14 +9,17 @@ const ANCHO = 360, BORDE = 10, GRUESO = 14;
 // LOS TRAMOS DEL POZO. Cada doscientos cincuenta metros cambia el color, y no
 // es decoracion: en un juego sin final, lo unico que le dice al jugador que
 // avanzo es que el lugar cambio. Un numero subiendo no alcanza.
+// El `nombre` en castellano queda como respaldo: si el módulo de idiomas no
+// carga, el HUD dice algo en vez de quedar vacío. Lo que se muestra es `clave`
+// pasado por la tabla.
 const TRAMOS = [
-  { nombre: "El garaje", cielo: ["#161c2b", "#242e46"], pared: "#3a4667" },
-  { nombre: "Las cañerías", cielo: ["#0f2020", "#1d3a38"], pared: "#2f5c58" },
-  { nombre: "La fábrica", cielo: ["#2a1020", "#4a1f38"], pared: "#75304f" },
-  { nombre: "El vacío", cielo: ["#080c1c", "#141d3d"], pared: "#243055" },
-  { nombre: "La panza", cielo: ["#2b1a10", "#54331f"], pared: "#7a4c2c" },
-  { nombre: "El basural", cielo: ["#1c1c12", "#41412a"], pared: "#5e5e36" },
-  { nombre: "La heladera", cielo: ["#0d2530", "#1b4a5c"], pared: "#2c7086" },
+  { nombre: "El garaje", clave: "tramo.garaje", cielo: ["#161c2b", "#242e46"], pared: "#3a4667" },
+  { nombre: "Las cañerías", clave: "tramo.canerias", cielo: ["#0f2020", "#1d3a38"], pared: "#2f5c58" },
+  { nombre: "La fábrica", clave: "tramo.fabrica", cielo: ["#2a1020", "#4a1f38"], pared: "#75304f" },
+  { nombre: "El vacío", clave: "tramo.vacio", cielo: ["#080c1c", "#141d3d"], pared: "#243055" },
+  { nombre: "La panza", clave: "tramo.panza", cielo: ["#2b1a10", "#54331f"], pared: "#7a4c2c" },
+  { nombre: "El basural", clave: "tramo.basural", cielo: ["#1c1c12", "#41412a"], pared: "#5e5e36" },
+  { nombre: "La heladera", clave: "tramo.heladera", cielo: ["#0d2530", "#1b4a5c"], pared: "#2c7086" },
 ];
 const LARGO_TRAMO = 25000;                 // 250 metros
 

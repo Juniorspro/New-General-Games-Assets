@@ -14,14 +14,32 @@
 <!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego queda
      después del HUD en el orden del documento, y como #p-juego crea su propio
      contexto de apilamiento, se pintaría ENCIMA del HUD. -->
-<canvas id="lienzo" width="360" height="640" aria-label="El pozo"></canvas>
+<canvas id="lienzo" width="360" height="640" aria-label="El pozo" data-t-attr="aria-label:doc.lienzo"></canvas>
+
+<!-- ───────────── idioma ─────────────
+     VA ANTES DEL MENU Y NO ADENTRO DE AJUSTES. Alguien que no lee castellano
+     abre el juego y lo primero que ve es un menú que no entiende: buscar dónde
+     se cambia el idioma en un idioma que no sabés es exactamente el problema.
+     Se pregunta una vez, se guarda y no se vuelve a preguntar. -->
+<main id="p-idioma" class="pantalla centrado" hidden>
+  <div class="tapa">
+    <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Paraguas" width="413" height="150"></h1>
+    <h2 class="idioma-t" data-t="idioma.titulo">Elegí tu idioma</h2>
+    <div class="botones" id="idiomas">
+      <button class="chico grande-op" data-idioma="en"><b>EN</b> English</button>
+      <button class="chico grande-op" data-idioma="es"><b>ES</b> Español</button>
+      <button class="chico grande-op" data-idioma="pt"><b>PT</b> Português</button>
+    </div>
+    <p class="bajada" data-t="idioma.bajada">Se puede cambiar después desde el menú.</p>
+  </div>
+</main>
 
 <!-- ───────────── menú ───────────── -->
 <main id="p-menu" class="pantalla centrado">
   <div class="tapa">
     <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Paraguas" width="413" height="150"></h1>
-    <p class="bajada"><b>Apretá</b>: se cierra, caés rápido y pasás por cualquier
-      lado. <b>Soltá</b>: se abre, caés lento y ocupás el doble.</p>
+    <p class="bajada" data-t-html="menu.bajada">Dedo <b>quieto</b>: se cierra, caés rápido y
+      pasás por cualquier lado. <b>Arrastrá</b>: se abre, caés lento y maniobrás.</p>
 
     <!-- EL BOTON DE CAER ES UN PORTAL DIBUJADO, no un rectángulo con texto. Es
          lo único que se toca en esta pantalla y lo primero que se ve: merece
@@ -29,70 +47,58 @@
          girando en sentidos opuestos —el remolino y la salpicadura de afuera—
          y el giro lo pone el CSS, así que alcanzan dos dibujos quietos para
          que parezca una animación. -->
-    <button id="m-jugar" class="portal" aria-label="Caer">
+    <button id="m-jugar" class="portal" aria-label="Caer" data-t-attr="aria-label:menu.jugar-aria">
       <span class="salpicadura" aria-hidden="true"></span>
       <span class="remolino" aria-hidden="true"></span>
-      <span class="portal-txt">CAER</span>
+      <span class="portal-txt" data-t="menu.jugar">CAER</span>
     </button>
 
-    <p class="record">Mejor caída <b id="m-mejor">0 m</b> <span id="m-caidas" class="tenue"></span></p>
+    <p class="record"><span data-t="menu.mejor">Mejor caída</span> <b id="m-mejor">0 m</b>
+      <span id="m-caidas" class="tenue"></span></p>
 
     <div class="botones fila chicos">
-      <button id="m-como" class="chico">? Cómo se juega</button>
-      <label class="opcion chico-op"><input type="checkbox" id="aj-sonido"> <span>Sonido</span></label>
-      <button id="m-borrar" class="chico peligro">Borrar</button>
+      <button id="m-como" class="chico" data-t="menu.como">? Cómo se juega</button>
+      <label class="opcion chico-op"><input type="checkbox" id="aj-sonido">
+        <span data-t="menu.sonido">Sonido</span></label>
+      <button id="m-idioma" class="chico" aria-label="Idioma" data-t-attr="aria-label:menu.idioma">EN</button>
+      <button id="m-borrar" class="chico peligro" data-t="menu.borrar">Borrar</button>
     </div>
   </div>
 </main>
 
 <!-- ───────────── cómo se juega ───────────── -->
 <main id="p-como" class="pantalla" hidden>
-  <header class="barra"><button data-volver class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
+  <header class="barra"><button data-volver class="chico" data-t="como.atras">← Atrás</button>
+    <h2 data-t="como.titulo">Cómo se juega</h2></header>
   <div class="texto">
-    <p class="destacado">Un dedo hace todo. <b>Apoyado</b>, el paraguas se cierra —caés
-      rápido— y vas hacia donde está el dedo. <b>Soltando</b>, se abre, caés lento y
-      planeás con lo que traías.</p>
+    <p class="destacado" data-t-html="como.destacado">Un dedo hace todo.</p>
 
-    <h3>El truco</h3>
-    <p>El paraguas <b>tarda nueve cuadros en cerrarse</b>. Un toquecito corto te deja
-      apuntar sin llegar a cerrarlo: te movés con la maniobra del paraguas abierto y
-      seguís cayendo lento. Apretones largos para bajar, toquecitos para acomodarte.
-      Eso es el juego entero.</p>
+    <h3 data-t="como.h-truco">El truco</h3>
+    <p data-t-html="como.truco"></p>
 
-    <h3>Lo que hay</h3>
+    <h3 data-t="como.h-hay">Lo que hay</h3>
     <dl>
-      <dt>Los huecos anchos</dt><dd>Pasan con el paraguas abierto. Tomate tu tiempo.</dd>
-      <dt>Los huecos angostos</dt><dd>Marcados en naranja y con dos flechas. Ahí <b>no
-        entrás abierto</b>: hay que cerrar, y cerrando caés al triple. Cerrá antes de
-        llegar, no cuando llegaste.</dd>
-      <dt>Las varillas</dt><dd>Arriba a la derecha. Cada viga que te comés rompe una.
-        Sin varillas, se terminó.</dd>
-      <dt>Las púas</dt><dd>Rojas. No perdonan ninguna.</dd>
-      <dt>La chatarra</dt><dd>Marca por dónde conviene pasar y suma puntos.</dd>
-      <dt>Al ras</dt><dd>Pasar a menos de siete píxeles del borde paga diez. El pozo
-        premia al que pasa justo, no al que pasa lejos.</dd>
+      <dt data-t="como.dt-anchos"></dt><dd data-t-html="como.dd-anchos"></dd>
+      <dt data-t="como.dt-angostos"></dt><dd data-t-html="como.dd-angostos"></dd>
+      <dt data-t="como.dt-varillas"></dt><dd data-t-html="como.dd-varillas"></dd>
+      <dt data-t="como.dt-puas"></dt><dd data-t-html="como.dd-puas"></dd>
+      <dt data-t="como.dt-chatarra"></dt><dd data-t-html="como.dd-chatarra"></dd>
+      <dt data-t="como.dt-ras"></dt><dd data-t-html="como.dd-ras"></dd>
     </dl>
 
-    <h3>El puntaje</h3>
-    <p>Son los <b>metros</b>, y los metros los ganás cayendo. Cerrar el paraguas no es
-      sólo para pasar por los huecos angostos: es la única forma de bajar rápido. El
-      juego te ofrece todo el tiempo el mismo trato, y vos decidís cuánto lo aceptás.</p>
+    <h3 data-t="como.h-puntaje">El puntaje</h3>
+    <p data-t-html="como.puntaje"></p>
 
-    <h3>De qué está hecho</h3>
-    <p>El pozo se genera para siempre, y <b>cada hueco se pone dentro de lo que se puede
-      alcanzar desde el anterior</b> a la velocidad a la que vas a llegar. No es un
-      detalle: un generador infinito falla poniendo dos huecos que no se alcanzan, y eso
-      no se ve como un error — se ve como que perdiste otra vez.</p>
-    <p>Todo es vectorial menos el paraguas y el personaje. El sonido son osciladores: el
-      viento que escuchás es ruido blanco pasado por un filtro que se abre con la
-      velocidad de caída.</p>
+    <h3 data-t="como.h-hecho">De qué está hecho</h3>
+    <p data-t-html="como.hecho1"></p>
+    <p data-t-html="como.hecho2"></p>
   </div>
 </main>
 
 <!-- ───────────── juego ───────────── -->
 <main id="p-juego" class="pantalla juego" hidden>
   <div class="hud">
-    <button id="j-salir" class="hud-btn" aria-label="Volver al menú">✕</button>
+    <button id="j-salir" class="hud-btn" aria-label="Volver al menú" data-t-attr="aria-label:hud.salir">✕</button>
     <b id="h-metros" class="metros">0 m</b>
     <div class="hud-dato"><span>◆</span><b id="h-monedas">0</b></div>
     <b id="h-varillas" class="varillas">☂☂☂</b>
@@ -103,17 +109,17 @@
 <!-- ───────────── final ───────────── -->
 <main id="p-fin" class="pantalla centrado" hidden>
   <div class="tapa fin">
-    <p id="f-record" class="record-nuevo" hidden>¡RÉCORD!</p>
-    <p class="fin-rotulo">Caíste</p>
+    <p id="f-record" class="record-nuevo" hidden data-t="fin.record">¡RÉCORD!</p>
+    <p class="fin-rotulo" data-t="fin.rotulo">Caíste</p>
     <h2 id="f-metros">0 m</h2>
     <ul id="f-lista" class="lista"></ul>
-    <button id="f-otra" class="portal chico-portal" aria-label="Otra vez">
+    <button id="f-otra" class="portal chico-portal" aria-label="Otra vez" data-t-attr="aria-label:fin.otra-aria">
       <span class="salpicadura" aria-hidden="true"></span>
       <span class="remolino" aria-hidden="true"></span>
-      <span class="portal-txt">OTRA</span>
+      <span class="portal-txt" data-t="fin.otra">OTRA</span>
     </button>
     <div class="botones fila chicos">
-      <button id="f-menu" class="chico">Al menú</button>
+      <button id="f-menu" class="chico" data-t="fin.menu">Al menú</button>
     </div>
   </div>
 </main>

@@ -45,27 +45,47 @@ export function bajar(Partida, semilla, tope = 20000) {
  * El de arriba puede cerrar el paraguas y moverse por separado, así que prueba
  * la GEOMETRÍA del pozo — que los huecos se alcancen. Éste prueba otra cosa,
  * que es más difícil y más importante: que el pozo se pueda bajar con el
- * control que tiene el jugador, donde el mismo dedo hace las dos cosas. Si el
- * hueco está lejos, apoya el dedo (apunta y de paso cierra); si ya está
- * alineado, suelta (abre y planea). Es exactamente lo que hace una persona.
+ * control que tiene el jugador, donde el mismo dedo hace las dos cosas.
+ *
+ * ES UNA COPIA DEL CONTROL, NO UNA APROXIMACION. Simula el dedo entero: dónde
+ * está apoyado, cuántos cuadros lleva quieto y la misma fórmula que usa
+ * `main.js` para convertir eso en movimiento. Si divergen, el robot prueba un
+ * juego que nadie juega — y eso ya pasó una vez: mientras el robot podía
+ * cerrar y moverse a la vez llegaba a 778 m, y con el control de verdad, 129.
+ *
+ * Con el control nuevo el gesto es: arrastrar para poner el dedo donde hay que
+ * ir —y mientras se arrastra el paraguas queda ABIERTO, así que se maniobra
+ * lento y con precisión— y después soltar el arrastre y dejar el dedo quieto,
+ * que es lo que lo cierra y hace caer. Arrastrar para corregir vuelve a
+ * abrirlo. Eso es lo que hace este bicho, cuadro por cuadro.
  */
 export function pilotoDedo(p) {
   const f = p.pozo.siguiente(p.y + 12);
   if (!f) return { cerrar: false, mover: null };
-  const falta = f.y - p.y;
-  const dx = f.x - p.x - p.vx * 7;
-  // Una fila angosta hay que cruzarla cerrada sí o sí: ahí el dedo se queda.
-  if (f.angosto && falta < 320)
-    return { cerrar: true, mover: Math.max(-1, Math.min(1, dx / 20)) };
-  if (Math.abs(dx) < 3) { p._pulso = false; return { cerrar: false, mover: null }; }
-  // TOQUECITOS. El paraguas tarda nueve cuadros en cerrarse: apoyando el dedo
-  // mientras esté bien abierto y soltando antes de que se cierre, se apunta
-  // con la maniobrabilidad del abierto sin pagar la velocidad del cerrado. Es
-  // lo que hace una persona a los dos minutos de jugar.
-  if (p._pulso && p.abierto < 0.62) p._pulso = false;
-  if (!p._pulso && p.abierto > 0.9) p._pulso = true;
-  if (!p._pulso) return { cerrar: false, mover: null };
-  return { cerrar: true, mover: Math.max(-1, Math.min(1, dx / 20)) };
+  if (!p._dedo) p._dedo = { objetivo: p.x, quieto: 999 };
+  const d = p._dedo;
+
+  // Adónde poner el dedo: el hueco, adelantado por la velocidad que se trae.
+  // Sin ese adelanto se llega al hueco con velocidad de costado y se pasa de
+  // largo; a trece píxeles por cuadro, pasarse diez es chocar.
+  const meta = Math.max(14, Math.min(346, f.x - p.vx * 3));
+  // LA ZONA MUERTA DECIDE EL RITMO DEL JUEGO. Si el robot corrige cada cuadro,
+  // el dedo no se queda quieto nunca y el paraguas no cierra jamás — cae lento
+  // para siempre y llega abierto a la primera fila angosta, donde no entra.
+  // Seis píxeles es lo que una persona deja pasar sin volver a tocar.
+  //
+  // Y ANTE UNA FILA ANGOSTA SE DEJA DE CORREGIR. Ahí hay que cruzar cerrado sí
+  // o sí, cerrar tarda nueve cuadros y sólo cierra el dedo quieto: seguir
+  // acomodándose hasta el final es llegar abierto. Se apunta una vez, se saca
+  // la mano y se deja caer.
+  const banda = f.angosto && f.y - p.y < 200 ? 26 : 6;
+  if (Math.abs(meta - d.objetivo) > banda) { d.objetivo = meta; d.quieto = 0; }
+  else d.quieto++;
+
+  // De acá para abajo es, letra por letra, lo que hace `leerEntrada`.
+  const dx = d.objetivo - p.x;
+  return { cerrar: d.quieto >= F.QUIETO,
+           mover: Math.abs(dx) < 3 ? 0 : Math.max(-1, Math.min(1, dx / 26)) };
 }
 
 export function bajarConDedo(Partida, semilla, tope = 20000) {

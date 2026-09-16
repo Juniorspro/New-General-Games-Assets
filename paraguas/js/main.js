@@ -8,6 +8,7 @@ import { despertar, efe, sonando, arrancarViento, soplar, callarViento } from ".
 import { cargar, guardar, borrar } from "./guardado.js";
 import { pilotoDedo } from "./piloto.js";
 import { ruta } from "./assets.js";
+import { t, aplicar, ponerIdioma, idioma, IDIOMAS } from "./idioma.js";
 
 const $ = (s) => document.querySelector(s);
 const lienzo = $("#lienzo");
@@ -79,6 +80,13 @@ const aMundo = (ev) => {
 // EL DEDO MANEJA POR ARRASTRE, NO POR POSICION, y es la correccion que mas
 // cambia como se siente el juego.
 //
+// Y EL DEDO EN MOVIMIENTO NO CIERRA EL PARAGUAS. Arrastrar es "corrarme" y
+// apoyar quieto es "caer rapido"; si arrastrar tambien cerrara, no habria
+// forma de maniobrar sin acelerar al triple, que es justo cuando menos se
+// maniobra. Se cuentan los cuadros desde el ultimo movimiento: mientras el
+// dedo se mueve el paraguas queda abierto, y a los ocho cuadros quieto se
+// cierra. Un toque que nunca se movio cierra en el primer cuadro.
+//
 // La primera version llevaba al personaje HACIA donde estaba el dedo. Tocar
 // para cerrar el paraguas —que es lo que hay que hacer todo el tiempo— lo
 // mandaba de golpe hasta el dedo, asi que no se podia cerrar sin moverse: el
@@ -89,13 +97,21 @@ const aMundo = (ev) => {
 lienzo.addEventListener("pointerdown", (ev) => {
   despertar(); arrancarViento();
   const x = aMundo(ev);
-  dedo = { id: ev.pointerId, x, cero: x, objetivo: partida ? partida.x : x };
+  // `quieto` arranca alto y no en cero: un toque que nunca se movio tiene que
+  // cerrar ya, no despues de esperar los ocho cuadros.
+  dedo = { id: ev.pointerId, x, cero: x, objetivo: partida ? partida.x : x,
+           quieto: 999, movio: false };
   try { lienzo.setPointerCapture(ev.pointerId); } catch (e) {}
   ev.preventDefault();
 });
 lienzo.addEventListener("pointermove", (ev) => {
   if (!dedo || ev.pointerId !== dedo.id) return;
+  const previo = dedo.x;
   dedo.x = aMundo(ev);
+  // Medio pixel de umbral: un dedo apoyado quieto igual manda eventos de
+  // movimiento por el temblor de la mano, y sin umbral el paraguas no cerraba
+  // nunca.
+  if (Math.abs(dedo.x - previo) > 0.5) dedo.movio = true;
   // 1,5 px de personaje por pixel de dedo: con 1 a 1 hay que barrer media
   // pantalla para cruzar el pozo y el pulgar no llega.
   dedo.objetivo = Math.max(14, Math.min(346, dedo.objetivo + (dedo.x - dedo.cero) * 1.5));
@@ -123,7 +139,11 @@ function leerEntrada() {
   if (teclas.ArrowRight) { entrada.mover = 1; entrada.cerrar = tecla; return; }
   if (tecla) { entrada.cerrar = true; entrada.mover = 0; return; }
   if (dedo) {
-    entrada.cerrar = true;
+    // Se cuenta acá y no en el evento porque esta función corre una vez por
+    // cuadro: el navegador manda varios `pointermove` entre cuadro y cuadro y
+    // contarlos ahí daría un tiempo distinto según el aparato.
+    if (dedo.movio) { dedo.quieto = 0; dedo.movio = false; } else dedo.quieto++;
+    entrada.cerrar = dedo.quieto >= F.QUIETO;
     const d = dedo.objetivo - partida.x;
     entrada.mover = Math.abs(d) < 3 ? 0 : Math.max(-1, Math.min(1, d / 26));
     return;
@@ -148,7 +168,7 @@ function alMenu() {
   if (!demo) arrancarDemo();
   const d = cargar();
   $("#m-mejor").textContent = `${d.mejor} m`;
-  $("#m-caidas").textContent = d.partidas === 1 ? "1 caída" : `${d.partidas} caídas`;
+  $("#m-caidas").textContent = d.partidas === 1 ? t("menu.caidas1") : t("menu.caidas", { n: d.partidas });
   mostrar("p-menu");
 }
 
@@ -166,6 +186,33 @@ $("#m-jugar").addEventListener("click", () => { efe.menu(); jugar(); });
 $("#f-otra").addEventListener("click", () => { efe.menu(); jugar(); });
 $("#f-menu").addEventListener("click", () => { efe.menu(); alMenu(); });
 $("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); });
+
+// --- idiomas -------------------------------------------------------------
+// Cambiar de idioma reescribe los `data-t` y ADEMAS vuelve a pintar lo que se
+// escribe desde JavaScript: el contador de caídas y el nombre del tramo no
+// tienen marca en el HTML, así que `aplicar()` no los toca y quedarían en el
+// idioma anterior hasta la próxima partida.
+function elegir(cod, guardarlo = true) {
+  ponerIdioma(cod);
+  aplicar();
+  $("#m-idioma").textContent = cod.toUpperCase();
+  if (guardarlo) { const d = cargar(); d.ajustes.idioma = cod; guardar(); }
+}
+for (const b of document.querySelectorAll("[data-idioma]"))
+  b.addEventListener("click", () => {
+    efe.menu();
+    elegir(b.dataset.idioma);
+    alMenu();
+  });
+// El botón del menú rota entre los tres. Con tres idiomas una pantalla aparte
+// para elegirlos es un clic de más: el que quiere cambiarlo lo ve escrito en el
+// botón y lo toca hasta que dice lo suyo.
+$("#m-idioma").addEventListener("click", () => {
+  const cods = Object.keys(IDIOMAS);
+  efe.menu();
+  elegir(cods[(cods.indexOf(idioma()) + 1) % cods.length]);
+  alMenu();
+});
 $("#j-salir").addEventListener("click", () => { efe.menu(); alMenu(); });
 for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); alMenu(); });
@@ -173,8 +220,14 @@ $("#aj-sonido").addEventListener("change", (e) => {
   const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
 });
 $("#m-borrar").addEventListener("click", () => {
-  if (!confirm("¿Borrar el récord?")) return;
-  borrar(); alMenu();
+  if (!confirm(t("menu.borrar-confirmar"))) return;
+  // BORRAR EL RECORD NO BORRA EL IDIOMA. Está en el mismo bulto guardado, pero
+  // volver al inglés porque alguien quiso resetear su puntaje es un castigo que
+  // nadie pidió.
+  const cod = cargar().ajustes.idioma;
+  borrar();
+  const nuevo = cargar(); nuevo.ajustes.idioma = cod; guardar();
+  alMenu();
 });
 
 // --- HUD -----------------------------------------------------------------
@@ -186,7 +239,7 @@ function pintarHud(p) {
   const poner = (sel, v) => { if (hud[sel] === v) return; hud[sel] = v; $(sel).textContent = v; };
   poner("#h-metros", `${p.metros} m`);
   poner("#h-monedas", String(p.monedas));
-  poner("#h-tramo", tramoDe(p.y).nombre);
+  poner("#h-tramo", t(tramoDe(p.y).clave));
   if (hud.varillas !== p.varillas) {
     hud.varillas = p.varillas;
     $("#h-varillas").textContent = "☂".repeat(Math.max(0, p.varillas)) || "—";
@@ -224,10 +277,10 @@ function terminar(p) {
     li.innerHTML = `<span>${k}</span><b>${v}</b>`;
     $("#f-lista").append(li);
   };
-  item("Chatarra", p.monedas);
-  item("Pasadas al ras", p.roces);
-  item("Puntaje", p.puntaje);
-  item("Mejor caída", `${d.mejor} m`);
+  item(t("fin.chatarra"), p.monedas);
+  item(t("fin.roces"), p.roces);
+  item(t("fin.puntaje"), p.puntaje);
+  item(t("fin.mejor"), `${d.mejor} m`);
   // No se muestra enseguida: el muñeco sigue cayendo un segundo y medio, y ese
   // segundo y medio es lo que hace que el final se sienta como un final.
   setTimeout(() => { if (partida && partida.estado === "muerto") mostrar("p-fin"); }, 1400);
@@ -298,7 +351,12 @@ function traer(url) {
   const d = cargar();
   $("#aj-sonido").checked = d.ajustes.sonido;
   sonando(d.ajustes.sonido);
-  alMenu();
+  // La pantalla de idiomas se muestra UNA vez, la primera. El demo del fondo
+  // arranca igual: la primera pantalla del juego también tiene que estar viva.
+  elegir(d.ajustes.idioma || "en", false);
+  if (!demo) arrancarDemo();
+  if (d.ajustes.idioma) alMenu();
+  else mostrar("p-idioma");
   requestAnimationFrame(bucle);
   window.PARAGUAS = { get partida() { return partida; }, get demoMetros() { return demo?.metros; },
                      jugar, alMenu, entrada, VISTA, F };

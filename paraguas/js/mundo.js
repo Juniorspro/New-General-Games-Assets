@@ -38,7 +38,18 @@ export const F = {
   VX_ABIERTO: 4.0, VX_CERRADO: 5.4,
   REACCION_ABIERTO: 0.16, REACCION_CERRADO: 0.085,
 
-  VARILLAS: 3,                // los golpes que aguanta el paraguas
+  VARILLAS: 3,            // los golpes que aguanta el paraguas
+
+  // CUANTOS CUADROS TIENE QUE ESTAR QUIETO EL DEDO PARA QUE EL PARAGUAS CIERRE.
+  //
+  // Arrastrar y cerrar son dos gestos distintos con el mismo dedo, y antes
+  // eran el mismo: apoyar cerraba, así que correrse de costado —que se hace
+  // arrastrando, con el dedo apoyado— cerraba el paraguas sin que nadie lo
+  // pidiera y se caía al triple justo mientras se estaba maniobrando. Ahora el
+  // dedo en movimiento NO cierra: se cierra cuando se queda quieto. Ocho
+  // cuadros son 130 ms, abajo del tiempo que tarda una persona en parar el
+  // pulgar a propósito y arriba del temblor de la mano.
+  QUIETO: 8,
 };
 
 export const M = (px) => Math.max(0, Math.floor(px / 100));   // pixeles a metros
