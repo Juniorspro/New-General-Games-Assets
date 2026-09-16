@@ -254,6 +254,14 @@ def pedir_fondos():
 
 def pedir_portada():
     piezas = {
+     "logo": ('The word "PIQUE" as a chunky pixel-art game logo, bold blocky letters with a thick '
+              'dark outline and a soft inner highlight, amber and cream letters with a teal drop '
+              'shadow, slight upward arc, isolated on an empty background, fills the image, '
+              'no background scenery, no extra words, no tagline'),
+     "titulo_fondo": ("Vertical title-screen scene for a pixel-art platformer, seen from the side: a "
+                      "sunny grass-topped cliff on the right, distant green hills and a bright sky "
+                      "with soft clouds filling the upper two thirds, a few floating stone platforms, "
+                      "spinning coins, no characters, no text. Empty space in the middle for a logo"),
      "portada": ("Vertical key art for a pixel-art running platformer: the amber-jacketed goggled "
                  "runner creature dashing to the right across grass-topped stone blocks, spinning "
                  "coins trailing behind, a warm sunny sky with soft clouds, distant green hills, "
@@ -263,7 +271,8 @@ def pedir_portada():
         if k in cargar(): print(f"  · {k}: ya pedido"); continue
         r = rz("submit_image_generation", {
             "project_id": PROYECTO, "output_path": f"assets/{k}.png",
-            "size": "1152x2048", "transparent": False,
+            "size": "1024x1024" if k == "logo" else "1152x2048",
+            "transparent": k == "logo",
             "prompt": f"{desc}. {ANCLA}"})
         if "task_id" not in r: print(f"  ✗ {k}: {r}"); continue
         anotar(k, {"task_id": r["task_id"], "output_path": r["output_path"], "cols": 1, "filas": 1})

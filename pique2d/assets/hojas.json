@@ -485,13 +485,31 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_torre_cerca-g1.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_torre_cerca-g1.png"
   },
-  "portada": {
-    "task_id": "gtask-e5a9535a6efc49d8811a",
-    "output_path": "assets/portada-g2.png",
+  "logo": {
+    "task_id": "gtask-c346e8e860094847a86d",
+    "output_path": "assets/logo-g1.png",
     "cols": 1,
     "filas": 1,
     "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/portada-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/portada-g2.png"
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/logo-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/logo-g1.png"
+  },
+  "titulo_fondo": {
+    "task_id": "gtask-e6a0f555d03e471d897b",
+    "output_path": "assets/titulo_fondo-g1.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/titulo_fondo-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/titulo_fondo-g1.png"
+  },
+  "portada": {
+    "task_id": "gtask-bd60ff94ae1244fda08d",
+    "output_path": "assets/portada-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/portada-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/portada-g3.png"
   }
 }

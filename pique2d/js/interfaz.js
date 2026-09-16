@@ -35,6 +35,7 @@ export function pintarMapa(alElegir) {
     const mundo = crear("section", "mundo" + (abierto ? "" : " cerrado"));
     const cab = crear("header", "cab-mundo");
     cab.append(crear("h2", null, `Mundo ${m}`));
+    const av = crear("div", "avance"); av.append(crear("i")); cab.append(av);
     if (!abierto) cab.append(crear("span", "candado", "🔒 terminá el mundo " + (m - 1)));
     mundo.append(cab);
 
@@ -50,6 +51,13 @@ export function pintarMapa(alElegir) {
       b.disabled = !abierto;
       b.dataset.nivel = id;
       b.style.setProperty("--tema", TEMAS[cfg.tema].cielo[0]);
+      // La postal del tema: es el mismo fondo que ve el jugador adentro del
+      // nivel, compuesto de las capas reales. Una miniatura generada aparte
+      // seria parecida pero distinta, y la tarjeta prometeria otro nivel.
+      const post = crear("img", "postal");
+      post.alt = ""; post.loading = "lazy";
+      post.src = ruta(`assets/postal/${cfg.tema}.webp`);
+      b.append(post);
       b.append(crear("span", "num", id));
       b.append(crear("span", "titulo", cfg.titulo));
       b.append(crear("span", "tema", TEMAS[cfg.tema].nombre + (cfg.jefe ? " · jefe" : "")));
@@ -69,6 +77,12 @@ export function pintarMapa(alElegir) {
     cont.append(mundo);
   }
 
+  // Barra de avance del mundo: cuantos de los cuatro estan hechos.
+  for (let m = 1; m <= 6; m++) {
+    const hechosM = [1, 2, 3, 4].filter((n) => datosNivel(idNivel(m, n)).hecho).length;
+    const barra = cont.querySelector(`.mundo:nth-of-type(${m}) .avance i`);
+    if (barra) barra.style.width = `${hechosM / 4 * 100}%`;
+  }
   $("#total-monedas").textContent = d.monedas;
   $("#total-niveles").textContent = `${hechos}/24`;
   $("#total-color").textContent =

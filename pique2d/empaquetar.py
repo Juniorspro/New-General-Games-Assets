@@ -145,9 +145,12 @@ def main():
         mapa[f"assets/piezas/{p.name}"] = data_uri(p); crudo += p.stat().st_size
     for p in sorted((AQUI / "assets" / "fondo").glob("*.webp")):
         mapa[f"assets/fondo/{p.name}"] = data_uri(p); crudo += p.stat().st_size
-    portada = AQUI / "assets" / "portada.webp"
-    if portada.exists():
-        mapa["assets/portada.webp"] = data_uri(portada); crudo += portada.stat().st_size
+    for p in sorted((AQUI / "assets" / "postal").glob("*.webp")):
+        mapa[f"assets/postal/{p.name}"] = data_uri(p); crudo += p.stat().st_size
+    for nombre in ("portada.webp", "logo.webp", "titulo_fondo.webp"):
+        p = AQUI / "assets" / nombre
+        if p.exists():
+            mapa[f"assets/{nombre}"] = data_uri(p); crudo += p.stat().st_size
     if con_musica:
         for p in sorted((AQUI / "assets" / "snd").glob("*.mp3")):
             mapa[f"assets/snd/{p.name}"] = data_uri(p); crudo += p.stat().st_size

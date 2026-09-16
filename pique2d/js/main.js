@@ -213,7 +213,16 @@ function cargarPatron(tema) {
   // El arte de portada, de fondo del menu.
   const arte = new Image();
   arte.onload = () => { $("#p-inicio").style.backgroundImage = `url(${arte.src})`; };
-  arte.src = ruta("assets/portada.webp");
+  arte.src = ruta("assets/titulo_fondo.webp");
+  // El logo dibujado reemplaza al de texto si carga. Si no carga, el de texto
+  // queda — un menu sin titulo es peor que un titulo tipografico.
+  const lg = new Image();
+  lg.onload = () => {
+    const e = $("#logo-img");
+    e.src = lg.src; e.hidden = false;
+    $("#p-inicio .logo").hidden = true;
+  };
+  lg.src = ruta("assets/logo.webp");
   UI.mostrar("p-inicio");
   redimensionar();
   requestAnimationFrame(bucle);

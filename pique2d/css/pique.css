@@ -407,3 +407,43 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   .botones .grande { padding: 10px 18px; font-size: 15px; min-height: 44px; }
   .caja-inicio .pie { font-size: 11px; margin-top: 10px; }
 }
+
+/* ───────────── menus con imagenes ───────────── */
+.logo-img {
+  display: block; width: min(300px, 80vw); height: auto; margin: 0 auto 6px;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  filter: drop-shadow(0 5px 0 rgba(0,0,0,.45));
+}
+#p-inicio { background-position: center 28%; background-size: cover; }
+.caja-inicio { background: rgba(14,18,30,.72); }
+
+/* Cada nivel muestra la POSTAL de su tema: el mismo fondo que ve adentro. */
+.nivel::before { display: none; }
+.nivel .postal {
+  /* object-position abajo: la postal mide 320x180 y la tarjeta muestra 76 px.
+     Recortada al centro se ve solo cielo — lo que distingue un tema del otro
+     esta abajo: el terreno, los arboles, la lava. */
+  display: block; width: 100%; height: 82px; object-fit: cover;
+  object-position: center bottom;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  border-bottom: 3px solid rgba(0,0,0,.45);
+}
+.nivel { min-height: 168px; }
+.nivel .num {
+  top: 6px; left: 8px; background: rgba(8,11,20,.72);
+  padding: 2px 7px; border-radius: 7px; font-size: 12px;
+}
+.nivel:disabled .postal { filter: grayscale(.85) brightness(.5); }
+.nivel.hecho::after { top: 78px; right: 9px; }
+
+/* Barra de avance por mundo */
+.avance {
+  flex: 1; max-width: 160px; height: 9px; margin-left: 4px;
+  background: rgba(255,255,255,.10); border-radius: 999px; overflow: hidden;
+  border: 2px solid rgba(0,0,0,.35);
+}
+.avance i {
+  display: block; height: 100%; width: 0;
+  background: linear-gradient(90deg, #ffb43a, #5ed88a);
+  transition: width .3s;
+}

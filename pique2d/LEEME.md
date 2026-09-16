@@ -78,6 +78,18 @@ fondos van en tres capas y valen la pena.
 La cámara puede subir **por encima del nivel** para mostrar cielo. Clavarla en
 cero dejaba el nivel pegado arriba y una franja vacía abajo.
 
+## Menú y mapa
+
+El menú lleva un **logo dibujado** y una escena de portada generada. El mapa
+muestra, en cada nivel, la **postal de su tema**: la misma que ve el jugador
+adentro, porque está **compuesta apilando las capas de fondo reales** más una
+franja de la textura del terreno. `componer_postales.py` las arma en un
+segundo y **no cuesta un crédito** — y, sobre todo, una postal generada aparte
+sería parecida pero distinta, y la tarjeta prometería un nivel que no es.
+
+Cada mundo tiene además una barra con cuántos de sus cuatro niveles están
+hechos.
+
 ## Los fondos
 
 Tres capas por tema, 24 imágenes generadas: cielo, lejos y cerca, cada una a su
@@ -169,7 +181,6 @@ python3 generar_sprites.py estado
 
 | pendiente | qué sería |
 |---|---|
-| Fondos del menú por mundo | hoy el menú usa una sola pieza de arte |
 | Efectos de sonido grabados | los generados venían de 380 KB cada uno, clips largos donde hace falta un golpe de medio segundo; los efectos siguen sintetizados y la **música sí es grabada** (3 pistas) |
 | Hojas extra | correr hacia atrás, aterrizaje, y una de daño |
 | Generar en un *worker* | el peor caso de 1136 ms bloquea el hilo |
