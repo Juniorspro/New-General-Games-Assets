@@ -189,11 +189,64 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
 
 /* Pantalla baja: el teléfono acostado. El juego es vertical, pero si alguien
    lo gira igual tiene que poder volver al menú. */
+/* Pantalla baja: el teléfono acostado.
+ *
+ * El menú creció al agregarse el segundo modo y el cuarto botón quedó abajo
+ * del borde: la prueba de interfaz lo cazó como "tapado por -", que es lo que
+ * devuelve elementFromPoint cuando el punto está fuera de la vista. Acá se
+ * achica todo lo que no es un botón —el logo, la bajada, los márgenes— antes
+ * que los botones, que son lo único que hay que poder tocar. */
 @media (max-height: 470px) {
-  .caja { padding: 14px 16px; }
-  .logo { font-size: 30px; }
-  .bajada { font-size: 12.5px; margin-bottom: 12px; }
-  .grande { min-height: 44px; font-size: 14px; }
+  .caja { padding: 10px 14px; }
+  .logo { font-size: 24px; margin-bottom: 4px; }
+  .bajada { display: none; }
+  .botones { gap: 5px; }
+  .grande { min-height: 44px; font-size: 13px; padding: 6px 10px; }
+  .grande small { font-size: 10.5px; }
+  .record { margin: 8px 0 2px; font-size: 11.5px; }
+  .opcion { margin: 5px 0; font-size: 12px; }
+  #m-borrar { min-height: 30px; padding: 4px 10px; font-size: 11.5px; }
+  .niveles { grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px; }
+  .niv { min-height: 58px; }
   .bolita { width: 62px; height: 62px; min-height: 62px; bottom: 12px; }
-  .dialogo { margin-bottom: 78px; }
+  .dialogo, .hud-portal { margin-bottom: 78px; }
 }
+
+
+/* ───────────── el modo portales ─────────────
+   La lista de niveles y lo que el pozo no tiene. */
+.modo-p { border-color: #3a5a8a; background: linear-gradient(135deg, #1d2c46, #22374f); }
+.modo-p span:first-child { color: var(--cian); }
+.marca { margin-left: auto; font-size: 13px; color: var(--tenue); font-variant-numeric: tabular-nums; }
+
+.niveles {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  padding: 12px; overflow-y: auto; align-content: start;
+}
+.niv {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 74px; padding: 8px 4px; font-size: 11.5px; line-height: 1.25;
+  text-align: center;
+}
+.niv b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.niv small { color: var(--tenue); font-size: 10.5px; }
+.niv.hecho { border-color: var(--verde); }
+.niv.hecho b { color: var(--verde); }
+.niv:disabled { opacity: .4; }
+
+/* La barra de abajo del juego: de qué color sale el próximo portal, la pista
+   del nivel, y volver a empezar sin pasar por el menú — que en un puzzle se
+   usa todo el tiempo. */
+.hud-portal {
+  display: flex; align-items: center; gap: 8px;
+  margin: auto 10px 96px; padding: 6px 8px;
+  background: rgba(10,14,24,.85); border: 1px solid var(--borde); border-radius: 10px;
+}
+.hud-portal[hidden] { display: none; }
+.bocha {
+  width: 16px; height: 16px; border-radius: 50%; flex: none;
+  background: var(--cian); box-shadow: 0 0 10px currentColor;
+}
+.bocha.b { background: #ff9b3a; }
+.pista { flex: 1; font-size: 12px; color: var(--tenue); }
+#h-reintentar { min-height: 30px; padding: 2px 10px; font-size: 15px; }

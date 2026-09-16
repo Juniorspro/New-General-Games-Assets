@@ -1,8 +1,15 @@
 # Dimensión Ñ
 
-Un juego de caída, vertical, para el teléfono. Un viejo con un reactor, su
-nieto atado con una soga y un pozo de 104 metros repartido en siete capítulos.
-Lo único que hacés es empujar para un costado; el resto lo resuelve la física.
+Dos juegos con la misma física, verticales, para el teléfono. Un viejo con un
+reactor y su nieto atado con una soga.
+
+**El pozo** — 104 metros en siete capítulos. Lo único que hacés es empujar para
+un costado; el resto lo resuelve la física. La pregunta es *¿llego?* y se
+contesta con los reflejos.
+
+**Portales** — quince niveles de pantalla fija. Disparás portales a las paredes
+y te tirás por uno para salir por el otro. No hay reloj: la pregunta es
+*¿por dónde?* y hasta que no se te ocurre, no pasa nada.
 
 **Abrilo:** `dimension-n-en-un-archivo.html`, doble clic. 496 KB, sin servidor,
 sin internet, sin instalar nada.
@@ -51,8 +58,16 @@ se lleva puesto lo que vos esquivaste.
 
 ## Cómo se juega
 
-Tocá la pantalla donde sea: el reactor empuja **hacia tu dedo**, más fuerte
-cuanto más lejos esté. El botón de abajo a la derecha —o un segundo dedo, o la
+**En el pozo:** tocá la pantalla donde sea y el reactor empuja **hacia tu
+dedo**, más fuerte cuanto más lejos esté.
+
+**En portales:** un toque corto **dispara** hacia donde tocaste; mantener el
+dedo y moverlo es el reactor. Lo que distingue un disparo de un empujón es el
+gesto, no en qué mitad de la pantalla lo hiciste — partir la pantalla en dos
+era lo obvio y es peor, porque la mitad de las paredes te quedan del lado que
+no dispara. Las paredes azules aceptan portal, las negras lo rebotan, y el
+techo y el piso siempre aceptan: es la salida cuando un tabique te tapa todo lo
+demás. Las placas se aprietan con **peso**, y vos tenés uno colgando. El botón de abajo a la derecha —o un segundo dedo, o la
 barra espaciadora— te hace **bolita**: el cuerpo se ovilla y el golpe se reparte
 entre once puntos en vez de clavar la cabeza. Descuenta dos tercios del daño.
 
@@ -67,6 +82,8 @@ js/cuerpo.js    el esqueleto de un ragdoll y cómo se dibuja
 js/medidas.js   las proporciones, medidas del dibujo (lo escribe una herramienta)
 js/voces.js     dónde está cada línea dentro del mp3 (ídem)
 js/nivel.js     el pozo, los siete capítulos y la historia
+js/portales.js  el otro modo: grilla, disparos y el cruce
+js/mapas.js     los 15 niveles de portales (lo escribe una herramienta)
 js/juego.js     la partida: qué choca con qué y qué cuesta
 js/dibujo.js    pintar el mundo
 js/audio.js     los osciladores y el atlas de voces
@@ -80,6 +97,7 @@ generar_cuerpos.py    un cuerpo entero por personaje, en T-pose
 cortar_cuerpos.py     lo parte en seis piezas y escribe js/medidas.js
 generar_texturas.py   pared, repisa y soga
 generar_voces.py      las 23 líneas, el atlas y js/voces.js
+armar_mapas.py        los 15 niveles de portales, validados al salir
 empaquetar.py         todo en un solo HTML
 ```
 
@@ -92,7 +110,7 @@ entera en Node. Por eso las pruebas la miden de verdad en vez de mirar capturas.
 sh pruebas/correr.sh
 ```
 
-68 comprobaciones. Las que importan:
+74 comprobaciones. Las que importan:
 
 - **`fisica.mjs`** — 6000 cuadros de maltrato sin que ningún punto se vaya a
   infinito; ningún hueso se estira más del 15%; la soga no se estira nada; la
@@ -104,6 +122,14 @@ sh pruebas/correr.sh
   suponerlo.
 - **`movil.mjs`** — tres tamaños de pantalla: que entre, que los botones lleguen
   a 44 px y que el arrastre **llegue al juego** y no se lo quede el navegador.
+- **`portales.mjs`** — que los quince niveles **se puedan pasar**. Un nivel de
+  puzzle sin solución se ve perfecto: no hay nada raro en la pantalla y no tira
+  ningún error, el jugador se queda ahí para siempre creyendo que es malo. Así
+  que se juega cada uno con la física de verdad, reproduciendo la solución que
+  encontró `buscar_soluciones.mjs` probando dos disparos en cuarenta y ocho
+  direcciones y tres formas de moverse. Y también lo contrario: que **ninguno se
+  gane sin disparar un portal**, porque un nivel que se pasa caminando no es un
+  nivel fácil, es un nivel que no está. Dos cayeron en esa: se rediseñaron.
 - **`voces.mjs`** — que cada línea del juego tenga su voz, que ninguna dure lo
   que no puede durar (el generador devolvía treinta y ocho segundos para un
   "Sí.") y que ningún tramo del atlas se pise con el siguiente.

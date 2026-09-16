@@ -23,8 +23,8 @@ y suena sólo con los osciladores. Los archivos son una mejora, no un requisito.
 import base64, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["assets", "voces", "medidas", "verlet", "cuerpo", "nivel", "juego", "dibujo",
-         "audio", "guardado"]
+ORDEN = ["assets", "voces", "medidas", "verlet", "cuerpo", "mapas", "portales", "nivel",
+         "juego", "dibujo", "audio", "guardado"]
 ENTRADA = "main"
 
 # Multilínea y con comillas simples O dobles: juego.js abre el import de

@@ -2,7 +2,10 @@
 
 import { construirNivel, CAPITULOS, FINAL } from "./nivel.js";
 import { Partida, VISTA } from "./juego.js";
-import { dibujar } from "./dibujo.js";
+import { dibujar, dibujarEscenario, origenEscenario } from "./dibujo.js";
+import { Escenario } from "./portales.js";
+import { NIVELES_P } from "./mapas.js";
+import { escalarCuerpos } from "./cuerpo.js";
 import { despertar, efe, sonando, zumbido, cargarVoces, voz } from "./audio.js";
 import { registrarPiezas } from "./cuerpo.js";
 import { registrarTexturas } from "./dibujo.js";
@@ -15,8 +18,15 @@ const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 
 let nivel = construirNivel();
-let partida = null;
+let partida = null;          // el pozo
+let escena = null;           // el modo portales
 let capSonando = -1;
+
+// LOS CUERPOS SON MÁS CHICOS EN PORTALES. En el pozo el pasillo mide 360 y un
+// Rilo de 76 píxeles se lee bien; acá el escenario es una grilla de tiles de
+// 16 y el agujero de un portal mide dos, así que un muñeco de cinco tiles no
+// pasa. Se cambia antes de armar los cuerpos, que es cuando se lee.
+const ESCALA_P = 0.66;
 
 // --- tamano --------------------------------------------------------------
 // EL ANCHO ES FIJO Y EL ALTO NO, y esa asimetria es la regla de justicia del
@@ -66,8 +76,18 @@ function aMundo(ev) {
   return { x: (ev.clientX - r.left) / esc, y: (ev.clientY - r.top) / esc };
 }
 
+// EN PORTALES, UN TOQUE CORTO DISPARA Y UN ARRASTRE EMPUJA, y se distinguen
+// por lo que hizo el dedo, no por dónde lo puso. Partir la pantalla en dos
+// mitades —una para apuntar y otra para moverse— era lo obvio y es peor: la
+// mitad de las paredes te quedan del lado que no dispara. Midiendo el gesto,
+// toda la pantalla sirve para las dos cosas.
+let tocado = null;
 lienzo.addEventListener("pointerdown", (ev) => {
   despertar();
+  if (escena && dedoDir === null) {
+    const m = aMundo(ev);
+    tocado = { id: ev.pointerId, t: performance.now(), x: m.x, y: m.y, arrastro: false };
+  }
   if (dedoDir === null) { dedoDir = ev.pointerId; entrada.dedoX = aMundo(ev).x; }
   else entrada.bolita = true;          // el segundo dedo hace bolita
   // setPointerCapture TIRA EXCEPCION si el puntero ya no esta activo —pasa si
@@ -79,8 +99,20 @@ lienzo.addEventListener("pointerdown", (ev) => {
 });
 lienzo.addEventListener("pointermove", (ev) => {
   if (ev.pointerId === dedoDir) entrada.dedoX = aMundo(ev).x;
+  if (tocado && ev.pointerId === tocado.id) {
+    const m = aMundo(ev);
+    if (Math.hypot(m.x - tocado.x, m.y - tocado.y) > 12) tocado.arrastro = true;
+  }
 });
 const soltar = (ev) => {
+  if (tocado && ev.pointerId === tocado.id) {
+    const rapido = performance.now() - tocado.t < 260;
+    if (rapido && !tocado.arrastro && escena) {
+      const o = origenEscenario();
+      escena.disparar(tocado.x - o.x, tocado.y - o.y);
+    }
+    tocado = null;
+  }
   if (ev.pointerId === dedoDir) { dedoDir = null; entrada.dedoX = null; }
   else entrada.bolita = false;
 };
@@ -109,11 +141,13 @@ addEventListener("keyup", (e) => { teclas[e.code] = false; });
 function leerEntrada() {
   if (teclas.ArrowLeft) entrada.mover = -1;
   else if (teclas.ArrowRight) entrada.mover = 1;
-  else if (entrada.dedoX != null && partida) {
+  else if (entrada.dedoX != null && (partida || escena)) {
+    const cuerpo = partida ? partida.rilo : escena.rilo;
+    const ref = partida ? entrada.dedoX : entrada.dedoX - origenEscenario().x;
     // El empujon es proporcional a la distancia, con un tope: a 70 px del
     // muneco ya esta a fondo. Con menos de 8 px se considera cero, porque si
     // no el dedo quieto encima del personaje lo hace vibrar.
-    const d = entrada.dedoX - partida.rilo.p.pecho.x;
+    const d = ref - cuerpo.p.pecho.x;
     entrada.mover = Math.abs(d) < 8 ? 0 : Math.max(-1, Math.min(1, d / 70));
   } else entrada.mover = 0;
   entrada.bolita = entrada.bolita || !!teclas.Space || !!teclas.ArrowDown;
@@ -166,7 +200,7 @@ function mostrar(id) {
 }
 
 function alMenu() {
-  partida = null;
+  partida = null; escena = null;
   const d = cargar();
   $("#m-record").textContent = `${d.mejorProf} m · ${d.mejorChatarra} chatarras`;
   $("#m-seguir").hidden = d.capitulo === 0;
@@ -175,14 +209,55 @@ function alMenu() {
 }
 
 function jugar(cap) {
+  escena = null;
+  escalarCuerpos(1);
   nivel = construirNivel();          // el nivel se rearma para limpiar portales y chatarra
   partida = new Partida(nivel);
   if (cap > 0) partida.reiniciarEn(cap);
   capSonando = -1;
+  $("#h-portal").hidden = true;
+  mostrar("p-juego");
+}
+
+// --- el modo portales ----------------------------------------------------
+function pintarNiveles() {
+  const d = cargar();
+  const cont = $("#pn-lista");
+  cont.innerHTML = "";
+  let hechos = 0;
+  NIVELES_P.forEach((n, i) => {
+    const hecho = !!d.portales.hechos[i];
+    if (hecho) hechos++;
+    // Se abre el siguiente al primero sin hacer: los puzzles se ordenan por lo
+    // que enseñan, y saltearse el que enseña a disparar al techo deja al
+    // jugador peleando con el que lo da por sabido.
+    const libre = i === 0 || !!d.portales.hechos[i - 1] || hecho;
+    const b = document.createElement("button");
+    b.className = "niv" + (hecho ? " hecho" : "");
+    b.disabled = !libre;
+    b.innerHTML = `<b>${i + 1}</b><small>${libre ? n.nombre : "🔒"}</small>` +
+                  (d.portales.chatarra[i] ? "<small>◆</small>" : "");
+    b.addEventListener("click", () => { despertar(); efe.menu(); portal(i); });
+    cont.append(b);
+  });
+  $("#pn-cuenta").textContent = `${hechos}/${NIVELES_P.length}`;
+  $("#m-portales-sub").textContent = `${hechos} de ${NIVELES_P.length} resueltos`;
+}
+
+function portal(n) {
+  partida = null;
+  escalarCuerpos(ESCALA_P);
+  escena = new Escenario(n);
+  $("#h-portal").hidden = false;
+  ultimo.pista = null; ultimo.bocha = null;
   mostrar("p-juego");
 }
 
 $("#m-jugar").addEventListener("click", () => { despertar(); efe.menu(); jugar(0); });
+$("#m-portales").addEventListener("click", () => {
+  despertar(); efe.menu(); pintarNiveles(); mostrar("p-niveles");
+});
+$("#h-reintentar").addEventListener("click", () => { efe.menu(); if (escena) escena.reiniciar(); });
 $("#m-seguir").addEventListener("click", () => { despertar(); efe.menu(); jugar(cargar().capitulo); });
 $("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); });
 $("#m-borrar").addEventListener("click", () => {
@@ -196,7 +271,13 @@ for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); alMenu(); });
 $("#f-otra").addEventListener("click", () => { efe.menu(); cortarFinal(); jugar(0); });
 $("#f-menu").addEventListener("click", () => { efe.menu(); cortarFinal(); alMenu(); });
-$("#j-salir").addEventListener("click", () => { efe.menu(); alMenu(); });
+$("#j-salir").addEventListener("click", () => {
+  efe.menu();
+  // Del modo portales se vuelve a la lista de niveles, no al menú: en un juego
+  // de puzzles se entra y se sale de un nivel veinte veces por sesión.
+  if (escena) { escena = null; pintarNiveles(); mostrar("p-niveles"); }
+  else alMenu();
+});
 
 // --- HUD -----------------------------------------------------------------
 // Se escribe SOLO cuando cambia. Esta funcion corre sesenta veces por segundo
@@ -223,6 +304,40 @@ function pintarHud(p) {
     poner("#d-que", que);
     if (ultimo.dQuien !== quien) { ultimo.dQuien = quien;
       $("#dialogo").dataset.quien = quien.toLowerCase(); }
+  }
+}
+
+function pintarHudPortal(e) {
+  const poner = (sel, v) => { if (ultimo[sel] === v) return; ultimo[sel] = v; $(sel).textContent = v; };
+  poner("#h-metros", `${e.tiros} tiros`);
+  poner("#h-chatarra", String(e.juntada));
+  poner("#h-cap", `${e.n + 1}. ${e.nombre}`);
+  const i = Math.round(e.integridad);
+  if (ultimo.integridad !== i) {
+    ultimo.integridad = i;
+    $("#h-barra").style.width = `${i}%`;
+    $("#h-barra").className = i < 30 ? "mal" : i < 60 ? "medio" : "";
+  }
+  if (ultimo.pista !== e.pista) { ultimo.pista = e.pista; $("#h-pista").textContent = e.pista; }
+  const b = e.proximo === 1 ? "bocha b" : "bocha";
+  if (ultimo.bocha !== b) { ultimo.bocha = b; $("#h-bocha").className = b; }
+}
+
+function sonarPortal(e) {
+  const v = e.ev;
+  if (!v) return;
+  if (v.golpe > 13) efe.golpe(v.golpe);
+  if (v.pincho) efe.pincho();
+  if (v.chatarra) efe.chatarra();
+  if (v.portal) efe.portal();
+  if (v.boton) efe.resorte();
+  if (v.roto) efe.roto();
+  if (v.gano) {
+    efe.gano();
+    const d = cargar();
+    d.portales.hechos[e.n] = true;
+    d.portales.chatarra[e.n] = Math.max(d.portales.chatarra[e.n] || 0, e.juntada);
+    guardar();
   }
 }
 
@@ -307,9 +422,21 @@ function bucle(ahora) {
   let n = 0;
   while (sobra >= PASO && n < 5) {
     sobra -= PASO; n++;
-    if (!partida) continue;
+    if (!partida && !escena) continue;
     try {
       leerEntrada();
+      if (escena) {
+        escena.paso(entrada);
+        sonarPortal(escena);
+        if (escena.estado === "gano" && escena.cuenta > 70) {
+          const sig = escena.n + 1;
+          escena = null;
+          if (sig < NIVELES_P.length) portal(sig);
+          else { pintarNiveles(); mostrar("p-niveles"); }
+          break;
+        }
+        continue;
+      }
       partida.paso(entrada);
       sonar(partida);
       if (partida.estado === "gano" && partida.cuenta++ > 60) { terminar(partida); break; }
@@ -317,10 +444,13 @@ function bucle(ahora) {
       // Sin esto, un error adentro del bucle se repite sesenta veces por
       // segundo: la pantalla queda quieta y no se puede ni salir.
       if (fallas++ === 0) console.error("Dimensión Ñ se rompió:", e);
-      partida = null; alMenu();
+      partida = null; escena = null; alMenu();
     }
   }
-  if (partida) {
+  if (escena) {
+    dibujarEscenario(ctx, escena);
+    pintarHudPortal(escena);
+  } else if (partida) {
     dibujar(ctx, partida);
     pintarHud(partida);
   }
@@ -338,8 +468,10 @@ function bucle(ahora) {
   requestAnimationFrame(bucle);
   // Para poder auditar el juego desde afuera: las pruebas corren la fisica de
   // verdad, no una copia.
+  pintarNiveles();
   window.DN = {
     get partida() { return partida; }, get nivel() { return nivel; },
-    jugar, alMenu, entrada, VISTA, CAPITULOS, construirNivel,
+    get escena() { return escena; },
+    jugar, portal, alMenu, entrada, VISTA, CAPITULOS, construirNivel, NIVELES_P,
   };
 }

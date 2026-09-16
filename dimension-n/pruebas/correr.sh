@@ -18,6 +18,9 @@ echo
 echo "── el nivel: que se pueda terminar, jugado de verdad ─────────"
 node pruebas/nivel.mjs
 echo
+echo "── portales: que los 15 niveles se puedan pasar ──────────────"
+node pruebas/portales.mjs
+echo
 echo "── el teléfono: que entre y que el toque llegue ──────────────"
 node pruebas/movil.mjs
 echo

@@ -198,14 +198,67 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
 
 /* Pantalla baja: el teléfono acostado. El juego es vertical, pero si alguien
    lo gira igual tiene que poder volver al menú. */
+/* Pantalla baja: el teléfono acostado.
+ *
+ * El menú creció al agregarse el segundo modo y el cuarto botón quedó abajo
+ * del borde: la prueba de interfaz lo cazó como "tapado por -", que es lo que
+ * devuelve elementFromPoint cuando el punto está fuera de la vista. Acá se
+ * achica todo lo que no es un botón —el logo, la bajada, los márgenes— antes
+ * que los botones, que son lo único que hay que poder tocar. */
 @media (max-height: 470px) {
-  .caja { padding: 14px 16px; }
-  .logo { font-size: 30px; }
-  .bajada { font-size: 12.5px; margin-bottom: 12px; }
-  .grande { min-height: 44px; font-size: 14px; }
+  .caja { padding: 10px 14px; }
+  .logo { font-size: 24px; margin-bottom: 4px; }
+  .bajada { display: none; }
+  .botones { gap: 5px; }
+  .grande { min-height: 44px; font-size: 13px; padding: 6px 10px; }
+  .grande small { font-size: 10.5px; }
+  .record { margin: 8px 0 2px; font-size: 11.5px; }
+  .opcion { margin: 5px 0; font-size: 12px; }
+  #m-borrar { min-height: 30px; padding: 4px 10px; font-size: 11.5px; }
+  .niveles { grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px; }
+  .niv { min-height: 58px; }
   .bolita { width: 62px; height: 62px; min-height: 62px; bottom: 12px; }
-  .dialogo { margin-bottom: 78px; }
+  .dialogo, .hud-portal { margin-bottom: 78px; }
 }
+
+
+/* ───────────── el modo portales ─────────────
+   La lista de niveles y lo que el pozo no tiene. */
+.modo-p { border-color: #3a5a8a; background: linear-gradient(135deg, #1d2c46, #22374f); }
+.modo-p span:first-child { color: var(--cian); }
+.marca { margin-left: auto; font-size: 13px; color: var(--tenue); font-variant-numeric: tabular-nums; }
+
+.niveles {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  padding: 12px; overflow-y: auto; align-content: start;
+}
+.niv {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 74px; padding: 8px 4px; font-size: 11.5px; line-height: 1.25;
+  text-align: center;
+}
+.niv b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.niv small { color: var(--tenue); font-size: 10.5px; }
+.niv.hecho { border-color: var(--verde); }
+.niv.hecho b { color: var(--verde); }
+.niv:disabled { opacity: .4; }
+
+/* La barra de abajo del juego: de qué color sale el próximo portal, la pista
+   del nivel, y volver a empezar sin pasar por el menú — que en un puzzle se
+   usa todo el tiempo. */
+.hud-portal {
+  display: flex; align-items: center; gap: 8px;
+  margin: auto 10px 96px; padding: 6px 8px;
+  background: rgba(10,14,24,.85); border: 1px solid var(--borde); border-radius: 10px;
+}
+.hud-portal[hidden] { display: none; }
+.bocha {
+  width: 16px; height: 16px; border-radius: 50%; flex: none;
+  background: var(--cian); box-shadow: 0 0 10px currentColor;
+}
+.bocha.b { background: #ff9b3a; }
+.pista { flex: 1; font-size: 12px; color: var(--tenue); }
+#h-reintentar { min-height: 30px; padding: 2px 10px; font-size: 15px; }
 
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0e18'/><ellipse cx='8' cy='9' rx='6' ry='2.6' fill='%23a8e063'/><circle cx='8' cy='5' r='2.6' fill='%238fe3f5'/></svg>">
@@ -225,9 +278,14 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
       Lo único que hacés es <b>empujar</b> — la física hace el resto.</p>
     <div class="botones">
       <button id="m-seguir" class="grande" hidden>
-        <span>▼ Seguir</span><small id="m-seguir-sub">—</small>
+        <span>▼ Seguir cayendo</span><small id="m-seguir-sub">—</small>
       </button>
-      <button id="m-jugar" class="grande primario"><span>▶ Empezar de cero</span></button>
+      <button id="m-jugar" class="grande primario">
+        <span>▼ El pozo</span><small>104 metros, sin frenos</small>
+      </button>
+      <button id="m-portales" class="grande modo-p">
+        <span>◉ Portales</span><small id="m-portales-sub">15 niveles</small>
+      </button>
       <button id="m-como" class="grande"><span>? Cómo se juega</span></button>
     </div>
     <p class="record">Mejor caída: <b id="m-record">0 m</b></p>
@@ -267,14 +325,44 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
         para nada y por eso están.</dd>
     </dl>
 
+    <h3>El otro modo: portales</h3>
+    <p class="destacado">Quince niveles de pantalla fija. No hay reloj y no hay prisa:
+      todo lo que necesitás para resolverlo lo estás viendo.</p>
+    <dl>
+      <dt>Tocar</dt><dd>Un toque corto <b>dispara un portal</b> hacia donde tocaste.
+        El color del próximo está abajo a la izquierda, y va alternando: hacen falta
+        los dos para que sirvan.</dd>
+      <dt>Arrastrar</dt><dd>Mantener el dedo y moverlo es el reactor, igual que en el pozo.
+        Lo que distingue un disparo de un empujón es el gesto, no en qué mitad de la
+        pantalla lo hiciste.</dd>
+      <dt>Pared azul</dt><dd>Ahí se puede clavar un portal.</dd>
+      <dt>Pared negra</dt><dd>Ahí rebota el tiro. Buscá otra cara.</dd>
+      <dt>Techo y piso</dt><dd>Siempre se puede disparar. Es la salida cuando un tabique
+        te tapa todo lo demás: se tira arriba y se sale cayendo del otro lado.</dd>
+      <dt>Las placas</dt><dd>Se aprietan con <b>peso</b>, y vos tenés uno colgando de una
+        soga. Hay puertas que no se abren si no dejás a Tito parado encima mientras vos
+        vas a otro lado.</dd>
+      <dt>Caer rápido</dt><dd>Entrar a un portal cayendo de muy alto y salir por uno de
+        costado te dispara lejos. Es la mitad de los niveles.</dd>
+    </dl>
+
     <h3>De qué está hecho</h3>
-    <p>Los dos cuerpos son <b>ragdolls de verdad</b>: once puntos cada uno, unidos por
+    <p>Los dos modos comparten la misma física. Los cuerpos son <b>ragdolls de verdad</b>: once puntos cada uno, unidos por
       huesos que no se estiran, resueltos con integración de Verlet. No hay animaciones:
       cada pose que ves es la física resolviéndose. El dibujo sale de las mismas
       articulaciones, así que lo que se ve y lo que choca son siempre lo mismo.</p>
     <p>No hay una sola imagen ni un solo archivo de audio: todo es vectores y
       osciladores. Por eso el juego entero entra en un mail.</p>
   </div>
+</main>
+
+<!-- ───────────── elegir nivel de portales ───────────── -->
+<main id="p-niveles" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver class="chico">← Atrás</button><h2>Portales</h2>
+    <span class="marca" id="pn-cuenta">0/15</span>
+  </header>
+  <div id="pn-lista" class="niveles"></div>
 </main>
 
 <!-- ───────────── juego ───────────── -->
@@ -286,6 +374,13 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
     <div class="hud-dato chat"><span>◆</span><b id="h-chatarra">0</b></div>
   </div>
   <div id="h-cap" class="capitulo">—</div>
+
+  <!-- Lo que sólo existe en el modo portales. -->
+  <div id="h-portal" class="hud-portal" hidden>
+    <span class="bocha" id="h-bocha"></span>
+    <span id="h-pista" class="pista">—</span>
+    <button id="h-reintentar" class="chico">↺</button>
+  </div>
 
   <div id="dialogo" class="dialogo" hidden>
     <b id="d-quien">—</b><span id="d-que">—</span>
@@ -413,6 +508,12 @@ const M_verlet = (() => {
   // hace falta para ver un obstaculo y corregir. Solo limita la CAIDA: para los
   // costados y para arriba no hay tope, asi que un resorte sigue disparando.
   const TOPE_CAIDA = 7.6;
+  // Y en el modo portales es mucho más alto. Ahí el tope no protege nada —el
+  // nivel entra entero en la pantalla, no hay nada que "venga de abajo" que no
+  // se vea— y en cambio ARRUINA el juego: la gracia de un portal es que caer
+  // mucho y salir de costado te dispara lejos, y con la velocidad clavada en 7,6
+  // salís igual de lento hayas caído dos tiles o treinta.
+  const TOPE_PORTALES = 17;
 
   function punto(x, y, opc = {}) {
     return {
@@ -457,7 +558,7 @@ const M_verlet = (() => {
    * despues la restriccion del hueso lo arrastra a la nada. Con 22 px por cuadro
    * de tope, nada del nivel es mas fino que un paso.
    */
-  function integrar(puntos, gravedad = G, tope = 22) {
+  function integrar(puntos, gravedad = G, tope = 22, topeCaida = TOPE_CAIDA) {
     for (const p of puntos) {
       p.tocando = false; p.golpe = 0;
       if (p.fijo) { p.px = p.x; p.py = p.y; continue; }
@@ -469,7 +570,7 @@ const M_verlet = (() => {
       // cuadro le vuelve a sumar los 0,46 de la gravedad encima del tope y la
       // caida real termina siendo tope + gravedad: el numero del codigo y el
       // numero medido no coinciden, que es la peor clase de constante.
-      if (vy > TOPE_CAIDA) vy = TOPE_CAIDA;
+      if (vy > topeCaida) vy = topeCaida;
       p.px = p.x; p.py = p.y;
       p.x += vx;
       p.y += vy;
@@ -557,7 +658,7 @@ const M_verlet = (() => {
     return llego;
   }
 
-  return { G, ROCE_AIRE, VUELTAS, TOPE_CAIDA, punto, palo, vel, rapidez, teletransportar, empujar, integrar, resolver, contraCaja, contraSegmento };
+  return { G, ROCE_AIRE, VUELTAS, TOPE_CAIDA, TOPE_PORTALES, punto, palo, vel, rapidez, teletransportar, empujar, integrar, resolver, contraCaja, contraSegmento };
 })();
 
 /* ── cuerpo.js ── */
@@ -602,6 +703,8 @@ const M_cuerpo = (() => {
   // vectoriales: una cara de 20 píxeles es una mancha, y lo que se ganó
   // dibujando a Rilo con su guardapolvo se pierde si no se le ve.
   const ALTO = { rilo: 76, tito: 62 };
+  let escala = 1;
+
 
   /**
    * De las fracciones del dibujo a los once puntos del ragdoll.
@@ -612,7 +715,7 @@ const M_cuerpo = (() => {
    * el muñeco no se hunda en el piso.
    */
   function esqueleto(clave) {
-    const m = MEDIDAS[clave], H = ALTO[clave];
+    const m = MEDIDAS[clave], H = ALTO[clave] * escala;
     const hombro = m.cabeza * H;
     const cadera = hombro + m.torso * H;
     const rodilla = cadera + m.muslo * H;
@@ -637,6 +740,20 @@ const M_cuerpo = (() => {
       ["rodDer", w * 0.24, rodilla, 3.0, 1.5], ["pieDer", w * 0.28, pie, 3.4, 1.5],
     ];
   }
+
+  // LOS CUERPOS SE PUEDEN ACHICAR, y hace falta. En el pozo el pasillo mide 360
+  // y un Rilo de 76 píxeles se lee bien; en el modo portales el escenario es una
+  // grilla de tiles de 16 y el agujero de un portal mide dos: por ahí no entra
+  // un muñeco de cinco tiles. Achicándolos a dos tercios, el portal pasa a ser
+  // una puerta y no una ranura. Se cambia ANTES de crear los cuerpos: el
+  // esqueleto se recalcula acá y crearCuerpo lee el resultado.
+  function escalarCuerpos(k) {
+    if (k === escala) return;
+    escala = k;
+    ESQUELETOS.rilo = esqueleto("rilo");
+    ESQUELETOS.tito = esqueleto("tito");
+  }
+  const altoDe = (clave) => ALTO[clave] * escala;
 
   const ESQUELETOS = { rilo: esqueleto("rilo"), tito: esqueleto("tito") };
 
@@ -760,7 +877,7 @@ const M_cuerpo = (() => {
     const ax = p.cabeza.x - p.pecho.x, ay = p.cabeza.y - p.pecho.y;
     // El alto de la cabeza también sale de la medida: es la fracción del dibujo
     // por la altura del personaje, con un pelín de más para que tape el cuello.
-    const alto = MEDIDAS[c.pinta.clave].cabeza * ALTO[c.pinta.clave] * 1.06;
+    const alto = MEDIDAS[c.pinta.clave].cabeza * altoDe(c.pinta.clave) * 1.06;
     const an = alto * (img.width / img.height);
     ctx.save();
     ctx.translate(p.cabeza.x, p.cabeza.y);
@@ -934,7 +1051,989 @@ const M_cuerpo = (() => {
     ceja: false, baba: false,
   };
 
-  return { ALTO_CUERPO, crearCuerpo, ovillar, centro, registrarPiezas, hayPiezas, dibujarCuerpo, RILO, TITO };
+  return { escalarCuerpos, altoDe, ALTO_CUERPO, crearCuerpo, ovillar, centro, registrarPiezas, hayPiezas, dibujarCuerpo, RILO, TITO };
+})();
+
+/* ── mapas.js ── */
+const M_mapas = (() => {
+  // Los quince niveles del modo portales.
+  //
+  // LO ESCRIBE armar_mapas.py: no se edita a mano. Cada nivel son 22 por 34
+  // caracteres y una fila a la que le falte uno corre el mapa entero una columna
+  // a partir de ahí, sin que se note leyéndolo.
+  //
+  //   #  pared por la que SE PUEDE disparar     X  pared negra: rebota el tiro
+  //   S  dónde aparecen    E  la salida         ^  púas    ~  gelatina
+  //   =  resorte           o  chatarra          B  placa   D  puerta
+  const NIVELES_P = [
+    { nombre: "Del otro lado", pista: "Tocá para disparar. Hacen falta los dos portales.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X          #         X",
+      "X          #         X",
+      "X          #         X",
+      "X          #    o    X",
+      "X          #         X",
+      "X          #         X",
+      "X          #         X",
+      "X  S       #       E X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "El pozo", pista: "Las púas duelen aunque llegues despacio.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X         ###        X",
+      "X         ###        X",
+      "X         ###        X",
+      "X         ###   o    X",
+      "X         ###        X",
+      "X         ###        X",
+      "X  S      ###      E X",
+      "X####^^^^^###^^^^^###X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Impulso", pista: "Caer por un portal conserva la velocidad.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                 ###X",
+      "X                 #E#X",
+      "X                 ###X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X  S                 X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####     o    #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Techo", pista: "Si tirás al techo de allá, caés de allá.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X  S        #        X",
+      "X#####      #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #   o    X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #        X",
+      "X           #   E    X",
+      "X           #########X",
+      "X           #        X",
+      "X^^^^^^^^^^^#^^^^^^^^X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "El peso de Tito", pista: "La placa se aprieta con peso. Tenés uno colgando.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X         #          X",
+      "X         #          X",
+      "X         #          X",
+      "X         #          X",
+      "X         #     o    X",
+      "X         #          X",
+      "X         #  DDD     X",
+      "X  S   B  #  DDD   E X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Gelatina", pista: "Adentro del verde todo va en cámara lenta.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X  S                 X",
+      "X#####               X",
+      "X          #         X",
+      "X          #         X",
+      "X      ~~~~#         X",
+      "X      ~~~~#         X",
+      "X      ~~~~#         X",
+      "X      ~~~~#    o    X",
+      "X      ~~~~#         X",
+      "X          #         X",
+      "X          #         X",
+      "X          #         X",
+      "X          #         X",
+      "X          #         X",
+      "X          #         X",
+      "X          #     E   X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Pared negra", pista: "En lo negro el disparo rebota. Buscá otra cara.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X         XXX        X",
+      "X         XXX        X",
+      "X         XXX        X",
+      "X         XXX   o    X",
+      "X         XXX        X",
+      "X         ###        X",
+      "X         ###        X",
+      "X  S      ###      E X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Dos placas", pista: "Las dos a la vez, y sos uno solo.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X        #           X",
+      "X        #           X",
+      "X        #      o    X",
+      "X        #           X",
+      "X        #           X",
+      "X        #    DDDD   X",
+      "X        #    DDDD   X",
+      "X  S  B  #  B      E X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "El resorte", pista: "Lo verde te devuelve para arriba.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X  ##                X",
+      "X  #E                X",
+      "X  ###          o    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X  S                 X",
+      "X#######     ========X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Torre", pista: "Para arriba también se puede.", mapa: [
+      "X####################X",
+      "X               #####X",
+      "X               #####X",
+      "X  E            #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####     o    #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####          #####X",
+      "X#####     S    #####X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Vaivén", pista: "Entrás por una cara y salís por la de al lado.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X     #########      X",
+      "X     #########      X",
+      "X     #########      X",
+      "X     #########      X",
+      "X  S  #########      X",
+      "X#############       X",
+      "X             #      X",
+      "X      o      #      X",
+      "X             #      X",
+      "X             #      X",
+      "X             #  E   X",
+      "X             #######X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Las dos púas", pista: "No hay piso limpio en el medio.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X       ######       X",
+      "X       ######       X",
+      "X       ######       X",
+      "X       ######  o    X",
+      "X       ######       X",
+      "X       ######       X",
+      "X  S    ######     E X",
+      "X###^^^^######^^^^###X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "El desvío", pista: "La placa está en un pozo. Alguien tiene que caer ahí.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X  S                 X",
+      "X#########    #######X",
+      "X        #    #      X",
+      "X        #    #      X",
+      "X        #    #      X",
+      "X        #    #  o   X",
+      "X        #    #      X",
+      "X        #    #      X",
+      "X        ######      X",
+      "X        #    #      X",
+      "X   DDD  #    #      X",
+      "X   DDD  #  B #      X",
+      "X E DDD  ######      X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "Caída larga", pista: "Cuanto más alto entrás, más lejos salís.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X        S           X",
+      "X       #####        X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                   #X",
+      "X                   #X",
+      "X###                #X",
+      "X###                #X",
+      "X#E                 #X",
+      "X###                #X",
+      "X###                #X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+    { nombre: "El último puente", pista: "Todo junto. Suerte.", mapa: [
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X              XXXXXXX",
+      "X              XXXXXXX",
+      "X  S           XXXXXXX",
+      "X#######       XXXXXXX",
+      "X              XXXXXXX",
+      "X      ~~~~    XXXXXXX",
+      "X      ~~~~          X",
+      "X      ~~~~     o    X",
+      "X      ~~~~          X",
+      "X              ######X",
+      "X              ######X",
+      "X   #####      ######X",
+      "X   #####      ######X",
+      "X   #####   B  ######X",
+      "X   #####DDDD########X",
+      "X   #####DDDD        X",
+      "X   #####        E   X",
+      "X####################X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X                    X",
+      "X####################X",
+    ] },
+  ];
+
+  return { NIVELES_P };
+})();
+
+/* ── portales.js ── */
+const M_portales = (() => {
+  // El segundo modo: ragdoll con portales, en pantalla fija.
+  //
+  // LA DIFERENCIA CON LA CAIDA NO ES EL DECORADO, ES LA PREGUNTA. En el pozo la
+  // pregunta es "¿llego?" y se contesta con los reflejos. Acá es "¿por donde?" y
+  // se contesta parado, mirando: el nivel entra entero en la pantalla, no hay
+  // reloj, y hasta que no se te ocurre no pasa nada. Por eso los niveles son de
+  // grilla y estan escritos a mano uno por uno — un nivel de puzzle generado por
+  // codigo es un laberinto, no un puzzle.
+  //
+  // LOS DOS CUERPOS SE TELETRANSPORTAN JUNTOS, y esa es la decision de diseno que
+  // hace que esto funcione. Un ragdoll son once puntos: si cada uno cruzara el
+  // portal por su cuenta, el muneco quedaria con medio cuerpo de cada lado y los
+  // huesos —que no se estiran— lo harian pedazos o lo escupirian de vuelta. Se
+  // mira UN punto, el pecho de Rilo, y cuando ese cruza el plano del portal se
+  // mueve todo el conjunto de una: los once puntos de Rilo, los once de Tito y
+  // la soga. Se pierde el efecto de "medio cuerpo asomando", y se gana que el
+  // muneco salga entero del otro lado, que es lo unico que el jugador pide.
+
+  const { punto, palo, integrar, resolver, contraCaja, empujar, rapidez, G, TOPE_PORTALES } = M_verlet;
+  const { crearCuerpo, ovillar, centro, altoDe, RILO, TITO } = M_cuerpo;
+  const { NIVELES_P } = M_mapas;
+  const T = 16;              // el lado de un tile, en pixeles
+  const COLS = 22, FILAS = 34;
+  const ANCHO_P = COLS * T;  // 352
+  const ALTO_P = FILAS * T;  // 544
+
+  // Que es solido. 'D' (puerta) lo es hasta que se aprieta el boton.
+  const SOLIDOS = new Set(["#", "X", "D", "="]);
+  const PORTALABLE = new Set(["#"]);
+
+  // Los cuatro lados de un tile: normal hacia afuera, y el eje sobre el que se
+  // extiende el portal.
+  const LADOS = [
+    { nx: 0, ny: -1, ex: 1, ey: 0 },   // 0: cara de arriba
+    { nx: 0, ny: 1, ex: 1, ey: 0 },    // 1: cara de abajo
+    { nx: -1, ny: 0, ex: 0, ey: 1 },   // 2: cara izquierda
+    { nx: 1, ny: 0, ex: 0, ey: 1 },    // 3: cara derecha
+  ];
+
+  class Escenario {
+    constructor(n) {
+      this.n = n;
+      const def = NIVELES_P[n];
+      this.def = def;
+      this.nombre = def.nombre;
+      this.pista = def.pista;
+      this.rejilla = def.mapa.map((f) => f.padEnd(COLS, " ").slice(0, COLS).split(""));
+      this.chatarra = [];
+      this.botones = [];
+      this.salida = null;
+      let spawn = { x: ANCHO_P / 2, y: 60 };
+      for (let y = 0; y < FILAS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          const c = this.rejilla[y]?.[x] || " ";
+          const px = x * T + T / 2, py = y * T + T / 2;
+          if (c === "S") { spawn = { x: px, y: py }; this.rejilla[y][x] = " "; }
+          else if (c === "E") { this.salida = { x: px, y: py }; this.rejilla[y][x] = " "; }
+          else if (c === "o") { this.chatarra.push({ x: px, y: py, tomada: false }); this.rejilla[y][x] = " "; }
+          else if (c === "B") { this.botones.push({ x: px, y: py + T / 4, apretado: false, tx: x, ty: y }); }
+        }
+      }
+      this.spawn = spawn;
+      this.reiniciar();
+    }
+
+    reiniciar() {
+      const { x, y } = this.spawn;
+      // LA 'S' MARCA DONDE SE PARA, NO DONDE VA LA CABEZA. crearCuerpo pone la
+      // cabeza en el punto que se le da y el cuerpo cuelga para abajo, así que
+      // poniendo la S en el piso el muñeco nacía metido adentro del piso: el
+      // pecho quedaba un tile más abajo y los disparos salían desde adentro de
+      // la pared.
+      const alto = altoDe("rilo");
+      this.rilo = crearCuerpo(x - 8, y - alto * 0.92, RILO);
+      this.tito = crearCuerpo(x + 14, y - alto * 0.92 - 4, TITO);
+      this.soga = palo(this.rilo.p.pecho, this.tito.p.pecho,
+                       { largo: 56, tipo: "cuerda", rigidez: 1 });
+      this.mano = palo(this.rilo.p.manoIzq, this.tito.p.manoDer,
+                       { largo: 26, tipo: "cuerda", rigidez: 0.28 });
+      this.puntos = [...this.rilo.puntos, ...this.tito.puntos];
+      this.palos = [...this.rilo.palos, ...this.tito.palos, this.mano, this.soga];
+      this.portales = [null, null];     // 0 = azul, 1 = naranja
+      this.proximo = 0;
+      this.estado = "jugando";          // jugando | gano | roto
+      this.integridad = 100;
+      this.espera = 0;
+      this.cuenta = 0;
+      this.t = 0;
+      this.sacude = 0;
+      this.chispas = [];
+      this.tiros = 0;
+      this.enfriar = 0;
+      for (const c of this.chatarra) c.tomada = false;
+      for (const b of this.botones) b.apretado = false;
+      this.puertas(false);
+    }
+
+    tile(x, y) {
+      if (x < 0 || y < 0 || x >= COLS || y >= FILAS) return "X";
+      return this.rejilla[y][x];
+    }
+
+    /** ¿Ese tile frena? Un tile tapado por un portal deja pasar: es un agujero. */
+    solido(x, y) {
+      const c = this.tile(x, y);
+      if (!SOLIDOS.has(c)) return false;
+      for (const p of this.portales) {
+        if (!p) continue;
+        for (const [cx, cy] of p.celdas) if (cx === x && cy === y) return false;
+      }
+      return true;
+    }
+
+    puertas(abrir) {
+      for (let y = 0; y < FILAS; y++)
+        for (let x = 0; x < COLS; x++) {
+          if (this.def.mapa[y]?.[x] === "D") this.rejilla[y][x] = abrir ? "d" : "D";
+        }
+    }
+
+    // --- disparar un portal ------------------------------------------------
+    /**
+     * Tirar desde el pecho de Rilo hacia (mx, my) y poner ahí un portal.
+     *
+     * El rayo avanza de a poco y no tile por tile: con pasos de un tile, un
+     * disparo casi horizontal se saltea esquinas y el portal aparece del otro
+     * lado de la pared. Con pasos de un tercio de tile eso no pasa y sigue
+     * costando nada — son doscientas iteraciones en el peor caso.
+     */
+    disparar(mx, my) {
+      if (this.estado !== "jugando" || this.enfriar > 0) return false;
+      const o = centro(this.rilo);
+      let dx = mx - o.x, dy = my - o.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 4) return false;
+      dx /= d; dy /= d;
+      const paso = T / 3;
+      let px = o.x, py = o.y, antX = Math.floor(o.x / T), antY = Math.floor(o.y / T);
+      for (let i = 0; i < 400; i++) {
+        px += dx * paso; py += dy * paso;
+        const tx = Math.floor(px / T), ty = Math.floor(py / T);
+        if (tx === antX && ty === antY) continue;
+        if (this.solido(tx, ty) || this.tile(tx, ty) === "X") {
+          // Por qué cara entró: la que cambió respecto del tile anterior.
+          let lado = -1;
+          if (ty > antY) lado = 0; else if (ty < antY) lado = 1;
+          else if (tx > antX) lado = 2; else if (tx < antX) lado = 3;
+          if (lado < 0) return false;
+          if (!PORTALABLE.has(this.tile(tx, ty))) { this.fallo(px, py); return false; }
+          return this.poner(tx, ty, lado);
+        }
+        if (tx < -1 || ty < -1 || tx > COLS || ty > FILAS) return false;
+        antX = tx; antY = ty;
+      }
+      return false;
+    }
+
+    fallo(x, y) {
+      this.chispa(x, y, "#ff9b6b", 7);
+      this.enfriar = 8;
+    }
+
+    /**
+     * Poner el portal sobre esa cara, ocupando DOS tiles.
+     *
+     * Dos y no uno porque el muñeco mide casi cinco tiles: por un agujero de
+     * dieciséis píxeles no entra ni hecho bolita, y un portal por el que no se
+     * puede pasar es un chiste de mal gusto en un juego de portales.
+     */
+    poner(tx, ty, lado) {
+      const L = LADOS[lado];
+      const vecinos = [[tx + L.ex, ty + L.ey], [tx - L.ex, ty - L.ey]];
+      let par = null;
+      for (const [vx, vy] of vecinos) {
+        if (!PORTALABLE.has(this.tile(vx, vy))) continue;
+        // El vecino también tiene que tener aire del lado de la normal: si no,
+        // el portal quedaría medio tapado por la pared de al lado.
+        if (SOLIDOS.has(this.tile(vx + L.nx, vy + L.ny))) continue;
+        par = [vx, vy]; break;
+      }
+      if (!par) return false;
+      const celdas = [[tx, ty], par];
+      const otro = this.portales[1 - this.proximo];
+      if (otro && celdas.some(([a, b]) => otro.celdas.some(([c, d]) => a === c && b === d)))
+        return false;                 // no se pisan entre ellos
+      const cx = (celdas[0][0] + celdas[1][0]) / 2 * T + T / 2 + L.nx * (T / 2);
+      const cy = (celdas[0][1] + celdas[1][1]) / 2 * T + T / 2 + L.ny * (T / 2);
+      this.portales[this.proximo] = {
+        celdas, lado, nx: L.nx, ny: L.ny, ex: L.ex, ey: L.ey,
+        x: cx, y: cy, ang: Math.atan2(L.ny, L.nx), color: this.proximo,
+      };
+      this.proximo = 1 - this.proximo;
+      this.tiros++;
+      this.enfriar = 6;
+      this.chispa(cx, cy, this.portales[1 - this.proximo].color ? "#ff9b3a" : "#5ad2ff", 10);
+      return true;
+    }
+
+    // --- el cruce ----------------------------------------------------------
+    /**
+     * ¿El pecho cruzó un portal en este cuadro?
+     *
+     * Se mira el SEGMENTO entre la posición anterior y la de ahora, no la
+     * posición sola: a siete píxeles por cuadro, un portal de un píxel de grosor
+     * se atraviesa entre dos cuadros sin que ninguno de los dos lo vea.
+     */
+    cruce() {
+      const [a, b] = this.portales;
+      if (!a || !b) return;
+      const p = this.rilo.p.pecho;
+      for (const [entra, sale] of [[a, b], [b, a]]) {
+        // Distancia con signo al plano del portal, antes y ahora.
+        const d0 = (p.px - entra.x) * entra.nx + (p.py - entra.y) * entra.ny;
+        const d1 = (p.x - entra.x) * entra.nx + (p.y - entra.y) * entra.ny;
+        if (!(d0 > 0 && d1 <= 0)) continue;
+        // Y que haya cruzado por el agujero, no por al lado.
+        const t = d0 / (d0 - d1 || 1);
+        const ix = p.px + (p.x - p.px) * t, iy = p.py + (p.y - p.py) * t;
+        const lat = (ix - entra.x) * entra.ex + (iy - entra.y) * entra.ey;
+        if (Math.abs(lat) > T) continue;
+        this.teletransportar(entra, sale);
+        return;
+      }
+    }
+
+    teletransportar(entra, sale) {
+      // El giro: lo que hay que rotar para que lo que entraba por la cara de A
+      // salga por la de B. El +PI es porque se entra CONTRA la normal de A y se
+      // sale A FAVOR de la de B.
+      const giro = sale.ang - entra.ang + Math.PI;
+      const cos = Math.cos(giro), sin = Math.sin(giro);
+      const mover = (q) => {
+        const rx = q.x - entra.x, ry = q.y - entra.y;
+        const vx = q.x - q.px, vy = q.y - q.py;
+        q.x = sale.x + (rx * cos - ry * sin) + sale.nx * 2;
+        q.y = sale.y + (rx * sin + ry * cos) + sale.ny * 2;
+        q.px = q.x - (vx * cos - vy * sin);
+        q.py = q.y - (vx * sin + vy * cos);
+      };
+      for (const q of this.puntos) mover(q);
+      this.chispa(sale.x, sale.y, "#c8ff8a", 12);
+      this.sacude = 4;
+      this.paso_portal = true;
+    }
+
+    // --- un cuadro ---------------------------------------------------------
+    paso(ent) {
+      this.t++;
+      this.ev = { golpe: 0, pincho: false, chatarra: 0, portal: false, boton: false,
+                  gano: false, roto: false };
+      if (this.enfriar > 0) this.enfriar--;
+      if (this.sacude > 0) this.sacude *= 0.88;
+      if (this.estado !== "jugando") {
+        this.cuenta++;
+        this.fisica(ent, true);
+        if (this.estado === "roto" && this.cuenta > 70) this.reiniciar();
+        return;
+      }
+      this.paso_portal = false;
+      this.fisica(ent, false);
+      this.cruce();
+      if (this.paso_portal) this.ev.portal = true;
+      this.juntar();
+      this.revisarBotones();
+      this.revisarSalida();
+      if (this.integridad <= 0) {
+        this.integridad = 0; this.estado = "roto"; this.cuenta = 0;
+        this.sacude = 12; this.ev.roto = true;
+      }
+      for (const c of this.chispas) { c.x += c.vx; c.y += c.vy; c.vy += 0.18; c.vida--; }
+      this.chispas = this.chispas.filter((c) => c.vida > 0);
+    }
+
+    fisica(ent, suelto) {
+      const r = this.rilo;
+      if (!suelto && ent.mover) {
+        const a = ent.mover * 0.30;
+        for (const pt of r.puntos) empujar(pt, a * pt.masa, 0);
+        empujar(r.p.pecho, ent.mover * 0.45, 0);
+        r.mirada = ent.mover;
+      } else r.mirada += (0 - r.mirada) * 0.08;
+      const bol = suelto ? 0 : (ent.bolita ? 1 : 0);
+      ovillar(r, bol);
+      ovillar(this.tito, bol * 0.85);
+
+      this.peor = null;
+      if (this.espera > 0) this.espera--;
+      integrar(this.puntos, G, 22, TOPE_PORTALES);
+      for (let k = 0; k < 3; k++) {
+        resolver(this.palos, 2);
+        for (const p of this.puntos) this.chocarPunto(p);
+      }
+      resolver(this.palos, 7);
+      this.cobrar();
+    }
+
+    // SE PROBÓ ENDEREZARLOS Y NO ENTRÓ. Un muñeco tirado boca abajo tapa menos
+    // de lo que parece, pero igual se intentó pararlos mientras tocan el piso,
+    // con un par de empujones —la cabeza hacia arriba del eje, la cadera al
+    // revés—. Medido: con fuerza suave no se levanta nada (88° de inclinación,
+    // o sea tirado), y con fuerza suficiente para vencer a la gravedad quedan en
+    // 61° y el cuerpo se vuelve elástico: rebota, se estira y deja de parecer un
+    // cuerpo. Levantar un ragdoll de Verlet pide un controlador de equilibrio
+    // por articulación, no dos empujones, y eso es otro proyecto. Se quedan
+    // tirados, que además es lo que hace un ragdoll.
+
+    chocarPunto(p) {
+      const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T);
+      for (let y = ty - 1; y <= ty + 1; y++) {
+        for (let x = tx - 1; x <= tx + 1; x++) {
+          const c = this.tile(x, y);
+          if (c === "^") {
+            if (p.x > x * T - 2 && p.x < x * T + T + 2 && p.y > y * T && p.y < y * T + T + 2)
+              this.pegar(p, 0, 16);
+            continue;
+          }
+          if (c === "~") {
+            if (p.x > x * T && p.x < x * T + T && p.y > y * T && p.y < y * T + T) {
+              p.px = p.x - (p.x - p.px) * 0.82;
+              p.py = p.y - (p.y - p.py) * 0.76;
+            }
+            continue;
+          }
+          if (!this.solido(x, y)) continue;
+          const opc = c === "=" ? { rebote: 1.35, roce: 0.96 } : { roce: 0.90 };
+          const v = contraCaja(p, x * T, y * T, T, T, opc);
+          if (v > 0 && c !== "=") this.pegar(p, v);
+        }
+      }
+      // Los bordes del escenario, por si un portal escupe para afuera.
+      if (p.x < 2) { p.x = 2; p.px = p.x; }
+      if (p.x > ANCHO_P - 2) { p.x = ANCHO_P - 2; p.px = p.x; }
+      if (p.y > ALTO_P + 60) this.pegar(p, 0, 40);
+    }
+
+    pegar(p, v, extra = 0) {
+      if (this.estado !== "jugando") return;
+      // EL UMBRAL ES MÁS ALTO QUE EN EL POZO, y tiene que serlo: acá se cae a
+      // diecisiete píxeles por cuadro en vez de siete y medio, así que con el
+      // mismo número una caída normal —la que el puzzle te PIDE hacer— costaría
+      // media barra. Acá el daño es para los errores, no para el método.
+      if (v < 13 && !extra) return;
+      const parte = p.nombre === "cabeza" ? 1.6 : p.nombre.startsWith("pie") ? 0.5 : 1;
+      const d = (Math.max(0, v - 13) * 2.0 + extra) * parte;
+      if (!this.peor || d > this.peor.d) this.peor = { d, v, p, extra };
+    }
+
+    cobrar() {
+      const g = this.peor;
+      if (!g || this.espera > 0) return;
+      const bol = Math.max(0, this.rilo.bolita);
+      const d = g.d * (1 - bol * 0.66);
+      if (d < 0.6) return;
+      this.espera = 12;
+      this.integridad -= d;
+      this.ev.golpe = Math.max(this.ev.golpe, g.v);
+      if (g.extra >= 16) this.ev.pincho = true;
+      this.sacude = Math.min(10, this.sacude + d * 0.4);
+      this.chispa(g.p.x, g.p.y, g.extra ? "#ff6b6b" : "#ffd447", Math.min(8, 2 + d * 0.35));
+    }
+
+    chispa(x, y, color, n = 3) {
+      for (let i = 0; i < n; i++)
+        this.chispas.push({ x, y, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.8) * 2.4,
+                            color, vida: 16 + Math.random() * 14 });
+    }
+
+    juntar() {
+      for (const p of this.puntos)
+        for (const c of this.chatarra) {
+          if (c.tomada || Math.abs(c.x - p.x) > 12 || Math.abs(c.y - p.y) > 12) continue;
+          c.tomada = true; this.ev.chatarra++; this.chispa(c.x, c.y, "#7dffb0", 6);
+        }
+    }
+
+    /**
+     * Los botones se aprietan con PESO, y por eso Tito sirve para algo.
+     *
+     * Es el único lugar del juego donde el nieto colgando de la soga deja de ser
+     * un estorbo y pasa a ser la herramienta: hay puertas que no se abren si no
+     * lo dejás parado encima de la placa mientras vos vas a otro lado.
+     */
+    revisarBotones() {
+      let algo = false;
+      for (const b of this.botones) {
+        const antes = b.apretado;
+        b.apretado = this.puntos.some((p) =>
+          Math.abs(p.x - b.x) < T * 0.9 && p.y > b.y - T * 0.7 && p.y < b.y + T * 0.7);
+        if (b.apretado !== antes) algo = true;
+      }
+      if (!algo) return;
+      const abierto = this.botones.length > 0 && this.botones.every((b) => b.apretado);
+      this.puertas(abierto);
+      this.ev.boton = true;
+    }
+
+    /**
+     * ¿Llegó a la salida?
+     *
+     * VALE CUALQUIER PARTE DEL CUERPO, no el centro. Mirando sólo el centro —que
+     * es el punto medio entre el pecho y la cadera— hay que meter el torso
+     * adentro del tile de la salida, y con la salida apoyada en el piso eso pide
+     * enterrar medio muñeco en el suelo: el robot se quedaba a quince píxeles de
+     * una zona de dieciséis, tocándola con los pies. Si tocaste la puerta,
+     * llegaste.
+     */
+    revisarSalida() {
+      if (!this.salida) return;
+      const c = centro(this.rilo);
+      const toca = Math.hypot(c.x - this.salida.x, c.y - this.salida.y) < 26 ||
+                   this.rilo.puntos.some((p) =>
+                     Math.hypot(p.x - this.salida.x, p.y - this.salida.y) < 17);
+      if (!toca) return;
+      this.estado = "gano"; this.cuenta = 0; this.ev.gano = true;
+      this.chispa(this.salida.x, this.salida.y, "#c8ff8a", 18);
+    }
+
+    get juntada() { return this.chatarra.filter((c) => c.tomada).length; }
+  }
+
+  return { T, COLS, ANCHO_P, ALTO_P, LADOS, Escenario };
 })();
 
 /* ── nivel.js ── */
@@ -1474,6 +2573,7 @@ const M_dibujo = (() => {
   const { VISTA } = M_juego;
   const { paredEn, capituloEn, ANCHO } = M_nivel;
   const { dibujarCuerpo } = M_cuerpo;
+  const { T, COLS, FILAS, ANCHO_P, ALTO_P } = M_portales;
   // Las texturas del mundo. Se registran una vez desde main.js y se guardan ya
   // convertidas en patron: crear un CanvasPattern es caro y hacerlo por cuadro
   // —que era lo obvio— tira a la basura todo lo que se gano usando una textura.
@@ -1761,7 +2861,208 @@ const M_dibujo = (() => {
     ctx.restore();
   }
 
-  return { registrarTexturas, dibujar };
+  // ───────────── el modo portales ─────────────
+  //
+  // Pantalla fija: el nivel entero mide 352x544 y se centra en la vista. No hay
+  // cámara que seguir porque no hay nada fuera de la pantalla — es la mitad de
+  // lo que hace que sea un puzzle y no un juego de reflejos: todo lo que
+  // necesitás para resolverlo lo estás viendo.
+
+
+  const COLOR_PORTAL = ["#5ad2ff", "#ff9b3a"];
+
+  /**
+   * Dónde arranca el escenario dentro de la vista.
+   *
+   * Lo necesita también la entrada: un toque llega en coordenadas de pantalla y
+   * el disparo se hace en coordenadas del escenario. Sale de acá y no se
+   * recalcula allá, porque dos fórmulas iguales escritas en dos archivos son dos
+   * fórmulas que en algún momento dejan de ser iguales.
+   */
+  const origenEscenario = () => ({
+    x: Math.round((VISTA.ancho - ANCHO_P) / 2),
+    y: Math.round((VISTA.alto - ALTO_P) / 2),
+  });
+
+  function dibujarEscenario(ctx, esc) {
+    const { x: ox, y: oy } = origenEscenario();
+
+    const g = ctx.createLinearGradient(0, 0, 0, VISTA.alto);
+    g.addColorStop(0, "#141a2a"); g.addColorStop(1, "#0b0e18");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
+
+    ctx.save();
+    if (esc.sacude > 0.3)
+      ctx.translate((Math.random() - 0.5) * esc.sacude, (Math.random() - 0.5) * esc.sacude);
+    ctx.translate(ox, oy);
+
+    // El fondo de la sala, para que se vea dónde termina el nivel.
+    ctx.fillStyle = "#1b2336";
+    ctx.fillRect(0, 0, ANCHO_P, ALTO_P);
+
+    const tex = patron(ctx, "pared");
+    for (let y = 0; y < FILAS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const c = esc.rejilla[y][x];
+        const px = x * T, py = y * T;
+        if (c === "^") { pinchos(ctx, px, py); continue; }
+        if (c === "~") { gel(ctx, px, py, esc.t); continue; }
+        if (c === "=") { resorte(ctx, px, py); continue; }
+        if (c === "d") { puertaAbierta(ctx, px, py); continue; }
+        if (c !== "#" && c !== "X" && c !== "D") continue;
+        // Un tile tapado por un portal es un agujero: no se dibuja.
+        if (esc.portales.some((p) => p && p.celdas.some(([a, b]) => a === x && b === y))) continue;
+        if (c === "D") { ctx.fillStyle = "#7a4b2c"; ctx.fillRect(px, py, T, T);
+                         ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(px, py, T, 2); continue; }
+        // LA PARED NEGRA SE VE DISTINTA A PROPÓSITO: es la única regla del juego
+        // que no se puede deducir probando sin perder un tiro, así que tiene que
+        // leerse de un vistazo.
+        ctx.fillStyle = c === "X" ? "#11151f" : "#33405c";
+        ctx.fillRect(px, py, T, T);
+        if (c === "#" && tex) {
+          ctx.save(); ctx.globalAlpha = 0.45; ctx.beginPath();
+          ctx.rect(px, py, T, T); ctx.clip();
+          ctx.fillStyle = tex; ctx.fillRect(px, py, T, T); ctx.restore();
+        }
+        ctx.fillStyle = c === "X" ? "rgba(255,255,255,.05)" : "rgba(255,255,255,.16)";
+        ctx.fillRect(px, py, T, 2);
+        if (c === "X") {
+          // La pared negra necesita un contorno o se lee como un agujero en vez
+          // de como una pared, y es justo la que hay que reconocer de un vistazo:
+          // es la única que rebota el disparo.
+          ctx.strokeStyle = "rgba(120,140,180,.22)"; ctx.lineWidth = 1;
+          ctx.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
+        }
+      }
+    }
+
+    for (const b of esc.botones) placa(ctx, b);
+    if (esc.salida) salida(ctx, esc.salida, esc.t);
+    for (const c of esc.chatarra) if (!c.tomada) chatarra(ctx, c, esc.t);
+    for (const p of esc.portales) if (p) portalBoca(ctx, p, esc.t);
+
+    // La soga y los cuerpos, igual que en el pozo.
+    const a = esc.mano.a, b = esc.mano.b;
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    const cy = my + Math.max(0, esc.mano.largo - d) * 0.8 + 3;
+    const enCurva = (t) => ({
+      x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * mx + t * t * b.x,
+      y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * cy + t * t * b.y,
+    });
+    if (TEX.soga) {
+      const N = 8, gr = 3, anchoTex = TEX.soga.width / N;
+      let ant = enCurva(0);
+      for (let i = 1; i <= N; i++) {
+        const pt = enCurva(i / N);
+        const dx = pt.x - ant.x, dy = pt.y - ant.y;
+        const l = Math.hypot(dx, dy) || 1;
+        ctx.save(); ctx.translate(ant.x, ant.y); ctx.rotate(Math.atan2(dy, dx));
+        ctx.drawImage(TEX.soga, (i - 1) * anchoTex, 0, anchoTex, TEX.soga.height, 0, -gr / 2, l + 1, gr);
+        ctx.restore();
+        ant = pt;
+      }
+    } else {
+      ctx.strokeStyle = "#c98f4a"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(mx, cy, b.x, b.y); ctx.stroke();
+    }
+    dibujarCuerpo(ctx, esc.tito);
+    dibujarCuerpo(ctx, esc.rilo);
+
+    for (const c of esc.chispas) {
+      ctx.globalAlpha = Math.min(1, c.vida / 14);
+      ctx.fillStyle = c.color;
+      ctx.fillRect(c.x - 1.3, c.y - 1.3, 2.6, 2.6);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (esc.estado === "roto") {
+      ctx.fillStyle = "rgba(24,6,10,.45)";
+      ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
+    }
+  }
+
+  function pinchos(ctx, px, py) {
+    ctx.fillStyle = "#4a2028"; ctx.fillRect(px, py + T * 0.55, T, T * 0.45);
+    ctx.fillStyle = "#ff6b6b";
+    for (let i = 0; i < 2; i++) {
+      const x = px + (i + 0.5) * (T / 2);
+      ctx.beginPath();
+      ctx.moveTo(x - T / 4, py + T * 0.6); ctx.lineTo(x, py + T * 0.08);
+      ctx.lineTo(x + T / 4, py + T * 0.6); ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function gel(ctx, px, py, t) {
+    ctx.fillStyle = "rgba(120,220,150,.20)"; ctx.fillRect(px, py, T, T);
+    ctx.fillStyle = "rgba(160,255,190,.35)";
+    const r = 2 + Math.sin(t / 22 + px * 0.13 + py * 0.09) * 1.1;
+    ctx.beginPath(); ctx.arc(px + T / 2, py + T / 2, r, 0, 7); ctx.fill();
+  }
+
+  function resorte(ctx, px, py) {
+    ctx.fillStyle = "#1f3a2c"; ctx.fillRect(px, py + T * 0.5, T, T * 0.5);
+    ctx.strokeStyle = "#7dffb0"; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let x = 0; x <= T; x += 5) ctx.lineTo(px + x, py + T * 0.34 + (Math.floor(x / 5) % 2 ? 5 : 0));
+    ctx.stroke();
+  }
+
+  function puertaAbierta(ctx, px, py) {
+    ctx.strokeStyle = "rgba(200,140,90,.30)"; ctx.lineWidth = 1;
+    ctx.strokeRect(px + 0.5, py + 0.5, T - 1, T - 1);
+  }
+
+  function placa(ctx, b) {
+    const y = b.y + (b.apretado ? 3 : 0);
+    ctx.fillStyle = b.apretado ? "#7dffb0" : "#8fa0c0";
+    ctx.fillRect(b.x - T * 0.7, y - 3, T * 1.4, 4);
+    ctx.fillStyle = "rgba(0,0,0,.35)";
+    ctx.fillRect(b.x - T * 0.5, y + 1, T, 3);
+  }
+
+  function salida(ctx, s, t) {
+    const pulso = 1 + Math.sin(t / 16) * 0.08;
+    ctx.save(); ctx.translate(s.x, s.y);
+    const g = ctx.createRadialGradient(0, 0, 1, 0, 0, 16 * pulso);
+    g.addColorStop(0, "rgba(220,255,160,.95)");
+    g.addColorStop(0.6, "rgba(120,220,90,.5)");
+    g.addColorStop(1, "rgba(60,140,60,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(0, 0, 16 * pulso, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(220,255,150,.9)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 11, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+
+  /**
+   * La boca de un portal: un óvalo aplastado contra la pared.
+   *
+   * Se dibuja SOBRE la cara y girado con ella, así que el portal del techo se ve
+   * como una elipse ancha y el de una pared lateral como una alta. Es la única
+   * pista visual de por dónde se sale, y sin eso el jugador no sabe si va a
+   * salir volando para arriba o para el costado.
+   */
+  function portalBoca(ctx, p, t) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.ang + Math.PI / 2);
+    const col = COLOR_PORTAL[p.color];
+    const largo = T * 1.05, hondo = 5.5 + Math.sin(t / 14) * 0.7;
+    const g = ctx.createRadialGradient(0, 0, 1, 0, 0, largo);
+    g.addColorStop(0, "rgba(255,255,255,.95)");
+    g.addColorStop(0.45, col);
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(0, 0, largo, hondo, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 0, largo, hondo, 0, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+
+  return { registrarTexturas, dibujar, origenEscenario, dibujarEscenario };
 })();
 
 /* ── audio.js ── */
@@ -1938,8 +3239,14 @@ const M_guardado = (() => {
   // no arranca porque no pudo leer un record es peor que uno sin record.
 
   const LLAVE = "dimension-n.v1";
-  const vacio = () => ({ capitulo: 0, mejorProf: 0, mejorChatarra: 0,
-                         ajustes: { sonido: true } });
+  const vacio = () => ({
+    capitulo: 0, mejorProf: 0, mejorChatarra: 0,
+    // El modo portales guarda qué niveles están hechos. Se guarda un arreglo de
+    // booleanos y no "hasta cuál llegué": los quince se pueden jugar en el orden
+    // que uno quiera una vez abiertos, y un número no sabría representar eso.
+    portales: { hechos: [], chatarra: [] },
+    ajustes: { sonido: true },
+  });
   let cache = null;
 
   function cargar() {
@@ -1948,6 +3255,7 @@ const M_guardado = (() => {
       const c = localStorage.getItem(LLAVE);
       cache = c ? { ...vacio(), ...JSON.parse(c) } : vacio();
       cache.ajustes = { ...vacio().ajustes, ...(cache.ajustes || {}) };
+      cache.portales = { ...vacio().portales, ...(cache.portales || {}) };
     } catch (e) { cache = vacio(); }
     return cache;
   }
@@ -1967,7 +3275,10 @@ const M_guardado = (() => {
 
 const { construirNivel, CAPITULOS, FINAL } = M_nivel;
 const { Partida, VISTA } = M_juego;
-const { dibujar } = M_dibujo;
+const { dibujar, dibujarEscenario, origenEscenario } = M_dibujo;
+const { Escenario } = M_portales;
+const { NIVELES_P } = M_mapas;
+const { escalarCuerpos } = M_cuerpo;
 const { despertar, efe, sonando, zumbido, cargarVoces, voz } = M_audio;
 const { registrarPiezas } = M_cuerpo;
 const { registrarTexturas } = M_dibujo;
@@ -1979,8 +3290,15 @@ const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 
 let nivel = construirNivel();
-let partida = null;
+let partida = null;          // el pozo
+let escena = null;           // el modo portales
 let capSonando = -1;
+
+// LOS CUERPOS SON MÁS CHICOS EN PORTALES. En el pozo el pasillo mide 360 y un
+// Rilo de 76 píxeles se lee bien; acá el escenario es una grilla de tiles de
+// 16 y el agujero de un portal mide dos, así que un muñeco de cinco tiles no
+// pasa. Se cambia antes de armar los cuerpos, que es cuando se lee.
+const ESCALA_P = 0.66;
 
 // --- tamano --------------------------------------------------------------
 // EL ANCHO ES FIJO Y EL ALTO NO, y esa asimetria es la regla de justicia del
@@ -2030,8 +3348,18 @@ function aMundo(ev) {
   return { x: (ev.clientX - r.left) / esc, y: (ev.clientY - r.top) / esc };
 }
 
+// EN PORTALES, UN TOQUE CORTO DISPARA Y UN ARRASTRE EMPUJA, y se distinguen
+// por lo que hizo el dedo, no por dónde lo puso. Partir la pantalla en dos
+// mitades —una para apuntar y otra para moverse— era lo obvio y es peor: la
+// mitad de las paredes te quedan del lado que no dispara. Midiendo el gesto,
+// toda la pantalla sirve para las dos cosas.
+let tocado = null;
 lienzo.addEventListener("pointerdown", (ev) => {
   despertar();
+  if (escena && dedoDir === null) {
+    const m = aMundo(ev);
+    tocado = { id: ev.pointerId, t: performance.now(), x: m.x, y: m.y, arrastro: false };
+  }
   if (dedoDir === null) { dedoDir = ev.pointerId; entrada.dedoX = aMundo(ev).x; }
   else entrada.bolita = true;          // el segundo dedo hace bolita
   // setPointerCapture TIRA EXCEPCION si el puntero ya no esta activo —pasa si
@@ -2043,8 +3371,20 @@ lienzo.addEventListener("pointerdown", (ev) => {
 });
 lienzo.addEventListener("pointermove", (ev) => {
   if (ev.pointerId === dedoDir) entrada.dedoX = aMundo(ev).x;
+  if (tocado && ev.pointerId === tocado.id) {
+    const m = aMundo(ev);
+    if (Math.hypot(m.x - tocado.x, m.y - tocado.y) > 12) tocado.arrastro = true;
+  }
 });
 const soltar = (ev) => {
+  if (tocado && ev.pointerId === tocado.id) {
+    const rapido = performance.now() - tocado.t < 260;
+    if (rapido && !tocado.arrastro && escena) {
+      const o = origenEscenario();
+      escena.disparar(tocado.x - o.x, tocado.y - o.y);
+    }
+    tocado = null;
+  }
   if (ev.pointerId === dedoDir) { dedoDir = null; entrada.dedoX = null; }
   else entrada.bolita = false;
 };
@@ -2073,11 +3413,13 @@ addEventListener("keyup", (e) => { teclas[e.code] = false; });
 function leerEntrada() {
   if (teclas.ArrowLeft) entrada.mover = -1;
   else if (teclas.ArrowRight) entrada.mover = 1;
-  else if (entrada.dedoX != null && partida) {
+  else if (entrada.dedoX != null && (partida || escena)) {
+    const cuerpo = partida ? partida.rilo : escena.rilo;
+    const ref = partida ? entrada.dedoX : entrada.dedoX - origenEscenario().x;
     // El empujon es proporcional a la distancia, con un tope: a 70 px del
     // muneco ya esta a fondo. Con menos de 8 px se considera cero, porque si
     // no el dedo quieto encima del personaje lo hace vibrar.
-    const d = entrada.dedoX - partida.rilo.p.pecho.x;
+    const d = ref - cuerpo.p.pecho.x;
     entrada.mover = Math.abs(d) < 8 ? 0 : Math.max(-1, Math.min(1, d / 70));
   } else entrada.mover = 0;
   entrada.bolita = entrada.bolita || !!teclas.Space || !!teclas.ArrowDown;
@@ -2130,7 +3472,7 @@ function mostrar(id) {
 }
 
 function alMenu() {
-  partida = null;
+  partida = null; escena = null;
   const d = cargar();
   $("#m-record").textContent = `${d.mejorProf} m · ${d.mejorChatarra} chatarras`;
   $("#m-seguir").hidden = d.capitulo === 0;
@@ -2139,14 +3481,55 @@ function alMenu() {
 }
 
 function jugar(cap) {
+  escena = null;
+  escalarCuerpos(1);
   nivel = construirNivel();          // el nivel se rearma para limpiar portales y chatarra
   partida = new Partida(nivel);
   if (cap > 0) partida.reiniciarEn(cap);
   capSonando = -1;
+  $("#h-portal").hidden = true;
+  mostrar("p-juego");
+}
+
+// --- el modo portales ----------------------------------------------------
+function pintarNiveles() {
+  const d = cargar();
+  const cont = $("#pn-lista");
+  cont.innerHTML = "";
+  let hechos = 0;
+  NIVELES_P.forEach((n, i) => {
+    const hecho = !!d.portales.hechos[i];
+    if (hecho) hechos++;
+    // Se abre el siguiente al primero sin hacer: los puzzles se ordenan por lo
+    // que enseñan, y saltearse el que enseña a disparar al techo deja al
+    // jugador peleando con el que lo da por sabido.
+    const libre = i === 0 || !!d.portales.hechos[i - 1] || hecho;
+    const b = document.createElement("button");
+    b.className = "niv" + (hecho ? " hecho" : "");
+    b.disabled = !libre;
+    b.innerHTML = `<b>${i + 1}</b><small>${libre ? n.nombre : "🔒"}</small>` +
+                  (d.portales.chatarra[i] ? "<small>◆</small>" : "");
+    b.addEventListener("click", () => { despertar(); efe.menu(); portal(i); });
+    cont.append(b);
+  });
+  $("#pn-cuenta").textContent = `${hechos}/${NIVELES_P.length}`;
+  $("#m-portales-sub").textContent = `${hechos} de ${NIVELES_P.length} resueltos`;
+}
+
+function portal(n) {
+  partida = null;
+  escalarCuerpos(ESCALA_P);
+  escena = new Escenario(n);
+  $("#h-portal").hidden = false;
+  ultimo.pista = null; ultimo.bocha = null;
   mostrar("p-juego");
 }
 
 $("#m-jugar").addEventListener("click", () => { despertar(); efe.menu(); jugar(0); });
+$("#m-portales").addEventListener("click", () => {
+  despertar(); efe.menu(); pintarNiveles(); mostrar("p-niveles");
+});
+$("#h-reintentar").addEventListener("click", () => { efe.menu(); if (escena) escena.reiniciar(); });
 $("#m-seguir").addEventListener("click", () => { despertar(); efe.menu(); jugar(cargar().capitulo); });
 $("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); });
 $("#m-borrar").addEventListener("click", () => {
@@ -2160,7 +3543,13 @@ for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); alMenu(); });
 $("#f-otra").addEventListener("click", () => { efe.menu(); cortarFinal(); jugar(0); });
 $("#f-menu").addEventListener("click", () => { efe.menu(); cortarFinal(); alMenu(); });
-$("#j-salir").addEventListener("click", () => { efe.menu(); alMenu(); });
+$("#j-salir").addEventListener("click", () => {
+  efe.menu();
+  // Del modo portales se vuelve a la lista de niveles, no al menú: en un juego
+  // de puzzles se entra y se sale de un nivel veinte veces por sesión.
+  if (escena) { escena = null; pintarNiveles(); mostrar("p-niveles"); }
+  else alMenu();
+});
 
 // --- HUD -----------------------------------------------------------------
 // Se escribe SOLO cuando cambia. Esta funcion corre sesenta veces por segundo
@@ -2187,6 +3576,40 @@ function pintarHud(p) {
     poner("#d-que", que);
     if (ultimo.dQuien !== quien) { ultimo.dQuien = quien;
       $("#dialogo").dataset.quien = quien.toLowerCase(); }
+  }
+}
+
+function pintarHudPortal(e) {
+  const poner = (sel, v) => { if (ultimo[sel] === v) return; ultimo[sel] = v; $(sel).textContent = v; };
+  poner("#h-metros", `${e.tiros} tiros`);
+  poner("#h-chatarra", String(e.juntada));
+  poner("#h-cap", `${e.n + 1}. ${e.nombre}`);
+  const i = Math.round(e.integridad);
+  if (ultimo.integridad !== i) {
+    ultimo.integridad = i;
+    $("#h-barra").style.width = `${i}%`;
+    $("#h-barra").className = i < 30 ? "mal" : i < 60 ? "medio" : "";
+  }
+  if (ultimo.pista !== e.pista) { ultimo.pista = e.pista; $("#h-pista").textContent = e.pista; }
+  const b = e.proximo === 1 ? "bocha b" : "bocha";
+  if (ultimo.bocha !== b) { ultimo.bocha = b; $("#h-bocha").className = b; }
+}
+
+function sonarPortal(e) {
+  const v = e.ev;
+  if (!v) return;
+  if (v.golpe > 13) efe.golpe(v.golpe);
+  if (v.pincho) efe.pincho();
+  if (v.chatarra) efe.chatarra();
+  if (v.portal) efe.portal();
+  if (v.boton) efe.resorte();
+  if (v.roto) efe.roto();
+  if (v.gano) {
+    efe.gano();
+    const d = cargar();
+    d.portales.hechos[e.n] = true;
+    d.portales.chatarra[e.n] = Math.max(d.portales.chatarra[e.n] || 0, e.juntada);
+    guardar();
   }
 }
 
@@ -2271,9 +3694,21 @@ function bucle(ahora) {
   let n = 0;
   while (sobra >= PASO && n < 5) {
     sobra -= PASO; n++;
-    if (!partida) continue;
+    if (!partida && !escena) continue;
     try {
       leerEntrada();
+      if (escena) {
+        escena.paso(entrada);
+        sonarPortal(escena);
+        if (escena.estado === "gano" && escena.cuenta > 70) {
+          const sig = escena.n + 1;
+          escena = null;
+          if (sig < NIVELES_P.length) portal(sig);
+          else { pintarNiveles(); mostrar("p-niveles"); }
+          break;
+        }
+        continue;
+      }
       partida.paso(entrada);
       sonar(partida);
       if (partida.estado === "gano" && partida.cuenta++ > 60) { terminar(partida); break; }
@@ -2281,10 +3716,13 @@ function bucle(ahora) {
       // Sin esto, un error adentro del bucle se repite sesenta veces por
       // segundo: la pantalla queda quieta y no se puede ni salir.
       if (fallas++ === 0) console.error("Dimensión Ñ se rompió:", e);
-      partida = null; alMenu();
+      partida = null; escena = null; alMenu();
     }
   }
-  if (partida) {
+  if (escena) {
+    dibujarEscenario(ctx, escena);
+    pintarHudPortal(escena);
+  } else if (partida) {
     dibujar(ctx, partida);
     pintarHud(partida);
   }
@@ -2302,9 +3740,11 @@ function bucle(ahora) {
   requestAnimationFrame(bucle);
   // Para poder auditar el juego desde afuera: las pruebas corren la fisica de
   // verdad, no una copia.
+  pintarNiveles();
   window.DN = {
     get partida() { return partida; }, get nivel() { return nivel; },
-    jugar, alMenu, entrada, VISTA, CAPITULOS, construirNivel,
+    get escena() { return escena; },
+    jugar, portal, alMenu, entrada, VISTA, CAPITULOS, construirNivel, NIVELES_P,
   };
 }
 

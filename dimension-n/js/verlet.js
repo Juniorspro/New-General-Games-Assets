@@ -29,6 +29,12 @@ export const VUELTAS = 6;       // pasadas del solucionador de restricciones
 // hace falta para ver un obstaculo y corregir. Solo limita la CAIDA: para los
 // costados y para arriba no hay tope, asi que un resorte sigue disparando.
 export const TOPE_CAIDA = 7.6;
+// Y en el modo portales es mucho más alto. Ahí el tope no protege nada —el
+// nivel entra entero en la pantalla, no hay nada que "venga de abajo" que no
+// se vea— y en cambio ARRUINA el juego: la gracia de un portal es que caer
+// mucho y salir de costado te dispara lejos, y con la velocidad clavada en 7,6
+// salís igual de lento hayas caído dos tiles o treinta.
+export const TOPE_PORTALES = 17;
 
 export function punto(x, y, opc = {}) {
   return {
@@ -73,7 +79,7 @@ export function empujar(p, fx, fy) {
  * despues la restriccion del hueso lo arrastra a la nada. Con 22 px por cuadro
  * de tope, nada del nivel es mas fino que un paso.
  */
-export function integrar(puntos, gravedad = G, tope = 22) {
+export function integrar(puntos, gravedad = G, tope = 22, topeCaida = TOPE_CAIDA) {
   for (const p of puntos) {
     p.tocando = false; p.golpe = 0;
     if (p.fijo) { p.px = p.x; p.py = p.y; continue; }
@@ -85,7 +91,7 @@ export function integrar(puntos, gravedad = G, tope = 22) {
     // cuadro le vuelve a sumar los 0,46 de la gravedad encima del tope y la
     // caida real termina siendo tope + gravedad: el numero del codigo y el
     // numero medido no coinciden, que es la peor clase de constante.
-    if (vy > TOPE_CAIDA) vy = TOPE_CAIDA;
+    if (vy > topeCaida) vy = topeCaida;
     p.px = p.x; p.py = p.y;
     p.x += vx;
     p.y += vy;

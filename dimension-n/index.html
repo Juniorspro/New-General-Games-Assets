@@ -24,9 +24,14 @@
       Lo único que hacés es <b>empujar</b> — la física hace el resto.</p>
     <div class="botones">
       <button id="m-seguir" class="grande" hidden>
-        <span>▼ Seguir</span><small id="m-seguir-sub">—</small>
+        <span>▼ Seguir cayendo</span><small id="m-seguir-sub">—</small>
       </button>
-      <button id="m-jugar" class="grande primario"><span>▶ Empezar de cero</span></button>
+      <button id="m-jugar" class="grande primario">
+        <span>▼ El pozo</span><small>104 metros, sin frenos</small>
+      </button>
+      <button id="m-portales" class="grande modo-p">
+        <span>◉ Portales</span><small id="m-portales-sub">15 niveles</small>
+      </button>
       <button id="m-como" class="grande"><span>? Cómo se juega</span></button>
     </div>
     <p class="record">Mejor caída: <b id="m-record">0 m</b></p>
@@ -66,14 +71,44 @@
         para nada y por eso están.</dd>
     </dl>
 
+    <h3>El otro modo: portales</h3>
+    <p class="destacado">Quince niveles de pantalla fija. No hay reloj y no hay prisa:
+      todo lo que necesitás para resolverlo lo estás viendo.</p>
+    <dl>
+      <dt>Tocar</dt><dd>Un toque corto <b>dispara un portal</b> hacia donde tocaste.
+        El color del próximo está abajo a la izquierda, y va alternando: hacen falta
+        los dos para que sirvan.</dd>
+      <dt>Arrastrar</dt><dd>Mantener el dedo y moverlo es el reactor, igual que en el pozo.
+        Lo que distingue un disparo de un empujón es el gesto, no en qué mitad de la
+        pantalla lo hiciste.</dd>
+      <dt>Pared azul</dt><dd>Ahí se puede clavar un portal.</dd>
+      <dt>Pared negra</dt><dd>Ahí rebota el tiro. Buscá otra cara.</dd>
+      <dt>Techo y piso</dt><dd>Siempre se puede disparar. Es la salida cuando un tabique
+        te tapa todo lo demás: se tira arriba y se sale cayendo del otro lado.</dd>
+      <dt>Las placas</dt><dd>Se aprietan con <b>peso</b>, y vos tenés uno colgando de una
+        soga. Hay puertas que no se abren si no dejás a Tito parado encima mientras vos
+        vas a otro lado.</dd>
+      <dt>Caer rápido</dt><dd>Entrar a un portal cayendo de muy alto y salir por uno de
+        costado te dispara lejos. Es la mitad de los niveles.</dd>
+    </dl>
+
     <h3>De qué está hecho</h3>
-    <p>Los dos cuerpos son <b>ragdolls de verdad</b>: once puntos cada uno, unidos por
+    <p>Los dos modos comparten la misma física. Los cuerpos son <b>ragdolls de verdad</b>: once puntos cada uno, unidos por
       huesos que no se estiran, resueltos con integración de Verlet. No hay animaciones:
       cada pose que ves es la física resolviéndose. El dibujo sale de las mismas
       articulaciones, así que lo que se ve y lo que choca son siempre lo mismo.</p>
     <p>No hay una sola imagen ni un solo archivo de audio: todo es vectores y
       osciladores. Por eso el juego entero entra en un mail.</p>
   </div>
+</main>
+
+<!-- ───────────── elegir nivel de portales ───────────── -->
+<main id="p-niveles" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver class="chico">← Atrás</button><h2>Portales</h2>
+    <span class="marca" id="pn-cuenta">0/15</span>
+  </header>
+  <div id="pn-lista" class="niveles"></div>
 </main>
 
 <!-- ───────────── juego ───────────── -->
@@ -85,6 +120,13 @@
     <div class="hud-dato chat"><span>◆</span><b id="h-chatarra">0</b></div>
   </div>
   <div id="h-cap" class="capitulo">—</div>
+
+  <!-- Lo que sólo existe en el modo portales. -->
+  <div id="h-portal" class="hud-portal" hidden>
+    <span class="bocha" id="h-bocha"></span>
+    <span id="h-pista" class="pista">—</span>
+    <button id="h-reintentar" class="chico">↺</button>
+  </div>
 
   <div id="dialogo" class="dialogo" hidden>
     <b id="d-quien">—</b><span id="d-que">—</span>

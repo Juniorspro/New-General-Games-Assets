@@ -39,6 +39,8 @@ import { MEDIDAS } from "./medidas.js";
 // vectoriales: una cara de 20 píxeles es una mancha, y lo que se ganó
 // dibujando a Rilo con su guardapolvo se pierde si no se le ve.
 const ALTO = { rilo: 76, tito: 62 };
+let escala = 1;
+
 
 /**
  * De las fracciones del dibujo a los once puntos del ragdoll.
@@ -49,7 +51,7 @@ const ALTO = { rilo: 76, tito: 62 };
  * el muñeco no se hunda en el piso.
  */
 function esqueleto(clave) {
-  const m = MEDIDAS[clave], H = ALTO[clave];
+  const m = MEDIDAS[clave], H = ALTO[clave] * escala;
   const hombro = m.cabeza * H;
   const cadera = hombro + m.torso * H;
   const rodilla = cadera + m.muslo * H;
@@ -74,6 +76,20 @@ function esqueleto(clave) {
     ["rodDer", w * 0.24, rodilla, 3.0, 1.5], ["pieDer", w * 0.28, pie, 3.4, 1.5],
   ];
 }
+
+// LOS CUERPOS SE PUEDEN ACHICAR, y hace falta. En el pozo el pasillo mide 360
+// y un Rilo de 76 píxeles se lee bien; en el modo portales el escenario es una
+// grilla de tiles de 16 y el agujero de un portal mide dos: por ahí no entra
+// un muñeco de cinco tiles. Achicándolos a dos tercios, el portal pasa a ser
+// una puerta y no una ranura. Se cambia ANTES de crear los cuerpos: el
+// esqueleto se recalcula acá y crearCuerpo lee el resultado.
+export function escalarCuerpos(k) {
+  if (k === escala) return;
+  escala = k;
+  ESQUELETOS.rilo = esqueleto("rilo");
+  ESQUELETOS.tito = esqueleto("tito");
+}
+export const altoDe = (clave) => ALTO[clave] * escala;
 
 const ESQUELETOS = { rilo: esqueleto("rilo"), tito: esqueleto("tito") };
 
@@ -197,7 +213,7 @@ function cabezaImg(ctx, c, img) {
   const ax = p.cabeza.x - p.pecho.x, ay = p.cabeza.y - p.pecho.y;
   // El alto de la cabeza también sale de la medida: es la fracción del dibujo
   // por la altura del personaje, con un pelín de más para que tape el cuello.
-  const alto = MEDIDAS[c.pinta.clave].cabeza * ALTO[c.pinta.clave] * 1.06;
+  const alto = MEDIDAS[c.pinta.clave].cabeza * altoDe(c.pinta.clave) * 1.06;
   const an = alto * (img.width / img.height);
   ctx.save();
   ctx.translate(p.cabeza.x, p.cabeza.y);
