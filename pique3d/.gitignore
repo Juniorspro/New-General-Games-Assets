@@ -1,0 +1,12 @@
+node_modules/
+
+# Lo que devuelve Rezona en crudo NO va al repo: 299 MB de GLB con 990.000
+# triangulos cada uno y 25 MB de PNG de 1024. Al repo va solo lo que el juego
+# usa de verdad — glb/ optimizado, tex/ en WebP y snd/ — que son 3,3 MB.
+# Lo crudo se vuelve a bajar con `python3 generar_assets.py` y los task_id
+# quedan anotados en assets/pedidos.json.
+assets/m3d_*.glb
+assets/*-g1.png
+assets/snd_*.mp3
+assets/heroe_rig*.glb
+assets/p[0-9]-g1.mp3

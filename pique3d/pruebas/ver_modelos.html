@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#1a1c26}canvas{display:block}</style></head><body>
+<script type="module">
+import * as THREE from "../vendor/three.module.min.js";
+import { GLTFLoader } from "../vendor/GLTFLoader.js";
+const MODELOS = ["heroe","bolo","caracol","aleta","erizo","fauces","conducto","yunque","coloso","moneda","resorte"];
+const S = 240, COLS = 4, FILAS = Math.ceil(MODELOS.length / COLS);
+// preserveDrawingBuffer: sin esto el navegador limpia el canvas entre dibujos
+// y la captura sale con UN solo modelo, el ultimo. No es un problema del
+// modelo ni del scissor: es que el buffer ya no esta cuando se saca la foto.
+const ren = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+ren.setSize(COLS * S, FILAS * S); ren.setPixelRatio(1);
+ren.outputColorSpace = THREE.SRGBColorSpace;
+ren.toneMapping = THREE.ACESFilmicToneMapping; ren.toneMappingExposure = 1.15;
+ren.shadowMap.enabled = true; document.body.appendChild(ren.domElement);
+const esc = new THREE.Scene(); esc.background = new THREE.Color("#252838");
+esc.add(new THREE.HemisphereLight("#cfe4ff", "#40342a", 1.6));
+const sol = new THREE.DirectionalLight("#fff0d8", 2.6); sol.position.set(3, 6, 5); esc.add(sol);
+const relleno = new THREE.DirectionalLight("#89c6ff", 0.9); relleno.position.set(-4, 2, 3); esc.add(relleno);
+const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+const cargador = new GLTFLoader();
+const cargar = (u) => new Promise((ok, mal) => cargador.load(u, ok, undefined, mal));
+window.__listo = false;
+(async () => {
+  ren.setScissorTest(true); ren.autoClear = false;
+  ren.setClearColor("#252838", 1); ren.clear();
+  for (let i = 0; i < MODELOS.length; i++) {
+    const g = await cargar(`../assets/glb/m3d_${MODELOS[i]}-g1.glb`);
+    const raiz = g.scene;
+    // Normalizar: el modelo llega con escala y origen cualquiera. Se centra y
+    // se escala a 1 unidad de alto para que todos se vean comparables.
+    const caja = new THREE.Box3().setFromObject(raiz);
+    const tam = caja.getSize(new THREE.Vector3()), centro = caja.getCenter(new THREE.Vector3());
+    const k = 1 / Math.max(tam.x, tam.y, tam.z);
+    raiz.scale.setScalar(k); raiz.position.sub(centro.multiplyScalar(k));
+    const grupo = new THREE.Group(); grupo.add(raiz); grupo.rotation.y = 0.5; esc.add(grupo);
+    cam.position.set(0, 0.25, 3.0); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
+    const c = i % COLS, f = Math.floor(i / COLS);
+    const x = c * S, y = (FILAS - 1 - f) * S;
+    ren.setViewport(x, y, S, S); ren.setScissor(x, y, S, S);
+    ren.render(esc, cam);
+    esc.remove(grupo);
+  }
+  window.__listo = true;
+})();
+</script></body></html>

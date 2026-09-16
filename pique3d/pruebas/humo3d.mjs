@@ -1,0 +1,24 @@
+import { chromium } from "playwright";
+const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
+  args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const pg = await nav.newPage({ viewport: { width: 1280, height: 720 } });
+const err = [];
+pg.on("pageerror", e => err.push("pageerror: " + e.message));
+pg.on("console", m => { if (m.type() === "error") err.push("consola: " + m.text()); });
+await pg.goto("http://127.0.0.1:8801/index.html");
+await pg.waitForFunction(() => !!window.PIQUE3D, { timeout: 60000 });
+console.log("cargo. modelos que faltan:", await pg.evaluate(() => window.PIQUE3D.faltan));
+await pg.screenshot({ path: "/tmp/t3/01-inicio.png" });
+await pg.click("#btn-jugar");
+await pg.waitForSelector("#p-mapa:not([hidden])");
+await pg.screenshot({ path: "/tmp/t3/02-mapa.png" });
+await pg.click('[data-nivel="1-1"]');
+await pg.waitForSelector("#p-juego:not([hidden])", { timeout: 40000 });
+await pg.waitForTimeout(2500);
+console.log("estado:", await pg.evaluate(() => window.PIQUE3D.partida?.estado));
+console.log("hud:", await pg.textContent("#hud-gen"));
+console.log("render:", await pg.evaluate(() => { const i = window.PIQUE3D.ren.info;
+  return { llamadas: i.render.calls, triangulos: i.render.triangles, texturas: i.memory.textures, geos: i.memory.geometries }; }));
+await pg.screenshot({ path: "/tmp/t3/03-juego.png" });
+console.log("errores:", err.length ? err.slice(0,6) : "ninguno");
+await nav.close();
