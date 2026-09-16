@@ -1,0 +1,115 @@
+# Pique — corredor pixel art con sprites generados y niveles comprobados
+
+Un juego de un botón: el personaje corre solo y lo único que hacés es saltar.
+24 niveles en 6 mundos, **ninguno dibujado a mano**, **ninguno publicado sin
+haberse jugado entero por dentro primero** y **ninguna moneda fuera de alcance**.
+
+## Lo medido
+
+Todo sale de `./pruebas/correr.sh`.
+
+| | |
+|---|---|
+| niveles validados | **72/72** (24 × 3 colores) |
+| caminos del validador rehechos en el juego real | **72/72** |
+| **monedas fuera de alcance** | **0 de 5.262** |
+| el archivo único, desde `file://` | **11/11** |
+| celular, acostado y parado | **22/22** |
+| cuadros de la animación de correr | **16** |
+| peor generación de nivel | 1136 ms · típico ~140 ms |
+| archivo único | **2,0 MB** |
+
+## El bug que había y que estaba bien reclamado
+
+Había lugares inaccesibles, y era grave: **59 de 539 monedas (10,9%) no se
+podían agarrar, y en el 5-3 era el 52%.** El validador probaba que EXISTE un
+camino al mástil, y eso no es lo mismo que probar que se alcanza todo: la
+búsqueda en haz se queda con los estados que llegaron más a la derecha, así que
+nunca explora los rincones que el camino óptimo no pisa.
+
+Dos arreglos fallaron antes del que anduvo, y los dos por resolverlo al revés
+—poner monedas y después preguntarse si se alcanzan:
+
+1. Un BFS cuadro a cuadro con dedup por estado. **Colapsó en catorce estados**:
+   el jugador avanza 2,55 px por cuadro, el hijo cae en el mismo casillero que
+   el padre y se descarta por repetido. Como el conjunto quedaba vacío, el paso
+   siguiente **borró las 539 monedas de los 24 niveles** sin que nada avisara.
+   Un arreglo que destruye contenido en silencio es peor que el bug.
+2. Un haz por diversidad. Andaba, pero tardaba 2,7 s por nivel y todavía
+   borraba 152 monedas.
+
+**La vuelta correcta es al revés:** `validar` ya devuelve el conjunto de celdas
+que ocuparon estados *realmente simulados*. Todo lo que está ahí es alcanzable
+por construcción, y no cuesta nada porque ya se calculó. Las monedas se siembran
+**solo ahí**. Es una subestimación del alcance real, que es la dirección segura.
+Y queda mejor de jugar: las monedas siguen el recorrido, que es para lo que
+sirven en un juego de correr.
+
+## Los sprites
+
+17 hojas generadas con IA, **todas 4×4 = 16 cuadros**, una hoja por movimiento.
+
+**Por qué 4×4 y no 3×3:** el servidor que las genera **ignora el tamaño pedido y
+entrega 1024×1024 siempre**. 1024 no divide en 3 —341,33 px por celda— así que
+toda hoja de 3×3 sale con las celdas corridas. Se midió: de 17 hojas pedidas en
+3×3, **16 fallaron por esto**. 1024/4 = 256 exacto, y de paso 16 cuadros son casi
+el doble de suaves que 9.
+
+Cada hoja pasa por un **control numérico** antes de entrar al juego
+(`check_spritesheet.py`): mide poses repetidas y líneas de división dibujadas en
+el borde de las celdas. Son las dos fallas que no se ven en una miniatura y
+arruinan la animación. En la primera tanda **7 de 17 fallaron** —poses repetidas
+o divisores dibujados— y se rehicieron reforzando las prohibiciones del prompt,
+que es lo que los modelos obedecen mejor que las descripciones.
+
+Las criaturas son **originales**: cumplen roles clásicos del género pero ninguna
+copia a un personaje de nadie, y cada prompt niega el parecido explícitamente
+(`NOT a plumber`, `no moustache`, `not a turtle`, `no cap`).
+
+## Cómo se ve
+
+El juego se dibuja en un lienzo de **320×180** y se estira a la pantalla con el
+suavizado apagado: un píxel es un píxel. El héroe se dibuja a 30 px de alto
+—casi dos tiles— sobre una caja de colisión de 11×15, que es la que validó los
+niveles. El sprite más grande que la caja es lo que hacen todos los
+plataformeros: la caja se siente justa y el personaje se ve grande.
+
+## Correr
+
+```sh
+python3 -m http.server 8802 --bind 127.0.0.1
+./pruebas/correr.sh
+python3 empaquetar.py             # -> pique-en-un-archivo.html
+python3 generar_sprites.py estado
+```
+
+## Trampas ya pagadas
+
+1. **El tamaño pedido se ignora.** Ver arriba: 16 de 17 hojas al tacho.
+2. **La textura del terreno a escala equivocada.** La imagen mide 256 y el tile
+   16: usada tal cual, una copia cubre dieciséis tiles y el suelo se ve como
+   cuatro franjas gigantes. Se achica a 32 y repite cada dos tiles.
+3. **La textura viene en capas.** El tile de llanura es "pasto sobre tierra", y
+   repetido pone una franja de pasto cada dos tiles, que se lee como sándwich.
+   Se usa el tercio de abajo —el material puro— y el borde de pasto se dibuja
+   aparte, solo donde hay cielo encima.
+4. **`source-atop` tiñe todo el lienzo, no el sprite.** La moneda de color
+   quedaba adentro de un cuadrado rosa opaco. Se tiñe en un lienzo aparte.
+5. **El recorte del sprite se mide sobre TODOS los cuadros juntos.** Recortando
+   cuadro a cuadro, el bicho se mueve un píxel para los costados en cada paso.
+6. **Escritura concurrente sobre el mismo JSON.** Un proceso pidiendo y otro
+   bajando: el que guarda último pisa lo del otro. Se perdieron nueve pedidos ya
+   pagados. Se relee el archivo justo antes de escribir.
+7. **El prompt corta a los 2000 caracteres.** Al reforzar el contrato de grilla,
+   el del héroe se pasó y el pedido fue rechazado. Se recortó la descripción,
+   **no las negaciones**: son las que evitan el parecido.
+8. **`imageSmoothingEnabled` se reactiva al cambiar el tamaño del lienzo.** Hay
+   que volver a apagarlo o los sprites salen lavados sin que nada avise.
+
+## Lo que falta
+
+| pendiente | qué sería |
+|---|---|
+| Música | los efectos son sintetizados; las pistas grabadas están en `pique3d/assets/snd/` y se pueden traer |
+| Hojas extra | correr hacia atrás, aterrizaje, y una de daño |
+| Generar en un *worker* | el peor caso de 1136 ms bloquea el hilo |

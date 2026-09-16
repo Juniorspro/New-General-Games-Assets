@@ -1,0 +1,22 @@
+import { chromium } from "playwright";
+const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const pg = await nav.newPage({ viewport: { width: 1100, height: 700 } });
+const err = [];
+pg.on("pageerror", e => err.push("pageerror: " + e.message));
+pg.on("console", m => { if (m.type()==="error") err.push("consola: " + m.text().slice(0,140)); });
+await pg.goto("http://127.0.0.1:8802/index.html");
+await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
+console.log("hojas que faltan:", await pg.evaluate(() => window.PIQUE.faltan));
+await pg.click("#btn-jugar"); await pg.waitForSelector("#p-mapa:not([hidden])");
+await pg.click('[data-nivel="1-1"]');
+await pg.waitForSelector("#p-juego:not([hidden])", { timeout: 30000 });
+await pg.waitForTimeout(1500);
+console.log("estado:", await pg.evaluate(() => window.PIQUE.partida?.estado));
+console.log("hud:", await pg.textContent("#hud-gen"));
+await pg.screenshot({ path: "/tmp/p2/01-juego.png" });
+// un rato mas de juego, saltando
+await pg.keyboard.down("Space"); await pg.waitForTimeout(180); await pg.keyboard.up("Space");
+await pg.waitForTimeout(600);
+await pg.screenshot({ path: "/tmp/p2/02-juego.png" });
+console.log("errores:", err.length ? err.slice(0,5) : "ninguno");
+await nav.close();

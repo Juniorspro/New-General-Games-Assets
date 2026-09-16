@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#11131c">
+<title>Pique — un corredor pixel art</title>
+<meta name="description" content="Un corredor 2D con niveles generados por código y comprobados uno por uno antes de dejarte jugarlos.">
+<link rel="stylesheet" href="css/pique.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23d8402f'/><circle cx='8' cy='6' r='3' fill='%23f0c090'/><rect x='5' y='9' width='6' height='5' rx='1' fill='%232b4a8f'/></svg>">
+</head>
+<body>
+
+<!-- ───────────── inicio ───────────── -->
+<main id="p-carga" class="pantalla centrado">
+  <div class="caja"><div class="girador" aria-hidden="true"></div>
+  <h2>Pique</h2><p id="carga-detalle" class="bajada">Arrancando…</p></div>
+</main>
+
+<main id="p-inicio" class="pantalla centrado" hidden>
+  <div class="caja">
+    <h1 class="logo">Pique</h1>
+    <p class="bajada">Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.</p>
+    <div class="botones">
+      <button id="btn-jugar" class="grande primario">Jugar</button>
+      <button id="btn-comojuego" class="grande">Cómo se juega</button>
+      <button id="btn-ajustes" class="grande">Ajustes</button>
+    </div>
+    <p class="pie">24 niveles · generados por código · ninguno dibujado a mano</p>
+  </div>
+</main>
+
+<!-- ───────────── mapa ───────────── -->
+<main id="p-mapa" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver="p-inicio" class="chico">← Atrás</button>
+    <div class="marcadores">
+      <span title="monedas juntadas">🪙 <b id="total-monedas">0</b></span>
+      <span title="niveles terminados">🏁 <b id="total-niveles">0/24</b></span>
+      <span title="monedas de color: rosa · violeta · negra">🎯 <b id="total-color">0/24</b></span>
+    </div>
+  </header>
+  <div id="mapa" class="mapa"></div>
+</main>
+
+<!-- ───────────── generando ───────────── -->
+<main id="p-generando" class="pantalla centrado" hidden>
+  <div class="caja">
+    <div class="girador" aria-hidden="true"></div>
+    <h2 id="gen-nivel">—</h2>
+    <p id="gen-detalle" class="bajada">Armando…</p>
+  </div>
+</main>
+
+<!-- ───────────── juego ───────────── -->
+<main id="p-juego" class="pantalla juego" hidden>
+  <div class="hud">
+    <div class="hud-izq">
+      <button id="hud-salir" class="chico" title="Volver al mapa (Esc)">←</button>
+      <span id="hud-nivel" class="hud-nivel">—</span>
+    </div>
+    <div class="hud-der">
+      <span class="dato" title="monedas">🪙 <b id="hud-monedas">0</b></span>
+      <span class="dato" title="monedas de color de este nivel"><i id="hud-color" class="pips"></i></span>
+      <span class="dato" title="burbujas: no hay vidas, hay burbujas">🫧 <b id="hud-burbujas">●●</b></span>
+      <span class="dato" title="segundos"><b id="hud-reloj">0</b></span>
+    </div>
+  </div>
+  <div class="escena">
+    <canvas id="lienzo" width="320" height="180" aria-label="El nivel"></canvas>
+  </div>
+  <p class="hud-pie"><span id="hud-gen">—</span> · tocá la pantalla o barra espaciadora para saltar · R reinicia</p>
+</main>
+
+<!-- ───────────── resultado ───────────── -->
+<main id="p-resultado" class="pantalla centrado" hidden>
+  <div id="res-panel" class="caja res">
+    <h2 id="res-titulo">—</h2>
+    <p id="res-sub" class="bajada">—</p>
+    <ul id="res-lista" class="lista"></ul>
+    <div class="botones fila">
+      <button id="res-seguir" class="primario">Siguiente</button>
+      <button id="res-repetir">De nuevo</button>
+      <button id="res-mapa">Al mapa</button>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── ayuda ───────────── -->
+<main id="p-ayuda" class="pantalla" hidden>
+  <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
+  <div class="texto">
+    <p class="destacado">Hay <b>un solo botón</b>: tocar la pantalla, o la barra espaciadora. Todo lo demás sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás.</p>
+
+    <h3>Los movimientos</h3>
+    <dl class="movs">
+      <dt>Salto corto</dt><dd>Un toque seco: sube unos 2 tiles y medio.</dd>
+      <dt>Salto alto</dt><dd>Mantenerlo apretado: casi 5 tiles. Se corta en cuanto soltás.</dd>
+      <dt>Vault</dt><dd><b>Solo.</b> Los obstáculos de un tile y los huecos de uno o dos se pasan sin tocar nada. De tres para arriba hay que saltar.</dd>
+      <dt>Vault con toque</dt><dd>Tocar <em>justo</em> mientras vaulteás: salto más alto y te llevás puesto al enemigo. Es la maniobra que más paga.</dd>
+      <dt>Trepada</dt><dd><b>Sola.</b> Si caés justo sobre el filo de una plataforma, te subís en vez de rebotar contra el costado.</dd>
+      <dt>Salto de pared</dt><dd>Tocar pegado a una pared: rebotás y <b>das vuelta la carrera</b>. Así se suben los pozos y las torres, en zigzag.</dd>
+      <dt>Giro en el aire</dt><dd>Tocar en el aire cuando ya no te queda salto: no subís, pero caés más lento. Uno por salto; pisar un enemigo te lo devuelve.</dd>
+      <dt>Tobogán</dt><dd>Caer sobre una bajada: acelerás y arrasás con lo que se cruce.</dd>
+    </dl>
+
+    <h3>Los bloques</h3>
+    <dl class="movs">
+      <dt class="b-pausa">Pausa</dt><dd>Parado encima te frena a vos <b>y al reloj</b>. Tocá para salir. Es el único lugar donde podés pensar.</dd>
+      <dt class="b-preg">?</dt><dd>Monedas, y a veces una burbuja.</dd>
+      <dt class="b-tiempo">Reloj</dt><dd>Suma 10 segundos, hasta 99.</dd>
+      <dt class="b-largo">Salto largo</dt><dd>Arco bajo y lejos: cruza huecos que ningún salto normal cruza.</dd>
+      <dt class="b-volt">Voltereta</dt><dd>La subida más alta del juego. Para lo que quedó arriba de todo.</dd>
+    </dl>
+
+    <h3>Las burbujas</h3>
+    <p>No hay vidas. Cuando te matan entrás en una <b>burbuja</b> que vuelve para atrás y perdés 5 monedas; tocá para pincharla donde quieras. Arrancás con dos y los bloques <code>?</code> a veces dan más. Sin burbujas, se terminó.</p>
+
+    <h3>Las monedas de color</h3>
+    <p>Cinco por nivel, escondidas. Juntá las cinco <b class="c-rosa">rosas</b> en una sola corrida y se habilitan las <b class="c-violeta">violetas</b>, que están peor puestas; con esas, las <b class="c-negra">negras</b>. Es el mismo nivel tres veces, cada vez más exigente.</p>
+
+    <h3>El mástil</h3>
+    <p>Cuanto más alto lo agarrás, más monedas: hasta 10. En los niveles de jefe el mástil está <b>trabado</b> hasta que lo derrotes.</p>
+
+    <h3>De dónde salen los niveles</h3>
+    <p>Ninguno está dibujado a mano. Cada uno se arma con piezas parametrizadas a partir de un número —el mismo número siempre, así que el 3-2 es siempre el 3-2— y después <b>se juega entero por dentro</b> con una búsqueda que corre la física de verdad, para comprobar que se puede terminar y que las cinco monedas se pueden alcanzar. Si no pasa, se tira y se arma otro. El tiempo límite sale de lo que tarda ese camino, no de un número inventado.</p>
+  </div>
+</main>
+
+<!-- ───────────── ajustes ───────────── -->
+<main id="p-ajustes" class="pantalla" hidden>
+  <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Ajustes</h2></header>
+  <div class="texto">
+    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Efectos de sonido</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-musica"> <span>Música</span></label>
+    <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span>Sacudida de pantalla</span></label>
+    <p class="nota">Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.</p>
+    <button id="aj-borrar" class="peligro">Borrar todo el progreso</button>
+  </div>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

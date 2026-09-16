@@ -1,0 +1,5 @@
+node_modules/
+# Las hojas crudas que devuelve el generador: 1 MB cada una en PNG de 1024.
+# Al repo va assets/hojas/ (WebP a 512) y assets/tile/, que son 1,5 MB.
+# Se vuelven a bajar con `python3 generar_sprites.py bajar`.
+assets/*.png
