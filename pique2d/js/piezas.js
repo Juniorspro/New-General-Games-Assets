@@ -220,7 +220,7 @@ export const PIEZAS = [
       for (let y = p.piso - alto; y < p.piso; y++) { p.set(x, y, V.TUBO); p.set(x + 1, y, V.TUBO); }
       // Planta solo en tubos de 2 para arriba: en uno de 1 tile el jugador
       // lo vaultea sin poder verla, y morir por algo que no se ve es basura.
-      if (alto >= 2 && p.rnd.chance(0.3 + p.dif * 0.4)) p.enemigo("planta", x, p.piso - alto - 1);
+      if (alto >= 2 && p.rnd.chance(0.3 + p.dif * 0.4)) p.enemigo("fauces", x, p.piso - alto - 1);
       p.moneda(x, p.piso - alto - 2);
     }
     return p.piso;
@@ -371,7 +371,7 @@ export const PIEZAS = [
   armar(p) {
     const w = p.rnd.entero(9, 14); p.ancho = w; p.suelo(0, w);
     const n = ent(p.dif, 1, 3);
-    for (let i = 0; i < n; i++) p.enemigo("boo", p.rnd.entero(2, w - 2), p.piso - p.rnd.entero(2, 6));
+    for (let i = 0; i < n; i++) p.enemigo("vela", p.rnd.entero(2, w - 2), p.piso - p.rnd.entero(2, 6));
     for (let i = 0; i < 3; i++) {
       const x = p.rnd.entero(1, w - 2), y = p.piso - p.rnd.entero(3, 6);
       p.set(x, y, V.PLATAFORMA); p.set(x + 1, y, V.PLATAFORMA);

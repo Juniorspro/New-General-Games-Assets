@@ -100,12 +100,13 @@ export function tiles(c, nv, camX, camY, t, ancho, alto, patron) {
     for (let tx = tx0; tx <= tx1; tx++) {
       const v = lee(tx, ty);
       if (v === V.NADA || v === V.SOLIDO) continue;
-      dibujarTile(c, v, tx * T - camX, ty * T - camY, tm, t, tx, ty, lee(tx, ty - 1) === V.NADA, patron);
+      dibujarTile(c, v, tx * T - camX, ty * T - camY, tm, t, tx, ty,
+                  lee(tx, ty - 1) === V.NADA, patron, (dx) => lee(tx + dx, ty));
     }
   }
 }
 
-function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron) {
+function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = () => 0) {
   switch (v) {
     case V.LADRILLO:
       // Con la textura del tema y no con un color plano: un rectangulo liso al
@@ -146,10 +147,28 @@ function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron) {
       else { c.fillRect(x + 7, y + 4, 2, 8); c.fillRect(x + 5, y + 6, 2, 2); c.fillRect(x + 9, y + 6, 2, 2); }
       break;
     }
-    case V.TUBO:
-      R(c, x, y, T, T, "#2a7f8f"); R(c, x, y, 3, T, "#4dbccf"); R(c, x + T - 3, y, 3, T, "#17505c");
-      if (arribaLibre) { R(c, x - 1, y, T + 2, 4, "#ffb43a"); R(c, x - 1, y, T + 2, 1, "#ffe0a0"); }
+    case V.TUBO: {
+      // Un tubo mide DOS tiles de ancho, asi que cada mitad dibuja la MITAD de
+      // la pieza. La version anterior dibujaba la pieza entera en cada tile: la
+      // boca salia dos veces, una al lado de la otra, y en pantalla se leia
+      // como dos cajitas y no como un tubo.
+      const pieza = arribaLibre ? piezas.tubo_boca : piezas.tubo_cuerpo;
+      if (pieza) {
+        const izq = vecino(-1) !== V.TUBO;
+        const sw = pieza.width / 2, sx = izq ? 0 : sw;
+        if (arribaLibre) {
+          // La boca sobresale un pixel hacia afuera: es el labio del tubo.
+          const fuera = izq ? -1 : 0;
+          c.drawImage(pieza, sx, 0, sw, pieza.height,
+                      (x + fuera) | 0, (y - 1) | 0, T + 1, T + 1);
+        } else {
+          c.drawImage(pieza, sx, 0, sw, pieza.height, x | 0, y | 0, T, T + 1);
+        }
+      } else {
+        R(c, x, y, T, T, "#2a7f8f"); R(c, x, y, 3, T, "#4dbccf");
+      }
       break;
+    }
     case V.PLATAFORMA:
       R(c, x, y, T, 4, tm.detalle); R(c, x, y, T, 1, "rgba(255,255,255,.5)");
       R(c, x, y + 4, T, 1, "rgba(0,0,0,.35)");
@@ -189,6 +208,10 @@ export function monedasVisibles(c, nv, camX, camY, t, ancho, alto, hoja) {
 }
 
 const tintado = {};
+
+// Piezas sueltas (tubos, iconos). Las carga main.js y las deja aca.
+export const piezas = {};
+export function registrarPiezas(m) { Object.assign(piezas, m); }
 export function monedaColor(c, x, y, t, tier, hoja) {
   const col = { rosa: "#ff7ac0", violeta: "#b07aff", negra: "#4a4a58" }[tier] || "#ff7ac0";
   const i = cuadroDe(t / 60, hoja, 10);

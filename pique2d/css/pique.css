@@ -199,3 +199,68 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   .juego { padding: 4px; }
   .hud-pie { font-size: 11px; }
 }
+
+/* ───────────── pantalla de juego, estilo juego movil ───────────── */
+/* El lienzo LLENA la pantalla. Antes vivia dentro de una caja centrada con
+   borde: en un telefono eso dejaba media pantalla negra arriba y abajo, que es
+   exactamente lo que se ve en una captura y no se puede defender. */
+#lienzo {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  display: block; z-index: 0; background: #0a0c12;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  touch-action: none;
+}
+.pantalla { position: relative; z-index: 2; background: var(--fondo); }
+#p-juego {
+  background: transparent; pointer-events: none;
+  justify-content: space-between; padding: 0;
+}
+/* El HUD deja pasar el toque salvo en sus botones: si capturara todo, la franja
+   de arriba dejaria de hacer saltar justo cuando el jugador mira el reloj. */
+#p-juego .hud, #p-juego .hud-pie { pointer-events: none; }
+#p-juego button { pointer-events: auto; }
+
+#p-juego .hud {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; max-width: none; width: 100%;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.hud-caja {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(10,13,20,.62); border: 2px solid rgba(255,255,255,.12);
+  border-radius: 10px; padding: 5px 10px 5px 7px;
+  font-size: 17px; font-weight: 800; line-height: 1;
+  text-shadow: 0 2px 0 rgba(0,0,0,.65);
+  font-variant-numeric: tabular-nums;
+}
+.hud-caja .ico { width: 20px; height: 20px; image-rendering: pixelated; display: block; }
+.hud-color { margin-left: auto; }
+.hud-reloj { min-width: 74px; justify-content: center; }
+#hud-reloj.apuro { color: var(--mal); animation: latir .5s infinite; }
+#hud-reloj.frenado { color: var(--acento2); }
+.hud-btn {
+  width: 40px; height: 40px; min-height: 40px; padding: 0;
+  display: grid; place-items: center; font-size: 17px;
+  background: rgba(10,13,20,.62); border: 2px solid rgba(255,255,255,.12);
+  border-radius: 10px; flex: none;
+}
+#p-juego .pips { gap: 5px; }
+#p-juego .pip { width: 12px; height: 12px; border-width: 2px; }
+#p-juego .hud-pie {
+  padding: 6px 12px 10px; font-size: 11px; text-align: center;
+  color: rgba(255,255,255,.55); text-shadow: 0 1px 3px rgba(0,0,0,.9);
+}
+
+@media (max-width: 740px) {
+  #p-juego .hud { padding: 8px 9px; gap: 6px; }
+  .hud-caja { font-size: 15px; padding: 4px 8px 4px 6px; }
+  .hud-caja .ico { width: 17px; height: 17px; }
+  .hud-reloj { min-width: 62px; }
+  #p-juego .hud-pie { display: none; }
+  .hud-btn { width: 36px; height: 36px; min-height: 36px; }
+}
+/* Telefono acostado y bajito: el HUD se achica todo lo que se pueda. */
+@media (orientation: landscape) and (max-height: 460px) {
+  #p-juego .hud { padding: 6px 8px; }
+  .hud-caja { font-size: 14px; }
+}

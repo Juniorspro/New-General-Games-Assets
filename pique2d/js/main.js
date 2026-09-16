@@ -1,18 +1,28 @@
 // Arranque, entrada y bucle.
 
-import { NIVELES, buscarNivel, idNivel, ANCHO_VISTA, ALTO_VISTA } from "./mundo.js";
+import { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista } from "./mundo.js";
 import { generarNivel } from "./generador.js";
 import { Partida, ESTADO } from "./juego.js";
 import { cargar, tierActual } from "./guardado.js";
 import * as UI from "./interfaz.js";
-import { despertar, efe, pararMusica, volumen } from "./audio.js";
+import { despertar, efe, pararMusica, volumen, cargarPistas } from "./audio.js";
 import { cargarTodas } from "./sprites.js";
+import { registrarPiezas } from "./dibujo.js";
 import { ruta } from "./assets.js";
 
 const $ = UI.$;
 const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
-lienzo.width = ANCHO_VISTA; lienzo.height = ALTO_VISTA;
+function redimensionar() {
+  ajustarVista(innerWidth, innerHeight);
+  lienzo.width = VISTA.ancho; lienzo.height = VISTA.alto;
+  // Hay que APAGARLO DE NUEVO: el navegador reactiva el suavizado cada vez que
+  // cambia el tamano del lienzo, y los sprites salen lavados sin aviso.
+  ctx.imageSmoothingEnabled = false;
+  if (partida) partida.camara(true);
+}
+addEventListener("resize", redimensionar);
+addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
 // Suavizado APAGADO, y hay que volver a apagarlo despues de cada resize: el
 // navegador lo reactiva al cambiar el tamano del lienzo y los sprites salen
 // lavados sin que nada avise.
@@ -133,6 +143,7 @@ $("#btn-ajustes").addEventListener("click", () => { efe.menu(); UI.mostrar("p-aj
 for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); UI.mostrar(b.dataset.volver); });
 $("#hud-salir").addEventListener("click", alMapa);
+$("#hud-pantalla").addEventListener("click", UI.pantallaCompleta);
 
 // --- carga de assets -----------------------------------------------------
 const HOJAS = [
@@ -171,8 +182,23 @@ function cargarPatron(tema) {
   hojas = await cargarTodas(HOJAS.map(([k, c, f]) => [k, `assets/hojas/${k}.webp`, c, f]));
   const faltan = HOJAS.filter(([k]) => !hojas[k]).map(([k]) => k);
   await Promise.all(TEMAS_TILE.map(async (t) => { patrones[t] = await cargarPatron(t); }));
+  // Las piezas sueltas: tubos e iconos del HUD.
+  const PIEZAS = ["tubo_boca", "tubo_cuerpo", "icono_moneda", "icono_burbuja", "icono_reloj"];
+  const ps = {};
+  await Promise.all(PIEZAS.map((k) => new Promise((ok) => {
+    const img = new Image();
+    img.onload = () => { ps[k] = img; ok(); };
+    img.onerror = () => ok();
+    img.src = ruta(`assets/piezas/${k}.webp`);
+  })));
+  registrarPiezas(ps);
+  // La musica se carga sin bloquear: el juego arranca igual y la pista entra
+  // cuando llega. Bloquear el arranque por 400 KB es regalar el primer segundo.
+  cargarPistas({ llano: "assets/snd/llano.mp3", subte: "assets/snd/subte.mp3",
+                 castillo: "assets/snd/castillo.mp3" });
   UI.montarAjustes();
   UI.mostrar("p-inicio");
+  redimensionar();
   requestAnimationFrame(bucle);
   window.PIQUE = {
     get partida() { return partida; }, get cfg() { return cfgActual; },

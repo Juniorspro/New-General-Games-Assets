@@ -10,13 +10,24 @@ export const ALTO_TILES = 24;     // alto del nivel
 // La camara NO muestra el nivel entero de alto: lo sigue. Sin esto el nivel
 // no puede ser mas alto que la pantalla, y sin alto no hay pozos para rebotar
 // ni torres para subir.
-// 320x180 = 20 x 11,25 tiles, y se estira a la pantalla con los pixeles
-// cuadrados. Antes eran 30 tiles de ancho y el personaje quedaba del tamano de
-// una uña: con 20, el heroe ocupa casi un quinto del alto de la pantalla, que
-// es la proporcion de un juego de correr de verdad. Ver menos adelante se
-// compensa con que ahora se ve QUE es cada cosa.
-export const ANCHO_VISTA = 320;
-export const ALTO_VISTA = 180;
+// La vista NO es fija: el alto manda y el ancho sale de la pantalla.
+//
+// Con un lienzo de tamano fijo, un telefono deja bandas negras arriba y abajo
+// —media pantalla desperdiciada— o hay que estirar y se deforma. Fijando el
+// ALTO en nueve tiles y sacando el ancho de la proporcion real de la pantalla,
+// el lienzo la llena entera, sin bandas y sin deformar: en un telefono
+// acostado se ve mas a los costados, en uno parado se ve menos. Nueve tiles de
+// alto es la medida del Mario original y la que hace que el personaje se vea
+// grande.
+export const VISTA = { ancho: 256, alto: 144 };
+
+export function ajustarVista(anchoPantalla, altoPantalla) {
+  const prop = Math.max(1.15, Math.min(2.6, anchoPantalla / Math.max(1, altoPantalla)));
+  VISTA.alto = 144;
+  // Multiplo de 8 para que la grilla de pixeles caiga entera.
+  VISTA.ancho = Math.round((VISTA.alto * prop) / 8) * 8;
+  return VISTA;
+}
 
 // Alto de dibujo de cada bicho, en pixeles del juego (el tile mide 16).
 // No es el alto de la caja de colision: la caja sigue siendo 11x15 porque es
@@ -96,42 +107,42 @@ export const TEMAS = {
   llano: {
     nombre: "Llanura", cielo: ["#5aa9e6", "#9ad5f5"], tierra: "#b06a3b",
     borde: "#7d4525", detalle: "#3fa34d", niebla: "#cfeaff", oscuro: false,
-    enemigos: ["goomba", "koopa", "planta", "paratroopa"],
+    enemigos: ["bolo", "caracol", "fauces", "aleta"],
   },
   subte: {
     nombre: "Subterráneo", cielo: ["#0d1b2a", "#1b3a4b"], tierra: "#3f5e78",
     borde: "#22384a", detalle: "#6fa8c7", niebla: "#1b3a4b", oscuro: true,
-    enemigos: ["goomba", "koopa", "huesos", "buzzy"],
+    enemigos: ["bolo", "caracol", "osario", "coraza"],
   },
   cielo: {
     nombre: "Cielo", cielo: ["#7ec8f0", "#d8f0ff"], tierra: "#e8f4ff",
     borde: "#a8cde0", detalle: "#ffffff", niebla: "#eaf7ff", oscuro: false,
-    enemigos: ["paratroopa", "bala", "lakitu", "goomba"],
+    enemigos: ["aleta", "perno", "vigia", "bolo"],
   },
   castillo: {
     nombre: "Castillo", cielo: ["#1a0e14", "#3a1a20"], tierra: "#6b5560",
     borde: "#3d3038", detalle: "#c8505a", niebla: "#3a1a20", oscuro: true,
-    enemigos: ["huesos", "lavita", "barra", "planta"],
+    enemigos: ["osario", "brasa", "rueda", "fauces"],
   },
   fantasma: {
     nombre: "Casa fantasma", cielo: ["#141026", "#2a2145"], tierra: "#4a3f6b",
     borde: "#2a2145", detalle: "#9b8fc4", niebla: "#2a2145", oscuro: true,
-    enemigos: ["boo", "huesos", "goomba"],
+    enemigos: ["vela", "osario", "bolo"],
   },
   desierto: {
     nombre: "Desierto", cielo: ["#e8b76a", "#f6e2b3"], tierra: "#d9a05b",
     borde: "#a8763c", detalle: "#8cc152", niebla: "#f6e2b3", oscuro: false,
-    enemigos: ["pokey", "spiny", "goomba", "planta"],
+    enemigos: ["torrepua", "erizo", "bolo", "fauces"],
   },
   nave: {
     nombre: "Nave", cielo: ["#2b3a55", "#5a6f8f"], tierra: "#8a6a4a",
     borde: "#5c4630", detalle: "#c9a227", niebla: "#5a6f8f", oscuro: false,
-    enemigos: ["bala", "canion", "koopa", "spiny"],
+    enemigos: ["perno", "mortero", "caracol", "erizo"],
   },
   torre: {
     nombre: "Torre", cielo: ["#3a2a4a", "#6a5080"], tierra: "#7a6a8a",
     borde: "#4a3a5a", detalle: "#d0a0e0", niebla: "#6a5080", oscuro: true,
-    enemigos: ["paratroopa", "spiny", "lavita", "huesos"],
+    enemigos: ["aleta", "erizo", "brasa", "osario"],
   },
 };
 
@@ -143,32 +154,32 @@ export const NIVELES = [
   { m: 1, n: 1, tema: "llano",    dif: 0.10, largo: 150, seg: 80, jefe: null, titulo: "Primeros pasos" },
   { m: 1, n: 2, tema: "subte",    dif: 0.16, largo: 155, seg: 80, jefe: null, titulo: "Abajo de todo" },
   { m: 1, n: 3, tema: "cielo",    dif: 0.22, largo: 160, seg: 85, jefe: null, titulo: "Entre las nubes" },
-  { m: 1, n: 4, tema: "castillo", dif: 0.28, largo: 140, seg: 90, jefe: "boom", titulo: "El primer portón" },
+  { m: 1, n: 4, tema: "castillo", dif: 0.28, largo: 140, seg: 90, jefe: "yunque", titulo: "El primer portón" },
   // mundo 2 — huecos y paredes
   { m: 2, n: 1, tema: "llano",    dif: 0.30, largo: 170, seg: 85, jefe: null, titulo: "Campo abierto" },
   { m: 2, n: 2, tema: "fantasma", dif: 0.36, largo: 160, seg: 90, jefe: null, titulo: "No mires atrás" },
   { m: 2, n: 3, tema: "cielo",    dif: 0.40, largo: 175, seg: 90, jefe: null, titulo: "Saltos de altura" },
-  { m: 2, n: 4, tema: "nave",     dif: 0.45, largo: 150, seg: 95, jefe: "boom", titulo: "A bordo" },
+  { m: 2, n: 4, tema: "nave",     dif: 0.45, largo: 150, seg: 95, jefe: "yunque", titulo: "A bordo" },
   // mundo 3 — velocidad
   { m: 3, n: 1, tema: "desierto", dif: 0.44, largo: 180, seg: 90, jefe: null, titulo: "Arena caliente" },
   { m: 3, n: 2, tema: "cielo",    dif: 0.50, largo: 185, seg: 90, jefe: null, titulo: "Lluvia de balas" },
   { m: 3, n: 3, tema: "llano",    dif: 0.54, largo: 190, seg: 95, jefe: null, titulo: "Caparazones" },
-  { m: 3, n: 4, tema: "castillo", dif: 0.58, largo: 160, seg: 100, jefe: "bowser", titulo: "Barras de fuego" },
+  { m: 3, n: 4, tema: "castillo", dif: 0.58, largo: 160, seg: 100, jefe: "coloso", titulo: "Barras de fuego" },
   // mundo 4 — vertical
   { m: 4, n: 1, tema: "torre",    dif: 0.58, largo: 150, seg: 95, jefe: null, titulo: "Para arriba" },
   { m: 4, n: 2, tema: "llano",    dif: 0.62, largo: 195, seg: 95, jefe: null, titulo: "Cuesta abajo" },
   { m: 4, n: 3, tema: "subte",    dif: 0.66, largo: 190, seg: 100, jefe: null, titulo: "Alto y bajo" },
-  { m: 4, n: 4, tema: "nave",     dif: 0.70, largo: 165, seg: 100, jefe: "boom", titulo: "Los cañones" },
+  { m: 4, n: 4, tema: "nave",     dif: 0.70, largo: 165, seg: 100, jefe: "yunque", titulo: "Los cañones" },
   // mundo 5 — todo junto
   { m: 5, n: 1, tema: "cielo",    dif: 0.70, largo: 200, seg: 100, jefe: null, titulo: "Sin piso" },
   { m: 5, n: 2, tema: "desierto", dif: 0.74, largo: 200, seg: 100, jefe: null, titulo: "Cactus en fila" },
   { m: 5, n: 3, tema: "fantasma", dif: 0.78, largo: 185, seg: 105, jefe: null, titulo: "Bajo llave" },
-  { m: 5, n: 4, tema: "castillo", dif: 0.82, largo: 175, seg: 105, jefe: "bowser", titulo: "Anillos de fuego" },
+  { m: 5, n: 4, tema: "castillo", dif: 0.82, largo: 175, seg: 105, jefe: "coloso", titulo: "Anillos de fuego" },
   // mundo 6 — el final
   { m: 6, n: 1, tema: "desierto", dif: 0.84, largo: 210, seg: 105, jefe: null, titulo: "Tierra de púas" },
   { m: 6, n: 2, tema: "fantasma", dif: 0.88, largo: 195, seg: 110, jefe: null, titulo: "El interruptor" },
-  { m: 6, n: 3, tema: "nave",     dif: 0.92, largo: 190, seg: 110, jefe: "boom", titulo: "Por la borda" },
-  { m: 6, n: 4, tema: "castillo", dif: 1.00, largo: 200, seg: 120, jefe: "bowser", titulo: "El último puente" },
+  { m: 6, n: 3, tema: "nave",     dif: 0.92, largo: 190, seg: 110, jefe: "yunque", titulo: "Por la borda" },
+  { m: 6, n: 4, tema: "castillo", dif: 1.00, largo: 200, seg: 120, jefe: "coloso", titulo: "El último puente" },
 ];
 
 export const idNivel = (m, n) => `${m}-${n}`;

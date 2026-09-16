@@ -107,15 +107,6 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/caracol_concha-g3.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/caracol_concha-g3.png"
   },
-  "fauces_morder": {
-    "task_id": "gtask-57890e47c575450ba926",
-    "output_path": "assets/fauces_morder-g3.png",
-    "cols": 4,
-    "filas": 4,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fauces_morder-g3.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fauces_morder-g3.png"
-  },
   "vela_flotar": {
     "task_id": "gtask-d9a65dbb5054468baf83",
     "output_path": "assets/vela_flotar-g3.png",
@@ -223,5 +214,59 @@
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_saltar-g3.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_saltar-g3.png"
+  },
+  "tubo_boca": {
+    "task_id": "gtask-9eb3b00cd8d74f9bb46d",
+    "output_path": "assets/tubo_boca-g1.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tubo_boca-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tubo_boca-g1.png"
+  },
+  "tubo_cuerpo": {
+    "task_id": "gtask-818ad98ad3764ee7b6bc",
+    "output_path": "assets/tubo_cuerpo-g1.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tubo_cuerpo-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tubo_cuerpo-g1.png"
+  },
+  "icono_moneda": {
+    "task_id": "gtask-71392f78f6314737b752",
+    "output_path": "assets/icono_moneda-g1.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/icono_moneda-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/icono_moneda-g1.png"
+  },
+  "icono_burbuja": {
+    "task_id": "gtask-71cae2bc38ec4d419f7d",
+    "output_path": "assets/icono_burbuja-g1.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/icono_burbuja-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/icono_burbuja-g1.png"
+  },
+  "icono_reloj": {
+    "task_id": "gtask-1c7e589fd090429f9d32",
+    "output_path": "assets/icono_reloj-g1.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/icono_reloj-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/icono_reloj-g1.png"
+  },
+  "fauces_morder": {
+    "task_id": "gtask-4814c16766eb4bbe81de",
+    "output_path": "assets/fauces_morder-g4.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fauces_morder-g4.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fauces_morder-g4.png"
   }
 }

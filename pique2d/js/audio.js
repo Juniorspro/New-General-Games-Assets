@@ -5,6 +5,8 @@
 // numero. Ademas la musica se genera con la misma semilla del nivel, asi que
 // cada mundo suena distinto sin que nadie componga nada.
 
+import { ruta } from "./assets.js";
+
 let ctx = null, maestro = null, canalMus = null, canalEfe = null;
 let musicaAndando = false, proximaNota = 0, pasoMus = 0, temaActual = null;
 
@@ -103,9 +105,45 @@ const TEMAS_MUS = {
 };
 const nota = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
+// --- musica grabada ------------------------------------------------------
+// Sintetizada suena a demo de teclado. Tres pistas grabadas de verdad, una por
+// familia de temas: mejor tres buenas que ocho mediocres, y pesa la mitad.
+const PISTAS = {};
+let fuenteMus = null;
+
+export async function cargarPistas(mapa) {
+  despertar();
+  if (!ctx) return;
+  await Promise.all(Object.entries(mapa).map(async ([tema, url]) => {
+    const u = ruta(url);
+    // Desde file://, fetch a una ruta suelta lo bloquea CORS y ensucia la
+    // consola con errores que no son un problema: si la pista no vino
+    // embebida, se usa la sintetizada y listo.
+    if (!u.startsWith("data:") && location.protocol === "file:") return;
+    try {
+      const r = await fetch(u);
+      if (!r.ok) return;
+      PISTAS[tema] = await ctx.decodeAudioData(await r.arrayBuffer());
+    } catch (e) { /* sin pista: sintetizada */ }
+  }));
+}
+
 export function musica(tema, semilla) {
   despertar();
   if (!ctx) return;
+  const familia = { llano: "llano", cielo: "llano", desierto: "llano", nave: "llano",
+                    subte: "subte", fantasma: "subte", torre: "subte",
+                    castillo: "castillo" }[tema] || "llano";
+  if (PISTAS[familia]) {
+    musicaAndando = false;
+    if (fuenteMus) { try { fuenteMus.stop(); } catch (e) {} }
+    fuenteMus = ctx.createBufferSource();
+    fuenteMus.buffer = PISTAS[familia];
+    fuenteMus.loop = true;
+    fuenteMus.connect(canalMus);
+    fuenteMus.start();
+    return;
+  }
   temaActual = TEMAS_MUS[tema] || TEMAS_MUS.llano;
   const esc = ESCALAS[temaActual.escala];
   // El patron se congela con la semilla: el mismo nivel suena igual siempre.
@@ -117,7 +155,10 @@ export function musica(tema, semilla) {
   musicaAndando = true; pasoMus = 0; proximaNota = ctx.currentTime + 0.05;
 }
 
-export function pararMusica() { musicaAndando = false; }
+export function pararMusica() {
+  musicaAndando = false;
+  if (fuenteMus) { try { fuenteMus.stop(); } catch (e) {} fuenteMus = null; }
+}
 
 // Se programa por adelantado en el reloj del audio y no con setInterval: el
 // temporizador del navegador se atrasa cuando la pestana pierde foco o el

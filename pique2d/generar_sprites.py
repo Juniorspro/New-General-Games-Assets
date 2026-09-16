@@ -112,7 +112,8 @@ HOJAS = {
  "caracol_concha":("caracol", "an empty amber shell spinning fast, side view, rotating a little more each cell", 4, 4, "2048x2048"),
  "aleta_volar":   ("aleta", "hovering and bobbing in place facing right, fins flapping", 4, 4, "2048x2048"),
  "erizo_caminar": ("erizo", "scuttling to the right, side view, tiny legs stepping, spikes quivering", 4, 4, "2048x2048"),
- "fauces_morder": ("fauces", "opening and closing its jaws once, front view, petals flexing", 4, 4, "2048x2048"),
+ "fauces_morder": ("fauces", "seen from the SIDE facing right, rising out of a pipe and snapping its "
+                   "jaws open and shut once, stalk stretching up then down", 4, 4, "2048x2048"),
  "osario_caminar":("osario", "walking to the right, side view, bones clacking, arms swinging", 4, 4, "2048x2048"),
  "vela_flotar":   ("vela", "drifting and pulsing in place facing right, tail of light waving", 4, 4, "2048x2048"),
  "perno_volar":   ("perno", "flying left at speed, side view pointing left, fins vibrating, slight bob", 4, 4, "2048x2048"),
@@ -122,6 +123,39 @@ HOJAS = {
 }
 
 # Objetos sin personaje: misma mecanica, otro sujeto.
+# Piezas sueltas, sin animacion: son una sola imagen cada una. Los tubos se
+# dibujaban a mano con rectangulos y quedaban como mesas — un cuerpo teal con
+# una tapa ambar flotando arriba. Un tubo es una pieza con boca y cuerpo, y
+# tiene que dibujarse como tal.
+PIEZAS = {
+ "tubo_boca":   ("the TOP MOUTH of a thick industrial pipe seen from the side: a wide rectangular "
+                 "rim with a raised lip, teal metal body with an amber rim band and two rivets, "
+                 "dark round opening in the middle, flat side view, isolated, fills the image"),
+ "tubo_cuerpo": ("the STRAIGHT BODY SEGMENT of a thick industrial pipe seen from the side: a plain "
+                 "vertical teal metal column with a bright highlight stripe on the left and a dark "
+                 "stripe on the right, no rim, no opening, tileable vertically, flat side view, "
+                 "isolated, fills the image"),
+ "icono_moneda": ("a single game coin icon, thick amber disc with cream bevel and a spiral emblem, "
+                  "front view, isolated, fills the image"),
+ "icono_burbuja":("a single soap bubble icon, pale cyan sphere with a white highlight, isolated, "
+                  "fills the image"),
+ "icono_reloj":  ("a single stopwatch icon, cream body with an amber rim and a dark needle, front "
+                  "view, isolated, fills the image"),
+}
+
+def pedir_piezas():
+    for k, desc in PIEZAS.items():
+        if k in cargar(): print(f"  · {k}: ya pedido"); continue
+        r = rz("submit_image_generation", {
+            "project_id": PROYECTO, "output_path": f"assets/{k}.png",
+            "size": "1024x1024", "transparent": True,
+            "prompt": (f"{desc}. Single object, centred, generous empty margin, no grid, "
+                       f"no borders, no other objects. {ANCLA}")})
+        if "task_id" not in r: print(f"  ✗ {k}: {r}"); continue
+        anotar(k, {"task_id": r["task_id"], "output_path": r["output_path"], "cols": 1, "filas": 1})
+        print(f"  ✓ {k}")
+
+
 OBJETOS = {
  "moneda_girar": ("a thick amber game coin with a bevelled cream edge and a spiral emblem, "
                   "spinning around its vertical axis, seen edge-on to fully face-on and back", 4, 4, "2048x2048"),
@@ -229,6 +263,7 @@ def bajar():
 modo = sys.argv[1] if len(sys.argv) > 1 else "estado"
 if modo == "pedir": pedir()
 elif modo == "tiles": pedir_tiles()
+elif modo == "piezas": pedir_piezas()
 elif modo == "bajar": bajar()
 else:
     d = cargar()

@@ -8,6 +8,7 @@
 import { NIVELES, idNivel, TEMAS } from "./mundo.js";
 import { cargar, guardar, datosNivel, tierActual, borrarTodo } from "./guardado.js";
 import { efe, despertar, volumen } from "./audio.js";
+import { ruta } from "./assets.js";
 
 const $ = (s) => document.querySelector(s);
 const crear = (tag, clase, texto) => {
@@ -75,14 +76,40 @@ export function pintarMapa(alElegir) {
 }
 
 // --- HUD -----------------------------------------------------------------
+// En el telefono la barra del navegador se come una franja, y acostado casi un
+// tercio. Pantalla completa no es un lujo: es ver lo que viene o no verlo.
+export async function pantallaCompleta() {
+  const e = document.documentElement;
+  try {
+    if (!document.fullscreenElement && e.requestFullscreen)
+      await e.requestFullscreen({ navigationUI: "hide" });
+    else if (e.webkitRequestFullscreen) e.webkitRequestFullscreen();
+  } catch (err) { /* iOS no lo permite y no hay nada que hacer */ }
+  try { await screen.orientation?.lock?.("landscape"); } catch (err) {}
+}
+
+// Los iconos se ponen una sola vez. Poner el src en cada cuadro hace que el
+// navegador revalide la imagen sesenta veces por segundo.
+let iconosPuestos = false;
+export function ponerIconos() {
+  if (iconosPuestos) return;
+  iconosPuestos = true;
+  for (const [id, clave] of [["ico-moneda", "icono_moneda"], ["ico-burbuja", "icono_burbuja"],
+                             ["ico-reloj", "icono_reloj"]]) {
+    const e = $("#" + id);
+    if (e) e.src = ruta(`assets/piezas/${clave}.webp`);
+  }
+}
+
 export function pintarHud(p) {
+  ponerIconos();
   $("#hud-monedas").textContent = p.monedas;
   const seg = Math.ceil(p.reloj / 60);
   const rel = $("#hud-reloj");
   rel.textContent = seg;
   rel.classList.toggle("apuro", seg <= 10);
   rel.classList.toggle("frenado", !p.relojCorre);
-  $("#hud-burbujas").textContent = "●".repeat(p.burbujas) + "○".repeat(Math.max(0, 2 - p.burbujas));
+  $("#hud-burbujas").textContent = p.burbujas;
   const c = $("#hud-color");
   c.innerHTML = "";
   for (const m of p.color) {

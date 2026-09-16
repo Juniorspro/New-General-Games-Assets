@@ -4,7 +4,7 @@
 // todo el archivo es que el ESTADO vive aca y el dibujo no decide nada: se
 // puede correr una partida entera sin canvas (asi la prueban las pruebas).
 
-import { T, V, F, TEMAS, ALTO_TILES, ANCHO_VISTA, ALTO_VISTA, ALTOS } from "./mundo.js";
+import { T, V, F, TEMAS, ALTO_TILES, VISTA, ALTOS } from "./mundo.js";
 import { nuevoJugador, paso, tileXY, sumarCombo } from "./fisica.js";
 import * as E from "./entidades.js";
 import * as D from "./dibujo.js";
@@ -119,18 +119,19 @@ export class Partida {
   }
 
   // --- camara ----------------------------------------------------------
-  camara() {
+  camara(brusco = false) {
     // El jugador va a un tercio de la pantalla, no al medio: corre siempre
     // para adelante, asi que lo que importa ver es lo que VIENE.
-    const objX = this.j.x - ANCHO_VISTA * 0.34;
-    this.camX += (objX - this.camX) * 0.16;
-    this.camX = Math.max(0, Math.min(this.nv.ancho * T - ANCHO_VISTA, this.camX));
+    const objX = this.j.x - VISTA.ancho * 0.30;
+    this.camX += (objX - this.camX) * (brusco ? 1 : 0.16);
+    this.camX = Math.max(0, Math.min(this.nv.ancho * T - VISTA.ancho, this.camX));
     // En vertical persigue mas suave y con zona muerta: seguir cada salto
     // marea y hace perder la referencia del piso.
-    const objY = this.j.y - ALTO_VISTA * 0.62;
+    const objY = this.j.y - VISTA.alto * 0.66;
     const d = objY - this.camY;
-    if (Math.abs(d) > 28) this.camY += (d - Math.sign(d) * 28) * 0.10;
-    this.camY = Math.max(0, Math.min(ALTO_TILES * T - ALTO_VISTA, this.camY));
+    if (brusco) this.camY = objY;
+    else if (Math.abs(d) > 20) this.camY += (d - Math.sign(d) * 20) * 0.12;
+    this.camY = Math.max(0, Math.min(ALTO_TILES * T - VISTA.alto, this.camY));
   }
 
   // --- recolectar -------------------------------------------------------
@@ -186,9 +187,9 @@ export class Partida {
     const nuevos = [];
     for (const e of this.bichos) {
       if (!e.vivo) continue;
-      if (Math.abs(e.x - this.j.x) > ANCHO_VISTA * 1.4) continue;  // fuera de vista, quieto
+      if (Math.abs(e.x - this.j.x) > VISTA.ancho * 1.4) continue;  // fuera de vista, quieto
       E.actualizar(e, this.nv, this.j, ev, nuevos);
-      if (e.tipo === "koopa" && e.caparazon && e.empujado) {
+      if (e.tipo === "caracol" && e.caparazon && e.empujado) {
         const n = E.barrer(e, this.bichos);
         for (let k = 0; k < n; k++) {
           const p = sumarCombo(this.j); this.monedas += p;
@@ -271,8 +272,8 @@ export class Partida {
     // Sube hasta quedar en aire libre: pinchar dentro de una pared seria
     // morir de nuevo al instante, que es la peor forma de perder.
     while (this.burbY > 2 * T && this.libre(this.burbX, this.burbY) === false) this.burbY -= T;
-    this.camX = Math.max(0, Math.min(this.nv.ancho * T - ANCHO_VISTA, this.burbX - ANCHO_VISTA * 0.34));
-    this.camY = Math.max(0, Math.min(ALTO_TILES * T - ALTO_VISTA, this.burbY - ALTO_VISTA * 0.5));
+    this.camX = Math.max(0, Math.min(this.nv.ancho * T - VISTA.ancho, this.burbX - VISTA.ancho * 0.34));
+    this.camY = Math.max(0, Math.min(ALTO_TILES * T - VISTA.alto, this.burbY - VISTA.alto * 0.5));
     const seguro = this.libre(this.burbX, this.burbY);
     if ((ent.toqueNuevo && seguro && this.burbujaT > 20) || this.burbujaT > 190) {
       if (!seguro) return;
@@ -329,13 +330,13 @@ export class Partida {
     const sx = this.sacudida ? Math.round((Math.random() - 0.5) * this.sacudida * 0.5) : 0;
     const sy = this.sacudida ? Math.round((Math.random() - 0.5) * this.sacudida * 0.5) : 0;
     c.save(); c.translate(sx, sy);
-    D.fondo(c, this.nv.tema, this.camX, this.camY, this.t, ANCHO_VISTA, ALTO_VISTA);
-    D.tiles(c, this.nv, this.camX, this.camY, this.t, ANCHO_VISTA, ALTO_VISTA, this.patron);
-    D.monedasVisibles(c, this.nv, this.camX, this.camY, this.t, ANCHO_VISTA, ALTO_VISTA, H.moneda_girar);
+    D.fondo(c, this.nv.tema, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto);
+    D.tiles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, this.patron);
+    D.monedasVisibles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, H.moneda_girar);
 
     // mastil
     const mx = this.nv.mastilX * T - this.camX;
-    if (mx > -40 && mx < ANCHO_VISTA + 40) {
+    if (mx > -40 && mx < VISTA.ancho + 40) {
       const topY = (this.nv.pisoMastil - 10) * T - this.camY;
       const banderaY = (this.estado === ESTADO.MASTIL || this.estado === ESTADO.GANADO)
         ? this.mastilY - this.camY - 12 : topY + 4;

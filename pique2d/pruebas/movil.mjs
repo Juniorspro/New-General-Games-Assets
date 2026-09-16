@@ -22,10 +22,26 @@ for (const [w,h,nom] of [[844,390,"acostado"],[390,844,"parado"]]) {
   const m = await pg.evaluate(()=>{ const l=document.querySelector("#lienzo").getBoundingClientRect();
     const hu=document.querySelector(".hud").getBoundingClientRect();
     return { anchoCSS: Math.round(l.width), altoCSS: Math.round(l.height),
-             choca: !(hu.bottom<=l.top||hu.top>=l.bottom),
+             choca: false,
              escala: +(l.width/320).toFixed(2) }; });
   ch(`${nom} el lienzo ocupa la pantalla`, m.anchoCSS > w*0.85, `${m.anchoCSS}x${m.altoCSS} px (x${m.escala})`);
-  ch(`${nom} el HUD no tapa el lienzo`, !m.choca);
+  // El HUD ahora va ENCIMA del lienzo a proposito: el lienzo ocupa la pantalla
+  // entera. Lo que hay que comprobar es que el toque en la franja del HUD
+  // —donde no hay boton— siga llegando al juego. Si el HUD capturara todo, el
+  // jugador perderia el salto justo cuando mira el reloj.
+  const pasa = await pg.evaluate(() => {
+    const hud = document.querySelector("#p-juego .hud").getBoundingClientRect();
+    const x = Math.round(window.innerWidth * 0.5), y = Math.round(hud.top + hud.height / 2);
+    const e = document.elementFromPoint(x, y);
+    return { llega: e && e.id === "lienzo", quien: e ? (e.id || e.className) : "nada" };
+  });
+  ch(`${nom} el toque atraviesa el HUD y llega al juego`, pasa.llega, `toco ${pasa.quien}`);
+  const botonOk = await pg.evaluate(() => {
+    const b = document.querySelector("#hud-salir").getBoundingClientRect();
+    const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return e && e.id === "hud-salir";
+  });
+  ch(`${nom} los botones del HUD si reciben el toque`, botonOk);
   const y0 = await pg.evaluate(()=>window.PIQUE.partida.j.y);
   await pg.touchscreen.tap(Math.floor(w/2), Math.floor(h*0.7));
   await pg.evaluate(()=>window.PIQUE.entrada.apoyado=true);

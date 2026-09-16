@@ -10,6 +10,12 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23d8402f'/><circle cx='8' cy='6' r='3' fill='%23f0c090'/><rect x='5' y='9' width='6' height='5' rx='1' fill='%232b4a8f'/></svg>">
 </head>
 <body>
+<!-- El lienzo va FUERA de las pantallas y primero en el DOM.
+     Adentro de #p-juego quedaba despues del HUD en el orden del documento, y
+     como #p-juego crea su propio contexto de apilamiento (z-index 2), el
+     canvas con z-index 0 se pintaba ENCIMA del HUD. El HUD existia, se podia
+     tocar, tenia su fondo aplicado — y no se veia. -->
+<canvas id="lienzo" width="256" height="144" aria-label="El nivel"></canvas>
 
 <!-- ───────────── inicio ───────────── -->
 <main id="p-carga" class="pantalla centrado">
@@ -55,21 +61,20 @@
 <!-- ───────────── juego ───────────── -->
 <main id="p-juego" class="pantalla juego" hidden>
   <div class="hud">
-    <div class="hud-izq">
-      <button id="hud-salir" class="chico" title="Volver al mapa (Esc)">←</button>
-      <span id="hud-nivel" class="hud-nivel">—</span>
+    <button id="hud-salir" class="hud-btn" title="Volver al mapa (Esc)">←</button>
+    <button id="hud-pantalla" class="hud-btn" title="Pantalla completa">⛶</button>
+    <div class="hud-caja hud-monedas">
+      <img id="ico-moneda" alt="" class="ico"><b id="hud-monedas">0</b>
     </div>
-    <div class="hud-der">
-      <span class="dato" title="monedas">🪙 <b id="hud-monedas">0</b></span>
-      <span class="dato" title="monedas de color de este nivel"><i id="hud-color" class="pips"></i></span>
-      <span class="dato" title="burbujas: no hay vidas, hay burbujas">🫧 <b id="hud-burbujas">●●</b></span>
-      <span class="dato" title="segundos"><b id="hud-reloj">0</b></span>
+    <div class="hud-caja hud-color"><i id="hud-color" class="pips"></i></div>
+    <div class="hud-caja hud-burb">
+      <img id="ico-burbuja" alt="" class="ico"><b id="hud-burbujas">2</b>
+    </div>
+    <div class="hud-caja hud-reloj">
+      <img id="ico-reloj" alt="" class="ico"><b id="hud-reloj">0</b>
     </div>
   </div>
-  <div class="escena">
-    <canvas id="lienzo" width="320" height="180" aria-label="El nivel"></canvas>
-  </div>
-  <p class="hud-pie"><span id="hud-gen">—</span> · tocá la pantalla o barra espaciadora para saltar · R reinicia</p>
+  <p class="hud-pie"><span id="hud-gen">—</span> · <span id="hud-nivel">—</span></p>
 </main>
 
 <!-- ───────────── resultado ───────────── -->

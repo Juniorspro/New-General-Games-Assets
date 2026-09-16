@@ -1,5 +1,13 @@
 // Los enemigos y las cosas que se mueven.
 //
+// Los nombres son PROPIOS, no los del genero: bolo, caracol, aleta, erizo,
+// fauces, osario, vela, perno, brasa. El rol de juego —camina, se pisa, no se
+// puede pisar— es un clasico y no se puede registrar; el personaje si. Cada
+// nombre tiene su hoja de sprites con el mismo nombre, asi que renombrar uno
+// aca sin renombrar la hoja deja al bicho como un rectangulo naranja: es el
+// respaldo, y aparecio en pantalla por copiar este archivo de la version vieja
+// sin traer el renombre.
+//
 // Trece tipos con una interfaz sola: cada uno sabe moverse y decir si se puede
 // pisar. La regla dura es que el enemigo NO decide si mata: eso lo resuelve
 // `chocar()` mirando de donde viene el jugador. Si cada enemigo decidiera por
@@ -41,23 +49,23 @@ const BASE = { vivo: true, vy: 0, dir: -1, suelo: false, t: 0, pisable: true, le
 export function crear(tipo, tx, ty) {
   const e = { ...BASE, tipo, x: tx * T + T / 2, y: ty * T + T, w: 13, h: 14, ini: { tx, ty } };
   switch (tipo) {
-    case "goomba":  e.vel = 0.45; break;
-    case "buzzy":   e.vel = 0.62; break;
-    case "koopa":   e.vel = 0.50; e.h = 18; e.caparazon = false; break;
-    case "paratroopa": e.vel = 0.55; e.h = 18; e.alas = true; e.baseY = e.y; break;
-    case "huesos":  e.vel = 0.55; e.h = 17; e.roto = 0; break;
-    case "spiny":   e.vel = 0.60; e.pisable = false; break;
-    case "planta":  e.pisable = false; e.w = 12; e.h = 18; e.baseY = e.y; e.fase = (tx * 37) % 120; break;
-    case "bala":    e.vel = 1.9; e.w = 14; e.h = 12; e.gravedad = false; break;
-    case "canion":  e.vel = 0; e.w = 16; e.h = 16; e.pisable = false; e.letal = false;
+    case "bolo":  e.vel = 0.45; break;
+    case "coraza":   e.vel = 0.62; break;
+    case "caracol":   e.vel = 0.50; e.h = 18; e.caparazon = false; break;
+    case "aleta": e.vel = 0.55; e.h = 18; e.alas = true; e.baseY = e.y; break;
+    case "osario":  e.vel = 0.55; e.h = 17; e.roto = 0; break;
+    case "erizo":   e.vel = 0.60; e.pisable = false; break;
+    case "fauces":  e.pisable = false; e.w = 12; e.h = 18; e.baseY = e.y; e.fase = (tx * 37) % 120; break;
+    case "perno":    e.vel = 1.9; e.w = 14; e.h = 12; e.gravedad = false; break;
+    case "mortero":  e.vel = 0; e.w = 16; e.h = 16; e.pisable = false; e.letal = false;
                     e.recarga = 90 + (tx * 17) % 60; e.reloj = e.recarga; break;
-    case "lakitu":  e.vel = 0.8; e.w = 16; e.h = 16; e.pisable = false; e.gravedad = false;
+    case "vigia":  e.vel = 0.8; e.w = 16; e.h = 16; e.pisable = false; e.gravedad = false;
                     e.reloj = 100; break;
-    case "boo":     e.w = 15; e.h = 15; e.pisable = false; e.gravedad = false; e.vel = 0.55; break;
-    case "pokey":   e.vel = 0.35; e.w = 13; e.h = 46; e.segmentos = 3; break;
-    case "lavita":  e.pisable = false; e.gravedad = false; e.w = 13; e.h = 15;
+    case "vela":     e.w = 15; e.h = 15; e.pisable = false; e.gravedad = false; e.vel = 0.55; break;
+    case "torrepua":   e.vel = 0.35; e.w = 13; e.h = 46; e.segmentos = 3; break;
+    case "brasa":  e.pisable = false; e.gravedad = false; e.w = 13; e.h = 15;
                     e.baseY = e.y + 5 * T; e.fase = (tx * 29) % 150; break;
-    case "barra":   e.pisable = false; e.gravedad = false; e.w = 10; e.h = 10;
+    case "rueda":   e.pisable = false; e.gravedad = false; e.w = 10; e.h = 10;
                     e.largo = 3 + ((tx * 13) % 3); e.pivote = { x: e.x, y: e.y - T }; break;
     default:        e.vel = 0.45;
   }
@@ -68,10 +76,10 @@ export function actualizar(e, nv, j, ev, nuevos) {
   e.t++;
   if (!e.vivo) return;
   switch (e.tipo) {
-    case "goomba": case "buzzy": case "spiny":
+    case "bolo": case "coraza": case "erizo":
       caer(e, nv); if (e.suelo) caminar(e, nv, e.vel); break;
 
-    case "koopa":
+    case "caracol":
       caer(e, nv);
       if (e.caparazon) {
         // El caparazon empujado mata todo lo que toca, incluidos otros
@@ -81,17 +89,17 @@ export function actualizar(e, nv, j, ev, nuevos) {
       } else if (e.suelo) caminar(e, nv, e.vel);
       break;
 
-    case "paratroopa":
+    case "aleta":
       // Rebota en el lugar. Pisarlo le saca las alas y queda un koopa comun.
       if (e.alas) { e.y = e.baseY + Math.sin(e.t / 26) * 34; }
       else { caer(e, nv); if (e.suelo) caminar(e, nv, e.vel); }
       break;
 
-    case "huesos":
+    case "osario":
       if (e.roto > 0) { if (--e.roto === 0) e.pisable = true; break; }
       caer(e, nv); if (e.suelo) caminar(e, nv, e.vel); break;
 
-    case "planta": {
+    case "fauces": {
       // Sale y se esconde. Y se queda escondida si el jugador esta encima del
       // tubo: salir justo abajo del jugador es una muerte que no se puede ver
       // venir, y esas no van.
@@ -104,20 +112,20 @@ export function actualizar(e, nv, j, ev, nuevos) {
       break;
     }
 
-    case "bala": e.x += e.dir * e.vel; if (e.x < -40 || e.x > nv.ancho * T + 40) e.vivo = false; break;
+    case "perno": e.x += e.dir * e.vel; if (e.x < -40 || e.x > nv.ancho * T + 40) e.vivo = false; break;
 
-    case "canion":
+    case "mortero":
       if (--e.reloj <= 0) {
         e.reloj = e.recarga;
         if (Math.abs(j.x - e.x) < 300) {
-          const b = crear("bala", 0, 0);
+          const b = crear("perno", 0, 0);
           b.x = e.x; b.y = e.y; b.dir = j.x < e.x ? -1 : 1;
           nuevos.push(b); ev.disparo = true;
         }
       }
       break;
 
-    case "lakitu": {
+    case "vigia": {
       // Persigue por arriba y tira spinies. Se mantiene adelante del jugador,
       // nunca encima: tirar algo sobre la cabeza sin aviso es lo mismo que la
       // planta, y tampoco va.
@@ -126,12 +134,12 @@ export function actualizar(e, nv, j, ev, nuevos) {
       e.y = Math.max(3 * T, j.y - 5 * T) + Math.sin(e.t / 30) * 6;
       if (--e.reloj <= 0) {
         e.reloj = 150;
-        const s = crear("spiny", 0, 0); s.x = e.x; s.y = e.y + 10; nuevos.push(s);
+        const s = crear("erizo", 0, 0); s.x = e.x; s.y = e.y + 10; nuevos.push(s);
       }
       break;
     }
 
-    case "boo": {
+    case "vela": {
       // Se acerca despacio. Si el jugador lo mira de frente se tapa y frena:
       // es lo que lo hace un obstaculo de ritmo y no una persecucion perdida.
       const dx = j.x - e.x, dy = (j.y - 8) - e.y;
@@ -143,20 +151,20 @@ export function actualizar(e, nv, j, ev, nuevos) {
       break;
     }
 
-    case "pokey":
+    case "torrepua":
       caer(e, nv);
       if (e.suelo) caminar(e, nv, e.vel);
       e.h = 16 * e.segmentos;
       break;
 
-    case "lavita": {
+    case "brasa": {
       const ciclo = (e.t + e.fase) % 150;
       if (ciclo < 75) { const u = ciclo / 75; e.y = e.baseY - Math.sin(u * Math.PI) * 130; e.activa = true; }
       else e.activa = false;
       break;
     }
 
-    case "barra":
+    case "rueda":
       e.ang = e.t * 0.032;
       break;
   }
@@ -169,16 +177,16 @@ function chocaPared(e, nv) {
 
 // Cajas de colision. La barra de fuego no tiene una: son varias.
 export function cajas(e) {
-  if (e.tipo === "barra") {
+  if (e.tipo === "rueda") {
     const c = [];
     for (let i = 1; i <= e.largo; i++)
       c.push({ x: e.pivote.x + Math.cos(e.ang) * i * 14,
                y: e.pivote.y + Math.sin(e.ang) * i * 14, w: 11, h: 11 });
     return c;
   }
-  if (e.tipo === "planta" && !e.activa) return [];
-  if (e.tipo === "lavita" && !e.activa) return [];
-  if (e.tipo === "huesos" && e.roto > 0) return [];
+  if (e.tipo === "fauces" && !e.activa) return [];
+  if (e.tipo === "brasa" && !e.activa) return [];
+  if (e.tipo === "osario" && e.roto > 0) return [];
   return [{ x: e.x, y: e.y - e.h / 2, w: e.w, h: e.h }];
 }
 
@@ -206,18 +214,18 @@ export function chocar(j, e) {
 // Que pasa cuando lo pisan. Devuelve cuantas monedas suelta.
 export function pisado(e, j, nuevos) {
   switch (e.tipo) {
-    case "koopa":
+    case "caracol":
       if (!e.caparazon) { e.caparazon = true; e.h = 13; e.empujado = false; }
       else { e.empujado = true; e.dir = j.x < e.x ? 1 : -1; }
       return 1;
-    case "paratroopa":
-      if (e.alas) { e.alas = false; e.tipo = "koopa"; e.vel = 0.5; e.caparazon = false; return 1; }
+    case "aleta":
+      if (e.alas) { e.alas = false; e.tipo = "caracol"; e.vel = 0.5; e.caparazon = false; return 1; }
       e.vivo = false; return 1;
-    case "huesos":
+    case "osario":
       // No muere: se desarma y se rearma. Es la broma del original y sirve
       // como obstaculo que vuelve.
       e.roto = 220; e.pisable = false; return 1;
-    case "pokey":
+    case "torrepua":
       if (--e.segmentos <= 0) e.vivo = false;
       return 1;
     default:
@@ -231,7 +239,7 @@ export function barrer(shell, lista) {
   for (const o of lista) {
     if (o === shell || !o.vivo || !o.letal) continue;
     if (Math.abs(o.x - shell.x) < 14 && Math.abs(o.y - shell.y) < 18) {
-      if (o.tipo === "pokey") { o.segmentos = 0; o.vivo = false; }
+      if (o.tipo === "torrepua") { o.segmentos = 0; o.vivo = false; }
       else o.vivo = false;
       cuenta++;
     }

@@ -14,6 +14,7 @@ Todo sale de `./pruebas/correr.sh`.
 | caminos del validador rehechos en el juego real | **72/72** |
 | **monedas fuera de alcance** | **0 de 5.262** |
 | el archivo único, desde `file://` | **11/11** |
+| las hojas de sprites | **17/17** con fondo limpio y grilla exacta |
 | celular, acostado y parado | **22/22** |
 | cuadros de la animación de correr | **16** |
 | peor generación de nivel | 1136 ms · típico ~140 ms |
@@ -66,6 +67,19 @@ Las criaturas son **originales**: cumplen roles clásicos del género pero ningu
 copia a un personaje de nadie, y cada prompt niega el parecido explícitamente
 (`NOT a plumber`, `no moustache`, `not a turtle`, `no cap`).
 
+## Pantalla y HUD
+
+El lienzo **llena la pantalla**. El alto es fijo —**9 tiles**, la medida del
+Mario original— y el **ancho sale de la proporción real de la pantalla**: en un
+teléfono acostado se ve más a los costados, en uno parado menos, y nunca hay
+bandas negras ni deformación. Antes era un lienzo fijo dentro de una caja
+centrada y en un teléfono eso dejaba media pantalla en negro.
+
+El HUD va **encima** del juego, con iconos pixel art generados (moneda, burbuja,
+cronómetro) y las cinco monedas de color. Deja pasar el toque salvo en sus
+propios botones: si capturara toda la franja de arriba, el jugador perdería el
+salto justo cuando mira el reloj.
+
 ## Cómo se ve
 
 El juego se dibuja en un lienzo de **320×180** y se estira a la pantalla con el
@@ -105,11 +119,32 @@ python3 generar_sprites.py estado
    **no las negaciones**: son las que evitan el parecido.
 8. **`imageSmoothingEnabled` se reactiva al cambiar el tamaño del lienzo.** Hay
    que volver a apagarlo o los sprites salen lavados sin que nada avise.
+9. **El lienzo adentro de la pantalla de juego se pinta ENCIMA del HUD.**
+   `#p-juego` tiene `z-index: 2` y crea su propio contexto de apilamiento; el
+   canvas, que va después en el DOM con `z-index: 0`, gana. El HUD existía, se
+   podía tocar, tenía su fondo aplicado — y no se veía. El canvas va **fuera**
+   de las pantallas y primero en el DOM.
+10. **Un tubo mide dos tiles de ancho**, así que cada mitad dibuja la MITAD de
+    la pieza. Dibujando la pieza entera en cada tile, la boca sale dos veces
+    una al lado de la otra y se lee como dos cajitas.
+11. **El recorte de fondo del servidor falla a veces.** De 17 hojas, tres
+    salieron mal: una con 30,5% de magenta sin recortar y otra 93% opaca. En
+    pantalla es un cuadrado de color alrededor del bicho. `despegar_fondo.py`
+    lo resuelve en post —determinista y gratis— y `pruebas/assets.py` lo mide
+    para que no vuelva.
+12. **Un reemplazo masivo sobre el código fuente pisa las líneas de `import`.**
+    Quedó `import { VISTA.ancho }`, que es un error de sintaxis: página en
+    blanco y una sola pista en la consola. `pruebas/sintaxis.mjs` lo caza en un
+    segundo.
+13. **Los nombres de las criaturas no se renombraron al copiar el archivo.**
+    `entidades.js` venía de la versión vieja con `koopa` y `planta`, y como cada
+    nombre busca su hoja de sprites, los bichos salían como rectángulos
+    naranjas. Ese rectángulo es el respaldo, y hacía bien en aparecer.
 
 ## Lo que falta
 
 | pendiente | qué sería |
 |---|---|
-| Música | los efectos son sintetizados; las pistas grabadas están en `pique3d/assets/snd/` y se pueden traer |
+| Efectos de sonido grabados | los generados venían de 380 KB cada uno, clips largos donde hace falta un golpe de medio segundo; los efectos siguen sintetizados y la **música sí es grabada** (3 pistas) |
 | Hojas extra | correr hacia atrás, aterrizaje, y una de daño |
 | Generar en un *worker* | el peor caso de 1136 ms bloquea el hilo |

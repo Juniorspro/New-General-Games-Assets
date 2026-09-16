@@ -141,6 +141,8 @@ def main():
         mapa[f"assets/hojas/{p.name}"] = data_uri(p); crudo += p.stat().st_size
     for p in sorted((AQUI / "assets" / "tile").glob("*.webp")):
         mapa[f"assets/tile/{p.name}"] = data_uri(p); crudo += p.stat().st_size
+    for p in sorted((AQUI / "assets" / "piezas").glob("*.webp")):
+        mapa[f"assets/piezas/{p.name}"] = data_uri(p); crudo += p.stat().st_size
     if con_musica:
         for p in sorted((AQUI / "assets" / "snd").glob("*.mp3")):
             mapa[f"assets/snd/{p.name}"] = data_uri(p); crudo += p.stat().st_size
