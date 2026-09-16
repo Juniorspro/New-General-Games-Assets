@@ -1,0 +1,84 @@
+{
+ "rilo": {
+  "medidas": {
+   "figura": [
+    912,
+    941
+   ],
+   "cabeza": 0.2859,
+   "torso": 0.4538,
+   "muslo": 0.1403,
+   "canilla": 0.1201,
+   "brazo_alto": 0.1403,
+   "brazo_bajo": 0.203,
+   "hombro_ancho": 0.2816
+  },
+  "piezas": {
+   "cabeza": [
+    179,
+    200
+   ],
+   "torso": [
+    124,
+    200
+   ],
+   "brazo_alto": [
+    37,
+    138
+   ],
+   "brazo_bajo": [
+    45,
+    197
+   ],
+   "pierna_alta": [
+    128,
+    136
+   ],
+   "pierna_baja": [
+    105,
+    116
+   ]
+  }
+ },
+ "tito": {
+  "medidas": {
+   "figura": [
+    892,
+    883
+   ],
+   "cabeza": 0.3601,
+   "torso": 0.1993,
+   "muslo": 0.2401,
+   "canilla": 0.2005,
+   "brazo_alto": 0.1563,
+   "brazo_bajo": 0.2016,
+   "hombro_ancho": 0.2933
+  },
+  "piezas": {
+   "cabeza": [
+    196,
+    200
+   ],
+   "torso": [
+    200,
+    137
+   ],
+   "brazo_alto": [
+    76,
+    144
+   ],
+   "brazo_bajo": [
+    102,
+    184
+   ],
+   "pierna_alta": [
+    67,
+    200
+   ],
+   "pierna_baja": [
+    114,
+    181
+   ]
+  }
+ }
+}

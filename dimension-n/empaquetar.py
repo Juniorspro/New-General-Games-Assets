@@ -11,15 +11,20 @@ de dependencias, resuelto a mano: por eso el ORDEN de la lista importa —un
 módulo tiene que estar armado antes de que otro lo lea— y por eso no hay
 ciclos.
 
-LO QUE HACE FÁCIL ESTE JUEGO. No hay un solo binario: el dibujo es vectorial y
-el sonido son osciladores. El empaquetado es texto pegado a texto, así que el
-archivo entero pesa lo mismo que el código, no lo que pesan los assets en
-base64.
+LOS BINARIOS VAN EN BASE64, y son pocos a propósito. Las piezas de los cuerpos
+y las texturas se preparan chicas (`preparar_assets.py`), y las veintitrés
+líneas de voz van pegadas en un solo mp3 con un índice de posiciones. Base64
+infla un 37%, así que cada kilobyte que se ahorra preparando vale 1,37 acá.
+
+Y EL JUEGO SIGUE ANDANDO SIN NINGUNO DE ELLOS: si se borra la carpeta de
+assets, el empaquetado sale igual y el juego se dibuja con la versión vectorial
+y suena sólo con los osciladores. Los archivos son una mejora, no un requisito.
 """
-import pathlib, re, sys
+import base64, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["verlet", "cuerpo", "nivel", "juego", "dibujo", "audio", "guardado"]
+ORDEN = ["assets", "voces", "medidas", "verlet", "cuerpo", "nivel", "juego", "dibujo",
+         "audio", "guardado"]
 ENTRADA = "main"
 
 # Multilínea y con comillas simples O dobles: juego.js abre el import de
@@ -30,6 +35,12 @@ RE_IMP_NOM = re.compile(r'^import\s*\{([^}]*)\}\s*from\s*[\'"]([^\'"]+)[\'"];?\s
 RE_IMP_TODO = re.compile(r'^import\s*\*\s*as\s+(\w+)\s*from\s*[\'"]([^\'"]+)[\'"];?\s*$', re.M)
 
 modulo_de = lambda ruta: pathlib.Path(ruta).stem
+
+
+def json_min(d):
+    """JSON sin espacios: con data: URIs de cien kilobytes, la sangría pesa."""
+    import json
+    return json.dumps(d, separators=(",", ":"))
 
 
 def partes_import(texto):
@@ -77,6 +88,25 @@ def envolver(nombre, src):
             f"  return {{ {', '.join(salidas)} }};\n}})();\n")
 
 
+def binarios():
+    """Los archivos que el juego pide por `ruta()`, como data: URIs."""
+    mapa, crudo = {}, 0
+    for sub in ["partes"]:
+        for f in sorted((AQUI / "assets" / sub).glob("*")):
+            if f.suffix.lower() not in (".webp", ".png"):
+                continue
+            mapa[f"assets/{sub}/{f.name}"] = data_uri(f); crudo += f.stat().st_size
+    mp3 = AQUI / "assets" / "voces.mp3"
+    if mp3.exists():
+        mapa["assets/voces.mp3"] = data_uri(mp3); crudo += mp3.stat().st_size
+    return mapa, crudo
+
+
+def data_uri(f):
+    tipo = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
+    return f"data:{tipo};base64," + base64.b64encode(f.read_bytes()).decode()
+
+
 def main():
     partes = []
     for nombre in ORDEN:
@@ -89,6 +119,12 @@ def main():
     src = RE_IMP_TODO.sub(lambda m: f"const {m.group(1)} = M_{modulo_de(m.group(2))};", src)
     partes.append(f"/* ── {ENTRADA}.js ── */\n{src}\n")
 
+    mapa, crudo = binarios()
+    # El mapa va PRIMERO, antes de cualquier módulo: `assets.js` lo lee al
+    # resolver una ruta y los módulos se ejecutan en orden al definirse.
+    partes.insert(0, "/* ── archivos ── */\nglobalThis.ARCHIVOS = "
+                     + json_min(mapa) + ";\n")
+
     html = (AQUI / "index.html").read_text(encoding="utf-8")
     css = (AQUI / "css" / "dn.css").read_text(encoding="utf-8")
     html = html.replace('<link rel="stylesheet" href="css/dn.css">',
@@ -100,7 +136,8 @@ def main():
     destino = AQUI / "dimension-n-en-un-archivo.html"
     destino.write_text(html, encoding="utf-8")
     kb = len(html.encode()) / 1024
-    print(f"{destino.name}: {kb:.0f} KB · {len(ORDEN) + 1} módulos, 0 binarios")
+    print(f"{destino.name}: {kb:.0f} KB · {len(ORDEN) + 1} módulos + "
+          f"{len(mapa)} binarios ({crudo // 1024} KB crudos)")
 
 
 if __name__ == "__main__":

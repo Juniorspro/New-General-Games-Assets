@@ -1,1 +1,8 @@
 node_modules
+
+# Lo crudo que devuelve el generador. Al repo va lo preparado:
+# assets/partes/*.webp (58 KB) y assets/voces.mp3 (214 KB).
+# Se vuelve a bajar con `python3 generar_cuerpos.py bajar` y
+# `python3 generar_voces.py bajar`.
+assets/*.png
+assets/voz/

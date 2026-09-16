@@ -1,0 +1,186 @@
+{
+  "c0l0": {
+    "task_id": "gtask-837d5f54f93f487c913f",
+    "output_path": "assets/voz_c0l0-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Bueno Tito, el portal quedó en el piso. Saltá.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c0l0-g1.mp3"
+  },
+  "c0l1": {
+    "task_id": "gtask-5b4ea1fc16f24d668e03",
+    "output_path": "assets/voz_c0l1-g1.mp3",
+    "quien": "Tito",
+    "texto": "¿Y qué hay abajo, abuelo?",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c0l1-g1.mp3"
+  },
+  "c0l2": {
+    "task_id": "gtask-94741ad00267416a908d",
+    "output_path": "assets/voz_c0l2-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Sí.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c0l2-g1.mp3"
+  },
+  "c1l0": {
+    "task_id": "gtask-6f655a4df6de402aa9ac",
+    "output_path": "assets/voz_c1l0-g1.mp3",
+    "quien": "Tito",
+    "texto": "¡Esto son caños! ¡Caños de qué!",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c1l0-g1.mp3"
+  },
+  "c1l1": {
+    "task_id": "gtask-a8403d5c954649ac8ebc",
+    "output_path": "assets/voz_c1l1-g1.mp3",
+    "quien": "Rilo",
+    "texto": "De la dimensión Ñ. Acá el agua va para arriba.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c1l1-g1.mp3"
+  },
+  "c1l2": {
+    "task_id": "gtask-4c5e1e6bc9bd40d48ed4",
+    "output_path": "assets/voz_c1l2-g1.mp3",
+    "quien": "Tito",
+    "texto": "Eso no contesta nada.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c1l2-g1.mp3"
+  },
+  "c2l0": {
+    "task_id": "gtask-efcdb57850c24a498ebb",
+    "output_path": "assets/voz_c2l0-g1.mp3",
+    "quien": "Rilo",
+    "texto": "No toques las aspas.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c2l0-g1.mp3"
+  },
+  "c2l1": {
+    "task_id": "gtask-98e060ab5b2f4edfa8e3",
+    "output_path": "assets/voz_c2l1-g1.mp3",
+    "quien": "Tito",
+    "texto": "¿Y si me tocan ellas a mí?",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c2l1-g1.mp3"
+  },
+  "c2l2": {
+    "task_id": "gtask-29c03abcafba452bb4dc",
+    "output_path": "assets/voz_c2l2-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Ahí sí es problema tuyo.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c2l2-g1.mp3"
+  },
+  "c3l0": {
+    "task_id": "gtask-8b9066446a1c4a508dbf",
+    "output_path": "assets/voz_c3l0-g1.mp3",
+    "quien": "Tito",
+    "texto": "No hay paredes. ¡No hay paredes!",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c3l0-g1.mp3"
+  },
+  "c3l1": {
+    "task_id": "gtask-31c977abdb034691bc66",
+    "output_path": "assets/voz_c3l1-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Apuntá bien entonces.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c3l1-g1.mp3"
+  },
+  "c4l0": {
+    "task_id": "gtask-f27399d962d445cdb7fa",
+    "output_path": "assets/voz_c4l0-g1.mp3",
+    "quien": "Tito",
+    "texto": "Abuelo… esto late.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c4l0-g1.mp3"
+  },
+  "c4l1": {
+    "task_id": "gtask-1e40c2ba45364e16a53b",
+    "output_path": "assets/voz_c4l1-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Es una panza, Tito. Tarde o temprano pasa.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c4l1-g1.mp3"
+  },
+  "c5l0": {
+    "task_id": "gtask-88c8153dec87430ea34d",
+    "output_path": "assets/voz_c5l0-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Acá tiran las realidades que no funcionaron.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c5l0-g1.mp3"
+  },
+  "c5l1": {
+    "task_id": "gtask-2153ddff7ee14cb3a824",
+    "output_path": "assets/voz_c5l1-g1.mp3",
+    "quien": "Tito",
+    "texto": "Hay como cuarenta vos tirados ahí.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c5l1-g1.mp3"
+  },
+  "c6l2": {
+    "task_id": "gtask-d0472d76701e42ea9f1c",
+    "output_path": "assets/voz_c6l2-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Por lo que hay adentro. Abrila.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c6l2-g1.mp3"
+  },
+  "f0": {
+    "task_id": "gtask-a8af38eb593343a59e1c",
+    "output_path": "assets/voz_f0-g1.mp3",
+    "quien": "Tito",
+    "texto": "…es un sánguche.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_f0-g1.mp3"
+  },
+  "f1": {
+    "task_id": "gtask-0cf93ea609fb4f47bf3e",
+    "output_path": "assets/voz_f1-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Es EL sánguche, Tito. En noventa realidades no existe.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_f1-g1.mp3"
+  },
+  "f2": {
+    "task_id": "gtask-d5f86561dad24a5e8acd",
+    "output_path": "assets/voz_f2-g1.mp3",
+    "quien": "Tito",
+    "texto": "¿Y por qué me trajiste a mí?",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_f2-g1.mp3"
+  },
+  "c5l2": {
+    "task_id": "gtask-0445b2dc738b4b309fd5",
+    "output_path": "assets/voz_c5l2-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Treinta y ocho. Seguí.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c5l2-g1.mp3"
+  },
+  "c6l0": {
+    "task_id": "gtask-1c62e45629db4187937a",
+    "output_path": "assets/voz_c6l0-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Llegamos.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c6l0-g1.mp3"
+  },
+  "c6l1": {
+    "task_id": "gtask-0c2785032f204aebabad",
+    "output_path": "assets/voz_c6l1-g1.mp3",
+    "quien": "Tito",
+    "texto": "¿Todo esto por una heladera?",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_c6l1-g1.mp3"
+  },
+  "f3": {
+    "task_id": "gtask-5de5ec68dd6240898380",
+    "output_path": "assets/voz_f3-g1.mp3",
+    "quien": "Rilo",
+    "texto": "Porque lo vamos a comer a la mitad. No soy un monstruo.",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/dimension-n/assets/voz_f3-g1.mp3"
+  }
+}

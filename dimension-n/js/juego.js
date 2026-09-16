@@ -67,12 +67,21 @@ export class Partida {
     this.t = 0;
     this.dicho = null;                 // el cartel de dialogo que esta puesto
     this.dichoT = 0;
-    this.decir(nv.caps[cap].dice, nv.caps[cap].nombre);
+    this.decir(nv.caps[cap].dice, nv.caps[cap].nombre, `c${cap}`);
     for (const c of nv.chatarra) if (c.y > y) c.tomada = false;
   }
 
-  decir(lineas, titulo) {
-    this.dicho = { lineas, titulo, i: 0 };
+  /**
+   * Poner un cartel de dialogo.
+   *
+   * `clave` es el prefijo con el que se busca la voz de cada linea ("c3" →
+   * "c3l0", "c3l1"). Sale de aca y no de un contador aparte porque las voces
+   * se generan leyendo el mismo nivel.js: si el prefijo se calculara en otro
+   * lado, un capitulo agregado en el medio correria todas las voces una
+   * posicion y nadie se enteraria hasta escucharlo.
+   */
+  decir(lineas, titulo, clave) {
+    this.dicho = { lineas, titulo, i: 0, clave };
     this.dichoT = 0;
   }
 
@@ -173,7 +182,11 @@ export class Partida {
       for (const p of this.puntos) this.chocarPunto(p);
       this.aspasChocar();
     }
-    resolver(this.palos, 5);
+    // SIETE VUELTAS AL FINAL, y el numero se midio. Con cinco, la canilla de
+    // Rilo —que es larga y liviana— se estiraba 23% cuando le pegaban en el
+    // pie; con siete baja a 14% y no cuesta un microsegundo mas, porque lo
+    // caro del cuadro son las colisiones, no el solucionador.
+    resolver(this.palos, 7);
     this.cobrar();
   }
 
@@ -301,7 +314,7 @@ export class Partida {
       this.desdeCap = po.cap + 1;
       this.integridad = Math.min(100, this.integridad + 26);
       const sig = this.nv.caps[po.cap + 1];
-      this.decir(sig.dice, sig.nombre);
+      this.decir(sig.dice, sig.nombre, `c${po.cap + 1}`);
     }
   }
 

@@ -3,8 +3,12 @@
 import { construirNivel, CAPITULOS, FINAL } from "./nivel.js";
 import { Partida, VISTA } from "./juego.js";
 import { dibujar } from "./dibujo.js";
-import { despertar, efe, sonando, zumbido } from "./audio.js";
+import { despertar, efe, sonando, zumbido, cargarVoces, voz } from "./audio.js";
+import { registrarPiezas } from "./cuerpo.js";
+import { registrarTexturas } from "./dibujo.js";
 import { cargar, guardar, borrar } from "./guardado.js";
+import { VOCES } from "./voces.js";
+import { ruta } from "./assets.js";
 
 const $ = (s) => document.querySelector(s);
 const lienzo = $("#lienzo");
@@ -115,6 +119,46 @@ function leerEntrada() {
   entrada.bolita = entrada.bolita || !!teclas.Space || !!teclas.ArrowDown;
 }
 
+// --- las imágenes --------------------------------------------------------
+//
+// EL JUEGO ARRANCA SIN ESPERARLAS. Las piezas de los cuerpos y las texturas se
+// cargan en segundo plano y se registran cuando llegan: hasta entonces se
+// dibuja la versión vectorial, que es la que tenía el juego antes de que
+// existieran las imágenes. Así una conexión lenta —o un archivo que falta— no
+// deja al jugador mirando una pantalla de carga, y el juego sigue siendo
+// jugable con cero assets.
+const PARTES = ["cabeza", "torso", "brazo_alto", "brazo_bajo", "pierna_alta", "pierna_baja"];
+const TEXTURAS = ["pared", "repisa", "soga"];
+
+function traer(url) {
+  return new Promise((listo) => {
+    const im = new Image();
+    im.onload = () => listo(im);
+    im.onerror = () => listo(null);
+    im.src = url;
+  });
+}
+
+async function cargarImagenes() {
+  const piezas = { rilo: {}, tito: {} };
+  const texturas = {};
+  await Promise.all([
+    ...["rilo", "tito"].flatMap((quien) => PARTES.map(async (parte) => {
+      const im = await traer(ruta(`assets/partes/${quien}_${parte}.webp`));
+      if (im) piezas[quien][parte] = im;
+    })),
+    ...TEXTURAS.map(async (t) => {
+      const im = await traer(ruta(`assets/partes/${t}.webp`));
+      if (im) texturas[t] = im;
+    }),
+  ]);
+  // Se registran solo si están LAS DOS piezas que mandan. Un muñeco con torso
+  // dibujado y cabeza faltante es peor que uno vectorial entero.
+  if (piezas.rilo.torso && piezas.tito.torso) registrarPiezas(piezas);
+  registrarTexturas(texturas);
+  return { piezas, texturas };
+}
+
 // --- pantallas -----------------------------------------------------------
 function mostrar(id) {
   for (const p of document.querySelectorAll(".pantalla")) p.hidden = true;
@@ -150,8 +194,8 @@ $("#aj-sonido").addEventListener("change", (e) => {
 });
 for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); alMenu(); });
-$("#f-otra").addEventListener("click", () => { efe.menu(); jugar(0); });
-$("#f-menu").addEventListener("click", () => { efe.menu(); alMenu(); });
+$("#f-otra").addEventListener("click", () => { efe.menu(); cortarFinal(); jugar(0); });
+$("#f-menu").addEventListener("click", () => { efe.menu(); cortarFinal(); alMenu(); });
 $("#j-salir").addEventListener("click", () => { efe.menu(); alMenu(); });
 
 // --- HUD -----------------------------------------------------------------
@@ -159,6 +203,7 @@ $("#j-salir").addEventListener("click", () => { efe.menu(); alMenu(); });
 // y tocar el DOM en cada cuadro es de las cosas mas caras que se pueden hacer
 // en un telefono, para escribir los mismos numeros que ya estaban.
 const ultimo = {};
+let ultimaVoz = null;
 function pintarHud(p) {
   const poner = (sel, v) => { if (ultimo[sel] === v) return; ultimo[sel] = v; $(sel).textContent = v; };
   poner("#h-metros", `${p.metros} m`);
@@ -195,6 +240,11 @@ function sonar(p) {
     const d = cargar();
     if (e.capitulo > d.capitulo) { d.capitulo = e.capitulo; guardar(); }
   }
+  // La voz de la línea que está puesta. Se dispara cuando CAMBIA la línea, no
+  // cada cuadro: `dicho.i` avanza solo cada dos segundos y medio.
+  const dicho = p.dicho;
+  const clave = dicho ? `${dicho.clave}l${dicho.i}` : null;
+  if (clave !== ultimaVoz) { ultimaVoz = clave; if (clave) voz(clave); }
   const ci = p.capitulo.i;
   if (ci !== capSonando) {
     capSonando = ci;
@@ -202,7 +252,14 @@ function sonar(p) {
   }
 }
 
+// Los relojes del diálogo final. Se guardan para poder cancelarlos: si el
+// jugador toca "Otra vez" a los dos segundos, las voces que quedaban en cola
+// seguían sonando encima del nivel nuevo.
+let finTimers = [];
+function cortarFinal() { for (const t of finTimers) clearTimeout(t); finTimers = []; }
+
 function terminar(p) {
+  cortarFinal();
   const d = cargar();
   d.mejorProf = Math.max(d.mejorProf, p.metros);
   d.mejorChatarra = Math.max(d.mejorChatarra, p.juntada);
@@ -221,6 +278,15 @@ function terminar(p) {
   // cuatro lineas, saber quien habla sin leer el nombre es la mitad del chiste.
   $("#f-dialogo").innerHTML = FINAL
     .map(([q, t]) => `<p data-quien="${q.toLowerCase()}"><b>${q}</b> ${t}</p>`).join("");
+  // El ida y vuelta del final, dicho en voz alta y en orden. Los tiempos salen
+  // del propio índice: cada línea espera a que termine la anterior más medio
+  // segundo, así que si una voz se regenera más larga, el ritmo se acomoda solo.
+  let cuando = 260;
+  FINAL.forEach((_, i) => {
+    const t = VOCES[`f${i}`];
+    finTimers.push(setTimeout(() => voz(`f${i}`), cuando));
+    cuando += (t ? t[1] * 1000 : 1600) + 420;
+  });
   partida = null;
   mostrar("p-fin");
 }
@@ -265,6 +331,9 @@ function bucle(ahora) {
   const d = cargar();
   $("#aj-sonido").checked = d.ajustes.sonido;
   sonando(d.ajustes.sonido);
+  cargarImagenes();
+  // Sin índice no se pide el mp3: no habría forma de saber qué parte suena.
+  if (Object.keys(VOCES).length) cargarVoces(ruta("assets/voces.mp3"), VOCES);
   alMenu();
   requestAnimationFrame(bucle);
   // Para poder auditar el juego desde afuera: las pruebas corren la fisica de

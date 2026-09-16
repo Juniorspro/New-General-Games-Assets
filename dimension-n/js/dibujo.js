@@ -4,6 +4,21 @@ import { VISTA } from "./juego.js";
 import { paredEn, capituloEn, ANCHO } from "./nivel.js";
 import { dibujarCuerpo } from "./cuerpo.js";
 
+// Las texturas del mundo. Se registran una vez desde main.js y se guardan ya
+// convertidas en patron: crear un CanvasPattern es caro y hacerlo por cuadro
+// —que era lo obvio— tira a la basura todo lo que se gano usando una textura.
+let TEX = {};
+let PAT = {};
+export function registrarTexturas(t) {
+  TEX = t || {};
+  PAT = {};
+}
+function patron(ctx, clave) {
+  if (PAT[clave] !== undefined) return PAT[clave];
+  PAT[clave] = TEX[clave] ? ctx.createPattern(TEX[clave], "repeat") : null;
+  return PAT[clave];
+}
+
 const mezclar = (a, b, t) => {
   const p = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
   const [r1, g1, b1] = p(a), [r2, g2, b2] = p(b);
@@ -74,15 +89,48 @@ export function dibujar(ctx, p) {
   // Se dibuja de mano a mano —que es lo que se entiende— aunque la
   // restriccion que aguanta el peso vaya de pecho a pecho.
   const a = p.mano.a, b = p.mano.b;
-  ctx.strokeStyle = "#c98f4a"; ctx.lineWidth = 2; ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
   const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
   const d = Math.hypot(a.x - b.x, a.y - b.y);
   // La panza: cuanto menos estirada, mas cuelga. Una linea recta entre dos
   // manos no es una soga, es una barra.
-  ctx.quadraticCurveTo(mx, my + Math.max(0, p.mano.largo - d) * 0.8 + 3, b.x, b.y);
-  ctx.stroke();
+  const cy = my + Math.max(0, p.mano.largo - d) * 0.8 + 3;
+  const enCurva = (t) => ({
+    x: (1 - t) * (1 - t) * a.x + 2 * (1 - t) * t * mx + t * t * b.x,
+    y: (1 - t) * (1 - t) * a.y + 2 * (1 - t) * t * cy + t * t * b.y,
+  });
+  if (TEX.soga) {
+    // LA SOGA SE DIBUJA EN OCHO TRAMOS, no de un saque. Una imagen no se puede
+    // curvar con drawImage: estirada de punta a punta queda una tira recta que
+    // no sigue la panza. Ocho pedacitos rectos sobre la curva se ven curvos, y
+    // ocho drawImage no le hacen ni cosquillas a un cuadro.
+    const N = 8, gr = 4;
+    const anchoTex = TEX.soga.width / N;
+    let ant = enCurva(0);
+    for (let i = 1; i <= N; i++) {
+      const pt = enCurva(i / N);
+      const dx = pt.x - ant.x, dy = pt.y - ant.y;
+      const l = Math.hypot(dx, dy) || 1;
+      ctx.save();
+      ctx.translate(ant.x, ant.y);
+      ctx.rotate(Math.atan2(dy, dx));
+      // CADA TRAMO DIBUJA SU PROPIO PEDAZO DE LA TEXTURA, no la textura entera.
+      // Dibujando la imagen completa en cada tramo, el trenzado aparecía ocho
+      // veces a lo largo de una soga de sesenta píxeles: quedaba una tira
+      // rayada, no una soga. Así el dibujo del trenzado recorre la soga una
+      // sola vez y conserva su proporción.
+      // +1 de largo: sin el solape se ve una rayita de fondo entre tramo y tramo.
+      ctx.drawImage(TEX.soga, (i - 1) * anchoTex, 0, anchoTex, TEX.soga.height,
+                    0, -gr / 2, l + 1, gr);
+      ctx.restore();
+      ant = pt;
+    }
+  } else {
+    ctx.strokeStyle = "#c98f4a"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.quadraticCurveTo(mx, cy, b.x, b.y);
+    ctx.stroke();
+  }
 
   dibujarCuerpo(ctx, p.tito);
   dibujarCuerpo(ctx, p.rilo);
@@ -108,13 +156,27 @@ function paredes(ctx, p, cam, color) {
   for (let y = y0; y <= y1; y += 50) mues.push({ y, ...paredEn(nv.perfil, y) });
   if (!mues.length) return;
 
+  const tex = patron(ctx, "pared");
   for (const lado of ["izq", "der"]) {
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.moveTo(lado === "izq" ? -20 : ANCHO + 20, y0);
     for (const m of mues) ctx.lineTo(m[lado], m.y);
     ctx.lineTo(lado === "izq" ? -20 : ANCHO + 20, y1);
-    ctx.closePath(); ctx.fill();
+    ctx.closePath();
+    ctx.fill();
+    if (tex) {
+      // La textura va ENCIMA del color plano y a media opacidad, no en lugar
+      // de el. Sola, la misma imagen de chapa pinta los siete capitulos
+      // iguales; arriba del color del capitulo, aporta el detalle y deja que
+      // el color siga contando en que parte del pozo esta el jugador.
+      ctx.save();
+      ctx.clip();
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = tex;
+      ctx.fillRect(-40, y0, ANCHO + 80, y1 - y0);
+      ctx.restore();
+    }
     // El filo iluminado. Sin esto la pared y el fondo se leen como una sola
     // mancha y no se ve donde termina el pasillo.
     ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = 2;
@@ -175,6 +237,17 @@ function obstaculo(ctx, o, t) {
     return;
   }
   ctx.fillStyle = "#2b3348"; ctx.fillRect(o.x, o.y, o.an, o.al);
+  const tex = patron(ctx, "repisa");
+  if (tex) {
+    // El patron se ancla en el origen del lienzo, no en la repisa, asi que se
+    // traslada a mano: sin esto la textura se "desliza" por debajo de cada
+    // repisa segun donde este, y dos repisas iguales se ven distintas.
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    ctx.fillStyle = tex;
+    ctx.fillRect(0, 0, o.an, o.al);
+    ctx.restore();
+  }
   ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.fillRect(o.x, o.y, o.an, 3);
 }
 

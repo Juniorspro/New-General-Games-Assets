@@ -5,6 +5,7 @@ Existe porque los servidores MCP se cargan al arrancar la sesión: si el
 servidor se declara después, esa sesión no lo ve y hay que hablarle a mano.
 
     python3 herramientas/rezona/rz.py tools
+    python3 herramientas/rezona/rz.py esquema [herramienta]
     python3 herramientas/rezona/rz.py call <herramienta> '<json>'
     python3 herramientas/rezona/rz.py batch '<json con lista de llamadas>'
 
@@ -127,6 +128,18 @@ def main():
                 props = list(((t.get("inputSchema") or {}).get("properties") or {}).keys())
                 if req:   print(f"    obligatorios: {', '.join(req)}")
                 if props: print(f"    acepta: {', '.join(props[:14])}")
+
+        elif modo == "esquema":
+            # El esquema COMPLETO de una herramienta. `tools` corta la
+            # descripcion en la primera linea y no muestra los valores que
+            # acepta cada parametro, que es justo donde vive lo que hace falta
+            # saber: que modelos existen, que tamanos, que formatos.
+            r = m.llamar("tools/list")
+            for t in r.get("result", {}).get("tools", []):
+                if len(sys.argv) > 2 and t["name"] != sys.argv[2]:
+                    continue
+                print(f"\n▸ {t['name']}\n{(t.get('description') or '').strip()}")
+                print(json.dumps(t.get("inputSchema") or {}, ensure_ascii=False, indent=2))
 
         elif modo == "call":
             args = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}

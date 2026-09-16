@@ -12,6 +12,9 @@ echo
 echo "── la física: ragdoll, soga, ovillo y daño ───────────────────"
 node pruebas/fisica.mjs
 echo
+echo "── las voces: que estén todas y duren lo que dura una frase ──"
+node pruebas/voces.mjs
+echo
 echo "── el nivel: que se pueda terminar, jugado de verdad ─────────"
 node pruebas/nivel.mjs
 echo

@@ -1,0 +1,12 @@
+{
+  "rilo": {
+    "task_id": "gtask-6dc9aecfec9b41ac9a60",
+    "output_path": "assets/cuerpo_rilo-g1.png",
+    "estado": "ready"
+  },
+  "tito": {
+    "task_id": "gtask-5ebcffcc9b5e4840a2c1",
+    "output_path": "assets/cuerpo_tito-g1.png",
+    "estado": "ready"
+  }
+}

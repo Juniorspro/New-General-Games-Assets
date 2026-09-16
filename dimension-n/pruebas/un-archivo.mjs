@@ -58,7 +58,11 @@ await pg.evaluate(() => {
   const ult = window.DN.nivel.portales[6];
   P.reiniciarEn(6);
   const dx = ult.x - P.rilo.p.pecho.x, dy = ult.y - 20 - P.rilo.p.pecho.y;
-  for (const q of P.rilo.puntos) { q.x += dx; q.y += dy; q.px += dx; q.py += dy; }
+  // SE MUEVEN LOS DOS, no sólo Rilo. La soga los ata de pecho a pecho y no se
+  // estira: dejando a Tito mil trescientos píxeles arriba, el solucionador
+  // arrastra a Rilo de vuelta hacia él y no llega nunca al portal. Lo cual,
+  // dicho sea de paso, es la prueba de que la soga funciona.
+  for (const q of P.puntos) { q.x += dx; q.y += dy; q.px += dx; q.py += dy; }
 });
 await pg.waitForSelector("#p-fin:not([hidden])", { timeout: 20000 });
 ch("pasar el último portal termina el juego", true);

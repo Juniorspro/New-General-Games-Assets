@@ -18,25 +18,71 @@
 // persona que cae y una bolsa de papas.
 
 import { punto, palo } from "./verlet.js";
+import { MEDIDAS } from "./medidas.js";
 
-// El esqueleto, en pixeles y con el (0,0) en la cabeza. Cambiarlo cambia la
-// forma del muneco y nada mas: los huesos miden su largo de aca.
-const HUESOS = [
-  ["cabeza", 0, 0, 7.0, 2.4],
-  ["pecho", 0, 15, 5.5, 3.0],
-  ["cadera", 0, 27, 5.0, 2.6],
-  ["codoIzq", -9, 21, 3.0, 0.9], ["manoIzq", -14, 31, 3.0, 0.7],
-  ["codoDer", 9, 21, 3.0, 0.9], ["manoDer", 14, 31, 3.0, 0.7],
-  ["rodIzq", -6, 39, 3.5, 1.1], ["pieIzq", -7, 51, 3.8, 0.9],
-  ["rodDer", 6, 39, 3.5, 1.1], ["pieDer", 7, 51, 3.8, 0.9],
-];
+// EL ESQUELETO SE CALCULA DE LAS MEDIDAS DEL DIBUJO, no se escribe a mano.
+//
+// `js/medidas.js` lo escribe cortar_cuerpos.py midiendo la ilustración de la
+// que salieron las piezas: dónde está el hombro, dónde la cadera, cuánto mide
+// el muslo. Armar el muñeco con esos números hace que las piezas encajen por
+// construcción; escritos a mano nunca terminan de coincidir y uno se pasa la
+// tarde moviendo un torso de a dos píxeles.
+//
+// UNO POR PERSONAJE, y es la mitad de lo que los distingue. Rilo es alto y
+// flaco —64 px, torso largo porque el guardapolvo le llega a la rodilla—;
+// Tito es bajo y cabezón —54 px, y su cabeza sola es el 36% de su altura
+// contra el 29% de la del abuelo—. Eso también cambia cómo caen: los miembros
+// largos de Rilo tienen más palanca y se voltean más.
 
-export const ALTO_CUERPO = 58;
+// Cuánto mide cada uno EN EL JUEGO, en píxeles del mundo (que son 360 de
+// ancho). Con las piezas dibujadas hace falta más tamaño que con las líneas
+// vectoriales: una cara de 20 píxeles es una mancha, y lo que se ganó
+// dibujando a Rilo con su guardapolvo se pierde si no se le ve.
+const ALTO = { rilo: 76, tito: 62 };
+
+/**
+ * De las fracciones del dibujo a los once puntos del ragdoll.
+ *
+ * Las masas sí van a mano: no salen de ningún dibujo. La cabeza y el pecho
+ * pesan porque son el centro del cuerpo, las manos casi nada. Los radios son
+ * la mitad del grosor de cada parte, redondeados a lo que hace falta para que
+ * el muñeco no se hunda en el piso.
+ */
+function esqueleto(clave) {
+  const m = MEDIDAS[clave], H = ALTO[clave];
+  const hombro = m.cabeza * H;
+  const cadera = hombro + m.torso * H;
+  const rodilla = cadera + m.muslo * H;
+  const pie = rodilla + m.canilla * H;
+  const codo = hombro + m.brazo_alto * H;
+  const mano = codo + m.brazo_bajo * H;
+  const w = m.hombro_ancho * H;
+  return [
+    // La cabeza va al MEDIO de la cabeza dibujada, no arriba de todo: es el
+    // punto que la física empuja y tiene que estar donde está el peso.
+    ["cabeza", 0, hombro * 0.5, Math.max(5.5, hombro * 0.34), 2.3],
+    ["pecho", 0, hombro, w * 0.34, 3.0],
+    ["cadera", 0, cadera, w * 0.30, 2.6],
+    ["codoIzq", -w * 0.62, codo, 2.8, 0.9], ["manoIzq", -w * 0.78, mano, 2.8, 0.8],
+    ["codoDer", w * 0.62, codo, 2.8, 0.9], ["manoDer", w * 0.78, mano, 2.8, 0.8],
+    // Rodillas y pies PESADOS, y no por realismo. La canilla de Rilo mide ocho
+    // píxeles —el guardapolvo le tapa la pierna hasta la rodilla— y un hueso
+    // corto entre dos puntos livianos es lo que más se estira cuando le pega
+    // algo: el mismo golpe lo mueve más y el solucionador tiene menos largo
+    // para repartir la corrección. Con masa 1,5 el estirón bajó de 25% a 13%.
+    ["rodIzq", -w * 0.24, rodilla, 3.0, 1.5], ["pieIzq", -w * 0.28, pie, 3.4, 1.5],
+    ["rodDer", w * 0.24, rodilla, 3.0, 1.5], ["pieDer", w * 0.28, pie, 3.4, 1.5],
+  ];
+}
+
+const ESQUELETOS = { rilo: esqueleto("rilo"), tito: esqueleto("tito") };
+
+export const ALTO_CUERPO = ALTO.rilo;
 
 export function crearCuerpo(x, y, pinta) {
   const p = {};
   const puntos = [];
-  for (const [n, dx, dy, r, m] of HUESOS) {
+  for (const [n, dx, dy, r, m] of ESQUELETOS[pinta.clave]) {
     const pt = punto(x + dx, y + dy, { radio: r, masa: m, nombre: n });
     p[n] = pt; puntos.push(pt);
   }
@@ -79,7 +125,7 @@ export function crearCuerpo(x, y, pinta) {
  */
 export function ovillar(c, cuanto) {
   c.bolita += (cuanto - c.bolita) * 0.22;
-  const k = 1 - c.bolita * 0.55;
+  const k = 1 - c.bolita * 0.45;
   for (const s of c.forma) {
     s.largo = s.base * k;
     // La rigidez sube casi hasta la de un hueso: un palo de forma flojo
@@ -87,7 +133,7 @@ export function ovillar(c, cuanto) {
     // Se queda por debajo de la rigidez de un hueso (1) a proposito: si la
     // pasa, el palo de forma le gana al hueso y el brazo se comprime a la
     // mitad — el ovillo queda bien y los brazos quedan cortos.
-    s.rigidez = 0.06 + c.bolita * 0.42;
+    s.rigidez = 0.06 + c.bolita * 0.30;
   }
 }
 
@@ -95,7 +141,89 @@ export function centro(c) {
   return { x: (c.p.pecho.x + c.p.cadera.x) / 2, y: (c.p.pecho.y + c.p.cadera.y) / 2 };
 }
 
-// --- dibujo --------------------------------------------------------------
+// --- dibujo con piezas ---------------------------------------------------
+//
+// CADA PIEZA SE DIBUJA ENTRE DOS ARTICULACIONES. No hay poses ni cuadros de
+// animacion: se toma el hueso que va del codo a la mano, se rota la imagen del
+// antebrazo a ese angulo y se la estira a ese largo. Como el hueso lo movio la
+// fisica, el dibujo la sigue sin que nadie tenga que sincronizar nada.
+//
+// TODAS LAS PIEZAS VIENEN VERTICALES, con la articulacion de arriba en el
+// borde superior y la de abajo en el inferior (lo garantiza preparar_assets.py
+// recortando al contenido). Por eso alcanza con rotar `atan2(b−a) − 90°`: el
+// "abajo" de la imagen es el "hacia b" del hueso.
+//
+// Y SI LAS IMAGENES NO ESTAN, se dibuja igual. El juego arranco siendo
+// vectorial y esa version sigue entera mas abajo: si una pieza no cargo —red
+// caida, archivo faltante— el muneco se dibuja solo con lineas y circulos en
+// vez de desaparecer.
+
+let PIEZAS = null;
+export function registrarPiezas(p) { PIEZAS = p; }
+export const hayPiezas = () => !!PIEZAS;
+
+// `k` es el ancho relativo al que sale de la proporcion de la imagen, y
+// `sobra` cuanto se pasa la pieza del largo del hueso para que las
+// articulaciones se solapen en vez de mostrar el hueco entre dos piezas.
+const AJUSTE = {
+  torso:       { k: 1.00, sobra: 1.12 },
+  brazo_alto:  { k: 0.90, sobra: 1.34 },
+  brazo_bajo:  { k: 0.90, sobra: 1.30 },
+  pierna_alta: { k: 0.95, sobra: 1.30 },
+  pierna_baja: { k: 0.95, sobra: 1.26 },
+};
+
+function tramo(ctx, img, a, b, parte) {
+  if (!img) return false;
+  const cfg = AJUSTE[parte];
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const d = Math.hypot(dx, dy) || 1;
+  const alto = d * cfg.sobra;
+  const an = alto * (img.width / img.height) * cfg.k;
+  ctx.save();
+  ctx.translate(a.x, a.y);
+  ctx.rotate(Math.atan2(dy, dx) - Math.PI / 2);
+  ctx.drawImage(img, -an / 2, -d * (cfg.sobra - 1) / 2, an, alto);
+  ctx.restore();
+  return true;
+}
+
+function cabezaImg(ctx, c, img) {
+  // La cabeza no va entre dos puntos: va CENTRADA en el suyo, con el pelo
+  // asomando para arriba. `ancla` dice a que altura de la imagen cae la cara,
+  // porque el pelo de Rilo ocupa media pieza y centrarla a la mitad le dejaria
+  // la cara en el pecho.
+  const p = c.p;
+  const ax = p.cabeza.x - p.pecho.x, ay = p.cabeza.y - p.pecho.y;
+  // El alto de la cabeza también sale de la medida: es la fracción del dibujo
+  // por la altura del personaje, con un pelín de más para que tape el cuello.
+  const alto = MEDIDAS[c.pinta.clave].cabeza * ALTO[c.pinta.clave] * 1.06;
+  const an = alto * (img.width / img.height);
+  ctx.save();
+  ctx.translate(p.cabeza.x, p.cabeza.y);
+  ctx.rotate(Math.atan2(ay, ax) + Math.PI / 2);
+  ctx.drawImage(img, -an / 2, -alto * c.pinta.cabezaAncla, an, alto);
+  ctx.restore();
+}
+
+function dibujarConPiezas(ctx, c, im) {
+  const p = c.p;
+  // El orden ES la profundidad: lo de atras primero. El brazo y la pierna
+  // derechos van detras del torso, los izquierdos adelante; asi el muneco se
+  // lee con volumen aunque todo sea plano.
+  tramo(ctx, im.brazo_alto, p.pecho, p.codoDer, "brazo_alto");
+  tramo(ctx, im.brazo_bajo, p.codoDer, p.manoDer, "brazo_bajo");
+  tramo(ctx, im.pierna_alta, p.cadera, p.rodDer, "pierna_alta");
+  tramo(ctx, im.pierna_baja, p.rodDer, p.pieDer, "pierna_baja");
+  tramo(ctx, im.pierna_alta, p.cadera, p.rodIzq, "pierna_alta");
+  tramo(ctx, im.pierna_baja, p.rodIzq, p.pieIzq, "pierna_baja");
+  tramo(ctx, im.torso, p.pecho, p.cadera, "torso");
+  tramo(ctx, im.brazo_alto, p.pecho, p.codoIzq, "brazo_alto");
+  tramo(ctx, im.brazo_bajo, p.codoIzq, p.manoIzq, "brazo_bajo");
+  cabezaImg(ctx, c, im.cabeza);
+}
+
+// --- dibujo vectorial (el respaldo) --------------------------------------
 
 const linea = (ctx, a, b, gr, color) => {
   ctx.strokeStyle = color; ctx.lineWidth = gr; ctx.lineCap = "round";
@@ -110,6 +238,12 @@ function ejes(c) {
 }
 
 export function dibujarCuerpo(ctx, c) {
+  const im = PIEZAS && PIEZAS[c.pinta.clave];
+  if (im && im.torso && im.cabeza) return dibujarConPiezas(ctx, c, im);
+  return dibujarVector(ctx, c);
+}
+
+function dibujarVector(ctx, c) {
   const { p, pinta } = c;
   const { nx, ny } = ejes(c);
 
@@ -219,14 +353,20 @@ export function dibujarCuerpo(ctx, c) {
   ctx.restore();
 }
 
-// Las dos pintas del juego. Son originales a proposito: homenaje, no calco.
+// Las dos pintas del juego. Los colores son los del respaldo vectorial; con
+// las piezas cargadas mandan las imagenes. `cabezaAncla` es a que altura de la
+// imagen de la cabeza cae la cara: Rilo lleva media pieza de pelo arriba, Tito
+// casi nada, y centrar las dos en el mismo lugar le deja la cara a uno donde
+// el otro tiene la nuca.
 export const RILO = {
+  clave: "rilo", cabezaAncla: 0.5,
   torso: "#eef2f7", solapa: "#cdd6e2", brazo: "#eef2f7", piel: "#d9b48f",
-  pantalon: "#3a4a63", zapato: "#22293a", pelo: "pinchos", pelocolor: "#8fe3f5",
+  pantalon: "#6b5535", zapato: "#3a3f4a", pelo: "pinchos", pelocolor: "#8fe3f5",
   ceja: true, baba: true,
 };
 export const TITO = {
+  clave: "tito", cabezaAncla: 0.48,
   torso: "#f5d341", solapa: null, brazo: "#f5d341", piel: "#e2b483",
-  pantalon: "#2f4d7a", zapato: "#2a2f3d", pelo: "tazon", pelocolor: "#7a4a2a",
+  pantalon: "#2f4d7a", zapato: "#e8eaf0", pelo: "tazon", pelocolor: "#7a4a2a",
   ceja: false, baba: false,
 };

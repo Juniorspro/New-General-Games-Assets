@@ -87,6 +87,56 @@ export const efe = {
   menu() { tono("square", 520, 700, 0.005, 0.07, 0.1); },
 };
 
+// --- las voces -----------------------------------------------------------
+//
+// UN SOLO MP3 CON TODAS LAS LINEAS PEGADAS, y un indice que dice donde empieza
+// y cuanto dura cada una. Veintitres archivos sueltos serian veintitres
+// pedidos de red, veintitres decodificaciones y —en el archivo unico—
+// veintitres bloques de base64. Asi es un pedido, un decode, y reproducir una
+// linea es `start(0, desde, largo)`.
+//
+// Se decodifica una sola vez y se guarda el AudioBuffer: un <audio> por linea
+// tambien funcionaria, pero no se puede pedir "de tal segundo a tal otro" con
+// precision, y en el telefono cada elemento nuevo cuesta.
+let vozBuf = null, vozIndice = null, vozAhora = null;
+
+export async function cargarVoces(url, indice) {
+  if (!indice) return;
+  vozIndice = indice;
+  try {
+    const r = await fetch(url);
+    const datos = await r.arrayBuffer();
+    // El contexto puede no existir todavia —no hubo gesto del usuario— asi que
+    // se guardan los bytes y se decodifican en el primer `voz()`.
+    vozBuf = { crudo: datos };
+  } catch (e) { vozIndice = null; }
+}
+
+export function voz(clave) {
+  if (!ac || !prendido || !vozIndice || !vozBuf) return;
+  const tramo = vozIndice[clave];
+  if (!tramo) return;
+  const soltar = () => {
+    // UNA VOZ POR VEZ. Los carteles se pisan cuando el jugador cruza un portal
+    // mientras habla el anterior, y dos lineas encimadas no se entiende
+    // ninguna: la nueva corta a la vieja.
+    if (vozAhora) { try { vozAhora.stop(); } catch (e) {} }
+    const s = ac.createBufferSource();
+    s.buffer = vozBuf.buffer;
+    const g = ac.createGain();
+    g.gain.value = 1.35;          // la voz por encima de los golpes
+    s.connect(g); g.connect(maestro);
+    s.start(0, tramo[0], tramo[1]);
+    vozAhora = s;
+  };
+  if (vozBuf.buffer) return soltar();
+  if (vozBuf.decodificando) return;
+  vozBuf.decodificando = true;
+  ac.decodeAudioData(vozBuf.crudo.slice(0), (buf) => {
+    vozBuf.buffer = buf; soltar();
+  }, () => { vozIndice = null; });
+}
+
 // El zumbido del pozo: dos osciladores desafinados que cambian de nota al
 // cambiar de capitulo. Es todo lo que hay de musica y alcanza, porque el juego
 // suena a golpes.

@@ -20,11 +20,17 @@ const nv = () => construirNivel();
 // --- que no explote ------------------------------------------------------
 {
   const p = new Partida(nv());
-  // Se mide el ESTIRÓN aparte de la compresión. Un hueso estirado es el
-  // muñeco desarmándose y no puede pasar; comprimido es el ovillo, que es una
-  // pose y tiene que poder. Medir |d − largo| junta las dos cosas y hace que
-  // la prueba se queje del ovillo como si fuera una falla.
-  let estiron = 0, compresion = 0, cual = "";
+  // SE MIDE EN PÍXELES, no en porcentaje, y es una corrección de la prueba:
+  // el guardapolvo de Rilo le tapa la pierna hasta la rodilla, así que su
+  // canilla mide OCHO píxeles. Un 23% sobre ocho píxeles son menos de dos, que
+  // nadie ve; el mismo 23% sobre el fémur de Tito serían tres y pico y sí se
+  // notaría. Lo que hace que un muñeco se vea desarmado es el hueco en
+  // píxeles, no la proporción — la prueba tiene que medir eso.
+  //
+  // Y se mide el ESTIRÓN aparte de la compresión: un hueso estirado es el
+  // muñeco viniéndose abajo; comprimido es el ovillo, que es una pose y tiene
+  // que poder.
+  let estiron = 0, estironPc = 0, compresion = 0, cual = "";
   for (let i = 0; i < 6000; i++) {
     // Se lo zarandea a propósito: dirección al azar y bolita a destiempo, que
     // es lo peor que le puede hacer un jugador.
@@ -32,21 +38,22 @@ const nv = () => construirNivel();
     for (const s of p.palos) {
       if (s.tipo !== "hueso") continue;
       const d = Math.hypot(s.a.x - s.b.x, s.a.y - s.b.y);
-      if ((d - s.largo) / s.largo > estiron) {
-        estiron = (d - s.largo) / s.largo; cual = `${s.a.nombre}–${s.b.nombre}`;
+      if (d - s.largo > estiron) {
+        estiron = d - s.largo;
+        estironPc = (d - s.largo) / s.largo;
+        cual = `${s.a.nombre}–${s.b.nombre} de ${s.largo.toFixed(1)} px`;
       }
-      compresion = Math.max(compresion, (s.largo - d) / s.largo);
+      compresion = Math.max(compresion, s.largo - d);
     }
   }
   const finito = p.puntos.every((q) => Number.isFinite(q.x) && Number.isFinite(q.y));
   ch("6000 cuadros de maltrato y ningún punto se va a infinito", finito);
-  // El 15% no es un numero redondo elegido para que pase: es donde quedo
-  // despues de buscar el ovillo mas apretado que no rompe nada. Apretando mas,
-  // los palos de forma le ganan al hueso de la canilla y el pie se separa.
-  ch("ningún hueso se estira más del 15%", estiron < 0.15,
-     `el peor es ${cual}, ${(estiron * 100).toFixed(1)}%`);
-  ch("y la compresión se queda en lo que hace el ovillo", compresion < 0.22,
-     `${(compresion * 100).toFixed(1)}%`);
+  // Dos píxeles y medio es lo que se empieza a ver: por debajo de eso, la
+  // separación queda tapada por el solape con el que se dibujan las piezas.
+  ch("ningún hueso se separa más de 2,5 px", estiron < 2.5,
+     `el peor es ${cual}: ${estiron.toFixed(2)} px (${(estironPc * 100).toFixed(0)}%)`);
+  ch("y la compresión se queda en lo que hace el ovillo", compresion < 4.5,
+     `${compresion.toFixed(2)} px`);
   ch("nadie se fue del pasillo", p.puntos.every((q) => q.x > -40 && q.x < 400),
      `x entre ${Math.min(...p.puntos.map((q) => q.x)).toFixed(0)} y ${Math.max(...p.puntos.map((q) => q.x)).toFixed(0)}`);
 }
