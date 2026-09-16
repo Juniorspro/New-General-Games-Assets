@@ -1858,13 +1858,18 @@ const PIEZAS = [
 
 // --- bloques ------------------------------------------------------------
 {
-  nombre: "bloques", peso: (d) => 6, temas: null, min: 0,
+  nombre: "bloques", peso: (d) => 9, temas: null, min: 0,
   armar(p) {
     const n = p.rnd.entero(3, 6), w = n + 4;
     p.ancho = w; p.suelo(0, w);
     const y = p.piso - p.rnd.entero(4, 5);
+    // Al menos UNO de la fila es un ?. Sorteando cada uno por separado, una
+    // fila de tres salia entera de ladrillos una de cada seis veces, y esa es
+    // una pieza de bloques que no da nada.
+    const cual = p.rnd.entero(0, n - 1);
     for (let i = 0; i < n; i++) {
-      const v = p.rnd.pesado([[V.LADRILLO, 5], [V.PREGUNTA, 3], [V.NADA, 2]]);
+      const v = i === cual ? V.PREGUNTA
+                           : p.rnd.pesado([[V.LADRILLO, 5], [V.PREGUNTA, 4], [V.NADA, 2]]);
       if (v !== V.NADA) p.set(2 + i, y, v);
       else p.moneda(2 + i, y);
     }
@@ -1880,6 +1885,30 @@ const PIEZAS = [
     const w = 6; p.ancho = w; p.suelo(0, w);
     p.set(3, p.piso - 4, V.TIEMPO);
     p.set(2, p.piso - 4, V.LADRILLO); p.set(4, p.piso - 4, V.LADRILLO);
+    return p.piso;
+  },
+},
+
+// --- una tanda de bloques ? ---------------------------------------------
+// Pieza dedicada, y existe por una cuenta: los ? salian nada mas de la pieza
+// "bloques", que aparece una o dos veces por nivel y ademas repartia entre
+// ladrillos y ?. Daba 1,3 bloques ? por nivel. Los hongos salen de ahi, asi
+// que sin bloques no hay hongos.
+{
+  // El peso SUBE con la dificultad. Se midio: en los mundos duros las piezas
+  // de pinches, lava y balas se quedan con casi todo el sorteo y los niveles
+  // de jefe salian con dos bloques ? —los dos de la largada— y nada mas.
+  nombre: "preguntas", peso: (d) => 6 + d * 5, temas: null, min: 0,
+  armar(p) {
+    const n = p.rnd.entero(2, 4), w = n * 2 + 5;
+    p.ancho = w; p.suelo(0, w);
+    // Cuatro tiles de alto: se llega de un toque corto y no tapa la carrera.
+    const y = p.piso - 4;
+    for (let i = 0; i < n; i++) {
+      p.set(2 + i * 2, y, V.PREGUNTA);
+      p.moneda(3 + i * 2, y - 2);
+    }
+    p.marcarColor(2 + n, y - 4, "alto");
     return p.piso;
   },
 },
@@ -2849,6 +2878,23 @@ function construir(cfg, tier, intento) {
   // Largada: doce tiles de nada, para que el jugador entienda que corre solo
   // antes de que le pidan algo.
   for (let i = 0; i < 12; i++) for (let y = piso; y < ALTO_TILES; y++) set(i, y, V.SOLIDO);
+  // DOS BLOQUES ? SOBRE LA LARGADA, SIEMPRE, EN TODOS LOS NIVELES.
+  //
+  // Se conto y el numero era el problema: 1,3 bloques ? por nivel de promedio
+  // y TRECE de los veinticuatro sin uno solo. Con esos numeros, un hongo cada
+  // tantos bloques sale a un hongo cada varios niveles — que es lo que se
+  // reclamo, y con razon.
+  //
+  // Estos dos van aca y no en una pieza sorteada porque este es el unico
+  // lugar del nivel que se conoce de antemano: doce tiles de piso llano y
+  // parejo por los que el jugador pasa siempre. Alcanzables sin depender de
+  // como salio el resto, y sin tapar nada — estan cuatro tiles por encima de
+  // un tramo que se cruza corriendo, sin saltar.
+  //
+  // Se ponen ANTES de validar, asi el validador los ve como lo que son:
+  // bloques solidos que estan ahi.
+  set(7, piso - 4, V.PREGUNTA);
+  set(9, piso - 4, V.PREGUNTA);
   x = 12;
 
   const finReservado = 16;
@@ -3075,6 +3121,9 @@ function generarNivel(cfg, tier = "rosa") {
       }
     }
 
+    // Los premios de los bloques ?: hongos garantizados y repartidos.
+    nv.premios = repartirPremios(nv, r.visitadas);
+
     // Monedas: solo donde el camino probo que se llega, y repuestas a lo largo
     // del recorrido para que no queden tramos pelados.
     const sem = sembrarMonedas(nv, r.visitadas);
@@ -3088,6 +3137,77 @@ function generarNivel(cfg, tier = "rosa") {
   // mejor que una pantalla negra sin explicacion.
   ultimo.nv.validacion = { fallo: ultimo.r.motivo, intentos: 10 };
   return ultimo.nv;
+}
+
+/**
+ * Decide que da cada bloque ?, y GARANTIZA que en todos los niveles haya
+ * hongos.
+ *
+ * Antes lo decidia una cuenta sobre la posicion del bloque —`(tx*7+ty*13)%12`—
+ * hecha en el momento del golpe. Era deterministe, que estaba bien, pero
+ * repartia sobre bloques que en muchos niveles no existian: se conto y daban
+ * 1,3 bloques ? por nivel, con trece de veinticuatro en cero. Una probabilidad
+ * de 2 en 12 sobre una poblacion de 1,3 es un hongo cada varios niveles.
+ *
+ * Aca se hace al reves: primero se mira QUE bloques hay y a cuales llega el
+ * jugador, y recien despues se reparte, empezando por los hongos. Asi la
+ * cantidad no depende de la suerte de la tirada.
+ *
+ * ALCANZABLE quiere decir que el jugador pasa POR DEBAJO: un bloque se golpea
+ * de abajo hacia arriba. Se mira contra `visitadas`, que son las celdas que el
+ * validador simulo de verdad, o sea una lista de lugares donde se PUEDE estar
+ * —nunca de mas—. Es la misma base con la que se siembran las monedas, y por
+ * la misma razon: prometer algo que no se alcanza es peor que no prometerlo.
+ */
+function repartirPremios(nv, visitadas) {
+  const bajo = (tx, ty) => {
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = 1; dy <= 2; dy++)
+        if (visitadas.has(`${tx + dx},${ty + dy}`)) return true;
+    return false;
+  };
+  const alcanzables = [], lejanos = [];
+  for (let ty = 0; ty < ALTO_TILES; ty++)
+    for (let tx = 0; tx < nv.ancho; tx++)
+      if (tileXYg(nv.grilla, nv.ancho, tx, ty) === V.PREGUNTA)
+        (bajo(tx, ty) ? alcanzables : lejanos).push({ tx, ty });
+
+  const premios = {};
+  if (!alcanzables.length) return premios;
+  alcanzables.sort((a, b) => a.tx - b.tx);
+
+  // El primero de todos lleva hongo SIEMPRE. Es uno de los dos de la largada,
+  // sobre piso llano y en los primeros segundos: el jugador lo encuentra sin
+  // buscarlo y ahi aprende que los bloques dan hongos.
+  const usados = new Set();
+  const dar = (i, que) => {
+    if (i < 0 || i >= alcanzables.length || usados.has(i)) return false;
+    usados.add(i);
+    premios[`${alcanzables[i].tx},${alcanzables[i].ty}`] = que;
+    return true;
+  };
+  dar(0, "hongo");
+
+  // El super va pasada la mitad: que valga el camino recorrido. Si el nivel
+  // tiene pocos bloques, cae donde haya.
+  const n = alcanzables.length;
+  let iSuper = Math.min(n - 1, Math.max(1, Math.round(n * 0.62)));
+  while (iSuper > 0 && usados.has(iSuper)) iSuper--;
+  dar(iSuper, "super");
+
+  // Tres hongos mas, repartidos a lo ancho de lo que quede.
+  for (let k = 1; k <= 3; k++) {
+    let i = Math.round((n - 1) * (k / 4));
+    for (let d = 0; d < n && usados.has(i); d++) i = (i + 1) % n;
+    dar(i, "hongo");
+  }
+  // Y dos burbujas, que son el otro premio que importa.
+  for (let k = 1; k <= 2; k++) {
+    let i = Math.round((n - 1) * (k / 3) + 1) % n;
+    for (let d = 0; d < n && usados.has(i); d++) i = (i + 1) % n;
+    dar(i, "burbuja");
+  }
+  return premios;
 }
 
 // --- alcance real --------------------------------------------------------
@@ -3403,18 +3523,21 @@ class Partida {
       this.sacudida = 4;
     } else if (v === V.PREGUNTA) {
       this.nv.grilla[i] = V.USADO; efe.bloque();
-      // QUE SALE DE CADA BLOQUE ES DETERMINISTA, no un sorteo.
+      // QUE SALE DE CADA BLOQUE LO DECIDIO EL GENERADOR, bloque por bloque.
       //
-      // Sale de la posicion del bloque, asi que el mismo bloque del mismo
-      // nivel da siempre lo mismo. Con azar, dos partidas del mismo nivel se
-      // juegan distinto y el jugador que aprende el nivel no gana nada por
-      // aprenderlo — que es justo lo que este juego pide.
-      const r = (tx * 7 + ty * 13) % 12;
-      if (this.burbujas < 4 && r === 0) {
+      // Antes lo resolvia una cuenta sobre la posicion en el momento del
+      // golpe. Era determinista —el mismo bloque daba siempre lo mismo, que
+      // es lo que hace que aprenderse un nivel sirva— pero repartia a ciegas
+      // sobre bloques que en la mitad de los niveles no existian. Ahora el
+      // generador mira cuantos hay y a cuales se llega, y garantiza los
+      // hongos; ver repartirPremios en generador.js. Sigue siendo el mismo
+      // premio siempre para el mismo bloque del mismo nivel.
+      const premio = this.nv.premios?.[`${tx},${ty}`];
+      if (premio === "burbuja" && this.burbujas < 4) {
         this.burbujas++; efe.burbuja(); this.texto(tx * T + 8, ty * T - 6, "burbuja", "#8ad8ff");
-      } else if (r === 5 && this.tam < 2) {
+      } else if (premio === "super" && this.tam < 2) {
         this.soltarHongo(tx, ty, "super");
-      } else if ((r === 3 || r === 8) && this.tam < 1) {
+      } else if (premio === "hongo" && this.tam < 1) {
         this.soltarHongo(tx, ty, "hongo");
       } else {
         this.monedas += 3; efe.moneda();

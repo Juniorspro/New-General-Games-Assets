@@ -24,7 +24,23 @@ const r = await pg.evaluate(async () => {
   nueva();
   await new Promise(r => setTimeout(r, 2200));
   const p = p0();
+
+  // SE APLANA EL NIVEL, y no es por comodidad.
+  //
+  // Todo lo que se mide aca —que el hongo llegue volando, que un golpe
+  // achique, que el gigante rompa— no tiene nada que ver con la forma del
+  // nivel. Corriendo sobre el nivel generado, el jugador se caia en un pozo a
+  // mitad de la prueba y la mitad de los checks fallaban por eso: la primera
+  // version pasaba de casualidad y se rompio en cuanto el generador cambio el
+  // 1-1. Una llanura infinita hace que la prueba mida lo que dice medir.
   p.bichos = []; p.jefeVivo = false;
+  const PISO = 18;
+  for (let ty = 0; ty < ALTO_TILES; ty++)
+    for (let tx = 0; tx < p.nv.ancho; tx++)
+      p.nv.grilla[ty * p.nv.ancho + tx] = ty >= PISO ? V.SOLIDO : V.NADA;
+  p.nv.mastilX = 1e6;               // que no termine el nivel a mitad de prueba
+  p.color = [];
+  p.j.x = 4 * T; p.j.y = PISO * T; p.j.vy = 0; p.j.vivo = true;
   const corre = (n) => { for (let i = 0; i < n; i++) p.actualizar({ toque: false, toqueNuevo: false }); };
 
   // 1) un hongo suelto vuela hasta el jugador y lo hace grande
@@ -43,14 +59,13 @@ const r = await pg.evaluate(async () => {
   out.trasGolpeBurbujasAntes = burbujasAntes;
   out.trasGolpeEstado = p.estado;
 
-  // 3) el pozo SI mata aunque sea grande
-  p.tam = 1; p.invT = 0; p.estado = ESTADO.JUGANDO;
-  const burb2 = p.burbujas;
-  p.morir("pozo");
-  out.pozoEstado = p.estado;
-  out.pozoGastoBurbuja = p.burbujas < burb2;
-
-  // 4) el super hongo: escena y despues gigante
+  // 3) el super hongo: escena y despues gigante
+  //
+  // VA ANTES QUE LA PRUEBA DEL POZO, y el orden no da igual: morir manda a la
+  // burbuja, y saliendo de ahi a mano el jugador queda donde lo dejo la
+  // burbuja —que puede ser adentro de una pared— y se muere de nuevo en el
+  // primer cuadro. La prueba pasaba por casualidad hasta que el generador
+  // cambio el 1-1. Lo que se rompe con el orden no es el juego, es la prueba.
   p.estado = ESTADO.JUGANDO; p.tam = 0; p.j.vivo = true; p.invT = 0;
   p.soltarHongo(Math.floor(p.j.x / T) + 3, Math.floor(p.j.y / T) - 4, "super");
   corre(60);
@@ -68,7 +83,7 @@ const r = await pg.evaluate(async () => {
   // algun lado y la prueba no se entere. Es la propiedad que sostiene que un
   // nivel validado se siga pudiendo terminar.
   const solidos = () => { let n = 0; for (const v of p.nv.grilla) if (v === V.SOLIDO) n++; return n; };
-  const tx = Math.floor(p.j.x / T) + 1, ty = Math.floor((p.j.y - 1) / T);
+  const tx = Math.floor(p.j.x / T) + 2, ty = Math.floor((p.j.y - 1) / T);
   p.nv.grilla[ty * p.nv.ancho + tx] = V.LADRILLO;
   const solidosAntes = solidos();
   corre(120);
@@ -85,6 +100,13 @@ const r = await pg.evaluate(async () => {
   corre(6);
   out.finTam = p.tam;
 
+  // 8) y recien ahora el pozo, que termina en burbuja y ensucia todo lo demas
+  p.estado = ESTADO.JUGANDO; p.tam = 1; p.invT = 0; p.j.vivo = true;
+  const burb2 = p.burbujas;
+  p.morir("pozo");
+  out.pozoEstado = p.estado;
+  out.pozoGastoBurbuja = p.burbujas < burb2;
+
   out.V = { NADA: V.NADA, SOLIDO: V.SOLIDO, LADRILLO: V.LADRILLO };
   return out;
 });
@@ -99,8 +121,6 @@ ch("un golpe estando grande achica", r.trasGolpeTam === 0, `tam → ${r.trasGolp
 ch("y NO gasta una burbuja", r.trasGolpeBurbujas === r.trasGolpeBurbujasAntes,
    `${r.trasGolpeBurbujasAntes} → ${r.trasGolpeBurbujas}`);
 ch("y no manda a la burbuja", r.trasGolpeEstado === "jugando", r.trasGolpeEstado);
-ch("el pozo mata igual aunque sea grande", r.pozoEstado === "burbuja" || r.pozoGastoBurbuja,
-   `estado ${r.pozoEstado}`);
 ch("el super hongo abre la escena", r.escenaEstado === "escena", r.escenaEstado);
 ch("y al terminar deja gigante", r.trasEscenaTam === 2 && r.trasEscenaEstado === "jugando",
    `tam ${r.trasEscenaTam}, ${r.gigT} cuadros`);
@@ -114,6 +134,8 @@ ch("pero NO rompe un solo tile de terreno solido", r.solidosDespues === r.solido
 ch("la caja de colision NO cambia de tamano", r.ancho === 11 && r.alto === 15,
    `${r.ancho}x${r.alto}`);
 ch("el gigante se acaba solo y vuelve a grande", r.finTam === 1, `tam ${r.finTam}`);
+ch("el pozo mata igual aunque sea grande", r.pozoEstado === "burbuja" || r.pozoGastoBurbuja,
+   `estado ${r.pozoEstado}`);
 ch("sin errores de javascript", err.length === 0, err.slice(0, 2).join(" | "));
 
 console.log(`\n${ok}/${ok + mal}`);

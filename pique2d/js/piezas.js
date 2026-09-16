@@ -181,13 +181,18 @@ export const PIEZAS = [
 
 // --- bloques ------------------------------------------------------------
 {
-  nombre: "bloques", peso: (d) => 6, temas: null, min: 0,
+  nombre: "bloques", peso: (d) => 9, temas: null, min: 0,
   armar(p) {
     const n = p.rnd.entero(3, 6), w = n + 4;
     p.ancho = w; p.suelo(0, w);
     const y = p.piso - p.rnd.entero(4, 5);
+    // Al menos UNO de la fila es un ?. Sorteando cada uno por separado, una
+    // fila de tres salia entera de ladrillos una de cada seis veces, y esa es
+    // una pieza de bloques que no da nada.
+    const cual = p.rnd.entero(0, n - 1);
     for (let i = 0; i < n; i++) {
-      const v = p.rnd.pesado([[V.LADRILLO, 5], [V.PREGUNTA, 3], [V.NADA, 2]]);
+      const v = i === cual ? V.PREGUNTA
+                           : p.rnd.pesado([[V.LADRILLO, 5], [V.PREGUNTA, 4], [V.NADA, 2]]);
       if (v !== V.NADA) p.set(2 + i, y, v);
       else p.moneda(2 + i, y);
     }
@@ -203,6 +208,30 @@ export const PIEZAS = [
     const w = 6; p.ancho = w; p.suelo(0, w);
     p.set(3, p.piso - 4, V.TIEMPO);
     p.set(2, p.piso - 4, V.LADRILLO); p.set(4, p.piso - 4, V.LADRILLO);
+    return p.piso;
+  },
+},
+
+// --- una tanda de bloques ? ---------------------------------------------
+// Pieza dedicada, y existe por una cuenta: los ? salian nada mas de la pieza
+// "bloques", que aparece una o dos veces por nivel y ademas repartia entre
+// ladrillos y ?. Daba 1,3 bloques ? por nivel. Los hongos salen de ahi, asi
+// que sin bloques no hay hongos.
+{
+  // El peso SUBE con la dificultad. Se midio: en los mundos duros las piezas
+  // de pinches, lava y balas se quedan con casi todo el sorteo y los niveles
+  // de jefe salian con dos bloques ? —los dos de la largada— y nada mas.
+  nombre: "preguntas", peso: (d) => 6 + d * 5, temas: null, min: 0,
+  armar(p) {
+    const n = p.rnd.entero(2, 4), w = n * 2 + 5;
+    p.ancho = w; p.suelo(0, w);
+    // Cuatro tiles de alto: se llega de un toque corto y no tapa la carrera.
+    const y = p.piso - 4;
+    for (let i = 0; i < n; i++) {
+      p.set(2 + i * 2, y, V.PREGUNTA);
+      p.moneda(3 + i * 2, y - 2);
+    }
+    p.marcarColor(2 + n, y - 4, "alto");
     return p.piso;
   },
 },

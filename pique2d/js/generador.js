@@ -45,6 +45,23 @@ function construir(cfg, tier, intento) {
   // Largada: doce tiles de nada, para que el jugador entienda que corre solo
   // antes de que le pidan algo.
   for (let i = 0; i < 12; i++) for (let y = piso; y < ALTO_TILES; y++) set(i, y, V.SOLIDO);
+  // DOS BLOQUES ? SOBRE LA LARGADA, SIEMPRE, EN TODOS LOS NIVELES.
+  //
+  // Se conto y el numero era el problema: 1,3 bloques ? por nivel de promedio
+  // y TRECE de los veinticuatro sin uno solo. Con esos numeros, un hongo cada
+  // tantos bloques sale a un hongo cada varios niveles — que es lo que se
+  // reclamo, y con razon.
+  //
+  // Estos dos van aca y no en una pieza sorteada porque este es el unico
+  // lugar del nivel que se conoce de antemano: doce tiles de piso llano y
+  // parejo por los que el jugador pasa siempre. Alcanzables sin depender de
+  // como salio el resto, y sin tapar nada — estan cuatro tiles por encima de
+  // un tramo que se cruza corriendo, sin saltar.
+  //
+  // Se ponen ANTES de validar, asi el validador los ve como lo que son:
+  // bloques solidos que estan ahi.
+  set(7, piso - 4, V.PREGUNTA);
+  set(9, piso - 4, V.PREGUNTA);
   x = 12;
 
   const finReservado = 16;
@@ -271,6 +288,9 @@ export function generarNivel(cfg, tier = "rosa") {
       }
     }
 
+    // Los premios de los bloques ?: hongos garantizados y repartidos.
+    nv.premios = repartirPremios(nv, r.visitadas);
+
     // Monedas: solo donde el camino probo que se llega, y repuestas a lo largo
     // del recorrido para que no queden tramos pelados.
     const sem = sembrarMonedas(nv, r.visitadas);
@@ -284,6 +304,77 @@ export function generarNivel(cfg, tier = "rosa") {
   // mejor que una pantalla negra sin explicacion.
   ultimo.nv.validacion = { fallo: ultimo.r.motivo, intentos: 10 };
   return ultimo.nv;
+}
+
+/**
+ * Decide que da cada bloque ?, y GARANTIZA que en todos los niveles haya
+ * hongos.
+ *
+ * Antes lo decidia una cuenta sobre la posicion del bloque —`(tx*7+ty*13)%12`—
+ * hecha en el momento del golpe. Era deterministe, que estaba bien, pero
+ * repartia sobre bloques que en muchos niveles no existian: se conto y daban
+ * 1,3 bloques ? por nivel, con trece de veinticuatro en cero. Una probabilidad
+ * de 2 en 12 sobre una poblacion de 1,3 es un hongo cada varios niveles.
+ *
+ * Aca se hace al reves: primero se mira QUE bloques hay y a cuales llega el
+ * jugador, y recien despues se reparte, empezando por los hongos. Asi la
+ * cantidad no depende de la suerte de la tirada.
+ *
+ * ALCANZABLE quiere decir que el jugador pasa POR DEBAJO: un bloque se golpea
+ * de abajo hacia arriba. Se mira contra `visitadas`, que son las celdas que el
+ * validador simulo de verdad, o sea una lista de lugares donde se PUEDE estar
+ * —nunca de mas—. Es la misma base con la que se siembran las monedas, y por
+ * la misma razon: prometer algo que no se alcanza es peor que no prometerlo.
+ */
+function repartirPremios(nv, visitadas) {
+  const bajo = (tx, ty) => {
+    for (let dx = -1; dx <= 1; dx++)
+      for (let dy = 1; dy <= 2; dy++)
+        if (visitadas.has(`${tx + dx},${ty + dy}`)) return true;
+    return false;
+  };
+  const alcanzables = [], lejanos = [];
+  for (let ty = 0; ty < ALTO_TILES; ty++)
+    for (let tx = 0; tx < nv.ancho; tx++)
+      if (tileXYg(nv.grilla, nv.ancho, tx, ty) === V.PREGUNTA)
+        (bajo(tx, ty) ? alcanzables : lejanos).push({ tx, ty });
+
+  const premios = {};
+  if (!alcanzables.length) return premios;
+  alcanzables.sort((a, b) => a.tx - b.tx);
+
+  // El primero de todos lleva hongo SIEMPRE. Es uno de los dos de la largada,
+  // sobre piso llano y en los primeros segundos: el jugador lo encuentra sin
+  // buscarlo y ahi aprende que los bloques dan hongos.
+  const usados = new Set();
+  const dar = (i, que) => {
+    if (i < 0 || i >= alcanzables.length || usados.has(i)) return false;
+    usados.add(i);
+    premios[`${alcanzables[i].tx},${alcanzables[i].ty}`] = que;
+    return true;
+  };
+  dar(0, "hongo");
+
+  // El super va pasada la mitad: que valga el camino recorrido. Si el nivel
+  // tiene pocos bloques, cae donde haya.
+  const n = alcanzables.length;
+  let iSuper = Math.min(n - 1, Math.max(1, Math.round(n * 0.62)));
+  while (iSuper > 0 && usados.has(iSuper)) iSuper--;
+  dar(iSuper, "super");
+
+  // Tres hongos mas, repartidos a lo ancho de lo que quede.
+  for (let k = 1; k <= 3; k++) {
+    let i = Math.round((n - 1) * (k / 4));
+    for (let d = 0; d < n && usados.has(i); d++) i = (i + 1) % n;
+    dar(i, "hongo");
+  }
+  // Y dos burbujas, que son el otro premio que importa.
+  for (let k = 1; k <= 2; k++) {
+    let i = Math.round((n - 1) * (k / 3) + 1) % n;
+    for (let d = 0; d < n && usados.has(i); d++) i = (i + 1) % n;
+    dar(i, "burbuja");
+  }
+  return premios;
 }
 
 // --- alcance real --------------------------------------------------------

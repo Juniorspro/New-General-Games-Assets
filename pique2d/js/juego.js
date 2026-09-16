@@ -234,18 +234,21 @@ export class Partida {
       this.sacudida = 4;
     } else if (v === V.PREGUNTA) {
       this.nv.grilla[i] = V.USADO; efe.bloque();
-      // QUE SALE DE CADA BLOQUE ES DETERMINISTA, no un sorteo.
+      // QUE SALE DE CADA BLOQUE LO DECIDIO EL GENERADOR, bloque por bloque.
       //
-      // Sale de la posicion del bloque, asi que el mismo bloque del mismo
-      // nivel da siempre lo mismo. Con azar, dos partidas del mismo nivel se
-      // juegan distinto y el jugador que aprende el nivel no gana nada por
-      // aprenderlo — que es justo lo que este juego pide.
-      const r = (tx * 7 + ty * 13) % 12;
-      if (this.burbujas < 4 && r === 0) {
+      // Antes lo resolvia una cuenta sobre la posicion en el momento del
+      // golpe. Era determinista —el mismo bloque daba siempre lo mismo, que
+      // es lo que hace que aprenderse un nivel sirva— pero repartia a ciegas
+      // sobre bloques que en la mitad de los niveles no existian. Ahora el
+      // generador mira cuantos hay y a cuales se llega, y garantiza los
+      // hongos; ver repartirPremios en generador.js. Sigue siendo el mismo
+      // premio siempre para el mismo bloque del mismo nivel.
+      const premio = this.nv.premios?.[`${tx},${ty}`];
+      if (premio === "burbuja" && this.burbujas < 4) {
         this.burbujas++; efe.burbuja(); this.texto(tx * T + 8, ty * T - 6, "burbuja", "#8ad8ff");
-      } else if (r === 5 && this.tam < 2) {
+      } else if (premio === "super" && this.tam < 2) {
         this.soltarHongo(tx, ty, "super");
-      } else if ((r === 3 || r === 8) && this.tam < 1) {
+      } else if (premio === "hongo" && this.tam < 1) {
         this.soltarHongo(tx, ty, "hongo");
       } else {
         this.monedas += 3; efe.moneda();
