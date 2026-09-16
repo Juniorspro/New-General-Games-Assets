@@ -1,0 +1,3419 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2308070c%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2245%22%20font-family%3D%22Impact%2CAnton%2Csans-serif%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20fill%3D%22%23ff1e8e%22%3EIB%3C%2Ftext%3E%3C%2Fsvg%3E">
+<meta name="theme-color" content="#08070c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IBLO">
+<link rel="manifest" href="/app.webmanifest">
+<link rel="apple-touch-icon" href="/icono-192.png">
+<title>IBLO · Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Great+Vibes&family=Barlow:wght@400;600;800&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tinta:#08070c; --humo:#15111e; --carta:#191426; --linea:#2c2440;
+  --papel:#f4f1f6; --tenue:#9d95ae; --ac:#ff1e8e; --ac2:#c34bff; --ok:#2ce65a; --mal:#ff5470;
+  --curva:20px;
+  --gordo:Anton,Impact,sans-serif; --cond:"Barlow Condensed",Barlow,sans-serif;
+  --alto:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; background:var(--tinta); color:var(--papel);
+  font:400 16px/1.55 Barlow,system-ui,-apple-system,sans-serif; overscroll-behavior-y:none}
+body{min-height:100dvh}
+h1,h2,h3,h4{font-family:var(--gordo); font-weight:400; text-transform:uppercase;
+  letter-spacing:.01em; margin:0; line-height:1.02}
+em{font-style:normal; color:var(--ac)}
+button,input,textarea,select{font:inherit; color:inherit}
+img{max-width:100%; display:block}
+/* sin esto, un display: en una clase le gana al hidden y la pantalla queda a la vista */
+[hidden]{display:none!important}
+
+/* ---------- fondo ---------- */
+.luzFondo{position:fixed; inset:0; z-index:-2; pointer-events:none;
+  background:
+    radial-gradient(58% 40% at 82% -6%, rgba(195,75,255,.28), transparent 62%),
+    radial-gradient(64% 46% at 10% 4%, rgba(255,30,142,.24), transparent 64%),
+    radial-gradient(90% 60% at 50% 108%, rgba(255,30,142,.12), transparent 70%)}
+.grano{position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ---------- ingreso ---------- */
+.ingreso{min-height:100dvh; display:flex; flex-direction:column; justify-content:center;
+  padding:34px 22px calc(34px + var(--alto)); max-width:440px; margin:0 auto}
+.lock{display:flex; align-items:center; gap:13px; margin-bottom:26px}
+.lock img{width:52px; height:52px; object-fit:contain;
+  filter:drop-shadow(0 0 16px rgba(255,30,142,.6))}
+.lock .firma{display:block; font:400 15px/1 "Great Vibes",cursive; color:var(--ac); margin-bottom:-2px}
+.lock .nombre{display:block; font:400 27px/1 var(--gordo); letter-spacing:.05em}
+.ingreso h1{font-size:clamp(34px,10vw,46px)}
+.ingreso h1 + p{color:var(--tenue); margin:11px 0 28px}
+
+/* ---------- cabecera ---------- */
+.cab{position:sticky; top:0; z-index:30; display:flex; align-items:center; gap:11px;
+  padding:12px 16px; background:rgba(8,7,12,.86); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--linea)}
+.cab img{width:29px; height:29px; object-fit:contain; filter:drop-shadow(0 0 9px rgba(255,30,142,.65))}
+.cab b{font:400 20px/1 var(--gordo); letter-spacing:.05em}
+.cab .quien{margin-left:auto; font:600 11px/1 var(--cond); letter-spacing:.15em;
+  text-transform:uppercase; color:var(--tenue)}
+.salir{background:none; border:1px solid var(--linea); border-radius:11px; padding:7px;
+  display:grid; place-items:center; color:var(--tenue); cursor:pointer}
+.salir svg{width:17px; height:17px}
+
+main{padding:20px 16px calc(96px + var(--alto)); max-width:640px; margin:0 auto}
+
+/* ---------- pantallas ---------- */
+.pant{animation:sube .3s ease both}
+@keyframes sube{from{opacity:0; transform:translateY(9px)} to{opacity:1; transform:none}}
+.rot{display:inline-flex; align-items:center; gap:8px; font:600 11px/1 var(--cond);
+  letter-spacing:.2em; text-transform:uppercase; color:var(--ac); margin-bottom:9px}
+.rot::before{content:""; width:20px; height:2px; background:var(--ac)}
+.pant h2{font-size:clamp(29px,8.4vw,38px)}
+.baja{color:var(--tenue); margin:9px 0 0; font-size:15px}
+
+/* ---------- portada de la app ---------- */
+.saludo{font:400 clamp(30px,8.6vw,40px)/1 var(--gordo); text-transform:uppercase}
+.saludo span{color:var(--ac)}
+.pulso{display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:999px;
+  border:1px solid var(--linea); background:var(--humo); font:600 10.5px/1 var(--cond);
+  letter-spacing:.16em; text-transform:uppercase; color:var(--tenue); margin-bottom:14px}
+.pulso i{width:7px; height:7px; border-radius:50%; background:var(--ok); animation:late 1.9s infinite}
+@keyframes late{0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.35; transform:scale(.8)}}
+.pulso.frio i{background:var(--tenue); animation:none}
+
+.cifras{display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:20px 0 26px}
+.cifra{padding:15px 12px; border-radius:16px; background:var(--carta); border:1px solid var(--linea);
+  text-align:center}
+.cifra b{display:block; font:400 30px/1 var(--gordo); color:var(--papel)}
+.cifra span{display:block; margin-top:5px; font:600 9.5px/1.25 var(--cond); letter-spacing:.13em;
+  text-transform:uppercase; color:var(--tenue)}
+.cifra.viva b{color:var(--ac)}
+
+.acciones{display:grid; gap:12px}
+.acc{position:relative; overflow:hidden; display:flex; align-items:center; gap:14px; text-align:left;
+  width:100%; padding:18px; border-radius:var(--curva); cursor:pointer;
+  background:var(--carta); border:1px solid var(--linea); color:var(--papel);
+  transition:border-color .18s, transform .18s}
+.acc:active{transform:scale(.985)}
+.acc .ico{flex:none; width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+  background:rgba(255,30,142,.13); color:var(--ac)}
+.acc .ico svg{width:23px; height:23px}
+.acc b{display:block; font:400 21px/1.05 var(--gordo); text-transform:uppercase}
+.acc small{display:block; margin-top:3px; color:var(--tenue); font-size:13.5px; line-height:1.4}
+.acc .flecha{margin-left:auto; color:var(--tenue); flex:none}
+.acc .flecha svg{width:19px; height:19px}
+.acc.destaca{border-color:transparent;
+  background:linear-gradient(135deg,rgba(255,30,142,.22),rgba(195,75,255,.16)) padding-box,
+             linear-gradient(135deg,var(--ac),var(--ac2)) border-box;
+  border:1px solid transparent}
+.acc.destaca .ico{background:rgba(255,255,255,.16); color:#fff}
+.acc.destaca small{color:rgba(255,255,255,.86)}
+.acc.destaca .flecha{color:rgba(255,255,255,.8)}
+.acc.destaca::after{content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.16) 50%,transparent 62%);
+  transform:translateX(-100%); animation:brillo 4.6s 1.2s infinite}
+@keyframes brillo{0%{transform:translateX(-100%)} 26%,100%{transform:translateX(100%)}}
+
+/* ---------- formularios ---------- */
+.campo{margin-bottom:15px}
+.campo label{display:block; font:600 11px/1 var(--cond); letter-spacing:.15em;
+  text-transform:uppercase; color:var(--tenue); margin-bottom:7px}
+input[type=text],input[type=password],input[type=datetime-local],input:not([type]),textarea{
+  width:100%; padding:14px 15px; border-radius:14px; background:var(--humo);
+  border:1px solid var(--linea); outline:none; transition:border-color .16s, background .16s}
+input:focus,textarea:focus{border-color:var(--ac); background:#1b1528}
+textarea{resize:vertical; min-height:96px; line-height:1.5}
+::placeholder{color:#635b74}
+.pista{display:block; margin-top:6px; font-size:12.5px; color:var(--tenue)}
+
+.bt{display:flex; align-items:center; justify-content:center; gap:9px; width:100%; cursor:pointer;
+  padding:16px; border-radius:15px; border:1px solid transparent;
+  font:600 14px/1 var(--cond); letter-spacing:.15em; text-transform:uppercase;
+  transition:transform .16s, opacity .16s}
+.bt:active{transform:scale(.985)}
+.bt[disabled]{opacity:.55; cursor:default}
+.bt.p{background:linear-gradient(135deg,var(--ac),var(--ac2)); color:#0b0510;
+  box-shadow:0 10px 26px -14px rgba(255,30,142,.9)}
+.bt.s{background:var(--humo); border-color:var(--linea); color:var(--papel)}
+.bt svg{width:17px; height:17px}
+.dosBotones{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:11px}
+@media (max-width:380px){ .dosBotones{grid-template-columns:1fr} }
+
+.giro{width:14px; height:14px; border-radius:50%; border:2px solid rgba(0,0,0,.28);
+  border-top-color:#0b0510; animation:vuelta .7s linear infinite; display:inline-block}
+.bt.s .giro{border-color:rgba(255,255,255,.25); border-top-color:var(--papel)}
+@keyframes vuelta{to{transform:rotate(360deg)}}
+
+.aviso{margin-top:13px; padding:13px 15px; border-radius:13px; font-size:14.5px;
+  border:1px solid var(--linea); background:var(--humo)}
+.aviso.mal{border-color:rgba(255,84,112,.5); background:rgba(255,84,112,.1); color:#ffc2cd}
+.aviso.bien{border-color:rgba(44,230,90,.42); background:rgba(44,230,90,.09); color:#bdf5cd}
+
+/* ---------- elegir tipo ---------- */
+.tipos{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:6px 0 20px}
+.tipo{cursor:pointer; padding:14px 8px; border-radius:15px; background:var(--humo);
+  border:1px solid var(--linea); text-align:center; color:var(--tenue); transition:all .16s}
+.tipo svg{width:21px; height:21px; margin:0 auto 7px; display:block}
+.tipo b{display:block; font:600 11px/1.2 var(--cond); letter-spacing:.11em; text-transform:uppercase}
+.tipo.viva{border-color:var(--ac); background:rgba(255,30,142,.12); color:var(--papel)}
+.tipo.viva svg{color:var(--ac)}
+
+/* ---------- foto ---------- */
+.suelta{position:relative; display:grid; place-items:center; gap:5px; padding:26px 16px;
+  border-radius:16px; border:1.5px dashed var(--linea); background:var(--humo);
+  text-align:center; cursor:pointer; overflow:hidden; min-height:120px}
+.suelta input{position:absolute; inset:0; opacity:0; cursor:pointer}
+.suelta svg{width:26px; height:26px; color:var(--ac)}
+.suelta b{font:600 13px/1 var(--cond); letter-spacing:.13em; text-transform:uppercase}
+.suelta small{color:var(--tenue); font-size:12.5px}
+.suelta.tiene{padding:0; border-style:solid; min-height:0}
+.suelta.tiene img{width:100%; max-height:330px; object-fit:contain; background:#000}
+.suelta .cambiar{position:absolute; right:10px; bottom:10px; padding:7px 13px; border-radius:999px;
+  background:rgba(8,7,12,.85); border:1px solid var(--linea);
+  font:600 10.5px/1 var(--cond); letter-spacing:.14em; text-transform:uppercase}
+.pesoFoto{margin-top:7px; font-size:12.5px; color:var(--tenue)}
+
+/* ---------- paleta ---------- */
+.paleta{display:flex; flex-wrap:wrap; gap:9px}
+.tinte{width:38px; height:38px; border-radius:12px; cursor:pointer; border:2px solid transparent;
+  position:relative; transition:transform .16s}
+.tinte:active{transform:scale(.92)}
+.tinte.viva{border-color:var(--papel); box-shadow:0 0 0 3px rgba(255,255,255,.1)}
+
+.interruptor{display:flex; align-items:center; gap:11px; padding:14px 15px; border-radius:14px;
+  background:var(--humo); border:1px solid var(--linea); cursor:pointer; margin-top:4px}
+.interruptor input{width:19px; height:19px; accent-color:var(--ac); flex:none}
+.interruptor span{font-size:14.5px}
+
+/* ---------- ficha que propone la IA ---------- */
+.separa{display:flex; align-items:center; gap:12px; margin:24px 0 14px; color:var(--tenue)}
+.separa::before,.separa::after{content:""; height:1px; flex:1; background:var(--linea)}
+.separa span{font:600 10.5px/1 var(--cond); letter-spacing:.2em; text-transform:uppercase}
+.fichaProp{border-radius:var(--curva); border:1px solid var(--linea); background:var(--carta);
+  overflow:hidden}
+.fichaProp .tapa{padding:16px 17px; border-bottom:1px solid var(--linea)}
+.fichaProp .tapa b{display:block; font:400 25px/1.05 var(--gordo); text-transform:uppercase}
+.fichaProp .tapa i{display:block; font-style:normal; margin-top:5px; font:600 11px/1.3 var(--cond);
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ac)}
+.fichaProp .fila{display:flex; gap:12px; padding:11px 17px; border-bottom:1px solid var(--linea);
+  font-size:14.5px}
+.fichaProp .fila:last-child{border-bottom:0}
+.fichaProp .fila b{flex:none; width:78px; font:600 10.5px/1.5 var(--cond); letter-spacing:.13em;
+  text-transform:uppercase; color:var(--tenue)}
+.fichaProp img{width:100%; max-height:290px; object-fit:contain; background:#000}
+.faltan{margin-top:12px; padding:13px 15px; border-radius:13px; font-size:14px;
+  border:1px dashed var(--linea); color:var(--tenue)}
+.faltan b{color:var(--papel)}
+
+.ejemplos{display:flex; gap:8px; flex-wrap:wrap; margin-top:11px}
+.ejemplo{cursor:pointer; padding:9px 13px; border-radius:999px; background:var(--humo);
+  border:1px solid var(--linea); color:var(--tenue); font-size:13px; text-align:left}
+.ejemplo:active{border-color:var(--ac)}
+
+.modoManual{margin-top:26px; padding-top:22px; border-top:1px solid var(--linea)}
+.modoManual > span{display:block; font:600 11px/1 var(--cond); letter-spacing:.15em;
+  text-transform:uppercase; color:var(--tenue); margin-bottom:10px}
+
+/* ---------- previa ---------- */
+.previa{margin-top:26px; border-radius:var(--curva); overflow:hidden;
+  border:1px solid var(--linea); background:var(--carta)}
+.previa .cinta{padding:9px 15px; background:var(--humo); border-bottom:1px solid var(--linea);
+  font:600 10.5px/1 var(--cond); letter-spacing:.18em; text-transform:uppercase; color:var(--tenue)}
+.previa .cuerpo{padding:17px; display:grid; gap:9px}
+.previa img{width:100%; max-height:300px; object-fit:contain; background:#000; border-radius:12px}
+.previa h4{font-size:23px}
+.previa p{margin:0; font-size:14.5px; opacity:.9; white-space:pre-wrap}
+.previa .precio{justify-self:start; padding:8px 14px; border-radius:999px; background:var(--ac);
+  color:#0b0510; font:600 13px/1 var(--cond); letter-spacing:.09em}
+.previa .contacto{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:5px;
+  padding-top:13px; border-top:1px solid var(--linea)}
+.previa .contacto span{display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:12px; border-radius:12px; font:600 12px/1 var(--cond); letter-spacing:.1em;
+  text-transform:uppercase}
+.previa .contacto .w{background:var(--ac); color:#0b0510}
+.previa .contacto .i{border:1px solid var(--linea); color:var(--papel)}
+.previa .contacto svg{width:15px; height:15px}
+
+/* ---------- lista ---------- */
+.fila{display:flex; gap:13px; padding:13px; border-radius:16px; background:var(--carta);
+  border:1px solid var(--linea); margin-bottom:10px; align-items:center}
+.fila img{width:56px; height:56px; border-radius:11px; object-fit:cover; flex:none; background:#000}
+.fila .sinFoto{width:56px; height:56px; border-radius:11px; flex:none; display:grid; place-items:center;
+  background:var(--humo); color:var(--tenue)}
+.fila .sinFoto svg{width:20px; height:20px}
+.fila .txt{flex:1; min-width:0}
+.fila .txt b{display:block; font:400 17px/1.15 var(--gordo); text-transform:uppercase;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.fila .txt span{display:block; margin-top:3px; font-size:12.5px; color:var(--tenue)}
+.fila .txt .marca{display:inline-block; width:auto; margin-top:5px; padding:3px 9px; border-radius:999px;
+  font:600 9.5px/1.5 var(--cond); letter-spacing:.13em; text-transform:uppercase}
+.fila .marca.pr{background:rgba(195,75,255,.16); color:#dcaaff}
+/* `#lista` es una grilla de dos columnas y un `.bt` mide 100% con 16 px de
+   relleno: metido acá adentro, su ancho mínimo pasaba la columna y la fila se
+   desbordaba fuera de la pantalla. Este es chico y se puede envolver. */
+/* ---------- equipo ---------- */
+.eqGrupo{margin-top:16px; padding:16px 17px; border-radius:16px; background:var(--carta);
+  border:1px solid var(--linea)}
+.eqCab{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.eqCab b{font:400 18px/1 var(--gordo); text-transform:uppercase; color:var(--ac)}
+.eqCab span{font:700 10px/1 var(--cond); letter-spacing:.2em; text-transform:uppercase; color:var(--tenue)}
+.eqCab .cuantos{margin-left:auto; font-size:12px; color:var(--tenue)}
+.eqGente{list-style:none; margin:13px 0 0; padding:0; display:grid; gap:7px}
+.eqUno{display:flex; align-items:center; gap:9px; padding:9px 11px; border-radius:12px;
+  background:var(--humo); border:1px solid var(--linea); min-width:0}
+.eqUno .n{flex:1; min-width:0; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.eqUno .n i{display:block; font-style:normal; font-size:11.5px; color:var(--tenue)}
+.eqUno .n i.sin{opacity:.55}
+.eqUno .estrella{border:0; background:none; cursor:pointer; font-size:15px; line-height:1;
+  color:var(--tenue); padding:2px 4px}
+.eqUno .estrella.viva{color:var(--ac)}
+.eqAlta{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; margin-top:12px}
+@media(max-width:640px){ .eqAlta{grid-template-columns:1fr} }
+.eqAlta input{margin:0}
+
+.chip{display:inline-flex; align-items:center; gap:7px; margin-top:8px; padding:7px 13px;
+  border-radius:999px; cursor:pointer; border:1px solid var(--linea); background:var(--humo);
+  color:var(--papel); font:700 10.5px/1.25 var(--cond); letter-spacing:.11em;
+  text-transform:uppercase; text-align:left; white-space:normal}
+.chip:hover{border-color:var(--ac); color:var(--ac)}
+.chip[disabled]{opacity:.55; cursor:default}
+.fila{min-width:0}
+.fila .marca.en{background:rgba(255,30,142,.16); color:#ff8fc4}
+.fila .marca.av{background:rgba(255,255,255,.08); color:var(--tenue)}
+.fila .marca.baja{background:rgba(255,84,112,.14); color:#ffa8b6}
+.bajar{flex:none; cursor:pointer; padding:9px 13px; border-radius:11px; background:none;
+  border:1px solid var(--linea); color:var(--tenue);
+  font:600 10.5px/1 var(--cond); letter-spacing:.13em; text-transform:uppercase}
+.bajar:active{border-color:var(--mal); color:var(--mal)}
+.vacio{padding:40px 22px; text-align:center; border:1px dashed var(--linea); border-radius:var(--curva);
+  color:var(--tenue); font-size:14.5px}
+.vacio b{display:block; font:400 22px/1.1 var(--gordo); text-transform:uppercase;
+  color:var(--papel); margin-bottom:7px}
+
+.dato{display:flex; justify-content:space-between; gap:14px; padding:13px 0;
+  border-bottom:1px solid var(--linea); font-size:14.5px}
+.dato b{font:600 11px/1.5 var(--cond); letter-spacing:.15em; text-transform:uppercase; color:var(--tenue)}
+.si{color:var(--ok)} .no{color:var(--mal)}
+
+/* ---------- solapas de abajo ---------- */
+.tabs{position:fixed; left:0; right:0; bottom:0; z-index:40; display:grid;
+  grid-template-columns:repeat(5,1fr); gap:2px;
+  padding:8px 6px calc(8px + var(--alto)); background:rgba(8,7,12,.94);
+  backdrop-filter:blur(16px); border-top:1px solid var(--linea)}
+.tabs button{background:none; border:0; cursor:pointer; display:grid; justify-items:center; gap:5px;
+  padding:7px 2px; border-radius:13px; color:var(--tenue);
+  font:600 9.5px/1 var(--cond); letter-spacing:.1em; text-transform:uppercase}
+.tabs svg{width:21px; height:21px}
+.tabs .act{color:var(--ac); background:rgba(255,30,142,.11)}
+
+/* ---------- traer de Instagram ---------- */
+.deIg{margin-top:20px; padding:17px; border-radius:var(--curva);
+  background:linear-gradient(135deg,rgba(195,75,255,.14),rgba(255,30,142,.1));
+  border:1px solid var(--linea)}
+/* «>» a propósito: sin eso agarra también los <b> del párrafo y salían tamaño título */
+.deIg .txt > b{display:block; font:400 21px/1.05 var(--gordo); text-transform:uppercase}
+.deIg .txt small{display:block; margin:6px 0 14px; color:var(--tenue); font-size:13.5px; line-height:1.45}
+.deIg .txt small span{color:var(--ac)}
+.deIg .txt small b{color:var(--papel); font-weight:700}
+.acc.nuevo{border-color:rgba(195,75,255,.5)}
+.acc.nuevo .ico{background:rgba(195,75,255,.16); color:#dcaaff}
+
+.creada{display:flex; gap:12px; align-items:center; padding:12px; border-radius:14px;
+  background:var(--carta); border:1px solid var(--linea); margin-top:9px}
+.creada .txt{flex:1; min-width:0}
+.creada .txt b{display:block; font:400 17px/1.15 var(--gordo); text-transform:uppercase}
+.creada .txt span{display:block; margin-top:3px; font-size:12.5px; color:var(--tenue)}
+.saltadas{margin-top:12px; padding:12px 14px; border-radius:13px; border:1px dashed var(--linea);
+  color:var(--tenue); font-size:13px; line-height:1.5}
+.saltadas b{color:var(--papel)}
+
+/* ---------- adorno ---------- */
+.adornoCaja{margin:4px 0 16px; padding:16px; border-radius:var(--curva);
+  background:var(--humo); border:1px solid var(--linea)}
+.adornoCaja .tit b{display:block; font:400 19px/1.05 var(--gordo); text-transform:uppercase}
+.adornoCaja .tit small{display:block; margin:5px 0 12px; color:var(--tenue); font-size:13px; line-height:1.45}
+.adornoPrevia{margin-top:14px; border-radius:14px; border:1px solid var(--linea);
+  background:
+    linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.045) 75%),
+    linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.045) 75%),
+    var(--carta);
+  background-size:18px 18px; background-position:0 0,9px 9px;
+  display:grid; place-items:center; padding:14px; min-height:150px}
+.adornoPrevia img{max-height:190px; width:auto}
+.esquinas{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:11px}
+.esquina{cursor:pointer; padding:12px 10px; border-radius:12px; background:var(--carta);
+  border:1px solid var(--linea); color:var(--tenue); display:flex; align-items:center; gap:9px;
+  font:600 11px/1 var(--cond); letter-spacing:.11em; text-transform:uppercase}
+.esquina i{width:20px; height:20px; border-radius:5px; border:1px solid var(--linea); position:relative; flex:none}
+.esquina i::after{content:""; position:absolute; width:8px; height:8px; border-radius:2px; background:var(--tenue)}
+.esquina[data-p="der-arriba"] i::after{right:1px; top:1px}
+.esquina[data-p="izq-arriba"] i::after{left:1px; top:1px}
+.esquina[data-p="der-abajo"] i::after{right:1px; bottom:1px}
+.esquina[data-p="izq-abajo"] i::after{left:1px; bottom:1px}
+.esquina.viva{border-color:var(--ac); color:var(--papel); background:rgba(255,30,142,.1)}
+.esquina.viva i::after{background:var(--ac)}
+
+/* la tarjeta de un candidato de Instagram */
+.cand{padding:15px; border-radius:var(--curva); background:var(--carta);
+  border:1px solid var(--linea); margin-top:11px}
+.cand h4{font:400 21px/1.08 var(--gordo); text-transform:uppercase; margin:0}
+.cand .sub{display:block; margin-top:4px; font:600 11px/1.3 var(--cond); letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ac)}
+.cand .fila{display:flex; gap:10px; margin-top:9px; font-size:14px}
+.cand .fila b{flex:none; width:70px; font:600 10.5px/1.5 var(--cond); letter-spacing:.13em;
+  text-transform:uppercase; color:var(--tenue)}
+.cand p{margin:9px 0 0; font-size:14px; color:var(--papel); opacity:.88}
+
+/* el adorno pegado en la previa */
+.previa .cuerpo{position:relative}
+.previa .pegote{position:absolute; z-index:2; width:34%; max-width:130px; max-height:none;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.55)); pointer-events:none; border-radius:0}
+.previa[data-pos="der-arriba"] .pegote{right:6px; top:6px; transform:rotate(9deg)}
+.previa[data-pos="izq-arriba"] .pegote{left:6px; top:6px; transform:rotate(-9deg)}
+.previa[data-pos="der-abajo"] .pegote{right:6px; bottom:6px; transform:rotate(-7deg)}
+.previa[data-pos="izq-abajo"] .pegote{left:6px; bottom:6px; transform:rotate(7deg)}
+.previa.conAdorno[data-pos$="-arriba"]:not(.conFoto) .cuerpo{padding-top:96px}
+.previa.conAdorno[data-pos$="-abajo"] .cuerpo{padding-bottom:86px}
+
+/* ---------- varias imágenes de una ---------- */
+.tiraFotos{display:flex; gap:8px; flex-wrap:wrap; margin-top:9px}
+.tiraFotos figure{position:relative; margin:0; width:74px; height:74px; border-radius:12px;
+  overflow:hidden; border:1px solid var(--linea); background:#000}
+.tiraFotos img{width:100%; height:100%; object-fit:cover}
+.tiraFotos button{position:absolute; right:3px; top:3px; width:21px; height:21px; padding:0;
+  border-radius:50%; border:0; cursor:pointer; background:rgba(8,7,12,.86); color:var(--papel);
+  font:600 13px/1 var(--cond); display:grid; place-items:center}
+.tiraFotos figure.mal{outline:2px solid var(--mal)}
+
+/* cada propuesta cuando vienen varias */
+.bloqueProp{margin-bottom:16px}
+.bloqueProp > .cual{display:flex; align-items:center; gap:9px; margin-bottom:9px;
+  font:600 10.5px/1 var(--cond); letter-spacing:.18em; text-transform:uppercase; color:var(--tenue)}
+.bloqueProp > .cual b{color:var(--ac); font-family:var(--cond)}
+.bloqueProp .noSalio{padding:14px 15px; border-radius:14px; font-size:14px;
+  border:1px dashed var(--linea); color:var(--tenue)}
+
+/* ---------- candidatos: de dónde salió cada uno ---------- */
+.cand{position:relative}
+.cand .sello2{position:absolute; right:13px; top:13px; padding:4px 10px; border-radius:999px;
+  font:600 9.5px/1.5 var(--cond); letter-spacing:.14em; text-transform:uppercase;
+  background:rgba(255,255,255,.08); color:var(--tenue)}
+.cand.deHistoria{border-color:rgba(195,75,255,.42)}
+.cand.deHistoria .sello2{background:rgba(195,75,255,.18); color:#dcaaff}
+.cand h4{padding-right:82px}
+.yaEsta{margin-top:11px; padding:12px 14px; border-radius:13px; font-size:13.5px; line-height:1.5;
+  border:1px dashed rgba(232,191,78,.5); background:rgba(232,191,78,.07); color:#f0dfa8}
+.yaEsta b{color:#ffe9a8}
+
+/* ---------- que se lea de lejos ----------
+   El dueño no es joven y usa esto en la puerta de un boliche, de noche y
+   apurado. Todo un punto más grande y los botones más altos que el mínimo. */
+body{font-size:17px}
+.baja{font-size:16px}
+.bt{padding:18px; font-size:15px}
+.bt.grande{padding:22px; font-size:17px; letter-spacing:.12em}
+.bt.grande svg{width:20px; height:20px}
+input[type=text],input[type=password],input[type=datetime-local],input:not([type]),textarea{
+  padding:16px 16px; font-size:17px}
+.campo label{font-size:12px}
+.tabs button{font-size:10px}
+.tabs svg{width:23px; height:23px}
+
+/* el bloque de Instagram, sin la pared de texto */
+.deIg{text-align:center}
+.deIg > b{display:block; font:400 25px/1.05 var(--gordo); text-transform:uppercase}
+.deIg > small{display:block; margin:8px 0 16px; color:var(--tenue); font-size:15px; line-height:1.45}
+
+/* los dos atajos para cargarla a mano */
+.atajos{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px}
+.atajo{display:flex; flex-direction:column; align-items:center; gap:9px; cursor:pointer;
+  padding:18px 10px; border-radius:16px; background:var(--humo); border:1px solid var(--linea);
+  color:var(--papel); font:600 12.5px/1.2 var(--cond); letter-spacing:.12em; text-transform:uppercase;
+  transition:border-color .16s, transform .16s}
+.atajo svg{width:26px; height:26px; color:var(--ac)}
+.atajo:active{transform:scale(.97)}
+.atajo.viva{border-color:var(--ac); background:rgba(255,30,142,.1)}
+.manual{margin-bottom:14px; animation:sube .22s ease both}
+
+/* el resumen de lo que no se usó: una línea tranquila, no un informe */
+.saltadas{margin-top:14px; padding:0; border:0; background:none; text-align:center;
+  color:var(--tenue); font-size:13.5px; line-height:1.5}
+.saltadas b{color:var(--tenue); font-weight:600}
+
+/* ---------- lo que casi nunca se toca, plegado ---------- */
+.masOpc{width:100%; display:flex; align-items:center; justify-content:center; gap:9px;
+  padding:15px; margin-bottom:14px; border-radius:14px; cursor:pointer;
+  background:none; border:1px dashed var(--linea); color:var(--tenue);
+  font:600 12px/1 var(--cond); letter-spacing:.15em; text-transform:uppercase}
+.masOpc svg{width:16px; height:16px; transition:transform .2s}
+.masOpc.viva{color:var(--papel); border-style:solid}
+.masOpc.viva svg{transform:rotate(180deg)}
+#masOpciones{animation:sube .22s ease both}
+
+/* =====================================================================
+   EN COMPUTADORA
+   El mismo panel, pero aprovechando la pantalla: las solapas pasan de la
+   barra de abajo a una columna a la izquierda, y donde hay una previa se
+   pone al lado en vez de abajo, así se ve mientras se escribe.
+   ===================================================================== */
+@media (min-width: 900px){
+  .cab{position:fixed; top:0; left:0; right:0; padding:14px 26px}
+  .cab b{font-size:23px}
+  .cab img{width:33px; height:33px}
+
+  .tabs{top:64px; bottom:0; left:0; right:auto; width:232px;
+    grid-template-columns:1fr; grid-auto-rows:max-content; align-content:start; gap:5px;
+    padding:18px 14px; border-top:0; border-right:1px solid var(--linea)}
+  .tabs button{grid-template-columns:26px 1fr; justify-items:start; align-items:center;
+    gap:13px; padding:15px 14px; font-size:12.5px; letter-spacing:.14em; text-align:left}
+  .tabs svg{width:22px; height:22px}
+  .tabs .act{background:rgba(255,30,142,.13)}
+
+  main{margin-left:232px; max-width:none; padding:92px 40px 60px}
+  .pant{max-width:760px}
+  .pant h2{font-size:44px}
+
+  /* el tablero: las tarjetas de a dos */
+  #pInicio{max-width:900px}
+  .acciones{grid-template-columns:1fr 1fr}
+  .cifras{max-width:520px}
+
+  /* cargar: formulario a la izquierda, previa al lado y siempre a la vista */
+  /* `grid-auto-rows:min-content` porque si no las filas se estiran para
+     acompañar a la previa, que ocupa muchas, y quedan huecos entre los campos */
+  #pCargar{max-width:1140px; display:grid; grid-template-columns:minmax(0,1fr) 380px;
+    column-gap:34px; row-gap:0; align-items:start; align-content:start;
+    grid-auto-rows:min-content}
+  #pCargar > .rot, #pCargar > h2, #pCargar > .baja, #pCargar > .tipos{grid-column:1 / -1}
+  #pCargar > .previa{grid-column:2; grid-row:5 / span 30; position:sticky; top:96px; margin-top:0}
+  #pCargar > :not(.previa):not(.rot):not(h2):not(.baja):not(.tipos){grid-column:1}
+  .tipos{max-width:560px}
+
+  /* la lista y los candidatos, de a dos columnas */
+  #lista{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  #lista .fila{margin-bottom:0}
+  #resNuevo{display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start}
+  #resNuevo .saltadas{grid-column:1 / -1}
+  #listaProp{display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start}
+
+  /* con mouse, que se note lo que se puede tocar */
+  .acc:hover, .atajo:hover, .tipo:hover, .esquina:hover{border-color:var(--ac)}
+  /* la grilla de Instagram dentro del panel */
+  .igRej{display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:9px}
+  .igU{position:relative; border-radius:12px; overflow:hidden; aspect-ratio:1;
+    border:1px solid var(--linea); background:#12060f}
+  .igU img{width:100%; height:100%; object-fit:cover; display:block}
+  .igU .qué{position:absolute; left:6px; top:6px; padding:3px 8px; border-radius:999px;
+    font:700 9.5px/1 var(--cond); letter-spacing:.1em; text-transform:uppercase;
+    background:rgba(8,3,10,.82); color:#fff}
+  .igU .qué.hist{background:var(--ac); color:#12060f}
+  .igU .sacar{position:absolute; right:6px; bottom:6px; padding:6px 11px; border-radius:999px;
+    border:0; cursor:pointer; font:700 10px/1 var(--cond); letter-spacing:.09em;
+    text-transform:uppercase; background:rgba(8,3,10,.86); color:#fff}
+  .igU .sacar:hover{background:var(--ac); color:#12060f}
+  .igU .queda{position:absolute; left:6px; bottom:6px; padding:3px 8px; border-radius:999px;
+    font:700 9.5px/1 var(--cond); background:rgba(8,3,10,.82); color:#fff}
+  .bt:hover{filter:brightness(1.08)}
+  .tabs button:hover{color:var(--papel)}
+}
+
+/* pantallas muy anchas: que no se estire al infinito */
+@media (min-width: 1500px){
+  main{padding-left:70px}
+}
+
+/* ---------- archivo de eventos ---------- */
+.secs{display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 14px}
+.sec1{cursor:pointer; padding:11px 15px; border-radius:999px; background:var(--humo);
+  border:1px solid var(--linea); color:var(--tenue); font:600 12.5px/1 var(--cond);
+  letter-spacing:.09em; text-transform:uppercase; transition:all .16s}
+.sec1 i{font-style:normal; opacity:.55; margin-left:6px; font-size:11px}
+.sec1.viva{color:var(--papel)}
+.sec1.viva{border-color:var(--tono, var(--ac)); background:color-mix(in srgb, var(--tono, var(--ac)) 16%, transparent)}
+.sec1 em{font-style:normal; display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:var(--tono, var(--ac)); margin-right:7px; vertical-align:middle}
+.arYa .esPortada{color:var(--ok)}
+.arLote{display:grid; grid-template-columns:repeat(auto-fill,minmax(78px,1fr)); gap:8px; margin:13px 0}
+.arLote figure{position:relative; margin:0; aspect-ratio:1; border-radius:12px; overflow:hidden;
+  border:1px solid var(--linea); background:#000}
+.arLote img{width:100%; height:100%; object-fit:cover}
+.arLote .peso{position:absolute; left:0; right:0; bottom:0; padding:3px 5px; font-size:9.5px;
+  text-align:center; background:rgba(8,7,12,.82); color:var(--tenue)}
+.arLote .vid{position:absolute; top:5px; right:5px; width:17px; height:17px; color:#fff;
+  filter:drop-shadow(0 1px 2px #000)}
+.arLote .mal{outline:2px solid var(--mal); outline-offset:-2px}
+.arYa{display:grid; gap:9px; margin-top:12px}
+.arYa .fila img{width:56px; height:56px; border-radius:11px; object-fit:cover; background:#000; flex:none}
+.arYa select{padding:8px 10px; border-radius:10px; background:var(--humo); color:var(--papel);
+  border:1px solid var(--linea); font:inherit; font-size:12.5px}
+/* IBLO-PAGINA-CSS */
+/* --- La página: estéticas y colores --------------------------------- */
+.grupo2{display:flex; gap:1px; background:var(--linea); border-radius:13px; overflow:hidden}
+.grupo2 button{flex:1; padding:12px 6px; border:0; cursor:pointer; background:var(--humo);
+  color:var(--tenue); font:600 12.5px/1 var(--cond); letter-spacing:.12em; text-transform:uppercase}
+.grupo2 button.viva{background:var(--ac); color:#12060c}
+.paleta{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:9px}
+.tono{display:grid; justify-items:center; gap:5px; font-size:10.5px; color:var(--tenue); text-align:center}
+.tono input[type=color]{width:100%; height:40px; padding:0; border:1px solid var(--linea);
+  border-radius:11px; background:none; cursor:pointer}
+.estCard{border:1px solid var(--linea); border-radius:15px; background:var(--humo); margin-bottom:10px}
+.estCard.apagada{opacity:.5}
+.estCab{display:flex; align-items:center; gap:9px; padding:12px 13px}
+.punto{width:14px; height:14px; border-radius:50%; flex:none; box-shadow:0 0 0 1px var(--linea)}
+.estNom{flex:1; min-width:0}
+.estNom b{display:block; font-size:14.5px}
+.estNom span{display:block; font-size:12px; color:var(--tenue); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap}
+.mini{flex:none; width:32px; height:32px; border-radius:9px; cursor:pointer;
+  border:1px solid var(--linea); background:var(--tinta2); color:var(--papel); font-size:13px; line-height:1}
+.estCuerpo{padding:0 13px 15px; border-top:1px solid var(--linea)}
+.estCuerpo label{display:block; margin:13px 0 6px; font:600 11px/1 var(--cond);
+  letter-spacing:.16em; text-transform:uppercase; color:var(--tenue)}
+.fichaFila{display:flex; gap:7px; margin-bottom:7px}
+.fichaFila .fk{flex:0 0 34%}
+.fichaFila .fv{flex:1; min-width:0}
+.previaFlyer{display:block; width:100%; max-height:190px; object-fit:cover;
+  border-radius:12px; margin-top:9px}
+.bt.malo{background:none; border-color:#7a2230; color:#ff9a9a}
+.cifra2{float:right; color:var(--papel); font-variant-numeric:tabular-nums; letter-spacing:0}
+/* el botón largo no entra en media columna: que respire y parta la línea */
+#pPagina .dosBotones{grid-template-columns:1.4fr 1fr}
+#pPagina .dosBotones .bt{padding:14px 10px; font-size:13px; line-height:1.25; text-align:center}
+/* los deslizadores vienen azules del navegador; van del color de la marca */
+#pPagina input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:22px;
+  background:none; cursor:pointer; margin:2px 0}
+#pPagina input[type=range]::-webkit-slider-runnable-track{height:3px; border-radius:2px; background:var(--linea)}
+#pPagina input[type=range]::-moz-range-track{height:3px; border-radius:2px; background:var(--linea)}
+#pPagina input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:19px; height:19px;
+  margin-top:-8px; border-radius:50%; background:var(--ac); border:0}
+#pPagina input[type=range]::-moz-range-thumb{width:19px; height:19px; border:0; border-radius:50%; background:var(--ac)}
+
+/* Ocho solapas en cinco columnas parten 5+3 y quedan chuecas. Con cuatro son
+   dos filas parejas y cada una entra mas ancha, que en un telefono se toca
+   mejor. VA ADENTRO DEL MEDIA QUERY a proposito: de 900 para arriba la barra
+   es una columna al costado, y como este bloque se inserta al final de la
+   hoja, una regla suelta le ganaria por orden y la rompeia. */
+@media (max-width: 899.98px){
+  .tabs{grid-template-columns:repeat(4,1fr)}
+}
+/* Lo de "sumar otra fiesta" estaba como dos botones grandes compitiendo con el
+   que de verdad hay que tocar. Plegado ocupa una linea y se abre si hace falta. */
+.masFiesta{margin-top:16px; border:1px solid var(--linea); border-radius:14px;
+  background:var(--humo); padding:0 13px}
+.masFiesta summary{padding:14px 0; cursor:pointer; list-style:none;
+  font:600 11.5px/1 var(--cond); letter-spacing:.16em; text-transform:uppercase; color:var(--tenue)}
+.masFiesta summary::-webkit-details-marker{display:none}
+.masFiesta summary::after{content:"+"; float:right; font-size:15px; line-height:1}
+.masFiesta[open] summary::after{content:"\2212"}
+.masFiesta[open] summary{color:var(--papel); border-bottom:1px solid var(--linea)}
+.masFiesta > .campo:last-of-type, .masFiesta > .bt:last-child{margin-bottom:14px}
+
+.panico{margin-top:26px; padding-top:18px; border-top:1px solid var(--linea)}
+.panico .baja{margin-top:8px}
+/* FIN IBLO-PAGINA-CSS */
+</style>
+<div class="luzFondo" aria-hidden="true"></div>
+<div class="grano" aria-hidden="true"></div>
+
+<!-- ============ INGRESO ============ -->
+<section class="ingreso" id="pIngreso">
+  <div class="lock">
+    <img id="embIng" alt="" src="">
+    <span><span class="firma">Eventos</span><span class="nombre">IBLO</span></span>
+  </div>
+  <h1>Panel <em>IBLO</em></h1>
+  <p id="bajaIng">Cargando…</p>
+
+  <form id="formIng" autocomplete="on">
+    <div class="campo">
+      <label for="usuario">Usuario</label>
+      <input id="usuario" name="username" autocomplete="username" autocapitalize="none"
+             spellcheck="false" placeholder="iblo" required>
+    </div>
+    <div class="campo">
+      <label for="clave">Contraseña</label>
+      <input id="clave" name="password" type="password" autocomplete="current-password"
+             placeholder="••••••••" required>
+    </div>
+    <button class="bt p" id="btIng" type="submit">Entrar</button>
+  </form>
+  <div class="aviso" id="avisoIng" hidden></div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" hidden>
+  <header class="cab">
+    <img id="embCab" alt="" src="">
+    <b>IBLO</b>
+    <span class="quien" id="quien"></span>
+    <button class="salir" id="btSalir" aria-label="Cerrar sesión">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg>
+    </button>
+  </header>
+
+  <main>
+
+    <!-- ---------- inicio: el tablero ---------- -->
+    <section class="pant" id="pInicio">
+      <div class="pulso" id="pulso"><i></i><span id="pulsoTxt">Mirando la web…</span></div>
+      <h2 class="saludo" id="saludo">Hola</h2>
+      <p class="baja">¿Qué hacemos?</p>
+
+      <div class="cifras" id="cifras">
+        <div class="cifra"><b id="cProx">–</b><span>Próximamente</span></div>
+        <div class="cifra"><b id="cEnt">–</b><span>Entradas</span></div>
+        <div class="cifra"><b id="cAvi">–</b><span>Avisos</span></div>
+      </div>
+
+      <div class="acciones">
+        <button class="acc destaca" type="button" data-ir="pAsis">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.7 4.9L18.6 8.6l-4.9 1.7L12 15.2l-1.7-4.9L5.4 8.6l4.9-1.7z"/><path d="M18.4 14.2l.8 2.3 2.3.8-2.3.8-.8 2.3-.8-2.3-2.3-.8 2.3-.8z"/><path d="M5.4 15.4l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z"/></svg></span>
+          <span><b>Subir una fiesta</b><small>Contámelo, mandá el flyer, o lo busco en tu Instagram.</small></span>
+          <span class="flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+        </button>
+
+
+        <button class="acc" type="button" data-ir="pCargar" data-tipo="proximamente">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><circle cx="12" cy="15.5" r="2" fill="currentColor" stroke="none"/></svg></span>
+          <span><b>Cargarla a mano</b><small>Si preferís llenar vos los datos.</small></span>
+          <span class="flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+        </button>
+
+
+
+
+        <button class="acc" type="button" data-ir="pArchivo">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h5l1.5 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="13.5" r="2.4"/></svg></span>
+          <span><b>Archivo de eventos</b><small>Subir fotos y videos a su sección.</small></span>
+          <span class="flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span>
+        </button>
+        <button class="acc" type="button" data-ir="pVisitas">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19V9M9 19V5M15 19v-7M21 19v-4"/></svg></span>
+          <span><b>Qui&#233;n est&#225; mirando</b><small>Cu&#225;nta gente hay ahora, de d&#243;nde viene y qu&#233; mira.</small></span>
+          <span class="flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+        </button>
+        <button class="acc" type="button" data-ir="pLista">
+          <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h7"/></svg></span>
+          <span><b>Lo que está en la web</b><small>Para bajar algo.</small></span>
+          <span class="flecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5l7 7-7 7"/></svg></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ---------- la IA ----------
+         Una sola cosa a la vista: el botón de buscar. Lo de escribir a mano
+         aparece sólo si lo piden, porque todo junto era una pared de texto. -->
+    <section class="pant" id="pAsis" hidden>
+      <span class="rot">Lo que se viene</span>
+      <h2>Subir una <em>fiesta</em></h2>
+
+      <div class="deIg">
+        <b>Buscar en mi Instagram</b>
+        <small>Miro tus historias y tus posteos, y te muestro lo que sirva.</small>
+        <button class="bt p grande" id="btNuevo" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/></svg>
+          Buscar</button>
+        <div class="aviso" id="avisoNuevo" hidden></div>
+        <div id="resNuevo" hidden></div>
+      </div>
+
+      <div class="separa"><span>o cargala vos</span></div>
+
+      <div class="atajos">
+        <button class="atajo" type="button" data-abre="manEscribir">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16"/><path d="m14.5 5.5 4 4L9 19H5v-4z"/></svg>
+          Contármelo</button>
+        <button class="atajo" type="button" data-abre="manFoto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12" r="3.4"/><path d="M8 5l1.4-2h5.2L16 5"/></svg>
+          Mandar foto</button>
+      </div>
+
+      <div class="manual" id="manEscribir" hidden>
+        <textarea id="aTexto" maxlength="900" style="min-height:110px"
+          placeholder="El 25 de octubre hacemos Halloween en el Club Juventud, arranca 00 hs, entradas a 10 mil."></textarea>
+        <div class="ejemplos" id="ejemplos"></div>
+      </div>
+
+      <div class="manual" id="manFoto" hidden>
+        <div class="suelta" id="sueltaIA">
+          <input type="file" accept="image/*" multiple aria-label="Elegir las imágenes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M12 3v13M7 8l5-5 5 5"/></svg>
+          <b>Elegir imágenes</b>
+          <small>El flyer o capturas. Podés mandar varias juntas.</small>
+        </div>
+        <div class="tiraFotos" id="tiraIA" hidden></div>
+        <div class="pesoFoto" id="pesoIA" hidden></div>
+      </div>
+
+      <button class="bt p grande" id="btVerIA" type="button" hidden>Armar la publicación</button>
+      <div class="aviso" id="avisoAsis" hidden></div>
+
+      <div id="propuesta" hidden>
+        <div class="separa"><span id="tituloProp">Esto entendí</span></div>
+        <div id="listaProp"></div>
+      </div>
+    </section>
+
+    <!-- ---------- cargar a mano ---------- -->
+    <section class="pant" id="pCargar" hidden>
+      <span class="rot">A mano</span>
+      <h2>Cargar una <em>publicación</em></h2>
+      <p class="baja">Lo que dejes vacío no se muestra.</p>
+
+      <div class="tipos" id="tipos" style="margin-top:18px">
+        <button class="tipo viva" type="button" data-t="proximamente">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+          <b>Próxima<br>fecha</b></button>
+        <button class="tipo" type="button" data-t="entrada">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 9.5V7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 0 0 5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.5a2.5 2.5 0 0 0 0-5z"/></svg>
+          <b>Entradas</b></button>
+        <button class="tipo" type="button" data-t="aviso">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11a8 8 0 0 1 16 0v4l1.5 3h-19L4 15z"/><path d="M9.5 21a2.6 2.6 0 0 0 5 0"/></svg>
+          <b>Aviso</b></button>
+      </div>
+
+      <div class="campo">
+        <label>Foto o flyer</label>
+        <div class="suelta" id="suelta">
+          <input type="file" accept="image/*" aria-label="Elegir la foto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M12 3v13M7 8l5-5 5 5"/></svg>
+          <b>Elegir foto</b>
+          <small>Se achica sola. Podés dejarla vacía.</small>
+        </div>
+        <div class="pesoFoto" id="pesoFoto" hidden></div>
+      </div>
+
+      <div class="campo">
+        <label for="titulo">Nombre <span id="reqTit" style="color:var(--ac)">*</span></label>
+        <input id="titulo" maxlength="120" placeholder="Halloween 2026">
+      </div>
+
+
+      <div class="campo" data-solo="proximamente entrada">
+        <label for="cuando">Cuándo es</label>
+        <input id="cuando" type="datetime-local">
+      </div>
+
+      <!-- Va acá, pegado a la fecha, y no al final del formulario: el dueño
+           carga cinco cosas de la misma fiesta y tiene que decidir cuál va
+           arriba mientras piensa en la fecha, no diez campos después. -->
+      <label class="interruptor" data-solo="proximamente" style="margin:2px 0 4px">
+        <input type="checkbox" id="fijar">
+        <span>Es <b>la próxima fecha</b>: va en la portada<br>
+          <small style="color:var(--tenue)">De todas las de esta fiesta, sólo una.
+            Las demás quedan en Publicaciones.</small></span>
+      </label>
+
+      <div class="campo" data-solo="proximamente entrada">
+        <label for="lugar">Lugar</label>
+        <input id="lugar" maxlength="120" placeholder="Club Juventud, Margarita Belén">
+      </div>
+
+
+      <div class="campo" data-solo="proximamente entrada">
+        <label for="precio">Precio <span id="reqPre" style="color:var(--ac)">*</span></label>
+        <input id="precio" maxlength="60" placeholder="$8.000 general · $15.000 VIP">
+      </div>
+
+      <div class="campo">
+        <label for="detalle">Texto del aviso</label>
+        <textarea id="detalle" maxlength="1200"
+          placeholder="Escribilo como te salga y después tocá Mejorar."></textarea>
+        <div class="dosBotones" style="margin-top:9px">
+          <button class="bt s" id="btMagia" type="button">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6l1.9 5.6 5.6 1.9-5.6 1.9L12 16.6l-1.9-5.6L4.5 9.1l5.6-1.9z"/><path d="M18.6 14.4l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/></svg>
+            Mejorar con IA</button>
+          <button class="bt s" id="btDeshacer" type="button" hidden>Deshacer</button>
+        </div>
+      </div>
+
+
+
+
+      <button class="masOpc" id="btMas" type="button">
+        <span>Más opciones</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div id="masOpciones" hidden>
+      <div class="campo" data-solo="proximamente">
+        <label for="subtitulo">Bajada</label>
+        <input id="subtitulo" maxlength="120" placeholder="Fiesta zonal de la Primavera">
+      </div>
+      <div class="campo" data-solo="proximamente entrada">
+        <label for="hora">Hora</label>
+        <input id="hora" maxlength="30" placeholder="22:00 hs">
+      </div>
+      <div class="campo">
+        <label>Color</label>
+        <div class="paleta" id="paleta"></div>
+      </div>
+      <div class="adornoCaja">
+        <div class="tit">
+          <b>Adorno</b>
+          <small>Un dibujo de la temática, pegado en la tarjeta.</small>
+        </div>
+        <input id="adObjeto" maxlength="90" placeholder="Dejalo vacío y lo elige por la temática">
+        <button class="bt s" id="btAdorno" type="button" style="margin-top:11px">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.6l1.9 5.6 5.6 1.9-5.6 1.9L12 16.6l-1.9-5.6L4.5 9.1l5.6-1.9z"/><path d="M18.6 14.4l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/></svg>
+          Generar adorno</button>
+        <div class="aviso" id="avisoAdorno" hidden></div>
+
+        <div id="adornoHecho" hidden>
+          <div class="adornoPrevia"><img id="adImg" alt=""></div>
+          <span class="pista" id="adQue"></span>
+          <label style="margin-top:12px; display:block">Dónde va</label>
+          <div class="esquinas" id="esquinas"></div>
+          <div class="dosBotones">
+            <button class="bt s" id="btOtroAdorno" type="button">Otro</button>
+            <button class="bt s" id="btSinAdorno" type="button">Sacarlo</button>
+          </div>
+        </div>
+      </div>
+      </div>
+
+      <button class="bt p grande" id="btPublicar" type="button" style="margin-top:16px">Publicar en la web</button>
+      <div class="aviso" id="avisoCargar" hidden></div>
+
+      <div class="previa" id="previa">
+        <div class="cinta">Así se va a ver en la web</div>
+        <div class="cuerpo">
+          <img class="pegote" id="pvAdorno" alt="" hidden>
+          <img id="pvImg" alt="" hidden>
+          <h4 id="pvTit">El nombre va acá</h4>
+          <p id="pvDes">Y lo que contás, acá abajo.</p>
+          <span class="precio" id="pvPre" hidden></span>
+          <div class="contacto">
+            <span class="w"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2m0 1.8a8.2 8.2 0 1 1-4.2 15.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8m-3.3 4c-.2 0-.5.1-.7.4-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.8 2.2.9 2.6.7 3.1.7.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.6-.3-1.5-.7c-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.5v-.5l-.7-1.7c-.2-.4-.4-.4-.5-.4z"/></svg>WhatsApp</span>
+            <span class="i"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>Instagram</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- publicadas ---------- -->
+    <!-- Qui&#233;n est&#225; mirando la web. No hay cuentas en el sitio p&#250;blico, as&#237; que
+         nadie tiene nombre: lo honesto es contar, no inventar identidades. -->
+    <section class="pant" id="pVisitas" hidden>
+      <h2>Qui&#233;n est&#225; mirando</h2>
+      <p class="baja" id="vsResumen">Cargando&#8230;</p>
+      <div id="vsCuerpo"></div>
+    </section>
+
+    <section class="pant" id="pLista" hidden>
+      <span class="rot">Lo que está arriba</span>
+      <h2>Mis <em>publicaciones</em></h2>
+      <p class="baja">Tocá «bajar» y sale de la web; lo bajado se puede volver a subir.
+        La que diga <b>En la portada</b> es la que se ve arriba de todo como próxima fecha.</p>
+      <div id="lista" style="margin-top:20px"></div>
+
+      <h2 style="margin-top:38px">Lo de <em>Instagram</em></h2>
+      <p class="baja">Esto se copia solo de la cuenta y sale en la portada.
+        Las historias se borran solas a las 24 horas, como en Instagram; lo demás
+        se saca de acá.</p>
+      <div class="aviso" id="avisoIg" hidden></div>
+      <div id="rejIg" style="margin-top:18px"></div>
+    </section>
+
+    <!-- ---------- equipo ---------- -->
+    <section class="pant" id="pEquipo" hidden>
+      <span class="rot">Quiénes son</span>
+      <h2>El <em>equipo</em></h2>
+      <p class="baja">Esto es lo que se ve en Servicios. El Instagram va sólo con
+        <b>@nombre</b>: el link a su perfil lo armo yo. La estrella marca a los de
+        siempre, que salen resaltados.</p>
+      <div class="aviso" id="avisoEq" hidden></div>
+      <div id="eqLista" style="margin-top:6px"></div>
+
+      <div class="campo" style="margin-top:26px">
+        <label for="eqGrupoNuevo">Grupo nuevo</label>
+        <div class="eqAlta">
+          <input id="eqGrupoNuevo" maxlength="40" placeholder="Barra">
+          <input id="eqCargoNuevo" maxlength="30" placeholder="Etiqueta: Trago">
+          <button class="bt s" id="btGrupoNuevo" type="button">Crearlo</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- ajustes ---------- -->
+
+    <!-- ---------- archivo de eventos ----------
+         La sección va PRIMERO y es obligatoria. El pedido del dueño de la fiesta
+         fue textual: «que cada cosa vaya al lugar que corresponda, no subir y que
+         quede ahí random». Si la sección fuera un campo más, al final del
+         formulario y salteable, volveríamos a eso. -->
+    <section class="pant" id="pArchivo" hidden>
+      <span class="rot">Archivo</span>
+      <h2>Archivos de <em>eventos</em></h2>
+      <p class="baja">Primero elegí a dónde va, después las fotos.</p>
+
+      <div class="campo">
+        <label>¿A qué sección? <span style="color:var(--ac)">*</span></label>
+        <div class="secs" id="arSecs"></div>
+        <button class="bt s" id="btSecNueva" type="button">Sección nueva</button>
+        <div id="cajaSecNueva" hidden style="margin-top:11px">
+          <input id="arSecNombre" maxlength="40" placeholder="Primavera 2027">
+          <div class="dosBotones" style="margin-top:9px">
+            <button class="bt s" id="btSecCrear" type="button">Crearla</button>
+            <button class="bt s" id="btSecCancelar" type="button">Dejar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>Fotos y videos</label>
+        <div class="suelta" id="arSuelta">
+          <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mov"
+                 multiple aria-label="Elegir fotos o videos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M12 3v13M7 8l5-5 5 5"/></svg>
+          <b>Elegir fotos o videos</b>
+          <small>Todas juntas si querés. Las fotos se achican solas.<br>
+            Los videos entran hasta 24 MB; si es más largo, usá el botón de abajo.</small>
+        </div>
+        <div class="arLote" id="arLote"></div>
+        <button class="bt s" id="btVideo" type="button" style="margin-top:11px">
+          <svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px"><path d="M8 5v14l11-7z"/></svg>
+          Subir video</button>
+        <div id="cajaVideo" hidden style="margin-top:12px">
+          <p class="pista" style="margin:0 0 10px">
+            Esto es para los videos largos. Uno corto, de hasta 24 MB, se sube
+            directo con «Elegir fotos o videos». Los que pesan más van a YouTube o
+            MediaFire y acá se pega el link: así arrancan al toque, sin cargar.
+          </p>
+          <div class="dosBotones" style="margin-bottom:10px">
+            <!-- `mediafire.com/upload/` daba 404 (error 370) y `studio.youtube.com/channel/UC/…`
+                 lleva un id de canal de mentira. Estas dos son las que abren de verdad. -->
+            <a class="bt s" href="https://www.youtube.com/upload" target="_blank" rel="noopener">Subir a YouTube</a>
+            <a class="bt s" href="https://app.mediafire.com/myfiles" target="_blank" rel="noopener">Subir a MediaFire</a>
+          </div>
+          <input id="arEnlace" inputmode="url" placeholder="https://youtu.be/...">
+          <span class="pista">Si es de YouTube, la tapa la saco sola.</span>
+          <div class="dosBotones" style="margin-top:10px">
+            <button class="bt p" id="btVideoListo" type="button">Agregar el video</button>
+            <button class="bt s" id="btVideoCancelar" type="button">Dejar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="arTitulo">Nombre del evento <span style="color:var(--ac)">*</span></label>
+        <input id="arTitulo" maxlength="90" list="arEventos" placeholder="Casamiento de Ana y Juan">
+        <datalist id="arEventos"></datalist>
+        <span class="pista">Es el álbum: todo lo que subas con este mismo nombre queda junto.
+          Si el evento ya existe, elegilo de la lista para no armar dos.</span>
+      </div>
+      <div class="campo">
+        <label for="arDesc">Una descripción, si querés</label>
+        <textarea id="arDesc" maxlength="600" placeholder="Recepción para 180 personas, con barra libre."></textarea>
+        <span class="pista">Se le pone lo mismo a todo lo que subas en esta vuelta.</span>
+      </div>
+
+      <button class="bt p grande" id="btSubirArch" type="button">Subir</button>
+      <div class="aviso" id="avisoArch" hidden></div>
+
+      <div class="campo" style="margin-top:24px">
+        <label>Lo que ya hay en esta sección</label>
+        <div class="arYa" id="arYa"></div>
+      </div>
+    </section>
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <!-- IBLO-PAGINA-SECCION -->
+<section class="pant" id="pPagina" hidden>
+  <span class="rot">La web</span>
+  <h2>La <em>página</em></h2>
+  <p class="baja">Todo lo que se ve en la web sale de acá. Cambiá lo que quieras,
+    mirá cómo queda y recién ahí publicá. Si algo no te gusta, <b>Deshacer</b> lo
+    devuelve como estaba.</p>
+
+  <div class="grupo2" id="pgSolapas" style="margin-top:16px">
+    <button class="viva" data-s="est" type="button">Estéticas</button>
+    <button data-s="marca" type="button">Colores</button>
+  </div>
+
+  <!-- ------------------------------------------------------ estéticas -->
+  <div id="pgEst">
+    <div id="pgAviso" class="aviso" hidden></div>
+
+    <!-- Cuando la base está vacía esto es lo único que hay que tocar, así que
+         va primero y es el único botón fuerte de la pantalla. -->
+    <button class="bt p" id="pgTraer" type="button" hidden style="margin-top:13px">
+      Traer las nueve que ya están</button>
+
+    <div id="pgLista" style="margin-top:14px"></div>
+
+    <details class="masFiesta">
+      <summary>Sumar otra fiesta</summary>
+      <div class="campo" style="margin-top:12px">
+        <label for="pgIdea">Contale a la IA de qué va</label>
+        <input id="pgIdea" maxlength="200" placeholder="Una fiesta Y2K, celeste y plateado, con cabina de fotos">
+        <button class="bt s" id="pgBtIA" type="button" style="margin-top:9px">Armar la estética</button>
+      </div>
+      <button class="bt s" id="pgBtNueva" type="button">Empezar una en blanco</button>
+    </details>
+  </div>
+
+  <!-- --------------------------------------------------------- marca -->
+  <div id="pgMarca" hidden>
+    <p class="baja" style="margin-top:16px">Estos son los colores de toda la página,
+      los que se ven cuando no estás parado sobre ninguna fiesta en particular.</p>
+    <div class="paleta" id="pgPalMarca"></div>
+    <div class="campo" style="margin-top:16px">
+      <label for="pgCurva">Esquinas redondeadas <span id="pgCurvaV" class="cifra2">18 px</span></label>
+      <input id="pgCurva" type="range" min="0" max="40" step="1" value="18">
+    </div>
+    <div class="campo">
+      <label for="pgGrano">Textura de grano <span id="pgGranoV" class="cifra2">4,5 %</span></label>
+      <input id="pgGrano" type="range" min="0" max="120" step="1" value="45">
+    </div>
+    <button class="bt s" id="pgResetColor" type="button" style="margin-top:6px">
+      Volver los colores originales</button>
+    <p class="baja">Deja los nombres y los textos como los tenés; sólo devuelve
+      los colores de fábrica, los de acá y los de cada fiesta.</p>
+  </div>
+
+  <div class="dosBotones" style="margin-top:20px">
+    <button class="bt p" id="pgBtGuardar" type="button">Publicar</button>
+    <button class="bt s" id="pgBtDeshacer" type="button">Deshacer</button>
+  </div>
+  <p class="baja">Los colores se ven al toque. Si agregaste o sacaste una fiesta,
+    la web se acomoda sola la primera vez que alguien entra.</p>
+
+  <!-- El botón de pánico. Va último, aparte y en rojo: es para el día en que
+       algo quedó feo y no se sabe qué se tocó. -->
+  <div class="panico">
+    <button class="bt malo" id="pgResetTodo" type="button">Volver todo al diseño original</button>
+    <p class="baja">Las nueve fiestas de siempre, con sus colores y sus textos,
+      como el primer día. Se publica al toque.</p>
+  </div>
+</section>
+<!-- FIN IBLO-PAGINA-SECCION -->
+
+    <section class="pant" id="pAjustes" hidden>
+      <span class="rot">La cuenta</span>
+      <h2><em>Ajustes</em></h2>
+      <div style="margin-top:18px">
+        <div class="dato"><b>Usuario</b><span id="ajUsuario">—</span></div>
+        <div class="dato"><b>Servidor</b><span id="ajServidor">—</span></div>
+        <div class="dato"><b>Base de datos</b><span id="ajBase">—</span></div>
+        <div class="dato"><b>IA</b><span id="ajIA">—</span></div>
+        <div class="dato"><b>WhatsApp del aviso</b><span id="ajWa">—</span></div>
+        <div class="dato"><b>Instagram del aviso</b><span id="ajIg">—</span></div>
+        <div class="dato"><b>Versión</b><span id="ajVersion">2.1</span></div>
+      </div>
+      <p class="baja" style="margin-top:18px">Todo lo que subís desde acá aparece en
+        <b style="color:var(--papel)">iblo-eventos.pages.dev</b>, en Publicaciones.</p>
+
+      <div class="campo" style="margin-top:26px">
+        <label>Cambiar la contraseña</label>
+        <input id="cActual" type="password" autocomplete="current-password" placeholder="La de ahora">
+      </div>
+      <div class="campo">
+        <input id="cNueva" type="password" autocomplete="new-password" placeholder="La nueva, mínimo 8">
+      </div>
+      <button class="bt s" id="btClave" type="button">Cambiar la contraseña</button>
+      <div class="aviso" id="avisoClave" hidden></div>
+      <button class="bt s" id="btSalir2" style="margin-top:22px">Cerrar sesión</button>
+    </section>
+  </main>
+
+  <nav class="tabs" id="tabs">
+    <button data-p="pInicio" class="act">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</button>
+    <button data-p="pAsis">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.7 4.9L18.6 8.6l-4.9 1.7L12 15.2l-1.7-4.9L5.4 8.6l4.9-1.7z"/><path d="M18.4 14.2l.8 2.3 2.3.8-2.3.8-.8 2.3-.8-2.3-2.3-.8 2.3-.8z"/><path d="M5.4 15.4l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z"/></svg>IA</button>
+    <button data-p="pCargar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Cargar</button>
+    <button data-p="pLista">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h7"/></svg>Arriba</button>
+    <button data-p="pEquipo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/></svg>Equipo</button>
+    <button data-p="pArchivo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h5l1.5 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="13.5" r="2.4"/></svg>Archivo</button>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <!-- IBLO-PAGINA-SOLAPA --><button data-p="pPagina">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 9v11"/></svg>La página</button><!-- FIN IBLO-PAGINA-SOLAPA -->
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <button data-p="pAjustes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.6l1.5 2.2 2.6-.4.5 2.6 2.4 1.1-1.2 2.4 1.2 2.4-2.4 1.1-.5 2.6-2.6-.4L12 21.4l-1.5-2.2-2.6.4-.5-2.6-2.4-1.1L6.2 12 5 9.6l2.4-1.1.5-2.6 2.6.4z"/></svg>Ajustes</button>
+  </nav>
+</div>
+
+<script>
+var EMB = "img/eb2332e02c.webp";
+document.getElementById("embIng").src = EMB;
+document.getElementById("embCab").src = EMB;
+/* ---------- saca la pantalla verde y recorta ----------
+   Corre en el teléfono, no en el servidor: el plan gratis de Workers corta a los
+   10 ms de CPU y pasar un millón de píxeles no entra ahí ni cerca.
+   Tres pasos, y los tres hacen falta:
+     1. alfa por «cuánto verde de más» tiene el píxel, con una banda blanda
+        para el borde y bajándole el verde a lo que se queda (el reflejo verde
+        del fondo sobre el objeto es lo que dejaba el halo).
+     2. se queda sólo con la manchita más grande, que tira la sombra del piso y
+        las pelusas del fondo que no eran lo bastante verdes.
+     3. recorta al objeto y lo baja a 420 px.
+   Se trabaja sobre una copia de 512 px: es cuatro veces menos laburo que el
+   original de 1024 y el recorte final igual sale de 420. */
+function sacarVerde(im, listo){
+  var lado = 512, e = Math.min(1, lado / Math.max(im.width, im.height));
+  var an = Math.max(1, Math.round(im.width * e)), al = Math.max(1, Math.round(im.height * e));
+
+  var c = document.createElement("canvas");
+  c.width = an; c.height = al;
+  var cx = c.getContext("2d", { willReadFrequently: true });
+  cx.imageSmoothingQuality = "high";
+  cx.drawImage(im, 0, 0, an, al);
+  var d = cx.getImageData(0, 0, an, al), p = d.data, n = an * al;
+
+  /* 0. de qué color es el fondo.
+     Antes se daba por hecho que era verde puro, y con eso el recorte sólo servía
+     para el generador de Cloudflare. Mirando las cuatro esquinas sirve para
+     cualquier fondo parejo, venga de donde venga la imagen. */
+  var esq = [[2,2],[an-3,2],[2,al-3],[an-3,al-3]], sr = 0, sg = 0, sb = 0;
+  for (var q = 0; q < 4; q++){
+    var kk = ((esq[q][1] * an) + esq[q][0]) * 4;
+    sr += p[kk]; sg += p[kk+1]; sb += p[kk+2];
+  }
+  var fr = sr/4, fg = sg/4, fb = sb/4;
+  /* ¿las esquinas se parecen entre sí? si no, el fondo no es parejo y no hay
+     nada que recortar con confianza: se vuelve al criterio de verde de siempre */
+  var disp = 0;
+  for (var q2 = 0; q2 < 4; q2++){
+    var k2 = ((esq[q2][1] * an) + esq[q2][0]) * 4;
+    disp = Math.max(disp, Math.abs(p[k2]-fr) + Math.abs(p[k2+1]-fg) + Math.abs(p[k2+2]-fb));
+  }
+  var fondoParejo = disp < 90;
+  var esVerde = fg - Math.max(fr, fb) > 26;
+
+  /* 1. alfa: lo parecido al fondo se va, y al resto se le saca el rebote verde */
+  for (var i = 0; i < n; i++){
+    var k = i * 4, r = p[k], g = p[k+1], b = p[k+2];
+    var otro = r > b ? r : b;
+    var verde = g - otro;
+
+    if (fondoParejo && !esVerde){
+      /* fondo liso de cualquier color: se mide la distancia a ese color */
+      var d0 = Math.abs(r-fr) + Math.abs(g-fg) + Math.abs(b-fb);
+      if (d0 < 60){ p[k+3] = 0; continue; }
+      if (d0 < 110){ p[k+3] = Math.round(255 * ((d0 - 60) / 50)); }
+      continue;
+    }
+
+    if (verde > 26 && g > 70){ p[k+3] = 0; continue; }
+    if (verde > 4){
+      var f = verde / 26;                        // 0 en el objeto, 1 en el fondo
+      p[k+3] = Math.round(255 * (1 - f * f));    // el borde se apaga suave
+      p[k+1] = otro;                             // sin verde de más
+      continue;
+    }
+    /* El generador pinta el rebote verde de la pantalla sobre el objeto mismo,
+       y eso no lo saca ningún umbral de alfa: queda un tinte oliva en las
+       sombras. Se le baja con una rodilla blanda, no con un corte, así un
+       objeto que de verdad tiene algo de verde no se arruina. */
+    var techo = (r + b) / 2 + 10;
+    if (g > techo) p[k+1] = Math.round(techo + (g - techo) * 0.25);
+  }
+
+  /* 2. la mancha más grande. Recorrido por pila, sin recursión. */
+  var visto = new Uint8Array(n), grupo = new Int32Array(n).fill(-1);
+  var pila = new Int32Array(n), mejor = -1, mejorTam = 0, cual = 0;
+  for (var s = 0; s < n; s++){
+    if (visto[s] || p[s*4+3] < 40) continue;
+    var tope = 0, tam = 0;
+    pila[tope++] = s; visto[s] = 1;
+    while (tope){
+      var q = pila[--tope];
+      grupo[q] = cual; tam++;
+      var qx = q % an, qy = (q - qx) / an;
+      for (var v = 0; v < 4; v++){
+        var nx = qx + (v === 0 ? 1 : v === 1 ? -1 : 0);
+        var ny = qy + (v === 2 ? 1 : v === 3 ? -1 : 0);
+        if (nx < 0 || ny < 0 || nx >= an || ny >= al) continue;
+        var m = ny * an + nx;
+        if (visto[m] || p[m*4+3] < 40) continue;
+        visto[m] = 1; pila[tope++] = m;
+      }
+    }
+    if (tam > mejorTam){ mejorTam = tam; mejor = cual; }
+    cual++;
+  }
+  if (mejor < 0){ listo("", 0, 0); return; }        // quedó todo verde
+
+  /* 3. borrar lo que no es la mancha grande, y de paso medir el recorte */
+  var minX = an, minY = al, maxX = -1, maxY = -1;
+  for (var j = 0; j < n; j++){
+    if (grupo[j] !== mejor){ p[j*4+3] = 0; continue; }
+    var jx = j % an, jy = (j - jx) / an;
+    if (jx < minX) minX = jx; if (jx > maxX) maxX = jx;
+    if (jy < minY) minY = jy; if (jy > maxY) maxY = jy;
+  }
+  cx.putImageData(d, 0, 0);
+
+  var aire = Math.round(Math.max(maxX - minX, maxY - minY) * 0.03);
+  minX = Math.max(0, minX - aire); minY = Math.max(0, minY - aire);
+  maxX = Math.min(an - 1, maxX + aire); maxY = Math.min(al - 1, maxY + aire);
+  var rx = maxX - minX + 1, ry = maxY - minY + 1;
+
+  var e2 = Math.min(1, 420 / Math.max(rx, ry));
+  var f2 = document.createElement("canvas");
+  f2.width = Math.max(1, Math.round(rx * e2)); f2.height = Math.max(1, Math.round(ry * e2));
+  var fx = f2.getContext("2d");
+  fx.imageSmoothingQuality = "high";
+  fx.drawImage(c, minX, minY, rx, ry, 0, 0, f2.width, f2.height);
+
+  var out = f2.toDataURL("image/webp", .9);
+  if (out.indexOf("data:image/webp") !== 0) out = f2.toDataURL("image/png");
+  listo(out, f2.width, f2.height);
+}
+
+var API = "https://iblo-eventos.pages.dev/api";
+var WA  = "5493725449273";
+var IG  = "iblo_eventos";
+var $   = function(i){ return document.getElementById(i); };
+var esc = function(s){ return String(s).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); };
+
+var COLORES = { magenta:"#ff1e8e", violeta:"#c34bff", oro:"#e8bf4e", verde:"#2ce65a",
+                cian:"#2fd8e8", rojo:"#ff2020", naranja:"#e8863a", blanco:"#f4f1f6" };
+
+var sesion = null, usuario = null, iaViva = false, iaQuienes = {};
+try { sesion = localStorage.getItem("iblo.sesion"); usuario = localStorage.getItem("iblo.usuario"); } catch(e){}
+
+/* ---------- red ---------- */
+function pedir(ruta, opc){
+  opc = opc || {};
+  var cab = { "Content-Type": "application/json" };
+  if (sesion) cab["Authorization"] = "Bearer " + sesion;
+  return fetch(API + ruta, {
+    method: opc.metodo || "GET",
+    headers: cab,
+    body: opc.cuerpo ? JSON.stringify(opc.cuerpo) : undefined
+  }).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){
+      if (r.status === 401 && sesion) cerrarSesion(true);
+      if (!r.ok) throw new Error(j.error || ("Error " + r.status));
+      return j;
+    });
+  });
+}
+function decir(caja, texto, clase){
+  var n = $(caja); if (!n) return;
+  if (!texto) { n.hidden = true; return; }
+  n.hidden = false; n.textContent = texto;
+  n.className = "aviso" + (clase ? " " + clase : "");
+}
+function cargando(bt, si, textoNormal){
+  bt.disabled = si;
+  bt.innerHTML = si ? '<span class="giro"></span>Un segundo…' : textoNormal;
+}
+
+/* ---------- ingreso ---------- */
+pedir("/estado").then(function(j){
+  iaViva = !!j.ia; iaQuienes = j.proveedores || {};
+  $("bajaIng").textContent = "Entrá con tu usuario para subir a la web.";
+  if (sesion) abrirApp();
+}).catch(function(){
+  $("bajaIng").textContent = "No hay conexión con el servidor. Fijate el internet y volvé a probar.";
+});
+
+$("formIng").addEventListener("submit", function(ev){
+  ev.preventDefault();
+  var u = $("usuario").value.trim().toLowerCase(), c = $("clave").value;
+  decir("avisoIng", "");
+  var bt = $("btIng");
+  cargando(bt, true, "Entrar");
+  pedir("/login", { metodo: "POST", cuerpo: { usuario: u, clave: c } })
+    .then(function(j){
+      sesion = j.sesion; usuario = j.usuario;
+      try { localStorage.setItem("iblo.sesion", sesion); localStorage.setItem("iblo.usuario", usuario); } catch(e){}
+      abrirApp();
+    })
+    .catch(function(e){ decir("avisoIng", e.message, "mal"); })
+    .then(function(){ cargando(bt, false, "Entrar"); });
+});
+
+function abrirApp(){
+  $("pIngreso").hidden = true;
+  $("app").hidden = false;
+  $("quien").textContent = usuario || "";
+  $("saludo").innerHTML = "Hola <span>" + esc(usuario || "IBLO") + "</span>";
+  $("ajUsuario").textContent = usuario || "—";
+  $("ajServidor").textContent = "iblo-eventos.pages.dev";
+  $("ajBase").innerHTML = '<span class="si">conectada</span>';
+  var nombres = Object.keys(iaQuienes).filter(function(k){ return iaQuienes[k]; });
+  $("ajIA").innerHTML = nombres.length
+    ? '<span class="si">' + nombres.join(" + ") + '</span>'
+    : '<span class="no">sin IA</span>';
+  $("ajWa").textContent = "3725 44-9273";
+  $("ajIg").textContent = "@" + IG;
+  refrescarTablero();
+}
+function cerrarSesion(porVencida){
+  sesion = null; usuario = null;
+  try { localStorage.removeItem("iblo.sesion"); localStorage.removeItem("iblo.usuario"); } catch(e){}
+  $("app").hidden = true; $("pIngreso").hidden = false;
+  $("clave").value = "";
+  if (porVencida) decir("avisoIng", "La sesión venció. Entrá de nuevo.", "mal");
+}
+$("btSalir").addEventListener("click", function(){ cerrarSesion(); });
+$("btSalir2").addEventListener("click", function(){ cerrarSesion(); });
+
+/* ---------- moverse ---------- */
+var PANTALLAS = ["pInicio","pAsis","pCargar","pLista","pArchivo","pEquipo","pAjustes", "pVisitas"];
+function irA(p){
+  PANTALLAS.forEach(function(x){ $(x).hidden = (x !== p); });
+  [].forEach.call($("tabs").children, function(b){ b.classList.toggle("act", b.dataset.p === p); });
+  if (p === "pInicio") refrescarTablero();
+  if (p === "pLista"){ cargarLista(); cargarIg(); }
+  if (p === "pEquipo") cargarEquipo();
+  if (p === "pArchivo") cargarArchivo();
+  if (p === "pVisitas") cargarVisitas();
+  scrollTo(0,0);
+}
+$("tabs").addEventListener("click", function(ev){
+  var b = ev.target.closest("button[data-p]"); if (b) irA(b.dataset.p);
+});
+document.addEventListener("click", function(ev){
+  var b = ev.target.closest("[data-ir]"); if (!b) return;
+  if (b.dataset.tipo) elegirTipo(b.dataset.tipo);
+  irA(b.dataset.ir);
+});
+
+/* ---------- quién está mirando la web ----------
+   No hay cuentas en el sitio público: todo el que entra es un desconocido y no
+   hay ningún «quién» que mostrar. Lo único honesto es contarlos, y contar bien:
+   la pantalla dice «visitas» y no «personas» porque es una fila por visita. */
+function ratoVs(ms){
+  var s = Math.round(ms / 1000);
+  if (s < 60) return s + " s";
+  var m = Math.round(s / 60);
+  if (m < 60) return m + " min";
+  return Math.floor(m / 60) + " h " + (m % 60) + " min";
+}
+function nombreDePagina(p){
+  var n = { "portada":"La portada", "iblo":"La portada",
+            "iblo-publicaciones":"Publicaciones", "iblo-archivo":"Archivo",
+            "iblo-reels":"Reels", "iblo-esteticas":"Estéticas",
+            "iblo-servicios":"Servicios" };
+  if (p.indexOf("m:") === 0) return (n[p.slice(2)] || p.slice(2)) + " (celular)";
+  return n[p] || p;
+}
+function cargarVisitas(){
+  var c = $("vsCuerpo");
+  pedir("/visitas").then(function(j){
+    $("vsResumen").textContent = j.ahora.length
+      ? (j.ahora.length === 1 ? "Hay 1 persona mirando ahora mismo."
+                              : "Hay " + j.ahora.length + " personas mirando ahora mismo.")
+      : "No hay nadie mirando en este momento.";
+    c.innerHTML = "";
+
+    function caja(titulo){
+      var d = document.createElement("div");
+      /* mismo cromo que las cifras del tablero, para que no parezca pegado */
+      d.style.cssText = "margin-bottom:14px;padding:15px 16px;border-radius:16px;" +
+        "background:var(--carta);border:1px solid var(--linea)";
+      if (titulo){
+        var h = document.createElement("h3");
+        h.style.cssText = "margin:0 0 4px;font:600 10px/1.4 var(--cond);" +
+          "letter-spacing:.14em;text-transform:uppercase;color:var(--tenue)";
+        h.textContent = titulo; d.appendChild(h);
+      }
+      c.appendChild(d); return d;
+    }
+    function fila(izq, der){
+      var f = document.createElement("div");
+      f.style.cssText = "display:flex;gap:10px;justify-content:space-between;" +
+        "padding:9px 0;border-bottom:1px solid var(--linea);font-size:14.5px";
+      var a = document.createElement("span"); a.textContent = izq;
+      var b = document.createElement("b"); b.textContent = der;
+      f.appendChild(a); f.appendChild(b); return f;
+    }
+
+    /* ahora mismo */
+    if (j.ahora.length){
+      var d0 = caja("Ahora mismo");
+      j.ahora.forEach(function(v){
+        var q = [nombreDePagina(v.pagina || "portada")];
+        if (v.vino) q.push("vino de " + v.vino);
+        d0.appendChild(fila(q.join(" · "),
+          "hace " + ratoVs(Date.now() - v.desde) + (v.movil ? " · celu" : " · compu")));
+      });
+    }
+
+    /* los números */
+    [["Últimas 24 horas", j.hoy], ["Últimos 7 días", j.semana]].forEach(function(x){
+      var d = caja(x[0]), n = x[1] || {};
+      var prom = n.visitas ? ratoVs(Math.round((n.tiempo || 0) / n.visitas)) : "—";
+      d.appendChild(fila("Visitas", String(n.visitas || 0)));
+      d.appendChild(fila("Desde el celular", String(n.enCelu || 0)));
+      d.appendChild(fila("Se quedan, en promedio", prom));
+    });
+
+    if (j.paginas.length){
+      var d1 = caja("Qué miran (7 días)");
+      j.paginas.forEach(function(x){ d1.appendChild(fila(nombreDePagina(x.pagina), String(x.n))); });
+    }
+    if (j.vienen.length){
+      var d2 = caja("De dónde vienen (7 días)");
+      j.vienen.forEach(function(x){ d2.appendChild(fila(x.vino, String(x.n))); });
+    } else {
+      var d2b = caja("De dónde vienen (7 días)");
+      var p2 = document.createElement("p");
+      p2.style.cssText = "margin:0;font-size:13.5px;opacity:.75";
+      p2.textContent = "Todavía nadie llegó desde otro sitio, o entraron escribiendo la dirección.";
+      d2b.appendChild(p2);
+    }
+    if (j.dias.length){
+      var d3 = caja("Día por día");
+      j.dias.forEach(function(x){ d3.appendChild(fila(x.dia, String(x.n))); });
+    }
+
+    var nota = document.createElement("p");
+    nota.style.cssText = "font-size:12.5px;opacity:.7;margin-top:4px";
+    nota.textContent = j.nota;
+    c.appendChild(nota);
+  }).catch(function(e){
+    $("vsResumen").textContent = e.message;
+    c.innerHTML = "";
+  });
+}
+
+/* ---------- el tablero de inicio ---------- */
+function refrescarTablero(){
+  /* sin no-store el navegador guarda la respuesta 30 segundos y los números
+     quedan viejos justo después de publicar algo */
+  fetch(API + "/publicaciones", { cache: "no-store" })
+    .then(function(r){ return r.json(); }).then(function(j){
+    var t = j.publicaciones || [], ahora = Date.now() - 6*3600e3;
+    var vig = function(p){ return p.cuando && p.cuando > ahora; };
+    var n = {
+      prox: t.filter(vig).length,
+      ent:  t.filter(function(p){ return p.precio && (!p.cuando || vig(p)); }).length,
+      avi:  t.filter(function(p){ return !p.precio && !p.cuando; }).length
+    };
+    $("cProx").textContent = n.prox; $("cEnt").textContent = n.ent; $("cAvi").textContent = n.avi;
+    $("cProx").parentNode.classList.toggle("viva", n.prox > 0);
+    $("cEnt").parentNode.classList.toggle("viva", n.ent > 0);
+    $("cAvi").parentNode.classList.toggle("viva", n.avi > 0);
+
+    var prox = t.filter(vig).sort(function(a,b){ return a.cuando - b.cuando; })[0];
+    $("pulso").classList.toggle("frio", !prox);
+    $("pulsoTxt").textContent = prox
+      ? "En la portada: " + prox.titulo
+      : "No hay ninguna fecha anunciada";
+  }).catch(function(){
+    $("pulso").classList.add("frio");
+    $("pulsoTxt").textContent = "Sin conexión con la web";
+  });
+}
+
+/* ---------- fotos ---------- */
+function comprimir(archivo, listo, falla){
+  var lector = new FileReader();
+  lector.onload = function(){
+    var im = new Image();
+    im.onload = function(){
+      var lado = 1000, e = Math.min(1, lado / Math.max(im.width, im.height));
+      var c = document.createElement("canvas");
+      function dibujar(f){
+        c.width = Math.round(im.width * e * f); c.height = Math.round(im.height * e * f);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+      }
+      dibujar(1);
+      var out = c.toDataURL("image/webp", .72);
+      if (out.indexOf("data:image/webp") !== 0) out = c.toDataURL("image/jpeg", .78);
+      if (out.length > 850000){ dibujar(.78); out = c.toDataURL("image/webp", .66); }
+      listo(out, c.width, c.height);
+    };
+    im.onerror = falla;
+    im.src = lector.result;
+  };
+  lector.readAsDataURL(archivo);
+}
+
+/* Un mismo cajón de fotos sirve para la IA y para el formulario. */
+function cajonFoto(idCaja, idPeso, alCambiar, vacio){
+  var estado = { b64: "" };
+  function enganchar(){
+    $(idCaja).querySelector("input").addEventListener("change", manejar);
+  }
+  function manejar(ev){
+    var f = ev.target.files && ev.target.files[0]; if (!f) return;
+    if (!/^image\//.test(f.type)) { alCambiar("", "Eso no es una imagen."); return; }
+    comprimir(f, function(b64, an, al){
+      estado.b64 = b64;
+      var s = $(idCaja);
+      if (!s.classList.contains("tiene")){
+        s.classList.add("tiene");
+        s.innerHTML = '<input type="file" accept="image/*" aria-label="Cambiar la foto">' +
+          '<img alt="" src="' + b64 + '"><span class="cambiar">Cambiar</span>';
+        enganchar();
+      } else {
+        s.querySelector("img").src = b64;
+      }
+      $(idPeso).hidden = false;
+      $(idPeso).textContent = Math.round(b64.length / 1365) + " KB · " + an + "×" + al;
+      alCambiar(b64, "");
+    }, function(){ alCambiar("", "No pude leer esa imagen."); });
+  }
+  /* mostrar una foto que ya viene hecha (la que le mandaron a la IA) */
+  estado.poner = function(b64){
+    if (!b64) return;
+    estado.b64 = b64;
+    var s = $(idCaja);
+    s.classList.add("tiene");
+    s.innerHTML = '<input type="file" accept="image/*" aria-label="Cambiar la foto">' +
+      '<img alt="" src="' + b64 + '"><span class="cambiar">Cambiar</span>';
+    enganchar();
+    $(idPeso).hidden = false;
+    $(idPeso).textContent = Math.round(b64.length / 1365) + " KB";
+  };
+  estado.limpiar = function(){
+    estado.b64 = "";
+    var s = $(idCaja);
+    s.classList.remove("tiene");
+    s.innerHTML = '<input type="file" accept="image/*" aria-label="Elegir la foto">' + vacio;
+    enganchar();
+    $(idPeso).hidden = true;
+  };
+  enganchar();
+  return estado;
+}
+
+var VACIA_F = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+  'stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>' +
+  '<path d="M12 3v13M7 8l5-5 5 5"/></svg><b>Elegir foto</b>' +
+  '<small>Se achica sola. Podés dejarla vacía.</small>';
+
+/* El cajón de la IA acepta varias de una: el dueño saca captura de tres historias
+   y las manda juntas. Cada una sale como una publicación aparte. */
+var TOPE_FOTOS = 6;
+var fotosIA = [];
+
+function pintarTira(){
+  var t = $("tiraIA");
+  t.hidden = !fotosIA.length;
+  t.innerHTML = fotosIA.map(function(f, i){
+    return '<figure><img alt="" src="' + f + '">' +
+           '<button type="button" data-q="' + i + '" aria-label="Sacar esta">×</button></figure>';
+  }).join("");
+  $("pesoIA").hidden = !fotosIA.length;
+  if (fotosIA.length){
+    var kb = Math.round(fotosIA.reduce(function(a, f){ return a + f.length; }, 0) / 1365);
+    $("pesoIA").textContent = fotosIA.length + (fotosIA.length === 1 ? " imagen · " : " imágenes · ") + kb + " KB";
+  }
+  $("btVerIA").textContent = fotosIA.length > 1
+    ? "Armar las " + fotosIA.length + " publicaciones"
+    : "Armar la publicación";
+  if (fotosIA.length) $("btVerIA").hidden = false;
+}
+$("tiraIA").addEventListener("click", function(ev){
+  var b = ev.target.closest("button[data-q]"); if (!b) return;
+  fotosIA.splice(+b.dataset.q, 1);
+  pintarTira();
+});
+
+function sumarFotos(ev){
+  var fs = [].slice.call(ev.target.files || []); if (!fs.length) return;
+  decir("avisoAsis", "");
+  var quedan = TOPE_FOTOS - fotosIA.length;
+  if (fs.length > quedan){
+    decir("avisoAsis", "De a " + TOPE_FOTOS + " como mucho. Tomé las primeras " + quedan + ".", "");
+    fs = fs.slice(0, quedan);
+  }
+  /* Cada una se guarda en su lugar, no con push: comprimir es asincrónico y
+     terminaban en cualquier orden, distinto del que las eligió el dueño. */
+  var base = fotosIA.length, hueco = new Array(fs.length), faltan = fs.length;
+  function acomodar(){
+    if (--faltan > 0) return;
+    for (var k = 0; k < hueco.length; k++) if (hueco[k]) fotosIA[base + k] = hueco[k];
+    fotosIA = fotosIA.filter(Boolean);
+    pintarTira();
+  }
+  fs.forEach(function(f, k){
+    if (!/^image\//.test(f.type)){ decir("avisoAsis", "Alguna no era una imagen.", "mal"); acomodar(); return; }
+    comprimir(f, function(b64){ hueco[k] = b64; acomodar(); },
+                 function(){ decir("avisoAsis", "Una no la pude leer.", "mal"); acomodar(); });
+  });
+  ev.target.value = "";   // que se pueda volver a elegir la misma
+}
+$("sueltaIA").querySelector("input").addEventListener("change", sumarFotos);
+
+var fotoF = cajonFoto("suelta", "pesoFoto", function(b64, err){
+  decir("avisoCargar", err || "", err ? "mal" : "");
+  refrescarPrevia();
+}, VACIA_F);
+
+/* ---------- la IA ---------- */
+var EJEMPLOS = [
+  "el 25 de octubre hacemos halloween en el club juventud, arranca 00hs, entradas a 10 mil",
+  "abrimos la preventa de la fiesta de egresados, 15 mil hasta el viernes",
+  "avisá que la fiesta del sábado se pasa para el finde que viene"
+];
+$("ejemplos").innerHTML = EJEMPLOS.map(function(t){
+  return '<button class="ejemplo" type="button">' + esc(t) + '</button>';
+}).join("");
+$("ejemplos").addEventListener("click", function(ev){
+  var b = ev.target.closest("button"); if (!b) return;
+  $("aTexto").value = b.textContent;
+  $("aTexto").focus();
+});
+
+/* «Contármelo» y «Mandar foto»: cada uno abre su panel. Antes estaba todo a la
+   vista de una y era una pared; el dueño abre sólo lo que va a usar. */
+document.querySelectorAll("[data-abre]").forEach(function(b){
+  b.addEventListener("click", function(){
+    var caja = $(b.dataset.abre);
+    caja.hidden = !caja.hidden;
+    b.classList.toggle("viva", !caja.hidden);
+    /* el botón de armar aparece cuando hay algo con qué armar */
+    $("btVerIA").hidden = $("manEscribir").hidden && $("manFoto").hidden;
+    if (!caja.hidden){
+      var campo = caja.querySelector("textarea, input[type=file]");
+      if (campo && campo.tagName === "TEXTAREA") campo.focus();
+      caja.scrollIntoView({ behavior:"smooth", block:"nearest" });
+    }
+  });
+});
+
+var NOMBRE_TIPO = { proximamente:"Próxima fecha", entrada:"Entradas", aviso:"Aviso" };
+
+function fichaDe(p, imagen){
+  var filas = [
+    ["Qué es", NOMBRE_TIPO[p.tipo] || "Aviso"],
+    ["Fecha", p.fecha], ["Lugar", p.lugar], ["Hora", p.hora], ["Precio", p.precio]
+  ].filter(function(f){ return f[1]; });
+  return (imagen ? '<img alt="" src="' + imagen + '">' : '') +
+    '<div class="tapa"><b>' + esc(p.titulo) + '</b>' +
+    (p.subtitulo ? '<i>' + esc(p.subtitulo) + '</i>' : '') + '</div>' +
+    filas.map(function(f){
+      return '<div class="fila"><b>' + f[0] + '</b><span>' + esc(f[1]) + '</span></div>';
+    }).join("") +
+    (p.detalle ? '<div class="fila"><b>Texto</b><span>' + esc(p.detalle) + '</span></div>' : '');
+}
+
+/* La IA arma la propuesta y la muestra. Nada sube a la web hasta que el dueño
+   toca «Publicar»: lo pidió así después de probar el modo automático.
+   Si mandó varias imágenes, es una llamada y una propuesta por cada una. */
+function llamarIA(){
+  var texto = $("aTexto").value.trim();
+  if (!texto && !fotosIA.length){
+    decir("avisoAsis", "Escribile algo o mandale una imagen.", "mal"); return;
+  }
+  var bt = $("btVerIA"), original = bt.textContent;
+  var tandas = fotosIA.length ? fotosIA.slice() : [""];
+  decir("avisoAsis", "");
+  $("listaProp").innerHTML = "";
+  $("propuesta").hidden = true;
+  bt.disabled = true;
+  bt.innerHTML = '<span class="giro"></span>' +
+    (tandas.length > 1 ? "Leyendo las " + tandas.length + "…" : "Un segundo…");
+
+  /* Una por vez, no en paralelo: con dos llamadas a la vez la IA se degradaba y
+     devolvía cualquier cosa para la segunda. Tarda más, pero no inventa. */
+  var salidas = new Array(tandas.length), turno = 0;
+  function siguiente(){
+    if (turno >= tandas.length) return Promise.resolve();
+    var i = turno++;
+    if (tandas.length > 1){
+      bt.innerHTML = '<span class="giro"></span>Leyendo ' + (i + 1) + " de " + tandas.length + "…";
+    }
+    return pedir("/asistente", { metodo:"POST", cuerpo:{ texto: texto, imagen: tandas[i], publicar: false } })
+      .then(function(j){ salidas[i] = { ok: j }; }, function(e){ salidas[i] = { mal: e.message }; })
+      .then(siguiente);
+  }
+
+  siguiente()
+    .then(function(){
+      var hubo = 0;
+      $("listaProp").innerHTML = "";
+      salidas.forEach(function(r, i){
+        var caja = document.createElement("div");
+        caja.className = "bloqueProp";
+        if (tandas.length > 1){
+          caja.innerHTML = '<div class="cual"><b>' + (i + 1) + " de " + tandas.length + '</b>' +
+            (r.ok ? esc(r.ok.propuesta.titulo) : "no salió") + '</div>';
+        }
+        if (r.mal){
+          caja.innerHTML += '<div class="noSalio">' + esc(r.mal) + '</div>';
+          $("listaProp").appendChild(caja);
+          return;
+        }
+        hubo++;
+        var p = r.ok.propuesta;
+        var ficha = document.createElement("div");
+        ficha.className = "fichaProp";
+        ficha.innerHTML = fichaDe(p, tandas[i]);
+        caja.appendChild(ficha);
+
+        var f = p.falta || [];
+        if (f.length){
+          var fa = document.createElement("div");
+          fa.className = "faltan";
+          fa.innerHTML = "<b>Quedó sin:</b> " + esc(f.join(", ")) + ". Si hace falta, cargalo a mano.";
+          caja.appendChild(fa);
+        }
+
+        var bots = document.createElement("div");
+        bots.className = "dosBotones";
+        var pub = document.createElement("button");
+        pub.className = "bt p"; pub.type = "button"; pub.textContent = "Publicar";
+        pub.onclick = function(){ publicarPropuesta(p, tandas[i], pub, caja); };
+        var edi = document.createElement("button");
+        edi.className = "bt s"; edi.type = "button"; edi.textContent = "Editar y decorar";
+        edi.onclick = function(){ volcarEnFormulario(p, tandas[i]); };
+        bots.appendChild(pub); bots.appendChild(edi);
+        caja.appendChild(bots);
+        $("listaProp").appendChild(caja);
+      });
+
+      $("tituloProp").textContent = tandas.length > 1
+        ? "Salieron " + hubo + " de " + tandas.length
+        : (salidas[0] && salidas[0].ok && salidas[0].ok.leyoFlyer ? "Esto saqué de la imagen" : "Esto entendí");
+      $("propuesta").hidden = false;
+      $("propuesta").scrollIntoView({ behavior:"smooth", block:"nearest" });
+    })
+    .then(function(){ bt.disabled = false; bt.textContent = original; });
+}
+
+/* Sube una propuesta tal cual está. */
+function publicarPropuesta(p, imagen, bt, caja){
+  var original = bt.textContent;
+  decir("avisoAsis", "");
+  cargando(bt, true, original);
+  pedir("/publicaciones", { metodo:"POST", cuerpo: cuerpoDe(p, { imagen: imagen }) })
+    .then(function(j){
+      var id = j.id;
+      caja.querySelector(".dosBotones").innerHTML = "";
+      var listo = document.createElement("div");
+      listo.className = "faltan";
+      listo.innerHTML = "<b>Publicada.</b> Ya se ve en la web.";
+      caja.insertBefore(listo, caja.querySelector(".dosBotones"));
+      var baja = document.createElement("button");
+      baja.className = "bt s"; baja.type = "button"; baja.textContent = "Bajarla";
+      baja.onclick = function(){ bajar(id, function(){
+        listo.innerHTML = "<b>Bajada.</b> Ya no se ve en la web.";
+        baja.remove(); refrescarTablero();
+      }); };
+      var ver = document.createElement("button");
+      ver.className = "bt s"; ver.type = "button"; ver.textContent = "Ver en la web";
+      ver.onclick = function(){ window.open("https://iblo-eventos.pages.dev/publicaciones", "_blank"); };
+      caja.querySelector(".dosBotones").appendChild(ver);
+      caja.querySelector(".dosBotones").appendChild(baja);
+      refrescarTablero();
+    })
+    .catch(function(e){ decir("avisoAsis", e.message, "mal"); cargando(bt, false, original); });
+}
+
+/* El cuerpo que espera /api/publicaciones, salga de la IA o del formulario. */
+function cuerpoDe(p, extra){
+  var ms = p.cuando ? Date.parse(p.cuando) : 0;
+  var c = {
+    tipo: p.tipo || "aviso", titulo: p.titulo || "",
+    subtitulo: p.subtitulo || "", detalle: p.detalle || "",
+    precio: p.precio || "", lugar: p.lugar || "", hora: p.hora || "",
+    cuando: isFinite(ms) ? ms : 0,
+    fecha: p.fecha || (ms ? fechaCorta(ms) : ""),
+    color: p.color || "magenta", destacado: false
+  };
+  for (var k in (extra || {})) c[k] = extra[k];
+  return c;
+}
+
+var propuestaViva = null, ultimaPublicada = 0;
+pintarTira();
+$("btVerIA").addEventListener("click", llamarIA);
+
+/* ---------- el botón «Nuevo»: lo último de Instagram ----------
+   Lee las historias y las publicaciones del feed, arma los candidatos y los
+   muestra; no sube nada hasta que el dueño toca en el que quiera. */
+function traerDeIg(){
+  var bt = $("btNuevo"), original = bt.innerHTML;
+  decir("avisoNuevo", "");
+  $("resNuevo").hidden = true;
+  $("resNuevo").innerHTML = "";
+  bt.disabled = true;
+  candidatosIg = [];
+
+  /* por código, no sumando: cada vuelta puede repetir alguno y el total daba
+     más alto que la cantidad de cosas que hay */
+  var saltadas = {}, mirados = 0, total = 0, vueltas = 0, huboError = "";
+  var ultimo = { historias: null, posteos: 0 };
+
+  function avance(){
+    bt.innerHTML = '<span class="giro"></span>' +
+      (total ? "Mirando " + Math.min(mirados + 1, total) + " de " + total + "…" : "Mirando…");
+  }
+  avance();
+
+  /* Se encadena vuelta tras vuelta hasta terminar. Antes cortaba a las cuatro y
+     le decía al dueño «tocá de nuevo», que es pedirle que haga el trabajo del
+     programa. Como el servidor ahora se acuerda de lo que descartó, cada vuelta
+     avanza de verdad. */
+  function vuelta(){
+    /* Lo que ya está en pantalla viaja en el pedido. Sin esto, la vuelta 2 volvía
+       a agarrar los candidatos de la vuelta 1 —todavía sin publicar— y el
+       servidor los tachaba por repetidos. */
+    var yaVistos = candidatosIg.map(function(c){ return c.codigo; })
+                     .concat(Object.keys(saltadas));
+    return pedir("/sugerir", { metodo:"POST", cuerpo:{ yaVistos: yaVistos } }).then(function(j){
+      var nuevos = j.candidatos || [];
+      mirados += (j.revisados || 0);
+      (j.descartadas || []).forEach(function(x){ saltadas[x.codigo] = 1; });
+      if (!total) total = mirados + (j.quedan || 0);
+      if (j.historias) ultimo.historias = j.historias;
+      if (j.posteos != null) ultimo.posteos = j.posteos;
+      nuevos.forEach(sumarCandidato);
+      if (nuevos.length) pintarCandidatos();
+      avance();
+      if ((j.quedan || 0) > 0 && ++vueltas < 12) return vuelta();
+    }, function(e){ huboError = e.message; });
+  }
+
+  vuelta().then(function(){
+    if (huboError){ decir("avisoNuevo", huboError, "mal"); }
+    else if (!candidatosIg.length){
+      decir("avisoNuevo", nadaNuevo(ultimo, saltadas), ultimo.historias && ultimo.historias.error ? "mal" : "");
+    } else {
+      /* «subila» no corresponde cuando la fiesta ya está en la web y lo único
+         que hay que hacer es completarle un dato */
+      var completar = candidatosIg.filter(function(c){ return c.yaEsta; }).length;
+      decir("avisoNuevo",
+        candidatosIg.length === 1
+          ? (completar ? "Esa fiesta ya está en la web y le falta un dato. Completala y listo."
+                       : "Encontré una. Mirala y si va, subila.")
+          : "Encontré " + candidatosIg.length + ". Mirá cada una y subí la que va." +
+            (completar ? " " + (completar === 1 ? "Una ya está" : completar + " ya están") +
+                         " en la web: a ésa" + (completar === 1 ? "" : "s") + " sólo hay que completarla" +
+                         (completar === 1 ? "" : "s") + "." : ""),
+        "bien");
+    }
+    pintarCandidatos(Object.keys(saltadas).length);
+    bt.disabled = false; bt.innerHTML = original;
+  });
+}
+
+/* Dibuja las tarjetas encontradas hasta ahora. */
+/* Una fiesta, una tarjeta.
+
+   El servidor ya junta las historias de la misma fiesta que le tocan en la misma
+   vuelta —el flyer en una y el precio en la otra—, pero cada vuelta es un pedido
+   aparte y no ve las anteriores. Así, tres historias de la misma noche repartidas
+   en dos vueltas salían como dos tarjetas y el dueño terminaba subiendo la misma
+   fiesta dos veces. Se junta acá también, con la misma regla: mismo nombre, o
+   fechas a menos de doce horas. Lo que le falta a la que ya está se lo completa
+   la nueva; lo que ya tiene no se pisa. */
+function sumarCandidato(n){
+  var igual = null;
+  for (var i = 0; i < candidatosIg.length; i++){
+    var c = candidatosIg[i];
+    if (c.titulo && n.titulo && c.titulo.toLowerCase() === n.titulo.toLowerCase()) { igual = c; break; }
+    if (c.cuando > 0 && n.cuando > 0 && Math.abs(c.cuando - n.cuando) < 43200000) { igual = c; break; }
+  }
+  if (!igual){ candidatosIg.push(n); return true; }
+
+  ["subtitulo","detalle","fecha","lugar","hora","precio"].forEach(function(campo){
+    if (!igual[campo] && n[campo]) igual[campo] = n[campo];
+  });
+  if (!igual.cuando && n.cuando) igual.cuando = n.cuando;
+  if (!igual.conFoto && n.conFoto){ igual.conFoto = true; igual.codigo = n.codigo; }
+  if (!igual.yaEsta && n.yaEsta) igual.yaEsta = n.yaEsta;
+  igual.juntadas = (igual.juntadas || 1) + 1;
+  return false;
+}
+
+/* «No hay nada nuevo» a secas deja al dueño sin saber si la app le miró las
+   historias o ni las vio. Ahora dice qué miró y por qué no salió nada. */
+function nadaNuevo(ultimo, saltadas){
+  var h = ultimo.historias || {};
+  if (h.error) return "No pude ver tus historias (" + h.error + "). De los posteos, nada nuevo.";
+
+  var partes = [];
+  if (h.total) partes.push(h.total === 1 ? "tu historia" : "tus " + h.total + " historias");
+  if (ultimo.posteos) partes.push(ultimo.posteos === 1 ? "1 posteo" : "los " + ultimo.posteos + " últimos posteos");
+
+  var mirado = partes.length ? "Miré " + partes.join(" y ") + ". " : "";
+  var cuantas = Object.keys(saltadas || {}).length;
+
+  if (!h.total && !ultimo.posteos) return "No encontré ni historias ni posteos para mirar.";
+  if (!cuantas) return mirado + "Ya está todo subido.";
+  return mirado + "Todo eso ya lo tenés publicado o no anuncia nada nuevo.";
+}
+
+function pintarCandidatos(saltadas){
+  var html = candidatosIg.map(function(p, i){
+    var filas = [["Fecha", p.fecha], ["Lugar", p.lugar], ["Hora", p.hora], ["Precio", p.precio]]
+      .filter(function(f){ return f[1]; })
+      .map(function(f){ return '<div class="fila"><b>' + f[0] + '</b><span>' + esc(f[1]) + '</span></div>'; })
+      .join("");
+
+    /* Cuando es la misma fiesta que ya está en la web, la única acción es
+       completarla. Antes al lado había un «Subirla aparte» que invitaba
+       justamente a lo que no hay que hacer: la misma noche dos veces en la
+       página. Si de verdad son dos fiestas distintas el mismo día, está
+       «Cambiar algo», que la lleva al formulario y de ahí se sube como nueva. */
+    var botones = p.yaEsta
+      ? '<button class="bt p" type="button" data-hacer="act" data-i="' + i + '">Agregarle ' +
+          esc(p.yaEsta.suma.join(" y ")) + '</button>' +
+        '<button class="bt s" type="button" data-hacer="edit" data-i="' + i + '">Cambiar algo</button>'
+      : '<button class="bt p" type="button" data-hacer="pub" data-i="' + i + '">Subirla</button>' +
+        '<button class="bt s" type="button" data-hacer="edit" data-i="' + i + '">Cambiar algo</button>';
+
+    return '<div class="cand' + (p.de === "historia" ? " deHistoria" : "") + '" data-i="' + i + '">' +
+      '<span class="sello2">' + (p.de === "historia" ? "Historia" : "Posteo") + '</span>' +
+      '<h4>' + esc(p.titulo) + '</h4>' +
+      (p.subtitulo ? '<span class="sub">' + esc(p.subtitulo) + '</span>' : '') +
+      filas +
+      (p.detalle ? '<p>' + esc(p.detalle) + '</p>' : '') +
+      (p.yaEsta
+        ? '<div class="yaEsta">Esta fiesta <b>ya está en la web</b>. Lo que le falta es ' +
+          esc(p.yaEsta.suma.join(" y ")) + '.</div>'
+        : '') +
+      (p.juntadas > 1
+        ? '<div class="yaEsta">Junté ' + p.juntadas + ' avisos tuyos de la misma fiesta en esta sola.</div>'
+        : '') +
+      '<div class="dosBotones">' + botones + '</div></div>';
+  }).join("");
+
+  /* Una línea tranquila, sin el informe de motivos que no le dice nada a nadie. */
+  /* Sólo cuando hay tarjetas: si no hay ninguna, el aviso de arriba ya lo dijo
+     y repetirlo con un número es ruido. */
+  if (saltadas && candidatosIg.length) {
+    html += '<div class="saltadas">Miré ' + saltadas +
+      (saltadas === 1 ? " cosa más y no anunciaba" : " cosas más y no anunciaban") + ' nada nuevo.</div>';
+  }
+  $("resNuevo").innerHTML = html;
+  $("resNuevo").hidden = !html;
+}
+
+var candidatosIg = [];
+$("btNuevo").addEventListener("click", traerDeIg);
+
+$("resNuevo").addEventListener("click", function(ev){
+  var b = ev.target.closest("button[data-hacer]"); if (!b) return;
+  var p = candidatosIg[+b.dataset.i]; if (!p) return;
+  var caja = b.closest(".cand");
+
+  if (b.dataset.hacer === "edit"){
+    /* la foto vive en el servidor; el formulario la vuelve a pedir al publicar */
+    volcarEnFormulario(p, "");
+    origenPendiente = p.codigo;
+    decir("avisoCargar", "Sale de " + (p.de === "historia" ? "una historia" : "un posteo") +
+      " tuyo. La foto se le pega sola al publicar.", "");
+    return;
+  }
+
+  var actualiza = b.dataset.hacer === "act";
+  var texto = b.textContent;
+  b.disabled = true;
+  cargando(b, true, texto);
+  var cuerpo = cuerpoDe(p, { origen: p.codigo });
+  if (actualiza) cuerpo.actualizar = p.yaEsta.id;
+
+  pedir("/publicaciones", { metodo:"POST", cuerpo: cuerpo })
+    .then(function(){
+      caja.innerHTML = '<h4>' + esc(p.titulo) + '</h4>' +
+        '<span class="pista" style="margin-top:7px">' +
+        (actualiza ? "Actualizada. Ya se ve en la web con lo nuevo." : "Publicada. Ya se ve en la web.") +
+        '</span>';
+      refrescarTablero();
+    })
+    .catch(function(e){ cargando(b, false, texto); b.disabled = false; decir("avisoNuevo", e.message, "mal"); });
+});
+
+/* ---------- cargar a mano ---------- */
+var tipoActual = "proximamente", colorActual = "magenta";
+
+$("paleta").innerHTML = Object.keys(COLORES).map(function(k){
+  return '<button class="tinte' + (k === "magenta" ? " viva" : "") + '" type="button" data-c="' + k +
+         '" style="background:' + COLORES[k] + '" aria-label="' + k + '"></button>';
+}).join("");
+$("paleta").addEventListener("click", function(ev){
+  var b = ev.target.closest("button"); if (!b) return;
+  colorActual = b.dataset.c;
+  [].forEach.call($("paleta").children, function(x){ x.classList.toggle("viva", x === b); });
+});
+
+$("btMas").addEventListener("click", function(){
+  var c = $("masOpciones");
+  c.hidden = !c.hidden;
+  $("btMas").classList.toggle("viva", !c.hidden);
+  if (!c.hidden) c.scrollIntoView({ behavior:"smooth", block:"nearest" });
+});
+
+function elegirTipo(t){
+  tipoActual = t;
+  [].forEach.call($("tipos").children, function(b){ b.classList.toggle("viva", b.dataset.t === t); });
+  [].forEach.call(document.querySelectorAll("#pCargar [data-solo]"), function(n){
+    n.hidden = n.dataset.solo.split(" ").indexOf(t) < 0;
+  });
+  $("reqPre").hidden = t !== "entrada";
+  $("btPublicar").textContent = t === "entrada" ? "Publicar las entradas"
+    : t === "aviso" ? "Publicar el aviso" : "Publicar la fecha";
+  refrescarPrevia();
+}
+$("tipos").addEventListener("click", function(ev){
+  var b = ev.target.closest("button"); if (b) elegirTipo(b.dataset.t);
+});
+elegirTipo("proximamente");
+
+["titulo","subtitulo","detalle","precio","lugar","hora"].forEach(function(id){
+  $(id).addEventListener("input", refrescarPrevia);
+});
+function refrescarPrevia(){
+  var t = $("titulo").value.trim(), d = $("detalle").value.trim(), p = $("precio").value.trim();
+  $("pvTit").textContent = t || "El nombre va acá";
+  $("pvDes").textContent = d || "Y lo que contás, acá abajo.";
+  $("pvPre").hidden = !p;
+  $("pvPre").textContent = p;
+  $("pvImg").hidden = !fotoF.b64;
+  if (fotoF.b64) $("pvImg").src = fotoF.b64;
+  var pv = $("previa");
+  pv.classList.toggle("conAdorno", !!adorno);
+  pv.classList.toggle("conFoto", !!fotoF.b64);
+  pv.dataset.pos = adornoPos;
+  $("pvAdorno").hidden = !adorno;
+  if (adorno) $("pvAdorno").src = adorno;
+}
+
+/* ---------- el adorno ----------
+   La IA genera el objeto sobre pantalla verde y el recorte lo hace el teléfono,
+   con `sacarVerde`. Lo que se guarda es el recorte, no el verde. */
+var ESQ = [["der-arriba","Arriba der."],["izq-arriba","Arriba izq."],
+           ["der-abajo","Abajo der."],["izq-abajo","Abajo izq."]];
+var adorno = "", adornoPos = "der-arriba";
+
+$("esquinas").innerHTML = ESQ.map(function(e){
+  return '<button class="esquina' + (e[0] === adornoPos ? " viva" : "") + '" type="button" data-p="' +
+         e[0] + '"><i></i>' + e[1] + '</button>';
+}).join("");
+$("esquinas").addEventListener("click", function(ev){
+  var b = ev.target.closest("button"); if (!b) return;
+  adornoPos = b.dataset.p;
+  [].forEach.call($("esquinas").children, function(x){ x.classList.toggle("viva", x === b); });
+});
+
+function mostrarAdorno(recorte, texto, bt, original){
+  adorno = recorte;
+  $("adImg").src = recorte;
+  $("adQue").textContent = texto;
+  $("adornoHecho").hidden = false;
+  bt.innerHTML = original;
+  refrescarPrevia();
+}
+
+/* `rehacer` es el botón «Otro»: pide uno nuevo aunque ya haya uno guardado. */
+function generarAdorno(rehacer){
+  var pista = [$("titulo").value, $("subtitulo").value, $("detalle").value].join(" ").trim();
+  var objeto = $("adObjeto").value.trim();
+  if (!pista && !objeto){
+    decir("avisoAdorno", "Poné el nombre de la fiesta arriba, o escribí acá qué objeto querés.", "mal");
+    return;
+  }
+  var bt = $("btAdorno"), original = bt.innerHTML;
+  decir("avisoAdorno", "");
+  cargando(bt, true, original);
+  pedir("/prop", { metodo:"POST", cuerpo:{ pista: pista, objeto: objeto, rehacer: !!rehacer } })
+    .then(function(j){
+      /* ya estaba recortado de otra vez: no hay nada que generar ni que pasar
+         por el canvas, viene listo y no gastó nada de IA */
+      if (j.deLaBase && j.recortado){
+        mostrarAdorno(j.recortado, "Salió: " + j.objeto + " · guardado de antes, no gastó IA.", bt, original);
+        return;
+      }
+      return new Promise(function(ok, mal){
+        var im = new Image();
+        im.onload = function(){
+          sacarVerde(im, function(recorte){
+            if (!recorte) { mal(new Error("El recorte salió vacío. Probá generarlo de nuevo.")); return; }
+            mostrarAdorno(recorte, "Salió: " + j.objeto + " · " +
+              Math.round(recorte.length / 1365) + " KB, con el fondo ya sacado.", bt, original);
+            /* queda en la biblioteca para la próxima fiesta con la misma onda.
+               Si no se puede guardar, el dueño ya tiene el suyo: no se avisa. */
+            if (j.clave) pedir("/prop", { metodo:"PUT", cuerpo:{ clave: j.clave, recortado: recorte } })
+              .catch(function(){});
+            ok();
+          });
+        };
+        im.onerror = function(){ mal(new Error("No pude leer la imagen que generó.")); };
+        im.src = j.imagen;
+      });
+    })
+    .catch(function(e){ decir("avisoAdorno", e.message, "mal"); })
+    .then(function(){ cargando(bt, false, original); });
+}
+$("btAdorno").addEventListener("click", function(){ generarAdorno(false); });
+$("btOtroAdorno").addEventListener("click", function(){ generarAdorno(true); });
+$("btSinAdorno").addEventListener("click", function(){
+  adorno = ""; $("adornoHecho").hidden = true; $("adImg").src = ""; refrescarPrevia();
+});
+
+
+/* ---------- archivo de eventos ----------
+   Sube fotos y videos a una sección. Tres cosas que valen la pena explicar:
+
+   1. La miniatura la hace el teléfono. El servidor no puede: el plan gratis de
+      Workers corta a los 10 ms de CPU. Y hace falta, porque la grilla de la web
+      pide treinta miniaturas de una: con los originales sería inusable.
+   2. La del video sale del primer cuadro, con un <video> escondido y un canvas.
+      Sin eso el video en la grilla sería un rectángulo negro. Hay que PEDIRLE un
+      tiempo concreto: con sólo cargar los metadatos, varios navegadores no
+      decodifican ningún cuadro y el canvas sale transparente.
+   3. Se sube de a uno, en fila. Todos juntos en paralelo revienta la memoria del
+      teléfono con archivos de 20 MB y, si algo falla, no se sabe qué entró. */
+
+var SECS = [], secElegida = "";
+var lote = [];               /* lo que se eligió del teléfono, ya preparado */
+
+function miniDe(fuente, an, al, lado){
+  lado = lado || 320;
+  var e = Math.min(1, lado / Math.max(an, al));
+  var c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(an * e));
+  c.height = Math.max(1, Math.round(al * e));
+  c.getContext("2d").drawImage(fuente, 0, 0, c.width, c.height);
+  var out = c.toDataURL("image/webp", .62);
+  if (out.indexOf("data:image/webp") !== 0) out = c.toDataURL("image/jpeg", .62);
+  return out;
+}
+
+
+/* El tope es del depósito, no un capricho: un valor no puede pasar de 25 MB y
+   la API corta en 24. */
+var TOPE_VIDEO = 24 * 1024 * 1024;
+
+/* La tapa del video es su primer cuadro. Hay que pedirle un tiempo concreto:
+   varios navegadores no decodifican NINGÚN cuadro con sólo cargar los metadatos,
+   y el canvas saldría transparente. Si no se puede, se sigue sin tapa —el video
+   se sube igual, sólo se ve un rectángulo en la grilla. */
+function tapaDeVideo(archivo, listo){
+  var url = URL.createObjectURL(archivo);
+  var v = document.createElement("video");
+  v.muted = true; v.playsInline = true; v.preload = "auto";
+  var yaEsta = false;
+  function fin(mini){
+    if (yaEsta) return;
+    yaEsta = true;
+    URL.revokeObjectURL(url);
+    listo(mini, v.videoWidth || 0, v.videoHeight || 0);
+  }
+  function sacar(){
+    if (!v.videoWidth) return fin("");
+    try { fin(miniDe(v, v.videoWidth, v.videoHeight)); }
+    catch (e){ fin(""); }                 /* algún códec que el canvas no lee */
+  }
+  v.onloadeddata = function(){ if (v.currentTime < .05) { try { v.currentTime = .1; } catch(e){ sacar(); } } };
+  v.onseeked = sacar;
+  v.onerror = function(){ fin(""); };
+  setTimeout(function(){ sacar(); }, 9000);   /* un video raro no cuelga la subida */
+  v.src = url;
+}
+
+/* prepara un archivo suelto y lo mete en el lote */
+function prepararUno(archivo, listo){
+  if (/^image\//.test(archivo.type)){
+    comprimir(archivo, function(b64, an, al){
+      var im = new Image();
+      im.onload = function(){
+        listo({ nombre: archivo.name, tipo: "foto", medio: b64,
+                mini: miniDe(im, im.width, im.height), ancho: an, alto: al,
+                peso: Math.round(b64.length * .75) });
+      };
+      im.onerror = function(){ listo({ nombre: archivo.name, tipo: "foto", medio: b64,
+                mini: b64, ancho: an, alto: al, peso: Math.round(b64.length * .75) }); };
+      im.src = b64;
+    }, function(){ listo({ nombre: archivo.name, error: "no pude leer la foto" }); });
+    return;
+  }
+  /* Un video corto viaja como archivo igual que una foto: la API lo acepta
+     hasta 24 MB, que es lo que entra en un valor del depósito. Más que eso no
+     hay forma, y ahí sí va por link. */
+  if (/^video\//.test(archivo.type)){
+    if (archivo.size > TOPE_VIDEO){
+      listo({ nombre: archivo.name, tipo: "video", peso: archivo.size,
+              error: "pesa " + (archivo.size / 1048576).toFixed(0) +
+                     " MB: subilo con «Subir video»" });
+      return;
+    }
+    tapaDeVideo(archivo, function(mini, an, al){
+      var fr = new FileReader();
+      fr.onload = function(){
+        listo({ nombre: archivo.name, tipo: "video", medio: fr.result, mini: mini,
+                ancho: an, alto: al, peso: archivo.size });
+      };
+      fr.onerror = function(){ listo({ nombre: archivo.name, error: "no pude leer el video" }); };
+      fr.readAsDataURL(archivo);
+    });
+    return;
+  }
+  listo({ nombre: archivo.name, error: "eso no es una foto ni un video" });
+}
+
+var ICO_VID = '<svg class="vid" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+
+function pintarLote(){
+  $("arLote").innerHTML = lote.map(function(x, i){
+    var cuerpo = x.mini
+      ? '<img alt="" src="' + x.mini + '">'
+      : '<div style="width:100%;height:100%;display:grid;place-items:center;color:var(--tenue);font-size:10px">' +
+        (x.tipo === "video" ? "video" : "?") + '</div>';
+    var pie = x.error ? x.error : (x.peso > 1048576
+      ? (x.peso / 1048576).toFixed(1) + " MB" : Math.round(x.peso / 1024) + " KB");
+    return '<figure class="' + (x.error ? "mal" : "") + '" data-i="' + i + '">' +
+      cuerpo + (x.tipo === "video" ? ICO_VID : "") +
+      '<span class="peso">' + esc(pie) + '</span></figure>';
+  }).join("");
+}
+
+function pintarSecs(){
+  /* cada sección con su color: es el mismo que usa la web para esa estética,
+     así el dueño reconoce a dónde está subiendo de un vistazo */
+  $("arSecs").innerHTML = SECS.map(function(s){
+    return '<button class="sec1' + (s.clave === secElegida ? " viva" : "") + '" type="button" data-s="' +
+      esc(s.clave) + '" style="--tono:' + esc(s.color || "#ff1e8e") + '"><em></em>' +
+      esc(s.nombre) + '<i>' + (s.cuantas || 0) + '</i></button>';
+  }).join("");
+  var s = SECS.filter(function(x){ return x.clave === secElegida; })[0];
+  $("btSubirArch").textContent = s ? "Subir a " + s.nombre : "Elegí una sección";
+  $("btSubirArch").disabled = !s;
+}
+
+/* `otraVez` corta la única vuelta que hace falta: el primer pedido no lleva
+   sección —todavía no sabemos cuál— y vuelve sólo con la lista de secciones; con
+   la primera elegida se pide de nuevo, ya con sus fotos. Sin este freno, una
+   respuesta rara dejaba el pedido dando vueltas para siempre. */
+var ALBUMES = [], albumAbierto = "";
+
+function cargarArchivo(otraVez){
+  pedir("/archivo" + (secElegida ? "?seccion=" + encodeURIComponent(secElegida) : ""))
+    .then(function(j){
+      SECS = j.secciones || [];
+      if (!secElegida && SECS.length) secElegida = SECS[0].clave;
+      pintarSecs();
+      if (j.albumes){
+        ALBUMES = j.albumes;
+        /* los eventos que ya existen, para que el dueño reuse el nombre en vez
+           de escribirlo distinto y armar dos álbumes de la misma fiesta */
+        $("arEventos").innerHTML = ALBUMES.map(function(a){
+          return '<option value="' + esc(a.nombre) + '">';
+        }).join("");
+        if (albumAbierto) abrirAlbum(albumAbierto);
+        else pintarAlbumes();
+      }
+      else if (secElegida && !otraVez) cargarArchivo(true);
+      else $("arYa").innerHTML = '<span class="pista">Todavía no hay nada acá.</span>';
+    })
+    .catch(function(e){ decir("avisoArch", e.message, "mal"); });
+}
+
+function pintarAlbumes(){
+  albumAbierto = "";
+  if (!ALBUMES.length){
+    $("arYa").innerHTML = '<span class="pista">Todavía no hay nada acá.</span>';
+    return;
+  }
+  $("arYa").innerHTML = ALBUMES.map(function(a){
+    var cuenta = a.cuantas + (a.cuantas === 1 ? " cosa" : " cosas") +
+      (a.videos ? " · " + a.videos + (a.videos === 1 ? " video" : " videos") : "");
+    return '<button class="fila" type="button" data-alb="' + esc(a.clave) + '" style="width:100%; text-align:left">' +
+      (a.tapa ? '<img alt="" src="' + esc(a.tapa) + '">' : '') +
+      '<div class="txt" style="flex:1"><span><b>' + esc(a.nombre) + '</b></span>' +
+      '<span class="pista">' + esc(cuenta) + '</span></div>' +
+      '<span class="pista" style="align-self:center">›</span></button>';
+  }).join("");
+}
+
+function abrirAlbum(clave){
+  albumAbierto = clave;
+  $("arYa").innerHTML = '<span class="pista">Abriendo…</span>';
+  pedir("/archivo?seccion=" + encodeURIComponent(secElegida) + "&album=" + encodeURIComponent(clave))
+    .then(function(j){ pintarYaEsta(j.medios || [], j.album); })
+    .catch(function(e){ decir("avisoArch", e.message, "mal"); });
+}
+
+function pintarYaEsta(medios, alb){
+  if (!medios.length){
+    $("arYa").innerHTML = '<span class="pista">Todavía no hay nada acá.</span>';
+    return;
+  }
+  var opciones = SECS.map(function(s){ return '<option value="' + esc(s.clave) + '">' + esc(s.nombre) + '</option>'; }).join("");
+  var sec = SECS.filter(function(x){ return x.clave === secElegida; })[0] || {};
+  var cabeza = '<div class="dosBotones" style="margin-bottom:4px">' +
+    '<button class="bt s" type="button" id="btVolverAlb">‹ Todos los eventos</button>' +
+    '<button class="bt s" type="button" id="btBajaAlbum">Sacar todo el evento</button></div>' +
+    (alb && alb.nombre ? '<span class="pista"><b>' + esc(alb.nombre) + '</b></span>' : '');
+  $("arYa").innerHTML = cabeza + medios.map(function(m){
+    var esPortada = sec.portada === m.id;
+    return '<div class="fila" data-id="' + m.id + '">' +
+      (m.miniatura ? '<img alt="" src="' + esc(m.miniatura) + '">' : '') +
+      '<div class="txt" style="flex:1">' +
+        '<span><b>' + esc(m.titulo || (m.tipo === "video" ? "Video" : "Foto")) + '</b>' +
+          (m.tipo === "video" ? ' <span class="marca">Video</span>' : '') +
+          (esPortada ? ' <span class="esPortada">· portada</span>' : '') + '</span>' +
+        (m.descripcion ? '<span class="pista">' + esc(m.descripcion.slice(0, 90)) + '</span>' : '') +
+        '<div class="dosBotones" style="margin-top:8px">' +
+          '<select data-mover="' + m.id + '" aria-label="Moverlo de sección">' +
+            '<option value="">Moverlo a…</option>' + opciones + '</select>' +
+          '<button class="bt s" type="button" data-baja="' + m.id + '">Sacarlo</button>' +
+        '</div>' +
+        (m.tipo === "foto" && !esPortada
+          ? '<button class="bt s" type="button" data-portada="' + m.id + '" style="margin-top:7px">Ponerla de portada</button>'
+          : '') +
+      '</div></div>';
+  }).join("");
+}
+
+$("arSecs").addEventListener("click", function(ev){
+  var b = ev.target.closest("button[data-s]"); if (!b) return;
+  secElegida = b.dataset.s;
+  decir("avisoArch", "");
+  pintarSecs(); cargarArchivo();
+});
+
+$("btSecNueva").addEventListener("click", function(){
+  $("cajaSecNueva").hidden = false; $("arSecNombre").focus();
+});
+$("btSecCancelar").addEventListener("click", function(){
+  $("cajaSecNueva").hidden = true; $("arSecNombre").value = "";
+});
+$("btSecCrear").addEventListener("click", function(){
+  var n = $("arSecNombre").value.trim();
+  if (n.length < 3){ decir("avisoArch", "Ponele un nombre de al menos tres letras.", "mal"); return; }
+  var bt = $("btSecCrear"), original = bt.innerHTML;
+  cargando(bt, true, original);
+  pedir("/archivo", { metodo:"POST", cuerpo:{ nuevaSeccion: n } })
+    .then(function(j){
+      secElegida = j.seccion.clave;
+      $("cajaSecNueva").hidden = true; $("arSecNombre").value = "";
+      decir("avisoArch", "Creada. Ahora subí las fotos a «" + j.seccion.nombre + "».", "bien");
+      cargarArchivo();
+    })
+    .catch(function(e){ decir("avisoArch", e.message, "mal"); })
+    .then(function(){ cargando(bt, false, original); });
+});
+
+$("arSuelta").querySelector("input").addEventListener("change", function(ev){
+  var fs = [].slice.call(ev.target.files || []); if (!fs.length) return;
+  ev.target.value = "";
+  decir("avisoArch", "Preparando " + fs.length + (fs.length === 1 ? " archivo…" : " archivos…"), "");
+  var i = 0;
+  (function siguiente(){
+    if (i >= fs.length){
+      var malos = lote.filter(function(x){ return x.error; }).length;
+      decir("avisoArch", malos
+        ? "Listo. " + malos + (malos === 1 ? " no se puede subir." : " no se pueden subir.")
+        : "", malos ? "mal" : "");
+      pintarLote();
+      return;
+    }
+    prepararUno(fs[i++], function(x){ lote.push(x); pintarLote(); siguiente(); });
+  })();
+});
+
+/* tocar una del lote la saca */
+$("arLote").addEventListener("click", function(ev){
+  var f = ev.target.closest("figure[data-i]"); if (!f) return;
+  lote.splice(+f.dataset.i, 1); pintarLote();
+});
+
+$("btSubirArch").addEventListener("click", function(){
+  if (!secElegida){ decir("avisoArch", "Elegí primero a qué sección va.", "mal"); return; }
+  var buenos = lote.filter(function(x){ return !x.error && x.medio; });
+  if (!buenos.length){ decir("avisoArch", "Elegí al menos una foto o un video.", "mal"); return; }
+  /* sin nombre, las fotos caen todas en un álbum «Sueltas» y se pierde el
+     sentido de tener secciones: cada tanda es un evento */
+  if (!$("arTitulo").value.trim()){
+    decir("avisoArch", "Ponele el nombre del evento: es el álbum donde van a quedar.", "mal");
+    $("arTitulo").focus(); return;
+  }
+
+  var bt = $("btSubirArch"), original = bt.textContent;
+  var titulo = $("arTitulo").value.trim(), desc = $("arDesc").value.trim();
+  var hechos = 0, fallados = [];
+  bt.disabled = true;
+
+  /* de a uno, en fila: en paralelo se le va la memoria al teléfono */
+  (function subir(i){
+    if (i >= buenos.length){
+      bt.disabled = false; bt.textContent = original;
+      lote = []; pintarLote();
+      $("arTitulo").value = ""; $("arDesc").value = "";
+      decir("avisoArch", fallados.length
+        ? "Subí " + hechos + " y " + fallados.length + " fallaron: " + fallados[0]
+        : (hechos === 1 ? "Subida. Ya está en la web." : "Subí las " + hechos + ". Ya están en la web."),
+        fallados.length ? "mal" : "bien");
+      cargarArchivo();
+      return;
+    }
+    bt.innerHTML = '<span class="giro"></span>Subiendo ' + (i + 1) + " de " + buenos.length + "…";
+    var x = buenos[i];
+    pedir("/archivo", { metodo:"POST", cuerpo:{
+      seccion: secElegida, titulo: titulo, descripcion: desc,
+      medio: x.medio, miniatura: x.mini, ancho: x.ancho, alto: x.alto } })
+      .then(function(){ hechos++; }, function(e){ fallados.push(e.message); })
+      .then(function(){ subir(i + 1); });
+  })(0);
+});
+
+/* ---------- el video, que es un link y no un archivo ---------- */
+$("btVideo").addEventListener("click", function(){
+  $("cajaVideo").hidden = !$("cajaVideo").hidden;
+  if (!$("cajaVideo").hidden) $("arEnlace").focus();
+});
+$("btVideoCancelar").addEventListener("click", function(){
+  $("cajaVideo").hidden = true; $("arEnlace").value = "";
+});
+$("btVideoListo").addEventListener("click", function(){
+  if (!secElegida){ decir("avisoArch", "Elegí primero a qué sección va.", "mal"); return; }
+  var url = $("arEnlace").value.trim();
+  if (!/^https:\/\//i.test(url)){
+    decir("avisoArch", "Pegá la dirección completa, la que arranca con https://", "mal"); return;
+  }
+  if (!$("arTitulo").value.trim()){
+    decir("avisoArch", "Ponele el nombre del evento arriba: es el álbum donde va a quedar.", "mal");
+    $("arTitulo").focus(); return;
+  }
+  var bt = $("btVideoListo"), original = bt.innerHTML;
+  cargando(bt, true, original);
+  pedir("/archivo", { metodo:"POST", cuerpo:{
+    seccion: secElegida, enlace: url,
+    titulo: $("arTitulo").value.trim(), descripcion: $("arDesc").value.trim() } })
+    .then(function(j){
+      $("cajaVideo").hidden = true; $("arEnlace").value = "";
+      $("arTitulo").value = ""; $("arDesc").value = "";
+      decir("avisoArch", j.conTapa
+        ? "Video agregado, con su tapa."
+        : "Video agregado. No pude sacarle tapa: subile una foto y ponela de portada si querés que se vea algo.", "bien");
+      cargarArchivo();
+    })
+    .catch(function(e){ decir("avisoArch", e.message, "mal"); })
+    .then(function(){ cargando(bt, false, original); });
+});
+
+$("arYa").addEventListener("click", function(ev){
+  if (ev.target.closest("#btVolverAlb")){ pintarAlbumes(); return; }
+  var todo = ev.target.closest("#btBajaAlbum");
+  if (todo){
+    if (!confirm("¿Sacamos TODO este evento de la web? No se puede deshacer.")) return;
+    todo.disabled = true; todo.textContent = "Sacando…";
+    pedir("/archivo?seccion=" + encodeURIComponent(secElegida) +
+          "&album=" + encodeURIComponent(albumAbierto), { metodo:"DELETE" })
+      .then(function(j){
+        decir("avisoArch", "Sacado el evento entero (" + j.sacadas + ").", "");
+        albumAbierto = ""; cargarArchivo();
+      })
+      .catch(function(e){
+        decir("avisoArch", e.message, "mal");
+        todo.disabled = false; todo.textContent = "Sacar todo el evento";
+      });
+    return;
+  }
+  var alb = ev.target.closest("button[data-alb]");
+  if (alb){ abrirAlbum(alb.dataset.alb); return; }
+  var p = ev.target.closest("button[data-portada]");
+  if (p){
+    p.disabled = true; p.textContent = "Poniéndola…";
+    pedir("/archivo", { metodo:"PUT", cuerpo:{ portadaDe: secElegida, portada: +p.dataset.portada } })
+      .then(function(){ decir("avisoArch", "Esa foto queda de portada de la sección.", "bien"); cargarArchivo(); })
+      .catch(function(e){ decir("avisoArch", e.message, "mal"); p.disabled = false; p.textContent = "Ponerla de portada"; });
+    return;
+  }
+  var b = ev.target.closest("button[data-baja]"); if (!b) return;
+  var id = b.dataset.baja;
+  b.disabled = true; b.textContent = "Sacando…";
+  pedir("/archivo?id=" + id, { metodo:"DELETE" })
+    .then(function(){ decir("avisoArch", "Sacado.", ""); cargarArchivo(); })
+    .catch(function(e){ decir("avisoArch", e.message, "mal"); b.disabled = false; b.textContent = "Sacarlo"; });
+});
+$("arYa").addEventListener("change", function(ev){
+  var sel = ev.target.closest("select[data-mover]"); if (!sel || !sel.value) return;
+  var id = sel.dataset.mover, destino = sel.value;
+  sel.disabled = true;
+  pedir("/archivo", { metodo:"PUT", cuerpo:{ id: +id, seccion: destino } })
+    .then(function(){
+      var s = SECS.filter(function(x){ return x.clave === destino; })[0];
+      decir("avisoArch", "Movido a «" + (s ? s.nombre : destino) + "».", "bien");
+      cargarArchivo();
+    })
+    .catch(function(e){ decir("avisoArch", e.message, "mal"); sel.disabled = false; });
+});
+
+/* mejorar el texto con la IA */
+var textoAntes = null;
+/* ---------- el respaldo, cuando el servidor se queda sin cupo ----------
+   Pollinations contesta gratis y sin cuenta, pero limita el escalón anónimo a un
+   pedido por dirección IP. Desde el servidor eso no sirve: todos los Workers de
+   Cloudflare salen por las mismas IP y siempre hay alguien en la cola. Desde acá
+   sí, porque la conexión es la del teléfono del dueño y no la comparte con nadie.
+
+   Va por GET porque el POST pide clave. Las instrucciones se pegan arriba del
+   pedido, que para reescribir un párrafo alcanza y sobra. */
+function iaDeRespaldo(sistema, pedido){
+  var u = "https://text.pollinations.ai/" +
+          encodeURIComponent(sistema + "\n\n---\n\n" + pedido) +
+          "?referrer=iblo-eventos.pages.dev";
+  return fetch(u).then(function(r){
+    return r.text().then(function(t){
+      /* cuando no le da el cupo contesta un JSON de error, a veces con un 200 */
+      if (!r.ok || /^\s*\{"error"/.test(t)) throw new Error("sin respaldo");
+      t = t.trim();
+      if (!t || t.length > 1200) throw new Error("sin respaldo");
+      return t;
+    });
+  });
+}
+
+/* ¿el error del servidor es «se acabó el cupo»? Sólo ahí vale la pena el rodeo:
+   si el pedido está mal, el respaldo va a fallar igual. */
+function esFaltaDeCupo(e){
+  return /cupo|saturad|l[ií]mite/i.test(String(e && e.message || ""));
+}
+
+/* Los modelos a veces devuelven todo el aviso entre comillas. Se sacan sólo si
+   abren y cierran el texto entero: si no, sacar la primera dejaba la de adentro
+   suelta y el aviso salía con media comilla colgando. */
+function sinComillas(t){
+  t = String(t).trim();
+  var pares = { '"': '"', "'": "'", "\u00ab": "\u00bb", "\u201c": "\u201d" };
+  var f = t.charAt(0);
+  if (pares[f] && t.charAt(t.length - 1) === pares[f]) return t.slice(1, -1).trim();
+  return t;
+}
+
+var SISTEMA_AVISO =
+  "Sos el community manager de IBLO Eventos, una productora de fiestas de Margarita Belén, Chaco. " +
+  "Reescribís avisos en español rioplatense (voseo), con energía pero sin exagerar. " +
+  "No inventes ningún dato que no esté en el texto: ni fechas, ni lugares, ni precios, ni nombres. " +
+  "Máximo 40 palabras, dos o tres frases. Sin hashtags, sin emojis, sin comillas. " +
+  "Devolvé únicamente el texto final, nada más.";
+
+$("btMagia").addEventListener("click", function(){
+  var d = $("detalle").value.trim();
+  if (d.length < 6){ decir("avisoCargar", "Escribí algo primero, aunque sea suelto.", "mal"); return; }
+  var bt = $("btMagia"), original = bt.innerHTML;
+  decir("avisoCargar", "");
+  cargando(bt, true, original);
+  pedir("/mejorar", { metodo:"POST", cuerpo:{ texto: d, titulo: $("titulo").value.trim(),
+                                              precio: $("precio").value.trim() } })
+    .catch(function(e){
+      /* el servidor sin cupo no tiene que dejar al dueño sin poder mejorar el texto */
+      if (!esFaltaDeCupo(e)) throw e;
+      return iaDeRespaldo(SISTEMA_AVISO, d)
+        .then(function(t){ return { texto: t, de: "respaldo" }; })
+        .catch(function(){ throw e; });   // que lea el mensaje del servidor, no el mío
+    })
+    .then(function(j){
+      textoAntes = d;
+      $("detalle").value = sinComillas(j.texto || d);
+      $("btDeshacer").hidden = false;
+      refrescarPrevia();
+      if (j.de === "respaldo")
+        decir("avisoCargar", "El cupo de la IA de casa está agotado, así que lo escribió la de respaldo. Revisalo antes de publicar.", "ok");
+    })
+    .catch(function(e){ decir("avisoCargar", e.message, "mal"); })
+    .then(function(){ cargando(bt, false, original); });
+});
+$("btDeshacer").addEventListener("click", function(){
+  if (textoAntes == null) return;
+  $("detalle").value = textoAntes; textoAntes = null;
+  $("btDeshacer").hidden = true; refrescarPrevia();
+});
+
+/* traer lo que propuso la IA al formulario */
+function volcarEnFormulario(p, imagen){
+  elegirTipo(p.tipo || "aviso");
+  $("titulo").value = p.titulo || "";
+  $("subtitulo").value = p.subtitulo || "";
+  $("detalle").value = p.detalle || "";
+  $("precio").value = p.precio || "";
+  $("lugar").value = p.lugar || "";
+  $("hora").value = p.hora || "";
+  $("cuando").value = p.cuando || "";
+  if (COLORES[p.color]){
+    colorActual = p.color;
+    [].forEach.call($("paleta").children, function(x){ x.classList.toggle("viva", x.dataset.c === p.color); });
+  }
+  fotoF.poner(imagen);
+  if (p.adorno){
+    adorno = p.adorno;
+    $("adImg").src = p.adorno;
+    $("adornoHecho").hidden = false;
+  }
+  refrescarPrevia();
+  irA("pCargar");
+}
+
+var origenPendiente = "";
+function limpiarFormulario(){
+  ["titulo","subtitulo","detalle","precio","lugar","hora","cuando","adObjeto"].forEach(function(id){ $(id).value = ""; });
+  adorno = ""; $("adornoHecho").hidden = true; origenPendiente = "";
+  $("fijar").checked = false;
+  fotoF.limpiar();
+  $("btDeshacer").hidden = true; textoAntes = null;
+  refrescarPrevia();
+}
+
+$("btPublicar").addEventListener("click", function(){
+  var titulo = $("titulo").value.trim();
+  if (!titulo){ decir("avisoCargar", "Falta el nombre.", "mal"); $("titulo").focus(); return; }
+  if (tipoActual === "entrada" && !$("precio").value.trim()){
+    decir("avisoCargar", "Para las entradas hace falta el precio.", "mal"); $("precio").focus(); return;
+  }
+  var cuandoTxt = $("cuando").value;
+  var ms = cuandoTxt ? Date.parse(cuandoTxt) : 0;
+  /* Una fecha pasada no aparece en ninguna solapa de la web: la gente busca lo
+     que se viene. Mejor avisarlo acá que dejarlo publicado y que no se vea. */
+  if (ms && ms < Date.now() - 6 * 3600e3 &&
+      !confirm("Esa fecha ya pasó, así que no va a aparecer en la web.\n\n¿La subimos igual?")) {
+    $("cuando").focus();
+    return;
+  }
+  var cuerpo = {
+    tipo: tipoActual, titulo: titulo,
+    subtitulo: $("subtitulo").value.trim(),
+    detalle: $("detalle").value.trim(),
+    precio: $("precio").value.trim(),
+    lugar: $("lugar").value.trim(), hora: $("hora").value.trim(),
+    cuando: isFinite(ms) ? ms : 0,
+    fecha: ms ? fechaCorta(ms) : "",
+    color: colorActual, imagen: fotoF.b64,
+    adorno: adorno, adorno_pos: adornoPos,
+    /* si vino de un posteo de Instagram, el server le pega la foto de ahí */
+    origen: origenPendiente,
+    destacado: tipoActual === "proximamente" && $("fijar").checked
+  };
+  var bt = $("btPublicar"), original = bt.textContent;
+  decir("avisoCargar", "");
+  cargando(bt, true, original);
+  pedir("/publicaciones", { metodo:"POST", cuerpo: cuerpo })
+    .then(function(){
+      decir("avisoCargar", "Listo, ya se ve en la web.", "bien");
+      limpiarFormulario(); refrescarTablero();
+    })
+    .catch(function(e){ decir("avisoCargar", e.message, "mal"); })
+    .then(function(){ cargando(bt, false, original); });
+});
+
+function fechaCorta(ms){
+  var d = new Date(ms);
+  return String(d.getDate()).padStart(2,"0") + "." +
+         String(d.getMonth()+1).padStart(2,"0") + "." +
+         String(d.getFullYear()).slice(2);
+}
+
+/* ---------- lo que está arriba ---------- */
+function cuandoTexto(p){
+  if (p.cuando){
+    var dias = Math.floor((p.cuando - Date.now())/86400000);
+    if (dias < 0) return "ya pasó";
+    if (dias === 0) return "es hoy";
+    if (dias === 1) return "es mañana";
+    return "faltan " + dias + " días";
+  }
+  var h = Math.round((Date.now() - p.creado)/3600000);
+  if (h < 1) return "recién";
+  if (h < 24) return "hace " + h + " h";
+  return "hace " + Math.round(h/24) + " días";
+}
+function cargarLista(){
+  $("lista").innerHTML = '<div class="vacio">Buscando…</div>';
+  pedir("/mias").then(function(j){
+    var t = j.publicaciones || [];
+    if (!t.length){
+      $("lista").innerHTML = '<div class="vacio"><b>Todavía no subiste nada</b>' +
+        'Lo que publiques va a aparecer acá.</div>';
+      return;
+    }
+    var MARCA = { proximamente:["pr","Próxima"], entrada:["en","Entradas"], aviso:["av","Aviso"] };
+    $("lista").innerHTML = t.map(function(p){
+      var m = MARCA[p.tipo] || MARCA.aviso;
+      var baja = p.estado !== "publicada";
+      return '<div class="fila">' +
+        (p.imagen ? '<img alt="" src="' + p.imagen + '">'
+                  : '<div class="sinFoto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+                    'stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/>' +
+                    '<circle cx="8.5" cy="9" r="1.5"/><path d="m4 17 4.5-4.5 3.5 3.5L15.5 12 20 16.5"/>' +
+                    '</svg></div>') +
+        '<div class="txt"><b>' + esc(p.titulo) + '</b>' +
+          '<span>' + esc(cuandoTexto(p)) + (p.precio ? " · " + esc(p.precio) : "") + '</span>' +
+          '<span class="marca ' + (baja ? "baja" : m[0]) + '">' + (baja ? "Bajada" : m[1]) + '</span>' +
+          (!baja && p.destacado ? ' <span class="marca pr">En la portada</span>' : "") +
+          /* sólo tiene sentido en algo con fecha: el cartel de la portada es
+             «la próxima fecha», un aviso sin fecha no puede ocuparlo */
+          (!baja && p.tipo === "proximamente" && p.cuando && !p.destacado
+            ? '<button class="chip" type="button" data-portada="' + p.id + '">Ponerla en la portada</button>'
+            : "") +
+          (baja ? '<button class="chip" type="button" data-subir="' + p.id + '">Subirla de nuevo</button>' : "") +
+        '</div>' +
+        (baja ? "" : '<button class="bajar" type="button" data-id="' + p.id + '">Bajar</button>') +
+        '</div>';
+    }).join("");
+  }).catch(function(e){
+    $("lista").innerHTML = '<div class="vacio"><b>No pude cargarlas</b>' + esc(e.message) + '</div>';
+  });
+}
+/* La grilla de Instagram, para poder sacar algo que no se quiere ver arriba.
+   Las historias no llevan botón: se van solas a las 24 horas y ofrecer el botón
+   sería prometer un control que no hace falta. Igual se muestra cuánto les
+   queda, que es la pregunta que se hace el dueño. */
+function cargarIg(){
+  $("rejIg").innerHTML = '<span class="pista">Buscando…</span>';
+  pedir("/instagram").then(function(j){
+    var p = j.posts || [];
+    if (!p.length){ $("rejIg").innerHTML = '<span class="pista">No hay nada copiado todavía.</span>'; return; }
+    var ahora = Date.now();
+    $("rejIg").innerHTML = '<div class="igRej">' + p.map(function(x){
+      var hist = x.tipo === "historia";
+      var faltan = Math.max(0, Math.round((x.publicado + 864e5 - ahora) / 36e5));
+      return '<div class="igU">' +
+        (x.imagen ? '<img alt="" src="' + esc(x.imagen) + '">' : '') +
+        '<span class="qué' + (hist ? " hist" : "") + '">' + (hist ? "Historia" : esc(x.tipo)) + '</span>' +
+        (hist
+          ? '<span class="queda">' + (faltan > 0 ? faltan + " h" : "se va ya") + '</span>'
+          : '<button class="sacar" type="button" data-ig="' + esc(x.codigo) + '">Sacar</button>') +
+        '</div>';
+    }).join("") + '</div>';
+  }).catch(function(e){ $("rejIg").innerHTML = '<span class="pista">' + esc(e.message) + '</span>'; });
+}
+$("rejIg").addEventListener("click", function(ev){
+  var b = ev.target.closest("button[data-ig]"); if (!b) return;
+  if (!confirm("¿La sacamos de la web?")) return;
+  b.disabled = true; b.textContent = "…";
+  pedir("/instagram?codigo=" + encodeURIComponent(b.dataset.ig), { metodo:"DELETE" })
+    .then(function(){ decir("avisoIg", "Sacada de la portada.", "bien"); cargarIg(); })
+    .catch(function(e){ decir("avisoIg", e.message, "mal"); b.disabled = false; b.textContent = "Sacar"; });
+});
+
+function bajar(id, listo){
+  pedir("/publicaciones?id=" + id, { metodo:"DELETE" }).then(listo).catch(function(e){
+    alert(e.message);
+  });
+}
+$("lista").addEventListener("click", function(ev){
+  var sub = ev.target.closest("button[data-subir]");
+  if (sub){
+    sub.disabled = true; sub.textContent = "Subiendo…";
+    pedir("/publicaciones", { metodo:"PUT", cuerpo:{ id:+sub.dataset.subir, estado:"publicada" } })
+      .then(function(){ cargarLista(); refrescarTablero(); })
+      .catch(function(e){
+        alert(e.message); sub.disabled = false; sub.textContent = "Subirla de nuevo";
+      });
+    return;
+  }
+  var pt = ev.target.closest("button[data-portada]");
+  if (pt){
+    pt.disabled = true; pt.textContent = "Poniéndola…";
+    pedir("/publicaciones", { metodo:"PUT", cuerpo:{ id:+pt.dataset.portada, destacado:true } })
+      .then(function(){ cargarLista(); refrescarTablero(); })
+      .catch(function(e){
+        alert(e.message); pt.disabled = false; pt.textContent = "Ponerla en la portada";
+      });
+    return;
+  }
+  var b = ev.target.closest("button[data-id]"); if (!b) return;
+  if (!confirm("¿La bajamos de la web?")) return;
+  b.disabled = true; b.textContent = "…";
+  bajar(b.dataset.id, function(){ cargarLista(); refrescarTablero(); });
+});
+
+/* ---------- el equipo ----------
+   Lo que se ve en la página de Servicios. Del Instagram se guarda SÓLO el
+   usuario: el dueño escribe «@fulano» y el link lo arma la página. Guardar la
+   dirección entera invita a pegar cualquier cosa —un posteo, un link con
+   parámetros de seguimiento— y después la tarjeta lleva a otro lado. */
+var EQ = [];
+
+function limpiarArroba(v){
+  var s = String(v || "").trim().replace(/\s+/g, "");
+  var m = s.match(/instagram\.com\/+([^/?#]+)/i);
+  if (m) s = m[1];
+  return s.replace(/^@+/, "").replace(/\/+$/, "");
+}
+
+function pintarEquipo(){
+  if (!EQ.length){
+    $("eqLista").innerHTML = '<div class="vacio"><b>Todavía no hay nadie</b>' +
+      'Creá un grupo acá abajo y empezá a sumar.</div>';
+    return;
+  }
+  $("eqLista").innerHTML = EQ.map(function(g){
+    var gente = g.gente.map(function(p){
+      return '<li class="eqUno" data-id="' + p.id + '">' +
+        '<button class="estrella' + (p.destacado ? " viva" : "") + '" type="button" ' +
+          'data-estrella="' + p.id + '" aria-label="Resaltarlo" title="Resaltarlo">' +
+          (p.destacado ? "★" : "☆") + '</button>' +
+        '<span class="n">' + esc(p.nombre) +
+          (p.ig ? '<i>@' + esc(p.ig) + '</i>' : '<i class="sin">sin Instagram</i>') + '</span>' +
+        '<button class="chip" type="button" data-editar="' + p.id + '">Cambiar</button>' +
+        '<button class="chip" type="button" data-sacar="' + p.id + '">Sacar</button>' +
+      '</li>';
+    }).join("");
+    return '<div class="eqGrupo" data-grupo="' + esc(g.grupo) + '">' +
+      '<div class="eqCab"><span>' + esc(g.cargo || "—") + '</span><b>' + esc(g.grupo) + '</b>' +
+        '<span class="cuantos">' + g.gente.length + '</span>' +
+        '<button class="chip" type="button" data-grenom="' + esc(g.grupo) + '">Renombrar</button>' +
+        '<button class="chip" type="button" data-grbaja="' + esc(g.grupo) + '">Borrar grupo</button>' +
+      '</div>' +
+      '<ul class="eqGente">' + gente + '</ul>' +
+      '<div class="eqAlta">' +
+        '<input maxlength="60" data-nom="' + esc(g.grupo) + '" placeholder="Nombre">' +
+        '<input maxlength="31" data-ig="' + esc(g.grupo) + '" placeholder="@usuario (opcional)">' +
+        '<button class="bt s" type="button" data-sumar="' + esc(g.grupo) + '">Sumarlo</button>' +
+      '</div></div>';
+  }).join("");
+}
+
+function cargarEquipo(){
+  $("eqLista").innerHTML = '<span class="pista">Buscando…</span>';
+  pedir("/equipo").then(function(j){ EQ = j.grupos || []; pintarEquipo(); })
+    .catch(function(e){ $("eqLista").innerHTML = '<span class="pista">' + esc(e.message) + '</span>'; });
+}
+
+/* Toda respuesta de la API vuelve con la lista entera ya agrupada. Repintar con
+   eso, y no parchear el array a mano, es lo que evita que la pantalla y la web
+   digan cosas distintas después de un alta que falló a medias. */
+function guardarEq(ruta, opc, bt, textoOriginal){
+  if (bt){ bt.disabled = true; bt.textContent = "…"; }
+  return pedir(ruta, opc)
+    .then(function(j){ EQ = j.grupos || EQ; pintarEquipo(); decir("avisoEq", ""); })
+    .catch(function(e){
+      decir("avisoEq", e.message, "mal");
+      if (bt){ bt.disabled = false; bt.textContent = textoOriginal; }
+    });
+}
+
+$("eqLista").addEventListener("click", function(ev){
+  var b;
+
+  if ((b = ev.target.closest("button[data-sumar]"))){
+    var g = b.dataset.sumar;
+    var iN = $("eqLista").querySelector('input[data-nom="' + CSS.escape(g) + '"]');
+    var iI = $("eqLista").querySelector('input[data-ig="' + CSS.escape(g) + '"]');
+    var nom = iN.value.trim();
+    if (!nom){ decir("avisoEq", "Ponele el nombre.", "mal"); iN.focus(); return; }
+    guardarEq("/equipo", { metodo:"POST", cuerpo:{ grupo:g, nombre:nom, ig:limpiarArroba(iI.value) } },
+      b, "Sumarlo");
+    return;
+  }
+
+  if ((b = ev.target.closest("button[data-estrella]"))){
+    var p = buscarUno(+b.dataset.estrella);
+    guardarEq("/equipo", { metodo:"PUT", cuerpo:{ id:p.id, destacado: !p.destacado } });
+    return;
+  }
+
+  if ((b = ev.target.closest("button[data-editar]"))){
+    var q = buscarUno(+b.dataset.editar);
+    var nom = prompt("¿Cómo se llama?", q.nombre);
+    if (nom === null) return;
+    nom = nom.trim(); if (!nom) return;
+    var ig = prompt("Instagram (sólo @usuario, vacío para sacarlo)", q.ig ? "@" + q.ig : "");
+    if (ig === null) return;
+    guardarEq("/equipo", { metodo:"PUT", cuerpo:{ id:q.id, nombre:nom, ig:limpiarArroba(ig) } }, b, "Cambiar");
+    return;
+  }
+
+  if ((b = ev.target.closest("button[data-sacar]"))){
+    var s = buscarUno(+b.dataset.sacar);
+    if (!confirm("¿Sacamos a " + s.nombre + " de la web?")) return;
+    guardarEq("/equipo?id=" + s.id, { metodo:"DELETE" }, b, "Sacar");
+    return;
+  }
+
+  if ((b = ev.target.closest("button[data-grenom]"))){
+    var viejo = b.dataset.grenom;
+    var gr = EQ.filter(function(x){ return x.grupo === viejo; })[0] || {};
+    var nuevo = prompt("¿Cómo se llama el grupo?", viejo);
+    if (nuevo === null) return;
+    nuevo = nuevo.trim(); if (!nuevo) return;
+    var cargo = prompt("Etiqueta chiquita de arriba (Cabina, Piso, Diseño…)", gr.cargo || "");
+    if (cargo === null) return;
+    guardarEq("/equipo", { metodo:"PUT", cuerpo:{ grupoViejo:viejo, grupo:nuevo, cargo:cargo.trim() } },
+      b, "Renombrar");
+    return;
+  }
+
+  if ((b = ev.target.closest("button[data-grbaja]"))){
+    var gg = b.dataset.grbaja;
+    var cuantos = (EQ.filter(function(x){ return x.grupo === gg; })[0] || { gente:[] }).gente.length;
+    if (!confirm("¿Borramos «" + gg + "» con sus " + cuantos + "? No se puede deshacer.")) return;
+    guardarEq("/equipo?grupo=" + encodeURIComponent(gg), { metodo:"DELETE" }, b, "Borrar grupo");
+    return;
+  }
+});
+
+function buscarUno(id){
+  for (var i = 0; i < EQ.length; i++)
+    for (var j = 0; j < EQ[i].gente.length; j++)
+      if (EQ[i].gente[j].id === id) return EQ[i].gente[j];
+  return {};
+}
+
+$("btGrupoNuevo").addEventListener("click", function(){
+  var g = $("eqGrupoNuevo").value.trim();
+  if (g.length < 2){ decir("avisoEq", "Ponele un nombre al grupo.", "mal"); return; }
+  var nom = prompt("¿Con quién arranca «" + g + "»?", "");
+  if (nom === null) return;
+  nom = nom.trim();
+  if (!nom){ decir("avisoEq", "Un grupo tiene que arrancar con alguien.", "mal"); return; }
+  guardarEq("/equipo", { metodo:"POST", cuerpo:{ grupo:g, cargo:$("eqCargoNuevo").value.trim(), nombre:nom } },
+    $("btGrupoNuevo"), "Crearlo")
+    .then(function(){ $("eqGrupoNuevo").value = ""; $("eqCargoNuevo").value = ""; });
+});
+
+/* ---------- contraseña ---------- */
+$("btClave").addEventListener("click", function(){
+  var a = $("cActual").value, n = $("cNueva").value;
+  if (n.length < 8){ decir("avisoClave", "La nueva tiene que tener 8 o más.", "mal"); return; }
+  var bt = $("btClave"), original = bt.textContent;
+  decir("avisoClave", "");
+  cargando(bt, true, original);
+  pedir("/clave", { metodo:"POST", cuerpo:{ actual: a, nueva: n } })
+    .then(function(){
+      decir("avisoClave", "Cambiada. Usá la nueva la próxima vez.", "bien");
+      $("cActual").value = ""; $("cNueva").value = "";
+    })
+    .catch(function(e){ decir("avisoClave", e.message, "mal"); })
+    .then(function(){ cargando(bt, false, original); });
+});
+
+/* Que Android la ofrezca como app y ande sin señal. */
+if ("serviceWorker" in navigator) {
+  addEventListener("load", function(){ navigator.serviceWorker.register("/sw.js").catch(function(){}); });
+}
+</script>
+<!-- IBLO-PAGINA-JS -->
+<script>
+/* La pantalla «La página»: lo que deja cambiar la web sin tocar código.
+ *
+ * Vive aparte del guion grande del panel a propósito. Usa lo que ya está
+ * —`$`, `pedir`, `irA`, `decir`— y se engancha sin editar nada de adentro, así
+ * que se puede volver a generar con el script sin riesgo de romper lo que
+ * funciona.
+ *
+ * DOS DECISIONES QUE IMPORTAN:
+ *
+ * · Se trabaja sobre una copia. Nada se manda al servidor hasta «Publicar los
+ *   cambios», y el servidor guarda la versión anterior antes de pisarla. Entre
+ *   las dos cosas, equivocarse no cuesta nada.
+ * · Los colores se eligen con el selector del teléfono, no escribiendo
+ *   hexadecimales, y cada uno tiene el nombre de lo que hace —«Fondo»,
+ *   «Tarjetas», «Bordes»— en vez del nombre de la variable CSS.
+ */
+(function () {
+  var TONOS = [
+    ["ac", "Acento", "El color fuerte: botones, títulos, luces."],
+    ["ac2", "Acento 2", "El secundario, más apagado."],
+    ["ac3", "Detalle", "Un tercero claro, para remates."],
+    ["tinta", "Fondo", "El fondo de la página. Va oscuro."],
+    ["tinta2", "Fondo 2", "Un escalón más claro que el fondo."],
+    ["humo", "Tarjetas", "El relleno de las cajas."],
+    ["linea", "Bordes", "Las líneas finitas."],
+    ["papel", "Texto", "El color de las letras. Va claro."],
+  ];
+  var estado = { esteticas: [], marca: null, abierta: null, cargado: false };
+
+  /* LO QUE HOY MUESTRA LA WEB, ADENTRO DEL PANEL.
+     La base arranca vacía y la página, mientras tanto, sigue mostrando la copia
+     que trae el HTML. Para que el panel no abra con una lista vacía —que es lo
+     que hace que el dueño piense que se borró todo— viene esto: las nueve
+     estéticas tal cual están publicadas, diez kilobytes, y un botón que las
+     carga. Antes esto se hacía desde la terminal con la contraseña del panel;
+     así no hace falta ni la terminal ni la contraseña. */
+  var DEFABRICA = {"esteticas":[{"k":"realeza","n":"Realeza","sub":"Elección de Rey y Reina · 19.09.2026","flyer":"realeza","pieza":"corona","dec":"realeza","clip":"upd","mov":"late","wsp":"Hola IBLO! Vi la fiesta de Elección de Rey y Reina y quiero info para el 19/09.","des":"Oro, esmeralda y corona de verdad. La fiesta zonal de la Primavera y del Estudiante cierra con la coronación del Rey y la Reina de toda la zona, con jurado y con las promos de varios pueblos adentro del mismo salón.","f":[["Lugar","Club Juventud · Margarita Belén"],["Arranca","22:00 hs"],["Cabina","DJ Agus Mendoza (set live)"],["Conduce","Maury Abraham"],["Momento","Coronación zonal"]],"paleta":{"tinta":"#0a0906","tinta2":"#13110a","humo":"#1d1a0f","linea":"#3d3418","papel":"#f4f1f6","ac":"#e8bf4e","ac2":"#0f6b45","ac3":"#4ade9a"},"oculta":false,"flyerUrl":""},{"k":"euphoria","n":"Euphoria","sub":"Pre Promo 26 · 02.05.2026","flyer":"euphoria","pieza":"bola","dec":"euphoria","clip":"euphoria","mov":"flota","wsp":"Hola IBLO! Me interesa una fiesta estilo Euphoria, con el stand de glitter. ¿Cómo lo armamos?","des":"Violeta, magenta y neón hasta en el piso. La estética que más nos piden: luz de tubo, brillo en la cara y un stand de glitter abierto toda la noche para que nadie salga como entró.","f":[["Lugar","Club Juventud"],["Start party","00:30 hs"],["Cabina","DJ Agus Mendoza + invitados"],["Clothing code","Colores"],["Adentro","Stand de glitter exclusivo"],["Extra","Conservadora gratis hasta 02:30"]],"paleta":{"tinta":"#0d0716","tinta2":"#170a26","humo":"#1f0f33","linea":"#3a1c5c","papel":"#f4f1f6","ac":"#c34bff","ac2":"#6a1fd0","ac3":"#ff5ce1"},"oculta":false,"flyerUrl":""},{"k":"western","n":"Wéstern","sub":"Cowboy Night · 06.06.2026","flyer":"western","pieza":"sombrero","dec":"western","clip":"western","mov":"gira","wsp":"Hola IBLO! Quiero armar una Cowboy Night con toro mecánico. ¿Me pasás info?","des":"Óxido, madera y revólver cruzado. Se entra de bota y sombrero, hay toro mecánico con premio en tragos para el que aguante arriba, y los mejores outfits se llevan entradas libres para todo el año.","f":[["Lugar","Club Juventud"],["Opening","00:30 hs"],["Cabina","Alan Inamorato · Rodri Ojeda"],["Anima","Gera Animador"],["Dress style","Wéstern (cowboy)"],["Adentro","Toro mecánico · shot de tekila"]],"paleta":{"tinta":"#100905","tinta2":"#1b0f08","humo":"#28170d","linea":"#4a2a17","papel":"#f4f1f6","ac":"#e8863a","ac2":"#8c3d1c","ac3":"#f0d0a0"},"oculta":false,"flyerUrl":""},{"k":"halloween","n":"Halloween","sub":"Noche de brujas · 01.11.2025","flyer":"halloween","pieza":null,"dec":"halloween","clip":"halloween","mov":"flota","wsp":"Hola IBLO! Quiero una fiesta de Halloween con concurso de disfraces. ¿Qué necesito?","des":"Rojo sangre sobre negro, telaraña en el techo y la entrada convertida en cementerio de la joda. Es nuestro evento más grande del año: concurso de disfraces con jurado invitado y premios que se preparan con meses de anticipación.","f":[["Lugar","Club Juventud"],["Open party","00:00 hs"],["Cabina","Alan Inamorato ft Javier Ríos"],["Concurso","Mejor disfraz, con jurado"],["Extra","Conservadora gratis hasta 02:30"],["Deco","Cementerio en el ingreso"]],"paleta":{"tinta":"#0a0405","tinta2":"#150607","humo":"#210809","linea":"#451012","papel":"#f4f1f6","ac":"#ff2020","ac2":"#8a0505","ac3":"#ff8a3d"},"oculta":false,"flyerUrl":""},{"k":"audiocar","n":"Audio Car","sub":"Despedida de año · 27.12.2025","flyer":"audiocar","pieza":"parlante","dec":"audiocar","clip":"noche","mov":"late","wsp":"Hola IBLO! Me interesa un evento Audio Car al aire libre. ¿Cómo es la producción?","des":"Cromo, magenta y cian: los equipos de sonido más grandes del NEA estacionados en el mismo predio. Abre de tarde al aire libre y sigue de noche adentro. Es la despedida del año y la única fecha donde la música la ponen los autos.","f":[["Lugar","Predio Camping Municipal"],["Open predio","18:00 hs"],["Open boliche","00:00 hs"],["Sonido","Los equipos más grandes del NEA"],["Ingreso","Con conservadora (sin vidrios)"],["Cabina","DJs invitados"]],"paleta":{"tinta":"#0c0512","tinta2":"#17081f","humo":"#230c2e","linea":"#451857","papel":"#f4f1f6","ac":"#ff2ba6","ac2":"#1fb6e0","ac3":"#ffb020"},"oculta":false,"flyerUrl":""},{"k":"semaforo","n":"Semáforo","sub":"Día de los enamorados · 15.02.2025","flyer":"semaforo","pieza":null,"dec":"semaforo","clip":"semaforo","mov":"flota","wsp":"Hola IBLO! Quiero hacer una Fiesta del Semáforo. ¿Me pasás info?","des":"Verde, amarillo y rojo, y cada color dice algo. Rojo si venís en pareja, amarillo si es amistad con derechos, verde si estás soltero. Se entra con la pulsera puesta y la noche se ordena sola.","f":[["Rojo","En pareja"],["Amarillo","Amigos con derechos"],["Verde","Soltero"],["Cabina","Javier Ríos · Alan Inamorato · Agus Mendoza"],["Anima","Gera Animador"],["Extra","Conservadora gratis hasta 02:00"]],"paleta":{"tinta":"#050a06","tinta2":"#08130b","humo":"#0d1f11","linea":"#1a3d22","papel":"#f4f1f6","ac":"#2ce65a","ac2":"#b81717","ac3":"#ffe14d"},"oculta":false,"flyerUrl":""},{"k":"ice","n":"Ice Party","sub":"Recibimiento del invierno · 21.06.2025","flyer":"ice","pieza":null,"dec":"ice","clip":"pre5to","mov":"flota","wsp":"Hola IBLO! Me interesa una Ice Party para mi promo. ¿Cómo lo vemos?","des":"Cian, hielo roto y vidrio suspendido. La fecha con la que recibimos el invierno, hecha junto a la pre promo de Colonia Benítez. Estética helada y la cabina más caliente que tenemos.","f":[["Lugar","Salón Multiusos · Colonia Benítez"],["Open","00:30 hs"],["Cabina","Alan Inamorato"],["Con","Pre promo 4to 1ra"],["Extra","Conservadora gratis hasta 02:30"]],"paleta":{"tinta":"#03090c","tinta2":"#061318","humo":"#0a2028","linea":"#134450","papel":"#f4f1f6","ac":"#2fd8e8","ac2":"#0e6f86","ac3":"#d6f7ff"},"oculta":false,"flyerUrl":""},{"k":"pirata","n":"Noche Pirata","sub":"Presentación de la 23 · 03.05.2023","flyer":"pirata","pieza":null,"dec":"pirata","clip":"disfraz","mov":"flota","wsp":"Hola IBLO! Quiero una fiesta temática tipo Noche Pirata. ¿Me pasás info?","des":"Oro viejo, negro y bandera. Una de las primeras temáticas de la casa, en Las Garcitas, con premio al mejor disfraz pirata y la presentación oficial de la promo 2023.","f":[["Lugar","Las Garcitas"],["Premio","Mejor disfraz pirata"],["Presenta","La 23"],["Época","Los primeros años"]],"paleta":{"tinta":"#080706","tinta2":"#12100b","humo":"#1c1810","linea":"#3a301a","papel":"#f4f1f6","ac":"#d4af37","ac2":"#7a1414","ac3":"#e8d9a0"},"oculta":false,"flyerUrl":""},{"k":"zonal","n":"Zonal Party","sub":"Complejo Luzzi · 14.10.2023","flyer":"zonal","pieza":"bola","dec":"zonal","clip":"vibras","mov":"late","wsp":"Hola IBLO! Quiero armar una fiesta zonal en mi localidad. ¿Llegan hasta acá?","des":"El primer mega evento: traer a un artista de afuera de la provincia a un pueblo del interior. Sonido y show de luces de la nueva generación, y el Complejo Luzzi transformado entero para una sola noche.","f":[["Lugar","Complejo Luzzi · Las Garcitas"],["Invitado","Facu Vázquez (1ª vez en Chaco)"],["DJ zonal","Yona Pérez"],["Anima","Gera Animador"],["Ingreso","Con conservadora"]],"paleta":{"tinta":"#0a0714","tinta2":"#130b20","humo":"#1c1030","linea":"#372058","papel":"#f4f1f6","ac":"#a855f7","ac2":"#c81e5a","ac3":"#38bdf8"},"oculta":false,"flyerUrl":""}],"marca":{"paleta":{"ac":"#ff1e8e","ac2":"#8b2fd6","ac3":"#ffd23f","tinta":"#08070c","tinta2":"#100d18","humo":"#1a1622","linea":"#2b2436","papel":"#f4f1f6"},"curva":18,"grano":0.045,"titular":"Anton","texto":"Barlow"}};
+
+  var esc = function (s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  var aviso = function (t, c) {
+    var n = document.getElementById("pgAviso");
+    if (!t) { n.hidden = true; return; }
+    n.hidden = false; n.textContent = t; n.className = "aviso" + (c ? " " + c : "");
+  };
+
+  /* ------------------------------------------------------------ dibujar */
+  function tonos(p, prefijo) {
+    var h = "";
+    for (var i = 0; i < TONOS.length; i++) {
+      var t = TONOS[i];
+      h += '<label class="tono" title="' + esc(t[2]) + '">' +
+           '<input type="color" data-tono="' + t[0] + '" data-pref="' + prefijo + '" value="' +
+             esc(p[t[0]] || "#000000") + '">' +
+           '<span>' + esc(t[1]) + '</span></label>';
+    }
+    return h;
+  }
+  var paleta = function (p, pref) { return '<div class="paleta">' + tonos(p, pref) + "</div>"; };
+
+  function fichas(e, i) {
+    var h = '<div class="fichasEd" data-i="' + i + '">';
+    for (var k = 0; k < e.f.length; k++)
+      h += '<div class="fichaFila"><input class="fk" value="' + esc(e.f[k][0]) +
+           '" placeholder="Lugar" maxlength="30"><input class="fv" value="' + esc(e.f[k][1]) +
+           '" placeholder="Club Juventud" maxlength="90">' +
+           '<button type="button" class="mini" data-fuera="' + k + '" aria-label="Sacar">×</button></div>';
+    return h + '<button type="button" class="chip" data-masficha="1">+ Otro dato</button></div>';
+  }
+
+  function tarjeta(e, i) {
+    var abierta = estado.abierta === i;
+    var h = '<div class="estCard' + (e.oculta ? " apagada" : "") + '" data-i="' + i + '">' +
+      '<div class="estCab" data-abre="1" role="button" tabindex="0" ' +
+           'aria-expanded="' + (abierta ? "true" : "false") + '">' +
+        '<span class="punto" style="background:' + esc(e.paleta.ac) + '"></span>' +
+        '<div class="estNom"><b>' + esc(e.n || "Sin nombre") + '</b>' +
+          '<span>' + esc(e.sub || "—") + '</span></div>' +
+        '<button type="button" class="mini" data-ojo="1" ' +
+          'aria-label="' + (e.oculta ? "Mostrar en la web" : "Esconder de la web") + '">' +
+          (e.oculta ? "◌" : "●") + '</button>' +
+        '<button type="button" class="mini" data-sube="1" aria-label="Subir">▲</button>' +
+        '<button type="button" class="mini" data-baja="1" aria-label="Bajar">▼</button>' +
+        '<span class="chevron">' + (abierta ? "▴" : "▾") + '</span>' +
+      '</div>';
+    if (abierta) {
+      h += '<div class="estCuerpo">' +
+        '<div class="campo"><label>Nombre</label>' +
+          '<input data-c="n" value="' + esc(e.n) + '" maxlength="40"></div>' +
+        '<div class="campo"><label>Bajada</label>' +
+          '<input data-c="sub" value="' + esc(e.sub) + '" maxlength="90" ' +
+          'placeholder="Cowboy Night · 06.06.2026"></div>' +
+        '<div class="campo"><label>Descripción</label>' +
+          '<textarea data-c="des" maxlength="700" style="min-height:96px">' + esc(e.des) + '</textarea></div>' +
+        '<div class="campo"><label>Los datos que se listan</label>' + fichas(e, i) + '</div>' +
+        '<div class="campo"><label>Mensaje de WhatsApp</label>' +
+          '<input data-c="wsp" value="' + esc(e.wsp) + '" maxlength="300"></div>' +
+        '<div class="campo"><label>Foto del flyer</label>' +
+          '<input type="file" accept="image/*" data-flyer="1">' +
+          (e.flyerUrl ? '<img class="previaFlyer" src="' + esc(e.flyerUrl) + '" alt="">' : "") +
+          '<p class="baja">Si no subís ninguna, queda la que ya tenía.</p></div>' +
+        '<label>Colores de esta fiesta</label>' + paleta(e.paleta, "e" + i) +
+        '<button type="button" class="bt malo" data-borra="1" style="margin-top:14px">' +
+          'Sacar esta estética</button>' +
+      "</div>";
+    }
+    return h + "</div>";
+  }
+
+  function pintar() {
+    var l = document.getElementById("pgLista");
+    l.innerHTML = estado.esteticas.map(tarjeta).join("");
+  }
+
+  function pintarMarca() {
+    var m = estado.marca || {};
+    document.getElementById("pgPalMarca").innerHTML = tonos(m.paleta || {}, "m");
+    document.getElementById("pgCurva").value = m.curva == null ? 18 : m.curva;
+    document.getElementById("pgCurvaV").textContent = (m.curva == null ? 18 : m.curva) + " px";
+    var g = Math.round((m.grano == null ? 0.045 : m.grano) * 1000);
+    document.getElementById("pgGrano").value = g;
+    document.getElementById("pgGranoV").textContent = (g / 10).toFixed(1).replace(".", ",") + " %";
+  }
+
+  /* --------------------------------------------------------- traer/guardar */
+  function cargarPagina() {
+    if (estado.cargado) return;
+    aviso("");
+    pedir("/sitio").then(function (d) {
+      var a = (d && d.areas) || {};
+      estado.esteticas = Array.isArray(a.esteticas) ? a.esteticas : [];
+      /* cuántas está mostrando la web AHORA: las de la base si hay, y si no las
+         de fábrica, que son las que el HTML dibuja de respaldo */
+      estado.enLaWeb = estado.esteticas.length
+        ? estado.esteticas.filter(function (e) { return !e.oculta; }).length
+        : DEFABRICA.esteticas.length;
+      /* Si la base todavía no tiene nada, se arranca de los colores que ya trae
+         la web, no de negro: abrir el panel no tiene que ofrecer romper todo. */
+      estado.marca = a.marca || { paleta: {
+        ac: "#ff1e8e", ac2: "#8b2fd6", ac3: "#ffd23f", tinta: "#08070c",
+        tinta2: "#100d18", humo: "#1a1622", linea: "#2b2436", papel: "#f4f1f6" },
+        curva: 18, grano: 0.045 };
+      if (!estado.marca.paleta) estado.marca.paleta = {};
+      estado.cargado = true;
+      /* La base arranca vacía: hasta que el dueño publique algo, la web sigue
+         mostrando lo que trae el HTML. Se avisa, porque si no parece un error. */
+      document.getElementById("pgTraer").hidden = estado.esteticas.length > 0;
+      if (!estado.esteticas.length)
+        aviso("La web está mostrando las nueve de siempre. Traelas acá y quedan " +
+              "todas editables.", "");
+      pintar(); pintarMarca();
+    }).catch(function (e) { aviso(e.message, "mal"); });
+  }
+
+  /* LO QUE MAS DUELE ES PUBLICAR DE MENOS.
+     Lo que se publica REEMPLAZA a lo que muestra la web, no se suma. Alcanza
+     con tocar «empezar una en blanco» y publicar para que las nueve de siempre
+     desaparezcan y quede una sola vacía. Pasó. Así que antes de subir se cuenta
+     qué va a quedar contra qué hay hoy, y si es menos hay que confirmarlo. */
+  function loQueSeVe() {
+    return estado.esteticas.filter(function (e) { return !e.oculta; }).length;
+  }
+  function sinCargar() {
+    return estado.esteticas.filter(function (e) {
+      return !e.oculta && !e.des && !(e.f && e.f.length);
+    });
+  }
+  function puedePublicar() {
+    var quedan = loQueSeVe();
+    if (!quedan) {
+      aviso("Así la web se queda sin ninguna fiesta. Si querés sacar una, " +
+            "usá el ojito; no las borres todas.", "mal");
+      return false;
+    }
+    var hoy = estado.enLaWeb == null ? DEFABRICA.esteticas.length : estado.enLaWeb;
+    if (quedan < hoy && !confirm(
+        "La web muestra " + hoy + " fiestas y vas a dejar " + quedan + ".\n\n" +
+        "Las otras " + (hoy - quedan) + " desaparecen. ¿Seguro?")) return false;
+    var flojas = sinCargar();
+    if (flojas.length && !confirm(
+        (flojas.length === 1 ? "«" + (flojas[0].n || "Una") + "» está sin cargar"
+                             : "Hay " + flojas.length + " sin cargar") +
+        " (sin descripción ni datos).\n\n¿Publicar igual?")) return false;
+    return true;
+  }
+
+  function guardar() {
+    if (!puedePublicar()) return;
+    var bt = document.getElementById("pgBtGuardar");
+    bt.disabled = true;
+    var antes = bt.textContent; bt.textContent = "Publicando…";
+    pedir("/sitio", { metodo: "PUT", cuerpo: { area: "esteticas", valor: estado.esteticas } })
+      .then(function () {
+        return pedir("/sitio", { metodo: "PUT", cuerpo: { area: "marca", valor: estado.marca } });
+      })
+      .then(function () {
+        estado.enLaWeb = loQueSeVe();
+        aviso("Listo, la web ya está cambiada: " + estado.enLaWeb + " fiestas.", "bien");
+      })
+      .catch(function (e) { aviso(e.message, "mal"); })
+      .then(function () { bt.disabled = false; bt.textContent = antes; });
+  }
+
+  function deshacer() {
+    if (!confirm("¿Volver la página a como estaba antes del último cambio?")) return;
+    pedir("/sitio", { metodo: "POST", cuerpo: { area: "esteticas" } })
+      .then(function (d) {
+        if (d && d.valor) estado.esteticas = d.valor;
+        return pedir("/sitio", { metodo: "POST", cuerpo: { area: "marca" } }).catch(function () { return null; });
+      })
+      .then(function (d) {
+        if (d && d.valor) estado.marca = d.valor;
+        pintar(); pintarMarca(); aviso("Volvió a como estaba.", "bien");
+      })
+      .catch(function (e) { aviso(e.message, "mal"); });
+  }
+
+  /* --------------------------------------------------------------- la IA */
+  function porIA() {
+    var idea = document.getElementById("pgIdea").value.trim();
+    if (!idea) { aviso("Contame de qué va la fiesta.", "mal"); return; }
+    var bt = document.getElementById("pgBtIA");
+    bt.disabled = true; var antes = bt.textContent; bt.textContent = "Pensando…";
+    pedir("/estilo", { metodo: "POST", cuerpo: { idea: idea } })
+      .then(function (d) {
+        estado.esteticas.push(d.estetica);
+        estado.abierta = estado.esteticas.length - 1;
+        pintar();
+        document.getElementById("pgIdea").value = "";
+        aviso("La escribió " + (d.de || "la IA") + ". Miralo bien y corregí lo que quieras: " +
+              "todavía no está publicada.", "bien");
+      })
+      .catch(function (e) { aviso(e.message, "mal"); })
+      .then(function () { bt.disabled = false; bt.textContent = antes; });
+  }
+
+  /* ------------------------------------------------------------- eventos */
+  function idx(n) {
+    var c = n.closest("[data-i]");
+    return c ? +c.dataset.i : -1;
+  }
+
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("button");
+    if (!b) {
+      /* Tocar la fila abre el editor. Va DESPUÉS de buscar el botón: las
+         flechitas y el ojo están adentro de la fila y tienen que seguir
+         haciendo lo suyo sin desplegarla. Cuatro botoncitos iguales de medio
+         centímetro en un teléfono no se distinguen; el blanco grande es la
+         fila entera. */
+      var cab = ev.target.closest(".estCab[data-abre]");
+      if (cab) {
+        var ic = idx(cab);
+        if (ic >= 0) { estado.abierta = estado.abierta === ic ? null : ic; pintar(); }
+      }
+      return;
+    }
+    if (b.id === "pgBtGuardar") return guardar();
+    if (b.id === "pgBtDeshacer") return deshacer();
+    if (b.id === "pgBtIA") return porIA();
+    /* LOS DOS BOTONES DE VOLVER ATRAS.
+       «Deshacer» va un paso para atras y depende del historial. Esto es otra
+       cosa: no importa cuantos pasos se dieron ni si el historial llega, vuelve
+       a los valores de fabrica, que viajan adentro del panel. Es el boton que
+       hace falta el dia en que algo quedo feo y nadie se acuerda que toco. */
+    if (b.id === "pgResetColor") {
+      if (!confirm("Devuelve los colores de fábrica: los de la página y los de " +
+                   "cada fiesta.\n\nLos nombres y los textos quedan como están. ¿Dale?")) return;
+      var deFab = {};
+      DEFABRICA.esteticas.forEach(function (x) { deFab[x.k] = x.paleta; });
+      estado.esteticas.forEach(function (e) {
+        e.paleta = JSON.parse(JSON.stringify(deFab[e.k] || DEFABRICA.marca.paleta));
+      });
+      estado.marca = JSON.parse(JSON.stringify(DEFABRICA.marca));
+      /* la vista previa del panel tambien se tiñe con esto, hay que devolverla */
+      for (var t = 0; t < TONOS.length; t++)
+        document.documentElement.style.removeProperty("--" + TONOS[t][0]);
+      document.documentElement.style.removeProperty("--curva");
+      pintar(); pintarMarca();
+      aviso("Colores de fábrica puestos. Tocá «Publicar» para que se vean en la web.", "bien");
+      return;
+    }
+    if (b.id === "pgResetTodo") {
+      if (!confirm("Vuelve TODO como el primer día: las nueve fiestas de siempre, " +
+                   "con sus colores y sus textos.\n\nLo que hayas cambiado se pierde. ¿Dale?")) return;
+      estado.esteticas = JSON.parse(JSON.stringify(DEFABRICA.esteticas));
+      estado.marca = JSON.parse(JSON.stringify(DEFABRICA.marca));
+      estado.enLaWeb = estado.esteticas.length;   // que no vuelva a preguntar por «dejás menos»
+      for (var u = 0; u < TONOS.length; u++)
+        document.documentElement.style.removeProperty("--" + TONOS[u][0]);
+      document.documentElement.style.removeProperty("--curva");
+      document.getElementById("pgTraer").hidden = true;
+      pintar(); pintarMarca();
+      guardar();                                   // este si se publica solo
+      return;
+    }
+    if (b.id === "pgTraer") {
+      estado.esteticas = JSON.parse(JSON.stringify(DEFABRICA.esteticas));
+      estado.marca = JSON.parse(JSON.stringify(DEFABRICA.marca));
+      document.getElementById("pgTraer").hidden = true;
+      pintar(); pintarMarca();
+      aviso("Listas las nueve. Cambiá lo que quieras y tocá «Publicar los cambios».", "bien");
+      document.querySelector(".masFiesta").open = false;
+      return;
+    }
+    if (b.id === "pgBtNueva") {
+      var base = {}; for (var i = 0; i < TONOS.length; i++) base[TONOS[i][0]] =
+        (estado.marca && estado.marca.paleta && estado.marca.paleta[TONOS[i][0]]) || "#888888";
+      estado.esteticas.push({ k: "nueva-" + Date.now().toString(36).slice(-4), n: "Nueva",
+        sub: "", des: "", wsp: "", f: [], paleta: base, flyer: "", flyerUrl: "",
+        pieza: null, dec: null, clip: null, mov: "flota", oculta: false });
+      estado.abierta = estado.esteticas.length - 1;
+      return pintar();
+    }
+    var s = b.closest("#pgSolapas");
+    if (s) {
+      [].forEach.call(s.children, function (x) { x.classList.toggle("viva", x === b); });
+      document.getElementById("pgEst").hidden = b.dataset.s !== "est";
+      document.getElementById("pgMarca").hidden = b.dataset.s !== "marca";
+      return;
+    }
+    var i = idx(b); if (i < 0) return;
+    var e = estado.esteticas[i]; if (!e) return;
+    if (b.dataset.ojo) { e.oculta = !e.oculta; return pintar(); }
+    if (b.dataset.sube && i > 0) {
+      estado.esteticas.splice(i - 1, 0, estado.esteticas.splice(i, 1)[0]);
+      estado.abierta = null; return pintar();
+    }
+    if (b.dataset.baja && i < estado.esteticas.length - 1) {
+      estado.esteticas.splice(i + 1, 0, estado.esteticas.splice(i, 1)[0]);
+      estado.abierta = null; return pintar();
+    }
+    if (b.dataset.borra) {
+      if (!confirm("¿Sacar «" + (e.n || "esta") + "» de la web?")) return;
+      estado.esteticas.splice(i, 1); estado.abierta = null; return pintar();
+    }
+    if (b.dataset.masficha) { e.f.push(["", ""]); return pintar(); }
+    if (b.dataset.fuera != null) { e.f.splice(+b.dataset.fuera, 1); return pintar(); }
+  });
+
+  /* Los textos se anotan al salir del campo y no en cada tecla: volver a
+     dibujar la tarjeta en cada letra le saca el foco al que está escribiendo. */
+  document.addEventListener("input", function (ev) {
+    var n = ev.target;
+    if (n.id === "pgCurva") {
+      estado.marca.curva = +n.value;
+      document.getElementById("pgCurvaV").textContent = n.value + " px";
+      document.documentElement.style.setProperty("--curva", n.value + "px");
+      return;
+    }
+    if (n.id === "pgGrano") {
+      estado.marca.grano = +n.value / 1000;
+      document.getElementById("pgGranoV").textContent = (+n.value / 10).toFixed(1).replace(".", ",") + " %";
+      return;
+    }
+    if (n.dataset && n.dataset.tono) {
+      var p = n.dataset.pref;
+      if (p === "m") {
+        estado.marca.paleta = estado.marca.paleta || {};
+        estado.marca.paleta[n.dataset.tono] = n.value;
+        /* se ve en el panel mismo: es la forma más rápida de saber si un color
+           se lee o no, sin ir a la web y volver */
+        document.documentElement.style.setProperty("--" + n.dataset.tono, n.value);
+      } else {
+        var j = +p.slice(1);
+        if (estado.esteticas[j]) {
+          estado.esteticas[j].paleta[n.dataset.tono] = n.value;
+          var pt = document.querySelector('.estCard[data-i="' + j + '"] .punto');
+          if (pt && n.dataset.tono === "ac") pt.style.background = n.value;
+        }
+      }
+      return;
+    }
+    var i = idx(n); if (i < 0) return;
+    var e = estado.esteticas[i]; if (!e) return;
+    if (n.dataset.c) { e[n.dataset.c] = n.value; return; }
+    if (n.classList.contains("fk") || n.classList.contains("fv")) {
+      var fila = n.closest(".fichaFila");
+      var k = [].indexOf.call(fila.parentNode.querySelectorAll(".fichaFila"), fila);
+      if (e.f[k]) e.f[k][n.classList.contains("fk") ? 0 : 1] = n.value;
+    }
+  });
+
+  /* La foto del flyer se sube al depósito que ya usa el archivo y queda como
+     dirección: meterla en base64 adentro del contenido lo haría pesar megas. */
+  document.addEventListener("change", function (ev) {
+    var n = ev.target;
+    if (!n.dataset || !n.dataset.flyer || !n.files || !n.files[0]) return;
+    var i = idx(n); if (i < 0) return;
+    var f = n.files[0];
+    if (f.size > 6e6) { aviso("Esa foto pesa mucho. Mandá una más liviana.", "mal"); return; }
+    aviso("Subiendo la foto…");
+    var lector = new FileReader();
+    lector.onload = function () {
+      pedir("/archivo", { metodo: "POST", cuerpo: { nuevaSeccion: "Flyers" } })
+        .catch(function () { return null; })
+        .then(function () {
+          return pedir("/archivo", { metodo: "POST", cuerpo: {
+            seccion: "flyers", titulo: estado.esteticas[i].n || "Flyer", medio: lector.result } });
+        })
+        .then(function (d) {
+          estado.esteticas[i].flyerUrl = API + "/archivo?id=" + d.id;
+          pintar(); aviso("Foto lista. Falta publicar los cambios.", "bien");
+        })
+        .catch(function (e) { aviso(e.message, "mal"); });
+    };
+    lector.readAsDataURL(f);
+  });
+
+  /* --------------------------------------------------------- engancharse */
+  if (typeof PANTALLAS !== "undefined" && PANTALLAS.indexOf("pPagina") < 0)
+    PANTALLAS.push("pPagina");
+  if (typeof irA === "function") {
+    var original = irA;
+    irA = function (p) { original(p); if (p === "pPagina") cargarPagina(); };
+  }
+  window.cargarPagina = cargarPagina;
+})();
+
+</script>
+<!-- FIN IBLO-PAGINA-JS -->

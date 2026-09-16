@@ -1,0 +1,26 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# Todo lo de acá lleva el hash de su contenido en el nombre, así que la promesa
+# de `immutable` es verdad: si el archivo cambia, cambia la URL.
+/img/*
+  Cache-Control: public, max-age=31536000, immutable
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+/modelos/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fuentes/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/audio/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/robots.txt
+  Content-Type: text/plain; charset=utf-8

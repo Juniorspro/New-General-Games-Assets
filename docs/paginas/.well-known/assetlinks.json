@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "dev.pages.iblo_eventos.panel",
+    "sha256_cert_fingerprints": [
+      "96:26:1D:F5:DE:9F:B8:03:F5:22:91:27:79:C1:BF:EA:DC:FB:1F:AA:92:EC:A0:29:12:73:C4:59:BC:9E:69:A6"
+    ]
+  }
+}]

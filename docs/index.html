@@ -1,0 +1,884 @@
+<title>Sabueso de Ofertas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#E9EBE4; --surface:#F8F9F5; --surface-2:#DEE1D6; --sunken:#D6DACC;
+  --ink:#131611; --ink-2:#4C524E; --ink-3:#6C726C;
+  --rule:#C6CBBB; --rule-2:#B0B6A3;
+  --accent:#123CE0; --accent-soft:#DCE2FB; --accent-ink:#FFFFFF;
+  --good:#12673F; --good-soft:#D7E9DE;
+  --warn:#8A5B06; --warn-soft:#F2E7CE;
+  --bad:#A32A20; --bad-soft:#F4DFDC;
+  --cyan:#00A3C4; --magenta:#C4257F; --yellow:#D8A800;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --hair:1px solid var(--rule);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1210; --surface:#171A17; --surface-2:#1F231F; --sunken:#101310;
+    --ink:#E9EBE4; --ink-2:#A7ADA6; --ink-3:#838A82;
+    --rule:#2B302B; --rule-2:#3C423B;
+    --accent:#93A9FF; --accent-soft:#1A2140; --accent-ink:#0B0D10;
+    --good:#4FC98D; --good-soft:#12291E;
+    --warn:#E2AB43; --warn-soft:#2B2412;
+    --bad:#F47767; --bad-soft:#341917;
+    --cyan:#4BC8E4; --magenta:#E464AB; --yellow:#E8C74A;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1210; --surface:#171A17; --surface-2:#1F231F; --sunken:#101310;
+  --ink:#E9EBE4; --ink-2:#A7ADA6; --ink-3:#838A82;
+  --rule:#2B302B; --rule-2:#3C423B;
+  --accent:#93A9FF; --accent-soft:#1A2140; --accent-ink:#0B0D10;
+  --good:#4FC98D; --good-soft:#12291E;
+  --warn:#E2AB43; --warn-soft:#2B2412;
+  --bad:#F47767; --bad-soft:#341917;
+  --cyan:#4BC8E4; --magenta:#E464AB; --yellow:#E8C74A;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation-duration:.01ms !important; transition-duration:.01ms !important}
+}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--body); font-size:15.5px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--display); margin:0; text-wrap:balance; letter-spacing:-.022em}
+button{font:inherit; color:inherit; cursor:pointer}
+a{color:var(--accent)}
+:focus-visible{outline:2.5px solid var(--accent); outline-offset:2px; border-radius:2px}
+.hoja{max-width:1120px; margin:0 auto; padding:0 clamp(16px,3.4vw,40px)}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.eyebrow{
+  font-family:var(--mono); font-size:10.5px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+}
+.sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
+
+/* ══ cabecera de hoja ══ */
+.sheet-top{border-bottom:1.5px solid var(--ink); background:var(--surface)}
+.sheet-top .hoja{
+  display:flex; align-items:center; gap:14px; height:56px; flex-wrap:nowrap;
+}
+.marca{display:flex; align-items:center; gap:10px; flex:none}
+.reg{width:15px; height:15px; flex:none}
+.marca b{
+  font-family:var(--display); font-weight:900; font-stretch:120%; font-size:18px;
+  letter-spacing:.02em; text-transform:uppercase;
+}
+.folio{
+  font-family:var(--mono); font-size:10.5px; color:var(--ink-3);
+  letter-spacing:.08em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.sheet-top .sp{flex:1}
+.campo-sel{display:flex; align-items:center; gap:7px; flex:none}
+.campo-sel select{
+  font-family:var(--mono); font-size:12px; padding:6px 8px;
+  background:var(--paper); color:var(--ink);
+  border:1.5px solid var(--rule); border-radius:2px;
+}
+.led-box{
+  display:inline-flex; align-items:center; gap:7px; flex:none;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; padding:6px 10px; border-radius:2px;
+  border:1.5px solid var(--rule); color:var(--ink-2); white-space:nowrap;
+}
+.led{width:7px; height:7px; border-radius:50%; background:var(--ink-3); flex:none}
+.led-box[data-on="1"]{border-color:var(--good); color:var(--good)}
+.led-box[data-on="1"] .led{background:var(--good); animation:latir 2.4s ease-in-out infinite}
+.led-box[data-on="0"]{border-color:var(--warn); color:var(--warn)}
+.led-box[data-on="0"] .led{background:var(--warn)}
+@keyframes latir{0%,100%{opacity:1}50%{opacity:.35}}
+@media (max-width:860px){
+  .sheet-top .hoja{height:auto; padding-top:10px; padding-bottom:10px; flex-wrap:wrap}
+  .folio{width:100%; order:9}
+}
+
+/* tira de calibración */
+.tira{
+  display:flex; align-items:stretch; height:24px; border-bottom:var(--hair);
+  background:var(--surface);
+}
+.tira canvas{flex:1; display:block; height:24px; width:100%}
+.swatches{display:flex; flex:none; border-left:var(--hair)}
+.swatches i{width:24px; display:block}
+.swatches i:nth-child(1){background:var(--cyan)}
+.swatches i:nth-child(2){background:var(--magenta)}
+.swatches i:nth-child(3){background:var(--yellow)}
+.swatches i:nth-child(4){background:var(--ink)}
+
+/* ══ orden ══ */
+.orden{padding:clamp(30px,5vw,52px) 0 0}
+.orden-grid{display:grid; grid-template-columns:1.25fr .75fr; gap:clamp(24px,4vw,48px); align-items:end}
+@media (max-width:900px){.orden-grid{grid-template-columns:1fr; align-items:start}}
+h1{
+  font-size:clamp(38px,6.6vw,72px); font-weight:900; font-stretch:110%;
+  line-height:.93; letter-spacing:-.04em;
+}
+h1 .lo{
+  display:inline-block; color:var(--accent);
+  border-bottom:5px solid var(--accent); padding-bottom:1px; line-height:.85;
+}
+.lede{margin:18px 0 0; max-width:52ch; color:var(--ink-2); font-size:17px}
+.pitch{
+  border-left:2.5px solid var(--ink); padding-left:16px;
+  display:flex; flex-direction:column; gap:11px;
+}
+.pitch div{display:grid; grid-template-columns:22px 1fr; gap:11px; font-size:14px; color:var(--ink-2)}
+.pitch b{
+  font-family:var(--mono); font-size:11px; color:var(--accent);
+  font-weight:600; padding-top:3px;
+}
+.pitch span strong{color:var(--ink); font-weight:600}
+
+/* etiqueta de orden */
+form.tag{
+  margin-top:30px; background:var(--surface); border:1.5px solid var(--ink);
+  display:grid; grid-template-columns:52px 1fr; position:relative;
+}
+.tag-punch{
+  border-right:1.5px dashed var(--rule-2); display:flex; justify-content:center;
+  padding-top:19px; background:var(--surface-2);
+}
+.tag-punch span{
+  width:16px; height:16px; border-radius:50%; background:var(--paper);
+  border:1.5px solid var(--rule-2);
+}
+.tag-in{padding:16px 18px 14px}
+#q{
+  width:100%; border:0; background:transparent; color:var(--ink); display:block;
+  font-family:var(--body); font-size:clamp(17px,2.2vw,21px); line-height:1.42;
+  font-weight:500; resize:vertical; min-height:66px; padding:8px 0 0;
+}
+#q::placeholder{color:var(--ink-3); font-weight:400}
+#q:focus{outline:none}
+.tag-foot{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+  border-top:1.5px dashed var(--rule); margin-top:12px; padding-top:13px;
+}
+.go{
+  background:var(--accent); color:var(--accent-ink); border:0; border-radius:2px;
+  font-family:var(--display); font-weight:800; font-stretch:108%;
+  text-transform:uppercase; letter-spacing:.06em; font-size:13.5px;
+  padding:12px 22px; transition:filter .12s ease, transform .1s ease;
+}
+.go:hover{filter:brightness(1.12)}
+.go:active{transform:translateY(1px)}
+.go[disabled]{opacity:.55; cursor:progress}
+.semillas{display:flex; flex-wrap:wrap; gap:7px; margin-left:auto}
+.sem{
+  background:transparent; border:1.5px solid var(--rule); border-radius:2px;
+  font-family:var(--mono); font-size:11px; color:var(--ink-2); padding:6px 9px;
+  transition:border-color .12s, color .12s;
+}
+.sem:hover{border-color:var(--accent); color:var(--accent)}
+
+/* ══ secciones ══ */
+section{padding:clamp(30px,4.6vw,48px) 0 0}
+.cab{
+  display:flex; align-items:baseline; gap:13px; padding-bottom:9px;
+  border-bottom:1.5px solid var(--ink); margin-bottom:18px;
+}
+.cab .lote{
+  font-family:var(--mono); font-size:11px; font-weight:600; color:var(--accent);
+  letter-spacing:.08em;
+}
+.cab h2{font-size:15px; font-weight:800; font-stretch:106%; text-transform:uppercase; letter-spacing:.06em}
+.cab .nota{margin-left:auto; font-size:12.5px; color:var(--ink-3); text-align:right}
+
+/* lectura */
+.lectura{display:grid; grid-template-columns:1.1fr .9fr; gap:26px; align-items:start}
+@media (max-width:820px){.lectura{grid-template-columns:1fr}}
+.campos{margin:0}
+.campo{display:grid; grid-template-columns:110px 1fr; gap:14px; padding:8px 0; border-bottom:var(--hair)}
+.campo:last-child{border-bottom:0}
+.campo dt{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); padding-top:4px}
+.campo dd{margin:0; display:flex; flex-wrap:wrap; gap:6px}
+.chip{font-family:var(--mono); font-size:12px; padding:3px 8px; border-radius:2px; background:var(--surface-2); border:1px solid var(--rule)}
+.chip.si{background:var(--good-soft); border-color:transparent; color:var(--good)}
+.chip.no{background:var(--bad-soft); border-color:transparent; color:var(--bad)}
+.chip.no::before{content:"− "; font-weight:700}
+.campo dd .fuerte{font-weight:600; font-size:16px}
+
+.panel{background:var(--surface); border:1.5px solid var(--rule); padding:16px 18px 18px}
+.panel .val{
+  font-family:var(--display); font-weight:900; font-stretch:104%; font-size:40px;
+  line-height:1; letter-spacing:-.035em; font-variant-numeric:tabular-nums;
+  display:flex; align-items:baseline; gap:8px; margin-top:4px;
+}
+.panel .val .cur{font-size:13px; color:var(--ink-3); font-weight:600; letter-spacing:.06em}
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent; margin:10px 0 0}
+input[type=range]::-webkit-slider-runnable-track{height:4px; background:var(--rule-2)}
+input[type=range]::-moz-range-track{height:4px; background:var(--rule-2)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:18px; height:18px; margin-top:-7px; border-radius:0;
+  background:var(--accent); border:3px solid var(--surface); box-shadow:0 0 0 1.5px var(--accent);
+}
+input[type=range]::-moz-range-thumb{
+  width:12px; height:12px; border-radius:0; background:var(--accent);
+  border:3px solid var(--surface); box-shadow:0 0 0 1.5px var(--accent);
+}
+.panel .pie{font-size:12.5px; color:var(--ink-3); margin-top:8px}
+
+/* termómetro */
+.term{background:var(--surface); border:1.5px solid var(--rule); padding:20px 22px 14px}
+.term .frase{font-size:17px; max-width:66ch; margin:0 0 26px; line-height:1.5}
+.term .frase b{font-weight:600; box-shadow:inset 0 -.5em 0 var(--accent-soft)}
+.barra{position:relative; height:56px}
+.zonas{display:flex; height:16px}
+.zona{position:relative; height:100%}
+.z1{background:var(--good)} .z2{background:var(--warn)} .z3{background:var(--bad)}
+.marca-x{position:absolute; top:-8px; height:26px; width:2.5px; background:var(--ink); transform:translateX(-50%)}
+.marca-x::after{
+  content:attr(data-l); position:absolute; top:-20px; left:50%; transform:translateX(-50%);
+  white-space:nowrap; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.08em; text-transform:uppercase; background:var(--ink); color:var(--paper);
+  padding:2px 6px;
+}
+.marca-o{position:absolute; top:-4px; height:18px; width:2px; background:var(--accent); transform:translateX(-50%)}
+.marca-o::after{
+  content:attr(data-l); position:absolute; top:23px; left:50%; transform:translateX(-50%);
+  white-space:nowrap; font-family:var(--mono); font-size:10px; font-weight:600;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--accent);
+}
+.ticks{display:flex; justify-content:space-between; border-top:var(--hair); padding-top:8px; margin-top:8px; font-family:var(--mono); font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.ticks b{display:block; color:var(--ink); font-weight:600; font-size:13.5px}
+.ticks span:nth-child(2){text-align:center} .ticks span:last-child{text-align:right}
+
+/* oferta */
+.oferta{display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1.5px solid var(--rule); margin-top:18px; background:var(--surface)}
+@media (max-width:640px){.oferta{grid-template-columns:1fr}}
+.oferta > div{padding:14px 16px; border-right:var(--hair)}
+.oferta > div:last-child{border-right:0}
+@media (max-width:640px){.oferta > div{border-right:0; border-bottom:var(--hair)} .oferta > div:last-child{border-bottom:0}}
+.oferta .n{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px; font-weight:600; letter-spacing:-.02em; margin-top:3px}
+.oferta .d{font-size:12.5px; color:var(--ink-3); margin-top:3px}
+.oferta .anc .n{color:var(--good)} .oferta .obj .n{color:var(--accent)} .oferta .aba .n{color:var(--bad)}
+
+/* ángulos */
+.angulos{display:flex; flex-direction:column; gap:0; border-top:1.5px solid var(--rule)}
+.ang{border-bottom:1.5px solid var(--rule); background:var(--surface)}
+.ang-cab{
+  display:grid; grid-template-columns:34px 1fr auto; gap:13px; align-items:center;
+  width:100%; text-align:left; background:transparent; border:0; padding:14px 16px;
+}
+.ang-cab:hover{background:var(--surface-2)}
+.ang-n{
+  font-family:var(--mono); font-size:11px; font-weight:600; color:var(--accent-ink);
+  background:var(--accent); width:24px; height:24px; display:grid; place-items:center;
+}
+.ang-t{min-width:0}
+.ang-t b{font-family:var(--display); font-weight:800; font-stretch:104%; font-size:15.5px; display:block}
+.ang-t i{font-style:normal; font-family:var(--mono); font-size:11.5px; color:var(--ink-2); display:block; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.ang-flecha{font-family:var(--mono); color:var(--ink-3); transition:transform .18s ease}
+.ang[open] .ang-flecha{transform:rotate(90deg)}
+.ang-cuerpo{padding:0 16px 15px 63px; border-top:var(--hair); margin-top:-1px}
+.ang-por{font-size:13.5px; color:var(--ink-2); margin:12px 0 12px; max-width:70ch}
+.enlaces{display:flex; flex-wrap:wrap; gap:8px}
+.enl{
+  display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+  border:1.5px solid var(--rule); background:var(--paper); padding:8px 12px;
+  font-size:13px; color:var(--ink); transition:border-color .12s, background .12s;
+}
+.enl:hover{border-color:var(--accent); background:var(--accent-soft)}
+.enl u{text-decoration:none; font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3)}
+.enl:hover u{color:var(--accent)}
+@media (max-width:640px){.ang-cuerpo{padding-left:16px}}
+
+/* duo: inspección + trampas + guion */
+.duo{display:grid; grid-template-columns:1fr 1fr; gap:30px; align-items:start}
+@media (max-width:820px){.duo{grid-template-columns:1fr}}
+.check{list-style:none; margin:0; padding:0}
+.check li{display:grid; grid-template-columns:auto 1fr; gap:11px; padding:10px 0; border-bottom:var(--hair); font-size:14.5px; align-items:start}
+.check li:last-child{border-bottom:0}
+.check input{
+  appearance:none; -webkit-appearance:none; width:17px; height:17px; margin:3px 0 0;
+  border:1.5px solid var(--rule-2); background:var(--surface); flex:none; cursor:pointer;
+}
+.check input:checked{background:var(--accent); border-color:var(--accent)}
+.check input:checked + label span{color:var(--ink-3); text-decoration:line-through}
+.trampas{list-style:none; margin:0; padding:0}
+.trampas li{display:grid; grid-template-columns:20px 1fr; gap:11px; padding:10px 0; border-bottom:var(--hair); font-size:14.5px}
+.trampas li:last-child{border-bottom:0}
+.trampas li::before{
+  content:"!"; font-family:var(--mono); font-weight:600; font-size:12px;
+  width:20px; height:20px; display:grid; place-items:center; margin-top:1px;
+  background:var(--bad-soft); color:var(--bad);
+}
+.guion{display:flex; flex-direction:column; gap:10px; margin-top:16px}
+.msg{background:var(--surface); border:1.5px solid var(--rule); border-left:3px solid var(--accent); padding:12px 14px; font-size:14.5px; position:relative}
+.msg p{margin:0; padding-right:64px}
+.copiar{
+  position:absolute; top:9px; right:9px; background:var(--paper); border:1px solid var(--rule);
+  font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-3); padding:3px 7px;
+}
+.copiar:hover{border-color:var(--accent); color:var(--accent)}
+
+/* radar */
+table.radar{width:100%; border-collapse:collapse; font-size:14px}
+.radar th{text-align:left; font-family:var(--mono); font-size:10px; font-weight:500; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); padding:0 10px 8px 0; border-bottom:1.5px solid var(--rule)}
+.radar td{padding:11px 10px 11px 0; border-bottom:var(--hair); vertical-align:top}
+.radar td.n{font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+.radar .acc{text-align:right; white-space:nowrap}
+.mini{background:transparent; border:1.5px solid var(--rule); font-family:var(--mono); font-size:11px; color:var(--ink-2); padding:4px 8px}
+.mini:hover{border-color:var(--accent); color:var(--accent)}
+.mini.del:hover{border-color:var(--bad); color:var(--bad)}
+.vacio{color:var(--ink-3); font-size:14px; padding:14px 0}
+.oculto{display:none !important}
+
+/* cargando */
+.cargando{display:flex; align-items:center; gap:11px; font-family:var(--mono); font-size:12.5px; color:var(--ink-2); padding:22px 16px; background:var(--surface); border:1.5px solid var(--rule)}
+.pulso{width:9px; height:9px; background:var(--accent); animation:pulso 1s ease-in-out infinite}
+@keyframes pulso{0%,100%{opacity:.2; transform:scale(.6)}50%{opacity:1; transform:scale(1)}}
+
+/* pie */
+.colofon{margin-top:52px; border-top:1.5px solid var(--ink); padding:20px 0 56px; display:grid; grid-template-columns:1fr 1fr; gap:30px}
+@media (max-width:820px){.colofon{grid-template-columns:1fr}}
+.colofon p{margin:0 0 10px; font-size:13px; color:var(--ink-3); max-width:62ch; line-height:1.6}
+.colofon b{color:var(--ink-2); font-weight:600}
+.colofon .marcas{display:flex; gap:16px; align-items:center; font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--ink-3); text-transform:uppercase; margin-top:14px}
+
+/* impresión */
+@media print{
+  .sheet-top,.tira,form.tag,.semillas,.panel,#sec-angulos,.radar,#sec-radar,.copiar,.led-box{display:none !important}
+  body{background:#fff; color:#000; font-size:11pt}
+  section{padding-top:14pt; break-inside:avoid}
+  .duo{grid-template-columns:1fr 1fr}
+}
+</style>
+
+<header class="sheet-top">
+  <div class="hoja">
+    <div class="marca">
+      <svg class="reg" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="5.4" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+        <path d="M8 0v4.2M8 11.8V16M0 8h4.2M11.8 8H16" stroke="var(--ink)" stroke-width="1.4"/>
+      </svg>
+      <b>Sabueso</b>
+    </div>
+    <div class="folio mono" id="folio">HOJA 01 · ORDEN —</div>
+    <div class="sp"></div>
+    <div class="campo-sel">
+      <label class="eyebrow" for="pais">Plaza</label>
+      <select id="pais">
+        <option value="MX">México</option><option value="AR">Argentina</option>
+        <option value="CO">Colombia</option><option value="CL">Chile</option>
+        <option value="PE">Perú</option><option value="UY">Uruguay</option>
+        <option value="ES">España</option>
+      </select>
+    </div>
+    <div class="led-box" id="led" data-on="?"><span class="led"></span><span id="led-txt">Conectando</span></div>
+  </div>
+</header>
+<div class="tira" aria-hidden="true">
+  <canvas id="halftone" width="1200" height="24"></canvas>
+  <div class="swatches"><i></i><i></i><i></i><i></i></div>
+</div>
+
+<main class="hoja">
+
+  <section class="orden" style="border:0">
+    <div class="orden-grid">
+      <div>
+        <h1>El anuncio bueno<br>ya está publicado.<br><span class="lo">Solo no lo ves.</span></h1>
+        <p class="lede">Escribe qué buscas como se lo dirías a un amigo. El sabueso lo convierte en seis
+          búsquedas distintas —incluida la que hace el vendedor que escribe mal— y te dice a qué precio
+          negociar antes de que abras la primera pestaña.</p>
+      </div>
+      <div class="pitch">
+        <div><b>01</b><span>Seis <strong>ángulos de ataque</strong>, no una búsqueda. El chollo casi nunca está bajo el nombre correcto.</span></div>
+        <div><b>02</b><span>Precio <strong>chollo / justo / caro</strong> antes de mirar, para no anclarte al primer anuncio que veas.</span></div>
+        <div><b>03</b><span>Tu <strong>oferta calculada</strong>: cuánto ofrecer primero y en qué cifra levantarte de la mesa.</span></div>
+      </div>
+    </div>
+
+    <form class="tag" id="form">
+      <div class="tag-punch"><span></span></div>
+      <div class="tag-in">
+        <label for="q" class="eyebrow">Orden de búsqueda</label>
+        <textarea id="q" rows="2" placeholder="PS5 Slim usada con dos controles, máximo 7000, que no sea la digital ni caja pelada"></textarea>
+        <div class="tag-foot">
+          <button class="go" type="submit" id="go">Soltar al sabueso</button>
+          <div class="semillas">
+            <button class="sem" type="button">iPhone 13 128GB, batería sana, hasta 6500</button>
+            <button class="sem" type="button">Bici de ruta talla 54, aluminio, usada</button>
+            <button class="sem" type="button">Lavadora 20kg seminueva, no Whirlpool</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section>
+    <div class="cab"><span class="lote">LOTE 01</span><h2>Lectura de la orden</h2>
+      <span class="nota" id="nota-lectura">Ejemplo cargado</span></div>
+    <div class="lectura">
+      <dl class="campos" id="campos"></dl>
+      <div class="panel">
+        <div class="eyebrow">Techo de precio</div>
+        <div class="val"><span id="techo-val">7,000</span><span class="cur" id="techo-cur">MXN</span></div>
+        <input type="range" id="techo" min="200" max="60000" step="100" value="7000" aria-label="Techo de precio">
+        <div class="pie">Mueve el techo: los enlaces de los seis ángulos se rearman al instante.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sec-precio">
+    <div class="cab"><span class="lote">LOTE 02</span><h2>A qué precio se vende de verdad</h2>
+      <span class="nota">Segunda mano · rango de referencia</span></div>
+    <div class="term">
+      <p class="frase" id="veredicto"></p>
+      <div class="barra">
+        <div class="zonas"><div class="zona z1" id="z1"></div><div class="zona z2" id="z2"></div><div class="zona z3" id="z3"></div></div>
+        <div class="marca-x" id="marca-techo" data-l="Tu techo"></div>
+        <div class="marca-o" id="marca-obj" data-l="Ofrece aquí"></div>
+      </div>
+      <div class="ticks">
+        <span><b id="t1">—</b>chollo, cierra ya</span>
+        <span><b id="t2">—</b>precio corriente</span>
+        <span><b id="t3">—</b>sobreprecio</span>
+      </div>
+    </div>
+    <div class="oferta">
+      <div class="anc"><div class="eyebrow">Primer anclaje</div><div class="n mono" id="o-anc">—</div><div class="d">Lo que ofreces de entrada. Bajo, pero no insultante.</div></div>
+      <div class="obj"><div class="eyebrow">Tu objetivo</div><div class="n mono" id="o-obj">—</div><div class="d">Cierre realista si el estado es el que dice el anuncio.</div></div>
+      <div class="aba"><div class="eyebrow">Levántate de la mesa</div><div class="n mono" id="o-aba">—</div><div class="d">Por encima de esto, hay otro anuncio esperando.</div></div>
+    </div>
+  </section>
+
+  <section id="sec-angulos">
+    <div class="cab"><span class="lote">LOTE 03</span><h2>Seis ángulos de ataque</h2>
+      <span class="nota">Abre el primero y el segundo · el resto es donde nadie mira</span></div>
+    <div class="angulos" id="angulos"></div>
+  </section>
+
+  <section>
+    <div class="duo">
+      <div>
+        <div class="cab"><span class="lote">LOTE 04</span><h2>Antes de pagar</h2></div>
+        <ul class="check" id="inspeccion"></ul>
+      </div>
+      <div>
+        <div class="cab"><span class="lote">LOTE 05</span><h2>Trampas y qué escribir</h2></div>
+        <ul class="trampas" id="trampas"></ul>
+        <div class="guion" id="guion"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sec-radar">
+    <div class="cab"><span class="lote">LOTE 06</span><h2>Radar</h2>
+      <span class="nota">Guardado solo en este navegador</span></div>
+    <table class="radar" id="radar-tabla">
+      <thead><tr><th style="width:42%">Orden</th><th>Plaza</th><th>Techo</th><th>Objetivo</th><th>Guardada</th><th></th></tr></thead>
+      <tbody id="radar-body"></tbody>
+    </table>
+    <div class="vacio oculto" id="radar-vacio">Aún no hay cacerías guardadas. Suelta al sabueso y aparecerán aquí.</div>
+  </section>
+
+  <div class="colofon">
+    <div>
+      <p><b>Qué hace y qué no.</b> Esta hoja no descarga anuncios: la API pública de MercadoLibre dejó de
+        responder sin token de aplicación, así que ninguna página estática puede traer listados en vivo — ni
+        esta ni ninguna. Lo que sí hace es construir la URL exacta de cada marketplace con los filtros ya
+        aplicados y decirte a qué precio negociar, que es la parte que decide si encuentras la ganga.</p>
+      <p>Los rangos de precio son estimaciones de referencia para que no te ancles al primer anuncio, no
+        cotizaciones en vivo. Confírmalos con lo que veas al abrir los enlaces.</p>
+    </div>
+    <div>
+      <p><b>Cómo se usa bien.</b> Abre el ángulo 1 y el 2 para hacerte el precio del día. Los ángulos 3 a 6
+        son los que encuentran lo que nadie más busca: errores de escritura, ventas urgentes, lotes y
+        anuncios mal categorizados. Guarda la cacería en el radar y repítela cada mañana: en segunda mano,
+        llegar primero vale más que regatear bien.</p>
+      <div class="marcas">
+        <span id="cf-fecha">—</span><span>·</span><span>Impresión técnica 01/01</span><span>·</span><span>No distribuir</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function(){
+"use strict";
+var $=function(i){return document.getElementById(i)};
+
+var PLAZAS={
+ MX:{ml:"listado.mercadolibre.com.mx",mlN:"MercadoLibre",cur:"MXN",sym:"$",amz:"amazon.com.mx",loc:"es-MX",olx:null,max:60000,step:100},
+ AR:{ml:"listado.mercadolibre.com.ar",mlN:"MercadoLibre",cur:"ARS",sym:"$",amz:null,loc:"es-AR",olx:null,max:4000000,step:5000},
+ CO:{ml:"listado.mercadolibre.com.co",mlN:"MercadoLibre",cur:"COP",sym:"$",amz:null,loc:"es-CO",olx:"olx.com.co",max:15000000,step:20000},
+ CL:{ml:"listado.mercadolibre.cl",mlN:"MercadoLibre",cur:"CLP",sym:"$",amz:null,loc:"es-CL",olx:null,max:4000000,step:5000},
+ PE:{ml:"listado.mercadolibre.com.pe",mlN:"MercadoLibre",cur:"PEN",sym:"S/",amz:null,loc:"es-PE",olx:"olx.com.pe",max:30000,step:50},
+ UY:{ml:"listado.mercadolibre.com.uy",mlN:"MercadoLibre",cur:"UYU",sym:"$",amz:null,loc:"es-UY",olx:null,max:300000,step:500},
+ ES:{ml:null,mlN:null,cur:"EUR",sym:"€",amz:"amazon.es",loc:"es-ES",olx:"wallapop",max:6000,step:25}
+};
+
+var EJEMPLO={
+ q:"PS5 Slim usada con dos controles, máximo 7000, que no sea la digital ni caja pelada",
+ producto:"PlayStation 5 Slim con lector de discos",
+ consulta:"playstation 5 slim usada",
+ condicion:"Usado, funcionando",
+ variantes:["ps5 slim","playstation 5 slim","consola ps5 disco"],
+ incluir:["dos controles","caja original"],
+ excluir:["digital","para piezas","no lee discos","solo caja","fat"],
+ precio:{chollo:5600,justo:7200,caro:9000},
+ oferta:{anclaje:5900,objetivo:6600,abandono:7600},
+ veredicto:"El precio corriente son <b>7,200</b> y tu techo son 7,000: vas a encontrarla, pero no la primera tarde. Ordena por recién publicados, escribe en los primeros diez minutos y ofrece 5,900 en efectivo — la mayoría cierra sobre 6,600.",
+ angulos:[
+  {nombre:"Directo",consulta:"playstation 5 slim usada",por:"El nombre correcto. Sirve para hacerte el precio del día, no para encontrar la ganga: aquí busca todo el mundo."},
+  {nombre:"Como lo escribe el vendedor",consulta:"play 5 slim",por:"Media plataforma escribe “play 5”, “ps5 slin” o “playstacion”. Esos anuncios no salen en la búsqueda correcta y llevan semanas sin una sola visita."},
+  {nombre:"Venta urgente",consulta:"remato playstation 5",por:"“Remato”, “urge”, “por viaje”, “me mudo”. Quien escribe eso ya decidió perder dinero: es el único sitio donde el regateo agresivo funciona."},
+  {nombre:"Lote o combo",consulta:"ps5 con juegos combo",por:"Un lote con dos juegos que no quieres suele salir más barato que la consola sola. Revende los juegos y baja el coste real otro 15%."},
+  {nombre:"Mal categorizado",consulta:"control dualsense ps5",por:"Busca el accesorio: siempre hay quien publica la consola completa dentro de la categoría de mandos o de juegos, donde nadie con presupuesto está mirando."},
+  {nombre:"Entrega en mano",consulta:"playstation 5 entrega en mano",por:"Sin envío hay menos compradores compitiendo y el vendedor prefiere cerrar hoy. Filtra a tu ciudad y llévate 10% de descuento por ir tú."}
+ ],
+ inspeccion:[
+  "Enciéndela delante de ti y entra a Ajustes › Sistema › Información de la consola: número de serie visible y sin bloqueo de cuenta.",
+  "Mete un disco físico y comprueba que lo lee y lo expulsa sin ruido de arrastre.",
+  "Escucha el ventilador con un juego pesado tres minutos: un zumbido agudo es polvo o rodamiento gastado.",
+  "Prueba los dos joysticks en el menú: mueve y suelta, el cursor no debe seguir corriendo solo (drift).",
+  "Revisa los puertos USB frontales y el HDMI moviendo el cable: no debe parpadear la imagen.",
+  "Pide la factura o el ticket original; sin él, negocia al menos 8% menos."
+ ],
+ trampas:[
+  "La versión Digital anunciada como “Slim” sin decir que no tiene lector. Pide foto de la ranura frontal encendida.",
+  "“Caja pelada” o “solo caja” escondido al final de la descripción: lo que vende es el cartón, no la consola.",
+  "Consola bloqueada por cuenta ajena: exige que la enciendan en videollamada y muestren el menú de usuarios.",
+  "40% bajo mercado, vendedor recién creado y pago por transferencia fuera de la plataforma. Es el timo de siempre."
+ ],
+ regateo:[
+  "Hola, ¿sigue disponible? ¿Me pasas foto del número de serie y de la ranura de discos con la consola encendida? Si todo cuadra la recojo hoy.",
+  "Vi tres iguales entre 6,400 y 6,800 esta semana. Te dejo 5,900 en efectivo ahora mismo y voy yo por ella; si no, lo entiendo perfecto.",
+  "¿Cuántas horas tiene y por qué la vendes? Si los dos mandos no tienen drift cerramos en 6,600 y no te hago perder más tiempo."
+ ]
+};
+
+var E={plaza:"MX",datos:EJEMPLO,techo:7000,ia:null,ocupado:false,ejemplo:true,folio:"—"};
+
+/* ── util ── */
+function sinAcentos(s){return s.normalize?s.normalize("NFD").replace(/[\u0300-\u036f]/g,""):s}
+function slug(s){return sinAcentos(String(s).toLowerCase()).replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}
+function fmt(n){try{return new Intl.NumberFormat(PLAZAS[E.plaza].loc,{maximumFractionDigits:0}).format(Math.round(n))}catch(e){return String(Math.round(n))}}
+function dinero(n){return PLAZAS[E.plaza].sym+fmt(n)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function techoDeTexto(t){
+  var l=String(t).replace(/[.,](?=\d{3}\b)/g,"");
+  var m=l.match(/(?:m[aá]x(?:imo)?|hasta|tope|menos de|por debajo de|presupuesto)\D{0,14}(\d{3,9})/i)||l.match(/\b(\d{3,9})\b/);
+  return m?parseInt(m[1],10):null;
+}
+
+/* ── enlaces por ángulo ── */
+function enlaces(consulta){
+  var p=PLAZAS[E.plaza],t=E.techo,d=E.datos,out=[];
+  var neg=(d.excluir||[]).filter(function(w){return !/\s/.test(w)&&w.length>2}).slice(0,5).map(function(w){return "-"+w}).join(" ");
+  var enc=encodeURIComponent(consulta), encN=encodeURIComponent(consulta+(neg?" "+neg:""));
+  if(p.ml){
+    out.push({n:p.mlN,f:"tope "+fmt(t)+" · menor precio",u:"https://"+p.ml+"/"+slug(consulta)+"_PriceRange_0-"+t+"_OrderId_PRICE"});
+    out.push({n:"ML recientes",f:"orden: más nuevos",u:"https://"+p.ml+"/"+slug(consulta)+"_PriceRange_0-"+Math.round(t*1.15)+"_OrderId_BEGINS*DESC"});
+  }
+  out.push({n:"Marketplace",f:"maxPrice="+t,u:"https://www.facebook.com/marketplace/search?query="+enc+"&maxPrice="+t});
+  if(p.olx){
+    out.push(p.olx==="wallapop"
+      ?{n:"Wallapop",f:"tope "+fmt(t),u:"https://es.wallapop.com/app/search?keywords="+enc+"&max_sale_price="+t+"&order_by=price_low_to_high"}
+      :{n:"OLX",f:"tope "+fmt(t),u:"https://www."+p.olx+"/items/q-"+slug(consulta)+"?search%5Bfilter_float_price%3Ato%5D="+t});
+  }
+  out.push({n:"eBay",f:neg?"con "+neg:"precio+envío",u:"https://www.ebay.com/sch/i.html?_nkw="+encN+"&_udhi="+t+"&_sop=15"});
+  out.push({n:"Google",f:"ppr_max="+t,u:"https://www.google.com/search?tbm=shop&q="+encN+"&tbs=mr:1,price:1,ppr_max:"+t});
+  if(p.amz) out.push({n:"Amazon",f:"precio asc.",u:"https://www."+p.amz+"/s?k="+enc+"&s=price-asc-rank"});
+  return out;
+}
+
+/* ── render ── */
+function pintaLectura(){
+  var d=E.datos;
+  var f=[
+   ["Producto","<span class='fuerte'>"+esc(d.producto)+"</span>"],
+   ["Condición","<span class='chip'>"+esc(d.condicion)+"</span>"],
+   ["Variantes",(d.variantes||[]).map(function(v){return "<span class='chip'>"+esc(v)+"</span>"}).join("")||"<span class='chip'>—</span>"],
+   ["Debe traer",(d.incluir||[]).map(function(v){return "<span class='chip si'>"+esc(v)+"</span>"}).join("")||"<span class='chip'>lo que sea</span>"],
+   ["Descartar",(d.excluir||[]).map(function(v){return "<span class='chip no'>"+esc(v)+"</span>"}).join("")||"<span class='chip'>nada</span>"]
+  ];
+  $("campos").innerHTML=f.map(function(x){return "<div class='campo'><dt>"+x[0]+"</dt><dd>"+x[1]+"</dd></div>"}).join("");
+}
+
+function pintaPrecio(){
+  var d=E.datos,p=d.precio,s=$("sec-precio");
+  if(!p||!p.justo){s.classList.add("oculto");return}
+  s.classList.remove("oculto");
+  var lo=p.chollo,mid=p.justo,hi=p.caro;
+  var of=d.oferta||{};
+  var anc=of.anclaje||Math.round(lo*1.03), obj=of.objetivo||Math.round((lo+mid)/2), aba=of.abandono||Math.round(mid*1.06);
+  $("t1").textContent="hasta "+dinero(lo);
+  $("t2").textContent=dinero(mid);
+  $("t3").textContent=dinero(hi)+"+";
+  $("o-anc").textContent=dinero(anc); $("o-obj").textContent=dinero(obj); $("o-aba").textContent=dinero(aba);
+  var tope=Math.max(hi*1.22,E.techo*1.06);
+  $("z1").style.flexGrow=lo/tope; $("z2").style.flexGrow=(mid-lo)/tope; $("z3").style.flexGrow=(tope-mid)/tope;
+  $("marca-techo").style.left=Math.min(99,Math.max(1,E.techo/tope*100))+"%";
+  $("marca-obj").style.left=Math.min(99,Math.max(1,obj/tope*100))+"%";
+  var txt;
+  if(E.techo<lo){
+    txt="Tu techo de <b>"+dinero(E.techo)+"</b> está por debajo del suelo del mercado. Vas a encontrarlo, pero será una venta urgente o una unidad con detalle: deja el radar puesto y revisa el ángulo 3 cada mañana.";
+  }else if(E.techo<=mid){
+    txt=E.ejemplo?d.veredicto:("Tu techo de <b>"+dinero(E.techo)+"</b> cae en zona de chollo: existen, pero duran horas. Ordena por recién publicados y escribe el primero — ofrece "+dinero(anc)+" y cierra alrededor de "+dinero(obj)+".");
+  }else if(E.techo<=hi){
+    txt="Con <b>"+dinero(E.techo)+"</b> compras hoy sin drama, así que tu ventaja es negociar: ancla en "+dinero(anc)+", apunta a "+dinero(obj)+" y no pases de "+dinero(aba)+".";
+  }else{
+    txt="Estás dispuesto a pagar <b>"+dinero(E.techo)+"</b> por algo que se vende en "+dinero(mid)+". Baja el techo: filtrar más alto solo hace que los anuncios sobrevalorados aparezcan primero y te anclan a su precio.";
+  }
+  $("veredicto").innerHTML=txt;
+}
+
+function pintaAngulos(){
+  var d=E.datos, angs=d.angulos&&d.angulos.length?d.angulos:[{nombre:"Directo",consulta:d.consulta,por:"Búsqueda literal de lo que pediste."}];
+  $("angulos").innerHTML=angs.map(function(a,i){
+    var ls=enlaces(a.consulta||d.consulta);
+    return "<details class='ang'"+(i<2?" open":"")+">"+
+      "<summary class='ang-cab'>"+
+        "<span class='ang-n'>"+(i+1)+"</span>"+
+        "<span class='ang-t'><b>"+esc(a.nombre)+"</b><i>"+esc(a.consulta||d.consulta)+"</i></span>"+
+        "<span class='ang-flecha mono'>›</span>"+
+      "</summary>"+
+      "<div class='ang-cuerpo'><p class='ang-por'>"+esc(a.por||"")+"</p><div class='enlaces'>"+
+        ls.map(function(l){
+          return "<a class='enl' target='_blank' rel='noopener noreferrer' href='"+esc(l.u)+"'>"+esc(l.n)+" <u>"+esc(l.f)+"</u></a>";
+        }).join("")+
+      "</div></div></details>";
+  }).join("");
+}
+
+function pintaResto(){
+  var d=E.datos;
+  $("inspeccion").innerHTML=(d.inspeccion||[]).map(function(t,i){
+    return "<li><input type='checkbox' id='ck"+i+"'><label for='ck"+i+"'><span>"+esc(t)+"</span></label></li>";
+  }).join("")||"<li><span>Sin comprobaciones específicas.</span></li>";
+  $("trampas").innerHTML=(d.trampas||[]).map(function(t){return "<li>"+esc(t)+"</li>"}).join("");
+  $("guion").innerHTML=(d.regateo||[]).map(function(m){
+    return "<div class='msg'><button class='copiar' type='button'>Copiar</button><p>"+esc(m)+"</p></div>";
+  }).join("");
+}
+
+function pinta(){
+  var p=PLAZAS[E.plaza];
+  $("techo-cur").textContent=p.cur; $("techo").max=p.max; $("techo").step=p.step;
+  if(E.techo>p.max) E.techo=p.max;
+  $("techo").value=E.techo; $("techo-val").textContent=fmt(E.techo);
+  $("folio").textContent="HOJA 01 · ORDEN "+E.folio+" · "+E.plaza+" · "+p.cur;
+  pintaLectura(); pintaPrecio(); pintaAngulos(); pintaResto();
+  $("nota-lectura").textContent=E.ejemplo?"Ejemplo cargado":(E.ia?"Leído por la IA":"Lectura literal · sin IA en esta vista");
+}
+
+/* ── IA ── */
+var PROMPT=[
+"Eres un cazador profesional de gangas en marketplaces de segunda mano de habla hispana.",
+"Responde SOLO con un objeto JSON válido. Sin markdown, sin texto alrededor.",
+"",
+'Esquema: {"producto":string,"consulta":string,"condicion":string,"variantes":[string],"incluir":[string],',
+'"excluir":[string],"precio":{"chollo":number,"justo":number,"caro":number},',
+'"oferta":{"anclaje":number,"objetivo":number,"abandono":number},"veredicto":string,',
+'"angulos":[{"nombre":string,"consulta":string,"por":string}],"inspeccion":[string],"trampas":[string],"regateo":[string]}',
+"",
+"Reglas:",
+"- consulta: 2-5 palabras en minúsculas, como se teclea en el buscador de MercadoLibre.",
+"- excluir: hasta 6 palabras de UNA sola palabra que ensucian los resultados de este producto concreto.",
+"- precio: precios reales de SEGUNDA MANO en la moneda y plaza indicadas. Enteros sin separadores.",
+"- oferta: anclaje ligeramente por encima de chollo, objetivo entre chollo y justo, abandono un poco sobre justo.",
+"- angulos: EXACTAMENTE 6, en este orden y con este significado, adaptados al producto:",
+"  1 Directo · el nombre correcto.",
+"  2 Como lo escribe el vendedor · errores de ortografía y abreviaturas reales que usa la gente.",
+"  3 Venta urgente · consulta con remato/urge/por viaje.",
+"  4 Lote o combo · el producto acompañado de accesorios o varias unidades.",
+"  5 Mal categorizado · buscar un accesorio o pieza para encontrar el producto entero publicado en la categoría equivocada.",
+"  6 Entrega en mano · recogida local sin envío.",
+"  Cada 'por' explica en 1-2 frases por qué ese ángulo encuentra lo que los demás no ven. Concreto, sin relleno.",
+"- inspeccion: 5-6 comprobaciones FÍSICAS específicas de este producto, con el menú, la pieza o el gesto exacto.",
+"- trampas: 3-4 estafas o defectos propios de este producto. Nada genérico.",
+"- regateo: 3 mensajes listos para enviar, en tuteo, breves, con cifras concretas.",
+"- veredicto: 1-2 frases comparando su techo con el mercado. Usa <b></b> una sola vez.",
+"- Todo en español neutro."
+].join("\n");
+
+function respaldo(q){
+  var t=techoDeTexto(q), negs=[], m, re=/(?:que no sea|sin|ni|excepto|nada de)\s+([a-záéíóúñ0-9]{3,18})/gi;
+  while((m=re.exec(q))) negs.push(m[1].toLowerCase());
+  var base=q.replace(/(?:m[aá]x(?:imo)?|hasta|tope|presupuesto)[^,.]*/gi,"")
+            .replace(/(?:que no sea|sin|ni|excepto|nada de)[^,.]*/gi,"")
+            .replace(/\s{2,}/g," ").replace(/[,.]\s*$/,"").trim();
+  var c=base.toLowerCase();
+  return {
+    producto:base.charAt(0).toUpperCase()+base.slice(1),
+    consulta:c, condicion:/usad|segunda|seminuev/i.test(q)?"Usado":"Cualquiera",
+    variantes:[], incluir:[], excluir:negs.concat(["piezas","roto","replica","copia"]).slice(0,6),
+    precio:null, oferta:null, veredicto:"",
+    angulos:[
+      {nombre:"Directo",consulta:c,por:"Búsqueda literal. Sirve para hacerte el precio del día."},
+      {nombre:"Como lo escribe el vendedor",consulta:c.split(" ").slice(0,2).join(" "),por:"Menos palabras encuentra los anuncios con el título mal escrito o incompleto, que llevan semanas sin visitas."},
+      {nombre:"Venta urgente",consulta:"remato "+c.split(" ").slice(0,2).join(" "),por:"Quien escribe “remato” o “urge” ya decidió perder dinero. Es donde el regateo agresivo funciona."},
+      {nombre:"Lote o combo",consulta:c.split(" ").slice(0,2).join(" ")+" combo",por:"Un lote suele salir más barato por unidad; revende lo que no quieras."},
+      {nombre:"Mal categorizado",consulta:c.split(" ").slice(0,2).join(" ")+" accesorio",por:"Buscando el accesorio aparecen productos completos publicados en la categoría equivocada."},
+      {nombre:"Entrega en mano",consulta:c+" entrega en mano",por:"Sin envío hay menos competencia y el vendedor prefiere cerrar hoy."}
+    ],
+    inspeccion:[
+      "Pide verlo funcionando en persona o en videollamada antes de pagar nada.",
+      "Comprueba número de serie visible y que coincida con el de las fotos del anuncio.",
+      "Revisa desgaste en las zonas de uso: bordes, conectores y tornillos sin marcas de haber sido abierto.",
+      "Prueba todos los botones, puertos y accesorios incluidos, uno por uno.",
+      "Pide factura, ticket o caja; sin ellos, negocia al menos un 8% menos."
+    ],
+    trampas:[
+      "Fotos sacadas del catálogo del fabricante en vez del producto real. Pide una foto con la fecha escrita en un papel.",
+      "Precio muy por debajo del resto con vendedor sin reputación: es el anzuelo más viejo del mercado.",
+      "Pago por transferencia fuera de la plataforma. Pierdes toda protección de compra.",
+      "Descripción que contradice el título: léela entera antes de escribir."
+    ],
+    regateo:[
+      "Hola, ¿sigue disponible? ¿Me pasas fotos reales y el motivo de venta? Si cuadra lo tomo esta semana.",
+      "Vi otros parecidos más baratos estos días. ¿Cierras en "+(t?fmt(Math.round(t*0.86)):"algo menos")+" en efectivo y paso yo a recogerlo?",
+      "¿Tiene garantía, factura o caja? Con eso pago lo que pides; sin factura tendríamos que ajustar el precio."
+    ],
+    _techo:t
+  };
+}
+
+function pedirIA(q){
+  if(!E.ia) return Promise.reject(new Error("sin ia"));
+  var p=PLAZAS[E.plaza];
+  return E.ia.json(
+    PROMPT+"\n\nPlaza: "+$("pais").options[$("pais").selectedIndex].text+
+    "\nMoneda: "+p.cur+"\nFecha: "+new Date().toISOString().slice(0,10)+
+    "\nOrden del usuario: \""+q+"\""+
+    "\nTecho que indicó: "+(techoDeTexto(q)||"no lo dijo, dedúcelo del mercado"),
+    {modelTier:"default",cache:true}
+  );
+}
+
+function rastrear(q){
+  q=(q||"").trim();
+  if(!q||E.ocupado) return;
+  E.ocupado=true; $("go").disabled=true; $("go").textContent="Rastreando…";
+  $("angulos").innerHTML="<div class='cargando'><span class='pulso'></span>Leyendo la orden, calculando precio de mercado y abriendo seis ángulos…</div>";
+  var base=respaldo(q), techoTexto=base._techo;
+
+  var cerrar=function(d,viaIA){
+    E.datos=d; E.ejemplo=false;
+    var p=PLAZAS[E.plaza];
+    var nt=techoTexto||(d.precio&&d.precio.justo?Math.round(d.precio.justo):E.techo);
+    E.techo=Math.min(Math.max(nt,p.step),p.max);
+    E.folio=String(Date.now()).slice(-6);
+    E.ocupado=false; $("go").disabled=false; $("go").textContent="Soltar al sabueso";
+    pinta(); guardar(q);
+    $("sec-precio").scrollIntoView({block:"start"});
+  };
+  pedirIA(q).then(function(r){
+    if(!r||!r.consulta) throw new Error("vacío");
+    ["angulos","inspeccion","trampas","regateo"].forEach(function(k){
+      if(!r[k]||!r[k].length) r[k]=base[k];
+    });
+    cerrar(r,true);
+  }).catch(function(){ cerrar(base,false); });
+}
+
+/* ── radar ── */
+var K="sabueso.radar.v2";
+function leer(){try{return JSON.parse(localStorage.getItem(K)||"[]")}catch(e){return []}}
+function escribir(v){try{localStorage.setItem(K,JSON.stringify(v.slice(0,12)))}catch(e){}}
+function guardar(q){
+  var d=E.datos, obj=(d.oferta&&d.oferta.objetivo)||null;
+  var v=leer().filter(function(x){return x.q!==q});
+  v.unshift({q:q,plaza:E.plaza,techo:E.techo,obj:obj,cur:PLAZAS[E.plaza].cur,t:Date.now()});
+  escribir(v); pintaRadar();
+}
+function cuando(t){
+  var m=Math.round((Date.now()-t)/6e4);
+  if(m<1) return "ahora"; if(m<60) return "hace "+m+" min";
+  var h=Math.round(m/60); return h<24?("hace "+h+" h"):("hace "+Math.round(h/24)+" d");
+}
+function pintaRadar(){
+  var v=leer();
+  $("radar-vacio").classList.toggle("oculto",v.length>0);
+  $("radar-tabla").classList.toggle("oculto",v.length===0);
+  $("radar-body").innerHTML=v.map(function(x,i){
+    return "<tr><td>"+esc(x.q)+"</td><td class='n'>"+x.plaza+"</td>"+
+      "<td class='n'>"+x.cur+" "+fmt(x.techo)+"</td>"+
+      "<td class='n'>"+(x.obj?x.cur+" "+fmt(x.obj):"—")+"</td>"+
+      "<td class='n'>"+cuando(x.t)+"</td>"+
+      "<td class='acc'><button class='mini' data-r='"+i+"'>Repetir</button> <button class='mini del' data-d='"+i+"'>Quitar</button></td></tr>";
+  }).join("");
+}
+
+/* ── halftone de la tira ── */
+function halftone(){
+  var c=$("halftone"); if(!c||!c.getContext) return;
+  var w=Math.round(c.getBoundingClientRect().width)||(c.parentElement.clientWidth-96)||1200;
+  var h=24, dpr=Math.min(2,window.devicePixelRatio||1);
+  c.width=w*dpr; c.height=h*dpr;
+  var g=c.getContext("2d"); g.scale(dpr,dpr); g.clearRect(0,0,w,h);
+  var tinta=getComputedStyle(document.documentElement).getPropertyValue("--ink").trim()||"#000";
+  g.fillStyle=tinta;
+  var paso=6;
+  for(var x=paso/2;x<w;x+=paso){
+    for(var y=paso/2;y<h;y+=paso){
+      var t=x/w;
+      var r=(1-t)*2.3*(0.55+0.45*Math.sin(x/38+y/7));
+      if(r>0.12){ g.globalAlpha=0.16+0.5*(1-t); g.beginPath(); g.arc(x,y,r,0,6.2832); g.fill(); }
+    }
+  }
+  g.globalAlpha=1;
+}
+
+/* ── eventos ── */
+$("form").addEventListener("submit",function(e){e.preventDefault(); rastrear($("q").value)});
+Array.prototype.forEach.call(document.querySelectorAll(".sem"),function(b){
+  b.addEventListener("click",function(){ $("q").value=b.textContent; rastrear(b.textContent); });
+});
+$("techo").addEventListener("input",function(){
+  E.techo=parseInt(this.value,10); $("techo-val").textContent=fmt(E.techo);
+  pintaPrecio(); pintaAngulos();
+});
+$("pais").addEventListener("change",function(){ E.plaza=this.value; pinta(); });
+$("guion").addEventListener("click",function(e){
+  var b=e.target.closest(".copiar"); if(!b) return;
+  var txt=b.parentNode.querySelector("p").textContent;
+  var ok=function(){b.textContent="Copiado"; setTimeout(function(){b.textContent="Copiar"},1600)};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(ok,ok)}else{ok()}
+});
+$("radar-body").addEventListener("click",function(e){
+  var b=e.target.closest("button"); if(!b) return;
+  var v=leer();
+  if(b.dataset.d!==undefined){ v.splice(+b.dataset.d,1); escribir(v); pintaRadar(); return; }
+  if(b.dataset.r!==undefined){
+    var x=v[+b.dataset.r];
+    $("pais").value=x.plaza; E.plaza=x.plaza; $("q").value=x.q;
+    window.scrollTo({top:0}); rastrear(x.q);
+  }
+});
+window.addEventListener("resize",halftone);
+
+/* ── arranque ── */
+$("q").value=EJEMPLO.q;
+E.folio="EJEMPLO";
+try{ $("cf-fecha").textContent=new Date().toLocaleDateString("es-MX",{year:"numeric",month:"long",day:"numeric"}); }catch(e){}
+pinta(); pintaRadar();
+halftone();
+requestAnimationFrame(halftone);
+window.addEventListener("load",halftone);
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(halftone)}
+
+if(window.claude&&typeof window.claude.use==="function"){
+  window.claude.use("sample").then(function(s){
+    E.ia=s;
+    $("led").dataset.on=s?"1":"0";
+    $("led-txt").textContent=s?"IA activa":"Modo manual";
+  },function(){ $("led").dataset.on="0"; $("led-txt").textContent="Modo manual"; });
+}else{
+  $("led").dataset.on="0"; $("led-txt").textContent="Modo manual";
+}
+})();
+</script>

@@ -1,0 +1,4 @@
+# Demostración. Se deja crawlear a propósito: si acá dijera Disallow, Google no
+# podría leer el `noindex` y la página igual podría acabar en los resultados.
+User-agent: *
+Allow: /

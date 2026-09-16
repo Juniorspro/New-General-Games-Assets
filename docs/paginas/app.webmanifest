@@ -1,0 +1,38 @@
+{
+  "name": "IBLO Panel",
+  "short_name": "IBLO",
+  "description": "El panel de IBLO Eventos: subir entradas, próximas fechas y avisos a la web.",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "start_url": "/iblo-app",
+  "scope": "/iblo-app",
+  "id": "/iblo-app",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08070c",
+  "theme_color": "#08070c",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "/icono-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icono-mask.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

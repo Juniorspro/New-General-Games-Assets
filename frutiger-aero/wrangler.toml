@@ -1,0 +1,31 @@
+# Configuracion del proyecto de Pages.
+#
+# EXISTE POR LA BASE DE DATOS. Las funciones no pueden hablar con D1 sin un
+# enlace declarado, y `wrangler pages deploy` lo lee de aca. Sin este archivo
+# `env.DB` llega vacio y todo lo social contesta 503, que es un error dificil
+# de leer si uno no sabe que el enlace se declara afuera del codigo.
+#
+# `pages_build_output_dir` le dice cual es la carpeta de archivos que se
+# publica. OJO CON UN DETALLE QUE ROMPE TODO: con este archivo puesto, las
+# funciones se buscan en functions/ AL LADO del toml, NO adentro de sitio/.
+# Dejarlas donde estaban hizo que wrangler subiera el sitio sin compilar una
+# sola funcion, y todas las rutas de /api pasaron a contestar 404 —incluidas
+# las de cobro, que ya andaban—. El despliegue no avisa: simplemente deja de
+# decir «Compiled Worker successfully».
+name = "frutiger-aero"
+compatibility_date = "2026-01-01"
+pages_build_output_dir = "sitio"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "frutiger-social"
+database_id = "0750acf7-a229-4521-bc1a-c3f19d82bf6d"
+
+# La inteligencia que dibuja los fondos de la Fábrica (functions/api/fabrica.js).
+#
+# ES UN ENLACE Y NO UNA CLAVE. Workers AI no se llama con una API key metida en
+# el código: se declara acá y llega como `env.AI`. Si este bloque no está, la
+# función no explota con un error de red —contesta «sin configurar»— y es de las
+# cosas más difíciles de adivinar mirando el código, porque el código está bien.
+[ai]
+binding = "AI"

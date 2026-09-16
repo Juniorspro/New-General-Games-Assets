@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Solicitudes · Frutiger Aero</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="stylesheet" href="css/aero.253b4b1e.css">
+<!-- ==========================================================================
+     La cola de solicitudes. Entra sólo el administrador.
+
+     SE ENTRA CON USUARIO Y CONTRASEÑA, no con una clave compartida. Una clave
+     suelta escrita en cada pantalla no dice quién entró, no se le puede sacar a
+     una sola persona, y si se filtra hay que cambiarla para todos. Acá la
+     cuenta lleva una marca y el servidor la comprueba en cada llamada: esta
+     página no decide nada, sólo muestra lo que el servidor le deja ver.
+
+     La primera vez hay que nombrarse administrador con la clave vieja. Después
+     no se usa más.
+     ========================================================================== -->
+<style>
+body{display:grid; place-items:start center; padding:22px 12px 60px}
+.hoja{width:min(680px,100%); display:grid; gap:14px}
+label{display:block; font-size:13.5px; font-weight:600; margin-bottom:5px}
+input{width:100%; font:inherit; font-size:15px; padding:8px 12px; border-radius:3px;
+  border:1px solid #b9c6d4; background:#fff; box-shadow:inset 0 1px 3px rgba(0,30,60,.14)}
+.ped{border:1px solid #c2d0de; border-radius:5px; margin-bottom:10px; overflow:hidden;
+  background:linear-gradient(180deg,#fff,#f4f8fc)}
+.ped .cab{display:flex; align-items:center; gap:10px; padding:10px 13px;
+  border-bottom:1px solid #e3ebf3; background:linear-gradient(180deg,#f7fbff,#e9f2fa)}
+.ped .cab b{font-size:15px} .ped .cab span{font-size:12.5px; color:var(--tinta-2)}
+.ped .dd{padding:12px 13px; display:grid; gap:6px; font-size:14.5px}
+.ped .dd i{font-style:normal; color:var(--tinta-2); font-size:12.5px;
+  letter-spacing:.14em; text-transform:uppercase}
+.ped code{font-family:ui-monospace,Menlo,monospace; font-size:16px; color:#0e3b5e;
+  background:#eaf6fb; padding:2px 8px; border-radius:3px; display:inline-block}
+.ped img.comp{max-width:100%; border-radius:4px; border:1px solid #b9c6d4; margin-top:4px}
+.ped .acc{display:flex; gap:8px; padding:10px 13px; border-top:1px solid #e3ebf3;
+  background:#f6fafd; flex-wrap:wrap}
+.bt.malo{border-color:#a83a24; color:#fff;
+  background:linear-gradient(180deg,#f0a08e 45%,#d6432a 45%,#a81e0c)}
+.bt.malo:hover{background:linear-gradient(180deg,#ffbcaa 45%,#e8543a 45%,#c02a14)}
+</style>
+</head>
+<body>
+<div class="hoja">
+
+  <section class="ventana" id="vEntrar">
+    <header class="titulo"><span class="txt">Entrar como administrador</span></header>
+    <div class="cuerpo">
+      <div class="grupo blanco" style="margin-top:0">
+        <p style="font-size:14px;margin:0 0 10px">Con <b>tu cuenta del sitio</b>,
+          la misma con la que publicás.</p>
+        <div><label for="us">Usuario</label><input id="us" autocomplete="username"></div>
+        <div style="margin-top:9px"><label for="cl">Contrase&#241;a</label>
+          <input id="cl" type="password" autocomplete="current-password"></div>
+        <div class="bots"><button class="bt p" type="button" id="btEntrar">Entrar</button></div>
+        <p id="avEntrar" style="margin-top:9px;font-size:13.5px" hidden></p>
+
+        <details style="margin-top:14px">
+          <summary style="cursor:pointer;font-size:13.5px;color:var(--tinta-2)">
+            Primera vez: nombrarme administrador</summary>
+          <p style="font-size:13.5px;margin:8px 0 0;color:var(--tinta-2)">
+            Entr&#225; arriba con tu cuenta y pon&#233; ac&#225; la clave vieja del sitio.
+            Se usa una sola vez.</p>
+          <div style="margin-top:8px"><input id="cla" type="password" placeholder="Clave del sitio"></div>
+          <div class="bots"><button class="bt" type="button" id="btNombrar">Nombrarme</button></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="ventana" id="vCola" hidden>
+    <header class="titulo">
+      <span class="txt" id="tituloCola">Solicitudes esperando</span>
+      <span class="mandos"><button type="button" class="cerrar" id="btSalir"
+        aria-label="Salir" style="width:auto;padding:0 10px;font-size:12px">Salir</button></span>
+    </header>
+    <div class="cuerpo">
+      <div class="grupo blanco" style="margin-top:0">
+        <p style="font-size:14px;margin:0">Compar&#225; cada n&#250;mero de operaci&#243;n
+          con lo que te entr&#243;. <b>Aprobar habilita la cuenta y le manda el aviso</b>
+          en el momento.</p>
+        <div class="bots">
+          <button class="bt p" type="button" id="btVer">Actualizar</button>
+          <span id="info" style="font-size:13.5px;color:var(--tinta-2);align-self:center"></span>
+        </div>
+      </div>
+      <div id="cola" style="margin-top:12px"></div>
+
+      <!-- Qui&#233;n est&#225; mirando. Los que tienen cuenta salen con nombre; los que
+           entran sin cuenta no tienen un &#171;qui&#233;n&#187; que mostrar y se cuentan. -->
+      <details class="grupo blanco" id="vsCaja" style="margin-top:14px">
+        <summary style="cursor:pointer;font-weight:600;font-size:14.5px">
+          Visitas <span id="vsAhora" style="font-weight:400;color:var(--tinta-2)"></span></summary>
+        <div id="vsCuerpo" style="margin-top:10px"></div>
+      </details>
+
+      <!-- Los c&#243;digos, que antes viv&#237;an en /admin con su propia clave. Una
+           segunda p&#225;gina de administraci&#243;n con una segunda llave es una llave
+           m&#225;s que se puede perder, para hacer algo que va justo al lado de
+           esto. Ahora es una secci&#243;n de ac&#225;. -->
+      <details class="grupo blanco" style="margin-top:14px">
+        <summary style="cursor:pointer;font-weight:600;font-size:14.5px">
+          Generar c&#243;digos de acceso</summary>
+        <p style="font-size:13.5px;margin:9px 0 0">Para el que te pag&#243; en mano y
+          no va a mandar comprobante. Mir&#225; que la plata haya entrado, gener&#225; uno
+          y pas&#225;selo. Un c&#243;digo vale <b>lo mismo que un pago</b>: le habilita la
+          cuenta con la que lo canjee.</p>
+        <div style="margin-top:10px"><label for="cgClave">Clave de administrador</label>
+          <input id="cgClave" type="password" autocomplete="off"
+                 placeholder="No se guarda: se escribe cada vez"></div>
+        <div style="display:flex;gap:9px;margin-top:9px">
+          <div style="flex:1"><label for="cgDesde">Desde el n&#250;mero</label>
+            <input id="cgDesde" type="number" min="1" value="1"></div>
+          <div style="flex:1"><label for="cgCuantos">Cu&#225;ntos</label>
+            <input id="cgCuantos" type="number" min="1" max="50" value="5"></div>
+        </div>
+        <div class="bots">
+          <button class="bt p" type="button" id="cgHacer">Generar</button>
+          <button class="bt" type="button" id="cgCopiar" hidden>Copiar todos</button>
+        </div>
+        <p id="cgAviso" style="margin:9px 0 0;font-size:13.5px" hidden></p>
+        <ul id="cgSalida" class="lista" style="margin-top:9px;
+            font-family:ui-monospace,Menlo,monospace;font-size:15px"></ul>
+      </details>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(i){ return document.getElementById(i); };
+  var pase = null;
+  try { var g = JSON.parse(localStorage.getItem("fa.sesion") || "null");
+        if (g && g.pase) pase = g.pase; } catch(e){}
+
+  function nodo(t, c, x){ var n = document.createElement(t); if (c) n.className = c;
+                          if (x != null) n.textContent = x; return n; }
+  function cuando(ms){
+    var d = Math.floor((Date.now()-ms)/60000);
+    if (d < 60) return "hace " + d + " min";
+    if (d < 1440) return "hace " + Math.floor(d/60) + " h";
+    return "hace " + Math.floor(d/1440) + " días";
+  }
+  function pedir(ruta, cuerpo){
+    var o = { headers:{} };
+    if (pase) o.headers.authorization = "Bearer " + pase;
+    if (cuerpo){ o.method = "POST"; o.headers["content-type"] = "application/json";
+                 o.body = JSON.stringify(cuerpo); }
+    return fetch("api/" + ruta, o).then(function(r){
+      return r.json().then(function(j){
+        if (!r.ok) throw new Error(j.error || ("error " + r.status)); return j; }); });
+  }
+  function decir(el, t, mal){
+    var a = $(el); a.hidden = false; a.style.color = mal ? "#a3231b" : "#0e5a2c"; a.textContent = t;
+  }
+
+  $("btEntrar").addEventListener("click", function(){
+    decir("avEntrar", "Entrando…", false);
+    pedir("cuenta", { hacer:"entrar", usuario:$("us").value, clave:$("cl").value })
+      .then(function(j){
+        pase = j.pase;
+        try { localStorage.setItem("fa.sesion", JSON.stringify({pase:j.pase, yo:j.yo})); } catch(e){}
+        ver();
+      })
+      .catch(function(e){ decir("avEntrar", e.message, true); });
+  });
+  $("cl").addEventListener("keydown", function(e){ if (e.key === "Enter") $("btEntrar").click(); });
+
+  $("btNombrar").addEventListener("click", function(){
+    if (!pase){ decir("avEntrar", "Primero entrá con tu cuenta.", true); return; }
+    pedir("revisar", { hacer:"nombrarme", clave:$("cla").value })
+      .then(function(){ decir("avEntrar", "Listo, ya sos administrador.", false); ver(); })
+      .catch(function(e){ decir("avEntrar", e.message, true); });
+  });
+
+  $("btSalir").addEventListener("click", function(){
+    $("vCola").hidden = true; $("vEntrar").hidden = false;
+  });
+  $("btVer").addEventListener("click", ver);
+
+  function ver(){
+    pedir("revisar", { hacer:"ver" })
+      .then(function(j){
+        $("vEntrar").hidden = true; $("vCola").hidden = false;
+        $("tituloCola").textContent = "Solicitudes — entraste como @" + j.yo;
+        $("info").textContent = j.conAcceso + " cuentas con acceso" +
+          (j.juntando ? "  ·  " + j.juntando + " juntando todavía" : "");
+        var c = $("cola"); c.textContent = "";
+        if (!j.pedidos.length){ c.appendChild(nodo("p", null, "No hay nada esperando.")); return; }
+        j.pedidos.forEach(function(p){ c.appendChild(tarjeta(p)); });
+      })
+      .catch(function(e){
+        if (/administrador|sesión/i.test(e.message)){ $("vCola").hidden = true; $("vEntrar").hidden = false; }
+        decir("avEntrar", e.message, true);
+      });
+  }
+
+  function plata(m, n){
+    return (m === "USD" ? "US$ " : "$ ") +
+      Number(n).toLocaleString("es-AR", {maximumFractionDigits: m === "USD" ? 2 : 0});
+  }
+
+  /* UNA TARJETA ES UNA PERSONA, no un comprobante: quien mandó cincuenta dos
+     veces es un solo pedido de cien con dos capturas, y se resuelve entero.
+
+     Arriba va EL NOMBRE DEL TITULAR, no el del perfil. En el comprobante figura
+     el titular de la cuenta que transfirió, y es lo único que se puede cruzar
+     contra lo que entró: el @usuario del sitio no aparece en ningún banco. */
+  function tarjeta(p){
+    var d = nodo("div", "ped");
+
+    var cab = nodo("div", "cab");
+    var t = nodo("div");
+    t.appendChild(nodo("b", null, p.titular || "(sin nombre)"));
+    t.appendChild(nodo("span", null,
+      p.nombre + "  ·  @" + p.usuario + "  ·  " + cuando(p.desde)));
+    cab.appendChild(t);
+    var tot = nodo("div", null, plata(p.moneda, p.total));
+    tot.style.cssText = "margin-left:auto;font-weight:700;font-size:16px;white-space:nowrap";
+    cab.appendChild(tot);
+    d.appendChild(cab);
+
+    var dd = nodo("div", "dd");
+
+    /* dos nombres distintos en un mismo pedido: puede ser que se corrigió, o
+       que está juntando comprobantes ajenos. Lo decide quien mira, pero tiene
+       que verlo. */
+    if (p.varios){
+      var ojo = nodo("div", null,
+        "⚠ Mandó los comprobantes con nombres distintos. Fijate cada uno abajo.");
+      ojo.style.cssText = "background:#fff3cd;border:1px solid #d9b350;color:#6b4c00;" +
+                          "border-radius:4px;padding:8px 10px;font-size:13.5px";
+      dd.appendChild(ojo);
+    }
+
+    p.aportes.forEach(function(a){
+      var caja = nodo("div");
+      caja.style.cssText = "border-top:1px dashed #d5e0eb;padding-top:9px;display:grid;gap:5px";
+      if (p.aportes.length === 1) caja.style.borderTop = "0";
+
+      var l1 = nodo("div");
+      l1.appendChild(nodo("i", null, "Operación "));
+      l1.appendChild(nodo("code", null, a.refer));
+      l1.appendChild(document.createTextNode("  " + plata(p.moneda, a.monto)));
+      caja.appendChild(l1);
+
+      /* el nombre de cada comprobante, cuando difiere del de arriba */
+      if (a.titular && a.titular !== p.titular){
+        var l2 = nodo("div");
+        l2.appendChild(nodo("i", null, "A nombre de "));
+        l2.appendChild(document.createTextNode(a.titular));
+        caja.appendChild(l2);
+      }
+      if (a.nota) caja.appendChild(nodo("div", null, a.nota));
+
+      if (a.foto){
+        var im = nodo("img", "comp"); im.alt = "Comprobante";
+        /* la imagen también pide el pase: la sirve la misma función */
+        fetch("api/revisar?foto=" + a.id, { headers:{ authorization:"Bearer " + pase } })
+          .then(function(r){ return r.ok ? r.blob() : null; })
+          .then(function(b){ if (b) im.src = URL.createObjectURL(b); });
+        caja.appendChild(im);
+      }
+      dd.appendChild(caja);
+    });
+    d.appendChild(dd);
+
+    var acc = nodo("div", "acc");
+    var ok = nodo("button", "bt p", "Aprobar y avisarle"); ok.type = "button";
+    var no = nodo("button", "bt malo", "Rechazar"); no.type = "button";
+    ok.addEventListener("click", function(){
+      ok.disabled = no.disabled = true;
+      pedir("revisar", { hacer:"aprobar", uid:p.uid }).then(ver)
+        .catch(function(e){ alert(e.message); ok.disabled = no.disabled = false; });
+    });
+    no.addEventListener("click", function(){
+      if (!confirm("¿Rechazar el pedido de " + (p.titular || "@" + p.usuario) +
+                   "? Le llega un aviso.")) return;
+      pedir("revisar", { hacer:"rechazar", uid:p.uid }).then(ver)
+        .catch(function(e){ alert(e.message); });
+    });
+    acc.appendChild(ok); acc.appendChild(no);
+    d.appendChild(acc);
+    return d;
+  }
+
+  /* --------------------------------------------------------- las visitas */
+  function rato(ms){
+    var s = Math.round(ms / 1000);
+    if (s < 60) return s + " s";
+    var m = Math.round(s / 60);
+    if (m < 60) return m + " min";
+    var h = Math.floor(m / 60);
+    return h + " h " + (m % 60) + " min";
+  }
+  function haceCuanto(ms){ return rato(Date.now() - ms); }
+
+  function verVisitas(){
+    pedir("visitas").then(function(j){
+      $("vsAhora").textContent = "· " + j.ahora.length +
+        (j.ahora.length === 1 ? " mirando ahora" : " mirando ahora");
+      var c = $("vsCuerpo"); c.textContent = "";
+
+      /* los que están en este momento */
+      var t1 = nodo("b", null, "Ahora mismo");
+      c.appendChild(t1);
+      if (!j.ahora.length){
+        c.appendChild(nodo("p", null, "Nadie en este momento."));
+      } else {
+        var ul = nodo("div");
+        ul.style.cssText = "display:grid;gap:6px;margin:8px 0 14px";
+        j.ahora.forEach(function(v){
+          var f = nodo("div");
+          f.style.cssText = "display:flex;gap:10px;align-items:baseline;padding:7px 10px;" +
+            "border:1px solid #c2d0de;border-radius:4px;background:#fff";
+          var q = nodo("b", null, v.usuario ? (v.nombre || v.usuario) : "Alguien sin cuenta");
+          f.appendChild(q);
+          if (v.usuario){
+            var ar = nodo("span", null, "@" + v.usuario);
+            ar.style.cssText = "font-size:12.5px;color:var(--tinta-2)";
+            f.appendChild(ar);
+          }
+          var d = nodo("span", null, "hace " + haceCuanto(v.desde) +
+            (v.movil ? "  ·  celular" : "  ·  computadora"));
+          d.style.cssText = "margin-left:auto;font-size:12.5px;color:var(--tinta-2)";
+          f.appendChild(d);
+          ul.appendChild(f);
+        });
+        c.appendChild(ul);
+      }
+
+      /* los números */
+      function bloque(titulo, d){
+        var g = nodo("div");
+        g.style.cssText = "border:1px solid #c2d0de;border-radius:4px;background:#fff;" +
+          "padding:9px 11px";
+        g.appendChild(nodo("b", null, titulo));
+        var n = nodo("div");
+        n.style.cssText = "font-size:13.5px;margin-top:3px;line-height:1.6";
+        var prom = d.visitas ? rato(Math.round((d.tiempo || 0) / d.visitas)) : "—";
+        n.textContent = (d.visitas || 0) + " visitas · " +
+          (d.conCuenta || 0) + " con cuenta · " +
+          (d.enCelu || 0) + " desde el celular · se quedan " + prom + " en promedio";
+        g.appendChild(n);
+        return g;
+      }
+      var nums = nodo("div");
+      nums.style.cssText = "display:grid;gap:8px;margin-bottom:14px";
+      nums.appendChild(bloque("Últimas 24 horas", j.hoy || {}));
+      nums.appendChild(bloque("Últimos 7 días", j.semana || {}));
+      c.appendChild(nums);
+
+      /* los que tienen cuenta */
+      c.appendChild(nodo("b", null, "Los que tienen cuenta, esta semana"));
+      if (!j.gente.length){
+        c.appendChild(nodo("p", null, "Nadie con cuenta entró esta semana."));
+      } else {
+        var g2 = nodo("div");
+        g2.style.cssText = "display:grid;gap:6px;margin-top:8px";
+        j.gente.forEach(function(u){
+          var f = nodo("div");
+          f.style.cssText = "display:flex;gap:10px;align-items:baseline;padding:7px 10px;" +
+            "border:1px solid #c2d0de;border-radius:4px;background:#fff";
+          var b = nodo("b", null, u.nombre || u.usuario);
+          if (u.acceso){
+            var e = nodo("span", null, " ★");
+            e.title = "Colaboró"; e.style.color = "#e8a800";
+            b.appendChild(e);
+          }
+          f.appendChild(b);
+          var ar = nodo("span", null, "@" + u.usuario);
+          ar.style.cssText = "font-size:12.5px;color:var(--tinta-2)";
+          f.appendChild(ar);
+          var d = nodo("span", null, u.veces + (u.veces === 1 ? " visita" : " visitas") +
+            " · " + rato(u.tiempo || 0) + " en total · última hace " + haceCuanto(u.ultima));
+          d.style.cssText = "margin-left:auto;font-size:12.5px;color:var(--tinta-2)";
+          f.appendChild(d);
+          g2.appendChild(f);
+        });
+        c.appendChild(g2);
+      }
+
+      var nota = nodo("p", null, j.nota);
+      nota.style.cssText = "margin-top:12px;font-size:12.5px;color:var(--tinta-2)";
+      c.appendChild(nota);
+    }).catch(function(e){
+      $("vsCuerpo").textContent = e.message;
+    });
+  }
+  $("vsCaja").addEventListener("toggle", function(){ if (this.open) verVisitas(); });
+
+  /* -------------------------------------------------------- los códigos */
+  $("cgHacer").addEventListener("click", function(){
+    var clave = $("cgClave").value;
+    if (!clave){ $("cgClave").focus(); decir("cgAviso", "Falta la clave.", true); return; }
+    decir("cgAviso", "Generando…", false);
+    fetch("api/codigos", { method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({ clave: clave, desde: +$("cgDesde").value || 1,
+                             cuantos: +$("cgCuantos").value || 5 }) })
+      .then(function(r){ return r.json().then(function(j){
+        if (!r.ok) throw new Error(j.error || ("error " + r.status)); return j; }); })
+      .then(function(j){
+        var u = $("cgSalida"); u.textContent = "";
+        (j.codigos || []).forEach(function(c){
+          var li = nodo("li", null, c); u.appendChild(li);
+        });
+        $("cgCopiar").hidden = !(j.codigos || []).length;
+        decir("cgAviso", (j.codigos || []).length + " listos. Pasáselos de a uno.", false);
+        /* la clave se borra apenas se usa: no queda escrita esperando a que
+           alguien mire el teléfono por encima del hombro */
+        $("cgClave").value = "";
+      })
+      .catch(function(e){ decir("cgAviso", e.message, true); });
+  });
+
+  $("cgCopiar").addEventListener("click", function(){
+    var t = [].map.call($("cgSalida").children, function(li){ return li.textContent; }).join("\n");
+    navigator.clipboard.writeText(t)
+      .then(function(){ decir("cgAviso", "Copiados.", false); })
+      .catch(function(){ decir("cgAviso", "No pude copiar: seleccionalos a mano.", true); });
+  });
+
+  if (pase) ver();
+})();
+</script>
+</body>
+</html>

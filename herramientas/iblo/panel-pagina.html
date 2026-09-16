@@ -1,0 +1,68 @@
+<section class="pant" id="pPagina" hidden>
+  <span class="rot">La web</span>
+  <h2>La <em>página</em></h2>
+  <p class="baja">Todo lo que se ve en la web sale de acá. Cambiá lo que quieras,
+    mirá cómo queda y recién ahí publicá. Si algo no te gusta, <b>Deshacer</b> lo
+    devuelve como estaba.</p>
+
+  <div class="grupo2" id="pgSolapas" style="margin-top:16px">
+    <button class="viva" data-s="est" type="button">Estéticas</button>
+    <button data-s="marca" type="button">Colores</button>
+  </div>
+
+  <!-- ------------------------------------------------------ estéticas -->
+  <div id="pgEst">
+    <div id="pgAviso" class="aviso" hidden></div>
+
+    <!-- Cuando la base está vacía esto es lo único que hay que tocar, así que
+         va primero y es el único botón fuerte de la pantalla. -->
+    <button class="bt p" id="pgTraer" type="button" hidden style="margin-top:13px">
+      Traer las nueve que ya están</button>
+
+    <div id="pgLista" style="margin-top:14px"></div>
+
+    <details class="masFiesta">
+      <summary>Sumar otra fiesta</summary>
+      <div class="campo" style="margin-top:12px">
+        <label for="pgIdea">Contale a la IA de qué va</label>
+        <input id="pgIdea" maxlength="200" placeholder="Una fiesta Y2K, celeste y plateado, con cabina de fotos">
+        <button class="bt s" id="pgBtIA" type="button" style="margin-top:9px">Armar la estética</button>
+      </div>
+      <button class="bt s" id="pgBtNueva" type="button">Empezar una en blanco</button>
+    </details>
+  </div>
+
+  <!-- --------------------------------------------------------- marca -->
+  <div id="pgMarca" hidden>
+    <p class="baja" style="margin-top:16px">Estos son los colores de toda la página,
+      los que se ven cuando no estás parado sobre ninguna fiesta en particular.</p>
+    <div class="paleta" id="pgPalMarca"></div>
+    <div class="campo" style="margin-top:16px">
+      <label for="pgCurva">Esquinas redondeadas <span id="pgCurvaV" class="cifra2">18 px</span></label>
+      <input id="pgCurva" type="range" min="0" max="40" step="1" value="18">
+    </div>
+    <div class="campo">
+      <label for="pgGrano">Textura de grano <span id="pgGranoV" class="cifra2">4,5 %</span></label>
+      <input id="pgGrano" type="range" min="0" max="120" step="1" value="45">
+    </div>
+    <button class="bt s" id="pgResetColor" type="button" style="margin-top:6px">
+      Volver los colores originales</button>
+    <p class="baja">Deja los nombres y los textos como los tenés; sólo devuelve
+      los colores de fábrica, los de acá y los de cada fiesta.</p>
+  </div>
+
+  <div class="dosBotones" style="margin-top:20px">
+    <button class="bt p" id="pgBtGuardar" type="button">Publicar</button>
+    <button class="bt s" id="pgBtDeshacer" type="button">Deshacer</button>
+  </div>
+  <p class="baja">Los colores se ven al toque. Si agregaste o sacaste una fiesta,
+    la web se acomoda sola la primera vez que alguien entra.</p>
+
+  <!-- El botón de pánico. Va último, aparte y en rojo: es para el día en que
+       algo quedó feo y no se sabe qué se tocó. -->
+  <div class="panico">
+    <button class="bt malo" id="pgResetTodo" type="button">Volver todo al diseño original</button>
+    <p class="baja">Las nueve fiestas de siempre, con sus colores y sus textos,
+      como el primer día. Se publica al toque.</p>
+  </div>
+</section>

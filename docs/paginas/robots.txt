@@ -1,0 +1,40 @@
+# IBLO Eventos
+User-agent: *
+
+# LA API NO SE BLOQUEA, Y ES A PROPÓSITO. Devuelve JSON y no hay nada que
+# indexar ahí, pero bloquearla acá era el peor error del sitio: las páginas
+# arman su contenido pidiéndole los datos a estas direcciones, y un buscador
+# que no las puede pedir renderiza la página VACÍA. La de publicaciones, sin
+# esto, le mostraba a Google el cartel de «No se pudieron cargar» —y encima el
+# dato estructurado de los eventos, que se arma después de ese pedido, no
+# existía nunca.
+#
+# «No lo indexes» y «no lo bajes» son dos cosas distintas y hacen falta las
+# dos: acá se deja bajar, y en `_headers` cada respuesta de la API va marcada
+# con «X-Robots-Tag: noindex» para que el JSON no salga como si fuera página.
+# Es exactamente el mismo razonamiento que el del panel, acá abajo.
+#
+# Se abren sólo las de lectura que usan las páginas públicas. El resto sigue
+# cerrado: no tiene sentido que un rastreador pasee por lo que no se muestra.
+Allow: /api/publicaciones
+Allow: /api/archivo
+Allow: /api/destacado
+Allow: /api/entradas
+Allow: /api/equipo
+Allow: /api/sitio
+Allow: /api/instagram
+Disallow: /api/
+Allow: /
+
+# El panel del dueño NO se bloquea acá a propósito: se marca con
+# «X-Robots-Tag: noindex» en _headers, y para leer esa marca Google
+# primero tiene que poder entrar. Bloqueándolo acá nunca la vería y la
+# dirección podía aparecer igual en el buscador, pelada.
+
+Sitemap: https://iblo-eventos.pages.dev/sitemap.xml
+
+# El archivo de 32 digitos que hay en la raiz es la clave de IndexNow, con
+# la que se le avisa a Bing, Yandex, Seznam y Naver que el sitio cambio.
+# No es un secreto: publicarla ES la prueba de que el dominio es nuestro.
+# Se manda con ./avisar-buscadores.sh. Google no usa IndexNow: para Google
+# la via sigue siendo el sitemap de arriba.

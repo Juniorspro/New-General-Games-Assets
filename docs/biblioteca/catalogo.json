@@ -1,0 +1,2223 @@
+[
+  {
+    "id": "lusion",
+    "nombre": "Lusion",
+    "url": "https://lusion.co",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 5,
+    "titulo": "Lusion - Award Winning 3D and Interactive Web Studio",
+    "descripcion": "We design and produce 3D visual storytelling, immersive websites, and interactive digital experiences that help brands stand out online.",
+    "fondo": "#ffffff",
+    "texto": "#f0f1fa",
+    "fuenteTitular": "Aeonik",
+    "fuenteCuerpo": "Aeonik",
+    "acentos": [
+      "#1a2ffb"
+    ],
+    "alto": 900
+  },
+  {
+    "id": "rive",
+    "nombre": "Rive",
+    "url": "https://rive.app",
+    "familia": "3d-webgl",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://rive.app/"
+  },
+  {
+    "id": "active-theory",
+    "nombre": "Active Theory",
+    "url": "https://activetheory.net",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 45,
+    "titulo": "Not Supported",
+    "descripcion": "",
+    "fondo": "#000000",
+    "texto": "#ffffff",
+    "fuenteTitular": "nbarchitekt",
+    "fuenteCuerpo": "nbarchitekt",
+    "acentos": [],
+    "alto": 900
+  },
+  {
+    "id": "three-js",
+    "nombre": "Three.js",
+    "url": "https://threejs.org",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 144,
+    "titulo": "Three.js – JavaScript 3D Library",
+    "descripcion": "",
+    "fondo": "#ffffff",
+    "texto": "#444444",
+    "fuenteTitular": "Roboto Mono",
+    "fuenteCuerpo": "Roboto Mono",
+    "acentos": [
+      "#0000ee",
+      "#049ef4"
+    ],
+    "alto": 900
+  },
+  {
+    "id": "spline",
+    "nombre": "Spline",
+    "url": "https://spline.design",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 25,
+    "titulo": "Spline - 3D Design tool in the browser with real-time collaboration",
+    "descripcion": "Spline is a free 3D design software with real-time collaboration to create web interactive experiences in the browser. Easy 3d modeling, animation, textures, and more.",
+    "fondo": "#000000",
+    "texto": "#ffffff",
+    "fuenteTitular": "Spline Sans",
+    "fuenteCuerpo": "Spline Sans",
+    "acentos": [
+      "#0062ff"
+    ],
+    "alto": 12290
+  },
+  {
+    "id": "resn",
+    "nombre": "Resn",
+    "url": "https://resn.co.nz",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 3,
+    "titulo": "Resn - Creative Digital Agency | Ideation, Design, and Development",
+    "descripcion": "Resn is a creative studio bringing brand, content and digital experiences to life through stories shaped with global brands and emerging innovators.",
+    "fondo": "#000000",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "sans-serif",
+    "acentos": [],
+    "alto": 900
+  },
+  {
+    "id": "bruno-simon",
+    "nombre": "Bruno Simon",
+    "url": "https://bruno-simon.com",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 34,
+    "titulo": "Bruno's",
+    "descripcion": "Bruno Simon's creative portfolio",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Amatic SC",
+    "fuenteCuerpo": "Nunito",
+    "acentos": [
+      "#ffceca",
+      "#ff6a7c"
+    ],
+    "alto": 900
+  },
+  {
+    "id": "14islands",
+    "nombre": "14islands",
+    "url": "https://14islands.com",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 22,
+    "titulo": "14islands | Creative design & technology agency",
+    "descripcion": "We're a nimble team of designers and developers crafting premium products, brands, and experiences — with offices in Stockholm and Reykjavík.",
+    "fondo": "#ffffff",
+    "texto": "#070707",
+    "fuenteTitular": "BentonSans",
+    "fuenteCuerpo": "BentonSans",
+    "acentos": [],
+    "alto": 10304
+  },
+  {
+    "id": "oio",
+    "nombre": "oio",
+    "url": "https://oio.studio",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 39,
+    "titulo": "✶ \\ ✶",
+    "descripcion": "future products and tools for a less-boring future",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": [
+      "#ffb5cd"
+    ],
+    "alto": 900
+  },
+  {
+    "id": "unseen-studio",
+    "nombre": "Unseen Studio",
+    "url": "https://unseen.co",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 8,
+    "titulo": "Unseen Studio® – Brand, Digital & Motion",
+    "descripcion": "We're Unseen Studio, a world-class creative production agency. We help brands transform by blending meaningful branding, compelling digital experiences and motion productions. Design Studio of the Yea",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Neue Montreal",
+    "fuenteCuerpo": "Neue Montreal",
+    "acentos": [],
+    "alto": 43
+  },
+  {
+    "id": "robin-payot",
+    "nombre": "Robin Payot",
+    "url": "https://robinpayot.com",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 16,
+    "titulo": "Robin Payot - Senior Creative Developer Freelance",
+    "descripcion": "I'm Robin Payot, a Freelance Creative Developer based in Paris, I love programming 3D or 2D websites with good design and beautiful animations using WebGL, JS, HTML, CSS, frameworks included. I've mad",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Roadgeek",
+    "fuenteCuerpo": "Lato",
+    "acentos": [],
+    "alto": 15000
+  },
+  {
+    "id": "poimandres",
+    "nombre": "Poimandres",
+    "url": "https://pmnd.rs",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 30,
+    "titulo": "Poimandres",
+    "descripcion": "Open source developer collective",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1",
+      "#0.35c28f5c28f5c20.08b4395810624e108.aa3d70a3d71"
+    ],
+    "alto": 900
+  },
+  {
+    "id": "zajno",
+    "nombre": "Zajno",
+    "url": "https://zajno.com",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 9,
+    "titulo": "Zajno Digital Studio | Web Design, Branding, 3D, Animation & Webflow Development Services",
+    "descripcion": "We are making award-winning immersive websites and apps with cool custom graphics, photos, videos, and animations. Let's Collaborate!",
+    "fondo": "#ebebeb",
+    "texto": "#1a1a1a",
+    "fuenteTitular": "s",
+    "fuenteCuerpo": "s",
+    "acentos": [
+      "#ff3928"
+    ],
+    "alto": 900
+  },
+  {
+    "id": "little-workshop",
+    "nombre": "Little Workshop",
+    "url": "https://littleworkshop.fr",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 13,
+    "titulo": "Little Workshop",
+    "descripcion": "Little Workshop is a digital studio that specializes in real-time 3D experiences: cutting-edge websites, virtual spaces, games, AR/VR apps and more.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Miso",
+    "fuenteCuerpo": "Times New Roman",
+    "acentos": [
+      "#4d8be9"
+    ],
+    "alto": 8486
+  },
+  {
+    "id": "keita-yamada",
+    "nombre": "Keita Yamada",
+    "url": "https://p5aholic.me",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 34,
+    "titulo": "Keita Yamada",
+    "descripcion": "Designer and Developer in Japan",
+    "fondo": "#e6e6e6",
+    "texto": "#000000",
+    "fuenteTitular": "Neue Montreal",
+    "fuenteCuerpo": "Neue Montreal",
+    "acentos": [],
+    "alto": 900
+  },
+  {
+    "id": "igloo",
+    "nombre": "Igloo",
+    "url": "https://igloo.inc",
+    "familia": "3d-webgl",
+    "estado": "ok",
+    "movil": false,
+    "kb": 3,
+    "titulo": "Igloo Inc.",
+    "descripcion": "Our mission is to create the largest onchain community, driving the consumer crypto revolution.",
+    "fondo": "#a0a5b1",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "Times New Roman",
+    "acentos": [],
+    "alto": 900
+  },
+  {
+    "id": "gsap",
+    "nombre": "GSAP",
+    "url": "https://gsap.com",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 34,
+    "titulo": "Homepage | GSAP",
+    "descripcion": "Supported by Webflow. Animate Anything - A wildly robust JavaScript animation library built for professionals.",
+    "fondo": "#0e100f",
+    "texto": "#fffce1",
+    "fuenteTitular": "Mori",
+    "fuenteCuerpo": "Mori",
+    "acentos": [
+      "#fffce1",
+      "#0ae448",
+      "#fec5fb",
+      "#ff8709"
+    ],
+    "alto": 9769
+  },
+  {
+    "id": "motion",
+    "nombre": "Motion",
+    "url": "https://motion.dev",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 33,
+    "titulo": "Motion (prev Framer Motion): JavaScript & React animation library",
+    "descripcion": "Motion (prev Framer Motion) is a fast, production-grade animation library for React, JavaScript and Vue. Build smooth UI animations at a tiny footprint.",
+    "fondo": "#0e1312",
+    "texto": "#ededec",
+    "fuenteTitular": "TASA Orbiter",
+    "fuenteCuerpo": "TASA Orbiter",
+    "acentos": [
+      "#0.f0a3d70a3d70a0.020c49ba5e353f860",
+      "#0.251eb851eb851e0.028f5c28f5c28f694",
+      "#0.b0a3d70a3d70a0.03126e978d4fdf494",
+      "#0.e147ae147ae1480.2e147ae147ae1460"
+    ],
+    "alto": 10819
+  },
+  {
+    "id": "lottiefiles",
+    "nombre": "LottieFiles",
+    "url": "https://lottiefiles.com",
+    "familia": "animacion",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://lottiefiles.com/"
+  },
+  {
+    "id": "dennis-snellenberg",
+    "nombre": "Dennis Snellenberg",
+    "url": "https://dennissnellenberg.com",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 2,
+    "titulo": "Dennis Snellenberg • Freelance Designer & Developer",
+    "descripcion": "Helping brands thrive in the digital world. Located in The Netherlands. Delivering tailor-made digital designs and building interactive websites from scratch. © Code by Dennis",
+    "fondo": "#1c1d20",
+    "texto": "#1c1d20",
+    "fuenteTitular": "Dennis Sans",
+    "fuenteCuerpo": "Dennis Sans",
+    "acentos": [
+      "#455ce9",
+      "#334bd3"
+    ],
+    "alto": 0
+  },
+  {
+    "id": "locomotive",
+    "nombre": "Locomotive",
+    "url": "https://locomotive.ca",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 3,
+    "titulo": "Locomotive | Montreal web agency",
+    "descripcion": "Locomotive® offers a wide range of creative and strategic services for remarkable brands, companies and organizations. Over the 15 years, Locomotive® has become a go-to for meaningful, innovative, res",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "LocomotiveNew",
+    "fuenteCuerpo": "HelveticaNowDisplay",
+    "acentos": [],
+    "alto": 6598
+  },
+  {
+    "id": "basement-studio",
+    "nombre": "Basement Studio",
+    "url": "https://basement.studio",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 102,
+    "titulo": "basement.studio | We make cool shit that performs.",
+    "descripcion": "basement.studio is a digital studio crafting brands, websites, 3D experiences, and products. We design and engineer cool shit that actually performs.",
+    "fondo": "#000000",
+    "texto": "#ffffff",
+    "fuenteTitular": "Geist",
+    "fuenteCuerpo": "Geist",
+    "acentos": [
+      "#ff4d00",
+      "#0.e6e6ea8544780.e6e6ea8544780.e6e6ea854478"
+    ],
+    "alto": 5814
+  },
+  {
+    "id": "aristide-benoist",
+    "nombre": "Aristide Benoist",
+    "url": "https://aristidebenoist.com",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 13,
+    "titulo": "Aristide Benoist — Independent developer",
+    "descripcion": "Aristide Benoist is a developer who specializes in motion and interaction. As an independent, he works with companies, agencies, startups and individuals all over the world.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "jws",
+    "acentos": [],
+    "alto": 0
+  },
+  {
+    "id": "obys-agency",
+    "nombre": "Obys Agency",
+    "url": "https://obys.agency",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 6,
+    "titulo": "Obys Agency",
+    "descripcion": "Concept-driven design studio based in the EU. Crafting award-winning brand and web experiences shaped by storytelling and strong visual systems.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "Obys",
+    "acentos": [],
+    "alto": 900
+  },
+  {
+    "id": "cuberto",
+    "nombre": "Cuberto",
+    "url": "https://cuberto.com",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 25,
+    "titulo": "Cuberto | Digital Design & Development Agency",
+    "descripcion": "Cuberto is a UI/UX design agency based in USA. We specialise in UI/UX design, branding, web, and mobile development.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Suisse Intl",
+    "fuenteCuerpo": "Suisse Intl",
+    "acentos": [],
+    "alto": 13596
+  },
+  {
+    "id": "codrops",
+    "nombre": "Codrops",
+    "url": "https://tympanus.net/codrops",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 91,
+    "titulo": "Codrops | Fueling web creativity since 2009",
+    "descripcion": "Explore the latest web design and frontend development trends with tutorials, demos, and creative coding resources.",
+    "fondo": "#f7f7f7",
+    "texto": "#26272e",
+    "fuenteTitular": "InterVariable",
+    "fuenteCuerpo": "InterVariable",
+    "acentos": [],
+    "alto": 2081
+  },
+  {
+    "id": "ochi-design",
+    "nombre": "Ochi Design",
+    "url": "https://ochi.design",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 23,
+    "titulo": "Presentation Design Agency | Presentation Design Services",
+    "descripcion": "At ochi.design we design eye-opening presentations for forward-thinking businesses | Pitch decks, sales presentations, company templates, training.",
+    "fondo": "#f1f1f1",
+    "texto": "#212121",
+    "fuenteTitular": "FoundersGrotesk",
+    "fuenteCuerpo": "NeueMontreal",
+    "acentos": [
+      "#cdea68"
+    ],
+    "alto": 11938
+  },
+  {
+    "id": "halo-lab",
+    "nombre": "Halo Lab",
+    "url": "https://www.halo-lab.com",
+    "familia": "animacion",
+    "estado": "ya-estaba",
+    "titulo": "Custom Design and Development Services — Halo Lab",
+    "descripcion": "Halo Lab is an award-winning custom web design and development company ⭐ Our team offer a reliable, customized and user-friendly solution for your business.",
+    "fondo": "#02021e",
+    "texto": "#ffffff",
+    "fuenteTitular": "Suisse",
+    "fuenteCuerpo": "Suisse",
+    "acentos": [
+      "#02021e",
+      "#3827c7",
+      "#3719ca",
+      "#3898ec"
+    ]
+  },
+  {
+    "id": "linear",
+    "nombre": "Linear",
+    "url": "https://linear.app",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Linear – The system for product development",
+    "descripcion": "Purpose-built for planning and building products with AI agents.",
+    "fondo": "#08090a",
+    "texto": "#f7f8f8",
+    "fuenteTitular": "Inter Variable",
+    "fuenteCuerpo": "Inter Variable",
+    "acentos": [
+      "#f34e52",
+      "#5e6ad2",
+      "#e4f222"
+    ]
+  },
+  {
+    "id": "stripe",
+    "nombre": "Stripe",
+    "url": "https://stripe.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Stripe | Financial Infrastructure to Grow Your Revenue",
+    "descripcion": "Stripe is a financial services platform that helps all types of businesses accept payments, build flexible billing models, and manage money movement.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "sohne-var",
+    "fuenteCuerpo": "sohne-var",
+    "acentos": [
+      "#533afd",
+      "#50617a",
+      "#061b31",
+      "#b9b9f9"
+    ]
+  },
+  {
+    "id": "exo-ape",
+    "nombre": "Exo Ape",
+    "url": "https://exoape.com",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 80,
+    "titulo": "Exo Ape - Global Digital Design Studio",
+    "descripcion": "We partner with brands and businesses that create exceptional experiences where people live, work and unwind.",
+    "fondo": "#ffffff",
+    "texto": "#0d0e13",
+    "fuenteTitular": "Lausanne-300",
+    "fuenteCuerpo": "Times New Roman",
+    "acentos": [
+      "#e0cdbd",
+      "#e0ccbb"
+    ],
+    "alto": 0
+  },
+  {
+    "id": "resend",
+    "nombre": "Resend",
+    "url": "https://resend.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Resend · Email for developers",
+    "descripcion": "The best way to reach humans instead of spam folders. Deliver transactional and marketing emails at scale.",
+    "fondo": "#000000",
+    "texto": "#f0f0f0",
+    "fuenteTitular": "domaine",
+    "fuenteCuerpo": "inter",
+    "acentos": [
+      "#3b9eff",
+      "#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d",
+      "#46fea5",
+      "#baa7ff"
+    ]
+  },
+  {
+    "id": "clerk",
+    "nombre": "Clerk",
+    "url": "https://clerk.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Clerk | Authentication and User Management",
+    "descripcion": "The easiest way to add authentication and user management to your application. Purpose-built for React, Next.js, Remix, and “The Modern Web”.",
+    "fondo": "#f7f7f8",
+    "texto": "#000000",
+    "fuenteTitular": "geistNumbers",
+    "fuenteCuerpo": "geistNumbers",
+    "acentos": [
+      "#6c47ff",
+      "#9785ff",
+      "#5de3ff"
+    ]
+  },
+  {
+    "id": "studio-freight",
+    "nombre": "Studio Freight",
+    "url": "https://studiofreight.com",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 87,
+    "titulo": "Studio Freight",
+    "descripcion": "Studio Freight delivers brands, digital experiences, campaigns, and special projects. We work across categories, continents, and capabilities to move missions forward.",
+    "fondo": "#fefdfc",
+    "texto": "#000000",
+    "fuenteTitular": "jjannon-regular",
+    "fuenteCuerpo": "Times New Roman",
+    "acentos": [],
+    "alto": 900
+  },
+  {
+    "id": "arc",
+    "nombre": "Arc",
+    "url": "https://arc.net",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Arc from The Browser Company",
+    "descripcion": "Experience a calmer, more personal internet in this browser designed for you. Let go of the clicks, the clutter, the distractions with the Arc browser.",
+    "fondo": "#fffcec",
+    "texto": "#000000",
+    "fuenteTitular": "Marlin Soft SQ",
+    "fuenteCuerpo": "Marlin",
+    "acentos": [
+      "#3139fb",
+      "#2702c2",
+      "#fffadd"
+    ]
+  },
+  {
+    "id": "framer",
+    "nombre": "Framer",
+    "url": "https://framer.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Framer: AI design agent",
+    "descripcion": "Go from idea to launch with an agent that designs and builds on the canvas. Keep each change editable, with hosting, security, analytics, CMS, and SEO built in.",
+    "fondo": "#000000",
+    "texto": "#000000",
+    "fuenteTitular": "GT Walsheim Medium",
+    "fuenteCuerpo": "sans-serif",
+    "acentos": [
+      "#0000ee",
+      "#0066ff"
+    ]
+  },
+  {
+    "id": "figma",
+    "nombre": "Figma",
+    "url": "https://figma.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Figma: The collaborative canvas for design, code, and AI",
+    "descripcion": "Figma is the canvas where design, code, and AI come together. From first idea to shipped product — go from concept to production with your whole team, in one place.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "figmaSans",
+    "fuenteCuerpo": "figmaSans",
+    "acentos": []
+  },
+  {
+    "id": "darkroom-engineering",
+    "nombre": "Darkroom Engineering",
+    "url": "https://darkroom.engineering",
+    "familia": "animacion",
+    "estado": "ok",
+    "movil": false,
+    "kb": 58,
+    "titulo": "where things get developed - darkroom.engineering",
+    "descripcion": "We're a global design and development studio shipping fast, motion-rich, and scalable digital work. WebGL, headless builds, and open source tools—crafted by a team distributed across Spain, Italy, Fra",
+    "fondo": "#000000",
+    "texto": "#31.e6a161e4f76649.6f06f694467438.fbb98c7e2824",
+    "fuenteTitular": "therma",
+    "fuenteCuerpo": "mono",
+    "acentos": [
+      "#31.e6a161e4f76649.6f06f694467438.fbb98c7e2824",
+      "#8.ae50c5eb313c1a.fc779a6b50b1b.bd2f1a9fbe77",
+      "#0.7ffe7e1fc08fa80.2cdaa0cae642c0.17d0635a426bb5"
+    ],
+    "alto": 8609
+  },
+  {
+    "id": "warp",
+    "nombre": "Warp",
+    "url": "https://warp.dev",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Warp — The Open Platform for Automating Development | Warp",
+    "descripcion": "Infrastructure to build, measure, and interact with agents across your SDLC — so you ship more and spend less.",
+    "fondo": "#ffffff",
+    "texto": "#0.11eb851eb851ec0.01cac083126e979dc",
+    "fuenteTitular": "matterMono",
+    "fuenteCuerpo": "Matter",
+    "acentos": [
+      "#2a1eff"
+    ]
+  },
+  {
+    "id": "railway",
+    "nombre": "Railway",
+    "url": "https://railway.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Railway | The all-in-one intelligent cloud provider",
+    "descripcion": "Railway is a full-stack cloud for deploying web apps, servers, databases, and more with automatic scaling, monitoring, and security.",
+    "fondo": "#13111c",
+    "texto": "#ffffff",
+    "fuenteTitular": "IBM Plex Serif",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#609f89",
+      "#c67839",
+      "#553f83",
+      "#a05fcf"
+    ]
+  },
+  {
+    "id": "supabase",
+    "nombre": "Supabase",
+    "url": "https://supabase.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Supabase | The Postgres Development Platform",
+    "descripcion": "Build production-grade applications with a Postgres database, Authentication, instant APIs, Realtime, Functions, Storage and Vector embeddings. Start for free.",
+    "fondo": "#0.feb851eb851eb80022",
+    "texto": "#0.1999999999999a0022",
+    "fuenteTitular": "Manrope",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#0.1999999999999a0022",
+      "#0.85495182a993080022",
+      "#0.feb851eb851eb80022",
+      "#0.64fb00bcbe61d0022"
+    ]
+  },
+  {
+    "id": "neon",
+    "nombre": "Neon",
+    "url": "https://neon.tech",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Neon — Postgres backends for apps and agents",
+    "descripcion": "The backend for apps and agents. Build with Lakebase Postgres, Auth, Functions, Storage, and an AI Gateway: instant, branchable, serverless.",
+    "fondo": "#000000",
+    "texto": "#ffffff",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#34d59a",
+      "#ff3621",
+      "#8.b5b2d4d4024b0.189ebc1849a2e11.95330941c8217"
+    ]
+  },
+  {
+    "id": "upstash",
+    "nombre": "Upstash",
+    "url": "https://upstash.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Upstash: Serverless Data Platform - Redis, Vector, Search",
+    "descripcion": "Serverless Redis, Vector and Search databases with low latency and pay-as-you-go pricing. Upstash is the data platform for modern and AI applications — create a Redis database in seconds.",
+    "fondo": "#60.851eb851eb840.0001f3ffe7626c8a30.0000c7ffe029debc3",
+    "texto": "#022c22",
+    "fuenteTitular": "Inter Tight",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#022c22",
+      "#2f.e346dc5d63881.a79f01b866e445.c5d82fd75e204",
+      "#2c.7cb295e9e1b29.0a2339c0ebeeb.093dd97f62b68",
+      "#42.f9c0ebedfa443a.451eb851eb8613.8ab9f559b3d"
+    ]
+  },
+  {
+    "id": "cal-com",
+    "nombre": "Cal.com",
+    "url": "https://cal.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Cal.com | Scheduling Software for Online Bookings",
+    "descripcion": "A fully customizable scheduling software for individuals, businesses taking calls and developers building scheduling platforms where users meet users.",
+    "fondo": "#f4f4f4",
+    "texto": "#000000",
+    "fuenteTitular": "Cal Sans",
+    "fuenteCuerpo": "sans-serif",
+    "acentos": [
+      "#0000ee",
+      "#0099ff"
+    ]
+  },
+  {
+    "id": "dub",
+    "nombre": "Dub",
+    "url": "https://dub.co",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Dub - The Modern Link Attribution Platform",
+    "descripcion": "Dub is the modern link attribution platform for short links, conversion tracking, and affiliate programs.",
+    "fondo": "#fafafa",
+    "texto": "#0a0a0a",
+    "fuenteTitular": "satoshi",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#3b82f6",
+      "#16a34a",
+      "#7c3aed",
+      "#7c2d12"
+    ]
+  },
+  {
+    "id": "liveblocks",
+    "nombre": "Liveblocks",
+    "url": "https://liveblocks.io",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Liveblocks | Realtime and sync for the agentic web",
+    "descripcion": "Liveblocks provides the infrastructure to handle concurrent edits on shared data, so people and AI agents can collaborate without breaking your app.",
+    "fondo": "#000000",
+    "texto": "#ffffff",
+    "fuenteTitular": "suisse",
+    "fuenteCuerpo": "suisse",
+    "acentos": [
+      "#6cefce"
+    ]
+  },
+  {
+    "id": "trigger-dev",
+    "nombre": "Trigger.dev",
+    "url": "https://trigger.dev",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Trigger.dev | Build and deploy fully-managed AI agents and workflows.",
+    "descripcion": "Trigger.dev is the open source platform for building AI workflows in TypeScript. Long-running tasks with retries, queues, observability, and elastic scaling.",
+    "fondo": "#121317",
+    "texto": "#d7d9dd",
+    "fuenteTitular": "Satoshi-Variable",
+    "fuenteCuerpo": "Geist",
+    "acentos": [
+      "#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1",
+      "#0.3906ee30caa3260.0029ed5ffb796ebe0.02042b88c4e0196",
+      "#fa3abf",
+      "#7655fd"
+    ]
+  },
+  {
+    "id": "mintlify",
+    "nombre": "Mintlify",
+    "url": "https://mintlify.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Mintlify - The Knowledge Platform Built for Agents",
+    "descripcion": "Self-updating documentation for startups, enterprises, and agents.",
+    "fondo": "#640000",
+    "texto": "#000000",
+    "fuenteTitular": "arizonaFlare",
+    "fuenteCuerpo": "inter",
+    "acentos": [
+      "#2.6d0092ccf6be40.2a5082cf52b90a0.78573a797891e4",
+      "#640000",
+      "#33.576c8b43958229.90d1b71758e2f.5a4a8c154c988",
+      "#0c8c5e"
+    ]
+  },
+  {
+    "id": "posthog",
+    "nombre": "PostHog",
+    "url": "https://posthog.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "PostHog – We make your product self-driving",
+    "descripcion": "PostHog automatically diagnoses problems, fixes bugs, and generates pull requests – all without you having to prompt it.",
+    "fondo": "#eeefe9",
+    "texto": "#000000",
+    "fuenteTitular": "RoundHog",
+    "fuenteCuerpo": "RoundHog",
+    "acentos": [
+      "#2f80fa",
+      "#b62ad9",
+      "#b17816",
+      "#f7a501"
+    ]
+  },
+  {
+    "id": "sentry",
+    "nombre": "Sentry",
+    "url": "https://sentry.io",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Application Performance Monitoring & Error Tracking Software | Sentry",
+    "descripcion": "Application performance monitoring for developers & software teams to see errors clearer, solve issues faster & continue learning continuously. Get started at sentry.io.",
+    "fondo": "#1f1633",
+    "texto": "#ffffff",
+    "fuenteTitular": "Dammit Sans",
+    "fuenteCuerpo": "Rubik",
+    "acentos": [
+      "#4e2a9a",
+      "#6a5fc1",
+      "#1f1633",
+      "#c2ef4e"
+    ]
+  },
+  {
+    "id": "retool",
+    "nombre": "Retool",
+    "url": "https://retool.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Build internal software better, with AI. | Retool",
+    "descripcion": "Build, deploy, and manage internal tools with Retool's unified engine. Connect to any database, API, or LLM. Leverage AI throughout your business.",
+    "fondo": "#151515",
+    "texto": "#e9ebdf",
+    "fuenteTitular": "saansFont",
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": [
+      "#518dd2"
+    ]
+  },
+  {
+    "id": "height",
+    "nombre": "Height",
+    "url": "https://height.app",
+    "familia": "producto-saas",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://height.app/"
+  },
+  {
+    "id": "attio",
+    "nombre": "Attio",
+    "url": "https://attio.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Attio: The CRM for agentic revenue",
+    "descripcion": "The system for revenue teams to build pipeline, accelerate deals, and grow accounts around the clock.\t",
+    "fondo": "#63.ffaacd9e83e40.08a6d76fbdfdfd0.00144fff57f59b89",
+    "texto": "#a.b858793dd97f80.188d28720f11151.8ab4b72c5197a",
+    "fuenteTitular": "interDisplay",
+    "fuenteCuerpo": "inter",
+    "acentos": [
+      "#56.195182a9930c0.c72a5a469d7344.189a02752546",
+      "#a.b858793dd97f80.188d28720f11151.8ab4b72c5197a",
+      "#25.6d0e560418941.176d330941c829.55273d5bab218",
+      "#14.91d7dbf487fd0.a36fd21ff2e494.71c193b3a68b"
+    ]
+  },
+  {
+    "id": "mercury",
+    "nombre": "Mercury",
+    "url": "https://mercury.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Online Business Banking For Startups, Small Businesses & Scaling Companies",
+    "descripcion": "Everything you do with money. All in one place. Apply in 10 minutes for business banking that transforms how you operate.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "arcadiaDisplay",
+    "fuenteCuerpo": "arcadia",
+    "acentos": [
+      "#5266eb",
+      "#fc92b4"
+    ]
+  },
+  {
+    "id": "ramp",
+    "nombre": "Ramp",
+    "url": "https://ramp.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "",
+    "descripcion": "",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "Times New Roman",
+    "acentos": []
+  },
+  {
+    "id": "zed",
+    "nombre": "Zed",
+    "url": "https://zed.dev",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Zed — Your last next editor",
+    "descripcion": "Zed is a high-performance, multiplayer code editor from the creators of Atom and Tree-sitter.",
+    "fondo": "#ffffff",
+    "texto": "#0.5be60c38f366940.03f73e905e8774e106.e1cac083127",
+    "fuenteTitular": "plexSerif",
+    "fuenteCuerpo": "writer",
+    "acentos": [
+      "#5b.9f765fd8adac0.28bbc2b94d94082.4495bff04577e",
+      "#0.5be60c38f366940.03f73e905e8774e106.e1cac083127",
+      "#24.54d6a161e4f81f.2be76c8b439651.005bc01a36e4",
+      "#0.cf7ff151e75360.005b870f535a1a280.02dcf96aba88fd6"
+    ]
+  },
+  {
+    "id": "val-town",
+    "nombre": "Val Town",
+    "url": "https://val.town",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Val Town",
+    "descripcion": "A nice place for JavaScript",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Sprig Sans",
+    "fuenteCuerpo": "IBM Plex Sans",
+    "acentos": [
+      "#0.edd2f1a9fbe770.0353f7ced916872ff.820c49ba5e38",
+      "#0.716872b020c49c0.1c28f5c28f5c29f0.ca3d70a3d708",
+      "#0.bef9db22d0e560.28f5c28f5c28f6e8.a9374bc6a7f",
+      "#0.4b020c49ba5e340.10e5604189374cf3.283126e978d8"
+    ]
+  },
+  {
+    "id": "modal",
+    "nombre": "Modal",
+    "url": "https://modal.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Modal: High-performance AI infrastructure",
+    "descripcion": "Bring your own code, and run CPU, GPU, and data-intensive compute at scale. The serverless platform for AI and data teams.",
+    "fondo": "#000000",
+    "texto": "#ddffdc",
+    "fuenteTitular": "Goga",
+    "fuenteCuerpo": "Inter Variable",
+    "acentos": [
+      "#ddffdc",
+      "#0.f76b2af14552180.0c1974454c3a6b0.08b0de59bd0ab8",
+      "#7fee64"
+    ]
+  },
+  {
+    "id": "baseten",
+    "nombre": "Baseten",
+    "url": "https://baseten.co",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Inference Platform: Deploy AI models in production | Baseten",
+    "descripcion": "Serve and scale open-source and custom AI models on the fastest, most reliable inference platform.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "NeueAlteGrotesk",
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": [
+      "#19e76e"
+    ]
+  },
+  {
+    "id": "replicate",
+    "nombre": "Replicate",
+    "url": "https://replicate.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Replicate - Run AI with an API",
+    "descripcion": "Run open-source machine learning models with a cloud API",
+    "fondo": "#ffffff",
+    "texto": "#202020",
+    "fuenteTitular": "basier-square",
+    "fuenteCuerpo": "basier-square",
+    "acentos": [
+      "#dd4425",
+      "#ea2804"
+    ]
+  },
+  {
+    "id": "groq",
+    "nombre": "Groq",
+    "url": "https://groq.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Groq is the premier neocloud for fast inference",
+    "descripcion": "Groq is the premier neocloud for fast inference. One fully integrated platform for infrastructure, inference, and control. Millions of developers run trillions of tokens on Groq every week.",
+    "fondo": "#f3f3ee",
+    "texto": "#2d2f33",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "esBuild",
+    "acentos": [
+      "#f43e01"
+    ]
+  },
+  {
+    "id": "anthropic",
+    "nombre": "Anthropic",
+    "url": "https://anthropic.com",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Home \\ Anthropic",
+    "descripcion": "Anthropic is an AI safety and research company that's working to build reliable, interpretable, and steerable AI systems.",
+    "fondo": "#faf9f5",
+    "texto": "#141413",
+    "fuenteTitular": "Anthropic Sans",
+    "fuenteCuerpo": "Anthropic Serif",
+    "acentos": [
+      "#c6613f",
+      "#d97757"
+    ]
+  },
+  {
+    "id": "loops",
+    "nombre": "Loops",
+    "url": "https://loops.so",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Loops | Email Marketing Software for SaaS Teams",
+    "descripcion": "Loops is email marketing software for SaaS teams to send marketing, lifecycle, and transactional email from one product. Free to start.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Newsreader",
+    "fuenteCuerpo": "sans-serif",
+    "acentos": [
+      "#0000ee",
+      "#d97757",
+      "#fc5200"
+    ]
+  },
+  {
+    "id": "tella",
+    "nombre": "Tella",
+    "url": "https://tella.tv",
+    "familia": "producto-saas",
+    "estado": "ya-estaba",
+    "titulo": "Tella | All-in-One Screen Recorder for Mac, Windows & Chrome",
+    "descripcion": "Tella is screen recording software for Mac, Windows, and the web. Record your screen, camera, microphone, and system audio, edit with AI, then share or export in up to 4K.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#0.ffff9b56323bc0.0002fc8035f3c17e20.00015100262a310d",
+      "#5e51f8",
+      "#c2bdfc",
+      "#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d"
+    ]
+  },
+  {
+    "id": "tailwind-css",
+    "nombre": "Tailwind CSS",
+    "url": "https://tailwindcss.com",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Tailwind CSS - Rapidly build modern websites without ever leaving your HTML.",
+    "descripcion": "Tailwind CSS is a utility-first CSS framework for rapidly building modern websites without ever leaving your HTML.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "inter",
+    "fuenteCuerpo": "inter",
+    "acentos": [
+      "#1.e7414a4d2b2c0.47589efd86a8fc5.7d18d25edd054",
+      "#23.29fbe76c8b449.93b107746887822.68240b780346",
+      "#10.1ae7d566cf421.2eb11c6d1e109b.c0d844d013a9",
+      "#31.8c9eecbfb15c4f.d68db8bac712.515379fa97e14"
+    ]
+  },
+  {
+    "id": "astro",
+    "nombre": "Astro",
+    "url": "https://astro.build",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Astro",
+    "descripcion": "Astro builds fast content sites, powerful web applications, dynamic server APIs, and everything in-between.",
+    "fondo": "#ffffff",
+    "texto": "#f2f6fa",
+    "fuenteTitular": "Obviously",
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": [
+      "#3178c6",
+      "#61dafb",
+      "#d83333"
+    ]
+  },
+  {
+    "id": "bun",
+    "nombre": "Bun",
+    "url": "https://bun.sh",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Bun — A fast all-in-one JavaScript runtime",
+    "descripcion": "Bundle, install, and run JavaScript & TypeScript — all in Bun. Bun is a fast JavaScript runtime & toolkit with a bundler, test runner, and npm-compatible package manager built in.",
+    "fondo": "#ffffff",
+    "texto": "#0a0a0a",
+    "fuenteTitular": "Archivo",
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": [
+      "#009150",
+      "#c27803",
+      "#ff1f8f",
+      "#28dc82"
+    ]
+  },
+  {
+    "id": "deno",
+    "nombre": "Deno",
+    "url": "https://deno.com",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Deno, the drop-in JavaScript runtime for Node developers",
+    "descripcion": "A drop-in JavaScript runtime with built-in TypeScript, npm support, and security by default. Run your existing Node project on Deno with no setup.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#70ffaf",
+      "#01c2ff",
+      "#db01ff",
+      "#66c2ff"
+    ]
+  },
+  {
+    "id": "nuxt",
+    "nombre": "Nuxt",
+    "url": "https://nuxt.com",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Nuxt: The Full-Stack Vue Framework",
+    "descripcion": "Build fast, production-ready web apps with Vue. File-based routing, auto-imports, and server-side rendering — all configured out of the box.",
+    "fondo": "#0.210624dd2f1aa0.0ac083126e978d8108.b1eb851eb85",
+    "texto": "#0.edd2f1a9fbe770.0353f7ced916872ff.820c49ba5e38",
+    "fuenteTitular": "Public Sans",
+    "fuenteCuerpo": "Public Sans",
+    "acentos": [
+      "#0.edd2f1a9fbe770.0353f7ced916872ff.820c49ba5e38",
+      "#0.b4395810624dd0.0a3d70a3d70a3d8100.c9ba5e353f8",
+      "#0.210624dd2f1aa0.0ac083126e978d8108.b1eb851eb85",
+      "#0.353f7ced9168720.0ac083126e978d8109.c147ae147ae"
+    ]
+  },
+  {
+    "id": "svelte",
+    "nombre": "Svelte",
+    "url": "https://svelte.dev",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Svelte • Web development for the rest of us",
+    "descripcion": "Web development for the rest of us",
+    "fondo": "#ffffff",
+    "texto": "#262626",
+    "fuenteTitular": "DM Serif Display",
+    "fuenteCuerpo": "Georgia",
+    "acentos": [
+      "#d43008",
+      "#f8603a"
+    ]
+  },
+  {
+    "id": "biome",
+    "nombre": "Biome",
+    "url": "https://biomejs.dev",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Biome, toolchain of the web",
+    "descripcion": "Format, lint, and more in a fraction of a second.",
+    "fondo": "#ffffff",
+    "texto": "#353841",
+    "fuenteTitular": "Geist-b17c5c92c1d3a205",
+    "fuenteCuerpo": "Geist-b17c5c92c1d3a205",
+    "acentos": [
+      "#0065da",
+      "#0000ee",
+      "#9a6700",
+      "#edd1fa"
+    ]
+  },
+  {
+    "id": "turso",
+    "nombre": "Turso",
+    "url": "https://turso.tech",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Turso - Millions of Databases. One Architecture.",
+    "descripcion": "Turso is the SQLite-based database architecture for millions of databases. Spin up a database for every user, agent, and tenant, with embedded replication, per-database encryption, and economics that ",
+    "fondo": "#0d1318",
+    "texto": "#ffffff",
+    "fuenteTitular": "__Inter_f367f3",
+    "fuenteCuerpo": "__Inter_f367f3",
+    "acentos": [
+      "#4ff8d2",
+      "#283945",
+      "#e879f9",
+      "#d946ef"
+    ]
+  },
+  {
+    "id": "hugging-face",
+    "nombre": "Hugging Face",
+    "url": "https://huggingface.co",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Hugging Face – The AI community building the future.",
+    "descripcion": "We’re on a journey to advance and democratize artificial intelligence through open source and open science.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Source Sans Pro",
+    "fuenteCuerpo": "Source Sans Pro",
+    "acentos": [
+      "#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1",
+      "#0.b4fdf3b645a1c80.05a1cac083126e8105.53333333333",
+      "#0.f78d4fdf3b64580.00c49ba5e353f7d108.8ac083126e9",
+      "#0.722d0e560418940.07ae147ae147ae100.cd4fdf3b646"
+    ]
+  },
+  {
+    "id": "prisma",
+    "nombre": "Prisma",
+    "url": "https://prisma.io",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Prisma | Agent Infrastructure for TypeScript",
+    "descripcion": "Prisma gives TypeScript and Node.js teams Prisma ORM, Prisma Postgres, and Prisma Compute: a type-safe ORM, managed Postgres, and Compute for deploying TypeScript apps, from schema to deployed app.",
+    "fondo": "#640000",
+    "texto": "#3a3b3c",
+    "fuenteTitular": "Sora",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#5a.f3b645a1cac000.0000c7ffe029debc3",
+      "#00bbcb",
+      "#0.5a0817fc7607c40.003556c20c321b0e0.00858189ad68588",
+      "#0.81a95421c044280.00138fffbce4217d0.00dbc914059b7568"
+    ]
+  },
+  {
+    "id": "trpc",
+    "nombre": "tRPC",
+    "url": "https://trpc.io",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "tRPC - Move Fast and Break Nothing. End-to-end typesafe APIs made easy. | tRPC",
+    "descripcion": "End-to-end typesafe APIs made easy. Automatic typesafety & autocompletion inferred from your API-paths, their input data, & outputs 🧙‍♂️",
+    "fondo": "#ffffff",
+    "texto": "#1c1e21",
+    "fuenteTitular": "system-ui",
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": [
+      "#398ccb",
+      "#1e293b",
+      "#4f46e5",
+      "#d97706"
+    ]
+  },
+  {
+    "id": "drizzle",
+    "nombre": "Drizzle",
+    "url": "https://orm.drizzle.team",
+    "familia": "dev-docs",
+    "estado": "ya-estaba",
+    "titulo": "Drizzle ORM - next gen TypeScript ORM.",
+    "descripcion": "Drizzle ORM is a lightweight and performant TypeScript ORM with developer experience in mind.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "ui-sans-serif",
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": [
+      "#334155",
+      "#fd7776"
+    ]
+  },
+  {
+    "id": "material-3",
+    "nombre": "Material 3",
+    "url": "https://m3.material.io",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Material Design 3 - Google's latest open source design system",
+    "descripcion": "Material Design 3 - Google's open-source design system, provides comprehensive guidelines, styles, &  components to create user-friendly interfaces.",
+    "fondo": "#ffffff",
+    "texto": "#1f1f1f",
+    "fuenteTitular": "Google Sans",
+    "fuenteCuerpo": "Google Sans Text",
+    "acentos": [
+      "#6442d6",
+      "#f1d3f9"
+    ]
+  },
+  {
+    "id": "android-developers",
+    "nombre": "Android Developers",
+    "url": "https://developer.android.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Android Mobile App Developer Tools - Android Developers",
+    "descripcion": "Discover the latest app development tools, platform updates, training, and documentation for developers across every Android device.\n",
+    "fondo": "#ffffff",
+    "texto": "#202124",
+    "fuenteTitular": "Google Sans",
+    "fuenteCuerpo": "Google Sans Text",
+    "acentos": [
+      "#174ea6",
+      "#1967d2",
+      "#1a73e8",
+      "#f66453"
+    ]
+  },
+  {
+    "id": "family",
+    "nombre": "Family",
+    "url": "https://family.co",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Family",
+    "descripcion": "Your favorite crypto wallet.",
+    "fondo": "#ffffff",
+    "texto": "#474645",
+    "fuenteTitular": "Family",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#030.3737329c347e8c0.84848387df5cf",
+      "#1a88f8",
+      "#030.7474751ce28ed40.7474751ce28ed4",
+      "#030.84848387df5cf0.828283d35eb748"
+    ]
+  },
+  {
+    "id": "cash-app",
+    "nombre": "Cash App",
+    "url": "https://cash.app",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Send, Receive, Invest, & Manage Your Money with Cash App",
+    "descripcion": "Download Cash App to send & receive money instantly, spend with the Cash App Card, buy bitcoin, invest in stocks, & manage your finances.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Cash Sans",
+    "fuenteCuerpo": "Cash Sans",
+    "acentos": [
+      "#0000ee"
+    ]
+  },
+  {
+    "id": "revolut",
+    "nombre": "Revolut",
+    "url": "https://revolut.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Just a moment...",
+    "descripcion": "",
+    "fondo": "#ffffff",
+    "texto": "#191c1f",
+    "fuenteTitular": "Aeonik Pro",
+    "fuenteCuerpo": "Inter",
+    "acentos": []
+  },
+  {
+    "id": "monzo",
+    "nombre": "Monzo",
+    "url": "https://monzo.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Monzo | Open a Free Account",
+    "descripcion": "Your salary sorted into Pots. Your spare change turned into savings. Your money, doing what it should with Monzo.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "MonzoSansDisplay",
+    "fuenteCuerpo": "MonzoSansText",
+    "acentos": [
+      "#0000ee",
+      "#ff4f40",
+      "#001825"
+    ]
+  },
+  {
+    "id": "n26",
+    "nombre": "N26",
+    "url": "https://n26.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Love your bank | Spend, save, and invest in one app",
+    "descripcion": "N26 is the first bank you'll love. Beautifully simple, 100% mobile, and trusted by millions. Open your free bank account in minutes.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "N26-Extended",
+    "fuenteCuerpo": "N26",
+    "acentos": [
+      "#003b39",
+      "#088177"
+    ]
+  },
+  {
+    "id": "nubank",
+    "nombre": "Nubank",
+    "url": "https://nubank.com.br",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Somos incansáveis pra você não precisar ser | Nubank",
+    "descripcion": "Saiba mais sobre o Nubank - sua vida financeira sem complicações, asteriscos ou letras miúdas.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "nuSansDisplay",
+    "fuenteCuerpo": "nuSansDisplay",
+    "acentos": [
+      "#8d0de3",
+      "#ecdfff",
+      "#1e002f",
+      "#714f8f"
+    ]
+  },
+  {
+    "id": "duolingo",
+    "nombre": "Duolingo",
+    "url": "https://duolingo.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Duolingo - The world’s most popular way to learn",
+    "descripcion": "Free, fun, and effective courses in languages and more. Learn with quick, science-based lessons personalized to you.",
+    "fondo": "#ffffff",
+    "texto": "#3c3c3c",
+    "fuenteTitular": "duolingo-sans",
+    "fuenteCuerpo": "sans-serif",
+    "acentos": [
+      "#a5ed6e",
+      "#58cc02",
+      "#1cb0f6",
+      "#0000ee"
+    ]
+  },
+  {
+    "id": "headspace",
+    "nombre": "Headspace",
+    "url": "https://headspace.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Mental Health App for Meditation & Sleep - Headspace",
+    "descripcion": "Live a healthier, happier, more well-rested life in just a few minutes a day. Get the science-backed mental health app for every moment. Try for free.",
+    "fondo": "#ffffff",
+    "texto": "#4b4c4d",
+    "fuenteTitular": "Headspace Apercu",
+    "fuenteCuerpo": "Headspace Apercu",
+    "acentos": [
+      "#0000ee",
+      "#0061ef"
+    ]
+  },
+  {
+    "id": "raycast",
+    "nombre": "Raycast",
+    "url": "https://raycast.com",
+    "familia": "producto-saas",
+    "estado": "ok",
+    "movil": false,
+    "kb": 11,
+    "titulo": "Raycast - Your shortcut to everything",
+    "descripcion": "A collection of powerful productivity tools all within an extendable launcher.",
+    "fondo": "#07080a",
+    "texto": "#ffffff",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": [],
+    "alto": 15681
+  },
+  {
+    "id": "strava",
+    "nombre": "Strava",
+    "url": "https://strava.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Strava | Running, Cycling & Hiking App - Train, Track & Share",
+    "descripcion": "Strava connects millions of runners, cyclists, hikers, walkers and other active people through the sports they love – all on our mobile app and website.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Boathouse",
+    "fuenteCuerpo": "Boathouse",
+    "acentos": [
+      "#fc5200",
+      "#0060d0",
+      "#1032cf"
+    ]
+  },
+  {
+    "id": "whoop",
+    "nombre": "Whoop",
+    "url": "https://whoop.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Attention Required! | Cloudflare",
+    "descripcion": "",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "-apple-system",
+    "fuenteCuerpo": "Times New Roman",
+    "acentos": [
+      "#0051c3"
+    ]
+  },
+  {
+    "id": "oura",
+    "nombre": "Oura",
+    "url": "https://ouraring.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Oura Ring. Smart Ring for Fitness, Stress, Sleep & Health.",
+    "descripcion": "Enhance your health journey with Oura. The Oura Ring provides round-the-clock insights into sleep, fitness, and stress for wellness. Now HSA/FSA eligible.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Editorial New",
+    "fuenteCuerpo": "AkkuratLL",
+    "acentos": [
+      "#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d",
+      "#172b85",
+      "#2a72de"
+    ]
+  },
+  {
+    "id": "wise",
+    "nombre": "Wise",
+    "url": "https://wise.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Wise: The international account | Money without borders | Wise United States",
+    "descripcion": "Banks charge a lot for overseas transfers. We don't. Transfer money abroad easily and quickly with our low cost money transfers.",
+    "fondo": "#ffffff",
+    "texto": "#454745",
+    "fuenteTitular": "Wise Sans",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#163300",
+      "#9fe870",
+      "#054d28"
+    ]
+  },
+  {
+    "id": "klarna",
+    "nombre": "Klarna",
+    "url": "https://klarna.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Access Denied",
+    "descripcion": "",
+    "fondo": "#ffffff",
+    "texto": "#0b051d",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "-apple-system",
+    "acentos": []
+  },
+  {
+    "id": "robinhood",
+    "nombre": "Robinhood",
+    "url": "https://robinhood.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Robinhood: 24/5 Commission-Free Stock Trading & Investing",
+    "descripcion": "Trade stocks on Robinhood with commission-free investing & advanced trading tools. Access fractional shares, real-time market data, and more. Terms and fees may apply.",
+    "fondo": "#000000",
+    "texto": "#000000",
+    "fuenteTitular": "Martina Plantijn",
+    "fuenteCuerpo": "Capsule Sans Text",
+    "acentos": [
+      "#ccff00",
+      "#0000ee"
+    ]
+  },
+  {
+    "id": "flighty",
+    "nombre": "Flighty",
+    "url": "https://flighty.app",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Flighty — Live Flight Tracker: Get flight alerts faster than the airlines",
+    "descripcion": "The only app that tells you everything about your flight and tracks your lifetime of travel. Get real-time updates, the fastest alerts, and delay predictions, so you're always the first to know and re",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "system-ui",
+    "fuenteCuerpo": "sans-serif",
+    "acentos": [
+      "#0000ee",
+      "#f7be00",
+      "#007bff"
+    ]
+  },
+  {
+    "id": "day-one",
+    "nombre": "Day One",
+    "url": "https://dayoneapp.com",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Day One Journal App | Your Journal For Life",
+    "descripcion": "The award-winning journal app for capturing life as you live it. Free to download on iPhone, Android, iPad, and Mac. Now available on the web.",
+    "fondo": "#ffffff",
+    "texto": "#333b40",
+    "fuenteTitular": "Avenir Next",
+    "fuenteCuerpo": "Avenir Next",
+    "acentos": [
+      "#1e75ae",
+      "#0a112d",
+      "#1b95e0",
+      "#248bd9"
+    ]
+  },
+  {
+    "id": "craft",
+    "nombre": "Craft",
+    "url": "https://craft.do",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Craft — Productivity App for Notes, Tasks, and Docs",
+    "descripcion": "A free notes and productivity app that follows you across all your devices. Premium features available.",
+    "fondo": "#fcf9f7",
+    "texto": "#030302",
+    "fuenteTitular": "UntitledSerifFont",
+    "fuenteCuerpo": "UntitledSansFont",
+    "acentos": [
+      "#9bd8a9",
+      "#0087ff"
+    ]
+  },
+  {
+    "id": "bear",
+    "nombre": "Bear",
+    "url": "https://bear.app",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Bear - Markdown Notes",
+    "descripcion": "Bear is a beautiful, powerfully simple Markdown note taking app to capture, write, and organize your life.",
+    "fondo": "#ffffff",
+    "texto": "#444444",
+    "fuenteTitular": "bearsansheadline",
+    "fuenteCuerpo": "bearsans",
+    "acentos": [
+      "#dd4c4f",
+      "#456aa3",
+      "#884aa8",
+      "#2b6451"
+    ]
+  },
+  {
+    "id": "halide",
+    "nombre": "Halide",
+    "url": "https://halide.cam",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Halide — The best pro camera for iPhone and iPad",
+    "descripcion": "Halide",
+    "fondo": "#020507",
+    "texto": "#000000",
+    "fuenteTitular": "HalideRouterNeue",
+    "fuenteCuerpo": "HalideRouterNeue",
+    "acentos": [
+      "#fffe4f"
+    ]
+  },
+  {
+    "id": "darkroom",
+    "nombre": "Darkroom",
+    "url": "https://darkroom.co",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Darkroom — Photo & Video Editor",
+    "descripcion": "Everything to edit. No import needed. Curves, masks, and color grading for the photos and videos already in Apple Photos. Try every tool free.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "system",
+    "fuenteCuerpo": "system",
+    "acentos": [
+      "#c7042e",
+      "#943420",
+      "#4b2a63",
+      "#8a4a3e"
+    ]
+  },
+  {
+    "id": "airbnb-design",
+    "nombre": "Airbnb Design",
+    "url": "https://airbnb.design",
+    "familia": "movil-android",
+    "estado": "ya-estaba",
+    "titulo": "Airbnb | Vacation rentals, cabins, beach houses, & more",
+    "descripcion": "Get an Airbnb for every kind of trip → 8 million vacation rentals → 2 million Guest Favorites → 220+ countries and regions worldwide",
+    "fondo": "#ffffff",
+    "texto": "#222222",
+    "fuenteTitular": "Airbnb Cereal VF",
+    "fuenteCuerpo": "Airbnb Cereal VF",
+    "acentos": [
+      "#ff385c"
+    ]
+  },
+  {
+    "id": "apple",
+    "nombre": "Apple",
+    "url": "https://apple.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Apple",
+    "descripcion": "",
+    "fondo": "#ffffff",
+    "texto": "#1d1d1f",
+    "fuenteTitular": "SF Pro Text",
+    "fuenteCuerpo": "SF Pro Text",
+    "acentos": [
+      "#0066cc",
+      "#0071e3",
+      "#2997ff"
+    ]
+  },
+  {
+    "id": "teenage-engineering",
+    "nombre": "Teenage Engineering",
+    "url": "https://teenage.engineering",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "teenage engineering",
+    "descripcion": "teenage engineering creates high quality, well designed, electronic products for all people who love sound and music.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": null,
+    "fuenteCuerpo": "te-20",
+    "acentos": []
+  },
+  {
+    "id": "nothing",
+    "nombre": "Nothing",
+    "url": "https://nothing.tech",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Nothing | UK",
+    "descripcion": "Here at Nothing, we’re building a world where tech is fun again. Remember a time where every new product made you excited? We’re bringing that back.",
+    "fondo": "#f4f4f4",
+    "texto": "#000000",
+    "fuenteTitular": "NType82-Regular",
+    "fuenteCuerpo": "NType82-Regular",
+    "acentos": []
+  },
+  {
+    "id": "aesop",
+    "nombre": "Aesop",
+    "url": "https://aesop.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Just a moment...",
+    "descripcion": "",
+    "fondo": "#ffffff",
+    "texto": "#313131",
+    "fuenteTitular": "system-ui",
+    "fuenteCuerpo": "system-ui",
+    "acentos": [
+      "#0000ee"
+    ]
+  },
+  {
+    "id": "koto",
+    "nombre": "Koto",
+    "url": "https://koto.studio",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Koto, an international creative agency building impactful brands",
+    "descripcion": "​​Meet Koto — a creative studio that partners with brands to shape the future with optimism, collaboration, and craft. Come see what we’re building.\n",
+    "fondo": "#ffffff",
+    "texto": "#ffffff",
+    "fuenteTitular": "gtKotoheimCondensed",
+    "fuenteCuerpo": "gtKotoheim",
+    "acentos": []
+  },
+  {
+    "id": "pentagram",
+    "nombre": "Pentagram",
+    "url": "https://pentagram.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Pentagram — The world’s largest independent design consultancy",
+    "descripcion": "Pentagram is the world’s largest independent design consultancy. The firm is owned and run by 24 partners, each of whom are leaders in their individual fields.",
+    "fondo": "#ffffff",
+    "texto": "#1a1a1a",
+    "fuenteTitular": "Plain",
+    "fuenteCuerpo": "Plain",
+    "acentos": []
+  },
+  {
+    "id": "collins",
+    "nombre": "Collins",
+    "url": "https://wearecollins.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "COLLINS",
+    "descripcion": "Make your company as valuable as it is unignorable.",
+    "fondo": "#ffffff",
+    "texto": "#140700",
+    "fuenteTitular": "Portrait Text",
+    "fuenteCuerpo": "Times New Roman",
+    "acentos": []
+  },
+  {
+    "id": "instrument",
+    "nombre": "Instrument",
+    "url": "https://instrument.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Instrument | A technology-led brand, product, & marketing agency | Instrument",
+    "descripcion": "We are a design and technology company helping brands unlock their full potential.",
+    "fondo": "#ffffff",
+    "texto": "#070708",
+    "fuenteTitular": "Instrument-Sans",
+    "fuenteCuerpo": "Instrument-Sans",
+    "acentos": []
+  },
+  {
+    "id": "hello-monday",
+    "nombre": "Hello Monday",
+    "url": "https://hellomonday.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Hello Monday",
+    "descripcion": "Hello Monday is a creative studio in New York, Copenhagen, and Aarhus that handcrafts digital (and magical) products, brands, and experiences.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "ClarendonBTWXX-Light",
+    "fuenteCuerpo": "nb_internationalproregular",
+    "acentos": []
+  },
+  {
+    "id": "buck",
+    "nombre": "Buck",
+    "url": "https://buck.co",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "BUCK",
+    "descripcion": "BUCK is a global creative company that brings brands, stories, and experiences to life through art, design, and technology.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Mabry",
+    "fuenteCuerpo": "Mabry",
+    "acentos": [
+      "#ffd42d"
+    ]
+  },
+  {
+    "id": "area-17",
+    "nombre": "AREA 17",
+    "url": "https://area17.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "AREA 17 — Brand, experience, and technology transformation",
+    "descripcion": "AREA 17 partners with the world’s most influential organizations to realize their vision and achieve their greatest impact.",
+    "fondo": "#ffffff",
+    "texto": "#1a1a1a",
+    "fuenteTitular": "ui-sans-serif",
+    "fuenteCuerpo": "ui-sans-serif",
+    "acentos": []
+  },
+  {
+    "id": "pitch",
+    "nombre": "Pitch",
+    "url": "https://pitch.com",
+    "familia": "producto-saas",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://pitch.com/"
+  },
+  {
+    "id": "mailchimp",
+    "nombre": "Mailchimp",
+    "url": "https://mailchimp.com",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "Email & SMS Marketing Platform | Mailchimp",
+    "descripcion": "Utilize real-time user behavior data and artificial intelligence to convert more customers. Easy to use, get started for free!",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Means Web",
+    "fuenteCuerpo": "Graphik Web",
+    "acentos": [
+      "#004e56",
+      "#ffe01b"
+    ]
+  },
+  {
+    "id": "rapha",
+    "nombre": "Rapha",
+    "url": "https://rapha.cc",
+    "familia": "marca-editorial",
+    "estado": "ya-estaba",
+    "titulo": "The World's Finest Cycling Clothing and Accessories | Rapha",
+    "descripcion": "We exist to inspire the world to live life by bike, because it’s never just a ride. Shop the world’s finest riding apparel, made by cyclists, for cyclists.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "raphaSansCondensed",
+    "fuenteCuerpo": "raphaSerifText",
+    "acentos": [
+      "#0000ee",
+      "#dcb9d1",
+      "#462639",
+      "#641b5c"
+    ]
+  },
+  {
+    "id": "calm",
+    "nombre": "Calm",
+    "url": "https://calm.com",
+    "familia": "movil-android",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://calm.com/"
+  },
+  {
+    "id": "godly",
+    "nombre": "Godly",
+    "url": "https://godly.website",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Recent — Design Inspiration",
+    "descripcion": "The best design inspiration on the Internet.",
+    "fondo": "#ffffff",
+    "texto": "#0b0b0b",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#0.266666666666660000"
+    ]
+  },
+  {
+    "id": "patagonia",
+    "nombre": "Patagonia",
+    "url": "https://patagonia.com",
+    "familia": "marca-editorial",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://patagonia.com/"
+  },
+  {
+    "id": "minimal-gallery",
+    "nombre": "Minimal Gallery",
+    "url": "https://minimal.gallery",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Minimal Gallery – Hand-picked web design inspiration, premium templates, tools and more",
+    "descripcion": "Get inspiration from the best modern website designs, submitted by talented designers worldwide. Discover new sites daily, plus premium Framer & Webflow templates and useful tools for creatives",
+    "fondo": "#000000",
+    "texto": "#b3b3b3",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#ff7373"
+    ]
+  },
+  {
+    "id": "lapa-ninja",
+    "nombre": "Lapa Ninja",
+    "url": "https://lapa.ninja",
+    "familia": "galerias",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://lapa.ninja/"
+  },
+  {
+    "id": "httpster",
+    "nombre": "Httpster",
+    "url": "https://httpster.net",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Website Design Inspiration | Httpster",
+    "descripcion": "Website design inspiration. Get inspired by our gallery of creative design ideas and great examples of beautiful award-winning sites.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Manrope",
+    "fuenteCuerpo": "Manrope",
+    "acentos": []
+  },
+  {
+    "id": "one-page-love",
+    "nombre": "One Page Love",
+    "url": "https://onepagelove.com",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "One Page Love — One Page Website Inspiration and Templates",
+    "descripcion": "One Page Love is a One Page website design gallery showcasing the best Single Page websites, templates and resources.",
+    "fondo": "#ffffff",
+    "texto": "#2d251f",
+    "fuenteTitular": "Geist",
+    "fuenteCuerpo": "-apple-system",
+    "acentos": [
+      "#7e6858",
+      "#d94f5c",
+      "#9b816f",
+      "#b09b8d"
+    ]
+  },
+  {
+    "id": "dark-mode-design",
+    "nombre": "Dark Mode Design",
+    "url": "https://darkmodedesign.com",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Dark Mode Design 🌘 Handpicked website inspiration",
+    "descripcion": "Dark Mode Design is a showcase of beautifully designed and inspiring dark mode websites. Dim the lights, lower your screen brightness, and enjoy.",
+    "fondo": "#000000",
+    "texto": "#ffffff",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": [
+      "#0000ee"
+    ]
+  },
+  {
+    "id": "saas-landing-page",
+    "nombre": "SaaS Landing Page",
+    "url": "https://saaslandingpage.com",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "The Best Landing Page Examples For Design Inspiration - SaaS Landing Page",
+    "descripcion": "SaaS Landing Page showcases the best landing page examples created by top-class SaaS companies. Get ideas and inspirations for your next design project.",
+    "fondo": "#fafafa",
+    "texto": "#71717a",
+    "fuenteTitular": "Inter",
+    "fuenteCuerpo": "Inter",
+    "acentos": []
+  },
+  {
+    "id": "refero",
+    "nombre": "Refero",
+    "url": "https://refero.design",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Refero — UI/UX Design Inspiration for Your Next Project",
+    "descripcion": "The largest collection of UI/UX references and design inspiration for web and iOS. Explore tens of thousands of screenshots with advanced search capabilities",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "Title",
+    "fuenteCuerpo": "Base-Variable",
+    "acentos": [
+      "#0000ee",
+      "#030e31",
+      "#ff6154",
+      "#fa2413"
+    ]
+  },
+  {
+    "id": "mobbin",
+    "nombre": "Mobbin",
+    "url": "https://mobbin.com",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Mobbin — UI & UX design inspiration for mobile & web apps",
+    "descripcion": "Save hours of UI & UX research with our library of 400,000+ fully searchable mobile & web app screenshots.",
+    "fondo": "#ffffff",
+    "texto": "#000000",
+    "fuenteTitular": "M Saans 652",
+    "fuenteCuerpo": "sans-serif",
+    "acentos": [
+      "#0000ee"
+    ]
+  },
+  {
+    "id": "siteinspire",
+    "nombre": "SiteInspire",
+    "url": "https://siteinspire.com",
+    "familia": "galerias",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://siteinspire.com/"
+  },
+  {
+    "id": "awwwards",
+    "nombre": "Awwwards",
+    "url": "https://awwwards.com",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Awwwards - Website Awards - Best Web Design Trends",
+    "descripcion": "Awwwards are the Website Awards that recognize and promote the talent and effort of the best developers, designers and web agencies in the world.",
+    "fondo": "#f8f8f8",
+    "texto": "#222222",
+    "fuenteTitular": "Inter Tight",
+    "fuenteCuerpo": "Inter Tight",
+    "acentos": []
+  },
+  {
+    "id": "dribbble",
+    "nombre": "Dribbble",
+    "url": "https://dribbble.com",
+    "familia": "galerias",
+    "estado": "ya-estaba"
+  },
+  {
+    "id": "screenlane",
+    "nombre": "Screenlane",
+    "url": "https://screenlane.com",
+    "familia": "galerias",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://screenlane.com/"
+  },
+  {
+    "id": "curated-design",
+    "nombre": "Curated Design",
+    "url": "https://curated.design",
+    "familia": "galerias",
+    "estado": "ya-estaba",
+    "titulo": "Web design inspiration from real, live websites — Curated",
+    "descripcion": "Live websites and landing pages, reviewed one at a time. Filter by style or industry, then click straight through to the real site.",
+    "fondo": "#010000",
+    "texto": "#000000",
+    "fuenteTitular": "Hedvig Letters Serif",
+    "fuenteCuerpo": "Euclid Circular A",
+    "acentos": [
+      "#0.7ae147ae147ae0000",
+      "#0.f851eb851eb850000",
+      "#0.3851eb851eb8520000",
+      "#0.ee147ae147ae180000"
+    ]
+  },
+  {
+    "id": "muji",
+    "nombre": "Muji",
+    "url": "https://muji.com",
+    "familia": "marca-editorial",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://muji.com/"
+  },
+  {
+    "id": "land-book",
+    "nombre": "Land-book",
+    "url": "https://land-book.com",
+    "familia": "galerias",
+    "estado": "fallo",
+    "error": "page.goto: net::ERR_CONNECTION_RESET at https://land-book.com/"
+  },
+  {
+    "id": "vercel",
+    "nombre": "Vercel",
+    "url": "https://vercel.com",
+    "familia": "producto-saas",
+    "estado": "ok",
+    "movil": false,
+    "kb": 25,
+    "titulo": "Agentic Infrastructure - Vercel",
+    "descripcion": "The autonomous stack for every app and agent.",
+    "fondo": "#fafafa",
+    "texto": "#171717",
+    "fuenteTitular": "GeistSans",
+    "fuenteCuerpo": "GeistSans",
+    "acentos": [
+      "#0072f5"
+    ],
+    "alto": 5333
+  }
+]

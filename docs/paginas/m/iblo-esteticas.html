@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2308070c%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2245%22%20font-family%3D%22Impact%2CAnton%2Csans-serif%22%20font-size%3D%2234%22%20text-anchor%3D%22middle%22%20fill%3D%22%23ff1e8e%22%3EIB%3C%2Ftext%3E%3C%2Fsvg%3E">
+<title>Estéticas · IBLO Eventos</title>
+<meta name="description" content="Las nueve estéticas de IBLO Eventos, una por pantalla.">
+<link rel="canonical" href="https://iblo-eventos.pages.dev/iblo-esteticas">
+<meta property="og:title" content="IBLO Eventos">
+<meta property="og:description" content="Viví las mejores noches con nosotros. Productora de fiestas — Margarita Belén, Chaco.">
+<meta property="og:image" content="https://iblo-eventos.pages.dev/og-iblo.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="IBLO Eventos, productora de fiestas de Margarita Belén, Chaco">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://iblo-eventos.pages.dev/iblo-esteticas">
+<meta property="og:site_name" content="IBLO Eventos">
+<meta property="og:locale" content="es_AR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="IBLO Eventos">
+<meta name="twitter:image" content="https://iblo-eventos.pages.dev/og-iblo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=Great+Vibes&family=Barlow:ital,wght@0,400;0,600;0,800;1,400&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --tinta:#08070c; --tinta2:#100d18; --humo:#1a1622; --linea:#2b2436;
+  --papel:#f4f1f6; --tenue:#a79fb5;
+  --ac:#ff1e8e; --ac2:#8b2fd6; --ac3:#ffd23f;
+  --acs:255,30,142;            /* --ac en rgb, para sombras */
+  --grano:.045; --curva:18px;
+  --gordo:'Anton',Impact,'Arial Narrow Bold',sans-serif;
+  --marca:'Archivo Black','Arial Black',sans-serif;
+  --firma:'Great Vibes',cursive;
+  --cond:'Barlow Condensed','Arial Narrow',sans-serif;
+  --texto:'Barlow',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+html[data-est="euphoria"]{ --ac:#c34bff; --ac2:#6a1fd0; --ac3:#ff5ce1; --acs:195,75,255; --tinta:#0d0716; --tinta2:#170a26; --humo:#1f0f33; --linea:#3a1c5c; }
+html[data-est="western"] { --ac:#e8863a; --ac2:#8c3d1c; --ac3:#f0d0a0; --acs:232,134,58;  --tinta:#100905; --tinta2:#1b0f08; --humo:#28170d; --linea:#4a2a17; }
+html[data-est="halloween"]{--ac:#ff2020; --ac2:#8a0505; --ac3:#ff8a3d; --acs:255,32,32;  --tinta:#0a0405; --tinta2:#150607; --humo:#210809; --linea:#451012; }
+html[data-est="realeza"] { --ac:#e8bf4e; --ac2:#0f6b45; --ac3:#4ade9a; --acs:232,191,78;  --tinta:#0a0906; --tinta2:#13110a; --humo:#1d1a0f; --linea:#3d3418; }
+html[data-est="semaforo"]{ --ac:#2ce65a; --ac2:#b81717; --ac3:#ffe14d; --acs:44,230,90;   --tinta:#050a06; --tinta2:#08130b; --humo:#0d1f11; --linea:#1a3d22; }
+html[data-est="audiocar"]{ --ac:#ff2ba6; --ac2:#1fb6e0; --ac3:#ffb020; --acs:255,43,166;  --tinta:#0c0512; --tinta2:#17081f; --humo:#230c2e; --linea:#451857; }
+html[data-est="ice"]     { --ac:#2fd8e8; --ac2:#0e6f86; --ac3:#d6f7ff; --acs:47,216,232;  --tinta:#03090c; --tinta2:#061318; --humo:#0a2028; --linea:#134450; }
+html[data-est="pirata"]  { --ac:#d4af37; --ac2:#7a1414; --ac3:#e8d9a0; --acs:212,175,55;  --tinta:#080706; --tinta2:#12100b; --humo:#1c1810; --linea:#3a301a; }
+html[data-est="zonal"]   { --ac:#a855f7; --ac2:#c81e5a; --ac3:#38bdf8; --acs:168,85,247;  --tinta:#0a0714; --tinta2:#130b20; --humo:#1c1030; --linea:#372058; }
+
+/* ============ BASE ============ */
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} *{animation-duration:.01ms!important;transition-duration:.01ms!important} }
+body{
+  margin:0; background:var(--tinta); color:var(--papel);
+  font:400 17px/1.65 var(--texto); overflow-x:hidden;
+  transition:background .5s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+img{max-width:100%; display:block}
+a{color:inherit}
+button{font:inherit; color:inherit; background:none; border:0; cursor:pointer}
+h1,h2,h3{margin:0; line-height:.95; font-family:var(--gordo); font-weight:400; text-transform:uppercase; letter-spacing:.01em}
+
+.caja{width:min(1180px,100% - 40px); margin-inline:auto}
+@media(max-width:640px){ .caja{width:min(1180px,100% - 26px)} body{font-size:16px} }
+
+section[id]{scroll-margin-top:80px}
+.sec{position:relative; padding-top:clamp(64px,9vw,120px); padding-bottom:clamp(64px,9vw,120px)}
+.sec + .sec{border-top:1px solid var(--linea)}
+
+.rotulo{
+  display:inline-flex; align-items:center; gap:9px; margin:0 0 18px;
+  font:700 12px/1 var(--cond); letter-spacing:.28em; text-transform:uppercase; color:var(--ac);
+}
+.rotulo::before{content:""; width:26px; height:2px; background:var(--ac); display:block}
+.tit{ font-size:clamp(34px,7.4vw,80px) }
+.tit em{ font-style:normal; color:var(--ac); }
+.bajada{ max-width:62ch; margin:16px 0 0; color:var(--tenue); font-size:clamp(15px,1.6vw,19px) }
+
+/* grano + viñeta globales */
+.grano{position:fixed; inset:0; pointer-events:none; z-index:60; opacity:var(--grano); mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
+
+/* ============ LUCES DE FONDO ============ */
+#luces{position:fixed; inset:0; z-index:-2; width:100%; height:100%; display:block;
+  filter:blur(46px) saturate(1.15); opacity:.62; transition:opacity .8s ease}
+.velolux{position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(ellipse 120% 80% at 50% 0%, transparent 30%, var(--tinta) 92%)}
+@media (prefers-reduced-motion:reduce){ #luces{opacity:.35} }
+
+/* destello al cambiar de estetica */
+#destello{position:fixed; inset:0; z-index:70; pointer-events:none; opacity:0;
+  background:radial-gradient(circle at 50% 55%, rgba(var(--acs),.75), transparent 62%)}
+#destello.va{animation:fogonazo .85s cubic-bezier(.16,1,.3,1)}
+@keyframes fogonazo{
+  0%{opacity:0; transform:scale(.55)}
+  22%{opacity:.85}
+  100%{opacity:0; transform:scale(1.9)}
+}
+#barrido{position:fixed; inset:0; z-index:71; pointer-events:none; opacity:0;
+  background:linear-gradient(105deg, transparent 38%, rgba(255,255,255,.13) 47%,
+    rgba(var(--acs),.6) 50%, rgba(255,255,255,.13) 53%, transparent 62%);
+  background-size:260% 100%}
+#barrido.va{animation:barrido .8s cubic-bezier(.5,0,.2,1)}
+@keyframes barrido{ 0%{opacity:1; background-position:130% 0} 100%{opacity:0; background-position:-70% 0} }
+
+/* ============ NAV ============ */
+.nav{position:fixed; inset:0 0 auto; z-index:50; backdrop-filter:blur(14px);
+  background:color-mix(in srgb, var(--tinta) 82%, transparent); border-bottom:1px solid transparent;
+  transition:border-color .3s, background .5s}
+.nav.pegado{border-bottom-color:var(--linea)}
+.nav .caja{display:flex; align-items:center; gap:22px; height:66px}
+.marca{display:flex; align-items:center; gap:10px; text-decoration:none; margin-right:auto}
+.marca img{width:34px; height:34px; flex:none; object-fit:contain}
+.marca b{font:400 19px/1 var(--marca); letter-spacing:-.01em}
+.marca b i{font-style:normal; color:var(--ac)}
+.nav nav{display:flex; gap:22px}
+.nav nav a{text-decoration:none; font:600 13px/1 var(--cond); letter-spacing:.16em; text-transform:uppercase;
+  color:var(--tenue); transition:color .2s}
+.nav nav a:hover{color:var(--papel)}
+.nav .cta{display:inline-flex; align-items:center; gap:7px; padding:10px 16px; border-radius:999px;
+  background:var(--ac); color:#0a0710; font:800 13px/1 var(--texto); text-decoration:none;
+  box-shadow:0 6px 22px -6px rgba(var(--acs),.7); transition:transform .18s, box-shadow .18s}
+.nav .cta:hover{transform:translateY(-2px); box-shadow:0 10px 28px -6px rgba(var(--acs),.85)}
+.hamb{display:none}
+@media(max-width:900px){
+  .nav nav{position:fixed; inset:66px 0 auto; flex-direction:column; gap:0; padding:8px 0 18px;
+    background:var(--tinta2); border-bottom:1px solid var(--linea); transform:translateY(-120%);
+    transition:transform .32s cubic-bezier(.4,0,.2,1)}
+  .nav nav.abierta{transform:none}
+  .nav nav a{padding:14px 24px; font-size:15px; border-top:1px solid var(--linea)}
+  .hamb{display:grid; place-items:center; width:42px; height:42px; border-radius:12px; border:1px solid var(--linea)}
+  .hamb span{display:block; width:18px; height:2px; background:var(--papel); position:relative}
+  .hamb span::before,.hamb span::after{content:""; position:absolute; left:0; width:18px; height:2px; background:var(--papel)}
+  .hamb span::before{top:-6px} .hamb span::after{top:6px}
+  .nav .cta{padding:9px 13px; font-size:12px}
+}
+
+/* ============ HERO ============ */
+.hero{position:relative; min-height:100svh; display:grid; align-items:center; padding:96px 0 40px; overflow:hidden}
+.hero .caja{position:relative; z-index:3}
+.focos{position:absolute; inset:0; z-index:0; overflow:hidden; opacity:.55}
+.foco{position:absolute; top:-30%; width:44vw; height:150%; filter:blur(46px); opacity:.5;
+  background:radial-gradient(closest-side, rgba(var(--acs),.85), transparent 72%);
+  animation:barre 9s ease-in-out infinite alternate}
+.foco:nth-child(1){left:-14vw}
+.foco:nth-child(2){left:30vw; animation-delay:-3.2s; background:radial-gradient(closest-side, color-mix(in srgb,var(--ac2) 85%, transparent), transparent 72%)}
+.foco:nth-child(3){left:66vw; animation-delay:-6.1s; background:radial-gradient(closest-side, color-mix(in srgb,var(--ac3) 60%, transparent), transparent 72%)}
+@keyframes barre{ from{transform:translateX(-9vw) skewX(-9deg)} to{transform:translateX(9vw) skewX(9deg)} }
+.rejilla{position:absolute; inset:0; z-index:1; opacity:.28; pointer-events:none;
+  background-image:linear-gradient(var(--linea) 1px,transparent 1px),linear-gradient(90deg,var(--linea) 1px,transparent 1px);
+  background-size:66px 66px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 45%,#000,transparent 78%);
+          mask-image:radial-gradient(ellipse 80% 60% at 50% 45%,#000,transparent 78%)}
+.velo{position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:linear-gradient(180deg,transparent 45%, var(--tinta) 96%)}
+
+.heroRej{display:grid; grid-template-columns:1.15fr .85fr; gap:48px; align-items:center}
+@media(max-width:940px){ .heroRej{grid-template-columns:1fr; gap:26px} }
+
+.lockup{display:flex; align-items:center; gap:16px; margin-bottom:20px}
+.lockup img{width:clamp(56px,9vw,84px); height:auto; flex:none;
+  filter:drop-shadow(0 0 22px rgba(var(--acs),.75)); animation:respira 4.5s ease-in-out infinite}
+@keyframes respira{50%{filter:drop-shadow(0 0 34px rgba(var(--acs),1))}}
+.lockup .letras{display:block}
+.lockup .firma{display:block; font:400 clamp(30px,5vw,46px)/.8 var(--firma); color:var(--papel);
+  margin-left:.28em; text-shadow:0 2px 18px rgba(0,0,0,.6)}
+.lockup .nombre{display:block; font:400 clamp(38px,7.4vw,70px)/.9 var(--marca);
+  letter-spacing:-.02em; color:var(--ac); text-shadow:0 0 34px rgba(var(--acs),.6);
+  margin-top:-.12em}
+.hero h1{font-size:clamp(44px,9.4vw,106px); letter-spacing:-.005em; text-wrap:balance}
+.hero h1 .lin{display:block; overflow:hidden}
+.hero h1 .lin > span{display:block; animation:sube .9s cubic-bezier(.16,1,.3,1) both}
+.hero h1 .lin:nth-child(2) > span{animation-delay:.09s}
+.hero h1 .lin:nth-child(3) > span{animation-delay:.18s}
+@keyframes sube{from{transform:translateY(105%)}to{transform:none}}
+.hero h1 em{font-style:normal; -webkit-text-stroke:2px var(--ac); color:transparent;
+  paint-order:stroke fill; text-shadow:0 0 40px rgba(var(--acs),.55)}
+.hero .lema{margin:20px 0 0; max-width:46ch; color:var(--tenue); font-size:clamp(16px,1.9vw,20px)}
+.botones{display:flex; flex-wrap:wrap; gap:12px; margin-top:30px}
+.bt{display:inline-flex; align-items:center; gap:9px; padding:15px 24px; border-radius:999px;
+  font:800 15px/1 var(--texto); text-decoration:none; transition:transform .18s, box-shadow .18s, background .3s}
+.bt.p{background:var(--ac); color:#09060e; box-shadow:0 10px 30px -8px rgba(var(--acs),.8)}
+.bt.s{border:1px solid var(--linea); background:color-mix(in srgb,var(--humo) 70%, transparent)}
+.bt:hover{transform:translateY(-3px)}
+.bt.p:hover{box-shadow:0 16px 38px -8px rgba(var(--acs),.95)}
+
+.bolaCaja{position:relative; aspect-ratio:1; max-width:460px; margin-inline:auto; width:100%}
+.bolaCaja canvas{width:100%; height:100%; display:block}
+.bolaCaja::after{content:""; position:absolute; inset:14%; border-radius:50%; z-index:-1;
+  background:radial-gradient(circle, rgba(var(--acs),.45), transparent 68%); filter:blur(34px)}
+@media(max-width:940px){ .bolaCaja{max-width:250px} }
+@media(max-width:640px){ .bolaCaja{max-width:210px} .hero{min-height:auto; padding:110px 0 34px} }
+
+.cinta{position:relative; z-index:3; margin-top:clamp(30px,5vw,58px); border-top:1px solid var(--linea); border-bottom:1px solid var(--linea);
+  background:color-mix(in srgb,var(--humo) 60%, transparent); overflow:hidden; padding:11px 0}
+.cinta div{display:flex; gap:34px; width:max-content; animation:corre 34s linear infinite}
+.cinta span{font:700 13px/1 var(--cond); letter-spacing:.24em; text-transform:uppercase; color:var(--tenue); white-space:nowrap}
+.cinta span b{color:var(--ac)}
+@keyframes corre{from{transform:none}to{transform:translateX(-50%)}}
+/* ============ PRÓXIMA FECHA ============ */
+.proxima{position:relative; overflow:hidden}
+.proxima::before{content:""; position:absolute; inset:0; z-index:0; opacity:.6;
+  background:radial-gradient(ellipse 70% 90% at 15% 0%, rgba(var(--acs),.2), transparent 70%)}
+.proxRej{position:relative; z-index:1; display:grid; grid-template-columns:1fr 340px; gap:clamp(26px,4vw,56px); align-items:center}
+@media(max-width:920px){ .proxRej{grid-template-columns:1fr} }
+.fechon{font:400 clamp(56px,12vw,150px)/.82 var(--gordo); letter-spacing:-.02em; margin:6px 0 4px}
+.fechon i{font-style:normal; color:var(--ac)}
+.datos{display:flex; flex-wrap:wrap; gap:10px; margin-top:22px}
+.chip{display:inline-flex; align-items:center; gap:8px; padding:9px 14px; border-radius:999px;
+  border:1px solid var(--linea); background:color-mix(in srgb,var(--humo) 65%, transparent);
+  font:600 13.5px/1 var(--texto)}
+.chip b{color:var(--ac); font-weight:800}
+.reloj{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:26px; max-width:420px}
+.reloj div{text-align:center; padding:13px 4px; border-radius:14px; border:1px solid var(--linea);
+  background:color-mix(in srgb,var(--humo) 60%, transparent)}
+.reloj strong{display:block; font:400 clamp(24px,4.6vw,36px)/1 var(--gordo); color:var(--ac);
+  font-variant-numeric:tabular-nums}
+.reloj small{display:block; margin-top:5px; font:600 10px/1 var(--cond); letter-spacing:.2em;
+  text-transform:uppercase; color:var(--tenue)}
+.coronaCaja{position:relative; aspect-ratio:1; width:100%; max-width:340px; margin-inline:auto}
+@media(max-width:640px){ .coronaCaja{max-width:240px} }
+.coronaCaja canvas{width:100%; height:100%; display:block}
+.coronaCaja::after{content:""; position:absolute; inset:18%; border-radius:50%; z-index:-1;
+  background:radial-gradient(circle, rgba(var(--acs),.4), transparent 66%); filter:blur(30px)}
+
+/* ============ ESTÉTICAS ============ */
+.pestanas{display:flex; gap:9px; overflow-x:auto; padding:4px 0 16px; margin:0 -4px 26px;
+  scrollbar-width:thin; -webkit-overflow-scrolling:touch}
+.pestanas::-webkit-scrollbar{height:5px}
+.pestanas::-webkit-scrollbar-thumb{background:var(--linea); border-radius:9px}
+.pes{flex:none; padding:11px 18px; border-radius:999px; border:1px solid var(--linea);
+  background:color-mix(in srgb,var(--humo) 55%, transparent); white-space:nowrap;
+  font:700 13px/1 var(--cond); letter-spacing:.16em; text-transform:uppercase; color:var(--tenue);
+  transition:color .2s, border-color .2s, background .2s, transform .2s}
+.pes:hover{color:var(--papel); border-color:var(--ac)}
+.pes[aria-selected="true"]{background:var(--ac); border-color:var(--ac); color:#09060e; transform:translateY(-1px)}
+
+.escena{display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr); gap:clamp(24px,3.6vw,52px); align-items:start}
+@media(max-width:860px){ .escena{grid-template-columns:1fr} }
+.flyer{position:relative; border-radius:var(--curva); overflow:hidden; border:1px solid var(--linea);
+  box-shadow:0 30px 70px -30px rgba(var(--acs),.6), 0 0 0 1px rgba(255,255,255,.03) inset}
+.flyer img{width:100%; aspect-ratio:3/4; object-fit:cover}
+.flyer::after{content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(180deg,transparent 55%, color-mix(in srgb,var(--tinta) 70%, transparent))}
+.flyer .sello{position:absolute; left:12px; top:12px; z-index:2; padding:6px 11px; border-radius:999px;
+  background:var(--ac); color:#09060e; font:800 11px/1 var(--texto); letter-spacing:.04em}
+.fadeflip{animation:flip .5s cubic-bezier(.16,1,.3,1)}
+@keyframes flip{from{opacity:0; transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+.escena h3{font-size:clamp(30px,5.6vw,58px); color:var(--ac); text-shadow:0 0 44px rgba(var(--acs),.4)}
+.escena .sub{margin:4px 0 0; font:700 13px/1.4 var(--cond); letter-spacing:.22em; text-transform:uppercase; color:var(--tenue)}
+.escena p.des{margin:16px 0 0; max-width:56ch}
+.fichas{display:flex; flex-wrap:wrap; margin-top:24px; background:var(--tinta2);
+  border:1px solid var(--linea); border-radius:var(--curva); overflow:hidden}
+.fichas div{flex:1 1 158px; min-width:158px; padding:15px 16px;
+  border-right:1px solid var(--linea); border-bottom:1px solid var(--linea)}
+.fichas dt{font:700 10px/1 var(--cond); letter-spacing:.22em; text-transform:uppercase; color:var(--tenue); margin-bottom:7px}
+.fichas dd{margin:0; font-weight:600; font-size:15px}
+.piezaCaja{margin-top:22px; height:230px; max-width:300px; position:relative}
+.piezaCaja canvas{width:100%; height:100%; display:block}
+.piezaCaja[hidden]{display:none!important}
+.piezaPie{position:absolute; left:0; bottom:0; font:600 11px/1 var(--cond); letter-spacing:.2em;
+  text-transform:uppercase; color:var(--tenue)}
+
+
+/* ============ DECORACIÓN Y CLIPS DE LA ESTÉTICA ============ */
+.escena{position:relative}
+.deco{position:absolute; right:-10px; top:-38px; width:clamp(120px,17vw,210px); z-index:0;
+  pointer-events:none; opacity:0; filter:drop-shadow(0 18px 40px rgba(0,0,0,.65))}
+.deco.entra{animation:decoEntra 1s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes decoEntra{ from{opacity:0; transform:translateY(-34px) rotate(-22deg) scale(.7)}
+                      to{opacity:.95; transform:none} }
+.deco.gira{animation:decoEntra 1s cubic-bezier(.16,1,.3,1) forwards, lazo 11s linear 1s infinite}
+@keyframes lazo{ from{transform:rotate(0)} to{transform:rotate(360deg)} }
+.deco.flota.entra{animation:decoEntra 1s cubic-bezier(.16,1,.3,1) forwards, mece 6s ease-in-out 1s infinite}
+@keyframes mece{ 50%{transform:translateY(-14px) rotate(4deg)} }
+.deco.late.entra{animation:decoEntra 1s cubic-bezier(.16,1,.3,1) forwards, late 3.4s ease-in-out 1s infinite}
+@keyframes late{ 50%{transform:scale(1.08)} }
+@media(max-width:860px){ .deco{width:110px; right:-4px; top:-42px} }
+.escena > .flyer, .escena > div{position:relative; z-index:1}
+
+.clipCaja{position:relative; margin-top:22px; border-radius:var(--curva); overflow:hidden;
+  border:1px solid var(--linea); max-width:300px; background:#000}
+.clipCaja video{display:block; width:100%; height:auto}
+.clipCaja .et{position:absolute; left:10px; top:10px; padding:5px 10px; border-radius:999px;
+  background:rgba(8,7,12,.72); backdrop-filter:blur(6px);
+  font:700 10px/1 var(--cond); letter-spacing:.2em; text-transform:uppercase; color:var(--papel)}
+.dosPiezas{display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start}
+
+/* ============ BOTÓN DE WHATSAPP ============ */
+.wsp{display:inline-flex; align-items:center; gap:10px; margin-top:22px; padding:14px 22px;
+  border-radius:999px; background:var(--ac); color:#09060e; text-decoration:none;
+  font:800 14.5px/1 var(--texto); box-shadow:0 10px 30px -10px rgba(var(--acs),.9);
+  transition:transform .18s, box-shadow .18s}
+.wsp:hover{transform:translateY(-3px); box-shadow:0 16px 38px -10px rgba(var(--acs),1)}
+.wsp svg{width:19px; height:19px; flex:none}
+.wsp.chico{margin-top:14px; padding:10px 15px; font-size:13px; background:transparent;
+  color:var(--ac); border:1px solid var(--ac); box-shadow:none}
+.wsp.chico:hover{background:var(--ac); color:#09060e}
+
+/* ============ MURO DE REELS ============ */
+.muro{display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px; margin-top:32px}
+.muro figure{margin:0; position:relative; border-radius:var(--curva); overflow:hidden;
+  border:1px solid var(--linea); background:#000; transition:border-color .25s, transform .25s}
+.muro figure:hover{border-color:var(--ac); transform:translateY(-4px)}
+.muro video{display:block; width:100%; height:auto}
+.muro figcaption{position:absolute; left:0; right:0; bottom:0; padding:26px 12px 10px;
+  background:linear-gradient(transparent, rgba(6,5,10,.9));
+  font:700 11px/1.3 var(--cond); letter-spacing:.16em; text-transform:uppercase}
+
+/* ============ CICLO EGRESADOS ============ */
+.ciclo{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-top:34px; counter-reset:e}
+.paso{position:relative; padding:24px 20px 20px; border-radius:var(--curva); border:1px solid var(--linea);
+  background:linear-gradient(160deg, var(--tinta2), var(--tinta)); overflow:hidden;
+  transition:border-color .25s, transform .25s}
+.paso:hover{border-color:var(--ac); transform:translateY(-4px)}
+.paso::before{counter-increment:e; content:counter(e,decimal-leading-zero);
+  position:absolute; right:-6px; top:-14px; font:400 62px/1 var(--gordo); color:var(--linea); opacity:.85}
+.paso h4{margin:0 0 8px; font:400 20px/1.1 var(--gordo); text-transform:uppercase}
+.paso p{margin:0; font-size:14.5px; color:var(--tenue); line-height:1.55}
+
+/* ============ SERVICIOS ============ */
+.servicios{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin-top:34px}
+.serv{padding:26px 22px; border-radius:var(--curva); border:1px solid var(--linea); background:var(--tinta2);
+  transition:border-color .25s, background .25s}
+.serv:hover{border-color:var(--ac); background:var(--humo)}
+.serv .ico{width:42px; height:42px; margin-bottom:14px; color:var(--ac)}
+.serv h4{margin:0 0 8px; font:400 19px/1.1 var(--gordo); text-transform:uppercase}
+.serv p{margin:0; font-size:14.5px; color:var(--tenue); line-height:1.55}
+.serv .prov{display:inline-block; margin-top:11px; font:600 11.5px/1 var(--cond); letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ac)}
+
+/* ============ GALERÍA ============ */
+.filtros{display:flex; flex-wrap:wrap; gap:8px; margin:26px 0 20px}
+.fl{padding:8px 15px; border-radius:999px; border:1px solid var(--linea); background:transparent;
+  font:700 12px/1 var(--cond); letter-spacing:.18em; text-transform:uppercase; color:var(--tenue); transition:.2s}
+.fl[aria-pressed="true"]{background:var(--ac); border-color:var(--ac); color:#09060e}
+.mosaico{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:9px}
+.mosaico button{position:relative; border-radius:12px; overflow:hidden; aspect-ratio:1; border:1px solid var(--linea);
+  background:var(--humo); padding:0; transition:transform .25s, border-color .25s}
+.mosaico button:hover{transform:scale(1.03); border-color:var(--ac); z-index:2}
+.mosaico img{width:100%; height:100%; object-fit:cover; transition:filter .25s}
+.mosaico button:hover img{filter:saturate(1.2) contrast(1.05)}
+.mosaico button::after{content:attr(data-ano); position:absolute; right:8px; bottom:7px;
+  font:700 10px/1 var(--cond); letter-spacing:.16em; padding:4px 7px; border-radius:6px;
+  background:rgba(8,7,12,.72); color:var(--papel); opacity:0; transition:opacity .25s}
+.mosaico button:hover::after{opacity:1}
+
+.visor{position:fixed; inset:0; z-index:80; display:grid; place-items:center; padding:20px;
+  background:rgba(4,3,7,.93); backdrop-filter:blur(8px)}
+.visor img{max-width:min(880px,92vw); max-height:86vh; width:auto; border-radius:14px;
+  box-shadow:0 40px 90px -30px #000; animation:flip .35s cubic-bezier(.16,1,.3,1)}
+.visor .cerrar{position:absolute; right:16px; top:16px; width:46px; height:46px; border-radius:50%;
+  border:1px solid var(--linea); background:var(--tinta2); font-size:22px; line-height:1}
+.visor .flecha{position:absolute; top:50%; transform:translateY(-50%); width:52px; height:52px; border-radius:50%;
+  border:1px solid var(--linea); background:var(--tinta2); font-size:22px}
+.visor .flecha.izq{left:14px} .visor .flecha.der{right:14px}
+
+/* ============ EQUIPO ============ */
+.equipo{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:32px; align-items:start}
+.rol{padding:24px 22px; border-radius:var(--curva); border:1px solid var(--linea); background:var(--tinta2)}
+.rol h4{margin:0 0 4px; font:400 18px/1.1 var(--gordo); text-transform:uppercase; color:var(--ac)}
+.rol .cargo{font:700 10.5px/1 var(--cond); letter-spacing:.24em; text-transform:uppercase; color:var(--tenue)}
+.rol ul{list-style:none; margin:16px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:7px}
+.rol li{font:600 12.5px/1 var(--texto); padding:6px 11px; border-radius:999px; background:var(--humo);
+  border:1px solid var(--linea); color:var(--papel)}
+.rol li.dest{border-color:var(--ac); color:var(--ac)}
+
+/* ============ NÚMEROS ============ */
+.numeros{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1px; margin-top:34px;
+  background:var(--linea); border:1px solid var(--linea); border-radius:var(--curva); overflow:hidden}
+.num{background:var(--tinta2); padding:28px 20px; text-align:center}
+.num strong{display:block; font:400 clamp(32px,5.4vw,52px)/1 var(--gordo); color:var(--ac);
+  font-variant-numeric:tabular-nums}
+.num span{display:block; margin-top:9px; font:600 11.5px/1.4 var(--cond); letter-spacing:.2em;
+  text-transform:uppercase; color:var(--tenue)}
+
+/* ============ ZONA ============ */
+.zonaRej{display:grid; grid-template-columns:1fr 1fr; gap:clamp(24px,4vw,56px); margin-top:34px}
+@media(max-width:820px){ .zonaRej{grid-template-columns:1fr} }
+.pueblos{list-style:none; margin:0; padding:0}
+.cobertura{padding:22px 24px; border-radius:var(--curva); border:1px solid var(--ac);
+  background:linear-gradient(140deg, color-mix(in srgb,var(--ac) 12%, transparent), transparent);
+  margin-bottom:20px}
+.cobertura b{display:block; font:400 clamp(22px,3.4vw,32px)/1 var(--gordo); text-transform:uppercase;
+  color:var(--ac); margin-bottom:7px}
+.cobertura p{margin:0; color:var(--papel); font-size:15.5px}
+.pueblos li{display:flex; align-items:baseline; gap:14px; padding:14px 0; border-bottom:1px solid var(--linea)}
+.pueblos b{font:400 clamp(19px,2.6vw,27px)/1 var(--gordo); text-transform:uppercase}
+.pueblos .base{color:var(--ac)}
+.pueblos small{margin-left:auto; font:600 11px/1 var(--cond); letter-spacing:.18em; text-transform:uppercase; color:var(--tenue)}
+.sedes{list-style:none; margin:0; padding:0; display:grid; gap:9px}
+.sedes li{padding:14px 17px; border-radius:13px; border:1px solid var(--linea); background:var(--tinta2)}
+.sedes b{display:block; font-weight:800}
+.sedes small{color:var(--tenue); font-size:13px}
+
+/* ============ CIERRE ============ */
+.cierre{position:relative; text-align:center; overflow:hidden}
+.cierre::before{content:""; position:absolute; inset:0;
+  background:radial-gradient(ellipse 60% 70% at 50% 100%, rgba(var(--acs),.28), transparent 72%)}
+.cierre .caja{position:relative; z-index:1}
+.cierre h2{font-size:clamp(38px,9vw,104px)}
+.cierre h2 em{font-style:normal; -webkit-text-stroke:2px var(--ac); color:transparent}
+.cierre .botones{justify-content:center}
+
+.pie{border-top:1px solid var(--linea); padding:34px 0; background:var(--tinta2)}
+.pieRej{display:flex; flex-wrap:wrap; gap:18px; align-items:center; justify-content:space-between}
+.pie small{color:var(--tenue); font-size:12.5px; line-height:1.7}
+.pie a{color:var(--ac); text-decoration:none}
+.pie a:hover{text-decoration:underline}
+
+/* aparición al scrollear */
+.rev{opacity:0; transform:translateY(22px); transition:opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1)}
+.rev.ok{opacity:1; transform:none}
+
+
+/* ============ AÑADIDOS DEL SITIO DE VARIAS PÁGINAS ============ */
+.nav nav a.act{color:var(--ac)}
+.nav nav a.act::after{content:""; display:block; height:2px; background:var(--ac); margin-top:5px}
+@media(max-width:900px){ .nav nav a.act::after{display:none} }
+
+/* cabecera de página interior */
+.tapa{position:relative; padding:120px 0 clamp(34px,5vw,60px); overflow:hidden}
+.tapa::before{content:""; position:absolute; inset:0;
+  background:radial-gradient(ellipse 90% 100% at 12% 0%, rgba(var(--acs),.22), transparent 68%)}
+.tapa .caja{position:relative; z-index:1}
+.tapa h1{font-size:clamp(38px,8.4vw,92px)}
+.tapa h1 em{font-style:normal; color:var(--ac)}
+.tapa .bajada{max-width:60ch}
+
+/* tarjetas de estética en la portada */
+.avance{display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:12px; margin-top:32px}
+.avance a{position:relative; display:block; border-radius:var(--curva); overflow:hidden;
+  border:1px solid var(--linea); text-decoration:none; background:var(--humo);
+  transition:transform .25s, border-color .25s}
+.avance a:hover{transform:translateY(-5px); border-color:var(--ac)}
+.avance img{width:100%; aspect-ratio:3/4; object-fit:cover; opacity:.82; transition:opacity .25s}
+.avance a:hover img{opacity:1}
+.avance b{position:absolute; left:0; right:0; bottom:0; padding:30px 12px 11px;
+  font:400 17px/1 var(--gordo); text-transform:uppercase;
+  background:linear-gradient(transparent, rgba(6,5,10,.94))}
+.avance small{position:absolute; left:11px; top:11px; padding:4px 9px; border-radius:999px;
+  background:rgba(8,7,12,.7); backdrop-filter:blur(5px);
+  font:700 9.5px/1 var(--cond); letter-spacing:.18em; text-transform:uppercase; color:var(--papel)}
+
+/* una estética por bloque, apiladas */
+.bloque{padding:clamp(48px,7vw,86px) 0; border-top:1px solid var(--linea); position:relative; scroll-margin-top:80px}
+.bloque:first-of-type{border-top:0}
+
+/* reproductor de reels */
+.reelRej{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; margin-top:34px}
+.reel{position:relative; border-radius:var(--curva); overflow:hidden; border:1px solid var(--linea);
+  background:#000; transition:border-color .25s}
+.reel:hover{border-color:var(--ac)}
+.reel video{display:block; width:100%; aspect-ratio:9/16; object-fit:cover; background:#000}
+.reel .capa{position:absolute; inset:0; display:grid; place-items:center; cursor:pointer;
+  background:linear-gradient(transparent 45%, rgba(5,4,9,.85)); transition:opacity .3s}
+.reel .capa.oculta{opacity:0; pointer-events:none}
+.reel .play{width:62px; height:62px; border-radius:50%; display:grid; place-items:center;
+  background:var(--ac); color:#09060e; box-shadow:0 10px 30px -8px rgba(var(--acs),.9)}
+.reel .play svg{width:24px; height:24px; margin-left:3px}
+.reel .tit{position:absolute; left:12px; right:12px; bottom:12px; pointer-events:none;
+  font:700 12px/1.35 var(--cond); letter-spacing:.14em; text-transform:uppercase}
+.reel .tit span{display:block; font:400 12.5px/1.4 var(--texto); letter-spacing:0;
+  text-transform:none; color:var(--tenue); margin-top:4px}
+.reel .son{position:absolute; right:10px; top:10px; z-index:2; width:40px; height:40px; border-radius:50%;
+  display:grid; place-items:center; border:1px solid rgba(255,255,255,.22);
+  background:rgba(8,7,12,.62); backdrop-filter:blur(7px); color:var(--papel)}
+.reel .son:hover{border-color:var(--ac); color:var(--ac)}
+.reel .son svg{width:19px; height:19px}
+.reel .barra{position:absolute; left:0; bottom:0; height:3px; background:var(--ac); width:0; z-index:2}
+.avisoSon{display:inline-flex; align-items:center; gap:9px; margin-top:20px; padding:10px 16px;
+  border-radius:999px; border:1px solid var(--linea); background:var(--tinta2);
+  font:600 13px/1 var(--texto); color:var(--tenue)}
+.avisoSon b{color:var(--ac)}
+
+/* clip ambiente dentro de una estética */
+.clipCaja video{aspect-ratio:9/16; object-fit:cover}
+
+/* ============ FONDOS DE FOTOS ============ */
+.conFoto{position:relative; isolation:isolate}
+.conFoto > .fotoFondo{position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none}
+.conFoto > .fotoFondo img{width:100%; height:100%; object-fit:cover; opacity:.19;
+  filter:blur(2px) saturate(1.3); transform:scale(1.06)}
+.conFoto > .fotoFondo::after{content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg, var(--tinta) 0%, color-mix(in srgb,var(--tinta) 72%, transparent) 32%,
+    color-mix(in srgb,var(--tinta) 72%, transparent) 68%, var(--tinta) 100%),
+    radial-gradient(ellipse 70% 60% at 20% 40%, rgba(var(--acs),.22), transparent 70%)}
+
+/* tira de caras que corre despacio */
+.tira{position:relative; overflow:hidden; padding:0; margin:0;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.tira .via{display:flex; gap:8px; width:max-content; animation:corre 68s linear infinite}
+.tira.atras .via{animation-direction:reverse; animation-duration:82s}
+.tira img{width:132px; height:132px; object-fit:cover; border-radius:12px; flex:none;
+  filter:saturate(1.1) contrast(1.04); opacity:.9; transition:opacity .3s, transform .3s}
+.tira img:hover{opacity:1; transform:scale(1.05)}
+.tiras{display:grid; gap:8px; margin-top:34px}
+@media(max-width:640px){ .tira img{width:96px; height:96px} }
+
+/* tejido de fotos para rellenar huecos */
+.tejido{position:absolute; inset:0; z-index:-1; display:grid; gap:6px; overflow:hidden;
+  grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); pointer-events:none;
+  -webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 50%, transparent 26%, #000 92%);
+          mask-image:radial-gradient(ellipse 80% 70% at 50% 50%, transparent 26%, #000 92%)}
+.tejido img{width:100%; aspect-ratio:1; object-fit:cover; opacity:.14; border-radius:9px;
+  filter:grayscale(.35) saturate(1.2)}
+
+/* rincón con foto en las tarjetas */
+.serv, .paso, .rol{position:relative; overflow:hidden}
+.serv .rincon, .paso .rincon, .rol .rincon{position:absolute; right:-22px; bottom:-22px; width:104px;
+  height:104px; object-fit:cover; border-radius:16px; opacity:.13; pointer-events:none;
+  transform:rotate(-8deg); filter:saturate(1.3); transition:opacity .28s, transform .28s}
+.serv:hover .rincon, .paso:hover .rincon, .rol:hover .rincon{opacity:.26; transform:rotate(-4deg) scale(1.06)}
+
+/* collage detrás de la bola del hero */
+.collage{position:absolute; inset:0; z-index:-1; display:grid; grid-template-columns:repeat(3,1fr);
+  gap:9px; transform:rotate(-7deg) scale(1.24); pointer-events:none;
+  -webkit-mask-image:radial-gradient(circle at 50% 50%, #000 18%, transparent 68%);
+          mask-image:radial-gradient(circle at 50% 50%, #000 18%, transparent 68%)}
+.collage img{width:100%; aspect-ratio:1; object-fit:cover; border-radius:12px; opacity:.42;
+  filter:saturate(1.25) contrast(1.05)}
+
+/* franja de fotos a sangre entre secciones */
+.franja{display:grid; grid-template-columns:repeat(8,1fr); gap:0; border-block:1px solid var(--linea)}
+.franja img{width:100%; aspect-ratio:1; object-fit:cover; opacity:.55; transition:opacity .3s, filter .3s;
+  filter:grayscale(.5)}
+.franja img:hover{opacity:1; filter:none}
+@media(max-width:900px){ .franja{grid-template-columns:repeat(5,1fr)} }
+@media(max-width:520px){ .franja{grid-template-columns:repeat(4,1fr)} }
+
+/* la ficha vacía deja de verse vacía */
+.fichas .relleno{flex:1 1 158px; min-width:158px; border-right:1px solid var(--linea);
+  border-bottom:1px solid var(--linea); background-size:cover; background-position:center; opacity:.5}
+
+/* ============ ENTRADAS EN VENTA ============ */
+.entradas{display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; margin-top:32px}
+.ent{display:flex; flex-direction:column; border-radius:var(--curva); overflow:hidden;
+  border:1px solid var(--linea); background:var(--tinta2); transition:border-color .25s, transform .25s}
+.ent:hover{border-color:var(--ac); transform:translateY(-4px)}
+.ent .foto{position:relative; background:#000}
+.ent .foto img{width:100%; aspect-ratio:4/5; object-fit:contain}
+.ent .sello{position:absolute; left:11px; top:11px; padding:5px 11px; border-radius:999px;
+  background:var(--ac); color:#09060e; font:800 11px/1 var(--texto)}
+.ent .cuerpo{padding:17px; display:flex; flex-direction:column; gap:9px; flex:1}
+.ent h3{font-size:clamp(20px,2.4vw,26px); text-transform:uppercase}
+.ent p{margin:0; font-size:14.5px; color:var(--papel); opacity:.88; white-space:pre-wrap}
+.ent .precio{align-self:flex-start; padding:9px 15px; border-radius:999px; background:var(--ac);
+  color:#09060e; font:800 16px/1 var(--texto)}
+.ent .contacto{display:flex; gap:8px; margin-top:auto; padding-top:14px; border-top:1px solid var(--linea)}
+.ent .contacto a{flex:1; display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:12px; border-radius:12px; text-decoration:none; font:800 13px/1 var(--texto);
+  transition:transform .16s}
+.ent .contacto a:hover{transform:translateY(-2px)}
+.ent .contacto .w{background:var(--ac); color:#09060e}
+.ent .contacto .i{border:1px solid var(--linea); color:var(--papel)}
+.ent .contacto svg{width:16px; height:16px}
+.ent .cuando{font:600 11px/1 var(--cond); letter-spacing:.16em; text-transform:uppercase; color:var(--tenue)}
+.sinEnt{padding:44px 24px; text-align:center; border:1px dashed var(--linea);
+  border-radius:var(--curva); color:var(--tenue); margin-top:30px}
+.sinEnt b{display:block; font:400 24px/1.1 var(--gordo); text-transform:uppercase; color:var(--papel); margin-bottom:8px}
+.cargandoEnt{padding:40px; text-align:center; color:var(--tenue); margin-top:30px}
+
+/* ============ ARCHIVO QUE VIENE DE INSTAGRAM ============ */
+.igRej{display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; margin-top:30px}
+.igPost{position:relative; display:block; border-radius:14px; overflow:hidden; border:1px solid var(--linea);
+  background:var(--humo); aspect-ratio:1; text-decoration:none; transition:transform .25s, border-color .25s}
+.igPost:hover{transform:translateY(-4px); border-color:var(--ac)}
+.igPost img{width:100%; height:100%; object-fit:cover}
+.igPost .tapa{position:absolute; inset:0; display:flex; flex-direction:column; justify-content:flex-end;
+  padding:34px 12px 11px; background:linear-gradient(transparent 42%, rgba(5,4,9,.92));
+  opacity:0; transition:opacity .25s}
+.igPost:hover .tapa{opacity:1}
+.igPost .tapa b{font:700 10.5px/1 var(--cond); letter-spacing:.16em; color:var(--ac)}
+.igPost .tipo{position:absolute; right:10px; top:10px; font-style:normal; padding:4px 8px;
+  border-radius:999px; background:rgba(8,7,12,.8); font:700 9px/1 var(--cond);
+  letter-spacing:.14em; text-transform:uppercase}
+.igPost .pie{margin-top:6px; font-size:12.5px; line-height:1.4; color:var(--papel);
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+@media(hover:none){ .igPost .tapa{opacity:1; background:linear-gradient(transparent 55%, rgba(5,4,9,.9))} }
+
+/* ---------- solapas y tarjetas de publicaciones ---------- */
+.solapas{display:flex; gap:9px; flex-wrap:wrap; margin:30px 0 4px}
+.solapa{appearance:none; cursor:pointer; font:600 13.5px/1 var(--cond); letter-spacing:.13em;
+  text-transform:uppercase; padding:12px 20px; border-radius:999px; color:var(--tenue);
+  background:var(--humo); border:1px solid var(--linea); display:inline-flex; align-items:center; gap:8px;
+  transition:color .18s, border-color .18s, background .18s, transform .18s}
+.solapa:hover{color:var(--papel); border-color:var(--ac); transform:translateY(-2px)}
+.solapa i{font:600 11px/1 var(--cond); font-style:normal; padding:3px 7px; border-radius:999px;
+  background:rgba(255,255,255,.08); color:inherit}
+.solapa.viva{background:var(--ac); border-color:var(--ac); color:#09060e}
+.solapa.viva i{background:rgba(0,0,0,.22)}
+.ent.pub .baja2{font:600 12px/1.3 var(--cond); letter-spacing:.13em; text-transform:uppercase; color:var(--ac)}
+.ent.pub .fechaGrande{font:400 clamp(30px,4vw,42px)/.9 var(--gordo); color:var(--papel); letter-spacing:.01em}
+.ent.pub .datos{display:flex; flex-wrap:wrap; gap:7px}
+.ent.pub .dato{display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px;
+  border:1px solid var(--linea); font-size:13px; color:var(--papel); opacity:.9}
+.ent.pub .dato svg{width:14px; height:14px; color:var(--ac); flex:none}
+/* el adorno que genera la IA, pegado a la tarjeta */
+.ent.pub{position:relative}
+.ent.pub .pegote{position:absolute; z-index:3; width:32%; max-width:150px; height:auto;
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.6)); pointer-events:none}
+.ent.pub[data-pos="der-arriba"] .pegote{right:6px; top:6px; transform:rotate(10deg)}
+.ent.pub[data-pos="izq-arriba"] .pegote{left:6px; top:6px; transform:rotate(-10deg)}
+.ent.pub[data-pos="der-abajo"] .pegote{right:6px; bottom:6px; transform:rotate(-8deg)}
+.ent.pub[data-pos="izq-abajo"] .pegote{left:6px; bottom:6px; transform:rotate(8deg)}
+/* la tarjeta recorta lo que se sale, así que el adorno va adentro y se le hace
+   lugar: sobre la foto si hay foto, y con una banda propia si no hay */
+.ent.pub[data-pos$="-arriba"]:not(.conFoto) .cuerpo{padding-top:104px}
+.ent.pub[data-pos$="-abajo"] .cuerpo{padding-bottom:96px}
+.entradas{padding-top:22px}
+[hidden]{display:none!important}
+/* ============================================================
+   VERSIÓN MÓVIL — otra estructura, no el escritorio encogido
+   ============================================================ */
+body{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px)); font-size:16px}
+main{overflow-x:hidden}
+
+/* cabecera compacta */
+.mcab{position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:11px;
+  padding:11px 16px calc(11px) 16px; backdrop-filter:blur(16px);
+  background:color-mix(in srgb,var(--tinta) 86%, transparent);
+  border-bottom:1px solid transparent; transition:border-color .3s}
+.mcab.pegado{border-bottom-color:var(--linea)}
+.mcab img{width:30px; height:30px; object-fit:contain}
+.mcab b{font:400 17px/1 var(--marca); letter-spacing:-.01em; margin-right:auto}
+.mcab .ig, .mcab .wa{width:38px; height:38px; border-radius:50%; display:grid; place-items:center;
+  border:1px solid var(--linea); color:var(--papel)}
+.mcab .wa{background:var(--ac); color:#09060e; border-color:var(--ac)}
+.mcab svg{width:18px; height:18px}
+
+/* barra de pestañas de abajo */
+.barraTabs{position:fixed; left:0; right:0; bottom:0; z-index:45; display:grid;
+  grid-template-columns:repeat(6,1fr); gap:1px; padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));
+  background:color-mix(in srgb,var(--tinta2) 94%, transparent); backdrop-filter:blur(18px);
+  border-top:1px solid var(--linea)}
+.barraTabs a{display:grid; justify-items:center; gap:4px; padding:5px 2px; border-radius:12px;
+  text-decoration:none; color:var(--tenue); font:700 8.5px/1 var(--cond); letter-spacing:.06em;
+  text-transform:uppercase; transition:color .2s, background .2s}
+.barraTabs a svg{width:19px; height:19px}
+.barraTabs a.act{color:var(--ac); background:color-mix(in srgb,var(--ac) 13%, transparent)}
+
+/* héroe a sangre */
+.mhero{position:relative; min-height:88svh; display:flex; flex-direction:column;
+  justify-content:flex-end; padding:24px 18px 30px; overflow:hidden; isolation:isolate}
+.mhero .mosaico3{position:absolute; inset:0; z-index:-2; display:grid; gap:3px;
+  grid-template-columns:repeat(3,1fr); align-content:start}
+.mhero .mosaico3 img{width:100%; aspect-ratio:1; object-fit:cover; opacity:.5}
+.mhero::after{content:""; position:absolute; inset:0; z-index:-1;
+  background:linear-gradient(180deg, color-mix(in srgb,var(--tinta) 55%, transparent) 0%,
+    color-mix(in srgb,var(--tinta) 78%, transparent) 42%, var(--tinta) 88%),
+    radial-gradient(ellipse 90% 55% at 50% 92%, rgba(var(--acs),.4), transparent 70%)}
+.mhero .lock{display:flex; align-items:center; gap:12px; margin-bottom:14px}
+.mhero .lock img{width:52px; filter:drop-shadow(0 0 18px rgba(var(--acs),.85))}
+.mhero .firma{display:block; font:400 26px/.8 var(--firma)}
+.mhero .nombre{display:block; font:400 38px/.9 var(--marca); color:var(--ac); margin-top:-.1em;
+  text-shadow:0 0 26px rgba(var(--acs),.7)}
+.mhero h1{font-size:clamp(34px,10.4vw,50px); text-wrap:balance}
+.mhero h1 em{font-style:normal; color:var(--ac)}
+.mhero p{margin:12px 0 0; color:var(--papel); opacity:.86; font-size:15.5px}
+.mhero .mbotones{display:grid; gap:9px; margin-top:20px}
+
+/* botones a lo ancho */
+.mbt{display:flex; align-items:center; justify-content:center; gap:9px; padding:16px 18px;
+  border-radius:16px; font:800 15.5px/1 var(--texto); text-decoration:none; text-align:center}
+.mbt.p{background:var(--ac); color:#09060e; box-shadow:0 12px 30px -12px rgba(var(--acs),1)}
+.mbt.s{border:1px solid var(--linea); background:var(--tinta2); color:var(--papel)}
+.mbt svg{width:18px; height:18px}
+
+/* bloques */
+.mbloq{padding:34px 0 8px}
+.mcaja{padding-inline:18px}
+.mrot{display:flex; align-items:center; gap:8px; font:700 10.5px/1 var(--cond);
+  letter-spacing:.24em; text-transform:uppercase; color:var(--ac); margin-bottom:10px}
+.mrot::before{content:""; width:20px; height:2px; background:var(--ac)}
+.mbloq h2{font-size:clamp(28px,8.4vw,40px)}
+.mbloq h2 em{font-style:normal; color:var(--ac)}
+.mbloq .baja{margin:10px 0 0; color:var(--tenue); font-size:15px}
+
+/* tarjeta de la próxima fecha */
+.mfecha{margin:18px 18px 0; padding:20px; border-radius:22px; position:relative; overflow:hidden;
+  border:1px solid var(--ac); background:linear-gradient(150deg, color-mix(in srgb,var(--ac) 15%, transparent), var(--tinta2))}
+.mfecha .dia{font:400 clamp(46px,15vw,66px)/.85 var(--gordo); letter-spacing:-.02em}
+.mfecha .dia i{font-style:normal; color:var(--ac)}
+.mfecha h3{margin:0 0 6px; font-size:22px}
+.mfecha ul{list-style:none; margin:16px 0 0; padding:0; display:grid; gap:7px}
+.mfecha li{display:flex; gap:9px; font-size:14.5px}
+.mfecha li b{color:var(--ac); flex:none; min-width:64px; font:700 10.5px/1.5 var(--cond);
+  letter-spacing:.16em; text-transform:uppercase}
+.mreloj{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:16px}
+.mreloj div{text-align:center; padding:10px 2px; border-radius:12px; background:rgba(8,7,12,.5);
+  border:1px solid var(--linea)}
+.mreloj strong{display:block; font:400 24px/1 var(--gordo); color:var(--ac); font-variant-numeric:tabular-nums}
+.mreloj small{display:block; margin-top:3px; font:700 8.5px/1 var(--cond); letter-spacing:.18em;
+  text-transform:uppercase; color:var(--tenue)}
+
+/* carrusel que engancha */
+.carrusel{display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; margin-top:18px;
+  padding:2px 18px 16px; scrollbar-width:none; -webkit-overflow-scrolling:touch}
+.carrusel::-webkit-scrollbar{display:none}
+.carrusel > *{scroll-snap-align:center; flex:none}
+.tarjEst{width:74vw; max-width:300px; position:relative; border-radius:20px; overflow:hidden;
+  border:1px solid var(--linea); text-decoration:none; display:block}
+.tarjEst img{width:100%; aspect-ratio:3/4.1; object-fit:cover}
+.tarjEst .info{position:absolute; left:0; right:0; bottom:0; padding:52px 15px 15px;
+  background:linear-gradient(transparent, rgba(5,4,9,.94) 62%)}
+.tarjEst .info b{display:block; font:400 24px/1 var(--gordo); text-transform:uppercase}
+.tarjEst .info small{display:block; margin-top:5px; font:700 10px/1.4 var(--cond);
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ac)}
+
+/* estéticas: una pantalla por estética, se pasa de costado */
+.baraja{display:flex; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none;
+  -webkit-overflow-scrolling:touch}
+.baraja::-webkit-scrollbar{display:none}
+.hoja{flex:none; width:100vw; scroll-snap-align:start; min-height:calc(100svh - 190px);
+  position:relative; display:flex; flex-direction:column; justify-content:flex-end;
+  padding:22px 18px 26px; overflow:hidden; isolation:isolate}
+.hoja .fondoHoja{position:absolute; inset:0; z-index:-2}
+.hoja .fondoHoja img{width:100%; height:100%; object-fit:cover; opacity:.62}
+.hoja::after{content:""; position:absolute; inset:0; z-index:-1;
+  background:linear-gradient(180deg, color-mix(in srgb,var(--tinta) 30%, transparent) 0%,
+    color-mix(in srgb,var(--tinta) 82%, transparent) 46%, var(--tinta) 92%)}
+.hoja .decoM{position:absolute; right:-16px; top:56px; width:118px; z-index:-1; opacity:.9;
+  filter:drop-shadow(0 12px 30px rgba(0,0,0,.7))}
+.hoja h3{font-size:clamp(32px,10vw,46px); color:var(--ac); text-shadow:0 0 40px rgba(var(--acs),.5)}
+.hoja .sub{margin:4px 0 0; font:700 11px/1.4 var(--cond); letter-spacing:.2em;
+  text-transform:uppercase; color:var(--papel); opacity:.75}
+.hoja .des{margin:12px 0 0; font-size:14.8px; color:var(--papel); opacity:.9}
+.hoja dl{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:16px 0 0}
+.hoja dl div{padding:10px 12px; border-radius:12px; background:rgba(10,8,16,.62);
+  border:1px solid var(--linea); backdrop-filter:blur(6px)}
+.hoja dt{font:700 8.5px/1 var(--cond); letter-spacing:.2em; text-transform:uppercase;
+  color:var(--tenue); margin-bottom:5px}
+.hoja dd{margin:0; font-size:13px; font-weight:600}
+.puntos{display:flex; justify-content:center; gap:6px; padding:12px 0 4px}
+.puntos span{width:7px; height:7px; border-radius:50%; background:var(--linea); transition:.25s}
+.puntos span.act{background:var(--ac); width:22px; border-radius:9px}
+.contadorEst{position:sticky; top:58px; z-index:20; display:flex; justify-content:center; pointer-events:none}
+.contadorEst b{padding:5px 12px; border-radius:999px; background:rgba(8,7,12,.72);
+  backdrop-filter:blur(8px); font:700 10px/1 var(--cond); letter-spacing:.18em; color:var(--papel)}
+
+/* reels a pantalla completa */
+.feed{scroll-snap-type:y mandatory; overflow-y:auto; height:calc(100svh - 124px);
+  scrollbar-width:none; overscroll-behavior:contain}
+.feed::-webkit-scrollbar{display:none}
+.mreel{position:relative; height:calc(100svh - 124px); scroll-snap-align:start; background:#000;
+  display:grid; place-items:center; overflow:hidden}
+.mreel video{width:100%; height:100%; object-fit:cover}
+.mreel .sobre{position:absolute; left:0; right:0; bottom:0; padding:70px 84px 20px 18px;
+  background:linear-gradient(transparent, rgba(4,3,8,.9) 55%); pointer-events:none}
+.mreel .sobre b{display:block; font:400 22px/1.05 var(--gordo); text-transform:uppercase}
+.mreel .sobre span{display:block; margin-top:6px; font-size:14px; color:var(--tenue)}
+.mreel .lado{position:absolute; right:14px; bottom:96px; display:grid; gap:12px; z-index:3}
+.mreel .lado button, .mreel .lado a{width:48px; height:48px; border-radius:50%; display:grid;
+  place-items:center; background:rgba(8,7,12,.62); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.2); color:var(--papel)}
+.mreel .lado svg{width:21px; height:21px}
+.mreel .lado .waR{background:var(--ac); color:#09060e; border-color:var(--ac)}
+.mreel .prog{position:absolute; left:0; bottom:0; height:3px; background:var(--ac); width:0; z-index:3}
+.mreel .toca{position:absolute; inset:0; z-index:2}
+.pista{position:absolute; left:0; right:0; top:0; z-index:3; display:flex; gap:3px; padding:10px 14px}
+.pista i{flex:1; height:2.5px; border-radius:2px; background:rgba(255,255,255,.22)}
+.pista i.act{background:var(--ac)}
+
+/* mosaico del archivo */
+.mmosaico{display:grid; grid-template-columns:repeat(3,1fr); gap:3px; margin-top:16px}
+.mmosaico button{padding:0; border:0; background:none; line-height:0}
+.mmosaico img{width:100%; aspect-ratio:1; object-fit:cover}
+.mvisor{position:fixed; inset:0; z-index:90; background:#05040a; display:flex;
+  scroll-snap-type:x mandatory; overflow-x:auto; scrollbar-width:none}
+.mvisor::-webkit-scrollbar{display:none}
+.mvisor figure{margin:0; flex:none; width:100vw; scroll-snap-align:center; display:grid; place-items:center}
+.mvisor img{max-width:100%; max-height:78svh; object-fit:contain}
+.mvisor .cerrarM{position:fixed; right:14px; top:14px; z-index:2; width:44px; height:44px;
+  border-radius:50%; background:rgba(8,7,12,.75); border:1px solid var(--linea); color:var(--papel);
+  font-size:20px}
+
+/* acordeón de servicios */
+.acorde{display:grid; gap:9px; margin-top:18px}
+.acorde details{border:1px solid var(--linea); border-radius:16px; background:var(--tinta2);
+  overflow:hidden}
+.acorde summary{list-style:none; cursor:pointer; padding:16px 17px; display:flex; align-items:center;
+  gap:12px; font:400 17px/1.1 var(--gordo); text-transform:uppercase}
+.acorde summary::-webkit-details-marker{display:none}
+.acorde summary svg{width:22px; height:22px; color:var(--ac); flex:none}
+.acorde summary::after{content:"+"; margin-left:auto; color:var(--ac); font:400 22px/1 var(--texto)}
+.acorde details[open] summary::after{content:"–"}
+.acorde .cuerpo{padding:0 17px 17px; font-size:14.5px; color:var(--tenue)}
+.acorde .cuerpo .prov{display:block; margin-top:8px; font:700 11px/1 var(--cond);
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ac)}
+
+/* lista de pueblos */
+.mpueblos{list-style:none; margin:16px 0 0; padding:0; display:grid; gap:1px; background:var(--linea);
+  border:1px solid var(--linea); border-radius:16px; overflow:hidden}
+.mpueblos li{background:var(--tinta2); padding:13px 16px; display:flex; align-items:baseline; gap:10px}
+.mpueblos b{font:400 17px/1 var(--gordo); text-transform:uppercase}
+.mpueblos .base{color:var(--ac)}
+.mpueblos small{margin-left:auto; font:700 9.5px/1 var(--cond); letter-spacing:.16em;
+  text-transform:uppercase; color:var(--tenue)}
+
+/* números en dos columnas */
+.mnums{display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-top:18px; background:var(--linea);
+  border:1px solid var(--linea); border-radius:18px; overflow:hidden}
+.mnums div{background:var(--tinta2); padding:18px 12px; text-align:center}
+.mnums strong{display:block; font:400 30px/1 var(--gordo); color:var(--ac); font-variant-numeric:tabular-nums}
+.mnums span{display:block; margin-top:6px; font:700 9.5px/1.3 var(--cond); letter-spacing:.16em;
+  text-transform:uppercase; color:var(--tenue)}
+
+/* tira de fotos */
+.mtira{overflow:hidden; margin-top:22px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.mtira div{display:flex; gap:6px; width:max-content; animation:corre 46s linear infinite}
+.mtira img{width:96px; height:96px; object-fit:cover; border-radius:11px}
+
+/* whatsapp flotante */
+.waFlota{opacity:0; transform:scale(.7); pointer-events:none; transition:opacity .3s, transform .3s;
+  position:fixed; right:14px; bottom:calc(78px + env(safe-area-inset-bottom,0px)); z-index:44;
+  width:54px; height:54px; border-radius:50%; display:grid; place-items:center; background:var(--ac);
+  color:#09060e; box-shadow:0 12px 30px -8px rgba(var(--acs),1)}
+.waFlota.ver{opacity:1; transform:none; pointer-events:auto}
+.waFlota svg{width:26px; height:26px}
+body[data-pg="esteticas"] .waFlota, body[data-pg="reels"] .waFlota{display:none}
+
+/* pie corto */
+.mpie{padding:30px 18px calc(24px); border-top:1px solid var(--linea); background:var(--tinta2);
+  text-align:center}
+.mpie small{display:block; color:var(--tenue); font-size:12.5px; line-height:1.7}
+.mpie a{color:var(--ac); text-decoration:none}
+.cambioModo{display:inline-block; margin-top:14px; padding:9px 16px; border-radius:999px;
+  border:1px solid var(--linea); font:700 11.5px/1 var(--cond); letter-spacing:.16em;
+  text-transform:uppercase; color:var(--tenue); text-decoration:none}
+
+/* ---- entradas en la versión de celular ---- */
+.mEnt{display:grid; gap:14px; margin-top:18px}
+.mEnt article{border-radius:20px; overflow:hidden; border:1px solid var(--linea); background:var(--tinta2)}
+.mEnt .foto{position:relative; background:#000}
+.mEnt .foto img{width:100%; aspect-ratio:4/5; object-fit:contain}
+.mEnt .sello{position:absolute; left:11px; top:11px; padding:5px 11px; border-radius:999px;
+  background:var(--ac); color:#09060e; font:800 11px/1 var(--texto)}
+.mEnt .cuerpo{padding:16px; display:grid; gap:9px}
+.mEnt h3{font-size:23px; text-transform:uppercase}
+.mEnt p{margin:0; font-size:14.5px; opacity:.9; white-space:pre-wrap}
+.mEnt .precio{justify-self:start; padding:9px 15px; border-radius:999px; background:var(--ac);
+  color:#09060e; font:800 16px/1 var(--texto)}
+.mEnt .cuando{font:600 10.5px/1 var(--cond); letter-spacing:.16em; text-transform:uppercase; color:var(--tenue)}
+.mEnt .contacto{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;
+  padding-top:13px; border-top:1px solid var(--linea)}
+.mEnt .contacto a{display:flex; align-items:center; justify-content:center; gap:7px; padding:13px;
+  border-radius:13px; text-decoration:none; font:800 13.5px/1 var(--texto)}
+.mEnt .contacto .w{background:var(--ac); color:#09060e}
+.mEnt .contacto .i{border:1px solid var(--linea); color:var(--papel)}
+.mEnt .contacto svg{width:16px; height:16px}
+
+/* ---- archivo de instagram en celular ---- */
+.igRej{grid-template-columns:repeat(2,1fr); gap:7px; margin-top:16px}
+
+/* ---------- solapas y tarjetas de publicaciones ---------- */
+.solapas{display:flex; gap:8px; margin:16px 0 2px; overflow-x:auto; scrollbar-width:none;
+  -webkit-overflow-scrolling:touch}
+.solapas::-webkit-scrollbar{display:none}
+.solapa{appearance:none; cursor:pointer; flex:none; font:600 12.5px/1 var(--cond); letter-spacing:.12em;
+  text-transform:uppercase; padding:11px 17px; border-radius:999px; color:var(--tenue);
+  background:var(--tinta2); border:1px solid var(--linea); display:inline-flex; align-items:center; gap:7px}
+.solapa i{font:600 10.5px/1 var(--cond); font-style:normal; padding:3px 6px; border-radius:999px;
+  background:rgba(255,255,255,.09); color:inherit}
+.solapa.viva{background:var(--ac); border-color:var(--ac); color:#09060e}
+.solapa.viva i{background:rgba(0,0,0,.22)}
+.mEnt .baja2{font:600 11.5px/1.3 var(--cond); letter-spacing:.13em; text-transform:uppercase; color:var(--ac)}
+.mEnt .fechaGrande{font:400 36px/.9 var(--gordo); color:var(--papel)}
+.mEnt .datos{display:flex; flex-wrap:wrap; gap:7px}
+.mEnt .dato{display:inline-flex; align-items:center; gap:6px; padding:7px 11px; border-radius:999px;
+  border:1px solid var(--linea); font-size:12.5px; opacity:.9}
+.mEnt .dato svg{width:14px; height:14px; color:var(--ac); flex:none}
+/* el adorno que genera la IA, pegado a la tarjeta */
+.mEnt article{position:relative}
+.mEnt .pegote{position:absolute; z-index:3; width:30%; max-width:118px; height:auto;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.6)); pointer-events:none}
+.mEnt article[data-pos="der-arriba"] .pegote{right:6px; top:6px; transform:rotate(10deg)}
+.mEnt article[data-pos="izq-arriba"] .pegote{left:6px; top:6px; transform:rotate(-10deg)}
+.mEnt article[data-pos="der-abajo"] .pegote{right:6px; bottom:6px; transform:rotate(-8deg)}
+.mEnt article[data-pos="izq-abajo"] .pegote{left:6px; bottom:6px; transform:rotate(8deg)}
+/* igual que en escritorio: el adorno va adentro y se le hace lugar */
+.mEnt article[data-pos$="-arriba"]:not(.conFoto) .cuerpo{padding-top:92px}
+.mEnt article[data-pos$="-abajo"] .cuerpo{padding-bottom:88px}
+.mEnt{padding-top:16px}
+</style>
+</head>
+<body data-pg="esteticas" data-modo="m">
+<style id="colorDest"></style>
+<canvas id="luces" aria-hidden="true"></canvas>
+<div class="velolux" aria-hidden="true"></div>
+<div id="destello" aria-hidden="true"></div>
+<div class="grano" aria-hidden="true"></div>
+
+<header class="mcab" id="mcab">
+  <img id="embNav" alt="" src="">
+  <b>IBLO</b>
+  <a class="ig" href="https://instagram.com/iblo_eventos" target="_blank" rel="noopener" aria-label="Instagram">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+  </a>
+  <a class="wa" id="waNav" href="#" target="_blank" rel="noopener" aria-label="WhatsApp">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2m0 1.8a8.2 8.2 0 1 1-4.2 15.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8m-3.3 4c-.2 0-.5.1-.7.4-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.8 2.2.9 2.6.7 3.1.7.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.6-.3-1.5-.7c-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.5v-.5l-.7-1.7c-.2-.4-.4-.4-.5-.4z"/></svg>
+  </a>
+</header>
+
+<main>
+<div class="contadorEst"><b id="cuenta">1 / 9</b></div>
+<div class="baraja" id="baraja"></div>
+<div class="puntos" id="puntos"></div>
+<div class="mcaja" style="padding-bottom:26px">
+  <a class="mbt p" id="waCierre" href="#" target="_blank" rel="noopener">Contanos tu idea</a>
+</div>
+
+</main>
+<nav class="barraTabs" id="tabs" aria-label="Secciones">
+  <a href="iblo.html" data-pg="inicio">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio</a>
+  <a href="iblo-publicaciones.html#entradas" data-pg="publicaciones">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 9.5V7a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v2.5a2.5 2.5 0 0 0 0 5V17a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-2.5a2.5 2.5 0 0 0 0-5z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Entradas</a>
+  <a href="iblo-esteticas.html" data-pg="esteticas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.6 6.1L21 10l-4.8 4.3L17.6 21 12 17.6 6.4 21l1.4-6.7L3 10l6.4-.9z"/></svg>Estéticas</a>
+  <a href="iblo-reels.html" data-pg="reels">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4.5 11.5 10M15 4.5 17.5 10M3 10h18"/><path d="M11 13.5v3.5l3-1.75z" fill="currentColor"/></svg>Reels</a>
+  <a href="iblo-archivo.html" data-pg="archivo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9" r="1.6"/><path d="m4 17 4.5-4.5 3.5 3.5L15.5 12 20 16.5"/></svg>Fotos</a>
+  <a href="iblo-servicios.html" data-pg="servicios">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/></svg>Servicios</a>
+</nav>
+
+<a class="waFlota" id="waFlota" href="#" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2m0 1.8a8.2 8.2 0 1 1-4.2 15.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8m-3.3 4c-.2 0-.5.1-.7.4-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.8 2.2.9 2.6.7 3.1.7.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.6-.3-1.5-.7c-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.5v-.5l-.7-1.7c-.2-.4-.4-.4-.5-.4z"/></svg>
+</a>
+
+<footer class="mpie">
+  <img id="embPie" alt="" src="" style="width:40px;height:40px;object-fit:contain;margin:0 auto 10px">
+  <small>
+    <b style="font:400 17px/1 var(--marca);color:var(--papel)">IBLO EVENTOS</b><br>
+    Margarita Belén, Chaco · llegamos a toda la provincia<br>
+    WhatsApp <a id="waPie" href="#" target="_blank" rel="noopener">3725 44-9273</a> ·
+    <a href="https://instagram.com/iblo_eventos" target="_blank" rel="noopener">@iblo_eventos</a>
+  </small>
+  <a class="cambioModo" id="cambioModo" href="#">Ver versión de escritorio</a>
+</footer>
+
+<script>
+
+var A = {"emblema": "../img/eb2332e02c.webp", "flyers": {"realeza": "../img/7f652b5ddd.webp", "amigo": "../img/c25dd92d6d.webp", "western": "../img/e01b841b1c.webp", "euphoria": "../img/f40488cfee.webp", "upd": "../img/36c86f7342.webp", "halloween": "../img/73325753e7.webp", "audiocar": "../img/a7eb7885f4.webp", "semaforo": "../img/11113843c2.webp", "ice": "../img/a93fbefaf7.webp", "pirata": "../img/3c013fd6cf.webp", "zonal": "../img/be88e6d614.webp", "pecado": "../img/001bb34ec2.webp", "aniversario": "../img/be37188d12.webp", "anonuevo": "../img/1ec8ff9c23.webp", "madre": "../img/dce4f28465.webp", "glitter": "../img/3ab747b009.webp", "pre5to": "../img/e84faf87c9.webp"}, "dec": {"halloween": "../img/8d37302f18.webp", "western": "../img/64e11e9600.webp", "euphoria": "../img/02763739fe.webp", "realeza": "../img/62238a63e6.webp", "semaforo": "../img/5d10e91268.webp", "audiocar": "../img/2226b646a3.webp", "ice": "../img/b63b289024.webp", "pirata": "../img/dc349042e4.webp", "zonal": "../img/d16095e1ea.webp"}, "tiles": ["../img/eefd53eeb1.webp", "../img/e83485f9dd.webp", "../img/eead1a1a12.webp", "../img/13798a0ccf.webp", "../img/a3961529f0.webp", "../img/224358c2cc.webp", "../img/ab5e5e1f54.webp", "../img/0d1b21ead5.webp", "../img/7b92946261.webp", "../img/0f9b99552e.webp", "../img/01120777fc.webp", "../img/11c773e864.webp", "../img/59792cd24f.webp", "../img/986fcfe7ed.webp", "../img/39fd1a027f.webp", "../img/ff58d32ba2.webp", "../img/38d2e14233.webp", "../img/4d2f22dd94.webp", "../img/f614154c66.webp", "../img/1ff91764e7.webp", "../img/9f3aa92414.webp", "../img/b502376534.webp", "../img/004bd3f996.webp", "../img/9804999d47.webp", "../img/78fca470d9.webp", "../img/160fb0869c.webp", "../img/21c209a902.webp"]};
+var MODELOS = {};
+var $ = function(i){ return document.getElementById(i); };
+var WA = "5493725449273";
+function wa(msg){ return "https://wa.me/"+WA+"?text="+encodeURIComponent(msg); }
+var ICONO_WA = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5.1-1.3A10 10 0 1 0 12 2m0 1.8a8.2 8.2 0 1 1-4.2 15.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 0 1 12 3.8m-3.3 4c-.2 0-.5.1-.7.4-.3.3-.9.9-.9 2.1s.9 2.4 1 2.6c.1.2 1.8 2.8 4.4 3.8 2.2.9 2.6.7 3.1.7.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.6-.3-1.5-.7c-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1-.2-.1-1-.4-1.9-1.2-.7-.6-1.2-1.4-1.3-1.6-.1-.2 0-.4.1-.5l.4-.5.3-.5v-.5l-.7-1.7c-.2-.4-.4-.4-.5-.4z"/></svg>';
+
+/* ---------------- datos ---------------- */
+/* IBLO-PREAMBULO */
+var __IBC=null; try{__IBC=JSON.parse(localStorage.getItem("iblo.sitio.v1")||"null");}catch(e){}
+var __IBE=((__IBC&&__IBC.esteticas)||[]).filter(function(x){return !x.oculta;});
+/* FIN IBLO-PREAMBULO */
+var ESTETICAS = __IBE.length ? __IBE : [
+ {k:"realeza", n:"Realeza", sub:"Elección de Rey y Reina · 19.09.2026", flyer:"realeza", pieza:"corona", dec:"realeza", clip:"upd", mov:"late", wsp:"Hola IBLO! Vi la fiesta de Elección de Rey y Reina y quiero info para el 19/09.",
+  des:"Oro, esmeralda y corona de verdad. La fiesta zonal de la Primavera y del Estudiante cierra con la coronación del Rey y la Reina de toda la zona, con jurado y con las promos de varios pueblos adentro del mismo salón.",
+  f:[["Lugar","Club Juventud · Margarita Belén"],["Arranca","22:00 hs"],["Cabina","DJ Agus Mendoza (set live)"],["Conduce","Maury Abraham"],["Momento","Coronación zonal"]]},
+
+ {k:"euphoria", n:"Euphoria", sub:"Pre Promo 26 · 02.05.2026", flyer:"euphoria", pieza:"bola", dec:"euphoria", clip:"euphoria", mov:"flota", wsp:"Hola IBLO! Me interesa una fiesta estilo Euphoria, con el stand de glitter. ¿Cómo lo armamos?",
+  des:"Violeta, magenta y neón hasta en el piso. La estética que más nos piden: luz de tubo, brillo en la cara y un stand de glitter abierto toda la noche para que nadie salga como entró.",
+  f:[["Lugar","Club Juventud"],["Start party","00:30 hs"],["Cabina","DJ Agus Mendoza + invitados"],["Clothing code","Colores"],["Adentro","Stand de glitter exclusivo"],["Extra","Conservadora gratis hasta 02:30"]]},
+
+ {k:"western", n:"Wéstern", sub:"Cowboy Night · 06.06.2026", flyer:"western", pieza:"sombrero", dec:"western", clip:"western", mov:"gira", wsp:"Hola IBLO! Quiero armar una Cowboy Night con toro mecánico. ¿Me pasás info?",
+  des:"Óxido, madera y revólver cruzado. Se entra de bota y sombrero, hay toro mecánico con premio en tragos para el que aguante arriba, y los mejores outfits se llevan entradas libres para todo el año.",
+  f:[["Lugar","Club Juventud"],["Opening","00:30 hs"],["Cabina","Alan Inamorato · Rodri Ojeda"],["Anima","Gera Animador"],["Dress style","Wéstern (cowboy)"],["Adentro","Toro mecánico · shot de tekila"]]},
+
+ {k:"halloween", n:"Halloween", sub:"Noche de brujas · 01.11.2025", flyer:"halloween", pieza:null, dec:"halloween", clip:"halloween", mov:"flota", wsp:"Hola IBLO! Quiero una fiesta de Halloween con concurso de disfraces. ¿Qué necesito?",
+  des:"Rojo sangre sobre negro, telaraña en el techo y la entrada convertida en cementerio de la joda. Es nuestro evento más grande del año: concurso de disfraces con jurado invitado y premios que se preparan con meses de anticipación.",
+  f:[["Lugar","Club Juventud"],["Open party","00:00 hs"],["Cabina","Alan Inamorato ft Javier Ríos"],["Concurso","Mejor disfraz, con jurado"],["Extra","Conservadora gratis hasta 02:30"],["Deco","Cementerio en el ingreso"]]},
+
+ {k:"audiocar", n:"Audio Car", sub:"Despedida de año · 27.12.2025", flyer:"audiocar", pieza:"parlante", dec:"audiocar", clip:"noche", mov:"late", wsp:"Hola IBLO! Me interesa un evento Audio Car al aire libre. ¿Cómo es la producción?",
+  des:"Cromo, magenta y cian: los equipos de sonido más grandes del NEA estacionados en el mismo predio. Abre de tarde al aire libre y sigue de noche adentro. Es la despedida del año y la única fecha donde la música la ponen los autos.",
+  f:[["Lugar","Predio Camping Municipal"],["Open predio","18:00 hs"],["Open boliche","00:00 hs"],["Sonido","Los equipos más grandes del NEA"],["Ingreso","Con conservadora (sin vidrios)"],["Cabina","DJs invitados"]]},
+
+ {k:"semaforo", n:"Semáforo", sub:"Día de los enamorados · 15.02.2025", flyer:"semaforo", pieza:null, dec:"semaforo", clip:"semaforo", mov:"flota", wsp:"Hola IBLO! Quiero hacer una Fiesta del Semáforo. ¿Me pasás info?",
+  des:"Verde, amarillo y rojo, y cada color dice algo. Rojo si venís en pareja, amarillo si es amistad con derechos, verde si estás soltero. Se entra con la pulsera puesta y la noche se ordena sola.",
+  f:[["Rojo","En pareja"],["Amarillo","Amigos con derechos"],["Verde","Soltero"],["Cabina","Javier Ríos · Alan Inamorato · Agus Mendoza"],["Anima","Gera Animador"],["Extra","Conservadora gratis hasta 02:00"]]},
+
+ {k:"ice", n:"Ice Party", sub:"Recibimiento del invierno · 21.06.2025", flyer:"ice", pieza:null, dec:"ice", clip:"pre5to", mov:"flota", wsp:"Hola IBLO! Me interesa una Ice Party para mi promo. ¿Cómo lo vemos?",
+  des:"Cian, hielo roto y vidrio suspendido. La fecha con la que recibimos el invierno, hecha junto a la pre promo de Colonia Benítez. Estética helada y la cabina más caliente que tenemos.",
+  f:[["Lugar","Salón Multiusos · Colonia Benítez"],["Open","00:30 hs"],["Cabina","Alan Inamorato"],["Con","Pre promo 4to 1ra"],["Extra","Conservadora gratis hasta 02:30"]]},
+
+ {k:"pirata", n:"Noche Pirata", sub:"Presentación de la 23 · 03.05.2023", flyer:"pirata", pieza:null, dec:"pirata", clip:"disfraz", mov:"flota", wsp:"Hola IBLO! Quiero una fiesta temática tipo Noche Pirata. ¿Me pasás info?",
+  des:"Oro viejo, negro y bandera. Una de las primeras temáticas de la casa, en Las Garcitas, con premio al mejor disfraz pirata y la presentación oficial de la promo 2023.",
+  f:[["Lugar","Las Garcitas"],["Premio","Mejor disfraz pirata"],["Presenta","La 23"],["Época","Los primeros años"]]},
+
+ {k:"zonal", n:"Zonal Party", sub:"Complejo Luzzi · 14.10.2023", flyer:"zonal", pieza:"bola", dec:"zonal", clip:"vibras", mov:"late", wsp:"Hola IBLO! Quiero armar una fiesta zonal en mi localidad. ¿Llegan hasta acá?",
+  des:"El primer mega evento: traer a un artista de afuera de la provincia a un pueblo del interior. Sonido y show de luces de la nueva generación, y el Complejo Luzzi transformado entero para una sola noche.",
+  f:[["Lugar","Complejo Luzzi · Las Garcitas"],["Invitado","Facu Vázquez (1ª vez en Chaco)"],["DJ zonal","Yona Pérez"],["Anima","Gera Animador"],["Ingreso","Con conservadora"]]}
+];
+
+var CICLO = [
+ ["Bienvenida","Arranca el año de la promo. Primera fecha juntos y presentación oficial del grupo."],
+ ["Presentación de remeras","La noche de las chombas y buzos: coreo, trucos y el grupo entero arriba del escenario."],
+ ["Sesión de fotos","Producción con fotógrafo. Los llevamos hasta la costanera de Corrientes, con transporte gestionado ante el municipio."],
+ ["Pre-quinto","La primera fiesta grande de la promo, muchas veces armada entre dos pueblos a la vez."],
+ ["UPD","El Último Primer Día. Es la fecha más esperada del calendario y la que más se vuelve viral."],
+ ["Fogón de despedida","La parte tranquila: la promo junta antes de que se termine todo."],
+ ["Recepción","La noche de gala. Vestidos, traje, cena y cierre de ciclo."]
+];
+
+var SERVICIOS = [
+ ["camara","Cabina de fotos","Un sector decorado según la temática de esa noche, con fondo propio. Se arma para cada fecha y no se repite.","@myf.visuals","Hola IBLO! Quiero contratar la cabina de fotos para mi evento."],
+ ["copa","Sector VIP","Mesas con barra exclusiva y precintos de ingreso. Cupo limitado, se agota en preventa.","","Hola IBLO! Quiero reservar sector VIP con barra exclusiva."],
+ ["chispa","Stand de glitter","Brillo aplicado toda la noche en las fechas Euphoria y Glitter Party.","@shine.glitter.stand","Hola IBLO! Me interesa el stand de glitter para mi fiesta."],
+ ["parlante","Sonido e iluminación","Equipo y luces de nivel para salón cerrado o predio al aire libre.","@gm_sonido_iluminacion","Hola IBLO! Necesito sonido e iluminación para un evento."],
+ ["camara","Producción audiovisual","Reels, aftermovie y visuales proyectados durante la fiesta.","@myf.visuals","Hola IBLO! Quiero producción audiovisual: reels y aftermovie."],
+ ["corona","Concursos y elecciones","Elección de Rey y Reina, mejor disfraz, mejor outfit, con jurado invitado y premios reales.","","Hola IBLO! Quiero armar una elección de Rey y Reina en mi evento."],
+ ["carpeta","Drive con todas las fotos","Después de cada fiesta subimos el material completo a una carpeta pública. Buscate y etiquetanos.","","Hola IBLO! Consulta por las fotos de una fiesta."],
+ ["regalo","Sorteos","Nuestra forma de llenar el salón. Etiquetá, compartí y entrás al bombo: el último juntó más de 1.800 comentarios.","","Hola IBLO! Quiero hacer un sorteo para difundir mi evento."],
+ ["hielo","Conservadora","En casi todas las fechas se entra con conservadora hasta determinada hora. Sin vidrio.","","Hola IBLO! Consulta sobre el ingreso con conservadora."]
+];
+
+var EQUIPO = [
+ ["Cabina","DJs",[["Agus Mendoza",1],["Alan Inamorato",1],["Matías Villalba",0],["Javier Ríos",0],["Rodri Ojeda",0],["Ailén Romero",0],["Apolo",0],["Braian Jara",0],["Yona Pérez",0]]],
+ ["Micrófono","Animación",[["Gera Animador",1],["Maury Abraham",0]]],
+ ["Cámara","Audiovisual",[["MyF Visuals",1],["Mati Silva",0]]],
+ ["Diseño","Flyers",[["Rulo.Creativo",1],["Jonás Desing",0],["EP Publicidades",0]]],
+ ["Piso","Staff y RRPP",[["Joni Romero",0],["Diego Valussi (Chipi)",0],["Neo Ojeda",0],["Lucy Martínez",0],["Karen Romero",0],["Cami Gauna",0],["Michael Torres",0],["Mile Toledo",0],["Julieta Díaz",0]]]
+];
+
+var NUMEROS = [
+ ["3½","años de fiestas"],["171","publicaciones"],["2.944","seguidores"],
+ ["216","historias archivadas"],["109.939","reproducciones en un reel"],["1.827","comentarios en un sorteo"]
+];
+
+var PUEBLOS = [
+ ["Margarita Belén","Base",1],["Las Garcitas","Donde empezó",0],["Colonia Benítez","Fechas zonales",0],
+ ["Colonia Amadeo","Fechas zonales",0],["General San Martín","Visitado",0],
+ ["Presidencia Roca","A pedido",0],["Pampa del Indio","A pedido",0],
+ ["Resistencia y área metro","A pedido",0],["Corrientes","Sesiones de fotos",0],
+ ["Resto del Chaco","Agendamos",0]
+];
+var SEDES = [
+ ["Club Juventud","Margarita Belén · la casa"],
+ ["Complejo Luzzi","Las Garcitas · las Zonal Party"],
+ ["Club Social y Deportivo","Las Garcitas · al aire libre"],
+ ["Salón Multiusos","Colonia Benítez"],
+ ["Predio Camping Municipal","Margarita Belén · Audio Car"],
+ ["Club San Martín","Fechas de primavera"]
+];
+
+var ICONOS = {
+ camara:'<path d="M4 8h4l2-3h8l2 3h4v14H4z"/><circle cx="20" cy="15" r="5"/>',
+ copa:'<path d="M8 4h16l-2 9a6 6 0 0 1-12 0z"/><path d="M16 22v10M10 32h12"/>',
+ chispa:'<path d="M20 3l3.6 10.4L34 17l-10.4 3.6L20 31l-3.6-10.4L6 17l10.4-3.6z"/>',
+ parlante:'<rect x="9" y="5" width="22" height="30" rx="3"/><circle cx="20" cy="25" r="6.5"/><circle cx="20" cy="25" r="2"/><circle cx="20" cy="12" r="3"/>',
+ corona:'<path d="M5 30l-1-18 8 7 8-13 8 13 8-7-1 18z"/><path d="M5 34h30"/>',
+ carpeta:'<path d="M4 9h11l3 4h18v20H4z"/>',
+ regalo:'<rect x="4" y="14" width="32" height="20" rx="2"/><path d="M4 20h32M20 14v20"/><path d="M20 14c-6-8-14-2-6 0M20 14c6-8 14-2 6 0"/>',
+ hielo:'<path d="M20 4v32M6 12l28 16M34 12L6 28"/>'
+};
+
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+
+/* --- emblemas y WhatsApp fijos --- */
+(function(){
+  ["embNav","embHero","embPie"].forEach(function(i){ var n=$(i); if(n) n.src=A.emblema; });
+  var fijos={waNav:"Hola IBLO! Quiero consultar por una fecha.",
+             waHero:"Hola IBLO! Quiero consultar por una fecha.",
+             waZona:"Hola IBLO! Soy de otra localidad del Chaco. ¿Llegan hasta acá?",
+             waCierre:"Hola IBLO! Quiero armar una fiesta. ¿Lo charlamos?",
+             waPie:"Hola IBLO! Quiero consultar por una fecha."};
+  for(var k in fijos){ var n=$(k); if(n) n.href=wa(fijos[k]); }
+  var act=document.body.dataset.pg;
+  var a=document.querySelector('#menu a[data-pg="'+act+'"]'); if(a) a.classList.add("act");
+})();
+
+/* --- escritorio o móvil: cada uno con su versión --- */
+(function(){
+  var esM = document.body.dataset.modo === "m";
+  function ir(aM){
+    var arch = location.pathname.split("/").pop() || "iblo.html";
+    location.replace((aM ? "m/" : "../") + arch + location.hash);
+  }
+  var elegido=null;
+  try{ elegido = localStorage.getItem("iblo.modo"); }catch(e){}
+  var yaSalte=false;
+  try{ yaSalte = sessionStorage.getItem("iblo.salto")==="1"; }catch(e){}
+  if(!yaSalte){
+    try{ sessionStorage.setItem("iblo.salto","1"); }catch(e){}
+    var chico = matchMedia("(max-width:820px)").matches;
+    if(elegido==="m" && !esM) return ir(true);
+    if(elegido==="e" && esM)  return ir(false);
+    if(!elegido){
+      if(chico && !esM) return ir(true);
+      if(!chico && esM) return ir(false);
+    }
+  }
+  // enlace para cambiar a mano
+  var l=document.getElementById("cambioModo");
+  if(l){
+    l.textContent = esM ? "Ver versión de escritorio" : "Ver versión para celular";
+    l.href="#";
+    l.addEventListener("click", function(ev){
+      ev.preventDefault();
+      try{ localStorage.setItem("iblo.modo", esM ? "e" : "m"); sessionStorage.removeItem("iblo.salto"); }catch(e){}
+      ir(!esM);
+    });
+  }
+})();
+
+/* --- nav --- */
+(function(){
+  var nav=$("nav"), menu=$("menu"), h=$("hamb");
+  if(!nav||!menu||!h) return;
+  addEventListener("scroll", function(){ nav.classList.toggle("pegado", scrollY>12); }, {passive:true});
+  h.addEventListener("click", function(){
+    var ab=menu.classList.toggle("abierta");
+    h.setAttribute("aria-expanded", ab?"true":"false");
+    h.setAttribute("aria-label", ab?"Cerrar el menú":"Abrir el menú");
+  });
+})();
+
+/* --- aparición --- */
+(function(){
+  var ob=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add("ok"); ob.unobserve(e.target); } });
+  },{rootMargin:"0px 0px -8% 0px"});
+  document.querySelectorAll(".rev").forEach(function(n){ ob.observe(n); });
+})();
+/* ---------------- luces de fondo ---------------- */
+(function(){
+  var cv=$("luces"); if(!cv) return;
+  var cx=cv.getContext("2d",{alpha:true}); if(!cx) return;
+  var quieto = matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var W=0,H=0,R=1;
+  function medir(){
+    R=Math.min(devicePixelRatio||1,1.4);
+    W=innerWidth; H=innerHeight;
+    cv.width=Math.round(W*R/3); cv.height=Math.round(H*R/3);   // se escala por CSS: barato y ya viene difuminado
+    cx.setTransform(cv.width/W,0,0,cv.height/H,0,0);
+  }
+  medir(); addEventListener("resize", medir);
+
+  // el color se lee de las variables del tema y se interpola al cambiar de estética
+  function leer(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function aRGB(h){
+    h=h.replace("#","");
+    if(h.length===3) h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var n=parseInt(h,16);
+    return [n>>16&255, n>>8&255, n&255];
+  }
+  var destino=[[255,30,142],[139,47,214],[255,210,63]], actualC=destino.map(function(c){return c.slice();});
+  function refrescarColores(){
+    destino=[aRGB(leer("--ac")), aRGB(leer("--ac2")), aRGB(leer("--ac3"))];
+  }
+  refrescarColores();
+  window.refrescarLuces=refrescarColores;
+
+  var focos=[];
+  for(var i=0;i<5;i++) focos.push({
+    x:Math.random(), y:Math.random(),
+    vx:(Math.random()-.5)*0.00013, vy:(Math.random()-.5)*0.00009,
+    r:.34+Math.random()*.3, c:i%3, f:Math.random()*6.28
+  });
+
+  var t0=performance.now();
+  function pinta(t){
+    requestAnimationFrame(pinta);
+    var dt=Math.min(t-t0,60); t0=t;
+    // acercar el color actual al del tema: eso da la transición suave
+    for(var k=0;k<3;k++) for(var j=0;j<3;j++)
+      actualC[k][j]+=(destino[k][j]-actualC[k][j])*0.045;
+    cx.clearRect(0,0,W,H);
+    cx.globalCompositeOperation="lighter";
+    for(var i=0;i<focos.length;i++){
+      var f=focos[i];
+      if(!quieto){
+        f.x+=f.vx*dt; f.y+=f.vy*dt; f.f+=dt*0.00035;
+        if(f.x<-.25||f.x>1.25) f.vx*=-1;
+        if(f.y<-.25||f.y>1.25) f.vy*=-1;
+      }
+      var px=(f.x+Math.sin(f.f)*.05)*W, py=(f.y+Math.cos(f.f*.8)*.045)*H;
+      var rad=f.r*Math.max(W,H)*(.85+Math.sin(f.f*1.3)*.12);
+      var c=actualC[f.c].map(Math.round);
+      var g=cx.createRadialGradient(px,py,0,px,py,rad);
+      g.addColorStop(0,"rgba("+c[0]+","+c[1]+","+c[2]+",.5)");
+      g.addColorStop(.55,"rgba("+c[0]+","+c[1]+","+c[2]+",.13)");
+      g.addColorStop(1,"rgba("+c[0]+","+c[1]+","+c[2]+",0)");
+      cx.fillStyle=g; cx.beginPath(); cx.arc(px,py,rad,0,6.2832); cx.fill();
+    }
+  }
+  requestAnimationFrame(pinta);
+})();
+
+/* ---------------- transición al cambiar de estética ---------------- */
+function transicion(){
+  if(matchMedia("(prefers-reduced-motion:reduce)").matches) return;
+  var d=$("destello"), b=$("barrido");
+  [d,b].forEach(function(n){ if(!n) return; n.classList.remove("va"); void n.offsetWidth; n.classList.add("va"); });
+}
+
+/* ---------------- 3D ---------------- */
+var TIPOS={5120:Int8Array,5121:Uint8Array,5122:Int16Array,5123:Uint16Array,
+           5125:Uint32Array,5126:Float32Array}, NC={SCALAR:1,VEC2:2,VEC3:3,VEC4:4};
+function b64buf(t){
+  t=t.replace(/\s+/g,"");
+  var co=t.indexOf("base64,"); if(co>=0) t=t.slice(co+7);
+  var b=atob(t),u=new Uint8Array(b.length);
+  for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);
+  return u.buffer;
+}
+function mallaDeGLB(buf, opc){
+  opc = opc || {};
+  var dv=new DataView(buf),off=12,gl=null,bin=null;
+  while(off<dv.byteLength){var L=dv.getUint32(off,true),T=dv.getUint32(off+4,true);
+    if(T===0x4E4F534A) gl=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,off+8,L)));
+    else if(T===0x004E4942) bin={off:off+8};
+    off+=8+L+((4-L%4)%4);}
+  function acc(i){var a=gl.accessors[i],v=gl.bufferViews[a.bufferView],T=TIPOS[a.componentType],
+    n=NC[a.type],vo=v.byteOffset||0,ao=a.byteOffset||0,st=v.byteStride||0;
+    if(!st||st===n*T.BYTES_PER_ELEMENT)
+      return new T(buf.slice(bin.off+vo+ao,bin.off+vo+ao+a.count*n*T.BYTES_PER_ELEMENT));
+    var todo=new T(buf.slice(bin.off+vo,bin.off+vo+v.byteLength));
+    var s=st/T.BYTES_PER_ELEMENT,d=ao/T.BYTES_PER_ELEMENT,o=new T(a.count*n);
+    for(var k=0;k<a.count;k++)for(var cc=0;cc<n;cc++)o[k*n+cc]=todo[d+k*s+cc];
+    return o;}
+  function tex(idx,srgb){
+    var t=gl.textures[idx];
+    var src=(t.extensions&&t.extensions.EXT_texture_webp)?t.extensions.EXT_texture_webp.source:t.source;
+    var im=gl.images[src],v=gl.bufferViews[im.bufferView];
+    var url=URL.createObjectURL(new Blob([new Uint8Array(buf,bin.off+(v.byteOffset||0),v.byteLength)],
+      {type:im.mimeType}));
+    var x=new THREE.TextureLoader().load(url,function(){URL.revokeObjectURL(url)});
+    x.flipY=false; x.wrapS=x.wrapT=THREE.RepeatWrapping;
+    if(srgb) x.colorSpace=THREE.SRGBColorSpace;
+    return x;}
+  var pr=gl.meshes[0].primitives[0], g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.BufferAttribute(acc(pr.attributes.POSITION),3));
+  if(pr.attributes.NORMAL!==undefined)
+    g.setAttribute("normal",new THREE.BufferAttribute(acc(pr.attributes.NORMAL),3));
+  if(pr.attributes.TEXCOORD_0!==undefined)
+    g.setAttribute("uv",new THREE.BufferAttribute(acc(pr.attributes.TEXCOORD_0),2));
+  if(pr.indices!==undefined) g.setIndex(new THREE.BufferAttribute(acc(pr.indices),1));
+  if(pr.attributes.NORMAL===undefined) g.computeVertexNormals();
+  g.computeBoundingBox();
+  var b=g.boundingBox,t3=new THREE.Vector3(); b.getSize(t3);
+  var c3=new THREE.Vector3(); b.getCenter(c3);
+  var s=2.2/Math.max(t3.x,t3.y,t3.z);
+  g.translate(-c3.x,-c3.y,-c3.z); g.scale(s,s,s);
+  // una pieza plana (un cartel) tiene que mirar a la cámara, no quedar de canto
+  if(opc.plano){
+    if(t3.x < t3.y && t3.x < t3.z) g.rotateY(-Math.PI/2);
+    else if(t3.y < t3.x && t3.y < t3.z) g.rotateX(-Math.PI/2);
+    g.computeBoundingBox();
+    var b2=g.boundingBox, t4=new THREE.Vector3(); b2.getSize(t4);
+    var c4=new THREE.Vector3(); b2.getCenter(c4);
+    g.translate(-c4.x,-c4.y,-c4.z);
+    var s2=2.35/Math.max(t4.x,t4.y);
+    g.scale(s2,s2,s2);
+  }
+  var md=(gl.materials||[{}])[pr.material||0]||{}, pbr=md.pbrMetallicRoughness||{};
+  var mat=new THREE.MeshStandardMaterial({color:0xffffff,metalness:1,roughness:1,envMapIntensity:1.25,
+    map:pbr.baseColorTexture?tex(pbr.baseColorTexture.index,true):null,
+    normalMap:md.normalTexture?tex(md.normalTexture.index,false):null});
+  if(pbr.metallicRoughnessTexture){ var orm=tex(pbr.metallicRoughnessTexture.index,false);
+    mat.roughnessMap=orm; mat.metalnessMap=orm; }
+  return new THREE.Mesh(g,mat);
+}
+function estudio(ren,esc){
+  var c=document.createElement("canvas"); c.width=512; c.height=256;
+  var x=c.getContext("2d");
+  var g=x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0,"#3a2b52"); g.addColorStop(.5,"#120d1c"); g.addColorStop(1,"#05040a");
+  x.fillStyle=g; x.fillRect(0,0,512,256);
+  x.fillStyle="rgba(255,255,255,.95)"; x.beginPath(); x.ellipse(150,70,90,42,0,0,7); x.fill();
+  x.fillStyle="rgba(255,60,170,.75)"; x.beginPath(); x.ellipse(380,110,70,34,0,0,7); x.fill();
+  x.fillStyle="rgba(60,200,255,.55)"; x.beginPath(); x.ellipse(280,200,110,40,0,0,7); x.fill();
+  var te=new THREE.CanvasTexture(c);
+  te.mapping=THREE.EquirectangularReflectionMapping; te.colorSpace=THREE.SRGBColorSpace;
+  esc.environment=new THREE.PMREMGenerator(ren).fromEquirectangular(te).texture;
+}
+function luces(esc){
+  esc.add(new THREE.AmbientLight(0xffffff,.5));
+  var k=new THREE.DirectionalLight(0xffffff,2.1); k.position.set(-2.6,4,3.4); esc.add(k);
+  var r=new THREE.DirectionalLight(0xff44b0,1.2); r.position.set(3.4,.8,-3); esc.add(r);
+  var a=new THREE.DirectionalLight(0x44d8ff,.8); a.position.set(0,-2.5,2); esc.add(a);
+}
+function visores(){ return typeof THREE!=="undefined" && !!document.createElement("canvas").getContext; }
+
+function nuevoVisor(cv, glb, opc){
+  opc=opc||{};
+  var ren, esc, cam, malla, giroX=0, giroY=0, vel=opc.vel||0.006, arrastra=false, ux=0, uy=0, vivo=true;
+  try{
+    ren=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+  }catch(e){ return null; }
+  ren.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  ren.outputColorSpace=THREE.SRGBColorSpace;
+  ren.toneMapping=THREE.ACESFilmicToneMapping; ren.toneMappingExposure=1.1;
+  esc=new THREE.Scene(); estudio(ren,esc); luces(esc);
+  cam=new THREE.PerspectiveCamera(30,1,.05,60); cam.position.set(0,0,opc.z||5.6);
+  try{ malla=mallaDeGLB(b64buf(glb), opc); esc.add(malla); }
+  catch(e){ return null; }
+  function medir(){
+    var w=cv.clientWidth||300, h=cv.clientHeight||300;
+    ren.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix();
+  }
+  medir(); addEventListener("resize", medir);
+  cv.style.touchAction="pan-y"; cv.style.cursor="grab";
+  function abajo(e){ arrastra=true; cv.style.cursor="grabbing";
+    ux=(e.touches?e.touches[0].clientX:e.clientX); uy=(e.touches?e.touches[0].clientY:e.clientY); }
+  function mueve(e){ if(!arrastra) return;
+    var x=(e.touches?e.touches[0].clientX:e.clientX), y=(e.touches?e.touches[0].clientY:e.clientY);
+    giroY+=(x-ux)*.008; giroX=Math.max(-.9,Math.min(.9,giroX+(y-uy)*.006)); ux=x; uy=y; }
+  function arriba(){ arrastra=false; cv.style.cursor="grab"; }
+  cv.addEventListener("pointerdown",abajo); addEventListener("pointermove",mueve); addEventListener("pointerup",arriba);
+  cv.addEventListener("touchstart",abajo,{passive:true}); cv.addEventListener("touchmove",mueve,{passive:true});
+  cv.addEventListener("touchend",arriba);
+  (function lazo(){
+    if(!vivo) return;
+    requestAnimationFrame(lazo);
+    if(opc.vaiven){
+      if(!arrastra) giroY = Math.sin(Date.now()/2600)*0.40;
+      malla.rotation.y=giroY;
+      malla.rotation.x=giroX + Math.sin(Date.now()/3700)*0.06;
+    } else {
+      if(!arrastra) giroY+=vel;
+      malla.rotation.y=giroY; malla.rotation.x=giroX;
+    }
+    if(opc.flota) malla.position.y=Math.sin(Date.now()/1400)*.09;
+    ren.render(esc,cam);
+  })();
+  return { parar:function(){ vivo=false; ren.dispose(); } };
+}
+
+
+/* --- fotos de fondo: se reparten solas por la página --- */
+function tesela(i){ return A.tiles ? A.tiles[i % A.tiles.length] : ""; }
+function mezclado(){
+  var v=[]; for(var i=0;i<(A.tiles||[]).length;i++) v.push(i);
+  for(var i=v.length-1;i>0;i--){ var j=(i*7+3)%(i+1); var t=v[i]; v[i]=v[j]; v[j]=t; }
+  return v;
+}
+function pintarFotos(){
+  if(!A.tiles) return;
+  var orden=mezclado(), n=0;
+
+  // fondo difuminado en las secciones marcadas
+  document.querySelectorAll("[data-foto]").forEach(function(s,i){
+    if(!A.fondos) return;
+    var d=document.createElement("div"); d.className="fotoFondo"; d.setAttribute("aria-hidden","true");
+    var im=document.createElement("img"); im.alt=""; im.loading="lazy";
+    im.src=A.fondos[i % A.fondos.length];
+    d.appendChild(im); s.classList.add("conFoto"); s.prepend(d);
+  });
+
+  // tejido de fotos donde haga falta
+  document.querySelectorAll("[data-tejido]").forEach(function(s){
+    var d=document.createElement("div"); d.className="tejido"; d.setAttribute("aria-hidden","true");
+    var cuantas=+s.dataset.tejido || 24, h="";
+    for(var i=0;i<cuantas;i++) h+='<img loading="lazy" alt="" src="'+tesela(orden[(n++)%orden.length])+'">';
+    d.innerHTML=h; s.style.position=s.style.position||"relative"; s.prepend(d);
+  });
+
+  // tiras que corren
+  document.querySelectorAll("[data-tira]").forEach(function(s){
+    var filas=+s.dataset.tira||2, h="";
+    for(var f=0;f<filas;f++){
+      var v="";
+      for(var r=0;r<2;r++) for(var i=0;i<12;i++) v+='<img loading="lazy" alt="" src="'+tesela(orden[(f*12+i)%orden.length])+'">';
+      h+='<div class="tira'+(f%2?' atras':'')+'"><div class="via">'+v+'</div></div>';
+    }
+    s.innerHTML=h;
+  });
+
+  // franja a sangre
+  document.querySelectorAll("[data-franja]").forEach(function(s){
+    var c=+s.dataset.franja||8, h="";
+    for(var i=0;i<c;i++) h+='<img loading="lazy" alt="" src="'+tesela(orden[(n++)%orden.length])+'">';
+    s.innerHTML=h;
+  });
+
+  // collage detrás de la bola
+  document.querySelectorAll("[data-collage]").forEach(function(s){
+    var d=document.createElement("div"); d.className="collage"; d.setAttribute("aria-hidden","true");
+    var h=""; for(var i=0;i<9;i++) h+='<img loading="lazy" alt="" src="'+tesela(orden[(n++)%orden.length])+'">';
+    d.innerHTML=h; s.prepend(d);
+  });
+
+  // un rincón con foto en cada tarjeta
+  document.querySelectorAll(".serv, .paso, .rol").forEach(function(c){
+    var im=document.createElement("img"); im.className="rincon"; im.alt=""; im.loading="lazy";
+    if(c.querySelector(".rincon")) return;
+    im.src=tesela(orden[(n++)%orden.length]); c.appendChild(im);
+  });
+}
+// se corre después del guion de cada página, para alcanzar las tarjetas ya dibujadas
+setTimeout(pintarFotos,0);
+
+/* --- pestaña activa, cabecera y tira de fotos --- */
+(function(){
+  var act=document.body.dataset.pg;
+  var a=document.querySelector('#tabs a[data-pg="'+act+'"]'); if(a) a.classList.add("act");
+  var c=$("mcab");
+  addEventListener("scroll", function(){ c.classList.toggle("pegado", scrollY>6); }, {passive:true});
+  var f=$("waFlota");
+  if(f){
+    f.href=wa("Hola IBLO! Quiero consultar por una fecha.");
+    var pg=document.body.dataset.pg;
+    if(pg!=="esteticas" && pg!=="reels"){
+      addEventListener("scroll", function(){ f.classList.toggle("ver", scrollY>340); }, {passive:true});
+    }
+  }
+  document.querySelectorAll("[data-mtira]").forEach(function(s){
+    var v=""; for(var r=0;r<2;r++) for(var i=0;i<10;i++) v+='<img loading="lazy" alt="" src="'+A.tiles[(i*3+r)%A.tiles.length]+'">';
+    s.innerHTML='<div>'+v+'</div>';
+  });
+})();
+
+(function(){
+  var h="", p="";
+  for(var i=0;i<ESTETICAS.length;i++){
+    var e=ESTETICAS[i], f="";
+    for(var k=0;k<Math.min(e.f.length,4);k++)
+      f+='<div><dt>'+esc(e.f[k][0])+'</dt><dd>'+esc(e.f[k][1])+'</dd></div>';
+    h+='<section class="hoja" id="'+e.k+'" data-est="'+e.k+'">'+
+       '<div class="fondoHoja" aria-hidden="true"><img loading="lazy" alt="" src="'+A.flyers[e.flyer]+'"></div>'+
+       (A.dec[e.dec]?'<img class="decoM" alt="" loading="lazy" src="'+A.dec[e.dec]+'">':'')+
+       '<h3>'+esc(e.n)+'</h3><p class="sub">'+esc(e.sub)+'</p><p class="des">'+esc(e.des)+'</p>'+
+       '<dl>'+f+'</dl>'+
+       '<a class="mbt p" style="margin-top:16px" target="_blank" rel="noopener" href="'+wa(e.wsp)+'">'+
+         'Quiero una fiesta '+esc(e.n)+'</a></section>';
+    p+='<span'+(i===0?' class="act"':'')+'></span>';
+  }
+  $("baraja").innerHTML=h; $("puntos").innerHTML=p;
+})();
+
+var actual="";
+function aplicar(k,i){
+  if(k===actual) return; actual=k;
+  document.documentElement.setAttribute("data-est",k);
+  if(window.transicion) transicion();
+  if(window.refrescarLuces) setTimeout(refrescarLuces,30);
+  var ps=$("puntos").children;
+  for(var j=0;j<ps.length;j++) ps[j].className = j===i ? "act" : "";
+  $("cuenta").textContent=(i+1)+" / "+ESTETICAS.length;
+}
+(function(){
+  var ob=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.intersectionRatio>.55){
+        var i=[].indexOf.call(e.target.parentNode.children, e.target);
+        aplicar(e.target.dataset.est, i);
+      }
+    });
+  },{root:$("baraja"), threshold:[.55]});
+  document.querySelectorAll(".hoja").forEach(function(n){ ob.observe(n); });
+  var k=location.hash.slice(1);
+  if(k && document.getElementById(k)) document.getElementById(k).scrollIntoView({inline:"start"});
+})();
+
+</script>
+<!-- IBLO-CARGADOR -->
+<script>
+/* Trae de /api/sitio lo que el dueño cambió desde el panel y lo aplica.
+ *
+ * TRES REGLAS QUE DECIDEN EL DISEÑO:
+ *
+ * 1. La página nunca queda en blanco. El HTML sigue trayendo su copia de las
+ *    estéticas y sus colores, y eso es lo que se ve al instante. Esto llega
+ *    después y sólo pisa lo que cambió. Si la API está caída, se ve lo de hoy.
+ * 2. Los colores no necesitan volver a dibujar nada. Son variables CSS: se
+ *    reemplaza una hoja de estilos y la página se retiñe sola, sin parpadeo.
+ *    Por eso "cambiar colores" es la parte barata y segura.
+ * 3. Agregar o sacar estéticas sí necesita redibujar, y eso lo hace la página,
+ *    no esto: cada página expone `window.ibloPintar(lista)` porque el
+ *    escritorio y el celular dibujan distinto. Si una página no lo expone, los
+ *    colores y las secciones igual funcionan.
+ *
+ * La copia en localStorage es para que el cambio se vea EN EL PRIMER CUADRO de
+ * la segunda visita: sin eso, el que entra ve un instante los colores viejos y
+ * después el salto.
+ */
+(function () {
+  var CACHE = "iblo.sitio.v1";
+  var TONOS = ["ac", "ac2", "ac3", "tinta", "tinta2", "humo", "linea", "papel"];
+
+  function css(areas) {
+    var t = "";
+    var m = areas.marca;
+    if (m) {
+      var v = "";
+      if (m.paleta) for (var i = 0; i < TONOS.length; i++)
+        if (m.paleta[TONOS[i]]) v += "--" + TONOS[i] + ":" + m.paleta[TONOS[i]] + ";";
+      if (m.paleta && m.paleta.ac) v += "--acs:" + rgb(m.paleta.ac) + ";";
+      if (m.curva != null) v += "--curva:" + m.curva + "px;";
+      if (m.grano != null) v += "--grano:" + m.grano + ";";
+      if (v) t += ":root{" + v + "}";
+    }
+    var e = areas.esteticas || [];
+    for (var j = 0; j < e.length; j++) {
+      var p = e[j].paleta; if (!p) continue;
+      var s = "";
+      for (var k = 0; k < TONOS.length; k++)
+        if (p[TONOS[k]]) s += "--" + TONOS[k] + ":" + p[TONOS[k]] + ";";
+      if (p.ac) s += "--acs:" + rgb(p.ac) + ";";
+      if (s) t += '[data-est="' + e[j].k + '"]{' + s + "}";
+    }
+    return t;
+  }
+  /* --acs es el mismo acento en componentes, que las sombras usan con alfa */
+  function rgb(h) {
+    return [1, 3, 5].map(function (i) { return parseInt(h.substr(i, 2), 16) || 0; }).join(",");
+  }
+
+  function secciones(lista) {
+    for (var i = 0; i < lista.length; i++) {
+      var s = lista[i];
+      var n = document.querySelector('[data-sec="' + s.id + '"]') || document.getElementById(s.id);
+      if (!n) continue;
+      n.hidden = !!s.oculta;
+      if (s.titulo) { var h = n.querySelector("h1,h2,h3"); if (h) h.textContent = s.titulo; }
+      if (s.texto) { var p = n.querySelector("p"); if (p) p.textContent = s.texto; }
+    }
+  }
+
+  /* El flyer de una estética nueva no está adentro del HTML —los que están
+     vienen en base64 desde antes—, así que llega por dirección. Se cambia el
+     src después de dibujar en vez de tocar el código que dibuja: así funciona
+     igual en la versión de escritorio y en la de celular, que arman la tarjeta
+     distinto. Y si no hay ni foto vieja ni dirección, se esconde el hueco. */
+  function flyers(lista) {
+    for (var i = 0; i < lista.length; i++) {
+      var e = lista[i];
+      var sec = document.querySelector('[data-est="' + e.k + '"]');
+      if (!sec) continue;
+      var im = sec.querySelector(".flyer img, .fondoHoja img");
+      if (!im) continue;
+      if (e.flyerUrl) im.src = e.flyerUrl;
+      else if (!im.getAttribute("src") || im.getAttribute("src") === "undefined") im.hidden = true;
+    }
+  }
+
+  function aplicar(areas, deLaRed) {
+    if (!areas) return;
+    try {
+      var hoja = document.getElementById("ibloTemas");
+      if (!hoja) {
+        hoja = document.createElement("style");
+        hoja.id = "ibloTemas";
+        document.head.appendChild(hoja);      // al final: gana por orden, sin !important
+      }
+      hoja.textContent = css(areas);
+      if (areas.secciones) secciones(areas.secciones);
+      var e = areas.esteticas;
+      if (e && e.length && window.ibloPintar) {
+        var vivas = e.filter(function (x) { return !x.oculta; });
+        if (vivas.length) window.ibloPintar(vivas);
+      }
+      if (e) flyers(e);
+    } catch (err) {
+      if (deLaRed) try { localStorage.removeItem(CACHE); } catch (e2) {}
+    }
+  }
+
+  /* Qué estéticas se dibujaron REALMENTE en este cargado. El bloque de datos
+     de la página ya leyó esta misma copia antes de dibujar, así que esto es lo
+     que el visitante tiene en pantalla. */
+  function llaves(a) {
+    return ((a && a.esteticas) || []).filter(function (x) { return !x.oculta; })
+      .map(function (x) { return x.k; }).join(",");
+  }
+  /* Salida de emergencia: iblo-eventos.pages.dev/?limpiar borra la copia local
+     y recarga. Existe porque la copia vive en el teléfono de cada uno y desde
+     el servidor no se la puede tocar: si alguna vez queda pegada algo raro, es
+     un link que se manda por WhatsApp y listo. */
+  if (location.search.indexOf("limpiar") >= 0) {
+    try {
+      localStorage.removeItem(CACHE);
+      sessionStorage.removeItem("iblo.recargo");
+    } catch (e) {}
+    location.replace(location.pathname);
+    return;
+  }
+
+  var previo = null;
+  try {
+    var g = localStorage.getItem(CACHE);
+    if (g) { previo = JSON.parse(g); aplicar(previo, false); }
+  } catch (e) {}
+
+  function tieneAlgo(o) {
+    for (var q in (o || {})) return true;
+    return false;
+  }
+
+  /* Colores, textos y esconder secciones se aplican en caliente y listo.
+     AGREGAR O SACAR una estética es otra cosa: hay que volver a dibujar la
+     baraja, los observadores de scroll, los videos y las piezas 3D. Volver a
+     correr todo eso a mano en una página de dos megas es donde se rompen las
+     cosas; recargar una vez es feo por medio segundo y no falla nunca. Pasa
+     sólo en la primera visita después del cambio, porque enseguida queda en la
+     copia local y se dibuja de entrada.
+
+     El candado guarda A QUÉ se recargó, no un simple «ya recargué»: con un
+     booleano, el segundo cambio del día no se aplicaba nunca. */
+  function recargarSiHaceFalta(antes, ahora) {
+    if (ahora === antes) return;
+    try {
+      if (sessionStorage.getItem("iblo.recargo") === ahora) return;
+      sessionStorage.setItem("iblo.recargo", ahora);
+      location.reload();
+    } catch (e) {}
+  }
+
+  if (!window.fetch) return;
+  fetch("/api/sitio", { headers: { Accept: "application/json" } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (!d || !d.areas) return;
+
+      if (!tieneAlgo(d.areas)) {
+        /* EL SERVIDOR SE QUEDÓ SIN NADA. Si acá había una copia guardada hay
+           que BORRARLA y sacar la hoja de estilos, o el que la tenía sigue
+           viendo lo viejo PARA SIEMPRE y arreglar el servidor no lo alcanza.
+           Pasó de verdad: una paleta celeste quedó pegada en un teléfono con
+           la base ya limpia, y desde el sitio no había forma de despegarla. */
+        try { localStorage.removeItem(CACHE); } catch (e) {}
+        if (tieneAlgo(previo)) {
+          var hoja = document.getElementById("ibloTemas");
+          if (hoja) hoja.textContent = "";             // los colores vuelven ya
+          recargarSiHaceFalta(llaves(previo), "");     // la lista, al recargar
+        }
+        return;
+      }
+
+      var antes = llaves(previo), ahora = llaves(d.areas);
+      try { localStorage.setItem(CACHE, JSON.stringify(d.areas)); } catch (e) {}
+      aplicar(d.areas, true);
+      recargarSiHaceFalta(antes, ahora);
+    })
+    .catch(function () {});
+})();
+
+</script>
+<!-- FIN IBLO-CARGADOR -->
+<script defer src="../visitas.js"></script>
+</body>
+</html>

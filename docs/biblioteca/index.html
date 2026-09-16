@@ -1,0 +1,1515 @@
+<title>Biblioteca de Estilos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --fondo:#101011; --panel:#181819; --panel2:#202022; --linea:#2c2c2e;
+  --tinta:#EDEDEA; --tinta2:#9C9C99; --tinta3:#6B6B69;
+  --acento:#C6FF4F;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+:root[data-theme="light"]{
+  --fondo:#EFEFEC; --panel:#FFFFFF; --panel2:#E4E4E0; --linea:#D3D3CE;
+  --tinta:#131313; --tinta2:#5B5B58; --tinta3:#87877F;
+  --acento:#4B6B00;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --fondo:#EFEFEC; --panel:#FFFFFF; --panel2:#E4E4E0; --linea:#D3D3CE;
+    --tinta:#131313; --tinta2:#5B5B58; --tinta3:#87877F;
+    --acento:#4B6B00;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);font-family:var(--mono);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.marco{max-width:1680px;margin:0 auto;padding:0 clamp(14px,2.4vw,30px)}
+
+header.top{position:sticky;top:0;z-index:20;background:var(--fondo);border-bottom:1px solid var(--linea)}
+header.top .marco{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding-top:14px;padding-bottom:14px}
+.logo{font-family:var(--display);font-weight:900;font-stretch:118%;text-transform:uppercase;font-size:17px;letter-spacing:.02em;display:flex;align-items:center;gap:9px}
+.logo i{width:9px;height:9px;background:var(--acento);display:block}
+.dato{color:var(--tinta3);font-size:11px;letter-spacing:.09em;text-transform:uppercase}
+.sp{flex:1}
+input[type=search]{
+  font-family:var(--mono);font-size:12.5px;padding:8px 11px;min-width:210px;
+  background:var(--panel);color:var(--tinta);border:1px solid var(--linea);border-radius:2px;
+}
+input[type=search]::placeholder{color:var(--tinta3)}
+.tema{background:var(--panel);border:1px solid var(--linea);color:var(--tinta2);border-radius:2px;padding:8px 11px;font:inherit;cursor:pointer}
+.tema:hover{color:var(--acento);border-color:var(--acento)}
+
+.filtros{display:flex;gap:7px;flex-wrap:wrap;padding:14px 0 4px}
+.f{
+  font-family:var(--mono);font-size:11.5px;padding:7px 11px;cursor:pointer;
+  background:transparent;color:var(--tinta2);border:1px solid var(--linea);border-radius:2px;
+}
+.f b{color:var(--tinta3);font-weight:500;margin-left:3px}
+.f:hover{color:var(--tinta);border-color:var(--tinta3)}
+.f[aria-pressed="true"]{background:var(--acento);color:#101011;border-color:var(--acento)}
+.f[aria-pressed="true"] b{color:#101011;opacity:.65}
+
+.familia{padding:34px 0 0}
+.cab{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--linea);padding-bottom:9px;margin-bottom:16px}
+.cab h2{font-family:var(--display);font-weight:800;font-stretch:106%;font-size:15px;text-transform:uppercase;letter-spacing:.05em;margin:0}
+.cab p{margin:0;color:var(--tinta3);font-size:12px}
+.cab .cuenta{margin-left:auto;color:var(--acento);font-size:12px}
+
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+.ficha{background:var(--panel);border:1px solid var(--linea);display:flex;flex-direction:column;overflow:hidden;transition:border-color .14s}
+.ficha:hover{border-color:var(--acento)}
+.lienzo{position:relative;display:block;aspect-ratio:16/10;background:var(--panel2);overflow:hidden;text-decoration:none}
+.lienzo img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;transition:transform .5s cubic-bezier(.2,.7,.3,1)}
+.ficha:hover .lienzo img:first-child{transform:scale(1.035)}
+img.tel{
+  position:absolute;right:11px;bottom:11px;width:19%;height:auto;aspect-ratio:9/19.5;
+  object-fit:cover;object-position:top center;border:1.5px solid rgba(0,0,0,.5);
+  border-radius:5px;box-shadow:0 6px 18px rgba(0,0,0,.5);background:var(--panel);
+}
+.pie{padding:11px 13px 13px;display:flex;flex-direction:column;gap:6px}
+.fila{display:flex;align-items:center;gap:10px}
+.pie h3{font-family:var(--display);font-weight:700;font-size:14.5px;margin:0;letter-spacing:-.01em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.paleta{display:flex;gap:3px;flex:none}
+.paleta i{width:13px;height:13px;display:block;border:1px solid rgba(128,128,128,.35)}
+.meta{display:flex;gap:5px;flex-wrap:wrap}
+.fuente{font-size:10.5px;color:var(--tinta2);background:var(--panel2);padding:2px 6px;border-radius:2px}
+.fuente.vacia{color:var(--tinta3);background:transparent;padding-left:0}
+.url{font-size:11px;color:var(--tinta3);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ficha:hover .url{color:var(--acento)}
+.oculto{display:none !important}
+.nada{color:var(--tinta3);padding:40px 0;text-align:center}
+
+footer{border-top:1px solid var(--linea);margin-top:46px;padding:20px 0 60px;color:var(--tinta3);font-size:11.5px;line-height:1.7}
+footer b{color:var(--tinta2);font-weight:500}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top"><div class="marco">
+  <div class="logo"><i></i>Biblioteca de Estilos</div>
+  <div class="dato">122 sitios · 23 con vista Android</div>
+  <div class="sp"></div>
+  <input type="search" id="q" placeholder="Buscar sitio o tipografía…" aria-label="Buscar">
+  <button class="tema" id="tema" type="button">◐ Tema</button>
+</div></header>
+
+<main class="marco">
+  <div class="filtros"><button class="f" data-f="*" aria-pressed="true">Todos <b>122</b></button><button class="f" data-f="3d-webgl">3D y WebGL <b>15</b></button><button class="f" data-f="animacion">Animación <b>14</b></button><button class="f" data-f="producto-saas">Producto y SaaS <b>34</b></button><button class="f" data-f="dev-docs">Herramientas y docs <b>12</b></button><button class="f" data-f="movil-android">Móvil y Android <b>23</b></button><button class="f" data-f="marca-editorial">Marca y editorial <b>13</b></button><button class="f" data-f="galerias">Galerías <b>11</b></button></div>
+  <section class="familia" id="3d-webgl">
+  <header class="cab"><h2>3D y WebGL</h2><p>Geometría en tiempo real, cámaras, materiales</p><span class="cuenta">15</span></header>
+  <div class="rejilla"><article class="ficha" data-fam="3d-webgl" data-buscar="lusion aeonik aeonik we design and produce 3d visual storytelling, immersive websites, and interactive digital experiences that help brands stand out online.">
+  <a class="lienzo" href="https://lusion.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/lusion.webp" alt="Captura de Lusion" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Lusion</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#1a2ffb" title="#1a2ffb"></i></span></div>
+    <div class="meta"><span class="fuente">Aeonik</span></div>
+    <a class="url" href="https://lusion.co" target="_blank" rel="noopener noreferrer">lusion.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="active theory nbarchitekt nbarchitekt ">
+  <a class="lienzo" href="https://activetheory.net" target="_blank" rel="noopener noreferrer">
+    <img src="img/active-theory.webp" alt="Captura de Active Theory" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Active Theory</h3><span class="paleta"><i style="background:#000000" title="#000000"></i></span></div>
+    <div class="meta"><span class="fuente">nbarchitekt</span></div>
+    <a class="url" href="https://activetheory.net" target="_blank" rel="noopener noreferrer">activetheory.net ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="three.js roboto mono roboto mono ">
+  <a class="lienzo" href="https://threejs.org" target="_blank" rel="noopener noreferrer">
+    <img src="img/three-js.webp" alt="Captura de Three.js" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Three.js</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#049ef4" title="#049ef4"></i></span></div>
+    <div class="meta"><span class="fuente">Roboto Mono</span></div>
+    <a class="url" href="https://threejs.org" target="_blank" rel="noopener noreferrer">threejs.org ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="spline spline sans spline sans spline is a free 3d design software with real-time collaboration to create web interactive experiences in the browser. easy 3d modeling, animation, textures, and more.">
+  <a class="lienzo" href="https://spline.design" target="_blank" rel="noopener noreferrer">
+    <img src="img/spline.webp" alt="Captura de Spline" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Spline</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#0062ff" title="#0062ff"></i></span></div>
+    <div class="meta"><span class="fuente">Spline Sans</span></div>
+    <a class="url" href="https://spline.design" target="_blank" rel="noopener noreferrer">spline.design ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="resn  sans-serif resn is a creative studio bringing brand, content and digital experiences to life through stories shaped with global brands and emerging innovators.">
+  <a class="lienzo" href="https://resn.co.nz" target="_blank" rel="noopener noreferrer">
+    <img src="img/resn.webp" alt="Captura de Resn" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Resn</h3><span class="paleta"><i style="background:#000000" title="#000000"></i></span></div>
+    <div class="meta"><span class="fuente">sans-serif</span></div>
+    <a class="url" href="https://resn.co.nz" target="_blank" rel="noopener noreferrer">resn.co.nz ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="bruno simon amatic sc nunito bruno simon's creative portfolio">
+  <a class="lienzo" href="https://bruno-simon.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/bruno-simon.webp" alt="Captura de Bruno Simon" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Bruno Simon</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#ffceca" title="#ffceca"></i><i style="background:#ff6a7c" title="#ff6a7c"></i></span></div>
+    <div class="meta"><span class="fuente">Amatic SC</span><span class="fuente">Nunito</span></div>
+    <a class="url" href="https://bruno-simon.com" target="_blank" rel="noopener noreferrer">bruno-simon.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="14islands bentonsans bentonsans we're a nimble team of designers and developers crafting premium products, brands, and experiences — with offices in stockholm and reykjavík.">
+  <a class="lienzo" href="https://14islands.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/14islands.webp" alt="Captura de 14islands" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>14islands</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">BentonSans</span></div>
+    <a class="url" href="https://14islands.com" target="_blank" rel="noopener noreferrer">14islands.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="oio  ui-sans-serif future products and tools for a less-boring future">
+  <a class="lienzo" href="https://oio.studio" target="_blank" rel="noopener noreferrer">
+    <img src="img/oio.webp" alt="Captura de oio" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>oio</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#ffb5cd" title="#ffb5cd"></i></span></div>
+    <div class="meta"><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://oio.studio" target="_blank" rel="noopener noreferrer">oio.studio ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="unseen studio neue montreal neue montreal we're unseen studio, a world-class creative production agency. we help brands transform by blending meaningful branding, compelling digital experiences and motion productions. design studio of the yea">
+  <a class="lienzo" href="https://unseen.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/unseen-studio.webp" alt="Captura de Unseen Studio" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Unseen Studio</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Neue Montreal</span></div>
+    <a class="url" href="https://unseen.co" target="_blank" rel="noopener noreferrer">unseen.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="robin payot roadgeek lato i'm robin payot, a freelance creative developer based in paris, i love programming 3d or 2d websites with good design and beautiful animations using webgl, js, html, css, frameworks included. i've mad">
+  <a class="lienzo" href="https://robinpayot.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/robin-payot.webp" alt="Captura de Robin Payot" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Robin Payot</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Roadgeek</span><span class="fuente">Lato</span></div>
+    <a class="url" href="https://robinpayot.com" target="_blank" rel="noopener noreferrer">robinpayot.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="poimandres  inter open source developer collective">
+  <a class="lienzo" href="https://pmnd.rs" target="_blank" rel="noopener noreferrer">
+    <img src="img/poimandres.webp" alt="Captura de Poimandres" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Poimandres</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1" title="#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1"></i><i style="background:#0.35c28f5c28f5c20.08b4395810624e108.aa3d70a3d71" title="#0.35c28f5c28f5c20.08b4395810624e108.aa3d70a3d71"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://pmnd.rs" target="_blank" rel="noopener noreferrer">pmnd.rs ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="zajno s s we are making award-winning immersive websites and apps with cool custom graphics, photos, videos, and animations. let's collaborate!">
+  <a class="lienzo" href="https://zajno.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/zajno.webp" alt="Captura de Zajno" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Zajno</h3><span class="paleta"><i style="background:#ebebeb" title="#ebebeb"></i><i style="background:#ff3928" title="#ff3928"></i></span></div>
+    <div class="meta"><span class="fuente">s</span></div>
+    <a class="url" href="https://zajno.com" target="_blank" rel="noopener noreferrer">zajno.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="little workshop miso times new roman little workshop is a digital studio that specializes in real-time 3d experiences: cutting-edge websites, virtual spaces, games, ar/vr apps and more.">
+  <a class="lienzo" href="https://littleworkshop.fr" target="_blank" rel="noopener noreferrer">
+    <img src="img/little-workshop.webp" alt="Captura de Little Workshop" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Little Workshop</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#4d8be9" title="#4d8be9"></i></span></div>
+    <div class="meta"><span class="fuente">Miso</span><span class="fuente">Times New Roman</span></div>
+    <a class="url" href="https://littleworkshop.fr" target="_blank" rel="noopener noreferrer">littleworkshop.fr ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="keita yamada neue montreal neue montreal designer and developer in japan">
+  <a class="lienzo" href="https://p5aholic.me" target="_blank" rel="noopener noreferrer">
+    <img src="img/keita-yamada.webp" alt="Captura de Keita Yamada" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Keita Yamada</h3><span class="paleta"><i style="background:#e6e6e6" title="#e6e6e6"></i></span></div>
+    <div class="meta"><span class="fuente">Neue Montreal</span></div>
+    <a class="url" href="https://p5aholic.me" target="_blank" rel="noopener noreferrer">p5aholic.me ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="3d-webgl" data-buscar="igloo  times new roman our mission is to create the largest onchain community, driving the consumer crypto revolution.">
+  <a class="lienzo" href="https://igloo.inc" target="_blank" rel="noopener noreferrer">
+    <img src="img/igloo.webp" alt="Captura de Igloo" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Igloo</h3><span class="paleta"><i style="background:#a0a5b1" title="#a0a5b1"></i></span></div>
+    <div class="meta"><span class="fuente">Times New Roman</span></div>
+    <a class="url" href="https://igloo.inc" target="_blank" rel="noopener noreferrer">igloo.inc ↗</a>
+  </div>
+</article></div>
+</section>
+<section class="familia" id="animacion">
+  <header class="cab"><h2>Animación</h2><p>Scroll, transiciones, cursores, movimiento como argumento</p><span class="cuenta">14</span></header>
+  <div class="rejilla"><article class="ficha" data-fam="animacion" data-buscar="gsap mori mori supported by webflow. animate anything - a wildly robust javascript animation library built for professionals.">
+  <a class="lienzo" href="https://gsap.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/gsap.webp" alt="Captura de GSAP" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>GSAP</h3><span class="paleta"><i style="background:#0e100f" title="#0e100f"></i><i style="background:#fffce1" title="#fffce1"></i><i style="background:#0ae448" title="#0ae448"></i><i style="background:#fec5fb" title="#fec5fb"></i><i style="background:#ff8709" title="#ff8709"></i></span></div>
+    <div class="meta"><span class="fuente">Mori</span></div>
+    <a class="url" href="https://gsap.com" target="_blank" rel="noopener noreferrer">gsap.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="motion tasa orbiter tasa orbiter motion (prev framer motion) is a fast, production-grade animation library for react, javascript and vue. build smooth ui animations at a tiny footprint.">
+  <a class="lienzo" href="https://motion.dev" target="_blank" rel="noopener noreferrer">
+    <img src="img/motion.webp" alt="Captura de Motion" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Motion</h3><span class="paleta"><i style="background:#0e1312" title="#0e1312"></i><i style="background:#0.f0a3d70a3d70a0.020c49ba5e353f860" title="#0.f0a3d70a3d70a0.020c49ba5e353f860"></i><i style="background:#0.251eb851eb851e0.028f5c28f5c28f694" title="#0.251eb851eb851e0.028f5c28f5c28f694"></i><i style="background:#0.b0a3d70a3d70a0.03126e978d4fdf494" title="#0.b0a3d70a3d70a0.03126e978d4fdf494"></i><i style="background:#0.e147ae147ae1480.2e147ae147ae1460" title="#0.e147ae147ae1480.2e147ae147ae1460"></i></span></div>
+    <div class="meta"><span class="fuente">TASA Orbiter</span></div>
+    <a class="url" href="https://motion.dev" target="_blank" rel="noopener noreferrer">motion.dev ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="dennis snellenberg dennis sans dennis sans helping brands thrive in the digital world. located in the netherlands. delivering tailor-made digital designs and building interactive websites from scratch. © code by dennis">
+  <a class="lienzo" href="https://dennissnellenberg.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/dennis-snellenberg.webp" alt="Captura de Dennis Snellenberg" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Dennis Snellenberg</h3><span class="paleta"><i style="background:#1c1d20" title="#1c1d20"></i><i style="background:#455ce9" title="#455ce9"></i><i style="background:#334bd3" title="#334bd3"></i></span></div>
+    <div class="meta"><span class="fuente">Dennis Sans</span></div>
+    <a class="url" href="https://dennissnellenberg.com" target="_blank" rel="noopener noreferrer">dennissnellenberg.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="locomotive locomotivenew helveticanowdisplay locomotive® offers a wide range of creative and strategic services for remarkable brands, companies and organizations. over the 15 years, locomotive® has become a go-to for meaningful, innovative, res">
+  <a class="lienzo" href="https://locomotive.ca" target="_blank" rel="noopener noreferrer">
+    <img src="img/locomotive.webp" alt="Captura de Locomotive" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Locomotive</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">LocomotiveNew</span><span class="fuente">HelveticaNowDisplay</span></div>
+    <a class="url" href="https://locomotive.ca" target="_blank" rel="noopener noreferrer">locomotive.ca ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="basement studio geist geist basement.studio is a digital studio crafting brands, websites, 3d experiences, and products. we design and engineer cool shit that actually performs.">
+  <a class="lienzo" href="https://basement.studio" target="_blank" rel="noopener noreferrer">
+    <img src="img/basement-studio.webp" alt="Captura de Basement Studio" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Basement Studio</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#ff4d00" title="#ff4d00"></i><i style="background:#0.e6e6ea8544780.e6e6ea8544780.e6e6ea854478" title="#0.e6e6ea8544780.e6e6ea8544780.e6e6ea854478"></i></span></div>
+    <div class="meta"><span class="fuente">Geist</span></div>
+    <a class="url" href="https://basement.studio" target="_blank" rel="noopener noreferrer">basement.studio ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="aristide benoist  jws aristide benoist is a developer who specializes in motion and interaction. as an independent, he works with companies, agencies, startups and individuals all over the world.">
+  <a class="lienzo" href="https://aristidebenoist.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/aristide-benoist.webp" alt="Captura de Aristide Benoist" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Aristide Benoist</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">jws</span></div>
+    <a class="url" href="https://aristidebenoist.com" target="_blank" rel="noopener noreferrer">aristidebenoist.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="obys agency  obys concept-driven design studio based in the eu. crafting award-winning brand and web experiences shaped by storytelling and strong visual systems.">
+  <a class="lienzo" href="https://obys.agency" target="_blank" rel="noopener noreferrer">
+    <img src="img/obys-agency.webp" alt="Captura de Obys Agency" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Obys Agency</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Obys</span></div>
+    <a class="url" href="https://obys.agency" target="_blank" rel="noopener noreferrer">obys.agency ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="cuberto suisse intl suisse intl cuberto is a ui/ux design agency based in usa. we specialise in ui/ux design, branding, web, and mobile development.">
+  <a class="lienzo" href="https://cuberto.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/cuberto.webp" alt="Captura de Cuberto" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Cuberto</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Suisse Intl</span></div>
+    <a class="url" href="https://cuberto.com" target="_blank" rel="noopener noreferrer">cuberto.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="codrops intervariable intervariable explore the latest web design and frontend development trends with tutorials, demos, and creative coding resources.">
+  <a class="lienzo" href="https://tympanus.net/codrops" target="_blank" rel="noopener noreferrer">
+    <img src="img/codrops.webp" alt="Captura de Codrops" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Codrops</h3><span class="paleta"><i style="background:#f7f7f7" title="#f7f7f7"></i></span></div>
+    <div class="meta"><span class="fuente">InterVariable</span></div>
+    <a class="url" href="https://tympanus.net/codrops" target="_blank" rel="noopener noreferrer">tympanus.net/codrops ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="ochi design foundersgrotesk neuemontreal at ochi.design we design eye-opening presentations for forward-thinking businesses | pitch decks, sales presentations, company templates, training.">
+  <a class="lienzo" href="https://ochi.design" target="_blank" rel="noopener noreferrer">
+    <img src="img/ochi-design.webp" alt="Captura de Ochi Design" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Ochi Design</h3><span class="paleta"><i style="background:#f1f1f1" title="#f1f1f1"></i><i style="background:#cdea68" title="#cdea68"></i></span></div>
+    <div class="meta"><span class="fuente">FoundersGrotesk</span><span class="fuente">NeueMontreal</span></div>
+    <a class="url" href="https://ochi.design" target="_blank" rel="noopener noreferrer">ochi.design ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="halo lab suisse suisse halo lab is an award-winning custom web design and development company ⭐ our team offer a reliable, customized and user-friendly solution for your business.">
+  <a class="lienzo" href="https://www.halo-lab.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/halo-lab.webp" alt="Captura de Halo Lab" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Halo Lab</h3><span class="paleta"><i style="background:#02021e" title="#02021e"></i><i style="background:#02021e" title="#02021e"></i><i style="background:#3827c7" title="#3827c7"></i><i style="background:#3719ca" title="#3719ca"></i><i style="background:#3898ec" title="#3898ec"></i></span></div>
+    <div class="meta"><span class="fuente">Suisse</span></div>
+    <a class="url" href="https://www.halo-lab.com" target="_blank" rel="noopener noreferrer">www.halo-lab.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="exo ape lausanne-300 times new roman we partner with brands and businesses that create exceptional experiences where people live, work and unwind.">
+  <a class="lienzo" href="https://exoape.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/exo-ape.webp" alt="Captura de Exo Ape" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Exo Ape</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#e0cdbd" title="#e0cdbd"></i><i style="background:#e0ccbb" title="#e0ccbb"></i></span></div>
+    <div class="meta"><span class="fuente">Lausanne-300</span><span class="fuente">Times New Roman</span></div>
+    <a class="url" href="https://exoape.com" target="_blank" rel="noopener noreferrer">exoape.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="studio freight jjannon-regular times new roman studio freight delivers brands, digital experiences, campaigns, and special projects. we work across categories, continents, and capabilities to move missions forward.">
+  <a class="lienzo" href="https://studiofreight.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/studio-freight.webp" alt="Captura de Studio Freight" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Studio Freight</h3><span class="paleta"><i style="background:#fefdfc" title="#fefdfc"></i></span></div>
+    <div class="meta"><span class="fuente">jjannon-regular</span><span class="fuente">Times New Roman</span></div>
+    <a class="url" href="https://studiofreight.com" target="_blank" rel="noopener noreferrer">studiofreight.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="animacion" data-buscar="darkroom engineering therma mono we're a global design and development studio shipping fast, motion-rich, and scalable digital work. webgl, headless builds, and open source tools—crafted by a team distributed across spain, italy, fra">
+  <a class="lienzo" href="https://darkroom.engineering" target="_blank" rel="noopener noreferrer">
+    <img src="img/darkroom-engineering.webp" alt="Captura de Darkroom Engineering" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Darkroom Engineering</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#31.e6a161e4f76649.6f06f694467438.fbb98c7e2824" title="#31.e6a161e4f76649.6f06f694467438.fbb98c7e2824"></i><i style="background:#8.ae50c5eb313c1a.fc779a6b50b1b.bd2f1a9fbe77" title="#8.ae50c5eb313c1a.fc779a6b50b1b.bd2f1a9fbe77"></i><i style="background:#0.7ffe7e1fc08fa80.2cdaa0cae642c0.17d0635a426bb5" title="#0.7ffe7e1fc08fa80.2cdaa0cae642c0.17d0635a426bb5"></i></span></div>
+    <div class="meta"><span class="fuente">therma</span><span class="fuente">mono</span></div>
+    <a class="url" href="https://darkroom.engineering" target="_blank" rel="noopener noreferrer">darkroom.engineering ↗</a>
+  </div>
+</article></div>
+</section>
+<section class="familia" id="producto-saas">
+  <header class="cab"><h2>Producto y SaaS</h2><p>La familia más copiada; mira qué la separa del montón</p><span class="cuenta">34</span></header>
+  <div class="rejilla"><article class="ficha" data-fam="producto-saas" data-buscar="linear inter variable inter variable purpose-built for planning and building products with ai agents.">
+  <a class="lienzo" href="https://linear.app" target="_blank" rel="noopener noreferrer">
+    <img src="img/linear.webp" alt="Captura de Linear" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Linear</h3><span class="paleta"><i style="background:#08090a" title="#08090a"></i><i style="background:#f34e52" title="#f34e52"></i><i style="background:#5e6ad2" title="#5e6ad2"></i><i style="background:#e4f222" title="#e4f222"></i></span></div>
+    <div class="meta"><span class="fuente">Inter Variable</span></div>
+    <a class="url" href="https://linear.app" target="_blank" rel="noopener noreferrer">linear.app ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="stripe sohne-var sohne-var stripe is a financial services platform that helps all types of businesses accept payments, build flexible billing models, and manage money movement.">
+  <a class="lienzo" href="https://stripe.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/stripe.webp" alt="Captura de Stripe" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Stripe</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#533afd" title="#533afd"></i><i style="background:#50617a" title="#50617a"></i><i style="background:#061b31" title="#061b31"></i><i style="background:#b9b9f9" title="#b9b9f9"></i></span></div>
+    <div class="meta"><span class="fuente">sohne-var</span></div>
+    <a class="url" href="https://stripe.com" target="_blank" rel="noopener noreferrer">stripe.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="resend domaine inter the best way to reach humans instead of spam folders. deliver transactional and marketing emails at scale.">
+  <a class="lienzo" href="https://resend.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/resend.webp" alt="Captura de Resend" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Resend</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#3b9eff" title="#3b9eff"></i><i style="background:#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d" title="#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d"></i><i style="background:#46fea5" title="#46fea5"></i><i style="background:#baa7ff" title="#baa7ff"></i></span></div>
+    <div class="meta"><span class="fuente">domaine</span><span class="fuente">inter</span></div>
+    <a class="url" href="https://resend.com" target="_blank" rel="noopener noreferrer">resend.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="clerk geistnumbers geistnumbers the easiest way to add authentication and user management to your application. purpose-built for react, next.js, remix, and “the modern web”.">
+  <a class="lienzo" href="https://clerk.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/clerk.webp" alt="Captura de Clerk" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Clerk</h3><span class="paleta"><i style="background:#f7f7f8" title="#f7f7f8"></i><i style="background:#6c47ff" title="#6c47ff"></i><i style="background:#9785ff" title="#9785ff"></i><i style="background:#5de3ff" title="#5de3ff"></i></span></div>
+    <div class="meta"><span class="fuente">geistNumbers</span></div>
+    <a class="url" href="https://clerk.com" target="_blank" rel="noopener noreferrer">clerk.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="arc marlin soft sq marlin experience a calmer, more personal internet in this browser designed for you. let go of the clicks, the clutter, the distractions with the arc browser.">
+  <a class="lienzo" href="https://arc.net" target="_blank" rel="noopener noreferrer">
+    <img src="img/arc.webp" alt="Captura de Arc" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Arc</h3><span class="paleta"><i style="background:#fffcec" title="#fffcec"></i><i style="background:#3139fb" title="#3139fb"></i><i style="background:#2702c2" title="#2702c2"></i><i style="background:#fffadd" title="#fffadd"></i></span></div>
+    <div class="meta"><span class="fuente">Marlin Soft SQ</span><span class="fuente">Marlin</span></div>
+    <a class="url" href="https://arc.net" target="_blank" rel="noopener noreferrer">arc.net ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="framer gt walsheim medium sans-serif go from idea to launch with an agent that designs and builds on the canvas. keep each change editable, with hosting, security, analytics, cms, and seo built in.">
+  <a class="lienzo" href="https://framer.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/framer.webp" alt="Captura de Framer" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Framer</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#0066ff" title="#0066ff"></i></span></div>
+    <div class="meta"><span class="fuente">GT Walsheim Medium</span><span class="fuente">sans-serif</span></div>
+    <a class="url" href="https://framer.com" target="_blank" rel="noopener noreferrer">framer.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="figma figmasans figmasans figma is the canvas where design, code, and ai come together. from first idea to shipped product — go from concept to production with your whole team, in one place.">
+  <a class="lienzo" href="https://figma.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/figma.webp" alt="Captura de Figma" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Figma</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">figmaSans</span></div>
+    <a class="url" href="https://figma.com" target="_blank" rel="noopener noreferrer">figma.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="warp mattermono matter infrastructure to build, measure, and interact with agents across your sdlc — so you ship more and spend less.">
+  <a class="lienzo" href="https://warp.dev" target="_blank" rel="noopener noreferrer">
+    <img src="img/warp.webp" alt="Captura de Warp" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Warp</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#2a1eff" title="#2a1eff"></i></span></div>
+    <div class="meta"><span class="fuente">matterMono</span><span class="fuente">Matter</span></div>
+    <a class="url" href="https://warp.dev" target="_blank" rel="noopener noreferrer">warp.dev ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="railway ibm plex serif inter railway is a full-stack cloud for deploying web apps, servers, databases, and more with automatic scaling, monitoring, and security.">
+  <a class="lienzo" href="https://railway.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/railway.webp" alt="Captura de Railway" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Railway</h3><span class="paleta"><i style="background:#13111c" title="#13111c"></i><i style="background:#609f89" title="#609f89"></i><i style="background:#c67839" title="#c67839"></i><i style="background:#553f83" title="#553f83"></i><i style="background:#a05fcf" title="#a05fcf"></i></span></div>
+    <div class="meta"><span class="fuente">IBM Plex Serif</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://railway.com" target="_blank" rel="noopener noreferrer">railway.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="supabase manrope inter build production-grade applications with a postgres database, authentication, instant apis, realtime, functions, storage and vector embeddings. start for free.">
+  <a class="lienzo" href="https://supabase.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/supabase.webp" alt="Captura de Supabase" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Supabase</h3><span class="paleta"><i style="background:#0.feb851eb851eb80022" title="#0.feb851eb851eb80022"></i><i style="background:#0.1999999999999a0022" title="#0.1999999999999a0022"></i><i style="background:#0.85495182a993080022" title="#0.85495182a993080022"></i><i style="background:#0.feb851eb851eb80022" title="#0.feb851eb851eb80022"></i><i style="background:#0.64fb00bcbe61d0022" title="#0.64fb00bcbe61d0022"></i></span></div>
+    <div class="meta"><span class="fuente">Manrope</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://supabase.com" target="_blank" rel="noopener noreferrer">supabase.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="neon inter inter the backend for apps and agents. build with lakebase postgres, auth, functions, storage, and an ai gateway: instant, branchable, serverless.">
+  <a class="lienzo" href="https://neon.tech" target="_blank" rel="noopener noreferrer">
+    <img src="img/neon.webp" alt="Captura de Neon" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Neon</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#34d59a" title="#34d59a"></i><i style="background:#ff3621" title="#ff3621"></i><i style="background:#8.b5b2d4d4024b0.189ebc1849a2e11.95330941c8217" title="#8.b5b2d4d4024b0.189ebc1849a2e11.95330941c8217"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://neon.tech" target="_blank" rel="noopener noreferrer">neon.tech ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="upstash inter tight inter serverless redis, vector and search databases with low latency and pay-as-you-go pricing. upstash is the data platform for modern and ai applications — create a redis database in seconds.">
+  <a class="lienzo" href="https://upstash.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/upstash.webp" alt="Captura de Upstash" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Upstash</h3><span class="paleta"><i style="background:#60.851eb851eb840.0001f3ffe7626c8a30.0000c7ffe029debc3" title="#60.851eb851eb840.0001f3ffe7626c8a30.0000c7ffe029debc3"></i><i style="background:#022c22" title="#022c22"></i><i style="background:#2f.e346dc5d63881.a79f01b866e445.c5d82fd75e204" title="#2f.e346dc5d63881.a79f01b866e445.c5d82fd75e204"></i><i style="background:#2c.7cb295e9e1b29.0a2339c0ebeeb.093dd97f62b68" title="#2c.7cb295e9e1b29.0a2339c0ebeeb.093dd97f62b68"></i><i style="background:#42.f9c0ebedfa443a.451eb851eb8613.8ab9f559b3d" title="#42.f9c0ebedfa443a.451eb851eb8613.8ab9f559b3d"></i></span></div>
+    <div class="meta"><span class="fuente">Inter Tight</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://upstash.com" target="_blank" rel="noopener noreferrer">upstash.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="cal.com cal sans sans-serif a fully customizable scheduling software for individuals, businesses taking calls and developers building scheduling platforms where users meet users.">
+  <a class="lienzo" href="https://cal.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/cal-com.webp" alt="Captura de Cal.com" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Cal.com</h3><span class="paleta"><i style="background:#f4f4f4" title="#f4f4f4"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#0099ff" title="#0099ff"></i></span></div>
+    <div class="meta"><span class="fuente">Cal Sans</span><span class="fuente">sans-serif</span></div>
+    <a class="url" href="https://cal.com" target="_blank" rel="noopener noreferrer">cal.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="dub satoshi inter dub is the modern link attribution platform for short links, conversion tracking, and affiliate programs.">
+  <a class="lienzo" href="https://dub.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/dub.webp" alt="Captura de Dub" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Dub</h3><span class="paleta"><i style="background:#fafafa" title="#fafafa"></i><i style="background:#3b82f6" title="#3b82f6"></i><i style="background:#16a34a" title="#16a34a"></i><i style="background:#7c3aed" title="#7c3aed"></i><i style="background:#7c2d12" title="#7c2d12"></i></span></div>
+    <div class="meta"><span class="fuente">satoshi</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://dub.co" target="_blank" rel="noopener noreferrer">dub.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="liveblocks suisse suisse liveblocks provides the infrastructure to handle concurrent edits on shared data, so people and ai agents can collaborate without breaking your app.">
+  <a class="lienzo" href="https://liveblocks.io" target="_blank" rel="noopener noreferrer">
+    <img src="img/liveblocks.webp" alt="Captura de Liveblocks" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Liveblocks</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#6cefce" title="#6cefce"></i></span></div>
+    <div class="meta"><span class="fuente">suisse</span></div>
+    <a class="url" href="https://liveblocks.io" target="_blank" rel="noopener noreferrer">liveblocks.io ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="trigger.dev satoshi-variable geist trigger.dev is the open source platform for building ai workflows in typescript. long-running tasks with retries, queues, observability, and elastic scaling.">
+  <a class="lienzo" href="https://trigger.dev" target="_blank" rel="noopener noreferrer">
+    <img src="img/trigger-dev.webp" alt="Captura de Trigger.dev" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Trigger.dev</h3><span class="paleta"><i style="background:#121317" title="#121317"></i><i style="background:#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1" title="#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1"></i><i style="background:#0.3906ee30caa3260.0029ed5ffb796ebe0.02042b88c4e0196" title="#0.3906ee30caa3260.0029ed5ffb796ebe0.02042b88c4e0196"></i><i style="background:#fa3abf" title="#fa3abf"></i><i style="background:#7655fd" title="#7655fd"></i></span></div>
+    <div class="meta"><span class="fuente">Satoshi-Variable</span><span class="fuente">Geist</span></div>
+    <a class="url" href="https://trigger.dev" target="_blank" rel="noopener noreferrer">trigger.dev ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="mintlify arizonaflare inter self-updating documentation for startups, enterprises, and agents.">
+  <a class="lienzo" href="https://mintlify.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/mintlify.webp" alt="Captura de Mintlify" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Mintlify</h3><span class="paleta"><i style="background:#640000" title="#640000"></i><i style="background:#2.6d0092ccf6be40.2a5082cf52b90a0.78573a797891e4" title="#2.6d0092ccf6be40.2a5082cf52b90a0.78573a797891e4"></i><i style="background:#640000" title="#640000"></i><i style="background:#33.576c8b43958229.90d1b71758e2f.5a4a8c154c988" title="#33.576c8b43958229.90d1b71758e2f.5a4a8c154c988"></i><i style="background:#0c8c5e" title="#0c8c5e"></i></span></div>
+    <div class="meta"><span class="fuente">arizonaFlare</span><span class="fuente">inter</span></div>
+    <a class="url" href="https://mintlify.com" target="_blank" rel="noopener noreferrer">mintlify.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="posthog roundhog roundhog posthog automatically diagnoses problems, fixes bugs, and generates pull requests – all without you having to prompt it.">
+  <a class="lienzo" href="https://posthog.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/posthog.webp" alt="Captura de PostHog" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>PostHog</h3><span class="paleta"><i style="background:#eeefe9" title="#eeefe9"></i><i style="background:#2f80fa" title="#2f80fa"></i><i style="background:#b62ad9" title="#b62ad9"></i><i style="background:#b17816" title="#b17816"></i><i style="background:#f7a501" title="#f7a501"></i></span></div>
+    <div class="meta"><span class="fuente">RoundHog</span></div>
+    <a class="url" href="https://posthog.com" target="_blank" rel="noopener noreferrer">posthog.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="sentry dammit sans rubik application performance monitoring for developers &amp; software teams to see errors clearer, solve issues faster &amp; continue learning continuously. get started at sentry.io.">
+  <a class="lienzo" href="https://sentry.io" target="_blank" rel="noopener noreferrer">
+    <img src="img/sentry.webp" alt="Captura de Sentry" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Sentry</h3><span class="paleta"><i style="background:#1f1633" title="#1f1633"></i><i style="background:#4e2a9a" title="#4e2a9a"></i><i style="background:#6a5fc1" title="#6a5fc1"></i><i style="background:#1f1633" title="#1f1633"></i><i style="background:#c2ef4e" title="#c2ef4e"></i></span></div>
+    <div class="meta"><span class="fuente">Dammit Sans</span><span class="fuente">Rubik</span></div>
+    <a class="url" href="https://sentry.io" target="_blank" rel="noopener noreferrer">sentry.io ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="retool saansfont ui-sans-serif build, deploy, and manage internal tools with retool's unified engine. connect to any database, api, or llm. leverage ai throughout your business.">
+  <a class="lienzo" href="https://retool.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/retool.webp" alt="Captura de Retool" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Retool</h3><span class="paleta"><i style="background:#151515" title="#151515"></i><i style="background:#518dd2" title="#518dd2"></i></span></div>
+    <div class="meta"><span class="fuente">saansFont</span><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://retool.com" target="_blank" rel="noopener noreferrer">retool.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="attio interdisplay inter the system for revenue teams to build pipeline, accelerate deals, and grow accounts around the clock.	">
+  <a class="lienzo" href="https://attio.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/attio.webp" alt="Captura de Attio" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Attio</h3><span class="paleta"><i style="background:#63.ffaacd9e83e40.08a6d76fbdfdfd0.00144fff57f59b89" title="#63.ffaacd9e83e40.08a6d76fbdfdfd0.00144fff57f59b89"></i><i style="background:#56.195182a9930c0.c72a5a469d7344.189a02752546" title="#56.195182a9930c0.c72a5a469d7344.189a02752546"></i><i style="background:#a.b858793dd97f80.188d28720f11151.8ab4b72c5197a" title="#a.b858793dd97f80.188d28720f11151.8ab4b72c5197a"></i><i style="background:#25.6d0e560418941.176d330941c829.55273d5bab218" title="#25.6d0e560418941.176d330941c829.55273d5bab218"></i><i style="background:#14.91d7dbf487fd0.a36fd21ff2e494.71c193b3a68b" title="#14.91d7dbf487fd0.a36fd21ff2e494.71c193b3a68b"></i></span></div>
+    <div class="meta"><span class="fuente">interDisplay</span><span class="fuente">inter</span></div>
+    <a class="url" href="https://attio.com" target="_blank" rel="noopener noreferrer">attio.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="mercury arcadiadisplay arcadia everything you do with money. all in one place. apply in 10 minutes for business banking that transforms how you operate.">
+  <a class="lienzo" href="https://mercury.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/mercury.webp" alt="Captura de Mercury" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Mercury</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#5266eb" title="#5266eb"></i><i style="background:#fc92b4" title="#fc92b4"></i></span></div>
+    <div class="meta"><span class="fuente">arcadiaDisplay</span><span class="fuente">arcadia</span></div>
+    <a class="url" href="https://mercury.com" target="_blank" rel="noopener noreferrer">mercury.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="ramp  times new roman ">
+  <a class="lienzo" href="https://ramp.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/ramp.webp" alt="Captura de Ramp" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Ramp</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Times New Roman</span></div>
+    <a class="url" href="https://ramp.com" target="_blank" rel="noopener noreferrer">ramp.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="zed plexserif writer zed is a high-performance, multiplayer code editor from the creators of atom and tree-sitter.">
+  <a class="lienzo" href="https://zed.dev" target="_blank" rel="noopener noreferrer">
+    <img src="img/zed.webp" alt="Captura de Zed" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Zed</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#5b.9f765fd8adac0.28bbc2b94d94082.4495bff04577e" title="#5b.9f765fd8adac0.28bbc2b94d94082.4495bff04577e"></i><i style="background:#0.5be60c38f366940.03f73e905e8774e106.e1cac083127" title="#0.5be60c38f366940.03f73e905e8774e106.e1cac083127"></i><i style="background:#24.54d6a161e4f81f.2be76c8b439651.005bc01a36e4" title="#24.54d6a161e4f81f.2be76c8b439651.005bc01a36e4"></i><i style="background:#0.cf7ff151e75360.005b870f535a1a280.02dcf96aba88fd6" title="#0.cf7ff151e75360.005b870f535a1a280.02dcf96aba88fd6"></i></span></div>
+    <div class="meta"><span class="fuente">plexSerif</span><span class="fuente">writer</span></div>
+    <a class="url" href="https://zed.dev" target="_blank" rel="noopener noreferrer">zed.dev ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="val town sprig sans ibm plex sans a nice place for javascript">
+  <a class="lienzo" href="https://val.town" target="_blank" rel="noopener noreferrer">
+    <img src="img/val-town.webp" alt="Captura de Val Town" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Val Town</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0.edd2f1a9fbe770.0353f7ced916872ff.820c49ba5e38" title="#0.edd2f1a9fbe770.0353f7ced916872ff.820c49ba5e38"></i><i style="background:#0.716872b020c49c0.1c28f5c28f5c29f0.ca3d70a3d708" title="#0.716872b020c49c0.1c28f5c28f5c29f0.ca3d70a3d708"></i><i style="background:#0.bef9db22d0e560.28f5c28f5c28f6e8.a9374bc6a7f" title="#0.bef9db22d0e560.28f5c28f5c28f6e8.a9374bc6a7f"></i><i style="background:#0.4b020c49ba5e340.10e5604189374cf3.283126e978d8" title="#0.4b020c49ba5e340.10e5604189374cf3.283126e978d8"></i></span></div>
+    <div class="meta"><span class="fuente">Sprig Sans</span><span class="fuente">IBM Plex Sans</span></div>
+    <a class="url" href="https://val.town" target="_blank" rel="noopener noreferrer">val.town ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="modal goga inter variable bring your own code, and run cpu, gpu, and data-intensive compute at scale. the serverless platform for ai and data teams.">
+  <a class="lienzo" href="https://modal.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/modal.webp" alt="Captura de Modal" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Modal</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#ddffdc" title="#ddffdc"></i><i style="background:#0.f76b2af14552180.0c1974454c3a6b0.08b0de59bd0ab8" title="#0.f76b2af14552180.0c1974454c3a6b0.08b0de59bd0ab8"></i><i style="background:#7fee64" title="#7fee64"></i></span></div>
+    <div class="meta"><span class="fuente">Goga</span><span class="fuente">Inter Variable</span></div>
+    <a class="url" href="https://modal.com" target="_blank" rel="noopener noreferrer">modal.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="baseten neuealtegrotesk ui-sans-serif serve and scale open-source and custom ai models on the fastest, most reliable inference platform.">
+  <a class="lienzo" href="https://baseten.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/baseten.webp" alt="Captura de Baseten" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Baseten</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#19e76e" title="#19e76e"></i></span></div>
+    <div class="meta"><span class="fuente">NeueAlteGrotesk</span><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://baseten.co" target="_blank" rel="noopener noreferrer">baseten.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="replicate basier-square basier-square run open-source machine learning models with a cloud api">
+  <a class="lienzo" href="https://replicate.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/replicate.webp" alt="Captura de Replicate" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Replicate</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#dd4425" title="#dd4425"></i><i style="background:#ea2804" title="#ea2804"></i></span></div>
+    <div class="meta"><span class="fuente">basier-square</span></div>
+    <a class="url" href="https://replicate.com" target="_blank" rel="noopener noreferrer">replicate.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="groq  esbuild groq is the premier neocloud for fast inference. one fully integrated platform for infrastructure, inference, and control. millions of developers run trillions of tokens on groq every week.">
+  <a class="lienzo" href="https://groq.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/groq.webp" alt="Captura de Groq" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Groq</h3><span class="paleta"><i style="background:#f3f3ee" title="#f3f3ee"></i><i style="background:#f43e01" title="#f43e01"></i></span></div>
+    <div class="meta"><span class="fuente">esBuild</span></div>
+    <a class="url" href="https://groq.com" target="_blank" rel="noopener noreferrer">groq.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="anthropic anthropic sans anthropic serif anthropic is an ai safety and research company that's working to build reliable, interpretable, and steerable ai systems.">
+  <a class="lienzo" href="https://anthropic.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/anthropic.webp" alt="Captura de Anthropic" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Anthropic</h3><span class="paleta"><i style="background:#faf9f5" title="#faf9f5"></i><i style="background:#c6613f" title="#c6613f"></i><i style="background:#d97757" title="#d97757"></i></span></div>
+    <div class="meta"><span class="fuente">Anthropic Sans</span><span class="fuente">Anthropic Serif</span></div>
+    <a class="url" href="https://anthropic.com" target="_blank" rel="noopener noreferrer">anthropic.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="loops newsreader sans-serif loops is email marketing software for saas teams to send marketing, lifecycle, and transactional email from one product. free to start.">
+  <a class="lienzo" href="https://loops.so" target="_blank" rel="noopener noreferrer">
+    <img src="img/loops.webp" alt="Captura de Loops" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Loops</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#d97757" title="#d97757"></i><i style="background:#fc5200" title="#fc5200"></i></span></div>
+    <div class="meta"><span class="fuente">Newsreader</span><span class="fuente">sans-serif</span></div>
+    <a class="url" href="https://loops.so" target="_blank" rel="noopener noreferrer">loops.so ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="tella inter inter tella is screen recording software for mac, windows, and the web. record your screen, camera, microphone, and system audio, edit with ai, then share or export in up to 4k.">
+  <a class="lienzo" href="https://tella.tv" target="_blank" rel="noopener noreferrer">
+    <img src="img/tella.webp" alt="Captura de Tella" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Tella</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0.ffff9b56323bc0.0002fc8035f3c17e20.00015100262a310d" title="#0.ffff9b56323bc0.0002fc8035f3c17e20.00015100262a310d"></i><i style="background:#5e51f8" title="#5e51f8"></i><i style="background:#c2bdfc" title="#c2bdfc"></i><i style="background:#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d" title="#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://tella.tv" target="_blank" rel="noopener noreferrer">tella.tv ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="raycast inter inter a collection of powerful productivity tools all within an extendable launcher.">
+  <a class="lienzo" href="https://raycast.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/raycast.webp" alt="Captura de Raycast" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Raycast</h3><span class="paleta"><i style="background:#07080a" title="#07080a"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://raycast.com" target="_blank" rel="noopener noreferrer">raycast.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="producto-saas" data-buscar="vercel geistsans geistsans the autonomous stack for every app and agent.">
+  <a class="lienzo" href="https://vercel.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/vercel.webp" alt="Captura de Vercel" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Vercel</h3><span class="paleta"><i style="background:#fafafa" title="#fafafa"></i><i style="background:#0072f5" title="#0072f5"></i></span></div>
+    <div class="meta"><span class="fuente">GeistSans</span></div>
+    <a class="url" href="https://vercel.com" target="_blank" rel="noopener noreferrer">vercel.com ↗</a>
+  </div>
+</article></div>
+</section>
+<section class="familia" id="dev-docs">
+  <header class="cab"><h2>Herramientas y docs</h2><p>Densidad de información bien resuelta</p><span class="cuenta">12</span></header>
+  <div class="rejilla"><article class="ficha" data-fam="dev-docs" data-buscar="tailwind css inter inter tailwind css is a utility-first css framework for rapidly building modern websites without ever leaving your html.">
+  <a class="lienzo" href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/tailwind-css.webp" alt="Captura de Tailwind CSS" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Tailwind CSS</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#1.e7414a4d2b2c0.47589efd86a8fc5.7d18d25edd054" title="#1.e7414a4d2b2c0.47589efd86a8fc5.7d18d25edd054"></i><i style="background:#23.29fbe76c8b449.93b107746887822.68240b780346" title="#23.29fbe76c8b449.93b107746887822.68240b780346"></i><i style="background:#10.1ae7d566cf421.2eb11c6d1e109b.c0d844d013a9" title="#10.1ae7d566cf421.2eb11c6d1e109b.c0d844d013a9"></i><i style="background:#31.8c9eecbfb15c4f.d68db8bac712.515379fa97e14" title="#31.8c9eecbfb15c4f.d68db8bac712.515379fa97e14"></i></span></div>
+    <div class="meta"><span class="fuente">inter</span></div>
+    <a class="url" href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer">tailwindcss.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="astro obviously ui-sans-serif astro builds fast content sites, powerful web applications, dynamic server apis, and everything in-between.">
+  <a class="lienzo" href="https://astro.build" target="_blank" rel="noopener noreferrer">
+    <img src="img/astro.webp" alt="Captura de Astro" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Astro</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#3178c6" title="#3178c6"></i><i style="background:#61dafb" title="#61dafb"></i><i style="background:#d83333" title="#d83333"></i></span></div>
+    <div class="meta"><span class="fuente">Obviously</span><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://astro.build" target="_blank" rel="noopener noreferrer">astro.build ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="bun archivo ui-sans-serif bundle, install, and run javascript &amp; typescript — all in bun. bun is a fast javascript runtime &amp; toolkit with a bundler, test runner, and npm-compatible package manager built in.">
+  <a class="lienzo" href="https://bun.sh" target="_blank" rel="noopener noreferrer">
+    <img src="img/bun.webp" alt="Captura de Bun" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Bun</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#009150" title="#009150"></i><i style="background:#c27803" title="#c27803"></i><i style="background:#ff1f8f" title="#ff1f8f"></i><i style="background:#28dc82" title="#28dc82"></i></span></div>
+    <div class="meta"><span class="fuente">Archivo</span><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://bun.sh" target="_blank" rel="noopener noreferrer">bun.sh ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="deno inter inter a drop-in javascript runtime with built-in typescript, npm support, and security by default. run your existing node project on deno with no setup.">
+  <a class="lienzo" href="https://deno.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/deno.webp" alt="Captura de Deno" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Deno</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#70ffaf" title="#70ffaf"></i><i style="background:#01c2ff" title="#01c2ff"></i><i style="background:#db01ff" title="#db01ff"></i><i style="background:#66c2ff" title="#66c2ff"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://deno.com" target="_blank" rel="noopener noreferrer">deno.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="nuxt public sans public sans build fast, production-ready web apps with vue. file-based routing, auto-imports, and server-side rendering — all configured out of the box.">
+  <a class="lienzo" href="https://nuxt.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/nuxt.webp" alt="Captura de Nuxt" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Nuxt</h3><span class="paleta"><i style="background:#0.210624dd2f1aa0.0ac083126e978d8108.b1eb851eb85" title="#0.210624dd2f1aa0.0ac083126e978d8108.b1eb851eb85"></i><i style="background:#0.edd2f1a9fbe770.0353f7ced916872ff.820c49ba5e38" title="#0.edd2f1a9fbe770.0353f7ced916872ff.820c49ba5e38"></i><i style="background:#0.b4395810624dd0.0a3d70a3d70a3d8100.c9ba5e353f8" title="#0.b4395810624dd0.0a3d70a3d70a3d8100.c9ba5e353f8"></i><i style="background:#0.210624dd2f1aa0.0ac083126e978d8108.b1eb851eb85" title="#0.210624dd2f1aa0.0ac083126e978d8108.b1eb851eb85"></i><i style="background:#0.353f7ced9168720.0ac083126e978d8109.c147ae147ae" title="#0.353f7ced9168720.0ac083126e978d8109.c147ae147ae"></i></span></div>
+    <div class="meta"><span class="fuente">Public Sans</span></div>
+    <a class="url" href="https://nuxt.com" target="_blank" rel="noopener noreferrer">nuxt.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="svelte dm serif display georgia web development for the rest of us">
+  <a class="lienzo" href="https://svelte.dev" target="_blank" rel="noopener noreferrer">
+    <img src="img/svelte.webp" alt="Captura de Svelte" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Svelte</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#d43008" title="#d43008"></i><i style="background:#f8603a" title="#f8603a"></i></span></div>
+    <div class="meta"><span class="fuente">DM Serif Display</span><span class="fuente">Georgia</span></div>
+    <a class="url" href="https://svelte.dev" target="_blank" rel="noopener noreferrer">svelte.dev ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="biome geist-b17c5c92c1d3a205 geist-b17c5c92c1d3a205 format, lint, and more in a fraction of a second.">
+  <a class="lienzo" href="https://biomejs.dev" target="_blank" rel="noopener noreferrer">
+    <img src="img/biome.webp" alt="Captura de Biome" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Biome</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0065da" title="#0065da"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#9a6700" title="#9a6700"></i><i style="background:#edd1fa" title="#edd1fa"></i></span></div>
+    <div class="meta"><span class="fuente">Geist-b17c5c92c1d3a205</span></div>
+    <a class="url" href="https://biomejs.dev" target="_blank" rel="noopener noreferrer">biomejs.dev ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="turso __inter_f367f3 __inter_f367f3 turso is the sqlite-based database architecture for millions of databases. spin up a database for every user, agent, and tenant, with embedded replication, per-database encryption, and economics that ">
+  <a class="lienzo" href="https://turso.tech" target="_blank" rel="noopener noreferrer">
+    <img src="img/turso.webp" alt="Captura de Turso" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Turso</h3><span class="paleta"><i style="background:#0d1318" title="#0d1318"></i><i style="background:#4ff8d2" title="#4ff8d2"></i><i style="background:#283945" title="#283945"></i><i style="background:#e879f9" title="#e879f9"></i><i style="background:#d946ef" title="#d946ef"></i></span></div>
+    <div class="meta"><span class="fuente">__Inter_f367f3</span></div>
+    <a class="url" href="https://turso.tech" target="_blank" rel="noopener noreferrer">turso.tech ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="hugging face source sans pro source sans pro we’re on a journey to advance and democratize artificial intelligence through open source and open science.">
+  <a class="lienzo" href="https://huggingface.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/hugging-face.webp" alt="Captura de Hugging Face" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Hugging Face</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1" title="#0.ed916872b020c80.0189374bc6a7efa108.87ef9db22d1"></i><i style="background:#0.b4fdf3b645a1c80.05a1cac083126e8105.53333333333" title="#0.b4fdf3b645a1c80.05a1cac083126e8105.53333333333"></i><i style="background:#0.f78d4fdf3b64580.00c49ba5e353f7d108.8ac083126e9" title="#0.f78d4fdf3b64580.00c49ba5e353f7d108.8ac083126e9"></i><i style="background:#0.722d0e560418940.07ae147ae147ae100.cd4fdf3b646" title="#0.722d0e560418940.07ae147ae147ae100.cd4fdf3b646"></i></span></div>
+    <div class="meta"><span class="fuente">Source Sans Pro</span></div>
+    <a class="url" href="https://huggingface.co" target="_blank" rel="noopener noreferrer">huggingface.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="prisma sora inter prisma gives typescript and node.js teams prisma orm, prisma postgres, and prisma compute: a type-safe orm, managed postgres, and compute for deploying typescript apps, from schema to deployed app.">
+  <a class="lienzo" href="https://prisma.io" target="_blank" rel="noopener noreferrer">
+    <img src="img/prisma.webp" alt="Captura de Prisma" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Prisma</h3><span class="paleta"><i style="background:#640000" title="#640000"></i><i style="background:#5a.f3b645a1cac000.0000c7ffe029debc3" title="#5a.f3b645a1cac000.0000c7ffe029debc3"></i><i style="background:#00bbcb" title="#00bbcb"></i><i style="background:#0.5a0817fc7607c40.003556c20c321b0e0.00858189ad68588" title="#0.5a0817fc7607c40.003556c20c321b0e0.00858189ad68588"></i><i style="background:#0.81a95421c044280.00138fffbce4217d0.00dbc914059b7568" title="#0.81a95421c044280.00138fffbce4217d0.00dbc914059b7568"></i></span></div>
+    <div class="meta"><span class="fuente">Sora</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://prisma.io" target="_blank" rel="noopener noreferrer">prisma.io ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="trpc system-ui ui-sans-serif end-to-end typesafe apis made easy. automatic typesafety &amp; autocompletion inferred from your api-paths, their input data, &amp; outputs 🧙‍♂️">
+  <a class="lienzo" href="https://trpc.io" target="_blank" rel="noopener noreferrer">
+    <img src="img/trpc.webp" alt="Captura de tRPC" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>tRPC</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#398ccb" title="#398ccb"></i><i style="background:#1e293b" title="#1e293b"></i><i style="background:#4f46e5" title="#4f46e5"></i><i style="background:#d97706" title="#d97706"></i></span></div>
+    <div class="meta"><span class="fuente">system-ui</span><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://trpc.io" target="_blank" rel="noopener noreferrer">trpc.io ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="dev-docs" data-buscar="drizzle ui-sans-serif ui-sans-serif drizzle orm is a lightweight and performant typescript orm with developer experience in mind.">
+  <a class="lienzo" href="https://orm.drizzle.team" target="_blank" rel="noopener noreferrer">
+    <img src="img/drizzle.webp" alt="Captura de Drizzle" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Drizzle</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#334155" title="#334155"></i><i style="background:#fd7776" title="#fd7776"></i></span></div>
+    <div class="meta"><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://orm.drizzle.team" target="_blank" rel="noopener noreferrer">orm.drizzle.team ↗</a>
+  </div>
+</article></div>
+</section>
+<section class="familia" id="movil-android">
+  <header class="cab"><h2>Móvil y Android</h2><p>Con captura de escritorio y de teléfono</p><span class="cuenta">23</span></header>
+  <div class="rejilla"><article class="ficha" data-fam="movil-android" data-buscar="material 3 google sans google sans text material design 3 - google's open-source design system, provides comprehensive guidelines, styles, &amp;  components to create user-friendly interfaces.">
+  <a class="lienzo" href="https://m3.material.io" target="_blank" rel="noopener noreferrer">
+    <img src="img/material-3.webp" alt="Captura de Material 3" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/material-3.webp" alt="Material 3 en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Material 3</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#6442d6" title="#6442d6"></i><i style="background:#f1d3f9" title="#f1d3f9"></i></span></div>
+    <div class="meta"><span class="fuente">Google Sans</span><span class="fuente">Google Sans Text</span></div>
+    <a class="url" href="https://m3.material.io" target="_blank" rel="noopener noreferrer">m3.material.io ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="android developers google sans google sans text discover the latest app development tools, platform updates, training, and documentation for developers across every android device.
+">
+  <a class="lienzo" href="https://developer.android.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/android-developers.webp" alt="Captura de Android Developers" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/android-developers.webp" alt="Android Developers en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Android Developers</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#174ea6" title="#174ea6"></i><i style="background:#1967d2" title="#1967d2"></i><i style="background:#1a73e8" title="#1a73e8"></i><i style="background:#f66453" title="#f66453"></i></span></div>
+    <div class="meta"><span class="fuente">Google Sans</span><span class="fuente">Google Sans Text</span></div>
+    <a class="url" href="https://developer.android.com" target="_blank" rel="noopener noreferrer">developer.android.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="family family inter your favorite crypto wallet.">
+  <a class="lienzo" href="https://family.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/family.webp" alt="Captura de Family" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/family.webp" alt="Family en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Family</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#030.3737329c347e8c0.84848387df5cf" title="#030.3737329c347e8c0.84848387df5cf"></i><i style="background:#1a88f8" title="#1a88f8"></i><i style="background:#030.7474751ce28ed40.7474751ce28ed4" title="#030.7474751ce28ed40.7474751ce28ed4"></i><i style="background:#030.84848387df5cf0.828283d35eb748" title="#030.84848387df5cf0.828283d35eb748"></i></span></div>
+    <div class="meta"><span class="fuente">Family</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://family.co" target="_blank" rel="noopener noreferrer">family.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="cash app cash sans cash sans download cash app to send &amp; receive money instantly, spend with the cash app card, buy bitcoin, invest in stocks, &amp; manage your finances.">
+  <a class="lienzo" href="https://cash.app" target="_blank" rel="noopener noreferrer">
+    <img src="img/cash-app.webp" alt="Captura de Cash App" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/cash-app.webp" alt="Cash App en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Cash App</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i></span></div>
+    <div class="meta"><span class="fuente">Cash Sans</span></div>
+    <a class="url" href="https://cash.app" target="_blank" rel="noopener noreferrer">cash.app ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="revolut aeonik pro inter ">
+  <a class="lienzo" href="https://revolut.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/revolut.webp" alt="Captura de Revolut" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/revolut.webp" alt="Revolut en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Revolut</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Aeonik Pro</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://revolut.com" target="_blank" rel="noopener noreferrer">revolut.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="monzo monzosansdisplay monzosanstext your salary sorted into pots. your spare change turned into savings. your money, doing what it should with monzo.">
+  <a class="lienzo" href="https://monzo.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/monzo.webp" alt="Captura de Monzo" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/monzo.webp" alt="Monzo en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Monzo</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#ff4f40" title="#ff4f40"></i><i style="background:#001825" title="#001825"></i></span></div>
+    <div class="meta"><span class="fuente">MonzoSansDisplay</span><span class="fuente">MonzoSansText</span></div>
+    <a class="url" href="https://monzo.com" target="_blank" rel="noopener noreferrer">monzo.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="n26 n26-extended n26 n26 is the first bank you'll love. beautifully simple, 100% mobile, and trusted by millions. open your free bank account in minutes.">
+  <a class="lienzo" href="https://n26.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/n26.webp" alt="Captura de N26" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/n26.webp" alt="N26 en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>N26</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#003b39" title="#003b39"></i><i style="background:#088177" title="#088177"></i></span></div>
+    <div class="meta"><span class="fuente">N26-Extended</span><span class="fuente">N26</span></div>
+    <a class="url" href="https://n26.com" target="_blank" rel="noopener noreferrer">n26.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="nubank nusansdisplay nusansdisplay saiba mais sobre o nubank - sua vida financeira sem complicações, asteriscos ou letras miúdas.">
+  <a class="lienzo" href="https://nubank.com.br" target="_blank" rel="noopener noreferrer">
+    <img src="img/nubank.webp" alt="Captura de Nubank" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/nubank.webp" alt="Nubank en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Nubank</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#8d0de3" title="#8d0de3"></i><i style="background:#ecdfff" title="#ecdfff"></i><i style="background:#1e002f" title="#1e002f"></i><i style="background:#714f8f" title="#714f8f"></i></span></div>
+    <div class="meta"><span class="fuente">nuSansDisplay</span></div>
+    <a class="url" href="https://nubank.com.br" target="_blank" rel="noopener noreferrer">nubank.com.br ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="duolingo duolingo-sans sans-serif free, fun, and effective courses in languages and more. learn with quick, science-based lessons personalized to you.">
+  <a class="lienzo" href="https://duolingo.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/duolingo.webp" alt="Captura de Duolingo" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/duolingo.webp" alt="Duolingo en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Duolingo</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#a5ed6e" title="#a5ed6e"></i><i style="background:#58cc02" title="#58cc02"></i><i style="background:#1cb0f6" title="#1cb0f6"></i><i style="background:#0000ee" title="#0000ee"></i></span></div>
+    <div class="meta"><span class="fuente">duolingo-sans</span><span class="fuente">sans-serif</span></div>
+    <a class="url" href="https://duolingo.com" target="_blank" rel="noopener noreferrer">duolingo.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="headspace headspace apercu headspace apercu live a healthier, happier, more well-rested life in just a few minutes a day. get the science-backed mental health app for every moment. try for free.">
+  <a class="lienzo" href="https://headspace.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/headspace.webp" alt="Captura de Headspace" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/headspace.webp" alt="Headspace en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Headspace</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#0061ef" title="#0061ef"></i></span></div>
+    <div class="meta"><span class="fuente">Headspace Apercu</span></div>
+    <a class="url" href="https://headspace.com" target="_blank" rel="noopener noreferrer">headspace.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="strava boathouse boathouse strava connects millions of runners, cyclists, hikers, walkers and other active people through the sports they love – all on our mobile app and website.">
+  <a class="lienzo" href="https://strava.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/strava.webp" alt="Captura de Strava" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/strava.webp" alt="Strava en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Strava</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#fc5200" title="#fc5200"></i><i style="background:#0060d0" title="#0060d0"></i><i style="background:#1032cf" title="#1032cf"></i></span></div>
+    <div class="meta"><span class="fuente">Boathouse</span></div>
+    <a class="url" href="https://strava.com" target="_blank" rel="noopener noreferrer">strava.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="whoop -apple-system times new roman ">
+  <a class="lienzo" href="https://whoop.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/whoop.webp" alt="Captura de Whoop" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/whoop.webp" alt="Whoop en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Whoop</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0051c3" title="#0051c3"></i></span></div>
+    <div class="meta"><span class="fuente">-apple-system</span><span class="fuente">Times New Roman</span></div>
+    <a class="url" href="https://whoop.com" target="_blank" rel="noopener noreferrer">whoop.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="oura editorial new akkuratll enhance your health journey with oura. the oura ring provides round-the-clock insights into sleep, fitness, and stress for wellness. now hsa/fsa eligible.">
+  <a class="lienzo" href="https://ouraring.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/oura.webp" alt="Captura de Oura" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/oura.webp" alt="Oura en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Oura</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d" title="#0.ffff9b56323bc0.0002fc7fc8004216c0.00015100262a310d"></i><i style="background:#172b85" title="#172b85"></i><i style="background:#2a72de" title="#2a72de"></i></span></div>
+    <div class="meta"><span class="fuente">Editorial New</span><span class="fuente">AkkuratLL</span></div>
+    <a class="url" href="https://ouraring.com" target="_blank" rel="noopener noreferrer">ouraring.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="wise wise sans inter banks charge a lot for overseas transfers. we don't. transfer money abroad easily and quickly with our low cost money transfers.">
+  <a class="lienzo" href="https://wise.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/wise.webp" alt="Captura de Wise" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/wise.webp" alt="Wise en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Wise</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#163300" title="#163300"></i><i style="background:#9fe870" title="#9fe870"></i><i style="background:#054d28" title="#054d28"></i></span></div>
+    <div class="meta"><span class="fuente">Wise Sans</span><span class="fuente">Inter</span></div>
+    <a class="url" href="https://wise.com" target="_blank" rel="noopener noreferrer">wise.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="klarna  -apple-system ">
+  <a class="lienzo" href="https://klarna.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/klarna.webp" alt="Captura de Klarna" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/klarna.webp" alt="Klarna en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Klarna</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">-apple-system</span></div>
+    <a class="url" href="https://klarna.com" target="_blank" rel="noopener noreferrer">klarna.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="robinhood martina plantijn capsule sans text trade stocks on robinhood with commission-free investing &amp; advanced trading tools. access fractional shares, real-time market data, and more. terms and fees may apply.">
+  <a class="lienzo" href="https://robinhood.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/robinhood.webp" alt="Captura de Robinhood" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/robinhood.webp" alt="Robinhood en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Robinhood</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#ccff00" title="#ccff00"></i><i style="background:#0000ee" title="#0000ee"></i></span></div>
+    <div class="meta"><span class="fuente">Martina Plantijn</span><span class="fuente">Capsule Sans Text</span></div>
+    <a class="url" href="https://robinhood.com" target="_blank" rel="noopener noreferrer">robinhood.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="flighty system-ui sans-serif the only app that tells you everything about your flight and tracks your lifetime of travel. get real-time updates, the fastest alerts, and delay predictions, so you're always the first to know and re">
+  <a class="lienzo" href="https://flighty.app" target="_blank" rel="noopener noreferrer">
+    <img src="img/flighty.webp" alt="Captura de Flighty" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/flighty.webp" alt="Flighty en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Flighty</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#f7be00" title="#f7be00"></i><i style="background:#007bff" title="#007bff"></i></span></div>
+    <div class="meta"><span class="fuente">system-ui</span><span class="fuente">sans-serif</span></div>
+    <a class="url" href="https://flighty.app" target="_blank" rel="noopener noreferrer">flighty.app ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="day one avenir next avenir next the award-winning journal app for capturing life as you live it. free to download on iphone, android, ipad, and mac. now available on the web.">
+  <a class="lienzo" href="https://dayoneapp.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/day-one.webp" alt="Captura de Day One" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/day-one.webp" alt="Day One en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Day One</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#1e75ae" title="#1e75ae"></i><i style="background:#0a112d" title="#0a112d"></i><i style="background:#1b95e0" title="#1b95e0"></i><i style="background:#248bd9" title="#248bd9"></i></span></div>
+    <div class="meta"><span class="fuente">Avenir Next</span></div>
+    <a class="url" href="https://dayoneapp.com" target="_blank" rel="noopener noreferrer">dayoneapp.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="craft untitledseriffont untitledsansfont a free notes and productivity app that follows you across all your devices. premium features available.">
+  <a class="lienzo" href="https://craft.do" target="_blank" rel="noopener noreferrer">
+    <img src="img/craft.webp" alt="Captura de Craft" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/craft.webp" alt="Craft en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Craft</h3><span class="paleta"><i style="background:#fcf9f7" title="#fcf9f7"></i><i style="background:#9bd8a9" title="#9bd8a9"></i><i style="background:#0087ff" title="#0087ff"></i></span></div>
+    <div class="meta"><span class="fuente">UntitledSerifFont</span><span class="fuente">UntitledSansFont</span></div>
+    <a class="url" href="https://craft.do" target="_blank" rel="noopener noreferrer">craft.do ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="bear bearsansheadline bearsans bear is a beautiful, powerfully simple markdown note taking app to capture, write, and organize your life.">
+  <a class="lienzo" href="https://bear.app" target="_blank" rel="noopener noreferrer">
+    <img src="img/bear.webp" alt="Captura de Bear" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/bear.webp" alt="Bear en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Bear</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#dd4c4f" title="#dd4c4f"></i><i style="background:#456aa3" title="#456aa3"></i><i style="background:#884aa8" title="#884aa8"></i><i style="background:#2b6451" title="#2b6451"></i></span></div>
+    <div class="meta"><span class="fuente">bearsansheadline</span><span class="fuente">bearsans</span></div>
+    <a class="url" href="https://bear.app" target="_blank" rel="noopener noreferrer">bear.app ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="halide haliderouterneue haliderouterneue halide">
+  <a class="lienzo" href="https://halide.cam" target="_blank" rel="noopener noreferrer">
+    <img src="img/halide.webp" alt="Captura de Halide" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/halide.webp" alt="Halide en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Halide</h3><span class="paleta"><i style="background:#020507" title="#020507"></i><i style="background:#fffe4f" title="#fffe4f"></i></span></div>
+    <div class="meta"><span class="fuente">HalideRouterNeue</span></div>
+    <a class="url" href="https://halide.cam" target="_blank" rel="noopener noreferrer">halide.cam ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="darkroom system system everything to edit. no import needed. curves, masks, and color grading for the photos and videos already in apple photos. try every tool free.">
+  <a class="lienzo" href="https://darkroom.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/darkroom.webp" alt="Captura de Darkroom" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/darkroom.webp" alt="Darkroom en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Darkroom</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#c7042e" title="#c7042e"></i><i style="background:#943420" title="#943420"></i><i style="background:#4b2a63" title="#4b2a63"></i><i style="background:#8a4a3e" title="#8a4a3e"></i></span></div>
+    <div class="meta"><span class="fuente">system</span></div>
+    <a class="url" href="https://darkroom.co" target="_blank" rel="noopener noreferrer">darkroom.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="movil-android" data-buscar="airbnb design airbnb cereal vf airbnb cereal vf get an airbnb for every kind of trip → 8 million vacation rentals → 2 million guest favorites → 220+ countries and regions worldwide">
+  <a class="lienzo" href="https://airbnb.design" target="_blank" rel="noopener noreferrer">
+    <img src="img/airbnb-design.webp" alt="Captura de Airbnb Design" loading="lazy" width="1440" height="900">
+    <img class="tel" src="movil/airbnb-design.webp" alt="Airbnb Design en Android" loading="lazy">
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Airbnb Design</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#ff385c" title="#ff385c"></i></span></div>
+    <div class="meta"><span class="fuente">Airbnb Cereal VF</span></div>
+    <a class="url" href="https://airbnb.design" target="_blank" rel="noopener noreferrer">airbnb.design ↗</a>
+  </div>
+</article></div>
+</section>
+<section class="familia" id="marca-editorial">
+  <header class="cab"><h2>Marca y editorial</h2><p>Tipografía como estructura, no como relleno</p><span class="cuenta">13</span></header>
+  <div class="rejilla"><article class="ficha" data-fam="marca-editorial" data-buscar="apple sf pro text sf pro text ">
+  <a class="lienzo" href="https://apple.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/apple.webp" alt="Captura de Apple" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Apple</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0066cc" title="#0066cc"></i><i style="background:#0071e3" title="#0071e3"></i><i style="background:#2997ff" title="#2997ff"></i></span></div>
+    <div class="meta"><span class="fuente">SF Pro Text</span></div>
+    <a class="url" href="https://apple.com" target="_blank" rel="noopener noreferrer">apple.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="teenage engineering  te-20 teenage engineering creates high quality, well designed, electronic products for all people who love sound and music.">
+  <a class="lienzo" href="https://teenage.engineering" target="_blank" rel="noopener noreferrer">
+    <img src="img/teenage-engineering.webp" alt="Captura de Teenage Engineering" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Teenage Engineering</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">te-20</span></div>
+    <a class="url" href="https://teenage.engineering" target="_blank" rel="noopener noreferrer">teenage.engineering ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="nothing ntype82-regular ntype82-regular here at nothing, we’re building a world where tech is fun again. remember a time where every new product made you excited? we’re bringing that back.">
+  <a class="lienzo" href="https://nothing.tech" target="_blank" rel="noopener noreferrer">
+    <img src="img/nothing.webp" alt="Captura de Nothing" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Nothing</h3><span class="paleta"><i style="background:#f4f4f4" title="#f4f4f4"></i></span></div>
+    <div class="meta"><span class="fuente">NType82-Regular</span></div>
+    <a class="url" href="https://nothing.tech" target="_blank" rel="noopener noreferrer">nothing.tech ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="aesop system-ui system-ui ">
+  <a class="lienzo" href="https://aesop.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/aesop.webp" alt="Captura de Aesop" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Aesop</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i></span></div>
+    <div class="meta"><span class="fuente">system-ui</span></div>
+    <a class="url" href="https://aesop.com" target="_blank" rel="noopener noreferrer">aesop.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="koto gtkotoheimcondensed gtkotoheim ​​meet koto — a creative studio that partners with brands to shape the future with optimism, collaboration, and craft. come see what we’re building.
+">
+  <a class="lienzo" href="https://koto.studio" target="_blank" rel="noopener noreferrer">
+    <img src="img/koto.webp" alt="Captura de Koto" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Koto</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">gtKotoheimCondensed</span><span class="fuente">gtKotoheim</span></div>
+    <a class="url" href="https://koto.studio" target="_blank" rel="noopener noreferrer">koto.studio ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="pentagram plain plain pentagram is the world’s largest independent design consultancy. the firm is owned and run by 24 partners, each of whom are leaders in their individual fields.">
+  <a class="lienzo" href="https://pentagram.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/pentagram.webp" alt="Captura de Pentagram" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Pentagram</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Plain</span></div>
+    <a class="url" href="https://pentagram.com" target="_blank" rel="noopener noreferrer">pentagram.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="collins portrait text times new roman make your company as valuable as it is unignorable.">
+  <a class="lienzo" href="https://wearecollins.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/collins.webp" alt="Captura de Collins" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Collins</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Portrait Text</span><span class="fuente">Times New Roman</span></div>
+    <a class="url" href="https://wearecollins.com" target="_blank" rel="noopener noreferrer">wearecollins.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="instrument instrument-sans instrument-sans we are a design and technology company helping brands unlock their full potential.">
+  <a class="lienzo" href="https://instrument.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/instrument.webp" alt="Captura de Instrument" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Instrument</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Instrument-Sans</span></div>
+    <a class="url" href="https://instrument.com" target="_blank" rel="noopener noreferrer">instrument.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="hello monday clarendonbtwxx-light nb_internationalproregular hello monday is a creative studio in new york, copenhagen, and aarhus that handcrafts digital (and magical) products, brands, and experiences.">
+  <a class="lienzo" href="https://hellomonday.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/hello-monday.webp" alt="Captura de Hello Monday" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Hello Monday</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">ClarendonBTWXX-Light</span><span class="fuente">nb_internationalproregular</span></div>
+    <a class="url" href="https://hellomonday.com" target="_blank" rel="noopener noreferrer">hellomonday.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="buck mabry mabry buck is a global creative company that brings brands, stories, and experiences to life through art, design, and technology.">
+  <a class="lienzo" href="https://buck.co" target="_blank" rel="noopener noreferrer">
+    <img src="img/buck.webp" alt="Captura de Buck" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Buck</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#ffd42d" title="#ffd42d"></i></span></div>
+    <div class="meta"><span class="fuente">Mabry</span></div>
+    <a class="url" href="https://buck.co" target="_blank" rel="noopener noreferrer">buck.co ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="area 17 ui-sans-serif ui-sans-serif area 17 partners with the world’s most influential organizations to realize their vision and achieve their greatest impact.">
+  <a class="lienzo" href="https://area17.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/area-17.webp" alt="Captura de AREA 17" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>AREA 17</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">ui-sans-serif</span></div>
+    <a class="url" href="https://area17.com" target="_blank" rel="noopener noreferrer">area17.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="mailchimp means web graphik web utilize real-time user behavior data and artificial intelligence to convert more customers. easy to use, get started for free!">
+  <a class="lienzo" href="https://mailchimp.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/mailchimp.webp" alt="Captura de Mailchimp" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Mailchimp</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#004e56" title="#004e56"></i><i style="background:#ffe01b" title="#ffe01b"></i></span></div>
+    <div class="meta"><span class="fuente">Means Web</span><span class="fuente">Graphik Web</span></div>
+    <a class="url" href="https://mailchimp.com" target="_blank" rel="noopener noreferrer">mailchimp.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="marca-editorial" data-buscar="rapha raphasanscondensed raphaseriftext we exist to inspire the world to live life by bike, because it’s never just a ride. shop the world’s finest riding apparel, made by cyclists, for cyclists.">
+  <a class="lienzo" href="https://rapha.cc" target="_blank" rel="noopener noreferrer">
+    <img src="img/rapha.webp" alt="Captura de Rapha" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Rapha</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#dcb9d1" title="#dcb9d1"></i><i style="background:#462639" title="#462639"></i><i style="background:#641b5c" title="#641b5c"></i></span></div>
+    <div class="meta"><span class="fuente">raphaSansCondensed</span><span class="fuente">raphaSerifText</span></div>
+    <a class="url" href="https://rapha.cc" target="_blank" rel="noopener noreferrer">rapha.cc ↗</a>
+  </div>
+</article></div>
+</section>
+<section class="familia" id="galerias">
+  <header class="cab"><h2>Galerías</h2><p>De aquí sale la próxima tanda de referencias</p><span class="cuenta">11</span></header>
+  <div class="rejilla"><article class="ficha" data-fam="galerias" data-buscar="godly inter inter the best design inspiration on the internet.">
+  <a class="lienzo" href="https://godly.website" target="_blank" rel="noopener noreferrer">
+    <img src="img/godly.webp" alt="Captura de Godly" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Godly</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0.266666666666660000" title="#0.266666666666660000"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://godly.website" target="_blank" rel="noopener noreferrer">godly.website ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="minimal gallery inter inter get inspiration from the best modern website designs, submitted by talented designers worldwide. discover new sites daily, plus premium framer &amp; webflow templates and useful tools for creatives">
+  <a class="lienzo" href="https://minimal.gallery" target="_blank" rel="noopener noreferrer">
+    <img src="img/minimal-gallery.webp" alt="Captura de Minimal Gallery" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Minimal Gallery</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#ff7373" title="#ff7373"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://minimal.gallery" target="_blank" rel="noopener noreferrer">minimal.gallery ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="httpster manrope manrope website design inspiration. get inspired by our gallery of creative design ideas and great examples of beautiful award-winning sites.">
+  <a class="lienzo" href="https://httpster.net" target="_blank" rel="noopener noreferrer">
+    <img src="img/httpster.webp" alt="Captura de Httpster" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Httpster</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i></span></div>
+    <div class="meta"><span class="fuente">Manrope</span></div>
+    <a class="url" href="https://httpster.net" target="_blank" rel="noopener noreferrer">httpster.net ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="one page love geist -apple-system one page love is a one page website design gallery showcasing the best single page websites, templates and resources.">
+  <a class="lienzo" href="https://onepagelove.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/one-page-love.webp" alt="Captura de One Page Love" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>One Page Love</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#7e6858" title="#7e6858"></i><i style="background:#d94f5c" title="#d94f5c"></i><i style="background:#9b816f" title="#9b816f"></i><i style="background:#b09b8d" title="#b09b8d"></i></span></div>
+    <div class="meta"><span class="fuente">Geist</span><span class="fuente">-apple-system</span></div>
+    <a class="url" href="https://onepagelove.com" target="_blank" rel="noopener noreferrer">onepagelove.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="dark mode design inter inter dark mode design is a showcase of beautifully designed and inspiring dark mode websites. dim the lights, lower your screen brightness, and enjoy.">
+  <a class="lienzo" href="https://darkmodedesign.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/dark-mode-design.webp" alt="Captura de Dark Mode Design" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Dark Mode Design</h3><span class="paleta"><i style="background:#000000" title="#000000"></i><i style="background:#0000ee" title="#0000ee"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://darkmodedesign.com" target="_blank" rel="noopener noreferrer">darkmodedesign.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="saas landing page inter inter saas landing page showcases the best landing page examples created by top-class saas companies. get ideas and inspirations for your next design project.">
+  <a class="lienzo" href="https://saaslandingpage.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/saas-landing-page.webp" alt="Captura de SaaS Landing Page" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>SaaS Landing Page</h3><span class="paleta"><i style="background:#fafafa" title="#fafafa"></i></span></div>
+    <div class="meta"><span class="fuente">Inter</span></div>
+    <a class="url" href="https://saaslandingpage.com" target="_blank" rel="noopener noreferrer">saaslandingpage.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="refero title base-variable the largest collection of ui/ux references and design inspiration for web and ios. explore tens of thousands of screenshots with advanced search capabilities">
+  <a class="lienzo" href="https://refero.design" target="_blank" rel="noopener noreferrer">
+    <img src="img/refero.webp" alt="Captura de Refero" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Refero</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i><i style="background:#030e31" title="#030e31"></i><i style="background:#ff6154" title="#ff6154"></i><i style="background:#fa2413" title="#fa2413"></i></span></div>
+    <div class="meta"><span class="fuente">Title</span><span class="fuente">Base-Variable</span></div>
+    <a class="url" href="https://refero.design" target="_blank" rel="noopener noreferrer">refero.design ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="mobbin m saans 652 sans-serif save hours of ui &amp; ux research with our library of 400,000+ fully searchable mobile &amp; web app screenshots.">
+  <a class="lienzo" href="https://mobbin.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/mobbin.webp" alt="Captura de Mobbin" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Mobbin</h3><span class="paleta"><i style="background:#ffffff" title="#ffffff"></i><i style="background:#0000ee" title="#0000ee"></i></span></div>
+    <div class="meta"><span class="fuente">M Saans 652</span><span class="fuente">sans-serif</span></div>
+    <a class="url" href="https://mobbin.com" target="_blank" rel="noopener noreferrer">mobbin.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="awwwards inter tight inter tight awwwards are the website awards that recognize and promote the talent and effort of the best developers, designers and web agencies in the world.">
+  <a class="lienzo" href="https://awwwards.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/awwwards.webp" alt="Captura de Awwwards" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Awwwards</h3><span class="paleta"><i style="background:#f8f8f8" title="#f8f8f8"></i></span></div>
+    <div class="meta"><span class="fuente">Inter Tight</span></div>
+    <a class="url" href="https://awwwards.com" target="_blank" rel="noopener noreferrer">awwwards.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="dribbble   ">
+  <a class="lienzo" href="https://dribbble.com" target="_blank" rel="noopener noreferrer">
+    <img src="img/dribbble.webp" alt="Captura de Dribbble" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Dribbble</h3><span class="paleta"></span></div>
+    <div class="meta"><span class="fuente vacia">sin datos de tipografía</span></div>
+    <a class="url" href="https://dribbble.com" target="_blank" rel="noopener noreferrer">dribbble.com ↗</a>
+  </div>
+</article>
+<article class="ficha" data-fam="galerias" data-buscar="curated design hedvig letters serif euclid circular a live websites and landing pages, reviewed one at a time. filter by style or industry, then click straight through to the real site.">
+  <a class="lienzo" href="https://curated.design" target="_blank" rel="noopener noreferrer">
+    <img src="img/curated-design.webp" alt="Captura de Curated Design" loading="lazy" width="1440" height="900">
+    
+  </a>
+  <div class="pie">
+    <div class="fila"><h3>Curated Design</h3><span class="paleta"><i style="background:#010000" title="#010000"></i><i style="background:#0.7ae147ae147ae0000" title="#0.7ae147ae147ae0000"></i><i style="background:#0.f851eb851eb850000" title="#0.f851eb851eb850000"></i><i style="background:#0.3851eb851eb8520000" title="#0.3851eb851eb8520000"></i><i style="background:#0.ee147ae147ae180000" title="#0.ee147ae147ae180000"></i></span></div>
+    <div class="meta"><span class="fuente">Hedvig Letters Serif</span><span class="fuente">Euclid Circular A</span></div>
+    <a class="url" href="https://curated.design" target="_blank" rel="noopener noreferrer">curated.design ↗</a>
+  </div>
+</article></div>
+</section>
+  <p class="nada oculto" id="nada">Nada coincide con esa búsqueda.</p>
+  <footer>
+    <b>Cómo usarla.</b> Cada ficha es una captura real del sitio en vivo, tomada con Playwright, más la
+    paleta y las tipografías leídas del CSS de la propia página. Elige una familia, roba el vocabulario
+    —no el diseño— y pásalo como <i>Estética</i> y <i>Referencia</i> en el prompt de cuatro partes.<br>
+    <b>Vista Android.</b> Las fichas de la familia móvil llevan la captura de teléfono superpuesta,
+    tomada con un Pixel 7 emulado.<br>
+    Capturado el 2 de septiembre de 2026.
+    Los sitios cambian: vuelve a correr <code>capturar.mjs</code> para refrescar.
+  </footer>
+</main>
+
+<script>
+(function(){
+  const fichas = [...document.querySelectorAll('.ficha')];
+  const familias = [...document.querySelectorAll('.familia')];
+  const botones = [...document.querySelectorAll('.f')];
+  const q = document.getElementById('q');
+  const nada = document.getElementById('nada');
+  let fam = '*';
+
+  function pintar(){
+    const t = q.value.trim().toLowerCase();
+    let visibles = 0;
+    for (const f of fichas){
+      const ok = (fam === '*' || f.dataset.fam === fam) && (!t || f.dataset.buscar.includes(t));
+      f.classList.toggle('oculto', !ok);
+      if (ok) visibles++;
+    }
+    for (const s of familias){
+      s.classList.toggle('oculto', !s.querySelectorAll('.ficha:not(.oculto)').length);
+    }
+    nada.classList.toggle('oculto', visibles > 0);
+  }
+
+  for (const b of botones){
+    b.addEventListener('click', () => {
+      fam = b.dataset.f;
+      botones.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      pintar();
+    });
+  }
+  q.addEventListener('input', pintar);
+
+  const raiz = document.documentElement;
+  document.getElementById('tema').addEventListener('click', () => {
+    const oscuro = getComputedStyle(raiz).getPropertyValue('--fondo').trim().startsWith('#1');
+    raiz.dataset.theme = oscuro ? 'light' : 'dark';
+  });
+})();
+</script>

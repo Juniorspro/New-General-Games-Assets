@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telaraña</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --tinta:#080b11; --panel:rgba(10,14,21,.72); --linea:rgba(150,205,235,.18);
+  --tiza:#e8f1f8; --tenue:#7f93a8; --hilo:#4fd8ff; --brasa:#ffab3d;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--tinta); color:var(--tiza); overflow:hidden;
+  font:600 14px/1.5 "Chakra Petch",system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+  user-select:none;
+}
+canvas{display:block; touch-action:none}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+.rot{font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--tenue)}
+
+/* ---- marcador ---- */
+#hud{position:fixed; inset:0; z-index:10; pointer-events:none; opacity:0; transition:opacity .5s}
+#hud.on{opacity:1}
+#izq{position:absolute; left:16px; top:14px; display:grid; gap:9px}
+.caja{
+  padding:8px 13px; background:var(--panel); border:1px solid var(--linea);
+  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+}
+.caja b{display:block; font-family:"IBM Plex Mono",monospace; font-size:23px; line-height:1.1; font-variant-numeric:tabular-nums}
+#reloj b{color:var(--brasa)}
+#reloj.apura b{animation:latir .8s infinite}
+@keyframes latir{50%{opacity:.35}}
+
+#der{position:absolute; right:16px; top:14px; text-align:right}
+#der .caja{display:inline-block}
+
+/* velocímetro: una barra, no un número más */
+#vel{position:absolute; left:50%; bottom:22px; transform:translateX(-50%); width:210px; text-align:center}
+#velbar{height:3px; margin-top:5px; background:rgba(232,241,248,.14)}
+#velbar i{display:block; height:100%; width:0; background:var(--hilo); transition:width .1s linear}
+
+/* la mira: dos corchetes, y se cierra cuando hay dónde engancharse */
+#mira{
+  position:absolute; left:50%; top:50%; width:26px; height:26px; margin:-13px 0 0 -13px;
+  transition:transform .12s ease, opacity .12s;
+}
+#mira i{position:absolute; width:8px; height:8px; border:2px solid var(--tiza); opacity:.55}
+#mira i:nth-child(1){left:0; top:0; border-right:0; border-bottom:0}
+#mira i:nth-child(2){right:0; top:0; border-left:0; border-bottom:0}
+#mira i:nth-child(3){left:0; bottom:0; border-right:0; border-top:0}
+#mira i:nth-child(4){right:0; bottom:0; border-left:0; border-top:0}
+#mira.hay{transform:scale(.62)}
+#mira.hay i{border-color:var(--hilo); opacity:1}
+
+/* ---- pantallas ---- */
+.tapa{
+  position:fixed; inset:0; z-index:20; display:grid; place-content:center; gap:22px; padding:28px;
+  text-align:center; background:radial-gradient(120% 90% at 50% 25%,rgba(18,34,52,.94),rgba(6,8,12,.97) 70%);
+  backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  transition:opacity .5s ease;
+}
+.tapa[hidden]{display:none !important}
+.tapa.ido{opacity:0; pointer-events:none}
+h1{
+  margin:0; font-family:"Archivo Black",Impact,sans-serif; font-size:clamp(42px,9vw,86px);
+  line-height:.92; letter-spacing:-.02em; text-transform:uppercase; text-wrap:balance;
+}
+h1 span{color:var(--hilo)}
+.bajada{margin:0; max-width:34ch; color:var(--tenue); font-weight:500}
+.teclas{display:grid; grid-template-columns:auto 1fr; gap:7px 15px; margin:0 auto; text-align:left; font-size:13px}
+.teclas kbd{
+  font:600 11px/1.7 "IBM Plex Mono",monospace; padding:1px 7px; color:var(--tiza);
+  background:rgba(232,241,248,.09); border:1px solid var(--linea);
+}
+.teclas span{color:var(--tenue); font-weight:500}
+button.jugar{
+  justify-self:center; padding:12px 34px; font:700 13px/1 "Chakra Petch",sans-serif;
+  letter-spacing:.22em; text-transform:uppercase; color:#04121a; background:var(--hilo);
+  border:0; cursor:pointer; transition:transform .12s, box-shadow .12s;
+}
+button.jugar:hover{transform:translateY(-2px); box-shadow:0 10px 30px rgba(79,216,255,.28)}
+button.jugar:focus-visible{outline:3px solid var(--tiza); outline-offset:3px}
+#barraCarga{width:min(70vw,300px); height:2px; margin:0 auto; background:rgba(232,241,248,.14)}
+#barraCarga i{display:block; height:100%; width:0; background:var(--hilo); transition:width .3s}
+#resultado .cifras{display:flex; gap:34px; justify-content:center}
+#resultado .cifras div b{display:block; font-family:"IBM Plex Mono",monospace; font-size:30px}
+.calidad{display:flex; gap:1px; justify-self:center; background:var(--linea)}
+.calidad button{
+  padding:6px 14px; font:600 10px/1.4 "Chakra Petch",sans-serif; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--tenue); background:#0b1018; border:0; cursor:pointer;
+}
+.calidad button[aria-pressed=true]{color:#04121a; background:var(--tiza)}
+@media (max-width:640px){ #vel{display:none} }
+@media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms !important; animation:none !important} }
+</style>
+
+<div id="hud">
+  <div id="izq">
+    <div class="caja"><span class="rot">Orbes</span><b id="orbes">0 / 0</b></div>
+    <div class="caja" id="reloj"><span class="rot">Tiempo</span><b id="tiempo">2:00</b></div>
+  </div>
+  <div id="der"><div class="caja"><span class="rot">Altura</span><b id="altura" class="mono">0 m</b></div></div>
+  <div id="vel"><span class="rot">Velocidad <em id="velnum" class="mono" style="font-style:normal">0</em> km/h</span>
+    <div id="velbar"><i></i></div></div>
+  <div id="mira"><i></i><i></i><i></i><i></i></div>
+</div>
+
+<div class="tapa" id="carga">
+  <h1>Tela<span>raña</span></h1>
+  <p class="bajada">Cargando la ciudad…</p>
+  <div id="barraCarga"><i></i></div>
+</div>
+
+<div class="tapa" id="inicio" hidden>
+  <h1>Tela<span>raña</span></h1>
+  <p class="bajada">Veintiocho orbes repartidos por los techos. Dos minutos. No hay escaleras.</p>
+  <div class="teclas">
+    <kbd>Mouse</kbd><span>mirar</span>
+    <kbd>Clic</kbd><span>lanzar el hilo — mantené para colgarte</span>
+    <kbd>W A S D</kbd><span>impulsarte, en el aire y en el techo</span>
+    <kbd>Espacio</kbd><span>saltar · soltarte con envión</span>
+    <kbd>Shift</kbd><span>acortar el hilo y ganar velocidad</span>
+  </div>
+  <div class="calidad">
+    <button data-calidad="alta">Alta</button>
+    <button data-calidad="media" aria-pressed="true">Media</button>
+    <button data-calidad="baja">Baja</button>
+  </div>
+  <button class="jugar" id="btJugar">Empezar</button>
+</div>
+
+<div class="tapa" id="resultado" hidden>
+  <h1 id="tituloFin">Se acabó</h1>
+  <div class="cifras">
+    <div><span class="rot">Orbes</span><b id="finOrbes">0</b></div>
+    <div><span class="rot">Punta</span><b id="finVel">0</b></div>
+    <div><span class="rot">Altura</span><b id="finAlt">0</b></div>
+  </div>
+  <button class="jugar" id="btOtra">Otra vez</button>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/jsm/" } }
+</script>
+<script type="module" src="./main.js"></script>

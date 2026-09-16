@@ -1,0 +1,4 @@
+# La dirección vieja del generador de códigos. La página ya no existe —ahora es
+# una sección de /solicitudes— pero un marcador que muere en un 404 no le dice
+# a nadie a dónde ir, así que lleva al lugar nuevo.
+/admin  /solicitudes  301

@@ -1,0 +1,1138 @@
+{
+ "_lee_esto_antes_de_generar": "Un proyecto por juego o por sitio. Antes de lanzar una tanda, mira si el asset ya existe aquí: repetirla cuesta créditos y tiempo. Anota SIEMPRE los parámetros con los que salió bien, que es lo que más cuesta averiguar.",
+ "credencial": {
+  "donde": "~/.rezona/credentials.json — FUERA del repo, nunca commiteada",
+  "marca_de_proyecto": "scratchpad/rezona-assets/.rezona/ — init se corre fuera del repo a propósito",
+  "regla": "el CLIENTE puede vivir en el repo; la LLAVE no",
+  "endpoint": "https://lab.rezona.ai/game/pgcserver"
+ },
+ "proyectos": {
+  "UHTebvdL": {
+   "nombre": "Humo Lento — tienda web",
+   "para": "Tienda de una página de mezcal ficticio. docs/paginas/humo-lento.html",
+   "creado": "2026-09-02",
+   "play_url": "https://lab.rezona.ai/game/pgcserver/play/UHTebvdL",
+   "workbench": "https://lab.rezona.ai/game?project=UHTebvdL",
+   "version": "v5",
+   "nota": "Contiene también los assets de Aquaviva (Frutiger Aero) y los del Gabinete, porque se generaron aquí antes de abrirle proyecto propio. v4 subió el Gabinete por error; v5 vuelve a ser la tienda."
+  },
+  "oBcHewMK": {
+   "nombre": "Gabinete — catálogo de objetos imposibles",
+   "para": "Catálogo de museo de una página con 6 modelos 3D y 12 imágenes. docs/paginas/gabinete.html",
+   "creado": "2026-09-02",
+   "play_url": "https://lab.rezona.ai/game/pgcserver/play/oBcHewMK",
+   "workbench": "https://lab.rezona.ai/game?project=oBcHewMK",
+   "version": "v1",
+   "nota": "Los assets se generaron en UHTebvdL; aquí sólo está la página subida."
+  },
+  "ceuaiXeI": {
+   "nombre": "Kane — tienda de herramienta de carpintería",
+   "para": "Tienda de una página con catálogo, ficha de producto y carrito. docs/paginas/kane.html",
+   "creado": "2026-09-02",
+   "play_url": "https://lab.rezona.ai/game/pgcserver/play/ceuaiXeI",
+   "workbench": "https://lab.rezona.ai/game?project=ceuaiXeI",
+   "version": "v1",
+   "nota": "Assets propios: 6 modelos y 14 imágenes."
+  },
+  "bINhtEPb": {
+   "nombre": "Electro Silver — tienda de electrodomésticos (Presidencia Roca)",
+   "para": "Demostración para el local de Presidencia Roca, Chaco. electro-silver/index.html",
+   "creado": "2026-09-02",
+   "play_url": "https://lab.rezona.ai/game/pgcserver/play/bINhtEPb",
+   "workbench": "https://lab.rezona.ai/game?project=bINhtEPb",
+   "version": "v2",
+   "nota": "6 modelos y 22 imágenes. El negocio no tiene ninguna presencia web: no hay Instagram del que sacar fotos. v2 agrega admin.html, el panel de publicaciones. Publicada en https://electro-silver.pages.dev con noindex: los datos y las tres reseñas son de ejemplo y no puede indexarse como si fuera el sitio del negocio."
+  },
+  "RzyBVluL": {
+   "nombre": "IBLO Eventos — sitio",
+   "para": "Demostración para la productora de fiestas de Margarita Belén, Chaco. iblo-eventos/index.html",
+   "creado": "2026-09-02",
+   "play_url": "https://lab.rezona.ai/game/pgcserver/play/RzyBVluL",
+   "workbench": "https://lab.rezona.ai/game?project=RzyBVluL",
+   "version": "sin subir",
+   "nota": "4 modelos 3D (bola de espejos, corona, sombrero cowboy, bafle) + 10 imagenes con transparencia (9 decoraciones por estetica y el emblema del jarro para el logo). Las fotos y los clips son reales, bajados de su Instagram."
+  },
+  "ZFiGfVPq": {
+   "nombre": "Frutiger Aero — sitio",
+   "para": "Ilustraciones de frutiger-aero/sitio/. Prompts en frutiger-aero/imagenes.json.",
+   "creado": "2026-09-05",
+   "play_url": "https://lab.rezona.ai/game/pgcserver/play/ZFiGfVPq",
+   "workbench": "https://lab.rezona.ai/game?project=ZFiGfVPq",
+   "version": "sin subir",
+   "nota": "La página quedó en «Próximamente :)». En uso: 2 fondos azules y 8 poses de la mascota (voxel, con alfa). Sin uso pero generados: 6 personajes 3D, 18 íconos y 8 láminas de estéticas. Prompts en frutiger-aero/modelos.json."
+  }
+ },
+ "assets": [
+  {
+   "proyecto": "UHTebvdL",
+   "pedido": "assets/hero-agave.png",
+   "output_path_real": "assets/hero-agave-g1.png",
+   "local_web": "docs/paginas/assets/agave.webp",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/hero-agave-g1.png",
+   "que_es": "Campo de agave espadín al amanecer con niebla baja. Banda de cita a ancho completo.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "pedido": "assets/horno-tierra.png",
+   "output_path_real": "assets/horno-tierra-g1.png",
+   "local_web": "docs/paginas/assets/horno.webp",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/horno-tierra-g1.png",
+   "que_es": "Horno de tierra con piñas asándose y humo. Placa vertical 4:5.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "pedido": "assets/tahona.png",
+   "output_path_real": "assets/tahona-g1.png",
+   "local_web": "docs/paginas/assets/tahona.webp",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/tahona-g1.png",
+   "que_es": "Tahona de piedra en palenque de adobe con haz de luz. Placa vertical 4:5.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "pedido": "assets/copa.png",
+   "output_path_real": "assets/copa-g1.png",
+   "local_web": "docs/paginas/assets/copa.webp",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/copa-g1.png",
+   "que_es": "Copita de barro con mezcal, naranja y sal de gusano. Banda de cita a ancho completo.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/copita.glb",
+   "output_path_real": "assets/copita-g1.glb",
+   "task_id": "gtask-81d4e978d13d4a92bfe7",
+   "local_web": "docs/paginas/modelos/copita.glb",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/copita-g1.glb",
+   "que_es": "Copita de barro de Oaxaca para catar. Cuenco con anillo de base.",
+   "crudo": "28,5 MB · 958.734 triángulos",
+   "optimizado": "856 KB · 28.762 triángulos",
+   "salio_bien": true,
+   "nota": "Forma correcta pero material más brillante de lo que pide un barro sin esmaltar. Si hace falta, retexturizar con submit_retexture_generation sobre este task_id."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/caja.glb",
+   "output_path_real": "assets/caja-g1.glb",
+   "task_id": "gtask-48aab6e79afc46d5ab5b",
+   "local_web": "docs/paginas/modelos/caja.glb",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/caja-g1.glb",
+   "que_es": "Caja de madera con asa de cuerda para una botella. Duelas, clavos y veta visibles.",
+   "crudo": "30,5 MB · similar",
+   "optimizado": "994 KB",
+   "salio_bien": true,
+   "nota": "IGNORÓ las proporciones pedidas: pedí 12x12x34 cm y salió casi cúbica (0,55x1,00x0,82). El generador no respeta medidas explícitas; describe la forma, no las cotas."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/veladora.glb",
+   "output_path_real": "assets/veladora-g1.glb",
+   "task_id": "gtask-4c9920a976a04856aefe",
+   "local_web": "docs/paginas/modelos/veladora.glb",
+   "optimizado": "870 KB",
+   "que_es": "Vaso veladora de vidrio prensado.",
+   "salio_bien": false,
+   "nota": "La GEOMETRÍA sirve; el material NO. Salió gris opaco: los generadores de imagen-a-3D no producen transparencia, hornean una difusa. Se resuelve sustituyendo el material por MeshPhysicalMaterial con transmisión en el visor. No gastes otra generación en esto."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/jicara.glb",
+   "output_path_real": "assets/jicara-g1.glb",
+   "task_id": "gtask-1c3ad99d676147528db2",
+   "que_es": "Jícara de guaje, PRIMER intento.",
+   "salio_bien": false,
+   "nota": "Forma correcta, textura naranja de pan en vez de guaje. Descartada."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/jicara2.glb",
+   "output_path_real": "assets/jicara2-g1.glb",
+   "task_id": "gtask-73888ed7b0c14e5982a1",
+   "local_web": "docs/paginas/modelos/jicara.glb",
+   "optimizado": "941 KB",
+   "que_es": "Jícara de guaje retexturizada sobre la anterior. La buena.",
+   "salio_bien": true,
+   "nota": "submit_retexture_generation sobre el task_id del primer intento, con prompt que prohíbe explícitamente el brillo y los tonos naranjas. 84 s y arreglado, sin volver a modelar."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/bot-alta.glb",
+   "output_path_real": "assets/bot-alta-g1.glb",
+   "task_id": "gtask-79c82409bf474542988e",
+   "local_web": "docs/paginas/modelos/aero/bot-alta.glb",
+   "optimizado": "306-551 KB",
+   "que_es": "Botella alta y esbelta con anillos. La más limpia de las tres.",
+   "salio_bien": true,
+   "nota": "Generada como SILUETA en blanco a propósito: el material de vidrio se pone en la página. Pedirla ya en vidrio sería tirar el dinero."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/bot-curva.glb",
+   "output_path_real": "assets/bot-curva-g1.glb",
+   "task_id": "gtask-af66b7d643fd4b7fbed7",
+   "local_web": "docs/paginas/modelos/aero/bot-curva.glb",
+   "optimizado": "306-551 KB",
+   "que_es": "Silueta de reloj de arena; salió más jarrón que botella, pero funciona.",
+   "salio_bien": true,
+   "nota": "Generada como SILUETA en blanco a propósito: el material de vidrio se pone en la página. Pedirla ya en vidrio sería tirar el dinero."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "model3d",
+   "pedido": "assets/bot-facetada.glb",
+   "output_path_real": "assets/bot-facetada-g1.glb",
+   "task_id": "gtask-e75238e6292746b69e80",
+   "local_web": "docs/paginas/modelos/aero/bot-facetada.glb",
+   "optimizado": "306-551 KB",
+   "que_es": "Prisma de ocho caras. Exactamente lo pedido.",
+   "salio_bien": true,
+   "nota": "Generada como SILUETA en blanco a propósito: el material de vidrio se pone en la página. Pedirla ya en vidrio sería tirar el dinero."
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "modelo3d",
+   "pieza": "reloj",
+   "task_id": "gtask-2816cc2bd0a047c6904d",
+   "output_path_real": "assets/g-reloj-g1.glb",
+   "local_web": "scratchpad/gab/web/reloj.glb (embebido en docs/paginas/gabinete.html)",
+   "bytes_original": 29352320,
+   "bytes_web": 509044,
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/g-reloj-g1.glb",
+   "que_es": "Reloj de arena de tres cámaras (el modelo salió con dos bulbos; la lámina sí trae los tres)",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "modelo3d",
+   "pieza": "llave",
+   "task_id": "gtask-aca38179a29a4523abbf",
+   "output_path_real": "assets/g-llave-g1.glb",
+   "local_web": "scratchpad/gab/web/llave.glb (embebido en docs/paginas/gabinete.html)",
+   "bytes_original": 10655192,
+   "bytes_web": 299732,
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/g-llave-g1.glb",
+   "que_es": "Llave con dientes en los dos extremos y el ojo al medio",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "modelo3d",
+   "pieza": "caracola",
+   "task_id": "gtask-e17c8a9242364fd4992b",
+   "output_path_real": "assets/g-caracola-g1.glb",
+   "local_web": "scratchpad/gab/web/caracola.glb (embebido en docs/paginas/gabinete.html)",
+   "bytes_original": 29909444,
+   "bytes_web": 448108,
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/g-caracola-g1.glb",
+   "que_es": "Caracola cuya espira acaba en rosca de tornillo",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "modelo3d",
+   "pieza": "farol",
+   "task_id": "gtask-b347e68d2a9d4158a3e2",
+   "output_path_real": "assets/g-farol-g1.glb",
+   "local_web": "scratchpad/gab/web/farol.glb (embebido en docs/paginas/gabinete.html)",
+   "bytes_original": 29934456,
+   "bytes_web": 588428,
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/g-farol-g1.glb",
+   "que_es": "Farol de latón con una polilla dentro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "modelo3d",
+   "pieza": "dado",
+   "task_id": "gtask-6438394cf8d64e5485ed",
+   "output_path_real": "assets/g-dado-g1.glb",
+   "local_web": "scratchpad/gab/web/dado.glb (embebido en docs/paginas/gabinete.html)",
+   "bytes_original": 29700436,
+   "bytes_web": 495940,
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/g-dado-g1.glb",
+   "que_es": "Dado dodecaédrico de hueso con doce signos",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "modelo3d",
+   "pieza": "corazon",
+   "task_id": "gtask-27e999c31bb840bfa979",
+   "output_path_real": "assets/g-corazon-g1.glb",
+   "local_web": "scratchpad/gab/web/corazon.glb (embebido en docs/paginas/gabinete.html)",
+   "bytes_original": 30144756,
+   "bytes_web": 597744,
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/UHTebvdL/assets/g-corazon-g1.glb",
+   "que_es": "Corazón anatómico de relojería en latón",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "imagen",
+   "pedido": "assets/gb-corredor.png",
+   "output_path_real": "assets/gb-corredor-g1.png",
+   "local_web": "scratchpad/gab/amb-corredor.webp",
+   "que_es": "Corredor de noche con una puerta entreabierta al fondo. Capa de la cinta de barrido.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "imagen",
+   "pedido": "assets/gb-vitrina.png",
+   "output_path_real": "assets/gb-vitrina-g1.png",
+   "local_web": "scratchpad/gab/amb-vitrina.webp",
+   "que_es": "Vitrina alta de nogal con vidrio ondulado. Capa de la cinta de barrido.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "imagen",
+   "pedido": "assets/gb-libro.png",
+   "output_path_real": "assets/gb-libro-g1.png",
+   "local_web": "scratchpad/gab/amb-libro.webp",
+   "que_es": "Libro de registro abierto, con pluma y barra de cera. Capa de la cinta de barrido.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "UHTebvdL",
+   "tipo": "imagen",
+   "pedido": "assets/gb-fondo2.png",
+   "output_path_real": "assets/gb-fondo2-g1.png",
+   "local_web": "scratchpad/gab/amb-fondo.webp",
+   "que_es": "Vitrina vacía con la peana de terciopelo y la marca de polvo. Es el premio por abrir los seis expedientes.",
+   "salio_bien": true,
+   "nota": "El primer intento (gb-fondo) salió con cajas de cartón y plástico moderno. Se rehizo nombrando en negativo: 'nothing modern in frame, no boxes, no plastic, no crates'."
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "modelo3d",
+   "pieza": "cepillo",
+   "task_id": "gtask-0afc3e0db20347e29038",
+   "output_path_real": "assets/k-cepillo-rt-g1.glb",
+   "local_web": "scratchpad/kane/web/cepillo.glb (embebido en docs/paginas/kane.html)",
+   "que_es": "Cepillo kanna de cuerpo de roble y hoja laminada",
+   "nota": "Retexturizado dos veces y descartadas las dos: la primera lo dejó naranja plástico. Va con la textura original.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "modelo3d",
+   "pieza": "formon",
+   "task_id": "gtask-3ea260bb347348a8abbd",
+   "output_path_real": "assets/k-formon-g1.glb",
+   "local_web": "scratchpad/kane/web/formon.glb (embebido en docs/paginas/kane.html)",
+   "que_es": "Formón oire nomi con mango de roble rojo",
+   "nota": "Retexturizado: el primero salió con mango rojo plástico. text_prompt en negativo ('no red, no plastic').",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "modelo3d",
+   "pieza": "sierra",
+   "task_id": "gtask-9762790d344f422ebe41",
+   "output_path_real": "assets/k-sierra-rt-g1.glb",
+   "local_web": "scratchpad/kane/web/sierra.glb (embebido en docs/paginas/kane.html)",
+   "que_es": "Serrucho dozuki de lomo de latón",
+   "nota": "Retexturizado: la hoja salía verde oliva. Ahora es acero pulido con lomo de latón.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "modelo3d",
+   "pieza": "martillo",
+   "task_id": "gtask-94573c41c24f4cc79891",
+   "output_path_real": "assets/k-martillo2-g1.glb",
+   "local_web": "scratchpad/kane/web/martillo.glb (embebido en docs/paginas/kane.html)",
+   "que_es": "Martillo gennou de dos caras",
+   "nota": "Regenerado: el primer modelo salió sólo con la cabeza, sin mango. El segundo prompt insiste en la proporción ('the handle is three times longer than the head').",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "modelo3d",
+   "pieza": "gramil",
+   "task_id": "gtask-e3a77897fb4141a1aa02",
+   "output_path_real": "assets/k-gramil2-g1.glb",
+   "local_web": "scratchpad/kane/web/gramil.glb (embebido en docs/paginas/kane.html)",
+   "que_es": "Gramil kebiki de dos agujas",
+   "nota": "Regenerado: el primero salió como un bastidor negro con un alambre. El segundo lo describe como dos piezas de madera y nada más.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "modelo3d",
+   "pieza": "piedra",
+   "task_id": "gtask-40486e3b7ed540bfb508",
+   "output_path_real": "assets/k-piedra-g1.glb",
+   "local_web": "scratchpad/kane/web/piedra.glb (embebido en docs/paginas/kane.html)",
+   "que_es": "Piedra de agua de doble grano en base de cedro",
+   "nota": "Salió bien al primer intento.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-taller.png",
+   "output_path_real": "assets/ki-taller-g1.png",
+   "local_web": "scratchpad/kane/taller.webp",
+   "que_es": "Banco de carpintería japonés, fondo de la portada",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-cat-cepillar.png",
+   "output_path_real": "assets/ki-cat-cepillar-g1.png",
+   "local_web": "scratchpad/kane/cat-cepillar.webp",
+   "que_es": "Baldosa de oficio, vista desde arriba",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-cat-cortar.png",
+   "output_path_real": "assets/ki-cat-cortar-g1.png",
+   "local_web": "scratchpad/kane/cat-cortar.webp",
+   "que_es": "Baldosa de oficio, vista desde arriba",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-cat-golpear.png",
+   "output_path_real": "assets/ki-cat-golpear-g1.png",
+   "local_web": "scratchpad/kane/cat-golpear.webp",
+   "que_es": "Baldosa de oficio, vista desde arriba",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-cat-marcar.png",
+   "output_path_real": "assets/ki-cat-marcar-g1.png",
+   "local_web": "scratchpad/kane/cat-marcar.webp",
+   "que_es": "Baldosa de oficio, vista desde arriba",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-cat-afilar.png",
+   "output_path_real": "assets/ki-cat-afilar-g1.png",
+   "local_web": "scratchpad/kane/cat-afilar.webp",
+   "que_es": "Baldosa de oficio, vista desde arriba",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-p-cepillo.png",
+   "output_path_real": "assets/ki-p-cepillo-g1.png",
+   "local_web": "scratchpad/kane/p-cepillo.webp",
+   "que_es": "Foto de producto sobre papel gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-p-formon.png",
+   "output_path_real": "assets/ki-p-formon-g1.png",
+   "local_web": "scratchpad/kane/p-formon.webp",
+   "que_es": "Foto de producto sobre papel gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-p-sierra.png",
+   "output_path_real": "assets/ki-p-sierra-g1.png",
+   "local_web": "scratchpad/kane/p-sierra.webp",
+   "que_es": "Foto de producto sobre papel gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-p-martillo.png",
+   "output_path_real": "assets/ki-p-martillo-g1.png",
+   "local_web": "scratchpad/kane/p-martillo.webp",
+   "que_es": "Foto de producto sobre papel gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-p-gramil.png",
+   "output_path_real": "assets/ki-p-gramil-g1.png",
+   "local_web": "scratchpad/kane/p-gramil.webp",
+   "que_es": "Foto de producto sobre papel gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-p-piedra.png",
+   "output_path_real": "assets/ki-p-piedra-g1.png",
+   "local_web": "scratchpad/kane/p-piedra.webp",
+   "que_es": "Foto de producto sobre papel gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-afilado.png",
+   "output_path_real": "assets/ki-afilado-g1.png",
+   "local_web": "scratchpad/kane/afilado.webp",
+   "que_es": "Un formón contra la piedra de agua, banda del servicio",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ceuaiXeI",
+   "tipo": "imagen",
+   "pedido": "assets/ki-envio.png",
+   "output_path_real": "assets/ki-envio-g1.png",
+   "local_web": "scratchpad/kane/envio.webp",
+   "que_es": "Paquete largo en papel kraft",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "modelo3d",
+   "pieza": "split",
+   "task_id": "gtask-e7ca54ce6c614378be63",
+   "output_path_real": "assets/es-split-g1.glb",
+   "local_web": "scratchpad/es/web/split.glb (embebido en electro-silver/index.html)",
+   "que_es": "Split de pared, unidad interior",
+   "salio_bien": true,
+   "nota": "Los seis salieron usables al primer intento. Ayudó pedir 'product catalogue photography' y describir la forma pieza por pieza."
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "modelo3d",
+   "pieza": "heladera",
+   "task_id": "gtask-0b5edbf079d74d358283",
+   "output_path_real": "assets/es-heladera-g1.glb",
+   "local_web": "scratchpad/es/web/heladera.glb (embebido en electro-silver/index.html)",
+   "que_es": "Heladera no frost de dos puertas",
+   "salio_bien": true,
+   "nota": "Los seis salieron usables al primer intento. Ayudó pedir 'product catalogue photography' y describir la forma pieza por pieza."
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "modelo3d",
+   "pieza": "lavarropas",
+   "task_id": "gtask-25423900cea94019a513",
+   "output_path_real": "assets/es-lavarropas-g1.glb",
+   "local_web": "scratchpad/es/web/lavarropas.glb (embebido en electro-silver/index.html)",
+   "que_es": "Lavarropas de carga frontal",
+   "salio_bien": true,
+   "nota": "Los seis salieron usables al primer intento. Ayudó pedir 'product catalogue photography' y describir la forma pieza por pieza."
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "modelo3d",
+   "pieza": "cocina",
+   "task_id": "gtask-439524989ba34f5dada5",
+   "output_path_real": "assets/es-cocina-g1.glb",
+   "local_web": "scratchpad/es/web/cocina.glb (embebido en electro-silver/index.html)",
+   "que_es": "Cocina de 4 hornallas",
+   "salio_bien": true,
+   "nota": "Los seis salieron usables al primer intento. Ayudó pedir 'product catalogue photography' y describir la forma pieza por pieza."
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "modelo3d",
+   "pieza": "tele",
+   "task_id": "gtask-313bb86f0305439cac5c",
+   "output_path_real": "assets/es-tele-g1.glb",
+   "local_web": "scratchpad/es/web/tele.glb (embebido en electro-silver/index.html)",
+   "que_es": "Televisor con pie central",
+   "salio_bien": true,
+   "nota": "Los seis salieron usables al primer intento. Ayudó pedir 'product catalogue photography' y describir la forma pieza por pieza."
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "modelo3d",
+   "pieza": "ventilador",
+   "task_id": "gtask-4393e3dd560c4e2dbd3b",
+   "output_path_real": "assets/es-ventilador-g1.glb",
+   "local_web": "scratchpad/es/web/ventilador.glb (embebido en electro-silver/index.html)",
+   "que_es": "Ventilador de pie",
+   "salio_bien": true,
+   "nota": "Los seis salieron usables al primer intento. Ayudó pedir 'product catalogue photography' y describir la forma pieza por pieza."
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-local.png",
+   "output_path_real": "assets/esi-local-g1.png",
+   "local_web": "scratchpad/es/local.webp",
+   "que_es": "Ambiente del local o del servicio",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-mostrador.png",
+   "output_path_real": "assets/esi-mostrador-g1.png",
+   "local_web": "scratchpad/es/mostrador.webp",
+   "que_es": "Ambiente del local o del servicio",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-instalacion.png",
+   "output_path_real": "assets/esi-instalacion-g1.png",
+   "local_web": "scratchpad/es/instalacion.webp",
+   "que_es": "Ambiente del local o del servicio",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-reparto.png",
+   "output_path_real": "assets/esi-reparto-g1.png",
+   "local_web": "scratchpad/es/reparto.webp",
+   "que_es": "Ambiente del local o del servicio",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-cat-clima.png",
+   "output_path_real": "assets/esi-cat-clima-g1.png",
+   "local_web": "scratchpad/es/cat-clima.webp",
+   "que_es": "Baldosa de rubro, productos agrupados",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-cat-frio.png",
+   "output_path_real": "assets/esi-cat-frio-g1.png",
+   "local_web": "scratchpad/es/cat-frio.webp",
+   "que_es": "Baldosa de rubro, productos agrupados",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-cat-lavado.png",
+   "output_path_real": "assets/esi-cat-lavado-g1.png",
+   "local_web": "scratchpad/es/cat-lavado.webp",
+   "que_es": "Baldosa de rubro, productos agrupados",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-cat-cocina.png",
+   "output_path_real": "assets/esi-cat-cocina-g1.png",
+   "local_web": "scratchpad/es/cat-cocina.webp",
+   "que_es": "Baldosa de rubro, productos agrupados",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-cat-tecno.png",
+   "output_path_real": "assets/esi-cat-tecno-g1.png",
+   "local_web": "scratchpad/es/cat-tecno.webp",
+   "que_es": "Baldosa de rubro, productos agrupados",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-cat-chicos.png",
+   "output_path_real": "assets/esi-cat-chicos-g1.png",
+   "local_web": "scratchpad/es/cat-chicos.webp",
+   "que_es": "Baldosa de rubro, productos agrupados",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-split.png",
+   "output_path_real": "assets/esi-p-split-g1.png",
+   "local_web": "scratchpad/es/p-split.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-heladera.png",
+   "output_path_real": "assets/esi-p-heladera-g1.png",
+   "local_web": "scratchpad/es/p-heladera.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-lavarropas.png",
+   "output_path_real": "assets/esi-p-lavarropas-g1.png",
+   "local_web": "scratchpad/es/p-lavarropas.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-cocina.png",
+   "output_path_real": "assets/esi-p-cocina-g1.png",
+   "local_web": "scratchpad/es/p-cocina.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-tele.png",
+   "output_path_real": "assets/esi-p-tele-g1.png",
+   "local_web": "scratchpad/es/p-tele.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-ventilador.png",
+   "output_path_real": "assets/esi-p-ventilador-g1.png",
+   "local_web": "scratchpad/es/p-ventilador.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-freezer.png",
+   "output_path_real": "assets/esi-p-freezer-g1.png",
+   "local_web": "scratchpad/es/p-freezer.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-termotanque.png",
+   "output_path_real": "assets/esi-p-termotanque-g1.png",
+   "local_web": "scratchpad/es/p-termotanque.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-microondas.png",
+   "output_path_real": "assets/esi-p-microondas-g1.png",
+   "local_web": "scratchpad/es/p-microondas.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-semiauto.png",
+   "output_path_real": "assets/esi-p-semiauto-g1.png",
+   "local_web": "scratchpad/es/p-semiauto.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-licuadora.png",
+   "output_path_real": "assets/esi-p-licuadora-g1.png",
+   "local_web": "scratchpad/es/p-licuadora.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "bINhtEPb",
+   "tipo": "imagen",
+   "pedido": "assets/esi-p-pava.png",
+   "output_path_real": "assets/esi-p-pava-g1.png",
+   "local_web": "scratchpad/es/p-pava.webp",
+   "que_es": "Foto de producto sobre gris claro",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/portada.png",
+   "output_path_real": "assets/portada-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/portada-g1.png",
+   "que_es": "Frutiger Aero · portada. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/bliss.png",
+   "output_path_real": "assets/bliss-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/bliss-g1.png",
+   "que_es": "Frutiger Aero · bliss. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/mitad-agua.png",
+   "output_path_real": "assets/mitad-agua-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/mitad-agua-g1.png",
+   "que_es": "Frutiger Aero · mitad-agua. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/monitor.png",
+   "output_path_real": "assets/monitor-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/monitor-g1.png",
+   "que_es": "Frutiger Aero · monitor. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/globo.png",
+   "output_path_real": "assets/globo-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/globo-g1.png",
+   "que_es": "Frutiger Aero · globo. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/burbujas.png",
+   "output_path_real": "assets/burbujas-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/burbujas-g1.png",
+   "que_es": "Frutiger Aero · burbujas. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/acuario.png",
+   "output_path_real": "assets/acuario-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/acuario-g1.png",
+   "que_es": "Frutiger Aero · acuario. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/medusas.png",
+   "output_path_real": "assets/medusas-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/medusas-g1.png",
+   "que_es": "Frutiger Aero · medusas. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/vidrio.png",
+   "output_path_real": "assets/vidrio-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/vidrio-g1.png",
+   "que_es": "Frutiger Aero · vidrio. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/hojas.png",
+   "output_path_real": "assets/hojas-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/hojas-g1.png",
+   "que_es": "Frutiger Aero · hojas. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/orbes.png",
+   "output_path_real": "assets/orbes-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/orbes-g1.png",
+   "que_es": "Frutiger Aero · orbes. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/aurora.png",
+   "output_path_real": "assets/aurora-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/aurora-g1.png",
+   "que_es": "Frutiger Aero · aurora. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/portada-ancha.png",
+   "output_path_real": "assets/portada-ancha-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/portada-ancha-g1.png",
+   "que_es": "Frutiger Aero · portada-ancha. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/aluminio.png",
+   "output_path_real": "assets/aluminio-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/aluminio-g1.png",
+   "que_es": "Frutiger Aero · aluminio. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/tapa-fotos.png",
+   "output_path_real": "assets/tapa-fotos-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/tapa-fotos-g1.png",
+   "que_es": "Frutiger Aero · tapa-fotos. Ver el prompt en frutiger-aero/imagenes.json.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/fondo-a.png",
+   "output_path_real": "assets/fondo-a-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/fondo-a-g1.png",
+   "que_es": "Loma verde bajo cielo azul, tipo Bliss de Windows XP · apaisada, la que se usa en escritorio.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/fondo-b.png",
+   "output_path_real": "assets/fondo-b-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/fondo-b-g1.png",
+   "que_es": "Loma verde bajo cielo azul, tipo Bliss de Windows XP · descartada: la loma cae hacia un lado.",
+   "salio_bien": false
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/fondo-c.png",
+   "output_path_real": "assets/fondo-c-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/fondo-c-g1.png",
+   "que_es": "Loma verde bajo cielo azul, tipo Bliss de Windows XP · vertical, la que se usa en celular.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-usuario.glb",
+   "output_path_real": "assets/p-usuario-g1.glb",
+   "que_es": "Frutiger Aero · monigote sin cara.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-delfin.glb",
+   "output_path_real": "assets/p-delfin-g1.glb",
+   "que_es": "Frutiger Aero · delfín saltando.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-pez.glb",
+   "output_path_real": "assets/p-pez-g1.glb",
+   "que_es": "Frutiger Aero · pez mariposa.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-robot.glb",
+   "output_path_real": "assets/p-robot-g1.glb",
+   "que_es": "Frutiger Aero · robot, intento 1: amasijo.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": false
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-robot2.glb",
+   "output_path_real": "assets/p-robot2-g1.glb",
+   "que_es": "Frutiger Aero · robot, intento 2: visor al costado.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": false
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-robot3.glb",
+   "output_path_real": "assets/p-robot3-g1.glb",
+   "que_es": "Frutiger Aero · robot, el que se usa.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-pajaro.glb",
+   "output_path_real": "assets/p-pajaro-g1.glb",
+   "que_es": "Frutiger Aero · pajarito.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "tipo": "model3d",
+   "pedido": "assets/p-medusa.glb",
+   "output_path_real": "assets/p-medusa-g1.glb",
+   "que_es": "Frutiger Aero · medusa blanca.",
+   "crudo": "~29 MB · ~960 mil triángulos",
+   "optimizado": "410-480 KB · ~29 mil triángulos",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-saludando.png",
+   "output_path_real": "assets/m-saludando-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-saludando-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · saludando. PNG con alfa.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-burbuja.png",
+   "output_path_real": "assets/m-burbuja-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-burbuja-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · burbuja. PNG con alfa.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-nube.png",
+   "output_path_real": "assets/m-nube-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-nube-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · nube. PNG con alfa.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-juego.png",
+   "output_path_real": "assets/m-juego-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-juego-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · juego. PNG con alfa.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-agua.png",
+   "output_path_real": "assets/m-agua-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-agua-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · agua. PNG con alfa.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-surf.png",
+   "output_path_real": "assets/m-surf-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-surf-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · surf. PNG con alfa.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-paz.png",
+   "output_path_real": "assets/m-paz-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-paz-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · paz. PNG con alfa.",
+   "salio_bien": true
+  },
+  {
+   "proyecto": "ZFiGfVPq",
+   "pedido": "assets/m-dormido.png",
+   "output_path_real": "assets/m-dormido-g1.png",
+   "public_url": "https://lab.rezona.ai/game/pgcserver/pv/ZFiGfVPq/assets/m-dormido-g1.png",
+   "que_es": "Mascota voxel de Frutiger Aero · dormido. PNG con alfa.",
+   "salio_bien": true
+  }
+ ],
+ "lo_que_funciono": {
+  "modelo_por_defecto": "gemini-3.1-flash-image · SOLO saca png. Con .jpg en output_path devuelve GENERATION_OUTPUT_FORMAT_MISMATCH, que es terminal: no reintentes, cambia la extensión.",
+  "tamano_de_salida": "1024x1024 siempre, ~1,2-2,1 MB por png. Recórtalo tú al formato que necesites.",
+  "receta_de_prompt": "Encabezar con el tipo de toma ('Editorial photograph of…', 'Documentary photograph of…'), luego sujeto concreto, luz, paleta, y cerrar con 'no people, no text'. Los cuatro salieron usables al primer intento con esta forma.",
+  "peso_para_web": "sharp a webp calidad 74, recortado a medida: 1100x620 quedó en 37-59 KB y 760x950 en 105-140 KB.",
+  "trampa_del_output_path": "El servidor RENOMBRA lo que pides: hero-agave.png volvió como hero-agave-g1.png. Fíate del output_path de CADA respuesta, nunca del que mandaste ni del orden.",
+  "fetch_generated_asset": "Exige la marca .rezona/ en el directorio destino, así que hay que pasarle dir= al sitio donde se corrió init, no al repo.",
+  "upload_project": "Necesita dist/index.html. Se salta assets/ porque el servidor reserva ese nombre; da igual si la página lleva las imágenes embebidas.",
+  "modelos_3d_generador": "Tripo3D vía submit_model3d_generation. ~155-185 s por modelo con texture+pbr y texture_quality detailed.",
+  "modelos_3d_peso": "Salen a ~28-30 MB y ~960 mil triángulos: inservibles para web tal cual.",
+  "modelos_3d_cadena": "gltf-transform simplify --ratio 0.03 --error 0.002 → resize 1024 → webp --quality 78. Deja ~29 mil triángulos y 0,85-1 MB: reducción de 33 veces sin que se note a tamaño de producto.",
+  "modelos_3d_no_respeta_medidas": "Las dimensiones en centímetros se ignoran. Hay que reescalar en el visor con Box3.",
+  "modelos_3d_de_uno_en_uno": "Enviados por separado, esperando cada uno. No se han comparado con un lote, así que la pérdida de calidad al agrupar queda como criterio del usuario, no como algo medido aquí.",
+  "gltfloader_no_esta_en_cdnjs": "three.js/0.160.0/three.module.min.js sí (200), pero examples/jsm/loaders/GLTFLoader.js da 404. Para cargar un GLB en un artifact hay que escribir un parser mínimo o embeber los atributos, no se puede tirar del loader oficial.",
+  "vista_previa_local": "Módulos ES no cargan por file:// (CORS). Hace falta servir por http local y un importmap con three y three/addons/.",
+  "modelos_3d_sin_transparencia": "Ningún generador de imagen-a-3D da vidrio: hornea una textura opaca. Usa su geometría y pon el material de vidrio en el visor.",
+  "modelos_3d_retexturizar": "Si la forma está bien y la textura no, submit_retexture_generation sobre su task_id cuesta 84 s y no vuelve a modelar. Nombra en negativo lo que salió mal ('sin brillo', 'sin tonos naranjas').",
+  "modelos_3d_variante_web": "Segunda pasada más agresiva para embeber en una página: simplify --ratio 0.014 --error 0.004, resize 512, webp 72 → 395-467 KB por pieza.",
+  "parser_glb_minimo": "Escrito en la página porque GLTFLoader no está en cdnjs. Estos GLB traen los atributos ENTRELAZADOS (byteStride 32) y las texturas por EXT_texture_webp, así que hay que desentrelazar y leer texture.extensions.EXT_texture_webp.source, no texture.source.",
+  "encuadre_del_visor": "Normalizar a 1,25 unidades y cámara a z=4,3 con fov 32. Con 1,6 y z=3,1 las piezas se salían del cuadro.",
+  "botellas_siluetas": "Para vidrio, pide 'glossy white ceramic-like surface for shape clarity, no label'. Sale una silueta neutra y limpia, y el vidrio se aplica en el visor con MeshPhysicalMaterial. Así la textura horneada no estorba.",
+  "botellas_solo_geometria": "Si el material se va a sustituir, en la optimización tira las texturas: resize 64 + webp 40 deja el GLB en 306-551 KB porque solo queda la malla.",
+  "fondo_animado_shader": "Fondo Frutiger Aero con un plano a pantalla completa y GLSL propio: degradado cielo-lima, cáusticas por senos realimentados, nubes por ruido de valor, rayos y once burbujas subiendo. Dos escenas, la orto del fondo y la perspectiva de la botella, con autoClear apagado.",
+  "cuidado_causticas": "pow(c,7.0) devuelve valores enormes y satura la pantalla a blanco. Hay que clamp(...,0,1) y bajar el peso a ~0.34, o el degradado desaparece.",
+  "cristal_aero_legible": "El cristal translúcido claro sobre fondo brillante deja el texto blanco ilegible. Tíñelo de azul, rgba(10,62,102,.30), y conserva el borde blanco y el brillo especular de arriba.",
+  "modelos_3d_variante_web_v2": "Para el Gabinete: simplify --ratio 0.014 --error 0.004 → resize 1024 → webp 72 → prune. Sale 300-600 KB por pieza. La textura a 512 borraba engranajes y remaches; a 1024 se leen y sólo cuesta ~120 KB más por modelo. El detalle grabado está en el mapa, no en la malla.",
+  "blobs_embebidos_como_data_uri": "Si el <script type=\"text/plain\"> guarda 'data:model/gltf-binary;base64,...', atob revienta con 'not correctly encoded' porque le llega la cabecera. Cortar en 'base64,' antes de decodificar.",
+  "spans_inline_en_las_tarjetas": "Un <span> con aspect-ratio no aplica nada: es inline. La lámina se comía el pie de la tarjeta. display:block en lámina, pie, num y lat.",
+  "panel_invisible_come_clics": "Un overlay fijo con opacity:0 pero pointer-events:auto en su hoja bloquea los clics del centro de la página sin que se vea nada. pointer-events:none en reposo, auto sólo con la clase .ver.",
+  "capas_de_barrido_por_apilado": "En un barrido por scroll el orden de recorte tiene que ser el del z-index, no el del DOM: querySelectorAll devuelve orden de documento y recortaba la capa de abajo mientras la de arriba seguía tapando. Y la última capa no se recorta nunca, o debajo aparece el fondo pelado.",
+  "aspect_ratio_infla_min_content": "Un item de grid con aspect-ratio y align-items:stretch transfiere la altura de la fila a su ancho mínimo: la columna 1.05fr se llevó 1069 px de 1140 y la ficha quedó en 225. min-width:0 en el item lo corta.",
+  "rotulo_bajo_las_capas": "Si a las capas se les pone z-index por JS hay que subir el texto por encima: un z-index:3 en el CSS quedó debajo de capas con 8/9/10 y el titular desapareció sin error ninguno.",
+  "ratio_fijo_de_simplify_no_sirve": "Los modelos vienen con densidades muy distintas (81 mil a 985 mil triángulos). Con --ratio 0.014 fijo, la sierra quedó en 1.139 triángulos y el martillo perdió el mango. Hay que calcular el ratio por modelo apuntando a una cantidad absoluta: 16.000 triángulos deja las piezas legibles y cuesta 500-670 KB con textura de 1024. El contador está en herramientas: leer el accessor de indices del GLB.",
+  "retextura_se_va_al_naranja": "Pedir 'warm honey tone' o 'red oak' devuelve naranja plástico saturado, dos veces seguidas. Lo que funciona es prohibirlo por nombre y pedir desaturado: 'no orange, no saturated colour, desaturated pale greyish beige'. Y si el tercer intento tampoco da, conviene volver a la textura original.",
+  "imagen_a_3d_pierde_piezas_finas": "El martillo salió sin mango y el gramil como un bastidor con un alambre. Los dos se arreglaron describiendo la PROPORCIÓN y el número de piezas ('two parts only', 'three times longer than the head') en vez de nombrar la herramienta.",
+  "atajo_padding_pisa_la_caja": "Una clase de sección con 'padding: X 0' declarada DESPUÉS del contenedor con 'padding: 0 X' le borra los costados. En escritorio no se nota porque el max-width deja aire; en móvil el contenido queda pegado al borde. Usar padding-top/padding-bottom.",
+  "boton_como_tarjeta_centra_solo": "Un <button> que hace de tarjeta centra su contenido en vertical: en una fila de alturas distintas las fotos arrancan a alturas distintas. display:flex + justify-content:flex-start.",
+  "fotos_de_producto_pesan_nada": "Sobre fondo gris liso, una foto de producto de 680×680 en webp 72 queda entre 2 y 17 KB. Veintidós imágenes pesaron 0,27 MB en total. El fondo plano comprime como texto.",
+  "choque_de_nombres_de_clase": "Usé .pie para el pie del sitio (oscuro) y para el pie de las baldosas de rubro (claro): las baldosas salieron con fondo negro. Antes de reutilizar un nombre corto, buscarlo en la hoja.",
+  "objeto_blanco_sobre_fondo_oscuro": "Un split es un rectángulo blanco: de frente y con estudio claro se ve como una mancha. Se resuelve con un entorno oscuro propio, luz de contorno azul por detrás y una vista de tres cuartos desde abajo (rotation.x negativo), no con más exposición.",
+  "buscador_de_tienda": "Dos cosas que cambian todo y cuestan poco: un campo de sinónimos por producto ('aire acondicionado' no aparece en 'Split Inverter 3000') y una distancia de edición de respaldo para 'heladra' o 'lavaropas'. Sin eso el buscador devuelve cero en las búsquedas más comunes.",
+  "el_atributo_hidden_se_pisa_solo": "Un elemento con hidden y una clase que declara display (flex, grid) sigue visible: la regla de autor le gana a la del navegador. Hay que poner [hidden]{display:none!important} en la hoja. Costó una vista previa con una imagen rota encima.",
+  "fotos_de_celular_al_navegador": "Achicar en canvas a 1200 px y sacar toDataURL('image/webp',0.82) baja una foto de 243 KB a 8 KB sobre fondo liso, y de ~4 MB a 100-200 KB en fotos reales. Sin eso, guardar en localStorage revienta a la tercera publicación (el tope son 5-10 MB).",
+  "clave_anon_de_supabase": "La anon key SÍ va en el HTML: es pública por diseño y sin RLS no sirve de nada. Lo que protege es la política: select para todos, insert/update/delete sólo 'to authenticated'. La service_role no va nunca en una página.",
+  "instagram_sin_sesion": "La API pública de IG responde sin login con la cabecera X-IG-App-ID: 936619743392459 y un UA de navegador. Perfil: /api/v1/users/web_profile_info/?username=X. Feed paginado: /api/v1/feed/user/<usuario>/username/?count=50&max_id=<next_max_id> (12 por página; la variante por id numérico da 401). Las destacadas exigen sesión ahí, pero insta-story.com/api/v1/web/profile y .../web/highlight-stories las devuelven sin captcha; IGViewer, InstaAnon, Imginn, Pixwox y Dumpor están todos detrás de Cloudflare y no pasan desde un datacenter, ni headless ni con xvfb.",
+  "ids_duplicados_matan_el_script": "Una <section id=\"x\"> y un <div id=\"x\"> adentro: getElementById devuelve la sección, el innerHTML la vacía entera y el siguiente $() da null. El error corta TODO el resto del <script>. Si la página queda a medias sin errores obvios, buscar ids repetidos primero.",
+  "meta_viewport": "Una página suelta (no artifact) necesita <meta name=\"viewport\"> a mano: sin él el móvil renderiza a 980 px y todos los breakpoints quedan muertos aunque el CSS esté bien.",
+  "imagenes_transparentes": "submit_image_generation con transparent:true SI devuelve canal alfa limpio (4 canales). El visor las compone sobre fondo oscuro y parece que no, pero componiendolas sobre un color vivo con sharp se ve el recorte perfecto. Cerrar el prompt con 'isolated on a fully transparent background, no people, no text'.",
+  "reels_de_instagram": "Los mp4 estan en el propio JSON del feed, en video_versions[].url: no hace falta sssinstagram ni ningun descargador. Se bajan con el mismo UA de navegador.",
+  "ffmpeg": "El ffmpeg que trae Playwright (/opt/pw-browsers/ffmpeg-1011) esta recortado: solo mjpeg/png a webm/vp8, no decodifica h264. 'npm i ffmpeg-static' baja un build completo y funciona.",
+  "h264_en_playwright": "El Chromium de Playwright NO trae H.264 (canPlayType da ''), asi que un mp4 embebido se ve negro en las pruebas aunque ande en Chrome real. Para poder verificar de verdad, codificar VP9/WebM: pesa menos y lo soportan Chrome, Firefox, Edge y Safari 14.1+.",
+  "posicion_absoluta_pisada": "Una regla como '.escena > *{position:relative}' pisa el position:absolute de un hijo decorativo y lo convierte en celda del grid. Excluir el elemento o apuntar a los hijos concretos.",
+  "size_respeta_la_relacion": "El parámetro size ajusta a la RELACIÓN pedida, no al número: 1536x672 volvió como 1376x768, que es el mismo 16:9. Sin size sale 1024x1024. Sirve para pedir banners anchos sin recortar y perder la mitad de la composición.",
+  "receta_frutiger_aero": "Encabezar con el sujeto concreto y cerrar SIEMPRE con la misma cola de estilo: 'Digital art wallpaper in the mid-2000s Frutiger Aero style, glossy and hyper-saturated, sky blue and lime green palette, wet glassy highlights, crisp lens flare, airbrushed 2007 desktop-wallpaper look, ultra clean, high gloss, no people, no text, no watermark'. Las quince salieron usables al primer intento y con la misma paleta entre sí, que es lo difícil de un lote.",
+  "generador_que_pisa": "Un script viejo que escribía en la misma carpeta de salida es una trampa silenciosa: correrlo una vez borra el lote generado. Al reemplazar imágenes hay que cambiarle el destino al script viejo, no confiar en acordarse.",
+  "size_tiene_techo": "1920x1080 devuelve VALIDATION_ERROR, que es terminal: no hay que reintentar. El lado más largo aguanta hasta 1536. Para 16:9 ancho, 1536x864.",
+  "modelos_3d_no_miran_a_camara": "Tripo no respeta la orientación: el robot salió mirando para atrás y el pez de canto. Regenerar no lo arregla —salen mirando a otro lado igual—. Se arregla con un giro fijo por modelo en el visor. Barato de averiguar: se renderiza el mismo modelo a 0, 0.8, 1.57, 2.35, 3.14 y 4.7 rad en una hoja y se elige.",
+  "pedir_de_frente": "Para que la cara quede en el frente hay que decirlo dos veces: 'Front view of ... facing the viewer' Y describir los rasgos 'on the front of the face'. Sin eso, dos intentos seguidos pusieron el visor en el costado de la cabeza.",
+  "three_copiado_no_cdn": "three.module.min.js copiado dentro del sitio en vez de traído de cdnjs: así lo que se prueba en local es exactamente lo que se publica. Son 670 KB sin comprimir y el CDN no puede romper la página.",
+  "fondo_para_vidrio": "Debajo de un panel de vidrio, un fondo con nubes blancas grandes lava el texto y la página entera se ve descolorida. Para Liquid Glass hay que pedir el fondo saturado y parejo —cielo azul de arriba abajo— y dejar el blanco para el filo del vidrio, no para el fondo.",
+  "vidrio_de_tres_capas": "El backdrop-filter solo da un rectángulo borroso. El filo que doblaría la luz es un degradado recortado a 1 px con mask-composite:exclude en un ::before, y el reflejo que sigue al puntero es un radial en el ::after con las coordenadas RELATIVAS A LA PIEZA: en coordenadas de ventana, el brillo de los paneles de abajo sale corrido.",
+  "capturas_falsas_de_chromium": "Chromium mezcla mal background-attachment:fixed con backdrop-filter tras un scrollIntoView: saca capturas con capas viejas, paneles sin su estado de selección o la página corrida. Comprobar con getComputedStyle antes de salir a cazar un bug que no existe.",
+  "iconos_transparentes": "transparent:true en submit_image_generation devuelve PNG con alfa de verdad. Pasarlos a WebP con el canvas de Playwright conserva el canal. 256x256 sale a 5-11 KB por ícono. Lo que los vuelve un juego coherente es repetir literalmente la misma cola de estilo en los dieciocho prompts.",
+  "cambiar_sujeto_no_insistir": "Cuando el generador mete algo que no pediste —un monigote de usuario dentro de un panel de vidrio, tres veces seguidas— repetir el prompt con más negaciones no sirve. Se cambia el sujeto por uno que quiera el mismo resultado: en vez de «placas de vidrio vacías», «una ventana de Aero».",
+  "lote_con_faltantes": "De 17 pedidos, 5 no llegaron a existir. fetch devuelve FILE_NOT_FOUND, que es terminal: hay que reenviar la generación, no reintentar la descarga. Conviene comparar la lista pedida contra los archivos bajados, no contar respuestas.",
+  "texto_no_se_genera": "Nada con texto legible se pide a un generador de imágenes: devuelve letras deformadas. Las cinco pantallas de error del sitio son CSS —3,8 KB contra un mega de PNG— y se leen igual en miniatura que a pantalla completa.",
+  "mismo_personaje_ocho_veces": "Para que un personaje salga IGUAL en varias imágenes hay que repetir su descripción física completa en cada prompt —pelo, visor, auriculares, ropa, zapatillas— y cambiar sólo la pose. Con una referencia corta («el mismo de antes, saludando») salen personajes distintos: el generador no recuerda nada entre pedidos.",
+  "referencia_gana_a_la_descripcion": "Para reproducir un personaje que trajo el usuario, describirlo con palabras no alcanza: pidiendo «voxel art, blocky cubic pixels» salió un cubito, cuando el personaje tenía cuerpo suave y sólo el pelo escalonado. submit_image_generation acepta `source_urls`: pasarle la imagen de referencia lo resolvió al primer intento. Son URLs, no archivos, así que la referencia se publica un rato en un sitio propio con nombre al azar y se saca después.",
+  "negar_lo_que_no_va": "Pedir «burbuja iridiscente» devolvió una esfera negra y turbia. Se arregló diciéndolo en negativo: «thin bright transparent film, almost invisible, NOT dark and NOT black». Con estos generadores, nombrar el defecto funciona mejor que insistir con el adjetivo lindo.",
+  "pose_A_para_imagen_a_3d": "Antes de pedir un modelo 3D a partir de una imagen, conviene generar una pose A de frente y simétrica y pasar ESA. Con el personaje saludando el brazo levantado le come la silueta y la reconstrucción sale torcida. Dos pasos, mucho mejor resultado.",
+  "immutable_exige_hash": "Marcar /img/* como immutable con max-age de un año y después reemplazar los archivos con el MISMO nombre deja al navegador del usuario mostrando lo viejo durante un año, y desde el servidor no se ve nada raro. Todo lo que se cachea así tiene que llevar el hash de su contenido en el nombre.",
+  "rig3d_devuelve_tres_presets": "submit_rig3d_generation sobre el task_id de un modelo humanoide devuelve rig + animaciones sin pedirle nada: 41 huesos y walk/idle/jump. 42 MB crudo. `simplify` sobre malla con skin tiene un piso de ~28 mil vértices; lo que sí baja el peso es `quantize` (KHR_mesh_quantization, que GLTFLoader lee solo) y sacar del JSON las animaciones que no se van a usar, con un prune después.",
+  "pixelar_tapa_la_reconstruccion": "Un modelo hecho de una sola foto tiene bultos y textura estirada que se ven de cerca. Dibujar el lienzo a 128 px y estirarlo con image-rendering:pixelated los tapa por completo, no cuesta ni un shader, y encima queda en el estilo si el personaje ya es de píxeles. Hace falta setPixelRatio(1) y setSize(...,false).",
+  "clock_de_three_come_el_delta": "THREE.Clock: getElapsedTime() llama a getDelta() por dentro. Pedir el tiempo y DESPUÉS el delta devuelve ~0 y todo lo que integra por cuadro —resortes, inercias, fundidos a mano— queda clavado sin ningún error. Se pide getDelta() una sola vez y el tiempo se acumula a mano.",
+  "mezclar_animaciones_a_mano": "crossFadeTo de three programa el fundido en su propio planificador y es fácil que funda al revés: la acción destino queda en peso 0 y su reloj no avanza, así que la animación no se ve nunca. Un número propio que se acerca por cuadro y se aplica con setEffectiveWeight es más largo de escribir y se puede comprobar desde una prueba.",
+  "encuadrar_por_todas_las_poses": "Para encuadrar un personaje animado no alcanza medir una pose: hay que recorrer los clips, juntar las posiciones de los huesos en varias muestras de cada uno, y calcular la distancia de cámara desde ESA caja. Con una sola pose, el salto se sale del cuadro."
+ },
+ "pendiente": "Quedó un proyecto suelto llamado 'Páginas web — assets' creado por error, sin assets. Ignorarlo o borrarlo."
+}

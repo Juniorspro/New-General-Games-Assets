@@ -1,0 +1,451 @@
+{
+ "esteticas": [
+  {
+   "k": "realeza",
+   "n": "Realeza",
+   "sub": "Elección de Rey y Reina · 19.09.2026",
+   "flyer": "realeza",
+   "pieza": "corona",
+   "dec": "realeza",
+   "clip": "upd",
+   "mov": "late",
+   "wsp": "Hola IBLO! Vi la fiesta de Elección de Rey y Reina y quiero info para el 19/09.",
+   "des": "Oro, esmeralda y corona de verdad. La fiesta zonal de la Primavera y del Estudiante cierra con la coronación del Rey y la Reina de toda la zona, con jurado y con las promos de varios pueblos adentro del mismo salón.",
+   "f": [
+    [
+     "Lugar",
+     "Club Juventud · Margarita Belén"
+    ],
+    [
+     "Arranca",
+     "22:00 hs"
+    ],
+    [
+     "Cabina",
+     "DJ Agus Mendoza (set live)"
+    ],
+    [
+     "Conduce",
+     "Maury Abraham"
+    ],
+    [
+     "Momento",
+     "Coronación zonal"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#0a0906",
+    "tinta2": "#13110a",
+    "humo": "#1d1a0f",
+    "linea": "#3d3418",
+    "papel": "#f4f1f6",
+    "ac": "#e8bf4e",
+    "ac2": "#0f6b45",
+    "ac3": "#4ade9a"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "euphoria",
+   "n": "Euphoria",
+   "sub": "Pre Promo 26 · 02.05.2026",
+   "flyer": "euphoria",
+   "pieza": "bola",
+   "dec": "euphoria",
+   "clip": "euphoria",
+   "mov": "flota",
+   "wsp": "Hola IBLO! Me interesa una fiesta estilo Euphoria, con el stand de glitter. ¿Cómo lo armamos?",
+   "des": "Violeta, magenta y neón hasta en el piso. La estética que más nos piden: luz de tubo, brillo en la cara y un stand de glitter abierto toda la noche para que nadie salga como entró.",
+   "f": [
+    [
+     "Lugar",
+     "Club Juventud"
+    ],
+    [
+     "Start party",
+     "00:30 hs"
+    ],
+    [
+     "Cabina",
+     "DJ Agus Mendoza + invitados"
+    ],
+    [
+     "Clothing code",
+     "Colores"
+    ],
+    [
+     "Adentro",
+     "Stand de glitter exclusivo"
+    ],
+    [
+     "Extra",
+     "Conservadora gratis hasta 02:30"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#0d0716",
+    "tinta2": "#170a26",
+    "humo": "#1f0f33",
+    "linea": "#3a1c5c",
+    "papel": "#f4f1f6",
+    "ac": "#c34bff",
+    "ac2": "#6a1fd0",
+    "ac3": "#ff5ce1"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "western",
+   "n": "Wéstern",
+   "sub": "Cowboy Night · 06.06.2026",
+   "flyer": "western",
+   "pieza": "sombrero",
+   "dec": "western",
+   "clip": "western",
+   "mov": "gira",
+   "wsp": "Hola IBLO! Quiero armar una Cowboy Night con toro mecánico. ¿Me pasás info?",
+   "des": "Óxido, madera y revólver cruzado. Se entra de bota y sombrero, hay toro mecánico con premio en tragos para el que aguante arriba, y los mejores outfits se llevan entradas libres para todo el año.",
+   "f": [
+    [
+     "Lugar",
+     "Club Juventud"
+    ],
+    [
+     "Opening",
+     "00:30 hs"
+    ],
+    [
+     "Cabina",
+     "Alan Inamorato · Rodri Ojeda"
+    ],
+    [
+     "Anima",
+     "Gera Animador"
+    ],
+    [
+     "Dress style",
+     "Wéstern (cowboy)"
+    ],
+    [
+     "Adentro",
+     "Toro mecánico · shot de tekila"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#100905",
+    "tinta2": "#1b0f08",
+    "humo": "#28170d",
+    "linea": "#4a2a17",
+    "papel": "#f4f1f6",
+    "ac": "#e8863a",
+    "ac2": "#8c3d1c",
+    "ac3": "#f0d0a0"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "halloween",
+   "n": "Halloween",
+   "sub": "Noche de brujas · 01.11.2025",
+   "flyer": "halloween",
+   "pieza": null,
+   "dec": "halloween",
+   "clip": "halloween",
+   "mov": "flota",
+   "wsp": "Hola IBLO! Quiero una fiesta de Halloween con concurso de disfraces. ¿Qué necesito?",
+   "des": "Rojo sangre sobre negro, telaraña en el techo y la entrada convertida en cementerio de la joda. Es nuestro evento más grande del año: concurso de disfraces con jurado invitado y premios que se preparan con meses de anticipación.",
+   "f": [
+    [
+     "Lugar",
+     "Club Juventud"
+    ],
+    [
+     "Open party",
+     "00:00 hs"
+    ],
+    [
+     "Cabina",
+     "Alan Inamorato ft Javier Ríos"
+    ],
+    [
+     "Concurso",
+     "Mejor disfraz, con jurado"
+    ],
+    [
+     "Extra",
+     "Conservadora gratis hasta 02:30"
+    ],
+    [
+     "Deco",
+     "Cementerio en el ingreso"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#0a0405",
+    "tinta2": "#150607",
+    "humo": "#210809",
+    "linea": "#451012",
+    "papel": "#f4f1f6",
+    "ac": "#ff2020",
+    "ac2": "#8a0505",
+    "ac3": "#ff8a3d"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "audiocar",
+   "n": "Audio Car",
+   "sub": "Despedida de año · 27.12.2025",
+   "flyer": "audiocar",
+   "pieza": "parlante",
+   "dec": "audiocar",
+   "clip": "noche",
+   "mov": "late",
+   "wsp": "Hola IBLO! Me interesa un evento Audio Car al aire libre. ¿Cómo es la producción?",
+   "des": "Cromo, magenta y cian: los equipos de sonido más grandes del NEA estacionados en el mismo predio. Abre de tarde al aire libre y sigue de noche adentro. Es la despedida del año y la única fecha donde la música la ponen los autos.",
+   "f": [
+    [
+     "Lugar",
+     "Predio Camping Municipal"
+    ],
+    [
+     "Open predio",
+     "18:00 hs"
+    ],
+    [
+     "Open boliche",
+     "00:00 hs"
+    ],
+    [
+     "Sonido",
+     "Los equipos más grandes del NEA"
+    ],
+    [
+     "Ingreso",
+     "Con conservadora (sin vidrios)"
+    ],
+    [
+     "Cabina",
+     "DJs invitados"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#0c0512",
+    "tinta2": "#17081f",
+    "humo": "#230c2e",
+    "linea": "#451857",
+    "papel": "#f4f1f6",
+    "ac": "#ff2ba6",
+    "ac2": "#1fb6e0",
+    "ac3": "#ffb020"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "semaforo",
+   "n": "Semáforo",
+   "sub": "Día de los enamorados · 15.02.2025",
+   "flyer": "semaforo",
+   "pieza": null,
+   "dec": "semaforo",
+   "clip": "semaforo",
+   "mov": "flota",
+   "wsp": "Hola IBLO! Quiero hacer una Fiesta del Semáforo. ¿Me pasás info?",
+   "des": "Verde, amarillo y rojo, y cada color dice algo. Rojo si venís en pareja, amarillo si es amistad con derechos, verde si estás soltero. Se entra con la pulsera puesta y la noche se ordena sola.",
+   "f": [
+    [
+     "Rojo",
+     "En pareja"
+    ],
+    [
+     "Amarillo",
+     "Amigos con derechos"
+    ],
+    [
+     "Verde",
+     "Soltero"
+    ],
+    [
+     "Cabina",
+     "Javier Ríos · Alan Inamorato · Agus Mendoza"
+    ],
+    [
+     "Anima",
+     "Gera Animador"
+    ],
+    [
+     "Extra",
+     "Conservadora gratis hasta 02:00"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#050a06",
+    "tinta2": "#08130b",
+    "humo": "#0d1f11",
+    "linea": "#1a3d22",
+    "papel": "#f4f1f6",
+    "ac": "#2ce65a",
+    "ac2": "#b81717",
+    "ac3": "#ffe14d"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "ice",
+   "n": "Ice Party",
+   "sub": "Recibimiento del invierno · 21.06.2025",
+   "flyer": "ice",
+   "pieza": null,
+   "dec": "ice",
+   "clip": "pre5to",
+   "mov": "flota",
+   "wsp": "Hola IBLO! Me interesa una Ice Party para mi promo. ¿Cómo lo vemos?",
+   "des": "Cian, hielo roto y vidrio suspendido. La fecha con la que recibimos el invierno, hecha junto a la pre promo de Colonia Benítez. Estética helada y la cabina más caliente que tenemos.",
+   "f": [
+    [
+     "Lugar",
+     "Salón Multiusos · Colonia Benítez"
+    ],
+    [
+     "Open",
+     "00:30 hs"
+    ],
+    [
+     "Cabina",
+     "Alan Inamorato"
+    ],
+    [
+     "Con",
+     "Pre promo 4to 1ra"
+    ],
+    [
+     "Extra",
+     "Conservadora gratis hasta 02:30"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#03090c",
+    "tinta2": "#061318",
+    "humo": "#0a2028",
+    "linea": "#134450",
+    "papel": "#f4f1f6",
+    "ac": "#2fd8e8",
+    "ac2": "#0e6f86",
+    "ac3": "#d6f7ff"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "pirata",
+   "n": "Noche Pirata",
+   "sub": "Presentación de la 23 · 03.05.2023",
+   "flyer": "pirata",
+   "pieza": null,
+   "dec": "pirata",
+   "clip": "disfraz",
+   "mov": "flota",
+   "wsp": "Hola IBLO! Quiero una fiesta temática tipo Noche Pirata. ¿Me pasás info?",
+   "des": "Oro viejo, negro y bandera. Una de las primeras temáticas de la casa, en Las Garcitas, con premio al mejor disfraz pirata y la presentación oficial de la promo 2023.",
+   "f": [
+    [
+     "Lugar",
+     "Las Garcitas"
+    ],
+    [
+     "Premio",
+     "Mejor disfraz pirata"
+    ],
+    [
+     "Presenta",
+     "La 23"
+    ],
+    [
+     "Época",
+     "Los primeros años"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#080706",
+    "tinta2": "#12100b",
+    "humo": "#1c1810",
+    "linea": "#3a301a",
+    "papel": "#f4f1f6",
+    "ac": "#d4af37",
+    "ac2": "#7a1414",
+    "ac3": "#e8d9a0"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  },
+  {
+   "k": "zonal",
+   "n": "Zonal Party",
+   "sub": "Complejo Luzzi · 14.10.2023",
+   "flyer": "zonal",
+   "pieza": "bola",
+   "dec": "zonal",
+   "clip": "vibras",
+   "mov": "late",
+   "wsp": "Hola IBLO! Quiero armar una fiesta zonal en mi localidad. ¿Llegan hasta acá?",
+   "des": "El primer mega evento: traer a un artista de afuera de la provincia a un pueblo del interior. Sonido y show de luces de la nueva generación, y el Complejo Luzzi transformado entero para una sola noche.",
+   "f": [
+    [
+     "Lugar",
+     "Complejo Luzzi · Las Garcitas"
+    ],
+    [
+     "Invitado",
+     "Facu Vázquez (1ª vez en Chaco)"
+    ],
+    [
+     "DJ zonal",
+     "Yona Pérez"
+    ],
+    [
+     "Anima",
+     "Gera Animador"
+    ],
+    [
+     "Ingreso",
+     "Con conservadora"
+    ]
+   ],
+   "paleta": {
+    "tinta": "#0a0714",
+    "tinta2": "#130b20",
+    "humo": "#1c1030",
+    "linea": "#372058",
+    "papel": "#f4f1f6",
+    "ac": "#a855f7",
+    "ac2": "#c81e5a",
+    "ac3": "#38bdf8"
+   },
+   "oculta": false,
+   "flyerUrl": ""
+  }
+ ],
+ "marca": {
+  "paleta": {
+   "ac": "#ff1e8e",
+   "ac2": "#8b2fd6",
+   "ac3": "#ffd23f",
+   "tinta": "#08070c",
+   "tinta2": "#100d18",
+   "humo": "#1a1622",
+   "linea": "#2b2436",
+   "papel": "#f4f1f6"
+  },
+  "curva": 18,
+  "grano": 0.045,
+  "titular": "Anton",
+  "texto": "Barlow"
+ },
+ "secciones": []
+}

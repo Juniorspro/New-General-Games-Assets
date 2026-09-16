@@ -1,0 +1,7 @@
+Acá va el logo.
+
+  logo.png   — cuadrado, PNG con fondo (no transparente), mínimo 512×512 px.
+               Google lo recorta redondo solo en el celular; el archivo va CUADRADO.
+               Que sea múltiplo de 48 (480, 528, 576...) le viene bien al favicon.
+
+Si tenés el logo en otro formato o tamaño, mandámelo y lo dejo listo.

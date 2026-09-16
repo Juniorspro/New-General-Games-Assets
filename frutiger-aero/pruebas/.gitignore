@@ -1,0 +1,5 @@
+# Playwright se instala por sesión (la máquina se borra), así que no va al repo.
+# Si falta:  npm install playwright   —pero NO 'npx playwright install', que baja
+# un Chromium que no coincide con el que ya está en /opt/pw-browsers.
+node_modules/
+package-lock.json

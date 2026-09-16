@@ -1,0 +1,18 @@
+# La LLAVE nunca al repo: init deja la marca y la credencial donde se corre.
+# El cliente sí es nuestro y va commiteado.
+.rezona/
+__pycache__/
+
+# la clave con que se firma el APK: nunca al repo
+*.keystore
+*.jks
+
+# el directorio desde el que se despliega a Pages: se arma copiando docs/paginas
+/sitio/
+.wrangler/
+
+# el token de Mint: nunca al repo (igual vive en ~/.mint, pero por las dudas)
+.mint/
+
+# secretos de la prueba local: NUNCA se suben
+.dev.vars

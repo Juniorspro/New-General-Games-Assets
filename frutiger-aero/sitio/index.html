@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Frutiger Aero</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Un escritorio de vidrio: archivo de la estética Frutiger Aero, con buscaminas, bloc de notas, reproductor y panel de control.">
+<meta name="theme-color" content="#1c4f8f">
+<meta property="og:title" content="Frutiger Aero">
+<meta property="og:description" content="La estética que creía que el futuro iba a ser transparente. Entrá y probá el escritorio.">
+<meta property="og:image" content="img/mascota/m-saludando.463f6804.webp">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icono-192.84b45c55.png">
+<link rel="apple-touch-icon" href="img/icono-192.84b45c55.png">
+<link rel="preload" as="font" type="font/woff2" href="fuentes/ss3.7a19a702.woff2" crossorigin>
+<link rel="stylesheet" href="css/aero.253b4b1e.css">
+
+<!-- ==========================================================================
+     Un escritorio, no una página.
+
+     Entra por una pantalla de inicio de sesión de Vista: se puede pasar como
+     invitado escribiendo cualquier nombre, o con la cuenta de Google. El token
+     de Google se verifica en `functions/api/entrar.js`, del lado del servidor:
+     decodificarlo en el navegador sería creerle a quien lo mandó.
+
+     Nada se guarda en un servidor. El perfil, las notas, el color del vidrio y
+     el récord del buscaminas viven en el navegador de quien entró.
+
+     El cromo es Aero de verdad: el corte duro al 45 %, las cuatro capas de la
+     barra de título y el filo blanco de 1 px. Está explicado en css/aero.253b4b1e.css.
+     ========================================================================== -->
+</head>
+<body class="sinsesion">
+
+<!-- ============================================ inicio de sesión -->
+<div id="logon">
+  <div class="aurora" aria-hidden="true"></div>
+
+  <div class="sesion">
+    <div class="retrato">
+      <img src="img/mascota/m-saludando.463f6804.webp" alt="" width="760" height="760">
+    </div>
+    <h1 id="hola">Bienvenido</h1>
+    <p class="rol">Elegí cómo entrar a este escritorio</p>
+
+    <div id="paso1">
+    <div class="campo">
+      <input id="nombre" type="text" maxlength="28" autocomplete="nickname"
+             placeholder="Tu nombre" aria-label="Tu nombre">
+      <button class="flecha" id="flecha" type="button" aria-label="Entrar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M12 5l7 7-7 7"
+          stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="osepara">o</div>
+
+    <!-- LLAVE DE ACCESO: la única puerta que no depende de nadie. La clave
+         privada vive en el aparato, acá queda la pública, y entrar es firmar
+         un número con la huella o la cara. Va primera porque es la mejor. -->
+    <button class="google" id="llave-btn" type="button" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" style="width:20px;height:20px">
+        <path d="M14.5 3a6.5 6.5 0 0 0-6.2 8.5L3 16.8V21h4.2l1.4-1.4v-1.9h1.9l1.4-1.4v-1.9h1.6
+                 A6.5 6.5 0 1 0 14.5 3Z" fill="none" stroke="#2b6ea8" stroke-width="1.7"
+              stroke-linejoin="round"/>
+        <circle cx="16.6" cy="8" r="1.5" fill="#2b6ea8"/>
+      </svg>
+      Entrar con una llave de acceso
+    </button>
+
+    <button class="google" id="discord-btn" type="button" hidden>
+      <svg viewBox="0 0 24 18" aria-hidden="true" style="width:22px;height:17px">
+        <path fill="#5865F2" d="M20.3 1.6A19.8 19.8 0 0 0 15.4.1l-.3.5c1.7.4 3.1 1 4.5 1.8
+          A16.9 16.9 0 0 0 12 1.2c-2.7 0-5.2.4-7.6 1.2 1.4-.8 2.9-1.4 4.5-1.8L8.6.1A19.8 19.8 0 0 0
+          3.7 1.6C.6 6.3-.3 10.9.2 15.4a19.9 19.9 0 0 0 6 2.6l.5-1c-.8-.3-1.6-.7-2.3-1.2l.5-.3
+          a14.2 14.2 0 0 0 12.2 0l.5.3c-.7.5-1.5.9-2.3 1.2l.5 1a19.9 19.9 0 0 0 6-2.6
+          c.6-5.2-.8-9.8-3.5-13.8ZM8 12.6c-1.2 0-2.2-1.1-2.2-2.4S6.8 7.8 8 7.8s2.2 1.1 2.2 2.4
+          S9.2 12.6 8 12.6Zm8 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4
+          -1 2.4-2.2 2.4Z"/>
+      </svg>
+      Entrar con Discord
+    </button>
+
+    <div id="gsi"></div>
+    <button class="google" id="gbt" type="button">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v8.9h11.8c-.5 2.7-2 5-4.3 6.6v5.5h7c4.1-3.8 6.6-9.4 6.6-16.3z"/>
+        <path fill="#34A853" d="M24 46c5.8 0 10.7-1.9 14.3-5.2l-7-5.5c-1.9 1.3-4.4 2.1-7.3 2.1-5.6 0-10.4-3.8-12.1-8.9H4.7v5.6C8.3 41.3 15.6 46 24 46z"/>
+        <path fill="#FBBC05" d="M11.9 28.5A13.2 13.2 0 0 1 11.2 24c0-1.6.3-3.1.7-4.5v-5.6H4.7A22 22 0 0 0 2.4 24c0 3.6.9 6.9 2.3 9.9l7.2-5.4z"/>
+        <path fill="#EA4335" d="M24 10.7c3.2 0 6 1.1 8.2 3.2l6.2-6.2C34.7 4.1 29.8 2 24 2 15.6 2 8.3 6.7 4.7 13.9l7.2 5.6c1.7-5.1 6.5-8.8 12.1-8.8z"/>
+      </svg>
+      Registrarme con Google
+    </button>
+
+    <p class="nota" id="pie-llave" hidden style="margin-top:14px">
+      <button type="button" id="crear-llave"
+        style="background:none;border:0;color:#bfe4ff;cursor:pointer;font:inherit;
+               padding:0;text-decoration:underline">Todavía no tengo cuenta</button>
+      · sin contraseña, con la huella o la cara de este aparato.
+    </p>
+
+    <p class="nota" id="g-error" hidden style="color:#ffc9c0"></p>
+
+    <p class="nota" id="sin-google" hidden>
+      <b>Todavía no hay ninguna forma de entrar con cuenta.</b> Este navegador
+      no maneja llaves de acceso y no hay ni Discord ni Google enchufados.
+      Entrá con un nombre, que anda igual.
+      <br><br>
+      Para encender <b>Discord</b> (se puede desde los 13):
+      <ol>
+        <li><b>discord.com/developers/applications</b> → <i>New Application</i>.</li>
+        <li>En <b>OAuth2</b>, en «Redirects», agregá la dirección de este sitio
+            seguida de <code>/api/discord</code>.</li>
+        <li>Copiá el <b>Client ID</b> y el <b>Client Secret</b> a Cloudflare
+            Pages → <b>Settings</b> → <b>Variables</b>, con los nombres
+            <code>DISCORD_CLIENT_ID</code> y <code>DISCORD_SECRET</code>.</li>
+      </ol>
+      El secreto va como <i>secreto</i>, no como variable común: no tiene que
+      volver a verse nunca.
+    </p>
+    </div><!-- /paso1 -->
+
+    <!-- ======================================================= 2º paso
+         Google dice quién sos, pero no cómo querés que te vean acá. El nombre
+         de usuario es la dirección del perfil: sacarlo del correo publicaría
+         medio correo de cada uno, así que se pide. Va sugerido, para que sea
+         un Enter y no un trámite. -->
+    <div id="paso2" hidden>
+      <p class="rol" id="g-quien"></p>
+      <div class="campo">
+        <input id="g-usuario" type="text" maxlength="20" autocomplete="username"
+               spellcheck="false" placeholder="tunombre" aria-label="Tu nombre de usuario">
+        <button class="flecha" id="g-listo" type="button" aria-label="Crear mi cuenta">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M12 5l7 7-7 7"
+            stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <p class="nota" style="margin-top:10px">
+        Así te van a encontrar: tu perfil va a ser <b id="g-muestra">@vos</b>.
+        En minúsculas, de 3 a 20, sin espacios.
+      </p>
+      <p class="nota" id="g-aviso" hidden style="color:#ffc9c0"></p>
+
+      <details class="nota" id="g-conclave" style="margin-top:14px;text-align:left">
+        <summary style="cursor:pointer">Ya tenía cuenta acá con contraseña</summary>
+        <p style="margin:8px 0 0">Escribila y le pegamos tu Google, así después
+          entrás de un toque. No se crea otra cuenta ni se pierde nada.</p>
+        <div class="campo" style="margin-top:10px">
+          <input id="g-vi-us" type="text" maxlength="20" autocomplete="username"
+                 spellcheck="false" placeholder="Tu usuario" aria-label="Tu usuario">
+        </div>
+        <div class="campo" style="margin-top:8px">
+          <input id="g-vi-cl" type="password" autocomplete="current-password"
+                 placeholder="Tu contraseña" aria-label="Tu contraseña">
+          <button class="flecha" id="g-vincular" type="button" aria-label="Pegar mi Google">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M12 5l7 7-7 7"
+              stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </details>
+
+      <p class="nota"><button type="button" id="g-volver"
+         style="background:none;border:0;color:#bfe4ff;cursor:pointer;font:inherit;
+                padding:0;text-decoration:underline">← Volver</button></p>
+    </div>
+  </div>
+
+  <div class="abajo">
+    <button class="redondo" type="button" id="accesible" aria-label="Accesibilidad">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.6" r="2.1" fill="currentColor"/>
+        <path d="M4 8.5h16M12 8.5v6m0 0l-3.5 6.5M12 14.5l3.5 6.5" stroke="currentColor"
+          stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    </button>
+    <button class="redondo" type="button" id="apagar" aria-label="Apagar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9" stroke="currentColor"
+        stroke-width="2.3" stroke-linecap="round"/><path d="M6.4 6.6a8 8 0 1 0 11.2 0"
+        stroke="currentColor" stroke-width="2.1" fill="none" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="bienvenida" hidden>
+  <div>
+    <div class="anillo" aria-hidden="true"></div>
+    <p>Bienvenido</p>
+  </div>
+</div>
+
+<!-- ============================================ colaborar -->
+<div id="fondoDona" hidden>
+  <section class="ventana">
+    <header class="titulo">
+      <img class="ico" src="img/icono.133cdca8.webp" alt="" width="256" height="256">
+      <span class="txt">Colaborar con Frutiger Aero</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" id="dona-x" aria-label="Cerrar">
+          <svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg>
+        </button>
+      </span>
+    </header>
+    <div class="cuerpo dona">
+      <div class="gracias">
+        <img src="img/mascota/m-paz.b7d4f491.webp" alt="" width="760" height="760">
+        <div>
+          <h2>Don&#225; lo que quieras y ten&#233;s acceso anticipado</h2>
+          <p>El escritorio es gratis y sin publicidad: si no quer&#233;s poner
+             nada, <b>entr&#225; igual</b>, es tuyo lo mismo.</p>
+          <p style="margin-top:7px">Pero si pon&#233;s <b>lo que sea</b>, entr&#225;s
+             a la <b>zona de donantes</b> y ten&#233;s las cosas antes que nadie.
+             La primera es un <b>launcher de Android</b> con esta misma
+             est&#233;tica, <b>en desarrollo</b>.</p>
+        </div>
+      </div>
+
+      <div class="grupo blanco" style="margin-top:14px">
+        <h2 style="font-size:15px">Elegí moneda y monto</h2>
+        <div class="monedas" id="dona-monedas">
+          <button type="button" data-moneda="ars" aria-pressed="true">Pesos argentinos</button>
+          <button type="button" data-moneda="usd" aria-pressed="false">D&#243;lares</button>
+        </div>
+        <div class="montos" id="dona-montos"></div>
+        <div class="otro">
+          <span id="dona-simbolo">$</span>
+          <input id="dona-otro" type="number" min="1" step="1" inputmode="numeric"
+                 placeholder="Otro monto" aria-label="Otro monto">
+        </div>
+      </div>
+
+      <div id="pp-botones" style="margin-top:14px" hidden></div>
+      <p id="pp-espera" style="margin-top:10px;font-size:13.5px;color:var(--tinta-2)" hidden></p>
+
+      <div class="pagos">
+        <a class="pago mp" id="dona-mp" href="#" target="_blank" rel="noopener">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <ellipse cx="16" cy="16" rx="15" ry="10.5" fill="#fff"/>
+            <path d="M6 16c2.2-3.4 6-5.4 10-5.4s7.8 2 10 5.4c-2.2 3.4-6 5.4-10 5.4S8.2 19.4 6 16z" fill="#2d9fdc"/>
+            <circle cx="16" cy="16" r="3.4" fill="#fff"/>
+          </svg>
+          <span>Transferencia en pesos<small id="dona-mp-pie">Desde Mercado Pago, tu banco o cualquier billetera</small></span>
+        </a>
+        <a class="pago pp" id="dona-pp" href="#" target="_blank" rel="noopener">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M11 26l1.1-6.7h3.6c4.6 0 7.6-2.3 8.3-6.6.6-3.8-1.6-5.9-5.9-5.9H10L6.6 26z" fill="#fff" opacity=".92"/>
+            <path d="M14.4 22.6l1-6.2h3.2c4.1 0 6.8-2 7.4-5.9.1-.6.1-1.1.1-1.6 1.7.9 2.4 2.6 2 5.2-.7 4.3-3.7 6.6-8.3 6.6h-3.6l-1.1 6.7z" fill="#cfe4ff"/>
+          </svg>
+          <span>PayPal<small id="dona-pp-pie">Tarjeta o saldo &#183; d&#243;lares</small></span>
+        </a>
+      </div>
+
+      <div class="alias" id="dona-alias" hidden>
+        <span class="et">Alias</span>
+        <code id="dona-alias-txt"></code>
+        <button class="bt" type="button" id="dona-copiar">Copiar</button>
+      </div>
+
+      <p class="chico" id="dona-nada" hidden>
+        <b>Todav&#237;a no hay datos de cobro cargados.</b> Se ponen en Cloudflare
+        Pages &#8594; Settings &#8594; Variables, con los nombres
+        <code>PAGO_MP_ALIAS</code>, <code>PAGO_MP_LINK</code> y
+        <code>PAGO_PAYPAL</code>. Apenas exista alguno, los botones se encienden
+        solos, sin volver a publicar.
+      </p>
+
+      <details class="grupo blanco" id="dona-canje" style="margin-top:12px">
+        <summary style="cursor:pointer;font-weight:600;font-size:14.5px">
+          Ya transfer&#237; &#8212; quiero mi acceso</summary>
+
+        <p style="margin:9px 0 0;font-size:13.5px;color:var(--tinta-2)">
+          El acceso anticipado arranca en <b id="rc-piso">$ 100</b>. Peg&#225; el
+          n&#250;mero de operaci&#243;n y el comprobante: si todav&#237;a no llegás,
+          <b>lo que mandaste queda sumado</b> y complet&#225;s cuando quieras.</p>
+        <div id="rc-barra" hidden style="margin-top:10px;padding:10px 12px;border-radius:4px;
+             border:1px solid var(--agua-borde);
+             background:linear-gradient(180deg,var(--agua-1),var(--agua-2))">
+          <div style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:600">
+            <span id="rc-llevas"></span><span id="rc-falta"></span>
+          </div>
+          <div style="margin-top:7px;height:12px;border-radius:999px;overflow:hidden;
+               border:1px solid #93a7b8;background:#fff;
+               box-shadow:inset 0 1px 3px rgba(0,30,60,.2)">
+            <i id="rc-lleno" style="display:block;height:100%;width:0%;
+               background:linear-gradient(180deg,#bff0f6 45%,#45b4d8 45%,#1a7fb0)"></i>
+          </div>
+        </div>
+
+        <div class="campoS">
+          <label for="rc-titular">Tu nombre y apellido</label>
+          <input id="rc-titular" type="text" autocomplete="name" spellcheck="false"
+                 placeholder="Como figura en la transferencia">
+          <small>Es lo que se compara contra el comprobante: si ac&#225; pon&#233;s un
+            apodo y en la transferencia figura otro nombre, <b>no se puede
+            cruzar</b> y el pedido se rechaza.</small>
+        </div>
+        <div class="campoS">
+          <label for="rc-refer">N&#250;mero de operaci&#243;n</label>
+          <input id="rc-refer" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="El que figura en el comprobante">
+        </div>
+        <div class="campoS">
+          <label for="rc-monto">Cu&#225;nto mandaste</label>
+          <div style="display:flex;gap:8px">
+            <select id="rc-moneda" style="flex:none;width:96px;font:inherit;font-size:15px;
+                    padding:8px 6px;border-radius:3px;border:1px solid #b9c6d4;background:#fff">
+              <option value="ARS">$ pesos</option>
+              <option value="USD">US$</option>
+            </select>
+            <input id="rc-monto" type="text" autocomplete="off" placeholder="Ej: 100"
+                   style="flex:1;min-width:0">
+          </div>
+        </div>
+        <div class="campoS">
+          <label for="rc-foto">Comprobante <span style="font-weight:400;color:var(--tinta-2)">(recomendado)</span></label>
+          <input id="rc-foto" type="file" accept="image/*">
+          <small>La captura de la transferencia. Se achica ac&#225; antes de subirla
+            y <b>se borra apenas se revisa</b>.</small>
+          <img id="rc-previa" alt="" hidden style="margin-top:8px;max-height:150px;
+               border-radius:4px;border:1px solid #b9c6d4">
+        </div>
+        <div class="bots">
+          <button class="bt p" type="button" id="rc-btn">Pedir el acceso</button>
+        </div>
+        <p id="rc-aviso" style="margin:9px 0 0;font-size:13.5px" hidden></p>
+
+        <details style="margin-top:12px">
+          <summary style="cursor:pointer;font-size:13.5px;color:var(--tinta-2)">
+            Tengo un c&#243;digo en vez de comprobante</summary>
+          <div class="otro" style="margin-top:9px">
+            <input id="cod-txt" type="text" placeholder="FA-0001-XXXXXX"
+                   autocomplete="off" spellcheck="false"
+                   style="text-transform:uppercase;font-family:ui-monospace,Menlo,monospace"
+                   aria-label="C&#243;digo de acceso">
+            <button class="bt" type="button" id="cod-btn">Canjear</button>
+          </div>
+          <p id="cod-aviso" style="margin:9px 0 0;font-size:13.5px" hidden></p>
+        </details>
+      </details>
+
+      <div class="salidas">
+        <button class="bt" type="button" id="dona-luego">Ahora no</button>
+        <button class="bt p" type="button" id="dona-listo">Ya colabor&#233;, entrar</button>
+      </div>
+      <p class="chico">El pago <b>no pasa por este sitio</b>: la transferencia
+        va directo a la cuenta, y en d&#243;lares lo maneja PayPal. Ac&#225; no se
+        guarda ning&#250;n dato tuyo ni queda registro de nada.</p>
+    </div>
+  </section>
+</div>
+
+<div id="burbujas" aria-hidden="true"></div>
+
+<!-- ============================================ el escritorio -->
+<div id="escritorio" hidden>
+
+  <!-- ============================================ la barra de arriba -->
+  <nav id="barraSocial" aria-label="Frutiger Aero">
+        <a class="logo" href="#" id="bsInicio">
+      <img src="img/icono.133cdca8.webp" alt="" width="256" height="256">Frutiger Aero</a>
+    <span class="hueco"></span>
+    <button class="bsBtn" type="button" id="bsMuro" aria-label="El muro" title="El muro">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.4"
+        fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 9h10M7 13h7"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="bsBtn" type="button" id="bsAvisos" aria-label="Avisos" title="Avisos"
+            style="position:relative">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 4 1.4 5.4 2 6H4c.6-.6 2-2 2-6z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <b id="bsPunto" hidden style="position:absolute;top:2px;right:2px;min-width:16px;height:16px;
+         border-radius:999px;background:#e0402a;color:#fff;font-size:10.5px;line-height:16px;
+         border:1px solid #fff;padding:0 3px"></b>
+    </button>
+    <button class="bsBtn" type="button" id="bsAjustes" aria-label="Ajustes" title="Ajustes">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="none"
+        stroke="currentColor" stroke-width="2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.9 1.9M16.6 16.6l1.9 1.9M18.5 5.5l-1.9 1.9M7.4 16.6l-1.9 1.9"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="bsYo" type="button" id="bsPerfil">
+      <img id="bsRetrato" src="img/mascota/m-saludando.463f6804.webp" alt="" width="760" height="760">
+      <span id="bsNombre">Entrar</span>
+    </button>
+  </nav>
+
+  <!-- La caja de arriba. En el lanzador que copia esto dice «buscar en
+       internet»; acá busca en el muro, que es lo que hay para encontrar.
+       Un buscador que no busca lo que tenés delante es un adorno. -->
+  <form class="buscaCaja" id="buscaCaja" role="search">
+    <div class="rotulo">
+      <img src="img/icono.133cdca8.webp" alt="" width="256" height="256">
+      Buscar en Frutiger Aero
+    </div>
+    <div class="campoB">
+      <svg class="lupa" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="10.5" cy="10.5" r="6.4" fill="none" stroke="#3f6f96" stroke-width="2.2"/>
+        <path d="M15.4 15.4L21 21" stroke="#3f6f96" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+      <input id="buscaTxt" type="search" autocomplete="off"
+             placeholder="Proyectos, gente, lo que sea" aria-label="Buscar">
+      <button class="irB" type="submit" aria-label="Buscar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13M11 6l6 6-6 6"
+          stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </form>
+
+  <ul class="iconos">
+    <li><button type="button" data-abrir="v-inicio">
+      <img class="lam" src="img/icono.133cdca8.webp" alt="" width="256" height="256">Frutiger Aero</button></li>
+    <li><button type="button" data-abrir="v-minas">
+      <svg class="lam" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="4" y="4" width="40" height="40" rx="5" fill="#e9f1f8" stroke="#7f97ad" stroke-width="2"/>
+        <circle cx="24" cy="25" r="10" fill="#20303f"/><rect x="22.5" y="9" width="3" height="8" rx="1.5" fill="#20303f"/>
+        <path d="M18 20l3 3" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>Buscaminas</button></li>
+    <li><button type="button" data-abrir="v-bloc">
+      <svg class="lam" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="9" y="5" width="30" height="38" rx="3" fill="#fff" stroke="#7f97ad" stroke-width="2"/>
+        <path d="M15 15h18M15 22h18M15 29h12" stroke="#4a90c4" stroke-width="2.2" stroke-linecap="round"/></svg>Mis notas</button></li>
+    <li><button type="button" data-abrir="v-repro">
+      <svg class="lam" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="19" fill="#2c7cc0" stroke="#c9e6f8" stroke-width="2"/>
+        <circle cx="24" cy="24" r="6" fill="#e9f6ff"/><path d="M20 15l12 9-12 9z" fill="#eaf7ff" opacity=".55"/></svg>Reproductor</button></li>
+    <li><button type="button" data-abrir="v-control">
+      <svg class="lam" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="5" y="8" width="38" height="32" rx="4" fill="#e9f1f8" stroke="#7f97ad" stroke-width="2"/>
+        <path d="M12 18h24M12 25h24M12 32h24" stroke="#9fb4c6" stroke-width="2"/>
+        <circle cx="19" cy="18" r="4" fill="#4a90c4"/><circle cx="30" cy="25" r="4" fill="#7cc242"/>
+        <circle cx="16" cy="32" r="4" fill="#f2a33c"/></svg>Panel de control</button></li>
+    <li><button type="button" data-abrir="v-mascota">
+      <img class="lam" src="img/mascota/m-paz.b7d4f491.webp" alt="" width="760" height="760">La mascota</button></li>
+    <li><button type="button" id="ic-zona" hidden>
+      <img class="lam" src="img/zona/app.webp" alt="" width="256" height="256">
+      <span id="ic-zona-txt">Aero+</span></button></li>
+    <li><button type="button" id="ic-dona">
+      <svg class="lam" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="18" fill="#ffd23f" stroke="#c98f10" stroke-width="2"/>
+        <circle cx="24" cy="24" r="13.5" fill="none" stroke="#fff5cc" stroke-width="1.6"/>
+        <path d="M24 14v20M29 18.5c-1.2-1.6-3-2.3-5-2.3-2.8 0-5 1.5-5 3.9 0 5 10 3.4 10 8.2 0 2.5-2.3 4-5.2 4-2.2 0-4.1-.8-5.3-2.5"
+          stroke="#8a5f06" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Colaborar</button></li>
+  </ul>
+
+<!-- La papelera. No es adorno: adentro están los avisos que cerraste, por si
+     cerraste alguno sin leerlo. Cerrar algo y perderlo para siempre, no. -->
+<button class="papelera" type="button" id="papelera">
+  <svg class="lam" viewBox="0 0 48 48" aria-hidden="true">
+    <path d="M12 14h24l-2.4 27a3 3 0 0 1-3 2.7H17.4a3 3 0 0 1-3-2.7z"
+      fill="#cfe9f8" stroke="#5e93bb" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M12 14h24" stroke="#5e93bb" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M19 8.5h10a2 2 0 0 1 2 2V14H17v-3.5a2 2 0 0 1 2-2z"
+      fill="#e8f5fd" stroke="#5e93bb" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M20 21v15M28 21v15" stroke="#8fb9d6" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <span>Papelera</span>
+</button>
+
+<div class="hoja">
+ <div class="col">
+
+  <!-- ---------------------------------------- inicio -->
+  <section class="ventana pegajosa" id="v-inicio">
+    <header class="titulo">
+      <img class="ico" src="img/icono.133cdca8.webp" alt="" width="256" height="256">
+      <span class="txt">Frutiger Aero — Inicio</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-inicio" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <nav class="menu" aria-label="Secciones">
+        <button type="button" data-abrir="v-que">¿Qué es?</button>
+        <button type="button" data-abrir="v-generos">Subgéneros</button>
+        <button type="button" data-abrir="v-recursos">Recursos</button>
+        <button type="button" data-abrir="v-minas">Buscaminas</button>
+        <button type="button" data-abrir="v-bloc">Notas</button>
+        <button type="button" data-abrir="v-repro">Música</button>
+        <button type="button" data-abrir="v-control">Panel</button>
+      </nav>
+
+      <div class="cartel">
+        <svg class="globo" viewBox="0 0 96 96" aria-hidden="true">
+          <defs>
+            <radialGradient id="g-mar" cx="34%" cy="28%">
+              <stop offset="0" stop-color="#eaffff"/><stop offset=".42" stop-color="#7fd6a8"/>
+              <stop offset=".82" stop-color="#2b9c62"/><stop offset="1" stop-color="#17693f"/>
+            </radialGradient>
+            <linearGradient id="g-bri" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+            </linearGradient>
+            <linearGradient id="g-mango" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f2f7fb"/><stop offset=".5" stop-color="#9fb4c6"/><stop offset="1" stop-color="#e6eef5"/>
+            </linearGradient>
+          </defs>
+          <circle cx="42" cy="40" r="30" fill="url(#g-mar)"/>
+          <g fill="#e9fff4" opacity=".92">
+            <path d="M27 26c5-3 10-2 13 1s-2 6-6 7-9 4-11 1 -1-6 4-9z"/>
+            <path d="M46 22c6 1 11 4 13 8s-4 5-8 3-8-5-7-8 1-3 2-3z"/>
+            <path d="M34 47c6-2 12 1 15 5s-1 8-6 8-11-3-13-7 1-5 4-6z"/>
+            <path d="M56 40c4 0 7 3 7 7s-4 8-7 6-4-6-3-9 2-4 3-4z"/>
+          </g>
+          <ellipse cx="34" cy="25" rx="21" ry="12" fill="url(#g-bri)"/>
+          <circle cx="42" cy="40" r="30" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>
+          <rect x="60" y="58" width="30" height="9" rx="4.5" transform="rotate(43 60 58)" fill="url(#g-mango)" stroke="#7d94a8" stroke-width="1"/>
+          <circle cx="58" cy="54" r="20" fill="rgba(215,245,255,.34)" stroke="#cfe6f2" stroke-width="3.4"/>
+          <circle cx="58" cy="54" r="20" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.2"/>
+          <path d="M46 46a20 20 0 0 1 12-8" stroke="rgba(255,255,255,.9)" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </svg>
+        <div class="dice">
+          <h1>¡Bienvenido!</h1>
+          <p>Un escritorio de vidrio y un archivo de <b>Frutiger Aero</b>: la estética
+             que entre 2004 y 2013 estuvo convencida de que el futuro iba a ser
+             transparente, verde y con peces adentro.</p>
+        </div>
+      </div>
+
+      <div class="grupo blanco">
+        <h2>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="g-hoja" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#c9f08a"/><stop offset="1" stop-color="#4e9c22"/></linearGradient></defs>
+            <path d="M4 20C4 10 12 4 21 4c0 9-6 17-16 16z" fill="url(#g-hoja)" stroke="#3d7a1c" stroke-width="1"/>
+            <path d="M6 19C10 13 15 9 19 7" stroke="#eaffd0" stroke-width="1.3" fill="none"/></svg>
+          Qué hay acá adentro
+        </h2>
+        <p>Tres ventanas sobre la estética —qué fue, sus subgéneros y sus
+           materiales—, un <b>buscaminas</b> que anda, un <b>bloc</b> que guarda
+           lo que escribís, un <b>reproductor</b> con visualizador, y un
+           <b>panel de control</b> que cambia el color del vidrio de toda la
+           interfaz, como en Vista.</p>
+        <div class="bots">
+          <button class="bt" type="button" data-abrir="v-que">Empezar por el principio</button>
+          <button class="bt" type="button" data-abrir="v-minas">Jugar al buscaminas</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- el muro -->
+  <section class="ventana" id="v-muro" hidden>
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.4" fill="#bfe9ff" stroke="#fff" stroke-width="1.2"/><path d="M7 9h10M7 13h7" stroke="#14568f" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="txt">El muro — proyectos de la comunidad</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-muro" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div class="grupo blanco" style="margin-top:0">
+        <h2>Cont&#225; qu&#233; est&#225;s haciendo</h2>
+        <p style="font-size:14px;margin:0">Cualquiera puede publicar un proyecto
+          Frutiger Aero y pedir apoyo. <b>El dinero va directo a tu cuenta</b>:
+          el sitio no toca un peso ni se queda con nada.</p>
+        <div class="bots"><button class="bt p" type="button" id="irPublicar">Publicar un proyecto</button></div>
+      </div>
+      <div class="pubs" id="muroLista" style="margin-top:12px"></div>
+      <div class="bots" style="justify-content:center">
+        <button class="bt" type="button" id="muroMas" hidden>Ver m&#225;s</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- avisos -->
+  <section class="ventana" id="v-avisos" hidden>
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 4 1.4 5.4 2 6H4c.6-.6 2-2 2-6z" fill="#bfe9ff" stroke="#fff" stroke-width="1.2"/></svg>
+      <span class="txt">Avisos</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-avisos" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo" id="avisosLista"></div>
+  </section>
+
+  <!-- ---------------------------------------- perfil -->
+  <section class="ventana" id="v-perfil" hidden>
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="#bfe9ff"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" fill="#bfe9ff"/></svg>
+      <span class="txt" id="perfilTitulo">Mi perfil</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-perfil" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo" id="perfilCuerpo"></div>
+  </section>
+
+  <!-- ---------------------------------------- buscaminas -->
+  <section class="ventana" id="v-minas">
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7" fill="#20303f"/><rect x="11" y="3" width="2" height="5" rx="1" fill="#20303f"/><path d="M9 10l2 2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="txt">Buscaminas</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-minas" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div class="marcador">
+        <b id="m-minas">010</b>
+        <span class="estado" id="m-estado">Tocá una casilla para empezar</span>
+        <b id="m-tiempo">000</b>
+      </div>
+      <div class="minas" id="m-campo"></div>
+      <div class="bots" style="justify-content:center">
+        <button class="bt" type="button" id="m-nuevo">Partida nueva</button>
+      </div>
+      <p style="margin:10px 0 0;font-size:13px;color:var(--tinta-2);text-align:center">
+        Clic derecho —o mantener apretado en el celular— pone una bandera.
+        La primera casilla nunca es una mina.</p>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- notas -->
+  <section class="ventana" id="v-bloc">
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="2" fill="#fff" stroke="#8fb4d0" stroke-width="1.3"/><path d="M8 8h8M8 12h8M8 16h5" stroke="#4a90c4" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span class="txt">Mis notas — se guardan en este dispositivo</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-bloc" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <textarea class="bloc" id="bloc" placeholder="Escribí acá. Se guarda solo."></textarea>
+      <div class="bots">
+        <button class="bt" type="button" id="bloc-borrar">Borrar todo</button>
+        <span class="guardado" id="bloc-ok"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- reproductor -->
+  <section class="ventana" id="v-repro">
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.4" fill="#2c7cc0" stroke="#c9e6f8" stroke-width="1.2"/><circle cx="12" cy="12" r="3" fill="#e9f6ff"/></svg>
+      <span class="txt">Reproductor</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-repro" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div class="repro">
+        <canvas id="visor" aria-hidden="true"></canvas>
+        <div class="fila">
+          <button class="redondito" id="r-play" type="button" aria-label="Reproducir"></button>
+          <input id="r-barra" type="range" min="0" max="1000" value="0" aria-label="Posición">
+          <span class="t" id="r-t">0:00 / 0:00</span>
+        </div>
+        <div class="fila">
+          <span class="t">Volumen</span>
+          <input id="r-vol" type="range" min="0" max="100" value="70" aria-label="Volumen">
+        </div>
+        <audio id="audio" src="audio/tema.94bd556b.mp3" preload="metadata"></audio>
+      </div>
+      <p style="margin:10px 0 0;font-size:13px;color:var(--tinta-2)">
+        Las barras del visualizador son el espectro real del audio, sacado con
+        <code>AnalyserNode</code>. Si el navegador no deja, quedan quietas.</p>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- qué es -->
+  <section class="ventana" id="v-que">
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#bfe9ff" stroke="#fff" stroke-width="1.4"/><path d="M12 10v7M12 6.6v1.6" stroke="#14568f" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span class="txt">Información — ¿Qué es Frutiger Aero?</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-que" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div class="grupo">
+        <h2>Una definición corta</h2>
+        <p><b>Frutiger Aero</b> —también llamado <i>Web 2.0 Gloss</i>— es el estilo
+           que dominó la publicidad, las interfaces y las fotos de stock
+           aproximadamente entre <b>2004 y 2013</b>, justo después del Y2K. El
+           nombre junta dos cosas: la tipografía <b>Frutiger</b>, que estaba en
+           todos lados, y <b>Aero</b>, la interfaz de vidrio de Windows Vista.</p>
+        <p>Lo que lo define no es un color: es una promesa. La tecnología y la
+           naturaleza iban a convivir sin fricción, y por eso todo tenía pasto,
+           agua, cielo y burbujas encima de algo hecho de plástico brillante.</p>
+        <ul class="chips">
+          <li>Esqueuomorfismo</li><li>Vidrio</li><li>Brillo húmedo</li>
+          <li>Cielos con nubes</li><li>Peces tropicales</li><li>Burbujas</li>
+          <li>Auroras</li><li>Bokeh</li><li>Destellos de lente</li>
+          <li>Verdes y azules</li><li>Tipografía humanista</li><li>Tecnología abstracta</li>
+        </ul>
+      </div>
+      <div class="grupo blanco">
+        <h2>Cómo se hace un botón Aero de verdad</h2>
+        <p>El detalle que separa un botón Aero de un botón cualquiera es que
+           <b>no tiene un degradado suave</b>: tiene dos degradados pegados con
+           un corte duro al 45 % de su alto. Ese escalón es el reflejo del
+           plástico. Todos los botones de esta página lo tienen.</p>
+        <div class="bots">
+          <button class="bt" type="button">Botón en reposo</button>
+          <button class="bt" type="button">Tocame y mirá el corte</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- subgéneros -->
+  <section class="ventana" id="v-generos">
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2.4" fill="#bfe9ff" stroke="#fff" stroke-width="1.3"/><path d="M6 9h12M6 12.5h12M6 16h8" stroke="#14568f" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span class="txt">Subgéneros — la familia Frutiger</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-generos" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <ul class="lista">
+        <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#dff6ff,#57b8e8 45%,#1a6ea8)"></span>
+          <span><b>Frutiger Aero</b><span>El tronco. Cielo, pasto, vidrio y un pez. Vista, el iPod nano, los folletos de un banco.</span></span></div></li>
+        <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#8fa3b8,#26374a 45%,#0b1420)"></span>
+          <span><b>Dark Aero</b><span>Lo mismo pero de noche: negro lacado, azules eléctricos y reflejos duros. Los equipos de audio de 2008.</span></span></div></li>
+        <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#d7ffe9,#43c98a 45%,#127a4a)"></span>
+          <span><b>Frutiger Eco</b><span>El brazo verde: hojas, gotas, paneles solares y la palabra «sustentable» en una tipografía redonda.</span></span></div></li>
+        <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#f0e6ff,#a887f0 45%,#5b34a8)"></span>
+          <span><b>Frutiger Aurora</b><span>Auroras, nebulosas y degradados que no existen en la naturaleza. El fondo que venía con la placa de video.</span></span></div></li>
+        <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#fff3d0,#f5b73f 45%,#b8781a)"></span>
+          <span><b>Global Village</b><span>El mundo conectado: el globo terráqueo, las siluetas de gente y las flechas que dan la vuelta al planeta.</span></span></div></li>
+        <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#ffdff0,#ef7ab8 45%,#a52d70)"></span>
+          <span><b>Vectorheart</b><span>Curvas vectoriales, corazones y remolinos de colores saturados. La tapa de la carpeta del secundario.</span></span></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- recursos -->
+  <section class="ventana" id="v-recursos">
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z" fill="#bfe9ff" stroke="#fff" stroke-width="1.2"/></svg>
+      <span class="txt">Recursos — paleta y materiales</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-recursos" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div class="grupo">
+        <h2>La paleta</h2>
+        <p>Tocá cualquiera y se copia al portapapeles.</p>
+        <ul class="paleta" id="paleta"></ul>
+        <p id="copiado" style="margin-top:10px;font-size:13px;color:#0e5a2c" hidden></p>
+      </div>
+      <div class="grupo blanco">
+        <h2>Los materiales del estilo</h2>
+        <ul class="lista" style="margin-top:2px">
+          <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#fff,#cfe0ee 45%,#8ba3b8)"></span>
+            <span><b>Tipografía</b><span>Frutiger y Segoe UI. Sin ninguna de las dos: cualquier humanista de palo seco con la «a» de dos pisos.</span></span></div></li>
+          <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#eaffff,#69d9e8 45%,#1a8fa8)"></span>
+            <span><b>Vidrio</b><span>Desenfoque del fondo, más saturación, un filo blanco de 1 px arriba y el brillo cortado al 45 %.</span></span></div></li>
+          <li><div class="fila"><span class="bola" style="background:radial-gradient(circle at 32% 26%,#e8ffd9,#8fd44a 45%,#3f7a17)"></span>
+            <span><b>Naturaleza</b><span>Pasto en primer plano, cielo limpio, agua con burbujas. Siempre nítido, nunca melancólico.</span></span></div></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+ </div>
+
+ <!-- ============================================ columna derecha -->
+ <div class="col">
+  <div class="aparato"><div>
+    <h3>Reloj</h3>
+    <div id="reloj">--:--</div>
+    <div id="fecha">&nbsp;</div>
+  </div></div>
+
+  <div class="aparato"><div>
+    <h3>Afuera</h3>
+    <div class="clima">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <defs><radialGradient id="g-sol" cx="38%" cy="34%">
+          <stop offset="0" stop-color="#fffbe0"/><stop offset=".55" stop-color="#ffd23f"/>
+          <stop offset="1" stop-color="#f08a12"/></radialGradient></defs>
+        <circle cx="26" cy="24" r="12" fill="url(#g-sol)"/>
+        <g stroke="#ffd23f" stroke-width="2.6" stroke-linecap="round" opacity=".85">
+          <path d="M26 5v5M26 38v5M7 24h5M40 24h5M12 10l3.5 3.5M36.5 34.5L40 38M40 10l-3.5 3.5M15.5 34.5L12 38"/>
+        </g>
+        <path d="M22 48a9 9 0 0 1 8.6-9 12 12 0 0 1 22.6 3.4A7.5 7.5 0 0 1 51 56H30a8 8 0 0 1-8-8z"
+              fill="#f4fbff" stroke="#cfe6f2" stroke-width="1.6"/>
+      </svg>
+      <div><b>Despejado</b><span>Como en el fondo de pantalla</span></div>
+    </div>
+  </div></div>
+
+  <!-- ---------------------------------------- panel de control -->
+  <section class="ventana" id="v-control">
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2.4" fill="#e9f1f8" stroke="#fff" stroke-width="1.3"/><circle cx="9" cy="9" r="2.4" fill="#4a90c4"/><circle cx="15" cy="15" r="2.4" fill="#7cc242"/></svg>
+      <span class="txt">Panel de control</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-control" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div class="grupo blanco" style="margin-top:0">
+        <h2>Color del vidrio</h2>
+        <div class="control">
+          <div>
+            <label for="c-tono">Tono</label>
+            <div class="tira" aria-hidden="true"></div>
+            <input id="c-tono" type="range" min="0" max="360" step="1" value="210">
+          </div>
+          <div>
+            <label for="c-sat">Intensidad</label>
+            <input id="c-sat" type="range" min="0" max="90" step="1" value="52">
+          </div>
+          <div>
+            <label for="c-vidrio">Transparencia</label>
+            <input id="c-vidrio" type="range" min="35" max="100" step="1" value="82">
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <h2>Fondo de escritorio</h2>
+        <ul class="fondos" id="c-fondos">
+          <button type="button" data-fondo="pasto" aria-label="Pasto y cielo"
+            style="background-image:url(img/fondo.06222548.webp)"></button>
+          <button type="button" data-fondo="aurora" aria-label="Aurora"
+            style="background-image:linear-gradient(180deg,#04203f,#0c4a7e 40%,#1e8fa8 70%,#7fe0cf)"></button>
+          <button type="button" data-fondo="vidrio" aria-label="Vidrio"
+            style="background-image:radial-gradient(120% 90% at 30% 10%,#bfe9ff,#2f7fd0 45%,#0a3a6b)"></button>
+        </ul>
+        <div class="interruptores" style="margin-top:12px">
+          <label><input id="c-burbujas" type="checkbox" checked> Burbujas en el fondo</label>
+        </div>
+        <div class="bots">
+          <button class="bt" type="button" id="c-reset">Volver a los valores de fábrica</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- zona de donantes -->
+  <section class="ventana" id="v-zona" hidden>
+    <header class="titulo">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.5 7.1.7-5.3 4.7 1.5 6.9L12 17.3l-6.2 3.5 1.5-6.9L2 9.2l7.1-.7z" fill="#ffd23f" stroke="#fff" stroke-width="1"/></svg>
+      <span class="txt">Zona de donantes</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-zona" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div id="zona-lista"></div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------- mascota -->
+  <section class="ventana" id="v-mascota">
+    <header class="titulo">
+      <img class="ico" src="img/icono.133cdca8.webp" alt="" width="256" height="256">
+      <span class="txt">La mascota</span>
+      <span class="mandos">
+        <button type="button" class="cerrar" data-cerrar="v-mascota" aria-label="Cerrar"><svg viewBox="0 0 11 11" aria-hidden="true"><path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" stroke-width="1.7" fill="none"/></svg></button>
+      </span>
+    </header>
+    <div class="cuerpo">
+      <div class="escena">
+        <img id="respaldo" src="img/mascota/m-saludando.463f6804.webp"
+             alt="La mascota del sitio, un personajito con visor y auriculares, saludando"
+             width="760" height="760" fetchpriority="high">
+        <canvas id="lienzo" width="600" height="600" hidden
+                data-modelo="modelos/mascota-rig.3e1c97c9.glb"
+                aria-label="La mascota en tres dimensiones. Arrastrá para girarla."></canvas>
+      </div>
+      <p style="margin:8px 0 0;font-size:13px;color:var(--tinta-2);text-align:center">
+        Arrastrala para girarla · tocala para que salte</p>
+      <ul class="poses" id="poses"></ul>
+    </div>
+  </section>
+ </div>
+</div>
+
+<p class="pie">Frutiger Aero · un escritorio hecho a mano. El cromo está calcado
+  de la interfaz real; los valores salen de
+  <a href="https://khang-nd.github.io/7.css/" rel="noopener">7.css</a>.
+  Nada de lo que hacés acá sale de tu navegador.</p>
+</div>
+
+<!-- ============================================ el cajón de las 3 rayitas -->
+</div>
+
+<!-- ============================================ menú de inicio -->
+<div id="inicio" hidden>
+  <div>
+    <div class="quien">
+      <span id="quien-retrato"></span>
+      <span><b id="quien-nombre">Invitado</b><span id="quien-rol">Cuenta local</span></span>
+    </div>
+    <ul>
+      <li><button type="button" data-abrir="v-inicio"><img class="lam" src="img/icono.133cdca8.webp" alt="">Frutiger Aero</button></li>
+      <li><button type="button" data-abrir="v-minas"><svg class="lam" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7" fill="#cfe6f8"/><rect x="11" y="3" width="2" height="5" rx="1" fill="#cfe6f8"/></svg>Buscaminas</button></li>
+      <li><button type="button" data-abrir="v-bloc"><svg class="lam" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="2.5" width="16" height="19" rx="2" fill="#cfe6f8"/></svg>Mis notas</button></li>
+      <li><button type="button" data-abrir="v-repro"><svg class="lam" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.4" fill="#cfe6f8"/><circle cx="12" cy="12" r="3" fill="#1a4a78"/></svg>Reproductor</button></li>
+      <li><button type="button" data-abrir="v-control"><svg class="lam" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="4" width="19" height="16" rx="2.4" fill="#cfe6f8"/></svg>Panel de control</button></li>
+      <li><button type="button" data-abrir="v-mascota"><img class="lam" src="img/mascota/m-paz.b7d4f491.webp" alt="">La mascota</button></li>
+    </ul>
+    <ul style="border-top:1px solid rgba(255,255,255,.16)">
+      <li><button type="button" id="mi-dona">
+        <svg class="lam" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#ffd23f"/><path d="M12 7v10M14.4 9.2c-.6-.8-1.5-1.2-2.5-1.2-1.4 0-2.5.8-2.5 2 0 2.5 5 1.7 5 4.1 0 1.3-1.2 2-2.6 2-1.1 0-2-.4-2.6-1.2" stroke="#8a5f06" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+        Colaborar</button></li>
+    </ul>
+    <div class="salir">
+      <button type="button" id="cerrar-sesion">
+        <svg class="lam" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9" stroke="#ffd9d2" stroke-width="2.2" stroke-linecap="round"/><path d="M6.8 6.9a7.4 7.4 0 1 0 10.4 0" stroke="#ffd9d2" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+        Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ el muelle
+     Los cuatro de todos los días, siempre a la vista. En el teléfono la barra
+     de arriba queda lejos del pulgar y el menú de inicio son dos toques; esto
+     es uno solo y está donde la mano ya está. -->
+<nav class="muelle" id="muelle" aria-label="Atajos" hidden>
+  <button type="button" data-muelle="muro" aria-label="El muro" title="El muro">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.4" fill="#2f7fc4" stroke="#14446e" stroke-width="1.2"/><path d="M7 9.5h10M7 13.5h7" stroke="#eaf6ff" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <button type="button" data-muelle="avisos" aria-label="Avisos" title="Avisos">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v4l-1.6 3h15.2L18 13V9a6 6 0 0 0-6-6z" fill="#2f7fc4" stroke="#14446e" stroke-width="1.2"/><path d="M9.6 19.2a2.6 2.6 0 0 0 4.8 0" stroke="#14446e" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+    <b id="muellePunto" hidden></b>
+  </button>
+  <button type="button" data-muelle="publicar" aria-label="Publicar" title="Publicar un proyecto">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="#ffd23f"/><path d="M12 7v10M7 12h10" stroke="#8a5f06" stroke-width="2.4" stroke-linecap="round"/></svg>
+  </button>
+  <button type="button" data-muelle="perfil" aria-label="Mi perfil" title="Mi perfil">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="#2f7fc4" stroke="#14446e" stroke-width="1.2"/><path d="M4 20.6c0-4.2 3.6-6.8 8-6.8s8 2.6 8 6.8" fill="#2f7fc4" stroke="#14446e" stroke-width="1.2"/></svg>
+  </button>
+</nav>
+
+<!-- Los avisos, cada uno en su ventanita. Se apilan acá y se van cerrando. -->
+<div id="avisitos" aria-live="polite"></div>
+
+<!-- ====================================================== Aero+
+     La zona de donantes. NO es una ventana más del escritorio: es otra
+     interfaz, a pantalla completa, con su propia barra y sus propias apps.
+     Esa es la idea —lo que se desbloquea tiene que SENTIRSE distinto, no ser
+     la misma pantalla con un cartel—, y por eso vive fuera de #escritorio.
+
+     Lo que muestra lo decide el servidor: si alguien la abre a la fuerza
+     tocando el HTML, la ve vacía, porque los datos no vienen. -->
+<div id="aeromas" hidden>
+  <div class="am-fondo" id="am-fondo" aria-hidden="true"></div>
+
+  <header class="am-barra">
+    <span class="am-logo"><img src="img/zona/app.webp" alt="" width="256" height="256">Aero+</span>
+    <span class="am-quien" id="am-quien"></span>
+    <button class="am-bt" type="button" id="am-salir">Volver al escritorio</button>
+  </header>
+
+  <main class="am-cuerpo">
+    <nav class="am-apps" id="am-apps" aria-label="Aplicaciones de Aero+"></nav>
+    <section class="am-panel" id="am-panel"></section>
+  </main>
+</div>
+
+<!-- El instalador. Es teatro, y a propósito: «se instala» es lo que hace que
+     se sienta un programa y no una pestaña. Pero no miente con lo que tarda:
+     los pasos que muestra son los que de verdad ocurren. -->
+<div id="am-instalar" hidden>
+  <section class="ventana">
+    <header class="titulo">
+      <img class="ico" src="img/zona/app.webp" alt="" width="256" height="256">
+      <span class="txt">Instalar Aero+</span>
+    </header>
+    <div class="cuerpo">
+      <div class="grupo blanco" style="margin-top:0">
+        <h2 style="margin-top:0">Aero+</h2>
+        <p style="font-size:14px;margin:0 0 12px">Fondos exclusivos, marcos para
+          tu retrato y un escritorio que te sigue entre dispositivos. Gracias por
+          bancar esto.</p>
+        <div class="am-barrita"><i id="am-lleno"></i></div>
+        <p class="chico" id="am-paso" style="margin:9px 0 0">Preparando…</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================ barra de tareas -->
+<nav class="tareas" aria-label="Ventanas">
+  <button class="orbe" type="button" id="orbe" aria-label="Menú de inicio" aria-expanded="false">
+    <img src="img/icono.133cdca8.webp" alt="" width="256" height="256">
+  </button>
+  <div class="hora"><span id="t-hora">--:--</span><br><span class="dia" id="t-dia">&nbsp;</span></div>
+</nav>
+
+<script src="js/escritorio.38df15f6.js"></script>
+<script src="js/social.2c7eafbd.js"></script>
+<script type="module" src="js/mascota.b786a449.js"></script>
+</body>
+</html>

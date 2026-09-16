@@ -1,0 +1,56 @@
+# Los proyectos gratis de Supabase se pausan tras 1 semana sin actividad.
+# Esto le pega dos veces por semana para que eso no pase nunca.
+#
+# Para encenderlo hay que cargar dos variables en el repo, una sola vez:
+#   Settings → Secrets and variables → Actions → pestaña Variables → New variable
+#     SUPABASE_URL       https://xxxxxxxx.supabase.co
+#     SUPABASE_ANON_KEY  la clave anon public (es pública, por eso va como variable y no como secret)
+#
+# Sin esas variables el trabajo no falla: avisa y se va.
+
+name: Despertar Supabase
+
+on:
+  schedule:
+    - cron: "17 12 */3 * *"   # cada 3 días, 12:17 UTC (09:17 en Argentina)
+  workflow_dispatch:           # y a mano cuando quieras, desde la pestaña Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tocarle la puerta al proyecto
+        env:
+          URL: ${{ vars.SUPABASE_URL }}
+          KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          set -u
+          if [ -z "${URL}" ] || [ -z "${KEY}" ]; then
+            echo "::warning::Faltan las variables SUPABASE_URL y SUPABASE_ANON_KEY."
+            echo "Cargalas en Settings → Secrets and variables → Actions → Variables."
+            echo "Hasta entonces esto no hace nada y el proyecto se puede pausar solo."
+            exit 0
+          fi
+          echo "Consultando ${URL} ..."
+          codigo=$(curl -sS -o /tmp/rta.txt -w "%{http_code}" --max-time 45 \
+            -H "apikey: ${KEY}" \
+            -H "Authorization: Bearer ${KEY}" \
+            "${URL}/rest/v1/publicaciones?select=id&limit=1")
+          echo "HTTP ${codigo}"
+          head -c 300 /tmp/rta.txt; echo
+          case "${codigo}" in
+            200|206)
+              echo "Despierto. La cuenta de 7 días vuelve a cero." ;;
+            000)
+              echo "::error::No hubo respuesta. ¿El proyecto está pausado o borrado?"
+              exit 1 ;;
+            401|403)
+              echo "::error::La clave no sirve para leer. Revisá que sea la anon public y que exista la política de lectura."
+              exit 1 ;;
+            404)
+              echo "::error::Responde pero no encuentra la tabla publicaciones."
+              exit 1 ;;
+            *)
+              echo "::error::Respuesta inesperada (${codigo})."
+              exit 1 ;;
+          esac

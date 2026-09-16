@@ -1,0 +1,63 @@
+/* --- La página: estéticas y colores --------------------------------- */
+.grupo2{display:flex; gap:1px; background:var(--linea); border-radius:13px; overflow:hidden}
+.grupo2 button{flex:1; padding:12px 6px; border:0; cursor:pointer; background:var(--humo);
+  color:var(--tenue); font:600 12.5px/1 var(--cond); letter-spacing:.12em; text-transform:uppercase}
+.grupo2 button.viva{background:var(--ac); color:#12060c}
+.paleta{display:grid; grid-template-columns:repeat(4,1fr); gap:9px; margin-top:9px}
+.tono{display:grid; justify-items:center; gap:5px; font-size:10.5px; color:var(--tenue); text-align:center}
+.tono input[type=color]{width:100%; height:40px; padding:0; border:1px solid var(--linea);
+  border-radius:11px; background:none; cursor:pointer}
+.estCard{border:1px solid var(--linea); border-radius:15px; background:var(--humo); margin-bottom:10px}
+.estCard.apagada{opacity:.5}
+.estCab{display:flex; align-items:center; gap:9px; padding:12px 13px}
+.punto{width:14px; height:14px; border-radius:50%; flex:none; box-shadow:0 0 0 1px var(--linea)}
+.estNom{flex:1; min-width:0}
+.estNom b{display:block; font-size:14.5px}
+.estNom span{display:block; font-size:12px; color:var(--tenue); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap}
+.mini{flex:none; width:32px; height:32px; border-radius:9px; cursor:pointer;
+  border:1px solid var(--linea); background:var(--tinta2); color:var(--papel); font-size:13px; line-height:1}
+.estCuerpo{padding:0 13px 15px; border-top:1px solid var(--linea)}
+.estCuerpo label{display:block; margin:13px 0 6px; font:600 11px/1 var(--cond);
+  letter-spacing:.16em; text-transform:uppercase; color:var(--tenue)}
+.fichaFila{display:flex; gap:7px; margin-bottom:7px}
+.fichaFila .fk{flex:0 0 34%}
+.fichaFila .fv{flex:1; min-width:0}
+.previaFlyer{display:block; width:100%; max-height:190px; object-fit:cover;
+  border-radius:12px; margin-top:9px}
+.bt.malo{background:none; border-color:#7a2230; color:#ff9a9a}
+.cifra2{float:right; color:var(--papel); font-variant-numeric:tabular-nums; letter-spacing:0}
+/* el botón largo no entra en media columna: que respire y parta la línea */
+#pPagina .dosBotones{grid-template-columns:1.4fr 1fr}
+#pPagina .dosBotones .bt{padding:14px 10px; font-size:13px; line-height:1.25; text-align:center}
+/* los deslizadores vienen azules del navegador; van del color de la marca */
+#pPagina input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:22px;
+  background:none; cursor:pointer; margin:2px 0}
+#pPagina input[type=range]::-webkit-slider-runnable-track{height:3px; border-radius:2px; background:var(--linea)}
+#pPagina input[type=range]::-moz-range-track{height:3px; border-radius:2px; background:var(--linea)}
+#pPagina input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:19px; height:19px;
+  margin-top:-8px; border-radius:50%; background:var(--ac); border:0}
+#pPagina input[type=range]::-moz-range-thumb{width:19px; height:19px; border:0; border-radius:50%; background:var(--ac)}
+
+/* Ocho solapas en cinco columnas parten 5+3 y quedan chuecas. Con cuatro son
+   dos filas parejas y cada una entra mas ancha, que en un telefono se toca
+   mejor. VA ADENTRO DEL MEDIA QUERY a proposito: de 900 para arriba la barra
+   es una columna al costado, y como este bloque se inserta al final de la
+   hoja, una regla suelta le ganaria por orden y la rompeia. */
+@media (max-width: 899.98px){
+  .tabs{grid-template-columns:repeat(4,1fr)}
+}
+/* Lo de "sumar otra fiesta" estaba como dos botones grandes compitiendo con el
+   que de verdad hay que tocar. Plegado ocupa una linea y se abre si hace falta. */
+.masFiesta{margin-top:16px; border:1px solid var(--linea); border-radius:14px;
+  background:var(--humo); padding:0 13px}
+.masFiesta summary{padding:14px 0; cursor:pointer; list-style:none;
+  font:600 11.5px/1 var(--cond); letter-spacing:.16em; text-transform:uppercase; color:var(--tenue)}
+.masFiesta summary::-webkit-details-marker{display:none}
+.masFiesta summary::after{content:"+"; float:right; font-size:15px; line-height:1}
+.masFiesta[open] summary::after{content:"\2212"}
+.masFiesta[open] summary{color:var(--papel); border-bottom:1px solid var(--linea)}
+.masFiesta > .campo:last-of-type, .masFiesta > .bt:last-child{margin-bottom:14px}
+
+.panico{margin-top:26px; padding-top:18px; border-top:1px solid var(--linea)}
+.panico .baja{margin-top:8px}

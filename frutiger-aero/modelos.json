@@ -1,0 +1,157 @@
+{
+ "_lee_esto": "La página quedó en «Próximamente :)» con la mascota. Se conservan los prompts de todo lo que tuvo antes —6 personajes 3D, 18 íconos, 8 láminas de estéticas— por si vuelven; en uso hoy están los 2 fondos y las 8 poses de la mascota.",
+ "proyecto": "ZFiGfVPq",
+ "generador": "submit_model3d_generation (Tripo3D) con texture, pbr y texture_quality detailed. Unos 3 minutos cada uno.",
+ "modelos": [
+  {
+   "archivo": "p-usuario.glb",
+   "nombre": "El monigote",
+   "giro": 0,
+   "prompt": "A friendly stylised humanoid mascot figure standing upright, smooth rounded body with no facial features, made of glossy sky-blue glass-like plastic with a white highlight, simple bulb-shaped head and rounded shoulders, like a 2007 user-account avatar icon rendered in 3D, clean and symmetrical, high gloss"
+  },
+  {
+   "archivo": "p-delfin.glb",
+   "nombre": "El delfín",
+   "giro": -0.55,
+   "prompt": "A stylised dolphin leaping, smooth rounded body, glossy translucent aqua-blue surface with white specular highlights, simplified cartoon proportions, no base, high gloss, clean shapes"
+  },
+  {
+   "archivo": "p-pez.glb",
+   "nombre": "El pez",
+   "giro": 1.5707963267948966,
+   "nota": "Es plano: de frente se ve de canto. El giro de un cuarto de vuelta es obligatorio.",
+   "prompt": "A stylised tropical butterflyfish, wide flat rounded body, bright yellow and white with black bands, glossy wet-looking surface, cartoon proportions, fins spread, high gloss"
+  },
+  {
+   "archivo": "p-robot3.glb",
+   "nombre": "El robot",
+   "giro": 4.7,
+   "nota": "Tercer intento. El 1 fue un amasijo; el 2 tenía el visor en el costado de la cabeza. Lo destrabó pedir 'front view ... facing the viewer' y describir la cara EN EL FRENTE. Aun así salió mirando para atrás, de ahí el giro de 4,7.",
+   "prompt": "Front view of a small friendly toy robot standing facing the viewer, symmetrical, glossy white plastic body with a sky-blue rounded chest plate, a large round head facing straight forward with two big dark round eyes and a small smile on the front of the face, two short arms hanging at the sides, two short legs, no headphones, no side panels on the head, clean simple shapes, high gloss, product render on white"
+  },
+  {
+   "archivo": "p-pajaro.glb",
+   "nombre": "El pajarito",
+   "giro": 0,
+   "prompt": "A stylised cartoon bird standing, plump rounded body, glossy sky-blue and white plastic surface with a small orange beak, simplified wings folded, big friendly shape, no base, high gloss"
+  },
+  {
+   "archivo": "p-medusa.glb",
+   "nombre": "La medusa",
+   "giro": 0,
+   "nota": "Se pide sin color a propósito: ningún generador da vidrio, hornean una textura opaca. El material de vidrio se aplica en el visor y sobre una textura blanca queda limpio.",
+   "prompt": "A stylised jellyfish, smooth domed bell with rounded flowing tentacles gathered underneath, glossy white ceramic-like surface for shape clarity, no colour, clean simple form"
+  }
+ ],
+ "descartados": [
+  "p-robot (intento 1)",
+  "p-robot2 (intento 2)",
+  "fondo-b (la loma caía hacia un lado)"
+ ],
+ "fondos": {
+  "_nota": "Las ilustraciones que tuvo antes el sitio se sacaron: la página es sólo vidrio sobre una foto. Quedan estos dos fondos. Los prompts de las 15 ilustraciones viejas están en la historia de git, en frutiger-aero/imagenes.json.",
+  "fondo.webp": {
+   "de": "lg-a",
+   "size": "1536x864",
+   "prompt": "Deep saturated blue sky filling almost the whole frame, rich cobalt at the top fading to bright azure near the bottom, only a few small crisp white clouds low on the horizon, a thin strip of vivid green grass hill along the very bottom edge, bright clean daylight, no people, no buildings, no text, no watermark, high resolution wallpaper"
+  },
+  "fondo-alto.webp": {
+   "de": "lg-c",
+   "size": "864x1536",
+   "prompt": "Vertical deep saturated blue sky filling almost the whole frame, rich cobalt at the top fading to bright azure lower down, only a few small crisp white clouds near the bottom, a thin strip of vivid green grass along the very bottom edge, bright clean daylight, no people, no buildings, no text, no watermark, phone wallpaper"
+  },
+  "descartados": "lg-b y lg-d, abstractos de tinta azul y violeta: lindos sueltos, pero debajo del vidrio las vetas compiten con el texto. Y cualquier versión con nubes grandes: el blanco lava la página entera."
+ },
+ "iconos": {
+  "_nota": "18 íconos en sitio/img/ic/, 256x256 WebP con alfa, 121 KB en total. Generados con transparent:true, que devuelve PNG con canal alfa; el canvas de Playwright lo conserva al pasarlos a WebP. Todos llevan la misma cola de estilo, que es lo que los hace parecer un juego y no dieciocho dibujos sueltos.",
+  "cola_de_estilo": ". Single centred 3D icon, glossy wet plastic and glass, bright specular highlight on the upper left, soft rim light, vivid sky-blue and cyan palette, clean simple silhouette, isolated on a fully transparent background, no shadow on the ground, no background, no text, no watermark, app icon render",
+  "sujetos": {
+   "i-burbuja": "A single iridescent soap bubble sphere",
+   "i-agua": "A curling splash of clear water forming a wave crest",
+   "i-orbe2": "A glossy candy-like round button, aqua blue, with a bright elliptical gloss covering the top half and a soft glow underneath, like a 2006 web button, nothing inside it",
+   "i-gota": "A single fat water droplet resting on a glossy green leaf",
+   "i-aluminio": "A polished brushed-aluminium rounded bar, cool grey metal with a horizontal grain",
+   "i-ventana": "A translucent blue glass application window with rounded corners and a frosted title bar",
+   "i-vidrio": "Three overlapping translucent blue glass panes floating at slight angles",
+   "i-gel": "A glossy aqua gel capsule button, pill shaped, translucent and wet looking",
+   "i-consola": "A small white glossy game controller, rounded and simple, standing upright",
+   "i-cruz": "A glossy blue cross-shaped directional pad icon floating",
+   "i-musica": "A small glossy white portable music player with a round click wheel",
+   "i-telefono": "A glossy black rectangular smartphone standing upright with a shiny blank screen",
+   "i-inicio": "A glossy blue sphere with a small white cloud passing across its front",
+   "i-personaje": "A smooth glossy blue humanoid mascot bust with no face",
+   "i-reloj": "A glossy glass hourglass with cyan sand",
+   "i-mapa": "A glossy blue glass globe of the earth",
+   "i-apagado": "A power symbol made of cool blue glass, a thick ring with a vertical bar on top",
+   "i-bateria": "A glossy horizontal battery icon made of blue glass, almost empty with one small red bar left"
+  },
+  "trampas": [
+   "Pedir «una figura sola, nada adentro» no alcanza: en tres intentos el generador le metió un monigote de usuario adentro del vidrio. Se resolvió cambiando de sujeto —una ventana de Aero en vez de placas vacías— en vez de insistir con el mismo prompt.",
+   "El primer i-orbe salió como un teléfono. El prompt decía «button» y lo interpretó como botón de llamada; hubo que describir la forma («round button with an elliptical gloss on the top half») en vez de nombrarla.",
+   "De 17 pedidos en un lote, 5 nunca llegaron a existir: fetch devuelve FILE_NOT_FOUND, que es terminal. Hay que reenviarlos, no reintentar el fetch."
+  ]
+ },
+ "esteticas": {
+  "_nota": "Ocho láminas de la sección «Estéticas», en sitio/img/est/. Cada una va dos veces: grande (1280x720) y miniatura (520x330). 1 MB entre las dieciséis.",
+  "cola_de_estilo": ". Wide cinematic composition, rich colour, high detail, no people, no text, no watermark, no logos",
+  "sujetos": {
+   "e-aero": "Frutiger Aero: a sunlit scene of clear water splashing over vivid green grass under a deep blue sky, iridescent soap bubbles floating, a glossy blue orb resting on brushed aluminium, hyper-saturated and wet looking, airbrushed 2007 desktop wallpaper",
+   "e-dreamcore": "Dreamcore: a vast empty pastel landscape at dusk, a single wooden door standing in the middle of shallow still water reflecting a lilac sky with too many small clouds, soft haze, gentle film grain, dreamlike and slightly wrong, nostalgic and lonely",
+   "e-weirdcore": "Weirdcore: a low-resolution oversaturated photo of an empty carpeted hallway, distorted with heavy chromatic aberration and warped perspective, crude glowing arrows and circles drawn over it, JPEG artifacts, uneasy and dizzy",
+   "e-liminal": "Liminal space: an empty indoor swimming pool room at night, drained blue tiles, buzzing fluorescent ceiling lights, no people, no windows, harsh even light, unsettlingly calm, amateur camera photo",
+   "e-vaporwave": "Vaporwave: a classical white marble bust floating over a magenta and cyan gradient sunset with a glowing wireframe grid horizon, palm silhouettes, VHS scanlines, 1980s mall poster",
+   "e-y2k": "Y2K chrome: liquid mercury blobs and polished chrome shapes floating over a silver and electric blue gradient, sharp lens flares, star sparkles, glossy metallic 1999 CD-ROM cover",
+   "e-metro": "Frutiger Metro: flat bright rectangles of lime green, orange and cyan tiling the frame at slight angles, one glossy blue sphere breaking the flatness, clean and graphic, 2011 poster",
+   "e-cassette": "Cassette futurism: a beige plastic control console with chunky square buttons, amber CRT screens glowing, ribbed vents and worn labels, warm tungsten light, 1979 spacecraft interior"
+  }
+ },
+ "pantallas_de_error": {
+  "_nota": "Las cinco pantallas de error NO están generadas: son CSS, en sitio/pantallas.js. Un generador de imágenes devuelve letras deformadas, y una pantalla de error mal escrita no es una pantalla de error. Acá el texto es texto, se lee igual en la miniatura y a pantalla completa, y pesa 3,8 KB en vez de un mega.",
+  "cuales": [
+   "Pantalla azul (Windows NT)",
+   "Kernel panic (Mac OS X)",
+   "Sin señal",
+   "Guru Meditation (Amiga)",
+   "Aero.exe ha dejado de funcionar (Windows Vista)"
+  ],
+  "por_que_dicen_frutiger_aero": "Todas nombran la propia página. Son recreaciones de una estética y nadie tiene que confundirlas ni un segundo con un error de su propia máquina."
+ },
+ "mascota": {
+  "_nota": "Las ocho poses de sitio/img/mascota/. Salen de una imagen de referencia que trajo el dueño, pasada al generador en `source_urls`. La primera vuelta se hizo describiendo al personaje con palabras y salió un cubito de voxels: el cuerpo del personaje es SUAVE y redondeado —mangas que caen, pantalón ancho, manos redondas sin dedos— y sólo el pelo y el visor tienen el escalonado de píxeles. Eso, en palabras, no se acierta. Con la imagen de referencia salió igual a la primera.",
+  "como_pasar_la_referencia": "submit_image_generation acepta `source_urls`, que son URLs y no archivos. La referencia se publicó un rato en el propio sitio, bajo un nombre al azar, se generó, y se sacó en el despliegue siguiente.",
+  "cabeza_del_prompt": "The exact same character as in the reference image: same proportions, same colours, same smooth rounded body with soft draping sleeves and wide baggy trousers, same round mitten hands, same chunky stair-stepped pixel hair, same mirrored visor and headphones. Keep it identical — only change the pose: ",
+  "cola": ". Full body, isolated on a fully transparent background, no ground shadow, no red background, no text, no watermark.",
+  "poses": {
+   "m-saludando": "standing straight facing the viewer and waving one hand",
+   "m-burbuja": "sitting cross-legged inside a large clear soap bubble, filling most of the bubble, floating. The bubble is a thin bright transparent film with pale rainbow highlights, almost invisible, NOT dark and NOT black",
+   "m-nube": "sitting on a small fluffy white cloud with the legs dangling",
+   "m-juego": "holding a small retro grey gamepad in both hands and looking down at it",
+   "m-agua": "floating underwater with three little tropical fish and bubbles around it",
+   "m-surf": "riding a small curl of clear water like a surfboard, arms out for balance",
+   "m-paz": "crouching down and making a peace sign with one hand",
+   "m-dormido": "curled up asleep on its side, hugging a glossy blue sphere"
+  },
+  "en_uso": "m-saludando en la página. Las otras siete quedan listas para cuando haya más que un cartel.",
+  "nota_de_la_burbuja": "La primera burbuja salió negra y turbia: al pedir «iridiscente» el generador la hizo opaca. Hubo que decirle en negativo lo que NO tenía que ser: «thin bright transparent film, almost invisible, NOT dark and NOT black»."
+ },
+ "modelo_de_la_mascota": {
+  "archivo": "sitio/modelos/mascota3d.<hash>.glb",
+  "como_se_hizo": "Se generó primero una pose A de frente con la imagen de referencia del dueño (m-pose3d), se publicó, y esa se le pasó a submit_model3d_generation en `source_url`. Una foto en pose A y de frente reconstruye mucho mejor que una saludando: el brazo levantado le come la silueta.",
+  "prompt_de_la_pose": "Front view, standing perfectly straight and symmetrical, facing the camera dead on, both arms hanging slightly away from the body in a relaxed A-pose, feet apart, neutral. Whole body visible head to toe, evenly lit with no harsh shadows.",
+  "crudo": "30 MB",
+  "optimizado": "538 KB — simplify 0.014 / error 0.004, resize 1024, webp 78, prune",
+  "giro_de_frente": 4.71,
+  "nota": "Sin huesos: una malla sola. Las animaciones son procedurales, en sitio/js/mascota.js. Los tres períodos (4, 2 y 6 s) son distintos a propósito para que el conjunto no se repita a la vista."
+ },
+ "rig": {
+  "como": "submit_rig3d_generation con el source_task_id del modelo. Sin pasarle `animations` devolvió tres presets: walk, idle y jump. 41 huesos.",
+  "crudo": "42 MB",
+  "optimizado": "1,67 MB — simplify 0.008 / error 0.006, resize 256, webp 72, quantize, prune, y walk sacado a mano del JSON del GLB más un prune después.",
+  "cuidados": [
+   "`simplify` sobre una malla con skin tiene un piso: no baja de ~28 mil vértices por más que se le pida menos.",
+   "`quantize` sí sirve y GLTFLoader lo lee de fábrica (KHR_mesh_quantization): 2,46 MB → 1,79 MB.",
+   "La escala del modelo va en un envoltorio, nunca en el nodo del skin: eso desalinea los huesos.",
+   "El encuadre se mide por las posiciones de los huesos, no con Box3.setFromObject, que devuelve la caja de la pose de amarre."
+  ]
+ }
+}

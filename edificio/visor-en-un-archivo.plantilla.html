@@ -1,0 +1,460 @@
+<title>Torre 111</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Ficha de obra sobre la vista: panel de instrumento oscuro, tipografía de
+   plano —grotesca para los rótulos, monoespaciada para las cotas— y un ámbar
+   de línea de cota como único color fuerte. Es una sola atmósfera a propósito:
+   el fondo de la página es la propia vista renderizada. */
+:root{
+  --noche:#0d1014;
+  --panel:rgba(16,21,28,.78);
+  --panel-solido:#11161d;
+  --linea:rgba(198,214,236,.15);
+  --tiza:#e7edf5;
+  --tenue:#8d9bad;
+  --cota:#f0a24a;
+  --sombra:0 18px 44px rgba(0,0,0,.5);
+  --paso:14px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--noche); color:var(--tiza); overflow:hidden;
+  font:400 14px/1.55 Archivo,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+canvas{display:block; touch-action:none}
+.rotulo{
+  font-weight:600; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--tenue);
+}
+.cifra{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-numeric:tabular-nums}
+
+/* ---------------- carga ---------------- */
+#carga{
+  position:fixed; inset:0; z-index:40; display:grid; place-content:center; gap:20px;
+  background:radial-gradient(130% 100% at 50% 15%,#1a2432 0%,#0d1014 68%);
+  transition:opacity .7s ease;
+}
+#carga.ido{opacity:0; pointer-events:none}
+#carga .marca{text-align:center}
+#carga h1{margin:0; font-size:19px; font-weight:700; letter-spacing:.22em; text-transform:uppercase}
+#carga .marca p{margin:5px 0 0; font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--tenue)}
+#altura{
+  text-align:center; font-size:34px; font-weight:500; letter-spacing:-.01em;
+  color:var(--cota);
+}
+#altura span{font-size:15px; color:var(--tenue); margin-left:2px}
+#riel{width:min(74vw,320px); height:2px; background:rgba(231,237,245,.14); overflow:hidden}
+#riel i{display:block; height:100%; width:0; background:var(--cota); transition:width .4s cubic-bezier(.4,0,.2,1)}
+
+/* ---------------- ficha ---------------- */
+#ficha{
+  position:fixed; left:var(--paso); bottom:var(--paso); z-index:20; width:252px;
+  max-height:calc(100vh - var(--paso) * 2); overflow-y:auto;
+  background:var(--panel); border:1px solid var(--linea); box-shadow:var(--sombra);
+  backdrop-filter:blur(16px) saturate(1.25); -webkit-backdrop-filter:blur(16px) saturate(1.25);
+}
+#ficha > *{padding:0 15px}
+#ficha header{padding-top:14px; padding-bottom:12px; border-bottom:1px solid var(--linea)}
+#ficha h2{margin:0; font-size:15px; font-weight:700; letter-spacing:.12em; text-transform:uppercase}
+#ficha header p{margin:3px 0 0; font-size:11px; color:var(--tenue)}
+
+/* las cotas: rótulo a la izquierda, valor monoespaciado a la derecha, mismos
+   ejes en todas las filas para que se lean como una columna de medidas */
+dl{display:grid; grid-template-columns:1fr auto; gap:5px 12px; margin:12px 0 13px}
+dt{font-weight:600; font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--tenue)}
+dd{margin:0; text-align:right; font-family:"IBM Plex Mono",monospace; font-size:12px; font-variant-numeric:tabular-nums}
+dd em{font-style:normal; color:var(--tenue); font-size:10.5px; margin-left:1px}
+
+.mandos{padding-top:12px; padding-bottom:14px; border-top:1px solid var(--linea)}
+.fila{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px}
+.fila label{font-weight:600; font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--tenue)}
+.fila output{font-family:"IBM Plex Mono",monospace; font-size:11.5px; font-variant-numeric:tabular-nums; min-width:3em; text-align:right}
+input[type=range]{-webkit-appearance:none; appearance:none; width:98px; height:16px; background:none; cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px; background:rgba(231,237,245,.2)}
+input[type=range]::-moz-range-track{height:2px; background:rgba(231,237,245,.2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:11px; height:11px; margin-top:-4.5px; background:var(--cota)}
+input[type=range]::-moz-range-thumb{width:11px; height:11px; border:0; border-radius:0; background:var(--cota)}
+input[type=range]:focus-visible{outline:2px solid var(--cota); outline-offset:3px}
+
+.grupo{display:flex; gap:1px; margin-top:10px; background:var(--linea)}
+.grupo button{
+  flex:1; padding:6px 4px; font:600 10px/1.4 Archivo,sans-serif; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--tenue); background:var(--panel-solido);
+  border:0; cursor:pointer; transition:color .15s,background .15s;
+}
+.grupo button:hover{color:var(--tiza)}
+.grupo button[aria-pressed=true]{color:#14100a; background:var(--cota)}
+.grupo button:focus-visible{outline:2px solid var(--cota); outline-offset:-2px}
+
+/* ---------------- telemetría ---------------- */
+#telemetria{
+  position:fixed; right:var(--paso); top:var(--paso); z-index:20; padding:9px 13px;
+  display:grid; grid-template-columns:auto auto; gap:2px 14px; align-items:baseline;
+  background:var(--panel); border:1px solid var(--linea); box-shadow:var(--sombra);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+}
+#telemetria b{font-family:"IBM Plex Mono",monospace; font-weight:500; font-size:12.5px; font-variant-numeric:tabular-nums; text-align:right}
+#telemetria span{font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--tenue)}
+
+#pista{
+  position:fixed; left:50%; bottom:calc(var(--paso) + 4px); transform:translateX(-50%); z-index:19;
+  margin:0; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--tenue);
+  text-shadow:0 1px 10px #000; pointer-events:none; transition:opacity .8s ease;
+}
+
+/* ---------------- si no hay 3D ---------------- */
+#respaldo{
+  position:fixed; inset:0; z-index:45; display:none; place-content:center; gap:18px;
+  padding:24px; background:var(--noche); text-align:center; overflow:auto;
+}
+#respaldo img{max-width:min(88vw,420px); max-height:64vh; border:1px solid var(--linea)}
+#respaldo p{max-width:38ch; margin:0 auto; font-size:13px; color:var(--tenue)}
+
+@media (max-width:720px){
+  #ficha{left:8px; right:8px; bottom:8px; width:auto}
+  dl{grid-template-columns:1fr auto 1fr auto}
+  #pista{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important; transition-duration:.01ms !important}
+}
+</style>
+
+<div id="carga">
+  <div class="marca">
+    <h1>Torre 111</h1>
+    <p>Blender · PBR · cielo HDRI</p>
+  </div>
+  <div id="altura" class="cifra">0,0<span>m</span></div>
+  <div id="riel"><i></i></div>
+</div>
+
+<div id="respaldo">
+  <div>
+    <img id="respaldoImg" alt="La torre renderizada en Cycles: fachada de vidrio con aletas verticales, pantalla de hormigón y podio sobre la vereda.">
+    <p id="respaldoTexto">Tu navegador no puede dibujar en 3D, así que va el render de Cycles.</p>
+  </div>
+</div>
+
+<aside id="ficha" hidden>
+  <header>
+    <h2>Torre 111</h2>
+    <p>Oficinas · hormigón, aluminio y muro cortina</p>
+  </header>
+
+  <dl>
+    <dt>Altura total</dt>   <dd>111,6<em> m</em></dd>
+    <dt>Plantas</dt>        <dd>21<em> + podio</em></dd>
+    <dt>Planta tipo</dt>    <dd>20 × 14<em> m</em></dd>
+    <dt>Entrepiso</dt>      <dd>3,80<em> m</em></dd>
+    <dt>Retiro</dt>         <dd>piso 13<em>, 4 m</em></dd>
+    <dt>Aletas</dt>         <dd>cada 1,70<em> m</em></dd>
+  </dl>
+
+  <div class="mandos">
+    <div class="fila">
+      <label for="exp">Exposición</label>
+      <input id="exp" type="range" min="0.2" max="1.4" step="0.02" value="0.62">
+      <output id="expV" class="cifra">0,62</output>
+    </div>
+    <div class="fila">
+      <label for="flor">Floración</label>
+      <input id="flor" type="range" min="0" max="0.8" step="0.02" value="0.24">
+      <output id="florV" class="cifra">0,24</output>
+    </div>
+    <div class="grupo">
+      <button id="btAo" aria-pressed="true">Oclusión</button>
+      <button id="btGira" aria-pressed="true">Girar</button>
+    </div>
+    <div class="grupo">
+      <button data-calidad="alta">Alta</button>
+      <button data-calidad="media" aria-pressed="true">Media</button>
+      <button data-calidad="baja">Baja</button>
+    </div>
+  </div>
+</aside>
+
+<div id="telemetria" hidden>
+  <b id="fps">--</b><span>fps</span>
+  <b id="tris">--</b><span>triáng.</span>
+  <b id="llam">--</b><span>llamadas</span>
+</div>
+
+<p id="pista">Arrastrá para girar · rueda para acercar</p>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls }  from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader }     from "three/addons/loaders/GLTFLoader.js";
+import { RGBELoader }     from "three/addons/loaders/RGBELoader.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass }     from "three/addons/postprocessing/RenderPass.js";
+import { SSAOPass }       from "three/addons/postprocessing/SSAOPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass }     from "three/addons/postprocessing/OutputPass.js";
+import { SMAAPass }       from "three/addons/postprocessing/SMAAPass.js";
+
+const $ = (s) => document.querySelector(s);
+const ALTO_REAL = 111.6;
+
+/* Los archivos viajan adentro de la página: el sandbox de este visor sólo deja
+   traer scripts de un CDN, nada de fetch a otro origen. Así que en vez de
+   pedirlos por red se decodifican en memoria y se parsean directo, sin fetch. */
+const B64 = { modelo: "__GLB__", cielo: "__HDR__" };
+
+function aBytes(b64){
+  const cr = atob(b64), u = new Uint8Array(cr.length);
+  for (let i = 0; i < cr.length; i++) u[i] = cr.charCodeAt(i);
+  return u;
+}
+
+/* ---------- carga: el contador sube en metros, que es la altura real ---------- */
+let hecho = 0;
+const ETAPAS = 3;
+function etapa(){
+  hecho++;
+  const v = hecho / ETAPAS;
+  $("#riel i").style.width = (v * 100) + "%";
+  $("#altura").innerHTML = (ALTO_REAL * v).toFixed(1).replace(".", ",") + "<span>m</span>";
+}
+
+function rendirse(texto){
+  $("#respaldoImg").src = "data:image/jpeg;base64,__POSTER__";
+  if (texto) $("#respaldoTexto").textContent = texto;
+  $("#respaldo").style.display = "grid";
+  $("#carga").classList.add("ido");
+}
+
+/* ---------- renderizador ---------- */
+let ren;
+try {
+  ren = new THREE.WebGLRenderer({ antialias:false, powerPreference:"high-performance" });
+  if (!ren.capabilities.isWebGL2) throw new Error("hace falta WebGL 2");
+} catch (e) {
+  rendirse("Tu navegador no puede dibujar en 3D (" + e.message + "), así que va el render de Cycles.");
+  throw e;
+}
+ren.setSize(innerWidth, innerHeight);
+ren.outputColorSpace = THREE.SRGBColorSpace;
+ren.toneMapping = THREE.ACESFilmicToneMapping;   // lo aplica el OutputPass
+ren.toneMappingExposure = 0.62;
+ren.shadowMap.enabled = true;
+ren.shadowMap.type = THREE.PCFSoftShadowMap;
+ren.info.autoReset = false;      // si no, el último pase pisa la cuenta
+document.body.appendChild(ren.domElement);
+
+const escena = new THREE.Scene();
+escena.fog = new THREE.Fog(0xa8b6c6, 380, 2600);
+
+const camara = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 3, 6000);
+camara.position.set(86, 28, -112);
+
+const mando = new OrbitControls(camara, ren.domElement);
+mando.enableDamping = true;
+mando.dampingFactor = 0.055;
+mando.target.set(0, 48, 0);
+mando.minDistance = 40;
+mando.maxDistance = 420;
+mando.maxPolarAngle = Math.PI * 0.495;    // que no se meta abajo del piso
+mando.autoRotate = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+mando.autoRotateSpeed = 0.32;
+$("#btGira").setAttribute("aria-pressed", String(mando.autoRotate));
+
+const sol = new THREE.DirectionalLight(0xffe9cf, 2.6);
+sol.position.set(-190, 120, 95);
+sol.castShadow = true;
+sol.shadow.mapSize.set(2048, 2048);
+const sc = sol.shadow.camera;
+sc.left = -110; sc.right = 110; sc.top = 150; sc.bottom = -30; sc.near = 1; sc.far = 520;
+sol.shadow.bias = -0.0006;
+sol.shadow.normalBias = 0.6;
+sol.target.position.set(0, 30, 0);
+escena.add(sol, sol.target);
+
+/* ---------- cielo ---------- */
+/* RGBELoader.load() haría un fetch; acá se usa su parse() a mano y se arma la
+   textura como la arma DataTextureLoader. Si algo falla, un degradé de cielo
+   alcanza para iluminar: la página nunca se queda sin entorno. */
+function armarCielo(){
+  try {
+    const d = new RGBELoader().parse(aBytes(B64.cielo).buffer);
+    const t = new THREE.DataTexture(d.data, d.width, d.height, THREE.RGBAFormat, d.type);
+    t.colorSpace = THREE.LinearSRGBColorSpace;
+    t.minFilter = t.magFilter = THREE.LinearFilter;
+    t.generateMipmaps = false;
+    t.flipY = true;
+    t.needsUpdate = true;
+    return t;
+  } catch (e) {
+    const c = document.createElement("canvas");
+    c.width = 8; c.height = 256;
+    const g = c.getContext("2d").createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0, "#1d3f6e"); g.addColorStop(.46, "#9fbcd8");
+    g.addColorStop(.52, "#cbb99a"); g.addColorStop(1, "#4a4238");
+    const cx = c.getContext("2d"); cx.fillStyle = g; cx.fillRect(0, 0, 8, 256);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }
+}
+
+let compuesta, ao, floracion, tris = 0;
+
+requestAnimationFrame(() => {
+  const cielo = armarCielo();
+  cielo.mapping = THREE.EquirectangularReflectionMapping;
+  const pmrem = new THREE.PMREMGenerator(ren);
+  escena.environment = pmrem.fromEquirectangular(cielo).texture;
+  escena.background = cielo;
+  escena.backgroundBlurriness = 0.015;
+  etapa();
+
+  new GLTFLoader().parse(aBytes(B64.modelo).buffer, "", (gltf) => {
+    /* El HDRI tiene el hemisferio de abajo casi negro y entre el borde del
+       suelo y el horizonte quedaba una franja oscura; este plano, teñido por
+       la niebla, la tapa y funde el suelo con el cielo. */
+    const horizonte = new THREE.Mesh(
+      new THREE.PlaneGeometry(40000, 40000),
+      new THREE.MeshBasicMaterial({ color: 0x8a8175 }));
+    horizonte.rotation.x = -Math.PI / 2;
+    horizonte.position.y = -0.7;
+    escena.add(horizonte);
+
+    gltf.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = o.receiveShadow = true;
+      const g = o.geometry;
+      tris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
+      const m = o.material;
+      if (m) {
+        /* Scene.environmentIntensity recién existe desde r163: acá la perilla
+           del ambiente es ésta, material por material. */
+        m.envMapIntensity = 0.45;
+        if (m.map) m.map.anisotropy = Math.min(8, ren.capabilities.getMaxAnisotropy());
+        m.needsUpdate = true;
+      }
+      if (o.name.startsWith("grupo_calle") || o.name.startsWith("suelo")) o.castShadow = false;
+    });
+    escena.add(gltf.scene);
+    etapa();
+
+    armarCompuesta();
+    etapa();
+    $("#tris").textContent = Math.round(tris).toLocaleString("es-AR");
+    $("#ficha").hidden = $("#telemetria").hidden = false;
+    setTimeout(() => $("#carga").classList.add("ido"), 260);
+    setTimeout(() => { $("#pista").style.opacity = 0; }, 6000);
+  }, (e) => rendirse("No se pudo leer el modelo (" + (e && e.message || e) + "), así que va el render de Cycles."));
+});
+
+/* ---------- cadena de post ---------- */
+/* La calidad no cambia sólo la resolución: en baja se saltea la oclusión, que
+   es de lejos el pase más caro, y en alta se suma el suavizado SMAA. */
+const CALIDAD = {
+  alta:  { escala: Math.min(devicePixelRatio, 2),   ao:true,  smaa:true  },
+  media: { escala: Math.min(devicePixelRatio, 1.5), ao:true,  smaa:false },
+  baja:  { escala: 1,                               ao:false, smaa:false },
+};
+let calidad = "media", quiereAo = true;
+
+function armarCompuesta(){
+  const c = CALIDAD[calidad], usaAo = c.ao && quiereAo;
+  if (compuesta) compuesta.dispose();
+  ren.setPixelRatio(c.escala);
+  compuesta = new EffectComposer(ren);
+  compuesta.setSize(innerWidth, innerHeight);
+
+  /* SSAOPass no dibuja la escena: toma el readBuffer y le multiplica la
+     oclusión encima. Sin un RenderPass adelante sale todo negro y sin errores. */
+  compuesta.addPass(new RenderPass(escena, camara));
+  if (usaAo) {
+    ao = new SSAOPass(escena, camara, innerWidth, innerHeight);
+    /* minDistance y maxDistance son fracciones del rango near–far, no metros:
+       con near 3 y far 6000 esto es más o menos 2,4 m y 72 m */
+    ao.kernelRadius = 8;
+    ao.minDistance = 0.0004;
+    ao.maxDistance = 0.012;
+    compuesta.addPass(ao);
+  } else {
+    ao = null;
+  }
+  floracion = new UnrealBloomPass(
+    new THREE.Vector2(innerWidth, innerHeight), parseFloat($("#flor").value), 0.55, 1.0);
+  compuesta.addPass(floracion);
+  compuesta.addPass(new OutputPass());
+  if (c.smaa) compuesta.addPass(new SMAAPass(innerWidth, innerHeight));
+}
+
+/* ---------- mandos ---------- */
+const coma = (v) => v.replace(".", ",");
+$("#exp").addEventListener("input", (e) => {
+  ren.toneMappingExposure = parseFloat(e.target.value);
+  $("#expV").textContent = coma(e.target.value);
+});
+$("#flor").addEventListener("input", (e) => {
+  if (floracion) floracion.strength = parseFloat(e.target.value);
+  $("#florV").textContent = coma(e.target.value);
+});
+$("#btAo").addEventListener("click", (e) => {
+  quiereAo = !quiereAo;
+  e.currentTarget.setAttribute("aria-pressed", String(quiereAo));
+  if (compuesta) armarCompuesta();
+});
+$("#btGira").addEventListener("click", (e) => {
+  mando.autoRotate = !mando.autoRotate;
+  e.currentTarget.setAttribute("aria-pressed", String(mando.autoRotate));
+});
+document.querySelectorAll("[data-calidad]").forEach((b) => {
+  b.addEventListener("click", () => {
+    calidad = b.dataset.calidad;
+    document.querySelectorAll("[data-calidad]").forEach(
+      (o) => o.setAttribute("aria-pressed", String(o === b)));
+    if (compuesta) armarCompuesta();
+  });
+});
+/* si el que mira agarra el edificio, el giro solo se corta: es lo que uno espera */
+ren.domElement.addEventListener("pointerdown", () => {
+  if (!mando.autoRotate) return;
+  mando.autoRotate = false;
+  $("#btGira").setAttribute("aria-pressed", "false");
+});
+
+addEventListener("resize", () => {
+  camara.aspect = innerWidth / innerHeight;
+  camara.updateProjectionMatrix();
+  ren.setSize(innerWidth, innerHeight);
+  if (compuesta) compuesta.setSize(innerWidth, innerHeight);
+});
+
+/* ---------- lazo ---------- */
+const reloj = new THREE.Clock();
+let cuadros = 0, desde = performance.now();
+(function lazo(){
+  requestAnimationFrame(lazo);
+  const d = Math.min(reloj.getDelta(), .05);
+  mando.update(d);
+  if (!compuesta) return;
+  ren.info.reset();
+  compuesta.render(d);
+  cuadros++;
+  const ahora = performance.now();
+  if (ahora - desde >= 1000){
+    $("#fps").textContent = Math.round(cuadros * 1000 / (ahora - desde));
+    $("#llam").textContent = ren.info.render.calls;
+    cuadros = 0; desde = ahora;
+  }
+})();
+</script>

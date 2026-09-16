@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Torre — visor 3D</title>
+<meta name="description" content="Un edificio hecho en Blender, con materiales PBR y cielo HDRI, mirándose en el navegador.">
+<style>
+  :root{
+    --tinta:#0b0d11; --panel:rgba(16,19,26,.72); --linea:rgba(255,255,255,.12);
+    --papel:#e9edf4; --tenue:#94a0b4; --ac:#5db1ff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--tinta); color:var(--papel); overflow:hidden;
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  canvas{display:block; touch-action:none}
+
+  /* ---- carga ---- */
+  #carga{
+    position:fixed; inset:0; z-index:30; display:grid; place-content:center;
+    gap:18px; background:radial-gradient(120% 90% at 50% 20%,#182231,#080a0e 70%);
+    transition:opacity .6s ease;
+  }
+  #carga.ido{opacity:0; pointer-events:none}
+  #carga h1{margin:0; font-size:15px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; text-align:center}
+  #barra{width:min(70vw,340px); height:3px; background:rgba(255,255,255,.12); border-radius:99px; overflow:hidden}
+  #barra i{display:block; height:100%; width:0; background:var(--ac); transition:width .25s ease}
+  #pct{text-align:center; color:var(--tenue); font-variant-numeric:tabular-nums; font-size:12px; letter-spacing:.08em}
+
+  /* ---- panel ---- */
+  #hud{
+    position:fixed; left:14px; bottom:14px; z-index:20; width:230px; padding:14px 14px 12px;
+    background:var(--panel); border:1px solid var(--linea); border-radius:14px;
+    backdrop-filter:blur(14px) saturate(1.3); -webkit-backdrop-filter:blur(14px) saturate(1.3);
+  }
+  #hud h2{margin:0 0 2px; font-size:13px; letter-spacing:.06em}
+  #hud .sub{margin:0 0 11px; color:var(--tenue); font-size:11.5px}
+  .fila{display:flex; align-items:center; justify-content:space-between; gap:10px; margin:7px 0}
+  .fila label{color:var(--tenue); font-size:11.5px}
+  .fila output{color:var(--papel); font-size:11.5px; font-variant-numeric:tabular-nums; min-width:2.6em; text-align:right}
+  input[type=range]{-webkit-appearance:none; appearance:none; width:104px; height:16px; background:none}
+  input[type=range]::-webkit-slider-runnable-track{height:3px; border-radius:99px; background:rgba(255,255,255,.18)}
+  input[type=range]::-moz-range-track{height:3px; border-radius:99px; background:rgba(255,255,255,.18)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:12px; height:12px; margin-top:-4.5px; border-radius:50%; background:var(--ac); cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:12px; height:12px; border:0; border-radius:50%; background:var(--ac); cursor:pointer}
+  .conmuta{display:flex; gap:5px; margin-top:10px; flex-wrap:wrap}
+  .conmuta button{
+    flex:1 1 auto; padding:5px 7px; font:inherit; font-size:11px; color:var(--tenue); cursor:pointer;
+    background:rgba(255,255,255,.05); border:1px solid var(--linea); border-radius:8px;
+  }
+  .conmuta button[aria-pressed=true]{color:#04121e; background:var(--ac); border-color:transparent; font-weight:600}
+  .conmuta button:hover{color:var(--papel)}
+  .conmuta button[aria-pressed=true]:hover{color:#04121e}
+
+  #datos{
+    position:fixed; right:14px; top:14px; z-index:20; padding:9px 12px; text-align:right;
+    background:var(--panel); border:1px solid var(--linea); border-radius:12px;
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    color:var(--tenue); font-size:11px; line-height:1.7; font-variant-numeric:tabular-nums;
+  }
+  #datos b{color:var(--papel); font-weight:600}
+  #pista{
+    position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:20;
+    color:var(--tenue); font-size:11.5px; letter-spacing:.05em; pointer-events:none;
+    text-shadow:0 1px 8px #000; transition:opacity .5s;
+  }
+  #falla{
+    position:fixed; inset:0; z-index:40; display:none; place-content:center; padding:28px;
+    background:var(--tinta); text-align:center;
+  }
+  #falla p{max-width:34em; color:var(--tenue)}
+  @media (max-width:640px){
+    #hud{left:10px; right:10px; bottom:10px; width:auto}
+    #pista{display:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="carga">
+  <h1>Torre</h1>
+  <div id="barra"><i></i></div>
+  <div id="pct">0 %</div>
+</div>
+
+<div id="falla">
+  <div>
+    <h2>No se pudo abrir el visor</h2>
+    <p id="fallaTexto">Hace falta un navegador con WebGL 2.</p>
+  </div>
+</div>
+
+<aside id="hud" hidden>
+  <h2>Torre</h2>
+  <p class="sub">Blender · PBR · cielo HDRI</p>
+
+  <div class="fila">
+    <label for="exp">Exposición</label>
+    <input id="exp" type="range" min="0.15" max="1.6" step="0.02" value="0.62">
+    <output id="expV">0.62</output>
+  </div>
+  <div class="fila">
+    <label for="flor">Floración</label>
+    <input id="flor" type="range" min="0" max="1" step="0.02" value="0.24">
+    <output id="florV">0.24</output>
+  </div>
+
+  <div class="conmuta">
+    <button id="btAo"   aria-pressed="true">Oclusión</button>
+    <button id="btGira" aria-pressed="true">Girar</button>
+  </div>
+  <div class="conmuta">
+    <button data-calidad="alta">Alta</button>
+    <button data-calidad="media" aria-pressed="true">Media</button>
+    <button data-calidad="baja">Baja</button>
+  </div>
+</aside>
+
+<div id="datos" hidden>
+  <div><b id="fps">--</b> fps</div>
+  <div><b id="tris">--</b> triángulos</div>
+  <div><b id="llam">--</b> llamadas</div>
+</div>
+
+<p id="pista">Arrastrá para girar · rueda para acercar</p>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader }    from "three/addons/loaders/GLTFLoader.js";
+import { RGBELoader }    from "three/addons/loaders/RGBELoader.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass }     from "three/addons/postprocessing/RenderPass.js";
+import { SSAOPass }       from "three/addons/postprocessing/SSAOPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass }     from "three/addons/postprocessing/OutputPass.js";
+import { SMAAPass }       from "three/addons/postprocessing/SMAAPass.js";
+
+const MODELO = "./torre.glb";
+const CIELO  = "./cielo.hdr";
+
+const $ = (s) => document.querySelector(s);
+const carga = $("#carga"), barra = $("#barra i"), pct = $("#pct");
+
+function morir(texto){
+  $("#fallaTexto").textContent = texto;
+  $("#falla").style.display = "grid";
+  carga.classList.add("ido");
+}
+
+/* ---------- renderizador ---------- */
+let ren;
+try {
+  ren = new THREE.WebGLRenderer({ antialias:false, powerPreference:"high-performance" });
+  if (!ren.capabilities.isWebGL2) throw new Error("sin WebGL 2");
+} catch (e) {
+  morir("Este navegador no puede dibujar en 3D: " + e.message);
+  throw e;
+}
+ren.setSize(innerWidth, innerHeight);
+ren.outputColorSpace = THREE.SRGBColorSpace;
+ren.toneMapping = THREE.ACESFilmicToneMapping;   // lo aplica el OutputPass
+ren.toneMappingExposure = 0.62;
+ren.shadowMap.enabled = true;
+ren.shadowMap.type = THREE.PCFSoftShadowMap;
+ren.info.autoReset = false;   // si no, cada pase pisa la cuenta anterior
+document.body.appendChild(ren.domElement);
+
+const escena = new THREE.Scene();
+escena.fog = new THREE.Fog(0xa8b6c6, 380, 2600);
+const camara = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 3, 6000);
+camara.position.set(86, 28, -112);
+
+const mando = new OrbitControls(camara, ren.domElement);
+mando.enableDamping = true;
+mando.dampingFactor = 0.055;
+mando.target.set(0, 48, 0);
+mando.minDistance = 40;
+mando.maxDistance = 420;
+mando.maxPolarAngle = Math.PI * 0.495;   // que no se meta abajo del piso
+mando.autoRotate = true;
+mando.autoRotateSpeed = 0.35;
+
+/* ---------- sol ---------- */
+const sol = new THREE.DirectionalLight(0xffe9cf, 2.6);
+sol.position.set(-190, 120, 95);
+sol.castShadow = true;
+sol.shadow.mapSize.set(2048, 2048);
+const s = sol.shadow.camera;
+s.left = -110; s.right = 110; s.top = 150; s.bottom = -30; s.near = 1; s.far = 520;
+sol.shadow.bias = -0.0006;
+sol.shadow.normalBias = 0.6;
+escena.add(sol, sol.target);
+sol.target.position.set(0, 30, 0);
+
+/* ---------- carga ---------- */
+/* Dos archivos con pesos distintos: la barra los pondera para que no salte. */
+const PESOS = { cielo: 0.22, modelo: 0.78 };
+const avance = { cielo: 0, modelo: 0 };
+function refrescar(){
+  const v = avance.cielo * PESOS.cielo + avance.modelo * PESOS.modelo;
+  barra.style.width = (v * 100).toFixed(1) + "%";
+  pct.textContent = Math.round(v * 100) + " %";
+}
+const mirar = (clave) => (e) => {
+  if (e.lengthComputable) { avance[clave] = e.loaded / e.total; refrescar(); }
+};
+
+const pmrem = new THREE.PMREMGenerator(ren);
+pmrem.compileEquirectangularShader();
+
+const pCielo = new Promise((ok, mal) =>
+  new RGBELoader().load(CIELO, ok, mirar("cielo"), mal));
+const pModelo = new Promise((ok, mal) =>
+  new GLTFLoader().load(MODELO, ok, mirar("modelo"), mal));
+
+let tris = 0, compuesta, ao, floracion;
+
+Promise.all([pCielo, pModelo]).then(([hdr, gltf]) => {
+  hdr.mapping = THREE.EquirectangularReflectionMapping;
+  const entorno = pmrem.fromEquirectangular(hdr).texture;
+  escena.environment = entorno;
+  escena.background = hdr;                 // el cielo crudo se ve mejor de fondo
+  escena.backgroundBlurriness = 0.015;
+  hdr.colorSpace = THREE.LinearSRGBColorSpace;
+
+  /* El HDRI tiene el hemisferio de abajo casi negro, y entre el borde del piso
+     del modelo y la línea del horizonte quedaba una franja oscura. Un plano
+     enorme y liso, teñido por la niebla, la tapa y funde el suelo con el cielo. */
+  const horizonte = new THREE.Mesh(
+    new THREE.PlaneGeometry(40000, 40000),
+    new THREE.MeshBasicMaterial({ color: 0x8a8175 }));
+  horizonte.rotation.x = -Math.PI / 2;
+  horizonte.position.y = -0.7;
+  escena.add(horizonte);
+
+  const torre = gltf.scene;
+  torre.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = true;
+    tris += o.geometry.index ? o.geometry.index.count/3 : o.geometry.attributes.position.count/3;
+    const m = o.material;
+    if (m) {
+      m.envMapIntensity = 0.45;
+      if (m.map) m.map.anisotropy = Math.min(8, ren.capabilities.getMaxAnisotropy());
+      m.needsUpdate = true;
+    }
+    /* el suelo enorme no tiene por qué tirar sombra sobre sí mismo */
+    if (o.name.startsWith("suelo")) o.castShadow = false;
+  });
+  escena.add(torre);
+
+  armarCompuesta();
+  $("#tris").textContent = Math.round(tris).toLocaleString("es-AR");
+  $("#hud").hidden = $("#datos").hidden = false;
+  carga.classList.add("ido");
+  setTimeout(() => { const p = $("#pista"); if (p) p.style.opacity = 0; }, 5200);
+}).catch((e) => {
+  morir("No se pudieron cargar los archivos del edificio. " + (e && e.message ? e.message : ""));
+});
+
+/* ---------- cadena de post ---------- */
+/* La calidad no cambia sólo la resolución: en baja se saltea la oclusión, que
+   es de lejos el paso más caro, y en alta se agrega el suavizado SMAA. */
+const CALIDAD = {
+  alta:  { escala: Math.min(devicePixelRatio, 2),   ao:true,  smaa:true  },
+  media: { escala: Math.min(devicePixelRatio, 1.5), ao:true,  smaa:false },
+  baja:  { escala: 1,                                ao:false, smaa:false },
+};
+let calidad = "media";
+let quiereAo = true;
+
+function armarCompuesta(){
+  const c = CALIDAD[calidad];
+  const usaAo = c.ao && quiereAo;
+  if (compuesta) compuesta.dispose();
+  ren.setPixelRatio(c.escala);
+  compuesta = new EffectComposer(ren);
+  compuesta.setSize(innerWidth, innerHeight);
+
+  /* SSAOPass en esta versión NO dibuja la escena: en su modo Default toma el
+     readBuffer y le multiplica la oclusión encima. Sin un RenderPass delante
+     el readBuffer está vacío y sale todo negro, sin ningún error en consola.
+     (Versiones viejas sí renderizaban solas; de ahí la confusión.) */
+  compuesta.addPass(new RenderPass(escena, camara));
+  if (usaAo) {
+    ao = new SSAOPass(escena, camara, innerWidth, innerHeight);
+    /* minDistance y maxDistance son fracciones del rango near-far, no metros:
+       con near 3 y far 6000 esto son ~2,4 m y ~72 m */
+    ao.kernelRadius = 8;
+    ao.minDistance = 0.0004;
+    ao.maxDistance = 0.012;
+    compuesta.addPass(ao);
+  } else {
+    ao = null;
+  }
+
+  floracion = new UnrealBloomPass(
+    new THREE.Vector2(innerWidth, innerHeight), 0.24, 0.55, 1.0);
+  compuesta.addPass(floracion);
+  compuesta.addPass(new OutputPass());
+  if (c.smaa) compuesta.addPass(new SMAAPass(innerWidth, innerHeight));
+
+  floracion.strength = parseFloat($("#flor").value);
+}
+
+/* ---------- panel ---------- */
+$("#exp").addEventListener("input", (e) => {
+  ren.toneMappingExposure = parseFloat(e.target.value);
+  $("#expV").textContent = e.target.value;
+});
+$("#flor").addEventListener("input", (e) => {
+  if (floracion) floracion.strength = parseFloat(e.target.value);
+  $("#florV").textContent = e.target.value;
+});
+$("#btAo").addEventListener("click", (e) => {
+  quiereAo = !quiereAo;
+  e.currentTarget.setAttribute("aria-pressed", String(quiereAo));
+  if (compuesta) armarCompuesta();
+});
+$("#btGira").addEventListener("click", (e) => {
+  mando.autoRotate = !mando.autoRotate;
+  e.currentTarget.setAttribute("aria-pressed", String(mando.autoRotate));
+});
+document.querySelectorAll("[data-calidad]").forEach((b) => {
+  b.addEventListener("click", () => {
+    calidad = b.dataset.calidad;
+    document.querySelectorAll("[data-calidad]").forEach(
+      (o) => o.setAttribute("aria-pressed", String(o === b)));
+    if (compuesta) armarCompuesta();
+  });
+});
+/* el usuario toca: se corta el giro solo, que es lo que uno espera */
+ren.domElement.addEventListener("pointerdown", () => {
+  if (!mando.autoRotate) return;
+  mando.autoRotate = false;
+  $("#btGira").setAttribute("aria-pressed", "false");
+});
+
+addEventListener("resize", () => {
+  camara.aspect = innerWidth / innerHeight;
+  camara.updateProjectionMatrix();
+  ren.setSize(innerWidth, innerHeight);
+  if (compuesta) compuesta.setSize(innerWidth, innerHeight);
+});
+
+/* ---------- lazo ---------- */
+const reloj = new THREE.Clock();
+let cuenta = 0, desde = performance.now();
+function lazo(){
+  requestAnimationFrame(lazo);
+  const d = Math.min(reloj.getDelta(), .05);
+  mando.update(d);
+  ren.info.reset();
+  if (compuesta) compuesta.render(d);
+
+  cuenta++;
+  const ahora = performance.now();
+  if (ahora - desde >= 1000){
+    $("#fps").textContent = Math.round(cuenta * 1000 / (ahora - desde));
+    $("#llam").textContent = ren.info.render.calls;
+    cuenta = 0; desde = ahora;
+  }
+}
+lazo();
+
+/* para poder medir desde afuera sin adivinar */
+window.visor = { ren, escena, camara, mando, SSAOPass, get ao(){return ao}, info: () => ({
+  calidad, ao: !!ao, tris: Math.round(tris),
+  llamadas: ren.info.render.calls, pixelRatio: ren.getPixelRatio(),
+}) };
+</script>
+</body>
+</html>

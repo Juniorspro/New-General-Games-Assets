@@ -1,0 +1,27 @@
+{
+  "name": "bot-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Bot de WhatsApp con comandos de prueba. Un solo motor de comandos, dos proveedores intercambiables.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "probar": "node src/probar.js",
+    "baileys": "PROVEEDOR=baileys node src/index.js",
+    "web": "PROVEEDOR=web node src/index.js",
+    "cloud": "PROVEEDOR=cloud node src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "express": "^5.2.1",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.34.7"
+  }
+}
