@@ -39,7 +39,10 @@ for (const [w,h,nom] of [[844,390,"acostado"],[390,844,"parado"]]) {
   const botonOk = await pg.evaluate(() => {
     const b = document.querySelector("#hud-salir").getBoundingClientRect();
     const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-    return e && e.id === "hud-salir";
+    // closest y no id: el punto del centro cae en el <span> del icono, que es
+    // hijo del boton. Comparar el id directo da falso negativo sobre un boton
+    // que funciona perfecto.
+    return !!(e && e.closest("#hud-salir"));
   });
   ch(`${nom} los botones del HUD si reciben el toque`, botonOk);
   const y0 = await pg.evaluate(()=>window.PIQUE.partida.j.y);

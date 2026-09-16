@@ -11,47 +11,71 @@ import { dibujarCuadro, cuadroDe } from "./sprites.js";
 const pi2 = Math.PI * 2;
 const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x | 0, y | 0, Math.ceil(w), Math.ceil(h)); };
 
-// --- fondo ---------------------------------------------------------------
-export function fondo(c, tema, camX, camY, t, ancho, alto) {
-  const tm = TEMAS[tema];
-  // Bandas planas en vez de degrade continuo: un degrade suave sobre pixeles
-  // cuadrados se ve como un error de compresion. Cuatro bandas se leen como
-  // cielo y son coherentes con el resto.
-  const a = tm.cielo[0], b = tm.cielo[1];
-  const mezcla = (p) => {
-    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
-    const m = (s) => Math.round((((pa >> s) & 255) * (1 - p) + ((pb >> s) & 255) * p));
-    return `rgb(${m(16)},${m(8)},${m(0)})`;
-  };
-  for (let i = 0; i < 5; i++) R(c, 0, alto * i / 5, ancho, alto / 5 + 1, mezcla(i / 4));
+// --- fondo en capas ------------------------------------------------------
+//
+// Tres capas a distinta velocidad: cielo, lejos y cerca. Una sola imagen de
+// fondo se ve plana, y en vertical el cielo ocupa DOS TERCIOS de la pantalla —
+// ahi es donde se decide si el juego se ve bien o se ve pobre.
+//
+// Las dos bandas se anclan al MUNDO y no a la pantalla: su base va a una Y
+// fija del nivel, corrida por la camara con su propio factor. Ancladas a la
+// pantalla se quedarian pegadas abajo al saltar, y el paralaje vertical
+// —que es el que mas se nota en un juego donde se salta— no existiria.
+const ANCLA_MUNDO = 18 * 16;          // la linea del horizonte, en el mundo
 
-  if (tema === "cielo" || tema === "llano" || tema === "desierto") {
-    for (let capa = 0; capa < 2; capa++) {
-      const vel = 0.10 + capa * 0.14, esc = 1 - capa * 0.3;
-      const off = (camX * vel) % 180;
-      c.globalAlpha = 0.45 - capa * 0.15;
-      for (let i = -1; i < ancho / 180 + 2; i++) {
-        const x = i * 180 - off;
-        if (tema === "cielo") nube(c, x, alto * 0.25 + capa * 34 - camY * vel * 0.3, 34 * esc, tm);
-        else cerro(c, x, alto - 26 - capa * 16 - camY * vel * 0.25, 120 * esc, 52 * esc, tm.detalle);
-      }
-      c.globalAlpha = 1;
-    }
+// El paralaje vertical se calcula RELATIVO a la camara de reposo, no en
+// absoluto. Con `ancla - camY * factor` la banda se corre hacia abajo a medida
+// que la camara sube, y en vertical —donde la camara queda muy por encima del
+// nivel— terminaba tapando al jugador. Tomando como cero la camara de reposo,
+// la banda se apoya SIEMPRE en la linea del piso y solo se mueve un poco
+// alrededor de ahi, que es lo que hace el paralaje de verdad.
+const camaraReposo = (alto) => 18 * 16 - alto * 0.74;
+
+function repetirX(c, img, x, y, w, h, ancho) {
+  // Se dibuja de nuevo a izquierda y derecha hasta tapar la vista. La imagen
+  // es repetible en horizontal, asi que la junta no se ve.
+  let x0 = x % w;
+  if (x0 > 0) x0 -= w;
+  for (let px = x0; px < ancho; px += w) c.drawImage(img, px | 0, y | 0, Math.ceil(w), Math.ceil(h));
+}
+
+export function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
+  const tm = TEMAS[tema];
+
+  // 1) cielo: cubre todo. Si no cargo, bandas planas de color.
+  if (capas.cielo) {
+    // Se escala por el ANCHO, no por el alto. Escalando para cubrir el alto —
+    // que en vertical son 448 px contra 360 de la imagen— el factor se va a
+    // 1,4 y una nube termina midiendo un tercio de la pantalla. Con 1,7
+    // pantallas por imagen las nubes quedan del tamano que se dibujaron.
+    const esc = (ancho * 1.7) / capas.cielo.width;
+    const w = capas.cielo.width * esc, h = capas.cielo.height * esc;
+    // Debajo de la imagen se rellena con su propio color de abajo, asi no
+    // queda una franja vacia cuando la vista es mas alta que la imagen.
+    R(c, 0, 0, ancho, alto, tm.cielo[1]);
+    const ref = camaraReposo(alto);
+    const y0 = -(camY - ref) * 0.10;
+    repetirX(c, capas.cielo, -camX * 0.05, y0, w, h, ancho);
+    if (y0 + h < alto) R(c, 0, y0 + h - 1, ancho, alto - (y0 + h) + 2, tm.cielo[1]);
+  } else {
+    const a = tm.cielo[0], b = tm.cielo[1];
+    const mezcla = (p) => {
+      const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+      const m = (s) => Math.round((((pa >> s) & 255) * (1 - p) + ((pb >> s) & 255) * p));
+      return `rgb(${m(16)},${m(8)},${m(0)})`;
+    };
+    for (let i = 0; i < 6; i++) R(c, 0, alto * i / 6, ancho, alto / 6 + 1, mezcla(i / 5));
   }
-}
-function nube(c, x, y, s, tm) {
-  // Nube de bloques, no de circulos: mantiene la grilla de pixeles.
-  R(c, x, y, s * 2, s * 0.7, "#ffffff");
-  R(c, x + s * 0.4, y - s * 0.45, s * 1.1, s * 0.6, "#ffffff");
-  R(c, x + s * 0.15, y + s * 0.6, s * 1.6, s * 0.4, "#ffffff");
-}
-function cerro(c, x, y, w, h, col) {
-  c.fillStyle = col;
-  const pasos = 8, pw = w / pasos;
-  for (let i = 0; i < pasos; i++) {
-    const p = Math.abs(i - (pasos - 1) / 2) / ((pasos - 1) / 2);
-    const hh = h * (1 - p * p);
-    c.fillRect((x + i * pw) | 0, (y + h - hh) | 0, Math.ceil(pw) + 1, Math.ceil(hh) + 1);
+
+  // 2) las dos bandas
+  for (const [clave, vel, velY, altoRel] of [["lejos", 0.22, 0.55, 0.30], ["cerca", 0.42, 0.80, 0.19]]) {
+    const img = capas[clave];
+    if (!img) continue;
+    const h = Math.max(48, Math.min(alto * altoRel, 220));
+    const w = img.width * (h / img.height);
+    const ref = camaraReposo(alto);
+    const baseY = (ANCLA_MUNDO - ref) - (camY - ref) * velY;
+    repetirX(c, img, -camX * vel, baseY - h, w, h, ancho);
   }
 }
 

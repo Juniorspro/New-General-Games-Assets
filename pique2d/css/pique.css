@@ -200,10 +200,7 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
   .hud-pie { font-size: 11px; }
 }
 
-/* ───────────── pantalla de juego, estilo juego movil ───────────── */
-/* El lienzo LLENA la pantalla. Antes vivia dentro de una caja centrada con
-   borde: en un telefono eso dejaba media pantalla negra arriba y abajo, que es
-   exactamente lo que se ve en una captura y no se puede defender. */
+/* ───────────── pantalla de juego ───────────── */
 #lienzo {
   position: fixed; inset: 0; width: 100%; height: 100%;
   display: block; z-index: 0; background: #0a0c12;
@@ -213,54 +210,200 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 .pantalla { position: relative; z-index: 2; background: var(--fondo); }
 #p-juego {
   background: transparent; pointer-events: none;
-  justify-content: space-between; padding: 0;
+  display: block; padding: 0;
 }
-/* El HUD deja pasar el toque salvo en sus botones: si capturara todo, la franja
-   de arriba dejaria de hacer saltar justo cuando el jugador mira el reloj. */
-#p-juego .hud, #p-juego .hud-pie { pointer-events: none; }
+/* Todo el HUD deja pasar el toque salvo sus botones: si capturara la franja de
+   arriba, el jugador perderia el salto justo cuando mira el reloj. */
+#p-juego > * { pointer-events: none; }
 #p-juego button { pointer-events: auto; }
 
-#p-juego .hud {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px; max-width: none; width: 100%;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-}
-.hud-caja {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(10,13,20,.62); border: 2px solid rgba(255,255,255,.12);
-  border-radius: 10px; padding: 5px 10px 5px 7px;
-  font-size: 17px; font-weight: 800; line-height: 1;
-  text-shadow: 0 2px 0 rgba(0,0,0,.65);
-  font-variant-numeric: tabular-nums;
-}
-.hud-caja .ico { width: 20px; height: 20px; image-rendering: pixelated; display: block; }
-.hud-color { margin-left: auto; }
-.hud-reloj { min-width: 74px; justify-content: center; }
-#hud-reloj.apuro { color: var(--mal); animation: latir .5s infinite; }
-#hud-reloj.frenado { color: var(--acento2); }
-.hud-btn {
-  width: 40px; height: 40px; min-height: 40px; padding: 0;
-  display: grid; place-items: center; font-size: 17px;
-  background: rgba(10,13,20,.62); border: 2px solid rgba(255,255,255,.12);
-  border-radius: 10px; flex: none;
-}
-#p-juego .pips { gap: 5px; }
-#p-juego .pip { width: 12px; height: 12px; border-width: 2px; }
-#p-juego .hud-pie {
-  padding: 6px 12px 10px; font-size: 11px; text-align: center;
-  color: rgba(255,255,255,.55); text-shadow: 0 1px 3px rgba(0,0,0,.9);
+/* El contorno del texto se hace con cuatro sombras y no con -webkit-text-stroke:
+   el stroke se dibuja CENTRADO sobre el trazo y se come la letra a tamanos
+   chicos. Cuatro sombras quedan por fuera, como en los juegos. */
+.contorno {
+  color: #fff;
+  text-shadow: 2px 0 0 #1b2436, -2px 0 0 #1b2436, 0 2px 0 #1b2436, 0 -2px 0 #1b2436,
+               2px 2px 0 #1b2436, -2px 2px 0 #1b2436, 2px -2px 0 #1b2436, -2px -2px 0 #1b2436,
+               0 3px 6px rgba(0,0,0,.45);
 }
 
-@media (max-width: 740px) {
-  #p-juego .hud { padding: 8px 9px; gap: 6px; }
-  .hud-caja { font-size: 15px; padding: 4px 8px 4px 6px; }
-  .hud-caja .ico { width: 17px; height: 17px; }
-  .hud-reloj { min-width: 62px; }
-  #p-juego .hud-pie { display: none; }
-  .hud-btn { width: 36px; height: 36px; min-height: 36px; }
+#p-juego .hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+  padding: 10px 12px; gap: 8px;
 }
-/* Telefono acostado y bajito: el HUD se achica todo lo que se pueda. */
-@media (orientation: landscape) and (max-height: 460px) {
-  #p-juego .hud { padding: 6px 8px; }
-  .hud-caja { font-size: 14px; }
+.hud-btn {
+  width: 46px; height: 46px; min-height: 46px; padding: 0;
+  display: grid; place-items: center; justify-self: start;
+  background: rgba(238,242,250,.92); border: 3px solid rgba(30,40,60,.55);
+  border-radius: 13px; box-shadow: 0 3px 0 rgba(20,26,40,.45);
+  color: #26324a; font-size: 17px;
+}
+.hud-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(20,26,40,.45); }
+.pausa { display: block; width: 15px; height: 17px;
+  border-left: 5px solid #26324a; border-right: 5px solid #26324a; }
+
+.hud-titulo { text-align: center; line-height: .95; justify-self: center; }
+.hud-curso {
+  display: block; font-size: 19px; font-weight: 800; letter-spacing: .5px;
+  color: #fff;
+  text-shadow: 2px 0 0 #1b2436, -2px 0 0 #1b2436, 0 2px 0 #1b2436, 0 -2px 0 #1b2436,
+               2px 2px 0 #1b2436, -2px 2px 0 #1b2436, 2px -2px 0 #1b2436, -2px -2px 0 #1b2436;
+}
+.hud-num {
+  display: block; font-size: 32px; font-weight: 900; color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 3px 0 0 #1b2436, -3px 0 0 #1b2436, 0 3px 0 #1b2436, 0 -3px 0 #1b2436,
+               3px 3px 0 #1b2436, -3px 3px 0 #1b2436, 3px -3px 0 #1b2436, -3px -3px 0 #1b2436,
+               0 4px 8px rgba(0,0,0,.4);
+}
+#p-juego .hud-monedas {
+  justify-self: end; display: inline-flex; align-items: center; gap: 7px;
+  font-size: 25px; font-weight: 900; color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 2px 0 0 #1b2436, -2px 0 0 #1b2436, 0 2px 0 #1b2436, 0 -2px 0 #1b2436,
+               2px 2px 0 #1b2436, -2px 2px 0 #1b2436, 2px -2px 0 #1b2436, -2px -2px 0 #1b2436;
+}
+#p-juego .hud-monedas .ico { width: 27px; height: 27px; image-rendering: pixelated; }
+
+/* Debajo del boton de pausa, no al lado: al lado pisaba el boton en pantallas
+   angostas y los puntos de color quedaban abajo de la mano. */
+.hud-secundario {
+  position: absolute; top: 72px; left: 0; right: 0;
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+}
+.hud-color-caja {
+  background: rgba(12,16,26,.5); border-radius: 999px; padding: 5px 9px;
+  display: inline-flex;
+}
+.hud-caja {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(12,16,26,.5); border-radius: 999px; padding: 4px 11px 4px 7px;
+  font-size: 16px; font-weight: 800; color: #fff;
+  font-variant-numeric: tabular-nums; text-shadow: 0 2px 3px rgba(0,0,0,.6);
+}
+.hud-caja + .hud-caja { margin-left: 0; }
+.hud-caja .ico { width: 19px; height: 19px; image-rendering: pixelated; }
+#hud-reloj.apuro { color: #ff8a8a; animation: latir .5s infinite; }
+#hud-reloj.frenado { color: #8ad8ff; }
+#p-juego .pips { gap: 5px; }
+#p-juego .pip { width: 11px; height: 11px; border-width: 2px; }
+
+.hud-abajo {
+  position: absolute; right: 12px; bottom: 12px; text-align: right;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.hud-mundo {
+  font-size: 15px; font-weight: 800; color: #fff;
+  text-shadow: 2px 0 0 #1b2436, -2px 0 0 #1b2436, 0 2px 0 #1b2436, 0 -2px 0 #1b2436,
+               2px 2px 0 #1b2436, -2px 2px 0 #1b2436, 2px -2px 0 #1b2436, -2px -2px 0 #1b2436;
+}
+.hud-gen { font-size: 10px; color: rgba(255,255,255,.6); text-shadow: 0 1px 3px rgba(0,0,0,.9); }
+.hud-pantalla { position: absolute; left: 12px; bottom: 12px; }
+
+@media (max-width: 420px) {
+  .hud-num { font-size: 27px; }
+  #p-juego .hud-monedas { font-size: 21px; }
+  #p-juego .hud-monedas .ico { width: 23px; height: 23px; }
+  .hud-gen { display: none; }
+}
+
+/* ───────────── inicio, con arte ───────────── */
+#p-inicio {
+  background: #0d1220 center/cover no-repeat;
+  position: relative;
+}
+#p-inicio::after {
+  /* pointer-events: none o el velo se come los toques de los botones. Se
+     detecto en la prueba de interfaz: "#btn-ajustes tapado por -". */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(8,11,20,.35), rgba(8,11,20,.88));
+  z-index: 0;
+}
+.caja-inicio {
+  position: relative; z-index: 1;
+  background: rgba(16,20,32,.78); backdrop-filter: blur(3px);
+  border-color: rgba(255,255,255,.14);
+}
+
+/* ───────────── menu y mapa con cara de juego ───────────── */
+#p-inicio { background-position: center 30%; }
+.caja-inicio {
+  border: 3px solid rgba(255,255,255,.18); border-radius: 18px;
+  box-shadow: 0 10px 0 rgba(0,0,0,.35), 0 24px 60px rgba(0,0,0,.6);
+  padding: 30px 26px 24px;
+}
+.caja-inicio .logo {
+  font-size: 62px; letter-spacing: -3px; margin-bottom: 2px;
+  filter: drop-shadow(0 4px 0 rgba(0,0,0,.45));
+}
+.botones .grande {
+  border: 3px solid rgba(255,255,255,.16); border-radius: 14px;
+  box-shadow: 0 4px 0 rgba(0,0,0,.4); font-size: 17px; font-weight: 800;
+  padding: 15px 20px;
+}
+.botones .grande:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
+.botones .primario {
+  border-color: #ffd98a;
+  box-shadow: 0 4px 0 #a86a00, 0 10px 22px rgba(255,160,40,.3);
+}
+.botones .primario:active { box-shadow: 0 1px 0 #a86a00; }
+
+/* --- mapa --- */
+#p-mapa { background: linear-gradient(180deg, #121826, #0b0f18); }
+.mapa { gap: 26px; padding: 14px 12px 40px; }
+.cab-mundo h2 {
+  font-size: 22px; font-weight: 900; color: #fff;
+  text-shadow: 2px 0 0 #1b2436, -2px 0 0 #1b2436, 0 2px 0 #1b2436, 0 -2px 0 #1b2436,
+               2px 2px 0 #1b2436, -2px 2px 0 #1b2436, 2px -2px 0 #1b2436, -2px -2px 0 #1b2436;
+}
+.niveles { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.nivel {
+  position: relative; overflow: hidden;
+  border: 3px solid rgba(255,255,255,.12); border-left-width: 3px;
+  border-radius: 14px; box-shadow: 0 4px 0 rgba(0,0,0,.4);
+  padding: 0 0 10px; min-height: 132px; gap: 0;
+  background: #1a2032;
+}
+/* Franja del color del tema arriba: es la miniatura del nivel sin necesitar
+   una imagen por nivel. */
+.nivel::before {
+  content: ""; display: block; height: 42px; width: 100%;
+  background: linear-gradient(180deg, var(--tema, #345), rgba(0,0,0,.35));
+  border-bottom: 3px solid rgba(0,0,0,.35);
+}
+.nivel .num {
+  position: absolute; top: 8px; left: 10px; font-size: 13px; font-weight: 900;
+  color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,.8), -1px -1px 0 rgba(0,0,0,.8);
+}
+.nivel .titulo { font-size: 15px; font-weight: 800; padding: 9px 10px 0; }
+.nivel .tema { padding: 0 10px; font-size: 11.5px; }
+.nivel .colores { padding: 0 10px; margin-top: 6px; }
+.nivel .mejor { padding: 0 10px; }
+.nivel.hecho { border-color: rgba(94,216,138,.55); }
+.nivel.hecho::after {
+  content: "✓"; position: absolute; top: 6px; right: 10px;
+  color: #5ed88a; font-weight: 900; font-size: 17px;
+  text-shadow: 1px 1px 0 rgba(0,0,0,.8);
+}
+.nivel:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.4); }
+.marcadores { font-size: 13px; }
+.barra { background: rgba(10,14,24,.9); border-bottom: 3px solid rgba(255,255,255,.08); }
+
+/* --- resultado --- */
+.res { border: 3px solid rgba(255,255,255,.14); border-radius: 18px;
+       box-shadow: 0 10px 0 rgba(0,0,0,.35); }
+.res h2 { font-size: 32px; font-weight: 900; }
+
+/* Pantalla baja (telefono acostado): el menu no entraba y el tercer boton
+   quedaba abajo del borde — la prueba lo cazo como "tapado por -", que es lo
+   que devuelve elementFromPoint cuando el punto esta fuera de la vista. */
+.centrado { overflow-y: auto; }
+@media (max-height: 520px) {
+  .caja-inicio { padding: 16px 20px 14px; }
+  .caja-inicio .logo { font-size: 38px; margin-bottom: 0; }
+  .caja-inicio .bajada { font-size: 13px; margin-bottom: 12px; }
+  .botones { gap: 7px; }
+  .botones .grande { padding: 10px 18px; font-size: 15px; min-height: 44px; }
+  .caja-inicio .pie { font-size: 11px; margin-top: 10px; }
 }

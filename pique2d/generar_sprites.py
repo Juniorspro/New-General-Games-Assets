@@ -195,6 +195,81 @@ def pedir_tiles():
         print(f"  ✓ {clave}")
 
 
+# --- fondos en capas ------------------------------------------------------
+# Tres capas por tema. Una sola imagen de fondo se ve plana; tres a distinta
+# velocidad dan profundidad de verdad, y es lo que hace que el cielo —que en
+# vertical ocupa dos tercios de la pantalla— valga la pena mirarlo.
+#
+# Las tres van SIN transparencia la de atras (es el cielo) y CON las otras dos.
+FONDOS = {
+ "llano":    ("bright blue sky with soft fluffy clouds, sunlit",
+              "distant rolling green hills with a few round trees on the horizon",
+              "nearer band of dark green forest treetops and bushes"),
+ "subte":    ("deep dark blue cavern void with faint glowing specks",
+              "distant cave walls with stalactites and dim blue mineral veins",
+              "nearer band of rough dark rock formations and dripping stone"),
+ "cielo":    ("pale bright sky, very light blue fading to white",
+              "distant layer of big soft white clouds and far mountain peaks",
+              "nearer band of thick white cloud banks"),
+ "castillo": ("dark red-black sky with drifting embers",
+              "distant volcanic mountains with glowing lava rivers",
+              "nearer band of dark stone battlements and iron spikes"),
+ "fantasma": ("deep violet night sky with a pale moon and mist",
+              "distant dead trees and a crooked mansion silhouette",
+              "nearer band of gnarled dark branches and fog"),
+ "desierto": ("warm orange sunset sky with thin clouds",
+              "distant sand dunes and mesas on the horizon",
+              "nearer band of dunes with dry shrubs and cactus silhouettes"),
+ "nave":     ("stormy blue-grey sky with heavy clouds",
+              "distant wooden airships and sails floating in the haze",
+              "nearer band of rigging, masts and iron plating"),
+ "torre":    ("twilight violet sky with two small moons",
+              "distant tall spires and towers fading into haze",
+              "nearer band of stone tower walls and arched windows"),
+}
+
+def pedir_fondos():
+    capas = ["cielo", "lejos", "cerca"]
+    for tema, tres in FONDOS.items():
+        for i, desc in enumerate(tres):
+            clave = f"fondo_{tema}_{capas[i]}"
+            if clave in cargar(): print(f"  · {clave}: ya pedido"); continue
+            # La capa del cielo es opaca y llena; las otras dos se recortan
+            # para que se vea lo de atras.
+            transp = i > 0
+            extra = ("horizontally seamless, the left edge continues into the right edge, "
+                     "no border, no vignette, nothing in the lower quarter, "
+                     "flat side-scrolling game background layer")
+            if transp:
+                extra += ", isolated silhouette band on a clean empty background, "                          "only the scenery, no sky behind it"
+            r = rz("submit_image_generation", {
+                "project_id": PROYECTO, "output_path": f"assets/{clave}.png",
+                "size": "2048x1152", "transparent": transp,
+                "prompt": f"{desc}. {extra}. {ANCLA}"})
+            if "task_id" not in r: print(f"  ✗ {clave}: {r}"); continue
+            anotar(clave, {"task_id": r["task_id"], "output_path": r["output_path"],
+                           "cols": 1, "filas": 1})
+            print(f"  ✓ {clave}")
+
+
+def pedir_portada():
+    piezas = {
+     "portada": ("Vertical key art for a pixel-art running platformer: the amber-jacketed goggled "
+                 "runner creature dashing to the right across grass-topped stone blocks, spinning "
+                 "coins trailing behind, a warm sunny sky with soft clouds, distant green hills, "
+                 "a flag pole far ahead. Dynamic, joyful, sense of speed. No text, no logo"),
+    }
+    for k, desc in piezas.items():
+        if k in cargar(): print(f"  · {k}: ya pedido"); continue
+        r = rz("submit_image_generation", {
+            "project_id": PROYECTO, "output_path": f"assets/{k}.png",
+            "size": "1152x2048", "transparent": False,
+            "prompt": f"{desc}. {ANCLA}"})
+        if "task_id" not in r: print(f"  ✗ {k}: {r}"); continue
+        anotar(k, {"task_id": r["task_id"], "output_path": r["output_path"], "cols": 1, "filas": 1})
+        print(f"  ✓ {k}")
+
+
 def rz(nombre, args, timeout=900):
     r = subprocess.run([sys.executable, str(RZ), "call", nombre, json.dumps(args)],
                        cwd=AQUI, capture_output=True, text=True, timeout=timeout)
@@ -264,6 +339,8 @@ modo = sys.argv[1] if len(sys.argv) > 1 else "estado"
 if modo == "pedir": pedir()
 elif modo == "tiles": pedir_tiles()
 elif modo == "piezas": pedir_piezas()
+elif modo == "fondos": pedir_fondos()
+elif modo == "portada": pedir_portada()
 elif modo == "bajar": bajar()
 else:
     d = cargar()

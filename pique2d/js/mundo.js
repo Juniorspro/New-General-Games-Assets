@@ -19,13 +19,23 @@ export const ALTO_TILES = 24;     // alto del nivel
 // acostado se ve mas a los costados, en uno parado se ve menos. Nueve tiles de
 // alto es la medida del Mario original y la que hace que el personaje se vea
 // grande.
-export const VISTA = { ancho: 256, alto: 144 };
+export const VISTA = { ancho: 208, alto: 448 };
 
+// VERTICAL PRIMERO. El juego de referencia se juega con el telefono parado, y
+// asi es como lo va a agarrar cualquiera.
+//
+// Lo que se fija es el ANCHO en tiles, no el alto: es el ancho el que decide
+// cuanto ve el jugador de lo que viene, y es lo unico que no se puede negociar
+// en un juego de correr. El alto sale de la proporcion real de la pantalla.
+// Parado eso da una vista MUY alta —unos 28 tiles para un nivel de 24— y esta
+// bien: son dos tercios de cielo, que es exactamente como se ve el original.
+// Por eso los fondos van en capas y valen la pena.
 export function ajustarVista(anchoPantalla, altoPantalla) {
-  const prop = Math.max(1.15, Math.min(2.6, anchoPantalla / Math.max(1, altoPantalla)));
-  VISTA.alto = 144;
-  // Multiplo de 8 para que la grilla de pixeles caiga entera.
-  VISTA.ancho = Math.round((VISTA.alto * prop) / 8) * 8;
+  const asp = anchoPantalla / Math.max(1, altoPantalla);
+  // 13 tiles parado, hasta 22 acostado.
+  const anchoTiles = Math.max(13, Math.min(22, 13 + (asp - 0.5) * 9));
+  VISTA.ancho = Math.round((anchoTiles * T) / 8) * 8;
+  VISTA.alto = Math.min(40 * T, Math.round(VISTA.ancho / asp / 8) * 8);
   return VISTA;
 }
 

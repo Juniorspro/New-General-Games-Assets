@@ -67,6 +67,28 @@ Las criaturas son **originales**: cumplen roles clásicos del género pero ningu
 copia a un personaje de nadie, y cada prompt niega el parecido explícitamente
 (`NOT a plumber`, `no moustache`, `not a turtle`, `no cap`).
 
+## Vertical, como se juega de verdad
+
+El juego es **vertical**. Lo que se fija es el **ancho en tiles** —13 parado,
+hasta 22 acostado— y el alto sale de la proporción real de la pantalla. Parado
+eso da una vista muy alta, unos 28 tiles para un nivel de 24, y **está bien**:
+son dos tercios de cielo, que es exactamente como se ve el género. Por eso los
+fondos van en tres capas y valen la pena.
+
+La cámara puede subir **por encima del nivel** para mostrar cielo. Clavarla en
+cero dejaba el nivel pegado arriba y una franja vacía abajo.
+
+## Los fondos
+
+Tres capas por tema, 24 imágenes generadas: cielo, lejos y cerca, cada una a su
+velocidad. Una sola imagen de fondo se ve plana, y en vertical el cielo ocupa
+dos tercios de la pantalla — ahí se decide si el juego se ve bien o se ve pobre.
+
+Las dos bandas se anclan al **mundo** y no a la pantalla, y el paralaje vertical
+se calcula **relativo a la cámara de reposo**. Con `ancla − camY × factor` la
+banda se corre hacia abajo a medida que la cámara sube, y en vertical terminaba
+tapando al jugador.
+
 ## Pantalla y HUD
 
 El lienzo **llena la pantalla**. El alto es fijo —**9 tiles**, la medida del
@@ -75,8 +97,10 @@ teléfono acostado se ve más a los costados, en uno parado menos, y nunca hay
 bandas negras ni deformación. Antes era un lienzo fijo dentro de una caja
 centrada y en un teléfono eso dejaba media pantalla en negro.
 
-El HUD va **encima** del juego, con iconos pixel art generados (moneda, burbuja,
-cronómetro) y las cinco monedas de color. Deja pasar el toque salvo en sus
+El HUD copia la disposición del género: **pausa arriba a la izquierda**, el
+número del nivel grande y centrado con contorno, **monedas arriba a la derecha**
+con su icono, y el mundo y el nombre del nivel abajo a la derecha. Los iconos
+son pixel art generado. Deja pasar el toque salvo en sus
 propios botones: si capturara toda la franja de arriba, el jugador perdería el
 salto justo cuando mira el reloj.
 
@@ -145,6 +169,7 @@ python3 generar_sprites.py estado
 
 | pendiente | qué sería |
 |---|---|
+| Fondos del menú por mundo | hoy el menú usa una sola pieza de arte |
 | Efectos de sonido grabados | los generados venían de 380 KB cada uno, clips largos donde hace falta un golpe de medio segundo; los efectos siguen sintetizados y la **música sí es grabada** (3 pistas) |
 | Hojas extra | correr hacia atrás, aterrizaje, y una de daño |
 | Generar en un *worker* | el peor caso de 1136 ms bloquea el hilo |

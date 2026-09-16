@@ -24,7 +24,7 @@
 </main>
 
 <main id="p-inicio" class="pantalla centrado" hidden>
-  <div class="caja">
+  <div class="caja caja-inicio">
     <h1 class="logo">Pique</h1>
     <p class="bajada">Corrés solo. Lo único que hacés es saltar — pero <em>cuándo</em> y <em>cuánto</em> es todo el juego.</p>
     <div class="botones">
@@ -61,20 +61,29 @@
 <!-- ───────────── juego ───────────── -->
 <main id="p-juego" class="pantalla juego" hidden>
   <div class="hud">
-    <button id="hud-salir" class="hud-btn" title="Volver al mapa (Esc)">←</button>
-    <button id="hud-pantalla" class="hud-btn" title="Pantalla completa">⛶</button>
-    <div class="hud-caja hud-monedas">
+    <button id="hud-salir" class="hud-btn" aria-label="Pausa / volver al mapa">
+      <span class="pausa"></span>
+    </button>
+    <div class="hud-titulo">
+      <span class="hud-curso">Nivel</span>
+      <span id="hud-num" class="hud-num">1</span>
+    </div>
+    <div class="hud-monedas">
       <img id="ico-moneda" alt="" class="ico"><b id="hud-monedas">0</b>
     </div>
-    <div class="hud-caja hud-color"><i id="hud-color" class="pips"></i></div>
-    <div class="hud-caja hud-burb">
-      <img id="ico-burbuja" alt="" class="ico"><b id="hud-burbujas">2</b>
-    </div>
-    <div class="hud-caja hud-reloj">
-      <img id="ico-reloj" alt="" class="ico"><b id="hud-reloj">0</b>
-    </div>
   </div>
-  <p class="hud-pie"><span id="hud-gen">—</span> · <span id="hud-nivel">—</span></p>
+
+  <div class="hud-secundario">
+    <div class="hud-color-caja"><i id="hud-color" class="pips"></i></div>
+    <div class="hud-caja hud-burb"><img id="ico-burbuja" alt="" class="ico"><b id="hud-burbujas">2</b></div>
+    <div class="hud-caja hud-reloj"><img id="ico-reloj" alt="" class="ico"><b id="hud-reloj">0</b></div>
+  </div>
+
+  <div class="hud-abajo">
+    <span id="hud-nivel" class="hud-mundo">—</span>
+    <span id="hud-gen" class="hud-gen">—</span>
+  </div>
+  <button id="hud-pantalla" class="hud-btn hud-pantalla" aria-label="Pantalla completa">⛶</button>
 </main>
 
 <!-- ───────────── resultado ───────────── -->

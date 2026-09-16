@@ -15,7 +15,8 @@ export const ESTADO = { JUGANDO: "jugando", BURBUJA: "burbuja", MASTIL: "mastil"
                         GANADO: "ganado", PERDIDO: "perdido" };
 
 export class Partida {
-  constructor(nv, tier, hojas = {}, patron = null) {
+  constructor(nv, tier, hojas = {}, patron = null, capas = {}) {
+    this.capas = capas;
     this.hojas = hojas;
     this.patron = patron;
     this.nv = nv;
@@ -127,11 +128,18 @@ export class Partida {
     this.camX = Math.max(0, Math.min(this.nv.ancho * T - VISTA.ancho, this.camX));
     // En vertical persigue mas suave y con zona muerta: seguir cada salto
     // marea y hace perder la referencia del piso.
-    const objY = this.j.y - VISTA.alto * 0.66;
+    // Mas abajo en la pantalla cuanto mas alta es la vista: parado, el jugador
+    // va en el tercio de abajo y arriba queda el cielo, como en el original.
+    const frac = VISTA.alto > 300 ? 0.74 : 0.66;
+    const objY = this.j.y - VISTA.alto * frac;
     const d = objY - this.camY;
     if (brusco) this.camY = objY;
     else if (Math.abs(d) > 20) this.camY += (d - Math.sign(d) * 20) * 0.12;
-    this.camY = Math.max(0, Math.min(ALTO_TILES * T - VISTA.alto, this.camY));
+    // El minimo puede ser NEGATIVO: si la vista es mas alta que el nivel, la
+    // camara sube por encima y se ve cielo. Clavarlo en 0 dejaba el nivel
+    // pegado arriba y una franja vacia abajo.
+    const minY = Math.min(0, ALTO_TILES * T - VISTA.alto);
+    this.camY = Math.max(minY, Math.min(Math.max(minY, ALTO_TILES * T - VISTA.alto), this.camY));
   }
 
   // --- recolectar -------------------------------------------------------
@@ -273,7 +281,8 @@ export class Partida {
     // morir de nuevo al instante, que es la peor forma de perder.
     while (this.burbY > 2 * T && this.libre(this.burbX, this.burbY) === false) this.burbY -= T;
     this.camX = Math.max(0, Math.min(this.nv.ancho * T - VISTA.ancho, this.burbX - VISTA.ancho * 0.34));
-    this.camY = Math.max(0, Math.min(ALTO_TILES * T - VISTA.alto, this.burbY - VISTA.alto * 0.5));
+    const minY2 = Math.min(0, ALTO_TILES * T - VISTA.alto);
+    this.camY = Math.max(minY2, Math.min(Math.max(minY2, ALTO_TILES * T - VISTA.alto), this.burbY - VISTA.alto * 0.5));
     const seguro = this.libre(this.burbX, this.burbY);
     if ((ent.toqueNuevo && seguro && this.burbujaT > 20) || this.burbujaT > 190) {
       if (!seguro) return;
@@ -330,7 +339,7 @@ export class Partida {
     const sx = this.sacudida ? Math.round((Math.random() - 0.5) * this.sacudida * 0.5) : 0;
     const sy = this.sacudida ? Math.round((Math.random() - 0.5) * this.sacudida * 0.5) : 0;
     c.save(); c.translate(sx, sy);
-    D.fondo(c, this.nv.tema, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto);
+    D.fondo(c, this.nv.tema, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, this.capas);
     D.tiles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, this.patron);
     D.monedasVisibles(c, this.nv, this.camX, this.camY, this.t, VISTA.ancho, VISTA.alto, H.moneda_girar);
 

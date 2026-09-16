@@ -29,7 +29,7 @@ addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
 ctx.imageSmoothingEnabled = false;
 
 let partida = null, cfgActual = null, tierActualN = "rosa";
-let hojas = {}, patrones = {};
+let hojas = {}, patrones = {}, capas = {};
 
 // --- entrada -------------------------------------------------------------
 // Un solo boton. Se guarda "apoyado" y se calcula el flanco por cuadro: si el
@@ -80,8 +80,9 @@ function empezar(m, n) {
     const t0 = performance.now();
     const nv = generarNivel(cfgActual, tierActualN);
     const ms = Math.round(performance.now() - t0);
-    partida = new Partida(nv, tierActualN, hojas, patrones[nv.tema] || null);
-    $("#hud-nivel").textContent = `${idNivel(m, n)} ${cfgActual.titulo}`;
+    partida = new Partida(nv, tierActualN, hojas, patrones[nv.tema] || null, capas[nv.tema] || {});
+    $("#hud-nivel").textContent = `Mundo ${m}-${n} · ${cfgActual.titulo}`;
+  $("#hud-num").textContent = String((m - 1) * 4 + n);
     $("#hud-gen").textContent = nv.validacion.fallo
       ? "sin validar"
       : `validado en ${nv.validacion.intentos} ${nv.validacion.intentos === 1 ? "intento" : "intentos"} · ${ms} ms`;
@@ -192,11 +193,27 @@ function cargarPatron(tema) {
     img.src = ruta(`assets/piezas/${k}.webp`);
   })));
   registrarPiezas(ps);
+  // Los fondos: tres capas por tema. Se cargan todas al arrancar porque el
+  // jugador puede saltar a cualquier mundo desde el mapa.
+  $("#carga-detalle").textContent = "Cargando fondos…";
+  await Promise.all(TEMAS_TILE.flatMap((tema) => {
+    capas[tema] = {};
+    return ["cielo", "lejos", "cerca"].map((cp) => new Promise((ok) => {
+      const img = new Image();
+      img.onload = () => { capas[tema][cp] = img; ok(); };
+      img.onerror = () => ok();
+      img.src = ruta(`assets/fondo/${tema}_${cp}.webp`);
+    }));
+  }));
   // La musica se carga sin bloquear: el juego arranca igual y la pista entra
   // cuando llega. Bloquear el arranque por 400 KB es regalar el primer segundo.
   cargarPistas({ llano: "assets/snd/llano.mp3", subte: "assets/snd/subte.mp3",
                  castillo: "assets/snd/castillo.mp3" });
   UI.montarAjustes();
+  // El arte de portada, de fondo del menu.
+  const arte = new Image();
+  arte.onload = () => { $("#p-inicio").style.backgroundImage = `url(${arte.src})`; };
+  arte.src = ruta("assets/portada.webp");
   UI.mostrar("p-inicio");
   redimensionar();
   requestAnimationFrame(bucle);
