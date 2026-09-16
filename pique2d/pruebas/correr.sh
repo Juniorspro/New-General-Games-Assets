@@ -15,6 +15,12 @@ echo
 echo "── niveles: 24 x 3 colores, y que no quede una moneda fuera ──"
 node pruebas/niveles.mjs
 echo
+echo "── el salto doble y el triple ────────────────────────────────"
+node pruebas/salto.mjs
+echo
+echo "── cuelgues: bucles sin fin, que no se atrapan con nada ──────"
+node pruebas/cuelgues.mjs
+echo
 echo "── desbloqueo y recuperacion ante errores ────────────────"
 node pruebas/progreso.mjs
 echo

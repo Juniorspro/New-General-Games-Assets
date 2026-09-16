@@ -21,6 +21,36 @@ export const ALTO_TILES = 24;     // alto del nivel
 // grande.
 export const VISTA = { ancho: 208, alto: 448 };
 
+// SUPERMUESTREO. El lienzo se dibuja a ESC veces la resolucion del juego y
+// recien despues se estira a la pantalla.
+//
+// El juego razona en pixeles de juego —el tile mide 16 y el heroe 30— y eso
+// no cambia: cambia cuantos pixeles de verdad tiene cada uno de esos. Con
+// ESC=1 el heroe son 30 pixeles y se lee cada escalon del contorno; con ESC=2
+// son 60 sacados de un dibujo original de 256, o sea el doble de detalle en
+// el mismo tamano en pantalla. Sigue siendo pixel art —el suavizado queda
+// apagado— pero con el grano mas fino, que es lo que se pidio.
+//
+// No se sube mas porque cuesta: el area del lienzo crece con el CUADRADO de
+// este numero, y el fondo y el terreno se rellenan enteros en cada cuadro.
+// En 2 son 373.000 pixeles por cuadro en vertical; en 3 serian 839.000.
+//
+// Medido en 2, en el nivel mas cargado (6-4, castillo, con jefe): 1,19 ms por
+// cuadro, o sea catorce veces el presupuesto de 60 Hz. En 3 serian unos 2,7 y
+// el margen bajaria a seis — que alcanza en esta maquina y no se sabe si
+// alcanza en un telefono de hace cuatro anos. El salto de 1 a 2 es el que se
+// ve; el de 2 a 3 es la mitad de visible y el doble de caro.
+export const ESC = 2;
+
+// Cada cuantos pixeles de juego se repite la textura del terreno.
+//
+// Estaba en 32, o sea dos tiles, y el ojo contaba la repeticion: un muro
+// largo se leia como la misma estampilla una y otra vez. En 64 la textura
+// aparece al MISMO tamano —sale de una imagen del doble, asi que cada pixel
+// de textura sigue midiendo lo mismo en pantalla— pero tarda cuatro tiles en
+// repetirse, y a esa distancia ya no se cuenta.
+export const PATRON = 64;
+
 // VERTICAL PRIMERO. El juego de referencia se juega con el telefono parado, y
 // asi es como lo va a agarrar cualquiera.
 //
@@ -45,7 +75,7 @@ export function ajustarVista(anchoPantalla, altoPantalla) {
 // es lo que hacen todos los plataformeros — la caja se siente justa y el
 // personaje se ve grande.
 export const ALTOS = {
-  heroe: 30, bolo: 20, caracol: 22, aleta: 22, erizo: 20, fauces: 26,
+  heroe: 30, bolo: 20, caracol: 22, aleta: 22, erizo: 20, fauces: 42,
   osario: 24, vela: 22, perno: 16, brasa: 20, moneda: 14, resorte: 14,
   yunque: 44, coloso: 52,
 };
@@ -54,7 +84,7 @@ export const ALTOS = {
 export const V = {
   NADA: 0,
   SOLIDO: 1,        // piso y paredes
-  LADRILLO: 2,      // se rompe de un cabezazo
+  LADRILLO: 2,      // se golpea desde abajo: paga una vez y queda rajado
   PREGUNTA: 3,      // suelta moneda o burbuja
   PAUSA: 4,         // frena al jugador Y al reloj hasta que toque
   TIEMPO: 5,        // suma segundos, tope 99
@@ -71,11 +101,26 @@ export const V = {
   VOLTERETA: 16,    // bloque de salto hacia atras
   USADO: 17,        // pregunta ya golpeada
   META: 18,         // la base del mastil, para saber donde termina
+  RAJADO: 19,       // ladrillo ya golpeado. SIGUE SIENDO SOLIDO, ver abajo.
 };
 
 // Los que frenan al jugador por los cuatro lados.
+// EL GOLPE NO SACA NUNCA UN TILE SOLIDO, Y ESO ES UNA REGLA DEL JUEGO.
+//
+// El ladrillo se rompia de un cabezazo y desaparecia. Eso convierte al
+// validador en un mentiroso: el validador demuestra que el nivel se puede
+// terminar SOBRE LA GRILLA QUE LE DIERON, y si jugando esa grilla pierde un
+// solido —justo el que el camino pisaba dos saltos despues— el camino
+// validado deja de existir. Se midio: el 4-3 validaba y despues no se podia
+// rehacer en el juego, en los tres colores.
+//
+// Golpear ahora paga y deja el tile RAJADO, que es solido igual. Nada de lo
+// que hace el jugador cambia por donde se puede caminar, asi que "validado"
+// vuelve a significar algo. Ademas es lo que hace el juego de referencia: ahi
+// los ladrillos rebotan y sueltan monedas, no se rompen.
 export const SOLIDOS = new Set([V.SOLIDO, V.LADRILLO, V.PREGUNTA, V.PAUSA,
-                                V.TIEMPO, V.TUBO, V.USADO, V.LARGO, V.VOLTERETA]);
+                                V.TIEMPO, V.TUBO, V.USADO, V.LARGO, V.VOLTERETA,
+                                V.RAJADO]);
 // Los que solo frenan desde arriba.
 export const SEMI = new Set([V.PLATAFORMA]);
 export const MATAN = new Set([V.PINCHE, V.LAVA]);
@@ -96,8 +141,11 @@ export const F = {
   IMPULSO_PARED: 11,    // cuadros en que el rebote le gana a la carrera
   VAULT: -4.6,          // el saltito automatico sobre un obstaculo de 1 tile
   VAULT_SALTO: -7.4,    // si toca justo al vaultear: mas alto y mata al enemigo
-  GIRO_CAIDA: 0.16,     // gravedad durante el giro en el aire
-  GIRO_CUADROS: 18,
+  // El segundo y el tercer salto. El tercero es el mas alto de los tres: es
+  // el que se ve, el que se festeja y el que paga haber encadenado.
+  SALTO2: -5.6,
+  SALTO3: -6.8,
+  FLIP_CUADROS: 26,     // lo que dura el volteo en pantalla, a 60 por segundo
   PISADA_REBOTE: -5.2,
   RESORTE_V: -10.6,
   LARGO_V: -5.6,        // salto largo: bajo

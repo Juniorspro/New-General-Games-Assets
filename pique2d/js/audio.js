@@ -166,7 +166,11 @@ export function pararMusica() {
 export function latirMusica() {
   if (!musicaAndando || !ctx || !temaActual) return;
   const paso = 60 / temaActual.bpm / 2;
-  while (proximaNota < ctx.currentTime + 0.2) {
+  // Tope y comprobacion del paso: si bpm llegara a ser 0 o infinito, `paso`
+  // seria 0 y este bucle no terminaria nunca.
+  if (!(paso > 0.001)) { musicaAndando = false; return; }
+  let vueltas = 0;
+  while (proximaNota < ctx.currentTime + 0.2 && vueltas++ < 64) {
     const t = proximaNota, i = pasoMus % 16;
     const n = temaActual.mel[i];
     if (n !== null) programar(nota(temaActual.raiz + n), t, paso * 0.9, "square", 0.10);

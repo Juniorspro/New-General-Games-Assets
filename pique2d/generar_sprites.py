@@ -63,6 +63,28 @@ sprite.
 Count the cells before finishing: exactly {n} poses, each one different from the
 other {n - 1}. If two cells would look the same, change one of them."""
 
+
+# La misma ley, en un tercio del espacio. EXISTE POR UN LIMITE MEDIBLE: el
+# servidor rechaza cualquier prompt de mas de 2000 caracteres, y el contrato
+# largo se come 1341 — con una descripcion de movimiento detallada (el
+# somersault, la flor abriendo de a poco) el pedido no entra y vuelve un
+# VALIDATION_ERROR. No se saca NINGUNA regla: se saca la repeticion. Las dos
+# que no se pueden tocar son "ninguna pose repetida" y "ninguna linea en el
+# borde de la celda", que son las dos fallas que el control numerico mide.
+def grilla_corta(cols, filas):
+    n = cols * filas
+    return f"""
+
+Arrange as a uniform {cols}x{filas} grid spritesheet, {n} cells, read row-major. Exactly
+{n} drawings. CONSTANT in all {n}: the same character, proportions, palette, camera
+angle, facing direction, scale and placement inside the cell. CHANGING: the pose
+only, advancing in small increments so cells 1 to {n} read as one continuous motion.
+All {n} poses must differ at a glance — no cell may repeat, mirror or nearly repeat
+another. Cells touch edge to edge with NO drawn line, stroke, border, divider,
+frame, label or number anywhere near the cell boundaries: a drawn divider makes
+the sheet unusable. Leave a generous empty margin around the subject inside each
+cell."""
+
 # Los personajes son ORIGINALES. Cada prompt niega el parecido.
 SUJETO = {
  # Acortado: el servidor corta los prompts en 2000 caracteres, y con el
@@ -79,8 +101,10 @@ SUJETO = {
             "small round eyes. It is a JELLYFISH, not a turtle, no shell, no feathered wings"),
  "erizo":  ("a spiky burr creature, dark round body completely covered in sharp cream spikes, two "
             "angry eyes peeking between the spikes, four tiny legs. Not a hedgehog mascot, no shoes"),
- "fauces": ("a toothed carnivorous flower with thick amber petals and a ring of cream fangs on a short "
-            "teal stalk. It is a PLANT, not a snake, no eyes, no leaves with faces"),
+ "fauces": ("a tall carnivorous plant: one LONG straight vertical teal stalk that runs from the very "
+            "bottom edge of the cell up to the top, with a big toothed head at the TOP whose jaws open "
+            "UPWARD toward the sky; thick amber petals around the mouth, a ring of cream fangs, dark "
+            "red gullet. It is a PLANT, not a snake, no eyes, no arms, no leaves with faces"),
  "osario": ("a small stack of chunky cartoon bones assembled into a two-legged creature with a rounded "
             "skull and hollow eye sockets, friendly not gory, no blood, not scary"),
  "vela":   ("a floating ghostly flame wisp with a soft round teal-white glowing body, two dark simple "
@@ -106,14 +130,35 @@ SUJETO = {
 HOJAS = {
  "heroe_correr":  ("heroe", "running fast to the right, side view, scarf streaming behind, legs cycling, arms pumping", 4, 4, "2048x2048"),
  "heroe_saltar":  ("heroe", "one jump arc seen from the side facing right: crouch, launch, rise, apex, fall, land", 4, 4, "2048x2048"),
+ # Tres saltos, TRES HOJAS distintas. Repetir la hoja del primero y girarla
+ # a mano se ve como lo que es: el mismo dibujo dando vueltas. Cada salto se
+ # reconoce por su animacion antes que por la altura, que es lo que hace que
+ # encadenar tres se sienta como tres cosas y no como una repetida.
+ "heroe_doble":   ("heroe", "one full FORWARD SOMERSAULT in mid-air, side view facing right, the whole body "
+                   "rotating a steady 360 degrees head-over-heels across the 16 cells (cell 1 upright, "
+                   "cell 5 head down forward, cell 9 upside down, cell 13 head up backward, cell 16 almost "
+                   "upright again), knees tucked to the chest, scarf whipping around the body", 4, 4, "2048x2048"),
+ "heroe_triple":  ("heroe", "one showy BACKFLIP at the top of a very high jump, side view facing right, the "
+                   "body rotating a steady 360 degrees BACKWARDS across the 16 cells, arms thrown out wide, "
+                   "back arched, legs kicking out straight, the long scarf spiralling behind in a wide "
+                   "ribbon. Clearly a backward rotation, the opposite way to a forward roll", 4, 4, "2048x2048"),
  "heroe_quieto":  ("heroe", "standing still facing right, breathing gently, scarf swaying, tiny idle bob", 4, 4, "2048x2048"),
  "bolo_caminar":  ("bolo", "waddling to the right, side view, stubby legs stepping", 4, 4, "2048x2048"),
  "caracol_caminar":("caracol","gliding to the right, side view, body rippling, eye stalks swaying", 4, 4, "2048x2048"),
  "caracol_concha":("caracol", "an empty amber shell spinning fast, side view, rotating a little more each cell", 4, 4, "2048x2048"),
  "aleta_volar":   ("aleta", "hovering and bobbing in place facing right, fins flapping", 4, 4, "2048x2048"),
  "erizo_caminar": ("erizo", "scuttling to the right, side view, tiny legs stepping, spikes quivering", 4, 4, "2048x2048"),
- "fauces_morder": ("fauces", "seen from the SIDE facing right, rising out of a pipe and snapping its "
-                   "jaws open and shut once, stalk stretching up then down", 4, 4, "2048x2048"),
+ # LA APERTURA ES MONOTONA, Y NO ES UN CAPRICHO. Un ciclo de abrir-y-cerrar
+ # en dieciseis celdas tiene las poses repetidas de a pares —la boca a medio
+ # abrir subiendo se dibuja igual que bajando— y el control numerico rechaza
+ # la hoja por cuadros duplicados, con razon. Se pide abrir de cero a tope y
+ # nada mas: dieciseis poses todas distintas. El cierre lo hace el juego
+ # leyendo la hoja de ida y de vuelta.
+ "fauces_morder": ("fauces", "seen from the SIDE facing right, the stalk perfectly still and vertical while "
+                   "the jaws at the TOP open wider and wider: cell 1 has the mouth completely shut, each "
+                   "cell opens it a little more, cell 16 has the jaws at their widest gape pointing up. "
+                   "The stalk is IDENTICAL in every cell — same length, same thickness, same position. "
+                   "Only the jaws move. Never close the mouth again", 4, 4, "2048x2048"),
  "osario_caminar":("osario", "walking to the right, side view, bones clacking, arms swinging", 4, 4, "2048x2048"),
  "vela_flotar":   ("vela", "drifting and pulsing in place facing right, tail of light waving", 4, 4, "2048x2048"),
  "perno_volar":   ("perno", "flying left at speed, side view pointing left, fins vibrating, slight bob", 4, 4, "2048x2048"),
@@ -167,12 +212,26 @@ OBJETOS = {
 # Tiles pixel art. Personajes pixelados sobre un mundo suave se ve peor que
 # las dos cosas por separado: el ojo compara y el personaje parece pegoteado.
 # Una hoja por tema con superficie y corte, en la MISMA paleta que los sprites.
+# OJO CON EL "ENCIMA DE". Estas texturas se usan como PATRON CORRIDO: se
+# repiten cada pocos tiles en las dos direcciones, asi que cualquier cosa que
+# este arriba del todo reaparece cada dos tiles HACIA ABAJO. La primera version
+# del llano decia "una franja de pasto sobre tierra oscura" y bajo tierra
+# salian franjas de pasto cada dos tiles, como un pancho. La superficie la
+# dibuja el codigo (el borde de 3 pixeles en tiles()); la textura tiene que ser
+# el MATERIAL, parejo y sin arriba ni abajo.
 TILES = {
- "llano":    "grass-topped earth: a strip of lush grass over dark soil with pebbles and roots",
+ "llano":    "packed dark brown earth, uniform all over, with small pebbles, grit and bits of root "
+             "scattered evenly in every direction, no grass, no surface layer, no horizon",
  "subte":    "cut stone blocks, cool blue-grey, with mortar lines and damp mineral veins",
  "castillo": "dark volcanic brick, deep grey-violet blocks with thin glowing ember cracks",
- "desierto": "wind-carved sandstone, warm ochre and cream, layered and grainy",
- "cielo":    "soft white cloud-stone, pale cream with gentle blue shadow",
+ # Estas dos salieron con formas GRANDES —lobulos de arenisca, nubes de piedra
+ # del tamano de un tile— y repetidas cada cuatro tiles se leen como una
+ # estampilla, no como material. Lo que funciona en una textura de terreno es
+ # el grano chico y parejo: se repite y nadie lo nota.
+ "desierto": "coarse desert sand and grit, warm ochre and cream, very fine even grain, tiny "
+             "scattered pebbles, no dunes, no ripples, no large shapes, no layers",
+ "cielo":    "dense packed white cloud material, pale cream with soft blue shadow, fine even "
+             "puffy grain all over, small uniform tufts, no large clouds, no sky, no horizon",
  "nave":     "weathered ship deck planks, warm brown wood with iron nail heads",
  "torre":    "polished violet tower stone, hexagonal blocks with faint glowing seams",
  "fantasma": "old haunted floorboards, dark violet wood with pale dust and cobwebs",
@@ -202,30 +261,54 @@ def pedir_tiles():
 #
 # Las tres van SIN transparencia la de atras (es el cielo) y CON las otras dos.
 FONDOS = {
- "llano":    ("bright blue sky with soft fluffy clouds, sunlit",
-              "distant rolling green hills with a few round trees on the horizon",
-              "nearer band of dark green forest treetops and bushes"),
- "subte":    ("deep dark blue cavern void with faint glowing specks",
-              "distant cave walls with stalactites and dim blue mineral veins",
-              "nearer band of rough dark rock formations and dripping stone"),
- "cielo":    ("pale bright sky, very light blue fading to white",
-              "distant layer of big soft white clouds and far mountain peaks",
-              "nearer band of thick white cloud banks"),
- "castillo": ("dark red-black sky with drifting embers",
-              "distant volcanic mountains with glowing lava rivers",
-              "nearer band of dark stone battlements and iron spikes"),
- "fantasma": ("deep violet night sky with a pale moon and mist",
-              "distant dead trees and a crooked mansion silhouette",
-              "nearer band of gnarled dark branches and fog"),
- "desierto": ("warm orange sunset sky with thin clouds",
-              "distant sand dunes and mesas on the horizon",
-              "nearer band of dunes with dry shrubs and cactus silhouettes"),
- "nave":     ("stormy blue-grey sky with heavy clouds",
-              "distant wooden airships and sails floating in the haze",
-              "nearer band of rigging, masts and iron plating"),
- "torre":    ("twilight violet sky with two small moons",
-              "distant tall spires and towers fading into haze",
-              "nearer band of stone tower walls and arched windows"),
+ "llano":    ("a bright late-morning summer sky: deep blue at the top fading to warm pale cyan at the "
+              "horizon, three big soft cumulus clouds with sunlit cream tops and cool blue undersides, "
+              "thin wisps higher up, a flock of tiny birds",
+              "a range of rolling green hills receding into haze, layered in three tones of green fading "
+              "to blue-grey, dotted with tiny round trees, a windmill on one crest and a far church spire",
+              "a dense band of forest treetops seen from the side: round leafy crowns in two greens, dark "
+              "trunks, bushes and tall grass along the bottom"),
+ "subte":    ("the black-blue void of a deep cavern, clusters of glowing cyan spores drifting, one dim "
+              "shaft of pale light falling from far above",
+              "distant cavern walls receding into blue darkness, long stalactites above and stalagmites "
+              "below, glowing cyan and violet mineral veins, a still underground lake reflecting them",
+              "a band of rough dark rock: jagged boulders, cracked columns, dripping wet stone and "
+              "clusters of glowing crystals"),
+ "cielo":    ("a luminous high-altitude sky, white at the horizon rising to soft blue, a warm sun flare "
+              "and thin cirrus streaks",
+              "a sea of thick white cloud banks below, distant snow mountain peaks poking through, small "
+              "floating rocky islets trailing wisps of cloud",
+              "a band of billowing cumulus cloud tops in cream and pale blue with a few floating stone "
+              "platforms and hanging vines"),
+ # El cielo del castillo salio con el tercio de abajo en BLANCO LISO: el
+ # modelo dejo el area sin pintar. Se le pide explicitamente que llegue hasta
+ # el borde de abajo, que es lo unico que no habia dicho.
+ "castillo": ("a burning red-black sky filling the WHOLE frame from the very top edge to the very "
+              "bottom edge, thick rolling smoke, drifting orange embers, a dark red sun low down, "
+              "the glow getting hotter and brighter toward the bottom edge. No blank area, no white "
+              "space, no empty band, every pixel painted",
+              "distant volcanic mountains with rivers of glowing lava running down them, ash plumes and "
+              "a jagged black fortress silhouette",
+              "a band of dark stone battlements with iron spikes, hanging chains and braziers with small "
+              "flames"),
+ "fantasma": ("a deep violet night sky, a big pale moon behind thin clouds, faint stars, low ground mist",
+              "distant bare dead trees, a crooked haunted mansion silhouette with two lit yellow windows, "
+              "a rusted iron fence and rolling fog",
+              "a band of gnarled dark branches, hanging moss, crooked gravestones and thick fog"),
+ "desierto": ("a warm orange and pink sunset sky, a huge low sun, long thin stretched clouds, heat haze",
+              "distant sand dunes and flat-topped mesas layered in ochre and violet, a ruined stone arch "
+              "and a tiny cluster of palms",
+              "a band of near dunes with dry shrubs, tall cactus silhouettes, bleached bones and "
+              "wind-blown sand"),
+ "nave":     ("a stormy blue-grey sky, heavy layered storm clouds, a distant fork of lightning, rain haze",
+              "distant wooden airships with patched sails and balloons floating in the haze, spinning "
+              "propellers, a far mountain ridge below",
+              "a band of ship rigging and masts with furled sails, iron plating and hanging lanterns"),
+ "torre":    ("a twilight violet sky with two small moons, a scatter of stars and faint aurora ribbons",
+              "distant tall slender spires and towers fading into violet haze, joined by thin bridges, "
+              "warm lit windows",
+              "a band of carved stone tower walls with arched windows, hanging banners, buttresses and "
+              "glowing runes"),
 }
 
 def pedir_fondos():
@@ -239,7 +322,10 @@ def pedir_fondos():
             transp = i > 0
             extra = ("horizontally seamless, the left edge continues into the right edge, "
                      "no border, no vignette, nothing in the lower quarter, "
-                     "flat side-scrolling game background layer")
+                     "one single parallax layer of a side-scrolling game background, "
+                     "richly detailed and painterly within the pixel-art style, strong "
+                     "atmospheric perspective, three or more depth planes fading with distance, "
+                     "wide panoramic composition, no characters, no creatures, no ground in front")
             if transp:
                 extra += ", isolated silhouette band on a clean empty background, "                          "only the scenery, no sky behind it"
             r = rz("submit_image_generation", {
@@ -299,12 +385,29 @@ def anotar(k, v):
     PEDIDOS.write_text(json.dumps(d, indent=2, ensure_ascii=False))
 
 
+TOPE = 2000        # el servidor rechaza cualquier prompt mas largo. Medido.
+
+def armar(cuerpo, c, f):
+    """Arma el prompt con el contrato largo, y con el corto si no entra.
+
+    El corte se hace ACA y no recortando la descripcion: la descripcion es lo
+    que distingue una hoja de otra, el contrato es el mismo texto en las
+    dieciseis. Recortar lo que se repite cuesta menos que recortar lo unico.
+    """
+    largo = f"{cuerpo}. {ANCLA}{grilla(c, f)}"
+    if len(largo) <= TOPE: return largo
+    corto = f"{cuerpo}. {ANCLA}{grilla_corta(c, f)}"
+    if len(corto) > TOPE:
+        raise SystemExit(f"prompt de {len(corto)} caracteres: no entra ni con el contrato corto")
+    return corto
+
+
 def pedir():
     todo = {}
     for k, (suj, mov, c, f, tam) in HOJAS.items():
-        todo[k] = (f"{SUJETO[suj]}, {mov}. {ANCLA}{grilla(c, f)}", c, f, tam)
+        todo[k] = (armar(f"{SUJETO[suj]}, {mov}", c, f), c, f, tam)
     for k, (desc, c, f, tam) in OBJETOS.items():
-        todo[k] = (f"{desc}. {ANCLA}{grilla(c, f)}", c, f, tam)
+        todo[k] = (armar(desc, c, f), c, f, tam)
     for k, (prompt, c, f, tam) in todo.items():
         if k in cargar(): print(f"  · {k}: ya pedido"); continue
         r = rz("submit_image_generation", {
@@ -344,16 +447,48 @@ def bajar():
         anotar(k, x)
 
 
-modo = sys.argv[1] if len(sys.argv) > 1 else "estado"
-if modo == "pedir": pedir()
-elif modo == "tiles": pedir_tiles()
-elif modo == "piezas": pedir_piezas()
-elif modo == "fondos": pedir_fondos()
-elif modo == "portada": pedir_portada()
-elif modo == "bajar": bajar()
-else:
+def rehacer(patrones):
+    """Saca claves del registro para que la proxima pedida las vuelva a mandar.
+
+    NO borra nada del disco. El servidor versiona la salida solo
+    (`assets/x.png` -> `assets/x-g2.png`), asi que el archivo viejo sigue ahi
+    y se puede volver a el si la tirada nueva sale peor. Borrar el PNG viejo
+    al pedir el nuevo es quedarse sin nada si el nuevo falla.
+    """
+    import fnmatch
     d = cargar()
-    print(f"{len(d)} hojas · {sum(1 for x in d.values() if x.get('local'))} bajadas")
-    for k, x in sorted(d.items()):
-        print(f"  {'↓' if x.get('local') else '…'} {k:18} {x.get('cols')}x{x.get('filas')} "
-              f"{x.get('estado','pendiente')} {x.get('error','')}")
+    fuera = [k for k in d if any(fnmatch.fnmatch(k, p) for p in patrones)]
+    if not fuera: print("  nada que rehacer"); return
+    guardado = AQUI / "assets" / "hojas.anterior.json"
+    guardado.write_text(json.dumps(d, indent=2, ensure_ascii=False))
+    for k in fuera:
+        print(f"  ↻ {k}  (era {d[k].get('output_path')})")
+        del d[k]
+    PEDIDOS.write_text(json.dumps(d, indent=2, ensure_ascii=False))
+    print(f"  {len(fuera)} claves fuera del registro · copia en {guardado.name}")
+
+
+# Bajo `if __name__`, y no suelto, PORQUE OTRO ARCHIVO LO IMPORTA.
+# preparar_assets.py necesita las tablas de aca (que clave es hoja, cual es
+# fondo). Suelto, importarlo ejecutaba el modo que estuviera en sys.argv del
+# OTRO programa: con suerte imprimia el estado, y con `pedir` en la linea de
+# comandos habria mandado a generar todo de nuevo, pagando de nuevo.
+def cli():
+    modo = sys.argv[1] if len(sys.argv) > 1 else "estado"
+    if modo == "rehacer": rehacer(sys.argv[2:])
+    elif modo == "pedir": pedir()
+    elif modo == "tiles": pedir_tiles()
+    elif modo == "piezas": pedir_piezas()
+    elif modo == "fondos": pedir_fondos()
+    elif modo == "portada": pedir_portada()
+    elif modo == "bajar": bajar()
+    else:
+        d = cargar()
+        print(f"{len(d)} hojas · {sum(1 for x in d.values() if x.get('local'))} bajadas")
+        for k, x in sorted(d.items()):
+            print(f"  {'↓' if x.get('local') else '…'} {k:18} {x.get('cols')}x{x.get('filas')} "
+                  f"{x.get('estado','pendiente')} {x.get('error','')}")
+
+
+if __name__ == "__main__":
+    cli()

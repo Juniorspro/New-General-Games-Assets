@@ -72,7 +72,21 @@ function construir(cfg, tier, intento) {
       moneda: (dx, ty) => { if (tileXYg(grilla, ancho, base + dx, ty) === V.NADA) set(base + dx, ty, V.MONEDA); },
       enemigo: (tipo, dx, ty) => enemigos.push({ tipo, tx: base + dx, ty }),
       marcarColor: (dx, ty, clase) => candidatos.push({ tx: base + dx, ty, clase }),
-      bicho: () => rnd.uno(tema.enemigos),
+      // LA PLANTA NO SALE POR SORTEO. Es el unico bicho que necesita algo
+      // debajo: sorteada como los demas caia en medio de un llano y quedaba
+      // una flor flotando en el aire, que es exactamente lo que se reclamo.
+      // Se la saca de la bolsa y se la coloca solo con `planta`, que le
+      // construye el tubo.
+      bicho: () => rnd.uno(tema.enemigos.filter((b) => b !== "fauces")),
+      // Un tubo de `alto` tiles en dx, de dos de ancho, con la planta
+      // asomando por la boca. Los dos van JUNTOS y por eso es una sola
+      // llamada: separados, alguna pieza iba a pedir una sin el otro.
+      planta: (dx, alto) => {
+        for (let y = piso - alto; y < piso; y++) {
+          set(base + dx, y, V.TUBO); set(base + dx + 1, y, V.TUBO);
+        }
+        enemigos.push({ tipo: "fauces", tx: base + dx, ty: piso - alto - 1 });
+      },
     };
     const nuevoPiso = elegida.armar(p);
     if (!p.ancho) p.ancho = 6;

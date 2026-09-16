@@ -217,11 +217,34 @@ export const PIEZAS = [
     w += 2; p.ancho = w; p.suelo(0, w);
     for (const x of xs) {
       const alto = p.rnd.entero(1, ent(p.dif, 2, 4));
-      for (let y = p.piso - alto; y < p.piso; y++) { p.set(x, y, V.TUBO); p.set(x + 1, y, V.TUBO); }
       // Planta solo en tubos de 2 para arriba: en uno de 1 tile el jugador
       // lo vaultea sin poder verla, y morir por algo que no se ve es basura.
-      if (alto >= 2 && p.rnd.chance(0.3 + p.dif * 0.4)) p.enemigo("fauces", x, p.piso - alto - 1);
+      if (alto >= 2 && p.rnd.chance(0.3 + p.dif * 0.4)) p.planta(x, alto);
+      else for (let y = p.piso - alto; y < p.piso; y++) { p.set(x, y, V.TUBO); p.set(x + 1, y, V.TUBO); }
       p.moneda(x, p.piso - alto - 2);
+    }
+    return p.piso;
+  },
+},
+
+// --- plantas ------------------------------------------------------------
+// Existe para los temas que tienen planta pero no tienen tubos —el castillo—
+// y para que en los que si los tienen la planta no dependa de que salga
+// sorteada la pieza "tubos". Sin esto el bicho estaba en la lista del tema y
+// casi nunca aparecia, o aparecia flotando.
+{
+  nombre: "plantas", peso: (d) => 3 + d * 2, temas: ["llano", "castillo", "desierto"], min: 0.1,
+  armar(p) {
+    const n = p.rnd.entero(1, 3);
+    let w = 3, xs = [];
+    for (let i = 0; i < n; i++) { xs.push(w); w += 2 + p.rnd.entero(3, 6); }
+    w += 3; p.ancho = w; p.suelo(0, w);
+    for (const x of xs) {
+      // Dos tiles como minimo: uno solo se vaultea sin ver la planta.
+      p.planta(x, p.rnd.entero(2, ent(p.dif, 3, 4)));
+      // Moneda arriba, a la altura de la cabeza abierta: paga saltar POR
+      // ENCIMA en vez de esperar a que se esconda.
+      p.moneda(x, p.piso - 6); p.moneda(x + 1, p.piso - 6);
     }
     return p.piso;
   },

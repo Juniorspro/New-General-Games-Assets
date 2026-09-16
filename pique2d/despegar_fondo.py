@@ -61,7 +61,13 @@ def sacar_llave(ruta):
     marron, y no hay una sola cosa magenta dibujada. El tinte rosa de las
     monedas de color se aplica por codigo, no viene en la hoja.
     """
-    im = Image.open(ruta).convert("RGBA")
+    return sacar_llave_im(Image.open(ruta).convert("RGBA"))
+
+
+def sacar_llave_im(im):
+    """Lo mismo sobre una imagen ya abierta. Se separo para poder encadenar
+    los dos pasos SIN guardar en el medio: guardando entre uno y otro, cada
+    pasada vuelve a comprimir con perdida la misma hoja."""
     px = im.load()
     w, h = im.size
     n = 0
@@ -71,6 +77,112 @@ def sacar_llave(ruta):
             if a > 0 and r > 150 and b > 150 and g < 120 and (r - g) > 60 and (b - g) > 60:
                 px[x, y] = (r, g, b, 0); n += 1
     return (im, n / (w*h)) if n else None
+
+
+def borrar_bordes(im, cols=4, filas=4, grosor=6):
+    """Cuarto paso: borrar las lineas de division dibujadas entre celdas.
+
+    Es la falla que el contrato del prompt pide evitar con mas insistencia y
+    la que igual vuelve: el modelo dibuja una linea en el borde de cada celda.
+    En las tres hojas nuevas salio una linea violeta oscura, (38,0,40), opaca,
+    en las divisiones verticales y horizontales.
+
+    Por que arruina la hoja y no se ve en la miniatura: el recorte automatico
+    mide el rectangulo ocupado por los pixeles opacos, y con una linea en el
+    borde ese rectangulo es LA CELDA ENTERA. O sea que el bicho se dibuja del
+    tamano de la celda —mas chico de lo pedido y corrido— y encima con la
+    linea adentro: en pantalla queda un recuadro gris alrededor del sprite. Se
+    vio en la planta antes de esto.
+
+    SE MIRA LADO POR LADO Y NO EL ANILLO ENTERO, y esa es la diferencia entre
+    que funcione y que no. Con el anillo completo el promedio se diluye: una
+    celda con linea en un solo lado no llega al umbral y la linea queda. Y
+    sobre todo: lo que define una division es que sea una LINEA CONTINUA a lo
+    largo del lado. Mirando lado por lado se puede pedir que ocupe mas de la
+    mitad, y asi ningun pedazo suelto del dibujo —una bufanda que llega al
+    borde— se confunde con una division.
+    """
+    px = im.load()
+    w, h = im.size
+    cw, ch = w // cols, h // filas
+    borrados = 0
+
+    def opaco(x, y):
+        return px[x, y][3] > 24
+
+    def limpiar(puntos):
+        nonlocal borrados
+        for x, y in puntos:
+            r, g, b, a = px[x, y]
+            if a:
+                px[x, y] = (r, g, b, 0); borrados += 1
+
+    for f in range(filas):
+        for k in range(cols):
+            x0, y0 = k * cw, f * ch
+            # Cada lado con su propia linea de prueba: la fila o columna mas
+            # de afuera. Si esta ocupada de punta a punta, es una division.
+            lados = [
+                (sum(opaco(x0 + i, y0) for i in range(cw)) / cw,
+                 [(x0 + i, y0 + g) for i in range(cw) for g in range(grosor)]),
+                (sum(opaco(x0 + i, y0 + ch - 1) for i in range(cw)) / cw,
+                 [(x0 + i, y0 + ch - 1 - g) for i in range(cw) for g in range(grosor)]),
+                (sum(opaco(x0, y0 + j) for j in range(ch)) / ch,
+                 [(x0 + g, y0 + j) for j in range(ch) for g in range(grosor)]),
+                (sum(opaco(x0 + cw - 1, y0 + j) for j in range(ch)) / ch,
+                 [(x0 + cw - 1 - g, y0 + j) for j in range(ch) for g in range(grosor)]),
+            ]
+            for frac, puntos in lados:
+                if frac > 0.55:
+                    limpiar(puntos)
+    return (im, borrados / (w * h)) if borrados else None
+
+
+def despegar_halo(im, cols=4, filas=4):
+    """Tercer paso: borrar el halo oscuro que rodea al bicho.
+
+    Hay hojas —el jefe yunque— que no salen ni con el muestreo de esquinas ni
+    con el color llave: el servidor deja alrededor del dibujo una sombra
+    oscura semitransparente que llega hasta el borde de la celda. En el
+    control da 90% opaco y en pantalla es una mancha negra siguiendo al bicho.
+
+    Se borra con una inundacion DESDE EL BORDE de cada celda, y eso es lo
+    importante: borrando "todo lo oscuro" se comeria el contorno negro del
+    propio dibujo, que es lo que le da la forma. Inundando desde afuera, la
+    mancha se va y el contorno queda, porque la inundacion se frena justo en
+    el —es opaco y no es mancha.
+    """
+    px = im.load()
+    w, h = im.size
+    cw, ch = w // cols, h // filas
+    borrados = 0
+
+    def fondo(x, y):
+        r, g, b, a = px[x, y]
+        if a < 200:
+            return True
+        return (0.3 * r + 0.59 * g + 0.11 * b) < 25
+
+    for f in range(filas):
+        for k in range(cols):
+            x0, y0 = k * cw, f * ch
+            pila = []
+            for i in range(cw):
+                pila.append((x0 + i, y0)); pila.append((x0 + i, y0 + ch - 1))
+            for j in range(ch):
+                pila.append((x0, y0 + j)); pila.append((x0 + cw - 1, y0 + j))
+            visto = set()
+            while pila:
+                x, y = pila.pop()
+                if (x, y) in visto: continue
+                if not (x0 <= x < x0 + cw and y0 <= y < y0 + ch): continue
+                visto.add((x, y))
+                if not fondo(x, y): continue
+                r, g, b, a = px[x, y]
+                if a:
+                    px[x, y] = (r, g, b, 0); borrados += 1
+                pila.extend(((x+1, y), (x-1, y), (x, y+1), (x, y-1)))
+    return (im, borrados / (w * h)) if borrados else None
 
 
 def main():
@@ -88,4 +200,8 @@ def main():
             print(f"  {f.name[:-5]:18} color llave borrado · {frac2*100:.0f}%")
 
 
-main()
+# Bajo `if __name__` PORQUE preparar_assets.py IMPORTA ESTE ARCHIVO. Suelto,
+# el import recorria assets/hojas entero y volvia a comprimir con perdida las
+# diecinueve hojas en cada corrida, aunque no hubiera nada que despegar.
+if __name__ == "__main__":
+    main()

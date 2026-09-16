@@ -9,7 +9,11 @@ const ok=[], mal=[]; const ch=(n,c,x="")=>(c?ok:mal).push(n+(x?` — ${x}`:""));
 await pg.goto("file://" + path.resolve("pique-en-un-archivo.html"));
 await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
 ch("abre desde file:// y arranca", true);
-ch("las 17 hojas de sprites cargaron del propio archivo",
+// El numero NO se escribe a mano: se pregunta cuantas hojas pide el juego.
+// Escrito a mano, agregar una hoja deja la prueba en verde contando las de
+// antes, que es como una prueba deja de probar.
+const nHojas = await pg.evaluate(()=>Object.keys(window.PIQUE.hojas).length + window.PIQUE.faltan.length);
+ch(`las ${nHojas} hojas de sprites cargaron del propio archivo`,
    (await pg.evaluate(()=>window.PIQUE.faltan)).length===0,
    JSON.stringify(await pg.evaluate(()=>window.PIQUE.faltan)));
 const ext = await pg.evaluate(()=>[...document.querySelectorAll("link[href],script[src],img[src]")]

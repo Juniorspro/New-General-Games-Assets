@@ -5,7 +5,7 @@
 // sea un pixel: dibujar grande y achicar produce bordes lavados, y un sprite
 // pixel art lavado se ve peor que un dibujo suave hecho a proposito.
 
-import { T, V, ALTO_TILES, ALTOS, F, TEMAS } from "./mundo.js";
+import { T, V, ALTO_TILES, ALTOS, F, TEMAS, ESC, PATRON } from "./mundo.js";
 import { dibujarCuadro, cuadroDe } from "./sprites.js";
 const dibujarCuadroTile = (c, h, i, x, y, alto) => dibujarCuadro(c, h, i, x, y, alto);
 
@@ -33,11 +33,35 @@ const ANCLA_MUNDO = 18 * 16;          // la linea del horizonte, en el mundo
 const camaraReposo = (alto) => 18 * 16 - alto * 0.74;
 
 function repetirX(c, img, x, y, w, h, ancho) {
-  // Se dibuja de nuevo a izquierda y derecha hasta tapar la vista. La imagen
-  // es repetible en horizontal, asi que la junta no se ve.
+  // EL PASO TIENE QUE SER MAYOR QUE CERO, Y HAY QUE COMPROBARLO.
+  //
+  // Aca estaba el cuelgue. `w` sale de `img.width * (h / img.height)`: si una
+  // imagen de fondo carga con ancho cero —pasa con un archivo cortado, con un
+  // data: URI mal armado, o cuando el navegador dispara onload sobre algo que
+  // no pudo decodificar— entonces w vale 0, `px += 0` no avanza nunca y el
+  // bucle no termina JAMAS. Eso no es un error que se pueda atrapar: es la
+  // pestana congelada, sin consola, sin nada. Se arregla mirando el numero
+  // antes de usarlo.
+  if (!(w > 0.5) || !(h > 0.5) || !img.width || !img.height) return;
+  const pasos = Math.ceil(ancho / w) + 2;
   let x0 = x % w;
   if (x0 > 0) x0 -= w;
-  for (let px = x0; px < ancho; px += w) c.drawImage(img, px | 0, y | 0, Math.ceil(w), Math.ceil(h));
+  for (let i = 0, px = x0; i < pasos && px < ancho; i++, px += w)
+    c.drawImage(img, px | 0, y | 0, Math.ceil(w), Math.ceil(h));
+}
+
+// Estira una tira de una fila de la imagen —la de arriba o la de abajo— para
+// tapar lo que la imagen no llega a cubrir. Se toman DOS pixeles de alto y no
+// uno: con uno, algunos navegadores suavizan contra el borde de la textura y
+// sale una linea mas clara justo en la union.
+function tiraY(c, img, x, y, altoTira, ancho, w, px, arriba) {
+  if (!(altoTira > 0) || !img.width || !img.height || !(w > 0.5)) return;
+  const sy = arriba ? 0 : img.height - 2;
+  const pasos = Math.ceil(ancho / w) + 2;
+  let x0 = px % w;
+  if (x0 > 0) x0 -= w;
+  for (let i = 0, cx = x0; i < pasos && cx < ancho; i++, cx += w)
+    c.drawImage(img, 0, sy, img.width, 2, cx | 0, y | 0, Math.ceil(w), Math.ceil(altoTira));
 }
 
 export function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
@@ -46,18 +70,47 @@ export function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
   // 1) cielo: cubre todo. Si no cargo, bandas planas de color.
   if (capas.cielo) {
     // Se escala por el ANCHO, no por el alto. Escalando para cubrir el alto —
-    // que en vertical son 448 px contra 360 de la imagen— el factor se va a
-    // 1,4 y una nube termina midiendo un tercio de la pantalla. Con 1,7
-    // pantallas por imagen las nubes quedan del tamano que se dibujaron.
+    // que en vertical son 448 px contra 572 de la imagen— una nube termina
+    // midiendo un tercio de la pantalla. Con 1,7 pantallas por imagen las
+    // nubes quedan del tamano que se dibujaron.
     const esc = (ancho * 1.7) / capas.cielo.width;
     const w = capas.cielo.width * esc, h = capas.cielo.height * esc;
-    // Debajo de la imagen se rellena con su propio color de abajo, asi no
-    // queda una franja vacia cuando la vista es mas alta que la imagen.
-    R(c, 0, 0, ancho, alto, tm.cielo[1]);
     const ref = camaraReposo(alto);
-    const y0 = -(camY - ref) * 0.10;
-    repetirX(c, capas.cielo, -camX * 0.05, y0, w, h, ancho);
-    if (y0 + h < alto) R(c, 0, y0 + h - 1, ancho, alto - (y0 + h) + 2, tm.cielo[1]);
+    // EL CIELO SE APOYA EN EL HORIZONTE, no en el borde de arriba.
+    //
+    // Antes empezaba arriba y lo que sobraba abajo se tapaba con un color
+    // plano del tema. Con los fondos nuevos —que tienen su propio degrade y su
+    // propia bruma— ese color no coincidia con nada y quedaba una franja lisa
+    // cruzando la pantalla: blanca en el castillo, violeta en el fantasma. Se
+    // veia en cada captura.
+    //
+    // Ahora el BORDE DE ABAJO de la imagen se clava en la misma linea de
+    // horizonte donde se apoyan las dos bandas, y lo que falta arriba y abajo
+    // se estira de la propia imagen: una tira de dos pixeles de su fila de
+    // arriba y otra de su fila de abajo. Sale del mismo dibujo, asi que no
+    // hay franja que no pegue — no hay franja.
+    // Base opaca ANTES de todo. Las tiras estiradas tapan lo que la imagen no
+    // llega a cubrir, pero el cielo y las dos bandas se corren a velocidades
+    // distintas —0,10 contra 0,80— asi que con la camara bien arriba la banda
+    // de adelante baja ocho veces mas rapido que el borde del cielo y entre
+    // los dos se abre una franja. Se vio en el castillo: un rectangulo BLANCO
+    // —lo que hubiera quedado en el lienzo— asomando por un pozo del terreno.
+    // Un fillRect por cuadro es barato y cierra el agujero para siempre.
+    R(c, 0, 0, ancho, alto, tm.cielo[1]);
+    const horizonte = (ANCLA_MUNDO - ref) - (camY - ref) * 0.10;
+    const y0 = horizonte - h;
+    const px = -camX * 0.05;
+    if (y0 > 0) tiraY(c, capas.cielo, 0, 0, y0 + 1, ancho, w, px, true);
+    repetirX(c, capas.cielo, px, y0, w, h, ancho);
+    // Abajo NO se estira la imagen: color plano del tema.
+    //
+    // La fila de arriba siempre es cielo de verdad, asi que estirarla es
+    // seguro. La de abajo NO: se midio y varios temas traen ahi otra cosa —el
+    // castillo, un rectangulo BLANCO que el modelo dejo sin pintar; el
+    // desierto y la torre, tierra—. Estirando esa fila, esa basura cruzaba la
+    // pantalla entera. Y es el borde de abajo que menos importa: cae DEBAJO
+    // del horizonte, donde ya estan las bandas y el terreno.
+    if (y0 + h < alto) R(c, 0, y0 + h - 1, ancho, alto - y0 - h + 2, tm.cielo[1]);
   } else {
     const a = tm.cielo[0], b = tm.cielo[1];
     const mezcla = (p) => {
@@ -144,17 +197,27 @@ export function tiles(c, nv, camX, camY, t, ancho, alto, patron, anim = null, ho
 
 function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = () => 0, hojas = {}, anim = null) {
   switch (v) {
+    case V.RAJADO:
     case V.LADRILLO:
       // Con la textura del tema y no con un color plano: un rectangulo liso al
       // lado de un suelo texturado se lee como un error de dibujo.
       if (patron) {
-        c.save(); c.translate(x - (tx * T) % 32, y - (ty * T) % 32);
-        c.fillStyle = patron; c.fillRect((tx * T) % 32, (ty * T) % 32, T, T); c.restore();
+        c.save(); c.translate(x - (tx * T) % PATRON, y - (ty * T) % PATRON);
+        c.fillStyle = patron; c.fillRect((tx * T) % PATRON, (ty * T) % PATRON, T, T); c.restore();
         R(c, x, y, T, T, "rgba(150,90,40,.35)");
       } else R(c, x, y, T, T, tm.tierra);
       R(c, x, y, T, 1, "rgba(255,255,255,.2)"); R(c, x, y + T - 1, T, 1, "rgba(0,0,0,.3)");
       c.fillStyle = "rgba(0,0,0,.35)";
       c.fillRect(x, y + 7, T, 1); c.fillRect(x + 7, y, 1, 7); c.fillRect(x + 3, y + 8, 1, 8); c.fillRect(x + 11, y + 8, 1, 8);
+      // El rajado se distingue de un vistazo: sin marca, el jugador lo golpea
+      // otra vez esperando otra moneda y no entiende por que no sale.
+      if (v === V.RAJADO) {
+        c.fillStyle = "rgba(0,0,0,.55)";
+        c.fillRect(x + 4, y + 2, 1, 4); c.fillRect(x + 5, y + 4, 1, 3);
+        c.fillRect(x + 10, y + 9, 1, 5); c.fillRect(x + 9, y + 11, 1, 3);
+        c.fillStyle = "rgba(255,255,255,.18)";
+        c.fillRect(x + 5, y + 2, 1, 4); c.fillRect(x + 11, y + 9, 1, 5);
+      }
       break;
     case V.PREGUNTA: {
       const s = (Math.sin(t / 9 + tx) * 0.5 + 0.5) * 22;
@@ -284,9 +347,12 @@ export function monedaColor(c, x, y, t, tier, hoja) {
   if (hoja) {
     if (!tintado.lienzo) {
       tintado.lienzo = document.createElement("canvas");
-      tintado.lienzo.width = tintado.lienzo.height = 48;
+      // El lienzo auxiliar va a la MISMA resolucion que el del juego. Si se
+      // quedara en 48 pixeles, la moneda seria lo unico grueso de la pantalla.
+      tintado.lienzo.width = tintado.lienzo.height = 48 * ESC;
       tintado.ctx = tintado.lienzo.getContext("2d");
       tintado.ctx.imageSmoothingEnabled = false;
+      tintado.ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
     }
     const tc = tintado.ctx;
     tc.clearRect(0, 0, 48, 48);
@@ -295,7 +361,7 @@ export function monedaColor(c, x, y, t, tier, hoja) {
     tc.fillStyle = col; tc.globalAlpha = 0.72;
     tc.fillRect(0, 0, 48, 48);
     tc.globalAlpha = 1; tc.globalCompositeOperation = "source-over";
-    c.drawImage(tintado.lienzo, Math.round(x - 24), Math.round(y - 40));
+    c.drawImage(tintado.lienzo, Math.round(x - 24), Math.round(y - 40), 48, 48);
   }
 }
 

@@ -44,6 +44,11 @@ function caer(e, nv) {
   else { e.y = ny; e.suelo = false; }
 }
 
+// Lo que mide la planta asomada del todo, en pixeles de juego. Es el alto de
+// la CAJA, y tiene que ser el mismo que el del dibujo (ALTOS.fauces) o la
+// planta mata donde no se la ve.
+export const PLANTA_ALTO = 42;
+
 const BASE = { vivo: true, vy: 0, dir: -1, suelo: false, t: 0, pisable: true, letal: true };
 
 export function crear(tipo, tx, ty) {
@@ -55,7 +60,11 @@ export function crear(tipo, tx, ty) {
     case "aleta": e.vel = 0.55; e.h = 18; e.alas = true; e.baseY = e.y; break;
     case "osario":  e.vel = 0.55; e.h = 17; e.roto = 0; break;
     case "erizo":   e.vel = 0.60; e.pisable = false; break;
-    case "fauces":  e.pisable = false; e.w = 12; e.h = 18; e.baseY = e.y; e.fase = (tx * 37) % 120; break;
+    // El medio tile de corrimiento: el tubo mide DOS tiles de ancho y la
+    // planta se coloca por el de la izquierda, asi que sin esto asoma pegada
+    // al borde en vez de por el centro de la boca.
+    case "fauces":  e.pisable = false; e.w = 12; e.h = 0; e.x += T / 2;
+                    e.baseY = e.y; e.salida = 0; e.fase = (tx * 37) % 120; break;
     case "perno":    e.vel = 1.9; e.w = 14; e.h = 12; e.gravedad = false; break;
     case "mortero":  e.vel = 0; e.w = 16; e.h = 16; e.pisable = false; e.letal = false;
                     e.recarga = 90 + (tx * 17) % 60; e.reloj = e.recarga; break;
@@ -107,7 +116,13 @@ export function actualizar(e, nv, j, ev, nuevos) {
       const cerca = Math.abs(j.x - e.x) < 22;
       const fuera = ciclo < 70 && !cerca;
       e.salida = fuera ? Math.min(1, (70 - ciclo) / 22) : Math.max(0, (e.salida ?? 0) - 0.08);
-      e.y = e.baseY - e.salida * 20;
+      // LA PLANTA NO SE MUEVE: CRECE. Antes se corria la entera hacia arriba
+      // (`y = baseY - salida * 20`) y escondida quedaba veinte pixeles mas
+      // abajo, flotando delante del tubo. Ahora el pie queda clavado en la
+      // boca y lo que cambia es el ALTO, o sea cuanto asomo — que es lo que
+      // hace una planta que sale de un tubo.
+      e.y = e.baseY;
+      e.h = e.salida * PLANTA_ALTO;
       e.activa = e.salida > 0.3;
       break;
     }

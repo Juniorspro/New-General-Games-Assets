@@ -134,15 +134,6 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/moneda_girar-g3.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/moneda_girar-g3.png"
   },
-  "tile_llano": {
-    "task_id": "gtask-a6313543d46d4b46ad82",
-    "output_path": "assets/tile_llano-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_llano-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_llano-g2.png"
-  },
   "tile_subte": {
     "task_id": "gtask-fe37176cafc244c3aac0",
     "output_path": "assets/tile_subte-g2.png",
@@ -160,24 +151,6 @@
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_castillo-g2.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_castillo-g2.png"
-  },
-  "tile_desierto": {
-    "task_id": "gtask-8d3094fe94214910817c",
-    "output_path": "assets/tile_desierto-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_desierto-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_desierto-g2.png"
-  },
-  "tile_cielo": {
-    "task_id": "gtask-541a6ed40b284b119f65",
-    "output_path": "assets/tile_cielo-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_cielo-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_cielo-g2.png"
   },
   "tile_nave": {
     "task_id": "gtask-160b77ab29d3473ab35a",
@@ -260,231 +233,6 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/icono_reloj-g1.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/icono_reloj-g1.png"
   },
-  "fauces_morder": {
-    "task_id": "gtask-4814c16766eb4bbe81de",
-    "output_path": "assets/fauces_morder-g4.png",
-    "cols": 4,
-    "filas": 4,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fauces_morder-g4.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fauces_morder-g4.png"
-  },
-  "fondo_llano_cielo": {
-    "task_id": "gtask-51ec94dc38ce41f5b53f",
-    "output_path": "assets/fondo_llano_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_llano_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_llano_cielo-g1.png"
-  },
-  "fondo_llano_lejos": {
-    "task_id": "gtask-baa2679ee0574ae2ae95",
-    "output_path": "assets/fondo_llano_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_llano_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_llano_lejos-g1.png"
-  },
-  "fondo_llano_cerca": {
-    "task_id": "gtask-e4f4ea0728a540a8b434",
-    "output_path": "assets/fondo_llano_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_llano_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_llano_cerca-g1.png"
-  },
-  "fondo_subte_cielo": {
-    "task_id": "gtask-6f60326fc828463a91ae",
-    "output_path": "assets/fondo_subte_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_cielo-g1.png"
-  },
-  "fondo_subte_lejos": {
-    "task_id": "gtask-c23e694ed74346fdb475",
-    "output_path": "assets/fondo_subte_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_lejos-g1.png"
-  },
-  "fondo_subte_cerca": {
-    "task_id": "gtask-9c41764dc5bb45c1ad22",
-    "output_path": "assets/fondo_subte_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_cerca-g1.png"
-  },
-  "fondo_cielo_cielo": {
-    "task_id": "gtask-fb08ac67b61545a09c9b",
-    "output_path": "assets/fondo_cielo_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_cielo_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_cielo_cielo-g1.png"
-  },
-  "fondo_cielo_lejos": {
-    "task_id": "gtask-2d543a02b0f84dfda744",
-    "output_path": "assets/fondo_cielo_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_cielo_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_cielo_lejos-g1.png"
-  },
-  "fondo_cielo_cerca": {
-    "task_id": "gtask-492105a6b639456d9e2e",
-    "output_path": "assets/fondo_cielo_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_cielo_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_cielo_cerca-g1.png"
-  },
-  "fondo_castillo_cielo": {
-    "task_id": "gtask-befe53262dc3472d8534",
-    "output_path": "assets/fondo_castillo_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_castillo_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_castillo_cielo-g1.png"
-  },
-  "fondo_castillo_lejos": {
-    "task_id": "gtask-14d6a94156fb42388bf5",
-    "output_path": "assets/fondo_castillo_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_castillo_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_castillo_lejos-g1.png"
-  },
-  "fondo_castillo_cerca": {
-    "task_id": "gtask-de168406703745dcb544",
-    "output_path": "assets/fondo_castillo_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_castillo_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_castillo_cerca-g1.png"
-  },
-  "fondo_fantasma_cielo": {
-    "task_id": "gtask-b505621c7f6b4a288d3e",
-    "output_path": "assets/fondo_fantasma_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_fantasma_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_fantasma_cielo-g1.png"
-  },
-  "fondo_fantasma_lejos": {
-    "task_id": "gtask-07e0121dfcbd4c20b0b4",
-    "output_path": "assets/fondo_fantasma_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_fantasma_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_fantasma_lejos-g1.png"
-  },
-  "fondo_fantasma_cerca": {
-    "task_id": "gtask-334df6c1d02d4dbfabf2",
-    "output_path": "assets/fondo_fantasma_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_fantasma_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_fantasma_cerca-g1.png"
-  },
-  "fondo_desierto_cielo": {
-    "task_id": "gtask-c77a72185a4646c3b2dc",
-    "output_path": "assets/fondo_desierto_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_desierto_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_desierto_cielo-g1.png"
-  },
-  "fondo_desierto_lejos": {
-    "task_id": "gtask-d55354fbc88a46489365",
-    "output_path": "assets/fondo_desierto_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_desierto_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_desierto_lejos-g1.png"
-  },
-  "fondo_desierto_cerca": {
-    "task_id": "gtask-cbbfb56a3b7349a39bf3",
-    "output_path": "assets/fondo_desierto_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_desierto_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_desierto_cerca-g1.png"
-  },
-  "fondo_nave_cielo": {
-    "task_id": "gtask-cd3ed74450dd4ab6ba58",
-    "output_path": "assets/fondo_nave_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_nave_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_nave_cielo-g1.png"
-  },
-  "fondo_nave_lejos": {
-    "task_id": "gtask-8883c6ff977845d1aca9",
-    "output_path": "assets/fondo_nave_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_nave_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_nave_lejos-g1.png"
-  },
-  "fondo_nave_cerca": {
-    "task_id": "gtask-01840920e3b84110987b",
-    "output_path": "assets/fondo_nave_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_nave_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_nave_cerca-g1.png"
-  },
-  "fondo_torre_cielo": {
-    "task_id": "gtask-70d375f487ba4f0b95e7",
-    "output_path": "assets/fondo_torre_cielo-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_torre_cielo-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_torre_cielo-g1.png"
-  },
-  "fondo_torre_lejos": {
-    "task_id": "gtask-5483e8b820cf4308b595",
-    "output_path": "assets/fondo_torre_lejos-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_torre_lejos-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_torre_lejos-g1.png"
-  },
-  "fondo_torre_cerca": {
-    "task_id": "gtask-841bb1b21b784abaa55b",
-    "output_path": "assets/fondo_torre_cerca-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_torre_cerca-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_torre_cerca-g1.png"
-  },
   "logo": {
     "task_id": "gtask-c346e8e860094847a86d",
     "output_path": "assets/logo-g1.png",
@@ -511,5 +259,275 @@
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/portada-g3.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/portada-g3.png"
+  },
+  "fondo_llano_cielo": {
+    "task_id": "gtask-b42b52cfead94ff2bed3",
+    "output_path": "assets/fondo_llano_cielo-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_llano_cielo-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_llano_cielo-g2.png"
+  },
+  "fondo_llano_lejos": {
+    "task_id": "gtask-6b2e9ee563104c889553",
+    "output_path": "assets/fondo_llano_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_llano_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_llano_lejos-g2.png"
+  },
+  "fondo_llano_cerca": {
+    "task_id": "gtask-9ffdc24e982c49a5a4c4",
+    "output_path": "assets/fondo_llano_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_llano_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_llano_cerca-g2.png"
+  },
+  "fondo_subte_cielo": {
+    "task_id": "gtask-e489064df2fc4ec1bff3",
+    "output_path": "assets/fondo_subte_cielo-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_cielo-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_cielo-g2.png"
+  },
+  "fondo_subte_lejos": {
+    "task_id": "gtask-439be1bdd25d41dca367",
+    "output_path": "assets/fondo_subte_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_lejos-g2.png"
+  },
+  "fondo_subte_cerca": {
+    "task_id": "gtask-7de3b151de4f4e4583c4",
+    "output_path": "assets/fondo_subte_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_cerca-g2.png"
+  },
+  "fondo_cielo_cielo": {
+    "task_id": "gtask-5b4fca512dd44428ad41",
+    "output_path": "assets/fondo_cielo_cielo-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_cielo_cielo-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_cielo_cielo-g2.png"
+  },
+  "fondo_cielo_lejos": {
+    "task_id": "gtask-37ad94f373b142cc96de",
+    "output_path": "assets/fondo_cielo_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_cielo_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_cielo_lejos-g2.png"
+  },
+  "fondo_cielo_cerca": {
+    "task_id": "gtask-1fe0440b7fc546ad9781",
+    "output_path": "assets/fondo_cielo_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_cielo_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_cielo_cerca-g2.png"
+  },
+  "fondo_castillo_lejos": {
+    "task_id": "gtask-7236cceb73684276856b",
+    "output_path": "assets/fondo_castillo_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_castillo_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_castillo_lejos-g2.png"
+  },
+  "fondo_castillo_cerca": {
+    "task_id": "gtask-4beba0be7d854aadad75",
+    "output_path": "assets/fondo_castillo_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_castillo_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_castillo_cerca-g2.png"
+  },
+  "fondo_fantasma_cielo": {
+    "task_id": "gtask-704e1641427a4a1fbd3a",
+    "output_path": "assets/fondo_fantasma_cielo-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_fantasma_cielo-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_fantasma_cielo-g2.png"
+  },
+  "fondo_fantasma_lejos": {
+    "task_id": "gtask-0ee671f357c74f6e80de",
+    "output_path": "assets/fondo_fantasma_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_fantasma_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_fantasma_lejos-g2.png"
+  },
+  "fondo_fantasma_cerca": {
+    "task_id": "gtask-e75bae035ef64bb5b3a2",
+    "output_path": "assets/fondo_fantasma_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_fantasma_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_fantasma_cerca-g2.png"
+  },
+  "fondo_desierto_cielo": {
+    "task_id": "gtask-430c7608e12c4c26943b",
+    "output_path": "assets/fondo_desierto_cielo-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_desierto_cielo-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_desierto_cielo-g2.png"
+  },
+  "fondo_desierto_lejos": {
+    "task_id": "gtask-950dc998a48a4a09a9a3",
+    "output_path": "assets/fondo_desierto_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_desierto_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_desierto_lejos-g2.png"
+  },
+  "fondo_desierto_cerca": {
+    "task_id": "gtask-3e7fe552b54c4824ba25",
+    "output_path": "assets/fondo_desierto_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_desierto_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_desierto_cerca-g2.png"
+  },
+  "fondo_nave_cielo": {
+    "task_id": "gtask-e002e136226949219b1e",
+    "output_path": "assets/fondo_nave_cielo-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_nave_cielo-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_nave_cielo-g2.png"
+  },
+  "fondo_nave_lejos": {
+    "task_id": "gtask-2771107641b241be845d",
+    "output_path": "assets/fondo_nave_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_nave_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_nave_lejos-g2.png"
+  },
+  "fondo_nave_cerca": {
+    "task_id": "gtask-91d94f569f4644e1bb41",
+    "output_path": "assets/fondo_nave_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_nave_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_nave_cerca-g2.png"
+  },
+  "fondo_torre_cielo": {
+    "task_id": "gtask-791fa910556d46069f93",
+    "output_path": "assets/fondo_torre_cielo-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_torre_cielo-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_torre_cielo-g2.png"
+  },
+  "fondo_torre_lejos": {
+    "task_id": "gtask-9ef0e3dc78304aabbdfb",
+    "output_path": "assets/fondo_torre_lejos-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_torre_lejos-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_torre_lejos-g2.png"
+  },
+  "fondo_torre_cerca": {
+    "task_id": "gtask-819920a7441f47c7aabb",
+    "output_path": "assets/fondo_torre_cerca-g2.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_torre_cerca-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_torre_cerca-g2.png"
+  },
+  "heroe_doble": {
+    "task_id": "gtask-2981d568347346bba5d9",
+    "output_path": "assets/heroe_doble-g1.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_doble-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_doble-g1.png"
+  },
+  "heroe_triple": {
+    "task_id": "gtask-f83f9d61b59f4d2e9bc3",
+    "output_path": "assets/heroe_triple-g1.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_triple-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_triple-g1.png"
+  },
+  "fauces_morder": {
+    "task_id": "gtask-4731f4c7cea34c61b5f9",
+    "output_path": "assets/fauces_morder-g5.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fauces_morder-g5.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fauces_morder-g5.png"
+  },
+  "tile_llano": {
+    "task_id": "gtask-6470afdfd2964b77a695",
+    "output_path": "assets/tile_llano-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_llano-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_llano-g3.png"
+  },
+  "tile_desierto": {
+    "task_id": "gtask-fe09b1e6e2594c1e9be8",
+    "output_path": "assets/tile_desierto-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_desierto-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_desierto-g3.png"
+  },
+  "tile_cielo": {
+    "task_id": "gtask-7f1a276af7bd427d8456",
+    "output_path": "assets/tile_cielo-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_cielo-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_cielo-g3.png"
+  },
+  "fondo_castillo_cielo": {
+    "task_id": "gtask-a27972dad7974712ab4a",
+    "output_path": "assets/fondo_castillo_cielo-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_castillo_cielo-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_castillo_cielo-g3.png"
   }
 }

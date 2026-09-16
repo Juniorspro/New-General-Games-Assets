@@ -128,7 +128,12 @@ def data_uri(p):
 
 
 def main():
-    con_musica = "--musica" in sys.argv
+    # La musica VA, salvo que se pida lo contrario. Estaba al reves y el
+    # resultado era que el archivo que el jugador abre —el unico que abre—
+    # era el unico sin musica: se generaron tres pistas y no las escuchaba
+    # nadie. Pesan 1,2 MB, que en base64 son 1,6: es lo que cuesta que el
+    # juego suene, y suena mejor de lo que pesa.
+    con_musica = "--sin-musica" not in sys.argv
     partes = []
     for nombre, ruta in VENDOR:
         partes.append(envolver(nombre, (AQUI / ruta).read_text(encoding="utf-8")))

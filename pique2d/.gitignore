@@ -3,3 +3,7 @@ node_modules/
 # Al repo va assets/hojas/ (WebP a 512) y assets/tile/, que son 1,5 MB.
 # Se vuelven a bajar con `python3 generar_sprites.py bajar`.
 assets/*.png
+
+# La copia que deja `generar_sprites.py rehacer` antes de sacar claves del
+# registro: sirve para volver atras en la maquina, no es parte del proyecto.
+assets/hojas.anterior.json

@@ -113,7 +113,12 @@ export class Partida {
       efe.paredazo();
       this.chispas(j.x + (j.dir > 0 ? -6 : 6), j.y - 8, "#ffffff", 6);
     }
-    if (ev.giro) this.chispas(j.x, j.y - 8, "#8ad8ff", 4);
+    if (ev.salto2) { efe.salto(); this.chispas(j.x, j.y - 6, "#8ad8ff", 7); }
+    if (ev.salto3) {
+      efe.saltoAlto();
+      this.chispas(j.x, j.y - 6, "#ffe08a", 10);
+      this.texto(j.x, j.y - 24, "¡triple!", "#ffd447");
+    }
     if (ev.resorte) efe.resorte();
     if (ev.saltoLargo) { efe.resorte(); this.texto(j.x, j.y - 22, "¡largo!", "#6aa8f0"); }
     if (ev.voltereta) { efe.saltoAlto(); this.texto(j.x, j.y - 22, "¡arriba!", "#d28ae8"); }
@@ -177,7 +182,10 @@ export class Partida {
     const i = ty * this.nv.ancho + tx;
     this.marcarTile(tx, ty);
     if (v === V.LADRILLO) {
-      this.nv.grilla[i] = V.NADA; efe.ladrillo();
+      // Queda RAJADO y solido, no en NADA. Ver el comentario de SOLIDOS en
+      // mundo.js: sacar un solido rompe el camino que el validador demostro.
+      this.nv.grilla[i] = V.RAJADO; efe.ladrillo();
+      this.monedas += 1; this.texto(tx * T + 8, ty * T - 6, "+1", "#ffd447");
       this.chispas(tx * T + 8, ty * T + 8, TEMAS[this.nv.tema].tierra, 8);
       this.sacudida = 4;
     } else if (v === V.PREGUNTA) {
@@ -218,7 +226,10 @@ export class Partida {
         const pago = sumarCombo(this.j);
         this.monedas += pago * E.pisado(e, this.j, nuevos);
         this.j.vy = F.PISADA_REBOTE;
-        this.j.giroUsado = false;              // pisar devuelve el giro
+        // Pisar devuelve los saltos de aire: se deja en 1 —como si acabara
+        // de saltar del piso— y no en 0, porque en 0 el toque siguiente
+        // contaria como salto del suelo estando en el aire.
+        this.j.saltos = 1; this.j.flip = 0;
         efe.pisada(); if (this.j.combo > 1) efe.combo(this.j.combo);
         this.texto(e.x, e.y - 22, `+${pago}`, this.j.combo > 2 ? "#ff9ad0" : "#ffd447");
         this.chispas(e.x, e.y - 6, "#ffffff", 5);
@@ -409,11 +420,25 @@ export class Partida {
     c.restore();
   }
 
-  // El heroe: tres hojas, una por estado. La de salto NO cicla — avanza con la
-  // altura, asi que agacharse, despegar, subir, caer y aterrizar salen en el
-  // momento que corresponde en vez de girar en redondo.
+  // El heroe: cinco hojas. Correr y quieto ciclan; las tres de salto no.
+  //
+  // El primer salto avanza CON LA ALTURA —agacharse, despegar, subir, caer,
+  // aterrizar salen en el momento que corresponde en vez de girar en redondo—
+  // y el doble y el triple avanzan CON EL RELOJ, porque un volteo es una
+  // vuelta completa que tiene que terminar aunque la altura no acompane: si
+  // se lo atara a vy, un doble salto contra un techo dejaria al heroe clavado
+  // boca abajo.
   dibujarHeroe(c, x, y, estado, espejo) {
     const H = this.hojas;
+    if (estado === "saltar" && this.j.flip > 0) {
+      const hoja = this.j.flipTipo === 3 ? H.heroe_triple : H.heroe_doble;
+      if (hoja) {
+        const p = Math.min(1, (this.j.flip - 1) / F.FLIP_CUADROS);
+        dibujarCuadro(c, hoja, Math.min(hoja.n - 1, Math.floor(p * hoja.n)),
+                      x, y, ALTOS.heroe, espejo);
+        return;
+      }
+    }
     if (estado === "saltar" && H.heroe_saltar) {
       const n = H.heroe_saltar.n;
       // vy va de -10 (subiendo fuerte) a +9 (cayendo): se mapea al cuadro.
@@ -451,6 +476,34 @@ export class Partida {
     if (e.tipo === "caracol" && e.caparazon) {
       const h = H.caracol_concha;
       if (h) dibujarCuadro(c, h, cuadroDe(t, h, e.empujado ? 22 : 4), x, y, ALTOS.caracol * 0.8, espejo);
+      return;
+    }
+    if (e.tipo === "fauces") {
+      const h = H.fauces_morder;
+      const boca = (e.baseY ?? e.y) - this.camY;     // la linea de la boca del tubo
+      if (!h) {
+        c.fillStyle = "#3fa34d";
+        c.fillRect((x - 3) | 0, (boca - (e.salida ?? 0) * ALTOS.fauces) | 0, 6, (e.salida ?? 0) * ALTOS.fauces);
+        return;
+      }
+      c.save();
+      // SE RECORTA EN LA BOCA DEL TUBO. El sprite se dibuja entero y lo que
+      // cae por debajo de la boca no se pinta: asi la planta SALE del tubo en
+      // vez de aparecer y desaparecer en el aire, que era el reclamo. El
+      // recorte es lo que hace el efecto, no una animacion de encogerse.
+      c.beginPath();
+      c.rect(x - 26, boca - ALTOS.fauces - 40, 52, ALTOS.fauces + 40);
+      c.clip();
+      // LA HOJA SE LEE DE IDA Y DE VUELTA. Esta dibujada abriendo nada mas
+      // —cuadro 0 cerrada, cuadro 15 a tope— porque dieciseis cuadros de
+      // abrir-y-cerrar tienen las poses repetidas de a pares y el control
+      // numerico rechaza la hoja. Leida en zigzag, esos dieciseis dibujos dan
+      // una mordida entera de treinta cuadros sin repetir ninguno.
+      const n = h.n, ida = Math.floor(this.t / 2) % (n * 2 - 2);
+      const i = ida < n ? ida : (n * 2 - 2 - ida);
+      dibujarCuadro(c, h, i, x, boca + (1 - (e.salida ?? 0)) * ALTOS.fauces,
+                    ALTOS.fauces, false);
+      c.restore();
       return;
     }
     if (e.tipo === "torrepua") {

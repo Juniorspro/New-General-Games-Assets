@@ -1,6 +1,6 @@
 // Arranque, entrada y bucle.
 
-import { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista } from "./mundo.js";
+import { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista, ESC, PATRON } from "./mundo.js";
 import { generarNivel } from "./generador.js";
 import { Partida, ESTADO } from "./juego.js";
 import { cargar, tierActual } from "./guardado.js";
@@ -15,10 +15,14 @@ const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 function redimensionar() {
   ajustarVista(innerWidth, innerHeight);
-  lienzo.width = VISTA.ancho; lienzo.height = VISTA.alto;
+  lienzo.width = VISTA.ancho * ESC; lienzo.height = VISTA.alto * ESC;
   // Hay que APAGARLO DE NUEVO: el navegador reactiva el suavizado cada vez que
   // cambia el tamano del lienzo, y los sprites salen lavados sin aviso.
   ctx.imageSmoothingEnabled = false;
+  // Y la escala tambien se vuelve a poner: cambiar el ancho o el alto de un
+  // lienzo lo resetea ENTERO, transformacion incluida. Sin esto el juego se
+  // dibujaria en un cuarto del lienzo despues del primer giro de pantalla.
+  ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
   if (partida) partida.camara(true);
 }
 addEventListener("resize", redimensionar);
@@ -27,6 +31,7 @@ addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
 // navegador lo reactiva al cambiar el tamano del lienzo y los sprites salen
 // lavados sin que nada avise.
 ctx.imageSmoothingEnabled = false;
+ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
 
 let partida = null, cfgActual = null, tierActualN = "rosa";
 let hojas = {}, patrones = {}, capas = {};
@@ -175,6 +180,7 @@ $("#hud-pantalla").addEventListener("click", UI.pantallaCompleta);
 // --- carga de assets -----------------------------------------------------
 const HOJAS = [
   ["heroe_correr", 4, 4], ["heroe_saltar", 4, 4], ["heroe_quieto", 4, 4],
+  ["heroe_doble", 4, 4], ["heroe_triple", 4, 4],
   ["bolo_caminar", 4, 4], ["caracol_caminar", 4, 4], ["caracol_concha", 4, 4],
   ["aleta_volar", 4, 4], ["erizo_caminar", 4, 4], ["fauces_morder", 4, 4],
   ["osario_caminar", 4, 4], ["vela_flotar", 4, 4], ["perno_volar", 4, 4],
@@ -187,17 +193,25 @@ function cargarPatron(tema) {
   return new Promise((ok) => {
     const img = new Image();
     img.onload = () => {
-      // La textura se ACHICA a 32x32 antes de hacer el patron. La imagen
-      // generada mide 256 y el tile mide 16: usada tal cual, una sola copia de
-      // la textura cubre dieciseis tiles y el terreno se ve como cuatro
-      // franjas gigantes en vez de como suelo. A 32 repite cada dos tiles, que
-      // es la escala a la que el pixel art se lee.
+      // La textura se ACHICA antes de hacer el patron. La imagen generada mide
+      // 256 y el tile mide 16: usada tal cual, una sola copia cubre dieciseis
+      // tiles y el terreno se ve como cuatro franjas gigantes en vez de como
+      // suelo. A PATRON pixeles repite cada cuatro tiles, que es la escala a
+      // la que el pixel art se lee sin que se cuente la repeticion.
       const chico = document.createElement("canvas");
-      chico.width = chico.height = 32;
+      chico.width = chico.height = PATRON * ESC;
       const cc = chico.getContext("2d");
       cc.imageSmoothingEnabled = false;
-      cc.drawImage(img, 0, 0, 32, 32);
-      ok(ctx.createPattern(chico, "repeat"));
+      cc.drawImage(img, 0, 0, PATRON * ESC, PATRON * ESC);
+      const pat = ctx.createPattern(chico, "repeat");
+      // El patron se achica por ESC para COMPENSAR la escala del lienzo. El
+      // relleno se pide en pixeles de juego, asi que sin esto el patron
+      // repetiria cada PATRON pixeles de LIENZO —la mitad— y el suelo saldria
+      // con la textura al doble de chica. Con la compensacion repite cada
+      // PATRON pixeles de juego, pero con el doble de pixeles adentro.
+      try { pat.setTransform(new DOMMatrix([1 / ESC, 0, 0, 1 / ESC, 0, 0])); }
+      catch (e) { /* navegador viejo: se ve mas grueso, pero se ve */ }
+      ok(pat);
     };
     img.onerror = () => ok(null);
     img.src = ruta(`assets/tile/${tema}.webp`);
