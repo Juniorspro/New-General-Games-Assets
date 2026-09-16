@@ -4,7 +4,7 @@ Un pozo sin fondo y un paraguas. **Apretá** y el paraguas se cierra: caés ráp
 y pasás por cualquier lado. **Soltá** y se abre: caés lento y ocupás el doble.
 Eso es todo el juego.
 
-**Abrilo:** `paraguas-en-un-archivo.html`, doble clic. 145 KB, sin servidor, sin
+**Abrilo:** `paraguas-en-un-archivo.html`, doble clic. 159 KB, sin servidor, sin
 internet, sin instalar nada.
 
 ## La mecánica
@@ -20,17 +20,19 @@ el tiempo el mismo trato y vos decidís cuánto lo aceptás.
 
 ## El control
 
-Un dedo hace todo: apoyado cierra el paraguas **y** apunta; soltando, se abre y
-planeás con lo que traías.
+**Tocar cierra el paraguas. Arrastrar te mueve.** Son dos cosas separadas y
+tienen que serlo: cerrar es lo que hacés todo el tiempo, y si tocar te llevara
+hasta el dedo, no podrías caer rápido sin correrte de lugar. Al apoyar, la
+posición del dedo queda como cero y lo que cuenta es cuánto lo corriste desde
+ahí — apoyar y no mover cierra el paraguas y nada más.
 
-Que sean la misma cosa parece un problema —si el dedo cierra, ¿cómo corregís
-flotando?— y la salida está en el propio retardo del paraguas: **tarda nueve
+Soltando, el paraguas se abre y **planeás con lo que traías**: no se frena de
+costado. Si soltar cortara también el envión lateral no habría forma de
+corregir cayendo lento.
+
+Y hay una válvula que sale sola del propio retardo del paraguas: **tarda nueve
 cuadros en cerrarse**, así que un toquecito corto te deja apuntar sin llegar a
-cerrarlo. Apretones largos para bajar, toquecitos para acomodarte. El gesto del
-juego sale solo de ahí, sin partir la pantalla en zonas ni agregar un botón.
-
-Y soltando no se frena de costado: se planea. Si soltar cortara también el
-envión lateral, no habría forma de corregir cayendo lento.
+cerrarlo. Apretones largos para bajar, toquecitos para acomodarte.
 
 ## Lo que hay abajo
 
@@ -74,7 +76,7 @@ atrás y después alcanza; cuando caés rápido, el viento te levanta las pierna
 sh pruebas/correr.sh
 ```
 
-44 comprobaciones. Las que importan:
+47 comprobaciones. Las que importan:
 
 - **`pozo.mjs`** — que el pozo **se pueda bajar**. Dos cosas por separado: que
   cada par de huecos esté dentro de lo que se corre en el tiempo que dura la
@@ -84,11 +86,25 @@ sh pruebas/correr.sh
   atado al control real de un dedo, que prueba que se pueda jugar. El primero
   baja 811 m de promedio y el segundo 520: esa diferencia es la habilidad que
   el juego pide.
-- **`movil.mjs`** — tres tamaños de pantalla, y sobre todo que el arrastre
-  **llegue al juego** y no se lo quede el navegador. Acá el dedo es el juego
-  entero: un toque que no llega no es un detalle de interfaz, es no poder jugar.
+- **`movil.mjs`** — tres tamaños de pantalla, y sobre todo que el dedo **llegue
+  al juego** y no se lo quede el navegador. Acá el dedo es el juego entero: un
+  toque que no llega no es un detalle de interfaz, es no poder jugar. También
+  afirma la separación de las dos acciones: tocar y sostener quieto cierra el
+  paraguas y **no** mueve; arrastrar sí mueve.
 - **`un-archivo.mjs`** — abre el empaquetado desde `file://`, cae, choca y
   termina.
+
+## El vestido
+
+El menú y la pantalla final no tienen fondo propio: atrás corre **una caída de
+verdad**, con el piloto automático —el mismo que valida el pozo— y el lienzo
+desenfocado por CSS. No es un video ni una imagen, cuesta lo que cuesta un
+cuadro del juego, y nunca se desactualiza: si cambia el color de un tramo o la
+forma de una viga, el menú cambia solo. Arranca a una profundidad al azar, así
+que el fondo es distinto cada vez que abrís el juego.
+
+El botón de caer es un **portal**: dos remolinos girando en sentidos opuestos,
+hechos con un `conic-gradient` y una máscara. Cero imágenes, cero kilobytes.
 
 ## Los personajes
 

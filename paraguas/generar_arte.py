@@ -28,14 +28,16 @@ ESTILO = ("Flat 2D TV cartoon animation style, thin clean black outline of even 
           "No drop shadow, no ground, no text, no frame, no hands, no person.")
 
 PIEZAS = {
-  "paraguas_abierto": ("A single OPEN umbrella seen straight from the front, perfectly symmetrical: "
-                       "a wide amber-orange canopy spread open with six visible panels and a small "
-                       "round finial on top, and a straight dark brown shaft hanging down from the "
-                       "centre with a curved wooden handle at the bottom. " + ESTILO),
-  "paraguas_cerrado": ("A single CLOSED umbrella, furled tight: the amber-orange fabric wrapped "
-                       "narrow around a straight dark brown shaft, a small round finial on top and "
-                       "a curved wooden handle at the bottom. Vertical, thin, seen from the front. "
-                       + ESTILO),
+  "paraguas_abierto": ("A single OPEN umbrella seen straight from the front, perfectly symmetrical, "
+                       "in the style of a sci-fi cartoon gadget: the canopy is spread wide with six "
+                       "panels alternating ACID LIME GREEN and dark teal, a thin glowing lime rim "
+                       "along the bottom edge, and a small glowing green orb as the finial on top. "
+                       "A straight metallic grey shaft hangs down from the centre with a curved "
+                       "handle at the bottom. " + ESTILO),
+  "paraguas_cerrado": ("A single CLOSED umbrella, furled tight, in the style of a sci-fi cartoon "
+                       "gadget: acid lime green and dark teal fabric wrapped narrow around a "
+                       "straight metallic grey shaft, a small glowing green orb on top and a curved "
+                       "handle at the bottom. Vertical, thin, seen from the front. " + ESTILO),
 }
 
 
@@ -59,7 +61,20 @@ def anotar(k, v):
     REG.write_text(json.dumps(d, indent=2, ensure_ascii=False))
 
 
-def pedir():
+def pedir(rehacer=False):
+    # LOS RENOMBRES VAN TODOS JUNTOS Y ANTES DE PEDIR NADA.
+    #
+    # Intercalados, cada uno escribía el registro desde una copia en memoria
+    # tomada al principio — o sea, sin lo que `anotar` había guardado en el
+    # disco para la pieza anterior. La segunda pieza pisaba a la primera y el
+    # pedido se perdía sin error: quedaba una pieza vieja y una nueva, y eso
+    # recién se nota mirando el dibujo.
+    if rehacer:
+        d = cargar()
+        for k in list(PIEZAS):
+            if k in d:
+                d[f"{k}.viejo{len([x for x in d if x.startswith(k + '.viejo')])}"] = d.pop(k)
+        REG.write_text(json.dumps(d, indent=2, ensure_ascii=False))
     d = cargar()
     for k, prompt in PIEZAS.items():
         if d.get(k, {}).get("task_id"):
@@ -108,8 +123,14 @@ def preparar():
     destino = AQUI / "assets" / "arte"
     destino.mkdir(parents=True, exist_ok=True)
     total = 0
+    reg = cargar()
     for k in PIEZAS:
-        f = AQUI / "assets" / f"{k}-g1.png"
+        # El archivo sale del REGISTRO, no de adivinar el sufijo. El servidor le
+        # pone un número de generación al nombre, así que el segundo pedido de
+        # una pieza cae en `-g2`: buscando `-g1` a mano, `preparar` seguía
+        # preparando la versión vieja y el juego mostraba el dibujo anterior.
+        local = reg.get(k, {}).get("local")
+        f = pathlib.Path(local) if local else AQUI / "assets" / f"{k}-g1.png"
         if not f.exists():
             print(f"  · falta {f.name}"); continue
         im = Image.open(f).convert("RGBA")
@@ -143,6 +164,7 @@ def preparar():
 if __name__ == "__main__":
     modo = sys.argv[1] if len(sys.argv) > 1 else "estado"
     if modo == "pedir": pedir()
+    elif modo == "rehacer": pedir(True)
     elif modo == "bajar": bajar()
     elif modo == "preparar": preparar()
     else:

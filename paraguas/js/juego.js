@@ -194,7 +194,7 @@ export class Partida {
       if (m.tomada || Math.abs(m.y - (this.y + 10)) > 22) continue;
       if (Math.abs(m.x - this.x) > 18) continue;
       m.tomada = true; this.monedas++; this.ev.moneda++;
-      this.chispa(m.x, m.y, "#7dffb0", 5);
+      this.chispa(m.x, m.y, "#ffe14a", 5);
     }
   }
 

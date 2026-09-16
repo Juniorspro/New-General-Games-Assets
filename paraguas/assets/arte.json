@@ -1,14 +1,26 @@
 {
-  "paraguas_abierto": {
+  "paraguas_abierto.viejo": {
     "task_id": "gtask-0308ca2f53fd4b4396ab",
     "output_path": "assets/paraguas_abierto-g1.png",
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/paraguas/assets/paraguas_abierto-g1.png"
   },
-  "paraguas_cerrado": {
+  "paraguas_cerrado.viejo": {
     "task_id": "gtask-6dd638a08dba44f5982c",
     "output_path": "assets/paraguas_cerrado-g1.png",
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/paraguas/assets/paraguas_cerrado-g1.png"
+  },
+  "paraguas_cerrado": {
+    "task_id": "gtask-629c3d929d4c4f8bb6aa",
+    "output_path": "assets/paraguas_cerrado-g2.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/paraguas_cerrado-g2.png"
+  },
+  "paraguas_abierto": {
+    "task_id": "gtask-07ec33be3d064661b403",
+    "output_path": "assets/paraguas_abierto-g3.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/paraguas_abierto-g3.png"
   }
 }

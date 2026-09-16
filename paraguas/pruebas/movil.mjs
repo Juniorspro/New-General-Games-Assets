@@ -42,10 +42,13 @@ for (const [w, h, nom] of [[390, 844, "parado"], [360, 640, "chico"], [844, 390,
   ch(`${nom} el lienzo entra en la pantalla`, caja.dentro && caja.an <= w + 1 && caja.al <= h + 1,
      `${caja.an}x${caja.al} en ${w}x${h}`);
 
-  // EL DEDO CIERRA EL PARAGUAS. Se apoya y se sostiene: si el navegador se
-  // quedó el toque, el paraguas no se cierra y no hay juego.
+  // TOCAR CIERRA EL PARAGUAS Y NO MUEVE. Son dos cosas separadas a propósito:
+  // cerrar es lo que hay que hacer todo el tiempo, y si tocar arrastrara al
+  // personaje hasta el dedo, no se podría caer rápido sin correrse de lugar.
+  // Se apoya el dedo LEJOS del personaje y se lo sostiene quieto.
   const r = await pg.evaluate(() => document.querySelector("#lienzo").getBoundingClientRect());
-  await pg.mouse.move(r.x + r.width * 0.75, r.y + r.height * 0.6);
+  const antesX = await pg.evaluate(() => window.PARAGUAS.partida.x);
+  await pg.mouse.move(r.x + r.width * 0.85, r.y + r.height * 0.6);
   await pg.mouse.down();
   await pg.waitForTimeout(500);
   const conDedo = await pg.evaluate(() => ({ abierto: window.PARAGUAS.partida.abierto,
@@ -54,9 +57,15 @@ for (const [w, h, nom] of [[390, 844, "parado"], [360, 640, "chico"], [844, 390,
   ch(`${nom} apoyando el dedo se cierra el paraguas`, conDedo.abierto < 0.25,
      `abierto=${conDedo.abierto.toFixed(2)}`);
   ch(`${nom} y se cae más rápido`, conDedo.vy > 9, `vy=${conDedo.vy.toFixed(1)}`);
+  ch(`${nom} y NO se mueve de costado por tocar`, Math.abs(conDedo.x - antesX) < 12,
+     `${Math.round(antesX)} → ${Math.round(conDedo.x)}`);
 
-  // Y apunta: el dedo estaba a la derecha, el personaje tiene que haber ido.
-  ch(`${nom} y el personaje va hacia el dedo`, conDedo.x > 200, `x=${Math.round(conDedo.x)}`);
+  // Arrastrando sí: lo que manda es cuánto se corrió el dedo, no dónde está.
+  await pg.mouse.move(r.x + r.width * 0.85 - 90, r.y + r.height * 0.6, { steps: 10 });
+  await pg.waitForTimeout(450);
+  const arrastrado = await pg.evaluate(() => window.PARAGUAS.partida.x);
+  ch(`${nom} arrastrando sí se mueve`, arrastrado < conDedo.x - 25,
+     `${Math.round(conDedo.x)} → ${Math.round(arrastrado)}`);
 
   await pg.mouse.up();
   await pg.waitForTimeout(700);

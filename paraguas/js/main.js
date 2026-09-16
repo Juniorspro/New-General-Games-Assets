@@ -6,12 +6,35 @@ import { dibujar, registrarTexturas, tramoDe } from "./dibujo.js";
 import { crearHeroe, pasoHeroe, registrarArte } from "./heroe.js";
 import { despertar, efe, sonando, arrancarViento, soplar, callarViento } from "./audio.js";
 import { cargar, guardar, borrar } from "./guardado.js";
+import { pilotoDedo } from "./piloto.js";
 import { ruta } from "./assets.js";
 
 const $ = (s) => document.querySelector(s);
 const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 let partida = null;
+
+// EL FONDO DE LOS MENUS ES UNA CAIDA DE VERDAD, borroneada.
+//
+// No es un video ni una imagen: es el juego corriendo con el piloto automatico
+// —el mismo que usa el validador del pozo— y el lienzo desenfocado por CSS.
+// Cuesta lo que cuesta un cuadro del juego, no hace falta cargar nada, y sobre
+// todo nunca se desactualiza: si mañana cambia el color de un tramo o la forma
+// de una viga, el menu cambia solo.
+let demo = null;
+function arrancarDemo() {
+  demo = new Partida();
+  // ARRANCA HONDO, no en la boca del pozo. Los primeros siete metros van
+  // limpios a propósito —para que el jugador se acomode— y un menú cuyo fondo
+  // es un rectángulo vacío durante los primeros dos segundos no se lee como
+  // "hay un juego atrás", se lee como que falló algo.
+  demo.y = 900 + Math.random() * 12000;
+  demo.pozo.generarHasta(demo.y + 2500);
+  const f = demo.pozo.siguiente(demo.y + 240);
+  demo.x = f ? f.x : 180;
+  demo.cam = demo.y - VISTA.alto * 0.3;
+  demo.heroe = crearHeroe(demo.x, demo.y);
+}
 
 // --- tamano --------------------------------------------------------------
 // El ancho es fijo y el alto no: el pozo mide 360 unidades en todos los
@@ -53,14 +76,30 @@ const aMundo = (ev) => {
   return (ev.clientX - r.left) / esc - (VISTA.ancho - 360) / 2;
 };
 
+// EL DEDO MANEJA POR ARRASTRE, NO POR POSICION, y es la correccion que mas
+// cambia como se siente el juego.
+//
+// La primera version llevaba al personaje HACIA donde estaba el dedo. Tocar
+// para cerrar el paraguas —que es lo que hay que hacer todo el tiempo— lo
+// mandaba de golpe hasta el dedo, asi que no se podia cerrar sin moverse: el
+// gesto de "caer rapido" y el de "correrme" eran el mismo y no se podian
+// separar. Ahora al apoyar se toma la posicion como CERO y lo que cuenta es
+// cuanto se corrio el dedo desde ahi: apoyar y no mover cierra el paraguas y
+// nada mas. El objetivo se arrastra con el dedo pixel a pixel.
 lienzo.addEventListener("pointerdown", (ev) => {
   despertar(); arrancarViento();
-  dedo = { id: ev.pointerId, x: aMundo(ev) };
+  const x = aMundo(ev);
+  dedo = { id: ev.pointerId, x, cero: x, objetivo: partida ? partida.x : x };
   try { lienzo.setPointerCapture(ev.pointerId); } catch (e) {}
   ev.preventDefault();
 });
 lienzo.addEventListener("pointermove", (ev) => {
-  if (dedo && ev.pointerId === dedo.id) dedo.x = aMundo(ev);
+  if (!dedo || ev.pointerId !== dedo.id) return;
+  dedo.x = aMundo(ev);
+  // 1,5 px de personaje por pixel de dedo: con 1 a 1 hay que barrer media
+  // pantalla para cruzar el pozo y el pulgar no llega.
+  dedo.objetivo = Math.max(14, Math.min(346, dedo.objetivo + (dedo.x - dedo.cero) * 1.5));
+  dedo.cero = dedo.x;
 });
 // setPointerCapture puede tirar excepcion si el puntero ya se solto, y sin
 // atrapar el error el dedo queda apoyado para siempre: el paraguas no se abre
@@ -85,8 +124,8 @@ function leerEntrada() {
   if (tecla) { entrada.cerrar = true; entrada.mover = 0; return; }
   if (dedo) {
     entrada.cerrar = true;
-    const d = dedo.x - partida.x;
-    entrada.mover = Math.abs(d) < 5 ? 0 : Math.max(-1, Math.min(1, d / 34));
+    const d = dedo.objetivo - partida.x;
+    entrada.mover = Math.abs(d) < 3 ? 0 : Math.max(-1, Math.min(1, d / 26));
     return;
   }
   entrada.cerrar = false;
@@ -97,11 +136,16 @@ function leerEntrada() {
 function mostrar(id) {
   for (const p of document.querySelectorAll(".pantalla")) p.hidden = true;
   $("#" + id).hidden = false;
+  // El desenfoque se enciende con una clase en el body y lo aplica el
+  // compositor: poner un filtro en el lienzo por cuadro desde JavaScript seria
+  // pagar el mismo efecto tres veces.
+  document.body.classList.toggle("borroso", id !== "p-juego");
 }
 
 function alMenu() {
   partida = null;
   callarViento();
+  if (!demo) arrancarDemo();
   const d = cargar();
   $("#m-mejor").textContent = `${d.mejor} m`;
   $("#m-caidas").textContent = d.partidas === 1 ? "1 caída" : `${d.partidas} caídas`;
@@ -110,6 +154,7 @@ function alMenu() {
 
 function jugar() {
   despertar(); arrancarViento();
+  demo = null;
   partida = new Partida();
   partida.heroe = crearHeroe(partida.x, partida.y);
   ultimoHito = 0;
@@ -203,7 +248,18 @@ function bucle(ahora) {
   let n = 0;
   while (sobra >= PASO && n < 5) {
     sobra -= PASO; n++;
-    if (!partida) continue;
+    if (!partida) {
+      // El demo del fondo. Si se estrella, arranca otra caida: el menu tiene
+      // que estar vivo aunque alguien lo deje abierto diez minutos.
+      if (demo) {
+        try {
+          demo.paso(pilotoDedo(demo));
+          pasoHeroe(demo.heroe, demo.x, demo.y, demo.vx, demo.vy, demo.abierto);
+          if (demo.estado === "muerto" && demo.cuenta > 40) arrancarDemo();
+        } catch (e) { demo = null; }
+      }
+      continue;
+    }
     try {
       leerEntrada();
       partida.paso(entrada);
@@ -217,6 +273,7 @@ function bucle(ahora) {
     }
   }
   if (partida) { dibujar(ctx, partida); pintarHud(partida); }
+  else if (demo) dibujar(ctx, demo);
 }
 
 // --- arranque ------------------------------------------------------------
@@ -243,7 +300,8 @@ function traer(url) {
   sonando(d.ajustes.sonido);
   alMenu();
   requestAnimationFrame(bucle);
-  window.PARAGUAS = { get partida() { return partida; }, jugar, alMenu, entrada, VISTA, F };
+  window.PARAGUAS = { get partida() { return partida; }, get demoMetros() { return demo?.metros; },
+                     jugar, alMenu, entrada, VISTA, F };
 
   const arte = {}, tex = {};
   await Promise.all([

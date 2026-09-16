@@ -189,9 +189,12 @@ function viga(ctx, f, color, t) {
 
 function moneda(ctx, m, t) {
   const r = 5 + Math.sin(t / 10 + m.y * 0.05) * 0.6;
-  ctx.fillStyle = "rgba(125,255,176,.18)";
+  ctx.fillStyle = "rgba(255,225,74,.28)";
   ctx.beginPath(); ctx.arc(m.x, m.y, r * 2.1, 0, 7); ctx.fill();
-  ctx.fillStyle = "#7dffb0";
+  // AMARILLO Y NO VERDE. El paraguas pasó a ser verde ácido, y dos verdes
+  // distintos a veinte metros de distancia se leen como el mismo color: la
+  // chatarra desaparecía contra el propio personaje.
+  ctx.fillStyle = "#ffe14a";
   ctx.beginPath();
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * Math.PI * 2 + t / 40;

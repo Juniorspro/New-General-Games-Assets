@@ -18,18 +18,28 @@
 
 <!-- ───────────── menú ───────────── -->
 <main id="p-menu" class="pantalla centrado">
-  <div class="caja">
-    <h1 class="logo">Paraguas</h1>
-    <p class="bajada">Un pozo sin fondo. Apretá y el paraguas se cierra:
-      caés rápido y pasás por cualquier lado. Soltá y se abre: caés lento y
-      ocupás el doble.</p>
-    <div class="botones">
-      <button id="m-jugar" class="grande primario"><span>▼ Caer</span></button>
-      <button id="m-como" class="grande"><span>? Cómo se juega</span></button>
+  <div class="tapa">
+    <h1 class="logo"><span>Para</span><em>guas</em></h1>
+    <p class="bajada">Un pozo sin fondo. <b>Apretá</b> y se cierra: caés rápido
+      y pasás por cualquier lado. <b>Soltá</b> y se abre: caés lento y ocupás el doble.</p>
+
+    <!-- EL BOTON DE CAER ES UN PORTAL, no un rectángulo con texto. Es lo único
+         que se toca en esta pantalla y lo primero que se ve: merece ser el
+         objeto más grande y el único que se mueve. El remolino es un
+         conic-gradient girando — cero imágenes, cero kilobytes. -->
+    <button id="m-jugar" class="portal" aria-label="Caer">
+      <span class="remolino" aria-hidden="true"></span>
+      <span class="remolino dos" aria-hidden="true"></span>
+      <span class="portal-txt">CAER</span>
+    </button>
+
+    <p class="record">Mejor caída <b id="m-mejor">0 m</b> <span id="m-caidas" class="tenue"></span></p>
+
+    <div class="botones fila chicos">
+      <button id="m-como" class="chico">? Cómo se juega</button>
+      <label class="opcion chico-op"><input type="checkbox" id="aj-sonido"> <span>Sonido</span></label>
+      <button id="m-borrar" class="chico peligro">Borrar</button>
     </div>
-    <p class="record">Mejor caída: <b id="m-mejor">0 m</b> <span id="m-caidas" class="tenue"></span></p>
-    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Sonido</span></label>
-    <button id="m-borrar" class="chico peligro">Borrar récord</button>
   </div>
 </main>
 
@@ -90,13 +100,17 @@
 
 <!-- ───────────── final ───────────── -->
 <main id="p-fin" class="pantalla centrado" hidden>
-  <div class="caja fin">
-    <p id="f-record" class="record-nuevo" hidden>¡Récord!</p>
+  <div class="tapa fin">
+    <p id="f-record" class="record-nuevo" hidden>¡RÉCORD!</p>
+    <p class="fin-rotulo">Caíste</p>
     <h2 id="f-metros">0 m</h2>
     <ul id="f-lista" class="lista"></ul>
-    <div class="botones fila">
-      <button id="f-otra" class="primario">Otra vez</button>
-      <button id="f-menu">Al menú</button>
+    <button id="f-otra" class="portal chico-portal" aria-label="Otra vez">
+      <span class="remolino" aria-hidden="true"></span>
+      <span class="portal-txt">OTRA</span>
+    </button>
+    <div class="botones fila chicos">
+      <button id="f-menu" class="chico">Al menú</button>
     </div>
   </div>
 </main>

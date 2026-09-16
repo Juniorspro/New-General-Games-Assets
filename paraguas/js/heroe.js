@@ -144,11 +144,11 @@ export function dibujarHeroe(ctx, h, x, y, abierto, ancho, invul) {
     const alt = an * (im.height / im.width) * (abierto > 0.5 ? 1 : 0.42);
     ctx.drawImage(im, -an / 2, -alt * 0.30, an, alt);
   } else {
-    ctx.fillStyle = "#e08b2c";
+    ctx.fillStyle = "#97ce4c";
     ctx.beginPath();
     ctx.ellipse(0, 0, ancho / 2, F.ALTO_PARAGUAS * (0.5 + abierto), 0, Math.PI, 0);
     ctx.fill();
-    ctx.strokeStyle = "#5a3a1c"; ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "#8a9099"; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 30); ctx.stroke();
   }
   ctx.restore();

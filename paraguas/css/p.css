@@ -43,22 +43,23 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
 .pantalla[hidden] { display: none; }
 .centrado { align-items: center; justify-content: center; padding: 18px; overflow-y: auto; }
 
-#p-menu, #p-fin, #p-como { background: radial-gradient(130% 60% at 50% 0%, #1d2740 0%, var(--fondo) 72%); }
+/* EL MENU Y EL FINAL SON UN VELO, NO UNA PARED. Tenían el mismo degradé opaco
+   que la pantalla de texto y tapaban el lienzo entero: el juego desenfocado
+   corría atrás y no se veía nada. La de "cómo se juega" sí queda opaca, porque
+   ahí lo que hay que leer es el texto. */
+#p-menu, #p-fin { background: radial-gradient(130% 70% at 50% 0%, rgba(14,24,16,.22), rgba(6,9,14,.62)); }
+#p-como { background: radial-gradient(130% 60% at 50% 0%, #16200f 0%, var(--fondo) 72%); }
 
 .caja {
   background: rgba(16,21,34,.94); border: 1px solid var(--borde); border-radius: 14px;
   padding: 22px 20px; width: 100%; text-align: center;
   box-shadow: 0 16px 44px rgba(0,0,0,.55); max-height: 100%; overflow-y: auto;
 }
-.logo {
-  margin: 0 0 8px; font-size: 40px; font-weight: 900; letter-spacing: -1.5px; line-height: 1;
-  background: linear-gradient(135deg, var(--ambar), #ffcf6a 60%, var(--cian));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
+
 .bajada { color: var(--tenue); margin: 0 0 18px; font-size: 14px; }
 .bajada b { color: var(--texto); }
 .record { color: var(--tenue); font-size: 13px; margin: 14px 0 6px; }
-.record b { color: var(--ambar); }
+.record b { color: var(--portal-claro); }
 .tenue { color: var(--tenue); opacity: .7; }
 
 .botones { display: flex; flex-direction: column; gap: 9px; }
@@ -71,24 +72,21 @@ button {
 }
 button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45); }
 .grande { min-height: 52px; font-size: 16px; }
-.primario {
-  background: linear-gradient(135deg, var(--ambar), #f0a94a);
-  border-color: var(--ambar); color: #2a1a00; font-weight: 800;
-}
+
 .chico { padding: 7px 12px; font-size: 13px; min-height: 36px; }
 .peligro { border-color: #5e2b33; color: #ff9b9b; background: transparent; box-shadow: none; }
 .opcion { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 10px 0; color: var(--tenue); font-size: 14px; }
-.opcion input { width: 20px; height: 20px; accent-color: var(--ambar); }
+.opcion input { width: 20px; height: 20px; accent-color: var(--portal); }
 
 /* --- texto largo --- */
 .barra { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
          background: rgba(10,14,24,.95); border-bottom: 2px solid var(--borde); }
 .barra h2 { margin: 0; font-size: 17px; }
 .texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
-.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--ambar); }
+.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--portal); }
 .texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
 .texto p b { color: var(--texto); }
-.destacado { background: var(--panel); border-left: 3px solid var(--cian);
+.destacado { background: rgba(22,32,20,.7); border-left: 3px solid var(--portal);
              padding: 11px 12px; border-radius: 0 8px 8px 0; }
 .texto dl { margin: 0; }
 .texto dt { font-weight: 700; margin-top: 10px; font-size: 14px; }
@@ -108,8 +106,8 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
 }
 .hud-dato { background: rgba(10,14,24,.7); border-radius: 8px; padding: 4px 8px;
             font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; }
-.hud-dato span { color: var(--verde); margin-right: 3px; }
-.varillas { font-size: 17px; color: var(--ambar); letter-spacing: -1px;
+.hud-dato span { color: #ffe14a; margin-right: 3px; }
+.varillas { font-size: 17px; color: var(--portal); letter-spacing: -1px;
             text-shadow: 0 2px 6px rgba(0,0,0,.8); }
 .varillas.poca { color: var(--mal); animation: latir .6s infinite; }
 @keyframes latir { 50% { opacity: .35; } }
@@ -118,7 +116,7 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
          font-size: 12px; color: var(--tenue); }
 
 /* --- final --- */
-.fin h2 { margin: 0 0 12px; font-size: 44px; font-weight: 900; color: var(--ambar);
+.fin h2 { margin: 0 0 12px; font-size: 44px; font-weight: 900;
           font-variant-numeric: tabular-nums; }
 .record-nuevo { margin: 0 0 4px; color: var(--verde); font-weight: 800; letter-spacing: 1px;
                 animation: pum .5s cubic-bezier(.2,1.6,.4,1) both; }
@@ -138,4 +136,126 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
   .grande { min-height: 44px; font-size: 14px; }
   .fin h2 { font-size: 30px; margin-bottom: 6px; }
   .lista li { padding: 4px 2px; font-size: 12.5px; }
+}
+
+/* ═══════════════ el vestido ═══════════════
+   Verde portal, contornos gruesos y negros, color plano. Lo que en la serie
+   hace que todo se lea de un vistazo es que no hay medias tintas: un objeto o
+   brilla o es negro. */
+:root {
+  --portal: #97ce4c;
+  --portal-claro: #c8f06a;
+  --portal-hondo: #4b7a1e;
+}
+
+/* EL FONDO DE LOS MENUS ES EL JUEGO, DESENFOCADO. El filtro lo aplica el
+   compositor sobre el lienzo entero, así que cuesta lo mismo que una capa de
+   más y no toca el bucle. El brillo bajo y la saturación alta son para que el
+   texto blanco se lea encima sin tener que taparlo con un panel opaco. */
+#lienzo { transition: filter .25s ease; }
+/* El desenfoque tiene que dejar VER que hay alguien cayendo. Con blur 9 y
+   brillo 0,55 sobre un pozo que ya es oscuro no quedaba nada: el menú parecía
+   tener un fondo liso. Siete de desenfoque y 0,85 de brillo dejan las vigas y
+   el paraguas reconocibles, y el velo de `.tapa` se encarga del contraste del
+   texto en vez de taparlo todo. */
+body.borroso #lienzo { filter: blur(6px) saturate(1.4) brightness(1.06); }
+
+/* La tapa: en vez de una caja opaca, un velo. Atrás se tiene que seguir viendo
+   que alguien está cayendo. */
+.tapa {
+  width: 100%; text-align: center; padding: 20px 18px;
+  border-radius: 18px;
+  background: radial-gradient(120% 90% at 50% 10%, rgba(18,28,22,.72), rgba(7,10,16,.86));
+  border: 2px solid rgba(151,206,76,.28);
+  box-shadow: 0 0 48px rgba(151,206,76,.14), 0 18px 50px rgba(0,0,0,.6);
+  max-height: 100%; overflow-y: auto;
+}
+
+.logo {
+  margin: 0 0 6px; font-size: 42px; font-weight: 900; line-height: .95;
+  letter-spacing: -1.5px; text-transform: uppercase;
+  text-shadow: 0 3px 0 #0b1408, 0 0 26px rgba(151,206,76,.55);
+}
+.logo span { color: #eaf6dc; }
+.logo em {
+  font-style: normal; color: var(--portal);
+  display: inline-block; transform: rotate(-3deg);
+}
+
+/* ── el botón portal ──
+   Es el único objeto grande de la pantalla y el único que se mueve. Dos
+   remolinos girando en sentidos opuestos: uno rápido y fino, otro lento y
+   ancho. Un conic-gradient girando no cuesta nada y no carga nada. */
+.portal {
+  position: relative; display: grid; place-items: center;
+  width: 176px; height: 176px; margin: 14px auto 6px;
+  padding: 0; border: none; background: none; box-shadow: none;
+  border-radius: 50%; cursor: pointer;
+  filter: drop-shadow(0 0 22px rgba(151,206,76,.55));
+}
+.portal .remolino {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    var(--portal-hondo) 0deg, var(--portal) 40deg, var(--portal-claro) 70deg,
+    var(--portal) 110deg, var(--portal-hondo) 160deg, var(--portal) 220deg,
+    var(--portal-claro) 260deg, var(--portal) 310deg, var(--portal-hondo) 360deg);
+  animation: girar 7s linear infinite;
+  -webkit-mask-image: radial-gradient(circle, transparent 26%, #000 40%, #000 92%, transparent 100%);
+  mask-image: radial-gradient(circle, transparent 26%, #000 40%, #000 92%, transparent 100%);
+}
+.portal .remolino.dos {
+  inset: 12px; opacity: .75; animation: girar 4.2s linear infinite reverse;
+  filter: blur(2px);
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+.portal .portal-txt {
+  position: relative; z-index: 1;
+  font-size: 30px; font-weight: 900; letter-spacing: 2px; color: #123006;
+  text-shadow: 0 2px 0 rgba(220,255,180,.55);
+}
+.portal:active { transform: scale(.95); }
+.portal.chico-portal { width: 122px; height: 122px; margin: 10px auto 4px; }
+.portal.chico-portal .portal-txt { font-size: 21px; }
+
+/* El resto de los botones se achica y se corre al pie: en esta pantalla hay UNA
+   cosa para hacer y el resto es administración. */
+/* Los botones del pie se ven chicos pero SE TOCAN GRANDE. Al mudarlos acá
+   heredaron `.chico`, que mide 36 px de alto, y la prueba de teléfono los cazó:
+   por debajo de 44 el dedo falla una de cada tres veces y no hay nada más
+   frustrante que un botón que a veces no anda. El tamaño visual lo da el texto
+   y el relleno; el área de toque, el min-height. */
+.botones.chicos { gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+.botones.chicos .chico { min-height: 44px; }
+.chico-op { min-height: 44px; display: flex; align-items: center; }
+.chico-op { margin: 0; font-size: 12.5px; }
+.chico-op input { width: 17px; height: 17px; }
+
+.bajada { font-size: 13.5px; }
+.record { font-size: 13px; letter-spacing: .3px; }
+.record b { color: var(--portal-claro); font-size: 15px; }
+
+/* ── el final ── */
+.fin-rotulo { margin: 0; color: var(--tenue); font-size: 13px; letter-spacing: 3px;
+              text-transform: uppercase; }
+.fin h2 { color: var(--portal-claro); text-shadow: 0 0 24px rgba(151,206,76,.5); }
+.record-nuevo { color: var(--portal); letter-spacing: 3px; }
+.lista li { border-bottom-color: rgba(151,206,76,.18); }
+
+/* ── el HUD, con el mismo verde ── */
+.metros { color: #eaf6dc; }
+.hud-dato span { color: #ffe14a; }
+.tramo { color: #b9cf9a; border: 1px solid rgba(151,206,76,.2); }
+
+/* ── texto largo ── */
+.texto h3 { color: var(--portal); }
+.destacado { border-left-color: var(--portal); }
+.primario { background: linear-gradient(135deg, var(--portal), var(--portal-claro));
+            border-color: var(--portal); color: #123006; }
+
+@media (max-height: 470px) {
+  .tapa { padding: 10px 14px; }
+  .portal { width: 104px; height: 104px; margin: 6px auto 2px; }
+  .portal .portal-txt { font-size: 19px; }
+  .portal.chico-portal { width: 86px; height: 86px; }
+  .logo { font-size: 24px; }
 }

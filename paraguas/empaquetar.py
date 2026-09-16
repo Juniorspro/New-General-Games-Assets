@@ -22,7 +22,8 @@ imágenes son una mejora, no un requisito.
 import base64, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["assets", "mundo", "pozo", "juego", "heroe", "dibujo", "audio", "guardado"]
+ORDEN = ["assets", "mundo", "pozo", "juego", "piloto", "heroe", "dibujo", "audio",
+         "guardado"]
 ENTRADA = "main"
 
 # Multilínea y con comillas simples O dobles: juego.js abre el import de
