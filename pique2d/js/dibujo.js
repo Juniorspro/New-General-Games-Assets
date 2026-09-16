@@ -54,6 +54,13 @@ function repetirX(c, img, x, y, w, h, ancho) {
 // tapar lo que la imagen no llega a cubrir. Se toman DOS pixeles de alto y no
 // uno: con uno, algunos navegadores suavizan contra el borde de la textura y
 // sale una linea mas clara justo en la union.
+// Un color del tema, mas oscuro. `p` es cuanto se va hacia el negro.
+function oscurecer(hex, p) {
+  const n = parseInt(hex.slice(1), 16);
+  const m = (s) => Math.round(((n >> s) & 255) * (1 - p));
+  return `rgb(${m(16)},${m(8)},${m(0)})`;
+}
+
 function tiraY(c, img, x, y, altoTira, ancho, w, px, arriba) {
   if (!(altoTira > 0) || !img.width || !img.height || !(w > 0.5)) return;
   const sy = arriba ? 0 : img.height - 2;
@@ -102,15 +109,36 @@ export function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
     const px = -camX * 0.05;
     if (y0 > 0) tiraY(c, capas.cielo, 0, 0, y0 + 1, ancho, w, px, true);
     repetirX(c, capas.cielo, px, y0, w, h, ancho);
-    // Abajo NO se estira la imagen: color plano del tema.
+    // DEBAJO DEL HORIZONTE NO HAY CIELO: HAY TIERRA VISTA DE LEJOS.
     //
-    // La fila de arriba siempre es cielo de verdad, asi que estirarla es
-    // seguro. La de abajo NO: se midio y varios temas traen ahi otra cosa —el
-    // castillo, un rectangulo BLANCO que el modelo dejo sin pintar; el
-    // desierto y la torre, tierra—. Estirando esa fila, esa basura cruzaba la
-    // pantalla entera. Y es el borde de abajo que menos importa: cae DEBAJO
-    // del horizonte, donde ya estan las bandas y el terreno.
-    if (y0 + h < alto) R(c, 0, y0 + h - 1, ancho, alto - y0 - h + 2, tm.cielo[1]);
+    // Antes ahi iba el color plano del cielo, y se veia clarisimo en cuanto
+    // el terreno tenia un pozo: por el agujero asomaba un rectangulo celeste
+    // liso, del color del cielo, a metros por debajo del pasto. Parecia un
+    // error de dibujo, y era el fondo asomando por donde no hay nada.
+    //
+    // Ahora es un degrade que arranca del tono del horizonte y se va a negro:
+    // por un pozo se ve profundidad, que es lo que hay abajo de la tierra.
+    //
+    // Tampoco se estira la fila de abajo de la imagen: se midio y varios
+    // temas traen ahi otra cosa —el castillo, un rectangulo BLANCO que el
+    // modelo dejo sin pintar; el desierto y la torre, tierra—, y estirarla
+    // cruzaba esa basura por toda la pantalla.
+    if (horizonte < alto) {
+      // Arranca YA OSCURO y seis pixeles mas arriba de la linea.
+      //
+      // Empezando en el color del cielo quedaba una franja celeste clarita
+      // cruzando la pantalla justo arriba del pasto: el cielo y las bandas se
+      // corren a velocidades distintas, asi que entre el borde de abajo del
+      // cielo y la base de la banda de adelante se abre un hueco, y por ahi
+      // asomaba el primer tono del degrade. Arrancando oscuro y un poco mas
+      // arriba, el hueco queda tapado por la banda y no se ve nada.
+      const y1 = horizonte - 6;
+      const g2 = c.createLinearGradient(0, y1, 0, alto);
+      g2.addColorStop(0, oscurecer(tm.borde, 0.22));
+      g2.addColorStop(1, oscurecer(tm.borde, 0.78));
+      c.fillStyle = g2;
+      c.fillRect(0, y1 | 0, ancho, Math.ceil(alto - y1 + 2));
+    }
   } else {
     const a = tm.cielo[0], b = tm.cielo[1];
     const mezcla = (p) => {
@@ -119,6 +147,8 @@ export function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
       return `rgb(${m(16)},${m(8)},${m(0)})`;
     };
     for (let i = 0; i < 6; i++) R(c, 0, alto * i / 6, ancho, alto / 6 + 1, mezcla(i / 5));
+    const hz = (ANCLA_MUNDO - camaraReposo(alto)) - (camY - camaraReposo(alto)) * 0.10;
+    if (hz < alto) R(c, 0, hz | 0, ancho, Math.ceil(alto - hz), oscurecer(tm.borde, 0.5));
   }
 
   // 2) las dos bandas
@@ -268,10 +298,25 @@ function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = ()
       }
       break;
     }
-    case V.PLATAFORMA:
-      R(c, x, y, T, 4, tm.detalle); R(c, x, y, T, 1, "rgba(255,255,255,.5)");
-      R(c, x, y + 4, T, 1, "rgba(0,0,0,.35)");
+    case V.PLATAFORMA: {
+      // Con la pieza dibujada, y cortada en tres: punta izquierda, cuerpo y
+      // punta derecha. Era una barra de cuatro pixeles de color plano y se
+      // leia como una franja de pintura arriba del fondo, no como algo donde
+      // pararse. Los herrajes de las puntas son lo que hace que se entienda
+      // donde empieza y donde termina la plataforma.
+      const pz = piezas.plataforma;
+      if (pz && pz.width) {
+        const izq = vecino(-1) !== V.PLATAFORMA, der = vecino(1) !== V.PLATAFORMA;
+        // Un tercio de la imagen por parte. La del medio se repite.
+        const sw = pz.width / 3;
+        const sx = izq ? 0 : (der ? sw * 2 : sw);
+        c.drawImage(pz, sx, 0, sw, pz.height, x | 0, y | 0, T, 13);
+      } else {
+        R(c, x, y, T, 5, tm.detalle); R(c, x, y, T, 1, "rgba(255,255,255,.5)");
+        R(c, x, y + 5, T, 1, "rgba(0,0,0,.35)");
+      }
       break;
+    }
     case V.PINCHE:
       c.fillStyle = "#d8dae2";
       for (let i = 0; i < 3; i++) {

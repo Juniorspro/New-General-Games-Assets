@@ -7,7 +7,7 @@ pg.on("console", m => { if (m.type()==="error") err.push("consola: " + m.text().
 await pg.goto("http://127.0.0.1:8802/index.html");
 await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
 console.log("hojas que faltan:", await pg.evaluate(() => window.PIQUE.faltan));
-await pg.click("#btn-jugar"); await pg.waitForSelector("#p-mapa:not([hidden])");
+await pg.click("#btn-niveles"); await pg.waitForSelector("#p-mapa:not([hidden])");
 await pg.click('[data-nivel="1-1"]');
 await pg.waitForSelector("#p-juego:not([hidden])", { timeout: 30000 });
 await pg.waitForTimeout(1500);

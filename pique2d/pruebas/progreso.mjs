@@ -9,7 +9,22 @@ await pg.waitForFunction(()=>!!window.PIQUE,{timeout:60000});
 await pg.evaluate(()=>localStorage.clear());
 await pg.reload(); await pg.waitForFunction(()=>!!window.PIQUE,{timeout:60000});
 
-await pg.tap("#btn-jugar"); await pg.waitForSelector("#p-mapa:not([hidden])");
+// JUGAR ENTRA DERECHO, sin pasar por el mapa. Es el cambio que se pidio:
+// el mapa era un peaje entre un nivel y el siguiente.
+await pg.tap("#btn-jugar");
+await pg.waitForSelector("#p-juego:not([hidden])",{timeout:40000});
+ch("Jugar entra derecho al 1-1, sin pasar por el mapa",
+   (await pg.evaluate(()=>window.PIQUE.cfg)).m === 1 &&
+   (await pg.evaluate(()=>window.PIQUE.cfg)).n === 1,
+   JSON.stringify(await pg.evaluate(()=>{const c=window.PIQUE.cfg; return `${c.m}-${c.n}`;})));
+await pg.evaluate(()=>window.PIQUE.alMapa());
+await pg.waitForSelector("#p-mapa:not([hidden])");
+const alMenu = async () => {
+  await pg.evaluate(()=>document.querySelector('#p-mapa [data-volver="p-inicio"]').click());
+  await pg.waitForSelector("#p-inicio:not([hidden])",{timeout:10000});
+};
+await alMenu();
+await pg.tap("#btn-niveles"); await pg.waitForSelector("#p-mapa:not([hidden])");
 const abiertos = () => pg.evaluate(()=>[...document.querySelectorAll(".nivel")].filter(b=>!b.disabled).map(b=>b.dataset.nivel));
 ch("de arranque solo esta abierto el 1-1", JSON.stringify(await abiertos()) === '["1-1"]',
    JSON.stringify(await abiertos()));
@@ -26,6 +41,14 @@ await pg.tap("#res-mapa"); await pg.waitForSelector("#p-mapa:not([hidden])");
 const ab2 = await abiertos();
 ch("ganar el 1-1 abre el 1-2 y nada mas", JSON.stringify(ab2) === '["1-1","1-2"]', JSON.stringify(ab2));
 ch("no abre el mundo entero", !ab2.includes("1-4"));
+
+// Y despues de ganar el 1-1, Jugar tiene que llevar al 1-2.
+await alMenu();
+await pg.tap("#btn-jugar");
+await pg.waitForSelector("#p-juego:not([hidden])",{timeout:40000});
+const sig = await pg.evaluate(()=>{const c=window.PIQUE.cfg; return `${c.m}-${c.n}`;});
+ch("y despues de ganarlo, Jugar lleva al 1-2", sig === "1-2", sig);
+await pg.evaluate(()=>window.PIQUE.alMapa()); await pg.waitForSelector("#p-mapa:not([hidden])");
 
 // Un nivel cerrado no se puede tocar.
 const cerrado = await pg.evaluate(()=>{ const b=document.querySelector('[data-nivel="1-3"]');

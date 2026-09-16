@@ -399,13 +399,23 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
    quedaba abajo del borde — la prueba lo cazo como "tapado por -", que es lo
    que devuelve elementFromPoint cuando el punto esta fuera de la vista. */
 .centrado { overflow-y: auto; }
+/* Pantalla baja: el telefono acostado.
+ *
+ * Con cuatro botones en una sola columna no entran: 4x44 de alto mas el logo
+ * dibujado —que mide 132 px a 300 de ancho— pasan los 390 px de un telefono
+ * acostado, y el ultimo boton queda abajo del borde. La prueba de interfaz lo
+ * cazo dos veces, las dos como "#btn-ajustes tapado por -".
+ *
+ * Se acomodan en DOS COLUMNAS. Dos filas de dos entran siempre, y de paso los
+ * botones quedan mas anchos, que acostado es lo que sobra. */
 @media (max-height: 520px) {
-  .caja-inicio { padding: 16px 20px 14px; }
-  .caja-inicio .logo { font-size: 38px; margin-bottom: 0; }
-  .caja-inicio .bajada { font-size: 13px; margin-bottom: 12px; }
-  .botones { gap: 7px; }
-  .botones .grande { padding: 10px 18px; font-size: 15px; min-height: 44px; }
-  .caja-inicio .pie { font-size: 11px; margin-top: 10px; }
+  .caja-inicio { padding: 14px 18px 12px; max-height: 96vh; overflow-y: auto; }
+  .caja-inicio .logo { font-size: 34px; margin-bottom: 0; }
+  .caja-inicio .bajada { font-size: 12px; margin-bottom: 9px; }
+  .logo-img { width: min(210px, 42vw); margin-bottom: 4px; }
+  .botones { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .botones .grande { padding: 10px 14px; font-size: 15px; min-height: 44px; }
+  .caja-inicio .pie { font-size: 11px; margin-top: 8px; }
 }
 
 /* ───────────── menus con imagenes ───────────── */

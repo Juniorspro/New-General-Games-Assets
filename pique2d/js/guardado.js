@@ -74,6 +74,25 @@ export function abrirSiguiente(m, n) {
   return d.desbloqueado;
 }
 
+/**
+ * El nivel que toca jugar: el primero sin terminar, y si estan todos hechos,
+ * el ultimo que se desbloqueo.
+ *
+ * Existe porque "Jugar" ya no abre el mapa. El mapa era un peaje: para seguir
+ * la partida habia que volver a elegir a mano el nivel siguiente cada vez, y
+ * el juego es de correr, no de administrar. Ahora Jugar entra derecho al que
+ * toca y el mapa quedo en su propio boton, para quien quiera repetir uno.
+ */
+export function proximoNivel() {
+  const d = cargar();
+  for (let i = 1; i <= Math.min(24, d.desbloqueado); i++) {
+    const m = Math.ceil(i / 4), n = i - (m - 1) * 4;
+    if (!d.niveles[`${m}-${n}`]?.hecho) return { m, n };
+  }
+  const i = Math.min(24, d.desbloqueado);
+  return { m: Math.ceil(i / 4), n: i - (Math.ceil(i / 4) - 1) * 4 };
+}
+
 export function borrarTodo() {
   try { localStorage.removeItem(LLAVE); } catch (e) {}
   cache = null;

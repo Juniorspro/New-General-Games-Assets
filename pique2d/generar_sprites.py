@@ -128,7 +128,18 @@ SUJETO = {
 # y el control la rechaza — 16 de 17 fallaron por esto en la primera tanda.
 # 1024/4 = 256 exacto. Ademas 16 cuadros son casi el doble de suaves que 9.
 HOJAS = {
- "heroe_correr":  ("heroe", "running fast to the right, side view, scarf streaming behind, legs cycling, arms pumping", 4, 4, "2048x2048"),
+ # EL CICLO DE CARRERA, POSE POR POSE. La primera version decia "corriendo
+ # rapido, piernas ciclando" y salieron dieciseis dibujos con las piernas
+ # abiertas en la misma zancada: cambiaba la bufanda y poco mas. En pantalla
+ # se ve como un muneco quieto con las piernas abiertas, que es exactamente
+ # lo que se reclamo. Un ciclo de carrera tiene cuatro poses clave y hay que
+ # nombrarlas: contacto, hundido, pasada (piernas JUNTAS) y empuje.
+ "heroe_correr":  ("heroe", "one complete RUN CYCLE to the right, side view, hitting these key poses in "
+                   "order: cells 1-2 contact, right leg forward and straight, left leg back; cells 3-4 "
+                   "down, knees bent, body at its lowest; cells 5-6 PASSING, both legs together under "
+                   "the body, one knee lifted high; cells 7-8 push off, left leg straight behind; then "
+                   "cells 9-16 repeat the same four poses with the legs SWAPPED. Arms swing opposite "
+                   "to the legs, the body bobs up and down, the scarf streams behind", 4, 4, "2048x2048"),
  "heroe_saltar":  ("heroe", "one jump arc seen from the side facing right: crouch, launch, rise, apex, fall, land", 4, 4, "2048x2048"),
  # Tres saltos, TRES HOJAS distintas. Repetir la hoja del primero y girarla
  # a mano se ve como lo que es: el mismo dibujo dando vueltas. Cada salto se
@@ -142,6 +153,21 @@ HOJAS = {
                    "body rotating a steady 360 degrees BACKWARDS across the 16 cells, arms thrown out wide, "
                    "back arched, legs kicking out straight, the long scarf spiralling behind in a wide "
                    "ribbon. Clearly a backward rotation, the opposite way to a forward roll", 4, 4, "2048x2048"),
+ # El giro. Correr solo y darse vuelta de golpe —el sprite espejado en un
+ # cuadro— se lee como un error de dibujo: el personaje aparece mirando al
+ # otro lado sin haber girado. Son dieciseis cuadros de pivote.
+ "heroe_girar":   ("heroe", "pivoting on the spot from facing RIGHT to facing LEFT, planting its feet "
+                   "and turning its whole body a little more in each cell: cell 1 fully in right "
+                   "profile, cell 8 facing the viewer head-on, cell 16 fully in left profile. The "
+                   "long scarf swings across the body as it turns", 4, 4, "2048x2048"),
+ # La escena del hongo gigante. Es lo unico del juego que se mira en vez de
+ # jugarse, asi que tiene que estar dibujado como una escena: sostenerlo,
+ # mirarlo, y comerselo.
+ "heroe_comer":   ("heroe", "three-quarter view facing right, holding a big round mushroom up in both "
+                   "hands in front of its face: cells 1 to 6 holding it high and turning it, looking "
+                   "at it, cells 7 to 11 leaning in and opening wide, cells 12 to 16 biting into it "
+                   "and swallowing, arms coming down. The mushroom gets smaller as it is eaten",
+                   4, 4, "2048x2048"),
  "heroe_quieto":  ("heroe", "standing still facing right, breathing gently, scarf swaying, tiny idle bob", 4, 4, "2048x2048"),
  "bolo_caminar":  ("bolo", "waddling to the right, side view, stubby legs stepping", 4, 4, "2048x2048"),
  "caracol_caminar":("caracol","gliding to the right, side view, body rippling, eye stalks swaying", 4, 4, "2048x2048"),
@@ -180,6 +206,9 @@ PIEZAS = {
                  "vertical teal metal column with a bright highlight stripe on the left and a dark "
                  "stripe on the right, no rim, no opening, tileable vertically, flat side view, "
                  "isolated, fills the image"),
+ "plataforma": ("a floating platform seen straight from the side: three thick wooden planks with a "
+                "bright top edge, dark iron brackets and bolts at both ends, flat top, flat bottom, "
+                "no legs, no posts, isolated, fills the image, tileable left to right"),
  "icono_moneda": ("a single game coin icon, thick amber disc with cream bevel and a spiral emblem, "
                   "front view, isolated, fills the image"),
  "icono_burbuja":("a single soap bubble icon, pale cyan sphere with a white highlight, isolated, "
@@ -202,6 +231,14 @@ def pedir_piezas():
 
 
 OBJETOS = {
+ "hongo_crecer":  ("a plump cartoon mushroom power-up: a domed amber cap with big cream spots and a "
+                   "short fat cream stem with two tiny dot eyes and a small smile, side view. It bobs "
+                   "and squashes gently, the cap wobbling. NOT a toadstool with a human face, no arms, "
+                   "no legs", 4, 4, "2048x2048"),
+ "hongo_super":   ("a huge glowing SUPER mushroom power-up: a tall domed cap painted in bright rainbow "
+                   "bands —red, orange, amber, green, teal, violet— with glowing cream spots, a thick "
+                   "cream stem, sparkles and rays of light radiating from it, two tiny fierce eyes. It "
+                   "pulses with power, the rays sweeping around. No arms, no legs", 4, 4, "2048x2048"),
  "moneda_girar": ("a thick amber game coin with a bevelled cream edge and a spiral emblem, "
                   "spinning around its vertical axis, seen edge-on to fully face-on and back", 4, 4, "2048x2048"),
  "resorte_saltar": ("a jump pad: wide cream metal plate on a thick amber coil spring bolted to a dark "
@@ -268,10 +305,13 @@ FONDOS = {
               "to blue-grey, dotted with tiny round trees, a windmill on one crest and a far church spire",
               "a dense band of forest treetops seen from the side: round leafy crowns in two greens, dark "
               "trunks, bushes and tall grass along the bottom"),
- "subte":    ("the black-blue void of a deep cavern, clusters of glowing cyan spores drifting, one dim "
-              "shaft of pale light falling from far above",
-              "distant cavern walls receding into blue darkness, long stalactites above and stalagmites "
-              "below, glowing cyan and violet mineral veins, a still underground lake reflecting them",
+ "subte":    ("the empty black-blue void deep inside a cavern: a smooth dark gradient, almost black at "
+              "the top fading to deep blue, with clusters of tiny glowing cyan spores drifting. "
+              "Nothing solid, no rock, no stalactites, no ceiling, no columns — only darkness and "
+              "floating lights",
+              "distant cavern walls far away and low down, receding into blue darkness, stalagmites "
+              "and glowing cyan mineral veins along the bottom, a still underground lake. The top half "
+              "of the image is completely empty",
               "a band of rough dark rock: jagged boulders, cracked columns, dripping wet stone and "
               "clusters of glowing crystals"),
  "cielo":    ("a luminous high-altitude sky, white at the horizon rising to soft blue, a warm sun flare "

@@ -55,8 +55,15 @@ function ruido({ dur = 0.15, vol = 0.2, corte = 1200, tipo = "lowpass" }) {
 }
 
 export const efe = {
-  salto:    () => tono({ f: 300, f2: 620, dur: 0.11, vol: 0.18 }),
-  saltoAlto:() => tono({ f: 340, f2: 820, dur: 0.16, vol: 0.20 }),
+  // EL SALTO SUENA COMO LA BURBUJA, y no al reves.
+  //
+  // El salto era un barrido de sierra corto —300 a 620 Hz— que sonaba a
+  // maquina, y el "plop" de seno subiendo que se usaba para la burbuja es el
+  // sonido que todo el mundo asocia con saltar. Se cambiaron de lugar: ahora
+  // el salto tiene el plop, y la burbuja —que es un rescate, no una accion—
+  // se quedo con el barrido, mas grave y mas largo.
+  salto:    () => tono({ f: 620, f2: 1180, dur: 0.14, tipo: "sine", vol: 0.19 }),
+  saltoAlto:() => tono({ f: 700, f2: 1500, dur: 0.2, tipo: "sine", vol: 0.22 }),
   paredazo: () => tono({ f: 500, f2: 260, dur: 0.09, tipo: "triangle", vol: 0.18 }),
   vault:    () => tono({ f: 600, f2: 900, dur: 0.07, tipo: "triangle", vol: 0.14 }),
   moneda:   () => { tono({ f: 988, dur: 0.05, vol: 0.16 });
@@ -68,7 +75,17 @@ export const efe = {
   bloque:   () => { tono({ f: 150, f2: 80, dur: 0.07, vol: 0.2 }); ruido({ dur: 0.06, vol: 0.14, corte: 700 }); },
   ladrillo: () => ruido({ dur: 0.18, vol: 0.24, corte: 2600, tipo: "highpass" }),
   resorte:  () => tono({ f: 220, f2: 1100, dur: 0.2, tipo: "sine", vol: 0.22 }),
-  burbuja:  () => tono({ f: 700, f2: 1400, dur: 0.28, tipo: "sine", vol: 0.18 }),
+  burbuja:  () => tono({ f: 300, f2: 700, dur: 0.3, tipo: "triangle", vol: 0.18 }),
+  hongo:    () => { [523, 659, 784, 1047, 1319].forEach((f, i) =>
+                    setTimeout(() => tono({ f, dur: 0.14, tipo: "square", vol: 0.2 }), i * 55)); },
+  hongoSuper: () => { [392, 523, 659, 784, 1047, 1319, 1568, 2093].forEach((f, i) =>
+                    setTimeout(() => tono({ f, dur: 0.26, tipo: "triangle", vol: 0.26 }), i * 100)); },
+  pisoton:  () => { tono({ f: 90, f2: 40, dur: 0.22, tipo: "sine", vol: 0.32 });
+                    ruido({ dur: 0.18, vol: 0.22, corte: 500 }); },
+  romper:   () => { ruido({ dur: 0.14, vol: 0.26, corte: 3200, tipo: "highpass" });
+                    tono({ f: 220, f2: 70, dur: 0.12, tipo: "square", vol: 0.16 }); },
+  achicar:  () => { [784, 659, 523, 392].forEach((f, i) =>
+                    setTimeout(() => tono({ f, dur: 0.12, tipo: "square", vol: 0.2 }), i * 60)); },
   pinchar:  () => { tono({ f: 400, f2: 120, dur: 0.3, tipo: "sawtooth", vol: 0.22 }); ruido({ dur: 0.2, vol: 0.15, corte: 500 }); },
   pausa:    () => tono({ f: 660, dur: 0.06, tipo: "sine", vol: 0.14 }),
   reloj:    () => tono({ f: 1200, dur: 0.05, tipo: "sine", vol: 0.12 }),

@@ -8,14 +8,14 @@ for (const [w,h,nom] of [[844,390,"acostado"],[390,844,"parado"]]) {
   await pg.waitForFunction(()=>!!window.PIQUE,{timeout:60000});
   ch(`${nom} sin scroll horizontal`,
      (await pg.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth))<=0);
-  for (const s of ["#btn-jugar","#btn-comojuego","#btn-ajustes"]) {
+  for (const s of ["#btn-jugar","#btn-niveles","#btn-comojuego","#btn-ajustes"]) {
     const t = await pg.evaluate((sel)=>{ const e=document.querySelector(sel); const r=e.getBoundingClientRect();
       const en=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
       return {tocable: e===en||e.contains(en), alto: Math.round(r.height), tapa: en?(en.id||en.className):"-"}; }, s);
     ch(`${nom} ${s} tocable`, t.tocable, t.tocable?`${t.alto}px de alto`:`tapado por ${t.tapa}`);
     ch(`${nom} ${s} llega a 44px`, t.alto>=44, `${t.alto}px`);
   }
-  await pg.click("#btn-jugar"); await pg.waitForSelector("#p-mapa:not([hidden])");
+  await pg.click("#btn-niveles"); await pg.waitForSelector("#p-mapa:not([hidden])");
   await pg.click('[data-nivel="1-1"]');
   await pg.waitForSelector("#p-juego:not([hidden])",{timeout:40000});
   await pg.waitForTimeout(500);

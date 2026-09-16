@@ -1,13 +1,4 @@
 {
-  "heroe_correr": {
-    "task_id": "gtask-7e1272b3d09f42ef8247",
-    "output_path": "assets/heroe_correr-g1.png",
-    "cols": 4,
-    "filas": 4,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_correr-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_correr-g1.png"
-  },
   "heroe_quieto": {
     "task_id": "gtask-0dae04d8ed584a2198b8",
     "output_path": "assets/heroe_quieto-g2.png",
@@ -287,24 +278,6 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_llano_cerca-g2.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_llano_cerca-g2.png"
   },
-  "fondo_subte_cielo": {
-    "task_id": "gtask-e489064df2fc4ec1bff3",
-    "output_path": "assets/fondo_subte_cielo-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_cielo-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_cielo-g2.png"
-  },
-  "fondo_subte_lejos": {
-    "task_id": "gtask-439be1bdd25d41dca367",
-    "output_path": "assets/fondo_subte_lejos-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_lejos-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_lejos-g2.png"
-  },
   "fondo_subte_cerca": {
     "task_id": "gtask-7de3b151de4f4e4583c4",
     "output_path": "assets/fondo_subte_cerca-g2.png",
@@ -529,5 +502,77 @@
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_castillo_cielo-g3.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_castillo_cielo-g3.png"
+  },
+  "heroe_girar": {
+    "task_id": "gtask-f4040cd6b66640ce8502",
+    "output_path": "assets/heroe_girar-g1.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_girar-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_girar-g1.png"
+  },
+  "heroe_comer": {
+    "task_id": "gtask-6c735bb55ba94cf8bcb6",
+    "output_path": "assets/heroe_comer-g1.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_comer-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_comer-g1.png"
+  },
+  "hongo_crecer": {
+    "task_id": "gtask-9ccd985ff0af48978598",
+    "output_path": "assets/hongo_crecer-g1.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/hongo_crecer-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/hongo_crecer-g1.png"
+  },
+  "hongo_super": {
+    "task_id": "gtask-5a41dc7518094ac99bfa",
+    "output_path": "assets/hongo_super-g1.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/hongo_super-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/hongo_super-g1.png"
+  },
+  "plataforma": {
+    "task_id": "gtask-8f22dc686ab449daafd3",
+    "output_path": "assets/plataforma-g1.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/plataforma-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/plataforma-g1.png"
+  },
+  "fondo_subte_cielo": {
+    "task_id": "gtask-9a4eec6b654340c0af8c",
+    "output_path": "assets/fondo_subte_cielo-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_cielo-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_cielo-g3.png"
+  },
+  "fondo_subte_lejos": {
+    "task_id": "gtask-2e1fab259c6d4d20bd45",
+    "output_path": "assets/fondo_subte_lejos-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/fondo_subte_lejos-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/fondo_subte_lejos-g3.png"
+  },
+  "heroe_correr": {
+    "task_id": "gtask-f9fcacdfc28f411d8857",
+    "output_path": "assets/heroe_correr-g2.png",
+    "cols": 4,
+    "filas": 4,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_correr-g2.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_correr-g2.png"
   }
 }

@@ -18,6 +18,9 @@ echo
 echo "── el salto doble y el triple ────────────────────────────────"
 node pruebas/salto.mjs
 echo
+echo "── hongos, tamanos y el gigante ──────────────────────────────"
+node pruebas/hongos.mjs
+echo
 echo "── cuelgues: bucles sin fin, que no se atrapan con nada ──────"
 node pruebas/cuelgues.mjs
 echo

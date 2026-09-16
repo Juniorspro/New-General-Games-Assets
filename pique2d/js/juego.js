@@ -12,7 +12,21 @@ import { dibujarCuadro, cuadroDe } from "./sprites.js";
 import { efe, musica, pararMusica, latirMusica } from "./audio.js";
 
 export const ESTADO = { JUGANDO: "jugando", BURBUJA: "burbuja", MASTIL: "mastil",
-                        GANADO: "ganado", PERDIDO: "perdido" };
+                        ESCENA: "escena", GANADO: "ganado", PERDIDO: "perdido" };
+
+// Los tres tamanos y lo que dibuja cada uno.
+//
+// LA CAJA DE COLISION NO CAMBIA NUNCA, Y ES A PROPOSITO. El validador
+// demuestra que cada nivel se puede terminar simulando un jugador de 11x15
+// pixeles; si al agarrar un hongo la caja creciera, un pasaje de un tile que
+// el validador cruzo dejaria de pasar y el nivel validado seria imposible. Lo
+// que crece es el DIBUJO. El premio de ser grande es aguantar un golpe y
+// —de gigante— arrasar con lo que se cruce, que se siente mas que ocupar mas
+// lugar, y no le miente al jugador sobre por donde entra.
+const ESCALA = [1, 1.45, 2.7];
+const ESCENA_CUADROS = 170;      // lo que dura la escena del hongo gigante
+const GIGANTE_CUADROS = 540;     // nueve segundos de gigante
+const GIRO_CUADROS = 12;         // el pivote al darse vuelta
 
 export class Partida {
   constructor(nv, tier, hojas = {}, patron = null, capas = {}) {
@@ -42,6 +56,16 @@ export class Partida {
     this.burbujaT = 0;
     this.jefe = null;
     this.jefeVivo = false;
+    // --- hongos y tamano ---
+    this.tam = 0;                  // 0 chico · 1 grande · 2 gigante
+    this.escalaAct = 1;            // el dibujo persigue al tamano, no salta
+    this.gigT = 0;                 // cuadros que le quedan de gigante
+    this.invT = 0;                 // invulnerable despues de achicarse
+    this.hongos = [];              // los que salieron de un bloque y vuelan
+    this.escena = null;            // la escena del hongo gigante
+    this.giroT = 0; this.giroDe = 1;
+    this.dirPrev = this.j.dir;
+    this.pasoGig = 0;
     if (nv.cfg.jefe) this.crearJefe(nv.cfg.jefe);
     musica(nv.tema, nv.mastilX * 7919);
   }
@@ -66,6 +90,7 @@ export class Partida {
       if (--p.vida <= 0) this.part.splice(i, 1);
     }
 
+    if (this.estado === ESTADO.ESCENA) return this.pasoEscena();
     if (this.estado === ESTADO.BURBUJA) return this.pasoBurbuja(ent);
     if (this.estado === ESTADO.MASTIL) return this.pasoMastil();
     if (this.estado !== ESTADO.JUGANDO) return;
@@ -77,15 +102,34 @@ export class Partida {
     if (this.reloj === 600) efe.apuro();
     if (this.reloj < 600 && this.reloj % 60 === 0) efe.apuro();
 
+    if (this.invT > 0) this.invT--;
+    if (this.giroT > 0) this.giroT--;
+    // El gigante arrasa ANTES de que corra la fisica: si se dejara para
+    // despues, el cuadro en que toca un ladrillo lo frena la pared y recien
+    // al siguiente lo rompe. Se veria trabarse contra cada bloque.
+    if (this.tam === 2) this.arrasar();
+
     const ev = {};
     paso(this.j, this.nv, ent, ev);
     this.sonarEventos(ev);
+    // Darse vuelta dispara el pivote. Se mira el cambio de `dir` y no un
+    // evento concreto porque hay tres formas de darse vuelta —pared, salto de
+    // pared y el rebote del muro del jefe— y las tres tienen que girar igual.
+    if (this.j.dir !== this.dirPrev) { this.giroT = GIRO_CUADROS; this.giroDe = this.dirPrev; }
+    this.dirPrev = this.j.dir;
     if (ev.cabezazo) this.golpearBloque(ev.cabezazo.tx, ev.cabezazo.ty);
     if (!this.j.vivo) return this.morir(ev.muerte);
 
     this.recolectar();
+    this.hongosPaso();
     this.bichosPaso(ev);
     if (this.jefeVivo) this.jefePaso();
+
+    // El tamano de dibujo persigue al tamano real en vez de saltar de golpe:
+    // asi crecer y achicarse se ven, que es la unica senal de que el hongo
+    // hizo algo.
+    this.escalaAct += ((ESCALA[this.tam] ?? 1) - this.escalaAct) * 0.13;
+    if (this.tam === 2 && --this.gigT <= 0) this.terminarGigante();
 
     // El mastil: se toca y termina. La altura define el premio.
     const tx = Math.floor(this.j.x / T);
@@ -190,10 +234,19 @@ export class Partida {
       this.sacudida = 4;
     } else if (v === V.PREGUNTA) {
       this.nv.grilla[i] = V.USADO; efe.bloque();
-      // Una de cada cinco da burbuja en vez de monedas. Sin eso, quedarse sin
-      // burbujas a mitad de nivel no tiene vuelta y el nivel se abandona.
-      if (this.burbujas < 4 && ((tx * 7 + ty * 13) % 5 === 0)) {
+      // QUE SALE DE CADA BLOQUE ES DETERMINISTA, no un sorteo.
+      //
+      // Sale de la posicion del bloque, asi que el mismo bloque del mismo
+      // nivel da siempre lo mismo. Con azar, dos partidas del mismo nivel se
+      // juegan distinto y el jugador que aprende el nivel no gana nada por
+      // aprenderlo — que es justo lo que este juego pide.
+      const r = (tx * 7 + ty * 13) % 12;
+      if (this.burbujas < 4 && r === 0) {
         this.burbujas++; efe.burbuja(); this.texto(tx * T + 8, ty * T - 6, "burbuja", "#8ad8ff");
+      } else if (r === 5 && this.tam < 2) {
+        this.soltarHongo(tx, ty, "super");
+      } else if ((r === 3 || r === 8) && this.tam < 1) {
+        this.soltarHongo(tx, ty, "hongo");
       } else {
         this.monedas += 3; efe.moneda();
         this.texto(tx * T + 8, ty * T - 6, "+3", "#ffd447");
@@ -221,7 +274,7 @@ export class Partida {
           this.texto(e.x, e.y - 20, `+${p}`, "#ffd447"); efe.combo(this.j.combo);
         }
       }
-      const res = E.chocar(this.j, e);
+      const res = this.invT > 0 || this.tam === 2 ? null : E.chocar(this.j, e);
       if (res === "pisar") {
         const pago = sumarCombo(this.j);
         this.monedas += pago * E.pisado(e, this.j, nuevos);
@@ -280,6 +333,28 @@ export class Partida {
   // No hay vidas. Al morir se entra en una burbuja que vuelve para atras;
   // tocar la pincha y se sigue. Sin burbujas, se perdio el nivel.
   morir(causa) {
+    // SER GRANDE SE PAGA CON EL TAMANO, NO CON UNA VIDA.
+    //
+    // Un golpe estando grande no cuesta una burbuja: cuesta volver a chico, y
+    // deja un segundo de invulnerabilidad para salir de donde sea que lo
+    // golpearon. Sin ese segundo, el mismo enemigo vuelve a tocar en el
+    // cuadro siguiente y el hongo no habria servido para nada.
+    //
+    // El pozo y el reloj NO se perdonan, y tiene que ser asi: si el tamano
+    // salvara tambien de caerse, el juego se quedaria sin ninguna forma de
+    // perder y correr con cuidado dejaria de tener sentido.
+    if (this.tam > 0 && causa !== "pozo" && causa !== "tiempo" && causa !== "encajado") {
+      this.tam = Math.max(0, this.tam - 1);
+      if (this.tam < 2) this.gigT = 0;
+      this.invT = 72;
+      this.j.vivo = true;
+      this.j.vy = Math.min(this.j.vy, -3.2);
+      this.sacudida = 8;
+      efe.achicar();
+      this.chispas(this.j.x, this.j.y - 12, "#ffffff", 12);
+      this.texto(this.j.x, this.j.y - 30, "¡uf!", "#ffd447");
+      return;
+    }
     this.causa = causa;
     efe.pinchar();
     this.chispas(this.j.x, this.j.y - 8, "#ff6a6a", 14);
@@ -295,6 +370,7 @@ export class Partida {
 
   pasoBurbuja(ent) {
     this.burbujaT++;
+    this.hongosPaso();
     this.burbX -= 1.5;
     this.burbY += Math.sin(this.burbujaT / 18) * 0.5;
     // Sube hasta quedar en aire libre: pinchar dentro de una pared seria
@@ -365,6 +441,138 @@ export class Partida {
     pararMusica(); efe.perder();
   }
 
+  // --- hongos -----------------------------------------------------------
+  //
+  // EL HONGO VA HACIA EL JUGADOR. En el juego del que sale la idea, el hongo
+  // cae y camina, y la mitad de las veces se escapa por un barranco antes de
+  // que uno lo alcance. Aca el jugador corre solo y no puede volver: un hongo
+  // que se va es un hongo que no se agarra nunca. Sale del bloque, se queda un
+  // momento arriba —para que se vea de donde salio— y despues vuela derecho.
+  soltarHongo(tx, ty, tipo) {
+    this.hongos.push({ tipo, x: tx * T + T / 2, y: ty * T + T / 2, vx: 0, vy: -2.2, t: 0 });
+    efe.hongo();
+    this.texto(tx * T + 8, ty * T - 8, tipo === "super" ? "¡SUPER!" : "¡hongo!",
+               tipo === "super" ? "#ff7ac0" : "#ffd447");
+  }
+
+  hongosPaso() {
+    // Si el jugador esta en la burbuja, el hongo va hacia la burbuja. Sin
+    // esto quedaba flotando quieto en el aire hasta que volviera, y si moria
+    // justo despues de romper el bloque, el premio ya ganado se quedaba ahi
+    // colgado para siempre.
+    const j = this.estado === ESTADO.BURBUJA
+      ? { x: this.burbX, y: this.burbY + 10 } : this.j;
+    for (let i = this.hongos.length - 1; i >= 0; i--) {
+      const h = this.hongos[i];
+      h.t++;
+      if (h.t < 16) {
+        // Sale del bloque y flota: si volara desde el cuadro cero, el jugador
+        // no llega a ver de donde salio.
+        h.y += h.vy; h.vy += 0.16;
+      } else {
+        // Persecucion con aceleracion. La velocidad se topa para que no se
+        // teletransporte: tiene que VERSE venir.
+        const dx = j.x - h.x, dy = (j.y - 10) - h.y;
+        const d = Math.max(1, Math.hypot(dx, dy));
+        const vel = Math.min(7, 1.6 + (h.t - 16) * 0.18);
+        h.x += (dx / d) * vel; h.y += (dy / d) * vel;
+        if (this.t % 3 === 0)
+          this.chispas(h.x, h.y, h.tipo === "super" ? "#ff9ad0" : "#ffe08a", 1);
+        if (d < 12) { this.hongos.splice(i, 1); this.tomarHongo(h); continue; }
+      }
+      // Un hongo que quedo dando vueltas mas de diez segundos se toma solo.
+      // Es un premio ya ganado: no se pierde por un caso raro de geometria.
+      if (h.t > 600) { this.hongos.splice(i, 1); this.tomarHongo(h); }
+    }
+  }
+
+  tomarHongo(h) {
+    if (h.tipo === "super") {
+      // El gigante entra por la escena, no de una. Es lo unico del juego que
+      // se mira en vez de jugarse y por eso tiene su propio estado.
+      this.estado = ESTADO.ESCENA;
+      this.escena = { t: 0 };
+      efe.hongoSuper();
+      return;
+    }
+    if (this.tam < 1) {
+      this.tam = 1;
+      this.chispas(this.j.x, this.j.y - 12, "#ffe08a", 14);
+      this.texto(this.j.x, this.j.y - 30, "¡grande!", "#ffd447");
+      efe.hongo();
+    } else { this.monedas += 5; efe.moneda(); }
+  }
+
+  // --- gigante ----------------------------------------------------------
+  //
+  // ARRASA CON TODO MENOS CON EL PISO, y esa excepcion no es timidez: el
+  // camino que el validador demostro se apoya en el terreno solido. Romper
+  // ladrillos, bloques y tubos abre camino y no cierra ninguno; romper el
+  // piso podria dejar un pozo que no se cruza, en un nivel que se prometio
+  // terminable. Lo que se rompe es lo que esta A LA ALTURA DEL CUERPO, que
+  // ademas es lo unico que se ve romper.
+  arrasar() {
+    const j = this.j;
+    const ROMPIBLE = new Set([V.LADRILLO, V.RAJADO, V.PREGUNTA, V.USADO,
+                              V.TIEMPO, V.PAUSA, V.TUBO, V.LARGO, V.VOLTERETA]);
+    const pieTy = Math.floor((j.y - 1) / T);
+    let rompio = 0;
+    for (let dx = 0; dx <= 1; dx++) {
+      const tx = Math.floor((j.x + j.dir * (6 + dx * T)) / T);
+      for (let d = 0; d <= 3; d++) {
+        const ty = pieTy - d;
+        const v = tileXY(this.nv, tx, ty);
+        if (!ROMPIBLE.has(v)) continue;
+        this.nv.grilla[ty * this.nv.ancho + tx] = V.NADA;
+        this.chispas(tx * T + 8, ty * T + 8, TEMAS[this.nv.tema].tierra, 6);
+        rompio++;
+      }
+    }
+    if (rompio) { efe.romper(); this.sacudida = Math.max(this.sacudida, 4); }
+    // Los bichos que toca se hacen puré. No hace falta pisarlos.
+    for (const e of this.bichos) {
+      if (!e.vivo) continue;
+      if (Math.abs(e.x - j.x) < 26 && Math.abs(e.y - (j.y - 14)) < 34) {
+        e.vivo = false;
+        this.monedas += 2;
+        this.chispas(e.x, e.y - 6, "#ffffff", 8);
+        efe.pisada();
+      }
+    }
+    // Los pasos: lentos, pesados y con temblor. Es lo unico que hace que un
+    // sprite mas grande se sienta mas grande.
+    if (j.suelo && ++this.pasoGig >= 22) {
+      this.pasoGig = 0;
+      efe.pisoton();
+      this.sacudida = Math.max(this.sacudida, 7);
+      for (let i = 0; i < 6; i++)
+        this.part.push({ tipo: "chispa", x: j.x + (Math.random() - 0.5) * 30, y: j.y,
+          r: 2 + Math.random() * 3, col: "#e8e2d4", g: 0.06,
+          vx: (Math.random() - 0.5) * 2.2, vy: -Math.random() * 1.6,
+          vida: 26, total: 26 });
+    }
+  }
+
+  terminarGigante() {
+    this.tam = 1; this.gigT = 0; this.invT = 60;
+    this.chispas(this.j.x, this.j.y - 16, "#ffffff", 16);
+    efe.achicar();
+  }
+
+  // --- la escena del hongo gigante --------------------------------------
+  pasoEscena() {
+    const es = this.escena;
+    es.t++;
+    if (es.t >= ESCENA_CUADROS) {
+      this.estado = ESTADO.JUGANDO;
+      this.escena = null;
+      this.tam = 2;
+      this.gigT = GIGANTE_CUADROS;
+      this.sacudida = 12;
+      this.chispas(this.j.x, this.j.y - 20, "#ffffff", 26);
+    }
+  }
+
   // --- particulas -------------------------------------------------------
   chispas(x, y, col, n) {
     for (let i = 0; i < n; i++)
@@ -403,6 +611,7 @@ export class Partida {
       if (!m.tomada) D.monedaColor(c, m.tx * T + 8 - this.camX, m.ty * T + T - 2 - this.camY,
                                    this.t, this.tier, H.moneda_girar);
 
+    for (const h of this.hongos) this.dibujarHongo(c, h);
     for (const e of this.bichos) this.dibujarBicho(c, e);
     if (this.jefeVivo) this.dibujarJefe(c);
     for (const p of this.part) D.particula(c, p, this.camX, this.camY);
@@ -414,8 +623,113 @@ export class Partida {
       c.beginPath(); c.arc(x, y - 14, 15, 0, Math.PI * 2); c.stroke();
       c.globalAlpha = 0.18; c.fillStyle = "#bfe8ff"; c.fill(); c.restore();
     } else if (this.estado !== ESTADO.GANADO || !this.premioDado) {
-      this.dibujarHeroe(c, this.j.x - this.camX, this.j.y - this.camY,
-        this.j.frenado ? "quieto" : (this.j.suelo ? "correr" : "saltar"), this.j.dir < 0);
+      // Parpadeo mientras dura la invulnerabilidad: es la unica forma de que
+      // el jugador sepa por que no lo estan matando.
+      if (!(this.invT > 0 && Math.floor(this.t / 3) % 2))
+        this.dibujarHeroe(c, this.j.x - this.camX, this.j.y - this.camY,
+          this.j.frenado ? "quieto" : (this.j.suelo ? "correr" : "saltar"), this.j.dir < 0);
+    }
+    c.restore();
+    // La escena va SIN la sacudida y SIN la camara: ocupa la pantalla entera.
+    if (this.estado === ESTADO.ESCENA) this.dibujarEscena(c);
+  }
+
+  dibujarHongo(c, h) {
+    const H = this.hojas;
+    const hoja = h.tipo === "super" ? H.hongo_super : H.hongo_crecer;
+    const x = h.x - this.camX, y = h.y - this.camY;
+    const alto = h.tipo === "super" ? 22 : 16;
+    // Un halo, porque un hongo volando entre monedas amarillas se pierde.
+    c.save();
+    const r = alto * 0.7 + Math.sin(this.t / 6) * 2;
+    const g = c.createRadialGradient(x, y - alto / 2, 1, x, y - alto / 2, r);
+    const col = h.tipo === "super" ? "#ff7ac0" : "#ffe08a";
+    g.addColorStop(0, col + "aa"); g.addColorStop(1, col + "00");
+    c.fillStyle = g; c.beginPath(); c.arc(x, y - alto / 2, r, 0, Math.PI * 2); c.fill();
+    c.restore();
+    if (hoja) dibujarCuadro(c, hoja, cuadroDe(this.t / 60, hoja, 12), x, y + alto / 2, alto);
+    else { c.fillStyle = col; c.fillRect((x - 6) | 0, (y - 6) | 0, 12, 12); }
+  }
+
+  /**
+   * La escena del hongo gigante: pantalla completa, dos segundos y medio.
+   *
+   * Esta dibujada con codigo y no con una imagen a proposito. Lo que se pidio
+   * es que sea MUY animada —rayos de colores girando, un destello sobre el
+   * hongo, el personaje mirandolo y comiendoselo—, y eso con una imagen fija
+   * de fondo no se puede: habria que generar sesenta. Los rayos giran, el
+   * fondo late y el unico dibujo generado es el personaje comiendo, que es lo
+   * unico que un dibujo hace mejor que el codigo.
+   */
+  dibujarEscena(c) {
+    const es = this.escena;
+    if (!es) return;
+    const W = VISTA.ancho, Hh = VISTA.alto;
+    const p = es.t / ESCENA_CUADROS;
+    const cx = W / 2, cy = Hh * 0.46;
+
+    // 1) rayos de arcoiris girando desde el centro
+    c.save();
+    c.fillStyle = "#1a1030"; c.fillRect(0, 0, W, Hh);
+    c.translate(cx, cy);
+    c.rotate(es.t * 0.016);
+    const RAYOS = 14, largo = Math.hypot(W, Hh);
+    for (let i = 0; i < RAYOS; i++) {
+      c.fillStyle = `hsl(${(i * 360 / RAYOS + es.t * 2.4) % 360} 85% 56%)`;
+      c.beginPath(); c.moveTo(0, 0);
+      const a0 = (i * 2 * Math.PI) / RAYOS, a1 = a0 + Math.PI / RAYOS;
+      c.lineTo(Math.cos(a0) * largo, Math.sin(a0) * largo);
+      c.lineTo(Math.cos(a1) * largo, Math.sin(a1) * largo);
+      c.closePath(); c.fill();
+    }
+    c.restore();
+
+    // 2) anillos que salen del centro
+    c.save();
+    c.globalAlpha = 0.5; c.strokeStyle = "#fff"; c.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const rr = ((es.t * 2.4 + i * 42) % 130);
+      c.globalAlpha = 0.45 * (1 - rr / 130);
+      c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI * 2); c.stroke();
+    }
+    c.restore();
+
+    // 3) el personaje comiendo, grande y en el medio
+    const hoja = this.hojas.heroe_comer;
+    const alto = Math.min(Hh * 0.46, W * 0.82);
+    if (hoja) {
+      const i = Math.min(hoja.n - 1, Math.floor(p * hoja.n));
+      dibujarCuadro(c, hoja, i, cx, cy + alto / 2, alto);
+    } else {
+      this.dibujarHeroe(c, cx, cy + alto / 2, "quieto", false);
+    }
+
+    // 4) el destello sobre el hongo, mientras todavia lo tiene en la mano
+    if (p < 0.62) {
+      c.save();
+      c.globalAlpha = 0.5 + Math.sin(es.t / 3) * 0.35;
+      c.fillStyle = "#fff";
+      const bx = cx + alto * 0.18, by = cy - alto * 0.18;
+      for (let i = 0; i < 4; i++) {
+        const a = es.t * 0.08 + (i * Math.PI) / 2;
+        const l = 10 + Math.sin(es.t / 4 + i) * 6;
+        c.fillRect(bx + Math.cos(a) * l - 1, by + Math.sin(a) * l - 1, 3, 3);
+      }
+      c.restore();
+    }
+
+    // 5) el cartel y el fundido a blanco del final
+    c.save();
+    c.textAlign = "center";
+    c.font = "bold 13px monospace";
+    c.fillStyle = "#1a1030";
+    c.fillText("¡SUPER HONGO!", cx + 1, Hh * 0.9 + 1);
+    c.fillStyle = "#fff";
+    c.fillText("¡SUPER HONGO!", cx, Hh * 0.9);
+    c.textAlign = "left";
+    if (p > 0.86) {
+      c.globalAlpha = (p - 0.86) / 0.14;
+      c.fillStyle = "#fff"; c.fillRect(0, 0, W, Hh);
     }
     c.restore();
   }
@@ -430,12 +744,61 @@ export class Partida {
   // boca abajo.
   dibujarHeroe(c, x, y, estado, espejo) {
     const H = this.hojas;
+    const esc = this.escalaAct ?? 1;
+    const alto = ALTOS.heroe * esc;
+    // De gigante el cuerpo va bajo el arcoiris. Se dibuja en un lienzo aparte
+    // y se tine ahi: pintando el degrade directo sobre el del juego con
+    // `source-atop` se tine TODO lo que ya estaba abajo, que fue el mismo
+    // error que costo entender con las monedas de color.
+    if (this.tam === 2 && esc > 1.6) {
+      const l = this.lienzoArcoiris(alto);
+      const tc = l.getContext("2d");
+      tc.setTransform(1, 0, 0, 1, 0, 0);
+      tc.clearRect(0, 0, l.width, l.height);
+      this.dibujarHeroeHoja(tc, l.width / 2, l.height - 2, estado, espejo, alto);
+      tc.globalCompositeOperation = "source-atop";
+      const g = tc.createLinearGradient(0, 0, l.width * 0.8, l.height);
+      // El arcoiris CORRE sobre el cuerpo: el desfase sale del reloj, asi que
+      // las bandas pasan de abajo hacia arriba en vez de quedarse pintadas.
+      for (let i = 0; i <= 6; i++)
+        g.addColorStop(i / 6, `hsl(${(i * 60 + this.t * 6) % 360} 95% 58%)`);
+      tc.globalAlpha = 0.46; tc.fillStyle = g;
+      tc.fillRect(0, 0, l.width, l.height);
+      tc.globalAlpha = 1; tc.globalCompositeOperation = "source-over";
+      c.drawImage(l, Math.round(x - l.width / 2), Math.round(y - l.height + 2),
+                  l.width, l.height);
+      return;
+    }
+    this.dibujarHeroeHoja(c, x, y, estado, espejo, alto);
+  }
+
+  lienzoArcoiris(alto) {
+    const lado = Math.ceil(alto * 1.6);
+    if (!this._arco || this._arco.width < lado) {
+      this._arco = document.createElement("canvas");
+      this._arco.width = this._arco.height = lado;
+      this._arco.getContext("2d").imageSmoothingEnabled = false;
+    }
+    return this._arco;
+  }
+
+  dibujarHeroeHoja(c, x, y, estado, espejo, alto) {
+    const H = this.hojas;
+    // El pivote gana a todo lo demas: si se esta dando vuelta, lo que importa
+    // es que se vea girar.
+    if (this.giroT > 0 && H.heroe_girar) {
+      const h = H.heroe_girar;
+      const i = Math.min(h.n - 1, Math.floor((1 - this.giroT / GIRO_CUADROS) * h.n));
+      // La hoja gira de derecha a izquierda. Girando al otro lado se espeja.
+      dibujarCuadro(c, h, i, x, y, alto, this.giroDe < 0);
+      return;
+    }
     if (estado === "saltar" && this.j.flip > 0) {
       const hoja = this.j.flipTipo === 3 ? H.heroe_triple : H.heroe_doble;
       if (hoja) {
         const p = Math.min(1, (this.j.flip - 1) / F.FLIP_CUADROS);
         dibujarCuadro(c, hoja, Math.min(hoja.n - 1, Math.floor(p * hoja.n)),
-                      x, y, ALTOS.heroe, espejo);
+                      x, y, alto, espejo);
         return;
       }
     }
@@ -443,19 +806,26 @@ export class Partida {
       const n = H.heroe_saltar.n;
       // vy va de -10 (subiendo fuerte) a +9 (cayendo): se mapea al cuadro.
       const p = Math.max(0, Math.min(1, (this.j.vy + 9) / 18));
-      dibujarCuadro(c, H.heroe_saltar, Math.round(1 + p * (n - 2)), x, y, ALTOS.heroe, espejo);
+      dibujarCuadro(c, H.heroe_saltar, Math.round(1 + p * (n - 2)), x, y, alto, espejo);
       return;
     }
     const hoja = estado === "correr" ? H.heroe_correr : H.heroe_quieto;
     if (hoja) {
-      dibujarCuadro(c, hoja, cuadroDe(this.t / 60, hoja, estado === "correr" ? 14 : 8),
-                    x, y, ALTOS.heroe, espejo);
+      // 22 cuadros por segundo para correr y no 14. Con 14, los dieciseis
+      // dibujos de un ciclo tardan 1,14 s en pasar: el personaje avanza casi
+      // tres tiles por zancada y se ve arrastrando los pies. A 22 el ciclo
+      // dura 0,73 s, que es el paso de alguien corriendo.
+      //
+      // El gigante va a la mitad: pasos lentos y pesados, que es lo que se
+      // pidio y ademas lo unico que hace que el tamano se sienta.
+      const fps = estado === "correr" ? (this.tam === 2 ? 9 : 22) : 8;
+      dibujarCuadro(c, hoja, cuadroDe(this.t / 60, hoja, fps), x, y, alto, espejo);
       return;
     }
     // Respaldo si una hoja no cargo. Un heroe invisible es lo peor que puede
     // pasar; un rectangulo naranja se entiende.
     c.fillStyle = "#ffb43a";
-    c.fillRect((x - 6) | 0, (y - 26) | 0, 12, 26);
+    c.fillRect((x - 6) | 0, (y - alto) | 0, 12, alto);
   }
 
   dibujarBicho(c, e) {

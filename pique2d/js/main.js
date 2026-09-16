@@ -3,7 +3,7 @@
 import { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista, ESC, PATRON } from "./mundo.js";
 import { generarNivel } from "./generador.js";
 import { Partida, ESTADO } from "./juego.js";
-import { cargar, tierActual } from "./guardado.js";
+import { cargar, tierActual, proximoNivel } from "./guardado.js";
 import * as UI from "./interfaz.js";
 import { despertar, efe, pararMusica, volumen, cargarPistas } from "./audio.js";
 import { cargarTodas } from "./sprites.js";
@@ -169,7 +169,13 @@ function terminar(gano) {
 }
 
 // --- botones -------------------------------------------------------------
-$("#btn-jugar").addEventListener("click", () => { despertar(); efe.menu(); alMapa(); });
+// Jugar entra DERECHO al nivel que toca. El mapa tiene su propio boton.
+$("#btn-jugar").addEventListener("click", () => {
+  despertar(); efe.menu();
+  const { m, n } = proximoNivel();
+  empezar(m, n);
+});
+$("#btn-niveles").addEventListener("click", () => { despertar(); efe.menu(); alMapa(); });
 $("#btn-comojuego").addEventListener("click", () => { efe.menu(); UI.mostrar("p-ayuda"); });
 $("#btn-ajustes").addEventListener("click", () => { efe.menu(); UI.mostrar("p-ajustes"); });
 for (const b of document.querySelectorAll("[data-volver]"))
@@ -181,6 +187,8 @@ $("#hud-pantalla").addEventListener("click", UI.pantallaCompleta);
 const HOJAS = [
   ["heroe_correr", 4, 4], ["heroe_saltar", 4, 4], ["heroe_quieto", 4, 4],
   ["heroe_doble", 4, 4], ["heroe_triple", 4, 4],
+  ["heroe_girar", 4, 4], ["heroe_comer", 4, 4],
+  ["hongo_crecer", 4, 4], ["hongo_super", 4, 4],
   ["bolo_caminar", 4, 4], ["caracol_caminar", 4, 4], ["caracol_concha", 4, 4],
   ["aleta_volar", 4, 4], ["erizo_caminar", 4, 4], ["fauces_morder", 4, 4],
   ["osario_caminar", 4, 4], ["vela_flotar", 4, 4], ["perno_volar", 4, 4],
@@ -188,6 +196,40 @@ const HOJAS = [
   ["moneda_girar", 4, 4], ["resorte_saltar", 4, 4],
 ];
 const TEMAS_TILE = ["llano", "subte", "castillo", "desierto", "cielo", "nave", "torre", "fantasma"];
+
+/**
+ * Devuelve una copia de la banda con el borde de ARRIBA desvanecido.
+ *
+ * Las dos bandas del fondo se piden recortadas —"solo la silueta, sin cielo
+ * detras"— y el servidor a veces devuelve un rectangulo opaco de punta a
+ * punta. Dibujado, ese rectangulo corta la pantalla con una linea recta a lo
+ * ancho: se ve clarisimo en el subte, donde la cueva de atras arranca de
+ * golpe en el medio del cielo.
+ *
+ * Arreglarlo pidiendo de nuevo no sirve: ya se pidio dos veces y volvio igual
+ * las dos. Aca se desvanece el cuarto de arriba con un degradado de alfa, que
+ * es determinista y anda con cualquier imagen que llegue, opaca o no. Si la
+ * banda YA venia recortada, el degradado no cambia nada visible porque arriba
+ * no hay nada que desvanecer.
+ */
+function desvanecerArriba(img, frac = 0.34) {
+  try {
+    const l = document.createElement("canvas");
+    l.width = img.width; l.height = img.height;
+    const c = l.getContext("2d");
+    c.drawImage(img, 0, 0);
+    const g = c.createLinearGradient(0, 0, 0, img.height * frac);
+    g.addColorStop(0, "rgba(0,0,0,1)");
+    g.addColorStop(0.55, "rgba(0,0,0,0.45)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    c.globalCompositeOperation = "destination-out";
+    c.fillStyle = g;
+    c.fillRect(0, 0, img.width, img.height * frac);
+    return l;
+  } catch (e) {
+    return img;          // sin canvas auxiliar, mejor la banda dura que nada
+  }
+}
 
 function cargarPatron(tema) {
   return new Promise((ok) => {
@@ -224,7 +266,8 @@ function cargarPatron(tema) {
   const faltan = HOJAS.filter(([k]) => !hojas[k]).map(([k]) => k);
   await Promise.all(TEMAS_TILE.map(async (t) => { patrones[t] = await cargarPatron(t); }));
   // Las piezas sueltas: tubos e iconos del HUD.
-  const PIEZAS = ["tubo_boca", "tubo_cuerpo", "icono_moneda", "icono_burbuja", "icono_reloj"];
+  const PIEZAS = ["tubo_boca", "tubo_cuerpo", "plataforma",
+                 "icono_moneda", "icono_burbuja", "icono_reloj"];
   const ps = {};
   await Promise.all(PIEZAS.map((k) => new Promise((ok) => {
     const img = new Image();
@@ -240,7 +283,7 @@ function cargarPatron(tema) {
     capas[tema] = {};
     return ["cielo", "lejos", "cerca"].map((cp) => new Promise((ok) => {
       const img = new Image();
-      img.onload = () => { capas[tema][cp] = img; ok(); };
+      img.onload = () => { capas[tema][cp] = cp === "cielo" ? img : desvanecerArriba(img); ok(); };
       img.onerror = () => ok();
       img.src = ruta(`assets/fondo/${tema}_${cp}.webp`);
     }));

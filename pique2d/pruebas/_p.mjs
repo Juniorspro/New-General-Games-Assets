@@ -7,7 +7,7 @@ await pg.waitForFunction(()=>!!window.PIQUE,{timeout:90000});
 await pg.evaluate(()=>localStorage.setItem("pique.v1",JSON.stringify({monedas:0,desbloqueado:6,niveles:{},ajustes:{sonido:false,musica:false,sacudida:true}})));
 await pg.reload(); await pg.waitForFunction(()=>!!window.PIQUE,{timeout:90000});
 await pg.screenshot({path:"/tmp/p5/menu.png"});
-await pg.click("#btn-jugar"); await pg.waitForSelector("#p-mapa:not([hidden])");
+await pg.click("#btn-niveles"); await pg.waitForSelector("#p-mapa:not([hidden])");
 await pg.screenshot({path:"/tmp/p5/mapa.png"});
 for (const [id,nom] of [["1-1","llano"],["2-2","fantasma"],["3-1","desierto"],["6-4","castillo"]]) {
   const [m,n]=id.split("-").map(Number);

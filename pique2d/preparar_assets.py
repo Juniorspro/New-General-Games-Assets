@@ -45,8 +45,14 @@ def destino(clave):
         return ("fondo", f"{tema}_{capa}", (1024, None), capa != "cielo")
     if clave.startswith("tile_"):
         return ("tile", clave[5:], (256, 256), False)
-    if clave.startswith("tubo_") or clave.startswith("icono_"):
-        return ("piezas", clave, (256, 256), True)
+    # Las piezas se enumeran DEL DICCIONARIO y no por prefijo. Con prefijos,
+    # `plataforma` no empezaba con "tubo_" ni con "icono_": se bajo, se pago y
+    # se quedo afuera sin que nada avisara, y el juego siguio dibujando la
+    # barra de color plano.
+    if clave in G.PIEZAS:
+        # Ancho fijo y alto por proporcion: la plataforma es ancha y baja, y
+        # forzada a cuadrada se aplastaba.
+        return ("piezas", clave, (256, None), True)
     if clave == "logo":
         return (".", "logo", (592, None), True)
     if clave in ("portada", "titulo_fondo"):
