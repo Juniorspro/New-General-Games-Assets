@@ -52,61 +52,126 @@ let hojas = {}, patrones = {}, capas = {}, escenaHongo = null;
 // Ahora la BAJADA deja un pedido anotado que el bucle consume cuando le toca,
 // pase lo que pase con el dedo en el medio.
 const entrada = { apoyado: false, previo: false, pedido: false, izq: false, der: false, frenar: false };
-const abajo = (e) => {
+
+// QUIEN SOSTIENE EL SALTO, en una lista. Hay tres formas de apretarlo —el
+// lienzo, el boton A y la barra espaciadora— y con una sola bandera, soltar
+// cualquiera de ellas lo apagaba aunque otra siguiera apretada. El salto se
+// sostiene mientras quede ALGUIEN sosteniendolo.
+const sostienen = new Set();
+const prenderSalto = (quien) => {
   despertar();
+  sostienen.add(quien);
   entrada.apoyado = true;
-  entrada.pedido = true;
+  entrada.pedido = true;          // el pedido sobrevive aunque se suelte ya
+};
+const apagarSalto = (quien) => {
+  sostienen.delete(quien);
+  if (!sostienen.size) entrada.apoyado = false;
+};
+
+// El lienzo: cada dedo que lo toca es un sostenedor distinto, y se suelta
+// solo cuando se levanta ESE dedo.
+let dedoLienzo = null;
+const abajoLienzo = (e) => {
+  const id = e.pointerId ?? "t";
+  if (dedoLienzo === null) dedoLienzo = id;
+  prenderSalto("lienzo");
   if (e.cancelable) e.preventDefault();
 };
-const arriba = () => { entrada.apoyado = false; };
-
+const arribaLienzo = (e) => {
+  const id = e && e.pointerId !== undefined ? e.pointerId : "t";
+  if (dedoLienzo !== null && id !== dedoLienzo) return;
+  dedoLienzo = null;
+  apagarSalto("lienzo");
+};
 for (const ev of ["pointerdown", "touchstart", "mousedown"])
-  lienzo.addEventListener(ev, abajo, { passive: false });
-for (const ev of ["pointerup", "pointercancel", "touchend", "mouseup", "mouseleave"])
-  window.addEventListener(ev, arriba);
+  lienzo.addEventListener(ev, abajoLienzo, { passive: false });
+for (const ev of ["pointerup", "pointercancel", "touchend", "mouseup"])
+  window.addEventListener(ev, arribaLienzo);
 
 // --- los mandos en pantalla ---------------------------------------------
 //
 // Tocar el lienzo SIGUE saltando. Estos botones no reemplazan eso: le ponen un
 // lugar fijo y visible a lo que ya se podia hacer —que en un telefono importa,
-// porque el pulgar no busca— y agregan el unico control que faltaba.
+// porque el pulgar no busca— y agregan el control de direccion.
 //
-// `preventDefault` en pointerdown y `touch-action: none` en el CSS: sin las
-// dos cosas el navegador se queda el toque para hacer scroll o para el gesto
-// de "volver atras", y el boton responde una de cada tres veces.
+// CADA BOTON SE QUEDA CON SU PROPIO DEDO, Y ESTO ES EL ARREGLO DE UN BUG QUE
+// SE SENTIA EN CADA PARTIDA.
+//
+// La version anterior soltaba las flechas desde un listener en `window`:
+// cualquier `pointerup` en cualquier parte de la pantalla las apagaba todas.
+// O sea que jugando como se juega —el pulgar izquierdo apretando ▶ y el
+// derecho tocando A para saltar— CADA VEZ QUE SE SOLTABA A se cancelaba el
+// movimiento, aunque el otro dedo siguiera apoyado en la flecha. Y como el
+// dedo ya estaba abajo, no habia un `pointerdown` nuevo que lo volviera a
+// prender: el personaje se quedaba clavado. Se notaba sobre todo encadenando
+// el doble y el triple salto, que es donde mas veces se suelta A.
+//
+// Se arregla con `setPointerCapture`: el boton se queda con ESE dedo hasta que
+// ese dedo se levante, y los eventos de los otros no lo tocan. Es el mecanismo
+// que hay para esto y evita tener que llevar la cuenta a mano.
+const usaPointer = "onpointerdown" in window;
+
 function montarMando(sel, alApretar, alSoltar) {
   const b = document.querySelector(sel);
   if (!b) return;
-  const abajoM = (e) => {
+  let dedo = null;
+
+  const apretar = (id, e) => {
+    if (dedo !== null) return;
+    dedo = id;
+    if (e && e.pointerId !== undefined) {
+      try { b.setPointerCapture(e.pointerId); } catch (err) { /* da igual */ }
+    }
     despertar();
     b.classList.add("apretado");
     alApretar();
-    if (e.cancelable) e.preventDefault();
+    if (e && e.cancelable) e.preventDefault();
   };
-  const arribaM = () => { b.classList.remove("apretado"); if (alSoltar) alSoltar(); };
-  b.addEventListener("pointerdown", abajoM, { passive: false });
-  b.addEventListener("touchstart", abajoM, { passive: false });
-  for (const ev of ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel"])
-    b.addEventListener(ev, arribaM);
+  const soltar = (id) => {
+    // Solo lo suelta el MISMO dedo que lo apreto. `null` quiere decir "sea
+    // quien sea", y es lo que usa el respaldo por si la pagina pierde el foco.
+    if (dedo === null || (id !== null && id !== dedo)) return;
+    dedo = null;
+    b.classList.remove("apretado");
+    if (alSoltar) alSoltar();
+  };
+  b.soltarMando = () => soltar(null);
+
+  if (usaPointer) {
+    b.addEventListener("pointerdown", (e) => apretar(e.pointerId, e), { passive: false });
+    for (const ev of ["pointerup", "pointercancel"])
+      b.addEventListener(ev, (e) => soltar(e.pointerId));
+  } else {
+    // Respaldo para navegadores sin pointer events. Se registra SOLO en ese
+    // caso: con los dos juntos, cada toque llega dos veces.
+    b.addEventListener("touchstart", (e) => apretar("t", e), { passive: false });
+    for (const ev of ["touchend", "touchcancel"]) b.addEventListener(ev, () => soltar("t"));
+    b.addEventListener("mousedown", (e) => apretar("m", e));
+    b.addEventListener("mouseup", () => soltar("m"));
+    b.addEventListener("mouseleave", () => soltar("m"));
+  }
 }
-const saltar = [() => { entrada.apoyado = true; entrada.pedido = true; },
-                () => { entrada.apoyado = false; }];
-montarMando("#mando-saltar", ...saltar);
-montarMando('[data-dir="arriba"]', ...saltar);
+
+montarMando("#mando-saltar", () => prenderSalto("A"), () => apagarSalto("A"));
 montarMando('[data-dir="izq"]', () => { entrada.izq = true; }, () => { entrada.izq = false; });
 montarMando('[data-dir="der"]', () => { entrada.der = true; }, () => { entrada.der = false; });
-montarMando('[data-dir="abajo"]', () => { entrada.frenar = true; }, () => { entrada.frenar = false; });
-// Soltar el dedo FUERA del boton tambien lo suelta. Sin esto, arrastrar el
-// pulgar de una flecha a otra deja la primera apretada para siempre y el
-// jugador queda corriendo contra una pared sin entender por que.
-for (const ev of ["pointerup", "pointercancel", "touchend", "touchcancel", "blur"])
-  window.addEventListener(ev, () => {
-    entrada.izq = entrada.der = entrada.frenar = false;
-    for (const b of document.querySelectorAll(".mando.apretado")) b.classList.remove("apretado");
-  });
+
+// Perder el foco o esconder la pestana SI suelta todo: si no, el dedo queda
+// apoyado para siempre y el personaje corre solo contra una pared.
+const soltarTodo = () => {
+  for (const b of document.querySelectorAll(".mando")) b.soltarMando && b.soltarMando();
+  sostienen.clear(); dedoLienzo = null;
+  entrada.apoyado = false; entrada.izq = entrada.der = entrada.frenar = false;
+};
+addEventListener("blur", soltarTodo);
+document.addEventListener("visibilitychange", () => { if (document.hidden) soltarTodo(); });
 
 addEventListener("keydown", (e) => {
-  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) { abajo(e); }
+  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) {
+    prenderSalto("tecla");
+    if (e.cancelable) e.preventDefault();
+  }
   if (e.code === "Escape" && partida) alMapa();
   if (e.code === "ArrowLeft") entrada.izq = true;
   if (e.code === "ArrowRight") entrada.der = true;
@@ -114,14 +179,11 @@ addEventListener("keydown", (e) => {
   if (e.code === "KeyR" && partida) empezar(cfgActual.m, cfgActual.n);
 });
 addEventListener("keyup", (e) => {
-  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) arriba();
+  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) apagarSalto("tecla");
   if (e.code === "ArrowLeft") entrada.izq = false;
   if (e.code === "ArrowRight") entrada.der = false;
   if (e.code === "ArrowDown") entrada.frenar = false;
 });
-// Perder el foco con el dedo apoyado dejaba al jugador saltando para siempre.
-addEventListener("blur", arriba);
-document.addEventListener("visibilitychange", () => { if (document.hidden) arriba(); });
 
 // --- pantallas -----------------------------------------------------------
 function alMapa() {

@@ -310,12 +310,12 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 .hud-abajo {
   /* Por encima de los mandos, no por detras. El nombre del nivel quedaba
      cruzado por el boton de saltar y no se leia ni uno ni el otro. */
-  position: absolute; right: 12px; bottom: calc(184px + env(safe-area-inset-bottom));
+  position: absolute; right: 12px; bottom: calc(122px + env(safe-area-inset-bottom));
   text-align: right;
   display: flex; flex-direction: column; gap: 2px;
 }
 @media (max-height: 520px) {
-  .hud-abajo { bottom: calc(146px + env(safe-area-inset-bottom)); }
+  .hud-abajo { bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
 .hud-mundo {
   font-size: 15px; font-weight: 800; color: #fff;
@@ -521,38 +521,34 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 }
 .mandos[hidden] { display: none; }
 
-.cruceta {
-  position: relative; width: 156px; height: 156px;
-  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
-}
-.cruceta-centro {
-  grid-area: 2 / 2; align-self: center; justify-self: center;
-  width: 26px; height: 26px; border-radius: 6px;
-  background: rgba(14,18,30,.5); border: 2px solid rgba(255,255,255,.14);
-}
+/* DOS FLECHAS Y NADA MAS. Arriba duplicaba el boton A y abajo frenaba algo
+   que se frena SOLO con soltar el dedo: dos teclas que no hacian falta,
+   ocupando pantalla y pudiendose tocar sin querer. */
+.cruceta { display: flex; gap: 10px; }
 .mando {
   pointer-events: auto; touch-action: none; -webkit-tap-highlight-color: transparent;
   color: #f4e4c1; font-size: 22px; line-height: 1; font-weight: 800;
   display: grid; place-items: center;
-  border: 3px solid rgba(255,255,255,.22);
-  background: rgba(20,26,40,.5); backdrop-filter: blur(2px);
-  box-shadow: 0 4px 0 rgba(0,0,0,.4);
+  /* Mas opacos que antes: sobre un cielo claro —el desierto, las nubes— con
+     medio alfa las flechas casi no se veian. Un boton que hay que buscar es
+     un boton que se toca tarde. */
+  border: 3px solid rgba(255,255,255,.34);
+  background: rgba(16,21,34,.72); backdrop-filter: blur(2px);
+  box-shadow: 0 4px 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.08);
   transition: transform .06s, background .06s;
   border-radius: 12px;
 }
-.dir.arriba { grid-area: 1 / 2; border-radius: 12px 12px 4px 4px; }
-.dir.izq    { grid-area: 2 / 1; border-radius: 12px 4px 4px 12px; }
-.dir.der    { grid-area: 2 / 3; border-radius: 4px 12px 12px 4px; }
-.dir.abajo  { grid-area: 3 / 2; border-radius: 4px 4px 12px 12px; }
+.dir { width: 76px; height: 86px; font-size: 26px; }
+.dir.izq { border-radius: 18px 8px 8px 18px; }
+.dir.der { border-radius: 8px 18px 18px 8px; }
 .mando-saltar {
   width: 104px; height: 104px; border-radius: 50%; font-size: 30px;
-  background: rgba(255,180,58,.42); border-color: rgba(255,226,160,.66);
-  color: #2a1a06;
+  background: rgba(255,180,58,.8); border-color: rgba(255,238,190,.85);
+  color: #2a1a06; text-shadow: 0 1px 0 rgba(255,255,255,.45);
 }
 .mando.apretado { transform: translateY(3px) scale(.95); background: rgba(255,212,71,.62); color: #2a1a06; }
 @media (max-height: 520px) {
-  .cruceta { width: 126px; height: 126px; }
-  .mando { font-size: 18px; }
+  .dir { width: 66px; height: 70px; font-size: 22px; }
   .mando-saltar { width: 86px; height: 86px; font-size: 26px; }
   .mandos { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 }
@@ -772,11 +768,8 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
        podia hacer, y agregan el unico control que faltaba: darse vuelta. -->
   <div id="mandos" class="mandos">
     <div class="cruceta" id="cruceta">
-      <button class="mando dir arriba" data-dir="arriba" aria-label="Saltar">▲</button>
-      <button class="mando dir izq"    data-dir="izq"    aria-label="Ir a la izquierda">◀</button>
-      <button class="mando dir der"    data-dir="der"    aria-label="Ir a la derecha">▶</button>
-      <button class="mando dir abajo"  data-dir="abajo"  aria-label="Frenar">▼</button>
-      <span class="cruceta-centro" aria-hidden="true"></span>
+      <button class="mando dir izq" data-dir="izq" aria-label="Ir a la izquierda">◀</button>
+      <button class="mando dir der" data-dir="der" aria-label="Ir a la derecha">▶</button>
     </div>
     <button id="mando-saltar" class="mando mando-saltar" aria-label="Saltar">
       <span aria-hidden="true">A</span>
@@ -802,7 +795,7 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 <main id="p-ayuda" class="pantalla" hidden>
   <header class="barra"><button data-volver="p-inicio" class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
   <div class="texto">
-    <p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora. Lo demás sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás. La <b>cruceta</b> de la izquierda manda para dónde vas.</p>
+    <p class="destacado">Casi todo sale del <b>botón de saltar</b>: tocar la pantalla, el botón <b>A</b>, o la barra espaciadora. Lo demás sale de cuánto lo mantenés apretado y de dónde estás parado cuando lo tocás. Las flechas <b>◀ ▶</b> de la izquierda mandan para dónde vas.</p>
 
     <h3>Los movimientos</h3>
     <dl class="movs">
@@ -811,7 +804,7 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
       <dt>Vault</dt><dd><b>Solo.</b> Los obstáculos de un tile y los huecos de uno o dos se pasan sin tocar nada. De tres para arriba hay que saltar.</dd>
       <dt>Vault con toque</dt><dd>Tocar <em>justo</em> mientras vaulteás: salto más alto y te llevás puesto al enemigo. Es la maniobra que más paga.</dd>
       <dt>Trepada</dt><dd><b>Sola.</b> Si caés justo sobre el filo de una plataforma, te subís en vez de rebotar contra el costado.</dd>
-      <dt>La cruceta</dt><dd><b>◀ ▶</b> te mueven, <b>▼</b> frena, <b>▲</b> y <b>A</b> saltan. Sin tocar nada te quedás quieto. Si preferís que corra solo —como las primeras versiones— está en Ajustes → Movimiento → Corredor.</dd>
+      <dt>Los botones</dt><dd><b>◀ ▶</b> te mueven y <b>A</b> salta — tocar la pantalla también. Sin tocar nada te quedás quieto. Si preferís que corra solo —como las primeras versiones— está en Ajustes → Movimiento → Corredor.</dd>
       <dt>Salto de pared</dt><dd>Tocar pegado a una pared: rebotás y <b>das vuelta la carrera</b>. Así se suben los pozos y las torres, en zigzag.</dd>
       <dt>Doble salto</dt><dd>Tocar otra vez en el aire: segundo impulso, con su propia vuelta de carnero.</dd>
       <dt>Triple salto</dt><dd>Y una tercera vez: el más alto de los tres, con un backflip. Encadenados llegan a 9 tiles. Pisar un enemigo te devuelve los dos saltos de aire.</dd>
@@ -5070,61 +5063,126 @@ let hojas = {}, patrones = {}, capas = {}, escenaHongo = null;
 // Ahora la BAJADA deja un pedido anotado que el bucle consume cuando le toca,
 // pase lo que pase con el dedo en el medio.
 const entrada = { apoyado: false, previo: false, pedido: false, izq: false, der: false, frenar: false };
-const abajo = (e) => {
+
+// QUIEN SOSTIENE EL SALTO, en una lista. Hay tres formas de apretarlo —el
+// lienzo, el boton A y la barra espaciadora— y con una sola bandera, soltar
+// cualquiera de ellas lo apagaba aunque otra siguiera apretada. El salto se
+// sostiene mientras quede ALGUIEN sosteniendolo.
+const sostienen = new Set();
+const prenderSalto = (quien) => {
   despertar();
+  sostienen.add(quien);
   entrada.apoyado = true;
-  entrada.pedido = true;
+  entrada.pedido = true;          // el pedido sobrevive aunque se suelte ya
+};
+const apagarSalto = (quien) => {
+  sostienen.delete(quien);
+  if (!sostienen.size) entrada.apoyado = false;
+};
+
+// El lienzo: cada dedo que lo toca es un sostenedor distinto, y se suelta
+// solo cuando se levanta ESE dedo.
+let dedoLienzo = null;
+const abajoLienzo = (e) => {
+  const id = e.pointerId ?? "t";
+  if (dedoLienzo === null) dedoLienzo = id;
+  prenderSalto("lienzo");
   if (e.cancelable) e.preventDefault();
 };
-const arriba = () => { entrada.apoyado = false; };
-
+const arribaLienzo = (e) => {
+  const id = e && e.pointerId !== undefined ? e.pointerId : "t";
+  if (dedoLienzo !== null && id !== dedoLienzo) return;
+  dedoLienzo = null;
+  apagarSalto("lienzo");
+};
 for (const ev of ["pointerdown", "touchstart", "mousedown"])
-  lienzo.addEventListener(ev, abajo, { passive: false });
-for (const ev of ["pointerup", "pointercancel", "touchend", "mouseup", "mouseleave"])
-  window.addEventListener(ev, arriba);
+  lienzo.addEventListener(ev, abajoLienzo, { passive: false });
+for (const ev of ["pointerup", "pointercancel", "touchend", "mouseup"])
+  window.addEventListener(ev, arribaLienzo);
 
 // --- los mandos en pantalla ---------------------------------------------
 //
 // Tocar el lienzo SIGUE saltando. Estos botones no reemplazan eso: le ponen un
 // lugar fijo y visible a lo que ya se podia hacer —que en un telefono importa,
-// porque el pulgar no busca— y agregan el unico control que faltaba.
+// porque el pulgar no busca— y agregan el control de direccion.
 //
-// `preventDefault` en pointerdown y `touch-action: none` en el CSS: sin las
-// dos cosas el navegador se queda el toque para hacer scroll o para el gesto
-// de "volver atras", y el boton responde una de cada tres veces.
+// CADA BOTON SE QUEDA CON SU PROPIO DEDO, Y ESTO ES EL ARREGLO DE UN BUG QUE
+// SE SENTIA EN CADA PARTIDA.
+//
+// La version anterior soltaba las flechas desde un listener en `window`:
+// cualquier `pointerup` en cualquier parte de la pantalla las apagaba todas.
+// O sea que jugando como se juega —el pulgar izquierdo apretando ▶ y el
+// derecho tocando A para saltar— CADA VEZ QUE SE SOLTABA A se cancelaba el
+// movimiento, aunque el otro dedo siguiera apoyado en la flecha. Y como el
+// dedo ya estaba abajo, no habia un `pointerdown` nuevo que lo volviera a
+// prender: el personaje se quedaba clavado. Se notaba sobre todo encadenando
+// el doble y el triple salto, que es donde mas veces se suelta A.
+//
+// Se arregla con `setPointerCapture`: el boton se queda con ESE dedo hasta que
+// ese dedo se levante, y los eventos de los otros no lo tocan. Es el mecanismo
+// que hay para esto y evita tener que llevar la cuenta a mano.
+const usaPointer = "onpointerdown" in window;
+
 function montarMando(sel, alApretar, alSoltar) {
   const b = document.querySelector(sel);
   if (!b) return;
-  const abajoM = (e) => {
+  let dedo = null;
+
+  const apretar = (id, e) => {
+    if (dedo !== null) return;
+    dedo = id;
+    if (e && e.pointerId !== undefined) {
+      try { b.setPointerCapture(e.pointerId); } catch (err) { /* da igual */ }
+    }
     despertar();
     b.classList.add("apretado");
     alApretar();
-    if (e.cancelable) e.preventDefault();
+    if (e && e.cancelable) e.preventDefault();
   };
-  const arribaM = () => { b.classList.remove("apretado"); if (alSoltar) alSoltar(); };
-  b.addEventListener("pointerdown", abajoM, { passive: false });
-  b.addEventListener("touchstart", abajoM, { passive: false });
-  for (const ev of ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel"])
-    b.addEventListener(ev, arribaM);
+  const soltar = (id) => {
+    // Solo lo suelta el MISMO dedo que lo apreto. `null` quiere decir "sea
+    // quien sea", y es lo que usa el respaldo por si la pagina pierde el foco.
+    if (dedo === null || (id !== null && id !== dedo)) return;
+    dedo = null;
+    b.classList.remove("apretado");
+    if (alSoltar) alSoltar();
+  };
+  b.soltarMando = () => soltar(null);
+
+  if (usaPointer) {
+    b.addEventListener("pointerdown", (e) => apretar(e.pointerId, e), { passive: false });
+    for (const ev of ["pointerup", "pointercancel"])
+      b.addEventListener(ev, (e) => soltar(e.pointerId));
+  } else {
+    // Respaldo para navegadores sin pointer events. Se registra SOLO en ese
+    // caso: con los dos juntos, cada toque llega dos veces.
+    b.addEventListener("touchstart", (e) => apretar("t", e), { passive: false });
+    for (const ev of ["touchend", "touchcancel"]) b.addEventListener(ev, () => soltar("t"));
+    b.addEventListener("mousedown", (e) => apretar("m", e));
+    b.addEventListener("mouseup", () => soltar("m"));
+    b.addEventListener("mouseleave", () => soltar("m"));
+  }
 }
-const saltar = [() => { entrada.apoyado = true; entrada.pedido = true; },
-                () => { entrada.apoyado = false; }];
-montarMando("#mando-saltar", ...saltar);
-montarMando('[data-dir="arriba"]', ...saltar);
+
+montarMando("#mando-saltar", () => prenderSalto("A"), () => apagarSalto("A"));
 montarMando('[data-dir="izq"]', () => { entrada.izq = true; }, () => { entrada.izq = false; });
 montarMando('[data-dir="der"]', () => { entrada.der = true; }, () => { entrada.der = false; });
-montarMando('[data-dir="abajo"]', () => { entrada.frenar = true; }, () => { entrada.frenar = false; });
-// Soltar el dedo FUERA del boton tambien lo suelta. Sin esto, arrastrar el
-// pulgar de una flecha a otra deja la primera apretada para siempre y el
-// jugador queda corriendo contra una pared sin entender por que.
-for (const ev of ["pointerup", "pointercancel", "touchend", "touchcancel", "blur"])
-  window.addEventListener(ev, () => {
-    entrada.izq = entrada.der = entrada.frenar = false;
-    for (const b of document.querySelectorAll(".mando.apretado")) b.classList.remove("apretado");
-  });
+
+// Perder el foco o esconder la pestana SI suelta todo: si no, el dedo queda
+// apoyado para siempre y el personaje corre solo contra una pared.
+const soltarTodo = () => {
+  for (const b of document.querySelectorAll(".mando")) b.soltarMando && b.soltarMando();
+  sostienen.clear(); dedoLienzo = null;
+  entrada.apoyado = false; entrada.izq = entrada.der = entrada.frenar = false;
+};
+addEventListener("blur", soltarTodo);
+document.addEventListener("visibilitychange", () => { if (document.hidden) soltarTodo(); });
 
 addEventListener("keydown", (e) => {
-  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) { abajo(e); }
+  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) {
+    prenderSalto("tecla");
+    if (e.cancelable) e.preventDefault();
+  }
   if (e.code === "Escape" && partida) alMapa();
   if (e.code === "ArrowLeft") entrada.izq = true;
   if (e.code === "ArrowRight") entrada.der = true;
@@ -5132,14 +5190,11 @@ addEventListener("keydown", (e) => {
   if (e.code === "KeyR" && partida) empezar(cfgActual.m, cfgActual.n);
 });
 addEventListener("keyup", (e) => {
-  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) arriba();
+  if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) apagarSalto("tecla");
   if (e.code === "ArrowLeft") entrada.izq = false;
   if (e.code === "ArrowRight") entrada.der = false;
   if (e.code === "ArrowDown") entrada.frenar = false;
 });
-// Perder el foco con el dedo apoyado dejaba al jugador saltando para siempre.
-addEventListener("blur", arriba);
-document.addEventListener("visibilitychange", () => { if (document.hidden) arriba(); });
 
 // --- pantallas -----------------------------------------------------------
 function alMapa() {

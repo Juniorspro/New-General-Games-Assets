@@ -22,8 +22,7 @@ await pg.evaluate(() => window.PIQUE.empezar(1, 1));
 await pg.waitForSelector("#p-juego:not([hidden])", { timeout: 40000 });
 await pg.waitForTimeout(400);
 
-for (const sel of ["#mando-saltar", '[data-dir="izq"]', '[data-dir="der"]',
-                   '[data-dir="abajo"]', '[data-dir="arriba"]']) {
+for (const sel of ["#mando-saltar", '[data-dir="izq"]', '[data-dir="der"]']) {
   const caja = await pg.locator(sel).boundingBox();
   ch(`${sel} se ve y es grande`, caja && caja.height >= 44 && caja.width >= 44,
      caja ? `${Math.round(caja.width)}x${Math.round(caja.height)} px` : "no esta");
@@ -51,10 +50,10 @@ ch("el boton de saltar hace saltar", salto.saltos >= 1, `vy=${salto.vy.toFixed(1
 // La cruceta manda la direccion: se aprieta ◀ y se mantiene.
 const izq = await pg.evaluate(async () => {
   const b = document.querySelector('[data-dir="izq"]');
-  b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+  b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerId: 9 }));
   for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
   const r = { dir: window.PIQUE.partida.j.dir, giro: window.PIQUE.partida.giroT };
-  b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 9 }));
   return r;
 });
 ch("◀ hace correr para la izquierda", izq.dir === -1, `dir=${izq.dir}`);
@@ -62,34 +61,74 @@ ch("y dispara la animacion de pivote", izq.giro > 0, `${izq.giro} cuadros`);
 
 const der = await pg.evaluate(async () => {
   const b = document.querySelector('[data-dir="der"]');
-  b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+  b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerId: 9 }));
   for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
   const r = window.PIQUE.partida.j.dir;
-  b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 9 }));
   return r;
 });
 ch("▶ lo devuelve para la derecha", der === 1, `dir=${der}`);
 
-// ▼ frena, y despues de soltarlo el jugador NO queda clavado: con ▶ arranca.
-const freno = await pg.evaluate(async () => {
-  const p = window.PIQUE.partida; p.j.suelo = true;
-  const abajo = document.querySelector('[data-dir="abajo"]');
+// SOLO DOS FLECHAS. Arriba duplicaba el boton A y abajo frenaba algo que se
+// frena solo con soltar el dedo.
+ch("no hay flecha arriba ni abajo ni centro",
+   await pg.evaluate(() => !document.querySelector('[data-dir="arriba"]') &&
+                           !document.querySelector('[data-dir="abajo"]') &&
+                           !document.querySelector(".cruceta-centro")));
+
+// EL CASO QUE SE ROMPIA: el pulgar izquierdo sostiene ▶ mientras el derecho
+// toca A tres veces para encadenar el triple salto. Soltar A no puede apagar
+// la flecha que el OTRO dedo sigue apretando.
+const dosDedos = await pg.evaluate(async () => {
+  const p = window.PIQUE.partida;
+  p.j.x = 60; p.j.y = p.nv.piso * 16; p.j.vy = 0; p.j.suelo = true; p.j.saltos = 0;
   const der = document.querySelector('[data-dir="der"]');
-  der.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+  const a = document.querySelector("#mando-saltar");
+  const ev = (el, tipo, id) => el.dispatchEvent(
+    new PointerEvent(tipo, { bubbles: true, cancelable: true, pointerId: id, isPrimary: id === 1 }));
+  const cuadros = (n) => new Promise(async (ok) => {
+    for (let i = 0; i < n; i++) await new Promise(r => requestAnimationFrame(r)); ok();
+  });
+  ev(der, "pointerdown", 1);           // el pulgar izquierdo se queda en ▶
+  await cuadros(6);
+  const x0 = p.j.x;
+  for (let k = 0; k < 3; k++) {        // tres toques de A, con su dedo propio
+    ev(a, "pointerdown", 2);
+    await cuadros(4);
+    ev(a, "pointerup", 2);
+    await cuadros(6);
+  }
+  const saltos = p.j.saltos;
+  await cuadros(10);
+  const avanzo = p.j.x - x0;
+  const sigue = window.PIQUE.entrada.der;
+  ev(der, "pointerup", 1);
+  return { avanzo, sigue, saltos };
+});
+ch("soltar A no cancela la flecha que sostiene el otro dedo", dosDedos.sigue,
+   `entrada.der=${dosDedos.sigue}`);
+ch("y el personaje siguio avanzando mientras encadenaba saltos",
+   dosDedos.avanzo > 30, `avanzo ${Math.round(dosDedos.avanzo)} px, ${dosDedos.saltos} saltos`);
+
+// ▼ ya no existe: frenar es soltar. Se comprueba que soltar ▶ frene.
+const freno = await pg.evaluate(async () => {
+  const p = window.PIQUE.partida;
+  // Se lo baja al piso y se espera a que aterrice: en el aire la velocidad se
+  // conserva a proposito —el validador midio los arcos de salto con velocidad
+  // constante— asi que soltar la flecha no frena hasta tocar suelo.
+  p.j.x = 60; p.j.y = p.nv.piso * 16; p.j.vy = 0; p.j.saltos = 0;
+  for (let i = 0; i < 10; i++) await new Promise(r => requestAnimationFrame(r));
+  const der = document.querySelector('[data-dir="der"]');
+  const ev = (t, id) => der.dispatchEvent(
+    new PointerEvent(t, { bubbles: true, cancelable: true, pointerId: id }));
+  ev("pointerdown", 3);
   for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
   const corria = Math.abs(p.j.vx) > 1;
-  abajo.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
-  for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
-  const quieto = Math.abs(p.j.vx) < 0.01;
-  abajo.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
-  der.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
-  for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
-  const vuelve = Math.abs(p.j.vx) > 1;
-  der.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
-  return { corria, quieto, vuelve };
+  ev("pointerup", 3);
+  for (let i = 0; i < 8; i++) await new Promise(r => requestAnimationFrame(r));
+  return { corria, quieto: Math.abs(p.j.vx) < 0.01 };
 });
-ch("▼ frena en seco aunque se este corriendo", freno.corria && freno.quieto);
-ch("y despues de soltarlo, ▶ vuelve a arrancar", freno.vuelve);
+ch("soltar ▶ frena", freno.corria && freno.quieto);
 
 // LOS DOS MODOS, y la diferencia entre ellos es TODO el cambio:
 //   libre    → sin tocar nada, se queda quieto.

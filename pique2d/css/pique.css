@@ -301,12 +301,12 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 .hud-abajo {
   /* Por encima de los mandos, no por detras. El nombre del nivel quedaba
      cruzado por el boton de saltar y no se leia ni uno ni el otro. */
-  position: absolute; right: 12px; bottom: calc(184px + env(safe-area-inset-bottom));
+  position: absolute; right: 12px; bottom: calc(122px + env(safe-area-inset-bottom));
   text-align: right;
   display: flex; flex-direction: column; gap: 2px;
 }
 @media (max-height: 520px) {
-  .hud-abajo { bottom: calc(146px + env(safe-area-inset-bottom)); }
+  .hud-abajo { bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
 .hud-mundo {
   font-size: 15px; font-weight: 800; color: #fff;
@@ -512,38 +512,34 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 }
 .mandos[hidden] { display: none; }
 
-.cruceta {
-  position: relative; width: 156px; height: 156px;
-  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
-}
-.cruceta-centro {
-  grid-area: 2 / 2; align-self: center; justify-self: center;
-  width: 26px; height: 26px; border-radius: 6px;
-  background: rgba(14,18,30,.5); border: 2px solid rgba(255,255,255,.14);
-}
+/* DOS FLECHAS Y NADA MAS. Arriba duplicaba el boton A y abajo frenaba algo
+   que se frena SOLO con soltar el dedo: dos teclas que no hacian falta,
+   ocupando pantalla y pudiendose tocar sin querer. */
+.cruceta { display: flex; gap: 10px; }
 .mando {
   pointer-events: auto; touch-action: none; -webkit-tap-highlight-color: transparent;
   color: #f4e4c1; font-size: 22px; line-height: 1; font-weight: 800;
   display: grid; place-items: center;
-  border: 3px solid rgba(255,255,255,.22);
-  background: rgba(20,26,40,.5); backdrop-filter: blur(2px);
-  box-shadow: 0 4px 0 rgba(0,0,0,.4);
+  /* Mas opacos que antes: sobre un cielo claro —el desierto, las nubes— con
+     medio alfa las flechas casi no se veian. Un boton que hay que buscar es
+     un boton que se toca tarde. */
+  border: 3px solid rgba(255,255,255,.34);
+  background: rgba(16,21,34,.72); backdrop-filter: blur(2px);
+  box-shadow: 0 4px 0 rgba(0,0,0,.45), inset 0 2px 0 rgba(255,255,255,.08);
   transition: transform .06s, background .06s;
   border-radius: 12px;
 }
-.dir.arriba { grid-area: 1 / 2; border-radius: 12px 12px 4px 4px; }
-.dir.izq    { grid-area: 2 / 1; border-radius: 12px 4px 4px 12px; }
-.dir.der    { grid-area: 2 / 3; border-radius: 4px 12px 12px 4px; }
-.dir.abajo  { grid-area: 3 / 2; border-radius: 4px 4px 12px 12px; }
+.dir { width: 76px; height: 86px; font-size: 26px; }
+.dir.izq { border-radius: 18px 8px 8px 18px; }
+.dir.der { border-radius: 8px 18px 18px 8px; }
 .mando-saltar {
   width: 104px; height: 104px; border-radius: 50%; font-size: 30px;
-  background: rgba(255,180,58,.42); border-color: rgba(255,226,160,.66);
-  color: #2a1a06;
+  background: rgba(255,180,58,.8); border-color: rgba(255,238,190,.85);
+  color: #2a1a06; text-shadow: 0 1px 0 rgba(255,255,255,.45);
 }
 .mando.apretado { transform: translateY(3px) scale(.95); background: rgba(255,212,71,.62); color: #2a1a06; }
 @media (max-height: 520px) {
-  .cruceta { width: 126px; height: 126px; }
-  .mando { font-size: 18px; }
+  .dir { width: 66px; height: 70px; font-size: 22px; }
   .mando-saltar { width: 86px; height: 86px; font-size: 26px; }
   .mandos { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 }
