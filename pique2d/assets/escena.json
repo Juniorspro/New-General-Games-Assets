@@ -1,0 +1,16 @@
+{
+  "cuadro": {
+    "task_id": "gtask-182e1f15d69647b59fe6",
+    "output_path": "assets/escena_cuadro-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/escena_cuadro-g1.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/escena_cuadro-g1.png"
+  },
+  "video": {
+    "task_id": "gtask-6cfb1aa0da36490a9076",
+    "output_path": "assets/escena_hongo-g1.mp4",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/escena_hongo-g1.mp4",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/escena_hongo-g1.mp4"
+  }
+}

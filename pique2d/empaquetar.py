@@ -152,6 +152,8 @@ def main():
         mapa[f"assets/fondo/{p.name}"] = data_uri(p); crudo += p.stat().st_size
     for p in sorted((AQUI / "assets" / "postal").glob("*.webp")):
         mapa[f"assets/postal/{p.name}"] = data_uri(p); crudo += p.stat().st_size
+    for p in sorted((AQUI / "assets" / "escena").glob("*.webp")):
+        mapa[f"assets/escena/{p.name}"] = data_uri(p); crudo += p.stat().st_size
     for nombre in ("portada.webp", "logo.webp", "titulo_fondo.webp"):
         p = AQUI / "assets" / nombre
         if p.exists():

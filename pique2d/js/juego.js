@@ -24,7 +24,7 @@ export const ESTADO = { JUGANDO: "jugando", BURBUJA: "burbuja", MASTIL: "mastil"
 // —de gigante— arrasar con lo que se cruce, que se siente mas que ocupar mas
 // lugar, y no le miente al jugador sobre por donde entra.
 const ESCALA = [1, 1.45, 2.7];
-const ESCENA_CUADROS = 170;      // lo que dura la escena del hongo gigante
+const ESCENA_CUADROS = 200;      // lo que dura la escena del hongo gigante
 const GIGANTE_CUADROS = 540;     // nueve segundos de gigante
 const GIRO_CUADROS = 12;         // el pivote al darse vuelta
 
@@ -157,6 +157,7 @@ export class Partida {
       efe.paredazo();
       this.chispas(j.x + (j.dir > 0 ? -6 : 6), j.y - 8, "#ffffff", 6);
     }
+    if (ev.darVuelta) { efe.vault(); this.chispas(j.x, j.y - 8, "#ffffff", 5); }
     if (ev.salto2) { efe.salto(); this.chispas(j.x, j.y - 6, "#8ad8ff", 7); }
     if (ev.salto3) {
       efe.saltoAlto();
@@ -655,14 +656,18 @@ export class Partida {
   }
 
   /**
-   * La escena del hongo gigante: pantalla completa, dos segundos y medio.
+   * La escena del hongo arcoiris: pantalla completa, unos tres segundos.
    *
-   * Esta dibujada con codigo y no con una imagen a proposito. Lo que se pidio
-   * es que sea MUY animada —rayos de colores girando, un destello sobre el
-   * hongo, el personaje mirandolo y comiendoselo—, y eso con una imagen fija
-   * de fondo no se puede: habria que generar sesenta. Los rayos giran, el
-   * fondo late y el unico dibujo generado es el personaje comiendo, que es lo
-   * unico que un dibujo hace mejor que el codigo.
+   * SON VEINTICUATRO FOTOGRAMAS DE UN VIDEO, y esa es toda la diferencia. Una
+   * hoja de sprites se le pide al modelo dibujo por dibujo: sale una
+   * animacion, pero cada cuadro es un dibujo aparte y se nota en el temblor.
+   * Un video se genera como una sola cosa continua, asi que los fotogramas ya
+   * vienen encadenados — el destello, el fogonazo blanco, el remolino y el
+   * personaje creciendo son UN movimiento y no veinticuatro dibujos parecidos.
+   * Los saca extraer_cuadros.py y quedan en assets/escena/.
+   *
+   * Si la hoja no cargo se dibuja una version hecha con codigo. Una escena que
+   * no aparece seria peor que una escena simple.
    */
   dibujarEscena(c) {
     const es = this.escena;
@@ -671,67 +676,54 @@ export class Partida {
     const p = es.t / ESCENA_CUADROS;
     const cx = W / 2, cy = Hh * 0.46;
 
-    // 1) rayos de arcoiris girando desde el centro
-    c.save();
-    c.fillStyle = "#1a1030"; c.fillRect(0, 0, W, Hh);
-    c.translate(cx, cy);
-    c.rotate(es.t * 0.016);
-    const RAYOS = 14, largo = Math.hypot(W, Hh);
-    for (let i = 0; i < RAYOS; i++) {
-      c.fillStyle = `hsl(${(i * 360 / RAYOS + es.t * 2.4) % 360} 85% 56%)`;
-      c.beginPath(); c.moveTo(0, 0);
-      const a0 = (i * 2 * Math.PI) / RAYOS, a1 = a0 + Math.PI / RAYOS;
-      c.lineTo(Math.cos(a0) * largo, Math.sin(a0) * largo);
-      c.lineTo(Math.cos(a1) * largo, Math.sin(a1) * largo);
-      c.closePath(); c.fill();
-    }
-    c.restore();
-
-    // 2) anillos que salen del centro
-    c.save();
-    c.globalAlpha = 0.5; c.strokeStyle = "#fff"; c.lineWidth = 2;
-    for (let i = 0; i < 3; i++) {
-      const rr = ((es.t * 2.4 + i * 42) % 130);
-      c.globalAlpha = 0.45 * (1 - rr / 130);
-      c.beginPath(); c.arc(cx, cy, rr, 0, Math.PI * 2); c.stroke();
-    }
-    c.restore();
-
-    // 3) el personaje comiendo, grande y en el medio
-    const hoja = this.hojas.heroe_comer;
-    const alto = Math.min(Hh * 0.46, W * 0.82);
-    if (hoja) {
+    const hoja = this.escenaHongo;
+    if (hoja && hoja.img && hoja.img.width) {
+      const cw = hoja.img.width / hoja.cols, ch = hoja.img.height / hoja.filas;
       const i = Math.min(hoja.n - 1, Math.floor(p * hoja.n));
-      dibujarCuadro(c, hoja, i, cx, cy + alto / 2, alto);
+      const sx = (i % hoja.cols) * cw, sy = Math.floor(i / hoja.cols) * ch;
+      // Se llena la pantalla recortando los costados, salvo que haya que
+      // recortar tanto que se pierda la escena —el telefono acostado, donde
+      // la proporcion no tiene nada que ver— y ahi se muestra entera con
+      // bandas negras.
+      const llenar = Math.max(W / cw, Hh / ch);
+      const entrar = Math.min(W / cw, Hh / ch);
+      const esc = (1 - entrar / llenar) <= 0.35 ? llenar : entrar;
+      const dw = cw * esc, dh = ch * esc;
+      c.fillStyle = "#07040f"; c.fillRect(0, 0, W, Hh);
+      c.drawImage(hoja.img, sx, sy, cw, ch,
+                  Math.round((W - dw) / 2), Math.round((Hh - dh) / 2),
+                  Math.ceil(dw), Math.ceil(dh));
     } else {
-      this.dibujarHeroe(c, cx, cy + alto / 2, "quieto", false);
-    }
-
-    // 4) el destello sobre el hongo, mientras todavia lo tiene en la mano
-    if (p < 0.62) {
       c.save();
-      c.globalAlpha = 0.5 + Math.sin(es.t / 3) * 0.35;
-      c.fillStyle = "#fff";
-      const bx = cx + alto * 0.18, by = cy - alto * 0.18;
-      for (let i = 0; i < 4; i++) {
-        const a = es.t * 0.08 + (i * Math.PI) / 2;
-        const l = 10 + Math.sin(es.t / 4 + i) * 6;
-        c.fillRect(bx + Math.cos(a) * l - 1, by + Math.sin(a) * l - 1, 3, 3);
+      c.fillStyle = "#1a1030"; c.fillRect(0, 0, W, Hh);
+      c.translate(cx, cy);
+      c.rotate(es.t * 0.016);
+      const RAYOS = 14, largo = Math.hypot(W, Hh);
+      for (let k = 0; k < RAYOS; k++) {
+        c.fillStyle = `hsl(${(k * 360 / RAYOS + es.t * 2.4) % 360} 85% 56%)`;
+        c.beginPath(); c.moveTo(0, 0);
+        const a0 = (k * 2 * Math.PI) / RAYOS, a1 = a0 + Math.PI / RAYOS;
+        c.lineTo(Math.cos(a0) * largo, Math.sin(a0) * largo);
+        c.lineTo(Math.cos(a1) * largo, Math.sin(a1) * largo);
+        c.closePath(); c.fill();
       }
       c.restore();
+      const hc = this.hojas.heroe_comer;
+      const alto = Math.min(Hh * 0.46, W * 0.82);
+      if (hc) dibujarCuadro(c, hc, Math.min(hc.n - 1, Math.floor(p * hc.n)), cx, cy + alto / 2, alto);
+      else this.dibujarHeroe(c, cx, cy + alto / 2, "quieto", false);
     }
 
-    // 5) el cartel y el fundido a blanco del final
     c.save();
     c.textAlign = "center";
     c.font = "bold 13px monospace";
     c.fillStyle = "#1a1030";
-    c.fillText("¡SUPER HONGO!", cx + 1, Hh * 0.9 + 1);
+    c.fillText("¡SUPER HONGO!", cx + 1, Hh * 0.93 + 1);
     c.fillStyle = "#fff";
-    c.fillText("¡SUPER HONGO!", cx, Hh * 0.9);
+    c.fillText("¡SUPER HONGO!", cx, Hh * 0.93);
     c.textAlign = "left";
-    if (p > 0.86) {
-      c.globalAlpha = (p - 0.86) / 0.14;
+    if (p > 0.9) {
+      c.globalAlpha = (p - 0.9) / 0.1;
       c.fillStyle = "#fff"; c.fillRect(0, 0, W, Hh);
     }
     c.restore();

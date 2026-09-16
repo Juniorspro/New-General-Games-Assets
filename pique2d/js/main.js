@@ -34,16 +34,28 @@ ctx.imageSmoothingEnabled = false;
 ctx.setTransform(GRAF.esc, 0, 0, GRAF.esc, 0, 0);
 
 let partida = null, cfgActual = null, tierActualN = "rosa";
-let hojas = {}, patrones = {}, capas = {};
+let hojas = {}, patrones = {}, capas = {}, escenaHongo = null;
 
 // --- entrada -------------------------------------------------------------
 // Un solo boton. Se guarda "apoyado" y se calcula el flanco por cuadro: si el
 // flanco se calculara en el evento, dos toques dentro del mismo cuadro se
 // comerian uno, y a 60 Hz eso pasa todo el tiempo en pantallas tactiles.
-const entrada = { apoyado: false, previo: false };
+// UN TOQUE MAS CORTO QUE UN CUADRO TAMBIEN CUENTA.
+//
+// Se guardaba nada mas "apoyado" y el flanco se calculaba por cuadro. Eso
+// pierde el toque entero cuando el dedo baja y sube dentro del mismo cuadro:
+// a 60 Hz hay 16 milisegundos por cuadro y un toque seco en una pantalla
+// tactil dura menos que eso mas seguido de lo que parece. Desde afuera es "le
+// toque y no salto", que es el peor error posible en un juego de un solo
+// boton. Se cazo con la prueba de mandos, donde ningun toque hacia saltar.
+//
+// Ahora la BAJADA deja un pedido anotado que el bucle consume cuando le toca,
+// pase lo que pase con el dedo en el medio.
+const entrada = { apoyado: false, previo: false, volver: false, pedido: false };
 const abajo = (e) => {
   despertar();
   entrada.apoyado = true;
+  entrada.pedido = true;
   if (e.cancelable) e.preventDefault();
 };
 const arriba = () => { entrada.apoyado = false; };
@@ -53,9 +65,41 @@ for (const ev of ["pointerdown", "touchstart", "mousedown"])
 for (const ev of ["pointerup", "pointercancel", "touchend", "mouseup", "mouseleave"])
   window.addEventListener(ev, arriba);
 
+// --- los mandos en pantalla ---------------------------------------------
+//
+// Tocar el lienzo SIGUE saltando. Estos botones no reemplazan eso: le ponen un
+// lugar fijo y visible a lo que ya se podia hacer —que en un telefono importa,
+// porque el pulgar no busca— y agregan el unico control que faltaba.
+//
+// `preventDefault` en pointerdown y `touch-action: none` en el CSS: sin las
+// dos cosas el navegador se queda el toque para hacer scroll o para el gesto
+// de "volver atras", y el boton responde una de cada tres veces.
+function montarMando(sel, alApretar, alSoltar) {
+  const b = $(sel);
+  if (!b) return;
+  const abajoM = (e) => {
+    despertar();
+    b.classList.add("apretado");
+    alApretar();
+    if (e.cancelable) e.preventDefault();
+  };
+  const arribaM = () => { b.classList.remove("apretado"); if (alSoltar) alSoltar(); };
+  b.addEventListener("pointerdown", abajoM, { passive: false });
+  b.addEventListener("touchstart", abajoM, { passive: false });
+  for (const ev of ["pointerup", "pointercancel", "pointerleave", "touchend", "touchcancel"])
+    b.addEventListener(ev, arribaM);
+}
+montarMando("#mando-saltar", () => { entrada.apoyado = true; entrada.pedido = true; },
+            () => { entrada.apoyado = false; });
+// El de darse vuelta es de flanco: se anota el pedido y el bucle lo consume en
+// el proximo cuadro. Aplicandolo en el evento, dos toques dentro del mismo
+// cuadro se comerian uno y el jugador quedaria mirando para donde no quiso.
+montarMando("#mando-volver", () => { entrada.volver = true; });
+
 addEventListener("keydown", (e) => {
   if (["Space", "ArrowUp", "KeyZ", "KeyX", "Enter"].includes(e.code)) { abajo(e); }
   if (e.code === "Escape" && partida) alMapa();
+  if ((e.code === "ArrowLeft" || e.code === "ArrowDown") && partida) entrada.volver = true;
   if (e.code === "KeyR" && partida) empezar(cfgActual.m, cfgActual.n);
 });
 addEventListener("keyup", (e) => {
@@ -86,6 +130,7 @@ function empezar(m, n) {
     const nv = generarNivel(cfgActual, tierActualN);
     const ms = Math.round(performance.now() - t0);
     partida = new Partida(nv, tierActualN, hojas, patrones[nv.tema] || null, capas[nv.tema] || {});
+    partida.escenaHongo = escenaHongo;
     $("#hud-nivel").textContent = `Mundo ${m}-${n} · ${cfgActual.titulo}`;
   $("#hud-num").textContent = String((m - 1) * 4 + n);
     $("#hud-gen").textContent = nv.validacion.fallo
@@ -174,8 +219,12 @@ function bucle(ahora) {
   while (acumulado >= PASO && pasos < 5) {
     acumulado -= PASO; pasos++;
     if (partida) {
-      const ent = { toque: entrada.apoyado, toqueNuevo: entrada.apoyado && !entrada.previo };
+      const ent = { toque: entrada.apoyado,
+                    toqueNuevo: entrada.pedido || (entrada.apoyado && !entrada.previo),
+                    volver: entrada.volver };
       entrada.previo = entrada.apoyado;
+      entrada.volver = false;
+      entrada.pedido = false;
       const antes = partida.estado;
       try { partida.actualizar(ent); }
       catch (e) { seRompio(e, "la logica"); break; }
@@ -184,7 +233,7 @@ function bucle(ahora) {
           (partida.estado === ESTADO.GANADO || partida.estado === ESTADO.PERDIDO)) {
         terminar(partida.estado === ESTADO.GANADO);
       }
-    } else entrada.previo = entrada.apoyado;
+    } else { entrada.previo = entrada.apoyado; entrada.pedido = false; entrada.volver = false; }
   }
   if (partida) {
     try { partida.dibujar(ctx); UI.pintarHud(partida); }
@@ -357,6 +406,18 @@ function calidad(esc) {
       img.src = ruta(`assets/fondo/${tema}_${cp}.webp`);
     }));
   }));
+  // La escena del hongo arcoiris: veinticuatro fotogramas sacados de un video
+  // generado, en una grilla de 4x6. No pasa por cargarHoja a proposito: esa
+  // mide el recorte leyendo el alfa de la hoja entera, y aca son fotogramas
+  // opacos que ocupan la celda completa — serian dos millones de pixeles
+  // leidos al arrancar para llegar a la respuesta que ya sabemos.
+  {
+    const im = new Image();
+    im.onload = () => { escenaHongo = { img: im, cols: 4, filas: 6, n: 24 };
+                        if (partida) partida.escenaHongo = escenaHongo; };
+    im.onerror = () => {};
+    im.src = ruta("assets/escena/hongo.webp");
+  }
   // La musica se carga sin bloquear: el juego arranca igual y la pista entra
   // cuando llega. Bloquear el arranque por 400 KB es regalar el primer segundo.
   cargarPistas({ llano: "assets/snd/llano.mp3", subte: "assets/snd/subte.mp3",

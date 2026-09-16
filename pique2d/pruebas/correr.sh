@@ -21,6 +21,9 @@ echo
 echo "── hongos, tamanos y el gigante ──────────────────────────────"
 node pruebas/hongos.mjs
 echo
+echo "── los botones en pantalla ───────────────────────────────────"
+node pruebas/mandos.mjs
+echo
 echo "── calidad de dibujo y costo por cuadro ──────────────────────"
 node pruebas/rendimiento.mjs
 echo

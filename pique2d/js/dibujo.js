@@ -337,7 +337,11 @@ function dibujarTile(c, v, x, y, tm, t, tx, ty, arribaLibre, patron, vecino = ()
         // Un tercio de la imagen por parte. La del medio se repite.
         const sw = pz.width / 3;
         const sx = izq ? 0 : (der ? sw * 2 : sw);
-        c.drawImage(pz, sx, 0, sw, pz.height, x | 0, y | 0, T, 13);
+        // El alto sale de la PROPORCION de la pieza, no de un numero puesto a
+        // mano: con 13 fijos, la losa nueva —que es mucho mas baja— salia
+        // estirada a lo alto y los bulones quedaban ovalados.
+        const alto = Math.max(5, Math.min(T, Math.round(T * pz.height / sw)));
+        c.drawImage(pz, sx, 0, sw, pz.height, x | 0, y | 0, T, alto);
       } else {
         R(c, x, y, T, 5, tm.detalle); R(c, x, y, T, 1, "rgba(255,255,255,.5)");
         R(c, x, y + 5, T, 1, "rgba(0,0,0,.35)");

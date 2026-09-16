@@ -241,15 +241,22 @@ export function montarAjustes(alCambiarGrafico) {
     pintar();
   }
   const sonido = $("#aj-sonido"), musica = $("#aj-musica"), sac = $("#aj-sacudida");
+  const mandos = $("#aj-mandos");
   sonido.checked = d.ajustes.sonido; musica.checked = d.ajustes.musica;
   sac.checked = d.ajustes.sacudida;
+  if (mandos) mandos.checked = d.ajustes.mandos !== false;
   const aplicar = () => {
     d.ajustes.sonido = sonido.checked; d.ajustes.musica = musica.checked;
     d.ajustes.sacudida = sac.checked;
+    if (mandos) d.ajustes.mandos = mandos.checked;
     volumen(d.ajustes.musica, d.ajustes.sonido);
+    // Apagar los botones NO deja al jugador sin forma de saltar: tocar el
+    // lienzo sigue andando. Por eso se puede apagar sin dejar el juego roto.
+    const caja = $("#mandos");
+    if (caja) caja.hidden = !(d.ajustes.mandos !== false);
     guardar();
   };
-  for (const e of [sonido, musica, sac]) e.addEventListener("change", aplicar);
+  for (const e of [sonido, musica, sac, mandos]) if (e) e.addEventListener("change", aplicar);
   $("#aj-borrar").addEventListener("click", () => {
     if (!confirm("¿Borrar todo el progreso? No se puede deshacer.")) return;
     borrarTodo(); location.reload();

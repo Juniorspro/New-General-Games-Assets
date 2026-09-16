@@ -94,6 +94,19 @@ export function paso(j, nv, ent, ev = {}) {
   }
 
   if (j.flip > 0) j.flip++;
+  // DARSE VUELTA. Es el unico control que el juego no tenia: se corre solo y
+  // hasta ahora la unica forma de cambiar de lado era chocarse una pared.
+  // Volver cuesta tiempo —el reloj no para— asi que no hace falta limitarlo
+  // de ninguna otra forma: el costo ya esta puesto.
+  //
+  // El validador no manda nunca este campo, asi que lo que demostro sigue
+  // valiendo: esto SUMA opciones, no le saca ninguna.
+  if (ent.volver) {
+    j.dir = -j.dir;
+    j.vx = j.dir * F.VEL;
+    j.impulso = 0;
+    ev.darVuelta = true;
+  }
   if (ent.toqueNuevo) j.buffer = F.BUFFER;
   if (j.buffer > 0) j.buffer--;
   if (j.coyote > 0) j.coyote--;

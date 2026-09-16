@@ -35,6 +35,10 @@ import generar_sprites as G
 import despegar_fondo as DF
 
 
+# Piezas que son material y no recorte: llenan el cuadro entero.
+PIEZAS_OPACAS = {"plataforma"}
+
+
 def destino(clave):
     """Donde va cada clave y como se achica. None = no se toca."""
     if clave in G.HOJAS or clave in G.OBJETOS:
@@ -49,6 +53,13 @@ def destino(clave):
     # `plataforma` no empezaba con "tubo_" ni con "icono_": se bajo, se pago y
     # se quedo afuera sin que nada avisara, y el juego siguio dibujando la
     # barra de color plano.
+    # La plataforma es una LOSA: ocupa el cuadro entero a proposito, igual que
+    # una textura de terreno. Tratada como recorte, el control la rechazaba por
+    # venir 99% opaca —que es justo lo que tiene que ser— y el juego se quedaba
+    # dibujando la version vieja sin que se notara. Un recorte y un material
+    # son dos cosas distintas y hay que decir cual es cual.
+    if clave in PIEZAS_OPACAS:
+        return ("piezas", clave, (256, None), False)
     if clave in G.PIEZAS:
         # Ancho fijo y alto por proporcion: la plataforma es ancha y baja, y
         # forzada a cuadrada se aplastaba.
@@ -66,6 +77,37 @@ def opacidad(im):
     en pantalla el bicho sale adentro de un cuadrado de color."""
     h = im.convert("RGBA").split()[3].histogram()
     return sum(h[25:]) / max(1, sum(h))
+
+
+def recortar_contenido(im, margen=2):
+    """Recorta al dibujo cuando el fondo NO es transparente sino un damero.
+
+    El modelo, cuando se le pide una pieza suelta sin transparencia, a veces
+    dibuja el fondo como el damero gris y blanco con que los editores
+    representan lo transparente. El servidor no lo saca —para el es pintura— y
+    el juego terminaba estampando ese damero en cada plataforma.
+
+    Se distingue por el color: el damero es gris puro, con los tres canales
+    casi iguales. Lo dibujado tiene color. Se toma el rectangulo de los pixeles
+    CON color y se recorta ahi, con un par de pixeles de margen para no comerse
+    el contorno negro —que tambien es gris y por eso no cuenta como color—.
+    """
+    px = im.convert("RGB").load()
+    w, h = im.size
+    x0, y0, x1, y1 = w, h, -1, -1
+    for y in range(h):
+        for x in range(w):
+            r, g, b = px[x, y]
+            if max(r, g, b) - min(r, g, b) > 25:
+                if x < x0: x0 = x
+                if x > x1: x1 = x
+                if y < y0: y0 = y
+                if y > y1: y1 = y
+    if x1 < 0:
+        return im
+    x0 = max(0, x0 - margen); y0 = max(0, y0 - margen)
+    x1 = min(w - 1, x1 + margen); y1 = min(h - 1, y1 + margen)
+    return im.crop((x0, y0, x1 + 1, y1 + 1))
 
 
 def recortar_alfa(im):
@@ -116,7 +158,9 @@ def preparar(clave, origen, forzar=False):
             r3 = DF.despegar_halo(im, cols, filas)
             if r3:
                 im = r3[0]
-    if carpeta == "piezas" or clave == "logo":
+    if clave in PIEZAS_OPACAS:
+        im = recortar_contenido(im)
+    elif carpeta == "piezas" or clave == "logo":
         im = recortar_alfa(im)
     if ah is None:
         ah = max(1, round(im.height * aw / im.width))

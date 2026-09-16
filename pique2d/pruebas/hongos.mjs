@@ -70,7 +70,7 @@ const r = await pg.evaluate(async () => {
   p.soltarHongo(Math.floor(p.j.x / T) + 3, Math.floor(p.j.y / T) - 4, "super");
   corre(60);
   out.escenaEstado = p.estado;
-  corre(180);
+  corre(230);            // la escena dura 200 cuadros, y antes hay que juntarlo
   out.trasEscenaTam = p.tam;
   out.trasEscenaEstado = p.estado;
   out.gigT = p.gigT;

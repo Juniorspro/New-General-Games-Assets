@@ -7,3 +7,8 @@ assets/*.png
 # La copia que deja `generar_sprites.py rehacer` antes de sacar claves del
 # registro: sirve para volver atras en la maquina, no es parte del proyecto.
 assets/hojas.anterior.json
+
+# El video crudo del que salen los fotogramas de la escena: 4 MB, y al repo
+# va la hoja ya extraida (assets/escena/, 300 KB). Se vuelve a bajar con
+# `python3 generar_escena.py bajar`.
+assets/*.mp4

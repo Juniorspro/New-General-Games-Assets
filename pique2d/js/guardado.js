@@ -14,7 +14,8 @@ const vacio = () => ({
   // grafico: "auto" | 1 | 2. En auto el juego mide como va y baja solo.
   // graficoAuto guarda lo que decidio la ultima vez, para arrancar ya bien
   // en vez de hacer sufrir los primeros segundos en cada partida.
-  ajustes: { sonido: true, musica: true, sacudida: true, grafico: "auto", graficoAuto: 0 },
+  ajustes: { sonido: true, musica: true, sacudida: true, mandos: true,
+             grafico: "auto", graficoAuto: 0 },
 });
 
 let cache = null;

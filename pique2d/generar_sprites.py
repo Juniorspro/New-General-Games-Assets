@@ -206,9 +206,15 @@ PIEZAS = {
                  "vertical teal metal column with a bright highlight stripe on the left and a dark "
                  "stripe on the right, no rim, no opening, tileable vertically, flat side view, "
                  "isolated, fills the image"),
- "plataforma": ("a floating platform seen straight from the side: three thick wooden planks with a "
-                "bright top edge, dark iron brackets and bolts at both ends, flat top, flat bottom, "
-                "no legs, no posts, isolated, fills the image, tileable left to right"),
+ # La primera version salio con herrajes enormes en las puntas y mas alta que
+ # ancha: achicada a la altura de media plataforma quedaba como un banco de
+ # plaza. Lo que hace falta es una LOSA: mucho mas ancha que alta, con el
+ # canto de arriba claro y el de abajo oscuro, y nada mas.
+ "plataforma": ("a thin floating stone slab seen exactly from the side, FOUR TIMES WIDER THAN TALL: "
+                "one flat pale stone plank with a bright flat top edge, a thin dark shadow line "
+                "under it and a darker underside, two small iron bolts near the ends. Flat side "
+                "view, no legs, no posts, no brackets, no chains, isolated, fills the image edge to "
+                "edge, tileable left to right"),
  "icono_moneda": ("a single game coin icon, thick amber disc with cream bevel and a spiral emblem, "
                   "front view, isolated, fills the image"),
  "icono_burbuja":("a single soap bubble icon, pale cyan sphere with a white highlight, isolated, "
@@ -220,10 +226,15 @@ PIEZAS = {
 def pedir_piezas():
     for k, desc in PIEZAS.items():
         if k in cargar(): print(f"  · {k}: ya pedido"); continue
+        # Las que son material y no recorte van SIN transparencia y sin pedir
+        # margen: el margen vacio es lo que hace que un recorte se pueda
+        # separar del fondo, y en una losa que llena el cuadro sobra.
+        opaca = k in ("plataforma",)
         r = rz("submit_image_generation", {
             "project_id": PROYECTO, "output_path": f"assets/{k}.png",
-            "size": "1024x1024", "transparent": True,
-            "prompt": (f"{desc}. Single object, centred, generous empty margin, no grid, "
+            "size": "1024x1024", "transparent": not opaca,
+            "prompt": (f"{desc}. {ANCLA}" if opaca else
+                       f"{desc}. Single object, centred, generous empty margin, no grid, "
                        f"no borders, no other objects. {ANCLA}")})
         if "task_id" not in r: print(f"  ✗ {k}: {r}"); continue
         anotar(k, {"task_id": r["task_id"], "output_path": r["output_path"], "cols": 1, "filas": 1})
@@ -265,13 +276,23 @@ TILES = {
  # del tamano de un tile— y repetidas cada cuatro tiles se leen como una
  # estampilla, no como material. Lo que funciona en una textura de terreno es
  # el grano chico y parejo: se repite y nadie lo nota.
- "desierto": "coarse desert sand and grit, warm ochre and cream, very fine even grain, tiny "
-             "scattered pebbles, no dunes, no ripples, no large shapes, no layers",
- "cielo":    "dense packed white cloud material, pale cream with soft blue shadow, fine even "
-             "puffy grain all over, small uniform tufts, no large clouds, no sky, no horizon",
- "nave":     "weathered ship deck planks, warm brown wood with iron nail heads",
- "torre":    "polished violet tower stone, hexagonal blocks with faint glowing seams",
- "fantasma": "old haunted floorboards, dark violet wood with pale dust and cobwebs",
+ "desierto": "coarse desert sand and grit, warm ochre and cream and pale gold, very fine even "
+             "grain, tiny pale pebbles. NO dark specks, NO blue, NO teal, no dunes, no ripples, no "
+             "large shapes, no layers",
+ "cielo":    "the inside of a thick cloud seen up close: soft rounded overlapping puffs of cream "
+             "and very pale blue, small and even all over, gentle shading, NO outlines, NO cracks, "
+             "NO mortar lines, NO veins, no sky, no horizon",
+ "nave":     "a weathered ship deck: long horizontal wooden planks of DIFFERENT widths and "
+             "DIFFERENT tones —some pale, some dark, some reddish—, heavy wood grain, knots, black "
+             "caulked seams and iron nail heads scattered irregularly. Nothing lines up, no two "
+             "planks the same",
+ "torre":    "PURPLE tower masonry, deep violet and lavender stone: irregular blocks of many DIFFERENT sizes fitted "
+             "together like a jigsaw, thin dark seams with a faint amber glow, worn violet faces. "
+             "Everything purple, nothing blue, nothing teal, nothing grey. NO hexagons, NO circles, "
+             "NO repeating pattern, NO blocks of equal size, not a tiled floor",
+ "fantasma": "old haunted floorboards: dark violet-grey wood with heavy grain, knots, splits and "
+             "gaps between boards, pale dust in the cracks. At most one or two thin cobweb strands, "
+             "small and off to a side — no big webs, no repeating webs",
 }
 
 def pedir_tiles():

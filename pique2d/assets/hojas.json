@@ -143,33 +143,6 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_castillo-g2.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_castillo-g2.png"
   },
-  "tile_nave": {
-    "task_id": "gtask-160b77ab29d3473ab35a",
-    "output_path": "assets/tile_nave-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_nave-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_nave-g2.png"
-  },
-  "tile_torre": {
-    "task_id": "gtask-9fb26b451788419980e7",
-    "output_path": "assets/tile_torre-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_torre-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_torre-g2.png"
-  },
-  "tile_fantasma": {
-    "task_id": "gtask-d1f5520db27e45759815",
-    "output_path": "assets/tile_fantasma-g2.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_fantasma-g2.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_fantasma-g2.png"
-  },
   "heroe_saltar": {
     "task_id": "gtask-d35e20cc17e743e08d4b",
     "output_path": "assets/heroe_saltar-g3.png",
@@ -476,24 +449,6 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_llano-g3.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_llano-g3.png"
   },
-  "tile_desierto": {
-    "task_id": "gtask-fe09b1e6e2594c1e9be8",
-    "output_path": "assets/tile_desierto-g3.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_desierto-g3.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_desierto-g3.png"
-  },
-  "tile_cielo": {
-    "task_id": "gtask-7f1a276af7bd427d8456",
-    "output_path": "assets/tile_cielo-g3.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_cielo-g3.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_cielo-g3.png"
-  },
   "fondo_castillo_cielo": {
     "task_id": "gtask-a27972dad7974712ab4a",
     "output_path": "assets/fondo_castillo_cielo-g3.png",
@@ -539,15 +494,6 @@
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/hongo_super-g1.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/hongo_super-g1.png"
   },
-  "plataforma": {
-    "task_id": "gtask-8f22dc686ab449daafd3",
-    "output_path": "assets/plataforma-g1.png",
-    "cols": 1,
-    "filas": 1,
-    "estado": "ready",
-    "local": "/home/user/New-General-Games-Assets/pique2d/assets/plataforma-g1.png",
-    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/plataforma-g1.png"
-  },
   "fondo_subte_cielo": {
     "task_id": "gtask-9a4eec6b654340c0af8c",
     "output_path": "assets/fondo_subte_cielo-g3.png",
@@ -574,5 +520,59 @@
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/pique2d/assets/heroe_correr-g2.png",
     "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/heroe_correr-g2.png"
+  },
+  "tile_desierto": {
+    "task_id": "gtask-cafd8f8fba03441c8c66",
+    "output_path": "assets/tile_desierto-g4.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_desierto-g4.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_desierto-g4.png"
+  },
+  "tile_cielo": {
+    "task_id": "gtask-8588d8db9b494d2b90f2",
+    "output_path": "assets/tile_cielo-g4.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_cielo-g4.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_cielo-g4.png"
+  },
+  "tile_nave": {
+    "task_id": "gtask-834f287516e34219aca2",
+    "output_path": "assets/tile_nave-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_nave-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_nave-g3.png"
+  },
+  "tile_fantasma": {
+    "task_id": "gtask-b64fa4d4ba09438491e7",
+    "output_path": "assets/tile_fantasma-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_fantasma-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_fantasma-g3.png"
+  },
+  "tile_torre": {
+    "task_id": "gtask-7ef8e766d64448308094",
+    "output_path": "assets/tile_torre-g4.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/tile_torre-g4.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/tile_torre-g4.png"
+  },
+  "plataforma": {
+    "task_id": "gtask-7aaacf3910184081b6b4",
+    "output_path": "assets/plataforma-g3.png",
+    "cols": 1,
+    "filas": 1,
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/pique2d/assets/plataforma-g3.png",
+    "public_url": "https://lab.rezona.ai/game/pgcserver/pv/EUDERiogqd/assets/plataforma-g3.png"
   }
 }
