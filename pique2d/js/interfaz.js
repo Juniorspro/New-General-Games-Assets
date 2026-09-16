@@ -57,74 +57,144 @@ export function pintarInicio() {
 }
 
 // --- mapa de mundos ------------------------------------------------------
+//
+// UN CAMINO, NO UNA PLANILLA. La version anterior era una grilla de tarjetas:
+// se entendia, pero no contaba nada. Un mapa de mundos tiene que dejar ver de
+// un vistazo DE DONDE VENIS Y A DONDE VAS, y eso lo dice la forma del
+// recorrido, no una lista.
+//
+// Cada mundo es una senda: cuatro paradas en zigzag sobre la postal del tema
+// —la misma imagen que se ve jugando— unidas por una linea que se DIBUJA
+// sola. El tramo ya recorrido va en color y el que falta, gris punteado; el
+// heroe se para en la proxima parada. Las posiciones estan en una tabla y no
+// repartidas por el CSS: la linea se traza sobre esos mismos numeros, asi que
+// no pueden quedar desfasadas.
+
+// x en porcentaje del ancho, y en porcentaje del alto de la senda.
+const PARADAS = [[20, 82], [50, 60], [78, 38], [46, 14]];
+
 export function pintarMapa(alElegir) {
   const d = cargar();
   const cont = $("#mapa"); cont.innerHTML = "";
   const totalColor = { rosa: 0, violeta: 0, negra: 0 };
   let hechos = 0;
+  const prox = proximoNivel();
 
   for (let m = 1; m <= 6; m++) {
-    // El mundo esta abierto si al menos su primer nivel lo esta.
     const mundoAbierto = abierto(m, 1);
     const mundo = crear("section", "mundo" + (mundoAbierto ? "" : " cerrado"));
+    const temaMundo = NIVELES.find((c) => c.m === m).tema;
+
     const cab = crear("header", "cab-mundo");
     cab.append(crear("h2", null, `Mundo ${m}`));
-    const av = crear("div", "avance"); av.append(crear("i")); cab.append(av);
+    const hechosM = [1, 2, 3, 4].filter((n) => datosNivel(idNivel(m, n)).hecho).length;
+    const av = crear("div", "avance");
+    const avi = crear("i"); avi.style.width = `${hechosM / 4 * 100}%`;
+    av.append(avi); cab.append(av);
+    cab.append(crear("span", "cuenta", `${hechosM}/4`));
     if (!mundoAbierto) cab.append(crear("span", "candado", "🔒"));
     mundo.append(cab);
 
-    const fila = crear("div", "niveles");
+    const senda = crear("div", "senda");
+    // El cielo del mundo, mezclado de los CUATRO temas que lo componen.
+    //
+    // Antes iba la postal del primer nivel de fondo, y el mundo 1 y el 2
+    // arrancan los dos en la llanura: dos mundos seguidos con la misma
+    // imagen, que es lo contrario de lo que un mapa tiene que hacer. Cuatro
+    // colores mezclados dan un cielo distinto por mundo sin cargar nada, y la
+    // postal de cada nivel pasa a estar donde se entiende mejor: adentro de
+    // su propia parada.
+    // Se usa cielo[1] —el tono CLARO de cada cielo— y no cielo[0]. Los
+    // oscuros de los ocho temas son todos azules o violetas casi negros: con
+    // esos, los seis mundos salian del mismo azul barroso y el degrade no
+    // distinguia nada, que era justo lo que se venia a arreglar.
+    const cielos = [1, 2, 3, 4].map((n) =>
+      TEMAS[NIVELES.find((c) => c.m === m && c.n === n).tema].cielo[1]);
+    senda.style.background = `linear-gradient(155deg, ${cielos.join(", ")})`;
+
+    // La linea, en SVG, sobre las MISMAS coordenadas que las paradas.
+    const puntos = PARADAS.map(([x, y]) => `${x},${y}`).join(" ");
+    const hechasM = [1, 2, 3, 4].map((n) => datosNivel(idNivel(m, n)).hecho);
+    // Hasta donde llega el tramo recorrido: la ultima parada hecha.
+    let ultima = 0;
+    for (let k = 0; k < 4; k++) if (hechasM[k]) ultima = k + 1;
+    const hasta = PARADAS.slice(0, Math.max(1, ultima)).map(([x, y]) => `${x},${y}`).join(" ");
+    senda.insertAdjacentHTML("beforeend",
+      `<svg class="senda-linea" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+         <polyline class="tramo-falta" points="${puntos}"/>
+         <polyline class="tramo-hecho" points="${hasta}"/>
+       </svg>`);
+
     for (let n = 1; n <= 4; n++) {
       const cfg = NIVELES.find((c) => c.m === m && c.n === n);
       const id = idNivel(m, n);
       const dn = datosNivel(id);
       if (dn.hecho) hechos++;
       for (const k of ["rosa", "violeta", "negra"]) if (dn.color[k]) totalColor[k]++;
-
-      const b = crear("button", "nivel" + (dn.hecho ? " hecho" : "") + (cfg.jefe ? " jefe" : ""));
       const libre = abierto(m, n);
-      b.disabled = !libre;
-      if (!libre) b.classList.add("cerrado");
-      b.dataset.nivel = id;
-      b.style.setProperty("--tema", TEMAS[cfg.tema].cielo[0]);
-      // La postal del tema: es el mismo fondo que ve el jugador adentro del
-      // nivel, compuesto de las capas reales. Una miniatura generada aparte
-      // seria parecida pero distinta, y la tarjeta prometeria otro nivel.
-      const post = crear("img", "postal");
-      post.alt = ""; post.loading = "lazy";
-      post.src = ruta(`assets/postal/${cfg.tema}.webp`);
-      b.append(post);
-      b.append(crear("span", "num", id));
-      b.append(crear("span", "titulo", cfg.titulo));
-      b.append(crear("span", "tema", TEMAS[cfg.tema].nombre + (cfg.jefe ? " · jefe" : "")));
+      const aqui = prox.m === m && prox.n === n;
 
-      const monedas = crear("span", "colores");
-      for (const k of ["rosa", "violeta", "negra"]) {
-        const p = crear("i", "pip " + k + (dn.color[k] ? " ok" : ""));
-        p.title = k;
-        monedas.append(p);
+      const b = crear("button", "parada" + (dn.hecho ? " hecha" : "") +
+                      (cfg.jefe ? " jefe" : "") + (libre ? "" : " cerrada") + (aqui ? " aqui" : ""));
+      b.disabled = !libre;
+      b.dataset.nivel = id;
+      b.style.left = `${PARADAS[n - 1][0]}%`;
+      b.style.top = `${PARADAS[n - 1][1]}%`;
+      // El retraso escalonado hace que las paradas aparezcan una detras de
+      // otra, en el orden en que se juegan. Es lo que da la sensacion de
+      // recorrido en vez de la de lista.
+      b.style.setProperty("--tarde", `${(m - 1) * 60 + n * 70}ms`);
+      b.title = `${id} · ${cfg.titulo}`;
+      b.setAttribute("aria-label",
+        `${id}, ${cfg.titulo}, ${TEMAS[cfg.tema].nombre}${cfg.jefe ? ", jefe" : ""}` +
+        (libre ? (dn.hecho ? ", terminado" : "") : ", cerrado"));
+
+      const disco = crear("span", "disco");
+      // La postal del propio nivel, adentro del disco: es el mismo fondo que
+      // se ve jugandolo, compuesto de las capas de verdad. Asi el mapa
+      // muestra a que se entra, no solo un numero.
+      if (libre) {
+        const mini = crear("img", "mini");
+        mini.alt = ""; mini.loading = "lazy";
+        mini.src = ruta(`assets/postal/${cfg.tema}.webp`);
+        disco.append(mini);
       }
-      b.append(monedas);
-      if (dn.hecho) b.append(crear("span", "mejor", `${dn.monedas} 🪙 · ${dn.mejorTiempo}s`));
-      else if (!libre) b.append(crear("span", "mejor", "terminá el anterior"));
+      disco.append(crear("b", null, cfg.jefe ? "★" : String(n)));
+      b.append(disco);
+      b.append(crear("span", "rotulo", cfg.titulo));
+      const pips = crear("span", "colores");
+      for (const k of ["rosa", "violeta", "negra"])
+        pips.append(crear("i", "pip " + k + (dn.color[k] ? " ok" : "")));
+      b.append(pips);
+      if (!libre) b.append(crear("span", "cerrojo", "🔒"));
+      else if (dn.hecho) b.append(crear("span", "tilde", "✓"));
+      if (aqui) {
+        // El heroe se dibuja con background-position sobre la hoja de 4x4:
+        // `background-size: 400%` deja UNA celda a la vista. Con una <img> a
+        // escala habia que achicarla con transform y el resultado se
+        // superponia al numero y al rotulo — y ademas quedaba a merced del
+        // origen del transform.
+        const h = crear("img", "heroe-ficha");
+        h.alt = ""; h.title = "estás acá";
+        h.src = ruta("assets/piezas/ficha_heroe.webp");
+        b.append(h);
+      }
       b.addEventListener("click", () => { despertar(); efe.menu(); alElegir(m, n); });
-      fila.append(b);
+      senda.append(b);
     }
-    mundo.append(fila);
+    mundo.append(senda);
     cont.append(mundo);
   }
 
-  // Barra de avance del mundo: cuantos de los cuatro estan hechos.
-  for (let m = 1; m <= 6; m++) {
-    const hechosM = [1, 2, 3, 4].filter((n) => datosNivel(idNivel(m, n)).hecho).length;
-    const barra = cont.querySelector(`.mundo:nth-of-type(${m}) .avance i`);
-    if (barra) barra.style.width = `${hechosM / 4 * 100}%`;
-  }
   $("#total-monedas").textContent = d.monedas;
   $("#total-niveles").textContent = `${hechos}/24`;
-  $("#total-abiertos") && ($("#total-abiertos").textContent = `${Math.min(24, d.desbloqueado)}/24`);
   $("#total-color").textContent =
     `${totalColor.rosa}/24 · ${totalColor.violeta}/24 · ${totalColor.negra}/24`;
+  // Se lleva la vista a donde esta el jugador. Con seis mundos, entrar al mapa
+  // y tener que bajar hasta el cuarto cada vez es un peaje.
+  const aqui = cont.querySelector(".parada.aqui");
+  if (aqui) requestAnimationFrame(() =>
+    aqui.scrollIntoView({ block: "center", behavior: "instant" }));
 }
 
 // --- HUD -----------------------------------------------------------------
@@ -259,6 +329,17 @@ export function montarAjustes(alCambiarGrafico) {
   // El selector de graficos. Quien sabe aplicar el cambio es main.js —es el
   // que tiene el lienzo y los patrones—, asi que aca solo se guarda y se
   // avisa.
+  const modo = $("#aj-modo");
+  if (modo) {
+    const pintarModo = () => {
+      for (const b of modo.querySelectorAll("[data-modo]"))
+        b.classList.toggle("puesto", (d.ajustes.auto ? "auto" : "libre") === b.dataset.modo);
+    };
+    for (const b of modo.querySelectorAll("[data-modo]"))
+      b.addEventListener("click", () => { d.ajustes.auto = b.dataset.modo === "auto";
+                                          guardar(); pintarModo(); });
+    pintarModo();
+  }
   const grupo = $("#aj-grafico");
   if (grupo) {
     const pintar = () => {

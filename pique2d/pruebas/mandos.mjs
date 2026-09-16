@@ -70,28 +70,56 @@ const der = await pg.evaluate(async () => {
 });
 ch("▶ lo devuelve para la derecha", der === 1, `dir=${der}`);
 
-// ▼ frena, y soltarlo devuelve la carrera: NO deja al jugador clavado.
+// ▼ frena, y despues de soltarlo el jugador NO queda clavado: con ▶ arranca.
 const freno = await pg.evaluate(async () => {
   const p = window.PIQUE.partida; p.j.suelo = true;
-  const b = document.querySelector('[data-dir="abajo"]');
-  b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+  const abajo = document.querySelector('[data-dir="abajo"]');
+  const der = document.querySelector('[data-dir="der"]');
+  der.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+  for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
+  const corria = Math.abs(p.j.vx) > 1;
+  abajo.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
   for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
   const quieto = Math.abs(p.j.vx) < 0.01;
-  b.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  abajo.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  der.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
   for (let i = 0; i < 6; i++) await new Promise(r => requestAnimationFrame(r));
-  return { quieto, vuelve: Math.abs(p.j.vx) > 1 };
+  const vuelve = Math.abs(p.j.vx) > 1;
+  der.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  return { corria, quieto, vuelve };
 });
-ch("▼ frena en seco", freno.quieto);
-ch("y soltarlo devuelve la carrera", freno.vuelve);
+ch("▼ frena en seco aunque se este corriendo", freno.corria && freno.quieto);
+ch("y despues de soltarlo, ▶ vuelve a arrancar", freno.vuelve);
 
-// Sin tocar la cruceta SIGUE CORRIENDO SOLO: es lo que hace que se pueda
-// jugar con un dedo, y lo que el validador da por hecho.
-const solo = await pg.evaluate(async () => {
-  const p = window.PIQUE.partida; const x0 = p.j.x;
-  for (let i = 0; i < 20; i++) await new Promise(r => requestAnimationFrame(r));
+// LOS DOS MODOS, y la diferencia entre ellos es TODO el cambio:
+//   libre    → sin tocar nada, se queda quieto.
+//   corredor → sin tocar nada, corre solo (y es lo que el validador da por
+//              hecho cuando demuestra que el nivel se puede terminar).
+const avance = async () => pg.evaluate(async () => {
+  const p = window.PIQUE.partida; p.j.suelo = true; const x0 = p.j.x;
+  for (let i = 0; i < 24; i++) await new Promise(r => requestAnimationFrame(r));
   return p.j.x - x0;
 });
-ch("sin tocar nada sigue corriendo solo", Math.abs(solo) > 8, `avanzo ${solo.toFixed(0)} px`);
+const ponerModo = async (modo) => {
+  await pg.evaluate((m) => {
+    const d = JSON.parse(localStorage.getItem("pique.v1") || "{}");
+    d.ajustes = { ...(d.ajustes || {}), auto: m === "auto" };
+    localStorage.setItem("pique.v1", JSON.stringify(d));
+  }, modo);
+  await pg.reload(); await pg.waitForFunction(() => !!window.PIQUE, { timeout: 60000 });
+  await pg.evaluate(() => window.PIQUE.empezar(1, 1));
+  await pg.waitForSelector("#p-juego:not([hidden])", { timeout: 40000 });
+  await pg.waitForTimeout(350);
+};
+await ponerModo("libre");
+const quieto = await avance();
+ch("en modo libre, sin tocar nada se queda quieto", Math.abs(quieto) < 3,
+   `se movio ${quieto.toFixed(1)} px`);
+await ponerModo("auto");
+const corre = await avance();
+ch("en modo corredor, sin tocar nada corre solo", Math.abs(corre) > 8,
+   `avanzo ${corre.toFixed(0)} px`);
+await ponerModo("libre");
 
 // Un toque en el lienzo sigue saltando: los botones AGREGAN, no reemplazan.
 await pg.evaluate(() => { const p = window.PIQUE.partida; p.j.vy = 0; p.j.suelo = true; p.j.saltos = 0; });

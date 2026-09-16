@@ -192,6 +192,31 @@ def preparar(clave, origen, forzar=False):
     return f"↻ {clave:22} → assets/{carpeta}/{nombre}.webp  {aw}x{ah}  {salida.stat().st_size // 1024} KB"
 
 
+def ficha_heroe():
+    """Recorta el primer cuadro de heroe_quieto a su propio contorno.
+
+    El mapa pone al heroe parado sobre la proxima parada. Puesto con la hoja
+    entera y background-position, se ve la celda COMPLETA —con todo el margen
+    vacio que el generador dejo alrededor— y el muneco queda corrido adentro
+    de su cuadradito: parece despegado del disco aunque este centrado al
+    pixel. Adentro del juego eso no pasa porque el dibujante mide el recorte
+    con el alfa; el CSS no puede. Asi que se recorta aca, una vez.
+    """
+    ent = AQUI / "assets" / "hojas" / "heroe_quieto.webp"
+    if not ent.exists():
+        return "✗ ficha_heroe: falta heroe_quieto.webp"
+    im = Image.open(ent).convert("RGBA")
+    celda = im.crop((0, 0, im.width // 4, im.height // 4))
+    celda = recortar_alfa(celda)
+    lado = max(celda.size)
+    cuadro = Image.new("RGBA", (lado, lado), (0, 0, 0, 0))
+    cuadro.paste(celda, ((lado - celda.width) // 2, lado - celda.height))
+    cuadro = cuadro.resize((128, 128), Image.NEAREST)
+    sal = AQUI / "assets" / "piezas" / "ficha_heroe.webp"
+    cuadro.save(sal, "WEBP", quality=90, method=6)
+    return f"↻ ficha_heroe           → assets/piezas/ficha_heroe.webp  128x128  {sal.stat().st_size // 1024} KB"
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     forzar = "--todo" in sys.argv
@@ -207,6 +232,7 @@ def main():
             hechos.append(msg)
         else:
             saltados += 1
+    hechos.append(ficha_heroe())
     for m in hechos:
         print("  " + m)
     print(f"  {len(hechos)} preparados · {saltados} sin cambios")

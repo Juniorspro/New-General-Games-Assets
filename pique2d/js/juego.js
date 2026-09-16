@@ -648,7 +648,8 @@ export class Partida {
       // el jugador sepa por que no lo estan matando.
       if (!(this.invT > 0 && Math.floor(this.t / 3) % 2))
         this.dibujarHeroe(c, this.j.x - this.camX, this.j.y - this.camY,
-          this.j.frenado ? "quieto" : (this.j.suelo ? "correr" : "saltar"), this.j.dir < 0);
+          this.j.frenado || (this.j.suelo && Math.abs(this.j.vx) < 0.2) ? "quieto"
+            : (this.j.suelo ? "correr" : "saltar"), this.j.dir < 0);
     }
     c.restore();
     // La escena va SIN la sacudida y SIN la camara: ocupa la pantalla entera.

@@ -229,6 +229,20 @@ function vigilar(dt) {
   VIG.n = 0; VIG.lentos = 0;
 }
 
+/**
+ * Que direccion se le pide al jugador este cuadro.
+ *
+ * Devolver `undefined` en vez de 0 no es un descuido: es lo que le dice a la
+ * fisica "nadie dijo nada, corre solo". En modo corredor se manda undefined
+ * cuando no hay flecha apretada; en modo libre se manda 0, que quiere decir
+ * "quedate quieto".
+ */
+function direccionPedida() {
+  const x = (entrada.der ? 1 : 0) + (entrada.izq ? -1 : 0);
+  if (x !== 0) return x;
+  return cargar().ajustes.auto ? undefined : 0;
+}
+
 function bucle(ahora) {
   requestAnimationFrame(bucle);
   let dt = ahora - ultimo; ultimo = ahora;
@@ -243,7 +257,7 @@ function bucle(ahora) {
       // esto, gana la que se leyo ultima y el personaje tiembla.
       const ent = { toque: entrada.apoyado,
                     toqueNuevo: entrada.pedido || (entrada.apoyado && !entrada.previo),
-                    x: (entrada.der ? 1 : 0) + (entrada.izq ? -1 : 0),
+                    x: direccionPedida(),
                     frenar: entrada.frenar };
       entrada.previo = entrada.apoyado;
       entrada.pedido = false;
@@ -418,7 +432,7 @@ function calidad(esc) {
   await Promise.all(TEMAS_TILE.map(async (t) => { patrones[t] = await cargarPatron(t); }));
   // Las piezas sueltas: tubos e iconos del HUD.
   const PIEZAS = ["tubo_boca", "tubo_cuerpo", "plataforma",
-                 "icono_moneda", "icono_burbuja", "icono_reloj"];
+                 "icono_moneda", "icono_burbuja", "icono_reloj", "ficha_heroe"];
   const ps = {};
   await Promise.all(PIEZAS.map((k) => new Promise((ok) => {
     const img = new Image();

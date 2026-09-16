@@ -169,8 +169,25 @@ export function paso(j, nv, ent, ev = {}) {
   // --- velocidad horizontal ----------------------------------------------
   // El jugador nunca elige esto: corre solo. Lo unico que lo cambia es el
   // rebote de una pared, y solo por unos cuadros.
+  // QUIETO ES UN ESTADO, Y LA DISTINCION ESTA EN `undefined` CONTRA `0`.
+  //
+  //   ent.x === undefined  → nadie dijo nada: corre solo (modo corredor, y es
+  //                          lo que manda el VALIDADOR, siempre).
+  //   ent.x === 1 | -1     → el jugador pide un lado: corre para ahi.
+  //   ent.x === 0          → el jugador NO pide ninguno: se queda quieto.
+  //
+  // Que el validador nunca mande el campo es lo que hace que todo esto sea
+  // seguro: lo que demostro —que el nivel se termina corriendo solo— sigue
+  // siendo alcanzable tal cual, apretando ▶ y nada mas. Quedarse quieto SUMA
+  // una opcion que antes no existia y no le saca ninguna.
+  const pedido = ent.x === 1 || ent.x === -1;
   if (j.impulso > 0) j.vx += (j.dir * F.VEL - j.vx) * 0.12;
-  else j.vx = j.dir * F.VEL;
+  else if (pedido || ent.x === undefined) j.vx = j.dir * F.VEL;
+  else if (j.suelo) j.vx = 0;
+  // En el AIRE sin direccion se conserva la velocidad que traia, y no es un
+  // detalle: el validador midio los arcos de salto con vx = dir * VEL todo el
+  // vuelo. Frenando en el aire, un salto que el validador probo que llegaba
+  // dejaria de llegar y el nivel validado seria mentira.
   // Frenar es solo en el piso. En el aire cambiaria el arco de los saltos, y
   // los arcos son justo lo que el validador midio para decir que el nivel se
   // puede terminar.
@@ -206,7 +223,9 @@ export function paso(j, nv, ent, ev = {}) {
   // Huecos de 1 o 2 tiles se cruzan solos, sin tocar. De 3 para arriba hay
   // que saltar. Es exactamente el limite del juego original y es lo que hace
   // que un nivel se sienta "con ritmo" en vez de "con trampas".
-  if (j.suelo && j.vault === 0 && j.vy >= 0) {
+  // El vault solo si se esta MOVIENDO. Parado en el filo de un hueco, el
+  // saltito automatico se disparaba solo y tiraba al jugador adentro.
+  if (j.suelo && j.vault === 0 && j.vy >= 0 && Math.abs(j.vx) > 0.1) {
     const pieX = j.x + j.dir * (F.ANCHO / 2 + 1);
     const ty = Math.floor((j.y + 2) / T);
     if (!pisable(nv, pieX, j.y + 2)) {

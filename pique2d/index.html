@@ -145,7 +145,7 @@
       <dt>Vault</dt><dd><b>Solo.</b> Los obstáculos de un tile y los huecos de uno o dos se pasan sin tocar nada. De tres para arriba hay que saltar.</dd>
       <dt>Vault con toque</dt><dd>Tocar <em>justo</em> mientras vaulteás: salto más alto y te llevás puesto al enemigo. Es la maniobra que más paga.</dd>
       <dt>Trepada</dt><dd><b>Sola.</b> Si caés justo sobre el filo de una plataforma, te subís en vez de rebotar contra el costado.</dd>
-      <dt>La cruceta</dt><dd><b>◀ ▶</b> mandan para dónde corrés — sirve para volver a buscar una moneda que quedó atrás, pero el reloj no para. <b>▼</b> frena en seco. <b>▲</b> y <b>A</b> saltan. Si no tocás ninguna flecha seguís corriendo solo, como siempre.</dd>
+      <dt>La cruceta</dt><dd><b>◀ ▶</b> te mueven, <b>▼</b> frena, <b>▲</b> y <b>A</b> saltan. Sin tocar nada te quedás quieto. Si preferís que corra solo —como las primeras versiones— está en Ajustes → Movimiento → Corredor.</dd>
       <dt>Salto de pared</dt><dd>Tocar pegado a una pared: rebotás y <b>das vuelta la carrera</b>. Así se suben los pozos y las torres, en zigzag.</dd>
       <dt>Doble salto</dt><dd>Tocar otra vez en el aire: segundo impulso, con su propia vuelta de carnero.</dd>
       <dt>Triple salto</dt><dd>Y una tercera vez: el más alto de los tres, con un backflip. Encadenados llegan a 9 tiles. Pisar un enemigo te devuelve los dos saltos de aire.</dd>
@@ -187,6 +187,14 @@
     <label class="opcion"><input type="checkbox" id="aj-musica"> <span>Música</span></label>
     <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span>Sacudida de pantalla</span></label>
     <label class="opcion"><input type="checkbox" id="aj-mandos"> <span>Botones en pantalla</span></label>
+    <div class="opcion opcion-grupo">
+      <span>Movimiento</span>
+      <div class="grupo" id="aj-modo">
+        <button data-modo="libre" class="chico">Libre</button>
+        <button data-modo="auto" class="chico">Corredor</button>
+      </div>
+    </div>
+    <p class="nota">En <b>libre</b> el personaje se queda quieto hasta que le decís para dónde ir con la cruceta. En <b>corredor</b> corre solo y la cruceta nada más lo corrige, como en las primeras versiones.</p>
     <div class="opcion opcion-grupo">
       <span>Gráficos</span>
       <div class="grupo" id="aj-grafico">

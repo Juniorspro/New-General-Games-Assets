@@ -574,3 +574,91 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 .bt-ico { opacity: .8; font-size: .9em; }
 .botones .grande small { font-size: 11px; font-weight: 600; opacity: .72; letter-spacing: .01em; }
 .botones .primario small { color: #6b4a10; opacity: .8; }
+
+
+/* ───────────── mapa: la senda ─────────────
+   Cuatro paradas en zigzag sobre la postal del tema, unidas por una linea que
+   se dibuja sola. Las coordenadas viven en PARADAS (interfaz.js) y se aplican
+   por style: aca no hay posiciones escritas, justamente para que la linea del
+   SVG y los botones no puedan quedar desfasados. */
+.senda {
+  position: relative; width: 100%; aspect-ratio: 5 / 4;
+  border-radius: 18px; overflow: hidden;
+  border: 3px solid rgba(255,255,255,.14);
+  background: var(--tema, #16203a);
+  box-shadow: 0 8px 0 rgba(0,0,0,.3), inset 0 0 60px rgba(0,0,0,.45);
+}
+
+.senda::after {           /* velo, para que el texto se lea sobre cualquier cielo */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 40%, rgba(8,11,20,.24), rgba(8,11,20,.8));
+}
+.senda-linea { position: absolute; inset: 0; width: 100%; height: 100%; }
+.senda-linea polyline { fill: none; stroke-linecap: round; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke; }
+.tramo-falta { stroke: rgba(255,255,255,.28); stroke-width: 6; stroke-dasharray: 2 9; }
+.tramo-hecho { stroke: #ffd447; stroke-width: 6; filter: drop-shadow(0 0 6px rgba(255,212,71,.5)); }
+
+.parada {
+  position: absolute; transform: translate(-50%, -50%);
+  z-index: 1; display: grid; place-items: center; gap: 2px;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  animation: aparece .34s var(--tarde, 0ms) both cubic-bezier(.2,1.5,.4,1);
+}
+@keyframes aparece { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+                     to   { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.parada .disco {
+  width: 62px; height: 62px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: linear-gradient(180deg, #2b3652, #1a2136);
+  border: 4px solid rgba(255,255,255,.3);
+  box-shadow: 0 5px 0 rgba(0,0,0,.45);
+  font-size: 24px; font-weight: 900; color: #f4e4c1;
+  transition: transform .1s;
+  position: relative; overflow: hidden;
+}
+.parada .disco .mini {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; image-rendering: pixelated; opacity: .5;
+}
+.parada .disco b { position: relative; z-index: 1;
+  text-shadow: 0 2px 0 rgba(0,0,0,.65), 0 0 6px rgba(0,0,0,.8); }
+.parada.hecha .disco b { text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+.parada.hecha .disco { background: linear-gradient(180deg, #ffd447, #e8a01e); color: #402a05;
+  border-color: #fff3c4; }
+.parada.jefe .disco { background: linear-gradient(180deg, #ff7a6a, #c8322a); color: #fff; }
+.parada.cerrada { cursor: not-allowed; }
+.parada.cerrada .disco { background: #1b2233; color: #55607a; border-color: rgba(255,255,255,.1); }
+.parada:not(.cerrada):active .disco { transform: translateY(4px) scale(.94); }
+.parada .rotulo {
+  font-size: 11px; font-weight: 700; color: #fff; max-width: 96px; text-align: center;
+  position: relative; z-index: 2;
+  line-height: 1.15; text-shadow: 0 2px 0 rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.9);
+}
+.parada.cerrada .rotulo { color: #7a839a; }
+.parada .colores { display: flex; gap: 3px; }
+.parada .tilde { position: absolute; top: -4px; right: -4px; font-size: 15px; color: #7fe39c;
+  text-shadow: 0 0 4px #000; }
+.parada .cerrojo { position: absolute; top: 12px; font-size: 20px; }
+
+/* La parada donde esta el jugador: late, y tiene el heroe parado encima. */
+.parada.aqui .disco { animation: late 1.5s infinite ease-in-out;
+  border-color: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.45), 0 0 0 4px rgba(255,212,71,.35); }
+@keyframes late { 0%,100% { box-shadow: 0 5px 0 rgba(0,0,0,.45), 0 0 0 3px rgba(255,212,71,.3); }
+                  50% { box-shadow: 0 5px 0 rgba(0,0,0,.45), 0 0 0 11px rgba(255,212,71,0); } }
+.parada .heroe-ficha {
+  /* La hoja es de 4x4: con background-size 400% se ve UNA celda. */
+  position: absolute; top: -50px; left: 50%; margin-left: -21px;
+  width: 42px; height: 42px;
+  image-rendering: pixelated;
+  animation: saltito 1.1s infinite ease-in-out;
+  filter: drop-shadow(0 3px 0 rgba(0,0,0,.45));
+  pointer-events: none;
+}
+@keyframes saltito { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+
+.cab-mundo .cuenta { font-size: 12px; color: var(--tenue); font-weight: 700; }
+@media (max-width: 560px) {
+  .parada .disco { width: 54px; height: 54px; font-size: 21px; }
+  .parada .rotulo { font-size: 10px; max-width: 80px; }
+}

@@ -25,7 +25,7 @@ const alMenu = async () => {
 };
 await alMenu();
 await pg.tap("#btn-niveles"); await pg.waitForSelector("#p-mapa:not([hidden])");
-const abiertos = () => pg.evaluate(()=>[...document.querySelectorAll(".nivel")].filter(b=>!b.disabled).map(b=>b.dataset.nivel));
+const abiertos = () => pg.evaluate(()=>[...document.querySelectorAll(".parada")].filter(b=>!b.disabled).map(b=>b.dataset.nivel));
 ch("de arranque solo esta abierto el 1-1", JSON.stringify(await abiertos()) === '["1-1"]',
    JSON.stringify(await abiertos()));
 
@@ -52,7 +52,7 @@ await pg.evaluate(()=>window.PIQUE.alMapa()); await pg.waitForSelector("#p-mapa:
 
 // Un nivel cerrado no se puede tocar.
 const cerrado = await pg.evaluate(()=>{ const b=document.querySelector('[data-nivel="1-3"]');
-  return { deshabilitado: b.disabled, marca: b.classList.contains("cerrado") }; });
+  return { deshabilitado: b.disabled, marca: b.classList.contains("cerrada") }; });
 ch("el 1-3 esta cerrado y marcado", cerrado.deshabilitado && cerrado.marca);
 
 // La guardia: se inyecta un error en la logica y el juego tiene que

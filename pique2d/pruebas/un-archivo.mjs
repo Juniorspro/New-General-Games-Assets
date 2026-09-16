@@ -20,7 +20,7 @@ const ext = await pg.evaluate(()=>[...document.querySelectorAll("link[href],scri
   .map(e=>e.getAttribute("href")||e.getAttribute("src")).filter(u=>u&&!u.startsWith("data:")));
 ch("no pide ni un archivo suelto", ext.length===0, ext.join(", "));
 await pg.click("#btn-niveles"); await pg.waitForSelector("#p-mapa:not([hidden])");
-ch("el mapa lista los 24 niveles", (await pg.$$(".nivel")).length===24);
+ch("el mapa lista los 24 niveles", (await pg.$$(".parada")).length===24);
 await pg.click('[data-nivel="1-1"]');
 await pg.waitForSelector("#p-juego:not([hidden])", { timeout: 40000 });
 ch("genera y valida un nivel", /validado/.test(await pg.textContent("#hud-gen")), await pg.textContent("#hud-gen"));
@@ -28,9 +28,17 @@ const y0 = await pg.evaluate(()=>window.PIQUE.partida.j.y);
 await pg.keyboard.down("Space"); await pg.waitForTimeout(220);
 ch("salta", (await pg.evaluate(()=>window.PIQUE.partida.j.y)) < y0-12);
 await pg.keyboard.up("Space");
+// Ahora el personaje arranca QUIETO y se mueve con la cruceta: la prueba
+// aprieta la flecha derecha, que es lo que hace un jugador.
 const x0 = await pg.evaluate(()=>window.PIQUE.partida.j.x);
+await pg.keyboard.down("ArrowRight");
 await pg.waitForTimeout(450);
-ch("corre solo", (await pg.evaluate(()=>window.PIQUE.partida.j.x)) > x0+40);
+const x1 = await pg.evaluate(()=>window.PIQUE.partida.j.x);
+await pg.keyboard.up("ArrowRight");
+ch("con la cruceta camina", x1 > x0+40, `avanzo ${Math.round(x1-x0)} px`);
+await pg.waitForTimeout(250);
+ch("y soltando la cruceta se queda quieto",
+   Math.abs((await pg.evaluate(()=>window.PIQUE.partida.j.x)) - x1) < 4);
 const an = await pg.evaluate(()=>{ const h=window.PIQUE.hojas.heroe_correr;
   return h ? {n:h.n, cw:h.cw, rw:h.r.w, rh:h.r.h} : null; });
 ch("la animacion de correr tiene 16 cuadros", an && an.n===16, JSON.stringify(an));

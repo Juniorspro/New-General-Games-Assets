@@ -14,7 +14,9 @@ const vacio = () => ({
   // grafico: "auto" | 1 | 2. En auto el juego mide como va y baja solo.
   // graficoAuto guarda lo que decidio la ultima vez, para arrancar ya bien
   // en vez de hacer sufrir los primeros segundos en cada partida.
-  ajustes: { sonido: true, musica: true, sacudida: true, mandos: true,
+  // auto: true = corredor clasico (corre solo, la cruceta solo corrige).
+  //       false = libre: parado quieto hasta que se le diga para donde ir.
+  ajustes: { sonido: true, musica: true, sacudida: true, mandos: true, auto: false,
              grafico: "auto", graficoAuto: 0 },
 });
 
