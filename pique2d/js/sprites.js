@@ -13,13 +13,13 @@
 // pedidas en 3x3, 16 fallaron por esto.
 
 import { ruta } from "./assets.js";
-import { ESC } from "./mundo.js";
+import { GRAF } from "./mundo.js";
 
 // Redondeo a la grilla del LIENZO, no a la del juego. Redondeando a pixel de
 // juego el sprite salta de a dos pixeles de pantalla y la carrera tiembla;
 // redondeando a pixel de lienzo se mueve suave y sigue cayendo justo sobre la
 // grilla, que es lo que evita que el contorno quede a medio pixel y borroso.
-const aRejilla = (v) => Math.round(v * ESC) / ESC;
+const aRejilla = (v) => Math.round(v * GRAF.esc) / GRAF.esc;
 
 const hojas = new Map();
 

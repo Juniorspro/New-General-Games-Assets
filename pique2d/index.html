@@ -131,7 +131,8 @@
     </dl>
 
     <h3>Los hongos</h3>
-    <p>Salen de los bloques <code>?</code> y <b>vuelan hasta vos</b>: no se escapan. El común te hace grande, y estando grande un golpe no te cuesta una burbuja — solo volvés a tamaño normal. El <b>súper hongo</b> te hace gigante por nueve segundos: arrasás con bloques, tubos y enemigos con solo caminar. El pozo y el reloj te matan igual, seas del tamaño que seas.</p>
+    <p>Salen de los bloques <code>?</code> y <b>vuelan hasta vos</b>: no se escapan. Uno de cada cuatro bloques tiene uno, y siempre el mismo bloque: el nivel se puede aprender. El común te hace grande, y estando grande un golpe no te cuesta una burbuja — solo volvés a tamaño normal.</p>
+    <p>El <b>hongo arcoíris</b> es otra cosa: hay <b>uno solo por mundo</b>, en el primer nivel de cada uno, y te hace gigante por nueve segundos. Arrasás con bloques, tubos y enemigos con solo caminar. El pozo y el reloj te matan igual, seas del tamaño que seas.</p>
 
     <h3>Las burbujas</h3>
     <p>No hay vidas. Cuando te matan entrás en una <b>burbuja</b> que vuelve para atrás y perdés 5 monedas; tocá para pincharla donde quieras. Arrancás con dos y los bloques <code>?</code> a veces dan más. Sin burbujas, se terminó.</p>
@@ -154,6 +155,15 @@
     <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Efectos de sonido</span></label>
     <label class="opcion"><input type="checkbox" id="aj-musica"> <span>Música</span></label>
     <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span>Sacudida de pantalla</span></label>
+    <div class="opcion opcion-grupo">
+      <span>Gráficos</span>
+      <div class="grupo" id="aj-grafico">
+        <button data-graf="auto" class="chico">Automático</button>
+        <button data-graf="2" class="chico">Nítido</button>
+        <button data-graf="1" class="chico">Rápido</button>
+      </div>
+    </div>
+    <p class="nota" id="aj-graf-nota">En automático el juego mide cómo va en tu teléfono y baja la resolución solo si no llega a 60 cuadros por segundo.</p>
     <p class="nota">Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.</p>
     <button id="aj-borrar" class="peligro">Borrar todo el progreso</button>
   </div>

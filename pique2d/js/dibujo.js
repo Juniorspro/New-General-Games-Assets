@@ -5,7 +5,7 @@
 // sea un pixel: dibujar grande y achicar produce bordes lavados, y un sprite
 // pixel art lavado se ve peor que un dibujo suave hecho a proposito.
 
-import { T, V, ALTO_TILES, ALTOS, F, TEMAS, ESC, PATRON } from "./mundo.js";
+import { T, V, ALTO_TILES, ALTOS, F, TEMAS, GRAF, PATRON } from "./mundo.js";
 import { dibujarCuadro, cuadroDe } from "./sprites.js";
 const dibujarCuadroTile = (c, h, i, x, y, alto) => dibujarCuadro(c, h, i, x, y, alto);
 
@@ -61,105 +61,132 @@ function oscurecer(hex, p) {
   return `rgb(${m(16)},${m(8)},${m(0)})`;
 }
 
-function tiraY(c, img, x, y, altoTira, ancho, w, px, arriba) {
-  if (!(altoTira > 0) || !img.width || !img.height || !(w > 0.5)) return;
-  const sy = arriba ? 0 : img.height - 2;
+// --- pre-escalado de las capas del fondo ---------------------------------
+//
+// ESTO ES LA MITAD DEL COSTO DE DIBUJAR UN CUADRO, y era gratis sacarlo.
+//
+// Las capas llegan en 1024 px de ancho y se dibujan a 240 o 350: cada copia
+// era un drawImage que ACHICABA una imagen grande, tres o cuatro veces por
+// capa, sesenta veces por segundo. Achicar cuesta; copiar 1 a 1 no. Se medio:
+// el fondo era 0,82 ms de los 1,73 que costaba el cuadro entero.
+//
+// Aca se achica UNA VEZ, cuando cambia el tamano de la vista, y despues se
+// copia sin escalar. La cache cuelga de la imagen misma —WeakMap— asi que si
+// el juego suelta una capa, su version chica se va con ella.
+const cacheEscala = new WeakMap();
+function aMedida(img, w, h) {
+  if (!img || !img.width || !img.height || !(w > 0.5) || !(h > 0.5)) return null;
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  const esc = GRAF.esc;
+  let porImagen = cacheEscala.get(img);
+  if (!porImagen) { porImagen = new Map(); cacheEscala.set(img, porImagen); }
+  const llave = `${w}x${h}@${esc}`;
+  let hecho = porImagen.get(llave);
+  if (hecho) return hecho;
+  try {
+    // El lienzo va en pixeles DE LIENZO —w por esc— y despues se dibuja
+    // pidiendo w pixeles de juego. Asi la copia cae 1 a 1 sobre la pantalla:
+    // guardandolo en pixeles de juego, el contexto lo agrandaba por esc al
+    // dibujarlo y se perdia todo el detalle que el supermuestreo agrega.
+    const l = document.createElement("canvas");
+    l.width = w * esc; l.height = h * esc;
+    const cc = l.getContext("2d");
+    cc.imageSmoothingEnabled = false;
+    cc.drawImage(img, 0, 0, w * esc, h * esc);
+    // El color de la fila de arriba, para rellenar lo que la imagen no cubre
+    // sin tener que estirar dos pixeles a lo alto de media pantalla —que es
+    // el caso de escalado mas caro que hay—.
+    let arriba = null;
+    try {
+      const d = cc.getImageData(Math.floor(w / 2), 0, 1, 1).data;
+      arriba = `rgb(${d[0]},${d[1]},${d[2]})`;
+    } catch (e) { /* lienzo sucio: se sigue sin el color */ }
+    hecho = { lienzo: l, w, h, esc, arriba };
+    // Una sola medida por imagen: cambiar de tamano de pantalla no tiene que
+    // dejar veinte lienzos viejos colgados.
+    porImagen.clear();
+    porImagen.set(llave, hecho);
+    return hecho;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Copia una capa ya achicada, repetida a lo ancho. Sin escalar: 1 a 1.
+function repetirListo(c, hecho, x, y, ancho) {
+  const { lienzo, w, h } = hecho;
   const pasos = Math.ceil(ancho / w) + 2;
-  let x0 = px % w;
+  let x0 = x % w;
   if (x0 > 0) x0 -= w;
-  for (let i = 0, cx = x0; i < pasos && cx < ancho; i++, cx += w)
-    c.drawImage(img, 0, sy, img.width, 2, cx | 0, y | 0, Math.ceil(w), Math.ceil(altoTira));
+  for (let i = 0, px = x0; i < pasos && px < ancho; i++, px += w)
+    c.drawImage(lienzo, px | 0, y | 0, w, h);
 }
 
 export function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
   const tm = TEMAS[tema];
+  const ref = camaraReposo(alto);
+  // La linea del horizonte, con el paralaje lento del cielo.
+  const horizonte = (ANCLA_MUNDO - ref) - (camY - ref) * 0.10;
 
-  // 1) cielo: cubre todo. Si no cargo, bandas planas de color.
-  if (capas.cielo) {
-    // Se escala por el ANCHO, no por el alto. Escalando para cubrir el alto —
-    // que en vertical son 448 px contra 572 de la imagen— una nube termina
-    // midiendo un tercio de la pantalla. Con 1,7 pantallas por imagen las
-    // nubes quedan del tamano que se dibujaron.
-    const esc = (ancho * 1.7) / capas.cielo.width;
-    const w = capas.cielo.width * esc, h = capas.cielo.height * esc;
-    const ref = camaraReposo(alto);
-    // EL CIELO SE APOYA EN EL HORIZONTE, no en el borde de arriba.
-    //
-    // Antes empezaba arriba y lo que sobraba abajo se tapaba con un color
-    // plano del tema. Con los fondos nuevos —que tienen su propio degrade y su
-    // propia bruma— ese color no coincidia con nada y quedaba una franja lisa
-    // cruzando la pantalla: blanca en el castillo, violeta en el fantasma. Se
-    // veia en cada captura.
-    //
-    // Ahora el BORDE DE ABAJO de la imagen se clava en la misma linea de
-    // horizonte donde se apoyan las dos bandas, y lo que falta arriba y abajo
-    // se estira de la propia imagen: una tira de dos pixeles de su fila de
-    // arriba y otra de su fila de abajo. Sale del mismo dibujo, asi que no
-    // hay franja que no pegue — no hay franja.
-    // Base opaca ANTES de todo. Las tiras estiradas tapan lo que la imagen no
-    // llega a cubrir, pero el cielo y las dos bandas se corren a velocidades
-    // distintas —0,10 contra 0,80— asi que con la camara bien arriba la banda
-    // de adelante baja ocho veces mas rapido que el borde del cielo y entre
-    // los dos se abre una franja. Se vio en el castillo: un rectangulo BLANCO
-    // —lo que hubiera quedado en el lienzo— asomando por un pozo del terreno.
-    // Un fillRect por cuadro es barato y cierra el agujero para siempre.
-    R(c, 0, 0, ancho, alto, tm.cielo[1]);
-    const horizonte = (ANCLA_MUNDO - ref) - (camY - ref) * 0.10;
-    const y0 = horizonte - h;
+  // 1) cielo.
+  //
+  // Se escala por el ANCHO, no por el alto: escalando para cubrir el alto
+  // —448 px de vista contra 572 de imagen— una nube termina midiendo un
+  // tercio de la pantalla. Con 1,7 pantallas por imagen las nubes quedan del
+  // tamano que se dibujaron.
+  //
+  // Y SE APOYA EN EL HORIZONTE, no en el borde de arriba. Antes empezaba
+  // arriba y lo que sobraba abajo se tapaba con un color plano del tema: con
+  // los fondos nuevos ese color no coincidia con nada y quedaba una franja
+  // lisa cruzando la pantalla —blanca en el castillo, violeta en el
+  // fantasma—. Se veia en cada captura.
+  const cielo = aMedida(capas.cielo,
+                        ancho * 1.7,
+                        capas.cielo ? capas.cielo.height * (ancho * 1.7) / capas.cielo.width : 0);
+  if (cielo) {
+    const y0 = horizonte - cielo.h;
     const px = -camX * 0.05;
-    if (y0 > 0) tiraY(c, capas.cielo, 0, 0, y0 + 1, ancho, w, px, true);
-    repetirX(c, capas.cielo, px, y0, w, h, ancho);
-    // DEBAJO DEL HORIZONTE NO HAY CIELO: HAY TIERRA VISTA DE LEJOS.
-    //
-    // Antes ahi iba el color plano del cielo, y se veia clarisimo en cuanto
-    // el terreno tenia un pozo: por el agujero asomaba un rectangulo celeste
-    // liso, del color del cielo, a metros por debajo del pasto. Parecia un
-    // error de dibujo, y era el fondo asomando por donde no hay nada.
-    //
-    // Ahora es un degrade que arranca del tono del horizonte y se va a negro:
-    // por un pozo se ve profundidad, que es lo que hay abajo de la tierra.
-    //
-    // Tampoco se estira la fila de abajo de la imagen: se midio y varios
-    // temas traen ahi otra cosa —el castillo, un rectangulo BLANCO que el
-    // modelo dejo sin pintar; el desierto y la torre, tierra—, y estirarla
-    // cruzaba esa basura por toda la pantalla.
-    if (horizonte < alto) {
-      // Arranca YA OSCURO y seis pixeles mas arriba de la linea.
-      //
-      // Empezando en el color del cielo quedaba una franja celeste clarita
-      // cruzando la pantalla justo arriba del pasto: el cielo y las bandas se
-      // corren a velocidades distintas, asi que entre el borde de abajo del
-      // cielo y la base de la banda de adelante se abre un hueco, y por ahi
-      // asomaba el primer tono del degrade. Arrancando oscuro y un poco mas
-      // arriba, el hueco queda tapado por la banda y no se ve nada.
-      const y1 = horizonte - 6;
-      const g2 = c.createLinearGradient(0, y1, 0, alto);
-      g2.addColorStop(0, oscurecer(tm.borde, 0.22));
-      g2.addColorStop(1, oscurecer(tm.borde, 0.78));
-      c.fillStyle = g2;
-      c.fillRect(0, y1 | 0, ancho, Math.ceil(alto - y1 + 2));
-    }
+    // Arriba, color plano de la propia imagen. Antes se estiraban dos filas
+    // de pixeles a lo alto de media pantalla: el caso de escalado mas caro
+    // que existe, y para dar el mismo color.
+    if (y0 > 0) { c.fillStyle = cielo.arriba || tm.cielo[0]; c.fillRect(0, 0, ancho, Math.ceil(y0) + 1); }
+    repetirListo(c, cielo, px, y0, ancho);
   } else {
     const a = tm.cielo[0], b = tm.cielo[1];
-    const mezcla = (p) => {
+    const mezcla = (q) => {
       const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
-      const m = (s) => Math.round((((pa >> s) & 255) * (1 - p) + ((pb >> s) & 255) * p));
+      const m = (sh) => Math.round((((pa >> sh) & 255) * (1 - q) + ((pb >> sh) & 255) * q));
       return `rgb(${m(16)},${m(8)},${m(0)})`;
     };
     for (let i = 0; i < 6; i++) R(c, 0, alto * i / 6, ancho, alto / 6 + 1, mezcla(i / 5));
-    const hz = (ANCLA_MUNDO - camaraReposo(alto)) - (camY - camaraReposo(alto)) * 0.10;
-    if (hz < alto) R(c, 0, hz | 0, ancho, Math.ceil(alto - hz), oscurecer(tm.borde, 0.5));
   }
 
-  // 2) las dos bandas
+  // 2) DEBAJO DEL HORIZONTE NO HAY CIELO: HAY TIERRA VISTA DE LEJOS.
+  //
+  // Antes ahi iba el color plano del cielo, y se veia clarisimo en cuanto el
+  // terreno tenia un pozo: por el agujero asomaba un rectangulo celeste liso,
+  // del color del cielo, a metros por debajo del pasto. Arranca ya oscuro y
+  // seis pixeles mas arriba de la linea, asi el hueco que se abre entre el
+  // borde del cielo y la base de la banda —se corren a distinta velocidad—
+  // queda tapado por la banda.
+  if (horizonte < alto) {
+    const y1 = horizonte - 6;
+    const g2 = c.createLinearGradient(0, y1, 0, alto);
+    g2.addColorStop(0, oscurecer(tm.borde, 0.22));
+    g2.addColorStop(1, oscurecer(tm.borde, 0.78));
+    c.fillStyle = g2;
+    c.fillRect(0, y1 | 0, ancho, Math.ceil(alto - y1 + 2));
+  }
+
+  // 3) las dos bandas
   for (const [clave, vel, velY, altoRel] of [["lejos", 0.22, 0.55, 0.30], ["cerca", 0.42, 0.80, 0.19]]) {
     const img = capas[clave];
-    if (!img) continue;
+    if (!img || !img.height) continue;
     const h = Math.max(48, Math.min(alto * altoRel, 220));
-    const w = img.width * (h / img.height);
-    const ref = camaraReposo(alto);
+    const hecho = aMedida(img, img.width * (h / img.height), h);
+    if (!hecho) continue;
     const baseY = (ANCLA_MUNDO - ref) - (camY - ref) * velY;
-    repetirX(c, img, -camX * vel, baseY - h, w, h, ancho);
+    repetirListo(c, hecho, -camX * vel, baseY - hecho.h, ancho);
   }
 }
 
@@ -390,14 +417,18 @@ export function monedaColor(c, x, y, t, tier, hoja) {
   // tine todo lo ya dibujado debajo del rectangulo, no el sprite, y la moneda
   // quedaba adentro de un cuadrado rosa opaco.
   if (hoja) {
+    // Se rehace si cambio la calidad: si no, la moneda se queda dibujada a la
+    // resolucion vieja y es lo unico borroso (o lo unico caro) de la pantalla.
+    if (tintado.lienzo && tintado.esc !== GRAF.esc) tintado.lienzo = null;
     if (!tintado.lienzo) {
       tintado.lienzo = document.createElement("canvas");
       // El lienzo auxiliar va a la MISMA resolucion que el del juego. Si se
       // quedara en 48 pixeles, la moneda seria lo unico grueso de la pantalla.
-      tintado.lienzo.width = tintado.lienzo.height = 48 * ESC;
+      tintado.lienzo.width = tintado.lienzo.height = 48 * GRAF.esc;
+      tintado.esc = GRAF.esc;
       tintado.ctx = tintado.lienzo.getContext("2d");
       tintado.ctx.imageSmoothingEnabled = false;
-      tintado.ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
+      tintado.ctx.setTransform(GRAF.esc, 0, 0, GRAF.esc, 0, 0);
     }
     const tc = tintado.ctx;
     tc.clearRect(0, 0, 48, 48);

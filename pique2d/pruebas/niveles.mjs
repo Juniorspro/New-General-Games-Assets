@@ -44,9 +44,10 @@ const res = await pg.evaluate(async () => {
       if (p.estado===ESTADO.MASTIL||p.estado===ESTADO.GANADO){llego=true;break;}
       if (p.estado===ESTADO.PERDIDO) break;
     }
+    const preg = (() => { let k=0; for (const v of nv.grilla) if (v===V.PREGUNTA) k++; return k; })();
     out.push({ id: idNivel(cfg.m,cfg.n), tier, valido: !nv.validacion.fallo, ms,
                mon, inal, colorInal, color: nv.monedasColor.length, llego, estado: p.estado,
-               hongos, supers, premInal });
+               hongos, supers, premInal, preg, primero: cfg.n === 1 });
   }
   return out;
 });
@@ -59,7 +60,9 @@ for (const r of res) {
   if (r.inal) fallos.push(`${r.id}/${r.tier}: ${r.inal} monedas inalcanzables`);
   if (r.colorInal) fallos.push(`${r.id}/${r.tier}: ${r.colorInal} monedas de color inalcanzables`);
   if (!r.hongos) fallos.push(`${r.id}/${r.tier}: ni un hongo`);
-  if (r.supers !== 1) fallos.push(`${r.id}/${r.tier}: ${r.supers} super hongos (tiene que ser 1)`);
+  // El arcoiris va UNO POR MUNDO, en el primer nivel. En los demas, ninguno.
+  const debe = r.primero ? 1 : 0;
+  if (r.supers !== debe) fallos.push(`${r.id}/${r.tier}: ${r.supers} super hongos (tiene que haber ${debe})`);
   if (r.premInal) fallos.push(`${r.id}/${r.tier}: ${r.premInal} premios en bloques que no se golpean`);
   monT += r.mon; inalT += r.inal; peor = Math.max(peor, r.ms);
   hongoT += r.hongos; supT += r.supers;
@@ -67,7 +70,9 @@ for (const r of res) {
 console.log(`niveles validados: ${okV}/${res.length}`);
 console.log(`caminos rehechos en el juego: ${okR}/${res.length}`);
 console.log(`monedas inalcanzables: ${inalT} de ${monT}`);
-console.log(`hongos: ${hongoT} en ${res.length} niveles (${(hongoT/res.length).toFixed(1)} por nivel) · ${supT} super`);
+const pregT = res.reduce((a,x)=>a+x.preg,0);
+console.log(`bloques ?: ${(pregT/res.length).toFixed(1)} por nivel · hongos: ${(hongoT/res.length).toFixed(1)} `
+          + `(${(hongoT/pregT*100).toFixed(0)}% de los bloques) · ${supT} arcoiris en ${res.length} niveles`);
 console.log(`peor generacion: ${peor} ms`);
 console.log(`errores de javascript: ${err.length ? err.slice(0,3).join(" | ") : "ninguno"}`);
 if (fallos.length) { console.log("FALLOS:"); fallos.slice(0,10).forEach(f=>console.log("  - "+f)); }

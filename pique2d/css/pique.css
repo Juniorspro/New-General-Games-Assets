@@ -467,3 +467,10 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 }
 .nivel.cerrado .mejor { color: var(--tenue); font-style: italic; }
 .cab-mundo .candado { font-size: 16px; }
+
+
+/* ───────────── selector de graficos ───────────── */
+.opcion-grupo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.opcion-grupo .grupo { display: flex; gap: 6px; }
+.opcion-grupo .grupo button { min-height: 40px; padding: 8px 12px; opacity: .55; }
+.opcion-grupo .grupo button.puesto { opacity: 1; outline: 2px solid #ffd447; }

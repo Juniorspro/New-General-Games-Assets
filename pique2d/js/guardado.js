@@ -11,7 +11,10 @@ const vacio = () => ({
   monedas: 0,
   niveles: {},          // "1-1": {hecho, mejorTiempo, monedas, color:{rosa,violeta,negra}}
   desbloqueado: 1,      // hasta que NIVEL llego, de 1 a 24
-  ajustes: { sonido: true, musica: true, sacudida: true },
+  // grafico: "auto" | 1 | 2. En auto el juego mide como va y baja solo.
+  // graficoAuto guarda lo que decidio la ultima vez, para arrancar ya bien
+  // en vez de hacer sufrir los primeros segundos en cada partida.
+  ajustes: { sonido: true, musica: true, sacudida: true, grafico: "auto", graficoAuto: 0 },
 });
 
 let cache = null;
@@ -21,6 +24,9 @@ export function cargar() {
   try {
     const crudo = localStorage.getItem(LLAVE);
     cache = crudo ? { ...vacio(), ...JSON.parse(crudo) } : vacio();
+    // Los ajustes se mezclan campo por campo: guardados con una version vieja
+    // les falta lo nuevo, y `undefined` en "grafico" apagaria el automatico.
+    cache.ajustes = { ...vacio().ajustes, ...(cache.ajustes || {}) };
   } catch (e) {
     cache = vacio();
   }

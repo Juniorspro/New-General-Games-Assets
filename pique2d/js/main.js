@@ -1,9 +1,9 @@
 // Arranque, entrada y bucle.
 
-import { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista, ESC, PATRON } from "./mundo.js";
+import { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista, GRAF, PATRON } from "./mundo.js";
 import { generarNivel } from "./generador.js";
 import { Partida, ESTADO } from "./juego.js";
-import { cargar, tierActual, proximoNivel } from "./guardado.js";
+import { cargar, guardar as guardarAjustes, tierActual, proximoNivel } from "./guardado.js";
 import * as UI from "./interfaz.js";
 import { despertar, efe, pararMusica, volumen, cargarPistas } from "./audio.js";
 import { cargarTodas } from "./sprites.js";
@@ -15,14 +15,14 @@ const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 function redimensionar() {
   ajustarVista(innerWidth, innerHeight);
-  lienzo.width = VISTA.ancho * ESC; lienzo.height = VISTA.alto * ESC;
+  lienzo.width = VISTA.ancho * GRAF.esc; lienzo.height = VISTA.alto * GRAF.esc;
   // Hay que APAGARLO DE NUEVO: el navegador reactiva el suavizado cada vez que
   // cambia el tamano del lienzo, y los sprites salen lavados sin aviso.
   ctx.imageSmoothingEnabled = false;
   // Y la escala tambien se vuelve a poner: cambiar el ancho o el alto de un
   // lienzo lo resetea ENTERO, transformacion incluida. Sin esto el juego se
   // dibujaria en un cuarto del lienzo despues del primer giro de pantalla.
-  ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
+  ctx.setTransform(GRAF.esc, 0, 0, GRAF.esc, 0, 0);
   if (partida) partida.camara(true);
 }
 addEventListener("resize", redimensionar);
@@ -31,7 +31,7 @@ addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
 // navegador lo reactiva al cambiar el tamano del lienzo y los sprites salen
 // lavados sin que nada avise.
 ctx.imageSmoothingEnabled = false;
-ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
+ctx.setTransform(GRAF.esc, 0, 0, GRAF.esc, 0, 0);
 
 let partida = null, cfgActual = null, tierActualN = "rosa";
 let hojas = {}, patrones = {}, capas = {};
@@ -126,10 +126,49 @@ function seRompio(e, donde) {
 }
 addEventListener("error", (ev) => { if (fallas === 0) seRompio(ev.error || ev.message, "la pagina"); });
 
+// EL VIGILANTE DE CUADROS.
+//
+// Dibujar al doble de resolucion TRIPLICA el costo de un cuadro: se midio,
+// 0,53 ms contra 1,71 en el nivel mas cargado. En esta maquina sobra margen
+// de las dos formas; en un telefono de hace unos anos no, y el juego se
+// arrastra. No hay forma de saber desde aca en que aparato se va a jugar, asi
+// que se mide EN EL APARATO: si de cada tanda de cuadros la mayoria tarda mas
+// de 21 ms —o sea menos de 47 por segundo— se baja la resolucion una vez y se
+// anota, para que la proxima partida arranque ya bien en vez de hacer sufrir
+// los primeros segundos otra vez.
+//
+// Se empieza a mirar despues de 90 cuadros de juego: los primeros siempre
+// tardan de mas —decodificar imagenes, armar el nivel— y castigar por eso
+// bajaria la calidad en telefonos que andan perfecto.
+// Ventanas cortas a proposito: 45 cuadros de calentamiento y 60 de medicion.
+// En un telefono que va a 25 por segundo eso son cuatro segundos de sufrir
+// antes de que baje solo, y cuatro segundos se aguantan. Con ventanas largas
+// la medida seria mas confiable y el jugador se comeria diez.
+const VIG = { n: 0, lentos: 0, calentando: 45, listo: false };
+function vigilar(dt) {
+  if (VIG.listo || cargar().ajustes.grafico !== "auto") return;
+  if (VIG.calentando > 0) { VIG.calentando--; return; }
+  VIG.n++;
+  if (dt > 21) VIG.lentos++;
+  if (VIG.n < 60) return;
+  const flojo = VIG.lentos / VIG.n > 0.45;
+  if (flojo && GRAF.esc > 1) {
+    calidad(1);
+    const d = cargar(); d.ajustes.graficoAuto = 1; guardarAjustes();
+    VIG.listo = true;
+  } else if (!flojo) {
+    // Anda bien: se confirma la calidad actual y no se vuelve a medir.
+    const d = cargar(); d.ajustes.graficoAuto = GRAF.esc; guardarAjustes();
+    VIG.listo = true;
+  }
+  VIG.n = 0; VIG.lentos = 0;
+}
+
 function bucle(ahora) {
   requestAnimationFrame(bucle);
   let dt = ahora - ultimo; ultimo = ahora;
   if (dt > 250) dt = PASO;                 // volver de una pestana en segundo plano
+  if (partida) vigilar(dt);
   acumulado += dt;
   let pasos = 0;
   while (acumulado >= PASO && pasos < 5) {
@@ -231,36 +270,66 @@ function desvanecerArriba(img, frac = 0.34) {
   }
 }
 
-function cargarPatron(tema) {
-  return new Promise((ok) => {
-    const img = new Image();
-    img.onload = () => {
+const imgsTile = {};
+
+function hacerPatron(img) {
+  if (!img) return null;
       // La textura se ACHICA antes de hacer el patron. La imagen generada mide
       // 256 y el tile mide 16: usada tal cual, una sola copia cubre dieciseis
       // tiles y el terreno se ve como cuatro franjas gigantes en vez de como
       // suelo. A PATRON pixeles repite cada cuatro tiles, que es la escala a
       // la que el pixel art se lee sin que se cuente la repeticion.
-      const chico = document.createElement("canvas");
-      chico.width = chico.height = PATRON * ESC;
-      const cc = chico.getContext("2d");
-      cc.imageSmoothingEnabled = false;
-      cc.drawImage(img, 0, 0, PATRON * ESC, PATRON * ESC);
-      const pat = ctx.createPattern(chico, "repeat");
+  const e = GRAF.esc;
+  const chico = document.createElement("canvas");
+  chico.width = chico.height = PATRON * e;
+  const cc = chico.getContext("2d");
+  cc.imageSmoothingEnabled = false;
+  cc.drawImage(img, 0, 0, PATRON * e, PATRON * e);
+  const pat = ctx.createPattern(chico, "repeat");
       // El patron se achica por ESC para COMPENSAR la escala del lienzo. El
       // relleno se pide en pixeles de juego, asi que sin esto el patron
       // repetiria cada PATRON pixeles de LIENZO —la mitad— y el suelo saldria
       // con la textura al doble de chica. Con la compensacion repite cada
       // PATRON pixeles de juego, pero con el doble de pixeles adentro.
-      try { pat.setTransform(new DOMMatrix([1 / ESC, 0, 0, 1 / ESC, 0, 0])); }
-      catch (e) { /* navegador viejo: se ve mas grueso, pero se ve */ }
-      ok(pat);
-    };
+  try { pat.setTransform(new DOMMatrix([1 / e, 0, 0, 1 / e, 0, 0])); }
+  catch (err) { /* navegador viejo: se ve mas grueso, pero se ve */ }
+  return pat;
+}
+
+function cargarPatron(tema) {
+  return new Promise((ok) => {
+    const img = new Image();
+    img.onload = () => { imgsTile[tema] = img; ok(hacerPatron(img)); };
     img.onerror = () => ok(null);
     img.src = ruta(`assets/tile/${tema}.webp`);
   });
 }
 
+/**
+ * Cambia la resolucion a la que se dibuja, y rehace lo que depende de ella.
+ *
+ * Hay que rehacer los patrones del terreno: llevan adentro un lienzo del
+ * tamano de la escala vieja y una transformacion que la compensa. Sin esto,
+ * bajar la calidad dejaba el suelo con la textura al doble de chica.
+ */
+function calidad(esc) {
+  esc = Math.max(1, Math.min(3, Math.round(esc)));
+  if (esc === GRAF.esc) return;
+  GRAF.esc = esc;
+  for (const t of TEMAS_TILE) if (imgsTile[t]) patrones[t] = hacerPatron(imgsTile[t]);
+  if (partida) partida.patron = patrones[partida.nv.tema] || null;
+  redimensionar();
+}
+
 (async () => {
+  // La calidad guardada se aplica ANTES de cargar nada: los patrones del
+  // terreno y las capas del fondo se arman a la resolucion que este puesta, y
+  // cambiarla despues obliga a rehacerlos todos.
+  {
+    const g = cargar().ajustes.grafico;
+    GRAF.esc = g === "auto" ? (cargar().ajustes.graficoAuto || 2)
+                            : Math.max(1, Math.min(3, Number(g) || 2));
+  }
   $("#carga-detalle").textContent = "Cargando sprites…";
   hojas = await cargarTodas(HOJAS.map(([k, c, f]) => [k, `assets/hojas/${k}.webp`, c, f]));
   const faltan = HOJAS.filter(([k]) => !hojas[k]).map(([k]) => k);
@@ -292,7 +361,7 @@ function cargarPatron(tema) {
   // cuando llega. Bloquear el arranque por 400 KB es regalar el primer segundo.
   cargarPistas({ llano: "assets/snd/llano.mp3", subte: "assets/snd/subte.mp3",
                  castillo: "assets/snd/castillo.mp3" });
-  UI.montarAjustes();
+  UI.montarAjustes((g) => calidad(g === "auto" ? (cargar().ajustes.graficoAuto || 2) : g));
   // El arte de portada, de fondo del menu.
   const arte = new Image();
   arte.onload = () => { $("#p-inicio").style.backgroundImage = `url(${arte.src})`; };
@@ -311,7 +380,7 @@ function cargarPatron(tema) {
   requestAnimationFrame(bucle);
   window.PIQUE = {
     get partida() { return partida; }, get cfg() { return cfgActual; },
-    empezar, alMapa, entrada, NIVELES, hojas, faltan,
+    empezar, alMapa, entrada, NIVELES, hojas, faltan, calidad, GRAF, VIG, vigilar,
   };
 })();
 

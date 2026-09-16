@@ -477,6 +477,13 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
 .nivel.cerrado .mejor { color: var(--tenue); font-style: italic; }
 .cab-mundo .candado { font-size: 16px; }
 
+
+/* ───────────── selector de graficos ───────────── */
+.opcion-grupo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.opcion-grupo .grupo { display: flex; gap: 6px; }
+.opcion-grupo .grupo button { min-height: 40px; padding: 8px 12px; opacity: .55; }
+.opcion-grupo .grupo button.puesto { opacity: 1; outline: 2px solid #ffd447; }
+
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23d8402f'/><circle cx='8' cy='6' r='3' fill='%23f0c090'/><rect x='5' y='9' width='6' height='5' rx='1' fill='%232b4a8f'/></svg>">
 </head>
@@ -602,7 +609,8 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
     </dl>
 
     <h3>Los hongos</h3>
-    <p>Salen de los bloques <code>?</code> y <b>vuelan hasta vos</b>: no se escapan. El común te hace grande, y estando grande un golpe no te cuesta una burbuja — solo volvés a tamaño normal. El <b>súper hongo</b> te hace gigante por nueve segundos: arrasás con bloques, tubos y enemigos con solo caminar. El pozo y el reloj te matan igual, seas del tamaño que seas.</p>
+    <p>Salen de los bloques <code>?</code> y <b>vuelan hasta vos</b>: no se escapan. Uno de cada cuatro bloques tiene uno, y siempre el mismo bloque: el nivel se puede aprender. El común te hace grande, y estando grande un golpe no te cuesta una burbuja — solo volvés a tamaño normal.</p>
+    <p>El <b>hongo arcoíris</b> es otra cosa: hay <b>uno solo por mundo</b>, en el primer nivel de cada uno, y te hace gigante por nueve segundos. Arrasás con bloques, tubos y enemigos con solo caminar. El pozo y el reloj te matan igual, seas del tamaño que seas.</p>
 
     <h3>Las burbujas</h3>
     <p>No hay vidas. Cuando te matan entrás en una <b>burbuja</b> que vuelve para atrás y perdés 5 monedas; tocá para pincharla donde quieras. Arrancás con dos y los bloques <code>?</code> a veces dan más. Sin burbujas, se terminó.</p>
@@ -625,6 +633,15 @@ code { background: var(--fondo2); padding: 1px 5px; border-radius: 4px; font-siz
     <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Efectos de sonido</span></label>
     <label class="opcion"><input type="checkbox" id="aj-musica"> <span>Música</span></label>
     <label class="opcion"><input type="checkbox" id="aj-sacudida"> <span>Sacudida de pantalla</span></label>
+    <div class="opcion opcion-grupo">
+      <span>Gráficos</span>
+      <div class="grupo" id="aj-grafico">
+        <button data-graf="auto" class="chico">Automático</button>
+        <button data-graf="2" class="chico">Nítido</button>
+        <button data-graf="1" class="chico">Rápido</button>
+      </div>
+    </div>
+    <p class="nota" id="aj-graf-nota">En automático el juego mide cómo va en tu teléfono y baja la resolución solo si no llega a 60 cuadros por segundo.</p>
     <p class="nota">Nada de esto sale de tu navegador: el progreso se guarda en este aparato y no hay servidor ni cuenta.</p>
     <button id="aj-borrar" class="peligro">Borrar todo el progreso</button>
   </div>
@@ -682,12 +699,17 @@ const VISTA = { ancho: 208, alto: 448 };
 // este numero, y el fondo y el terreno se rellenan enteros en cada cuadro.
 // En 2 son 373.000 pixeles por cuadro en vertical; en 3 serian 839.000.
 //
-// Medido en 2, en el nivel mas cargado (6-4, castillo, con jefe): 1,19 ms por
-// cuadro, o sea catorce veces el presupuesto de 60 Hz. En 3 serian unos 2,7 y
-// el margen bajaria a seis — que alcanza en esta maquina y no se sabe si
-// alcanza en un telefono de hace cuatro anos. El salto de 1 a 2 es el que se
-// ve; el de 2 a 3 es la mitad de visible y el doble de caro.
-const ESC = 2;
+// Medido en esta maquina, en el nivel mas cargado (6-3): en 1 el cuadro sale
+// 0,53 ms y en 2 sale 1,71 — o sea que subir de 1 a 2 TRIPLICA el costo. Aca
+// sobra margen de las dos formas; en un telefono de hace unos anos, no. Por
+// eso NO es una constante: es un numero que el juego baja solo cuando ve que
+// no llega, y que el jugador puede fijar a mano en Ajustes.
+//
+// Se guarda adentro de un objeto y no como `export let` para que los modulos
+// que lo leen vean el cambio: un `let` exportado se copia al importarlo en
+// algunos empaquetados, y quedaria la mitad del juego dibujando en 2 y la
+// otra mitad en 1.
+const GRAF = { esc: 2 };
 
 // Cada cuantos pixeles de juego se repite la textura del terreno.
 //
@@ -889,7 +911,7 @@ const NIVELES = [
 
 const idNivel = (m, n) => `${m}-${n}`;
 const buscarNivel = (m, n) => NIVELES.find((x) => x.m === m && x.n === n);
-return { T, ALTO_TILES, VISTA, ESC, PATRON, ajustarVista, ALTOS, V, SOLIDOS, SEMI, MATAN, RAMPAS, F, TEMAS, NIVELES, idNivel, buscarNivel };
+return { T, ALTO_TILES, VISTA, GRAF, PATRON, ajustarVista, ALTOS, V, SOLIDOS, SEMI, MATAN, RAMPAS, F, TEMAS, NIVELES, idNivel, buscarNivel };
 })();
 
 /* ── azar ── */
@@ -962,7 +984,10 @@ const vacio = () => ({
   monedas: 0,
   niveles: {},          // "1-1": {hecho, mejorTiempo, monedas, color:{rosa,violeta,negra}}
   desbloqueado: 1,      // hasta que NIVEL llego, de 1 a 24
-  ajustes: { sonido: true, musica: true, sacudida: true },
+  // grafico: "auto" | 1 | 2. En auto el juego mide como va y baja solo.
+  // graficoAuto guarda lo que decidio la ultima vez, para arrancar ya bien
+  // en vez de hacer sufrir los primeros segundos en cada partida.
+  ajustes: { sonido: true, musica: true, sacudida: true, grafico: "auto", graficoAuto: 0 },
 });
 
 let cache = null;
@@ -972,6 +997,9 @@ function cargar() {
   try {
     const crudo = localStorage.getItem(LLAVE);
     cache = crudo ? { ...vacio(), ...JSON.parse(crudo) } : vacio();
+    // Los ajustes se mezclan campo por campo: guardados con una version vieja
+    // les falta lo nuevo, y `undefined` en "grafico" apagaria el automatico.
+    cache.ajustes = { ...vacio().ajustes, ...(cache.ajustes || {}) };
   } catch (e) {
     cache = vacio();
   }
@@ -1279,12 +1307,12 @@ const M_sprites = (() => {
 // pedidas en 3x3, 16 fallaron por esto.
 
 const { ruta } = M_assets;
-const { ESC } = M_mundo;
+const { GRAF } = M_mundo;
 // Redondeo a la grilla del LIENZO, no a la del juego. Redondeando a pixel de
 // juego el sprite salta de a dos pixeles de pantalla y la carrera tiembla;
 // redondeando a pixel de lienzo se mueve suave y sigue cayendo justo sobre la
 // grilla, que es lo que evita que el contorno quede a medio pixel y borroso.
-const aRejilla = (v) => Math.round(v * ESC) / ESC;
+const aRejilla = (v) => Math.round(v * GRAF.esc) / GRAF.esc;
 
 const hojas = new Map();
 
@@ -2407,7 +2435,7 @@ const M_dibujo = (() => {
 // sea un pixel: dibujar grande y achicar produce bordes lavados, y un sprite
 // pixel art lavado se ve peor que un dibujo suave hecho a proposito.
 
-const { T, V, ALTO_TILES, ALTOS, F, TEMAS, ESC, PATRON } = M_mundo;
+const { T, V, ALTO_TILES, ALTOS, F, TEMAS, GRAF, PATRON } = M_mundo;
 const { dibujarCuadro, cuadroDe } = M_sprites;
 const dibujarCuadroTile = (c, h, i, x, y, alto) => dibujarCuadro(c, h, i, x, y, alto);
 
@@ -2463,105 +2491,132 @@ function oscurecer(hex, p) {
   return `rgb(${m(16)},${m(8)},${m(0)})`;
 }
 
-function tiraY(c, img, x, y, altoTira, ancho, w, px, arriba) {
-  if (!(altoTira > 0) || !img.width || !img.height || !(w > 0.5)) return;
-  const sy = arriba ? 0 : img.height - 2;
+// --- pre-escalado de las capas del fondo ---------------------------------
+//
+// ESTO ES LA MITAD DEL COSTO DE DIBUJAR UN CUADRO, y era gratis sacarlo.
+//
+// Las capas llegan en 1024 px de ancho y se dibujan a 240 o 350: cada copia
+// era un drawImage que ACHICABA una imagen grande, tres o cuatro veces por
+// capa, sesenta veces por segundo. Achicar cuesta; copiar 1 a 1 no. Se medio:
+// el fondo era 0,82 ms de los 1,73 que costaba el cuadro entero.
+//
+// Aca se achica UNA VEZ, cuando cambia el tamano de la vista, y despues se
+// copia sin escalar. La cache cuelga de la imagen misma —WeakMap— asi que si
+// el juego suelta una capa, su version chica se va con ella.
+const cacheEscala = new WeakMap();
+function aMedida(img, w, h) {
+  if (!img || !img.width || !img.height || !(w > 0.5) || !(h > 0.5)) return null;
+  w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+  const esc = GRAF.esc;
+  let porImagen = cacheEscala.get(img);
+  if (!porImagen) { porImagen = new Map(); cacheEscala.set(img, porImagen); }
+  const llave = `${w}x${h}@${esc}`;
+  let hecho = porImagen.get(llave);
+  if (hecho) return hecho;
+  try {
+    // El lienzo va en pixeles DE LIENZO —w por esc— y despues se dibuja
+    // pidiendo w pixeles de juego. Asi la copia cae 1 a 1 sobre la pantalla:
+    // guardandolo en pixeles de juego, el contexto lo agrandaba por esc al
+    // dibujarlo y se perdia todo el detalle que el supermuestreo agrega.
+    const l = document.createElement("canvas");
+    l.width = w * esc; l.height = h * esc;
+    const cc = l.getContext("2d");
+    cc.imageSmoothingEnabled = false;
+    cc.drawImage(img, 0, 0, w * esc, h * esc);
+    // El color de la fila de arriba, para rellenar lo que la imagen no cubre
+    // sin tener que estirar dos pixeles a lo alto de media pantalla —que es
+    // el caso de escalado mas caro que hay—.
+    let arriba = null;
+    try {
+      const d = cc.getImageData(Math.floor(w / 2), 0, 1, 1).data;
+      arriba = `rgb(${d[0]},${d[1]},${d[2]})`;
+    } catch (e) { /* lienzo sucio: se sigue sin el color */ }
+    hecho = { lienzo: l, w, h, esc, arriba };
+    // Una sola medida por imagen: cambiar de tamano de pantalla no tiene que
+    // dejar veinte lienzos viejos colgados.
+    porImagen.clear();
+    porImagen.set(llave, hecho);
+    return hecho;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Copia una capa ya achicada, repetida a lo ancho. Sin escalar: 1 a 1.
+function repetirListo(c, hecho, x, y, ancho) {
+  const { lienzo, w, h } = hecho;
   const pasos = Math.ceil(ancho / w) + 2;
-  let x0 = px % w;
+  let x0 = x % w;
   if (x0 > 0) x0 -= w;
-  for (let i = 0, cx = x0; i < pasos && cx < ancho; i++, cx += w)
-    c.drawImage(img, 0, sy, img.width, 2, cx | 0, y | 0, Math.ceil(w), Math.ceil(altoTira));
+  for (let i = 0, px = x0; i < pasos && px < ancho; i++, px += w)
+    c.drawImage(lienzo, px | 0, y | 0, w, h);
 }
 
 function fondo(c, tema, camX, camY, t, ancho, alto, capas = {}) {
   const tm = TEMAS[tema];
+  const ref = camaraReposo(alto);
+  // La linea del horizonte, con el paralaje lento del cielo.
+  const horizonte = (ANCLA_MUNDO - ref) - (camY - ref) * 0.10;
 
-  // 1) cielo: cubre todo. Si no cargo, bandas planas de color.
-  if (capas.cielo) {
-    // Se escala por el ANCHO, no por el alto. Escalando para cubrir el alto —
-    // que en vertical son 448 px contra 572 de la imagen— una nube termina
-    // midiendo un tercio de la pantalla. Con 1,7 pantallas por imagen las
-    // nubes quedan del tamano que se dibujaron.
-    const esc = (ancho * 1.7) / capas.cielo.width;
-    const w = capas.cielo.width * esc, h = capas.cielo.height * esc;
-    const ref = camaraReposo(alto);
-    // EL CIELO SE APOYA EN EL HORIZONTE, no en el borde de arriba.
-    //
-    // Antes empezaba arriba y lo que sobraba abajo se tapaba con un color
-    // plano del tema. Con los fondos nuevos —que tienen su propio degrade y su
-    // propia bruma— ese color no coincidia con nada y quedaba una franja lisa
-    // cruzando la pantalla: blanca en el castillo, violeta en el fantasma. Se
-    // veia en cada captura.
-    //
-    // Ahora el BORDE DE ABAJO de la imagen se clava en la misma linea de
-    // horizonte donde se apoyan las dos bandas, y lo que falta arriba y abajo
-    // se estira de la propia imagen: una tira de dos pixeles de su fila de
-    // arriba y otra de su fila de abajo. Sale del mismo dibujo, asi que no
-    // hay franja que no pegue — no hay franja.
-    // Base opaca ANTES de todo. Las tiras estiradas tapan lo que la imagen no
-    // llega a cubrir, pero el cielo y las dos bandas se corren a velocidades
-    // distintas —0,10 contra 0,80— asi que con la camara bien arriba la banda
-    // de adelante baja ocho veces mas rapido que el borde del cielo y entre
-    // los dos se abre una franja. Se vio en el castillo: un rectangulo BLANCO
-    // —lo que hubiera quedado en el lienzo— asomando por un pozo del terreno.
-    // Un fillRect por cuadro es barato y cierra el agujero para siempre.
-    R(c, 0, 0, ancho, alto, tm.cielo[1]);
-    const horizonte = (ANCLA_MUNDO - ref) - (camY - ref) * 0.10;
-    const y0 = horizonte - h;
+  // 1) cielo.
+  //
+  // Se escala por el ANCHO, no por el alto: escalando para cubrir el alto
+  // —448 px de vista contra 572 de imagen— una nube termina midiendo un
+  // tercio de la pantalla. Con 1,7 pantallas por imagen las nubes quedan del
+  // tamano que se dibujaron.
+  //
+  // Y SE APOYA EN EL HORIZONTE, no en el borde de arriba. Antes empezaba
+  // arriba y lo que sobraba abajo se tapaba con un color plano del tema: con
+  // los fondos nuevos ese color no coincidia con nada y quedaba una franja
+  // lisa cruzando la pantalla —blanca en el castillo, violeta en el
+  // fantasma—. Se veia en cada captura.
+  const cielo = aMedida(capas.cielo,
+                        ancho * 1.7,
+                        capas.cielo ? capas.cielo.height * (ancho * 1.7) / capas.cielo.width : 0);
+  if (cielo) {
+    const y0 = horizonte - cielo.h;
     const px = -camX * 0.05;
-    if (y0 > 0) tiraY(c, capas.cielo, 0, 0, y0 + 1, ancho, w, px, true);
-    repetirX(c, capas.cielo, px, y0, w, h, ancho);
-    // DEBAJO DEL HORIZONTE NO HAY CIELO: HAY TIERRA VISTA DE LEJOS.
-    //
-    // Antes ahi iba el color plano del cielo, y se veia clarisimo en cuanto
-    // el terreno tenia un pozo: por el agujero asomaba un rectangulo celeste
-    // liso, del color del cielo, a metros por debajo del pasto. Parecia un
-    // error de dibujo, y era el fondo asomando por donde no hay nada.
-    //
-    // Ahora es un degrade que arranca del tono del horizonte y se va a negro:
-    // por un pozo se ve profundidad, que es lo que hay abajo de la tierra.
-    //
-    // Tampoco se estira la fila de abajo de la imagen: se midio y varios
-    // temas traen ahi otra cosa —el castillo, un rectangulo BLANCO que el
-    // modelo dejo sin pintar; el desierto y la torre, tierra—, y estirarla
-    // cruzaba esa basura por toda la pantalla.
-    if (horizonte < alto) {
-      // Arranca YA OSCURO y seis pixeles mas arriba de la linea.
-      //
-      // Empezando en el color del cielo quedaba una franja celeste clarita
-      // cruzando la pantalla justo arriba del pasto: el cielo y las bandas se
-      // corren a velocidades distintas, asi que entre el borde de abajo del
-      // cielo y la base de la banda de adelante se abre un hueco, y por ahi
-      // asomaba el primer tono del degrade. Arrancando oscuro y un poco mas
-      // arriba, el hueco queda tapado por la banda y no se ve nada.
-      const y1 = horizonte - 6;
-      const g2 = c.createLinearGradient(0, y1, 0, alto);
-      g2.addColorStop(0, oscurecer(tm.borde, 0.22));
-      g2.addColorStop(1, oscurecer(tm.borde, 0.78));
-      c.fillStyle = g2;
-      c.fillRect(0, y1 | 0, ancho, Math.ceil(alto - y1 + 2));
-    }
+    // Arriba, color plano de la propia imagen. Antes se estiraban dos filas
+    // de pixeles a lo alto de media pantalla: el caso de escalado mas caro
+    // que existe, y para dar el mismo color.
+    if (y0 > 0) { c.fillStyle = cielo.arriba || tm.cielo[0]; c.fillRect(0, 0, ancho, Math.ceil(y0) + 1); }
+    repetirListo(c, cielo, px, y0, ancho);
   } else {
     const a = tm.cielo[0], b = tm.cielo[1];
-    const mezcla = (p) => {
+    const mezcla = (q) => {
       const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
-      const m = (s) => Math.round((((pa >> s) & 255) * (1 - p) + ((pb >> s) & 255) * p));
+      const m = (sh) => Math.round((((pa >> sh) & 255) * (1 - q) + ((pb >> sh) & 255) * q));
       return `rgb(${m(16)},${m(8)},${m(0)})`;
     };
     for (let i = 0; i < 6; i++) R(c, 0, alto * i / 6, ancho, alto / 6 + 1, mezcla(i / 5));
-    const hz = (ANCLA_MUNDO - camaraReposo(alto)) - (camY - camaraReposo(alto)) * 0.10;
-    if (hz < alto) R(c, 0, hz | 0, ancho, Math.ceil(alto - hz), oscurecer(tm.borde, 0.5));
   }
 
-  // 2) las dos bandas
+  // 2) DEBAJO DEL HORIZONTE NO HAY CIELO: HAY TIERRA VISTA DE LEJOS.
+  //
+  // Antes ahi iba el color plano del cielo, y se veia clarisimo en cuanto el
+  // terreno tenia un pozo: por el agujero asomaba un rectangulo celeste liso,
+  // del color del cielo, a metros por debajo del pasto. Arranca ya oscuro y
+  // seis pixeles mas arriba de la linea, asi el hueco que se abre entre el
+  // borde del cielo y la base de la banda —se corren a distinta velocidad—
+  // queda tapado por la banda.
+  if (horizonte < alto) {
+    const y1 = horizonte - 6;
+    const g2 = c.createLinearGradient(0, y1, 0, alto);
+    g2.addColorStop(0, oscurecer(tm.borde, 0.22));
+    g2.addColorStop(1, oscurecer(tm.borde, 0.78));
+    c.fillStyle = g2;
+    c.fillRect(0, y1 | 0, ancho, Math.ceil(alto - y1 + 2));
+  }
+
+  // 3) las dos bandas
   for (const [clave, vel, velY, altoRel] of [["lejos", 0.22, 0.55, 0.30], ["cerca", 0.42, 0.80, 0.19]]) {
     const img = capas[clave];
-    if (!img) continue;
+    if (!img || !img.height) continue;
     const h = Math.max(48, Math.min(alto * altoRel, 220));
-    const w = img.width * (h / img.height);
-    const ref = camaraReposo(alto);
+    const hecho = aMedida(img, img.width * (h / img.height), h);
+    if (!hecho) continue;
     const baseY = (ANCLA_MUNDO - ref) - (camY - ref) * velY;
-    repetirX(c, img, -camX * vel, baseY - h, w, h, ancho);
+    repetirListo(c, hecho, -camX * vel, baseY - hecho.h, ancho);
   }
 }
 
@@ -2792,14 +2847,18 @@ function monedaColor(c, x, y, t, tier, hoja) {
   // tine todo lo ya dibujado debajo del rectangulo, no el sprite, y la moneda
   // quedaba adentro de un cuadrado rosa opaco.
   if (hoja) {
+    // Se rehace si cambio la calidad: si no, la moneda se queda dibujada a la
+    // resolucion vieja y es lo unico borroso (o lo unico caro) de la pantalla.
+    if (tintado.lienzo && tintado.esc !== GRAF.esc) tintado.lienzo = null;
     if (!tintado.lienzo) {
       tintado.lienzo = document.createElement("canvas");
       // El lienzo auxiliar va a la MISMA resolucion que el del juego. Si se
       // quedara en 48 pixeles, la moneda seria lo unico grueso de la pantalla.
-      tintado.lienzo.width = tintado.lienzo.height = 48 * ESC;
+      tintado.lienzo.width = tintado.lienzo.height = 48 * GRAF.esc;
+      tintado.esc = GRAF.esc;
       tintado.ctx = tintado.lienzo.getContext("2d");
       tintado.ctx.imageSmoothingEnabled = false;
-      tintado.ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
+      tintado.ctx.setTransform(GRAF.esc, 0, 0, GRAF.esc, 0, 0);
     }
     const tc = tintado.ctx;
     tc.clearRect(0, 0, 48, 48);
@@ -3122,7 +3181,7 @@ function generarNivel(cfg, tier = "rosa") {
     }
 
     // Los premios de los bloques ?: hongos garantizados y repartidos.
-    nv.premios = repartirPremios(nv, r.visitadas);
+    nv.premios = repartirPremios(nv, r.visitadas, cfg);
 
     // Monedas: solo donde el camino probo que se llega, y repuestas a lo largo
     // del recorrido para que no queden tramos pelados.
@@ -3159,7 +3218,7 @@ function generarNivel(cfg, tier = "rosa") {
  * —nunca de mas—. Es la misma base con la que se siembran las monedas, y por
  * la misma razon: prometer algo que no se alcanza es peor que no prometerlo.
  */
-function repartirPremios(nv, visitadas) {
+function repartirPremios(nv, visitadas, nivel) {
   const bajo = (tx, ty) => {
     for (let dx = -1; dx <= 1; dx++)
       for (let dy = 1; dy <= 2; dy++)
@@ -3175,32 +3234,44 @@ function repartirPremios(nv, visitadas) {
   const premios = {};
   if (!alcanzables.length) return premios;
   alcanzables.sort((a, b) => a.tx - b.tx);
-
-  // El primero de todos lleva hongo SIEMPRE. Es uno de los dos de la largada,
-  // sobre piso llano y en los primeros segundos: el jugador lo encuentra sin
-  // buscarlo y ahi aprende que los bloques dan hongos.
+  const n = alcanzables.length;
   const usados = new Set();
   const dar = (i, que) => {
-    if (i < 0 || i >= alcanzables.length || usados.has(i)) return false;
+    if (i < 0 || i >= n || usados.has(i)) return false;
     usados.add(i);
     premios[`${alcanzables[i].tx},${alcanzables[i].ty}`] = que;
     return true;
   };
-  dar(0, "hongo");
 
-  // El super va pasada la mitad: que valga el camino recorrido. Si el nivel
-  // tiene pocos bloques, cae donde haya.
-  const n = alcanzables.length;
-  let iSuper = Math.min(n - 1, Math.max(1, Math.round(n * 0.62)));
-  while (iSuper > 0 && usados.has(iSuper)) iSuper--;
-  dar(iSuper, "super");
-
-  // Tres hongos mas, repartidos a lo ancho de lo que quede.
-  for (let k = 1; k <= 3; k++) {
-    let i = Math.round((n - 1) * (k / 4));
+  // UNO DE CADA CUATRO BLOQUES DA HONGO. Ni mas ni menos.
+  //
+  // La primera version ponia cuatro hongos fijos por nivel, y con ocho o diez
+  // bloques eso era la mitad: demasiado. Lo que hace que un bloque valga la
+  // pena golpearlo es no saber que sale, y si sale hongo una de cada dos
+  // veces, deja de ser una sorpresa. Con la cuarta parte, un nivel con ocho
+  // bloques da dos hongos y uno con veinte da cinco — la cantidad acompana al
+  // tamano del nivel en vez de ser un numero fijo.
+  const cuantos = Math.max(1, Math.round(n * 0.25));
+  for (let k = 0; k < cuantos; k++) {
+    // Repartidos a lo ancho, no amontonados: el primero cae en la largada.
+    let i = k === 0 ? 0 : Math.round((n - 1) * (k / cuantos));
     for (let d = 0; d < n && usados.has(i); d++) i = (i + 1) % n;
     dar(i, "hongo");
   }
+
+  // EL HONGO ARCOIRIS ES RARO, y esa es toda su gracia. Uno por MUNDO, en el
+  // primer nivel de cada uno: seis en los veinticuatro. Habia uno por nivel y
+  // volverse gigante dejaba de ser un evento para ser la rutina.
+  //
+  // La regla es por posicion en la lista de niveles y no un sorteo, asi que se
+  // puede aprender: el arcoiris esta en el 1-1, el 2-1, el 3-1...
+  if (nivel && nivel.n === 1) {
+    // Pasada la mitad: que haya que llegar hasta ahi.
+    let iSuper = Math.min(n - 1, Math.max(0, Math.round(n * 0.62)));
+    for (let d = 0; d < n && usados.has(iSuper); d++) iSuper = (iSuper + 1) % n;
+    dar(iSuper, "super");
+  }
+
   // Y dos burbujas, que son el otro premio que importa.
   for (let k = 1; k <= 2; k++) {
     let i = Math.round((n - 1) * (k / 3) + 1) % n;
@@ -4361,21 +4432,59 @@ function ponerIconos() {
   }
 }
 
+// EL HUD SE TOCA SOLO CUANDO CAMBIA. Sesenta veces por segundo, no.
+//
+// Esta funcion corre en cada cuadro del bucle. La version anterior hacia, en
+// cada uno de esos cuadros: cinco querySelector, cuatro escrituras de
+// textContent, y —lo peor— vaciaba #hud-color con innerHTML = "" y volvia a
+// crear las cinco bolitas con createElement. Eso obliga al navegador a
+// recalcular estilos y rehacer el layout del HUD sesenta veces por segundo.
+// En una computadora ni se nota; en un telefono es de las cosas mas caras que
+// se pueden hacer por cuadro, y se hacia para escribir los mismos numeros que
+// ya estaban.
+//
+// Ahora los elementos se buscan una sola vez, los valores se comparan con lo
+// ultimo escrito, y las cinco bolitas se crean una vez y despues solo cambian
+// de clase.
+const hudE = {};
+const hudV = {};
+const escribir = (el, clave, val) => {
+  if (!el || hudV[clave] === val) return;
+  hudV[clave] = val; el.textContent = val;
+};
+
 function pintarHud(p) {
   ponerIconos();
-  $("#hud-monedas").textContent = p.monedas;
-  const seg = Math.ceil(p.reloj / 60);
-  const rel = $("#hud-reloj");
-  rel.textContent = seg;
-  rel.classList.toggle("apuro", seg <= 10);
-  rel.classList.toggle("frenado", !p.relojCorre);
-  $("#hud-burbujas").textContent = p.burbujas;
-  const c = $("#hud-color");
-  c.innerHTML = "";
-  for (const m of p.color) {
-    const i = crear("i", "pip " + p.tier + (m.tomada ? " ok" : ""));
-    c.append(i);
+  if (!hudE.monedas) {
+    hudE.monedas = $("#hud-monedas");
+    hudE.reloj = $("#hud-reloj");
+    hudE.burbujas = $("#hud-burbujas");
+    hudE.color = $("#hud-color");
+    hudE.pips = [];
   }
+  escribir(hudE.monedas, "monedas", p.monedas);
+  const seg = Math.ceil(p.reloj / 60);
+  escribir(hudE.reloj, "reloj", seg);
+  if (hudE.reloj) {
+    const apuro = seg <= 10, frenado = !p.relojCorre;
+    if (hudV.apuro !== apuro) { hudV.apuro = apuro; hudE.reloj.classList.toggle("apuro", apuro); }
+    if (hudV.frenado !== frenado) { hudV.frenado = frenado; hudE.reloj.classList.toggle("frenado", frenado); }
+  }
+  escribir(hudE.burbujas, "burbujas", p.burbujas);
+
+  const c = hudE.color;
+  if (!c) return;
+  if (hudE.pips.length !== p.color.length) {
+    c.innerHTML = "";
+    hudE.pips = p.color.map(() => { const i = crear("i", "pip"); c.append(i); return i; });
+    hudV.pips = null;
+  }
+  // La firma es "tier|tomadas": mientras no cambie, no se toca una clase.
+  const firma = p.tier + "|" + p.color.map((m) => (m.tomada ? 1 : 0)).join("");
+  if (hudV.pips === firma) return;
+  hudV.pips = firma;
+  for (let i = 0; i < hudE.pips.length; i++)
+    hudE.pips[i].className = "pip " + p.tier + (p.color[i].tomada ? " ok" : "");
 }
 
 // --- resultado -----------------------------------------------------------
@@ -4424,8 +4533,25 @@ function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
 }
 
 // --- ajustes -------------------------------------------------------------
-function montarAjustes() {
+function montarAjustes(alCambiarGrafico) {
   const d = cargar();
+  // El selector de graficos. Quien sabe aplicar el cambio es main.js —es el
+  // que tiene el lienzo y los patrones—, asi que aca solo se guarda y se
+  // avisa.
+  const grupo = $("#aj-grafico");
+  if (grupo) {
+    const pintar = () => {
+      for (const b of grupo.querySelectorAll("[data-graf]"))
+        b.classList.toggle("puesto", String(d.ajustes.grafico) === b.dataset.graf);
+    };
+    for (const b of grupo.querySelectorAll("[data-graf]"))
+      b.addEventListener("click", () => {
+        d.ajustes.grafico = b.dataset.graf === "auto" ? "auto" : Number(b.dataset.graf);
+        guardar(); pintar();
+        if (alCambiarGrafico) alCambiarGrafico(d.ajustes.grafico);
+      });
+    pintar();
+  }
   const sonido = $("#aj-sonido"), musica = $("#aj-musica"), sac = $("#aj-sacudida");
   sonido.checked = d.ajustes.sonido; musica.checked = d.ajustes.musica;
   sac.checked = d.ajustes.sacudida;
@@ -4467,10 +4593,10 @@ window.M_interfaz = M_interfaz;
 (() => {
 // Arranque, entrada y bucle.
 
-const { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista, ESC, PATRON } = M_mundo;
+const { NIVELES, buscarNivel, idNivel, VISTA, ajustarVista, GRAF, PATRON } = M_mundo;
 const { generarNivel } = M_generador;
 const { Partida, ESTADO } = M_juego;
-const { cargar, tierActual, proximoNivel } = M_guardado;
+const { cargar, guardar: guardarAjustes, tierActual, proximoNivel } = M_guardado;
 const UI = M_interfaz;
 const { despertar, efe, pararMusica, volumen, cargarPistas } = M_audio;
 const { cargarTodas } = M_sprites;
@@ -4481,14 +4607,14 @@ const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 function redimensionar() {
   ajustarVista(innerWidth, innerHeight);
-  lienzo.width = VISTA.ancho * ESC; lienzo.height = VISTA.alto * ESC;
+  lienzo.width = VISTA.ancho * GRAF.esc; lienzo.height = VISTA.alto * GRAF.esc;
   // Hay que APAGARLO DE NUEVO: el navegador reactiva el suavizado cada vez que
   // cambia el tamano del lienzo, y los sprites salen lavados sin aviso.
   ctx.imageSmoothingEnabled = false;
   // Y la escala tambien se vuelve a poner: cambiar el ancho o el alto de un
   // lienzo lo resetea ENTERO, transformacion incluida. Sin esto el juego se
   // dibujaria en un cuarto del lienzo despues del primer giro de pantalla.
-  ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
+  ctx.setTransform(GRAF.esc, 0, 0, GRAF.esc, 0, 0);
   if (partida) partida.camara(true);
 }
 addEventListener("resize", redimensionar);
@@ -4497,7 +4623,7 @@ addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
 // navegador lo reactiva al cambiar el tamano del lienzo y los sprites salen
 // lavados sin que nada avise.
 ctx.imageSmoothingEnabled = false;
-ctx.setTransform(ESC, 0, 0, ESC, 0, 0);
+ctx.setTransform(GRAF.esc, 0, 0, GRAF.esc, 0, 0);
 
 let partida = null, cfgActual = null, tierActualN = "rosa";
 let hojas = {}, patrones = {}, capas = {};
@@ -4592,10 +4718,49 @@ function seRompio(e, donde) {
 }
 addEventListener("error", (ev) => { if (fallas === 0) seRompio(ev.error || ev.message, "la pagina"); });
 
+// EL VIGILANTE DE CUADROS.
+//
+// Dibujar al doble de resolucion TRIPLICA el costo de un cuadro: se midio,
+// 0,53 ms contra 1,71 en el nivel mas cargado. En esta maquina sobra margen
+// de las dos formas; en un telefono de hace unos anos no, y el juego se
+// arrastra. No hay forma de saber desde aca en que aparato se va a jugar, asi
+// que se mide EN EL APARATO: si de cada tanda de cuadros la mayoria tarda mas
+// de 21 ms —o sea menos de 47 por segundo— se baja la resolucion una vez y se
+// anota, para que la proxima partida arranque ya bien en vez de hacer sufrir
+// los primeros segundos otra vez.
+//
+// Se empieza a mirar despues de 90 cuadros de juego: los primeros siempre
+// tardan de mas —decodificar imagenes, armar el nivel— y castigar por eso
+// bajaria la calidad en telefonos que andan perfecto.
+// Ventanas cortas a proposito: 45 cuadros de calentamiento y 60 de medicion.
+// En un telefono que va a 25 por segundo eso son cuatro segundos de sufrir
+// antes de que baje solo, y cuatro segundos se aguantan. Con ventanas largas
+// la medida seria mas confiable y el jugador se comeria diez.
+const VIG = { n: 0, lentos: 0, calentando: 45, listo: false };
+function vigilar(dt) {
+  if (VIG.listo || cargar().ajustes.grafico !== "auto") return;
+  if (VIG.calentando > 0) { VIG.calentando--; return; }
+  VIG.n++;
+  if (dt > 21) VIG.lentos++;
+  if (VIG.n < 60) return;
+  const flojo = VIG.lentos / VIG.n > 0.45;
+  if (flojo && GRAF.esc > 1) {
+    calidad(1);
+    const d = cargar(); d.ajustes.graficoAuto = 1; guardarAjustes();
+    VIG.listo = true;
+  } else if (!flojo) {
+    // Anda bien: se confirma la calidad actual y no se vuelve a medir.
+    const d = cargar(); d.ajustes.graficoAuto = GRAF.esc; guardarAjustes();
+    VIG.listo = true;
+  }
+  VIG.n = 0; VIG.lentos = 0;
+}
+
 function bucle(ahora) {
   requestAnimationFrame(bucle);
   let dt = ahora - ultimo; ultimo = ahora;
   if (dt > 250) dt = PASO;                 // volver de una pestana en segundo plano
+  if (partida) vigilar(dt);
   acumulado += dt;
   let pasos = 0;
   while (acumulado >= PASO && pasos < 5) {
@@ -4697,36 +4862,66 @@ function desvanecerArriba(img, frac = 0.34) {
   }
 }
 
-function cargarPatron(tema) {
-  return new Promise((ok) => {
-    const img = new Image();
-    img.onload = () => {
+const imgsTile = {};
+
+function hacerPatron(img) {
+  if (!img) return null;
       // La textura se ACHICA antes de hacer el patron. La imagen generada mide
       // 256 y el tile mide 16: usada tal cual, una sola copia cubre dieciseis
       // tiles y el terreno se ve como cuatro franjas gigantes en vez de como
       // suelo. A PATRON pixeles repite cada cuatro tiles, que es la escala a
       // la que el pixel art se lee sin que se cuente la repeticion.
-      const chico = document.createElement("canvas");
-      chico.width = chico.height = PATRON * ESC;
-      const cc = chico.getContext("2d");
-      cc.imageSmoothingEnabled = false;
-      cc.drawImage(img, 0, 0, PATRON * ESC, PATRON * ESC);
-      const pat = ctx.createPattern(chico, "repeat");
+  const e = GRAF.esc;
+  const chico = document.createElement("canvas");
+  chico.width = chico.height = PATRON * e;
+  const cc = chico.getContext("2d");
+  cc.imageSmoothingEnabled = false;
+  cc.drawImage(img, 0, 0, PATRON * e, PATRON * e);
+  const pat = ctx.createPattern(chico, "repeat");
       // El patron se achica por ESC para COMPENSAR la escala del lienzo. El
       // relleno se pide en pixeles de juego, asi que sin esto el patron
       // repetiria cada PATRON pixeles de LIENZO —la mitad— y el suelo saldria
       // con la textura al doble de chica. Con la compensacion repite cada
       // PATRON pixeles de juego, pero con el doble de pixeles adentro.
-      try { pat.setTransform(new DOMMatrix([1 / ESC, 0, 0, 1 / ESC, 0, 0])); }
-      catch (e) { /* navegador viejo: se ve mas grueso, pero se ve */ }
-      ok(pat);
-    };
+  try { pat.setTransform(new DOMMatrix([1 / e, 0, 0, 1 / e, 0, 0])); }
+  catch (err) { /* navegador viejo: se ve mas grueso, pero se ve */ }
+  return pat;
+}
+
+function cargarPatron(tema) {
+  return new Promise((ok) => {
+    const img = new Image();
+    img.onload = () => { imgsTile[tema] = img; ok(hacerPatron(img)); };
     img.onerror = () => ok(null);
     img.src = ruta(`assets/tile/${tema}.webp`);
   });
 }
 
+/**
+ * Cambia la resolucion a la que se dibuja, y rehace lo que depende de ella.
+ *
+ * Hay que rehacer los patrones del terreno: llevan adentro un lienzo del
+ * tamano de la escala vieja y una transformacion que la compensa. Sin esto,
+ * bajar la calidad dejaba el suelo con la textura al doble de chica.
+ */
+function calidad(esc) {
+  esc = Math.max(1, Math.min(3, Math.round(esc)));
+  if (esc === GRAF.esc) return;
+  GRAF.esc = esc;
+  for (const t of TEMAS_TILE) if (imgsTile[t]) patrones[t] = hacerPatron(imgsTile[t]);
+  if (partida) partida.patron = patrones[partida.nv.tema] || null;
+  redimensionar();
+}
+
 (async () => {
+  // La calidad guardada se aplica ANTES de cargar nada: los patrones del
+  // terreno y las capas del fondo se arman a la resolucion que este puesta, y
+  // cambiarla despues obliga a rehacerlos todos.
+  {
+    const g = cargar().ajustes.grafico;
+    GRAF.esc = g === "auto" ? (cargar().ajustes.graficoAuto || 2)
+                            : Math.max(1, Math.min(3, Number(g) || 2));
+  }
   $("#carga-detalle").textContent = "Cargando sprites…";
   hojas = await cargarTodas(HOJAS.map(([k, c, f]) => [k, `assets/hojas/${k}.webp`, c, f]));
   const faltan = HOJAS.filter(([k]) => !hojas[k]).map(([k]) => k);
@@ -4758,7 +4953,7 @@ function cargarPatron(tema) {
   // cuando llega. Bloquear el arranque por 400 KB es regalar el primer segundo.
   cargarPistas({ llano: "assets/snd/llano.mp3", subte: "assets/snd/subte.mp3",
                  castillo: "assets/snd/castillo.mp3" });
-  UI.montarAjustes();
+  UI.montarAjustes((g) => calidad(g === "auto" ? (cargar().ajustes.graficoAuto || 2) : g));
   // El arte de portada, de fondo del menu.
   const arte = new Image();
   arte.onload = () => { $("#p-inicio").style.backgroundImage = `url(${arte.src})`; };
@@ -4777,7 +4972,7 @@ function cargarPatron(tema) {
   requestAnimationFrame(bucle);
   window.PIQUE = {
     get partida() { return partida; }, get cfg() { return cfgActual; },
-    empezar, alMapa, entrada, NIVELES, hojas, faltan,
+    empezar, alMapa, entrada, NIVELES, hojas, faltan, calidad, GRAF, VIG, vigilar,
   };
 })();
 

@@ -120,21 +120,59 @@ export function ponerIconos() {
   }
 }
 
+// EL HUD SE TOCA SOLO CUANDO CAMBIA. Sesenta veces por segundo, no.
+//
+// Esta funcion corre en cada cuadro del bucle. La version anterior hacia, en
+// cada uno de esos cuadros: cinco querySelector, cuatro escrituras de
+// textContent, y —lo peor— vaciaba #hud-color con innerHTML = "" y volvia a
+// crear las cinco bolitas con createElement. Eso obliga al navegador a
+// recalcular estilos y rehacer el layout del HUD sesenta veces por segundo.
+// En una computadora ni se nota; en un telefono es de las cosas mas caras que
+// se pueden hacer por cuadro, y se hacia para escribir los mismos numeros que
+// ya estaban.
+//
+// Ahora los elementos se buscan una sola vez, los valores se comparan con lo
+// ultimo escrito, y las cinco bolitas se crean una vez y despues solo cambian
+// de clase.
+const hudE = {};
+const hudV = {};
+const escribir = (el, clave, val) => {
+  if (!el || hudV[clave] === val) return;
+  hudV[clave] = val; el.textContent = val;
+};
+
 export function pintarHud(p) {
   ponerIconos();
-  $("#hud-monedas").textContent = p.monedas;
-  const seg = Math.ceil(p.reloj / 60);
-  const rel = $("#hud-reloj");
-  rel.textContent = seg;
-  rel.classList.toggle("apuro", seg <= 10);
-  rel.classList.toggle("frenado", !p.relojCorre);
-  $("#hud-burbujas").textContent = p.burbujas;
-  const c = $("#hud-color");
-  c.innerHTML = "";
-  for (const m of p.color) {
-    const i = crear("i", "pip " + p.tier + (m.tomada ? " ok" : ""));
-    c.append(i);
+  if (!hudE.monedas) {
+    hudE.monedas = $("#hud-monedas");
+    hudE.reloj = $("#hud-reloj");
+    hudE.burbujas = $("#hud-burbujas");
+    hudE.color = $("#hud-color");
+    hudE.pips = [];
   }
+  escribir(hudE.monedas, "monedas", p.monedas);
+  const seg = Math.ceil(p.reloj / 60);
+  escribir(hudE.reloj, "reloj", seg);
+  if (hudE.reloj) {
+    const apuro = seg <= 10, frenado = !p.relojCorre;
+    if (hudV.apuro !== apuro) { hudV.apuro = apuro; hudE.reloj.classList.toggle("apuro", apuro); }
+    if (hudV.frenado !== frenado) { hudV.frenado = frenado; hudE.reloj.classList.toggle("frenado", frenado); }
+  }
+  escribir(hudE.burbujas, "burbujas", p.burbujas);
+
+  const c = hudE.color;
+  if (!c) return;
+  if (hudE.pips.length !== p.color.length) {
+    c.innerHTML = "";
+    hudE.pips = p.color.map(() => { const i = crear("i", "pip"); c.append(i); return i; });
+    hudV.pips = null;
+  }
+  // La firma es "tier|tomadas": mientras no cambie, no se toca una clase.
+  const firma = p.tier + "|" + p.color.map((m) => (m.tomada ? 1 : 0)).join("");
+  if (hudV.pips === firma) return;
+  hudV.pips = firma;
+  for (let i = 0; i < hudE.pips.length; i++)
+    hudE.pips[i].className = "pip " + p.tier + (p.color[i].tomada ? " ok" : "");
 }
 
 // --- resultado -----------------------------------------------------------
@@ -183,8 +221,25 @@ export function pintarResultado(p, cfg, gano, alSeguir, alRepetir, alMapa) {
 }
 
 // --- ajustes -------------------------------------------------------------
-export function montarAjustes() {
+export function montarAjustes(alCambiarGrafico) {
   const d = cargar();
+  // El selector de graficos. Quien sabe aplicar el cambio es main.js —es el
+  // que tiene el lienzo y los patrones—, asi que aca solo se guarda y se
+  // avisa.
+  const grupo = $("#aj-grafico");
+  if (grupo) {
+    const pintar = () => {
+      for (const b of grupo.querySelectorAll("[data-graf]"))
+        b.classList.toggle("puesto", String(d.ajustes.grafico) === b.dataset.graf);
+    };
+    for (const b of grupo.querySelectorAll("[data-graf]"))
+      b.addEventListener("click", () => {
+        d.ajustes.grafico = b.dataset.graf === "auto" ? "auto" : Number(b.dataset.graf);
+        guardar(); pintar();
+        if (alCambiarGrafico) alCambiarGrafico(d.ajustes.grafico);
+      });
+    pintar();
+  }
   const sonido = $("#aj-sonido"), musica = $("#aj-musica"), sac = $("#aj-sacudida");
   sonido.checked = d.ajustes.sonido; musica.checked = d.ajustes.musica;
   sac.checked = d.ajustes.sacudida;

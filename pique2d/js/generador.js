@@ -289,7 +289,7 @@ export function generarNivel(cfg, tier = "rosa") {
     }
 
     // Los premios de los bloques ?: hongos garantizados y repartidos.
-    nv.premios = repartirPremios(nv, r.visitadas);
+    nv.premios = repartirPremios(nv, r.visitadas, cfg);
 
     // Monedas: solo donde el camino probo que se llega, y repuestas a lo largo
     // del recorrido para que no queden tramos pelados.
@@ -326,7 +326,7 @@ export function generarNivel(cfg, tier = "rosa") {
  * —nunca de mas—. Es la misma base con la que se siembran las monedas, y por
  * la misma razon: prometer algo que no se alcanza es peor que no prometerlo.
  */
-function repartirPremios(nv, visitadas) {
+function repartirPremios(nv, visitadas, nivel) {
   const bajo = (tx, ty) => {
     for (let dx = -1; dx <= 1; dx++)
       for (let dy = 1; dy <= 2; dy++)
@@ -342,32 +342,44 @@ function repartirPremios(nv, visitadas) {
   const premios = {};
   if (!alcanzables.length) return premios;
   alcanzables.sort((a, b) => a.tx - b.tx);
-
-  // El primero de todos lleva hongo SIEMPRE. Es uno de los dos de la largada,
-  // sobre piso llano y en los primeros segundos: el jugador lo encuentra sin
-  // buscarlo y ahi aprende que los bloques dan hongos.
+  const n = alcanzables.length;
   const usados = new Set();
   const dar = (i, que) => {
-    if (i < 0 || i >= alcanzables.length || usados.has(i)) return false;
+    if (i < 0 || i >= n || usados.has(i)) return false;
     usados.add(i);
     premios[`${alcanzables[i].tx},${alcanzables[i].ty}`] = que;
     return true;
   };
-  dar(0, "hongo");
 
-  // El super va pasada la mitad: que valga el camino recorrido. Si el nivel
-  // tiene pocos bloques, cae donde haya.
-  const n = alcanzables.length;
-  let iSuper = Math.min(n - 1, Math.max(1, Math.round(n * 0.62)));
-  while (iSuper > 0 && usados.has(iSuper)) iSuper--;
-  dar(iSuper, "super");
-
-  // Tres hongos mas, repartidos a lo ancho de lo que quede.
-  for (let k = 1; k <= 3; k++) {
-    let i = Math.round((n - 1) * (k / 4));
+  // UNO DE CADA CUATRO BLOQUES DA HONGO. Ni mas ni menos.
+  //
+  // La primera version ponia cuatro hongos fijos por nivel, y con ocho o diez
+  // bloques eso era la mitad: demasiado. Lo que hace que un bloque valga la
+  // pena golpearlo es no saber que sale, y si sale hongo una de cada dos
+  // veces, deja de ser una sorpresa. Con la cuarta parte, un nivel con ocho
+  // bloques da dos hongos y uno con veinte da cinco — la cantidad acompana al
+  // tamano del nivel en vez de ser un numero fijo.
+  const cuantos = Math.max(1, Math.round(n * 0.25));
+  for (let k = 0; k < cuantos; k++) {
+    // Repartidos a lo ancho, no amontonados: el primero cae en la largada.
+    let i = k === 0 ? 0 : Math.round((n - 1) * (k / cuantos));
     for (let d = 0; d < n && usados.has(i); d++) i = (i + 1) % n;
     dar(i, "hongo");
   }
+
+  // EL HONGO ARCOIRIS ES RARO, y esa es toda su gracia. Uno por MUNDO, en el
+  // primer nivel de cada uno: seis en los veinticuatro. Habia uno por nivel y
+  // volverse gigante dejaba de ser un evento para ser la rutina.
+  //
+  // La regla es por posicion en la lista de niveles y no un sorteo, asi que se
+  // puede aprender: el arcoiris esta en el 1-1, el 2-1, el 3-1...
+  if (nivel && nivel.n === 1) {
+    // Pasada la mitad: que haya que llegar hasta ahi.
+    let iSuper = Math.min(n - 1, Math.max(0, Math.round(n * 0.62)));
+    for (let d = 0; d < n && usados.has(iSuper); d++) iSuper = (iSuper + 1) % n;
+    dar(iSuper, "super");
+  }
+
   // Y dos burbujas, que son el otro premio que importa.
   for (let k = 1; k <= 2; k++) {
     let i = Math.round((n - 1) * (k / 3) + 1) % n;

@@ -35,12 +35,17 @@ export const VISTA = { ancho: 208, alto: 448 };
 // este numero, y el fondo y el terreno se rellenan enteros en cada cuadro.
 // En 2 son 373.000 pixeles por cuadro en vertical; en 3 serian 839.000.
 //
-// Medido en 2, en el nivel mas cargado (6-4, castillo, con jefe): 1,19 ms por
-// cuadro, o sea catorce veces el presupuesto de 60 Hz. En 3 serian unos 2,7 y
-// el margen bajaria a seis — que alcanza en esta maquina y no se sabe si
-// alcanza en un telefono de hace cuatro anos. El salto de 1 a 2 es el que se
-// ve; el de 2 a 3 es la mitad de visible y el doble de caro.
-export const ESC = 2;
+// Medido en esta maquina, en el nivel mas cargado (6-3): en 1 el cuadro sale
+// 0,53 ms y en 2 sale 1,71 — o sea que subir de 1 a 2 TRIPLICA el costo. Aca
+// sobra margen de las dos formas; en un telefono de hace unos anos, no. Por
+// eso NO es una constante: es un numero que el juego baja solo cuando ve que
+// no llega, y que el jugador puede fijar a mano en Ajustes.
+//
+// Se guarda adentro de un objeto y no como `export let` para que los modulos
+// que lo leen vean el cambio: un `let` exportado se copia al importarlo en
+// algunos empaquetados, y quedaria la mitad del juego dibujando en 2 y la
+// otra mitad en 1.
+export const GRAF = { esc: 2 };
 
 // Cada cuantos pixeles de juego se repite la textura del terreno.
 //
