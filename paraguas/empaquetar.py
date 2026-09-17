@@ -22,8 +22,12 @@ imágenes son una mejora, no un requisito.
 import base64, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["assets", "mundo", "pozo", "juego", "piloto", "heroe", "dibujo", "audio",
-         "guardado", "idioma", "musica"]
+# EL ORDEN ES EL GRAFO DE DEPENDENCIAS RESUELTO A MANO: un módulo tiene que
+# estar armado antes de que otro lo lea. `heroe` usa `skins` y `compras` usa
+# `guardado`, así que van después — y equivocarse acá no rompe el empaquetado,
+# rompe el juego en el primer cuadro, que es donde menos se busca.
+ORDEN = ["assets", "mundo", "pozo", "juego", "piloto", "skins", "heroe", "dibujo",
+         "audio", "guardado", "compras", "idioma", "musica"]
 ENTRADA = "main"
 
 # Multilínea y con comillas simples O dobles: juego.js abre el import de

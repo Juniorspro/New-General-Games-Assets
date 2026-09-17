@@ -22,5 +22,8 @@ echo
 echo "── los tres idiomas ──────────────────────────────────────────"
 node pruebas/idiomas.mjs
 echo
+echo "── la tienda de skins ────────────────────────────────────────"
+node pruebas/tienda.mjs
+echo
 echo "── la música y los sonidos ───────────────────────────────────"
 JUEGO=PARAGUAS ARCHIVO=paraguas-en-un-archivo.html JUGAR="#m-jugar" node pruebas/sonido.mjs

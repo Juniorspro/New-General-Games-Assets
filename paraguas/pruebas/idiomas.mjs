@@ -59,7 +59,7 @@ ch("y arranca en inglés, no en el idioma del navegador",
    (await pg.$eval("[data-t='idioma.titulo']", (e) => e.textContent)) === "Choose your language");
 
 // Las tres pantallas de texto, en los tres idiomas, buscando claves crudas.
-const marca = /(?:^|\s)(?:doc|idioma|menu|como|hud|fin|tramo)\.[a-z0-9-]+(?:\s|$)/i;
+const marca = /(?:^|\s)(?:doc|idioma|menu|como|hud|fin|tramo|tienda|rango|skin)\.[a-z0-9-]+(?:\s|$)/i;
 for (const cod of ["pt", "es", "en"]) {
   await pg.goto(url);
   await pg.waitForFunction(() => !!window.PARAGUAS, { timeout: 30000 });
@@ -70,9 +70,12 @@ for (const cod of ["pt", "es", "en"]) {
 
   const textos = [];
   textos.push(await pg.$eval("#p-menu", (e) => e.innerText));
+  await pg.click("#m-tienda"); await pg.waitForTimeout(250);
+  textos.push(await pg.$eval("#p-tienda", (e) => e.innerText));
+  await pg.click("#p-tienda [data-volver]"); await pg.waitForTimeout(150);
   await pg.click("#m-como"); await pg.waitForTimeout(150);
   textos.push(await pg.$eval("#p-como", (e) => e.innerText));
-  await pg.click("[data-volver]"); await pg.waitForTimeout(150);
+  await pg.click("#p-como [data-volver]"); await pg.waitForTimeout(150);
   // El final: se lo mata a propósito para poder leer la lista de resultados.
   await pg.click("#m-jugar"); await pg.waitForTimeout(300);
   await pg.evaluate(() => {

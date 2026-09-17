@@ -150,9 +150,14 @@ ch("chocar termina la caída y muestra el final", true);
 const fin = await pg.evaluate(() => ({
   metros: document.querySelector("#f-metros").textContent,
   datos: document.querySelectorAll("#f-lista li").length,
-  mejor: JSON.parse(localStorage.getItem("paraguas.v1") || "{}").mejor,
+  guardado: JSON.parse(localStorage.getItem("paraguas.v1") || "{}"),
 }));
-ch("y anota el récord", fin.datos === 4 && fin.mejor > 0, `${fin.metros} · récord ${fin.mejor} m`);
+// Cinco renglones: lo ganado, lo que hay en la billetera, los roces, el puntaje
+// y el récord. El primero y el segundo son la tienda: sin ellos, la chatarra
+// vuelve a ser un número que se mira y se tira.
+ch("y anota el récord y la chatarra", fin.datos === 5 && fin.guardado.mejor > 0
+   && typeof fin.guardado.monedas === "number",
+   `${fin.metros} · récord ${fin.guardado.mejor} m · billetera ${fin.guardado.monedas}`);
 
 await pg.click("#f-otra");
 await pg.waitForTimeout(400);

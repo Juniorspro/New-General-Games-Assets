@@ -57,14 +57,41 @@
       <span id="m-caidas" class="tenue"></span></p>
 
     <div class="botones fila chicos">
+      <button id="m-tienda" class="chico" data-t="menu.tienda">Skins</button>
       <button id="m-como" class="chico" data-t="menu.como">? Cómo se juega</button>
-      <label class="opcion chico-op"><input type="checkbox" id="aj-sonido">
-        <span data-t="menu.sonido">Sonido</span></label>
-      <label class="opcion chico-op"><input type="checkbox" id="aj-musica">
-        <span data-t="menu.musica">Música</span></label>
+      <!-- LOS DOS INTERRUPTORES SON BOTONES CON ICONO Y NO CASILLAS CON TEXTO.
+           "Sonido" y "Música" son dos palabras largas en tres idiomas, y con el
+           botón de skins el pie pasó a seis cosas: en un teléfono de 360 no
+           entraban y la tapa se volvía desplazable, que es la forma silenciosa
+           de esconder la última fila. El estado se lee igual —el icono cambia— y
+           el área de toque sigue siendo de 44 px. -->
+      <button id="aj-sonido" class="chico interruptor" aria-pressed="true"
+              aria-label="Sonido" data-t-attr="aria-label:menu.sonido">🔊</button>
+      <button id="aj-musica" class="chico interruptor" aria-pressed="true"
+              aria-label="Música" data-t-attr="aria-label:menu.musica">♪</button>
       <button id="m-idioma" class="chico" aria-label="Idioma" data-t-attr="aria-label:menu.idioma">EN</button>
       <button id="m-borrar" class="chico peligro" data-t="menu.borrar">Borrar</button>
     </div>
+  </div>
+</main>
+
+<!-- ───────────── la tienda de skins ───────────── -->
+<main id="p-tienda" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver class="chico" data-t="como.atras">← Atrás</button>
+    <h2 data-t="tienda.titulo">Skins</h2>
+    <b id="t-monedas" class="bolsillo">0</b>
+  </header>
+  <!-- La vista previa es el MUÑECO DE VERDAD, cayendo, dibujado con el mismo
+       código que el juego. Una foto de cada skin serían treinta y cuatro fotos
+       y, sobre todo, se desincronizaría con el dibujo el día que alguien toque
+       una línea del rig. -->
+  <canvas id="t-vista" class="vista" width="360" height="150" aria-hidden="true"></canvas>
+  <div id="t-info" class="vista-info"><b id="t-nombre">Rilo</b> <span id="t-rango" class="rango"></span></div>
+  <div id="t-grilla" class="grilla"></div>
+  <p class="nota" data-t="tienda.nota"></p>
+  <div class="botones fila chicos">
+    <button id="t-restaurar" class="chico" data-t="tienda.restaurar">Restaurar compras</button>
   </div>
 </main>
 

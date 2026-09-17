@@ -91,7 +91,8 @@ ch("la música se toca sola mientras jugás", durante - antes >= MINIMO,
 // batería por nada y vuelve a sonar solo al cambiar de pantalla.
 await pg.click("#j-salir");
 await pg.waitForTimeout(250);
-await pg.uncheck("#aj-musica");
+// Es un botón con icono, no una casilla: se toca.
+await pg.click("#aj-musica");
 await pg.waitForTimeout(300);
 await pg.click(JUGAR);
 // SE ESPERA ANTES DE EMPEZAR A CONTAR. Entrar a una partida dispara efectos
@@ -114,7 +115,7 @@ ch("apagando la música, el secuenciador para de verdad", andando === false && q
 await pg.reload();
 await pg.waitForFunction((j) => !!window[j], JUEGO, { timeout: 30000 });
 ch("y la decisión se guarda",
-   (await pg.$eval("#aj-musica", (e) => e.checked)) === false);
+   (await pg.$eval("#aj-musica", (e) => e.getAttribute("aria-pressed"))) === "false");
 
 // Los efectos siguen sonando con la música apagada: son dos interruptores
 // porque son dos cosas distintas — la música es decoración y los efectos son

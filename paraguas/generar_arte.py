@@ -67,6 +67,55 @@ PIEZAS = {
                "desaturated grey-blue, almost a silhouette. Even detail all over with nothing "
                "important near the edges. No characters, no text, no lighting effects.")},
 
+  # LAS TRES SKINS PAGAS. Las otras treinta se hacen con código —tiñendo las
+  # mismas piezas y agregando accesorios vectoriales— y por eso pesan cero. Estas
+  # tres son las únicas con DIBUJO PROPIO, y esa es justamente la razón por la
+  # que se pueden cobrar aparte: lo que se paga es algo que el juego no puede
+  # generar solo, no un número más alto.
+  #
+  # Se genera el paraguas ABIERTO y la cabeza. El cerrado se tiñe a partir del
+  # base: es una tira de quince píxeles que se ve medio segundo por vez, y no
+  # justifica ni el peso ni la plata.
+  "pro_cromo_paraguas": {
+    "alto": 320,
+    "prompt": ("A single OPEN umbrella seen straight from the front, perfectly symmetrical, made "
+               "of polished liquid chrome: mirror-bright silver panels with sharp white highlights "
+               "and cold blue reflections, a razor-thin rim, and a floating chrome sphere instead "
+               "of a finial on top. A straight chrome shaft hangs down with a curved handle. "
+               + ESTILO)},
+  "pro_cromo_cabeza": {
+    "alto": 120,
+    "prompt": ("The head of a small cartoon character, seen from the front, made of polished "
+               "liquid chrome: a featureless mirror-smooth face with a single horizontal glowing "
+               "cyan visor across the eyes, and short swept-back chrome spikes for hair. Just the "
+               "head and neck, nothing else. " + ESTILO)},
+  "pro_magma_paraguas": {
+    "alto": 320,
+    "prompt": ("A single OPEN umbrella seen straight from the front, perfectly symmetrical, made "
+               "of cooling volcanic rock: near-black cracked basalt panels with bright orange "
+               "molten seams glowing between them, glowing embers along the bottom rim, and a "
+               "burning ember as the finial on top. A dark iron shaft hangs down with a curved "
+               "handle. " + ESTILO)},
+  "pro_magma_cabeza": {
+    "alto": 120,
+    "prompt": ("The head of a small cartoon character, seen from the front, made of cracked black "
+               "volcanic rock with bright orange molten light glowing out of the cracks, two "
+               "burning orange eyes, and a crest of small flames instead of hair. Just the head "
+               "and neck, nothing else. " + ESTILO)},
+  "pro_vacio_paraguas": {
+    "alto": 320,
+    "prompt": ("A single OPEN umbrella seen straight from the front, perfectly symmetrical, whose "
+               "canopy is a hole in space: deep black panels filled with tiny stars and faint "
+               "violet nebula, ringed by a thin glowing violet edge, with a small collapsing "
+               "purple star as the finial on top. A dark shaft hangs down with a curved handle. "
+               + ESTILO)},
+  "pro_vacio_cabeza": {
+    "alto": 120,
+    "prompt": ("The head of a small cartoon character, seen from the front, that is a silhouette "
+               "filled with a starfield: deep black face with tiny white stars inside it, two "
+               "glowing violet eyes, and a halo of faint violet dust instead of hair. Just the "
+               "head and neck, nothing else. " + ESTILO)},
+
   # EL BOTON. Gira entero, así que tiene que ser REDONDO y estar centrado: si el
   # recorte lo deja descentrado un par de píxeles, al girar se bambolea.
   "ui_portal": {

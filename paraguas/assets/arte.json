@@ -58,5 +58,41 @@
     "output_path": "assets/fondo_pozo-g1.png",
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/paraguas/assets/fondo_pozo-g1.png"
+  },
+  "pro_cromo_paraguas": {
+    "task_id": "gtask-8465051e90654cab869c",
+    "output_path": "assets/pro_cromo_paraguas-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/pro_cromo_paraguas-g1.png"
+  },
+  "pro_cromo_cabeza": {
+    "task_id": "gtask-99a6bd7b99854a25bb8d",
+    "output_path": "assets/pro_cromo_cabeza-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/pro_cromo_cabeza-g1.png"
+  },
+  "pro_magma_paraguas": {
+    "task_id": "gtask-993bbb77b4d44026b612",
+    "output_path": "assets/pro_magma_paraguas-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/pro_magma_paraguas-g1.png"
+  },
+  "pro_magma_cabeza": {
+    "task_id": "gtask-b6dc1d91ce054b96a026",
+    "output_path": "assets/pro_magma_cabeza-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/pro_magma_cabeza-g1.png"
+  },
+  "pro_vacio_paraguas": {
+    "task_id": "gtask-72a95b35a6cc44c98505",
+    "output_path": "assets/pro_vacio_paraguas-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/pro_vacio_paraguas-g1.png"
+  },
+  "pro_vacio_cabeza": {
+    "task_id": "gtask-ced5e45aae634ee8b7c9",
+    "output_path": "assets/pro_vacio_cabeza-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/pro_vacio_cabeza-g1.png"
   }
 }

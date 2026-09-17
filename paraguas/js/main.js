@@ -3,10 +3,12 @@
 import { VISTA, F, ajustarVista, M } from "./mundo.js";
 import { Partida } from "./juego.js";
 import { dibujar, registrarTexturas, tramoDe } from "./dibujo.js";
-import { crearHeroe, pasoHeroe, registrarArte } from "./heroe.js";
+import { crearHeroe, pasoHeroe, registrarArte, dibujarHeroe, ponerSkin } from "./heroe.js";
 import { despertar, efe, sonando, arrancarViento, soplar, callarViento, contexto, salida } from "./audio.js";
 import * as musica from "./musica.js";
-import { cargar, guardar, borrar } from "./guardado.js";
+import { cargar, guardar, borrar, sumarMonedas, tiene, comprarConMonedas, ponerse } from "./guardado.js";
+import { SKINS, porId, esPaga } from "./skins.js";
+import * as compras from "./compras.js";
 import { pilotoDedo } from "./piloto.js";
 import { ruta } from "./assets.js";
 import { t, aplicar, ponerIdioma, idioma, IDIOMAS } from "./idioma.js";
@@ -198,6 +200,133 @@ $("#m-jugar").addEventListener("click", () => { efe.menu(); jugar(); });
 $("#f-otra").addEventListener("click", () => { efe.menu(); jugar(); });
 $("#f-menu").addEventListener("click", () => { efe.menu(); alMenu(); });
 $("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); });
+$("#m-tienda").addEventListener("click", () => { efe.menu(); aLaTienda(); });
+
+// --- la tienda -----------------------------------------------------------
+//
+// La vista previa es el MUÑECO DE VERDAD cayendo, dibujado con el mismo código
+// que el juego: una foto por skin serían treinta y cuatro imágenes y, peor, se
+// desincronizarían con el dibujo el día que alguien toque una línea del rig.
+const vista = $("#t-vista");
+const vctx = vista.getContext("2d");
+let mirando = null, heroeVista = null;
+// EL AVISO PISA AL NOMBRE Y DURA HASTA EL PROXIMO TOQUE. Escribirlo directo en
+// el elemento no servía: `pintarTienda()` corre después y lo tapa con el nombre
+// de la skin, así que "te faltan 12.000" aparecía y desaparecía en el mismo
+// cuadro — o sea, no aparecía.
+let aviso = "";
+
+function aLaTienda() {
+  sincronizarPagas();
+  const d = cargar();
+  mirando = porId(d.skin);
+  heroeVista = crearHeroe(180, 30);
+  pintarTienda();
+  mostrar("p-tienda");
+  // Los precios de las pagas los da la tienda del teléfono, no el código: el
+  // precio depende del país y de la moneda, y escribirlo a mano es mostrarle a
+  // alguien un número que no es el que va a pagar.
+  compras.precios(SKINS.filter(esPaga).map((k) => k.producto)).then((m) => {
+    preciosReales = m; pintarTienda();
+  });
+}
+let preciosReales = {};
+
+/**
+ * Pasar las compras al inventario.
+ *
+ * `compras.js` sabe de PRODUCTOS (`paraguas.skin.cromo`) y el inventario sabe de
+ * SKINS (`cromo`): el que conoce las dos cosas es el catálogo, así que la
+ * traducción vive acá y no adentro del cobro. Sin este paso, comprar una skin
+ * paga la marcaba como comprada y `ponerse()` la rechazaba igual —porque mira el
+ * inventario— y quedaba pagada y no ponible, que es el peor resultado posible.
+ *
+ * Corre al arrancar (después de restaurar) y después de cada compra, así que un
+ * teléfono nuevo que restaura sus compras las encuentra puestas donde van.
+ */
+function sincronizarPagas() {
+  const d = cargar();
+  let cambio = false;
+  for (const k of SKINS)
+    if (esPaga(k) && compras.pagada(k.producto) && !d.skins[k.id]) { d.skins[k.id] = true; cambio = true; }
+  if (cambio) guardar();
+}
+
+function pintarTienda() {
+  const d = cargar();
+  $("#t-monedas").textContent = d.monedas.toLocaleString();
+  $("#t-nombre").textContent = aviso || t(`skin.${mirando.id}`);
+  $("#t-rango").textContent = t(`rango.${mirando.rango}`);
+  $("#t-rango").className = `rango ${mirando.rango}`;
+  const g = $("#t-grilla");
+  g.innerHTML = "";
+  for (const k of SKINS) {
+    const b = document.createElement("button");
+    const mio = tiene(k.id) || (esPaga(k) && compras.pagada(k.producto));
+    b.className = `skin ${k.rango}${mio ? " tengo" : ""}${d.skin === k.id ? " puesta" : ""}`;
+    const muestra = document.createElement("span");
+    muestra.className = "muestra";
+    for (const c of [k.pelo || "#d9b48f", k.bata || "#e9eef7", k.paraguas || "#97ce4c"]) {
+      const i = document.createElement("i"); i.style.background = c; muestra.append(i);
+    }
+    const nombre = document.createElement("span");
+    nombre.textContent = t(`skin.${k.id}`);
+    const precio = document.createElement("span");
+    precio.className = "precio";
+    if (mio) precio.textContent = d.skin === k.id ? t("tienda.puesta") : t("tienda.poner");
+    else if (esPaga(k)) precio.textContent = preciosReales[k.producto] || t("tienda.paga");
+    else {
+      precio.textContent = k.precio.toLocaleString();
+      if (d.monedas < k.precio) precio.classList.add("caro");
+    }
+    b.append(muestra, nombre, precio);
+    b.addEventListener("click", () => elegirSkin(k));
+    g.append(b);
+  }
+}
+
+function elegirSkin(k) {
+  const d = cargar();
+  mirando = k;
+  aviso = "";
+  const mio = tiene(k.id) || (esPaga(k) && compras.pagada(k.producto));
+  if (mio) {
+    // Ya es tuya: un toque la pone. Sin confirmación, porque no se pierde nada.
+    ponerse(k.id); ponerSkin(k.id); efe.hito();
+  } else if (esPaga(k)) {
+    comprarPaga(k);
+  } else if (d.monedas >= k.precio) {
+    if (comprarConMonedas(k.id, k.precio)) { ponerse(k.id); ponerSkin(k.id); efe.hito(); }
+  } else {
+    // NO ALCANZA: se dice CUANTO falta, no "no te alcanza". Es el mismo toque y
+    // la diferencia entre un juego que te muestra la meta y uno que te dice que
+    // no.
+    efe.golpe();
+    aviso = t("tienda.falta", { n: (k.precio - d.monedas).toLocaleString() });
+  }
+  pintarTienda();
+}
+
+async function comprarPaga(k) {
+  if (!compras.disponible()) {
+    // Sin tienda conectada NO se desbloquea nada y no se simula ninguna compra.
+    efe.golpe();
+    aviso = t("tienda.sin-tienda");
+    pintarTienda();
+    return;
+  }
+  const r = await compras.comprar(k.producto);
+  if (r.ok) { sincronizarPagas(); ponerse(k.id); ponerSkin(k.id); efe.hito(); aviso = ""; }
+  else { efe.golpe(); aviso = t("tienda.sin-tienda"); }
+  pintarTienda();
+}
+
+$("#t-restaurar").addEventListener("click", async () => {
+  efe.menu();
+  await compras.restaurar();
+  sincronizarPagas();
+  pintarTienda();
+});
 
 // --- idiomas -------------------------------------------------------------
 // Cambiar de idioma reescribe los `data-t` y ADEMAS vuelve a pintar lo que se
@@ -228,17 +357,24 @@ $("#m-idioma").addEventListener("click", () => {
 $("#j-salir").addEventListener("click", () => { efe.menu(); alMenu(); });
 for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); alMenu(); });
-$("#aj-sonido").addEventListener("change", (e) => {
-  const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
-});
+function interruptor(sel, campo, alCambiar) {
+  const b = $(sel);
+  const pintar = (v) => b.setAttribute("aria-pressed", String(!!v));
+  b.addEventListener("click", () => {
+    const d = cargar();
+    d.ajustes[campo] = !d.ajustes[campo];
+    guardar(); pintar(d.ajustes[campo]); alCambiar(d.ajustes[campo]);
+  });
+  return pintar;
+}
+const pintarSonido = interruptor("#aj-sonido", "sonido", (v) => { efe.menu(); sonando(v); });
 // LA MUSICA SE APAGA APARTE DE LOS EFECTOS. Son dos molestias distintas: la
 // música cansa a la décima partida y los efectos no, y el que juega con un
 // video de fondo quiere callar la música sin perder el sonido del paraguas —que
 // es información, no decoración.
-$("#aj-musica").addEventListener("change", (e) => {
-  const d = cargar(); d.ajustes.musica = e.target.checked; guardar();
-  musica.sonando(e.target.checked);
-  if (e.target.checked && !partida) musica.arrancarTema();
+const pintarMusica = interruptor("#aj-musica", "musica", (v) => {
+  musica.sonando(v);
+  if (v && !partida) musica.arrancarTema();
 });
 $("#m-borrar").addEventListener("click", () => {
   if (!confirm(t("menu.borrar-confirmar"))) return;
@@ -295,6 +431,11 @@ function terminar(p) {
   d.mejorMonedas = Math.max(d.mejorMonedas, p.monedas);
   d.partidas++;
   guardar();
+  // LA CHATARRA DE LA PARTIDA SE SUMA A LA BILLETERA. Hasta ahora era un número
+  // que se miraba y se tiraba; ahora es lo que se gasta en la tienda, así que
+  // recogerla pasó de ser un adorno a ser la única razón para desviarse de la
+  // línea buena.
+  const bolsillo = sumarMonedas(p.monedas);
   $("#f-metros").textContent = `${p.metros} m`;
   $("#f-record").hidden = !record;
   $("#f-lista").innerHTML = "";
@@ -303,7 +444,8 @@ function terminar(p) {
     li.innerHTML = `<span>${k}</span><b>${v}</b>`;
     $("#f-lista").append(li);
   };
-  item(t("fin.chatarra"), p.monedas);
+  item(t("fin.ganaste"), `+${p.monedas} ◆`);
+  item(t("tienda.monedas", { n: bolsillo }), "");
   item(t("fin.roces"), p.roces);
   item(t("fin.puntaje"), p.puntaje);
   item(t("fin.mejor"), `${d.mejor} m`);
@@ -353,11 +495,34 @@ function bucle(ahora) {
   }
   if (partida) { dibujar(ctx, partida); pintarHud(partida); }
   else if (demo) dibujar(ctx, demo);
+  if (!$("#p-tienda").hidden) pintarVista();
+}
+
+/**
+ * La vista previa de la tienda.
+ *
+ * SE LE PONE LA SKIN MIRADA Y SE LA SACA AL SALIR. `heroe.js` guarda UNA skin
+ * puesta —la del juego— porque dibujar el muñeco es una sola cosa y tener dos
+ * personajes a la vez no pasa nunca. Para la vista previa se la cambia, se
+ * dibuja y se la devuelve en el mismo cuadro: si se la dejara puesta, salir de
+ * la tienda mirando una skin que no es tuya te la dejaría puesta en el juego.
+ */
+function pintarVista() {
+  const puesta = cargar().skin;
+  ponerSkin(mirando ? mirando.id : puesta);
+  vctx.clearRect(0, 0, 360, 150);
+  pasoHeroe(heroeVista, 180, 30, Math.sin(performance.now() / 700) * 2.2, 6, 1);
+  dibujarHeroe(vctx, heroeVista, 180, 30, 1, F.ANCHO_ABIERTO, 0);
+  ponerSkin(puesta);
 }
 
 // --- arranque ------------------------------------------------------------
 const ARTE = ["paraguas_abierto", "paraguas_cerrado", "rilo_cabeza", "rilo_torso",
-              "rilo_brazo_alto", "rilo_brazo_bajo", "rilo_pierna_alta", "rilo_pierna_baja"];
+              "rilo_brazo_alto", "rilo_brazo_bajo", "rilo_pierna_alta", "rilo_pierna_baja",
+              // El dibujo propio de las tres skins pagas.
+              "pro_cromo_paraguas", "pro_cromo_cabeza",
+              "pro_magma_paraguas", "pro_magma_cabeza",
+              "pro_vacio_paraguas", "pro_vacio_cabeza"];
 const TEXTURAS = ["pared", "repisa", "fondo_pozo"];
 
 function traer(url) {
@@ -375,19 +540,28 @@ function traer(url) {
 // sigue siendo jugable con cero archivos.
 (async () => {
   const d = cargar();
-  $("#aj-sonido").checked = d.ajustes.sonido;
+  pintarSonido(d.ajustes.sonido);
   sonando(d.ajustes.sonido);
-  $("#aj-musica").checked = d.ajustes.musica;
+  pintarMusica(d.ajustes.musica);
   musica.sonando(d.ajustes.musica);
   // La pantalla de idiomas se muestra UNA vez, la primera. El demo del fondo
   // arranca igual: la primera pantalla del juego también tiene que estar viva.
   elegir(d.ajustes.idioma || "en", false);
+  ponerSkin(d.skin);
+  // Restaurar compras al arrancar: quien cambió de teléfono ya pagó, y no tiene
+  // por qué buscar un botón para que se lo reconozcan.
+  compras.restaurar().then(sincronizarPagas).catch(() => {});
+  sincronizarPagas();
   if (!demo) arrancarDemo();
   if (d.ajustes.idioma) alMenu();
   else mostrar("p-idioma");
   requestAnimationFrame(bucle);
   window.PARAGUAS = { get partida() { return partida; }, get demoMetros() { return demo?.metros; },
-                     jugar, alMenu, entrada, VISTA, F };
+                     jugar, alMenu, entrada, VISTA, F,
+                     // La tienda expuesta para las pruebas: es la única forma de
+                     // comprobar, por debajo de la interfaz, que sin puente
+                     // conectado no se entrega nada.
+                     compras };
 
   const arte = {}, tex = {};
   await Promise.all([

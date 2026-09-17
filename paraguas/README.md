@@ -80,7 +80,7 @@ atrás y después alcanza; cuando caés rápido, el viento te levanta las pierna
 sh pruebas/correr.sh
 ```
 
-90 comprobaciones. Las que importan:
+112 comprobaciones. Las que importan:
 
 - **`pozo.mjs`** — que el pozo **se pueda bajar**. Dos cosas por separado: que
   cada par de huecos esté dentro de lo que se corre en el tiempo que dura la
@@ -116,6 +116,65 @@ Rilo es el mismo personaje del otro juego de este repositorio: generado a partir
 de una descripción escrita para estos juegos. La idea es un homenaje declarado;
 los diseños, los nombres y el mundo son propios.
 
+
+
+## Las skins
+
+**34: una de fábrica, 30 con chatarra y 3 con dinero real.**
+
+Las treinta se hacen con código y **pesan cero**. Treinta dibujos nuevos serían
+medio megabyte adentro del archivo único —más que el juego entero— y encima
+treinta personajes que no se parecen entre sí. Cada skin es una tabla: de qué
+color se tiñe cada pieza del muñeco, qué accesorio vectorial lleva en la cabeza,
+qué aura deja atrás y de qué color queda el paraguas. Diez accesorios, siete
+auras y una paleta alcanzan, y el muñeco sigue siendo el mismo muñeco — que es
+lo que hace que una skin se lea como la misma persona disfrazada.
+
+Teñir usa el modo `color`, que reemplaza el matiz pero **deja la luminosidad**:
+las sombras, los pliegues y el contorno negro siguen ahí. Pintando liso, cada
+pieza queda una mancha plana con forma de brazo. Y se tiñe **una vez y se
+guarda**: la receta son tres operaciones de lienzo por pieza, y hecha en cada
+cuadro son mil seiscientas por segundo para dibujar siempre lo mismo.
+
+**Los precios salen de una medición.** Un robot con el control de verdad junta
+190 monedas en 66 segundos; una persona junta del orden de cien por minuto. Con
+eso una común son cinco minutos y una legendaria son entre siete y veinte horas.
+Juntarlas todas son **614.850 monedas ≈ 102 horas**. Están caras a propósito:
+una tienda donde todo se compra en una tarde deja de ser una tienda a la tarde
+siguiente.
+
+### Las tres pagas
+
+Son las únicas con **dibujo propio** —paraguas y cabeza generados, no el muñeco
+base teñido— y esa es exactamente la razón por la que se pueden cobrar aparte:
+lo que se paga es algo que el juego no puede generar solo. Una skin paga que
+fuera "las mismas piezas pero doradas" sería cobrar por un número más alto.
+
+**`js/compras.js` hoy no cobra nada, y eso es a propósito.** El juego no sabe de
+plata: pregunta si hay tienda, pregunta si la skin está paga, y llama a
+`comprar()`. Sin nada conectado, el botón dice "no disponible", no se cobra, no
+se pide ningún dato y **no se desbloquea nada**. Un botón que simula una compra
+y entrega la skin igual es una mentira que además arruina la economía.
+
+Para conectarla, hay que darle un objeto con tres funciones antes de que arranque
+el juego:
+
+    window.PARAGUAS_COMPRAS = {
+      async catalogo(ids)  → [{ id, precio: "US$ 2,99" }]
+      async comprar(id)    → { ok: true } | { ok: false, motivo }
+      async restaurar()    → [ids ya comprados]
+    }
+
+`id` es el `producto` de la skin (`paraguas.skin.cromo`, `…magma`, `…vacio`), que
+es el mismo identificador que hay que dar de alta en Google Play o App Store.
+Del lado del juego no hay nada más que hacer.
+
+**Tres cosas que este archivo no hace, y no las tiene que hacer:** no ve datos de
+pago (eso es de la tienda del teléfono, que es la única que puede), no sabe de
+precios (los muestra tal como se los da la tienda, porque dependen del país y de
+la moneda), y **no valida el recibo**. Lo que marca como comprado vive en el
+aparato y se puede editar a mano: para una tienda de verdad, la validación va del
+lado del servidor y `restaurar()` tiene que consultarlo.
 
 ## El sonido
 
