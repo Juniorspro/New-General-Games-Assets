@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1020">
+<title>Garfio</title>
+<meta name="description" content="Una torre sin techo y un gancho. Apoyás el dedo y te colgás; arrastrás y te hamacás; soltás y salís disparado.">
+<link rel="stylesheet" href="css/g.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b1020'/><circle cx='8' cy='5' r='2.6' fill='none' stroke='%235ad8ff' stroke-width='1.4'/><path d='M8 8v5' stroke='%23d9d2c4' stroke-width='1.2'/></svg>">
+</head>
+<body>
+
+<!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego queda
+     después del HUD en el orden del documento, y como #p-juego crea su propio
+     contexto de apilamiento, se pintaría ENCIMA del HUD. -->
+<canvas id="lienzo" width="360" height="640" aria-label="La torre" data-t-attr="aria-label:doc.lienzo"></canvas>
+
+<!-- ───────────── idioma ─────────────
+     VA ANTES DEL MENU Y NO ADENTRO DE AJUSTES: buscar dónde se cambia el idioma
+     en un idioma que no sabés leer es exactamente el problema. Se pregunta una
+     vez, se guarda y no se vuelve a preguntar. -->
+<main id="p-idioma" class="pantalla centrado" hidden>
+  <div class="tapa">
+    <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Garfio" width="420" height="150"></h1>
+    <h2 class="idioma-t" data-t="idioma.titulo">Elegí tu idioma</h2>
+    <div class="botones" id="idiomas">
+      <button class="chico grande-op" data-idioma="en"><b>EN</b> English</button>
+      <button class="chico grande-op" data-idioma="es"><b>ES</b> Español</button>
+      <button class="chico grande-op" data-idioma="pt"><b>PT</b> Português</button>
+    </div>
+    <p class="bajada" data-t="idioma.bajada">Se puede cambiar después desde el menú.</p>
+  </div>
+</main>
+
+<!-- ───────────── menú ───────────── -->
+<main id="p-menu" class="pantalla centrado" hidden>
+  <div class="tapa">
+    <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Garfio" width="420" height="150"></h1>
+    <p class="bajada" data-t-html="menu.bajada"><b>Apoyá</b> en una argolla y el gancho se clava.
+      <b>Arrastrá</b> para hamacarte. <b>Soltá</b> y salís por la tangente.</p>
+
+    <!-- El botón es una ARGOLLA dibujada: lo único que se toca en esta pantalla
+         y lo mismo que se toca todo el juego. El aro gira, el gancho no. -->
+    <button id="m-jugar" class="aro" aria-label="Subir" data-t-attr="aria-label:menu.jugar-aria">
+      <span class="anillo" aria-hidden="true"></span>
+      <span class="garra" aria-hidden="true"></span>
+      <span class="aro-txt" data-t="menu.jugar">SUBIR</span>
+    </button>
+
+    <p class="record"><span data-t="menu.mejor">Mejor altura</span> <b id="m-mejor">0 m</b>
+      <span id="m-partidas" class="tenue"></span></p>
+
+    <div class="botones fila chicos">
+      <button id="m-como" class="chico" data-t="menu.como">? Cómo se juega</button>
+      <label class="opcion chico-op"><input type="checkbox" id="aj-sonido">
+        <span data-t="menu.sonido">Sonido</span></label>
+      <button id="m-idioma" class="chico" aria-label="Idioma" data-t-attr="aria-label:menu.idioma">EN</button>
+      <button id="m-borrar" class="chico peligro" data-t="menu.borrar">Borrar</button>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── cómo se juega ───────────── -->
+<main id="p-como" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico" data-t="como.atras">← Atrás</button>
+    <h2 data-t="como.titulo">Cómo se juega</h2></header>
+  <div class="texto">
+    <p class="destacado" data-t-html="como.destacado">Un dedo hace todo.</p>
+
+    <h3 data-t="como.h-truco">El truco</h3>
+    <p data-t-html="como.truco"></p>
+
+    <h3 data-t="como.h-hay">Lo que hay</h3>
+    <dl>
+      <dt data-t="como.dt-argollas"></dt><dd data-t-html="como.dd-argollas"></dd>
+      <dt data-t="como.dt-oxidadas"></dt><dd data-t-html="como.dd-oxidadas"></dd>
+      <dt data-t="como.dt-tuercas"></dt><dd data-t-html="como.dd-tuercas"></dd>
+      <dt data-t="como.dt-paredes"></dt><dd data-t-html="como.dd-paredes"></dd>
+      <dt data-t="como.dt-marea"></dt><dd data-t-html="como.dd-marea"></dd>
+    </dl>
+
+    <h3 data-t="como.h-puntaje">El puntaje</h3>
+    <p data-t-html="como.puntaje"></p>
+
+    <h3 data-t="como.h-hecho">De qué está hecho</h3>
+    <p data-t-html="como.hecho1"></p>
+    <p data-t-html="como.hecho2"></p>
+  </div>
+</main>
+
+<!-- ───────────── juego ───────────── -->
+<main id="p-juego" class="pantalla juego" hidden>
+  <div class="hud">
+    <button id="j-salir" class="hud-btn" aria-label="Volver al menú" data-t-attr="aria-label:hud.salir">✕</button>
+    <b id="h-metros" class="metros">0 m</b>
+    <div class="hud-dato"><span>⬡</span><b id="h-tuercas">0</b></div>
+  </div>
+  <div id="h-piso" class="piso">—</div>
+</main>
+
+<!-- ───────────── final ───────────── -->
+<main id="p-fin" class="pantalla centrado" hidden>
+  <div class="tapa fin">
+    <p id="f-record" class="record-nuevo" hidden data-t="fin.record">¡RÉCORD!</p>
+    <p class="fin-rotulo" data-t="fin.rotulo">Te caíste</p>
+    <h2 id="f-metros">0 m</h2>
+    <ul id="f-lista" class="lista"></ul>
+    <button id="f-otra" class="aro chico-aro" aria-label="Otra vez" data-t-attr="aria-label:fin.otra-aria">
+      <span class="anillo" aria-hidden="true"></span>
+      <span class="garra" aria-hidden="true"></span>
+      <span class="aro-txt" data-t="fin.otra">OTRA</span>
+    </button>
+    <div class="botones fila chicos">
+      <button id="f-menu" class="chico" data-t="fin.menu">Al menú</button>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

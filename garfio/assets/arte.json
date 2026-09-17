@@ -1,0 +1,38 @@
+{
+  "bicho": {
+    "task_id": "gtask-49b2db3fd69e4774a97c",
+    "output_path": "assets/bicho-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/garfio/assets/bicho-g1.png"
+  },
+  "ui_anillo": {
+    "task_id": "gtask-f87277245adb42828f05",
+    "output_path": "assets/ui_anillo-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/garfio/assets/ui_anillo-g1.png"
+  },
+  "ui_garra": {
+    "task_id": "gtask-972b1607bbac48f39d51",
+    "output_path": "assets/ui_garra-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/garfio/assets/ui_garra-g1.png"
+  },
+  "ui_logo": {
+    "task_id": "gtask-6e9dad4a10dd49a4bd72",
+    "output_path": "assets/ui_logo-g2.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/garfio/assets/ui_logo-g2.png"
+  },
+  "ui_marco": {
+    "task_id": "gtask-76a079810e4b48fd9719",
+    "output_path": "assets/ui_marco-g2.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/garfio/assets/ui_marco-g2.png"
+  },
+  "ui_chapa": {
+    "task_id": "gtask-a30e5f78ef524a958efa",
+    "output_path": "assets/ui_chapa-g2.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/garfio/assets/ui_chapa-g2.png"
+  }
+}

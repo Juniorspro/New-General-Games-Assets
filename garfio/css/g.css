@@ -1,0 +1,260 @@
+/* Garfio — hoja única.
+   Vertical y nada más: el juego se dibuja en 360 de ancho y se escala entero,
+   así que la interfaz vive dentro de ese rectángulo. Las medidas van en svh y
+   no en vh porque en un teléfono vh incluye la barra del navegador y el último
+   renglón queda siempre tapado. */
+
+:root {
+  --fondo: #0b1020;
+  --borde: #26335c;
+  --texto: #e9eef7;
+  --tenue: #93a0bb;
+  --cian: #5ad8ff;
+  --cian-claro: #b6f0ff;
+  --cian-hondo: #1d6c8c;
+  --oxido: #e08b2c;
+  --mal: #ff6b6b;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--fondo); color: var(--texto);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%; overscroll-behavior: none;
+}
+body { min-height: 100svh; display: flex; align-items: center; justify-content: center; }
+button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* `touch-action: none` es obligatorio: sin eso el navegador se queda el
+   arrastre para hacer scroll y el dedo —que acá es el juego entero— llega una
+   vez de cada tres. */
+#lienzo {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  touch-action: none; display: block; z-index: 0;
+  box-shadow: 0 0 0 100vmax var(--fondo);
+  transition: filter .25s ease;
+}
+/* EL FONDO DE LOS MENUS ES EL JUEGO, DESENFOCADO. El filtro lo aplica el
+   compositor sobre el lienzo entero, así que cuesta lo mismo que una capa de
+   más y no toca el bucle. Y nunca se desactualiza. */
+body.borroso #lienzo { filter: blur(6px) saturate(1.35) brightness(1.1); }
+
+.pantalla {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: var(--an, min(360px, 100vw)); height: var(--al, min(640px, 100svh));
+  display: flex; flex-direction: column; z-index: 2;
+}
+.pantalla[hidden] { display: none; }
+.centrado { align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+
+/* El menú y el final son un VELO, no una pared: atrás se tiene que seguir
+   viendo que alguien está trepando. La de "cómo se juega" sí queda opaca,
+   porque ahí lo que hay que leer es el texto. */
+#p-idioma, #p-menu, #p-fin { background: radial-gradient(130% 70% at 50% 0%, rgba(12,22,40,.22), rgba(5,8,16,.62)); }
+#p-como { background: radial-gradient(130% 60% at 50% 0%, #101a30 0%, var(--fondo) 72%); }
+
+/* EL MARCO ES UNA IMAGEN CORTADA EN NUEVE (`border-image`), no un borde.
+   Un dibujo de vigas remachadas no se puede estirar entero: las esquinas
+   quedarían deformes y los remaches ovalados. `border-image` deja las cuatro
+   esquinas del tamaño original y estira sólo los lados, así que el mismo dibujo
+   de 320×320 sirve para el panel alto del menú y para el bajo del final. El
+   relleno NO se dibuja (sin `fill`): el centro es transparente y lo que se ve
+   ahí es el degradé de abajo, y a través suyo la torre desenfocada. */
+.tapa {
+  width: 100%; text-align: center;
+  padding: 12px 10px 10px;
+  border: 30px solid transparent;
+  border-image: url(../assets/arte/ui_marco.webp) 30% / 30px / 0 round;
+  background: radial-gradient(120% 90% at 50% 10%, rgba(14,26,44,.42), rgba(5,8,16,.7));
+  background-clip: padding-box;
+  filter: drop-shadow(0 12px 26px rgba(0,0,0,.6));
+  max-height: 100%; overflow-y: auto;
+}
+
+/* El título es un dibujo, no texto con sombras. El `alt` lleva la palabra, así
+   que el lector de pantalla sigue leyendo "Garfio". */
+.logo { margin: 0 0 2px; line-height: 0; }
+.logo img {
+  width: min(82%, 246px); height: auto;
+  filter: drop-shadow(0 0 16px rgba(90,216,255,.45));
+  animation: colgar 4.5s ease-in-out infinite;
+}
+@keyframes colgar { 50% { transform: rotate(-1.4deg) translateY(2px); } }
+
+.bajada { color: var(--tenue); margin: 0 0 8px; font-size: 13px; }
+.bajada b { color: var(--texto); }
+.record { color: var(--tenue); font-size: 13px; margin: 0 0 6px; letter-spacing: .3px; }
+.record b { color: var(--cian-claro); font-size: 15px; }
+.tenue { color: var(--tenue); opacity: .7; }
+
+/* ── el botón: una argolla ──
+   Es el único objeto grande de la pantalla y lo mismo que se toca todo el
+   juego: quien lo aprieta ya está practicando. El aro gira despacio; la garra
+   queda quieta encima, porque una garra girando se lee como un ventilador. */
+.aro {
+  position: relative; display: grid; place-items: center;
+  width: 164px; height: 164px; margin: 6px auto 16px;
+  padding: 0; border: none; background: none; box-shadow: none;
+  border-radius: 50%; cursor: pointer;
+  filter: drop-shadow(0 0 18px rgba(90,216,255,.5));
+}
+.aro .anillo, .aro .garra {
+  position: absolute; left: 50%; top: 50%; width: 100%; height: 100%;
+  background: center / contain no-repeat;
+  transform-origin: 50% 50%; pointer-events: none;
+}
+/* Van como FONDO y no como <img> por el empaquetado: el botón aparece dos veces
+   (menú y final) y cada etiqueta metería la imagen entera otra vez en base64. */
+.aro .anillo {
+  background-image: url(../assets/arte/ui_anillo.webp);
+  animation: girar-aro 16s linear infinite;
+}
+.aro .garra {
+  background-image: url(../assets/arte/ui_garra.webp);
+  width: 46%; height: 46%;
+  transform: translate(-50%, -132%);
+  animation: colgar-garra 3.2s ease-in-out infinite;
+}
+@keyframes girar-aro {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes colgar-garra {
+  0%, 100% { transform: translate(-50%, -132%) rotate(-6deg); }
+  50%      { transform: translate(-50%, -132%) rotate(6deg); }
+}
+/* La palabra va clara y con contorno negro: oscura desaparecía sobre el metal
+   claro del aro, y el aro gira, así que el fondo de la letra cambia siempre. */
+.aro .aro-txt {
+  position: relative; z-index: 1;
+  font-size: 26px; font-weight: 900; letter-spacing: 2px; color: #f2fbff;
+  text-shadow: 2px 2px 0 #05121c, -2px 2px 0 #05121c, 2px -2px 0 #05121c,
+               -2px -2px 0 #05121c, 0 0 14px rgba(2,10,20,.9);
+}
+.aro:active { transform: scale(.95); }
+.aro.chico-aro { width: 116px; height: 116px; margin: 4px auto 12px; }
+.aro.chico-aro .aro-txt { font-size: 18px; }
+
+/* ── los botones: una chapa de taller ──
+   La misma imagen de 192×192 para todos, cortada en nueve. Acá el centro SI se
+   dibuja (`fill`) porque ahí está la chapa; en el marco no, porque hay agujero. */
+.botones { display: flex; flex-direction: column; gap: 9px; }
+.botones.fila { flex-direction: row; justify-content: center; }
+button {
+  font: inherit; color: #dff1ff; border: 12px solid transparent;
+  border-image: url(../assets/arte/ui_chapa.webp) 30% fill / 12px / 0 stretch;
+  background: none; box-shadow: none;
+  padding: 8px 12px; min-height: 46px; cursor: pointer; border-radius: 0;
+}
+button:active { transform: translateY(2px); }
+.chico { padding: 5px 10px; font-size: 13px; min-height: 36px; }
+/* Los botones del pie se ven chicos pero SE TOCAN GRANDE: por debajo de 44 px
+   el dedo falla una de cada tres veces, y no hay nada más frustrante que un
+   botón que a veces no anda. El tamaño visual lo da el texto; el área de toque,
+   el min-height. */
+.botones.chicos { gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.botones.chicos .chico { min-height: 44px; }
+/* El de borrar lleva la MISMA chapa y sólo cambia el color de la letra: teñir
+   la imagen con un filtro teñía también el texto. */
+.peligro { color: #ff8f8f; }
+#m-idioma { font-weight: 800; letter-spacing: 1px; min-width: 46px; }
+
+.opcion { display: flex; align-items: center; justify-content: center; gap: 7px;
+          color: var(--tenue); font-size: 12.5px; margin: 0; }
+.opcion input { width: 17px; height: 17px; accent-color: var(--cian); }
+.chico-op { min-height: 44px; }
+
+/* ── la pantalla de idiomas ── */
+.idioma-t { margin: 8px 0 12px; font-size: 19px; color: var(--cian-claro); }
+#idiomas { gap: 9px; margin-bottom: 12px; }
+/* Los tres van GRANDES aunque hereden `.chico`: son lo único que se toca en esa
+   pantalla y el que los toca todavía no entiende nada de lo que dice alrededor. */
+.grande-op { min-height: 52px; font-size: 15px; padding: 12px 14px; }
+.grande-op b { color: var(--cian-claro); margin-right: 8px; letter-spacing: 1px; }
+
+/* --- texto largo --- */
+.barra { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+         background: rgba(8,12,24,.95); border-bottom: 2px solid var(--borde); }
+.barra h2 { margin: 0; font-size: 17px; }
+.texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
+.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--cian); }
+.texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
+.texto p b { color: var(--texto); }
+.destacado { background: rgba(18,32,54,.8); border-left: 3px solid var(--cian);
+             padding: 11px 12px; border-radius: 0 8px 8px 0; }
+.texto dl { margin: 0; }
+.texto dt { font-weight: 700; margin-top: 10px; font-size: 14px; }
+.texto dd { margin: 2px 0 0; color: var(--tenue); font-size: 13.5px; }
+.texto dd b { color: var(--texto); }
+
+/* --- HUD --- */
+.juego { pointer-events: none; }
+.juego button { pointer-events: auto; }
+.hud { display: flex; align-items: center; gap: 8px; padding: 10px 10px 0; }
+.hud-btn { width: 40px; height: 40px; min-height: 40px; padding: 0; font-size: 15px; line-height: 1; }
+.metros {
+  flex: 1; text-align: left; font-size: 21px; font-weight: 800;
+  font-variant-numeric: tabular-nums; color: #dff1ff;
+  text-shadow: 0 2px 6px rgba(0,0,0,.8);
+}
+/* Cuando el piso empieza a subir, los metros laten. Es el segundo aviso: el
+   primero es el borde rojo abajo, y dos avisos distintos para lo mismo es lo
+   que hace que no se pase por alto. */
+.metros.apuro { color: #ff9b9b; animation: latir .7s infinite; }
+@keyframes latir { 50% { opacity: .45; } }
+.hud-dato { background: rgba(8,12,24,.7); border-radius: 8px; padding: 4px 8px;
+            font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; }
+.hud-dato span { color: #ffd84a; margin-right: 3px; }
+.piso { margin: 6px 10px 0; align-self: flex-start;
+        background: rgba(8,12,24,.6); border: 1px solid rgba(90,216,255,.22);
+        border-radius: 7px; padding: 3px 9px; font-size: 12px; color: #b9d8e8; }
+
+/* --- final --- */
+.fin h2 { margin: 0 0 10px; font-size: 42px; font-weight: 900;
+          font-variant-numeric: tabular-nums;
+          color: var(--cian-claro); text-shadow: 0 0 24px rgba(90,216,255,.5); }
+.fin-rotulo { margin: 0; color: var(--tenue); font-size: 13px; letter-spacing: 3px;
+              text-transform: uppercase; }
+.record-nuevo { margin: 0 0 4px; color: var(--cian); font-weight: 800; letter-spacing: 3px;
+                animation: pum .5s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes pum { from { transform: scale(.4); opacity: 0; } }
+.lista { list-style: none; padding: 0; margin: 0 0 12px; text-align: left; }
+.lista li { display: flex; justify-content: space-between; gap: 10px;
+            padding: 6px 2px; border-bottom: 1px solid rgba(90,216,255,.18); font-size: 14px; }
+.lista span { color: var(--tenue); }
+.lista b { font-variant-numeric: tabular-nums; }
+
+/* PANTALLA MEDIANA (un 16:9 de 640 de alto). Con las medidas del 19,5:9 la tapa
+   mide más que la pantalla, se vuelve desplazable y la última fila de botones
+   queda abajo del corte — que es la forma silenciosa de esconderla. */
+@media (max-height: 700px) and (min-height: 471px) {
+  .logo img { width: min(70%, 204px); }
+  .bajada { font-size: 12.5px; }
+  .aro { width: 142px; height: 142px; margin: 4px auto 12px; }
+  .aro .aro-txt { font-size: 23px; }
+  .botones.chicos { margin-top: 6px; }
+}
+
+/* EL TELEFONO ACOSTADO. El juego es vertical y ahí no se juega, pero se entra
+   igual —basta girar el aparato sin querer— y el menú tiene que seguir siendo
+   un menú, entero y sin desplazar. */
+@media (max-height: 470px) {
+  .tapa { border-width: 20px; border-image-width: 20px; padding: 4px 8px 6px; }
+  .logo { margin: 0; }
+  .logo img { width: min(44%, 126px); }
+  .idioma-t { font-size: 15px; margin: 4px 0 8px; }
+  .grande-op { min-height: 44px; font-size: 13.5px; padding: 8px 12px; }
+  #idiomas { gap: 6px; margin-bottom: 6px; }
+  .bajada { display: none; }
+  .aro { width: 78px; height: 78px; margin: 2px auto 8px; }
+  .aro .aro-txt { font-size: 15px; }
+  .aro.chico-aro { width: 70px; height: 70px; margin: 2px auto 8px; }
+  .aro.chico-aro .aro-txt { font-size: 13px; }
+  .record { font-size: 11.5px; margin: 0; }
+  .record b { font-size: 13px; }
+  .botones.chicos { margin-top: 4px; gap: 5px; }
+  .botones.chicos .chico { font-size: 11.5px; padding: 3px 8px; }
+  .fin h2 { font-size: 28px; margin-bottom: 4px; }
+  .lista li { padding: 3px 2px; font-size: 12px; }
+}
