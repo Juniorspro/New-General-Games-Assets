@@ -468,6 +468,21 @@ function apilar(clave, cerrar){
    quedar vacía, y pedir «atrás» en el medio dejaría el historial corriendo
    atrás de la pantalla —`history.back()` no es inmediato, y el `pushState` de
    la que abre llegaría antes que el `popstate` de la que cerró—. */
+/* Esconder una ventana ya no es instantáneo, así que hay un momento en que
+   está visible pero ya no cuenta: `pointer-events:none` en `.saliendo` evita
+   que alguien le haga clic a algo que para el programa ya se cerró. */
+function cerrarConGracia(v){
+  if (quieto){ v.hidden = true; return; }
+  v.classList.remove("entrando");
+  v.classList.add("saliendo");
+  if (v._yendose) clearTimeout(v._yendose);
+  v._yendose = setTimeout(function(){
+    v._yendose = null;
+    v.classList.remove("saliendo");
+    v.hidden = true;
+  }, 190);
+}
+
 function desapilar(clave, callado){
   var i = enPila(clave);
   if (i < 0) return false;
@@ -486,9 +501,11 @@ window.addEventListener("popstate", function(){
 
 function cerrarVentana(id){
   var v = $(id); if (!v) return;
-  /* el `|| v.hidden = true` es para la ventana que abrió algo que no pasó por
-     acá: igual se cierra, sólo que sin historial */
-  if (!desapilar(id)) v.hidden = true;
+  /* el respaldo es para la ventana que abrió algo que no pasó por acá: igual
+     se cierra, sólo que sin historial. Anima como las demás, porque si no una
+     ventana se desvanece y la de al lado desaparece de golpe, y eso se lee
+     como que una de las dos está rota. */
+  if (!desapilar(id)) cerrarConGracia(v);
 }
 
 function abrir(id){
@@ -501,8 +518,19 @@ function abrir(id){
   if (esCelu()) pila.slice().forEach(function(x){
     if (x.clave !== id && x.clave.slice(0,2) === "v-") desapilar(x.clave, true);
   });
+  /* Si venía saliendo y la vuelven a abrir, se cancela la salida: sin esto
+     el temporizador de la animación anterior la escondería a mitad de camino
+     de estar apareciendo, y la ventana parpadearía sola. */
+  if (v._yendose){ clearTimeout(v._yendose); v._yendose = null; }
+  v.classList.remove("saliendo");
   v.hidden = false;
-  apilar(id, function(){ v.hidden = true; });
+  if (!quieto){
+    v.classList.remove("entrando");
+    void v.offsetWidth;              /* reinicia la animación si ya estaba puesta */
+    v.classList.add("entrando");
+    setTimeout(function(){ v.classList.remove("entrando"); }, 900);
+  }
+  apilar(id, function(){ cerrarConGracia(v); });
   cerrarInicio();
   alFrente(v);
   /* Lo escucha el cartel de colaborar, que espera a que la persona haya

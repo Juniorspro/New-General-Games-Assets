@@ -956,3 +956,86 @@ button{font:inherit}
   .tareas .orbe{width:62px; height:62px; margin:-14px 0 0}
   .tareas .hora{position:absolute; right:12px; margin:0}
 }
+
+/* ============================================================ movimiento
+   Las ventanas aparecían de golpe: `hidden=false` y ya estaban ahí. En un
+   escritorio de vidrio eso se siente barato, porque el vidrio tiene peso y
+   el peso se ve cuando algo llega. Todo lo de acá anima SOLO `transform`,
+   `opacity` y `filter`, que no tocan el layout: ninguna de estas reglas
+   puede mover una ventana de lugar ni cambiar cuánto mide.
+
+   Y todo muere junto al final del bloque si la persona pidió menos
+   movimiento. Eso no es un detalle de cortesía: a quien tiene vértigo o
+   migraña vestibular, una pantalla que se mueve sola le arruina el día. */
+
+@keyframes ventanaEntra{
+  from{ opacity:0; transform:translate3d(0,16px,0) scale(.955); filter:blur(7px) }
+  60% { opacity:1; transform:translate3d(0,-3px,0) scale(1.006); filter:blur(0) }
+  to  { opacity:1; transform:none; filter:none }
+}
+@keyframes ventanaSale{
+  from{ opacity:1; transform:none; filter:none }
+  to  { opacity:0; transform:translate3d(0,9px,0) scale(.965); filter:blur(5px) }
+}
+/* el brillo que cruza el vidrio cuando la ventana llega */
+@keyframes destelloVidrio{
+  from{ transform:translateX(-120%) skewX(-18deg) }
+  to  { transform:translateX(260%)  skewX(-18deg) }
+}
+
+.ventana.entrando{
+  animation:ventanaEntra .42s cubic-bezier(.16,1.02,.3,1) both;
+  will-change:transform,opacity,filter;
+}
+.ventana.saliendo{
+  animation:ventanaSale .19s cubic-bezier(.4,0,.86,.4) both;
+  pointer-events:none;
+}
+/* el destello va sobre la barra de título, que es donde el vidrio se ve
+   más: se dibuja con ::after para no agregar un nodo por ventana */
+.ventana.entrando > .titulo{ position:relative; overflow:hidden }
+.ventana.entrando > .titulo::after{
+  content:""; position:absolute; inset:0 auto 0 0; width:42%;
+  background:linear-gradient(100deg,
+    transparent, rgba(255,255,255,.72) 46%, rgba(255,255,255,.9) 54%, transparent);
+  animation:destelloVidrio .78s cubic-bezier(.3,.1,.2,1) .1s both;
+  pointer-events:none;
+}
+
+/* --- los botones acusan recibo ---
+   Un botón de vidrio que no se hunde al apretarlo no parece un botón: parece
+   un dibujo. 60 ms es lo que tarda en sentirse instantáneo sin que se note. */
+button, .boton, [role="button"]{
+  transition:transform .13s cubic-bezier(.2,.8,.3,1),
+             box-shadow .18s ease, filter .18s ease;
+}
+button:hover:not(:disabled), .boton:hover{ filter:brightness(1.05) }
+button:active:not(:disabled), .boton:active{ transform:scale(.968) }
+
+/* --- los iconos del escritorio flotan un poco al pasarles por encima --- */
+#zona-iconos button, #iconos button, .icono{
+  transition:transform .22s cubic-bezier(.16,1,.3,1), filter .22s ease;
+}
+#zona-iconos button:hover, #iconos button:hover, .icono:hover{
+  transform:translateY(-3px) scale(1.035);
+  filter:drop-shadow(0 6px 12px rgba(8,40,96,.34)) brightness(1.06);
+}
+
+/* --- el cartel de colaborar entra como lo que es: algo que se acerca --- */
+@keyframes donaEntra{
+  from{ opacity:0; transform:translate3d(0,26px,0) scale(.94) }
+  to  { opacity:1; transform:none }
+}
+#fondoDona:not([hidden]) > *{ animation:donaEntra .34s cubic-bezier(.16,1.02,.3,1) both }
+#fondoDona{ transition:opacity .2s ease }
+
+/* Acá muere todo. Ver arriba por qué. */
+@media (prefers-reduced-motion:reduce){
+  .ventana.entrando, .ventana.saliendo,
+  .ventana.entrando > .titulo::after,
+  #fondoDona:not([hidden]) > *{ animation:none !important }
+  button, .boton, [role="button"],
+  #zona-iconos button, #iconos button, .icono{ transition:none !important }
+  button:active:not(:disabled), .boton:active{ transform:none }
+  #zona-iconos button:hover, #iconos button:hover, .icono:hover{ transform:none }
+}
