@@ -505,6 +505,10 @@ function abrir(id){
   apilar(id, function(){ v.hidden = true; });
   cerrarInicio();
   alFrente(v);
+  /* Lo escucha el cartel de colaborar, que espera a que la persona haya
+     abierto algo antes de pedirle nada. Va acá y no en cada botón porque
+     social.js también abre por esta misma puerta (window.FA.abrir). */
+  document.dispatchEvent(new CustomEvent("ventana-abierta", { detail: { id: id } }));
   /* Dos motivos para NO desplazar la página acá: en el teléfono la ventana es
      `position:fixed` y pedirlo mueve el fondo por atrás; y si está despegada ya
      se ve donde la dejaste, así que desplazarse sería mover la página para
@@ -1068,9 +1072,13 @@ $("poses").addEventListener("click", function(e){
    variables de entorno, igual que el identificador de Google. Así se cambian
    desde el panel de Cloudflare sin volver a publicar, y si no hay ninguno la
    pantalla lo dice en vez de mostrar botones que no llevan a ningún lado. */
+/* Los pisos arrancan donde dice la promesa de afuera: cien pesos o un dólar.
+   Un botón mínimo de $1.000 delante de alguien al que le dijeron «desde 100»
+   no es una cifra distinta, es una promesa rota, y ahí se va. El que quiera
+   poner más tiene los otros botones y la casilla de monto libre. */
 var MONTOS = {
-  ars: { simbolo: "$",   pasos: [1000, 2500, 5000, 10000], porDefecto: 2500 },
-  usd: { simbolo: "US$", pasos: [3, 5, 10, 25],            porDefecto: 5 }
+  ars: { simbolo: "$",   pasos: [100, 500, 1000, 2500], porDefecto: 500 },
+  usd: { simbolo: "US$", pasos: [1, 3, 5, 10],          porDefecto: 3 }
 };
 var pago = null, moneda = "ars", monto = MONTOS.ars.porDefecto;
 
@@ -1162,7 +1170,25 @@ function quizasColaborar(){
   if (caja.leer("colaboro", 0)) return;              // ya dijo que sí
   var visto = caja.leer("donaVisto", 0);
   if (Date.now() - visto < 30*24*3600*1000) return;  // dijo «ahora no» hace poco
-  setTimeout(abrirDona, 900);
+
+  /* A los 900 ms el cartel tapaba el escritorio antes de que se viera nada, y
+     eso contradice lo de arriba: al que todavía no vio qué hay, pedirle plata
+     le suena a peaje. Ahora espera a que HAYA VISTO algo —abrir una ventana—
+     y si no abre ninguna, sale igual al minuto. El que ya se enganchó decide
+     con información; el que sólo miraba, se va sin que le pidan nada. */
+  var salio = false, desde = Date.now();
+  function lanzar(){
+    if (salio) return;
+    salio = true;
+    document.removeEventListener("ventana-abierta", alAbrir);
+    setTimeout(abrirDona, 1200);
+  }
+  /* Los primeros 8 s no cuentan: ahí se restauran solas las ventanas de la
+     sesión anterior, y tomarlas por un gesto de la persona nos devolvería
+     al cartel instantáneo que queríamos sacar. */
+  function alAbrir(){ if (Date.now() - desde > 8000) lanzar(); }
+  document.addEventListener("ventana-abierta", alAbrir);
+  setTimeout(lanzar, 60000);
 }
 
 $("dona-x").addEventListener("click", function(){ cerrarDona("luego"); });

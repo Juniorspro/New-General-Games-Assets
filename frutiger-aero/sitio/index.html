@@ -100,22 +100,16 @@
 
     <p class="nota" id="g-error" hidden style="color:#ffc9c0"></p>
 
+    <!-- Esto lo ve el VISITANTE, no el dueño. Antes decía cómo dar de alta una
+         aplicación de Discord y dónde pegar las variables en Cloudflare: un
+         instructivo de configuración delante de alguien que sólo quería pasar,
+         que además deja al sitio con cara de estar a medio hacer. El paso a
+         paso vive en LEEME.md, que es de quien lo necesita. Acá va lo único
+         que le sirve al que está mirando: que puede entrar igual. -->
     <p class="nota" id="sin-google" hidden>
-      <b>Todavía no hay ninguna forma de entrar con cuenta.</b> Este navegador
-      no maneja llaves de acceso y no hay ni Discord ni Google enchufados.
-      Entrá con un nombre, que anda igual.
-      <br><br>
-      Para encender <b>Discord</b> (se puede desde los 13):
-      <ol>
-        <li><b>discord.com/developers/applications</b> → <i>New Application</i>.</li>
-        <li>En <b>OAuth2</b>, en «Redirects», agregá la dirección de este sitio
-            seguida de <code>/api/discord</code>.</li>
-        <li>Copiá el <b>Client ID</b> y el <b>Client Secret</b> a Cloudflare
-            Pages → <b>Settings</b> → <b>Variables</b>, con los nombres
-            <code>DISCORD_CLIENT_ID</code> y <code>DISCORD_SECRET</code>.</li>
-      </ol>
-      El secreto va como <i>secreto</i>, no como variable común: no tiene que
-      volver a verse nunca.
+      <b>Entrá con un nombre y listo.</b> Este navegador no maneja llaves de
+      acceso, así que por ahora se entra así: escribí cómo querés que te vean
+      y pasá. No hace falta contraseña ni correo.
     </p>
     </div><!-- /paso1 -->
 
@@ -978,7 +972,7 @@
   <div class="hora"><span id="t-hora">--:--</span><br><span class="dia" id="t-dia">&nbsp;</span></div>
 </nav>
 
-<script src="js/escritorio.38df15f6.js"></script>
+<script src="js/escritorio.890178ee.js"></script>
 <script src="js/social.2c7eafbd.js"></script>
 <script type="module" src="js/mascota.b786a449.js"></script>
 </body>
