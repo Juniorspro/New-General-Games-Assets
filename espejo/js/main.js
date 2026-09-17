@@ -7,17 +7,26 @@
 // una hora no cambia nada.
 
 import { Partida } from "./juego.js";
-import { dibujar, celdaDe, marcarToque, VISTA } from "./dibujo.js";
+import { dibujar, celdaDe, marcarToque, chispear, barrido, registrarArte, rutaArte, COLOR, VISTA } from "./dibujo.js";
 import { NIVELES } from "./niveles.js";
-import { despertar, efe, sonando } from "./audio.js";
+import { despertar, efe, sonando, contexto, salida } from "./audio.js";
+import * as musica from "./musica.js";
 import { cargar, guardar, borrar, lucesDe, anotar, abiertos, totalLuces } from "./guardado.js";
 import { t, aplicar, ponerIdioma, idioma, IDIOMAS } from "./idioma.js";
 
 const $ = (s) => document.querySelector(s);
+
+// Despertar el audio ES el momento de conectar la música: antes no hay contexto
+// —el navegador no deja crearlo sin un gesto— y después habría que acordarse.
+function despertarTodo() {
+  despertar();
+  musica.conectar(contexto(), salida());
+}
 const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d");
 let partida = null;
 let destello = null;
+let gano = 0;                    // cuándo se ganó, para el barrido de luz
 
 // --- tamaño --------------------------------------------------------------
 // El tablero se dibuja siempre en 360 de ancho y se escala entero: así una
@@ -48,18 +57,38 @@ redimensionar();
 // a alguien que ni siquiera quería jugar todavía.
 lienzo.addEventListener("pointerup", (ev) => {
   if (!partida || partida.ganado) return;
-  despertar();
+  despertarTodo();
   const r = lienzo.getBoundingClientRect();
   const px = (ev.clientX - r.left) / esc, py = (ev.clientY - r.top) / esc;
   const cel = celdaDe(partida.nivel, px, py);
   if (!cel) return;
-  const antes = partida.prendidos.size;
+  const antes = new Set(partida.prendidos);
   if (!partida.tocar(cel.c, cel.f)) return;
   destello = { ...cel, t: performance.now() };
-  efe.espejo();
-  if (partida.prendidos.size > antes) efe.prende();
-  else if (partida.prendidos.size < antes) efe.apaga();
+  efe.espejo(partida.estado[partida.celda(cel.c, cel.f).i]);
+  // LAS CHISPAS SALEN DEL OBJETIVO QUE CAMBIO, no del espejo que tocaste. El
+  // espejo dice QUE hiciste algo —para eso está el destello— y el objetivo dice
+  // SI SIRVIO, que es la única pregunta que importa. Y salen del que se apagó
+  // también: perder un objetivo que ya tenías es información igual de valiosa.
+  for (const clave of partida.prendidos)
+    if (!antes.has(clave)) {
+      const [c, f] = clave.split(",").map(Number);
+      chispear(c, f, (COLOR[partida.celda(c, f).color] || COLOR.cian).vivo, 14);
+    }
+  for (const clave of antes)
+    if (!partida.prendidos.has(clave)) {
+      const [c, f] = clave.split(",").map(Number);
+      chispear(c, f, "#5a6478", 7);
+    }
+  if (partida.ganado) efe.ultimo();
+  else if (partida.prendidos.size > antes.size) efe.prende();
+  else if (partida.prendidos.size < antes.size) efe.apaga();
   pintarHud();
+  if (partida.ganado) gano = performance.now();
+  // LA MUSICA DICE CUANTO FALTA: la densidad de las campanas sube con los
+  // objetivos ya prendidos. Es la única señal de "vas bien" que no ocupa
+  // pantalla, y en un tablero chico la pantalla es lo que más escasea.
+  musica.empujar(partida.prendidos.size / Math.max(1, partida.nivel.objetivos.length));
   if (partida.ganado) setTimeout(ganar, 420);
 });
 lienzo.addEventListener("pointerdown", (ev) => ev.preventDefault());
@@ -73,6 +102,8 @@ function mostrar(id) {
 
 function alMenu() {
   partida = null;
+  musica.parar();
+  musica.arrancarTema();
   const abre = abiertos(NIVELES.length);
   $("#m-seguir").textContent = t("menu.seguir", { n: Math.min(abre, NIVELES.length) });
   $("#m-luces").textContent = t("menu.luces", { n: totalLuces(), t: NIVELES.length * 3 });
@@ -104,9 +135,13 @@ function alMapa() {
 }
 
 function jugar(i) {
-  despertar();
+  despertarTodo();
+  efe.nivel();
+  musica.pararTema();
+  musica.arrancar();
   partida = new Partida(NIVELES[i], i);
   destello = null;
+  gano = 0;
   pintarHud();
   mostrar("p-juego");
 }
@@ -133,7 +168,7 @@ $("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); })
 $("#j-salir").addEventListener("click", () => { efe.menu(); alMapa(); });
 $("#j-reiniciar").addEventListener("click", () => {
   if (!partida) return;
-  efe.menu(); partida.reiniciar(); destello = null; pintarHud();
+  efe.menu(); partida.reiniciar(); destello = null; gano = 0; pintarHud();
 });
 // LA PISTA CUESTA UN TOQUE, y por eso es una decisión y no un botón de ganar.
 // Gratis, la forma óptima de jugar sería apretarla hasta el final; cobrándola,
@@ -156,6 +191,13 @@ for (const b of document.querySelectorAll("[data-mapa]"))
   b.addEventListener("click", () => { efe.menu(); alMapa(); });
 $("#aj-sonido").addEventListener("change", (e) => {
   const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
+});
+// LA MUSICA SE APAGA APARTE DE LOS EFECTOS: son dos molestias distintas, y en un
+// juego de pensar la primera que estorba es la música.
+$("#aj-musica").addEventListener("change", (e) => {
+  const d = cargar(); d.ajustes.musica = e.target.checked; guardar();
+  musica.sonando(e.target.checked);
+  if (e.target.checked && !partida) musica.arrancarTema();
 });
 $("#m-borrar").addEventListener("click", () => {
   if (!confirm(t("menu.borrar-confirmar"))) return;
@@ -191,7 +233,10 @@ $("#m-idioma").addEventListener("click", () => {
 function pintarHud() {
   if (!partida) return;
   $("#h-nivel").textContent = t("hud.nivel", { n: partida.numero + 1 });
-  $("#h-toques").textContent = `${partida.toques} ${t("hud.toques")}`;
+  // "1 toques" es el detalle que hace que un juego se sienta hecho a las
+  // apuradas, y aparece justo en el primer toque de cada nivel.
+  $("#h-toques").textContent =
+    `${partida.toques} ${t(partida.toques === 1 ? "hud.toques1" : "hud.toques")}`;
   $("#h-par").textContent = t("hud.par", { n: partida.par });
   $("#h-toques").classList.toggle("pasado", partida.toques > partida.par);
 }
@@ -201,11 +246,19 @@ function bucle(ahora) {
   requestAnimationFrame(bucle);
   if (!partida || $("#p-juego").hidden) return;
   try {
-    dibujar(ctx, partida, ahora);
+    dibujar(ctx, partida, ahora, destello);
     if (destello) {
       const edad = (ahora - destello.t) / (destello.pista ? 900 : 380);
       if (edad >= 1) destello = null;
       else marcarToque(ctx, partida.nivel, destello.c, destello.f, edad);
+    }
+    // El barrido de la victoria cruza el tablero una vez, en el segundo que pasa
+    // entre ganar y que aparezca la pantalla del final: sin él, ganar es que la
+    // pantalla cambie de golpe y no se llega a ver el tablero resuelto.
+    if (gano) {
+      const edad = (ahora - gano) / 900;
+      if (edad >= 1) gano = 0;
+      else barrido(ctx, partida.nivel, edad);
     }
   } catch (e) {
     // Un error adentro del dibujo se repite sesenta veces por segundo y deja la
@@ -219,10 +272,21 @@ function bucle(ahora) {
 const d = cargar();
 $("#aj-sonido").checked = d.ajustes.sonido;
 sonando(d.ajustes.sonido);
+$("#aj-musica").checked = d.ajustes.musica;
+musica.sonando(d.ajustes.musica);
 elegir(d.ajustes.idioma || "en", false);
 if (d.ajustes.idioma) alMenu();
 else mostrar("p-idioma");
 requestAnimationFrame(bucle);
+
+// LA MESA SE CARGA DESPUES Y NO BLOQUEA NADA: hasta que llega, el tablero se
+// dibuja sobre el color liso de siempre. Una conexión lenta no puede dejar a
+// nadie mirando una pantalla de carga por una textura decorativa.
+(async () => {
+  const im = new Image();
+  im.onload = () => registrarArte("fondo_mesa", im);
+  im.src = rutaArte("fondo_mesa");
+})();
 
 // Para las pruebas: poder mirar y manejar la partida desde afuera.
 globalThis.ESPEJO = {
@@ -235,3 +299,9 @@ globalThis.ESPEJO = {
 // de centrado, y comprobarla a ojo es imposible: un error de medio píxel no se
 // ve en el medio del tablero y sí en los bordes.
 globalThis.__celdaDe = celdaDe;
+
+// Un gancho para la prueba de sonido: dispara UN efecto. Los efectos no dejan
+// rastro en el DOM ni en el estado, así que la única forma de comprobar que
+// siguen sonando con la música apagada es pedir uno y contar los osciladores.
+globalThis.__efe = () => efe.menu();
+globalThis.__musicaAndando = () => musica.andando();

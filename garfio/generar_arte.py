@@ -33,6 +33,18 @@ PIEZAS = {
                "compact blue jumpsuit and a tool belt, tiny boots dangling. Cute, simple, "
                "roughly as wide as it is tall, facing the viewer. " + ESTILO)},
 
+  # EL FONDO DE LA TORRE. Igual que en Paraguas: una sola textura que el juego
+  # repite ESPEJADA —cada copia dada vuelta, así la costura coincide consigo
+  # misma— y tiñe con el color del piso. Pedirle a un generador que haga una
+  # textura repetible no funciona; pedirle que no ponga nada en los bordes, sí.
+  "fondo_torre": {
+    "medida": (360, 512), "transparente": False, "recortar": False,
+    "prompt": ("The inside of a tall industrial tower seen head on, filling the whole image: "
+               "steel scaffolding, girders, ducts, dark windows and hanging cables, receding "
+               "into the dark. Flat 2D cartoon style with thick dark outlines, low contrast, "
+               "very dark desaturated blue, almost a silhouette. Even detail all over with "
+               "nothing important near the edges. No characters, no text, no lighting effects.")},
+
   # El botón: una argolla de verdad, del mismo tipo que las del juego.
   "ui_anillo": {
     "medida": (352, 352),
@@ -107,7 +119,13 @@ def pedir(rehacer=False):
             print(f"  · {k} ya pedido"); continue
         r = rz("submit_image_generation", {
             "project_id": PROYECTO, "output_path": f"assets/{k}.png", "prompt": cfg["prompt"],
-            "model": MODELO, "size": "1024x1024", "transparent": True})
+            # LOS FONDOS NO SE PIDEN RECORTADOS. `transparent` le dice al
+            # servidor que borre el fondo de la imagen, que es justo lo que hace
+            # falta para una pieza suelta y exactamente lo contrario de lo que
+            # hace falta para una textura que ocupa la pantalla entera: le
+            # abriría agujeros por donde se ve el vacío.
+            "model": MODELO, "size": "1024x1024",
+            "transparent": cfg.get("transparente", True)})
         if "task_id" not in r:
             print(f"  ✗ {k}: {r}"); continue
         anotar(k, {"task_id": r["task_id"], "output_path": r["output_path"]})
@@ -182,10 +200,11 @@ def preparar():
         # El recorte se mide sobre el alfa UMBRALADO: el recorte de fondo del
         # generador deja un halo de alfa bajo por toda la imagen y getbbox()
         # sobre el alfa crudo devuelve la imagen entera.
-        m = im.getchannel("A").point(lambda v: 255 if v > 100 else 0)
-        caja = m.getbbox()
-        if caja:
-            im = im.crop(caja)
+        if cfg.get("recortar", True):
+            m = im.getchannel("A").point(lambda v: 255 if v > 100 else 0)
+            caja = m.getbbox()
+            if caja:
+                im = im.crop(caja)
         if cfg.get("damero", k.startswith("ui_")):
             im = sin_damero(im)
         if cfg.get("medida"):

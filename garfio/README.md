@@ -7,8 +7,8 @@ Vertical, un dedo, tres idiomas (inglés, español y portugués; pregunta cuál 
 primera vez). Todo vectorial menos el bicho y el vestido de los menús.
 
     python3 -m http.server 8805      # y abrir http://127.0.0.1:8805
-    sh pruebas/correr.sh             # 70 comprobaciones
-    python3 empaquetar.py            # garfio-en-un-archivo.html, 279 KB
+    sh pruebas/correr.sh             # 79 comprobaciones
+    python3 empaquetar.py            # garfio-en-un-archivo.html, 411 KB
 
 ## La mecánica, en una línea
 
@@ -59,9 +59,29 @@ no se veía adónde saltar. Ahora hay un mínimo de torre a la vista y en
 horizontal queda una tira angosta en el medio, que es lo que corresponde a un
 juego vertical.
 
+
+## El sonido
+
+**Dos cosas distintas, y a propósito.** En el menú suena un tema grabado; en el
+juego la música **se toca sola** con osciladores y no se repite nunca.
+
+El modelo de música da treinta segundos como techo y en la práctica devolvió
+nueve, de donde sale un bucle de cinco o seis. Eso en un menú no molesta —nadie
+se queda diez minutos mirando un menú— y da una atmósfera que un puñado de
+osciladores no da. Abajo de una partida de tres minutos, en cambio, es una
+tortura: se escucha la costura treinta y seis veces. Así que la música del juego
+es un secuenciador: una progresión de acordes, un bajo, un arpegio y percusión
+de ruido, con la densidad, el filtro y el bombo atados a **cómo venís jugando**.
+La música no acompaña al juego, lo informa — igual que el viento. Y no pesa
+nada: cero archivos.
+
+**La música se apaga aparte de los efectos**, porque son dos molestias
+distintas: la música cansa a la décima partida y los efectos no, y un efecto es
+información mientras la música es decoración.
+
 ## Las pruebas
 
-70, y la que más vale es `pruebas/salto.mjs`: **vuelve a medir cuánto se salta
+79, y la que más vale es `pruebas/salto.mjs`: **vuelve a medir cuánto se salta
 de verdad**, armando una torre de dos argollas y poniendo al piloto a
 hamacarse. `SALTO_MAX` es una constante en un archivo; alguien toca la gravedad
 o el empuje y la constante se queda con el valor de ayer. El juego sigue

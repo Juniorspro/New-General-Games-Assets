@@ -24,6 +24,13 @@ export function despertar() {
 
 export const sonando = (v) => { prendido = v; if (maestro) maestro.gain.value = v ? 0.5 : 0; };
 
+// El contexto y el maestro se comparten con la musica: dos AudioContext en la
+// misma pagina es el error que hace que en un telefono uno de los dos no suene
+// nunca —el navegador limita cuantos deja abiertos— y ademas el silencio se
+// pediria dos veces, una por cada arbol.
+export const contexto = () => ac;
+export const salida = () => maestro;
+
 function ruidoBuffer(dur) {
   const n = Math.floor(ac.sampleRate * dur);
   const buf = ac.createBuffer(1, n, ac.sampleRate);
@@ -71,6 +78,13 @@ export const efe = {
   abrir() { golpeRuido(0.22, 2600, 0.16); },
   cerrar() { golpeRuido(0.13, 1500, 0.14); },
   hito() { [523, 659, 784].forEach((f, i) => setTimeout(() => tono("triangle", f, f, 0.01, 0.22, 0.14), i * 70)); },
+  // El aviso de fila angosta: suena UNA vez, cuando aparece a tiro, y no
+  // mientras se cruza. Un aviso que llega cuando ya estas adentro no es un
+  // aviso, es un comentario.
+  angosto() { tono("square", 330, 250, 0.004, 0.16, 0.09); },
+  // Varilla rota: un crujido corto y seco. Se distingue del golpe comun porque
+  // es lo que cuenta cuantas te quedan.
+  varilla() { golpeRuido(0.09, 1800, 0.3); tono("square", 260, 120, 0.004, 0.18, 0.14); },
   menu() { tono("square", 520, 700, 0.004, 0.07, 0.1); },
 };
 

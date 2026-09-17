@@ -71,6 +71,19 @@ const sueltos = await pg.evaluate(() => [...document.querySelectorAll("link[href
   .map((e) => e.getAttribute("href") || e.getAttribute("src")).filter((u) => u && !u.startsWith("data:")));
 ch("no pide ni un archivo suelto", sueltos.length === 0, sueltos.join(", "));
 
+// Y LO QUE PIDE EL JAVASCRIPT TAMBIEN VA ADENTRO. Los módulos resuelven sus
+// archivos con `ruta()`, que mira el mapa ARCHIVOS: una entrada que quedó como
+// ruta relativa en vez de data: URI da 404 contra file://, el juego no falla
+// —dibuja la versión sin textura— y nadie se entera.
+const binarios = await pg.evaluate(() => {
+  const a = globalThis.ARCHIVOS || {};
+  return { total: Object.keys(a).length,
+           crudas: Object.entries(a).filter(([, v]) => !String(v).startsWith("data:")).map(([k]) => k) };
+});
+ch("todos los binarios que pide el código van embebidos",
+   binarios.total > 0 && binarios.crudas.length === 0,
+   `${binarios.total} archivos · ${binarios.crudas.join(", ")}`);
+
 // Las imágenes del vestido las pide el CSS con `url()`, no el JavaScript: si el
 // empaquetador no les cambia la ruta por el data: URI, el pedido sale 404, el
 // navegador no tira ningún error y la pantalla se ve igual de bien —sin marco,

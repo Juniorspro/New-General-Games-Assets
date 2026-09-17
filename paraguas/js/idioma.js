@@ -32,6 +32,7 @@ const ES = {
   "menu.caidas1": "1 caída",
   "menu.como": "? Cómo se juega",
   "menu.sonido": "Sonido",
+  "menu.musica": "Música",
   "menu.borrar": "Borrar",
   "menu.borrar-confirmar": "¿Borrar el récord?",
   "menu.idioma": "Idioma",
@@ -58,7 +59,7 @@ const ES = {
   "como.puntaje": "Son los <b>metros</b>, y los metros los ganás cayendo. Cerrar el paraguas no es sólo para pasar por los huecos angostos: es la única forma de bajar rápido. El juego te ofrece todo el tiempo el mismo trato, y vos decidís cuánto lo aceptás.",
   "como.h-hecho": "De qué está hecho",
   "como.hecho1": "El pozo se genera para siempre, y <b>cada hueco se pone dentro de lo que se puede alcanzar desde el anterior</b> a la velocidad a la que vas a llegar. No es un detalle: un generador infinito falla poniendo dos huecos que no se alcanzan, y eso no se ve como un error — se ve como que perdiste otra vez.",
-  "como.hecho2": "Todo es vectorial menos el paraguas, el personaje y el vestido de los menús. El sonido son osciladores: el viento que escuchás es ruido blanco pasado por un filtro que se abre con la velocidad de caída.",
+  "como.hecho2": "Todo es vectorial menos el paraguas, el personaje, el fondo del pozo y el vestido de los menús. El sonido son osciladores: el viento es ruido blanco pasado por un filtro que se abre con la velocidad de caída, y la música del juego se toca sola —el arpegio se densifica cuanto más rápido caés—. El único archivo de audio es el tema del menú.",
 
   "hud.salir": "Volver al menú",
 
@@ -97,6 +98,7 @@ const EN = {
   "menu.caidas1": "1 drop",
   "menu.como": "? How to play",
   "menu.sonido": "Sound",
+  "menu.musica": "Music",
   "menu.borrar": "Erase",
   "menu.borrar-confirmar": "Erase your best drop?",
   "menu.idioma": "Language",
@@ -123,7 +125,7 @@ const EN = {
   "como.puntaje": "It's the <b>metres</b>, and metres come from falling. Shutting the umbrella isn't just for narrow gaps: it is the only way down fast. The game offers you the same deal the whole time, and you decide how much of it to take.",
   "como.h-hecho": "What it's made of",
   "como.hecho1": "The pit is generated forever, and <b>every gap is placed within reach of the one before it</b> at the speed you'll actually be going. That's not a detail: an endless generator fails by placing two gaps you can't get between, and that doesn't look like a bug — it looks like you lost again.",
-  "como.hecho2": "Everything is vector art except the umbrella, the character and the menu trim. The sound is oscillators: the wind you hear is white noise through a filter that opens with your falling speed.",
+  "como.hecho2": "Everything is vector art except the umbrella, the character, the pit backdrop and the menu trim. The sound is oscillators: the wind is white noise through a filter that opens with your falling speed, and the in-game music plays itself — the arpeggio thickens the faster you fall. The only audio file is the menu theme.",
 
   "hud.salir": "Back to menu",
 
@@ -162,6 +164,7 @@ const PT = {
   "menu.caidas1": "1 queda",
   "menu.como": "? Como se joga",
   "menu.sonido": "Som",
+  "menu.musica": "Música",
   "menu.borrar": "Apagar",
   "menu.borrar-confirmar": "Apagar o recorde?",
   "menu.idioma": "Idioma",
@@ -188,7 +191,7 @@ const PT = {
   "como.puntaje": "São os <b>metros</b>, e os metros vêm de cair. Fechar o guarda-chuva não é só para os vãos estreitos: é o único jeito de descer rápido. O jogo te oferece o mesmo trato o tempo todo, e você decide o quanto aceita.",
   "como.h-hecho": "Do que é feito",
   "como.hecho1": "O poço é gerado para sempre, e <b>cada vão é posto dentro do alcance do anterior</b> na velocidade em que você vai chegar. Não é detalhe: um gerador infinito falha pondo dois vãos que não se alcançam, e isso não parece um erro — parece que você perdeu de novo.",
-  "como.hecho2": "Tudo é vetorial menos o guarda-chuva, o personagem e o enfeite dos menus. O som são osciladores: o vento que você ouve é ruído branco por um filtro que abre com a velocidade da queda.",
+  "como.hecho2": "Tudo é vetorial menos o guarda-chuva, o personagem, o fundo do poço e o enfeite dos menus. O som são osciladores: o vento é ruído branco por um filtro que abre com a velocidade da queda, e a música do jogo se toca sozinha — o arpejo fica mais denso quanto mais rápido você cai. O único arquivo de áudio é o tema do menu.",
 
   "hud.salir": "Voltar ao menu",
 

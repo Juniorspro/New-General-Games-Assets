@@ -32,6 +32,10 @@ export class Partida {
     this.sube = 0;
     this.sacude = 0;
     this.chispas = [];
+    // Los últimos dieciocho cuadros de recorrido: tres décimas de segundo, que
+    // es lo que dura un arco de péndulo corto. Más larga, la estela tapa las
+    // argollas que están abajo.
+    this.estela = [];
     this.ev = {};
     this.torre.generarHasta(-VISTA.alto * 3);
   }
@@ -61,6 +65,8 @@ export class Partida {
 
     this.gancho(ent);
     this.mover();
+    this.estela.push({ x: this.x, y: this.y });
+    if (this.estela.length > 18) this.estela.shift();
     this.paredes();
     this.juntar();
 
@@ -103,7 +109,12 @@ export class Partida {
   gancho(ent) {
     const d = ent && ent.dedo;
     if (!d) {
-      if (this.ancla) { this.ancla = null; this.ev.suelta = true; }
+      if (this.ancla) {
+        // Chispas al soltar, en el CUERPO y no en la argolla: marcan el punto y
+        // la dirección por donde saliste, que es lo único que decidiste vos.
+        this.chispear(this.x, this.y, "#ffd1a0", 5);
+        this.ancla = null; this.ev.suelta = true;
+      }
       return;
     }
     if (!this.ancla) {
@@ -121,6 +132,7 @@ export class Partida {
       this.largo = Math.max(F.LARGO_MIN, dist);
       a.tocada = this.t;
       this.ev.engancha = true;
+      this.chispear(a.x, a.y, "#b6f0ff", 6);
     }
     const a = this.ancla;
     if (a.oxidada && this.t - a.tocada > F.VIDA_OXIDADA) {
@@ -175,9 +187,11 @@ export class Partida {
     if (this.x - r < PARED) {
       this.x = PARED + r; this.vx = Math.abs(this.vx) * 0.45;
       this.ev.pared = true; this.sacude = 3;
+      this.chispear(PARED, this.y, "#8b97b8", 4);
     } else if (this.x + r > ANCHO - PARED) {
       this.x = ANCHO - PARED - r; this.vx = -Math.abs(this.vx) * 0.45;
       this.ev.pared = true; this.sacude = 3;
+      this.chispear(ANCHO - PARED, this.y, "#8b97b8", 4);
     }
   }
 
@@ -193,6 +207,7 @@ export class Partida {
 
   morir() {
     if (this.estado === "muerto") return;
+    this.estela.length = 0;
     this.estado = "muerto";
     this.ancla = null;
     this.ev.muerto = true;

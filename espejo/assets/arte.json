@@ -22,5 +22,11 @@
     "output_path": "assets/ui_chapa-g3.png",
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/espejo/assets/ui_chapa-g3.png"
+  },
+  "fondo_mesa": {
+    "task_id": "gtask-1872f2befd4f4e3898ca",
+    "output_path": "assets/fondo_mesa-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/espejo/assets/fondo_mesa-g1.png"
   }
 }

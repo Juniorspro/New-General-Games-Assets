@@ -4,13 +4,21 @@ import { VISTA, F, ajustarVista, M } from "./mundo.js";
 import { Partida } from "./juego.js";
 import { dibujar, registrarTexturas, tramoDe } from "./dibujo.js";
 import { crearHeroe, pasoHeroe, registrarArte } from "./heroe.js";
-import { despertar, efe, sonando, arrancarViento, soplar, callarViento } from "./audio.js";
+import { despertar, efe, sonando, arrancarViento, soplar, callarViento, contexto, salida } from "./audio.js";
+import * as musica from "./musica.js";
 import { cargar, guardar, borrar } from "./guardado.js";
 import { pilotoDedo } from "./piloto.js";
 import { ruta } from "./assets.js";
 import { t, aplicar, ponerIdioma, idioma, IDIOMAS } from "./idioma.js";
 
 const $ = (s) => document.querySelector(s);
+
+// Despertar el audio ES el momento de conectar la música: antes no hay contexto
+// —el navegador no deja crearlo sin un gesto— y después habría que acordarse.
+function despertarTodo() {
+  despertar();
+  musica.conectar(contexto(), salida());
+}
 const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 let partida = null;
@@ -95,7 +103,7 @@ const aMundo = (ev) => {
 // cuanto se corrio el dedo desde ahi: apoyar y no mover cierra el paraguas y
 // nada mas. El objetivo se arrastra con el dedo pixel a pixel.
 lienzo.addEventListener("pointerdown", (ev) => {
-  despertar(); arrancarViento();
+  despertarTodo(); arrancarViento();
   const x = aMundo(ev);
   // `quieto` arranca alto y no en cero: un toque que nunca se movio tiene que
   // cerrar ya, no despues de esperar los ocho cuadros.
@@ -165,6 +173,8 @@ function mostrar(id) {
 function alMenu() {
   partida = null;
   callarViento();
+  musica.parar();
+  musica.arrancarTema();
   if (!demo) arrancarDemo();
   const d = cargar();
   $("#m-mejor").textContent = `${d.mejor} m`;
@@ -173,7 +183,9 @@ function alMenu() {
 }
 
 function jugar() {
-  despertar(); arrancarViento();
+  despertarTodo(); arrancarViento();
+  musica.pararTema();
+  musica.arrancar();
   demo = null;
   partida = new Partida();
   partida.heroe = crearHeroe(partida.x, partida.y);
@@ -219,6 +231,15 @@ for (const b of document.querySelectorAll("[data-volver]"))
 $("#aj-sonido").addEventListener("change", (e) => {
   const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
 });
+// LA MUSICA SE APAGA APARTE DE LOS EFECTOS. Son dos molestias distintas: la
+// música cansa a la décima partida y los efectos no, y el que juega con un
+// video de fondo quiere callar la música sin perder el sonido del paraguas —que
+// es información, no decoración.
+$("#aj-musica").addEventListener("change", (e) => {
+  const d = cargar(); d.ajustes.musica = e.target.checked; guardar();
+  musica.sonando(e.target.checked);
+  if (e.target.checked && !partida) musica.arrancarTema();
+});
 $("#m-borrar").addEventListener("click", () => {
   if (!confirm(t("menu.borrar-confirmar"))) return;
   // BORRAR EL RECORD NO BORRA EL IDIOMA. Está en el mismo bulto guardado, pero
@@ -252,14 +273,19 @@ function sonar(p) {
   const e = p.ev;
   if (e.moneda) efe.moneda();
   if (e.roce) efe.roce();
-  if (e.golpe) efe.golpe();
+  if (e.golpe) { efe.golpe(); efe.varilla(); }
+  if (e.angosto) efe.angosto();
   if (e.pinchos) efe.pinchos();
   if (e.paraguas) (p.objetivo ? efe.abrir() : efe.cerrar());
   if (e.muerto) { efe.muerto(); terminar(p); }
   const hito = Math.floor(p.metros / 100);
   if (hito > ultimoHito) { ultimoHito = hito; efe.hito(); }
-  const v = (p.vy - F.TERMINAL_ABIERTO) / (F.TERMINAL_CERRADO - F.TERMINAL_ABIERTO);
-  soplar(Math.max(0, Math.min(1, v)));
+  const v = Math.max(0, Math.min(1, (p.vy - F.TERMINAL_ABIERTO) / (F.TERMINAL_CERRADO - F.TERMINAL_ABIERTO)));
+  soplar(v);
+  // LA MUSICA SIGUE A LA CAIDA, no al reloj. Es la misma idea que el viento: el
+  // arpegio se densifica y el filtro se abre cuando caés rápido, así que la
+  // música dice a qué velocidad venís sin que haya que mirar un número.
+  musica.empujar(v * 0.75 + Math.min(1, p.metros / 900) * 0.25);
 }
 
 function terminar(p) {
@@ -332,7 +358,7 @@ function bucle(ahora) {
 // --- arranque ------------------------------------------------------------
 const ARTE = ["paraguas_abierto", "paraguas_cerrado", "rilo_cabeza", "rilo_torso",
               "rilo_brazo_alto", "rilo_brazo_bajo", "rilo_pierna_alta", "rilo_pierna_baja"];
-const TEXTURAS = ["pared", "repisa"];
+const TEXTURAS = ["pared", "repisa", "fondo_pozo"];
 
 function traer(url) {
   return new Promise((listo) => {
@@ -351,6 +377,8 @@ function traer(url) {
   const d = cargar();
   $("#aj-sonido").checked = d.ajustes.sonido;
   sonando(d.ajustes.sonido);
+  $("#aj-musica").checked = d.ajustes.musica;
+  musica.sonando(d.ajustes.musica);
   // La pantalla de idiomas se muestra UNA vez, la primera. El demo del fondo
   // arranca igual: la primera pantalla del juego también tiene que estar viva.
   elegir(d.ajustes.idioma || "en", false);
@@ -369,3 +397,9 @@ function traer(url) {
   if (arte.paraguas_abierto) registrarArte(arte);
   registrarTexturas(tex);
 })();
+
+// Un gancho para la prueba de sonido: dispara UN efecto. Los efectos no dejan
+// rastro en el DOM ni en el estado, así que la única forma de comprobar que
+// siguen sonando con la música apagada es pedir uno y contar los osciladores.
+globalThis.__efe = () => efe.menu();
+globalThis.__musicaAndando = () => musica.andando();

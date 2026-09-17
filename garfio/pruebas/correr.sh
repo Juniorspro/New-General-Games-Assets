@@ -21,3 +21,6 @@ node pruebas/un-archivo.mjs
 echo
 echo "── los tres idiomas ──────────────────────────────────────────"
 node pruebas/idiomas.mjs
+echo
+echo "── la música y los sonidos ───────────────────────────────────"
+JUEGO=GARFIO ARCHIVO=garfio-en-un-archivo.html JUGAR="#m-jugar" node pruebas/sonido.mjs

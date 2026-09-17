@@ -21,3 +21,6 @@ node pruebas/un-archivo.mjs
 echo
 echo "── los tres idiomas ──────────────────────────────────────────"
 node pruebas/idiomas.mjs
+echo
+echo "── la música y los sonidos ───────────────────────────────────"
+JUEGO=ESPEJO ARCHIVO=espejo-en-un-archivo.html JUGAR="#m-seguir" VENTANA=3200 MINIMO=3 node pruebas/sonido.mjs

@@ -25,6 +25,7 @@ const ES = {
   "menu.partidas1": "1 intento",
   "menu.como": "? Cómo se juega",
   "menu.sonido": "Sonido",
+  "menu.musica": "Música",
   "menu.borrar": "Borrar",
   "menu.borrar-confirmar": "¿Borrar el récord?",
   "menu.idioma": "Idioma",
@@ -49,7 +50,7 @@ const ES = {
   "como.puntaje": "Son los <b>metros</b>, y la única forma de ganarlos es soltar. Quedarse colgado es gratis y seguro hasta que el piso te alcanza; el juego te ofrece todo el tiempo el mismo trato y vos decidís cuánto lo aceptás.",
   "como.h-hecho": "De qué está hecho",
   "como.hecho1": "La torre se genera para siempre, y <b>cada argolla se pone dentro de lo que se puede saltar desde la anterior</b>. Ese número no salió de lo que quedaba lindo: está medido jugando, y hay una prueba que lo vuelve a medir con la física de verdad y falla si alguien toca la gravedad y se olvida de esto.",
-  "como.hecho2": "Todo es vectorial menos el bicho y el vestido de los menús. El sonido son osciladores: no hay un solo archivo de audio.",
+  "como.hecho2": "Todo es vectorial menos el bicho, el fondo de la torre y el vestido de los menús. El sonido son osciladores y la música del juego también: se toca sola, con una progresión de acordes cuya densidad sube con la altura y la velocidad. El único archivo de audio es el tema del menú.",
 
   "hud.salir": "Volver al menú",
 
@@ -85,6 +86,7 @@ const EN = {
   "menu.partidas1": "1 run",
   "menu.como": "? How to play",
   "menu.sonido": "Sound",
+  "menu.musica": "Music",
   "menu.borrar": "Erase",
   "menu.borrar-confirmar": "Erase your best height?",
   "menu.idioma": "Language",
@@ -109,7 +111,7 @@ const EN = {
   "como.puntaje": "It's the <b>metres</b>, and the only way to earn them is to let go. Hanging on is free and safe until the floor catches you; the game offers you the same deal the whole time, and you decide how much of it to take.",
   "como.h-hecho": "What it's made of",
   "como.hecho1": "The tower is generated forever, and <b>every ring is placed within jumping range of the one before it</b>. That number didn't come from what looked nice: it is measured by playing, and a test re-measures it with the real physics and fails if somebody changes gravity and forgets about this.",
-  "como.hecho2": "Everything is vector art except the character and the menu trim. The sound is oscillators: there isn't a single audio file.",
+  "como.hecho2": "Everything is vector art except the character, the tower backdrop and the menu trim. The sound is oscillators and so is the in-game music: it plays itself, from a chord progression whose density rises with your height and speed. The only audio file is the menu theme.",
 
   "hud.salir": "Back to menu",
 
@@ -145,6 +147,7 @@ const PT = {
   "menu.partidas1": "1 tentativa",
   "menu.como": "? Como se joga",
   "menu.sonido": "Som",
+  "menu.musica": "Música",
   "menu.borrar": "Apagar",
   "menu.borrar-confirmar": "Apagar o recorde?",
   "menu.idioma": "Idioma",
@@ -169,7 +172,7 @@ const PT = {
   "como.puntaje": "São os <b>metros</b>, e o único jeito de ganhá-los é soltar. Ficar pendurado é de graça e seguro até o chão te alcançar; o jogo te oferece o mesmo trato o tempo todo, e você decide o quanto aceita.",
   "como.h-hecho": "Do que é feito",
   "como.hecho1": "A torre é gerada para sempre, e <b>cada argola é posta dentro do que dá para saltar da anterior</b>. Esse número não saiu do que ficava bonito: está medido jogando, e tem um teste que remede com a física de verdade e falha se alguém mexer na gravidade e esquecer disto.",
-  "como.hecho2": "Tudo é vetorial menos o bicho e o enfeite dos menus. O som são osciladores: não tem um único arquivo de áudio.",
+  "como.hecho2": "Tudo é vetorial menos o bicho, o fundo da torre e o enfeite dos menus. O som são osciladores e a música do jogo também: ela se toca sozinha, com uma progressão de acordes cuja densidade sobe com a altura e a velocidade. O único arquivo de áudio é o tema do menu.",
 
   "hud.salir": "Voltar ao menu",
 

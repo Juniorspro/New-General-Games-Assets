@@ -9,7 +9,7 @@ const LLAVE = "espejo.v1";
 // `idioma: null` quiere decir "nunca eligió", que NO es lo mismo que "eligió
 // inglés": es lo único que distingue al que abre el juego por primera vez del
 // que ya eligió inglés y no quiere que le pregunten más.
-const vacio = () => ({ luces: {}, ajustes: { sonido: true, idioma: null } });
+const vacio = () => ({ luces: {}, ajustes: { sonido: true, musica: true, idioma: null } });
 let cache = null;
 
 export function cargar() {

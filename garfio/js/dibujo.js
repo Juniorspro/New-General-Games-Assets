@@ -42,6 +42,46 @@ for (let i = 0; i < 400; i++)
 
 const arte = {};
 export function registrarArte(nombre, imagen) { if (imagen) arte[nombre] = imagen; }
+
+/**
+ * El fondo de la torre, a media velocidad y teñido con el color del piso.
+ *
+ * SE REPITE ESPEJADO, dando vuelta una copia sí y una no. Pedirle a un generador
+ * una textura que empalme consigo misma no funciona —siempre se ve la costura— y
+ * arreglarla a mano cuesta una tarde. Espejada, la costura es la imagen contra sí
+ * misma: coincide por construcción, y en una maraña de vigas nadie nota la
+ * simetría.
+ *
+ * Y SE TIÑE en vez de tener una textura por piso: cinco imágenes son cinco veces
+ * el peso, y además se desincronizan con los colores del código apenas alguien
+ * toca un piso.
+ */
+function dibujarFondo(ctx, piso, sig, t, cam, al) {
+  const im = arte.fondo_torre;
+  if (!im) return;
+  const alto = im.height;
+  const desp = cam * 0.45;
+  const primera = Math.floor(desp / alto);
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  for (let k = -1; k <= Math.ceil(al / alto); k++) {
+    const i = primera + k;
+    const y = i * alto - desp;
+    if (y > al || y + alto < 0) continue;
+    ctx.save();
+    // El módulo tiene que ser POSITIVO: la torre sube, así que la cámara es
+    // negativa, y en JavaScript `-1 % 2` es -1, no 1.
+    if (((i % 2) + 2) % 2 === 1) { ctx.translate(0, y + alto); ctx.scale(1, -1); }
+    else ctx.translate(0, y);
+    ctx.drawImage(im, 0, 0, ANCHO, alto);
+    ctx.restore();
+  }
+  ctx.globalCompositeOperation = "color";
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle = mezclarColor(piso.pared, sig.pared, t);
+  ctx.fillRect(0, 0, ANCHO, al);
+  ctx.restore();
+}
 export const rutaArte = (n) => ruta(`assets/arte/${n}.webp`);
 
 export function dibujar(ctx, p) {
@@ -72,12 +112,15 @@ export function dibujar(ctx, p) {
     ctx.beginPath(); ctx.arc(d.x, y, d.r, 0, 7); ctx.fill();
   }
 
+  dibujarFondo(ctx, piso, sig, t, cam, al);
   dibujarParedes(ctx, p, piso, sig, t, cam, al);
   dibujarTuercas(ctx, p, cam);
   dibujarArgollas(ctx, p, piso, cam, al);
   dibujarSoga(ctx, p, cam);
+  dibujarEstela(ctx, p, cam);
   dibujarBicho(ctx, p, cam);
   dibujarChispas(ctx, p, cam);
+  dibujarVelocidad(ctx, p, al);
   dibujarMarea(ctx, p, al);
   ctx.restore();
 }
@@ -195,6 +238,52 @@ function dibujarBicho(ctx, p, cam) {
     ctx.beginPath(); ctx.arc(-3.5, -2, 1.8, 0, 7); ctx.arc(3.5, -2, 1.8, 0, 7); ctx.fill();
   }
   ctx.restore();
+}
+
+/**
+ * La estela: por dónde venís.
+ *
+ * ES LA AYUDA MAS GRANDE QUE DA LA PANTALLA en un juego de soltar en el momento
+ * justo. Un péndulo se ve como una bolita quieta en el aire; con la cola de los
+ * últimos cuadros se ve el ARCO, y viendo el arco se puede predecir por dónde
+ * vas a salir — que es exactamente la decisión del juego. Sin ella hay que
+ * soltar de memoria.
+ */
+function dibujarEstela(ctx, p, cam) {
+  const e = p.estela;
+  if (!e || e.length < 2) return;
+  ctx.lineCap = "round";
+  for (let i = 1; i < e.length; i++) {
+    const k = i / e.length;
+    ctx.globalAlpha = k * 0.5;
+    ctx.strokeStyle = p.ancla ? "#b6f0ff" : "#ffd1a0";
+    ctx.lineWidth = 1 + k * 4;
+    ctx.beginPath();
+    ctx.moveTo(e[i - 1].x, e[i - 1].y - cam);
+    ctx.lineTo(e[i].x, e[i].y - cam);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** Rayas de aire cuando venís rápido. El mismo truco que en Paraguas: a esta
+ *  velocidad el fondo ya no se percibe como movimiento. */
+function dibujarVelocidad(ctx, p, al) {
+  const v = Math.hypot(p.vx, p.vy) / F.VEL_MAX;
+  if (v < 0.45) return;
+  const int = (v - 0.45) / 0.55;
+  ctx.strokeStyle = `rgba(255,255,255,${0.04 + int * 0.13})`;
+  ctx.lineWidth = 1.4;
+  const an = Math.atan2(p.vy, p.vx);
+  for (let i = 0; i < 10; i++) {
+    const rx = frac(Math.sin((i + Math.floor(p.t / 3) * 0.37) * 91.7) * 7331) * ANCHO;
+    const ry = frac(Math.sin((i * 3.7 + Math.floor(p.t / 3) * 0.91)) * 4331) * al;
+    const largo = 16 + int * 54;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.lineTo(rx - Math.cos(an) * largo, ry - Math.sin(an) * largo);
+    ctx.stroke();
+  }
 }
 
 function dibujarChispas(ctx, p, cam) {

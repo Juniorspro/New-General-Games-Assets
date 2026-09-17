@@ -3,12 +3,20 @@
 import { VISTA, F, ANCHO, ajustarVista } from "./mundo.js";
 import { Partida } from "./juego.js";
 import { dibujar, pisoDe, registrarArte, rutaArte } from "./dibujo.js";
-import { despertar, efe, sonando, arrancarViento, soplar, callarViento } from "./audio.js";
+import { despertar, efe, sonando, arrancarViento, soplar, callarViento, contexto, salida } from "./audio.js";
+import * as musica from "./musica.js";
 import { cargar, guardar, borrar } from "./guardado.js";
 import { piloto } from "./piloto.js";
 import { t, aplicar, ponerIdioma, idioma, IDIOMAS } from "./idioma.js";
 
 const $ = (s) => document.querySelector(s);
+
+// Despertar el audio ES el momento de conectar la música: antes no hay contexto
+// —el navegador no deja crearlo sin un gesto— y después habría que acordarse.
+function despertarTodo() {
+  despertar();
+  musica.conectar(contexto(), salida());
+}
 const lienzo = $("#lienzo");
 const ctx = lienzo.getContext("2d", { alpha: false });
 let partida = null;
@@ -73,7 +81,7 @@ const aMundo = (cx, cy) => {
 };
 
 lienzo.addEventListener("pointerdown", (ev) => {
-  despertar(); arrancarViento();
+  despertarTodo(); arrancarViento();
   dedo = { id: ev.pointerId, cx: ev.clientX, cy: ev.clientY };
   // setPointerCapture puede tirar excepción si el puntero ya se soltó, y sin
   // atraparla el dedo queda apoyado para siempre: no se suelta nunca más.
@@ -123,6 +131,8 @@ function mostrar(id) {
 function alMenu() {
   partida = null;
   callarViento();
+  musica.parar();
+  musica.arrancarTema();
   if (!demo) arrancarDemo();
   const d = cargar();
   $("#m-mejor").textContent = `${d.mejor} m`;
@@ -132,7 +142,9 @@ function alMenu() {
 }
 
 function jugar() {
-  despertar(); arrancarViento();
+  despertarTodo(); arrancarViento();
+  musica.pararTema();
+  musica.arrancar();
   demo = null;
   partida = new Partida();
   ultimoHito = 0;
@@ -149,6 +161,14 @@ for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); alMenu(); });
 $("#aj-sonido").addEventListener("change", (e) => {
   const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
+});
+// LA MUSICA SE APAGA APARTE DE LOS EFECTOS: son dos molestias distintas. La
+// música cansa a la décima partida y los efectos no, y el sonido del gancho
+// clavándose es información, no decoración.
+$("#aj-musica").addEventListener("change", (e) => {
+  const d = cargar(); d.ajustes.musica = e.target.checked; guardar();
+  musica.sonando(e.target.checked);
+  if (e.target.checked && !partida) musica.arrancarTema();
 });
 $("#m-borrar").addEventListener("click", () => {
   if (!confirm(t("menu.borrar-confirmar"))) return;
@@ -201,14 +221,26 @@ let ultimoHito = 0;
 function sonar(p) {
   const e = p.ev;
   if (e.engancha) efe.engancha();
-  if (e.suelta) efe.suelta();
+  if (e.suelta) {
+    // SOLTAR PARA ARRIBA SUENA DISTINTO de soltar de costado: es el momento que
+    // hay que aprender, y el juego no lo explica en ningún lado. Un sonido
+    // propio lo enseña sin una sola palabra.
+    if (p.vy < -5) efe.buena(); else efe.suelta();
+  }
+  if (p.ancla && p.t % 9 === 0)
+    efe.soga(Math.min(1, Math.hypot(p.vx, p.vy) / F.VEL_MAX));
   if (e.tuerca) efe.tuerca();
   if (e.pared) efe.pared();
   if (e.rompe) efe.rompe();
   if (e.muerto) { efe.muerto(); terminar(p); }
   const hito = Math.floor(p.metros / 50);
   if (hito > ultimoHito) { ultimoHito = hito; efe.hito(); }
-  soplar(Math.min(1, Math.hypot(p.vx, p.vy) / F.VEL_MAX));
+  const v = Math.min(1, Math.hypot(p.vx, p.vy) / F.VEL_MAX);
+  soplar(v);
+  // LA MUSICA SIGUE A LA TREPADA, no al reloj: mitad velocidad, mitad altura.
+  // Así el arpegio se densifica de a poco a lo largo de la partida y además
+  // salta cuando estás volando entre dos argollas, que es cuando más se siente.
+  musica.empujar(v * 0.5 + Math.min(1, p.alto / 5000) * 0.5);
 }
 
 function terminar(p) {
@@ -276,7 +308,7 @@ function bucle(ahora) {
 }
 
 // --- arranque ------------------------------------------------------------
-const ARTE = ["bicho"];
+const ARTE = ["bicho", "fondo_torre"];
 
 function traer(url) {
   return new Promise((listo) => {
@@ -295,6 +327,8 @@ function traer(url) {
   const d = cargar();
   $("#aj-sonido").checked = d.ajustes.sonido;
   sonando(d.ajustes.sonido);
+  $("#aj-musica").checked = d.ajustes.musica;
+  musica.sonando(d.ajustes.musica);
   elegir(d.ajustes.idioma || "en", false);
   if (!demo) arrancarDemo();
   if (d.ajustes.idioma) alMenu();
@@ -309,3 +343,9 @@ globalThis.GARFIO = {
   get demo() { return demo; },
   jugar, alMenu, Partida, piloto,
 };
+
+// Un gancho para la prueba de sonido: dispara UN efecto. Los efectos no dejan
+// rastro en el DOM ni en el estado, así que la única forma de comprobar que
+// siguen sonando con la música apagada es pedir uno y contar los osciladores.
+globalThis.__efe = () => efe.menu();
+globalThis.__musicaAndando = () => musica.andando();

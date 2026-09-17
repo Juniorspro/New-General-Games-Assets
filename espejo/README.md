@@ -10,8 +10,8 @@ vestido de los menús.
 
     python3 -m http.server 8806      # y abrir http://127.0.0.1:8806
     node armar_niveles.mjs           # rehace los cuarenta niveles
-    sh pruebas/correr.sh             # 71 comprobaciones
-    python3 empaquetar.py            # espejo-en-un-archivo.html, 211 KB
+    sh pruebas/correr.sh             # 80 comprobaciones
+    python3 empaquetar.py            # espejo-en-un-archivo.html, 277 KB
 
 ## Ningún nivel se diseñó a ojo
 
@@ -58,9 +58,29 @@ nada, sin un solo mensaje en ninguna consola. Se arregló el empaquetador de los
 tres juegos y hay una prueba que comprueba que **todos** los nombres que exporta
 cada módulo llegan al archivo único.
 
+
+## El sonido
+
+**Dos cosas distintas, y a propósito.** En el menú suena un tema grabado; en el
+juego la música **se toca sola** con osciladores y no se repite nunca.
+
+El modelo de música da treinta segundos como techo y en la práctica devolvió
+nueve, de donde sale un bucle de cinco o seis. Eso en un menú no molesta —nadie
+se queda diez minutos mirando un menú— y da una atmósfera que un puñado de
+osciladores no da. Abajo de una partida de tres minutos, en cambio, es una
+tortura: se escucha la costura treinta y seis veces. Así que la música del juego
+es un secuenciador: una progresión de acordes, un bajo, un arpegio y percusión
+de ruido, con la densidad, el filtro y el bombo atados a **cómo venís jugando**.
+La música no acompaña al juego, lo informa — igual que el viento. Y no pesa
+nada: cero archivos.
+
+**La música se apaga aparte de los efectos**, porque son dos molestias
+distintas: la música cansa a la décima partida y los efectos no, y un efecto es
+información mientras la música es decoración.
+
 ## Las pruebas
 
-71. Las que más valen:
+80. Las que más valen:
 
 - Los cuarenta se ganan, ninguno viene ganado, y **el par de cada uno es la
   distancia mínima de verdad** — recalculada con el mismo trazador de rayos que

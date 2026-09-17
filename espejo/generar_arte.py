@@ -37,6 +37,17 @@ PIEZAS = {
                'across them, slightly tilted, with a thin cyan glow behind the letters. Nothing '
                'else in the image: no characters, no mirrors, no frame, no other words. Isolated '
                'on a fully transparent background, flat colours, no drop shadow.')},
+  # LA MESA. Es el fondo del tablero, y tiene que ser CASI NEGRA: arriba van
+  # rayos de colores saturados, y una textura con carácter propio les pelea el
+  # contraste justo donde hay que leer por dónde pasa el rayo.
+  "fondo_mesa": {
+    "medida": (360, 512), "transparente": False, "recortar": False,
+    "prompt": ("The surface of a dark laboratory optics bench seen from directly above, filling "
+               "the whole image: brushed near-black metal with a faint etched measurement grid, "
+               "tiny scratches, a few screw holes and mounting slots. Extremely low contrast, "
+               "almost entirely black, subtle. Even detail all over with nothing important near "
+               "the edges. No characters, no text, no lighting effects, no instruments.")},
+
   "ui_prisma": {
     "medida": (300, 120),
     "prompt": ("A wide horizontal plate of dark polished glass with bevelled edges and a bright "
@@ -93,7 +104,13 @@ def pedir(rehacer=False):
             print(f"  · {k} ya pedido"); continue
         r = rz("submit_image_generation", {
             "project_id": PROYECTO, "output_path": f"assets/{k}.png", "prompt": cfg["prompt"],
-            "model": MODELO, "size": "1024x1024", "transparent": True})
+            # LOS FONDOS NO SE PIDEN RECORTADOS. `transparent` le dice al
+            # servidor que borre el fondo de la imagen, que es justo lo que hace
+            # falta para una pieza suelta y exactamente lo contrario de lo que
+            # hace falta para una textura que ocupa la pantalla entera: le
+            # abriría agujeros por donde se ve el vacío.
+            "model": MODELO, "size": "1024x1024",
+            "transparent": cfg.get("transparente", True)})
         if "task_id" not in r:
             print(f"  ✗ {k}: {r}"); continue
         anotar(k, {"task_id": r["task_id"], "output_path": r["output_path"]})
@@ -168,10 +185,11 @@ def preparar():
         # El recorte se mide sobre el alfa UMBRALADO: el recorte de fondo del
         # generador deja un halo de alfa bajo por toda la imagen y getbbox()
         # sobre el alfa crudo devuelve la imagen entera.
-        m = im.getchannel("A").point(lambda v: 255 if v > 100 else 0)
-        caja = m.getbbox()
-        if caja:
-            im = im.crop(caja)
+        if cfg.get("recortar", True):
+            m = im.getchannel("A").point(lambda v: 255 if v > 100 else 0)
+            caja = m.getbbox()
+            if caja:
+                im = im.crop(caja)
         if cfg.get("damero", k.startswith("ui_")):
             im = sin_damero(im)
         if cfg.get("medida"):

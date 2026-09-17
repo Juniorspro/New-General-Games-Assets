@@ -47,6 +47,50 @@ for (let i = 0; i < 420; i++)
 let texturas = {};
 export function registrarTexturas(t) { texturas = t || {}; }
 
+/**
+ * La pared del fondo, a media velocidad y teñida con el color del tramo.
+ *
+ * SE REPITE ESPEJADA, dando vuelta una copia sí y una no. Pedirle a un
+ * generador una textura que empalme consigo misma no funciona —siempre se ve la
+ * costura— y arreglarla a mano cuesta una tarde. Espejada, la costura es la
+ * imagen contra sí misma: coincide por construcción, y en una pared de caños y
+ * remaches nadie nota la simetría.
+ *
+ * Y SE TIÑE EN VEZ DE TENER UNA TEXTURA POR TRAMO. Siete imágenes son siete
+ * veces el peso, y además se desincronizan con los colores del código apenas
+ * alguien toca un tramo: así el fondo cambia de color solo, con el tramo.
+ */
+function fondo(ctx, cam, color) {
+  const im = texturas.fondo_pozo;
+  if (!im) return;
+  const alto = im.height, ancho = ANCHO;
+  const ox = Math.round((VISTA.ancho - ANCHO) / 2);
+  // A la mitad de la velocidad de la cámara: la pared del fondo está "lejos".
+  const desp = cam * 0.5;
+  const primera = Math.floor(desp / alto);
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  for (let k = -1; k <= Math.ceil(VISTA.alto / alto); k++) {
+    const i = primera + k;
+    const y = i * alto - desp;
+    if (y > VISTA.alto || y + alto < 0) continue;
+    ctx.save();
+    // El módulo tiene que ser positivo: arriba del cero la cámara es negativa y
+    // en JavaScript `-1 % 2` es -1, no 1.
+    if (((i % 2) + 2) % 2 === 1) { ctx.translate(ox, y + alto); ctx.scale(1, -1); }
+    else ctx.translate(ox, y);
+    ctx.drawImage(im, 0, 0, ancho, alto);
+    ctx.restore();
+  }
+  // El tinte: el mismo color de la pared del tramo, en modo `color`, así que la
+  // textura conserva sus luces y sombras y sólo cambia de matiz.
+  ctx.globalCompositeOperation = "color";
+  ctx.globalAlpha = 0.75;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
+  ctx.restore();
+}
+
 export function dibujar(ctx, p) {
   const cam = p.cam;
   const t = (((cam % LARGO_TRAMO) + LARGO_TRAMO) % LARGO_TRAMO) / LARGO_TRAMO;
@@ -61,6 +105,8 @@ export function dibujar(ctx, p) {
   g.addColorStop(0, c0); g.addColorStop(1, c1);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
+
+  fondo(ctx, cam, pared);
 
   // El polvo a un tercio de velocidad: es lo unico que da profundidad en un
   // pozo donde todo lo demas esta a la misma distancia.
@@ -101,6 +147,21 @@ export function dibujar(ctx, p) {
       const largo = 20 + veloz * 90;
       ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx, ry + largo); ctx.stroke();
     }
+  }
+
+  // EL FOGONAZO DEL PARAGUAS: un anillo que se abre cuando el paraguas termina
+  // de cambiar de estado. El cambio dura nueve cuadros y es gradual, así que sin
+  // esto no hay ningún momento en que se vea "listo, ya está cerrado" — y ese
+  // momento es el que hay que sincronizar con el hueco.
+  if (p.golpeParaguas > 0) {
+    const k = p.golpeParaguas / 12;
+    ctx.globalAlpha = k * 0.55;
+    ctx.strokeStyle = p.objetivo ? "#8fe3f5" : "#97ce4c";
+    ctx.lineWidth = 2 + k * 3;
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, (1 - k) * 46 + 10, ((1 - k) * 46 + 10) * 0.45, 0, 0, 7);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 
   dibujarHeroe(ctx, p.heroe, p.x, p.y, p.abierto, p.anchoParaguas, p.invul);

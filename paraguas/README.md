@@ -80,7 +80,7 @@ atrás y después alcanza; cuando caés rápido, el viento te levanta las pierna
 sh pruebas/correr.sh
 ```
 
-47 comprobaciones. Las que importan:
+90 comprobaciones. Las que importan:
 
 - **`pozo.mjs`** — que el pozo **se pueda bajar**. Dos cosas por separado: que
   cada par de huecos esté dentro de lo que se corre en el tiempo que dura la
@@ -115,3 +115,23 @@ hechos con un `conic-gradient` y una máscara. Cero imágenes, cero kilobytes.
 Rilo es el mismo personaje del otro juego de este repositorio: generado a partir
 de una descripción escrita para estos juegos. La idea es un homenaje declarado;
 los diseños, los nombres y el mundo son propios.
+
+
+## El sonido
+
+**Dos cosas distintas, y a propósito.** En el menú suena un tema grabado; en el
+juego la música **se toca sola** con osciladores y no se repite nunca.
+
+El modelo de música da treinta segundos como techo y en la práctica devolvió
+nueve, de donde sale un bucle de cinco o seis. Eso en un menú no molesta —nadie
+se queda diez minutos mirando un menú— y da una atmósfera que un puñado de
+osciladores no da. Abajo de una partida de tres minutos, en cambio, es una
+tortura: se escucha la costura treinta y seis veces. Así que la música del juego
+es un secuenciador: una progresión de acordes, un bajo, un arpegio y percusión
+de ruido, con la densidad, el filtro y el bombo atados a **cómo venís jugando**.
+La música no acompaña al juego, lo informa — igual que el viento. Y no pesa
+nada: cero archivos.
+
+**La música se apaga aparte de los efectos**, porque son dos molestias
+distintas: la música cansa a la décima partida y los efectos no, y un efecto es
+información mientras la música es decoración.

@@ -10,7 +10,7 @@ const LLAVE = "paraguas.v1";
 // hay que preguntarle— del que ya eligió inglés y no quiere que le pregunten
 // más.
 const vacio = () => ({ mejor: 0, mejorMonedas: 0, partidas: 0,
-                       ajustes: { sonido: true, idioma: null } });
+                       ajustes: { sonido: true, musica: true, idioma: null } });
 let cache = null;
 
 export function cargar() {

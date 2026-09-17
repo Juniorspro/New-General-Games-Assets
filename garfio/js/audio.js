@@ -24,6 +24,13 @@ export function despertar() {
 
 export const sonando = (v) => { prendido = v; if (maestro) maestro.gain.value = v ? 0.5 : 0; };
 
+// El contexto y el maestro se comparten con la musica: dos AudioContext en la
+// misma pagina es el error que hace que en un telefono uno de los dos no suene
+// nunca —el navegador limita cuantos deja abiertos— y ademas el silencio se
+// pediria dos veces, una por cada arbol.
+export const contexto = () => ac;
+export const salida = () => maestro;
+
 function ruidoBuffer(dur) {
   const n = Math.floor(ac.sampleRate * dur);
   const buf = ac.createBuffer(1, n, ac.sampleRate);
@@ -74,6 +81,13 @@ export const efe = {
   // desafinados. Tiene que asustar sin ser el sonido de perder.
   rompe() { tono("sawtooth", 420, 90, 0.004, 0.3, 0.2); tono("square", 390, 80, 0.004, 0.3, 0.12); },
   muerto() { tono("sawtooth", 300, 42, 0.01, 0.9, 0.28); },
+  // El roce de la soga mientras te hamacas: sube de tono con la velocidad, asi
+  // que se escucha cuanto envion estas juntando SIN mirar el arco. Es corto y
+  // bajo a proposito: suena hasta cinco veces por segundo.
+  soga(v) { tono("triangle", 180 + v * 420, 160 + v * 380, 0.004, 0.05, 0.02 + v * 0.03); },
+  // Soltar en el punto justo —arriba del arco y para arriba— paga un sonido
+  // propio. Es la unica forma de aprender el timing sin que nadie lo explique.
+  buena() { tono("sine", 700, 1400, 0.004, 0.16, 0.1); },
   hito() { [523, 659, 784].forEach((f, i) => setTimeout(() => tono("triangle", f, f, 0.01, 0.22, 0.14), i * 70)); },
   menu() { tono("square", 520, 700, 0.004, 0.07, 0.1); },
 };

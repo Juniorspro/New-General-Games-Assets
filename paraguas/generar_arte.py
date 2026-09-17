@@ -51,6 +51,22 @@ PIEZAS = {
                "straight metallic grey shaft, a small glowing green orb on top and a curved "
                "handle at the bottom. Vertical, thin, seen from the front. " + ESTILO)},
 
+  # EL FONDO DEL POZO. Se dibuja repetido hacia abajo y con parallax, y el juego
+  # lo TIÑE con el color del tramo en vez de generar siete texturas distintas:
+  # una imagen por tramo son siete veces el peso y además se desincroniza con
+  # los colores del código apenas alguien toca un tramo.
+  #
+  # No se pide "que sea repetible": eso no lo cumple ningún generador. Se pide
+  # que las cosas no lleguen a los bordes, y el juego la repite ESPEJADA —cada
+  # copia dada vuelta— así que la costura siempre coincide consigo misma.
+  "fondo_pozo": {
+    "medida": (360, 512), "transparente": False, "recortar": False,
+    "prompt": ("The far wall of a deep industrial shaft seen head on, filling the whole image: "
+               "riveted metal plates, vertical pipes, bundles of cable, extractor grilles and "
+               "grime. Flat 2D cartoon style with thick dark outlines, low contrast, very dark "
+               "desaturated grey-blue, almost a silhouette. Even detail all over with nothing "
+               "important near the edges. No characters, no text, no lighting effects.")},
+
   # EL BOTON. Gira entero, así que tiene que ser REDONDO y estar centrado: si el
   # recorte lo deja descentrado un par de píxeles, al girar se bambolea.
   "ui_portal": {
@@ -139,7 +155,13 @@ def pedir(rehacer=False):
             print(f"  · {k} ya pedido"); continue
         r = rz("submit_image_generation", {
             "project_id": PROYECTO, "output_path": f"assets/{k}.png", "prompt": cfg["prompt"],
-            "model": MODELO, "size": "1024x1024", "transparent": True})
+            # LOS FONDOS NO SE PIDEN RECORTADOS. `transparent` le dice al
+            # servidor que borre el fondo de la imagen, que es justo lo que hace
+            # falta para una pieza suelta y exactamente lo contrario de lo que
+            # hace falta para una textura que ocupa la pantalla entera: le
+            # abriría agujeros por donde se ve el vacío.
+            "model": MODELO, "size": "1024x1024",
+            "transparent": cfg.get("transparente", True)})
         if "task_id" not in r:
             print(f"  ✗ {k}: {r}"); continue
         anotar(k, {"task_id": r["task_id"], "output_path": r["output_path"]})
@@ -215,10 +237,11 @@ def preparar():
         # El recorte se mide sobre el alfa UMBRALADO: el recorte de fondo del
         # generador deja un halo de alfa bajo por toda la imagen y getbbox()
         # sobre el alfa crudo devuelve la imagen entera.
-        m = im.getchannel("A").point(lambda v: 255 if v > 100 else 0)
-        caja = m.getbbox()
-        if caja:
-            im = im.crop(caja)
+        if cfg.get("recortar", True):
+            m = im.getchannel("A").point(lambda v: 255 if v > 100 else 0)
+            caja = m.getbbox()
+            if caja:
+                im = im.crop(caja)
         if cfg.get("damero"):
             im = sin_damero(im)
         # `medida` fuerza el tamaño exacto SIN respetar la proporción: las piezas

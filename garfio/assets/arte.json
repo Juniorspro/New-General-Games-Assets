@@ -34,5 +34,11 @@
     "output_path": "assets/ui_chapa-g2.png",
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/garfio/assets/ui_chapa-g2.png"
+  },
+  "fondo_torre": {
+    "task_id": "gtask-be3129651edb41e58c2d",
+    "output_path": "assets/fondo_torre-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/garfio/assets/fondo_torre-g1.png"
   }
 }

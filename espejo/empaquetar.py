@@ -22,7 +22,7 @@ imágenes son una mejora, no un requisito.
 import base64, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["assets", "haz", "niveles", "juego", "dibujo", "audio", "guardado", "idioma"]
+ORDEN = ["assets", "haz", "niveles", "juego", "dibujo", "audio", "guardado", "idioma", "musica"]
 ENTRADA = "main"
 
 # Multilínea y con comillas simples O dobles: juego.js abre el import de
@@ -115,7 +115,7 @@ def binarios():
     juego, vestido, crudo = {}, {}, 0
     for sub in ["arte"]:
         for f in sorted((AQUI / "assets" / sub).glob("*")):
-            if f.suffix.lower() not in (".webp", ".png"):
+            if f.suffix.lower() not in (".webp", ".png", ".mp3"):
                 continue
             destino = vestido if f.name.startswith("ui_") else juego
             destino[f"assets/{sub}/{f.name}"] = data_uri(f); crudo += f.stat().st_size

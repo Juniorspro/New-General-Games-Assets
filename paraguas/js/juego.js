@@ -34,6 +34,8 @@ export class Partida {
     this.chispas = [];
     this.cam = 0;
     this.pasadas = new Set();
+    this.golpeParaguas = 0;       // cuadros que le quedan al fogonazo
+    this.avisadas = new Set();    // filas angostas ya avisadas
     this.ev = {};
   }
 
@@ -54,7 +56,7 @@ export class Partida {
   paso(ent) {
     this.t++;
     this.ev = { golpe: false, pinchos: false, moneda: 0, roce: false,
-                muerto: false, paraguas: false };
+                muerto: false, paraguas: false, angosto: false };
     if (this.sacude > 0) this.sacude *= 0.87;
     for (const c of this.chispas) { c.x += c.vx; c.y += c.vy; c.vy += 0.16; c.vida--; }
     this.chispas = this.chispas.filter((c) => c.vida > 0);
@@ -67,7 +69,8 @@ export class Partida {
     // natural (mantener) es el que cuesta.
     const antes = this.objetivo;
     this.objetivo = ent.cerrar ? 0 : 1;
-    if (antes !== this.objetivo) this.ev.paraguas = true;
+    if (antes !== this.objetivo) { this.ev.paraguas = true; this.golpeParaguas = 12; }
+    if (this.golpeParaguas > 0) this.golpeParaguas--;
     this.abierto += (this.objetivo - this.abierto) * F.VEL_PARAGUAS;
     if (Math.abs(this.abierto - this.objetivo) < 0.004) this.abierto = this.objetivo;
 
@@ -93,6 +96,15 @@ export class Partida {
     // que abrir el paraguas FRENE de verdad y no solo acelere menos.
     this.vy += (this.terminal - this.vy) * F.ROCE + F.GRAVEDAD * 0.12;
     if (this.vy > F.TERMINAL_CERRADO) this.vy = F.TERMINAL_CERRADO;
+
+    // EL AVISO DE FILA ANGOSTA SUENA UNA VEZ Y TEMPRANO: cuando la fila entra en
+    // el alcance del ojo, no cuando se cruza. Un aviso que llega cuando ya
+    // estás adentro no es un aviso.
+    const prox = this.pozo.siguiente(this.y + 12);
+    if (prox && prox.angosto && prox.y - this.y < 330 && !this.avisadas.has(prox.y)) {
+      this.avisadas.add(prox.y);
+      this.ev.angosto = true;
+    }
 
     this.mover();
     this.pozo.generarHasta(this.y + VISTA.alto * 2);

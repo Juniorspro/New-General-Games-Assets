@@ -52,5 +52,11 @@
     "output_path": "assets/ui_chapa-g1.png",
     "estado": "ready",
     "local": "/home/user/New-General-Games-Assets/paraguas/assets/ui_chapa-g1.png"
+  },
+  "fondo_pozo": {
+    "task_id": "gtask-28912e080d5f4107aacf",
+    "output_path": "assets/fondo_pozo-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/paraguas/assets/fondo_pozo-g1.png"
   }
 }
