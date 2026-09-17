@@ -6,6 +6,7 @@
 // sin número de línea.
 import { chromium } from "playwright";
 import path from "path";
+import { readdirSync, readFileSync } from "fs";
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
 const pg = await nav.newPage({ viewport: { width: 420, height: 820 }, hasTouch: true });
 const err = [];
@@ -14,6 +15,49 @@ pg.on("console", (m) => { if (m.type() === "error") err.push("consola: " + m.tex
 let ok = 0, mal = 0;
 const ch = (n, c, d = "") => { c ? (ok++, console.log(`  ✓ ${n}${d ? " — " + d : ""}`))
                                  : (mal++, console.log(`  ✗ ${n}${d ? " — " + d : ""}`)); };
+
+// --- que ningún nombre exportado se pierda por el camino ------------------
+//
+// ESTA PRUEBA EXISTE POR UN ERROR QUE COSTO UNA TARDE. `export const A = 0,
+// B = 1;` es una sola línea con dos exportaciones, y el empaquetador se quedaba
+// con la primera: en el archivo único, `B` quedaba `undefined` en todos los
+// módulos que lo importaban. No falla al cargar — falla la primera vez que
+// alguien compara contra `B`, o sea jugando, y comparar contra undefined no
+// tira error: simplemente nunca es verdad. En el juego se veía así: tocar un
+// espejo no hacía nada, sin ningún mensaje en ninguna consola.
+{
+  const html = readFileSync(new URL("../paraguas-en-un-archivo.html", import.meta.url), "utf8");
+  const faltan = [];
+  for (const f of readdirSync(new URL("../js/", import.meta.url)).filter((f) => f.endsWith(".js"))) {
+    if (f === "main.js") continue;
+    const src = readFileSync(new URL(`../js/${f}`, import.meta.url), "utf8");
+    const mod = f.replace(/\.js$/, "");
+    // El cierre del módulo (`};\n})();`) es parte del patrón a propósito: sin
+    // él, la búsqueda se quedaba con el primer `return {` del cuerpo —el de
+    // cualquier función de adentro— y daba por faltantes exportaciones que
+    // estaban perfectamente puestas.
+    const bloque = html.match(new RegExp(
+      `const M_${mod} = \\(\\(\\) => \\{[\\s\\S]*?\\n  return \\{([^}]*)\\};\\n\\}\\)\\(\\);`));
+    if (!bloque) { faltan.push(`${f}: no está en el archivo`); continue; }
+    const puestos = new Set(bloque[1].split(",").map((s) => s.trim()));
+    const esperados = new Set();
+    for (const m of src.matchAll(/^export\s+(?:async\s+)?(?:const|let|var|function|class)\s+(\w+)/gm))
+      esperados.add(m[1]);
+    // Sólo declaraciones de UNA línea, sin llaves y sin paréntesis: una de
+    // varias líneas es un objeto y una con paréntesis es una función, y en las
+    // dos las comas separan otra cosa que exportaciones. Sin ese recorte, la
+    // prueba pedía que llegaran al archivo único cosas como "216" —un pedazo de
+    // un color— y "v", que es el argumento de una lambda.
+    for (const m of src.matchAll(/^export\s+(?:const|let|var)\s+([^;{}()\n]+);\s*$/gm)) {
+      const partes = m[1].split(",").map((x) => x.split("=")[0].trim());
+      if (partes.every((x) => /^\w+$/.test(x))) for (const x of partes) esperados.add(x);
+    }
+    for (const n of esperados) if (!puestos.has(n)) faltan.push(`${f}: falta ${n}`);
+  }
+  ch("todos los nombres que exporta cada módulo llegan al archivo único",
+     faltan.length === 0, faltan.slice(0, 4).join(" · "));
+}
+
 
 await pg.goto("file://" + path.resolve("paraguas-en-un-archivo.html"));
 await pg.waitForFunction(() => !!window.PARAGUAS, { timeout: 30000 });

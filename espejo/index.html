@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#080c18">
+<title>Espejo</title>
+<meta name="description" content="Cuarenta puzzles de espejos y rayos. Ninguno se diseñó a ojo: los cuarenta los resolvió una máquina antes de dejártelos jugar.">
+<link rel="stylesheet" href="css/e.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23080c18'/><path d='M3 13L13 3' stroke='%23e8f3ff' stroke-width='2' stroke-linecap='round'/><path d='M2 8h5' stroke='%235ad8ff' stroke-width='1.6'/><path d='M8 14V9' stroke='%235ad8ff' stroke-width='1.6'/></svg>">
+</head>
+<body>
+
+<!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego quedaría
+     después del HUD en el orden del documento, y como #p-juego crea su propio
+     contexto de apilamiento, se pintaría ENCIMA del HUD. -->
+<canvas id="lienzo" width="360" height="640" aria-label="El tablero" data-t-attr="aria-label:doc.lienzo"></canvas>
+
+<!-- ───────────── idioma ─────────────
+     VA ANTES DEL MENU: buscar dónde se cambia el idioma en un idioma que no
+     sabés leer es exactamente el problema. Se pregunta una vez y se guarda. -->
+<main id="p-idioma" class="pantalla centrado" hidden>
+  <div class="tapa">
+    <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Espejo" width="420" height="150"></h1>
+    <h2 class="idioma-t" data-t="idioma.titulo">Elegí tu idioma</h2>
+    <div class="botones" id="idiomas">
+      <button class="chico grande-op" data-idioma="en"><b>EN</b> English</button>
+      <button class="chico grande-op" data-idioma="es"><b>ES</b> Español</button>
+      <button class="chico grande-op" data-idioma="pt"><b>PT</b> Português</button>
+    </div>
+    <p class="bajada" data-t="idioma.bajada">Se puede cambiar después desde el menú.</p>
+  </div>
+</main>
+
+<!-- ───────────── menú ───────────── -->
+<main id="p-menu" class="pantalla centrado" hidden>
+  <div class="tapa">
+    <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Espejo" width="420" height="150"></h1>
+    <p class="bajada" data-t-html="menu.bajada">Tocá un espejo y se da vuelta.</p>
+
+    <button id="m-seguir" class="prisma" aria-label="Jugar" data-t-attr="aria-label:menu.jugar-aria">Nivel 1</button>
+    <p class="record"><b id="m-luces">0</b></p>
+
+    <div class="botones fila chicos">
+      <button id="m-niveles" class="chico" data-t="menu.niveles">Niveles</button>
+      <button id="m-como" class="chico" data-t="menu.como">? Cómo se juega</button>
+      <label class="opcion chico-op"><input type="checkbox" id="aj-sonido">
+        <span data-t="menu.sonido">Sonido</span></label>
+      <button id="m-idioma" class="chico" aria-label="Idioma" data-t-attr="aria-label:menu.idioma">EN</button>
+      <button id="m-borrar" class="chico peligro" data-t="menu.borrar">Borrar</button>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── mapa de niveles ───────────── -->
+<main id="p-mapa" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico" data-t="como.atras">← Atrás</button>
+    <h2 data-t="niv.titulo">Niveles</h2></header>
+  <div id="mapa" class="mapa"></div>
+</main>
+
+<!-- ───────────── cómo se juega ───────────── -->
+<main id="p-como" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico" data-t="como.atras">← Atrás</button>
+    <h2 data-t="como.titulo">Cómo se juega</h2></header>
+  <div class="texto">
+    <p class="destacado" data-t-html="como.destacado">Cada emisor tira un rayo.</p>
+
+    <h3 data-t="como.h-hay">Lo que hay</h3>
+    <dl>
+      <dt data-t="como.dt-emisor"></dt><dd data-t-html="como.dd-emisor"></dd>
+      <dt data-t="como.dt-espejo"></dt><dd data-t-html="como.dd-espejo"></dd>
+      <dt data-t="como.dt-objetivo"></dt><dd data-t-html="como.dd-objetivo"></dd>
+      <dt data-t="como.dt-muro"></dt><dd data-t-html="como.dd-muro"></dd>
+    </dl>
+
+    <h3 data-t="como.h-par">El par</h3>
+    <p data-t-html="como.par"></p>
+
+    <h3 data-t="como.h-hecho">De qué está hecho</h3>
+    <p data-t-html="como.hecho1"></p>
+    <p data-t-html="como.hecho2"></p>
+  </div>
+</main>
+
+<!-- ───────────── juego ───────────── -->
+<main id="p-juego" class="pantalla juego" hidden>
+  <div class="hud">
+    <button id="j-salir" class="hud-btn" aria-label="Volver a los niveles" data-t-attr="aria-label:hud.salir">✕</button>
+    <div class="hud-centro">
+      <b id="h-nivel">Nivel 1</b>
+      <span id="h-toques" class="toques">0 toques</span>
+      <span id="h-par" class="par">par 1</span>
+    </div>
+    <button id="j-pista" class="hud-btn" aria-label="Pista" data-t-attr="aria-label:hud.pista">?</button>
+    <button id="j-reiniciar" class="hud-btn" aria-label="Reiniciar el nivel" data-t-attr="aria-label:hud.reiniciar">↺</button>
+  </div>
+</main>
+
+<!-- ───────────── ganaste ───────────── -->
+<main id="p-fin" class="pantalla centrado" hidden>
+  <div class="tapa fin">
+    <h2 data-t="fin.titulo">¡Listo!</h2>
+    <p id="f-luces" class="luces-grandes">●●●</p>
+    <p id="f-perfecto" class="perfecto" hidden data-t="fin.perfecto">En el par exacto</p>
+    <ul class="lista">
+      <li><span data-t="fin.toques">Toques</span><b id="f-toques">0</b></li>
+      <li><span data-t="fin.par">Par</span><b id="f-par">0</b></li>
+    </ul>
+    <p id="f-ultimo" class="ultimo" hidden data-t="fin.ultimo"></p>
+    <button id="f-siguiente" class="prisma" aria-label="Nivel siguiente" data-t-attr="aria-label:fin.siguiente-aria" data-t="fin.siguiente">SIGUE</button>
+    <div class="botones fila chicos">
+      <button id="f-repetir" class="chico" data-t="fin.repetir">Repetir</button>
+      <button id="f-niveles" class="chico" data-t="fin.niveles">A los niveles</button>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

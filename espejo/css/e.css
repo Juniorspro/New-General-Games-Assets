@@ -1,0 +1,226 @@
+/* Espejo — hoja única.
+   Vertical y nada más: el tablero se dibuja en 360 de ancho y se escala entero,
+   así que la interfaz vive dentro de ese rectángulo. Las medidas van en svh y
+   no en vh porque en un teléfono vh incluye la barra del navegador y el último
+   renglón queda siempre tapado. */
+
+:root {
+  --fondo: #080c18;
+  --panel: #101628;
+  --borde: #232c46;
+  --texto: #e9eef7;
+  --tenue: #8d99b6;
+  --cian: #5ad8ff;
+  --cian-claro: #b6f0ff;
+  --rosa: #ff7bd5;
+  --ambar: #ffc24a;
+  --mal: #ff8f8f;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: var(--fondo); color: var(--texto);
+  font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%; overscroll-behavior: none;
+}
+body {
+  min-height: 100svh; display: flex; align-items: center; justify-content: center;
+  /* Un fondo que insinúa rayos cruzados. Cuesta una sola pintada y hace que las
+     pantallas de texto no se sientan un documento. */
+  background-image:
+    radial-gradient(120% 60% at 20% 0%, rgba(90,216,255,.07), transparent 60%),
+    radial-gradient(100% 60% at 85% 100%, rgba(255,123,213,.06), transparent 60%);
+}
+button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* `touch-action: none` es obligatorio: sin eso el navegador se queda el toque
+   para desplazar la página y el dedo llega una vez de cada tres. */
+#lienzo {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  touch-action: none; display: block; z-index: 0; visibility: hidden;
+}
+
+.pantalla {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: var(--an, min(360px, 100vw)); height: var(--al, min(640px, 100svh));
+  display: flex; flex-direction: column; z-index: 2;
+}
+.pantalla[hidden] { display: none; }
+.centrado { align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+#p-menu, #p-idioma, #p-fin { background: radial-gradient(130% 70% at 50% 0%, rgba(14,22,40,.5), rgba(4,6,14,.85)); }
+#p-mapa, #p-como { background: var(--fondo); }
+
+/* EL MARCO ES UNA IMAGEN CORTADA EN NUEVE (`border-image`), no un borde. Un
+   dibujo de varillas con espejos no se puede estirar entero: las esquinas
+   quedarían deformes. `border-image` deja las cuatro esquinas del tamaño
+   original y estira sólo los lados, así que el mismo dibujo de 320×320 sirve
+   para el panel alto del menú y para el bajo del final. El relleno no se dibuja
+   (sin `fill`): el centro de la pieza es transparente. */
+.tapa {
+  width: 100%; text-align: center;
+  padding: 12px 10px 10px;
+  border: 28px solid transparent;
+  border-image: url(../assets/arte/ui_marco.webp) 30% / 28px / 0 round;
+  background: radial-gradient(120% 90% at 50% 10%, rgba(16,24,44,.72), rgba(4,7,16,.9));
+  background-clip: padding-box;
+  filter: drop-shadow(0 12px 26px rgba(0,0,0,.6));
+  max-height: 100%; overflow-y: auto;
+}
+
+/* El título es un dibujo, no texto con sombras. El `alt` lleva la palabra, así
+   que el lector de pantalla sigue leyendo "Espejo". */
+.logo { margin: 0 0 4px; line-height: 0; }
+.logo img {
+  width: min(80%, 240px); height: auto;
+  filter: drop-shadow(0 0 16px rgba(90,216,255,.4));
+}
+
+.bajada { color: var(--tenue); margin: 0 0 12px; font-size: 13px; }
+.bajada b { color: var(--texto); }
+.record { color: var(--tenue); font-size: 13px; margin: 8px 0 2px; }
+.record b { color: var(--cian-claro); font-size: 15px; }
+
+/* ── el botón grande: una placa de vidrio ── */
+.prisma {
+  display: block; width: 100%; max-width: 250px; margin: 6px auto 4px;
+  border: 16px solid transparent;
+  border-image: url(../assets/arte/ui_prisma.webp) 26% fill / 16px / 0 stretch;
+  background: none; box-shadow: none; border-radius: 0;
+  font: inherit; font-size: 19px; font-weight: 800; letter-spacing: 1px;
+  color: #eaf9ff; text-shadow: 0 2px 0 rgba(0,0,0,.55);
+  min-height: 62px; padding: 6px 12px; cursor: pointer;
+  filter: drop-shadow(0 0 14px rgba(90,216,255,.35));
+}
+.prisma:active { transform: translateY(2px); }
+
+/* ── los botones chicos: una placa de vidrio ahumado ── */
+.botones { display: flex; flex-direction: column; gap: 8px; }
+.botones.fila { flex-direction: row; justify-content: center; }
+button {
+  font: inherit; color: #dff1ff; border: 12px solid transparent;
+  border-image: url(../assets/arte/ui_chapa.webp) 30% fill / 12px / 0 stretch;
+  background: none; box-shadow: none; border-radius: 0;
+  padding: 8px 12px; min-height: 46px; cursor: pointer;
+}
+button:active { transform: translateY(2px); }
+button:disabled { opacity: .45; cursor: default; }
+.chico { padding: 5px 10px; font-size: 13px; min-height: 36px; }
+/* Los botones del pie se ven chicos pero SE TOCAN GRANDE: por debajo de 44 px
+   el dedo falla una de cada tres veces. El tamaño visual lo da el texto; el
+   área de toque, el min-height. */
+.botones.chicos { gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.botones.chicos .chico { min-height: 44px; }
+.peligro { color: var(--mal); }
+#m-idioma { font-weight: 800; letter-spacing: 1px; min-width: 46px; }
+
+.opcion { display: flex; align-items: center; justify-content: center; gap: 7px;
+          color: var(--tenue); font-size: 12.5px; margin: 0; }
+.opcion input { width: 17px; height: 17px; accent-color: var(--cian); }
+.chico-op { min-height: 44px; }
+
+/* ── la pantalla de idiomas ── */
+.idioma-t { margin: 8px 0 12px; font-size: 19px; color: var(--cian-claro); }
+#idiomas { gap: 9px; margin-bottom: 12px; }
+.grande-op { min-height: 52px; font-size: 15px; padding: 12px 14px; }
+.grande-op b { color: var(--cian-claro); margin-right: 8px; letter-spacing: 1px; }
+
+/* ── el mapa de niveles ──
+   Cinco columnas: con cuatro los botones quedan enormes y con seis el número no
+   se lee. Cada uno mide más de 44 px de lado por el `min-height`, que es lo que
+   hace que el dedo acierte el nivel que quería. */
+.mapa {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+  padding: 12px; overflow-y: auto; flex: 1; align-content: start;
+}
+.celda-niv {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; min-height: 58px; padding: 6px 2px; font-size: 15px; font-weight: 700;
+}
+.celda-niv .luces { font-size: 9px; letter-spacing: 1px; color: var(--cian); line-height: 1; }
+.celda-niv.hecho { color: var(--cian-claro); }
+.celda-niv.cerrado { color: var(--tenue); }
+.celda-niv.cerrado .luces { color: var(--tenue); font-size: 11px; }
+
+/* --- texto largo --- */
+.barra { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+         background: rgba(6,10,22,.95); border-bottom: 2px solid var(--borde); }
+.barra h2 { margin: 0; font-size: 17px; }
+.texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
+.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--cian); }
+.texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
+.texto p b { color: var(--texto); }
+.destacado { background: rgba(16,24,44,.9); border-left: 3px solid var(--cian);
+             padding: 11px 12px; border-radius: 0 8px 8px 0; }
+.texto dl { margin: 0; }
+.texto dt { font-weight: 700; margin-top: 10px; font-size: 14px; }
+.texto dd { margin: 2px 0 0; color: var(--tenue); font-size: 13.5px; }
+.texto dd b { color: var(--texto); }
+
+/* --- HUD --- */
+.juego { pointer-events: none; background: none; }
+.juego button { pointer-events: auto; }
+.hud { display: flex; align-items: center; gap: 6px; padding: 8px 8px 0; }
+.hud-btn { width: 44px; height: 44px; min-height: 44px; padding: 0; font-size: 17px; line-height: 1; }
+.hud-centro { flex: 1; text-align: center; line-height: 1.25; }
+.hud-centro b { display: block; font-size: 15px; color: #eaf9ff; }
+.toques { font-size: 12.5px; color: var(--tenue); font-variant-numeric: tabular-nums; }
+/* Pasado el par, el contador se pone ámbar: no es un castigo, es la única señal
+   de que las tres luces ya no están en juego — y llega en el momento en que
+   todavía se puede reiniciar y probar de nuevo. */
+.toques.pasado { color: var(--ambar); }
+.par { font-size: 12.5px; color: var(--cian); margin-left: 6px; }
+
+/* --- ganaste --- */
+.fin h2 { margin: 0 0 4px; font-size: 30px; font-weight: 900; color: var(--cian-claro);
+          text-shadow: 0 0 24px rgba(90,216,255,.5); }
+.luces-grandes { margin: 0 0 6px; font-size: 26px; letter-spacing: 6px; color: var(--cian);
+                 animation: pum .5s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes pum { from { transform: scale(.4); opacity: 0; } }
+.perfecto { margin: 0 0 8px; color: var(--ambar); font-weight: 700; font-size: 13px;
+            letter-spacing: 2px; text-transform: uppercase; }
+.ultimo { color: var(--cian-claro); font-size: 13.5px; margin: 8px 0; }
+.lista { list-style: none; padding: 0; margin: 0 0 10px; text-align: left; }
+.lista li { display: flex; justify-content: space-between; gap: 10px;
+            padding: 6px 2px; border-bottom: 1px solid rgba(90,216,255,.18); font-size: 14px; }
+.lista span { color: var(--tenue); }
+.lista b { font-variant-numeric: tabular-nums; }
+
+/* PANTALLA MEDIANA Y TELEFONO ACOSTADO. Con las medidas del 19,5:9 la tapa mide
+   más que la pantalla, se vuelve desplazable y la última fila de botones queda
+   abajo del corte — que es la forma silenciosa de esconderla. */
+@media (max-height: 700px) and (min-height: 471px) {
+  .logo img { width: min(68%, 200px); }
+  .bajada { font-size: 12.5px; margin-bottom: 8px; }
+  .prisma { min-height: 54px; font-size: 17px; }
+}
+@media (max-height: 470px) {
+  .tapa { border-width: 20px; border-image-width: 20px; padding: 4px 8px 6px; }
+  .logo { margin: 0; }
+  .logo img { width: min(42%, 120px); }
+  .idioma-t { font-size: 15px; margin: 4px 0 8px; }
+  .grande-op { min-height: 44px; font-size: 13.5px; padding: 8px 12px; }
+  #idiomas { gap: 6px; margin-bottom: 6px; }
+  .bajada { display: none; }
+  .prisma { min-height: 44px; font-size: 14px; margin: 0 auto; border-width: 10px;
+            border-image-width: 10px; max-width: 200px; }
+  .logo img { width: min(34%, 96px); }
+  .idioma-t { font-size: 14px; margin: 2px 0 6px; }
+  .grande-op { min-height: 44px; font-size: 12.5px; padding: 6px 10px; }
+  .record { margin: 2px 0 0; font-size: 11px; }
+  .botones.chicos { margin-top: 4px; gap: 4px; }
+  .botones.chicos .chico { font-size: 11.5px; padding: 3px 8px; }
+  .fin h2 { font-size: 22px; }
+  /* Acostado el panel mide 250 px de ancho —la escala sale del alto, no del
+     ancho—, así que los cinco botones del pie NO entran en una fila: van en
+     dos, y lo que se achica es todo lo demás hasta que la tapa entra sin
+     desplazar. Probé la fila única y los botones se salían del panel: quedaban
+     dibujados y no se podían tocar, que es peor que no verlos. */
+  .botones.chicos .chico { padding: 2px 7px; font-size: 10.5px; }
+  .opcion { font-size: 10.5px; gap: 4px; }
+  .tapa { padding: 2px 6px 4px; }
+  .logo img { width: min(28%, 80px); }
+  .luces-grandes { font-size: 20px; margin-bottom: 2px; }
+  .lista li { padding: 3px 2px; font-size: 12px; }
+  .perfecto, .ultimo { font-size: 11.5px; margin: 2px 0; }
+}

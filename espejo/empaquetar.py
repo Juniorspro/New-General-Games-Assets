@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Paraguas en un solo archivo HTML, para abrir con doble clic.
+"""Espejo en un solo archivo HTML, para abrir con doble clic.
 
 QUE RESUELVE. Un módulo ES cargado desde file:// lo bloquea CORS: el juego
 abierto sin servidor muestra una página en blanco y un error de origen en la
-consola. Y ocho archivos sueltos no se mandan por mail.
+consola. Y diez archivos sueltos no se mandan por mail.
 
 COMO. Cada módulo se envuelve en una función que devuelve sus exportaciones y
 los imports se vuelven una desestructuración de esa función. Es el mismo grafo
@@ -11,9 +11,9 @@ de dependencias, resuelto a mano: por eso el ORDEN de la lista importa —un
 módulo tiene que estar armado antes de que otro lo lea— y por eso no hay
 ciclos.
 
-LOS BINARIOS VAN EN BASE64, y son quince: diez del juego y cinco del vestido. Base64 infla un 37%, así que cada
-kilobyte que se ahorra preparando vale 1,37 acá — por eso el arte se guarda a
-320 px de alto y no a 1024.
+LOS BINARIOS VAN EN BASE64, y son cuatro, todos del vestido: el tablero es
+vectorial. Base64 infla un 37%, así que cada kilobyte que se ahorra preparando
+vale 1,37 acá — por eso el arte se guarda al tamaño en que se muestra.
 
 Y EL JUEGO SIGUE ANDANDO SIN NINGUNO DE ELLOS: si se borra la carpeta de arte,
 el empaquetado sale igual y el juego se dibuja con líneas y círculos. Las
@@ -22,8 +22,7 @@ imágenes son una mejora, no un requisito.
 import base64, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["assets", "mundo", "pozo", "juego", "piloto", "heroe", "dibujo", "audio",
-         "guardado", "idioma"]
+ORDEN = ["assets", "haz", "niveles", "juego", "dibujo", "audio", "guardado", "idioma"]
 ENTRADA = "main"
 
 # Multilínea y con comillas simples O dobles: juego.js abre el import de
@@ -163,18 +162,18 @@ def main():
                      + json_min(mapa) + ";\n")
 
     html = (AQUI / "index.html").read_text(encoding="utf-8")
-    css = (AQUI / "css" / "p.css").read_text(encoding="utf-8")
+    css = (AQUI / "css" / "e.css").read_text(encoding="utf-8")
     # El CSS entra con las rutas ya resueltas; el HTML se resuelve después, con
     # el CSS adentro, así que alcanza una sola pasada para los dos.
     css = incrustar_rutas(css, vestido, ["../"])
-    html = html.replace('<link rel="stylesheet" href="css/p.css">',
+    html = html.replace('<link rel="stylesheet" href="css/e.css">',
                         f"<style>\n{css}\n</style>")
     html = incrustar_rutas(html, vestido, [""])
     # Sin `type="module"` no hay ámbito de módulo, así que todo va adentro de
     # una función: si no, cada `const` del juego queda colgado de window.
     html = html.replace('<script type="module" src="js/main.js"></script>',
                         "<script>\n(() => {\n" + "\n".join(partes) + "\n})();\n</script>")
-    destino = AQUI / "paraguas-en-un-archivo.html"
+    destino = AQUI / "espejo-en-un-archivo.html"
     destino.write_text(html, encoding="utf-8")
     kb = len(html.encode()) / 1024
     print(f"{destino.name}: {kb:.0f} KB · {len(ORDEN) + 1} módulos + "

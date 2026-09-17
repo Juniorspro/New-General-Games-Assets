@@ -1,0 +1,26 @@
+{
+  "ui_logo": {
+    "task_id": "gtask-4acb916717da4c4a8d89",
+    "output_path": "assets/ui_logo-g3.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/espejo/assets/ui_logo-g3.png"
+  },
+  "ui_prisma": {
+    "task_id": "gtask-f26811f0e59d4360a6b8",
+    "output_path": "assets/ui_prisma-g1.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/espejo/assets/ui_prisma-g1.png"
+  },
+  "ui_marco": {
+    "task_id": "gtask-d361c8981ce044b39707",
+    "output_path": "assets/ui_marco-g3.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/espejo/assets/ui_marco-g3.png"
+  },
+  "ui_chapa": {
+    "task_id": "gtask-94a645acb27544a9b545",
+    "output_path": "assets/ui_chapa-g3.png",
+    "estado": "ready",
+    "local": "/home/user/New-General-Games-Assets/espejo/assets/ui_chapa-g3.png"
+  }
+}

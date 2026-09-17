@@ -59,6 +59,23 @@ def exportaciones(src):
     nombres = []
     for m in re.finditer(r"^export\s+(?:async\s+)?(?:const|let|var|function|class)\s+(\w+)", src, re.M):
         nombres.append(m.group(1))
+    # UNA DECLARACION PUEDE TRAER VARIOS NOMBRES, y olvidarlo costó una tarde.
+    # `export const A = 0, B = 1;` es una sola línea con dos exportaciones, y la
+    # expresión de arriba se queda con la primera: en el archivo único, `B`
+    # quedaba `undefined` en todos los módulos que lo importaban. Y no falla al
+    # cargar — falla la primera vez que alguien compara contra `B`, o sea
+    # jugando, y comparar contra undefined no tira error: simplemente nunca es
+    # verdad. Se limita a declaraciones de una línea con inicializadores
+    # simples, que es el caso que aparece de verdad (tablas de constantes).
+    # Sin saltos de línea, ni llaves, ni paréntesis en los valores: una
+    # declaración de varias líneas es un objeto y una con paréntesis es una
+    # función, y en las dos las comas separan otra cosa que exportaciones.
+    for m in re.finditer(r"^export\s+(?:const|let|var)\s+((?:\w+\s*=\s*[^,;{}()\n]+,\s*)+\w+\s*=\s*[^,;{}()\n]+);\s*$",
+                         src, re.M):
+        for parte in m.group(1).split(","):
+            nombre = parte.split("=")[0].strip()
+            if nombre.isidentifier():
+                nombres.append(nombre)
     for m in re.finditer(r"^export\s*\{([^}]*)\}", src, re.M):
         for parte in m.group(1).split(","):
             parte = parte.strip()
