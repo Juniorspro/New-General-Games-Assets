@@ -681,6 +681,10 @@ document.addEventListener("pointerdown", function(e){
   var r = v.getBoundingClientRect();
   var dx = e.clientX - r.left, dy = e.clientY - r.top;
   t.classList.add("agarrando");
+  /* Mientras se arrastra, la sombra no puede tener transicion: con una de
+     250 ms la ventana llega antes que su propia sombra y se ve despegada
+     del puntero todo el arrastre. `moviendo` la apaga en el CSS. */
+  v.classList.add("moviendo");
   try { t.setPointerCapture(e.pointerId); } catch(err){}
 
   function mover(ev){
@@ -690,6 +694,7 @@ document.addEventListener("pointerdown", function(e){
   }
   function soltar(){
     t.classList.remove("agarrando");
+    v.classList.remove("moviendo");
     try { t.releasePointerCapture(e.pointerId); } catch(err){}
     t.removeEventListener("pointermove", mover);
     t.removeEventListener("pointerup", soltar);

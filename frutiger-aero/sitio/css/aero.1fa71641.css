@@ -1004,22 +1004,44 @@ button{font:inherit}
 
 /* --- los botones acusan recibo ---
    Un botón de vidrio que no se hunde al apretarlo no parece un botón: parece
-   un dibujo. 60 ms es lo que tarda en sentirse instantáneo sin que se note. */
-button, .boton, [role="button"]{
+   un dibujo. 130 ms es lo que tarda en sentirse instantáneo sin que se note.
+
+   Acá hay una sola regla de aspecto y es el hundido, a propósito. La primera
+   versión traía además un `filter:brightness(1.05)` para todo botón en
+   :hover, y eso fue un error: `button:hover:not(:disabled)` pesa más que
+   `.orbe:hover` o `.redondo:hover`, así que les pisaba el brillo que ya
+   tenían (1.12 y 1.2) y los dejaba más apagados que antes. El hover de cada
+   botón ya está resuelto arriba, uno por uno; no hacía falta nada general.
+
+   El hundido sí es general, pero abajo se lo devuelve el suyo a los tres que
+   ya lo tenían. Va así y no con un `:not(.muelle button)` metido en el
+   selector general porque `button:active:not(:disabled)` pesa (0,2,1) y
+   cualquier regla de componente razonable pesa menos: es más corto
+   re-declarar que pelear la especificidad. */
+button{
   transition:transform .13s cubic-bezier(.2,.8,.3,1),
              box-shadow .18s ease, filter .18s ease;
 }
-button:hover:not(:disabled), .boton:hover{ filter:brightness(1.05) }
-button:active:not(:disabled), .boton:active{ transform:scale(.968) }
+button:active:not(:disabled){ transform:scale(.968) }
+/* el muelle baja, no se achica: está pegado al borde y achicarlo lo despega */
+.muelle button:active:not(:disabled){ transform:translateY(1px) }
+/* en los iconos del escritorio se hunde el dibujo (más arriba), no el marco */
+.iconos button:active:not(:disabled){ transform:none }
 
-/* --- los iconos del escritorio flotan un poco al pasarles por encima --- */
-#zona-iconos button, #iconos button, .icono{
-  transition:transform .22s cubic-bezier(.16,1,.3,1), filter .22s ease;
+/* --- los iconos del escritorio flotan al pasarles por encima ---
+   Se levanta el dibujo, no el botón. El botón ya trae su recuadro de vidrio
+   en :hover, y moverlo entero haría bailar el rótulo junto con el marco.
+   Levantando sólo el .lam el recuadro se queda quieto y el icono parece
+   salirse de él, que es justo lo que hacían los escritorios de 2007. */
+.iconos button{ transition:box-shadow .2s ease }
+.iconos .lam{ transition:transform .22s cubic-bezier(.16,1,.3,1), filter .22s ease }
+.iconos button:hover{ box-shadow:inset 0 1px 0 rgba(255,255,255,.5),
+                                 0 5px 16px -5px rgba(4,24,56,.55) }
+.iconos button:hover .lam{
+  transform:translateY(-3px) scale(1.06);
+  filter:drop-shadow(0 7px 11px rgba(0,25,60,.72)) brightness(1.07);
 }
-#zona-iconos button:hover, #iconos button:hover, .icono:hover{
-  transform:translateY(-3px) scale(1.035);
-  filter:drop-shadow(0 6px 12px rgba(8,40,96,.34)) brightness(1.06);
-}
+.iconos button:active .lam{ transform:translateY(-1px) scale(.99); transition-duration:.08s }
 
 /* --- el cartel de colaborar entra como lo que es: algo que se acerca --- */
 @keyframes donaEntra{
@@ -1029,13 +1051,121 @@ button:active:not(:disabled), .boton:active{ transform:scale(.968) }
 #fondoDona:not([hidden]) > *{ animation:donaEntra .34s cubic-bezier(.16,1.02,.3,1) both }
 #fondoDona{ transition:opacity .2s ease }
 
-/* Acá muere todo. Ver arriba por qué. */
+/* --- el menú de inicio sale del orbe ---
+   Sale de abajo a la izquierda porque es de donde lo abriste: el
+   `transform-origin` en la esquina hace que la escala se lea como que el
+   menú crece desde el botón, no como que aparece en el aire. Sólo la
+   entrada: la salida la maneja `hidden`, y una salida animada obligaría a
+   meter mano en el JS del historial, que ya tiene bastante con lo suyo. */
+@keyframes inicioEntra{
+  from{ opacity:0; transform:translate3d(-6px,14px,0) scale(.93) }
+  to  { opacity:1; transform:none }
+}
+@keyframes itemEntra{
+  from{ opacity:0; transform:translate3d(-10px,0,0) }
+  to  { opacity:1; transform:none }
+}
+#inicio:not([hidden]){
+  transform-origin:0 100%;
+  animation:inicioEntra .24s cubic-bezier(.16,1.02,.3,1) both;
+}
+/* los renglones entran uno atrás de otro, pero corto: 26 ms de diferencia
+   alcanzan para que el ojo lea una cascada y no una lista que parpadea. El
+   último arranca a los 182 ms, o sea antes de que termine el menú. */
+#inicio:not([hidden]) li{ animation:itemEntra .22s ease-out both }
+#inicio:not([hidden]) li:nth-child(1){ animation-delay:.05s }
+#inicio:not([hidden]) li:nth-child(2){ animation-delay:.076s }
+#inicio:not([hidden]) li:nth-child(3){ animation-delay:.102s }
+#inicio:not([hidden]) li:nth-child(4){ animation-delay:.128s }
+#inicio:not([hidden]) li:nth-child(5){ animation-delay:.154s }
+#inicio:not([hidden]) li:nth-child(6){ animation-delay:.18s }
+#inicio button{ transition:transform .14s cubic-bezier(.2,.8,.3,1), border-color .18s ease }
+#inicio button:hover{ transform:translateX(3px) }
+
+/* --- el orbe ---
+   Cuando el menú está abierto el orbe se queda hundido y encendido: es la
+   única señal en pantalla de qué botón dejó eso ahí. */
+.orbe{ transition:transform .16s cubic-bezier(.2,.8,.3,1), filter .2s ease,
+                  box-shadow .2s ease }
+.orbe:active:not(:disabled){ transform:scale(.93) }
+.orbe[aria-expanded="true"]{
+  filter:brightness(1.22);
+  box-shadow:0 0 0 2px rgba(255,255,255,.5), 0 0 18px 2px hsl(var(--tono) 90% 65% / .6);
+}
+
+/* --- Aero+ entra como una cortina, no como un corte ---
+   Ocupa la pantalla entera, y algo que ocupa la pantalla entera apareciendo
+   de un cuadro al otro se siente como que se rompió la página. */
+@keyframes aeromasEntra{
+  from{ opacity:0; transform:scale(1.035) }
+  to  { opacity:1; transform:none }
+}
+#aeromas:not([hidden]){ animation:aeromasEntra .3s cubic-bezier(.22,1,.3,1) both }
+
+/* --- la ventana suelta cuenta que está suelta ---
+   Al despegarla del lugar la sombra se agranda: es lo que hace una hoja de
+   papel cuando la levantás de la mesa. Se anima sólo la sombra, y no
+   mientras la arrastrás (`.moviendo` la apaga), porque una sombra con
+   transición durante un drag va siempre un cuadro atrás del puntero. */
+.ventana{ transition:box-shadow .25s ease }
+.ventana.suelta{
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.6),
+    0 0 0 2px hsl(var(--tono) 60% 26% / .38),
+    0 34px 62px -18px rgba(4,24,56,.7),
+    0 5px 14px -5px rgba(4,24,56,.45);
+}
+.ventana.moviendo{ transition:none }
+
+/* --- el foco de teclado se ve ---
+   El outline de 2 px ya estaba, pegado al borde: sobre el filo blanco del
+   vidrio se confundía con el borde mismo. Separarlo un píxel más alcanza
+   para que se lea como un anillo aparte. Va por `outline` y no por
+   `box-shadow`: media página de botones tiene su propio box-shadow de
+   vidrio y uno de foco se lo comería entero.
+   Sobre fondo oscuro —el orbe, los iconos del escritorio, los mandos de la
+   barra de título— el azul no contrasta, así que ahí va blanco. */
+:focus-visible{ outline-offset:2px }
+.orbe:focus-visible,
+.iconos button:focus-visible,
+.mandos button:focus-visible,
+#inicio button:focus-visible{ outline-color:#fff }
+
+/* --- el muro llega de a poco ---
+   Las publicaciones aparecen todas juntas cuando contesta el servidor.
+   Escalonarlas cuesta cero y hace que la tanda se lea como que cargó sola
+   en vez de como un salto. Se usa `:nth-child` hasta 8 y de ahí en más
+   entran sin retraso: más abajo del octavo ya nadie está mirando. */
+@keyframes pubEntra{
+  from{ opacity:0; transform:translate3d(0,10px,0) }
+  to  { opacity:1; transform:none }
+}
+#muroLista > *{ animation:pubEntra .3s ease-out both }
+#muroLista > :nth-child(1){ animation-delay:.02s }
+#muroLista > :nth-child(2){ animation-delay:.06s }
+#muroLista > :nth-child(3){ animation-delay:.1s }
+#muroLista > :nth-child(4){ animation-delay:.14s }
+#muroLista > :nth-child(5){ animation-delay:.18s }
+#muroLista > :nth-child(6){ animation-delay:.22s }
+#muroLista > :nth-child(7){ animation-delay:.26s }
+#muroLista > :nth-child(8){ animation-delay:.3s }
+
+/* Acá muere todo. Ver arriba por qué.
+   Se apagan las animaciones y las transiciones, no los estilos: el halo del
+   foco, la sombra de la ventana suelta y el orbe encendido se quedan, porque
+   no se mueven — dicen dónde estás parado, y eso hace falta igual. */
 @media (prefers-reduced-motion:reduce){
   .ventana.entrando, .ventana.saliendo,
   .ventana.entrando > .titulo::after,
-  #fondoDona:not([hidden]) > *{ animation:none !important }
-  button, .boton, [role="button"],
-  #zona-iconos button, #iconos button, .icono{ transition:none !important }
-  button:active:not(:disabled), .boton:active{ transform:none }
-  #zona-iconos button:hover, #iconos button:hover, .icono:hover{ transform:none }
+  #fondoDona:not([hidden]) > *,
+  #inicio:not([hidden]), #inicio:not([hidden]) li,
+  #aeromas:not([hidden]),
+  #muroLista > *{ animation:none !important }
+  button,
+  .iconos button, .iconos .lam,
+  #inicio button, .orbe, .ventana{ transition:none !important }
+  button:active:not(:disabled),
+  .muelle button:active:not(:disabled){ transform:none }
+  .iconos button:hover .lam, .iconos button:active .lam{ transform:none }
+  #inicio button:hover, .orbe:active:not(:disabled){ transform:none }
 }
