@@ -66,6 +66,7 @@ fc-match "Impact"; fc-match "Anton"
 | `piper` present, `import numpy` fails | **Common.** Piper is installed but its numpy is broken | Apply the repair in section 5.2. Do not give up on Piper. |
 | `fc-match Impact` returns DejaVu / Liberation / Nimbus | **The font is not installed.** fontconfig substitutes silently | Install real display fonts, section 4.3. This is why text looks cheap. |
 | Rezona MCP tools absent | Generative assets unavailable | Section 1.3 |
+| Shell works but the job needs a screen | No desktop | **Bring one up yourself** and send a screenshot — section 1.4. Do not ask first |
 
 ### 1.3 Rezona Lab — check, then connect
 
@@ -156,68 +157,164 @@ it still holds before relying on it):
 | Any burst | `GENERATION_RATE_LIMITED` after a few rapid calls | Pace ≥3 s between submits; **read the error** and back off exponentially. A retry loop that ignores the error burns its whole budget against a closed window |
 | Transient | `生成服务暂时不可用` = service temporarily unavailable | Retry later; it recovers |
 
-### 1.4 Do you need a GUI desktop?
+### 1.4 No usable machine? Bring one up. Then screenshot it.
 
-Usually **no**. Everything in this playbook runs headless. Ask for a desktop
-only when the task genuinely requires a graphical app (a specific editor, a
-design tool, manual inspection).
+**Standing instruction: if the preflight finds no usable machine, do not stop
+and do not ask. Bring up a desktop, take a screenshot, and send it.** Report
+what you did afterwards, not before.
 
-**Option A — headless X inside the machine you already have.** Cheapest.
+"No usable machine" means any of:
+
+- a shell exists but the task needs a graphical app (an editor, a design tool,
+  something you have to look at);
+- the shell is missing tools you cannot install headlessly;
+- you have a shell but no way to *see* anything, and the job needs eyes.
+
+It does **not** mean "no shell at all" — with no shell you cannot start a
+container either. That case is 1.5.
+
+#### Ladder — try in this order, stop at the first that works
+
+**Rung 1 — headless X in the machine you already have.** Fastest, no Docker,
+no ports, ~1 GB.
 
 ```bash
-apt-get install -y xvfb x11-utils imagemagick xfce4 xfce4-terminal   # ~1 GB
+apt-get install -y xvfb x11-utils imagemagick xfce4 xfce4-terminal
 Xvfb :99 -screen 0 1920x1080x24 &
 export DISPLAY=:99
 startxfce4 &
-# screenshot it:
-import -window root /tmp/desktop.png
+sleep 5
+import -window root /tmp/desktop.png      # ← screenshot, send this
 ```
 
-That gives a real desktop you can screenshot and drive, with no streaming.
+Good enough whenever only *you* need to see the screen.
 
-**Option B — neko, a virtual desktop in Docker streamed over WebRTC.**
-`m1k1o/neko` runs a browser *or* a full XFCE/KDE desktop in a container and
-streams it to a web page that several people can share and control at once.
-Use it when a **human** needs to watch or take over, not for Claude's own work.
-Images on Docker Hub (`m1k1o/neko`), docs at <https://neko.m1k1o.net/>.
+**Rung 2 — neko, a shared desktop in Docker over WebRTC.** Use this when a
+**human** has to watch or take over, or when rung 1 is unavailable.
+`m1k1o/neko` streams a browser *or* a full XFCE/KDE desktop to a web page
+several people can control at once. Docs: <https://neko.m1k1o.net/>,
+images: `ghcr.io/m1k1o/neko/*`.
 
-```yaml
-# docker-compose.yml — minimal
+Check the prerequisites, then go:
+
+```bash
+docker info >/dev/null 2>&1 && echo "docker ok" || echo "NO DOCKER — go to rung 3"
+IP=$(curl -s --max-time 10 ifconfig.me || hostname -I | awk '{print $1}')
+echo "host ip: $IP"
+```
+
+```bash
+mkdir -p ~/neko && cd ~/neko
+cat > docker-compose.yml <<EOF
 services:
   neko:
-    image: "ghcr.io/m1k1o/neko/chromium:latest"
+    image: "ghcr.io/m1k1o/neko/xfce:latest"     # full desktop, not just a browser
     restart: unless-stopped
     shm_size: "2gb"
-    ports: ["8080:8080", "52000-52100:52000-52100/udp"]
+    ports:
+      - "8080:8080"
+      - "52000-52100:52000-52100/udp"
     environment:
       NEKO_DESKTOP_SCREEN: 1920x1080@30
       NEKO_MEMBER_MULTIUSER_USER_PASSWORD: neko
       NEKO_MEMBER_MULTIUSER_ADMIN_PASSWORD: admin
       NEKO_WEBRTC_EPR: 52000-52100
-      NEKO_WEBRTC_NAT1TO1: <your-host-ip>
+      NEKO_WEBRTC_NAT1TO1: $IP
+EOF
+docker compose up -d
+sleep 20
+docker compose ps
+curl -sS -o /dev/null -w "neko http %{http_code}\n" http://localhost:8080/
 ```
 
-> **Claude: do not spin up neko on your own initiative.** It needs Docker, open
-> UDP ports and a reachable host IP. Propose it, name what it costs, and let the
-> user decide. If Docker is absent or ports are closed, say so instead of
-> flailing.
+Then **hand the user the door**, in one message:
 
-**Option C — the user already has a VM/VPS.** Ask for SSH access or ask them to
-run the preflight on it and paste the output back.
+```
+Desktop is up:  http://<host-ip>:8080/
+  viewer  → neko
+  admin   → admin
+```
 
-### 1.5 If there is no machine at all
+Use `ghcr.io/m1k1o/neko/chromium:latest` instead if a browser alone is enough —
+it is much lighter than the XFCE image.
 
-Then this playbook cannot run, and Claude should say that in one sentence
-rather than pretending. Order of alternatives, best first:
+**Screenshot a running neko** (it has a real X server inside the container):
 
-1. **Claude Code on the web / desktop** — gives a container with shell,
-   ffmpeg and Chromium. This is what the playbook assumes.
-2. **Any Linux box + SSH** — a €5 VPS is enough for 1080×1920 at 30 fps.
-3. **A local machine with Docker** — run neko or just a container with
-   ffmpeg + node.
+```bash
+docker compose exec -T neko sh -c 'DISPLAY=:99 import -window root /tmp/s.png' \
+  && docker compose cp neko:/tmp/s.png ./neko.png
+# if `import` is missing inside the image:
+docker compose exec -T neko sh -c 'apt-get update -qq && apt-get install -y -qq imagemagick'
+```
+
+**Rung 3 — no Docker, or ports blocked.** Do not flail. Say which prerequisite
+failed, in one line, and offer the alternatives in 1.5. Possible saves before
+giving up:
+
+- `NEKO_WEBRTC_NAT1TO1` wrong → the page loads but the stream never starts. Set
+  it to the address the *user's browser* will reach, not the container's.
+- UDP 52000-52100 blocked → try `NEKO_WEBRTC_UDPMUX: 52100` (one UDP port) or
+  `NEKO_WEBRTC_TCPMUX: 8081` (TCP only, worse quality, gets through most
+  firewalls).
+- Port 8080 taken → move the left-hand side: `"9080:8080"`.
+- Rootless/no-privileges host → rung 1 instead; Xvfb needs nothing special.
+
+#### Screenshots are not optional
+
+**Send a screenshot whenever the user cannot see what you can.** Do not
+describe a screen in prose when you can show it.
+
+Send one:
+
+- as soon as any desktop comes up (proof it works, and it is the fastest way
+  for the user to spot that it came up wrong);
+- before and after anything done inside a GUI app;
+- at each checkpoint of a long job;
+- with every video deliverable — a contact sheet (section 10), always;
+- whenever you are about to say "it looks right".
+
+```bash
+# a desktop you own
+DISPLAY=:99 import -window root /tmp/shot.png
+
+# just one window
+DISPLAY=:99 import -window "$(DISPLAY=:99 xdotool getactivewindow)" /tmp/win.png
+
+# a web page, no desktop needed
+node -e "const{chromium}=require('playwright-core');(async()=>{
+  const b=await chromium.launch({executablePath:process.env.CHROME,args:['--no-sandbox']});
+  const p=await b.newPage({viewport:{width:1440,height:900}});
+  await p.goto(process.argv[1],{waitUntil:'networkidle'});
+  await p.screenshot({path:'/tmp/page.png',fullPage:true}); await b.close();})()" "https://example.com"
+
+# several moments of a video in one image
+ffmpeg -v error -i out.mp4 -vf "fps=1/2.5,scale=176:-1,tile=9x3" -frames:v 1 sheet.jpg -y
+```
+
+Then attach the file with whatever mechanism the surface gives you, and say in
+one line what the user should be looking at. Downscale before sending —
+1920×1080 PNG screenshots are large, and `-resize 50%` costs nothing in
+legibility.
+
+**Rung 4 — the user already has a VM/VPS.** If they mention one, prefer it over
+starting containers: ask for SSH, or ask them to run the preflight there and
+paste the output back.
+
+### 1.5 If there is genuinely no shell
+
+With no shell you cannot start Docker, so there is nothing to bring up. Say so
+in one sentence instead of pretending, and give the user the shortest path to a
+machine — best first:
+
+1. **Claude Code on the web / desktop** — a container with shell, ffmpeg and
+   Chromium. This is what the playbook assumes.
+2. **Any Linux box + SSH** — a €5 VPS handles 1080×1920 at 30 fps.
+3. **A local machine with Docker** — hand them the neko compose file above;
+   it is copy-paste, and then they give you the URL.
 4. **Browser-only editors** (CapCut Web, Kdenlive via RollApp, Photopea) — the
-   *user* drives those by hand. Claude can write the shot list, script, timing
-   sheet and subtitle file, but cannot operate them.
+   *user* drives those by hand. You can still deliver the shot list, script,
+   timing sheet, subtitle file (`.srt`/`.ass`) and every generated asset, ready
+   to drop in.
 
 ---
 
@@ -858,9 +955,12 @@ ask.
 - Build the contact sheet and look at it before delivering.
 - Report failures with the actual number ("30 attempts, 1 succeeded"), not a
   vague apology.
-- Ask before anything expensive or shared: installing packages on a shared box,
-  starting Docker containers, opening ports, spending generation credits at
-  scale.
+- Bring up a desktop on its own initiative when the preflight finds none
+  (section 1.4), and send a screenshot as soon as it is up.
+- Send screenshots and contact sheets instead of describing what a screen
+  looks like.
+- Ask first only for things that touch someone else: installing packages on a
+  shared or production box, or spending generation credits at scale.
 
 **Claude should not:**
 
@@ -871,6 +971,7 @@ ask.
   Write "it's on our site", not "we made it", unless the user confirms.
 - Leave long jobs running in the background without telling the user, or claim
   a background job finished without checking.
+- Say "it looks right" without attaching the picture that shows it.
 - Start a second renderer against a directory another one is writing.
 
 **The user should expect:** ~20 minutes of render per finished minute of video,
