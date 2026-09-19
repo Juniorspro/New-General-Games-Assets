@@ -1,0 +1,146 @@
+/* El vestido del juego. */
+:root{
+  --tinta:#fdf8ee; --tinta2:#cdbfa6;
+  --pasto:#6fae3d; --pasto-osc:#3c6b23;
+  --sol:#ffcf5c; --sol-osc:#e0982b;
+  --tierra:#4a3524;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:#8fb8d6;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  touch-action:none;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+#cargando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:#8fb8d6;color:#33506a;font:800 15px/1 system-ui;letter-spacing:.1em;z-index:40}
+body.listo #cargando{display:none}
+
+/* ---------- el dedo ---------- */
+#dedo{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .25s}
+body.jugando #dedo{pointer-events:auto;opacity:1}
+
+#joy{position:absolute;left:24px;bottom:calc(30px + env(safe-area-inset-bottom,0px));
+  width:132px;height:132px;border-radius:50%;
+  background:rgba(255,255,255,.09);border:2px solid rgba(255,255,255,.32);
+  backdrop-filter:blur(3px);opacity:.45;transition:opacity .16s}
+#joy.on{opacity:.95}
+#joyP{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;
+  border-radius:50%;background:rgba(255,255,255,.82);
+  box-shadow:0 3px 12px rgba(0,0,0,.35)}
+
+/* EL BOTON DE LADRAR ES GRANDE Y ESTA ABAJO A LA DERECHA, que es donde cae el
+   pulgar derecho sin mirar. 104 px de lado: bastante mas que los 44 minimos,
+   porque es el unico boton del juego y se aprieta a cada rato. */
+#bLadra{position:absolute;right:24px;bottom:calc(34px + env(safe-area-inset-bottom,0px));
+  width:104px;height:104px;border-radius:50%;border:3px solid #fff6d8;
+  background:radial-gradient(circle at 34% 30%,#ffe08a,var(--sol) 46%,var(--sol-osc));
+  color:#4a3008;font:900 20px/1 system-ui;letter-spacing:.06em;
+  box-shadow:0 6px 18px rgba(0,0,0,.34),inset 0 -4px 0 rgba(0,0,0,.16);
+  display:grid;place-items:center}
+#bLadra span{transform:translateY(1px)}
+/* el golpe al apretarlo: se hunde y le sale un aro */
+#bLadra.pum{animation:ladra .34s ease-out}
+@keyframes ladra{
+  0%{transform:scale(.90);box-shadow:0 0 0 0 rgba(255,207,92,.65),0 6px 18px rgba(0,0,0,.34)}
+  100%{transform:scale(1);box-shadow:0 0 0 34px rgba(255,207,92,0),0 6px 18px rgba(0,0,0,.34)}
+}
+#bPausa{position:absolute;right:16px;top:calc(14px + env(safe-area-inset-top,0px));
+  width:44px;height:44px;border-radius:12px;border:2px solid rgba(255,255,255,.34);
+  background:rgba(0,0,0,.24);color:#fff;font:900 15px/1 system-ui;letter-spacing:.08em}
+
+/* ---------- las pantallas ---------- */
+.pan{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;justify-content:center;
+  padding:26px 20px calc(26px + env(safe-area-inset-bottom,0px));
+  /* EL MENU DEJA VER EL CAMPO. La camara da una vuelta lenta alrededor del
+     perro detras del menu, asi que el velo es apenas un tinte: taparlo seria
+     esconder lo unico que hay para mostrar. */
+  background:radial-gradient(ellipse at 50% 42%,rgba(8,20,30,.10),rgba(8,20,30,.55))}
+.pan.on{display:flex}
+
+/* LA TARJETA ESTA DIBUJADA CON CSS Y NO ES UNA IMAGEN. Una placa horneada se
+   estira mal en cuanto cambia el largo del texto o el idioma, y ademas hay que
+   generarla; con gradientes y un borde, se adapta sola y pesa cero. */
+/* LA TARJETA VA ABAJO Y NO AL MEDIO. Centrada, tapaba justo al perro, que es
+   lo unico que el menu tiene para mostrar: detras corre la camara dando una
+   vuelta lenta alrededor de el. Abajo, el perro queda en la mitad de arriba y
+   se ve entero. */
+.tarjeta{position:relative;overflow:hidden;max-width:360px;width:100%;
+  padding:0 0 22px;text-align:center;border-radius:26px;
+  background:
+    linear-gradient(180deg,rgba(255,252,244,.96),rgba(247,238,222,.93)),
+    radial-gradient(circle at 20% 0%,rgba(255,224,138,.5),transparent 60%);
+  border:3px solid #fff;
+  box-shadow:0 18px 44px rgba(12,32,20,.42),inset 0 2px 0 rgba(255,255,255,.9);
+  animation:entra .5s cubic-bezier(.16,.9,.28,1) both}
+@keyframes entra{from{opacity:0;transform:translateY(22px) scale(.95)}to{opacity:1;transform:none}}
+
+.cuerpo{padding:18px 26px 0}
+/* El banner es una imagen de verdad, del MISMO perro que el del juego: sale de
+   la misma referencia con la que se genero el modelo 3D. Un dibujo distinto en
+   el menu se nota enseguida. */
+.banner{height:150px;background:var(--banner,none) center/cover no-repeat,#cfe6f5;
+  border-radius:23px 23px 0 0;position:relative}
+/* el degrade funde el borde de abajo del banner con el papel de la tarjeta: sin
+   esto queda un corte recto y se ve pegoteado */
+.banner::after{content:'';position:absolute;inset:auto 0 0 0;height:54px;
+  background:linear-gradient(180deg,transparent,rgba(252,246,235,.97))}
+.pata{display:inline-block;width:20px;height:20px;margin-right:9px;
+  vertical-align:-4px;background:var(--pata,none) center/contain no-repeat;
+  opacity:.72}
+h1{font:900 42px/1 system-ui;letter-spacing:.14em;margin-bottom:6px;margin-top:-6px;
+  background:linear-gradient(180deg,#4e8a2a,#2c5c18);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 0 #fff) drop-shadow(0 4px 10px rgba(44,92,24,.35))}
+h2{font:900 26px/1 system-ui;letter-spacing:.12em;color:#2c5c18;margin-bottom:16px}
+.sub{font:700 13px/1.5 system-ui;color:#6b7a5a;margin-bottom:20px}
+.pie{font:700 10px/1.6 system-ui;color:#9aa78c;letter-spacing:.04em;margin-top:16px}
+
+.b{position:relative;overflow:hidden;width:100%;padding:16px 22px;border-radius:16px;
+  border:3px solid #fff8e2;font:900 15px/1 system-ui;letter-spacing:.1em;
+  color:#3b2a06;background:linear-gradient(180deg,#ffd97a,var(--sol) 55%,var(--sol-osc));
+  box-shadow:0 6px 0 #b9761d,0 10px 20px rgba(0,0,0,.22);
+  transition:transform .08s ease,box-shadow .08s ease}
+.b:active{transform:translateY(4px);box-shadow:0 2px 0 #b9761d,0 5px 12px rgba(0,0,0,.22)}
+/* un brillo que lo cruza cada tanto */
+.b.p::after{content:'';position:absolute;top:-50%;bottom:-50%;width:38%;left:-55%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.72),transparent);
+  transform:skewX(-18deg);pointer-events:none;
+  animation:brillo 3.4s ease-in-out 1s infinite}
+@keyframes brillo{0%{left:-55%}56%,100%{left:135%}}
+
+/* LOS DESTELLOS SON DOS CAPAS DE GRADIENTES REPETIDOS Y CERO NODOS. La version
+   con divs pedia treinta elementos animados encima del juego 3D, que es
+   exactamente donde no sobra cuadro. */
+.destellos{position:absolute;inset:0;pointer-events:none;opacity:.75;
+  background-image:
+    radial-gradient(2px 2px at 24px 30px,rgba(255,255,255,.95),transparent),
+    radial-gradient(3px 3px at 120px 90px,rgba(255,224,138,.85),transparent),
+    radial-gradient(1.6px 1.6px at 220px 46px,rgba(255,255,255,.9),transparent);
+  background-size:160px 130px,220px 190px,190px 150px;
+  animation:chispas 7s linear infinite}
+@keyframes chispas{
+  from{background-position:0 0,0 0,0 0;opacity:.25}
+  50%{opacity:.85}
+  to{background-position:0 130px,0 -190px,0 150px;opacity:.25}
+}
+
+/* QUIEN PIDE MENOS MOVIMIENTO, RECIBE MENOS MOVIMIENTO. Un fondo que centellea
+   sin parar le arruina la pantalla a alguien con sensibilidad al movimiento.
+   Se apaga lo que se mueve solo y se dejan las respuestas al toque. */
+@media (prefers-reduced-motion: reduce){
+  .tarjeta,.b.p::after,.destellos,#bLadra.pum{animation:none!important}
+  .destellos{opacity:.3}
+}
+
+/* En apaisado el menu se achica para que entre entero sin scroll. */
+@media (max-height: 460px){
+  .tarjeta{padding:0 0 12px;max-width:340px}
+  .cuerpo{padding:12px 20px 0}
+  .banner{height:84px}
+  h1{font-size:30px}
+  .sub{margin-bottom:12px;font-size:12px}
+  .b{padding:12px 18px}
+  .pie{margin-top:10px}
+  #joy{width:112px;height:112px;left:16px;bottom:16px}
+  #bLadra{width:88px;height:88px;right:16px;bottom:18px;font-size:17px}
+}

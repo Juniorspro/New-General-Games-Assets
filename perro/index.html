@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Campo</title>
+<meta name="description" content="Un perro, un campo con lomas y mucho pasto al viento. Joystick para andar, botón para ladrar.">
+<link rel="stylesheet" href="css/p.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="cargando">Cargando el campo…</div>
+
+<!-- el dedo -->
+<div id="dedo">
+  <div id="joy"><div id="joyP"></div></div>
+  <button id="bLadra" aria-label="Ladrar"><span>GUAU</span></button>
+  <button id="bPausa" aria-label="Menú">| |</button>
+</div>
+
+<!-- el menu -->
+<div class="pan on" id="pMenu">
+  <div class="tarjeta">
+    <div class="banner" role="img" aria-label="Un perro corriendo por un campo de pasto"></div>
+    <div class="destellos" aria-hidden="true"></div>
+    <div class="cuerpo">
+      <h1><span>CAMPO</span></h1>
+      <p class="sub">Un perro, una loma y todo el pasto del mundo.</p>
+      <button class="b p" id="mJugar"><i class="pata" aria-hidden="true"></i>SALIR AL CAMPO</button>
+      <p class="pie">Arrastrá para andar · fuerte para correr · GUAU para ladrar</p>
+    </div>
+  </div>
+</div>
+
+<div class="pan" id="pPausa">
+  <div class="tarjeta">
+    <h2>EN PAUSA</h2>
+    <button class="b p" id="mVolver">SEGUIR</button>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
