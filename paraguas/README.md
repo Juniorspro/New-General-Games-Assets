@@ -194,3 +194,80 @@ nada: cero archivos.
 **La música se apaga aparte de los efectos**, porque son dos molestias
 distintas: la música cansa a la décima partida y los efectos no, y un efecto es
 información mientras la música es decoración.
+
+---
+
+# La fluidez: por qué iba lag y qué se hizo
+
+## Primero, medirlo bien
+
+El primer intento de medición dio **0,1 ms por cuadro** con el juego yendo a
+cuarenta cuadros por segundo — o sea que mentía. Las órdenes de canvas no se
+ejecutan cuando se las llama: se encolan, y `performance.now()` alrededor de un
+`drawImage` mide cuánto cuesta **pedir** el dibujo, no hacerlo. Leyendo un píxel
+con `getImageData` al final se obliga a que todo lo pedido esté hecho, y recién
+ahí el número sirve.
+
+## Lo que se encontró
+
+Con el reloj arreglado, el costo del dibujo por cuadro:
+
+| densidad de pantalla | píxeles del lienzo | antes | después |
+|---|---|---|---|
+| 1x | 412×892 | 4,52 ms | **3,14 ms** |
+| 2x | 824×1783 | 15,50 ms | **11,01 ms** |
+| 3x | 1030×2229 | 24,53 ms | **16,46 ms** |
+
+El costo se multiplicaba por **cinco** cuando los píxeles se multiplicaban por
+seis, pero partiendo de un número ya alto. Tres causas, todas por cuadro:
+
+1. **Un `globalCompositeOperation = "color"` a pantalla completa.** Ese modo no
+   es un relleno: para cada píxel convierte el color de abajo a HSL, le cambia
+   el matiz y lo vuelve a RGB. En una pantalla de 3x son 2,3 millones de píxeles
+   con esa cuenta, sesenta veces por segundo. Ahora el matiz se le aplica **a la
+   textura**, una vez por color, y queda guardado.
+2. **`createPattern` en cada cuadro** para la pared, y **una vez por viga
+   visible** para las repisas — entre cinco y diez por cuadro. El patrón no
+   depende de nada que cambie: se hace una vez.
+3. **Un degradé nuevo por cuadro** para el cielo, cuando sus dos colores son los
+   mismos durante el 88 % de cada tramo.
+
+El aspecto no cambió: comparando el **mismo cuadro congelado** antes y después,
+la pared difiere como máximo **9 sobre 255**, o sea menos del 4 %.
+
+## Y lo que de verdad arregla "va lag en MI teléfono"
+
+Bajar de 24 a 16 ms está bien, pero sigue siendo mucho para un teléfono, que
+además tiene un procesador más lento que la máquina donde se mide. Y no hay
+forma honesta de preguntarle a un aparato cuánto puede.
+
+Lo que sí se puede es **mirar cuánto está tardando y bajar la resolución hasta
+que entre**. El juego mide la mediana de sus últimos treinta cuadros —la
+mediana y no el promedio, porque un solo cuadro de 300 ms no dice nada de cómo
+va el juego— y ajusta la densidad de dibujo en cinco escalones.
+
+**Baja rápido y sube despacio, y no es simétrico a propósito.** Bajar tarde se
+siente como un juego roto durante todo el rato que tarda; subir rápido hace que
+la imagen cambie de nitidez cada dos por tres, que se ve peor que quedarse un
+rato de más en la calidad baja.
+
+Comprobado frenando el procesador con el protocolo de depuración, que es lo más
+parecido a un teléfono barato que se puede hacer desde una computadora:
+
+- con la máquina libre se queda en la mejor calidad;
+- **con el procesador frenado seis veces baja sola y pasa de 16,9 a 30,8 cuadros
+  por segundo**;
+- y una vez acomodada **se queda quieta** — se miró ocho veces a lo largo de
+  diez segundos y no se movió.
+
+El tope base también bajó de 2,5x a 2x: de 2 para arriba la diferencia no se ve
+en un dibujo de trazo grueso, y son un 36 % menos de píxeles que pintar.
+
+## Una prueba que fallaba una de cada seis veces
+
+`un-archivo.mjs` comprobaba que la barra espaciadora cierra el paraguas y
+acelera, y a veces daba `vy=-2.2`. El paraguas **sí** se cerraba: lo que pasaba
+es que en esos 500 ms el jugador chocaba una viga y rebotaba para arriba. No era
+el juego, era que la prueba dejaba la caída librada a donde cayera. Ahora se lo
+alinea con el hueco de la próxima viga antes de apretar. Ocho corridas seguidas
+en verde.

@@ -53,10 +53,77 @@ function arrancarDemo() {
 // mismo tiempo— y a lo alto se estira hasta donde llegue, porque ver un poco
 // mas o menos de pozo no cambia nada.
 let esc = 1;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LA RESOLUCION SE AJUSTA A LO QUE EL APARATO AGUANTA.
+   ═══════════════════════════════════════════════════════════════════════════
+   El costo del dibujo va con los PIXELES, y los pixeles van con la densidad de
+   la pantalla: medido con el reloj vaciado, un cuadro cuesta 3,1 ms a densidad
+   1 y 16,5 a densidad 3. Un telefono tiene 2,5 o 3 y ademas un procesador mas
+   lento que esta maquina, asi que el mismo juego que va fluido en una compu va
+   a los tumbos en la mano — que es exactamente lo que pasaba.
+   No hay forma honesta de preguntarle a un telefono cuanto puede: lo que si se
+   puede es MIRAR cuanto esta tardando y bajar la resolucion hasta que entre.
+   El juego se ve un poco menos nitido y se mueve bien, que en un juego de
+   reflejos es el cambio correcto.
+   Y SUBE DE NUEVO si sobra, con histeresis: sin eso, un tiron de medio segundo
+   bajaria la calidad para siempre, y una calidad que sube y baja sola cada dos
+   cuadros se ve peor que cualquiera de las dos. */
+const CALIDADES = [1, 0.82, 0.68, 0.55, 0.45];
+let calidad = 0;                 // indice en CALIDADES; 0 es la mejor
+const LARGO_MUESTRA = 30;
+const muestras = new Float32Array(LARGO_MUESTRA);
+let iMuestra = 0, nMuestras = 0, esperaCalidad = 0, vecesRapido = 0;
+
+// El tope base baja de 2,5 a 2: de 2 para arriba la diferencia no se ve en un
+// dibujo de trazo grueso, y son un 36 % menos de pixeles que pintar.
+const TOPE_DPR = 2;
+
+/* BAJA RAPIDO Y SUBE DESPACIO, Y NO ES SIMETRICO A PROPOSITO.
+   Bajar tarde se siente como un juego roto durante todo el rato que tarda: con
+   el procesador frenado seis veces, la primera version tardaba seis segundos
+   por escalon y se quedaba a diecisiete cuadros por segundo. Subir rapido, en
+   cambio, hace que la imagen cambie de nitidez cada dos por tres, que se ve
+   peor que quedarse un rato de mas en la calidad baja.
+   Asi que para BAJAR alcanza con una tanda de cuadros lentos, y para SUBIR
+   hacen falta cuatro tandas seguidas de cuadros sobrados. */
+function anotarCuadro(ms) {
+  muestras[iMuestra] = ms;
+  iMuestra = (iMuestra + 1) % LARGO_MUESTRA;
+  if (nMuestras < LARGO_MUESTRA) nMuestras++;
+  if (esperaCalidad > 0) { esperaCalidad--; return; }
+  if (nMuestras < LARGO_MUESTRA) return;
+
+  // LA MEDIANA Y NO EL PROMEDIO: un solo cuadro de 300 ms —cambiar de pestaña,
+  // el recolector de basura— le mueve el promedio y no dice nada de como va el
+  // juego. La mediana lo ignora.
+  const orden = Array.from(muestras).sort((a, b) => a - b);
+  const med = orden[LARGO_MUESTRA >> 1];
+
+  if (med > 20 && calidad < CALIDADES.length - 1) {        // menos de 50 cuadros
+    calidad++; vecesRapido = 0; reinicia(10);
+  } else if (med < 11.5 && calidad > 0) {                  // sobra de sobra
+    if (++vecesRapido >= 4) { calidad--; vecesRapido = 0; reinicia(10); }
+    else { nMuestras = 0; iMuestra = 0; }
+  } else {
+    vecesRapido = 0;
+    nMuestras = 0; iMuestra = 0;      // otra tanda limpia
+  }
+}
+
+/** Aplica la calidad nueva y arranca una tanda de medicion limpia. Los primeros
+ *  cuadros despues de cambiar el tamaño del lienzo son lentos por el cambio en
+ *  si, y contarlos haria que bajar la calidad se vea como que hace falta bajar
+ *  mas. */
+function reinicia(saltar) {
+  nMuestras = 0; iMuestra = 0; esperaCalidad = saltar;
+  redimensionar();
+}
+
 function redimensionar() {
   esc = ajustarVista(innerWidth, innerHeight);
   const anCSS = VISTA.ancho * esc, alCSS = VISTA.alto * esc;
-  const dpr = Math.min(devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(devicePixelRatio || 1, TOPE_DPR) * CALIDADES[calidad];
   lienzo.width = Math.round(anCSS * dpr);
   lienzo.height = Math.round(alCSS * dpr);
   lienzo.style.width = `${anCSS}px`;
@@ -461,9 +528,18 @@ function terminar(p) {
 const PASO = 1000 / 60;
 let previo = performance.now(), sobra = 0, fallas = 0;
 
+// Para poder comparar dos versiones del dibujo: con el bucle corriendo, entre
+// una captura y la otra la camara se movio y la diferencia que se mide es el
+// movimiento, no el dibujo.
+let corriendo = true;
 function bucle(ahora) {
   requestAnimationFrame(bucle);
+  if (!corriendo) return;
   let dt = ahora - previo; previo = ahora;
+  // SE MIDE EL CUADRO ENTERO Y SOLO JUGANDO. En el menu la demo corre igual
+  // pero nadie esta pendiente de la fluidez, y ademas las animaciones del CSS
+  // ensucian la cuenta.
+  if (partida) anotarCuadro(dt);
   if (dt > 250) dt = 250;
   sobra += dt;
   let n = 0;
@@ -561,7 +637,62 @@ function traer(url) {
                      // La tienda expuesta para las pruebas: es la única forma de
                      // comprobar, por debajo de la interfaz, que sin puente
                      // conectado no se entrega nada.
-                     compras };
+                     compras,
+    /* ============================================================
+       LAS SONDAS DE COSTO. "Va lag" no es un dato: puede ser el calculo, puede
+       ser el dibujo, puede ser que se dibuje de mas. Separarlos es la unica
+       forma de arreglar el que cuesta y no el que se sospecha.
+       ============================================================ */
+    /**
+     * EL RELOJ SOLO SOLO MIDE EL ENCOLADO, ASI QUE HAY QUE VACIARLO.
+     *
+     * Las ordenes de canvas no se ejecutan cuando se las llama: se encolan y el
+     * navegador las rasteriza cuando quiere. Midiendo con `performance.now()`
+     * alrededor de los `drawImage` daba 0,1 ms por cuadro mientras el juego iba
+     * a cuarenta cuadros por segundo — o sea, medía cuánto cuesta PEDIR el
+     * dibujo, no hacerlo.
+     * `getImageData` obliga a que todo lo pedido esté hecho antes de devolver
+     * el pixel, asi que leyendo UN pixel al final el tiempo medido incluye el
+     * trabajo de verdad.
+     */
+    costo(n = 60) {
+      if (!partida) return null;
+      dibujar(ctx, partida); ctx.getImageData(0, 0, 1, 1);   // calentar
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) {
+        leerEntrada(); partida.paso(entrada);
+        pasoHeroe(partida.heroe, partida.x, partida.y, partida.vx, partida.vy, partida.abierto);
+      }
+      const t1 = performance.now();
+      for (let i = 0; i < n; i++) dibujar(ctx, partida);
+      ctx.getImageData(0, 0, 1, 1);
+      const t2 = performance.now();
+      return { paso: +((t1 - t0) / n).toFixed(3), dibujo: +((t2 - t1) / n).toFixed(3),
+               total: +((t2 - t0) / n).toFixed(3), n };
+    },
+    /** Cuadros por segundo de verdad, contados sobre el bucle que corre. */
+    fps(ms = 2000) {
+      return new Promise((ok) => {
+        let n = 0; const t0 = performance.now();
+        const p = () => { n++; performance.now() - t0 < ms ? requestAnimationFrame(p)
+                                                          : ok(+(n / ((performance.now() - t0) / 1000)).toFixed(1)); };
+        requestAnimationFrame(p);
+      });
+    },
+    /** Congela el bucle y dibuja UN cuadro con el estado que se le pida. */
+    congelar(est) {
+      corriendo = false;
+      if (partida && est) Object.assign(partida, est);
+      if (partida) dibujar(ctx, partida);
+      return !!partida;
+    },
+    descongelar() { corriendo = true; },
+    calidad: () => ({ paso: calidad, factor: CALIDADES[calidad],
+                      dprUsado: Math.min(devicePixelRatio || 1, TOPE_DPR) * CALIDADES[calidad] }),
+    lienzo: () => ({ w: lienzo.width, h: lienzo.height,
+                     cssW: lienzo.clientWidth, cssH: lienzo.clientHeight,
+                     dpr: devicePixelRatio }),
+  };
 
   const arte = {}, tex = {};
   await Promise.all([

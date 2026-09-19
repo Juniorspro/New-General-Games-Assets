@@ -1784,12 +1784,54 @@ const M_dibujo = (() => {
    * veces el peso, y además se desincronizan con los colores del código apenas
    * alguien toca un tramo: así el fondo cambia de color solo, con el tramo.
    */
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EL TINTE SE HORNEA UNA VEZ POR COLOR, NO SE APLICA POR CUADRO.
+  // ═══════════════════════════════════════════════════════════════════════════
+  // La version anterior dibujaba las baldosas del fondo y despues tapaba LA
+  // PANTALLA ENTERA con un `fillRect` en modo `color`. Ese modo no es un relleno:
+  // para cada pixel convierte el color de abajo a HSL, le cambia el matiz y lo
+  // vuelve a RGB. En un telefono con pantalla de 3x eso son 2,3 MILLONES de
+  // pixeles con esa cuenta, sesenta veces por segundo.
+  // Y se nota en la medicion: el dibujo pasaba de 0,26 ms con pixeles 1x a 16,2
+  // con 3x. Sesenta y dos veces mas caro cuando los pixeles son seis veces mas —
+  // o sea que no era "mas pixeles", era esto.
+  // Ahora el matiz se le aplica A LA TEXTURA, una sola vez por color, en un
+  // lienzo aparte que queda guardado. Dibujar la textura ya teñida cuesta lo
+  // mismo que dibujar la textura.
+  const TENIDAS = new Map();
+
+  function fondoTenido(im, color) {
+    const clave = color;
+    let c = TENIDAS.get(clave);
+    if (c) return c;
+    // LA CACHE TIENE TOPE. Los colores salen de mezclar dos tramos con un cruce
+    // continuo, asi que si no se corta habria un lienzo nuevo por cada cuadro del
+    // cruce y la memoria crece para siempre.
+    if (TENIDAS.size > 24) TENIDAS.clear();
+    c = document.createElement("canvas");
+    c.width = im.width; c.height = im.height;
+    const x = c.getContext("2d");
+    x.drawImage(im, 0, 0);
+    x.globalCompositeOperation = "color";
+    x.globalAlpha = 0.75;
+    x.fillStyle = color;
+    x.fillRect(0, 0, c.width, c.height);
+    // `destination-in` devuelve el alfa original: sin esto el rectangulo del
+    // tinte deja opaco lo que la textura tenia transparente.
+    x.globalCompositeOperation = "destination-in";
+    x.globalAlpha = 1;
+    x.drawImage(im, 0, 0);
+    TENIDAS.set(clave, c);
+    return c;
+  }
+
   function fondo(ctx, cam, color) {
     const im = texturas.fondo_pozo;
     if (!im) return;
+    const tinta = fondoTenido(im, color);
     const alto = im.height, ancho = ANCHO;
     const ox = Math.round((VISTA.ancho - ANCHO) / 2);
-    // A la mitad de la velocidad de la cámara: la pared del fondo está "lejos".
+    // A la mitad de la velocidad de la camara: la pared del fondo esta "lejos".
     const desp = cam * 0.5;
     const primera = Math.floor(desp / alto);
     ctx.save();
@@ -1799,20 +1841,25 @@ const M_dibujo = (() => {
       const y = i * alto - desp;
       if (y > VISTA.alto || y + alto < 0) continue;
       ctx.save();
-      // El módulo tiene que ser positivo: arriba del cero la cámara es negativa y
+      // El modulo tiene que ser positivo: arriba del cero la camara es negativa y
       // en JavaScript `-1 % 2` es -1, no 1.
       if (((i % 2) + 2) % 2 === 1) { ctx.translate(ox, y + alto); ctx.scale(1, -1); }
       else ctx.translate(ox, y);
-      ctx.drawImage(im, 0, 0, ancho, alto);
+      ctx.drawImage(tinta, 0, 0, ancho, alto);
       ctx.restore();
     }
-    // El tinte: el mismo color de la pared del tramo, en modo `color`, así que la
-    // textura conserva sus luces y sombras y sólo cambia de matiz.
-    ctx.globalCompositeOperation = "color";
-    ctx.globalAlpha = 0.75;
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
     ctx.restore();
+  }
+
+  // El degrade del cielo se rehace SOLO cuando cambian sus dos colores. Durante
+  // el 88 % de cada tramo son los mismos dos, asi que casi siempre se reusa.
+  let CIELO = null, CIELO_C0 = "", CIELO_C1 = "";
+  function cielo(ctx, c0, c1) {
+    if (CIELO && c0 === CIELO_C0 && c1 === CIELO_C1) return CIELO;
+    CIELO = ctx.createLinearGradient(0, 0, 0, VISTA.alto);
+    CIELO.addColorStop(0, c0); CIELO.addColorStop(1, c1);
+    CIELO_C0 = c0; CIELO_C1 = c1;
+    return CIELO;
   }
 
   function dibujar(ctx, p) {
@@ -1825,9 +1872,7 @@ const M_dibujo = (() => {
     const c1 = mezclarColor(a.cielo[1], b.cielo[1], m);
     const pared = mezclarColor(a.pared, b.pared, m);
 
-    const g = ctx.createLinearGradient(0, 0, 0, VISTA.alto);
-    g.addColorStop(0, c0); g.addColorStop(1, c1);
-    ctx.fillStyle = g;
+    ctx.fillStyle = cielo(ctx, c0, c1);
     ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
 
     fondo(ctx, cam, pared);
@@ -1904,6 +1949,18 @@ const M_dibujo = (() => {
     }
   }
 
+  // UN PATRON POR TEXTURA Y NO UNO POR CUADRO. `createPattern` no es gratis: hay
+  // que volver a preparar la imagen para que se pueda repetir. Estaba llamandose
+  // una vez por cuadro para la pared y UNA VEZ POR VIGA VISIBLE para las repisas,
+  // o sea entre cinco y diez veces por cuadro. El patron no depende de nada que
+  // cambie, asi que se hace una vez y queda.
+  const PATRONES = new Map();
+  function patron(ctx, clave, im) {
+    let p = PATRONES.get(clave);
+    if (!p) { p = ctx.createPattern(im, "repeat"); PATRONES.set(clave, p); }
+    return p;
+  }
+
   function paredes(ctx, cam, color) {
     const y0 = cam - 40, y1 = cam + VISTA.alto + 40;
     ctx.fillStyle = color;
@@ -1912,8 +1969,7 @@ const M_dibujo = (() => {
     const tex = texturas.pared;
     if (tex) {
       ctx.save(); ctx.globalAlpha = 0.45;
-      const pat = ctx.createPattern(tex, "repeat");
-      ctx.fillStyle = pat;
+      ctx.fillStyle = patron(ctx, "pared", tex);
       ctx.fillRect(-40, y0, BORDE + 40, y1 - y0);
       ctx.fillRect(ANCHO - BORDE, y0, BORDE + 40, y1 - y0);
       ctx.restore();
@@ -1940,7 +1996,7 @@ const M_dibujo = (() => {
       ctx.fillRect(a, y, b - a, GRUESO);
       if (texturas.repisa) {
         ctx.save(); ctx.beginPath(); ctx.rect(a, y, b - a, GRUESO); ctx.clip();
-        ctx.translate(a, y); ctx.fillStyle = ctx.createPattern(texturas.repisa, "repeat");
+        ctx.translate(a, y); ctx.fillStyle = patron(ctx, "repisa", texturas.repisa);
         ctx.fillRect(0, 0, b - a, GRUESO); ctx.restore();
       }
       ctx.fillStyle = "rgba(255,255,255,.16)";
@@ -3040,10 +3096,77 @@ function arrancarDemo() {
 // mismo tiempo— y a lo alto se estira hasta donde llegue, porque ver un poco
 // mas o menos de pozo no cambia nada.
 let esc = 1;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LA RESOLUCION SE AJUSTA A LO QUE EL APARATO AGUANTA.
+   ═══════════════════════════════════════════════════════════════════════════
+   El costo del dibujo va con los PIXELES, y los pixeles van con la densidad de
+   la pantalla: medido con el reloj vaciado, un cuadro cuesta 3,1 ms a densidad
+   1 y 16,5 a densidad 3. Un telefono tiene 2,5 o 3 y ademas un procesador mas
+   lento que esta maquina, asi que el mismo juego que va fluido en una compu va
+   a los tumbos en la mano — que es exactamente lo que pasaba.
+   No hay forma honesta de preguntarle a un telefono cuanto puede: lo que si se
+   puede es MIRAR cuanto esta tardando y bajar la resolucion hasta que entre.
+   El juego se ve un poco menos nitido y se mueve bien, que en un juego de
+   reflejos es el cambio correcto.
+   Y SUBE DE NUEVO si sobra, con histeresis: sin eso, un tiron de medio segundo
+   bajaria la calidad para siempre, y una calidad que sube y baja sola cada dos
+   cuadros se ve peor que cualquiera de las dos. */
+const CALIDADES = [1, 0.82, 0.68, 0.55, 0.45];
+let calidad = 0;                 // indice en CALIDADES; 0 es la mejor
+const LARGO_MUESTRA = 30;
+const muestras = new Float32Array(LARGO_MUESTRA);
+let iMuestra = 0, nMuestras = 0, esperaCalidad = 0, vecesRapido = 0;
+
+// El tope base baja de 2,5 a 2: de 2 para arriba la diferencia no se ve en un
+// dibujo de trazo grueso, y son un 36 % menos de pixeles que pintar.
+const TOPE_DPR = 2;
+
+/* BAJA RAPIDO Y SUBE DESPACIO, Y NO ES SIMETRICO A PROPOSITO.
+   Bajar tarde se siente como un juego roto durante todo el rato que tarda: con
+   el procesador frenado seis veces, la primera version tardaba seis segundos
+   por escalon y se quedaba a diecisiete cuadros por segundo. Subir rapido, en
+   cambio, hace que la imagen cambie de nitidez cada dos por tres, que se ve
+   peor que quedarse un rato de mas en la calidad baja.
+   Asi que para BAJAR alcanza con una tanda de cuadros lentos, y para SUBIR
+   hacen falta cuatro tandas seguidas de cuadros sobrados. */
+function anotarCuadro(ms) {
+  muestras[iMuestra] = ms;
+  iMuestra = (iMuestra + 1) % LARGO_MUESTRA;
+  if (nMuestras < LARGO_MUESTRA) nMuestras++;
+  if (esperaCalidad > 0) { esperaCalidad--; return; }
+  if (nMuestras < LARGO_MUESTRA) return;
+
+  // LA MEDIANA Y NO EL PROMEDIO: un solo cuadro de 300 ms —cambiar de pestaña,
+  // el recolector de basura— le mueve el promedio y no dice nada de como va el
+  // juego. La mediana lo ignora.
+  const orden = Array.from(muestras).sort((a, b) => a - b);
+  const med = orden[LARGO_MUESTRA >> 1];
+
+  if (med > 20 && calidad < CALIDADES.length - 1) {        // menos de 50 cuadros
+    calidad++; vecesRapido = 0; reinicia(10);
+  } else if (med < 11.5 && calidad > 0) {                  // sobra de sobra
+    if (++vecesRapido >= 4) { calidad--; vecesRapido = 0; reinicia(10); }
+    else { nMuestras = 0; iMuestra = 0; }
+  } else {
+    vecesRapido = 0;
+    nMuestras = 0; iMuestra = 0;      // otra tanda limpia
+  }
+}
+
+/** Aplica la calidad nueva y arranca una tanda de medicion limpia. Los primeros
+ *  cuadros despues de cambiar el tamaño del lienzo son lentos por el cambio en
+ *  si, y contarlos haria que bajar la calidad se vea como que hace falta bajar
+ *  mas. */
+function reinicia(saltar) {
+  nMuestras = 0; iMuestra = 0; esperaCalidad = saltar;
+  redimensionar();
+}
+
 function redimensionar() {
   esc = ajustarVista(innerWidth, innerHeight);
   const anCSS = VISTA.ancho * esc, alCSS = VISTA.alto * esc;
-  const dpr = Math.min(devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(devicePixelRatio || 1, TOPE_DPR) * CALIDADES[calidad];
   lienzo.width = Math.round(anCSS * dpr);
   lienzo.height = Math.round(alCSS * dpr);
   lienzo.style.width = `${anCSS}px`;
@@ -3448,9 +3571,18 @@ function terminar(p) {
 const PASO = 1000 / 60;
 let previo = performance.now(), sobra = 0, fallas = 0;
 
+// Para poder comparar dos versiones del dibujo: con el bucle corriendo, entre
+// una captura y la otra la camara se movio y la diferencia que se mide es el
+// movimiento, no el dibujo.
+let corriendo = true;
 function bucle(ahora) {
   requestAnimationFrame(bucle);
+  if (!corriendo) return;
   let dt = ahora - previo; previo = ahora;
+  // SE MIDE EL CUADRO ENTERO Y SOLO JUGANDO. En el menu la demo corre igual
+  // pero nadie esta pendiente de la fluidez, y ademas las animaciones del CSS
+  // ensucian la cuenta.
+  if (partida) anotarCuadro(dt);
   if (dt > 250) dt = 250;
   sobra += dt;
   let n = 0;
@@ -3548,7 +3680,62 @@ function traer(url) {
                      // La tienda expuesta para las pruebas: es la única forma de
                      // comprobar, por debajo de la interfaz, que sin puente
                      // conectado no se entrega nada.
-                     compras };
+                     compras,
+    /* ============================================================
+       LAS SONDAS DE COSTO. "Va lag" no es un dato: puede ser el calculo, puede
+       ser el dibujo, puede ser que se dibuje de mas. Separarlos es la unica
+       forma de arreglar el que cuesta y no el que se sospecha.
+       ============================================================ */
+    /**
+     * EL RELOJ SOLO SOLO MIDE EL ENCOLADO, ASI QUE HAY QUE VACIARLO.
+     *
+     * Las ordenes de canvas no se ejecutan cuando se las llama: se encolan y el
+     * navegador las rasteriza cuando quiere. Midiendo con `performance.now()`
+     * alrededor de los `drawImage` daba 0,1 ms por cuadro mientras el juego iba
+     * a cuarenta cuadros por segundo — o sea, medía cuánto cuesta PEDIR el
+     * dibujo, no hacerlo.
+     * `getImageData` obliga a que todo lo pedido esté hecho antes de devolver
+     * el pixel, asi que leyendo UN pixel al final el tiempo medido incluye el
+     * trabajo de verdad.
+     */
+    costo(n = 60) {
+      if (!partida) return null;
+      dibujar(ctx, partida); ctx.getImageData(0, 0, 1, 1);   // calentar
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) {
+        leerEntrada(); partida.paso(entrada);
+        pasoHeroe(partida.heroe, partida.x, partida.y, partida.vx, partida.vy, partida.abierto);
+      }
+      const t1 = performance.now();
+      for (let i = 0; i < n; i++) dibujar(ctx, partida);
+      ctx.getImageData(0, 0, 1, 1);
+      const t2 = performance.now();
+      return { paso: +((t1 - t0) / n).toFixed(3), dibujo: +((t2 - t1) / n).toFixed(3),
+               total: +((t2 - t0) / n).toFixed(3), n };
+    },
+    /** Cuadros por segundo de verdad, contados sobre el bucle que corre. */
+    fps(ms = 2000) {
+      return new Promise((ok) => {
+        let n = 0; const t0 = performance.now();
+        const p = () => { n++; performance.now() - t0 < ms ? requestAnimationFrame(p)
+                                                          : ok(+(n / ((performance.now() - t0) / 1000)).toFixed(1)); };
+        requestAnimationFrame(p);
+      });
+    },
+    /** Congela el bucle y dibuja UN cuadro con el estado que se le pida. */
+    congelar(est) {
+      corriendo = false;
+      if (partida && est) Object.assign(partida, est);
+      if (partida) dibujar(ctx, partida);
+      return !!partida;
+    },
+    descongelar() { corriendo = true; },
+    calidad: () => ({ paso: calidad, factor: CALIDADES[calidad],
+                      dprUsado: Math.min(devicePixelRatio || 1, TOPE_DPR) * CALIDADES[calidad] }),
+    lienzo: () => ({ w: lienzo.width, h: lienzo.height,
+                     cssW: lienzo.clientWidth, cssH: lienzo.clientHeight,
+                     dpr: devicePixelRatio }),
+  };
 
   const arte = {}, tex = {};
   await Promise.all([

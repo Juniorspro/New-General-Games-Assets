@@ -25,5 +25,8 @@ echo
 echo "── la tienda de skins ────────────────────────────────────────"
 node pruebas/tienda.mjs
 echo
+echo "── la fluidez: que se acomode al aparato ─────────────────────"
+node pruebas/fluidez.mjs
+echo
 echo "── la música y los sonidos ───────────────────────────────────"
 JUEGO=PARAGUAS ARCHIVO=paraguas-en-un-archivo.html JUGAR="#m-jugar" node pruebas/sonido.mjs

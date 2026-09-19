@@ -60,12 +60,54 @@ export function registrarTexturas(t) { texturas = t || {}; }
  * veces el peso, y además se desincronizan con los colores del código apenas
  * alguien toca un tramo: así el fondo cambia de color solo, con el tramo.
  */
+// ═══════════════════════════════════════════════════════════════════════════
+// EL TINTE SE HORNEA UNA VEZ POR COLOR, NO SE APLICA POR CUADRO.
+// ═══════════════════════════════════════════════════════════════════════════
+// La version anterior dibujaba las baldosas del fondo y despues tapaba LA
+// PANTALLA ENTERA con un `fillRect` en modo `color`. Ese modo no es un relleno:
+// para cada pixel convierte el color de abajo a HSL, le cambia el matiz y lo
+// vuelve a RGB. En un telefono con pantalla de 3x eso son 2,3 MILLONES de
+// pixeles con esa cuenta, sesenta veces por segundo.
+// Y se nota en la medicion: el dibujo pasaba de 0,26 ms con pixeles 1x a 16,2
+// con 3x. Sesenta y dos veces mas caro cuando los pixeles son seis veces mas —
+// o sea que no era "mas pixeles", era esto.
+// Ahora el matiz se le aplica A LA TEXTURA, una sola vez por color, en un
+// lienzo aparte que queda guardado. Dibujar la textura ya teñida cuesta lo
+// mismo que dibujar la textura.
+const TENIDAS = new Map();
+
+function fondoTenido(im, color) {
+  const clave = color;
+  let c = TENIDAS.get(clave);
+  if (c) return c;
+  // LA CACHE TIENE TOPE. Los colores salen de mezclar dos tramos con un cruce
+  // continuo, asi que si no se corta habria un lienzo nuevo por cada cuadro del
+  // cruce y la memoria crece para siempre.
+  if (TENIDAS.size > 24) TENIDAS.clear();
+  c = document.createElement("canvas");
+  c.width = im.width; c.height = im.height;
+  const x = c.getContext("2d");
+  x.drawImage(im, 0, 0);
+  x.globalCompositeOperation = "color";
+  x.globalAlpha = 0.75;
+  x.fillStyle = color;
+  x.fillRect(0, 0, c.width, c.height);
+  // `destination-in` devuelve el alfa original: sin esto el rectangulo del
+  // tinte deja opaco lo que la textura tenia transparente.
+  x.globalCompositeOperation = "destination-in";
+  x.globalAlpha = 1;
+  x.drawImage(im, 0, 0);
+  TENIDAS.set(clave, c);
+  return c;
+}
+
 function fondo(ctx, cam, color) {
   const im = texturas.fondo_pozo;
   if (!im) return;
+  const tinta = fondoTenido(im, color);
   const alto = im.height, ancho = ANCHO;
   const ox = Math.round((VISTA.ancho - ANCHO) / 2);
-  // A la mitad de la velocidad de la cámara: la pared del fondo está "lejos".
+  // A la mitad de la velocidad de la camara: la pared del fondo esta "lejos".
   const desp = cam * 0.5;
   const primera = Math.floor(desp / alto);
   ctx.save();
@@ -75,20 +117,25 @@ function fondo(ctx, cam, color) {
     const y = i * alto - desp;
     if (y > VISTA.alto || y + alto < 0) continue;
     ctx.save();
-    // El módulo tiene que ser positivo: arriba del cero la cámara es negativa y
+    // El modulo tiene que ser positivo: arriba del cero la camara es negativa y
     // en JavaScript `-1 % 2` es -1, no 1.
     if (((i % 2) + 2) % 2 === 1) { ctx.translate(ox, y + alto); ctx.scale(1, -1); }
     else ctx.translate(ox, y);
-    ctx.drawImage(im, 0, 0, ancho, alto);
+    ctx.drawImage(tinta, 0, 0, ancho, alto);
     ctx.restore();
   }
-  // El tinte: el mismo color de la pared del tramo, en modo `color`, así que la
-  // textura conserva sus luces y sombras y sólo cambia de matiz.
-  ctx.globalCompositeOperation = "color";
-  ctx.globalAlpha = 0.75;
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
   ctx.restore();
+}
+
+// El degrade del cielo se rehace SOLO cuando cambian sus dos colores. Durante
+// el 88 % de cada tramo son los mismos dos, asi que casi siempre se reusa.
+let CIELO = null, CIELO_C0 = "", CIELO_C1 = "";
+function cielo(ctx, c0, c1) {
+  if (CIELO && c0 === CIELO_C0 && c1 === CIELO_C1) return CIELO;
+  CIELO = ctx.createLinearGradient(0, 0, 0, VISTA.alto);
+  CIELO.addColorStop(0, c0); CIELO.addColorStop(1, c1);
+  CIELO_C0 = c0; CIELO_C1 = c1;
+  return CIELO;
 }
 
 export function dibujar(ctx, p) {
@@ -101,9 +148,7 @@ export function dibujar(ctx, p) {
   const c1 = mezclarColor(a.cielo[1], b.cielo[1], m);
   const pared = mezclarColor(a.pared, b.pared, m);
 
-  const g = ctx.createLinearGradient(0, 0, 0, VISTA.alto);
-  g.addColorStop(0, c0); g.addColorStop(1, c1);
-  ctx.fillStyle = g;
+  ctx.fillStyle = cielo(ctx, c0, c1);
   ctx.fillRect(0, 0, VISTA.ancho, VISTA.alto);
 
   fondo(ctx, cam, pared);
@@ -180,6 +225,18 @@ export function dibujar(ctx, p) {
   }
 }
 
+// UN PATRON POR TEXTURA Y NO UNO POR CUADRO. `createPattern` no es gratis: hay
+// que volver a preparar la imagen para que se pueda repetir. Estaba llamandose
+// una vez por cuadro para la pared y UNA VEZ POR VIGA VISIBLE para las repisas,
+// o sea entre cinco y diez veces por cuadro. El patron no depende de nada que
+// cambie, asi que se hace una vez y queda.
+const PATRONES = new Map();
+function patron(ctx, clave, im) {
+  let p = PATRONES.get(clave);
+  if (!p) { p = ctx.createPattern(im, "repeat"); PATRONES.set(clave, p); }
+  return p;
+}
+
 function paredes(ctx, cam, color) {
   const y0 = cam - 40, y1 = cam + VISTA.alto + 40;
   ctx.fillStyle = color;
@@ -188,8 +245,7 @@ function paredes(ctx, cam, color) {
   const tex = texturas.pared;
   if (tex) {
     ctx.save(); ctx.globalAlpha = 0.45;
-    const pat = ctx.createPattern(tex, "repeat");
-    ctx.fillStyle = pat;
+    ctx.fillStyle = patron(ctx, "pared", tex);
     ctx.fillRect(-40, y0, BORDE + 40, y1 - y0);
     ctx.fillRect(ANCHO - BORDE, y0, BORDE + 40, y1 - y0);
     ctx.restore();
@@ -216,7 +272,7 @@ function viga(ctx, f, color, t) {
     ctx.fillRect(a, y, b - a, GRUESO);
     if (texturas.repisa) {
       ctx.save(); ctx.beginPath(); ctx.rect(a, y, b - a, GRUESO); ctx.clip();
-      ctx.translate(a, y); ctx.fillStyle = ctx.createPattern(texturas.repisa, "repeat");
+      ctx.translate(a, y); ctx.fillStyle = patron(ctx, "repisa", texturas.repisa);
       ctx.fillRect(0, 0, b - a, GRUESO); ctx.restore();
     }
     ctx.fillStyle = "rgba(255,255,255,.16)";

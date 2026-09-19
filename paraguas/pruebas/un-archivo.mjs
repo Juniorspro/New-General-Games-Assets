@@ -123,6 +123,18 @@ const y1 = await pg.evaluate(() => window.PARAGUAS.partida.y);
 ch("cae solo", y1 > y0 + 100, `bajó ${Math.round(y1 - y0)} px`);
 
 // El teclado: barra espaciadora cierra.
+//
+// ANTES SE LO PONE EN EL HUECO DE LA PROXIMA VIGA. Sin esto la prueba fallaba
+// una de cada seis veces con `vy=-2.2`: el paraguas SI se cerraba, pero en esos
+// 500 ms el jugador chocaba una viga y rebotaba para arriba, asi que la
+// comprobacion de que acelera daba negativa. No era el juego: era que la prueba
+// dejaba la caida librada a donde cayera.
+await pg.evaluate(() => {
+  const p = window.PARAGUAS.partida;
+  const f = p.pozo.siguiente(p.y + 40);
+  if (f) p.x = f.x;              // el centro del hueco
+  p.vy = 0;
+});
 await pg.keyboard.down("Space");
 await pg.waitForTimeout(500);
 const cerrado = await pg.evaluate(() => ({ a: window.PARAGUAS.partida.abierto, vy: window.PARAGUAS.partida.vy }));
