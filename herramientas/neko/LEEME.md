@@ -9,7 +9,7 @@ se pide como JPG por REST y los clics y las teclas se mandan por WebSocket.
 | Cosa | Estado |
 |---|---|
 | `https://neko.m1k1o.net/` | Es **solo la documentación**, no una instancia. Título `season_change`. |
-| Chromium de este contenedor → internet | **Falla**: `page.goto: net::ERR_CONNECTION_RESET` |
+| Chromium de este contenedor → internet | **Falla**. Medido de nuevo el 19/09: `ERR_CERT_AUTHORITY_INVALID`, no confia en la CA del proxy — ver `herramientas/pc-virtual/LEEME.md` |
 | `curl` → internet | **Anda** (`neko.m1k1o.net` HTTP 200, 132 792 bytes) |
 | `wss://` a través del proxy del agente | **Anda** (probado contra `ws.postman-echo.com` y `echo.websocket.org`) |
 | Neko real corriendo acá en Docker | **Anda**: `ghcr.io/m1k1o/neko/xfce`, `--network host`, healthy |
