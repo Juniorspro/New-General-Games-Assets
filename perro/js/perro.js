@@ -11,15 +11,22 @@
 //    distancia esta de su hueso. De ahi sale una `SkinnedMesh` de verdad, que
 //    se anima con senos y cosenos.
 //
-// EL CAMINO 2 EXISTE PORQUE EL RIGGEO AUTOMATICO ESTA HECHO PARA HUMANOIDES.
-// Con un perro puede devolver un esqueleto con las piernas donde no van, o
-// directamente fallar. Y sin esqueleto, un perro que se desliza por el pasto
-// con las patas tiesas se ve peor que cualquier otra cosa del juego.
+// HOY SE USA EL CAMINO 2, Y ESO SE DECIDIO MIRANDO.
+//
+// El riggeo automatico de Rezona SI acepta cuadrupedos: devolvio un esqueleto
+// con `preset:quadruped:walk`, 72 canales, y los huesos deforman la malla de
+// verdad. Pero la caminata que devuelve esta MAL: se le abren las patas como
+// tijeras, la rodilla delantera dobla para el lado que no dobla en un perro, y
+// el cuerpo se despega del piso en media pasada.
+// Se renderizaron las dos caminatas cuadro por cuadro con el MISMO modelo
+// (`pruebas/ciclo.mjs`) y no hay discusion, asi que el juego carga el modelo
+// SIN esqueleto y usa el rig de abajo. El camino 1 queda escrito y funcionando:
+// el dia que el preset mejore, alcanza con volver a hornear el GLB riggeado.
 import * as THREE from "../vendor/three.module.min.js";
 import { GLTFLoader } from "../vendor/GLTFLoader.js";
 import { M } from "./mundo.js";
 import { ruta } from "./assets.js";
-import { altura, normal } from "./terreno.js";
+import { altura } from "./terreno.js";
 
 // ───────────────────────────────────────────────────────────────────────────
 // DOS NUMEROS QUE SALEN DE MIRAR EL MODELO, NO DE SUPONERLO.
@@ -69,6 +76,14 @@ export function cargaPerro(esc, listo, falla) {
       }
     });
 
+    // LA HUELLA SALE DE LA CAJA DEL MODELO YA ESCALADO, no de un numero a ojo:
+    // con otro perro mas largo, los puntos donde se muestrea el suelo tienen que
+    // moverse con el.
+    const c3 = new THREE.Box3().setFromObject(raiz);
+    const t3 = c3.getSize(new THREE.Vector3());
+    const largoEs = Math.max(t3.x, t3.z), anchoEs = Math.min(t3.x, t3.z);
+    ponHuella(largoEs, anchoEs);
+
     const pivote = new THREE.Group();
     pivote.add(raiz);
     esc.add(pivote);
@@ -77,8 +92,53 @@ export function cargaPerro(esc, listo, falla) {
     const bicho = conClips ? conMixer(pivote, raiz, gltf) : conRigPropio(pivote, raiz);
     bicho.pivote = pivote;
     bicho.conClips = conClips;
+
+    // ── SE CALIBRA DONDE ESTAN LAS PATAS, RECORRIENDO LA MALLA DEFORMADA ──
+    //
+    // `Box3.setFromObject` sobre una malla con esqueleto devuelve la caja de la
+    // POSE DE ENLACE, no la del bicho animado: three transforma la caja de la
+    // geometria por la matriz del objeto y no toca los huesos. Por eso el perro
+    // salia apoyado "segun la caja" y con las patas metidas en la tierra —
+    // medido despues a ojo en una vista de costado, que es lo unico que no
+    // miente acá.
+    // Se recorre la animacion en doce fases, se deforma cada vertice con sus
+    // huesos y se busca el punto MAS BAJO de todos. Eso es donde estan las
+    // patas de verdad, y de ahi sale el corrimiento.
+    bicho.calibra = () => calibraPiso(raiz, bicho);
+    bicho.calibra();
+
     listo(bicho);
   }, undefined, (e) => falla && falla(e));
+}
+
+/** El punto mas bajo de la malla ya deformada, en el sistema del pivote.
+ *  Se muestrea uno de cada tres vertices: con 26 mil vertices y doce fases,
+ *  recorrerlos todos son 320 mil transformaciones al cargar; de a tres, cien
+ *  mil, y el punto mas bajo de un perro no se mueve por saltearse dos vertices
+ *  de cada tres. */
+function calibraPiso(raiz, bicho) {
+  const v = new THREE.Vector3();
+  let bajo = Infinity;
+  const mallas = [];
+  raiz.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) mallas.push(o); });
+  for (let f = 0; f < 12; f++) {
+    bicho.paso(0.001, f < 6 ? 0 : M.VEL_CAMINA, f * 0.25);
+    raiz.updateMatrixWorld(true);
+    for (const m of mallas) {
+      const pos = m.geometry.attributes.position;
+      const conHueso = m.isSkinnedMesh && typeof m.applyBoneTransform === "function";
+      for (let i = 0; i < pos.count; i += 3) {
+        v.fromBufferAttribute(pos, i);
+        if (conHueso) m.applyBoneTransform(i, v);
+        v.applyMatrix4(m.matrixWorld);
+        if (v.y < bajo) bajo = v.y;
+      }
+    }
+  }
+  if (!isFinite(bajo)) return 0;
+  raiz.position.y -= bajo;          // las patas quedan en y = 0 del pivote
+  raiz.updateMatrixWorld(true);
+  return +bajo.toFixed(4);
 }
 
 /* --- camino 1: el GLB ya trae animaciones --------------------------------
@@ -382,19 +442,82 @@ function conRigPropio(pivote, raiz) {
   };
 }
 
-/** Apoya y orienta al perro sobre el terreno. Aparte de la animacion a
- *  proposito: esto vale para los dos caminos. */
-const N = new THREE.Vector3(), ARRIBA = new THREE.Vector3(0, 1, 0);
-const Q = new THREE.Quaternion(), Q2 = new THREE.Quaternion();
+/** Apoya y orienta al perro sobre el terreno.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SE MUESTREA BAJO LAS CUATRO PATAS, NO EN UN PUNTO.
+ * ═══════════════════════════════════════════════════════════════════════════
+ * La primera version ponia el perro a la altura del suelo EN SU CENTRO y lo
+ * inclinaba con la normal de ese punto. En terreno plano se ve bien; en una
+ * loma, el centro esta mas alto que las puntas y las patas de adelante y de
+ * atras quedan ENTERRADAS. Medido sobre 150 posiciones al azar: se hundia
+ * 0,357 unidades en el peor caso y 0,144 de promedio, con un perro de 1,539 de
+ * alto — o sea casi una cuarta parte del bicho abajo del pasto.
+ *
+ * Ahora se mide el suelo en los cuatro puntos donde estarian las patas y:
+ *  · la ALTURA es la MAYOR de las cuatro, asi ninguna pata puede quedar abajo;
+ *  · la INCLINACION sale de las diferencias entre esos mismos puntos, que es
+ *    la pendiente que el perro pisa de verdad, y no la normal de un punto.
+ *
+ * Y LA INCLINACION SE LIMITA. Contra un barranco, seguir la pendiente al pie
+ * de la letra deja al perro parado de punta; con el tope, se inclina lo que se
+ * ve natural y el resto lo absorbe la altura.
+ */
+const ARRIBA = new THREE.Vector3(0, 1, 0);
+const Qy = new THREE.Quaternion(), Qp = new THREE.Quaternion(), Qr = new THREE.Quaternion();
+const EJE_X = new THREE.Vector3(1, 0, 0), EJE_Z = new THREE.Vector3(0, 0, 1);
+
+// La huella del perro, en unidades del mundo. Sale de la caja del modelo ya
+// escalado y la escribe `cargaPerro`: a ojo, un perro mas largo o mas corto
+// dejaria de apoyar bien y no habria forma de saber por que.
+let HUELLA = { largo: 1.0, ancho: 0.4 };
+export function ponHuella(largo, ancho) { HUELLA = { largo, ancho }; }
+
+const TOPE_INCL = 0.42;      // radianes: ~24 grados
+
+const PUNTOS = [[1,0],[-1,0],[0,1],[0,-1],[.7,.7],[.7,-.7],[-.7,.7],[-.7,-.7]];
+const _p = new THREE.Vector3();
+
 export function apoya(pivote, x, z, rumbo) {
-  pivote.position.set(x, altura(x, z), z);
-  // El giro propio del modelo se suma al rumbo: uno es del arte y el otro del
-  // juego, y mezclarlos en una sola variable hace que cambiar el modelo
-  // obligue a tocar la logica.
-  Q.setFromAxisAngle(ARRIBA, rumbo + GIRO_MODELO);
-  // Y SE INCLINA CON LA PENDIENTE. Sin esto el perro va derecho como una tabla
-  // por una loma y se le ven las patas hundidas de un lado.
-  normal(x, z, N);
-  Q2.setFromUnitVectors(ARRIBA, N);
-  pivote.quaternion.copy(Q2).multiply(Q);
+  const r = rumbo + GIRO_MODELO;
+  const s = Math.sin(r), c = Math.cos(r);
+  const hl = HUELLA.largo * 0.50, hw = HUELLA.ancho * 0.55;
+  const pl = HUELLA.largo * 0.42, pw = HUELLA.ancho * 0.50;
+
+  // 1. LA PENDIENTE QUE EL PERRO PISA, de las cuatro patas.
+  const hFre = altura(x + s * pl, z + c * pl);
+  const hAtr = altura(x - s * pl, z - c * pl);
+  const hDer = altura(x + c * pw, z - s * pw);
+  const hIzq = altura(x - c * pw, z + s * pw);
+  let cab = Math.max(-TOPE_INCL, Math.min(TOPE_INCL, Math.atan2(hFre - hAtr, pl * 2)));
+  let ala = Math.max(-TOPE_INCL, Math.min(TOPE_INCL, Math.atan2(hDer - hIzq, pw * 2)));
+
+  Qy.setFromAxisAngle(ARRIBA, r);
+  Qp.setFromAxisAngle(EJE_X, -cab);    // nariz arriba cuando sube
+  Qr.setFromAxisAngle(EJE_Z, ala);
+  // rumbo primero y despues la pendiente, para que el cabeceo sea SIEMPRE
+  // respecto del eje del perro y no del eje del mundo
+  pivote.quaternion.copy(Qy).multiply(Qp).multiply(Qr);
+
+  // 2. LA ALTURA, YA CONTANDO LO QUE LA INCLINACION BAJA CADA PUNTA.
+  //
+  // ESTE ES EL PASO QUE FALTABA. Apoyar el pivote en el suelo mas alto no
+  // alcanza: girar al perro sobre su propia base SUBE una punta y BAJA la otra,
+  // y esa que baja se mete en la tierra. Con la inclinacion tope (0,42 rad) y
+  // medio perro de largo (0,77), una esquina llega a bajar 0,31 — mas que todo
+  // lo que se habia ganado muestreando el suelo en ocho puntos.
+  // Asi que para cada punta se calcula cuanto la baja el giro y se exige que
+  // AUN ASI quede sobre su suelo. El perro sube lo justo y ni un milimetro mas.
+  // El punto se gira UNA vez y de ahi salen sus tres coordenadas. La primera
+  // version giraba el punto para sacar cuanto bajaba, pero muestreaba el suelo
+  // en OTRO lado —con el rumbo solo, sin la inclinacion—, asi que comparaba la
+  // altura de un punto contra el suelo de un punto distinto. Empeoraba el
+  // hundimiento en vez de arreglarlo: de 0,151 a 0,427.
+  let y = -Infinity;
+  for (const [dl, dw] of PUNTOS) {
+    _p.set(hw * dw, 0, hl * dl).applyQuaternion(pivote.quaternion);
+    const necesita = altura(x + _p.x, z + _p.z) - _p.y;
+    if (necesita > y) y = necesita;
+  }
+  pivote.position.set(x, y, z);
 }

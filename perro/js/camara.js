@@ -18,6 +18,14 @@ export function armaCamara(cam) {
   let rumbo = 0, arranco = false;
 
   return {
+    /** Hacia donde mira la camara, en el plano del piso.
+     *
+     *  LO NECESITA EL JOYSTICK. El dedo dice "arriba" y arriba en la pantalla
+     *  es hacia donde mira la CAMARA, no el eje +Z del mundo. Tomando el eje
+     *  del mundo, el control anda bien mientras no gires y se da vuelta en
+     *  cuanto el perro encara para el otro lado: empujar arriba lo trae hacia
+     *  vos. Es exactamente lo que se siente como "el joystick esta invertido". */
+    rumbo: () => rumbo,
     /** @param dt segundos; @param p {x,y,z} del perro; @param rumboMov hacia
      *  donde va; @param andando si se esta moviendo */
     paso(dt, px, pz, rumboMov, andando) {

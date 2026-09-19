@@ -27,7 +27,11 @@ await pg.waitForTimeout(2500);
 
 const e = await pg.evaluate(() => window.__perro.est());
 ch("el perro carga desde el archivo unico", e.cargado, JSON.stringify(e));
-ch("usa el esqueleto con animaciones", e.conClips === true);
+// EL RIG QUE SE USA ES EL PROPIO, y eso es una decision, no un accidente: la
+// caminata del preset generado se le abre como tijera y dobla la rodilla para
+// el lado que no va. Si esto pasara a `true`, alguien volvio a hornear el GLB
+// riggeado sin mirar el ciclo.
+ch("anima con el rig propio, no con el clip generado", e.conClips === false);
 ch("no pide ningun archivo suelto", sueltos.length === 0, sueltos.slice(0,3).join(" | "));
 
 await pg.click("#mJugar");

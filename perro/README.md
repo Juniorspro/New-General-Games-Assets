@@ -25,7 +25,24 @@ Generado con Rezona en cuatro pasos, no en uno:
    → `prune` → `quantize`. De **39 MB a 1,14 MB** conservando el esqueleto y la
    animación, con 26.690 vértices.
 
-### Caminar y correr
+### Caminar: se usa el rig propio, y eso se decidió mirando
+
+**El riggeo automático funciona, pero la caminata que devuelve está mal.** Se le
+abren las patas como tijeras, la rodilla delantera dobla para el lado que no
+dobla en un perro, y el cuerpo se despega del piso en media pasada. Se
+renderizaron los dos ciclos cuadro por cuadro **con el mismo modelo** y no hay
+discusión.
+
+Así que el juego carga el modelo **sin** esqueleto y usa el rig armado en
+`perro.js`: reparte los vértices en siete regiones por su posición, crea un
+hueso por región, pinta los pesos con suavizado en las uniones y produce una
+`SkinnedMesh` de verdad que trota en diagonal, con el lomo rebotando al doble de
+frecuencia que las patas. El camino del clip queda escrito y funcionando: el día
+que el preset mejore, alcanza con volver a hornear el GLB riggeado.
+
+De paso pesa menos: 874 KB en vez de 1,14 MB.
+
+### Cómo se pensó el correr (el camino del clip, hoy sin usar)
 
 **El servicio devuelve una sola animación.** Se pidieron `walk`, `run` e `idle`
 en tres llamadas separadas y las tres volvieron con el mismo
@@ -62,6 +79,47 @@ perro camina con el culo adelante moviendo las orejas. Como la silueta es casi
 simétrica de lejos, en una captura no se ve.
 
 ---
+
+## El perro apoyaba mal, y tres sondas mintieron antes de encontrarlo
+
+El perro salía **enterrado hasta la panza**. Lo que costó encontrarlo no fue el
+arreglo, fueron las mediciones:
+
+1. La primera sonda comparaba `pivote.position.y` con `altura(x,z)` **justo
+   después de que el código le asignara uno al otro**. Una tautología: daba 0
+   siempre y decía "el perro apoya sobre el suelo" con el perro bajo tierra.
+2. La segunda usaba `Box3.setFromObject`. Sobre una malla con esqueleto eso
+   devuelve la caja de la **pose de enlace**, no la del bicho animado: three
+   transforma la caja de la geometría y no toca los huesos. Los números subían y
+   bajaban sin relación con lo que se veía.
+3. Recién una vista de costado, sin pasto, mostró el problema de verdad.
+
+El arreglo tiene tres partes, todas medidas:
+
+- **Se calibra dónde están las patas** recorriendo la malla ya deformada por sus
+  huesos, en doce fases de la animación, y buscando el punto más bajo de todos.
+  Ese es el piso del modelo.
+- **Se muestrea el suelo en ocho puntos** bajo la huella, no en uno: con un solo
+  punto, en una loma el centro está más alto que las puntas y las patas de
+  adelante quedan enterradas.
+- **Se descuenta lo que baja la propia inclinación.** Girar al perro sobre su
+  base sube una punta y baja la otra; con el tope de inclinación y medio perro
+  de largo, una esquina llega a bajar 0,31 — más que todo lo ganado antes.
+
+Medido sobre los vértices deformados: **0,004 de hundimiento promedio y 0,055 en
+el peor caso**, sobre un perro de 1,44 de alto y con el pasto midiendo 0,34. El
+peor caso queda tapado por el pasto.
+
+## El joystick estaba en coordenadas del mundo
+
+Arriba en la pantalla es hacia donde mira **la cámara**, no el eje +Z del mundo.
+Tomando el eje del mundo, el control anda bien mientras no gires y se da vuelta
+en cuanto el perro encara para el otro lado: empujar arriba lo trae hacia vos.
+
+Ahora el rumbo del dedo se suma al de la cámara. Comprobado midiendo lo único
+que importa —que empujando arriba el perro se **aleja** de la cámara— también
+**después de darse media vuelta**, que es justo donde el control viejo se
+invertía.
 
 ## El campo
 
@@ -112,18 +170,37 @@ los 2048 píxeles del mapa entre todo y la sombra saldría como un borrón.
 
 ## El sonido
 
-**El generador de audio de Rezona estuvo caído toda la sesión.** Se pidieron
-música de menú, de caminar, de correr y dos ladridos; los cinco fallaron con
-"servicio temporalmente no disponible", y se reintentaron en rondas durante ~40
-minutos sin éxito. `js/audio.js` tiene los dos caminos y **hoy suena el
-sintetizado**: es exactamente el caso para el que esa capa existe.
+**El generador de efectos de audio de Rezona está caído.** Se pidieron tres
+ladridos, jadeo, pasos y tres pistas de música, en varias tandas a lo largo de
+dos horas. Todos los pedidos se **aceptan** y después fallan con "servicio
+temporalmente no disponible". No es un límite de envíos ni un problema del
+pedido: una prueba suelta de un solo ladrido llegó a `generating` y también
+falló. Lo que sí responde es `kind: "speech"`, así que lo caído es el backend de
+efectos y música, no Rezona entero.
 
-El ladrido sintetizado no es un bip: es un tono que cae pasado por un pasabanda
-que se cierra — un filtro que se abre y se cierra es lo que convierte un tono en
-una vocal; sin eso suena a bocina.
+`js/audio.js` tiene los dos caminos y **hoy suena el sintetizado**. El día que
+vuelva, alcanza con dejar los `.mp3` en `assets/` y las muestras pisan a la
+síntesis sin tocar una línea — el empaquetador ya los busca.
 
-El día que el generador vuelva, alcanza con dejar los `.mp3` en `assets/` y las
-muestras pisan a la síntesis sin tocar una línea.
+### El ladrido sintetizado, mientras tanto
+
+No es un bip. Un ladrido tiene cuatro cosas y las cuatro están:
+
+1. un golpe de aire al abrir la boca, 8 ms;
+2. un cuerpo armónico que **cae** de tono — un tono que no cae suena a bocina;
+3. **tres formantes en paralelo**, no uno: un solo pasabanda da una vocal sola y
+   suena a juguete, mientras que la garganta y la boca arman varias resonancias
+   a la vez, y de ahí sale la "a" del guau;
+4. los tres formantes **bajando juntos**, que es literalmente el hocico
+   cerrándose y lo que convierte "aaa" en "auu".
+
+Y cada ladrido sale distinto: tono, largo y formantes se mueven un poco al azar,
+porque repetido idéntico deja de sonar a perro y suena a botón. Hay además tres
+voces (grave, media y aguda) y nunca se repite la anterior.
+
+Corriendo, el perro **jadea**: una sola fuente de ruido con la ganancia latiendo
+a 3,1 Hz, que es aire entrando y saliendo. Sube y baja con la velocidad, sin un
+umbral que lo prenda de golpe.
 
 ### Los niveles, medidos
 

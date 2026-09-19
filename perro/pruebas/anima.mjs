@@ -15,34 +15,6 @@ let ok = 0, mal = 0;
 const ch = (n,c,d="") => { c ? (ok++, console.log(`  ✓ ${n}${d?" — "+d:""}`))
                              : (mal++, console.log(`  ✗ ${n}${d?" — "+d:""}`)); };
 
-// La matriz de cada hueso en dos momentos: si el clip anima de verdad, cambian.
-const huesos = async () => pg.evaluate(() => {
-  const out = [];
-  window.__perro.P;
-  const esc = document.querySelector("canvas");
-  // se busca el esqueleto recorriendo la escena desde el pivote del perro
-  const raiz = window.__perro.pivoteDePrueba;
-  return null;
-});
-
-// Camino directo: se mide cuanto se mueven los huesos entre dos instantes.
-const muestra = async (seg) => pg.evaluate(async (s) => {
-  const M = await import("/js/mundo.js");
-  return new Promise((ok) => {
-    const t = [];
-    const saca = () => {
-      const h = window.__perro.huesos();
-      t.push(h);
-      if (t.length === 2) ok(t);
-    };
-    saca();
-    setTimeout(saca, s * 1000);
-  });
-}, seg);
-
-const hay = await pg.evaluate(() => typeof window.__perro.huesos === "function");
-if (!hay) { console.log("  (falta la sonda de huesos)"); }
-
 const mov = await pg.evaluate(async () => {
   window.__perro.pan(null);                 // a jugar
   const lee = () => window.__perro.huesos();

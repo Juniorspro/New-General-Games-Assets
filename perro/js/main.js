@@ -121,7 +121,10 @@ function paso(dt, t) {
     // adelante y derecha es derecha sin mas cuentas.
     const f = ENT.fuerza;
     if (f > 0.04) {
-      P.rumboMov = Math.atan2(ENT.x, -ENT.y);
+      // EL DEDO MANDA RESPECTO DE LA CAMARA, NO DEL MUNDO. Arriba en la
+      // pantalla es hacia donde mira la camara; sumarle el rumbo de la camara
+      // es lo que hace que "arriba" sea siempre "para alla" y nunca "para aca".
+      P.rumboMov = camara.rumbo() + Math.atan2(ENT.x, -ENT.y);
       const quiere = f < M.UMBRAL_CORRE
         ? M.VEL_CAMINA * (f / M.UMBRAL_CORRE)
         : M.VEL_CAMINA + (M.VEL_CORRE - M.VEL_CAMINA) *
@@ -159,6 +162,11 @@ function paso(dt, t) {
     if (ev) { P.pasos++; AU.pisada(ev === "fuerte"); }
     apoya(bicho.pivote, P.x, P.z, P.rumbo);
   }
+
+  // EL JADEO SIGUE A LA VELOCIDAD, no a un estado: asi aparece y se va solo
+  // cuando el perro arranca y cuando afloja, sin un umbral que lo prenda y lo
+  // apague de golpe.
+  AU.jadeo(modo === "juega" ? Math.max(0, (P.vel - M.VEL_CAMINA) / (M.VEL_CORRE - M.VEL_CAMINA)) : 0);
 
   pasto.paso(t, P.x, P.z);
   sigueSombra(sol, P.x, P.y, P.z);
@@ -218,22 +226,53 @@ globalThis.__perro = {
     for (let i = 0; i < n; i++) { paso(0.016, i * 0.016); ren.render(esc, cam); }
     return { ms: +((performance.now() - t) / n).toFixed(3), n };
   },
-  /** Cuanto se despega el perro del suelo que se ve. Si esto no da ~0, el
-   *  terreno y la consulta de altura no son la misma superficie. */
-  pegadoAlSuelo(n = 400) {
-    let peor = 0;
+  /** CUANTO SE METE EL PERRO EN LA TIERRA, medido sobre la malla DEFORMADA.
+   *
+   *  DOS SONDAS ANTERIORES MINTIERON ACA, cada una a su manera:
+   *   · la primera comparaba `pivote.position.y` con `altura(x,z)` justo
+   *     despues de que `apoya()` le asignara uno al otro. Tautologia: daba 0
+   *     siempre y el perro estaba enterrado hasta la panza.
+   *   · la segunda usaba `Box3.setFromObject`, que sobre una malla con
+   *     esqueleto devuelve la caja de la POSE DE ENLACE — no la del bicho
+   *     animado. Daba numeros que subian y bajaban sin relacion con lo que se
+   *     veia en pantalla.
+   *  Esta recorre los vertices aplicandoles sus huesos, que es lo unico que
+   *  coincide con lo que dibuja la tarjeta. */
+  hundido(n = 30) {
+    if (!bicho) return null;
+    const v = new THREE.Vector3();
+    const mallas = [];
+    bicho.pivote.traverse((o) => { if (o.isMesh || o.isSkinnedMesh) mallas.push(o); });
+    let peor = 0, suma = 0;
     for (let i = 0; i < n; i++) {
-      const x = (Math.random() * 2 - 1) * LIMITE, z = (Math.random() * 2 - 1) * LIMITE;
-      apoya(bicho.pivote, x, z, 0);
-      peor = Math.max(peor, Math.abs(bicho.pivote.position.y - altura(x, z)));
+      const x = (Math.random() * 2 - 1) * LIMITE * 0.9;
+      const z = (Math.random() * 2 - 1) * LIMITE * 0.9;
+      bicho.paso(0.016, M.VEL_CAMINA, i * 0.13);
+      apoya(bicho.pivote, x, z, Math.random() * 6.28);
+      bicho.pivote.updateMatrixWorld(true);
+      let bajo = Infinity;
+      for (const m of mallas) {
+        const pos = m.geometry.attributes.position;
+        const conHueso = m.isSkinnedMesh && typeof m.applyBoneTransform === "function";
+        for (let k = 0; k < pos.count; k += 9) {
+          v.fromBufferAttribute(pos, k);
+          if (conHueso) m.applyBoneTransform(k, v);
+          v.applyMatrix4(m.matrixWorld);
+          if (v.y < bajo) bajo = v.y;
+        }
+      }
+      // cuanto queda el punto mas bajo de la malla por debajo de SU suelo
+      const d = altura(bicho.pivote.position.x, bicho.pivote.position.z) - bajo;
+      suma += Math.max(0, d);
+      if (d > peor) peor = d;
     }
     apoya(bicho.pivote, P.x, P.z, P.rumbo);
-    return +peor.toFixed(5);
+    return { peor: +peor.toFixed(3), medio: +(suma / n).toFixed(3) };
   },
   /** Las matrices del esqueleto, en crudo. Es la unica forma honesta de
-   *  comprobar que la animacion DEFORMA la malla: un mixer con un clip cuyos
-   *  huesos no coinciden corre igual, no mueve nada, y desde el codigo se ve
-   *  identico a que funcione. */
+   *  comprobar que la animacion DEFORMA la malla: un rig cuyos huesos no
+   *  coinciden corre igual, no mueve nada, y desde el codigo se ve identico a
+   *  que funcione. */
   huesos() {
     const v = [];
     if (bicho) bicho.pivote.traverse((o) => {
@@ -244,6 +283,28 @@ globalThis.__perro = {
   },
   pan: (id) => { id ? alMenu() : juega(); return modo; },
   pasto: () => pasto.malla.count,
+  /** Solo para mirar: camara de costado, sin pasto, para ver donde caen las
+   *  patas. Una medicion de caja sobre una malla con esqueleto devuelve la caja
+   *  de la POSE DE ENLACE, no la del perro animado — asi que para esto hay que
+   *  mirar, no calcular. */
+  costado(d = 4.5, alto = 0.6) {
+    pasto.malla.visible = false;
+    const yy = altura(P.x, P.z);
+    cam.position.set(P.x + d, yy + alto, P.z);
+    cam.lookAt(P.x, yy + 0.55, P.z);
+    ren.render(esc, cam);
+    return { x: +P.x.toFixed(2), z: +P.z.toFixed(2), suelo: +yy.toFixed(3) };
+  },
+  conPasto: (v) => { pasto.malla.visible = v; },
+  camPos: () => ({ x: +cam.position.x.toFixed(3), z: +cam.position.z.toFixed(3) }),
+  /** Avanza SOLO la animacion, sin mover al perro de sitio. Sirve para mirar el
+   *  ciclo de la caminata cuadro por cuadro en el mismo lugar. */
+  avanzaAnim(dt, vel) {
+    if (!bicho) return null;
+    bicho.paso(dt, vel === undefined ? M.VEL_CAMINA : vel, performance.now() / 1000 - t0);
+    apoya(bicho.pivote, P.x, P.z, P.rumbo);
+    return true;
+  },
   /** Solo para medir: frena el dibujo sin tocar el audio. */
   dibujo: (v) => { dibujando = v; return dibujando; },
   P,

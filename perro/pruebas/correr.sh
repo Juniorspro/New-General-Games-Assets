@@ -7,7 +7,7 @@ python3 -m http.server 8811 >/dev/null 2>&1 &
 SRV=$!
 sleep 2
 mal=0
-for p in terreno anima sonido; do
+for p in terreno anima control sonido; do
   echo "── $p"
   node "pruebas/$p.mjs" || mal=1
 done

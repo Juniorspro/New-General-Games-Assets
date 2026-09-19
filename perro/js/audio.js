@@ -51,7 +51,8 @@ export function despierta() {
 
 /* --- las muestras -------------------------------------------------------- */
 const ARCHIVOS = {
-  ladra: "assets/ladra.mp3", ladra2: "assets/ladra2.mp3",
+  ladra1: "assets/ladra1.mp3", ladra2: "assets/ladra2.mp3", ladra3: "assets/ladra3.mp3",
+  jadeo: "assets/jadeo.mp3", pasos: "assets/pasos.mp3",
   m_menu: "assets/m_menu.mp3", m_camina: "assets/m_camina.mp3",
   m_corre: "assets/m_corre.mp3",
 };
@@ -155,43 +156,129 @@ function paraFondo() {
 }
 
 /* --- el ladrido ----------------------------------------------------------
-   Si hay muestra, suena la muestra. Si no, se sintetiza: un ladrido es un
-   golpe de aire con una resonancia que cae. Se arma con ruido pasado por un
-   pasabanda que baja de tono, mas un tono corto que le da el cuerpo. */
+   ═══════════════════════════════════════════════════════════════════════════
+   ESTE ES EL SONIDO QUE MAS SE ESCUCHA, ASI QUE ES EL QUE MAS TRABAJO LLEVA.
+   ═══════════════════════════════════════════════════════════════════════════
+   Si hay muestra grabada, gana la muestra. Cuando no hay, esto no es un bip:
+   un ladrido tiene cuatro cosas y las cuatro estan aca.
+
+    1. UN GOLPE DE AIRE al abrir la boca: ruido corto y agudo, 8 ms.
+    2. UN CUERPO ARMONICO que CAE de tono rapido. Un tono que no cae suena a
+       bocina; lo que hace "perro" es la caida.
+    3. TRES FORMANTES, no uno. Un solo pasabanda da una vocal sola y suena a
+       juguete. La garganta y la boca de un bicho arman varias resonancias a la
+       vez: con tres filtros en paralelo aparece la "a" del guau.
+    4. LA BOCA QUE SE CIERRA: los tres formantes bajan juntos durante el
+       ladrido. Eso es literalmente el hocico cerrandose, y es lo que convierte
+       "aaa" en "auu".
+
+   Y CADA LADRIDO SALE UN POCO DISTINTO. Repetido identico, a la tercera vez
+   deja de sonar a perro y suena a boton: el tono, el largo y los formantes se
+   mueven un poco al azar en cada uno. */
+const VOCES = [
+  // grave y corto, mediano, agudo. Ninguno se repite dos veces seguidas.
+  { f0: 300, dur: 0.20, form: [620, 1180, 2400] },
+  { f0: 380, dur: 0.17, form: [740, 1420, 2700] },
+  { f0: 470, dur: 0.14, form: [880, 1700, 3100] },
+];
+let ultimaVoz = -1;
+
 export function ladra(agudo) {
   if (!AC) return false;
-  const k = agudo ? "ladra2" : "ladra";
-  if (MUE[k]) {
-    const s = AC.createBufferSource(); s.buffer = MUE[k];
-    const g = AC.createGain(); g.gain.value = 0.92;
+  // Las muestras, cuando existan: se elige una de las tres sin repetir.
+  const conMuestra = ["ladra1", "ladra2", "ladra3"].filter((k) => MUE[k]);
+  if (conMuestra.length) {
+    let i = Math.floor(Math.random() * conMuestra.length);
+    if (conMuestra.length > 1 && i === ultimaVoz) i = (i + 1) % conMuestra.length;
+    ultimaVoz = i;
+    const s = AC.createBufferSource(); s.buffer = MUE[conMuestra[i]];
+    s.playbackRate.value = 0.94 + Math.random() * 0.13;   // ni dos iguales
+    const g = AC.createGain(); g.gain.value = 0.95;
     s.connect(g); g.connect(MAE); s.start();
     return true;
   }
-  const t0 = AC.currentTime, base = agudo ? 780 : 520;
-  // el cuerpo
+
+  let iv = agudo ? 2 : Math.floor(Math.random() * 2);
+  if (iv === ultimaVoz && VOCES.length > 1) iv = (iv + 1) % VOCES.length;
+  ultimaVoz = iv;
+  const V = VOCES[iv];
+  const t0 = AC.currentTime;
+  const rnd = 0.92 + Math.random() * 0.17;
+  const f0 = V.f0 * rnd, dur = V.dur * (0.9 + Math.random() * 0.22);
+
+  const bus = AC.createGain();
+  bus.gain.value = 1;
+  bus.connect(MAE);
+
+  // 2. el cuerpo: diente de sierra (muchos armonicos, que es lo que los
+  //    formantes necesitan para tener de donde filtrar) cayendo de tono
   const o = AC.createOscillator(); o.type = "sawtooth";
-  o.frequency.setValueAtTime(base * 1.5, t0);
-  o.frequency.exponentialRampToValueAtTime(base * 0.55, t0 + 0.16);
-  const og = AC.createGain();
-  og.gain.setValueAtTime(0.0001, t0);
-  og.gain.exponentialRampToValueAtTime(0.52, t0 + 0.012);
-  og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.19);
-  // LA BOCA. Un pasabanda que se abre y se cierra es lo que convierte un tono
-  // en una vocal: sin esto suena a bocina, no a perro.
-  const boca = AC.createBiquadFilter(); boca.type = "bandpass"; boca.Q.value = 2.4;
-  boca.frequency.setValueAtTime(base * 2.2, t0);
-  boca.frequency.exponentialRampToValueAtTime(base * 0.9, t0 + 0.17);
-  o.connect(boca); boca.connect(og); og.connect(MAE); o.start(t0); o.stop(t0 + 0.25);
-  // el golpe de aire del principio
+  o.frequency.setValueAtTime(f0 * 1.7, t0);
+  o.frequency.exponentialRampToValueAtTime(f0 * 0.52, t0 + dur * 0.85);
+  // un temblorcito: una cuerda vocal no da un tono perfecto
+  const vib = AC.createOscillator(); vib.frequency.value = 34;
+  const vibG = AC.createGain(); vibG.gain.value = f0 * 0.05;
+  vib.connect(vibG); vibG.connect(o.frequency); vib.start(t0); vib.stop(t0 + dur + 0.1);
+
+  const env = AC.createGain();
+  env.gain.setValueAtTime(0.0001, t0);
+  env.gain.exponentialRampToValueAtTime(0.85, t0 + 0.014);
+  env.gain.exponentialRampToValueAtTime(0.22, t0 + dur * 0.45);
+  env.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(env);
+
+  // 3 y 4. tres formantes en paralelo, todos cerrandose
+  const pesos = [0.55, 0.30, 0.16];
+  V.form.forEach((hz, k) => {
+    const f = AC.createBiquadFilter();
+    f.type = "bandpass";
+    f.Q.value = 5.5 - k * 1.4;
+    const a = hz * rnd;
+    f.frequency.setValueAtTime(a * 1.18, t0);
+    f.frequency.exponentialRampToValueAtTime(a * 0.62, t0 + dur * 0.9);
+    const g = AC.createGain(); g.gain.value = pesos[k];
+    env.connect(f); f.connect(g); g.connect(bus);
+  });
+  o.start(t0); o.stop(t0 + dur + 0.08);
+
+  // 1. el golpe de aire de la apertura
   const s = AC.createBufferSource(); s.buffer = RUIDO; s.loop = true;
-  const f = AC.createBiquadFilter(); f.type = "bandpass";
-  f.frequency.value = base * 2.6; f.Q.value = 0.9;
+  const fs = AC.createBiquadFilter(); fs.type = "bandpass";
+  fs.frequency.value = V.form[2] * rnd; fs.Q.value = 0.8;
   const sg = AC.createGain();
   sg.gain.setValueAtTime(0.0001, t0);
-  sg.gain.exponentialRampToValueAtTime(0.26, t0 + 0.008);
-  sg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
-  s.connect(f); f.connect(sg); sg.connect(MAE); s.start(t0); s.stop(t0 + 0.14);
+  sg.gain.exponentialRampToValueAtTime(0.30, t0 + 0.008);
+  sg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.075);
+  s.connect(fs); fs.connect(sg); sg.connect(bus);
+  s.start(t0); s.stop(t0 + 0.12);
+
   return true;
+}
+
+/* --- el jadeo -------------------------------------------------------------
+   Corriendo, el perro respira. Es lo que convierte un modelo que se desplaza
+   en un bicho que se cansa, y cuesta cuatro nodos. Se enciende y se apaga con
+   una sola ganancia, asi que no hay que crear nada por cuadro. */
+let JADEO = null;
+export function jadeo(fuerza) {
+  if (!AC) return;
+  if (!JADEO) {
+    const g = AC.createGain(); g.gain.value = 0; g.connect(MAE);
+    const s = AC.createBufferSource(); s.buffer = RUIDO; s.loop = true;
+    const f = AC.createBiquadFilter(); f.type = "bandpass";
+    f.frequency.value = 900; f.Q.value = 1.4;
+    // EL RITMO ES UNA GANANCIA QUE LATE, no un sonido repetido: un jadeo es
+    // aire entrando y saliendo, o sea la MISMA fuente subiendo y bajando.
+    const lat = AC.createOscillator(); lat.type = "triangle"; lat.frequency.value = 3.1;
+    const latG = AC.createGain(); latG.gain.value = 0.6;
+    const base = AC.createGain(); base.gain.value = 0.6;
+    lat.connect(latG); latG.connect(base.gain);
+    s.connect(f); f.connect(base); base.connect(g);
+    s.start(); lat.start();
+    JADEO = { g };
+  }
+  JADEO.g.gain.setTargetAtTime(Math.max(0, Math.min(1, fuerza)) * 0.075,
+                               AC.currentTime, 0.35);
 }
 
 /** Un toque de boton. Corto y claro: es el unico acuse de recibo del menu. */

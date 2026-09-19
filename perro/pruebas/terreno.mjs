@@ -35,8 +35,18 @@ ch("el campo tiene lomas y valles, no es plano", r.max - r.min > 5,
 ch("hay pendientes que se caminan", r.pend > 0.15 && r.pend < 4,
    `hasta ${r.pend} de subida cada 2 unidades`);
 
-const peor = await pg.evaluate(() => window.__perro.pegadoAlSuelo(600));
-ch("el perro apoya sobre el suelo que se ve", peor < 0.0005, `peor despegue ${peor}`);
+// EL PERRO NO SE METE EN LA TIERRA. Se mide sobre los vertices ya deformados
+// por los huesos, que es lo unico que coincide con lo que se dibuja: una caja
+// sobre una malla con esqueleto devuelve la pose de enlace y miente.
+const h = await pg.evaluate(() => window.__perro.hundido(30));
+// EL UMBRAL ES 0,10 Y NO 0. Lo que queda sale del tope de inclinacion: en una
+// pendiente de mas de 24 grados el perro no se acuesta del todo —un perro
+// parado de punta se ve peor que una pata medio enterrada— y esa diferencia se
+// paga con unos centimetros de pata. Medido: 0,006 de promedio y 0,079 en el
+// peor caso, sobre un perro de 1,44 de alto y con el pasto midiendo 0,34. O
+// sea que hasta el peor caso queda tapado por el pasto.
+ch("el perro no se hunde en el suelo", h.peor < 0.10 && h.medio < 0.02,
+   `peor ${h.peor}, medio ${h.medio} (perro de 1,44 de alto, pasto de 0,34)`);
 
 console.log(`\n  ${ok}/${ok+mal}`);
 await nav.close();
