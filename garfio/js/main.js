@@ -141,12 +141,18 @@ function alMenu() {
   mostrar("p-menu");
 }
 
+// EL TUTORIAL SE MUESTRA HASTA QUE SE COMPLETE UNA VEZ, y se guarda. Mostrarlo
+// siempre molesta al que ya sabe; mostrarlo una sola partida no alcanza, porque
+// la primera se pierde en veinte segundos y nadie leyó nada.
+let mostrarTuto = false;
+
 function jugar() {
   despertarTodo(); arrancarViento();
   musica.pararTema();
   musica.arrancar();
   demo = null;
   partida = new Partida();
+  mostrarTuto = !cargar().tutoHecho;
   ultimoHito = 0;
   for (const k in hud) delete hud[k];
   mostrar("p-juego");
@@ -213,6 +219,29 @@ function pintarHud(p) {
   poner("#h-metros", `${p.metros} m`);
   poner("#h-tuercas", String(p.tuercas));
   poner("#h-piso", t(pisoDe(p.alto).clave));
+
+  // EL TUTORIAL SE PINTA DESDE EL ESTADO DE LA PARTIDA, no desde un contador
+  // propio del HUD: con dos fuentes, el cartel y el juego se desincronizan y
+  // queda diciendo "soltá" cuando ya soltaste.
+  const ct = $("#h-tuto");
+  // SE GUARDA EN CUANTO SE COMPLETA, y no al terminar la partida: el que
+  // aprendió los tres gestos y después se murió ya aprendió, y volver a
+  // mostrárselo es no haber estado mirando.
+  if (p.tuto >= 3 && mostrarTuto) {
+    mostrarTuto = false;
+    const d = cargar(); d.tutoHecho = true; guardar();
+  }
+  if (p.tuto >= 3 || !mostrarTuto) {
+    if (!ct.hidden) ct.hidden = true;
+  } else {
+    const clave = "tuto." + p.tuto;
+    if (hud.tuto !== clave) {
+      hud.tuto = clave;
+      ct.textContent = t(clave);
+      ct.className = "tuto" + (p.tuto === 1 ? " lado" : p.tuto === 2 ? " suelta" : "");
+      ct.hidden = false;
+    }
+  }
   const apuro = p.sube > 0;
   if (hud.apuro !== apuro) { hud.apuro = apuro; $("#h-metros").classList.toggle("apuro", apuro); }
 }
@@ -227,8 +256,15 @@ function sonar(p) {
     // propio lo enseña sin una sola palabra.
     if (p.vy < -5) efe.buena(); else efe.suelta();
   }
-  if (p.ancla && p.t % 9 === 0)
-    efe.soga(Math.min(1, Math.hypot(p.vx, p.vy) / F.VEL_MAX));
+  // LA SOGA CRUJE CUANDO TRABAJA, NO POR ESTAR ENGANCHADA. Antes sonaba cada
+  // nueve cuadros mientras hubiera ancla, con o sin movimiento; no se notaba
+  // porque nadie se quedaba colgado quieto. Ahora la partida EMPIEZA colgado y
+  // quieto, y el crujido sonaba solo, una vez cada 150 ms, sobre una soga que
+  // no se movia — y ademas ensuciaba la medicion del silencio con la musica
+  // apagada. Una soga quieta no hace ruido.
+  const trab = Math.hypot(p.vx, p.vy);
+  if (p.ancla && p.t % 9 === 0 && trab > 0.6)
+    efe.soga(Math.min(1, trab / F.VEL_MAX));
   if (e.tuerca) efe.tuerca();
   if (e.pared) efe.pared();
   if (e.rompe) efe.rompe();
@@ -349,3 +385,9 @@ globalThis.GARFIO = {
 // siguen sonando con la música apagada es pedir uno y contar los osciladores.
 globalThis.__efe = () => efe.menu();
 globalThis.__musicaAndando = () => musica.andando();
+
+/* ============================================================
+   LA SONDA. Una afirmacion sin numero no vale: de aca sale el estado real de
+   la partida para las pruebas.
+   ============================================================ */
+window.__garfio = { partida: () => partida, demo: () => demo };

@@ -45,32 +45,128 @@ canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block;image
   text-shadow:0 1px 6px #000;transition:opacity .2s;padding:0 10px}
 #pista.on{opacity:1}
 
-/* ---------- dedo ---------- */
-#dedo{position:absolute;left:0;top:0;width:100%;height:100%;z-index:4;pointer-events:none}
+/* ---------- dedo ----------
+   ═══════════════════════════════════════════════════════════════════════════
+   LOS CONTROLES SE ANCLAN A LA PANTALLA, NO AL MARCO.
+   ═══════════════════════════════════════════════════════════════════════════
+   El marco guarda la proporcion de telefono y en apaisado queda de 175 px de
+   ancho: ahi adentro el joystick y el boton de fuego se TOCABAN (medido: 0 px
+   de aire). Anclados a la pantalla, en apaisado se van a las bandas negras de
+   los costados —que es donde esta la mano— y en vertical quedan igual que
+   siempre, porque ahi el marco ocupa todo el ancho.
+
+   Y LA COLUMNA DE LA DERECHA SE APILA HACIA ARRIBA, no en abanico. El abanico
+   se ve mejor en un dibujo y no entra: con un telefono de 360 px de ancho, un
+   joystick de 132 mas tres botones al costado piden 368 px y la pantalla tiene
+   360. Apilados, el ancho que hace falta no depende de cuantos botones haya. */
+#dedo{position:fixed;inset:0;z-index:12;pointer-events:none}
 body.jugando #dedo{pointer-events:auto}
-#hud,#dedo{opacity:0;transition:opacity .22s}
-body.jugando #hud,body.jugando #dedo{opacity:1}
-#joy{position:absolute;left:18px;bottom:calc(26px + env(safe-area-inset-bottom,0px));
+#dedo,#bPau{opacity:0;transition:opacity .22s}
+body.jugando #dedo,body.jugando #bPau{opacity:1}
+
+#joy{position:absolute;left:20px;bottom:calc(26px + env(safe-area-inset-bottom,0px));
   width:132px;height:132px;border-radius:50%;
-  background:rgba(255,255,255,.045);border:2px solid rgba(255,255,255,.13)}
+  background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.07),rgba(255,255,255,.02) 70%);
+  border:2px solid rgba(255,255,255,.16);
+  box-shadow:inset 0 0 22px rgba(0,0,0,.35)}
 #joyP{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;
-  border-radius:50%;background:rgba(242,238,230,.30);border:2px solid rgba(242,238,230,.5)}
-.bt{position:absolute;border-radius:50%;display:grid;place-items:center;
-  font:900 11px/1 system-ui;letter-spacing:.06em;color:var(--tinta);
-  background:rgba(255,255,255,.055);border:2px solid rgba(255,255,255,.16)}
-.bt.on{background:rgba(255,255,255,.2)}
-.bt.no{opacity:.32}
-#bTira{right:16px;bottom:calc(30px + env(safe-area-inset-bottom,0px));width:104px;height:104px;
-  border-color:rgba(255,200,87,.45);background:rgba(255,200,87,.11)}
-#bEsq{right:126px;bottom:calc(96px + env(safe-area-inset-bottom,0px));width:64px;height:64px;
-  border-color:rgba(79,195,247,.45);background:rgba(79,195,247,.10)}
-#bUsa{right:130px;bottom:calc(20px + env(safe-area-inset-bottom,0px));width:60px;height:60px;
-  border-color:rgba(105,219,124,.5);background:rgba(105,219,124,.12);display:none}
+  border-radius:50%;
+  background:radial-gradient(circle at 38% 34%,rgba(255,255,255,.55),rgba(242,238,230,.24));
+  border:2px solid rgba(242,238,230,.55);
+  box-shadow:0 3px 10px rgba(0,0,0,.4)}
+
+/* EL BOTON ES UN ARO DE COLOR CON UN SIMBOLO ADENTRO Y LA PALABRA ABAJO.
+   El simbolo es el que se mira de reojo mientras se juega; la palabra es para
+   la primera vez. Los dos juntos, y no uno solo, porque el que ya jugo no lee
+   y el que recien empieza no adivina un icono. */
+.bt{position:absolute;border:0;padding:0;border-radius:50%;
+  display:grid;place-items:center;gap:0;
+  background:transparent;color:var(--tinta);
+  -webkit-tap-highlight-color:transparent;
+  transition:transform .07s ease,filter .07s ease}
+.bt::before{content:'';position:absolute;inset:0;border-radius:50%;
+  background:var(--relleno);border:2.5px solid var(--aro);
+  box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 -3px 0 rgba(0,0,0,.18)}
+.bt svg{position:relative;display:block;width:30px;height:30px;
+  fill:none;stroke:var(--aro);stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
+.bt svg .lleno{fill:var(--aro);stroke:none}
+.bt svg .fina{stroke-width:1.6;opacity:.65}
+.bt span{position:relative;font:900 10px/1 system-ui;letter-spacing:.09em;
+  color:var(--aro);margin-top:5px;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.bt.on,.bt:active{transform:scale(.94);filter:brightness(1.45)}
+.bt.no{opacity:.3}
+
+/* FUEGO: el mas grande y el mas abajo, que es donde cae el pulgar sin mirar.
+   El simbolo es una mira, no una bala: lo que el boton hace es APUNTAR y
+   disparar solo, y la mira lo dice. */
+#bTira{--aro:#ffc857;--relleno:rgba(255,200,87,.13);
+  right:20px;bottom:calc(24px + env(safe-area-inset-bottom,0px));
+  width:112px;height:112px}
+#bTira svg{width:38px;height:38px}
+
+/* ESQUIVAR: dos flechas que salen para el costado. */
+#bEsq{--aro:#4fc3f7;--relleno:rgba(79,195,247,.11);
+  right:36px;bottom:calc(160px + env(safe-area-inset-bottom,0px));
+  width:80px;height:80px}
+#bEsq svg{width:28px;height:28px}
+
+/* USAR: una mano abierta, simplificada a un cuadrado con el dedo arriba. */
+#bUsa{--aro:#69db7c;--relleno:rgba(105,219,124,.13);
+  right:38px;bottom:calc(264px + env(safe-area-inset-bottom,0px));
+  width:76px;height:76px;display:none}
 #bUsa.ver{display:grid}
-#bPau{position:absolute;right:10px;bottom:calc(178px + env(safe-area-inset-bottom,0px));
-  width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);
-  font:800 13px/1 system-ui;color:var(--tinta2)}
+#bUsa svg{width:26px;height:26px}
+
+/* LA PAUSA SE VA ARRIBA Y LEJOS DEL PULGAR. Estaba a 178 px del borde de
+   abajo, o sea justo en la columna de los botones de accion: apretarla sin
+   querer en el medio de una pelea es perder la partida por un boton que se
+   usa una vez cada diez minutos. Arriba al medio no la toca nadie de casualidad
+   y se ve igual. Y mide 46 px, que pasa el minimo de 44. */
+#bPau{position:fixed;left:50%;transform:translateX(-50%);
+  top:calc(10px + env(safe-area-inset-top,0px));
+  width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+  background:rgba(8,11,17,.55);border:1px solid rgba(255,255,255,.16);
+  color:var(--tinta2);font:800 13px/1 system-ui;letter-spacing:.06em;
+  pointer-events:none;z-index:13}
+body.jugando #bPau{pointer-events:auto}
+
+/* EN PANTALLAS BAJAS LA COLUMNA NO ENTRA. Con 380 px de alto, el tercer boton
+   apilado se sale por arriba; se achica todo y se junta la pila lo justo para
+   que siga habiendo 24 px de aire entre uno y otro. */
+/* EN APAISADO LA PAUSA SE VA A LA BANDA NEGRA.
+   Arriba al medio esta bien en vertical, donde el marco ocupa todo el ancho y
+   ahi no hay nada. En apaisado el marco se angosta hasta 175 px y arriba al
+   medio es justo donde se amontonan los corazones, la barra de energia y el
+   contador de piso: el boton les quedaba ENCIMA. En la banda no tapa nada y
+   sigue lejos del pulgar. */
+@media (min-aspect-ratio: 13/10){
+  #bPau{left:20px;transform:none;top:calc(16px + env(safe-area-inset-top,0px))}
+
+  /* Y EL HUD SE ACHICA, PORQUE NO ENTRA. En apaisado el marco mide 175 px de
+     ancho: siete corazones de 17 px con sus separaciones ya ocupan 140, y del
+     otro lado va el piso, el arma y las monedas. Medido, los dos bloques se
+     PISABAN. Con corazones de 11 px el bloque de la izquierda baja a 95 px y
+     el de la derecha a 45: entran los dos con aire en el medio.
+     No se achica en vertical porque ahi sobra ancho y un HUD chico es un HUD
+     que no se lee. */
+  .cor{width:11px;height:11px}
+  #vidas{gap:3px}
+  #barE{width:92px;height:5px;margin-top:4px}
+  #piso{font-size:12px}
+  #salas{font-size:8px}
+  #arma{font-size:9px;margin-top:3px}
+  #monN{font-size:9px;margin-top:2px}
+}
+
+@media (max-height: 460px){
+  #joy{width:104px;height:104px;left:16px;bottom:18px}
+  #joyP{width:44px;height:44px;margin:-22px 0 0 -22px}
+  #bTira{width:92px;height:92px;right:16px;bottom:18px}
+  #bEsq{width:68px;height:68px;right:28px;bottom:134px}
+  #bUsa{width:64px;height:64px;right:30px;bottom:226px}
+}
 
 /* ---------- pantallas ---------- */
 .pan{position:absolute;inset:0;z-index:20;display:none;flex-direction:column;
@@ -266,13 +362,6 @@ body.pl-logo .pan.on > h1{animation:pozoEntra .40s cubic-bezier(.18,.85,.25,1) b
   <div id="aviso"></div>
   <div id="pista"></div>
 
-  <div id="dedo">
-    <div id="joy"><div id="joyP"></div></div>
-    <div class="bt" id="bTira">FUEGO</div>
-    <div class="bt" id="bEsq">ESQ</div>
-    <div class="bt" id="bUsa">USAR</div>
-    <div id="bPau">| |</div>
-  </div>
 
   <div class="pan on" id="pIdioma">
     <h1>POZO</h1>
@@ -311,6 +400,40 @@ body.pl-logo .pan.on > h1{animation:pozoEntra .40s cubic-bezier(.18,.85,.25,1) b
     <button class="b p" id="fiOtra"></button>
     <button class="b" id="fiMenu"></button>
   </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     LOS CONTROLES VIVEN FUERA DEL MARCO, Y ESA ES LA CLAVE DE TODO.
+     ═══════════════════════════════════════════════════════════════════════
+     El marco mantiene la proporcion de telefono (412:892) y se achica para
+     entrar en la pantalla. En apaisado eso lo deja de CIENTO SETENTA Y CINCO
+     pixeles de ancho: adentro de esa franja no entran un joystick de 132 y un
+     boton de 104, y se tocaban — medido, cero pixeles de aire entre los dos.
+     Afuera del marco, en cambio, estan los trescientos pixeles de banda negra
+     que sobran a cada lado, que es justo donde va la mano.
+     Y en vertical no cambia nada, porque ahi el marco ocupa todo el ancho. -->
+<div id="dedo">
+  <div id="joy"><div id="joyP"></div></div>
+  <button class="bt" id="bTira" aria-label="Disparar">
+    <!-- una mira, no una bala: el boton apunta solo, lo que se elige es CUANDO -->
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/>
+      <circle cx="12" cy="12" r="1.9" class="lleno"/>
+      <path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/></svg>
+    <span>FUEGO</span></button>
+  <button class="bt" id="bEsq" aria-label="Esquivar">
+    <!-- un cuerpo que sale disparado de costado, con la estela detras -->
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 5l7 7-7 7"/><path d="M2.5 8.5h3.5M1 12h4.5M2.5 15.5h3.5" class="fina"/></svg>
+    <span>ESQ</span></button>
+  <button class="bt" id="bUsa" aria-label="Usar">
+    <!-- una mano que se apoya: palma y tres dedos -->
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8.5 12V5.2a1.7 1.7 0 013.4 0V11"/>
+      <path d="M11.9 11V4.2a1.7 1.7 0 013.4 0V12"/>
+      <path d="M15.3 12V6.8a1.7 1.7 0 013.4 0V15a6 6 0 01-6 6h-1.8a5 5 0 01-3.9-1.9l-3.3-4.2a1.7 1.7 0 012.6-2.1L8.5 15"/>
+    </svg>
+    <span>USAR</span></button>
+  <button id="bPau" aria-label="Pausa">| |</button>
 </div>
 
 <script type="module">
@@ -538,7 +661,7 @@ const LANG = {
   fiD:'piso {0} · {1} bajas · {2} monedas · {3}',
   piso:'PISO {0}', salaLimpia:'¡DESPEJADA!', abre:'LA PUERTA SE ABRE',
   escalera:'LA ESCALERA', jefeAhi:'ALGO GRANDE',
-  tomaste:'{0}', cofre:'COFRE', usar:'USAR',
+  tomaste:'{0}', cofre:'COFRE', usar:'USAR', fuego:'FUEGO', esq:'ESQ',
   pTuto1:'MOVÉ con el dedo izquierdo',
   pTuto2:'FUEGO apunta solo al más cercano',
   pTuto3:'ESQ te esquiva y te hace invencible un instante',
@@ -570,7 +693,7 @@ const LANG = {
   fiD:'floor {0} · {1} kills · {2} coins · {3}',
   piso:'FLOOR {0}', salaLimpia:'CLEAR!', abre:'THE DOOR OPENS',
   escalera:'THE STAIRS', jefeAhi:'SOMETHING BIG',
-  tomaste:'{0}', cofre:'CHEST', usar:'USE',
+  tomaste:'{0}', cofre:'CHEST', usar:'USE', fuego:'FIRE', esq:'DODGE',
   pTuto1:'MOVE with your left thumb',
   pTuto2:'FIRE aims at the closest one by itself',
   pTuto3:'DODGE rolls you and makes you briefly untouchable',
@@ -602,7 +725,7 @@ const LANG = {
   fiD:'andar {0} · {1} abates · {2} moedas · {3}',
   piso:'ANDAR {0}', salaLimpia:'LIMPA!', abre:'A PORTA ABRE',
   escalera:'A ESCADA', jefeAhi:'ALGO GRANDE',
-  tomaste:'{0}', cofre:'BAÚ', usar:'USAR',
+  tomaste:'{0}', cofre:'BAÚ', usar:'USAR', fuego:'FOGO', esq:'DESVIAR',
   pTuto1:'MOVA com o dedo esquerdo',
   pTuto2:'FOGO mira sozinho no mais próximo',
   pTuto3:'ESQ te esquiva e te deixa invencível um instante',
@@ -3345,7 +3468,19 @@ function pintaIdioma(){
   $('#paT').textContent = T('paT');
   $('#paSigue').textContent = T('sigue');
   $('#paMenu').textContent = T('menu');
-  $('#bUsa').textContent = T('usar');
+  // SE ESCRIBE EN EL <span>, NO EN EL BOTON.
+  //
+  // Antes esta linea hacia `$('#bUsa').textContent = ...`, que reemplaza TODO
+  // el contenido del boton — incluido el icono. El sintoma no fue un error: el
+  // boton quedaba con la palabra y sin dibujo, y como los otros dos no se
+  // traducen, sus iconos si se veian. O sea que se veia como un icono mal
+  // hecho, no como un icono borrado.
+  // Y de paso se traducen los otros dos, que estaban en castellano fijo adentro
+  // de un juego que habla tres idiomas.
+  for (const [sel, clave] of [['#bUsa','usar'], ['#bTira','fuego'], ['#bEsq','esq']]) {
+    const b = $(sel), sp = b && b.querySelector('span');
+    if (sp) sp.textContent = T(clave);
+  }
   document.querySelectorAll('#idL .b').forEach(b =>
     b.style.opacity = (b.dataset.l === IDIOMA ? '1' : '.55'));
   hudReset(); hudPinta();

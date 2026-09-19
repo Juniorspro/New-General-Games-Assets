@@ -19,6 +19,9 @@ echo "── el archivo único, desde file:// ───────────�
 python3 empaquetar.py
 node pruebas/un-archivo.mjs
 echo
+echo "── arrancar colgado y el tutorial ────────────────────────────"
+ARCHIVO_PUERTO=8805 node pruebas/tutorial.mjs
+echo
 echo "── los tres idiomas ──────────────────────────────────────────"
 node pruebas/idiomas.mjs
 echo

@@ -16,12 +16,37 @@ const INVUL = 30;
 export class Partida {
   constructor(semilla) {
     this.torre = new Torre(semilla);
-    this.x = ANCHO / 2;
-    this.y = 0;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LA PARTIDA EMPIEZA COLGADO DE LA PRIMERA ARGOLLA, NO CAYENDO.
+    // ═══════════════════════════════════════════════════════════════════════
+    // Antes arrancaba en el aire con un empujoncito hacia arriba y sin soga: el
+    // que no sabia todavia que hay que MANTENER el dedo apoyado se caia sin
+    // haber tocado nada y sin entender por que. Un juego que se pierde antes de
+    // que puedas hacer algo no es dificil, esta roto.
+    // Colgado y quieto, la primera pantalla EXPLICA el juego sola: se ve la
+    // soga tirante, se ve la argolla, y no pasa nada hasta que el jugador
+    // decide. `atado` sostiene ese estado hasta el primer dedo.
+    const a0 = this.torre.argollas[0];
+    this.ancla = a0;
+    // El largo va entre el minimo (76) y los 140 que hay hasta el piso del
+    // mundo: 124 deja al bicho colgando con soga tirante y bien a la vista.
+    this.largo = 124;
+    this.x = a0.x;
+    this.y = a0.y + this.largo;
     this.vx = 0;
-    this.vy = -3.2;                  // un empujoncito inicial hacia arriba
-    this.ancla = null;               // la argolla enganchada
-    this.largo = 0;
+    this.vy = 0;
+    /** Colgado esperando el primer dedo. Se apaga en cuanto alguien toca. */
+    this.atado = true;
+
+    // EL TUTORIAL ES UN NUMERO, NO UNA MAQUINA DE ESTADOS APARTE. Cada paso se
+    // da por cumplido cuando el jugador HACE la cosa, no cuando pasa el tiempo:
+    // un cartel que se va solo a los tres segundos se lo pierde el que estaba
+    // mirando otra cosa, y el que ya sabe lo tiene que aguantar igual.
+    //  0 = mantené el dedo   1 = arrastrá para hamacarte
+    //  2 = soltá para salir  3 = listo
+    this.tuto = 0;
+    this.tutoDato = 0;       // cuanto lleva hamacado, para pasar del 1 al 2
     this.tuercas = 0;
     this.estado = "trepando";        // trepando | muerto
     this.alto = 0;                   // el punto más alto alcanzado, en píxeles
@@ -64,6 +89,7 @@ export class Partida {
     if (this.estado === "muerto") { this.cuenta++; this.caerMuerto(); return; }
 
     this.gancho(ent);
+    this.tutorial(ent);
     this.mover();
     this.estela.push({ x: this.x, y: this.y });
     if (this.estela.length > 18) this.estela.shift();
@@ -96,7 +122,10 @@ export class Partida {
     // el que se queda hamacándose abajo del corte no se muere nunca: el
     // validador encontró una torre donde el robot se trababa a diez metros y
     // seguía vivo a los cinco minutos. Un juego sin fin tiene que terminar.
-    if (this.alto > F.SUBE_DESDE || this.t > F.SUBE_TIEMPO) {
+    // Y NO ARRANCA MIENTRAS SIGAS COLGADO DEL PRINCIPIO: el reloj de `SUBE_TIEMPO`
+    // corre desde el cuadro uno, asi que alguien que se queda leyendo el
+    // tutorial veia venir el piso sin haber jugado todavia.
+    if (!this.atado && (this.alto > F.SUBE_DESDE || this.t > F.SUBE_TIEMPO)) {
       const v = Math.min(F.SUBE_MAX,
                          F.SUBE_VEL * (1 + Math.max(this.alto - F.SUBE_DESDE, 0) / 9000));
       this.cam -= v;
@@ -106,9 +135,40 @@ export class Partida {
   }
 
   // --- el gancho ---------------------------------------------------------
+  /**
+   * Adelanta el tutorial mirando lo que el jugador YA hizo.
+   *
+   * No hay temporizadores: el paso 0 se cumple tocando, el 1 hamacandose de
+   * verdad (medido por la velocidad de costado que junto), y el 2 soltando.
+   * Asi el cartel siempre dice lo unico que falta hacer.
+   */
+  tutorial(ent) {
+    if (this.tuto >= 3) return;
+    const d = ent && ent.dedo;
+    if (this.tuto === 0) {
+      if (d && this.ancla) this.tuto = 1;
+      return;
+    }
+    if (this.tuto === 1) {
+      // HAMACARSE ES JUNTAR VELOCIDAD DE COSTADO, no mover el dedo: alguien
+      // puede arrastrar el dedo sin lograr nada, y darle por cumplido el paso
+      // seria enseñarle mal.
+      if (this.ancla) this.tutoDato = Math.max(this.tutoDato, Math.abs(this.vx));
+      if (this.tutoDato > 3.4) this.tuto = 2;
+      return;
+    }
+    if (this.tuto === 2 && this.ev.suelta) this.tuto = 3;
+  }
+
   gancho(ent) {
     const d = ent && ent.dedo;
+    if (d) this.atado = false;       // el jugador tomo el mando
     if (!d) {
+      // COLGADO DE ENTRADA NO SE SUELTA SOLO. La soga es un resorte —se
+      // mantiene apretando— pero al principio todavia no hay nadie apretando:
+      // sin esta guarda, el primer cuadro del juego suelta la argolla y el
+      // arreglo de arrancar atado no serviria de nada.
+      if (this.atado) return;
       if (this.ancla) {
         // Chispas al soltar, en el CUERPO y no en la argolla: marcan el punto y
         // la dirección por donde saliste, que es lo único que decidiste vos.

@@ -258,3 +258,48 @@ button:active { transform: translateY(2px); }
   .fin h2 { font-size: 28px; margin-bottom: 4px; }
   .lista li { padding: 3px 2px; font-size: 12px; }
 }
+
+/* ---------- el tutorial ----------
+   DEBAJO DEL BICHO, NO ARRIBA. La primera versión lo puso arriba y tapaba
+   justo la argolla y la soga — o sea las dos cosas que el cartel está
+   explicando. El bicho cuelga al 42% de la pantalla y de ahí para abajo no hay
+   nada, así que el cartel va al 66%: se lee sin tapar nada y queda por encima
+   de donde cae el pulgar.
+   Y NO SE TOCA (`pointer-events:none`): el juego entero es apoyar el dedo en
+   cualquier lado, y un cartel que se coma ese toque haría que el tutorial
+   impida hacer lo que el tutorial pide. */
+.tuto{position:absolute;left:50%;top:66%;transform:translateX(-50%);
+  max-width:min(300px,82vw);padding:11px 16px;border-radius:14px;
+  background:rgba(12,16,24,.82);border:1px solid rgba(182,240,255,.28);
+  color:#eaf6ff;font:700 13px/1.45 system-ui,sans-serif;text-align:center;
+  letter-spacing:.01em;text-shadow:0 1px 4px #000;
+  pointer-events:none;z-index:6;
+  animation:tutoEntra .32s cubic-bezier(.2,.9,.3,1) both}
+.tuto[hidden]{display:none}
+@keyframes tutoEntra{from{opacity:0;transform:translateX(-50%) translateY(8px)}
+                     to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* Una mano que se apoya y se va, para el primer paso: lo que hay que hacer es
+   un gesto, y un gesto se explica mostrándolo. */
+.tuto::after{content:'';display:block;width:26px;height:26px;margin:9px auto 0;
+  border-radius:50%;background:rgba(234,246,255,.9);
+  box-shadow:0 0 0 0 rgba(182,240,255,.5);
+  animation:tutoDedo 1.7s ease-out infinite}
+@keyframes tutoDedo{
+  0%{transform:scale(.72);box-shadow:0 0 0 0 rgba(182,240,255,.55)}
+  55%{transform:scale(1);box-shadow:0 0 0 16px rgba(182,240,255,0)}
+  100%{transform:scale(.72);box-shadow:0 0 0 0 rgba(182,240,255,0)}}
+/* En el paso de hamacarse, la mano va y viene de costado en vez de latir. */
+.tuto.lado::after{animation:tutoLado 1.5s ease-in-out infinite}
+@keyframes tutoLado{
+  0%,100%{transform:translateX(-26px) scale(.86)}
+  50%{transform:translateX(26px) scale(.86)}}
+/* Y al soltar, se va hacia arriba. */
+.tuto.suelta::after{animation:tutoSuelta 1.4s ease-out infinite}
+@keyframes tutoSuelta{
+  0%{transform:translateY(6px) scale(.9);opacity:1}
+  70%{transform:translateY(-16px) scale(.6);opacity:0}
+  100%{transform:translateY(-16px) scale(.6);opacity:0}}
+
+@media (prefers-reduced-motion: reduce){
+  .tuto,.tuto::after{animation:none!important}
+}

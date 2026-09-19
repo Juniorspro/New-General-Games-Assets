@@ -82,10 +82,56 @@ título pasó a medir 141 px y a ir de 33,5 % a 49,3 %, así que la banda cerrad
 pasó de 33-68 a 32-68,5. **Hay que volver a medirlo** si cambia el cartel o se
 agrega una línea.
 
+## Los controles: de 6 px de aire a 24
+
+Los botones de acción se **tocaban**. Medido antes de cambiar nada, el par más
+cerca (FUEGO y ESQ) tenía **6 px** entre borde y borde en vertical, y en
+apaisado el joystick y FUEGO estaban a **0** — el mismo blanco para el pulgar.
+
+La causa no era el espaciado: era **dónde vivían**. El marco mantiene la
+proporción de teléfono (412:892) y se achica para entrar en la pantalla, así
+que en apaisado queda de **175 px de ancho**. Adentro de esa franja no entran
+un joystick de 132 y un botón de 104, y punto.
+
+Ahora los controles se anclan a la **pantalla**, no al marco: en apaisado se van
+a las bandas negras de los costados —que es donde está la mano— y en vertical
+quedan igual que siempre, porque ahí el marco ocupa todo el ancho. La columna de
+la derecha se apila hacia arriba en vez de abrirse en abanico: con 360 px de
+ancho, un joystick más tres botones al costado piden 368 y no hay.
+
+Y son botones dibujados, no círculos con texto: un aro de color por acción, el
+símbolo en SVG (una mira para FUEGO, un cuerpo saliendo de costado para ESQ, una
+mano para USAR) y la palabra abajo. El símbolo es el que se mira de reojo
+jugando; la palabra es para la primera vez.
+
+Medido después, en los tres formatos: **24 px de aire** entre los dos controles
+más cercanos, y ninguno por debajo de los 44 px de blanco tocable.
+
+### Dos cosas que aparecieron al medir
+
+- **La pausa estaba en la columna del pulgar**, a 178 px del borde de abajo.
+  Apretarla sin querer en el medio de una pelea es perder la partida por un
+  botón que se usa una vez cada diez minutos. Se fue arriba, y en apaisado a la
+  banda negra, porque arriba al medio es justo donde el HUD se amontona cuando
+  el marco se angosta.
+- **El HUD se pisaba a sí mismo en apaisado**: siete corazones de 17 px ya
+  ocupan 140 de los 175 que mide el marco, y del otro lado va el piso, el arma
+  y las monedas. En ese formato los corazones pasan a 11 px y los dos bloques
+  entran con aire.
+
+### Un bug que se veía como un icono mal hecho
+
+`$('#bUsa').textContent = T('usar')` reemplaza **todo** el contenido del botón,
+icono incluido. Como los otros dos botones no se traducían, sus íconos sí se
+veían: el síntoma era "el de USAR quedó feo", no "le borré el dibujo". Ahora la
+palabra se escribe en el `<span>` y de paso los tres botones se traducen, que
+estaban en castellano fijo adentro de un juego que habla tres idiomas.
+
 ## Cómo se comprueba
 
     node pruebas/probar_pozo.mjs $PWD/pozo.html   # 7/7  audio y mezcla
     node pruebas/anim.mjs        $PWD/pozo.html   # 5/5  animaciones del menú
+    node pruebas/controles.mjs   $PWD/pozo.html   # 9/9  separación de los controles
     node pruebas/auditar.mjs     $PWD/pozo.html   # sondas propias del juego
 
 Lo último devuelve, sobre esta versión: 600 pisos generados y ninguno malo,

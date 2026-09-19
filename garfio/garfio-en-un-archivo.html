@@ -268,6 +268,48 @@ button:active { transform: translateY(2px); }
   .lista li { padding: 3px 2px; font-size: 12px; }
 }
 
+/* ---------- el tutorial ----------
+   ARRIBA Y NO ABAJO: abajo es donde cae el pulgar y donde está el bicho al
+   principio, así que un cartel ahí lo tapa justo cuando hay que mirarlo.
+   Y NO SE TOCA (`pointer-events:none`): el juego entero es apoyar el dedo en
+   cualquier lado, y un cartel que se coma ese toque haría que el tutorial
+   impida hacer lo que el tutorial pide. */
+.tuto{position:absolute;left:50%;top:14%;transform:translateX(-50%);
+  max-width:min(300px,82vw);padding:11px 16px;border-radius:14px;
+  background:rgba(12,16,24,.82);border:1px solid rgba(182,240,255,.28);
+  color:#eaf6ff;font:700 13px/1.45 system-ui,sans-serif;text-align:center;
+  letter-spacing:.01em;text-shadow:0 1px 4px #000;
+  pointer-events:none;z-index:6;
+  animation:tutoEntra .32s cubic-bezier(.2,.9,.3,1) both}
+.tuto[hidden]{display:none}
+@keyframes tutoEntra{from{opacity:0;transform:translateX(-50%) translateY(-8px)}
+                     to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* Una mano que se apoya y se va, para el primer paso: lo que hay que hacer es
+   un gesto, y un gesto se explica mostrándolo. */
+.tuto::after{content:'';display:block;width:26px;height:26px;margin:9px auto 0;
+  border-radius:50%;background:rgba(234,246,255,.9);
+  box-shadow:0 0 0 0 rgba(182,240,255,.5);
+  animation:tutoDedo 1.7s ease-out infinite}
+@keyframes tutoDedo{
+  0%{transform:scale(.72);box-shadow:0 0 0 0 rgba(182,240,255,.55)}
+  55%{transform:scale(1);box-shadow:0 0 0 16px rgba(182,240,255,0)}
+  100%{transform:scale(.72);box-shadow:0 0 0 0 rgba(182,240,255,0)}}
+/* En el paso de hamacarse, la mano va y viene de costado en vez de latir. */
+.tuto.lado::after{animation:tutoLado 1.5s ease-in-out infinite}
+@keyframes tutoLado{
+  0%,100%{transform:translateX(-26px) scale(.86)}
+  50%{transform:translateX(26px) scale(.86)}}
+/* Y al soltar, se va hacia arriba. */
+.tuto.suelta::after{animation:tutoSuelta 1.4s ease-out infinite}
+@keyframes tutoSuelta{
+  0%{transform:translateY(6px) scale(.9);opacity:1}
+  70%{transform:translateY(-16px) scale(.6);opacity:0}
+  100%{transform:translateY(-16px) scale(.6);opacity:0}}
+
+@media (prefers-reduced-motion: reduce){
+  .tuto,.tuto::after{animation:none!important}
+}
+
 </style>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b1020'/><circle cx='8' cy='5' r='2.6' fill='none' stroke='%235ad8ff' stroke-width='1.4'/><path d='M8 8v5' stroke='%23d9d2c4' stroke-width='1.2'/></svg>">
 </head>
@@ -361,6 +403,9 @@ button:active { transform: translateY(2px); }
     <div class="hud-dato"><span>⬡</span><b id="h-tuercas">0</b></div>
   </div>
   <div id="h-piso" class="piso">—</div>
+  <!-- EL CARTEL DEL TUTORIAL. Va sobre el juego y no en una pantalla aparte:
+       lo que hay que aprender es el gesto, y el gesto se hace acá. -->
+  <div id="h-tuto" class="tuto" hidden></div>
 </main>
 
 <!-- ───────────── final ───────────── -->
@@ -644,12 +689,37 @@ const M_juego = (() => {
   class Partida {
     constructor(semilla) {
       this.torre = new Torre(semilla);
-      this.x = ANCHO / 2;
-      this.y = 0;
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // LA PARTIDA EMPIEZA COLGADO DE LA PRIMERA ARGOLLA, NO CAYENDO.
+      // ═══════════════════════════════════════════════════════════════════════
+      // Antes arrancaba en el aire con un empujoncito hacia arriba y sin soga: el
+      // que no sabia todavia que hay que MANTENER el dedo apoyado se caia sin
+      // haber tocado nada y sin entender por que. Un juego que se pierde antes de
+      // que puedas hacer algo no es dificil, esta roto.
+      // Colgado y quieto, la primera pantalla EXPLICA el juego sola: se ve la
+      // soga tirante, se ve la argolla, y no pasa nada hasta que el jugador
+      // decide. `atado` sostiene ese estado hasta el primer dedo.
+      const a0 = this.torre.argollas[0];
+      this.ancla = a0;
+      // El largo va entre el minimo (76) y los 140 que hay hasta el piso del
+      // mundo: 124 deja al bicho colgando con soga tirante y bien a la vista.
+      this.largo = 124;
+      this.x = a0.x;
+      this.y = a0.y + this.largo;
       this.vx = 0;
-      this.vy = -3.2;                  // un empujoncito inicial hacia arriba
-      this.ancla = null;               // la argolla enganchada
-      this.largo = 0;
+      this.vy = 0;
+      /** Colgado esperando el primer dedo. Se apaga en cuanto alguien toca. */
+      this.atado = true;
+
+      // EL TUTORIAL ES UN NUMERO, NO UNA MAQUINA DE ESTADOS APARTE. Cada paso se
+      // da por cumplido cuando el jugador HACE la cosa, no cuando pasa el tiempo:
+      // un cartel que se va solo a los tres segundos se lo pierde el que estaba
+      // mirando otra cosa, y el que ya sabe lo tiene que aguantar igual.
+      //  0 = mantené el dedo   1 = arrastrá para hamacarte
+      //  2 = soltá para salir  3 = listo
+      this.tuto = 0;
+      this.tutoDato = 0;       // cuanto lleva hamacado, para pasar del 1 al 2
       this.tuercas = 0;
       this.estado = "trepando";        // trepando | muerto
       this.alto = 0;                   // el punto más alto alcanzado, en píxeles
@@ -692,6 +762,7 @@ const M_juego = (() => {
       if (this.estado === "muerto") { this.cuenta++; this.caerMuerto(); return; }
 
       this.gancho(ent);
+      this.tutorial(ent);
       this.mover();
       this.estela.push({ x: this.x, y: this.y });
       if (this.estela.length > 18) this.estela.shift();
@@ -724,7 +795,10 @@ const M_juego = (() => {
       // el que se queda hamacándose abajo del corte no se muere nunca: el
       // validador encontró una torre donde el robot se trababa a diez metros y
       // seguía vivo a los cinco minutos. Un juego sin fin tiene que terminar.
-      if (this.alto > F.SUBE_DESDE || this.t > F.SUBE_TIEMPO) {
+      // Y NO ARRANCA MIENTRAS SIGAS COLGADO DEL PRINCIPIO: el reloj de `SUBE_TIEMPO`
+      // corre desde el cuadro uno, asi que alguien que se queda leyendo el
+      // tutorial veia venir el piso sin haber jugado todavia.
+      if (!this.atado && (this.alto > F.SUBE_DESDE || this.t > F.SUBE_TIEMPO)) {
         const v = Math.min(F.SUBE_MAX,
                            F.SUBE_VEL * (1 + Math.max(this.alto - F.SUBE_DESDE, 0) / 9000));
         this.cam -= v;
@@ -734,9 +808,40 @@ const M_juego = (() => {
     }
 
     // --- el gancho ---------------------------------------------------------
+    /**
+     * Adelanta el tutorial mirando lo que el jugador YA hizo.
+     *
+     * No hay temporizadores: el paso 0 se cumple tocando, el 1 hamacandose de
+     * verdad (medido por la velocidad de costado que junto), y el 2 soltando.
+     * Asi el cartel siempre dice lo unico que falta hacer.
+     */
+    tutorial(ent) {
+      if (this.tuto >= 3) return;
+      const d = ent && ent.dedo;
+      if (this.tuto === 0) {
+        if (d && this.ancla) this.tuto = 1;
+        return;
+      }
+      if (this.tuto === 1) {
+        // HAMACARSE ES JUNTAR VELOCIDAD DE COSTADO, no mover el dedo: alguien
+        // puede arrastrar el dedo sin lograr nada, y darle por cumplido el paso
+        // seria enseñarle mal.
+        if (this.ancla) this.tutoDato = Math.max(this.tutoDato, Math.abs(this.vx));
+        if (this.tutoDato > 3.4) this.tuto = 2;
+        return;
+      }
+      if (this.tuto === 2 && this.ev.suelta) this.tuto = 3;
+    }
+
     gancho(ent) {
       const d = ent && ent.dedo;
+      if (d) this.atado = false;       // el jugador tomo el mando
       if (!d) {
+        // COLGADO DE ENTRADA NO SE SUELTA SOLO. La soga es un resorte —se
+        // mantiene apretando— pero al principio todavia no hay nadie apretando:
+        // sin esta guarda, el primer cuadro del juego suelta la argolla y el
+        // arreglo de arrancar atado no serviria de nada.
+        if (this.atado) return;
         if (this.ancla) {
           // Chispas al soltar, en el CUERPO y no en la argolla: marcan el punto y
           // la dirección por donde saliste, que es lo único que decidiste vos.
@@ -1514,6 +1619,10 @@ const M_idioma = (() => {
     "como.hecho1": "La torre se genera para siempre, y <b>cada argolla se pone dentro de lo que se puede saltar desde la anterior</b>. Ese número no salió de lo que quedaba lindo: está medido jugando, y hay una prueba que lo vuelve a medir con la física de verdad y falla si alguien toca la gravedad y se olvida de esto.",
     "como.hecho2": "Todo es vectorial menos el bicho, el fondo de la torre y el vestido de los menús. El sonido son osciladores y la música del juego también: se toca sola, con una progresión de acordes cuya densidad sube con la altura y la velocidad. El único archivo de audio es el tema del menú.",
 
+    "tuto.0": "Mantené el dedo apoyado para quedar colgado",
+    "tuto.1": "Arrastrá a los costados para hamacarte",
+    "tuto.2": "Soltá para salir disparado por la tangente",
+
     "hud.salir": "Volver al menú",
 
     "fin.record": "¡RÉCORD!",
@@ -1575,6 +1684,10 @@ const M_idioma = (() => {
     "como.hecho1": "The tower is generated forever, and <b>every ring is placed within jumping range of the one before it</b>. That number didn't come from what looked nice: it is measured by playing, and a test re-measures it with the real physics and fails if somebody changes gravity and forgets about this.",
     "como.hecho2": "Everything is vector art except the character, the tower backdrop and the menu trim. The sound is oscillators and so is the in-game music: it plays itself, from a chord progression whose density rises with your height and speed. The only audio file is the menu theme.",
 
+    "tuto.0": "Hold your finger down to stay hooked",
+    "tuto.1": "Drag side to side to build a swing",
+    "tuto.2": "Let go to fly off along the tangent",
+
     "hud.salir": "Back to menu",
 
     "fin.record": "NEW BEST!",
@@ -1635,6 +1748,10 @@ const M_idioma = (() => {
     "como.h-hecho": "Do que é feito",
     "como.hecho1": "A torre é gerada para sempre, e <b>cada argola é posta dentro do que dá para saltar da anterior</b>. Esse número não saiu do que ficava bonito: está medido jogando, e tem um teste que remede com a física de verdade e falha se alguém mexer na gravidade e esquecer disto.",
     "como.hecho2": "Tudo é vetorial menos o bicho, o fundo da torre e o enfeite dos menus. O som são osciladores e a música do jogo também: ela se toca sozinha, com uma progressão de acordes cuja densidade sobe com a altura e a velocidade. O único arquivo de áudio é o tema do menu.",
+
+    "tuto.0": "Segure o dedo para ficar pendurado",
+    "tuto.1": "Arraste para os lados para se balançar",
+    "tuto.2": "Solte para sair pela tangente",
 
     "hud.salir": "Voltar ao menu",
 
@@ -2052,12 +2169,18 @@ function alMenu() {
   mostrar("p-menu");
 }
 
+// EL TUTORIAL SE MUESTRA HASTA QUE SE COMPLETE UNA VEZ, y se guarda. Mostrarlo
+// siempre molesta al que ya sabe; mostrarlo una sola partida no alcanza, porque
+// la primera se pierde en veinte segundos y nadie leyó nada.
+let mostrarTuto = false;
+
 function jugar() {
   despertarTodo(); arrancarViento();
   musica.pararTema();
   musica.arrancar();
   demo = null;
   partida = new Partida();
+  mostrarTuto = !cargar().tutoHecho;
   ultimoHito = 0;
   for (const k in hud) delete hud[k];
   mostrar("p-juego");
@@ -2124,6 +2247,29 @@ function pintarHud(p) {
   poner("#h-metros", `${p.metros} m`);
   poner("#h-tuercas", String(p.tuercas));
   poner("#h-piso", t(pisoDe(p.alto).clave));
+
+  // EL TUTORIAL SE PINTA DESDE EL ESTADO DE LA PARTIDA, no desde un contador
+  // propio del HUD: con dos fuentes, el cartel y el juego se desincronizan y
+  // queda diciendo "soltá" cuando ya soltaste.
+  const ct = $("#h-tuto");
+  // SE GUARDA EN CUANTO SE COMPLETA, y no al terminar la partida: el que
+  // aprendió los tres gestos y después se murió ya aprendió, y volver a
+  // mostrárselo es no haber estado mirando.
+  if (p.tuto >= 3 && mostrarTuto) {
+    mostrarTuto = false;
+    const d = cargar(); d.tutoHecho = true; guardar();
+  }
+  if (p.tuto >= 3 || !mostrarTuto) {
+    if (!ct.hidden) ct.hidden = true;
+  } else {
+    const clave = "tuto." + p.tuto;
+    if (hud.tuto !== clave) {
+      hud.tuto = clave;
+      ct.textContent = t(clave);
+      ct.className = "tuto" + (p.tuto === 1 ? " lado" : p.tuto === 2 ? " suelta" : "");
+      ct.hidden = false;
+    }
+  }
   const apuro = p.sube > 0;
   if (hud.apuro !== apuro) { hud.apuro = apuro; $("#h-metros").classList.toggle("apuro", apuro); }
 }
@@ -2138,8 +2284,15 @@ function sonar(p) {
     // propio lo enseña sin una sola palabra.
     if (p.vy < -5) efe.buena(); else efe.suelta();
   }
-  if (p.ancla && p.t % 9 === 0)
-    efe.soga(Math.min(1, Math.hypot(p.vx, p.vy) / F.VEL_MAX));
+  // LA SOGA CRUJE CUANDO TRABAJA, NO POR ESTAR ENGANCHADA. Antes sonaba cada
+  // nueve cuadros mientras hubiera ancla, con o sin movimiento; no se notaba
+  // porque nadie se quedaba colgado quieto. Ahora la partida EMPIEZA colgado y
+  // quieto, y el crujido sonaba solo, una vez cada 150 ms, sobre una soga que
+  // no se movia — y ademas ensuciaba la medicion del silencio con la musica
+  // apagada. Una soga quieta no hace ruido.
+  const trab = Math.hypot(p.vx, p.vy);
+  if (p.ancla && p.t % 9 === 0 && trab > 0.6)
+    efe.soga(Math.min(1, trab / F.VEL_MAX));
   if (e.tuerca) efe.tuerca();
   if (e.pared) efe.pared();
   if (e.rompe) efe.rompe();
@@ -2260,6 +2413,12 @@ globalThis.GARFIO = {
 // siguen sonando con la música apagada es pedir uno y contar los osciladores.
 globalThis.__efe = () => efe.menu();
 globalThis.__musicaAndando = () => musica.andando();
+
+/* ============================================================
+   LA SONDA. Una afirmacion sin numero no vale: de aca sale el estado real de
+   la partida para las pruebas.
+   ============================================================ */
+window.__garfio = { partida: () => partida, demo: () => demo };
 
 
 })();

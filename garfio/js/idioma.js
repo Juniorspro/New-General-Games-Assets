@@ -52,6 +52,10 @@ const ES = {
   "como.hecho1": "La torre se genera para siempre, y <b>cada argolla se pone dentro de lo que se puede saltar desde la anterior</b>. Ese número no salió de lo que quedaba lindo: está medido jugando, y hay una prueba que lo vuelve a medir con la física de verdad y falla si alguien toca la gravedad y se olvida de esto.",
   "como.hecho2": "Todo es vectorial menos el bicho, el fondo de la torre y el vestido de los menús. El sonido son osciladores y la música del juego también: se toca sola, con una progresión de acordes cuya densidad sube con la altura y la velocidad. El único archivo de audio es el tema del menú.",
 
+  "tuto.0": "Mantené el dedo apoyado para quedar colgado",
+  "tuto.1": "Arrastrá a los costados para hamacarte",
+  "tuto.2": "Soltá para salir disparado por la tangente",
+
   "hud.salir": "Volver al menú",
 
   "fin.record": "¡RÉCORD!",
@@ -113,6 +117,10 @@ const EN = {
   "como.hecho1": "The tower is generated forever, and <b>every ring is placed within jumping range of the one before it</b>. That number didn't come from what looked nice: it is measured by playing, and a test re-measures it with the real physics and fails if somebody changes gravity and forgets about this.",
   "como.hecho2": "Everything is vector art except the character, the tower backdrop and the menu trim. The sound is oscillators and so is the in-game music: it plays itself, from a chord progression whose density rises with your height and speed. The only audio file is the menu theme.",
 
+  "tuto.0": "Hold your finger down to stay hooked",
+  "tuto.1": "Drag side to side to build a swing",
+  "tuto.2": "Let go to fly off along the tangent",
+
   "hud.salir": "Back to menu",
 
   "fin.record": "NEW BEST!",
@@ -173,6 +181,10 @@ const PT = {
   "como.h-hecho": "Do que é feito",
   "como.hecho1": "A torre é gerada para sempre, e <b>cada argola é posta dentro do que dá para saltar da anterior</b>. Esse número não saiu do que ficava bonito: está medido jogando, e tem um teste que remede com a física de verdade e falha se alguém mexer na gravidade e esquecer disto.",
   "como.hecho2": "Tudo é vetorial menos o bicho, o fundo da torre e o enfeite dos menus. O som são osciladores e a música do jogo também: ela se toca sozinha, com uma progressão de acordes cuja densidade sobe com a altura e a velocidade. O único arquivo de áudio é o tema do menu.",
+
+  "tuto.0": "Segure o dedo para ficar pendurado",
+  "tuto.1": "Arraste para os lados para se balançar",
+  "tuto.2": "Solte para sair pela tangente",
 
   "hud.salir": "Voltar ao menu",
 
