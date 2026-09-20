@@ -39,17 +39,24 @@ export const TipografiaDemo: React.FC = () => (
       />
     </AbsoluteFill>
 
-    {/* 2. la mascota, grande y muy desenfocada: solo se le ve pelo y capucha */}
-    <AbsoluteFill style={{ justifyContent: "flex-start", alignItems: "center" }}>
+    {/* 2. la mascota, grande y muy desenfocada, DETRAS DEL TEXTO
+           El texto se planta al 62 % y despues se viene hacia la camara; lo que
+           tiene que descubrir al pasar es pelo y capucha. Asi que la cabeza va
+           justo ahi, no pegada al techo: arriba del todo el texto no descubre
+           nada y la mascota se lee como un adorno suelto. */}
+    <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
       <Img
         src={staticFile("mascota.png")}
         style={{
-          // Casi toda fuera de cuadro: solo asoman pelo y capucha por arriba.
-          // Metida mas abajo se lee como una cabeza flotando, no como fondo.
-          width: "132%",
-          marginTop: "-52%",
-          filter: "blur(21px) brightness(1.05)",
-          opacity: 0.9,
+          // Tres intentos para encontrar esto:
+          //  - pegada arriba: el texto no descubre nada, queda de adorno;
+          //  - centrada y enorme: una mancha borrosa que tapa todo el cuadro;
+          //  - asi: la cabeza arriba del texto, mas chica y translucida, y el
+          //    video se sigue leyendo alrededor. Eso es profundidad y no un velo.
+          width: "88%",
+          marginTop: "-14%",
+          filter: "blur(15px) brightness(1.06)",
+          opacity: 0.62,
         }}
       />
     </AbsoluteFill>
