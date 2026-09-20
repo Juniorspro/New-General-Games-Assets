@@ -8,6 +8,7 @@ import {
 import { DURACION, MortyEdit } from "./MortyEdit";
 import { DURACION_TECNICA, Tecnica } from "./Tecnica";
 import { DURACION_EDIT, EditMorty, editMortySchema } from "./EditMorty";
+import { Formato, formatoSchema, repartir } from "./Formato";
 
 // Cada <Composition> es una entrada en la barra lateral del estudio.
 
@@ -21,6 +22,30 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1080}
         height={1920}
+      />
+      <Composition
+        id="Formato"
+        component={Formato}
+        schema={formatoSchema}
+        durationInFrames={330}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          fondo: "blanco" as const,
+          audio: "",
+          guion: repartir(
+            "este juego tiene mas lag que mi paciencia un martes a la manana y todavia dicen que esta optimizado",
+            18,
+            13,
+          ),
+          inserts: [
+            { tipo: "sticker" as const, archivo: "pose-piensa.png", desde: 20, dura: 95, x: 50, y: 34, ancho: 52, giro: -4 },
+            { tipo: "video" as const, archivo: "t2.mp4", desde: 120, dura: 90, x: 50, y: 30, ancho: 74, giro: 3 },
+            { tipo: "sticker" as const, archivo: "pose-shock.png", desde: 132, dura: 78, x: 74, y: 58, ancho: 40, giro: 6 },
+            { tipo: "sticker" as const, archivo: "pose-aprueba.png", desde: 225, dura: 95, x: 50, y: 36, ancho: 54, giro: -3 },
+          ],
+        }}
       />
       <Composition
         id="EditMorty"
