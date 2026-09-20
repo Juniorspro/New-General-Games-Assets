@@ -2,3 +2,5 @@ node_modules/
 out/
 .remotion/
 public/*.mp4
+public/*.webm
+public/*.m4a
