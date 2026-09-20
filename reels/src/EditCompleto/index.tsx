@@ -9,6 +9,7 @@ import {
   Sequence,
   staticFile,
   useCurrentFrame,
+  useVideoConfig,
 } from "remotion";
 import { z } from "zod";
 import { loadFont } from "../load-font";
@@ -51,7 +52,8 @@ export const editCompletoSchema = z.object({
 
 export type EditCompletoProps = z.infer<typeof editCompletoSchema>;
 
-export const DURACION_COMPLETO = 150; // 5 s: lo que da el clip a 0,4x
+export const FPS = 60;
+export const DURACION_COMPLETO = 300; // 5 s a 60 fps: lo que da el clip a 0,4x
 
 const cerca = (f: number, puntos: number[], caida: number) => {
   let v = 0;
@@ -77,7 +79,7 @@ const Firma: React.FC = () => {
           fontFamily: "FirmaManuscrita, cursive",
           fontSize: 62,
           color: "#fff",
-          opacity: 0.45 + Math.sin(f / 16) * 0.08,
+          opacity: 0.45 + Math.sin(f / 32) * 0.08,
           textShadow: "0 0 22px rgba(0,0,0,.6)",
         }}
       >
@@ -96,10 +98,15 @@ export const EditCompleto: React.FC<EditCompletoProps> = ({
   mascota,
 }) => {
   const f = useCurrentFrame();
-  const golpe = cerca(f, golpes, 10);
-  const destello = cerca(f, golpes, 4) * 0.8;
+  const { fps } = useVideoConfig();
+
+  // Todo lo que decae o avanza se mide en SEGUNDOS y despues se pasa a
+  // cuadros. Clavado en cuadros, pasar de 30 a 60 fps hace que cada golpe
+  // dure la mitad de tiempo y el edit entero cambie de ritmo solo.
+  const golpe = cerca(f, golpes, fps * 0.33);
+  const destello = cerca(f, golpes, fps * 0.13) * 0.8;
   const esNeon = f >= drop;
-  const zoom = 1.05 + f * 0.0006 + golpe * 0.07;
+  const zoom = 1.05 + (f / fps) * 0.018 + golpe * 0.07;
 
   const grade = esNeon
     ? "invert(1) hue-rotate(155deg) saturate(3.1) contrast(1.22) brightness(1.04)"
@@ -167,9 +174,12 @@ export const EditCompleto: React.FC<EditCompletoProps> = ({
       <AbsoluteFill
         style={{
           backgroundColor: "#000",
-          opacity: interpolate(f, [DURACION_COMPLETO - 16, DURACION_COMPLETO], [0, 1], {
-            extrapolateLeft: "clamp",
-          }),
+          opacity: interpolate(
+            f,
+            [DURACION_COMPLETO - fps * 0.27, DURACION_COMPLETO],
+            [0, 1],
+            { extrapolateLeft: "clamp" },
+          ),
         }}
       />
     </AbsoluteFill>

@@ -10,7 +10,7 @@ import { DURACION_TECNICA, Tecnica } from "./Tecnica";
 import { DURACION_EDIT, EditMorty, editMortySchema } from "./EditMorty";
 import { Formato, formatoSchema, repartir } from "./Formato";
 import { DURACION_TIPO, TipografiaDemo } from "./Tipografia/Demo";
-import { DURACION_COMPLETO, EditCompleto, editCompletoSchema } from "./EditCompleto";
+import { DURACION_COMPLETO, EditCompleto, editCompletoSchema, FPS } from "./EditCompleto";
 
 // Cada <Composition> es una entrada en la barra lateral del estudio.
 
@@ -22,23 +22,23 @@ export const RemotionRoot: React.FC = () => {
         component={EditCompleto}
         schema={editCompletoSchema}
         durationInFrames={DURACION_COMPLETO}
-        fps={30}
+        fps={FPS}
         width={1080}
         height={1920}
         defaultProps={{
-          clip: "clip_nuevo.mp4",
+          clip: "clip_150.mp4",
           musica: "",
           velocidad: 0.4,
           // drop fuera de rango: la inversion neon sobre material YA turquesa
           // da magenta barroso. El efecto esta bien; no es para este clip.
           drop: 9999,
-          golpes: [0, 38, 76, 114],
+          golpes: [0, 76, 152, 228],
           mascota: "mascota.png",
           palabras: [
-            { texto: "EL CORTE", desde: 6, dura: 34 },
-            { texto: "NO ES", desde: 42, dura: 30 },
-            { texto: "EL RITMO", desde: 74, dura: 34 },
-            { texto: "ClaudEdits", desde: 110, dura: 38 },
+            { texto: "EL CORTE", desde: 12, dura: 68 },
+            { texto: "NO ES", desde: 84, dura: 60 },
+            { texto: "EL RITMO", desde: 148, dura: 68 },
+            { texto: "ClaudEdits", desde: 220, dura: 76 },
           ],
         }}
       />

@@ -50,7 +50,10 @@ export const Tipografia: React.FC<TipoProps> = ({
   const zEntrada = interpolate(ent, [0, 1], [-520, 0]);
 
   // SALIDA: se viene encima de la camara, acelerando.
-  const salida = interpolate(f, [duracion - 13, duracion], [0, 1], {
+  // El tramo se mide en SEGUNDOS y no en cuadros: clavado en 13 cuadros, a
+  // 60 fps duraba la mitad de tiempo que a 30 y el vuelo salia atropellado.
+  const cuadrosSalida = Math.round(fps * 0.43);
+  const salida = interpolate(f, [duracion - cuadrosSalida, duracion], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
