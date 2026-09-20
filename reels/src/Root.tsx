@@ -9,6 +9,7 @@ import { DURACION, MortyEdit } from "./MortyEdit";
 import { DURACION_TECNICA, Tecnica } from "./Tecnica";
 import { DURACION_EDIT, EditMorty, editMortySchema } from "./EditMorty";
 import { Formato, formatoSchema, repartir } from "./Formato";
+import { DURACION_TIPO, TipografiaDemo } from "./Tipografia/Demo";
 
 // Cada <Composition> es una entrada en la barra lateral del estudio.
 
@@ -19,6 +20,14 @@ export const RemotionRoot: React.FC = () => {
         id="MortyEdit"
         component={MortyEdit}
         durationInFrames={DURACION}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="Tipografia"
+        component={TipografiaDemo}
+        durationInFrames={DURACION_TIPO}
         fps={30}
         width={1080}
         height={1920}
