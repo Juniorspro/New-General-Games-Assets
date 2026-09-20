@@ -6,6 +6,7 @@ import {
   captionedVideoSchema,
 } from "./CaptionedVideo";
 import { DURACION, MortyEdit } from "./MortyEdit";
+import { DURACION_TECNICA, Tecnica } from "./Tecnica";
 
 // Cada <Composition> es una entrada en la barra lateral del estudio.
 
@@ -16,6 +17,14 @@ export const RemotionRoot: React.FC = () => {
         id="MortyEdit"
         component={MortyEdit}
         durationInFrames={DURACION}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="Tecnica"
+        component={Tecnica}
+        durationInFrames={DURACION_TECNICA}
         fps={30}
         width={1080}
         height={1920}
