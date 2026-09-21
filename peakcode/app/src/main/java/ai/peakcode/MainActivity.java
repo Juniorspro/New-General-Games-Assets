@@ -13,6 +13,9 @@ import android.webkit.WebSettings;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
@@ -36,6 +39,12 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Puente(), "Peak");
         web.loadUrl("file:///android_asset/index.html");
         setContentView(web);
+    }
+
+    /** Empuja al JS: funcion(id, dato) con los dos strings escapados. */
+    private void emitir(String funcion, String id, String dato) {
+        runOnUiThread(() -> web.evaluateJavascript(
+            funcion + "(" + aJson(id) + "," + aJson(dato) + ")", null));
     }
 
     /** Devuelve al JavaScript llamando a una funcion global. */
@@ -153,6 +162,67 @@ public class MainActivity extends Activity {
                 startActivity(new Intent(Intent.ACTION_VIEW,
                     Uri.parse("https://f-droid.org/packages/com.termux/")));
             } catch (Exception e) { }
+        }
+
+
+        /**
+         * POST con streaming SSE, hecho del lado nativo (sin CORS). Empuja cada
+         * trozo a window.peakChunk, el final a peakFin y los errores a peakErr.
+         * id sirve para que el JS sepa a que mensaje pertenece cada trozo.
+         */
+        @JavascriptInterface
+        public void stream(String id, String url, String apiKey, String bodyJson) {
+            new Thread(() -> {
+                HttpURLConnection c = null;
+                try {
+                    c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setRequestMethod("POST");
+                    c.setDoOutput(true);
+                    c.setConnectTimeout(20000);
+                    c.setReadTimeout(120000);
+                    c.setRequestProperty("Content-Type", "application/json");
+                    c.setRequestProperty("Accept", "text/event-stream");
+                    if (apiKey != null && !apiKey.isEmpty())
+                        c.setRequestProperty("Authorization", "Bearer " + apiKey);
+                    DataOutputStream o = new DataOutputStream(c.getOutputStream());
+                    o.write(bodyJson.getBytes("UTF-8"));
+                    o.flush(); o.close();
+
+                    int http = c.getResponseCode();
+                    if (http < 200 || http >= 300) {
+                        // el cuerpo de error suele explicar el motivo
+                        StringBuilder e = new StringBuilder();
+                        try {
+                            BufferedReader er = new BufferedReader(new InputStreamReader(
+                                c.getErrorStream(), "UTF-8"));
+                            String l; while ((l = er.readLine()) != null) e.append(l);
+                            er.close();
+                        } catch (Exception ig) {}
+                        emitir("window.peakErr", id, "HTTP " + http + " " + e.toString());
+                        return;
+                    }
+                    BufferedReader r = new BufferedReader(new InputStreamReader(
+                        c.getInputStream(), "UTF-8"));
+                    String linea; boolean huboSSE = false;
+                    StringBuilder plano = new StringBuilder();
+                    while ((linea = r.readLine()) != null) {
+                        if (linea.startsWith("data:")) {
+                            huboSSE = true;
+                            emitir("window.peakChunk", id, linea.substring(5).trim());
+                        } else if (!linea.trim().isEmpty()) {
+                            plano.append(linea).append('\n');   // por si no es SSE
+                        }
+                    }
+                    r.close();
+                    if (!huboSSE && plano.length() > 0)
+                        emitir("window.peakChunk", id, "__PLANO__" + plano.toString());
+                    emitir("window.peakFin", id, "");
+                } catch (Exception e) {
+                    emitir("window.peakErr", id, String.valueOf(e.getMessage()));
+                } finally {
+                    if (c != null) c.disconnect();
+                }
+            }).start();
         }
 
         @JavascriptInterface

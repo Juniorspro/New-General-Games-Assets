@@ -1,8 +1,21 @@
-# PeakCode — app Android sobre OmniRoute
+# PeakCode — app Android de chat con IA
 
-Cliente de chat para Android que habla con un **endpoint compatible con
-OpenAI**. Nació apuntando a [OmniRoute](https://github.com/diegosouzapw/OmniRoute),
-pero sirve contra cualquier endpoint de ese tipo.
+**Anda al abrirla, sin instalar ni configurar nada.** Trae un motor gratis por
+defecto (Pollinations, modelo abierto GPT-OSS 20B, sin key). OmniRoute en un
+servidor propio queda como opción avanzada en Ajustes.
+
+Cliente de chat para Android. La red pasa por un **puente nativo (Java)**, no
+por `fetch()` del WebView: así no hay CORS y se puede pegar a cualquier endpoint
+gratis aunque no mande cabeceras CORS. Verificado el 21/9 contra Pollinations
+(`POST https://text.pollinations.ai/openai`, sin key, streaming SSE, contestó de
+verdad) y contra OmniRoute local.
+
+## Los dos motores
+
+| motor | setup | qué es |
+|---|---|---|
+| **Gratis** (por defecto) | **ninguno** | Pollinations, GPT-OSS 20B, sin key. Tiene límites de uso |
+| **OmniRoute** (avanzado) | un servidor + contraseña | 352 proveedores, 90+ capas gratis. Ver `servidor/` |
 
 ## Acá SÍ se puede compilar un APK (corrección al repo)
 

@@ -30,23 +30,18 @@ textarea{flex:1;resize:none;max-height:38vh;background:var(--panel);color:var(--
 .tapa{position:fixed;inset:0;background:var(--fondo);padding:20px 18px;overflow-y:auto;
  display:none;z-index:9}
 .tapa.ver{display:block}
-h2{margin:2px 0 4px;font-size:21px}
-.paso{color:var(--acento);font:600 12px system-ui;letter-spacing:.09em;text-transform:uppercase}
+h2{margin:2px 0 10px;font-size:21px}
 label{display:block;margin:16px 0 5px;color:var(--tenue);font-size:13px}
 input,select{width:100%;background:var(--panel);color:var(--texto);border:1px solid var(--linea);
  border-radius:11px;padding:12px;font:inherit}
 .boton{background:var(--acento);color:#1a0f0a;border:0;border-radius:11px;padding:14px;
  font:600 16px system-ui;width:100%;margin-top:14px}
-.boton:disabled{opacity:.45}
 .secundario{background:var(--panel);color:var(--texto);border:1px solid var(--linea)}
-.pista{color:var(--tenue);font-size:13px;margin-top:10px;line-height:1.5}
-.estado{margin-top:14px;padding:12px;border-radius:11px;font-size:14px;border:1px solid var(--linea);
- background:var(--panel)}
-.estado.ok{border-color:var(--bien);color:#cdf0d8}
-.estado.no{border-color:var(--mal);color:#ffd9d6}
+.pista{color:var(--tenue);font-size:13px;margin-top:9px;line-height:1.5}
+.estado{margin-top:14px;padding:12px;border-radius:11px;font-size:14px;border:1px solid var(--linea);background:var(--panel)}
+.estado.ok{border-color:var(--bien);color:#cdf0d8}.estado.no{border-color:var(--mal);color:#ffd9d6}
 code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-break:break-all}
-pre{background:#000;padding:12px;border-radius:10px;overflow-x:auto;font-size:12px;
- border:1px solid var(--linea)}
+.oculto{display:none}
 .fila{display:flex;gap:8px}.fila>*{flex:1}
 </style></head><body>
 
@@ -60,235 +55,100 @@ pre{background:#000;padding:12px;border-radius:10px;overflow-x:auto;font-size:12
 <footer><textarea id=entrada rows=1 placeholder="Escribí…"></textarea>
  <button class=env id=bEnviar>↑</button></footer>
 
-<!-- ══════════ ASISTENTE ══════════ -->
-<div class=tapa id=asis>
-  <div id=p1>
-    <div class=paso>Paso 1 de 3</div>
-    <h2>Buscando el motor</h2>
-    <div class=pista>PeakCode necesita OmniRoute corriendo. Lo busco solo —
-     no tenés que averiguar ninguna dirección.</div>
-    <div class=estado id=e1>Buscando…</div>
-    <div id=noHay style="display:none">
-      <div class=pista><b>No lo encontré.</b> Hay que instalarlo una vez. Corre
-       adentro de Termux, que es una terminal de Android.</div>
-      <pre id=cmd></pre>
-      <div class=pista>Esa contraseña la generé yo y ya me la acuerdo: no la
-       tenés que copiar ni inventar.</div>
-      <button class=boton id=bTermux>Instalar en Termux</button>
-      <button class="boton secundario" id=bCopiar>Copiar el comando</button>
-      <button class="boton secundario" id=bReintentar>Ya está — buscar de nuevo</button>
-      <div class=pista id=avisoTermux></div>
-    </div>
-    <button class=boton id=bServidor style="margin-top:22px">Uso un servidor (no el teléfono)</button>
-    <button class="boton secundario" id=bManual>Poner la dirección a mano</button>
-    <div id=manual style="display:none">
-      <label>Dirección del motor</label>
-      <input id=mURL placeholder="https://tu-usuario-peakcode-motor.hf.space/v1">
-      <div class=pista>Si armaste el motor en un Space de Hugging Face (ver
-       <code>peakcode/servidor</code> en el repo), pegá su dirección terminada
-       en <code>/v1</code>. La app hace el login y saca la llave sola.</div>
-      <button class="boton secundario" id=bProbarManual>Probar</button>
-    </div>
-  </div>
-
-  <div id=p2 style="display:none">
-    <div class=paso>Paso 2 de 3</div>
-    <h2>Sacando la llave</h2>
-    <div class=pista>La genero yo hablando con el motor. Vos no copiás nada.</div>
-    <label>Contraseña del panel</label>
-    <input id=aClave type=password>
-    <div class=pista id=pistaClave></div>
-    <button class=boton id=bLlave>Generar la llave</button>
-    <div class=estado id=e2 style="display:none"></div>
-  </div>
-
-  <div id=p3 style="display:none">
-    <div class=paso>Paso 3 de 3</div>
-    <h2>Elegí el cerebro</h2>
-    <div class=pista>Los <code>auto/…</code> eligen el mejor disponible solos.
-     Si no sabés, dejá el que está.</div>
-    <label>Modelo</label>
-    <select id=aModelo></select>
-    <div class=estado id=e3></div>
-    <button class=boton id=bListo>Empezar</button>
-  </div>
-</div>
-
-<!-- ══════════ AJUSTES ══════════ -->
 <div class=tapa id=ajustes>
   <h2>Ajustes</h2>
-  <label>Dirección del motor</label><input id=cURL>
-  <label>Llave</label><input id=cKey type=password>
-  <label>Modelo</label>
-  <div class=fila><select id=cModelo></select>
-   <button class="boton secundario" id=bTraer style="margin:0;flex:0 0 92px">Traer</button></div>
+
+  <label>Motor</label>
+  <select id=cPreset>
+    <option value=free>Gratis — sin configurar nada</option>
+    <option value=omni>Servidor propio (OmniRoute) — avanzado</option>
+  </select>
+
+  <div id=zonaFree>
+    <div class=pista>Anda al toque, sin cuenta ni llave. Usa un modelo abierto
+     gratuito. Tiene límites de uso y puede fallar si hay mucha demanda.</div>
+  </div>
+
+  <div id=zonaOmni class=oculto>
+    <label>Dirección del motor (termina en /v1)</label>
+    <input id=cURL placeholder="https://tu-usuario-peakcode-motor.hf.space/v1">
+    <label>Contraseña del panel</label>
+    <input id=cClave type=password>
+    <button class="boton secundario" id=bConectar>Conectar y sacar la llave</button>
+    <div class=estado oculto id=eOmni></div>
+    <label>Modelo</label>
+    <div class=fila><select id=cModelo></select>
+      <button class="boton secundario" id=bTraer style="margin:0;flex:0 0 88px">Traer</button></div>
+    <div class=pista>Cómo armar el servidor gratis: carpeta <code>peakcode/servidor</code> del repo.</div>
+  </div>
+
   <button class=boton id=bGuardar>Guardar</button>
-  <button class="boton secundario" id=bRehacer>Rehacer la configuración</button>
   <button class="boton secundario" id=bCerrar>Cerrar</button>
 </div>
 
 <script>
 const $=s=>document.querySelector(s);
+const FREE={chat:'https://text.pollinations.ai/openai', key:'', modelo:'openai', preset:'free'};
 const G={
-  url:localStorage.getItem('url')||'', key:localStorage.getItem('key')||'',
-  modelo:localStorage.getItem('modelo')||'', clave:localStorage.getItem('clave')||''
+  preset:localStorage.getItem('preset')||'free',
+  chat:localStorage.getItem('chat')||FREE.chat,
+  key:localStorage.getItem('key')||'',
+  modelo:localStorage.getItem('modelo')||FREE.modelo
 };
 let hist=JSON.parse(localStorage.getItem('hist')||'[]');
-const CANDIDATAS=['http://127.0.0.1:20128/v1','http://localhost:20128/v1'];
+function salvar(){for(const k of ['preset','chat','key','modelo'])localStorage.setItem(k,G[k]);}
+function pintarCab(){$('#cabModelo').textContent=(G.preset==='free'?'gratis · ':'')+ (G.modelo||'—');}
 
-function salvar(){for(const k of ['url','key','modelo','clave'])localStorage.setItem(k,G[k]);}
-function claveAlAzar(){const a='abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
- return Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>a[b%a.length]).join('');}
-
-// ── ¿hay motor en esta dirección? ────────────────────────────────────────────
-async function vive(url){
-  try{
-    const c=new AbortController(); setTimeout(()=>c.abort(),4000);
-    const r=await fetch(url.replace(/\/+$/,'')+'/models',{signal:c.signal});
-    return r.status===401||r.status===200;   // 401 tambien sirve: hay motor
-  }catch(e){ return false; }
-}
-
-async function buscar(){
-  $('#e1').className='estado'; $('#e1').textContent='Buscando…';
-  $('#noHay').style.display='none';
-  for(const u of CANDIDATAS){
-    if(await vive(u)){
-      G.url=u; salvar();
-      $('#e1').className='estado ok';
-      $('#e1').textContent='Lo encontré en '+u;
-      setTimeout(irAlDos,700); return;
-    }
+// ── streaming por el puente de Java (sin CORS) ───────────────────────────────
+let enCurso=null;                 // {id, caja, texto}
+window.peakChunk=(id,data)=>{
+  if(!enCurso||enCurso.id!==id)return;
+  if(data.startsWith('__PLANO__')){                 // respuesta no-SSE: texto crudo
+    enCurso.texto=data.slice(9); enCurso.caja.textContent=enCurso.texto;
+    $('#hilo').scrollTop=1e9; return;
   }
-  $('#e1').className='estado no'; $('#e1').textContent='No hay motor respondiendo.';
-  if(!G.clave){ G.clave=claveAlAzar(); salvar(); }
-  $('#cmd').textContent=
-    'pkg update -y && pkg install -y nodejs-lts && '+
-    'npm install -g omniroute && '+
-    "omniroute setup --password '"+G.clave+"' --non-interactive && omniroute";
-  $('#noHay').style.display='block';
-  $('#avisoTermux').textContent = Peak.hayTermux()
-    ? 'Termux está instalado.'
-    : 'No veo Termux: el botón te lleva a bajarlo de F-Droid.';
-}
-
-function irAlDos(){
-  $('#p1').style.display='none'; $('#p2').style.display='block';
-  $('#aClave').value=G.clave||'';
-  $('#pistaClave').textContent = G.clave
-    ? 'Ya la puse: es la que generé para el comando de instalación.'
-    : 'Es la que pusiste al configurar OmniRoute.';
-}
-
-$('#bTermux').onclick=()=>{
-  const c=$('#cmd').textContent;
-  if(!Peak.hayTermux()){ Peak.abrirTermux(); return; }
-  if(Peak.correrEnTermux(c)){ Peak.aviso('Mandado a Termux'); }
-  else { Peak.copiar(c); Peak.abrirTermux();
-         Peak.aviso('Termux no acepta comandos: te lo copié, pegalo ahí'); }
-};
-$('#bCopiar').onclick=()=>Peak.copiar($('#cmd').textContent);
-$('#bReintentar').onclick=buscar;
-$('#bManual').onclick=()=>{$('#manual').style.display='block';$('#mURL').value=G.url||CANDIDATAS[0];};
-$('#bServidor').onclick=()=>{$('#manual').style.display='block';$('#mURL').value=G.url&&/https/.test(G.url)?G.url:'https://.hf.space/v1';$('#mURL').focus();};
-$('#bProbarManual').onclick=async()=>{
-  const u=$('#mURL').value.trim();
-  $('#e1').className='estado'; $('#e1').textContent='Probando '+u+'…';
-  if(await vive(u)){ G.url=u; salvar(); $('#e1').className='estado ok';
-    $('#e1').textContent='Responde. Sigo.'; setTimeout(irAlDos,600); }
-  else { $('#e1').className='estado no'; $('#e1').textContent='Ahí no hay nada.'; }
-};
-
-// ── paso 2: login + crear la llave, sin copiar nada ─────────────────────────
-$('#bLlave').onclick=async()=>{
-  const clave=$('#aClave').value; const raiz=G.url.replace(/\/v1\/?$/,'');
-  const e=$('#e2'); e.style.display='block'; e.className='estado'; e.textContent='Entrando…';
-  $('#bLlave').disabled=true;
+  if(data==='[DONE]')return;
   try{
-    let r=await fetch(raiz+'/api/auth/login',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({password:clave})});
-    if(!r.ok) throw new Error(r.status===401?'la contraseña no es esa':'login: HTTP '+r.status);
-    e.textContent='Adentro. Creando la llave…';
-    r=await fetch(raiz+'/api/keys',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'PeakCode'})});
-    if(!r.ok) throw new Error('no me dejó crear la llave: HTTP '+r.status);
-    const d=await r.json();
-    if(!d.key) throw new Error('el motor no devolvió ninguna llave');
-    G.key=d.key; G.clave=clave; salvar();
-    e.className='estado ok'; e.textContent='Llave lista.';
-    setTimeout(irAlTres,700);
-  }catch(err){ e.className='estado no'; e.textContent=err.message; }
-  $('#bLlave').disabled=false;
+    const j=JSON.parse(data);
+    const t=j.choices?.[0]?.delta?.content ?? j.choices?.[0]?.message?.content ?? '';
+    if(t){enCurso.texto+=t; enCurso.caja.textContent=enCurso.texto; $('#hilo').scrollTop=1e9;}
+  }catch(e){}
+};
+window.peakFin=(id)=>{
+  if(!enCurso||enCurso.id!==id)return;
+  const t=enCurso.texto||'(el modelo no devolvió nada)';
+  enCurso.caja.textContent=t;
+  hist.push({role:'assistant',content:t}); guardarHist(); const c=enCurso; enCurso=null;
+  // re-render para que aparezca el botón guardar
+  repintar();
+};
+window.peakErr=(id,msg)=>{
+  if(!enCurso||enCurso.id!==id)return;
+  enCurso.caja.remove(); enCurso=null;
+  const pista=/HTTP 401|403/.test(msg)?'la llave no sirve. Revisá el motor en ⚙.'
+    :/HTTP 429/.test(msg)?'te frenaron por límite de uso. Probá de nuevo en un rato.'
+    :/HTTP 5\d\d/.test(msg)?'el motor tuvo un problema: '+msg
+    :'no pude conectar. '+msg;
+  poner('Error: '+pista,'err');
 };
 
-// ── paso 3: modelos ─────────────────────────────────────────────────────────
-async function traerModelos(destino,estado){
-  const s=$(destino); s.innerHTML='';
-  try{
-    const r=await fetch(G.url+'/models',{headers:{Authorization:'Bearer '+G.key}});
-    if(!r.ok) throw new Error(explicar(r.status));
-    const xs=((await r.json()).data||[]).map(m=>m.id);
-    // los auto/ primero: eligen el mejor proveedor disponible solos
-    xs.sort((a,b)=>(b.startsWith('auto/')-a.startsWith('auto/'))||a.localeCompare(b));
-    xs.forEach(id=>{const o=document.createElement('option');o.value=o.textContent=id;s.appendChild(o);});
-    const pref=xs.find(x=>x==='auto/best-coding')||xs.find(x=>x.startsWith('auto/'))||xs[0];
-    s.value=G.modelo&&xs.includes(G.modelo)?G.modelo:pref;
-    if(estado){$(estado).className='estado ok';$(estado).textContent=xs.length+' modelos.';}
-    return xs.length;
-  }catch(e){ if(estado){$(estado).className='estado no';$(estado).textContent=e.message;} return 0; }
-}
-async function irAlTres(){
-  $('#p2').style.display='none'; $('#p3').style.display='block';
-  await traerModelos('#aModelo','#e3');
-}
-$('#bListo').onclick=()=>{
-  G.modelo=$('#aModelo').value; salvar();
-  $('#asis').classList.remove('ver'); pintarCab(); repintar();
-};
-
-// ── ajustes ─────────────────────────────────────────────────────────────────
-$('#bAjustes').onclick=async()=>{
-  $('#cURL').value=G.url;$('#cKey').value=G.key;
-  $('#ajustes').classList.add('ver'); await traerModelos('#cModelo');
-};
-$('#bTraer').onclick=()=>traerModelos('#cModelo');
-$('#bGuardar').onclick=()=>{
-  G.url=$('#cURL').value.trim().replace(/\/+$/,'');G.key=$('#cKey').value.trim();
-  G.modelo=$('#cModelo').value;salvar();pintarCab();
-  $('#ajustes').classList.remove('ver');Peak.aviso('Guardado');
-};
-$('#bCerrar').onclick=()=>$('#ajustes').classList.remove('ver');
-$('#bRehacer').onclick=()=>{
-  $('#ajustes').classList.remove('ver');
-  $('#p2').style.display='none';$('#p3').style.display='none';$('#p1').style.display='block';
-  $('#asis').classList.add('ver'); buscar();
-};
-
-// ── chat ────────────────────────────────────────────────────────────────────
-function pintarCab(){$('#cabModelo').textContent=G.modelo||'sin configurar';}
+// ── chat ─────────────────────────────────────────────────────────────────────
 function poner(t,q,guardable){
   const d=document.createElement('div');d.className='msg '+q;d.textContent=t;
   if(guardable){const b=document.createElement('button');
     b.className='guardar';b.textContent='⤓ guardar';
     b.onclick=()=>{const n=prompt('Nombre del archivo:','peakcode.txt');if(!n)return;
-      const r=Peak.guardar(n,d.textContent);
-      Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);};
+      const r=Peak.guardar(n,d.textContent);Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);};
     d.appendChild(b);}
   $('#hilo').appendChild(d);$('#hilo').scrollTop=1e9;return d;
 }
 function repintar(){
   $('#hilo').innerHTML='';
-  if(!hist.length) poner('Listo. Escribí lo que necesites.','el');
+  if(!hist.length) poner('Hola. Ya estoy lista, escribí lo que necesites.\nSi querés otro motor, tocá ⚙.','el');
   hist.forEach(m=>poner(m.content,m.role==='user'?'yo':'el',m.role!=='user'));
 }
 function guardarHist(){localStorage.setItem('hist',JSON.stringify(hist.slice(-40)));}
-function explicar(e){
-  if(e===401||e===403)return 'la llave no sirve (401). Rehacé la configuración en ⚙.';
-  if(e===404)return 'la dirección está mal (404): ¿termina en /v1?';
-  if(e===429)return 'te frenaron por límite de uso (429). Probá otro modelo.';
-  if(e>=500)return 'el motor contestó '+e+': falló el proveedor de atrás.';
-  return 'HTTP '+e;
-}
+
 $('#bAdjuntar').onclick=()=>Peak.abrir();
 window.peakArchivoLeido=d=>{
   if(d.error){poner('No pude leer el archivo: '+d.error,'err');return;}
@@ -297,44 +157,79 @@ window.peakArchivoLeido=d=>{
 };
 $('#bLimpiar').onclick=()=>{hist=[];guardarHist();repintar();};
 
-async function enviar(){
+function enviar(){
   const ta=$('#entrada'),txt=ta.value.trim();
-  if(!txt)return;
-  if(!G.key||!G.url){$('#asis').classList.add('ver');buscar();return;}
+  if(!txt||enCurso)return;
   ta.value='';ta.style.height='auto';
   hist.push({role:'user',content:txt});poner(txt,'yo');guardarHist();
-  const caja=poner('…','el',false);let texto='';
-  try{
-    const r=await fetch(G.url+'/chat/completions',{method:'POST',
-      headers:{'Content-Type':'application/json',Authorization:'Bearer '+G.key},
-      body:JSON.stringify({model:G.modelo||undefined,messages:hist,stream:true})});
-    if(!r.ok){let x='';try{const j=await r.json();x=j.error?.message?' — '+j.error.message:'';}catch(e){}
-      throw new Error(explicar(r.status)+x);}
-    if(r.body&&r.body.getReader){
-      const lec=r.body.getReader(),dec=new TextDecoder();let resto='';
-      for(;;){const {done,value}=await lec.read();if(done)break;
-        resto+=dec.decode(value,{stream:true});
-        const ps=resto.split('\n');resto=ps.pop();
-        for(const l of ps){
-          if(!l.startsWith('data:'))continue;
-          const c=l.slice(5).trim();if(c==='[DONE]')continue;
-          try{const t=JSON.parse(c).choices?.[0]?.delta?.content||'';
-            if(t){texto+=t;caja.textContent=texto;$('#hilo').scrollTop=1e9;}}catch(e){}
-        }}
-    } else { texto=(await r.json()).choices?.[0]?.message?.content||''; }
-    caja.textContent=texto||'(el modelo no devolvió nada)';
-    hist.push({role:'assistant',content:caja.textContent});guardarHist();repintar();
-  }catch(e){
-    caja.remove();
-    poner('Error: '+(/Failed to fetch|NetworkError|Load failed/i.test(e.message)
-      ?'No llegué al motor. ¿Sigue corriendo OmniRoute en '+G.url+' ?':e.message),'err');
-  }
+  const caja=poner('…','el',false);
+  const id='m'+Date.now();
+  enCurso={id,caja,texto:''};
+  const body=JSON.stringify({model:G.modelo||undefined,messages:hist,stream:true});
+  Peak.stream(id, G.chat, G.key, body);
 }
 $('#bEnviar').onclick=enviar;
 $('#entrada').addEventListener('input',e=>{e.target.style.height='auto';
  e.target.style.height=Math.min(e.target.scrollHeight,innerHeight*.38)+'px';});
 
-// ── arranque ────────────────────────────────────────────────────────────────
-pintarCab();
-if(!G.key||!G.url){ $('#asis').classList.add('ver'); buscar(); } else { repintar(); }
+// ── ajustes ───────────────────────────────────────────────────────────────────
+function pintarZonas(){
+  const omni=$('#cPreset').value==='omni';
+  $('#zonaOmni').classList.toggle('oculto',!omni);
+  $('#zonaFree').classList.toggle('oculto',omni);
+}
+$('#cPreset').onchange=pintarZonas;
+$('#bAjustes').onclick=()=>{
+  $('#cPreset').value=G.preset;
+  $('#cURL').value=G.preset==='omni'?G.chat.replace(/\/chat\/completions$/,''):'';
+  $('#cClave').value=localStorage.getItem('clave')||'';
+  pintarZonas(); $('#ajustes').classList.add('ver');
+};
+$('#bCerrar').onclick=()=>$('#ajustes').classList.remove('ver');
+
+$('#bConectar').onclick=async()=>{
+  const base=$('#cURL').value.trim().replace(/\/+$/,'');
+  const raiz=base.replace(/\/v1$/,''); const clave=$('#cClave').value;
+  const e=$('#eOmni'); e.classList.remove('oculto'); e.className='estado'; e.textContent='Entrando…';
+  try{
+    let r=await fetch(raiz+'/api/auth/login',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({password:clave})});
+    if(!r.ok)throw new Error(r.status===401?'la contraseña no es esa':'login HTTP '+r.status);
+    r=await fetch(raiz+'/api/keys',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'PeakCode'})});
+    if(!r.ok)throw new Error('no me dejó crear la llave: HTTP '+r.status);
+    const k=(await r.json()).key; if(!k)throw new Error('no devolvió llave');
+    localStorage.setItem('clave',clave);
+    G.key=k; G.chat=base+'/chat/completions';
+    e.className='estado ok'; e.textContent='Conectado. Trayendo modelos…';
+    await traerModelos(base,k);
+  }catch(err){ e.className='estado no'; e.textContent=err.message; }
+};
+async function traerModelos(base,key){
+  try{
+    const r=await fetch(base+'/models',{headers:{Authorization:'Bearer '+key}});
+    const xs=((await r.json()).data||[]).map(m=>m.id)
+      .sort((a,b)=>(b.startsWith('auto/')-a.startsWith('auto/'))||a.localeCompare(b));
+    $('#cModelo').innerHTML=''; xs.forEach(id=>{const o=document.createElement('option');
+      o.value=o.textContent=id;$('#cModelo').appendChild(o);});
+    $('#cModelo').value=xs.find(x=>x==='auto/best-coding')||xs.find(x=>x.startsWith('auto/'))||xs[0];
+    return xs.length;
+  }catch(e){ return 0; }
+}
+$('#bTraer').onclick=()=>{const b=$('#cURL').value.trim().replace(/\/+$/,'');
+  traerModelos(b,G.key).then(n=>Peak.aviso(n?n+' modelos':'no pude traer la lista'));};
+
+$('#bGuardar').onclick=()=>{
+  if($('#cPreset').value==='free'){
+    Object.assign(G,FREE);
+  }else{
+    const base=$('#cURL').value.trim().replace(/\/+$/,'');
+    G.preset='omni'; G.chat=base+'/chat/completions';
+    if($('#cModelo').value)G.modelo=$('#cModelo').value;
+  }
+  salvar(); pintarCab(); $('#ajustes').classList.remove('ver'); repintar(); Peak.aviso('Guardado');
+};
+
+// arranque: SIN asistente. Anda directo con el motor gratis.
+pintarCab(); repintar();
 </script></body></html>
