@@ -1,0 +1,18 @@
+{
+  "archivo": "specter_vfx_696726.mp4",
+  "segundos": 61.21,
+  "fps": 60.0,
+  "ancho": 1080,
+  "alto": 1440,
+  "cortes": 30,
+  "cortes_por_segundo": 0.49,
+  "plano_mediana_s": 0.63,
+  "bpm": 97.4,
+  "cortes_sobre_beat": 0.1,
+  "lum_p5": 5.6,
+  "lum_mediana": 39.4,
+  "lum_p95": 178.0,
+  "saturacion": 0.377,
+  "clipping_pct": 0.231,
+  "nitidez": 285.5
+}

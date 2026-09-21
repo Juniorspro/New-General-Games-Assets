@@ -1,0 +1,18 @@
+{
+  "archivo": "waznats_124118.mp4",
+  "segundos": 80.01,
+  "fps": 60.0,
+  "ancho": 1080,
+  "alto": 1920,
+  "cortes": 11,
+  "cortes_por_segundo": 0.14,
+  "plano_mediana_s": 0.12,
+  "bpm": 89.4,
+  "cortes_sobre_beat": 0.09,
+  "lum_p5": 0.0,
+  "lum_mediana": 0.0,
+  "lum_p95": 75.8,
+  "saturacion": 0.148,
+  "clipping_pct": 0.113,
+  "nitidez": 124.0
+}

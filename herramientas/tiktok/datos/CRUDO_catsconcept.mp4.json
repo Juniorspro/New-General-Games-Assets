@@ -1,0 +1,18 @@
+{
+  "archivo": "CRUDO_catsconcept.mp4",
+  "segundos": 92.32,
+  "fps": 30.0,
+  "ancho": 960,
+  "alto": 720,
+  "cortes": 18,
+  "cortes_por_segundo": 0.19,
+  "plano_mediana_s": 2.17,
+  "bpm": 81.4,
+  "cortes_sobre_beat": 0.0,
+  "lum_p5": 2.2,
+  "lum_mediana": 37.7,
+  "lum_p95": 136.3,
+  "saturacion": 0.405,
+  "clipping_pct": 0.029,
+  "nitidez": 433.0
+}

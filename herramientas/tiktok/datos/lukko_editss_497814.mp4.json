@@ -1,0 +1,18 @@
+{
+  "archivo": "lukko_editss_497814.mp4",
+  "segundos": 24.24,
+  "fps": 30.0,
+  "ancho": 576,
+  "alto": 576,
+  "cortes": 5,
+  "cortes_por_segundo": 0.21,
+  "plano_mediana_s": 1.37,
+  "bpm": 139.9,
+  "cortes_sobre_beat": 0.2,
+  "lum_p5": 1.2,
+  "lum_mediana": 14.1,
+  "lum_p95": 79.4,
+  "saturacion": 0.335,
+  "clipping_pct": 0.11,
+  "nitidez": 148.4
+}

@@ -1,0 +1,23 @@
+CRUDO_catsconcept.mp4            0.19/s  BPM  81.4  beat  0.0  sat 0.405  clip  0.029  nit   433.0
+daredevilmurdck_507920.mp4       0.52/s  BPM 111.3  beat 0.68  sat  0.27  clip  0.055  nit   748.5
+flick_edits8_582612.mp4          0.64/s  BPM  92.4  beat 0.14  sat 0.038  clip  1.467  nit  1136.1
+gaps_edits_487879.mp4            2.51/s  BPM 104.9  beat 0.17  sat 0.161  clip  0.001  nit   414.1
+gh0st_1m_840648.mp4              0.63/s  BPM 111.3  beat 0.08  sat 0.453  clip  1.582  nit   484.5
+kane_justchillin_904661.mp4      0.06/s  BPM  74.7  beat  0.0  sat 0.166  clip  0.088  nit   189.8
+kyoten92x_007894.mp4             1.76/s  BPM  64.9  beat 0.23  sat 0.264  clip  0.259  nit   177.5
+lukko_editss_497814.mp4          0.21/s  BPM 139.9  beat  0.2  sat 0.335  clip   0.11  nit   148.4
+menjane__056455.mp4              0.33/s  BPM 104.9  beat 0.14  sat 0.436  clip  0.026  nit   153.3
+menjane__836946.mp4              0.61/s  BPM  81.4  beat 0.07  sat 0.248  clip  0.002  nit    87.7
+patrick_x8_609095.mp4            0.82/s  BPM 109.1  beat 0.05  sat  0.47  clip  0.191  nit  1174.1
+patrickjaneforever_888020.mp4    0.24/s  BPM  74.7  beat  0.0  sat 0.167  clip    0.0  nit    63.6
+phonkrt_198622.mp4               0.00/s  BPM  83.9  beat None  sat 0.166  clip  0.137  nit   153.6
+quorneredits_057682.mp4          0.59/s  BPM 102.9  beat  0.2  sat 0.207  clip  0.057  nit   499.4
+rvbikz_ae_040878.mp4             1.08/s  BPM 109.1  beat 0.62  sat 0.133  clip  0.002  nit   203.6
+skysosuke_516244.mp4             1.23/s  BPM  92.4  beat 0.19  sat 0.265  clip  2.584  nit   153.8
+specter_vfx_696726.mp4           0.49/s  BPM  97.4  beat  0.1  sat 0.377  clip  0.231  nit   285.5
+tekno_edit__222727.mp4           1.04/s  BPM  85.2  beat 0.18  sat 0.187  clip  0.021  nit   217.8
+waznats_124118.mp4               0.14/s  BPM  89.4  beat 0.09  sat 0.148  clip  0.113  nit   124.0
+wednuu_865694.mp4                0.15/s  BPM 116.1  beat 0.43  sat 0.609  clip  2.389  nit   477.2
+zyreecuts_803024.mp4             0.82/s  BPM 111.3  beat 0.09  sat 0.334  clip  0.067  nit  1969.3
+
+21 videos -> /home/user/New-General-Games-Assets/herramientas/tiktok/datos/_corpus.json

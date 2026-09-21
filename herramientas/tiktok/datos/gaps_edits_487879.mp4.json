@@ -1,0 +1,18 @@
+{
+  "archivo": "gaps_edits_487879.mp4",
+  "segundos": 32.73,
+  "fps": 30.0,
+  "ancho": 720,
+  "alto": 720,
+  "cortes": 82,
+  "cortes_por_segundo": 2.51,
+  "plano_mediana_s": 0.23,
+  "bpm": 104.9,
+  "cortes_sobre_beat": 0.17,
+  "lum_p5": 4.9,
+  "lum_mediana": 101.6,
+  "lum_p95": 177.4,
+  "saturacion": 0.161,
+  "clipping_pct": 0.001,
+  "nitidez": 414.1
+}

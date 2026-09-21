@@ -1,0 +1,18 @@
+{
+  "archivo": "gh0st_1m_840648.mp4",
+  "segundos": 19.0,
+  "fps": 25.0,
+  "ancho": 576,
+  "alto": 576,
+  "cortes": 12,
+  "cortes_por_segundo": 0.63,
+  "plano_mediana_s": 1.08,
+  "bpm": 111.3,
+  "cortes_sobre_beat": 0.08,
+  "lum_p5": 3.9,
+  "lum_mediana": 39.7,
+  "lum_p95": 196.5,
+  "saturacion": 0.453,
+  "clipping_pct": 1.582,
+  "nitidez": 484.5
+}

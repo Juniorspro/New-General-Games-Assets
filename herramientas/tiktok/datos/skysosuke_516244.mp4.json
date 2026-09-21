@@ -1,0 +1,18 @@
+{
+  "archivo": "skysosuke_516244.mp4",
+  "segundos": 21.22,
+  "fps": 60.0,
+  "ancho": 1080,
+  "alto": 1080,
+  "cortes": 26,
+  "cortes_por_segundo": 1.23,
+  "plano_mediana_s": 0.55,
+  "bpm": 92.4,
+  "cortes_sobre_beat": 0.19,
+  "lum_p5": 31.6,
+  "lum_mediana": 121.7,
+  "lum_p95": 195.2,
+  "saturacion": 0.265,
+  "clipping_pct": 2.584,
+  "nitidez": 153.8
+}

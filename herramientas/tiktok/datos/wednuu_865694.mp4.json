@@ -1,0 +1,18 @@
+{
+  "archivo": "wednuu_865694.mp4",
+  "segundos": 46.13,
+  "fps": 30.0,
+  "ancho": 720,
+  "alto": 720,
+  "cortes": 7,
+  "cortes_por_segundo": 0.15,
+  "plano_mediana_s": 1.5,
+  "bpm": 116.1,
+  "cortes_sobre_beat": 0.43,
+  "lum_p5": 26.2,
+  "lum_mediana": 94.9,
+  "lum_p95": 157.2,
+  "saturacion": 0.609,
+  "clipping_pct": 2.389,
+  "nitidez": 477.2
+}

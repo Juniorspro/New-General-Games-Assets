@@ -1,0 +1,18 @@
+{
+  "archivo": "kyoten92x_007894.mp4",
+  "segundos": 19.85,
+  "fps": 60.0,
+  "ancho": 1080,
+  "alto": 1080,
+  "cortes": 35,
+  "cortes_por_segundo": 1.76,
+  "plano_mediana_s": 0.08,
+  "bpm": 64.9,
+  "cortes_sobre_beat": 0.23,
+  "lum_p5": 16.7,
+  "lum_mediana": 76.9,
+  "lum_p95": 153.3,
+  "saturacion": 0.264,
+  "clipping_pct": 0.259,
+  "nitidez": 177.5
+}

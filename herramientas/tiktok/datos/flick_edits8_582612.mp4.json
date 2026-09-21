@@ -1,0 +1,18 @@
+{
+  "archivo": "flick_edits8_582612.mp4",
+  "segundos": 56.05,
+  "fps": 25.0,
+  "ancho": 540,
+  "alto": 540,
+  "cortes": 36,
+  "cortes_por_segundo": 0.64,
+  "plano_mediana_s": 0.96,
+  "bpm": 92.4,
+  "cortes_sobre_beat": 0.14,
+  "lum_p5": 16.4,
+  "lum_mediana": 208.2,
+  "lum_p95": 226.9,
+  "saturacion": 0.038,
+  "clipping_pct": 1.467,
+  "nitidez": 1136.1
+}

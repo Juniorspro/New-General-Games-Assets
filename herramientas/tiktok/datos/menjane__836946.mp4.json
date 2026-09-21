@@ -1,0 +1,18 @@
+{
+  "archivo": "menjane__836946.mp4",
+  "segundos": 47.63,
+  "fps": 30.0,
+  "ancho": 720,
+  "alto": 720,
+  "cortes": 29,
+  "cortes_por_segundo": 0.61,
+  "plano_mediana_s": 0.8,
+  "bpm": 81.4,
+  "cortes_sobre_beat": 0.07,
+  "lum_p5": 0.6,
+  "lum_mediana": 37.3,
+  "lum_p95": 164.8,
+  "saturacion": 0.248,
+  "clipping_pct": 0.002,
+  "nitidez": 87.7
+}

@@ -1,0 +1,18 @@
+{
+  "archivo": "PatrickJane_phonk.mp4",
+  "segundos": 21.97,
+  "fps": 30.0,
+  "ancho": 1080,
+  "alto": 1080,
+  "cortes": 11,
+  "cortes_por_segundo": 0.5,
+  "plano_mediana_s": 1.98,
+  "bpm": 118.6,
+  "cortes_sobre_beat": 0.09,
+  "lum_p5": 0.0,
+  "lum_mediana": 37.4,
+  "lum_p95": 143.1,
+  "saturacion": 0.253,
+  "clipping_pct": 0.03,
+  "nitidez": 380.2
+}

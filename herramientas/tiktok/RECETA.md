@@ -1,5 +1,11 @@
 # RECETA — números medidos sobre 22 edits de TikTok
 
+> **CORREGIDA EL 2026-09-21. Leé primero el bloque «El corpus de 20» al final.**
+> Los números de más abajo salen de **5** edits y están **desmentidos** por una
+> medición posterior sobre **20**: el nicho no es saturado y luminoso, es
+> **oscuro y desaturado**. Lo que sigue queda como registro de cómo se llegó,
+> no como objetivo.
+
 > Salida del §4 del playbook. Los videos se bajaron **para medir**, no para
 > republicar: lo que queda acá son números, no clips.
 > Reproducir: `python3 medir.py corpus/*.mp4` → `datos/_corpus.json`
@@ -239,3 +245,115 @@ El proveedor de audio de Rezona falló 3 veces seguidas
 exacto con numpy — y tiene una ventaja sobre la generada: al conocer el BPM,
 los cortes caen en el pulso por construcción, no por suerte. Para publicar se
 reemplaza por una pista de la biblioteca de TikTok.
+
+
+---
+
+# El corpus de 20 (2026-09-21) — esto es lo que hay que copiar
+
+20 edits del nicho de personaje bajados y medidos enteros, más 1 clip crudo de
+control. Las URLs y los números por video están en
+`datos/corpus20-medidas.txt`. Reproducir:
+`python3 medir.py <videos>` → `datos/_corpus.json`.
+
+Incluye los dos que más rinden que se encontraron: uno de **1,8 M de likes**
+(@menjane_, Patrick Jane) y uno de **2,6 M** (@daredevilmurdck, Harvey Specter).
+
+## Los números, y en qué se equivocaba la receta vieja
+
+| | receta vieja (n=5) | **corpus de 20** | 1,8 M likes | 2,6 M likes |
+|---|---|---|---|---|
+| cortes / segundo | 0,86 | **0,60** (0,00 – 2,51) | 0,61 | 0,52 |
+| cortes sobre beat | 0,20 | **0,14** (0,00 – 0,68) | 0,07 | **0,68** |
+| saturación | 0,51 | **0,26** (0,04 – 0,61) | 0,248 | 0,270 |
+| clipping % | 1,67 | **0,10** (0,00 – 2,58) | 0,002 | 0,055 |
+| nitidez | 758 | **211** (64 – 1969) | 88 | 748 |
+| luz p5 | 49 | **4,1** (0 – 31,6) | 0,6 | 11,2 |
+| luz mediana | 113 | **39,7** (0 – 208) | 37,3 | 60,1 |
+| luz p95 | 205 | **161** (76 – 227) | 164,8 | 174,3 |
+| duración | — | **32,4 s** (13 – 84) | 47 s | 84 s |
+
+**El nicho tiene los negros CERRADOS, no abiertos.** La receta vieja pedía
+subir el p5 de 2 a 49; la mediana real es 4,1 y el edit de 1,8 M de likes está
+en **0,6**. Levantar el negro es lo que le saca el aire cinematográfico.
+
+**Y va DESATURADO.** Mediana 0,26, no 0,51. Los dos que más rinden están en
+0,248 y 0,270. Subir saturación en este material sólo fabrica clipping.
+
+Consecuencia práctica: un clip crudo de una serie ya está casi en el objetivo
+(el que se usó medía p5 2,2 / mediana 37,7 / p95 136 / sat 0,405). **El grade
+es un retoque, no una corrección**: bajar saturación a ~0,8, un poco de gamma
+y contraste, y un techo de salida al 97 % para que el clipping no se escape.
+
+## El formato: cuadrado, no 9:16
+
+| formato | cuántos |
+|---|---|
+| cuadrado (720², 576², 1080², 540²) | **14 de 20** |
+| vertical (1080x1920, 720x1280, 576x1024, 1080x1440) | 6 de 20 |
+| apaisado | 0 |
+
+Los dos que más rinden son 720x720 y 1080x1080. Y no es sólo moda: desde una
+fuente 4:3 el 9:16 se lleva **404 px de 960** y hay que estirar 2,67x, mientras
+el 1:1 se lleva 720 y estira 1,5x. Medido sobre el mismo material y el mismo
+montaje, sólo por cambiar de encuadre: **nitidez 90 → 380**.
+
+**Ojo al medir verticales con barras:** un 1080x1920 con un 16:9 adentro tiene
+el 58 % del cuadro en negro, y eso arrastra los percentiles. En el corpus,
+@waznats mide p5 0,0 / mediana 0,0 / p95 75,8 — no es un video negro, son las
+barras. Para esos hay que medir sólo el área con imagen.
+
+## Lo que se ve, que no está en ningún número
+
+- **Subtítulo palabra por palabra**, en mayúsculas finas, centrado y chico, que
+  va apareciendo con el diálogo (@specter_vfx). Es el formato "edit de
+  diálogo", distinto del edit musical.
+- **Texto grande en la barra negra**, no sobre la imagen (@gh0st.1m:
+  "THE PROBLEM" / "THE SOLUTION >>>"). Resuelve el texto sin tapar la cara.
+- **Block glitch**: bloquecitos rectangulares corridos, sobre todo en los
+  edits de anime (@quorneredits).
+- **Un solo plano en cámara lenta, sin un corte en 32 s** (@phonkrt) es un
+  formato válido y le va bien. No todo edit es una ráfaga de cortes.
+- **Sacudida en el corte**, que es lo que separa un edit de phonk de una
+  sucesión de planos. Se hace moviendo la POSICIÓN del recorte cuadro a cuadro:
+  el TAMAÑO de salida no se puede animar en ffmpeg, así que se recorta más
+  chico (40 px de margen) y se mueve la ventana adentro de ese margen.
+
+## Cortar sobre el beat: `beats.py`
+
+`medir.py` re-deduce el tempo por autocorrelación y se equivoca lo suficiente
+como para arruinar la medición (89,4 sobre una pista de 90 exactos). Para
+montar hace falta tempo **y fase** y los tiempos de cada golpe: eso es
+`beats.py`.
+
+Medido sobre el phonk CC0 que se usó: **120,19 BPM**, negra de 499,2 ms, primer
+golpe a los 55 ms, y el **drop a los 47,93 s** (la energía por compás salta de
+0,6 a 1,0 y se queda). El montaje se cuelga de ahí: 16 golpes de subida, el
+drop, 24 de cuerpo, 4 de cola.
+
+Resultado: 18 de 19 cortes a menos de 40 ms (un cuadro) del pulso real. El
+mejor del corpus llega a 0,68.
+
+Resto de deriva a vigilar: 4 golpes son 1,99692 s y el cuadro más cercano son
+2,000 s. Son 3 ms por plano, 34 ms en 22 s — menos de un cuadro, tolerable. Si
+el edit fuera de un minuto habría que repartir los cuadros contra los tiempos
+absolutos de la grilla, no plano por plano.
+
+## Música libre de regalías, desde acá
+
+- **Pixabay da 403** a `requests` (protección anti-bot).
+- **La API de Openverse** (`api.openverse.org/v1/audio/?q=phonk&license=cc0,by`)
+  no pide clave y devuelve el enlace directo. Ahí salió el phonk que se usó:
+  81 s, **CC0** (ni atribución pide), de Freesound.
+- Wikimedia sirve, pero exige un User-Agent con contacto y tira **429** si se
+  le piden dos archivos seguidos.
+- Para publicar en TikTok conviene igual cambiarla por una de la biblioteca
+  comercial de TikTok, que es lo que el algoritmo premia.
+
+## Juntar links sigue siendo el cuello
+
+De 26 URLs reunidas por buscador, **6 dieron "sin itemStruct"** (privadas,
+borradas o bloqueadas). El buscador devuelve sobre todo páginas
+`discover/`, que no traen IDs. La página de un video suelto sí responde entera
+a `requests`; las grillas (búsqueda, hashtag, cuenta) no, se arman con llamadas
+firmadas del navegador.

@@ -1,0 +1,18 @@
+{
+  "archivo": "patrick_x8_609095.mp4",
+  "segundos": 23.2,
+  "fps": 30.0,
+  "ancho": 720,
+  "alto": 720,
+  "cortes": 19,
+  "cortes_por_segundo": 0.82,
+  "plano_mediana_s": 0.55,
+  "bpm": 109.1,
+  "cortes_sobre_beat": 0.05,
+  "lum_p5": 6.5,
+  "lum_mediana": 39.2,
+  "lum_p95": 147.0,
+  "saturacion": 0.47,
+  "clipping_pct": 0.191,
+  "nitidez": 1174.1
+}

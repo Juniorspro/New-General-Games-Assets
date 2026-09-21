@@ -1,0 +1,29 @@
+# Los 20 edits medidos el 2026-09-21 + 1 crudo de control.
+# Numeros por video en datos/corpus20-medidas.txt y datos/<archivo>.json
+# Reproducir:  python3 calidad.py bajar <url> <salida.mp4>  &&  python3 medir.py <salida.mp4>
+https://www.tiktok.com/@menjane_/video/7649151402215836946
+https://www.tiktok.com/@menjane_/video/7622582971698056455
+https://www.tiktok.com/@daredevilmurdck/video/7358914520980507920
+https://www.tiktok.com/@specter.vfx/video/7585914090430696726
+https://www.tiktok.com/@patrick.x8/video/7653979679631609095
+https://www.tiktok.com/@flick_edits8/video/7678297286077582612
+https://www.tiktok.com/@waznats/video/7668364260057124118
+https://www.tiktok.com/@kane.justchillin/video/7675572035157904661
+https://www.tiktok.com/@patrickjaneforever/video/7650635104057888020
+https://www.tiktok.com/@rvbikz.ae/video/7503611203718040878
+https://www.tiktok.com/@tekno_edit_/video/7656541594300222727
+https://www.tiktok.com/@zyreecuts/video/7484664041449803024
+https://www.tiktok.com/@phonkrt/video/7336585175981198622
+https://www.tiktok.com/@skysosuke/video/7603936925346516244
+https://www.tiktok.com/@gh0st.1m/video/7502119957245840648
+https://www.tiktok.com/@lukko.editss/video/7519119006146497814
+https://www.tiktok.com/@wednuu/video/7600186633710865694
+https://www.tiktok.com/@kyoten92x/video/7580035596849007894
+https://www.tiktok.com/@quorneredits/video/7566015216887057682
+https://www.tiktok.com/@gaps.edits/video/7644703923013487879
+# crudo de control (no es un edit): 92 s de escenas sin tocar
+https://www.tiktok.com/@catsconcept/video/7665423020801985822
+# no se pudieron bajar (privados, borrados o bloqueados):
+#  @razenvoid/7611708466247306516  @thinker.ong/7609725789508013334
+#  @_editvideo1/7135072913731980549  @_m4t1ax_/7150379673854201093
+#  @fortniteproroblox42/7492377551550106902  @neo_xt/7212397116730248453

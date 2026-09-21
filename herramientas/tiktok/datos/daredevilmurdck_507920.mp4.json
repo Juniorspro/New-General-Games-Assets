@@ -1,0 +1,18 @@
+{
+  "archivo": "daredevilmurdck_507920.mp4",
+  "segundos": 83.87,
+  "fps": 60.0,
+  "ancho": 1080,
+  "alto": 1080,
+  "cortes": 44,
+  "cortes_por_segundo": 0.52,
+  "plano_mediana_s": 1.33,
+  "bpm": 111.3,
+  "cortes_sobre_beat": 0.68,
+  "lum_p5": 11.2,
+  "lum_mediana": 60.1,
+  "lum_p95": 174.3,
+  "saturacion": 0.27,
+  "clipping_pct": 0.055,
+  "nitidez": 748.5
+}

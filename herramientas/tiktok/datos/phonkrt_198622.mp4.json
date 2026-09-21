@@ -1,0 +1,18 @@
+{
+  "archivo": "phonkrt_198622.mp4",
+  "segundos": 32.0,
+  "fps": 60.0,
+  "ancho": 1080,
+  "alto": 1920,
+  "cortes": 0,
+  "cortes_por_segundo": 0.0,
+  "plano_mediana_s": null,
+  "bpm": 83.9,
+  "cortes_sobre_beat": null,
+  "lum_p5": 0.0,
+  "lum_mediana": 17.8,
+  "lum_p95": 132.9,
+  "saturacion": 0.166,
+  "clipping_pct": 0.137,
+  "nitidez": 153.6
+}

@@ -1,0 +1,18 @@
+{
+  "archivo": "tekno_edit__222727.mp4",
+  "segundos": 16.37,
+  "fps": 30.0,
+  "ancho": 720,
+  "alto": 720,
+  "cortes": 17,
+  "cortes_por_segundo": 1.04,
+  "plano_mediana_s": 0.7,
+  "bpm": 85.2,
+  "cortes_sobre_beat": 0.18,
+  "lum_p5": 2.6,
+  "lum_mediana": 34.3,
+  "lum_p95": 142.1,
+  "saturacion": 0.187,
+  "clipping_pct": 0.021,
+  "nitidez": 217.8
+}
