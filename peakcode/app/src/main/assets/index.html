@@ -79,10 +79,14 @@ pre{background:#000;padding:12px;border-radius:10px;overflow-x:auto;font-size:12
       <button class="boton secundario" id=bReintentar>Ya está — buscar de nuevo</button>
       <div class=pista id=avisoTermux></div>
     </div>
-    <button class=boton id=bManual style="margin-top:22px">Poner la dirección a mano</button>
+    <button class=boton id=bServidor style="margin-top:22px">Uso un servidor (no el teléfono)</button>
+    <button class="boton secundario" id=bManual>Poner la dirección a mano</button>
     <div id=manual style="display:none">
       <label>Dirección del motor</label>
-      <input id=mURL placeholder="http://127.0.0.1:20128/v1">
+      <input id=mURL placeholder="https://tu-usuario-peakcode-motor.hf.space/v1">
+      <div class=pista>Si armaste el motor en un Space de Hugging Face (ver
+       <code>peakcode/servidor</code> en el repo), pegá su dirección terminada
+       en <code>/v1</code>. La app hace el login y saca la llave sola.</div>
       <button class="boton secundario" id=bProbarManual>Probar</button>
     </div>
   </div>
@@ -186,6 +190,7 @@ $('#bTermux').onclick=()=>{
 $('#bCopiar').onclick=()=>Peak.copiar($('#cmd').textContent);
 $('#bReintentar').onclick=buscar;
 $('#bManual').onclick=()=>{$('#manual').style.display='block';$('#mURL').value=G.url||CANDIDATAS[0];};
+$('#bServidor').onclick=()=>{$('#manual').style.display='block';$('#mURL').value=G.url&&/https/.test(G.url)?G.url:'https://.hf.space/v1';$('#mURL').focus();};
 $('#bProbarManual').onclick=async()=>{
   const u=$('#mURL').value.trim();
   $('#e1').className='estado'; $('#e1').textContent='Probando '+u+'…';
