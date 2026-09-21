@@ -162,3 +162,141 @@ El comando de instalación en Termux (ARM). OmniRoute pesa 431 MB con 77
 dependencias, algunas nativas, y pide Node >=22.22.2. En Termux va
 `nodejs-lts`. **No se probó en un teléfono de verdad** — puede fallar al
 compilar alguna dependencia nativa.
+
+---
+
+# 0.9 — modo agente, workflow y todos los formatos
+
+Hasta la 0.8 PeakCode era un chat que sabía guardar archivos. La 0.9 es un
+agente: hace el trabajo solo y te deja los archivos hechos en el teléfono.
+
+## Los tres modos
+
+| modo | qué hace |
+|---|---|
+| 💬 **Chat** | lo de siempre: charla con streaming y artifacts |
+| ⚡ **Agente** | usa herramientas en un bucle hasta terminar la tarea |
+| 🧩 **Workflow** | planificador → N obreros en paralelo → integrador → revisor |
+
+## Por qué un protocolo de etiquetas y no *function calling*
+
+El motor gratis (Pollinations) y varios de los 492 de OmniRoute no soportan
+*function calling*, o lo soportan mal. Un protocolo de texto anda con cualquier
+modelo que sepa escribir:
+
+```
+<peak:crear archivo="informe.md">…contenido…</peak:crear>
+<peak:leer archivo="datos.csv" desde="0" hasta="6000"></peak:leer>
+<peak:agente nombre="investigador" tarea="…">contexto</peak:agente>
+<peak:listo>resumen</peak:listo>
+```
+
+También hay `anexar`, `listar`, `buscar`, `borrar`, `guardar` y `plan`.
+
+## "Ejecutando": el contenido no se muestra mientras se escribe
+
+El pedido fue que la app cree el archivo sin mostrar el proceso de tipeo. Se
+resuelve con un **lector incremental** (`Lector`, en `agente.js`): apenas ve la
+apertura `<peak:crear>`, lo que sigue deja de ir a la pantalla y se convierte
+en un renglón de actividad que dice `ejecutando` y cuánto lleva escrito. Al
+cerrar, el renglón pasa a tilde con la ruta.
+
+El lector está probado alimentándolo **de a un carácter**, porque así llega de
+verdad por SSE: un tag puede partirse en `<pea` + `k:crear…`. Hay 16 pruebas
+en el repo de trabajo, incluidas las de contenido con `</peak:otracosa>` y `<div>`
+adentro del archivo.
+
+## Los dos techos que se corrieron, y lo que NO se puede
+
+**Escritura.** Si el modelo se corta por largo, la app le manda las últimas
+1800 letras y le pide que siga exacto, hasta 40 veces (`TOPES.continuaciones`).
+El archivo sale entero aunque no entre en una respuesta.
+
+**Contexto.** Dos cosas. Una: los adjuntos ya **no** van al contexto, van al
+*taller*, y el agente lee pedazos con `<peak:leer desde= hasta=>`. Antes un
+archivo de 200k caracteres entraba entero al historial. Dos: cuando la charla
+pasa de 52 mil caracteres se **compacta** (se resume lo viejo, se dejan los
+últimos 6 mensajes intactos).
+
+**Lo que no es:** esto no le saca la ventana de contexto al modelo, ni el techo
+por respuesta. Son las dos mismas maniobras que hace Claude Code —escribir en
+pedazos y compactar— para que el techo no se note. Un modelo con ventana chica
+sigue teniendo ventana chica.
+
+## El taller
+
+Un sistema de archivos plano en `localStorage` (botón 🗂). Es lo que le permite
+a varios agentes trabajar sobre lo mismo y lo que mantiene el contexto flaco.
+Se puede ver, previsualizar, exportar a cualquier formato y bajar entero en ZIP.
+
+## Paralelismo de verdad
+
+`Peak.stream` ya lanzaba un hilo de Java por llamada; lo que faltaba era del
+lado del JS, donde había **una sola** conversación en curso (`enCurso`). Ahora
+las llamadas se registran por id en un `Map`, y los obreros corren a la vez.
+Medido en la prueba automatizada: **pico de 3 llamadas simultáneas**.
+
+Dos bugs que solo aparecen con agentes en paralelo y que costaron encontrarlos:
+
+- El id de acción se armaba con `índice + Date.now()`. Dos agentes en el mismo
+  milisegundo sacaban el **mismo id**, se pisaban el renglón en pantalla y uno
+  quedaba colgado en "ejecutando" para siempre.
+- Los módulos son `<script>` clásicos y **comparten el ámbito global**: el
+  `const G` de `nucleo.js` chocaba con el `const {G}` de los otros tres y no
+  cargaba ninguno. Cada módulo va adentro de su propia función.
+
+## Los archivos
+
+| archivo | qué tiene |
+|---|---|
+| `index.html` | marcado y estilos |
+| `puente.js` | `Peak` de mentira si no estamos en el APK, para probar en el escritorio |
+| `formatos.js` | los 57 formatos, todo offline y sin librerías |
+| `nucleo.js` | estado, taller, multiplexor de streams, continuación, compactación |
+| `agente.js` | protocolo, lector incremental, herramientas, bucle |
+| `flujo.js` | el workflow de cuatro pasos |
+| `interfaz.js` | pantalla, renglones de actividad, hojas |
+
+## Los 57 formatos
+
+Documento: txt, md, pdf, docx, odt, rtf, epub, tex ·
+Planilla: csv, tsv, xlsx, ods ·
+Presentación: pptx ·
+Web: html, css, js, ts, jsx, tsx, vue, svg ·
+Datos: json, jsonl, xml, yaml, toml, ini, sql, geojson ·
+Código: py, java, kt, swift, c, h, cpp, cs, go, rs, rb, php, lua, r, dart, sh,
+bat, ps1, diff ·
+Varios: srt, vtt, ics, vcf, m3u, gpx, log, env, zip
+
+Los armados (pdf, docx, xlsx, pptx, odt, ods, epub, rtf) se generan **en JS
+puro, sin librerías**: el mismo `zip()` store-only sirve para OOXML,
+OpenDocument y EPUB, que los tres son un ZIP con XML adentro. Se escribe
+Markdown para documentos y CSV para planillas, y la app convierte. En pptx,
+cada `# título` es una lámina.
+
+Validados con Python: ZIP íntegro, XML bien formado, partes obligatorias
+presentes, y `mimetype` primero y sin comprimir en odt/ods/epub (que es lo que
+exigen esos formatos).
+
+### Dos bugs viejos del PDF que aparecieron acá
+
+El generador de PDF de la 0.8 tenía dos fallas que solo se ven con acentos:
+
+1. Los offsets de la tabla `xref` se contaban en **caracteres** pero el archivo
+   se escribía en UTF-8. Cualquier acento corría todos los offsets y los
+   lectores avisaban *"incorrect startxref pointer"*.
+2. El texto iba en UTF-8 declarado como WinAnsi, así que `ñandú` salía `Ã±andÃº`.
+
+Los dos se arreglan con lo mismo: escribir el PDF en **Latin-1**, donde un
+carácter es un byte. Verificado con `pypdf`: 0 avisos, acentos correctos, y un
+PDF de 300 renglones que pagina en 13 hojas con el primero y el último enteros.
+
+## Riendas
+
+Están en `TOPES` (`nucleo.js`), y son para que un agente no se dispare, no
+límites del modelo: 24 pasos por tarea, 40 continuaciones, profundidad 2
+(un agente delega, el subagente ya no), 6 obreros como máximo.
+
+El botón ■ frena. Es un **corte blando**: el puente de Java no sabe cancelar
+una llamada a mitad de camino, así que se deja de escuchar y el bucle se para
+en el próximo control. El hilo termina solo y su respuesta se tira.

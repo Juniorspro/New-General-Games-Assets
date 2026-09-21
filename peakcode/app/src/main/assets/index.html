@@ -46,10 +46,10 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
  color:var(--texto);border-radius:11px;padding:9px 12px;font:600 14px system-ui;max-width:46vw}
 .chip .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip .fl{color:var(--tenue);font-weight:400}
-#sheet,#sheetFmt{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
+#sheet,#sheetFmt,#sheetTaller{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
  border-radius:18px 18px 0 0;max-height:70dvh;overflow-y:auto;transform:translateY(102%);
  transition:transform .22s ease;z-index:8;padding:8px 0 14px}
-#sheet.ver,#sheetFmt.ver{transform:translateY(0)}
+#sheet.ver,#sheetFmt.ver,#sheetTaller.ver{transform:translateY(0)}
 #sheetFmt{left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
  border-radius:18px 18px 0 0;transform:translateY(102%);transition:transform .22s ease;z-index:8;padding:8px 0 14px}
 #velo{position:fixed;inset:0;background:#000a;opacity:0;pointer-events:none;transition:opacity .2s;z-index:7}
@@ -82,11 +82,47 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
 #preview .barra button.x{background:var(--panel);color:var(--texto);border:1px solid var(--linea)}
 #preview iframe{flex:1;border:0;width:100%;background:#fff}
 .fila{display:flex;gap:8px}.fila>*{flex:1}
+
+/* ── renglones de actividad, estilo Claude Code ─────────────────────────── */
+.acts{display:flex;flex-direction:column;gap:2px;margin:4px 0}
+.act{display:flex;gap:9px;align-items:flex-start;font:13.5px/1.5 ui-monospace,
+ SFMono-Regular,Menlo,monospace;padding:3px 0;color:var(--texto)}
+.act .pip{flex:0 0 14px;text-align:center;color:var(--acento);line-height:1.5}
+.act.hecho .pip{color:var(--bien)}
+.act.mal .pip{color:var(--mal)}
+.act .qué{flex:1;min-width:0;word-break:break-word}
+.act .det{color:var(--tenue);font-size:12.5px}
+.act .corre{color:var(--acento)}
+.act.mal .det{color:#ffb3ad}
+@keyframes lat{0%,100%{opacity:1}50%{opacity:.25}}
+.act .lat{animation:lat 1.1s ease-in-out infinite}
+.sangria{padding-left:23px;color:var(--tenue);font:12.5px/1.5 ui-monospace,monospace;
+ white-space:pre-wrap;word-break:break-word}
+.agente-tag{display:inline-block;background:var(--linea);color:var(--texto);border-radius:6px;
+ padding:0 6px;margin-right:6px;font:600 11.5px system-ui}
+.modo-chip{background:var(--panel);border:1px solid var(--linea);color:var(--texto);
+ border-radius:11px;padding:9px 11px;font:600 13px system-ui;white-space:nowrap}
+.modo-chip.vivo{border-color:var(--acento);color:var(--acento)}
+.barra-modo{display:flex;gap:6px;padding:0 12px 8px}
+.barra-modo button{flex:1;background:var(--panel);border:1px solid var(--linea);
+ color:var(--tenue);border-radius:10px;padding:7px 4px;font:600 12.5px system-ui}
+.barra-modo button.sel{border-color:var(--acento);color:var(--acento);background:#d977570f}
+.tallerfila{display:flex;gap:10px;align-items:center;padding:11px 18px}
+.tallerfila:active{background:#ffffff0c}
+.tallerfila .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.tallerfila .t{color:var(--tenue);font-size:12px;white-space:nowrap}
+.tallerfila button{background:var(--linea);border:0;color:var(--texto);font:600 12px system-ui;
+ padding:6px 10px;border-radius:8px}
+.grupo{padding:12px 18px 4px;color:var(--acento);font:600 12px system-ui;text-transform:uppercase;
+ letter-spacing:.04em}
+.detener{background:var(--mal);color:#fff;border:0;border-radius:13px;min-width:48px;height:46px;
+ font:600 15px system-ui}
 </style></head><body>
 
 <header>
   <b>PeakCode</b><span class=modelo id=cabModelo>—</span>
   <button class=icono id=bAdjuntar title=Adjuntar>📎</button>
+  <button class=icono id=bTaller title=Taller>🗂</button>
   <button class=icono id=bLimpiar title=Nueva>✚</button>
   <button class=icono id=bAjustes title=Ajustes>⚙</button>
 </header>
@@ -94,10 +130,17 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
 <div id=velo></div>
 <div id=sheetFmt><div class=sh-tit>Guardar como</div><div id=fmtLista></div></div>
 <div id=sheet><div class=sh-tit id=shTit>Elegí el modelo</div><div id=shLista></div></div>
+<div id=sheetTaller><div class=sh-tit>Taller · archivos de trabajo</div><div id=tallerLista></div><div style="padding:10px 18px 4px"><button class="boton secundario" id=bTallerZip>⤓ Bajar todo en un ZIP</button><button class="boton secundario" id=bTallerVaciar>Vaciar el taller</button></div></div>
+<div class=barra-modo>
+  <button id=mChat class=sel>💬 Chat</button>
+  <button id=mAgente>⚡ Agente</button>
+  <button id=mFlujo>🧩 Workflow</button>
+</div>
 <footer>
   <button class=chip id=bModelo><span class=n>modelo</span><span class=fl>▾</span></button>
   <textarea id=entrada rows=1 placeholder="Escribí…"></textarea>
   <button class=env id=bEnviar>↑</button>
+  <button class="detener oculto" id=bDetener>■</button>
 </footer>
 
 <div class=tapa id=ajustes>
@@ -127,6 +170,9 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
     <div class=pista>Cómo armar el servidor gratis: carpeta <code>peakcode/servidor</code> del repo.</div>
   </div>
 
+  <label>Agentes en paralelo (modo Workflow)</label>
+  <select id=cObreros><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+  <div class=pista>Cada agente es una conexión aparte al motor. Más agentes terminan antes, pero gastan más rápido el límite del motor gratis.</div>
   <button class=boton id=bGuardar>Guardar</button>
   <button class="boton secundario" id=bCerrar>Cerrar</button>
 </div>
@@ -140,414 +186,10 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
   <iframe id=pvFrame sandbox="allow-scripts allow-modals"></iframe>
 </div>
 
-<script>
-const $=s=>document.querySelector(s);
-const FREE={chat:'https://text.pollinations.ai/openai', key:'', modelo:'openai', preset:'free'};
-const G={
-  preset:localStorage.getItem('preset')||'free',
-  chat:localStorage.getItem('chat')||FREE.chat,
-  key:localStorage.getItem('key')||'',
-  modelo:localStorage.getItem('modelo')||FREE.modelo
-};
-let hist=JSON.parse(localStorage.getItem('hist')||'[]');
-function salvar(){for(const k of ['preset','chat','key','modelo'])localStorage.setItem(k,G[k]);}
-function pintarCab(){$('#cabModelo').textContent=(G.preset==='free'?'gratis · ':'')+ (G.modelo||'—');}
-
-// ── streaming por el puente de Java (sin CORS) ───────────────────────────────
-let enCurso=null;                 // {id, caja, texto}
-window.peakChunk=(id,data)=>{
-  if(!enCurso||enCurso.id!==id)return;
-  if(data.startsWith('__PLANO__')){                 // respuesta no-SSE: texto crudo
-    enCurso.texto=data.slice(9); enCurso.caja.textContent=enCurso.texto;
-    $('#hilo').scrollTop=1e9; return;
-  }
-  if(data==='[DONE]')return;
-  try{
-    const j=JSON.parse(data);
-    const t=j.choices?.[0]?.delta?.content ?? j.choices?.[0]?.message?.content ?? '';
-    if(t){enCurso.texto+=t; enCurso.caja.textContent=enCurso.texto; $('#hilo').scrollTop=1e9;}
-  }catch(e){}
-};
-window.peakFin=(id)=>{
-  if(!enCurso||enCurso.id!==id)return;
-  const t=enCurso.texto||'(el modelo no devolvió nada)';
-  enCurso.caja.textContent=t;
-  hist.push({role:'assistant',content:t}); guardarHist(); const c=enCurso; enCurso=null;
-  // re-render para que aparezca el botón guardar
-  repintar();
-};
-window.peakErr=(id,msg)=>{
-  if(!enCurso||enCurso.id!==id)return;
-  enCurso.caja.remove(); enCurso=null;
-  const pista=/HTTP 401|403/.test(msg)?'la llave no sirve. Revisá el motor en ⚙.'
-    :/HTTP 429/.test(msg)?'te frenaron por límite de uso. Probá de nuevo en un rato.'
-    :/HTTP 5\d\d/.test(msg)?'el motor tuvo un problema: '+msg
-    :'no pude conectar. '+msg;
-  poner('Error: '+pista,'err');
-};
-
-// ── chat ─────────────────────────────────────────────────────────────────────
-function poner(t,q,guardable){
-  const d=document.createElement('div');d.className='msg '+q;
-  if(q==='el'&&guardable) pintarAsistente(d,t); else d.textContent=t;
-  if(guardable){const b=document.createElement('button');
-    b.className='guardar';b.textContent='⤓ guardar';
-    b.onclick=()=>menuFormato(d.textContent);
-    d.appendChild(b);}
-  $('#hilo').appendChild(d);$('#hilo').scrollTop=1e9;return d;
-}
-function repintar(){
-  $('#hilo').innerHTML='';
-  if(!hist.length) poner('Hola. Ya estoy lista, escribí lo que necesites.\nSi querés otro motor, tocá ⚙.','el');
-  hist.forEach(m=>poner(m.content,m.role==='user'?'yo':'el',m.role!=='user'));
-}
-function guardarHist(){localStorage.setItem('hist',JSON.stringify(hist.slice(-40)));}
-
-$('#bAdjuntar').onclick=()=>Peak.abrir();
-window.peakArchivoLeido=d=>{
-  if(d.error){poner('No pude leer el archivo: '+d.error,'err');return;}
-  hist.push({role:'user',content:'--- '+d.nombre+' ---\n'+d.texto});guardarHist();
-  poner('📎 '+d.nombre+' ('+d.texto.length+' caracteres)','yo');
-};
-$('#bLimpiar').onclick=()=>{hist=[];guardarHist();repintar();};
-
-function enviar(){
-  const ta=$('#entrada'),txt=ta.value.trim();
-  if(!txt||enCurso)return;
-  ta.value='';ta.style.height='auto';
-  hist.push({role:'user',content:txt});poner(txt,'yo');guardarHist();
-  const caja=poner('…','el',false);
-  const id='m'+Date.now();
-  enCurso={id,caja,texto:''};
-  const body=JSON.stringify({model:G.modelo||undefined,messages:hist,stream:true});
-  Peak.stream(id, G.chat, G.key, body);
-}
-$('#bEnviar').onclick=enviar;
-$('#entrada').addEventListener('input',e=>{e.target.style.height='auto';
- e.target.style.height=Math.min(e.target.scrollHeight,innerHeight*.38)+'px';});
-
-// ── ajustes ───────────────────────────────────────────────────────────────────
-function pintarZonas(){
-  const omni=$('#cPreset').value==='omni';
-  $('#zonaOmni').classList.toggle('oculto',!omni);
-  $('#zonaFree').classList.toggle('oculto',omni);
-}
-$('#cPreset').onchange=pintarZonas;
-$('#bAjustes').onclick=()=>{
-  $('#cPreset').value=G.preset;
-  $('#cURL').value=G.preset==='omni'?G.chat.replace(/\/chat\/completions$/,''):'';
-  $('#cClave').value=localStorage.getItem('clave')||'';
-  pintarZonas(); $('#ajustes').classList.add('ver');
-};
-$('#bCerrar').onclick=()=>$('#ajustes').classList.remove('ver');
-
-$('#bConectar').onclick=async()=>{
-  const base=$('#cURL').value.trim().replace(/\/+$/,'');
-  const raiz=base.replace(/\/v1$/,''); const clave=$('#cClave').value;
-  const e=$('#eOmni'); e.classList.remove('oculto'); e.className='estado'; e.textContent='Entrando…';
-  try{
-    let r=await fetch(raiz+'/api/auth/login',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({password:clave})});
-    if(!r.ok)throw new Error(r.status===401?'la contraseña no es esa':'login HTTP '+r.status);
-    r=await fetch(raiz+'/api/keys',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'PeakCode'})});
-    if(!r.ok)throw new Error('no me dejó crear la llave: HTTP '+r.status);
-    const k=(await r.json()).key; if(!k)throw new Error('no devolvió llave');
-    localStorage.setItem('clave',clave);
-    G.key=k; G.chat=base+'/chat/completions';
-    e.className='estado ok'; e.textContent='Conectado. Trayendo modelos…';
-    await traerModelos(base,k);
-  }catch(err){ e.className='estado no'; e.textContent=err.message; }
-};
-async function traerModelos(base,key){
-  try{
-    const r=await fetch(base+'/models',{headers:{Authorization:'Bearer '+key}});
-    const xs=((await r.json()).data||[]).map(m=>m.id)
-      .sort((a,b)=>(b.startsWith('auto/')-a.startsWith('auto/'))||a.localeCompare(b));
-    $('#cModelo').innerHTML=''; xs.forEach(id=>{const o=document.createElement('option');
-      o.value=o.textContent=id;$('#cModelo').appendChild(o);});
-    $('#cModelo').value=xs.find(x=>x==='auto/best-coding')||xs.find(x=>x.startsWith('auto/'))||xs[0];
-    return xs.length;
-  }catch(e){ return 0; }
-}
-$('#bTraer').onclick=()=>{const b=$('#cURL').value.trim().replace(/\/+$/,'');
-  traerModelos(b,G.key).then(n=>Peak.aviso(n?n+' modelos':'no pude traer la lista'));};
-
-$('#bGuardar').onclick=()=>{
-  if($('#cPreset').value==='free'){
-    Object.assign(G,FREE);
-  }else{
-    const base=$('#cURL').value.trim().replace(/\/+$/,'');
-    G.preset='omni'; G.chat=base+'/chat/completions';
-    if($('#cModelo').value)G.modelo=$('#cModelo').value;
-  }
-  salvar(); pintarCab(); $('#ajustes').classList.remove('ver'); repintar(); Peak.aviso('Guardado');
-};
-
-
-
-// ── artifacts: cuadritos de código con vista previa y descarga ────────────────
-const EXT_LANG={html:'html',xml:'xml',svg:'svg',js:'js',javascript:'js',ts:'ts',
- typescript:'ts',css:'css',py:'py',python:'py',json:'json',java:'java',c:'c',cpp:'cpp',
- sh:'sh',bash:'sh',md:'md',markdown:'md',sql:'sql',csv:'csv',php:'php',go:'go',rs:'rs'};
-const MIME_EXT={html:'text/html',svg:'image/svg+xml',json:'application/json',
- csv:'text/csv',md:'text/markdown'};
-
-let _pvTexto='', _pvExt='html', _pvNom='pagina';
-function verPreview(codigo, ext, titulo){
- _pvTexto=codigo; _pvExt=ext; _pvNom=(titulo||'archivo').replace(/[^A-Za-z0-9._-]/g,'_');
- const fr=$('#pvFrame');
- let doc=codigo;
- if(ext==='svg') doc='<!doctype html><meta charset=utf-8><body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#fff">'+codigo+'</body>';
- else if(ext==='md') doc='<!doctype html><meta charset=utf-8><body style="font:16px system-ui;max-width:44em;margin:1.5em auto;padding:0 1em;white-space:pre-wrap">'+codigo.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</body>';
- else if(!/^\s*<(!doctype|html)/i.test(codigo)) doc='<!doctype html><meta charset=utf-8>'+codigo;
- fr.srcdoc=doc;
- $('#pvTit').textContent=titulo||'Vista previa';
- $('#preview').classList.add('ver');
-}
-$('#pvCerrar').onclick=()=>{$('#preview').classList.remove('ver');$('#pvFrame').srcdoc='';};
-$('#pvBajar').onclick=()=>{
- const nom=_pvNom.endsWith('.'+_pvExt)?_pvNom:_pvNom+'.'+_pvExt;
- const r=Peak.guardar(nom,_pvTexto);
- Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);
-};
-
-// pinta un mensaje del asistente partiendo texto y bloques ```
-function pintarAsistente(cont, texto){
- cont.textContent='';
- const re=/```([^\n`]*)\n?([\s\S]*?)```/g;
- let i=0,m,idx=0;
- while((m=re.exec(texto))){
-  if(m.index>i){const t=document.createElement('span');t.textContent=texto.slice(i,m.index);cont.appendChild(t);}
-  const lang=(m[1]||'').trim().toLowerCase();
-  const ext=EXT_LANG[lang]|| (lang||'txt');
-  const codigo=m[2].replace(/\n$/,'');
-  cont.appendChild(cuadro(codigo, ext, ++idx));
-  i=re.lastIndex;
- }
- if(i<texto.length){const t=document.createElement('span');t.textContent=texto.slice(i);cont.appendChild(t);}
- if(idx===0) cont.textContent=texto;   // sin bloques: texto pelado
-}
-function cuadro(codigo, ext, n){
- const box=document.createElement('div');box.className='bloque';
- const cab=document.createElement('div');cab.className='bloque-cab';
- const et=document.createElement('span');et.className='lang';et.textContent=ext.toUpperCase();
- cab.appendChild(et);
- // descargar (arriba, segun el tipo)
- const bd=document.createElement('button');bd.textContent='⤓ '+ext;
- bd.onclick=()=>{const nom='peakcode_'+n+'.'+ext;
-   const r=Peak.guardar(nom,codigo);Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);};
- // vista previa: para lo que se puede mostrar
- if(['html','svg','md','xml'].includes(ext)){
-  const bp=document.createElement('button');bp.className='prev';bp.textContent='▷ Vista previa';
-  bp.onclick=()=>verPreview(codigo, ext==='xml'?'html':ext, 'Bloque '+n);
-  cab.appendChild(bp);
- }
- cab.appendChild(bd);
- const pre=document.createElement('pre');pre.textContent=codigo;
- box.appendChild(cab);box.appendChild(pre);
- return box;
-}
-
-// ── generar archivos, todo offline ───────────────────────────────────────────
-function b64(u8){let s='';for(let i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return btoa(s);}
-function utf8(str){return new TextEncoder().encode(str);}
-
-// CRC32 para el ZIP del docx
-const _crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;
- for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
-function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_crcT[(c^u8[i])&0xFF]^(c>>>8);
- return (c^0xFFFFFFFF)>>>0;}
-
-// ZIP store-only (sin comprimir): alcanza para un docx
-function zip(archivos){
- const le=[],ce=[];let off=0;
- for(const a of archivos){
-  const nom=utf8(a.nombre), dat=utf8(a.texto), crc=crc32(dat);
-  const lh=new Uint8Array(30+nom.length); const dv=new DataView(lh.buffer);
-  dv.setUint32(0,0x04034b50,true);dv.setUint16(4,20,true);dv.setUint16(6,0x800,true);
-  dv.setUint32(14,crc,true);dv.setUint32(18,dat.length,true);dv.setUint32(22,dat.length,true);
-  dv.setUint16(26,nom.length,true);lh.set(nom,30);
-  le.push(lh,dat);
-  const ch=new Uint8Array(46+nom.length); const cv=new DataView(ch.buffer);
-  cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);
-  cv.setUint16(8,0x800,true);cv.setUint32(16,crc,true);cv.setUint32(20,dat.length,true);
-  cv.setUint32(24,dat.length,true);cv.setUint16(28,nom.length,true);cv.setUint32(42,off,true);
-  ch.set(nom,46);ce.push(ch);
-  off+=lh.length+dat.length;
- }
- const cd=ce.reduce((a,b)=>a+b.length,0);
- const end=new Uint8Array(22);const ev=new DataView(end.buffer);
- ev.setUint32(0,0x06054b50,true);ev.setUint16(8,ce.length,true);ev.setUint16(10,ce.length,true);
- ev.setUint32(12,cd,true);ev.setUint32(16,off,true);
- const partes=[...le,...ce,end];const tot=partes.reduce((a,b)=>a+b.length,0);
- const out=new Uint8Array(tot);let p=0;for(const x of partes){out.set(x,p);p+=x.length;}
- return out;
-}
-function xmlEsc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function docx(texto){
- const parr=texto.split('\n').map(l=>
-  '<w:p><w:r><w:t xml:space="preserve">'+xmlEsc(l)+'</w:t></w:r></w:p>').join('');
- const doc='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
-  '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
-  '<w:body>'+parr+'</w:body></w:document>';
- const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
-  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
-  '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
-  '<Default Extension="xml" ContentType="application/xml"/>'+
-  '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
-  '</Types>';
- const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
-  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
-  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
-  '</Relationships>';
- return zip([{nombre:'[Content_Types].xml',texto:ct},
-             {nombre:'_rels/.rels',texto:rels},
-             {nombre:'word/document.xml',texto:doc}]);
-}
-
-// PDF A4, Helvetica 11, con corte de renglon y paginado
-function pdf(texto){
- const AN=595,AL=842,MX=50,MY=50,FS=11,LH=15,COLS=88;
- const lineas=[];
- for(const cruda of texto.split('\n')){
-  if(cruda.length<=COLS){lineas.push(cruda);continue;}
-  let l=cruda;while(l.length>COLS){let corte=l.lastIndexOf(' ',COLS);if(corte<40)corte=COLS;
-   lineas.push(l.slice(0,corte));l=l.slice(corte).replace(/^ /,'');}lineas.push(l);
- }
- const porPag=Math.floor((AL-2*MY)/LH);
- const pags=[];for(let i=0;i<lineas.length;i+=porPag)pags.push(lineas.slice(i,i+porPag));
- if(!pags.length)pags.push(['']);
- const esc=t=>t.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
- const obj=[];                       // texto de cada objeto
- obj.push('<< /Type /Catalog /Pages 2 0 R >>');
- const kids=[]; let n=3+pags.length; // fuente y contenidos despues de las paginas
- pags.forEach((_,i)=>kids.push((3+i)+' 0 R'));
- obj.push('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+pags.length+' >>');
- const fuenteObj=3+pags.length+pags.length; // n de la fuente
- pags.forEach((_,i)=>{
-  const cont=fuenteObj+1+i;
-  obj.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+AN+' '+AL+'] '+
-    '/Resources << /Font << /F1 '+fuenteObj+' 0 R >> >> /Contents '+cont+' 0 R >>');
- });
- obj.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
- pags.forEach(pag=>{
-  let cs='BT /F1 '+FS+' Tf '+LH+' TL '+MX+' '+(AL-MY)+' Td\n';
-  pag.forEach((l,j)=>{cs+='('+esc(l)+') Tj'+(j<pag.length-1?' T*':'')+'\n';});
-  cs+='ET';
-  obj.push('<< /Length '+utf8(cs).length+' >>\nstream\n'+cs+'\nendstream');
- });
- let pdf='%PDF-1.4\n';const offs=[0];
- obj.forEach((o,i)=>{offs.push(pdf.length);pdf+=(i+1)+' 0 obj\n'+o+'\nendobj\n';});
- const xref=pdf.length;
- pdf+='xref\n0 '+(obj.length+1)+'\n0000000000 65535 f \n';
- for(let i=1;i<=obj.length;i++)pdf+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
- pdf+='trailer\n<< /Size '+(obj.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
- return utf8(pdf);
-}
-
-const FORMATOS=[
- {ext:'txt', nom:'Texto (.txt)',      mime:'text/plain', bin:false},
- {ext:'md',  nom:'Markdown (.md)',    mime:'text/markdown', bin:false},
- {ext:'html',nom:'Página web (.html)',mime:'text/html', bin:false},
- {ext:'csv', nom:'Tabla (.csv)',      mime:'text/csv', bin:false},
- {ext:'pdf', nom:'PDF (.pdf)',        mime:'application/pdf', bin:true},
- {ext:'docx',nom:'Word (.docx)',      mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', bin:true},
-];
-let _guardarTexto='';
-function menuFormato(texto){
- _guardarTexto=texto;
- const l=$('#fmtLista');l.innerHTML='';
- FORMATOS.forEach(f=>{
-  const d=document.createElement('div');d.className='mod';
-  d.innerHTML='<div class=ava>'+f.ext.toUpperCase().slice(0,2)+'</div>'+
-   '<div class=cuerpo><div class=nom></div></div>';
-  d.querySelector('.nom').textContent=f.nom;
-  d.onclick=()=>{cerrarFmt();hacerArchivo(f);};
-  l.appendChild(d);
- });
- $('#sheetFmt').classList.add('ver');$('#velo').classList.add('ver');
-}
-function cerrarFmt(){$('#sheetFmt').classList.remove('ver');
- if(!$('#sheet').classList.contains('ver'))$('#velo').classList.remove('ver');}
-function hacerArchivo(f){
- const base=(prompt('Nombre del archivo:', 'peakcode.'+f.ext)||'').trim();
- if(!base)return;
- const nom=base.endsWith('.'+f.ext)?base:base+'.'+f.ext;
- let r;
- if(!f.bin){
-  let t=_guardarTexto;
-  if(f.ext==='html'&&!/<html/i.test(t))
-   t='<!doctype html><meta charset=utf-8><body style="font:16px system-ui;max-width:40em;margin:2em auto;white-space:pre-wrap">'+
-     _guardarTexto.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</body>';
-  r=Peak.guardar(nom,t);
- }else{
-  const bytes=f.ext==='pdf'?pdf(_guardarTexto):docx(_guardarTexto);
-  r=Peak.guardarBinario(nom,b64(bytes),f.mime);
- }
- Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);
-}
-
-// ── selector de modelos, estilo hoja inferior ────────────────────────────────
-let CATALOGO=[];   // [{id, nom, desc}]
-
-function iniciales(id){
-  const base=id.split('/').pop().replace(/[-_.]/g,' ').trim();
-  return (base[0]||'?').toUpperCase();
-}
-function lindo(id){
-  // "auto/best-coding" -> "Best coding" ; "openai" -> "Openai"
-  const b=id.split('/').pop().replace(/[-_]/g,' ');
-  return b.charAt(0).toUpperCase()+b.slice(1);
-}
-
-async function cargarCatalogo(){
-  CATALOGO=[];
-  try{
-    if(G.preset==='free'){
-      const r=await fetch('https://text.pollinations.ai/models');
-      const d=await r.json();
-      CATALOGO=(Array.isArray(d)?d:[]).map(m=>({
-        id:m.name||m.id, nom:lindo(m.name||m.id),
-        desc:(m.description||'')+(m.reasoning?' · razona':'')}));
-    }else{
-      const base=G.chat.replace(/\/chat\/completions$/,'');
-      const r=await fetch(base+'/models',{headers:{Authorization:'Bearer '+G.key}});
-      const xs=((await r.json()).data||[]).map(m=>m.id);
-      xs.sort((a,b)=>(b.startsWith('auto/')-a.startsWith('auto/'))||a.localeCompare(b));
-      CATALOGO=xs.map(id=>({id, nom:lindo(id),
-        desc:id.startsWith('auto/')?'ruteo: elige el mejor disponible solo':''}));
-    }
-  }catch(e){}
-  if(!CATALOGO.length) CATALOGO=[{id:G.modelo||'openai',nom:lindo(G.modelo||'openai'),desc:''}];
-  if(!CATALOGO.find(m=>m.id===G.modelo)) G.modelo=CATALOGO[0].id;
-}
-
-function abrirSheet(){
-  const l=$('#shLista'); l.innerHTML='';
-  $('#shTit').textContent=(G.preset==='free'?'Gratis':'OmniRoute')+' · '+CATALOGO.length+' modelos';
-  CATALOGO.forEach(m=>{
-    const d=document.createElement('div');
-    d.className='mod'+(m.id===G.modelo?' sel':'');
-    d.innerHTML='<div class=ava>'+iniciales(m.id)+'</div><div class=cuerpo>'+
-      '<div class=nom></div><div class=desc></div></div>'+
-      (m.id===G.modelo?'<div class=tick>✓</div>':'');
-    d.querySelector('.nom').textContent=m.nom;
-    d.querySelector('.desc').textContent=m.desc||m.id;
-    d.onclick=()=>{ G.modelo=m.id; salvar(); pintarCab(); cerrarSheet(); };
-    l.appendChild(d);
-  });
-  $('#sheet').classList.add('ver'); $('#velo').classList.add('ver');
-}
-function cerrarSheet(){$('#sheet').classList.remove('ver');$('#velo').classList.remove('ver');}
-$('#velo').onclick=()=>{cerrarSheet();cerrarFmt();};
-$('#bModelo').onclick=async()=>{ if(!CATALOGO.length)await cargarCatalogo(); abrirSheet(); };
-
-function pintarChip(){ $('#bModelo .n').textContent=lindo(G.modelo||'—'); }
-const _pc=pintarCab; pintarCab=()=>{_pc();pintarChip();};
-
-// arranque: SIN asistente. Anda directo con el motor gratis.
-cargarCatalogo();
-pintarCab(); repintar();
-</script>
+<script src="puente.js"></script>
+<script src="formatos.js"></script>
+<script src="nucleo.js"></script>
+<script src="agente.js"></script>
+<script src="flujo.js"></script>
+<script src="interfaz.js"></script>
 </body></html>

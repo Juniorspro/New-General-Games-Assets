@@ -30,6 +30,8 @@ public class MainActivity extends Activity {
 
     private WebView web;
     private static final int PEDIR_ARCHIVO = 7001;
+    /** Cuanto de un adjunto se lee. Va al taller, no al contexto del modelo. */
+    private static final int TECHO_ADJUNTO = 4_000_000;
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -70,6 +72,35 @@ public class MainActivity extends Activity {
         return o.append('"').toString();
     }
 
+    /**
+     * Android elige con que app abrir el archivo por su MIME. Guardar todo
+     * como octet-stream deja los .md y los .csv sin abrir con nada.
+     */
+    private static String mimePorNombre(String nombre) {
+        int p = nombre.lastIndexOf('.');
+        String e = p < 0 ? "" : nombre.substring(p + 1).toLowerCase();
+        switch (e) {
+            case "txt": case "log": case "env": case "ini": return "text/plain";
+            case "md":   return "text/markdown";
+            case "html": case "htm": return "text/html";
+            case "css":  return "text/css";
+            case "js":   return "text/javascript";
+            case "json": return "application/json";
+            case "xml":  return "application/xml";
+            case "svg":  return "image/svg+xml";
+            case "csv":  return "text/csv";
+            case "tsv":  return "text/tab-separated-values";
+            case "yaml": case "yml": return "application/yaml";
+            case "sql":  return "application/sql";
+            case "sh":   return "application/x-sh";
+            case "py":   return "text/x-python";
+            case "ics":  return "text/calendar";
+            case "vcf":  return "text/vcard";
+            case "vtt":  return "text/vtt";
+            default:     return "application/octet-stream";
+        }
+    }
+
     public class Puente {
         /** Guarda texto en Descargas. Devuelve el nombre o un error. */
         @JavascriptInterface
@@ -80,7 +111,7 @@ public class MainActivity extends Activity {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ContentValues v = new ContentValues();
                     v.put(MediaStore.MediaColumns.DISPLAY_NAME, nombre);
-                    v.put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream");
+                    v.put(MediaStore.MediaColumns.MIME_TYPE, mimePorNombre(nombre));
                     v.put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/PeakCode");
                     Uri u = getContentResolver().insert(
                             MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
@@ -209,7 +240,7 @@ public class MainActivity extends Activity {
                     c.setRequestMethod("POST");
                     c.setDoOutput(true);
                     c.setConnectTimeout(20000);
-                    c.setReadTimeout(120000);
+                    c.setReadTimeout(300000);   // una vuelta de agente puede ser larga
                     c.setRequestProperty("Content-Type", "application/json");
                     c.setRequestProperty("Accept", "text/event-stream");
                     if (apiKey != null && !apiKey.isEmpty())
@@ -276,14 +307,18 @@ public class MainActivity extends Activity {
                 BufferedReader r = new BufferedReader(new InputStreamReader(
                         getContentResolver().openInputStream(u), "UTF-8"));
                 String l; int leidos = 0;
-                // Techo de 200 mil caracteres: mas que eso no entra en el
-                // contexto de los modelos libres y cuelga la pagina.
-                while ((l = r.readLine()) != null && leidos < 200000) {
-                    sb.append(l).append('\n'); leidos += l.length();
+                // Antes el techo era de 200 mil caracteres, porque el archivo
+                // entero se metia en el contexto del modelo. Ahora va al
+                // taller y el agente lee los pedazos que precisa, asi que el
+                // techo solo esta para no dejar sin memoria a la pagina.
+                while (leidos < TECHO_ADJUNTO && (l = r.readLine()) != null) {
+                    sb.append(l).append('\n'); leidos += l.length() + 1;
                 }
+                boolean cortado = leidos >= TECHO_ADJUNTO;
                 r.close();
                 avisar("window.peakArchivoLeido",
                        "{\"nombre\":" + aJson(nombre == null ? "archivo" : nombre)
+                       + ",\"cortado\":" + cortado
                        + ",\"texto\":" + aJson(sb.toString()) + "}");
             } catch (Exception e) {
                 avisar("window.peakArchivoLeido",
