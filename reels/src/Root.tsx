@@ -12,12 +12,21 @@ import { Formato, formatoSchema, repartir } from "./Formato";
 import { DURACION_TIPO, TipografiaDemo } from "./Tipografia/Demo";
 import { DURACION_COMPLETO, EditCompleto, editCompletoSchema, FPS } from "./EditCompleto";
 import { DURACION_BATALLA, EditBatalla, editBatallaSchema, FPS_BATALLA } from "./EditBatalla";
+import { DURACION_30, EditTreinta, FPS_30 } from "./EditTreinta";
 
 // Cada <Composition> es una entrada en la barra lateral del estudio.
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="EditTreinta"
+        component={EditTreinta}
+        durationInFrames={DURACION_30}
+        fps={FPS_30}
+        width={1080}
+        height={1920}
+      />
       <Composition
         id="EditBatalla"
         component={EditBatalla}
