@@ -31,12 +31,22 @@ except Exception as e:
           flush=True)
 
 print("== Blender 4.3.2 ==", flush=True)
-# el oficial de blender.org, no el de la distro: este SI trae OpenImageDenoise
-# y numpy, que es lo que faltaba en el del contenedor
 sh("apt-get install -y -qq libxi6 libxxf86vm1 libxfixes3 libxrender1 libsm6 libgl1")
-sh("cd /tmp && wget -q https://download.blender.org/release/Blender4.3/"
-   "blender-4.3.2-linux-x64.tar.xz -O b.tar.xz")
-sh("cd /tmp && tar xf b.tar.xz && mv blender-4.3.2-linux-x64 blender")
+
+# Si el kernel `preparar` viene enganchado como entrada, Blender ya esta ahi y
+# nos ahorramos 34,5 s de bajada — el 60% del kernel. Si no esta, se baja.
+import glob
+listo = glob.glob("/kaggle/input/*/blender/blender")
+if listo:
+    os.makedirs("/tmp", exist_ok=True)
+    sh(f"cp -r {os.path.dirname(os.path.dirname(listo[0]))} /tmp/blender")
+    sh("chmod +x /tmp/blender/blender")
+    print("  Blender salio de la entrada, no se bajo nada", flush=True)
+else:
+    print("  no hay Blender en la entrada: bajandolo", flush=True)
+    sh("cd /tmp && wget -q https://download.blender.org/release/Blender4.3/"
+       "blender-4.3.2-linux-x64.tar.xz -O b.tar.xz")
+    sh("cd /tmp && tar xf b.tar.xz && mv blender-4.3.2-linux-x64 blender")
 if os.path.exists("/tmp/blender/blender"):
     v = subprocess.run(["/tmp/blender/blender", "--version"],
                        capture_output=True, text=True).stdout.splitlines()

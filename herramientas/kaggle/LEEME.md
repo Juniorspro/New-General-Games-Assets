@@ -144,3 +144,44 @@ y clonar el repo— tardó **58 s**. Los archivos salen con
 O sea que **el render es lo más rápido de todo**: el 84% del tiempo es preparar
 la máquina. Para varios renders seguidos conviene **un solo kernel que haga
 todos**, no uno por render.
+
+---
+
+# Wine en Kaggle: hasta dónde llegó
+
+`capcut.py` corre **sin GPU** (instalar Wine no necesita placa, así no gasta
+cuota). Se probó porque CapCut es gratis — bajarlo es legítimo, a diferencia de
+After Effects, que es pago y además no corre en Wine.
+
+Lo que quedó medido en tres corridas:
+
+| | |
+|---|---|
+| Kaggle base | Ubuntu 22.04.5 (jammy), 4 núcleos, 31 GB RAM, root |
+| wine de Ubuntu | **6.0.3**, de 2021 — demasiado viejo |
+| **WineHQ stable** | **11.0**, instala bien en ~230 s |
+| prefijo de Wine (`drive_c`) | se arma bien |
+| Xvfb + openbox + capturas | andan |
+
+## Las tres trampas, en orden
+
+1. **La página de CapCut no trae el `.exe` en el HTML** — lo arma JavaScript.
+   Primera corrida: `0 enlaces .exe` en 232 KB de página. El link real sale de
+   un JSON en `capcut.com/activity/download_pc`, bajo la clave `"url"`:
+   `.../installer/capcut_capcutpc_0_1.2.36_installer.exe`
+2. **El instalador es `PE32 executable (GUI) Intel 80386`: 32 bits.** Con
+   `wine64` solo no alcanza — hace falta `dpkg --add-architecture i386`.
+3. **`wineboot -i` se colgó 1000 s y mató el kernel.** Wine abre un cartel
+   preguntando si instalar Wine Mono y espera un Aceptar que nadie va a dar.
+   Se apaga con `WINEDLLOVERRIDES='mscoree,mshtml='`.
+
+## La lección que sirve para cualquier kernel
+
+Un `subprocess.run(..., timeout=N)` que se pasa **tira excepción y se lleva el
+kernel entero**, y con él todas las capturas y todo el informe. En una máquina
+donde el log recién se lee al final, eso es quedarse sin nada.
+
+Lo que va: lanzar de fondo con `Popen`, **sacar fotos mientras corre**, envolver
+cada etapa en `try/except`, y que la captura nunca pueda tirar. Un cuelgue así
+se **ve** en vez de borrar la evidencia. `xdotool key Return` cada tanto hace lo
+que haría una persona ante un cartel.
