@@ -42,6 +42,26 @@ input,select{width:100%;background:var(--panel);color:var(--texto);border:1px so
 .estado.ok{border-color:var(--bien);color:#cdf0d8}.estado.no{border-color:var(--mal);color:#ffd9d6}
 code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-break:break-all}
 .oculto{display:none}
+.chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--linea);
+ color:var(--texto);border-radius:11px;padding:9px 12px;font:600 14px system-ui;max-width:46vw}
+.chip .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip .fl{color:var(--tenue);font-weight:400}
+#sheet{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
+ border-radius:18px 18px 0 0;max-height:70dvh;overflow-y:auto;transform:translateY(102%);
+ transition:transform .22s ease;z-index:8;padding:8px 0 14px}
+#sheet.ver{transform:translateY(0)}
+#velo{position:fixed;inset:0;background:#000a;opacity:0;pointer-events:none;transition:opacity .2s;z-index:7}
+#velo.ver{opacity:1;pointer-events:auto}
+.sh-tit{padding:14px 18px 6px;color:var(--tenue);font-size:13px}
+.mod{display:flex;gap:12px;align-items:flex-start;padding:12px 18px}
+.mod:active{background:#ffffff0c}
+.mod .ava{flex:0 0 30px;height:30px;border-radius:8px;background:var(--acento);color:#1a0f0a;
+ display:flex;align-items:center;justify-content:center;font:700 14px system-ui;margin-top:1px}
+.mod .cuerpo{flex:1;min-width:0}
+.mod .nom{font-weight:600}
+.mod .desc{color:var(--tenue);font-size:12.5px;line-height:1.4}
+.mod.sel .ava{background:var(--bien)}
+.mod .tick{color:var(--bien);font-size:18px;align-self:center}
 .fila{display:flex;gap:8px}.fila>*{flex:1}
 </style></head><body>
 
@@ -52,8 +72,13 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
   <button class=icono id=bAjustes title=Ajustes>⚙</button>
 </header>
 <div id=hilo></div>
-<footer><textarea id=entrada rows=1 placeholder="Escribí…"></textarea>
- <button class=env id=bEnviar>↑</button></footer>
+<div id=velo></div>
+<div id=sheet><div class=sh-tit id=shTit>Elegí el modelo</div><div id=shLista></div></div>
+<footer>
+  <button class=chip id=bModelo><span class=n>modelo</span><span class=fl>▾</span></button>
+  <textarea id=entrada rows=1 placeholder="Escribí…"></textarea>
+  <button class=env id=bEnviar>↑</button>
+</footer>
 
 <div class=tapa id=ajustes>
   <h2>Ajustes</h2>
@@ -230,6 +255,65 @@ $('#bGuardar').onclick=()=>{
   salvar(); pintarCab(); $('#ajustes').classList.remove('ver'); repintar(); Peak.aviso('Guardado');
 };
 
+// ── selector de modelos, estilo hoja inferior ────────────────────────────────
+let CATALOGO=[];   // [{id, nom, desc}]
+
+function iniciales(id){
+  const base=id.split('/').pop().replace(/[-_.]/g,' ').trim();
+  return (base[0]||'?').toUpperCase();
+}
+function lindo(id){
+  // "auto/best-coding" -> "Best coding" ; "openai" -> "Openai"
+  const b=id.split('/').pop().replace(/[-_]/g,' ');
+  return b.charAt(0).toUpperCase()+b.slice(1);
+}
+
+async function cargarCatalogo(){
+  CATALOGO=[];
+  try{
+    if(G.preset==='free'){
+      const r=await fetch('https://text.pollinations.ai/models');
+      const d=await r.json();
+      CATALOGO=(Array.isArray(d)?d:[]).map(m=>({
+        id:m.name||m.id, nom:lindo(m.name||m.id),
+        desc:(m.description||'')+(m.reasoning?' · razona':'')}));
+    }else{
+      const base=G.chat.replace(/\/chat\/completions$/,'');
+      const r=await fetch(base+'/models',{headers:{Authorization:'Bearer '+G.key}});
+      const xs=((await r.json()).data||[]).map(m=>m.id);
+      xs.sort((a,b)=>(b.startsWith('auto/')-a.startsWith('auto/'))||a.localeCompare(b));
+      CATALOGO=xs.map(id=>({id, nom:lindo(id),
+        desc:id.startsWith('auto/')?'ruteo: elige el mejor disponible solo':''}));
+    }
+  }catch(e){}
+  if(!CATALOGO.length) CATALOGO=[{id:G.modelo||'openai',nom:lindo(G.modelo||'openai'),desc:''}];
+  if(!CATALOGO.find(m=>m.id===G.modelo)) G.modelo=CATALOGO[0].id;
+}
+
+function abrirSheet(){
+  const l=$('#shLista'); l.innerHTML='';
+  $('#shTit').textContent=(G.preset==='free'?'Gratis':'OmniRoute')+' · '+CATALOGO.length+' modelos';
+  CATALOGO.forEach(m=>{
+    const d=document.createElement('div');
+    d.className='mod'+(m.id===G.modelo?' sel':'');
+    d.innerHTML='<div class=ava>'+iniciales(m.id)+'</div><div class=cuerpo>'+
+      '<div class=nom></div><div class=desc></div></div>'+
+      (m.id===G.modelo?'<div class=tick>✓</div>':'');
+    d.querySelector('.nom').textContent=m.nom;
+    d.querySelector('.desc').textContent=m.desc||m.id;
+    d.onclick=()=>{ G.modelo=m.id; salvar(); pintarCab(); cerrarSheet(); };
+    l.appendChild(d);
+  });
+  $('#sheet').classList.add('ver'); $('#velo').classList.add('ver');
+}
+function cerrarSheet(){$('#sheet').classList.remove('ver');$('#velo').classList.remove('ver');}
+$('#velo').onclick=cerrarSheet;
+$('#bModelo').onclick=async()=>{ if(!CATALOGO.length)await cargarCatalogo(); abrirSheet(); };
+
+function pintarChip(){ $('#bModelo .n').textContent=lindo(G.modelo||'—'); }
+const _pc=pintarCab; pintarCab=()=>{_pc();pintarChip();};
+
 // arranque: SIN asistente. Anda directo con el motor gratis.
+cargarCatalogo();
 pintarCab(); repintar();
 </script></body></html>
