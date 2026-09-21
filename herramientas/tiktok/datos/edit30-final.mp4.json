@@ -1,0 +1,18 @@
+{
+  "archivo": "edit30-final.mp4",
+  "segundos": 29.72,
+  "fps": 60.0,
+  "ancho": 1080,
+  "alto": 1920,
+  "cortes": 61,
+  "cortes_por_segundo": 2.05,
+  "plano_mediana_s": 0.17,
+  "bpm": 121.2,
+  "cortes_sobre_beat": 0.41,
+  "lum_p5": 25.2,
+  "lum_mediana": 46.7,
+  "lum_p95": 148.2,
+  "saturacion": 0.593,
+  "clipping_pct": 0.341,
+  "nitidez": 820.7
+}

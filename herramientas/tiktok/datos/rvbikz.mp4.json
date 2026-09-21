@@ -1,0 +1,18 @@
+{
+  "archivo": "rvbikz.mp4",
+  "segundos": 60.39,
+  "fps": 23.98,
+  "ancho": 576,
+  "alto": 576,
+  "cortes": 65,
+  "cortes_por_segundo": 1.08,
+  "plano_mediana_s": 0.54,
+  "bpm": 109.1,
+  "cortes_sobre_beat": 0.62,
+  "lum_p5": 4.3,
+  "lum_mediana": 39.7,
+  "lum_p95": 181.5,
+  "saturacion": 0.133,
+  "clipping_pct": 0.002,
+  "nitidez": 203.6
+}

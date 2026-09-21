@@ -1,0 +1,18 @@
+{
+  "archivo": "PatrickJane_edit.mp4",
+  "segundos": 20.67,
+  "fps": 30.0,
+  "ancho": 1080,
+  "alto": 1920,
+  "cortes": 8,
+  "cortes_por_segundo": 0.39,
+  "plano_mediana_s": 1.33,
+  "bpm": 89.4,
+  "cortes_sobre_beat": 0.38,
+  "lum_p5": 50.7,
+  "lum_mediana": 123.9,
+  "lum_p95": 198.7,
+  "saturacion": 0.201,
+  "clipping_pct": 0.669,
+  "nitidez": 88.5
+}

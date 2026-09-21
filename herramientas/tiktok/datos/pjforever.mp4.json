@@ -1,0 +1,18 @@
+{
+  "archivo": "pjforever.mp4",
+  "segundos": 61.57,
+  "fps": 60.0,
+  "ancho": 720,
+  "alto": 720,
+  "cortes": 15,
+  "cortes_por_segundo": 0.24,
+  "plano_mediana_s": 0.81,
+  "bpm": 74.7,
+  "cortes_sobre_beat": 0.0,
+  "lum_p5": 0.5,
+  "lum_mediana": 23.2,
+  "lum_p95": 83.8,
+  "saturacion": 0.167,
+  "clipping_pct": 0.0,
+  "nitidez": 63.6
+}
