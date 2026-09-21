@@ -357,3 +357,59 @@ borradas o bloqueadas). El buscador devuelve sobre todo páginas
 `discover/`, que no traen IDs. La página de un video suelto sí responde entera
 a `requests`; las grillas (búsqueda, hashtag, cuenta) no, se arman con llamadas
 firmadas del navegador.
+
+
+---
+
+# Colgarse de una pista real (2026-09-21, `montar3.py`)
+
+Cuando el tema lo pone el usuario —lo normal— el montaje se cuelga de SU
+grilla. Lo que hizo falta, y no estaba:
+
+## La deriva se arregla con tiempos absolutos, no plano por plano
+
+Un compas a 145,58 BPM son 1,648578 s = **49,457 cuadros** a 30 fps. No es
+entero, y casi ningun tempo lo es. Si cada plano se redondea por separado el
+error se SUMA: en `montar2.py` eran 3 ms por plano y 34 ms al final.
+
+`montar3.py` calcula los cortes como **tiempos absolutos de la grilla** y
+recien despues los pasa a cuadros. El error de cada corte queda acotado a
+medio cuadro y no se acumula. Medido: **peor desvio 16,3 ms** en 23,3 s, y
+`cortes_sobre_beat` dio **0,91** — el mejor del corpus de 20 llega a 0,68.
+
+## Un recorte de TikTok ya viene cortado sobre la grilla
+
+El audio que mando el usuario eran 16,76 s de un video bajado con ssstik
+(marca de agua + placa final). Los 13,19 s de musica resultaron ser
+**exactamente 8 compases**: el creador lo corto sobre el pulso. Eso lo hace
+loopeable sin costura, que es lo que salva el caso de "tengo 13 s y necesito
+23".
+
+Como se leyo la estructura, con `beats.py` y energia por media negra:
+
+| compases | que hay | que se hizo |
+|---|---|---|
+| 1-6 | groove parejo | se loopea: es el cuerpo |
+| 7 | empieza a bajar | — |
+| 8 | break, y un golpe al maximo a los 12,776 s | es el final, ya hecho |
+
+Pista montada = groove x2 + break + golpe = 23,311 s. El punto de union del
+loop cae donde la energia esta baja, asi que no se oye.
+
+**Y el loop da la estructura visual gratis:** la primera vuelta del groove en
+blanco y negro, y el color entra EXACTO en la vuelta del loop. La musica se
+repite, la imagen escala.
+
+## Sacar el tema de un video: lo que se puede y lo que no
+
+- El JSON de la pagina de un video **si** trae `music.title`, `music.authorName`
+  y a veces la pista entera en `music.playUrl`. Es el mejor camino — si se
+  tiene la URL.
+- Un archivo bajado con ssstik **no** trae nada de eso: solo queda
+  `comment: vid:<id interno>`, que no sirve para reconstruir la URL.
+- La marca de agua da el usuario (ahi salio `@hibye6560`), pero **la pagina de
+  perfil no lista los videos**: la grilla se arma con llamadas firmadas. Hubo
+  que trabajar con los 13 s que habia.
+
+Moraleja para la proxima: **pedir la URL del TikTok, no el archivo bajado.**
+Con la URL se saca el nombre del tema y la pista completa.
