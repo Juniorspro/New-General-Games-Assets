@@ -11,12 +11,36 @@ import { DURACION_EDIT, EditMorty, editMortySchema } from "./EditMorty";
 import { Formato, formatoSchema, repartir } from "./Formato";
 import { DURACION_TIPO, TipografiaDemo } from "./Tipografia/Demo";
 import { DURACION_COMPLETO, EditCompleto, editCompletoSchema, FPS } from "./EditCompleto";
+import { DURACION_BATALLA, EditBatalla, editBatallaSchema, FPS_BATALLA } from "./EditBatalla";
 
 // Cada <Composition> es una entrada en la barra lateral del estudio.
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="EditBatalla"
+        component={EditBatalla}
+        schema={editBatallaSchema}
+        durationInFrames={DURACION_BATALLA}
+        fps={FPS_BATALLA}
+        width={2160}
+        height={3840}
+        defaultProps={{
+          golpes: [0, 130, 240, 300],
+          tomas: [
+            { archivo: "v2carga4k.png", desde: 0, dura: 132, zoomDesde: 1.14, zoomHasta: 1.33, panX: -2, panY: 3, velocidad: false },
+            { archivo: "v2rostro4k.png", desde: 130, dura: 112, zoomDesde: 1.42, zoomHasta: 1.18, panX: 2, panY: -2, velocidad: false },
+            { archivo: "v2impacto4k.png", desde: 240, dura: 120, zoomDesde: 1.08, zoomHasta: 1.46, panX: 0, panY: 0, velocidad: true },
+          ],
+          palabras: [
+            { texto: "NADIE", desde: 18, dura: 74 },
+            { texto: "ME DIO", desde: 96, dura: 70 },
+            { texto: "ESTE\nPODER", desde: 172, dura: 84 },
+            { texto: "ClaudEdits", desde: 268, dura: 84 },
+          ],
+        }}
+      />
       <Composition
         id="EditCompleto"
         component={EditCompleto}
