@@ -64,6 +64,23 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
 .mod .desc{color:var(--tenue);font-size:12.5px;line-height:1.4}
 .mod.sel .ava{background:var(--bien)}
 .mod .tick{color:var(--bien);font-size:18px;align-self:center}
+.bloque{border:1px solid var(--linea);border-radius:12px;overflow:hidden;margin:8px 0;background:#0d0b0a}
+.bloque-cab{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--panel);
+ border-bottom:1px solid var(--linea)}
+.bloque-cab .lang{flex:1;color:var(--tenue);font:600 12px ui-monospace,monospace}
+.bloque-cab button{background:var(--linea);border:0;color:var(--texto);font:600 12px system-ui;
+ padding:5px 11px;border-radius:8px}
+.bloque-cab button.prev{background:var(--acento);color:#1a0f0a}
+.bloque pre{margin:0;padding:11px;overflow-x:auto;font:12.5px ui-monospace,monospace;color:#e8e3db;
+ max-height:42vh}
+#preview{position:fixed;inset:0;background:var(--fondo);display:none;flex-direction:column;z-index:20}
+#preview.ver{display:flex}
+#preview .barra{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--linea)}
+#preview .barra .t{flex:1;font:600 14px system-ui;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#preview .barra button{background:var(--acento);color:#1a0f0a;border:0;border-radius:9px;
+ padding:9px 13px;font:600 14px system-ui}
+#preview .barra button.x{background:var(--panel);color:var(--texto);border:1px solid var(--linea)}
+#preview iframe{flex:1;border:0;width:100%;background:#fff}
 .fila{display:flex;gap:8px}.fila>*{flex:1}
 </style></head><body>
 
@@ -162,7 +179,8 @@ window.peakErr=(id,msg)=>{
 
 // ── chat ─────────────────────────────────────────────────────────────────────
 function poner(t,q,guardable){
-  const d=document.createElement('div');d.className='msg '+q;d.textContent=t;
+  const d=document.createElement('div');d.className='msg '+q;
+  if(q==='el'&&guardable) pintarAsistente(d,t); else d.textContent=t;
   if(guardable){const b=document.createElement('button');
     b.className='guardar';b.textContent='⤓ guardar';
     b.onclick=()=>menuFormato(d.textContent);
@@ -257,6 +275,70 @@ $('#bGuardar').onclick=()=>{
   salvar(); pintarCab(); $('#ajustes').classList.remove('ver'); repintar(); Peak.aviso('Guardado');
 };
 
+
+
+// ── artifacts: cuadritos de código con vista previa y descarga ────────────────
+const EXT_LANG={html:'html',xml:'xml',svg:'svg',js:'js',javascript:'js',ts:'ts',
+ typescript:'ts',css:'css',py:'py',python:'py',json:'json',java:'java',c:'c',cpp:'cpp',
+ sh:'sh',bash:'sh',md:'md',markdown:'md',sql:'sql',csv:'csv',php:'php',go:'go',rs:'rs'};
+const MIME_EXT={html:'text/html',svg:'image/svg+xml',json:'application/json',
+ csv:'text/csv',md:'text/markdown'};
+
+let _pvTexto='', _pvExt='html', _pvNom='pagina';
+function verPreview(codigo, ext, titulo){
+ _pvTexto=codigo; _pvExt=ext; _pvNom=(titulo||'archivo').replace(/[^A-Za-z0-9._-]/g,'_');
+ const fr=$('#pvFrame');
+ let doc=codigo;
+ if(ext==='svg') doc='<!doctype html><meta charset=utf-8><body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#fff">'+codigo+'</body>';
+ else if(ext==='md') doc='<!doctype html><meta charset=utf-8><body style="font:16px system-ui;max-width:44em;margin:1.5em auto;padding:0 1em;white-space:pre-wrap">'+codigo.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</body>';
+ else if(!/^\s*<(!doctype|html)/i.test(codigo)) doc='<!doctype html><meta charset=utf-8>'+codigo;
+ fr.srcdoc=doc;
+ $('#pvTit').textContent=titulo||'Vista previa';
+ $('#preview').classList.add('ver');
+}
+$('#pvCerrar').onclick=()=>{$('#preview').classList.remove('ver');$('#pvFrame').srcdoc='';};
+$('#pvBajar').onclick=()=>{
+ const nom=_pvNom.endsWith('.'+_pvExt)?_pvNom:_pvNom+'.'+_pvExt;
+ const r=Peak.guardar(nom,_pvTexto);
+ Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);
+};
+
+// pinta un mensaje del asistente partiendo texto y bloques ```
+function pintarAsistente(cont, texto){
+ cont.textContent='';
+ const re=/```([^\n`]*)\n?([\s\S]*?)```/g;
+ let i=0,m,idx=0;
+ while((m=re.exec(texto))){
+  if(m.index>i){const t=document.createElement('span');t.textContent=texto.slice(i,m.index);cont.appendChild(t);}
+  const lang=(m[1]||'').trim().toLowerCase();
+  const ext=EXT_LANG[lang]|| (lang||'txt');
+  const codigo=m[2].replace(/\n$/,'');
+  cont.appendChild(cuadro(codigo, ext, ++idx));
+  i=re.lastIndex;
+ }
+ if(i<texto.length){const t=document.createElement('span');t.textContent=texto.slice(i);cont.appendChild(t);}
+ if(idx===0) cont.textContent=texto;   // sin bloques: texto pelado
+}
+function cuadro(codigo, ext, n){
+ const box=document.createElement('div');box.className='bloque';
+ const cab=document.createElement('div');cab.className='bloque-cab';
+ const et=document.createElement('span');et.className='lang';et.textContent=ext.toUpperCase();
+ cab.appendChild(et);
+ // descargar (arriba, segun el tipo)
+ const bd=document.createElement('button');bd.textContent='⤓ '+ext;
+ bd.onclick=()=>{const nom='peakcode_'+n+'.'+ext;
+   const r=Peak.guardar(nom,codigo);Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);};
+ // vista previa: para lo que se puede mostrar
+ if(['html','svg','md','xml'].includes(ext)){
+  const bp=document.createElement('button');bp.className='prev';bp.textContent='▷ Vista previa';
+  bp.onclick=()=>verPreview(codigo, ext==='xml'?'html':ext, 'Bloque '+n);
+  cab.appendChild(bp);
+ }
+ cab.appendChild(bd);
+ const pre=document.createElement('pre');pre.textContent=codigo;
+ box.appendChild(cab);box.appendChild(pre);
+ return box;
+}
 
 // ── generar archivos, todo offline ───────────────────────────────────────────
 function b64(u8){let s='';for(let i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return btoa(s);}
@@ -458,4 +540,12 @@ const _pc=pintarCab; pintarCab=()=>{_pc();pintarChip();};
 // arranque: SIN asistente. Anda directo con el motor gratis.
 cargarCatalogo();
 pintarCab(); repintar();
-</script></body></html>
+</script>
+<div id=preview>
+  <div class=barra>
+    <span class=t id=pvTit>Vista previa</span>
+    <button id=pvBajar>⤓ Descargar</button>
+    <button class=x id=pvCerrar>Cerrar</button>
+  </div>
+  <iframe id=pvFrame sandbox="allow-scripts allow-modals"></iframe>
+</div></body></html>
