@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Un ramo que no se termina — para Leonelita</title>
+<meta name="description" content="Tocá donde quieras y crece una flor amarilla. Cada una trae algo que quiero decirte.">
+<style>
+/* ESTILO: acuarela. Fondos suaves, papel con grano, nada de bordes duros. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#fdf6e4;
+  font-family:"Georgia","Times New Roman",serif;touch-action:none;user-select:none}
+/* El grano del papel: dos gradientes repetidos y cero imágenes. */
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:3;opacity:.5;
+  background-image:
+    radial-gradient(1px 1px at 12px 20px,rgba(140,110,60,.16),transparent),
+    radial-gradient(1px 1px at 60px 70px,rgba(140,110,60,.12),transparent);
+  background-size:90px 110px,130px 150px}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#tit{position:fixed;top:5%;left:0;right:0;text-align:center;z-index:2;pointer-events:none;
+  font-size:clamp(20px,5.2vw,32px);color:#7d6535;letter-spacing:.04em;
+  text-shadow:0 1px 0 #fffdf6}
+#tit small{display:block;margin-top:6px;font-size:.5em;letter-spacing:.14em;
+  text-transform:uppercase;color:#a6905f}
+#msj{position:fixed;left:50%;bottom:11%;transform:translateX(-50%);z-index:2;
+  width:min(440px,86vw);text-align:center;pointer-events:none;
+  font-size:clamp(16px,4.3vw,22px);line-height:1.5;color:#6b5528;
+  opacity:0;transition:opacity .5s}
+#msj.on{opacity:1}
+#pie{position:fixed;bottom:4%;left:0;right:0;text-align:center;z-index:2;pointer-events:none;
+  font-size:12px;letter-spacing:.12em;color:#b8a273;font-family:system-ui,sans-serif}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="tit">Un ramo que no se termina<small>21 de septiembre · para Leonelita</small></div>
+<div id="msj"></div>
+<div id="pie">tocá donde quieras · cada flor dice algo</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: sembrar. Cada toque planta una flor amarilla que crece sola.
+   ═══════════════════════════════════════════════════════════════════════════
+   No hay meta ni puntaje a proposito: lo unico que hace la pagina es
+   devolverte una flor cada vez que la tocas, y no se termina nunca. */
+const c = document.getElementById("c"), x = c.getContext("2d");
+const elMsj = document.getElementById("msj");
+
+const COSAS = [
+  "Te quiero, bubush.",
+  "Mi vidiñi, hoy también.",
+  "Mi pequeñita hermosa.",
+  "Sos mi lugar preferido.",
+  "Leonelita, gracias por existir.",
+  "Con vos hasta los martes son lindos.",
+  "Me gusta tu risa más que cualquier canción.",
+  "Si volviera a elegir, te elijo igual.",
+  "Cada flor de estas es un día que te pienso.",
+  "Mi bubush, sos lo mejor que me pasó.",
+  "Te amo despacito y todos los días.",
+  "Mi vidiñi, quedate.",
+];
+let iCosa = 0;
+
+/* EL LIENZO SE MIDE EN PIXELES DE VERDAD y no en los del CSS: si no, en un
+   telefono con pantalla densa las flores salen borrosas. */
+let dpr = 1;
+function medir() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  c.width = Math.round(innerWidth * dpr);
+  c.height = Math.round(innerHeight * dpr);
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", medir); medir();
+
+const flores = [];
+const AZAR = (a, b) => a + Math.random() * (b - a);
+
+function plantar(px, py) {
+  flores.push({
+    x: px, y: py, t: 0,
+    tam: AZAR(26, 46),
+    petalos: Math.round(AZAR(6, 9)),
+    giro: AZAR(0, 6.28),
+    // el tono se mueve entre el amarillo manteca y el dorado: un solo amarillo
+    // para todas hace que el ramo se vea impreso, no crecido
+    tono: AZAR(43, 54),
+    vaiven: AZAR(0.7, 1.4),
+  });
+  if (flores.length > 90) flores.shift();   // el ramo no crece para siempre
+  elMsj.textContent = COSAS[iCosa % COSAS.length];
+  iCosa++;
+  elMsj.classList.add("on");
+}
+
+function flor(f, ahora) {
+  // CRECE CON UN REBOTE Y NO EN LINEA RECTA: una flor que aparece de golpe se
+  // ve puesta; una que se pasa un poquito y vuelve, se ve viva.
+  const e = Math.min(1, f.t / 26);
+  const k = 1 - Math.pow(1 - e, 3);
+  const reb = 1 + Math.sin(e * Math.PI) * 0.18;
+  const tam = f.tam * k * reb;
+  const bal = Math.sin(ahora / 900 * f.vaiven + f.giro) * 0.06;
+
+  x.save();
+  x.translate(f.x, f.y);
+  x.rotate(f.giro + bal);
+
+  // el tallo, dibujado con una curva: una recta se ve de alambre
+  x.strokeStyle = `hsla(95,38%,38%,${k * .9})`;
+  x.lineWidth = 2.4; x.lineCap = "round";
+  x.beginPath();
+  x.moveTo(0, 0);
+  x.quadraticCurveTo(tam * 0.35, tam * 1.5, tam * 0.1, tam * 3.1 * k);
+  x.stroke();
+  // una hoja
+  x.fillStyle = `hsla(95,40%,42%,${k * .85})`;
+  x.beginPath();
+  x.ellipse(tam * 0.5, tam * 1.7, tam * 0.42, tam * 0.17, 0.5, 0, 7);
+  x.fill();
+
+  // los petalos
+  for (let i = 0; i < f.petalos; i++) {
+    const a = (i / f.petalos) * Math.PI * 2;
+    x.save(); x.rotate(a);
+    const g = x.createLinearGradient(0, 0, 0, -tam);
+    g.addColorStop(0, `hsla(${f.tono},92%,62%,${k})`);
+    g.addColorStop(1, `hsla(${f.tono + 8},96%,78%,${k})`);
+    x.fillStyle = g;
+    x.beginPath();
+    x.ellipse(0, -tam * 0.62, tam * 0.27, tam * 0.62, 0, 0, 7);
+    x.fill();
+    x.restore();
+  }
+  // el centro
+  x.fillStyle = `hsla(34,78%,46%,${k})`;
+  x.beginPath(); x.arc(0, 0, tam * 0.27, 0, 7); x.fill();
+  x.fillStyle = `hsla(40,90%,68%,${k * .8})`;
+  x.beginPath(); x.arc(-tam * 0.07, -tam * 0.07, tam * 0.11, 0, 7); x.fill();
+  x.restore();
+}
+
+function cuadro(ahora) {
+  requestAnimationFrame(cuadro);
+  x.clearRect(0, 0, innerWidth, innerHeight);
+  for (const f of flores) { f.t++; flor(f, ahora); }
+}
+requestAnimationFrame(cuadro);
+
+/* EL DEDO SIEMBRA MIENTRAS SE ARRASTRA, no sólo al tocar: arrastrando sale un
+   ramo entero de una pasada, que es lo que uno quiere hacer sin que se lo
+   digan. Se pone una distancia mínima para que no salgan cien flores pegadas. */
+let ultX = -999, ultY = -999, apoyado = false;
+const dentro = (e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+function quizas(p) {
+  if (Math.hypot(p.x - ultX, p.y - ultY) < 56) return;
+  ultX = p.x; ultY = p.y; plantar(p.x, p.y);
+}
+c.addEventListener("pointerdown", (e) => { apoyado = true; ultX = -999; quizas(dentro(e)); e.preventDefault(); });
+c.addEventListener("pointermove", (e) => { if (apoyado) quizas(dentro(e)); });
+for (const ev of ["pointerup", "pointercancel", "pointerleave"])
+  c.addEventListener(ev, () => { apoyado = false; });
+
+// Tres flores de bienvenida, para que la pantalla no arranque vacía.
+setTimeout(() => plantar(innerWidth * 0.3, innerHeight * 0.58), 500);
+setTimeout(() => plantar(innerWidth * 0.52, innerHeight * 0.66), 900);
+setTimeout(() => plantar(innerWidth * 0.72, innerHeight * 0.56), 1300);
+
+// Sonda para las pruebas.
+window.__flores = { cuantas: () => flores.length, plantar, msj: () => elMsj.textContent };
+</script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>El camino hasta vos — para Leonelita</title>
+<meta name="description" content="Llevá la flor por el laberinto hasta su nombre. Cada tramo enciende una frase.">
+<style>
+/* ESTILO: dibujo a línea. Blanco, una sola tinta, cero relleno. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;
+  background:#fbfaf6;font-family:system-ui,-apple-system,sans-serif;color:#2b2b2b;
+  display:grid;place-items:center}
+canvas{display:block;touch-action:none}
+#tit{position:fixed;top:4%;left:0;right:0;text-align:center;pointer-events:none;
+  font:700 11px/1.6 system-ui;letter-spacing:.24em;text-transform:uppercase;color:#a8a29a}
+#frase{position:fixed;bottom:8%;left:50%;transform:translateX(-50%);
+  width:min(440px,90vw);text-align:center;pointer-events:none;
+  font-size:clamp(15px,4.2vw,20px);line-height:1.5;color:#3b3b3b;
+  min-height:3em;display:grid;place-items:center;
+  transition:opacity .35s}
+#frase b{color:#c79a16}
+#pie{position:fixed;bottom:3.2%;left:0;right:0;text-align:center;pointer-events:none;
+  font:700 10px/1 system-ui;letter-spacing:.16em;text-transform:uppercase;color:#bdb7ad}
+</style>
+</head>
+<body>
+<div id="tit">El camino hasta vos</div>
+<canvas id="c"></canvas>
+<div id="frase">arrastrá la flor sin soltar</div>
+<div id="pie">21 de septiembre · para Leonelita</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: llevar de la mano. La flor sigue al dedo pero NO atraviesa paredes.
+   ═══════════════════════════════════════════════════════════════════════════
+   El laberinto es a propósito fácil y de un solo camino: no es un desafío, es
+   una excusa para que el recorrido tarde lo suficiente como para leer cinco
+   frases. Soltar el dedo no castiga — la flor te espera donde la dejaste. */
+const c = document.getElementById("c"), x = c.getContext("2d");
+const elFrase = document.getElementById("frase");
+
+/* El laberinto, dibujado a mano en una grilla de 9x11. 1 es pared.
+   Hecho a mano y no generado: uno generado sale con recovecos que no llevan a
+   ningún lado, y acá cada tramo tiene que valer una frase. */
+const M = [
+  "111111111",
+  "100000001",
+  "101111101",
+  "101000101",
+  "101011101",
+  "100010001",
+  "111010111",
+  "100010001",
+  "101111101",
+  "100000001",
+  "111111111",
+];
+const FIL = M.length, COL = M[0].length;
+const ENTRADA = { c: 1, f: 1 }, SALIDA = { c: 7, f: 9 };
+
+const FRASES = [
+  ["arrancá acá", "Cada vuelta de este camino es un día que te esperé."],
+  [0.25, "Mi <b>bubush</b>: no fue difícil llegar, fue largo y valió."],
+  [0.5,  "Mi <b>vidiñi</b>: a mitad de camino ya sabía que eras vos."],
+  [0.75, "Mi <b>pequeñita</b>: falta poco y ya te estoy extrañando."],
+  [1,    "Llegué. <b>Leonelita</b>, te amo."],
+];
+let hito = 0, recorrido = 0, ganado = false;
+
+let CEL = 34, OX = 0, OY = 0, dpr = 1;
+function medir() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  const dispo = Math.min(innerWidth * 0.92, innerHeight * 0.58);
+  CEL = Math.floor(Math.min(dispo / COL, dispo / FIL * 1.0));
+  const an = CEL * COL, al = CEL * FIL;
+  c.style.width = an + "px"; c.style.height = al + "px";
+  c.width = Math.round(an * dpr); c.height = Math.round(al * dpr);
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  OX = 0; OY = 0;
+}
+addEventListener("resize", () => { medir(); });
+medir();
+
+const flor = { x: 0, y: 0 };
+const aPx = (ce, fi) => ({ x: (ce + .5) * CEL, y: (fi + .5) * CEL });
+function reset() { const p = aPx(ENTRADA.c, ENTRADA.f); flor.x = p.x; flor.y = p.y; }
+reset();
+
+const pared = (ce, fi) => ce < 0 || fi < 0 || ce >= COL || fi >= FIL || M[fi][ce] === "1";
+
+/* SE MUEVE EJE POR EJE Y NO EN DIAGONAL. Moviendo en diagonal, la flor se
+   clava en las esquinas y el dedo "deja de funcionar" sin motivo visible.
+   Probando primero X y después Y, en una esquina se desliza por la pared. */
+const RADIO = () => CEL * 0.3;
+
+/** ¿Entra la flor centrada en (ex,ey)? Se prueban sus cuatro esquinas. */
+function libre(ex, ey) {
+  const r = RADIO();
+  for (const [dx, dy] of [[-r,-r],[r,-r],[-r,r],[r,r]]) {
+    const ce = Math.floor((ex + dx) / CEL), fi = Math.floor((ey + dy) / CEL);
+    if (pared(ce, fi)) return false;
+  }
+  return true;
+}
+
+/* CADA EJE SE MUEVE POR SU CUENTA, Y CADA UNO TOCA SOLO SU COORDENADA.
+   La primera versión probaba los dos ejes en un bucle y en cada vuelta
+   asignaba LAS DOS coordenadas: la vuelta del eje Y le devolvía a X el valor
+   viejo, así que el movimiento horizontal se deshacía siempre que el vertical
+   también fuera posible. El resultado era una flor que en un pasillo abierto
+   sólo se movía para arriba y para abajo — y como el laberinto tiene tramos
+   verticales, parecía que "a veces no responde" en vez de estar roto.
+   Lo encontró la prueba automática, no la vista: arrastrando con el dedo uno
+   corrige sin darse cuenta.
+   Eje por eje sigue siendo lo correcto: en diagonal, contra una esquina, la
+   flor se desliza por la pared en vez de clavarse. */
+function intentar(nx, ny) {
+  if (libre(nx, flor.y)) flor.x = nx;
+  if (libre(flor.x, ny)) flor.y = ny;
+}
+
+function avanzar(px, py) {
+  if (ganado) return;
+  // la flor va HACIA el dedo, no salta a él: así no se puede cruzar una pared
+  // de un tirón moviendo el dedo rápido
+  const dx = px - flor.x, dy = py - flor.y;
+  const d = Math.hypot(dx, dy);
+  if (d < 0.5) return;
+  const paso = Math.min(d, CEL * 0.34);
+  const antes = { x: flor.x, y: flor.y };
+  intentar(flor.x + dx / d * paso, flor.y + dy / d * paso);
+  recorrido += Math.hypot(flor.x - antes.x, flor.y - antes.y);
+
+  const meta = aPx(SALIDA.c, SALIDA.f);
+  const cerca = Math.hypot(flor.x - meta.x, flor.y - meta.y) < CEL * .6;
+  const avance = Math.min(1, recorrido / (CEL * 26));
+  while (hito + 1 < FRASES.length && typeof FRASES[hito + 1][0] === "number"
+         && avance >= FRASES[hito + 1][0]) {
+    hito++; elFrase.innerHTML = FRASES[hito][1];
+  }
+  if (cerca && !ganado) { ganado = true; hito = FRASES.length - 1; elFrase.innerHTML = FRASES[hito][1]; }
+}
+
+function cuadro(ahora) {
+  requestAnimationFrame(cuadro);
+  const AN = COL * CEL, AL = FIL * CEL;
+  x.clearRect(0, 0, AN, AL);
+
+  // las paredes, dibujadas como línea y no como bloque: el estilo es de dibujo
+  x.strokeStyle = "#2b2b2b"; x.lineWidth = Math.max(2, CEL * .07); x.lineCap = "round";
+  for (let f = 0; f < FIL; f++)
+    for (let ce = 0; ce < COL; ce++) {
+      if (M[f][ce] !== "1") continue;
+      // se dibuja el borde SOLO donde hay un vecino libre: así el laberinto
+      // queda de líneas y no de cuadrados negros
+      const X0 = ce * CEL, Y0 = f * CEL;
+      if (!pared(ce, f - 1)) { x.beginPath(); x.moveTo(X0, Y0); x.lineTo(X0 + CEL, Y0); x.stroke(); }
+      if (!pared(ce, f + 1)) { x.beginPath(); x.moveTo(X0, Y0 + CEL); x.lineTo(X0 + CEL, Y0 + CEL); x.stroke(); }
+      if (!pared(ce - 1, f)) { x.beginPath(); x.moveTo(X0, Y0); x.lineTo(X0, Y0 + CEL); x.stroke(); }
+      if (!pared(ce + 1, f)) { x.beginPath(); x.moveTo(X0 + CEL, Y0); x.lineTo(X0 + CEL, Y0 + CEL); x.stroke(); }
+    }
+
+  // la meta: un corazón de línea
+  const m = aPx(SALIDA.c, SALIDA.f);
+  const s = CEL * (ganado ? .40 + Math.sin(ahora / 320) * .05 : .32);
+  x.strokeStyle = ganado ? "#c79a16" : "#cfc8b8";
+  x.lineWidth = Math.max(2, CEL * .06);
+  x.beginPath();
+  x.moveTo(m.x, m.y + s * .8);
+  x.bezierCurveTo(m.x - s * 1.4, m.y - s * .3, m.x - s * .4, m.y - s * 1.1, m.x, m.y - s * .35);
+  x.bezierCurveTo(m.x + s * .4, m.y - s * 1.1, m.x + s * 1.4, m.y - s * .3, m.x, m.y + s * .8);
+  x.stroke();
+
+  // la flor
+  const r = CEL * .3;
+  x.save(); x.translate(flor.x, flor.y); x.rotate(ahora / 1600);
+  for (let i = 0; i < 6; i++) {
+    x.rotate(Math.PI / 3);
+    x.fillStyle = "#f2c12e";
+    x.beginPath(); x.ellipse(0, -r * .62, r * .3, r * .62, 0, 0, 7); x.fill();
+  }
+  x.fillStyle = "#b9791a";
+  x.beginPath(); x.arc(0, 0, r * .3, 0, 7); x.fill();
+  x.restore();
+}
+requestAnimationFrame(cuadro);
+
+const punto = (e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+let apoyado = false;
+c.addEventListener("pointerdown", (e) => { apoyado = true; avanzar(...Object.values(punto(e))); e.preventDefault(); });
+c.addEventListener("pointermove", (e) => { if (!apoyado) return; const p = punto(e); avanzar(p.x, p.y); });
+for (const ev of ["pointerup", "pointercancel", "pointerleave"])
+  c.addEventListener(ev, () => { apoyado = false; });
+addEventListener("keydown", (e) => {
+  const d = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] }[e.key];
+  if (!d) return; e.preventDefault();
+  avanzar(flor.x + d[0] * CEL * .5, flor.y + d[1] * CEL * .5);
+});
+
+elFrase.innerHTML = FRASES[0][1];
+
+window.__flores = { ganado: () => ganado, hito: () => hito,
+  /** Recorre el laberinto de verdad, para las pruebas.
+   *
+   *  VA CON BUSQUEDA EN ANCHURA Y NO ELIGIENDO "LA QUE ACERCA MAS". Lo goloso
+   *  parece alcanzar en un laberinto chico y no: en el primer callejon sin
+   *  salida se clava, porque salir de ahi es ALEJARSE de la meta. Con BFS sale
+   *  el camino entero antes de dar el primer paso.
+   *  Y despues se camina con `avanzar()`, o sea por el mismo camino que el
+   *  dedo: recorrerlo de otra forma probaria otra cosa que la que se juega. */
+  llegar() {
+    const clave = (ce, fi) => fi * COL + ce;
+    const de = new Map(), cola = [[ENTRADA.c, ENTRADA.f]];
+    de.set(clave(ENTRADA.c, ENTRADA.f), null);
+    while (cola.length) {
+      const [ce, fi] = cola.shift();
+      if (ce === SALIDA.c && fi === SALIDA.f) break;
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nc = ce + dx, nf = fi + dy;
+        if (pared(nc, nf) || de.has(clave(nc, nf))) continue;
+        de.set(clave(nc, nf), [ce, fi]);
+        cola.push([nc, nf]);
+      }
+    }
+    const camino = [];
+    let cur = [SALIDA.c, SALIDA.f];
+    while (cur) { camino.unshift(cur); cur = de.get(clave(cur[0], cur[1])); }
+    for (const [ce, fi] of camino) {
+      const p = aPx(ce, fi);
+      for (let k = 0; k < 20 && Math.hypot(flor.x - p.x, flor.y - p.y) > 2; k++)
+        avanzar(p.x, p.y);
+    }
+    return ganado;
+  } };
+</script>
+</body>
+</html>

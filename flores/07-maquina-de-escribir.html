@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>La carta que se escribe sola — para Leonelita</title>
+<meta name="description" content="Apretá cualquier tecla, o tocá la pantalla, y la carta se va escribiendo sola.">
+<style>
+/* ESTILO: máquina de escribir. Sepia, monoespaciada, papel con manchas. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;user-select:none;touch-action:manipulation;
+  background:#2b2118;font-family:"Courier New",Courier,monospace;
+  display:grid;place-items:center;padding:14px}
+#hoja{position:relative;width:min(560px,94vw);height:min(760px,88vh);
+  padding:clamp(26px,7vw,54px) clamp(22px,7vw,52px);overflow:hidden;
+  background:
+    radial-gradient(ellipse at 18% 12%,rgba(160,120,60,.13),transparent 45%),
+    radial-gradient(ellipse at 84% 78%,rgba(140,100,50,.11),transparent 42%),
+    linear-gradient(#f6ecd6,#eaddc0);
+  box-shadow:0 26px 60px rgba(0,0,0,.55),inset 0 0 70px rgba(120,86,40,.14);
+  border-radius:3px}
+/* el agujerito de las hojas de máquina, al costado */
+#hoja::before{content:'';position:absolute;left:0;top:0;bottom:0;width:26px;
+  background:repeating-linear-gradient(180deg,transparent 0 22px,rgba(120,86,40,.16) 22px 24px)}
+#txt{font-size:clamp(13px,3.5vw,17px);line-height:1.95;color:#3a2c18;
+  white-space:pre-wrap;word-break:break-word}
+/* EL CURSOR ES UN BLOQUE QUE PARPADEA, como el de una máquina: una barrita
+   fina se lee como un editor de texto y rompe el clima. */
+#cur{display:inline-block;width:.58em;height:1.05em;vertical-align:-.18em;
+  background:#3a2c18;animation:par 1s steps(1) infinite}
+@keyframes par{50%{opacity:0}}
+#ayuda{position:fixed;bottom:2.6%;left:0;right:0;text-align:center;
+  font:700 11px/1.5 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;
+  color:#9c8258;transition:opacity .6s}
+#ayuda.ya{opacity:0}
+@media (prefers-reduced-motion: reduce){#cur{animation:none}}
+</style>
+</head>
+<body>
+<div id="hoja"><div id="txt"></div><span id="cur" aria-hidden="true"></span></div>
+<div id="ayuda">apretá cualquier tecla · o tocá la hoja</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: escribir a mano, sin saber qué. Cada tecla saca UNA letra de la
+   carta, sin importar cuál se apriete.
+   ═══════════════════════════════════════════════════════════════════════════
+   El texto ya está escrito; lo que se pone es el pulso. Es la mecánica del
+   "typewriter" dada vuelta: en vez de que la máquina escriba sola mientras
+   mirás, la escribís vos y descubrís qué dice al escribirla. */
+const CARTA =
+`Leonelita:
+
+hoy es el día de las flores
+amarillas y no te compré
+ninguna, porque las que venden
+se marchitan en tres días.
+
+esto no.
+
+mi bubush: me gusta cómo
+arrugás la nariz cuando algo
+no te convence.
+
+mi vidiñi: me gusta que me
+llames cuando no pasa nada,
+sólo para que pase algo.
+
+mi pequeñita: me gusta que
+seas exactamente del tamaño
+de un abrazo mío.
+
+no sé escribir cartas.
+sé que te amo, que es más
+difícil y me sale mejor.
+
+                    — tuyo
+`;
+
+const elTxt = document.getElementById("txt");
+const elCur = document.getElementById("cur");
+const elAyuda = document.getElementById("ayuda");
+let i = 0;
+
+/* ── el sonido de la tecla ────────────────────────────────────────────────
+   UN SOLO AudioContext y recién en el primer gesto: ningún navegador deja
+   sonar antes, y dos contextos en la misma página dejan uno mudo en el
+   teléfono. El golpe es ruido corto con un filtro: una máquina de escribir no
+   tiene tono, tiene golpe. */
+let AC = null, RUIDO = null;
+function despertar() {
+  if (AC) return;
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  const n = (AC.sampleRate * 0.25) | 0;
+  RUIDO = AC.createBuffer(1, n, AC.sampleRate);
+  const d = RUIDO.getChannelData(0);
+  for (let k = 0; k < n; k++) d[k] = Math.random() * 2 - 1;
+}
+function golpe(fuerte) {
+  if (!AC || !RUIDO) return;
+  const t0 = AC.currentTime;
+  const s = AC.createBufferSource(); s.buffer = RUIDO;
+  const f = AC.createBiquadFilter(); f.type = "bandpass";
+  f.frequency.value = fuerte ? 1500 : 2300 + Math.random() * 700;
+  f.Q.value = 1.2;
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(fuerte ? .16 : .085, t0 + .004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + (fuerte ? .12 : .045));
+  s.connect(f); f.connect(g); g.connect(AC.destination);
+  s.start(t0); s.stop(t0 + .2);
+}
+
+function escribir() {
+  despertar();
+  elAyuda.classList.add("ya");
+  if (i >= CARTA.length) return;
+  // LOS RENGLONES SALEN ENTEROS AL LLEGAR AL SALTO DE LINEA. Letra por letra
+  // también en el salto, la carta parecía trabarse: la tecla no hacía nada
+  // visible y se sentía rota.
+  let n = 1;
+  if (CARTA[i] === "\n") { n = 1; golpe(true); } else golpe(false);
+  elTxt.textContent = CARTA.slice(0, i + n);
+  i += n;
+  // el papel sube solo cuando el texto pasa el alto de la hoja
+  const hoja = document.getElementById("hoja");
+  if (elTxt.scrollHeight > hoja.clientHeight - 60)
+    elTxt.style.marginTop = `${hoja.clientHeight - 60 - elTxt.scrollHeight}px`;
+  if (i >= CARTA.length) elCur.style.display = "none";
+}
+
+// CUALQUIER TECLA SIRVE, menos las que no son de escribir: apretar Tab o F5
+// para que salga una letra sería quitarle al teclado lo que ya hace.
+addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (["Tab","F5","Escape"].includes(e.key)) return;
+  e.preventDefault();
+  escribir();
+});
+addEventListener("pointerdown", (e) => { e.preventDefault(); escribir(); });
+
+window.__flores = { escritas: () => i, total: CARTA.length, escribir,
+                    todo() { while (i < CARTA.length) escribir(); return i; } };
+</script>
+</body>
+</html>

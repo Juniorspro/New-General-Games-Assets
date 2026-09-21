@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Memotest de razones — para Leonelita</title>
+<meta name="description" content="Encontrá los pares. Cada par que sale descubre una razón por la que te quiero.">
+<style>
+/* ESTILO: naipes. Cartón crema, esquinas redondas, sombra dura tipo mesa. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;overflow-x:hidden;user-select:none;
+  background:radial-gradient(ellipse at 50% 0%,#2e5c3f,#16301f 70%);
+  font-family:"Georgia",serif;color:#f3ecd8;
+  display:flex;flex-direction:column;align-items:center;padding:16px 12px 26px}
+h1{font-size:clamp(18px,4.8vw,25px);font-weight:400;letter-spacing:.03em;margin-bottom:2px}
+.sub{font:700 10px/1.6 system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;
+  color:#9dc0a6;margin-bottom:12px}
+#tabla{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(6px,2vw,11px);
+  width:min(440px,94vw)}
+.carta{aspect-ratio:3/4;position:relative;cursor:pointer;
+  /* LA CARTA GIRA DE VERDAD, en 3D: con un cambio de color se ve como un botón
+     que cambia de color, y lo que hace que un memotest se sienta a naipes es
+     ese giro de medio segundo. */
+  perspective:700px;background:none;border:0;padding:0}
+.cara{position:absolute;inset:0;border-radius:9px;display:grid;place-items:center;
+  backface-visibility:hidden;transition:transform .45s cubic-bezier(.3,.8,.35,1);
+  box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.dorso{background:linear-gradient(145deg,#8a2f45,#5e1c2e);
+  border:2px solid #c98a9c;transform:rotateY(0deg);
+  font-size:clamp(17px,5vw,24px);color:rgba(255,220,180,.5)}
+.frente{background:linear-gradient(160deg,#fdf6e0,#f0e2bd);border:2px solid #e8d49a;
+  transform:rotateY(180deg);font-size:clamp(20px,6.5vw,30px)}
+.carta.abierta .dorso{transform:rotateY(-180deg)}
+.carta.abierta .frente{transform:rotateY(0deg)}
+.carta.lista .frente{background:linear-gradient(160deg,#fff8d8,#ffe9a0);
+  box-shadow:0 0 0 2px #ffd964,0 0 18px rgba(255,217,100,.45)}
+#razon{margin-top:16px;width:min(440px,94vw);min-height:4.2em;text-align:center;
+  font-size:clamp(14px,4vw,18px);line-height:1.55;color:#ffe9a8;
+  background:rgba(0,0,0,.22);border:1px solid rgba(255,233,168,.25);
+  border-radius:12px;padding:12px 14px;display:grid;place-items:center}
+#pie{margin-top:12px;font:700 11px/1 system-ui,sans-serif;letter-spacing:.14em;
+  text-transform:uppercase;color:#8fae98}
+button.otra{margin-top:14px;padding:10px 20px;border-radius:10px;border:1px solid #9dc0a6;
+  background:rgba(255,255,255,.07);color:#eaf6ee;font:700 12px/1 system-ui;letter-spacing:.1em}
+@media (prefers-reduced-motion: reduce){.cara{transition:none}}
+</style>
+</head>
+<body>
+<h1>Ocho razones</h1>
+<div class="sub">Leonelita · 21 de septiembre</div>
+<div id="tabla"></div>
+<div id="razon">encontrá dos flores iguales</div>
+<div id="pie"><span id="cuenta">0</span> de 8 razones</div>
+<button class="otra" id="otra">mezclar de nuevo</button>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: memotest. Ocho pares; cada par descubierto entrega una razón.
+   ═══════════════════════════════════════════════════════════════════════════
+   NO HAY CONTADOR DE ERRORES NI DE TIEMPO, a propósito: el juego no es el
+   punto, las ocho frases son el punto, y un cronómetro convierte un regalo en
+   una prueba. */
+const SIMBOLOS = ["🌼","🌻","🌷","🌸","💛","🌺","✨","🍀"];
+const RAZONES = [
+  "Porque te reís con toda la cara, no sólo con la boca.",
+  "Porque me escuchás aunque esté diciendo cualquier cosa.",
+  "Porque tenés las manos frías y el corazón al revés.",
+  "Porque me hacés querer ser mejor sin pedírmelo nunca.",
+  "Porque «mi bubush» te queda mejor que cualquier nombre.",
+  "Porque cuando estás cerca no necesito nada más, mi vidiñi.",
+  "Porque sos chiquita y no entrás en ninguna parte de mi vida sin llenarla.",
+  "Porque te amo, Leonelita, y ya van ocho razones y me faltan mil.",
+];
+
+const tabla = document.getElementById("tabla");
+const elRazon = document.getElementById("razon");
+const elCuenta = document.getElementById("cuenta");
+
+let abiertas = [], bloqueado = false, encontrados = 0;
+
+function mezclar(a) {
+  // Fisher-Yates y no `sort(() => Math.random() - .5)`: el segundo no mezcla
+  // parejo y deja los pares cerca, que en un memotest se nota enseguida.
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function armar() {
+  tabla.innerHTML = "";
+  abiertas = []; bloqueado = false; encontrados = 0;
+  elCuenta.textContent = "0";
+  elRazon.textContent = "encontrá dos flores iguales";
+  const mazo = mezclar(SIMBOLOS.flatMap((s, i) => [{ s, i }, { s, i }]));
+  mazo.forEach((carta) => {
+    const b = document.createElement("button");
+    b.className = "carta";
+    b.setAttribute("aria-label", "carta tapada");
+    b.innerHTML = `<div class="cara dorso">❦</div><div class="cara frente">${carta.s}</div>`;
+    b.dataset.i = carta.i;
+    b.addEventListener("click", () => voltear(b));
+    tabla.appendChild(b);
+  });
+}
+
+function voltear(b) {
+  if (bloqueado || b.classList.contains("abierta")) return;
+  b.classList.add("abierta");
+  b.setAttribute("aria-label", "carta descubierta");
+  abiertas.push(b);
+  if (abiertas.length < 2) return;
+
+  const [a, c] = abiertas;
+  if (a.dataset.i === c.dataset.i) {
+    a.classList.add("lista"); c.classList.add("lista");
+    abiertas = [];
+    encontrados++;
+    elCuenta.textContent = String(encontrados);
+    elRazon.textContent = RAZONES[+a.dataset.i];
+    if (encontrados === SIMBOLOS.length)
+      setTimeout(() => { elRazon.textContent = "…y todas las que no entran acá. Te amo, mi pequeñita."; }, 2400);
+    return;
+  }
+  // SE TAPAN SOLAS AL SEGUNDO, y mientras tanto no se puede tocar nada: sin
+  // ese cerrojo se pueden abrir seis cartas de un manotazo y el juego se
+  // desarma.
+  bloqueado = true;
+  setTimeout(() => {
+    a.classList.remove("abierta"); c.classList.remove("abierta");
+    a.setAttribute("aria-label", "carta tapada"); c.setAttribute("aria-label", "carta tapada");
+    abiertas = []; bloqueado = false;
+  }, 950);
+}
+
+document.getElementById("otra").addEventListener("click", armar);
+armar();
+
+window.__flores = { encontrados: () => encontrados,
+  resolver() {
+    const porI = {};
+    for (const b of tabla.children) (porI[b.dataset.i] ||= []).push(b);
+    for (const i in porI) { voltear(porI[i][0]); voltear(porI[i][1]); }
+    return encontrados;
+  } };
+</script>
+</body>
+</html>

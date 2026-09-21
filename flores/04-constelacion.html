@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Tu constelación — para Leonelita</title>
+<meta name="description" content="Uní las estrellas en orden y aparece una flor en el cielo. Cada línea enciende una palabra.">
+<style>
+/* ESTILO: noche. Azul profundo, estrellas, todo brilla en vez de tener borde. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;
+  background:radial-gradient(ellipse at 50% 110%,#123a5c 0%,#0a1930 45%,#050b18 100%);
+  font-family:system-ui,-apple-system,sans-serif;color:#dbe9ff}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+#tit{position:fixed;top:5%;left:0;right:0;text-align:center;z-index:2;pointer-events:none}
+#tit b{display:block;font-size:clamp(19px,5vw,27px);font-weight:600;letter-spacing:.05em;
+  text-shadow:0 0 18px rgba(255,226,140,.5)}
+#tit small{display:block;margin-top:5px;font-size:11px;letter-spacing:.22em;
+  text-transform:uppercase;color:#7f9dc4}
+#palabra{position:fixed;left:50%;bottom:13%;transform:translateX(-50%);z-index:2;
+  width:min(420px,88vw);text-align:center;pointer-events:none;
+  font-size:clamp(17px,4.6vw,23px);line-height:1.45;
+  color:#ffe98f;text-shadow:0 0 22px rgba(255,220,110,.55);
+  opacity:0;transition:opacity .45s}
+#palabra.on{opacity:1}
+#pie{position:fixed;bottom:5.5%;left:0;right:0;text-align:center;z-index:2;pointer-events:none;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#6d87ad}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="tit"><b>Tu constelación</b><small>Leonelita · 21 de septiembre</small></div>
+<div id="palabra"></div>
+<div id="pie">tocá las estrellas que titilan</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: unir puntos EN ORDEN. La siguiente estrella es la única que titila.
+   ═══════════════════════════════════════════════════════════════════════════
+   Dejar unir cualquiera con cualquiera suena más libre y es peor: se arma un
+   garabato y no aparece nunca el dibujo. Titilando sólo la que sigue, no hay
+   forma de equivocarse y el dibujo sale igual. */
+const c = document.getElementById("c"), x = c.getContext("2d");
+const elP = document.getElementById("palabra");
+
+/* La flor, en coordenadas de 0 a 1 para que entre en cualquier pantalla: ocho
+   pétalos alrededor de un centro, dibujados en el orden en que se unen. */
+const FLOR = [];
+for (let i = 0; i < 8; i++) {
+  const a = -Math.PI / 2 + (i / 8) * Math.PI * 2;
+  FLOR.push([0.5 + Math.cos(a) * 0.26, 0.42 + Math.sin(a) * 0.20]);
+}
+FLOR.push([0.5, 0.42]);                      // el centro, al final
+FLOR.push([0.5, 0.62]);                      // el tallo
+FLOR.push([0.5, 0.78]);
+
+const PALABRAS = [
+  "Mi bubush,", "sos", "la parte", "más linda", "de todos",
+  "mis días.", "Mi vidiñi,", "mi pequeñita,", "te amo.",
+  "Feliz día de", "las flores amarillas.",
+];
+
+let AN = 0, AL = 0, dpr = 1;
+const fondo = [];
+function medir() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  AN = innerWidth; AL = innerHeight;
+  c.width = Math.round(AN * dpr); c.height = Math.round(AL * dpr);
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", medir); medir();
+for (let i = 0; i < 160; i++)
+  fondo.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + .3,
+               f: Math.random() * 6.28, v: .4 + Math.random() * 1.2 });
+
+const pos = (i) => ({ x: FLOR[i][0] * AN, y: FLOR[i][1] * AL });
+let unidas = 0;                              // cuántas estrellas ya se tocaron
+const chispas = [];
+
+function tocar(px, py) {
+  if (unidas >= FLOR.length) return;
+  const p = pos(unidas);
+  // EL BLANCO ES GRANDE: 46 px de radio, bastante más que la estrella dibujada.
+  // Una estrella de seis píxeles es imposible de tocar con el pulgar.
+  if (Math.hypot(px - p.x, py - p.y) > 46) return;
+  for (let i = 0; i < 16; i++)
+    chispas.push({ x: p.x, y: p.y, a: Math.random() * 6.28,
+                   v: 1 + Math.random() * 3, vida: 40 + Math.random() * 20 });
+  unidas++;
+  const texto = PALABRAS.slice(0, unidas).join(" ");
+  elP.textContent = texto;
+  elP.classList.add("on");
+}
+
+function cuadro(ahora) {
+  requestAnimationFrame(cuadro);
+  x.clearRect(0, 0, AN, AL);
+
+  // el cielo de fondo
+  for (const e of fondo) {
+    const b = .35 + .65 * (0.5 + 0.5 * Math.sin(ahora / 900 * e.v + e.f));
+    x.fillStyle = `rgba(210,228,255,${b * .75})`;
+    x.beginPath(); x.arc(e.x * AN, e.y * AL, e.r, 0, 7); x.fill();
+  }
+
+  // las líneas ya trazadas
+  if (unidas > 1) {
+    x.strokeStyle = "rgba(255,226,140,.75)";
+    x.lineWidth = 2; x.lineCap = "round";
+    x.shadowColor = "rgba(255,214,90,.9)"; x.shadowBlur = 12;
+    x.beginPath();
+    for (let i = 0; i < unidas; i++) {
+      const p = pos(i);
+      i ? x.lineTo(p.x, p.y) : x.moveTo(p.x, p.y);
+    }
+    x.stroke();
+    x.shadowBlur = 0;
+  }
+
+  // las estrellas de la flor
+  for (let i = 0; i < FLOR.length; i++) {
+    const p = pos(i);
+    const hecha = i < unidas, siguiente = i === unidas;
+    // LA QUE SIGUE LATE Y LAS DEMAS NO: es toda la instrucción que hace falta,
+    // y no hace falta ninguna palabra.
+    const late = siguiente ? 1 + Math.sin(ahora / 260) * .45 : 1;
+    const r = (hecha ? 5 : siguiente ? 6.5 : 3) * late;
+    x.fillStyle = hecha ? "#ffe98f" : siguiente ? "#fff4c4" : "rgba(180,205,240,.45)";
+    if (hecha || siguiente) { x.shadowColor = "rgba(255,220,110,.95)"; x.shadowBlur = siguiente ? 22 : 14; }
+    x.beginPath(); x.arc(p.x, p.y, r, 0, 7); x.fill();
+    x.shadowBlur = 0;
+    if (siguiente) {
+      x.strokeStyle = `rgba(255,236,160,${.5 - .3 * Math.sin(ahora / 260)})`;
+      x.lineWidth = 1.5;
+      x.beginPath(); x.arc(p.x, p.y, 16 + Math.sin(ahora / 260) * 6, 0, 7); x.stroke();
+    }
+  }
+
+  for (let i = chispas.length - 1; i >= 0; i--) {
+    const s = chispas[i];
+    s.x += Math.cos(s.a) * s.v; s.y += Math.sin(s.a) * s.v; s.v *= .94; s.vida--;
+    if (s.vida <= 0) { chispas.splice(i, 1); continue; }
+    x.fillStyle = `rgba(255,230,150,${s.vida / 60})`;
+    x.beginPath(); x.arc(s.x, s.y, 1.8, 0, 7); x.fill();
+  }
+
+  // Terminada, la flor respira: se queda como un dibujo vivo en el cielo.
+  if (unidas >= FLOR.length) {
+    const b = .10 + .07 * Math.sin(ahora / 700);
+    x.fillStyle = `rgba(255,226,140,${b})`;
+    x.beginPath(); x.arc(AN * .5, AL * .42, AN * .3, 0, 7); x.fill();
+  }
+}
+requestAnimationFrame(cuadro);
+
+const punto = (e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+c.addEventListener("pointerdown", (e) => { const p = punto(e); tocar(p.x, p.y); e.preventDefault(); });
+// arrastrando también, que es lo que uno hace sin pensar al unir puntos
+c.addEventListener("pointermove", (e) => { if (e.buttons || e.pointerType === "touch") { const p = punto(e); tocar(p.x, p.y); } });
+
+window.__flores = { unidas: () => unidas, total: FLOR.length,
+                    unirTodo() { while (unidas < FLOR.length) { const p = pos(unidas); tocar(p.x, p.y); } } };
+</script>
+</body>
+</html>

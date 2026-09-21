@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>La caja de música — para Leonelita</title>
+<meta name="description" content="Dale cuerda a la manivela y la caja toca. Cada vuelta abre un papelito.">
+<style>
+/* ESTILO: art déco. Dorado sobre verde botella, simetría, líneas finas. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 38px,rgba(212,175,84,.05) 38px 39px),
+    radial-gradient(ellipse at 50% 20%,#1d4038,#0d1f1c 70%);
+  font-family:"Georgia",serif;color:#f2e6c4;display:grid;place-items:center;padding:16px}
+#caja{position:relative;width:min(400px,92vw);text-align:center}
+.marco{border:2px solid #d4af54;border-radius:4px;padding:clamp(20px,6vw,34px) clamp(16px,5vw,26px);
+  background:linear-gradient(170deg,rgba(212,175,84,.09),rgba(0,0,0,.18));
+  box-shadow:0 0 0 6px rgba(212,175,84,.12),0 20px 46px rgba(0,0,0,.55)}
+h1{font-size:clamp(19px,5.4vw,27px);font-weight:400;letter-spacing:.14em;margin-bottom:4px}
+.sub{font:700 10px/1.8 system-ui,sans-serif;letter-spacing:.26em;text-transform:uppercase;
+  color:#a9955f;margin-bottom:18px}
+#disco{display:block;margin:0 auto 16px}
+#papel{min-height:5.4em;display:grid;place-items:center;padding:12px 8px;
+  border-top:1px solid rgba(212,175,84,.3);border-bottom:1px solid rgba(212,175,84,.3);
+  font-size:clamp(15px,4.2vw,19px);line-height:1.55;color:#ffe9a8;
+  transition:opacity .4s}
+#papel.cambiando{opacity:0}
+#manivela{margin-top:18px;width:100%;padding:15px;border-radius:3px;
+  border:2px solid #d4af54;background:rgba(212,175,84,.13);color:#ffe9a8;
+  font:700 12px/1 system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;
+  transition:background .15s,transform .08s}
+#manivela:active{transform:translateY(2px);background:rgba(212,175,84,.26)}
+#vueltas{margin-top:11px;font:700 10px/1 system-ui,sans-serif;letter-spacing:.18em;
+  text-transform:uppercase;color:#8d7c4f}
+</style>
+</head>
+<body>
+<div id="caja"><div class="marco">
+  <h1>La caja de música</h1>
+  <div class="sub">Leonelita · 21 · 09</div>
+  <canvas id="disco" width="200" height="200"></canvas>
+  <div id="papel">dale cuerda</div>
+  <button id="manivela">dar cuerda</button>
+  <div id="vueltas">0 vueltas</div>
+</div></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: dar cuerda. Cada vuelta toca un pedazo de melodía y saca un papel.
+   ═══════════════════════════════════════════════════════════════════════════
+   Es la única de las diez que suena de verdad, y por eso es la única con un
+   botón grande en vez de un gesto: el sonido necesita un toque deliberado, no
+   un arrastre. */
+const disco = document.getElementById("disco"), x = disco.getContext("2d");
+const elPapel = document.getElementById("papel");
+const elVueltas = document.getElementById("vueltas");
+
+const PAPELES = [
+  "Mi bubush, si esta caja tuviera una sola canción, sería tu nombre.",
+  "Mi vidiñi, te pienso en los días comunes, que son casi todos.",
+  "Mi pequeñita, cabés en un abrazo y no entrás en ninguna palabra.",
+  "Leonelita: gracias por los días fáciles y por bancarte los otros.",
+  "Te quiero despacio, que es como duran las cosas.",
+  "Si me preguntan qué me salió bien en la vida, digo tu nombre.",
+  "Hoy es el día de las flores amarillas y vos sos todas.",
+  "Te amo. Dale cuerda de nuevo cuando quieras que te lo repita.",
+];
+let vueltas = 0, girando = 0, angulo = 0;
+
+/* ── la melodía ───────────────────────────────────────────────────────────
+   Una caja de música es un peine de púas: cada nota es una campanita que
+   arranca fuerte y se apaga sola, sin sostenido. Eso se hace con dos senos —
+   la nota y su armónico— y una caída exponencial. Con una onda cuadrada
+   sonaría a consola, no a caja. */
+let AC = null;
+const NOTAS = [
+  // un vals corto en Do mayor, tres tiempos, que es lo que suena a caja
+  [523.25,0],[659.25,.30],[783.99,.60],[659.25,.90],[523.25,1.20],[392.00,1.50],
+  [440.00,1.80],[523.25,2.10],[659.25,2.40],[523.25,2.70],[440.00,3.00],[349.23,3.30],
+];
+function campanita(hz, cuando, fuerza) {
+  const t0 = AC.currentTime + cuando;
+  for (const [mult, vol, largo] of [[1, .22, 1.9], [2.01, .09, 1.2], [3.02, .04, .8]]) {
+    const o = AC.createOscillator(); o.type = "sine";
+    o.frequency.value = hz * mult;
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol * fuerza, t0 + .008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + largo);
+    o.connect(g); g.connect(AC.destination);
+    o.start(t0); o.stop(t0 + largo + .1);
+  }
+}
+function tocar() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
+  if (AC.state === "suspended") AC.resume();
+  // la melodía se corre un poco cada vuelta, así no suena idéntica dos veces
+  const desde = (vueltas % 4) * 3;
+  for (let i = 0; i < 6; i++) {
+    const n = NOTAS[(desde + i) % NOTAS.length];
+    campanita(n[0], i * 0.3, 1 - i * 0.06);
+  }
+}
+
+function darCuerda() {
+  tocar();
+  girando = 1;
+  elPapel.classList.add("cambiando");
+  setTimeout(() => {
+    elPapel.textContent = PAPELES[vueltas % PAPELES.length];
+    elPapel.classList.remove("cambiando");
+  }, 380);
+  vueltas++;
+  elVueltas.textContent = vueltas === 1 ? "1 vuelta" : `${vueltas} vueltas`;
+}
+
+/* El disco: un cilindro de caja de música visto de frente, con sus púas.
+   Gira mientras suena y va frenando, como uno de verdad al que se le acaba la
+   cuerda. */
+function cuadro() {
+  requestAnimationFrame(cuadro);
+  if (girando > 0.001) { angulo += girando * 0.07; girando *= 0.992; }
+  const R = 100;
+  x.clearRect(0, 0, 200, 200);
+  x.save(); x.translate(R, R);
+
+  x.strokeStyle = "rgba(212,175,84,.35)"; x.lineWidth = 1;
+  for (const r of [92, 78, 34]) { x.beginPath(); x.arc(0, 0, r, 0, 7); x.stroke(); }
+
+  x.save(); x.rotate(angulo);
+  // las púas: 24 puntitos en dos anillos
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * 6.28;
+    const largo = i % 3 === 0 ? 20 : 12;
+    x.strokeStyle = i % 3 === 0 ? "#ffe9a8" : "rgba(212,175,84,.65)";
+    x.lineWidth = i % 3 === 0 ? 2.4 : 1.6;
+    x.beginPath();
+    x.moveTo(Math.cos(a) * 40, Math.sin(a) * 40);
+    x.lineTo(Math.cos(a) * (40 + largo), Math.sin(a) * (40 + largo));
+    x.stroke();
+  }
+  // un rayo grueso que marca la vuelta
+  x.strokeStyle = "#d4af54"; x.lineWidth = 3;
+  x.beginPath(); x.moveTo(0, 0); x.lineTo(0, -34); x.stroke();
+  x.restore();
+
+  x.fillStyle = "#d4af54";
+  x.beginPath(); x.arc(0, 0, 9, 0, 7); x.fill();
+  x.fillStyle = "#0d1f1c";
+  x.beginPath(); x.arc(0, 0, 4, 0, 7); x.fill();
+
+  // una florcita en el centro cuando ya se le dio bastante cuerda
+  if (vueltas >= PAPELES.length) {
+    x.save(); x.rotate(-angulo * .4);
+    for (let i = 0; i < 6; i++) {
+      x.rotate(Math.PI / 3);
+      x.fillStyle = "#ffe08a";
+      x.beginPath(); x.ellipse(0, -18, 7, 15, 0, 0, 7); x.fill();
+    }
+    x.fillStyle = "#c58b1e";
+    x.beginPath(); x.arc(0, 0, 7, 0, 7); x.fill();
+    x.restore();
+  }
+  x.restore();
+}
+requestAnimationFrame(cuadro);
+
+document.getElementById("manivela").addEventListener("click", darCuerda);
+addEventListener("keydown", (e) => { if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); darCuerda(); } });
+
+window.__flores = { vueltas: () => vueltas, darCuerda, papel: () => elPapel.textContent };
+</script>
+</body>
+</html>

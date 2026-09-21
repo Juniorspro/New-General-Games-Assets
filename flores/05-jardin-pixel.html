@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>El jardín de Leonelita — regalo del 21</title>
+<meta name="description" content="Regá el jardín manteniendo el dedo. Cada flor que abre trae un recuerdo.">
+<style>
+/* ESTILO: pixel art. Todo en una grilla de 4 px, paleta corta, sin antialias. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;
+  background:#1b2a3a;font-family:ui-monospace,"Courier New",monospace;
+  display:grid;place-items:center}
+#c{image-rendering:pixelated;width:min(96vw,min(520px,56vh*1.0));
+  aspect-ratio:1/1.25;display:block;
+  box-shadow:0 0 0 4px #0e1824,0 0 0 8px #2f4a63,0 18px 40px rgba(0,0,0,.5)}
+#hud{position:fixed;top:3%;left:0;right:0;text-align:center;
+  font:700 clamp(12px,3.4vw,15px)/1.5 ui-monospace,monospace;color:#9fd98a;
+  letter-spacing:.1em;text-transform:uppercase}
+#hud small{display:block;color:#5d7f9c;font-size:.78em;letter-spacing:.18em}
+#dice{position:fixed;bottom:5%;left:50%;transform:translateX(-50%);
+  width:min(440px,90vw);text-align:center;
+  font:clamp(13px,3.7vw,16px)/1.55 ui-monospace,monospace;color:#ffe08a;
+  background:#0e1824;border:3px solid #2f4a63;padding:11px 14px;
+  min-height:3.2em;display:grid;place-items:center}
+#regar{position:fixed;bottom:5%;right:5%;display:none}
+</style>
+</head>
+<body>
+<div id="hud">El jardín de Leonelita<small>mantené el dedo para regar</small></div>
+<canvas id="c" width="160" height="200"></canvas>
+<div id="dice">el jardín está seco…</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: regar sosteniendo. No hay toques: hay que MANTENER.
+   ═══════════════════════════════════════════════════════════════════════════
+   Un jardín que crece con toques premia apretar rápido. Sosteniendo, la única
+   forma de que crezca es quedarse — que es de lo que se trata el regalo. */
+const c = document.getElementById("c"), x = c.getContext("2d");
+x.imageSmoothingEnabled = false;
+const AN = c.width, AL = c.height;
+const elDice = document.getElementById("dice");
+
+const RECUERDOS = [
+  "la primera vez que te reíste conmigo",
+  "cuando te quedaste dormida en mi hombro",
+  "el día que me dijiste «bubush»",
+  "todas las veces que me esperaste",
+  "el mate compartido de los domingos",
+  "cómo me mirás cuando hablo de más",
+  "mi vidiñi, tu mano en la mía",
+  "mi pequeñita, tu pelo hecho un desastre",
+  "el abrazo de cuando volví",
+  "vos, simplemente vos",
+];
+
+/* La paleta: once colores y ninguno más. Una paleta corta es lo que hace que
+   un dibujo se lea como pixel art y no como un dibujo chico. */
+const P = { cielo1:"#2a4a6b", cielo2:"#3d6a8f", cielo3:"#5a8cb0", nube:"#b9dcf2",
+            sol:"#ffe08a", tierra:"#4a3524",
+            tierra2:"#5c4430", tallo:"#5aa94a", petalo:"#ffd447", centro:"#e08b2a",
+            agua:"#7fd4ff", brote:"#7fc95e" };
+
+const HOR = AL - 34;          // donde termina el cielo y empieza la tierra
+
+const CANTEROS = 6;
+const macetas = [];
+for (let i = 0; i < CANTEROS; i++)
+  macetas.push({ x: 16 + i * 22, crece: 0, abierta: false, tipo: i % 3 });
+
+let regando = false, gotas = [], t = 0, abiertas = 0;
+
+function px(cx, cy, w, h, col) { x.fillStyle = col; x.fillRect(cx | 0, cy | 0, w, h); }
+
+function dibujarFlor(m) {
+  const base = HOR;
+  const alto = Math.round(m.crece * 40);
+  if (alto <= 0) return;
+  // el tallo, de a cuatro píxeles
+  for (let j = 0; j < alto; j += 4) px(m.x + 2, base - j, 2, 4, P.tallo);
+  if (alto > 14) px(m.x - 3, base - 14, 5, 3, P.brote);
+  if (alto > 24) px(m.x + 5, base - 24, 5, 3, P.brote);
+  if (m.crece < 0.8) {
+    // todavía es un brote
+    px(m.x, base - alto - 3, 6, 4, P.brote);
+    return;
+  }
+  // la flor abierta: un patrón fijo de píxeles, distinto por tipo
+  const cx = m.x + 3, cy = base - alto - 5;
+  const formas = [
+    [[-6,-2,4,4],[6,-2,4,4],[-2,-8,4,4],[-2,4,4,4],[-5,-6,3,3],[5,-6,3,3],[-5,3,3,3],[5,3,3,3]],
+    [[-7,0,4,3],[7,0,4,3],[0,-7,3,4],[0,7,3,4],[-5,-5,4,4],[5,-5,4,4],[-5,5,4,4],[5,5,4,4]],
+    [[-6,-4,4,4],[6,-4,4,4],[-6,4,4,4],[6,4,4,4],[-1,-8,4,4],[-1,6,4,4]],
+  ];
+  for (const [dx, dy, w, h] of formas[m.tipo]) px(cx + dx - 1, cy + dy - 1, w, h, P.petalo);
+  px(cx - 2, cy - 2, 5, 5, P.centro);
+}
+
+function cuadro() {
+  requestAnimationFrame(cuadro);
+  t++;
+
+  /* EL CIELO LLEGA HASTA LA TIERRA. La primera versión lo cortaba en el 55 %
+     del alto y de ahí hasta el suelo no pintaba nada: quedaba una franja del
+     color del fondo de la página, y las flores crecían adentro de ese pozo
+     negro. Se veía como un error de dibujo y era uno de aritmética. */
+  px(0, 0, AN, HOR, P.cielo1);
+  // tres bandas, más claras cerca del horizonte, como aclara un cielo de verdad
+  px(0, HOR - 56, AN, 56, P.cielo2);
+  px(0, HOR - 22, AN, 22, P.cielo3);
+
+  // nubes de a bloques: una nube difuminada rompería el pixel art
+  for (let i = 0; i < 3; i++) {
+    const n = [[16, 5, .07], [36, 3, .04], [54, 4, .10]][i];
+    const nx = ((t * n[2] + i * 74) % (AN + 56)) - 48;
+    px(nx, n[0], n[1] * 8, 4, P.nube);
+    px(nx + 6, n[0] - 4, n[1] * 5, 4, P.nube);
+  }
+
+  const sol = 10 + (Math.sin(t / 90) > 0 ? 1 : 0);
+  px(AN - 32, 16, sol, sol, P.sol);
+  px(AN - 34, 18, 2, sol - 4, P.sol);
+  px(AN - 32 + sol, 18, 2, sol - 4, P.sol);
+
+  // tierra
+  px(0, HOR, AN, 34, P.tierra);
+  for (let i = 0; i < AN; i += 8) px(i, HOR, 4, 3, P.tierra2);
+
+  if (regando) {
+    if (t % 2 === 0)
+      gotas.push({ x: 8 + Math.random() * (AN - 16), y: 40 + Math.random() * 30, v: 2 + Math.random() });
+    for (const m of macetas) {
+      if (m.crece < 1) {
+        m.crece = Math.min(1, m.crece + 0.0055);
+        if (m.crece >= 1 && !m.abierta) {
+          m.abierta = true;
+          elDice.textContent = RECUERDOS[abiertas % RECUERDOS.length];
+          abiertas++;
+          if (abiertas >= CANTEROS)
+            setTimeout(() => { elDice.textContent = "te amo, mi pequeñita 🌼"; }, 2200);
+        }
+      }
+    }
+  }
+  for (let i = gotas.length - 1; i >= 0; i--) {
+    const g = gotas[i]; g.y += g.v;
+    if (g.y > HOR) { gotas.splice(i, 1); continue; }
+    px(g.x, g.y, 2, 4, P.agua);
+  }
+
+  for (const m of macetas) dibujarFlor(m);
+}
+requestAnimationFrame(cuadro);
+
+/* SE RIEGA DESDE CUALQUIER PARTE DE LA PANTALLA, no sólo sobre el dibujo: el
+   canvas es chico y apuntarle con el pulgar es una pelea que nadie pidió. */
+const abrir = (e) => { regando = true; if (e.cancelable) e.preventDefault(); };
+const cerrar = () => { regando = false; };
+addEventListener("pointerdown", abrir);
+for (const ev of ["pointerup", "pointercancel"]) addEventListener(ev, cerrar);
+addEventListener("keydown", (e) => { if (e.code === "Space") { abrir(e); } });
+addEventListener("keyup", (e) => { if (e.code === "Space") cerrar(); });
+
+window.__flores = { abiertas: () => abiertas, regar: (v) => { regando = v; },
+                    crecer() { for (const m of macetas) { m.crece = 1;
+                      if (!m.abierta) { m.abierta = true; abiertas++;
+                        elDice.textContent = RECUERDOS[abiertas % RECUERDOS.length]; } } } };
+</script>
+</body>
+</html>

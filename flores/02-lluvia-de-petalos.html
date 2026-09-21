@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Lluvia de pétalos — para Leonelita</title>
+<meta name="description" content="Atajá los pétalos amarillos con el canasto. Cada uno escribe un renglón de la carta.">
+<style>
+/* ESTILO: papel de carta y tinta. Todo el juego pasa arriba; la carta se
+   escribe abajo, en un papel de verdad con renglones. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;
+  background:linear-gradient(180deg,#bfe3f5 0%,#e8f4fa 52%,#f7f1dd 100%);
+  font-family:"Courier New",Courier,monospace}
+#cielo{position:fixed;left:0;right:0;top:0;height:58%;display:block;width:100%}
+#tit{position:fixed;top:14px;left:0;right:0;text-align:center;z-index:2;pointer-events:none;
+  font:700 13px/1.4 system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5c7d90}
+#marcador{position:fixed;top:40px;left:0;right:0;text-align:center;z-index:2;pointer-events:none;
+  font:700 clamp(15px,4vw,19px)/1 system-ui,sans-serif;color:#37546a}
+/* LA CARTA ES LA RECOMPENSA. Ocupa el 42 % de abajo y se llena sola: sin algo
+   que se vaya llenando, atajar pétalos no significa nada. */
+#carta{position:fixed;left:0;right:0;bottom:0;height:42%;z-index:2;
+  padding:18px clamp(16px,6vw,44px) 14px;overflow:hidden;
+  background:
+    repeating-linear-gradient(180deg,transparent 0 31px,rgba(90,120,150,.18) 31px 32px),
+    linear-gradient(180deg,#fffdf2,#fbf3dc);
+  box-shadow:0 -8px 24px rgba(80,60,20,.14);
+  border-top:2px solid #e8dcb8}
+#carta h2{font:italic 700 clamp(15px,4vw,19px)/32px "Georgia",serif;color:#8a6a2a;margin-bottom:0}
+#renglones{font:clamp(13px,3.6vw,16px)/32px "Courier New",monospace;color:#3f4b57}
+#renglones div{opacity:0;transform:translateY(6px);animation:sale .45s ease-out forwards}
+@keyframes sale{to{opacity:1;transform:none}}
+#firma{position:absolute;right:clamp(16px,6vw,44px);bottom:12px;
+  font:italic 700 clamp(14px,3.8vw,18px)/1 "Georgia",serif;color:#a07c33;
+  opacity:0;transition:opacity 1s}
+#firma.on{opacity:1}
+@media (prefers-reduced-motion: reduce){#renglones div{animation:none;opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<canvas id="cielo"></canvas>
+<div id="tit">Día de las flores amarillas</div>
+<div id="marcador">0 pétalos</div>
+<div id="carta">
+  <h2>Leonelita,</h2>
+  <div id="renglones"></div>
+  <div id="firma">— tuyo, siempre</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: atajar. Los pétalos caen y el canasto sigue al dedo.
+   ═══════════════════════════════════════════════════════════════════════════
+   Y NO SE PIERDE NUNCA. Un pétalo que se cae al piso no resta ni termina nada:
+   la carta se escribe más despacio y listo. Un regalo con pantalla de "perdiste"
+   deja de ser un regalo. */
+const c = document.getElementById("cielo"), x = c.getContext("2d");
+const elMarc = document.getElementById("marcador");
+const elReng = document.getElementById("renglones");
+const elFirma = document.getElementById("firma");
+
+const CARTA = [
+  "hoy es el día de las flores amarillas",
+  "y yo no tenía flores, así que hice esto.",
+  "",
+  "mi bubush, mi vidiñi, mi pequeñita:",
+  "me gusta cómo te reís de tus propios chistes,",
+  "me gusta que me cuentes todo dos veces,",
+  "me gusta despertarme y que estés.",
+  "",
+  "si un día te olvidás de lo linda que sos,",
+  "volvé a abrir esta página.",
+  "",
+  "te amo.",
+];
+let iLinea = 0, juntados = 0;
+
+let dpr = 1, AN = 0, AL = 0;
+function medir() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  AN = c.clientWidth; AL = c.clientHeight;
+  c.width = Math.round(AN * dpr); c.height = Math.round(AL * dpr);
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener("resize", medir); medir();
+
+const petalos = [];
+let canasto = { x: 0, y: 0 };
+canasto.x = AN / 2;
+
+function suelta() {
+  petalos.push({
+    x: 20 + Math.random() * (AN - 40), y: -30,
+    vy: 0.9 + Math.random() * 1.1,
+    // EL VAIVEN ES LO QUE LO HACE UN PETALO Y NO UNA PIEDRA: cayendo derecho
+    // se ve como lluvia, y una flor no cae derecho.
+    fase: Math.random() * 6.28, amp: 18 + Math.random() * 26,
+    giro: Math.random() * 6.28, vg: (Math.random() - .5) * .07,
+    tam: 9 + Math.random() * 7,
+    tono: 44 + Math.random() * 10,
+  });
+}
+
+function nuevoRenglon() {
+  if (iLinea >= CARTA.length) { elFirma.classList.add("on"); return; }
+  const d = document.createElement("div");
+  d.textContent = CARTA[iLinea] || " ";
+  elReng.appendChild(d);
+  iLinea++;
+  // La carta no hace scroll: si se pasa de largo, se corre para arriba sola.
+  while (elReng.scrollHeight > elReng.clientHeight + 40 && elReng.firstChild)
+    elReng.removeChild(elReng.firstChild);
+  if (iLinea >= CARTA.length) elFirma.classList.add("on");
+}
+
+function dibujaCanasto() {
+  const cx = canasto.x, cy = AL - 26;
+  x.save();
+  x.translate(cx, cy);
+  // un jarrón simple: dos curvas y una boca
+  x.fillStyle = "#cf8a3c";
+  x.beginPath();
+  x.moveTo(-26, -20); x.quadraticCurveTo(-16, 18, 0, 20);
+  x.quadraticCurveTo(16, 18, 26, -20); x.closePath(); x.fill();
+  x.fillStyle = "#e9a95b";
+  x.beginPath(); x.ellipse(0, -20, 26, 7, 0, 0, 7); x.fill();
+  x.fillStyle = "rgba(255,255,255,.28)";
+  x.beginPath(); x.ellipse(-9, -6, 5, 13, .2, 0, 7); x.fill();
+  x.restore();
+}
+
+function dibujaPetalo(p) {
+  x.save(); x.translate(p.x, p.y); x.rotate(p.giro);
+  const g = x.createLinearGradient(0, -p.tam, 0, p.tam);
+  g.addColorStop(0, `hsl(${p.tono},95%,72%)`);
+  g.addColorStop(1, `hsl(${p.tono - 8},88%,54%)`);
+  x.fillStyle = g;
+  x.beginPath(); x.ellipse(0, 0, p.tam * .52, p.tam, 0, 0, 7); x.fill();
+  x.strokeStyle = "rgba(160,110,20,.35)"; x.lineWidth = 1;
+  x.beginPath(); x.moveTo(0, -p.tam * .8); x.lineTo(0, p.tam * .8); x.stroke();
+  x.restore();
+}
+
+let t = 0, proximo = 0;
+function cuadro() {
+  requestAnimationFrame(cuadro);
+  t++;
+  x.clearRect(0, 0, AN, AL);
+
+  if (t > proximo) { suelta(); proximo = t + 34 + Math.random() * 30; }
+
+  for (let i = petalos.length - 1; i >= 0; i--) {
+    const p = petalos[i];
+    p.y += p.vy;
+    p.x += Math.sin(t / 44 + p.fase) * (p.amp / 46);
+    p.giro += p.vg;
+    dibujaPetalo(p);
+    // ¿lo atajó? la boca del jarrón es ancha a propósito: esto tiene que ser
+    // fácil, no un desafío
+    if (p.y > AL - 44 && p.y < AL - 8 && Math.abs(p.x - canasto.x) < 34) {
+      petalos.splice(i, 1);
+      juntados++;
+      elMarc.textContent = juntados === 1 ? "1 pétalo" : `${juntados} pétalos`;
+      if (juntados % 2 === 1 || iLinea < 4) nuevoRenglon();
+      continue;
+    }
+    if (p.y > AL + 30) petalos.splice(i, 1);
+  }
+  dibujaCanasto();
+}
+requestAnimationFrame(cuadro);
+
+/* EL JARRON SIGUE AL DEDO EN TODA LA PANTALLA, no sólo dentro del canvas: el
+   dedo se apoya donde cae y esperar que sepa dónde termina el cielo es pedirle
+   que mire. */
+function mover(e) {
+  const r = c.getBoundingClientRect();
+  canasto.x = Math.max(28, Math.min(AN - 28, e.clientX - r.left));
+}
+addEventListener("pointerdown", (e) => { mover(e); });
+addEventListener("pointermove", (e) => { mover(e); });
+addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") canasto.x = Math.max(28, canasto.x - 26);
+  if (e.key === "ArrowRight") canasto.x = Math.min(AN - 28, canasto.x + 26);
+});
+
+window.__flores = { juntados: () => juntados, lineas: () => iLinea,
+                    atajar() { petalos.push({ x: canasto.x, y: AL - 30, vy: 1, fase: 0,
+                                              amp: 0, giro: 0, vg: 0, tam: 10, tono: 48 }); } };
+</script>
+</body>
+</html>

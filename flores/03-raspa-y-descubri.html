@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Raspá con el dedo — para Leonelita</title>
+<meta name="description" content="Una tarjeta dorada. Raspala con el dedo y aparece lo que dice abajo.">
+<style>
+/* ESTILO: tarjeta de raspar. Dorado, sombra dura, fondo bordó. */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;
+  background:radial-gradient(ellipse at 50% 30%,#5c2233,#2a0f1a 70%);
+  font-family:"Georgia",serif;display:grid;place-items:center}
+#caja{position:relative;width:min(380px,88vw);aspect-ratio:3/4;
+  border-radius:20px;overflow:hidden;
+  box-shadow:0 22px 50px rgba(0,0,0,.55),0 0 0 3px #d8a33f,0 0 0 8px rgba(216,163,63,.22)}
+/* EL MENSAJE VIVE DEBAJO, EN HTML DE VERDAD. Dibujarlo en el canvas obligaría
+   a partir los renglones a mano y no se podría copiar ni leer con un lector. */
+#abajo{position:absolute;inset:0;display:grid;place-items:center;text-align:center;
+  padding:9% 10%;background:linear-gradient(160deg,#fff8e8,#ffeec6);color:#6b4a12}
+#abajo .flor{font-size:clamp(40px,12vw,64px);line-height:1;margin-bottom:12px}
+#abajo h1{font-size:clamp(21px,6vw,30px);margin-bottom:10px;color:#8a5f14}
+#abajo p{font-size:clamp(14px,4.1vw,18px);line-height:1.6}
+#abajo .firma{margin-top:14px;font-style:italic;color:#a97f2a;font-size:clamp(13px,3.6vw,16px)}
+#tapa{position:absolute;inset:0;display:block;width:100%;height:100%}
+#pista{position:fixed;bottom:6%;left:0;right:0;text-align:center;
+  font:700 12px/1.5 system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;
+  color:#d8a33f;opacity:.85;transition:opacity .6s}
+#pista.ya{opacity:0}
+#otra{position:fixed;top:4%;right:5%;padding:9px 15px;border:0;border-radius:10px;
+  background:rgba(216,163,63,.18);color:#e8c988;border:1px solid rgba(216,163,63,.45);
+  font:700 12px/1 system-ui,sans-serif;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<button id="otra">OTRA</button>
+<div id="caja">
+  <div id="abajo">
+    <div class="flor" aria-hidden="true">🌼</div>
+    <h1 id="titu">Para vos</h1>
+    <p id="texto">…</p>
+    <div class="firma">21 de septiembre</div>
+  </div>
+  <canvas id="tapa"></canvas>
+</div>
+<div id="pista">raspá con el dedo</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   MECANICA: raspar. El dedo borra la capa dorada y deja ver lo de abajo.
+   ═══════════════════════════════════════════════════════════════════════════
+   El truco es `destination-out`: en vez de pintar, BORRA lo que ya está en el
+   lienzo. Poner encima un color del fondo no sirve — taparía también el
+   mensaje, que vive debajo del canvas y no adentro. */
+const tapa = document.getElementById("tapa"), x = tapa.getContext("2d");
+const elPista = document.getElementById("pista");
+const elTit = document.getElementById("titu"), elTxt = document.getElementById("texto");
+
+const TARJETAS = [
+  ["Mi bubush", "Te miro y se me pasa el día. No sé cómo hacés eso, pero no dejes de hacerlo."],
+  ["Mi vidiñi", "Todo lo aburrido del mundo se vuelve llevadero si me lo contás vos."],
+  ["Mi pequeñita", "Cabés entera en un abrazo y aun así no me entrás en el pecho."],
+  ["Leonelita", "Te elegiría de nuevo. Y otra vez. Y el martes que viene también."],
+  ["Bubush hermosa", "Gracias por bancarme los días en que ni yo me banco."],
+  ["Mi vidiñi", "Me hacés reír con la boca llena y eso es amor del bueno."],
+  ["Mi pequeñita", "Si el día de las flores amarillas fuera todos los días, igual te traería."],
+  ["Leonelita", "No tengo un ramo. Tengo esto, que me llevó más tiempo y más ganas."],
+];
+let iT = Math.floor(Math.random() * TARJETAS.length);
+
+let dpr = 1, AN = 0, AL = 0, listo = false;
+function pintarTapa() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  AN = tapa.clientWidth; AL = tapa.clientHeight;
+  tapa.width = Math.round(AN * dpr); tapa.height = Math.round(AL * dpr);
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  x.globalCompositeOperation = "source-over";
+
+  const g = x.createLinearGradient(0, 0, AN, AL);
+  g.addColorStop(0, "#c9952f"); g.addColorStop(.42, "#f0d072");
+  g.addColorStop(.58, "#d9a93f"); g.addColorStop(1, "#b8862a");
+  x.fillStyle = g; x.fillRect(0, 0, AN, AL);
+
+  // el grano del dorado: sin esto es un rectángulo naranja
+  for (let i = 0; i < 900; i++) {
+    x.fillStyle = `rgba(255,255,255,${Math.random() * .1})`;
+    x.fillRect(Math.random() * AN, Math.random() * AL, 2, 1);
+  }
+  x.fillStyle = "rgba(90,60,10,.35)";
+  x.font = `700 ${Math.round(AN * .062)}px system-ui,sans-serif`;
+  x.textAlign = "center";
+  x.fillText("21 · 09", AN / 2, AL * .44);
+  x.font = `700 ${Math.round(AN * .035)}px system-ui,sans-serif`;
+  x.fillText("FLORES AMARILLAS", AN / 2, AL * .53);
+  listo = false;
+  elPista.classList.remove("ya");
+}
+
+function nuevaTarjeta() {
+  iT = (iT + 1) % TARJETAS.length;
+  elTit.textContent = TARJETAS[iT][0];
+  elTxt.textContent = TARJETAS[iT][1];
+  pintarTapa();
+}
+
+let ultimo = null;
+function raspar(px, py) {
+  x.globalCompositeOperation = "destination-out";
+  x.lineCap = "round"; x.lineJoin = "round";
+  // EL GROSOR ES DE DEDO, NO DE LAPIZ: con 8 px raspar una tarjeta entera son
+  // dos minutos y nadie llega al mensaje.
+  x.lineWidth = Math.max(26, AN * 0.11);
+  x.beginPath();
+  if (ultimo) x.moveTo(ultimo.x, ultimo.y); else x.moveTo(px - .1, py);
+  x.lineTo(px, py); x.stroke();
+  ultimo = { x: px, y: py };
+  elPista.classList.add("ya");
+}
+
+/* CUANDO YA SE RASPO CASI TODO, SE VA SOLA. Dejar el último 20 % a mano es
+   trabajo sin recompensa: el mensaje ya se leyó y lo único que queda es
+   limpiar. Se mira una grilla de puntos y no pixel por pixel, que en un
+   teléfono cuesta y no hace falta. */
+function medirRaspado() {
+  const paso = 14, d = x.getImageData(0, 0, tapa.width, tapa.height).data;
+  let libres = 0, total = 0;
+  for (let j = 0; j < tapa.height; j += paso)
+    for (let i = 0; i < tapa.width; i += paso) {
+      total++;
+      if (d[(j * tapa.width + i) * 4 + 3] < 40) libres++;
+    }
+  return libres / total;
+}
+let cuenta = 0;
+function quizasRevelar() {
+  if (listo) return;
+  if (++cuenta % 8) return;                 // no en cada movimiento: cuesta
+  if (medirRaspado() > 0.55) {
+    listo = true;
+    tapa.style.transition = "opacity .7s";
+    tapa.style.opacity = "0";
+  }
+}
+
+const punto = (e) => { const r = tapa.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+let apoyado = false;
+tapa.addEventListener("pointerdown", (e) => { apoyado = true; ultimo = null; const p = punto(e); raspar(p.x, p.y); e.preventDefault(); });
+tapa.addEventListener("pointermove", (e) => { if (!apoyado) return; const p = punto(e); raspar(p.x, p.y); quizasRevelar(); });
+for (const ev of ["pointerup", "pointercancel", "pointerleave"])
+  tapa.addEventListener(ev, () => { apoyado = false; ultimo = null; quizasRevelar(); });
+
+document.getElementById("otra").addEventListener("click", () => {
+  tapa.style.transition = "none"; tapa.style.opacity = "1";
+  nuevaTarjeta();
+});
+addEventListener("resize", () => { if (!listo) pintarTapa(); });
+
+elTit.textContent = TARJETAS[iT][0];
+elTxt.textContent = TARJETAS[iT][1];
+pintarTapa();
+
+window.__flores = { raspado: () => medirRaspado(), listo: () => listo,
+                    raspaTodo() {
+                      // EL COLOR IMPORTA AUNQUE SE ESTE BORRANDO: con
+                      // `destination-out` lo que se saca es el ALFA del color
+                      // que se pinta. El ultimo fillStyle que habia quedado era
+                      // rgba(...,.35), asi que "borrar todo" borraba un tercio
+                      // y la tarjeta seguia tapada.
+                      x.globalCompositeOperation = "destination-out";
+                      x.fillStyle = "#000";
+                      x.fillRect(0, 0, AN, AL);
+                      cuenta = 7; quizasRevelar();
+                    } };
+</script>
+</body>
+</html>
