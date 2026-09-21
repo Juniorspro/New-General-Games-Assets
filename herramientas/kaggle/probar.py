@@ -13,10 +13,22 @@ def ahora():
 
 print("ARRANCO", ahora(), flush=True)
 
-placa = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total",
-                        "--format=csv,noheader"],
-                       capture_output=True, text=True)
-print("PLACA:", (placa.stdout or placa.stderr).strip(), flush=True)
+# nvidia-smi NO existe si el kernel no consiguio GPU, y un subprocess.run
+# sobre un binario ausente tira FileNotFoundError y se lleva el kernel entero
+# al primer segundo. Ya paso: hay que preguntar antes.
+import shutil, urllib.request
+if shutil.which("nvidia-smi"):
+    placa = subprocess.run(["nvidia-smi", "--query-gpu=name,memory.total",
+                            "--format=csv,noheader"], capture_output=True, text=True)
+    print("PLACA:", (placa.stdout or placa.stderr).strip(), flush=True)
+else:
+    print("PLACA: NINGUNA (no hay nvidia-smi: el kernel corrio sin GPU)", flush=True)
+
+try:
+    c = urllib.request.urlopen("https://pypi.org/pypi/kaggle/json", timeout=20).status
+    print(f"INTERNET: si (HTTP {c})", flush=True)
+except Exception as e:
+    print(f"INTERNET: NO ({type(e).__name__})", flush=True)
 
 # 20 latidos de 30 s = 10 minutos. Tiempo de sobra para preguntar desde afuera.
 for i in range(20):

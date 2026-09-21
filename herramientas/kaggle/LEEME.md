@@ -18,20 +18,51 @@ y corre con todo lo del usuario apagado.
 Medido: `https://www.kaggle.com/api/v1/...` contesta **HTTP 401** desde el
 contenedor de la sesión. O sea que se llega; solo falta la llave.
 
-## La pregunta que falta responder
+## RESPONDIDO: `logs` no habla en vivo
 
-`kaggle kernels logs` existe como comando aparte de `output`. **Falta saber si
-devuelve el log de un kernel que todavía está corriendo.** De eso depende algo
-grande:
+Medido el 21/9 con `probar.py` (late cada 30 s durante 10 min):
 
-- **Si habla en vivo**: un kernel puede levantar escritorio + VNC + túnel,
-  imprimir la dirección, y esta sesión leerla mientras sigue abierto. Eso da
-  **interfaz gráfica sin que el usuario toque nada**.
-- **Si solo habla al terminar**: no hay forma de enterarse de esa dirección sin
-  que una persona mire la pantalla, y Kaggle queda para trabajo por lotes.
+| se pidió el log a las | el kernel ya había impreso | devolvió |
+|---|---|---|
+| 15:35:46 | `LATIDO 00`-`02` | **vacío** |
+| 15:37:29 | `LATIDO 00`-`06` | **vacío** |
+| 15:39:11 | `LATIDO 00`-`10` | **vacío** |
+| 15:46:12, ya `COMPLETE` | todo | los 24 renglones |
 
-`probar.py` está hecho para contestar exactamente eso: late cada 30 s durante 10
-minutos. Si desde afuera se ven los `LATIDO` antes del `TERMINE`, habla en vivo.
+**`kaggle kernels logs` solo devuelve el log cuando el kernel termina.**
+
+Consecuencia: **no se puede tener una interfaz gráfica en Kaggle manejada desde
+afuera.** Un kernel puede levantar escritorio + VNC + túnel, pero la dirección
+del túnel es aleatoria y no hay forma de leerla mientras el kernel vive; cuando
+el log la entrega, el kernel ya murió y el túnel con él. Para interfaz en vivo
+hay que seguir usando Colab, que necesita un navegador abierto.
+
+Kaggle queda entonces para lo que sí hace bien: **trabajo por lotes, sin clicks**.
+
+## La casilla que hay que marcar en la cuenta
+
+En la primera corrida real, con `enable_gpu` y `enable_internet` pedidos, el log
+dijo:
+
+```
+PLACA: NINGUNA (no hay nvidia-smi: el kernel corrio sin GPU)
+INTERNET: NO (URLError)
+```
+
+**Kaggle ignora los dos en silencio si la cuenta no tiene el teléfono
+verificado** (kaggle.com/settings → Phone Verification). Sin internet el kernel
+ni siquiera puede bajar Blender, así que hasta marcar eso no sirve para nada.
+
+## Formato del token: cambió
+
+Ya no son `username` + `key`. Ahora es un token único `KGAT_...` que va en
+`KAGGLE_API_TOKEN`, o en `~/.kaggle/access_token`. El usuario sigue haciendo
+falta para armar el `id` del kernel, y se averigua con `kaggle kernels list --mine`.
+
+## Lo que sí quedó probado
+
+Autenticación, empujar un kernel de tipo `script`, que corra 10 minutos enteros
+y bajar el log al final: **todo anduvo**. La plomería está verificada.
 
 ## Uso
 
