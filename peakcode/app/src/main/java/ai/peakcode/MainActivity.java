@@ -7,6 +7,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
@@ -95,6 +96,35 @@ public class MainActivity extends Activity {
                 java.io.FileOutputStream o = new java.io.FileOutputStream(f);
                 o.write(contenido.getBytes("UTF-8"));
                 o.close();
+                return f.getAbsolutePath();
+            } catch (Exception e) {
+                return "ERROR: " + e.getMessage();
+            }
+        }
+
+
+        /** Guarda bytes (PDF, docx, imagenes) en Descargas. Recibe base64. */
+        @JavascriptInterface
+        public String guardarBinario(String nombre, String base64, String mime) {
+            try {
+                byte[] datos = Base64.decode(base64, Base64.DEFAULT);
+                if (nombre == null || nombre.trim().isEmpty()) nombre = "peakcode.bin";
+                if (mime == null || mime.isEmpty()) mime = "application/octet-stream";
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ContentValues v = new ContentValues();
+                    v.put(MediaStore.MediaColumns.DISPLAY_NAME, nombre);
+                    v.put(MediaStore.MediaColumns.MIME_TYPE, mime);
+                    v.put(MediaStore.MediaColumns.RELATIVE_PATH, "Download/PeakCode");
+                    Uri u = getContentResolver().insert(
+                            MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                    if (u == null) return "ERROR: no pude crear el archivo";
+                    OutputStream o = getContentResolver().openOutputStream(u);
+                    o.write(datos); o.close();
+                    return "Download/PeakCode/" + nombre;
+                }
+                java.io.File f = new java.io.File(getExternalFilesDir(null), nombre);
+                java.io.FileOutputStream o = new java.io.FileOutputStream(f);
+                o.write(datos); o.close();
                 return f.getAbsolutePath();
             } catch (Exception e) {
                 return "ERROR: " + e.getMessage();

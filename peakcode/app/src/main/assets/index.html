@@ -46,10 +46,12 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
  color:var(--texto);border-radius:11px;padding:9px 12px;font:600 14px system-ui;max-width:46vw}
 .chip .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip .fl{color:var(--tenue);font-weight:400}
-#sheet{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
+#sheet,#sheetFmt{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
  border-radius:18px 18px 0 0;max-height:70dvh;overflow-y:auto;transform:translateY(102%);
  transition:transform .22s ease;z-index:8;padding:8px 0 14px}
-#sheet.ver{transform:translateY(0)}
+#sheet.ver,#sheetFmt.ver{transform:translateY(0)}
+#sheetFmt{left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--linea);
+ border-radius:18px 18px 0 0;transform:translateY(102%);transition:transform .22s ease;z-index:8;padding:8px 0 14px}
 #velo{position:fixed;inset:0;background:#000a;opacity:0;pointer-events:none;transition:opacity .2s;z-index:7}
 #velo.ver{opacity:1;pointer-events:auto}
 .sh-tit{padding:14px 18px 6px;color:var(--tenue);font-size:13px}
@@ -73,6 +75,7 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
 </header>
 <div id=hilo></div>
 <div id=velo></div>
+<div id=sheetFmt><div class=sh-tit>Guardar como</div><div id=fmtLista></div></div>
 <div id=sheet><div class=sh-tit id=shTit>Elegí el modelo</div><div id=shLista></div></div>
 <footer>
   <button class=chip id=bModelo><span class=n>modelo</span><span class=fl>▾</span></button>
@@ -162,8 +165,7 @@ function poner(t,q,guardable){
   const d=document.createElement('div');d.className='msg '+q;d.textContent=t;
   if(guardable){const b=document.createElement('button');
     b.className='guardar';b.textContent='⤓ guardar';
-    b.onclick=()=>{const n=prompt('Nombre del archivo:','peakcode.txt');if(!n)return;
-      const r=Peak.guardar(n,d.textContent);Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);};
+    b.onclick=()=>menuFormato(d.textContent);
     d.appendChild(b);}
   $('#hilo').appendChild(d);$('#hilo').scrollTop=1e9;return d;
 }
@@ -255,6 +257,146 @@ $('#bGuardar').onclick=()=>{
   salvar(); pintarCab(); $('#ajustes').classList.remove('ver'); repintar(); Peak.aviso('Guardado');
 };
 
+
+// ── generar archivos, todo offline ───────────────────────────────────────────
+function b64(u8){let s='';for(let i=0;i<u8.length;i++)s+=String.fromCharCode(u8[i]);return btoa(s);}
+function utf8(str){return new TextEncoder().encode(str);}
+
+// CRC32 para el ZIP del docx
+const _crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;
+ for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=_crcT[(c^u8[i])&0xFF]^(c>>>8);
+ return (c^0xFFFFFFFF)>>>0;}
+
+// ZIP store-only (sin comprimir): alcanza para un docx
+function zip(archivos){
+ const le=[],ce=[];let off=0;
+ for(const a of archivos){
+  const nom=utf8(a.nombre), dat=utf8(a.texto), crc=crc32(dat);
+  const lh=new Uint8Array(30+nom.length); const dv=new DataView(lh.buffer);
+  dv.setUint32(0,0x04034b50,true);dv.setUint16(4,20,true);dv.setUint16(6,0x800,true);
+  dv.setUint32(14,crc,true);dv.setUint32(18,dat.length,true);dv.setUint32(22,dat.length,true);
+  dv.setUint16(26,nom.length,true);lh.set(nom,30);
+  le.push(lh,dat);
+  const ch=new Uint8Array(46+nom.length); const cv=new DataView(ch.buffer);
+  cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);
+  cv.setUint16(8,0x800,true);cv.setUint32(16,crc,true);cv.setUint32(20,dat.length,true);
+  cv.setUint32(24,dat.length,true);cv.setUint16(28,nom.length,true);cv.setUint32(42,off,true);
+  ch.set(nom,46);ce.push(ch);
+  off+=lh.length+dat.length;
+ }
+ const cd=ce.reduce((a,b)=>a+b.length,0);
+ const end=new Uint8Array(22);const ev=new DataView(end.buffer);
+ ev.setUint32(0,0x06054b50,true);ev.setUint16(8,ce.length,true);ev.setUint16(10,ce.length,true);
+ ev.setUint32(12,cd,true);ev.setUint32(16,off,true);
+ const partes=[...le,...ce,end];const tot=partes.reduce((a,b)=>a+b.length,0);
+ const out=new Uint8Array(tot);let p=0;for(const x of partes){out.set(x,p);p+=x.length;}
+ return out;
+}
+function xmlEsc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function docx(texto){
+ const parr=texto.split('\n').map(l=>
+  '<w:p><w:r><w:t xml:space="preserve">'+xmlEsc(l)+'</w:t></w:r></w:p>').join('');
+ const doc='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+  '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'+
+  '<w:body>'+parr+'</w:body></w:document>';
+ const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+  '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+  '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+  '<Default Extension="xml" ContentType="application/xml"/>'+
+  '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+  '</Types>';
+ const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
+  '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+  '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+  '</Relationships>';
+ return zip([{nombre:'[Content_Types].xml',texto:ct},
+             {nombre:'_rels/.rels',texto:rels},
+             {nombre:'word/document.xml',texto:doc}]);
+}
+
+// PDF A4, Helvetica 11, con corte de renglon y paginado
+function pdf(texto){
+ const AN=595,AL=842,MX=50,MY=50,FS=11,LH=15,COLS=88;
+ const lineas=[];
+ for(const cruda of texto.split('\n')){
+  if(cruda.length<=COLS){lineas.push(cruda);continue;}
+  let l=cruda;while(l.length>COLS){let corte=l.lastIndexOf(' ',COLS);if(corte<40)corte=COLS;
+   lineas.push(l.slice(0,corte));l=l.slice(corte).replace(/^ /,'');}lineas.push(l);
+ }
+ const porPag=Math.floor((AL-2*MY)/LH);
+ const pags=[];for(let i=0;i<lineas.length;i+=porPag)pags.push(lineas.slice(i,i+porPag));
+ if(!pags.length)pags.push(['']);
+ const esc=t=>t.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');
+ const obj=[];                       // texto de cada objeto
+ obj.push('<< /Type /Catalog /Pages 2 0 R >>');
+ const kids=[]; let n=3+pags.length; // fuente y contenidos despues de las paginas
+ pags.forEach((_,i)=>kids.push((3+i)+' 0 R'));
+ obj.push('<< /Type /Pages /Kids ['+kids.join(' ')+'] /Count '+pags.length+' >>');
+ const fuenteObj=3+pags.length+pags.length; // n de la fuente
+ pags.forEach((_,i)=>{
+  const cont=fuenteObj+1+i;
+  obj.push('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+AN+' '+AL+'] '+
+    '/Resources << /Font << /F1 '+fuenteObj+' 0 R >> >> /Contents '+cont+' 0 R >>');
+ });
+ obj.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+ pags.forEach(pag=>{
+  let cs='BT /F1 '+FS+' Tf '+LH+' TL '+MX+' '+(AL-MY)+' Td\n';
+  pag.forEach((l,j)=>{cs+='('+esc(l)+') Tj'+(j<pag.length-1?' T*':'')+'\n';});
+  cs+='ET';
+  obj.push('<< /Length '+utf8(cs).length+' >>\nstream\n'+cs+'\nendstream');
+ });
+ let pdf='%PDF-1.4\n';const offs=[0];
+ obj.forEach((o,i)=>{offs.push(pdf.length);pdf+=(i+1)+' 0 obj\n'+o+'\nendobj\n';});
+ const xref=pdf.length;
+ pdf+='xref\n0 '+(obj.length+1)+'\n0000000000 65535 f \n';
+ for(let i=1;i<=obj.length;i++)pdf+=String(offs[i]).padStart(10,'0')+' 00000 n \n';
+ pdf+='trailer\n<< /Size '+(obj.length+1)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+ return utf8(pdf);
+}
+
+const FORMATOS=[
+ {ext:'txt', nom:'Texto (.txt)',      mime:'text/plain', bin:false},
+ {ext:'md',  nom:'Markdown (.md)',    mime:'text/markdown', bin:false},
+ {ext:'html',nom:'Página web (.html)',mime:'text/html', bin:false},
+ {ext:'csv', nom:'Tabla (.csv)',      mime:'text/csv', bin:false},
+ {ext:'pdf', nom:'PDF (.pdf)',        mime:'application/pdf', bin:true},
+ {ext:'docx',nom:'Word (.docx)',      mime:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', bin:true},
+];
+let _guardarTexto='';
+function menuFormato(texto){
+ _guardarTexto=texto;
+ const l=$('#fmtLista');l.innerHTML='';
+ FORMATOS.forEach(f=>{
+  const d=document.createElement('div');d.className='mod';
+  d.innerHTML='<div class=ava>'+f.ext.toUpperCase().slice(0,2)+'</div>'+
+   '<div class=cuerpo><div class=nom></div></div>';
+  d.querySelector('.nom').textContent=f.nom;
+  d.onclick=()=>{cerrarFmt();hacerArchivo(f);};
+  l.appendChild(d);
+ });
+ $('#sheetFmt').classList.add('ver');$('#velo').classList.add('ver');
+}
+function cerrarFmt(){$('#sheetFmt').classList.remove('ver');
+ if(!$('#sheet').classList.contains('ver'))$('#velo').classList.remove('ver');}
+function hacerArchivo(f){
+ const base=(prompt('Nombre del archivo:', 'peakcode.'+f.ext)||'').trim();
+ if(!base)return;
+ const nom=base.endsWith('.'+f.ext)?base:base+'.'+f.ext;
+ let r;
+ if(!f.bin){
+  let t=_guardarTexto;
+  if(f.ext==='html'&&!/<html/i.test(t))
+   t='<!doctype html><meta charset=utf-8><body style="font:16px system-ui;max-width:40em;margin:2em auto;white-space:pre-wrap">'+
+     _guardarTexto.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</body>';
+  r=Peak.guardar(nom,t);
+ }else{
+  const bytes=f.ext==='pdf'?pdf(_guardarTexto):docx(_guardarTexto);
+  r=Peak.guardarBinario(nom,b64(bytes),f.mime);
+ }
+ Peak.aviso(r.startsWith('ERROR')?r:'Guardado en '+r);
+}
+
 // ── selector de modelos, estilo hoja inferior ────────────────────────────────
 let CATALOGO=[];   // [{id, nom, desc}]
 
@@ -307,7 +449,7 @@ function abrirSheet(){
   $('#sheet').classList.add('ver'); $('#velo').classList.add('ver');
 }
 function cerrarSheet(){$('#sheet').classList.remove('ver');$('#velo').classList.remove('ver');}
-$('#velo').onclick=cerrarSheet;
+$('#velo').onclick=()=>{cerrarSheet();cerrarFmt();};
 $('#bModelo').onclick=async()=>{ if(!CATALOGO.length)await cargarCatalogo(); abrirSheet(); };
 
 function pintarChip(){ $('#bModelo .n').textContent=lindo(G.modelo||'—'); }
