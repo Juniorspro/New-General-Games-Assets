@@ -102,6 +102,59 @@ public class MainActivity extends Activity {
                                    PEDIR_ARCHIVO);
         }
 
+        /** Copia al portapapeles: el plan B cuando Termux no acepta comandos. */
+        @JavascriptInterface
+        public void copiar(String texto) {
+            android.content.ClipboardManager cm =
+                (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            cm.setPrimaryClip(android.content.ClipData.newPlainText("PeakCode", texto));
+            runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                    "Comando copiado", Toast.LENGTH_SHORT).show());
+        }
+
+        /** ¿Esta Termux instalado? Necesita el <queries> del manifest. */
+        @JavascriptInterface
+        public boolean hayTermux() {
+            try {
+                getPackageManager().getPackageInfo("com.termux", 0);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        /**
+         * Manda el comando a Termux. Solo funciona si Termux tiene
+         * allow-external-apps=true en su termux.properties; si no, tira y se
+         * devuelve false para que la pagina ofrezca copiar y pegar a mano.
+         */
+        @JavascriptInterface
+        public boolean correrEnTermux(String comando) {
+            try {
+                Intent i = new Intent();
+                i.setClassName("com.termux", "com.termux.app.RunCommandService");
+                i.setAction("com.termux.RUN_COMMAND");
+                i.putExtra("com.termux.RUN_COMMAND_PATH",
+                           "/data/data/com.termux/files/usr/bin/bash");
+                i.putExtra("com.termux.RUN_COMMAND_ARGUMENTS",
+                           new String[]{"-c", comando});
+                i.putExtra("com.termux.RUN_COMMAND_BACKGROUND", false);
+                startService(i);
+                return true;
+            } catch (Exception e) { return false; }
+        }
+
+        /** Abre Termux a secas, o su ficha en F-Droid si no esta. */
+        @JavascriptInterface
+        public void abrirTermux() {
+            try {
+                Intent i = getPackageManager().getLaunchIntentForPackage("com.termux");
+                if (i != null) { startActivity(i); return; }
+            } catch (Exception e) { }
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://f-droid.org/packages/com.termux/")));
+            } catch (Exception e) { }
+        }
+
         @JavascriptInterface
         public void aviso(String t) {
             runOnUiThread(() -> Toast.makeText(MainActivity.this, t,

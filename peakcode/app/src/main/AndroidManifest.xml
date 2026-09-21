@@ -3,6 +3,12 @@
     <!-- INTERNET es lo unico imprescindible: la app habla con el endpoint del
          router. Nada de root, nada de permisos raros. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Para poder mandarle el comando de instalacion a Termux, si esta. Si el
+         usuario no lo tiene, la app cae a copiar el comando al portapapeles. -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND"/>
+    <!-- Android 11+ esconde las otras apps: sin esto no se puede ni preguntar
+         si Termux esta instalado. -->
+    <queries><package android:name="com.termux"/></queries>
     <application
         android:label="PeakCode"
         android:supportsRtl="true"
