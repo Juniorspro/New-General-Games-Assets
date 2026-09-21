@@ -123,3 +123,29 @@ tronco que empieza más arriba y sale torcida. Los anillos se cosen de a dos.
    chico cuesta 10 s; equivocarse en grande cuesta 27.
 6. Este Blender sigue **sin OpenImageDenoise** (ver arriba): denoise apagado y
    se compensa con muestras. A 128 no queda ruido visible.
+
+## El mismo árbol en una T4 de Colab
+
+Medido el 21/9 por el buzón (`herramientas/colab/obrero.py`), con el Blender
+4.3.2 oficial, no el de Debian:
+
+| | CPU (este contenedor) | T4 de Colab |
+|---|---|---|
+| tamaño | 1000x750 | 1920x1440 |
+| muestras | 128 | 512 |
+| motor | Cycles CPU, 4 núcleos | Cycles **GPU/OptiX** |
+| tiempo | 27 s | **13 s** |
+| muestras por segundo | 3,56 M | **108,89 M** |
+
+Los dos trabajos no son el mismo, así que el titular es el rendimiento
+normalizado: **la T4 rinde x30,6**. Dicho de las dos maneras que se entienden:
+
+- el render grande (1920x1440, 512 muestras) en CPU habría tardado **6,6 min**;
+- el render de los 27 s, en la T4, sale en **0,88 s**.
+
+`PLACA: GPU/OPTIX (Tesla T4)` — o sea que la línea que imprime el script no era
+paranoia: confirma que de verdad fue por placa y no una caída silenciosa a CPU.
+
+**Una cosa para arreglar del buzón:** el obrero fija `SALIDA` al buzón y
+`arbol.py` siempre escribe `arbol.png`, así que **cada render pisa el anterior**.
+Para guardar varios hay que ponerle nombre por pedido.
