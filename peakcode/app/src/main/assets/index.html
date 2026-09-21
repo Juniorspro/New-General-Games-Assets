@@ -1,31 +1,253 @@
-<!doctype html><html lang="es"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PeakCode</title>
 <style>
- :root{--fondo:#12100e;--panel:#1c1917;--linea:#2e2a26;--texto:#f0ede8;--tenue:#a39c92;--acento:#d97757}
- *{box-sizing:border-box} body{margin:0;background:var(--fondo);color:var(--texto);
-  font:16px/1.5 system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh}
- header{padding:14px 16px;border-bottom:1px solid var(--linea);font-weight:600}
- header small{color:var(--tenue);font-weight:400}
- #hilo{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
- .msg{max-width:88%;padding:10px 13px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
- .yo{align-self:flex-end;background:var(--acento);color:#1a0f0a}
- .el{align-self:flex-start;background:var(--panel);border:1px solid var(--linea)}
- footer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--linea)}
- textarea{flex:1;resize:none;background:var(--panel);color:var(--texto);
-  border:1px solid var(--linea);border-radius:12px;padding:11px;font:inherit}
- button{background:var(--acento);color:#1a0f0a;border:0;border-radius:12px;
-  padding:0 18px;font:600 16px system-ui}
-</style>
-<header>PeakCode <small>— esqueleto, compilado en la sesión</small></header>
-<div id=hilo><div class="msg el">Si ves esto, el APK compiló y el WebView anda.
-Acá va a ir el chat contra la API del modelo.</div></div>
-<footer><textarea id=t rows=1 placeholder="Escribí…"></textarea><button id=b>↑</button></footer>
+:root{--fondo:#12100e;--panel:#1c1917;--linea:#2e2a26;--texto:#f0ede8;
+ --tenue:#a39c92;--acento:#d97757;--mal:#e5534b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--fondo);color:var(--texto);height:100dvh;display:flex;
+ flex-direction:column;font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:10px;padding:12px 14px;
+ border-bottom:1px solid var(--linea);flex:0 0 auto}
+header b{font-size:17px}
+header .modelo{color:var(--tenue);font-size:12px;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;flex:1}
+.icono{background:none;border:0;color:var(--tenue);font-size:20px;padding:6px;cursor:pointer}
+#hilo{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:90%;padding:10px 13px;border-radius:15px;white-space:pre-wrap;
+ word-break:break-word;position:relative}
+.yo{align-self:flex-end;background:var(--acento);color:#1a0f0a}
+.el{align-self:flex-start;background:var(--panel);border:1px solid var(--linea)}
+.err{align-self:stretch;background:#2a1513;border:1px solid var(--mal);color:#ffd9d6;
+ font-size:14px}
+.msg .guardar{position:absolute;right:6px;bottom:-9px;background:var(--linea);
+ border:0;color:var(--texto);font-size:11px;padding:3px 9px;border-radius:9px}
+footer{flex:0 0 auto;display:flex;gap:8px;padding:10px 12px 14px;
+ border-top:1px solid var(--linea);align-items:flex-end}
+textarea{flex:1;resize:none;max-height:38vh;background:var(--panel);color:var(--texto);
+ border:1px solid var(--linea);border-radius:13px;padding:11px;font:inherit}
+.env{background:var(--acento);color:#1a0f0a;border:0;border-radius:13px;
+ min-width:48px;height:46px;font:600 19px system-ui}
+#ajustes{position:fixed;inset:0;background:var(--fondo);padding:18px;overflow-y:auto;
+ display:none;z-index:9}
+#ajustes.ver{display:block}
+#ajustes h2{margin:4px 0 16px;font-size:19px}
+label{display:block;margin:14px 0 5px;color:var(--tenue);font-size:13px}
+input,select{width:100%;background:var(--panel);color:var(--texto);
+ border:1px solid var(--linea);border-radius:11px;padding:11px;font:inherit}
+.fila{display:flex;gap:8px}.fila>*{flex:1}
+.boton{background:var(--acento);color:#1a0f0a;border:0;border-radius:11px;
+ padding:13px;font:600 16px system-ui;width:100%;margin-top:18px}
+.secundario{background:var(--panel);color:var(--texto);border:1px solid var(--linea)}
+.pista{color:var(--tenue);font-size:12.5px;margin-top:8px;line-height:1.5}
+code{background:#000;padding:1px 5px;border-radius:5px;font-size:13px}
+</style></head><body>
+
+<header>
+  <b>PeakCode</b>
+  <span class=modelo id=cabModelo>sin configurar</span>
+  <button class=icono id=bAdjuntar title="Adjuntar archivo">📎</button>
+  <button class=icono id=bLimpiar title="Nueva conversación">✚</button>
+  <button class=icono id=bAjustes title="Ajustes">⚙</button>
+</header>
+
+<div id=hilo></div>
+
+<footer>
+  <textarea id=entrada rows=1 placeholder="Escribí…"></textarea>
+  <button class=env id=bEnviar>↑</button>
+</footer>
+
+<div id=ajustes>
+  <h2>Ajustes</h2>
+
+  <label>Dirección del router (base URL)</label>
+  <input id=cURL placeholder="http://127.0.0.1:20128/v1">
+  <div class=pista>Si OmniRoute corre en este mismo teléfono (Termux), va
+   <code>http://127.0.0.1:20128/v1</code>. Si corre en un servidor, poné su
+   dirección <code>https://…/v1</code>.</div>
+
+  <label>API key que emitió OmniRoute</label>
+  <input id=cKey type=password placeholder="la que generaste en su panel">
+  <div class=pista>Se guarda solo en este teléfono. Sale del panel de OmniRoute
+   (<code>:20128/dashboard</code>), no de ningún proveedor.</div>
+
+  <label>Modelo</label>
+  <div class=fila>
+    <select id=cModelo><option value="">(traer la lista primero)</option></select>
+    <button class="boton secundario" id=bTraer style="margin:0;flex:0 0 96px">Traer</button>
+  </div>
+
+  <button class=boton id=bGuardar>Guardar</button>
+  <button class="boton secundario" id=bCerrar>Cerrar</button>
+</div>
+
 <script>
- const hilo=document.getElementById('hilo');
- function poner(txt,quien){const d=document.createElement('div');
-  d.className='msg '+quien;d.textContent=txt;hilo.appendChild(d);hilo.scrollTop=1e9}
- document.getElementById('b').onclick=()=>{const t=document.getElementById('t');
-  if(!t.value.trim())return;poner(t.value,'yo');
-  poner('Todavía no hay backend enchufado: falta la clave de la API.','el');t.value=''}
-</script></html>
+const $ = s => document.querySelector(s);
+const cfg = {
+  url:   localStorage.getItem('url')   || 'http://127.0.0.1:20128/v1',
+  key:   localStorage.getItem('key')   || '',
+  modelo:localStorage.getItem('modelo')|| ''
+};
+let hist = JSON.parse(localStorage.getItem('hist') || '[]');
+
+function pintarCab(){ $('#cabModelo').textContent = cfg.modelo || 'sin configurar'; }
+
+function poner(txt, quien, guardable){
+  const d = document.createElement('div');
+  d.className = 'msg ' + quien;
+  d.textContent = txt;
+  if (guardable){
+    const b = document.createElement('button');
+    b.className = 'guardar'; b.textContent = '⤓ guardar';
+    b.onclick = () => {
+      const nom = prompt('Nombre del archivo:', 'peakcode.txt');
+      if (!nom) return;
+      const r = Peak.guardar(nom, d.textContent);
+      Peak.aviso(r.startsWith('ERROR') ? r : 'Guardado en ' + r);
+    };
+    d.appendChild(b);
+  }
+  $('#hilo').appendChild(d);
+  $('#hilo').scrollTop = 1e9;
+  return d;
+}
+
+function repintar(){
+  $('#hilo').innerHTML = '';
+  if (!hist.length) poner('Configurá la dirección y la key en ⚙ y escribí.', 'el');
+  hist.forEach(m => poner(m.content, m.role === 'user' ? 'yo' : 'el',
+                          m.role !== 'user'));
+}
+
+function guardarHist(){
+  // techo para que el almacenamiento del navegador no explote
+  localStorage.setItem('hist', JSON.stringify(hist.slice(-40)));
+}
+
+// --- ajustes ---------------------------------------------------------------
+$('#bAjustes').onclick = () => {
+  $('#cURL').value = cfg.url; $('#cKey').value = cfg.key;
+  if (cfg.modelo){
+    const o = document.createElement('option');
+    o.value = o.textContent = cfg.modelo; $('#cModelo').appendChild(o);
+    $('#cModelo').value = cfg.modelo;
+  }
+  $('#ajustes').classList.add('ver');
+};
+$('#bCerrar').onclick = () => $('#ajustes').classList.remove('ver');
+$('#bGuardar').onclick = () => {
+  cfg.url = $('#cURL').value.trim().replace(/\/+$/,'');
+  cfg.key = $('#cKey').value.trim();
+  cfg.modelo = $('#cModelo').value;
+  localStorage.setItem('url', cfg.url);
+  localStorage.setItem('key', cfg.key);
+  localStorage.setItem('modelo', cfg.modelo);
+  pintarCab(); $('#ajustes').classList.remove('ver');
+  Peak.aviso('Guardado');
+};
+
+$('#bTraer').onclick = async () => {
+  const url = $('#cURL').value.trim().replace(/\/+$/,'');
+  const key = $('#cKey').value.trim();
+  $('#bTraer').textContent = '…';
+  try{
+    const r = await fetch(url + '/models', {headers:{Authorization:'Bearer '+key}});
+    if (!r.ok) throw new Error(explicar(r.status));
+    const d = await r.json();
+    const xs = (d.data || []).map(m => m.id).sort();
+    $('#cModelo').innerHTML = '';
+    xs.forEach(id => { const o=document.createElement('option');
+                       o.value=o.textContent=id; $('#cModelo').appendChild(o); });
+    Peak.aviso(xs.length + ' modelos');
+  }catch(e){ Peak.aviso('No pude traer la lista: ' + e.message); }
+  $('#bTraer').textContent = 'Traer';
+};
+
+function explicar(estado){
+  if (estado === 401 || estado === 403) return 'la API key no sirve (401). Revisala en ⚙.';
+  if (estado === 404) return 'la dirección está mal (404): ¿termina en /v1?';
+  if (estado === 429) return 'te frenó por límite de uso (429). Probá otro modelo.';
+  if (estado >= 500)  return 'el router contestó ' + estado + ': el proveedor de atrás falló.';
+  return 'HTTP ' + estado;
+}
+
+// --- archivos --------------------------------------------------------------
+$('#bAdjuntar').onclick = () => Peak.abrir();
+window.peakArchivoLeido = d => {
+  if (d.error){ poner('No pude leer el archivo: ' + d.error, 'err'); return; }
+  const t = '--- ' + d.nombre + ' ---\n' + d.texto;
+  hist.push({role:'user', content:t}); guardarHist();
+  poner('📎 ' + d.nombre + ' (' + d.texto.length + ' caracteres)', 'yo');
+};
+
+$('#bLimpiar').onclick = () => { hist = []; guardarHist(); repintar(); };
+
+// --- enviar ----------------------------------------------------------------
+async function enviar(){
+  const ta = $('#entrada');
+  const txt = ta.value.trim();
+  if (!txt) return;
+  if (!cfg.key || !cfg.url){ poner('Falta la dirección o la key: tocá ⚙.', 'err'); return; }
+  ta.value = ''; ta.style.height = 'auto';
+  hist.push({role:'user', content:txt}); poner(txt, 'yo'); guardarHist();
+
+  const caja = poner('…', 'el', false);
+  let texto = '';
+  try{
+    const r = await fetch(cfg.url + '/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+cfg.key},
+      body: JSON.stringify({model: cfg.modelo || undefined, messages: hist, stream: true})
+    });
+    if (!r.ok){
+      let extra = '';
+      try{ const j = await r.json(); extra = j.error?.message ? ' — ' + j.error.message : ''; }catch(e){}
+      throw new Error(explicar(r.status) + extra);
+    }
+    // SSE a mano: el WebView tiene ReadableStream, pero si no, se cae al else
+    if (r.body && r.body.getReader){
+      const lec = r.body.getReader(), dec = new TextDecoder();
+      let resto = '';
+      for(;;){
+        const {done, value} = await lec.read();
+        if (done) break;
+        resto += dec.decode(value, {stream:true});
+        const partes = resto.split('\n');
+        resto = partes.pop();
+        for (const linea of partes){
+          if (!linea.startsWith('data:')) continue;
+          const cuerpo = linea.slice(5).trim();
+          if (cuerpo === '[DONE]') continue;
+          try{
+            const j = JSON.parse(cuerpo);
+            const t = j.choices?.[0]?.delta?.content || '';
+            if (t){ texto += t; caja.textContent = texto; $('#hilo').scrollTop = 1e9; }
+          }catch(e){}
+        }
+      }
+    } else {
+      const j = await r.json();
+      texto = j.choices?.[0]?.message?.content || '(respuesta vacía)';
+      caja.textContent = texto;
+    }
+    if (!texto) texto = '(el modelo no devolvió nada)';
+    caja.textContent = texto;
+    hist.push({role:'assistant', content:texto}); guardarHist();
+    repintar();
+  }catch(e){
+    caja.remove();
+    const pista = /Failed to fetch|NetworkError|Load failed/i.test(e.message)
+      ? 'No llegué al router. ¿Está corriendo OmniRoute en ' + cfg.url + ' ?'
+      : e.message;
+    poner('Error: ' + pista, 'err');
+  }
+}
+$('#bEnviar').onclick = enviar;
+$('#entrada').addEventListener('input', e => {
+  e.target.style.height = 'auto';
+  e.target.style.height = Math.min(e.target.scrollHeight, window.innerHeight*0.38) + 'px';
+});
+
+pintarCab(); repintar();
+</script></body></html>
