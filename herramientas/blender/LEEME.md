@@ -83,3 +83,43 @@ mal cuesta una hora.
    Blender trae su propio codificador: `armar_video.py` lee los PNG con el
    editor de video y los codifica en segundos. Volver a renderizar con salida
    `FFMPEG` costaría los 6 minutos y medio de nuevo.
+
+---
+
+# El árbol: `arbol.py`
+
+Un árbol lowpoly armado con la misma receta que `casita.py`: datos de malla y
+semilla fija (`random.Random(7)`), así sale siempre el mismo árbol.
+
+```sh
+docker exec -u neko -e MUESTRAS=128 -e ANCHO=1000 -e ALTO=750 -e SALIDA=/tmp \
+  neko blender --background --python /tmp/arbol.py
+```
+
+| | |
+|---|---|
+| Geometría | 28 objetos · **628 caras** · 485 vértices |
+| Render | Cycles CPU, 128 muestras, 1000x750, sin denoise |
+| Tiempo | **27 s** (4 núcleos) |
+| `arbol.png` | 919 KB |
+
+El tronco y las ramas salen de la misma función, `tubo()`: una rama es un
+tronco que empieza más arriba y sale torcida. Los anillos se cosen de a dos.
+
+## Lo que costó encontrar
+
+1. **Las ramas cortas no existen.** Con ramas de 1,0-1,3 la copa se las comía
+   enteras y el árbol quedaba como un brócoli con palito. Recién a 1,6-2,3 la
+   silueta se abre y se ven. Es lo que más cambió el resultado.
+2. **Un solo verde se ve de cartón.** Van tres, alternados por bola.
+3. **`LADOS = 7`, impar a propósito.** Con 8 las facetas quedan simétricas y el
+   tronco parece un tubo industrial.
+4. **El sombreado plano no es un detalle, es el estilo.** Con `use_smooth` las
+   facetas desaparecen y queda un choclo de plástico.
+5. **El encuadre se mide, no se calcula** — igual que en `pelota.py`. Tres
+   pasadas a 400x300 y 8 muestras (10 s cada una) para llegar al encuadre: con
+   lente 52 la copa se salía por la izquierda; a 1000x750 el tronco quedaba sin
+   pie y hubo que bajar el punto al que mira la cámara. Probar el encuadre en
+   chico cuesta 10 s; equivocarse en grande cuesta 27.
+6. Este Blender sigue **sin OpenImageDenoise** (ver arriba): denoise apagado y
+   se compensa con muestras. A 128 no queda ruido visible.
