@@ -434,13 +434,14 @@ probado; lo que falta es que alguien lo use.
 | Rotar la clave de IBLO | pasó por el chat | el dueño |
 | IA de respaldo en IBLO | agregar Groq o Gemini | se puede |
 | Publicaciones duplicadas | ids 21 y 22 se muestran dos veces | se puede |
-| Compilar el APK | no hay SDK de Android y no entra en el disco | **trabado acá** |
+| Compilar el APK | ~~no hay SDK~~ **resuelto 21/9: el SDK pesó 458 MB y entró. Ver `peakcode/`** | **se puede** |
 
 ## Lo que NO se puede hacer desde esta máquina
 
 Dicho para que nadie lo prometa de nuevo:
 
-- **Compilar un APK** — no hay SDK y no entra (2-3 GB, quedan ~2,4).
+- **Compilar un APK** — ~~no entra~~ **ya se puede**: JDK 21 y Gradle 8.14.3 estaban
+  instalados, el SDK pesó 458 MB y quedaban 27 GB. Primer APK compilado el 21/9.
 - **Subir a MediaFire** — haría falta la contraseña de la cuenta guardada en el
   servidor. Una clave guardada para que un programa la use es una clave que se
   puede filtrar entera.

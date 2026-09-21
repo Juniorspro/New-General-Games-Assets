@@ -27,8 +27,10 @@ clonado y **se borra cuando termina la sesión**.
 - **El disco es una cuota fija.** `df` miente: "Avail" en 0 con poco "Used"
   quiere decir que se acabó la cuota, no que la máquina esté rota. Borrar
   archivos grandes libera espacio al instante.
-- **No hay SDK de Android** y no entra (pesa 2-3 GB, quedan ~2,4 GB). O sea:
-  **acá no se puede compilar un APK.** Si hace falta una app, se hace web.
+- **El SDK de Android SÍ entra, y acá se compila un APK.** (Corregido el 21/9:
+  antes decía que no. JDK 21 y Gradle 8.14.3 ya estaban instalados, el SDK pesó
+  **458 MB** —no 2-3 GB— y quedaban 27 GB. Primer APK compilado y verificado:
+  ver `peakcode/LEEME.md`.)
 
 ### Lo que sí está puesto
 

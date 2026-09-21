@@ -1,0 +1,31 @@
+<!doctype html><html lang="es"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PeakCode</title>
+<style>
+ :root{--fondo:#12100e;--panel:#1c1917;--linea:#2e2a26;--texto:#f0ede8;--tenue:#a39c92;--acento:#d97757}
+ *{box-sizing:border-box} body{margin:0;background:var(--fondo);color:var(--texto);
+  font:16px/1.5 system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;height:100dvh}
+ header{padding:14px 16px;border-bottom:1px solid var(--linea);font-weight:600}
+ header small{color:var(--tenue);font-weight:400}
+ #hilo{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+ .msg{max-width:88%;padding:10px 13px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
+ .yo{align-self:flex-end;background:var(--acento);color:#1a0f0a}
+ .el{align-self:flex-start;background:var(--panel);border:1px solid var(--linea)}
+ footer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--linea)}
+ textarea{flex:1;resize:none;background:var(--panel);color:var(--texto);
+  border:1px solid var(--linea);border-radius:12px;padding:11px;font:inherit}
+ button{background:var(--acento);color:#1a0f0a;border:0;border-radius:12px;
+  padding:0 18px;font:600 16px system-ui}
+</style>
+<header>PeakCode <small>— esqueleto, compilado en la sesión</small></header>
+<div id=hilo><div class="msg el">Si ves esto, el APK compiló y el WebView anda.
+Acá va a ir el chat contra la API del modelo.</div></div>
+<footer><textarea id=t rows=1 placeholder="Escribí…"></textarea><button id=b>↑</button></footer>
+<script>
+ const hilo=document.getElementById('hilo');
+ function poner(txt,quien){const d=document.createElement('div');
+  d.className='msg '+quien;d.textContent=txt;hilo.appendChild(d);hilo.scrollTop=1e9}
+ document.getElementById('b').onclick=()=>{const t=document.getElementById('t');
+  if(!t.value.trim())return;poner(t.value,'yo');
+  poner('Todavía no hay backend enchufado: falta la clave de la API.','el');t.value=''}
+</script></html>
