@@ -38,6 +38,23 @@ gradle --no-daemon assembleDebug     # sale app/build/outputs/apk/debug/
 Primer APK compilado y verificado: `ai.peakcode` 0.1, minSdk 24, targetSdk 34,
 firmado con la clave de depuración, un solo permiso (`INTERNET`).
 
+### Trampa: cada sesión firma con una clave distinta
+
+El contenedor es efímero, así que `~/.android/debug.keystore` **se genera de
+nuevo en cada sesión**. Dos APK compilados en sesiones distintas quedan
+firmados con claves distintas, y Android **se niega a instalar uno encima del
+otro**: tira *"No se instaló la aplicación"* por firma que no coincide.
+
+Medido el 21/9, huellas SHA-256 del certificado:
+
+| APK | huella |
+|---|---|
+| `app-debug-7` (sesión anterior) | `d11a41e7…3b94` |
+| `app-debug-8` (esta sesión) | `2a482d70…7fe5` |
+
+**Hay que desinstalar PeakCode antes de instalar el APK nuevo.** Se pierde el
+historial de chat, que vive en el `localStorage` del WebView.
+
 ## Cómo se instala el SDK, por si hay que rehacerlo
 
 ```sh
