@@ -4,7 +4,9 @@
   "donde": "~/.rezona/credentials.json — FUERA del repo, nunca commiteada",
   "marca_de_proyecto": "scratchpad/rezona-assets/.rezona/ — init se corre fuera del repo a propósito",
   "regla": "el CLIENTE puede vivir en el repo; la LLAVE no",
-  "endpoint": "https://lab.rezona.ai/game/pgcserver"
+  "endpoint": "https://lab.rezona.ai/game/pgcserver",
+  "entrar": "npx rezona@latest login --no-browser — imprime una URL con codigo, la aprueba la persona. NO usar --paste: la key quedaria en el historial del chat y habria que rotarla. Hay que entrar en CADA sesion: ~/.rezona se borra con el contenedor.",
+  "ojo_son_dos_cuentas": "Los 6 proyectos de aqui abajo estan en OTRA cuenta. La que se usa desde el 2026-09-21 (446.485 creditos gastables) ve 10 proyectos, ninguno de esos. Si list_projects no muestra el proyecto que buscas, no se borro: estas en la otra cuenta. Los public_url viejos siguen respondiendo 200 sin autenticarse, y el repo no los enlaza: tiene los assets bajados."
  },
  "proyectos": {
   "UHTebvdL": {
@@ -1134,5 +1136,20 @@
   "mezclar_animaciones_a_mano": "crossFadeTo de three programa el fundido en su propio planificador y es fácil que funda al revés: la acción destino queda en peso 0 y su reloj no avanza, así que la animación no se ve nunca. Un número propio que se acerca por cuadro y se aplica con setEffectiveWeight es más largo de escribir y se puede comprobar desde una prueba.",
   "encuadrar_por_todas_las_poses": "Para encuadrar un personaje animado no alcanza medir una pose: hay que recorrer los clips, juntar las posiciones de los huesos en varias muestras de cada uno, y calcular la distancia de cámara desde ESA caja. Con una sola pose, el salto se sale del cuadro."
  },
- "pendiente": "Quedó un proyecto suelto llamado 'Páginas web — assets' creado por error, sin assets. Ignorarlo o borrarlo."
+ "pendiente": "Quedó un proyecto suelto llamado 'Páginas web — assets' creado por error, sin assets. Ignorarlo o borrarlo.",
+ "proyectos_de_la_cuenta_nueva": {
+  "_nota": "Listados el 2026-09-21 con list_projects. Aun sin inventario de assets: se anota a medida que se generen.",
+  "ids": {
+   "xVuxCcKGeQ": "ClaudEdits — mascota y stickers (2026-09-20)",
+   "ZDvZiGfVxW": "ClaudEdits — Goku 3D (2026-09-19)",
+   "TeITAqFWps": "ClaudEdits — identidad del canal (2026-09-19)",
+   "xVuxCcKGir": "Perro 3D — campo verde (2026-09-19)",
+   "aFdaIjanbP": "Mekorama TikTok — assets del edit (2026-09-18)",
+   "xVuxCcKGYO": "Dimension N (2026-09-16)",
+   "EUDERiogqd": "Pique 3D (2026-09-16)",
+   "mspmFCTOiP": "sin nombre util (2026-09-12)",
+   "LMHLptZeCK": "sin nombre util (2026-09-11)",
+   "tOMtshuHnZ": "tmp — descartable, borrar (2026-09-09)"
+  }
+ }
 }

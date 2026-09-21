@@ -275,11 +275,58 @@ Es un servidor MCP para generar imágenes, sprites, audio y modelos 3D.
 - Cada `submit_*` **gasta créditos**. Crear proyectos, consultar y descargar es
   gratis.
 
-### Lo que puede no estar
+### Conectarse: hay que hacerlo en CADA sesión
 
-El MCP de Rezona **puede no estar conectado** en una sesión. Si las herramientas
-no aparecen, no hay forma de generar assets: decilo y seguí con lo que haya, no
-lo simules.
+La credencial vive en `~/.rezona/credentials.json`, que está **fuera del repo y
+se borra con el contenedor**. Sesión nueva = sesión sin Rezona. Se comprueba en
+un segundo:
+
+```bash
+npx rezona@latest status          # "Not signed in" = hay que entrar
+```
+
+**Entrá con el flujo del navegador, no pegando la key:**
+
+```bash
+npx rezona@latest login --no-browser      # dejalo corriendo en segundo plano
+```
+
+Imprime una URL con un código (`https://rezona.ai/api-keys?code=XXXX-...`) y se
+queda esperando. El usuario la abre, comprueba que el código coincida, aprueba,
+y la credencial se escribe sola acá.
+
+**Por qué así y no `login --paste`:** una key pegada en el chat queda en el
+historial para siempre, y entonces hay que rotarla. Con el flujo del navegador
+el secreto nunca pasa por la conversación y no queda nada que rotar. Medido:
+tarda lo que tarde la persona en aprobar (la última vez, 5 minutos), así que
+lanzalo en segundo plano y esperá leyendo el archivo de salida — nunca lo corras
+en primer plano, que te come el turno.
+
+### Si el MCP no aparece entre las herramientas
+
+Pasa seguido: los servidores MCP se cargan al arrancar la sesión. **No es un
+bloqueo** — el cliente stdio está commiteado y habla con el mismo servidor:
+
+```bash
+python3 herramientas/rezona/rz.py tools
+python3 herramientas/rezona/rz.py call list_projects '{}'
+```
+
+Lo que **no** se hace es simular un asset que no se generó.
+
+### Ojo: hay más de una cuenta
+
+`estado.json` anota 6 proyectos (Humo Lento, Gabinete, Kane, Electro Silver,
+IBLO, Frutiger Aero). **Esos están en otra cuenta**: la que se usa ahora
+(447.403 de saldo, 446.485 gastables) ve 10 proyectos y ninguno es de esos. Si
+`list_projects` no muestra el proyecto que buscás, no se borró: estás en la otra
+cuenta.
+
+No rompe nada de lo publicado, y está medido: los `public_url` viejos siguen
+devolviendo 200 sin autenticarse, y ningún `.html`/`.js`/`.css` del repo apunta
+a `lab.rezona.ai` — los assets están bajados. (Si comprobás una de esas URLs con
+`curl -I` vas a ver un 405: es el proxy, que no deja pasar `HEAD`. Usá `curl -r
+0-2047` y da 200.)
 
 ---
 
