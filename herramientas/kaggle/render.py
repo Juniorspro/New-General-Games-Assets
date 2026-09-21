@@ -15,9 +15,20 @@ def sh(c):
         print("  fallo:", c[:70], "\n ", r.stderr[-400:], flush=True)
     return r
 
+import shutil, urllib.request
 print("== placa ==", flush=True)
-print(subprocess.run(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
-                     capture_output=True, text=True).stdout.strip(), flush=True)
+if shutil.which("nvidia-smi"):
+    print(subprocess.run(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+                         capture_output=True, text=True).stdout.strip(), flush=True)
+else:
+    print("PLACA: NINGUNA (sin nvidia-smi). Falta verificar el telefono en Kaggle.",
+          flush=True)
+try:
+    print("INTERNET: si (HTTP %d)" % urllib.request.urlopen(
+        "https://pypi.org/pypi/kaggle/json", timeout=20).status, flush=True)
+except Exception as e:
+    print(f"INTERNET: NO ({type(e).__name__}) -> no va a poder bajar Blender",
+          flush=True)
 
 print("== Blender 4.3.2 ==", flush=True)
 # el oficial de blender.org, no el de la distro: este SI trae OpenImageDenoise
@@ -26,8 +37,12 @@ sh("apt-get install -y -qq libxi6 libxxf86vm1 libxfixes3 libxrender1 libsm6 libg
 sh("cd /tmp && wget -q https://download.blender.org/release/Blender4.3/"
    "blender-4.3.2-linux-x64.tar.xz -O b.tar.xz")
 sh("cd /tmp && tar xf b.tar.xz && mv blender-4.3.2-linux-x64 blender")
-print(subprocess.run(["/tmp/blender/blender", "--version"],
-                     capture_output=True, text=True).stdout.splitlines()[0], flush=True)
+if os.path.exists("/tmp/blender/blender"):
+    v = subprocess.run(["/tmp/blender/blender", "--version"],
+                       capture_output=True, text=True).stdout.splitlines()
+    print(v[0] if v else "Blender no contesto --version", flush=True)
+else:
+    raise SystemExit("Blender no se bajo: mira las lineas de arriba")
 
 print("== repo ==", flush=True)
 sh(f"git clone -q --depth 1 -b {RAMA} {REPO} /tmp/repo")

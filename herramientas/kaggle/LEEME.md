@@ -95,3 +95,52 @@ python3 kg.py bajar claude-render-arbol ./salida
    `kernels output`. Fuera de ahí se pierde.
 5. Blender se baja **el oficial de blender.org**, no el de la distro: ese trae
    OpenImageDenoise y numpy, que es justo lo que le faltaba al del contenedor.
+
+---
+
+# La primera corrida real: anduvo
+
+21/9, `kg.py render arbol MUESTRAS=512 ANCHO=1920 ALTO=1440`, mandado desde la
+sesión sin que el usuario toque nada. Log del kernel:
+
+```
+[stdout   0.81] == placa ==
+[stdout   0.85] Tesla T4
+[stdout   0.85] Tesla T4
+[stdout   0.99] INTERNET: si (HTTP 200)
+[stdout  34.52] Blender 4.3.2
+[stdout  44.76] == render: arbol ==
+[stdout  53.43] Saved: '/kaggle/working/arbol.png'
+[stdout  53.43] PLACA: GPU/OPTIX (Tesla T4, Tesla T4)
+[stdout  53.43] TARDO 8.7 s   codigo=0
+[stdout  53.43]        3252175  arbol.png
+```
+
+**Kaggle da dos T4, no una**, y `elegir_placa` prende las dos solo (pone
+`use = True` en todos los aparatos del tipo elegido).
+
+| | muestras/s | el mismo render |
+|---|---|---|
+| CPU, 4 núcleos | 3,56 M | — |
+| Colab, 1x T4 | 108,89 M | **13,0 s** |
+| **Kaggle, 2x T4** | **162,71 M** | **8,7 s** |
+
+**x1,49 contra Colab. x45,8 contra la CPU.** La segunda placa no duplica porque
+el armado del BVH y la carga de la escena no se reparten.
+
+El kernel entero, de arranque a terminado —incluido bajar los 352 MB de Blender
+y clonar el repo— tardó **58 s**. Los archivos salen con
+`kg.py bajar claude-render-arbol <carpeta>`.
+
+## Los tiempos de cada tramo, para saber dónde se va el rato
+
+| tramo | cuándo |
+|---|---|
+| placa e internet comprobados | 0,99 s |
+| Blender bajado y descomprimido | 34,5 s |
+| repo clonado | 44,8 s |
+| render terminado | 53,4 s |
+
+O sea que **el render es lo más rápido de todo**: el 84% del tiempo es preparar
+la máquina. Para varios renders seguidos conviene **un solo kernel que haga
+todos**, no uno por render.
