@@ -1,6 +1,36 @@
 # Casita lowpoly. Se arma con datos de malla, no con el ratón, así el
 # resultado es el mismo cada vez que se corre.
-import bpy, math, mathutils
+import bpy, math, mathutils, os
+
+# --- elegir la placa -----------------------------------------------------
+# Por defecto CPU: es lo que hay en el contenedor de la sesion y es el numero
+# contra el que estan medidos los tiempos del LEEME. Con DISPOSITIVO=GPU se
+# usa la placa (Colab presta una T4).
+#
+# La trampa: poner cycles.device = "GPU" NO alcanza. Si en las preferencias no
+# hay ninguna placa prendida, Cycles se cae a CPU y renderiza igual, sin avisar
+# nada. Hay que prender los aparatos a mano y recien ahi pedir GPU.
+def elegir_placa(esc):
+    quiero = os.environ.get("DISPOSITIVO", "CPU").upper()
+    if quiero != "GPU":
+        esc.cycles.device = "CPU"
+        return "CPU"
+    prefs = bpy.context.preferences.addons["cycles"].preferences
+    for tipo in ("OPTIX", "CUDA", "HIP", "ONEAPI"):
+        try:
+            prefs.compute_device_type = tipo
+        except TypeError:
+            continue        # este Blender no se compilo con ese backend
+        prefs.get_devices()
+        placas = [d for d in prefs.devices if d.type == tipo]
+        if placas:
+            for d in prefs.devices:
+                d.use = (d.type == tipo)
+            esc.cycles.device = "GPU"
+            return "GPU/%s (%s)" % (tipo, ", ".join(d.name for d in placas))
+    esc.cycles.device = "CPU"
+    return "CPU (se pidio GPU y no hay ninguna)"
+
 
 # --- limpiar la escena de arranque ---
 bpy.ops.object.select_all(action="SELECT")
@@ -181,21 +211,22 @@ bpy.context.scene.world = mundo
 # --- render ---
 esc = bpy.context.scene
 esc.render.engine = "CYCLES"
-esc.cycles.device = "CPU"
-esc.cycles.samples = 160
+print("PLACA:", elegir_placa(esc))
+esc.cycles.samples = int(os.environ.get("MUESTRAS", "160"))
 # este Blender de Debian viene sin OpenImageDenoise, asi que se compensa
 # con mas muestras en vez de limpiar el ruido despues
 esc.cycles.use_denoising = False
 esc.render.resolution_x = 1100
 esc.render.resolution_y = 750
 esc.render.film_transparent = False
-esc.render.filepath = "/home/neko/casita.png"
+SALIDA = os.environ.get("SALIDA", "/home/neko")
+esc.render.filepath = os.path.join(SALIDA, "casita.png")
 
 caras_tot = sum(len(o.data.polygons) for o in bpy.data.objects if o.type == "MESH")
 verts_tot = sum(len(o.data.vertices) for o in bpy.data.objects if o.type == "MESH")
 print("CASITA: %d objetos, %d caras, %d vertices" % (
     len([o for o in bpy.data.objects if o.type == "MESH"]), caras_tot, verts_tot))
 
-bpy.ops.wm.save_as_mainfile(filepath="/home/neko/casita.blend")
+bpy.ops.wm.save_as_mainfile(filepath=os.path.join(SALIDA, "casita.blend"))
 bpy.ops.render.render(write_still=True)
 print("CASITA: listo")

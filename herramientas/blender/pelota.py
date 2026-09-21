@@ -11,6 +11,36 @@
 import bpy, os, math
 from mathutils import Vector
 
+# --- elegir la placa -----------------------------------------------------
+# Por defecto CPU: es lo que hay en el contenedor de la sesion y es el numero
+# contra el que estan medidos los tiempos del LEEME. Con DISPOSITIVO=GPU se
+# usa la placa (Colab presta una T4).
+#
+# La trampa: poner cycles.device = "GPU" NO alcanza. Si en las preferencias no
+# hay ninguna placa prendida, Cycles se cae a CPU y renderiza igual, sin avisar
+# nada. Hay que prender los aparatos a mano y recien ahi pedir GPU.
+def elegir_placa(esc):
+    quiero = os.environ.get("DISPOSITIVO", "CPU").upper()
+    if quiero != "GPU":
+        esc.cycles.device = "CPU"
+        return "CPU"
+    prefs = bpy.context.preferences.addons["cycles"].preferences
+    for tipo in ("OPTIX", "CUDA", "HIP", "ONEAPI"):
+        try:
+            prefs.compute_device_type = tipo
+        except TypeError:
+            continue        # este Blender no se compilo con ese backend
+        prefs.get_devices()
+        placas = [d for d in prefs.devices if d.type == tipo]
+        if placas:
+            for d in prefs.devices:
+                d.use = (d.type == tipo)
+            esc.cycles.device = "GPU"
+            return "GPU/%s (%s)" % (tipo, ", ".join(d.name for d in placas))
+    esc.cycles.device = "CPU"
+    return "CPU (se pidio GPU y no hay ninguna)"
+
+
 MOTOR    = os.environ.get("MOTOR", "CYCLES")
 MUESTRAS = int(os.environ.get("MUESTRAS", "24"))
 ANCHO    = int(os.environ.get("ANCHO", "640"))
@@ -191,7 +221,7 @@ if MOTOR == "CYCLES":
     # configurar y revienta recien al renderizar, llevandose el render entero.
     # Esta anotado en LEEME.md y se paga una sola vez.
     esc.cycles.use_denoising = False
-    esc.cycles.device = "CPU"
+    print("PLACA:", elegir_placa(esc))
     esc.cycles.max_bounces = 4
     esc.cycles.use_fast_gi = True
 
