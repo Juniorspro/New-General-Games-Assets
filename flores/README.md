@@ -17,7 +17,7 @@ diez veces con otro color.
 | 5 | `05-jardin-pixel.html` | pixel art, grilla de 4 px | **mantener** el dedo para regar; cada flor que abre trae un recuerdo |
 | 6 | `06-memotest.html` | mesa de paño verde | ocho pares, y cada par es una razón |
 | 7 | `07-maquina-de-escribir.html` | sepia, monoespaciada | cualquier tecla saca una letra: la carta la escribe ella |
-| 8 | `08-burbujas.html` | vidrio y neón violeta | reventar la que brilla; se va armando el poema |
+| 8 | `08-burbujas.html` | vidrio y neón violeta | reventar la que brilla; se va armando el poema (nueve pedazos, en orden) |
 | 9 | `09-laberinto.html` | line art, trazo a mano | llevar la flor hasta el corazón sin cruzar paredes |
 | 10 | `10-caja-de-musica.html` | art déco, dorado sobre verde | dar cuerda: **la única que suena una melodía de verdad** |
 
@@ -44,14 +44,26 @@ Abre las diez en Chromium, hace avanzar cada mecánica por la sonda `window.__fl
 y comprueba que el estado cambió. **Que abra sin tirar error no alcanza**: una
 página que carga y cuya mecánica no avanza se ve idéntica en una captura.
 
-Medido, no estimado: **23 de 23**.
+Medido, no estimado: **25 de 25**.
 
-Dos cosas las encontró la prueba y no el ojo:
+Cuatro cosas las encontró la prueba y no el ojo:
 
 - En la **9** la flor no podía moverse en horizontal. `intentar()` probaba los
   dos ejes en un bucle y en cada vuelta asignaba las dos coordenadas, así que la
   vuelta del eje Y le devolvía a X el valor viejo y deshacía el movimiento. Se
   veía como un laberinto difícil.
+- En la **9**, otra vez: la flor se movía **adentro del evento del dedo**, un
+  pasito por cada `pointermove`. Si el dedo iba rápido llegaban pocos eventos y
+  la flor quedaba lejos; si el dedo se quedaba **quieto** sobre un punto, la
+  flor se frenaba a mitad de camino. Medido: dedo quieto en la columna 6
+  durante 1,5 s y la flor llegaba a la **1,34**. Ahora el dedo dice adónde y el
+  reloj dice cuánto.
+- En la **8** las quince burbujas nacían **abajo del borde de la pantalla** y
+  subían a 40 px por segundo. Medido: los primeros **4 segundos** eran una
+  pantalla violeta vacía, y la burbuja marcada —la única que se puede reventar—
+  estaba en y=873 de una pantalla de 820, o sea afuera. Se tocaba a ciegas.
+  Ahora arrancan todas en pantalla y en orden de arriba para abajo, y la
+  marcada nunca se va de la franja donde se lee.
 - En la **5** el cielo se cortaba en el 55 % del alto y de ahí hasta la tierra no
   se pintaba nada: **8960 píxeles de 32000**, el 28 % del lienzo, quedaban del
   color del fondo de la página, y las flores crecían dentro de ese pozo. La

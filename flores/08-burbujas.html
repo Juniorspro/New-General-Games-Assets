@@ -14,11 +14,13 @@ html,body{height:100%;overflow:hidden;touch-action:none;user-select:none;
 canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 #tit{position:fixed;top:4.5%;left:0;right:0;text-align:center;z-index:2;pointer-events:none;
   font:700 11px/1.6 system-ui;letter-spacing:.24em;text-transform:uppercase;color:#b48ce0}
-#poema{position:fixed;left:50%;top:11%;transform:translateX(-50%);z-index:2;
-  width:min(460px,90vw);text-align:center;pointer-events:none;
+#poema{position:fixed;left:50%;top:9%;transform:translateX(-50%);z-index:2;
+  width:min(460px,90vw);text-align:center;pointer-events:none;padding:16px 12px;
+  background:radial-gradient(ellipse at 50% 50%,rgba(13,6,24,.86) 0 52%,rgba(13,6,24,0) 80%);
   font-size:clamp(17px,4.8vw,25px);line-height:1.5;font-weight:300;
   color:#ffe9a8;text-shadow:0 0 26px rgba(255,205,120,.5)}
 #poema b{font-weight:700;color:#fff6d8}
+#poema:empty{background:none;padding:0}
 #pie{position:fixed;bottom:4.5%;left:0;right:0;text-align:center;z-index:2;pointer-events:none;
   font:700 11px/1 system-ui;letter-spacing:.16em;text-transform:uppercase;color:#8f6fc0}
 </style>
@@ -38,8 +40,10 @@ canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
 const c = document.getElementById("c"), x = c.getContext("2d");
 const elPoema = document.getElementById("poema");
 
-const POEMA = ["Leonelita,", "si", "todo", "lo", "que", "siento", "fuera", "aire,",
-               "no", "habría", "burbujas", "suficientes.", "Te", "amo,", "bubush."];
+/* El poema, en pedazos y no palabra por palabra: quince burbujas en una
+   pantalla de teléfono es un enjambre, y cada toque decía media idea. */
+const POEMA = ["Leonelita,", "si todo", "lo que siento", "fuera aire,",
+               "no habría", "burbujas", "suficientes.", "Te amo,", "bubush."];
 
 let AN = 0, AL = 0, dpr = 1;
 function medir() {
@@ -54,18 +58,39 @@ const burbujas = [];
 const trozos = [];
 let siguiente = 0, dichas = 0;
 
-function nueva(i) {
-  const r = 34 + Math.random() * 18;
-  burbujas.push({
-    i, r,
-    x: r + 20 + Math.random() * (AN - 2 * r - 40),
-    y: AL + r + Math.random() * 200,
-    vy: 0.45 + Math.random() * 0.45,
-    fase: Math.random() * 6.28, amp: 12 + Math.random() * 20,
-    tono: 255 + Math.random() * 45,
-  });
+const FUENTE = (r) => `${Math.round(Math.min(17, r * .40))}px system-ui,sans-serif`;
+
+/* EL TAMAÑO SALE DEL TEXTO, no al revés: con un radio al azar, "suficientes."
+   se salía de su propia burbuja. */
+function radioPara(txt) {
+  x.font = "600 15px system-ui,sans-serif";
+  return Math.max(32, x.measureText(txt).width / 2 + 15);
 }
-for (let i = 0; i < POEMA.length; i++) nueva(i);
+
+/* TODAS ARRANCAN EN PANTALLA Y EN ORDEN, de arriba para abajo.
+   Antes salían todas por debajo del borde (y = alto + azar) y subían a 40 px
+   por segundo: medido, los primeros dos segundos eran una pantalla violeta
+   vacía, y la burbuja marcada —la única que se puede tocar— estaba abajo del
+   borde de la pantalla. Se tocaba a ciegas.
+   En orden de arriba para abajo, además, el poema se lee como se juega. */
+function repartir() {
+  burbujas.length = 0;
+  const n = POEMA.length;
+  for (let i = 0; i < n; i++) {
+    const r = radioPara(POEMA[i]);
+    // en zigzag: una a la izquierda, la que sigue a la derecha, así no se tapan
+    const lado = i % 2 ? 0.66 : 0.34;
+    burbujas.push({
+      i, r,
+      x: Math.min(AN - r - 8, Math.max(r + 8, AN * lado + (Math.random() - .5) * AN * .12)),
+      y: AL * 0.34 + i * (AL * 0.70 / Math.max(1, n - 1)),
+      vy: 0.30 + Math.random() * 0.30,
+      fase: Math.random() * 6.28, amp: 12 + Math.random() * 20,
+      tono: 255 + Math.random() * 45,
+    });
+  }
+}
+repartir();
 
 function revienta(b) {
   for (let k = 0; k < 18; k++) {
@@ -79,7 +104,10 @@ function revienta(b) {
   const hasta = POEMA.slice(0, dichas);
   elPoema.innerHTML = hasta.map((p, k) => k === hasta.length - 1 ? `<b>${p}</b>` : p).join(" ");
   if (dichas >= POEMA.length)
-    setTimeout(() => { elPoema.innerHTML += "<br><b>🌼</b>"; }, 900);
+    setTimeout(() => { elPoema.innerHTML += "<br><b>🌼</b>";
+      // ya no queda ninguna: el pie dejaría una instrucción imposible
+      document.getElementById("pie").textContent = "21 de septiembre · para Leonelita";
+    }, 900);
 }
 
 function dibujaBurbuja(b, esLaQueSigue, ahora) {
@@ -102,7 +130,7 @@ function dibujaBurbuja(b, esLaQueSigue, ahora) {
   x.beginPath(); x.ellipse(b.x - b.r * .34, b.y - b.r * .38, b.r * .17, b.r * .1, -.7, 0, 7); x.fill();
 
   x.fillStyle = esLaQueSigue ? "#fff6d8" : "rgba(226,214,250,.55)";
-  x.font = `${esLaQueSigue ? 700 : 400} ${Math.round(b.r * .46)}px system-ui,sans-serif`;
+  x.font = `${esLaQueSigue ? 700 : 400} ${FUENTE(b.r)}`;
   x.textAlign = "center"; x.textBaseline = "middle";
   x.fillText(POEMA[b.i], b.x, b.y);
 
@@ -124,9 +152,19 @@ function cuadro(ahora) {
     if (b.i < siguiente) continue;                 // ya reventada
     b.y -= b.vy;
     b.x += Math.sin(t / 60 + b.fase) * (b.amp / 90);
+    b.x = Math.min(AN - b.r - 6, Math.max(b.r + 6, b.x));
     // AL LLEGAR ARRIBA VUELVE POR ABAJO. Si se fuera, la palabra que sigue
     // podría no estar nunca en pantalla y el poema se trabaría.
     if (b.y < -b.r - 10) { b.y = AL + b.r + 20; }
+    /* LA QUE HAY QUE TOCAR NUNCA SE VA DE LA PANTALLA. Si quedó abajo del
+       borde o se metió atrás del poema, vuelve sola a la franja donde se lee.
+       No alcanza con acomodarlas al empezar: girando la pantalla, o volviendo
+       después de un rato, la marcada puede haber subido de más. */
+    if (b.i === siguiente) {
+      const arriba = AL * 0.26, abajo = AL * 0.84;
+      if (b.y > abajo) b.y -= Math.min(6, b.y - abajo);
+      else if (b.y < arriba) b.y += Math.min(6, arriba - b.y);
+    }
     dibujaBurbuja(b, b.i === siguiente, ahora);
   }
 
@@ -151,6 +189,10 @@ const punto = (e) => { const r = c.getBoundingClientRect(); return { x: e.client
 c.addEventListener("pointerdown", (e) => { const p = punto(e); tocar(p.x, p.y); e.preventDefault(); });
 
 window.__flores = { dichas: () => dichas, total: POEMA.length,
+  /** Dónde está la que hay que tocar, para poder probar que se ve. */
+  sigue: () => { const b = burbujas.find((q) => q.i === siguiente);
+                 return b ? { x: b.x, y: b.y, r: b.r } : null; },
+  pantalla: () => ({ AN, AL }),
   reventarTodo() { while (siguiente < POEMA.length) {
     const b = burbujas.find((q) => q.i === siguiente); if (!b) break; revienta(b); } return dichas; } };
 </script>

@@ -35,6 +35,35 @@ const PRUEBAS = {
    página. La mecánica avanzaba igual —las flores abrían— así que la sonda daba
    bien y el dibujo estaba roto. Se mira el lienzo, no el contador. */
 const EXTRA = {
+  /* EL DEDO DICE ADONDE, NO CUANTO. Se apoya, se arrastra de un tirón hasta la
+     columna 6 y se deja QUIETO: sin más eventos, la flor tiene que llegar
+     igual. Antes se movía un pasito por `pointermove` y se quedaba a menos de
+     una celda de la entrada. Arrastrando con la mano uno lo corrige sin darse
+     cuenta, así que sólo se ve si se deja el dedo parado a propósito. */
+  "09-laberinto.html": ["la flor llega aunque el dedo se quede quieto", () => new Promise((ok) => {
+    const c = document.getElementById("c"), g = window.__flores.donde();
+    const px = (ce, fi) => ({ x: g.caja.x + (ce + .5) * g.CEL, y: g.caja.y + (fi + .5) * g.CEL });
+    const tirar = (t, p) => c.dispatchEvent(new PointerEvent(t, { clientX: p.x, clientY: p.y, bubbles: true, cancelable: true }));
+    const fin = px(6, 1);
+    tirar("pointerdown", px(1, 1));
+    tirar("pointermove", fin);
+    setTimeout(() => {
+      const f = window.__flores.donde();
+      tirar("pointerup", fin);
+      const col = f.x / f.CEL - .5, fila = f.y / f.CEL - .5;
+      window.__flores.reiniciar();
+      ok(Math.abs(col - 6) < 0.2 && Math.abs(fila - 1) < 0.2);
+    }, 1200);
+  })],
+
+  /* LA QUE HAY QUE TOCAR TIENE QUE VERSE ENTERA. Antes todas nacían debajo del
+     borde de abajo y subían a 40 px por segundo: la marcada —la única que se
+     puede reventar— estaba fuera de pantalla y se tocaba a ciegas. */
+  "08-burbujas.html": ["la burbuja marcada se ve entera", () => {
+    const b = window.__flores.sigue(), p = window.__flores.pantalla();
+    return !!b && b.y - b.r > 0 && b.y + b.r < p.AL && b.x - b.r > 0 && b.x + b.r < p.AN;
+  }],
+
   "05-jardin-pixel.html": ["el lienzo no tiene huecos sin pintar", () => {
     const c = document.getElementById("c");
     const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
@@ -69,6 +98,11 @@ for (const a of archivos) {
   const hay = await pg.evaluate(() => typeof window.__flores === "object");
   if (!hay) { ch(`${a}: tiene sonda`, false); await pg.close(); continue; }
 
+  if (EXTRA[a]) {
+    const [comoSeLlama, mirar] = EXTRA[a];
+    ch(`${a}: ${comoSeLlama}`, (await pg.evaluate(`(${mirar.toString()})()`)) === true);
+  }
+
   const [hacer, comprobar, que] = PRUEBAS[a] || [];
   let resultado = null;
   if (hacer) {
@@ -79,11 +113,6 @@ for (const a of archivos) {
   ch(`${a}: la mecánica avanza`, resultado === true, que);
   ch(`${a}: sin errores ni archivos sueltos`, err.length === 0 && sueltos.length === 0,
      [...err.slice(0, 1), ...sueltos.slice(0, 1)].join(" | "));
-
-  if (EXTRA[a]) {
-    const [comoSeLlama, mirar] = EXTRA[a];
-    ch(`${a}: ${comoSeLlama}`, (await pg.evaluate(`(${mirar.toString()})()`)) === true);
-  }
 
   // QUE NO SEAN LA MISMA PAGINA CON OTRO COLOR: se pide que cada una tenga su
   // propio título, que es lo mínimo para que sean diez y no una repetida.

@@ -71,8 +71,10 @@ let hito = 0, recorrido = 0, ganado = false;
 let CEL = 34, OX = 0, OY = 0, dpr = 1;
 function medir() {
   dpr = Math.min(devicePixelRatio || 1, 2);
-  const dispo = Math.min(innerWidth * 0.92, innerHeight * 0.58);
-  CEL = Math.floor(Math.min(dispo / COL, dispo / FIL * 1.0));
+  // CADA EJE TIENE SU PRESUPUESTO. Antes se tomaba el menor de los dos y se
+  // dividía por el ancho Y por el alto, así que en un teléfono el laberinto
+  // salía chico y sobraba media pantalla arriba.
+  CEL = Math.floor(Math.min(innerWidth * 0.92 / COL, innerHeight * 0.62 / FIL));
   const an = CEL * COL, al = CEL * FIL;
   c.style.width = an + "px"; c.style.height = al + "px";
   c.width = Math.round(an * dpr); c.height = Math.round(al * dpr);
@@ -120,14 +122,14 @@ function intentar(nx, ny) {
   if (libre(flor.x, ny)) flor.y = ny;
 }
 
-function avanzar(px, py) {
-  if (ganado) return;
+function avanzar(px, py, maxi) {
+  if (ganado) return 0;
   // la flor va HACIA el dedo, no salta a él: así no se puede cruzar una pared
   // de un tirón moviendo el dedo rápido
   const dx = px - flor.x, dy = py - flor.y;
   const d = Math.hypot(dx, dy);
-  if (d < 0.5) return;
-  const paso = Math.min(d, CEL * 0.34);
+  if (d < 0.5) return 0;
+  const paso = Math.min(d, maxi || CEL * 0.34);
   const antes = { x: flor.x, y: flor.y };
   intentar(flor.x + dx / d * paso, flor.y + dy / d * paso);
   recorrido += Math.hypot(flor.x - antes.x, flor.y - antes.y);
@@ -140,10 +142,35 @@ function avanzar(px, py) {
     hito++; elFrase.innerHTML = FRASES[hito][1];
   }
   if (cerca && !ganado) { ganado = true; hito = FRASES.length - 1; elFrase.innerHTML = FRASES[hito][1]; }
+  return Math.hypot(flor.x - antes.x, flor.y - antes.y);
+}
+
+/* LA FLOR CAMINA POR RELOJ, NO POR EVENTO.
+   Antes se movía adentro del `pointermove`, un pasito por evento. Dos cosas
+   salían mal y las dos se sentían como "a veces no anda": si el dedo se movía
+   rápido llegaban pocos eventos y la flor quedaba metros atrás, y si el dedo
+   se quedaba QUIETO sobre un punto la flor se frenaba a mitad de camino, porque
+   sin eventos no había pasos. Medido: dedo quieto en la columna 6 durante
+   1,5 s y la flor avanzaba menos de una celda.
+   Ahora el dedo sólo dice ADONDE, y el reloj dice CUANTO. */
+const VEL = 4.6;                       // celdas por segundo
+let destino = null, tPrevio = 0;
+function seguirAlDedo(ahora) {
+  const dt = Math.min((ahora - tPrevio) / 1000, 0.05);   // un salto de pestaña no teletransporta
+  tPrevio = ahora;
+  if (!destino || ganado) return;
+  // el tramo del cuadro se parte en pedacitos: de un tirón se cruzaría una pared
+  let resto = VEL * CEL * dt;
+  while (resto > 0.5) {
+    const tramo = Math.min(resto, CEL * 0.22);
+    if (avanzar(destino.x, destino.y, tramo) < 0.01) break;   // contra la pared, basta
+    resto -= tramo;
+  }
 }
 
 function cuadro(ahora) {
   requestAnimationFrame(cuadro);
+  seguirAlDedo(ahora);
   const AN = COL * CEL, AL = FIL * CEL;
   x.clearRect(0, 0, AN, AL);
 
@@ -187,11 +214,10 @@ function cuadro(ahora) {
 requestAnimationFrame(cuadro);
 
 const punto = (e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
-let apoyado = false;
-c.addEventListener("pointerdown", (e) => { apoyado = true; avanzar(...Object.values(punto(e))); e.preventDefault(); });
-c.addEventListener("pointermove", (e) => { if (!apoyado) return; const p = punto(e); avanzar(p.x, p.y); });
+c.addEventListener("pointerdown", (e) => { destino = punto(e); e.preventDefault(); });
+c.addEventListener("pointermove", (e) => { if (destino) destino = punto(e); });
 for (const ev of ["pointerup", "pointercancel", "pointerleave"])
-  c.addEventListener(ev, () => { apoyado = false; });
+  c.addEventListener(ev, () => { destino = null; });
 addEventListener("keydown", (e) => {
   const d = { ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0] }[e.key];
   if (!d) return; e.preventDefault();
@@ -201,6 +227,9 @@ addEventListener("keydown", (e) => {
 elFrase.innerHTML = FRASES[0][1];
 
 window.__flores = { ganado: () => ganado, hito: () => hito,
+  donde: () => ({ x: flor.x, y: flor.y, CEL, caja: c.getBoundingClientRect() }),
+  reiniciar() { reset(); destino = null; hito = 0; recorrido = 0; ganado = false;
+                elFrase.innerHTML = FRASES[0][1]; },
   /** Recorre el laberinto de verdad, para las pruebas.
    *
    *  VA CON BUSQUEDA EN ANCHURA Y NO ELIGIENDO "LA QUE ACERCA MAS". Lo goloso
