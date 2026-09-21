@@ -1,0 +1,23 @@
+{
+  "name": "IA local (Ollama) — para abrir desde el teléfono",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  // El puerto de Ollama se reenvía a una URL pública del Codespace: eso es lo
+  // que hace que la VM sea ALCANZABLE desde el navegador del celular, que es
+  // justo lo que este contenedor efímero no puede dar.
+  "forwardPorts": [11434, 8080],
+  "portsAttributes": {
+    "11434": { "label": "Ollama API", "onAutoForward": "silent" },
+    "8080":  { "label": "Web", "onAutoForward": "openBrowser" }
+  },
+
+  // Al crear el Codespace se instala Ollama (no se baja el modelo todavia, para
+  // no demorar el arranque cinco minutos; eso lo hace `ia` la primera vez).
+  "postCreateCommand": "bash .devcontainer/setup-ollama.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  }
+}
