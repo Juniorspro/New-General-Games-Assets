@@ -1,0 +1,1722 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Enjambre — sobreviví seis minutos</title>
+<meta name="description" content="Un pulgar y nada de apuntar. Vos te movés; las armas disparan solas. Lo que decide la partida es qué subís.">
+<meta name="theme-color" content="#0c0a16">
+<style>
+/* ESTILO: laboratorio de noche. Violeta profundo, verde ácido y un rosa de
+   aviso. La regla es que el menú prepare el ojo para el juego: si las
+   pantallas son claras, la primera partida encandila. */
+:root{ --verde:#8ad06a; --cian:#7cf6ff; --rosa:#ff6ea9; --violeta:#c264e0;
+       --fondo:#0c0a16; --tinta:#eee9f7; --apagado:#8a83a6; --linea:rgba(255,255,255,.12); }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--fondo);color:var(--tinta);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:none;user-select:none;
+  overscroll-behavior:none}
+#lienzo{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;background:#141021}
+
+.pantalla{position:fixed;inset:0;z-index:2;display:none;place-items:center;overflow-y:auto;
+  padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));
+  background:radial-gradient(ellipse at 50% 0%,rgba(194,100,224,.20),transparent 60%),
+             linear-gradient(180deg,var(--fondo),#07060e)}
+.pantalla.on{display:grid}
+.pantalla.sinfondo{background:none;pointer-events:none}
+.pantalla.sinfondo #hud,.pantalla.sinfondo #zona{pointer-events:auto}
+/* la de mejoras se ve ENCIMA del juego congelado: cortar a negro perdería el
+   contexto justo cuando hay que decidir mirando cómo venía la partida */
+#pMejora{background:rgba(8,6,16,.86)}
+
+.caja{width:min(430px,100%);display:flex;flex-direction:column;gap:12px;text-align:center;margin:auto}
+.logo{font-size:clamp(34px,10.5vw,54px);font-weight:900;letter-spacing:.10em;line-height:1;margin:4px 0 2px;
+  background:linear-gradient(95deg,var(--verde),var(--cian) 55%,var(--violeta));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 20px rgba(138,208,106,.28))}
+.logo.chico{font-size:clamp(26px,8vw,38px)}
+h2{font-size:clamp(19px,5.4vw,25px);font-weight:800}
+.bajada{color:var(--apagado);font-size:clamp(13px,3.6vw,15px);line-height:1.55}
+.marca{color:var(--cian);font:700 12px/1.6 system-ui;letter-spacing:.06em}
+
+/* los bichitos del menú: seis puntos que se acercan al título, como el juego */
+.bichitos{display:flex;justify-content:center;gap:10px;height:26px}
+.bichitos i{width:11px;height:13px;border-radius:50% 50% 45% 45%;background:var(--verde);opacity:.75;
+  animation:vaiven 2.4s ease-in-out infinite alternate}
+.bichitos i:nth-child(2n){background:var(--rosa);animation-duration:1.9s}
+.bichitos i:nth-child(3n){background:var(--violeta);animation-duration:3.1s}
+@keyframes vaiven{from{transform:translateY(-7px) scale(.9)}to{transform:translateY(7px) scale(1.1)}}
+
+button{font:700 15px/1 system-ui,sans-serif;color:var(--tinta);cursor:pointer;
+  background:rgba(255,255,255,.055);border:1px solid var(--linea);border-radius:13px;padding:15px 16px;
+  transition:transform .08s,background .15s}
+button:active{transform:translateY(2px);background:rgba(255,255,255,.11)}
+button.grande{font-size:17px;padding:18px 16px;
+  background:linear-gradient(100deg,rgba(138,208,106,.26),rgba(124,246,255,.26));border-color:rgba(255,255,255,.26)}
+button.peligro{color:#ff9a9a;border-color:rgba(255,90,90,.34);background:rgba(255,60,60,.09)}
+button.volver{background:none;border:none;color:var(--apagado);font-size:13px;padding:12px}
+.botonera{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.fila{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;
+  border:1px solid var(--linea);border-radius:13px;background:rgba(255,255,255,.028);font-size:14px;text-align:left}
+.fila.col{flex-direction:column;align-items:stretch;gap:9px}
+.int{min-width:56px;padding:9px;font-size:17px}.int.no{opacity:.33}
+.segmentado{display:flex;gap:6px}
+.segmentado button{flex:1;padding:11px 6px;font-size:13px;border-radius:10px}
+.segmentado button.el{background:linear-gradient(100deg,rgba(138,208,106,.32),rgba(124,246,255,.32));
+  border-color:rgba(255,255,255,.34)}
+.ayuda{text-align:left;display:flex;flex-direction:column;gap:11px;font-size:14px;line-height:1.55;color:#cfc7e2}
+.ayuda li{list-style:none;padding-left:18px;position:relative}
+.ayuda li::before{content:'';position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--verde)}
+.record{display:none;font:800 12px/1 system-ui;letter-spacing:.14em;color:var(--cian)}
+.record.on{display:block}
+
+#hud{position:fixed;top:0;left:0;right:0;z-index:4;display:flex;align-items:center;gap:8px;
+  padding:max(30px,calc(env(safe-area-inset-top) + 22px)) 12px 8px}
+.chip{background:rgba(8,6,16,.6);border:1px solid var(--linea);border-radius:10px;
+  padding:6px 10px;font:700 12px/1 system-ui;letter-spacing:.04em;color:#d9d2ec}
+.chip b{font-size:14px;font-variant-numeric:tabular-nums}
+#hudMatados{color:var(--rosa)}
+#bSalir{margin-left:auto;padding:8px 12px;font-size:12px;background:rgba(8,6,16,.6)}
+#zona{position:fixed;inset:0;z-index:3}
+
+/* las tarjetas de mejora: lo único que se elige en todo el juego */
+.tarjetas{display:flex;flex-direction:column;gap:10px}
+/* EL `min-width:0` NO ES DECORATIVO. Un hijo de grid trae `min-width:auto`, que
+   lo obliga a ser al menos tan ancho como su palabra más larga y, dentro de una
+   caja flex que puede encogerse, termina midiendo el contenido en vez de la
+   columna: la descripción salía partida en una palabra por renglón. */
+.tarjeta{display:grid;grid-template-columns:14px minmax(0,1fr);gap:12px;align-items:start;
+  text-align:left;padding:15px 15px;border-radius:14px;width:100%}
+.tarjeta>div{min-width:0}
+.tarjetas{width:100%}
+.tarjeta i{width:14px;height:14px;border-radius:4px;margin-top:3px}
+.tarjeta .t{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tarjeta .t b{font-weight:700;font-size:11px;color:var(--apagado);letter-spacing:.06em}
+.tarjeta .t em{font-style:normal;font-size:10px;font-weight:900;letter-spacing:.12em;
+  background:var(--verde);color:#0c0a16;border-radius:5px;padding:3px 6px}
+.tarjeta .d{font-size:13px;line-height:1.5;color:#b9b1cf;margin-top:5px}
+.tarjeta.nueva{border-color:rgba(138,208,106,.5);background:rgba(138,208,106,.09)}
+@media (prefers-reduced-motion:reduce){.bichitos i{animation:none}}
+
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+
+<section id="pIdioma" class="pantalla">
+  <div class="caja">
+    <h1 class="logo chico">ENJAMBRE</h1>
+    <h2 data-t="idioma.titulo">Elegí tu idioma</h2>
+    <p class="bajada" data-t="idioma.bajada">Se puede cambiar después en Ajustes.</p>
+    <div class="botonera" id="listaIdiomas"></div>
+  </div>
+</section>
+
+<section id="pMenu" class="pantalla">
+  <div class="caja">
+    <div class="bichitos" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 class="logo">ENJAMBRE</h1>
+    <p class="bajada" data-t="menu.bajada">Seis minutos. Sólo te movés: las armas disparan solas.</p>
+    <p class="marca" id="menuMejor"></p>
+    <div class="botonera">
+      <button id="bJugar" class="grande" data-t="menu.jugar">Jugar</button>
+      <button id="bComo" data-t="menu.como">Cómo se juega</button>
+      <button id="bAjustes" data-t="menu.ajustes">Ajustes</button>
+    </div>
+  </div>
+</section>
+
+<section id="pComo" class="pantalla">
+  <div class="caja">
+    <h2 data-t="como.titulo">Cómo se juega</h2>
+    <ul class="ayuda">
+      <li data-t="como.1"></li><li data-t="como.2"></li><li data-t="como.3"></li>
+      <li data-t="como.4"></li><li data-t="como.5"></li>
+    </ul>
+    <button class="volver" data-ir="menu" data-t="volver">Volver</button>
+  </div>
+</section>
+
+<section id="pAjustes" class="pantalla">
+  <div class="caja">
+    <h2 data-t="aj.titulo">Ajustes</h2>
+    <div class="fila"><span data-t="aj.sonido">Sonido</span><button id="ajSonido" class="int">🔊</button></div>
+    <div class="fila col"><span data-t="aj.idioma">Idioma</span><div class="segmentado" id="ajIdioma"></div></div>
+    <button id="bBorrar" class="peligro" data-t="aj.borrar">Borrar récords</button>
+    <button class="volver" data-ir="menu" data-t="volver">Volver</button>
+  </div>
+</section>
+
+<section id="pJuego" class="pantalla sinfondo">
+  <div id="hud">
+    <div class="chip"><b id="hudReloj">6:00</b></div>
+    <div class="chip"><span data-t="mej.nivel">Nivel</span> <b id="hudNivel">1</b></div>
+    <div class="chip"><b id="hudMatados">0</b> ☠</div>
+    <button id="bSalir" data-t="hud.salir">Salir</button>
+  </div>
+  <!-- LA ZONA DE MOVIMIENTO ES TODA LA PANTALLA. Un joystick en una esquina
+       obliga a mirarse el pulgar; acá el mando nace donde apoyás el dedo. -->
+  <div id="zona"></div>
+</section>
+
+<section id="pMejora" class="pantalla">
+  <div class="caja">
+    <h2><span data-t="mej.titulo">Nivel</span> <span id="mejNivel">2</span></h2>
+    <div id="tarjetas" class="tarjetas"></div>
+  </div>
+</section>
+
+<section id="pFin" class="pantalla">
+  <div class="caja">
+    <h2 id="finTitulo" data-t="fin.perdio">Te agarraron</h2>
+    <div id="finRecord" class="record" data-t="fin.record">Récord nuevo</div>
+    <div class="fila"><span data-t="fin.tiempo">Tiempo</span><b id="finTiempo">0:00</b></div>
+    <div class="fila"><span data-t="fin.matados">Matados</span><b id="finMatados">0</b></div>
+    <div class="fila"><span data-t="fin.nivel">Nivel</span><b id="finNivel">1</b></div>
+    <div class="botonera">
+      <button id="bOtra" class="grande" data-t="fin.otra">De nuevo</button>
+      <button data-ir="menu" data-t="fin.menu">Menú</button>
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+/* ── archivos ── */
+globalThis.ARCHIVOS = {};
+
+/* ── azar.js ── */
+const M_azar = (() => {
+  // Azar con semilla. La misma semilla da siempre la misma partida.
+  //
+  // POR QUE IMPORTA ACA. Una partida de supervivencia dura minutos y muere de
+  // una forma injusta cada tanto; si además cada corrida es un mundo distinto,
+  // no hay manera de reproducir un bug ni de comparar dos versiones del balance.
+  // Con semilla, "la partida 4218" es la misma para siempre y las pruebas pueden
+  // jugar mil veces lo mismo.
+
+  function azar(semilla) {
+    let a = semilla >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      // Math.imul y no `*`: los productos de 32 bits pasan de 2^53 y el float64
+      // redondea justo los bits de abajo, que son los que dan la mezcla.
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const entero = (r, n) => Math.floor(r() * n) % n;
+  const uno = (r, l) => l[entero(r, l.length)];
+  const entre = (r, a, b) => a + r() * (b - a);
+  function barajar(r, l) {
+    for (let i = l.length - 1; i > 0; i--) { const j = entero(r, i + 1); [l[i], l[j]] = [l[j], l[i]]; }
+    return l;
+  }
+
+  return { azar, entero, uno, entre, barajar };
+})();
+
+/* ── bichos.js ── */
+const M_bichos = (() => {
+  // Los bichos. Todos inventados: cumplen roles del género sin parecerse a nadie.
+  //
+  // CADA UNO TIENE QUE LEERSE DE UN VISTAZO, incluso con cuarenta en pantalla.
+  // Por eso se distinguen por SILUETA y no por detalle: una gota, un triángulo,
+  // un hexágono. El color ayuda, pero el que juega mira la forma.
+
+  const BICHOS = {
+    // la masa: lenta, blanda, y viene de a montones
+    mota:      { r: 11, vida: 10,  vel: 60,  daño: 9,  xp: 1, color: "#8ad06a", forma: "gota",  peso: 1.0 },
+    // la presión: rápida y de vidrio, castiga quedarse quieto
+    pua:       { r: 9,  vida: 7,   vel: 122,  daño: 13, xp: 2, color: "#ff7a5c", forma: "punta", peso: 0.8 },
+    // el muro: obliga a rodear en vez de atravesar
+    caparazon: { r: 17, vida: 58,  vel: 42,  daño: 19, xp: 5, color: "#7d9bd6", forma: "placa", peso: 2.6 },
+    // el ruido: no va derecho, así que no se le puede apuntar de memoria
+    zumbido:   { r: 10, vida: 14,  vel: 95,  daño: 11, xp: 3, color: "#e8c65a", forma: "rombo", peso: 1.0, errante: true },
+    // el jefe: lento, enorme, y va largando motas
+    bulto:     { r: 40, vida: 1500, vel: 34, daño: 32, xp: 120, color: "#c264e0", forma: "placa", peso: 12, jefe: true },
+  };
+
+  /* LAS OLEADAS, en segundos desde el arranque.
+     Escritas a mano y no generadas: una curva automática sube parejo y aburre.
+     Acá hay respiros a propósito —el minuto 3 después del primer jefe— porque lo
+     que hace que una partida se sienta larga no es la dificultad sino no poder
+     respirar nunca. */
+  /* LA VELOCIDAD ES LA VARIABLE QUE MANDA, y costó tres rondas de medición
+     entenderlo. Subir la vida de los bichos y el daño de contacto casi no movió
+     la supervivencia del robot: con el jugador a 140 y la masa a 46, nunca lo
+     alcanzaban, así que ni la vida ni el daño llegaban a aplicarse. Lo que hace
+     que una oleada sea una amenaza es que TE LLEGUE. La púa ahora corre casi
+     tanto como vos: no se la puede dejar atrás, hay que matarla. */
+  const OLEADAS = [
+    { desde:   0, cada: 1.10, tipos: ["mota"],                            porVez: 2 },
+    { desde:  35, cada: 0.95, tipos: ["mota", "mota", "pua"],             porVez: 2 },
+    { desde:  75, cada: 0.85, tipos: ["mota", "pua", "zumbido"],          porVez: 3 },
+    { desde: 115, cada: 0.80, tipos: ["mota", "pua", "caparazon"],        porVez: 3 },
+    { desde: 160, cada: 0.00, tipos: [],                                  porVez: 0, jefe: "bulto" },
+    { desde: 175, cada: 1.30, tipos: ["mota"],                            porVez: 2 },   // el respiro
+    { desde: 205, cada: 0.70, tipos: ["pua", "zumbido", "caparazon"],     porVez: 4 },
+    { desde: 255, cada: 0.60, tipos: ["mota", "pua", "zumbido", "caparazon"], porVez: 5 },
+    { desde: 310, cada: 0.00, tipos: [],                                  porVez: 0, jefe: "bulto" },
+    { desde: 325, cada: 0.50, tipos: ["pua", "zumbido", "caparazon"],     porVez: 6 },
+  ];
+
+  /** Cuánta vida de más tienen los bichos a los `t` segundos.
+   *
+   *  SUBE POR TRAMOS Y NO SIN FRENO. Multiplicando sin tope, a los seis minutos
+   *  una mota aguanta lo que un jefe y el arma que elegiste deja de importar.
+   *  Lo que tiene que crecer es CUANTOS vienen, no cuánto aguanta cada uno. */
+  const dureza = (t) => 1 + Math.min(2.2, t / 190);
+
+  /* EL TECHO DE BICHOS VIVOS, y por qué no es una optimización sino balance.
+     Medido con un robot sobre doce partidas: sin techo se llegaba a 560 bichos a
+     la vez y NINGUNA de las doce sobrevivía. Lo que pasa es una espiral: si no
+     alcanzás a matar al ritmo al que entran, cada segundo entran más, y a partir
+     de cierto punto no hay arma que lo dé vuelta — la partida ya está perdida
+     dos minutos antes de que te toquen. Con techo, quedarse atrás se paga caro
+     pero se puede remontar. Y de paso el cuadro deja de costar 15 ms. */
+  const MAX_BICHOS = 200;
+
+  const LARGO = 360;   // seis minutos: una partida entra en un viaje corto
+
+  return { BICHOS, OLEADAS, dureza, MAX_BICHOS, LARGO };
+})();
+
+/* ── armas.js ── */
+const M_armas = (() => {
+  // Las armas y las mejoras. Nada de esto se apunta: se elige.
+  //
+  // POR QUE EL ATAQUE ES AUTOMATICO. En un teléfono, mover y apuntar con dos
+  // pulgares a la vez es pelear con el aparato, no con los bichos. Acá el único
+  // gesto es moverse; lo que decide la partida es QUE arma subís y en qué orden.
+  // Eso convierte cada subida de nivel en la jugada de verdad.
+
+  const ARMAS = {
+    /* Dispara sola al bicho más cercano. Es el arma de arranque porque enseña la
+       regla de la casa: si no mirás para dónde, igual pega. */
+    chispa: {
+      nombre: "chispa", tipo: "tiro", color: "#ffe066",
+      niveles: [
+        { cada: 0.62, daño: 12, vel: 380, radio: 5.0, cuantos: 1, atraviesa: 0 },
+        { cada: 0.54, daño: 15, vel: 400, radio: 5.5, cuantos: 2, atraviesa: 0 },
+        { cada: 0.46, daño: 19, vel: 420, radio: 6.0, cuantos: 2, atraviesa: 1 },
+        { cada: 0.40, daño: 24, vel: 440, radio: 6.5, cuantos: 3, atraviesa: 1 },
+        { cada: 0.34, daño: 30, vel: 470, radio: 7.0, cuantos: 3, atraviesa: 2 },
+      ],
+    },
+    /* Trozos que giran alrededor. No hay que hacer nada y por eso es la respuesta
+       a quedar rodeado: pega en todas las direcciones a la vez. */
+    orbita: {
+      nombre: "orbita", tipo: "orbita", color: "#7cf6ff",
+      niveles: [
+        { cuantos: 2, daño: 7,  radio: 52, giro: 2.2, r: 8 },
+        { cuantos: 3, daño: 9,  radio: 56, giro: 2.4, r: 8 },
+        { cuantos: 4, daño: 11, radio: 60, giro: 2.6, r: 9 },
+        { cuantos: 5, daño: 14, radio: 66, giro: 2.8, r: 9 },
+        { cuantos: 6, daño: 18, radio: 72, giro: 3.0, r: 10 },
+      ],
+    },
+    /* Una onda que se abre desde vos. Poco daño pero empuja, y empujar es lo que
+       te saca de un abrazo del que no se sale disparando. */
+    onda: {
+      nombre: "onda", tipo: "onda", color: "#b48cff",
+      niveles: [
+        { cada: 3.2, daño: 12, radio: 96,  empuje: 150 },
+        { cada: 2.9, daño: 15, radio: 112, empuje: 165 },
+        { cada: 2.6, daño: 19, radio: 130, empuje: 180 },
+        { cada: 2.3, daño: 24, radio: 150, empuje: 200 },
+        { cada: 2.0, daño: 30, radio: 172, empuje: 225 },
+      ],
+    },
+    /* Un latigazo para donde vas. Es la única que premia mirar para dónde corrés,
+       así que le da algo que hacer al que quiere jugar fino. */
+    hilo: {
+      nombre: "hilo", tipo: "hilo", color: "#ff6ea9",
+      niveles: [
+        { cada: 1.20, daño: 16, largo: 96,  ancho: 34 },
+        { cada: 1.05, daño: 20, largo: 108, ancho: 38 },
+        { cada: 0.92, daño: 25, largo: 120, ancho: 42 },
+        { cada: 0.80, daño: 31, largo: 134, ancho: 48 },
+        { cada: 0.68, daño: 39, largo: 150, ancho: 54 },
+      ],
+    },
+    /* Semillas que quedan atrás y estallan. Premia correr en círculos, que es lo
+       que uno termina haciendo igual. */
+    semilla: {
+      nombre: "semilla", tipo: "semilla", color: "#8ad06a",
+      niveles: [
+        { cada: 1.7, daño: 22, radio: 44, dura: 6 },
+        { cada: 1.5, daño: 27, radio: 50, dura: 6 },
+        { cada: 1.3, daño: 33, radio: 56, dura: 7 },
+        { cada: 1.1, daño: 41, radio: 64, dura: 7 },
+        { cada: 0.9, daño: 52, radio: 72, dura: 8 },
+      ],
+    },
+  };
+
+  /** Las pasivas. Suben un número y ya; están para que no todas las elecciones
+   *  sean un arma nueva que hay que aprender a mitad de partida. */
+  const PASIVAS = {
+    botas:  { max: 5, aplicar: (p, n) => { p.vel = 140 * (1 + n * 0.09); } },
+    /* EL IMAN ARRANCA GRANDE, y eso es balance y no comodidad. Las gemas caen
+       DONDE MUERE EL BICHO, y con un arma que llega a 520 píxeles eso es lejos de
+       vos. Con un radio de 52 —el primero que puse— el jugador huía, las gemas
+       quedaban atrás y no subía de nivel nunca: medido, 25 bichos matados, 21
+       gemas tiradas en el piso y 4 de experiencia. El juego entero es subir de
+       nivel, así que juntar no puede depender de volver a pisar el lugar. */
+    iman:   { max: 5, aplicar: (p, n) => { p.iman = 150 * (1 + n * 0.30); } },
+    coraza: { max: 5, aplicar: (p, n) => { p.vidaMax = 100 + n * 26; } },
+    filo:   { max: 5, aplicar: (p, n) => { p.daño = 1 + n * 0.12; } },
+    pulso:  { max: 5, aplicar: (p, n) => { p.frecuencia = 1 - n * 0.065; } },
+  };
+
+  /** Cuánta experiencia hace falta para el nivel `n`.
+   *
+   *  CRECE PERO NO SE DISPARA. Con una curva exponencial, después del nivel diez
+   *  no se sube más y las mejoras que faltan no se ven nunca; con una plana, a
+   *  los dos minutos ya está todo al máximo y el resto de la partida es inercia. */
+  const xpParaNivel = (n) => Math.round(4 + n * 2.6 + n * n * 0.45);
+
+  return { ARMAS, PASIVAS, xpParaNivel };
+})();
+
+/* ── mundo.js ── */
+const M_mundo = (() => {
+  // El mundo: bichos, tiros, gemas y el reloj. Sin dibujo y sin audio.
+  //
+  // POR QUE LA SIMULACION VIVE SOLA. Un juego de supervivencia se rompe por el
+  // balance, no por el dibujo: que el jefe sea imposible, que una arma no sirva
+  // nunca, que a los cinco minutos entren tantos bichos que el teléfono se
+  // arrastre. Nada de eso se ve mirando una captura. Acá un robot juega partidas
+  // enteras en milisegundos y las pruebas miden cuántas sobreviven, con qué arma
+  // y cuántos bichos llegó a haber en pantalla.
+
+  const { azar, uno, entre } = M_azar;
+  const { BICHOS, OLEADAS, dureza, LARGO, MAX_BICHOS } = M_bichos;
+  const { ARMAS, PASIVAS, xpParaNivel } = M_armas;
+  /* LA REJILLA. Sin ella, separar a los bichos entre sí es comparar cada uno con
+     cada uno: con doscientos en pantalla son cuarenta mil comparaciones por
+     cuadro y el teléfono se planta. Con celdas del tamaño del bicho más grande,
+     cada uno mira sólo sus nueve celdas vecinas. */
+  class Rejilla {
+    constructor(lado) { this.lado = lado; this.celdas = new Map(); }
+    clave(x, y) { return ((x / this.lado) | 0) * 73856093 ^ ((y / this.lado) | 0) * 19349663; }
+    limpiar() { this.celdas.clear(); }
+    meter(o) {
+      const k = this.clave(o.x, o.y);
+      let c = this.celdas.get(k);
+      if (!c) this.celdas.set(k, c = []);
+      c.push(o);
+    }
+    *cerca(x, y) {
+      const L = this.lado;
+      for (let dy = -L; dy <= L; dy += L)
+        for (let dx = -L; dx <= L; dx += L) {
+          const c = this.celdas.get(this.clave(x + dx, y + dy));
+          if (c) yield* c;
+        }
+    }
+  }
+
+  class Mundo {
+    constructor(semilla = 1, opciones = {}) {
+      this.r = azar(semilla);
+      this.semilla = semilla;
+      // El mundo es más grande que la pantalla para que huir signifique algo,
+      // pero tiene borde: un mapa infinito se juega corriendo para siempre en
+      // línea recta, que es aburrido y además nunca se pierde.
+      this.radioMapa = opciones.radioMapa || 900;
+      this.jugador = {
+        x: 0, y: 0, vx: 0, vy: 0, r: 13,
+        vel: 140, vida: 100, vidaMax: 100, iman: 150, daño: 1, frecuencia: 1,
+        rumbo: 0, invulnerable: 0,
+        armas: { chispa: 1 }, pasivas: {},
+        nivel: 1, xp: 0, xpNecesaria: xpParaNivel(1),
+      };
+      this.bichos = [];
+      this.tiros = [];
+      this.gemas = [];
+      this.semillas = [];
+      this.ondas = [];
+      this.latigos = [];
+      this.golpes = [];          // avisos para el dibujo y el sonido
+      this.rejilla = new Rejilla(44);
+      this.t = 0;
+      this.relojes = {};         // cada arma con su propio contador
+      this.anguloOrbita = 0;
+      this.muerto = false;
+      this.gano = false;
+      this.matados = 0;
+      this.pendienteMejora = 0;  // cuántas elecciones debe el juego
+      this.proximaOleada = 0;
+      this.jefesLargados = 0;
+      this.picoBichos = 0;
+    }
+
+    // ── consultas ────────────────────────────────────────────────────────────
+    nivelArma(n) { return this.jugador.armas[n] || 0; }
+    datosArma(n) { return ARMAS[n].niveles[this.nivelArma(n) - 1]; }
+    terminada() { return this.muerto || this.gano; }
+
+    /** Qué tres cosas se ofrecen al subir de nivel.
+     *
+     *  NUNCA OFRECE ALGO QUE YA ESTA AL MAXIMO, y siempre ofrece tres cosas
+     *  distintas. Si no, en el nivel doce la pantalla de mejoras muestra tres
+     *  veces lo mismo agotado y la subida de nivel se vuelve un trámite. */
+    ofertas() {
+      const bolsa = [];
+      for (const n of Object.keys(ARMAS)) {
+        const lv = this.nivelArma(n);
+        if (lv >= ARMAS[n].niveles.length) continue;
+        // un arma nueva sólo si quedan manos: seis armas a la vez es ruido
+        if (lv === 0 && Object.keys(this.jugador.armas).length >= 4) continue;
+        bolsa.push({ clase: "arma", nombre: n, nivel: lv + 1, nueva: lv === 0 });
+      }
+      for (const n of Object.keys(PASIVAS)) {
+        const lv = this.jugador.pasivas[n] || 0;
+        if (lv >= PASIVAS[n].max) continue;
+        bolsa.push({ clase: "pasiva", nombre: n, nivel: lv + 1, nueva: lv === 0 });
+      }
+      // se sortea sin repetir; si no quedan tres, se devuelve lo que haya
+      const fuera = [];
+      while (fuera.length < 3 && bolsa.length) {
+        const i = Math.floor(this.r() * bolsa.length) % bolsa.length;
+        fuera.push(bolsa.splice(i, 1)[0]);
+      }
+      return fuera;
+    }
+
+    elegir(oferta) {
+      if (!oferta) return;
+      if (oferta.clase === "arma") this.jugador.armas[oferta.nombre] = oferta.nivel;
+      else {
+        this.jugador.pasivas[oferta.nombre] = oferta.nivel;
+        PASIVAS[oferta.nombre].aplicar(this.jugador, oferta.nivel);
+        if (oferta.nombre === "coraza") this.jugador.vida += 26;
+      }
+      this.pendienteMejora = Math.max(0, this.pendienteMejora - 1);
+    }
+
+    // ── el paso de simulación ────────────────────────────────────────────────
+    /**
+     * @param dt segundos
+     * @param mov {x,y} dirección de movimiento, de módulo 0 a 1
+     */
+    avanzar(dt, mov) {
+      if (this.terminada() || this.pendienteMejora > 0) return;
+      this.t += dt;
+      this.golpes.length = 0;
+
+      this.moverJugador(dt, mov);
+      this.largarBichos();
+      this.rearmarRejilla();
+      this.moverBichos(dt);
+      this.dispararArmas(dt);
+      this.moverTiros(dt);
+      this.moverOrbita(dt);
+      this.moverOndas(dt);
+      this.moverSemillas(dt);
+      this.moverLatigos(dt);
+      this.recogerGemas(dt);
+
+      if (this.jugador.vida <= 0) { this.jugador.vida = 0; this.muerto = true; }
+      if (this.t >= LARGO && !this.muerto) this.gano = true;
+      if (this.bichos.length > this.picoBichos) this.picoBichos = this.bichos.length;
+    }
+
+    moverJugador(dt, mov) {
+      const p = this.jugador;
+      const m = Math.hypot(mov.x, mov.y);
+      if (m > 0.02) {
+        const k = Math.min(1, m);
+        p.x += (mov.x / m) * p.vel * k * dt;
+        p.y += (mov.y / m) * p.vel * k * dt;
+        p.rumbo = Math.atan2(mov.y, mov.x);
+      }
+      // el borde: se frena, no se rebota. Rebotar contra una pared invisible con
+      // treinta bichos encima se siente como que el juego te empujó a la muerte.
+      const d = Math.hypot(p.x, p.y);
+      if (d > this.radioMapa) { p.x = (p.x / d) * this.radioMapa; p.y = (p.y / d) * this.radioMapa; }
+      if (p.invulnerable > 0) p.invulnerable -= dt;
+    }
+
+    oleadaActual() {
+      let cual = OLEADAS[0];
+      for (const o of OLEADAS) if (this.t >= o.desde) cual = o;
+      return cual;
+    }
+
+    largarBichos() {
+      const o = this.oleadaActual();
+      // los jefes salen una sola vez cada uno
+      if (o.jefe && this.jefesLargados < OLEADAS.filter((q) => q.jefe && q.desde <= this.t).length) {
+        this.jefesLargados++;
+        this.nacer(o.jefe, 1);
+        return;
+      }
+      if (!o.cada) return;
+      if (this.t < this.proximaOleada) return;
+      this.proximaOleada = this.t + o.cada;
+      // el techo frena la entrada, no mata lo que ya está: los que hay se ganan
+      if (this.bichos.length >= MAX_BICHOS) return;
+      for (let i = 0; i < o.porVez && this.bichos.length < MAX_BICHOS; i++)
+        this.nacer(uno(this.r, o.tipos), 1);
+    }
+
+    /** Nace fuera de la pantalla, en un anillo alrededor del jugador.
+     *
+     *  NUNCA ENCIMA: un bicho que aparece pegado al jugador le saca vida antes de
+     *  que se lo pueda ver, y eso se siente como trampa y no como dificultad. */
+    nacer(tipo, cuantos) {
+      const b = BICHOS[tipo];
+      for (let i = 0; i < cuantos; i++) {
+        const a = this.r() * 6.283, d = entre(this.r, 420, 520);
+        const x = this.jugador.x + Math.cos(a) * d, y = this.jugador.y + Math.sin(a) * d;
+        this.bichos.push({
+          tipo, x, y, vx: 0, vy: 0, r: b.r,
+          vida: b.vida * dureza(this.t), vidaMax: b.vida * dureza(this.t),
+          golpeado: 0, fase: this.r() * 6.283,
+        });
+      }
+    }
+
+    rearmarRejilla() {
+      this.rejilla.limpiar();
+      for (const b of this.bichos) this.rejilla.meter(b);
+    }
+
+    moverBichos(dt) {
+      const p = this.jugador;
+      for (let i = this.bichos.length - 1; i >= 0; i--) {
+        const b = this.bichos[i], d = BICHOS[b.tipo];
+        let dx = p.x - b.x, dy = p.y - b.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        dx /= dist; dy /= dist;
+        if (d.errante) {
+          // los erráticos no van derecho: se les suma un vaivén con su propia fase
+          const s = Math.sin(this.t * 3.4 + b.fase) * 0.75;
+          const nx = -dy, ny = dx;
+          dx += nx * s; dy += ny * s;
+          const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+        }
+        b.vx = dx * d.vel; b.vy = dy * d.vel;
+
+        /* SEPARACION ENTRE BICHOS. Sin esto, cincuenta bichos convergen al mismo
+           punto y se apilan en uno solo: se ve un bicho y te pega por cincuenta.
+           Los pesados empujan a los livianos y no al revés. */
+        let sx = 0, sy = 0;
+        for (const o of this.rejilla.cerca(b.x, b.y)) {
+          if (o === b) continue;
+          const ox = b.x - o.x, oy = b.y - o.y;
+          const dd = ox * ox + oy * oy;
+          const min = (b.r + o.r) * 0.92;
+          if (dd > min * min || dd < 1e-6) continue;
+          const l = Math.sqrt(dd);
+          const fuerza = (min - l) / min * (BICHOS[o.tipo].peso / d.peso);
+          sx += (ox / l) * fuerza; sy += (oy / l) * fuerza;
+        }
+        b.x += (b.vx + sx * 90) * dt;
+        b.y += (b.vy + sy * 90) * dt;
+        if (b.golpeado > 0) b.golpeado -= dt;
+
+        // contacto
+        if (dist < b.r + p.r && p.invulnerable <= 0) {
+          p.vida -= d.daño;
+          /* MEDIO SEGUNDO DE GRACIA Y NO MENOS. Es lo que separa "me comí un
+             golpe" de "me fundieron en un segundo y no vi nada": sin ventana, un
+             abrazo de treinta bichos saca la barra entera antes de que el dedo
+             reaccione, y eso no es dificultad, es no dejar jugar. */
+          p.invulnerable = 0.45;
+          this.golpes.push({ que: "jugador", x: p.x, y: p.y });
+        }
+        if (b.vida <= 0) this.matar(i);
+      }
+    }
+
+    matar(i) {
+      const b = this.bichos[i];
+      const d = BICHOS[b.tipo];
+      this.bichos.splice(i, 1);
+      this.matados++;
+      this.gemas.push({ x: b.x, y: b.y, xp: d.xp, r: d.jefe ? 9 : 4.5, vx: 0, vy: 0 });
+      this.golpes.push({ que: "muere", x: b.x, y: b.y, jefe: !!d.jefe });
+      // el jefe se deshace en motas: el remate tiene que ser un momento
+      if (d.jefe) for (let k = 0; k < 10; k++) this.nacerEn("mota", b.x, b.y, 60);
+    }
+
+    nacerEn(tipo, x, y, disp) {
+      const b = BICHOS[tipo];
+      this.bichos.push({
+        tipo, x: x + entre(this.r, -disp, disp), y: y + entre(this.r, -disp, disp),
+        vx: 0, vy: 0, r: b.r, vida: b.vida * dureza(this.t), vidaMax: b.vida * dureza(this.t),
+        golpeado: 0, fase: this.r() * 6.283,
+      });
+    }
+
+    masCercano(x, y, hasta = 1e9) {
+      let mejor = null, mejorD = hasta * hasta;
+      for (const b of this.bichos) {
+        const d = (b.x - x) ** 2 + (b.y - y) ** 2;
+        if (d < mejorD) { mejorD = d; mejor = b; }
+      }
+      return mejor;
+    }
+
+    reloj(n, cada, dt) {
+      this.relojes[n] = (this.relojes[n] || 0) + dt;
+      if (this.relojes[n] < cada * this.jugador.frecuencia) return false;
+      this.relojes[n] = 0;
+      return true;
+    }
+
+    dispararArmas(dt) {
+      const p = this.jugador;
+      if (this.nivelArma("chispa")) {
+        const a = this.datosArma("chispa");
+        if (this.reloj("chispa", a.cada, dt)) {
+          for (let k = 0; k < a.cuantos; k++) {
+            /* EL ALCANCE DEL ARMA Y EL DEL IMAN TIENEN QUE HABLARSE.
+               Con 520 de alcance, los bichos morían lejísimos y la gema quedaba
+               donde murieron. Medido a los 20 segundos: 21 bichos matados, 20
+               gemas en el piso y NINGUNA a menos de 179 px de un imán de 150.
+               El juego dejaba de premiar en silencio. Se dispara más cerca. */
+            const b = this.masCercano(p.x, p.y, 290);
+            if (!b) break;
+            const ang = Math.atan2(b.y - p.y, b.x - p.x) + (k - (a.cuantos - 1) / 2) * 0.18;
+            this.tiros.push({ x: p.x, y: p.y, vx: Math.cos(ang) * a.vel, vy: Math.sin(ang) * a.vel,
+                              r: a.radio, daño: a.daño * p.daño, vida: 1.6, atraviesa: a.atraviesa, tocados: new Set() });
+          }
+          this.golpes.push({ que: "tiro", x: p.x, y: p.y });
+        }
+      }
+      if (this.nivelArma("onda")) {
+        const a = this.datosArma("onda");
+        if (this.reloj("onda", a.cada, dt)) {
+          this.ondas.push({ x: p.x, y: p.y, r: 0, rMax: a.radio, daño: a.daño * p.daño, empuje: a.empuje, tocados: new Set() });
+          this.golpes.push({ que: "onda", x: p.x, y: p.y });
+        }
+      }
+      if (this.nivelArma("semilla")) {
+        const a = this.datosArma("semilla");
+        if (this.reloj("semilla", a.cada, dt))
+          this.semillas.push({ x: p.x, y: p.y, r: a.radio, daño: a.daño * p.daño, dura: a.dura, listo: 0.5, tocados: new Set() });
+      }
+      if (this.nivelArma("hilo")) {
+        const a = this.datosArma("hilo");
+        if (this.reloj("hilo", a.cada, dt)) {
+          this.latigos.push({ x: p.x, y: p.y, rumbo: p.rumbo, largo: a.largo, ancho: a.ancho,
+                              daño: a.daño * p.daño, vida: 0.18, tocados: new Set() });
+          this.golpes.push({ que: "hilo", x: p.x, y: p.y });
+        }
+      }
+    }
+
+    dañar(b, cuanto) {
+      b.vida -= cuanto;
+      b.golpeado = 0.12;
+      this.golpes.push({ que: "pega", x: b.x, y: b.y, cuanto });
+    }
+
+    moverTiros(dt) {
+      for (let i = this.tiros.length - 1; i >= 0; i--) {
+        const t = this.tiros[i];
+        t.x += t.vx * dt; t.y += t.vy * dt; t.vida -= dt;
+        if (t.vida <= 0) { this.tiros.splice(i, 1); continue; }
+        for (const b of this.rejilla.cerca(t.x, t.y)) {
+          if (t.tocados.has(b)) continue;
+          if ((b.x - t.x) ** 2 + (b.y - t.y) ** 2 > (b.r + t.r) ** 2) continue;
+          this.dañar(b, t.daño);
+          t.tocados.add(b);
+          if (t.tocados.size > t.atraviesa) { this.tiros.splice(i, 1); break; }
+        }
+      }
+      this.limpiarMuertos();
+    }
+
+    moverOrbita(dt) {
+      if (!this.nivelArma("orbita")) return;
+      const a = this.datosArma("orbita"), p = this.jugador;
+      this.anguloOrbita += a.giro * dt;
+      for (let k = 0; k < a.cuantos; k++) {
+        const ang = this.anguloOrbita + (k / a.cuantos) * 6.283;
+        const x = p.x + Math.cos(ang) * a.radio, y = p.y + Math.sin(ang) * a.radio;
+        for (const b of this.rejilla.cerca(x, y)) {
+          if ((b.x - x) ** 2 + (b.y - y) ** 2 > (b.r + a.r) ** 2) continue;
+          // la órbita pega por tiempo, no por toque: si no, un bicho pegado al
+          // jugador recibe sesenta golpes por segundo y todo lo demás sobra
+          b.cooldownOrbita = (b.cooldownOrbita || 0) - dt;
+          if (b.cooldownOrbita > 0) continue;
+          b.cooldownOrbita = 0.3;
+          this.dañar(b, a.daño * p.daño);
+        }
+      }
+      this.limpiarMuertos();
+    }
+
+    moverOndas(dt) {
+      for (let i = this.ondas.length - 1; i >= 0; i--) {
+        const o = this.ondas[i];
+        o.r += (o.rMax / 0.45) * dt;
+        if (o.r >= o.rMax) { this.ondas.splice(i, 1); continue; }
+        for (const b of this.bichos) {
+          if (o.tocados.has(b)) continue;
+          const d = Math.hypot(b.x - o.x, b.y - o.y);
+          if (d > o.r || d < o.r - 40) continue;
+          o.tocados.add(b);
+          this.dañar(b, o.daño);
+          const m = d || 1;
+          b.x += ((b.x - o.x) / m) * o.empuje * 0.12;
+          b.y += ((b.y - o.y) / m) * o.empuje * 0.12;
+        }
+      }
+      this.limpiarMuertos();
+    }
+
+    moverSemillas(dt) {
+      for (let i = this.semillas.length - 1; i >= 0; i--) {
+        const s = this.semillas[i];
+        s.dura -= dt;
+        if (s.listo > 0) { s.listo -= dt; continue; }
+        if (s.dura <= 0) { this.semillas.splice(i, 1); continue; }
+        for (const b of this.rejilla.cerca(s.x, s.y)) {
+          if (s.tocados.has(b)) continue;
+          if ((b.x - s.x) ** 2 + (b.y - s.y) ** 2 > (b.r + s.r) ** 2) continue;
+          s.tocados.add(b);
+          this.dañar(b, s.daño);
+        }
+      }
+      this.limpiarMuertos();
+    }
+
+    moverLatigos(dt) {
+      for (let i = this.latigos.length - 1; i >= 0; i--) {
+        const l = this.latigos[i];
+        l.vida -= dt;
+        if (l.vida <= 0) { this.latigos.splice(i, 1); continue; }
+        const cx = l.x + Math.cos(l.rumbo) * l.largo * 0.5;
+        const cy = l.y + Math.sin(l.rumbo) * l.largo * 0.5;
+        for (const b of this.bichos) {
+          if (l.tocados.has(b)) continue;
+          // se mira en el sistema del latigazo: a lo largo y a lo ancho
+          const dx = b.x - l.x, dy = b.y - l.y;
+          const a = dx * Math.cos(l.rumbo) + dy * Math.sin(l.rumbo);
+          const o = -dx * Math.sin(l.rumbo) + dy * Math.cos(l.rumbo);
+          if (a < -b.r || a > l.largo + b.r || Math.abs(o) > l.ancho / 2 + b.r) continue;
+          l.tocados.add(b);
+          this.dañar(b, l.daño);
+        }
+      }
+      this.limpiarMuertos();
+    }
+
+    limpiarMuertos() {
+      for (let i = this.bichos.length - 1; i >= 0; i--) if (this.bichos[i].vida <= 0) this.matar(i);
+    }
+
+    recogerGemas(dt) {
+      const p = this.jugador;
+      for (let i = this.gemas.length - 1; i >= 0; i--) {
+        const g = this.gemas[i];
+        let d = Math.hypot(g.x - p.x, g.y - p.y);
+        /* LA GEMA TIENE QUE CORRER MAS QUE VOS, Y NO SOLTARTE.
+           La primera versión la atraía a 120 px/s mientras el jugador corre a
+           140: huyendo —que es lo que uno hace todo el tiempo en este juego— la
+           gema quedaba atrás, salía del radio del imán y se frenaba para siempre.
+           Medido en el juego real: 25 bichos matados, 21 gemas tiradas en el
+           piso y 4 de experiencia juntada. La prueba sin navegador no lo vio
+           porque en seis minutos uno termina pisando muchas por casualidad, así
+           que el nivel final igual subía y el número tapaba el agujero.
+           Una vez que entró al imán, ya es tuya: no se suelta aunque te alejes. */
+        /* Y LA GEMA SIEMPRE VIENE, esté donde esté. Con un radio, una gema que
+           cayó afuera queda muerta para siempre y el jugador nunca se entera de
+           que perdió experiencia: no hay ningún aviso, sólo sube más lento de lo
+           que debería. Lejos viene despacio —hay que ir a buscarla, que es la
+           decisión— y adentro del imán se acelera. Lo que sube el imán es la
+           velocidad, no un límite. */
+        if (d < p.iman) g.atraida = true;
+        const v = g.atraida ? p.vel * 1.75 + (p.iman - Math.min(d, p.iman)) * 3 : 34;
+        g.x += ((p.x - g.x) / (d || 1)) * v * dt;
+        g.y += ((p.y - g.y) / (d || 1)) * v * dt;
+        // la distancia se vuelve a medir DESPUES de mover la gema: usando la de
+        // antes, la gema que llegó justo en este cuadro se recoge recién en el
+        // siguiente, y a velocidad alta eso es pasársela de largo
+        d = Math.hypot(g.x - p.x, g.y - p.y);
+        if (d < p.r + g.r + 6) {
+          this.gemas.splice(i, 1);
+          p.xp += g.xp;
+          this.golpes.push({ que: "gema", x: g.x, y: g.y });
+          while (p.xp >= p.xpNecesaria) {
+            p.xp -= p.xpNecesaria;
+            p.nivel++;
+            p.xpNecesaria = xpParaNivel(p.nivel);
+            this.pendienteMejora++;
+          }
+        }
+      }
+    }
+  }
+
+  return { Mundo };
+})();
+
+/* ── assets.js ── */
+const M_assets = (() => {
+  // De dónde salen las imágenes, si es que hay alguna.
+  //
+  // EL JUEGO ANDA COMPLETO SIN UN SOLO ARCHIVO. Todo lo que se ve está dibujado
+  // con formas; las imágenes son una MEJORA y no un requisito. Por eso `imagen()`
+  // puede devolver null y el dibujo tiene que saber seguir sin ella.
+  //
+  // Esto no es prolijidad de más: los assets generados todavía no existen —el
+  // servicio que los genera está rechazando el cobro— y el juego tenía que
+  // poder entregarse igual. Cuando aparezcan, entran por acá y no hay que tocar
+  // una línea del dibujo.
+
+  const cache = new Map();
+
+  /** El empaquetador deja las imágenes en `globalThis.ARCHIVOS` como data: URI. */
+  function ruta(nombre) {
+    const tabla = globalThis.ARCHIVOS || {};
+    return tabla[`assets/${nombre}`] || tabla[nombre] || null;
+  }
+
+  /**
+   * Devuelve la imagen ya cargada, o null si no existe (todavía).
+   * NO ESPERA: devolver una promesa obligaría a que el dibujo la espere y a que
+   * el primer cuadro de la partida se trabe justo cuando no puede.
+   */
+  function imagen(nombre) {
+    if (cache.has(nombre)) return cache.get(nombre);
+    const u = ruta(nombre);
+    if (!u) { cache.set(nombre, null); return null; }
+    const i = new Image();
+    i.src = u;
+    cache.set(nombre, i);
+    return i;
+  }
+
+  /** Lista para que las pruebas digan qué falta sin abrir el juego. */
+  const ESPERADAS = [
+    "bicho-mota.png", "bicho-pua.png", "bicho-caparazon.png", "bicho-zumbido.png", "bicho-bulto.png",
+    "jugador.png", "piso.png", "gema.png",
+  ];
+
+  return { ruta, imagen, ESPERADAS };
+})();
+
+/* ── dibujo.js ── */
+const M_dibujo = (() => {
+  // El dibujo. Todo por código: siluetas simples que se leen con doscientos
+  // bichos en pantalla.
+  //
+  // LA SILUETA ANTES QUE EL DETALLE. Con cuarenta bichos encima, nadie mira una
+  // textura: mira si eso que viene es redondo, puntiagudo o cuadrado. Por eso
+  // cada especie es una FORMA distinta y el color sólo confirma.
+  //
+  // Y TODO LO CARO SE COCINA UNA VEZ. Cada especie se dibuja con su resplandor en
+  // un lienzo aparte al arrancar, y después se estampa. Un `shadowBlur` por bicho
+  // y por cuadro son doscientos desenfoques: ahí se va el teléfono.
+
+  const { BICHOS } = M_bichos;
+  const { ARMAS } = M_armas;
+  const { imagen } = M_assets;
+  const PISO = "#141021", PISO2 = "#1b1630";
+
+  class Pantalla {
+    constructor(lienzo) {
+      this.c = lienzo;
+      this.x = lienzo.getContext("2d");
+      this.sacudida = 0;
+      this.numeros = [];
+      this.trozos = [];
+      this.sellos = null;
+      this.medir();
+    }
+
+    medir() {
+      const TOPE = 2_600_000;
+      const anCss = this.c.clientWidth || innerWidth, alCss = this.c.clientHeight || innerHeight;
+      this.dpr = Math.min(devicePixelRatio || 1, 2, Math.max(1, Math.sqrt(TOPE / Math.max(1, anCss * alCss))));
+      this.AN = anCss; this.AL = alCss;
+      this.c.width = Math.round(this.AN * this.dpr);
+      this.c.height = Math.round(this.AL * this.dpr);
+      this.x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      this.sellos = null;
+    }
+
+    /** Dibuja la silueta de una especie, centrada en el origen. */
+    silueta(g, forma, r) {
+      g.beginPath();
+      if (forma === "gota") {
+        g.moveTo(0, -r);
+        g.bezierCurveTo(r * 1.05, -r * .55, r * .95, r * .75, 0, r);
+        g.bezierCurveTo(-r * .95, r * .75, -r * 1.05, -r * .55, 0, -r);
+      } else if (forma === "punta") {
+        g.moveTo(r, 0); g.lineTo(-r * .7, -r * .8); g.lineTo(-r * .3, 0); g.lineTo(-r * .7, r * .8);
+        g.closePath();
+      } else if (forma === "rombo") {
+        g.moveTo(0, -r); g.lineTo(r * .78, 0); g.lineTo(0, r); g.lineTo(-r * .78, 0); g.closePath();
+      } else {                       // placa: un hexágono achatado
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * 6.283 + 0.52;
+          const px = Math.cos(a) * r, py = Math.sin(a) * r * .82;
+          i ? g.lineTo(px, py) : g.moveTo(px, py);
+        }
+        g.closePath();
+      }
+    }
+
+    cocinar() {
+      this.hojas = {};
+      for (const [nombre, d] of Object.entries(BICHOS)) {
+        const r = d.r, pad = Math.round(r * .75), lado = Math.round((r + pad) * 2);
+        const h = document.createElement("canvas");
+        h.width = h.height = lado * this.dpr;
+        const g = h.getContext("2d");
+        g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        g.translate(lado / 2, lado / 2);
+        g.shadowColor = d.color; g.shadowBlur = pad * .8;
+        g.fillStyle = d.color; this.silueta(g, d.forma, r); g.fill();
+        g.shadowBlur = 0;
+        // un ojo: es lo único que convierte una mancha en un bicho
+        g.fillStyle = "rgba(10,6,20,.8)";
+        g.beginPath(); g.ellipse(r * .12, -r * .12, r * .26, r * .3, 0, 0, 6.283); g.fill();
+        g.fillStyle = "rgba(255,255,255,.92)";
+        g.beginPath(); g.arc(r * .2, -r * .2, r * .11, 0, 6.283); g.fill();
+        // brillo de arriba
+        g.fillStyle = "rgba(255,255,255,.18)";
+        g.beginPath(); g.ellipse(-r * .22, -r * .42, r * .3, r * .16, -.5, 0, 6.283); g.fill();
+        this.hojas[nombre] = { h, lado };
+      }
+      this.sellos = true;
+    }
+
+    sacudir(f) { this.sacudida = Math.min(14, this.sacudida + f); }
+
+    numero(x, y, texto, color) {
+      if (this.numeros.length > 40) return;         // con doscientos bichos, no todos
+      this.numeros.push({ x, y, texto, color, vida: 1 });
+    }
+
+    estallar(x, y, color, cuantos) {
+      for (let i = 0; i < cuantos; i++) {
+        const a = Math.random() * 6.283, v = 40 + Math.random() * 180;
+        this.trozos.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vida: 1, color,
+                           r: 1.6 + Math.random() * 2.4 });
+      }
+    }
+
+    dibujar(w, dt, mando) {
+      const X = this.x;
+      if (!this.sellos) this.cocinar();
+      const p = w.jugador;
+      X.clearRect(0, 0, this.AN, this.AL);
+
+      // la cámara sigue al jugador, con la sacudida encima
+      let sx = 0, sy = 0;
+      if (this.sacudida > 0.1) {
+        sx = (Math.random() - .5) * this.sacudida;
+        sy = (Math.random() - .5) * this.sacudida;
+        this.sacudida *= 0.86;
+      }
+      const cx = this.AN / 2 - p.x + sx, cy = this.AL / 2 - p.y + sy;
+      X.save(); X.translate(cx, cy);
+
+      this.piso(X, p, w);
+      this.cosas(X, w, dt);
+      X.restore();
+
+      this.hud(X, w, mando);
+    }
+
+    piso(X, p, w) {
+      // El piso se dibuja sólo donde se ve: pintar el mapa entero es pintar cinco
+      // pantallas de las que se miran una.
+      const x0 = p.x - this.AN, y0 = p.y - this.AL, an = this.AN * 2, al = this.AL * 2;
+      X.fillStyle = PISO; X.fillRect(x0, y0, an, al);
+      const paso = 64;
+      X.strokeStyle = "rgba(255,255,255,.035)"; X.lineWidth = 1;
+      X.beginPath();
+      for (let x = Math.floor(x0 / paso) * paso; x < x0 + an; x += paso) { X.moveTo(x, y0); X.lineTo(x, y0 + al); }
+      for (let y = Math.floor(y0 / paso) * paso; y < y0 + al; y += paso) { X.moveTo(x0, y); X.lineTo(x0 + an, y); }
+      X.stroke();
+      // el borde del mapa: se ve, así que nadie se sorprende al chocarlo
+      X.strokeStyle = "rgba(255,110,169,.35)"; X.lineWidth = 4;
+      X.beginPath(); X.arc(0, 0, w.radioMapa, 0, 6.283); X.stroke();
+      X.strokeStyle = "rgba(255,110,169,.10)"; X.lineWidth = 26;
+      X.beginPath(); X.arc(0, 0, w.radioMapa + 13, 0, 6.283); X.stroke();
+    }
+
+    cosas(X, w, dt) {
+      const p = w.jugador;
+
+      // semillas en el piso
+      for (const s of w.semillas) {
+        X.fillStyle = `rgba(138,208,106,${s.listo > 0 ? .12 : .20})`;
+        X.beginPath(); X.arc(s.x, s.y, s.r, 0, 6.283); X.fill();
+        X.strokeStyle = "rgba(138,208,106,.5)"; X.lineWidth = 2;
+        X.beginPath(); X.arc(s.x, s.y, s.r, 0, 6.283); X.stroke();
+      }
+      // ondas
+      for (const o of w.ondas) {
+        X.strokeStyle = `rgba(180,140,255,${1 - o.r / o.rMax})`;
+        X.lineWidth = 7 * (1 - o.r / o.rMax) + 2;
+        X.beginPath(); X.arc(o.x, o.y, o.r, 0, 6.283); X.stroke();
+      }
+      // gemas
+      for (const g of w.gemas) {
+        X.fillStyle = "#7cf6ff";
+        X.beginPath(); X.moveTo(g.x, g.y - g.r); X.lineTo(g.x + g.r, g.y);
+        X.lineTo(g.x, g.y + g.r); X.lineTo(g.x - g.r, g.y); X.closePath(); X.fill();
+      }
+      // bichos
+      for (const b of w.bichos) {
+        const d = BICHOS[b.tipo], hoja = this.hojas[b.tipo];
+        const img = imagen(`bicho-${b.tipo}.png`);
+        const bamboleo = 1 + Math.sin(w.t * 7 + b.fase) * 0.05;
+        const l = hoja.lado * bamboleo;
+        if (img && img.complete && img.naturalWidth) {
+          X.drawImage(img, b.x - l / 2, b.y - l / 2, l, l);
+        } else {
+          X.drawImage(hoja.h, b.x - l / 2, b.y - l / 2, l, l);
+        }
+        if (b.golpeado > 0) {
+          X.globalAlpha = b.golpeado * 5;
+          X.fillStyle = "#fff";
+          this.contexto(X, b.x, b.y, () => this.silueta(X, d.forma, d.r));
+          X.fill(); X.globalAlpha = 1;
+        }
+        // barra de vida sólo en los que aguantan: en una mota es ruido
+        if (d.vida >= 50 && b.vida < b.vidaMax) {
+          const an = d.r * 2;
+          X.fillStyle = "rgba(0,0,0,.6)"; X.fillRect(b.x - an / 2, b.y - d.r - 9, an, 4);
+          X.fillStyle = "#ff6ea9"; X.fillRect(b.x - an / 2, b.y - d.r - 9, an * (b.vida / b.vidaMax), 4);
+        }
+      }
+      // latigazos
+      for (const l of w.latigos) {
+        X.save(); X.translate(l.x, l.y); X.rotate(l.rumbo);
+        X.fillStyle = `rgba(255,110,169,${l.vida * 4})`;
+        X.fillRect(0, -l.ancho / 2, l.largo, l.ancho);
+        X.restore();
+      }
+      // órbita
+      if (w.nivelArma("orbita")) {
+        const a = w.datosArma("orbita");
+        for (let k = 0; k < a.cuantos; k++) {
+          const ang = w.anguloOrbita + (k / a.cuantos) * 6.283;
+          const x = p.x + Math.cos(ang) * a.radio, y = p.y + Math.sin(ang) * a.radio;
+          X.fillStyle = ARMAS.orbita.color;
+          X.beginPath(); X.arc(x, y, a.r, 0, 6.283); X.fill();
+        }
+      }
+      // tiros
+      for (const t of w.tiros) {
+        X.fillStyle = ARMAS.chispa.color;
+        X.beginPath(); X.arc(t.x, t.y, t.r, 0, 6.283); X.fill();
+      }
+      // el jugador
+      const img = imagen("jugador.png");
+      const parpadea = p.invulnerable > 0 && (Math.floor(p.invulnerable * 18) % 2 === 0);
+      if (!parpadea) {
+        if (img && img.complete && img.naturalWidth) {
+          X.drawImage(img, p.x - p.r * 1.8, p.y - p.r * 1.8, p.r * 3.6, p.r * 3.6);
+        } else {
+          X.save(); X.translate(p.x, p.y); X.rotate(p.rumbo);
+          X.shadowColor = "#7cf6ff"; X.shadowBlur = 14;
+          X.fillStyle = "#e8f4ff";
+          X.beginPath();
+          X.moveTo(p.r * 1.25, 0); X.lineTo(-p.r * .85, -p.r * .95);
+          X.lineTo(-p.r * .35, 0); X.lineTo(-p.r * .85, p.r * .95);
+          X.closePath(); X.fill();
+          X.shadowBlur = 0;
+          X.fillStyle = "#1a2740";
+          X.beginPath(); X.arc(p.r * .25, 0, p.r * .3, 0, 6.283); X.fill();
+          X.restore();
+        }
+      }
+      // trozos y números
+      for (let i = this.trozos.length - 1; i >= 0; i--) {
+        const s = this.trozos[i];
+        s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= .93; s.vy *= .93; s.vida -= dt * 2.1;
+        if (s.vida <= 0) { this.trozos.splice(i, 1); continue; }
+        X.globalAlpha = s.vida; X.fillStyle = s.color;
+        X.beginPath(); X.arc(s.x, s.y, s.r, 0, 6.283); X.fill();
+      }
+      X.globalAlpha = 1;
+      X.textAlign = "center";
+      for (let i = this.numeros.length - 1; i >= 0; i--) {
+        const n = this.numeros[i];
+        n.vida -= dt * 1.5; n.y -= dt * 42;
+        if (n.vida <= 0) { this.numeros.splice(i, 1); continue; }
+        X.globalAlpha = Math.min(1, n.vida * 1.6);
+        X.fillStyle = n.color;
+        X.font = `800 ${Math.round(13 + 6 * n.vida)}px system-ui,sans-serif`;
+        X.fillText(n.texto, n.x, n.y);
+      }
+      X.globalAlpha = 1;
+    }
+
+    contexto(X, x, y, f) { X.save(); X.translate(x, y); X.beginPath(); f(); X.restore(); }
+
+    hud(X, w, mando) {
+      const p = w.jugador;
+      // barra de experiencia, pegada arriba: es la que se mira todo el tiempo
+      X.fillStyle = "rgba(255,255,255,.10)"; X.fillRect(0, 0, this.AN, 7);
+      X.fillStyle = "#7cf6ff";
+      X.fillRect(0, 0, this.AN * Math.min(1, p.xp / p.xpNecesaria), 7);
+      // vida
+      const an = Math.min(this.AN * .62, 280), x0 = (this.AN - an) / 2, y = 16;
+      X.fillStyle = "rgba(0,0,0,.5)"; X.fillRect(x0 - 2, y - 2, an + 4, 12);
+      X.fillStyle = "#ff3d5a"; X.fillRect(x0, y, an, 8);
+      X.fillStyle = "#3ce06a"; X.fillRect(x0, y, an * Math.max(0, p.vida / p.vidaMax), 8);
+
+      // el mando, donde el dedo lo puso
+      if (mando && mando.activo) {
+        X.strokeStyle = "rgba(255,255,255,.22)"; X.lineWidth = 2;
+        X.beginPath(); X.arc(mando.ox, mando.oy, mando.radio, 0, 6.283); X.stroke();
+        X.fillStyle = "rgba(255,255,255,.30)";
+        X.beginPath(); X.arc(mando.x, mando.y, mando.radio * .38, 0, 6.283); X.fill();
+      }
+    }
+  }
+
+  return { Pantalla };
+})();
+
+/* ── audio.js ── */
+const M_audio = (() => {
+  // Sonido sintetizado. Ni un archivo: se fabrica con osciladores.
+  //
+  // EL LIMITE DE VOCES EXISTE POR UNA RAZON. Con doscientos bichos muriendo, un
+  // sonido por muerte son cincuenta voces por segundo: el navegador se traba y lo
+  // que se escucha es un zumbido. Acá hay un techo por tipo y por ventana de
+  // tiempo — si ya sonó hace poco, el siguiente no suena. Se pierde nada y se
+  // gana que se entienda lo que pasa.
+
+  class Ruido {
+    constructor() { this.AC = null; this.vol = 1; this.ultimo = {}; }
+
+    despertar() {
+      if (this.AC) { if (this.AC.state === "suspended") this.AC.resume(); return true; }
+      try { this.AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return false; }
+      this.maestro = this.AC.createGain();
+      this.maestro.gain.value = 0.55;
+      this.maestro.connect(this.AC.destination);
+      return true;
+    }
+
+    /** ¿Puede sonar `n` otra vez? Separa las repeticiones al menos `sep` segundos. */
+    deja(n, sep) {
+      if (!this.AC) return false;
+      const t = this.AC.currentTime;
+      if (this.ultimo[n] && t - this.ultimo[n] < sep) return false;
+      this.ultimo[n] = t;
+      return true;
+    }
+
+    env(cuando, pico, ataque, caida) {
+      const g = this.AC.createGain();
+      g.gain.setValueAtTime(0.0001, cuando);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, pico * this.vol), cuando + ataque);
+      g.gain.exponentialRampToValueAtTime(0.0001, cuando + ataque + caida);
+      g.connect(this.maestro);
+      return g;
+    }
+
+    ruidoBuf(seg) {
+      const n = Math.max(1, (this.AC.sampleRate * seg) | 0);
+      const b = this.AC.createBuffer(1, n, this.AC.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const s = this.AC.createBufferSource(); s.buffer = b; return s;
+    }
+
+    tono(hz, hz2, pico, largo, tipo = "square") {
+      const t = this.AC.currentTime;
+      const o = this.AC.createOscillator(); o.type = tipo;
+      o.frequency.setValueAtTime(hz, t);
+      if (hz2) o.frequency.exponentialRampToValueAtTime(hz2, t + largo);
+      o.connect(this.env(t, pico, 0.004, largo));
+      o.start(t); o.stop(t + largo + 0.08);
+    }
+
+    tiro()   { if (this.deja("tiro", 0.07))  this.tono(680, 380, 0.045, 0.06, "square"); }
+    pega()   { if (this.deja("pega", 0.045)) this.tono(300, 170, 0.035, 0.05, "triangle"); }
+    muere()  {
+      if (!this.deja("muere", 0.055)) return;
+      const t = this.AC.currentTime, s = this.ruidoBuf(0.1);
+      const f = this.AC.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1400;
+      s.connect(f); f.connect(this.env(t, 0.06, 0.003, 0.08));
+      s.start(t); s.stop(t + 0.14);
+    }
+    gema()   { if (this.deja("gema", 0.05))  this.tono(1250, 1750, 0.03, 0.05, "sine"); }
+    golpe()  { if (!this.deja("golpe", 0.2)) return;
+               const t = this.AC.currentTime, s = this.ruidoBuf(0.25);
+               const f = this.AC.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 480;
+               s.connect(f); f.connect(this.env(t, 0.18, 0.004, 0.22)); s.start(t); s.stop(t + 0.3); }
+    onda()   { if (this.deja("onda", 0.2))   this.tono(140, 60, 0.13, 0.28, "sine"); }
+    nivel()  { if (!this.AC) return;
+               // tres notas que suben: es el único sonido que celebra algo
+               [523, 659, 880].forEach((hz, i) => setTimeout(() => this.tono(hz, hz, 0.09, 0.16, "triangle"), i * 85)); }
+    jefe()   { if (!this.AC) return; this.tono(90, 42, 0.26, 0.9, "sawtooth"); }
+    fin()    { if (!this.AC) return; [440, 330, 262].forEach((hz, i) => setTimeout(() => this.tono(hz, hz, 0.1, 0.3, "triangle"), i * 150)); }
+  }
+
+  return { Ruido };
+})();
+
+/* ── guardado.js ── */
+const M_guardado = (() => {
+  // Lo que sobrevive a la partida. localStorage y nada más.
+  //
+  // LEER PUEDE TIRAR EXCEPCION, no devolver vacío: en modo privado el `getItem`
+  // revienta. Un juego que no arranca por no poder leer un récord es peor que uno
+  // sin récords, así que cada acceso va envuelto.
+
+  const LLAVE = "enjambre.v1";
+  const vacio = () => ({
+    mejorTiempo: 0, mejorMatados: 0, mejorNivel: 0, partidas: 0, ganadas: 0,
+    ajustes: { sonido: true, idioma: null, mando: "donde-toques" },
+  });
+  let cache = null;
+
+  function cargar() {
+    if (cache) return cache;
+    try {
+      const c = localStorage.getItem(LLAVE);
+      cache = c ? { ...vacio(), ...JSON.parse(c) } : vacio();
+      cache.ajustes = { ...vacio().ajustes, ...(cache.ajustes || {}) };
+    } catch (e) { cache = vacio(); }
+    return cache;
+  }
+  function guardar() { try { localStorage.setItem(LLAVE, JSON.stringify(cargar())); } catch (e) {} }
+  const ajustes = () => cargar().ajustes;
+
+  /** Anota el resultado. Devuelve qué récords se rompieron. */
+  function anotar(r) {
+    const d = cargar();
+    const nuevos = { tiempo: r.t > d.mejorTiempo, matados: r.matados > d.mejorMatados, nivel: r.nivel > d.mejorNivel };
+    d.mejorTiempo = Math.max(d.mejorTiempo, r.t);
+    d.mejorMatados = Math.max(d.mejorMatados, r.matados);
+    d.mejorNivel = Math.max(d.mejorNivel, r.nivel);
+    d.partidas++;
+    if (r.gano) d.ganadas++;
+    guardar();
+    return nuevos;
+  }
+  function borrarTodo() { cache = vacio(); try { localStorage.removeItem(LLAVE); } catch (e) {} }
+
+  return { cargar, guardar, ajustes, anotar, borrarTodo };
+})();
+
+/* ── idioma.js ── */
+const M_idioma = (() => {
+  // Los textos, en una sola tabla y tres idiomas.
+  //
+  // POR QUE UNA TABLA Y NO TRES HTML: copiar el index tres veces se desincroniza
+  // a la primera corrección. Acá el HTML tiene UN texto por lugar, marcado con
+  // `data-t`, y la tabla decide cuál se escribe.
+
+  const { ajustes, guardar } = M_guardado;
+  const IDIOMAS = { en: "English", es: "Español", pt: "Português" };
+
+  const BICHO = {
+    en: { mota: "Blob", pua: "Spike", caparazon: "Shell", zumbido: "Buzz", bulto: "Lump" },
+    es: { mota: "Mota", pua: "Púa", caparazon: "Caparazón", zumbido: "Zumbido", bulto: "Bulto" },
+    pt: { mota: "Mancha", pua: "Espinho", caparazon: "Casco", zumbido: "Zumbido", bulto: "Volume" },
+  };
+  const ARMA = {
+    en: { chispa: ["Spark", "Fires on its own at whatever is closest."],
+          orbita: ["Orbit", "Shards that circle you. They hit in every direction."],
+          onda:   ["Wave", "A ring that damages and shoves. Gets you out of a hug."],
+          hilo:   ["Lash", "A whip where you're heading. Rewards steering."],
+          semilla:["Seed", "Drops mines behind you. Rewards running in circles."] },
+    es: { chispa: ["Chispa", "Dispara sola a lo más cercano."],
+          orbita: ["Órbita", "Trozos que giran. Pegan en todas las direcciones."],
+          onda:   ["Onda", "Un anillo que daña y empuja. Te saca de un abrazo."],
+          hilo:   ["Hilo", "Un latigazo para donde vas. Premia manejar fino."],
+          semilla:["Semilla", "Deja minas atrás. Premia correr en círculos."] },
+    pt: { chispa: ["Faísca", "Atira sozinha no mais perto."],
+          orbita: ["Órbita", "Pedaços que giram. Batem em todas as direções."],
+          onda:   ["Onda", "Um anel que fere e empurra. Tira você do aperto."],
+          hilo:   ["Chicote", "Uma chicotada para onde você vai."],
+          semilla:["Semente", "Deixa minas atrás. Premia correr em círculos."] },
+  };
+  const PASIVA = {
+    en: { botas: ["Boots", "Move faster."], iman: ["Magnet", "Gems fly to you sooner and faster."],
+          coraza: ["Plating", "More health."], filo: ["Edge", "More damage."], pulso: ["Pulse", "Everything fires more often."] },
+    es: { botas: ["Botas", "Te movés más rápido."], iman: ["Imán", "Las gemas vienen antes y más rápido."],
+          coraza: ["Coraza", "Más vida."], filo: ["Filo", "Más daño."], pulso: ["Pulso", "Todo dispara más seguido."] },
+    pt: { botas: ["Botas", "Você anda mais rápido."], iman: ["Ímã", "As gemas vêm antes e mais rápido."],
+          coraza: ["Couraça", "Mais vida."], filo: ["Fio", "Mais dano."], pulso: ["Pulso", "Tudo atira mais vezes."] },
+  };
+
+  const T = {
+    en: {
+      "doc.titulo": "Enjambre — survive six minutes",
+      "doc.desc": "One thumb, no aiming. You move; the weapons fire themselves. What decides the run is what you level up.",
+      "idioma.titulo": "Choose your language", "idioma.bajada": "You can change it later in Settings.",
+      "menu.jugar": "Play", "menu.como": "How to play", "menu.ajustes": "Settings",
+      "menu.bajada": "Six minutes. You only move — the weapons fire on their own.",
+      "menu.mejor": "Best", "menu.nunca": "You haven't played yet",
+      "como.titulo": "How to play",
+      "como.1": "Drag anywhere to move. There is no aiming: your weapons fire by themselves.",
+      "como.2": "Killing drops gems. Gems level you up, and every level you pick one of three upgrades.",
+      "como.3": "What decides the run is WHICH upgrade, and in what order. That is the whole game.",
+      "como.4": "You can carry four weapons. Choose them well: after the fourth, only upgrades.",
+      "como.5": "Two bosses, at 2:40 and at 5:10. Survive six minutes and you win.",
+      "aj.titulo": "Settings", "aj.sonido": "Sound", "aj.idioma": "Language",
+      "aj.borrar": "Erase records", "aj.seguro": "Tap again to erase", "volver": "Back",
+      "hud.salir": "Quit",
+      "mej.titulo": "Level", "mej.nueva": "NEW", "mej.nivel": "Level",
+      "fin.gano": "You made it", "fin.perdio": "They got you",
+      "fin.tiempo": "Time", "fin.matados": "Killed", "fin.nivel": "Level", "fin.record": "New record",
+      "fin.otra": "Again", "fin.menu": "Menu",
+    },
+    es: {
+      "doc.titulo": "Enjambre — sobreviví seis minutos",
+      "doc.desc": "Un pulgar y nada de apuntar. Vos te movés; las armas disparan solas. Lo que decide la partida es qué subís.",
+      "idioma.titulo": "Elegí tu idioma", "idioma.bajada": "Se puede cambiar después en Ajustes.",
+      "menu.jugar": "Jugar", "menu.como": "Cómo se juega", "menu.ajustes": "Ajustes",
+      "menu.bajada": "Seis minutos. Sólo te movés: las armas disparan solas.",
+      "menu.mejor": "Mejor", "menu.nunca": "Todavía no jugaste",
+      "como.titulo": "Cómo se juega",
+      "como.1": "Arrastrá donde quieras para moverte. No se apunta: las armas disparan solas.",
+      "como.2": "Matar deja gemas. Las gemas te suben de nivel, y en cada nivel elegís una de tres mejoras.",
+      "como.3": "Lo que decide la partida es CUÁL mejora y en qué orden. Ese es todo el juego.",
+      "como.4": "Podés llevar cuatro armas. Elegilas bien: después de la cuarta, sólo mejoras.",
+      "como.5": "Hay dos jefes, a los 2:40 y a los 5:10. Aguantá seis minutos y ganás.",
+      "aj.titulo": "Ajustes", "aj.sonido": "Sonido", "aj.idioma": "Idioma",
+      "aj.borrar": "Borrar récords", "aj.seguro": "Tocá otra vez para borrar", "volver": "Volver",
+      "hud.salir": "Salir",
+      "mej.titulo": "Nivel", "mej.nueva": "NUEVA", "mej.nivel": "Nivel",
+      "fin.gano": "La contaste", "fin.perdio": "Te agarraron",
+      "fin.tiempo": "Tiempo", "fin.matados": "Matados", "fin.nivel": "Nivel", "fin.record": "Récord nuevo",
+      "fin.otra": "De nuevo", "fin.menu": "Menú",
+    },
+    pt: {
+      "doc.titulo": "Enjambre — sobreviva seis minutos",
+      "doc.desc": "Um polegar e nada de mirar. Você anda; as armas atiram sozinhas. O que decide a partida é o que você melhora.",
+      "idioma.titulo": "Escolha seu idioma", "idioma.bajada": "Dá para mudar depois em Ajustes.",
+      "menu.jugar": "Jogar", "menu.como": "Como se joga", "menu.ajustes": "Ajustes",
+      "menu.bajada": "Seis minutos. Você só anda: as armas atiram sozinhas.",
+      "menu.mejor": "Melhor", "menu.nunca": "Você ainda não jogou",
+      "como.titulo": "Como se joga",
+      "como.1": "Arraste onde quiser para andar. Não se mira: as armas atiram sozinhas.",
+      "como.2": "Matar deixa gemas. As gemas sobem seu nível, e a cada nível você escolhe uma de três melhorias.",
+      "como.3": "O que decide a partida é QUAL melhoria e em que ordem. É esse o jogo todo.",
+      "como.4": "Você leva quatro armas. Escolha bem: depois da quarta, só melhorias.",
+      "como.5": "Há dois chefes, aos 2:40 e aos 5:10. Aguente seis minutos e você ganha.",
+      "aj.titulo": "Ajustes", "aj.sonido": "Som", "aj.idioma": "Idioma",
+      "aj.borrar": "Apagar recordes", "aj.seguro": "Toque de novo para apagar", "volver": "Voltar",
+      "hud.salir": "Sair",
+      "mej.titulo": "Nível", "mej.nueva": "NOVA", "mej.nivel": "Nível",
+      "fin.gano": "Você conseguiu", "fin.perdio": "Pegaram você",
+      "fin.tiempo": "Tempo", "fin.matados": "Mortos", "fin.nivel": "Nível", "fin.record": "Novo recorde",
+      "fin.otra": "De novo", "fin.menu": "Menu",
+    },
+  };
+
+  const idioma = () => ajustes().idioma || "en";
+  const t = (k) => (T[idioma()] && T[idioma()][k]) || T.en[k] || k;
+  const nombreBicho = (n) => (BICHO[idioma()] || BICHO.en)[n] || n;
+  const arma = (n) => (ARMA[idioma()] || ARMA.en)[n] || [n, ""];
+  const pasiva = (n) => (PASIVA[idioma()] || PASIVA.en)[n] || [n, ""];
+
+  function elegir(l) { if (!IDIOMAS[l]) return; ajustes().idioma = l; guardar(); aplicar(); }
+
+  function aplicar() {
+    document.documentElement.lang = idioma();
+    for (const e of document.querySelectorAll("[data-t]")) e.textContent = t(e.dataset.t);
+    const tit = document.querySelector("title"); if (tit) tit.textContent = t("doc.titulo");
+    const d = document.querySelector('meta[name="description"]'); if (d) d.setAttribute("content", t("doc.desc"));
+  }
+
+  /** Las tres tablas tienen que tener las mismas llaves, y todos los bichos y
+   *  armas nombre en los tres idiomas. */
+  function faltantes() {
+    const fuera = [], base = Object.keys(T.en);
+    for (const l of Object.keys(T)) {
+      for (const k of base) if (!(k in T[l])) fuera.push(`${l} no tiene ${k}`);
+      for (const k of Object.keys(T[l])) if (!base.includes(k)) fuera.push(`${l} tiene de más ${k}`);
+    }
+    for (const [nom, tabla] of [["bichos", BICHO], ["armas", ARMA], ["pasivas", PASIVA]]) {
+      const n = Object.keys(tabla.en).length;
+      for (const l of Object.keys(tabla))
+        if (Object.keys(tabla[l]).length !== n) fuera.push(`${l} tiene ${Object.keys(tabla[l]).length} ${nom} y en tiene ${n}`);
+    }
+    return fuera;
+  }
+
+  return { IDIOMAS, idioma, t, nombreBicho, arma, pasiva, elegir, aplicar, faltantes };
+})();
+
+/* ── main.js ── */
+// El cableado: pantallas, el mando, el bucle y la elección de mejoras.
+
+const { Mundo } = M_mundo;
+const { LARGO } = M_bichos;
+const { ARMAS } = M_armas;
+const { Pantalla } = M_dibujo;
+const { Ruido } = M_audio;
+const G = M_guardado;
+const I = M_idioma;
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+
+const pantalla = new Pantalla($("#lienzo"));
+const ruido = new Ruido();
+let mundo = null, corriendo = false, anterior = 0, resto = 0;
+
+const PANTALLAS = { idioma: "#pIdioma", menu: "#pMenu", como: "#pComo", ajustes: "#pAjustes",
+                    juego: "#pJuego", mejora: "#pMejora", fin: "#pFin" };
+function ir(n) {
+  for (const [k, sel] of Object.entries(PANTALLAS)) $(sel).classList.toggle("on", k === n);
+  if (n === "menu") pintarMenu();
+  if (n === "ajustes") pintarAjustes();
+}
+$$("[data-ir]").forEach((b) => b.addEventListener("click", () => { if (corriendo) salir(); ir(b.dataset.ir); }));
+
+// ── idioma ─────────────────────────────────────────────────────────────────
+for (const [cod, nom] of Object.entries(I.IDIOMAS)) {
+  const b = document.createElement("button");
+  b.innerHTML = `<b style="opacity:.55;font-size:12px;margin-right:9px">${cod.toUpperCase()}</b>${nom}`;
+  b.addEventListener("click", () => { I.elegir(cod); ir("menu"); });
+  $("#listaIdiomas").appendChild(b);
+}
+
+const reloj = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+
+function pintarMenu() {
+  const d = G.cargar();
+  $("#menuMejor").textContent = d.partidas
+    ? `${I.t("menu.mejor")}  ${reloj(d.mejorTiempo)} · ${d.mejorMatados} · ${I.t("mej.nivel")} ${d.mejorNivel}`
+    : I.t("menu.nunca");
+}
+function pintarAjustes() {
+  $("#ajSonido").classList.toggle("no", !G.ajustes().sonido);
+  const c = $("#ajIdioma");
+  if (!c.children.length) for (const cod of Object.keys(I.IDIOMAS)) {
+    const b = document.createElement("button");
+    b.textContent = cod.toUpperCase();
+    b.addEventListener("click", () => { I.elegir(cod); pintarAjustes(); pintarMenu(); });
+    c.appendChild(b);
+  }
+  [...c.children].forEach((b) => b.classList.toggle("el", b.textContent.toLowerCase() === I.idioma()));
+}
+$("#ajSonido").addEventListener("click", () => {
+  const a = G.ajustes(); a.sonido = !a.sonido; ruido.vol = a.sonido ? 1 : 0; G.guardar(); pintarAjustes();
+});
+let armadoBorrar = 0;
+$("#bBorrar").addEventListener("click", (e) => {
+  if (Date.now() - armadoBorrar < 4000) { G.borrarTodo(); armadoBorrar = 0; I.aplicar(); ir("menu"); return; }
+  armadoBorrar = Date.now();
+  e.target.textContent = I.t("aj.seguro");
+  setTimeout(() => { if (Date.now() - armadoBorrar >= 4000) e.target.textContent = I.t("aj.borrar"); }, 4100);
+});
+$("#bJugar").addEventListener("click", () => empezar());
+$("#bComo").addEventListener("click", () => ir("como"));
+$("#bAjustes").addEventListener("click", () => ir("ajustes"));
+
+/* ── EL MANDO NACE DONDE APOYAS EL DEDO ───────────────────────────────────
+   Un joystick clavado en una esquina obliga a mirar el pulgar en vez de la
+   pantalla, y en un teléfono grande ni se llega. Acá el centro es donde
+   apoyaste: se juega sin mirarse la mano. */
+const mando = { activo: false, ox: 0, oy: 0, x: 0, y: 0, radio: 54, dedo: null };
+function tomar(e) {
+  if (!corriendo) return;
+  mando.activo = true; mando.dedo = e.pointerId;
+  mando.ox = mando.x = e.clientX; mando.oy = mando.y = e.clientY;
+  ruido.despertar();
+}
+function mover(e) {
+  if (!mando.activo || e.pointerId !== mando.dedo) return;
+  mando.x = e.clientX; mando.y = e.clientY;
+  const dx = mando.x - mando.ox, dy = mando.y - mando.oy;
+  const d = Math.hypot(dx, dy);
+  // si el dedo se va lejos, el centro lo SIGUE: si no, arrastrar de más deja
+  // el mando pegado al tope y girar se vuelve pelearle a un borde invisible
+  if (d > mando.radio) {
+    mando.ox += (dx / d) * (d - mando.radio);
+    mando.oy += (dy / d) * (d - mando.radio);
+  }
+}
+function soltar(e) { if (e.pointerId === mando.dedo) { mando.activo = false; mando.dedo = null; } }
+$("#zona").addEventListener("pointerdown", (e) => { e.preventDefault(); tomar(e); });
+$("#zona").addEventListener("pointermove", mover);
+for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("#zona").addEventListener(ev, soltar);
+
+const direccion = () => {
+  if (!mando.activo) return { x: 0, y: 0 };
+  const dx = mando.x - mando.ox, dy = mando.y - mando.oy, d = Math.hypot(dx, dy);
+  if (d < 6) return { x: 0, y: 0 };
+  const k = Math.min(1, d / mando.radio);
+  return { x: (dx / d) * k, y: (dy / d) * k };
+};
+// teclado, para la computadora
+const teclas = new Set();
+addEventListener("keydown", (e) => { teclas.add(e.code); });
+addEventListener("keyup", (e) => { teclas.delete(e.code); });
+const porTeclado = () => {
+  let x = 0, y = 0;
+  if (teclas.has("KeyA") || teclas.has("ArrowLeft")) x -= 1;
+  if (teclas.has("KeyD") || teclas.has("ArrowRight")) x += 1;
+  if (teclas.has("KeyW") || teclas.has("ArrowUp")) y -= 1;
+  if (teclas.has("KeyS") || teclas.has("ArrowDown")) y += 1;
+  const m = Math.hypot(x, y);
+  return m ? { x: x / m, y: y / m } : null;
+};
+
+// ── la partida ─────────────────────────────────────────────────────────────
+function empezar(semilla) {
+  ruido.despertar();
+  ruido.vol = G.ajustes().sonido ? 1 : 0;
+  mundo = new Mundo(semilla ?? ((Math.random() * 1e9) | 0));
+  pantalla.medir();
+  pantalla.numeros.length = 0; pantalla.trozos.length = 0; pantalla.sacudida = 0;
+  mando.activo = false;
+  ir("juego");
+  corriendo = true; anterior = performance.now(); resto = 0;
+  requestAnimationFrame(cuadro);
+}
+function salir() { corriendo = false; }
+
+/* EL PASO DE SIMULACION ES FIJO, y el dibujo va a la velocidad que pueda.
+   Con un paso variable, un teléfono lento simula saltos grandes: los bichos
+   atraviesan al jugador sin tocarlo y los tiros pasan de largo. Peor todavía,
+   la partida sale distinta según el teléfono, y entonces el balance medido con
+   el robot no dice nada. Acá se acumula el tiempo real y se dan pasos de 1/60
+   hasta gastarlo; si el cuadro fue larguísimo, se descartan los que sobran en
+   vez de intentar ponerse al día, que es como se entra en una espiral. */
+const PASO = 1 / 60;
+function cuadro(ahora) {
+  if (!corriendo) return;
+  requestAnimationFrame(cuadro);
+  const dt = Math.min(0.25, (ahora - anterior) / 1000);
+  anterior = ahora;
+  resto += dt;
+  let vueltas = 0;
+  const dir = porTeclado() || direccion();
+  while (resto >= PASO && vueltas < 5) { mundo.avanzar(PASO, dir); resto -= PASO; vueltas++; sonarGolpes(); }
+  if (resto > PASO * 5) resto = 0;
+
+  pantalla.dibujar(mundo, dt, mando);
+  hud();
+
+  if (mundo.pendienteMejora > 0) { mostrarMejoras(); return; }
+  if (mundo.terminada()) terminar();
+}
+
+function sonarGolpes() {
+  for (const g of mundo.golpes) {
+    if (g.que === "tiro") ruido.tiro();
+    else if (g.que === "pega") { ruido.pega(); pantalla.numero(g.x, g.y - 12, Math.round(g.cuanto), "#ffe066"); }
+    else if (g.que === "muere") {
+      ruido.muere();
+      pantalla.estallar(g.x, g.y, g.jefe ? "#c264e0" : "#8ad06a", g.jefe ? 60 : 7);
+      if (g.jefe) pantalla.sacudir(12);
+    } else if (g.que === "gema") ruido.gema();
+    else if (g.que === "onda") ruido.onda();
+    else if (g.que === "jugador") { ruido.golpe(); pantalla.sacudir(7); }
+  }
+}
+
+function hud() {
+  const p = mundo.jugador;
+  $("#hudReloj").textContent = reloj(Math.max(0, LARGO - mundo.t));
+  $("#hudNivel").textContent = p.nivel;
+  $("#hudMatados").textContent = mundo.matados;
+}
+
+// ── elegir mejora ──────────────────────────────────────────────────────────
+function mostrarMejoras() {
+  corriendo = false;
+  ruido.nivel();
+  const ofertas = mundo.ofertas();
+  const cont = $("#tarjetas");
+  cont.innerHTML = "";
+  $("#mejNivel").textContent = mundo.jugador.nivel;
+  for (const o of ofertas) {
+    const [nom, desc] = o.clase === "arma" ? I.arma(o.nombre) : I.pasiva(o.nombre);
+    const color = o.clase === "arma" ? ARMAS[o.nombre].color : "#7cf6ff";
+    const b = document.createElement("button");
+    b.className = "tarjeta" + (o.nueva ? " nueva" : "");
+    /* LOS DOS TEXTOS VAN ADENTRO DE UN SOLO HIJO.
+       La tarjeta es una grilla de dos columnas —el cuadradito de color y el
+       texto—, y acá había TRES hijos: el cuadradito, el título y la
+       descripción. El tercero se iba a la fila de abajo y caía en la primera
+       columna, la de 14 píxeles: la descripción salía partida en una palabra
+       por renglón. Se veía como un problema de estilo y era de estructura. */
+    b.innerHTML = `<i style="background:${color}"></i><div>` +
+      `<div class="t">${nom} ${o.nueva ? `<em>${I.t("mej.nueva")}</em>` : `<b>${I.t("mej.nivel")} ${o.nivel}</b>`}</div>` +
+      `<div class="d">${desc}</div></div>`;
+    b.addEventListener("click", () => {
+      mundo.elegir(o);
+      if (mundo.pendienteMejora > 0) { mostrarMejoras(); return; }
+      ir("juego"); corriendo = true; anterior = performance.now(); resto = 0;
+      requestAnimationFrame(cuadro);
+    });
+    cont.appendChild(b);
+  }
+  ir("mejora");
+}
+
+function terminar() {
+  corriendo = false;
+  ruido.fin();
+  const r = { gano: mundo.gano, t: mundo.t, matados: mundo.matados, nivel: mundo.jugador.nivel };
+  const nuevos = G.anotar(r);
+  $("#finTitulo").dataset.t = r.gano ? "fin.gano" : "fin.perdio";
+  $("#finTitulo").textContent = I.t(r.gano ? "fin.gano" : "fin.perdio");
+  $("#finTiempo").textContent = reloj(r.t);
+  $("#finMatados").textContent = r.matados;
+  $("#finNivel").textContent = r.nivel;
+  $("#finRecord").classList.toggle("on", nuevos.tiempo || nuevos.matados || nuevos.nivel);
+  ir("fin");
+}
+$("#bSalir").addEventListener("click", () => { salir(); ir("menu"); });
+$("#bOtra").addEventListener("click", () => empezar());
+
+addEventListener("resize", () => pantalla.medir());
+addEventListener("visibilitychange", () => { if (document.hidden && corriendo) { salir(); ir("menu"); } });
+
+I.aplicar();
+ir(G.ajustes().idioma ? "menu" : "idioma");
+
+// La sonda de las pruebas: el mismo camino que el dedo.
+window.__enjambre = {
+  ir, empezar, salir,
+  pantallaActual: () => Object.entries(PANTALLAS).find(([, s]) => $(s).classList.contains("on"))?.[0],
+  estado: () => mundo && { t: mundo.t, bichos: mundo.bichos.length, matados: mundo.matados,
+                           nivel: mundo.jugador.nivel, vida: mundo.jugador.vida,
+                           pendiente: mundo.pendienteMejora, terminada: mundo.terminada(),
+                           armas: { ...mundo.jugador.armas }, pico: mundo.picoBichos },
+  mundo: () => mundo,
+  /** Juega sola, para medir. Devuelve el resultado. */
+  robot(segundos = 20) {
+    if (!mundo) return null;
+    const piloto = () => {
+      const p = mundo.jugador, b = mundo.masCercano(p.x, p.y, 400);
+      let x = 0, y = 0;
+      if (b) { const d = Math.hypot(b.x - p.x, b.y - p.y) || 1; x = -(b.x - p.x) / d; y = -(b.y - p.y) / d; }
+      const a = Math.atan2(p.y, p.x); x += -Math.sin(a) * .7; y += Math.cos(a) * .7;
+      const dc = Math.hypot(p.x, p.y);
+      if (dc > mundo.radioMapa * .85) { x -= p.x / dc; y -= p.y / dc; }
+      const m = Math.hypot(x, y) || 1; return { x: x / m, y: y / m };
+    };
+    const hasta = mundo.t + segundos;
+    while (!mundo.terminada() && mundo.t < hasta) {
+      if (mundo.pendienteMejora > 0) { mundo.elegir(mundo.ofertas()[0]); continue; }
+      mundo.avanzar(PASO, piloto());
+    }
+    return window.__enjambre.estado();
+  },
+};
+
+
+})();
+</script>
+</body>
+</html>

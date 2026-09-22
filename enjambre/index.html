@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Enjambre — sobreviví seis minutos</title>
+<meta name="description" content="Un pulgar y nada de apuntar. Vos te movés; las armas disparan solas. Lo que decide la partida es qué subís.">
+<meta name="theme-color" content="#0c0a16">
+<link rel="stylesheet" href="css/enjambre.css">
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+
+<section id="pIdioma" class="pantalla">
+  <div class="caja">
+    <h1 class="logo chico">ENJAMBRE</h1>
+    <h2 data-t="idioma.titulo">Elegí tu idioma</h2>
+    <p class="bajada" data-t="idioma.bajada">Se puede cambiar después en Ajustes.</p>
+    <div class="botonera" id="listaIdiomas"></div>
+  </div>
+</section>
+
+<section id="pMenu" class="pantalla">
+  <div class="caja">
+    <div class="bichitos" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 class="logo">ENJAMBRE</h1>
+    <p class="bajada" data-t="menu.bajada">Seis minutos. Sólo te movés: las armas disparan solas.</p>
+    <p class="marca" id="menuMejor"></p>
+    <div class="botonera">
+      <button id="bJugar" class="grande" data-t="menu.jugar">Jugar</button>
+      <button id="bComo" data-t="menu.como">Cómo se juega</button>
+      <button id="bAjustes" data-t="menu.ajustes">Ajustes</button>
+    </div>
+  </div>
+</section>
+
+<section id="pComo" class="pantalla">
+  <div class="caja">
+    <h2 data-t="como.titulo">Cómo se juega</h2>
+    <ul class="ayuda">
+      <li data-t="como.1"></li><li data-t="como.2"></li><li data-t="como.3"></li>
+      <li data-t="como.4"></li><li data-t="como.5"></li>
+    </ul>
+    <button class="volver" data-ir="menu" data-t="volver">Volver</button>
+  </div>
+</section>
+
+<section id="pAjustes" class="pantalla">
+  <div class="caja">
+    <h2 data-t="aj.titulo">Ajustes</h2>
+    <div class="fila"><span data-t="aj.sonido">Sonido</span><button id="ajSonido" class="int">🔊</button></div>
+    <div class="fila col"><span data-t="aj.idioma">Idioma</span><div class="segmentado" id="ajIdioma"></div></div>
+    <button id="bBorrar" class="peligro" data-t="aj.borrar">Borrar récords</button>
+    <button class="volver" data-ir="menu" data-t="volver">Volver</button>
+  </div>
+</section>
+
+<section id="pJuego" class="pantalla sinfondo">
+  <div id="hud">
+    <div class="chip"><b id="hudReloj">6:00</b></div>
+    <div class="chip"><span data-t="mej.nivel">Nivel</span> <b id="hudNivel">1</b></div>
+    <div class="chip"><b id="hudMatados">0</b> ☠</div>
+    <button id="bSalir" data-t="hud.salir">Salir</button>
+  </div>
+  <!-- LA ZONA DE MOVIMIENTO ES TODA LA PANTALLA. Un joystick en una esquina
+       obliga a mirarse el pulgar; acá el mando nace donde apoyás el dedo. -->
+  <div id="zona"></div>
+</section>
+
+<section id="pMejora" class="pantalla">
+  <div class="caja">
+    <h2><span data-t="mej.titulo">Nivel</span> <span id="mejNivel">2</span></h2>
+    <div id="tarjetas" class="tarjetas"></div>
+  </div>
+</section>
+
+<section id="pFin" class="pantalla">
+  <div class="caja">
+    <h2 id="finTitulo" data-t="fin.perdio">Te agarraron</h2>
+    <div id="finRecord" class="record" data-t="fin.record">Récord nuevo</div>
+    <div class="fila"><span data-t="fin.tiempo">Tiempo</span><b id="finTiempo">0:00</b></div>
+    <div class="fila"><span data-t="fin.matados">Matados</span><b id="finMatados">0</b></div>
+    <div class="fila"><span data-t="fin.nivel">Nivel</span><b id="finNivel">1</b></div>
+    <div class="botonera">
+      <button id="bOtra" class="grande" data-t="fin.otra">De nuevo</button>
+      <button data-ir="menu" data-t="fin.menu">Menú</button>
+    </div>
+  </div>
+</section>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

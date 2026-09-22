@@ -1,0 +1,90 @@
+/* ESTILO: laboratorio de noche. Violeta profundo, verde ácido y un rosa de
+   aviso. La regla es que el menú prepare el ojo para el juego: si las
+   pantallas son claras, la primera partida encandila. */
+:root{ --verde:#8ad06a; --cian:#7cf6ff; --rosa:#ff6ea9; --violeta:#c264e0;
+       --fondo:#0c0a16; --tinta:#eee9f7; --apagado:#8a83a6; --linea:rgba(255,255,255,.12); }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--fondo);color:var(--tinta);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:none;user-select:none;
+  overscroll-behavior:none}
+#lienzo{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;background:#141021}
+
+.pantalla{position:fixed;inset:0;z-index:2;display:none;place-items:center;overflow-y:auto;
+  padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));
+  background:radial-gradient(ellipse at 50% 0%,rgba(194,100,224,.20),transparent 60%),
+             linear-gradient(180deg,var(--fondo),#07060e)}
+.pantalla.on{display:grid}
+.pantalla.sinfondo{background:none;pointer-events:none}
+.pantalla.sinfondo #hud,.pantalla.sinfondo #zona{pointer-events:auto}
+/* la de mejoras se ve ENCIMA del juego congelado: cortar a negro perdería el
+   contexto justo cuando hay que decidir mirando cómo venía la partida */
+#pMejora{background:rgba(8,6,16,.86)}
+
+.caja{width:min(430px,100%);display:flex;flex-direction:column;gap:12px;text-align:center;margin:auto}
+.logo{font-size:clamp(34px,10.5vw,54px);font-weight:900;letter-spacing:.10em;line-height:1;margin:4px 0 2px;
+  background:linear-gradient(95deg,var(--verde),var(--cian) 55%,var(--violeta));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 20px rgba(138,208,106,.28))}
+.logo.chico{font-size:clamp(26px,8vw,38px)}
+h2{font-size:clamp(19px,5.4vw,25px);font-weight:800}
+.bajada{color:var(--apagado);font-size:clamp(13px,3.6vw,15px);line-height:1.55}
+.marca{color:var(--cian);font:700 12px/1.6 system-ui;letter-spacing:.06em}
+
+/* los bichitos del menú: seis puntos que se acercan al título, como el juego */
+.bichitos{display:flex;justify-content:center;gap:10px;height:26px}
+.bichitos i{width:11px;height:13px;border-radius:50% 50% 45% 45%;background:var(--verde);opacity:.75;
+  animation:vaiven 2.4s ease-in-out infinite alternate}
+.bichitos i:nth-child(2n){background:var(--rosa);animation-duration:1.9s}
+.bichitos i:nth-child(3n){background:var(--violeta);animation-duration:3.1s}
+@keyframes vaiven{from{transform:translateY(-7px) scale(.9)}to{transform:translateY(7px) scale(1.1)}}
+
+button{font:700 15px/1 system-ui,sans-serif;color:var(--tinta);cursor:pointer;
+  background:rgba(255,255,255,.055);border:1px solid var(--linea);border-radius:13px;padding:15px 16px;
+  transition:transform .08s,background .15s}
+button:active{transform:translateY(2px);background:rgba(255,255,255,.11)}
+button.grande{font-size:17px;padding:18px 16px;
+  background:linear-gradient(100deg,rgba(138,208,106,.26),rgba(124,246,255,.26));border-color:rgba(255,255,255,.26)}
+button.peligro{color:#ff9a9a;border-color:rgba(255,90,90,.34);background:rgba(255,60,60,.09)}
+button.volver{background:none;border:none;color:var(--apagado);font-size:13px;padding:12px}
+.botonera{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.fila{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;
+  border:1px solid var(--linea);border-radius:13px;background:rgba(255,255,255,.028);font-size:14px;text-align:left}
+.fila.col{flex-direction:column;align-items:stretch;gap:9px}
+.int{min-width:56px;padding:9px;font-size:17px}.int.no{opacity:.33}
+.segmentado{display:flex;gap:6px}
+.segmentado button{flex:1;padding:11px 6px;font-size:13px;border-radius:10px}
+.segmentado button.el{background:linear-gradient(100deg,rgba(138,208,106,.32),rgba(124,246,255,.32));
+  border-color:rgba(255,255,255,.34)}
+.ayuda{text-align:left;display:flex;flex-direction:column;gap:11px;font-size:14px;line-height:1.55;color:#cfc7e2}
+.ayuda li{list-style:none;padding-left:18px;position:relative}
+.ayuda li::before{content:'';position:absolute;left:0;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--verde)}
+.record{display:none;font:800 12px/1 system-ui;letter-spacing:.14em;color:var(--cian)}
+.record.on{display:block}
+
+#hud{position:fixed;top:0;left:0;right:0;z-index:4;display:flex;align-items:center;gap:8px;
+  padding:max(30px,calc(env(safe-area-inset-top) + 22px)) 12px 8px}
+.chip{background:rgba(8,6,16,.6);border:1px solid var(--linea);border-radius:10px;
+  padding:6px 10px;font:700 12px/1 system-ui;letter-spacing:.04em;color:#d9d2ec}
+.chip b{font-size:14px;font-variant-numeric:tabular-nums}
+#hudMatados{color:var(--rosa)}
+#bSalir{margin-left:auto;padding:8px 12px;font-size:12px;background:rgba(8,6,16,.6)}
+#zona{position:fixed;inset:0;z-index:3}
+
+/* las tarjetas de mejora: lo único que se elige en todo el juego */
+.tarjetas{display:flex;flex-direction:column;gap:10px}
+/* EL `min-width:0` NO ES DECORATIVO. Un hijo de grid trae `min-width:auto`, que
+   lo obliga a ser al menos tan ancho como su palabra más larga y, dentro de una
+   caja flex que puede encogerse, termina midiendo el contenido en vez de la
+   columna: la descripción salía partida en una palabra por renglón. */
+.tarjeta{display:grid;grid-template-columns:14px minmax(0,1fr);gap:12px;align-items:start;
+  text-align:left;padding:15px 15px;border-radius:14px;width:100%}
+.tarjeta>div{min-width:0}
+.tarjetas{width:100%}
+.tarjeta i{width:14px;height:14px;border-radius:4px;margin-top:3px}
+.tarjeta .t{font-weight:800;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tarjeta .t b{font-weight:700;font-size:11px;color:var(--apagado);letter-spacing:.06em}
+.tarjeta .t em{font-style:normal;font-size:10px;font-weight:900;letter-spacing:.12em;
+  background:var(--verde);color:#0c0a16;border-radius:5px;padding:3px 6px}
+.tarjeta .d{font-size:13px;line-height:1.5;color:#b9b1cf;margin-top:5px}
+.tarjeta.nueva{border-color:rgba(138,208,106,.5);background:rgba(138,208,106,.09)}
+@media (prefers-reduced-motion:reduce){.bichitos i{animation:none}}
