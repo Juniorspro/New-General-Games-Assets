@@ -47,6 +47,9 @@ mantiene: `MEMORIA.md`. Última puesta al día: 22/09/2026.
 | carpeta | qué es | detalle en |
 |---|---|---|
 | `bosque/` | tercera persona en un bosque al atardecer, con VHS y cinco cintas | [juegos](juegos.md) |
+| `motor2d/` | motor 2D en pixel compartido: escala entera, mandos, sonido sintetizado, menús | [juegos](juegos.md) |
+| `zonda/` | ZONDA: plataformas tipo Celeste, 20 salas comprobadas por un resolvedor | `zonda/README.md` |
+| `luz-mala/` | LUZ MALA: metroidvania tipo Silksong, a medio hacer | [juegos](juegos.md) |
 | `perro/` | CAMPO: un perro 3D en tercera persona sobre lomas de pasto | `perro/README.md` |
 | `pique/` `pique2d/` `pique3d/` | corredor de un botón: 2D, pixel art y 2.5D; niveles comprobados solos | su `LEEME.md` |
 | `enjambre/` | supervivencia por oleadas con un pulgar; los assets todavía no existen | `enjambre/README.md` |

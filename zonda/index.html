@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#07060c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ZONDA</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%2307060c'/%3E%3Crect x='3' y='3' width='10' height='2' fill='%23d9a441'/%3E%3Crect x='9' y='5' width='2' height='2' fill='%23d9a441'/%3E%3Crect x='7' y='7' width='2' height='2' fill='%23d9a441'/%3E%3Crect x='5' y='9' width='2' height='2' fill='%23d9a441'/%3E%3Crect x='3' y='11' width='10' height='2' fill='%23c8322f'/%3E%3C/svg%3E">
+<!--CSS-->
+</head>
+<body>
+<div id="juego">
+  <canvas id="lienzo"></canvas>
+
+  <div class="mandos" id="mandos">
+    <div class="zona" id="zonaPalanca"><div class="base"></div><div class="perilla"></div></div>
+    <div class="bt" id="btSalto" style="right:14px;bottom:max(34px,calc(env(safe-area-inset-bottom) + 18px))"></div>
+    <div class="bt" id="btDash" style="right:100px;bottom:max(18px,calc(env(safe-area-inset-bottom) + 6px))"></div>
+    <div class="bt chico" id="btAgarre" style="right:32px;bottom:max(126px,calc(env(safe-area-inset-bottom) + 110px))"></div>
+  </div>
+  <div class="pausa-bt" id="btPausa"></div>
+
+  <div class="capa limpia abajo" id="capaTitulo">
+    <div class="hueco"></div>
+    <button class="boton" id="bJugar">JUGAR</button>
+    <button class="boton gris" id="bCapitulos">CAPÍTULOS</button>
+    <button class="boton gris" id="bCartas">CARTAS</button>
+    <button class="boton gris" id="bOpciones">OPCIONES</button>
+    <button class="boton gris" id="bCreditos">CRÉDITOS</button>
+  </div>
+
+  <div class="capa" id="capaCapitulos" data-volver="bCapVolver">
+    <h2>CAPÍTULOS</h2>
+    <div id="listaCap" class="lista"></div>
+    <button class="boton gris" id="bCapVolver">VOLVER</button>
+  </div>
+
+  <div class="capa" id="capaCartas" data-volver="bCarVolver">
+    <h2>CARTAS</h2>
+    <div id="listaCartas" class="lista"></div>
+    <button class="boton gris" id="bCarVolver">VOLVER</button>
+  </div>
+
+  <div class="capa" id="capaOpciones" data-volver="bOpcVolver">
+    <h2>OPCIONES</h2>
+    <div id="listaOpc" class="lista"></div>
+    <p class="txt">VELOCIDAD, DASH INFINITO E INVENCIBLE SON AYUDAS: EL CERRO SE PUEDE SUBIR IGUAL CON ELLAS.</p>
+    <button class="boton gris" id="bOpcVolver">VOLVER</button>
+  </div>
+
+  <div class="capa" id="capaPausa" data-volver="bSeguir">
+    <h2>PAUSA</h2>
+    <button class="boton" id="bSeguir">SEGUIR</button>
+    <button class="boton gris" id="bReintentar">REINTENTAR SALA</button>
+    <button class="boton gris" id="bPausaOpc">OPCIONES</button>
+    <button class="boton gris" id="bSalir">SALIR AL MENÚ</button>
+    <p class="txt" id="txtPausa"></p>
+  </div>
+
+  <div class="capa" id="capaFin">
+    <h2 id="finTitulo">CAPÍTULO COMPLETO</h2>
+    <div class="panel" id="finDatos"></div>
+    <button class="boton" id="bFinSeguir">SEGUIR</button>
+  </div>
+
+  <div class="capa" id="capaCreditos" data-volver="bCredVolver">
+    <h2>ZONDA</h2>
+    <div class="panel" id="creditosTxt"></div>
+    <div class="panel">
+      <p class="txt">TECLADO: FLECHAS O WASD · C, K O ESPACIO SALTA · X O J DASH · Z, L O SHIFT AGARRA · ESC PAUSA</p>
+      <p class="txt">MANDO: A SALTA · X DASH · GATILLOS AGARRAN</p>
+      <p class="txt">TOQUE: EL PULGAR IZQUIERDO MUEVE Y APUNTA · A LA DERECHA SALTO, DASH Y AGARRE</p>
+    </div>
+    <button class="boton gris" id="bCredVolver">VOLVER</button>
+  </div>
+</div>
+<!--JS-->
+</body>
+</html>

@@ -19,3 +19,8 @@ se resumen en una sola.
   - 18-19/09: Pozo, CAMPO (el perro) y el rendimiento de Paraguas.
   - 21/09: Flores.
   - 22/09, antes de esta sesión: Ritmo y Enjambre.
+- **22/09/2026, más tarde, en la misma rama:**
+  - Pidió dos juegos 2D "goty" copiando populares. Se eligieron Celeste y
+    Silksong.
+  - Quedó ZONDA completo en `zonda/zonda.html`.
+  - LUZ MALA quedó empezado.

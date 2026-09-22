@@ -1,0 +1,12 @@
+/* zonda/zonda.css — lo propio de ZONDA encima de motor2d/ui.css */
+.lista{display:flex;flex-direction:column;align-items:center;width:100%;max-width:380px}
+.lista .panel{margin:5px 0}
+.lista p.txt{margin:-2px 0 8px;font-size:12px;color:#aab2cf}
+#capaTitulo{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+#capaTitulo .boton{min-width:220px}
+@media (max-height:600px){
+  #capaTitulo .boton{min-height:40px;padding:6px 10px 8px;margin:4px}
+  .capa{padding-top:12px;padding-bottom:12px}
+}
+.panel p.txt + p.txt{margin-top:6px}
+.panel b{color:#ffd9a0}

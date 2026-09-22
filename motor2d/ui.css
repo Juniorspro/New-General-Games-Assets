@@ -1,0 +1,73 @@
+/* motor2d/ui.css — capas, botones de 16 bits y mandos que flotan sobre el juego */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#07060c;color:#fff;
+  font-family:"Trebuchet MS",Verdana,sans-serif;touch-action:none;overscroll-behavior:none}
+#juego{position:fixed;inset:0;overflow:hidden}
+#lienzo{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+canvas.px{display:block;image-rendering:pixelated;image-rendering:crisp-edges;pointer-events:none}
+
+/* ---------- capas de menú ---------- */
+.capa{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:max(24px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom));
+  background:rgba(8,6,16,.80);z-index:5;overflow-y:auto;gap:2px}
+.capa::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.20) 0 1px,transparent 1px 3px)}
+.capa > *{position:relative}
+.capa.ver{display:flex;animation:aparecer .24s steps(4) both}
+.capa.limpia{background:transparent}
+.capa.limpia::before{display:none}
+.capa.abajo{justify-content:flex-end}
+@keyframes aparecer{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+.hueco{flex:1 1 auto;min-height:24px}
+h2{display:flex;justify-content:center;margin:4px 0 12px;min-height:30px;
+  animation:entrar .42s steps(5) both,destello 2.4s steps(6) infinite}
+@keyframes destello{0%,70%,100%{filter:brightness(1)}80%{filter:brightness(1.45)}}
+
+.boton{border:none;border-radius:0;padding:12px 14px 14px;margin:6px;min-width:236px;min-height:52px;
+  display:flex;justify-content:center;align-items:center;color:#fff;font:bold 16px monospace;cursor:pointer;
+  background:#e2661a;box-shadow:inset -4px -4px 0 #9c3c08,inset 4px 4px 0 #ffb05a,0 0 0 3px #141018,0 6px 0 3px #141018;
+  animation:entrar .42s steps(5) both}
+.boton.gris{background:#3a3f58;box-shadow:inset -4px -4px 0 #23263a,inset 4px 4px 0 #5d6488,0 0 0 3px #141018,0 6px 0 3px #141018}
+.boton.azul{background:#2f6fb0;box-shadow:inset -4px -4px 0 #1b4270,inset 4px 4px 0 #6cb3ee,0 0 0 3px #141018,0 6px 0 3px #141018}
+.boton.verde{background:#2f8a4e;box-shadow:inset -4px -4px 0 #1b5a31,inset 4px 4px 0 #6fd28f,0 0 0 3px #141018,0 6px 0 3px #141018}
+.boton.chico{min-width:120px;min-height:44px;padding:8px 10px 10px}
+.boton:active{transform:translateY(4px)}
+.boton.sel{outline:3px solid #fff4c2;outline-offset:4px;animation:entrar .42s steps(5) both,latido 1s steps(2) infinite}
+.boton[data-no]{opacity:.4;filter:grayscale(1)}
+.capa .boton:nth-of-type(2){animation-delay:.06s}.capa .boton:nth-of-type(3){animation-delay:.12s}
+.capa .boton:nth-of-type(4){animation-delay:.18s}.capa .boton:nth-of-type(5){animation-delay:.24s}
+.capa .boton:nth-of-type(6){animation-delay:.3s}.capa .boton:nth-of-type(7){animation-delay:.36s}
+@keyframes entrar{from{transform:translateY(26px);opacity:0}to{transform:none;opacity:1}}
+.capa p.txt{animation:entrar .42s steps(5) .3s both}
+@keyframes latido{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+.fila{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;width:100%}
+.panel{background:#151a2b;padding:12px 14px;margin:6px 0;max-width:360px;width:100%;
+  box-shadow:inset -3px -3px 0 #0c0f1a,inset 3px 3px 0 #2a3150,0 0 0 2px #141018;animation:entrar .36s steps(4) both}
+p.txt{font:bold 13px/1.55 "Courier New",monospace;color:#cfd4e6;letter-spacing:.2px;max-width:360px;text-align:center}
+p.txt.izq{text-align:left}
+.oculto{display:none!important}
+
+/* ---------- mandos: flotan sobre el juego, sin panel negro ---------- */
+.mandos{position:absolute;left:0;right:0;bottom:0;height:230px;pointer-events:none;z-index:3;display:none}
+.mandos.ver{display:block}
+.mandos .zona{position:absolute;left:0;bottom:0;width:52%;height:250px;pointer-events:auto;touch-action:none}
+.mandos .base,.mandos .perilla{position:absolute;left:0;top:0;pointer-events:none;opacity:0;transition:opacity .08s}
+.mandos .zona.on .base,.mandos .zona.on .perilla{opacity:1}
+.mandos .base{width:76px;height:76px;background:rgba(255,255,255,.07);
+  clip-path:polygon(22px 0,54px 0,76px 22px,76px 54px,54px 76px,22px 76px,0 54px,0 22px);
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.35)}
+.mandos .perilla{width:36px;height:36px;background:rgba(255,244,194,.55);
+  clip-path:polygon(10px 0,26px 0,36px 10px,36px 26px,26px 36px,10px 36px,0 26px,0 10px)}
+.mandos .pista{position:absolute;left:18px;bottom:max(22px,env(safe-area-inset-bottom));pointer-events:none;opacity:.55}
+.mandos .bt{position:absolute;width:76px;height:76px;pointer-events:auto;touch-action:none;display:flex;
+  align-items:center;justify-content:center;background:rgba(20,16,32,.5);
+  clip-path:polygon(14px 0,62px 0,76px 14px,76px 62px,62px 76px,14px 76px,0 62px,0 14px)}
+.mandos .bt::after{content:'';position:absolute;inset:0;pointer-events:none;
+  clip-path:inherit;box-shadow:inset 0 0 0 3px rgba(255,255,255,.28),inset -5px -5px 0 rgba(0,0,0,.35)}
+.mandos .bt.on{background:rgba(255,210,74,.38);transform:translateY(3px)}
+.mandos .bt.chico{width:60px;height:60px;clip-path:polygon(12px 0,48px 0,60px 12px,60px 48px,48px 60px,12px 60px,0 48px,0 12px)}
+.pausa-bt{position:absolute;right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));z-index:4;
+  width:44px;height:44px;display:none;align-items:center;justify-content:center;background:rgba(20,16,32,.5);
+  clip-path:polygon(8px 0,36px 0,44px 8px,44px 36px,36px 44px,8px 44px,0 36px,0 8px);pointer-events:auto}
+.pausa-bt.ver{display:flex}

@@ -1,0 +1,10 @@
+{
+  "salida": "zonda.html",
+  "css": ["motor2d/ui.css", "zonda/zonda.css"],
+  "js": [
+    "motor2d/base.js", "motor2d/pantalla.js", "motor2d/entrada.js", "motor2d/sonido.js", "motor2d/fuente.js",
+    "motor2d/sprites.js", "motor2d/fx.js", "motor2d/bucle.js", "motor2d/ui.js",
+    "zonda/js/fisica.js", "zonda/js/salas.js", "zonda/js/historia.js", "zonda/js/arte.js", "zonda/js/musica.js",
+    "zonda/js/dibujo.js", "zonda/js/pantallas.js", "zonda/js/juego.js"
+  ]
+}
