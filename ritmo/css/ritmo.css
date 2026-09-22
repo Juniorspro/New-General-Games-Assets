@@ -1,0 +1,139 @@
+/* ESTILO: mesa de mezcla de madrugada. Negro violáceo, neón de tres colores,
+   tipografía ancha y mucho espacio muerto. La regla es que nada compite con la
+   pista: las pantallas son oscuras para que el ojo llegue al juego ya
+   acostumbrado y la primera nota no encandile. */
+
+:root{
+  --grave:#ff3d8b; --medio:#31e0c8; --agudo:#ffcc2f;
+  --fondo:#0a0616; --fondo2:#140c2a; --tinta:#efe9ff; --apagado:#8d82ad;
+  --linea:rgba(255,255,255,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--fondo);color:var(--tinta);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  touch-action:none;user-select:none;overscroll-behavior:none}
+
+/* EL FONDO FIJO VIVE ACA Y NO EN EL LIENZO. Es un degradado que no cambia
+   nunca; pintándolo en el lienzo había que rellenar la pantalla entera en cada
+   cuadro, y en una tablet eso son 3,1 millones de píxeles sesenta veces por
+   segundo para que quede exactamente igual. El navegador lo compone una vez. */
+#lienzo{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0;
+  background:linear-gradient(180deg,#0a0616 0%,#120a26 55%,#07040f 100%)}
+
+.pantalla{position:fixed;inset:0;z-index:2;display:none;place-items:center;
+  padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(120,60,200,.20),transparent 60%),
+    linear-gradient(180deg,var(--fondo),#07040f);
+  overflow-y:auto}
+.pantalla.on{display:grid}
+.pantalla.sinfondo{background:none;pointer-events:none}
+.pantalla.sinfondo #hud,.pantalla.sinfondo #zonas,.pantalla.sinfondo .cuenta{pointer-events:auto}
+
+.caja{width:min(430px,100%);display:flex;flex-direction:column;gap:12px;
+  align-items:stretch;text-align:center;margin:auto}
+.caja.ancha{width:min(520px,100%)}
+
+/* ── el logo y el ecualizador ─────────────────────────────────────────── */
+.logo{font-size:clamp(46px,15vw,78px);font-weight:900;letter-spacing:.16em;
+  line-height:1;margin:2px 0 6px;
+  background:linear-gradient(95deg,var(--grave),var(--medio) 52%,var(--agudo));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 22px rgba(255,61,139,.30))}
+.logo.chico{font-size:clamp(30px,10vw,44px)}
+/* Las barras del ecualizador son 14 divs y no un lienzo: el menú no tiene que
+   pelear por cuadros con nada, y una animación de CSS la corre el compositor
+   del navegador aunque el hilo de JavaScript esté ocupado cocinando la carta. */
+.ecualizador{display:flex;gap:3px;justify-content:center;align-items:flex-end;
+  height:54px;margin-bottom:-6px;opacity:.5}
+.ecualizador i{width:5px;border-radius:3px;background:linear-gradient(180deg,var(--medio),var(--grave));
+  animation:ecu 1.1s ease-in-out infinite alternate}
+@keyframes ecu{from{height:8%}to{height:100%}}
+
+h2{font-size:clamp(19px,5.4vw,25px);font-weight:800;letter-spacing:.02em}
+.bajada{color:var(--apagado);font-size:clamp(13px,3.6vw,15px);line-height:1.55}
+.grandote{font-size:clamp(26px,8vw,38px);font-weight:900}
+
+/* ── botones ──────────────────────────────────────────────────────────── */
+button{font:700 15px/1 system-ui,sans-serif;color:var(--tinta);cursor:pointer;
+  background:rgba(255,255,255,.055);border:1px solid var(--linea);
+  border-radius:13px;padding:15px 16px;transition:transform .08s,background .15s}
+button:active{transform:translateY(2px);background:rgba(255,255,255,.11)}
+button[disabled]{opacity:.38;pointer-events:none}
+button.grande{font-size:17px;padding:18px 16px;
+  background:linear-gradient(100deg,rgba(255,61,139,.26),rgba(49,224,200,.26));
+  border-color:rgba(255,255,255,.26)}
+button.peligro{color:#ff9a9a;border-color:rgba(255,90,90,.34);background:rgba(255,60,60,.09)}
+button.volver{background:none;border:none;color:var(--apagado);font-size:13px;padding:12px}
+.botonera{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+
+.fila{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:13px 14px;border:1px solid var(--linea);border-radius:13px;
+  background:rgba(255,255,255,.028);font-size:14px;text-align:left}
+.fila.col{flex-direction:column;align-items:stretch;gap:9px}
+.fila .valor{color:var(--apagado);font-variant-numeric:tabular-nums}
+.int{min-width:56px;padding:9px;font-size:17px}
+.int.no{opacity:.33}
+
+.segmentado{display:flex;gap:6px}
+.segmentado button{flex:1;padding:11px 6px;font-size:13px;border-radius:10px}
+.segmentado button.el{background:linear-gradient(100deg,rgba(255,61,139,.32),rgba(49,224,200,.32));
+  border-color:rgba(255,255,255,.34)}
+
+.ayuda{text-align:left;display:flex;flex-direction:column;gap:11px;
+  font-size:14px;line-height:1.55;color:#cdc4e6;padding-left:2px}
+.ayuda li{list-style:none;padding-left:18px;position:relative}
+.ayuda li::before{content:'';position:absolute;left:0;top:.55em;width:7px;height:7px;
+  border-radius:50%;background:var(--medio)}
+
+/* ── lista de canciones ───────────────────────────────────────────────── */
+.pistas{display:flex;flex-direction:column;gap:8px}
+.pista{display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:12px;
+  padding:13px 14px;border:1px solid var(--linea);border-radius:13px;
+  background:rgba(255,255,255,.03);text-align:left;font:inherit}
+.pista .n{font-weight:900;font-size:19px;color:var(--apagado);font-variant-numeric:tabular-nums}
+.pista .t{font-weight:700;font-size:15px}
+.pista .s{font-size:11.5px;color:var(--apagado);margin-top:3px;letter-spacing:.02em}
+.pista .e{font-size:13px;letter-spacing:2px;color:var(--agudo)}
+.pista.cerrada{opacity:.45}
+.pista.cerrada .e{color:var(--apagado)}
+/* la barra de dificultad, a la izquierda del número */
+.pista .dif{display:flex;gap:2px;margin-top:4px}
+.pista .dif i{width:4px;height:4px;border-radius:1px;background:var(--linea)}
+.pista .dif i.on{background:var(--grave)}
+
+/* ── en juego ─────────────────────────────────────────────────────────── */
+#hud{position:fixed;top:0;left:0;right:0;z-index:4;display:flex;align-items:center;
+  justify-content:space-between;gap:10px;
+  padding:max(10px,env(safe-area-inset-top)) 14px 10px}
+#hudPuntos{font-weight:900;font-size:22px;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 14px rgba(255,255,255,.25)}
+#hudCancion{color:var(--apagado);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+#bSalir{padding:9px 13px;font-size:12px;background:rgba(0,0,0,.35)}
+#zonas{position:fixed;inset:0;z-index:3;display:grid;grid-template-columns:repeat(3,1fr);
+  width:min(94vw,520px);left:50%;transform:translateX(-50%)}
+#zonas div{height:100%}
+.cuenta{position:fixed;inset:0;z-index:5;display:grid;place-items:center;
+  font-size:clamp(60px,20vw,110px);font-weight:900;pointer-events:none;
+  text-shadow:0 0 34px rgba(255,61,139,.55)}
+.cuenta:empty{display:none}
+
+/* ── resultado ────────────────────────────────────────────────────────── */
+.estrellas{font-size:34px;letter-spacing:8px;color:var(--agudo);min-height:42px}
+.limpia{display:none;font-weight:900;letter-spacing:.16em;font-size:13px;color:#7cf6ff}
+.limpia.on{display:block}
+.record{display:none;font-weight:800;font-size:12px;letter-spacing:.14em;color:var(--agudo)}
+.record.on{display:block}
+.desglose{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}
+.desglose div{display:flex;align-items:center;gap:8px;padding:9px 11px;font-size:13px;
+  border:1px solid var(--linea);border-radius:10px;background:rgba(255,255,255,.025)}
+.desglose b{margin-left:auto;font-variant-numeric:tabular-nums}
+.desglose i{width:8px;height:8px;border-radius:50%}
+.desglose i.p{background:#7cf6ff}.desglose i.b{background:#9dff6b}
+.desglose i.r{background:#ffc247}.desglose i.e{background:#ff5252}
+
+.circulo{width:104px;height:104px;border-radius:50%;margin:6px auto;
+  border:3px solid var(--medio);opacity:.35;transition:transform .07s,opacity .07s}
+.circulo.late{transform:scale(1.12);opacity:1}
+
+@media (prefers-reduced-motion:reduce){.ecualizador i{animation:none;height:46%}}

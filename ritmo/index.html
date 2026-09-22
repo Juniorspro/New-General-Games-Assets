@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Ritmo — un juego de ritmo con música escrita por código</title>
+<meta name="description" content="Nueve canciones compuestas por código, y cada carta revisada por una máquina antes de dejarte jugarla.">
+<meta name="theme-color" content="#0a0616">
+<link rel="stylesheet" href="css/ritmo.css">
+</head>
+<body>
+
+<!-- EL LIENZO VIVE SIEMPRE, ABAJO DE TODO. Crearlo al empezar la partida
+     obliga a medir y cocinar los sellos en el peor momento: el primer cuadro
+     de la canción, que es justo el que no puede tardar. -->
+<canvas id="lienzo"></canvas>
+
+<!-- ── idioma ─────────────────────────────────────────────────────────── -->
+<section id="pIdioma" class="pantalla">
+  <div class="caja">
+    <h1 class="logo chico">RITMO</h1>
+    <h2 data-t="idioma.titulo">Elegí tu idioma</h2>
+    <p class="bajada" data-t="idioma.bajada">Se puede cambiar después en Ajustes.</p>
+    <div class="botonera" id="listaIdiomas"></div>
+  </div>
+</section>
+
+<!-- ── menú ───────────────────────────────────────────────────────────── -->
+<section id="pMenu" class="pantalla">
+  <div class="caja">
+    <div id="ecu" class="ecualizador" aria-hidden="true"></div>
+    <h1 class="logo">RITMO</h1>
+    <p class="bajada" data-t="menu.bajada">Nueve canciones. Tocá el carril cuando la nota llega a la línea.</p>
+    <div class="botonera">
+      <button id="bJugar" class="grande" data-t="menu.jugar">Jugar</button>
+      <button id="bComo" data-t="menu.como">Cómo se juega</button>
+      <button id="bAjustes" data-t="menu.ajustes">Ajustes</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── lista de canciones ─────────────────────────────────────────────── -->
+<section id="pLista" class="pantalla">
+  <div class="caja ancha">
+    <h2 data-t="lista.titulo">Canciones</h2>
+    <div id="pistas" class="pistas"></div>
+    <button class="volver" data-ir="menu" data-t="lista.volver">Volver</button>
+  </div>
+</section>
+
+<!-- ── ajustes ────────────────────────────────────────────────────────── -->
+<section id="pAjustes" class="pantalla">
+  <div class="caja">
+    <h2 data-t="aj.titulo">Ajustes</h2>
+    <div class="fila"><span data-t="aj.musica">Música</span><button id="ajMusica" class="int">♪</button></div>
+    <div class="fila"><span data-t="aj.efectos">Sonido de los toques</span><button id="ajEfectos" class="int">🔊</button></div>
+    <div class="fila col">
+      <span data-t="aj.anticipo">Velocidad de las notas</span>
+      <div class="segmentado" id="ajAnticipo">
+        <button data-v="2.0" data-t="aj.lento">Lenta</button>
+        <button data-v="1.5" data-t="aj.normal">Normal</button>
+        <button data-v="1.1" data-t="aj.rapido">Rápida</button>
+      </div>
+    </div>
+    <div class="fila"><span data-t="aj.desfase">Ajuste de sincronía</span>
+      <span class="valor" id="ajDesfaseVal">0 ms</span></div>
+    <button id="bCalibrar" data-t="aj.calibrar">Calibrar</button>
+    <div class="fila col"><span data-t="aj.idioma">Idioma</span>
+      <div class="segmentado" id="ajIdioma"></div></div>
+    <button id="bBorrar" class="peligro" data-t="aj.borrar">Borrar progreso</button>
+    <button class="volver" data-ir="menu" data-t="lista.volver">Volver</button>
+  </div>
+</section>
+
+<!-- ── calibración ────────────────────────────────────────────────────── -->
+<section id="pCalibrar" class="pantalla">
+  <div class="caja">
+    <h2 data-t="cal.titulo">Calibración</h2>
+    <p class="bajada" data-t="cal.bajada">Tocá junto con el pulso. Con doce toques alcanza.</p>
+    <div id="calCirculo" class="circulo"></div>
+    <p class="grandote"><span id="calFaltan">12</span> <span data-t="cal.faltan">toques</span></p>
+    <p class="bajada"><span data-t="cal.resultado">Tu desfase</span>: <b id="calValor">—</b></p>
+    <button id="bCalUsar" class="grande" data-t="cal.usar" disabled>Usarlo</button>
+    <button class="volver" data-ir="ajustes" data-t="cal.salir">Cancelar</button>
+  </div>
+</section>
+
+<!-- ── cómo se juega ──────────────────────────────────────────────────── -->
+<section id="pComo" class="pantalla">
+  <div class="caja">
+    <h2 data-t="como.titulo">Cómo se juega</h2>
+    <ul class="ayuda">
+      <li data-t="como.1"></li><li data-t="como.2"></li><li data-t="como.3"></li>
+      <li data-t="como.4"></li><li data-t="como.5"></li>
+    </ul>
+    <button class="volver" data-ir="menu" data-t="lista.volver">Volver</button>
+  </div>
+</section>
+
+<!-- ── en juego ───────────────────────────────────────────────────────── -->
+<section id="pJuego" class="pantalla sinfondo">
+  <div id="hud">
+    <div id="hudPuntos">0</div>
+    <div id="hudCancion"></div>
+    <button id="bSalir" data-t="hud.salir">Salir</button>
+  </div>
+  <div id="cuenta" class="cuenta"></div>
+  <!-- LAS ZONAS DE TOQUE SON DIVS Y NO EL LIENZO. Con el lienzo habría que
+       traducir coordenadas y acertar el carril a mano; con tres divs el
+       navegador ya sabe cuál se tocó, y además se pueden hacer más altos que
+       lo que se dibuja, que es lo que el pulgar necesita. -->
+  <div id="zonas"><div data-c="0"></div><div data-c="1"></div><div data-c="2"></div></div>
+</section>
+
+<!-- ── resultado ──────────────────────────────────────────────────────── -->
+<section id="pFin" class="pantalla">
+  <div class="caja">
+    <h2 data-t="fin.titulo">Se terminó</h2>
+    <div id="finEstrellas" class="estrellas"></div>
+    <div id="finLimpia" class="limpia" data-t="fin.limpia">SIN FALLAR NI UNA</div>
+    <div id="finRecord" class="record" data-t="fin.record">Récord nuevo</div>
+    <div class="fila"><span data-t="fin.puntos">Puntos</span><b id="finPuntos">0</b></div>
+    <div class="fila"><span data-t="fin.precision">Precisión</span><b id="finPrecision">0%</b></div>
+    <div class="fila"><span data-t="fin.racha">Mejor racha</span><b id="finRacha">0</b></div>
+    <div class="desglose">
+      <div><i class="p"></i><span data-t="fin.perfecto">Perfecto</span><b id="finP">0</b></div>
+      <div><i class="b"></i><span data-t="fin.bien">Bien</span><b id="finB">0</b></div>
+      <div><i class="r"></i><span data-t="fin.rozo">Rozó</span><b id="finR">0</b></div>
+      <div><i class="e"></i><span data-t="fin.error">Error</span><b id="finE">0</b></div>
+    </div>
+    <div class="botonera">
+      <button id="bOtra" class="grande" data-t="fin.otra">De nuevo</button>
+      <button id="bSiguiente" data-t="fin.siguiente">La que sigue</button>
+      <button id="bALista" data-t="fin.lista">Canciones</button>
+    </div>
+  </div>
+</section>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
