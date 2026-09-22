@@ -48,6 +48,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | [imagenes](imagenes.md) | haya que generar una imagen, o convertir un render en sprite |
 | [maquina](maquina.md) | algo falle por red, disco, Docker o permisos de la sesión |
 | [neko](neko.md) | haga falta un escritorio gráfico o manejar un navegador |
+| [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico |
 | [diario](diario.md) | quieras saber qué pasó en la sesión anterior y qué quedó |
 
 ## Los tres documentos largos (no se leen enteros)
@@ -70,6 +71,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `herramientas/rezona/` | cliente stdio del MCP de Rezona | [rezona](rezona.md) |
 | `herramientas/descargable/` | arma el HTML descargable de un artifact | su docstring |
 | `herramientas/iblo/`, `mint/`, `audio/` | utilidades sueltas | — |
+| `zocalo/` | zócalo de stream: editor, fuente de OBS, y `quemar.mjs` para videos | [video](video.md) |
 | `termo/` | termo de mate en 3D (three.js): se gira, se ceba, el agua se enfría | [maquina](maquina.md) para capturarlo |
 | `telarana/`, `garfio/`, `pozo/`, `pique*/`, `flores/`, `paraguas/` | juegos | — |
 | `Prompts/` | colecciones de prompts | — |

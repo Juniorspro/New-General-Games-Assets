@@ -28,6 +28,12 @@ Una entrada por sesión: qué quedó y qué falta. La más nueva arriba.
   cargó desde adentro, modo estándar, acentos bien, cero errores. Lo único que
   quiso salir fueron las fuentes de Google, que tienen respaldo.
   El empaquetado **no se commitea**: es un resultado, se regenera en segundos.
+- `zocalo/`: zócalo de stream con el título pedido, publicado
+  (claude.ai/artifact/9XRuLCVN8x6tdYwfw8EZ8H, privado) y quemado en el video que
+  mandó (clip de la Cámara, 992×576, 1:05). Tapa entero el zócalo oficial y
+  deja libre a la intérprete de señas. Se corrigieron dos errores de tipeo del
+  título pedido: LIBETARIO → LIBERTARIO e INFLAGANTI → IN FRAGANTI.
+  **El video no se commitea**: es material de la Cámara, y el repo es público.
 
 **Qué falta**
 
