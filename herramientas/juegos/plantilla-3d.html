@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Plantilla 3D</title>
+<style>
+ html,body{margin:0;height:100%;background:#0b0d14;overflow:hidden;font-family:system-ui,sans-serif}
+ canvas{display:block;touch-action:none}
+ #hud{position:fixed;left:16px;top:16px;color:#fff;font-weight:700;letter-spacing:.04em;text-shadow:0 2px 8px #000a;pointer-events:none}
+ #hud b{font-size:28px;display:block}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+</head><body><div id="hud"><b id="pts">0</b>WASD / flechas / tocar</div>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// 1) Render: color correcto + tonemapping filmico = la mitad del "look AAA"
+const r = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+r.setPixelRatio(Math.min(devicePixelRatio, 2));
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.85;
+r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(r.domElement);
+
+const escena = new THREE.Scene();
+escena.background = new THREE.Color(0x1a2233);
+escena.fog = new THREE.FogExp2(0x1a2233, 0.035);            // profundidad atmosferica
+escena.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture; escena.environmentIntensity = 0.5; // reflejos PBR
+const cam = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+
+// 2) Luz: una clave calida con sombra + relleno frio (contraste de temperatura)
+const sol = new THREE.DirectionalLight(0xffe2b8, 2.6);
+sol.position.set(8, 14, 6); sol.castShadow = true;
+sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0004;
+Object.assign(sol.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20 });
+escena.add(sol, sol.target, new THREE.HemisphereLight(0x8fb6ff, 0x2a1d14, 0.6));
+
+// 3) Mundo
+const suelo = new THREE.Mesh(new THREE.PlaneGeometry(80, 80),
+  new THREE.MeshStandardMaterial({ color: 0x2c3a4f, roughness: .85 }));
+suelo.rotation.x = -Math.PI / 2; suelo.receiveShadow = true; escena.add(suelo);
+const roca = new THREE.MeshStandardMaterial({ color: 0x6b7a90, roughness: .6, metalness: .1 });
+for (let i = 0; i < 60; i++) {
+  const m = new THREE.Mesh(new THREE.DodecahedronGeometry(.4 + Math.random() * 1.4), roca);
+  const a = Math.random() * 6.28, d = 8 + Math.random() * 25;
+  m.position.set(Math.cos(a) * d, .3, Math.sin(a) * d); m.rotation.set(Math.random(), Math.random(), 0);
+  m.castShadow = m.receiveShadow = true; escena.add(m);
+}
+const jug = new THREE.Mesh(new THREE.CapsuleGeometry(.45, .8, 6, 16),
+  new THREE.MeshStandardMaterial({ color: 0xff5a36, roughness: .35 }));
+jug.castShadow = true; jug.position.y = .85; escena.add(jug);
+
+// Orbes emisivos: el bloom solo los "enciende" a ellos (umbral alto)
+const orbes = [], matOrbe = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x44ddff, emissiveIntensity: 4 });
+function orbe() { const o = new THREE.Mesh(new THREE.IcosahedronGeometry(.3, 2), matOrbe);
+  o.position.set((Math.random() - .5) * 30, 1, (Math.random() - .5) * 30); escena.add(o); orbes.push(o); }
+for (let i = 0; i < 12; i++) orbe();
+
+// 4) Particulas (juice)
+const chispas = [];
+function explotar(p) { for (let i = 0; i < 24; i++) { const s = new THREE.Mesh(new THREE.SphereGeometry(.06, 6, 6), matOrbe);
+  s.position.copy(p); s.userData.v = new THREE.Vector3().randomDirection().multiplyScalar(4 + Math.random() * 4);
+  s.userData.t = .6; escena.add(s); chispas.push(s); } }
+
+// 5) Post: bloom + OutputPass (tonemapping y sRGB al final de la cadena)
+const comp = new EffectComposer(r);
+comp.addPass(new RenderPass(escena, cam));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), .9, .5, .85); comp.addPass(bloom);
+comp.addPass(new OutputPass());
+
+function tam() { const w = innerWidth, h = innerHeight; r.setSize(w, h); comp.setSize(w, h); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+addEventListener('resize', tam); tam();
+
+// 6) Control: teclado + toque, con aceleracion (no velocidad instantanea)
+const k = {}; addEventListener('keydown', e => k[e.code] = 1); addEventListener('keyup', e => k[e.code] = 0);
+let toque = null; addEventListener('pointerdown', e => toque = [e.clientX, e.clientY]);
+addEventListener('pointermove', e => toque && (toque[2] = e.clientX - toque[0], toque[3] = e.clientY - toque[1]));
+addEventListener('pointerup', () => toque = null);
+const vel = new THREE.Vector3(), camPos = new THREE.Vector3(0, 8, 10);
+let pts = 0, sacudida = 0;
+
+const reloj = new THREE.Clock();
+r.setAnimationLoop(() => {
+  const dt = Math.min(reloj.getDelta(), 1 / 30), t = reloj.elapsedTime;   // dt acotado: sin saltos al volver de otra pestaña
+  const dir = new THREE.Vector3((k.KeyD | k.ArrowRight) - (k.KeyA | k.ArrowLeft), 0, (k.KeyS | k.ArrowDown) - (k.KeyW | k.ArrowUp));
+  if (toque && toque[2] !== undefined) dir.set(toque[2], 0, toque[3]).clampLength(0, 60).divideScalar(60);
+  vel.lerp(dir.clampLength(0, 1).multiplyScalar(9), 1 - Math.exp(-10 * dt));   // suavizado independiente del framerate
+  jug.position.addScaledVector(vel, dt);
+  if (vel.lengthSq() > .1) jug.rotation.y = Math.atan2(vel.x, vel.z);
+  jug.position.y = .85 + Math.abs(Math.sin(t * 12)) * .08 * Math.min(vel.length() / 9, 1); // bob al caminar
+
+  for (const o of orbes) { o.position.y = 1 + Math.sin(t * 2 + o.id) * .2; o.rotation.y += dt;
+    if (o.position.distanceTo(jug.position) < .9) { explotar(o.position); o.position.set((Math.random() - .5) * 30, 1, (Math.random() - .5) * 30);
+      pts++; document.getElementById('pts').textContent = pts; sacudida = .25; } }
+  for (let i = chispas.length; i--;) { const s = chispas[i]; s.userData.t -= dt; s.userData.v.y -= 9 * dt;
+    s.position.addScaledVector(s.userData.v, dt); s.scale.setScalar(Math.max(s.userData.t / .6, 0));
+    if (s.userData.t <= 0) { escena.remove(s); chispas.splice(i, 1); } }
+
+  // Camara con retardo + sacudida que decae
+  camPos.lerp(jug.position.clone().add(new THREE.Vector3(0, 7, 9)), 1 - Math.exp(-4 * dt));
+  sacudida = Math.max(0, sacudida - dt);
+  cam.position.copy(camPos).add(new THREE.Vector3().randomDirection().multiplyScalar(sacudida * .4));
+  cam.lookAt(jug.position.x, 1, jug.position.z);
+  sol.position.set(jug.position.x + 8, 14, jug.position.z + 6); sol.target.position.copy(jug.position);
+  comp.render();
+});
+window.__estado = () => ({ pts, x: jug.position.x, z: jug.position.z });
+</script></body></html>

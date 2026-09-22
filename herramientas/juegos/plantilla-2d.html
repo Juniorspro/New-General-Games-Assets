@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Plantilla 2D</title>
+<style>
+ html,body{margin:0;height:100%;background:#120e1f;display:grid;place-items:center;overflow:hidden}
+ canvas{image-rendering:pixelated;touch-action:none}
+</style></head><body><canvas id="c"></canvas>
+<script>
+// Resolucion interna baja y escalado ENTERO: pixel art nitido en cualquier pantalla
+const W = 320, H = 180, cv = document.getElementById('c'), g = cv.getContext('2d');
+cv.width = W; cv.height = H; g.imageSmoothingEnabled = false;
+function tam() { const s = Math.max(1, Math.floor(Math.min(innerWidth / W, innerHeight / H)));
+  cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; }
+addEventListener('resize', tam); tam();
+
+// --- Hoja de sprites. Con arte real: const hoja = new Image(); hoja.src='heroe.png' y
+// mismo formato (cuadros de 16x16 en fila, una fila por animacion).
+// Aca se dibuja por codigo para que la plantilla ande sin assets.
+const T = 16, ANIM = { quieto: [0, 2, 3], corre: [1, 6, 12], salta: [2, 2, 1] }; // fila, cuadros, fps
+const hoja = document.createElement('canvas'); hoja.width = T * 6; hoja.height = T * 3;
+(() => { const h = hoja.getContext('2d'), P = (x, y, w, hh, c) => { h.fillStyle = c; h.fillRect(x, y, w, hh); };
+  for (let fila = 0; fila < 3; fila++) for (let f = 0; f < 6; f++) { const ox = f * T, oy = fila * T;
+    const bob = fila === 0 ? (f % 2) : fila === 1 ? [0, 1, 0, 0, 1, 0][f] : 0;
+    const pierna = fila === 1 ? [0, 2, 3, 0, -2, -3][f] : fila === 2 ? 2 : 0;
+    P(ox + 5, oy + 3 + bob, 6, 6, '#ffd6a0'); P(ox + 4, oy + 2 + bob, 8, 2, '#3b1f5c');   // cabeza + pelo
+    P(ox + 9, oy + 5 + bob, 1, 1, '#120e1f');                                            // ojo
+    P(ox + 4, oy + 9 + bob, 8, 4, '#e8414b'); P(ox + 4, oy + 9 + bob, 8, 1, '#ff7a6b');  // torso con luz de borde
+    P(ox + 5 + Math.max(0, pierna), oy + 13, 2, 3, '#2a2a4a'); P(ox + 9 - Math.max(0, -pierna), oy + 13, 2, 3, '#2a2a4a');
+  } })();
+
+// --- Fondos con parallax (3 capas, cada una mas lenta y mas desaturada = profundidad)
+function capa(color, alto, rug, semilla) { const c = document.createElement('canvas'); c.width = W * 2; c.height = H;
+  const x = c.getContext('2d'); x.fillStyle = color; x.beginPath(); x.moveTo(0, H);
+  for (let i = 0; i <= W * 2; i += 4) x.lineTo(i, H - alto - Math.sin(i * .02 + semilla) * rug - Math.sin(i * .053 + semilla * 3) * rug * .5);
+  x.lineTo(W * 2, H); x.fill(); return c; }
+const capas = [[capa('#2b2350', 90, 18, 1), .15], [capa('#3d2d63', 60, 14, 4), .35], [capa('#54386e', 35, 8, 9), .6]];
+
+// --- Nivel
+const suelo = 150, plataformas = [[60, 120, 50], [150, 95, 40], [230, 115, 60], [340, 90, 50], [430, 120, 70]];
+const monedas = plataformas.map(([x, y, w]) => ({ x: x + w / 2, y: y - 12, ok: 1 }));
+const p = { x: 20, y: suelo - T, vx: 0, vy: 0, piso: 0, coyote: 0, buffer: 0, anim: 'quieto', t: 0, der: 1, sx: 1, sy: 1 };
+let camX = 0, sacudida = 0, pausa = 0, pts = 0; const parts = [];
+
+const k = {}; onkeydown = e => { k[e.code] = 1; if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) p.buffer = .12; };
+onkeyup = e => k[e.code] = 0;
+cv.onpointerdown = e => { const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
+  if (x > .66) p.buffer = .12; else k.toque = x < .33 ? -1 : 1; };
+cv.onpointerup = () => k.toque = 0;
+
+function polvo(x, y, n, c) { for (let i = 0; i < n; i++) parts.push({ x, y, vx: (Math.random() - .5) * 60, vy: -Math.random() * 50, t: .4, c }); }
+
+// Paso FIJO de fisica (1/120 s): mismo salto en 60 Hz, 144 Hz o un celular lento
+const DT = 1 / 120; let acum = 0, antes = performance.now();
+function fisica(dt) {
+  if (pausa > 0) { pausa -= dt; return; }                         // hit-stop: congela un instante al agarrar algo
+  const dir = (k.ArrowRight || k.KeyD ? 1 : 0) - (k.ArrowLeft || k.KeyA ? 1 : 0) || k.toque || 0;
+  p.vx += (dir * 110 - p.vx) * Math.min(1, (p.piso ? 14 : 6) * dt);   // menos control en el aire
+  if (dir) p.der = dir;
+  p.coyote = p.piso ? .09 : p.coyote - dt; p.buffer -= dt;       // coyote time + buffer de salto
+  if (p.buffer > 0 && p.coyote > 0) { p.vy = -250; p.buffer = p.coyote = 0; p.sx = .7; p.sy = 1.35; polvo(p.x + 8, p.y + T, 6, '#cbb8ff'); }
+  const sube = p.vy < 0, sostiene = k.Space || k.ArrowUp || k.KeyW;
+  p.vy += (sube && !sostiene ? 1500 : 800) * dt;                 // salto variable: soltar = cae antes
+  p.x += p.vx * dt; p.y += Math.min(p.vy, 400) * dt;
+  const estaba = p.piso; p.piso = 0;
+  if (p.y + T >= suelo) { p.y = suelo - T; p.vy = 0; p.piso = 1; }
+  for (const [x, y, w] of plataformas) if (p.vy >= 0 && p.x + 12 > x && p.x + 4 < x + w && p.y + T >= y && p.y + T - p.vy * dt <= y + 1) { p.y = y - T; p.vy = 0; p.piso = 1; }
+  if (p.piso && !estaba) { p.sx = 1.3; p.sy = .75; polvo(p.x + 8, p.y + T, 5, '#cbb8ff'); }
+  p.sx += (1 - p.sx) * 12 * dt; p.sy += (1 - p.sy) * 12 * dt;    // squash & stretch vuelve a 1
+  for (const m of monedas) if (m.ok && Math.abs(p.x + 8 - m.x) < 10 && Math.abs(p.y + 8 - m.y) < 12) {
+    m.ok = 0; pts++; pausa = .05; sacudida = .15; polvo(m.x, m.y, 14, '#ffe066'); }
+  for (let i = parts.length; i--;) { const q = parts[i]; q.t -= dt; q.vy += 200 * dt; q.x += q.vx * dt; q.y += q.vy * dt; if (q.t <= 0) parts.splice(i, 1); }
+  p.anim = !p.piso ? 'salta' : Math.abs(p.vx) > 15 ? 'corre' : 'quieto'; p.t += dt;
+  camX += (p.x - W * .4 - camX) * 5 * dt; camX = Math.max(0, camX); sacudida = Math.max(0, sacudida - dt);
+}
+
+function dibujar() {
+  const grad = g.createLinearGradient(0, 0, 0, H); grad.addColorStop(0, '#1b1333'); grad.addColorStop(1, '#6b3d6e');
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  g.save(); if (sacudida) g.translate((Math.random() - .5) * sacudida * 20 | 0, (Math.random() - .5) * sacudida * 20 | 0);
+  for (const [c, f] of capas) { const ox = -(camX * f) % W; g.drawImage(c, ox | 0, 0); g.drawImage(c, (ox + W * 2) | 0, 0); }
+  const cx = Math.round(camX);                                  // redondear la camara: sin temblor de sub-pixel
+  g.fillStyle = '#1e1630'; g.fillRect(0, suelo, W, H - suelo); g.fillStyle = '#8a5fbf'; g.fillRect(0, suelo, W, 2);
+  for (const [x, y, w] of plataformas) { g.fillStyle = '#2d2148'; g.fillRect(x - cx, y, w, 6); g.fillStyle = '#b48cff'; g.fillRect(x - cx, y, w, 1); }
+  const brillo = Math.sin(performance.now() / 150) > 0;
+  for (const m of monedas) if (m.ok) { g.fillStyle = '#ffe066'; g.fillRect(m.x - cx - 2, m.y - 3, 4, 6); if (brillo) { g.fillStyle = '#fff'; g.fillRect(m.x - cx - 1, m.y - 2, 1, 2); } }
+  for (const q of parts) { g.globalAlpha = q.t / .4; g.fillStyle = q.c; g.fillRect(q.x - cx | 0, q.y | 0, 2, 2); } g.globalAlpha = 1;
+  const [fila, n, fps] = ANIM[p.anim], cuadro = Math.floor(p.t * fps) % n;
+  g.save(); g.translate(Math.round(p.x - cx + 8), Math.round(p.y + T)); g.scale(p.der * p.sx, p.sy);
+  g.drawImage(hoja, cuadro * T, fila * T, T, T, -8, -T, T, T); g.restore();
+  g.restore();
+  g.fillStyle = '#fff'; g.font = 'bold 10px monospace'; g.fillText('★ ' + pts, 8, 14);
+}
+
+function bucle(ahora) { acum += Math.min((ahora - antes) / 1000, .1); antes = ahora;
+  while (acum >= DT) { fisica(DT); acum -= DT; } dibujar(); requestAnimationFrame(bucle); }
+requestAnimationFrame(bucle);
+window.__estado = () => ({ pts, x: p.x, anim: p.anim });
+</script></body></html>
