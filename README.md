@@ -6,7 +6,9 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 > **Empezá por acá:** [`ARRANQUE.md`](ARRANQUE.md) dice **cómo se trabaja**
 > (la máquina, las trampas ya pagadas, cómo se despliega). [`ESTADO.md`](ESTADO.md)
 > dice **qué hay construido** (cada página, cada endpoint, cada tabla).
-> Una sesión nueva debería leer los dos, en ese orden.
+> Una sesión nueva no los lee enteros: empieza por
+> [`memoria/INDICE.md`](memoria/INDICE.md), que dice qué sección abrir
+> ([`MEMORIA.md`](MEMORIA.md) explica cómo se usa y se mantiene).
 
 > **Para hacer un juego que se vea bien:** [`GUIA-JUEGOS.md`](GUIA-JUEGOS.md),
 > la receta con Rezona: qué pedir, cómo procesarlo y qué hacer en el motor.

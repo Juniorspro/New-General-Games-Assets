@@ -5,7 +5,8 @@ por qué está hecho así.
 
 > **Este documento dice QUÉ HAY.** El de al lado, `ARRANQUE.md`, dice **CÓMO SE
 > TRABAJA** acá: la máquina, las herramientas, Rezona Lab y las trampas que ya
-> costaron una tarde cada una. Una sesión nueva debería leer los dos.
+> costaron una tarde cada una. Una sesión nueva no los lee enteros: empieza
+> por `memoria/INDICE.md`, que dice qué sección abrir.
 
 Todos los números de acá están medidos contra la base de producción, no
 estimados.

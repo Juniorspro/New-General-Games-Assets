@@ -9,7 +9,8 @@ dice "anda", es porque se corrió. Si no se pudo probar, lo dice.
 
 > **Este documento dice CÓMO SE TRABAJA acá.** El de al lado, `ESTADO.md`, dice
 > **QUÉ HAY CONSTRUIDO**: cada página, cada endpoint, cada tabla, cada decisión
-> de los dos sitios. Una sesión nueva debería leer los dos — este primero.
+> de los dos sitios. Una sesión nueva no los lee enteros: empieza por
+> `memoria/INDICE.md`, que dice qué sección abrir.
 
 ---
 
@@ -388,8 +389,10 @@ corridas. Antes de "arreglar" algo, comprobá que lo que medís sea lo que creé
   tiempo vale más que una promesa.
 - **Nunca pongas el identificador del modelo** en commits, código ni nada que
   vaya al repo.
-- Rama de trabajo: `claude/repo-session-change-m7f12k`, en el repo
-  `Juniorspro/New-General-Games-Assets`. Commit, push, y desplegar.
+- Rama de trabajo: la que da cada sesión, en el repo
+  `Juniorspro/New-General-Games-Assets` (fueron
+  `claude/repo-session-change-m7f12k` y después `claude/fijate-iszyer`).
+  Commit, push, y desplegar.
 - **El repo cambió.** El viejo era `Juniorspro/General-Assets-Games`, rama
   `claude/patron-2-93yeb9`: ahí quedaron los 487 MB de binarios sueltos y
   `splat-ciudad/`. Acá está el código y la documentación.
