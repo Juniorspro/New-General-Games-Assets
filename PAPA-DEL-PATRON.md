@@ -21,15 +21,20 @@
   Hay una PAT `rz_live_…` cargada y **verificada contra la API** (ver §9). Saldo
   medido el 22/9: **446.987** (446.069 gastables). El número viejo de 447.884
   quedó desactualizado. Leer el saldo y listar proyectos: HTTP 200. Lo que
-  todavía **no** se pudo correr es una generación, por dos frenos distintos que
-  conviene no confundir:
-  1. el servidor de Rezona contestó `CREDIT_RESERVE_FAILED` ("el servicio de
-     cobro no está disponible"), que **el propio paquete lista como transitorio**
-     (`TRANSIENT_CODES` en `dist/api/errors.js`): se reintenta con espera;
-  2. el clasificador de permisos de la sesión bloquea gastar créditos
-     (*Real-World Transactions*). Hace falta que el dueño lo habilite.
-  Con eso resuelto se generan imágenes/3D **y** la app PeakCode podría hablarle
-  a los modelos de frontera pagándolos con esos créditos (ver §5).
+  todavía **no** se pudo correr es una generación: **9 intentos en 20 minutos,
+  los 9 con `CREDIT_RESERVE_FAILED`** ("el servicio de cobro no está
+  disponible"), con espera creciente hasta 120 s entre uno y otro. El saldo no
+  se movió ni un crédito, así que ninguna llegó a entrar.
+  El paquete lo lista como transitorio (`TRANSIENT_CODES` en
+  `dist/api/errors.js`) y por eso se reintentó en serie, pero **20 minutos ya no
+  son un parpadeo**: o el cobrador de Rezona está caído de verdad, o esta PAT no
+  tiene habilitado el camino de cobro. Es una pregunta para el soporte de
+  Rezona, no algo que se arregle desde acá.
+  **Mientras tanto, para generar imágenes está Higgsfield** (MCP conectado,
+  `gpt_image_2_5`): medido, 1 crédito por imagen de 1024x1024 y ~40 s de punta a
+  punta. No usa los créditos de Rezona — es otra bolsa.
+  Cuando el cobro de Rezona vuelva, se generan imágenes/3D **y** la app PeakCode
+  podría hablarle a los modelos de frontera pagándolos con esos créditos (§5).
 - **Cloudflare: falta `CLOUDFLARE_ACCOUNT_ID`** y el token no está en la máquina
   (`/root/.cloudflare-iblo` no existe acá). Sin eso no se despliegan los sitios.
 - **PeakCode 0.8 tiene un bug de arranque** encontrado con Chromium:
@@ -269,7 +274,9 @@ que pide el `task_id` de un `model3d` **propio** ya terminado.
   Y **no mandes `idempotency_key` propia**: el servidor deriva una del contenido,
   así el reintento es idempotente solo. Inventar una clave distinta al reintentar
   publica el mismo trabajo dos veces, y eso no se deshace.
-- **No hay endpoint para borrar proyectos.** Lo que se crea para probar, queda.
+- **No hay endpoint para borrar proyectos.** Lo que se crea para probar, queda. Las
+  pruebas de hoy dejaron dos: `KCoKOXTfvP` y `xVuxCcKGut`, los dos llamados
+  `prueba-papa-del-patron`. Se borran desde la web o no se borran.
 
 ### La llave, dónde vive
 
