@@ -2,7 +2,10 @@
    LA LETRA ES LA DE UNA CASETERA: monoespaciada, en mayúsculas, blanca con
    sombra negra corrida. Es la misma voz que la fecha de la cámara, así el menú
    no parece de otro juego. */
+/* UN SOLO TEMA, OSCURO, A PROPÓSITO: es una grabación de video, no una página
+   que cambia con el sistema. Los colores se pintan explícitos en todo. */
 :root {
+  color-scheme: dark;
   --vcr: "Courier New", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --azul: #1f3fb8;
   --papel: #f4f1e6;

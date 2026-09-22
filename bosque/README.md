@@ -4,13 +4,16 @@ Un bosque en tercera persona, grabado en VHS. Cinco cintas perdidas entre el
 sendero, la cabaña, la fogata, el mirador y los abedules. Cuando la imagen
 empieza a fallar, hay una cinta cerca.
 
+**Para jugar: `bosque-en-un-archivo.html`, con doble clic.** Es el juego entero
+en un solo HTML de 12 MB —código, texturas, modelos y el caminante adentro—, y
+no pide nada afuera: anda sin internet y sin servidor. También está subido en
+https://rezona.ai/game/pgcserver/play/VvyVJutbOf
+
     npm install
-    node herramientas/armar.mjs          # arma dist/ (juego.js + datos/)
-    cd dist && python3 -m http.server    # y abrir http://127.0.0.1:8000
+    node herramientas/armar.mjs          # arma dist/ y bosque-en-un-archivo.html
+    node pruebas/un-archivo.mjs          # el archivo único abierto con doble clic
     node pruebas/ver.mjs                 # recorre el bosque y saca capturas
     node pruebas/cintas.mjs              # las cinco cintas de punta a punta
-
-**Para jugar:** https://rezona.ai/game/pgcserver/play/VvyVJutbOf
 
 | | |
 |---|---|
@@ -62,13 +65,14 @@ procesador**, sin placa de video):
 
 | | |
 |---|---|
-| árboles | **3.139** (abetos, píceas y abedules) |
+| árboles | **3.150** (abetos, píceas y abedules) |
 | helechos / matas de pasto / flores | 2.242 / 7.589 / 141 |
 | triángulos de un abeto cercano / medio / lejano | ~2.600 / ~500 / 4 |
 | triángulos por cuadro, calidad alta | **310 mil a 760 mil** según dónde |
 | llamadas de dibujo por cuadro | 60 a 74 |
 | armar el mundo (rejilla, árboles, flora, objetos) | ~1,4 s |
-| descarga total | **9,3 MB** (708 KB de código, el resto texturas y modelos) |
+| descarga total | **9,3 MB** en carpeta (711 KB de código); **12,1 MB** en un archivo, por el base64 |
+| archivo único abierto con `file://` | carga hasta el menú, no hace ningún pedido afuera, sin errores |
 
 **Lo que NO está medido: los cuadros por segundo en un teléfono.** Este
 navegador tarda ~1,5 s por cuadro porque no tiene placa; ese número no dice
@@ -120,6 +124,13 @@ Y el filtro es el radar: cerca de una cinta sin recoger la imagen falla más.
   follaje que roza la cámara se abre con un tramado.
 - **El menú no entraba en un teléfono acostado.** 360 px de alto: el botón de
   PLAY quedaba debajo del borde y no había forma de empezar.
+- **El archivo único no puede pedir nada.** Abierto con doble clic (`file://`)
+  el navegador no deja leer la carpeta de al lado, y publicado en una página con
+  política de seguridad tampoco deja hacer `fetch` a direcciones `data:` ni
+  `blob:`. Por eso los GLB se decodifican a mano y se le pasan enteros al
+  parser, y las texturas de adentro de cada GLB se leen como `<img>` en vez de
+  con `ImageBitmapLoader` (que hace `fetch`): sin eso el caminante salía sin
+  textura y sin ningún error.
 - **Dos parches de shader se pisaban.** `onBeforeCompile` es uno por material,
   y three reutiliza programas entre materiales cuyos parches tienen el mismo
   texto. `parche.js` encadena y le da a cada parche su clave.
