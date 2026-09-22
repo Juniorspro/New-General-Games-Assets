@@ -15,14 +15,14 @@
 (function(){
 'use strict';
 
-const {G,TOPES,Taller,pedir}=window.PeakNucleo;
+const {G,TOPES,Taller,mandar}=window.PeakNucleo;
 const {correrAgente}=window.PeakAgente;
 
 /** Le pide al modelo que parta la tarea. Devuelve un arreglo de subtareas. */
 async function planificar(tarea, al){
   al('paso',{nombre:'Planificando', etiqueta:'plan'});
   const cuantos=Math.max(2,Math.min(G.obreros,TOPES.obrerosMax));
-  const r=await pedir({mensajes:[
+  const r=await mandar({mensajes:[
     {role:'system',content:
       'Partís trabajos en pedazos independientes para repartir entre agentes '+
       'que trabajan a la vez y NO se ven entre ellos.'},

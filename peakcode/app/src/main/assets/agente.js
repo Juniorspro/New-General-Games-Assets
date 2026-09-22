@@ -277,7 +277,9 @@ async function correrAgente(op){
       mensajes, modelo:op.modelo,
       onTexto:d=>lector.empujar(d),
       incompleto:()=>lector.incompleto,
-      onSeguir:(n,largo)=>al('seguir',{n, largo, etiqueta:op.etiqueta})
+      onSeguir:(n,largo)=>al('seguir',{n, largo, etiqueta:op.etiqueta}),
+      onCambio:c=>al('cambio-modelo',{...c, etiqueta:op.etiqueta}),
+      onRuta:r=>al('ruta',{...r, etiqueta:op.etiqueta})
     });
     const acciones=lector.terminar();
 

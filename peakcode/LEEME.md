@@ -400,3 +400,88 @@ algo real, y el entorno lo bloqueó dos veces: primero por exponer un servicio,
 después por crear una superficie de control remoto. Sin poder probarlo no se
 escribe: el control de neko va por WebSocket con un formato que habría que
 adivinar, y código adivinado que dice "esto anda" es peor que no tenerlo.
+
+---
+
+# 1.1 — flota de modelos
+
+## Por qué te frenaban
+
+El motor gratis es **una bolsa compartida** por todos los que usan la app sin
+llave. Cuando el proveedor te corta, te corta, y hasta la 1.0 eso terminaba en
+un error y ahí quedabas. La 1.1 no saca el límite —eso no lo puede hacer
+ninguna app— sino que **deja de depender de un solo motor**.
+
+## La verdad sobre "modelos públicos" (medido el 22/9)
+
+| proveedor | ¿sin llave? | modelos gratis |
+|---|---|---|
+| **Pollinations** | **sí** | **1** (GPT-OSS 20B) |
+| OpenRouter | no, llave gratis | **21** con sufijo `:free` |
+| Groq | no, llave gratis | varios |
+| Cerebras | no, llave gratis | varios |
+| DeepInfra | no, llave | varios |
+
+Comprobado a mano: OpenRouter y DeepInfra **listan** su catálogo sin llave, pero
+una llamada de inferencia sin llave devuelve **401**. Listar no es poder usar.
+
+Conclusión incómoda: **quince modelos sin pegar ninguna llave no existen**. Con
+una sola llave gratis de OpenRouter pasás de 1 modelo a 22, y ahí sí hay flota.
+Si alguien promete quince modelos sin ninguna llave, está usando la llave de
+otro.
+
+## Cómo elige, y por qué no es a ojo
+
+El catálogo de OpenRouter publica por modelo el `context_length`, si acepta
+`tools`, y los índices de referencia de Artificial Analysis
+(`intelligence_index`, `coding_index`, `agentic_index`). El ruteo clasifica el
+pedido y ordena por el índice que corresponde:
+
+| lo que pediste | cómo se detecta | por qué ordena |
+|---|---|---|
+| **código** | bloques ```, `function`, `def`, extensiones, `error:` | `coding_index` |
+| **razonar** | "por qué", "analizá", "paso a paso" | modelos que razonan, después `intelligence_index` |
+| **texto largo** | más de 12.000 caracteres | `context_length` |
+| **agente** | estás en modo Agente o Workflow | acepta `tools`, después `agentic_index` |
+| **general** | lo demás | `intelligence_index` |
+
+La clasificación es a propósito grosera y no gasta una llamada: si se equivoca,
+el peor caso es que use un modelo igual de bueno.
+
+## El cambio automático
+
+Cuando un modelo falla, se mira el error:
+
+| error | qué pasa | cuánto se enfría |
+|---|---|---|
+| 429 / rate limit | prueba el que sigue | 90 s |
+| 5xx / overload | prueba el que sigue | 30 s |
+| se colgó | prueba el que sigue | 45 s |
+| 401 / 403 | prueba el que sigue | 10 min |
+| 404 modelo inexistente | prueba el que sigue | 1 h |
+| **400 y demás** | **NO rota** | — |
+
+Un 400 es un problema del pedido: rotar sería gastar seis llamadas para recibir
+seis veces el mismo error. Hasta 6 intentos por pedido.
+
+Enfriado quiere decir que la próxima vez ni se lo intenta, así que no se
+malgastan llamadas contra el que ya te frenó.
+
+## Un agujero que apareció haciendo esto
+
+Al probar el cambio automático salió una llamada de más que iba al motor viejo.
+Era el **autotítulo**, que llamaba directo sin pasar por la flota. Lo mismo
+pasaba con el **resumen de contexto** y con el **planificador del workflow**:
+tres caminos que seguían pegándole al motor frenado aunque la flota tuviera
+otros libres. Ahora todas las llamadas salen por `mandar()`, que es el único
+punto de salida.
+
+## Probado
+
+29 verificaciones en Chromium, contra los assets extraídos del APK: que junte
+los catálogos y lea bien sus campos, que elija el modelo correcto para cada
+tipo de tarea, que rote cuando frenan y que la respuesta llegue igual, que el
+enfriado evite reintentar al frenado, que un 400 **no** dispare la rotación, y
+que cuando de verdad no queda ninguno lo diga en vez de quedarse colgado.
+
+Los catálogos de prueba son copias de la forma real que devuelve OpenRouter.

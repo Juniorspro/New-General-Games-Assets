@@ -83,6 +83,14 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
 #preview iframe{flex:1;border:0;width:100%;background:#fff}
 .fila{display:flex;gap:8px}.fila>*{flex:1}
 
+.motor{border:1px solid var(--linea);border-radius:12px;padding:11px 12px;margin:9px 0;background:var(--panel)}
+.motor .fila1{display:flex;align-items:center;gap:8px}
+.motor .nom{flex:1;font-weight:600}
+.motor input{margin-top:8px;font:12.5px ui-monospace,monospace}
+.motor .comor{color:var(--tenue);font-size:12.5px;margin-top:7px;line-height:1.45}
+.motor .err{color:#ffb3ad;font-size:12.5px;margin-top:6px}
+.quien{color:var(--tenue);font:11.5px ui-monospace,monospace;margin-top:5px}
+
 /* ── panel lateral de conversaciones, como el de Claude ────────────────── */
 #cajon{position:fixed;top:0;bottom:0;left:0;width:84vw;max-width:340px;background:var(--panel);
  border-right:1px solid var(--linea);z-index:12;transform:translateX(-102%);
@@ -189,7 +197,8 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
   </div>
   <div id=cajonLista></div>
   <div class=tapa-inf>
-    <button id=bConectores>🔌  Conectores</button>
+    <button id=bMotores>⚡  Motores</button>
+  <button id=bConectores>🔌  Conectores</button>
     <button id=bAjustes2>⚙  Ajustes</button>
   </div>
 </div>
@@ -205,6 +214,21 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
   <button class=env id=bEnviar>↑</button>
   <button class="detener oculto" id=bDetener>■</button>
 </footer>
+
+<div class="tapa" id=motores>
+  <h2>Motores</h2>
+  <div class=pista>Cuantos más motores tengas prendidos, menos te frenan: si uno te
+   corta, la app sigue sola con otro.</div>
+  <label style="display:flex;align-items:center;gap:10px;margin:16px 0 4px">
+    <input type=checkbox id=cAuto style="width:auto;flex:0 0 auto"> Elegir el modelo solo, según lo que pidas
+  </label>
+  <div class=pista>Apagado, usa siempre el que elegiste a mano en el selector de abajo.</div>
+  <div id=listaMotores></div>
+  <button class=boton id=bRecargarCat>Actualizar los catálogos</button>
+  <div class=estado oculto id=eMotores></div>
+  <div id=resumenFlota class=pista></div>
+  <button class="boton secundario" id=bCerrarMotores>Cerrar</button>
+</div>
 
 <div class="tapa" id=conectores>
   <h2>Conectores</h2>
@@ -273,6 +297,7 @@ o bien:
 <script src="sesiones.js"></script>
 <script src="nucleo.js"></script>
 <script src="mcp.js"></script>
+<script src="flota.js"></script>
 <script src="agente.js"></script>
 <script src="flujo.js"></script>
 <script src="interfaz.js"></script>

@@ -155,13 +155,23 @@ function pedir(op){
       error(msg){ if(!vivo)return; cerrar(); falla(new Error(msg)); }
     });
 
-    const cuerpo={ model:op.modelo||G.modelo||undefined,
-                   messages:op.mensajes, stream:true };
+    // destino: a dónde va ESTA llamada. Sin él, al motor configurado a mano.
+    // Con él, la flota manda cada llamada al proveedor que eligió.
+    const d=op.destino||{chat:G.chat, key:G.key, modelo:op.modelo||G.modelo};
+    const cuerpo={ model:d.modelo||undefined, messages:op.mensajes, stream:true };
     if(op.temperatura!=null) cuerpo.temperature=op.temperatura;
-    try{ Peak.stream(id, G.chat, G.key, JSON.stringify(cuerpo)); }
+    try{ Peak.stream(id, d.chat, d.key||'', JSON.stringify(cuerpo)); }
     catch(e){ cerrar(); falla(e); }
   });
 }
+
+/**
+ * Por acá salen TODAS las llamadas al modelo. Si la flota está cargada, elige
+ * y reintenta con otro cuando frenan; si no, va derecho. Tenerlo en un solo
+ * lugar importa: si el resumen de contexto o el título de la charla salieran
+ * por afuera, seguirían pegándole al motor frenado.
+ */
+function mandar(op){ return (window.PeakNucleo.enrutador||pedir)(op); }
 
 /**
  * Lo mismo, pero sin techo de escritura: si la respuesta viene cortada, le
@@ -177,7 +187,7 @@ async function pedirLargo(op){
   let entero='', vueltas=0;
   const cortada=()=>op.incompleto?op.incompleto():false;
   while(true){
-    const r=await pedir({...op, mensajes});
+    const r=await mandar({...op, mensajes});
     entero+=r.texto;
     if(Corte.pedido) return {texto:entero, vueltas};
     const hayQueSeguir=(r.motivoFin==='length'||cortada()) && r.texto.trim()!=='';
@@ -210,7 +220,7 @@ async function compactar(hist, avisar){
   const crudo=viejos.map(m=>(m.role==='user'?'USUARIO: ':'ASISTENTE: ')+m.content).join('\n\n');
   let resumen;
   try{
-    const r=await pedir({mensajes:[{role:'user',content:
+    const r=await mandar({mensajes:[{role:'user',content:
       'Resumí esta conversación en menos de 1200 palabras. Guardá: qué pidió la '+
       'persona, qué se decidió, qué archivos se crearon y qué falta. Sin '+
       'preámbulo, solo el resumen.\n\n'+crudo.slice(-90000)}]});
@@ -223,7 +233,8 @@ async function compactar(hist, avisar){
           ...recientes];
 }
 
-window.PeakNucleo={G,LIBRE,TOPES,Taller,pedir,pedirLargo,compactar,pesoDe,salvar,leer,escribir,
+window.PeakNucleo={G,LIBRE,TOPES,Taller,pedir,mandar,pedirLargo,compactar,pesoDe,salvar,leer,escribir,
+  enrutador:null,
   enVuelo,Corte,abortar,reanudar};
 
 })();

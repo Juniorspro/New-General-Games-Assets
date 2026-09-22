@@ -12,12 +12,13 @@
 'use strict';
 
 const $=s=>document.querySelector(s);
-const {G,LIBRE,TOPES,Taller,pedir,pedirLargo,compactar,salvar,Corte,abortar,reanudar}=window.PeakNucleo;
+const {G,LIBRE,TOPES,Taller,pedir,mandar,pedirLargo,compactar,salvar,Corte,abortar,reanudar}=window.PeakNucleo;
 const {correrAgente,human}=window.PeakAgente;
 const {correrFlujo}=window.PeakFlujo;
 const FMT=window.PeakFormatos;
 const {Sesiones}=window.PeakSesiones;
 const {Conectores,interpretar,conectar}=window.PeakMCP;
+const {Flota,cargarCatalogos,clasificar}=window.PeakFlota;
 
 let hist=[];
 let trabajando=false;
@@ -192,6 +193,13 @@ function pintor(panel){
                 'continuación '+d.n+' · '+human(d.largo),'hecho',et);
         return;
       case 'compactando': renglon(panel,'Compactando el contexto','','hecho',et); return;
+      case 'cambio-modelo':
+        renglon(panel,d.de+' está frenado, sigo con otro',
+                d.quedan+' modelo'+(d.quedan===1?'':'s')+' más para probar','hecho',et);
+        return;
+      case 'ruta':
+        if(Flota.auto) renglon(panel,d.modelo,'elegido para "'+d.tarea+'"','hecho',et);
+        return;
       case 'delegando': renglon(panel,'Largando '+d.cuantos+' agentes en paralelo','','hecho',et); return;
       case 'paso':
         // el paso anterior recién se da por hecho cuando arranca el siguiente
@@ -237,6 +245,14 @@ function pista(m){
   return 'no pude conectar. '+m;
 }
 
+function renglonQuien(nodo){
+  if(!Flota.ultimo||!Flota.auto) return;
+  const q=document.createElement('div'); q.className='quien';
+  q.textContent=Flota.ultimo.modelo+' · '+Flota.ultimo.prov+
+    (Flota.ultimo.intento>1?' (los '+(Flota.ultimo.intento-1)+' anteriores estaban frenados)':'');
+  nodo.appendChild(q);
+}
+
 async function modoChat(){
   const caja=poner('…','el',false);
   hist=await compactar(hist, ()=>{ caja.textContent='(compactando el contexto…)'; });
@@ -244,11 +260,15 @@ async function modoChat(){
   const r=await pedirLargo({
     mensajes:hist,
     onTexto:(d,t)=>{ texto=t; caja.textContent=t; abajo(); },
-    incompleto:()=>false
+    incompleto:()=>false,
+    onCambio:c=>{ caja.textContent='('+c.de+' está frenado, sigo con otro…)'; },
+    onRuta:()=>{}
   });
   const fin=(r.texto||texto||'(el modelo no devolvió nada)').trim();
   hist.push({role:'assistant',content:fin}); guardarHist();
-  caja.remove(); repintar(); Sesiones.tocar(Sesiones.activa); autoTitular();
+  caja.remove(); repintar();
+  const ultima=$('#hilo').lastElementChild; if(ultima) renglonQuien(ultima);
+  Sesiones.tocar(Sesiones.activa); autoTitular();
 }
 
 async function modoAgente(tarea, enFlujo){
@@ -595,7 +615,7 @@ async function autoTitular(){
   ses.auto=true; Sesiones._guardarLista();       // sigue siendo automático
   pintarCab(); pintarCajon();
   try{
-    const r=await pedir({mensajes:[{role:'user',content:
+    const r=await mandar({mensajes:[{role:'user',content:
       'Poné un título de 3 a 6 palabras para esta conversación. Sin comillas, '+
       'sin punto final, sin explicar nada. Solo el título.\n\n'+
       primero.content.slice(0,700)}]});
@@ -675,9 +695,68 @@ $('#bPegarMCP').onclick=async()=>{
   $('#cPegar').value=''; pintarConectores();
 };
 
+// ── motores ──────────────────────────────────────────────────────────────────
+function pintarMotores(){
+  $('#cAuto').checked=Flota.auto;
+  const l=$('#listaMotores'); l.innerHTML='';
+  Flota.proveedores.forEach(p=>{
+    const d=document.createElement('div'); d.className='motor';
+    const f=document.createElement('div'); f.className='fila1';
+    const n=document.createElement('div'); n.className='nom'; n.textContent=p.nombre;
+    const cuantos=Flota.modelos.filter(m=>m.prov===p.id).length;
+    const pa=document.createElement('span');
+    if(p.activo&&(p.sinLlave||p.llave)){
+      pa.className='pastilla '+(cuantos?'on':'gris');
+      pa.textContent=cuantos?cuantos+' modelos':'sin catálogo';
+    }else{ pa.className='pastilla gris'; pa.textContent=p.sinLlave?'apagado':'falta la llave'; }
+    const sw=document.createElement('input'); sw.type='checkbox'; sw.checked=!!p.activo;
+    sw.style.cssText='width:auto;flex:0 0 auto';
+    sw.onchange=()=>{ p.activo=sw.checked; Flota.guardar(); pintarMotores(); };
+    f.appendChild(n); f.appendChild(pa); f.appendChild(sw);
+    d.appendChild(f);
+    if(!p.sinLlave){
+      const i=document.createElement('input'); i.type='password';
+      i.placeholder='pegá acá la llave'; i.value=p.llave||'';
+      i.onchange=()=>{ p.llave=i.value.trim(); Flota.guardar(); pintarMotores(); };
+      d.appendChild(i);
+    }
+    const c=document.createElement('div'); c.className='comor'; c.textContent=p.sacar;
+    d.appendChild(c);
+    if(p.error){ const e=document.createElement('div'); e.className='err';
+                 e.textContent='Último intento: '+p.error; d.appendChild(e); }
+    l.appendChild(d);
+  });
+  const r=$('#resumenFlota');
+  const tot=Flota.modelos.length;
+  if(!tot) r.textContent='Todavía no hay catálogos cargados. Tocá "Actualizar los catálogos".';
+  else{
+    const conH=Flota.modelos.filter(m=>m.herramientas).length;
+    const grande=Flota.modelos.reduce((a,m)=>Math.max(a,m.ctx||0),0);
+    r.textContent=tot+' modelos en la flota · '+conH+' sirven para el modo agente · '+
+      'el de más contexto aguanta '+grande.toLocaleString('es-AR')+' tokens.';
+  }
+}
+$('#bMotores').onclick=()=>{ cerrarCajon(); pintarMotores(); $('#motores').classList.add('ver'); };
+$('#bCerrarMotores').onclick=()=>$('#motores').classList.remove('ver');
+$('#cAuto').onchange=e=>{ Flota.auto=e.target.checked; Flota.guardar(); pintarCab(); };
+$('#bRecargarCat').onclick=async()=>{
+  const e=$('#eMotores'); e.classList.remove('oculto','ok','no'); e.textContent='Buscando…';
+  await cargarCatalogos(nom=>{ e.textContent='Preguntándole a '+nom+'…'; });
+  const malos=Flota.proveedores.filter(p=>p.error&&p.activo&&(p.sinLlave||p.llave));
+  e.classList.add(Flota.modelos.length?(malos.length?'no':'ok'):'no');
+  e.textContent=Flota.modelos.length
+    ? Flota.modelos.length+' modelos listos.'+(malos.length?' No entraron: '+
+        malos.map(p=>p.nombre+' ('+p.error+')').join(', '):'')
+    : 'No entró ninguno. '+(malos.map(p=>p.nombre+': '+p.error).join(' · ')||'');
+  pintarMotores();
+};
+
 // ── arranque ─────────────────────────────────────────────────────────────────
 arrancarSesiones();
 cargarCatalogo().then(pintarChip);
+// los catálogos de la flota se traen en segundo plano: si no llegan, la app
+// sigue andando con el motor configurado a mano
+if(Flota.auto) cargarCatalogos().then(()=>{ if($('#motores').classList.contains('ver')) pintarMotores(); });
 pintarModo(); pintarCab(); repintar(); pintarTaller(); pintarCajon();
 
 })();
