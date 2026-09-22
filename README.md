@@ -3,10 +3,14 @@
 Continuación de `Juniorspro/General-Assets-Games`. Acá está **el código y la
 documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 
-> **Empezá por acá:** [`ARRANQUE.md`](ARRANQUE.md) dice **cómo se trabaja**
-> (la máquina, las trampas ya pagadas, cómo se despliega). [`ESTADO.md`](ESTADO.md)
-> dice **qué hay construido** (cada página, cada endpoint, cada tabla).
-> Una sesión nueva debería leer los dos, en ese orden.
+> **Empezá por acá:** [`PAPA-DEL-PATRON.md`](PAPA-DEL-PATRON.md) es el traspaso
+> al día — lo que está trabado ahora mismo, la GPU gratis de Kaggle, el Blender
+> por script, la app PeakCode y lo que ya se decidió no volver a intentar.
+> Después: [`ARRANQUE.md`](ARRANQUE.md) dice **cómo se trabaja** (la máquina, las
+> trampas ya pagadas, cómo se despliega) y [`ESTADO.md`](ESTADO.md) dice **qué hay
+> construido** (cada página, cada endpoint, cada tabla). Una sesión nueva debería
+> leer los tres, en ese orden: donde el traspaso contradice a los otros dos, manda
+> el traspaso, que es el más nuevo.
 
 ## Qué hay
 
