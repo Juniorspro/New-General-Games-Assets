@@ -29,6 +29,12 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 
 ## Quién pide
 
+- **Siempre quiere el HTML para descargar** (lo pidió el 22/9, "siempre"). Toda
+  página o app que se haga: además del link, se le **manda el archivo**
+  (`SendUserFile`, `display: "attach"`), completo y que ande sin internet.
+  Se arma con `herramientas/descargable/empaquetar.py`: el archivo de un
+  artifact solo no sirve, porque no trae `<!doctype>` ni `meta charset` (los
+  acentos se rompen al abrirlo del disco) y carga las librerías de la CDN.
 - Prefiere que se corrija lo que está mal antes que se agregue al lado.
 - Quiere el dato con su número, y que se diga cuando algo **no** se pudo probar.
 - Cuando algo se traba, quiere saber **cuál de los frenos** fue: el servicio
@@ -62,6 +68,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `herramientas/blender/` | escenas 3D por script, con tiempos medidos | `PAPA-DEL-PATRON.md § 4` |
 | `herramientas/neko/` | manejar un escritorio Linux por REST | [neko](neko.md) |
 | `herramientas/rezona/` | cliente stdio del MCP de Rezona | [rezona](rezona.md) |
+| `herramientas/descargable/` | arma el HTML descargable de un artifact | su docstring |
 | `herramientas/iblo/`, `mint/`, `audio/` | utilidades sueltas | — |
 | `termo/` | termo de mate en 3D (three.js): se gira, se ceba, el agua se enfría | [maquina](maquina.md) para capturarlo |
 | `telarana/`, `garfio/`, `pozo/`, `pique*/`, `flores/`, `paraguas/` | juegos | — |

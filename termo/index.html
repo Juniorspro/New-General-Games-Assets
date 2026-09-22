@@ -389,10 +389,15 @@
   // ── La escena ──────────────────────────────────────────────────────────
   const lienzo = $("lienzo");
   const escena = lienzo.parentElement;
+  // Dos fallas distintas, dos avisos distintos: sin three.js (el archivo se
+  // abrió sin internet) no es lo mismo que un navegador sin WebGL.
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true, alpha: true });
   } catch (e) {
+    if (typeof THREE === "undefined") {
+      $("sin-3d").textContent = "No se pudo cargar three.js, que dibuja el termo. Revisá la conexión y recargá la página.";
+    }
     $("sin-3d").hidden = false;
     lienzo.hidden = true;
   }

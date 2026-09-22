@@ -22,6 +22,12 @@ Una entrada por sesión: qué quedó y qué falta. La más nueva arriba.
   por Newton (k 0,043/h, reloj ×120). Revisado con una captura: arreglados el
   cartel de "sin WebGL" que salía igual, la bombilla que tapaba el chorro y la
   escala partida en dos renglones. **La segunda versión no se volvió a mirar.**
+- `herramientas/descargable/empaquetar.py`: arma el HTML completo de un
+  artifact (doctype, charset, reset, scripts de CDN adentro). Medido con el
+  termo: 686 KB, abierto desde el disco **con la red cortada**: three r160
+  cargó desde adentro, modo estándar, acentos bien, cero errores. Lo único que
+  quiso salir fueron las fuentes de Google, que tienen respaldo.
+  El empaquetado **no se commitea**: es un resultado, se regenera en segundos.
 
 **Qué falta**
 
