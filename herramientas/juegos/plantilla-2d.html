@@ -92,7 +92,7 @@ function dibujar() {
   g.fillStyle = '#fff'; g.font = 'bold 10px monospace'; g.fillText('★ ' + pts, 8, 14);
 }
 
-function bucle(ahora) { acum += Math.min((ahora - antes) / 1000, .1); antes = ahora;
+function bucle(ahora) { acum += Math.max(0, Math.min((ahora - antes) / 1000, .1)); antes = ahora;
   while (acum >= DT) { fisica(DT); acum -= DT; } dibujar(); requestAnimationFrame(bucle); }
 requestAnimationFrame(bucle);
 window.__estado = () => ({ pts, x: p.x, anim: p.anim });
