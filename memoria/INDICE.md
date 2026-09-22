@@ -5,8 +5,22 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 
 ## Reglas que no se discuten
 
-- **Ningún secreto entra al repo.** Después de cada commit,
-  `git grep -nI "cfat_\|rz_live_\|sk-\|-----BEGIN"` tiene que volver vacío.
+- **Ningún secreto entra al repo.** Después de cada commit:
+
+  ```sh
+  git grep -nIE '\b(cfat_|rz_live_|sk-)[A-Za-z0-9_-]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY'
+  ```
+
+  Tiene que volver vacío, y el 22/9 vuelve vacío. **No uses la versión corta**
+  (`git grep "cfat_\|sk-\|-----BEGIN"`, la que está en `ARRANQUE.md` y
+  `README.md`): esa matchea las líneas que explican la regla, los `gtask-…` de
+  los assets y hasta `netmask-2.1.1` de un lockfile — cientos de falsos
+  positivos que enseñan a ignorar la alarma, que es peor que no tenerla.
+  Los tres pedazos de la buena: el `\b` deja afuera `gtask-`, los 16 caracteres
+  piden una llave de verdad y no un prefijo suelto, y `PRIVATE KEY` evita que
+  `-----BEGIN` solo dispare con la propia documentación.
+  Probada en las dos direcciones el 22/9: vacía sobre el repo, y agarra las tres
+  formas cuando se le pone carnada.
 - **Medí antes de afirmar.** "Anda" sin un número al lado no vale.
 - **Los comentarios explican POR QUÉ, no qué.** Son la memoria del proyecto.
 - **La pantalla no decide nada.** Toda puerta se pregunta en el servidor.
