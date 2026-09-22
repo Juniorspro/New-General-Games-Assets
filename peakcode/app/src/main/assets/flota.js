@@ -29,8 +29,13 @@ const {G,escribir,leer}=N;
 const BASE=[
   {id:'pollinations', nombre:'El de fábrica', activo:true, sinLlave:true,
    chat:'https://text.pollinations.ai/openai',
-   catalogo:'https://text.pollinations.ai/models',
-   resumen:'Viene andando, no hay que hacer nada. Es el que se llena y te frena.',
+   // su /models sólo lista uno, pero estos dos contestan sin llave (medido)
+   modelosFijos:[{id:'openai', nom:'GPT (OpenAI)'},{id:'openai-fast', nom:'GPT rápido'}],
+   resumen:'Viene andando, no hay que hacer nada. Sin registro.',
+   web:''},
+  {id:'aihorde', nombre:'Red abierta', activo:true, sinLlave:true, esHorde:true,
+   catalogo:'https://aihorde.net/api/v2/status/models?type=text',
+   resumen:'Decenas de modelos que prestan otras personas. Sin registro, pero más lento.',
    web:''},
   {id:'huggingface', nombre:'Hugging Face', activo:false,
    chat:'https://router.huggingface.co/v1/chat/completions',
@@ -85,7 +90,7 @@ const Flota={
     escribir('flotaAuto',this.auto?'1':'0');
   },
   por(id){ return this.proveedores.find(p=>p.id===id); },
-  listos(){ return this.proveedores.filter(p=>p.activo&&(p.sinLlave||p.llave)&&p.catalogo); }
+  listos(){ return this.proveedores.filter(p=>p.activo&&(p.sinLlave||p.llave)&&(p.catalogo||p.modelosFijos)); }
 };
 
 // ── OmniRoute: cambia dirección+contraseña por una llave ──────────────────────
@@ -157,7 +162,25 @@ async function cargarCatalogos(alPaso){
   for(const p of Flota.listos()){
     try{
       if(alPaso) alPaso(p.nombre);
+      if(p.modelosFijos){                       // los que ya sabemos que andan
+        p.error=null;
+        for(const m of p.modelosFijos)
+          out.push({prov:p.id, id:m.id, nom:m.nom, ctx:8000, herramientas:true,
+                    razona:false, ix:{general:20,codigo:15,agente:10}});
+        continue;
+      }
       const d=await traerJSON(p.catalogo, p.llave);
+      if(p.esHorde){                            // AI Horde: otra forma
+        p.error=null;
+        const activos=(Array.isArray(d)?d:[]).filter(m=>(m.count||0)>0)
+          .sort((a,b)=>(b.count||0)-(a.count||0)).slice(0,30);
+        for(const m of activos)
+          out.push({prov:p.id, id:m.name, nom:lindoHorde(m.name), ctx:4096,
+                    herramientas:false, razona:false,
+                    // más obreros = más disponible; le damos un puntaje bajo igual
+                    ix:{general:8+Math.min(6,m.count||0), codigo:6, agente:4}});
+        continue;
+      }
       let xs=Array.isArray(d)?d:(d.data||d.models||[]);
       if(p.soloGratis) xs=xs.filter(m=>String(m.id||'').endsWith(':free'));
       p.error=null;
@@ -166,6 +189,12 @@ async function cargarCatalogos(alPaso){
   }
   Flota.modelos=out;
   return out;
+}
+function lindoHorde(nombre){
+  // "aphrodite/TheDrummer/Behemoth-X-123B-v2.1" -> "Behemoth X 123B"
+  const b=String(nombre).split('/').pop().replace(/[-_]/g,' ')
+    .replace(/\bv?\d+(\.\d+)*\b/gi,'').replace(/Q\d+ ?K ?M?/gi,'').trim();
+  return b.charAt(0).toUpperCase()+b.slice(1) || nombre;
 }
 
 // ── de qué va el pedido ──────────────────────────────────────────────────────
@@ -212,6 +241,50 @@ function recuperable(msg){
   return 0;                                                    // 400 y demás: es el pedido
 }
 
+// ── AI Horde: pedir y esperar (async, no streaming) ──────────────────────────
+function esperar(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function aTexto(mensajes){
+  // aplana la charla a un prompt, que es lo que espera Horde
+  let s='';
+  for(const m of mensajes){
+    if(m.role==='system') s+=m.content+'\n\n';
+    else if(m.role==='user') s+='Usuario: '+m.content+'\n';
+    else s+='Asistente: '+m.content+'\n';
+  }
+  return s+'Asistente:';
+}
+async function pedirHorde(op, modeloId){
+  const M=window.PeakMCP;
+  const cab={'Content-Type':'application/json','apikey':'0000000000'};
+  const cuerpo=JSON.stringify({
+    prompt:aTexto(op.mensajes),
+    models:[modeloId],
+    params:{max_length:512, max_context_length:4096}
+  });
+  const env=await M.http('POST','https://aihorde.net/api/v2/generate/text/async',cab,cuerpo);
+  if(env.estado===429) throw new Error('HTTP 429 la red abierta está llena, probá con otro');
+  if(env.estado<200||env.estado>=300) throw new Error('HTTP '+env.estado+' '+(env.cuerpo||'').slice(0,120));
+  const id=JSON.parse(env.cuerpo||'{}').id;
+  if(!id) throw new Error('no me dio un turno en la red abierta');
+  // esperar el resultado: la red es comunitaria, puede tardar
+  for(let i=0;i<40;i++){
+    await esperar(3000);
+    if(window.PeakNucleo.Corte&&window.PeakNucleo.Corte.pedido) throw new Error('cortado');
+    const st=await M.http('GET','https://aihorde.net/api/v2/generate/text/status/'+id,{},'');
+    if(st.estado<200||st.estado>=300) continue;
+    const j=JSON.parse(st.cuerpo||'{}');
+    if(j.faulted) throw new Error('la red abierta no pudo con este pedido');
+    if(j.done){
+      let t=((j.generations||[{}])[0].text||'').trim();
+      // los modelos abiertos a veces siguen escribiendo "Usuario:": cortamos ahí
+      t=t.split(/\n(?:Usuario|User):/)[0].trim();
+      if(op.onTexto&&t) op.onTexto(t,t);
+      return {texto:t||'(la red abierta no devolvió nada)', motivoFin:'stop'};
+    }
+  }
+  throw new Error('la red abierta tardó demasiado');
+}
+
 // ── el enrutador ─────────────────────────────────────────────────────────────
 /**
  * Prueba con un modelo, y si lo frenan sigue con el que viene. Lo que cambia
@@ -231,7 +304,9 @@ async function pedirRuteado(op){
     const p=Flota.por(m.prov);
     if(!p) continue;
     try{
-      const r=await N.pedir({...op, destino:{chat:p.chat, key:p.llave||'', modelo:m.id}});
+      const r=p.esHorde
+        ? await pedirHorde(op, m.id)
+        : await N.pedir({...op, destino:{chat:p.chat, key:p.llave||'', modelo:m.id}});
       Flota.ultimo={prov:p.nombre, modelo:m.nom, id:m.id, tarea, intento:i+1};
       if(op.onRuta) op.onRuta(Flota.ultimo);
       return r;
@@ -246,7 +321,7 @@ async function pedirRuteado(op){
   throw ultimo||new Error('no quedó ningún modelo disponible');
 }
 
-window.PeakFlota={Flota, cargarCatalogos, clasificar, candidatos, pedirRuteado, conectarOmni,
+window.PeakFlota={Flota, cargarCatalogos, clasificar, candidatos, pedirRuteado, conectarOmni, pedirHorde, aTexto,
   recuperable, enfriar, enfriado, normalizar, BASE};
 // el núcleo lo usa si está; si no, sigue como antes
 N.enrutador=pedirRuteado;

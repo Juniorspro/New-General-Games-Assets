@@ -701,84 +701,84 @@ function estadoFlota(){
   const e=$('#estadoFlota');
   if(!n){ e.innerHTML='Buscando modelos…'; return; }
   const falta=Flota.proveedores.filter(p=>!p.sinLlave&&!p.llave).length;
-  if(n<=2) e.innerHTML='Tenés <span class=grande>'+n+'</span> modelo'+(n>1?'s':'')+
-    '. Por eso te frenan seguido: es uno solo y lo usa todo el mundo.';
-  else e.innerHTML='Tenés <span class=grande>'+n+'</span> modelos. Si uno se llena, sigo con otro.'+
-    (falta?' Podés sumar más con '+falta+' llave'+(falta>1?'s':'')+' gratis más.':'');
+  e.innerHTML='Tenés <span class=grande>'+n+'</span> modelo'+(n===1?'':'s')+
+    ' listos, sin registrarte. Si uno se llena, sigo con otro solo.';
+}
+
+function tarjetaMotor(p){
+  const d=document.createElement('div'); d.className='tarjeta';
+  const f=document.createElement('div'); f.className='fila1';
+  const n=document.createElement('div'); n.className='nom'; n.textContent=p.nombre;
+  const cuantos=Flota.modelos.filter(m=>m.prov===p.id).length;
+  const pa=document.createElement('span');
+  const listo=p.activo&&(p.sinLlave||p.llave);
+  if(listo&&cuantos){ pa.className='pastilla on'; pa.textContent=cuantos+(cuantos===1?' modelo':' modelos'); }
+  else if(listo){ pa.className='pastilla gris'; pa.textContent='probando…'; }
+  else if(!p.llave&&!p.sinLlave&&!p.esOmni){ pa.className='pastilla gris'; pa.textContent='falta la llave'; }
+  else { pa.className='pastilla gris'; pa.textContent='apagado'; }
+  const sw=document.createElement('input'); sw.type='checkbox'; sw.checked=!!p.activo;
+  sw.style.cssText='width:auto;flex:0 0 auto;transform:scale(1.2)';
+  sw.onchange=async()=>{ p.activo=sw.checked; Flota.guardar(); pintarMotores();
+    if(p.activo&&(p.sinLlave||p.llave)) await recargar(); };
+  f.appendChild(n); f.appendChild(pa); f.appendChild(sw);
+  d.appendChild(f);
+  const c=document.createElement('div'); c.className='comor'; c.textContent=p.resumen;
+  d.appendChild(c);
+  if(p.esOmni){
+    const bd=document.createElement('button'); bd.className='boton secundario';
+    bd.textContent='Desplegar mi servidor (Hugging Face)';
+    bd.onclick=()=>Peak.abrirWeb(p.web);
+    const iu=document.createElement('input'); iu.placeholder='dirección: https://…hf.space';
+    iu.value=p.url||''; iu.onchange=()=>{ p.url=iu.value.trim(); Flota.guardar(); };
+    const ic=document.createElement('input'); ic.type='password';
+    ic.placeholder=p.clave?'contraseña guardada':'contraseña del panel';
+    ic.onchange=()=>{ p.clave=ic.value.trim(); Flota.guardar(); };
+    const bc=document.createElement('button'); bc.className='boton'; bc.textContent='Conectar mi servidor';
+    bc.onclick=async()=>{ p.url=iu.value.trim()||p.url; p.clave=ic.value.trim()||p.clave;
+      bc.textContent='Conectando…';
+      try{ await conectarOmni(p); p.activo=true; ic.value=''; Flota.guardar(); await recargar(); }
+      catch(e){ avisoMotor(p,e.message); pintarMotores(); }
+      bc.textContent='Conectar mi servidor'; };
+    d.appendChild(bd); d.appendChild(iu); d.appendChild(ic); d.appendChild(bc);
+  } else if(!p.sinLlave){
+    if(!p.llave){
+      const b=document.createElement('button'); b.className='boton secundario';
+      b.textContent='Conseguir la llave gratis'; b.onclick=()=>Peak.abrirWeb(p.web);
+      d.appendChild(b);
+    }
+    const i=document.createElement('input'); i.type='password';
+    i.placeholder=p.llave?'llave guardada — pegá otra para cambiarla':'pegá la llave acá';
+    i.onchange=async()=>{ p.llave=i.value.trim(); p.activo=!!p.llave; Flota.guardar();
+                          i.value=''; pintarMotores(); await recargar(); };
+    d.appendChild(i);
+  }
+  if(p.error&&p.activo&&(p.sinLlave||p.llave)){
+    const e=document.createElement('div'); e.className='comor'; e.style.color='#ffb3ad';
+    e.textContent=/40[13]/.test(p.error)?'La llave no entró. Fijate que esté completa.':'No contestó. Puede ser la conexión.';
+    d.appendChild(e);
+  }
+  return d;
 }
 
 function pintarMotores(){
   $('#cAuto').checked=Flota.auto;
   estadoFlota();
   const l=$('#listaMotores'); l.innerHTML='';
-  Flota.proveedores.forEach(p=>{
-    const d=document.createElement('div'); d.className='tarjeta';
-    const f=document.createElement('div'); f.className='fila1';
-    const n=document.createElement('div'); n.className='nom'; n.textContent=p.nombre;
-    const cuantos=Flota.modelos.filter(m=>m.prov===p.id).length;
-    const pa=document.createElement('span');
-    const listo=p.activo&&(p.sinLlave||p.llave);
-    if(listo&&cuantos){ pa.className='pastilla on'; pa.textContent=cuantos+' modelo'+(cuantos>1?'s':''); }
-    else if(listo){ pa.className='pastilla gris'; pa.textContent='probando…'; }
-    else if(!p.llave&&!p.sinLlave){ pa.className='pastilla gris'; pa.textContent='falta la llave'; }
-    else { pa.className='pastilla gris'; pa.textContent='apagado'; }
-    const sw=document.createElement('input'); sw.type='checkbox'; sw.checked=!!p.activo;
-    sw.style.cssText='width:auto;flex:0 0 auto;transform:scale(1.2)';
-    sw.onchange=async()=>{ p.activo=sw.checked; Flota.guardar(); pintarMotores();
-      if(p.activo) await recargar(); };
-    f.appendChild(n); f.appendChild(pa); f.appendChild(sw);
-    d.appendChild(f);
-    const c=document.createElement('div'); c.className='comor'; c.textContent=p.resumen;
-    d.appendChild(c);
-    if(p.esOmni){
-      const paso=document.createElement('div'); paso.className='comor';
-      paso.textContent=p.llave
-        ? 'Conectado. Si lo desplegaste de nuevo, volvé a conectar.'
-        : 'Primero desplegá tu servidor (una vez, ~10 min), después pegá su dirección y contraseña.';
-      d.appendChild(paso);
-      const bd=document.createElement('button'); bd.className='boton secundario';
-      bd.textContent='Desplegar mi servidor (Hugging Face)';
-      bd.onclick=()=>Peak.abrirWeb(p.web);
-      d.appendChild(bd);
-      const iu=document.createElement('input'); iu.placeholder='dirección: https://…hf.space';
-      iu.value=p.url||''; iu.onchange=()=>{ p.url=iu.value.trim(); Flota.guardar(); };
-      const ic=document.createElement('input'); ic.type='password';
-      ic.placeholder=p.clave?'contraseña guardada':'contraseña del panel';
-      ic.onchange=()=>{ p.clave=ic.value.trim(); Flota.guardar(); };
-      const bc=document.createElement('button'); bc.className='boton';
-      bc.textContent='Conectar mi servidor';
-      bc.onclick=async()=>{
-        p.url=iu.value.trim()||p.url; p.clave=ic.value.trim()||p.clave;
-        bc.textContent='Conectando…';
-        try{ await conectarOmni(p); p.activo=true; ic.value=''; Flota.guardar();
-             await recargar(); }
-        catch(e){ avisoMotor(p, e.message); pintarMotores(); }
-        bc.textContent='Conectar mi servidor';
-      };
-      d.appendChild(iu); d.appendChild(ic); d.appendChild(bc);
-    } else if(!p.sinLlave){
-      if(!p.llave){
-        const b=document.createElement('button'); b.className='boton secundario';
-        b.textContent='Conseguir la llave gratis';
-        b.onclick=()=>Peak.abrirWeb(p.web);
-        d.appendChild(b);
-      }
-      const i=document.createElement('input'); i.type='password';
-      i.placeholder=p.llave?'llave guardada — pegá otra para cambiarla':'pegá la llave acá';
-      i.onchange=async()=>{ p.llave=i.value.trim(); p.activo=!!p.llave; Flota.guardar();
-                            i.value=''; pintarMotores(); await recargar(); };
-      d.appendChild(i);
-    }
-    if(p.error&&p.activo&&(p.sinLlave||p.llave)){
-      const e=document.createElement('div'); e.className='comor';
-      e.style.color='#ffb3ad';
-      e.textContent=/40[13]/.test(p.error)?'La llave no entró. Fijate que esté completa.'
-        :'No contestó. Puede ser la conexión.';
-      d.appendChild(e);
-    }
-    l.appendChild(d);
-  });
+  const sinLlave=Flota.proveedores.filter(p=>p.sinLlave);
+  const conLlave=Flota.proveedores.filter(p=>!p.sinLlave);
+
+  const t1=document.createElement('div'); t1.className='grupo';
+  t1.textContent='Andan ya · sin registro'; l.appendChild(t1);
+  sinLlave.forEach(p=>l.appendChild(tarjetaMotor(p)));
+
+  const det=document.createElement('details'); det.className='avanzado';
+  const sum=document.createElement('summary');
+  sum.textContent='Sumar más modelos (opcional, con una llave gratis)';
+  det.appendChild(sum);
+  conLlave.forEach(p=>det.appendChild(tarjetaMotor(p)));
+  l.appendChild(det);
 }
+
 function avisoMotor(p,msg){
   const e=$('#eMotores'); e.classList.remove('oculto','ok','no'); e.classList.add('no');
   e.textContent='"'+p.nombre+'": '+(/40[13]|contraseña/.test(msg)?'la contraseña no entró.':msg);

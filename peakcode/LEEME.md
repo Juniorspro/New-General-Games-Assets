@@ -619,3 +619,56 @@ mala: que aparezca la tarjeta, que el botón abra Hugging Face, que conecte y
 sume los modelos, que llame en el orden correcto, que repita la cookie, que use
 la llave emitida, que la guarde y que no deje la contraseña en pantalla. Más
 las suites de 0.9 a 1.2, todas en verde.
+
+---
+
+# 1.4 — que abra con modelos, sin pantalla de llaves
+
+El pedido: que la app abra y ya tenga modelos andando, sin la pantalla de pegar
+llaves adelante. Eso se hizo con lo único que de verdad no pide registro.
+
+## Lo que se probó, endpoint por endpoint (medido)
+
+Buscando modelos sin registro, se probó cada uno de verdad, no de memoria:
+
+- **Pollinations**: `openai` y `openai-fast` contestan sin llave. Su `/models`
+  sólo lista uno, así que los dos quedan fijos en el código.
+- **AI Horde**: 28 modelos de texto activos, con la llave anónima **oficial**
+  `0000000000` (la que ellos dan para uso anónimo — no es circunvención). Probado
+  de punta a punta desde acá: se pide, se espera, y devuelve texto real.
+- Todo lo demás (Hugging Face, OpenRouter, Groq, Cerebras, DeepInfra) **lista**
+  sin llave pero **da 401 al usar**. Los Spaces aceptan la llamada anónima pero
+  la GPU da 0 s de cuota. No hay más "sin registro" que estos dos.
+
+## Lo que NO se hizo, y por qué
+
+Meter llaves adentro de la app —mías o de otro— no se hizo: el repo es público,
+las llaves se escanean y se anulan solas en minutos, y usar una ajena banea la
+cuenta del dueño. Buscar repos que "regalan llaves" es lo mismo: credenciales
+filtradas, muertas al llegar. No arreglan nada, así que no van.
+
+## AI Horde: el adaptador
+
+No es OpenAI-compatible ni streaming. Es asíncrono: `POST
+/generate/text/async` con la llave anónima → devuelve un turno → se espera
+(`GET /status/{id}`) hasta `done`. La app aplana la charla a un prompt, corta la
+respuesta si el modelo empieza a escribir "Usuario:", y respeta el botón de
+frenar. Va por el puente nativo. Es más lento porque la red es comunitaria y el
+anónimo tiene la prioridad más baja — por eso se llama "Red abierta" y avisa que
+es más lento.
+
+## La pantalla de Modelos, rearmada
+
+Arriba, **"Andan ya · sin registro"**: El de fábrica (Pollinations) y la Red
+abierta (AI Horde), prendidos de fábrica. La app abre con ~6 modelos sin tocar
+nada. Abajo, colapsado en **"Sumar más modelos (opcional, con una llave
+gratis)"**: Hugging Face, OpenRouter, Groq, Cerebras, DeepInfra y tu propio
+OmniRoute. El que no quiere saber nada de llaves no las ve nunca.
+
+## Probado
+
+El adaptador de Horde contra la API real (keyless, de punta a punta). La flota:
+que junte los sin-registro sin llave, que elija por tarea, que rote cuando
+frenan, y —apagando los sin-llave— que el agotamiento avise. La pantalla: las
+dos secciones, el titular, y que no queden palabras técnicas. Más las suites de
+0.9 a 1.3, todas en verde contra los assets del APK.
