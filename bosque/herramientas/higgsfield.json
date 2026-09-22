@@ -1,0 +1,46 @@
+{
+  "_lee_esto": "De dónde salió cada asset del bosque. Los PNG y GLB crudos NO están en el repo (≈150 MB): se vuelven a bajar de result_url, o se regeneran con el mismo modelo y pedido. procesar_assets.py y optimizar_modelos.mjs los convierten en lo que hay en assets/.",
+  "gastado": { "creditos": 203, "de": 4350.2, "fecha": "2026-09-22" },
+  "lo_que_funciono": {
+    "imagenes": "nano_banana_2 a 2k sale a 2 créditos y fue usable al primer intento en las 23 imágenes. Encabezar con el tipo de toma, sujeto concreto, luz, y cerrar con 'no text, no watermark'. Para recortes: 'isolated on a pure white seamless background' + remove_background.",
+    "cielo": "nano_banana_2 a 4k y 21:9 (6336x2688) le ganó a grok_image 2:1 a 2k en resolución. El horizonte le cae en el 54 % de la altura, no en la mitad: procesar_assets.py lo reacomoda. El sol medido quedó a 7,8° de elevación.",
+    "texturas": "'seamless tileable' en el pedido no alcanza: salen casi repetibles pero con degradé de luz. Se aplanan y se funde la costura después.",
+    "recortes": "remove_background falló una vez de ocho (la rama de abeto) y el reintento anduvo. Deja halos blancos en los bordes semitransparentes: descontaminar + sangrar.",
+    "objetos_3d": "tripo_h3_1_image_to_3d con texture+pbr+detailed: 9 créditos. Llegan normalizados a un cubo de 1 m, con texturas de 4096 y cuantizados: al escalarlos hay que pasar la geometría a coma flotante primero (ver props.js, aFlotante).",
+    "personaje": "image_to_3d (Meshy) con pose_mode a-pose y symmetry on, sin esqueleto; después 3d_rigging (8 créditos) una vez por animación, siempre desde la MISMA malla: los cuatro esqueletos salen con los mismos nombres y se pueden juntar en un GLB. Las animaciones vienen en el lugar (sin avance de raíz).",
+    "audio": "Los modelos de música y efectos (sonilo_music, mirelo_text_to_audio) están habilitados solo para el constructor de juegos de Higgsfield: la herramienta dice explícitamente que no se usan sueltos. Todo el sonido es sintetizado."
+  },
+  "imagenes": [
+    { "archivo": "cielo.webp", "modelo": "nano_banana_2 4k 21:9", "job": "0a0764d4-a51d-462a-892f-80b0d774c55b" },
+    { "archivo": "(cielo descartado)", "modelo": "grok_image 2k 2:1 quality", "job": "4a094f02-9910-4abf-ac5f-82c84fcded2d" },
+    { "archivo": "suelo.webp", "job": "8b161068-c7ff-43e8-8bc1-938e334a3544" },
+    { "archivo": "musgo.webp", "job": "918d0d51-4dc1-412d-8740-1cd2e22822cf" },
+    { "archivo": "sendero.webp", "job": "37debb1b-094b-484a-adb4-071026b15aeb" },
+    { "archivo": "roca.webp", "job": "99ca2f29-28d7-4207-9b1d-c29ed3bb50fa" },
+    { "archivo": "corteza-abeto.webp", "job": "bf62b1f5-909e-4e6d-a39c-77e2f3670ea3" },
+    { "archivo": "corteza-abedul.webp", "job": "3277331e-198c-4e9b-a16e-7fb6c86106b6" },
+    { "archivo": "rama-abeto.webp", "job": "85d2e70c-955c-40ad-9f87-40728b95b4b8", "recorte": "662bbac2-1fe6-4d4b-941a-244770559a22" },
+    { "archivo": "rama-picea.webp", "job": "ff7ca18f-dcc7-4a62-b065-e62412406434", "recorte": "2a38a5a9-f771-40dc-b3f2-fa99dd384692" },
+    { "archivo": "helecho.webp", "job": "140322b2-f2e8-4562-96a2-ca2b66719cf8", "recorte": "27639081-3136-4ee0-89e8-febd9af6e80a" },
+    { "archivo": "pasto.webp", "job": "891dcc45-cefe-4317-9483-d42b015805d6", "recorte": "40dc6b5e-6c9c-48be-9a2b-a46baa371613" },
+    { "archivo": "hojas-abedul.webp", "job": "ab66bdcf-825a-4de1-9c78-9f4374c5dbd6", "recorte": "1c8ad2e5-16f0-48ea-80c8-9a8090e6a555" },
+    { "archivo": "flores.webp", "job": "55613f6d-5d18-4d14-91be-f958a6140ae9", "recorte": "b7955cc1-cac5-4a76-b4a6-37121bb99c42" },
+    { "archivo": "(abeto entero, sin usar)", "job": "b0b9ea80-d6e1-40c7-a7de-37fd6b4d0ca7" },
+    { "archivo": "(abedul entero, sin usar)", "job": "18a025b8-b672-4cf2-910c-bfac23f82080" },
+    { "archivo": "caminante (referencia)", "job": "b3b11ebc-af73-4407-9862-4706bbe460a3" }
+  ],
+  "modelos_3d": [
+    { "archivo": "roca.glb", "imagen": "e78a69f7-52c9-4534-842a-dd22845450f4", "job": "4ab62520-6650-4aad-8ca4-d46e58dd2c1d" },
+    { "archivo": "laja.glb", "imagen": "72f64578-52f2-4fa9-a064-d608fe06e1d6", "job": "8d1f4cc6-27a0-44a9-a3bd-80f7f5ca309e" },
+    { "archivo": "tronco.glb", "imagen": "6f893f8b-43dd-49d6-b68e-4ef25fd89327", "job": "abd59f24-08d0-49a1-b7e5-b68e2e7eaf55" },
+    { "archivo": "tocon.glb", "imagen": "bef94112-d1cc-479b-afd3-1a854e4d4a63", "job": "7be51c76-38ab-47d5-8191-b897c499d763" },
+    { "archivo": "cabana.glb", "imagen": "36a2743a-7075-48db-9734-2fd41829eb67", "job": "302da33f-8f69-4cbe-b09f-19f07d4fcc65" },
+    { "archivo": "fogata.glb", "imagen": "e53d4e8e-96be-4a4b-b308-86042a6580d3", "job": "b05c5354-3f4e-443c-bd00-ef98f22b2b5a" },
+    { "archivo": "cinta.glb", "imagen": "96960c38-0faa-45bb-9268-b443900b71f7", "job": "faeb84f6-2524-4f88-8b5a-027e0edfdcb6" },
+    { "archivo": "caminante.glb (malla)", "modelo": "image_to_3d", "job": "99843bae-9640-478d-8c8e-a7647e978307" },
+    { "archivo": "caminante.glb (quieto, id 0)", "modelo": "3d_rigging", "job": "efd8f37a-6e45-4aac-836c-4ee4a1de9414" },
+    { "archivo": "caminante.glb (camina, id 30 Casual_Walk)", "modelo": "3d_rigging", "job": "ecdd6789-8f32-4b7c-b507-d03f459fc12d" },
+    { "archivo": "caminante.glb (corre, id 14 Run_02)", "modelo": "3d_rigging", "job": "2fcd1959-390f-4f7b-b828-662a73c45051" },
+    { "archivo": "caminante.glb (mirar, id 336 Long_Breathe_and_Look_Around)", "modelo": "3d_rigging", "job": "f235f9a8-f025-4971-9e52-05cfb62f5d0c" }
+  ]
+}

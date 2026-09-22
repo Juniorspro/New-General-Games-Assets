@@ -16,6 +16,7 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `docs/paginas/` | **IBLO Eventos** — sitio de una productora, con panel de administración | iblo-eventos.pages.dev |
 | `docs/biblioteca/` | la galería / biblioteca | — |
 | `electro-silver/` | sitio de Electro Silver (Presidencia Roca, Chaco) | electro-silver.pages.dev |
+| `bosque/` | bosque 3D en tercera persona, grabado en VHS: cinco cintas y un atardecer que no termina. Assets de Higgsfield | rezona.ai/game/pgcserver/play/VvyVJutbOf |
 | `telarana/` | juego de un botón: colgarse de un hilo y recorrer una ciudad | — |
 | `edificio/` | una torre de oficinas armada por script en Blender + visor three.js | — |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |

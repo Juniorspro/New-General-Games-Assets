@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0d10">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1 3 9h3l-3 5h10l-3-5h3z' fill='%23234a2c'/%3E%3C/svg%3E">
+<title>Bosque</title>
+<meta name="description" content="Un bosque en tercera persona, grabado en VHS. Cinco cintas perdidas y un atardecer que no termina.">
+<link rel="stylesheet" href="css/bosque.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="carga">
+  <div class="osd">▶ PLAY</div>
+  <h1 class="marca">BOSQUE</h1>
+  <div class="barra"><i id="cargaBarra"></i></div>
+  <p id="cargaTexto">REBOBINANDO…</p>
+</div>
+
+<!-- toda la pantalla recibe los dedos; los botones van por encima -->
+<div id="hud" hidden>
+  <div id="joy"><div id="joyBola"></div></div>
+  <button id="bAccion" hidden>RECOGER CINTA</button>
+  <button id="bPausa" aria-label="Pausa">❚❚</button>
+</div>
+
+<div id="aviso" hidden>
+  <p class="titulo" id="avisoTitulo"></p>
+  <p class="texto" id="avisoTexto"></p>
+</div>
+
+<div class="pan" id="menu" hidden>
+  <div class="tarjeta">
+    <h1>BOSQUE</h1>
+    <p class="sub">Cinco cintas perdidas. Un atardecer que no termina.</p>
+    <button class="b principal" id="mJugar">▶ PLAY</button>
+    <div class="fila">
+      <button class="b" id="mVHS">VHS: SÍ</button>
+      <button class="b" id="mCal">CALIDAD: MEDIA</button>
+    </div>
+    <p class="pie" id="mAyuda">Pulgar izquierdo: caminar (a fondo, correr) · derecho: mirar.<br>Cuando la imagen falla, hay una cinta cerca.</p>
+    <p class="pie compu">Compu: WASD o flechas · Shift corre · clic y mouse para mirar · E recoge · V cambia el VHS</p>
+    <p class="girar">Mejor con el teléfono acostado</p>
+  </div>
+</div>
+
+<div class="pan" id="pausa" hidden>
+  <div class="tarjeta">
+    <h2>❚❚ PAUSA</h2>
+    <p class="sub" id="pCuenta">CINTAS 0/5</p>
+    <button class="b principal" id="pSeguir">▶ SEGUIR</button>
+    <div class="fila">
+      <button class="b" id="pVHS">VHS: SÍ</button>
+      <button class="b" id="pCal">CALIDAD: MEDIA</button>
+    </div>
+  </div>
+</div>
+
+<div id="error" hidden></div>
+
+<script src="juego.js"></script>
+</body>
+</html>

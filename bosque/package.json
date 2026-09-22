@@ -1,0 +1,14 @@
+{
+  "name": "bosque",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "armar": "node herramientas/armar.mjs",
+    "probar": "node pruebas/todo.mjs"
+  },
+  "devDependencies": {
+    "@gltf-transform/cli": "^4.5.0",
+    "esbuild": "^0.25.0",
+    "three": "^0.186.0"
+  }
+}

@@ -1,0 +1,64 @@
+{
+ "cielo": {
+  "sol_u": 0.27942,
+  "sol_v": 0.5686,
+  "sol_elevacion_grados": 12.35,
+  "niebla_sol": [
+   0.735,
+   0.6915,
+   0.7214
+  ],
+  "niebla": [
+   0.5471,
+   0.6272,
+   0.7251
+  ],
+  "cenit": [
+   0.6369,
+   0.6947,
+   0.7766
+  ]
+ },
+ "recortes": {
+  "rama-abeto": {
+   "ancho": 816,
+   "alto": 1024,
+   "proporcion": 0.7968
+  },
+  "rama-picea": {
+   "ancho": 600,
+   "alto": 1024,
+   "proporcion": 0.587
+  },
+  "helecho": {
+   "ancho": 596,
+   "alto": 1024,
+   "proporcion": 0.5823
+  },
+  "pasto": {
+   "ancho": 568,
+   "alto": 512,
+   "proporcion": 1.1122
+  },
+  "hojas-abedul": {
+   "ancho": 544,
+   "alto": 512,
+   "proporcion": 1.061
+  },
+  "flores": {
+   "ancho": 448,
+   "alto": 512,
+   "proporcion": 0.8758
+  },
+  "abeto-lejos": {
+   "ancho": 476,
+   "alto": 1024,
+   "proporcion": 0.4635
+  },
+  "abedul-lejos": {
+   "ancho": 652,
+   "alto": 1024,
+   "proporcion": 0.6348
+  }
+ }
+}

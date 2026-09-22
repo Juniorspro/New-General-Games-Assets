@@ -60,6 +60,22 @@
    "workbench": "https://lab.rezona.ai/game?project=ZFiGfVPq",
    "version": "sin subir",
    "nota": "La página quedó en «Próximamente :)». En uso: 2 fondos azules y 8 poses de la mascota (voxel, con alfa). Sin uso pero generados: 6 personajes 3D, 18 íconos y 8 láminas de estéticas. Prompts en frutiger-aero/modelos.json."
+  },
+  "VvyVJutbOf": {
+   "nombre": "Bosque — el atardecer que no termina",
+   "para": "Bosque 3D en tercera persona con filtro VHS y cinco cintas. bosque/ (se sube dist/ armado con herramientas/armar.mjs)",
+   "creado": "2026-09-22",
+   "play_url": "https://rezona.ai/game/pgcserver/play/VvyVJutbOf",
+   "workbench": "https://lab.rezona.ai/game?project=VvyVJutbOf",
+   "version": "v1",
+   "nota": "Los assets NO salieron de Rezona sino de Higgsfield (ver bosque/herramientas/higgsfield.json): la generación seguía dando CREDIT_RESERVE_FAILED. La subida sí anda. La carpeta de assets en dist/ se llama datos/ porque Rezona saltea assets/."
+  },
+  "jwejXPWphC": {
+   "nombre": "Enjambre — supervivencia por oleadas",
+   "para": "Los assets de enjambre/ (assets.js los espera por nombre)",
+   "creado": "2026-09-22",
+   "version": "sin subir",
+   "nota": "Vacío. La primera imagen de prueba (el jugador) volvió con CREDIT_RESERVE_FAILED: 扣费服务暂时不可用 ('el servicio de cobro no está disponible'), con 446.918 créditos en la cuenta según `rezona status`. No se gastó nada."
   }
  },
  "assets": [

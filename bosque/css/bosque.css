@@ -1,0 +1,100 @@
+/* El juego es el lienzo; todo lo demás es una capa fina encima.
+   LA LETRA ES LA DE UNA CASETERA: monoespaciada, en mayúsculas, blanca con
+   sombra negra corrida. Es la misma voz que la fecha de la cámara, así el menú
+   no parece de otro juego. */
+:root {
+  --vcr: "Courier New", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --azul: #1f3fb8;
+  --papel: #f4f1e6;
+  --tinta: #0b0d10;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden; background: var(--tinta); color: var(--papel);
+  font-family: var(--vcr); touch-action: none; user-select: none; -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+/* EL LIENZO SE DIBUJA A ~480 LÍNEAS Y SE ESTIRA. El suavizado del navegador
+   al estirarlo es parte del efecto: una cinta no tiene pixeles duros. */
+#c { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; display: block; image-rendering: auto; }
+[hidden] { display: none !important; }
+
+/* ── carga ── */
+#carga {
+  position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px;
+  background: #0e1f8a; z-index: 30;
+}
+#carga .osd { position: absolute; top: 22px; left: 26px; font-size: 22px; font-weight: 700; text-shadow: 2px 2px 0 #000; }
+.marca { margin: 0; font-size: clamp(44px, 12vw, 96px); letter-spacing: 0.18em; font-weight: 700; text-shadow: 3px 3px 0 #000; }
+.barra { width: min(70vw, 360px); height: 10px; border: 2px solid var(--papel); box-shadow: 2px 2px 0 #000; }
+.barra i { display: block; height: 100%; width: 0; background: var(--papel); transition: width 0.2s; }
+#cargaTexto { margin: 0; font-size: 15px; letter-spacing: 0.12em; text-shadow: 2px 2px 0 #000; }
+
+/* ── menú y pausa ── */
+.pan { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; z-index: 20;
+       padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); pointer-events: none;
+       background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0) 55%); }
+.tarjeta { pointer-events: auto; width: min(560px, 100%); text-align: center; padding: 18px 16px 14px; }
+.tarjeta h1 { margin: 0; font-size: clamp(40px, 10vw, 76px); letter-spacing: 0.2em; text-shadow: 3px 3px 0 #000; }
+.tarjeta h2 { margin: 0 0 4px; font-size: 30px; letter-spacing: 0.14em; text-shadow: 2px 2px 0 #000; }
+.sub { margin: 6px 0 16px; font-size: 15px; letter-spacing: 0.06em; text-shadow: 2px 2px 0 #000; }
+.b {
+  font: 700 15px var(--vcr); letter-spacing: 0.1em; color: var(--papel); background: rgba(10, 12, 16, 0.55);
+  border: 2px solid var(--papel); padding: 11px 14px; margin: 4px; cursor: pointer; min-height: 44px;
+  text-shadow: 1px 1px 0 #000; box-shadow: 2px 2px 0 #000;
+}
+.b:active { transform: translate(2px, 2px); box-shadow: none; }
+.b.principal { background: var(--azul); font-size: 20px; padding: 13px 34px; }
+.fila { display: flex; flex-wrap: wrap; justify-content: center; }
+.pie { margin: 12px 0 0; font-size: 12px; line-height: 1.5; opacity: 0.9; text-shadow: 1px 1px 0 #000; }
+.compu, .girar { display: none; }
+@media (pointer: fine) { .compu { display: block; } #mAyuda { display: none; } }
+@media (pointer: coarse) and (orientation: portrait) { .girar { display: block; margin: 10px 0 0; font-size: 12px; opacity: 0.8; } }
+/* UN TELÉFONO ACOSTADO TIENE 360 PX DE ALTO. Con el título grande y la ayuda,
+   el botón de PLAY quedaba debajo del borde de la pantalla y no había forma de
+   empezar: nada avisaba, simplemente no estaba. */
+@media (max-height: 460px) {
+  .pan { align-items: center; padding-top: 8px; padding-bottom: 8px; }
+  .tarjeta { padding: 6px 12px; }
+  .tarjeta h1 { font-size: 34px; }
+  .sub { margin: 2px 0 8px; font-size: 13px; }
+  .b { padding: 8px 12px; min-height: 40px; font-size: 13px; }
+  .b.principal { font-size: 17px; padding: 9px 28px; }
+  .pie { margin-top: 6px; font-size: 11px; }
+  #aviso { bottom: 12%; }
+  #aviso .texto { font-size: 15px; }
+}
+
+/* ── en partida ── */
+#hud { position: fixed; inset: 0; z-index: 10; touch-action: none; }
+#joy {
+  position: absolute; width: 132px; height: 132px; border-radius: 50%;
+  border: 2px solid rgba(244, 241, 230, 0.35); background: rgba(0, 0, 0, 0.12);
+  opacity: 0; transition: opacity 0.15s; pointer-events: none;
+}
+#joy.on { opacity: 1; }
+#joyBola { position: absolute; left: 41px; top: 41px; width: 50px; height: 50px; border-radius: 50%;
+           background: rgba(244, 241, 230, 0.42); border: 2px solid rgba(244, 241, 230, 0.7); }
+#bAccion {
+  position: absolute; right: calc(24px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom));
+  font: 700 15px var(--vcr); letter-spacing: 0.08em; color: var(--papel); background: var(--azul);
+  border: 2px solid var(--papel); padding: 16px 18px; box-shadow: 3px 3px 0 #000; animation: late 1.1s infinite;
+}
+@keyframes late { 50% { filter: brightness(1.35); } }
+#bPausa {
+  position: absolute; top: calc(12px + env(safe-area-inset-top)); right: calc(50% - 26px); width: 52px; height: 40px;
+  font: 700 16px var(--vcr); color: var(--papel); background: rgba(0,0,0,0.25); border: 2px solid rgba(244,241,230,0.55);
+}
+
+/* el texto de la cinta: subtítulo de video casero, abajo y al centro */
+#aviso {
+  position: fixed; left: 50%; bottom: calc(18% + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  width: min(620px, calc(100% - 32px)); text-align: center; z-index: 15; pointer-events: none;
+  animation: aparece 0.6s ease-out;
+}
+#aviso .titulo { margin: 0 0 8px; font-size: 14px; letter-spacing: 0.14em; color: #ffe9a8; text-shadow: 2px 2px 0 #000; }
+#aviso .texto { margin: 0; font-size: 17px; line-height: 1.45; text-shadow: 2px 2px 0 #000, 0 0 12px rgba(0,0,0,0.8); }
+@keyframes aparece { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+#error { position: fixed; inset: 0; display: grid; place-content: center; padding: 24px; text-align: center;
+         background: #0e1f8a; z-index: 40; font-size: 16px; line-height: 1.6; white-space: pre-wrap; }
