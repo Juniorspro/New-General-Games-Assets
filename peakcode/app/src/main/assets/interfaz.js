@@ -18,7 +18,7 @@ const {correrFlujo}=window.PeakFlujo;
 const FMT=window.PeakFormatos;
 const {Sesiones}=window.PeakSesiones;
 const {Conectores,interpretar,conectar}=window.PeakMCP;
-const {Flota,cargarCatalogos,clasificar}=window.PeakFlota;
+const {Flota,cargarCatalogos,clasificar,conectarOmni}=window.PeakFlota;
 
 let hist=[];
 let trabajando=false;
@@ -730,7 +730,33 @@ function pintarMotores(){
     d.appendChild(f);
     const c=document.createElement('div'); c.className='comor'; c.textContent=p.resumen;
     d.appendChild(c);
-    if(!p.sinLlave){
+    if(p.esOmni){
+      const paso=document.createElement('div'); paso.className='comor';
+      paso.textContent=p.llave
+        ? 'Conectado. Si lo desplegaste de nuevo, volvé a conectar.'
+        : 'Primero desplegá tu servidor (una vez, ~10 min), después pegá su dirección y contraseña.';
+      d.appendChild(paso);
+      const bd=document.createElement('button'); bd.className='boton secundario';
+      bd.textContent='Desplegar mi servidor (Hugging Face)';
+      bd.onclick=()=>Peak.abrirWeb(p.web);
+      d.appendChild(bd);
+      const iu=document.createElement('input'); iu.placeholder='dirección: https://…hf.space';
+      iu.value=p.url||''; iu.onchange=()=>{ p.url=iu.value.trim(); Flota.guardar(); };
+      const ic=document.createElement('input'); ic.type='password';
+      ic.placeholder=p.clave?'contraseña guardada':'contraseña del panel';
+      ic.onchange=()=>{ p.clave=ic.value.trim(); Flota.guardar(); };
+      const bc=document.createElement('button'); bc.className='boton';
+      bc.textContent='Conectar mi servidor';
+      bc.onclick=async()=>{
+        p.url=iu.value.trim()||p.url; p.clave=ic.value.trim()||p.clave;
+        bc.textContent='Conectando…';
+        try{ await conectarOmni(p); p.activo=true; ic.value=''; Flota.guardar();
+             await recargar(); }
+        catch(e){ avisoMotor(p, e.message); pintarMotores(); }
+        bc.textContent='Conectar mi servidor';
+      };
+      d.appendChild(iu); d.appendChild(ic); d.appendChild(bc);
+    } else if(!p.sinLlave){
       if(!p.llave){
         const b=document.createElement('button'); b.className='boton secundario';
         b.textContent='Conseguir la llave gratis';
@@ -752,6 +778,10 @@ function pintarMotores(){
     }
     l.appendChild(d);
   });
+}
+function avisoMotor(p,msg){
+  const e=$('#eMotores'); e.classList.remove('oculto','ok','no'); e.classList.add('no');
+  e.textContent='"'+p.nombre+'": '+(/40[13]|contraseña/.test(msg)?'la contraseña no entró.':msg);
 }
 async function recargar(){
   const e=$('#eMotores'); e.classList.remove('oculto','ok','no'); e.textContent='Buscando…';

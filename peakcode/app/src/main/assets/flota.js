@@ -57,6 +57,12 @@ const BASE=[
    catalogo:'https://api.deepinfra.com/v1/openai/models',
    resumen:'Muchos modelos. Regala crédito al abrir la cuenta.',
    web:'https://deepinfra.com/dash/api_keys'},
+  // Tu propio OmniRoute: una máquina tuya que junta muchos modelos. No lleva
+  // una llave que pegás vos, sino la dirección del servidor y su contraseña;
+  // OmniRoute emite su propia llave y esta app la guarda sola.
+  {id:'omniroute', nombre:'Tu propio motor', activo:false, esOmni:true,
+   resumen:'Tu servidor OmniRoute. Junta muchos modelos gratis en una máquina tuya.',
+   web:'https://huggingface.co/new-space?sdk=docker'},
 ];
 
 function guardado(){ try{ return JSON.parse(leer('flota','{}')); }catch(e){ return {}; } }
@@ -70,13 +76,46 @@ const Flota={
 
   guardar(){
     const o={};
-    for(const p of this.proveedores) o[p.id]={llave:p.llave||'', activo:!!p.activo};
+    for(const p of this.proveedores){
+      o[p.id]={llave:p.llave||'', activo:!!p.activo};
+      if(p.esOmni){ o[p.id].url=p.url||''; o[p.id].clave=p.clave||'';
+                    o[p.id].chat=p.chat||''; o[p.id].catalogo=p.catalogo||''; }
+    }
     escribir('flota',JSON.stringify(o));
     escribir('flotaAuto',this.auto?'1':'0');
   },
   por(id){ return this.proveedores.find(p=>p.id===id); },
-  listos(){ return this.proveedores.filter(p=>p.activo&&(p.sinLlave||p.llave)); }
+  listos(){ return this.proveedores.filter(p=>p.activo&&(p.sinLlave||p.llave)&&p.catalogo); }
 };
+
+// ── OmniRoute: cambia dirección+contraseña por una llave ──────────────────────
+// El login va por el puente (Peak.http), no por fetch(): un OmniRoute recién
+// desplegado no manda los encabezados CORS para un origen file://.
+async function conectarOmni(prov){
+  const M=window.PeakMCP;
+  const base=String(prov.url||'').replace(/\/+$/,'').replace(/\/v1$/,'');
+  if(!/^https?:\/\//.test(base)) throw new Error('Falta la dirección del servidor');
+  const login=await M.http('POST', base+'/api/auth/login',
+    {'Content-Type':'application/json'}, JSON.stringify({password:prov.clave||''}));
+  if(login.estado<200||login.estado>=300)
+    throw new Error(login.estado===401?'la contraseña no entró':'no respondió el login (HTTP '+login.estado+')');
+  // la cookie de sesión vuelve en set-cookie; se repite en la llamada que emite la llave
+  const cookie=(login.cabeceras&&login.cabeceras['set-cookie'])||'';
+  const ck=cookie?{'Cookie':cookie.split(';')[0]}:{};
+  const emite=await M.http('POST', base+'/api/keys',
+    Object.assign({'Content-Type':'application/json'}, ck),
+    JSON.stringify({name:'PeakCode '+new Date().toISOString().slice(0,10)}));
+  if(emite.estado<200||emite.estado>=300)
+    throw new Error('no me dio la llave (HTTP '+emite.estado+')');
+  const j=JSON.parse(emite.cuerpo||'{}');
+  const k=j.key||j.apiKey||j.api_key||(j.data&&j.data.key);
+  if(!k) throw new Error('el servidor contestó pero sin llave adentro');
+  prov.llave=k;
+  prov.chat=base+'/v1/chat/completions';
+  prov.catalogo=base+'/v1/models';
+  Flota.guardar();
+  return k;
+}
 
 // ── traer los catálogos ──────────────────────────────────────────────────────
 async function traerJSON(url, llave){
@@ -207,7 +246,7 @@ async function pedirRuteado(op){
   throw ultimo||new Error('no quedó ningún modelo disponible');
 }
 
-window.PeakFlota={Flota, cargarCatalogos, clasificar, candidatos, pedirRuteado,
+window.PeakFlota={Flota, cargarCatalogos, clasificar, candidatos, pedirRuteado, conectarOmni,
   recuperable, enfriar, enfriado, normalizar, BASE};
 // el núcleo lo usa si está; si no, sigue como antes
 N.enrutador=pedirRuteado;

@@ -564,3 +564,58 @@ veces. Ahora hay una prueba que recorre el DOM y falla si algún elemento usa
 **Sacar las llaves yo.** No puedo abrir cuentas a tu nombre: hacen falta tu
 correo, aceptar los términos como vos, y recibir el mail de verificación. Las
 llaves las sacás vos en dos minutos con los botones que quedaron puestos.
+
+---
+
+# 1.3 — tu propio motor (OmniRoute) como opción de un toque
+
+## Lo que se buscó en GitHub, y lo que NO entró
+
+Se buscaron repos "como OmniRoute". Salieron dos grupos:
+
+**Ruteadores para auto-hospedar (legítimos, traés tus llaves o las públicas):**
+OmniRoute (69k⭐, el que ya se usa), LiteLLM (59k), 9router (29k),
+Portkey/gateway (13k), coai (9k), bifrost (8k), gpt-load (7k), Kong, Tyk.
+
+**Los que reversean apps pagas (NO se integran):** WindsurfAPI, AIClient2API,
+ChatGPTAPIFree, chatgptProxyAPI. Funcionan colándose por la API interna de un
+producto pago; se rompen cuando el producto cambia algo y banean la cuenta que
+los use. No se construye la app encima de eso.
+
+Y lo que se pidió explícito —repos que "den llaves"— no se buscó: son
+credenciales filtradas de otras personas, mueren en minutos porque las
+escanean, y usarlas puede baniar la cuenta del dueño.
+
+## Tu propio motor, en la pantalla de Modelos
+
+OmniRoute ya estaba como servidor (`peakcode/servidor/`) y como opción
+escondida en "avanzado". Ahora es un motor de primera clase, **"Tu propio
+motor"**, con:
+
+- botón **"Desplegar mi servidor (Hugging Face)"** que abre la página para
+  crear el Space;
+- dos campos: la dirección (`https://…hf.space`) y la contraseña del panel;
+- botón **"Conectar mi servidor"**.
+
+Al conectar, la app hace sola el baile que antes era manual: `POST
+/api/auth/login` con la contraseña → toma la cookie de sesión → `POST /api/keys`
+(repitiendo la cookie) → OmniRoute emite una llave `sk-…` → `GET /v1/models`.
+La llave queda guardada; la contraseña se borra del campo apenas se usa.
+
+Importante: el login va por el **puente nativo** (`Peak.http`), no por
+`fetch()`. Un OmniRoute recién desplegado no manda los encabezados CORS para un
+origen `file://`, así que por `fetch` fallaría; por el puente no hay CORS.
+
+Por qué esto sí resuelve lo del límite: los modelos gratis los junta OmniRoute
+del lado del servidor —incluidos los públicos sin llave que mantiene al día— y
+la app ve todo detrás de una sola dirección tuya. Si algún día querés sumar más,
+le pegás tus llaves gratis a OmniRoute una vez, no a la app.
+
+## Probado
+
+10 verificaciones contra un OmniRoute simulado que respeta el flujo real
+(login, cookie de sesión, emisión de llave, catálogo), incluida la contraseña
+mala: que aparezca la tarjeta, que el botón abra Hugging Face, que conecte y
+sume los modelos, que llame en el orden correcto, que repita la cookie, que use
+la llave emitida, que la guarde y que no deje la contraseña en pantalla. Más
+las suites de 0.9 a 1.2, todas en verde.
