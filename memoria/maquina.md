@@ -31,6 +31,23 @@ Cuando algo no sale, primero hay que saber **quién** lo frenó:
    despista: parece un problema de firmas y es de transporte. Se arregla pasando
    las fuentes a `https://` y configurando solo el proxy https.
 
+## Capturar una página 3D (medido el 22/9)
+
+- Playwright 1.56.1 está instalado **global**: `require($(npm root -g)/playwright)`.
+  Python no lo tiene. Chromium en `/opt/pw-browsers`.
+- **El Chromium no llega a internet**, así que una página que carga three.js
+  de cdnjs queda en blanco. Se baja el `.js` con `curl` y se sirve con
+  `page.route` (`route.fulfill`); todo lo demás se aborta y las fuentes caen a
+  las de respaldo — la captura no muestra la tipografía real.
+- WebGL sin GPU anda con `--use-gl=angle --use-angle=swiftshader
+  --enable-unsafe-swiftshader`. Escritorio 1280x760 y teléfono 400x860 en dos
+  capturas alcanzan.
+- La convención del repo para three.js: `cdnjs … three.js/0.160.0/three.min.js`
+  (UMD, 7 páginas la usan). OrbitControls no viene en ese archivo.
+- El esqueleto de los artifacts trae `[hidden]{display:none!important}`; un
+  HTML suelto del repo **no**, y un `display:grid` le gana al `hidden`. Ponerlo
+  a mano.
+
 ## Docker
 
 - **Arranca acá**, con `dockerd --iptables=false --bridge=none` (sin esas

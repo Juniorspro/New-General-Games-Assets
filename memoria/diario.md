@@ -16,6 +16,12 @@ Una entrada por sesión: qué quedó y qué falta. La más nueva arriba.
 - Dos imágenes generadas por Higgsfield (1 crédito cada una) y una convertida a
   sprite 64x64 de 16 colores. Ver [imagenes](imagenes.md).
 - Este sistema de memoria, instalado con `MEMORIA.md`, `CLAUDE.md` y `memoria/`.
+- `termo/index.html`: termo de mate en 3D, publicado como artifact
+  (claude.ai/artifact/YbhriSa1FJU6gf78vfXjYY, privado). Se gira arrastrando,
+  ceba sobre un mate, cuenta los 1.000 ml en cebadas de 45, y el agua se enfría
+  por Newton (k 0,043/h, reloj ×120). Revisado con una captura: arreglados el
+  cartel de "sin WebGL" que salía igual, la bombilla que tapaba el chorro y la
+  escala partida en dos renglones. **La segunda versión no se volvió a mirar.**
 
 **Qué falta**
 

@@ -1,0 +1,810 @@
+<title>Termo Cebador</title>
+<meta name="description" content="Un termo de mate en 3D: se gira, se ceba y el agua se enfría como en la vida real.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  /* La paleta sale del mate mismo: el verde de la yerba para lo que se toca,
+     un gris salvia de fondo (no un gris neutro: tira al verde a propósito) y
+     tres colores semánticos para la temperatura, que no son el acento. */
+  :root {
+    --suelo: #E6EAE3;
+    --superficie: #F5F7F2;
+    --tinta: #17201A;
+    --tinta-suave: #56625A;
+    --linea: #CBD3CA;
+    --acento: #2D5943;
+    --acento-tinta: #F2F6F0;
+    --escenario-alto: #F3F5F0;
+    --escenario-bajo: #D5DCD3;
+    --agua: #3F7DA8;
+    --ideal: #2C7A4D;
+    --tibio: #A0720F;
+    --quema: #B4532A;
+    --frio: #3A6BA5;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+    --cuerpo: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --suelo: #0F1411;
+      --superficie: #171D19;
+      --tinta: #E4E9E3;
+      --tinta-suave: #97A39A;
+      --linea: #2A332D;
+      --acento: #86B596;
+      --acento-tinta: #0E1411;
+      --escenario-alto: #232B26;
+      --escenario-bajo: #121714;
+      --agua: #7FB3D8;
+      --ideal: #6CC08D;
+      --tibio: #D9A93A;
+      --quema: #E6875A;
+      --frio: #86ACDD;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --suelo: #0F1411;
+    --superficie: #171D19;
+    --tinta: #E4E9E3;
+    --tinta-suave: #97A39A;
+    --linea: #2A332D;
+    --acento: #86B596;
+    --acento-tinta: #0E1411;
+    --escenario-alto: #232B26;
+    --escenario-bajo: #121714;
+    --agua: #7FB3D8;
+    --ideal: #6CC08D;
+    --tibio: #D9A93A;
+    --quema: #E6875A;
+    --frio: #86ACDD;
+  }
+
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    background: var(--suelo);
+    color: var(--tinta);
+    font-family: var(--cuerpo);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .app {
+    box-sizing: border-box;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  /* ── el escenario ─────────────────────────────────────────── */
+  .escena {
+    position: relative;
+    min-height: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    background: radial-gradient(120% 90% at 45% 30%, var(--escenario-alto), var(--escenario-bajo));
+  }
+  #lienzo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: grab;
+  }
+  #lienzo:active { cursor: grabbing; }
+  #lienzo:focus-visible { outline: 3px solid var(--acento); outline-offset: -3px; }
+  .cartel {
+    position: absolute;
+    inset: 22px 24px auto 24px;
+    pointer-events: none;
+    display: grid;
+    gap: 4px;
+  }
+  .cartel h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(30px, 4.4vw, 52px);
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .cartel p {
+    margin: 0;
+    color: var(--tinta-suave);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+  .pista {
+    position: absolute;
+    left: 24px;
+    bottom: 18px;
+    margin: 0;
+    pointer-events: none;
+    color: var(--tinta-suave);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  .sin-3d {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    text-align: center;
+    color: var(--tinta-suave);
+  }
+
+  /* ── el tablero ───────────────────────────────────────────── */
+  .tablero {
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--superficie);
+    border-radius: 20px;
+    padding: 22px 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .bloque { display: grid; gap: 10px; }
+  .bloque + .bloque { border-top: 1px solid var(--linea); padding-top: 18px; }
+  .rotulo {
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--tinta-suave);
+  }
+  .lectura {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .lectura .numero { font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.03em; }
+  .lectura.chica .numero { font-size: 40px; }
+  .lectura .unidad { font-size: 18px; color: var(--tinta-suave); }
+
+  .chip {
+    justify-self: start;
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c);
+    background: color-mix(in srgb, var(--c) 14%, transparent);
+  }
+  .chip[data-estado="ideal"] { --c: var(--ideal); }
+  .chip[data-estado="tibio"] { --c: var(--tibio); }
+  .chip[data-estado="quema"] { --c: var(--quema); }
+  .chip[data-estado="frio"]  { --c: var(--frio); }
+
+  /* La escala va de 40 a 100 °C: con eso la franja ideal (70–80) cae justo
+     en la mitad y se lee sin mirar los números. */
+  .termometro { position: relative; height: 10px; border-radius: 5px; background: var(--linea); margin-top: 4px; }
+  .termometro .franja {
+    position: absolute; top: 0; bottom: 0;
+    left: 50%; width: 16.667%;
+    background: color-mix(in srgb, var(--ideal) 45%, transparent);
+  }
+  .termometro .marca {
+    position: absolute; top: -5px;
+    width: 4px; height: 20px; margin-left: -2px;
+    border-radius: 2px;
+    background: var(--tinta);
+    transition: left 0.4s ease;
+  }
+  .escala { position: relative; height: 16px; font-family: var(--mono); font-size: 11px; color: var(--tinta-suave); }
+  .escala span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+  .escala span:first-child { transform: none; }
+  .escala span:last-child { transform: translateX(-100%); }
+
+  .nivel { height: 10px; border-radius: 5px; background: var(--linea); overflow: hidden; }
+  .nivel > div { height: 100%; width: 100%; background: var(--agua); transition: width 0.5s ease; }
+
+  .nota { margin: 0; font-size: 13px; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+
+  .boton {
+    appearance: none;
+    width: 100%;
+    border: 1px solid var(--linea);
+    border-radius: 12px;
+    padding: 13px 16px;
+    font: 600 15px/1.2 var(--cuerpo);
+    color: var(--tinta);
+    background: transparent;
+    cursor: pointer;
+  }
+  .boton:hover:not(:disabled) { background: color-mix(in srgb, var(--tinta) 6%, transparent); }
+  .boton.primario { border-color: var(--acento); background: var(--acento); color: var(--acento-tinta); padding-block: 16px; font-size: 16px; }
+  .boton.primario:hover:not(:disabled) { background: color-mix(in srgb, var(--acento) 88%, var(--tinta)); }
+  .boton:disabled { opacity: 0.45; cursor: not-allowed; }
+  .boton:focus-visible, .muestra input:focus-visible + span, input[type="range"]:focus-visible {
+    outline: 2px solid var(--tinta);
+    outline-offset: 2px;
+  }
+
+  .carga { display: grid; gap: 8px; }
+  .carga label { font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+  .carga output { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type="range"] { width: 100%; margin: 0; accent-color: var(--acento); }
+
+  .colores { border: 0; margin: 0; padding: 0; display: grid; gap: 10px; min-width: 0; }
+  .colores legend { margin-bottom: 10px; }
+  .muestras { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .muestra {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; cursor: pointer;
+  }
+  .muestra input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .muestra span {
+    flex: none;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--c);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta) 25%, transparent);
+  }
+  .muestra input:checked + span { box-shadow: 0 0 0 2px var(--superficie), 0 0 0 4px var(--tinta); }
+
+  .consejo {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--tinta-suave);
+    max-width: 65ch;
+  }
+  .consejo strong { color: var(--tinta); font-weight: 600; }
+
+  @media (max-width: 760px) {
+    html, body { height: auto; }
+    .app { height: auto; grid-template-columns: 1fr; }
+    .escena { height: 62vh; min-height: 340px; }
+    .tablero { overflow: visible; }
+  }
+</style>
+
+<div class="app">
+  <section class="escena" aria-label="Termo y mate en 3D">
+    <canvas id="lienzo" tabindex="0" aria-label="Termo de mate en 3D. Arrastrá para girarlo; con las flechas también."></canvas>
+    <div class="cartel">
+      <h1>Termo Cebador</h1>
+      <p>1 litro · acero · pico cebador</p>
+    </div>
+    <p class="pista">Arrastrá para girar la mesa</p>
+    <div class="sin-3d" id="sin-3d" hidden>Este navegador no pudo arrancar WebGL, así que el termo no se puede dibujar.</div>
+  </section>
+
+  <aside class="tablero">
+    <section class="bloque" aria-labelledby="t-temp">
+      <h2 class="rotulo" id="t-temp">Temperatura del agua</h2>
+      <div class="lectura"><span class="numero" id="temp">78</span><span class="unidad">°C</span></div>
+      <p class="chip" id="estado" data-estado="ideal" aria-live="polite">Justo para el mate</p>
+      <div class="termometro" aria-hidden="true"><div class="franja"></div><div class="marca" id="marca"></div></div>
+      <div class="escala" aria-hidden="true">
+        <span style="left:0">40</span><span style="left:50%">70</span><span style="left:66.667%">80</span><span style="left:100%">100 °C</span>
+      </div>
+      <p class="nota" id="reloj">Pasaron 0 h 00 min · reloj ×120</p>
+    </section>
+
+    <section class="bloque" aria-labelledby="t-agua">
+      <h2 class="rotulo" id="t-agua">Agua en el termo</h2>
+      <div class="lectura chica"><span class="numero" id="ml">1.000</span><span class="unidad">ml</span></div>
+      <div class="nivel" aria-hidden="true"><div id="nivel"></div></div>
+      <p class="nota"><span id="quedan">22</span> cebadas de 45 ml · <span id="cebados">0</span> mates cebados</p>
+      <button class="boton primario" id="cebar" type="button">Cebar un mate</button>
+    </section>
+
+    <section class="bloque" aria-labelledby="t-carga">
+      <h2 class="rotulo" id="t-carga">Cargar el termo</h2>
+      <div class="carga">
+        <label for="tcarga"><span>Agua a</span><span><output id="tcarga-out" for="tcarga">78</output> °C</span></label>
+        <input id="tcarga" type="range" min="60" max="100" step="1" value="78">
+        <button class="boton" id="cargar" type="button">Llenar con 1 litro</button>
+      </div>
+    </section>
+
+    <section class="bloque">
+    <fieldset class="colores">
+      <legend class="rotulo">Esmalte</legend>
+      <div class="muestras">
+        <label class="muestra"><input type="radio" name="color" id="c-verde" value="#3d5c44" checked><span style="--c:#3d5c44"></span>Verde martillado</label>
+        <label class="muestra"><input type="radio" name="color" id="c-negro" value="#23272a"><span style="--c:#23272a"></span>Negro</label>
+        <label class="muestra"><input type="radio" name="color" id="c-crema" value="#d8ccb0"><span style="--c:#d8ccb0"></span>Crema</label>
+        <label class="muestra"><input type="radio" name="color" id="c-rojo" value="#8c2a25"><span style="--c:#8c2a25"></span>Rojo</label>
+      </div>
+    </fieldset>
+    </section>
+
+    <p class="consejo">El agua para el mate va entre <strong>70 y 80 °C</strong>. Hirviendo quema la yerba y la amarga; tibia la lava enseguida.</p>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+(() => {
+  // ── El agua ────────────────────────────────────────────────────────────
+  // Enfriamiento de Newton contra un ambiente de 20 °C. La constante sale de
+  // pedirle a un buen termo que pierda ~2,5 °C en la primera hora con el agua
+  // a 78: k = 2,5 / (78 − 20) ≈ 0,043 por hora. El reloj corre ×120 (un
+  // segundo son dos minutos), si no el cambio no se ve nunca.
+  const AMBIENTE = 20, K = 0.043, ACELERA = 120;
+  const CAPACIDAD = 1000, CEBADA = 45;
+  const agua = { ml: CAPACIDAD, carga: 78, horas: 0, cebados: 0 };
+  const temperatura = () => AMBIENTE + (agua.carga - AMBIENTE) * Math.exp(-K * agua.horas);
+
+  function clasificar(t) {
+    if (t >= 82) return ["quema", "Muy caliente: quema la yerba"];
+    if (t >= 70) return ["ideal", "Justo para el mate"];
+    if (t >= 60) return ["tibio", "Tibio: la yerba se lava rápido"];
+    return ["frio", "Frío: cargá agua nueva"];
+  }
+
+  const $ = (id) => document.getElementById(id);
+  const ui = {
+    temp: $("temp"), estado: $("estado"), marca: $("marca"), reloj: $("reloj"),
+    ml: $("ml"), nivel: $("nivel"), quedan: $("quedan"), cebados: $("cebados"),
+    cebar: $("cebar"), cargar: $("cargar"), tcarga: $("tcarga"), tcargaOut: $("tcarga-out"),
+  };
+  const miles = new Intl.NumberFormat("es-AR");
+  let ultimoEstado = "";
+
+  function pintar() {
+    const t = temperatura();
+    ui.temp.textContent = Math.round(t);
+    const [clave, texto] = clasificar(t);
+    if (clave !== ultimoEstado) {           // solo si cambia: aria-live no repite
+      ui.estado.dataset.estado = clave;
+      ui.estado.textContent = texto;
+      ultimoEstado = clave;
+    }
+    ui.marca.style.left = (Math.min(1, Math.max(0, (t - 40) / 60)) * 100) + "%";
+    const min = Math.floor(agua.horas * 60);
+    ui.reloj.textContent = `Pasaron ${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")} min · reloj ×120`;
+    ui.ml.textContent = miles.format(agua.ml);
+    ui.nivel.style.width = (agua.ml / CAPACIDAD * 100) + "%";
+    ui.quedan.textContent = Math.floor(agua.ml / CEBADA);
+    ui.cebados.textContent = agua.cebados;
+    const vacio = agua.ml < CEBADA;
+    ui.cebar.disabled = vacio || !!vertido;
+    ui.cebar.textContent = vacio ? "Sin agua: llená el termo" : "Cebar un mate";
+    ui.cargar.disabled = !!vertido;
+  }
+
+  ui.tcarga.addEventListener("input", () => { ui.tcargaOut.textContent = ui.tcarga.value; });
+  ui.cargar.addEventListener("click", () => {
+    agua.ml = CAPACIDAD;
+    agua.carga = Number(ui.tcarga.value);
+    agua.horas = 0;
+    pintar();
+  });
+
+  // ── La escena ──────────────────────────────────────────────────────────
+  const lienzo = $("lienzo");
+  const escena = lienzo.parentElement;
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true, alpha: true });
+  } catch (e) {
+    $("sin-3d").hidden = false;
+    lienzo.hidden = true;
+  }
+  let vertido = null;
+  if (!renderer) {
+    pintar();
+    return;
+  }
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const scene = new THREE.Scene();
+  const camara = new THREE.PerspectiveCamera(32, 1, 0.1, 80);
+  const mira = new THREE.Vector3(0.1, 1.3, 0);
+
+  // Sin un entorno, el acero sale gris plano: el metal no tiene color propio,
+  // solo refleja. Como el CSP no deja bajar un HDR, se arma un cuarto chico
+  // (cielo en degradé + tres ventanas) y se lo pasa por PMREM.
+  function entorno() {
+    const pm = new THREE.PMREMGenerator(renderer);
+    const cuarto = new THREE.Scene();
+    const esfera = new THREE.SphereGeometry(10, 32, 16);
+    const pos = esfera.attributes.position, colores = [];
+    const arriba = new THREE.Color("#eef1ec"), abajo = new THREE.Color("#2e3430");
+    for (let i = 0; i < pos.count; i++) {
+      const c = abajo.clone().lerp(arriba, (pos.getY(i) / 10 + 1) / 2);
+      colores.push(c.r, c.g, c.b);
+    }
+    esfera.setAttribute("color", new THREE.Float32BufferAttribute(colores, 3));
+    cuarto.add(new THREE.Mesh(esfera, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+    const ventana = (w, h, x, y, z, fuerza) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(fuerza, fuerza, fuerza), side: THREE.DoubleSide }));
+      m.position.set(x, y, z);
+      m.lookAt(0, 0, 0);
+      cuarto.add(m);
+    };
+    ventana(6, 4, -5, 5, 4, 4);
+    ventana(3, 6, 6, 2, -2, 2.4);
+    ventana(8, 1.2, 0, 8, 0, 3);
+    const tex = pm.fromScene(cuarto, 0.035).texture;
+    pm.dispose();
+    return tex;
+  }
+  scene.environment = entorno();
+
+  scene.add(new THREE.HemisphereLight(0xf4f6f2, 0x2a2f2c, 0.5));
+  const sol = new THREE.DirectionalLight(0xffffff, 1.7);
+  sol.position.set(-3.5, 6.5, 4.5);
+  sol.castShadow = true;
+  sol.shadow.mapSize.set(2048, 2048);
+  Object.assign(sol.shadow.camera, { left: -4.5, right: 4.5, top: 4.5, bottom: -2.5, near: 1, far: 20 });
+  sol.shadow.bias = -0.0004;
+  sol.shadow.normalBias = 0.02;
+  scene.add(sol);
+
+  // El piso solo recibe sombra: el color de fondo lo pone la página, así la
+  // escena se ve bien en tema claro y oscuro sin tocar nada acá.
+  const piso = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ opacity: 0.22 }));
+  piso.rotation.x = -Math.PI / 2;
+  piso.receiveShadow = true;
+  scene.add(piso);
+
+  // Esmalte martillado: puntos redondos de brillo al azar, usados como bump.
+  // Semilla fija para que salga igual cada vez. Cada punto se dibuja también
+  // del otro lado del borde: sin eso la textura, que da la vuelta al termo,
+  // deja una costura vertical donde se junta consigo misma.
+  function martillado() {
+    const c = document.createElement("canvas");
+    c.width = c.height = 512;
+    const g = c.getContext("2d");
+    g.fillStyle = "#808080";
+    g.fillRect(0, 0, 512, 512);
+    let semilla = 7;
+    const azar = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 2400; i++) {
+      const x = azar() * 512, y = azar() * 512, r = 5 + azar() * 12;
+      const l = Math.round(90 + azar() * 76);
+      for (const dx of [-512, 0, 512]) for (const dy of [-512, 0, 512]) {
+        const cx = x + dx, cy = y + dy;
+        if (cx < -r || cx > 512 + r || cy < -r || cy > 512 + r) continue;
+        const gr = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+        gr.addColorStop(0, `rgba(${l},${l},${l},0.85)`);
+        gr.addColorStop(1, `rgba(${l},${l},${l},0)`);
+        g.fillStyle = gr;
+        g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+      }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(3, 5);
+    return t;
+  }
+
+  const esmalte = new THREE.MeshStandardMaterial({
+    color: "#3d5c44", roughness: 0.48, metalness: 0.25, bumpMap: martillado(), bumpScale: 1.4,
+  });
+  const acero = new THREE.MeshStandardMaterial({ color: "#d0d4d6", roughness: 0.24, metalness: 1 });
+  const plastico = new THREE.MeshStandardMaterial({ color: "#2a2e2b", roughness: 0.55, metalness: 0 });
+  const sombra = (m) => { m.castShadow = true; m.receiveShadow = true; return m; };
+  const torno = (puntos, seg = 72, suavizar = 0) => {
+    let v = puntos.map(([x, y]) => new THREE.Vector2(x, y));
+    if (suavizar) v = new THREE.SplineCurve(v).getPoints(suavizar);
+    return new THREE.LatheGeometry(v, seg);
+  };
+
+  // La mesa gira entera (termo + mate): así el arrastre se siente como mover
+  // un plato giratorio y no como hacer girar un objeto suelto en el aire.
+  const mesa = new THREE.Group();
+  scene.add(mesa);
+
+  // ── El termo ── perfil de revolución: base redondeada, cuerpo recto y un
+  // hombro que cierra hasta el cuello. Medidas en "unidades" de ~11 cm.
+  const termo = new THREE.Group();
+  const REPOSO = new THREE.Vector3(-0.6, 0, 0);
+  termo.position.copy(REPOSO);
+  mesa.add(termo);
+
+  termo.add(sombra(new THREE.Mesh(torno([
+    [0, 0], [0.47, 0], [0.53, 0.025], [0.555, 0.09], [0.555, 2.02],
+    [0.54, 2.16], [0.49, 2.28], [0.42, 2.36], [0.385, 2.4],
+  ]), esmalte)));
+
+  const virolaBase = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.561, 0.561, 0.07, 72, 1, true), acero));
+  virolaBase.position.y = 0.13;
+  termo.add(virolaBase);
+
+  const cuello = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.39, 0.39, 0.12, 64), acero));
+  cuello.position.y = 2.44;
+  termo.add(cuello);
+
+  const tapon = sombra(new THREE.Mesh(torno([
+    [0.37, 0], [0.36, 0.06], [0.31, 0.14], [0.22, 0.2], [0.1, 0.225], [0, 0.23],
+  ], 64), plastico));
+  tapon.position.y = 2.5;
+  termo.add(tapon);
+
+  // El pico cebador apunta hacia +x, del lado contrario al asa: con el asa
+  // arriba al inclinar, la mano queda donde tiene que quedar.
+  const pico = new THREE.Group();
+  pico.position.set(0.12, 2.68, 0);
+  pico.rotation.z = THREE.MathUtils.degToRad(-35);
+  termo.add(pico);
+  const caño = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.066, 0.34, 28), acero));
+  caño.position.y = 0.17;
+  pico.add(caño);
+  const labio = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 10, 28), acero);
+  labio.position.y = 0.34;
+  labio.rotation.x = Math.PI / 2;
+  pico.add(labio);
+  const punta = new THREE.Object3D();          // de acá sale el chorro
+  punta.position.y = 0.36;
+  pico.add(punta);
+  const atras = new THREE.Object3D();          // con punta, da la dirección del chorro
+  atras.position.y = 0.1;
+  pico.add(atras);
+
+  const asa = sombra(new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.065, 20, 48, Math.PI), esmalte));
+  asa.rotation.z = Math.PI / 2;
+  asa.position.set(-0.52, 1.35, 0);
+  termo.add(asa);
+  for (const y of [0.85, 1.85]) {
+    const anclaje = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.1, 24), acero));
+    anclaje.rotation.z = Math.PI / 2;
+    anclaje.position.set(-0.56, y, 0);
+    termo.add(anclaje);
+  }
+
+  // ── El mate ── calabaza, virola, yerba y bombilla. A escala: un mate mide
+  // un tercio del termo, más o menos.
+  const mate = new THREE.Group();
+  mate.position.set(1.0, 0, 0.15);
+  mate.scale.setScalar(1.3);
+  mesa.add(mate);
+  mate.add(sombra(new THREE.Mesh(torno([
+    [0, 0], [0.17, 0], [0.25, 0.05], [0.33, 0.17], [0.365, 0.31],
+    [0.35, 0.45], [0.3, 0.55], [0.265, 0.61],
+  ], 64, 48), new THREE.MeshStandardMaterial({ color: "#6b4527", roughness: 0.62 }))));
+  const virola = new THREE.Mesh(new THREE.TorusGeometry(0.268, 0.024, 12, 64), acero);
+  virola.rotation.x = Math.PI / 2;
+  virola.position.y = 0.615;
+  mate.add(virola);
+  const YERBA_SECA = new THREE.Color("#6f7c36"), YERBA_MOJADA = new THREE.Color("#3f4a1c");
+  const yerbaMat = new THREE.MeshStandardMaterial({ color: YERBA_SECA.clone(), roughness: 1 });
+  const yerba = new THREE.Mesh(new THREE.CircleGeometry(0.262, 48), yerbaMat);
+  yerba.rotation.x = -Math.PI / 2;
+  yerba.position.y = 0.598;
+  yerba.receiveShadow = true;
+  mate.add(yerba);
+  // Del lado de afuera, lejos del pico: si queda del lado del termo, el
+  // chorro cae justo sobre ella y en pantalla se confunden.
+  const bombilla = sombra(new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.6, 12), acero));
+  bombilla.position.set(0.09, 0.83, -0.06);
+  bombilla.rotation.z = -0.3;
+  mate.add(bombilla);
+  const boquilla = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 10), acero);
+  boquilla.scale.set(1.4, 0.6, 1);
+  boquilla.position.set(0.09 + Math.sin(0.3) * 0.3, 0.83 + Math.cos(0.3) * 0.3, -0.06);
+  mate.add(boquilla);
+
+  const MATE_RADIO = 0.262 * 1.3;
+  const MATE_BOCA = 0.598 * 1.3;
+  let humedad = 0;
+
+  // ── Dónde tiene que terminar el termo al cebar ─────────────────────────
+  // Se calcula en vez de ponerse a mano: se lo inclina del todo, se mira dónde
+  // quedó la punta del pico y se corre el termo para que esa punta caiga un
+  // poco antes del centro del mate (el chorro sale con velocidad y avanza).
+  const INCLINACION = THREE.MathUtils.degToRad(72);
+  const desplazamiento = new THREE.Vector3();
+  (function calcularDestino() {
+    termo.rotation.z = -INCLINACION;
+    termo.position.copy(REPOSO);
+    mesa.updateMatrixWorld(true);
+    const p = mesa.worldToLocal(punta.getWorldPosition(new THREE.Vector3()));
+    const destino = new THREE.Vector3(mate.position.x - 0.22, MATE_BOCA + 0.72, mate.position.z);
+    desplazamiento.copy(destino).sub(p);
+    termo.rotation.z = 0;
+  })();
+
+  const suave = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+  function pose(k) {
+    const e = suave(k);
+    termo.rotation.z = -INCLINACION * e;
+    termo.position.copy(REPOSO).addScaledVector(desplazamiento, e);
+  }
+
+  // ── El chorro ── gotas con gravedad. La gravedad está "a escala de
+  // pantalla", no a escala real: a 9,8 m/s² con una unidad de 11 cm el chorro
+  // cae tan rápido que no se llega a ver.
+  const MAX_GOTAS = 420, GRAVEDAD = 25;
+  const gotas = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.034, 10, 8),
+    new THREE.MeshStandardMaterial({ color: "#8cc6e6", roughness: 0.02, metalness: 0.1, transparent: true, opacity: 0.9 }),
+    MAX_GOTAS,
+  );
+  gotas.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  gotas.frustumCulled = false;
+  gotas.count = 0;
+  mesa.add(gotas);
+  const vivas = [];
+  const tmp = new THREE.Object3D();
+  const pPunta = new THREE.Vector3(), pAtras = new THREE.Vector3();
+
+  function soltarGota() {
+    if (vivas.length >= MAX_GOTAS) return;
+    mesa.worldToLocal(punta.getWorldPosition(pPunta));
+    mesa.worldToLocal(atras.getWorldPosition(pAtras));
+    const dir = pPunta.clone().sub(pAtras).normalize();
+    const j = () => (Math.random() - 0.5) * 0.02;
+    vivas.push({
+      p: pPunta.clone().add(new THREE.Vector3(j(), j(), j())),
+      v: dir.multiplyScalar(0.9 + Math.random() * 0.1),
+    });
+  }
+
+  function moverGotas(dt) {
+    for (let i = vivas.length - 1; i >= 0; i--) {
+      const g = vivas[i];
+      g.v.y -= GRAVEDAD * dt;
+      g.p.addScaledVector(g.v, dt);
+      const dx = g.p.x - mate.position.x, dz = g.p.z - mate.position.z;
+      const enElMate = g.p.y < MATE_BOCA && dx * dx + dz * dz < MATE_RADIO * MATE_RADIO;
+      if (enElMate) humedad = Math.min(1, humedad + 0.012);
+      if (enElMate || g.p.y < 0) vivas.splice(i, 1);
+    }
+    for (let i = 0; i < vivas.length; i++) {
+      tmp.position.copy(vivas[i].p);
+      tmp.updateMatrix();
+      gotas.setMatrixAt(i, tmp.matrix);
+    }
+    gotas.count = vivas.length;
+    gotas.instanceMatrix.needsUpdate = true;
+  }
+
+  // ── Cebar ─────────────────────────────────────────────────────────────
+  const FASE = { sube: 0.75, vierte: 1.3, baja: 0.75 };
+  const VISTA = 0.3;                           // de perfil y un poco de tres cuartos: se ve el chorro entero
+  const DOS_PI = Math.PI * 2;
+  let acumulado = 0;
+
+  ui.cebar.addEventListener("click", () => {
+    if (vertido || agua.ml < CEBADA) return;
+    const a = mesa.rotation.y;
+    vertido = { t: 0, servido: false, giroDesde: a, giroHasta: VISTA + Math.round((a - VISTA) / DOS_PI) * DOS_PI };
+    velocidad = 0;
+    pintar();
+  });
+
+  function avanzarVertido(dt) {
+    vertido.t += dt;
+    const t = vertido.t;
+    const { sube, vierte, baja } = FASE;
+    if (t < sube) {
+      const k = t / sube;
+      pose(k);
+      mesa.rotation.y = vertido.giroDesde + (vertido.giroHasta - vertido.giroDesde) * suave(k);
+    } else if (t < sube + vierte) {
+      pose(1);
+      mesa.rotation.y = vertido.giroHasta;
+      acumulado += dt * 150;                   // gotas por segundo
+      while (acumulado >= 1) { soltarGota(); acumulado -= 1; }
+    } else if (t < sube + vierte + baja) {
+      if (!vertido.servido) {
+        vertido.servido = true;
+        agua.ml -= CEBADA;
+        agua.cebados += 1;
+        pintar();
+      }
+      pose(1 - (t - sube - vierte) / baja);
+    } else {
+      pose(0);
+      vertido = null;
+      ocioso = 0;
+      pintar();
+    }
+  }
+
+  // ── Girar a mano ──────────────────────────────────────────────────────
+  const quieto = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let arrastrando = false, ultimoX = 0, velocidad = 0, ocioso = 0;
+  lienzo.addEventListener("pointerdown", (e) => {
+    if (vertido) return;
+    arrastrando = true;
+    ultimoX = e.clientX;
+    velocidad = 0;
+    lienzo.setPointerCapture(e.pointerId);
+  });
+  lienzo.addEventListener("pointermove", (e) => {
+    if (!arrastrando) return;
+    const dx = e.clientX - ultimoX;
+    ultimoX = e.clientX;
+    mesa.rotation.y += dx * 0.01;
+    velocidad = dx * 0.6;
+    ocioso = 0;
+  });
+  const soltar = () => { arrastrando = false; };
+  lienzo.addEventListener("pointerup", soltar);
+  lienzo.addEventListener("pointercancel", soltar);
+  lienzo.addEventListener("keydown", (e) => {
+    if (vertido) return;
+    if (e.key === "ArrowLeft") { mesa.rotation.y -= 0.15; ocioso = 0; e.preventDefault(); }
+    if (e.key === "ArrowRight") { mesa.rotation.y += 0.15; ocioso = 0; e.preventDefault(); }
+  });
+
+  // ── Color ── recordarlo es comodidad de cada uno, así que va a
+  // localStorage, y si el navegador no deja, no pasa nada.
+  const radios = document.querySelectorAll('input[name="color"]');
+  function ponerColor(hex) {
+    esmalte.color.set(hex);
+    radios.forEach((r) => { r.checked = r.value === hex; });
+  }
+  try {
+    const guardado = localStorage.getItem("termo-esmalte");
+    if (guardado && [...radios].some((r) => r.value === guardado)) ponerColor(guardado);
+  } catch (e) { /* sin almacenamiento: queda el verde */ }
+  radios.forEach((r) => r.addEventListener("change", () => {
+    ponerColor(r.value);
+    try { localStorage.setItem("termo-esmalte", r.value); } catch (e) { /* no importa */ }
+  }));
+
+  // ── Tamaño ── en pantalla angosta la cámara se aleja: si no, el mate o el
+  // termo inclinado se salen por los costados.
+  function acomodar() {
+    const w = escena.clientWidth, h = escena.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camara.aspect = w / h;
+    const d = 8.6 * Math.max(1, 1.1 / camara.aspect);
+    camara.position.set(mira.x + 0.5, mira.y + 1.2, d);
+    camara.lookAt(mira);
+    camara.updateProjectionMatrix();
+  }
+  new ResizeObserver(acomodar).observe(escena);
+  acomodar();
+
+  // ── El bucle ──────────────────────────────────────────────────────────
+  mesa.rotation.y = VISTA;
+  let antes = performance.now(), paraPintar = 0;
+  function cuadro(ahora) {
+    // Tope de 50 ms: al volver de otra pestaña el reloj del agua no pega un salto.
+    const dt = Math.min(0.05, (ahora - antes) / 1000);
+    antes = ahora;
+
+    agua.horas += dt * ACELERA / 3600;
+    paraPintar += dt;
+    if (paraPintar > 0.25) { paraPintar = 0; pintar(); }
+
+    if (vertido) avanzarVertido(dt);
+    else if (!arrastrando) {
+      ocioso += dt;
+      if (Math.abs(velocidad) > 0.001) {       // la inercia del arrastre se apaga sola
+        mesa.rotation.y += velocidad * dt;
+        velocidad *= Math.pow(0.04, dt);
+      } else if (ocioso > 3 && !quieto.matches) {
+        mesa.rotation.y += dt * 0.18;
+      }
+    }
+
+    moverGotas(dt);
+    humedad = Math.max(0, humedad - dt * 0.1);
+    yerbaMat.color.copy(YERBA_SECA).lerp(YERBA_MOJADA, humedad);
+
+    renderer.render(scene, camara);
+    requestAnimationFrame(cuadro);
+  }
+  pintar();
+  requestAnimationFrame(cuadro);
+})();
+</script>

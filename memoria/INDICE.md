@@ -63,6 +63,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `herramientas/neko/` | manejar un escritorio Linux por REST | [neko](neko.md) |
 | `herramientas/rezona/` | cliente stdio del MCP de Rezona | [rezona](rezona.md) |
 | `herramientas/iblo/`, `mint/`, `audio/` | utilidades sueltas | — |
+| `termo/` | termo de mate en 3D (three.js): se gira, se ceba, el agua se enfría | [maquina](maquina.md) para capturarlo |
 | `telarana/`, `garfio/`, `pozo/`, `pique*/`, `flores/`, `paraguas/` | juegos | — |
 | `Prompts/` | colecciones de prompts | — |
 
