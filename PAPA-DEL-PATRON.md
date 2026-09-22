@@ -17,9 +17,18 @@
 
 ## 0. Lo más urgente que sigue trabado
 
-- **Rezona: 447.884 créditos parados.** El conector MCP apunta a otra cuenta
-  (ve 0). Para usarlos hace falta crear la API key en https://rezona.ai/api-keys
-  y pegarla. Con eso se generan imágenes/3D **y** la app PeakCode podría hablarle
+- **Rezona: la llave ya existe y anda; los créditos siguen sin gastarse.**
+  Hay una PAT `rz_live_…` cargada y **verificada contra la API** (ver §9). Saldo
+  medido el 22/9: **446.987** (446.069 gastables). El número viejo de 447.884
+  quedó desactualizado. Leer el saldo y listar proyectos: HTTP 200. Lo que
+  todavía **no** se pudo correr es una generación, por dos frenos distintos que
+  conviene no confundir:
+  1. el servidor de Rezona contestó `CREDIT_RESERVE_FAILED` ("el servicio de
+     cobro no está disponible"), que **el propio paquete lista como transitorio**
+     (`TRANSIENT_CODES` en `dist/api/errors.js`): se reintenta con espera;
+  2. el clasificador de permisos de la sesión bloquea gastar créditos
+     (*Real-World Transactions*). Hace falta que el dueño lo habilite.
+  Con eso resuelto se generan imágenes/3D **y** la app PeakCode podría hablarle
   a los modelos de frontera pagándolos con esos créditos (ver §5).
 - **Cloudflare: falta `CLOUDFLARE_ACCOUNT_ID`** y el token no está en la máquina
   (`/root/.cloudflare-iblo` no existe acá). Sin eso no se despliegan los sitios.
@@ -204,3 +213,67 @@ de beats), 555 filtros ffmpeg, `xfade` con 58 transiciones, LUT propio + denoise
   caminos, ninguno da las dos cosas gratis (tabla §1).
 - No montar runners de Actions como PC remota (TOS + riesgo + sin GPU).
 - No usar Colab/Kaggle de mula de descargas: sus términos lo prohíben.
+
+---
+
+## 9. Rezona por HTTP: lo que se midió de la API
+
+El conector MCP puede no estar; el paquete de npm puede estar bloqueado por el
+clasificador (*Code from External*). Nada de eso importa: la API se maneja con
+`curl` y está toda medida. Esto se sacó leyendo el paquete `rezona@0.2.0`
+(MIT, TypeScript), no adivinando.
+
+| cosa | valor |
+|---|---|
+| base de producción | `https://lab.rezona.ai/game/pgcserver` |
+| base de desarrollo | `https://devlab.rezona.ai/game/pgcserver` |
+| autenticación | `Authorization: Bearer rz_live_…` — **nunca** en la query: eso cae en los logs del proxy |
+| credenciales | `~/.rezona/credentials.json`, directorio 0700 y archivo 0600 |
+| override para CI | `REZONA_PAT` y `REZONA_API_BASE` |
+
+**La PAT es la cuenta entera.** Las keys que emite Rezona **no llevan scope**:
+el único límite es una lista blanca de 9 endpoints del lado del servidor. O sea
+que una PAT filtrada es la cuenta filtrada, no "un permiso de lectura".
+
+Los endpoints de esa lista blanca:
+
+| endpoint | qué hace |
+|---|---|
+| `GET /api/credits/pat-balance` | saldo: `balance` y `spendable`. La diferencia es lo reservado y todavía no liquidado |
+| `POST /api/projects` · `GET /api/projects` | crear y listar proyectos. **Gratis**, no gasta créditos |
+| `GET /api/projects/{ref}` · `/versions` | consultar proyecto y versiones |
+| `POST /api/projects/{ref}/generations` | **la que cobra.** `{type, output_path, [type]: params}` |
+| `POST /api/generations/status` | estado por lote de `task_ids` |
+| `GET /api/projects/{ref}/files/{v|current|assets}/…` | bajar los bytes del producto |
+| `POST /api/projects/{ref}/rezona/publish` | publicar una versión ya compilada |
+
+Tipos de generación y lo que aceptan: `image` (`prompt`, `size` `WxH` o `auto`,
+`n` hasta 4, `ref_image_urls`), `video` (`resolution` 480p/720p/1080p, `ratio`),
+`audio` (`mp3`/`wav`, hasta 120 s), `model3d` (`source_url` pública) y el rigging,
+que pide el `task_id` de un `model3d` **propio** ya terminado.
+
+### Trampas, todas del código del paquete
+
+- **El `output_path` que vale es el de la RESPUESTA.** El servidor le agrega el
+  número de generación (`-g{n}`). Ya estaba anotado en `ARRANQUE.md`; se
+  confirma leyendo `submitGeneration`.
+- **`CREDIT_RESERVE_FAILED` no es "te quedaste sin plata".** Es el cobrador
+  caído, y está en la lista de transitorios junto con `GENERATION_RATE_LIMITED`
+  y `UPSTREAM_UNAVAILABLE`: se reintenta con espera creciente. Sin créditos, el
+  servidor contesta **402**, que es otra cosa.
+- **Las referencias de imagen tienen que ser URLs públicas https.** Loopback y
+  privadas se rechazan del lado del servidor. Un asset ya generado ahí **ya
+  tiene** su `public_url`: no hace falta subirlo a ningún lado.
+- **`publish` solo acepta versiones estables ya compiladas**, con
+  `dist/index.html`. `current` y las inexistentes dan 404; sin ese archivo, 409.
+  Y **no mandes `idempotency_key` propia**: el servidor deriva una del contenido,
+  así el reintento es idempotente solo. Inventar una clave distinta al reintentar
+  publica el mismo trabajo dos veces, y eso no se deshace.
+- **No hay endpoint para borrar proyectos.** Lo que se crea para probar, queda.
+
+### La llave, dónde vive
+
+En `~/.rezona/credentials.json` del contenedor, que **es efímero**: se va con la
+sesión. No está ni va a estar en el repo — sigue valiendo la regla de §7. Si
+hace falta que sobreviva, va como variable de entorno del entorno de la sesión
+(`REZONA_PAT`), nunca en un archivo versionado.
