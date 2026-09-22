@@ -8,6 +8,10 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 > dice **qué hay construido** (cada página, cada endpoint, cada tabla).
 > Una sesión nueva debería leer los dos, en ese orden.
 
+> **Para hacer un juego que se vea bien:** [`GUIA-JUEGOS.md`](GUIA-JUEGOS.md),
+> la receta con Rezona: qué pedir, cómo procesarlo y qué hacer en el motor.
+> Sale de lo medido en `bosque/` y en los juegos anteriores.
+
 ## Qué hay
 
 | carpeta | qué es | dónde vive |
