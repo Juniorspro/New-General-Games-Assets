@@ -114,13 +114,14 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
 /* ── en juego ─────────────────────────────────────────────────────────── */
 #hud{position:fixed;top:0;left:0;right:0;z-index:4;display:flex;align-items:center;
   justify-content:space-between;gap:10px;
-  padding:max(10px,env(safe-area-inset-top)) 14px 10px}
+  padding:max(10px,env(safe-area-inset-top)) 14px 10px;pointer-events:none}
+#hud>*{pointer-events:auto}
 #hudPuntos{font-weight:900;font-size:22px;font-variant-numeric:tabular-nums;
   text-shadow:0 0 14px rgba(255,255,255,.25)}
 #hudCancion{color:var(--apagado);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
 #bSalir{padding:9px 13px;font-size:12px;background:rgba(0,0,0,.35)}
-#zonas{position:fixed;inset:0;z-index:3;display:grid;grid-template-columns:repeat(3,1fr);
-  width:min(94vw,520px);left:50%;transform:translateX(-50%)}
+#zonas{position:fixed;inset:0;z-index:3;display:grid;grid-template-columns:repeat(4,1fr);
+  width:min(96vw,560px);left:50%;transform:translateX(-50%)}
 #zonas div{height:100%}
 .cuenta{position:fixed;inset:0;z-index:5;display:grid;place-items:center;
   font-size:clamp(60px,20vw,110px);font-weight:900;pointer-events:none;
@@ -131,6 +132,8 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
 .estrellas{font-size:34px;letter-spacing:8px;color:var(--agudo);min-height:42px}
 .limpia{display:none;font-weight:900;letter-spacing:.16em;font-size:13px;color:#7cf6ff}
 .limpia.on{display:block}
+.perdiste{display:none;font-weight:900;letter-spacing:.14em;font-size:13px;color:#ff7676}
+.perdiste.on{display:block}
 .record{display:none;font-weight:800;font-size:12px;letter-spacing:.14em;color:var(--agudo)}
 .record.on{display:block}
 .desglose{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}
@@ -250,7 +253,7 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
        traducir coordenadas y acertar el carril a mano; con tres divs el
        navegador ya sabe cuál se tocó, y además se pueden hacer más altos que
        lo que se dibuja, que es lo que el pulgar necesita. -->
-  <div id="zonas"><div data-c="0"></div><div data-c="1"></div><div data-c="2"></div></div>
+  <div id="zonas"><div data-c="0"></div><div data-c="1"></div><div data-c="2"></div><div data-c="3"></div></div>
 </section>
 
 <!-- ── resultado ──────────────────────────────────────────────────────── -->
@@ -259,6 +262,7 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
     <h2 data-t="fin.titulo">Se terminó</h2>
     <div id="finEstrellas" class="estrellas"></div>
     <div id="finLimpia" class="limpia" data-t="fin.limpia">SIN FALLAR NI UNA</div>
+    <div id="finPerdiste" class="perdiste" data-t="fin.perdiste">TE QUEDASTE SIN VIDA</div>
     <div id="finRecord" class="record" data-t="fin.record">Récord nuevo</div>
     <div class="fila"><span data-t="fin.puntos">Puntos</span><b id="finPuntos">0</b></div>
     <div class="fila"><span data-t="fin.precision">Precisión</span><b id="finPrecision">0%</b></div>
@@ -511,7 +515,12 @@ const M_carta = (() => {
   // aprendérsela. Sortear el carril se juega igual de bien y se olvida enseguida.
 
   const { CANCIONES, componer } = M_compositor;
-  const CARRILES = 3;
+  /* CUATRO CARRILES Y NO TRES. Tres se juegan cómodos con un pulgar y por eso
+     estaban; cuatro es lo que la gente reconoce —izquierda, abajo, arriba,
+     derecha— y lo que permite tocar con los dos pulgares como se toca de verdad.
+     El costo es que las notas quedan más cerca entre sí, y de eso se encarga el
+     validador: el piso de 115 ms por carril no se toca. */
+  const CARRILES = 4;
 
   /** Lo mínimo que puede haber entre dos notas del MISMO carril, en segundos.
    *
@@ -796,6 +805,14 @@ const M_juego = (() => {
   /** Cuánta precisión hace falta para cada estrella. */
   const ESTRELLAS = [0.70, 0.85, 0.95];
 
+  /* LA VIDA. Se arranca a la mitad, se gana acertando y se pierde fallando.
+     Existe para que la canción tenga tensión: sin ella, fallar veinte seguidas y
+     fallar una se sienten igual y la barra de arriba es un adorno.
+     Los números están corridos a favor del que juega: un acierto da poco, un
+     error saca bastante, pero hacen falta DIECIOCHO errores seguidos desde la
+     mitad para perder. Es difícil perder sin haberse dado cuenta de que iba mal. */
+  const VIDA = { perfecto: 0.020, bien: 0.014, rozo: 0.008, error: -0.055 };
+
   class Partida {
     constructor(idCancion) {
       const c = carta(idCancion);
@@ -815,6 +832,8 @@ const M_juego = (() => {
       this.cuenta = { perfecto: 0, bien: 0, rozo: 0, error: 0 };
       this.ultimoJuicio = null;     // {clase, dt, carril, t}
       this.terminada = false;
+      this.vida = 0.5;
+      this.perdio = false;
       this.sostenidas = new Array(CARRILES).fill(null);
       for (const n of this.notas) { n.juzgada = null; n.sostenidaHasta = 0; n.soltada = false; }
       this.cursor.fill(0);
@@ -825,6 +844,8 @@ const M_juego = (() => {
 
     anotar(clase) {
       this.cuenta[clase]++;
+      this.vida = Math.max(0, Math.min(1, this.vida + VIDA[clase]));
+      if (this.vida <= 0) this.perdio = true;
       if (clase === "error") { this.combo = 0; return; }
       this.puntos += Math.round(PUNTOS[clase] * this.multiplicador());
       this.combo++;
@@ -885,6 +906,10 @@ const M_juego = (() => {
           if (hasta >= s.t + s.largo) this.sostenidas[c] = null;
         }
       }
+      // Se termina por el final de la canción o por quedarse sin vida. Lo segundo
+      // corta al toque: seguir tocando una canción ya perdida no es una segunda
+      // oportunidad, es no dejar reintentar.
+      if (this.perdio) this.terminada = true;
       if (!this.terminada && t > this.tema.duracion + 1.5 &&
           this.notas.every((n) => n.juzgada)) this.terminada = true;
     }
@@ -914,251 +939,404 @@ const M_juego = (() => {
 
 /* ── dibujo.js ── */
 const M_dibujo = (() => {
-  // El dibujo. Neón vectorial, y todo lo caro cocinado una sola vez.
+  // El dibujo. Flechas, receptores, salpicaduras y un fondo que late.
   //
-  // LOS DESTELLOS VAN PRE-DIBUJADOS. `shadowBlur` se recalcula en cada llamada:
-  // con veinte notas en pantalla son veinte desenfoques por cuadro, y en un
-  // teléfono eso solo ya se come el presupuesto. Acá cada tipo de nota se dibuja
-  // UNA vez, con su resplandor, en un lienzo aparte, y después se estampa. Una
-  // estampa es una copia de píxeles y cuesta lo mismo tenga o no resplandor.
+  // TODO LO CARO SE COCINA UNA VEZ. Una flecha con resplandor cuesta un
+  // `shadowBlur`, y `shadowBlur` se recalcula en cada llamada: con veinte flechas
+  // en pantalla son veinte desenfoques por cuadro y ahí se va el presupuesto.
+  // Cada pieza —flecha, receptor apagado, receptor prendido, salpicadura— se
+  // dibuja UNA vez en su propio lienzo y después se estampa. Estampar es copiar
+  // píxeles y cuesta lo mismo tenga o no resplandor.
+  //
+  // Y EL FONDO FIJO NO SE PINTA ACA: lo pone el CSS detrás del lienzo. Rellenar
+  // un degradado a pantalla completa sesenta veces por segundo, para que quede
+  // exactamente igual, era el trabajo más caro del juego.
 
   const { CARRILES } = M_carta;
-  const COLORES = [
-    { vivo: "#ff3d8b", flojo: "#7a1743" },   // carril grave
-    { vivo: "#31e0c8", flojo: "#0f5d54" },   // medio
-    { vivo: "#ffcc2f", flojo: "#7a5f0e" },   // agudo
+  /* Los cuatro carriles son direcciones, no números: izquierda, abajo, arriba,
+     derecha. Se leen sin aprenderlas y cada una tiene su color. */
+  const CARRILES_INFO = [
+    { dir: "izq",    vivo: "#c24bff", flojo: "#4a1a6e", giro: Math.PI },
+    { dir: "abajo",  vivo: "#00d9ff", flojo: "#0b4f5e", giro: Math.PI / 2 },
+    { dir: "arriba", vivo: "#3ce06a", flojo: "#14532b", giro: -Math.PI / 2 },
+    { dir: "der",    vivo: "#ff3d5a", flojo: "#6e1522", giro: 0 },
   ];
+  const COLORES = CARRILES_INFO;
   const JUICIO = { perfecto: "#7cf6ff", bien: "#9dff6b", rozo: "#ffc247", error: "#ff5252" };
+
+  /** La silueta de una flecha, mirando a la derecha, en una caja de -1 a 1. */
+  function trazarFlecha(x, r) {
+    const p = (a, b) => [a * r, b * r];
+    const pts = [[0.95, 0], [0.18, -0.85], [0.18, -0.34], [-0.95, -0.34],
+                 [-0.95, 0.34], [0.18, 0.34], [0.18, 0.85]];
+    x.beginPath();
+    pts.forEach((q, i) => { const [a, b] = p(q[0], q[1]); i ? x.lineTo(a, b) : x.moveTo(a, b); });
+    x.closePath();
+  }
 
   class Pantalla {
     constructor(lienzo) {
       this.c = lienzo;
       this.x = lienzo.getContext("2d");
       this.chispas = [];
-      this.anillos = [];
+      this.salpicaduras = [];
+      this.polvo = [];
       this.sellos = null;
       this.medir();
     }
 
     medir() {
       /* EL LIENZO NO PASA DE UNOS DOS MILLONES Y MEDIO DE PIXELES.
-         En una tablet, 768×1024 a densidad 2 son 3,1 millones de píxeles que hay
-         que rellenar sesenta veces por segundo; medido, ahí los cuadros bajaban a
-         54,8 por segundo. Lo que se dibuja son formas grandes de neón, no texto
-         fino: bajar la densidad a 1,8 no se ve y devuelve los cuadros. En un
-         teléfono normal el tope no se alcanza y la densidad queda intacta. */
+         En una tablet, 768×1024 a densidad 2 son 3,1 millones que hay que
+         rellenar sesenta veces por segundo; medido, ahí los cuadros bajaban a
+         54,8. Lo que se dibuja son formas grandes: bajar la densidad no se ve. */
       const TOPE = 2_600_000;
       const anCss = this.c.clientWidth || innerWidth, alCss = this.c.clientHeight || innerHeight;
       const cabe = Math.sqrt(TOPE / Math.max(1, anCss * alCss));
       this.dpr = Math.min(devicePixelRatio || 1, 2, Math.max(1, cabe));
-      this.AN = anCss;
-      this.AL = alCss;
+      this.AN = anCss; this.AL = alCss;
       this.c.width = Math.round(this.AN * this.dpr);
       this.c.height = Math.round(this.AL * this.dpr);
       this.x.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-      // La pista no ocupa todo el ancho: en un teléfono grande, tres carriles de
-      // borde a borde obligan a estirar el pulgar hasta la esquina.
-      this.anchoPista = Math.min(this.AN * 0.94, 520);
+      this.anchoPista = Math.min(this.AN * 0.96, 560);
       this.x0 = (this.AN - this.anchoPista) / 2;
       this.anchoCarril = this.anchoPista / CARRILES;
-      // La línea de juicio va abajo pero no pegada: el dedo tapa lo que toca, y
-      // hace falta ver la nota entrar.
-      this.linea = this.AL * 0.80;
+      // Los receptores van arriba del todo o abajo del todo; abajo el dedo los
+      // tapa justo cuando hay que mirarlos, así que van a tres cuartos.
+      this.linea = this.AL * 0.775;
+      this.radio = Math.min(this.anchoCarril * 0.33, this.AL * 0.042);
       this.sellos = null;
       this.cocinarFondos();
+      this.sembrarPolvo();
     }
 
-    /* LOS DEGRADADOS SE COCINAN AL MEDIR, NO EN CADA CUADRO.
-       `createLinearGradient` y `createRadialGradient` construyen un objeto y su
-       rampa de color cada vez que se los llama, y acá había tres por cuadro a
-       pantalla completa. Medido en una tablet a 1536×2048: el cuadro costaba
-       22,4 ms, o sea más que un cuadro entero a 60. Sólo dependen del tamaño de
-       la pantalla, así que se rehacen cuando el tamaño cambia y no sesenta veces
-       por segundo. */
     cocinarFondos() {
       const X = this.x;
-      const rg = X.createRadialGradient(this.AN / 2, this.linea, 0, this.AN / 2, this.linea, this.AL * 0.55);
-      rg.addColorStop(0, "rgba(120,60,200,1)");
-      rg.addColorStop(1, "rgba(120,60,200,0)");
+      const rg = X.createRadialGradient(this.AN / 2, this.linea, 0, this.AN / 2, this.linea, this.AL * 0.62);
+      rg.addColorStop(0, "rgba(150,70,255,1)");
+      rg.addColorStop(1, "rgba(150,70,255,0)");
       this.gPulso = rg;
-      this.gCarril = COLORES.map((col, c) => {
-        const lg = X.createLinearGradient(0, this.linea - this.AL * .3, 0, this.linea);
+      this.gCarril = CARRILES_INFO.map((col) => {
+        const lg = X.createLinearGradient(0, this.linea - this.AL * .34, 0, this.linea);
         lg.addColorStop(0, "rgba(255,255,255,0)");
-        lg.addColorStop(1, col.vivo + "44");
+        lg.addColorStop(1, col.vivo + "3a");
         return lg;
       });
     }
 
-    centroCarril(c) { return this.x0 + this.anchoCarril * (c + 0.5); }
-
-    /** Cocina las notas con su resplandor. Se rehace sólo si cambia el tamaño. */
-    cocinar() {
-      const an = Math.round(this.anchoCarril * 0.74);
-      const al = Math.round(Math.max(16, this.AL * 0.026));
-      const pad = Math.round(al * 1.6);
-      this.selloAn = an; this.selloAl = al; this.selloPad = pad;
-      this.sellos = COLORES.map((col) => {
-        const h = document.createElement("canvas");
-        h.width = (an + pad * 2) * this.dpr; h.height = (al + pad * 2) * this.dpr;
-        const g = h.getContext("2d");
-        g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-        g.shadowColor = col.vivo; g.shadowBlur = pad * 0.8;
-        g.fillStyle = col.vivo;
-        redondeado(g, pad, pad, an, al, al / 2); g.fill();
-        g.shadowBlur = 0;
-        g.fillStyle = "rgba(255,255,255,.85)";
-        redondeado(g, pad + an * 0.14, pad + al * 0.26, an * 0.72, al * 0.3, al * 0.15); g.fill();
-        return h;
-      });
+    sembrarPolvo() {
+      // Motas que suben despacio. Es lo que hace que el fondo no parezca una foto.
+      this.polvo = [];
+      const n = Math.round((this.AN * this.AL) / 26000);
+      for (let i = 0; i < n; i++)
+        this.polvo.push({ x: Math.random() * this.AN, y: Math.random() * this.AL,
+                          v: 0.15 + Math.random() * 0.5, r: 0.8 + Math.random() * 1.8,
+                          a: 0.08 + Math.random() * 0.2 });
     }
 
-    estampar(carril, cx, cy) {
-      const s = this.sellos[carril], p = this.selloPad;
-      this.x.drawImage(s, 0, 0, s.width, s.height,
-        cx - this.selloAn / 2 - p, cy - this.selloAl / 2 - p,
-        this.selloAn + p * 2, this.selloAl + p * 2);
+    centroCarril(c) { return this.x0 + this.anchoCarril * (c + 0.5); }
+
+    /** Cocina flechas, receptores y salpicadura. Sólo al cambiar de tamaño. */
+    cocinar() {
+      const r = this.radio, pad = Math.round(r * 0.9);
+      const lado = Math.round((r + pad) * 2);
+      this.padSello = pad; this.ladoSello = lado;
+      const nuevo = () => {
+        const h = document.createElement("canvas");
+        h.width = h.height = lado * this.dpr;
+        const g = h.getContext("2d");
+        g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+        g.translate(lado / 2, lado / 2);
+        return [h, g];
+      };
+
+      this.flechas = []; this.receptores = []; this.prendidos = [];
+      for (const info of CARRILES_INFO) {
+        // ── la flecha que cae ──
+        let [h, g] = nuevo();
+        g.rotate(info.giro);
+        g.shadowColor = info.vivo; g.shadowBlur = pad * 0.85;
+        g.fillStyle = info.vivo; trazarFlecha(g, r); g.fill();
+        g.shadowBlur = 0;
+        g.fillStyle = "rgba(255,255,255,.30)"; trazarFlecha(g, r * 0.62); g.fill();
+        g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = Math.max(1.5, r * 0.09);
+        trazarFlecha(g, r); g.stroke();
+        this.flechas.push(h);
+
+        // ── el receptor apagado: el mismo contorno, hueco ──
+        [h, g] = nuevo();
+        g.rotate(info.giro);
+        g.strokeStyle = "rgba(255,255,255,.30)"; g.lineWidth = Math.max(2, r * 0.13);
+        trazarFlecha(g, r); g.stroke();
+        g.fillStyle = "rgba(255,255,255,.045)"; trazarFlecha(g, r); g.fill();
+        this.receptores.push(h);
+
+        // ── el receptor prendido: lleno y con halo ──
+        [h, g] = nuevo();
+        g.rotate(info.giro);
+        g.shadowColor = info.vivo; g.shadowBlur = pad * 1.1;
+        g.fillStyle = info.vivo; trazarFlecha(g, r); g.fill();
+        g.shadowBlur = 0;
+        g.fillStyle = "rgba(255,255,255,.55)"; trazarFlecha(g, r * 0.55); g.fill();
+        this.prendidos.push(h);
+      }
+
+      // La salpicadura del acierto perfecto: una estrella blanca que se abre.
+      const [hs, gs] = nuevo();
+      gs.fillStyle = "#fff";
+      for (let i = 0; i < 12; i++) {
+        gs.save(); gs.rotate((i / 12) * 6.283);
+        gs.beginPath(); gs.moveTo(0, -r * .2); gs.lineTo(r * 1.0, 0); gs.lineTo(0, r * .2);
+        gs.closePath(); gs.fill(); gs.restore();
+      }
+      this.salpicadura = hs;
+      this.sellos = true;
+    }
+
+    estampar(hoja, cx, cy, escala = 1, alfa = 1) {
+      const l = this.ladoSello * escala;
+      if (alfa !== 1) this.x.globalAlpha = alfa;
+      this.x.drawImage(hoja, cx - l / 2, cy - l / 2, l, l);
+      if (alfa !== 1) this.x.globalAlpha = 1;
     }
 
     chispear(carril, clase) {
       const cx = this.centroCarril(carril);
       const col = JUICIO[clase] || "#fff";
-      this.anillos.push({ x: cx, y: this.linea, r: this.anchoCarril * 0.18, vida: 1, col });
-      if (clase === "error") return;
-      const n = clase === "perfecto" ? 14 : 8;
+      if (clase === "error") {
+        for (let i = 0; i < 6; i++)
+          this.chispas.push({ x: cx + (Math.random() - .5) * this.anchoCarril * .5, y: this.linea,
+                              vx: (Math.random() - .5) * 2, vy: 1.6 + Math.random() * 2,
+                              vida: 1, col: "#ff5252" });
+        return;
+      }
+      if (clase === "perfecto") this.salpicaduras.push({ carril, vida: 1 });
+      const n = clase === "perfecto" ? 16 : 9;
       for (let i = 0; i < n; i++) {
         const a = (i / n) * 6.283 + Math.random();
-        const v = 2.2 + Math.random() * 3.4;
-        this.chispas.push({ x: cx, y: this.linea, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.2,
-                            vida: 1, col });
+        const v = 2.4 + Math.random() * 3.6;
+        this.chispas.push({ x: cx, y: this.linea, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.4,
+                            vida: 1, col: i % 3 ? col : CARRILES_INFO[carril].vivo });
       }
     }
 
-    /** Un cuadro. `t` es la hora de la canción; `pulso` late con el bombo. */
-    dibujar(partida, t, opciones) {
-      const { anticipo, pulso, apretados, juicio } = opciones;
+    /**
+     * Un cuadro.
+     * @param t hora de la canción
+     * @param o {anticipo, pulso, latido, apretados, juicio, vida, progreso, combo}
+     */
+    dibujar(partida, t, o) {
       const X = this.x;
       if (!this.sellos) this.cocinar();
+      const { anticipo, pulso, latido, apretados, juicio } = o;
       X.clearRect(0, 0, this.AN, this.AL);
 
-      /* EL FONDO FIJO NO SE PINTA ACA: lo pone el CSS detrás del lienzo, y el
-         navegador lo compone una sola vez en vez de rellenarlo sesenta veces por
-         segundo. Un degradado a pantalla completa por cuadro era, en la tablet,
-         más de tres millones de píxeles de trabajo que nunca cambiaban. */
-      // el latido, y SOLO sobre el rectángulo que el halo alcanza: pintarlo a
-      // pantalla completa era rellenar de transparente todo lo que queda afuera
+      this.fondo(X, t, pulso, latido);
+
+      /* LA CAMARA REBOTA CON EL PULSO, y el rebote se aplica a TODA la pista de
+         una sola vez con una transformación. Escalando cada cosa por su cuenta,
+         las flechas y los receptores se despegan entre sí en el rebote y se ve
+         como un error de dibujo. */
+      const rebote = 1 + 0.018 * Math.max(0, pulso);
+      X.save();
+      X.translate(this.AN / 2, this.linea);
+      X.scale(rebote, rebote);
+      X.translate(-this.AN / 2, -this.linea);
+
+      this.pista(X, apretados);
+      this.notas(X, partida, t, anticipo);
+      this.receptoresYSalpicaduras(X, partida, t, apretados);
+      X.restore();
+
+      this.particulas(X);
+      this.carteles(X, partida, t, juicio, o);
+    }
+
+    // ── fondo ──────────────────────────────────────────────────────────────
+    fondo(X, t, pulso, latido) {
+      // galones que bajan: dan sensación de velocidad sin tapar nada
+      const paso = this.AL * 0.19;
+      const corr = ((t * this.AL * 0.045) % paso + paso) % paso;
+      X.strokeStyle = "rgba(255,255,255,.028)";
+      X.lineWidth = Math.max(8, this.AL * 0.016);
+      for (let y = -paso; y < this.AL + paso; y += paso) {
+        X.beginPath();
+        X.moveTo(-10, y + corr - this.AN * .12);
+        X.lineTo(this.AN / 2, y + corr);
+        X.lineTo(this.AN + 10, y + corr - this.AN * .12);
+        X.stroke();
+      }
+
+      // el reflector detrás de los receptores, que late con el bombo
       if (pulso > 0.01) {
-        const r = this.AL * 0.55;
-        X.globalAlpha = 0.20 * pulso;
+        const r = this.AL * 0.62;
+        X.globalAlpha = 0.26 * pulso;
         X.fillStyle = this.gPulso;
         X.fillRect(0, Math.max(0, this.linea - r), this.AN, Math.min(this.AL, r * 2));
         X.globalAlpha = 1;
       }
 
-      // ── la pista ─────────────────────────────────────────────────────────
-      X.fillStyle = "rgba(255,255,255,.028)";
+      // anillos que salen del centro en cada tiempo
+      if (latido !== undefined) {
+        for (const f of [latido, latido + 1]) {
+          const v = f % 1;
+          if (v > 0.98) continue;
+          X.globalAlpha = 0.16 * (1 - v);
+          X.strokeStyle = "#a071ff";
+          X.lineWidth = 2 + 6 * (1 - v);
+          X.beginPath();
+          X.arc(this.AN / 2, this.linea, this.AL * 0.10 + v * this.AL * 0.55, 0, 6.283);
+          X.stroke();
+          X.globalAlpha = 1;
+        }
+      }
+
+      // el fogonazo del bombo: blanco, muy poco, y sólo en el golpe
+      if (pulso > 0.75) {
+        X.fillStyle = `rgba(255,255,255,${(pulso - 0.75) * 0.10})`;
+        X.fillRect(0, 0, this.AN, this.AL);
+      }
+    }
+
+    pista(X, apretados) {
+      X.fillStyle = "rgba(0,0,0,.26)";
       X.fillRect(this.x0, 0, this.anchoPista, this.AL);
       for (let c = 0; c <= CARRILES; c++) {
-        X.strokeStyle = "rgba(255,255,255,.10)"; X.lineWidth = 1;
-        X.beginPath(); X.moveTo(this.x0 + c * this.anchoCarril, 0);
-        X.lineTo(this.x0 + c * this.anchoCarril, this.AL); X.stroke();
+        X.strokeStyle = "rgba(255,255,255,.07)"; X.lineWidth = 1;
+        X.beginPath();
+        X.moveTo(this.x0 + c * this.anchoCarril, 0);
+        X.lineTo(this.x0 + c * this.anchoCarril, this.AL);
+        X.stroke();
       }
-      // el carril apretado se prende: sin eso no se ve si el toque entró
       for (let c = 0; c < CARRILES; c++) {
         if (!apretados[c]) continue;
         X.fillStyle = this.gCarril[c];
-        X.fillRect(this.x0 + c * this.anchoCarril, this.linea - this.AL * .3, this.anchoCarril, this.AL * .3);
+        X.fillRect(this.x0 + c * this.anchoCarril, this.linea - this.AL * .34, this.anchoCarril, this.AL * .34);
       }
+    }
 
-      // ── las notas ────────────────────────────────────────────────────────
-      const vel = this.linea / anticipo;          // píxeles por segundo
-      const alto = this.selloAl;
+    notas(X, partida, t, anticipo) {
+      const vel = this.linea / anticipo;
       for (const n of partida.notas) {
         const dt = n.t - t;
-        if (dt > anticipo + 0.1) break;           // ordenadas: lo que sigue está más lejos
+        if (dt > anticipo + 0.2) break;
         if (n.juzgada && n.largo === 0) continue;
         const y = this.linea - dt * vel;
-        if (y > this.AL + 60) continue;
+        if (y > this.AL + this.radio * 3) continue;
         const cx = this.centroCarril(n.carril);
         if (n.largo > 0) {
-          // la sostenida es una barra; lo ya mantenido se apaga
           const y2 = this.linea - (n.t + n.largo - t) * vel;
-          const col = COLORES[n.carril];
-          X.fillStyle = n.juzgada ? col.flojo : col.vivo + "66";
-          redondeado(X, cx - this.selloAn * .28, Math.min(y, y2), this.selloAn * .56, Math.abs(y - y2), this.selloAn * .28);
-          X.fill();
+          const arriba = Math.min(y, y2), alto = Math.abs(y - y2);
+          const col = CARRILES_INFO[n.carril];
+          X.fillStyle = col.flojo;
+          X.fillRect(cx - this.radio * .30, arriba, this.radio * .60, alto);
+          // la parte ya mantenida se prende
+          if (n.juzgada && n.sostenidaHasta > n.t) {
+            const hasta = this.linea - (n.sostenidaHasta - t) * vel;
+            X.fillStyle = col.vivo;
+            X.fillRect(cx - this.radio * .30, Math.min(y, hasta), this.radio * .60, Math.abs(hasta - y));
+          }
         }
-        if (!n.juzgada) this.estampar(n.carril, cx, y);
+        if (!n.juzgada) this.estampar(this.flechas[n.carril], cx, y);
       }
+    }
 
-      // ── la línea de juicio ───────────────────────────────────────────────
-      X.strokeStyle = "rgba(255,255,255,.55)"; X.lineWidth = 2;
-      X.beginPath(); X.moveTo(this.x0, this.linea); X.lineTo(this.x0 + this.anchoPista, this.linea); X.stroke();
+    receptoresYSalpicaduras(X, partida, t, apretados) {
       for (let c = 0; c < CARRILES; c++) {
-        X.strokeStyle = COLORES[c].vivo; X.lineWidth = 3;
-        X.globalAlpha = apretados[c] ? 1 : .5;
-        X.beginPath();
-        X.moveTo(this.x0 + c * this.anchoCarril + 6, this.linea);
-        X.lineTo(this.x0 + (c + 1) * this.anchoCarril - 6, this.linea);
-        X.stroke();
-        X.globalAlpha = 1;
+        const cx = this.centroCarril(c);
+        this.estampar(this.receptores[c], cx, this.linea);
+        if (apretados[c]) this.estampar(this.prendidos[c], cx, this.linea, 1.06);
       }
+      for (let i = this.salpicaduras.length - 1; i >= 0; i--) {
+        const s = this.salpicaduras[i];
+        s.vida -= 0.075;
+        if (s.vida <= 0) { this.salpicaduras.splice(i, 1); continue; }
+        this.estampar(this.salpicadura, this.centroCarril(s.carril), this.linea,
+                      1.1 + (1 - s.vida) * 1.5, s.vida * 0.8);
+      }
+    }
 
-      // ── chispas y anillos ────────────────────────────────────────────────
-      for (let i = this.anillos.length - 1; i >= 0; i--) {
-        const a = this.anillos[i]; a.vida -= 0.055; a.r += this.anchoCarril * 0.035;
-        if (a.vida <= 0) { this.anillos.splice(i, 1); continue; }
-        X.strokeStyle = a.col; X.globalAlpha = a.vida * .8; X.lineWidth = 3 * a.vida;
-        X.beginPath(); X.arc(a.x, a.y, a.r, 0, 6.284); X.stroke(); X.globalAlpha = 1;
+    particulas(X) {
+      for (const p of this.polvo) {
+        p.y -= p.v;
+        if (p.y < -4) { p.y = this.AL + 4; p.x = Math.random() * this.AN; }
+        X.fillStyle = `rgba(210,180,255,${p.a})`;
+        X.beginPath(); X.arc(p.x, p.y, p.r, 0, 6.283); X.fill();
       }
       for (let i = this.chispas.length - 1; i >= 0; i--) {
         const s = this.chispas[i];
-        s.x += s.vx; s.y += s.vy; s.vy += 0.22; s.vida -= 0.035;
+        s.x += s.vx; s.y += s.vy; s.vy += 0.24; s.vida -= 0.036;
         if (s.vida <= 0) { this.chispas.splice(i, 1); continue; }
         X.fillStyle = s.col; X.globalAlpha = s.vida;
-        X.fillRect(s.x - 1.5, s.y - 1.5, 3, 3);
+        X.fillRect(s.x - 1.8, s.y - 1.8, 3.6, 3.6);
         X.globalAlpha = 1;
       }
+    }
 
-      // ── racha y juicio ───────────────────────────────────────────────────
-      if (partida.combo >= 3) {
-        X.textAlign = "center";
-        X.fillStyle = "rgba(255,255,255,.90)";
-        X.font = `800 ${Math.round(this.AL * .062)}px system-ui,sans-serif`;
-        X.fillText(partida.combo, this.AN / 2, this.AL * .40);
-        X.fillStyle = "rgba(255,255,255,.34)";
-        X.font = `700 ${Math.round(this.AL * .017)}px system-ui,sans-serif`;
-        X.fillText("×" + partida.multiplicador().toFixed(1), this.AN / 2, this.AL * .435);
+    carteles(X, partida, t, juicio, o) {
+      // ── barra de progreso, arriba del todo ──
+      if (o.progreso !== undefined) {
+        X.fillStyle = "rgba(255,255,255,.10)";
+        X.fillRect(0, 0, this.AN, 3);
+        X.fillStyle = "#c24bff";
+        X.fillRect(0, 0, this.AN * Math.max(0, Math.min(1, o.progreso)), 3);
       }
+
+      /* ── barra de vida, ARRIBA ──
+         Abajo es donde la pone el género, y abajo estaba: el problema es que el
+         espacio de abajo es el único que queda libre para el cartel del juicio, y
+         el juicio no puede ir en el medio de la pista porque tapa las flechas que
+         hay que leer. Entre las dos cosas, la que se mira de reojo es la vida. */
+      if (o.vida !== undefined) {
+        const an = this.anchoPista, x0 = this.x0, y = this.AL * 0.088, al = Math.max(9, this.AL * 0.014);
+        /* LA BANDEJA VA DE BORDE A BORDE. Con un marco justo alrededor de la
+           barra, las flechas que pasan por detrás quedaban cortadas al medio y se
+           leía como un error de dibujo en vez de como algo que está adelante. */
+        X.fillStyle = "rgba(6,3,14,.88)";
+        X.fillRect(0, y - al * .9, this.AN, al * 2.8);
+        X.fillStyle = "#ff3d5a"; X.fillRect(x0, y, an, al);
+        X.fillStyle = "#3ce06a"; X.fillRect(x0, y, an * o.vida, al);
+        // el cursor que separa las dos mitades: es lo que se mira de reojo
+        X.fillStyle = "#fff";
+        X.fillRect(x0 + an * o.vida - 2, y - 3, 4, al + 6);
+      }
+
+      /* ── el juicio y la racha, DEBAJO DE LOS RECEPTORES ──
+         Estaban en el medio de la pista, que es donde caen las flechas: tapaban
+         justo lo que hay que leer para jugar. Es el mismo error que ya se había
+         arreglado una vez y volvió al rehacer el dibujo, así que queda escrito.
+         Debajo de los receptores no pasa nada y el ojo ya está mirando ahí. */
       if (juicio && juicio.texto) {
         const edad = t - juicio.t;
-        if (edad >= 0 && edad < .55) {
+        if (edad >= 0 && edad < .62) {
+          const v = edad / .62;
+          // un golpe de escala que se asienta: aparece grande y se acomoda
+          const esc = 1 + 0.40 * Math.exp(-edad * 22) - v * 0.10;
+          X.save();
+          X.globalAlpha = Math.min(1, (1 - v) * 2.4);
+          X.translate(this.AN / 2, this.linea + this.AL * 0.095 + v * v * 22);
+          X.scale(esc, esc);
           X.textAlign = "center";
-          X.globalAlpha = 1 - edad / .55;
+          X.lineWidth = Math.max(3, this.AL * 0.006);
+          X.strokeStyle = "rgba(0,0,0,.85)";
           X.fillStyle = JUICIO[juicio.clase] || "#fff";
-          X.font = `800 ${Math.round(this.AL * .028)}px system-ui,sans-serif`;
-          /* EL CARTEL VA DEBAJO DE LA LINEA. Arriba cae justo donde bajan las
-             notas que vienen, y tapar lo que hay que leer para jugar es el peor
-             lugar posible para poner un adorno. Debajo no hay nada. */
-          X.fillText(juicio.texto, this.AN / 2, this.linea + this.AL * .055 + edad * 22);
-          X.globalAlpha = 1;
+          X.font = `900 ${Math.round(this.AL * .034)}px system-ui,sans-serif`;
+          X.strokeText(juicio.texto, 0, 0);
+          X.fillText(juicio.texto, 0, 0);
+          if (partida.combo >= 3) {
+            X.font = `900 ${Math.round(this.AL * .050)}px system-ui,sans-serif`;
+            X.fillStyle = "#fff";
+            X.strokeText(partida.combo, 0, this.AL * .058);
+            X.fillText(partida.combo, 0, this.AL * .058);
+          }
+          X.restore();
         }
       }
     }
   }
 
-  function redondeado(x, X0, Y0, an, al, r) {
-    r = Math.min(r, an / 2, al / 2);
-    x.beginPath();
-    x.moveTo(X0 + r, Y0);
-    x.arcTo(X0 + an, Y0, X0 + an, Y0 + al, r);
-    x.arcTo(X0 + an, Y0 + al, X0, Y0 + al, r);
-    x.arcTo(X0, Y0 + al, X0, Y0, r);
-    x.arcTo(X0, Y0, X0 + an, Y0, r);
-    x.closePath();
-  }
-
-  return { COLORES, Pantalla };
+  return { CARRILES_INFO, COLORES, Pantalla };
 })();
 
 /* ── guardado.js ── */
@@ -1288,14 +1466,14 @@ const M_idioma = (() => {
       "cal.titulo": "Calibration", "cal.bajada": "Tap along with the beat. Twelve taps is enough.",
       "cal.faltan": "taps left", "cal.resultado": "Your offset", "cal.usar": "Use it", "cal.salir": "Cancel",
       "como.titulo": "How to play",
-      "como.1": "Three lanes. A note falls; tap its lane exactly when it touches the line.",
+      "como.1": "Four arrows. One falls; tap its lane exactly when it lands on its receptor.",
       "como.2": "The closer to the line, the better the hit: PERFECT, GOOD, EDGE.",
       "como.3": "Long notes: tap and hold until the bar ends.",
-      "como.4": "The lane follows the melody — low on the left, high on the right.",
+      "como.4": "The lane follows the melody — low on the left, high on the right. Miss too much and you run out of health.",
       "como.5": "If it feels early or late on your headphones, calibrate in Settings.",
       "hud.salir": "Quit",
       "fin.titulo": "Song over", "fin.puntos": "Score", "fin.precision": "Accuracy",
-      "fin.racha": "Best combo", "fin.limpia": "FULL COMBO", "fin.record": "New record",
+      "fin.racha": "Best combo", "fin.limpia": "FULL COMBO", "fin.perdiste": "OUT OF HEALTH", "fin.record": "New record",
       "fin.otra": "Again", "fin.lista": "Songs", "fin.siguiente": "Next song",
       "fin.perfecto": "Perfect", "fin.bien": "Good", "fin.rozo": "Edge", "fin.error": "Miss",
       "j.perfecto": "PERFECT", "j.bien": "GOOD", "j.rozo": "EDGE", "j.error": "MISS",
@@ -1319,14 +1497,14 @@ const M_idioma = (() => {
       "cal.titulo": "Calibración", "cal.bajada": "Tocá junto con el pulso. Con doce toques alcanza.",
       "cal.faltan": "toques", "cal.resultado": "Tu desfase", "cal.usar": "Usarlo", "cal.salir": "Cancelar",
       "como.titulo": "Cómo se juega",
-      "como.1": "Tres carriles. Cae una nota: tocá su carril justo cuando toca la línea.",
+      "como.1": "Cuatro flechas. Cae una: tocá su carril justo cuando cae sobre su receptor.",
       "como.2": "Cuanto más cerca de la línea, mejor sale: PERFECTO, BIEN, ROZÓ.",
       "como.3": "Las notas largas: tocá y mantené hasta que se termina la barra.",
-      "como.4": "El carril sigue a la melodía: grave a la izquierda, agudo a la derecha.",
+      "como.4": "El carril sigue a la melodía: grave a la izquierda, agudo a la derecha. Si fallás mucho te quedás sin vida.",
       "como.5": "Si con tus auriculares se siente adelantado o atrasado, calibrá en Ajustes.",
       "hud.salir": "Salir",
       "fin.titulo": "Se terminó", "fin.puntos": "Puntos", "fin.precision": "Precisión",
-      "fin.racha": "Mejor racha", "fin.limpia": "SIN FALLAR NI UNA", "fin.record": "Récord nuevo",
+      "fin.racha": "Mejor racha", "fin.limpia": "SIN FALLAR NI UNA", "fin.perdiste": "TE QUEDASTE SIN VIDA", "fin.record": "Récord nuevo",
       "fin.otra": "De nuevo", "fin.lista": "Canciones", "fin.siguiente": "La que sigue",
       "fin.perfecto": "Perfecto", "fin.bien": "Bien", "fin.rozo": "Rozó", "fin.error": "Error",
       "j.perfecto": "PERFECTO", "j.bien": "BIEN", "j.rozo": "ROZÓ", "j.error": "ERROR",
@@ -1350,14 +1528,14 @@ const M_idioma = (() => {
       "cal.titulo": "Calibração", "cal.bajada": "Toque junto com a batida. Doze toques bastam.",
       "cal.faltan": "toques", "cal.resultado": "Seu desvio", "cal.usar": "Usar", "cal.salir": "Cancelar",
       "como.titulo": "Como se joga",
-      "como.1": "Três pistas. Cai uma nota: toque na pista dela bem quando encostar na linha.",
+      "como.1": "Quatro setas. Cai uma: toque na pista dela bem quando cair no receptor.",
       "como.2": "Quanto mais perto da linha, melhor sai: PERFEITO, BOM, RASPOU.",
       "como.3": "Notas longas: toque e segure até a barra acabar.",
-      "como.4": "A pista segue a melodia: grave à esquerda, agudo à direita.",
+      "como.4": "A pista segue a melodia: grave à esquerda, agudo à direita. Errando muito você fica sem vida.",
       "como.5": "Se no seu fone soar adiantado ou atrasado, calibre nos Ajustes.",
       "hud.salir": "Sair",
       "fin.titulo": "Acabou", "fin.puntos": "Pontos", "fin.precision": "Precisão",
-      "fin.racha": "Melhor sequência", "fin.limpia": "SEM ERRAR NENHUMA", "fin.record": "Novo recorde",
+      "fin.racha": "Melhor sequência", "fin.limpia": "SEM ERRAR NENHUMA", "fin.perdiste": "FICOU SEM VIDA", "fin.record": "Novo recorde",
       "fin.otra": "De novo", "fin.lista": "Músicas", "fin.siguiente": "A próxima",
       "fin.perfecto": "Perfeito", "fin.bien": "Bom", "fin.rozo": "Raspou", "fin.error": "Erro",
       "j.perfecto": "PERFEITO", "j.bien": "BOM", "j.rozo": "RASPOU", "j.error": "ERRO",
@@ -1426,7 +1604,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 const banda = new Banda();
 const pantalla = new Pantalla($("#lienzo"));
 let partida = null, corriendo = false, idActual = 1;
-const apretados = new Array(CARRILES).fill(false);
+const apretados = new Array(CARRILES).fill(false);   // CARRILES sale de carta.js
 let juicioVisible = null, bombos = [], iBombo = 0, ultimoBombo = -9, tPrimera = 0;
 
 // ── pantallas ──────────────────────────────────────────────────────────────
@@ -1607,9 +1785,15 @@ function cuadro() {
 
   while (iBombo < bombos.length && bombos[iBombo] <= t) ultimoBombo = bombos[iBombo++];
   const pulso = Math.max(0, 1 - (t - ultimoBombo) / 0.3);
+  // El latido es la fase del tiempo musical, de 0 a 1 en cada negra. Los anillos
+  // del fondo salen de acá y no del bombo: el bombo se saltea tiempos, y un
+  // fondo que late salteado se siente descompuesto.
+  const porTiempo = 60 / CANCIONES.find((x) => x.id === idActual).bpm;
+  const latido = t > 0 ? (t / porTiempo) % 1 : 0;
 
   pantalla.dibujar(partida, t, {
-    anticipo: G.ajustes().anticipo, pulso, apretados, juicio: juicioVisible,
+    anticipo: G.ajustes().anticipo, pulso, latido, apretados, juicio: juicioVisible,
+    vida: partida.vida, progreso: t / partida.tema.duracion,
   });
   $("#hudPuntos").textContent = partida.puntos.toLocaleString();
 
@@ -1632,7 +1816,10 @@ function terminar() {
   banda.parar();
   const r = { puntos: partida.puntos, precision: partida.precision(),
               estrellas: partida.estrellas(), limpia: partida.limpia() };
-  const record = G.anotarMarca(idActual, r);
+  /* PERDER NO DEJA MARCA. El puntaje de media canción no se puede comparar con
+     el de una entera, y guardarlo abriría la siguiente con una pasada que ni
+     terminó. */
+  const record = partida.perdio ? false : G.anotarMarca(idActual, r);
   $("#finEstrellas").textContent = "★".repeat(r.estrellas) + "☆".repeat(3 - r.estrellas);
   $("#finPuntos").textContent = r.puntos.toLocaleString();
   $("#finPrecision").textContent = Math.round(r.precision * 100) + "%";
@@ -1641,8 +1828,9 @@ function terminar() {
   $("#finB").textContent = partida.cuenta.bien;
   $("#finR").textContent = partida.cuenta.rozo;
   $("#finE").textContent = partida.cuenta.error;
-  $("#finLimpia").classList.toggle("on", r.limpia);
-  $("#finRecord").classList.toggle("on", record);
+  $("#finLimpia").classList.toggle("on", r.limpia && !partida.perdio);
+  $("#finPerdiste").classList.toggle("on", partida.perdio);
+  $("#finRecord").classList.toggle("on", record && !partida.perdio);
   $("#bSiguiente").style.display = idActual < 9 && r.estrellas >= 1 ? "" : "none";
   ir("fin");
 }
@@ -1695,8 +1883,9 @@ $$("#zonas div").forEach((z) => {
 });
 
 // Teclado, para la computadora. D F J es donde caen los dedos sin mirar.
-const TECLAS = { KeyD: 0, KeyF: 1, KeyJ: 2, Digit1: 0, Digit2: 1, Digit3: 2,
-                 ArrowLeft: 0, ArrowDown: 1, ArrowRight: 2 };
+const TECLAS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3,
+                 Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3,
+                 ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 };
 addEventListener("keydown", (e) => {
   const c = TECLAS[e.code];
   if (c === undefined || e.repeat) return;
@@ -1732,7 +1921,7 @@ window.__ritmo = {
    *  trabajo completo. */
   medirDibujo(veces = 60) {
     const ctx = $("#lienzo").getContext("2d");
-    const opciones = { anticipo: 1.1, pulso: 1, apretados: [true, false, true], juicio: null };
+    const opciones = { anticipo: 1.1, pulso: 1, apretados: [true, false, true, false], juicio: null, vida: 0.7, progreso: 0.5, latido: 0.3 };
     const tomar = (hacer) => {
       const ms = [];
       for (let k = 0; k < veces; k++) {

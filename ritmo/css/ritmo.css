@@ -105,13 +105,14 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
 /* ── en juego ─────────────────────────────────────────────────────────── */
 #hud{position:fixed;top:0;left:0;right:0;z-index:4;display:flex;align-items:center;
   justify-content:space-between;gap:10px;
-  padding:max(10px,env(safe-area-inset-top)) 14px 10px}
+  padding:max(10px,env(safe-area-inset-top)) 14px 10px;pointer-events:none}
+#hud>*{pointer-events:auto}
 #hudPuntos{font-weight:900;font-size:22px;font-variant-numeric:tabular-nums;
   text-shadow:0 0 14px rgba(255,255,255,.25)}
 #hudCancion{color:var(--apagado);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
 #bSalir{padding:9px 13px;font-size:12px;background:rgba(0,0,0,.35)}
-#zonas{position:fixed;inset:0;z-index:3;display:grid;grid-template-columns:repeat(3,1fr);
-  width:min(94vw,520px);left:50%;transform:translateX(-50%)}
+#zonas{position:fixed;inset:0;z-index:3;display:grid;grid-template-columns:repeat(4,1fr);
+  width:min(96vw,560px);left:50%;transform:translateX(-50%)}
 #zonas div{height:100%}
 .cuenta{position:fixed;inset:0;z-index:5;display:grid;place-items:center;
   font-size:clamp(60px,20vw,110px);font-weight:900;pointer-events:none;
@@ -122,6 +123,8 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
 .estrellas{font-size:34px;letter-spacing:8px;color:var(--agudo);min-height:42px}
 .limpia{display:none;font-weight:900;letter-spacing:.16em;font-size:13px;color:#7cf6ff}
 .limpia.on{display:block}
+.perdiste{display:none;font-weight:900;letter-spacing:.14em;font-size:13px;color:#ff7676}
+.perdiste.on{display:block}
 .record{display:none;font-weight:800;font-size:12px;letter-spacing:.14em;color:var(--agudo)}
 .record.on{display:block}
 .desglose{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:2px}

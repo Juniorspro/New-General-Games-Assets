@@ -17,6 +17,14 @@ const PESO = { perfecto: 1, bien: 0.65, rozo: 0.3, error: 0 };
 /** Cuánta precisión hace falta para cada estrella. */
 export const ESTRELLAS = [0.70, 0.85, 0.95];
 
+/* LA VIDA. Se arranca a la mitad, se gana acertando y se pierde fallando.
+   Existe para que la canción tenga tensión: sin ella, fallar veinte seguidas y
+   fallar una se sienten igual y la barra de arriba es un adorno.
+   Los números están corridos a favor del que juega: un acierto da poco, un
+   error saca bastante, pero hacen falta DIECIOCHO errores seguidos desde la
+   mitad para perder. Es difícil perder sin haberse dado cuenta de que iba mal. */
+const VIDA = { perfecto: 0.020, bien: 0.014, rozo: 0.008, error: -0.055 };
+
 export class Partida {
   constructor(idCancion) {
     const c = carta(idCancion);
@@ -36,6 +44,8 @@ export class Partida {
     this.cuenta = { perfecto: 0, bien: 0, rozo: 0, error: 0 };
     this.ultimoJuicio = null;     // {clase, dt, carril, t}
     this.terminada = false;
+    this.vida = 0.5;
+    this.perdio = false;
     this.sostenidas = new Array(CARRILES).fill(null);
     for (const n of this.notas) { n.juzgada = null; n.sostenidaHasta = 0; n.soltada = false; }
     this.cursor.fill(0);
@@ -46,6 +56,8 @@ export class Partida {
 
   anotar(clase) {
     this.cuenta[clase]++;
+    this.vida = Math.max(0, Math.min(1, this.vida + VIDA[clase]));
+    if (this.vida <= 0) this.perdio = true;
     if (clase === "error") { this.combo = 0; return; }
     this.puntos += Math.round(PUNTOS[clase] * this.multiplicador());
     this.combo++;
@@ -106,6 +118,10 @@ export class Partida {
         if (hasta >= s.t + s.largo) this.sostenidas[c] = null;
       }
     }
+    // Se termina por el final de la canción o por quedarse sin vida. Lo segundo
+    // corta al toque: seguir tocando una canción ya perdida no es una segunda
+    // oportunidad, es no dejar reintentar.
+    if (this.perdio) this.terminada = true;
     if (!this.terminada && t > this.tema.duracion + 1.5 &&
         this.notas.every((n) => n.juzgada)) this.terminada = true;
   }

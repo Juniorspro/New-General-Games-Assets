@@ -6,7 +6,12 @@
 
 import { CANCIONES, componer } from "./compositor.js";
 
-export const CARRILES = 3;
+/* CUATRO CARRILES Y NO TRES. Tres se juegan cómodos con un pulgar y por eso
+   estaban; cuatro es lo que la gente reconoce —izquierda, abajo, arriba,
+   derecha— y lo que permite tocar con los dos pulgares como se toca de verdad.
+   El costo es que las notas quedan más cerca entre sí, y de eso se encarga el
+   validador: el piso de 115 ms por carril no se toca. */
+export const CARRILES = 4;
 
 /** Lo mínimo que puede haber entre dos notas del MISMO carril, en segundos.
  *

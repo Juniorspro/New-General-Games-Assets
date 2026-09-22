@@ -14,7 +14,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 const banda = new Banda();
 const pantalla = new Pantalla($("#lienzo"));
 let partida = null, corriendo = false, idActual = 1;
-const apretados = new Array(CARRILES).fill(false);
+const apretados = new Array(CARRILES).fill(false);   // CARRILES sale de carta.js
 let juicioVisible = null, bombos = [], iBombo = 0, ultimoBombo = -9, tPrimera = 0;
 
 // ── pantallas ──────────────────────────────────────────────────────────────
@@ -195,9 +195,15 @@ function cuadro() {
 
   while (iBombo < bombos.length && bombos[iBombo] <= t) ultimoBombo = bombos[iBombo++];
   const pulso = Math.max(0, 1 - (t - ultimoBombo) / 0.3);
+  // El latido es la fase del tiempo musical, de 0 a 1 en cada negra. Los anillos
+  // del fondo salen de acá y no del bombo: el bombo se saltea tiempos, y un
+  // fondo que late salteado se siente descompuesto.
+  const porTiempo = 60 / CANCIONES.find((x) => x.id === idActual).bpm;
+  const latido = t > 0 ? (t / porTiempo) % 1 : 0;
 
   pantalla.dibujar(partida, t, {
-    anticipo: G.ajustes().anticipo, pulso, apretados, juicio: juicioVisible,
+    anticipo: G.ajustes().anticipo, pulso, latido, apretados, juicio: juicioVisible,
+    vida: partida.vida, progreso: t / partida.tema.duracion,
   });
   $("#hudPuntos").textContent = partida.puntos.toLocaleString();
 
@@ -220,7 +226,10 @@ function terminar() {
   banda.parar();
   const r = { puntos: partida.puntos, precision: partida.precision(),
               estrellas: partida.estrellas(), limpia: partida.limpia() };
-  const record = G.anotarMarca(idActual, r);
+  /* PERDER NO DEJA MARCA. El puntaje de media canción no se puede comparar con
+     el de una entera, y guardarlo abriría la siguiente con una pasada que ni
+     terminó. */
+  const record = partida.perdio ? false : G.anotarMarca(idActual, r);
   $("#finEstrellas").textContent = "★".repeat(r.estrellas) + "☆".repeat(3 - r.estrellas);
   $("#finPuntos").textContent = r.puntos.toLocaleString();
   $("#finPrecision").textContent = Math.round(r.precision * 100) + "%";
@@ -229,8 +238,9 @@ function terminar() {
   $("#finB").textContent = partida.cuenta.bien;
   $("#finR").textContent = partida.cuenta.rozo;
   $("#finE").textContent = partida.cuenta.error;
-  $("#finLimpia").classList.toggle("on", r.limpia);
-  $("#finRecord").classList.toggle("on", record);
+  $("#finLimpia").classList.toggle("on", r.limpia && !partida.perdio);
+  $("#finPerdiste").classList.toggle("on", partida.perdio);
+  $("#finRecord").classList.toggle("on", record && !partida.perdio);
   $("#bSiguiente").style.display = idActual < 9 && r.estrellas >= 1 ? "" : "none";
   ir("fin");
 }
@@ -283,8 +293,9 @@ $$("#zonas div").forEach((z) => {
 });
 
 // Teclado, para la computadora. D F J es donde caen los dedos sin mirar.
-const TECLAS = { KeyD: 0, KeyF: 1, KeyJ: 2, Digit1: 0, Digit2: 1, Digit3: 2,
-                 ArrowLeft: 0, ArrowDown: 1, ArrowRight: 2 };
+const TECLAS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3,
+                 Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3,
+                 ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 };
 addEventListener("keydown", (e) => {
   const c = TECLAS[e.code];
   if (c === undefined || e.repeat) return;
@@ -320,7 +331,7 @@ window.__ritmo = {
    *  trabajo completo. */
   medirDibujo(veces = 60) {
     const ctx = $("#lienzo").getContext("2d");
-    const opciones = { anticipo: 1.1, pulso: 1, apretados: [true, false, true], juicio: null };
+    const opciones = { anticipo: 1.1, pulso: 1, apretados: [true, false, true, false], juicio: null, vida: 0.7, progreso: 0.5, latido: 0.3 };
     const tomar = (hacer) => {
       const ms = [];
       for (let k = 0; k < veces; k++) {
