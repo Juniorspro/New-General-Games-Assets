@@ -8,10 +8,19 @@ import { ajustes, guardar } from "./guardado.js";
 
 export const IDIOMAS = { en: "English", es: "Español", pt: "Português" };
 
-const BICHO = {
-  en: { mota: "Blob", pua: "Spike", caparazon: "Shell", zumbido: "Buzz", bulto: "Lump" },
-  es: { mota: "Mota", pua: "Púa", caparazon: "Caparazón", zumbido: "Zumbido", bulto: "Bulto" },
-  pt: { mota: "Mancha", pua: "Espinho", caparazon: "Casco", zumbido: "Zumbido", bulto: "Volume" },
+const ETAPA = {
+  en: { pradera: ["Meadow", "Where it starts. Blobs, and one lump at the end."],
+        nido:    ["Nest", "Everything splits. Kill one, get three."],
+        salina:  ["Salt flats", "They shoot from far and lie in wait. Keep moving."],
+        hervidero: ["Hive", "All of it at once, and three bosses."] },
+  es: { pradera: ["Pradera", "Donde se empieza. Motas, y un bulto al final."],
+        nido:    ["Nido", "Todo se parte. Matás uno y salen tres."],
+        salina:  ["Salina", "Disparan de lejos y esperan agazapados. No te quedes quieto."],
+        hervidero: ["Hervidero", "Todo junto, y tres jefes."] },
+  pt: { pradera: ["Pradaria", "Onde começa. Manchas, e um volume no fim."],
+        nido:    ["Ninho", "Tudo se parte. Mata um e saem três."],
+        salina:  ["Salina", "Atiram de longe e esperam agachados. Não pare."],
+        hervidero: ["Fervedouro", "Tudo junto, e três chefes."] },
 };
 const ARMA = {
   en: { chispa: ["Spark", "Fires on its own at whatever is closest."],
@@ -30,6 +39,24 @@ const ARMA = {
         hilo:   ["Chicote", "Uma chicotada para onde você vai."],
         semilla:["Semente", "Deixa minas atrás. Premia correr em círculos."] },
 };
+const EVO = {
+  en: { tormenta: ["Storm", "Five shots that go through everything, five times a second."],
+        anillo:   ["Ring", "The orbit becomes a solid ring around you."],
+        sismo:    ["Quake", "A huge wave that damages, shoves and stuns."],
+        guadaña:  ["Scythe", "Sweeps almost all the way around you."],
+        raiz:     ["Root", "The seeds link up and burn the line between them."] },
+  es: { tormenta: ["Tormenta", "Cinco tiros que atraviesan todo, cinco veces por segundo."],
+        anillo:   ["Anillo", "La órbita se vuelve un aro entero alrededor tuyo."],
+        sismo:    ["Sismo", "Una onda enorme que daña, empuja y aturde."],
+        guadaña:  ["Guadaña", "Barre casi toda la vuelta a tu alrededor."],
+        raiz:     ["Raíz", "Las semillas se unen y queman la línea entre ellas."] },
+  pt: { tormenta: ["Tormenta", "Cinco tiros que atravessam tudo, cinco vezes por segundo."],
+        anillo:   ["Anel", "A órbita vira um aro inteiro em volta de você."],
+        sismo:    ["Abalo", "Uma onda enorme que fere, empurra e atordoa."],
+        guadaña:  ["Foice", "Varre quase toda a volta ao seu redor."],
+        raiz:     ["Raiz", "As sementes se unem e queimam a linha entre elas."] },
+};
+
 const PASIVA = {
   en: { botas: ["Boots", "Move faster."], iman: ["Magnet", "Gems fly to you sooner and faster."],
         coraza: ["Plating", "More health."], filo: ["Edge", "More damage."], pulso: ["Pulse", "Everything fires more often."] },
@@ -60,6 +87,7 @@ const T = {
     "fin.gano": "You made it", "fin.perdio": "They got you",
     "fin.tiempo": "Time", "fin.matados": "Killed", "fin.nivel": "Level", "fin.record": "New record",
     "fin.otra": "Again", "fin.menu": "Menu",
+    "menu.etapas": "Stages", "etapas.titulo": "Stages", "etapas.cerrada": "Finish the previous stage", "etapas.mejor": "Best", "etapas.hecha": "Cleared", "mej.evolucion": "EVOLUTION", "fin.etapa": "Stage", "hud.envion": "Dash", "como.6": "The ring at the bottom right is the dash: half a second of invulnerability, and it is the only thing you press.",
   },
   es: {
     "doc.titulo": "Enjambre — sobreviví seis minutos",
@@ -81,6 +109,7 @@ const T = {
     "fin.gano": "La contaste", "fin.perdio": "Te agarraron",
     "fin.tiempo": "Tiempo", "fin.matados": "Matados", "fin.nivel": "Nivel", "fin.record": "Récord nuevo",
     "fin.otra": "De nuevo", "fin.menu": "Menú",
+    "menu.etapas": "Etapas", "etapas.titulo": "Etapas", "etapas.cerrada": "Terminá la etapa anterior", "etapas.mejor": "Mejor", "etapas.hecha": "Terminada", "mej.evolucion": "EVOLUCIÓN", "fin.etapa": "Etapa", "hud.envion": "Envión", "como.6": "El anillo de abajo a la derecha es el envión: medio segundo de invulnerabilidad, y es lo único que se aprieta.",
   },
   pt: {
     "doc.titulo": "Enjambre — sobreviva seis minutos",
@@ -102,12 +131,14 @@ const T = {
     "fin.gano": "Você conseguiu", "fin.perdio": "Pegaram você",
     "fin.tiempo": "Tempo", "fin.matados": "Mortos", "fin.nivel": "Nível", "fin.record": "Novo recorde",
     "fin.otra": "De novo", "fin.menu": "Menu",
+    "menu.etapas": "Fases", "etapas.titulo": "Fases", "etapas.cerrada": "Termine a fase anterior", "etapas.mejor": "Melhor", "etapas.hecha": "Concluída", "mej.evolucion": "EVOLUÇÃO", "fin.etapa": "Fase", "hud.envion": "Impulso", "como.6": "O anel embaixo à direita é o impulso: meio segundo de invulnerabilidade, e é a única coisa que se aperta.",
   },
 };
 
 export const idioma = () => ajustes().idioma || "en";
 export const t = (k) => (T[idioma()] && T[idioma()][k]) || T.en[k] || k;
-export const nombreBicho = (n) => (BICHO[idioma()] || BICHO.en)[n] || n;
+export const etapa = (n) => (ETAPA[idioma()] || ETAPA.en)[n] || [n, ""];
+export const evolucion = (n) => (EVO[idioma()] || EVO.en)[n] || [n, ""];
 export const arma = (n) => (ARMA[idioma()] || ARMA.en)[n] || [n, ""];
 export const pasiva = (n) => (PASIVA[idioma()] || PASIVA.en)[n] || [n, ""];
 
@@ -128,7 +159,7 @@ export function faltantes() {
     for (const k of base) if (!(k in T[l])) fuera.push(`${l} no tiene ${k}`);
     for (const k of Object.keys(T[l])) if (!base.includes(k)) fuera.push(`${l} tiene de más ${k}`);
   }
-  for (const [nom, tabla] of [["bichos", BICHO], ["armas", ARMA], ["pasivas", PASIVA]]) {
+  for (const [nom, tabla] of [["etapas", ETAPA], ["armas", ARMA], ["pasivas", PASIVA], ["evoluciones", EVO]]) {
     const n = Object.keys(tabla.en).length;
     for (const l of Object.keys(tabla))
       if (Object.keys(tabla[l]).length !== n) fuera.push(`${l} tiene ${Object.keys(tabla[l]).length} ${nom} y en tiene ${n}`);

@@ -30,6 +30,9 @@ html,body{height:100%;overflow:hidden;background:var(--fondo);color:var(--tinta)
 #pMejora{background:rgba(8,6,16,.86)}
 
 .caja{width:min(430px,100%);display:flex;flex-direction:column;gap:12px;text-align:center;margin:auto}
+.caja.ancha{width:min(500px,100%)}
+.etiqueta{font:700 11px/1 system-ui;letter-spacing:.18em;text-transform:uppercase;color:var(--apagado)}
+.etiqueta b{color:var(--cian)}
 .logo{font-size:clamp(34px,10.5vw,54px);font-weight:900;letter-spacing:.10em;line-height:1;margin:4px 0 2px;
   background:linear-gradient(95deg,var(--verde),var(--cian) 55%,var(--violeta));
   -webkit-background-clip:text;background-clip:text;color:transparent;
@@ -79,6 +82,26 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
 #bSalir{margin-left:auto;padding:8px 12px;font-size:12px;background:rgba(8,6,16,.6)}
 #zona{position:fixed;inset:0;z-index:3}
 
+/* ── las etapas ─────────────────────────────────────────────────────────── */
+.etapas{display:flex;flex-direction:column;gap:9px;width:100%}
+.etapa{display:grid;grid-template-columns:40px minmax(0,1fr);gap:13px;align-items:center;
+  text-align:left;padding:14px 15px;border-radius:14px;width:100%;
+  border-color:color-mix(in srgb,var(--tono) 40%,transparent);
+  background:linear-gradient(100deg,color-mix(in srgb,var(--tono) 12%,transparent),rgba(255,255,255,.02))}
+.etapa>div{min-width:0}
+.etapa .n{font-weight:900;font-size:24px;color:var(--tono);text-align:center;font-variant-numeric:tabular-nums}
+.etapa .t{font-weight:800;font-size:16px}
+.etapa .t em{font-style:normal;color:var(--verde)}
+.etapa .d{font-size:12.5px;line-height:1.45;color:#b9b1cf;margin-top:3px}
+.etapa .s{font-size:11px;color:var(--apagado);margin-top:5px;letter-spacing:.04em}
+.etapa.cerrada{opacity:.42;background:rgba(255,255,255,.02)}
+.etapa.hecha .n::after{content:'';display:block;height:2px;background:var(--verde);margin-top:3px;border-radius:2px}
+
+/* el botón del envión, donde cae el pulgar derecho */
+#bEnvion{position:fixed;right:calc(52px - 34px);bottom:calc(62px - 34px);width:68px;height:68px;
+  z-index:5;border-radius:50%;background:none;border:none;padding:0}
+#bEnvion:active{transform:none}
+
 /* las tarjetas de mejora: lo único que se elige en todo el juego */
 .tarjetas{display:flex;flex-direction:column;gap:10px}
 /* EL `min-width:0` NO ES DECORATIVO. Un hijo de grid trae `min-width:auto`, que
@@ -96,6 +119,12 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
   background:var(--verde);color:#0c0a16;border-radius:5px;padding:3px 6px}
 .tarjeta .d{font-size:13px;line-height:1.5;color:#b9b1cf;margin-top:5px}
 .tarjeta.nueva{border-color:rgba(138,208,106,.5);background:rgba(138,208,106,.09)}
+/* LA EVOLUCION SE OFRECE SOLA Y SE TIENE QUE VER DISTINTA. Es la jugada de la
+   partida: mezclada entre dos mejoras comunes se elige sin entender qué era. */
+.tarjeta.evolucion{border-color:rgba(255,209,102,.7);
+  background:linear-gradient(100deg,rgba(255,209,102,.16),rgba(194,100,224,.14));
+  box-shadow:0 0 28px rgba(255,209,102,.18)}
+.tarjeta .t em.evo{background:#ffd166;color:#241a04}
 @media (prefers-reduced-motion:reduce){.bichitos i{animation:none}}
 
 </style>
@@ -126,12 +155,20 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
   </div>
 </section>
 
+<section id="pEtapas" class="pantalla">
+  <div class="caja ancha">
+    <h2 data-t="etapas.titulo">Etapas</h2>
+    <div id="listaEtapas" class="etapas"></div>
+    <button class="volver" data-ir="menu" data-t="volver">Volver</button>
+  </div>
+</section>
+
 <section id="pComo" class="pantalla">
   <div class="caja">
     <h2 data-t="como.titulo">Cómo se juega</h2>
     <ul class="ayuda">
       <li data-t="como.1"></li><li data-t="como.2"></li><li data-t="como.3"></li>
-      <li data-t="como.4"></li><li data-t="como.5"></li>
+      <li data-t="como.6"></li><li data-t="como.4"></li><li data-t="como.5"></li>
     </ul>
     <button class="volver" data-ir="menu" data-t="volver">Volver</button>
   </div>
@@ -157,6 +194,10 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
   <!-- LA ZONA DE MOVIMIENTO ES TODA LA PANTALLA. Un joystick en una esquina
        obliga a mirarse el pulgar; acá el mando nace donde apoyás el dedo. -->
   <div id="zona"></div>
+  <!-- EL ENVION VA POR ENCIMA DE LA ZONA DE MOVIMIENTO, donde cae el pulgar
+       derecho. El anillo que lo rodea lo dibuja el lienzo, así que acá sólo
+       está el área que se toca. -->
+  <button id="bEnvion" data-t-aria="hud.envion" aria-label="Envión"></button>
 </section>
 
 <section id="pMejora" class="pantalla">
@@ -168,6 +209,7 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
 
 <section id="pFin" class="pantalla">
   <div class="caja">
+    <div class="etiqueta"><span data-t="fin.etapa">Etapa</span> <b id="finEtapa"></b></div>
     <h2 id="finTitulo" data-t="fin.perdio">Te agarraron</h2>
     <div id="finRecord" class="record" data-t="fin.record">Récord nuevo</div>
     <div class="fila"><span data-t="fin.tiempo">Tiempo</span><b id="finTiempo">0:00</b></div>
@@ -175,6 +217,7 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
     <div class="fila"><span data-t="fin.nivel">Nivel</span><b id="finNivel">1</b></div>
     <div class="botonera">
       <button id="bOtra" class="grande" data-t="fin.otra">De nuevo</button>
+      <button data-ir="etapas" data-t="etapas.titulo">Etapas</button>
       <button data-ir="menu" data-t="fin.menu">Menú</button>
     </div>
   </div>
@@ -221,106 +264,249 @@ const M_azar = (() => {
 const M_bichos = (() => {
   // Los bichos. Todos inventados: cumplen roles del género sin parecerse a nadie.
   //
-  // CADA UNO TIENE QUE LEERSE DE UN VISTAZO, incluso con cuarenta en pantalla.
-  // Por eso se distinguen por SILUETA y no por detalle: una gota, un triángulo,
-  // un hexágono. El color ayuda, pero el que juega mira la forma.
+  // CADA UNO SE TIENE QUE LEER DE UN VISTAZO con cuarenta en pantalla, así que se
+  // distinguen por SILUETA y por CÓMO SE MUEVEN, no por detalle. El color sólo
+  // confirma lo que la forma ya dijo.
+  //
+  // Y CADA UNO TIENE QUE PEDIR ALGO DISTINTO. Un bestiario donde todos caminan
+  // derecho hacia vos es un solo bicho pintado de ocho colores: lo que hace que
+  // valga la pena mirar quién viene es que cada especie rompa una costumbre.
 
   const BICHOS = {
-    // la masa: lenta, blanda, y viene de a montones
-    mota:      { r: 11, vida: 10,  vel: 60,  daño: 9,  xp: 1, color: "#8ad06a", forma: "gota",  peso: 1.0 },
-    // la presión: rápida y de vidrio, castiga quedarse quieto
-    pua:       { r: 9,  vida: 7,   vel: 122,  daño: 13, xp: 2, color: "#ff7a5c", forma: "punta", peso: 0.8 },
+    // la masa: lenta, blanda, y viene de a montones. Enseña el juego.
+    mota:      { r: 13, vida: 10,  vel: 92,  daño: 6,  xp: 1, color: "#8ad06a", forma: "gota",  peso: 1.0,
+                 patas: 2 },
+    // la presión: corre casi tanto como vos, así que no se la deja atrás
+    pua:       { r: 11, vida: 7,   vel: 122, daño: 9,  xp: 2, color: "#ff7a5c", forma: "punta", peso: 0.8,
+                 estela: true },
     // el muro: obliga a rodear en vez de atravesar
-    caparazon: { r: 17, vida: 58,  vel: 42,  daño: 19, xp: 5, color: "#7d9bd6", forma: "placa", peso: 2.6 },
+    caparazon: { r: 20, vida: 58,  vel: 62,  daño: 14, xp: 5, color: "#7d9bd6", forma: "placa", peso: 2.6,
+                 blindado: 0.45 },
     // el ruido: no va derecho, así que no se le puede apuntar de memoria
-    zumbido:   { r: 10, vida: 14,  vel: 95,  daño: 11, xp: 3, color: "#e8c65a", forma: "rombo", peso: 1.0, errante: true },
-    // el jefe: lento, enorme, y va largando motas
-    bulto:     { r: 40, vida: 1500, vel: 34, daño: 32, xp: 120, color: "#c264e0", forma: "placa", peso: 12, jefe: true },
+    zumbido:   { r: 12, vida: 14,  vel: 95,  daño: 8,  xp: 3, color: "#e8c65a", forma: "rombo", peso: 1.0,
+                 errante: true, alas: true },
+    /* el que se parte: al morir deja dos crías. Castiga matar de lejos sin mirar
+       lo que se acumula atrás. */
+    saco:      { r: 22, vida: 46,  vel: 74,  daño: 10, xp: 4, color: "#c88fd6", forma: "gota",  peso: 2.0,
+                 parte: ["larva", "larva", "larva"] },
+    larva:     { r: 8,  vida: 6,   vel: 118, daño: 5,  xp: 1, color: "#e2b0ec", forma: "punta", peso: 0.5 },
+    /* el que guarda distancia y escupe. Es el único al que hay que IR a buscar:
+       sin él, alejarse siempre es gratis. */
+    escupidor: { r: 15, vida: 30,  vel: 80,  daño: 6,  xp: 4, color: "#6fd8c0", forma: "rombo", peso: 1.4,
+                 /* LA BALA VA LENTA A PROPOSITO. A 190 px/s no se esquivaba: salía y pegaba, y
+     un daño que no se puede evitar no es dificultad, es un impuesto. A 150 se ve
+     venir y se sale del camino, que es lo que este bicho tiene que enseñar. */
+  /* EL QUE DISPARA TAMBIEN TIENE TECHO, por la misma razón que el que acecha:
+     no se acerca, así que no se gasta. Medido en la salina a los dos minutos:
+     66 escupidores vivos, uno cada 2,8 segundos, son veintitrés balas por
+     segundo. Eso no se esquiva, se sufre — y la prueba lo mostró clarísimo
+     porque el robot mataba lo MISMO que en la pradera (174 contra 190) y llegaba
+     al mismo nivel, pero terminaba con 48 de vida contra 134. No moría de
+     hambre: se desangraba. Con diez a la vez son tres balas y media por segundo,
+     que sí se leen. */
+                 distancia: 230, escupe: { cada: 2.8, daño: 6, vel: 150, r: 7 },
+                 maxVivos: 10, olvida: 900 },
+    /* el que se queda quieto hasta que te acercás y entonces salta. Hace que
+       cruzar un claro vacío deje de ser seguro. */
+    /* EL QUE ACECHA NO SE MUEVE, Y POR ESO TIENE TECHO Y SE VA.
+       Un bicho quieto no se acerca a que lo maten: se acumula. Medido, la etapa
+       de la salina no la terminaba nadie —0 de 8, muriendo a los 82 segundos de
+       345— porque a los dos minutos el mapa entero era un campo minado de
+       acechos que nunca se gastaban. Van dos reglas: no puede haber más de
+       `maxVivos` a la vez, y el que quedó lejísimos se levanta y se va, porque
+       un acecho a novecientos píxeles no es una amenaza, es memoria ocupada. */
+    acecho:    { r: 16, vida: 34,  vel: 0,   daño: 10, xp: 5, color: "#d6708f", forma: "placa", peso: 1.8,
+                 acecha: { radio: 170, impulso: 340, descanso: 1.5 }, maxVivos: 14, olvida: 950 },
+
+    // ── jefes ──────────────────────────────────────────────────────────────
+    // el primero: enorme y lento, y se deshace en motas. El remate es un momento.
+    bulto:     { r: 44, vida: 1500, vel: 88, daño: 24, xp: 120, color: "#c264e0", forma: "placa", peso: 12,
+                 jefe: true, parte: ["mota","mota","mota","mota","mota","mota","mota","mota","mota","mota"] },
+    // el segundo: rápido y con escolta. Obliga a elegir entre el jefe y el resto.
+    madre:     { r: 40, vida: 2100, vel: 62, daño: 22, xp: 160, color: "#ff6ea9", forma: "gota",  peso: 10,
+                 jefe: true, cria: { cada: 2.4, tipo: "larva", cuantos: 3 } },
+    // el tercero: se planta y escupe en abanico. El único que pega de lejos.
+    torre:     { r: 46, vida: 2600, vel: 54, daño: 24, xp: 200, color: "#7cf6ff", forma: "placa", peso: 14,
+                 jefe: true, blindado: 0.3, abanico: { cada: 2.8, cuantos: 9, daño: 13, vel: 175, r: 7 } },
   };
 
-  /* LAS OLEADAS, en segundos desde el arranque.
-     Escritas a mano y no generadas: una curva automática sube parejo y aburre.
-     Acá hay respiros a propósito —el minuto 3 después del primer jefe— porque lo
-     que hace que una partida se sienta larga no es la dificultad sino no poder
-     respirar nunca. */
-  /* LA VELOCIDAD ES LA VARIABLE QUE MANDA, y costó tres rondas de medición
-     entenderlo. Subir la vida de los bichos y el daño de contacto casi no movió
-     la supervivencia del robot: con el jugador a 140 y la masa a 46, nunca lo
-     alcanzaban, así que ni la vida ni el daño llegaban a aplicarse. Lo que hace
-     que una oleada sea una amenaza es que TE LLEGUE. La púa ahora corre casi
-     tanto como vos: no se la puede dejar atrás, hay que matarla. */
-  const OLEADAS = [
-    { desde:   0, cada: 1.10, tipos: ["mota"],                            porVez: 2 },
-    { desde:  35, cada: 0.95, tipos: ["mota", "mota", "pua"],             porVez: 2 },
-    { desde:  75, cada: 0.85, tipos: ["mota", "pua", "zumbido"],          porVez: 3 },
-    { desde: 115, cada: 0.80, tipos: ["mota", "pua", "caparazon"],        porVez: 3 },
-    { desde: 160, cada: 0.00, tipos: [],                                  porVez: 0, jefe: "bulto" },
-    { desde: 175, cada: 1.30, tipos: ["mota"],                            porVez: 2 },   // el respiro
-    { desde: 205, cada: 0.70, tipos: ["pua", "zumbido", "caparazon"],     porVez: 4 },
-    { desde: 255, cada: 0.60, tipos: ["mota", "pua", "zumbido", "caparazon"], porVez: 5 },
-    { desde: 310, cada: 0.00, tipos: [],                                  porVez: 0, jefe: "bulto" },
-    { desde: 325, cada: 0.50, tipos: ["pua", "zumbido", "caparazon"],     porVez: 6 },
+  /* ── LAS ETAPAS ──────────────────────────────────────────────────────────────
+     Cuatro, y cada una es un juego distinto con las mismas manos: cambian qué
+     viene, con qué frecuencia, de qué color es todo y quién está al final.
+     ESCRITAS A MANO. Una curva generada sube parejo, y lo que hace que seis
+     minutos no se sientan largos no es la dificultad sino tener respiros y
+     sorpresas en los lugares correctos. */
+  const ETAPAS = [
+    {
+      id: 1, nombre: "pradera", largo: 300,
+      piso: "#141021", reja: "rgba(255,255,255,.035)", borde: "#ff6ea9",
+      niebla: "rgba(138,208,106,.05)",
+      oleadas: [
+        { desde:   0, cada: 1.10, tipos: ["mota"],                          porVez: 2 },
+        { desde:  30, cada: 0.95, tipos: ["mota", "mota", "pua"],           porVez: 2 },
+        { desde:  70, cada: 0.85, tipos: ["mota", "pua", "zumbido"],        porVez: 3 },
+        { desde: 110, cada: 0.80, tipos: ["mota", "pua", "caparazon"],      porVez: 3 },
+        { desde: 145, jefe: "bulto" },
+        { desde: 160, cada: 1.30, tipos: ["mota"],                          porVez: 2 },   // respiro
+        { desde: 195, cada: 0.70, tipos: ["pua", "zumbido", "caparazon"],   porVez: 4 },
+        { desde: 245, cada: 0.60, tipos: ["mota", "pua", "zumbido", "caparazon"], porVez: 5 },
+      ],
+    },
+    {
+      id: 2, nombre: "nido", largo: 330,
+      piso: "#1a1020", reja: "rgba(255,180,220,.045)", borde: "#ffcc4d",
+      niebla: "rgba(200,143,214,.06)",
+      oleadas: [
+        { desde:   0, cada: 1.00, tipos: ["mota", "larva"],                 porVez: 3 },
+        { desde:  35, cada: 0.90, tipos: ["saco", "larva"],                 porVez: 2 },
+        { desde:  80, cada: 0.85, tipos: ["saco", "pua", "larva"],          porVez: 3 },
+        { desde: 130, cada: 0.75, tipos: ["saco", "zumbido", "caparazon"],  porVez: 3 },
+        { desde: 170, jefe: "madre" },
+        { desde: 185, cada: 1.20, tipos: ["larva"],                         porVez: 3 },
+        { desde: 220, cada: 0.62, tipos: ["saco", "pua", "larva", "zumbido"], porVez: 5 },
+        { desde: 275, cada: 0.52, tipos: ["saco", "caparazon", "pua"],      porVez: 5 },
+      ],
+    },
+    {
+      id: 3, nombre: "salina", largo: 345,
+      piso: "#101a1e", reja: "rgba(140,255,230,.05)", borde: "#6fd8c0",
+      niebla: "rgba(111,216,192,.06)",
+      /* LOS ESPECIALES SON EL CONDIMENTO, NO EL GRUESO.
+         La primera versión de esta etapa era casi toda escupidores y acechos: los
+         dos guardan distancia o no se mueven, así que había poquísimo para matar.
+         Medido: nivel 4 a los dos minutos —contra 15 en las otras etapas— y 0 de
+         8 partidas terminadas. No moría por dificultad, moría por hambre: sin
+         bichos que se te vengan encima no hay gemas, sin gemas no hay niveles y
+         sin niveles no hay con qué. Cada oleada lleva ahora masa que se acerca. */
+      oleadas: [
+        { desde:   0, cada: 1.05, tipos: ["mota", "mota", "acecho"],        porVez: 3 },
+        { desde:  40, cada: 0.90, tipos: ["mota", "mota", "escupidor"],     porVez: 3 },
+        { desde:  85, cada: 0.80, tipos: ["mota", "pua", "pua", "escupidor", "acecho"], porVez: 4 },
+        { desde: 135, cada: 0.72, tipos: ["pua", "mota", "caparazon", "escupidor", "zumbido"], porVez: 4 },
+        { desde: 180, jefe: "torre" },
+        { desde: 196, cada: 1.20, tipos: ["mota", "acecho"],                porVez: 3 },
+        { desde: 235, cada: 0.60, tipos: ["pua", "mota", "escupidor", "acecho", "zumbido"], porVez: 5 },
+        { desde: 290, cada: 0.50, tipos: ["pua", "mota", "escupidor", "caparazon", "zumbido"], porVez: 6 },
+      ],
+    },
+    {
+      id: 4, nombre: "hervidero", largo: 380,
+      piso: "#1c0f13", reja: "rgba(255,120,120,.05)", borde: "#ff5252",
+      niebla: "rgba(255,90,110,.06)",
+      oleadas: [
+        { desde:   0, cada: 0.85, tipos: ["mota", "pua", "larva"],          porVez: 3 },
+        { desde:  45, cada: 0.75, tipos: ["saco", "escupidor", "pua"],      porVez: 3 },
+        { desde:  95, cada: 0.68, tipos: ["acecho", "caparazon", "zumbido"], porVez: 4 },
+        { desde: 140, jefe: "bulto" },
+        { desde: 155, cada: 0.70, tipos: ["saco", "pua", "escupidor"],      porVez: 4 },
+        { desde: 200, jefe: "madre" },
+        { desde: 215, cada: 0.62, tipos: ["acecho", "escupidor", "zumbido"], porVez: 4 },
+        { desde: 280, jefe: "torre" },
+        /* EL TRAMO FINAL AFLOJA LA ENTRADA, no la amenaza. El tercer jefe ya es
+           el remate; encimarle además la oleada más densa del juego hacía que
+           nadie —ni el robot que elige bien, que llegaba a nivel 21— viera el
+           final. Con el jefe en pantalla, lo que falta no son más bichos. */
+        { desde: 300, cada: 0.62, tipos: ["saco", "pua", "caparazon", "escupidor", "acecho"], porVez: 4 },
+      ],
+    },
   ];
 
-  /** Cuánta vida de más tienen los bichos a los `t` segundos.
-   *
-   *  SUBE POR TRAMOS Y NO SIN FRENO. Multiplicando sin tope, a los seis minutos
-   *  una mota aguanta lo que un jefe y el arma que elegiste deja de importar.
-   *  Lo que tiene que crecer es CUANTOS vienen, no cuánto aguanta cada uno. */
-  const dureza = (t) => 1 + Math.min(2.2, t / 190);
+  /** Cuánta vida de más tienen los bichos a los `t` segundos, según la etapa. */
+  /* LA DUREZA POR ETAPA SUBE MENOS DE LO QUE PARECE NECESARIO. Con 0,28 por
+     etapa, la cuarta empezaba con bichos casi al doble de vida Y con tres jefes:
+     medido, el robot moría a los 121 segundos de 380 y no llegaba a ver la mitad
+     del contenido que la etapa tiene para mostrar. La cuarta ya es más difícil
+     por lo que manda —qué viene y cuántos—, no hace falta inflar también los
+     números. */
+  const dureza = (t, etapa = 1) => (1 + Math.min(2.2, t / 190)) * (1 + (etapa - 1) * 0.15);
 
-  /* EL TECHO DE BICHOS VIVOS, y por qué no es una optimización sino balance.
+  /* EL TECHO DE BICHOS VIVOS, y por qué es balance y no optimización.
      Medido con un robot sobre doce partidas: sin techo se llegaba a 560 bichos a
-     la vez y NINGUNA de las doce sobrevivía. Lo que pasa es una espiral: si no
-     alcanzás a matar al ritmo al que entran, cada segundo entran más, y a partir
-     de cierto punto no hay arma que lo dé vuelta — la partida ya está perdida
-     dos minutos antes de que te toquen. Con techo, quedarse atrás se paga caro
-     pero se puede remontar. Y de paso el cuadro deja de costar 15 ms. */
+     la vez y NINGUNA sobrevivía. Es una espiral: si no matás al ritmo al que
+     entran, cada segundo entran más, y la partida ya está perdida dos minutos
+     antes de que te toquen. Con techo, quedarse atrás se paga caro pero se
+     remonta. Y de paso el cuadro deja de costar 15 ms. */
   const MAX_BICHOS = 200;
 
-  const LARGO = 360;   // seis minutos: una partida entra en un viaje corto
+  /* MAS BICHOS QUIERE DECIR QUE CADA UNO PEGUE MENOS.
+     Al hacer que la horda llegue de verdad, el daño de contacto de antes se
+     volvió una sentencia: con medio segundo de gracia entre golpe y golpe, estar
+     rodeado eran veinte de daño por segundo y la barra entera en cinco segundos.
+     Medido: 0 de 8 partidas terminadas en las dos últimas etapas, incluso
+     eligiendo bien. El peligro de una horda tiene que ser que no te deja
+     respirar, no que cada mota pegue como un jefe. */
 
-  return { BICHOS, OLEADAS, dureza, MAX_BICHOS, LARGO };
+  /* LA VELOCIDAD VA POR PESO, y costó una ronda entera entenderlo.
+     Subir a todos por igual arregló la densidad en pantalla pero rompió las dos
+     últimas etapas: medido, 0 de 8 partidas terminadas incluso eligiendo bien,
+     muriendo a los 123 segundos de 345. La culpa era del caparazón, que con 84
+     corría casi tanto como el jugador siendo además el que más aguanta: un muro
+     que además te persigue no se rodea, sólo se sufre. Lo chico corre, lo grande
+     no — y lo grande sigue siendo peligroso porque no se muere. */
+
+  /* EL RECICLADO, y es lo que hace que el juego se VEA como lo que es.
+     Medido con la pantalla de un teléfono: a los sesenta segundos había 56 bichos
+     vivos y UNO en pantalla. El 2 %. La mediana estaba a 446 píxeles, o sea fuera
+     de cámara, porque la masa es más lenta que el jugador y nunca cierra la
+     distancia: se juntaba un anillo de bichos lejísimos mientras la pantalla se
+     veía vacía. Un juego de hordas donde no se ve la horda.
+     Dos cosas lo arreglan. Una es que la masa corra lo suficiente como para
+     alcanzarte cuando frenás o girás —no más rápido que vos, pero cerca—. La
+     otra es ésta: el que quedó demasiado lejos se levanta y vuelve a aparecer
+     del otro lado, en el anillo de siempre. No se lo mata ni se lo regala: se lo
+     mueve, y así los doscientos que el techo permite están siempre alrededor
+     tuyo en vez de perdidos en un rincón del mapa. */
+  const RECICLAR = 760;
+
+  /* LOS ELITES. Un bicho común al que le tocó la lotería: más grande, más duro y
+     suelta un cofre. Están para que la pantalla tenga de vez en cuando un blanco
+     que valga la pena perseguir en vez de sólo cosas de las que huir. */
+  const ELITE = { vida: 7, r: 1.45, xp: 6, vel: 0.82, aura: "#ffd166" };
+  const probElite = (t) => Math.min(0.055, 0.008 + t / 14000);
+
+  return { BICHOS, ETAPAS, dureza, MAX_BICHOS, RECICLAR, ELITE, probElite };
 })();
 
 /* ── armas.js ── */
 const M_armas = (() => {
-  // Las armas y las mejoras. Nada de esto se apunta: se elige.
+  // Las armas, las pasivas y las evoluciones. Nada de esto se apunta: se elige.
   //
   // POR QUE EL ATAQUE ES AUTOMATICO. En un teléfono, mover y apuntar con dos
-  // pulgares a la vez es pelear con el aparato, no con los bichos. Acá el único
-  // gesto es moverse; lo que decide la partida es QUE arma subís y en qué orden.
-  // Eso convierte cada subida de nivel en la jugada de verdad.
+  // pulgares es pelear con el aparato y no con los bichos. El único gesto es
+  // moverse; lo que decide la partida es QUE subís y en qué orden. Por eso cada
+  // subida de nivel es la jugada de verdad.
 
   const ARMAS = {
-    /* Dispara sola al bicho más cercano. Es el arma de arranque porque enseña la
+    /* Dispara sola a lo más cercano. Es el arma de arranque porque enseña la
        regla de la casa: si no mirás para dónde, igual pega. */
     chispa: {
-      nombre: "chispa", tipo: "tiro", color: "#ffe066",
+      tipo: "tiro", color: "#ffe066",
       niveles: [
-        { cada: 0.62, daño: 12, vel: 380, radio: 5.0, cuantos: 1, atraviesa: 0 },
-        { cada: 0.54, daño: 15, vel: 400, radio: 5.5, cuantos: 2, atraviesa: 0 },
-        { cada: 0.46, daño: 19, vel: 420, radio: 6.0, cuantos: 2, atraviesa: 1 },
-        { cada: 0.40, daño: 24, vel: 440, radio: 6.5, cuantos: 3, atraviesa: 1 },
-        { cada: 0.34, daño: 30, vel: 470, radio: 7.0, cuantos: 3, atraviesa: 2 },
+        { cada: 0.62, daño: 12, vel: 380, radio: 5.0, cuantos: 1, atraviesa: 0, alcance: 290 },
+        { cada: 0.54, daño: 15, vel: 400, radio: 5.5, cuantos: 2, atraviesa: 0, alcance: 300 },
+        { cada: 0.46, daño: 19, vel: 420, radio: 6.0, cuantos: 2, atraviesa: 1, alcance: 310 },
+        { cada: 0.40, daño: 24, vel: 440, radio: 6.5, cuantos: 3, atraviesa: 1, alcance: 320 },
+        { cada: 0.34, daño: 30, vel: 470, radio: 7.0, cuantos: 3, atraviesa: 2, alcance: 330 },
       ],
+      evoluciona: { con: "filo", en: "tormenta" },
     },
-    /* Trozos que giran alrededor. No hay que hacer nada y por eso es la respuesta
-       a quedar rodeado: pega en todas las direcciones a la vez. */
+    /* Trozos que giran. No hay que hacer nada, y por eso es la respuesta a quedar
+       rodeado: pega en todas las direcciones a la vez. */
     orbita: {
-      nombre: "orbita", tipo: "orbita", color: "#7cf6ff",
+      tipo: "orbita", color: "#7cf6ff",
       niveles: [
-        { cuantos: 2, daño: 7,  radio: 52, giro: 2.2, r: 8 },
-        { cuantos: 3, daño: 9,  radio: 56, giro: 2.4, r: 8 },
-        { cuantos: 4, daño: 11, radio: 60, giro: 2.6, r: 9 },
-        { cuantos: 5, daño: 14, radio: 66, giro: 2.8, r: 9 },
-        { cuantos: 6, daño: 18, radio: 72, giro: 3.0, r: 10 },
+        { cuantos: 2, daño: 7,  radio: 56, giro: 2.2, r: 9 },
+        { cuantos: 3, daño: 9,  radio: 60, giro: 2.4, r: 9 },
+        { cuantos: 4, daño: 11, radio: 64, giro: 2.6, r: 10 },
+        { cuantos: 5, daño: 14, radio: 70, giro: 2.8, r: 10 },
+        { cuantos: 6, daño: 18, radio: 76, giro: 3.0, r: 11 },
       ],
+      evoluciona: { con: "pulso", en: "anillo" },
     },
     /* Una onda que se abre desde vos. Poco daño pero empuja, y empujar es lo que
        te saca de un abrazo del que no se sale disparando. */
     onda: {
-      nombre: "onda", tipo: "onda", color: "#b48cff",
+      tipo: "onda", color: "#b48cff",
       niveles: [
         { cada: 3.2, daño: 12, radio: 96,  empuje: 150 },
         { cada: 2.9, daño: 15, radio: 112, empuje: 165 },
@@ -328,43 +514,66 @@ const M_armas = (() => {
         { cada: 2.3, daño: 24, radio: 150, empuje: 200 },
         { cada: 2.0, daño: 30, radio: 172, empuje: 225 },
       ],
+      evoluciona: { con: "coraza", en: "sismo" },
     },
     /* Un latigazo para donde vas. Es la única que premia mirar para dónde corrés,
        así que le da algo que hacer al que quiere jugar fino. */
     hilo: {
-      nombre: "hilo", tipo: "hilo", color: "#ff6ea9",
+      tipo: "hilo", color: "#ff6ea9",
       niveles: [
-        { cada: 1.20, daño: 16, largo: 96,  ancho: 34 },
-        { cada: 1.05, daño: 20, largo: 108, ancho: 38 },
-        { cada: 0.92, daño: 25, largo: 120, ancho: 42 },
-        { cada: 0.80, daño: 31, largo: 134, ancho: 48 },
-        { cada: 0.68, daño: 39, largo: 150, ancho: 54 },
+        { cada: 1.20, daño: 16, largo: 100, ancho: 36 },
+        { cada: 1.05, daño: 20, largo: 112, ancho: 40 },
+        { cada: 0.92, daño: 25, largo: 124, ancho: 44 },
+        { cada: 0.80, daño: 31, largo: 138, ancho: 50 },
+        { cada: 0.68, daño: 39, largo: 154, ancho: 56 },
       ],
+      evoluciona: { con: "botas", en: "guadaña" },
     },
     /* Semillas que quedan atrás y estallan. Premia correr en círculos, que es lo
        que uno termina haciendo igual. */
     semilla: {
-      nombre: "semilla", tipo: "semilla", color: "#8ad06a",
+      tipo: "semilla", color: "#8ad06a",
       niveles: [
-        { cada: 1.7, daño: 22, radio: 44, dura: 6 },
-        { cada: 1.5, daño: 27, radio: 50, dura: 6 },
-        { cada: 1.3, daño: 33, radio: 56, dura: 7 },
-        { cada: 1.1, daño: 41, radio: 64, dura: 7 },
-        { cada: 0.9, daño: 52, radio: 72, dura: 8 },
+        { cada: 1.7, daño: 22, radio: 46, dura: 6 },
+        { cada: 1.5, daño: 27, radio: 52, dura: 6 },
+        { cada: 1.3, daño: 33, radio: 58, dura: 7 },
+        { cada: 1.1, daño: 41, radio: 66, dura: 7 },
+        { cada: 0.9, daño: 52, radio: 74, dura: 8 },
       ],
+      evoluciona: { con: "iman", en: "raiz" },
     },
   };
 
-  /** Las pasivas. Suben un número y ya; están para que no todas las elecciones
-   *  sean un arma nueva que hay que aprender a mitad de partida. */
+  /* ── LAS EVOLUCIONES ────────────────────────────────────────────────────────
+     Un arma al máximo MAS su pasiva al máximo se funden en otra cosa. Existen
+     por una razón concreta: sin ellas, después del nivel quince todas las
+     ofertas son "+1 a algo que ya tenés" y la pantalla de mejoras —que es donde
+     está el juego— se vuelve un trámite. Con ellas, las pasivas dejan de ser el
+     premio consuelo y pasan a ser una apuesta: subir `filo` no es sólo más daño,
+     es el camino a otra arma.
+     Se ofrecen SOLAS y marcadas, porque una evolución que aparece mezclada entre
+     dos mejoras comunes se elige sin entender que era la jugada de la partida. */
+  const EVOLUCIONES = {
+    tormenta: { tipo: "tiro",   color: "#fff3a0", de: "chispa",
+                datos: { cada: 0.20, daño: 34, vel: 520, radio: 8, cuantos: 5, atraviesa: 99, alcance: 380 } },
+    anillo:   { tipo: "anillo", color: "#b6fbff", de: "orbita",
+                datos: { daño: 26, radio: 92, giro: 3.6, grosor: 15 } },
+    sismo:    { tipo: "onda",   color: "#d9c2ff", de: "onda",
+                datos: { cada: 1.5, daño: 52, radio: 240, empuje: 330, aturde: 1.1 } },
+    guadaña:  { tipo: "guadaña",color: "#ffa8cc", de: "hilo",
+                datos: { cada: 0.55, daño: 48, radio: 128, arco: Math.PI * 1.35 } },
+    raiz:     { tipo: "raiz",   color: "#b6f09a", de: "semilla",
+                datos: { cada: 0.8, daño: 40, radio: 74, dura: 9, hilo: 12 } },
+  };
+
+  /** Las pasivas. Suben un número — y son la mitad de cada evolución. */
   const PASIVAS = {
     botas:  { max: 5, aplicar: (p, n) => { p.vel = 140 * (1 + n * 0.09); } },
-    /* EL IMAN ARRANCA GRANDE, y eso es balance y no comodidad. Las gemas caen
-       DONDE MUERE EL BICHO, y con un arma que llega a 520 píxeles eso es lejos de
-       vos. Con un radio de 52 —el primero que puse— el jugador huía, las gemas
-       quedaban atrás y no subía de nivel nunca: medido, 25 bichos matados, 21
-       gemas tiradas en el piso y 4 de experiencia. El juego entero es subir de
-       nivel, así que juntar no puede depender de volver a pisar el lugar. */
+    /* EL IMAN ARRANCA GRANDE, y eso es balance. Las gemas caen DONDE MUERE EL
+       BICHO, y con un arma de alcance eso es lejos de vos. Con un radio chico el
+       jugador huía, las gemas quedaban atrás y no subía de nivel nunca: medido,
+       25 bichos matados, 21 gemas en el piso y 4 de experiencia. El juego entero
+       es subir de nivel, así que juntar no puede depender de volver a pisar. */
     iman:   { max: 5, aplicar: (p, n) => { p.iman = 150 * (1 + n * 0.30); } },
     coraza: { max: 5, aplicar: (p, n) => { p.vidaMax = 100 + n * 26; } },
     filo:   { max: 5, aplicar: (p, n) => { p.daño = 1 + n * 0.12; } },
@@ -373,32 +582,39 @@ const M_armas = (() => {
 
   /** Cuánta experiencia hace falta para el nivel `n`.
    *
-   *  CRECE PERO NO SE DISPARA. Con una curva exponencial, después del nivel diez
-   *  no se sube más y las mejoras que faltan no se ven nunca; con una plana, a
-   *  los dos minutos ya está todo al máximo y el resto de la partida es inercia. */
+   *  CRECE PERO NO SE DISPARA. Con una curva exponencial, pasado el nivel diez no
+   *  se sube más y las mejoras que faltan no se ven nunca; con una plana, a los
+   *  dos minutos está todo al máximo y el resto de la partida es inercia. */
   const xpParaNivel = (n) => Math.round(4 + n * 2.6 + n * n * 0.45);
 
-  return { ARMAS, PASIVAS, xpParaNivel };
+  /* EL ENVION. Es la única cosa que se aprieta en todo el juego, y existe porque
+     sin él la habilidad se reduce a caminar bien: no hay forma de arreglar un
+     error. Medio segundo de invulnerabilidad convierte "me encerraron" en "me
+     encerraron y salí", que es la diferencia entre una muerte injusta y una
+     buena. Con espera larga para que no sea la respuesta a todo. */
+  const ENVION = { distancia: 168, espera: 3.4, gracia: 0.42, dura: 0.16 };
+
+  return { ARMAS, EVOLUCIONES, PASIVAS, xpParaNivel, ENVION };
 })();
 
 /* ── mundo.js ── */
 const M_mundo = (() => {
-  // El mundo: bichos, tiros, gemas y el reloj. Sin dibujo y sin audio.
+  // El mundo: bichos, tiros, gemas, cofres y el reloj. Sin dibujo y sin audio.
   //
   // POR QUE LA SIMULACION VIVE SOLA. Un juego de supervivencia se rompe por el
-  // balance, no por el dibujo: que el jefe sea imposible, que una arma no sirva
+  // balance, no por el dibujo: que el jefe sea imposible, que un arma no sirva
   // nunca, que a los cinco minutos entren tantos bichos que el teléfono se
   // arrastre. Nada de eso se ve mirando una captura. Acá un robot juega partidas
   // enteras en milisegundos y las pruebas miden cuántas sobreviven, con qué arma
-  // y cuántos bichos llegó a haber en pantalla.
+  // y cuántos bichos llegó a haber a la vez.
 
   const { azar, uno, entre } = M_azar;
-  const { BICHOS, OLEADAS, dureza, LARGO, MAX_BICHOS } = M_bichos;
-  const { ARMAS, PASIVAS, xpParaNivel } = M_armas;
+  const { BICHOS, ETAPAS, dureza, MAX_BICHOS, ELITE, probElite, RECICLAR } = M_bichos;
+  const { ARMAS, EVOLUCIONES, PASIVAS, xpParaNivel, ENVION } = M_armas;
   /* LA REJILLA. Sin ella, separar a los bichos entre sí es comparar cada uno con
-     cada uno: con doscientos en pantalla son cuarenta mil comparaciones por
-     cuadro y el teléfono se planta. Con celdas del tamaño del bicho más grande,
-     cada uno mira sólo sus nueve celdas vecinas. */
+     cada uno: con doscientos son cuarenta mil comparaciones por cuadro y el
+     teléfono se planta. Con celdas del tamaño del bicho más grande, cada uno
+     mira sólo sus nueve celdas vecinas. */
   class Rejilla {
     constructor(lado) { this.lado = lado; this.celdas = new Map(); }
     clave(x, y) { return ((x / this.lado) | 0) * 73856093 ^ ((y / this.lado) | 0) * 19349663; }
@@ -420,57 +636,85 @@ const M_mundo = (() => {
   }
 
   class Mundo {
-    constructor(semilla = 1, opciones = {}) {
+    constructor(semilla = 1, etapa = 1, opciones = {}) {
       this.r = azar(semilla);
       this.semilla = semilla;
+      this.etapa = ETAPAS.find((e) => e.id === etapa) || ETAPAS[0];
+      this.largo = this.etapa.largo;
       // El mundo es más grande que la pantalla para que huir signifique algo,
-      // pero tiene borde: un mapa infinito se juega corriendo para siempre en
-      // línea recta, que es aburrido y además nunca se pierde.
+      // pero tiene borde: un mapa infinito se juega corriendo en línea recta.
       this.radioMapa = opciones.radioMapa || 900;
       this.jugador = {
-        x: 0, y: 0, vx: 0, vy: 0, r: 13,
+        x: 0, y: 0, r: 14,
         vel: 140, vida: 100, vidaMax: 100, iman: 150, daño: 1, frecuencia: 1,
         rumbo: 0, invulnerable: 0,
-        armas: { chispa: 1 }, pasivas: {},
+        envion: 0, envionListo: 0, envionDir: { x: 1, y: 0 },
+        armas: { chispa: 1 }, pasivas: {}, evolucionadas: {},
         nivel: 1, xp: 0, xpNecesaria: xpParaNivel(1),
       };
       this.bichos = [];
-      this.tiros = [];
+      this.tiros = [];      // los míos
+      this.balas = [];      // los de ellos
       this.gemas = [];
+      this.cofres = [];
       this.semillas = [];
       this.ondas = [];
       this.latigos = [];
-      this.golpes = [];          // avisos para el dibujo y el sonido
-      this.rejilla = new Rejilla(44);
+      this.guadañas = [];
+      this.golpes = [];
+      this.rejilla = new Rejilla(48);
       this.t = 0;
-      this.relojes = {};         // cada arma con su propio contador
+      this.relojes = {};
       this.anguloOrbita = 0;
       this.muerto = false;
       this.gano = false;
       this.matados = 0;
-      this.pendienteMejora = 0;  // cuántas elecciones debe el juego
+      this.pendienteMejora = 0;
       this.proximaOleada = 0;
       this.jefesLargados = 0;
+      this.jefesVivos = 0;
       this.picoBichos = 0;
     }
 
     // ── consultas ────────────────────────────────────────────────────────────
     nivelArma(n) { return this.jugador.armas[n] || 0; }
-    datosArma(n) { return ARMAS[n].niveles[this.nivelArma(n) - 1]; }
+    evolucionada(n) { return !!this.jugador.evolucionadas[n]; }
+    datosArma(n) {
+      if (this.evolucionada(n)) return EVOLUCIONES[this.jugador.evolucionadas[n]].datos;
+      return ARMAS[n].niveles[this.nivelArma(n) - 1];
+    }
     terminada() { return this.muerto || this.gano; }
+    maxArmas() { return 4; }
 
-    /** Qué tres cosas se ofrecen al subir de nivel.
+    /** ¿Qué armas están listas para evolucionar ahora mismo? */
+    evolucionesListas() {
+      const fuera = [];
+      for (const [n, a] of Object.entries(ARMAS)) {
+        if (!a.evoluciona || this.evolucionada(n)) continue;
+        if (this.nivelArma(n) < a.niveles.length) continue;
+        if ((this.jugador.pasivas[a.evoluciona.con] || 0) < PASIVAS[a.evoluciona.con].max) continue;
+        fuera.push({ clase: "evolucion", nombre: n, en: a.evoluciona.en, nivel: 0, nueva: true });
+      }
+      return fuera;
+    }
+
+    /** Qué se ofrece al subir de nivel.
      *
-     *  NUNCA OFRECE ALGO QUE YA ESTA AL MAXIMO, y siempre ofrece tres cosas
-     *  distintas. Si no, en el nivel doce la pantalla de mejoras muestra tres
-     *  veces lo mismo agotado y la subida de nivel se vuelve un trámite. */
+     *  UNA EVOLUCION LISTA SE OFRECE SOLA Y PRIMERO. Mezclada entre dos mejoras
+     *  comunes se elige sin entender que era la jugada de la partida, y esa es
+     *  justo la decisión que el juego quiere que tomes mirando.
+     *  Y NUNCA SE OFRECE ALGO YA AGOTADO: en el nivel veinte, tres casillas
+     *  repetidas al máximo convierten la subida de nivel en un trámite. */
     ofertas() {
+      const evo = this.evolucionesListas();
+      if (evo.length) return [evo[0]];
+
       const bolsa = [];
       for (const n of Object.keys(ARMAS)) {
+        if (this.evolucionada(n)) continue;
         const lv = this.nivelArma(n);
         if (lv >= ARMAS[n].niveles.length) continue;
-        // un arma nueva sólo si quedan manos: seis armas a la vez es ruido
-        if (lv === 0 && Object.keys(this.jugador.armas).length >= 4) continue;
+        if (lv === 0 && Object.keys(this.jugador.armas).length >= this.maxArmas()) continue;
         bolsa.push({ clase: "arma", nombre: n, nivel: lv + 1, nueva: lv === 0 });
       }
       for (const n of Object.keys(PASIVAS)) {
@@ -478,31 +722,47 @@ const M_mundo = (() => {
         if (lv >= PASIVAS[n].max) continue;
         bolsa.push({ clase: "pasiva", nombre: n, nivel: lv + 1, nueva: lv === 0 });
       }
-      // se sortea sin repetir; si no quedan tres, se devuelve lo que haya
       const fuera = [];
       while (fuera.length < 3 && bolsa.length) {
         const i = Math.floor(this.r() * bolsa.length) % bolsa.length;
         fuera.push(bolsa.splice(i, 1)[0]);
       }
+      // Si ya no queda NADA que subir, se ofrece vida: una mejora vacía sería
+      // una pantalla que no se puede cerrar.
+      if (!fuera.length) fuera.push({ clase: "curar", nombre: "curar", nivel: 0, nueva: false });
       return fuera;
     }
 
     elegir(oferta) {
       if (!oferta) return;
-      if (oferta.clase === "arma") this.jugador.armas[oferta.nombre] = oferta.nivel;
+      const p = this.jugador;
+      if (oferta.clase === "arma") p.armas[oferta.nombre] = oferta.nivel;
+      else if (oferta.clase === "evolucion") {
+        p.evolucionadas[oferta.nombre] = oferta.en;
+        this.golpes.push({ que: "evolucion", x: p.x, y: p.y });
+      } else if (oferta.clase === "curar") p.vida = Math.min(p.vidaMax, p.vida + 40);
       else {
-        this.jugador.pasivas[oferta.nombre] = oferta.nivel;
-        PASIVAS[oferta.nombre].aplicar(this.jugador, oferta.nivel);
-        if (oferta.nombre === "coraza") this.jugador.vida += 26;
+        p.pasivas[oferta.nombre] = oferta.nivel;
+        PASIVAS[oferta.nombre].aplicar(p, oferta.nivel);
+        if (oferta.nombre === "coraza") p.vida = Math.min(p.vidaMax, p.vida + 26);
       }
       this.pendienteMejora = Math.max(0, this.pendienteMejora - 1);
     }
 
-    // ── el paso de simulación ────────────────────────────────────────────────
-    /**
-     * @param dt segundos
-     * @param mov {x,y} dirección de movimiento, de módulo 0 a 1
-     */
+    /** El envión. Devuelve true si salió. */
+    lanzarEnvion() {
+      const p = this.jugador;
+      if (p.envionListo > 0 || p.envion > 0) return false;
+      const m = Math.hypot(p.envionDir.x, p.envionDir.y) || 1;
+      p.envion = ENVION.dura;
+      p.envionListo = ENVION.espera;
+      p.invulnerable = Math.max(p.invulnerable, ENVION.gracia);
+      p.envionDir = { x: p.envionDir.x / m, y: p.envionDir.y / m };
+      this.golpes.push({ que: "envion", x: p.x, y: p.y });
+      return true;
+    }
+
+    // ── el paso ──────────────────────────────────────────────────────────────
     avanzar(dt, mov) {
       if (this.terminada() || this.pendienteMejora > 0) return;
       this.t += dt;
@@ -512,73 +772,117 @@ const M_mundo = (() => {
       this.largarBichos();
       this.rearmarRejilla();
       this.moverBichos(dt);
+      this.moverBalas(dt);
       this.dispararArmas(dt);
       this.moverTiros(dt);
       this.moverOrbita(dt);
       this.moverOndas(dt);
       this.moverSemillas(dt);
       this.moverLatigos(dt);
-      this.recogerGemas(dt);
+      this.moverGuadañas(dt);
+      this.recogerCosas(dt);
 
       if (this.jugador.vida <= 0) { this.jugador.vida = 0; this.muerto = true; }
-      if (this.t >= LARGO && !this.muerto) this.gano = true;
+      /* SE GANA POR AGUANTAR, no por matar al jefe.
+         La primera versión pedía además que no quedara ningún jefe vivo, y eso
+         hace la etapa imposible de terminar: medido, el robot sobrevivía 318
+         segundos de una etapa de 300 y perdía igual, porque nunca llegaba a
+         bajar los 1500 puntos de vida del jefe mientras huía. El jefe es una
+         amenaza a esquivar, no un peaje. */
+      if (this.t >= this.largo && !this.muerto) this.gano = true;
       if (this.bichos.length > this.picoBichos) this.picoBichos = this.bichos.length;
     }
 
     moverJugador(dt, mov) {
       const p = this.jugador;
+      if (p.envionListo > 0) p.envionListo -= dt;
       const m = Math.hypot(mov.x, mov.y);
       if (m > 0.02) {
+        p.rumbo = Math.atan2(mov.y, mov.x);
+        p.envionDir = { x: mov.x / m, y: mov.y / m };
+      }
+      if (p.envion > 0) {
+        // durante el envión no se dirige: es un compromiso, no un movimiento
+        p.envion -= dt;
+        const v = ENVION.distancia / ENVION.dura;
+        p.x += p.envionDir.x * v * dt;
+        p.y += p.envionDir.y * v * dt;
+      } else if (m > 0.02) {
         const k = Math.min(1, m);
         p.x += (mov.x / m) * p.vel * k * dt;
         p.y += (mov.y / m) * p.vel * k * dt;
-        p.rumbo = Math.atan2(mov.y, mov.x);
       }
-      // el borde: se frena, no se rebota. Rebotar contra una pared invisible con
-      // treinta bichos encima se siente como que el juego te empujó a la muerte.
+      // el borde frena, no rebota: rebotar con treinta bichos encima se siente
+      // como que el juego te empujó a la muerte
       const d = Math.hypot(p.x, p.y);
       if (d > this.radioMapa) { p.x = (p.x / d) * this.radioMapa; p.y = (p.y / d) * this.radioMapa; }
       if (p.invulnerable > 0) p.invulnerable -= dt;
     }
 
     oleadaActual() {
-      let cual = OLEADAS[0];
-      for (const o of OLEADAS) if (this.t >= o.desde) cual = o;
+      let cual = this.etapa.oleadas[0];
+      for (const o of this.etapa.oleadas) if (this.t >= o.desde && o.cada) cual = o;
       return cual;
     }
 
     largarBichos() {
-      const o = this.oleadaActual();
-      // los jefes salen una sola vez cada uno
-      if (o.jefe && this.jefesLargados < OLEADAS.filter((q) => q.jefe && q.desde <= this.t).length) {
+      // los jefes salen una sola vez cada uno, en su momento
+      const debidos = this.etapa.oleadas.filter((q) => q.jefe && q.desde <= this.t);
+      if (this.jefesLargados < debidos.length) {
+        const q = debidos[this.jefesLargados];
         this.jefesLargados++;
-        this.nacer(o.jefe, 1);
+        this.nacer(q.jefe, 1);
+        this.jefesVivos++;
+        this.golpes.push({ que: "jefe", x: this.jugador.x, y: this.jugador.y });
         return;
       }
-      if (!o.cada) return;
+      const o = this.oleadaActual();
+      if (!o || !o.cada || this.t < o.desde) return;
       if (this.t < this.proximaOleada) return;
       this.proximaOleada = this.t + o.cada;
       // el techo frena la entrada, no mata lo que ya está: los que hay se ganan
       if (this.bichos.length >= MAX_BICHOS) return;
-      for (let i = 0; i < o.porVez && this.bichos.length < MAX_BICHOS; i++)
-        this.nacer(uno(this.r, o.tipos), 1);
+      for (let i = 0; i < o.porVez && this.bichos.length < MAX_BICHOS; i++) {
+        let tipo = uno(this.r, o.tipos);
+        // si esa especie llegó a su techo, entra otra en vez de saltear el turno:
+        // saltear haría que la oleada entera se afine cuando sobra de una sola
+        if (BICHOS[tipo].maxVivos && this.cuantosDe(tipo) >= BICHOS[tipo].maxVivos)
+          tipo = uno(this.r, o.tipos.filter((q) => !BICHOS[q].maxVivos || this.cuantosDe(q) < BICHOS[q].maxVivos) ,
+                    ) || tipo;
+        this.nacer(tipo, 1);
+      }
     }
 
     /** Nace fuera de la pantalla, en un anillo alrededor del jugador.
      *
-     *  NUNCA ENCIMA: un bicho que aparece pegado al jugador le saca vida antes de
-     *  que se lo pueda ver, y eso se siente como trampa y no como dificultad. */
+     *  NUNCA ENCIMA: uno que aparece pegado saca vida antes de que se lo vea, y
+     *  eso se siente como trampa y no como dificultad. */
     nacer(tipo, cuantos) {
-      const b = BICHOS[tipo];
       for (let i = 0; i < cuantos; i++) {
-        const a = this.r() * 6.283, d = entre(this.r, 420, 520);
-        const x = this.jugador.x + Math.cos(a) * d, y = this.jugador.y + Math.sin(a) * d;
-        this.bichos.push({
-          tipo, x, y, vx: 0, vy: 0, r: b.r,
-          vida: b.vida * dureza(this.t), vidaMax: b.vida * dureza(this.t),
-          golpeado: 0, fase: this.r() * 6.283,
-        });
+        const a = this.r() * 6.283, d = entre(this.r, 430, 540);
+        this.nacerEn(tipo, this.jugador.x + Math.cos(a) * d, this.jugador.y + Math.sin(a) * d, 0);
       }
+    }
+
+    nacerEn(tipo, x, y, disp, forzarElite) {
+      const b = BICHOS[tipo];
+      const elite = forzarElite ?? (!b.jefe && this.r() < probElite(this.t));
+      const vida = b.vida * dureza(this.t, this.etapa.id) * (elite ? ELITE.vida : 1);
+      this.bichos.push({
+        tipo, elite,
+        x: x + (disp ? entre(this.r, -disp, disp) : 0),
+        y: y + (disp ? entre(this.r, -disp, disp) : 0),
+        r: b.r * (elite ? ELITE.r : 1),
+        vida, vidaMax: vida,
+        golpeado: 0, fase: this.r() * 6.283, aturdido: 0,
+        reloj: this.r() * 2, salto: 0, saltoDir: { x: 0, y: 0 },
+      });
+    }
+
+    cuantosDe(tipo) {
+      let n = 0;
+      for (const b of this.bichos) if (b.tipo === tipo) n++;
+      return n;
     }
 
     rearmarRejilla() {
@@ -590,21 +894,86 @@ const M_mundo = (() => {
       const p = this.jugador;
       for (let i = this.bichos.length - 1; i >= 0; i--) {
         const b = this.bichos[i], d = BICHOS[b.tipo];
+        if (b.aturdido > 0) { b.aturdido -= dt; continue; }
+        const lejos = Math.hypot(b.x - p.x, b.y - p.y);
+        // el que acecha o dispara y quedó lejísimos se borra: no amenaza a nadie
+        if (d.olvida && lejos > d.olvida) { this.bichos.splice(i, 1); continue; }
+        // el resto no se borra, se RECICLA: vuelve a entrar por el otro lado
+        if (!d.jefe && lejos > RECICLAR) {
+          const a = this.r() * 6.283, dd = entre(this.r, 430, 520);
+          b.x = p.x + Math.cos(a) * dd;
+          b.y = p.y + Math.sin(a) * dd;
+          continue;
+        }
         let dx = p.x - b.x, dy = p.y - b.y;
         const dist = Math.hypot(dx, dy) || 1;
         dx /= dist; dy /= dist;
-        if (d.errante) {
-          // los erráticos no van derecho: se les suma un vaivén con su propia fase
-          const s = Math.sin(this.t * 3.4 + b.fase) * 0.75;
-          const nx = -dy, ny = dx;
-          dx += nx * s; dy += ny * s;
-          const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
-        }
-        b.vx = dx * d.vel; b.vy = dy * d.vel;
+        const vel = d.vel * (b.elite ? ELITE.vel : 1);
 
-        /* SEPARACION ENTRE BICHOS. Sin esto, cincuenta bichos convergen al mismo
-           punto y se apilan en uno solo: se ve un bicho y te pega por cincuenta.
-           Los pesados empujan a los livianos y no al revés. */
+        if (d.acecha) {
+          /* EL QUE ACECHA se queda quieto hasta que entrás en su radio y ahí se
+             impulsa. Hace que cruzar un claro vacío deje de ser gratis. */
+          b.reloj -= dt;
+          if (b.salto > 0) {
+            b.salto -= dt;
+            b.x += b.saltoDir.x * d.acecha.impulso * dt;
+            b.y += b.saltoDir.y * d.acecha.impulso * dt;
+          } else if (dist < d.acecha.radio && b.reloj <= 0) {
+            b.salto = 0.32; b.saltoDir = { x: dx, y: dy };
+            b.reloj = d.acecha.descanso;
+            this.golpes.push({ que: "acecho", x: b.x, y: b.y });
+          }
+        } else if (d.distancia) {
+          /* EL QUE ESCUPE guarda distancia: se acerca si está lejos y se aleja si
+             está cerca. Es el único al que hay que IR a buscar, y sin él alejarse
+             siempre sería gratis. */
+          const signo = dist > d.distancia ? 1 : (dist < d.distancia * 0.72 ? -1 : 0);
+          b.x += dx * vel * signo * dt;
+          b.y += dy * vel * signo * dt;
+          b.reloj -= dt;
+          if (b.reloj <= 0 && dist < d.distancia * 1.5) {
+            b.reloj = d.escupe.cada;
+            this.balas.push({ x: b.x, y: b.y, vx: dx * d.escupe.vel, vy: dy * d.escupe.vel,
+                              r: d.escupe.r, daño: d.escupe.daño, vida: 3 });
+            this.golpes.push({ que: "escupe", x: b.x, y: b.y });
+          }
+        } else {
+          if (d.errante) {
+            const s = Math.sin(this.t * 3.4 + b.fase) * 0.75;
+            const nx = -dy, ny = dx;
+            dx += nx * s; dy += ny * s;
+            const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+          }
+          b.x += dx * vel * dt;
+          b.y += dy * vel * dt;
+        }
+
+        // los jefes que crían y los que abren en abanico
+        if (d.cria) {
+          b.reloj -= dt;
+          if (b.reloj <= 0) {
+            b.reloj = d.cria.cada;
+            for (let k = 0; k < d.cria.cuantos && this.bichos.length < MAX_BICHOS; k++)
+              this.nacerEn(d.cria.tipo, b.x, b.y, 40, false);
+          }
+        }
+        if (d.abanico) {
+          b.reloj -= dt;
+          if (b.reloj <= 0) {
+            b.reloj = d.abanico.cada;
+            const base = Math.atan2(p.y - b.y, p.x - b.x);
+            for (let k = 0; k < d.abanico.cuantos; k++) {
+              const a = base + (k - (d.abanico.cuantos - 1) / 2) * 0.22;
+              this.balas.push({ x: b.x, y: b.y, vx: Math.cos(a) * d.abanico.vel, vy: Math.sin(a) * d.abanico.vel,
+                                r: d.abanico.r, daño: d.abanico.daño, vida: 4 });
+            }
+            this.golpes.push({ que: "escupe", x: b.x, y: b.y });
+          }
+        }
+
+        /* SEPARACION. Sin esto, cincuenta bichos convergen al mismo punto y se
+           apilan en uno: se ve un bicho y te pega por cincuenta. Los pesados
+           empujan a los livianos y no al revés. */
         let sx = 0, sy = 0;
         for (const o of this.rejilla.cerca(b.x, b.y)) {
           if (o === b) continue;
@@ -613,24 +982,37 @@ const M_mundo = (() => {
           const min = (b.r + o.r) * 0.92;
           if (dd > min * min || dd < 1e-6) continue;
           const l = Math.sqrt(dd);
-          const fuerza = (min - l) / min * (BICHOS[o.tipo].peso / d.peso);
-          sx += (ox / l) * fuerza; sy += (oy / l) * fuerza;
+          const f = (min - l) / min * (BICHOS[o.tipo].peso / d.peso);
+          sx += (ox / l) * f; sy += (oy / l) * f;
         }
-        b.x += (b.vx + sx * 90) * dt;
-        b.y += (b.vy + sy * 90) * dt;
+        b.x += sx * 90 * dt; b.y += sy * 90 * dt;
         if (b.golpeado > 0) b.golpeado -= dt;
 
-        // contacto
         if (dist < b.r + p.r && p.invulnerable <= 0) {
           p.vida -= d.daño;
-          /* MEDIO SEGUNDO DE GRACIA Y NO MENOS. Es lo que separa "me comí un
-             golpe" de "me fundieron en un segundo y no vi nada": sin ventana, un
-             abrazo de treinta bichos saca la barra entera antes de que el dedo
-             reaccione, y eso no es dificultad, es no dejar jugar. */
+          /* MEDIO SEGUNDO DE GRACIA. Es lo que separa "me comí un golpe" de "me
+             fundieron en un segundo y no vi nada": sin ventana, un abrazo saca la
+             barra entera antes de que el dedo reaccione. */
           p.invulnerable = 0.45;
           this.golpes.push({ que: "jugador", x: p.x, y: p.y });
         }
         if (b.vida <= 0) this.matar(i);
+      }
+    }
+
+    moverBalas(dt) {
+      const p = this.jugador;
+      for (let i = this.balas.length - 1; i >= 0; i--) {
+        const b = this.balas[i];
+        b.x += b.vx * dt; b.y += b.vy * dt; b.vida -= dt;
+        if (b.vida <= 0) { this.balas.splice(i, 1); continue; }
+        if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < (b.r + p.r) ** 2) {
+          this.balas.splice(i, 1);
+          if (p.invulnerable <= 0) {
+            p.vida -= b.daño; p.invulnerable = 0.45;
+            this.golpes.push({ que: "jugador", x: p.x, y: p.y });
+          }
+        }
       }
     }
 
@@ -639,19 +1021,14 @@ const M_mundo = (() => {
       const d = BICHOS[b.tipo];
       this.bichos.splice(i, 1);
       this.matados++;
-      this.gemas.push({ x: b.x, y: b.y, xp: d.xp, r: d.jefe ? 9 : 4.5, vx: 0, vy: 0 });
-      this.golpes.push({ que: "muere", x: b.x, y: b.y, jefe: !!d.jefe });
-      // el jefe se deshace en motas: el remate tiene que ser un momento
-      if (d.jefe) for (let k = 0; k < 10; k++) this.nacerEn("mota", b.x, b.y, 60);
-    }
-
-    nacerEn(tipo, x, y, disp) {
-      const b = BICHOS[tipo];
-      this.bichos.push({
-        tipo, x: x + entre(this.r, -disp, disp), y: y + entre(this.r, -disp, disp),
-        vx: 0, vy: 0, r: b.r, vida: b.vida * dureza(this.t), vidaMax: b.vida * dureza(this.t),
-        golpeado: 0, fase: this.r() * 6.283,
-      });
+      const xp = d.xp * (b.elite ? ELITE.xp : 1);
+      this.gemas.push({ x: b.x, y: b.y, xp, r: d.jefe ? 10 : (b.elite ? 7 : 5) });
+      this.golpes.push({ que: "muere", x: b.x, y: b.y, jefe: !!d.jefe, elite: b.elite, tipo: b.tipo });
+      if (b.elite || d.jefe) this.cofres.push({ x: b.x, y: b.y, r: 13, jefe: !!d.jefe });
+      if (d.jefe) this.jefesVivos = Math.max(0, this.jefesVivos - 1);
+      // los que se parten: el saco deja crías, el jefe se deshace
+      if (d.parte) for (const t of d.parte)
+        if (this.bichos.length < MAX_BICHOS) this.nacerEn(t, b.x, b.y, d.jefe ? 70 : 26, false);
     }
 
     masCercano(x, y, hasta = 1e9) {
@@ -670,52 +1047,54 @@ const M_mundo = (() => {
       return true;
     }
 
+    /** El daño que recibe un bicho, ya descontado su blindaje. */
+    dañar(b, cuanto) {
+      const bl = BICHOS[b.tipo].blindado || 0;
+      // EL BLINDAJE ES UNA FRACCION Y NO UN RESTO FIJO. Restando un número, un
+      // arma de muchos golpes chiquitos deja de hacer NADA y el jugador no
+      // entiende por qué; con fracción siempre pega, sólo que menos.
+      const real = cuanto * (1 - bl);
+      b.vida -= real;
+      b.golpeado = 0.12;
+      this.golpes.push({ que: "pega", x: b.x, y: b.y, cuanto: real, blindado: bl > 0 });
+    }
+
     dispararArmas(dt) {
       const p = this.jugador;
-      if (this.nivelArma("chispa")) {
-        const a = this.datosArma("chispa");
-        if (this.reloj("chispa", a.cada, dt)) {
+      for (const nombre of Object.keys(p.armas)) {
+        const evo = p.evolucionadas[nombre];
+        const tipo = evo ? EVOLUCIONES[evo].tipo : ARMAS[nombre].tipo;
+        const a = this.datosArma(nombre);
+        if (tipo === "tiro" && this.reloj(nombre, a.cada, dt)) {
           for (let k = 0; k < a.cuantos; k++) {
-            /* EL ALCANCE DEL ARMA Y EL DEL IMAN TIENEN QUE HABLARSE.
-               Con 520 de alcance, los bichos morían lejísimos y la gema quedaba
-               donde murieron. Medido a los 20 segundos: 21 bichos matados, 20
-               gemas en el piso y NINGUNA a menos de 179 px de un imán de 150.
-               El juego dejaba de premiar en silencio. Se dispara más cerca. */
-            const b = this.masCercano(p.x, p.y, 290);
+            const b = this.masCercano(p.x, p.y, a.alcance);
             if (!b) break;
-            const ang = Math.atan2(b.y - p.y, b.x - p.x) + (k - (a.cuantos - 1) / 2) * 0.18;
+            const ang = Math.atan2(b.y - p.y, b.x - p.x) + (k - (a.cuantos - 1) / 2) * 0.17;
             this.tiros.push({ x: p.x, y: p.y, vx: Math.cos(ang) * a.vel, vy: Math.sin(ang) * a.vel,
-                              r: a.radio, daño: a.daño * p.daño, vida: 1.6, atraviesa: a.atraviesa, tocados: new Set() });
+                              r: a.radio, daño: a.daño * p.daño, vida: 1.7,
+                              atraviesa: a.atraviesa, tocados: new Set(), color: evo ? EVOLUCIONES[evo].color : ARMAS[nombre].color });
           }
           this.golpes.push({ que: "tiro", x: p.x, y: p.y });
-        }
-      }
-      if (this.nivelArma("onda")) {
-        const a = this.datosArma("onda");
-        if (this.reloj("onda", a.cada, dt)) {
-          this.ondas.push({ x: p.x, y: p.y, r: 0, rMax: a.radio, daño: a.daño * p.daño, empuje: a.empuje, tocados: new Set() });
+        } else if (tipo === "onda" && this.reloj(nombre, a.cada, dt)) {
+          this.ondas.push({ x: p.x, y: p.y, r: 0, rMax: a.radio, daño: a.daño * p.daño,
+                            empuje: a.empuje, aturde: a.aturde || 0, tocados: new Set() });
           this.golpes.push({ que: "onda", x: p.x, y: p.y });
-        }
-      }
-      if (this.nivelArma("semilla")) {
-        const a = this.datosArma("semilla");
-        if (this.reloj("semilla", a.cada, dt))
-          this.semillas.push({ x: p.x, y: p.y, r: a.radio, daño: a.daño * p.daño, dura: a.dura, listo: 0.5, tocados: new Set() });
-      }
-      if (this.nivelArma("hilo")) {
-        const a = this.datosArma("hilo");
-        if (this.reloj("hilo", a.cada, dt)) {
+        } else if (tipo === "semilla" && this.reloj(nombre, a.cada, dt)) {
+          this.semillas.push({ x: p.x, y: p.y, r: a.radio, daño: a.daño * p.daño, dura: a.dura,
+                               listo: 0.45, tocados: new Set() });
+        } else if (tipo === "raiz" && this.reloj(nombre, a.cada, dt)) {
+          this.semillas.push({ x: p.x, y: p.y, r: a.radio, daño: a.daño * p.daño, dura: a.dura,
+                               listo: 0.25, tocados: new Set(), raiz: true });
+        } else if (tipo === "hilo" && this.reloj(nombre, a.cada, dt)) {
           this.latigos.push({ x: p.x, y: p.y, rumbo: p.rumbo, largo: a.largo, ancho: a.ancho,
                               daño: a.daño * p.daño, vida: 0.18, tocados: new Set() });
           this.golpes.push({ que: "hilo", x: p.x, y: p.y });
+        } else if (tipo === "guadaña" && this.reloj(nombre, a.cada, dt)) {
+          this.guadañas.push({ rumbo: p.rumbo - a.arco / 2, arco: a.arco, radio: a.radio,
+                               daño: a.daño * p.daño, vida: 0.3, tocados: new Set() });
+          this.golpes.push({ que: "hilo", x: p.x, y: p.y });
         }
       }
-    }
-
-    dañar(b, cuanto) {
-      b.vida -= cuanto;
-      b.golpeado = 0.12;
-      this.golpes.push({ que: "pega", x: b.x, y: b.y, cuanto });
     }
 
     moverTiros(dt) {
@@ -735,20 +1114,34 @@ const M_mundo = (() => {
     }
 
     moverOrbita(dt) {
+      const p = this.jugador;
+      const evo = p.evolucionadas.orbita;
       if (!this.nivelArma("orbita")) return;
-      const a = this.datosArma("orbita"), p = this.jugador;
+      const a = this.datosArma("orbita");
       this.anguloOrbita += a.giro * dt;
-      for (let k = 0; k < a.cuantos; k++) {
-        const ang = this.anguloOrbita + (k / a.cuantos) * 6.283;
-        const x = p.x + Math.cos(ang) * a.radio, y = p.y + Math.sin(ang) * a.radio;
-        for (const b of this.rejilla.cerca(x, y)) {
-          if ((b.x - x) ** 2 + (b.y - y) ** 2 > (b.r + a.r) ** 2) continue;
-          // la órbita pega por tiempo, no por toque: si no, un bicho pegado al
-          // jugador recibe sesenta golpes por segundo y todo lo demás sobra
-          b.cooldownOrbita = (b.cooldownOrbita || 0) - dt;
-          if (b.cooldownOrbita > 0) continue;
-          b.cooldownOrbita = 0.3;
+      if (evo) {
+        // el anillo: un aro completo, así que se mira la distancia y no cada trozo
+        for (const b of this.bichos) {
+          const d = Math.hypot(b.x - p.x, b.y - p.y);
+          if (Math.abs(d - a.radio) > a.grosor + b.r) continue;
+          b.cdOrbita = (b.cdOrbita || 0) - dt;
+          if (b.cdOrbita > 0) continue;
+          b.cdOrbita = 0.28;
           this.dañar(b, a.daño * p.daño);
+        }
+      } else {
+        for (let k = 0; k < a.cuantos; k++) {
+          const ang = this.anguloOrbita + (k / a.cuantos) * 6.283;
+          const x = p.x + Math.cos(ang) * a.radio, y = p.y + Math.sin(ang) * a.radio;
+          for (const b of this.rejilla.cerca(x, y)) {
+            if ((b.x - x) ** 2 + (b.y - y) ** 2 > (b.r + a.r) ** 2) continue;
+            // pega por tiempo y no por toque: si no, un bicho pegado recibe
+            // sesenta golpes por segundo y todo lo demás sobra
+            b.cdOrbita = (b.cdOrbita || 0) - dt;
+            if (b.cdOrbita > 0) continue;
+            b.cdOrbita = 0.3;
+            this.dañar(b, a.daño * p.daño);
+          }
         }
       }
       this.limpiarMuertos();
@@ -762,9 +1155,10 @@ const M_mundo = (() => {
         for (const b of this.bichos) {
           if (o.tocados.has(b)) continue;
           const d = Math.hypot(b.x - o.x, b.y - o.y);
-          if (d > o.r || d < o.r - 40) continue;
+          if (d > o.r || d < o.r - 44) continue;
           o.tocados.add(b);
           this.dañar(b, o.daño);
+          if (o.aturde) b.aturdido = Math.max(b.aturdido, o.aturde);
           const m = d || 1;
           b.x += ((b.x - o.x) / m) * o.empuje * 0.12;
           b.y += ((b.y - o.y) / m) * o.empuje * 0.12;
@@ -785,6 +1179,22 @@ const M_mundo = (() => {
           s.tocados.add(b);
           this.dañar(b, s.daño);
         }
+        // la raíz además une con la semilla anterior y quema la línea
+        if (s.raiz && i > 0) {
+          const q = this.semillas[i - 1];
+          if (q && q.raiz) for (const b of this.bichos) {
+            const dx = b.x - s.x, dy = b.y - s.y;
+            const lx = q.x - s.x, ly = q.y - s.y;
+            const ll = lx * lx + ly * ly || 1;
+            const u = Math.max(0, Math.min(1, (dx * lx + dy * ly) / ll));
+            const px = s.x + lx * u, py = s.y + ly * u;
+            if ((b.x - px) ** 2 + (b.y - py) ** 2 > (b.r + 12) ** 2) continue;
+            b.cdRaiz = (b.cdRaiz || 0) - dt;
+            if (b.cdRaiz > 0) continue;
+            b.cdRaiz = 0.4;
+            this.dañar(b, s.daño * 0.35);
+          }
+        }
       }
       this.limpiarMuertos();
     }
@@ -794,11 +1204,8 @@ const M_mundo = (() => {
         const l = this.latigos[i];
         l.vida -= dt;
         if (l.vida <= 0) { this.latigos.splice(i, 1); continue; }
-        const cx = l.x + Math.cos(l.rumbo) * l.largo * 0.5;
-        const cy = l.y + Math.sin(l.rumbo) * l.largo * 0.5;
         for (const b of this.bichos) {
           if (l.tocados.has(b)) continue;
-          // se mira en el sistema del latigazo: a lo largo y a lo ancho
           const dx = b.x - l.x, dy = b.y - l.y;
           const a = dx * Math.cos(l.rumbo) + dy * Math.sin(l.rumbo);
           const o = -dx * Math.sin(l.rumbo) + dy * Math.cos(l.rumbo);
@@ -810,37 +1217,46 @@ const M_mundo = (() => {
       this.limpiarMuertos();
     }
 
+    moverGuadañas(dt) {
+      const p = this.jugador;
+      for (let i = this.guadañas.length - 1; i >= 0; i--) {
+        const g = this.guadañas[i];
+        g.vida -= dt;
+        if (g.vida <= 0) { this.guadañas.splice(i, 1); continue; }
+        const avance = g.arco * (dt / 0.3);
+        g.rumbo += avance;
+        for (const b of this.bichos) {
+          if (g.tocados.has(b)) continue;
+          const d = Math.hypot(b.x - p.x, b.y - p.y);
+          if (d > g.radio + b.r) continue;
+          const a = Math.atan2(b.y - p.y, b.x - p.x);
+          let dif = ((a - g.rumbo + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+          if (Math.abs(dif) > avance * 1.6 + 0.25) continue;
+          g.tocados.add(b);
+          this.dañar(b, g.daño);
+        }
+      }
+      this.limpiarMuertos();
+    }
+
     limpiarMuertos() {
       for (let i = this.bichos.length - 1; i >= 0; i--) if (this.bichos[i].vida <= 0) this.matar(i);
     }
 
-    recogerGemas(dt) {
+    recogerCosas(dt) {
       const p = this.jugador;
       for (let i = this.gemas.length - 1; i >= 0; i--) {
         const g = this.gemas[i];
         let d = Math.hypot(g.x - p.x, g.y - p.y);
-        /* LA GEMA TIENE QUE CORRER MAS QUE VOS, Y NO SOLTARTE.
-           La primera versión la atraía a 120 px/s mientras el jugador corre a
-           140: huyendo —que es lo que uno hace todo el tiempo en este juego— la
-           gema quedaba atrás, salía del radio del imán y se frenaba para siempre.
-           Medido en el juego real: 25 bichos matados, 21 gemas tiradas en el
-           piso y 4 de experiencia juntada. La prueba sin navegador no lo vio
-           porque en seis minutos uno termina pisando muchas por casualidad, así
-           que el nivel final igual subía y el número tapaba el agujero.
-           Una vez que entró al imán, ya es tuya: no se suelta aunque te alejes. */
-        /* Y LA GEMA SIEMPRE VIENE, esté donde esté. Con un radio, una gema que
-           cayó afuera queda muerta para siempre y el jugador nunca se entera de
-           que perdió experiencia: no hay ningún aviso, sólo sube más lento de lo
-           que debería. Lejos viene despacio —hay que ir a buscarla, que es la
-           decisión— y adentro del imán se acelera. Lo que sube el imán es la
-           velocidad, no un límite. */
+        /* LA GEMA SIEMPRE VIENE, esté donde esté, y una vez atraída no suelta.
+           Con un radio, una gema que cayó afuera queda muerta para siempre y el
+           jugador nunca se entera de que perdió experiencia: sólo sube más lento
+           de lo que debería. Lejos viene despacio —hay que ir a buscarla, que es
+           la decisión— y adentro del imán se acelera. */
         if (d < p.iman) g.atraida = true;
         const v = g.atraida ? p.vel * 1.75 + (p.iman - Math.min(d, p.iman)) * 3 : 34;
         g.x += ((p.x - g.x) / (d || 1)) * v * dt;
         g.y += ((p.y - g.y) / (d || 1)) * v * dt;
-        // la distancia se vuelve a medir DESPUES de mover la gema: usando la de
-        // antes, la gema que llegó justo en este cuadro se recoge recién en el
-        // siguiente, y a velocidad alta eso es pasársela de largo
         d = Math.hypot(g.x - p.x, g.y - p.y);
         if (d < p.r + g.r + 6) {
           this.gemas.splice(i, 1);
@@ -853,6 +1269,34 @@ const M_mundo = (() => {
             this.pendienteMejora++;
           }
         }
+      }
+      for (let i = this.cofres.length - 1; i >= 0; i--) {
+        const c = this.cofres[i];
+        if (Math.hypot(c.x - p.x, c.y - p.y) > p.r + c.r + 4) continue;
+        this.cofres.splice(i, 1);
+        this.abrirCofre(c);
+      }
+    }
+
+    /** El cofre. Es el único premio del juego que no se elige: cae lo que cae. */
+    abrirCofre(c) {
+      const p = this.jugador;
+      const q = this.r();
+      if (c.jefe || q < 0.34) {
+        // subida de nivel gratis: el premio grande
+        this.pendienteMejora++;
+        this.golpes.push({ que: "cofre", x: c.x, y: c.y, premio: "nivel" });
+      } else if (q < 0.7) {
+        p.vida = Math.min(p.vidaMax, p.vida + 45);
+        this.golpes.push({ que: "cofre", x: c.x, y: c.y, premio: "vida" });
+      } else {
+        // arrasa: todo lo que está cerca recibe un golpe grande
+        for (const b of this.bichos) {
+          if (Math.hypot(b.x - p.x, b.y - p.y) > 340) continue;
+          this.dañar(b, 120 * p.daño);
+        }
+        this.golpes.push({ que: "cofre", x: c.x, y: c.y, premio: "bomba" });
+        this.limpiarMuertos();
       }
     }
   }
@@ -907,22 +1351,21 @@ const M_assets = (() => {
 
 /* ── dibujo.js ── */
 const M_dibujo = (() => {
-  // El dibujo. Todo por código: siluetas simples que se leen con doscientos
-  // bichos en pantalla.
+  // El dibujo. Siluetas simples que se leen con doscientos bichos encima.
   //
-  // LA SILUETA ANTES QUE EL DETALLE. Con cuarenta bichos encima, nadie mira una
-  // textura: mira si eso que viene es redondo, puntiagudo o cuadrado. Por eso
-  // cada especie es una FORMA distinta y el color sólo confirma.
+  // LA SILUETA ANTES QUE EL DETALLE. Con cuarenta bichos arriba nadie mira una
+  // textura: mira si lo que viene es redondo, puntiagudo o cuadrado. Cada especie
+  // es una FORMA distinta y el color sólo confirma. Lo que les da carácter no es
+  // el detalle sino el MOVIMIENTO: patas que caminan, alas que baten, un cuerpo
+  // que se aplasta al golpear. Eso se lee aunque el bicho mida doce píxeles.
   //
   // Y TODO LO CARO SE COCINA UNA VEZ. Cada especie se dibuja con su resplandor en
-  // un lienzo aparte al arrancar, y después se estampa. Un `shadowBlur` por bicho
+  // un lienzo aparte al arrancar y después se estampa. Un `shadowBlur` por bicho
   // y por cuadro son doscientos desenfoques: ahí se va el teléfono.
 
-  const { BICHOS } = M_bichos;
-  const { ARMAS } = M_armas;
+  const { BICHOS, ELITE } = M_bichos;
+  const { ARMAS, EVOLUCIONES, ENVION } = M_armas;
   const { imagen } = M_assets;
-  const PISO = "#141021", PISO2 = "#1b1630";
-
   class Pantalla {
     constructor(lienzo) {
       this.c = lienzo;
@@ -930,7 +1373,9 @@ const M_dibujo = (() => {
       this.sacudida = 0;
       this.numeros = [];
       this.trozos = [];
+      this.marcas = [];      // manchas del piso, para que no sea una grilla vacía
       this.sellos = null;
+      this.destello = 0;
       this.medir();
     }
 
@@ -945,32 +1390,34 @@ const M_dibujo = (() => {
       this.sellos = null;
     }
 
-    /** Dibuja la silueta de una especie, centrada en el origen. */
+    /** La silueta de una especie, centrada en el origen. */
     silueta(g, forma, r) {
       g.beginPath();
       if (forma === "gota") {
         g.moveTo(0, -r);
-        g.bezierCurveTo(r * 1.05, -r * .55, r * .95, r * .75, 0, r);
-        g.bezierCurveTo(-r * .95, r * .75, -r * 1.05, -r * .55, 0, -r);
+        g.bezierCurveTo(r * 1.05, -r * .55, r * .95, r * .78, 0, r);
+        g.bezierCurveTo(-r * .95, r * .78, -r * 1.05, -r * .55, 0, -r);
       } else if (forma === "punta") {
-        g.moveTo(r, 0); g.lineTo(-r * .7, -r * .8); g.lineTo(-r * .3, 0); g.lineTo(-r * .7, r * .8);
+        g.moveTo(r, 0); g.lineTo(-r * .7, -r * .82); g.lineTo(-r * .28, 0); g.lineTo(-r * .7, r * .82);
         g.closePath();
       } else if (forma === "rombo") {
-        g.moveTo(0, -r); g.lineTo(r * .78, 0); g.lineTo(0, r); g.lineTo(-r * .78, 0); g.closePath();
-      } else {                       // placa: un hexágono achatado
+        g.moveTo(0, -r); g.lineTo(r * .8, 0); g.lineTo(0, r); g.lineTo(-r * .8, 0); g.closePath();
+      } else {
         for (let i = 0; i < 6; i++) {
           const a = (i / 6) * 6.283 + 0.52;
-          const px = Math.cos(a) * r, py = Math.sin(a) * r * .82;
+          const px = Math.cos(a) * r, py = Math.sin(a) * r * .84;
           i ? g.lineTo(px, py) : g.moveTo(px, py);
         }
         g.closePath();
       }
     }
 
+    /** Cocina el cuerpo de cada especie con su resplandor, sin las partes que se
+     *  mueven: esas se dibujan en vivo porque cambian en cada cuadro. */
     cocinar() {
       this.hojas = {};
       for (const [nombre, d] of Object.entries(BICHOS)) {
-        const r = d.r, pad = Math.round(r * .75), lado = Math.round((r + pad) * 2);
+        const r = d.r, pad = Math.round(r * .8), lado = Math.round((r + pad) * 2);
         const h = document.createElement("canvas");
         h.width = h.height = lado * this.dpr;
         const g = h.getContext("2d");
@@ -979,164 +1426,258 @@ const M_dibujo = (() => {
         g.shadowColor = d.color; g.shadowBlur = pad * .8;
         g.fillStyle = d.color; this.silueta(g, d.forma, r); g.fill();
         g.shadowBlur = 0;
-        // un ojo: es lo único que convierte una mancha en un bicho
-        g.fillStyle = "rgba(10,6,20,.8)";
-        g.beginPath(); g.ellipse(r * .12, -r * .12, r * .26, r * .3, 0, 0, 6.283); g.fill();
-        g.fillStyle = "rgba(255,255,255,.92)";
-        g.beginPath(); g.arc(r * .2, -r * .2, r * .11, 0, 6.283); g.fill();
+        // el borde oscuro: lo que hace que no se fundan entre ellos cuando se
+        // amontonan, que es todo el tiempo
+        g.strokeStyle = "rgba(8,4,16,.55)"; g.lineWidth = Math.max(1.5, r * .12);
+        this.silueta(g, d.forma, r); g.stroke();
         // brillo de arriba
-        g.fillStyle = "rgba(255,255,255,.18)";
-        g.beginPath(); g.ellipse(-r * .22, -r * .42, r * .3, r * .16, -.5, 0, 6.283); g.fill();
+        g.fillStyle = "rgba(255,255,255,.16)";
+        g.beginPath(); g.ellipse(-r * .2, -r * .44, r * .34, r * .17, -.5, 0, 6.283); g.fill();
         this.hojas[nombre] = { h, lado };
       }
       this.sellos = true;
     }
 
-    sacudir(f) { this.sacudida = Math.min(14, this.sacudida + f); }
+    sacudir(f) { this.sacudida = Math.min(16, this.sacudida + f); }
+    fogonazo(f) { this.destello = Math.min(1, this.destello + f); }
 
     numero(x, y, texto, color) {
-      if (this.numeros.length > 40) return;         // con doscientos bichos, no todos
+      if (this.numeros.length > 34) return;   // con doscientos bichos, no todos
       this.numeros.push({ x, y, texto, color, vida: 1 });
     }
 
-    estallar(x, y, color, cuantos) {
+    estallar(x, y, color, cuantos, fuerza = 1) {
       for (let i = 0; i < cuantos; i++) {
-        const a = Math.random() * 6.283, v = 40 + Math.random() * 180;
+        const a = Math.random() * 6.283, v = (40 + Math.random() * 180) * fuerza;
         this.trozos.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, vida: 1, color,
-                           r: 1.6 + Math.random() * 2.4 });
+                           r: (1.6 + Math.random() * 2.6) * fuerza });
+      }
+    }
+
+    /** Manchas fijas del piso, sembradas una vez por partida. */
+    sembrar(w) {
+      this.marcas = [];
+      const r = w.radioMapa;
+      for (let i = 0; i < 150; i++) {
+        const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * r;
+        this.marcas.push({ x: Math.cos(a) * d, y: Math.sin(a) * d,
+                           r: 6 + Math.random() * 34, g: Math.random() * 6.283 });
       }
     }
 
     dibujar(w, dt, mando) {
       const X = this.x;
       if (!this.sellos) this.cocinar();
-      const p = w.jugador;
+      if (!this.marcas.length) this.sembrar(w);
+      const p = w.jugador, E = w.etapa;
       X.clearRect(0, 0, this.AN, this.AL);
 
-      // la cámara sigue al jugador, con la sacudida encima
       let sx = 0, sy = 0;
       if (this.sacudida > 0.1) {
         sx = (Math.random() - .5) * this.sacudida;
         sy = (Math.random() - .5) * this.sacudida;
         this.sacudida *= 0.86;
       }
-      const cx = this.AN / 2 - p.x + sx, cy = this.AL / 2 - p.y + sy;
-      X.save(); X.translate(cx, cy);
+      X.save();
+      X.translate(this.AN / 2 - p.x + sx, this.AL / 2 - p.y + sy);
 
-      this.piso(X, p, w);
-      this.cosas(X, w, dt);
+      this.piso(X, p, w, E);
+      this.cosas(X, w, dt, E);
       X.restore();
 
-      this.hud(X, w, mando);
+      if (this.destello > 0.01) {
+        X.fillStyle = `rgba(255,255,255,${this.destello * .35})`;
+        X.fillRect(0, 0, this.AN, this.AL);
+        this.destello *= 0.82;
+      }
+      this.hud(X, w, mando, E);
     }
 
-    piso(X, p, w) {
-      // El piso se dibuja sólo donde se ve: pintar el mapa entero es pintar cinco
-      // pantallas de las que se miran una.
+    piso(X, p, w, E) {
       const x0 = p.x - this.AN, y0 = p.y - this.AL, an = this.AN * 2, al = this.AL * 2;
-      X.fillStyle = PISO; X.fillRect(x0, y0, an, al);
-      const paso = 64;
-      X.strokeStyle = "rgba(255,255,255,.035)"; X.lineWidth = 1;
+      X.fillStyle = E.piso; X.fillRect(x0, y0, an, al);
+
+      // las manchas: sólo las que se ven, y se ven porque la cámara sigue al jugador
+      X.fillStyle = E.niebla;
+      for (const m of this.marcas) {
+        if (Math.abs(m.x - p.x) > this.AN || Math.abs(m.y - p.y) > this.AL) continue;
+        X.save(); X.translate(m.x, m.y); X.rotate(m.g);
+        X.beginPath(); X.ellipse(0, 0, m.r, m.r * .62, 0, 0, 6.283); X.fill();
+        X.restore();
+      }
+
+      const paso = 72;
+      X.strokeStyle = E.reja; X.lineWidth = 1;
       X.beginPath();
       for (let x = Math.floor(x0 / paso) * paso; x < x0 + an; x += paso) { X.moveTo(x, y0); X.lineTo(x, y0 + al); }
       for (let y = Math.floor(y0 / paso) * paso; y < y0 + al; y += paso) { X.moveTo(x0, y); X.lineTo(x0 + an, y); }
       X.stroke();
+
       // el borde del mapa: se ve, así que nadie se sorprende al chocarlo
-      X.strokeStyle = "rgba(255,110,169,.35)"; X.lineWidth = 4;
+      X.strokeStyle = E.borde + "66"; X.lineWidth = 5;
       X.beginPath(); X.arc(0, 0, w.radioMapa, 0, 6.283); X.stroke();
-      X.strokeStyle = "rgba(255,110,169,.10)"; X.lineWidth = 26;
-      X.beginPath(); X.arc(0, 0, w.radioMapa + 13, 0, 6.283); X.stroke();
+      X.strokeStyle = E.borde + "1a"; X.lineWidth = 30;
+      X.beginPath(); X.arc(0, 0, w.radioMapa + 15, 0, 6.283); X.stroke();
     }
 
-    cosas(X, w, dt) {
-      const p = w.jugador;
+    /** Un bicho, con lo que se mueve dibujado en vivo. */
+    bicho(X, b, t) {
+      const d = BICHOS[b.tipo], hoja = this.hojas[b.tipo];
+      const esc = b.r / d.r;
+      const anda = Math.sin(t * 9 + b.fase);
+      // el cuerpo se aplasta al caminar y se estira al saltar: es lo que hace que
+      // una mancha parezca un bicho y no un sprite arrastrado
+      const ex = 1 + anda * 0.05 + (b.golpeado > 0 ? 0.22 : 0);
+      const ey = 1 - anda * 0.05 - (b.golpeado > 0 ? 0.14 : 0);
+      const img = imagen(`bicho-${b.tipo}.png`);
+      const l = hoja.lado * esc;
 
-      // semillas en el piso
+      X.save();
+      X.translate(b.x, b.y);
+      if (b.elite) {
+        X.strokeStyle = ELITE.aura; X.lineWidth = 2.5;
+        X.globalAlpha = .55 + Math.sin(t * 5 + b.fase) * .2;
+        X.beginPath(); X.arc(0, 0, b.r + 7, 0, 6.283); X.stroke();
+        X.globalAlpha = 1;
+      }
+      // patas: dos palitos que alternan
+      if (d.patas) {
+        X.strokeStyle = "rgba(8,4,16,.5)"; X.lineWidth = Math.max(1.6, b.r * .14);
+        for (const s of [-1, 1]) {
+          X.beginPath();
+          X.moveTo(s * b.r * .45, b.r * .5);
+          X.lineTo(s * b.r * .62, b.r * (1.0 + s * anda * .22));
+          X.stroke();
+        }
+      }
+      // alas: dos elipses que baten rápido
+      if (d.alas) {
+        const bat = Math.abs(Math.sin(t * 26 + b.fase));
+        X.fillStyle = "rgba(255,255,255,.28)";
+        for (const s of [-1, 1]) {
+          X.save(); X.translate(s * b.r * .7, -b.r * .2); X.rotate(s * (0.5 + bat * 0.7));
+          X.beginPath(); X.ellipse(0, 0, b.r * .75, b.r * .28, 0, 0, 6.283); X.fill();
+          X.restore();
+        }
+      }
+      X.scale(ex, ey);
+      if (img && img.complete && img.naturalWidth) X.drawImage(img, -l / 2, -l / 2, l, l);
+      else X.drawImage(hoja.h, -l / 2, -l / 2, l, l);
+      X.restore();
+
+      // EL OJO MIRA AL JUGADOR. Es un detalle de dos círculos y es lo que hace
+      // que cuarenta manchas se lean como cuarenta bichos que te vienen a buscar.
+      const rr = b.r;
+      X.fillStyle = "rgba(10,6,20,.85)";
+      X.beginPath(); X.ellipse(b.x + b.mirada * rr * .18, b.y - rr * .1, rr * .3, rr * .34, 0, 0, 6.283); X.fill();
+      X.fillStyle = "#fff";
+      X.beginPath(); X.arc(b.x + b.mirada * rr * .26, b.y - rr * .18, rr * .13, 0, 6.283); X.fill();
+
+      if (b.golpeado > 0) {
+        X.save(); X.translate(b.x, b.y);
+        X.globalAlpha = Math.min(1, b.golpeado * 6); X.fillStyle = "#fff";
+        this.silueta(X, d.forma, b.r); X.fill();
+        X.restore(); X.globalAlpha = 1;
+      }
+      // barra de vida sólo en los que aguantan: en una mota es ruido
+      if ((d.vida >= 46 || b.elite) && b.vida < b.vidaMax && !d.jefe) {
+        const an = b.r * 2;
+        X.fillStyle = "rgba(0,0,0,.6)"; X.fillRect(b.x - an / 2, b.y - b.r - 10, an, 4);
+        X.fillStyle = b.elite ? ELITE.aura : "#ff6ea9";
+        X.fillRect(b.x - an / 2, b.y - b.r - 10, an * (b.vida / b.vidaMax), 4);
+      }
+    }
+
+    cosas(X, w, dt, E) {
+      const p = w.jugador, t = w.t;
+
       for (const s of w.semillas) {
-        X.fillStyle = `rgba(138,208,106,${s.listo > 0 ? .12 : .20})`;
+        X.fillStyle = `rgba(138,208,106,${s.listo > 0 ? .10 : .18})`;
         X.beginPath(); X.arc(s.x, s.y, s.r, 0, 6.283); X.fill();
         X.strokeStyle = "rgba(138,208,106,.5)"; X.lineWidth = 2;
         X.beginPath(); X.arc(s.x, s.y, s.r, 0, 6.283); X.stroke();
       }
-      // ondas
+      // las raíces se unen entre sí
+      for (let i = 1; i < w.semillas.length; i++) {
+        const a = w.semillas[i], b = w.semillas[i - 1];
+        if (!a.raiz || !b.raiz) continue;
+        X.strokeStyle = "rgba(182,240,154,.5)"; X.lineWidth = 4;
+        X.beginPath(); X.moveTo(a.x, a.y); X.lineTo(b.x, b.y); X.stroke();
+      }
       for (const o of w.ondas) {
-        X.strokeStyle = `rgba(180,140,255,${1 - o.r / o.rMax})`;
-        X.lineWidth = 7 * (1 - o.r / o.rMax) + 2;
+        const v = 1 - o.r / o.rMax;
+        X.strokeStyle = `rgba(180,140,255,${v})`;
+        X.lineWidth = 8 * v + 2;
         X.beginPath(); X.arc(o.x, o.y, o.r, 0, 6.283); X.stroke();
       }
-      // gemas
       for (const g of w.gemas) {
-        X.fillStyle = "#7cf6ff";
+        X.fillStyle = g.xp >= 6 ? "#ffd166" : "#7cf6ff";
         X.beginPath(); X.moveTo(g.x, g.y - g.r); X.lineTo(g.x + g.r, g.y);
         X.lineTo(g.x, g.y + g.r); X.lineTo(g.x - g.r, g.y); X.closePath(); X.fill();
       }
-      // bichos
-      for (const b of w.bichos) {
-        const d = BICHOS[b.tipo], hoja = this.hojas[b.tipo];
-        const img = imagen(`bicho-${b.tipo}.png`);
-        const bamboleo = 1 + Math.sin(w.t * 7 + b.fase) * 0.05;
-        const l = hoja.lado * bamboleo;
-        if (img && img.complete && img.naturalWidth) {
-          X.drawImage(img, b.x - l / 2, b.y - l / 2, l, l);
-        } else {
-          X.drawImage(hoja.h, b.x - l / 2, b.y - l / 2, l, l);
-        }
-        if (b.golpeado > 0) {
-          X.globalAlpha = b.golpeado * 5;
-          X.fillStyle = "#fff";
-          this.contexto(X, b.x, b.y, () => this.silueta(X, d.forma, d.r));
-          X.fill(); X.globalAlpha = 1;
-        }
-        // barra de vida sólo en los que aguantan: en una mota es ruido
-        if (d.vida >= 50 && b.vida < b.vidaMax) {
-          const an = d.r * 2;
-          X.fillStyle = "rgba(0,0,0,.6)"; X.fillRect(b.x - an / 2, b.y - d.r - 9, an, 4);
-          X.fillStyle = "#ff6ea9"; X.fillRect(b.x - an / 2, b.y - d.r - 9, an * (b.vida / b.vidaMax), 4);
-        }
+      for (const c of w.cofres) {
+        const lat = 1 + Math.sin(t * 6) * .12;
+        X.save(); X.translate(c.x, c.y); X.scale(lat, lat);
+        X.fillStyle = "#ffd166"; X.fillRect(-c.r, -c.r * .8, c.r * 2, c.r * 1.6);
+        X.fillStyle = "#8a6a1f"; X.fillRect(-c.r, -c.r * .15, c.r * 2, c.r * .3);
+        X.restore();
       }
-      // latigazos
+
+      // los bichos, ordenados por Y para que los de adelante tapen a los de atrás
+      const lista = w.bichos;
+      for (const b of lista) b.mirada = Math.sign(p.x - b.x) || 1;
+      lista.sort((a, b) => a.y - b.y);
+      for (const b of lista) this.bicho(X, b, t);
+
+      // los jefes llevan su barra grande arriba de la cabeza
+      for (const b of lista) {
+        if (!BICHOS[b.tipo].jefe) continue;
+        const an = b.r * 3;
+        X.fillStyle = "rgba(0,0,0,.65)"; X.fillRect(b.x - an / 2 - 2, b.y - b.r - 20, an + 4, 9);
+        X.fillStyle = BICHOS[b.tipo].color;
+        X.fillRect(b.x - an / 2, b.y - b.r - 18, an * (b.vida / b.vidaMax), 5);
+      }
+
+      for (const b of w.balas) {
+        X.fillStyle = "#ff9d6e";
+        X.beginPath(); X.arc(b.x, b.y, b.r, 0, 6.283); X.fill();
+        X.strokeStyle = "rgba(255,255,255,.6)"; X.lineWidth = 1.5;
+        X.beginPath(); X.arc(b.x, b.y, b.r, 0, 6.283); X.stroke();
+      }
       for (const l of w.latigos) {
         X.save(); X.translate(l.x, l.y); X.rotate(l.rumbo);
         X.fillStyle = `rgba(255,110,169,${l.vida * 4})`;
         X.fillRect(0, -l.ancho / 2, l.largo, l.ancho);
         X.restore();
       }
-      // órbita
+      for (const g of w.guadañas) {
+        X.strokeStyle = `rgba(255,168,204,${g.vida * 3})`;
+        X.lineWidth = 14;
+        X.beginPath(); X.arc(p.x, p.y, g.radio, g.rumbo - .5, g.rumbo); X.stroke();
+      }
       if (w.nivelArma("orbita")) {
         const a = w.datosArma("orbita");
-        for (let k = 0; k < a.cuantos; k++) {
-          const ang = w.anguloOrbita + (k / a.cuantos) * 6.283;
-          const x = p.x + Math.cos(ang) * a.radio, y = p.y + Math.sin(ang) * a.radio;
-          X.fillStyle = ARMAS.orbita.color;
-          X.beginPath(); X.arc(x, y, a.r, 0, 6.283); X.fill();
-        }
-      }
-      // tiros
-      for (const t of w.tiros) {
-        X.fillStyle = ARMAS.chispa.color;
-        X.beginPath(); X.arc(t.x, t.y, t.r, 0, 6.283); X.fill();
-      }
-      // el jugador
-      const img = imagen("jugador.png");
-      const parpadea = p.invulnerable > 0 && (Math.floor(p.invulnerable * 18) % 2 === 0);
-      if (!parpadea) {
-        if (img && img.complete && img.naturalWidth) {
-          X.drawImage(img, p.x - p.r * 1.8, p.y - p.r * 1.8, p.r * 3.6, p.r * 3.6);
+        const col = w.evolucionada("orbita") ? EVOLUCIONES[w.jugador.evolucionadas.orbita].color : ARMAS.orbita.color;
+        if (w.evolucionada("orbita")) {
+          X.strokeStyle = col; X.lineWidth = a.grosor;
+          X.globalAlpha = .55;
+          X.beginPath(); X.arc(p.x, p.y, a.radio, 0, 6.283); X.stroke();
+          X.globalAlpha = 1;
         } else {
-          X.save(); X.translate(p.x, p.y); X.rotate(p.rumbo);
-          X.shadowColor = "#7cf6ff"; X.shadowBlur = 14;
-          X.fillStyle = "#e8f4ff";
-          X.beginPath();
-          X.moveTo(p.r * 1.25, 0); X.lineTo(-p.r * .85, -p.r * .95);
-          X.lineTo(-p.r * .35, 0); X.lineTo(-p.r * .85, p.r * .95);
-          X.closePath(); X.fill();
-          X.shadowBlur = 0;
-          X.fillStyle = "#1a2740";
-          X.beginPath(); X.arc(p.r * .25, 0, p.r * .3, 0, 6.283); X.fill();
-          X.restore();
+          for (let k = 0; k < a.cuantos; k++) {
+            const ang = w.anguloOrbita + (k / a.cuantos) * 6.283;
+            X.fillStyle = col;
+            X.beginPath(); X.arc(p.x + Math.cos(ang) * a.radio, p.y + Math.sin(ang) * a.radio, a.r, 0, 6.283); X.fill();
+          }
         }
       }
-      // trozos y números
+      for (const q of w.tiros) {
+        X.fillStyle = q.color || "#ffe066";
+        X.beginPath(); X.arc(q.x, q.y, q.r, 0, 6.283); X.fill();
+      }
+
+      this.jugador(X, p, t);
+
       for (let i = this.trozos.length - 1; i >= 0; i--) {
         const s = this.trozos[i];
         s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= .93; s.vy *= .93; s.vida -= dt * 2.1;
@@ -1148,31 +1689,78 @@ const M_dibujo = (() => {
       X.textAlign = "center";
       for (let i = this.numeros.length - 1; i >= 0; i--) {
         const n = this.numeros[i];
-        n.vida -= dt * 1.5; n.y -= dt * 42;
+        n.vida -= dt * 1.5; n.y -= dt * 44;
         if (n.vida <= 0) { this.numeros.splice(i, 1); continue; }
         X.globalAlpha = Math.min(1, n.vida * 1.6);
         X.fillStyle = n.color;
-        X.font = `800 ${Math.round(13 + 6 * n.vida)}px system-ui,sans-serif`;
+        X.font = `800 ${Math.round(13 + 7 * n.vida)}px system-ui,sans-serif`;
         X.fillText(n.texto, n.x, n.y);
       }
       X.globalAlpha = 1;
     }
 
-    contexto(X, x, y, f) { X.save(); X.translate(x, y); X.beginPath(); f(); X.restore(); }
+    jugador(X, p, t) {
+      const img = imagen("jugador.png");
+      const parpadea = p.invulnerable > 0 && Math.floor(p.invulnerable * 20) % 2 === 0;
+      // la estela del envión: se ve de dónde venís, que es lo que hace que el
+      // envión se sienta rápido en vez de sólo teletransportarte
+      if (p.envion > 0) {
+        X.globalAlpha = .3; X.fillStyle = "#7cf6ff";
+        for (let k = 1; k <= 4; k++) {
+          X.beginPath();
+          X.arc(p.x - p.envionDir.x * k * 15, p.y - p.envionDir.y * k * 15, p.r * (1 - k * .16), 0, 6.283);
+          X.fill();
+        }
+        X.globalAlpha = 1;
+      }
+      if (parpadea) return;
+      X.save(); X.translate(p.x, p.y); X.rotate(p.rumbo);
+      if (img && img.complete && img.naturalWidth) {
+        X.drawImage(img, -p.r * 1.9, -p.r * 1.9, p.r * 3.8, p.r * 3.8);
+      } else {
+        X.shadowColor = "#7cf6ff"; X.shadowBlur = 16;
+        X.fillStyle = "#e8f4ff";
+        X.beginPath();
+        X.moveTo(p.r * 1.3, 0); X.lineTo(-p.r * .85, -p.r * .95);
+        X.lineTo(-p.r * .3, 0); X.lineTo(-p.r * .85, p.r * .95);
+        X.closePath(); X.fill();
+        X.shadowBlur = 0;
+        X.strokeStyle = "rgba(10,20,40,.5)"; X.lineWidth = 2; X.stroke();
+        X.fillStyle = "#1a2740";
+        X.beginPath(); X.arc(p.r * .3, 0, p.r * .28, 0, 6.283); X.fill();
+      }
+      X.restore();
+    }
 
-    hud(X, w, mando) {
+    hud(X, w, mando, E) {
       const p = w.jugador;
-      // barra de experiencia, pegada arriba: es la que se mira todo el tiempo
       X.fillStyle = "rgba(255,255,255,.10)"; X.fillRect(0, 0, this.AN, 7);
       X.fillStyle = "#7cf6ff";
       X.fillRect(0, 0, this.AN * Math.min(1, p.xp / p.xpNecesaria), 7);
-      // vida
+
       const an = Math.min(this.AN * .62, 280), x0 = (this.AN - an) / 2, y = 16;
       X.fillStyle = "rgba(0,0,0,.5)"; X.fillRect(x0 - 2, y - 2, an + 4, 12);
       X.fillStyle = "#ff3d5a"; X.fillRect(x0, y, an, 8);
       X.fillStyle = "#3ce06a"; X.fillRect(x0, y, an * Math.max(0, p.vida / p.vidaMax), 8);
 
-      // el mando, donde el dedo lo puso
+      /* EL ENVION SE MUESTRA COMO UN ANILLO ALREDEDOR DEL PULGAR, y no como un
+         número en una esquina. Es lo único que se aprieta en el juego: mirarlo
+         tiene que costar cero, porque se lo necesita justo cuando no hay tiempo
+         de mirar nada. */
+      const listo = p.envionListo <= 0;
+      const cx = this.AN - 52, cy = this.AL - 52 - 10;
+      X.strokeStyle = listo ? "#7cf6ff" : "rgba(255,255,255,.18)";
+      X.lineWidth = 4;
+      X.beginPath();
+      X.arc(cx, cy, 24, -Math.PI / 2, -Math.PI / 2 + 6.283 * (listo ? 1 : 1 - p.envionListo / ENVION.espera));
+      X.stroke();
+      X.fillStyle = listo ? "rgba(124,246,255,.16)" : "rgba(255,255,255,.05)";
+      X.beginPath(); X.arc(cx, cy, 21, 0, 6.283); X.fill();
+      X.fillStyle = listo ? "#7cf6ff" : "rgba(255,255,255,.35)";
+      X.font = "800 15px system-ui,sans-serif"; X.textAlign = "center"; X.textBaseline = "middle";
+      X.fillText("»", cx, cy + 1);
+      X.textBaseline = "alphabetic";
+
       if (mando && mando.activo) {
         X.strokeStyle = "rgba(255,255,255,.22)"; X.lineWidth = 2;
         X.beginPath(); X.arc(mando.ox, mando.oy, mando.radio, 0, 6.283); X.stroke();
@@ -1277,8 +1865,10 @@ const M_guardado = (() => {
 
   const LLAVE = "enjambre.v1";
   const vacio = () => ({
-    mejorTiempo: 0, mejorMatados: 0, mejorNivel: 0, partidas: 0, ganadas: 0,
-    ajustes: { sonido: true, idioma: null, mando: "donde-toques" },
+    // por etapa: {mejorTiempo, mejorMatados, mejorNivel, hecha}
+    etapas: {},
+    partidas: 0, ganadas: 0,
+    ajustes: { sonido: true, idioma: null },
   });
   let cache = null;
 
@@ -1294,21 +1884,35 @@ const M_guardado = (() => {
   function guardar() { try { localStorage.setItem(LLAVE, JSON.stringify(cargar())); } catch (e) {} }
   const ajustes = () => cargar().ajustes;
 
-  /** Anota el resultado. Devuelve qué récords se rompieron. */
-  function anotar(r) {
+  function marca(etapa) { return cargar().etapas[etapa] || null; }
+
+  /** Anota el resultado de una etapa. Devuelve qué récords se rompieron. */
+  function anotar(etapa, r) {
     const d = cargar();
-    const nuevos = { tiempo: r.t > d.mejorTiempo, matados: r.matados > d.mejorMatados, nivel: r.nivel > d.mejorNivel };
-    d.mejorTiempo = Math.max(d.mejorTiempo, r.t);
-    d.mejorMatados = Math.max(d.mejorMatados, r.matados);
-    d.mejorNivel = Math.max(d.mejorNivel, r.nivel);
+    const v = d.etapas[etapa] || { mejorTiempo: 0, mejorMatados: 0, mejorNivel: 0, hecha: false };
+    const nuevos = { tiempo: r.t > v.mejorTiempo, matados: r.matados > v.mejorMatados,
+                     nivel: r.nivel > v.mejorNivel, primera: r.gano && !v.hecha };
+    v.mejorTiempo = Math.max(v.mejorTiempo, r.t);
+    v.mejorMatados = Math.max(v.mejorMatados, r.matados);
+    v.mejorNivel = Math.max(v.mejorNivel, r.nivel);
+    v.hecha = v.hecha || r.gano;
+    d.etapas[etapa] = v;
     d.partidas++;
     if (r.gano) d.ganadas++;
     guardar();
     return nuevos;
   }
+
+  /** Hasta qué etapa se puede entrar. La siguiente se abre al terminar la anterior. */
+  function abiertas() {
+    const d = cargar();
+    let n = 1;
+    while (n < 4 && d.etapas[n]?.hecha) n++;
+    return n;
+  }
   function borrarTodo() { cache = vacio(); try { localStorage.removeItem(LLAVE); } catch (e) {} }
 
-  return { cargar, guardar, ajustes, anotar, borrarTodo };
+  return { cargar, guardar, ajustes, marca, anotar, abiertas, borrarTodo };
 })();
 
 /* ── idioma.js ── */
@@ -1322,10 +1926,19 @@ const M_idioma = (() => {
   const { ajustes, guardar } = M_guardado;
   const IDIOMAS = { en: "English", es: "Español", pt: "Português" };
 
-  const BICHO = {
-    en: { mota: "Blob", pua: "Spike", caparazon: "Shell", zumbido: "Buzz", bulto: "Lump" },
-    es: { mota: "Mota", pua: "Púa", caparazon: "Caparazón", zumbido: "Zumbido", bulto: "Bulto" },
-    pt: { mota: "Mancha", pua: "Espinho", caparazon: "Casco", zumbido: "Zumbido", bulto: "Volume" },
+  const ETAPA = {
+    en: { pradera: ["Meadow", "Where it starts. Blobs, and one lump at the end."],
+          nido:    ["Nest", "Everything splits. Kill one, get three."],
+          salina:  ["Salt flats", "They shoot from far and lie in wait. Keep moving."],
+          hervidero: ["Hive", "All of it at once, and three bosses."] },
+    es: { pradera: ["Pradera", "Donde se empieza. Motas, y un bulto al final."],
+          nido:    ["Nido", "Todo se parte. Matás uno y salen tres."],
+          salina:  ["Salina", "Disparan de lejos y esperan agazapados. No te quedes quieto."],
+          hervidero: ["Hervidero", "Todo junto, y tres jefes."] },
+    pt: { pradera: ["Pradaria", "Onde começa. Manchas, e um volume no fim."],
+          nido:    ["Ninho", "Tudo se parte. Mata um e saem três."],
+          salina:  ["Salina", "Atiram de longe e esperam agachados. Não pare."],
+          hervidero: ["Fervedouro", "Tudo junto, e três chefes."] },
   };
   const ARMA = {
     en: { chispa: ["Spark", "Fires on its own at whatever is closest."],
@@ -1344,6 +1957,24 @@ const M_idioma = (() => {
           hilo:   ["Chicote", "Uma chicotada para onde você vai."],
           semilla:["Semente", "Deixa minas atrás. Premia correr em círculos."] },
   };
+  const EVO = {
+    en: { tormenta: ["Storm", "Five shots that go through everything, five times a second."],
+          anillo:   ["Ring", "The orbit becomes a solid ring around you."],
+          sismo:    ["Quake", "A huge wave that damages, shoves and stuns."],
+          guadaña:  ["Scythe", "Sweeps almost all the way around you."],
+          raiz:     ["Root", "The seeds link up and burn the line between them."] },
+    es: { tormenta: ["Tormenta", "Cinco tiros que atraviesan todo, cinco veces por segundo."],
+          anillo:   ["Anillo", "La órbita se vuelve un aro entero alrededor tuyo."],
+          sismo:    ["Sismo", "Una onda enorme que daña, empuja y aturde."],
+          guadaña:  ["Guadaña", "Barre casi toda la vuelta a tu alrededor."],
+          raiz:     ["Raíz", "Las semillas se unen y queman la línea entre ellas."] },
+    pt: { tormenta: ["Tormenta", "Cinco tiros que atravessam tudo, cinco vezes por segundo."],
+          anillo:   ["Anel", "A órbita vira um aro inteiro em volta de você."],
+          sismo:    ["Abalo", "Uma onda enorme que fere, empurra e atordoa."],
+          guadaña:  ["Foice", "Varre quase toda a volta ao seu redor."],
+          raiz:     ["Raiz", "As sementes se unem e queimam a linha entre elas."] },
+  };
+
   const PASIVA = {
     en: { botas: ["Boots", "Move faster."], iman: ["Magnet", "Gems fly to you sooner and faster."],
           coraza: ["Plating", "More health."], filo: ["Edge", "More damage."], pulso: ["Pulse", "Everything fires more often."] },
@@ -1374,6 +2005,7 @@ const M_idioma = (() => {
       "fin.gano": "You made it", "fin.perdio": "They got you",
       "fin.tiempo": "Time", "fin.matados": "Killed", "fin.nivel": "Level", "fin.record": "New record",
       "fin.otra": "Again", "fin.menu": "Menu",
+      "menu.etapas": "Stages", "etapas.titulo": "Stages", "etapas.cerrada": "Finish the previous stage", "etapas.mejor": "Best", "etapas.hecha": "Cleared", "mej.evolucion": "EVOLUTION", "fin.etapa": "Stage", "hud.envion": "Dash", "como.6": "The ring at the bottom right is the dash: half a second of invulnerability, and it is the only thing you press.",
     },
     es: {
       "doc.titulo": "Enjambre — sobreviví seis minutos",
@@ -1395,6 +2027,7 @@ const M_idioma = (() => {
       "fin.gano": "La contaste", "fin.perdio": "Te agarraron",
       "fin.tiempo": "Tiempo", "fin.matados": "Matados", "fin.nivel": "Nivel", "fin.record": "Récord nuevo",
       "fin.otra": "De nuevo", "fin.menu": "Menú",
+      "menu.etapas": "Etapas", "etapas.titulo": "Etapas", "etapas.cerrada": "Terminá la etapa anterior", "etapas.mejor": "Mejor", "etapas.hecha": "Terminada", "mej.evolucion": "EVOLUCIÓN", "fin.etapa": "Etapa", "hud.envion": "Envión", "como.6": "El anillo de abajo a la derecha es el envión: medio segundo de invulnerabilidad, y es lo único que se aprieta.",
     },
     pt: {
       "doc.titulo": "Enjambre — sobreviva seis minutos",
@@ -1416,12 +2049,14 @@ const M_idioma = (() => {
       "fin.gano": "Você conseguiu", "fin.perdio": "Pegaram você",
       "fin.tiempo": "Tempo", "fin.matados": "Mortos", "fin.nivel": "Nível", "fin.record": "Novo recorde",
       "fin.otra": "De novo", "fin.menu": "Menu",
+      "menu.etapas": "Fases", "etapas.titulo": "Fases", "etapas.cerrada": "Termine a fase anterior", "etapas.mejor": "Melhor", "etapas.hecha": "Concluída", "mej.evolucion": "EVOLUÇÃO", "fin.etapa": "Fase", "hud.envion": "Impulso", "como.6": "O anel embaixo à direita é o impulso: meio segundo de invulnerabilidade, e é a única coisa que se aperta.",
     },
   };
 
   const idioma = () => ajustes().idioma || "en";
   const t = (k) => (T[idioma()] && T[idioma()][k]) || T.en[k] || k;
-  const nombreBicho = (n) => (BICHO[idioma()] || BICHO.en)[n] || n;
+  const etapa = (n) => (ETAPA[idioma()] || ETAPA.en)[n] || [n, ""];
+  const evolucion = (n) => (EVO[idioma()] || EVO.en)[n] || [n, ""];
   const arma = (n) => (ARMA[idioma()] || ARMA.en)[n] || [n, ""];
   const pasiva = (n) => (PASIVA[idioma()] || PASIVA.en)[n] || [n, ""];
 
@@ -1442,7 +2077,7 @@ const M_idioma = (() => {
       for (const k of base) if (!(k in T[l])) fuera.push(`${l} no tiene ${k}`);
       for (const k of Object.keys(T[l])) if (!base.includes(k)) fuera.push(`${l} tiene de más ${k}`);
     }
-    for (const [nom, tabla] of [["bichos", BICHO], ["armas", ARMA], ["pasivas", PASIVA]]) {
+    for (const [nom, tabla] of [["etapas", ETAPA], ["armas", ARMA], ["pasivas", PASIVA], ["evoluciones", EVO]]) {
       const n = Object.keys(tabla.en).length;
       for (const l of Object.keys(tabla))
         if (Object.keys(tabla[l]).length !== n) fuera.push(`${l} tiene ${Object.keys(tabla[l]).length} ${nom} y en tiene ${n}`);
@@ -1450,15 +2085,15 @@ const M_idioma = (() => {
     return fuera;
   }
 
-  return { IDIOMAS, idioma, t, nombreBicho, arma, pasiva, elegir, aplicar, faltantes };
+  return { IDIOMAS, idioma, t, etapa, evolucion, arma, pasiva, elegir, aplicar, faltantes };
 })();
 
 /* ── main.js ── */
 // El cableado: pantallas, el mando, el bucle y la elección de mejoras.
 
 const { Mundo } = M_mundo;
-const { LARGO } = M_bichos;
-const { ARMAS } = M_armas;
+const { ETAPAS } = M_bichos;
+const { ARMAS, EVOLUCIONES } = M_armas;
 const { Pantalla } = M_dibujo;
 const { Ruido } = M_audio;
 const G = M_guardado;
@@ -1470,11 +2105,13 @@ const pantalla = new Pantalla($("#lienzo"));
 const ruido = new Ruido();
 let mundo = null, corriendo = false, anterior = 0, resto = 0;
 
-const PANTALLAS = { idioma: "#pIdioma", menu: "#pMenu", como: "#pComo", ajustes: "#pAjustes",
-                    juego: "#pJuego", mejora: "#pMejora", fin: "#pFin" };
+const PANTALLAS = { idioma: "#pIdioma", menu: "#pMenu", etapas: "#pEtapas", como: "#pComo",
+                    ajustes: "#pAjustes", juego: "#pJuego", mejora: "#pMejora", fin: "#pFin" };
+let etapaActual = 1;
 function ir(n) {
   for (const [k, sel] of Object.entries(PANTALLAS)) $(sel).classList.toggle("on", k === n);
   if (n === "menu") pintarMenu();
+  if (n === "etapas") pintarEtapas();
   if (n === "ajustes") pintarAjustes();
 }
 $$("[data-ir]").forEach((b) => b.addEventListener("click", () => { if (corriendo) salir(); ir(b.dataset.ir); }));
@@ -1491,9 +2128,31 @@ const reloj = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
 
 function pintarMenu() {
   const d = G.cargar();
+  const hechas = Object.values(d.etapas).filter((e) => e.hecha).length;
   $("#menuMejor").textContent = d.partidas
-    ? `${I.t("menu.mejor")}  ${reloj(d.mejorTiempo)} · ${d.mejorMatados} · ${I.t("mej.nivel")} ${d.mejorNivel}`
+    ? `${I.t("etapas.hecha")} ${hechas}/${ETAPAS.length} · ${d.partidas} ${I.t("fin.etapa").toLowerCase()}s`
     : I.t("menu.nunca");
+}
+
+function pintarEtapas() {
+  const abiertas = G.abiertas();
+  const cont = $("#listaEtapas");
+  cont.innerHTML = "";
+  for (const e of ETAPAS) {
+    const m = G.marca(e.id);
+    const cerrada = e.id > abiertas;
+    const [nom, desc] = I.etapa(e.nombre);
+    const b = document.createElement("button");
+    b.className = "etapa" + (cerrada ? " cerrada" : "") + (m?.hecha ? " hecha" : "");
+    b.style.setProperty("--tono", e.borde);
+    b.innerHTML = `<div class="n">${e.id}</div><div>
+      <div class="t">${nom}${m?.hecha ? " <em>✓</em>" : ""}</div>
+      <div class="d">${cerrada ? I.t("etapas.cerrada") : desc}</div>
+      <div class="s">${cerrada ? "" : (m ? `${I.t("etapas.mejor")} ${reloj(m.mejorTiempo)} · ${m.mejorMatados} ☠` : `${Math.round(e.largo / 60)}:${String(e.largo % 60).padStart(2, "0")}`)}</div>
+    </div>`;
+    if (!cerrada) b.addEventListener("click", () => empezar(e.id));
+    cont.appendChild(b);
+  }
 }
 function pintarAjustes() {
   $("#ajSonido").classList.toggle("no", !G.ajustes().sonido);
@@ -1516,7 +2175,7 @@ $("#bBorrar").addEventListener("click", (e) => {
   e.target.textContent = I.t("aj.seguro");
   setTimeout(() => { if (Date.now() - armadoBorrar >= 4000) e.target.textContent = I.t("aj.borrar"); }, 4100);
 });
-$("#bJugar").addEventListener("click", () => empezar());
+$("#bJugar").addEventListener("click", () => ir("etapas"));
 $("#bComo").addEventListener("click", () => ir("como"));
 $("#bAjustes").addEventListener("click", () => ir("ajustes"));
 
@@ -1548,6 +2207,17 @@ $("#zona").addEventListener("pointerdown", (e) => { e.preventDefault(); tomar(e)
 $("#zona").addEventListener("pointermove", mover);
 for (const ev of ["pointerup", "pointercancel", "pointerleave"]) $("#zona").addEventListener(ev, soltar);
 
+/* EL ENVION TIENE SU PROPIO BOTON Y NO UN DOBLE TOQUE.
+   Un doble toque compite con el movimiento: apoyar y soltar rápido para
+   corregir el rumbo lo dispararía sin querer, y gastarlo por accidente es
+   peor que no tenerlo. El botón está donde cae el pulgar derecho y por encima
+   de la zona de movimiento. */
+$("#bEnvion").addEventListener("pointerdown", (e) => {
+  e.preventDefault(); e.stopPropagation();
+  if (corriendo && mundo) mundo.lanzarEnvion();
+});
+addEventListener("keydown", (e) => { if (e.code === "Space" && corriendo && mundo) { e.preventDefault(); mundo.lanzarEnvion(); } });
+
 const direccion = () => {
   if (!mando.activo) return { x: 0, y: 0 };
   const dx = mando.x - mando.ox, dy = mando.y - mando.oy, d = Math.hypot(dx, dy);
@@ -1570,10 +2240,12 @@ const porTeclado = () => {
 };
 
 // ── la partida ─────────────────────────────────────────────────────────────
-function empezar(semilla) {
+function empezar(etapa, semilla) {
   ruido.despertar();
   ruido.vol = G.ajustes().sonido ? 1 : 0;
-  mundo = new Mundo(semilla ?? ((Math.random() * 1e9) | 0));
+  etapaActual = etapa ?? etapaActual;
+  mundo = new Mundo(semilla ?? ((Math.random() * 1e9) | 0), etapaActual);
+  pantalla.marcas.length = 0;
   pantalla.medir();
   pantalla.numeros.length = 0; pantalla.trozos.length = 0; pantalla.sacudida = 0;
   mando.activo = false;
@@ -1625,7 +2297,7 @@ function sonarGolpes() {
 
 function hud() {
   const p = mundo.jugador;
-  $("#hudReloj").textContent = reloj(Math.max(0, LARGO - mundo.t));
+  $("#hudReloj").textContent = reloj(Math.max(0, mundo.largo - mundo.t));
   $("#hudNivel").textContent = p.nivel;
   $("#hudMatados").textContent = mundo.matados;
 }
@@ -1639,18 +2311,35 @@ function mostrarMejoras() {
   cont.innerHTML = "";
   $("#mejNivel").textContent = mundo.jugador.nivel;
   for (const o of ofertas) {
-    const [nom, desc] = o.clase === "arma" ? I.arma(o.nombre) : I.pasiva(o.nombre);
-    const color = o.clase === "arma" ? ARMAS[o.nombre].color : "#7cf6ff";
+    let nom, desc, color, etiqueta;
+    if (o.clase === "evolucion") {
+      [nom, desc] = I.evolucion(o.en);
+      color = EVOLUCIONES[o.en].color;
+      etiqueta = `<em class="evo">${I.t("mej.evolucion")}</em>`;
+    } else if (o.clase === "arma") {
+      [nom, desc] = I.arma(o.nombre); color = ARMAS[o.nombre].color;
+    } else if (o.clase === "curar") {
+      nom = "+40"; desc = ""; color = "#3ce06a";
+    } else {
+      [nom, desc] = I.pasiva(o.nombre); color = "#7cf6ff";
+    }
     const b = document.createElement("button");
-    b.className = "tarjeta" + (o.nueva ? " nueva" : "");
+    b.className = "tarjeta" + (o.nueva ? " nueva" : "") + (o.clase === "evolucion" ? " evolucion" : "");
     /* LOS DOS TEXTOS VAN ADENTRO DE UN SOLO HIJO.
        La tarjeta es una grilla de dos columnas —el cuadradito de color y el
        texto—, y acá había TRES hijos: el cuadradito, el título y la
        descripción. El tercero se iba a la fila de abajo y caía en la primera
        columna, la de 14 píxeles: la descripción salía partida en una palabra
        por renglón. Se veía como un problema de estilo y era de estructura. */
+    /* LOS DOS TEXTOS VAN ADENTRO DE UN SOLO HIJO.
+       La tarjeta es una grilla de dos columnas —el cuadradito y el texto— y acá
+       había TRES hijos: el tercero se iba a la fila de abajo y caía en la
+       columna de 14 píxeles, así que la descripción salía partida en una
+       palabra por renglón. Parecía un problema de estilo y era de estructura. */
+    const marca = etiqueta || (o.nueva ? `<em>${I.t("mej.nueva")}</em>`
+                  : (o.nivel ? `<b>${I.t("mej.nivel")} ${o.nivel}</b>` : ""));
     b.innerHTML = `<i style="background:${color}"></i><div>` +
-      `<div class="t">${nom} ${o.nueva ? `<em>${I.t("mej.nueva")}</em>` : `<b>${I.t("mej.nivel")} ${o.nivel}</b>`}</div>` +
+      `<div class="t">${nom} ${marca}</div>` +
       `<div class="d">${desc}</div></div>`;
     b.addEventListener("click", () => {
       mundo.elegir(o);
@@ -1667,17 +2356,18 @@ function terminar() {
   corriendo = false;
   ruido.fin();
   const r = { gano: mundo.gano, t: mundo.t, matados: mundo.matados, nivel: mundo.jugador.nivel };
-  const nuevos = G.anotar(r);
+  const nuevos = G.anotar(etapaActual, r);
   $("#finTitulo").dataset.t = r.gano ? "fin.gano" : "fin.perdio";
   $("#finTitulo").textContent = I.t(r.gano ? "fin.gano" : "fin.perdio");
   $("#finTiempo").textContent = reloj(r.t);
   $("#finMatados").textContent = r.matados;
   $("#finNivel").textContent = r.nivel;
   $("#finRecord").classList.toggle("on", nuevos.tiempo || nuevos.matados || nuevos.nivel);
+  $("#finEtapa").textContent = I.etapa(mundo.etapa.nombre)[0];
   ir("fin");
 }
-$("#bSalir").addEventListener("click", () => { salir(); ir("menu"); });
-$("#bOtra").addEventListener("click", () => empezar());
+$("#bSalir").addEventListener("click", () => { salir(); ir("etapas"); });
+$("#bOtra").addEventListener("click", () => empezar(etapaActual));
 
 addEventListener("resize", () => pantalla.medir());
 addEventListener("visibilitychange", () => { if (document.hidden && corriendo) { salir(); ir("menu"); } });
@@ -1689,10 +2379,11 @@ ir(G.ajustes().idioma ? "menu" : "idioma");
 window.__enjambre = {
   ir, empezar, salir,
   pantallaActual: () => Object.entries(PANTALLAS).find(([, s]) => $(s).classList.contains("on"))?.[0],
-  estado: () => mundo && { t: mundo.t, bichos: mundo.bichos.length, matados: mundo.matados,
-                           nivel: mundo.jugador.nivel, vida: mundo.jugador.vida,
+  estado: () => mundo && { t: mundo.t, etapa: mundo.etapa.id, bichos: mundo.bichos.length,
+                           matados: mundo.matados, nivel: mundo.jugador.nivel, vida: mundo.jugador.vida,
                            pendiente: mundo.pendienteMejora, terminada: mundo.terminada(),
-                           armas: { ...mundo.jugador.armas }, pico: mundo.picoBichos },
+                           armas: { ...mundo.jugador.armas },
+                           evos: { ...mundo.jugador.evolucionadas }, pico: mundo.picoBichos },
   mundo: () => mundo,
   /** Juega sola, para medir. Devuelve el resultado. */
   robot(segundos = 20) {
@@ -1704,6 +2395,7 @@ window.__enjambre = {
       const a = Math.atan2(p.y, p.x); x += -Math.sin(a) * .7; y += Math.cos(a) * .7;
       const dc = Math.hypot(p.x, p.y);
       if (dc > mundo.radioMapa * .85) { x -= p.x / dc; y -= p.y / dc; }
+      if (b && Math.hypot(b.x - p.x, b.y - p.y) < 60) mundo.lanzarEnvion();
       const m = Math.hypot(x, y) || 1; return { x: x / m, y: y / m };
     };
     const hasta = mundo.t + segundos;

@@ -21,6 +21,9 @@ html,body{height:100%;overflow:hidden;background:var(--fondo);color:var(--tinta)
 #pMejora{background:rgba(8,6,16,.86)}
 
 .caja{width:min(430px,100%);display:flex;flex-direction:column;gap:12px;text-align:center;margin:auto}
+.caja.ancha{width:min(500px,100%)}
+.etiqueta{font:700 11px/1 system-ui;letter-spacing:.18em;text-transform:uppercase;color:var(--apagado)}
+.etiqueta b{color:var(--cian)}
 .logo{font-size:clamp(34px,10.5vw,54px);font-weight:900;letter-spacing:.10em;line-height:1;margin:4px 0 2px;
   background:linear-gradient(95deg,var(--verde),var(--cian) 55%,var(--violeta));
   -webkit-background-clip:text;background-clip:text;color:transparent;
@@ -70,6 +73,26 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
 #bSalir{margin-left:auto;padding:8px 12px;font-size:12px;background:rgba(8,6,16,.6)}
 #zona{position:fixed;inset:0;z-index:3}
 
+/* ── las etapas ─────────────────────────────────────────────────────────── */
+.etapas{display:flex;flex-direction:column;gap:9px;width:100%}
+.etapa{display:grid;grid-template-columns:40px minmax(0,1fr);gap:13px;align-items:center;
+  text-align:left;padding:14px 15px;border-radius:14px;width:100%;
+  border-color:color-mix(in srgb,var(--tono) 40%,transparent);
+  background:linear-gradient(100deg,color-mix(in srgb,var(--tono) 12%,transparent),rgba(255,255,255,.02))}
+.etapa>div{min-width:0}
+.etapa .n{font-weight:900;font-size:24px;color:var(--tono);text-align:center;font-variant-numeric:tabular-nums}
+.etapa .t{font-weight:800;font-size:16px}
+.etapa .t em{font-style:normal;color:var(--verde)}
+.etapa .d{font-size:12.5px;line-height:1.45;color:#b9b1cf;margin-top:3px}
+.etapa .s{font-size:11px;color:var(--apagado);margin-top:5px;letter-spacing:.04em}
+.etapa.cerrada{opacity:.42;background:rgba(255,255,255,.02)}
+.etapa.hecha .n::after{content:'';display:block;height:2px;background:var(--verde);margin-top:3px;border-radius:2px}
+
+/* el botón del envión, donde cae el pulgar derecho */
+#bEnvion{position:fixed;right:calc(52px - 34px);bottom:calc(62px - 34px);width:68px;height:68px;
+  z-index:5;border-radius:50%;background:none;border:none;padding:0}
+#bEnvion:active{transform:none}
+
 /* las tarjetas de mejora: lo único que se elige en todo el juego */
 .tarjetas{display:flex;flex-direction:column;gap:10px}
 /* EL `min-width:0` NO ES DECORATIVO. Un hijo de grid trae `min-width:auto`, que
@@ -87,4 +110,10 @@ button.volver{background:none;border:none;color:var(--apagado);font-size:13px;pa
   background:var(--verde);color:#0c0a16;border-radius:5px;padding:3px 6px}
 .tarjeta .d{font-size:13px;line-height:1.5;color:#b9b1cf;margin-top:5px}
 .tarjeta.nueva{border-color:rgba(138,208,106,.5);background:rgba(138,208,106,.09)}
+/* LA EVOLUCION SE OFRECE SOLA Y SE TIENE QUE VER DISTINTA. Es la jugada de la
+   partida: mezclada entre dos mejoras comunes se elige sin entender qué era. */
+.tarjeta.evolucion{border-color:rgba(255,209,102,.7);
+  background:linear-gradient(100deg,rgba(255,209,102,.16),rgba(194,100,224,.14));
+  box-shadow:0 0 28px rgba(255,209,102,.18)}
+.tarjeta .t em.evo{background:#ffd166;color:#241a04}
 @media (prefers-reduced-motion:reduce){.bichitos i{animation:none}}

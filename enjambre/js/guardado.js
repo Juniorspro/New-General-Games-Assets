@@ -6,8 +6,10 @@
 
 const LLAVE = "enjambre.v1";
 const vacio = () => ({
-  mejorTiempo: 0, mejorMatados: 0, mejorNivel: 0, partidas: 0, ganadas: 0,
-  ajustes: { sonido: true, idioma: null, mando: "donde-toques" },
+  // por etapa: {mejorTiempo, mejorMatados, mejorNivel, hecha}
+  etapas: {},
+  partidas: 0, ganadas: 0,
+  ajustes: { sonido: true, idioma: null },
 });
 let cache = null;
 
@@ -23,16 +25,30 @@ export function cargar() {
 export function guardar() { try { localStorage.setItem(LLAVE, JSON.stringify(cargar())); } catch (e) {} }
 export const ajustes = () => cargar().ajustes;
 
-/** Anota el resultado. Devuelve qué récords se rompieron. */
-export function anotar(r) {
+export function marca(etapa) { return cargar().etapas[etapa] || null; }
+
+/** Anota el resultado de una etapa. Devuelve qué récords se rompieron. */
+export function anotar(etapa, r) {
   const d = cargar();
-  const nuevos = { tiempo: r.t > d.mejorTiempo, matados: r.matados > d.mejorMatados, nivel: r.nivel > d.mejorNivel };
-  d.mejorTiempo = Math.max(d.mejorTiempo, r.t);
-  d.mejorMatados = Math.max(d.mejorMatados, r.matados);
-  d.mejorNivel = Math.max(d.mejorNivel, r.nivel);
+  const v = d.etapas[etapa] || { mejorTiempo: 0, mejorMatados: 0, mejorNivel: 0, hecha: false };
+  const nuevos = { tiempo: r.t > v.mejorTiempo, matados: r.matados > v.mejorMatados,
+                   nivel: r.nivel > v.mejorNivel, primera: r.gano && !v.hecha };
+  v.mejorTiempo = Math.max(v.mejorTiempo, r.t);
+  v.mejorMatados = Math.max(v.mejorMatados, r.matados);
+  v.mejorNivel = Math.max(v.mejorNivel, r.nivel);
+  v.hecha = v.hecha || r.gano;
+  d.etapas[etapa] = v;
   d.partidas++;
   if (r.gano) d.ganadas++;
   guardar();
   return nuevos;
+}
+
+/** Hasta qué etapa se puede entrar. La siguiente se abre al terminar la anterior. */
+export function abiertas() {
+  const d = cargar();
+  let n = 1;
+  while (n < 4 && d.etapas[n]?.hecha) n++;
+  return n;
 }
 export function borrarTodo() { cache = vacio(); try { localStorage.removeItem(LLAVE); } catch (e) {} }

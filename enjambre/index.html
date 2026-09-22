@@ -34,12 +34,20 @@
   </div>
 </section>
 
+<section id="pEtapas" class="pantalla">
+  <div class="caja ancha">
+    <h2 data-t="etapas.titulo">Etapas</h2>
+    <div id="listaEtapas" class="etapas"></div>
+    <button class="volver" data-ir="menu" data-t="volver">Volver</button>
+  </div>
+</section>
+
 <section id="pComo" class="pantalla">
   <div class="caja">
     <h2 data-t="como.titulo">Cómo se juega</h2>
     <ul class="ayuda">
       <li data-t="como.1"></li><li data-t="como.2"></li><li data-t="como.3"></li>
-      <li data-t="como.4"></li><li data-t="como.5"></li>
+      <li data-t="como.6"></li><li data-t="como.4"></li><li data-t="como.5"></li>
     </ul>
     <button class="volver" data-ir="menu" data-t="volver">Volver</button>
   </div>
@@ -65,6 +73,10 @@
   <!-- LA ZONA DE MOVIMIENTO ES TODA LA PANTALLA. Un joystick en una esquina
        obliga a mirarse el pulgar; acá el mando nace donde apoyás el dedo. -->
   <div id="zona"></div>
+  <!-- EL ENVION VA POR ENCIMA DE LA ZONA DE MOVIMIENTO, donde cae el pulgar
+       derecho. El anillo que lo rodea lo dibuja el lienzo, así que acá sólo
+       está el área que se toca. -->
+  <button id="bEnvion" data-t-aria="hud.envion" aria-label="Envión"></button>
 </section>
 
 <section id="pMejora" class="pantalla">
@@ -76,6 +88,7 @@
 
 <section id="pFin" class="pantalla">
   <div class="caja">
+    <div class="etiqueta"><span data-t="fin.etapa">Etapa</span> <b id="finEtapa"></b></div>
     <h2 id="finTitulo" data-t="fin.perdio">Te agarraron</h2>
     <div id="finRecord" class="record" data-t="fin.record">Récord nuevo</div>
     <div class="fila"><span data-t="fin.tiempo">Tiempo</span><b id="finTiempo">0:00</b></div>
@@ -83,6 +96,7 @@
     <div class="fila"><span data-t="fin.nivel">Nivel</span><b id="finNivel">1</b></div>
     <div class="botonera">
       <button id="bOtra" class="grande" data-t="fin.otra">De nuevo</button>
+      <button data-ir="etapas" data-t="etapas.titulo">Etapas</button>
       <button data-ir="menu" data-t="fin.menu">Menú</button>
     </div>
   </div>
