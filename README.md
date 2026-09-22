@@ -3,7 +3,12 @@
 Continuación de `Juniorspro/General-Assets-Games`. Acá está **el código y la
 documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 
-> **Empezá por acá:** [`PAPA-DEL-PATRON.md`](PAPA-DEL-PATRON.md) es el traspaso
+> **Empezá por acá:** [`memoria/INDICE.md`](memoria/INDICE.md) — el índice de la
+> memoria, que en ~60 líneas dice las reglas, qué hay dónde y qué nota abrir para
+> cada tarea. El método está en [`MEMORIA.md`](MEMORIA.md). Leyendo el índice
+> alcanza para arrancar; los tres documentos largos se abren **por sección**.
+>
+> Los tres largos: [`PAPA-DEL-PATRON.md`](PAPA-DEL-PATRON.md) es el traspaso
 > al día — lo que está trabado ahora mismo, la GPU gratis de Kaggle, el Blender
 > por script, la app PeakCode y lo que ya se decidió no volver a intentar.
 > Después: [`ARRANQUE.md`](ARRANQUE.md) dice **cómo se trabaja** (la máquina, las
