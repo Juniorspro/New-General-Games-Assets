@@ -27,27 +27,36 @@ const {G,escribir,leer}=N;
 // ── los proveedores ──────────────────────────────────────────────────────────
 // `sinLlave` es el único que anda sin configurar nada.
 const BASE=[
-  {id:'pollinations', nombre:'Pollinations', sinLlave:true, activo:true,
+  {id:'pollinations', nombre:'El de fábrica', activo:true, sinLlave:true,
    chat:'https://text.pollinations.ai/openai',
    catalogo:'https://text.pollinations.ai/models',
-   sacar:'No hace falta nada: es el que viene andando.'},
+   resumen:'Viene andando, no hay que hacer nada. Es el que se llena y te frena.',
+   web:''},
+  {id:'huggingface', nombre:'Hugging Face', activo:false,
+   chat:'https://router.huggingface.co/v1/chat/completions',
+   catalogo:'https://router.huggingface.co/v1/models',
+   resumen:'El que más modelos suma. La cuenta y la llave son gratis.',
+   web:'https://huggingface.co/settings/tokens'},
   {id:'openrouter', nombre:'OpenRouter', activo:false, soloGratis:true,
    chat:'https://openrouter.ai/api/v1/chat/completions',
    catalogo:'https://openrouter.ai/api/v1/models',
-   sacar:'Llave gratis en openrouter.ai/keys. Se usan solo los modelos que '+
-         'terminan en ":free", así que no te puede cobrar.'},
+   resumen:'Solo usa los modelos que son gratis, así que no te puede cobrar.',
+   web:'https://openrouter.ai/keys'},
   {id:'groq', nombre:'Groq', activo:false,
    chat:'https://api.groq.com/openai/v1/chat/completions',
    catalogo:'https://api.groq.com/openai/v1/models',
-   sacar:'Llave gratis en console.groq.com/keys. Es el más rápido de todos.'},
+   resumen:'El más rápido de todos. La llave es gratis.',
+   web:'https://console.groq.com/keys'},
   {id:'cerebras', nombre:'Cerebras', activo:false,
    chat:'https://api.cerebras.ai/v1/chat/completions',
    catalogo:'https://api.cerebras.ai/v1/models',
-   sacar:'Llave gratis en cloud.cerebras.ai.'},
+   resumen:'Rápido y gratis, con menos modelos.',
+   web:'https://cloud.cerebras.ai'},
   {id:'deepinfra', nombre:'DeepInfra', activo:false,
    chat:'https://api.deepinfra.com/v1/openai/chat/completions',
    catalogo:'https://api.deepinfra.com/v1/openai/models',
-   sacar:'Llave en deepinfra.com (tiene crédito de regalo al arrancar).'},
+   resumen:'Muchos modelos. Regala crédito al abrir la cuenta.',
+   web:'https://deepinfra.com/dash/api_keys'},
 ];
 
 function guardado(){ try{ return JSON.parse(leer('flota','{}')); }catch(e){ return {}; } }
@@ -82,14 +91,18 @@ async function traerJSON(url, llave){
 function normalizar(prov, m){
   const id=m.id||m.name;
   if(!id) return null;
+  // Hugging Face devuelve los proveedores adentro de cada modelo
+  const hf=(m.providers&&m.providers[0])||null;
   const sp=m.supported_parameters||[];
   const ba=(m.benchmarks&&m.benchmarks.artificial_analysis)||{};
   return {
     prov:prov.id,
     id,
     nom:(m.name||id).replace(/\s*\(free\)\s*$/i,''),
-    ctx:m.context_length||(m.top_provider&&m.top_provider.context_length)||m.max_context_length||0,
-    herramientas:sp.includes('tools')||!!m.tool_use||prov.id==='pollinations',
+    ctx:m.context_length||(m.top_provider&&m.top_provider.context_length)||
+        (hf&&hf.context_length)||m.max_context_length||0,
+    herramientas:sp.includes('tools')||!!m.tool_use||prov.id==='pollinations'||
+        (hf&&hf.supports_tools)||false,
     razona:sp.includes('reasoning')||!!m.reasoning,
     // los índices salen del catálogo, no de mi opinión
     ix:{

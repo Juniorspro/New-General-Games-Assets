@@ -357,6 +357,15 @@ public class MainActivity extends Activity {
             }).start();
         }
 
+        /** Abre una pagina en el navegador. Para "conseguir la llave gratis". */
+        @JavascriptInterface
+        public void abrirWeb(String url) {
+            try {
+                if (url == null || !url.startsWith("https://")) return;
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+            } catch (Exception e) { }
+        }
+
         @JavascriptInterface
         public void aviso(String t) {
             runOnUiThread(() -> Toast.makeText(MainActivity.this, t,

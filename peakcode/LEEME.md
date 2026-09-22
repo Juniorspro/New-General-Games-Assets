@@ -485,3 +485,82 @@ enfriado evite reintentar al frenado, que un 400 **no** dispare la rotación, y
 que cuando de verdad no queda ninguno lo diga en vez de quedarse colgado.
 
 Los catálogos de prueba son copias de la forma real que devuelve OpenRouter.
+
+---
+
+# 1.2 — IAs sin registro (lo que hay de verdad), Rezona y menos jerga
+
+## La búsqueda de IAs sin registro: qué se probó y qué dio
+
+Medido el 22/9, endpoint por endpoint, no de memoria:
+
+| dónde | listar modelos | **usarlos** sin registro |
+|---|---|---|
+| Pollinations | sí | **sí** · 1 modelo |
+| Hugging Face (router) | sí, 137 modelos | **no** · 401 |
+| Hugging Face (Spaces) | sí | **no**, ver abajo |
+| OpenRouter | sí, 444 (21 gratis) | no · 401 |
+| DeepInfra | sí, 194 | no · 401 |
+| Groq · Cerebras · Mistral · Google · Together | no | no |
+
+### Lo de los Spaces, que era la mejor pista
+
+Un Space público **sí** acepta la llamada sin ninguna credencial: se le manda
+el pedido a `/gradio_api/call/...` y devuelve un `event_id`. Pero al leer el
+resultado aparece esto:
+
+> `ZeroGPU quota exceeded — You have exceeded your ZeroGPU quota (90s requested
+> vs. 0s left). Authenticate with a Hugging Face token for more quota.`
+
+O sea: **la puerta está abierta y la GPU da cero segundos a los anónimos**. Es
+la misma pared, una capa más adentro. Un token gratis de Hugging Face la corre.
+
+Dos cosas más, dichas porque importan: apuntar la app a Spaces de otra gente es
+gastarle la cuota a un tercero, y los Spaces gratis **se duermen** solos. La
+versión honesta de esa idea es un Space propio, que es justo lo que ya está
+armado en `peakcode/servidor/`.
+
+**Conclusión: con dos llaves gratis (Hugging Face + OpenRouter) se pasa de 1
+modelo a más de 150.** Sin ninguna llave, hay uno. No hay vuelta.
+
+## Rezona
+
+Su página `/mcp` existe pero está detrás del login: la dirección y la llave se
+ven solo con la cuenta abierta. Probar rutas a ciegas dio 405 en todas, porque
+el sitio es una sola página y nginx rechaza POST en cualquier lado.
+
+Así que la app trae una **tarjeta de Rezona lista**, con el botón que abre
+`rezona.ai/mcp`, los dos campos y el texto de dónde sacar cada dato. Pegás los
+dos, tocás conectar y queda. La llave se guarda como `Authorization: Bearer` y
+se borra del campo apenas se usa.
+
+## Menos jerga
+
+Las dos pantallas estaban escritas para alguien que ya sabe. Ahora:
+
+| antes | ahora |
+|---|---|
+| "Motores · proveedores · catálogos" | **"Modelos"** y un titular: *"Tenés 138 modelos. Si uno se llena, sigo con otro."* |
+| "Pollinations" | **"El de fábrica"** — *"Viene andando, no hay que hacer nada. Es el que se llena y te frena."* |
+| "Actualizar los catálogos" | se actualiza solo al pegar una llave |
+| "Llave gratis en openrouter.ai/keys" | botón **"Conseguir la llave gratis"** que abre la página |
+| "stdio · Android no puede lanzar procesos" | **"no anda en el teléfono"** + *"son un programa de computadora"* |
+| el `{"mcpServers": …}` en primer plano | escondido en **"Otro servidor (avanzado)"** |
+
+Hay una prueba que falla si vuelve a aparecer una palabra técnica
+(*catálogo, proveedor, endpoint, API, token*) en la pantalla de Modelos.
+
+Se agrega `Peak.abrirWeb()` al puente para los botones que abren una página.
+
+## Por tercera vez, el bug de `oculto`
+
+Volví a escribir `<div class=estado oculto>` en el marcado nuevo, que declara un
+**atributo** y no la clase, así que quedaba una caja vacía a la vista. Van tres
+veces. Ahora hay una prueba que recorre el DOM y falla si algún elemento usa
+`oculto` como atributo en vez de clase.
+
+## Lo que no hice
+
+**Sacar las llaves yo.** No puedo abrir cuentas a tu nombre: hacen falta tu
+correo, aceptar los términos como vos, y recibir el mail de verificación. Las
+llaves las sacás vos en dos minutos con los botones que quedaron puestos.

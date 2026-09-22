@@ -695,60 +695,155 @@ $('#bPegarMCP').onclick=async()=>{
   $('#cPegar').value=''; pintarConectores();
 };
 
-// ── motores ──────────────────────────────────────────────────────────────────
+// ── motores: en castellano, sin jerga ────────────────────────────────────────
+function estadoFlota(){
+  const n=Flota.modelos.length;
+  const e=$('#estadoFlota');
+  if(!n){ e.innerHTML='Buscando modelos…'; return; }
+  const falta=Flota.proveedores.filter(p=>!p.sinLlave&&!p.llave).length;
+  if(n<=2) e.innerHTML='Tenés <span class=grande>'+n+'</span> modelo'+(n>1?'s':'')+
+    '. Por eso te frenan seguido: es uno solo y lo usa todo el mundo.';
+  else e.innerHTML='Tenés <span class=grande>'+n+'</span> modelos. Si uno se llena, sigo con otro.'+
+    (falta?' Podés sumar más con '+falta+' llave'+(falta>1?'s':'')+' gratis más.':'');
+}
+
 function pintarMotores(){
   $('#cAuto').checked=Flota.auto;
+  estadoFlota();
   const l=$('#listaMotores'); l.innerHTML='';
   Flota.proveedores.forEach(p=>{
-    const d=document.createElement('div'); d.className='motor';
+    const d=document.createElement('div'); d.className='tarjeta';
     const f=document.createElement('div'); f.className='fila1';
     const n=document.createElement('div'); n.className='nom'; n.textContent=p.nombre;
     const cuantos=Flota.modelos.filter(m=>m.prov===p.id).length;
     const pa=document.createElement('span');
-    if(p.activo&&(p.sinLlave||p.llave)){
-      pa.className='pastilla '+(cuantos?'on':'gris');
-      pa.textContent=cuantos?cuantos+' modelos':'sin catálogo';
-    }else{ pa.className='pastilla gris'; pa.textContent=p.sinLlave?'apagado':'falta la llave'; }
+    const listo=p.activo&&(p.sinLlave||p.llave);
+    if(listo&&cuantos){ pa.className='pastilla on'; pa.textContent=cuantos+' modelo'+(cuantos>1?'s':''); }
+    else if(listo){ pa.className='pastilla gris'; pa.textContent='probando…'; }
+    else if(!p.llave&&!p.sinLlave){ pa.className='pastilla gris'; pa.textContent='falta la llave'; }
+    else { pa.className='pastilla gris'; pa.textContent='apagado'; }
     const sw=document.createElement('input'); sw.type='checkbox'; sw.checked=!!p.activo;
-    sw.style.cssText='width:auto;flex:0 0 auto';
-    sw.onchange=()=>{ p.activo=sw.checked; Flota.guardar(); pintarMotores(); };
+    sw.style.cssText='width:auto;flex:0 0 auto;transform:scale(1.2)';
+    sw.onchange=async()=>{ p.activo=sw.checked; Flota.guardar(); pintarMotores();
+      if(p.activo) await recargar(); };
     f.appendChild(n); f.appendChild(pa); f.appendChild(sw);
     d.appendChild(f);
+    const c=document.createElement('div'); c.className='comor'; c.textContent=p.resumen;
+    d.appendChild(c);
     if(!p.sinLlave){
+      if(!p.llave){
+        const b=document.createElement('button'); b.className='boton secundario';
+        b.textContent='Conseguir la llave gratis';
+        b.onclick=()=>Peak.abrirWeb(p.web);
+        d.appendChild(b);
+      }
       const i=document.createElement('input'); i.type='password';
-      i.placeholder='pegá acá la llave'; i.value=p.llave||'';
-      i.onchange=()=>{ p.llave=i.value.trim(); Flota.guardar(); pintarMotores(); };
+      i.placeholder=p.llave?'llave guardada — pegá otra para cambiarla':'pegá la llave acá';
+      i.onchange=async()=>{ p.llave=i.value.trim(); p.activo=!!p.llave; Flota.guardar();
+                            i.value=''; pintarMotores(); await recargar(); };
       d.appendChild(i);
     }
-    const c=document.createElement('div'); c.className='comor'; c.textContent=p.sacar;
-    d.appendChild(c);
-    if(p.error){ const e=document.createElement('div'); e.className='err';
-                 e.textContent='Último intento: '+p.error; d.appendChild(e); }
+    if(p.error&&p.activo&&(p.sinLlave||p.llave)){
+      const e=document.createElement('div'); e.className='comor';
+      e.style.color='#ffb3ad';
+      e.textContent=/40[13]/.test(p.error)?'La llave no entró. Fijate que esté completa.'
+        :'No contestó. Puede ser la conexión.';
+      d.appendChild(e);
+    }
     l.appendChild(d);
   });
-  const r=$('#resumenFlota');
-  const tot=Flota.modelos.length;
-  if(!tot) r.textContent='Todavía no hay catálogos cargados. Tocá "Actualizar los catálogos".';
-  else{
-    const conH=Flota.modelos.filter(m=>m.herramientas).length;
-    const grande=Flota.modelos.reduce((a,m)=>Math.max(a,m.ctx||0),0);
-    r.textContent=tot+' modelos en la flota · '+conH+' sirven para el modo agente · '+
-      'el de más contexto aguanta '+grande.toLocaleString('es-AR')+' tokens.';
-  }
 }
-$('#bMotores').onclick=()=>{ cerrarCajon(); pintarMotores(); $('#motores').classList.add('ver'); };
-$('#bCerrarMotores').onclick=()=>$('#motores').classList.remove('ver');
-$('#cAuto').onchange=e=>{ Flota.auto=e.target.checked; Flota.guardar(); pintarCab(); };
-$('#bRecargarCat').onclick=async()=>{
+async function recargar(){
   const e=$('#eMotores'); e.classList.remove('oculto','ok','no'); e.textContent='Buscando…';
-  await cargarCatalogos(nom=>{ e.textContent='Preguntándole a '+nom+'…'; });
-  const malos=Flota.proveedores.filter(p=>p.error&&p.activo&&(p.sinLlave||p.llave));
-  e.classList.add(Flota.modelos.length?(malos.length?'no':'ok'):'no');
-  e.textContent=Flota.modelos.length
-    ? Flota.modelos.length+' modelos listos.'+(malos.length?' No entraron: '+
-        malos.map(p=>p.nombre+' ('+p.error+')').join(', '):'')
-    : 'No entró ninguno. '+(malos.map(p=>p.nombre+': '+p.error).join(' · ')||'');
+  await cargarCatalogos(nom=>{ e.textContent='Viendo qué tiene '+nom+'…'; });
+  const n=Flota.modelos.length;
+  e.classList.add(n?'ok':'no');
+  e.textContent=n?'Listo: '+n+' modelos para usar.':'No entró ninguno. Revisá las llaves o la conexión.';
   pintarMotores();
+}
+$('#bMotores').onclick=()=>{ cerrarCajon(); pintarMotores(); $('#motores').classList.add('ver');
+  if(!Flota.modelos.length) recargar(); };
+$('#bCerrarMotores').onclick=()=>$('#motores').classList.remove('ver');
+$('#cAuto').onchange=e=>{ Flota.auto=e.target.checked; Flota.guardar(); estadoFlota(); };
+$('#bRecargarCat').onclick=recargar;
+
+// ── conectores ───────────────────────────────────────────────────────────────
+function pintarConectores(){
+  const l=$('#listaConectores'); if(!l) return;
+  l.innerHTML='';
+  const rz=Conectores.lista.find(c=>c.nombre==='Rezona');
+  const pr=$('#pastRezona');
+  if(pr){
+    const hs=(rz&&rz.herramientas||[]).length;
+    pr.className='pastilla '+(hs?'on':'gris');
+    pr.textContent=hs?hs+' herramienta'+(hs>1?'s':''):'sin conectar';
+  }
+  Conectores.lista.filter(c=>c.nombre!=='Rezona').forEach(c=>{
+    const d=document.createElement('div'); d.className='tarjeta';
+    const f=document.createElement('div'); f.className='fila1';
+    const n=document.createElement('div'); n.className='nom'; n.textContent=c.nombre;
+    const hs=(c.herramientas||[]).length;
+    const p=document.createElement('span');
+    if(c.tipo!=='http'){ p.className='pastilla off'; p.textContent='no anda en el teléfono'; }
+    else if(hs){ p.className='pastilla on'; p.textContent=hs+' herramienta'+(hs>1?'s':''); }
+    else { p.className='pastilla gris'; p.textContent='sin conectar'; }
+    f.appendChild(n); f.appendChild(p); d.appendChild(f);
+    if(c.motivo){ const m=document.createElement('div'); m.className='comor';
+                  m.textContent=c.motivo; d.appendChild(m); }
+    if(hs){ const h=document.createElement('div'); h.className='comor';
+            h.textContent='Puede: '+c.herramientas.map(x=>x.nombre).join(', '); d.appendChild(h); }
+    const fila=document.createElement('div'); fila.className='acciones-msg';
+    if(c.tipo==='http'){
+      const bp=document.createElement('button'); bp.textContent='Probar';
+      bp.onclick=async()=>{ bp.textContent='…';
+        try{ await conectar(c); avisoMCP('ok','"'+c.nombre+'" quedó conectado.'); }
+        catch(e){ avisoMCP('no','"'+c.nombre+'" no conectó: '+e.message); }
+        pintarConectores(); };
+      const ba=document.createElement('button'); ba.textContent=c.activo?'Apagar':'Prender';
+      ba.onclick=()=>{ c.activo=!c.activo; Conectores._guardar(); pintarConectores(); };
+      fila.appendChild(bp); fila.appendChild(ba);
+    }
+    const bb=document.createElement('button'); bb.textContent='Quitar';
+    bb.onclick=()=>{ Conectores.borrar(c.id); pintarConectores(); };
+    fila.appendChild(bb); d.appendChild(fila);
+    l.appendChild(d);
+  });
+}
+function avisoMCP(clase,texto){
+  const e=$('#eMCP'); e.classList.remove('oculto','ok','no');
+  if(clase) e.classList.add(clase);
+  e.textContent=texto;
+}
+$('#bConectores').onclick=()=>{ cerrarCajon(); pintarConectores();
+  $('#conectores').classList.add('ver'); };
+$('#bCerrarConectores').onclick=()=>$('#conectores').classList.remove('ver');
+$('#bWebRezona').onclick=()=>Peak.abrirWeb('https://rezona.ai/mcp');
+$('#bConectarRezona').onclick=async()=>{
+  const url=$('#rzUrl').value.trim(), key=$('#rzKey').value.trim();
+  if(!/^https?:\/\//.test(url)) return avisoMCP('no','Falta la dirección, la que empieza con https://');
+  const c=Conectores.agregar({nombre:'Rezona', url, tipo:'http', activo:true,
+    cabeceras:key?{Authorization:'Bearer '+key}:{}});
+  avisoMCP('','Conectando con Rezona…');
+  try{
+    const hs=await conectar(c);
+    avisoMCP('ok','Rezona conectado: '+hs.length+' herramientas listas.');
+    $('#rzKey').value='';
+  }catch(e){ avisoMCP('no','No pude conectar con Rezona: '+e.message); }
+  pintarConectores();
+};
+$('#bPegarMCP').onclick=async()=>{
+  const {servidores,avisos}=interpretar($('#cPegar').value);
+  if(!servidores.length){ avisoMCP('no', avisos.join(' ')); return; }
+  avisoMCP('', 'Conectando…');
+  const partes=[];
+  for(const srv of servidores){
+    const c=Conectores.agregar(srv);
+    if(c.tipo!=='http'){ partes.push('"'+c.nombre+'" no anda en el teléfono.'); continue; }
+    try{ const hs=await conectar(c); partes.push('"'+c.nombre+'": '+hs.length+' herramientas.'); }
+    catch(e){ partes.push('"'+c.nombre+'" no conectó: '+e.message); }
+  }
+  avisoMCP(partes.some(x=>/no /.test(x))?'no':'ok', partes.join(' '));
+  $('#cPegar').value=''; pintarConectores();
 };
 
 // ── arranque ─────────────────────────────────────────────────────────────────

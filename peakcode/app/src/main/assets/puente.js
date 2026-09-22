@@ -42,6 +42,7 @@ if(!window.Peak){
       i.click();
     },
     copiar(t){ navigator.clipboard?.writeText(t); },
+    abrirWeb(u){ try{ window.open(u,'_blank'); }catch(e){} },
     hayTermux(){ return false; },
     correrEnTermux(){ return false; },
     abrirTermux(){},

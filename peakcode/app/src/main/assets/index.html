@@ -83,6 +83,21 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
 #preview iframe{flex:1;border:0;width:100%;background:#fff}
 .fila{display:flex;gap:8px}.fila>*{flex:1}
 
+.titular{font:600 17px/1.45 system-ui;margin:14px 0 6px}
+.titular .grande{color:var(--acento);font-size:23px}
+.interruptor{display:flex;align-items:center;gap:11px;margin:18px 0 4px;font-size:15px}
+.interruptor input{width:auto;flex:0 0 auto;transform:scale(1.25)}
+.tarjeta{border:1px solid var(--linea);border-radius:13px;padding:13px;margin:12px 0;background:var(--panel)}
+.tarjeta .fila1{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.tarjeta .nom{flex:1;font:600 16px system-ui}
+.tarjeta .comor{color:var(--tenue);font-size:13px;line-height:1.5;margin-top:6px}
+.tarjeta input{margin-top:9px}
+.tarjeta .boton{margin-top:10px;padding:11px}
+.avanzado{margin:16px 0;border-top:1px solid var(--linea);padding-top:12px}
+.avanzado summary{color:var(--tenue);font:14px system-ui;padding:6px 0}
+.avanzado textarea{width:100%;min-height:92px;background:var(--panel);color:var(--texto);
+ border:1px solid var(--linea);border-radius:11px;padding:11px;font:12.5px ui-monospace,monospace}
+
 .motor{border:1px solid var(--linea);border-radius:12px;padding:11px 12px;margin:9px 0;background:var(--panel)}
 .motor .fila1{display:flex;align-items:center;gap:8px}
 .motor .nom{flex:1;font-weight:600}
@@ -216,37 +231,48 @@ code{background:#000;padding:2px 6px;border-radius:5px;font-size:12.5px;word-bre
 </footer>
 
 <div class="tapa" id=motores>
-  <h2>Motores</h2>
-  <div class=pista>Cuantos más motores tengas prendidos, menos te frenan: si uno te
-   corta, la app sigue sola con otro.</div>
-  <label style="display:flex;align-items:center;gap:10px;margin:16px 0 4px">
-    <input type=checkbox id=cAuto style="width:auto;flex:0 0 auto"> Elegir el modelo solo, según lo que pidas
+  <h2>Modelos</h2>
+  <div id=estadoFlota class=titular></div>
+  <label class=interruptor>
+    <input type=checkbox id=cAuto> <span>Que elija solo el mejor para cada cosa</span>
   </label>
-  <div class=pista>Apagado, usa siempre el que elegiste a mano en el selector de abajo.</div>
+  <div class=pista>Si lo apagás, usa siempre el que elegís vos abajo, al lado de donde escribís.</div>
   <div id=listaMotores></div>
-  <button class=boton id=bRecargarCat>Actualizar los catálogos</button>
-  <div class=estado oculto id=eMotores></div>
-  <div id=resumenFlota class=pista></div>
-  <button class="boton secundario" id=bCerrarMotores>Cerrar</button>
+  <div class="estado oculto" id=eMotores></div>
+  <button class="boton secundario" id=bRecargarCat>Revisar de nuevo</button>
+  <button class=boton id=bCerrarMotores>Listo</button>
 </div>
 
 <div class="tapa" id=conectores>
   <h2>Conectores</h2>
-  <div class=pista>Pegá acá la configuración de un servidor MCP: una URL suelta, o el
-   bloque <code>{"mcpServers": …}</code> que ya usás en la compu. Se agrega solo.</div>
-  <textarea id=cPegar placeholder='https://mi-servidor/mcp
+  <div class=pista>Un conector le presta a la app herramientas de otro lado: tus proyectos
+   de Rezona, tus notas, lo que tengas. Después el agente las usa solo cuando le sirven.</div>
 
-o bien:
-
-{"mcpServers": {"github": {"url": "https://…/mcp", "headers": {"Authorization": "Bearer …"}}}}'></textarea>
-  <button class=boton id=bPegarMCP>Agregar y conectar</button>
-  <div class="estado oculto" id=eMCP></div>
   <div id=listaConectores></div>
-  <div class=pista><b>Ojo con los locales.</b> Los servidores que arrancan con un comando
-   (<code>npx</code>, <code>python -m</code>) corren como un programa en tu máquina, y una app
-   de Android no puede lanzar procesos. Esos quedan anotados pero apagados: necesitan
-   una versión remota por HTTP.</div>
-  <button class="boton secundario" id=bCerrarConectores>Cerrar</button>
+
+  <div class=tarjeta id=tarjetaRezona>
+    <div class=fila1><div class=nom>Rezona</div>
+      <span class="pastilla gris" id=pastRezona>sin conectar</span></div>
+    <div class=comor>Tus créditos y tus proyectos de Rezona, adentro de la app.</div>
+    <div class=comor><b>Dónde están los datos:</b> entrá a rezona.ai, tocá <b>MCP</b> en el
+     menú, y ahí figuran la dirección y la llave. Copiá las dos y pegalas acá.</div>
+    <button class="boton secundario" id=bWebRezona>Abrir rezona.ai</button>
+    <input id=rzUrl placeholder="la dirección que dice ahí">
+    <input id=rzKey type=password placeholder="la llave">
+    <button class=boton id=bConectarRezona>Conectar Rezona</button>
+  </div>
+
+  <details class=avanzado>
+    <summary>Otro servidor (avanzado)</summary>
+    <div class=pista>Pegá una dirección, o el bloque <code>{"mcpServers": …}</code> que ya
+     tengas armado en la compu.</div>
+    <textarea id=cPegar placeholder='https://mi-servidor/mcp'></textarea>
+    <button class="boton secundario" id=bPegarMCP>Agregar</button>
+    <div class=pista>Los que arrancan con un comando (<code>npx</code>, <code>python</code>)
+     no andan en el teléfono: son un programa de computadora, y Android no puede abrirlos.</div>
+  </details>
+  <div class="estado oculto" id=eMCP></div>
+  <button class=boton id=bCerrarConectores>Listo</button>
 </div>
 
 <div class=tapa id=ajustes>
