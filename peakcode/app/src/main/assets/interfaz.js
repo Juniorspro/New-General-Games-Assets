@@ -16,13 +16,57 @@ const {G,LIBRE,TOPES,Taller,pedir,pedirLargo,compactar,salvar,Corte,abortar,rean
 const {correrAgente,human}=window.PeakAgente;
 const {correrFlujo}=window.PeakFlujo;
 const FMT=window.PeakFormatos;
+const {Sesiones}=window.PeakSesiones;
+const {Conectores,interpretar,conectar}=window.PeakMCP;
 
-let hist=JSON.parse(localStorage.getItem('hist')||'[]');
+let hist=[];
 let trabajando=false;
-function guardarHist(){ try{ localStorage.setItem('hist',JSON.stringify(hist.slice(-40))); }catch(e){} }
+
+// El taller no decide dónde se guarda: lo guarda la sesión que está abierta.
+Taller.alCambiar=()=>guardarSesion();
+
+function guardarSesion(){
+  const id=Sesiones.activa; if(!id) return;
+  Sesiones.guardarDatos(id,{mensajes:hist.slice(-60), taller:Taller.archivos});
+}
+function guardarHist(){ guardarSesion(); }
+
+/** Abre una conversación: carga su historial y su taller. */
+function abrirSesion(id){
+  if(!Sesiones.encabezado(id)) return;
+  Sesiones.abrir(id);
+  const d=Sesiones.datos(id);
+  hist=d.mensajes||[];
+  Taller.cargarDe(d.taller||{});
+  repintar(); pintarTaller(); pintarCajon(); pintarCab();
+}
+function nuevaSesion(){
+  Sesiones.nueva();
+  hist=[]; Taller.cargarDe({});
+  repintar(); pintarTaller(); pintarCajon(); pintarCab();
+}
+/** Arranque: la última abierta, o una nueva si es la primera vez. */
+function arrancarSesiones(){
+  // migración de la 0.9: si había un historial suelto, se convierte en la primera
+  const viejo=(()=>{ try{ return JSON.parse(localStorage.getItem('hist')||'[]'); }catch(e){ return []; } })();
+  if(!Sesiones.lista.length){
+    const s=Sesiones.nueva(viejo.length?Sesiones.tituloDe(viejo[0].content):'Conversación nueva');
+    if(viejo.length){
+      const tallerViejo=(()=>{ try{ return JSON.parse(localStorage.getItem('taller')||'{}'); }catch(e){ return {}; } })();
+      Sesiones.guardarDatos(s.id,{mensajes:viejo, taller:tallerViejo});
+      try{ localStorage.removeItem('hist'); localStorage.removeItem('taller'); }catch(e){}
+    }
+  }
+  const id=Sesiones.activa&&Sesiones.encabezado(Sesiones.activa)
+    ? Sesiones.activa : Sesiones.lista[0].id;
+  Sesiones.abrir(id);
+  const d=Sesiones.datos(id);
+  hist=d.mensajes||[]; Taller.cargarDe(d.taller||{});
+}
 function pintarCab(){
-  const m=(G.preset==='free'?'gratis · ':'')+(G.modelo||'—');
-  $('#cabModelo').textContent=m+(G.modo==='chat'?'':' · '+(G.modo==='agente'?'agente':'workflow'));
+  const s=Sesiones.encabezado(Sesiones.activa);
+  const modo=G.modo==='chat'?'':' · '+(G.modo==='agente'?'agente':'workflow');
+  $('#cabModelo').textContent=(s?s.titulo:'')+modo;
 }
 function abajo(){ $('#hilo').scrollTop=1e9; }
 
@@ -31,9 +75,16 @@ function poner(t,q,guardable){
   const d=document.createElement('div'); d.className='msg '+q;
   if(q==='el'&&guardable) pintarAsistente(d,t); else d.textContent=t;
   if(guardable){
-    const b=document.createElement('button'); b.className='guardar'; b.textContent='⤓ guardar';
-    b.onclick=()=>menuFormato(d.dataset.crudo||d.textContent);
-    d.dataset.crudo=t; d.appendChild(b);
+    d.dataset.crudo=t;
+    const fila=document.createElement('div'); fila.className='acciones-msg';
+    const bc=document.createElement('button'); bc.textContent='⧉ copiar';
+    bc.onclick=()=>{ Peak.copiar(t); Peak.aviso('Copiado'); };
+    const bg=document.createElement('button'); bg.textContent='⤓ guardar';
+    bg.onclick=()=>menuFormato(t);
+    const br=document.createElement('button'); br.textContent='↻ rehacer';
+    br.onclick=()=>rehacer();
+    fila.appendChild(bc); fila.appendChild(bg); fila.appendChild(br);
+    d.appendChild(fila);
   }
   $('#hilo').appendChild(d); abajo(); return d;
 }
@@ -197,7 +248,7 @@ async function modoChat(){
   });
   const fin=(r.texto||texto||'(el modelo no devolvió nada)').trim();
   hist.push({role:'assistant',content:fin}); guardarHist();
-  caja.remove(); repintar();
+  caja.remove(); repintar(); Sesiones.tocar(Sesiones.activa); autoTitular();
 }
 
 async function modoAgente(tarea, enFlujo){
@@ -212,7 +263,7 @@ async function modoAgente(tarea, enFlujo){
   const resumen=(r.resumen||'Listo.').trim();
   hist.push({role:'assistant',content:resumen}); guardarHist();
   poner(resumen,'el',true);
-  pintarTaller();
+  pintarTaller(); Sesiones.tocar(Sesiones.activa); autoTitular();
 }
 
 $('#bEnviar').onclick=enviar;
@@ -244,7 +295,7 @@ window.peakArchivoLeido=d=>{
     'Primeras líneas:\n'+d.texto.slice(0,900)});
   guardarHist(); pintarTaller();
 };
-$('#bLimpiar').onclick=()=>{ hist=[]; guardarHist(); repintar(); };
+$('#bLimpiar').onclick=nuevaSesion;
 
 // ── artifacts ────────────────────────────────────────────────────────────────
 const EXT_LANG={html:'html',xml:'xml',svg:'svg',js:'js',javascript:'js',ts:'ts',
@@ -471,8 +522,162 @@ $('#velo').onclick=()=>{ cerrarSheet(); cerrarFmt(); cerrarTaller(); };
 $('#bModelo').onclick=async()=>{ if(!CATALOGO.length) await cargarCatalogo(); abrirSheet(); };
 function pintarChip(){ $('#bModelo .n').textContent=lindo(G.modelo||'—'); }
 
+// ── rehacer la última respuesta ──────────────────────────────────────────────
+async function rehacer(){
+  if(trabajando) return;
+  // saca las respuestas del final hasta encontrar el último pedido
+  while(hist.length && hist[hist.length-1].role!=='user') hist.pop();
+  if(!hist.length) return;
+  const pedido=hist[hist.length-1].content;
+  hist.pop(); guardarHist(); repintar();
+  $('#entrada').value=pedido;
+  enviar();
+}
+
+// ── panel lateral de conversaciones ──────────────────────────────────────────
+let _filtro='';
+function pintarCajon(){
+  const l=$('#cajonLista'); if(!l) return;
+  l.innerHTML='';
+  const xs=Sesiones.buscar(_filtro);
+  if(!xs.length){
+    const v=document.createElement('div'); v.className='vacio';
+    v.textContent=_filtro?'No encontré nada con "'+_filtro+'".':'Todavía no hay conversaciones.';
+    l.appendChild(v); return;
+  }
+  for(const [titulo,grupo] of Sesiones.agrupar(xs)){
+    const g=document.createElement('div'); g.className='grupo-fecha'; g.textContent=titulo;
+    l.appendChild(g);
+    for(const ses of grupo){
+      const f=document.createElement('div');
+      f.className='charla'+(ses.id===Sesiones.activa?' sel':'');
+      const t=document.createElement('div'); t.className='t'; t.textContent=ses.titulo;
+      t.onclick=()=>{ abrirSesion(ses.id); cerrarCajon(); };
+      const m=document.createElement('button'); m.className='mas'; m.textContent='⋯';
+      m.onclick=e=>{ e.stopPropagation(); menuCharla(ses); };
+      f.appendChild(t); f.appendChild(m); l.appendChild(f);
+    }
+  }
+}
+function menuCharla(ses){
+  const q=prompt('Nombre de la conversación (dejalo vacío para borrarla):', ses.titulo);
+  if(q===null) return;
+  if(!q.trim()){
+    if(!confirm('¿Borrar "'+ses.titulo+'" y sus archivos?')) return;
+    Sesiones.borrar(ses.id);
+    if(!Sesiones.lista.length) nuevaSesion();
+    else if(!Sesiones.activa) abrirSesion(Sesiones.lista[0].id);
+    else { pintarCajon(); pintarCab(); }
+    return;
+  }
+  Sesiones.renombrar(ses.id,q); pintarCajon(); pintarCab();
+}
+function abrirCajon(){ pintarCajon(); $('#cajon').classList.add('ver');
+  $('#veloCajon').classList.add('ver'); }
+function cerrarCajon(){ $('#cajon').classList.remove('ver');
+  $('#veloCajon').classList.remove('ver'); }
+$('#bCajon').onclick=abrirCajon;
+$('#veloCajon').onclick=cerrarCajon;
+$('#bNuevaCharla').onclick=()=>{ nuevaSesion(); cerrarCajon(); };
+$('#cBuscar').addEventListener('input',e=>{ _filtro=e.target.value; pintarCajon(); });
+$('#bAjustes2').onclick=()=>{ cerrarCajon(); $('#bAjustes').click(); };
+
+/**
+ * Le pone nombre a la charla con el modelo, como hace Claude. Es una llamada
+ * chica y aparte: si falla, queda el título recortado del primer mensaje.
+ */
+async function autoTitular(){
+  const ses=Sesiones.encabezado(Sesiones.activa);
+  if(!ses||!ses.auto||hist.length<2) return;
+  const primero=hist.find(m=>m.role==='user');
+  if(!primero) return;
+  Sesiones.renombrar(ses.id, Sesiones.tituloDe(primero.content));
+  ses.auto=true; Sesiones._guardarLista();       // sigue siendo automático
+  pintarCab(); pintarCajon();
+  try{
+    const r=await pedir({mensajes:[{role:'user',content:
+      'Poné un título de 3 a 6 palabras para esta conversación. Sin comillas, '+
+      'sin punto final, sin explicar nada. Solo el título.\n\n'+
+      primero.content.slice(0,700)}]});
+    const t=(r.texto||'').trim().split('\n')[0].replace(/^["'«]|["'».]$/g,'').trim();
+    if(t && t.length<70 && ses.auto){
+      Sesiones.renombrar(ses.id,t); ses.auto=true; Sesiones._guardarLista();
+      pintarCab(); pintarCajon();
+    }
+  }catch(e){ /* queda el recorte del primer mensaje */ }
+}
+
+// ── conectores ───────────────────────────────────────────────────────────────
+function pintarConectores(){
+  const l=$('#listaConectores'); if(!l) return;
+  l.innerHTML='';
+  if(!Conectores.lista.length){
+    const v=document.createElement('div'); v.className='pista';
+    v.textContent='Todavía no hay conectores.'; l.appendChild(v); return;
+  }
+  Conectores.lista.forEach(c=>{
+    const d=document.createElement('div'); d.className='conector';
+    const f1=document.createElement('div'); f1.className='fila1';
+    const n=document.createElement('div'); n.className='nom'; n.textContent=c.nombre;
+    const p=document.createElement('span');
+    const hs=(c.herramientas||[]).length;
+    if(c.tipo!=='http'){ p.className='pastilla off'; p.textContent='no se puede'; }
+    else if(hs){ p.className='pastilla on'; p.textContent=hs+' herramienta'+(hs>1?'s':''); }
+    else { p.className='pastilla gris'; p.textContent='sin conectar'; }
+    f1.appendChild(n); f1.appendChild(p);
+    d.appendChild(f1);
+    if(c.url){ const u=document.createElement('div'); u.className='url'; u.textContent=c.url;
+               d.appendChild(u); }
+    if(c.motivo){ const m=document.createElement('div'); m.className='hs'; m.textContent=c.motivo;
+                  d.appendChild(m); }
+    if(hs){ const h=document.createElement('div'); h.className='hs';
+            h.textContent=c.herramientas.map(x=>x.nombre).join(' · '); d.appendChild(h); }
+    const fila=document.createElement('div'); fila.className='acciones-msg';
+    if(c.tipo==='http'){
+      const bp=document.createElement('button'); bp.textContent='Probar';
+      bp.onclick=async()=>{ bp.textContent='…';
+        try{ const r=await conectar(c); avisoMCP('ok','"'+c.nombre+'": '+r.length+' herramientas.'); }
+        catch(e){ avisoMCP('no','"'+c.nombre+'": '+e.message); }
+        bp.textContent='Probar'; pintarConectores(); };
+      const ba=document.createElement('button');
+      ba.textContent=c.activo?'Apagar':'Prender';
+      ba.onclick=()=>{ c.activo=!c.activo; Conectores._guardar(); pintarConectores(); };
+      fila.appendChild(bp); fila.appendChild(ba);
+    }
+    const bb=document.createElement('button'); bb.textContent='Quitar';
+    bb.onclick=()=>{ Conectores.borrar(c.id); pintarConectores(); };
+    fila.appendChild(bb);
+    d.appendChild(fila);
+    l.appendChild(d);
+  });
+}
+function avisoMCP(clase,texto){
+  const e=$('#eMCP'); e.classList.remove('oculto','ok','no');
+  if(clase) e.classList.add(clase);
+  e.textContent=texto;
+}
+$('#bConectores').onclick=()=>{ cerrarCajon(); pintarConectores();
+  $('#conectores').classList.add('ver'); };
+$('#bCerrarConectores').onclick=()=>$('#conectores').classList.remove('ver');
+$('#bPegarMCP').onclick=async()=>{
+  const {servidores,avisos}=interpretar($('#cPegar').value);
+  if(!servidores.length){ avisoMCP('no', avisos.join(' ')); return; }
+  avisoMCP('', 'Conectando…');
+  const partes=[...avisos];
+  for(const srv of servidores){
+    const c=Conectores.agregar(srv);
+    if(c.tipo!=='http') continue;
+    try{ const hs=await conectar(c); partes.push('"'+c.nombre+'": '+hs.length+' herramientas.'); }
+    catch(e){ c.estado='mal'; partes.push('"'+c.nombre+'": no conectó — '+e.message); }
+  }
+  const todoBien=!partes.some(x=>/no conect|stdio/.test(x));
+  avisoMCP(todoBien?'ok':'no', partes.join(' '));
+  $('#cPegar').value=''; pintarConectores();
+};
+
 // ── arranque ─────────────────────────────────────────────────────────────────
+arrancarSesiones();
 cargarCatalogo().then(pintarChip);
-pintarModo(); pintarCab(); repintar(); pintarTaller();
+pintarModo(); pintarCab(); repintar(); pintarTaller(); pintarCajon();
 
 })();

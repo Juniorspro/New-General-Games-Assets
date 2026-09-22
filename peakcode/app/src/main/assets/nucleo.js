@@ -12,17 +12,27 @@
 'use strict';
 
 // ── configuración ────────────────────────────────────────────────────────────
+// localStorage puede tirar excepción, no solo devolver null: pasa con los datos
+// de sitio bloqueados, en ventana privada y adentro de un iframe en sandbox. Si
+// eso reventara acá, no cargaría NINGÚN módulo y la app abriría muerta, así que
+// se lee y se escribe siempre a través de estas dos.
+function leer(k,porDefecto){
+  try{ const v=localStorage.getItem(k); return v==null?porDefecto:v; }
+  catch(e){ return porDefecto; }
+}
+function escribir(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }
+
 const LIBRE={chat:'https://text.pollinations.ai/openai', key:'', modelo:'openai', preset:'free'};
 const G={
-  preset:localStorage.getItem('preset')||'free',
-  chat:localStorage.getItem('chat')||LIBRE.chat,
-  key:localStorage.getItem('key')||'',
-  modelo:localStorage.getItem('modelo')||LIBRE.modelo,
-  modo:localStorage.getItem('modo')||'chat',        // chat | agente | flujo
-  obreros:+(localStorage.getItem('obreros')||3)     // cuántos agentes en paralelo
+  preset:leer('preset','free'),
+  chat:leer('chat',LIBRE.chat),
+  key:leer('key',''),
+  modelo:leer('modelo',LIBRE.modelo),
+  modo:leer('modo','chat'),        // chat | agente | flujo
+  obreros:+leer('obreros','3')     // cuántos agentes en paralelo
 };
 function salvar(){ for(const k of ['preset','chat','key','modelo','modo','obreros'])
-  localStorage.setItem(k,G[k]); }
+  escribir(k,G[k]); }
 
 // Techos. No son del modelo: son las riendas para que un agente no se dispare.
 const TOPES={
@@ -39,8 +49,13 @@ const TOPES={
 // no explote: el contenido largo queda acá y el modelo lee pedazos cuando los
 // necesita, en vez de arrastrar todo en cada mensaje.
 const Taller={
-  archivos:JSON.parse(localStorage.getItem('taller')||'{}'),
+  archivos:{},
+  // Cada conversación tiene su propio taller, así que quién persiste no lo
+  // decide el taller: lo engancha la interfaz con alCambiar.
+  alCambiar:null,
+  cargarDe(obj){ this.archivos=obj&&typeof obj==='object'?obj:{}; },
   _guardar(){
+    if(this.alCambiar){ try{ this.alCambiar(this.archivos); }catch(e){} return; }
     try{ localStorage.setItem('taller',JSON.stringify(this.archivos)); }
     catch(e){ /* se llenó el localStorage: seguimos en memoria */ }
   },
@@ -208,7 +223,7 @@ async function compactar(hist, avisar){
           ...recientes];
 }
 
-window.PeakNucleo={G,LIBRE,TOPES,Taller,pedir,pedirLargo,compactar,pesoDe,salvar,
+window.PeakNucleo={G,LIBRE,TOPES,Taller,pedir,pedirLargo,compactar,pesoDe,salvar,leer,escribir,
   enVuelo,Corte,abortar,reanudar};
 
 })();

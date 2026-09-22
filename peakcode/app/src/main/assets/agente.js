@@ -167,12 +167,47 @@ const HERRAMIENTAS={
     a.ruta=ruta;
     return String(ruta).startsWith('ERROR')?ruta:'Guardado '+destino+' en '+ruta;
   },
-  listo(a){ return 'Listo.'; }
+  listo(a){ return 'Listo.'; },
+
+  /** Llama una herramienta de un servidor MCP conectado. Es asincrónica. */
+  async mcp(a){
+    const M=window.PeakMCP;
+    if(!M) return 'Los conectores no están cargados.';
+    const srv=a.attrs.servidor||a.attrs.conector;
+    const her=a.attrs.herramienta||a.attrs.tool;
+    if(!srv||!her) return 'Falta servidor= o herramienta= en <peak:mcp>.';
+    let args={};
+    const crudo=(a.texto||'').trim();
+    if(crudo){
+      try{ args=JSON.parse(crudo); }
+      catch(e){ return 'Los argumentos tienen que ser un JSON válido. '+
+                       'Me llegó: '+crudo.slice(0,160); }
+    }
+    return await M.usar(srv, her, args);
+  }
 };
 
 // ── el sistema que le enseña el protocolo al modelo ──────────────────────────
 function sistema(puedeDelegar){
   const exts=[...new Set(FMT.FORMATOS.map(f=>f.ext))].join(', ');
+  // las herramientas de los conectores MCP que estén prendidos
+  let bloqueMCP='';
+  try{
+    const hs=window.PeakMCP?window.PeakMCP.Conectores.herramientas():[];
+    if(hs.length){
+      bloqueMCP='\n\nCONECTORES. Además tenés estas herramientas de servidores '+
+        'externos. Se llaman con <peak:mcp> y los argumentos van como JSON adentro:\n'+
+        '<peak:mcp servidor="NOMBRE" herramienta="LA_QUE_SEA">{"campo":"valor"}</peak:mcp>\n\n'+
+        hs.slice(0,60).map(h=>{
+          const campos=h.esquema&&h.esquema.properties
+            ? ' · argumentos: '+Object.keys(h.esquema.properties).join(', ') : '';
+          return '- servidor="'+h.servidor+'" herramienta="'+h.nombre+'": '+
+                 (h.desc||'sin descripción')+campos;
+        }).join('\n')+
+        '\n\nUsalas cuando hagan falta datos o acciones que no tenés local. '+
+        'Si no hace falta ninguna, no las toques.';
+    }
+  }catch(e){}
   return `Sos PeakCode, un agente que trabaja en un teléfono. No charlás: hacés.
 
 Tenés herramientas. Se usan escribiendo etiquetas en tu respuesta. La app las
@@ -187,7 +222,7 @@ ejecuta de verdad y te devuelve el resultado, y ahí seguís.
 <peak:borrar archivo="viejo.txt"/>
 <peak:guardar archivo="informe.md" formato="pdf"/>${puedeDelegar?`
 <peak:agente nombre="investigador" tarea="qué tiene que lograr">contexto extra</peak:agente>`:''}
-<peak:listo>resumen de una o dos líneas de lo que quedó hecho</peak:listo>
+<peak:listo>resumen de una o dos líneas de lo que quedó hecho</peak:listo>${bloqueMCP}
 
 Reglas:
 1. <peak:crear> escribe el archivo de verdad en el teléfono, en Descargas/PeakCode.
@@ -260,7 +295,8 @@ async function correrAgente(op){
       let salida;
       try{
         const h=HERRAMIENTAS[a.nombre];
-        salida=h?h(a):'No existe la herramienta "'+a.nombre+'".';
+        // await: las locales son sincrónicas, pero mcp() sale a la red
+        salida=h?await h(a):'No existe la herramienta "'+a.nombre+'".';
       }catch(e){ salida='Falló: '+e.message; }
       a.resultado=salida;
       hechas.push(a);

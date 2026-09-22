@@ -286,6 +286,77 @@ public class MainActivity extends Activity {
             }).start();
         }
 
+        /**
+         * HTTP generico con cabeceras propias. Hace falta para MCP, que manda
+         * Mcp-Session-Id y MCP-Protocol-Version, y para neko, que usa cookies.
+         * stream() no sirve: fija sus cabeceras y solo entiende SSE.
+         *
+         * La respuesta vuelve por window.peakHttp(id, json) con estado,
+         * cabeceras y cuerpo.
+         */
+        @JavascriptInterface
+        public void http(String id, String metodo, String url,
+                         String cabecerasJson, String cuerpo) {
+            new Thread(() -> {
+                HttpURLConnection c = null;
+                try {
+                    c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setRequestMethod(metodo == null || metodo.isEmpty() ? "GET" : metodo);
+                    c.setConnectTimeout(20000);
+                    c.setReadTimeout(120000);
+                    c.setInstanceFollowRedirects(true);
+                    if (cabecerasJson != null && !cabecerasJson.isEmpty()) {
+                        org.json.JSONObject h = new org.json.JSONObject(cabecerasJson);
+                        java.util.Iterator<String> it = h.keys();
+                        while (it.hasNext()) {
+                            String k = it.next();
+                            c.setRequestProperty(k, h.getString(k));
+                        }
+                    }
+                    if (cuerpo != null && !cuerpo.isEmpty()) {
+                        c.setDoOutput(true);
+                        OutputStream o = c.getOutputStream();
+                        o.write(cuerpo.getBytes("UTF-8"));
+                        o.flush(); o.close();
+                    }
+                    int estado = c.getResponseCode();
+                    // el cuerpo de error explica el motivo: hay que leerlo igual
+                    java.io.InputStream is = (estado >= 200 && estado < 300)
+                            ? c.getInputStream() : c.getErrorStream();
+                    StringBuilder sb = new StringBuilder();
+                    if (is != null) {
+                        BufferedReader r = new BufferedReader(
+                                new InputStreamReader(is, "UTF-8"));
+                        String l;
+                        while ((l = r.readLine()) != null) sb.append(l).append('\n');
+                        r.close();
+                    }
+                    org.json.JSONObject cab = new org.json.JSONObject();
+                    for (java.util.Map.Entry<String, java.util.List<String>> e
+                            : c.getHeaderFields().entrySet()) {
+                        if (e.getKey() != null && !e.getValue().isEmpty())
+                            cab.put(e.getKey().toLowerCase(), e.getValue().get(0));
+                    }
+                    org.json.JSONObject res = new org.json.JSONObject();
+                    res.put("estado", estado);
+                    res.put("cabeceras", cab);
+                    res.put("cuerpo", sb.toString());
+                    // va como string y se hace JSON.parse del lado del JS:
+                    // asi reusamos el escapador que ya esta probado
+                    emitir("window.peakHttp", id, res.toString());
+                } catch (Exception e) {
+                    try {
+                        org.json.JSONObject res = new org.json.JSONObject();
+                        res.put("estado", 0);
+                        res.put("error", String.valueOf(e.getMessage()));
+                        emitir("window.peakHttp", id, res.toString());
+                    } catch (Exception ig) { }
+                } finally {
+                    if (c != null) c.disconnect();
+                }
+            }).start();
+        }
+
         @JavascriptInterface
         public void aviso(String t) {
             runOnUiThread(() -> Toast.makeText(MainActivity.this, t,

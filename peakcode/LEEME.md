@@ -300,3 +300,103 @@ límites del modelo: 24 pasos por tarea, 40 continuaciones, profundidad 2
 El botón ■ frena. Es un **corte blando**: el puente de Java no sabe cancelar
 una llamada a mitad de camino, así que se deja de escuchar y el bucle se para
 en el próximo control. El hilo termina solo y su respuesta se tira.
+
+---
+
+# 1.0 — conversaciones y conectores
+
+## Conversaciones, como el panel de Claude
+
+Antes había UN historial y el ✚ lo borraba. Ahora cada charla es una sesión con
+su nombre, su historial y **su propio taller de archivos**, así que lo de un
+trabajo no se mezcla con lo de otro.
+
+El panel (☰) trae: chat nuevo, buscador (busca en los títulos *y* adentro de los
+mensajes), la lista agrupada por fecha —Hoy, Ayer, Últimos 7 días, Últimos 30
+días y después por mes—, y renombrar o borrar tocando el ⋯.
+
+**Autotítulo.** Al terminar el primer intercambio se le pide al modelo un título
+de 3 a 6 palabras. Es una llamada chica y aparte; si falla, queda el recorte del
+primer mensaje, que ya se había puesto al instante. Un título puesto a mano no
+se pisa nunca más.
+
+**Guardado.** `ses.lista` tiene solo los encabezados y `ses.d.<id>` el contenido
+de cada una, así que abrir el panel no levanta megabytes de charlas viejas.
+
+**Migración.** Si venías de la 0.9, el `hist` y el `taller` sueltos se convierten
+en la primera conversación y se borran las claves viejas. Probado.
+
+Abajo de cada respuesta hay **copiar · guardar · rehacer**. Rehacer saca las
+respuestas del final hasta el último pedido y lo vuelve a mandar, sin duplicarlo.
+
+## Conectores (MCP)
+
+Pantalla nueva: pegás una URL suelta o el bloque `{"mcpServers": …}` que ya usás
+en la compu, y se agrega solo. Entiende además `{"nombre":{…}}`, un `{"url":…}`
+directo y `apiKey`/`token` sueltos, que los convierte en `Authorization: Bearer`.
+
+Las herramientas de los servidores prendidos entran en el sistema del agente, y
+se llaman así:
+
+```
+<peak:mcp servidor="github" herramienta="search_repos">{"query":"algo"}</peak:mcp>
+```
+
+### Lo que NO se puede, y por qué
+
+Un servidor MCP puede ser de dos clases:
+
+| clase | cómo arranca | en el teléfono |
+|---|---|---|
+| **remoto (HTTP)** | una URL | **anda** |
+| **local (stdio)** | `npx algo`, `python -m algo` | **no puede andar** |
+
+Los stdio son un programa que corre en tu máquina y se habla por la entrada y
+salida estándar. Una app de Android **no puede lanzar procesos**. Si pegás una
+config con `command`, la app lo anota, lo deja apagado y te dice el motivo, en
+vez de fallar callada.
+
+### Detalles del transporte
+
+Se implementa **Streamable HTTP**: todo por POST al mismo endpoint, y el
+servidor contesta o un JSON suelto o un `text/event-stream` (se manejan los dos).
+Se manda `Accept` con los dos tipos, `MCP-Protocol-Version`, y el
+`Mcp-Session-Id` que devuelve el `initialize` se repite en todas las llamadas
+siguientes. El transporte viejo (HTTP+SSE de 2024) **no** está: si el servidor
+contesta 405 al POST, la app lo dice con esas palabras en vez de un error pelado.
+
+Hizo falta un método nuevo en el puente de Java, `Peak.http`, porque `stream()`
+fija sus propias cabeceras y solo entiende SSE. Y tiene que ser por el puente y
+no por `fetch()`: con `fetch` hay CORS, y casi ningún servidor MCP manda los
+encabezados para permitir un origen `file://`.
+
+### Cómo se probó
+
+Contra un **servidor MCP real**, levantado con el SDK oficial
+(`@modelcontextprotocol/sdk`) en loopback y con llave obligatoria: 17
+verificaciones, incluidas `initialize`, `tools/list` por SSE, `tools/call` con
+números y con texto, `isError`, herramienta inexistente, y el rechazo sin llave.
+La interfaz se probó aparte en Chromium.
+
+## Un arreglo de fondo: localStorage
+
+`nucleo.js` leía `localStorage` sin protección al cargar. `localStorage` no solo
+devuelve `null` cuando no hay nada: **tira excepción** con los datos de sitio
+bloqueados, en ventana privada o adentro de un iframe en sandbox. Si eso pasaba,
+no cargaba ningún módulo y la app abría muerta. Ahora todo pasa por `leer()` y
+`escribir()`, y hay una prueba que rompe `localStorage` a propósito y verifica
+que la app siga andando.
+
+## Otro bug viejo: la clase que no era clase
+
+`<div class=estado oculto>` declara un atributo `oculto`, no la clase, así que
+el `.oculto{display:none}` nunca aplicaba. Venía de la 0.8: la caja de estado de
+OmniRoute siempre estuvo visible y vacía.
+
+## Lo que quedó afuera: neko
+
+No está. Se intentó levantar neko en Docker acá para escribir el cliente contra
+algo real, y el entorno lo bloqueó dos veces: primero por exponer un servicio,
+después por crear una superficie de control remoto. Sin poder probarlo no se
+escribe: el control de neko va por WebSocket con un formato que habría que
+adivinar, y código adivinado que dice "esto anda" es peor que no tenerlo.
