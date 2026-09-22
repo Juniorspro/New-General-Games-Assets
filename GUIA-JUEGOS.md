@@ -5,16 +5,16 @@ Esto es lo que hace falta para que un juego web se vea como el bosque de
 que llega y qué hacer en el motor. Está escrito para dárselo a un agente
 (Claude Code, Codex) conectado a Rezona Lab, pero se lee igual.
 
+**Cómo se usa.** Copiá este archivo a la carpeta del juego, al lado del
+`AGENTS.md` que deja `rezona init`, y decile al agente: *"Leé GUIA-JUEGOS.md
+antes de generar nada y seguilo"*. Todo lo que dice acá salió de hacerlo: cada
+número está medido y cada trampa costó una tarde.
+
 **De dónde salen los números.** Los assets del bosque se generaron con
 Higgsfield porque ese día Rezona no generaba (sección 1). Lo que se aprendió
 procesándolos y en el motor vale igual para lo que llega de Rezona, que también
 hace el 3D con Tripo. Los números propios de Rezona son de otros juegos de este
 repo (`pique3d/`, `perro/`, `enjambre/`) y cada uno lo dice donde aparece.
-
-**Cómo se usa.** Copiá este archivo a la carpeta del juego, al lado del
-`AGENTS.md` que deja `rezona init`, y decile al agente: *"Leé GUIA-JUEGOS.md
-antes de generar nada y seguilo"*. Todo lo que dice acá salió de hacerlo: cada
-número está medido y cada trampa costó una tarde.
 
 ---
 
