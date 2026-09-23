@@ -6,3 +6,4 @@
 
 ## 23/09/2026
 - Revisado `rezona-ai-pgc/HOLLOWMERE`: no arregla el cobro de Rezona. La key quedó `PAT_INACTIVE`.
+- 23/09 11:23: key nueva por `login --no-browser`; Rezona genera de nuevo (perro OK).
