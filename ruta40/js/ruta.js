@@ -85,6 +85,19 @@ export function generarTramo(id) {
   };
   suavizar(1, n - 1, 2);
   for (const r of rampas) { const ia = Math.floor((r.x1 - x0) / DX) - 4, ib = Math.floor((r.x2 - x0) / DX) + 10; suavizar(ia, ib, 8); }
+  /* el límite de curvatura: ninguna cresta con menos de 3 m de radio (el bot encontró una de
+     45° a plano donde la chata quedaba colgada de la panza) y ningún pozo con menos de 2 m
+     (una "V" que terminaba en pared). Se baja la cresta o se sube el pozo, de a poco. */
+  const kC = DX * DX / 3, kP = DX * DX / 2;
+  for (let pas = 0; pas < 400; pas++) {
+    let cambio = 0;
+    for (let i = 1; i < n - 1; i++) {
+      const d2 = h[i - 1] - 2 * h[i] + h[i + 1];
+      if (d2 < -kC) { const q = (h[i - 1] + h[i + 1] + kC) / 2; cambio = Math.max(cambio, h[i] - q); h[i] = q; }
+      else if (d2 > kP) { const q = (h[i - 1] + h[i + 1] - kP) / 2; cambio = Math.max(cambio, q - h[i]); h[i] = q; }
+    }
+    if (cambio < 1e-4) break;
+  }
   /* los puentes: donde el terreno hace un pozo, un tablero recto de lado a lado */
   const debajo = Float64Array.from(h), puentes = [];
   if (T.puentes) for (let x = 300 + al() * 150; x < T.largo - 80; x += T.puentes * (0.8 + al() * 0.4)) {

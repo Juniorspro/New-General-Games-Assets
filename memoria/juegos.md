@@ -25,8 +25,9 @@ La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
   el juego.
 - En `pique/`, `pique2d/`, `espejo/`, `zonda/`, `luz-mala/` y `kuntur/`, los
   niveles los comprueba una máquina. La vara al 23/09: [kuntur](kuntur.md)
-  para 2.5D y [brillo](brillo.md) para 2D. BRILLO es el último: el próximo
-  tiene que superarlo.
+  para 2.5D y [brillo](brillo.md) para 2D. RUTA 40 es el último
+  ([ruta40](ruta40.md)): el primero con arte pintado de Rezona, física de autos y
+  un bot que maneja con la misma física. El próximo tiene que superarlo.
 
 ## El bosque (22/09/2026)
 

@@ -43,7 +43,7 @@ además aloja juegos. Fuente: `ARRANQUE.md § 6`,
 - En `submit_retexture_generation`, `text_prompt` e `image_prompt_url` son
   excluyentes.
 
-## Lo que anduvo: 75 lecciones en `estado.json › lo_que_funciono`
+## Lo que anduvo: 79 lecciones en `estado.json › lo_que_funciono`
 
 No abras el archivo (61 KB): buscá la clave con
 `grep -n '"clave"' herramientas/rezona/estado.json`.
@@ -86,6 +86,11 @@ No abras el archivo (61 KB): buscá la clave con
 Los proyectos creados (id, `play_url`, versión) están en
 `estado.json › proyectos`. **Anotá ahí cada proyecto nuevo y cada pedido que
 salió bien, con sus parámetros:** repetir una tanda cuesta créditos.
+
+- `fetch_generated_asset` no baja en una carpeta sin `.rezona/`: se baja
+  con `curl` del `public_url` que da `check_generation_tasks` (con
+  `project_id`), y no hace falta nada más.
+- Para carrocerías de autos de juego: RUTA 40 (`ruta40.md § El arte`).
 
 ## Caídas conocidas
 

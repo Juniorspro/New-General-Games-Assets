@@ -12,7 +12,7 @@ import { crearAuto, pasoAuto, PASO, altoEn, volcado } from './fisica.js';
 import { VEHICULOS, aFisica } from './vehiculos.js';
 import { generarTramo } from './ruta.js';
 import { crearPiloto } from './piloto.js';
-import { VISTA } from './dibujo.js';
+import { VISTA } from './vista.js';
 import { t } from './textos.js';
 
 const cache = {};
@@ -20,11 +20,12 @@ export const tramoDe = (id) => (cache[id] = cache[id] || generarTramo(id));
 
 export const LARGO_PICADA = 1200;
 const NOMBRES = ['El Turco', 'La Negra', 'Chiquito', 'Pocho', 'La Gringa', 'Cacho', 'El Rulo', 'Pirucha', 'Nené', 'Tucu', 'La Flaca', 'Bocha'];
-const RIVALES_NIVEL = [['chata', 'escarabajo', 'chata'], ['escarabajo', 'colectivo', 'cuatro'], ['cuatro', 'tractor', 'cuatro']];
+/* la del barrio se tiene que poder ganar con la chata del principio: ahí no corre ningún Fitito */
+const RIVALES_NIVEL = [['chata', 'colectivo', 'chata'], ['escarabajo', 'colectivo', 'cuatro'], ['cuatro', 'tractor', 'cuatro']];
 /* las picadas de cada tramo: tres, cada una con rivales mejores */
 export function picada(tramoId, nivel) {
   const i = ['puna', 'quebrada', 'salinas', 'valles', 'cuyo', 'patagonia', 'glaciar'].indexOf(tramoId);
-  const mej = Math.min(10, 1 + i + nivel * 3), duda = [0.55, 0.28, 0.08][nivel];
+  const mej = Math.min(10, i + nivel * 3 + (nivel ? 1 : 0)), duda = [0.55, 0.28, 0.08][nivel];
   return {
     nivel, premio: Math.round((600 + i * 350) * [1, 2.4, 5][nivel] / 50) * 50,
     rivales: RIVALES_NIVEL[nivel].map((v, k) => ({ vehiculo: v, mej, duda, nombre: NOMBRES[(i * 3 + nivel * 5 + k * 7) % NOMBRES.length], semilla: 11 + i * 31 + nivel * 7 + k })),

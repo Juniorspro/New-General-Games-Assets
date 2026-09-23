@@ -5,7 +5,8 @@ import { VEHICULOS, ORDEN_VEHICULOS, aFisica, MEJORAS } from '../js/vehiculos.js
 import { TRAMOS, generarTramo } from '../js/ruta.js';
 import { crearPiloto } from '../js/piloto.js';
 
-const arg = process.argv.slice(2), sueltos = arg.filter((a) => !a.startsWith('--'));
+const esteArchivo = import.meta.url === `file://${process.argv[1]}`;
+const arg = esteArchivo ? process.argv.slice(2) : [], sueltos = arg.filter((a) => !a.startsWith('--'));
 const op = Object.fromEntries(arg.filter((a) => a.startsWith('--')).map((a) => a.slice(2).split('=')));
 const vehs = sueltos[0] && sueltos[0] !== 'todos' ? [sueltos[0]] : ORDEN_VEHICULOS;
 const tramos = sueltos[1] ? [sueltos[1]] : TRAMOS.map((t) => t.id);
@@ -38,7 +39,7 @@ export function correr(vid, tid, niv, segundos, conNafta = true) {
   return { vid, tid, niv, x: Math.round(maxX), fin, t: Math.round(t), cargas, v: +(maxX / t).toFixed(1) };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (esteArchivo) {
   for (const v of vehs) {
     const filas = [];
     for (const tr of tramos) filas.push(correr(v, tr, nivel, seg, op.nafta !== 'no'));

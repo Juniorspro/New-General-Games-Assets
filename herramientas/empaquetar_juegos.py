@@ -59,6 +59,15 @@ JUEGOS = {
         'deps': ['esbuild'],
         'como': 'npm install\nnode brillo/herramientas/armar.mjs   # → brillo/brillo.html',
     },
+    'ruta40': {
+        'titulo': 'RUTA 40',
+        'que': 'Autos tipo Hill Climb por la Ruta 40, de la Puna al Glaciar: 7 tramos, 5 vehículos con mejoras, picadas, arte pintado, 3 idiomas.',
+        'carpetas': ['ruta40'],
+        'html': 'ruta40/ruta40.html',
+        'armar': ['node', 'ruta40/herramientas/armar.mjs'],
+        'deps': ['esbuild'],
+        'como': 'npm install\nnode ruta40/herramientas/armar.mjs   # → ruta40/ruta40.html',
+    },
     'bosque': {
         'titulo': 'BOSQUE',
         'que': 'Tercera persona en un bosque al atardecer, con filtro VHS: encontrá las cinco cintas. three.js, modelos y texturas.',

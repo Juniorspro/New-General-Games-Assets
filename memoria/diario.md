@@ -4,6 +4,21 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **23/09/2026, tarde · `claude/fijate-iszyer`:**
+  - Pidió un zip por juego para portar a TikTok. Quedaron `entregas/*.zip`,
+    que se arman con `herramientas/empaquetar_juegos.py`, y las guías en
+    `herramientas/tiktok/`.
+  - También pidió arreglar BRILLO (el viento que no se veía y varios errores)
+    y agregarle música 16 bits.
+  - Después pidió "otro juego como Hill Climb, con Rezona y no pixel art, 200%
+    (después 1000%) mejor". Quedó RUTA 40 en `ruta40/ruta40.html`:
+    - 7 tramos y 5 vehículos con mejoras;
+    - picadas contra rivales fantasma;
+    - interfaz de cartelería vial y chacarera sintetizada;
+    - el bot da "Todo se cumple" (`ruta40.md`).
+  - No quiso covers 16 bits de canciones con derechos (Wii Shop, Vista). Se
+    hizo música propia.
+  - Falta: probar RUTA 40 en un teléfono de verdad.
 - **23/09/2026, madrugada · `claude/fijate-iszyer`:**
   - KUNTUR: las piedras que se mueven eran casi invisibles (cada cara, un
     recorte suelto) → `texBloque`. Además se arreglaron unos 30 errores
