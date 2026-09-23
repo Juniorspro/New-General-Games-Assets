@@ -18,9 +18,9 @@ const carpeta = path.join(AQUI, "recorridos");
 /* pistas: puntos de paso para los tramos que el resolvedor no adivina solo. Clave "mundo:tramo" */
 const PISTAS = {
   /* el pozo de la burbuja grande: primero al fondo del pozo, después a la repisa de arriba */
-  'arrecife:2': [{ x: 106 * 16 + 8, y: 24 * 16, radio: 10 }, { x: 106 * 16 + 8, y: 6 * 16, burbuja: true }, { x: 112 * 16, y: 8 * 16 }],
+  'arrecife:2': [{ x: 106 * 16 + 8, y: 24 * 16, radio: 10 }, { x: 106 * 16 + 8, y: 6 * 16, burbuja: true, acciones: [2] }, { x: 112 * 16, y: 8 * 16 }],
   /* la burbuja grande del cielo: a la nube de abajo, adentro de la burbuja, y arriba */
-  'cielo:1': [{ x: 67 * 16 + 8, y: 27 * 16, radio: 10 }, { x: 67 * 16 + 8, y: 10 * 16, burbuja: true }, { x: 74 * 16, y: 10 * 16 }],
+  'cielo:1': [{ x: 67 * 16 + 8, y: 27 * 16, radio: 10 }, { x: 67 * 16 + 8, y: 10 * 16, burbuja: true, acciones: [2] }, { x: 74 * 16, y: 10 * 16 }],
 };
 /* lo que no se tiene que poder: [mundo, desde (índice de sesión o 'inicio'), meta, habilidades a sacar] */
 const CERRADO = {

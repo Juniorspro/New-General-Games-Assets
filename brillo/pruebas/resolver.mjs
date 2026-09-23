@@ -14,6 +14,7 @@ export const ACCIONES = [
   { x: 1, toca: 1 }, { x: -1, toca: 1 }, { toca: 1 },
   { y: -1, corto: 1 },
 ];
+const TODAS = ACCIONES.map((_, i) => i);
 /* prev: la acción de antes. Si ya venía apretando el salto, seguir apretando no es apretar de nuevo */
 export function entradaDe(a, f, prev) {
   const sigue = prev && prev.salto && a.salto;
@@ -54,7 +55,9 @@ function relojDe(m) {
   };
 }
 /* busca un camino. o: { desde:{x,y,id}, meta:{x,y,radio,alto,burbuja} o {guino:id}, habil, max, peso, mundo }
-   (burbuja: la meta cuenta solo si Nick sigue adentro de una burbuja grande) */
+   (burbuja: la meta cuenta solo si Nick sigue adentro de una burbuja grande;
+   acciones: los índices de ACCIONES que se pueden usar, p. ej. [2] = solo esperar,
+   para un viaje en burbuja, que la búsqueda si no cambia por saltos que parecen mejores) */
 export function resolver(nivel, o) {
   const m0 = o.mundo ? copiar(o.mundo) : modoResolvedor(crearMundo(nivel, { habil: o.habil, en: o.desde }), o.meta.guino);
   if (!m0.auroraCol) { const c = new Uint8Array(m0.W); let hay = false; for (let i = 0; i < m0.tiles.length; i++) if (m0.tiles[i] === B.AURORA) { c[i % m0.W] = 1; hay = true; } m0.auroraCol = hay ? c : null; }
@@ -90,7 +93,7 @@ export function resolver(nivel, o) {
       acciones.reverse();
       return { ok: true, cuadros: acciones.length * K, acciones, explorados, final: n.m.p, mundo: n.m };
     }
-    for (let ai = 0; ai < ACCIONES.length; ai++) {
+    for (const ai of meta.acciones || TODAS) {
       const a = ACCIONES[ai];
       if (a.toca && !n.m.habil.zumbido) continue;
       const m = copiar(n.m);
