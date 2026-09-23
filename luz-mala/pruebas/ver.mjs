@@ -21,7 +21,9 @@ await pag.goto("file://" + path.join(AQUI, "luz-mala.html") + "?fijo");
 await pag.waitForFunction(() => window.__L && window.__L.listo, null, { timeout: 20000 });
 const foto = async (n) => { await pag.waitForTimeout(150); await pag.screenshot({ path: path.join(salida, n + ".png") }); };
 const anda = (n) => pag.evaluate((n) => window.__L.anda(n), n);
-await pag.waitForTimeout(900); await foto("00-titulo");
+await anda(50); await foto("00-idioma");
+await pag.evaluate(() => window.__L.entrada("salto", true)); await anda(2); await pag.evaluate(() => window.__L.entrada("salto", false));
+await anda(120); await pag.waitForTimeout(400); await foto("00-titulo");
 const salas = [["P1", {}], ["R1", {}], ["R2", {}], ["A1", {}], ["T1", { habil: { aleteo: 1 } }], ["A2", { habil: { aleteo: 1 } }], ["H1", { habil: { aleteo: 1, resina: 1 }, estado: { viuda: 1 } }], ["H2", { habil: { aleteo: 1, resina: 1 } }], ["A3", { habil: { aleteo: 1, resina: 1 } }]];
 let i = 1;
 for (const [id, o] of salas) {

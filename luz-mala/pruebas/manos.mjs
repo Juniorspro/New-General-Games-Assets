@@ -28,27 +28,47 @@ const esperar = (ms) => pag.waitForTimeout(ms);
 const sala = () => pag.evaluate(() => window.__L.sala());
 const anda = (n) => pag.evaluate((n) => window.__L.anda(n), n);
 
-/* 1. los menús con el dedo */
-await esperar(1200); await foto("m01-titulo");
-for (const [boton, capa, volver] of [["#bOpciones", "#capaOpciones", "#bOpcVolver"], ["#bCreditos", "#capaCreditos", "#bCredVolver"]]) {
-  await pag.tap(boton); await esperar(450);
-  ver(await visible(capa), `${boton} abre ${capa}`);
-  await foto("m-" + capa.slice(5));
-  await pag.tap(volver); await esperar(450);
-  ver(await visible("#capaTitulo"), `${volver} vuelve al título`);
-}
-await pag.tap("#bOpciones"); await esperar(450);
-const antes = await pag.evaluate(() => JSON.stringify(window.__L.Opc));
-const ops = await pag.$$("#listaOpc button");
-await ops[2].tap(); await esperar(120);
-ver(antes !== (await pag.evaluate(() => JSON.stringify(window.__L.Opc))), `tocar una opción la cambia (${ops.length} opciones)`);
-await ops[2].tap(); await esperar(120);
-await pag.tap("#bOpcVolver"); await esperar(450);
+/* los menús son del lienzo: se toca la palabra donde está dibujada */
+const menu = () => pag.evaluate(() => window.__L.menu());
+const tocarItem = async (id) => { const d = await pag.evaluate((id) => window.__L.donde(id), id); if (!d) return false; await pag.touchscreen.tap(d.x, d.y); await esperar(80); return true; };
 
-/* 2. el título con el teclado */
+/* 1. el idioma con el dedo: un farol */
+await esperar(1000); await foto("m00-idioma");
+let mm = await menu();
+ver(mm && mm.id === "idioma" && mm.items.join() === "es,en,pt", `lo primero son los tres faroles (${mm && mm.items})`);
+ver(await tocarItem("en"), "el farol de English se toca");
+await esperar(1700);
+mm = await menu();
+ver(mm && mm.id === "titulo" && (await pag.evaluate(() => window.__L.idioma())) === "en", `tocar el farol elige el idioma y sigue al título (${mm && mm.id})`);
+await foto("m01-titulo");
+
+/* 2. los menús con el dedo */
+ver(await tocarItem("opciones"), "OPCIONES se toca");
+await esperar(400);
+ver((await menu())?.id === "opciones", "OPCIONES abre las opciones");
+await foto("m-opciones");
+const antes = await pag.evaluate(() => JSON.stringify(window.__L.Opc));
+await tocarItem("temblor");
+ver(antes !== (await pag.evaluate(() => JSON.stringify(window.__L.Opc))), "tocar una opción la cambia");
+await tocarItem("temblor");
+ver(antes === (await pag.evaluate(() => JSON.stringify(window.__L.Opc))), "tocarla otra vez la deja como estaba");
+const i0 = await pag.evaluate(() => window.__L.idioma());
+await tocarItem("idioma");
+const i1 = await pag.evaluate(() => window.__L.idioma());
+ver(i1 !== i0, `tocar el idioma lo cambia en el momento (${i0} → ${i1})`);
+await pag.evaluate(() => window.__L.ponerIdioma("es"));
+await tocarItem("volver"); await esperar(300);
+ver((await menu())?.id === "titulo", "VOLVER vuelve al título");
+await tocarItem("creditos"); await esperar(600);
+ver((await pag.evaluate(() => window.__L.estado())) === "creditos", "CRÉDITOS abre los créditos");
+await foto("m-creditos");
+await pag.touchscreen.tap(200, 400); await esperar(300);
+ver((await menu())?.id === "titulo", "tocar la pantalla sale de los créditos");
+
+/* 2b. el título con el teclado */
+const s0t = (await menu()).sel;
 await pag.keyboard.press("ArrowDown"); await esperar(80);
-const sel = await pag.evaluate(() => { const b = document.querySelector("#capaTitulo .sel"); return b ? b.id : ""; });
-ver(!!sel, `la flecha mueve la selección (${sel})`);
+ver((await menu()).sel !== s0t, `la flecha mueve la luciérnaga (${s0t} → ${(await menu()).sel})`);
 
 /* 3. en una sala: palanca + salto con dos dedos */
 await pag.evaluate(() => window.__L.empezar("P1", { sinCharlas: true }));
@@ -124,9 +144,9 @@ await esperar(100);
 
 /* 7. pausa con el dedo y el mapa desde la pausa */
 await pag.tap("#btPausa"); await esperar(400);
-ver((await pag.evaluate(() => window.__L.estado())) === "pausa" && (await visible("#capaPausa")), "el botón de pausa pausa");
+ver((await pag.evaluate(() => window.__L.estado())) === "pausa" && (await menu())?.id === "pausa", "el botón de pausa pausa");
 await foto("m03-pausa");
-await pag.tap("#bMapa"); await esperar(400);
+await tocarItem("mapa"); await esperar(400);
 ver((await pag.evaluate(() => window.__L.estado())) === "mapa", "MAPA desde la pausa");
 await foto("m04-mapa");
 await pag.mouse.click(200, 200); await esperar(300);

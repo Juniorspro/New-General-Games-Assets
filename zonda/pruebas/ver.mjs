@@ -24,6 +24,8 @@ await pag.waitForFunction(() => window.__Z && window.__Z.listo, null, { timeout:
 const foto = async (n) => { await pag.waitForTimeout(120); await pag.screenshot({ path: path.join(salida, n + ".png") }); };
 const anda = (n) => pag.evaluate((n) => window.__Z.anda(n), n);
 
+await anda(60); await foto("00-idioma");
+await pag.click("#bIdioma_es"); await anda(20);
 await anda(150); await foto("01-portada");
 await pag.click("#bJugar"); await anda(60); await foto("02-tarjeta");
 await anda(200); await foto("03-dialogo");

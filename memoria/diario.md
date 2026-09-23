@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **23/09/2026 · `claude/fijate-iszyer`:**
+  - Pidió: pantalla de idioma (es, en, pt) antes del menú en todos los juegos,
+    cada juego con su estilo, y cada juego nuevo mucho mejor que el anterior.
+  - ZONDA quedó traducido con su pantalla de idioma.
+  - LUZ MALA se rehízo por fuera: interfaz propia en el lienzo, traducido,
+    más animaciones y efectos (lista en `juegos.md § Los 2D en pixel`).
+  - Todas las pruebas de los dos pasan. Falta: nada pedido.
 - **22/09/2026 · `claude/fijate-iszyer`:**
   - Rezona quedó conectado (`init` + login) pero no generó: `CREDIT_RESERVE_FAILED`.
   - Bosque 3D en VHS con assets de Higgsfield, subido a Rezona (`VvyVJutbOf`)

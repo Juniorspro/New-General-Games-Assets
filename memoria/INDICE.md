@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 22/09/2026.
+mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026.
 
 ## Reglas que no se discuten
 
@@ -28,6 +28,12 @@ mantiene: `MEMORIA.md`. Última puesta al día: 22/09/2026.
   neuronal instalada para esta memoria: quería notas, no un programa.
 - **Cuida los tokens:** nada de leer `.md` del repo "por las dudas".
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
+- **En todo juego, antes del menú, se elige idioma: español, inglés o
+  portugués**, siempre, y con todo traducido (menús, historia, diálogos).
+- **Cada juego con estilo propio**: otros botones, otro orden de menú, otras
+  transiciones y otros efectos. No reusar el diseño del juego anterior.
+- **Cada juego nuevo tiene que superar claramente al anterior** en
+  animaciones, efectos y todo ("100% mejor", 23/09), sin copiar.
 - Tiene Rezona (446 mil créditos el 22/09) y Higgsfield. Prefiere Rezona.
 
 ## Las notas
@@ -47,9 +53,9 @@ mantiene: `MEMORIA.md`. Última puesta al día: 22/09/2026.
 | carpeta | qué es | detalle en |
 |---|---|---|
 | `bosque/` | tercera persona en un bosque al atardecer, con VHS y cinco cintas | [juegos](juegos.md) |
-| `motor2d/` | motor 2D en pixel compartido: escala entera, mandos, sonido sintetizado, menús | [juegos](juegos.md) |
+| `motor2d/` | motor 2D en pixel compartido: escala entera, mandos, sonido sintetizado, idiomas | [juegos](juegos.md) |
 | `zonda/` | ZONDA: plataformas tipo Celeste, 20 salas comprobadas por un resolvedor | `zonda/README.md` |
-| `luz-mala/` | LUZ MALA: metroidvania tipo Silksong, 9 salas y 3 jefes, recorrido comprobado | `luz-mala/README.md` |
+| `luz-mala/` | LUZ MALA: metroidvania tipo Silksong, 9 salas y 3 jefes, menús en el lienzo, 3 idiomas | `luz-mala/README.md` |
 | `perro/` | CAMPO: un perro 3D en tercera persona sobre lomas de pasto | `perro/README.md` |
 | `pique/` `pique2d/` `pique3d/` | corredor de un botón: 2D, pixel art y 2.5D; niveles comprobados solos | su `LEEME.md` |
 | `enjambre/` | supervivencia por oleadas con un pulgar; los assets todavía no existen | `enjambre/README.md` |

@@ -36,7 +36,10 @@ faroles.
   - `fisica`: el movimiento y el combate, puros, con azar de semilla;
   - `bichos` y `jefes`;
   - `salas`: el mundo, en coordenadas de baldosa;
-  - `historia`, `arte`, `musica`, `dibujo`, `pantallas` y `juego`.
+  - `textos`: todo lo que se lee, en español, inglés y portugués;
+  - `letra`: la letra fina, con minúsculas y acentos de los tres idiomas;
+  - `menus`: los menús, dibujados en el lienzo (no usa `motor2d/ui`);
+  - `arte`, `musica`, `dibujo`, `pantallas` y `juego`.
 - Armar: `node motor2d/armar.mjs luz-mala` (desde la raíz).
 - Pruebas (todas desde la raíz):
   - `node luz-mala/pruebas/conexiones.mjs`: que cada hueco en el borde de una
@@ -52,6 +55,9 @@ faroles.
     intro, charlas, tienda, hongo, pasar de sala, morir y recuperar la sombra,
     el Torito, mapa y pausa. Además repite en el juego los recorridos del
     resolvedor.
-  - `node luz-mala/pruebas/manos.mjs`: menús con el dedo, palanca con dos dedos
-    (CDP), cada botón, teclado y mando simulado.
+  - `node luz-mala/pruebas/manos.mjs`: los faroles del idioma y los menús con
+    el dedo, palanca con dos dedos (CDP), cada botón, teclado y mando simulado.
+  - `node luz-mala/pruebas/idiomas.mjs`: los faroles salen primero con el
+    idioma del navegador, no falta ninguna letra, los tres idiomas tienen los
+    mismos textos y el menú y las charlas cambian en el momento.
   - `node luz-mala/pruebas/ver.mjs <carpeta>`: capturas de cada sala.

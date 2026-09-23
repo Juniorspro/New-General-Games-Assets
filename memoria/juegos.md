@@ -7,6 +7,12 @@ La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
 
 ## Cómo se hacen acá
 
+- **Pedidos fijos del dueño (23/09):**
+  - Siempre una pantalla de idioma (español, inglés, portugués) antes del
+    menú, y el juego entero traducido.
+  - Cada juego con su propio estilo de menú, botones, orden y transiciones.
+  - Cada juego nuevo, bastante mejor que el anterior en animaciones y efectos.
+    Antes de empezar uno, mirá qué tenía el último y subí la vara.
 - Web y para el teléfono primero: una mecánica pulida antes que muchas.
 - Cuando piden HTML, un solo archivo que abre con doble clic y anda sin
   internet. Ya lo tienen `pique/`, `perro/`, `flores/` y `bosque/`
@@ -45,10 +51,11 @@ La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
 
 ## Los 2D en pixel: `motor2d/`, `zonda/`, `luz-mala/` (22/09/2026)
 
-- `motor2d/` es el motor compartido. Son scripts sueltos: `base`, `pantalla`
-  (escala entera), `entrada` (teclado, dedos, palanca y mando), `sonido`
-  (sintetizado), `fuente`, `sprites`, `fx`, `bucle` (60 Hz fijos), `ui` y
-  `ui.css`.
+- `motor2d/` es el motor compartido. Son scripts sueltos: `base`, `idioma`,
+  `pantalla` (escala entera), `entrada` (teclado, dedos, palanca y mando),
+  `sonido` (sintetizado), `fuente`, `sprites`, `fx`, `bucle` (60 Hz fijos),
+  `ui` y `ui.css`. `ui` y `ui.css` (botones de 16 bits) son de ZONDA: cada
+  juego nuevo trae su propia interfaz.
 - Armar un juego: `node motor2d/armar.mjs <juego>`. Lee `<juego>/juego.json` y
   `<juego>/index.html` (con `<!--CSS-->` y `<!--JS-->`), mete todo en un IIFE y
   revisa la sintaxis con `vm`. Si falla, dice el archivo y la línea.
@@ -89,3 +96,33 @@ La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
   - Para ver si un jefe se puede ganar sirve un bot con tácticas por jefe.
     Primero hay que depurar el bot: medía la distancia al centro del jefe sin
     contar el ancho y se metía adentro. Recién después se ajusta el jefe.
+- Idiomas (23/09/2026):
+  - `motor2d/idioma.js`: `Idioma.iniciar(clave, tablas)` toma el idioma del
+    navegador la primera vez y después el último elegido; `tr(k, ...)` llena
+    `{0}`, `{1}`.
+  - La pantalla de idioma sale siempre, antes del menú, con el último marcado.
+  - `motor2d/fuente.js` ya tiene Â Ã À Ê Ô Õ Ç.
+  - Cada juego tiene `pruebas/idiomas.mjs`: pantalla primero, idioma del
+    navegador, letras que faltan (`letrasQueFaltan`, sin los `{n}`) y textos.
+- Lo que tiene LUZ MALA desde el 23/09 (el piso para el próximo juego, que
+  tiene que superarlo sin copiarlo):
+  - menús dibujados en el lienzo, sin botones: palabras que se prenden y dos
+    luciérnagas de cursor (`luz-mala/js/menus.js`);
+  - letra fina propia con minúsculas y halo (`letra.js`); los textos de los
+    tres idiomas, en `textos.js` (`TX()`);
+  - el idioma se elige con faroles colgados; portada con estero que refleja
+    todo y juncos; la intro dibuja con luz una imagen por frase;
+  - transición de iris de luz; oscuridad suave con degradés (no la trama de
+    ZONDA) y brillo sumado; los ojos de los bichos brillan en lo oscuro;
+  - Chispa: carrera de 6 cuadros, respira, se sacude las alas, golpe en 3
+    tiempos con la espina, estela de la cola; congelado corto al pegar;
+  - afuera de cada sala, 16 baldosas de madera con anillos: en el teléfono
+    parado la sala no flota en negro.
+- Lo aprendido al rehacer LUZ MALA (23/09):
+  - Menús en el lienzo y pruebas: `__L.menu()` dice qué hay y `__L.donde(id)`
+    dónde tocar, en píxeles de la ventana; se toca con `pag.touchscreen.tap`.
+  - Lo que se apaga o crece mientras se dibuja usa `Reloj.d` y no `DT`: con
+    `DT`, en una pantalla de 120 Hz va al doble y con `anda(n)` no avanza.
+  - Nada de lógica en el dibujo: el farol elegido se confirmaba al dibujar y
+    las pruebas perdían el toque siguiente. Ahora está en `Menu.pasar`.
+  - `__L.empezar(id)` sin `en` pone a Chispa en (16,16), que en R1 es pared.

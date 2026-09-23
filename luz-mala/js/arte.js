@@ -21,6 +21,7 @@ function componer(ancho, alto, capas) {
 const PAL_CHISPA = {
   k: '#0d0a14', d: '#3d3156', e: '#62507e', o: '#b8481c', O: '#f08a34', w: '#fff8e0', x: '#ffd0c0',
   g: '#f6ffa8', G: '#b4e858', a: 'rgba(200,232,255,0.55)', A: 'rgba(235,248,255,0.8)',
+  n: '#c8b890', N: '#ffffff',
 };
 const CAB = {
   normal: ['.o...o.', '..k.k..', '.kkkkk.', 'kOOOOOk', 'kOokoOk', 'kwwkwwk', 'kwwkwwk', '.kkkkk.'],
@@ -47,16 +48,31 @@ const PAT = {
   cae: ['....k..k...', '...k....k..'],
   pared: ['kkk.kk.....', 'k..........'],
   sentada: ['...kkkkkk..', '...........'],
+  /* la carrera en seis tiempos: paso largo, cruce, vuelo corto y vuelta */
+  r0: ['..kk....kk.', '.k.......k.'],
+  r1: ['...kk..kk..', '..k.....k..'],
+  r2: ['....kk.kk..', '....k..k...'],
+  r3: ['.....kkk...', '....k.k....'],
+  r4: ['....kk.kk..', '...k...k...'],
+  r5: ['...kk...kk.', '..k......k.'],
+  firme: ['...kk...kk.', '...k....k..'],
 };
 const ALAS = {
   cae: [['a..', 'aa.', '.a.'], 0, 5],
   dash: [['Aa...', 'aAa..', 'aaa..', '.aa..'], 0, 4],
   sube: [['.a.', 'aa.'], 0, 6],
+  abre: [['A...', 'aA..', 'aaA.', '.aa.'], 0, 3],
+};
+/* la espina que lleva en la mano: guardada, estirada en el golpe y de vuelta */
+const ESPINA = {
+  guarda: [['nnN'], 6, 9],
+  estira: [['nnnnnN'], 10, 9],
+  vuelve: [['nnN'], 9, 10],
 };
 function cuadroChispa(cab, cue, pat, o) {
   o = o || {};
   const dy = o.bob || 0;
-  return componer(11, 13, [o.alas ? ALAS[o.alas] : null, [CUE[cue], 0, 8], [PAT[pat], 0, 11], [CAB[cab], 3 + (o.dx || 0), dy]]);
+  return componer(o.ancho || 11, 13, [o.alas ? ALAS[o.alas] : null, [CUE[cue], 0, 8], [PAT[pat], 0, 11], [CAB[cab], 3 + (o.dx || 0), dy], o.espina ? ESPINA[o.espina] : null]);
 }
 
 /* ---------------- los bichos ---------------- */
@@ -273,14 +289,21 @@ function prepararArte() {
   const s = (f, pal, o) => sprite(f, pal, Object.assign({ contorno: null }, o));
   const ch = (cab, cue, pat, o) => s(cuadroChispa(cab, cue, pat, o), PAL_CHISPA, { ox: 6, oy: 13 });
   SPR.chispa = {
-    quieta: [ch('normal', 'normal', 'quieto'), ch('normal', 'brilla', 'quieto', { bob: 1 })],
+    /* respira: la cabeza baja un píxel y la cola se prende y se apaga */
+    quieta: [ch('normal', 'normal', 'quieto'), ch('normal', 'brilla', 'quieto'), ch('normal', 'brilla', 'quieto', { bob: 1 }), ch('normal', 'normal', 'quieto', { bob: 1 })],
     parpadea: ch('parpadea', 'normal', 'quieto'),
-    corre: [ch('normal', 'normal', 'c0', { dx: 1 }), ch('normal', 'brilla', 'c1', { dx: 1, bob: 1 }), ch('normal', 'normal', 'c2', { dx: 1 }), ch('normal', 'brilla', 'c3', { dx: 1, bob: 1 })],
+    /* cada tanto se sacude las alas */
+    alas: [ch('normal', 'brilla', 'quieto', { alas: 'abre' }), ch('normal', 'brilla', 'quieto', { alas: 'sube', bob: 1 })],
+    corre: [ch('normal', 'normal', 'r0', { dx: 1 }), ch('normal', 'brilla', 'r1', { dx: 1, bob: 1 }), ch('normal', 'brilla', 'r2', { dx: 1, bob: 1 }),
+      ch('normal', 'normal', 'r3', { dx: 1 }), ch('normal', 'brilla', 'r4', { dx: 1, bob: 1 }), ch('normal', 'normal', 'r5', { dx: 1 })],
     sube: ch('atras', 'normal', 'sube', { alas: 'sube' }),
     cae: [ch('normal', 'normal', 'cae', { alas: 'cae' }), ch('normal', 'brilla', 'cae', { alas: 'sube' })],
     dash: ch('atras', 'brilla', 'sube', { alas: 'dash', dx: 1 }),
     pared: ch('normal', 'normal', 'pared'),
-    golpe: ch('normal', 'golpe', 'quieto', { dx: 1 }),
+    /* el golpe en tres tiempos: se echa atrás, estira la espina, vuelve */
+    golpePrep: ch('normal', 'golpe', 'firme', { espina: 'guarda', ancho: 16 }),
+    golpe: ch('normal', 'golpe', 'r0', { dx: 2, espina: 'estira', ancho: 16 }),
+    golpeFin: ch('normal', 'golpe', 'firme', { dx: 1, espina: 'vuelve', ancho: 16 }),
     golpeArr: ch('arriba', 'golpe', 'quieto'),
     golpeAba: ch('normal', 'golpe', 'sube', { alas: 'sube' }),
     cura: [ch('cierra', 'cura', 'quieto'), ch('cierra', 'brilla', 'quieto', { bob: 1 })],

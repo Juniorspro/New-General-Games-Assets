@@ -21,58 +21,66 @@
   </div>
   <div class="pausa-bt" id="btPausa"></div>
 
+  <div class="capa limpia abajo" id="capaIdioma">
+    <div class="hueco"></div>
+    <p class="txt">ELEGÍ TU IDIOMA · CHOOSE YOUR LANGUAGE · ESCOLHA SEU IDIOMA</p>
+    <button class="boton gris" id="bIdioma_es">ESPAÑOL</button>
+    <button class="boton gris" id="bIdioma_en">ENGLISH</button>
+    <button class="boton gris" id="bIdioma_pt">PORTUGUÊS</button>
+  </div>
+
   <div class="capa limpia abajo" id="capaTitulo">
     <div class="hueco"></div>
-    <button class="boton" id="bJugar">JUGAR</button>
-    <button class="boton gris" id="bCapitulos">CAPÍTULOS</button>
-    <button class="boton gris" id="bCartas">CARTAS</button>
-    <button class="boton gris" id="bOpciones">OPCIONES</button>
-    <button class="boton gris" id="bCreditos">CRÉDITOS</button>
+    <button class="boton" id="bJugar" data-t="jugar">JUGAR</button>
+    <button class="boton gris" id="bCapitulos" data-t="capitulos">CAPÍTULOS</button>
+    <button class="boton gris" id="bCartas" data-t="cartas">CARTAS</button>
+    <button class="boton gris" id="bOpciones" data-t="opciones">OPCIONES</button>
+    <button class="boton gris" id="bCreditos" data-t="creditos">CRÉDITOS</button>
   </div>
 
   <div class="capa" id="capaCapitulos" data-volver="bCapVolver">
-    <h2>CAPÍTULOS</h2>
+    <h2 data-t="capitulos">CAPÍTULOS</h2>
     <div id="listaCap" class="lista"></div>
-    <button class="boton gris" id="bCapVolver">VOLVER</button>
+    <button class="boton gris" id="bCapVolver" data-t="volver">VOLVER</button>
   </div>
 
   <div class="capa" id="capaCartas" data-volver="bCarVolver">
-    <h2>CARTAS</h2>
+    <h2 data-t="cartas">CARTAS</h2>
     <div id="listaCartas" class="lista"></div>
-    <button class="boton gris" id="bCarVolver">VOLVER</button>
+    <button class="boton gris" id="bCarVolver" data-t="volver">VOLVER</button>
   </div>
 
   <div class="capa" id="capaOpciones" data-volver="bOpcVolver">
-    <h2>OPCIONES</h2>
+    <h2 data-t="opciones">OPCIONES</h2>
     <div id="listaOpc" class="lista"></div>
-    <p class="txt">VELOCIDAD, DASH INFINITO E INVENCIBLE SON AYUDAS: EL CERRO SE PUEDE SUBIR IGUAL CON ELLAS.</p>
-    <button class="boton gris" id="bOpcVolver">VOLVER</button>
+    <p class="txt" data-t="ayudas">VELOCIDAD, DASH INFINITO E INVENCIBLE SON AYUDAS: EL CERRO SE PUEDE SUBIR IGUAL CON ELLAS.</p>
+    <button class="boton gris" id="bOpcVolver" data-t="volver">VOLVER</button>
   </div>
 
   <div class="capa" id="capaPausa" data-volver="bSeguir">
-    <h2>PAUSA</h2>
-    <button class="boton" id="bSeguir">SEGUIR</button>
-    <button class="boton gris" id="bReintentar">REINTENTAR SALA</button>
-    <button class="boton gris" id="bPausaOpc">OPCIONES</button>
-    <button class="boton gris" id="bSalir">SALIR AL MENÚ</button>
+    <h2 data-t="pausa">PAUSA</h2>
+    <button class="boton" id="bSeguir" data-t="seguir">SEGUIR</button>
+    <button class="boton gris" id="bReintentar" data-t="reintentar">REINTENTAR SALA</button>
+    <button class="boton gris" id="bPausaOpc" data-t="opciones">OPCIONES</button>
+    <button class="boton gris" id="bSalir" data-t="salirMenu">SALIR AL MENÚ</button>
     <p class="txt" id="txtPausa"></p>
   </div>
 
   <div class="capa" id="capaFin">
     <h2 id="finTitulo">CAPÍTULO COMPLETO</h2>
     <div class="panel" id="finDatos"></div>
-    <button class="boton" id="bFinSeguir">SEGUIR</button>
+    <button class="boton" id="bFinSeguir" data-t="seguir">SEGUIR</button>
   </div>
 
   <div class="capa" id="capaCreditos" data-volver="bCredVolver">
     <h2>ZONDA</h2>
     <div class="panel" id="creditosTxt"></div>
     <div class="panel">
-      <p class="txt">TECLADO: FLECHAS O WASD · C, K O ESPACIO SALTA · X O J DASH · Z, L O SHIFT AGARRA · ESC PAUSA</p>
-      <p class="txt">MANDO: A SALTA · X DASH · GATILLOS AGARRAN</p>
-      <p class="txt">TOQUE: EL PULGAR IZQUIERDO MUEVE Y APUNTA · A LA DERECHA SALTO, DASH Y AGARRE</p>
+      <p class="txt" data-t="teclado">TECLADO: FLECHAS O WASD · C, K O ESPACIO SALTA · X O J DASH · Z, L O SHIFT AGARRA · ESC PAUSA</p>
+      <p class="txt" data-t="mando">MANDO: A SALTA · X DASH · GATILLOS AGARRAN</p>
+      <p class="txt" data-t="toque">TOQUE: EL PULGAR IZQUIERDO MUEVE Y APUNTA · A LA DERECHA SALTO, DASH Y AGARRE</p>
     </div>
-    <button class="boton gris" id="bCredVolver">VOLVER</button>
+    <button class="boton gris" id="bCredVolver" data-t="volver">VOLVER</button>
   </div>
 </div>
 <!--JS-->

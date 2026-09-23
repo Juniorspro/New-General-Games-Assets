@@ -48,7 +48,7 @@ function dibujarPortada(g, t) {
   if (ciclo < 5) dibujarZonda(g, -20 + ciclo / 5 * (W + 40), piso - 30 + Math.sin(t * 2) * 4, t, 1.2, Math.min(1, ciclo, 5 - ciclo));
   /* el título; con un submenú abierto se apaga el fondo y el título se va,
      para que no se encime con el panel */
-  if (!UI.actual || UI.actual === 'capaTitulo') tituloZonda(g, W, H, t);
+  if (!UI.actual || UI.actual === 'capaTitulo' || UI.actual === 'capaIdioma') tituloZonda(g, W, H, t);
   else Trama.cubrir(g, 9, '#07060c');
 }
 function tituloZonda(g, W, H, t) {
@@ -72,7 +72,7 @@ function tituloZonda(g, W, H, t) {
     if (Math.abs((px - x0) + (py - y0) - barrido) < 6) c = '#fffbe8';
     g.fillStyle = c; g.fillRect(px, py, e, e);
   }
-  if (t > 1.1) textoPx(g, 'UNA CHICA, UN CERRO Y EL VIENTO', W / 2, y0 + 8 * e + 8, { alin: 'centro', grad: GRAD.gris });
+  if (t > 1.1) textoPx(g, tr('lema'), W / 2, y0 + 8 * e + 8, { alin: 'centro', grad: GRAD.gris });
 }
 
 /* ---------------- la tarjeta de cada capítulo ---------------- */
@@ -84,7 +84,7 @@ function dibujarTarjeta(g, J) {
   if (a <= 0.05) return;
   const y = Math.round(H * 0.34);
   g.globalAlpha = a;
-  textoPx(g, 'CAPÍTULO ' + cap.id, W / 2, y, { alin: 'centro', grad: GRAD.gris });
+  textoPx(g, tr('capitulo', cap.id), W / 2, y, { alin: 'centro', grad: GRAD.gris });
   textoPx(g, cap.nombre.toUpperCase(), W / 2, y + 16, { alin: 'centro', grad: GRAD.ocre, escala: 2 });
   textoPx(g, CAP_SUB[cap.id].toUpperCase(), W / 2, y + 44, { alin: 'centro', grad: GRAD.blanco });
   g.globalAlpha = 1;

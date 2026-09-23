@@ -109,58 +109,66 @@ p.txt.izq{text-align:left}
   </div>
   <div class="pausa-bt" id="btPausa"></div>
 
+  <div class="capa limpia abajo" id="capaIdioma">
+    <div class="hueco"></div>
+    <p class="txt">ELEGÍ TU IDIOMA · CHOOSE YOUR LANGUAGE · ESCOLHA SEU IDIOMA</p>
+    <button class="boton gris" id="bIdioma_es">ESPAÑOL</button>
+    <button class="boton gris" id="bIdioma_en">ENGLISH</button>
+    <button class="boton gris" id="bIdioma_pt">PORTUGUÊS</button>
+  </div>
+
   <div class="capa limpia abajo" id="capaTitulo">
     <div class="hueco"></div>
-    <button class="boton" id="bJugar">JUGAR</button>
-    <button class="boton gris" id="bCapitulos">CAPÍTULOS</button>
-    <button class="boton gris" id="bCartas">CARTAS</button>
-    <button class="boton gris" id="bOpciones">OPCIONES</button>
-    <button class="boton gris" id="bCreditos">CRÉDITOS</button>
+    <button class="boton" id="bJugar" data-t="jugar">JUGAR</button>
+    <button class="boton gris" id="bCapitulos" data-t="capitulos">CAPÍTULOS</button>
+    <button class="boton gris" id="bCartas" data-t="cartas">CARTAS</button>
+    <button class="boton gris" id="bOpciones" data-t="opciones">OPCIONES</button>
+    <button class="boton gris" id="bCreditos" data-t="creditos">CRÉDITOS</button>
   </div>
 
   <div class="capa" id="capaCapitulos" data-volver="bCapVolver">
-    <h2>CAPÍTULOS</h2>
+    <h2 data-t="capitulos">CAPÍTULOS</h2>
     <div id="listaCap" class="lista"></div>
-    <button class="boton gris" id="bCapVolver">VOLVER</button>
+    <button class="boton gris" id="bCapVolver" data-t="volver">VOLVER</button>
   </div>
 
   <div class="capa" id="capaCartas" data-volver="bCarVolver">
-    <h2>CARTAS</h2>
+    <h2 data-t="cartas">CARTAS</h2>
     <div id="listaCartas" class="lista"></div>
-    <button class="boton gris" id="bCarVolver">VOLVER</button>
+    <button class="boton gris" id="bCarVolver" data-t="volver">VOLVER</button>
   </div>
 
   <div class="capa" id="capaOpciones" data-volver="bOpcVolver">
-    <h2>OPCIONES</h2>
+    <h2 data-t="opciones">OPCIONES</h2>
     <div id="listaOpc" class="lista"></div>
-    <p class="txt">VELOCIDAD, DASH INFINITO E INVENCIBLE SON AYUDAS: EL CERRO SE PUEDE SUBIR IGUAL CON ELLAS.</p>
-    <button class="boton gris" id="bOpcVolver">VOLVER</button>
+    <p class="txt" data-t="ayudas">VELOCIDAD, DASH INFINITO E INVENCIBLE SON AYUDAS: EL CERRO SE PUEDE SUBIR IGUAL CON ELLAS.</p>
+    <button class="boton gris" id="bOpcVolver" data-t="volver">VOLVER</button>
   </div>
 
   <div class="capa" id="capaPausa" data-volver="bSeguir">
-    <h2>PAUSA</h2>
-    <button class="boton" id="bSeguir">SEGUIR</button>
-    <button class="boton gris" id="bReintentar">REINTENTAR SALA</button>
-    <button class="boton gris" id="bPausaOpc">OPCIONES</button>
-    <button class="boton gris" id="bSalir">SALIR AL MENÚ</button>
+    <h2 data-t="pausa">PAUSA</h2>
+    <button class="boton" id="bSeguir" data-t="seguir">SEGUIR</button>
+    <button class="boton gris" id="bReintentar" data-t="reintentar">REINTENTAR SALA</button>
+    <button class="boton gris" id="bPausaOpc" data-t="opciones">OPCIONES</button>
+    <button class="boton gris" id="bSalir" data-t="salirMenu">SALIR AL MENÚ</button>
     <p class="txt" id="txtPausa"></p>
   </div>
 
   <div class="capa" id="capaFin">
     <h2 id="finTitulo">CAPÍTULO COMPLETO</h2>
     <div class="panel" id="finDatos"></div>
-    <button class="boton" id="bFinSeguir">SEGUIR</button>
+    <button class="boton" id="bFinSeguir" data-t="seguir">SEGUIR</button>
   </div>
 
   <div class="capa" id="capaCreditos" data-volver="bCredVolver">
     <h2>ZONDA</h2>
     <div class="panel" id="creditosTxt"></div>
     <div class="panel">
-      <p class="txt">TECLADO: FLECHAS O WASD · C, K O ESPACIO SALTA · X O J DASH · Z, L O SHIFT AGARRA · ESC PAUSA</p>
-      <p class="txt">MANDO: A SALTA · X DASH · GATILLOS AGARRAN</p>
-      <p class="txt">TOQUE: EL PULGAR IZQUIERDO MUEVE Y APUNTA · A LA DERECHA SALTO, DASH Y AGARRE</p>
+      <p class="txt" data-t="teclado">TECLADO: FLECHAS O WASD · C, K O ESPACIO SALTA · X O J DASH · Z, L O SHIFT AGARRA · ESC PAUSA</p>
+      <p class="txt" data-t="mando">MANDO: A SALTA · X DASH · GATILLOS AGARRAN</p>
+      <p class="txt" data-t="toque">TOQUE: EL PULGAR IZQUIERDO MUEVE Y APUNTA · A LA DERECHA SALTO, DASH Y AGARRE</p>
     </div>
-    <button class="boton gris" id="bCredVolver">VOLVER</button>
+    <button class="boton gris" id="bCredVolver" data-t="volver">VOLVER</button>
   </div>
 </div>
 <script>
@@ -219,6 +227,48 @@ const Guardado = {
 function reloj(seg) {
   const m = Math.floor(seg / 60), s = seg - m * 60;
   return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
+}
+
+/* ==== motor2d/idioma.js ==== */
+/* ============================================================================
+   motor2d/idioma.js — español, inglés y portugués.
+   Cada juego trae sus textos en tablas con las mismas claves por idioma; acá
+   se elige cuál vale. La elección se guarda y la próxima vez viene marcada.
+   Si nunca se eligió, se propone el idioma del navegador.
+   ========================================================================== */
+
+const IDIOMAS = [['es', 'ESPAÑOL'], ['en', 'ENGLISH'], ['pt', 'PORTUGUÊS']];
+const Idioma = {
+  actual: 'es', clave: null, tablas: { es: {} }, elegido: false,
+  iniciar(clave, tablas) {
+    this.clave = clave; this.tablas = tablas;
+    const g = Guardado.leer(clave, null);
+    this.elegido = !!(g && tablas[g]);
+    this.actual = this.elegido ? g : this.delNavegador();
+  },
+  delNavegador() {
+    const l = String((navigator.languages && navigator.languages[0]) || navigator.language || 'es').slice(0, 2).toLowerCase();
+    return this.tablas[l] ? l : 'es';
+  },
+  poner(l) { if (!this.tablas[l]) return; this.actual = l; this.elegido = true; Guardado.escribir(this.clave, l); },
+  /* una clave de la tabla del idioma; si falta, la del español; si falta, la clave */
+  t(k) {
+    const T = this.tablas[this.actual];
+    if (T && T[k] != null) return T[k];
+    const E = this.tablas.es;
+    return E && E[k] != null ? E[k] : k;
+  },
+  /* los textos del DOM marcados con data-t="clave" */
+  traducirDOM(raiz) {
+    (raiz || document).querySelectorAll('[data-t]').forEach((el) => { el.textContent = this.t(el.dataset.t); delete el.dataset.pxk; });
+    document.documentElement.lang = this.actual;
+  },
+};
+/* tr('carta', n, total) → "CARTA 3/19": {0}, {1}… se reemplazan en orden */
+function tr(k) {
+  let s = String(Idioma.t(k));
+  for (let i = 1; i < arguments.length; i++) s = s.split('{' + (i - 1) + '}').join(arguments[i]);
+  return s;
 }
 
 /* ==== motor2d/pantalla.js ==== */
@@ -746,8 +796,8 @@ const Sonido = {
 
 /* ==== motor2d/fuente.js ==== */
 /* ============================================================================
-   motor2d/fuente.js — la fuente de píxeles 5x7 de EL TIPO, con tildes, Ñ, Ü
-   y ¡¿, más los signos que piden los diálogos. Las minúsculas se dibujan como
+   motor2d/fuente.js — la fuente de píxeles 5x7 de EL TIPO, con tildes, Ñ, Ü,
+   ¡¿ y las letras del portugués, más los signos que piden los diálogos. Las minúsculas se dibujan como
    mayúsculas: en un juego alcanza y se lee mejor a este tamaño.
    ========================================================================== */
 
@@ -783,8 +833,16 @@ const FUENTE_PX = {
   '…': [".....", ".....", ".....", ".....", ".....", ".....", "#.#.#"], '*': [".....", "#.#.#", ".###.", "#####", ".###.", "#.#.#", "....."],
   '—': [".....", ".....", ".....", "#####", ".....", ".....", "....."], '_': ["....", "....", "....", "....", "....", "....", "####"],
 };
-const ACENTOS_PX = { 'Á': ['A', 'a'], 'É': ['E', 'a'], 'Í': ['I', 'a'], 'Ó': ['O', 'a'], 'Ú': ['U', 'a'], 'Ñ': ['N', 't'], 'Ü': ['U', 'd'] };
-const MARCAS_PX = { a: [[3, -3], [2, -2]], t: [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]], d: [[1, -2], [3, -2]] };
+/* las letras con marca: la base más la marca. Con las del portugués (Â Ã À Ç Ê Ô Õ)
+   alcanza para los tres idiomas de los juegos */
+const ACENTOS_PX = {
+  'Á': ['A', 'a'], 'É': ['E', 'a'], 'Í': ['I', 'a'], 'Ó': ['O', 'a'], 'Ú': ['U', 'a'], 'Ñ': ['N', 't'], 'Ü': ['U', 'd'],
+  'Â': ['A', 'c'], 'Ã': ['A', 't'], 'À': ['A', 'g'], 'Ê': ['E', 'c'], 'Ô': ['O', 'c'], 'Õ': ['O', 't'], 'Ç': ['C', 'z'],
+};
+const MARCAS_PX = {
+  a: [[3, -3], [2, -2]], t: [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]], d: [[1, -2], [3, -2]],
+  c: [[1, -2], [2, -3], [3, -2]], g: [[1, -3], [2, -2]], z: [[2, 7], [3, 8], [2, 8]],
+};
 
 function glifoPx(ch) {
   const c = ch.toUpperCase();
@@ -800,7 +858,7 @@ function puntosTexto(str) {
   for (const ch of str) {
     const g = glifoPx(ch), w = g.f[0].length;
     for (let r = 0; r < 7; r++) for (let k = 0; k < w; k++) if (g.f[r][k] === '#') pts.push([x + k, r, r]);
-    if (g.m) for (const [mx, my] of g.m) pts.push([x + mx, my, 0]);
+    if (g.m) for (const [mx, my] of g.m) pts.push([x + mx, my, my > 6 ? 6 : 0]);
     x += w + 1;
   }
   return { pts, w: Math.max(1, x - 1) };
@@ -3256,7 +3314,7 @@ function dibujarPortada(g, t) {
   if (ciclo < 5) dibujarZonda(g, -20 + ciclo / 5 * (W + 40), piso - 30 + Math.sin(t * 2) * 4, t, 1.2, Math.min(1, ciclo, 5 - ciclo));
   /* el título; con un submenú abierto se apaga el fondo y el título se va,
      para que no se encime con el panel */
-  if (!UI.actual || UI.actual === 'capaTitulo') tituloZonda(g, W, H, t);
+  if (!UI.actual || UI.actual === 'capaTitulo' || UI.actual === 'capaIdioma') tituloZonda(g, W, H, t);
   else Trama.cubrir(g, 9, '#07060c');
 }
 function tituloZonda(g, W, H, t) {
@@ -3280,7 +3338,7 @@ function tituloZonda(g, W, H, t) {
     if (Math.abs((px - x0) + (py - y0) - barrido) < 6) c = '#fffbe8';
     g.fillStyle = c; g.fillRect(px, py, e, e);
   }
-  if (t > 1.1) textoPx(g, 'UNA CHICA, UN CERRO Y EL VIENTO', W / 2, y0 + 8 * e + 8, { alin: 'centro', grad: GRAD.gris });
+  if (t > 1.1) textoPx(g, tr('lema'), W / 2, y0 + 8 * e + 8, { alin: 'centro', grad: GRAD.gris });
 }
 
 /* ---------------- la tarjeta de cada capítulo ---------------- */
@@ -3292,7 +3350,7 @@ function dibujarTarjeta(g, J) {
   if (a <= 0.05) return;
   const y = Math.round(H * 0.34);
   g.globalAlpha = a;
-  textoPx(g, 'CAPÍTULO ' + cap.id, W / 2, y, { alin: 'centro', grad: GRAD.gris });
+  textoPx(g, tr('capitulo', cap.id), W / 2, y, { alin: 'centro', grad: GRAD.gris });
   textoPx(g, cap.nombre.toUpperCase(), W / 2, y + 16, { alin: 'centro', grad: GRAD.ocre, escala: 2 });
   textoPx(g, CAP_SUB[cap.id].toUpperCase(), W / 2, y + 44, { alin: 'centro', grad: GRAD.blanco });
   g.globalAlpha = 1;
@@ -3394,6 +3452,213 @@ function dibujarFinal(g, J) {
   }
 }
 
+/* ==== zonda/js/idiomas.js ==== */
+/* ============================================================================
+   zonda/js/idiomas.js — ZONDA en español, inglés y portugués (de Brasil).
+   Las tablas del juego (DIALOGOS, CARTAS, nombres de salas…) están escritas
+   en español en su lugar; al elegir idioma se reemplaza su texto en el mismo
+   objeto, así el resto del código no se entera. Los textos de la interfaz van
+   por tr('clave').
+   ========================================================================== */
+
+const UI_ZONDA = {
+  es: {
+    jugar: 'JUGAR', seguirPartida: 'SEGUIR', capitulos: 'CAPÍTULOS', cartas: 'CARTAS', opciones: 'OPCIONES', creditos: 'CRÉDITOS', volver: 'VOLVER',
+    pausa: 'PAUSA', seguir: 'SEGUIR', reintentar: 'REINTENTAR SALA', salirMenu: 'SALIR AL MENÚ',
+    capituloCompleto: 'CAPÍTULO {0} COMPLETO', tiempoMuertes: 'TIEMPO {0} · MUERTES {1}', cartasDe: 'CARTAS {0} DE {1}',
+    carta: 'CARTA {0}/{1}', pausaTxt: '{0} · SALA {1}/{2} · MUERTES {3} · {4}', capInfo: 'CARTAS {0}/{1} · MUERTES {2}', mejor: ' · MEJOR {0}',
+    todaviaNo: 'TODAVÍA NO', encontraste: 'ENCONTRASTE {0} DE {1}', deA: 'DE {0} PARA {1}',
+    musica: 'MÚSICA', efectos: 'EFECTOS', temblor: 'TEMBLOR', velocidad: 'VELOCIDAD', dashInf: 'DASH INFINITO', invencible: 'INVENCIBLE', reloj: 'RELOJ',
+    si: 'SÍ', no: 'NO', idioma: 'IDIOMA',
+    ayudas: 'VELOCIDAD, DASH INFINITO E INVENCIBLE SON AYUDAS: EL CERRO SE PUEDE SUBIR IGUAL CON ELLAS.',
+    teclado: 'TECLADO: FLECHAS O WASD · C, K O ESPACIO SALTA · X O J DASH · Z, L O SHIFT AGARRA · ESC PAUSA',
+    mando: 'MANDO: A SALTA · X DASH · GATILLOS AGARRAN',
+    toque: 'TOQUE: EL PULGAR IZQUIERDO MUEVE Y APUNTA · A LA DERECHA SALTO, DASH Y AGARRE',
+    lema: 'UNA CHICA, UN CERRO Y EL VIENTO', capitulo: 'CAPÍTULO {0}',
+  },
+  en: {
+    jugar: 'PLAY', seguirPartida: 'CONTINUE', capitulos: 'CHAPTERS', cartas: 'LETTERS', opciones: 'OPTIONS', creditos: 'CREDITS', volver: 'BACK',
+    pausa: 'PAUSE', seguir: 'RESUME', reintentar: 'RETRY ROOM', salirMenu: 'QUIT TO MENU',
+    capituloCompleto: 'CHAPTER {0} COMPLETE', tiempoMuertes: 'TIME {0} · DEATHS {1}', cartasDe: 'LETTERS {0} OF {1}',
+    carta: 'LETTER {0}/{1}', pausaTxt: '{0} · ROOM {1}/{2} · DEATHS {3} · {4}', capInfo: 'LETTERS {0}/{1} · DEATHS {2}', mejor: ' · BEST {0}',
+    todaviaNo: 'NOT YET', encontraste: 'YOU FOUND {0} OF {1}', deA: 'FROM {0} TO {1}',
+    musica: 'MUSIC', efectos: 'SOUND', temblor: 'SHAKE', velocidad: 'SPEED', dashInf: 'INFINITE DASH', invencible: 'INVINCIBLE', reloj: 'TIMER',
+    si: 'YES', no: 'NO', idioma: 'LANGUAGE',
+    ayudas: 'SPEED, INFINITE DASH AND INVINCIBLE ARE ASSISTS: THE MOUNTAIN CAN STILL BE CLIMBED WITH THEM.',
+    teclado: 'KEYBOARD: ARROWS OR WASD · C, K OR SPACE JUMPS · X OR J DASHES · Z, L OR SHIFT GRABS · ESC PAUSES',
+    mando: 'GAMEPAD: A JUMPS · X DASHES · TRIGGERS GRAB',
+    toque: 'TOUCH: THE LEFT THUMB MOVES AND AIMS · ON THE RIGHT, JUMP, DASH AND GRAB',
+    lema: 'A GIRL, A MOUNTAIN AND THE WIND', capitulo: 'CHAPTER {0}',
+  },
+  pt: {
+    jugar: 'JOGAR', seguirPartida: 'CONTINUAR', capitulos: 'CAPÍTULOS', cartas: 'CARTAS', opciones: 'OPÇÕES', creditos: 'CRÉDITOS', volver: 'VOLTAR',
+    pausa: 'PAUSA', seguir: 'CONTINUAR', reintentar: 'REPETIR SALA', salirMenu: 'SAIR PARA O MENU',
+    capituloCompleto: 'CAPÍTULO {0} COMPLETO', tiempoMuertes: 'TEMPO {0} · MORTES {1}', cartasDe: 'CARTAS {0} DE {1}',
+    carta: 'CARTA {0}/{1}', pausaTxt: '{0} · SALA {1}/{2} · MORTES {3} · {4}', capInfo: 'CARTAS {0}/{1} · MORTES {2}', mejor: ' · MELHOR {0}',
+    todaviaNo: 'AINDA NÃO', encontraste: 'VOCÊ ENCONTROU {0} DE {1}', deA: 'DE {0} PARA {1}',
+    musica: 'MÚSICA', efectos: 'EFEITOS', temblor: 'TREMOR', velocidad: 'VELOCIDADE', dashInf: 'DASH INFINITO', invencible: 'INVENCÍVEL', reloj: 'CRONÔMETRO',
+    si: 'SIM', no: 'NÃO', idioma: 'IDIOMA',
+    ayudas: 'VELOCIDADE, DASH INFINITO E INVENCÍVEL SÃO AJUDAS: DÁ PARA SUBIR A MONTANHA MESMO COM ELAS.',
+    teclado: 'TECLADO: SETAS OU WASD · C, K OU ESPAÇO PULA · X OU J DASH · Z, L OU SHIFT AGARRA · ESC PAUSA',
+    mando: 'CONTROLE: A PULA · X DASH · GATILHOS AGARRAM',
+    toque: 'TOQUE: O POLEGAR ESQUERDO MOVE E MIRA · À DIREITA, PULO, DASH E AGARRAR',
+    lema: 'UMA GAROTA, UMA MONTANHA E O VENTO', capitulo: 'CAPÍTULO {0}',
+  },
+};
+
+/* la historia, con la misma forma que en historia.js: los diálogos van línea
+   por línea en el mismo orden, y cada carta es [de, para, texto] */
+const TEXTOS_ZONDA = {
+  en: {
+    CAP_SUB: { 1: 'Where the mountain begins', 2: 'What was left down below', 3: 'The ice remembers', 4: 'What the wind carries away' },
+    NOMBRES: { ayelen: 'AYELÉN', zonda: 'THE ZONDA', rosa: 'ROSA' },
+    capitulos: ['The Gorge', 'The Mine', 'The Glacier', 'The Summit'],
+    salas: {
+      '1-1': 'At the foot of the mountain', '1-2': 'The chimney', '1-3': 'The first wind', '1-4': 'Wind stones', '1-5': 'The apacheta',
+      '2-1': 'The mouth of the mine', '2-2': 'Rotten planks', '2-3': 'The mine carts', '2-4': 'The shaft', '2-5': 'The way out',
+      '3-1': 'Old snow', '3-2': 'Headwind', '3-3': 'Gusts', '3-4': 'Ice mirrors', '3-5': 'The pass',
+      '4-1': 'The storm', '4-2': 'Two breaths', '4-3': 'All together', '4-4': 'The wind carries you', '4-5': 'The summit',
+    },
+    DIALOGOS: {
+      inicio: [
+        'Grandma Rosa climbed this mountain for forty years, with the mailbag on her shoulder.',
+        'The night she passed away, the Zonda rose and carried the bag up the mountain.',
+        "I'm going to find them. And leave her stone on the apacheta at the summit, the way it's done.",
+      ],
+      viento1: ['And who are you, climbing at night?', "Ayelén. Rosa's granddaughter.", "Rosa doesn't climb anymore. Go home. What the wind takes never comes back.", "Then I'll go and get it."],
+      apacheta1: ['An apacheta. Grandma left a stone on every one.', 'I leave one too. So the mountain lets me through.', 'The mountain owes you nothing, little one.'],
+      mina: ["The Quispe mine. Grandma brought them their families' letters.", 'Nobody has come in here for thirty years. No letters, no people.'],
+      mina2: ['I found letters. They were never opened.', 'Because there was no one left. I keep them. Someone has to keep them.', 'Did you take them to look after them?', 'Keep climbing, if you want to know so badly.'],
+      glaciar: ['So cold. Grandma used to say the ice remembers everything.', "The ice remembers. I forget. That's why I blow."],
+      glaciar2: ['Rosa asked me for one thing, the last time she came up.', 'What did she ask?', 'Not to let you climb alone. And look: here you are. Alone.', "I'm not alone. You're here, and you never stop talking."],
+      regalo: ["Up there it blows harder than me. You won't make it alone.", "Here. I'll lend you a breath: you'll be able to push yourself twice in the air.", 'Thank you, Zonda.', "Don't thank me. Climb."],
+      lleva: ["Don't fight me now. Let me carry you."],
+      cumbre: ['The summit.', 'The bag is at the apacheta. Rosa left it there. I only looked after it.'],
+      final: [
+        "There's a letter with my name on it.",
+        'Ayelén: if you are reading this, you made it up here. I always knew you would.',
+        "Leave the stone, look at the sun and go down light. The wind delivers what we can't.",
+        'I love you. Rosa.',
+        'Zonda... are you the one who delivers them?',
+        'Each one, to wherever it has to go.',
+      ],
+    },
+    CARTAS: {
+      '1-1': ['Tomás', 'his mother', "Mom: I got to the mine safely. Up here the sky is so close it's scary to touch. Send me the wool socks. Tomás, 1971."],
+      '1-2': ['Anselmo', 'Don Aurelio', "Don Aurelio: I owe you three llamas and an apology. I have the llamas. The apology I'll say in person when I come down."],
+      '1-3': ['Julián', 'Elena', 'Dear Elena: the wind up here messes up everything except what I feel. Wait for me at carnival.'],
+      '1-4': ['the night shift', 'Rosa', 'Rosa: thank you for climbing through the snow. Without your letters this mine would just be a hole.'],
+      '1-5': ['Dad', 'his daughter', 'Daughter: on the apacheta of the gorge there is a stone of mine. When you pass, leave one of yours beside it. That way we keep each other company.'],
+      '2-1': ['Ramón', 'Martina', 'Martina: today we found silver. Not much. Just enough for the roof of the house. The rest, for the party.'],
+      '2-2': ['F. Quispe', 'the mine boss', "Dear boss: I quit. I'm off to play the charango in Humahuaca. Don't look for me. What you owe me, though, you will pay me."],
+      '2-3': ['Beto', 'Tito', "Tito: the cart on the north vein starts by itself. If you come up, don't get on it. If you get on it, hold on."],
+      '2-4': ['Nicanor', 'his mom', 'Mom: the shaft is deep but the people are good. We eat together, we sing together. I miss your locro. Nicanor, 1983.'],
+      '2-5': ['the mine', 'whoever finds this', "Today we close the mine. The letters that were never delivered stay in Rosa's bag. She will know what to do."],
+      '3-1': ['a shepherdess from Iruya', 'Rosa', 'Rosa: the ice keeps the footprints of those who climbed before. I stepped in yours.'],
+      '3-2': ['Esteban', 'his love', "My love: if the headwind won't let me come back, I'll come back walking backwards. But I'll come back."],
+      '3-3': ['Grandpa Ceferino', 'his grandson', 'Grandson: you get through the gusts crouching down and counting to three. Same as with sorrows.'],
+      '3-4': ['Pedro', 'Clara', 'Clara: in the glacier I saw myself reflected a thousand times. In none of them was I without you. Awful. Come back.'],
+      '3-5': ['Justina', 'Rosa', 'Rosa, my friend: if one day you stop climbing, someone of your blood will climb for you. I know you.'],
+      '4-1': ['someone', 'someone', "The storm isn't bad, my grandmother says. It's just the sky tidying up."],
+      '4-2': ['a guide', 'Rosa', 'Whoever climbs with company has two breaths: one for themselves and one for whoever comes behind.'],
+      '4-3': ['Tomás', 'his mother', "Mom: I reached the summit. There's nothing here. Just the sun, the wind and me. It's the most beautiful thing I've ever seen. Tomás, 1972."],
+      '4-4': ['Rosa', 'the wind', "To the wind: thank you for carrying me when I couldn't. Rosa."],
+    },
+    CREDITOS: [
+      'ZONDA',
+      'A girl, a mountain and the wind.',
+      'Everything you see is drawn with code and everything you hear is synthesized: there is not a single image or audio file.',
+      'Every room was checked by a solver that uses the same physics as the game.',
+      'For Rosa, and for every mail carrier of the mountain.',
+    ],
+  },
+  pt: {
+    CAP_SUB: { 1: 'Onde a montanha começa', 2: 'O que ficou lá embaixo', 3: 'O gelo se lembra', 4: 'O que o vento leva' },
+    NOMBRES: { ayelen: 'AYELÉN', zonda: 'O ZONDA', rosa: 'ROSA' },
+    capitulos: ['A Quebrada', 'A Mina', 'O Glaciar', 'O Cume'],
+    salas: {
+      '1-1': 'No pé da montanha', '1-2': 'A chaminé', '1-3': 'O primeiro vento', '1-4': 'Pedras de vento', '1-5': 'A apacheta',
+      '2-1': 'A boca da mina', '2-2': 'Tábuas podres', '2-3': 'Os vagonetes', '2-4': 'O poço', '2-5': 'A saída',
+      '3-1': 'Neve velha', '3-2': 'Vento contra', '3-3': 'Rajadas', '3-4': 'Espelhos de gelo', '3-5': 'A passagem',
+      '4-1': 'A tempestade', '4-2': 'Dois fôlegos', '4-3': 'Tudo junto', '4-4': 'O vento te leva', '4-5': 'O cume',
+    },
+    DIALOGOS: {
+      inicio: [
+        'A vó Rosa subiu esta montanha por quarenta anos, com a bolsa das cartas no ombro.',
+        'Na noite em que ela se foi, o Zonda se levantou e levou a bolsa montanha acima.',
+        'Vou buscar as cartas. E deixar a pedra dela na apacheta do cume, como se faz.',
+      ],
+      viento1: ['E quem é você, pra subir de noite?', 'Ayelén. A neta da Rosa.', 'A Rosa não sobe mais. Volte. O que o vento leva não volta.', 'Então eu vou buscar.'],
+      apacheta1: ['Uma apacheta. A vó deixava uma pedra em cada uma.', 'Deixo uma. Pra montanha me deixar passar.', 'A montanha não te deve nada, menina.'],
+      mina: ['A mina dos Quispe. A vó trazia as cartas das famílias deles.', 'Faz trinta anos que ninguém entra aqui. Nem cartas, nem gente.'],
+      mina2: ['Encontrei cartas. Nunca foram abertas.', 'Porque não sobrou ninguém. Eu guardo as cartas. Alguém tem que guardar.', 'Você levou as cartas pra cuidar delas?', 'Continue subindo, se quer tanto saber.'],
+      glaciar: ['Que frio. A vó dizia que o gelo se lembra de tudo.', 'O gelo se lembra. Eu esqueço. Por isso eu sopro.'],
+      glaciar2: ['A Rosa me pediu uma coisa, da última vez que subiu.', 'O que ela pediu?', 'Que eu não te deixasse subir sozinha. E olha só: aqui está você. Sozinha.', 'Não estou sozinha. Tem você, que não para de falar.'],
+      regalo: ['Lá em cima sopra mais forte que eu. Sozinha você não vai conseguir.', 'Tome. Te empresto um fôlego: duas vezes você vai poder se impulsionar no ar.', 'Obrigada, Zonda.', 'Não me agradeça. Suba.'],
+      lleva: ['Agora não brigue comigo. Deixe o vento te levar.'],
+      cumbre: ['O cume.', 'A bolsa está na apacheta. A Rosa deixou ali. Eu só cuidei dela.'],
+      final: [
+        'Tem uma carta com o meu nome.',
+        'Ayelén: se você está lendo isto, é porque subiu. Eu já sabia.',
+        'Deixe a pedra, olhe o sol e desça leve. O vento entrega o que nós não conseguimos.',
+        'Te amo. Rosa.',
+        'Zonda... é você quem entrega as cartas?',
+        'Cada uma, pra onde tiver que chegar.',
+      ],
+    },
+    CARTAS: {
+      '1-1': ['Tomás', 'sua mãe', 'Mãe: cheguei bem à mina. Aqui em cima o céu está tão perto que dá medo de tocar. Me mande as meias de lã. Tomás, 1971.'],
+      '1-2': ['Anselmo', 'seu Aurelio', 'Seu Aurelio: eu lhe devo três lhamas e um pedido de desculpas. As lhamas eu tenho. As desculpas eu peço pessoalmente quando descer.'],
+      '1-3': ['Julián', 'Elena', 'Querida Elena: o vento daqui bagunça tudo, menos o que eu sinto. Me espere no carnaval.'],
+      '1-4': ['o turno da noite', 'Rosa', 'Rosa: obrigado por subir com a neve. Sem as suas cartas, esta mina seria só um buraco.'],
+      '1-5': ['o pai', 'sua filha', 'Filha: na apacheta da quebrada tem uma pedra minha. Quando passar, deixe uma sua ao lado. Assim a gente se faz companhia.'],
+      '2-1': ['Ramón', 'Martina', 'Martina: hoje encontramos prata. Não muita. O suficiente para o telhado da casa. O resto, para a festa.'],
+      '2-2': ['F. Quispe', 'o chefe da mina', 'Senhor chefe: eu me demito. Vou tocar charango em Humahuaca. Não me procurem. O que me devem, isso sim, me paguem.'],
+      '2-3': ['Beto', 'Tito', 'Tito: o vagonete do veio norte anda sozinho. Se você subir, não entre nele. Se entrar nele, segure firme.'],
+      '2-4': ['Nicanor', 'sua mãezinha', 'Mãezinha: o poço é fundo, mas o pessoal é bom. Comemos juntos, cantamos juntos. Sinto falta do seu locro. Nicanor, 1983.'],
+      '2-5': ['a mina', 'quem encontrar', 'Hoje fechamos a mina. As cartas que não foram entregues ficam na bolsa da Rosa. Ela vai saber o que fazer.'],
+      '3-1': ['uma pastora de Iruya', 'Rosa', 'Rosa: o gelo guarda as pegadas de quem subiu antes. Eu pisei nas suas.'],
+      '3-2': ['Esteban', 'seu amor', 'Amor: se o vento contra não me deixar voltar, eu volto de costas. Mas volto.'],
+      '3-3': ['o avô Ceferino', 'seu neto', 'Neto: as rajadas se aguentam agachado e contando até três. Como as tristezas.'],
+      '3-4': ['Pedro', 'Clara', 'Clara: no glaciar me vi refletido mil vezes. Em nenhuma eu estava sem você. Horrível. Volte.'],
+      '3-5': ['Justina', 'Rosa', 'Rosa, amiga: se um dia você não subir mais, alguém do seu sangue vai subir por você. Eu te conheço.'],
+      '4-1': ['alguém', 'alguém', 'A tempestade não é ruim, diz a minha avó. É o céu fazendo faxina.'],
+      '4-2': ['um guia', 'Rosa', 'Quem sobe acompanhado tem dois fôlegos: um para si e outro para quem vem atrás.'],
+      '4-3': ['Tomás', 'sua mãe', 'Mãe: cheguei ao cume. Não tem nada. Só o sol, o vento e eu. É a coisa mais linda que já vi na vida. Tomás, 1972.'],
+      '4-4': ['Rosa', 'o vento', 'Ao vento: obrigada por me levar quando eu não conseguia. Rosa.'],
+    },
+    CREDITOS: [
+      'ZONDA',
+      'Uma garota, uma montanha e o vento.',
+      'Tudo o que se vê é desenhado com código e tudo o que se ouve é sintetizado: não há uma única imagem nem um único arquivo de áudio.',
+      'Todas as salas foram verificadas por um solucionador que usa a mesma física do jogo.',
+      'Para a Rosa, e para todas as carteiras e carteiros da montanha.',
+    ],
+  },
+};
+
+/* el español original, tomado de las tablas antes de tocarlas */
+const TEXTOS_ES = {
+  CAP_SUB: Object.assign({}, CAP_SUB),
+  NOMBRES: Object.assign({}, NOMBRES),
+  capitulos: CAPITULOS.map((c) => c.nombre),
+  salas: Object.fromEntries(CAPITULOS.flatMap((c) => c.salas.map((s) => [s.id, s.nombre]))),
+  DIALOGOS: Object.fromEntries(Object.entries(DIALOGOS).map(([k, v]) => [k, v.map((l) => l.t)])),
+  CARTAS: Object.fromEntries(Object.entries(CARTAS).map(([k, c]) => [k, [c.de, c.a, c.t]])),
+  CREDITOS: CREDITOS.slice(),
+};
+
+function aplicarIdiomaZonda(l) {
+  const T = l === 'es' ? TEXTOS_ES : TEXTOS_ZONDA[l];
+  Object.assign(CAP_SUB, T.CAP_SUB);
+  Object.assign(NOMBRES, T.NOMBRES);
+  CAPITULOS.forEach((c, i) => { c.nombre = T.capitulos[i]; for (const s of c.salas) s.nombre = T.salas[s.id]; });
+  for (const k in DIALOGOS) DIALOGOS[k].forEach((ln, i) => { ln.t = T.DIALOGOS[k][i]; });
+  for (const k in CARTAS) { const [de, a, t] = T.CARTAS[k]; Object.assign(CARTAS[k], { de, a, t }); }
+  CREDITOS.length = 0; CREDITOS.push(...T.CREDITOS);
+  Idioma.traducirDOM();
+}
+
 /* ==== zonda/js/juego.js ==== */
 /* ============================================================================
    zonda/js/juego.js — el que ata todo: estados, progreso, menús y sondas.
@@ -3473,11 +3738,12 @@ function finCapitulo() {
   Prog.cap = siguiente ? J.capIdx + 1 : J.capIdx; Prog.sala = 0;
   guardarProg();
   const tomadas = cap.salas.filter((s) => Prog.cartas[s.id + ':0']).length;
-  document.getElementById('finTitulo').textContent = 'CAPÍTULO ' + cap.id + ' COMPLETO';
+  document.getElementById('finTitulo').textContent = tr('capituloCompleto', cap.id);
+  delete document.getElementById('finTitulo').dataset.pxk;
   document.getElementById('finDatos').innerHTML =
     `<p class="txt">${cap.nombre.toUpperCase()}</p>` +
-    `<p class="txt">TIEMPO ${reloj(J.tCap)} · MUERTES ${J.muertesCap}</p>` +
-    `<p class="txt">CARTAS ${tomadas} DE ${cartasDe(cap)}</p>`;
+    `<p class="txt">${tr('tiempoMuertes', reloj(J.tCap), J.muertesCap)}</p>` +
+    `<p class="txt">${tr('cartasDe', tomadas, cartasDe(cap))}</p>`;
   mostrarMandos(false);
   UI.mostrar('capaFin');
 }
@@ -3546,7 +3812,7 @@ function procesarEventos(m) {
         FX.emitir(e.x, e.y, 18, { cols: ['#fff6dc', '#ffd24a', '#ffffff'], disp: 90, vida: 28 });
         J.cartasCap++;
         const n = Object.keys(Prog.cartas).length;
-        J.aviso = { txt: 'CARTA ' + n + '/' + TOTAL_CARTAS, t: 0 };
+        J.aviso = { txt: tr('carta', n, TOTAL_CARTAS), t: 0 };
         guardarProg();
         break;
       }
@@ -3614,7 +3880,7 @@ function pausar() {
   J.estado = 'pausa';
   mostrarMandos(false);
   document.getElementById('txtPausa').textContent =
-    `${CAPITULOS[J.capIdx].nombre.toUpperCase()} · SALA ${J.salaIdx + 1}/${CAPITULOS[J.capIdx].salas.length} · MUERTES ${J.muertesCap} · ${reloj(J.tCap)}`;
+    tr('pausaTxt', CAPITULOS[J.capIdx].nombre.toUpperCase(), J.salaIdx + 1, CAPITULOS[J.capIdx].salas.length, J.muertesCap, reloj(J.tCap));
   UI.mostrar('capaPausa');
 }
 function seguir() { UI.ocultar(); J.estado = J.dialogo ? 'dialogo' : 'jugando'; mostrarMandos(true); }
@@ -3625,9 +3891,25 @@ function irPortada() {
   armarPortada();
   UI.mostrar('capaTitulo');
 }
+/* ---------------- el idioma: antes del menú, siempre ---------------- */
+function mostrarIdioma() {
+  J.estado = 'portada';
+  mostrarMandos(false);
+  const i = IDIOMAS.findIndex((x) => x[0] === Idioma.actual);
+  IDIOMAS.forEach(([l], k) => { const b = document.getElementById('bIdioma_' + l); b.classList.toggle('gris', k !== i); delete b.dataset.pxk; });
+  UI.mostrar('capaIdioma', { sel: Math.max(0, i) });
+}
+function elegirIdioma(l, quedarse) {
+  Idioma.poner(l);
+  aplicarIdiomaZonda(l);
+  /* los botones de opción se vuelven a escribir en el idioma nuevo */
+  for (const [b, op] of UI.opciones) UI.pintarOpcion(b, op);
+  if (!quedarse) irPortada();
+  else if (UI.actual) UI.alPixelar(UI.capa(UI.actual));
+}
 function armarPortada() {
   const b = document.getElementById('bJugar');
-  b.textContent = Prog.empezado ? 'SEGUIR' : 'JUGAR';
+  b.textContent = tr(Prog.empezado ? 'seguirPartida' : 'jugar');
   delete b.dataset.pxk;
 }
 function armarCapitulos() {
@@ -3645,7 +3927,7 @@ function armarCapitulos() {
     const p = document.createElement('p');
     p.className = 'txt';
     const tomadas = cap.salas.filter((s) => Prog.cartas[s.id + ':0']).length;
-    p.textContent = abierto ? `CARTAS ${tomadas}/${cartasDe(cap)} · MUERTES ${Prog.muertes[i] || 0}${Prog.tiempos[i] ? ' · MEJOR ' + reloj(Prog.tiempos[i]) : ''}` : 'TODAVÍA NO';
+    p.textContent = abierto ? tr('capInfo', tomadas, cartasDe(cap), Prog.muertes[i] || 0) + (Prog.tiempos[i] ? tr('mejor', reloj(Prog.tiempos[i])) : '') : tr('todaviaNo');
     lista.appendChild(p);
   });
 }
@@ -3653,7 +3935,7 @@ function armarCartas() {
   const lista = document.getElementById('listaCartas');
   lista.innerHTML = '';
   const n = Object.keys(Prog.cartas).length;
-  const cab = document.createElement('p'); cab.className = 'txt'; cab.textContent = `ENCONTRASTE ${n} DE ${TOTAL_CARTAS}`;
+  const cab = document.createElement('p'); cab.className = 'txt'; cab.textContent = tr('encontraste', n, TOTAL_CARTAS);
   lista.appendChild(cab);
   for (const cap of CAPITULOS) for (const s of cap.salas) {
     const c = CARTAS[s.id];
@@ -3662,7 +3944,7 @@ function armarCartas() {
     panel.className = 'panel';
     const tiene = Prog.cartas[s.id + ':0'];
     panel.innerHTML = tiene
-      ? `<p class="txt izq"><b>DE ${c.de.toUpperCase()} PARA ${c.a.toUpperCase()}</b></p><p class="txt izq">${c.t}</p>`
+      ? `<p class="txt izq"><b>${tr('deA', c.de.toUpperCase(), c.a.toUpperCase())}</b></p><p class="txt izq">${c.t}</p>`
       : `<p class="txt izq">${s.id} · ${s.nombre.toUpperCase()}</p><p class="txt izq">???</p>`;
     lista.appendChild(panel);
   }
@@ -3672,14 +3954,18 @@ function armarOpciones() {
   if (cont.dataset.listo) return;
   cont.dataset.listo = '1';
   const velocidades = [1, 0.9, 0.8, 0.7, 0.6];
+  const siNo = (v) => tr(v ? 'si' : 'no');
+  const vol = (k) => [() => { Opc[k] = lim(Math.round((Opc[k] - 0.1) * 10) / 10, 0, 1); }, () => { Opc[k] = lim(Math.round((Opc[k] + 0.1) * 10) / 10, 0, 1); }, () => { Opc[k] = Opc[k] >= 1 ? 0 : lim(Math.round((Opc[k] + 0.1) * 10) / 10, 0, 1); }];
+  const cambiarIdioma = (d) => () => { const i = IDIOMAS.findIndex((x) => x[0] === Idioma.actual); elegirIdioma(IDIOMAS[(i + d + IDIOMAS.length) % IDIOMAS.length][0], true); };
   const ops = [
-    ['MÚSICA', () => 'MÚSICA ' + barrita(Opc.musica), () => { Opc.musica = lim(Math.round((Opc.musica - 0.1) * 10) / 10, 0, 1); }, () => { Opc.musica = lim(Math.round((Opc.musica + 0.1) * 10) / 10, 0, 1); }, () => { Opc.musica = Opc.musica >= 1 ? 0 : lim(Math.round((Opc.musica + 0.1) * 10) / 10, 0, 1); }],
-    ['EFECTOS', () => 'EFECTOS ' + barrita(Opc.efectos), () => { Opc.efectos = lim(Math.round((Opc.efectos - 0.1) * 10) / 10, 0, 1); }, () => { Opc.efectos = lim(Math.round((Opc.efectos + 0.1) * 10) / 10, 0, 1); }, () => { Opc.efectos = Opc.efectos >= 1 ? 0 : lim(Math.round((Opc.efectos + 0.1) * 10) / 10, 0, 1); }],
-    ['TEMBLOR', () => 'TEMBLOR: ' + (Opc.temblor ? 'SÍ' : 'NO'), () => { Opc.temblor = !Opc.temblor; }, () => { Opc.temblor = !Opc.temblor; }],
-    ['VELOCIDAD', () => 'VELOCIDAD: ' + Math.round(Opc.velocidad * 100) + '%', () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[Math.max(0, i - 1)]; }, () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[(i + 1) % velocidades.length]; }],
-    ['DASH', () => 'DASH INFINITO: ' + (Opc.dashInfinito ? 'SÍ' : 'NO'), () => { Opc.dashInfinito = !Opc.dashInfinito; }, () => { Opc.dashInfinito = !Opc.dashInfinito; }],
-    ['INVENCIBLE', () => 'INVENCIBLE: ' + (Opc.invencible ? 'SÍ' : 'NO'), () => { Opc.invencible = !Opc.invencible; }, () => { Opc.invencible = !Opc.invencible; }],
-    ['RELOJ', () => 'RELOJ: ' + (Opc.reloj ? 'SÍ' : 'NO'), () => { Opc.reloj = !Opc.reloj; }, () => { Opc.reloj = !Opc.reloj; }],
+    ['IDIOMA', () => tr('idioma') + ': ' + IDIOMAS.find((x) => x[0] === Idioma.actual)[1], cambiarIdioma(-1), cambiarIdioma(1)],
+    ['MUSICA', () => tr('musica') + ' ' + barrita(Opc.musica), ...vol('musica')],
+    ['EFECTOS', () => tr('efectos') + ' ' + barrita(Opc.efectos), ...vol('efectos')],
+    ['TEMBLOR', () => tr('temblor') + ': ' + siNo(Opc.temblor), () => { Opc.temblor = !Opc.temblor; }, () => { Opc.temblor = !Opc.temblor; }],
+    ['VELOCIDAD', () => tr('velocidad') + ': ' + Math.round(Opc.velocidad * 100) + '%', () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[Math.max(0, i - 1)]; }, () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[(i + 1) % velocidades.length]; }],
+    ['DASH', () => tr('dashInf') + ': ' + siNo(Opc.dashInfinito), () => { Opc.dashInfinito = !Opc.dashInfinito; }, () => { Opc.dashInfinito = !Opc.dashInfinito; }],
+    ['INVENCIBLE', () => tr('invencible') + ': ' + siNo(Opc.invencible), () => { Opc.invencible = !Opc.invencible; }, () => { Opc.invencible = !Opc.invencible; }],
+    ['RELOJ', () => tr('reloj') + ': ' + siNo(Opc.reloj), () => { Opc.reloj = !Opc.reloj; }, () => { Opc.reloj = !Opc.reloj; }],
   ];
   for (const [id, texto, izq, der, tocar] of ops) {
     const b = document.createElement('button');
@@ -3785,7 +4071,7 @@ function arrancar() {
     bCapitulos: () => { armarCapitulos(); UI.mostrar('capaCapitulos', { apilar: true }); },
     bCartas: () => { armarCartas(); UI.mostrar('capaCartas', { apilar: true }); },
     bOpciones: () => { armarOpciones(); UI.mostrar('capaOpciones', { apilar: true }); },
-    bCreditos: () => { UI.mostrar('capaCreditos', { apilar: true }); },
+    bCreditos: () => { document.getElementById('creditosTxt').innerHTML = CREDITOS.slice(1).map((c) => `<p class="txt">${c}</p>`).join(''); UI.mostrar('capaCreditos', { apilar: true }); },
     bCapVolver: () => { UI.volver(); }, bCarVolver: () => { UI.volver(); }, bCredVolver: () => { UI.volver(); },
     bOpcVolver: () => { if (!UI.volver()) irPortada(); },
     bSeguir: seguir,
@@ -3797,9 +4083,11 @@ function arrancar() {
       else irPortada();
     },
   });
-  document.getElementById('creditosTxt').innerHTML = CREDITOS.slice(1).map((c) => `<p class="txt">${c}</p>`).join('');
   aplicarOpciones();
-  irPortada();
+  Idioma.iniciar('zonda:idioma', UI_ZONDA);
+  aplicarIdiomaZonda(Idioma.actual);
+  for (const [l] of IDIOMAS) document.getElementById('bIdioma_' + l).addEventListener('click', () => { UI.sonar('elegir'); elegirIdioma(l); });
+  mostrarIdioma();
   Bucle.iniciar(pasar, dibujar, () => Entrada.leerMando());
   /* sondas para las pruebas: nada de esto lo usa el juego */
   window.__Z = {
@@ -3812,6 +4100,21 @@ function arrancar() {
     sala() { const m = J.mundo; return m && { id: m.sala.id, salio: m.salio, muerta: m.p.muerta, estado: m.p.estado, x: m.p.x, y: m.p.y, dashes: m.p.dashes, cumbre: !!m.cumbre }; },
     estado() { return J.estado; },
     medidas() { return { msDibujo: Bucle.msDibujo, W: Pantalla.W, H: Pantalla.H, PX: Pantalla.PX, particulas: FX.part.length }; },
+    idioma(l) { if (l) elegirIdioma(l, true); return Idioma.actual; },
+    textos() { return { dialogo: DIALOGOS.inicio[0].t, carta: CARTAS['1-1'].t, sala: CAPITULOS[0].salas[0].nombre, capitulo: CAPITULOS[0].nombre, jugar: tr('jugar') }; },
+    /* letras de los tres idiomas que la fuente no tiene (saldrían como '?') */
+    letrasQueFaltan() {
+      const falta = new Set();
+      const mirar = (x) => { for (const ch of String(x).replace(/\{\d\}/g, '')) if (ch !== '?' && ch !== ' ' && glifoPx(ch).f === FUENTE_PX['?']) falta.add(ch); };
+      for (const l in UI_ZONDA) Object.values(UI_ZONDA[l]).forEach(mirar);
+      for (const T of [TEXTOS_ES, TEXTOS_ZONDA.en, TEXTOS_ZONDA.pt]) {
+        [T.CAP_SUB, T.NOMBRES, T.salas].forEach((o) => Object.values(o).forEach(mirar));
+        T.capitulos.forEach(mirar); T.CREDITOS.forEach(mirar);
+        Object.values(T.DIALOGOS).flat().forEach(mirar); Object.values(T.CARTAS).flat().forEach(mirar);
+      }
+      IDIOMAS.forEach(([, n]) => mirar(n));
+      return [...falta];
+    },
   };
 }
 arrancar();

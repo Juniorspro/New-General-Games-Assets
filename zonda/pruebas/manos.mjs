@@ -29,8 +29,12 @@ const esperar = (ms) => pag.waitForTimeout(ms);
 const sala = () => pag.evaluate(() => window.__Z.sala());
 const anda = (n) => pag.evaluate((n) => window.__Z.anda(n), n);
 
+/* 0. primero el idioma */
+await esperar(900);
+ver(await visible("#capaIdioma"), "antes del menú se elige idioma");
+await pag.tap("#bIdioma_es"); await esperar(400);
 /* 1. los menús con el dedo (con esperas de verdad: los paneles se animan) */
-await esperar(1200);
+await esperar(800);
 await foto("m01-titulo");
 for (const [boton, capa, volver] of [["#bCapitulos", "#capaCapitulos", "#bCapVolver"], ["#bCartas", "#capaCartas", "#bCarVolver"], ["#bOpciones", "#capaOpciones", "#bOpcVolver"], ["#bCreditos", "#capaCreditos", "#bCredVolver"]]) {
   await pag.tap(boton); await esperar(450);

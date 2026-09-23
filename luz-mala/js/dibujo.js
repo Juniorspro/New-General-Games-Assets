@@ -26,13 +26,16 @@ function ubicarLM(m, snap) {
   /* mira un poco hacia donde va: así se ve venir lo de adelante */
   const quiere = Math.abs(p.vx) > 20 ? sig(p.vx) * Math.min(34, W * 0.16) : VistaLM.mira * 0.985;
   VistaLM.mira = snap ? quiere : acercar(VistaLM.mira, quiere, 1.4);
+  /* mientras el jefe se presenta, la cámara lo mira a él */
+  const cine = typeof J !== 'undefined' && J.cine && m.jefe && J.cine.t < 1.5;
+  const fx = cine ? m.jefe.x + m.jefe.w / 2 : p.x + 4 + VistaLM.mira, fy = cine ? m.jefe.y + m.jefe.h / 2 : p.y + 6;
   let mx, my;
   if (sw <= W) mx = -(W - sw) / 2;
-  else mx = lim(p.x + 4 + VistaLM.mira - W / 2, 0, sw - W);
+  else mx = lim(fx - W / 2, 0, sw - W);
   if (sh <= usable) my = -(usable - sh) / 2;
-  else my = lim(p.y + 6 - usable * 0.56, 0, sh - usable);
+  else my = lim(fy - usable * 0.56, 0, sh - usable);
   if (snap) { VistaLM.x = mx; VistaLM.y = my; }
-  else { VistaLM.x += (mx - VistaLM.x) * 0.14; VistaLM.y += (my - VistaLM.y) * (Math.abs(my - VistaLM.y) > 60 ? 0.3 : 0.12); }
+  else { const k = cine ? 0.06 : 0.14; VistaLM.x += (mx - VistaLM.x) * k; VistaLM.y += (my - VistaLM.y) * (Math.abs(my - VistaLM.y) > 60 ? 0.3 : cine ? 0.06 : 0.12); }
 }
 
 /* ---------------- el fondo: dos capas que se mueven más lento que la sala ---------------- */
@@ -83,39 +86,52 @@ function dibujarFondoLM(g, zona) {
   }
 }
 
-/* ---------------- la sala: paredes, tablones, espinas, adornos (una vez) ---------------- */
+/* ---------------- la sala: paredes, tablones, espinas, adornos (una vez) ----------------
+   La capa sale con MARGEN_LM baldosas de más por cada lado: afuera de la sala
+   sigue la madera maciza del quebracho (con sus anillos), y las salidas siguen
+   como túneles. Así, en un teléfono parado, la sala no flota en una franja negra */
+const MARGEN_LM = 16;
 const cacheCapaLM = new Map();
+function mezclaHex(a, b, k) { const x = hexRGB(a), y = hexRGB(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join(''); }
 function capaLM(m) {
   const sala = m.sala, k = sala.id;
   if (cacheCapaLM.has(k)) return cacheCapaLM.get(k);
-  const Z = ZONA_ARTE[sala.zona], w = m.w, h = m.h, W = w * 8, H = h * 8;
+  const Z = ZONA_ARTE[sala.zona], w = m.w, h = m.h, M = MARGEN_LM, WW = w + 2 * M, HH = h + 2 * M, W = WW * 8, H = HH * 8, D = M * 8;
   const c = lienzoLM(W, H), g = c.getContext('2d');
   const id = g.createImageData(W, H), d = new Uint32Array(id.data.buffer);
   const mapa = sala.mapa, sol = (x, y) => x < 0 || y < 0 || x >= w || y >= h ? (mapa[lim(y, 0, h - 1)][lim(x, 0, w - 1)] === '#') : mapa[y][x] === '#';
+  const solM = (x, y) => sol(x - M, y - M);
   /* profundidad: a cuántas baldosas está cada pared del aire más cercano */
-  const prof = new Uint8Array(w * h).fill(9), cola = [];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!sol(x, y)) { prof[y * w + x] = 0; cola.push(x, y); }
+  const prof = new Uint8Array(WW * HH).fill(9), cola = [];
+  for (let y = 0; y < HH; y++) for (let x = 0; x < WW; x++) if (!solM(x, y)) { prof[y * WW + x] = 0; cola.push(x, y); }
   for (let i = 0; i < cola.length; i += 2) {
-    const x = cola[i], y = cola[i + 1], v = prof[y * w + x] + 1;
+    const x = cola[i], y = cola[i + 1], v = prof[y * WW + x] + 1;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
       const nx = x + dx, ny = y + dy;
-      if (nx >= 0 && ny >= 0 && nx < w && ny < h && prof[ny * w + nx] > v) { prof[ny * w + nx] = v; if (v < 4) cola.push(nx, ny); }
+      if (nx >= 0 && ny >= 0 && nx < WW && ny < HH && prof[ny * WW + nx] > v) { prof[ny * WW + nx] = v; if (v < 4) cola.push(nx, ny); }
     }
   }
   const col = {
     madera: c32LM(Z.madera), osc: c32LM(Z.maderaOsc), clara: c32LM(Z.maderaClara), borde: c32LM(Z.borde), vetas: c32LM(Z.vetas),
     musgo: c32LM(Z.musgo), musgoClaro: c32LM(Z.musgoClaro), negro: c32LM('#060409'), negro2: c32LM('#0c0810'),
+    hondo: c32LM(mezclaHex('#060409', Z.maderaOsc, 0.32)), anillo: c32LM(mezclaHex('#060409', Z.vetas, 0.55)),
   };
-  for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
-    if (!sol(tx, ty)) continue;
-    const pr = prof[ty * w + tx];
-    const arr = !sol(tx, ty - 1), aba = !sol(tx, ty + 1), izq = !sol(tx - 1, ty), der = !sol(tx + 1, ty);
+  /* los anillos del tronco: círculos alrededor de un centro lejano, un poco torcidos */
+  const acx = w * 4 + D + (ruidoLM(k.length, 3, 7) - 0.5) * w * 6, acy = h * 4 + D + h * 14;
+  for (let ty = 0; ty < HH; ty++) for (let tx = 0; tx < WW; tx++) {
+    if (!solM(tx, ty)) continue;
+    const pr = prof[ty * WW + tx];
+    const arr = !solM(tx, ty - 1), aba = !solM(tx, ty + 1), izq = !solM(tx - 1, ty), der = !solM(tx + 1, ty);
     for (let ly = 0; ly < 8; ly++) for (let lx = 0; lx < 8; lx++) {
       const X = tx * 8 + lx, Y = ty * 8 + ly, b = BAYER[(Y & 3) * 4 + (X & 3)];
       /* esquinas redondeadas donde el aire toca dos lados */
       if ((arr && izq && lx + ly < 2) || (arr && der && (7 - lx) + ly < 2) || (aba && izq && lx + (7 - ly) < 2) || (aba && der && (7 - lx) + (7 - ly) < 2)) continue;
       let v;
-      if (pr >= 3) v = b < 3 ? col.negro2 : col.negro;
+      if (pr >= 3) {
+        const dd = Math.hypot(X - acx, (Y - acy) * 1.15) + Math.sin(X * 0.05) * 3 + ruidoLM(X >> 3, Y >> 3, 9) * 2;
+        const anillo = dd % 9;
+        v = anillo < 1 ? (b < 10 ? col.anillo : col.hondo) : anillo < 3 ? (b < 5 ? col.hondo : col.negro2) : (b < 2 ? col.negro2 : col.negro);
+      }
       else if (pr === 2) v = b < 5 ? col.osc : col.negro2;
       else {
         v = col.madera;
@@ -136,6 +152,7 @@ function capaLM(m) {
     }
   }
   g.putImageData(id, 0, 0);
+  g.translate(D, D);
   /* segunda pasada: lo que cuelga y lo que crece, fuera de las baldosas */
   for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
     if (!sol(tx, ty)) continue;
@@ -174,6 +191,7 @@ function capaLM(m) {
     else if (ch === 'y') casita(g, X + 4, Y + 8, tx);
     else if (ch === 'f') { g.fillStyle = '#3a2a1e'; g.fillRect(X + 3, Y, 1, 6); }
   }
+  if (cacheCapaLM.size >= 10) cacheCapaLM.delete(cacheCapaLM.keys().next().value);
   cacheCapaLM.set(k, c);
   return c;
 }
@@ -284,7 +302,7 @@ function dibujarRompibles(g, m, ox, oy, t) {
       const gx = Math.floor(ruidoLM(i, r.x, 71) * (r.w - 2)) + 1, gy = Math.floor(ruidoLM(i, r.y, 72) * (r.h - 3)) + 1;
       g.fillRect(x + tiem + gx, y + gy, 1, 2 + (i % 3));
     }
-    if (r.t > 0) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x, y, r.w, r.h); r.t -= DT; }
+    if (r.t > 0) { g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(x, y, r.w, r.h); r.t -= Reloj.d; }
   }
 }
 function dibujarCosasLM(g, m, ox, oy, t, J) {
@@ -301,10 +319,10 @@ function dibujarCosasLM(g, m, ox, oy, t, J) {
         dibujarSprite(g, prendido ? SPR.cosa.farolPrendido : SPR.cosa.farol, x + 4 + bal, y + 14, 1);
         break;
       }
-      case 'terron': dibujarSprite(g, SPR.cosa.terron, x + 4, y + 8, 1, c.flash > 0 ? { blanco: true } : null); if (c.flash > 0) c.flash -= DT; break;
+      case 'terron': dibujarSprite(g, SPR.cosa.terron, x + 4, y + 8, 1, c.flash > 0 ? { blanco: true } : null); if (c.flash > 0) c.flash -= Reloj.d; break;
       case 'chispaExtra': {
         const yy = y + 4 + Math.sin(t * 2.6) * 2;
-        halo(g, x + 4, yy, 9, '#f6ffa8', 0.35);
+        g.globalCompositeOperation = 'lighter'; brillo(g, x + 4, yy, 11, '246,255,168', 0.5); g.globalCompositeOperation = 'source-over';
         g.fillStyle = '#ffffff'; g.fillRect(Math.round(x + 3), Math.round(yy - 1), 2, 2);
         g.fillStyle = '#f6ffa8'; g.fillRect(Math.round(x + 4), Math.round(yy - 3), 1, 6); g.fillRect(Math.round(x + 1), Math.round(yy), 6, 1);
         break;
@@ -338,36 +356,30 @@ function dibujarCosasLM(g, m, ox, oy, t, J) {
   const s = J.prog.sombra;
   if (s && s.sala === m.sala.id) {
     const yy = oy + s.y + Math.sin(t * 2.2) * 2;
-    halo(g, ox + s.x, yy, 10, '#9fb8ff', 0.3);
+    g.globalCompositeOperation = 'lighter'; brillo(g, ox + s.x, yy, 12, '159,184,255', 0.45); g.globalCompositeOperation = 'source-over';
     g.fillStyle = '#1a1030'; g.fillRect(Math.round(ox + s.x - 2), Math.round(yy - 2), 5, 5);
     g.fillStyle = '#c8d8ff'; g.fillRect(Math.round(ox + s.x - 1), Math.round(yy - 1), 1, 1); g.fillRect(Math.round(ox + s.x + 1), Math.round(yy - 1), 1, 1);
   }
 }
-function globoAccion(g, x, y, txt, t) {
+function globoAccion(g, x, y, clave, t) {
   const b = Math.round(Math.sin(t * 5) * 1);
-  textoPx(g, txt, Math.round(x), Math.round(y - 8 + b), { alin: 'centro', grad: GRAD.blanco });
-  g.fillStyle = '#fff4c2';
+  textoFino(g, tr(clave === 'HABLAR' ? 'hablar' : 'descansar'), Math.round(x), Math.round(y - 10 + b), { alin: 'centro', col: '#fff6d8', halo: '#f6ffa8' });
+  g.fillStyle = '#f6ffa8';
   g.fillRect(Math.round(x) - 1, Math.round(y + b) - 1, 3, 1); g.fillRect(Math.round(x), Math.round(y + b) - 2, 1, 1);
 }
 
-const cacheHaloLM = new Map();
-function halo(g, x, y, r, col, fuerza) {
-  const k = r + col + Math.round(fuerza * 20);
-  let c = cacheHaloLM.get(k);
-  if (!c) {
-    c = lienzoLM(r * 2 + 1, r * 2 + 1);
-    const q = c.getContext('2d');
-    q.fillStyle = col;
-    for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) {
-      const d = Math.hypot(xx, yy) / r;
-      if (d <= 1 && BAYER[((yy + 64) & 3) * 4 + ((xx + 64) & 3)] / 16 < (1 - d) * fuerza * 2) q.fillRect(xx + r, yy + r, 1, 1);
-    }
-    cacheHaloLM.set(k, c);
-  }
-  g.drawImage(c, Math.round(x - r), Math.round(y - r));
-}
 
 /* ---------------- bichos, balas y jefes ---------------- */
+/* dónde tiene los ojos cada bicho (el primer píxel 'e' de su dibujo): en lo
+   oscuro, lo primero que se ve de un bicho son los ojos */
+const OJOS_LM = {};
+function ojosDe(tipo) {
+  if (OJOS_LM[tipo] !== undefined) return OJOS_LM[tipo];
+  const f = DIB_BICHO[tipo] && DIB_BICHO[tipo][0], col = PAL_BICHO[tipo] && PAL_BICHO[tipo].e;
+  let r = null;
+  if (f && col) for (let y = 0; y < f.length && !r; y++) { const x = f[y].indexOf('e'); if (x >= 0) r = { x, y, w: f[0].length, h: f.length, col: hexRGB(col).join(',') }; }
+  return (OJOS_LM[tipo] = r);
+}
 function dibujarBichosLM(g, m, ox, oy, t) {
   for (const b of m.bichos) {
     if (b.muerto) continue;
@@ -376,7 +388,8 @@ function dibujarBichosLM(g, m, ox, oy, t) {
     if (b.tipo === 'grillo') f = !pisaLM(m, b) ? s[2] : b.espera < 0.2 ? s[1] : s[0];
     if (b.tipo === 'aranita' && b.est === 'cuelga') { g.fillStyle = 'rgba(210,220,245,0.5)'; g.fillRect(ox + Math.round(b.x + b.w / 2), oy, 1, Math.max(0, Math.round(b.y))); }
     const dir = b.tipo === 'polilla' ? 1 : b.dir;
-    dibujarSprite(g, f, ox + b.x + b.w / 2, oy + b.y + b.h + (b.tipo === 'mosquito' ? 1 : 0), dir, b.flash > 0 ? { blanco: true } : null);
+    /* al recibir el golpe se aplasta y se pone blanco */
+    dibujarSprite(g, f, ox + b.x + b.w / 2, oy + b.y + b.h + (b.tipo === 'mosquito' ? 1 : 0), dir, b.flash > 0 ? { blanco: true, sx: 1.25, sy: 0.8 } : null);
     if (b.tipo === 'hormiga' && b.est === 'carga') { g.fillStyle = '#ffcc60'; g.fillRect(ox + Math.round(b.x + (b.dir > 0 ? b.w + 1 : -2)), oy + Math.round(b.y + 2), 1, 1); }
   }
 }
@@ -433,7 +446,7 @@ function dibujarJefeLM(g, m, ox, oy, t) {
 }
 
 /* ---------------- Chispa ---------------- */
-function animLM() { return { sx: 1, sy: 1, parpadeo: 2, estela: [], flash: 0, corre: 0 }; }
+function animLM() { return { sx: 1, sy: 1, parpadeo: 2, estela: [], flash: 0, corre: 0, cola: [], quieta: 0, alas: 0, paso: -1, dir: 0 }; }
 function pasarAnimLM(A, m) {
   const p = m.p;
   A.sx = acercar(A.sx, 1, 4 * DT); A.sy = acercar(A.sy, 1, 4 * DT);
@@ -443,6 +456,28 @@ function pasarAnimLM(A, m) {
   if (p.dashT > 0) A.estela.push({ x: p.x, y: p.y, dir: p.dir, v: 1 });
   for (const e of A.estela) e.v -= 0.12;
   while (A.estela.length && A.estela[0].v <= 0) A.estela.shift();
+  if (p.muerta) return;
+  /* al darse vuelta en el piso se aplasta un toque */
+  if (A.dir && A.dir !== p.dir && p.enSuelo) { A.sx = 0.72; A.sy = 1.12; }
+  A.dir = p.dir;
+  /* quieta un rato: cada tanto se sacude las alas */
+  const quieta = p.enSuelo && Math.abs(p.vx) < 10 && !p.golpe && !p.curando;
+  A.quieta = quieta ? A.quieta + DT : 0;
+  if (A.alas > 0) A.alas -= DT;
+  else if (A.quieta > 3 && Math.random() < DT * 0.3) A.alas = 0.55;
+  /* las pisadas levantan polvito */
+  const Z = ZONA_ARTE[m.sala.zona];
+  if (p.enSuelo && Math.abs(p.vx) > 10) {
+    const f = Math.floor(A.corre / 6) % 6;
+    if (f !== A.paso && (f === 0 || f === 3)) FX.emitir(p.x + 4 - p.dir * 2, p.y + 12, 1, { cols: Z.polvo, vx: -p.dir * 14, vy: -8, disp: 6, vida: 12, arrastre: 0.9 });
+    A.paso = f;
+  } else A.paso = -1;
+  /* resbalando por la resina de la pared: gotitas que caen */
+  if (p.pared && Math.random() < 0.3) FX.emitir(p.x + 4 + p.pared * 5, p.y + 3, 1, { cols: ['#ffb040', '#ffe08a', Z.maderaClara], vy: 30, disp: 4, g: 200, vida: 16 });
+  /* la luz de la cola deja estela cuando va rápido */
+  if (Math.hypot(p.vx, p.vy) > 70) A.cola.push({ x: p.x + 4 - p.dir * 5, y: p.y + 9, v: 1 });
+  for (const c of A.cola) c.v -= 0.08;
+  while (A.cola.length && A.cola[0].v <= 0) A.cola.shift();
 }
 function spriteChispa(m, A, J) {
   const p = m.p, S = SPR.chispa, t = VistaLM.t;
@@ -451,21 +486,33 @@ function spriteChispa(m, A, J) {
   if (p.curando) return S.cura[Math.floor(t * 6) % 2];
   if (p.invulnT > LF.INVULN - 0.3) return S.duele;
   if (p.dashT > 0) return S.dash;
-  if (p.golpe) return p.golpe.tipo === 'arr' ? S.golpeArr : p.golpe.tipo === 'aba' ? S.golpeAba : S.golpe;
+  if (p.golpe) {
+    if (p.golpe.tipo === 'arr') return S.golpeArr;
+    if (p.golpe.tipo === 'aba') return S.golpeAba;
+    return p.golpe.t < 0.035 ? S.golpePrep : p.golpe.t < 0.13 ? S.golpe : S.golpeFin;
+  }
   if (p.pared) return S.pared;
   if (!p.enSuelo) return p.vy < -40 ? S.sube : S.cae[Math.floor(t * 8) % 2];
-  if (Math.abs(p.vx) > 10) return S.corre[Math.floor(A.corre / 7) % 4];
+  if (Math.abs(p.vx) > 10) return S.corre[Math.floor(A.corre / 6) % 6];
+  if (A.alas > 0) return S.alas[Math.floor(t * 14) % 2];
   if (A.parpadeo < 0) return S.parpadea;
-  return S.quieta[Math.floor(t * 2) % 2];
+  return S.quieta[Math.floor(t * 2.6) % 4];
 }
 function dibujarChispa(g, m, A, ox, oy, J) {
   const p = m.p;
   for (const e of A.estela) dibujarSprite(g, SPR.chispa.dash, ox + e.x + 4, oy + e.y + 12, e.dir, { blanco: true, alfa: e.v * 0.35 });
+  if (A.cola.length) {
+    g.globalCompositeOperation = 'lighter';
+    for (const c of A.cola) { g.fillStyle = `rgba(246,255,168,${c.v * 0.55})`; g.fillRect(Math.round(ox + c.x), Math.round(oy + c.y), 1, 1); }
+    g.globalCompositeOperation = 'source-over';
+  }
   /* titila mientras es invulnerable */
   if (p.invulnT > 0 && !p.muerta && Math.floor(p.invulnT * 16) % 2 === 0 && p.invulnT < LF.INVULN - 0.3) return;
   const s = spriteChispa(m, A, J);
   const dy = J.sentada ? -5 : 0;
   dibujarSprite(g, s, ox + p.x + 4, oy + p.y + 12 + dy, p.dir, { sx: A.sx, sy: A.sy, blanco: A.flash > 0 });
+  /* la cola brilla sola, y late despacio */
+  if (!p.muerta) { g.globalCompositeOperation = 'lighter'; brillo(g, ox + p.x + 4 - p.dir * 4, oy + p.y + 9 + dy, 6, '246,255,168', 0.22 + Math.sin(VistaLM.t * 3) * 0.08); g.globalCompositeOperation = 'source-over'; }
   /* el tajo de la espina */
   if (p.golpe && p.golpe.t < LF.GOLPE_T * 0.55) {
     const G = p.golpe, fr = Math.min(2, Math.floor(G.t / 0.035)), T = SPR.tajo[G.tipo][fr];
@@ -478,36 +525,34 @@ function dibujarChispa(g, m, A, ox, oy, J) {
   }
 }
 
-/* ---------------- la luz ---------------- */
-let lienzoOscLM = null, pixOscLM = null;
+/* ---------------- la luz: oscuridad suave con agujeros de luz, y el brillo encima ----------------
+   No es la trama de ZONDA: la oscuridad se pinta a media resolución en un
+   lienzo aparte, las luces le cortan agujeros con degradés radiales y se
+   agranda suavizada. Después, encima, cada luz suma su color. */
+let lienzoOscLM = null;
 function oscuridadLM(g, luces, fuerza) {
-  const W = Math.ceil(Pantalla.W / 2), H = Math.ceil(Pantalla.H / 2);
-  if (!lienzoOscLM || lienzoOscLM.width !== W || lienzoOscLM.height !== H) {
-    lienzoOscLM = lienzoLM(W, H);
-    const q = lienzoOscLM.getContext('2d'), id = q.createImageData(W, H);
-    pixOscLM = { q, id, d: new Uint32Array(id.data.buffer) };
+  const W = Pantalla.W, H = Pantalla.H, w = Math.ceil(W / 2), h = Math.ceil(H / 2);
+  if (!lienzoOscLM || lienzoOscLM.width !== w || lienzoOscLM.height !== h) lienzoOscLM = lienzoLM(w, h);
+  const q = lienzoOscLM.getContext('2d');
+  q.globalCompositeOperation = 'source-over';
+  q.clearRect(0, 0, w, h);
+  q.fillStyle = `rgba(5,3,8,${lim(fuerza * 0.88, 0, 0.94)})`;
+  q.fillRect(0, 0, w, h);
+  /* la viñeta: los bordes, más oscuros */
+  const v = q.createRadialGradient(w / 2, h * 0.42, Math.min(w, h) * 0.35, w / 2, h * 0.42, Math.max(w, h) * 0.72);
+  v.addColorStop(0, 'rgba(5,3,8,0)'); v.addColorStop(1, 'rgba(5,3,8,0.45)');
+  q.fillStyle = v; q.fillRect(0, 0, w, h);
+  q.globalCompositeOperation = 'destination-out';
+  for (const l of luces) {
+    if (l.solo) continue;
+    const x = l.x / 2, y = l.y / 2, r = l.r / 2, k = l.k || 1;
+    if (x + r < 0 || x - r > w || y + r < 0 || y - r > h || r <= 0) continue;
+    const grd = q.createRadialGradient(x, y, 0, x, y, r);
+    grd.addColorStop(0, `rgba(0,0,0,${k})`); grd.addColorStop(0.5, `rgba(0,0,0,${k * 0.62})`); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    q.fillStyle = grd; q.fillRect(x - r, y - r, r * 2, r * 2);
   }
-  const d = pixOscLM.d, negro = [0, 70, 130, 185, 225].map((a) => c32LM('#050308', a));
-  /* solo las luces que tocan la pantalla */
-  const L = luces.filter((l) => l.x + l.r > 0 && l.x - l.r < W * 2 && l.y + l.r > 0 && l.y - l.r < H * 2).map((l) => ({ x: l.x / 2, y: l.y / 2, r: l.r / 2, r2: (l.r / 2) * (l.r / 2), k: l.k || 1 }));
-  for (let y = 0; y < H; y++) {
-    const fila = y * W;
-    for (let x = 0; x < W; x++) {
-      let k = 1;
-      for (let i = 0; i < L.length; i++) {
-        const l = L[i], dx = x - l.x, dy = y - l.y, dd = dx * dx + dy * dy;
-        if (dd >= l.r2) continue;
-        const q = 1 - (1 - Math.sqrt(dd / l.r2)) * l.k;
-        if (q < k) k = q;
-      }
-      /* la viñeta: los bordes de la pantalla un poco más oscuros */
-      const vx = (x - W / 2) / (W / 2), vy = (y - H * 0.42) / (H * 0.6), vi = vx * vx + vy * vy;
-      const v = k * fuerza * 3.4 + (vi > 0.55 ? (vi - 0.55) * 1.6 : 0) + BAYER[(y & 3) * 4 + (x & 3)] / 16 - 0.5;
-      d[fila + x] = negro[v < 0 ? 0 : v > 4 ? 4 : Math.round(v)];
-    }
-  }
-  pixOscLM.q.putImageData(pixOscLM.id, 0, 0);
-  g.drawImage(lienzoOscLM, 0, 0, W * 2, H * 2);
+  q.globalCompositeOperation = 'source-over';
+  g.save(); g.imageSmoothingEnabled = true; g.drawImage(lienzoOscLM, 0, 0, w * 2, h * 2); g.restore();
 }
 /* el farol del pueblo se prende con el primero que vuelva a tener luz */
 function farolPrendido(c, J) { return c.zona === 'pueblo' ? Object.keys(J.prog.faroles).length > 0 : !!J.prog.faroles[c.zona]; }
@@ -518,39 +563,136 @@ function oscuroDe(m, J) {
   let f = ZONAS[zona].luz;
   if (zona === 'pueblo') f *= 1 - 0.18 * Object.keys(J.prog.faroles).length;
   else if (J.prog.faroles[zona]) f *= 0.55;
-  if (m.oscuro) f = Math.max(f, 0.93);
+  if (m.oscuro) f = Math.max(f, 1);
   return f;
 }
+/* cada luz: dónde, qué tan grande, cuánto corta la oscuridad y de qué color brilla */
 function lucesDe(m, J, ox, oy, t) {
   const p = m.p, luces = [];
-  const brillo = 40 + p.luz * 0.18 + (p.curando ? 10 + Math.sin(t * 20) * 3 : 0);
-  if (!p.muerta || p.tMuerta < 0.8) luces.push({ x: ox + p.x + 4, y: oy + p.y + 7, r: p.muerta ? brillo * (1 - p.tMuerta / 0.8) : brillo });
+  const r0 = 44 + p.luz * 0.2 + (p.curando ? 12 + Math.sin(t * 20) * 3 : 0);
+  if (!p.muerta || p.tMuerta < 0.8) luces.push({ x: ox + p.x + 4, y: oy + p.y + 7, r: p.muerta ? r0 * (1 - p.tMuerta / 0.8) : r0, col: '200,255,120', a: 0.2 });
   for (const a of m.adornos) {
-    if (a.c === 'h') luces.push({ x: ox + a.x + 4, y: oy + a.y + 5, r: 22, k: 0.8 });
-    else if (a.c === 'y') luces.push({ x: ox + a.x + 4 + ((a.x >> 3) % 2 ? -8 : 8), y: oy + a.y - 1, r: 30, k: 0.85 });
-    else if (a.c === 'f') luces.push({ x: ox + a.x + 4, y: oy + a.y + 8, r: 40 + Math.sin(t * 9 + a.x) * 2, k: 0.9 });
+    if (a.c === 'h') luces.push({ x: ox + a.x + 4, y: oy + a.y + 5, r: 24, k: 0.8, col: '80,220,200', a: 0.16 });
+    else if (a.c === 'y') luces.push({ x: ox + a.x + 4 + ((a.x >> 3) % 2 ? -8 : 8), y: oy + a.y - 1, r: 32, k: 0.85, col: '255,190,110', a: 0.18 });
+    else if (a.c === 'f') luces.push({ x: ox + a.x + 4, y: oy + a.y + 8, r: 42 + Math.sin(t * 9 + a.x) * 2, k: 0.9, col: '255,200,120', a: 0.22 });
   }
   for (const c of m.cosas) {
-    if (c.tipo === 'banco') luces.push({ x: ox + c.x + 8, y: oy + c.y + 2, r: 34, k: 0.9 });
-    else if (c.tipo === 'farol' && farolPrendido(c, J)) luces.push({ x: ox + c.x + 4, y: oy + c.y + 8, r: 96 });
-    else if (c.tipo === 'chispaExtra') luces.push({ x: ox + c.x + 4, y: oy + c.y + 4, r: 26 });
-    else if (c.tipo === 'npc') luces.push({ x: ox + c.x + 8, y: oy + c.y + 8, r: 26, k: 0.7 });
-    else if (c.tipo === 'ambar') luces.push({ x: ox + c.x + 1, y: oy + c.y + 1, r: 8, k: 0.8 });
+    if (c.tipo === 'banco') luces.push({ x: ox + c.x + 8, y: oy + c.y + 2, r: 36, k: 0.9, col: '90,230,210', a: 0.2 });
+    else if (c.tipo === 'farol' && farolPrendido(c, J)) luces.push({ x: ox + c.x + 4, y: oy + c.y + 8, r: 104, col: '255,200,110', a: 0.3 });
+    else if (c.tipo === 'chispaExtra') luces.push({ x: ox + c.x + 4, y: oy + c.y + 4, r: 28, col: '246,255,168', a: 0.3 });
+    else if (c.tipo === 'npc') luces.push({ x: ox + c.x + 8, y: oy + c.y + 8, r: 28, k: 0.7 });
+    else if (c.tipo === 'ambar') luces.push({ x: ox + c.x + 1, y: oy + c.y + 1, r: 9, k: 0.8, col: '255,170,60', a: 0.3 });
   }
-  for (const q of m.pinchos) if (q.liquido) for (let x = q.x + 8; x < q.x + q.w; x += 20) luces.push({ x: ox + x, y: oy + q.y, r: 26, k: 0.85 });
-  for (const b of m.balas) if (b.tipo === 'acido') luces.push({ x: ox + b.x, y: oy + b.y, r: 10, k: 0.8 });
+  for (const b of m.bichos) {
+    const o = !b.muerto && ojosDe(b.tipo);
+    if (!o) continue;
+    const dir = b.tipo === 'polilla' ? 1 : b.dir, cx = ox + b.x + b.w / 2, by = oy + b.y + b.h + (b.tipo === 'mosquito' ? 1 : 0);
+    const dx = Math.round(cx - (dir < 0 ? o.w - (o.w >> 1) : o.w >> 1));
+    luces.push({ x: dx + (dir < 0 ? o.w - 1 - o.x : o.x) + 0.5, y: Math.round(by - o.h) + o.y + 0.5, r: 9, col: o.col, a: 0.5 + Math.sin(t * 5 + b.x0) * 0.12, solo: true });
+  }
+  for (const q of m.pinchos) if (q.liquido) for (let x = q.x + 8; x < q.x + q.w; x += 20) luces.push({ x: ox + x, y: oy + q.y, r: 28, k: 0.85, col: '255,150,60', a: 0.16 });
+  for (const b of m.balas) if (b.tipo === 'acido') luces.push({ x: ox + b.x, y: oy + b.y, r: 12, k: 0.8, col: '220,255,60', a: 0.3 });
   const s = J.prog.sombra;
-  if (s && s.sala === m.sala.id) luces.push({ x: ox + s.x, y: oy + s.y, r: 22, k: 0.8 });
-  if (m.jefe && m.jefe.tipo === 'reina' && !m.jefe.muerto) luces.push({ x: ox + m.jefe.x + (m.jefe.dir < 0 ? 8 : m.jefe.w - 8), y: oy + m.jefe.y + 10, r: 20, k: 0.7 });
+  if (s && s.sala === m.sala.id) luces.push({ x: ox + s.x, y: oy + s.y, r: 24, k: 0.8, col: '150,180,255', a: 0.25 });
+  if (m.jefe && m.jefe.tipo === 'reina' && !m.jefe.muerto) luces.push({ x: ox + m.jefe.x + (m.jefe.dir < 0 ? 8 : m.jefe.w - 8), y: oy + m.jefe.y + 10, r: 22, k: 0.7, col: '255,210,60', a: 0.3 });
+  if (J.orbeFarol) luces.push({ x: ox + J.orbeFarol.x, y: oy + J.orbeFarol.y, r: 40, col: '255,240,170', a: 0.5 });
+  for (const a of J.ambiente) luces.push({ x: ox + a.x, y: oy + a.y, r: 10, k: 0.4 });
   return luces;
 }
-/* un poco de color encima de la oscuridad: la luz tiñe */
-function tinteLM(g, m, J, ox, oy) {
+/* el brillo: cada luz suma su color encima de la oscuridad */
+function brilloLuces(g, luces) {
   g.globalCompositeOperation = 'lighter';
-  const p = m.p;
-  if (!p.muerta) halo(g, ox + p.x + 4, oy + p.y + 7, 16, '#1e2808', 0.35);
-  for (const c of m.cosas) if (c.tipo === 'farol' && farolPrendido(c, J)) halo(g, ox + c.x + 4, oy + c.y + 8, 30, '#402a08', 0.6);
-  for (const q of m.pinchos) if (q.liquido) for (let x = q.x + 8; x < q.x + q.w; x += 30) halo(g, ox + x, oy + q.y, 14, '#3a1a04', 0.6);
+  for (const l of luces) if (l.col) brillo(g, l.x, l.y, l.r * 0.62, l.col, l.a || 0.2);
+  g.globalCompositeOperation = 'source-over';
+}
+
+/* ---------------- lo de adelante: siluetas que pasan más rápido que la sala ---------------- */
+const cacheFrente = new Map();
+function frenteDe(zona, arriba) {
+  const k = zona + arriba;
+  if (cacheFrente.has(k)) return cacheFrente.get(k);
+  const W = 320, H = arriba ? 26 : 14, c = lienzoLM(W, H), g = c.getContext('2d');
+  g.fillStyle = '#030206';
+  for (let x = 0; x < W; x++) {
+    const n = ruidoLM(x >> 3, arriba ? 1 : 2, 131), n2 = ruidoLM(x, 3, 132);
+    if (arriba) {
+      /* raíces colgando, telas o gotas, según la zona */
+      if (zona === 'tela') { if (n2 > 0.985) { g.fillStyle = 'rgba(200,210,240,0.25)'; g.fillRect(x, 0, 1, 10 + n * 16); g.fillStyle = '#030206'; } }
+      else if (n > 0.62) { const largo = 3 + Math.round((n - 0.62) * 50 + Math.sin(x * 0.7) * 2); g.fillRect(x, 0, 1, Math.min(H, largo)); }
+      else if (n2 > 0.97) g.fillRect(x, 0, 1, 4 + n * 14);
+      g.fillRect(x, 0, 1, 2 + Math.round(n * 3));
+    } else {
+      const alto = zona === 'pueblo' || zona === 'raices' ? Math.round(n * 6 + (n2 > 0.9 ? 5 : 0)) : Math.round(n * 3);
+      g.fillRect(x, H - alto, 1, alto);
+    }
+  }
+  cacheFrente.set(k, c);
+  return c;
+}
+function dibujarFrente(g, zona) {
+  const W = Pantalla.W, U = VistaLM.usable || Pantalla.H;
+  for (const arriba of [true, false]) {
+    const f = frenteDe(zona, arriba), T = f.width;
+    const x0 = -Math.round((VistaLM.x * 1.35) % T) - (VistaLM.x < 0 ? T : 0);
+    g.globalAlpha = 0.9;
+    for (let x = x0 - T; x < W; x += T) g.drawImage(f, x, arriba ? 0 : U - f.height);
+    g.globalAlpha = 1;
+  }
+}
+
+/* ---------------- los efectos del mundo ---------------- */
+function dibujarCadaveres(g, J, ox, oy) {
+  for (const c of J.cadaveres) {
+    const s = SPR.bichos[c.tipo];
+    if (!s) continue;
+    const a = 1 - c.t / 0.7;
+    g.save(); g.globalAlpha = Math.max(0, a);
+    g.translate(Math.round(ox + c.x), Math.round(oy + c.y)); g.scale(1, -1);
+    dibujarSprite(g, s[0], 0, 0, c.dir, { blanco: c.t < 0.08 });
+    g.restore();
+  }
+}
+function dibujarEfectosLuz(g, J, ox, oy, t) {
+  g.globalCompositeOperation = 'lighter';
+  /* bichitos de luz que titilan en el aire */
+  for (const a of J.ambiente) {
+    const on = Math.sin(a.f * 3.1) * 0.5 + 0.5;
+    if (on < 0.15) continue;
+    const col = J.mundo.sala.zona === 'hormiguero' ? '255,170,80' : J.mundo.sala.zona === 'tela' ? '190,210,255' : '200,255,120';
+    brillo(g, ox + a.x, oy + a.y, 5, col, 0.4 * on);
+    g.fillStyle = `rgba(${col},${on})`; g.fillRect(Math.round(ox + a.x), Math.round(oy + a.y), 1, 1);
+  }
+  /* las ondas: al golpear, al rugir, al prenderse un farol */
+  for (const o of J.ondas) {
+    if (o.t < 0) continue;
+    const k = o.t / o.dur, e = 1 - Math.pow(1 - k, 3);
+    g.strokeStyle = `rgba(${o.col},${(1 - k) * 0.7})`; g.lineWidth = o.r > 40 ? 2 : 1;
+    g.beginPath(); g.arc(Math.round(ox + o.x) + 0.5, Math.round(oy + o.y) + 0.5, Math.max(1, o.r * e), 0, Math.PI * 2); g.stroke();
+  }
+  /* los rayos del jefe vencido */
+  if (J.rayos) {
+    const r = J.rayos, k = r.t < 0.3 ? r.t / 0.3 : Math.max(0, 1 - (r.t - 1.2) / 1.4);
+    g.save(); g.translate(ox + r.x, oy + r.y); g.rotate(r.t * 0.8);
+    for (let i = 0; i < 12; i++) {
+      g.rotate(Math.PI / 6);
+      const largo = 60 + (i % 3) * 30;
+      const grd = g.createLinearGradient(0, 0, 0, -largo);
+      grd.addColorStop(0, `rgba(255,250,220,${0.4 * k})`); grd.addColorStop(1, 'rgba(255,250,220,0)');
+      g.fillStyle = grd; g.beginPath(); g.moveTo(0, 0); g.lineTo(-4 - i % 2 * 3, -largo); g.lineTo(4 + i % 2 * 3, -largo); g.closePath(); g.fill();
+    }
+    g.restore();
+    brillo(g, ox + r.x, oy + r.y, 40, '255,250,220', 0.5 * k);
+  }
+  /* la luz que viaja al farol */
+  if (J.orbeFarol) { const f = J.orbeFarol; brillo(g, ox + f.x, oy + f.y, 16, '255,240,170', 0.8); brillo(g, ox + f.x, oy + f.y, 4, '255,255,255', 1); }
+  /* curándose: un anillo de luz que se cierra sobre Chispa */
+  const p = J.mundo.p;
+  if (p.curando) {
+    const dur = p.curaRapida ? LF.CURAR_T * 0.6 : LF.CURAR_T, k = (p.curarT % dur) / dur;
+    g.strokeStyle = `rgba(246,255,168,${0.3 + k * 0.5})`; g.lineWidth = 1;
+    g.beginPath(); g.arc(Math.round(ox + p.x + 4) + 0.5, Math.round(oy + p.y + 6) + 0.5, 18 * (1 - k) + 3, 0, Math.PI * 2); g.stroke();
+    if (Math.random() < 0.5) { const a = Math.random() * Math.PI * 2; FX.emitir(p.x + 4 + Math.cos(a) * 18, p.y + 6 + Math.sin(a) * 18, 1, { col: '#f6ffa8', vx: -Math.cos(a) * 50, vy: -Math.sin(a) * 50, disp: 2, vida: 20, arrastre: 0.95 }); }
+  }
   g.globalCompositeOperation = 'source-over';
 }
 
@@ -560,13 +702,14 @@ function dibujarSalaLM(g, J, t) {
   const ox = -Math.round(VistaLM.x) + FX.sx, oy = -Math.round(VistaLM.y) + FX.sy;
   dibujarFondoLM(g, m.sala.zona);
   FX.dibujar(g, -ox, -oy, true);
-  g.drawImage(capaLM(m), ox, oy);
-  /* afuera de la sala no hay fondo: es madera maciza */
-  const W = Pantalla.W, H = Pantalla.H, sw = m.w * 8, sh = m.h * 8;
+  const D = MARGEN_LM * 8;
+  g.drawImage(capaLM(m), ox - D, oy - D);
+  /* más allá del margen (pantallas enormes), negro */
+  const W = Pantalla.W, H = Pantalla.H, sw = m.w * 8 + D, sh = m.h * 8 + D;
   g.fillStyle = '#060409';
-  if (oy > 0) g.fillRect(0, 0, W, oy);
+  if (oy - D > 0) g.fillRect(0, 0, W, oy - D);
   if (oy + sh < H) g.fillRect(0, oy + sh, W, H - oy - sh);
-  if (ox > 0) g.fillRect(0, 0, ox, H);
+  if (ox - D > 0) g.fillRect(0, 0, ox - D, H);
   if (ox + sw < W) g.fillRect(ox + sw, 0, W - ox - sw, H);
   dibujarResina(g, m, ox, oy, t);
   dibujarRompibles(g, m, ox, oy, t);
@@ -581,18 +724,21 @@ function dibujarSalaLM(g, J, t) {
   }
   dibujarCosasLM(g, m, ox, oy, t, J);
   dibujarBichosLM(g, m, ox, oy, t);
+  dibujarCadaveres(g, J, ox, oy);
   dibujarJefeLM(g, m, ox, oy, t);
   dibujarChispa(g, m, J.anim, ox, oy, J);
   dibujarBalasLM(g, m, ox, oy, t);
   FX.dibujar(g, -ox, -oy, false);
-  oscuridadLM(g, lucesDe(m, J, ox, oy, t), oscuroDe(m, J));
-  tinteLM(g, m, J, ox, oy);
-  /* abajo, donde van los pulgares: tierra oscura para que los mandos se lean */
+  const luces = lucesDe(m, J, ox, oy, t);
+  oscuridadLM(g, luces, oscuroDe(m, J));
+  brilloLuces(g, luces);
+  dibujarEfectosLuz(g, J, ox, oy, t);
+  dibujarFrente(g, m.sala.zona);
+  /* abajo, donde van los pulgares: un degradé oscuro para que los mandos se lean */
   if (VistaLM.mandos) {
-    const y0 = VistaLM.usable;
-    Trama.cubrir(g, 6, '#07050a', 0, y0, Pantalla.W, 4);
-    Trama.cubrir(g, 11, '#07050a', 0, y0 + 4, Pantalla.W, 6);
-    Trama.cubrir(g, 14, '#07050a', 0, y0 + 10, Pantalla.W, Pantalla.H - y0 - 10);
+    const y0 = VistaLM.usable, grd = g.createLinearGradient(0, y0 - 6, 0, y0 + 30);
+    grd.addColorStop(0, 'rgba(5,3,8,0)'); grd.addColorStop(1, 'rgba(5,3,8,0.94)');
+    g.fillStyle = grd; g.fillRect(0, y0 - 6, Pantalla.W, Pantalla.H - y0 + 6);
   }
 }
 
@@ -601,12 +747,13 @@ function dibujarHUD(g, J, t) {
   const p = J.mundo.p, x0 = 6, y0 = 6;
   /* la vasija: se llena de abajo para arriba; late cuando alcanza para curarse */
   const R = 8, cx = x0 + R, cy = y0 + R, nivel = p.luz / LF.LUZ_MAX, alcanza = p.luz >= LF.CURAR_COSTO;
+  if (J.vasija > 0 || alcanza) { g.globalCompositeOperation = 'lighter'; brillo(g, cx, cy, 14 + J.vasija * 8, '246,255,168', 0.12 + J.vasija * 0.35 + (alcanza ? Math.sin(t * 6) * 0.05 + 0.05 : 0)); g.globalCompositeOperation = 'source-over'; }
   for (let yy = -R; yy <= R; yy++) for (let xx = -R; xx <= R; xx++) {
     const d = Math.hypot(xx + 0.5, yy + 0.5);
     if (d > R + 0.5) continue;
     let col = null;
     if (d > R - 1) col = '#0d0a14';
-    else if (d > R - 2) col = '#6a6080';
+    else if (d > R - 2) col = J.vasija > 0.3 ? '#f6ffd0' : '#6a6080';
     else {
       const h = (R - 2 - yy) / (2 * (R - 2));
       const ola = Math.sin(t * 3 + xx * 0.6) * 0.03;
@@ -616,10 +763,12 @@ function dibujarHUD(g, J, t) {
   }
   g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(cx - 4, cy - 5, 2, 1);
   /* las chispas de vida */
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < p.vida; i++) brillo(g, x0 + 2 * R + 9 + i * 9, y0 + 6, 6, '246,255,168', 0.18);
+  g.globalCompositeOperation = 'source-over';
   for (let i = 0; i < p.vidaMax; i++) {
     const x = x0 + 2 * R + 6 + i * 9, y = y0 + 3, llena = i < p.vida;
     if (llena) {
-      halo(g, x + 3, y + 3, 5, '#f6ffa8', 0.25);
       g.fillStyle = '#0d0a14'; g.fillRect(x, y + 1, 7, 5); g.fillRect(x + 1, y, 5, 7);
       g.fillStyle = '#b4e858'; g.fillRect(x + 1, y + 1, 5, 5);
       g.fillStyle = '#f6ffa8'; g.fillRect(x + 2, y + 1, 3, 4);
@@ -634,17 +783,17 @@ function dibujarHUD(g, J, t) {
   const ax = x0 + 2 * R + 6, ay = y0 + 13;
   g.fillStyle = '#0d0a14'; g.fillRect(ax, ay, 5, 5);
   g.fillStyle = '#f0a03a'; g.fillRect(ax + 1, ay + 1, 3, 3); g.fillStyle = '#ffe08a'; g.fillRect(ax + 1, ay + 1, 1, 1);
-  textoPx(g, String(J.ambarVisto), ax + 8, ay + 1, { grad: GRAD.ambar });
-  if (J.ambarMas > 0) textoPx(g, '+' + J.ambarMas, ax + 8 + anchoTexto(String(J.ambarVisto)) + 4, ay + 1, { grad: GRAD.oro });
+  textoFino(g, String(J.ambarVisto), ax + 8, ay - 1, { col: '#ffd98a' });
+  if (J.ambarMas > 0) textoFino(g, '+' + J.ambarMas, ax + 8 + anchoFino(String(J.ambarVisto)) + 4, ay - 1, { col: '#fff0a0', halo: '#ffb050' });
   /* la barra del jefe */
   const j = J.mundo.jefe;
   if (j && !j.muerto && j.est !== 'presenta') {
     const W = Pantalla.W, bw = Math.min(180, W - 40), bx = Math.round((W - bw) / 2), by = VistaLM.usable - 14;
-    textoPx(g, JEFES_TXT[j.tipo].nombre, W / 2, by - 9, { alin: 'centro', grad: GRAD.rojo });
+    textoFino(g, TX().jefes[j.tipo].nombre, W / 2, by - 11, { alin: 'centro', col: '#ffd0c0', halo: '#ff6a5a' });
     g.fillStyle = '#0d0a14'; g.fillRect(bx - 1, by - 1, bw + 2, 6);
     g.fillStyle = '#2a1418'; g.fillRect(bx, by, bw, 4);
     const k = Math.max(0, j.vida / j.vidaMax);
-    J.barraJefe = J.barraJefe == null ? k : acercar(J.barraJefe, k, 0.4 * DT);
+    J.barraJefe = J.barraJefe == null ? k : acercar(J.barraJefe, k, 0.4 * Reloj.d);
     g.fillStyle = '#fff0c8'; g.fillRect(bx, by, Math.round(bw * J.barraJefe), 4);
     g.fillStyle = '#c42a3c'; g.fillRect(bx, by, Math.round(bw * k), 4);
     g.fillStyle = '#ff6a5a'; g.fillRect(bx, by, Math.round(bw * k), 1);

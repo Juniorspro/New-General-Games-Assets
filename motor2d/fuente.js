@@ -1,6 +1,6 @@
 /* ============================================================================
-   motor2d/fuente.js — la fuente de píxeles 5x7 de EL TIPO, con tildes, Ñ, Ü
-   y ¡¿, más los signos que piden los diálogos. Las minúsculas se dibujan como
+   motor2d/fuente.js — la fuente de píxeles 5x7 de EL TIPO, con tildes, Ñ, Ü,
+   ¡¿ y las letras del portugués, más los signos que piden los diálogos. Las minúsculas se dibujan como
    mayúsculas: en un juego alcanza y se lee mejor a este tamaño.
    ========================================================================== */
 
@@ -36,8 +36,16 @@ const FUENTE_PX = {
   '…': [".....", ".....", ".....", ".....", ".....", ".....", "#.#.#"], '*': [".....", "#.#.#", ".###.", "#####", ".###.", "#.#.#", "....."],
   '—': [".....", ".....", ".....", "#####", ".....", ".....", "....."], '_': ["....", "....", "....", "....", "....", "....", "####"],
 };
-const ACENTOS_PX = { 'Á': ['A', 'a'], 'É': ['E', 'a'], 'Í': ['I', 'a'], 'Ó': ['O', 'a'], 'Ú': ['U', 'a'], 'Ñ': ['N', 't'], 'Ü': ['U', 'd'] };
-const MARCAS_PX = { a: [[3, -3], [2, -2]], t: [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]], d: [[1, -2], [3, -2]] };
+/* las letras con marca: la base más la marca. Con las del portugués (Â Ã À Ç Ê Ô Õ)
+   alcanza para los tres idiomas de los juegos */
+const ACENTOS_PX = {
+  'Á': ['A', 'a'], 'É': ['E', 'a'], 'Í': ['I', 'a'], 'Ó': ['O', 'a'], 'Ú': ['U', 'a'], 'Ñ': ['N', 't'], 'Ü': ['U', 'd'],
+  'Â': ['A', 'c'], 'Ã': ['A', 't'], 'À': ['A', 'g'], 'Ê': ['E', 'c'], 'Ô': ['O', 'c'], 'Õ': ['O', 't'], 'Ç': ['C', 'z'],
+};
+const MARCAS_PX = {
+  a: [[3, -3], [2, -2]], t: [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]], d: [[1, -2], [3, -2]],
+  c: [[1, -2], [2, -3], [3, -2]], g: [[1, -3], [2, -2]], z: [[2, 7], [3, 8], [2, 8]],
+};
 
 function glifoPx(ch) {
   const c = ch.toUpperCase();
@@ -53,7 +61,7 @@ function puntosTexto(str) {
   for (const ch of str) {
     const g = glifoPx(ch), w = g.f[0].length;
     for (let r = 0; r < 7; r++) for (let k = 0; k < w; k++) if (g.f[r][k] === '#') pts.push([x + k, r, r]);
-    if (g.m) for (const [mx, my] of g.m) pts.push([x + mx, my, 0]);
+    if (g.m) for (const [mx, my] of g.m) pts.push([x + mx, my, my > 6 ? 6 : 0]);
     x += w + 1;
   }
   return { pts, w: Math.max(1, x - 1) };

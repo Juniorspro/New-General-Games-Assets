@@ -32,9 +32,20 @@ const prog = () => pag.evaluate(() => window.__L.prog());
 const apretar = async (a, n = 2) => { await pag.evaluate((a) => window.__L.entrada(a, true), a); await anda(n); await pag.evaluate((a) => window.__L.entrada(a, false), a); await anda(1); };
 const poner = (x, y) => pag.evaluate(([x, y]) => window.__L.poner(x, y), [x, y]);
 const esperar = async (cond, max = 600) => { for (let i = 0; i < max; i += 10) { if (await pag.evaluate(cond)) return true; await anda(10); } return false; };
+/* los menús son del lienzo: se toca la palabra donde está dibujada */
+const menu = () => pag.evaluate(() => window.__L.menu());
+const tocarItem = async (id) => { await pag.waitForTimeout(250); const d = await pag.evaluate((id) => window.__L.donde(id), id); if (!d) return false; await pag.touchscreen.tap(d.x, d.y); await anda(3); return true; };
+
+/* 0. primero, el idioma: tres faroles colgados */
+await anda(20);
+ver((await menu())?.id === "idioma", "lo primero es elegir el idioma");
+await foto("p00-idioma");
+await apretar("salto");
+await esperar(() => (window.__L.menu() || {}).id === "titulo", 200);
+ver((await menu())?.id === "titulo", "después del farol, el título");
 
 /* 1. nueva partida: la intro y el pueblo */
-await pag.tap("#bNueva"); await anda(5);
+ver(await tocarItem("nueva"), "se puede tocar NUEVA PARTIDA");
 ver((await estado()) === "intro", "NUEVA PARTIDA arranca la intro");
 await foto("p01-intro");
 for (let i = 0; i < 12 && (await estado()) === "intro"; i++) { await apretar("salto"); await apretar("salto"); }
@@ -57,12 +68,12 @@ await apretar("arr");
 for (let i = 0; i < 10 && (await estado()) === "dialogo"; i++) { await apretar("salto"); await anda(4); }
 ver((await estado()) === "tienda", "Don Canasto abre la tienda");
 await pag.waitForTimeout(500); await foto("p04-tienda");
-await pag.tap("#bT_iman"); await anda(2);
+await tocarItem("iman");
 const pr = await prog();
 ver(pr.compras.iman && (await sala()).ambar === 20, "comprar la pelusa de cardo cobra 40 de ámbar");
-await pag.tap("#bT_espina"); await anda(2);
+await tocarItem("espina");
 ver(!(await prog()).compras.espina, "sin ámbar suficiente no se compra");
-await pag.tap("#bTiendaVolver"); await anda(2);
+await tocarItem("chau");
 ver((await estado()) === "jugando", "CHAU, DON vuelve al juego");
 
 /* 4. sentarse en el hongo */
@@ -119,7 +130,7 @@ ver((await estado()) === "jugando", "el mapa se cierra");
 await apretar("pausa"); await anda(3);
 ver((await estado()) === "pausa", "ESC pausa");
 await pag.waitForTimeout(500); await foto("p11-pausa");
-await pag.tap("#bSeguir"); await anda(3);
+await tocarItem("seguir");
 ver((await estado()) === "jugando", "SEGUIR vuelve");
 
 /* 9. los recorridos del resolvedor, repetidos en el juego (pasando de sala en sala) */

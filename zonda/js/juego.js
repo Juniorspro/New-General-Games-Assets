@@ -76,11 +76,12 @@ function finCapitulo() {
   Prog.cap = siguiente ? J.capIdx + 1 : J.capIdx; Prog.sala = 0;
   guardarProg();
   const tomadas = cap.salas.filter((s) => Prog.cartas[s.id + ':0']).length;
-  document.getElementById('finTitulo').textContent = 'CAPÍTULO ' + cap.id + ' COMPLETO';
+  document.getElementById('finTitulo').textContent = tr('capituloCompleto', cap.id);
+  delete document.getElementById('finTitulo').dataset.pxk;
   document.getElementById('finDatos').innerHTML =
     `<p class="txt">${cap.nombre.toUpperCase()}</p>` +
-    `<p class="txt">TIEMPO ${reloj(J.tCap)} · MUERTES ${J.muertesCap}</p>` +
-    `<p class="txt">CARTAS ${tomadas} DE ${cartasDe(cap)}</p>`;
+    `<p class="txt">${tr('tiempoMuertes', reloj(J.tCap), J.muertesCap)}</p>` +
+    `<p class="txt">${tr('cartasDe', tomadas, cartasDe(cap))}</p>`;
   mostrarMandos(false);
   UI.mostrar('capaFin');
 }
@@ -149,7 +150,7 @@ function procesarEventos(m) {
         FX.emitir(e.x, e.y, 18, { cols: ['#fff6dc', '#ffd24a', '#ffffff'], disp: 90, vida: 28 });
         J.cartasCap++;
         const n = Object.keys(Prog.cartas).length;
-        J.aviso = { txt: 'CARTA ' + n + '/' + TOTAL_CARTAS, t: 0 };
+        J.aviso = { txt: tr('carta', n, TOTAL_CARTAS), t: 0 };
         guardarProg();
         break;
       }
@@ -217,7 +218,7 @@ function pausar() {
   J.estado = 'pausa';
   mostrarMandos(false);
   document.getElementById('txtPausa').textContent =
-    `${CAPITULOS[J.capIdx].nombre.toUpperCase()} · SALA ${J.salaIdx + 1}/${CAPITULOS[J.capIdx].salas.length} · MUERTES ${J.muertesCap} · ${reloj(J.tCap)}`;
+    tr('pausaTxt', CAPITULOS[J.capIdx].nombre.toUpperCase(), J.salaIdx + 1, CAPITULOS[J.capIdx].salas.length, J.muertesCap, reloj(J.tCap));
   UI.mostrar('capaPausa');
 }
 function seguir() { UI.ocultar(); J.estado = J.dialogo ? 'dialogo' : 'jugando'; mostrarMandos(true); }
@@ -228,9 +229,25 @@ function irPortada() {
   armarPortada();
   UI.mostrar('capaTitulo');
 }
+/* ---------------- el idioma: antes del menú, siempre ---------------- */
+function mostrarIdioma() {
+  J.estado = 'portada';
+  mostrarMandos(false);
+  const i = IDIOMAS.findIndex((x) => x[0] === Idioma.actual);
+  IDIOMAS.forEach(([l], k) => { const b = document.getElementById('bIdioma_' + l); b.classList.toggle('gris', k !== i); delete b.dataset.pxk; });
+  UI.mostrar('capaIdioma', { sel: Math.max(0, i) });
+}
+function elegirIdioma(l, quedarse) {
+  Idioma.poner(l);
+  aplicarIdiomaZonda(l);
+  /* los botones de opción se vuelven a escribir en el idioma nuevo */
+  for (const [b, op] of UI.opciones) UI.pintarOpcion(b, op);
+  if (!quedarse) irPortada();
+  else if (UI.actual) UI.alPixelar(UI.capa(UI.actual));
+}
 function armarPortada() {
   const b = document.getElementById('bJugar');
-  b.textContent = Prog.empezado ? 'SEGUIR' : 'JUGAR';
+  b.textContent = tr(Prog.empezado ? 'seguirPartida' : 'jugar');
   delete b.dataset.pxk;
 }
 function armarCapitulos() {
@@ -248,7 +265,7 @@ function armarCapitulos() {
     const p = document.createElement('p');
     p.className = 'txt';
     const tomadas = cap.salas.filter((s) => Prog.cartas[s.id + ':0']).length;
-    p.textContent = abierto ? `CARTAS ${tomadas}/${cartasDe(cap)} · MUERTES ${Prog.muertes[i] || 0}${Prog.tiempos[i] ? ' · MEJOR ' + reloj(Prog.tiempos[i]) : ''}` : 'TODAVÍA NO';
+    p.textContent = abierto ? tr('capInfo', tomadas, cartasDe(cap), Prog.muertes[i] || 0) + (Prog.tiempos[i] ? tr('mejor', reloj(Prog.tiempos[i])) : '') : tr('todaviaNo');
     lista.appendChild(p);
   });
 }
@@ -256,7 +273,7 @@ function armarCartas() {
   const lista = document.getElementById('listaCartas');
   lista.innerHTML = '';
   const n = Object.keys(Prog.cartas).length;
-  const cab = document.createElement('p'); cab.className = 'txt'; cab.textContent = `ENCONTRASTE ${n} DE ${TOTAL_CARTAS}`;
+  const cab = document.createElement('p'); cab.className = 'txt'; cab.textContent = tr('encontraste', n, TOTAL_CARTAS);
   lista.appendChild(cab);
   for (const cap of CAPITULOS) for (const s of cap.salas) {
     const c = CARTAS[s.id];
@@ -265,7 +282,7 @@ function armarCartas() {
     panel.className = 'panel';
     const tiene = Prog.cartas[s.id + ':0'];
     panel.innerHTML = tiene
-      ? `<p class="txt izq"><b>DE ${c.de.toUpperCase()} PARA ${c.a.toUpperCase()}</b></p><p class="txt izq">${c.t}</p>`
+      ? `<p class="txt izq"><b>${tr('deA', c.de.toUpperCase(), c.a.toUpperCase())}</b></p><p class="txt izq">${c.t}</p>`
       : `<p class="txt izq">${s.id} · ${s.nombre.toUpperCase()}</p><p class="txt izq">???</p>`;
     lista.appendChild(panel);
   }
@@ -275,14 +292,18 @@ function armarOpciones() {
   if (cont.dataset.listo) return;
   cont.dataset.listo = '1';
   const velocidades = [1, 0.9, 0.8, 0.7, 0.6];
+  const siNo = (v) => tr(v ? 'si' : 'no');
+  const vol = (k) => [() => { Opc[k] = lim(Math.round((Opc[k] - 0.1) * 10) / 10, 0, 1); }, () => { Opc[k] = lim(Math.round((Opc[k] + 0.1) * 10) / 10, 0, 1); }, () => { Opc[k] = Opc[k] >= 1 ? 0 : lim(Math.round((Opc[k] + 0.1) * 10) / 10, 0, 1); }];
+  const cambiarIdioma = (d) => () => { const i = IDIOMAS.findIndex((x) => x[0] === Idioma.actual); elegirIdioma(IDIOMAS[(i + d + IDIOMAS.length) % IDIOMAS.length][0], true); };
   const ops = [
-    ['MÚSICA', () => 'MÚSICA ' + barrita(Opc.musica), () => { Opc.musica = lim(Math.round((Opc.musica - 0.1) * 10) / 10, 0, 1); }, () => { Opc.musica = lim(Math.round((Opc.musica + 0.1) * 10) / 10, 0, 1); }, () => { Opc.musica = Opc.musica >= 1 ? 0 : lim(Math.round((Opc.musica + 0.1) * 10) / 10, 0, 1); }],
-    ['EFECTOS', () => 'EFECTOS ' + barrita(Opc.efectos), () => { Opc.efectos = lim(Math.round((Opc.efectos - 0.1) * 10) / 10, 0, 1); }, () => { Opc.efectos = lim(Math.round((Opc.efectos + 0.1) * 10) / 10, 0, 1); }, () => { Opc.efectos = Opc.efectos >= 1 ? 0 : lim(Math.round((Opc.efectos + 0.1) * 10) / 10, 0, 1); }],
-    ['TEMBLOR', () => 'TEMBLOR: ' + (Opc.temblor ? 'SÍ' : 'NO'), () => { Opc.temblor = !Opc.temblor; }, () => { Opc.temblor = !Opc.temblor; }],
-    ['VELOCIDAD', () => 'VELOCIDAD: ' + Math.round(Opc.velocidad * 100) + '%', () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[Math.max(0, i - 1)]; }, () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[(i + 1) % velocidades.length]; }],
-    ['DASH', () => 'DASH INFINITO: ' + (Opc.dashInfinito ? 'SÍ' : 'NO'), () => { Opc.dashInfinito = !Opc.dashInfinito; }, () => { Opc.dashInfinito = !Opc.dashInfinito; }],
-    ['INVENCIBLE', () => 'INVENCIBLE: ' + (Opc.invencible ? 'SÍ' : 'NO'), () => { Opc.invencible = !Opc.invencible; }, () => { Opc.invencible = !Opc.invencible; }],
-    ['RELOJ', () => 'RELOJ: ' + (Opc.reloj ? 'SÍ' : 'NO'), () => { Opc.reloj = !Opc.reloj; }, () => { Opc.reloj = !Opc.reloj; }],
+    ['IDIOMA', () => tr('idioma') + ': ' + IDIOMAS.find((x) => x[0] === Idioma.actual)[1], cambiarIdioma(-1), cambiarIdioma(1)],
+    ['MUSICA', () => tr('musica') + ' ' + barrita(Opc.musica), ...vol('musica')],
+    ['EFECTOS', () => tr('efectos') + ' ' + barrita(Opc.efectos), ...vol('efectos')],
+    ['TEMBLOR', () => tr('temblor') + ': ' + siNo(Opc.temblor), () => { Opc.temblor = !Opc.temblor; }, () => { Opc.temblor = !Opc.temblor; }],
+    ['VELOCIDAD', () => tr('velocidad') + ': ' + Math.round(Opc.velocidad * 100) + '%', () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[Math.max(0, i - 1)]; }, () => { const i = velocidades.indexOf(Opc.velocidad); Opc.velocidad = velocidades[(i + 1) % velocidades.length]; }],
+    ['DASH', () => tr('dashInf') + ': ' + siNo(Opc.dashInfinito), () => { Opc.dashInfinito = !Opc.dashInfinito; }, () => { Opc.dashInfinito = !Opc.dashInfinito; }],
+    ['INVENCIBLE', () => tr('invencible') + ': ' + siNo(Opc.invencible), () => { Opc.invencible = !Opc.invencible; }, () => { Opc.invencible = !Opc.invencible; }],
+    ['RELOJ', () => tr('reloj') + ': ' + siNo(Opc.reloj), () => { Opc.reloj = !Opc.reloj; }, () => { Opc.reloj = !Opc.reloj; }],
   ];
   for (const [id, texto, izq, der, tocar] of ops) {
     const b = document.createElement('button');
@@ -388,7 +409,7 @@ function arrancar() {
     bCapitulos: () => { armarCapitulos(); UI.mostrar('capaCapitulos', { apilar: true }); },
     bCartas: () => { armarCartas(); UI.mostrar('capaCartas', { apilar: true }); },
     bOpciones: () => { armarOpciones(); UI.mostrar('capaOpciones', { apilar: true }); },
-    bCreditos: () => { UI.mostrar('capaCreditos', { apilar: true }); },
+    bCreditos: () => { document.getElementById('creditosTxt').innerHTML = CREDITOS.slice(1).map((c) => `<p class="txt">${c}</p>`).join(''); UI.mostrar('capaCreditos', { apilar: true }); },
     bCapVolver: () => { UI.volver(); }, bCarVolver: () => { UI.volver(); }, bCredVolver: () => { UI.volver(); },
     bOpcVolver: () => { if (!UI.volver()) irPortada(); },
     bSeguir: seguir,
@@ -400,9 +421,11 @@ function arrancar() {
       else irPortada();
     },
   });
-  document.getElementById('creditosTxt').innerHTML = CREDITOS.slice(1).map((c) => `<p class="txt">${c}</p>`).join('');
   aplicarOpciones();
-  irPortada();
+  Idioma.iniciar('zonda:idioma', UI_ZONDA);
+  aplicarIdiomaZonda(Idioma.actual);
+  for (const [l] of IDIOMAS) document.getElementById('bIdioma_' + l).addEventListener('click', () => { UI.sonar('elegir'); elegirIdioma(l); });
+  mostrarIdioma();
   Bucle.iniciar(pasar, dibujar, () => Entrada.leerMando());
   /* sondas para las pruebas: nada de esto lo usa el juego */
   window.__Z = {
@@ -415,6 +438,21 @@ function arrancar() {
     sala() { const m = J.mundo; return m && { id: m.sala.id, salio: m.salio, muerta: m.p.muerta, estado: m.p.estado, x: m.p.x, y: m.p.y, dashes: m.p.dashes, cumbre: !!m.cumbre }; },
     estado() { return J.estado; },
     medidas() { return { msDibujo: Bucle.msDibujo, W: Pantalla.W, H: Pantalla.H, PX: Pantalla.PX, particulas: FX.part.length }; },
+    idioma(l) { if (l) elegirIdioma(l, true); return Idioma.actual; },
+    textos() { return { dialogo: DIALOGOS.inicio[0].t, carta: CARTAS['1-1'].t, sala: CAPITULOS[0].salas[0].nombre, capitulo: CAPITULOS[0].nombre, jugar: tr('jugar') }; },
+    /* letras de los tres idiomas que la fuente no tiene (saldrían como '?') */
+    letrasQueFaltan() {
+      const falta = new Set();
+      const mirar = (x) => { for (const ch of String(x).replace(/\{\d\}/g, '')) if (ch !== '?' && ch !== ' ' && glifoPx(ch).f === FUENTE_PX['?']) falta.add(ch); };
+      for (const l in UI_ZONDA) Object.values(UI_ZONDA[l]).forEach(mirar);
+      for (const T of [TEXTOS_ES, TEXTOS_ZONDA.en, TEXTOS_ZONDA.pt]) {
+        [T.CAP_SUB, T.NOMBRES, T.salas].forEach((o) => Object.values(o).forEach(mirar));
+        T.capitulos.forEach(mirar); T.CREDITOS.forEach(mirar);
+        Object.values(T.DIALOGOS).flat().forEach(mirar); Object.values(T.CARTAS).flat().forEach(mirar);
+      }
+      IDIOMAS.forEach(([, n]) => mirar(n));
+      return [...falta];
+    },
   };
 }
 arrancar();
