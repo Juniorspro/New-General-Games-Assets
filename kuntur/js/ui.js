@@ -203,19 +203,20 @@ export class UI {
     const c = $('div', 'panel tablero', this.capa);
     $('h2', '', c, esc(tr('opciones')));
     const items = filas.map((f) => {
-      const b = $('button', 'fila', c, `<span class="n">${esc(f.nombre())}</span><span class="v">‹ <b></b> ›</span>`);
+      const b = $('button', 'fila' + (f.abrir ? ' abre' : ''), c, `<span class="n">${esc(f.nombre())}</span><span class="v">${f.abrir ? '✂' : '‹'} <b></b> ›</span>`);
       b.pintar = () => { b.querySelector('.n').textContent = f.nombre(); b.querySelector('b').innerHTML = f.valor(); };
       b.pintar();
       return b;
     });
-    $('p', 'teclas', c, esc(tr('controles')));
+    /* la ayuda del teclado, solo si hay teclado a mano */
+    const teclas = matchMedia('(pointer: coarse)').matches ? null : $('p', 'teclas', c, esc(tr('controles')));
     const volver = $('button', 'boleto chico', c, `<span class="sombra"></span><span class="papel"></span><span class="txt">${esc(tr('volver'))}</span>`);
     items.push(volver);
-    const repintar = () => { items.forEach((b) => b.pintar && b.pintar()); volver.querySelector('.txt').textContent = tr('volver'); c.querySelector('h2').textContent = tr('opciones'); c.querySelector('.teclas').textContent = tr('controles'); };
+    const repintar = () => { items.forEach((b) => b.pintar && b.pintar()); volver.querySelector('.txt').textContent = tr('volver'); c.querySelector('h2').textContent = tr('opciones'); if (teclas) teclas.textContent = tr('controles'); };
     this.lista(items, {
       i: 0,
-      elegir: (i) => { if (i === filas.length) alVolver(); else { filas[i].cambiar(1); repintar(); } },
-      lados: (i, d) => { if (i < filas.length) { filas[i].cambiar(d); repintar(); } },
+      elegir: (i) => { if (i === filas.length) alVolver(); else if (filas[i].abrir) filas[i].abrir(); else { filas[i].cambiar(1); repintar(); } },
+      lados: (i, d) => { if (i < filas.length && !filas[i].abrir) { filas[i].cambiar(d); repintar(); } },
       volver: alVolver,
     });
   }
@@ -350,17 +351,183 @@ export class UI {
     });
   }
 
-  /* ---------------- los controles de dedo ---------------- */
-  controlesTactiles(alPausa) {
+  /* ---------------- los controles de dedo ----------------
+     A (las opciones guardadas): { modo, alfa, vib, pos: { k: {x, y} en fracción
+     de la pantalla }, tam: { k: escala } } con k = pal, salto, accion, pausa.
+     Sin posición guardada, cada uno va a su lugar de siempre, adentro del telón. */
+  controlesTactiles(alPausa, A) {
     if (this.tactil) return;
+    this.A = A;
     const t = this.tactil = $('div', 'tactil', this.r);
-    const zona = $('div', 'zonaPal', t), aro = $('div', 'aro', zona), bola = $('div', 'bola', zona);
+    const zona = $('div', 'zonaPal', t), aro = $('div', 'aro', zona, '<i class="brazo v"></i><i class="brazo h"></i><i class="fl i"></i><i class="fl d"></i><i class="fl a"></i><i class="fl b"></i>'), bola = $('div', 'bola', zona);
     const bs = $('div', 'bSalto', t, '<svg viewBox="0 0 40 40"><path d="M20 3c7 6 9 16 4 26l-4 8-4-8C11 19 13 9 20 3z"/><path class="c" d="M20 7v29"/></svg>');
     const ba = $('div', 'bAccion', t, '<svg viewBox="0 0 40 40"><path d="M13 22V10a2.5 2.5 0 015 0v9-12a2.5 2.5 0 015 0v12-10a2.5 2.5 0 015 0v12-6a2.5 2.5 0 015 0v10c0 8-5 13-12 13-5 0-8-3-11-7l-5-7a2.5 2.5 0 014-3z"/></svg>');
     const bp = $('div', 'bPausa', t, '<i></i><i></i>');
-    Entrada.palanca(zona, aro, bola, 44);
+    aro.dataset.control = 'pal'; bs.dataset.control = 'salto'; ba.dataset.control = 'accion'; bp.dataset.control = 'pausa';
+    this.ctl = { pal: aro, salto: bs, accion: ba, pausa: bp, zona, bola };
+    this.cfgPal = { radio: 44, modo: 'flotante', cx: 0, cy: 0 };
+    this.reposoPal = Entrada.palanca(zona, aro, bola, this.cfgPal);
     Entrada.boton(bs, 'salto'); Entrada.boton(ba, 'accion');
     bp.addEventListener('pointerdown', (e) => { e.preventDefault(); alPausa(); });
+    this.acomodar();
+    addEventListener('resize', () => this.acomodar());
+    addEventListener('orientationchange', () => setTimeout(() => this.acomodar(), 300));
+    this.editorTactil(t);
   }
   verTactil(v) { if (this.tactil) this.tactil.classList.toggle('ve', v); }
+
+  /* el marco del teatrito: lo que tapan el telón abierto y la cenefa */
+  marco() {
+    const w = Pantalla.w, h = Pantalla.h;
+    return { w, h, izq: w * 0.067, der: w - w * 0.067, arr: Math.max(56, h * 0.09), aba: h };
+  }
+  /* dónde va el centro de cada control, en px del juego, siempre adentro del marco */
+  centro(k) {
+    const M = this.marco(), A = this.A, s = TAM_CTL[k] * A.tam[k];
+    const def = { pal: [M.izq + 66, M.h - 126], salto: [M.der - 56, M.h - 72], accion: [M.der - 142, M.h - 116], pausa: [M.der - 33, M.arr + 27] }[k];
+    let x = A.pos[k] ? A.pos[k].x * M.w : def[0], y = A.pos[k] ? A.pos[k].y * M.h : def[1];
+    const entre = (v, a, b) => (a > b ? (a + b) / 2 : Math.max(a, Math.min(b, v)));
+    x = entre(x, M.izq + s / 2 + 2, M.der - s / 2 - 2); y = entre(y, M.arr + s / 2, M.aba - s / 2 - 4);
+    return { x, y, s };
+  }
+  acomodar() {
+    const t = this.tactil, A = this.A;
+    if (!t) return;
+    const M = this.marco(), C = this.ctl;
+    t.style.setProperty('--alfa', A.alfa);
+    t.classList.toggle('cruz', A.modo === 'cruz');
+    for (const k of ['salto', 'accion', 'pausa']) {
+      const c = this.centro(k), el = C[k];
+      Object.assign(el.style, { width: c.s + 'px', height: c.s + 'px', left: c.x - c.s / 2 + 'px', top: c.y - c.s / 2 + 'px' });
+    }
+    /* la palanca flotante escucha toda la mitad de su lado; la fija y la cruz, un poco más que su dibujo */
+    const c = this.centro('pal'), r = c.s / 2, z = C.zona.style;
+    let zx, zy, zw, zh;
+    if (A.modo === 'flotante') { zx = c.x < M.w / 2 ? 0 : M.w / 2; zy = M.arr; zw = M.w / 2; zh = M.h - M.arr; }
+    else { zw = zh = r * 3.2; zx = c.x - zw / 2; zy = c.y - zh / 2; }
+    Object.assign(z, { left: zx + 'px', top: zy + 'px', width: zw + 'px', height: zh + 'px' });
+    Object.assign(C.pal.style, { width: r * 2 + 'px', height: r * 2 + 'px' });
+    Object.assign(C.bola.style, { width: r * 0.9 + 'px', height: r * 0.9 + 'px' });
+    Object.assign(this.cfgPal, { radio: r, modo: A.modo, cx: c.x - zx, cy: c.y - zy });
+    this.reposoPal();
+    Entrada.vibrar = !!A.vib;
+  }
+
+  /* ---------------- acomodar los controles: se arrastran como recortes sobre el escenario ----------------
+     Mientras se acomoda, un escucha "de captura" en el contenedor se queda con
+     los toques antes que los botones: así no se salta ni se camina. */
+  editorTactil(t) {
+    const dedos = new Map();
+    let mov = null, pinza = null;
+    const activo = (e) => t.classList.contains('editando') && !(this.barraEd && this.barraEd.contains(e.target));
+    const pos = (e) => Pantalla.aJuego(e.clientX, e.clientY);
+    t.addEventListener('pointerdown', (e) => {
+      if (!activo(e)) return;
+      e.stopPropagation(); e.preventDefault();
+      const q = pos(e);
+      dedos.set(e.pointerId, q);
+      try { t.setPointerCapture(e.pointerId); } catch (_) {}
+      if (dedos.size === 1) {
+        const el = e.target.closest && e.target.closest('[data-control]');
+        mov = null;
+        if (el) { this.elegirCtl(el.dataset.control); const c = this.centro(this.sel); mov = { id: e.pointerId, dx: c.x - q.x, dy: c.y - q.y }; }
+      } else if (dedos.size === 2) {
+        const [a, b] = [...dedos.values()];
+        pinza = { d0: Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)), s0: this.A.tam[this.sel] }; mov = null;
+      }
+    }, true);
+    t.addEventListener('pointermove', (e) => {
+      if (!dedos.has(e.pointerId) || !t.classList.contains('editando')) return;
+      e.stopPropagation(); e.preventDefault();
+      const q = pos(e);
+      dedos.set(e.pointerId, q);
+      const M = this.marco();
+      if (pinza && dedos.size >= 2) {
+        const [a, b] = [...dedos.values()];
+        this.A.tam[this.sel] = Math.round(Math.max(0.6, Math.min(1.8, pinza.s0 * Math.hypot(a.x - b.x, a.y - b.y) / pinza.d0)) * 20) / 20;
+        this.acomodar(); this.pintarBarra();
+      } else if (mov && e.pointerId === mov.id) {
+        this.A.pos[this.sel] = { x: (q.x + mov.dx) / M.w, y: (q.y + mov.dy) / M.h };
+        this.barraEd.classList.add('lejos');
+        this.acomodar();
+      }
+    }, true);
+    const fin = (e) => {
+      if (!dedos.delete(e.pointerId)) return;
+      e.stopPropagation();
+      if (dedos.size < 2) pinza = null;
+      if (mov && mov.id === e.pointerId) {
+        /* queda guardado donde se ve (ya metido adentro del marco) */
+        const c = this.centro(this.sel), M = this.marco();
+        this.A.pos[this.sel] = { x: c.x / M.w, y: c.y / M.h };
+        mov = null;
+      }
+      if (this.barraEd) this.barraEd.classList.remove('lejos');
+      if (this.alCambioTactil) this.alCambioTactil();
+    };
+    t.addEventListener('pointerup', fin, true); t.addEventListener('pointercancel', fin, true);
+  }
+  elegirCtl(k) {
+    this.sel = k;
+    for (const [n, el] of Object.entries(this.ctl)) if (TAM_CTL[n]) el.classList.toggle('elegido', n === k);
+    this.pintarBarra();
+  }
+  pintarBarra() {
+    const b = this.barraEd, A = this.A;
+    if (!b) return;
+    const q = (s) => b.querySelector(s);
+    q('[data-k=tam] em').textContent = `${tr(NOMBRE_CTL[this.sel])} · ${Math.round(A.tam[this.sel] * 100)}%`;
+    q('[data-k=alfa] em').textContent = Math.round(A.alfa * 100) + '%';
+    q('[data-k=modo] em').textContent = tr(A.modo);
+    q('[data-k=vib] em').textContent = tr(A.vib ? 'si' : 'no');
+  }
+  editarTactil(alCambio, alListo) {
+    const t = this.tactil, A = this.A;
+    this.limpiar();
+    this.capa.classList.add('oscuro');
+    const antes = t.classList.contains('ve');
+    t.classList.add('editando', 've');
+    for (const [k, el] of Object.entries(this.ctl)) if (NOMBRE_CTL[k]) el.dataset.nombre = tr(NOMBRE_CTL[k]);
+    this.alCambioTactil = alCambio;
+    const par = (k, n) => `<div class="chip par" data-k="${k}"><button data-d="-1">−</button><span><i>${esc(tr(n))}</i><em></em></span><button data-d="1">+</button></div>`;
+    const b = this.barraEd = $('div', 'acomoda', t, `<b class="tit">${esc(tr('acomodaTit'))}</b><small>${esc(tr('acomodaAyuda'))}</small>
+      <div class="chips">${par('tam', 'tamano')}${par('alfa', 'opacidad')}
+        <button class="chip" data-k="modo"><i>${esc(tr('palanca'))}</i><em></em></button>
+        <button class="chip" data-k="vib"><i>${esc(tr('vibrar'))}</i><em></em></button>
+        <button class="chip" data-k="espejo">${esc(tr('espejar'))}</button>
+        <button class="chip" data-k="reset">${esc(tr('restablecer'))}</button>
+        <button class="chip listo" data-k="listo">${esc(tr('listo'))}</button></div>`);
+    const MODOS = ['flotante', 'fija', 'cruz'];
+    const salir = () => {
+      t.classList.remove('editando'); b.remove(); this.barraEd = null; this.alCambioTactil = null;
+      for (const el of Object.values(this.ctl)) el.classList.remove('elegido');
+      this.verTactil(antes);
+      alListo();
+    };
+    const hacer = (k, d) => {
+      const M = this.marco();
+      if (k === 'tam') A.tam[this.sel] = Math.round(Math.max(0.6, Math.min(1.8, A.tam[this.sel] + d * 0.1)) * 10) / 10;
+      else if (k === 'alfa') A.alfa = Math.round(Math.max(0.2, Math.min(1, A.alfa + d * 0.1)) * 10) / 10;
+      else if (k === 'modo') A.modo = MODOS[(MODOS.indexOf(A.modo) + (d || 1) + 3) % 3];
+      else if (k === 'vib') { A.vib = !A.vib; Entrada.vibrar = A.vib; Entrada.zumbar(30); }
+      else if (k === 'espejo') for (const n of Object.keys(TAM_CTL)) { const c = this.centro(n); A.pos[n] = { x: 1 - c.x / M.w, y: c.y / M.h }; }
+      else if (k === 'reset') { A.pos = {}; A.tam = { pal: 1, salto: 1, accion: 1, pausa: 1 }; A.modo = 'flotante'; A.alfa = 0.85; }
+      else if (k === 'listo') { salir(); return; }
+      this.acomodar(); this.pintarBarra();
+      if (alCambio) alCambio();
+    };
+    /* cada botón de la barra, también con flechas y mando */
+    const items = [...b.querySelectorAll('button')];
+    const accion = (el) => [el.closest('[data-k]').dataset.k, +(el.dataset.d || 0)];
+    this.lista(items, {
+      i: items.length - 1,
+      elegir: (i, el) => { const [k, d] = accion(el || items[i]); hacer(k, d); },
+      volver: salir,
+    });
+    this.elegirCtl(this.sel || 'salto');
+  }
 }
+
+/* el tamaño de cada control a escala 1 (la palanca, de diámetro) y cómo se llama */
+const TAM_CTL = { pal: 88, salto: 76, accion: 64, pausa: 46 };
+const NOMBRE_CTL = { pal: 'cCaminar', salto: 'cSaltar', accion: 'cMano', pausa: 'cPausa' };

@@ -32,6 +32,11 @@ export class Director {
   constructor() {
     const tactil = matchMedia('(pointer: coarse)').matches;
     this.op = Object.assign({ musica: 7, efectos: 8, calidad: tactil ? 'baja' : 'media', temblor: true }, leer(CLAVE_OP, {}));
+    /* los controles de dedo, como los dejó acomodados el jugador */
+    const TA = this.op.tactil || {};
+    this.op.tactil = { modo: 'flotante', alfa: 0.85, vib: true, ...TA, pos: { ...(TA.pos || {}) }, tam: { pal: 1, salto: 1, accion: 1, pausa: 1, ...(TA.tam || {}) } };
+    Entrada.vibrar = this.op.tactil.vib;
+    this.hayDedos = tactil || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.partida = leer(CLAVE, null);
     const calURL = new URLSearchParams(location.search).get('cal');
     this.E = new Escena(document.getElementById('c'), calURL || this.op.calidad);
@@ -142,9 +147,17 @@ export class Director {
       { nombre: () => tr('temblor'), valor: () => tr(o.temblor ? 'si' : 'no'), cambiar: () => { o.temblor = !o.temblor; } },
       { nombre: () => tr('pantalla'), valor: () => tr(document.fullscreenElement ? 'si' : 'no'), cambiar: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (_) {} } },
     ];
+    if (this.hayDedos) filas.push({ nombre: () => tr('tactiles'), valor: () => tr('acomodar'), abrir: () => { escribir(CLAVE_OP, this.op); this.editarTactil(alVolver); } });
     this.ui.opciones(filas, () => { escribir(CLAVE_OP, this.op); if (this.cap) this.cap.o.temblor = o.temblor; alVolver(); });
   }
   guardar() { escribir(CLAVE, this.partida); }
+  armarTactil() { if (!this.ui.tactil) this.ui.controlesTactiles(() => { if (!this.pausado && !this.charlaActual) this.pausar(); }, this.op.tactil); }
+  /* acomodar los controles de dedo: se guarda con cada cambio, y al terminar vuelve a las opciones */
+  editarTactil(alVolver) {
+    this.armarTactil();
+    Sonido.sfx('hoja');
+    this.ui.editarTactil(() => escribir(CLAVE_OP, this.op), () => { Sonido.sfx('elegir'); escribir(CLAVE_OP, this.op); this.verOpciones(alVolver); });
+  }
 
   /* ============================== un capítulo ============================== */
   async jugar(id, en) {
@@ -172,7 +185,7 @@ export class Director {
     Sonido.musica(H.musica); Sonido.ambientar(H.ambiente);
     this.estado = 'juego';
     this.ui.verTactil(Entrada.fuente === 'toque');
-    if (!this.ui.tactil) this.ui.controlesTactiles(() => { if (!this.pausado && !this.charlaActual) this.pausar(); });
+    this.armarTactil();
     this.ui.verTactil(Entrada.fuente === 'toque');
     Sonido.sfx('telon');
     await this.ui.telon(false);
@@ -268,6 +281,7 @@ export class Director {
         break;
       case 'copla': {
         Sonido.sfx('copla');
+        if (Entrada.fuente === 'toque') Entrada.zumbar([15, 40, 15, 40, 30]);
         const P = this.partida; P.coplas = Array.from(new Set([...(P.coplas || []), e.id])); this.guardar();
         const i = indiceCopla(e.id);
         this.ui.copla(T().coplas[i] || [], P.coplas.length, TOTAL_COPLAS);
@@ -275,6 +289,7 @@ export class Director {
       }
       case 'muere':
         Sonido.sfx('muere');
+        if (Entrada.fuente === 'toque') Entrada.zumbar([40, 50, 90]);
         this.cerrarGritos();
         this.esperar(0.72).then(() => { if (this.cap === c) { this.ui.pasarHoja(); Sonido.sfx('hoja'); } });
         break;

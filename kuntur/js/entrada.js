@@ -47,11 +47,16 @@ export const Entrada = {
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.soltarTodo(); });
   },
 
+  /* un toquecito en la mano, si el teléfono sabe y el jugador quiere */
+  vibrar: false,
+  zumbar(ms) { if (this.vibrar && navigator.vibrate) try { navigator.vibrate(ms); } catch (_) {} },
+
   /* un botón de la pantalla */
   boton(el, accion) {
     const dedos = new Set();
     el.addEventListener('pointerdown', (e) => {
       e.preventDefault(); e.stopPropagation();
+      if (!dedos.size) this.zumbar(10);
       dedos.add(e.pointerId); this.usar('toque');
       this.pulsar(accion, 'p' + e.pointerId); el.classList.add('on');
       try { el.setPointerCapture(e.pointerId); } catch (_) {}
@@ -61,40 +66,61 @@ export const Entrada = {
     el.addEventListener('contextmenu', (e) => e.preventDefault());
   },
 
-  /* la palanca: aparece donde apoya el pulgar y lo sigue si se va lejos */
-  palanca(zona, aro, bola, radio) {
-    radio = radio || 40;
+  /* la palanca. cfg (se lee en cada toque, así se puede cambiar en vivo):
+     { radio, modo, cx, cy } con el centro de reposo en coordenadas de la zona.
+     - flotante: aparece donde apoya el dedo y lo sigue si se va lejos;
+     - fija: el centro no se mueve;
+     - cruz: una cruz de flechas quieta (y se marcan los brazos apretados). */
+  palanca(zona, aro, bola, cfg) {
     let id = null, ox = 0, oy = 0;
     const dirs = { izq: false, der: false, arr: false, aba: false };
-    const poner = (q) => { for (const a in dirs) { if (q[a] && !dirs[a]) { dirs[a] = true; this.pulsar(a, 'pal'); } else if (!q[a] && dirs[a]) { dirs[a] = false; this.soltar(a, 'pal'); } } };
+    /* si una escena soltó todo con el dedo apoyado, al moverlo vuelve a contar */
+    const poner = (q) => {
+      let nuevo = false;
+      for (const a in dirs) {
+        if (q[a] && (!dirs[a] || !this.IN[a])) { nuevo = nuevo || !dirs[a]; dirs[a] = true; this.pulsar(a, 'pal'); } else if (!q[a] && dirs[a]) { dirs[a] = false; this.soltar(a, 'pal'); }
+        zona.classList.toggle('p-' + a, dirs[a]);
+      }
+      if (nuevo && cfg.modo === 'cruz') this.zumbar(8);
+    };
+    /* sin dedo, vuelve a su lugar */
+    const reposo = () => {
+      const r = cfg.radio, b = r * 0.45;
+      aro.style.transform = `translate(${cfg.cx - r}px,${cfg.cy - r}px)`;
+      bola.style.transform = `translate(${cfg.cx - b}px,${cfg.cy - b}px)`;
+    };
+    reposo();
     /* con el teléfono parado el juego está girado: se pasa el dedo a coordenadas del juego */
     const punto = (e) => { const q = this.aJuego ? this.aJuego(e.clientX, e.clientY) : { x: e.clientX, y: e.clientY }; const r = this.caja ? this.caja(zona) : zona.getBoundingClientRect(); return { x: q.x - r.left, y: q.y - r.top }; };
     const mover = (e) => {
-      const q = punto(e);
+      const q = punto(e), radio = cfg.radio;
       let dx = q.x - ox, dy = q.y - oy;
       const d = Math.hypot(dx, dy);
-      if (d > radio * 1.4) { const k = (d - radio * 1.4) / d; ox += dx * k; oy += dy * k; dx -= dx * k; dy -= dy * k; }
+      if (cfg.modo === 'flotante' && d > radio * 1.4) { const k = (d - radio * 1.4) / d; ox += dx * k; oy += dy * k; dx -= dx * k; dy -= dy * k; }
       const nx = dx / radio, ny = dy / radio;
       this.palancaXY = { x: Math.max(-1, Math.min(1, nx)), y: Math.max(-1, Math.min(1, ny)) };
-      /* los costados mandan; arriba y abajo piden más recorrido para no agacharse sin querer */
-      poner({ izq: nx < -0.28, der: nx > 0.28, arr: ny < -0.62, aba: ny > 0.62 });
+      /* los costados mandan; arriba y abajo piden más recorrido para no agacharse sin querer
+         (en la cruz, el dedo sobre un brazo ya cuenta) */
+      const v = cfg.modo === 'cruz' ? 0.45 : 0.62;
+      poner({ izq: nx < -0.28, der: nx > 0.28, arr: ny < -v, aba: ny > v });
       aro.style.transform = `translate(${ox - radio}px,${oy - radio}px)`;
-      const k = Math.min(1, radio / Math.max(1, Math.hypot(dx, dy)));
-      bola.style.transform = `translate(${ox + dx * k - 20}px,${oy + dy * k - 20}px)`;
+      const k = Math.min(1, radio / Math.max(1, Math.hypot(dx, dy))), b = radio * 0.45;
+      bola.style.transform = `translate(${ox + dx * k - b}px,${oy + dy * k - b}px)`;
     };
     zona.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       if (id !== null) return;
       id = e.pointerId; this.usar('toque');
       const q = punto(e);
-      ox = q.x; oy = q.y;
+      if (cfg.modo === 'flotante') { ox = q.x; oy = q.y; } else { ox = cfg.cx; oy = cfg.cy; }
       zona.classList.add('on');
       try { zona.setPointerCapture(id); } catch (_) {}
       mover(e);
     });
     zona.addEventListener('pointermove', (e) => { if (e.pointerId === id) mover(e); });
-    const fin = (e) => { if (e.pointerId !== id) return; id = null; zona.classList.remove('on'); poner({}); this.palancaXY = { x: 0, y: 0 }; };
+    const fin = (e) => { if (e.pointerId !== id) return; id = null; zona.classList.remove('on'); poner({}); this.palancaXY = { x: 0, y: 0 }; reposo(); };
     zona.addEventListener('pointerup', fin); zona.addEventListener('pointercancel', fin); zona.addEventListener('lostpointercapture', fin);
+    return reposo;
   },
 
   /* el mando: se lee una vez por cuadro dibujado */

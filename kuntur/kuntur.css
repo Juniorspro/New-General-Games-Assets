@@ -114,7 +114,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#140c18;touch-action
 .hojas.dobla .pagina:last-child,.hojas.doblaAtras .pagina:first-child{animation:doblar .5s both}
 @keyframes doblar{from{transform:rotateY(-70deg);opacity:.3}}
 .nav{display:flex;gap:12px}
-.tablero{background:var(--grano),#e4d4b4;background-blend-mode:multiply;width:min(560px,calc(92 * var(--vw)))}
+.tablero{background:var(--grano),#e4d4b4;background-blend-mode:multiply;width:min(560px,calc(92 * var(--vw)));overflow-y:auto;touch-action:pan-y}
 .fila{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 18px;background:rgba(255,250,236,.7);box-shadow:0 0 0 3px var(--borde);font-size:clamp(15px,calc(1.8 * var(--vw)),18px);transition:transform .2s}
 .fila .v{font-weight:bold;color:#b8242a}
 .fila .v b{display:inline-block;min-width:5.5em;text-align:center;color:var(--tinta)}
@@ -200,20 +200,60 @@ html,body{width:100%;height:100%;overflow:hidden;background:#140c18;touch-action
 .tactil{position:fixed;inset:0;z-index:20;pointer-events:none;opacity:0;transition:opacity .4s}
 .tactil.ve{opacity:1}
 .tactil.ve>*{pointer-events:auto}
-/* el telón abierto deja un costado (51% × .13) y la cenefa arriba: los botones van adentro */
-.tactil{--costado:calc(6.7 * var(--vw));--cenefa:max(56px,calc(9 * var(--vh)))}
-.zonaPal{position:absolute;left:0;bottom:0;width:calc(46 * var(--vw));height:calc(58 * var(--vh))}
-.zonaPal .aro{position:absolute;left:0;top:0;width:88px;height:88px;border-radius:50%;background:conic-gradient(from 45deg,rgba(242,182,50,.35) 25%,rgba(192,40,46,.35) 0 50%,rgba(242,182,50,.35) 0 75%,rgba(192,40,46,.35) 0) 0 0/16px 16px;box-shadow:0 0 0 4px rgba(247,243,234,.7);transform:translate(calc(var(--costado) + 22px),calc(calc(58 * var(--vh)) - 170px));transition:opacity .2s;opacity:.55}
-.zonaPal .bola{position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;background:#f7f3ea;box-shadow:0 0 0 3px #c0282e,2px 4px 0 rgba(0,0,0,.3);transform:translate(calc(var(--costado) + 46px),calc(calc(58 * var(--vh)) - 146px))}
+/* cada control lo pone ui.acomodar (left, top y tamaño); acá solo el dibujo */
+.tactil>.zonaPal,.tactil>.bSalto,.tactil>.bAccion,.tactil>.bPausa{opacity:var(--alfa,.85);transition:opacity .15s}
+.tactil>.on{opacity:max(var(--alfa,.85),.92)}
+.zonaPal{position:absolute;left:0;top:0}
+.zonaPal .aro{position:absolute;left:0;top:0;width:88px;height:88px;border-radius:50%;background:conic-gradient(from 45deg,rgba(242,182,50,.35) 25%,rgba(192,40,46,.35) 0 50%,rgba(242,182,50,.35) 0 75%,rgba(192,40,46,.35) 0) 0 0/16px 16px;box-shadow:0 0 0 4px rgba(247,243,234,.7);transition:opacity .2s;opacity:.55}
+.zonaPal .bola{position:absolute;left:0;top:0;width:40px;height:40px;border-radius:50%;background:#f7f3ea;box-shadow:0 0 0 3px #c0282e,2px 4px 0 rgba(0,0,0,.3)}
 .zonaPal.on .aro{opacity:.9}
-.bSalto,.bAccion{position:absolute;width:76px;height:76px;border-radius:50%;background:rgba(247,243,234,.82);box-shadow:0 0 0 4px rgba(192,40,46,.6),3px 5px 0 rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center}
-.bSalto{right:calc(var(--costado) + 18px);bottom:34px}
-.bAccion{right:calc(var(--costado) + 110px);bottom:84px;width:64px;height:64px;box-shadow:0 0 0 4px rgba(31,143,108,.6),3px 5px 0 rgba(0,0,0,.25)}
+.aro .fl{display:none}
+/* la cruz: dos tiras tejidas cruzadas, con una flecha en cada brazo que se prende al apretarlo */
+.aro .brazo{display:none}
+.tactil.cruz .aro{border-radius:0;box-shadow:none;background:none;opacity:.85}
+.tactil.cruz .aro .brazo{display:block;position:absolute;background:conic-gradient(from 45deg,#f2b632 25%,#c0282e 0 50%,#f2b632 0 75%,#c0282e 0) 0 0/12px 12px;box-shadow:0 0 0 3px rgba(247,243,234,.8),inset 0 0 0 40px rgba(58,42,34,.28);border-radius:6px}
+.aro .brazo.v{left:33%;right:33%;top:0;bottom:0}
+.aro .brazo.h{top:33%;bottom:33%;left:0;right:0}
+.tactil.cruz .bola{display:none}
+.tactil.cruz .aro .fl{display:block;position:absolute;width:17%;height:17%;background:#f7f3ea;transition:background .1s,scale .1s}
+.aro .fl.i{left:5%;top:41.5%;clip-path:polygon(100% 0,100% 100%,0 50%)}
+.aro .fl.d{right:5%;top:41.5%;clip-path:polygon(0 0,0 100%,100% 50%)}
+.aro .fl.a{top:5%;left:41.5%;clip-path:polygon(0 100%,100% 100%,50% 0)}
+.aro .fl.b{bottom:5%;left:41.5%;clip-path:polygon(0 0,100% 0,50% 100%)}
+.zonaPal.p-izq .fl.i,.zonaPal.p-der .fl.d,.zonaPal.p-arr .fl.a,.zonaPal.p-aba .fl.b{background:#f2b632;scale:1.35}
+.bSalto,.bAccion{position:absolute;left:0;top:0;width:76px;height:76px;border-radius:50%;background:rgba(247,243,234,.82);box-shadow:0 0 0 4px rgba(192,40,46,.6),3px 5px 0 rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center}
+.bAccion{width:64px;height:64px;box-shadow:0 0 0 4px rgba(31,143,108,.6),3px 5px 0 rgba(0,0,0,.25)}
 .bSalto svg,.bAccion svg{width:58%;height:58%;fill:#3a2a22}
 .bSalto svg .c{fill:none;stroke:#f7f3ea;stroke-width:1.6}
 .bSalto.on,.bAccion.on{scale:.9;background:#fff}
-.bPausa{position:absolute;right:calc(var(--costado) + 10px);top:calc(var(--cenefa) + 4px);width:46px;height:46px;border-radius:50%;background:rgba(247,243,234,.8);box-shadow:0 0 0 3px rgba(106,47,154,.55);display:flex;gap:6px;align-items:center;justify-content:center}
-.bPausa i{width:6px;height:18px;background:#3a2a22;border-radius:2px}
+.bPausa{position:absolute;left:0;top:0;width:46px;height:46px;border-radius:50%;background:rgba(247,243,234,.8);box-shadow:0 0 0 3px rgba(106,47,154,.55);display:flex;gap:13%;align-items:center;justify-content:center}
+.bPausa i{width:13%;height:39%;background:#3a2a22;border-radius:2px}
+
+/* acomodar los controles: cada uno con su línea de "cortar acá" y su etiqueta */
+.tactil.editando{z-index:42;pointer-events:auto;opacity:1}
+.tactil.editando>.zonaPal,.tactil.editando>[data-control]{opacity:max(var(--alfa,.85),.5)}
+.tactil.editando .zonaPal{outline:2px dashed rgba(247,243,234,.3);outline-offset:-3px;background:rgba(247,243,234,.05)}
+.tactil.editando .aro{opacity:.95}
+.tactil.editando .bola{pointer-events:none}
+.tactil.editando [data-control]{cursor:grab;outline:2px dashed rgba(247,243,234,.85);outline-offset:6px}
+.tactil.editando [data-control].elegido{outline:3px solid #f2b632;outline-offset:7px;filter:drop-shadow(0 0 10px rgba(242,182,50,.75))}
+.tactil.editando [data-control]::after{content:attr(data-nombre);position:absolute;left:50%;top:100%;translate:-50% 12px;padding:1px 8px;font:bold 11px/1.4 Georgia,serif;color:var(--tinta);background:#fffaf0;box-shadow:0 0 0 2px var(--borde),2px 3px 0 rgba(30,15,20,.3);border-radius:3px;white-space:nowrap;pointer-events:none}
+.tactil.editando .bPausa::after{top:auto;bottom:100%;translate:-50% -12px}
+.acomoda{position:absolute;left:50%;top:calc(max(56px,calc(9 * var(--vh))) + 6px);translate:-50% 0;rotate:-.6deg;width:min(640px,calc(100% - 13.4 * var(--vw) - 130px));padding:10px 14px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--grano),var(--papel);background-blend-mode:multiply;box-shadow:0 0 0 4px var(--borde),inset 0 5px 0 #1f8f6c,6px 9px 0 rgba(30,15,20,.4);transform-origin:50% 0;animation:despliegaPanel .5s both cubic-bezier(.3,1.4,.5,1);transition:opacity .2s}
+.acomoda.lejos{opacity:.15;pointer-events:none}
+.acomoda .tit{font-family:var(--gorda);font-size:18px;color:#b8242a;letter-spacing:.03em}
+.acomoda small{font-style:italic;font-size:12px;opacity:.8;text-align:center}
+.acomoda .chips{display:flex;flex-wrap:wrap;justify-content:center;gap:7px}
+.chip{display:flex;align-items:center;gap:6px;padding:4px 11px;min-height:34px;font-size:13px;background:#fffaf0;box-shadow:0 0 0 2.5px var(--borde),2px 3px 0 rgba(30,15,20,.3);border-radius:4px;transition:scale .15s}
+.chip i{font-style:normal;opacity:.7}
+.chip em{font-style:normal;font-weight:bold;color:#b8242a}
+.chip.par{padding:0;gap:0}
+.chip.par span{display:flex;flex-direction:column;align-items:center;line-height:1.15;padding:2px 2px;min-width:7.5em}
+.chip.par span i{font-size:10px}
+.chip.par button{width:34px;height:34px;font:bold 20px var(--gorda);color:var(--tinta);border-radius:4px}
+.chip.listo{background:#1f8f6c;color:#fff4dc;font-weight:bold;padding:4px 16px}
+.acomoda .foco{scale:1.06;box-shadow:0 0 0 2.5px var(--borde),0 0 0 5px rgba(242,182,50,.85)}
+.chip.par button.foco{background:#fff3c4}
 
 /* pantallas angostas: el menú abajo, el logo más chico */
 /* pantallas angostas (una ventana parada; el teléfono se gira y no entra acá) */
@@ -246,4 +286,9 @@ html.bajita .narra .hoja{padding:18px 30px}
 html.bajita .narra p{font-size:15px}
 html.bajita .globo{max-width:min(320px,calc(48 * var(--vw)));padding:14px 14px 10px}
 html.bajita .globo p{font-size:14px}
+html.bajita .acomoda{padding:6px 12px 8px;gap:4px}
+html.bajita .acomoda .tit{font-size:15px}
+html.bajita .acomoda small{font-size:11px}
+html.bajita .chip{min-height:30px;font-size:12px;padding:3px 9px}
+html.bajita .chip.par button{width:30px;height:30px}
 html.bajita .nota{font-size:13px;padding:8px 16px 8px 20px;bottom:10px}

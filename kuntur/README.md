@@ -13,6 +13,9 @@ mando o dedos.
 - Apu va creciendo: en las Salinas aletea (doble salto), en la Puna planea y
   abre trabas.
 - Las apachetas guardan el lugar. Hay 15 coplas escondidas.
+- Controles de dedo a gusto (Opciones → Controles de dedo): cada botón se
+  arrastra y se agranda, con palanca flotante, fija o en cruz, opacidad,
+  modo zurdo y vibración.
 - En el celular parado el juego se gira solo 90° para jugarse acostado (y
   pide pantalla completa horizontal si el teléfono lo deja).
 - La gente y los animales se mueven todo el tiempo (tejen, cavan, saludan,

@@ -101,7 +101,27 @@ HTML: `kuntur/kuntur.html` (830 KB). Es la vara para el próximo juego. Ver tamb
   clientX) y `caja(el)` suma los offsets hasta `#app`.
 - Clases en `html`: `girado`, `angosta`, `bajita` (alto < 520: menús apretados,
   `--corto`). Al elegir idioma prueba pantalla completa y `orientation.lock`.
-- Los botones táctiles se corren `--costado` (lo que queda del telón abierto) y
-  `--cenefa`: si no, el telón los tapaba en el teléfono.
+- Los controles de dedo quedan adentro del marco del teatrito (`ui.marco()`:
+  6,7 % de cada costado y la cenefa): si no, el telón los tapaba.
+
+## Controles de dedo (personalizables)
+
+- Opciones → "Controles de dedo · Acomodar" (solo si hay pantalla táctil).
+  Editor en `ui.editarTactil`: arrastrar, tocar para elegir y pellizcar o
+  −/+ para el tamaño (60-180 %), opacidad (20-100 %), palanca flotante / fija
+  / cruz, vibrar, espejar (zurdo), restablecer, listo.
+- Se guarda en `kuntur:opciones` como `tactil: { modo, alfa, vib, pos, tam }`;
+  `pos` en fracción de la pantalla lógica (sirve en otro tamaño), sin `pos` va
+  el lugar de siempre. `ui.centro(k)` lo mete siempre adentro del marco.
+- Mientras se acomoda, un escucha de captura en `.tactil` se queda con los
+  toques antes que los botones (así no se salta ni se camina).
+- `Entrada.palanca(zona, aro, bola, cfg)` lee `cfg` en cada toque (se cambia en
+  vivo) y devuelve `reposo()`. La flotante escucha media pantalla de su lado.
+- Trampa: una escena llama a `soltarTodo()` con el dedo apoyado; la palanca
+  creía que seguía apretada. Ahora al mover el dedo vuelve a contar.
+- Probado con toques de verdad por CDP (`Input.dispatchTouchEvent`, dos dedos
+  para pellizcar) en 390×844 girado; para probar toques en el juego hay que
+  pasar la escena del principio y `congelado = true` (si no, Killa camina hasta
+  una charla y la escena suelta todo).
 - Para probarlo: Playwright con viewport 390×844, `hasTouch` e `isMobile`
   (no quedó script en el repo), y girar la foto 90° para mirarla.

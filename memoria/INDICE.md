@@ -32,6 +32,10 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026.
   portugués**, siempre, y con todo traducido (menús, historia, diálogos).
 - **Cada juego con estilo propio**: otros botones, otro orden de menú, otras
   transiciones y otros efectos. No reusar el diseño del juego anterior.
+- **Controles de dedo personalizables, "sí o sí"** (23/09): que el jugador
+  mueva y agrande cada botón, cambie la transparencia y el tipo de palanca,
+  lo espeje para zurdos y elija si vibra. Se guarda. Hecho en KUNTUR
+  (`kuntur.md § Controles de dedo`).
 - **Cada juego nuevo tiene que superar claramente al anterior** en
   animaciones, efectos y todo ("100% mejor", 23/09), sin copiar.
 - Tiene Rezona (446 mil créditos el 22/09) y Higgsfield. Prefiere Rezona.

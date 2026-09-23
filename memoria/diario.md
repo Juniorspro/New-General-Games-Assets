@@ -4,6 +4,10 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **23/09/2026, noche, después · `claude/fijate-iszyer`:**
+  - "Sí o sí controles personalizados móviles": KUNTUR tiene editor de
+    controles de dedo (`kuntur.md § Controles de dedo`). Quedó como regla en el
+    índice. Falta, si lo pide: llevarlo a ZONDA y LUZ MALA.
 - **23/09/2026, noche · `claude/fijate-iszyer`:**
   - KUNTUR v2: en el celular parado se gira 90°, cinemáticas con gestos y
     franjas en cada capítulo, gente y animales animados todo el tiempo
