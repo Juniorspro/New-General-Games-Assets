@@ -175,6 +175,14 @@ export const POSES_KILLA = {
     return { cuerpoY: -1, inclina: -2, cabezaX: -0.6, trenza: 1, piernas: [[[0.5, 0], [2.4 + S(a), -4], [3.4 + S(a) * 2, -8]], [[-0.5, 0], [0.4 - S(a), -4], [1.2 - S(a) * 2, -8]]], brazo: [[1, 0], [3.8, -1], [6.4, -1.4]], brazoLejos: [[-1, 0], [2.8, -1], [5.8, -1.4]] };
   }),
   planea: [0, 1].map((f) => ({ cuerpoY: 0, trenza: 2.8, poncho: 'abierto', vuela: 0.8, piernas: [[[0.5, 0], [1.6, -4.2], [0.6 + f * 0.4, -8.6]], [[-0.5, 0], [-1, -4.4], [-2 + f * 0.4, -8.4]]], brazo: [[1, 0], [3, 3], [3.4, 7 + f * 0.3]], brazoLejos: [[-1, 0], [0.6, 3.4], [1.6, 7.2 + f * 0.3]] })),
+  /* los gestos de las escenas */
+  saluda: [0, 1].map((f) => Object.assign(quieta(0), { boca: f ? 'cerrada' : 'abierta', cabezaY: 0.3, brazo: [[1, 0], [3, 2.6], [4 + (f ? 1.4 : -0.6), 6.6]] })),
+  senala: [0, 1].map((f) => Object.assign(quieta(0), { cabezaX: 0.5, cabezaY: 0.7, boca: f ? 'abierta' : 'cerrada', brazo: [[1, 0], [3.6, 2], [7, 4.6 + f * 0.4]] })),
+  levanta: [0, 1].map((f) => Object.assign(quieta(0), { cabezaY: 0.9, cuerpoY: f ? 0 : 0, trenza: 0.6, brazo: [[1, 0], [2.2, 3.6], [2.6 + f * 0.3, 8.2]], brazoLejos: [[-1, 0], [0, 3.6], [0.6 - f * 0.3, 8.2]] })),
+  arrodilla: [0, 1].map((f) => ({ cuerpoY: -3.4, cabezaY: -0.6, cabezaX: 0.4, inclina: 1, poncho: 'agachada', trenza: -0.4,
+    piernas: [[[0.5, 0], [3.8, -2.2], [2.6, -5.8]], [[-0.5, 0], [-1.6, -5.4], [-3.8, -5.8]]], brazo: [[1, 0], [3, -2.4], [5.6 + f * 0.4, -4.4]], brazoLejos: [[-1, 0], [2, -2.6], [4.4 + f * 0.4, -4.6]] })),
+  abraza: [0, 1].map((f) => Object.assign(quieta(f), { cabezaY: -0.6, cabezaX: 0.4, brazo: [[1, 0], [3.2, -1.6], [5, -0.6]], brazoLejos: [[-1, 0], [2.2, -1.8], [4.2, -0.8]] })),
+  asiente: [0, 1].map((f) => Object.assign(quieta(0), { cabezaY: f ? -1 : 0, cabezaX: f ? 0.4 : 0 })),
   cae_mal: [{ cuerpoY: -4.5, cabezaY: -1.5, inclina: 3, poncho: 'agachada', ojos: 'cerrados', trenza: 1, piernas: [[[0.5, 0], [3.6, -1.4], [5.4, -4.6]], [[-0.5, 0], [2, -2], [3.6, -5]]], brazo: [[1, 0], [3, -2], [5, -3.5]] }],
 };
 

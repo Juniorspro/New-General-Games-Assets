@@ -11,10 +11,13 @@ import { biomaEn } from './biomas.js';
 import { armarCarton, armarTeatrito, armarColgantes, pasarColgantes } from './papel.js';
 import { Escenario } from './escenario.js';
 import { KillaPapel } from './actores.js';
-import { Apu, Vecino, Puma, VientoBlanco, Farol, pisoBajo } from './figuras.js';
+import { Apu, Vecino, Puma, VientoBlanco, Farol, Animal, Volador, pisoBajo } from './figuras.js';
+import { LUGAR_ANIMAL } from './escenario.js';
+import { DECOR } from './elenco.js';
 import { Papelitos, Clima, AGUAYO } from './papelitos.js';
 import { PaisajeTren } from './paisaje.js';
 import { NIVEL } from './niveles.js';
+import { Pantalla } from './pantalla.js';
 
 const suave = (k, dt) => 1 - Math.pow(k, dt);
 const lim = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -51,6 +54,11 @@ export class Capitulo {
     this.apu.poner(modoApu, m.p.x - 1.2, m.p.y + 2.2);
     this.vecinos = {};
     for (const n of m.npcs) this.vecinos[n.id] = new Vecino(g, n.id, n.x, n.y);
+    /* los animales del mapa */
+    this.animales = [];
+    nivel.mapa.forEach((fila, r) => { for (let x = 0; x < fila.length; x++) { const L = LUGAR_ANIMAL[fila[x]]; if (L) this.animales.push(new Animal(g, L[0], x + 0.5, m.h - 1 - r, L[1] - (x % 3) * 0.15, m)); } });
+    /* el farol que pasa de mano en mano, para las escenas */
+    this.voladores = {};
     this.puma = (nivel.persecuciones || []).some((q) => q.tipo === 'puma') ? new Puma(g) : null;
     this.ventisca = (nivel.persecuciones || []).some((q) => q.tipo === 'tormenta') ? new VientoBlanco(g) : null;
     this.farol = id === 'puna' ? new Farol(g) : null;
@@ -79,7 +87,7 @@ export class Capitulo {
   paso(inp) {
     const m = this.m;
     if (this.quieta) return;
-    const e = this.entrada ? this.entrada(m.p) : this.guion ? this.guion(m) : inp;
+    const e = this.entrada ? this.entrada(m.p) : this.bloqueo ? NADA : this.guion ? this.guion(m) : inp;
     pasarKilla(m, e || NADA);
     if (m.p.muerta && m.p.tMuerta > 1.25) revivir(m);
     for (const ev of m.eventos) this.alEvento(ev);
@@ -193,15 +201,20 @@ export class Capitulo {
       if (Math.abs(k - this.bioK) > 0.01) { this.bioK += (k - this.bioK) * suave(0.2, dt); this.bio = biomaEn('nevado', this.bioK); this.E.ponerBioma(this.bio); this.cielo.poner(this.bio); }
     }
     this.temblor *= Math.pow(0.004, dt);
+    /* las franjas de cine en las escenas */
+    this.barras = (this.barras || 0) + ((this.bloqueo ? 1 : 0) - (this.barras || 0)) * suave(0.015, dt);
+    this.E.u.uBarras.value = this.barras;
     this.pasarCamara(dt);
     this.colocarCamara(t);
     const camX = this.E.camara.position.x;
     /* Killa */
     const hablando = this.hablaKilla;
-    this.killa.actualizar(p, { t, dt, aterrizo: this.caida, salto: this.saltoRecien, habla: hablando });
+    this.killa.actualizar(p, { t, dt, aterrizo: this.caida, salto: this.saltoRecien, habla: hablando, quieta: this.quieta });
     this.caida = 0; this.saltoRecien = false;
     this.apu.pasar(dt, t, p, { termica: p.enTermica });
-    for (const v of Object.values(this.vecinos)) v.pasar(dt, t, p.x);
+    for (const v of Object.values(this.vecinos)) v.pasar(dt, t, p.x, p.y);
+    for (const a of this.animales) a.pasar(dt, t, p, this.cam.x, this.ancho);
+    for (const v of Object.values(this.voladores)) v.pasar(dt);
     if (this.puma) this.puma.pasar(dt, t, m);
     if (this.ventisca) {
       this.ventisca.pasar(dt, t, m);
@@ -233,11 +246,17 @@ export class Capitulo {
     }
   }
   dibujar() { this.E.dibujar(this.t); }
+  /* el farol que le dio Tomás, en la mano (en el tren todavía sin luz: es de día) */
+  darFarol() { if (!this.farol) this.farol = new Farol(this.g, true); }
+  volador(nombre) {
+    if (!this.voladores[nombre]) this.voladores[nombre] = new Volador(this.g, nombre, nombre === 'farol' ? DECOR.farol : DECOR.copla, 0, nombre === 'farol' ? 0.03 : 0.035);
+    return this.voladores[nombre];
+  }
 
   /* dónde está algo en la pantalla (para los globitos de charla) */
   aPantalla(v) {
     const q = v.clone().project(this.E.camara);
-    return { x: (q.x * 0.5 + 0.5) * innerWidth, y: (-q.y * 0.5 + 0.5) * innerHeight, adelante: q.z < 1 };
+    return { x: (q.x * 0.5 + 0.5) * Pantalla.w, y: (-q.y * 0.5 + 0.5) * Pantalla.h, adelante: q.z < 1 };
   }
   cabezaDe(quien) {
     const p = this.m.p;
@@ -253,7 +272,7 @@ export class Capitulo {
       if (o.geometry) o.geometry.dispose();
       if (o.material) for (const mt of [].concat(o.material)) { if (mt.map && mt.map.userData.w == null) mt.map.dispose(); mt.dispose(); }
     });
-    this.E.u.uFrio.value = 0; this.E.u.uFlash.value = 0;
+    this.E.u.uFrio.value = 0; this.E.u.uFlash.value = 0; this.E.u.uBarras.value = 0;
     this.cielo.u.uRayo.value = 0;
   }
 }

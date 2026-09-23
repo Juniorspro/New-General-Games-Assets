@@ -47,6 +47,9 @@ export class KillaPapel {
     this.anim = anim; this.cuadro = i;
   }
   caer(causa) { this.muerte = { t: 0, causa }; }
+  /* un gesto de las escenas (saluda, señala, levanta, arrodilla, abraza, asiente);
+     seg = Infinity lo deja puesto hasta hacer(null) */
+  hacer(anim, seg) { this.gesto = anim ? { anim, t: seg == null ? 1.2 : seg, fase: 0 } : null; }
   volver() { this.muerte = null; this.pop = 0; this.sy = 0.4; this.sx = 1.4; }
 
   /* p: la física; o: { t, dt, aterrizo, salto, habla } */
@@ -57,7 +60,8 @@ export class KillaPapel {
     this.sx = acercar(this.sx, 1, 1 - Math.pow(0.0004, dt)); this.sy = acercar(this.sy, 1, 1 - Math.pow(0.0004, dt));
     this.tAterriza -= dt;
     /* qué dibujo toca */
-    const vx = p.vx, quieta = p.estado === 'normal' && p.enSuelo && Math.abs(vx) < 0.3 && !p.agachada;
+    /* con el mundo quieto (una charla, una escena) no se la ve correr en el lugar */
+    const vx = o.quieta && p.enSuelo ? 0 : p.vx, quieta = p.estado === 'normal' && p.enSuelo && Math.abs(vx) < 0.3 && !p.agachada;
     this.tQuieta = quieta ? this.tQuieta + dt : 0;
     let dir = p.dir;
     if (p.muerta) this.poner('cae_mal', 0);
@@ -78,6 +82,7 @@ export class KillaPapel {
       else this.poner('cae', Math.floor(t * 8));
     } else if (this.tAterriza > 0) this.poner('aterriza', 0);
     else if (Math.abs(vx) > 0.3) { this.fase += Math.abs(vx) * dt; this.poner('corre', Math.floor(this.fase / 0.27)); }
+    else if (this.gesto && this.T[this.gesto.anim]) { const G = this.gesto; G.fase += dt; this.poner(G.anim, Math.floor(G.fase * (G.anim === 'saluda' ? 6 : 3))); }
     else if (o.habla) this.poner('habla', Math.floor(t * 6));
     else {
       this.tParpado -= dt;
@@ -86,17 +91,17 @@ export class KillaPapel {
       else if (this.tQuieta > 3.5 && Math.sin(t * 0.6) > 0.3) this.poner('mira', 0);
       else this.poner('quieta', Math.floor(t * 3));
     }
+    if (this.gesto) { this.gesto.t -= dt; if (this.gesto.t <= 0) this.gesto = null; }
     /* darse vuelta: la hoja da media vuelta (del otro lado se ve el dibujo al revés) */
     if (dir) this.dir = dir;
     const meta = this.dir > 0 ? -0.28 : Math.PI + 0.28;
-    let d = meta - this.yaw;
-    while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
-    this.yaw += d * (1 - Math.pow(0.000001, dt));
+    /* sin dar la vuelta por el otro lado: la hoja va de 0 a PI y vuelve */
+    this.yaw += (meta - this.yaw) * (1 - Math.pow(0.000001, dt));
     this.raiz.position.set(p.x, p.y, 0);
     this.pivote.rotation.y = (this.yaw + 0.28) * (Math.PI / (Math.PI + 0.56));
     /* al correr se hamaca un poquito; en el aire se inclina con la velocidad */
-    this.onda += Math.abs(p.vx) * dt * 2.2;
-    this.pivote.rotation.z = p.enSuelo ? Math.sin(this.onda) * 0.035 * Math.min(1, Math.abs(p.vx) / 3) : -Math.sign(p.vx) * Math.min(0.12, Math.abs(p.vy) * 0.01);
+    this.onda += Math.abs(vx) * dt * 2.2;
+    this.pivote.rotation.z = p.enSuelo ? Math.sin(this.onda) * 0.035 * Math.min(1, Math.abs(vx) / 3) : -Math.sign(p.vx) * Math.min(0.12, Math.abs(p.vy) * 0.01);
     this.pivote.rotation.x = 0;
     this.pivote.scale.set(this.sx, this.sy, 1);
     this.pivote.position.set(0, 0, 0);

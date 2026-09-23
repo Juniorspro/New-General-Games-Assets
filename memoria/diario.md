@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **23/09/2026, noche · `claude/fijate-iszyer`:**
+  - KUNTUR v2: en el celular parado se gira 90°, cinemáticas con gestos y
+    franjas en cada capítulo, gente y animales animados todo el tiempo
+    (`kuntur.md § Cinemáticas`, `§ Celular`).
+  - La partida entera pasa. Sin probar en un teléfono de verdad (ni fps ni
+    sonido). Sigue sin respuesta lo del dibujo liso.
 - **23/09/2026, más tarde · `claude/fijate-iszyer`:**
   - Pidió "otro juego aún mejor, buena historia y 2.5D súper goty". Quedó
     KUNTUR en `kuntur/kuntur.html`, estilo Paper Mario (pedido tras rechazar

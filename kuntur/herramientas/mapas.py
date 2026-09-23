@@ -174,7 +174,7 @@ m.rect(vagones[9][0] + 3, 6, vagones[9][0] + 5, 6)   # el carbón
 m.put(vagones[9][0] + 4, 7, 'K')
 m.put(vagones[1][0] + 11, 7, 'K')           # arriba de un farol
 m.rect(vagones[1][0] + 11, 6, vagones[1][0] + 11, 6)
-m.put(la - 2, 6, 't')                       # Tomás
+m.put(la - 5, 6, 't')                       # Tomás: se lo ve desde el techo del último vagón
 m.put(la - 1, 6, 'N')
 m.put(la + 1, 9, 'F')
 MAPAS['tren'] = m.filas()

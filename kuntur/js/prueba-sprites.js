@@ -1,7 +1,7 @@
 // hoja de prueba: los cuadros de pixel art en plano y los mismos en cubos
 import * as THREE from 'three';
 import { cuadrosKilla } from './sprites.js';
-import { ELENCO, ANIMALES, APU, DECOR } from './elenco.js';
+import { ELENCO, ANIMALES, APU, DECOR, ANIM_GENTE } from './elenco.js';
 import { inflar, mallaVox } from './vox.js';
 
 export function probarSprites() {
@@ -9,10 +9,14 @@ export function probarSprites() {
   const lista = [];
   const q = new URLSearchParams(location.search);
   if (q.get('elenco')) {
-    for (const [n, f] of Object.entries(ELENCO)) for (const i of [0, 1]) lista.push([n + i, f(i)]);
-    for (const [n, f] of Object.entries(ANIMALES)) for (const i of [0, 1, 2]) lista.push([n + i, f(i)]);
-    lista.push(['pichon0', APU.pichon(0)], ['pichon2', APU.pichon(2)], ['cuerpo', APU.cuerpo(0.9)], ['ala', APU.ala(0.9)], ['cuerpoJ', APU.cuerpo(0.3)]);
-    for (const [n, f] of Object.entries(DECOR)) lista.push([n, f(0)], [n + '1', f(1)]);
+    const quien = q.get('elenco');
+    for (const [n, f] of Object.entries(ELENCO)) {
+      if (quien !== '1' && quien !== n) continue;
+      for (const [a, [c]] of Object.entries(ANIM_GENTE)) for (let i = 0; i < c; i++) lista.push([n.slice(0, 3) + ' ' + a + i, f(a + ':' + i)]);
+    }
+    if (quien === '1' || quien === 'animales') for (const [n, f] of Object.entries(ANIMALES)) for (let i = 0; i < 6; i++) lista.push([n + i, f(i)]);
+    if (quien === '1') lista.push(['pichon0', APU.pichon(0)], ['pichon2', APU.pichon(2)], ['cuerpo', APU.cuerpo(0.9)], ['ala', APU.ala(0.9)], ['cuerpoJ', APU.cuerpo(0.3)]);
+    if (quien === '1') for (const [n, f] of Object.entries(DECOR)) lista.push([n, f(0)], [n + '1', f(1)]);
   } else for (const [n, fr] of Object.entries(cuadros)) fr.forEach((L, i) => lista.push([n + i, L]));
   /* en plano */
   const k = q.get('elenco') ? 3 : 6, porFila = q.get('elenco') ? 12 : 10;

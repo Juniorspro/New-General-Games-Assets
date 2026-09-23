@@ -11,6 +11,7 @@
 import { T, tr, IDIOMAS, TEXTOS } from './textos.js';
 import { granoPapel } from './papel.js';
 import { Entrada } from './entrada.js';
+import { Pantalla } from './pantalla.js';
 
 const $ = (tag, cls, padre, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (padre) padre.appendChild(e); return e; };
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -106,7 +107,7 @@ export class UI {
     const tags = $('div', 'tags', c);
     const items = IDIOMAS.map(([l, nombre], i) => {
       const b = $('button', 'tag', tags, `<span class="ojal"></span><b>${esc(TEXTOS[l].ui.saludo)}</b><i>${esc(nombre)}</i>`);
-      b.style.setProperty('--hilo', `${18 + (i % 2) * 7}vh`); b.style.setProperty('--fase', `${-i * 0.7}s`); b.style.setProperty('--col', PALETA[i * 2]);
+      b.style.setProperty('--hilo', `calc(${18 + (i % 2) * 7} * var(--vh) * var(--corto, 1))`); b.style.setProperty('--fase', `${-i * 0.7}s`); b.style.setProperty('--col', PALETA[i * 2]);
       return b;
     });
     const i0 = Math.max(0, IDIOMAS.findIndex(([l]) => l === actual));
@@ -280,8 +281,9 @@ export class UI {
     G.completar = () => { G.t = 999; G.escribir(0); };
     G.poner = (x, y) => {
       const w = g.offsetWidth, h = g.offsetHeight;
-      const lado = innerWidth * 0.075 + 8, arriba = Math.max(64, innerHeight * 0.1);
-      const X = Math.max(lado, Math.min(innerWidth - w - lado, x - w * 0.35)), Y = Math.max(arriba, Math.min(innerHeight - h - 12, y - h - 26));
+      const W = Pantalla.w, H = Pantalla.h;
+      const lado = W * 0.075 + 8, arriba = Math.max(64, H * 0.1);
+      const X = Math.max(lado, Math.min(W - w - lado, x - w * 0.35)), Y = Math.max(arriba, Math.min(H - h - 12, y - h - 26));
       g.style.transform = `translate(${X}px,${Y}px)`;
       g.style.setProperty('--cola', `${Math.max(18, Math.min(w - 26, x - X))}px`);
     };
@@ -299,6 +301,7 @@ export class UI {
     clearTimeout(this.tNota);
     this.tNota = setTimeout(() => { n.classList.remove('ve'); setTimeout(() => n.remove(), 500); }, 6500);
   }
+  esconderNota() { if (this.notaEl) { const n = this.notaEl; n.classList.remove('ve'); setTimeout(() => n.remove(), 500); this.notaEl = null; } }
   aviso(texto) {
     const a = $('div', 'aviso', this.r, esc(texto));
     setTimeout(() => a.classList.add('ve'), 30);

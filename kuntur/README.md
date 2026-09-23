@@ -13,6 +13,10 @@ mando o dedos.
 - Apu va creciendo: en las Salinas aletea (doble salto), en la Puna planea y
   abre trabas.
 - Las apachetas guardan el lugar. Hay 15 coplas escondidas.
+- En el celular parado el juego se gira solo 90° para jugarse acostado (y
+  pide pantalla completa horizontal si el teléfono lo deja).
+- La gente y los animales se mueven todo el tiempo (tejen, cavan, saludan,
+  pastan, huyen) y las escenas tienen cinemáticas con franjas y gestos.
 
 **Armar:** `node kuntur/herramientas/armar.mjs` (usa three y esbuild de
 `bosque/node_modules`). Los mapas salen de `herramientas/mapas.py`.

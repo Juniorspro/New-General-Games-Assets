@@ -28,6 +28,8 @@ export function recorte(nombre, fn, arg, mpx) {
   h.userData.L = L; h.userData.mpx = mpx;
   return h;
 }
+/* los animales (y, u, m) no son decorados: caminan (figuras.js › Animal) */
+export const LUGAR_ANIMAL = { y: ['llama', -1.3], u: ['vicuna', -1.9], m: ['flamenco', -0.4] };
 const DECORADOS = {
   c: { fn: DECOR.cardon, mpx: 0.09, z: [-1.6, -2.6], varia: 3 },
   a: { fn: DECOR.casa, mpx: 0.07, z: [-2.3, -2.3], varia: 2 },
@@ -38,9 +40,6 @@ const DECORADOS = {
   w: { fn: DECOR.corral, mpx: 0.06, z: [-1.1, -1.1], varia: 1 },
   n: { fn: DECOR.nido, mpx: 0.06, z: [-0.3, -0.3], varia: 1 },
   f: { fn: DECOR.fogon, mpx: 0.045, z: [-0.8, -0.8], varia: 1, anim: 3 },
-  y: { fn: ANIMALES.llama, mpx: 0.05, z: [-1.3, -1.3], varia: 1, anim: 2, lento: 1.2 },
-  u: { fn: ANIMALES.vicuna, mpx: 0.05, z: [-1.6, -2.2], varia: 1, anim: 2, lento: 1.6 },
-  m: { fn: ANIMALES.flamenco, mpx: 0.045, z: [-0.4, -0.4], varia: 1, anim: 2, lento: 0.8 },
 };
 
 export class Escenario {
@@ -49,6 +48,7 @@ export class Escenario {
     this.g = new THREE.Group(); this.g.name = 'escenario';
     escena.add(this.g);
     this.cosas = [];        // recortes que se paran (y se animan)
+    this.hamaca = new Set(); this.viento = bio.clima === 'viento' || bio.clima === 'nieve' ? 0.035 : 0.014;
     this.cajas = []; this.rompe = new Map(); this.puertas = []; this.palancas = []; this.apachetas = []; this.coplas = [];
     this.aguas = [];
     const filas = m.nivel.mapa, H = m.h;
@@ -69,6 +69,7 @@ export class Escenario {
     this.t = 0;
   }
   parar(h, D, ch) {
+    if (ch === 'c' || ch === 'p' || ch === 's') this.hamaca.add(h);
     h.userData.pop = { t: -1, listo: false, giro: h.rotation.y };
     h.rotation.x = -Math.PI / 2;
     h.visible = false;
@@ -260,7 +261,8 @@ export class Escenario {
         const f = Math.floor((t + A.fase) / A.lento) % A.n;
         if (f !== A.f) { A.f = f; const { tex } = texDe(A.nombre, A.fn, f); h.material.map = tex; h.material.needsUpdate = true; h.customDepthMaterial.map = tex; h.customDepthMaterial.needsUpdate = true; }
       }
-      if (P.listo && h.userData.hamaca) h.rotation.z = Math.sin(t * 2 + h.position.x) * 0.03;
+      /* los recortes altos se hamacan con el viento, como papel */
+      if (P.listo && h.userData.hamaca !== false && (h.userData.hamaca || this.hamaca.has(h))) h.rotation.z = Math.sin(t * 1.4 + h.position.x * 0.7) * this.viento + Math.sin(t * 3.1 + h.position.x) * this.viento * 0.3;
     }
     for (const { c, mm } of this.cajas) mm.position.set(c.x + 0.5, c.y + 0.5, -0.1);
     for (const [k, r] of this.rompe) {

@@ -67,9 +67,11 @@ export const Entrada = {
     let id = null, ox = 0, oy = 0;
     const dirs = { izq: false, der: false, arr: false, aba: false };
     const poner = (q) => { for (const a in dirs) { if (q[a] && !dirs[a]) { dirs[a] = true; this.pulsar(a, 'pal'); } else if (!q[a] && dirs[a]) { dirs[a] = false; this.soltar(a, 'pal'); } } };
+    /* con el teléfono parado el juego está girado: se pasa el dedo a coordenadas del juego */
+    const punto = (e) => { const q = this.aJuego ? this.aJuego(e.clientX, e.clientY) : { x: e.clientX, y: e.clientY }; const r = this.caja ? this.caja(zona) : zona.getBoundingClientRect(); return { x: q.x - r.left, y: q.y - r.top }; };
     const mover = (e) => {
-      const r = zona.getBoundingClientRect();
-      let dx = e.clientX - r.left - ox, dy = e.clientY - r.top - oy;
+      const q = punto(e);
+      let dx = q.x - ox, dy = q.y - oy;
       const d = Math.hypot(dx, dy);
       if (d > radio * 1.4) { const k = (d - radio * 1.4) / d; ox += dx * k; oy += dy * k; dx -= dx * k; dy -= dy * k; }
       const nx = dx / radio, ny = dy / radio;
@@ -84,8 +86,8 @@ export const Entrada = {
       e.preventDefault();
       if (id !== null) return;
       id = e.pointerId; this.usar('toque');
-      const r = zona.getBoundingClientRect();
-      ox = e.clientX - r.left; oy = e.clientY - r.top;
+      const q = punto(e);
+      ox = q.x; oy = q.y;
       zona.classList.add('on');
       try { zona.setPointerCapture(id); } catch (_) {}
       mover(e);

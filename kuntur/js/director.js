@@ -14,6 +14,7 @@ import { DT, NADA, revivir } from './fisica.js';
 import { T, tr, Idioma, IDIOMAS } from './textos.js';
 import { HISTORIA, ORDEN, siguiente, numeroDe } from './historia.js';
 import { NIVEL } from './niveles.js';
+import { Pantalla } from './pantalla.js';
 
 const CLAVE = 'kuntur:partida', CLAVE_OP = 'kuntur:opciones';
 const leer = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (_) { return d; } };
@@ -48,6 +49,7 @@ export class Director {
     });
     Entrada.mando({ 0: ['salto', 'aceptar'], 1: ['accion', 'volver'], 2: 'accion', 3: 'accion', 9: 'pausa', 8: 'volver', 12: 'arr', 13: 'aba', 14: 'izq', 15: 'der' });
     Entrada.alUsar = (f) => this.ui.verTactil(f === 'toque' && this.estado === 'juego');
+    Entrada.aJuego = (x, y) => Pantalla.aJuego(x, y); Entrada.caja = (el) => Pantalla.caja(el);
     this.estado = 'idioma'; this.cap = null; this.portada = null;
     this.esperas = []; this.condiciones = []; this.escuchas = [];
     this.charlaActual = null; this.gritos = []; this.pausado = false; this.acum = 0; this.ult = 0;
@@ -66,6 +68,7 @@ export class Director {
     const l = Idioma.guardado() || Idioma.delNavegador();
     Idioma.poner(l);
     this.ui.idioma(l, async (elegido) => {
+      Pantalla.acostar();
       Idioma.poner(elegido);
       Sonido.iniciar();
       Sonido.sfx('elegir');
@@ -85,6 +88,7 @@ export class Director {
     P.pasarCamara(1, true);
     P.apu.orbitar(p.x + 0.5, p.y + 4.2, 4.2);
     P.clima.fuerza = 0.6;
+    P.tGesto = 3;
   }
   async titulo(abrir) {
     this.estado = 'titulo';
@@ -175,8 +179,18 @@ export class Director {
     const n = numeroDe(id);
     const chico = id === 'prologo' ? tr('prologo') : id === 'epilogo' ? tr('epilogo') : tr('capitulo', n);
     this.ui.cartel(chico, T().capitulos[id], COLOR_CAP[id]);
-    if (!en) { await dormir(1600); await this.ui.narrar(T().narra[id] || []); }
-    else await dormir(900);
+    if (!en) {
+      /* el plano de entrada: desde lejos y alto, y después baja hasta Killa */
+      const p = c.m.p;
+      c.bloqueo = true;
+      c.encuadre = { x: p.x + 14, y: p.y + 7, ancho: 36, libre: true, alzada: 5 };
+      c.pasarCamara(1, true);
+      await dormir(1600); await this.ui.narrar(T().narra[id] || []);
+      if (this.cap !== c) return;
+      c.encuadre = null;
+      await dormir(700);
+      c.bloqueo = false;
+    } else await dormir(900);
     if (this.cap !== c) return;
     c.quieta = false;
     if (H.empezar) H.empezar(this);
@@ -293,13 +307,22 @@ export class Director {
     void p; void sal; void nieve;
   }
   hablarCon(id) {
-    if (this.charlaActual || this.cap.quieta) return;
+    if (this.charlaActual || this.cap.quieta || this.hablando || this.sinVecinos) return;
     const lista = (this.H.hablar || {})[id];
     if (!lista) return;
     const n = this.hablados[id] || 0;
     this.hablados[id] = n + 1;
     const v = this.cap.vecinos[id]; if (v) v.saltito();
-    this.charla(lista[Math.min(n, lista.length - 1)]);
+    const c = this.cap, p = c.m.p, clave = lista[Math.min(n, lista.length - 1)];
+    /* si quedó encima del vecino, da un pasito atrás para verse las caras */
+    if (v && Math.abs(p.x - v.x) < 1.15) {
+      const lado = p.x < v.x ? -1 : 1;
+      this.hablando = true;
+      this.caminarA(v.x + lado * 1.3).then(() => { p.dir = -lado; this.hablando = false; this.charla(clave); });
+      return;
+    }
+    if (v) p.dir = p.x < v.x ? 1 : -1;
+    this.charla(clave);
   }
 
   /* ============================== lo que la historia usa ============================== */
@@ -312,9 +335,10 @@ export class Director {
     if (this.charlaActual) return new Promise((r) => { this.condiciones.push({ fn: () => !this.charlaActual, r: () => this.charla(clave, o).then(r) }); });
     this.cerrarGritos();
     return new Promise((listo) => {
-      const C = this.charlaActual = { lineas, i: -1, listo, globo: null, quietaAntes: c.quieta, encuadre: c.encuadre, cap: c };
+      const C = this.charlaActual = { lineas, i: -1, listo, globo: null, quietaAntes: c.quieta, encuadre: c.encuadre, cap: c, clave, desde: o.desde || 0 };
       c.quieta = true;
       Entrada.soltarTodo();
+      for (const [q] of lineas) if (c.vecinos[q]) c.vecinos[q].enCharla = true;
       /* si nadie tomó la cámara, se acerca a los que hablan */
       if (!c.encuadre) {
         const p = c.m.p, xs = [p.x];
@@ -333,6 +357,7 @@ export class Director {
     C.i++;
     if (C.i >= C.lineas.length) {
       this.charlaActual = null;
+      for (const v of Object.values(c.vecinos)) v.enCharla = false;
       if (c.encuadre && c.encuadre.auto) c.encuadre = C.encuadre;
       c.quieta = C.quietaAntes;
       C.listo();
@@ -343,6 +368,13 @@ export class Director {
     C.globo.quien = quien;
     if (c.vecinos[quien]) c.vecinos[quien].habla = true;
     if (quien === 'killa') c.hablaKilla = true;
+    /* los gestos de cada línea (historia.js › gestos), y el que escucha asiente a veces */
+    const G = (this.H.gestos || {})[C.clave], g = G && G[C.desde + C.i];
+    if (g) for (const [q, anim, seg] of (Array.isArray(g[0]) ? g : [g])) this.gesto(q, anim, seg);
+    else if (Math.random() < 0.4) {
+      const oyente = quien === 'killa' ? C.lineas.map((l) => l[0]).find((q) => c.vecinos[q]) : 'killa';
+      if (oyente) setTimeout(() => { if (this.charlaActual === C) this.gesto(oyente, 'asiente', 0.6); }, 500);
+    }
     if (quien === 'apu') { c.apu.aletear(); Sonido.sfx('pio', { grande: c.apu.edad > 0.5 }); }
     Sonido.sfx('mover');
   }
@@ -372,9 +404,42 @@ export class Director {
     const c = this.cap;
     c.quieta = false;
     c.entrada = (p) => ({ x: Math.abs(x - p.x) > 0.12 ? Math.sign(x - p.x) : 0, y: 0, salto: false, saltoE: false, accion: false, accionE: false });
-    return this.cuando(() => Math.abs(c.m.p.x - x) <= 0.12 || c.m.p.muerta).then(() => { c.entrada = null; c.m.p.vx = 0; });
+    return this.cuando(() => Math.abs(c.m.p.x - x) <= 0.12 || c.m.p.muerta).then(() => { c.entrada = null; c.m.p.vx = 0; if (c.bloqueo) c.quieta = true; });
   }
   telon(cerrar) { Sonido.sfx('telon'); return this.ui.telon(cerrar); }
+  /* ---------------- las cinemáticas ---------------- */
+  cine(on) {
+    const c = this.cap; if (!c) return;
+    if (this.alCine) this.alCine(on, c);
+    c.bloqueo = !!on;
+    /* en la escena el mundo se queda quieto (las vigas del tren no pasan, el viento no sopla) */
+    c.quieta = !!on;
+    this.ui.verTactil(!on && Entrada.fuente === 'toque');
+    if (on) { this.ui.sinEtiquetas(); Entrada.soltarTodo(); this.ui.esconderNota(); }
+  }
+  /* un gesto: quien = 'killa', 'apu' o un vecino */
+  gesto(quien, anim, seg) {
+    const c = this.cap; if (!c) return Promise.resolve();
+    if (quien === 'killa') { c.killa.hacer(anim, seg); return seg === Infinity ? Promise.resolve() : this.esperar(seg == null ? 1.2 : seg); }
+    if (quien === 'apu') { c.apu.aletear(); Sonido.sfx('pio', { grande: c.apu.edad > 0.5 }); return this.esperar(0.5); }
+    const v = c.vecinos[quien];
+    if (!v || (v.accion && v.accion.t > 1e5)) return Promise.resolve();
+    return v.hacer(anim, seg);
+  }
+  caminarVecino(quien, x, vel) { const v = this.cap && this.cap.vecinos[quien]; return v ? v.caminarA(x, vel) : Promise.resolve(); }
+  mirar(quien, dir) { const c = this.cap; if (!c) return; if (quien === 'killa') c.m.p.dir = dir; else if (c.vecinos[quien]) c.vecinos[quien].mirar(dir); }
+  lanzar(nombre, desde, hasta, dur, alto) { return this.cap.volador(nombre).lanzar(desde, hasta, dur, alto); }
+  /* mover la cámara de a poco hasta un encuadre */
+  viajar(meta, seg) {
+    const c = this.cap, cam = c.cam, a = { x: cam.x, y: cam.y, ancho: c.ancho };
+    let t = 0;
+    const paso = () => {
+      t += 1 / 60; const k = Math.min(1, t / seg), e = k * k * (3 - 2 * k);
+      c.encuadre = Object.assign({}, meta, { x: a.x + (meta.x - a.x) * e, y: a.y + (meta.y - a.y) * e, ancho: a.ancho + (meta.ancho - a.ancho) * e });
+      return k >= 1;
+    };
+    return this.cuando(paso);
+  }
   musica(n) { Sonido.musica(n); }
   ambiente(n) { Sonido.ambientar(n); }
   sfx(n, o) { Sonido.sfx(n, o); }
@@ -387,7 +452,7 @@ export class Director {
     this.esperas = this.esperas.filter((q) => { if (q.cap !== c) return false; if (ahora >= q.t) { q.r(); return false; } return true; });
     this.condiciones = this.condiciones.filter((q) => { let ok = false; try { ok = q.fn(); } catch (_) { ok = true; } if (ok) { q.r(); return false; } return true; });
     const p = c.m.p;
-    if (this.H.ayudas && !this.charlaActual) for (const [x, k] of this.H.ayudas) if (p.x >= x && !this.ayudadas.has(k)) this.ayuda(k);
+    if (this.H.ayudas && !this.charlaActual && !c.bloqueo) for (const [x, k] of this.H.ayudas) if (p.x >= x && !this.ayudadas.has(k)) this.ayuda(k);
   }
   pasarGlobos(dt) {
     const c = this.cap;
@@ -482,7 +547,13 @@ export class Director {
       }
       E.aceptar = E.volver = E.arr = E.aba = false;
     } else {
-      if (this.portada) this.portada.cuadro(real);
+      if (this.portada) {
+        const P = this.portada;
+        /* en la portada Killa le hace señas a Apu, que da vueltas arriba */
+        P.tGesto -= real;
+        if (P.tGesto < 0) { P.tGesto = 5 + Math.random() * 4; P.killa.hacer(['saluda', 'senala', 'levanta'][Math.floor(Math.random() * 3)], 1.8); }
+        P.cuadro(real);
+      }
       Entrada.fin();
     }
   }

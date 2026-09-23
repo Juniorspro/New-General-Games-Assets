@@ -33,6 +33,17 @@ const ver = (ok, que) => { console.log((ok ? "ok   " : "MAL  ") + que); if (!ok)
 /* en la página: pasos de física de a uno, atendiendo charlas y narraciones */
 await pag.evaluate(() => {
   const d = window.__K; d.congelado = true;
+  /* el resolvedor a veces aprieta "arriba" al lado de un vecino: acá no se charla con ellos
+     (el pasito atrás para verse las caras movería a Killa del camino resuelto) */
+  d.sinVecinos = true;
+  /* si una escena camina a Killa (para que no quede encima de alguien), al terminar
+     se la devuelve adonde estaba: así sigue el camino resuelto tal cual */
+  let foto = null;
+  d.alCine = (on, c) => {
+    const p = c.m.p;
+    if (on) foto = { p: JSON.parse(JSON.stringify(p)), tiempo: c.m.tiempo };
+    else if (foto) { const f = foto; foto = null; for (const k of Object.keys(f.p)) p[k] = f.p[k]; if (p.caja) p.caja = null; c.m.tiempo = f.tiempo; }
+  };
   const esperarUI = () => new Promise((r) => setTimeout(r, 0));
   window.__pasos = async (n, alPaso) => {
     for (let i = 0; i < n; i++) {

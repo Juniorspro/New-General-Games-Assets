@@ -9,6 +9,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { Pantalla } from './pantalla.js';
 
 export const CALIDADES = {
   alta: { px: 2, sombra: 2048, bloom: 1, msaa: 4 },
@@ -93,6 +94,7 @@ export class Escena {
     this.u = this.grado.uniforms;
     this.tamano();
     addEventListener('resize', () => this.tamano());
+    addEventListener('orientationchange', () => setTimeout(() => this.tamano(), 250));
   }
 
   /* cambiar la calidad sin rearmar todo (el antialias del principio queda) */
@@ -109,7 +111,8 @@ export class Escena {
   }
 
   tamano() {
-    const w = innerWidth, h = innerHeight;
+    Pantalla.actualizar();
+    const w = Pantalla.w, h = Pantalla.h;
     this.renderer.setSize(w, h, false);
     this.renderer.domElement.style.width = w + 'px'; this.renderer.domElement.style.height = h + 'px';
     this.composer.setSize(w, h);

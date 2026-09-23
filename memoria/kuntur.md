@@ -2,7 +2,7 @@
 
 Juego 2.5D "estilo Paper Mario" en `kuntur/`: Killa lleva un pichón de cóndor
 de Purmamarca al Nevado de Chañi. Prólogo, 5 capítulos y epílogo. Un solo
-HTML: `kuntur/kuntur.html` (806 KB). Es la vara para el próximo juego. Ver también: [juegos](juegos.md),
+HTML: `kuntur/kuntur.html` (830 KB). Es la vara para el próximo juego. Ver también: [juegos](juegos.md),
 [maquina](maquina.md) (el navegador para probar).
 
 ## Cómo se llegó al estilo
@@ -67,3 +67,41 @@ HTML: `kuntur/kuntur.html` (806 KB). Es la vara para el próximo juego. Ver tamb
 - Una charla que arranca mientras se cierra el telón quedaba colgada: el
   director no abre charlas con `terminando` y cierra globos al cambiar.
 - 15 coplas, 3 por capítulo, cada una con el tema de su lugar.
+
+## Cinemáticas y sprites vivos (v2)
+
+- Escenas: `director.cine(true/false)` pone `bloqueo` (sin mando y con franjas)
+  y `quieta` (el mundo no da pasos de física, ni vigas ni viento). Ayudantes:
+  `gesto(quien, anim, seg)`, `caminarVecino`, `mirar`, `lanzar` (un `Volador`
+  de papel), `viajar(meta, seg)` y `encuadre {x, y, ancho, libre, alzada}`
+  (alzada negativa mira para arriba).
+- Gestos por línea de charla en `HISTORIA[cap].gestos[clave][línea]`; si no hay,
+  el que escucha a veces asiente.
+- Gente: `ELENCO[id]('anim:cuadro')` en `elenco.js` (poses articuladas).
+  `Vecino` (figuras.js) elige, en orden: caminar a una meta > acción > hablar >
+  charla > saludar si Killa pasa a menos de 3,2 m > su tarea. Animales: `Animal`
+  sale de las letras y/u/m del mapa (`LUGAR_ANIMAL`); la vicuña huye.
+- Killa: `hacer(anim, seg)`; seg = Infinity lo deja hasta `hacer(null)`.
+- Trampas:
+  - darse vuelta con "vuelta corta" (wrap del ángulo) la dejaba de canto: el
+    papel no es periódico, el yaw va y vuelve por interpolación simple;
+  - la escena congela el mundo pero **no** hay que poner vx = 0 en la física
+    (rompe la partida grabada): solo el dibujo la ve quieta;
+  - `partida.mjs` guarda y repone a Killa y `m.tiempo` alrededor de cada escena
+    (`alCine`) y apaga las charlas con vecinos (`sinVecinos`); si no, las
+    caminatas de las escenas desfasan las soluciones grabadas.
+
+## Celular parado: se gira 90°
+
+- `js/pantalla.js`: si el alto > ancho en un dispositivo táctil, `#app` va con
+  `translateX(innerWidth) rotate(90deg)` y el juego usa el ancho y alto
+  lógicos (`Pantalla.w/h`). El CSS no usa vw/vh: usa `calc(N * var(--vw))`
+  (también los negativos), que `Pantalla` actualiza.
+- El toque se pasa con `Pantalla.aJuego` (x = clientY, y = innerWidth −
+  clientX) y `caja(el)` suma los offsets hasta `#app`.
+- Clases en `html`: `girado`, `angosta`, `bajita` (alto < 520: menús apretados,
+  `--corto`). Al elegir idioma prueba pantalla completa y `orientation.lock`.
+- Los botones táctiles se corren `--costado` (lo que queda del telón abierto) y
+  `--cenefa`: si no, el telón los tapaba en el teléfono.
+- Para probarlo: Playwright con viewport 390×844, `hasTouch` e `isMobile`
+  (no quedó script en el repo), y girar la foto 90° para mirarla.

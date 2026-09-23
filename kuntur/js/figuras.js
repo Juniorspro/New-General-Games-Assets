@@ -9,7 +9,7 @@
 import * as THREE from 'three';
 import { hojaRecortada, granoPapel } from './papel.js';
 import { texDe } from './escenario.js';
-import { ELENCO, ANIMALES, APU, DECOR } from './elenco.js';
+import { ELENCO, ANIMALES, APU, DECOR, ANIM_GENTE, TAREA } from './elenco.js';
 import { B, baldosa } from './fisica.js';
 import { hash } from './azar.js';
 
@@ -40,34 +40,85 @@ function girar(actual, dir, dt, rapido) {
 }
 
 /* ============================================================================
-   LOS VECINOS
+   LOS VECINOS: nunca quietos del todo. Cada uno tiene su tarea (la abuela
+   teje, don Ceferino pica sal, Tomás palea carbón, Coquena flota); cuando
+   Killa se acerca la dejan, se dan vuelta y la saludan; al hablar mueven las
+   manos; en las escenas caminan, señalan, asienten y abrazan.
    ========================================================================== */
 export class Vecino {
   constructor(padre, id, x, y) {
     this.id = id; this.fn = ELENCO[id] || ELENCO.abuela;
-    this.hoja = hojaDe(id, this.fn, 0, id === 'coquena' ? 0.045 : 0.038);
+    this.mpx = id === 'coquena' ? 0.045 : 0.038;
+    this.hoja = hojaDe(id, this.fn, 'quieto:0', this.mpx);
     this.piv = new THREE.Group(); this.piv.add(this.hoja);
     this.raiz = new THREE.Group(); this.raiz.add(this.piv);
     this.raiz.position.set(x, y, -0.25);
     padre.add(this.raiz);
-    this.yaw = 0; this.habla = false; this.f = 0; this.brinco = 0; this.x = x; this.y = y;
+    this.yaw = 0; this.dir = 1; this.habla = false; this.brinco = 0; this.x = x; this.y = y; this.x0 = x;
     this.visible = true; this.aparece = 1;
+    this.tarea = TAREA[id] || 'quieto';
+    this.anim = this.tarea; this.fa = Math.random() * 4; this.clave = '';
+    this.accion = null;          // un gesto pedido por la escena: { anim, t, listo }
+    this.meta = null;            // adónde camina: { x, vel, listo }
+    this.forzado = null;         // para dónde mira en una escena
+    this.cerca = false; this.saludo = 0; this.tLejos = 0;
+    /* se imprimen todos sus cuadros de una vez, así no traba al cambiar */
+    for (const [n, [c]] of Object.entries(ANIM_GENTE)) {
+      if (id === 'coquena' ? !['quieto', 'habla', 'saluda', 'flota', 'baston'].includes(n) : ['flota', 'baston'].includes(n)) continue;
+      for (let f = 0; f < c; f++) texDe(id, this.fn, n + ':' + f);
+    }
   }
   saltito() { this.brinco = 0.28; }
   mostrar(v) { this.visible = v; if (v) { this.aparece = 0; this.raiz.visible = true; } }
-  pasar(dt, t, kx) {
+  /* para las escenas: un gesto que dura seg (devuelve una promesa) */
+  hacer(anim, seg) {
+    if (this.accion && this.accion.listo) this.accion.listo();
+    return new Promise((r) => { this.accion = { anim, t: seg == null ? ANIM_GENTE[anim][0] / ANIM_GENTE[anim][1] : seg, listo: r }; this.fa = 0; });
+  }
+  caminarA(x, vel) { return new Promise((r) => { this.meta = { x, vel: vel || 1.4, listo: r }; }); }
+  mirar(dir) { this.forzado = dir; }
+  pasar(dt, t, kx, ky) {
     if (!this.visible) { this.raiz.visible = false; return; }
     this.raiz.visible = true;
-    const dir = kx < this.x - 0.2 ? -1 : 1;
+    const dx = kx - this.x, cerca = Math.abs(dx) < 3.2 && Math.abs((ky || this.y) - this.y) < 3;
+    /* qué hace ahora */
+    let anim, dir = this.dir;
+    if (this.meta) {
+      const d = this.meta.x - this.x;
+      if (Math.abs(d) < 0.05) { const r = this.meta.listo; this.meta = null; r(); }
+      else { this.x += Math.sign(d) * Math.min(Math.abs(d), this.meta.vel * dt); dir = Math.sign(d); anim = 'camina'; }
+    }
+    if (!anim && this.accion) {
+      this.accion.t -= dt; anim = this.accion.anim;
+      if (this.accion.t <= 0) { const r = this.accion.listo; this.accion = null; r(); }
+    }
+    if (!anim && this.habla) anim = 'habla';
+    if (!anim && this.enCharla) anim = 'quieto';
+    if (!anim) {
+      /* Killa llega: deja la tarea, se da vuelta y la saluda una vez */
+      if (cerca && !this.cerca) { this.saludo = ANIM_GENTE.saluda[0] / ANIM_GENTE.saluda[1] * 2; this.fa = 0; }
+      if (!cerca) this.tLejos += dt; else this.tLejos = 0;
+      this.cerca = cerca;
+      if (this.saludo > 0) { this.saludo -= dt; anim = 'saluda'; }
+      else anim = cerca || this.tLejos < 1.5 ? 'quieto' : this.tarea;
+    }
+    if (!this.meta) dir = this.forzado || (anim === this.tarea && this.tarea !== 'quieto' ? this.dir : (Math.abs(dx) < 9 ? (dx < -0.2 ? -1 : 1) : this.dir));
+    this.dir = dir;
     this.yaw = girar(this.yaw, dir, dt, 0.004);
     this.piv.rotation.y = this.yaw;
-    const f = this.habla ? Math.floor(t * 7) % 2 : Math.floor(t * 1.3 + this.x) % 2;
-    if (f !== this.f) { this.f = f; ponerTex(this.hoja, texDe(this.id, this.fn, f).tex); }
+    /* el cuadro */
+    if (anim !== this.anim) { this.anim = anim; this.fa = 0; }
+    const [n, fps] = ANIM_GENTE[anim] || ANIM_GENTE.quieto;
+    this.fa += dt * fps;
+    const clave = anim + ':' + (Math.floor(this.fa) % n);
+    if (clave !== this.clave) { this.clave = clave; ponerTex(this.hoja, texDe(this.id, this.fn, clave).tex); }
     this.brinco = Math.max(0, this.brinco - dt);
     const b = this.brinco > 0 ? Math.sin((this.brinco / 0.28) * Math.PI) * 0.25 : 0;
     /* respira, y al hablar se estira un poquito */
-    this.piv.scale.y = 1 + Math.sin(t * 2.1 + this.x) * 0.012 + (this.habla ? Math.abs(Math.sin(t * 13)) * 0.025 : 0);
+    this.piv.scale.y = 1 + Math.sin(t * 2.1 + this.x0) * 0.012 + (anim === 'habla' ? Math.abs(Math.sin(t * 13)) * 0.02 : 0);
     this.piv.position.y = b;
+    this.piv.rotation.z = anim === 'camina' ? Math.sin(this.fa * Math.PI / 3) * 0.03 : 0;
+    this.raiz.position.set(this.x, this.y, -0.25);
     /* aparecer: se para como las figuras del libro desplegable */
     if (this.aparece < 1) {
       this.aparece = Math.min(1, this.aparece + dt / 0.5);
@@ -78,6 +129,88 @@ export class Vecino {
   }
   /* la altura de la cabeza, para el globito */
   cabeza() { return new THREE.Vector3(this.x, this.y + (this.id === 'coquena' ? 1.3 : 1.65), 0); }
+}
+
+/* ============================================================================
+   LOS ANIMALES: llamas que caminan y rumian, vicuñas que pastan y disparan si
+   Killa se acerca, flamencos que picotean el agua.
+   ========================================================================== */
+const TIPO_ANIMAL = {
+  llama: { mpx: 0.05, vel: 0.7, rango: 2.5, huye: 0, fpsQ: 0.9, fpsC: 5 },
+  vicuna: { mpx: 0.05, vel: 1.1, rango: 3, huye: 5.5, fpsQ: 0.7, fpsC: 9 },
+  flamenco: { mpx: 0.045, vel: 0.35, rango: 0.6, huye: 0, fpsQ: 1.1, fpsC: 3 },
+};
+export class Animal {
+  constructor(padre, tipo, x, y, z, m) {
+    this.tipo = tipo; this.T = TIPO_ANIMAL[tipo]; this.fn = ANIMALES[tipo]; this.m = m;
+    for (let f = 0; f < 6; f++) texDe(tipo, this.fn, f);
+    this.hoja = hojaDe(tipo, this.fn, 0, this.T.mpx);
+    this.piv = new THREE.Group(); this.piv.add(this.hoja);
+    this.raiz = new THREE.Group(); this.raiz.add(this.piv); padre.add(this.raiz);
+    this.x = x; this.x0 = x; this.y = y; this.z = z;
+    this.dir = hash(Math.round(x), 3, 9) < 0.5 ? -1 : 1; this.yaw = this.dir > 0 ? 0 : Math.PI;
+    this.estado = 'quieto'; this.t = 1 + hash(Math.round(x), 4, 9) * 3; this.meta = x; this.fa = 0; this.f = -1;
+    this.pop = -1; this.raiz.visible = false; this.hoja.rotation.x = -Math.PI / 2;
+  }
+  /* ¿se puede pisar ahí? (mismo suelo que en casa, para no tirarse de un borde) */
+  pisable(x) { return Math.abs(pisoBajo(this.m, x, this.y + 1) - this.y) < 0.3 && Math.abs(pisoBajo(this.m, x + 0.6 * Math.sign(x - this.x || 1), this.y + 1) - this.y) < 0.3; }
+  pasar(dt, t, p, camX, ancho) {
+    /* aparece como los decorados, cuando la cámara se acerca */
+    if (this.pop < 0 && Math.abs(this.x - camX) < ancho / 2 + 3) this.pop = 0;
+    if (this.pop >= 0 && this.pop < 1) {
+      this.pop = Math.min(1, this.pop + dt / 0.45); this.raiz.visible = true;
+      const k = this.pop, e = 1 - Math.pow(1 - k, 3) * Math.cos(k * 7);
+      this.hoja.rotation.x = -Math.PI / 2 * (1 - e);
+    }
+    if (this.pop < 0) return;
+    const T = this.T, dK = p.x - this.x;
+    this.t -= dt;
+    /* la vicuña se asusta */
+    if (T.huye && this.estado !== 'huye' && Math.abs(dK) < 3.2 && Math.abs(p.y - this.y) < 2.5) {
+      const d = -Math.sign(dK) || 1, x = this.x + d * 5;
+      if (this.pisable(this.x + d * 0.8)) { this.estado = 'huye'; this.meta = x; this.t = 2.2; }
+    }
+    if (this.estado === 'quieto' && this.t <= 0) {
+      /* elige adónde ir, sin alejarse de su lugar */
+      const x = this.x0 + (hash(Math.round(t * 7), Math.round(this.x0), 5) - 0.5) * 2 * T.rango;
+      this.meta = x; this.estado = 'camina'; this.t = 6;
+    }
+    if (this.estado !== 'quieto') {
+      const d = this.meta - this.x, vel = this.estado === 'huye' ? T.huye : T.vel;
+      const paso = Math.sign(d) * Math.min(Math.abs(d), vel * dt);
+      if (Math.abs(d) < 0.05 || this.t <= 0 || !this.pisable(this.x + paso * 4)) { this.estado = 'quieto'; this.t = 1.5 + hash(Math.round(t * 3), Math.round(this.x0), 6) * 4; }
+      else { this.x += paso; this.dir = Math.sign(d); }
+    }
+    /* el cuadro: 0-1 quieto, 2-5 caminando */
+    const anda = this.estado !== 'quieto';
+    this.fa += dt * (anda ? (this.estado === 'huye' ? T.fpsC * 1.6 : T.fpsC) : T.fpsQ);
+    const f = anda ? 2 + Math.floor(this.fa) % 4 : Math.floor(this.fa) % 2;
+    if (f !== this.f) { this.f = f; ponerTex(this.hoja, texDe(this.tipo, this.fn, f).tex); }
+    this.yaw = girar(this.yaw, this.dir, dt, 0.003);
+    this.piv.rotation.y = this.yaw;
+    this.piv.rotation.z = anda ? Math.sin(this.fa * Math.PI / 2) * 0.04 : 0;
+    this.raiz.position.set(this.x, this.y, this.z);
+  }
+}
+
+/* un recorte que vuela de una mano a otra (el farol que da Tomás, la cinta de mamá) */
+export class Volador {
+  constructor(padre, nombre, fn, arg, mpx) {
+    this.hoja = hojaDe(nombre, fn, arg, mpx);
+    this.raiz = new THREE.Group(); this.raiz.add(this.hoja); padre.add(this.raiz);
+    this.raiz.visible = false; this.v = null;
+  }
+  lanzar(desde, hasta, dur, alto) { return new Promise((r) => { this.v = { desde, hasta, dur, alto: alto == null ? 1.2 : alto, t: 0, listo: r }; this.raiz.visible = true; }); }
+  pasar(dt) {
+    if (this.sigue && !this.v) { const q = this.sigue.raiz.position; this.raiz.position.set(q.x + 0.1, q.y + 0.25, q.z + 0.05); this.raiz.visible = this.sigue.raiz.visible; }
+    const v = this.v; if (!v) return;
+    v.t += dt;
+    const k = Math.min(1, v.t / v.dur), e = k * k * (3 - 2 * k);
+    this.raiz.position.set(v.desde.x + (v.hasta.x - v.desde.x) * e, v.desde.y + (v.hasta.y - v.desde.y) * e + Math.sin(k * Math.PI) * v.alto, 0.3);
+    this.raiz.rotation.z = Math.sin(k * Math.PI * 2) * 0.4;
+    if (k >= 1) { const r = v.listo; this.v = null; r(); }
+  }
+  esconder() { this.raiz.visible = false; }
 }
 
 /* ============================================================================
@@ -130,8 +263,8 @@ export class Apu {
     this.ajustar();
   }
   ajustar() {
-    const volando = this.modo === 'sigue' || this.modo === 'va' || this.modo === 'libre' || this.modo === 'lleva' || this.modo === 'cruza' || this.modo === 'orbita';
-    this.pichon.visible = this.modo === 'suelo' || this.modo === 'bulto';
+    const volando = this.modo === 'baja' || this.modo === 'sigue' || this.modo === 'va' || this.modo === 'libre' || this.modo === 'lleva' || this.modo === 'cruza' || this.modo === 'orbita' || this.modo === 'posado';
+    this.pichon.visible = this.modo === 'suelo' || this.modo === 'bulto' || this.modo === 'brazos';
     this.condor.visible = volando;
     this.raiz.visible = this.modo !== 'nada';
   }
@@ -143,6 +276,8 @@ export class Apu {
   }
   /* se fue volando a abrir una traba */
   ir(x, y) { this.va = { x0: this.pos.x, y0: this.pos.y, x, y, t: 0 }; this.modo = 'va'; this.ajustar(); }
+  /* bajar volando hasta un lugar y quedarse posado (el nido de la cumbre) */
+  aterrizar(x, y, dur) { this.baja = { x0: this.pos.x, y0: this.pos.y, x, y, t: 0, dur: dur || 1.3 }; this.modo = 'baja'; this.ajustar(); }
   soltar() { this.modo = 'libre'; this.libre = { t: 0, x0: this.pos.x, y0: this.pos.y }; this.ajustar(); }
   aletear() { this.aleteo = 0.5; this.pio = 0.3; }
   /* pasar volando por el cielo, de un lado al otro */
@@ -164,6 +299,7 @@ export class Apu {
     let dir = this.dir;
     this.aleteo = Math.max(0, this.aleteo - dt);
     this.pio = Math.max(0, this.pio - dt);
+    this.condor.position.y = 0; this.condor.rotation.z = 0; this.condor.scale.setScalar(1);
     switch (this.modo) {
       case 'nada': break;
       case 'suelo': {
@@ -173,6 +309,34 @@ export class Apu {
         if (f !== this.fp) { this.fp = f; ponerTex(this.pichon, texDe('apuP', APU.pichon, f).tex); }
         this.pichon.position.set(0, 0, 0);
         dir = -1;
+        break;
+      }
+      case 'brazos': {
+        /* en brazos de Killa, contra el pecho */
+        dir = dirK;
+        this.raiz.position.set(p.x + dirK * (this.brazosX == null ? 0.3 : this.brazosX), p.y + (this.brazosY == null ? 0.52 : this.brazosY), 0.1);
+        const f = this.pio > 0 ? 2 : Math.floor(t * 2) % 2;
+        if (f !== this.fp) { this.fp = f; ponerTex(this.pichon, texDe('apuP', APU.pichon, f).tex); }
+        for (const a of this.alitas) { a.visible = this.aleteo > 0; a.rotation.z = Math.PI * 0.75 + Math.sin(t * 40) * 0.9; }
+        break;
+      }
+      case 'baja': {
+        const B = this.baja; B.t += dt;
+        const k = Math.min(1, B.t / B.dur), e = k * k * (3 - 2 * k);
+        this.pos.set(B.x0 + (B.x - B.x0) * e, B.y0 + (B.y - B.y0) * e + Math.sin(k * Math.PI) * 0.8, 0.2);
+        this.raiz.position.copy(this.pos);
+        dir = Math.sign(B.x - B.x0) || this.dir;
+        this.fase += dt * (k > 0.7 ? 18 : 9); this.batir(k > 0.7 ? 1.3 : 1);
+        if (k >= 1) { this.modo = 'posado'; this.aletear(); }
+        break;
+      }
+      case 'posado': {
+        /* parado en el nido, con las alas plegadas; de vez en cuando las abre */
+        this.raiz.position.set(this.pos.x, this.pos.y + Math.sin(t * 2) * 0.02, -0.35);
+        const abre = this.aleteo > 0 ? Math.sin((this.aleteo / 0.5) * Math.PI) : 0;
+        this.alas(3.05 - abre * 1.1, 2.95 - abre * 1.0);
+        this.condor.rotation.z = 0.7; this.condor.position.y = 0.2 * this.k / 0.05; this.condor.scale.setScalar(0.85);
+        dir = this.dir;
         break;
       }
       case 'bulto': {
@@ -368,12 +532,11 @@ export class VientoBlanco {
 
 /* el farol que le dio Tomás: un recorte con su luz, colgado de la mano */
 export class Farol {
-  constructor(padre) {
+  constructor(padre, sinLuz) {
     this.hoja = hojaDe('farol', DECOR.farol, 0, 0.03);
     this.raiz = new THREE.Group(); this.raiz.add(this.hoja); padre.add(this.raiz);
-    this.luz = new THREE.PointLight('#ffc070', 2.4, 10, 1.2);
-    this.luz.position.set(0, 0.3, 1.5);
-    this.raiz.add(this.luz);
+    this.luz = sinLuz ? { intensity: 0 } : new THREE.PointLight('#ffc070', 2.4, 10, 1.2);
+    if (!sinLuz) { this.luz.position.set(0, 0.3, 1.5); this.raiz.add(this.luz); }
     this.hoja.material.emissive = new THREE.Color('#ffb040'); this.hoja.material.emissiveIntensity = 0.5;
     this.f = 0;
   }
