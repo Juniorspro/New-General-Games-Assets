@@ -531,11 +531,11 @@ export const MEDIDAS = {
     768
    ],
    "medio": [
-    1310,
+    1304,
     445
    ],
    "bajoMedio": [
-    140,
+    141,
     79,
     70
    ],
@@ -551,7 +551,7 @@ export const MEDIDAS = {
     768
    ],
    "medio": [
-    1376,
+    1370,
     511
    ],
    "bajoMedio": [
@@ -571,13 +571,13 @@ export const MEDIDAS = {
     768
    ],
    "medio": [
-    1376,
+    1370,
     212
    ],
    "bajoMedio": [
-    201,
-    198,
-    228
+    206,
+    202,
+    233
    ],
    "suelo": [
     219,
@@ -591,13 +591,13 @@ export const MEDIDAS = {
     768
    ],
    "medio": [
-    1376,
+    1370,
     337
    ],
    "bajoMedio": [
-    131,
+    134,
     57,
-    72
+    74
    ],
    "suelo": [
     118,
@@ -611,7 +611,7 @@ export const MEDIDAS = {
     768
    ],
    "medio": [
-    1376,
+    1370,
     455
    ],
    "bajoMedio": [
@@ -631,13 +631,13 @@ export const MEDIDAS = {
     768
    ],
    "medio": [
-    1376,
+    1370,
     463
    ],
    "bajoMedio": [
-    124,
-    90,
-    106
+    125,
+    91,
+    107
    ],
    "suelo": [
     103,
@@ -651,13 +651,13 @@ export const MEDIDAS = {
     768
    ],
    "medio": [
-    1376,
+    1370,
     598
    ],
    "bajoMedio": [
     161,
     167,
-    190
+    191
    ],
    "suelo": [
     144,

@@ -79,6 +79,26 @@ def teñir_huecos(im, color, reflejo=False):
     return Image.fromarray(base.astype(np.uint8))
 
 
+def sin_borde(im, pasos=2):
+    """le saca el halo al recorte automático del fondo: los píxeles del borde (medio
+    transparentes) toman el color del vecino opaco de adentro, así no queda un filo rosado"""
+    arr = np.array(im).astype(np.float32)
+    a = arr[:, :, 3]
+    for _ in range(pasos):
+        borde = (a > 8) & (a < 250)
+        opaco = a >= 250
+        suma = np.zeros(arr.shape[:2] + (3,), np.float32); cuenta = np.zeros(arr.shape[:2], np.float32)
+        for dy in (-2, -1, 0, 1, 2):
+            for dx in (-2, -1, 0, 1, 2):
+                if dx == 0 and dy == 0: continue
+                o = np.roll(np.roll(opaco, dy, 0), dx, 1)
+                c = np.roll(np.roll(arr[:, :, :3], dy, 0), dx, 1)
+                suma += c * o[:, :, None]; cuenta += o
+        ok = borde & (cuenta > 0)
+        arr[ok, :3] = suma[ok] / cuenta[ok][:, None]
+    return Image.fromarray(arr.astype(np.uint8))
+
+
 def recortar(im, margen=2):
     bb = im.getchannel('A').point(lambda v: 255 if v > 8 else 0).getbbox()
     return im.crop((max(0, bb[0] - margen), max(0, bb[1] - margen), min(im.width, bb[2] + margen), min(im.height, bb[3] + margen))), bb
@@ -203,6 +223,7 @@ def cortar_hoja(src, nombres, alto_max=420, q=82, tipo='props'):
         raise SystemExit(f'{src}: salieron {len(partes)} partes y hay {len(nombres)} nombres')
     for (s, e), n in zip(partes, nombres):
         pieza, _ = recortar(im.crop((s, 0, e, im.height)))
+        pieza = sin_borde(pieza)
         esc = min(1, alto_max / pieza.height, alto_max * 1.6 / pieza.width)
         out = pieza.resize((max(1, round(pieza.width * esc)), max(1, round(pieza.height * esc))), Image.LANCZOS)
         kb = guardar(out, n, q) // 1024
@@ -236,6 +257,8 @@ for t in TRAMOS:
             dentro = False
     med = med.crop((0, mejor[1], med.width, mejor[2]))
     med, _ = recortar(med, 0)
+    # las columnas de los costados salen medio transparentes: en la unión espejada quedaba una raya
+    med = sin_borde(med.crop((3, 0, med.width - 3, med.height)))
     # el color de abajo, para rellenar debajo de la franja
     ab = np.array(med)[-6:, :, :]
     ok = ab[:, :, 3] > 200

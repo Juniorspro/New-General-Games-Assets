@@ -75,7 +75,7 @@ function armar(id) {
   const ruedas = M.ruedas.map((r, i) => {
     const hunde = F.masa * G * parte[i] / F.susp.k;
     const quieto = F.susp.reposo - hunde;
-    return { x: r.x - cx, y: r.y - cy + quieto, r: r.r, reposo: F.susp.reposo, masa: 0.13 * F.masa * (r.r / 0.42) };
+    return { x: r.x - cx, y: r.y - cy + quieto, yDib: r.y - cy, r: r.r, reposo: F.susp.reposo, masa: 0.13 * F.masa * (r.r / 0.42) };
   });
   /* el contorno que choca: la panza entre las ruedas se sube hasta el eje (si no, cualquier
      loma lo deja colgado de la panza) y se ponen puntos cada 45 cm, para que una cresta no

@@ -58,7 +58,7 @@ function masCercano(S, px, py, radio) {
 export function crearAuto(def, x, y, mej = {}) {
   const k = (m) => mej[m] || 0;
   const A = {
-    def,
+    def, mej,
     x, y, a: 0, vx: 0, vy: 0, w: 0,
     m: def.masa, I: def.inercia,
     motor: def.motor.torque * (1 + 0.9 * k('motor')),
