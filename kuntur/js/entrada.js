@@ -4,6 +4,8 @@
    se sigue por su pointerId. */
 
 const ACCIONES = ['izq', 'der', 'arr', 'aba', 'salto', 'accion', 'pausa', 'aceptar', 'volver'];
+/* la perilla del joystick, en radios de la base (ui.js le da el mismo tamaño) */
+export const PERILLA = 0.5;
 export const Entrada = {
   IN: {}, EDGE: {}, fuentes: new Map(), fuente: 'teclado', alUsar: null,
   pad: null, padAntes: {}, palancaXY: { x: 0, y: 0 },
@@ -85,7 +87,7 @@ export const Entrada = {
     };
     /* sin dedo, vuelve a su lugar */
     const reposo = () => {
-      const r = cfg.radio, b = r * 0.45;
+      const r = cfg.radio, b = r * PERILLA;
       aro.style.transform = `translate(${cfg.cx - r}px,${cfg.cy - r}px)`;
       bola.style.transform = `translate(${cfg.cx - b}px,${cfg.cy - b}px)`;
     };
@@ -104,7 +106,7 @@ export const Entrada = {
       const v = cfg.modo === 'cruz' ? 0.45 : 0.62;
       poner({ izq: nx < -0.28, der: nx > 0.28, arr: ny < -v, aba: ny > v });
       aro.style.transform = `translate(${ox - radio}px,${oy - radio}px)`;
-      const k = Math.min(1, radio / Math.max(1, Math.hypot(dx, dy))), b = radio * 0.45;
+      const k = Math.min(1, radio / Math.max(1, Math.hypot(dx, dy))), b = radio * PERILLA;
       bola.style.transform = `translate(${ox + dx * k - b}px,${oy + dy * k - b}px)`;
     };
     zona.addEventListener('pointerdown', (e) => {

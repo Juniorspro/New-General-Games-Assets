@@ -8,6 +8,8 @@ se resumen en una sola.
   - "Sí o sí controles personalizados móviles": KUNTUR tiene editor de
     controles de dedo (`kuntur.md § Controles de dedo`). Quedó como regla en el
     índice. Falta, si lo pide: llevarlo a ZONDA y LUZ MALA.
+  - Después: en su celular pedía teclas (arrancaba en modo PC) → arreglado;
+    joystick de verdad por defecto y giro para los dos lados.
 - **23/09/2026, noche · `claude/fijate-iszyer`:**
   - KUNTUR v2: en el celular parado se gira 90°, cinemáticas con gestos y
     franjas en cada capítulo, gente y animales animados todo el tiempo

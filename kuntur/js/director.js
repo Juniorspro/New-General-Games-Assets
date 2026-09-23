@@ -36,6 +36,7 @@ export class Director {
     const TA = this.op.tactil || {};
     this.op.tactil = { modo: 'flotante', alfa: 0.85, vib: true, ...TA, pos: { ...(TA.pos || {}) }, tam: { pal: 1, salto: 1, accion: 1, pausa: 1, ...(TA.tam || {}) } };
     Entrada.vibrar = this.op.tactil.vib;
+    Pantalla.giro = this.op.giro || 'auto'; Pantalla.sensor();
     this.hayDedos = tactil || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.partida = leer(CLAVE, null);
     const calURL = new URLSearchParams(location.search).get('cal');
@@ -53,7 +54,12 @@ export class Director {
       Enter: 'aceptar', Escape: ['pausa', 'volver'], KeyP: 'pausa', Backspace: 'volver',
     });
     Entrada.mando({ 0: ['salto', 'aceptar'], 1: ['accion', 'volver'], 2: 'accion', 3: 'accion', 9: 'pausa', 8: 'volver', 12: 'arr', 13: 'aba', 14: 'izq', 15: 'der' });
-    Entrada.alUsar = (f) => this.ui.verTactil(f === 'toque' && this.estado === 'juego');
+    Entrada.alUsar = (f) => this.ui.verTactil(f === 'toque' && this.estado === 'juego' && !(this.cap && this.cap.bloqueo));
+    /* en el teléfono se arranca con los dedos (si no, pedía teclas y los botones no
+       aparecían nunca: se prendían recién al tocarlos). Cualquier toque en la
+       pantalla, también en los menús, pasa a dedos; una tecla, a teclado. */
+    if (tactil) Entrada.fuente = 'toque';
+    addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') Entrada.usar('toque'); }, true);
     Entrada.aJuego = (x, y) => Pantalla.aJuego(x, y); Entrada.caja = (el) => Pantalla.caja(el);
     this.estado = 'idioma'; this.cap = null; this.portada = null;
     this.esperas = []; this.condiciones = []; this.escuchas = [];
@@ -147,6 +153,8 @@ export class Director {
       { nombre: () => tr('temblor'), valor: () => tr(o.temblor ? 'si' : 'no'), cambiar: () => { o.temblor = !o.temblor; } },
       { nombre: () => tr('pantalla'), valor: () => tr(document.fullscreenElement ? 'si' : 'no'), cambiar: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (_) {} } },
     ];
+    const GIROS = ['auto', 'normal', 'reves'];
+    if (this.hayDedos) filas.push({ nombre: () => tr('giro'), valor: () => tr(Pantalla.giro), cambiar: (d) => { o.giro = GIROS[(GIROS.indexOf(Pantalla.giro) + d + 3) % 3]; Pantalla.ponerGiro(o.giro); } });
     if (this.hayDedos) filas.push({ nombre: () => tr('tactiles'), valor: () => tr('acomodar'), abrir: () => { escribir(CLAVE_OP, this.op); this.editarTactil(alVolver); } });
     this.ui.opciones(filas, () => { escribir(CLAVE_OP, this.op); if (this.cap) this.cap.o.temblor = o.temblor; alVolver(); });
   }

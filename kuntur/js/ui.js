@@ -10,7 +10,7 @@
    ========================================================================== */
 import { T, tr, IDIOMAS, TEXTOS } from './textos.js';
 import { granoPapel } from './papel.js';
-import { Entrada } from './entrada.js';
+import { Entrada, PERILLA } from './entrada.js';
 import { Pantalla } from './pantalla.js';
 
 const $ = (tag, cls, padre, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; if (padre) padre.appendChild(e); return e; };
@@ -407,7 +407,7 @@ export class UI {
     else { zw = zh = r * 3.2; zx = c.x - zw / 2; zy = c.y - zh / 2; }
     Object.assign(z, { left: zx + 'px', top: zy + 'px', width: zw + 'px', height: zh + 'px' });
     Object.assign(C.pal.style, { width: r * 2 + 'px', height: r * 2 + 'px' });
-    Object.assign(C.bola.style, { width: r * 0.9 + 'px', height: r * 0.9 + 'px' });
+    Object.assign(C.bola.style, { width: r * PERILLA * 2 + 'px', height: r * PERILLA * 2 + 'px' });
     Object.assign(this.cfgPal, { radio: r, modo: A.modo, cx: c.x - zx, cy: c.y - zy });
     this.reposoPal();
     Entrada.vibrar = !!A.vib;

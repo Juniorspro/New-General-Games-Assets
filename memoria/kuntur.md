@@ -117,6 +117,16 @@ HTML: `kuntur/kuntur.html` (830 KB). Es la vara para el próximo juego. Ver tamb
   toques antes que los botones (así no se salta ni se camina).
 - `Entrada.palanca(zona, aro, bola, cfg)` lee `cfg` en cada toque (se cambia en
   vivo) y devuelve `reposo()`. La flotante escucha media pantalla de su lado.
+- Trampa grave (la vio el dueño en su celular): arrancaba en modo teclado
+  ("Flechas o A y D") y los botones de dedo solo se prendían al tocarlos,
+  pero escondidos no se podían tocar. Ahora con `pointer: coarse` se arranca
+  en `toque`, y cualquier toque (también en menús) pasa a dedos.
+- De fábrica: joystick flotante a la izquierda, botones a la derecha. El
+  joystick es base tejida + perilla de papel, con una marquita por dirección.
+- Giro del teléfono (opciones): auto / normal / al revés. En auto lo decide el
+  acelerómetro (`devicemotion`, x > 0 = borde derecho arriba = normal); en
+  iPhone pide permiso y no se usa: queda el manual. Al revés, `#app` va con
+  `translateY(innerHeight) rotate(-90deg)` y el toque es (innerHeight − y, x).
 - Trampa: una escena llama a `soltarTodo()` con el dedo apoyado; la palanca
   creía que seguía apretada. Ahora al mover el dedo vuelve a contar.
 - Probado con toques de verdad por CDP (`Input.dispatchTouchEvent`, dos dedos
