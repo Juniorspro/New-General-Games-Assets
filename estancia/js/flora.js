@@ -78,6 +78,60 @@
     });
   }
 
+  // Con los recortes de Rezona: cada tarjeta es un abanico de 4 o 5 ramas
+  // (una sola rama deja la copa rala). El lienzo 2D guarda el color
+  // premultiplicado y pierde el sangrado del recorte, así que se arma en un
+  // DataTexture y se vuelve a sangrar el borde (§ 5.2): si no, los mips
+  // meten negro en el contorno de cada hoja.
+  const RAMAS = { quebracho: "rama-quebracho.webp", algarrobo: "rama-algarrobo.webp", arbusto: "rama-vinal.webp" };
+  function ramaRezona(mat, tipo) {
+    const dato = window.ARCHIVOS && ARCHIVOS[RAMAS[tipo]];
+    if (!dato) return;
+    const img = new Image();
+    img.onload = () => {
+      const N = img.width >= 1024 ? 1024 : 512, c = document.createElement("canvas");
+      c.width = c.height = N;
+      const g = c.getContext("2d"), az = E.azar(tipo.length * 17);
+      const n = tipo === "arbusto" ? 5 : 4, abre = tipo === "algarrobo" ? 1.2 : 0.95;
+      for (let i = 0; i < n; i++) {
+        const ang = (i / (n - 1) - 0.5) * abre + (az() - 0.5) * 0.15, sc = 0.7 + az() * 0.3;
+        g.save(); g.translate(N / 2 + (az() - 0.5) * 40, N); g.rotate(ang); g.scale(sc * (az() < 0.5 ? -1 : 1), sc);
+        g.drawImage(img, -N / 2, -N, N, N); g.restore();
+      }
+      const d = g.getImageData(0, 0, N, N).data;
+      sangrar(d, N, 12);
+      // Las filas al revés: un DataTexture no se da vuelta solo.
+      const out = new Uint8Array(N * N * 4);
+      for (let y = 0; y < N; y++) out.set(d.subarray((N - 1 - y) * N * 4, (N - y) * N * 4), y * N * 4);
+      const t = new THREE.DataTexture(out, N, N, THREE.RGBAFormat);
+      t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = true;
+      t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.anisotropy = 4;
+      t.needsUpdate = true;
+      mat.map = t;
+    };
+    img.src = dato;
+  }
+  // Rellena el color de los pixeles transparentes con el de sus vecinos
+  // opacos, de a un pixel por pasada.
+  function sangrar(d, N, pasadas) {
+    let lleno = new Uint8Array(N * N);
+    for (let i = 0; i < N * N; i++) lleno[i] = d[i * 4 + 3] > 8 ? 1 : 0;
+    for (let k = 0; k < pasadas; k++) {
+      const nuevo = lleno.slice();
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const i = y * N + x;
+        if (lleno[i]) continue;
+        let r = 0, gg = 0, b = 0, m = 0;
+        for (const j of [i - 1, i + 1, i - N, i + N]) {
+          if (j < 0 || j >= N * N || !lleno[j]) continue;
+          r += d[j * 4]; gg += d[j * 4 + 1]; b += d[j * 4 + 2]; m++;
+        }
+        if (m) { d[i * 4] = r / m; d[i * 4 + 1] = gg / m; d[i * 4 + 2] = b / m; nuevo[i] = 1; }
+      }
+      lleno = nuevo;
+    }
+  }
+
   // ── materiales ──
   const uViento = { uTiempo: { value: 0 }, uRacha: { value: 0.5 }, uSolDirV: { value: new THREE.Vector3() }, uSolColor: { value: new THREE.Color() } };
   F.uniformes = uViento;
@@ -99,6 +153,10 @@
         .replace("#include <begin_vertex>", "#include <begin_vertex>\n" + VIENTO + (hojas ? `
           transformed += normal * sin(uTiempo * 6.0 + position.x * 3.0 + position.z * 2.0) * 0.025 * (0.3 + uRacha);` : ""));
       if (!hojas) return;
+      // DoubleSide da vuelta la normal en la cara de atrás: el pasto y las
+      // hojas vistos de atrás quedaban negros. Una tarjeta se ilumina igual
+      // de los dos lados.
+      sh.fragmentShader = sh.fragmentShader.replace("#include <normal_fragment_begin>", "#include <normal_fragment_begin>\n#ifdef DOUBLE_SIDED\nnormal *= faceDirection;\n#endif");
       sh.fragmentShader = sh.fragmentShader
         .replace("#include <common>", "#include <common>\nuniform vec3 uSolDirV, uSolColor;")
         // Alfa nítido en todos los mips: si no, de lejos el follaje se desvanece.
@@ -124,9 +182,16 @@
       roughness: 0.92, vertexColors: true,
     });
     parcheViento(corteza, "corteza", false);
-    const hoja = (tipo) => parcheViento(new THREE.MeshStandardMaterial({
-      map: tarjetaHojas(tipo), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.78, vertexColors: true,
-    }), "hojas-" + tipo, true);
+    // El algarrobo de Rezona vino rojizo y el vinal pálido: se tiñen al verde
+    // oliva del monte chaqueño.
+    const TINTE = { quebracho: 0xffffff, algarrobo: 0xb8f070, arbusto: 0xd0f0a0 };
+    const hoja = (tipo) => {
+      const m = parcheViento(new THREE.MeshStandardMaterial({
+        map: tarjetaHojas(tipo), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.78, vertexColors: true,
+      }), "hojas-" + tipo, true);
+      if (window.ARCHIVOS && ARCHIVOS[RAMAS[tipo]]) { m.color.set(TINTE[tipo]); ramaRezona(m, tipo); }
+      return m;
+    };
     return { corteza, quebracho: hoja("quebracho"), algarrobo: hoja("algarrobo"), arbusto: hoja("arbusto") };
   }
 
@@ -419,7 +484,8 @@
   // sembradas con la semilla de cada celda: al volver a un lugar, las matas
   // están donde estaban (§ 6.6).
   F.crearPasto = () => {
-    const tex = tarjetaPasto();
+    // La mata de espartillo de Rezona (ya viene sangrada), o la dibujada.
+    const tex = window.ARCHIVOS && ARCHIVOS["mata-espartillo.webp"] ? E.textura("mata-espartillo.webp", { repetir: false }) : tarjetaPasto();
     const mat = parcheViento(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9, vertexColors: true }), "pasto", true);
     const q1 = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
     const q2 = q1.clone().rotateY(Math.PI / 2);

@@ -87,6 +87,15 @@
     const g = guachoMalla();
     J.cuerpo = g.malla; J.huesos = g.huesos;
     E.motor.escena.add(J.cuerpo);
+    // El Guacho de Rezona, si cargó: el de código queda de esqueleto lógico.
+    J.piel = E.modelos && E.modelos.hay("guacho") ? E.modelos.clonar("guacho") : null;
+    J.caderaAlto = 0.98;
+    if (J.piel) {
+      J.cuerpo.material.visible = false; J.cuerpo.castShadow = false;
+      E.motor.escena.add(J.piel.raiz);
+      J.piel.raiz.updateMatrixWorld(true);
+      if (J.piel.roles.cadera) J.caderaAlto = J.piel.roles.cadera.getWorldPosition(new V()).y;
+    }
     J.manos = manosPrimera();
     E.motor.camara.add(J.manos);
     E.motor.escena.add(E.motor.camara);
@@ -99,6 +108,7 @@
       return c.huesos.cuerpo.localToWorld(destino.set(0, 0.5, 0.35));
     }
     if (J.camara === "primera") return J.manos.userData.mano.getWorldPosition(destino);
+    if (J.piel && J.piel.roles.manoD) return J.piel.roles.manoD.getWorldPosition(destino);
     return J.huesos.codoD.localToWorld(destino.set(0, -0.32, 0));
   };
   J.adelante = (destino) => E.motor.camara.getWorldDirection(destino);
@@ -225,12 +235,13 @@
     J.bob += J.vel * dt * (J.montado ? 0.9 : 1.6);
     const paso = Math.sin(J.bob * Math.PI) * (J.montado ? 0.035 + Math.min(c.vReal, 9) * 0.006 : 0.03) * E.suave(0.3, 1.5, J.vel);
     const resp = Math.sin(t * 1.3) * 0.006 * (1 + (100 - J.cansancio) / 60);
-    const ojo = J.montado ? c.malla.position.y + 2.25 + (c.huesos.cuerpo.position.y - c.altoCuerpo) : suelo + 1.66;
+    const ojo = J.montado ? c.malla.position.y + c.sillaY + 0.66 + (c.huesos.cuerpo.position.y - c.altoCuerpo) : suelo + 1.66;
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(J.pitch + resp, J.yaw, 0, "YXZ"));
     if (J.camara === "primera") {
       cam.position.set(J.x, ojo + paso, J.z);
       cam.quaternion.copy(q);
       J.cuerpo.visible = false;
+      if (J.piel) J.piel.raiz.visible = false;
       J.manos.visible = true;
     } else {
       // Por encima del hombro, 3,7 m, corrida 0,42 a la derecha. Se acerca
@@ -251,6 +262,7 @@
       cam.position.copy(objetivo).addScaledVector(atras, J.dist3).addScaledVector(der, 0.42);
       cam.quaternion.copy(q);
       J.cuerpo.visible = true;
+      if (J.piel) J.piel.raiz.visible = true;
       J.manos.visible = false;
     }
     posarCuerpo(dt, t);
@@ -261,7 +273,8 @@
     const h = J.huesos, c = E.animales.caballo;
     if (J.montado) {
       // Sentado en el recado, las piernas abiertas alrededor del caballo.
-      J.cuerpo.position.copy(c.huesos.cuerpo.getWorldPosition(tmp)).add(tmp2.set(0, 0.42 - 0.98 + 0.05, 0));
+      J.cuerpo.position.copy(c.malla.position);
+      J.cuerpo.position.y += c.sillaY + (c.huesos.cuerpo.position.y - c.altoCuerpo) - 0.98;
       J.cuerpo.rotation.set(0, c.yaw, 0);
       h.piernaI.rotation.set(-1.25, 0, 0.55); h.piernaD.rotation.set(-1.25, 0, -0.55);
       h.rodillaI.rotation.x = 1.35; h.rodillaD.rotation.x = 1.35;
@@ -286,6 +299,45 @@
     } else {
       h.hombroD.rotation.set(J.montado ? -0.4 : Math.sin(J.bob * Math.PI) * 0.35 * E.suave(0.2, 1.5, J.vel), 0, 0);
       h.codoD.rotation.x = -0.25;
+    }
+    if (J.piel && J.piel.raiz.visible) vestir(dt);
+  }
+
+  // El modelo de Rezona: quieto, caminando o corriendo según la velocidad, y
+  // encima lo que la animación no trae (sentarse en el recado, revolear).
+  function vestir(dt) {
+    const p = J.piel, M = E.modelos, r = p.roles, lz = E.lazo;
+    p.raiz.position.copy(J.cuerpo.position);
+    p.raiz.quaternion.copy(J.cuerpo.quaternion);
+    if (J.montado) p.raiz.position.y += 0.98 - J.caderaAlto;
+    const v = J.montado ? 0 : J.vel;
+    const anda = E.suave(0.15, 1.1, v), corre = p.acciones.run ? E.suave(2.6, 3.8, v) : 0;
+    // La carrera de Rezona avanza 5 m por vuelta de 1,27 s; la caminata va en el lugar.
+    M.mezclar(p, { idle: 1 - anda, walk: anda * (1 - corre), run: anda * corre },
+      { walk: E.clamp(v * 1.35, 0.6, 3), run: E.clamp(v / 3.9, 0.8, 1.8) });
+    p.mixer.update(dt);
+    p.raiz.updateMatrixWorld(true);
+    if (J.montado) {
+      // Sentado: los muslos adelante y abiertos, las rodillas dobladas.
+      for (const [muslo, rodilla] of [[r.musloI, r.rodillaI], [r.musloD, r.rodillaD]]) {
+        if (!muslo) continue;
+        const lado = Math.sign(p.raiz.worldToLocal(muslo.getWorldPosition(tmp)).x) || 1;
+        M.girar(p, muslo, M.X, -1.35);
+        M.girar(p, muslo, M.Z, 0.42 * lado);
+        M.girar(p, rodilla, M.X, 1.3);
+      }
+    }
+    // El brazo del lazo: arriba y girando al revolear, adelante al tirar.
+    if (lz && lz.estado === "revoleando") {
+      M.girar(p, r.brazoD, M.X, -(Math.PI - 0.35) + Math.sin(lz.angulo) * 0.25);
+      M.girar(p, r.brazoD, M.Z, Math.cos(lz.angulo) * 0.3);
+      M.girar(p, r.codoD, M.X, -0.35);
+    } else if (lz && lz.estado === "enganchado") {
+      M.girar(p, r.brazoD, M.X, -1.0); M.girar(p, r.codoD, M.X, -0.5);
+      M.girar(p, r.brazoI, M.X, -0.9); M.girar(p, r.codoI, M.X, -0.4);
+    } else if (J.montado) {
+      M.girar(p, r.brazoD, M.X, -0.5); M.girar(p, r.brazoI, M.X, -0.5);
+      M.girar(p, r.codoD, M.X, -0.6); M.girar(p, r.codoI, M.X, -0.6);
     }
   }
 

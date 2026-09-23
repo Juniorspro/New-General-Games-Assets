@@ -280,11 +280,14 @@
     const v = manga.vaca, cam = E.motor.camara, lz = E.motor.renderer.domElement.getBoundingClientRect();
     ndc.set(((cx - lz.left) / lz.width) * 2 - 1, -((cy - lz.top) / lz.height) * 2 + 1);
     ray.setFromCamera(ndc, cam);
-    const hit = ray.intersectObject(v.malla, false)[0];
+    // Con el modelo de Rezona se apunta a lo que se ve, no al esqueleto lógico.
+    const hit = (v.piel ? ray.intersectObjects(v.piel.mallas, false) : ray.intersectObject(v.malla, false))[0];
     if (!hit) return;
     // ¿Qué parte tocó? En coordenadas del hueso del cuerpo y de la cabeza.
     const enCuerpo = v.huesos.cuerpo.worldToLocal(hit.point.clone());
-    const enCabeza = v.huesos.cabeza.worldToLocal(hit.point.clone());
+    const enCabeza = v.piel && v.piel.roles.cabeza
+      ? v.piel.raiz.worldToLocal(hit.point.clone()).sub(v.piel.raiz.worldToLocal(v.piel.roles.cabeza.getWorldPosition(new V())))
+      : v.huesos.cabeza.worldToLocal(hit.point.clone());
     let parte = "cuerpo";
     if (enCabeza.length() < 0.32 && Math.abs(enCabeza.x) > 0.1) parte = "oreja";
     else if (enCuerpo.z > 0.55) parte = "cuello";
@@ -308,9 +311,15 @@
     if (a.herr === "caravana") {
       s.caravana = true; E.juego.gastar(COSTO.caravana, "Caravana");
       // Caravana amarilla con el número, en la oreja izquierda.
-      const tag = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.075, 0.06), new THREE.MeshStandardMaterial({ color: 0xe8c21a, roughness: 0.5 }));
-      tag.position.set(0.24, 0.0, 0.03);
-      v.huesos.cabeza.add(tag); v.caravanaMalla = tag;
+      const mat = new THREE.MeshStandardMaterial({ color: 0xe8c21a, roughness: 0.5 });
+      if (v.piel) {
+        const tag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.075, 0.012), mat);
+        E.modelos.pegar(v.piel, tag, a.punto, afuera(v, a.punto)); v.caravanaMalla = tag;
+      } else {
+        const tag = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.075, 0.06), mat);
+        tag.position.set(0.24, 0.0, 0.03);
+        v.huesos.cabeza.add(tag); v.caravanaMalla = tag;
+      }
     }
     if (a.herr === "hierro") {
       s.marcada = true;
@@ -321,13 +330,19 @@
         g.beginPath(); g.moveTo(w / 2 - 20, h / 2 + 10); g.lineTo(w / 2, h / 2 - 22); g.lineTo(w / 2 + 20, h / 2 + 10); g.stroke();
       });
       const marca = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2), new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, roughness: 1 }));
-      marca.position.set(0.31, 0.08, -0.55); marca.rotation.y = Math.PI / 2;
-      v.huesos.cuerpo.add(marca); v.marcaMalla = marca;
+      if (v.piel) E.modelos.pegar(v.piel, marca, a.punto, afuera(v, a.punto));
+      else { marca.position.set(0.31, 0.08, -0.55); marca.rotation.y = Math.PI / 2; v.huesos.cuerpo.add(marca); }
+      v.marcaMalla = marca;
       humo(a.punto);
     }
     E.sonido && E.sonido.mugido(v, 1.2);
     marcarHerramienta();
     if (W.trabajada(v)) E.juego.mostrar("Lista. Soltala con el botón o con E.");
+  }
+  // Hacia afuera del costado donde cayó el punto (para pegar caravana y marca).
+  function afuera(v, punto) {
+    const lado = Math.sign(v.piel.raiz.worldToLocal(punto.clone()).x) || 1;
+    return new V(lado, 0, 0).transformDirection(v.piel.raiz.matrixWorld);
   }
   function humo(p) {
     const tex = E.lienzo(32, 32, (g, w, h) => { const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, "rgba(255,255,255,0.9)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); });

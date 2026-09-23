@@ -69,3 +69,22 @@ Una entrada por sesión: qué quedó y qué falta. La más nueva arriba.
 - En la cuenta de Rezona apareció el proyecto `luck-alien-descartable`
   (`HbCHYQfUXt`), creado el 22/9 a las 13:08:58, que **no lo hizo esta sesión**.
   Si no fue el dueño, algo más está usando esa cuenta.
+
+## 23/9/2026 (noche) — Estancia, con assets de Rezona
+
+- `estancia/`: el juego "Estancia — La Ley del Monte" (three.js, un solo HTML,
+  12,2 MB). Qué es y de dónde sale cada asset: `estancia/LEEME.md`.
+- Rezona volvió a cobrar. Se generaron 14 imágenes, 7 modelos 3D y 5 rigs
+  (4.455 créditos); vaca, caballo, guacho, chata y rollos ya están en el juego,
+  con el animal de código como plan B y como LOD de lejos.
+- La voz del Guacho: 38 frases con Higgsfield (~4 créditos).
+- Probado con Playwright desde `file://`: carga 3,4 s, sin errores,
+  862 mil triángulos y 281 llamadas en el monte.
+
+**Qué falta**
+
+- Música y efectos grabados: el audio de Rezona estuvo caído toda la noche.
+  Los pedidos (42) están en el scratchpad de esa sesión; `estancia/rezona.json`
+  guarda los que salieron.
+- Las copas de los árboles con las ramas de Rezona se ven algo borrosas de
+  cerca; los animales de Rezona no se echan (se quedan parados).

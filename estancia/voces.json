@@ -1,0 +1,159 @@
+{
+ "modelo": "seed_audio (Higgsfield)",
+ "voz": "Barrett (preset d603a8cd-3fe1-55e0-9245-617a2589131e)",
+ "costo": "0,1 créditos por frase",
+ "frases": [
+  {
+   "n": "errar-0",
+   "t": "¡La puta madre!"
+  },
+  {
+   "n": "errar-1",
+   "t": "¡Me cago en…!"
+  },
+  {
+   "n": "errar-2",
+   "t": "Uh, la concha de la lora."
+  },
+  {
+   "n": "errar-3",
+   "t": "¡Pero la puta que te parió!"
+  },
+  {
+   "n": "enlazada-0",
+   "t": "¡Ahí está, guacha!"
+  },
+  {
+   "n": "enlazada-1",
+   "t": "¡Tomá, desgraciada!"
+  },
+  {
+   "n": "enlazada-2",
+   "t": "¡Ya te tengo!"
+  },
+  {
+   "n": "enlazada-3",
+   "t": "Quedate quieta, negra."
+  },
+  {
+   "n": "cortado-0",
+   "t": "¡Se cortó el lazo, la puta madre!"
+  },
+  {
+   "n": "cortado-1",
+   "t": "Me cago en el tiento podrido."
+  },
+  {
+   "n": "seFue-0",
+   "t": "¡Se me fue con lazo y todo!"
+  },
+  {
+   "n": "seFue-1",
+   "t": "¡Ahí va el lazo, la reputa…!"
+  },
+  {
+   "n": "pialada-0",
+   "t": "¡Abajo!"
+  },
+  {
+   "n": "pialada-1",
+   "t": "¡Echate, carajo!"
+  },
+  {
+   "n": "pialada-2",
+   "t": "Ahí está. Quieta."
+  },
+  {
+   "n": "errarPial-0",
+   "t": "¡Pará, pará…!"
+  },
+  {
+   "n": "errarPial-1",
+   "t": "Casi, casi. Otra vez."
+  },
+  {
+   "n": "todaviaNo-0",
+   "t": "Está entera todavía. Hay que cansarla."
+  },
+  {
+   "n": "todaviaNo-1",
+   "t": "Que se canse primero."
+  },
+  {
+   "n": "patada-0",
+   "t": "¡Ay, la puta! La costilla…"
+  },
+  {
+   "n": "patada-1",
+   "t": "¡Hija de puta, qué patada!"
+  },
+  {
+   "n": "cornada-0",
+   "t": "¡Me ensartó, la guacha!"
+  },
+  {
+   "n": "cornada-1",
+   "t": "¡Ay, carajo!"
+  },
+  {
+   "n": "embiste-0",
+   "t": "¡Uy, viene!"
+  },
+  {
+   "n": "embiste-1",
+   "t": "¡Cuidado que carga!"
+  },
+  {
+   "n": "sed-0",
+   "t": "Me muero de sed."
+  },
+  {
+   "n": "sed-1",
+   "t": "Tengo la garganta hecha polvo."
+  },
+  {
+   "n": "calor-0",
+   "t": "Qué calor de mierda."
+  },
+  {
+   "n": "calor-1",
+   "t": "Cuarenta a la sombra, y sin sombra."
+  },
+  {
+   "n": "curada-0",
+   "t": "Listo, negra. Ya está."
+  },
+  {
+   "n": "curada-1",
+   "t": "Así, curadita."
+  },
+  {
+   "n": "lesion-0",
+   "t": "Se me mancó el zaino. Lo reventé."
+  },
+  {
+   "n": "lesion-1",
+   "t": "Uh, el caballo viene rengo."
+  },
+  {
+   "n": "sinLazo-0",
+   "t": "No tengo lazo. Hay uno colgado en la galería."
+  },
+  {
+   "n": "fumar-0",
+   "t": "Un armado y seguimos."
+  },
+  {
+   "n": "manga-0",
+   "t": "Vamos, adentro."
+  },
+  {
+   "n": "manga-1",
+   "t": "A la manga, vamos."
+  },
+  {
+   "n": "silbar-0",
+   "t": "¡Fiiiu! Vení, zaino."
+  }
+ ]
+}

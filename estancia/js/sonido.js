@@ -178,6 +178,28 @@
   };
   S.moscas = (x) => { if (S.listo) moscasG.gain.setTargetAtTime(x * 0.06, ctx.currentTime, 0.3); };
   S.rociar = (si) => { if (S.listo) sprayG.gain.setTargetAtTime(si ? 0.25 : 0, ctx.currentTime, 0.04); };
+  // La voz del Guacho: frases grabadas con Higgsfield (seed_audio), en
+  // datos.js como voz-<clave>-<n>.mp3. Se decodifican la primera vez que se
+  // usan. Si no están, queda el subtítulo solo.
+  const voces = {};
+  let hablando = null;
+  S.voz = (nombre) => {
+    if (!S.listo) return;
+    const dato = window.ARCHIVOS && ARCHIVOS["voz-" + nombre + ".mp3"];
+    if (!dato) return;
+    const sonar = (buf) => {
+      if (hablando) try { hablando.stop(); } catch (e) { /* ya terminó */ }
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = buf; g.gain.value = 0.9;
+      src.connect(g); g.connect(master);
+      const r = ctx.createGain(); r.gain.value = 0.12; g.connect(r).connect(rever);   // un poco de campo abierto
+      src.start(); hablando = src;
+    };
+    if (voces[nombre]) return sonar(voces[nombre]);
+    const b64 = atob(dato.slice(dato.indexOf(",") + 1)), u = new Uint8Array(b64.length);
+    for (let i = 0; i < b64.length; i++) u[i] = b64.charCodeAt(i);
+    ctx.decodeAudioData(u.buffer).then((buf) => { voces[nombre] = buf; sonar(buf); }).catch(() => {});
+  };
   S.radio = false;
 
   let proxTero = 6, proxChimango = 40, proxFuego = 0, proxVoz = 0;

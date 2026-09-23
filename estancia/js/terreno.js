@@ -142,6 +142,10 @@
       normalScale: new THREE.Vector2(0.9, 0.9), roughness: 0.96, metalness: 0,
     });
     const pasto = E.textura("pasto.webp"), pastoN = E.textura("pasto-n.webp", { srgb: false });
+    // El barro de Rezona para la orilla del estero y los bajos; si no está,
+    // el suelo oscurecido hace de barro.
+    const hayBarro = !!(window.ARCHIVOS && ARCHIVOS["barro.webp"]);
+    const barro = hayBarro ? E.textura("barro.webp") : pasto;
     // Mezcla por altura: gana la textura que "sobresale" en cada pixel. Un
     // degradé parejo parece pintura aguada. Y contra la repetición, cada
     // textura mezclada con ella misma girada y a otra escala según un ruido
@@ -149,12 +153,13 @@
     E.parchear(mat, "terreno", (sh) => {
       sh.uniforms.mapPasto = { value: pasto };
       sh.uniforms.normalPasto = { value: pastoN };
+      sh.uniforms.mapBarro = { value: barro };
       sh.vertexShader = sh.vertexShader
         .replace("#include <common>", "#include <common>\nattribute float aMezcla, aHumedo, aMonte;\nvarying float vMezcla, vHumedo, vMonte;\nvarying vec2 vMundo;")
         .replace("#include <uv_vertex>", "#include <uv_vertex>\nvMezcla = aMezcla; vHumedo = aHumedo; vMonte = aMonte; vMundo = position.xz;");
       sh.fragmentShader = sh.fragmentShader
         .replace("#include <common>", `#include <common>
-          uniform sampler2D mapPasto, normalPasto;
+          uniform sampler2D mapPasto, normalPasto, mapBarro;
           varying float vMezcla, vHumedo, vMonte;
           varying vec2 vMundo;
           float th2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -170,7 +175,10 @@
           float mPasto = smoothstep(-0.12, 0.12, (vMezcla - 0.5) * 1.3 + (alP - alS) * 0.9);
           vec4 cSuelo = mix(cS, cP, mPasto);
           cSuelo.rgb *= 0.86 + 0.26 * trn(vMundo * 0.045 + 7.0);             // variación de tono cada decenas de metros
-          cSuelo.rgb *= mix(1.0, 0.5, vHumedo);                               // barro húmedo, más oscuro
+          ${hayBarro ? `vec4 cB = texture2D(mapBarro, uvA * 1.3);
+          float mB = smoothstep(-0.1, 0.1, (vHumedo - 0.45) * 1.4 + (dot(cB.rgb, vec3(0.33)) - dot(cSuelo.rgb, vec3(0.33))) * 0.7);
+          cSuelo = mix(cSuelo, cB, mB);
+          cSuelo.rgb *= mix(1.0, 0.75, vHumedo);` : "cSuelo.rgb *= mix(1.0, 0.5, vHumedo);"}           // barro húmedo, más oscuro
           cSuelo.rgb *= mix(1.0, 0.8, vMonte);                                // debajo de las copas
           diffuseColor *= cSuelo;`)
         .replace("#include <normal_fragment_maps>", `

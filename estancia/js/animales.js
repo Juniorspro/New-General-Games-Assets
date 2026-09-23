@@ -308,6 +308,65 @@
     pos.needsUpdate = true;
   }
 
+  // ── la piel de Rezona ── el animal de código sigue ahí, invisible: es el
+  // esqueleto lógico que usan el lazo, la manga y la cura. El modelo lo copia
+  // cuadro a cuadro (posición, giro, tumbe) y camina con su propia animación.
+  const TINTES = { hereford: C("#ffffff"), angus: C("#2b2624"), braford: C("#e8cdb8") };
+  function vestirCon(malla, nombre, tinte) {
+    const M = E.modelos;
+    const piel = M && M.hay(nombre) ? M.clonar(nombre, { tinte }) : null;
+    if (!piel) return null;
+    malla.material.visible = false;
+    malla.castShadow = false;
+    E.motor.escena.add(piel.raiz);
+    return piel;
+  }
+  function recadoMalla() {
+    const g = new THREE.Group();
+    const m = (c, r = 0.85) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+    const pieza = (geo, mat, x, y, z) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+    pieza(new THREE.BoxGeometry(0.7, 0.04, 0.95), m(0x7a1e1a), 0, 0, 0);                        // la carona
+    pieza(new THREE.BoxGeometry(0.6, 0.09, 0.62), m(0x3b2616, 0.7), 0, 0.06, 0.02);             // los bastos
+    pieza(new THREE.BoxGeometry(0.56, 0.08, 0.55), m(0xcfc2a8, 1), 0, 0.13, 0.02);  // el cojinillo de oveja
+    for (const s of [1, -1]) {
+      pieza(new THREE.BoxGeometry(0.015, 0.6, 0.03), m(0x2a1a10), s * 0.35, -0.26, 0.1);        // la acción del estribo
+      const e = pieza(new THREE.TorusGeometry(0.06, 0.012, 4, 10), new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.8, roughness: 0.4 }), s * 0.36, -0.58, 0.1);
+      e.rotation.y = Math.PI / 2;
+    }
+    return g;
+  }
+  const qTmp = new THREE.Quaternion();
+  function vestir(a, dt) {
+    const p = a.piel, h = a.huesos, M = E.modelos;
+    // De lejos, el animal de código (3 mil triángulos contra 19 mil) y sin
+    // mezclador de animación: a 70 m no se nota y la tropa entera cuesta poco.
+    const lejos = E.motor.camara.position.distanceToSquared(a.malla.position) > 70 * 70;
+    p.raiz.visible = !lejos;
+    a.malla.material.visible = lejos; a.malla.castShadow = lejos;
+    if (lejos) return;
+    const caido = a.estado === "tumbada" || a.estado === "levanta" || (a.salud && a.salud.muerta);
+    p.raiz.position.copy(a.malla.position);
+    p.raiz.quaternion.copy(a.malla.quaternion);
+    // El bote del paso y el cabeceo del galope; la echada no (el modelo no
+    // sabe plegar las patas: se queda parada, quieta).
+    if (!caido) {
+      p.raiz.position.y += h.cuerpo.position.y - a.altoCuerpo + (a.echar || 0) * 0.55;
+      p.raiz.quaternion.multiply(qTmp.setFromAxisAngle(M.X, h.cuerpo.rotation.x));
+    }
+    if (p.mixer) {
+      const v = caido ? 0 : a.vReal;
+      M.mezclar(p, { walk: E.suave(0.04, 0.35, v) }, { walk: E.clamp(v * p.andar, 0.5, 4.2) });
+      p.mixer.update(dt);
+    }
+    p.raiz.updateMatrixWorld(true);
+    const r = p.roles;
+    M.girar(p, r.cuello, M.X, h.cuello.rotation.x * p.cuanto.cuello);
+    if (r.nuca) M.girar(p, r.nuca, M.X, h.cuello.rotation.x * 0.3);
+    M.girar(p, r.cabeza, M.X, h.cabeza.rotation.x * p.cuanto.cabeza);
+    M.girar(p, r.cabeza, M.Y, h.cabeza.rotation.y);
+    if (r.cola) M.girar(p, r.cola, M.Y, h.cola.rotation.z * 1.5);
+  }
+
   // ── la tropa ──
   const NOMBRES_BRAVA = new Set([4, 11]);
   A.construir = () => {
@@ -318,6 +377,7 @@
       const tipo = i % 5 === 1 ? "angus" : i % 7 === 3 ? "braford" : "hereford";
       const { malla, huesos, astada } = vacaMalla(tipo, 500 + i);
       E.motor.escena.add(malla);
+      const piel = vestirCon(malla, "vaca", TINTES[tipo].clone().multiplyScalar(0.88 + az() * 0.24));
       const ang = az() * Math.PI * 2, r = 30 + az() * 60;
       const v = {
         tipo, malla, huesos, astada, num: 200 + i * 7 + Math.floor(az() * 5),
@@ -327,7 +387,7 @@
         arisca: 0.3 + az() * 0.3, brava: NOMBRES_BRAVA.has(i) ? 0.8 : az() * 0.3,
         fatiga: 1, recorrido: 0, ultimaBosta: az() * 4, mugido: 5 + az() * 30,
         salud: { bichera: null, vacunada: false, desparasitada: false, caravana: false, marcada: false, muerta: false, curada: 0 },
-        caravanaMalla: null, marcaMalla: null,
+        caravanaMalla: null, marcaMalla: null, piel,
       };
       A.vacas.push(v);
     }
@@ -335,19 +395,29 @@
     A.querencia = { x: 115, z: 55 };
     const cab = caballoMalla();
     E.motor.escena.add(cab.malla);
+    const pielC = vestirCon(cab.malla, "caballo", null);
     A.caballo = {
       malla: cab.malla, huesos: cab.huesos, x: L.rancho.x + 6, z: L.rancho.z + 7, yaw: -0.3, v: 0, vReal: 0, fase: 0, altoCuerpo: 1.12,
-      aliento: 1, lesion: 0, montado: false, destino: null, cabeza: 0, t: 0,
+      aliento: 1, lesion: 0, montado: false, destino: null, cabeza: 0, t: 0, piel: pielC,
+      // Dónde se sienta el jinete, sobre la raíz del caballo.
+      sillaY: 1.59,
     };
+    if (pielC) {
+      const lomo = E.modelos.alturaLomo(pielC, 0.05) ?? 1.42;
+      const recado = recadoMalla();
+      recado.position.set(0, lomo - 0.02, 0.05);
+      pielC.raiz.add(recado);
+      A.caballo.sillaY = lomo + 0.15;
+    }
   };
 
   // ── lo que el resto del juego necesita saber de una vaca ──
   const tmp = new V();
-  A.cabeza = (a, destino) => a.huesos.cabeza.localToWorld(destino.set(0, -0.08, 0.2));
-  A.cuello = (a, destino) => a.huesos.cuello.getWorldPosition(destino);
+  A.cabeza = (a, destino) => (a.piel && a.piel.roles.cabeza ? a.piel.roles.cabeza.getWorldPosition(destino) : a.huesos.cabeza.localToWorld(destino.set(0, -0.08, 0.2)));
+  A.cuello = (a, destino) => (a.piel && a.piel.roles.cuello ? a.piel.roles.cuello.getWorldPosition(destino) : a.huesos.cuello.getWorldPosition(destino));
   A.puntoHerida = (v, destino) => {
     const lado = v.salud.bichera ? v.salud.bichera.lado : 1;
-    destino.set(lado * 0.3, 0.05, -0.35);
+    destino.set(lado * (v.piel ? v.piel.anchoHerida || 0.36 : 0.3), 0.05, -0.35);
     return v.huesos.cuerpo.localToWorld(destino);
   };
   A.cercana = (x, z, max, filtro = () => true) => {
@@ -528,6 +598,10 @@
   }
 
   function posar(a, dt, t) {
+    posarLogico(a, dt, t);
+    if (a.piel) vestir(a, dt);
+  }
+  function posarLogico(a, dt, t) {
     const y = E.terreno.altura(a.x, a.z) - Math.min(0.6, E.terreno.agua(a.x, a.z) * 0.35);
     a.malla.position.set(a.x, y, a.z);
     a.malla.rotation.set(0, a.yaw, 0);

@@ -34,7 +34,8 @@
   G.decir = (clave, v) => {
     const l = FRASES[clave];
     if (!l) return;
-    const texto = l[Math.floor(Math.random() * l.length)];
+    const i = Math.floor(Math.random() * l.length), texto = l[i];
+    E.sonido.voz(clave + "-" + i);
     const s = $("subtitulo");
     s.textContent = texto;
     s.classList.add("visible");
@@ -67,6 +68,8 @@
     cargando("Encendiendo…"); await pausa();
     E.motor.iniciar(lienzo);
     E.motor.actualizarHora(G.hora, 0);
+    cargando("Los animales y el Guacho…"); await pausa();
+    try { await E.modelos.cargar(); } catch (e) { console.warn("sin modelos", e); }
     cargando("Tierra colorada…"); await pausa();
     E.terreno.construir();
     cargando("El monte: quebrachos y algarrobos…"); await pausa();

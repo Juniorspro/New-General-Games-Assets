@@ -47,3 +47,15 @@ Ver también: [rezona](rezona.md).
 - (sin comprobar) El conversor quedó escrito en el scratchpad de la sesión del
   22/9 y **no se commiteó**, así que se perdió con el contenedor. Si hace falta
   otra vez, se reescribe con lo de arriba.
+
+## Voz (23/9/2026)
+
+- Higgsfield `seed_audio` hace voz en castellano con las voces preset en
+  inglés: la mejor para un gaucho fue **Barrett**
+  (`d603a8cd-3fe1-55e0-9245-617a2589131e`), Whisper la da como español al 96%.
+  **0,1 crédito por frase.** Viene con silencio de sobra: recortar con
+  `silenceremove` y apurar un 8% (`atempo=1.08`).
+- Sus modelos de **música y efectos no se pueden usar sueltos** (solo dentro de
+  su generador de juegos): para eso no hay Higgsfield.
+- Ojo con `jobs_wait`: los ids son los que devuelve `generate_audio_batch`, no
+  otros (si no, "Generation not found").

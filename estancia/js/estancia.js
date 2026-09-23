@@ -6,8 +6,19 @@
   const C = (E.estancia = { segmentos: [], circulos: [], puntos: [], animados: [] });
   const V = THREE.Vector3;
 
-  // ── materiales dibujados ──
+  // ── materiales ── las texturas de Rezona si están (datos.js), si no, dibujadas.
+  // tam: cuántos metros ocupa una repetición, para que una pared de 6 m no
+  // estire la textura (ver caja()).
+  const hay = (n) => !!(window.ARCHIVOS && ARCHIVOS[n]);
+  function matRezona(nombre, tam, extra) {
+    if (!hay(nombre + ".webp")) return null;
+    const m = new THREE.MeshStandardMaterial({ map: E.textura(nombre + ".webp"), normalMap: hay(nombre + "-n.webp") ? E.textura(nombre + "-n.webp", { srgb: false }) : null, ...extra });
+    m.userData.tam = tam;
+    return m;
+  }
   function matRevoque() {
+    const rz = matRezona("revoque", 2.2, { roughness: 0.95 });
+    if (rz) return rz;
     const t = E.lienzo(512, 512, (g, w, h) => {
       g.fillStyle = "#d9cfbd"; g.fillRect(0, 0, w, h);
       const az = E.azar(3);
@@ -30,6 +41,8 @@
     return new THREE.MeshStandardMaterial({ map: t, roughness: 0.95 });
   }
   function matChapa() {
+    const rz = matRezona("chapa", 1.6, { roughness: 0.55, metalness: 0.15 });
+    if (rz) return rz;
     const t = E.lienzo(256, 256, (g, w, h) => {
       for (let x = 0; x < w; x++) {
         const v = 120 + 45 * Math.sin((x / w) * Math.PI * 2 * 8);
@@ -47,7 +60,7 @@
     const m = new THREE.MeshStandardMaterial({ map: E.textura("corteza.webp"), normalMap: E.textura("corteza-n.webp", { srgb: false }), roughness: 0.9, color: 0xb4a898 });
     return m;
   };
-  const tablas = () => new THREE.MeshStandardMaterial({
+  const tablas = () => matRezona("tablas", 1.4, { roughness: 0.88 }) || new THREE.MeshStandardMaterial({
     map: E.lienzo(256, 256, (g, w, h) => {
       g.fillStyle = "#6e5a45"; g.fillRect(0, 0, w, h);
       const az = E.azar(4);
@@ -55,8 +68,20 @@
     }, { repetir: true }), roughness: 0.88,
   });
 
+  // Las caras de BoxGeometry van en orden +x, -x, +y, -y, +z, -z, cuatro
+  // vértices cada una: se estira el uv de cada cara a su tamaño en metros.
+  function uvEnMetros(g, w, h, d, tam) {
+    const uv = g.attributes.uv, lados = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+    for (let i = 0; i < uv.count; i++) {
+      const [a, b] = lados[Math.floor(i / 4)];
+      uv.setXY(i, (uv.getX(i) * a) / tam, (uv.getY(i) * b) / tam);
+    }
+    return g;
+  }
   function caja(w, h, d, mat, x, y, z, ry = 0) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    const g = new THREE.BoxGeometry(w, h, d);
+    if (mat.userData.tam) uvEnMetros(g, w, h, d, mat.userData.tam);
+    const m = new THREE.Mesh(g, mat);
     m.position.set(x, y, z); m.rotation.y = ry;
     m.castShadow = true; m.receiveShadow = true;
     E.motor.escena.add(m);
@@ -213,7 +238,8 @@
 
     // ── el tanque australiano y el molino ──
     const Tq = L.tanque, yt = T.altura(Tq.x, Tq.z);
-    const zinc = new THREE.MeshStandardMaterial({ color: 0x9aa3a8, metalness: 0.75, roughness: 0.4, map: chapa.map });
+    // Sin mapa de entorno un metal refleja negro: poco metal y más rugoso.
+    const zinc = new THREE.MeshStandardMaterial({ color: 0xc4cbd0, metalness: 0.2, roughness: 0.5, map: chapa.map });
     const pared2 = new THREE.Mesh(new THREE.CylinderGeometry(Tq.r, Tq.r, 1.3, 48, 1, true), zinc);
     pared2.position.set(Tq.x, yt + 0.65, Tq.z); pared2.castShadow = true; pared2.receiveShadow = true;
     pared2.material.side = THREE.DoubleSide;
@@ -279,7 +305,32 @@
     E.motor.escena.add(new THREE.LineSegments(gh, new THREE.LineBasicMaterial({ color: 0x8a8d8f })));
     // La tranquera de entrada (cerrada: el campo termina acá).
     for (const h of [0.3, 0.65, 1.0, 1.3]) caja(4.6, 0.12, 0.05, tab, L.tranquera.x, T.altura(0, lim) + h, lim);
+    utiles();
   };
+
+  // La chata al costado del rancho y los rollos de pasto al lado del corral
+  // (modelos de Rezona; si no cargaron, no están y listo).
+  function utiles() {
+    const M = E.modelos, T = E.terreno, L = E.lugares;
+    const poner = (nombre, x, z, yaw, colis) => {
+      const m = M.clonar(nombre);
+      if (!m) return null;
+      m.raiz.position.set(x, T.altura(x, z) - 0.03, z);
+      m.raiz.rotation.y = yaw;
+      E.motor.escena.add(m.raiz);
+      m.raiz.updateMatrixWorld(true);
+      for (const [dx, dz, r] of colis) {
+        const p = m.raiz.localToWorld(new V(dx, 0, dz));
+        C.circulos.push({ x: p.x, z: p.z, r });
+      }
+      return m;
+    };
+    const R = L.rancho;
+    poner("chata", R.x - 9.5, R.z + 3, 0.35, [[0, -1.7, 1.1], [0, 0, 1.1], [0, 1.7, 1.1]]);
+    const Co = L.corral;
+    const rollos = [[-4, -13.5, 0.1], [-2.3, -13.8, 0.05], [-0.6, -13.4, 0.15], [1.1, -13.9, 0.0], [-3.1, -15.4, 0.2], [-1.4, -15.3, 0.1]];
+    for (const [dx, dz, yaw] of rollos) poner("rollo", Co.x + dx, Co.z + dz, yaw, [[0, 0, 0.8]]);
+  }
 
   function crearFuego(base) {
     const grupo = new THREE.Group();

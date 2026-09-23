@@ -17,7 +17,7 @@
     brillo: ["#000000", "#ff5a22", "#ff7f36", "#ffab68", "#ffe9c8", "#fff2dc"],
     sol:    ["#000000", "#000000", "#ff8e4a", "#ffbe82", "#ffeed8", "#fff5e8"],
     solI:   [0, 0, 1.3, 3.1, 4.3, 4.9],
-    hemiI:  [0.05, 0.1, 0.28, 0.42, 0.52, 0.58],
+    hemiI:  [0.05, 0.12, 0.34, 0.58, 0.8, 0.9],
   };
   const tmpA = new THREE.Color(), tmpB = new THREE.Color();
   function clave(nombre, e, destino) {
@@ -54,7 +54,8 @@
     M.sol.shadow.bias = -0.0006;
     M.sol.shadow.normalBias = 0.05;
     M.escena.add(M.sol, M.sol.target);
-    M.hemi = new THREE.HemisphereLight(0x8fa3bd, 0x3a2418, 0.5);
+    // Abajo, el rebote de la tierra colorada: sin él, la sombra de mediodía es negra.
+    M.hemi = new THREE.HemisphereLight(0x8fa3bd, 0x6a3a24, 0.5);
     M.escena.add(M.hemi);
     // Luna: un relleno azul muy bajo para que la noche no sea negro puro.
     M.luna = new THREE.DirectionalLight(0x6f86b8, 0);
