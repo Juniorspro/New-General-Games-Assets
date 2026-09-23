@@ -34,6 +34,10 @@ RESET = """<style>
 
 CDN = re.compile(
     r'<script\s+src="(https://(?:cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)/[^"]+)"\s*>\s*</script>')
+# Los scripts locales del propio juego (js/algo.js): también van adentro, leídos
+# del disco al lado del HTML. Sin esto, un juego partido en archivos no anda
+# como descarga de un solo archivo.
+LOCAL = re.compile(r'<script\s+src="(?!https?://)([^"]+\.js)"\s*>\s*</script>')
 
 # Lo que va al <head>: el bloque de arriba de la página, antes del contenido.
 CABEZA = re.compile(r'\s*(<title>.*?</title>|<meta\b[^>]*>|<link\b[^>]*>|<style\b[^>]*>.*?</style>)',
@@ -47,7 +51,7 @@ def bajar(url):
     return r.stdout.decode("utf-8")
 
 
-def empaquetar(fuente):
+def empaquetar(fuente, carpeta="."):
     if re.match(r"\s*<!doctype", fuente, re.I):
         sys.exit("ya es un HTML completo: no hace falta empaquetarlo")
 
@@ -63,6 +67,14 @@ def empaquetar(fuente):
         return f"<script>/* {m.group(1)} */\n{codigo}\n</script>"
 
     resto, metidos = CDN.subn(meter, resto)
+
+    def meter_local(m):
+        import os
+        codigo = open(os.path.join(carpeta, m.group(1)), encoding="utf-8").read().replace("</script", "<\\/script")
+        return f"<script>/* {m.group(1)} */\n{codigo}\n</script>"
+
+    resto, locales = LOCAL.subn(meter_local, resto)
+    metidos += locales
     html = ("<!doctype html>\n<html lang=\"es\">\n<head>\n"
             "<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
@@ -74,6 +86,7 @@ def empaquetar(fuente):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         sys.exit(__doc__)
-    html, metidos = empaquetar(open(sys.argv[1], encoding="utf-8").read())
+    import os
+    html, metidos = empaquetar(open(sys.argv[1], encoding="utf-8").read(), os.path.dirname(os.path.abspath(sys.argv[1])))
     open(sys.argv[2], "w", encoding="utf-8").write(html)
-    print(f"{sys.argv[2]}: {len(html.encode()) / 1024:.0f} KB, {metidos} script(s) de CDN adentro")
+    print(f"{sys.argv[2]}: {len(html.encode()) / 1024:.0f} KB, {metidos} script(s) adentro")

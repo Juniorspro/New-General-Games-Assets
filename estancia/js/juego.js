@@ -1,0 +1,399 @@
+// El juego: arranque, bucle, controles, interfaz, días y el final.
+"use strict";
+(() => {
+  const G = (E.juego = {
+    corriendo: false, pausa: false, dia: 1, hora: 6, horasJuego: 6, dinero: 1500000,
+    hierroCaliente: 0, comio: false, t: 0, fijo: location.hash === "#fijo",
+  });
+  const $ = (id) => document.getElementById(id);
+  const HORAS_POR_SEGUNDO = 1 / 60;           // una hora de juego, un minuto real
+  const miles = new Intl.NumberFormat("es-AR");
+
+  // ── lo que dice el Guacho ── corto, en argentino, puteando poco pero bien.
+  const FRASES = {
+    errar: ["¡La puta madre!", "¡Me cago en…!", "Uh, la concha de la lora.", "¡Pero la puta que te parió!"],
+    enlazada: ["¡Ahí está, guacha!", "¡Tomá, desgraciada!", "¡Ya te tengo!", "Quedate quieta, negra."],
+    cortado: ["¡Se cortó el lazo, la puta madre!", "Me cago en el tiento podrido."],
+    seFue: ["¡Se me fue con lazo y todo!", "¡Ahí va el lazo, la reputa…!"],
+    pialada: ["¡Abajo!", "¡Echate, carajo!", "Ahí está. Quieta."],
+    errarPial: ["¡Pará, pará…!", "Casi, casi. Otra vez."],
+    todaviaNo: ["Está entera todavía. Hay que cansarla.", "Que se canse primero."],
+    patada: ["¡Ay, la puta! La costilla…", "¡Hija de puta, qué patada!"],
+    cornada: ["¡Me ensartó, la guacha!", "¡Ay, carajo!"],
+    embiste: ["¡Uy, viene!", "¡Cuidado que carga!"],
+    sed: ["Me muero de sed.", "Tengo la garganta hecha polvo."],
+    calor: ["Qué calor de mierda.", "Cuarenta a la sombra, y sin sombra."],
+    curada: ["Listo, negra. Ya está.", "Así, curadita."],
+    lesion: ["Se me mancó el zaino. Lo reventé.", "Uh, el caballo viene rengo."],
+    sinLazo: ["No tengo lazo. Hay uno colgado en la galería."],
+    fumar: ["Un armado y seguimos.", "…"],
+    manga: ["Vamos, adentro.", "A la manga, vamos."],
+    silbar: ["¡Fiiiu! Vení, zaino."],
+  };
+  let ultimaFrase = 0;
+  G.decir = (clave, v) => {
+    const l = FRASES[clave];
+    if (!l) return;
+    const texto = l[Math.floor(Math.random() * l.length)];
+    const s = $("subtitulo");
+    s.textContent = texto;
+    s.classList.add("visible");
+    clearTimeout(G._sub);
+    G._sub = setTimeout(() => s.classList.remove("visible"), 2600);
+    ultimaFrase = G.t;
+  };
+  G.mostrar = (texto, dura = 3200) => {
+    const m = $("mensaje");
+    m.textContent = texto;
+    m.classList.add("visible");
+    clearTimeout(G._men);
+    G._men = setTimeout(() => m.classList.remove("visible"), dura);
+  };
+  G.golpe = (v, tipo) => {
+    E.jugador.golpe(tipo);
+    G.decir(tipo);
+    E.sonido.golpeSeco();
+    if (E.jugador.costilla > 0 && tipo === "patada") G.mostrar("Costilla quebrada: dos días sin correr y con menos fuerza en el lazo.");
+  };
+  G.gastar = (monto, que) => { G.dinero -= monto; };
+  G.soltarPuntero = () => { if (document.pointerLockElement) document.exitPointerLock(); };
+  G.enMenu = () => !$("menu").hidden || !$("parte").hidden || !$("fin").hidden || !$("pausa").hidden;
+
+  // ── arranque ──
+  G.iniciar = async () => {
+    const lienzo = $("lienzo");
+    const cargando = (t) => { $("cargaTexto").textContent = t; };
+    const pausa = () => new Promise((r) => setTimeout(r, 0));
+    cargando("Encendiendo…"); await pausa();
+    E.motor.iniciar(lienzo);
+    E.motor.actualizarHora(G.hora, 0);
+    cargando("Tierra colorada…"); await pausa();
+    E.terreno.construir();
+    cargando("El monte: quebrachos y algarrobos…"); await pausa();
+    E.flora.construir();
+    cargando("Rancho, corral y manga…"); await pausa();
+    E.estancia.construir();
+    cargando("La hacienda…"); await pausa();
+    E.animales.construir();
+    E.jugador.iniciar();
+    E.lazo.construir();
+    E.trabajo.construir();
+    E.trabajo.conectarCura();
+    E.trabajo.conectarManga();
+    E.conectarEntrada(lienzo);
+    conectarInterfaz();
+    // Compilar todos los shaders en la carga: si no, lo primero que entra en
+    // pantalla traba el juego (§ 6.1).
+    cargando("Preparando la luz…"); await pausa();
+    E.motor.acomodar();
+    colocar(0.016);
+    try { await E.motor.renderer.compileAsync(E.motor.escena, E.motor.camara); } catch (e) { /* los navegadores viejos no lo tienen */ }
+    E.motor.dibujar(0, {});
+    $("carga").hidden = true;
+    $("menu").hidden = false;
+    requestAnimationFrame(bucle);
+  };
+
+  function conectarInterfaz() {
+    $("menuEmpezar").onclick = () => empezar();
+    $("parteSeguir").onclick = () => { $("parte").hidden = true; retomar(); };
+    $("pausaSeguir").onclick = () => { $("pausa").hidden = true; retomar(); };
+    $("finOtra").onclick = () => location.reload();
+    $("fogonCalentar").onclick = () => { $("fogon").hidden = true; retomar(); calentarHierro(); };
+    $("fogonComer").onclick = () => { $("fogon").hidden = true; retomar(); comerAsado(); };
+    $("fogonCerrar").onclick = () => { $("fogon").hidden = true; retomar(); };
+    document.addEventListener("pointerlockchange", () => {
+      if (!document.pointerLockElement && G.corriendo && !E.entrada.tactil && !G.enMenu() && !E.trabajo.cura.activa && !E.trabajo.manga.activa && $("fogon").hidden) {
+        $("pausa").hidden = false;
+      }
+    });
+  }
+  function retomar() {
+    if (!E.entrada.tactil && !E.trabajo.manga.activa && !E.trabajo.cura.activa) { try { $("lienzo").requestPointerLock(); } catch (e) { /* no importa */ } }
+  }
+  function empezar() {
+    $("menu").hidden = true;
+    E.sonido.iniciar();
+    G.corriendo = true;
+    // El primer día arranca con una vaca agusanada.
+    const v = E.animales.vacas[6];
+    E.animales.enfermar(v);
+    parte(`Día 1 de ${E.trabajo.DIAS}. Amanece en la estancia, 23 °C y se viene pesado.`,
+      `El puestero vio la ${v.num} con la bichera, rengueando ${E.trabajo.rumbo(v.destino.x, v.destino.z)}, metida en el monte. Buscá las huellas frescas y la bosta con moscas. El zaino está ensillado al lado del rancho.`);
+  }
+  function parte(titulo, texto) {
+    $("parteTitulo").textContent = titulo;
+    $("parteTexto").textContent = texto;
+    $("parte").hidden = false;
+    G.soltarPuntero();
+  }
+
+  // ── pasar el tiempo ── con fundido a negro.
+  let fundido = null;
+  G.fundir = (horas, alTerminar) => {
+    fundido = { t: 0, horas, hecho: false, alTerminar };
+  };
+  function avanzarFundido(dt) {
+    if (!fundido) return 0;
+    fundido.t += dt;
+    if (fundido.t > 0.6 && !fundido.hecho) {
+      fundido.hecho = true;
+      G.hora += fundido.horas; G.horasJuego += fundido.horas;
+      if (fundido.alTerminar) fundido.alTerminar();
+    }
+    const n = fundido.t < 0.6 ? fundido.t / 0.6 : Math.max(0, 1 - (fundido.t - 1.0) / 0.6);
+    if (fundido.t > 1.6) fundido = null;
+    return n;
+  }
+
+  // ── la vida de estancia ──
+  function tomarMate() {
+    const J = E.jugador;
+    G.fundir(0.35, () => { J.sed = Math.min(100, J.sed + 45); J.cansancio = Math.min(100, J.cansancio + 18); G.mostrar("Mate cocido con galleta. Uno vuelve a ser persona."); });
+  }
+  function tomarAgua() {
+    const J = E.jugador, c = E.animales.caballo;
+    G.fundir(0.08, () => { J.sed = 100; if (J.montado || Math.hypot(c.x - J.x, c.z - J.z) < 6) { c.aliento = 1; G.mostrar("Tomaste agua, y el zaino también."); } else G.mostrar("Agua del bebedero, tibia pero agua."); });
+  }
+  function calentarHierro() {
+    G.fundir(0.4, () => { G.hierroCaliente = 1.5; G.mostrar("El hierro está al rojo. Tenés una hora y media."); });
+  }
+  function comerAsado() {
+    const J = E.jugador;
+    G.fundir(0.7, () => { J.cansancio = Math.min(100, J.cansancio + 45); G.comio = true; G.mostrar("Asado al costillar, con cuero. Grasa y humo."); });
+  }
+  function dormir(forzado) {
+    const J = E.jugador;
+    const hasta = 24 - G.hora + 6;
+    G.fundir(hasta, () => nuevoDia(forzado));
+  }
+  function desmayo(motivo) {
+    const J = E.jugador;
+    if (J.montado) J.desmontar();
+    E.lazo.estado === "enganchado" && (E.lazo.vaca.estado = "escapa", E.lazo.vaca = null, E.lazo.estado = "listo");
+    G.fundir(24 - G.hora + 6, () => {
+      J.x = E.lugares.rancho.x - 1.5; J.z = E.lugares.rancho.z + 2;
+      nuevoDia(true, motivo);
+      J.salud = 45; J.sed = 60; J.cansancio = 55;
+    });
+  }
+  function nuevoDia(mal, motivo) {
+    const J = E.jugador, c = E.animales.caballo;
+    G.dia++; G.hora = 6; G.horasJuego = Math.ceil(G.horasJuego / 24) * 24 + 6;
+    J.cansancio = mal ? 70 : G.comio ? 100 : 82;
+    J.sed = Math.max(J.sed, 80);
+    J.salud = Math.min(100, J.salud + 25);
+    if (J.costilla > 0) J.costilla--;
+    if (c.lesion > 0) c.lesion--;
+    c.aliento = 1;
+    G.hierroCaliente = 0; G.comio = false;
+    const { muertas, nuevas } = E.trabajo.amanecer();
+    const b = E.trabajo.balance();
+    if (G.dia > E.trabajo.DIAS || b.vivas < 12) { fin(b); return; }
+    let texto = motivo ? motivo + " " : "";
+    if (muertas.length) texto += `Amaneció muerta ${muertas.map((v) => "la " + v.num).join(" y ")}: la bichera la comió. Los chimangos ya están arriba. `;
+    if (nuevas.length) texto += nuevas.map((v) => `El puestero vio la ${v.num} agusanada, ${E.trabajo.rumbo(v.destino.x, v.destino.z)}.`).join(" ") + " ";
+    const pend = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta && !nuevas.includes(v));
+    if (pend.length) texto += `Siguen con bichera: ${pend.map((v) => `la ${v.num} (${v.salud.bichera.dias} ${v.salud.bichera.dias === 1 ? "día" : "días"})`).join(", ")}. A los tres días se mueren. `;
+    if (!muertas.length && !nuevas.length && !pend.length) texto += "Nadie agusanado hoy. Día para la manga: vacunar, caravanear y marcar. ";
+    texto += `Hacienda: ${b.vivas} de ${b.total}, ${b.trabajadas} trabajadas.`;
+    parte(`Día ${G.dia} de ${E.trabajo.DIAS}.`, texto);
+  }
+  function fin(b) {
+    G.corriendo = false;
+    const fundiste = b.vivas < 12 || b.patrimonio < 1500000 + 18 * 850000 * 0.7;
+    $("finTitulo").textContent = fundiste ? "Fundiste la estancia." : "Salvaste la temporada.";
+    $("finTexto").innerHTML =
+      `<p>Hacienda viva: <b>${b.vivas} de ${b.total}</b>. Vacunadas contra aftosa: <b>${b.vacunadas}</b>. Trabajadas completas: <b>${b.trabajadas}</b>.</p>` +
+      `<p>Plata en la caja: <b>$ ${miles.format(Math.round(G.dinero))}</b>. La hacienda vale <b>$ ${miles.format(Math.round(b.hacienda))}</b>.</p>` +
+      `<p>${fundiste ? "Con lo que se murió y lo que no se vacunó, no alcanza para seguir. El banco se queda con el campo." : "La estancia sigue viva un año más. Nadie te va a dar las gracias, pero el campo sigue."}</p>`;
+    $("fin").hidden = false;
+    G.soltarPuntero();
+  }
+
+  // ── interacción ── lo mismo arma el cartel y ejecuta la acción.
+  function contexto() {
+    const J = E.jugador, Z = E.lazo, W = E.trabajo, c = E.animales.caballo;
+    if (W.manga.activa) return W.manga.fase === "cepo" ? { texto: W.trabajada(W.manga.vaca) ? "Soltar la vaca" : "Soltarla sin terminar", fn: () => W.salirManga(W.trabajada(W.manga.vaca)) } : null;
+    if (Z.estado === "atada" && Z.vaca && Math.hypot(Z.vaca.x - J.x, Z.vaca.z - J.z) < 3) {
+      if (J.montado) return { texto: "Bajate para trabajarla", fn: () => J.desmontar() };
+      if (Z.vaca.salud.bichera) return { texto: `Curar la bichera de la ${Z.vaca.num}`, fn: () => W.abrirCura(Z.vaca) };
+      return { texto: `Soltar la ${Z.vaca.num}`, fn: () => Z.soltar() };
+    }
+    if (!J.montado && Math.hypot(c.x - J.x, c.z - J.z) < 2.6) return { texto: "Montar el zaino", fn: () => J.montar() };
+    for (const p of E.estancia.puntos) {
+      if (Math.hypot(p.x - J.x, p.z - J.z) > p.r) continue;
+      if (J.montado && p.id !== "tanque") return { texto: "Bajate del caballo", fn: () => J.desmontar() };
+      if (p.id === "mate") return { texto: p.texto, fn: tomarMate };
+      if (p.id === "tanque") return { texto: p.texto, fn: tomarAgua };
+      if (p.id === "radio") return { texto: E.sonido.radio ? "Apagar la radio" : "Prender la radio", fn: () => { E.sonido.radio = !E.sonido.radio; } };
+      if (p.id === "catre") return { texto: G.hora >= 17 || J.cansancio < 30 ? "Dormir en el catre" : "Todavía es temprano para dormir", fn: () => { if (G.hora >= 17 || J.cansancio < 30) dormir(false); } };
+      if (p.id === "fogon") return { texto: "Fogón: calentar el hierro o comer", fn: () => { $("fogonComer").disabled = G.hora < 18; $("fogon").hidden = false; G.soltarPuntero(); } };
+      if (p.id === "manga") return { texto: p.texto, fn: () => W.entrarManga() };
+      if (p.id === "tranquera") return { texto: p.texto, fn: () => E.estancia.alternarTranquera() };
+    }
+    if (!Z.tieneLazo && Math.hypot(E.lugares.rancho.x + 3.5 - J.x, E.lugares.rancho.z + 3 - J.z) < 2.2 && !J.montado) {
+      return { texto: `Agarrar el lazo nuevo de la galería ($ ${miles.format(W.COSTO.lazo)})`, fn: () => { Z.tieneLazo = true; Z.desgaste = 0; G.gastar(W.COSTO.lazo, "Lazo"); Z.equipar(); } };
+    }
+    if (J.montado && c.vReal < 0.6) return { texto: "Desmontar", fn: () => J.desmontar() };
+    return null;
+  }
+
+  function controles(ctxAccion) {
+    const en = E.entrada, J = E.jugador, Z = E.lazo, W = E.trabajo;
+    if (G.enMenu() || W.cura.activa || !$("fogon").hidden || fundido) return;
+    if (en.pulsado("KeyE") || en.botonPulsado("accion")) { if (ctxAccion) ctxAccion.fn(); }
+    if (W.manga.activa) {
+      const idx = ["Digit1", "Digit2", "Digit3", "Digit4"].findIndex((k) => en.pulsado(k));
+      if (idx >= 0) { W.manga.herr = ["aftosa", "ivermectina", "caravana", "hierro"][idx]; document.querySelector(`#manga [data-herr="${W.manga.herr}"]`).click(); }
+      return;
+    }
+    if (en.pulsado("Digit1") || en.pulsado("KeyL")) Z.equipar();
+    const puedeLazo = document.pointerLockElement || en.tactil;
+    if ((en.raton.izqRecien && puedeLazo) || en.botonPulsado("lazo")) Z.empezarRevoleo();
+    if ((en.raton.izqSuelto || (G._lazoTactil && !en.boton("lazo"))) && Z.estado === "revoleando") Z.tirar();
+    G._lazoTactil = en.boton("lazo");
+    if (en.pulsado("KeyP") || en.botonPulsado("pialar")) Z.pialar();
+    if (en.pulsado("KeyV") || en.botonPulsado("camara")) J.camara = J.camara === "primera" ? "tercera" : "primera";
+    if (en.pulsado("KeyH") || en.botonPulsado("silbar")) { E.animales.caballo.destino = { x: J.x, z: J.z }; G.decir("silbar"); }
+    if (en.pulsado("KeyF") && !G._fumando) { G._fumando = 6; G.decir("fumar"); }
+    J.bloqueado = W.manga.activa ? "manga" : Z.estado === "revoleando" || Z.estado === "enganchado" ? "lazo" : null;
+  }
+
+  // ── el HUD ──
+  let proxHud = 0, proxHuellas = 0;
+  function hud(ctxAccion) {
+    const J = E.jugador, Z = E.lazo, c = E.animales.caballo, W = E.trabajo;
+    const hh = Math.floor(G.hora) % 24, mm = Math.floor((G.hora % 1) * 60);
+    $("hudDia").textContent = `Día ${G.dia} de ${W.DIAS}`;
+    $("hudHora").textContent = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+    $("hudTemp").textContent = `${Math.round(E.motor.temp)} °C`;
+    $("hudTemp").classList.toggle("calor", E.motor.temp > 36);
+    $("barSed").style.width = J.sed + "%"; $("barSed").parentElement.classList.toggle("bajo", J.sed < 25);
+    $("barCans").style.width = J.cansancio + "%"; $("barCans").parentElement.classList.toggle("bajo", J.cansancio < 20);
+    $("barSalud").style.width = J.salud + "%"; $("barSalud").parentElement.classList.toggle("bajo", J.salud < 30);
+    $("hudCaballo").hidden = !J.montado;
+    $("barCaballo").style.width = c.aliento * 100 + "%";
+    $("hudLesion").hidden = !(c.lesion > 0);
+    $("hudCostilla").hidden = !(J.costilla > 0);
+    $("hudPlata").textContent = `$ ${miles.format(Math.round(G.dinero))}`;
+    const b = W.balance();
+    const agus = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta);
+    $("hudObjetivos").innerHTML =
+      agus.map((v) => `<li class="urgente">La ${v.num} con bichera · ${v.salud.bichera.dias ? v.salud.bichera.dias + (v.salud.bichera.dias === 1 ? " día" : " días") : "de hoy"}</li>`).join("") +
+      `<li>Trabajadas en la manga: ${b.trabajadas} de ${b.vivas}</li>` +
+      (G.hierroCaliente > 0 ? `<li>Hierro caliente: ${Math.round(G.hierroCaliente * 60)} min</li>` : "") +
+      `<li>${Z.tieneLazo ? (Z.estado === "guardado" ? "Lazo en el recado (1)" : "Lazo en la mano") : "Sin lazo"}${J.montado && J.alPaso ? " · al paso" : ""}</li>`;
+    $("aviso").textContent = ctxAccion ? `${E.entrada.tactil ? "✋" : "E"} · ${ctxAccion.texto}` : "";
+    $("aviso").classList.toggle("visible", !!ctxAccion);
+    // El forcejeo: tensión contra lo que aguanta el cuero, y lo que le queda a la vaca.
+    const tira = Z.estado === "enganchado";
+    $("tension").hidden = !tira;
+    if (tira) {
+      const resiste = 1.5 - Z.desgaste * 0.35;
+      $("tensionBarra").style.width = Math.min(100, (Z.tension / resiste) * 100) + "%";
+      $("tensionBarra").className = Z.tension > resiste * 0.85 ? "rojo" : Z.tension > resiste * 0.55 ? "amarillo" : "";
+      $("fatigaBarra").style.width = Z.vaca.fatiga * 100 + "%";
+      $("tensionTexto").textContent = Z.vaca.fatiga < 0.38 ? "Cansada: pialala (P)" : "Aguantá y cobrá (botón derecho)";
+      $("pial").hidden = !Z.pialando;
+      if (Z.pialando) { $("pialAguja").style.left = Z.pialando.aguja * 100 + "%"; $("pialVentana").style.left = (Z.pialando.ventana - 0.11) * 100 + "%"; }
+    } else $("pial").hidden = true;
+    const q = Z.calidadVisible();
+    $("revoleo").hidden = Z.estado !== "revoleando";
+    $("revoleoArco").style.strokeDashoffset = String(126 * (1 - q));
+    $("revoleoArco").classList.toggle("justo", q > 0.82);
+  }
+
+  // ── el cuadro ──
+  const ctxAnimales = {
+    aviso: (v, tipo) => G.decir(tipo === "lesion" ? "lesion" : tipo),
+    golpe: (v, tipo) => G.golpe(v, tipo),
+    mugir: (v) => E.sonido.mugido(v),
+    hora: 6, horasJuego: 6, escalaHoras: HORAS_POR_SEGUNDO, sed: false,
+  };
+  const ctxJugador = { dh: 0, aviso: (t) => G.decir(t) };
+  let antes = performance.now();
+  function colocar(dt) {
+    // Poner todo en su lugar sin avanzar el mundo (para la carga y las fotos).
+    E.jugador.actualizar(0, G.t, { dh: 0, aviso: () => {} });
+    E.flora.actualizar(E.motor.camara, G.t);
+    E.flora.actualizarPasto(E.motor.camara.position);
+    E.flora.actualizarSol(E.motor.camara);
+    E.motor.seguirSombra(new THREE.Vector3(E.jugador.x, E.terreno.altura(E.jugador.x, E.jugador.z), E.jugador.z));
+  }
+  G.simular = (dt) => {
+    const activo = G.corriendo && !G.enMenu() && !E.trabajo.cura.activa && $("fogon").hidden;
+    const dh = activo ? dt * HORAS_POR_SEGUNDO : 0;
+    G.hora += dh; G.horasJuego += dh;
+    G.hierroCaliente = Math.max(0, G.hierroCaliente - dh);
+    G.t += dt;
+    E.motor.actualizarHora(G.hora, G.t);
+    // Una racha de viento que va y viene.
+    E.flora.uniformes.uRacha.value = 0.35 + 0.3 * Math.sin(G.t * 0.21) * Math.sin(G.t * 0.13 + 1) + 0.15 * Math.sin(G.t * 0.9);
+    const ctxAccion = activo ? contexto() : null;
+    if (activo) controles(ctxAccion);
+    ctxJugador.dh = dh;
+    if (activo || E.trabajo.manga.activa) {
+      if (!E.trabajo.manga.activa) E.jugador.actualizar(dt, G.t, ctxJugador);
+      E.lazo.actualizar(dt, G.t);
+      ctxAnimales.hora = G.hora; ctxAnimales.horasJuego = G.horasJuego; ctxAnimales.sed = E.motor.calor > 0.5;
+      E.animales.actualizar(dt, G.t, E.jugador, ctxAnimales);
+    }
+    E.estancia.actualizar(dt, G.t);
+    E.terreno.actualizar(G.t);
+    E.trabajo.actualizarCura(dt);
+    E.trabajo.actualizarManga(dt, G.t);
+    // El hierro brilla si está caliente.
+    E.estancia.hierro.punta.material.emissiveIntensity = G.hierroCaliente > 0 ? 2.5 + Math.sin(G.t * 3) * 0.4 : 0;
+    const cam = E.motor.camara;
+    E.flora.actualizar(cam, G.t);
+    E.flora.actualizarPasto(cam.position);
+    E.flora.actualizarSol(cam);
+    E.motor.seguirSombra(new THREE.Vector3(E.jugador.x, E.terreno.altura(E.jugador.x, E.jugador.z), E.jugador.z));
+    proxHuellas -= dt;
+    if (proxHuellas <= 0) { proxHuellas = 1.5; E.animales.rehacerHuellas(G.horasJuego); }
+    E.sonido.actualizar(dt, E.jugador, G.hora);
+    if (activo) {
+      const J = E.jugador;
+      if (J.sed <= 0) desmayo("Te agarró un golpe de calor. Te encontró el puestero tirado y te trajo al rancho.");
+      else if (J.salud <= 0) desmayo("Te dejó de cama. Te trajeron al rancho entre dos.");
+      else if (G.hora >= 23.5) { G.mostrar("Te agarró la noche. Te dormiste donde estabas."); dormir(true); }
+      if (J.sed < 20 && G.t - ultimaFrase > 25) G.decir("sed");
+      else if (E.motor.temp > 38 && G.t - ultimaFrase > 60 && Math.random() < dt * 0.05) G.decir("calor");
+    }
+    if (G._fumando) {
+      G._fumando -= dt;
+      if (G._fumando <= 0) { G._fumando = 0; E.jugador.cansancio = Math.min(100, E.jugador.cansancio + 3); }
+    }
+    proxHud -= dt;
+    if (proxHud <= 0) { proxHud = 0.1; hud(ctxAccion); }
+    E.entrada.finCuadro();
+  };
+  function bucle(ahora) {
+    // El dt nunca negativo: la marca de requestAnimationFrame puede ser anterior
+    // al performance.now() que se tomó al armar (§ 6.1).
+    const real = (ahora - antes) / 1000;
+    antes = ahora;
+    const dt = Math.max(0, Math.min(0.05, real));
+    E.motor.acomodar();
+    E.motor.medir(real, G.fijo);
+    G.simular(dt);
+    const negro = avanzarFundido(dt);
+    const J = E.jugador;
+    E.motor.dibujar(G.t, { sed: E.clamp((30 - J.sed) / 30, 0, 1) * 0.8, dolor: J.dolor, negro });
+    requestAnimationFrame(bucle);
+  }
+
+  // ── para las pruebas (Playwright) ──
+  window.__juego = {
+    G, J: () => E.jugador, A: () => E.animales, Z: () => E.lazo, W: () => E.trabajo,
+    empezar: () => { empezar(); $("parte").hidden = true; },
+    ir(x, z, yaw = 0, pitch = 0) { const J = E.jugador; J.x = x; J.z = z; J.yaw = yaw; J.pitch = pitch; if (J.montado) { E.animales.caballo.x = x; E.animales.caballo.z = z; } colocar(0); },
+    hora(h) { G.hora = h; E.motor.actualizarHora(h, G.t); },
+    paso(dt, n = 1) { for (let i = 0; i < n; i++) G.simular(dt); },
+    foto() { E.motor.acomodar(); E.motor.dibujar(G.t, {}); return E.motor.renderer.info.render; },
+    info() { const r = E.motor.renderer.info; return { triangulos: r.render.triangles, llamadas: r.render.calls, geometrias: r.memory.geometries, texturas: r.memory.textures, escala: E.motor.escala }; },
+  };
+
+  addEventListener("load", () => G.iniciar().catch((e) => { $("cargaTexto").textContent = "No se pudo arrancar: " + e.message; console.error(e); }));
+})();
