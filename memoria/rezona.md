@@ -10,6 +10,11 @@ Fuente: `herramientas/juegos/GUIA-JUEGOS.md § 1, § 3, § 10`. Ver también: [j
 ## Caídas
 - 22/09/2026 21:38–21:54: `submit_image_generation` → `CREDIT_RESERVE_FAILED` (servicio de cobro caído), 9 intentos. No cobra.
 
+- 23/09 03:39: la key da `PAT_INACTIVE` (rotada o revocada): hace falta una nueva con `login --paste`.
+
+## Repo PGC
+- `rezona-ai-pgc/HOLLOWMERE` (único repo de la org, público): juego Babylon hecho en el espacio PGC de Rezona. No trae nada sobre cobros ni `CREDIT_RESERVE_FAILED`; el error es del servidor. Sirve de referencia: `PLAN_ASSETS.md` (plan de assets del skill `rezona-pgc-game-plan-assets`) y `AGENT_CONTRACT.md`.
+
 ## Trampas
 - `submit_audio_generation.kind` ∈ `auto|speech|music|sound` (no `sfx`).
 - El `output_path` que vale es el de la respuesta (`-g1`). `.jpg` con el modelo por defecto es error terminal.
