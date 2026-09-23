@@ -6,7 +6,7 @@
    gestos, y se lo pasa al director para el sonido, la historia y la interfaz.
    ========================================================================== */
 import * as THREE from 'three';
-import { crearMundo, pasarKilla, revivir, empezarEn, DT, NADA, B, baldosa } from './fisica.js';
+import { crearMundo, pasarKilla, revivir, empezarEn, DT, NADA, B, baldosa, vigasEn } from './fisica.js';
 import { biomaEn } from './biomas.js';
 import { armarCarton, armarTeatrito, armarColgantes, pasarColgantes } from './papel.js';
 import { Escenario } from './escenario.js';
@@ -89,7 +89,8 @@ export class Capitulo {
     if (this.quieta) return;
     const e = this.entrada ? this.entrada(m.p) : this.bloqueo ? NADA : this.guion ? this.guion(m) : inp;
     pasarKilla(m, e || NADA);
-    if (m.p.muerta && m.p.tMuerta > 1.25) revivir(m);
+    /* no revive con una viga del túnel pasando justo por la apacheta (moría otra vez al primer cuadro) */
+    if (m.p.muerta && m.p.tMuerta > 1.25 && !vigasEn(m).some((v) => v.tipo === 'baja' && Math.abs(v.xa - m.p.checkpoint.x) < 1.2)) revivir(m);
     for (const ev of m.eventos) this.alEvento(ev);
     m.eventos.length = 0;
   }
@@ -271,6 +272,8 @@ export class Capitulo {
     this.g.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
       if (o.material) for (const mt of [].concat(o.material)) { if (mt.map && mt.map.userData.w == null) mt.map.dispose(); mt.dispose(); }
+      if (o.customDepthMaterial) o.customDepthMaterial.dispose();
+      if (o.isInstancedMesh) o.dispose();
     });
     this.E.u.uFrio.value = 0; this.E.u.uFlash.value = 0; this.E.u.uBarras.value = 0;
     this.cielo.u.uRayo.value = 0;

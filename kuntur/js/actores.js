@@ -49,7 +49,13 @@ export class KillaPapel {
   caer(causa) { this.muerte = { t: 0, causa }; }
   /* un gesto de las escenas (saluda, señala, levanta, arrodilla, abraza, asiente);
      seg = Infinity lo deja puesto hasta hacer(null) */
-  hacer(anim, seg) { this.gesto = anim ? { anim, t: seg == null ? 1.2 : seg, fase: 0 } : null; }
+  hacer(anim, seg) {
+    if (!anim) { this.gesto = this.gestoFijo = null; return; }
+    const g = { anim, t: seg == null ? 1.2 : seg, fase: 0 };
+    /* uno corto (asentir) encima de uno fijo (abrazar) no lo borra: al terminar, vuelve el fijo */
+    if (g.t === Infinity) this.gestoFijo = g;
+    this.gesto = g;
+  }
   volver() { this.muerte = null; this.pop = 0; this.sy = 0.4; this.sx = 1.4; }
 
   /* p: la física; o: { t, dt, aterrizo, salto, habla } */
@@ -91,7 +97,7 @@ export class KillaPapel {
       else if (this.tQuieta > 3.5 && Math.sin(t * 0.6) > 0.3) this.poner('mira', 0);
       else this.poner('quieta', Math.floor(t * 3));
     }
-    if (this.gesto) { this.gesto.t -= dt; if (this.gesto.t <= 0) this.gesto = null; }
+    if (this.gesto) { this.gesto.t -= dt; if (this.gesto.t <= 0) this.gesto = this.gestoFijo !== this.gesto ? this.gestoFijo : null; }
     /* darse vuelta: la hoja da media vuelta (del otro lado se ve el dibujo al revés) */
     if (dir) this.dir = dir;
     const meta = this.dir > 0 ? -0.28 : Math.PI + 0.28;

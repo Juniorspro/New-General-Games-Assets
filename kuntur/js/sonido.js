@@ -53,7 +53,7 @@ const TEMA = {
   }),
   prologo: tema(56, 4, {
     quena: melodia('-:4 A4:2 C5:1 A4:1 G4:3 -:1 E4:2 G4:1 A4:1 A4:4 -:4 C5:2 D5:1 C5:1 A4:3 G4:1 E4:4 -:4'),
-    largo: 32, reverb: 0.8, viento: 1, suave: true,
+    largo: 40, reverb: 0.8, viento: 1, suave: true,
   }),
   colores: tema(100, 2, {
     quena: melodia('A5:.5 G5:.25 E5:.25 G5:.5 A5:.5 C6:.5 A5:.5 G5:1 E5:.5 D5:.25 C5:.25 D5:.5 E5:.5 G5:.5 E5:.5 D5:1 A5:.5 G5:.25 E5:.25 G5:.5 A5:.5 C6:.5 D6:.5 C6:1 A5:.5 G5:.5 E5:.5 D5:.25 C5:.25 A4:1 A4:1 -:8 E5:.5 E5:.25 G5:.25 A5:.5 E5:.5 D5:.5 C5:.5 D5:1 E5:.5 E5:.25 G5:.25 A5:.5 C6:.5 A5:.5 G5:.5 E5:1 C6:.5 A5:.5 G5:.5 E5:.5 D5:.5 E5:.5 C5:.5 D5:.25 C5:.25 A4:1 A4:1 -:8'),
@@ -71,7 +71,7 @@ const TEMA = {
   }),
   puna: tema(58, 4, {
     quena: melodia('-:2 E5:2 G5:1 E5:1 D5:4 -:2 C5:1 D5:1 E5:2 A4:4 -:4 A5:2 G5:1 E5:1 G5:3 E5:1 D5:2 C5:1 D5:1 A4:4 -:4'),
-    arpegio: ['Am', 'Am', 'G', 'G', 'C', 'C', 'Am', 'Am'], largo: 32, reverb: 0.9, suave: true,
+    arpegio: ['Am', 'Am', 'G', 'G', 'C', 'C', 'Am', 'Am'], largo: 48, reverb: 0.9, suave: true,
   }),
   persecucion: tema(152, 2, {
     quena: melodia('A5:.5 A5:.25 G5:.25 E5:.5 G5:.5 A5:1 -:1 C6:.5 C6:.25 A5:.25 G5:.5 E5:.5 D5:1 -:1'),
@@ -80,7 +80,7 @@ const TEMA = {
   }),
   tormenta: tema(92, 4, {
     sikus: melodia('A4:2 C5:2 B4:2 G4:2 A4:4 -:4 E5:2 D5:2 C5:2 B4:2 A4:4 -:4'),
-    bombo: [[0, 1], [1.5, 0.5], [2, 0.8], [3.5, 0.5]], largo: 24, reverb: 0.6, viento: 1.2,
+    bombo: [[0, 1], [1.5, 0.5], [2, 0.8], [3.5, 0.5]], largo: 32, reverb: 0.6, viento: 1.2,
   }),
   cumbre: tema(80, 4, {
     quena: melodia('E5:1 D5:.5 C5:.5 A4:2 C5:1 D5:.5 E5:.5 G5:1.5 E5:.5 A5:1 G5:.5 E5:.5 D5:1 C5:1 D5:1.5 C5:.5 A4:2 E5:1 G5:.5 A5:.5 C6:2 A5:1 G5:.5 E5:.5 D5:1.5 E5:.5 G5:1 E5:.5 D5:.5 C5:1 A4:1 C5:.5 D5:.5 E5:1 A5:4 -:4'),
@@ -111,6 +111,11 @@ export const Sonido = {
     for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6); }
     this.rev = c.createConvolver(); this.rev.buffer = ir;
     this.revIn = c.createGain(); this.revIn.gain.value = 0.35; this.revIn.connect(this.rev); this.rev.connect(this.bMusica);
+    this.revFx = c.createConvolver(); this.revFx.buffer = ir;
+    this.revInFx = c.createGain(); this.revInFx.gain.value = 0.35; this.revInFx.connect(this.revFx); this.revFx.connect(this.bEfectos);
+    /* en el iPhone el audio se suspende solo (una llamada, otra app): cualquier toque lo despierta */
+    const despertar = () => { if (c.state !== 'running') c.resume(); };
+    addEventListener('pointerdown', despertar, true); addEventListener('keydown', despertar, true);
     this.ruido = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const d = this.ruido.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     this.cuerdas = new Map();
@@ -232,6 +237,8 @@ export const Sonido = {
     const A = this.actual, c = this.ctx;
     if (!A || !c || A.muerto) return;
     const T = A.T, P = T.pistas, seg = 60 / T.bpm, largo = P.largo, hasta = c.currentTime + 0.25;
+    /* con la pestaña escondida no se programa nada: al volver se salta lo perdido en vez de tocarlo todo junto */
+    if (A.t0 + A.prox * seg < c.currentTime - 0.1) A.prox = Math.ceil((c.currentTime - A.t0) / seg * 2) / 2;
     /* se programa en tramos de medio tiempo */
     while (A.t0 + A.prox * seg < hasta) {
       const b0 = A.prox, b1 = A.prox + 0.5, base = A.t0 + A.vuelta * largo * seg;
@@ -281,6 +288,7 @@ export const Sonido = {
     r.connect(fl); fl.connect(g); g.connect(this.bEfectos); r.start();
     const A = this.ambiente = { tipo, fuente: r, g, fl, prox: c.currentTime };
     A.fn = (ahora) => {
+      A.prox = Math.max(A.prox, ahora);
       /* el viento sube y baja solo */
       if (tipo !== 'granizo') { fl.frequency.setTargetAtTime(380 + Math.sin(ahora * 0.23) * 180 + Math.sin(ahora * 0.61) * 90, ahora, 0.5); g.gain.setTargetAtTime((tipo === 'noche' ? 0.015 : 0.04) * (1.1 + Math.sin(ahora * 0.31)), ahora, 0.6); }
       if (tipo === 'granizo') while (A.prox < ahora + 0.2) { A.prox += 0.03 + Math.random() * 0.06; this.golpe(A.prox, 0.03 + Math.random() * 0.05, 3500 + Math.random() * 2500, 0.02); }
@@ -300,8 +308,8 @@ export const Sonido = {
       case 'pio': this.pio(t, o.grande); break;
       case 'aterriza': this.golpe(t, Math.min(0.5, 0.1 + (o.fuerza || 5) * 0.02), 300, 0.12); this.tono(t, 110, 60, 0.12, Math.min(0.25, (o.fuerza || 5) * 0.012)); break;
       case 'paso': this.golpe(t, 0.05, o.nieve ? 1200 : o.sal ? 2600 : 1800 + Math.random() * 600, 0.035); break;
-      case 'apacheta': this.golpe(t, 0.25, 1200, 0.06); this.golpe(t + 0.09, 0.18, 1500, 0.05); { const b = this.bMusica; this.bMusica = this.bEfectos; this.rasguear(t + 0.15, 'C', 0.8, 1); this.bMusica = b; } break;
-      case 'copla': { const b = this.bMusica; this.bMusica = this.bEfectos; ['A5', 'C6', 'D6', 'E6', 'G6', 'A6'].forEach((q, i) => this.pulsar(t + i * 0.07, nm(q), 0.7)); this.bMusica = b; this.tono(t + 0.45, 1760, 1760, 1.2, 0.05); } break;
+      case 'apacheta': this.golpe(t, 0.25, 1200, 0.06); this.golpe(t + 0.09, 0.18, 1500, 0.05); this.comoEfecto(() => this.rasguear(t + 0.15, 'C', 0.8, 1)); break;
+      case 'copla': this.comoEfecto(() => ['A5', 'C6', 'D6', 'E6', 'G6', 'A6'].forEach((q, i) => this.pulsar(t + i * 0.07, nm(q), 0.7))); this.tono(t + 0.45, 1760, 1760, 1.2, 0.05); break;
       case 'muere': for (let i = 0; i < 7; i++) this.golpe(t + i * 0.035 + Math.random() * 0.02, 0.12, 2000 + Math.random() * 3000, 0.03); this.tono(t + 0.1, 620, 180, 0.55, 0.09, 'triangle'); break;
       case 'revive': this.tono(t, 260, 900, 0.16, 0.1, 'triangle'); this.soplido(t, 1200, 3200, 0.15, 0.1, 2); break;
       case 'puerta': this.tono(t, 140, 190, 0.5, 0.05, 'sawtooth'); this.tono(t + 0.1, 170, 120, 0.4, 0.04, 'sawtooth'); this.golpe(t + 0.45, 0.2, 400, 0.1); break;
@@ -328,6 +336,8 @@ export const Sonido = {
       case 'puerta2': break;
     }
   },
+  /* un instrumento de la música tocado como efecto: va al volumen de efectos y a su reverb */
+  comoEfecto(fn) { const b = this.bMusica, r = this.revIn; this.bMusica = this.bEfectos; this.revIn = this.revInFx; try { fn(); } finally { this.bMusica = b; this.revIn = r; } },
   pio(t, grande) {
     if (grande) return this.kiia(t);
     this.tono(t, 2300, 3100, 0.07, 0.06, 'sine'); this.tono(t + 0.09, 2500, 3300, 0.06, 0.05, 'sine');
@@ -337,7 +347,7 @@ export const Sonido = {
     o.type = 'sawtooth'; o.frequency.setValueAtTime(1400, t); o.frequency.linearRampToValueAtTime(1900, t + 0.12); o.frequency.exponentialRampToValueAtTime(900, t + 0.6);
     fl.type = 'bandpass'; fl.frequency.value = 2200; fl.Q.value = 3;
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.09, t + 0.04); g.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
-    o.connect(fl); fl.connect(g); g.connect(this.bEfectos); g.connect(this.revIn);
+    o.connect(fl); fl.connect(g); g.connect(this.bEfectos); g.connect(this.revInFx);
     o.start(t); o.stop(t + 0.7);
   },
 };

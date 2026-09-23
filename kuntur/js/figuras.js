@@ -228,7 +228,11 @@ export class Apu {
   }
   ponerEdad(edad) {
     this.edad = edad;
-    while (this.piv.children.length) this.piv.remove(this.piv.children[0]);
+    /* lo de antes se libera (las texturas son compartidas y se quedan) */
+    while (this.piv.children.length) {
+      const o = this.piv.children[0]; this.piv.remove(o);
+      o.traverse((q) => { if (q.geometry) q.geometry.dispose(); if (q.material) [].concat(q.material).forEach((mt) => mt.dispose()); if (q.customDepthMaterial) q.customDepthMaterial.dispose(); });
+    }
     /* el pichón */
     this.pichon = hojaDe('apuP', APU.pichon, 0, 0.034);
     this.piv.add(this.pichon);

@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { B, baldosa, vigasEn } from './fisica.js';
 import { hash } from './azar.js';
-import { textoRecorte, hojaRecortada, granoPapel, ZF, ZB } from './papel.js';
+import { textoRecorte, texBloque, hojaRecortada, granoPapel, ZF, ZB } from './papel.js';
 import { DECOR, ANIMALES } from './elenco.js';
 import { TREN_VAGONES } from './mapas.js';
 
@@ -160,10 +160,10 @@ export class Escenario {
       this.g.add(h);
       this.palancas.push({ l, h });
     }
-    /* piedras de empujar: cajas de cartón pintadas de piedra */
-    const tPiedra = texDe('pd', DECOR.piedra, 0).tex;
+    /* piedras de empujar: cajas de cartón macizas pintadas de piedra (el mismo dibujo en las seis caras) */
+    const tPiedra = texBloque(DECOR.piedra(0), { fondo: '#9a9088' });
     for (const c of m.cajas) {
-      const mm = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1.4), new THREE.MeshStandardMaterial({ map: tPiedra, alphaTest: 0.3, roughness: 0.9 }));
+      const mm = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1.4), new THREE.MeshStandardMaterial({ map: tPiedra, roughness: 0.9 }));
       mm.castShadow = mm.receiveShadow = true;
       this.g.add(mm); this.cajas.push({ c, mm });
     }

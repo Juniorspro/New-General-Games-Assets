@@ -177,7 +177,9 @@ export function pasarKilla(m, inp) {
 function reparado(m, p, dir) {
   const y = Math.floor(p.y + 0.4);
   for (let d = 1; d <= 2; d++) if (solidaEn(m, Math.floor(p.x - dir * (p.w / 2 + d - 0.6)), y)) return true;
-  return !!cajaEn(m, p.x - dir * 1.9 - 0.3, p.y + 0.1, p.x - dir * 0.3, p.y + 0.9, null) && dir !== 0;
+  if (!dir) return false;
+  const x0 = dir > 0 ? p.x - 2.2 : p.x + 0.3, x1 = dir > 0 ? p.x - 0.3 : p.x + 2.2;
+  return !!cajaEn(m, x0, p.y + 0.1, x1, p.y + 0.9, null);
 }
 export function rafagaEn(m, v) { return (((m.tiempo + v.fase) % v.periodo) / v.periodo) < v.activa; }
 function aplicarViento(m, p) {
@@ -248,8 +250,8 @@ function pasarNormal(m, p, inp) {
       p.vy = K.SALTO2; p.saltoUsado = true; p.cortado = false; p.buffer = 0;
       evento(m, 'aleteo');
     }
-    if (m.habil.planeo) p.planeoArmado = true;
-    p.buffer = 0;
+    /* si no hay nada que usar en el aire, el toque queda guardado y salta al aterrizar */
+    if (m.habil.planeo && !p.planeoArmado) { p.planeoArmado = true; p.buffer = 0; }
   } else if (p.buffer > 0 && p.agachada && suelo) {
     /* agachada no salta, pero se para si puede */
   }
@@ -396,7 +398,7 @@ function pasarColgado(m, p, inp) {
   if (inp.y > 0 || inp.x === c.dir || p.buffer > 0) {
     if (inp.x === -c.dir && p.buffer > 0) {
       /* salto hacia atrás, soltándose */
-      soltar(p); p.vy = K.SALTO * 0.85; p.vx = -c.dir * K.CORRE; p.dir = -c.dir; p.buffer = 0; evento(m, 'salto'); return;
+      soltar(p); p.vy = K.SALTO * 0.85; p.vx = -c.dir * K.CORRE; p.dir = -c.dir; p.buffer = 0; p.cortado = false; evento(m, 'salto'); return;
     }
     const x1 = c.dir > 0 ? c.cx + p.w / 2 + 0.05 : c.cx + 1 - p.w / 2 - 0.05;
     if (chocaKilla(m, p, x1, c.tope, K.ALTO) && chocaKilla(m, p, x1, c.tope, K.ALTO_AGACHADA)) return;
@@ -439,6 +441,8 @@ function pasarEscalera(m, p, inp) {
     if (inp.y < 0) { p.estado = 'normal'; p.enSuelo = true; p.y = Math.ceil(ny - 1e-3); if (chocaKilla(m, p, p.x, p.y)) p.y = Math.floor(p.y) + 1; }
     return;
   }
+  /* bajando, los tablones también la frenan (si no, atravesaba el enganche entre vagones) */
+  if (inp.y < 0) { const piso = pisoEntre(m, p, p.y, ny); if (piso != null) { p.y = piso; p.vy = 0; p.estado = 'normal'; p.enSuelo = true; return; } }
   const abajo = baldosa(m, tx, Math.floor(ny + 0.1)) === B.ESCALERA || baldosa(m, tx, Math.floor(ny + 0.9)) === B.ESCALERA;
   if (!abajo) { p.estado = 'normal'; p.enSuelo = false; return; }
   p.y = ny;
@@ -509,7 +513,12 @@ function pasarCajas(m) {
       if (!antes) evento(m, 'cajaCae', { x: c.x + 0.5, y: c.y });
     } else { c.y = ny; c.enSuelo = false; }
     /* se cayó del mapa: vuelve a donde estaba */
-    if (c.y < -4) { c.x = c.x0; c.y = c.y0; c.vy = 0; }
+    /* se cayó del mapa, o quedó en un piso de más abajo (de donde no se puede subir): vuelve a su
+       lugar, salvo que Killa esté parada ahí (la dejaba trabada adentro de la piedra) */
+    if ((c.y < -4 || (c.enSuelo && c.y <= c.y0 - 2.5)) && !killaEn(m, c.x0, c.y0, c.x0 + c.w, c.y0 + c.h)) {
+      c.x = c.x0; c.y = c.y0; c.vy = 0; c.enSuelo = true;
+      evento(m, 'cajaCae', { x: c.x + 0.5, y: c.y });
+    }
   }
 }
 
@@ -679,6 +688,7 @@ export function clave(m, grano) {
 }
 export function copiar(m) {
   const n = Object.assign({}, m);
+  n.habil = Object.assign({}, m.habil);
   n.p = Object.assign({}, m.p, { colgado: m.p.colgado && Object.assign({}, m.p.colgado), trepa: m.p.trepa && Object.assign({}, m.p.trepa), checkpoint: Object.assign({}, m.p.checkpoint) });
   n.cajas = m.cajas.map((c) => Object.assign({}, c));
   if (m.p.caja) n.p.caja = n.cajas[m.cajas.indexOf(m.p.caja)];

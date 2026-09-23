@@ -62,6 +62,7 @@ export class UI {
   }
   enfocar(L, i) {
     L.items.forEach((el, j) => el.classList.toggle('foco', j === i));
+    if (L.items[i] && L.items[i].scrollIntoView && L.items[i].closest('.tablero')) try { L.items[i].scrollIntoView({ block: 'nearest' }); } catch (_) {}
     L.i = i;
     if (L.cambio) L.cambio(i);
     if (this.alMover) this.alMover();
@@ -114,6 +115,8 @@ export class UI {
     this.lista(items, {
       i: i0,
       elegir: async (i, el) => {
+        if (this.idiomaElegido) return;
+        this.idiomaElegido = true;
         this.foco = null;
         el.classList.add('elegido');
         items.forEach((o) => { if (o !== el) o.classList.add('sube'); });
@@ -180,7 +183,7 @@ export class UI {
     const izq = $('div', 'pagina', hojas), der = $('div', 'pagina', hojas);
     const nav = $('div', 'nav', c);
     const ant = $('button', 'boleto chico', nav, '<span class="sombra"></span><span class="papel"></span><span class="txt">‹</span>');
-    const volver = $('button', 'boleto chico', nav, `<span class="txt">${esc(tr('volver'))}</span>`);
+    const volver = $('button', 'boleto chico', nav, `<span class="sombra"></span><span class="papel"></span><span class="txt">${esc(tr('volver'))}</span>`);
     const sig = $('button', 'boleto chico', nav, '<span class="sombra"></span><span class="papel"></span><span class="txt">›</span>');
     let par = 0;
     const pintar = (dir) => {
@@ -261,7 +264,7 @@ export class UI {
         c.classList.add('fuera'); setTimeout(() => c.remove(), 700); listo();
       };
       this.narrando = avanzar;
-      c.addEventListener('pointerdown', (e) => { e.preventDefault(); avanzar(); });
+      c.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); avanzar(); });
       setTimeout(mostrar, 500);
     });
   }
@@ -345,7 +348,7 @@ export class UI {
       let fin = false;
       const cerrar = () => { if (fin) return; fin = true; this.narrando = null; c.classList.add('fuera'); setTimeout(() => { c.remove(); listo(); }, 800); };
       this.narrando = cerrar;
-      c.addEventListener('pointerdown', cerrar);
+      c.addEventListener('pointerdown', (e) => { e.stopPropagation(); cerrar(); });
       setTimeout(() => c.classList.add('ve'), 50);
       setTimeout(cerrar, 4000 + lineas.length * 2600);
     });

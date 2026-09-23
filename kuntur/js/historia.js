@@ -11,7 +11,8 @@ import { T } from './textos.js';
 export const HISTORIA = {
   /* ---------------- Prólogo: la granizada ---------------- */
   prologo: {
-    musica: 'prologo', ambiente: 'granizo',
+    /* si salta por encima del pichón y llega a la salida, el final espera a que termine la escena */
+    musica: 'prologo', ambiente: 'granizo', finEspera: 'pichon',
     gestos: {
       inicio: { 0: [['abuela', 'senala', 1.8]], 1: [['killa', 'asiente', 0.8]] },
       casa: { 0: [['abuela', 'asiente', 1]], 2: [['abuela', 'senala', 2.4]], 3: [['abuela', 'habla', 2]], 4: [['killa', 'asiente', 0.8]], 6: [['abuela', 'abraza', 2.6]] },
@@ -40,7 +41,7 @@ export const HISTORIA = {
       afuera(j) { j.grito('afuera'); j.ayuda('saltar'); },
       corral(j) { j.grito('corral'); },
       async pichon(j) {
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         const c = j.cap;
         j.cine(true);
         c.encuadre = { x: 56.9, y: 8.3, ancho: 8.5 };
@@ -105,7 +106,7 @@ export const HISTORIA = {
     zonas: {
       piedra(j) { j.grito('piedra'); j.ayuda('empujar'); },
       async mirador(j) {
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         const c = j.cap, p = c.m.p;
         j.cine(true);
         /* la cámara se aleja y recorre los cerros pintados */
@@ -132,7 +133,7 @@ export const HISTORIA = {
     },
     zonas: {
       async aleteo(j) {
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         j.cine(true);
         await j.charla('aleteo', { hasta: 2 });
         j.cine(false);
@@ -158,7 +159,7 @@ export const HISTORIA = {
       viaducto(j) { j.grito('viaducto'); },
       tunel(j) { j.grito('tunel'); j.ayuda('tunel'); },
       async tomas(j) {
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         const c = j.cap, p = c.m.p, t = c.vecinos.tomas;
         j.cine(true);
         if (t && Math.abs(p.x - t.x) < 1.3) await j.caminarA(t.x - 1.7);
@@ -194,10 +195,11 @@ export const HISTORIA = {
       coquena: { 0: [['coquena', 'baston', 1.6]], 1: [['killa', 'senala', 1.2]], 3: [['coquena', 'baston', 1.4]], 4: [['killa', 'asiente', 0.8]], 5: [['coquena', 'baston', 1.8]] },
       coquena2: { 0: [['coquena', 'baston', 1.4]] },
     },
-    empezar(j) { if (j.cap.vecinos.coquena) j.cap.vecinos.coquena.mostrar(false); },
+    /* Coquena aparece en su escena; si se retoma después, ya está */
+    empezar(j) { if (j.cap.vecinos.coquena && !j.cap.m.hechos.has('coquena')) j.cap.vecinos.coquena.mostrar(false); },
     zonas: {
       async planeo(j) {
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         j.cine(true);
         await j.charla('planeo', { hasta: 2 });
         j.cine(false);
@@ -207,7 +209,7 @@ export const HISTORIA = {
         j.grito('planeo', 2);
       },
       async llamar(j) {
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         j.cap.killa.hacer('senala', 1.6);
         await j.charla('llamar', { hasta: 1 });
         j.ayuda('llamar');
@@ -218,7 +220,7 @@ export const HISTORIA = {
       async coquena(j) {
         const c = j.cap, v = c.vecinos.coquena, p = c.m.p;
         j.musica('puna');
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         j.cine(true);
         if (v && Math.abs(p.x - v.x) < 1.4) await j.caminarA(v.x - 2.2);
         c.encuadre = { x: v ? (p.x + v.x) / 2 : p.x, y: p.y + 1.8, ancho: 12 };
@@ -243,6 +245,8 @@ export const HISTORIA = {
   /* ---------------- 5. El Nevado ---------------- */
   nevado: {
     musica: 'tormenta', ambiente: 'viento', finPorGuion: true,
+    /* retomado en una apacheta pasada la tormenta: ya no hay tormenta */
+    empezar(j) { if (j.reanudado && j.cap.m.p.x > 99) { j.musica('cumbre'); j.ambiente(null); } },
     gestos: {
       cumbre: { 0: [['killa', 'arrodilla', Infinity]], 2: [['killa', 'asiente', 1]], 3: [['killa', 'arrodilla', Infinity]] },
     },
@@ -250,7 +254,7 @@ export const HISTORIA = {
       tormenta(j) { j.grito('tormenta'); j.sfx('trueno'); },
       async cumbre(j) {
         const c = j.cap, p = c.m.p;
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         j.cine(true);
         c.encuadre = { x: 145.4, y: 45.5, ancho: 10.5 };
         await j.caminarA(144.6);
@@ -298,7 +302,7 @@ export const HISTORIA = {
     zonas: {
       async casa(j) {
         const c = j.cap, p = c.m.p, ab = c.vecinos.abuela;
-        await j.enSuelo();
+        if (!await j.enSuelo()) return;
         j.cine(true);
         c.encuadre = { x: p.x + 3, y: p.y + 1.7, ancho: 11 };
         await j.caminarA(ab ? ab.x - 2.6 : p.x + 2.2);

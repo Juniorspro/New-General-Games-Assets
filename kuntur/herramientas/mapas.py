@@ -124,10 +124,12 @@ m.put(91, 13, 't')             # Apu aletea
 m.rect(96, 4, 102, 4, '~')
 m.suelo(103, 109, 13)
 m.suelo(110, 117, 18)          # pared de 5: aleteo y borde
+m.rect(118, 4, 121, 4, '~')     # el pozo de abajo del salto de 18 a 16: salmuera (si no, no tenía salida)
 m.suelo(122, 130, 16)
 m.rect(126, 16, 126, 20); m.put(126, 21, 'K')
 m.suelo(131, 136, 12); m.suelo(137, 139, 9)
 m.put(140, 5, 'A')
+m.put(143, 5, 'A')              # bajando corriendo del escalón se pasaba por arriba de la de 140
 for (a, b) in ((150, 152), (160, 163), (170, 172)):
     m.rect(a, 4, b, 4, '~')
 m.put(161, 5, '#'); m.put(161, 6, 'K')   # islita en el charco
@@ -250,10 +252,10 @@ m.suelo(92, 104, 14)
 m.put(100, 14, 'A')
 # la subida: en zigzag hacia la izquierda y la derecha
 m.suelo(105, 112, 17)
-m.rect(113, 14, 113, 21, 'H'); m.suelo(114, 149, 22)
+m.rect(113, 0, 113, 16); m.rect(113, 17, 113, 21, 'H'); m.suelo(114, 149, 22)   # la escalera, sobre piso (no sobre un pozo)
 m.rect(98, 25, 110, 25)        # repisa de vuelta
 m.rect(111, 22, 112, 25)
-m.rect(97, 25, 97, 29, 'H')
+m.put(97, 25, '#'); m.rect(97, 26, 97, 29, 'H')
 m.rect(98, 30, 108, 30)
 m.put(104, 31, 'A')
 m.rect(98, 31, 98, 31, '#')

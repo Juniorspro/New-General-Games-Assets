@@ -130,7 +130,8 @@ export const Entrada = {
   leerMando() {
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     const g = pads && [...pads].find((p) => p && p.connected);
-    if (!g || !this.mapaPad) return;
+    /* se desconectó con algo apretado: se suelta todo lo del mando */
+    if (!g || !this.mapaPad) { for (const a of Object.keys(this.padAntes)) this.soltar(a, 'pad'); this.padAntes = {}; return; }
     const ahora = {};
     for (const [i, a] of Object.entries(this.mapaPad)) if (g.buttons[i] && g.buttons[i].pressed) ahora[a] = true;
     const ax = g.axes[0] || 0, ay = g.axes[1] || 0;

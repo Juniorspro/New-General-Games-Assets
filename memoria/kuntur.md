@@ -58,6 +58,27 @@ HTML: `kuntur/kuntur.html` (830 KB). Es la vara para el próximo juego. Ver tamb
 - Los disparos de la física se cruzan yendo a la derecha: el epílogo se
   dio vuelta (la casa a la derecha).
 
+## Revisión de errores (23/09, noche)
+
+- Tres agentes leyeron el código por partes y confirmaron corriendo la física
+  en Node. Salieron unos 30 errores reales; los que más enseñan:
+  - las piedras eran cajas con la textura recortada (márgenes transparentes y
+    `alphaTest`): cada cara quedaba como una carta suelta, casi invisible.
+    Ahora `papel.texBloque` (dibujo a sangre, filo de tinta, borde de papel);
+  - Esc manda `pausa` y `volver` juntos: abría y cerraba la pausa en el mismo
+    cuadro (`enRaizPausa`; en submenús Esc vuelve un paso);
+  - `pausado` quedaba en true si se escondía la pestaña en la narración final;
+  - un script de zona esperando `enSuelo()` seguía vivo después de morir y se
+    duplicaba: `enSuelo()` ahora da false si hubo una muerte (`vidas`) y el
+    script corta; morir vacía `escuchas`;
+  - el final del prólogo espera la escena del pichón (`finEspera`), si no se
+    pisaban al saltar por encima;
+  - bajando escaleras se atravesaban los tablones; la piedra volvía encima de
+    Killa; pozos sin salida y escaleras sobre pozos en los mapas; el salto
+    apretado en el aire (sin aleteo) se perdía; revivir bajo una viga del túnel.
+- Después de tocar física o mapas: `recorrido.mjs <cap> --guardar` de todos
+  (3 a la vez) y `partida.mjs`. Pasó todo el 23/09 a la noche.
+
 ## La historia
 
 - `js/historia.js`: funciones async por capítulo que usan al director

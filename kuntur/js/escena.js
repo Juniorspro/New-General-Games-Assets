@@ -83,11 +83,10 @@ export class Escena {
     this.composer = new EffectComposer(r, rt);
     this.composer.addPass(new RenderPass(this.escena, this.camara));
     this.bloom = null;
-    if (cal.bloom > 0) {
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.4, 0.6, 0.85);
-      this.bloom.resolucion = cal.bloom;
-      this.composer.addPass(this.bloom);
-    }
+    /* el bloom se arma siempre (apagado en calidad baja): así se puede prender después en las opciones */
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.4, 0.6, 0.85);
+    this.bloom.resolucion = cal.bloom || 0.5; this.bloom.enabled = cal.bloom > 0;
+    this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     this.grado = new ShaderPass(GRADO);
     this.composer.addPass(this.grado);
@@ -107,6 +106,8 @@ export class Escena {
     s.mapSize.set(cal.sombra, cal.sombra);
     if (s.map) { s.map.dispose(); s.map = null; }
     if (this.bloom) { this.bloom.enabled = cal.bloom > 0; this.bloom.resolucion = cal.bloom || 0.5; }
+    /* el composer se acuerda del pixel ratio con que se armó: si no, la calidad no cambiaba la resolución */
+    this.composer.setPixelRatio(r.getPixelRatio());
     this.tamano();
   }
 

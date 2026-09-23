@@ -83,6 +83,23 @@ export function textoRecorte(L, o) {
   return tex;
 }
 
+/* un bloque macizo: el dibujo ocupa toda la cara (sin márgenes transparentes, que
+   en una caja dejaban cada cara como una carta suelta, casi invisible), con el
+   filo de tinta y el borde de papel de los recortes, y el grano */
+export function texBloque(L, o) {
+  o = o || {};
+  const k = o.k || 6, W = L.w * k, H = L.h * k;
+  const [c, g] = lienzo(W, H);
+  g.fillStyle = o.fondo || '#8a8078'; g.fillRect(0, 0, W, H);
+  for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) { const col = L.p[y * L.w + x]; if (col) { g.fillStyle = col; g.fillRect(x * k, (L.h - 1 - y) * k, k, k); } }
+  g.globalCompositeOperation = 'multiply'; g.globalAlpha = 0.45; g.fillStyle = g.createPattern(granoPapel(), 'repeat'); g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  const b = Math.round(k * 1.4);
+  g.strokeStyle = o.colBorde || '#f7f3ea'; g.lineWidth = b; g.strokeRect(b / 2, b / 2, W - b, H - b);
+  g.strokeStyle = o.tinta || '#3a2a22'; g.lineWidth = Math.max(2, k * 0.5); g.strokeRect(b + k * 0.25, b + k * 0.25, W - b * 2 - k * 0.5, H - b * 2 - k * 0.5);
+  return aTex(c);
+}
+
 /* un plano recortado que hace sombra con su forma */
 export function hojaRecortada(tex, ancho, alto, o) {
   o = o || {};

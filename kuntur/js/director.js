@@ -67,7 +67,7 @@ export class Director {
     this.toque = false;
     document.getElementById('ui').addEventListener('pointerdown', () => { this.toque = true; });
     document.getElementById('c').addEventListener('pointerdown', () => { this.toque = true; });
-    document.addEventListener('visibilitychange', () => { if (document.hidden && this.estado === 'juego' && !this.pausado && !this.charlaActual) this.pausar(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && this.estado === 'juego' && !this.pausado && !this.charlaActual && !this.ui.narrando) this.pausar(); });
     window.__K = this; this.Entrada = Entrada;          // para las pruebas
     this._cuadro = (ts) => this.cuadro(ts);
     requestAnimationFrame(this._cuadro);
@@ -103,6 +103,7 @@ export class Director {
   }
   async titulo(abrir) {
     this.estado = 'titulo';
+    this.pausado = false; this.hablando = false;
     this.ui.verTactil(false);
     this.ui.sinEtiquetas();
     if (!this.portada) { this.armarPortada(); }
@@ -118,7 +119,8 @@ export class Director {
         this.iTitulo = ops.findIndex((o) => o[0] === k);
         Sonido.sfx('elegir');
         if (k === 'nuevo' && !seguro) { seguro = true; this.ui.ponerTextoBoleto(el, tr('nuevoSeguro')); return; }
-        if (k === 'empezar' || k === 'nuevo') { this.partida = { cap: 'prologo', en: null, coplas: [], llegados: ['prologo'] }; this.guardar(); this.jugar('prologo', null); }
+        /* "Empezar" después de terminar el viaje no borra lo juntado (coplas y capítulos); "Viaje nuevo" sí, y pregunta */
+        if (k === 'empezar' || k === 'nuevo') { const guarda = k === 'empezar' && P; this.partida = { cap: 'prologo', en: null, coplas: guarda ? P.coplas || [] : [], llegados: guarda ? P.llegados || ['prologo'] : ['prologo'] }; this.guardar(); this.jugar('prologo', null); }
         else if (k === 'seguir') this.jugar(P.cap, P.en);
         else if (k === 'capitulos') this.verCapitulos();
         else if (k === 'coplas') this.verCoplas();
@@ -159,7 +161,7 @@ export class Director {
     this.ui.opciones(filas, () => { escribir(CLAVE_OP, this.op); if (this.cap) this.cap.o.temblor = o.temblor; alVolver(); });
   }
   guardar() { escribir(CLAVE, this.partida); }
-  armarTactil() { if (!this.ui.tactil) this.ui.controlesTactiles(() => { if (!this.pausado && !this.charlaActual) this.pausar(); }, this.op.tactil); }
+  armarTactil() { if (!this.ui.tactil) this.ui.controlesTactiles(() => { if (!this.pausado && !this.charlaActual && !this.ui.narrando) this.pausar(); }, this.op.tactil); }
   /* acomodar los controles de dedo: se guarda con cada cambio, y al terminar vuelve a las opciones */
   editarTactil(alVolver) {
     this.armarTactil();
@@ -179,7 +181,8 @@ export class Director {
     if (this.portada) { this.portada.destruir(); this.portada = null; }
     if (this.cap) { this.cap.destruir(); this.cap = null; }
     this.esperas = []; this.condiciones = []; this.escuchas = [];
-    this.terminando = false; this.hablados = {}; this.ayudadas = new Set(); this.ultEmpuja = 0;
+    this.terminando = false; this.finEsperando = false; this.hablados = {}; this.ayudadas = new Set(); this.ultEmpuja = 0;
+    this.pausado = false; this.hablando = false; this.zonasEnCurso = {}; this.vidas = 0;
     const H = this.H = HISTORIA[id] || {};
     const P = this.partida;
     this.cap = new Capitulo(this.E, this.cielo, id, {
@@ -197,6 +200,7 @@ export class Director {
     this.ui.verTactil(Entrada.fuente === 'toque');
     Sonido.sfx('telon');
     await this.ui.telon(false);
+    if (this.cap !== c) return;
     const n = numeroDe(id);
     const chico = id === 'prologo' ? tr('prologo') : id === 'epilogo' ? tr('epilogo') : tr('capitulo', n);
     this.ui.cartel(chico, T().capitulos[id], COLOR_CAP[id]);
@@ -206,11 +210,14 @@ export class Director {
       c.bloqueo = true;
       c.encuadre = { x: p.x + 14, y: p.y + 7, ancho: 36, libre: true, alzada: 5 };
       c.pasarCamara(1, true);
-      await dormir(1600); await this.ui.narrar(T().narra[id] || []);
+      await dormir(1600);
+      if (this.cap !== c) return;
+      await this.ui.narrar(T().narra[id] || []);
       if (this.cap !== c) return;
       c.encuadre = null;
       await dormir(700);
       c.bloqueo = false;
+      this.ui.verTactil(Entrada.fuente === 'toque');
     } else await dormir(900);
     if (this.cap !== c) return;
     c.quieta = false;
@@ -218,7 +225,13 @@ export class Director {
     if (id === 'prologo' && c.m.hechos.has('pichon')) c.apu.poner('bulto');
   }
   async terminarCapitulo() {
-    if (this.terminando || !this.cap) return;
+    if (this.terminando || !this.cap || this.finEsperando) return;
+    const esp = this.H.finEspera && this.zonasEnCurso && this.zonasEnCurso[this.H.finEspera];
+    if (esp) {
+      const c0 = this.cap;
+      this.finEsperando = true; await esp; this.finEsperando = false;
+      if (this.cap !== c0 || this.terminando) return;
+    }
     this.terminando = true;
     const c = this.cap, id = c.id, H = this.H;
     if (H.terminar) await H.terminar(this);
@@ -231,11 +244,12 @@ export class Director {
     } else {
       /* el final */
       P.terminado = true; P.cap = 'epilogo'; P.en = null; this.guardar();
+      this.estado = 'final'; this.pausado = false;
       Sonido.musica('creditos');
       await this.ui.narrar(T().charlas.final || [], { final: true });
       Sonido.sfx('telon');
       await this.ui.telon(true);
-      this.cap.destruir(); this.cap = null;
+      if (this.cap) { this.cap.destruir(); this.cap = null; }
       this.estado = 'creditos';
       await this.ui.creditos(T().creditos);
       this.armarPortada();
@@ -249,7 +263,7 @@ export class Director {
     this.cerrarGritos();
     const c = this.cap;
     const coplas = (this.partida.coplas || []).length;
-    const menu = () => this.ui.pausa({
+    const menu = () => (this.enRaizPausa = true) && this.ui.pausa({
       capitulo: T().capitulos[c.id], coplas, total: TOTAL_COPLAS,
       opciones: [['continuar', tr('continuar')], ['reintentar', tr('reintentar')], ['opciones', tr('opciones')], ['salir', tr('salir')]],
       elegir: async (k) => {
@@ -257,8 +271,8 @@ export class Director {
         if (k === 'continuar') { this.ui.limpiar(); this.pausado = false; }
         else if (k === 'reintentar') {
           this.ui.limpiar(); this.pausado = false;
-          if (!c.m.p.muerta && !this.charlaActual && !c.quieta) { this.ui.pasarHoja().then(() => { if (this.cap === c) revivir(c.m); }); Sonido.sfx('hoja'); }
-        } else if (k === 'opciones') this.verOpciones(menu);
+          if (!c.m.p.muerta && !this.charlaActual && !c.quieta && !c.bloqueo && !c.entrada && !this.hablando) { this.ui.pasarHoja().then(() => { if (this.cap === c) revivir(c.m); }); Sonido.sfx('hoja'); }
+        } else if (k === 'opciones') { this.enRaizPausa = false; this.verOpciones(menu); }
         else if (k === 'salir') { this.pausado = false; this.salirAlTitulo(); }
       },
     });
@@ -266,6 +280,7 @@ export class Director {
   }
   async salirAlTitulo() {
     this.estado = 'cargando';
+    this.ui.foco = null;
     this.cerrarGlobos();
     Sonido.sfx('telon');
     await this.ui.telon(true);
@@ -296,6 +311,7 @@ export class Director {
         break;
       }
       case 'muere':
+        this.vidas = (this.vidas || 0) + 1; this.escuchas = [];
         Sonido.sfx('muere');
         if (Entrada.fuente === 'toque') Entrada.zumbar([40, 50, 90]);
         this.cerrarGritos();
@@ -303,7 +319,11 @@ export class Director {
         break;
       case 'revive': Sonido.sfx('revive'); break;
       case 'habla': this.hablarCon(e.id); break;
-      case 'zona': { const z = this.H.zonas && this.H.zonas[e.id]; if (z) z(this); break; }
+      case 'zona': {
+        const z = this.H.zonas && this.H.zonas[e.id];
+        if (z) { const pr = Promise.resolve(z(this)); this.zonasEnCurso[e.id] = pr; pr.then(() => { if (this.zonasEnCurso[e.id] === pr) delete this.zonasEnCurso[e.id]; }); }
+        break;
+      }
       case 'fin': if (!this.H.finPorGuion) this.terminarCapitulo(); break;
       case 'puerta': Sonido.sfx('puerta'); break;
       case 'palanca': Sonido.sfx('palanca'); break;
@@ -333,9 +353,11 @@ export class Director {
     if (this.charlaActual || this.cap.quieta || this.hablando || this.sinVecinos) return;
     const lista = (this.H.hablar || {})[id];
     if (!lista) return;
+    const v = this.cap.vecinos[id];
+    if (v && v.visible === false) return;
     const n = this.hablados[id] || 0;
     this.hablados[id] = n + 1;
-    const v = this.cap.vecinos[id]; if (v) v.saltito();
+    if (v) v.saltito();
     const c = this.cap, p = c.m.p, clave = lista[Math.min(n, lista.length - 1)];
     /* si quedó encima del vecino, da un pasito atrás para verse las caras */
     if (v && Math.abs(p.x - v.x) < 1.15) {
@@ -398,7 +420,8 @@ export class Director {
       const oyente = quien === 'killa' ? C.lineas.map((l) => l[0]).find((q) => c.vecinos[q]) : 'killa';
       if (oyente) setTimeout(() => { if (this.charlaActual === C) this.gesto(oyente, 'asiente', 0.6); }, 500);
     }
-    if (quien === 'apu') { c.apu.aletear(); Sonido.sfx('pio', { grande: c.apu.edad > 0.5 }); }
+    const conGestoApu = g && (Array.isArray(g[0]) ? g : [g]).some((q) => q[0] === 'apu');
+    if (quien === 'apu' && !conGestoApu) { c.apu.aletear(); Sonido.sfx('pio', { grande: c.apu.edad > 0.5 }); }
     Sonido.sfx('mover');
   }
   grito(clave, desde) {
@@ -421,7 +444,12 @@ export class Director {
   }
   esperar(s) { return new Promise((r) => this.esperas.push({ t: (this.cap ? this.cap.t : 0) + s, r, cap: this.cap })); }
   cuando(fn) { return new Promise((r) => this.condiciones.push({ fn, r })); }
-  enSuelo() { const c = this.cap; return this.cuando(() => { const p = c.m.p; return p.enSuelo && p.estado === 'normal' && !p.muerta; }); }
+  /* resuelve true al pisar, o false si Killa se apagó mientras tanto (el script tiene que cortar) */
+  enSuelo() {
+    const c = this.cap, vida = this.vidas;
+    let murio = false;
+    return this.cuando(() => { if (this.vidas !== vida || this.cap !== c) { murio = true; return true; } const p = c.m.p; return p.enSuelo && p.estado === 'normal' && !p.muerta; }).then(() => !murio);
+  }
   evento(tipo) { return new Promise((r) => this.escuchas.push({ tipo, r })); }
   caminarA(x) {
     const c = this.cap;
@@ -457,7 +485,7 @@ export class Director {
     const c = this.cap, cam = c.cam, a = { x: cam.x, y: cam.y, ancho: c.ancho };
     let t = 0;
     const paso = () => {
-      t += 1 / 60; const k = Math.min(1, t / seg), e = k * k * (3 - 2 * k);
+      t += this.dtReal || 1 / 60; const k = Math.min(1, t / seg), e = k * k * (3 - 2 * k);
       c.encuadre = Object.assign({}, meta, { x: a.x + (meta.x - a.x) * e, y: a.y + (meta.y - a.y) * e, ancho: a.ancho + (meta.ancho - a.ancho) * e });
       return k >= 1;
     };
@@ -532,6 +560,7 @@ export class Director {
   /* para las pruebas: avanzar el juego sin dibujar */
   simular(seg, paso) { paso = paso || 1 / 30; for (let t = 0; t < seg; t += paso) this.logica(paso); this.pintar(); }
   logica(real) {
+    this.dtReal = Math.min(0.1, real);
     Entrada.leerMando();
     const E = Entrada.EDGE;
     if (this.toque) { E.aceptarToque = true; this.toque = false; }
@@ -540,7 +569,13 @@ export class Director {
     const juega = this.estado === 'juego' && this.cap;
     if (this.ui.narrando) { if (avanza) { this.ui.narrando(); E.salto = E.aceptar = E.accion = false; } }
     else if (juega) {
-      if (E.pausa) { E.pausa = false; if (this.pausado) { this.ui.limpiar(); this.pausado = false; } else if (!this.charlaActual) this.pausar(); }
+      /* Esc manda 'pausa' y 'volver' juntos: al abrir la pausa, el 'volver' no la tiene que cerrar.
+         En Opciones o en el editor de dedos, Esc vuelve un paso (y guarda), no cierra todo. */
+      if (E.pausa) {
+        E.pausa = false;
+        if (this.pausado) { if (this.enRaizPausa) { this.ui.limpiar(); this.pausado = false; E.volver = false; } }
+        else if (!this.charlaActual && !this.ui.narrando) { this.pausar(); E.volver = false; }
+      }
       if (this.pausado) this.ui.pasar(E);
       else if (this.charlaActual) {
         const C = this.charlaActual;

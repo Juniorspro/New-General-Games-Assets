@@ -134,7 +134,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#140c18;touch-action
 .cartel small{display:block;font-style:italic;font-size:clamp(13px,calc(1.6 * var(--vw)),17px);opacity:.8}
 .cartel b{display:block;font-family:var(--gorda);font-size:clamp(24px,calc(4.2 * var(--vw)),46px);color:var(--col);line-height:1.1;margin-top:4px}
 .cartel em{display:block;margin-top:6px;font-size:14px}
-.cartel.quieto{position:relative;left:auto;top:auto;animation:bajaCartel .7s both cubic-bezier(.3,1.5,.5,1)}
+.cartel.quieto{position:relative;left:auto;top:auto;translate:none;animation:bajaCartel .7s both cubic-bezier(.3,1.5,.5,1)}
 .cartel.sube{animation:subeCartel .7s forwards ease-in}
 @keyframes bajaCartel{from{transform:translateY(calc(-60 * var(--vh))) rotate(-6deg)}}
 @keyframes subeCartel{to{transform:translateY(calc(-70 * var(--vh)))}}
@@ -243,7 +243,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#140c18;touch-action
 .tactil.editando .zonaPal{outline:2px dashed rgba(247,243,234,.3);outline-offset:-3px;background:rgba(247,243,234,.05)}
 .tactil.editando .aro{opacity:.95}
 .tactil.editando .bola{pointer-events:none}
-.tactil.editando [data-control]{cursor:grab;outline:2px dashed rgba(247,243,234,.85);outline-offset:6px}
+.tactil.editando [data-control]{z-index:2;cursor:grab;outline:2px dashed rgba(247,243,234,.85);outline-offset:6px}
 .tactil.editando [data-control].elegido{outline:3px solid #f2b632;outline-offset:7px;filter:drop-shadow(0 0 10px rgba(242,182,50,.75))}
 .tactil.editando [data-control]::after{content:attr(data-nombre);position:absolute;left:50%;top:100%;translate:-50% 12px;padding:1px 8px;font:bold 11px/1.4 Georgia,serif;color:var(--tinta);background:#fffaf0;box-shadow:0 0 0 2px var(--borde),2px 3px 0 rgba(30,15,20,.3);border-radius:3px;white-space:nowrap;pointer-events:none}
 .tactil.editando .bPausa::after{top:auto;bottom:100%;translate:-50% -12px}
@@ -285,6 +285,12 @@ html.bajita .boleto .txt{font-size:13px}
 html.bajita .boleto .num{font-size:9px}
 html.bajita .boleto .sello{width:34px;height:34px;margin-top:-17px;line-height:30px;font-size:6px}
 html.bajita .cartel{padding:10px 22px 12px;top:max(48px,calc(9 * var(--vh)))}
+html.bajita .cartel.quieto{top:auto}
+html.angosta .pausa .boletos{translate:none;right:auto}
+html.bajita .pausa{gap:12px}
+/* 7: en pantallas bajitas el número vertical agrandaba cada boleto y el primero se salía */
+html.bajita .boleto .num{display:none}
+html.bajita .boleto{padding:4px 14px}
 html.bajita .cartel b{font-size:clamp(20px,calc(3.4 * var(--vw)),30px)}
 html.bajita .panel{padding:10px 18px;gap:6px;max-height:calc(94 * var(--vh))}
 html.bajita .panel h2{font-size:21px}
@@ -296,6 +302,7 @@ html.bajita .narra p{font-size:15px}
 html.bajita .globo{max-width:min(320px,calc(48 * var(--vw)));padding:14px 14px 10px}
 html.bajita .globo p{font-size:14px}
 html.bajita .acomoda{padding:6px 12px 8px;gap:4px}
+html.bajita .acomoda small{display:none}
 html.bajita .acomoda .tit{font-size:15px}
 html.bajita .acomoda small{font-size:11px}
 html.bajita .chip{min-height:30px;font-size:12px;padding:3px 9px}
