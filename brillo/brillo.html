@@ -1,0 +1,2524 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2f8fe8">
+<title>BRILLO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#2f8fe8;touch-action:none;overscroll-behavior:none}
+#app{position:fixed;left:0;top:0;width:100vw;height:100vh;transform-origin:0 0;overflow:hidden;background:linear-gradient(#1b66d8,#86c4fb 60%,#f2fbff)}
+#c{position:absolute;display:block;image-rendering:pixelated}
+#ui{position:absolute;inset:0;pointer-events:none}
+
+</style>
+</head>
+<body>
+<div id="app"><canvas id="c"></canvas><div id="ui"></div></div>
+<script>
+(() => {
+  // brillo/js/pixel.js
+  function rgb(h) {
+    const n = parseInt(h.slice(1), 16);
+    return [n >> 16 & 255, n >> 8 & 255, n & 255];
+  }
+  function hex([r, g, b]) {
+    return "#" + (1 << 24 | Math.round(r) << 16 | Math.round(g) << 8 | Math.round(b)).toString(16).slice(1);
+  }
+  function mezclar(a, b, t) {
+    const A = rgb(a), B2 = rgb(b);
+    return hex([A[0] + (B2[0] - A[0]) * t, A[1] + (B2[1] - A[1]) * t, A[2] + (B2[2] - A[2]) * t]);
+  }
+  var empaquetar = (h, a = 255) => {
+    const [r, g, b] = rgb(h);
+    return (a << 24 | b << 16 | g << 8 | r) >>> 0;
+  };
+  var RAMPA = {
+    azul: ["#0a2566", "#113f9e", "#1a5fd0", "#2f82ee", "#55a5fb", "#8cc8ff", "#c9e7ff", "#f2fbff"],
+    verde: ["#0c4a1c", "#156e22", "#1f9a2c", "#3bbd33", "#6fd845", "#a6ee6a", "#d6fba6", "#f6fff0"],
+    naranja: ["#6a2a06", "#a2440a", "#d86410", "#f58a1c", "#ffae3c", "#ffcf78", "#ffe9bf", "#fff9ef"],
+    rosa: ["#6e0f3e", "#a31a5e", "#d6307f", "#f2549e", "#fb82ba", "#ffb2d6", "#ffdcec", "#fff5fa"],
+    amarillo: ["#6b4c00", "#a07400", "#d6a300", "#f5c400", "#ffdb2e", "#ffea73", "#fff5b8", "#fffdf0"],
+    violeta: ["#2c1266", "#46209e", "#6534cf", "#8452ee", "#a67bfb", "#c7a8ff", "#e4d5ff", "#f8f4ff"],
+    cian: ["#003f5c", "#006b8f", "#0097bf", "#1bbde0", "#4fd8f2", "#8ceafa", "#c8f6fd", "#f0fdff"],
+    gris: ["#3a3f47", "#565c66", "#737a85", "#9098a3", "#adb4bd", "#c9ced5", "#e2e5e9", "#f6f7f8"],
+    blanco: ["#7d93ad", "#9db1c8", "#bccde0", "#d5e2ef", "#e6eff7", "#f1f6fb", "#f8fbfe", "#ffffff"],
+    tierra: ["#3b2413", "#5a371b", "#7a4d27", "#9a6636", "#b98249", "#d3a468", "#e8c894", "#f7ebd2"],
+    arena: ["#7a5a2a", "#9c7838", "#bd984e", "#d6b46a", "#e8cc8a", "#f3e0ad", "#faefd0", "#fffaee"]
+  };
+  var LUZ = (() => {
+    const l = [-0.55, -0.7, 0.55], n = Math.hypot(...l);
+    return l.map((v) => v / n);
+  })();
+  var pintura = {
+    plana: (c) => () => c,
+    /* esfera en bandas: difusa + un poco de luz de abajo, cuantizada en la rampa */
+    esfera(rampa, o = {}) {
+      const n = rampa.length, bajo = o.bajo ?? 1, alto = o.alto ?? n - 2;
+      return (u, v) => {
+        const r2 = u * u + v * v;
+        if (r2 > 1) return null;
+        const z = Math.sqrt(1 - r2);
+        let d = -(u * LUZ[0] + v * LUZ[1]) + z * LUZ[2];
+        d = d * 0.75 + 0.25 + Math.max(0, v - 0.55) * 0.35;
+        const i = Math.max(bajo, Math.min(alto, Math.round(bajo + (alto - bajo) * Math.max(0, Math.min(1, d)))));
+        return rampa[i];
+      };
+    },
+    /* el vidrio del Aero: esfera + la gorra clara arriba con corte nítido + el punto de luz */
+    aero(rampa, o = {}) {
+      const base = pintura.esfera(rampa, o), n = rampa.length, corte = o.corte ?? -0.05, gorra = o.gorra ?? 0.55;
+      return (u, v) => {
+        const c = base(u, v);
+        if (!c) return null;
+        const du = u + 0.42, dv = v + 0.56;
+        if (du * du * 1.4 + dv * dv * 2.8 < (o.punto ?? 0.05)) return rampa[n - 1];
+        if (v < corte && (u / 0.8) ** 2 + ((v + 0.4) / 0.52) ** 2 < 1) return mezclar(c, rampa[n - 1], gorra);
+        if (o.rebote !== false && v > 0.5 && (u / 0.62) ** 2 + ((v - 0.78) / 0.24) ** 2 < 1) return mezclar(c, rampa[n - 2], 0.4);
+        return c;
+      };
+    },
+    /* una forma de huevo: más ancha arriba (el cuerpo) — se usa con Lienzo.huevo */
+    /* degradé vertical en bandas (para cuerpos, piernas, cosas que no son esferas) */
+    vertical(rampa, desde, hasta) {
+      return (u, v) => rampa[Math.round(desde + (hasta - desde) * (v * 0.5 + 0.5))];
+    }
+  };
+  var Lienzo = class {
+    constructor(w, h) {
+      this.w = w;
+      this.h = h;
+      this.p = new Uint32Array(w * h);
+      this.hex = new Array(w * h).fill(null);
+      this.rampa = new Array(w * h).fill(null);
+    }
+    punto(x, y, c, rampa, a) {
+      x |= 0;
+      y |= 0;
+      if (x < 0 || y < 0 || x >= this.w || y >= this.h || !c) return;
+      const i = y * this.w + x;
+      this.p[i] = empaquetar(c, a ?? 255);
+      this.hex[i] = c;
+      this.rampa[i] = rampa || null;
+    }
+    borrar(x, y) {
+      x |= 0;
+      y |= 0;
+      if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+      const i = y * this.w + x;
+      this.p[i] = 0;
+      this.hex[i] = null;
+      this.rampa[i] = null;
+    }
+    hay(x, y) {
+      return x >= 0 && y >= 0 && x < this.w && y < this.h && this.p[y * this.w + x] !== 0;
+    }
+    /* una elipse: pinta es un color o una función (u, v) */
+    elipse(cx, cy, rx, ry, pinta, rampa) {
+      const f = typeof pinta === "function" ? pinta : () => pinta;
+      for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+        const u = (x + 0.5 - cx) / rx, v = (y + 0.5 - cy) / ry;
+        if (u * u + v * v > 1) continue;
+        this.punto(x, y, f(u, v, x, y), rampa);
+      }
+    }
+    /* un huevo: una elipse más ancha arriba (ancho = rx * (1 - k * v)) */
+    huevo(cx, cy, rx, ry, k, pinta, rampa) {
+      const f = typeof pinta === "function" ? pinta : () => pinta;
+      for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+        const v = (y + 0.5 - cy) / ry;
+        if (v * v > 1) continue;
+        const r = rx * (1 - k * v);
+        for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+          const u = (x + 0.5 - cx) / r;
+          if (u * u + v * v > 1) continue;
+          this.punto(x, y, f(u, v, x, y), rampa);
+        }
+      }
+    }
+    /* rectángulo con esquinas redondeadas (r en píxeles); u, v van de -1 a 1 en la caja */
+    caja(x0, y0, x1, y1, r, pinta, rampa) {
+      const f = typeof pinta === "function" ? pinta : () => pinta;
+      for (let y = Math.floor(y0); y < Math.ceil(y1); y++) for (let x = Math.floor(x0); x < Math.ceil(x1); x++) {
+        const px2 = x + 0.5, py = y + 0.5;
+        const qx = Math.max(x0 + r - px2, 0, px2 - (x1 - r)), qy = Math.max(y0 + r - py, 0, py - (y1 - r));
+        if (qx * qx + qy * qy > r * r) continue;
+        this.punto(x, y, f((px2 - x0) / (x1 - x0) * 2 - 1, (py - y0) / (y1 - y0) * 2 - 1, x, y), rampa);
+      }
+    }
+    /* un trazo grueso con puntas redondas (piernas, brazos, tallos) */
+    capsula(x0, y0, x1, y1, r, pinta, rampa) {
+      const f = typeof pinta === "function" ? pinta : () => pinta;
+      const dx = x1 - x0, dy = y1 - y0, L2 = dx * dx + dy * dy || 1e-6;
+      for (let y = Math.floor(Math.min(y0, y1) - r); y <= Math.ceil(Math.max(y0, y1) + r); y++) for (let x = Math.floor(Math.min(x0, x1) - r); x <= Math.ceil(Math.max(x0, x1) + r); x++) {
+        const px2 = x + 0.5, py = y + 0.5;
+        const t = Math.max(0, Math.min(1, ((px2 - x0) * dx + (py - y0) * dy) / L2));
+        const ex = px2 - (x0 + dx * t), ey = py - (y0 + dy * t);
+        if (ex * ex + ey * ey > r * r) continue;
+        const lado = (ex * -dy + ey * dx) / Math.sqrt(L2) / r;
+        this.punto(x, y, f(lado, t * 2 - 1, x, y), rampa);
+      }
+    }
+    /* polígono (lista de [x, y]); u, v en la caja que lo contiene */
+    poligono(pts, pinta, rampa) {
+      const f = typeof pinta === "function" ? pinta : () => pinta;
+      const xs = pts.map((q2) => q2[0]), ys = pts.map((q2) => q2[1]);
+      const X0 = Math.min(...xs), X1 = Math.max(...xs), Y0 = Math.min(...ys), Y1 = Math.max(...ys);
+      for (let y = Math.floor(Y0); y <= Math.ceil(Y1); y++) for (let x = Math.floor(X0); x <= Math.ceil(X1); x++) {
+        const px2 = x + 0.5, py = y + 0.5;
+        let dentro = false;
+        for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+          const [xi, yi] = pts[i], [xj, yj] = pts[j];
+          if (yi > py !== yj > py && px2 < (xj - xi) * (py - yi) / (yj - yi) + xi) dentro = !dentro;
+        }
+        if (dentro) this.punto(x, y, f((px2 - X0) / (X1 - X0 || 1) * 2 - 1, (py - Y0) / (Y1 - Y0 || 1) * 2 - 1, x, y), rampa);
+      }
+    }
+    linea(x0, y0, x1, y1, c, rampa) {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+      for (let i = 0; i <= n; i++) this.punto(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), c, rampa);
+    }
+    /* el contorno de color: los píxeles vacíos que tocan la figura toman el tono más oscuro de su rampa */
+    contorno(o = {}) {
+      const { w, h } = this, nuevos = [];
+      for (let y = -1; y <= h; y++) for (let x = -1; x <= w; x++) {
+        if (this.hay(x, y)) continue;
+        let vecino = -1;
+        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+          const X = x + dx, Y = y + dy;
+          if (this.hay(X, Y)) {
+            vecino = Y * w + X;
+            break;
+          }
+        }
+        if (vecino < 0 || x < 0 || y < 0 || x >= w || y >= h) continue;
+        const R = this.rampa[vecino];
+        nuevos.push([x, y, o.color || (R ? R[o.tono ?? 0] : mezclar(this.hex[vecino], "#000000", 0.6)), R]);
+      }
+      for (const [x, y, c, R] of nuevos) this.punto(x, y, c, R);
+      return this;
+    }
+    /* los bordes de adentro entre dos rampas distintas (la cabeza sobre el cuerpo): una línea oscura */
+    separar(rampaDe, o = {}) {
+      const { w, h } = this, marcar = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!this.p[i] || this.rampa[i] !== rampaDe) continue;
+        const abajo = (y + 1) * w + x;
+        if (y + 1 < h && this.p[abajo] && this.rampa[abajo] && this.rampa[abajo] !== rampaDe) marcar.push([x, y + 1, this.rampa[abajo]]);
+      }
+      for (const [x, y, R] of marcar) this.punto(x, y, R[o.tono ?? 1], R);
+      return this;
+    }
+    /* al canvas (para dibujar con drawImage); espejo = de cara a la izquierda */
+    aCanvas(espejo) {
+      const c = document.createElement("canvas");
+      c.width = this.w;
+      c.height = this.h;
+      const g = c.getContext("2d"), img = g.createImageData(this.w, this.h);
+      const d = new Uint32Array(img.data.buffer);
+      for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) d[y * this.w + (espejo ? this.w - 1 - x : x)] = this.p[y * this.w + x];
+      g.putImageData(img, 0, 0);
+      return c;
+    }
+  };
+  function lienzo2d(w, h) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w));
+    c.height = Math.max(1, Math.round(h));
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    return [c, g];
+  }
+  function azar(semilla) {
+    let s = semilla >>> 0 || 1;
+    return () => {
+      s ^= s << 13;
+      s >>>= 0;
+      s ^= s >> 17;
+      s ^= s << 5;
+      s >>>= 0;
+      return s / 4294967296;
+    };
+  }
+
+  // brillo/js/personajes.js
+  var CUADRO = { w: 30, h: 36 };
+  var CX = 15;
+  var PISO = 35;
+  function poseBase() {
+    return {
+      cabeza: { x: CX, y: 10, r: 8 },
+      cuerpo: { x: CX, y: 24.4, rx: 6.5, ry: 6.5 },
+      /* las piernas: cadera → pie (el pie es la zapatilla) */
+      piernas: [{ cx: CX - 2.3, cy: 28.6, px: CX - 2.6, py: PISO - 1.7 }, { cx: CX + 2.3, cy: 28.6, px: CX + 2.6, py: PISO - 1.7 }],
+      /* los brazitos: hombro → mano */
+      brazos: [{ hx: CX - 5.1, hy: 21.6, mx: CX - 6.7, my: 25.2 }, { hx: CX + 5.1, hy: 21.6, mx: CX + 6.7, my: 25.2 }],
+      ojos: "abiertos",
+      boca: null,
+      mira: 1,
+      dy: 0
+    };
+  }
+  var ANIM = {
+    quieto: { n: 6, fn(p, f) {
+      const b = Math.sin(f / 6 * Math.PI * 2);
+      p.dy = b * 0.5;
+      p.cabeza.y += b * 0.35;
+      p.brazos.forEach((a) => {
+        a.my += b * 0.5;
+      });
+      return p;
+    } },
+    parpadea: { n: 1, fn(p) {
+      p.ojos = "cerrados";
+      return p;
+    } },
+    corre: { n: 8, fn(p, f) {
+      const a = f / 8 * Math.PI * 2;
+      p.dy = -Math.abs(Math.sin(a)) * 1.3;
+      p.cabeza.x += 1.2;
+      p.cabeza.y += Math.abs(Math.sin(a)) * 0.4;
+      p.cuerpo.x += 0.6;
+      p.piernas.forEach((l, i) => {
+        const q2 = a + i * Math.PI;
+        l.px = l.cx + Math.sin(q2) * 3.2;
+        l.py = PISO - 1.7 - Math.max(0, Math.cos(q2)) * 2.2;
+      });
+      p.brazos.forEach((b, i) => {
+        const q2 = a + (1 - i) * Math.PI;
+        b.mx = b.hx + Math.sin(q2) * 2.6 + (i ? 0.8 : -0.8);
+        b.my = b.hy + 3.6 - Math.abs(Math.cos(q2)) * 1;
+      });
+      return p;
+    } },
+    salta: { n: 2, fn(p, f) {
+      p.piernas[0].px -= 1.2;
+      p.piernas[0].py -= 2.6;
+      p.piernas[1].px += 1.5;
+      p.piernas[1].py -= 1;
+      p.brazos.forEach((b, i) => {
+        b.mx = b.hx + (i ? 3 : -3);
+        b.my = b.hy - 3 - f;
+      });
+      return p;
+    } },
+    cae: { n: 2, fn(p, f) {
+      p.piernas.forEach((l, i) => {
+        l.px = l.cx + (i ? 1.8 : -1.8);
+        l.py -= 1.2;
+      });
+      p.brazos.forEach((b, i) => {
+        b.mx = b.hx + (i ? 3.5 : -3.5);
+        b.my = b.hy - 4.5 + f;
+      });
+      p.ojos = "grandes";
+      return p;
+    } },
+    aterriza: { n: 1, fn(p) {
+      p.aplaste = 0.82;
+      p.piernas.forEach((l, i) => {
+        l.px = l.cx + (i ? 2.6 : -2.6);
+      });
+      return p;
+    } },
+    /* el zumbido: tiembla entero con los brazitos abiertos */
+    zumbido: { n: 4, fn(p, f) {
+      const s = [1, -1, 1, -1][f] * 0.9;
+      p.cabeza.x += s;
+      p.cuerpo.x += s * 0.6;
+      p.brazos.forEach((b, i) => {
+        b.mx = b.hx + (i ? 4.5 : -4.5);
+        b.my = b.hy - 1 + f % 2;
+      });
+      p.ojos = "fuertes";
+      p.boca = "o";
+      return p;
+    } },
+    /* flotando con la burbuja: piernitas colgando, brazos arriba */
+    flota: { n: 4, fn(p, f) {
+      const b = Math.sin(f / 4 * Math.PI * 2);
+      p.piernas.forEach((l, i) => {
+        l.px = l.cx + (i ? 1 : -1) + b * (i ? 0.8 : -0.8);
+        l.py -= 0.8;
+      });
+      p.brazos.forEach((b2, i) => {
+        b2.mx = b2.hx + (i ? 2 : -2);
+        b2.my = b2.hy - 6;
+      });
+      p.boca = "feliz";
+      return p;
+    } },
+    /* nadando: brazada y patada */
+    nada: { n: 6, fn(p, f) {
+      const a = f / 6 * Math.PI * 2;
+      p.cabeza.x += 1.2;
+      p.cuerpo.x += 0.3;
+      p.brazos.forEach((b, i) => {
+        const q2 = a + i * Math.PI;
+        b.mx = b.hx + Math.cos(q2) * 4.5;
+        b.my = b.hy + Math.sin(q2) * 3.5;
+      });
+      p.piernas.forEach((l, i) => {
+        const q2 = a + i * Math.PI;
+        l.px = l.cx - 2 + Math.sin(q2) * 1.6;
+        l.py = PISO - 2.4 + Math.cos(q2) * 1.2;
+      });
+      return p;
+    } },
+    habla: { n: 4, fn(p, f) {
+      p.boca = f % 2 ? "o" : "chica";
+      p.brazos[1].mx += f === 1 ? 1.5 : 0;
+      p.brazos[1].my -= f === 1 ? 2 : 0;
+      return p;
+    } },
+    saluda: { n: 4, fn(p, f) {
+      const b = p.brazos[1];
+      b.mx = b.hx + 3 + f % 2 * 2;
+      b.my = b.hy - 7;
+      p.boca = "feliz";
+      return p;
+    } },
+    feliz: { n: 4, fn(p, f) {
+      p.dy = -[0, 2, 3, 1][f];
+      p.brazos.forEach((b, i) => {
+        b.mx = b.hx + (i ? 3 : -3);
+        b.my = b.hy - 6;
+      });
+      p.ojos = "felices";
+      p.boca = "feliz";
+      return p;
+    } },
+    triste: { n: 2, fn(p, f) {
+      p.cabeza.y += 1;
+      p.ojos = "tristes";
+      p.brazos.forEach((b) => {
+        b.my += 1;
+      });
+      p.dy = f * 0.3;
+      return p;
+    } },
+    abraza: { n: 2, fn(p, f) {
+      p.brazos.forEach((b, i) => {
+        b.mx = b.hx + (i ? 6 : 2);
+        b.my = b.hy + 0.5 - f;
+      });
+      p.ojos = "felices";
+      p.boca = "feliz";
+      return p;
+    } }
+  };
+  var ANIMS = Object.keys(ANIM);
+  var cuadrosDe = (anim) => (ANIM[anim] || ANIM.quieto).n;
+  function ojos(L, p, R, plano) {
+    const hx = p.cabeza.x + p.mira * 1.4, hy = p.cabeza.y + 0.4;
+    const oscuro = plano ? R[1] : "#0b1a3c", brillo = "#ffffff";
+    for (const dx of [-2.6, 2.6]) {
+      const x = Math.round(hx + dx - 0.5), y = Math.round(hy - 1);
+      switch (p.ojos) {
+        case "cerrados":
+          L.punto(x, y + 1, oscuro);
+          L.punto(x + 1, y + 1, oscuro);
+          break;
+        case "felices":
+          L.punto(x, y + 1, oscuro);
+          L.punto(x + 1, y, oscuro);
+          L.punto(x + 2, y + 1, oscuro);
+          break;
+        case "tristes":
+          L.punto(x, y, oscuro);
+          L.punto(x + 1, y + 1, oscuro);
+          L.punto(x + 1, y + 2, oscuro);
+          break;
+        case "fuertes":
+          for (let i = 0; i < 2; i++) {
+            L.punto(x, y + i, oscuro);
+            L.punto(x + 1, y + i, oscuro);
+          }
+          L.punto(x + (dx < 0 ? 1 : 0), y - 1, oscuro);
+          break;
+        default: {
+          const alto = p.ojos === "grandes" ? 4 : 3;
+          for (let i = 0; i < alto; i++) {
+            L.punto(x, y + i - (alto > 3 ? 1 : 0), oscuro);
+            L.punto(x + 1, y + i - (alto > 3 ? 1 : 0), oscuro);
+          }
+          if (!plano) L.punto(x + 1, y - (alto > 3 ? 1 : 0), brillo);
+        }
+      }
+    }
+    if (!plano && p.cachetes !== false) for (const dx of [-4.2, 4.2]) L.punto(Math.round(hx + dx - 0.5), Math.round(hy + 2), mezclar(R[5], "#ff6aa0", 0.55));
+    const bx = Math.round(hx - 0.5), by = Math.round(hy + 3);
+    if (p.boca === "feliz") {
+      L.punto(bx - 1, by, oscuro);
+      L.punto(bx, by + 1, oscuro);
+      L.punto(bx + 1, by + 1, oscuro);
+      L.punto(bx + 2, by, oscuro);
+    } else if (p.boca === "o") {
+      L.punto(bx, by, oscuro);
+      L.punto(bx + 1, by, oscuro);
+      L.punto(bx, by + 1, oscuro);
+      L.punto(bx + 1, by + 1, oscuro);
+    } else if (p.boca === "chica") {
+      L.punto(bx, by, oscuro);
+      L.punto(bx + 1, by, oscuro);
+    }
+  }
+  function muneco(rampa, anim, f, o = {}) {
+    const A = ANIM[anim] || ANIM.quieto;
+    const p = A.fn(poseBase(), f % A.n);
+    const L = new Lienzo(CUADRO.w, CUADRO.h);
+    const R = rampa, plano = !!o.plano;
+    const ap = p.aplaste || 1, k = (y) => PISO - (PISO - y) * ap;
+    const dy = p.dy || 0;
+    const pinta = plano ? () => R[3] : null;
+    const zap = o.zapas || RAMPA.blanco;
+    for (const l of p.piernas) {
+      L.capsula(l.cx, k(l.cy) + dy, l.px, k(l.py) - 1.2 + dy, 1.7, pinta || pintura.vertical(R, 3, 1), R);
+    }
+    for (const l of p.piernas) {
+      const zx = l.px + 1, zy = k(l.py) + dy;
+      L.elipse(zx, zy, 2.9, 1.9, plano ? () => zap[3] : (u, v) => v < -0.2 ? zap[6] : v < 0.45 ? zap[5] : zap[3], zap);
+      if (!plano) L.punto(Math.round(zx - 1.6), Math.round(zy - 1), zap[7], zap);
+    }
+    const [bAtras, bAdel] = p.mira > 0 ? [p.brazos[0], p.brazos[1]] : [p.brazos[1], p.brazos[0]];
+    L.capsula(bAtras.hx, k(bAtras.hy) + dy, bAtras.mx, k(bAtras.my) + dy, 1.35, pinta || pintura.vertical(R, 3, 2), R);
+    const c = p.cuerpo;
+    L.huevo(c.x, k(c.y) + dy, c.rx * (2 - ap) ** 0.5, c.ry * ap, 0.08, pinta || pintura.aero(R, { bajo: 1, alto: 5, gorra: 0.18, corte: -0.3, punto: 0.02, rebote: false }), R);
+    const h = p.cabeza;
+    L.elipse(h.x, k(h.y) + dy, h.r * (2 - ap) ** 0.4, h.r * ap ** 0.6, pinta || pintura.aero(R, { bajo: 2, alto: 6, punto: 0.06, gorra: 0.5 }), R);
+    if (!plano) L.separar(R);
+    L.capsula(bAdel.hx, k(bAdel.hy) + dy, bAdel.mx, k(bAdel.my) + dy, 1.35, pinta || pintura.vertical(R, 5, 3), R);
+    if (o.extra) o.extra(L, p, k, dy);
+    ojos(L, { ...p, cabeza: { ...h, y: k(h.y) + dy } }, R, plano);
+    if (!plano) L.contorno({ tono: 0 });
+    return L;
+  }
+  var cache = /* @__PURE__ */ new Map();
+  function cuadro(quien, anim, f, espejo) {
+    const Q = QUIENES[quien] || QUIENES.nick;
+    const n = cuadrosDe(anim), i = (f % n + n) % n;
+    const clave = `${quien}:${anim}:${i}:${espejo ? 1 : 0}`;
+    let c = cache.get(clave);
+    if (!c) {
+      c = muneco(Q.rampa, anim, i, Q).aCanvas(espejo);
+      cache.set(clave, c);
+    }
+    return c;
+  }
+  var gorro = (col) => (L, p, k, dy) => {
+    const h = p.cabeza, y = k(h.y) + dy;
+    L.caja(h.x - 7, y - 7.5, h.x + 7, y - 5.5, 1, col[4], col);
+    L.caja(h.x - 4.5, y - 11, h.x + 4.5, y - 6.5, 2, pintura.vertical(col, 6, 3), col);
+  };
+  var auris = (L, p, k, dy) => {
+    const h = p.cabeza, y = k(h.y) + dy, R = RAMPA.gris;
+    L.capsula(h.x - 6.5, y - 1, h.x - 5.5, y - 6.5, 1, R[6], R);
+    L.capsula(h.x + 6.5, y - 1, h.x + 5.5, y - 6.5, 1, R[6], R);
+    L.capsula(h.x - 5.5, y - 6.5, h.x + 5.5, y - 6.5, 1, R[6], R);
+    L.elipse(h.x - 7, y + 0.5, 1.8, 2.6, pintura.esfera(RAMPA.violeta), RAMPA.violeta);
+    L.elipse(h.x + 7, y + 0.5, 1.8, 2.6, pintura.esfera(RAMPA.violeta), RAMPA.violeta);
+  };
+  var monio = (L, p, k, dy) => {
+    const h = p.cabeza, y = k(h.y) + dy;
+    L.elipse(h.x - 1, y - 8, 3, 2.4, pintura.aero(RAMPA.verde, { bajo: 3, alto: 6 }), RAMPA.verde);
+    L.elipse(h.x + 2.5, y - 8.6, 2.2, 2, pintura.esfera(RAMPA.rosa, { bajo: 3, alto: 6 }), RAMPA.rosa);
+  };
+  var QUIENES = {
+    nick: { rampa: RAMPA.azul },
+    mora: { rampa: RAMPA.verde, extra: monio },
+    tito: { rampa: RAMPA.naranja, extra: gorro(RAMPA.arena) },
+    lila: { rampa: RAMPA.rosa, extra: auris },
+    sol: { rampa: RAMPA.amarillo },
+    vio: { rampa: RAMPA.violeta },
+    gris: { rampa: RAMPA.gris, plano: true },
+    moraPlana: { rampa: RAMPA.gris, plano: true, extra: monio }
+  };
+
+  // brillo/js/prueba-sprites.js
+  function probarSprites() {
+    const q2 = new URLSearchParams(location.search);
+    const quienes = (q2.get("quien") || "nick,mora,tito,lila,gris").split(",");
+    const K2 = +(q2.get("k") || 3);
+    const c = document.getElementById("c");
+    const filas = [];
+    for (const quien of quienes) for (const a of ANIMS) filas.push([quien, a]);
+    const cols = 8;
+    c.width = cols * CUADRO.w * K2 + 120;
+    c.height = filas.length * CUADRO.h * K2;
+    Object.assign(c.style, { position: "absolute", left: 0, top: 0, width: c.width + "px", height: c.height + "px", imageRendering: "pixelated", background: "linear-gradient(#bfe6ff,#eaf8ff)" });
+    document.body.style.overflow = "auto";
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = false;
+    g.font = "12px sans-serif";
+    g.fillStyle = "#123";
+    filas.forEach(([quien, a], fila) => {
+      g.fillText(`${quien} ${a}`, 4, fila * CUADRO.h * K2 + 16);
+      for (let f = 0; f < cuadrosDe(a); f++) g.drawImage(cuadro(quien, a, f, false), 120 + f * CUADRO.w * K2, fila * CUADRO.h * K2, CUADRO.w * K2, CUADRO.h * K2);
+    });
+    window.__listo = true;
+  }
+
+  // brillo/js/pantalla.js
+  var ALTO = 360;
+  var ANCHO_MIN = 560;
+  var ANCHO_MAX = 880;
+  var esTactil = () => matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
+  var Pantalla = {
+    w: 640,
+    h: ALTO,
+    escala: 1,
+    girado: false,
+    invertido: false,
+    giro: "auto",
+    reves: false,
+    cajaW: 0,
+    cajaH: 0,
+    lienzo: { x: 0, y: 0, w: 640, h: 360 },
+    dpr: 1,
+    alCambiar: null,
+    actualizar() {
+      const vw = innerWidth, vh = innerHeight;
+      this.girado = esTactil() && vh > vw * 1.05;
+      const W = this.girado ? vh : vw, H = this.girado ? vw : vh;
+      const dpr = this.dpr = Math.min(3, Math.max(1, devicePixelRatio || 1));
+      const dW = Math.round(W * dpr), dH = Math.round(H * dpr);
+      let s = Math.max(1, Math.floor(dH / ALTO));
+      while (s > 1 && Math.floor(dW / s) < ANCHO_MIN) s--;
+      let w = Math.min(ANCHO_MAX, Math.floor(dW / s));
+      if (w < ANCHO_MIN) w = ANCHO_MIN;
+      w -= w % 2;
+      this.w = w;
+      this.h = ALTO;
+      this.escala = s;
+      let lw = w * s / dpr, lh = ALTO * s / dpr;
+      const k = Math.min(1, W / lw, H / lh);
+      lw *= k;
+      lh *= k;
+      this.cajaW = W;
+      this.cajaH = H;
+      this.lienzo = { x: Math.round((W - lw) / 2), y: Math.round((H - lh) / 2), w: lw, h: lh };
+      const raiz = document.documentElement, app = document.getElementById("app");
+      raiz.classList.toggle("girado", this.girado);
+      raiz.classList.toggle("bajita", H < 520);
+      raiz.classList.toggle("tactil", esTactil());
+      raiz.style.setProperty("--vw", W / 100 + "px");
+      raiz.style.setProperty("--vh", H / 100 + "px");
+      raiz.style.setProperty("--px", lh / ALTO + "px");
+      raiz.style.setProperty("--lx", this.lienzo.x + "px");
+      raiz.style.setProperty("--ly", this.lienzo.y + "px");
+      raiz.style.setProperty("--lw", lw + "px");
+      raiz.style.setProperty("--lh", lh + "px");
+      this.invertido = this.girado && (this.giro === "reves" || this.giro === "auto" && this.reves);
+      if (app) {
+        app.style.width = W + "px";
+        app.style.height = H + "px";
+        app.style.transform = !this.girado ? "" : this.invertido ? `translateY(${vh}px) rotate(-90deg)` : `translateX(${vw}px) rotate(90deg)`;
+      }
+      if (this.alCambiar) this.alCambiar();
+    },
+    /* de la pantalla (clientX, clientY) a la caja de #app en píxeles CSS, sin el giro */
+    aCaja(cx, cy) {
+      if (!this.girado) return { x: cx, y: cy };
+      return this.invertido ? { x: innerHeight - cy, y: cx } : { x: cy, y: innerWidth - cx };
+    },
+    /* de la pantalla a píxeles del juego */
+    aJuego(cx, cy) {
+      const q2 = this.aCaja(cx, cy), L = this.lienzo;
+      return { x: (q2.x - L.x) * this.w / L.w, y: (q2.y - L.y) * this.h / L.h };
+    },
+    /* la caja de un elemento en coordenadas de #app (sin contar el giro) */
+    caja(el) {
+      if (!this.girado) return el.getBoundingClientRect();
+      let x = 0, y = 0, e = el;
+      while (e && e.id !== "app") {
+        x += e.offsetLeft || 0;
+        y += e.offsetTop || 0;
+        e = e.offsetParent;
+      }
+      return { left: x, top: y, width: el.offsetWidth, height: el.offsetHeight };
+    },
+    ponerGiro(g) {
+      this.giro = g;
+      this.actualizar();
+    },
+    /* el acelerómetro: con el teléfono acostado la gravedad cae sobre x (+ si el borde derecho
+       quedó arriba). Tiene que sostenerse un ratito. En iPhone pide permiso: ahí no se usa. */
+    sensor() {
+      if (this.conSensor || typeof DeviceMotionEvent === "undefined" || typeof DeviceMotionEvent.requestPermission === "function") return;
+      this.conSensor = true;
+      let lado = 0, desde = 0;
+      addEventListener("devicemotion", (e) => {
+        const g = e.accelerationIncludingGravity;
+        if (!g || g.x == null) return;
+        const x = g.x, y = g.y || 0;
+        const q2 = Math.abs(x) > 6.5 && Math.abs(x) > Math.abs(y) + 2.5 ? Math.sign(x) : 0;
+        if (!q2) {
+          lado = 0;
+          return;
+        }
+        if (q2 !== lado) {
+          lado = q2;
+          desde = performance.now();
+          return;
+        }
+        const r = q2 < 0;
+        if (performance.now() - desde > 350 && r !== this.reves) {
+          this.reves = r;
+          if (this.girado && this.giro === "auto") this.actualizar();
+        }
+      });
+    },
+    /* pantalla completa y acostado, si el teléfono deja (tiene que venir de un toque) */
+    acostar() {
+      if (!esTactil()) return;
+      const d = document.documentElement;
+      try {
+        const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: "hide" }) : null;
+        if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape")).catch(() => {
+        });
+      } catch (_) {
+      }
+    },
+    iniciar() {
+      this.actualizar();
+      addEventListener("resize", () => this.actualizar());
+      addEventListener("orientationchange", () => setTimeout(() => this.actualizar(), 250));
+      this.sensor();
+    }
+  };
+
+  // brillo/js/post.js
+  var VERT = `#version 300 es
+in vec2 p; out vec2 uv;
+void main() { uv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`;
+  var EXTRAER = `#version 300 es
+precision mediump float;
+in vec2 uv; out vec4 o;
+uniform sampler2D base; uniform float umbral;
+void main() {
+  vec3 c = texture(base, uv).rgb;
+  float l = dot(c, vec3(0.3, 0.55, 0.15));
+  float k = smoothstep(umbral, 1.0, l);
+  o = vec4(c * k, 1.0);
+}`;
+  var BORRONEAR = `#version 300 es
+precision mediump float;
+in vec2 uv; out vec4 o;
+uniform sampler2D fuente; uniform vec2 paso;
+void main() {
+  vec3 s = texture(fuente, uv).rgb * 0.2270;
+  s += (texture(fuente, uv + paso * 1.3846).rgb + texture(fuente, uv - paso * 1.3846).rgb) * 0.3162;
+  s += (texture(fuente, uv + paso * 3.2308).rgb + texture(fuente, uv - paso * 3.2308).rgb) * 0.0703;
+  o = vec4(s, 1.0);
+}`;
+  var FINAL = `#version 300 es
+precision mediump float;
+in vec2 uv; out vec4 o;
+uniform sampler2D base, brillo1, brillo2;
+uniform vec2 tam;          // p\xEDxeles del juego
+uniform vec2 sol;          // el sol en la pantalla (0-1, y para arriba)
+uniform float bloom, destello, rayos, t, olas, olasDesde, velo;
+uniform vec3 tinte, levantar; uniform float sat, contraste;
+vec3 muestra(sampler2D s, vec2 q) { return texture(s, clamp(q, 0.0, 1.0)).rgb; }
+void main() {
+  vec2 q = uv;
+  /* abajo del agua: cada fila corrida un n\xFAmero entero de p\xEDxeles */
+  float fila = floor((1.0 - q.y) * tam.y);
+  if (olas > 0.0 && (1.0 - q.y) * tam.y > olasDesde) q.x += floor(sin(fila * 0.19 + t * 2.3) * olas + 0.5) / tam.x;
+  vec3 c = texture(base, q).rgb;
+  /* bloom: dos tama\xF1os */
+  vec3 b = muestra(brillo1, q) * 0.7 + muestra(brillo2, q) * 0.9;
+  c += b * bloom;
+  /* el destello del lente: fantasmas del lado opuesto al sol, cada uno de otro color */
+  if (destello > 0.0) {
+    vec2 eje = vec2(0.5) - sol;
+    vec3 f = vec3(0.0);
+    for (int i = 1; i <= 4; i++) {
+      float k = float(i) * 0.42;
+      vec2 g = sol + eje * k * 2.0;
+      float d = length((uv - g) * vec2(tam.x / tam.y, 1.0));
+      float r = 0.018 + 0.018 * float(i);
+      float disco = smoothstep(r, r * 0.55, d) * 0.55;
+      vec3 col = i == 1 ? vec3(0.4, 0.9, 1.0) : i == 2 ? vec3(0.6, 1.0, 0.55) : i == 3 ? vec3(1.0, 0.75, 0.5) : vec3(0.75, 0.6, 1.0);
+      f += col * disco * muestra(brillo2, sol).r * 1.6;
+    }
+    /* el aro alrededor del sol */
+    float d = length((uv - sol) * vec2(tam.x / tam.y, 1.0));
+    f += vec3(0.7, 0.9, 1.0) * smoothstep(0.01, 0.0, abs(d - 0.2)) * 0.09;
+    c += f * destello;
+  }
+  /* los rayos: la luz fuerte, arrastrada desde el sol */
+  if (rayos > 0.0) {
+    vec3 r = vec3(0.0);
+    vec2 dir = (uv - sol) / 18.0;
+    vec2 m = uv;
+    float peso = 1.0;
+    for (int i = 0; i < 18; i++) { m -= dir; r += muestra(brillo2, m) * peso; peso *= 0.9; }
+    c += r / 18.0 * rayos * 2.2;
+  }
+  /* la gradaci\xF3n del mundo */
+  c = (c - 0.5) * contraste + 0.5;
+  float l = dot(c, vec3(0.299, 0.587, 0.114));
+  c = mix(vec3(l), c, sat) * tinte + levantar;
+  /* el velo claro de los bordes (el Aero no oscurece: aclara) */
+  vec2 e = uv - 0.5;
+  c = mix(c, vec3(0.93, 0.97, 1.0), smoothstep(0.25, 0.75, dot(e, e) * 2.0) * velo);
+  o = vec4(c, 1.0);
+}`;
+  function compilar(gl, fuente, tipo) {
+    const s = gl.createShader(tipo);
+    gl.shaderSource(s, fuente);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function programa(gl, frag) {
+    const p = gl.createProgram();
+    gl.attachShader(p, compilar(gl, VERT, gl.VERTEX_SHADER));
+    gl.attachShader(p, compilar(gl, frag, gl.FRAGMENT_SHADER));
+    gl.bindAttribLocation(p, 0, "p");
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const u = {};
+    const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) {
+      const a = gl.getActiveUniform(p, i);
+      u[a.name] = gl.getUniformLocation(p, a.name);
+    }
+    return { p, u };
+  }
+  var GRADO_NEUTRO = { tinte: [1, 1, 1], levantar: [0, 0, 0], sat: 1.08, contraste: 1.04 };
+  var Post = class {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.calidad = "alta";
+      let gl = null;
+      try {
+        gl = canvas.getContext("webgl2", { antialias: false, alpha: false, premultipliedAlpha: false, depth: false, stencil: false });
+      } catch (_) {
+      }
+      this.gl = gl;
+      if (!gl) {
+        this.g2 = canvas.getContext("2d");
+        return;
+      }
+      try {
+        this.pExtraer = programa(gl, EXTRAER);
+        this.pBorronear = programa(gl, BORRONEAR);
+        this.pFinal = programa(gl, FINAL);
+      } catch (e) {
+        console.warn("post:", e.message);
+        this.gl = null;
+        this.g2 = canvas.getContext("2d");
+        return;
+      }
+      const b = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      this.tBase = this.textura(gl.NEAREST);
+      this.w = 0;
+      this.h = 0;
+    }
+    textura(filtro) {
+      const gl = this.gl, t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filtro);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filtro);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    }
+    destino(w, h) {
+      const gl = this.gl, t = this.textura(gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      const f = gl.createFramebuffer();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+      return { t, f, w, h };
+    }
+    /* el tamaño: w x h del juego, escala entera, y el tamaño en la página */
+    tamano(w, h, escala, css) {
+      const c = this.canvas;
+      c.width = w * escala;
+      c.height = h * escala;
+      Object.assign(c.style, { width: css.w + "px", height: css.h + "px", left: css.x + "px", top: css.y + "px" });
+      if (!this.gl || w === this.w && h === this.h) {
+        this.w = w;
+        this.h = h;
+        return;
+      }
+      this.w = w;
+      this.h = h;
+      this.b1 = this.destino(w >> 1, h >> 1);
+      this.b1b = this.destino(w >> 1, h >> 1);
+      this.b2 = this.destino(w >> 3, h >> 3);
+      this.b2b = this.destino(w >> 3, h >> 3);
+    }
+    pasada(prog, dest, fn) {
+      const gl = this.gl;
+      gl.bindFramebuffer(gl.FRAMEBUFFER, dest ? dest.f : null);
+      gl.viewport(0, 0, dest ? dest.w : this.canvas.width, dest ? dest.h : this.canvas.height);
+      gl.useProgram(prog.p);
+      fn(prog.u);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    usar(unidad, tex, loc) {
+      const gl = this.gl;
+      gl.activeTexture(gl.TEXTURE0 + unidad);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(loc, unidad);
+    }
+    borronear(a, b, veces) {
+      const gl = this.gl;
+      for (let i = 0; i < veces; i++) {
+        this.pasada(this.pBorronear, b, (u) => {
+          this.usar(0, a.t, u.fuente);
+          gl.uniform2f(u.paso, 1 / a.w, 0);
+        });
+        this.pasada(this.pBorronear, a, (u) => {
+          this.usar(0, b.t, u.fuente);
+          gl.uniform2f(u.paso, 0, 1 / a.h);
+        });
+      }
+    }
+    /* o: { sol:[x,y] (0-1, y para abajo), bloom, destello, rayos, umbral, grado, olas, olasDesde, velo, t } */
+    mostrar(fuente, o) {
+      const gl = this.gl;
+      if (!gl) {
+        const g = this.g2;
+        g.imageSmoothingEnabled = false;
+        g.drawImage(fuente, 0, 0, this.canvas.width, this.canvas.height);
+        return;
+      }
+      gl.bindTexture(gl.TEXTURE_2D, this.tBase);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, fuente);
+      const baja = this.calidad === "baja";
+      const G = o.grado || GRADO_NEUTRO;
+      if (!baja) {
+        this.pasada(this.pExtraer, this.b1, (u) => {
+          this.usar(0, this.tBase, u.base);
+          gl.uniform1f(u.umbral, o.umbral ?? 0.72);
+        });
+        this.borronear(this.b1, this.b1b, 1);
+        this.pasada(this.pExtraer, this.b2, (u) => {
+          this.usar(0, this.b1.t, u.base);
+          gl.uniform1f(u.umbral, 0);
+        });
+        this.borronear(this.b2, this.b2b, 2);
+      }
+      this.pasada(this.pFinal, null, (u) => {
+        this.usar(0, this.tBase, u.base);
+        this.usar(1, baja ? this.tBase : this.b1.t, u.brillo1);
+        this.usar(2, baja ? this.tBase : this.b2.t, u.brillo2);
+        gl.uniform2f(u.tam, this.w, this.h);
+        const s = o.sol || [0.8, 0.15];
+        gl.uniform2f(u.sol, s[0], 1 - s[1]);
+        gl.uniform1f(u.bloom, baja ? 0 : o.bloom ?? 0.55);
+        gl.uniform1f(u.destello, baja ? 0 : o.destello ?? 0);
+        gl.uniform1f(u.rayos, baja ? 0 : o.rayos ?? 0);
+        gl.uniform1f(u.t, o.t || 0);
+        gl.uniform1f(u.olas, o.olas || 0);
+        gl.uniform1f(u.olasDesde, o.olasDesde ?? 0);
+        gl.uniform1f(u.velo, o.velo ?? 0.18);
+        gl.uniform3fv(u.tinte, G.tinte);
+        gl.uniform3fv(u.levantar, G.levantar);
+        gl.uniform1f(u.sat, G.sat);
+        gl.uniform1f(u.contraste, G.contraste);
+      });
+    }
+  };
+
+  // brillo/js/fondos.js
+  var TAU = Math.PI * 2;
+  function perfil(periodo, armonicos, al) {
+    const ondas = armonicos.map(([k, a]) => ({ k, a, f: al() * TAU }));
+    return (x) => ondas.reduce((s, o) => s + Math.sin(x / periodo * TAU * o.k + o.f) * o.a, 0);
+  }
+  function tiraLomas(o) {
+    const { ancho, alto, base, amp, armonicos, colores, filo, al } = o;
+    const [c, g] = lienzo2d(ancho, alto);
+    const alt = perfil(ancho, armonicos, al);
+    const tope = new Int16Array(ancho);
+    for (let x = 0; x < ancho; x++) tope[x] = Math.round(base - alt(x) * amp);
+    const grad = g.createLinearGradient(0, base - amp, 0, alto);
+    colores.forEach((col, i) => grad.addColorStop(i / (colores.length - 1), col));
+    g.fillStyle = grad;
+    for (let x = 0; x < ancho; x++) g.fillRect(x, tope[x], 1, alto - tope[x]);
+    if (filo) for (let x = 0; x < ancho; x++) {
+      const pend = tope[(x + 1) % ancho] - tope[(x - 1 + ancho) % ancho];
+      const w = Math.max(1, Math.round(filo.ancho * (pend >= 0 ? 1 : 0.5)));
+      g.fillStyle = filo.color;
+      g.fillRect(x, tope[x], 1, w);
+      if (filo.sombra) {
+        g.fillStyle = filo.sombra;
+        g.fillRect(x, tope[x] + w, 1, 1);
+      }
+    }
+    return { c, tope, ancho, alto };
+  }
+  function nube(al, ancho, alto) {
+    const L = new Lienzo(ancho, alto);
+    const bollos = [];
+    const n = 5 + Math.floor(al() * 4);
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n;
+      const r = alto * (0.26 + 0.22 * Math.sin(t * Math.PI)) * (0.8 + al() * 0.35);
+      bollos.push([ancho * (0.12 + t * 0.76), alto - r - 2 - al() * alto * 0.12, r]);
+    }
+    const R = RAMPA.blanco;
+    for (const [x, y, r] of bollos) L.elipse(x, y, r, r * 0.92, (u, v) => {
+      const d = -u * 0.45 - v * 0.9;
+      return R[d > 0.55 ? 7 : d > 0.1 ? 6 : d > -0.35 ? 5 : d > -0.7 ? 4 : 3];
+    }, R);
+    for (let x = 0; x < ancho; x++) for (let y = alto - 3; y < alto; y++) if (L.hay(x, y - 1)) L.punto(x, y, R[3], R);
+    L.contorno({ color: "#d7ecfb" });
+    return L.aCanvas();
+  }
+  function arbol(al, r) {
+    const L = new Lienzo(Math.ceil(r * 2 + 4), Math.ceil(r * 2 + r * 1.2 + 4));
+    const cx = L.w / 2, cy = r + 2;
+    L.capsula(cx, cy + r * 0.5, cx, L.h - 2, Math.max(1, r * 0.16), pintura.vertical(RAMPA.tierra, 4, 2), RAMPA.tierra);
+    L.elipse(cx, cy, r, r * 0.95, pintura.aero(RAMPA.verde, { bajo: 1, alto: 6, gorra: 0.35, punto: 0.05 }), RAMPA.verde);
+    L.contorno({ tono: 0 });
+    return L.aCanvas();
+  }
+  function sol() {
+    const T3 = 200;
+    const [c, g] = lienzo2d(T3, T3);
+    const m = T3 / 2;
+    let gr = g.createRadialGradient(m, m, 0, m, m, m);
+    gr.addColorStop(0, "rgba(255,255,255,1)");
+    gr.addColorStop(0.1, "rgba(255,255,250,0.95)");
+    gr.addColorStop(0.22, "rgba(255,252,225,0.45)");
+    gr.addColorStop(0.5, "rgba(230,245,255,0.14)");
+    gr.addColorStop(1, "rgba(210,235,255,0)");
+    g.fillStyle = gr;
+    g.fillRect(0, 0, T3, T3);
+    for (let i = 0; i < 16; i++) {
+      const a = i / 16 * TAU + 0.12, largo = i % 2 ? m * 0.55 : m * 0.95;
+      for (let k = 6; k < largo; k++) {
+        const x = Math.round(m + Math.cos(a) * k), y = Math.round(m + Math.sin(a) * k);
+        g.fillStyle = `rgba(255,255,255,${(1 - k / largo) * 0.8})`;
+        g.fillRect(x, y, 1, 1);
+      }
+    }
+    g.fillStyle = "#ffffff";
+    g.beginPath();
+    g.arc(m, m, 9, 0, TAU);
+    g.fill();
+    return c;
+  }
+  function dibujarMolino(g, x, y, alto, ang, col) {
+    g.fillStyle = col.torre;
+    for (let i = 0; i < alto; i++) {
+      const w = 1 + (i > alto * 0.5 ? 1 : 0);
+      g.fillRect(Math.round(x - w / 2), Math.round(y - alto + i), w, 1);
+    }
+    g.fillStyle = col.aspa;
+    const cx = x, cy = y - alto, L = alto * 0.62;
+    for (let k = 0; k < 3; k++) {
+      const a = ang + k * TAU / 3;
+      for (let i = 1; i < L; i++) g.fillRect(Math.round(cx + Math.cos(a) * i), Math.round(cy + Math.sin(a) * i), 1, 1);
+    }
+    g.fillStyle = col.centro;
+    g.fillRect(Math.round(cx) - 1, Math.round(cy) - 1, 2, 2);
+  }
+  var MUNDOS_FONDO = {
+    /* la Colina Serena: el cielo azul y las lomas verdes de todos los fondos de pantalla */
+    colina(semilla = 7) {
+      const al = azar(semilla);
+      const cielo = [[0, "#1b66d8"], [0.35, "#3d8ef3"], [0.62, "#86c4fb"], [0.8, "#c9e9ff"], [1, "#f2fbff"]];
+      const nubes = [];
+      for (let i = 0; i < 9; i++) {
+        const w = 70 + Math.floor(al() * 110);
+        nubes.push({ c: nube(al, w, Math.round(w * (0.32 + al() * 0.12))), x: al() * 2400, y: 18 + al() * 120, f: 0.05 + al() * 0.12, v: 2 + al() * 5 });
+      }
+      const montes = tiraLomas({ ancho: 1400, alto: 150, base: 110, amp: 42, armonicos: [[2, 0.6], [5, 0.3], [11, 0.1]], colores: ["#7fb3e6", "#9cc6ee", "#c4def5"], filo: { ancho: 1, color: "#d7ebfb" }, al });
+      const lejos = tiraLomas({ ancho: 1200, alto: 140, base: 80, amp: 26, armonicos: [[3, 0.55], [7, 0.3], [13, 0.15]], colores: ["#86d06c", "#a4dd8c", "#c9ecb8"], filo: { ancho: 2, color: "#d4f7b4" }, al });
+      const medio = tiraLomas({ ancho: 1e3, alto: 170, base: 70, amp: 34, armonicos: [[2, 0.7], [5, 0.25], [9, 0.08]], colores: ["#57c93a", "#3aae2e", "#2c8f2a", "#2a7a30"], filo: { ancho: 3, color: "#c3f78e", sombra: "#8ee05e" }, al });
+      const molinos = [];
+      for (let i = 0; i < 7; i++) {
+        const x = Math.floor((i + al() * 0.6) / 7 * lejos.ancho);
+        molinos.push({ x, alto: 22 + Math.floor(al() * 10), fase: al() * TAU, v: 0.6 + al() * 0.5 });
+      }
+      const [ca, ga] = lienzo2d(medio.ancho, medio.alto);
+      ga.drawImage(medio.c, 0, 0);
+      for (let i = 0; i < 14; i++) {
+        const x = Math.floor(al() * medio.ancho), r = 5 + Math.floor(al() * 6), A = arbol(al, r);
+        ga.drawImage(A, Math.round(x - A.width / 2), medio.tope[x] - A.height + 3);
+        if (x < 60) ga.drawImage(A, Math.round(x + medio.ancho - A.width / 2), medio.tope[x] - A.height + 3);
+        if (x > medio.ancho - 60) ga.drawImage(A, Math.round(x - medio.ancho - A.width / 2), medio.tope[x] - A.height + 3);
+      }
+      for (let i = 0; i < 260; i++) {
+        const x = Math.floor(al() * medio.ancho), y = medio.tope[x] + 4 + Math.floor(al() * 40);
+        ga.fillStyle = ["#ffffff", "#ffe46b", "#ff9ccc"][i % 3];
+        ga.fillRect(x, y, 1, 1);
+      }
+      const S = sol();
+      return {
+        cielo,
+        sol: [0.8, 0.14],
+        nubes,
+        molinos,
+        grado: { tinte: [1, 1.01, 1.02], levantar: [0, 0.01, 0.02], sat: 1.12, contraste: 1.04 },
+        post: { bloom: 0.6, destello: 0.9, rayos: 0.55, umbral: 0.74, velo: 0.16 },
+        /* capas: [canvas, factor x, y en pantalla (con la cámara en su lugar), factor y] */
+        capas: [
+          { c: montes.c, f: 0.06, y: 150, fy: 0.03 },
+          { c: lejos.c, f: 0.14, y: 190, fy: 0.06, molinos: true },
+          { c: ca, f: 0.3, y: 220, fy: 0.12 }
+        ],
+        lejosTope: lejos.tope,
+        S
+      };
+    }
+  };
+  var Fondo = class {
+    constructor(nombre, semilla) {
+      this.nombre = nombre;
+      this.M = (MUNDOS_FONDO[nombre] || MUNDOS_FONDO.colina)(semilla);
+      this.cieloTira = null;
+      this.altoTira = 0;
+    }
+    get sol() {
+      return this.M.sol;
+    }
+    get grado() {
+      return this.M.grado;
+    }
+    get post() {
+      return this.M.post;
+    }
+    tiraCielo(h) {
+      if (this.cieloTira && this.altoTira === h) return this.cieloTira;
+      const [c, g] = lienzo2d(1, h), gr = g.createLinearGradient(0, 0, 0, h);
+      for (const [k, col] of this.M.cielo) gr.addColorStop(k, col);
+      g.fillStyle = gr;
+      g.fillRect(0, 0, 1, h);
+      this.cieloTira = c;
+      this.altoTira = h;
+      return c;
+    }
+    /* lo de atrás del juego. cam = { x, y } (arriba a la izquierda de la vista, en píxeles del mundo); ref = el y de la cámara "en su lugar" */
+    atras(g, cam, t, w, h, ref = 0) {
+      const M = this.M;
+      g.drawImage(this.tiraCielo(h), 0, 0, 1, h, 0, 0, w, h);
+      const sx = Math.round(M.sol[0] * w - M.S.width / 2), sy = Math.round(M.sol[1] * h - M.S.height / 2);
+      g.drawImage(M.S, sx, sy);
+      for (const n of M.nubes) {
+        const per = 2400;
+        let x = ((n.x + t * n.v - cam.x * n.f) % per + per) % per - 200;
+        g.drawImage(n.c, Math.round(x), Math.round(n.y - (cam.y - ref) * n.f * 0.3));
+      }
+      for (const L of M.capas) {
+        const per = L.c.width;
+        const ox = -(cam.x * L.f % per + per) % per;
+        const y = Math.round(L.y + (h - 360) - (cam.y - ref) * L.fy);
+        for (let x = Math.round(ox); x < w; x += per) {
+          g.drawImage(L.c, x, y);
+          if (L.molinos) for (const m of M.molinos) {
+            const mx = x + m.x;
+            if (mx < -30 || mx > w + 30) continue;
+            dibujarMolino(g, mx, y + M.lejosTope[m.x] + 2, m.alto, m.fase + t * m.v, { torre: "#f4fbff", aspa: "#ffffff", centro: "#cfe6f7" });
+          }
+        }
+      }
+    }
+  };
+
+  // brillo/js/tiles.js
+  var T = 16;
+  var h32 = (x, y, s = 0) => {
+    let h = x * 374761393 + y * 668265263 + s * 2147483647 >>> 0;
+    h = (h ^ h >>> 13) * 1274126177 >>> 0;
+    return ((h ^ h >>> 16) >>> 0) / 4294967296;
+  };
+  var ESTILOS = {
+    colina: { tope: RAMPA.verde, cuerpo: RAMPA.tierra, piedras: true, hondo: 3 }
+  };
+  function pintarNivel(anchoT, altoT, esSolido, estilo) {
+    const E = ESTILOS[estilo] || ESTILOS.colina;
+    const P = 256, piezas = /* @__PURE__ */ new Map();
+    const sol2 = (x, y) => x < 0 || x >= anchoT ? esSolido(Math.max(0, Math.min(anchoT - 1, x)), y) : y < 0 ? false : y >= altoT ? true : esSolido(x, y);
+    const hondura = (x, y) => {
+      let k = 0;
+      while (k < 6 && sol2(x, y - k - 1)) k++;
+      return k;
+    };
+    const tope = E.tope.map(rgb), cuerpo = E.cuerpo.map(rgb);
+    for (let py = 0; py < Math.ceil(altoT * T / P); py++) for (let px2 = 0; px2 < Math.ceil(anchoT * T / P); px2++) {
+      const c = document.createElement("canvas");
+      c.width = P;
+      c.height = P;
+      const g = c.getContext("2d"), img = g.createImageData(P, P), d = img.data;
+      let algo = false;
+      const tx0 = px2 * P / T, ty0 = py * P / T;
+      for (let ty = ty0; ty < ty0 + P / T; ty++) for (let tx = tx0; tx < tx0 + P / T; tx++) {
+        if (tx >= anchoT || ty >= altoT || !sol2(tx, ty)) continue;
+        algo = true;
+        const arr = !sol2(tx, ty - 1), aba = !sol2(tx, ty + 1), izq = !sol2(tx - 1, ty), der = !sol2(tx + 1, ty);
+        const hd = hondura(tx, ty);
+        for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+          const r = 4;
+          const esq = (cx, cy) => {
+            const dx = cx - x - 0.5, dy = cy - y - 0.5;
+            return dx * dx + dy * dy > r * r;
+          };
+          if (arr && izq && x < r && y < r && esq(r, r)) continue;
+          if (arr && der && x >= T - r && y < r && esq(T - r, r)) continue;
+          if (aba && izq && x < r && y >= T - r && esq(r, T - r)) continue;
+          if (aba && der && x >= T - r && y >= T - r && esq(T - r, T - r)) continue;
+          const X = tx * T + x, Y = ty * T + y;
+          let col;
+          const gota2 = 7 + Math.floor(h32(X, 0, 3) * 2.5) + (h32(X >> 1, ty, 5) < 0.18 ? 3 : 0) - (h32(X >> 2, ty, 6) < 0.15 ? 2 : 0);
+          if (arr && y < gota2) {
+            col = y === 0 ? tope[6] : y === 1 ? tope[6] : y === 2 ? tope[5] : y < gota2 - 3 ? tope[4] : y < gota2 - 1 ? tope[3] : tope[2];
+            if (y === 0 && h32(X, Y, 9) < 0.35) col = tope[7];
+            if (y === 4 && h32(X, Y, 11) < 0.12) col = tope[6];
+            if (y < 2 && (izq && x < 2 || der && x > T - 3)) col = tope[5];
+          } else {
+            const prof = hd * T + y + (h32(X >> 3, ty, 4) - 0.5) * 6;
+            const nivel = Math.max(0, Math.min(1, prof / 70));
+            const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5][(Y & 3) * 4 + (X & 3)] / 16;
+            const fi = 5.4 - nivel * 3.4;
+            let i = Math.floor(fi) + (fi - Math.floor(fi) > bayer ? 1 : 0);
+            i = Math.max(1, Math.min(6, i));
+            col = cuerpo[i];
+            const n = h32(X, Y, 1);
+            const pq = h32(X >> 1, Y >> 1, 12);
+            if (E.piedras && pq < 0.018) col = (X & 1) === 0 && (Y & 1) === 0 ? cuerpo[Math.min(7, i + 3)] : cuerpo[Math.min(7, i + 1)];
+            else if (n < 0.05) col = cuerpo[Math.max(0, i - 1)];
+            if (arr && y > gota2 && y < gota2 + 5 && h32(X, ty, 13) < 0.08) col = cuerpo[Math.max(0, i - 2)];
+            if (arr && y === gota2) col = cuerpo[Math.max(0, i - 2)];
+            if (izq && x === 0 || der && x === T - 1) col = cuerpo[1];
+            else if (izq && x === 1 || der && x === T - 2) col = cuerpo[Math.max(0, i - 1)];
+            if (aba && y === T - 1) col = cuerpo[0];
+            else if (aba && y === T - 2) col = cuerpo[1];
+          }
+          const k = ((Y - py * P) * P + (X - px2 * P)) * 4;
+          d[k] = col[0];
+          d[k + 1] = col[1];
+          d[k + 2] = col[2];
+          d[k + 3] = 255;
+        }
+        if (arr && ty > 0) for (let x = 0; x < T; x++) {
+          const X = tx * T + x, q2 = h32(X, ty, 7);
+          if (q2 > 0.45) continue;
+          if (izq && x < 3 || der && x > T - 4) continue;
+          const alto = q2 < 0.12 ? 3 : q2 < 0.3 ? 2 : 1;
+          for (let k2 = 1; k2 <= alto; k2++) {
+            const Y = ty * T - k2;
+            if (Y < py * P) continue;
+            const kk = ((Y - py * P) * P + (X - px2 * P)) * 4, cc = k2 === alto ? tope[5] : tope[4];
+            d[kk] = cc[0];
+            d[kk + 1] = cc[1];
+            d[kk + 2] = cc[2];
+            d[kk + 3] = 255;
+          }
+        }
+      }
+      if (!algo) continue;
+      g.putImageData(img, 0, 0);
+      piezas.set(px2 + "," + py, c);
+    }
+    return {
+      P,
+      piezas,
+      dibujar(g2, cam, w, h) {
+        for (let py = Math.floor(cam.y / P); py <= Math.floor((cam.y + h) / P); py++) for (let px2 = Math.floor(cam.x / P); px2 <= Math.floor((cam.x + w) / P); px2++) {
+          const c = piezas.get(px2 + "," + py);
+          if (c) g2.drawImage(c, px2 * P - Math.round(cam.x), py * P - Math.round(cam.y));
+        }
+      }
+    };
+  }
+
+  // brillo/js/efectos.js
+  var TAU2 = Math.PI * 2;
+  function pintarBurbuja(r) {
+    const T3 = Math.ceil(r * 2 + 2);
+    const [c, g] = lienzo2d(T3, T3);
+    const img = g.createImageData(T3, T3), d = img.data, m = T3 / 2;
+    for (let y = 0; y < T3; y++) for (let x = 0; x < T3; x++) {
+      const dx = x + 0.5 - m, dy = y + 0.5 - m, q2 = Math.hypot(dx, dy) / r;
+      if (q2 > 1) continue;
+      const a = Math.atan2(dy, dx);
+      let R = 210, G = 240, B2 = 255, A = 0.06;
+      if (q2 > 0.78) {
+        const h = (a / TAU2 + 0.5 + q2 * 0.3) % 1;
+        R = 190 + 65 * Math.cos(TAU2 * h);
+        G = 200 + 55 * Math.cos(TAU2 * (h - 0.33));
+        B2 = 220 + 35 * Math.cos(TAU2 * (h - 0.66));
+        A = 0.35 + (q2 - 0.78) * 2.2;
+      }
+      const rx = dx / r + 0.38, ry = dy / r + 0.42;
+      if (rx * rx * 2.2 + ry * ry * 4 < 0.09) {
+        R = G = B2 = 255;
+        A = 0.95;
+      }
+      const px2 = dx / r - 0.42, py = dy / r - 0.5;
+      if (px2 * px2 + py * py < 0.012) {
+        R = G = B2 = 255;
+        A = 0.8;
+      }
+      const k = (y * T3 + x) * 4;
+      d[k] = R;
+      d[k + 1] = G;
+      d[k + 2] = B2;
+      d[k + 3] = Math.min(255, A * 255);
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  }
+  var HECHAS = /* @__PURE__ */ new Map();
+  function burbuja(r) {
+    r = Math.max(2, Math.round(r));
+    if (!HECHAS.has(r)) HECHAS.set(r, pintarBurbuja(r));
+    return HECHAS.get(r);
+  }
+  var BurbujasAmbiente = class {
+    constructor(n, semilla, o = {}) {
+      const al = azar(semilla);
+      this.lista = [];
+      for (let i = 0; i < n; i++) {
+        const prof = al();
+        this.lista.push({ x: al() * 2e3, y: al() * 400, prof, r: 2 + prof * prof * 13 + al() * 2, v: 6 + prof * 22 + al() * 6, fase: al() * TAU2, f: 0.2 + prof * 1.1 });
+      }
+      this.subir = o.subir ?? 1;
+    }
+    /* capa: 'atras' (prof < 0.65) o 'frente' (prof ≥ 0.65) */
+    dibujar(g, cam, t, w, h, capa) {
+      for (const b of this.lista) {
+        const adelante = b.prof >= 0.65;
+        if (capa === "frente" !== adelante) continue;
+        const per = w + 200, perY = h + 120;
+        const y = ((b.y - t * b.v * this.subir - cam.y * b.f * 0.5) % perY + perY) % perY - 60;
+        const x = ((b.x - cam.x * b.f + Math.sin(t * 0.8 + b.fase) * 8) % per + per) % per - 100;
+        const img = burbuja(b.r * (1 + Math.sin(t * 2 + b.fase) * 0.04));
+        g.globalAlpha = adelante ? 0.75 : 0.55 + b.prof * 0.4;
+        g.drawImage(img, Math.round(x - img.width / 2), Math.round(y - img.height / 2));
+      }
+      g.globalAlpha = 1;
+    }
+  };
+  function pastoFrente(ancho, semilla) {
+    const al = azar(semilla), alto = 70;
+    const [c, g] = lienzo2d(ancho, alto);
+    for (let i = 0; i < ancho / 7; i++) {
+      const x0 = al() * ancho, largo = 18 + al() * 46, curva = (al() - 0.5) * 26, gr = 3 + Math.floor(al() * 3);
+      const col = ["#17601c", "#1d7322", "#23862a", "#145419"][Math.floor(al() * 4)];
+      for (let k = 0; k < largo; k++) {
+        const t = k / largo, x = x0 + curva * t * t, y = alto - k;
+        const w = Math.max(1, Math.round(gr * (1 - t * 0.8)));
+        g.fillStyle = k > largo - 3 ? "#8ee05e" : col;
+        for (const dx of [0, ancho, -ancho]) g.fillRect(Math.round(x + dx), Math.round(y), w, 1);
+      }
+      g.fillStyle = "rgba(210,255,170,0.8)";
+      for (let k = Math.floor(largo * 0.3); k < largo * 0.7; k++) {
+        const t = k / largo;
+        for (const dx of [0, ancho, -ancho]) g.fillRect(Math.round(x0 + curva * t * t + dx), alto - k, 1, 1);
+      }
+    }
+    return c;
+  }
+  var Destellos = class {
+    constructor() {
+      this.lista = [];
+    }
+    soltar(x, y, n = 6, o = {}) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * TAU2, v = (o.v ?? 40) * (0.4 + Math.random() * 0.8);
+        this.lista.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (o.sube ?? 10), vida: 0, dura: 0.5 + Math.random() * 0.5, col: o.col || "#ffffff", tam: o.tam ?? 2 });
+      }
+    }
+    pasar(dt) {
+      for (const d of this.lista) {
+        d.vida += dt;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.vx *= 1 - dt * 3;
+        d.vy *= 1 - dt * 3;
+      }
+      this.lista = this.lista.filter((d) => d.vida < d.dura);
+    }
+    dibujar(g, cam) {
+      for (const d of this.lista) {
+        const k = 1 - d.vida / d.dura, s = Math.max(1, Math.round(d.tam * (0.5 + k)));
+        const x = Math.round(d.x - cam.x), y = Math.round(d.y - cam.y);
+        g.globalAlpha = Math.min(1, k * 1.6);
+        g.fillStyle = d.col;
+        g.fillRect(x, y - s, 1, s * 2 + 1);
+        g.fillRect(x - s, y, s * 2 + 1, 1);
+      }
+      g.globalAlpha = 1;
+    }
+  };
+
+  // brillo/js/prueba-fondo.js
+  function probarFondo() {
+    const q2 = new URLSearchParams(location.search);
+    Pantalla.iniciar();
+    const post = new Post(document.getElementById("c"));
+    const F = new Fondo(q2.get("mundo") || "colina", 7);
+    const A = 120, H = 23;
+    const mapa = (x, y) => y >= 19 || x > 30 && x < 42 && y >= 16 || x > 50 && x < 57 && y === 12 || x > 70 && y >= 17;
+    const N = pintarNivel(A, H, mapa, "colina");
+    let [base, g] = lienzo2d(Pantalla.w, Pantalla.h);
+    const B2 = new BurbujasAmbiente(40, 3), P = pastoFrente(900, 5);
+    const t0 = performance.now();
+    const cam = { x: +(q2.get("x") || 0), y: H * T - Pantalla.h };
+    const cuadroN = () => {
+      requestAnimationFrame(cuadroN);
+      const w = Pantalla.w, h = Pantalla.h;
+      if (base.width !== w || base.height !== h) {
+        [base, g] = lienzo2d(w, h);
+        post.tamano(w, h, Pantalla.escala, Pantalla.lienzo);
+      }
+      const t = q2.has("t") ? +q2.get("t") : (performance.now() - t0) / 1e3;
+      if (q2.has("mover")) cam.x = +(q2.get("x") || 0) + t * 40;
+      F.atras(g, cam, t, w, h, cam.y);
+      B2.dibujar(g, cam, t, w, h, "atras");
+      N.dibujar(g, cam, w, h);
+      const f = Math.floor(t * 8);
+      g.drawImage(cuadro("nick", "quieto", f, false), Math.round(12 * T - cam.x), Math.round(19 * T - 36 - cam.y));
+      g.drawImage(cuadro("mora", "saluda", f, true), Math.round(15 * T - cam.x), Math.round(19 * T - 36 - cam.y));
+      g.drawImage(cuadro("nick", "corre", f, false), Math.round(20 * T - cam.x), Math.round(19 * T - 36 - cam.y));
+      {
+        const per = P.width, ox = -(cam.x * 1.3 % per + per) % per;
+        for (let x = Math.round(ox); x < w; x += per) g.drawImage(P, x, h - P.height + 26);
+      }
+      B2.dibujar(g, cam, t, w, h, "frente");
+      post.mostrar(base, { ...F.post, sol: F.sol, grado: F.grado, t });
+    };
+    post.tamano(Pantalla.w, Pantalla.h, Pantalla.escala, Pantalla.lienzo);
+    requestAnimationFrame(cuadroN);
+    window.__listo = true;
+  }
+
+  // brillo/js/fisica.js
+  var T2 = 16;
+  var DT = 1 / 60;
+  var B = { VACIO: 0, PISO: 1, TABLON: 2, PLANO: 3, AGUA: 4, ESTATICA: 5, HONGO: 6 };
+  var NADA = { x: 0, y: 0, salto: false, saltoE: false, accion: false, accionE: false };
+  var K = {
+    ANCHO: 12,
+    ALTO: 26,
+    CORRE: 2.45,
+    ACEL: 0.34,
+    FRENO: 0.46,
+    ACEL_AIRE: 0.24,
+    FRENO_AIRE: 0.1,
+    GRAV: 0.3,
+    CAIDA: 5.6,
+    SALTO: -5.95,
+    CORTE: -2.1,
+    CIMA: 0.55,
+    COYOTE: 6,
+    GUARDA: 6,
+    BURBUJA: -3.9,
+    FLOTA: 70,
+    FLOTA_CAIDA: 0.75,
+    AGUA_GRAV: 0.07,
+    AGUA_CAIDA: 1.3,
+    AGUA_CORRE: 1.75,
+    BRAZADA: -2.9,
+    SALE_AGUA: -5.4,
+    HONGO: -8.7,
+    CORRIENTE: 0.5,
+    CORRIENTE_MAX: -3.3,
+    ZUMBIDO_R: 46,
+    ZUMBIDO_CD: 34,
+    MUERTO: 55
+  };
+  var LETRA = { "#": B.PISO, "=": B.TABLON, "%": B.PLANO, "~": B.AGUA, "^": B.ESTATICA, "b": B.HONGO };
+  function crearMundo(nivel, o = {}) {
+    const filas = nivel.filas, H = filas.length, W = Math.max(...filas.map((f) => f.length));
+    const m = {
+      nivel,
+      W,
+      H,
+      t: 0,
+      eventos: [],
+      tiles: new Uint8Array(W * H),
+      rotos: /* @__PURE__ */ new Set(),
+      gotas: [],
+      guinos: [],
+      sesiones: [],
+      zonas: [],
+      corrientes: [],
+      salida: null,
+      inicio: null,
+      plataformas: (nivel.plataformas || []).map((q2, i) => ({ id: i, ...q2 })),
+      burbujeros: (nivel.burbujeros || []).map((q2, i) => ({ id: i, ...q2 })),
+      planitos: (nivel.planitos || []).map((q2, i) => ({ id: i, ...q2 })),
+      restaurados: /* @__PURE__ */ new Set(),
+      habil: Object.assign({}, nivel.habil || {}, o.habil || {}),
+      juntadas: new Set(o.juntadas || [])
+    };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const c = filas[y][x] || " ";
+      if (LETRA[c] != null) m.tiles[y * W + x] = LETRA[c];
+      const px2 = x * T2 + T2 / 2, py = y * T2 + T2;
+      if (c === "o") m.gotas.push({ id: `${nivel.id}:g${x},${y}`, x: px2, y: py - 8 });
+      else if (c === "G") m.guinos.push({ id: `${nivel.id}:G${x},${y}`, x: px2, y: py - 8 });
+      else if (c === "S") m.sesiones.push({ id: `S${x}`, x: px2, y: py });
+      else if (c === "N") m.inicio = { x: px2, y: py };
+      else if (c === "F") m.salida = { x: px2, y: py };
+      else if (c === "w") m.corrientes.push({ x, y });
+    }
+    for (const z of nivel.zonas || []) m.zonas.push({ ...z });
+    m.corriente = new Uint8Array(W * H);
+    for (const q2 of m.corrientes) m.corriente[q2.y * W + q2.x] = 1;
+    const en = o.en || m.inicio || { x: 32, y: 32 };
+    m.p = nuevoNick(en);
+    m.p.checkpoint = { x: en.x, y: en.y, id: o.en && o.en.id };
+    m.gotas = m.gotas.filter((g) => !m.juntadas.has(g.id));
+    m.guinos = m.guinos.filter((g) => !m.juntadas.has(g.id));
+    for (const id of o.rotos || []) m.rotos.add(id);
+    for (const z of m.zonas) if (en.x > z.x0 && o.en) z.hecha = true;
+    return m;
+  }
+  function nuevoNick(en) {
+    return {
+      x: en.x,
+      y: en.y,
+      vx: 0,
+      vy: 0,
+      w: K.ANCHO,
+      h: K.ALTO,
+      dir: 1,
+      enSuelo: false,
+      coyote: 0,
+      guarda: 0,
+      cortado: true,
+      tAire: 0,
+      burbujaUsada: false,
+      flota: 0,
+      flotando: false,
+      enAgua: false,
+      brazada: 0,
+      enBurbuja: null,
+      zumbidoCd: 0,
+      zumbido: 0,
+      muerto: false,
+      tMuerto: 0,
+      sobre: null,
+      saltoRecien: false
+    };
+  }
+  function baldosa(m, tx, ty) {
+    if (tx < 0 || tx >= m.W) return B.PISO;
+    if (ty < 0) return B.VACIO;
+    if (ty >= m.H) return B.VACIO;
+    const b = m.tiles[ty * m.W + tx];
+    if (b === B.PLANO && m.rotos.has(ty * m.W + tx)) return B.VACIO;
+    return b;
+  }
+  var solida = (b) => b === B.PISO || b === B.PLANO || b === B.HONGO;
+  function chocaCaja(m, x0, y0, x1, y1) {
+    for (let ty = Math.floor(y0 / T2); ty <= Math.floor((y1 - 1e-3) / T2); ty++) for (let tx = Math.floor(x0 / T2); tx <= Math.floor((x1 - 1e-3) / T2); tx++) if (solida(baldosa(m, tx, ty))) return true;
+    return false;
+  }
+  var cajaDe = (p, x, y) => [x - p.w / 2, y - p.h, x + p.w / 2, y];
+  function toca(m, p, tipo, achica = 2) {
+    const [x0, y0, x1, y1] = cajaDe(p, p.x, p.y);
+    for (let ty = Math.floor((y0 + achica) / T2); ty <= Math.floor((y1 - achica - 1e-3) / T2); ty++) for (let tx = Math.floor((x0 + achica) / T2); tx <= Math.floor((x1 - achica - 1e-3) / T2); tx++) if (baldosa(m, tx, ty) === tipo) return true;
+    return false;
+  }
+  function plataformaEn(q2, t) {
+    const u = (1 - Math.cos((t + (q2.fase || 0)) / q2.periodo * Math.PI * 2)) / 2;
+    return { x: q2.x0 + (q2.x1 - q2.x0) * u, y: q2.y0 + (q2.y1 - q2.y0) * u, w: q2.w, h: 6 };
+  }
+  function burbujasDe(q2, t) {
+    const r = [], vida = Math.floor(q2.sube / q2.vel);
+    for (let k = Math.floor((t - vida) / q2.cada); k <= Math.floor(t / q2.cada); k++) {
+      const nace = k * q2.cada + (q2.fase || 0);
+      if (nace > t || t - nace > vida) continue;
+      r.push({ id: `${q2.id}:${k}`, x: q2.x + Math.sin((t - nace) * 0.05 + k) * 3, y: q2.y - (t - nace) * q2.vel, r: q2.r || 14 });
+    }
+    return r;
+  }
+  function planitoEn(q2, t) {
+    const L = Math.abs(q2.x1 - q2.x0), per = L / (q2.vel || 0.6) * 2;
+    const k = (t + (q2.fase || 0)) % per / per;
+    const u = k < 0.5 ? k * 2 : 2 - k * 2;
+    return { x: q2.x0 + (q2.x1 - q2.x0) * u, y: q2.y, dir: k < 0.5 ? Math.sign(q2.x1 - q2.x0) : -Math.sign(q2.x1 - q2.x0), w: 14, h: 14 };
+  }
+  function evento(m, t, o) {
+    m.eventos.push(Object.assign({ t }, o || {}));
+  }
+  function paso(m, inp) {
+    const p = m.p;
+    m.t++;
+    if (p.muerto) {
+      p.tMuerto++;
+      return;
+    }
+    if (inp.saltoE) p.guarda = K.GUARDA;
+    else if (p.guarda > 0) p.guarda--;
+    if (p.zumbidoCd > 0) p.zumbidoCd--;
+    if (p.zumbido > 0) p.zumbido--;
+    if (inp.accionE && m.habil.zumbido && p.zumbidoCd === 0) zumbar(m, p);
+    if (p.enBurbuja) pasarEnBurbuja(m, p, inp);
+    else pasarNormal(m, p, inp);
+    revisar(m, p);
+  }
+  function zumbar(m, p) {
+    p.zumbido = 14;
+    p.zumbidoCd = K.ZUMBIDO_CD;
+    const cx = p.x, cy = p.y - p.h / 2, R = K.ZUMBIDO_R;
+    const rotos = [];
+    for (let ty = Math.floor((cy - R) / T2); ty <= Math.floor((cy + R) / T2); ty++) for (let tx = Math.floor((cx - R) / T2); tx <= Math.floor((cx + R) / T2); tx++) {
+      if (tx < 0 || ty < 0 || tx >= m.W || ty >= m.H) continue;
+      const i = ty * m.W + tx;
+      if (m.tiles[i] !== B.PLANO || m.rotos.has(i)) continue;
+      const dx = Math.max(tx * T2 - cx, 0, cx - (tx + 1) * T2), dy = Math.max(ty * T2 - cy, 0, cy - (ty + 1) * T2);
+      if (dx * dx + dy * dy <= R * R) {
+        m.rotos.add(i);
+        rotos.push([tx, ty]);
+      }
+    }
+    for (const q2 of m.planitos) {
+      if (m.restaurados.has(q2.id)) continue;
+      const e = planitoEn(q2, m.t);
+      if (Math.hypot(e.x - cx, e.y - e.h / 2 - cy) < R + 8) {
+        m.restaurados.add(q2.id);
+        evento(m, "restaura", { x: e.x, y: e.y - 7, id: q2.id });
+      }
+    }
+    evento(m, "zumbido", { x: cx, y: cy, rotos });
+  }
+  function pasarNormal(m, p, inp) {
+    const enAgua = toca(m, p, B.AGUA, 6);
+    if (enAgua !== p.enAgua) {
+      evento(m, enAgua ? "agua" : "saleAgua", { x: p.x, y: p.y });
+      p.enAgua = enAgua;
+      if (enAgua) {
+        p.burbujaUsada = false;
+        p.flota = 0;
+        p.vy *= 0.35;
+      }
+    }
+    const suelo = p.enSuelo;
+    const max = p.enAgua ? K.AGUA_CORRE : K.CORRE;
+    const meta = inp.x * max;
+    if (inp.x) p.dir = inp.x;
+    const acel = suelo ? inp.x ? K.ACEL : K.FRENO : inp.x ? K.ACEL_AIRE : K.FRENO_AIRE;
+    if (p.vx < meta) p.vx = Math.min(meta, p.vx + acel);
+    else if (p.vx > meta) p.vx = Math.max(meta, p.vx - acel);
+    if (suelo) {
+      p.coyote = K.COYOTE;
+      p.burbujaUsada = false;
+      p.tAire = 0;
+    } else {
+      if (p.coyote > 0) p.coyote--;
+      p.tAire++;
+    }
+    p.saltoRecien = false;
+    if (p.enAgua) {
+      if (p.brazada > 0) p.brazada--;
+      const cabezaAfuera = baldosa(m, Math.floor(p.x / T2), Math.floor((p.y - p.h + 4) / T2)) !== B.AGUA;
+      if (p.guarda > 0 && (cabezaAfuera || p.brazada === 0)) {
+        p.vy = cabezaAfuera ? K.SALE_AGUA : K.BRAZADA;
+        p.brazada = 9;
+        p.guarda = 0;
+        p.cortado = !cabezaAfuera;
+        evento(m, cabezaAfuera ? "salto" : "brazada", { x: p.x, y: p.y });
+      }
+      p.vy = Math.min(K.AGUA_CAIDA, p.vy + K.AGUA_GRAV);
+      if (p.vy < -3 && !cabezaAfuera) p.vy += 0.12;
+    } else {
+      if (p.guarda > 0 && (suelo || p.coyote > 0)) {
+        p.vy = K.SALTO;
+        p.guarda = 0;
+        p.coyote = 0;
+        p.cortado = false;
+        p.enSuelo = false;
+        p.saltoRecien = true;
+        evento(m, "salto", { x: p.x, y: p.y });
+      } else if (p.guarda > 0 && !suelo && m.habil.burbuja && !p.burbujaUsada) {
+        p.vy = K.BURBUJA;
+        p.burbujaUsada = true;
+        p.flota = K.FLOTA;
+        p.guarda = 0;
+        p.cortado = false;
+        evento(m, "burbuja", { x: p.x, y: p.y - p.h / 2 });
+      }
+      if (!inp.salto && p.vy < K.CORTE && !p.cortado) {
+        p.vy = K.CORTE;
+        p.cortado = true;
+      }
+      if (!inp.salto) p.cortado = true;
+      let g = K.GRAV;
+      if (inp.salto && Math.abs(p.vy) < 1.2) g *= K.CIMA;
+      p.flotando = false;
+      if (p.flota > 0) {
+        p.flota--;
+        if (inp.salto && p.vy > 0) {
+          p.flotando = true;
+          g = 0.05;
+        }
+      }
+      p.vy = Math.min(p.flotando ? K.FLOTA_CAIDA : K.CAIDA, p.vy + g);
+      const cx = Math.floor(p.x / T2), cy = Math.floor((p.y - p.h / 2) / T2);
+      if (cx >= 0 && cy >= 0 && cx < m.W && cy < m.H && m.corriente[cy * m.W + cx] && !suelo) p.vy = Math.max(K.CORRIENTE_MAX, p.vy - K.CORRIENTE - (p.flotando ? 0.1 : 0));
+      if (suelo && inp.y < 0 && inp.saltoE && p.sobre === "tablon") {
+        p.bajando = 10;
+        p.y += 2;
+        p.enSuelo = false;
+      }
+    }
+    if (p.bajando > 0) p.bajando--;
+    mover(m, p);
+  }
+  function pasarEnBurbuja(m, p, inp) {
+    const q2 = m.burbujeros[p.enBurbuja.q];
+    const b = burbujasDe(q2, m.t).find((x) => x.id === p.enBurbuja.id);
+    if (!b || inp.saltoE) {
+      p.enBurbuja = null;
+      p.salioDe = b ? b.id : p.salioDe;
+      p.vy = inp.saltoE ? K.SALTO * 0.9 : -1;
+      p.vx = inp.x * K.CORRE;
+      p.burbujaUsada = false;
+      p.cortado = false;
+      evento(m, "sale", { x: p.x, y: p.y - p.h / 2, salto: !!inp.saltoE });
+      return;
+    }
+    if (inp.x) p.dir = inp.x;
+    p.vx = 0;
+    p.vy = 0;
+    p.x = b.x;
+    p.y = b.y + p.h / 2 - 1;
+  }
+  function mover(m, p) {
+    const lleva = llevado(m, p);
+    if (lleva) {
+      p.x += lleva.dx;
+      p.y += lleva.dy;
+    }
+    let nx = p.x + p.vx;
+    const [, y0, , y1] = cajaDe(p, nx, p.y);
+    if (chocaCaja(m, nx - p.w / 2, y0, nx + p.w / 2, y1)) {
+      const paso2 = Math.sign(p.vx) * 0.25;
+      let k = 0;
+      while (k < 40 && !chocaCaja(m, p.x + paso2 - p.w / 2, y0, p.x + paso2 + p.w / 2, y1)) {
+        p.x += paso2;
+        k++;
+      }
+      nx = p.x;
+      p.vx = 0;
+    }
+    p.x = nx;
+    const antes = p.y;
+    let ny = p.y + p.vy;
+    p.enSuelo = false;
+    p.sobre = null;
+    if (p.vy < 0) {
+      if (chocaCaja(m, p.x - p.w / 2, ny - p.h, p.x + p.w / 2, ny)) {
+        let corrido = false;
+        for (const d of [1, -1, 2, -2, 3, -3, 4, -4]) if (!chocaCaja(m, p.x + d - p.w / 2, ny - p.h, p.x + d + p.w / 2, ny)) {
+          p.x += d;
+          corrido = true;
+          break;
+        }
+        if (!corrido) {
+          ny = Math.ceil((ny - p.h) / T2) * T2 + p.h;
+          p.vy = 0;
+          evento(m, "cabeza", { x: p.x, y: ny - p.h });
+        }
+      }
+    } else {
+      const piso = pisoEntre(m, p, antes, ny);
+      if (piso) {
+        const fuerte = p.vy;
+        ny = piso.y;
+        p.vy = 0;
+        p.enSuelo = true;
+        p.sobre = piso.que;
+        if (piso.que === "hongo") {
+          p.vy = K.HONGO;
+          p.enSuelo = false;
+          p.burbujaUsada = false;
+          p.cortado = true;
+          evento(m, "hongo", { x: p.x, y: ny });
+        } else if (fuerte > 2.4) evento(m, "aterriza", { x: p.x, y: ny, fuerza: fuerte });
+      }
+    }
+    p.y = ny;
+    if (p.enSuelo) {
+      p.flota = 0;
+      p.flotando = false;
+    }
+  }
+  function pisoEntre(m, p, y0, y1) {
+    let mejor = null;
+    const x0 = p.x - p.w / 2 + 0.5, x1 = p.x + p.w / 2 - 0.5;
+    for (let ty = Math.floor(y0 / T2); ty <= Math.floor(y1 / T2); ty++) {
+      const yt = ty * T2;
+      if (yt < y0 - 1e-3 || yt > y1 + 1e-3) continue;
+      for (let tx = Math.floor(x0 / T2); tx <= Math.floor(x1 / T2); tx++) {
+        const b = baldosa(m, tx, ty);
+        const vale = solida(b) || b === B.TABLON && !(p.bajando > 0);
+        if (vale && (!mejor || yt < mejor.y)) mejor = { y: yt, que: b === B.HONGO ? "hongo" : b === B.TABLON ? "tablon" : "piso" };
+      }
+    }
+    for (const q2 of m.plataformas) {
+      const a = plataformaEn(q2, m.t - 1), b = plataformaEn(q2, m.t);
+      if (x1 < b.x || x0 > b.x + b.w * T2) continue;
+      if (y0 <= a.y + 0.5 && y1 >= b.y - 0.5 && (!mejor || b.y < mejor.y)) mejor = { y: b.y, que: "plataforma", q: q2.id };
+    }
+    return mejor;
+  }
+  function llevado(m, p) {
+    if (p.sobre !== "plataforma") return null;
+    const x0 = p.x - p.w / 2, x1 = p.x + p.w / 2;
+    for (const q2 of m.plataformas) {
+      const a = plataformaEn(q2, m.t - 1), b = plataformaEn(q2, m.t);
+      if (x1 < a.x - 2 || x0 > a.x + a.w * T2 + 2) continue;
+      if (Math.abs(p.y - a.y) < 1.5) return { dx: b.x - a.x, dy: b.y - a.y };
+    }
+    return null;
+  }
+  function revisar(m, p) {
+    const cx = p.x, cy = p.y - p.h / 2;
+    for (const g of m.gotas) if (!g.tomada && Math.abs(g.x - cx) < 11 && Math.abs(g.y - cy) < 17) {
+      g.tomada = true;
+      m.juntadas.add(g.id);
+      evento(m, "gota", { x: g.x, y: g.y, id: g.id });
+    }
+    for (const g of m.guinos) if (!g.tomado && Math.abs(g.x - cx) < 12 && Math.abs(g.y - cy) < 18) {
+      g.tomado = true;
+      m.juntadas.add(g.id);
+      evento(m, "guino", { x: g.x, y: g.y, id: g.id });
+    }
+    for (const s of m.sesiones) if (p.checkpoint.id !== s.id && Math.abs(s.x - cx) < 12 && Math.abs(s.y - p.y) < 20) {
+      p.checkpoint = { x: s.x, y: s.y, id: s.id };
+      evento(m, "sesion", { x: s.x, y: s.y, id: s.id });
+    }
+    if (m.salida && !m.fin && Math.abs(m.salida.x - cx) < 14 && Math.abs(m.salida.y - p.y) < 30) {
+      m.fin = true;
+      evento(m, "fin");
+    }
+    for (const z of m.zonas) if (!z.hecha && cx >= z.x0 && cx <= z.x1 && (z.y0 == null || p.y >= z.y0 && p.y <= z.y1)) {
+      z.hecha = true;
+      const da = (m.nivel.da || {})[z.id];
+      if (da) Object.assign(m.habil, da);
+      evento(m, "zona", { id: z.id });
+    }
+    if (toca(m, p, B.ESTATICA, 3)) return morir(m, "estatica");
+    if (p.y - p.h > m.H * T2 + 40) return morir(m, "caida");
+    for (const q2 of m.planitos) {
+      if (m.restaurados.has(q2.id)) continue;
+      const e = planitoEn(q2, m.t);
+      const ox = Math.abs(e.x - cx) < (p.w + e.w) / 2 - 1, oy = p.y > e.y - e.h && p.y - p.h < e.y;
+      if (!ox || !oy) continue;
+      if (p.vy > 0.5 && p.y - e.y + e.h < 9) {
+        m.restaurados.add(q2.id);
+        p.vy = K.SALTO * 0.75;
+        p.cortado = false;
+        p.burbujaUsada = false;
+        evento(m, "restaura", { x: e.x, y: e.y - 7, id: q2.id, pisado: true });
+      } else return morir(m, "planito");
+    }
+    if (!p.enBurbuja) for (const q2 of m.burbujeros) for (const b of burbujasDe(q2, m.t)) {
+      if (b.id === p.salioDe) continue;
+      if (Math.hypot(b.x - cx, b.y - cy) < b.r + 4) {
+        p.enBurbuja = { q: q2.id, id: b.id };
+        p.vx = 0;
+        p.vy = 0;
+        evento(m, "entra", { x: b.x, y: b.y });
+        return;
+      }
+    }
+  }
+  function morir(m, causa) {
+    const p = m.p;
+    if (p.muerto) return;
+    p.muerto = true;
+    p.tMuerto = 0;
+    p.causa = causa;
+    p.enBurbuja = null;
+    evento(m, "muere", { causa, x: p.x, y: p.y - p.h / 2 });
+  }
+  function revivir(m) {
+    const c = m.p.checkpoint;
+    m.p = Object.assign(nuevoNick(c), { checkpoint: c });
+    m.fin = false;
+    evento(m, "revive", { x: c.x, y: c.y });
+  }
+
+  // brillo/js/niveles.js
+  function construir(W, H, dibujar) {
+    const g = Array.from({ length: H }, () => Array(W).fill(" "));
+    const M = {
+      W,
+      H,
+      put(x, y, c = "#") {
+        if (x >= 0 && y >= 0 && x < W && y < H) g[y][x] = c;
+      },
+      rect(x0, y0, x1, y1, c = "#") {
+        for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) M.put(x, y, c);
+      },
+      /* piso de x0 a x1 con la cara de arriba en la fila y (hasta abajo de todo) */
+      suelo(x0, x1, y, c = "#") {
+        M.rect(x0, y, x1, H - 1, c);
+      },
+      hueco(x0, x1, y0 = 0) {
+        M.rect(x0, y0, x1, H - 1, " ");
+      },
+      /* una fila de gotitas, o un arco de gotitas (para marcar un salto) */
+      gotas(x0, x1, y) {
+        for (let x = x0; x <= x1; x++) M.put(x, y, "o");
+      },
+      arco(x0, x1, y, alto) {
+        for (let x = x0; x <= x1; x++) {
+          const t = (x - x0) / Math.max(1, x1 - x0);
+          M.put(x, Math.round(y - Math.sin(t * Math.PI) * alto), "o");
+        }
+      }
+    };
+    dibujar(M);
+    return g.map((r) => r.join(""));
+  }
+  var px = (tx) => tx * T2;
+  var COLINA = (() => {
+    const W = 214, H = 26, P = 21;
+    const filas = construir(W, H, (m) => {
+      m.suelo(0, 29, P);
+      m.put(4, P - 1, "N");
+      m.gotas(12, 20, P - 2);
+      m.rect(24, P - 1, 25, P - 1);
+      m.arco(24, 29, P - 3, 2);
+      m.rect(30, P + 1, 36, H - 2, "~");
+      m.rect(30, H - 1, 36, H - 1);
+      m.arco(30, 36, P - 2, 3);
+      m.suelo(37, 53, P);
+      m.put(43, P - 1, "S");
+      m.rect(56, P - 5, 57, P - 1, "%");
+      m.suelo(54, 59, P);
+      m.gotas(58, 61, P - 2);
+      m.rect(60, P - 1, 61, P - 1);
+      m.suelo(62, 70, P - 3);
+      m.gotas(63, 69, P - 5);
+      m.suelo(71, 80, P);
+      m.put(75, P - 1, "b");
+      m.rect(71, P - 10, 77, P - 10, "=");
+      m.put(74, P - 11, "G");
+      m.gotas(72, 76, P - 12);
+      m.rect(81, P - 3, 83, P - 3, "=");
+      m.rect(85, P - 6, 87, P - 6, "=");
+      m.rect(89, P - 9, 91, P - 9, "=");
+      m.arco(81, 91, P - 5, 5);
+      m.suelo(81, 91, P);
+      m.suelo(93, 104, P - 9);
+      m.gotas(95, 103, P - 11);
+      m.suelo(105, 107, P - 6);
+      m.suelo(108, 110, P - 3);
+      m.suelo(111, 118, P);
+      m.put(114, P - 1, "S");
+      m.hueco(119, 136, 0);
+      m.suelo(137, 146, P - 4);
+      m.arco(120, 136, P - 6, 3);
+      m.suelo(147, 170, P - 4);
+      m.rect(152, P - 10, 158, P - 10, "%");
+      m.rect(152, P - 13, 152, P - 11, "%");
+      m.rect(158, P - 13, 158, P - 11, "%");
+      m.rect(152, P - 14, 158, P - 14, "%");
+      m.put(155, P - 11, "G");
+      m.rect(153, P - 7, 154, P - 7, "=");
+      m.rect(156, P - 8, 157, P - 8, "=");
+      m.rect(162, P - 7, 163, P - 5, "%");
+      m.gotas(164, 169, P - 6);
+      m.put(166, P - 5, "S");
+      m.suelo(171, 176, P - 7);
+      m.suelo(177, 180, P - 10);
+      m.rect(182, P - 12, 184, P - 12, "=");
+      m.rect(186, P - 14, 188, P - 14, "=");
+      m.suelo(190, W - 1, P - 14);
+      m.arco(177, 190, P - 13, 4);
+      m.put(200, P - 15, "F");
+      m.rect(106, P + 1, 107, P + 2, " ");
+      m.put(105, P + 2, "%");
+      m.put(106, P + 2, "G");
+    });
+    return {
+      id: "colina",
+      mundo: "colina",
+      filas,
+      plataformas: [
+        { x0: px(120), y0: px(P - 2), x1: px(126), y1: px(P - 2), w: 3, periodo: 250 },
+        { x0: px(129), y0: px(P - 1), x1: px(129), y1: px(P - 7), w: 3, periodo: 210, fase: 60 },
+        { x0: px(133), y0: px(P - 6), x1: px(133), y1: px(P - 6), w: 3, periodo: 100 }
+      ],
+      planitos: [
+        { x0: px(63) + 8, x1: px(69) + 8, y: px(P - 3), vel: 0.55 },
+        { x0: px(148) + 8, x1: px(160), y: px(P - 4), vel: 0.6 },
+        { x0: px(165), x1: px(170) + 8, y: px(P - 4), vel: 0.7, fase: 90 }
+      ],
+      zonas: [
+        { id: "tito", x0: px(47), x1: px(52) },
+        { id: "planito", x0: px(59), x1: px(61) },
+        { id: "cima", x0: px(192), x1: px(214) }
+      ],
+      /* lo que da la historia al pasar por una zona (la física lo sabe, así la máquina también) */
+      da: { tito: { zumbido: true } },
+      npcs: [{ id: "mora", x: px(9), y: px(P), mira: -1 }, { id: "tito", x: px(50), y: px(P), mira: -1 }]
+    };
+  })();
+  var NIVELES = { colina: COLINA };
+
+  // brillo/js/objetos.js
+  var cache2 = /* @__PURE__ */ new Map();
+  var hecho = (k, fn) => {
+    if (!cache2.has(k)) cache2.set(k, fn());
+    return cache2.get(k);
+  };
+  function gota(f) {
+    return hecho("gota" + f % 4, () => {
+      const L = new Lienzo(11, 14), R = RAMPA.cian;
+      const brillo = f % 4 / 4;
+      L.elipse(5.5, 8.5, 4.3, 4.6, pintura.aero(R, { bajo: 2, alto: 6, gorra: 0.55, punto: 0.08 }), R);
+      L.poligono([[5.5, 1], [2.2, 6.8], [8.8, 6.8]], (u, v) => R[v < 0 ? 6 : 5], R);
+      L.contorno({ tono: 1 });
+      const y = Math.round(3 + brillo * 9);
+      for (let x = 3; x < 9; x++) if (L.hay(x, y)) L.punto(x, y, "#ffffff");
+      return L.aCanvas();
+    });
+  }
+  function guino(f) {
+    return hecho("guino" + f % 2, () => {
+      const L = new Lienzo(20, 20), R = RAMPA.amarillo;
+      L.elipse(10, 10, 8.4, 8.4, pintura.aero(R, { bajo: 2, alto: 6, gorra: 0.5, punto: 0.06 }), R);
+      L.contorno({ tono: 1 });
+      const o = "#5a3c00";
+      L.punto(6, 8, o);
+      L.punto(7, 8, o);
+      L.punto(6, 9, o);
+      L.punto(7, 9, o);
+      if (f % 2) {
+        L.punto(12, 9, o);
+        L.punto(13, 8, o);
+        L.punto(14, 9, o);
+      } else {
+        L.punto(12, 8, o);
+        L.punto(13, 8, o);
+        L.punto(12, 9, o);
+        L.punto(13, 9, o);
+      }
+      for (let x = 6; x <= 14; x++) L.punto(x, 13 + (x > 7 && x < 13 ? 1 : 0), o);
+      L.punto(5, 12, o);
+      L.punto(15, 12, o);
+      return L.aCanvas();
+    });
+  }
+  function sesion(prendida, f) {
+    return hecho(`ses${prendida ? 1 : 0}${f % 4}`, () => {
+      const L = new Lienzo(24, 28), Bl = RAMPA.blanco;
+      L.caja(2, 2, 22, 18, 3, pintura.vertical(Bl, 7, 4), Bl);
+      L.caja(4, 4, 20, 15, 1, prendida ? (u, v) => mezclar(RAMPA.azul[4], RAMPA.azul[6], Math.max(0, -v) * 0.8) : () => RAMPA.gris[3], prendida ? RAMPA.azul : RAMPA.gris);
+      for (let i = 0; i < 6; i++) L.punto(6 + i, 5 + (5 - i), prendida ? "#e6f5ff" : RAMPA.gris[5]);
+      if (prendida) {
+        const V = RAMPA.verde;
+        [[9, 10], [10, 11], [11, 12], [12, 11], [13, 10], [14, 9], [15, 8]].forEach(([x, y]) => {
+          L.punto(x, y, V[5], V);
+          L.punto(x, y + 1, V[3], V);
+        });
+      }
+      L.caja(10, 18, 14, 23, 1, pintura.vertical(Bl, 6, 3), Bl);
+      L.caja(6, 23, 18, 26, 2, pintura.vertical(Bl, 7, 4), Bl);
+      L.contorno({ tono: 0 });
+      if (prendida && f % 4 === 0) L.punto(19, 3, "#ffffff");
+      return L.aCanvas();
+    });
+  }
+  var ORBES = {
+    colina: { rampa: RAMPA.verde, adentro: "hoja" },
+    arrecife: { rampa: RAMPA.cian, adentro: "perla" },
+    ciudad: { rampa: RAMPA.azul, adentro: "prisma" },
+    cielo: { rampa: RAMPA.rosa, adentro: "arco" },
+    aurora: { rampa: RAMPA.violeta, adentro: "estrella" }
+  };
+  function orbe(mundo, f) {
+    return hecho(`orbe${mundo}${f % 8}`, () => {
+      const O = ORBES[mundo] || ORBES.colina, R = O.rampa;
+      const L = new Lienzo(36, 36);
+      L.elipse(18, 18, 15.5, 15.5, pintura.aero(R, { bajo: 1, alto: 6, gorra: 0.55, punto: 0.05 }), R);
+      const a = f / 8 * Math.PI * 2;
+      if (O.adentro === "hoja") {
+        const V = RAMPA.verde, s = Math.cos(a);
+        L.elipse(18, 19, 6 * Math.max(0.3, Math.abs(s)), 8, pintura.esfera(V, { bajo: 3, alto: 7 }), V);
+        L.linea(18, 12, 18, 26, V[1], V);
+      } else {
+        L.elipse(18, 19, 5, 5, pintura.aero(RAMPA.blanco, { bajo: 3, alto: 7 }), RAMPA.blanco);
+      }
+      L.contorno({ tono: 0 });
+      const rx = Math.round(18 + Math.cos(a) * 10), ry = Math.round(18 + Math.sin(a) * 3 - 6);
+      L.punto(rx, ry, "#ffffff");
+      L.punto(rx + 1, ry, "#ffffff");
+      return L.aCanvas();
+    });
+  }
+  function plataforma(w) {
+    return hecho("plat" + w, () => {
+      const L = new Lienzo(w * 16, 8), R = RAMPA.cian;
+      L.caja(0, 0, w * 16, 7, 3, (u, v) => v < -0.5 ? R[7] : v < 0 ? R[6] : v < 0.5 ? R[5] : R[4], R);
+      for (let x = 4; x < w * 16 - 4; x += 9) L.punto(x, 2, "#ffffff");
+      L.contorno({ tono: 2 });
+      return L.aCanvas();
+    });
+  }
+  function tablon(izq, der) {
+    return hecho(`tab${izq ? 1 : 0}${der ? 1 : 0}`, () => {
+      const L = new Lienzo(16, 7), R = RAMPA.cian;
+      L.caja(izq ? 1 : 0, 0, der ? 15 : 16, 5, izq || der ? 2 : 0, (u, v) => v < -0.4 ? R[7] : v < 0.3 ? R[6] : R[5], R);
+      if (izq) L.punto(4, 1, "#ffffff");
+      L.contorno({ tono: 3 });
+      return L.aCanvas();
+    });
+  }
+  function hongo(f) {
+    return hecho("hongo" + f, () => {
+      const L = new Lienzo(20, 18), R = RAMPA.rosa, ap = [1, 0.7, 0.85, 1.1][f % 4];
+      L.caja(7, 9, 13, 17, 2, pintura.vertical(RAMPA.blanco, 7, 4), RAMPA.blanco);
+      L.elipse(10, 17 - 8 * ap, 9, 7 * ap, (u, v) => v > 0.35 ? null : pintura.aero(R, { bajo: 2, alto: 6, gorra: 0.5 })(u, v), R);
+      for (const [x, y] of [[6, -5], [11, -6], [14, -3]]) L.elipse(x, 17 - 8 * ap + y * ap + 2, 1.5, 1.2, "#ffffff", RAMPA.blanco);
+      L.contorno({ tono: 0 });
+      return L.aCanvas();
+    });
+  }
+  function planito(f, dir) {
+    return hecho(`plan${f % 2}${dir > 0 ? 1 : 0}`, () => {
+      const [c, g] = lienzo2d(16, 16);
+      const bajo = f % 2;
+      g.fillStyle = "#8e949c";
+      g.fillRect(1, 2 + bajo, 14, 14 - bajo);
+      g.fillStyle = "#7a8088";
+      g.fillRect(1, 15, 14, 1);
+      g.fillStyle = "#4f545b";
+      const ox = dir > 0 ? 2 : 0;
+      g.fillRect(4 + ox, 6 + bajo, 2, 3);
+      g.fillRect(9 + ox, 6 + bajo, 2, 3);
+      g.fillRect(5 + ox, 11 + bajo, 5, 1);
+      return c;
+    });
+  }
+  function bloquePlano(f) {
+    return hecho("bloq" + (f || 0), () => {
+      const [c, g] = lienzo2d(16, 16);
+      g.fillStyle = "#9aa0a8";
+      g.fillRect(0, 0, 16, 16);
+      g.fillStyle = "#868c94";
+      g.fillRect(0, 15, 16, 1);
+      g.fillRect(15, 0, 1, 16);
+      g.fillStyle = "#aab0b7";
+      g.fillRect(0, 0, 15, 1);
+      g.fillRect(0, 0, 1, 15);
+      return c;
+    });
+  }
+  function estatica(g, x, y, f) {
+    for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j += 2) {
+      const n = ((x * 31 + i * 7 + j * 13 + f * 17) * 2654435761 >>> 0) / 4294967296;
+      g.fillStyle = n < 0.33 ? "#5c6068" : n < 0.66 ? "#8a8f97" : "#b5bac1";
+      g.fillRect(x + i, y + j, 1, 2);
+    }
+  }
+
+  // brillo/js/juego.js
+  var suave = (k, dt) => 1 - Math.pow(k, dt * 60);
+  var Nivel = class {
+    constructor(id, o = {}) {
+      this.id = id;
+      const N = this.N = NIVELES[id];
+      this.m = crearMundo(N, o);
+      this.fondo = new Fondo(N.mundo, 7);
+      const m = this.m;
+      this.capa = pintarNivel(m.W, m.H, (x, y) => m.tiles[y * m.W + x] === B.PISO, N.estilo || "colina");
+      this.encima = [];
+      for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) {
+        const b = m.tiles[y * m.W + x];
+        if (b === B.TABLON || b === B.PLANO || b === B.ESTATICA || b === B.HONGO) this.encima.push({ x, y, b, i: y * m.W + x });
+      }
+      this.agua = [];
+      for (let y = 0; y < m.H; y++) {
+        let a = -1;
+        for (let x = 0; x <= m.W; x++) {
+          const es = x < m.W && m.tiles[y * m.W + x] === B.AGUA;
+          if (es && a < 0) a = x;
+          if (!es && a >= 0) {
+            this.agua.push({ x0: a, x1: x, y, sup: y === 0 || m.tiles[(y - 1) * m.W + a] !== B.AGUA });
+            a = -1;
+          }
+        }
+      }
+      this.npcs = (N.npcs || []).map((v) => ({ ...v, anim: "quieto", f: 0, habla: false, visible: v.visible !== false }));
+      this.cam = { x: 0, y: 0 };
+      this.mira = 0;
+      this.burbujas = new BurbujasAmbiente(N.burbujas ?? 34, 11);
+      this.pasto = pastoFrente(900, 5);
+      this.fx = new Destellos();
+      this.ondas = [];
+      this.trozos = [];
+      this.letreros = [];
+      this.pops = [];
+      this.t = 0;
+      this.sacudon = 0;
+      this.hongoAplaste = /* @__PURE__ */ new Map();
+      this.quieto = false;
+      this.alEvento = null;
+      this.parpado = 0;
+      this.tParpado = 2;
+      this.fase = 0;
+      this.tAterriza = 0;
+      this.camara(0, true);
+    }
+    /* ---------------- un paso de física (60 por segundo) ---------------- */
+    paso(inp) {
+      const m = this.m;
+      if (this.quieto) return;
+      paso(m, this.entrada ? this.entrada(m.p) : inp || NADA);
+      if (m.p.muerto && m.p.tMuerto > K.MUERTO) revivir(m);
+      for (const e of m.eventos) this.efecto(e);
+      m.eventos.length = 0;
+    }
+    efecto(e) {
+      const m = this.m, p = m.p;
+      switch (e.t) {
+        case "zumbido":
+          this.ondas.push({ x: e.x, y: e.y, t: 0 });
+          this.sacudon = Math.max(this.sacudon, 0.25);
+          for (const [tx, ty] of e.rotos) this.romper(tx, ty);
+          break;
+        case "restaura":
+          this.pops.push({ x: e.x, y: e.y, t: 0 });
+          this.fx.soltar(e.x, e.y, 12, { v: 70, col: "#ffffff" });
+          break;
+        case "gota":
+          this.fx.soltar(e.x, e.y, 5, { v: 35, col: "#c8f6fd", tam: 1 });
+          this.letreros.push({ x: e.x, y: e.y - 6, t: 0, txt: "+1" });
+          break;
+        case "guino":
+          this.fx.soltar(e.x, e.y, 18, { v: 80, col: "#fff5b8" });
+          this.ondas.push({ x: e.x, y: e.y, t: 0, dorada: true });
+          break;
+        case "sesion":
+          this.fx.soltar(e.x, e.y - 14, 14, { v: 60, col: "#a6ee6a" });
+          break;
+        case "hongo":
+          this.hongoAplaste.set(Math.floor(e.x / T2), 12);
+          break;
+        case "aterriza":
+          this.tAterriza = 0.1;
+          break;
+        case "muere":
+          this.sacudon = 0.3;
+          break;
+        case "revive":
+          this.fx.soltar(e.x, e.y - 14, 16, { v: 60, col: "#8cc8ff" });
+          break;
+        case "agua":
+        case "saleAgua":
+          this.fx.soltar(e.x, Math.floor(e.y / T2) * T2, 10, { v: 55, col: "#c8f6fd", sube: 40, tam: 1 });
+          break;
+        case "burbuja":
+        case "entra":
+        case "sale":
+          this.fx.soltar(e.x, e.y, 6, { v: 30, col: "#ffffff", tam: 1 });
+          break;
+      }
+      if (this.alEvento) this.alEvento(e, this);
+    }
+    /* un bloque plano se rompe: los pedazos grises saltan y se vuelven burbujas de colores */
+    romper(tx, ty) {
+      for (let i = 0; i < 6; i++) this.trozos.push({ x: tx * T2 + 4 + i % 3 * 4, y: ty * T2 + 4 + Math.floor(i / 3) * 6, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 80, t: 0, col: ["#ff82ba", "#6fd845", "#55a5fb", "#ffdb2e", "#a67bfb", "#4fd8f2"][i] });
+    }
+    /* ---------------- la cámara ---------------- */
+    camara(dt, ya) {
+      const p = this.m.p, m = this.m;
+      const w = this.w || 640, h = this.h || 360;
+      this.mira += ((Math.abs(p.vx) > 0.6 ? p.dir * 46 : this.mira * 0.9 / 46 * 46) - this.mira) * (ya ? 1 : suave(0.965, dt));
+      let tx = p.x - w / 2 + this.mira, ty = p.y - h * 0.6;
+      if (this.encuadre) {
+        tx = this.encuadre.x - w / 2;
+        ty = this.encuadre.y - h / 2;
+      }
+      tx = Math.max(0, Math.min(m.W * T2 - w, tx));
+      ty = Math.max(0, Math.min(m.H * T2 - h, ty));
+      if (m.H * T2 < h) ty = (m.H * T2 - h) / 2;
+      const k = ya ? 1 : suave(this.encuadre ? 0.95 : 0.88, dt);
+      this.cam.x += (tx - this.cam.x) * k;
+      this.cam.y += (ty - this.cam.y) * (ya ? 1 : suave(0.92, dt));
+    }
+    /* ---------------- lo que se anima con el tiempo real ---------------- */
+    cuadro(dt) {
+      this.t += dt;
+      this.camara(dt);
+      this.fx.pasar(dt);
+      for (const o of this.ondas) o.t += dt;
+      this.ondas = this.ondas.filter((o) => o.t < 0.5);
+      for (const q2 of this.trozos) {
+        q2.t += dt;
+        q2.x += q2.vx * dt;
+        q2.y += q2.vy * dt;
+        q2.vy += 300 * dt;
+      }
+      this.trozos = this.trozos.filter((q2) => q2.t < 1.1);
+      for (const q2 of this.letreros) q2.t += dt;
+      this.letreros = this.letreros.filter((q2) => q2.t < 0.8);
+      for (const q2 of this.pops) q2.t += dt;
+      this.pops = this.pops.filter((q2) => q2.t < 1.4);
+      this.sacudon = Math.max(0, this.sacudon - dt);
+      this.tAterriza -= dt;
+      for (const [k, v] of this.hongoAplaste) {
+        if (v <= 0) this.hongoAplaste.delete(k);
+        else this.hongoAplaste.set(k, v - 1);
+      }
+      this.tParpado -= dt;
+      if (this.tParpado < 0) {
+        this.parpado = 0.12;
+        this.tParpado = 2 + Math.random() * 3;
+      }
+      if (this.parpado > 0) this.parpado -= dt;
+      const p = this.m.p;
+      this.fase += Math.abs(p.vx) * dt * 60;
+    }
+    /* qué dibujo le toca a Nick */
+    poseNick() {
+      const p = this.m.p, t = this.t;
+      if (p.muerto) return ["gris", "triste", Math.floor(t * 4)];
+      if (p.enBurbuja || p.flotando) return ["nick", "flota", Math.floor(t * 6)];
+      if (p.zumbido > 0) return ["nick", "zumbido", Math.floor(t * 30)];
+      if (p.enAgua) return ["nick", "nada", Math.floor(t * 8)];
+      if (!p.enSuelo) return ["nick", p.vy < 0 ? "salta" : "cae", Math.floor(t * 8)];
+      if (this.tAterriza > 0) return ["nick", "aterriza", 0];
+      if (Math.abs(p.vx) > 0.4) return ["nick", "corre", Math.floor(this.fase / 7)];
+      if (this.parpado > 0) return ["nick", "parpadea", 0];
+      return ["nick", this.gestoNick || "quieto", Math.floor(t * 6)];
+    }
+    /* ---------------- dibujar ---------------- */
+    dibujar(g, w, h) {
+      this.w = w;
+      this.h = h;
+      const m = this.m, t = this.t;
+      const sac = this.sacudon > 0 ? Math.round((Math.random() - 0.5) * this.sacudon * 16) : 0;
+      const cam = { x: Math.round(this.cam.x) + sac, y: Math.round(this.cam.y) };
+      this.fondo.atras(g, cam, t, w, h, m.H * T2 - h);
+      this.burbujas.dibujar(g, cam, t, w, h, "atras");
+      this.capa.dibujar(g, cam, w, h);
+      const X = (x) => Math.round(x - cam.x), Y = (y) => Math.round(y - cam.y);
+      const f = Math.floor(t * 8);
+      for (const q2 of this.encima) {
+        const x = q2.x * T2 - cam.x, y = q2.y * T2 - cam.y;
+        if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
+        if (q2.b === B.TABLON) {
+          const izq = baldosa(m, q2.x - 1, q2.y) !== B.TABLON, der = baldosa(m, q2.x + 1, q2.y) !== B.TABLON;
+          g.drawImage(tablon(izq, der), Math.round(x), Math.round(y));
+        } else if (q2.b === B.PLANO) {
+          if (!m.rotos.has(q2.i)) g.drawImage(bloquePlano(), Math.round(x), Math.round(y));
+        } else if (q2.b === B.ESTATICA) estatica(g, Math.round(x), Math.round(y), f);
+        else if (q2.b === B.HONGO) {
+          const a = this.hongoAplaste.get(q2.x) || 0;
+          g.drawImage(hongo(a > 8 ? 1 : a > 4 ? 2 : a > 0 ? 3 : 0), Math.round(x - 2), Math.round(y - 2));
+        }
+      }
+      for (const q2 of m.plataformas) {
+        const a = plataformaEn(q2, m.t);
+        g.drawImage(plataforma(q2.w), X(a.x), Y(a.y));
+      }
+      for (const q2 of m.burbujeros) {
+        g.fillStyle = "#e6eff7";
+        g.fillRect(X(q2.x - 8), Y(q2.y + 4), 16, 6);
+        for (const b of burbujasDe(q2, m.t)) {
+          const img = burbuja(b.r);
+          g.globalAlpha = 0.9;
+          g.drawImage(img, X(b.x - img.width / 2), Y(b.y - img.height / 2));
+          g.globalAlpha = 1;
+        }
+      }
+      for (const q2 of m.gotas) if (!q2.tomada) g.drawImage(gota(f + (q2.x >> 4)), X(q2.x - 5), Y(q2.y - 7 + Math.sin(t * 3 + q2.x * 0.1) * 1.5));
+      for (const q2 of m.guinos) if (!q2.tomado) {
+        const img = guino(Math.floor(t * 1.5) % 3 === 0 ? 1 : 0);
+        g.drawImage(img, X(q2.x - 10), Y(q2.y - 10 + Math.sin(t * 2.2) * 2));
+      }
+      for (const s of m.sesiones) g.drawImage(sesion(m.p.checkpoint.id === s.id, f), X(s.x - 12), Y(s.y - 28));
+      if (m.salida) {
+        const img = orbe(this.N.mundo, Math.floor(t * 6));
+        g.drawImage(img, X(m.salida.x - 18), Y(m.salida.y - 44 + Math.sin(t * 1.6) * 3));
+      }
+      for (const q2 of m.planitos) {
+        if (m.restaurados.has(q2.id)) continue;
+        const e = planitoEn(q2, m.t);
+        g.drawImage(planito(Math.floor(m.t / 12), e.dir), X(e.x - 8), Y(e.y - 16));
+      }
+      for (const v of this.npcs) if (v.visible) g.drawImage(cuadro(v.id, v.anim, Math.floor(t * (v.anim === "habla" ? 8 : 6)), v.mira < 0), X(v.x - 15), Y(v.y - 35));
+      const p = m.p;
+      const [quien, anim, fr] = this.poseNick();
+      const muerto = p.muerto;
+      if (!muerto || p.tMuerto < 40) {
+        g.globalAlpha = muerto ? Math.max(0, 1 - p.tMuerto / 40) : 1;
+        g.drawImage(cuadro(quien, anim, fr, p.dir < 0), X(p.x - 15), Y(p.y - 35 + (muerto ? -p.tMuerto * 0.3 : 0)));
+        g.globalAlpha = 1;
+      }
+      if (p.flotando || p.enBurbuja) {
+        const img = burbuja(p.enBurbuja ? 22 : 19);
+        g.globalAlpha = 0.85;
+        g.drawImage(img, X(p.x - img.width / 2), Y(p.y - p.h / 2 - img.height / 2 - 2));
+        g.globalAlpha = 1;
+      }
+      for (const o of this.ondas) {
+        const r = 6 + o.t * (o.dorada ? 90 : 140), a = 1 - o.t / 0.5;
+        g.globalAlpha = a * 0.9;
+        g.strokeStyle = o.dorada ? "#fff5b8" : "#c9e7ff";
+        g.lineWidth = 2;
+        g.beginPath();
+        g.arc(X(o.x), Y(o.y), r, 0, Math.PI * 2);
+        g.stroke();
+        g.globalAlpha = a * 0.5;
+        g.beginPath();
+        g.arc(X(o.x), Y(o.y), r * 0.7, 0, Math.PI * 2);
+        g.stroke();
+        g.globalAlpha = 1;
+      }
+      for (const q2 of this.trozos) {
+        const k = Math.min(1, q2.t / 0.5);
+        if (k < 1) {
+          g.fillStyle = "#9aa0a8";
+          g.fillRect(X(q2.x), Y(q2.y), 4, 4);
+        }
+        const img = burbuja(3 + k * 2);
+        g.globalAlpha = k * (1 - Math.max(0, q2.t - 0.8) / 0.3);
+        g.drawImage(img, X(q2.x - img.width / 2), Y(q2.y - img.height / 2));
+        g.globalAlpha = 1;
+        if (k >= 1) {
+          g.fillStyle = q2.col;
+          g.globalAlpha = 0.5;
+          g.fillRect(X(q2.x) - 1, Y(q2.y) - 1, 2, 2);
+          g.globalAlpha = 1;
+        }
+      }
+      for (const q2 of this.pops) {
+        for (let i = 0; i < 7; i++) {
+          const a = i / 7 * Math.PI * 2, r = 4 + q2.t * 30;
+          const img = burbuja(2 + i % 3);
+          g.globalAlpha = Math.max(0, 1 - q2.t / 1.4);
+          g.drawImage(img, X(q2.x + Math.cos(a) * r - img.width / 2), Y(q2.y + Math.sin(a) * r * 0.6 - q2.t * 40 - img.height / 2));
+        }
+        g.globalAlpha = 1;
+      }
+      this.fx.dibujar(g, cam);
+      g.font = "bold 8px sans-serif";
+      g.textAlign = "center";
+      for (const q2 of this.letreros) {
+        g.globalAlpha = 1 - q2.t / 0.8;
+        g.fillStyle = "#ffffff";
+        g.fillText(q2.txt, X(q2.x), Y(q2.y - q2.t * 20));
+      }
+      g.globalAlpha = 1;
+      for (const a of this.agua) {
+        const x0 = X(a.x0 * T2), x1 = X(a.x1 * T2), y0 = Y(a.y * T2);
+        if (x1 < 0 || x0 > w || y0 > h || y0 < -T2) continue;
+        g.fillStyle = a.sup ? "rgba(60,190,240,0.38)" : "rgba(30,150,220,0.45)";
+        g.fillRect(x0, y0, x1 - x0, T2);
+        if (a.sup) {
+          for (let x = x0; x < x1; x++) {
+            const o = Math.round(Math.sin((x + cam.x) * 0.18 + t * 3) * 1.2 + Math.sin((x + cam.x) * 0.07 - t * 1.7));
+            g.fillStyle = "rgba(230,250,255,0.85)";
+            g.fillRect(x, y0 + o, 1, 1);
+            g.fillStyle = "rgba(160,230,255,0.5)";
+            g.fillRect(x, y0 + o + 1, 1, 2);
+          }
+        } else {
+          for (let x = x0; x < x1; x += 2) for (let y = y0; y < y0 + T2; y += 2) {
+            const c = Math.sin((x + cam.x) * 0.23 + t * 1.3) + Math.sin((y + cam.y) * 0.31 - t * 1.1) + Math.sin((x + y + cam.x) * 0.11 + t);
+            if (c > 2.2) {
+              g.fillStyle = "rgba(210,250,255,0.35)";
+              g.fillRect(x, y, 2, 1);
+            }
+          }
+        }
+      }
+      const per = this.pasto.width, ox = -(cam.x * 1.25 % per + per) % per;
+      const yp = h - this.pasto.height + 30 + Math.round((m.H * T2 - h - cam.y) * 1.25);
+      if (yp < h) for (let x = Math.round(ox); x < w; x += per) g.drawImage(this.pasto, x, yp);
+      this.burbujas.dibujar(g, cam, t, w, h, "frente");
+      this.camVista = cam;
+    }
+    /* dónde está algo del mundo en la pantalla del juego */
+    aPantalla(x, y) {
+      const c = this.camVista || this.cam;
+      return { x: x - c.x, y: y - c.y };
+    }
+  };
+
+  // brillo/js/prueba-nivel.js
+  function probarNivel() {
+    const q2 = new URLSearchParams(location.search);
+    Pantalla.iniciar();
+    const post = new Post(document.getElementById("c"));
+    const habil = {};
+    for (const h of (q2.get("habil") || "").split(",")) if (h) habil[h] = true;
+    const N = new Nivel(q2.get("nivel") || "colina", { habil, en: q2.has("x") ? { x: +q2.get("x"), y: +q2.get("y") } : null });
+    let [base, g] = lienzo2d(Pantalla.w, Pantalla.h);
+    const teclas = {}, antes = {};
+    addEventListener("keydown", (e) => {
+      teclas[e.code] = true;
+      if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
+    });
+    addEventListener("keyup", (e) => {
+      teclas[e.code] = false;
+    });
+    const leer = () => {
+      const s = !!(teclas.KeyZ || teclas.Space), a = !!teclas.KeyX;
+      const r = { x: (teclas.ArrowRight ? 1 : 0) - (teclas.ArrowLeft ? 1 : 0), y: (teclas.ArrowUp ? 1 : 0) - (teclas.ArrowDown ? 1 : 0), salto: s, saltoE: s && !antes.s, accion: a, accionE: a && !antes.a };
+      antes.s = s;
+      antes.a = a;
+      return r;
+    };
+    let acum = 0, ult = 0;
+    window.__N = N;
+    window.__paso = (inp, n = 1) => {
+      for (let i = 0; i < n; i++) N.paso(inp);
+    };
+    const cuadroN = (ts) => {
+      requestAnimationFrame(cuadroN);
+      const dt = ult ? Math.min(0.1, (ts - ult) / 1e3) : DT;
+      ult = ts;
+      const w = Pantalla.w, h = Pantalla.h;
+      if (base.width !== w || base.height !== h) {
+        [base, g] = lienzo2d(w, h);
+        post.tamano(w, h, Pantalla.escala, Pantalla.lienzo);
+      }
+      if (!window.__congelado) {
+        acum += dt;
+        let n = 0;
+        while (acum >= DT && n < 5) {
+          N.paso(leer());
+          acum -= DT;
+          n++;
+        }
+      }
+      N.cuadro(dt);
+      N.dibujar(g, w, h);
+      const F = N.fondo;
+      post.mostrar(base, { ...F.post, sol: F.sol, grado: F.grado, t: N.t });
+    };
+    post.tamano(Pantalla.w, Pantalla.h, Pantalla.escala, Pantalla.lienzo);
+    requestAnimationFrame(cuadroN);
+    window.__listo = true;
+  }
+
+  // brillo/js/main.js
+  var q = new URLSearchParams(location.search);
+  if (q.get("prueba") === "sprites") probarSprites();
+  else if (q.get("prueba") === "fondo") probarFondo();
+  else if (q.get("prueba") === "nivel") probarNivel();
+})();
+
+</script>
+</body>
+</html>
