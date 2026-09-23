@@ -12,7 +12,7 @@
    Todo se maneja con teclado, mando, mouse o dedos.
    ========================================================================== */
 import { TX, tr, IDIOMAS, TEXTOS, MUNDOS, EMO } from './textos.js';
-import { cuadro } from './personajes.js';
+import { cuadro, plano } from './personajes.js';
 import { orbe, guino as dibGuino, gota as dibGota, emoticon } from './objetos.js';
 import { burbuja } from './efectos.js';
 
@@ -22,7 +22,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 /* un canvas de pixel art a imagen (para los avatares y los íconos) */
 const png = new Map();
 export function imagen(clave, fn) { if (!png.has(clave)) png.set(clave, fn().toDataURL()); return png.get(clave); }
-export const avatar = (quien) => imagen('av' + quien, () => cuadro(quien === 'plano' ? 'gris' : quien, 'quieto', 0, false));
+export const avatar = (quien) => imagen('av' + quien, () => (quien === 'plano' ? plano(0) : cuadro(quien, 'quieto', 0, false)));
 /* los emoticones de la charla: :) ;) :D <3 */
 const CARITAS = { ':)': 'sonrisa', ';)': 'guino', ':D': 'risa', '<3': 'corazon' };
 function conCaritas(t) {

@@ -41,6 +41,8 @@ export class Nivel {
     this.ondas = []; this.trozos = []; this.letreros = []; this.pops = [];
     this.t = 0; this.sacudon = 0; this.hongoAplaste = new Map();
     this.quieto = false; this.alEvento = null;
+    /* los que aparecen en las escenas (el Plano): { x, y (los pies), img(t), visible } */
+    this.actores = []; this.orbeTomado = false;
     this.parpado = 0; this.tParpado = 2;
     this.fase = 0; this.tAterriza = 0;
     this.camara(0, true);
@@ -163,11 +165,12 @@ export class Nivel {
     for (const q of m.gotas) if (!q.tomada) g.drawImage(gota(f + (q.x >> 4)), X(q.x - 5), Y(q.y - 7 + Math.sin(t * 3 + q.x * 0.1) * 1.5));
     for (const q of m.guinos) if (!q.tomado) { const img = guino(Math.floor(t * 1.5) % 3 === 0 ? 1 : 0); g.drawImage(img, X(q.x - 10), Y(q.y - 10 + Math.sin(t * 2.2) * 2)); }
     for (const s of m.sesiones) g.drawImage(sesion(m.p.checkpoint.id === s.id, f), X(s.x - 12), Y(s.y - 28));
-    if (m.salida) { const img = orbe(this.N.mundo, Math.floor(t * 6)); g.drawImage(img, X(m.salida.x - 18), Y(m.salida.y - 44 + Math.sin(t * 1.6) * 3)); }
+    if (m.salida && !this.orbeTomado) { const img = orbe(this.N.mundo, Math.floor(t * 6)); g.drawImage(img, X(m.salida.x - 18), Y(m.salida.y - 44 + Math.sin(t * 1.6) * 3)); }
     /* los planitos */
     for (const q of m.planitos) { if (m.restaurados.has(q.id)) continue; const e = planitoEn(q, m.t); g.drawImage(planito(Math.floor(m.t / 12), e.dir), X(e.x - 8), Y(e.y - 16)); }
     /* los vecinos */
     for (const v of this.npcs) if (v.visible) g.drawImage(cuadro(v.id, v.anim, Math.floor(t * (v.anim === 'habla' ? 8 : 6)), v.mira < 0), X(v.x - 15), Y(v.y - 35));
+    for (const a of this.actores) if (a.visible !== false) { const img = a.img(t); g.drawImage(img, X(a.x - img.width / 2), Y(a.y - img.height)); }
     /* Nick */
     const p = m.p;
     const [quien, anim, fr] = this.poseNick();

@@ -151,6 +151,7 @@ img.emo{width:1.2em;height:1.2em;vertical-align:-.2em;image-rendering:pixelated}
 
 /* ================= los avisos (abajo a la derecha) ================= */
 .avisos{position:absolute;right:calc(100% - var(--lx) - var(--lw) + 2.5*var(--u));bottom:calc(100% - var(--ly) - var(--lh) + 2.5*var(--u));display:flex;flex-direction:column;gap:calc(1*var(--u));align-items:flex-end;z-index:35}
+#ui.conDedos .avisos{bottom:calc(100% - var(--ly) - var(--lh)*.64)}
 .aviso{display:flex;align-items:center;gap:calc(1.4*var(--u));padding:calc(1.2*var(--u)) calc(2.4*var(--u)) calc(1.2*var(--u)) calc(1.4*var(--u));border-radius:calc(1.6*var(--u));font-size:clamp(11px,calc(2.5*var(--u)),18px);transform:translateY(calc(8*var(--u)));opacity:0;transition:transform .45s cubic-bezier(.3,1.5,.5,1),opacity .3s}
 .aviso.ve{transform:none;opacity:1}
 .aviso.sale{opacity:0;transform:translateX(calc(10*var(--u)))}
@@ -170,7 +171,7 @@ img.emo{width:1.2em;height:1.2em;vertical-align:-.2em;image-rendering:pixelated}
 /* ================= el cartel del mundo ================= */
 .cartelMundo{position:absolute;left:calc(var(--lx) + var(--lw)/2);top:calc(var(--ly) + 9*var(--u));translate:-50% 0;padding:calc(1.6*var(--u)) calc(7*var(--u)) calc(2*var(--u));border-radius:calc(2.6*var(--u));text-align:center;z-index:25;animation:bajaCartel .7s both cubic-bezier(.3,1.5,.5,1)}
 .cartelMundo small{display:block;font-size:clamp(11px,calc(2.4*var(--u)),18px);color:#1a79d6;font-weight:600}
-.cartelMundo b{display:block;font-size:clamp(20px,calc(6*var(--u)),46px);font-weight:800;background:linear-gradient(#ffffff,#9ce6ff 50%,#1e9be8 52%,#8fe9ff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(10,90,170,.5);filter:drop-shadow(0 1px 2px rgba(0,50,130,.5))}
+.cartelMundo b{display:block;font-size:clamp(20px,calc(6*var(--u)),46px);font-weight:800;background:linear-gradient(#ffffff,#c4f1ff 44%,#1d8be0 52%,#0f63c2 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(4,50,125,.85);filter:drop-shadow(0 0 3px rgba(255,255,255,.9)) drop-shadow(0 1px 2px rgba(0,40,110,.6))}
 .cartelMundo.sale{animation:subeCartel .6s forwards ease-in}
 @keyframes bajaCartel{from{transform:translateY(calc(-20*var(--u)));opacity:0}}
 @keyframes subeCartel{to{transform:translateY(calc(-20*var(--u)));opacity:0}}
@@ -213,6 +214,8 @@ img.emo{width:1.2em;height:1.2em;vertical-align:-.2em;image-rendering:pixelated}
 .tactil{position:absolute;left:var(--lx);top:var(--ly);width:var(--lw);height:var(--lh);z-index:20;pointer-events:none;opacity:0;transition:opacity .4s}
 .tactil.ve{opacity:1}
 .tactil.ve>*{pointer-events:auto}
+.tactil>.oculto{display:none}
+.tactil.editando>.oculto{display:block}
 .tactil>.zonaPal,.tactil>.bSalto,.tactil>.bZumbido,.tactil>.bPausa{opacity:var(--alfa,.85);transition:opacity .15s}
 .tactil>.on{opacity:max(var(--alfa,.85),.95)}
 .zonaPal{position:absolute;left:0;top:0}

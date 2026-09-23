@@ -22,6 +22,9 @@ export function pintarNivel(anchoT, altoT, esSolido, estilo) {
   const sol = (x, y) => (x < 0 || x >= anchoT ? esSolido(Math.max(0, Math.min(anchoT - 1, x)), y) : y < 0 ? false : y >= altoT ? true : esSolido(x, y));
   /* cuántas baldosas sólidas hay arriba (para oscurecer con la profundidad) */
   const hondura = (x, y) => { let k = 0; while (k < 6 && sol(x, y - k - 1)) k++; return k; };
+  /* dónde empieza (en píxeles) la tierra de esta columna; se promedia con las
+     vecinas, así un escalón no deja una columna más oscura hasta abajo */
+  const supT = (x, y) => (sol(x, y) ? (y - hondura(x, y)) * T : null);
   const tope = E.tope.map(rgb), cuerpo = E.cuerpo.map(rgb);
   for (let py = 0; py < Math.ceil(altoT * T / P); py++) for (let px = 0; px < Math.ceil(anchoT * T / P); px++) {
     const c = document.createElement('canvas'); c.width = P; c.height = P;
@@ -32,7 +35,7 @@ export function pintarNivel(anchoT, altoT, esSolido, estilo) {
       if (tx >= anchoT || ty >= altoT || !sol(tx, ty)) continue;
       algo = true;
       const arr = !sol(tx, ty - 1), aba = !sol(tx, ty + 1), izq = !sol(tx - 1, ty), der = !sol(tx + 1, ty);
-      const hd = hondura(tx, ty);
+      const S = [-2, -1, 0, 1, 2].map((d) => supT(tx + d, ty));
       for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
         /* esquinas redondas de afuera */
         const r = 4;
@@ -53,7 +56,9 @@ export function pintarNivel(anchoT, altoT, esSolido, estilo) {
           if (y < 2 && (izq && x < 2 || der && x > T - 3)) col = tope[5];
         } else {
           /* la tierra: un degradé con la profundidad hecho con puntillado (Bayer), piedritas claras y raíces */
-          const prof = hd * T + y + (h32(X >> 3, ty, 4) - 0.5) * 6;
+          let sw = 0, sv = 0;
+          for (let d = -2; d <= 2; d++) { const q = S[d + 2]; if (q == null) continue; const wq = Math.max(0, 1 - Math.abs(d * T + T / 2 - x - 0.5) / 40); sw += wq; sv += wq * q; }
+          const prof = Y - (sw ? sv / sw : S[2]) + (h32(X >> 3, ty, 4) - 0.5) * 6;
           const nivel = Math.max(0, Math.min(1, prof / 70));
           const bayer = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5][(Y & 3) * 4 + (X & 3)] / 16;
           const fi = 5.4 - nivel * 3.4;                       // de 5.4 (arriba) a 2 (hondo)

@@ -35,7 +35,7 @@ export const Pantalla = {
     const raiz = document.documentElement, app = document.getElementById('app');
     raiz.classList.toggle('girado', this.girado);
     raiz.classList.toggle('bajita', H < 520);
-    raiz.classList.toggle('tactil', esTactil());
+    raiz.classList.toggle('dedos', esTactil());
     raiz.style.setProperty('--vw', W / 100 + 'px'); raiz.style.setProperty('--vh', H / 100 + 'px');
     /* un píxel del juego en píxeles CSS: la interfaz se mide con esto y crece junto con el dibujo */
     raiz.style.setProperty('--px', lh / ALTO + 'px');

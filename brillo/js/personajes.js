@@ -4,7 +4,7 @@
    piernitas, zapatillas y ojitos. Cada cuadro se arma con una "pose" (dónde
    van la cabeza, el cuerpo, los brazitos y las piernas) y se pinta con
    pixel.js; los cuadros se guardan hechos. */
-import { Lienzo, RAMPA, pintura, mezclar } from './pixel.js';
+import { Lienzo, RAMPA, pintura, mezclar, lienzo2d } from './pixel.js';
 
 export const CUADRO = { w: 30, h: 36 };      // el tamaño de cada cuadro
 const CX = 15, PISO = 35;                    // el centro y dónde apoyan los pies
@@ -180,3 +180,29 @@ export const QUIENES = {
   gris: { rampa: RAMPA.gris, plano: true },
   moraPlana: { rampa: RAMPA.gris, plano: true, extra: monio },
 };
+
+/* PLANO, la Actualización: un cuadrado gris sin brillo, sin sombra y sin
+   contorno de color, lo contrario de todo lo demás. f: 0-3 (3 parpadea, 1
+   tiene una falla de imagen); tibio: al final le aparecen los cachetes. */
+const cachePlano = new Map();
+export function plano(f = 0, tibio = false) {
+  const k = `${f & 3}:${tibio ? 1 : 0}`;
+  let c = cachePlano.get(k);
+  if (c) return c;
+  let g;
+  [c, g] = lienzo2d(36, 36);
+  const o = 4, S = 28;
+  g.fillStyle = '#5d636b'; g.fillRect(o - 1, o - 1, S + 2, S + 2);
+  g.fillStyle = tibio ? '#b3adb2' : '#9aa0a8'; g.fillRect(o, o, S, S);
+  g.fillStyle = '#3a3f46';
+  if ((f & 3) === 3) { g.fillRect(o + 7, o + 11, 4, 1); g.fillRect(o + 17, o + 11, 4, 1); }
+  else { g.fillRect(o + 7, o + 8, 4, 6); g.fillRect(o + 17, o + 8, 4, 6); }
+  if (tibio) {
+    g.fillRect(o + 10, o + 19, 8, 1); g.fillRect(o + 9, o + 18, 1, 1); g.fillRect(o + 18, o + 18, 1, 1);
+    g.fillStyle = '#e59ab8'; g.fillRect(o + 4, o + 15, 3, 2); g.fillRect(o + 21, o + 15, 3, 2);
+  } else g.fillRect(o + 8, o + 19, 12, 1);
+  /* la falla: una tira que se corre */
+  if ((f & 3) === 1) { const d = g.getImageData(0, o + 12, 36, 3); g.clearRect(0, o + 12, 36, 3); g.putImageData(d, 2, o + 12); }
+  cachePlano.set(k, c);
+  return c;
+}

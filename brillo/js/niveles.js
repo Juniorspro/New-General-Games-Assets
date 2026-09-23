@@ -107,8 +107,10 @@ const COLINA = (() => {
       { x0: px(165), x1: px(170) + 8, y: px(P - 4), vel: 0.7, fase: 90 },
     ],
     zonas: [
+      { id: 'estanque', x0: px(27), x1: px(29) },
       { id: 'tito', x0: px(47), x1: px(52) },
       { id: 'planito', x0: px(59), x1: px(61) },
+      { id: 'hongo', x0: px(72), x1: px(74) },
       { id: 'cima', x0: px(192), x1: px(214) },
     ],
     /* lo que da la historia al pasar por una zona (la física lo sabe, así la máquina también) */
