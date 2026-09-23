@@ -151,8 +151,13 @@ function video(idioma) {
   if (op.cuadros) args.push(`--frames=${op.cuadros}`);
   log(`video ${idioma}…`);
   remotion(args);
-  /* el índice del MP4 adelante (faststart), así TikTok lo empieza a mostrar antes de bajarlo entero */
-  ffmpeg(['-loglevel', 'error', '-i', crudo, '-c', 'copy', '-movflags', '+faststart', '-metadata', 'title=BRILLO — tráiler', dest]);
+  /* la pasada final con el ffmpeg del sistema: Remotion lo deja en rango completo (yuvj420p) y algunas
+     apps lo muestran lavado, así que va a BT.709 de rango limitado, con x264 afinado para dibujos y el
+     índice adelante (faststart), así TikTok lo empieza a mostrar antes de bajarlo entero */
+  ffmpeg(['-loglevel', 'error', '-i', crudo, '-vf', 'scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p',
+    '-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-crf', '17', '-profile:v', 'high', '-level', '4.2',
+    '-color_range', 'tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709',
+    '-c:a', 'copy', '-movflags', '+faststart', '-metadata', 'title=BRILLO — tráiler', dest]);
   fs.unlinkSync(crudo);
   log(`listo ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1024 / 1024).toFixed(1)} MB)`);
   /* la portada de TikTok */

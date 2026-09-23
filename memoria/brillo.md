@@ -141,7 +141,10 @@ graphics en pixel art del juego. Una versión horizontal más vertical de
 - **El ffmpeg que trae Remotion es mínimo** (sin `gblur`, `eq` ni
   `loudnorm`). Se usa el del sistema (`apt-get install ffmpeg`, 6.1.1).
   - La música se lleva a -14 LUFS con pico -1 dBTP, en dos pasadas.
-  - El MP4 se pasa con `+faststart`.
+  - Remotion saca el MP4 en rango completo (`yuvj420p`), aunque se le pida
+    `yuv420p`. Hay una pasada final con x264 (`-tune animation`, crf 17) a
+    BT.709 de rango limitado, con `+faststart`: 90 MB → 66 MB y los colores
+    no se mueven (±2 de 255).
 - **Zona segura de TikTok:** nada importante arriba de 220 px, abajo de
   1500 ni en los 120 px de la derecha. `ZONA` en `carteles.jsx` centra todo
   en x = 490.
