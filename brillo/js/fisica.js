@@ -232,7 +232,7 @@ function pasarEnBurbuja(m, p, inp) {
   const b = burbujasDe(q, m.t).find((x) => x.id === p.enBurbuja.id);
   if (!b || inp.saltoE) {
     p.enBurbuja = null; p.salioDe = b ? b.id : p.salioDe;
-    p.vy = inp.saltoE ? K.SALTO * 0.9 : -1; p.vx = inp.x * K.CORRE; p.burbujaUsada = false; p.cortado = false;
+    p.vy = inp.saltoE ? K.SALTO * 0.9 : -1; p.vx = inp.x * K.CORRE; p.burbujaUsada = false; p.cortado = false; p.guarda = 0;
     evento(m, 'sale', { x: p.x, y: p.y - p.h / 2, salto: !!inp.saltoE });
     return;
   }
@@ -342,7 +342,11 @@ function revisar(m, p) {
   /* las burbujas grandes: tocarlas es meterse (salvo la que recién se dejó) */
   if (!p.enBurbuja) for (const q of m.burbujeros) for (const b of burbujasDe(q, m.t)) {
     if (b.id === p.salioDe) continue;
-    if (Math.hypot(b.x - cx, b.y - cy) < b.r + 4) { p.enBurbuja = { q: q.id, id: b.id }; p.vx = 0; p.vy = 0; evento(m, 'entra', { x: b.x, y: b.y }); return; }
+    if (Math.hypot(b.x - cx, b.y - cy) < b.r + 4) {
+      /* adentro de la burbuja no se está en el piso: si no, al salir se sumaban el salto de piso y la burbuja */
+      p.enBurbuja = { q: q.id, id: b.id }; p.vx = 0; p.vy = 0; p.enSuelo = false; p.coyote = 0; p.sobre = null;
+      evento(m, 'entra', { x: b.x, y: b.y }); return;
+    }
   }
 }
 

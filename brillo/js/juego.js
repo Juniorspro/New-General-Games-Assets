@@ -11,7 +11,7 @@ import { NIVELES } from './niveles.js';
 import { Fondo } from './fondos.js';
 import { pintarNivel } from './tiles.js';
 import { cuadro, cuadrosDe } from './personajes.js';
-import { gota, guino, sesion, orbe, plataforma, tablon, hongo, planito, bloquePlano, estatica, aurora } from './objetos.js';
+import { gota, guino, sesion, orbe, plataforma, tablon, hongo, planito, bloquePlano, estatica, aurora, viento, surtidor } from './objetos.js';
 import { BurbujasAmbiente, pastoFrente, Destellos, burbuja } from './efectos.js';
 
 const suave = (k, dt) => 1 - Math.pow(k, dt * 60);
@@ -29,6 +29,20 @@ export class Nivel {
     for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) {
       const b = m.tiles[y * m.W + x];
       if (b === B.TABLON || b === B.PLANO || b === B.ESTATICA || b === B.HONGO || b === B.AURORA) this.encima.push({ x, y, b, i: y * m.W + x });
+    }
+    /* las columnas de viento: rectángulos de baldosas 'w' (por columna, y se juntan las vecinas iguales) */
+    this.vientos = [];
+    for (let x = 0; x < m.W; x++) {
+      let y0 = -1;
+      for (let y = 0; y <= m.H; y++) {
+        const es = y < m.H && m.corriente[y * m.W + x];
+        if (es && y0 < 0) y0 = y;
+        if (!es && y0 >= 0) {
+          const ant = this.vientos.find((v) => v.x1 === x - 1 && v.y0 === y0 && v.y1 === y - 1);
+          if (ant) ant.x1 = x; else this.vientos.push({ x0: x, x1: x, y0, y1: y - 1 });
+          y0 = -1;
+        }
+      }
     }
     /* el agua, en tiras por fila (para teñir y dibujar la superficie) */
     this.agua = [];
@@ -158,10 +172,17 @@ export class Nivel {
       else if (q.b === B.ESTATICA) estatica(g, Math.round(x), Math.round(y), f);
       else if (q.b === B.HONGO) { const a = this.hongoAplaste.get(q.x) || 0; g.drawImage(hongo(a > 8 ? 1 : a > 4 ? 2 : a > 0 ? 3 : 0), Math.round(x - 2), Math.round(y - 2)); }
     }
+    /* el viento que sube */
+    for (const v of this.vientos) {
+      const x = v.x0 * T - cam.x, y = v.y0 * T - cam.y, ww = (v.x1 - v.x0 + 1) * T, hh = (v.y1 - v.y0 + 1) * T;
+      if (x > w || x + ww < 0 || y > h || y + hh < 0) continue;
+      const ya = Math.max(y, -8), yb = Math.min(y + hh, h + 8);
+      viento(g, Math.round(x), Math.round(ya), ww, Math.round(yb - ya), t, v.x0 * T, Math.round(ya - y));
+    }
     /* las plataformas que se mueven y las burbujas grandes */
     for (const q of m.plataformas) { const a = plataformaEn(q, m.t); g.drawImage(plataforma(q.w), X(a.x), Y(a.y)); }
     for (const q of m.burbujeros) {
-      g.fillStyle = '#e6eff7'; g.fillRect(X(q.x - 8), Y(q.y + 4), 16, 6);
+      const S = surtidor(); g.drawImage(S, X(q.x - S.width / 2), Y(q.y + 14 - S.height));
       for (const b of burbujasDe(q, m.t)) { const img = burbuja(b.r); g.globalAlpha = 0.9; g.drawImage(img, X(b.x - img.width / 2), Y(b.y - img.height / 2)); g.globalAlpha = 1; }
     }
     /* gotitas, guiños, sesiones y el orbe */

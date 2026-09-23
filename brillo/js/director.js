@@ -38,7 +38,7 @@ const MANDO = { 0: ['salto', 'aceptar'], 1: ['accion', 'volver'], 2: 'accion', 3
 const VOZ = { nick: 1250, mora: 1700, tito: 950, plano: 520, dorado: 1100, lila: 1850, sol: 1450, vio: 1550 };
 
 const PARTIDA_NUEVA = () => ({ mundo: ORDEN[0], en: null, juntadas: [], rotos: {}, habil: {}, hechos: [] });
-const OPCIONES = () => ({ musica: 7, efectos: 8, calidad: 'alta', giro: 'auto', tactil: TACTIL_INICIAL() });
+const OPCIONES = () => ({ musica: 7, efectos: 8, estilo: 'aero', calidad: 'alta', giro: 'auto', tactil: TACTIL_INICIAL() });
 
 /* todos los guiños del juego en orden (mundo por mundo, de izquierda a
    derecha): el guiño número i destapa el emoticón número i */
@@ -76,6 +76,7 @@ export class Director {
     Pantalla.alCambiar = () => { this.tactil.acomodar(); this.base = null; };
     /* el sonido: se prende con el primer toque o la primera tecla */
     Sonido.volumenes(this.opc.musica / 10, this.opc.efectos / 10);
+    Sonido.modo = this.opc.estilo === 'chip' ? 'chip' : 'aero';
     const prender = () => Sonido.iniciar();
     addEventListener('pointerdown', prender, true); addEventListener('keydown', prender, true);
     ui.alMover = () => Sonido.sfx('mover');
@@ -238,6 +239,7 @@ export class Director {
       { nombre: () => tr('idioma'), valor: () => IDIOMAS.find(([l]) => l === Idioma.actual)[1], cambiar: (d) => { Idioma.poner(ciclo(IDIOMAS.map(([l]) => l), Idioma.actual, d)); } },
       { nombre: () => tr('musica'), valor: () => barra(O.musica), cambiar: (d) => { O.musica = Math.max(0, Math.min(10, O.musica + d)); Sonido.volumenes(O.musica / 10, O.efectos / 10); this.guardarOpc(); } },
       { nombre: () => tr('efectos'), valor: () => barra(O.efectos), cambiar: (d) => { O.efectos = Math.max(0, Math.min(10, O.efectos + d)); Sonido.volumenes(O.musica / 10, O.efectos / 10); Sonido.sfx('gota', { k: O.efectos }); this.guardarOpc(); } },
+      { nombre: () => tr('estiloMusica'), valor: () => tr(O.estilo === 'chip' ? 'chip' : 'aero'), cambiar: () => { O.estilo = O.estilo === 'chip' ? 'aero' : 'chip'; Sonido.ponerModo(O.estilo); this.guardarOpc(); } },
       { nombre: () => tr('calidad'), valor: () => tr(O.calidad), cambiar: (d) => { O.calidad = ciclo(['alta', 'baja'], O.calidad, d); this.post.calidad = O.calidad; this.guardarOpc(); } },
     ];
     if (document.documentElement.requestFullscreen) filas.push({ nombre: () => tr('pantalla'), valor: () => tr(document.fullscreenElement ? 'si' : 'no'), cambiar: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else Pantalla.acostar(); } catch (_) {} } });

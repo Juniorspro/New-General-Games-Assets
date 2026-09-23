@@ -16,3 +16,6 @@ __pycache__/
 
 # secretos de la prueba local: NUNCA se suben
 .dev.vars
+
+# los zips de los juegos: se rehacen con herramientas/empaquetar_juegos.py
+entregas/

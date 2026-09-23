@@ -2,7 +2,7 @@
 //
 //     node brillo/herramientas/armar.mjs [--dev]
 //
-// Usa el esbuild que ya está en bosque/node_modules (no hay que instalar nada).
+// Usa el esbuild de node_modules (el de la raíz o, en el repo, el de bosque/).
 // El CSS entra en <!--CSS--> y el código, empaquetado en un IIFE, en <!--JS-->.
 // Con --dev no se minifica (para leer los errores).
 import fs from "node:fs";
@@ -11,7 +11,10 @@ import { createRequire } from "node:module";
 
 const AQUI = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const RAIZ = path.resolve(AQUI, "..");
-const MODULOS = path.join(RAIZ, "bosque/node_modules");
+/* los módulos: los de esta carpeta, los de la raíz (npm install en la raíz del
+   zip) o los de bosque/ (en el repo, ya instalados) */
+const MODULOS = [path.join(AQUI, "node_modules"), path.join(RAIZ, "node_modules"), path.join(RAIZ, "bosque/node_modules")].find((d) => fs.existsSync(path.join(d, "esbuild")));
+if (!MODULOS) { console.error("Faltan esbuild: corré npm install en la carpeta de arriba (ver LEEME.md)."); process.exit(1); }
 const require = createRequire(path.join(MODULOS, "x.js"));
 const esbuild = require("esbuild");
 const dev = process.argv.includes("--dev");

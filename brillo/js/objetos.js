@@ -217,3 +217,54 @@ export function aurora(g, x, y, prendida, falta, t, tx) {
     g.globalAlpha = 1;
   }
 }
+
+/* una columna de viento que sube: una banda de aire apenas celeste, rayitas
+   que suben rápido, flechitas (para que se entienda para dónde empuja) y
+   hojitas que giran. x, y, w, h en pantalla; ox, oy: dónde empieza la columna
+   en el mundo (así el dibujo no "patina" cuando se mueve la cámara). */
+export function viento(g, x, y, w, h, t, ox, oy) {
+  const gr = g.createLinearGradient(x, 0, x + w, 0);
+  gr.addColorStop(0, 'rgba(120,215,255,0.1)'); gr.addColorStop(0.5, 'rgba(200,245,255,0.36)'); gr.addColorStop(1, 'rgba(120,215,255,0.1)');
+  g.fillStyle = gr; g.fillRect(x, y, w, h);
+  /* los bordes: una línea de puntos celeste que también sube */
+  g.fillStyle = 'rgba(70,170,235,0.55)';
+  for (let yy = y + (((-(t * 60 + oy)) % 6) + 6) % 6; yy < y + h; yy += 6) { g.fillRect(x, Math.round(yy), 1, 3); g.fillRect(x + w - 1, Math.round(yy), 1, 3); }
+  const H = Math.max(1, h);
+  /* rayitas: cada una sube a su velocidad y vuelve a empezar abajo */
+  for (let i = 0, n = Math.ceil(w / 5); i < n * Math.ceil(H / 70); i++) {
+    const cx = x + ((i * 37 + 3) % Math.max(1, w - 2)) + 1, v = 110 + (i * 53) % 70, largo = 6 + (i * 7) % 9;
+    const cy = y + H - (((t * v + i * 97 + oy) % (H + largo)) + H + largo) % (H + largo);
+    g.fillStyle = 'rgba(60,160,230,0.35)'; g.fillRect(Math.round(cx) + 1, Math.round(cy), 1, largo);
+    g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillRect(Math.round(cx), Math.round(cy), 1, largo);
+    g.fillStyle = '#ffffff'; g.fillRect(Math.round(cx), Math.round(cy), 1, 2);
+  }
+  /* flechitas que suben despacio */
+  for (let k = 0, n = Math.ceil(H / 56); k < n; k++) {
+    const cy = y + H - (((t * 55 + k * 56 + oy * 0.5) % H) + H) % H, cx = Math.round(x + w / 2);
+    g.globalAlpha = 0.9 * Math.max(0, Math.min(1, (cy - y) / 30, (y + H - cy) / 30));
+    const r = Math.min(6, Math.floor(w / 2) - 1);
+    for (let d = 0; d < r; d++) {
+      g.fillStyle = '#2f8fe0'; g.fillRect(cx - d - 1, Math.round(cy) + d + 1, 2, 1); g.fillRect(cx + d - 1, Math.round(cy) + d + 1, 2, 1);
+      g.fillStyle = '#ffffff'; g.fillRect(cx - d - 1, Math.round(cy) + d, 2, 1); g.fillRect(cx + d - 1, Math.round(cy) + d, 2, 1);
+    }
+    g.globalAlpha = 1;
+  }
+  /* hojitas verdes que suben girando */
+  for (let k = 0, n = Math.ceil(H / 90); k < n; k++) {
+    const cy = y + H - (((t * 80 + k * 90 + ox) % H) + H) % H, cx = x + w / 2 + Math.sin(t * 3 + k * 2) * (w / 2 - 2);
+    g.fillStyle = k % 2 ? '#8fec5e' : '#c9f7a8'; g.fillRect(Math.round(cx), Math.round(cy), 2, 1);
+    g.fillStyle = '#3cae1d'; g.fillRect(Math.round(cx) + (Math.sin(t * 6 + k) > 0 ? 1 : 0), Math.round(cy) + 1, 1, 1);
+  }
+}
+
+/* el surtidor de las burbujas grandes: una fuentecita de vidrio con la boca oscura */
+let SURT = null;
+export function surtidor() {
+  if (SURT) return SURT;
+  const L = new Lienzo(26, 14), R = RAMPA.cian;
+  L.caja(1, 5, 25, 14, 4, pintura.aero(R, { bajo: 2, alto: 6, gorra: 0.5, punto: 0.04 }), R);
+  L.elipse(13, 5.5, 8, 3, pintura.esfera(R, { bajo: 1, alto: 4 }), R);
+  L.elipse(13, 5, 5.5, 1.8, () => R[0], R);
+  L.contorno({ tono: 0 });
+  return (SURT = L.aCanvas());
+}

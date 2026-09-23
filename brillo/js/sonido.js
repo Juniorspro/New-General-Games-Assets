@@ -120,10 +120,14 @@ const TEMA = {
 TEMA.final = { ...TEMA.titulo, bpm: 138, reverb: 0.5, pistas: [...TEMA.titulo.pistas, { inst: 'pad', patron: 'pad', vol: 0.18, centro: 62 }, { inst: 'campana', patron: 'arpegio', vol: 0.16, ritmo: [[0, 0], [1, 2], [2, 1], [3, 3]], centro: 76 }] };
 TEMA.creditos = TEMA.final;
 export const TEMAS = Object.keys(TEMA);
+/* el modo 16 bits: las mismas canciones, tocadas con los instrumentos de las
+   consolas de 16 bits (pulsos con vibrato, piano FM, bajo triangular), por un
+   reductor de bits, un filtro bajo y el eco corto de la época */
+const CHIP = { vibra: 'pulso', marimba: 'pulso12', campana: 'pulso12', flauta: 'pulso', caja: 'pulso12', ep: 'fm', guitarra: 'pulso12', arpa: 'pulso12', pad: 'cuerdaChip', coro: 'cuerdaChip', bajo: 'bajoChip' };
 
 /* ============================================================================ */
 export const Sonido = {
-  ctx: null, vMusica: 0.7, vEfectos: 0.8, actual: null, pendiente: null, capas: 0,
+  ctx: null, vMusica: 0.7, vEfectos: 0.8, actual: null, pendiente: null, capas: 0, modo: 'aero',
   iniciar() {
     if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume(); return; }
     const A = window.AudioContext || window.webkitAudioContext;
@@ -149,7 +153,17 @@ export const Sonido = {
     this.eco.connect(dI); dI.connect(pI); pI.connect(this.bMusica); dI.connect(dD); dD.connect(pD); pD.connect(this.bMusica); dD.connect(fb); fb.connect(dI);
     this.ruido = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const d = this.ruido.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    this.cuerdas = new Map();
+    this.cuerdas = new Map(); this.ondas = new Map();
+    /* la cadena del modo 16 bits: reductor de bits → filtro bajo → (eco corto) → música */
+    this.chipIn = c.createGain();
+    const crush = c.createWaveShaper(), curva = new Float32Array(2048);
+    for (let i = 0; i < 2048; i++) { const x = i / 1023.5 - 1; curva[i] = Math.round(x * 28) / 28; }
+    crush.curve = curva; crush.oversample = 'none';
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6800; lp.Q.value = 0.5;
+    this.chipIn.connect(crush); crush.connect(lp); lp.connect(this.bMusica);
+    const eco = c.createDelay(1), efb = c.createGain(), elp = c.createBiquadFilter(), eIn = c.createGain();
+    eco.delayTime.value = 0.19; efb.gain.value = 0.42; elp.type = 'lowpass'; elp.frequency.value = 2800; eIn.gain.value = 0.32;
+    lp.connect(eIn); eIn.connect(eco); eco.connect(elp); elp.connect(efb); efb.connect(eco); elp.connect(this.bMusica);
     const despertar = () => { if (c.state !== 'running') c.resume(); };
     addEventListener('pointerdown', despertar, true); addEventListener('keydown', despertar, true);
     if (this.pendiente) { const p = this.pendiente; this.pendiente = null; this.musica(p); }
@@ -278,6 +292,61 @@ export const Sonido = {
     this.env(g, t, 0.012, v * 0.34, 0.35, v * 0.2, t + d);
     o.start(t); o2.start(t); o.stop(t + d + 0.4); o2.stop(t + d + 0.4);
   },
+  /* ---------------- los instrumentos de 16 bits ---------------- */
+  /* una onda de pulso (duty = cuánto de la vuelta está arriba), en serie de Fourier */
+  onda(duty) {
+    let w = this.ondas.get(duty);
+    if (w) return w;
+    const N = 48, re = new Float32Array(N), im = new Float32Array(N);
+    for (let k = 1; k < N; k++) re[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+    w = this.ctx.createPeriodicWave(re, im);
+    this.ondas.set(duty, w);
+    return w;
+  },
+  pulso(t, n, d, v, dest, duty = 0.25) {
+    const c = this.ctx, f = hz(n), o = c.createOscillator(), vib = c.createOscillator(), vg = c.createGain();
+    o.setPeriodicWave(this.onda(duty)); o.frequency.value = f;
+    vib.frequency.value = 5.6; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.007, t + 0.35); vib.connect(vg); vg.connect(o.frequency);
+    const g = this.salida(dest, 0.25, ((n % 5) - 2) * 0.12), dur = Math.max(0.1, d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.11, t + 0.004); g.gain.setTargetAtTime(v * 0.07, t + 0.02, 0.15); g.gain.setTargetAtTime(0.0001, t + dur, 0.05);
+    o.connect(g);
+    for (const x of [o, vib]) { x.start(t); x.stop(t + dur + 0.4); }
+  },
+  /* pulso finito y cortito: lo que en 16 bits hacía de arpa, guitarra y campanita */
+  pulso12(t, n, d, v, dest) {
+    const c = this.ctx, f = hz(n), o = c.createOscillator(), g = this.salida(dest, 0.3, ((n % 7) - 3) * 0.1);
+    o.setPeriodicWave(this.onda(0.125)); o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.1, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.45);
+    o.connect(g); o.start(t); o.stop(t + 0.5);
+  },
+  /* piano FM de dos operadores (el de las consolas de 16 bits) */
+  fm(t, n, d, v, dest) {
+    const c = this.ctx, f = hz(n), car = c.createOscillator(), mod = c.createOscillator(), mg = c.createGain();
+    car.frequency.value = f; mod.frequency.value = f * 2;
+    mg.gain.setValueAtTime(f * 3, t); mg.gain.exponentialRampToValueAtTime(f * 0.3, t + 0.35);
+    mod.connect(mg); mg.connect(car.frequency);
+    const g = this.salida(dest, 0.25, Math.sin(t * 2.7) * 0.3);
+    this.env(g, t, 0.003, v * 0.2, 0.25, v * 0.07, t + d);
+    car.connect(g);
+    for (const o of [car, mod]) { o.start(t); o.stop(t + d + 0.4); }
+  },
+  /* colchón de dos pulsos cuadrados apenas desafinados */
+  cuerdaChip(t, n, d, v, dest) {
+    const c = this.ctx, f = hz(n), fl = c.createBiquadFilter(), g = this.salida(dest, 0.3, ((n % 5) - 2) * 0.2);
+    fl.type = 'lowpass'; fl.frequency.value = 1700; fl.connect(g);
+    const os = [];
+    for (const df of [1.003, 0.997]) { const o = c.createOscillator(); o.setPeriodicWave(this.onda(0.5)); o.frequency.value = f * df; o.connect(fl); os.push(o); }
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.05, t + 0.25); g.gain.setValueAtTime(v * 0.05, t + d); g.gain.linearRampToValueAtTime(0.0001, t + d + 0.5);
+    for (const o of os) { o.start(t); o.stop(t + d + 0.6); }
+  },
+  bajoChip(t, n, d, v, dest) {
+    const c = this.ctx, f = hz(n), o = c.createOscillator(), o2 = c.createOscillator(), g2 = c.createGain(), fl = c.createBiquadFilter(), g = this.salida(dest, 0.05, 0);
+    o.type = 'triangle'; o.frequency.value = f; o2.setPeriodicWave(this.onda(0.5)); o2.frequency.value = f; g2.gain.value = 0.18;
+    fl.type = 'lowpass'; fl.frequency.value = 1400;
+    o.connect(fl); o2.connect(g2); g2.connect(fl); fl.connect(g);
+    this.env(g, t, 0.004, v * 0.42, 0.18, v * 0.26, t + d);
+    for (const x of [o, o2]) { x.start(t); x.stop(t + d + 0.3); }
+  },
   /* ---------------- la batería ---------------- */
   ruidoEn(t, dur, tipo, f, q, v, dest, rev = 0.25) {
     const c = this.ctx, r = c.createBufferSource(), fl = c.createBiquadFilter(), g = this.salida(dest, rev, 0);
@@ -306,11 +375,22 @@ export const Sonido = {
     if (this.actual) { const g = this.actual.g; g.gain.setTargetAtTime(0.0001, ahora, 0.6); this.actual.muerto = true; setTimeout(() => g.disconnect(), 4000); }
     const T = TEMA[nombre];
     if (!T) { this.actual = null; return; }
-    const g = c.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(T.vol || 1, ahora + 0.2, 0.5); g.connect(this.bMusica);
-    this.revIn.gain.setTargetAtTime(T.reverb ?? 0.4, ahora, 0.5);
+    const chip = this.modo === 'chip';
+    const g = c.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime((T.vol || 1) * (chip ? 1.15 : 1), ahora + 0.2, 0.5); g.connect(chip ? this.chipIn : this.bMusica);
+    this.revIn.gain.setTargetAtTime((T.reverb ?? 0.4) * (chip ? 0.3 : 1), ahora, 0.5);
     this.filtro.frequency.setTargetAtTime(T.filtro || 9000, ahora, 0.5);
     const largo = T.acordes.reduce((s, a) => s + a[1], 0);
     this.actual = { nombre, T, g, t0: ahora + 0.4, prox: 0, largo };
+  },
+  /* cambiar entre 'aero' y 'chip' (16 bits): la canción que suena vuelve a empezar con el otro sonido */
+  ponerModo(m) {
+    if (this.modo === m) return;
+    this.modo = m;
+    const A = this.actual;
+    if (!A || !this.ctx) return;
+    A.g.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.2); A.muerto = true; setTimeout(() => A.g.disconnect(), 3000);
+    this.actual = null;
+    this.musica(A.nombre);
   },
   /* el Plano: cuántas capas suenan (0 a 4) */
   ponerCapas(k) { this.capas = k; },
@@ -327,8 +407,8 @@ export const Sonido = {
       const ac = this.acordeEn(T, b0);
       for (const P of T.pistas) {
         if (T.capas && P.capa != null && P.capa > this.capas) continue;
-        const dest = A.g, v = P.vol ?? 0.5;
-        const tocar = (t, n, d, vv) => this[P.inst] && this[P.inst](t, n, d, vv, dest);
+        const dest = A.g, v = P.vol ?? 0.5, inst = this.modo === 'chip' ? CHIP[P.inst] || P.inst : P.inst;
+        const tocar = (t, n, d, vv) => this[inst] && this[inst](t, n, d, vv, dest);
         if (P.notas) {
           const L = P.notas.length ? P.notas[P.notas.length - 1][0] + P.notas[P.notas.length - 1][2] : 1, rep = Math.ceil(A.largo / L);
           for (let k = 0; k < rep; k++) for (const [b, n, d] of P.notas) if (enTramo(b + k * L) && b + k * L < A.largo) tocar(tiempo(b + k * L), n, d * seg, v);
