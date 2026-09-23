@@ -1,0 +1,6 @@
+# lo que se vuelve a hacer con grabar.mjs (tomas, música, videos) y lo que instala npm
+salida/
+remotion/node_modules/
+remotion/public/tomas/
+remotion/public/audio/
+remotion/out/

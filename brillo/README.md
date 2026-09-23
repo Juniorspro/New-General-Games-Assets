@@ -170,3 +170,55 @@ Fuentes:
 - [Wii Shop Channel Theme, Hooktheory](https://www.hooktheory.com/theorytab/view/kazumi-totaka/wii-shop-channel-theme)
 - [Wii Shop Channel, SongBPM](https://songbpm.com/@kazumi-totaka/wii-shop-channel-from-nintendo-wii-channels-for-flute-piano-duet)
 - [Kazumi Totaka, Wikipedia](https://en.wikipedia.org/wiki/Kazumi_Totaka)
+
+## El tráiler
+
+`brillo/trailer/` arma un tráiler de ~97 s con el juego de verdad, en MP4
+(H.264 + AAC), horizontal 1920×1080 y vertical 1080×1920 (TikTok, Reels,
+Shorts), en español, inglés o portugués. El armado final lo hace
+[Remotion](https://www.remotion.dev/) (React → video).
+
+```
+node brillo/herramientas/armar.mjs
+cd brillo/trailer/remotion && npm install && cd -          # una vez
+node brillo/trailer/grabar.mjs todo --idioma=es            # o en, pt, todos
+node brillo/trailer/verificar.mjs brillo/trailer/salida/brillo-trailer-es-horizontal.mp4 5,30,60
+```
+
+Son tres pasos (`grabar.mjs tomas`, `audio`, `video`), que también se
+corren sueltos. Los tres leen el mismo guion (`trailer/guion.js`), así las
+tomas, la música y los cortes cuentan el tiempo igual.
+
+- **Las tomas son el juego** (`tomas.js`).
+  - `grabar.mjs` levanta un servidor local y le mete a `brillo.html` un reloj
+    propio (`requestAnimationFrame` y `performance.now`), así cada cuadro sale
+    exacto aunque la máquina tarde medio segundo en dibujarlo.
+  - Nick juega solo repitiendo los recorridos del resolvedor
+    (`pruebas/recorridos/`), con la misma física. La cámara se acerca ×2 y
+    sigue a Nick con un foco suave.
+  - La escena de la Actualización la actúa el director del juego. Su ventana
+    de chat es HTML, así que se guarda cuadro a cuadro (textos, quién habla,
+    avatares) y Remotion la dibuja de nuevo, más grande.
+  - Cada toma sale en un WebM (VP9, WebCodecs + `webm.js`) en
+    `remotion/public/tomas/`. Las del juego son las mismas en los tres
+    idiomas; solo la Actualización se graba por idioma.
+- **La música** (`audio.js`) es la del juego, hecha con su sintetizador en un
+  `OfflineAudioContext`:
+  - la bossa del título al principio;
+  - silencio cuando llega el Plano;
+  - el tema del final desde el logo, con los cortes en los compases (138 bpm);
+  - en "…o en 16 bits" cambia al modo chip.
+  - Los efectos (saltos, gotitas, burbujas, zumbidos) son los que el juego
+    pidió en cada toma, en su momento.
+- **El armado** (`remotion/src/`) es Frutiger Aero en HTML y SVG: pastillas
+  brillantes, texto de vidrio con reflejo, burbujas con arcoíris, destellos
+  de lente, transiciones de burbujas y destellos blancos en los compases.
+  - En el vertical, el juego va en una ventana de vidrio con la misma toma
+    desenfocada atrás (la hace ffmpeg: un `blur()` de CSS es carísimo sin
+    placa de video).
+  - Las letras son Open Sans y Nunito (`remotion/public/fuentes/`, OFL).
+- **Para probar:** `grabar.mjs tomas --solo=titulo,cierre` graba solo esas
+  tomas; `--muestra=0.5,2` saca PNG en vez de video; `grabar.mjs video
+  --formato=vertical --cuadros=700-900` hace solo un pedazo.
+- Tomas, música y videos no van al repo (`trailer/.gitignore`): se vuelven a
+  hacer con `grabar.mjs`.
