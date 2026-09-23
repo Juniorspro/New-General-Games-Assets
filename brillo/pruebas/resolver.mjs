@@ -3,7 +3,7 @@
 // con acciones que duran K pasos y una heurística de distancia por la grilla.
 // Lo que se mueve con el reloj (plataformas, burbujas, planitos) entra en la
 // clave solo si está cerca de Nick, y cuantizado.
-import { crearMundo, paso, copiar, clave, baldosa, B, T, plataformaEn, planitoEn, modoResolvedor } from "../js/fisica.js";
+import { crearMundo, paso, copiar, clave, baldosa, B, T, plataformaEn, planitoEn, modoResolvedor, AURORA } from "../js/fisica.js";
 export { copiar };
 
 export const K = 6;
@@ -48,12 +48,16 @@ function relojDe(m) {
     for (const q of m.plataformas) { const a = plataformaEn(q, t); if (Math.abs(a.x - p.x) < 260 && Math.abs(a.y - p.y) < 200) s += Math.round(a.x / 4) + ':' + Math.round(a.y / 4) + ';'; }
     for (const q of m.planitos) { if (m.restaurados.has(q.id)) continue; const e = planitoEn(q, t); if (Math.abs(e.x - p.x) < 200) s += Math.round(e.x / 4) + ';'; }
     for (const q of m.burbujeros) if (Math.abs(q.x - p.x) < 260) s += 'b' + Math.floor(((t - (q.fase || 0)) % q.cada + q.cada) % q.cada / 6);
+    /* la Aurora: si hay baldosas de luz cerca, cuenta la fase de la ola */
+    if (m.auroraCol) { const cx = Math.floor(p.x / T); for (let x = Math.max(0, cx - 12); x <= Math.min(m.W - 1, cx + 12); x++) if (m.auroraCol[x]) { const A = m.nivel.aurora || AURORA; s += 'a' + Math.floor((t % A.periodo) / 4); break; } }
     return s;
   };
 }
-/* busca un camino. o: { desde:{x,y,id}, meta:{x,y,radio} o {guino:id}, habil, max, peso, mundo } */
+/* busca un camino. o: { desde:{x,y,id}, meta:{x,y,radio,alto,burbuja} o {guino:id}, habil, max, peso, mundo }
+   (burbuja: la meta cuenta solo si Nick sigue adentro de una burbuja grande) */
 export function resolver(nivel, o) {
   const m0 = o.mundo ? copiar(o.mundo) : modoResolvedor(crearMundo(nivel, { habil: o.habil, en: o.desde }), o.meta.guino);
+  if (!m0.auroraCol) { const c = new Uint8Array(m0.W); let hay = false; for (let i = 0; i < m0.tiles.length; i++) if (m0.tiles[i] === B.AURORA) { c[i % m0.W] = 1; hay = true; } m0.auroraCol = hay ? c : null; }
   const meta = o.meta, radio = meta.radio || 14;
   const dist = mapaDistancias(m0, meta);
   const hDe = (m) => {
@@ -66,7 +70,7 @@ export function resolver(nivel, o) {
   };
   const llego = meta.guino != null
     ? (m) => !m.p.muerto && m.juntadas.has(meta.guino)
-    : (m) => !m.p.muerto && Math.abs(m.p.x - meta.x) < radio && Math.abs(m.p.y - meta.y) < (meta.alto || 24);
+    : (m) => !m.p.muerto && Math.abs(m.p.x - meta.x) < radio && Math.abs(m.p.y - meta.y) < (meta.alto || 24) && (!meta.burbuja || !!m.p.enBurbuja);
   const peso = o.peso || 2.2, max = o.max || 300000;
   const abiertos = [{ m: m0, g: 0, f: hDe(m0), camino: null }];
   const reloj = relojDe(m0);

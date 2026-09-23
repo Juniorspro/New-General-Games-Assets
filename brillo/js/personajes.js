@@ -149,7 +149,7 @@ export function cuadro(quien, anim, f, espejo) {
   const n = cuadrosDe(anim), i = ((f % n) + n) % n;
   const clave = `${quien}:${anim}:${i}:${espejo ? 1 : 0}`;
   let c = cache.get(clave);
-  if (!c) { c = muneco(Q.rampa, anim, i, Q).aCanvas(espejo); cache.set(clave, c); }
+  if (!c) { c = (Q.figura ? Q.figura(anim, i) : muneco(Q.rampa, anim, i, Q)).aCanvas(espejo); cache.set(clave, c); }
   return c;
 }
 
@@ -179,7 +179,35 @@ export const QUIENES = {
   vio: { rampa: RAMPA.violeta },
   gris: { rampa: RAMPA.gris, plano: true },
   moraPlana: { rampa: RAMPA.gris, plano: true, extra: monio },
+  dorado: { figura: (anim, f) => pezDorado(anim, f) },
 };
+
+/* Dorado: un pez dorado de vidrio, redondo, con la cola grande y aletitas.
+   Flota a media altura del cuadro (no tiene pies) y mueve la cola. */
+function pezDorado(anim, f) {
+  const L = new Lienzo(CUADRO.w, CUADRO.h);
+  const R = RAMPA.naranja, A = RAMPA.amarillo;
+  const ola = Math.sin(f / 6 * Math.PI * 2), dy = Math.round(ola * 1);
+  const cx = 16, cy = 20 + dy;
+  /* la cola, atrás (a la izquierda: mira a la derecha) */
+  const c = ola * 1.5;
+  L.poligono([[cx - 8, cy], [cx - 14, cy - 6 + c], [cx - 12, cy], [cx - 14, cy + 6 + c]], pintura.vertical(R, 5, 2), R);
+  /* la aleta de arriba */
+  L.poligono([[cx - 3, cy - 6], [cx + 1, cy - 11], [cx + 4, cy - 6]], pintura.vertical(A, 6, 3), A);
+  /* el cuerpo */
+  L.elipse(cx, cy, 8.5, 7, pintura.aero(R, { bajo: 2, alto: 6, gorra: 0.5, punto: 0.07 }), R);
+  L.separar(R);
+  /* la panza clara y la aletita del costado */
+  L.elipse(cx + 1, cy + 3.5, 5, 2.4, pintura.esfera(A, { bajo: 4, alto: 7 }), A);
+  L.poligono([[cx - 2, cy + 1], [cx - 6, cy + 4 + ola], [cx - 1, cy + 4]], A[4], A);
+  /* el ojo grande y la boca */
+  L.elipse(cx + 4.5, cy - 2, 2, 2.2, () => '#0b1a3c', R); L.punto(cx + 4, cy - 3, '#ffffff'); L.punto(cx + 5, cy - 3, '#ffffff');
+  L.punto(cx + 3, cy + 1, mezclar(R[5], '#ff6aa0', 0.6));
+  if (anim === 'habla' && f % 2) { L.punto(cx + 8, cy + 1, '#6a2a06'); L.punto(cx + 8, cy + 2, '#6a2a06'); }
+  else L.punto(cx + 8, cy + 1, '#6a2a06');
+  L.contorno({ tono: 0 });
+  return L;
+}
 
 /* PLANO, la Actualización: un cuadrado gris sin brillo, sin sombra y sin
    contorno de color, lo contrario de todo lo demás. f: 0-3 (3 parpadea, 1

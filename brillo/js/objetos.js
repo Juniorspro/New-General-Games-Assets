@@ -193,3 +193,27 @@ export function estatica(g, x, y, f) {
     g.fillRect(x + i, y + j, 1, 2);
   }
 }
+
+/* la Aurora: una cinta de luz arriba de la baldosa. Prendida, brilla y cambia
+   de color (verde, cian, violeta) como las cortinas del cielo; apagada, queda
+   una línea de puntitos, que se aviva cuando está por prenderse. */
+const AUR = ['#7dffc0', '#6ff0e8', '#79d4ff', '#a98cff', '#e28cff', '#79d4ff'];
+export function aurora(g, x, y, prendida, falta, t, tx) {
+  if (prendida) {
+    for (let i = 0; i < 16; i++) {
+      const u = (tx * 16 + i) * 0.045 + t * 0.6, k = Math.floor(((u % AUR.length) + AUR.length) % AUR.length);
+      const o = Math.round(Math.sin((tx * 16 + i) * 0.3 + t * 3) * 0.8);
+      g.fillStyle = '#f4fffb'; g.fillRect(x + i, y + o, 1, 1);
+      g.fillStyle = AUR[k]; g.fillRect(x + i, y + 1 + o, 1, 3);
+      g.globalAlpha = 0.45; g.fillRect(x + i, y + 4 + o, 1, 3);
+      g.globalAlpha = 0.18; g.fillRect(x + i, y + 7 + o, 1, 6);
+      g.globalAlpha = 1;
+    }
+  } else {
+    const cerca = falta < 36 ? 1 - falta / 36 : 0;
+    g.globalAlpha = 0.22 + cerca * 0.5;
+    g.fillStyle = cerca > 0 ? '#c8fff0' : '#7fb8d8';
+    for (let i = (tx & 1); i < 16; i += 2) g.fillRect(x + i, y + 1, 1, 1);
+    g.globalAlpha = 1;
+  }
+}

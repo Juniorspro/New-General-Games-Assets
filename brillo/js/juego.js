@@ -6,12 +6,12 @@
    planitos), los vecinos, Nick, los efectos, el agua (encima: todo lo que
    está adentro queda teñido) y lo de adelante (pasto y burbujas grandes).
    ========================================================================== */
-import { crearMundo, paso, revivir, baldosa, B, T, K, NADA, plataformaEn, burbujasDe, planitoEn } from './fisica.js';
+import { crearMundo, paso, revivir, baldosa, B, T, K, NADA, plataformaEn, burbujasDe, planitoEn, auroraBrilla, auroraFalta } from './fisica.js';
 import { NIVELES } from './niveles.js';
 import { Fondo } from './fondos.js';
 import { pintarNivel } from './tiles.js';
 import { cuadro, cuadrosDe } from './personajes.js';
-import { gota, guino, sesion, orbe, plataforma, tablon, hongo, planito, bloquePlano, estatica } from './objetos.js';
+import { gota, guino, sesion, orbe, plataforma, tablon, hongo, planito, bloquePlano, estatica, aurora } from './objetos.js';
 import { BurbujasAmbiente, pastoFrente, Destellos, burbuja } from './efectos.js';
 
 const suave = (k, dt) => 1 - Math.pow(k, dt * 60);
@@ -28,7 +28,7 @@ export class Nivel {
     this.encima = [];
     for (let y = 0; y < m.H; y++) for (let x = 0; x < m.W; x++) {
       const b = m.tiles[y * m.W + x];
-      if (b === B.TABLON || b === B.PLANO || b === B.ESTATICA || b === B.HONGO) this.encima.push({ x, y, b, i: y * m.W + x });
+      if (b === B.TABLON || b === B.PLANO || b === B.ESTATICA || b === B.HONGO || b === B.AURORA) this.encima.push({ x, y, b, i: y * m.W + x });
     }
     /* el agua, en tiras por fila (para teñir y dibujar la superficie) */
     this.agua = [];
@@ -36,7 +36,7 @@ export class Nivel {
     this.npcs = (N.npcs || []).map((v) => ({ ...v, anim: 'quieto', f: 0, habla: false, visible: v.visible !== false }));
     this.cam = { x: 0, y: 0 }; this.mira = 0;
     this.burbujas = new BurbujasAmbiente(N.burbujas ?? 34, 11);
-    this.pasto = pastoFrente(900, 5);
+    this.pasto = pastoFrente(900, 5, N.mundo);
     this.fx = new Destellos();
     this.ondas = []; this.trozos = []; this.letreros = []; this.pops = [];
     this.t = 0; this.sacudon = 0; this.hongoAplaste = new Map();
@@ -150,7 +150,8 @@ export class Nivel {
     for (const q of this.encima) {
       const x = q.x * T - cam.x, y = q.y * T - cam.y;
       if (x < -20 || x > w + 20 || y < -20 || y > h + 20) continue;
-      if (q.b === B.TABLON) { const izq = baldosa(m, q.x - 1, q.y) !== B.TABLON, der = baldosa(m, q.x + 1, q.y) !== B.TABLON; g.drawImage(tablon(izq, der), Math.round(x), Math.round(y)); }
+      if (q.b === B.AURORA) aurora(g, Math.round(x), Math.round(y), auroraBrilla(m, q.x, m.t), auroraFalta(m, q.x, m.t), t, q.x);
+      else if (q.b === B.TABLON) { const izq = m.tiles[q.i - 1] !== B.TABLON, der = m.tiles[q.i + 1] !== B.TABLON; g.drawImage(tablon(izq, der), Math.round(x), Math.round(y)); }
       else if (q.b === B.PLANO) { if (!m.rotos.has(q.i)) g.drawImage(bloquePlano(), Math.round(x), Math.round(y)); }
       else if (q.b === B.ESTATICA) estatica(g, Math.round(x), Math.round(y), f);
       else if (q.b === B.HONGO) { const a = this.hongoAplaste.get(q.x) || 0; g.drawImage(hongo(a > 8 ? 1 : a > 4 ? 2 : a > 0 ? 3 : 0), Math.round(x - 2), Math.round(y - 2)); }
@@ -211,11 +212,18 @@ export class Nivel {
     for (const q of this.letreros) { g.globalAlpha = 1 - q.t / 0.8; g.fillStyle = '#ffffff'; g.fillText(q.txt, X(q.x), Y(q.y - q.t * 20)); }
     g.globalAlpha = 1;
     /* el agua, encima de todo lo que tiene adentro */
+    const mar = !!this.N.mar;
     for (const a of this.agua) {
       const x0 = X(a.x0 * T), x1 = X(a.x1 * T), y0 = Y(a.y * T);
       if (x1 < 0 || x0 > w || y0 > h || y0 < -T) continue;
-      g.fillStyle = a.sup ? 'rgba(60,190,240,0.38)' : 'rgba(30,150,220,0.45)';
+      g.fillStyle = a.sup ? 'rgba(60,190,240,0.38)' : mar ? 'rgba(40,170,230,0.14)' : 'rgba(30,150,220,0.45)';
       g.fillRect(x0, y0, x1 - x0, T);
+      /* donde el agua toca el aire de costado (las cúpulas), un filo de vidrio */
+      if (mar) {
+        g.fillStyle = 'rgba(225,250,255,0.55)';
+        if (m.tiles[a.y * m.W + a.x0 - 1] === B.VACIO) g.fillRect(x0, y0, 1, T);
+        if (a.x1 < m.W && m.tiles[a.y * m.W + a.x1] === B.VACIO) g.fillRect(x1 - 1, y0, 1, T);
+      }
       if (a.sup) {
         /* la superficie que se mueve, con su filo de luz */
         for (let x = x0; x < x1; x++) {
@@ -225,16 +233,20 @@ export class Nivel {
         }
       } else {
         /* la luz del fondo (cáusticas) que se mueve */
-        for (let x = x0; x < x1; x += 2) for (let y = y0; y < y0 + T; y += 2) {
+        const pas = mar ? 4 : 2, xa = Math.max(x0, 0), xb = Math.min(x1, w);
+        g.fillStyle = 'rgba(210,250,255,0.35)';
+        for (let x = xa - ((xa + cam.x) % pas + pas) % pas; x < xb; x += pas) for (let y = y0; y < y0 + T; y += pas) {
           const c = Math.sin((x + cam.x) * 0.23 + t * 1.3) + Math.sin((y + cam.y) * 0.31 - t * 1.1) + Math.sin((x + y + cam.x) * 0.11 + t);
-          if (c > 2.2) { g.fillStyle = 'rgba(210,250,255,0.35)'; g.fillRect(x, y, 2, 1); }
+          if (c > 2.2) g.fillRect(x, y, pas, 1);
         }
       }
     }
     /* lo de adelante: pasto alto y burbujas grandes */
-    const per = this.pasto.width, ox = -(((cam.x * 1.25) % per) + per) % per;
-    const yp = h - this.pasto.height + 30 + Math.round((m.H * T - h - cam.y) * 1.25);
-    if (yp < h) for (let x = Math.round(ox); x < w; x += per) g.drawImage(this.pasto, x, yp);
+    if (this.pasto) {
+      const per = this.pasto.width, ox = -(((cam.x * 1.25) % per) + per) % per;
+      const yp = h - this.pasto.height + 30 + Math.round((m.H * T - h - cam.y) * 1.25);
+      if (yp < h) for (let x = Math.round(ox); x < w; x += per) g.drawImage(this.pasto, x, yp);
+    }
     this.burbujas.dibujar(g, cam, t, w, h, 'frente');
     this.camVista = cam;
   }

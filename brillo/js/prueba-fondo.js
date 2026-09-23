@@ -11,13 +11,14 @@ export function probarFondo() {
   const q = new URLSearchParams(location.search);
   Pantalla.iniciar();
   const post = new Post(document.getElementById('c'));
-  const F = new Fondo(q.get('mundo') || 'colina', 7);
+  const mundo = q.get('mundo') || 'colina';
+  const F = new Fondo(mundo, 7);
   /* un pedacito de nivel: piso con un escalón y una isla flotando */
   const A = 120, H = 23;
   const mapa = (x, y) => y >= 19 || (x > 30 && x < 42 && y >= 16) || (x > 50 && x < 57 && y === 12) || (x > 70 && y >= 17);
-  const N = pintarNivel(A, H, mapa, 'colina');
+  const N = pintarNivel(A, H, mapa, mundo);
   let [base, g] = lienzo2d(Pantalla.w, Pantalla.h);
-  const B = new BurbujasAmbiente(40, 3), P = pastoFrente(900, 5);
+  const B = new BurbujasAmbiente(40, 3), P = pastoFrente(900, 5, mundo);
   const t0 = performance.now();
   const cam = { x: +(q.get('x') || 0), y: H * T - Pantalla.h };
   const cuadroN = () => {
@@ -33,7 +34,7 @@ export function probarFondo() {
     g.drawImage(cuadro('nick', 'quieto', f, false), Math.round(12 * T - cam.x), Math.round(19 * T - 36 - cam.y));
     g.drawImage(cuadro('mora', 'saluda', f, true), Math.round(15 * T - cam.x), Math.round(19 * T - 36 - cam.y));
     g.drawImage(cuadro('nick', 'corre', f, false), Math.round(20 * T - cam.x), Math.round(19 * T - 36 - cam.y));
-    { const per = P.width, ox = -((cam.x * 1.3) % per + per) % per; for (let x = Math.round(ox); x < w; x += per) g.drawImage(P, x, h - P.height + 26); }
+    if (P) { const per = P.width, ox = -((cam.x * 1.3) % per + per) % per; for (let x = Math.round(ox); x < w; x += per) g.drawImage(P, x, h - P.height + 26); }
     B.dibujar(g, cam, t, w, h, 'frente');
     post.mostrar(base, { ...F.post, sol: F.sol, grado: F.grado, t });
   };

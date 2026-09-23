@@ -119,5 +119,205 @@ const COLINA = (() => {
   };
 })();
 
-export const NIVELES = { colina: COLINA };
-export const ORDEN = ['colina'];
+/* ============================== 2. El Arrecife de Cristal ============================== */
+/* todo es agua; se respira en las cúpulas de aire (vidrio) y en la gran sala hundida */
+const ARRECIFE = (() => {
+  const W = 200, H = 30, P = 24;
+  const filas = construir(W, H, (m) => {
+    m.rect(0, 0, W - 1, P - 1, '~');
+    m.suelo(0, W - 1, P);
+    /* la cúpula de la salida */
+    m.rect(0, 15, 13, P - 1, ' ');
+    m.put(3, P - 1, 'N');
+    m.gotas(6, 11, P - 2);
+    /* corales entre las cúpulas, y medusas de estática en el fondo */
+    m.rect(18, 19, 19, P - 1); m.rect(26, 15, 27, P - 1); m.rect(33, 18, 34, P - 1);
+    m.rect(21, P - 1, 23, P - 1, '^'); m.rect(29, P - 1, 31, P - 1, '^');
+    m.arco(15, 25, 17, 4); m.arco(27, 38, 13, 3);
+    /* la segunda cúpula: la primera sesión */
+    m.rect(40, 15, 51, P - 1, ' ');
+    m.put(44, P - 1, 'S');
+    m.gotas(46, 50, P - 3);
+    /* la sala hundida: techo de roca hasta arriba; el piso del medio es estática (hay que ir con la burbuja) */
+    m.rect(58, 0, 103, 5);
+    m.rect(60, 6, 99, P - 1, ' ');
+    m.rect(67, P, 80, P, '^');
+    m.gotas(62, 65, P - 2);
+    m.arco(67, 80, P - 5, 3);
+    /* el hongo y la repisa del primer guiño */
+    m.put(88, P - 1, 'b');
+    m.rect(85, 17, 91, 17, '=');
+    m.put(88, 16, 'G');
+    m.gotas(85, 91, 15);
+    m.put(95, P - 1, 'S');
+    /* el túnel y el pozo de aire: se sube adentro de una burbuja grande */
+    m.rect(100, 6, 103, 20);
+    m.rect(100, 21, 103, P - 1, ' ');
+    m.rect(104, 0, 108, 3); m.rect(104, 4, 108, P - 1, ' ');
+    m.rect(109, 8, 118, P - 1); m.rect(109, 0, 118, 3); m.rect(109, 4, 118, 7, ' ');
+    m.gotas(111, 117, 6);
+    /* el agua de nuevo: el segundo guiño, detrás de coral gris */
+    m.rect(122, 16, 123, P - 1); m.rect(137, 12, 138, P - 1);
+    m.rect(129, 20, 133, P - 1, '%'); m.rect(130, 21, 132, P - 1, '~'); m.put(131, P - 2, 'G');
+    m.arco(124, 136, 14, 4);
+    m.rect(141, P - 1, 143, P - 1, '^');
+    /* la tercera cúpula */
+    m.rect(146, 16, 156, P - 1, ' ');
+    m.put(151, P - 1, 'S');
+    /* la fosa del tercer guiño, con estática en las paredes */
+    m.rect(164, P, 171, H - 2, '~'); m.put(167, H - 2, 'G');
+    m.put(164, 26, '^'); m.put(164, 27, '^'); m.put(171, 25, '^'); m.put(171, 26, '^');
+    /* la torre de coral con la cúpula del orbe arriba */
+    m.rect(176, 12, W - 1, P - 1);
+    m.rect(182, 4, W - 1, 11, ' ');
+    m.arco(172, 180, 10, 3);
+    m.put(192, 11, 'F');
+  });
+  return {
+    id: 'arrecife', mundo: 'arrecife', estilo: 'arrecife', filas, habil: { zumbido: true }, mar: true,
+    burbujeros: [{ x: px(106) + 8, y: px(P) - 14, cada: 90, sube: px(P) - 14 - px(5), vel: 1.5, r: 15 }],
+    zonas: [
+      { id: 'dorado', x0: px(53), x1: px(58) },
+      { id: 'pozo', x0: px(100), x1: px(103) },
+      { id: 'cima', x0: px(182), x1: px(W) },
+    ],
+    da: { dorado: { burbuja: true } },
+    npcs: [{ id: 'dorado', x: px(56), y: px(21), mira: -1 }],
+    burbujas: 44,
+  };
+})();
+
+/* ============================== 3. Ciudad Vidrio ============================== */
+/* torres de vidrio con terrazas; la calle de abajo no mata, y los ascensores te devuelven arriba */
+const CIUDAD = (() => {
+  const W = 180, H = 34, P = 28;
+  const filas = construir(W, H, (m) => {
+    m.suelo(0, W - 1, P);
+    m.put(3, P - 1, 'N');
+    m.gotas(6, 12, P - 2);
+    /* la escalerita de vidrio hasta la primera torre (la de Radio Vidrio, donde está Lila) */
+    m.rect(15, 25, 17, 25, '='); m.rect(18, 22, 20, 22, '=');
+    m.arco(14, 21, 22, 3);
+    m.rect(21, 19, 30, P - 1);
+    /* el puente de vidrio y la segunda torre, con un planito */
+    m.rect(31, 19, 37, 19, '=');
+    m.arco(36, 43, 16, 3);
+    m.rect(42, 17, 55, P - 1);
+    m.put(50, 16, 'S');
+    /* el ascensor (entre 56 y 63) y la torre alta, con un hongo y el primer guiño arriba */
+    m.rect(64, 8, 75, P - 1);
+    m.put(66, 7, 'b');
+    m.rect(64, 2, 68, 2, '='); m.put(66, 1, 'G');
+    m.put(71, 7, '^');
+    m.gotas(57, 59, 6);
+    /* la cuarta torre: el techo tiene dos vidrios grises; abajo, un cuarto con el segundo guiño */
+    m.rect(78, 12, 88, P - 1);
+    m.rect(80, 13, 86, 14, ' '); m.rect(82, 12, 83, 12, '%'); m.put(85, 14, 'G');
+    m.gotas(79, 81, 10);
+    /* la quinta torre, con la pared gris que se rompe con el zumbido */
+    m.rect(92, 16, 104, P - 1);
+    m.rect(98, 12, 98, 15, '%');
+    m.put(102, 15, 'S');
+    m.gotas(93, 97, 14);
+    /* el zigzag de tablones hasta la terraza más alta */
+    for (const [x, y] of [[105, 25], [109, 22], [105, 19], [109, 16], [105, 13], [109, 10], [105, 7], [109, 4]]) m.rect(x, y, x + 2, y, '=');
+    m.arco(105, 111, 9, 2);
+    m.rect(112, 4, 130, P - 1);
+    m.put(118, 3, '^');
+    m.put(126, 3, 'S');
+    /* la séptima torre: una ventana gris al costado, con el tercer guiño adentro (se ve desde el ascensor) */
+    m.rect(136, 10, 150, P - 1);
+    m.rect(136, 20, 136, 22, '%'); m.rect(137, 20, 140, 22, ' '); m.put(139, 22, 'G');
+    m.gotas(131, 135, 7);
+    /* la torre de la radio, con el orbe arriba */
+    m.rect(152, 8, 154, 8, '=');
+    m.rect(158, 6, 168, P - 1);
+    m.arco(150, 158, 5, 2);
+    m.put(163, 5, 'F');
+    m.gotas(170, 176, P - 2);
+  });
+  return {
+    id: 'ciudad', mundo: 'ciudad', estilo: 'ciudad', filas, habil: { zumbido: true, burbuja: true },
+    plataformas: [
+      { x0: px(57), y0: px(26), x1: px(57), y1: px(8), w: 3, periodo: 360 },
+      { x0: px(89), y0: px(26), x1: px(89), y1: px(12), w: 3, periodo: 300, fase: 80 },
+      { x0: px(132), y0: px(26), x1: px(132), y1: px(10), w: 3, periodo: 320, fase: 40 },
+    ],
+    planitos: [
+      { x0: px(43) + 8, x1: px(48) + 8, y: px(17), vel: 0.55 },
+      { x0: px(93) + 8, x1: px(97), y: px(16), vel: 0.6, fase: 40 },
+      { x0: px(120), x1: px(129), y: px(4), vel: 0.65 },
+    ],
+    zonas: [
+      { id: 'lila', x0: px(23), x1: px(27) },
+      { id: 'lila2', x0: px(99), x1: px(103) },
+      { id: 'cima', x0: px(158), x1: px(169) },
+    ],
+    npcs: [{ id: 'lila', x: px(28), y: px(19), mira: -1 }],
+  };
+})();
+
+/* ============================== 4. El Cielo Burbuja ============================== */
+/* nubes sobre el vacío (caerse desconecta), columnas de viento que suben y burbujas grandes */
+const CIELO = (() => {
+  const W = 210, H = 36;
+  const filas = construir(W, H, (m) => {
+    /* la nube de la salida, con Sol */
+    m.rect(0, 22, 16, 25);
+    m.put(3, 21, 'N');
+    m.gotas(5, 14, 20);
+    /* la primera columna de viento (llega hasta abajo: si te caés ahí, te sube) */
+    m.rect(20, 8, 21, H - 1, 'w');
+    m.gotas(20, 21, 11); m.gotas(20, 21, 15);
+    m.rect(25, 14, 34, 16);
+    /* el hueco grande: con la burbuja, o con la segunda columna; arriba de ella, el primer guiño */
+    m.rect(42, 3, 43, H - 1, 'w');
+    m.rect(38, 6, 41, 6, '='); m.put(39, 5, 'G');
+    m.arco(35, 46, 12, 3);
+    m.rect(47, 16, 58, 19);
+    m.put(52, 15, 'S');
+    /* abajo, la nube con el burbujero; la burbuja grande sube hasta la nube alta */
+    m.rect(62, 27, 70, 29);
+    m.gotas(63, 66, 25);
+    m.rect(70, 10, 86, 12);
+    m.put(79, 9, '^');
+    m.put(84, 9, 'S');
+    m.arco(66, 73, 8, 2);
+    /* la nube que va y viene sobre el hueco; abajo, una nubecita con el segundo guiño y una columna para volver */
+    m.rect(99, 22, 102, 23); m.put(100, 21, 'G');
+    m.rect(104, 11, 104, H - 1, 'w');
+    m.gotas(90, 110, 7);
+    m.rect(114, 10, 126, 12);
+    m.put(122, 9, 'S');
+    /* la subida final: columna, nube, el hueco de la burbuja y la cima del arcoíris */
+    m.rect(130, 2, 131, H - 1, 'w');
+    m.rect(134, 4, 142, 5);
+    m.rect(147, 13, 149, 13); m.put(148, 12, 'G');
+    m.rect(152, 5, 152, H - 1, 'w');
+    m.rect(156, 6, 168, 8);
+    m.arco(143, 155, 1, 2);
+    m.rect(172, 3, W - 1, 6);
+    m.put(200, 2, 'F');
+    m.gotas(174, 196, 1);
+  });
+  return {
+    id: 'cielo', mundo: 'cielo', estilo: 'cielo', filas, habil: { zumbido: true, burbuja: true },
+    burbujeros: [{ x: px(67) + 8, y: px(27) - 14, cada: 90, sube: px(27) - 14 - px(9), vel: 1.5, r: 15 }],
+    plataformas: [{ x0: px(88), y0: px(10), x1: px(110), y1: px(10), w: 3, periodo: 420 }],
+    planitos: [
+      { x0: px(48) + 8, x1: px(56), y: px(16), vel: 0.55 },
+      { x0: px(115) + 8, x1: px(120), y: px(10), vel: 0.6 },
+    ],
+    zonas: [
+      { id: 'sol', x0: px(8), x1: px(12) },
+      { id: 'burbujota', x0: px(62), x1: px(65), y0: px(24), y1: px(28) },
+      { id: 'sol2', x0: px(80), x1: px(84) },
+      { id: 'cima', x0: px(172), x1: px(W) },
+    ],
+    npcs: [{ id: 'sol', x: px(11), y: px(22), mira: -1 }],
+    burbujas: 50,
+  };
+})();
+
+export const NIVELES = { colina: COLINA, arrecife: ARRECIFE, ciudad: CIUDAD, cielo: CIELO };
+export const ORDEN = ['colina', 'arrecife', 'ciudad', 'cielo'];

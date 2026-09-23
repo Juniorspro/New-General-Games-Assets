@@ -12,14 +12,25 @@ const h32 = (x, y, s = 0) => { let h = (x * 374761393 + y * 668265263 + s * 2147
 
 /* los estilos de cada mundo: de qué rampas salen el pasto y el cuerpo */
 export const ESTILOS = {
-  colina: { tope: RAMPA.verde, cuerpo: RAMPA.tierra, piedras: true, hondo: 3 },
+  colina: { tope: RAMPA.verde, cuerpo: RAMPA.tierra, piedras: true },
+  /* arena arriba y roca azul abajo, con piedritas que parecen conchitas */
+  arrecife: { tope: RAMPA.arena, cuerpo: RAMPA.roca, piedras: true, pastoAlto: 0 },
+  /* terrazas con pasto y el cuerpo de vidrio con ventanas y reflejos */
+  ciudad: { tope: RAMPA.verde, cuerpo: RAMPA.vidrio, ventanas: true },
+  /* nubes: todo blanco y redondo, con la panza celeste */
+  cielo: { tope: RAMPA.blanco, cuerpo: ['#5f7fa6', '#7896bb', '#93adce', '#aec4df', '#c6d7ec', '#dce8f5', '#eef4fb', '#ffffff'], nube: true, radio: 6 },
+  /* la noche: pasto oscuro y tierra azul con cristalitos que brillan */
+  aurora: { tope: RAMPA.noche, cuerpo: RAMPA.nocheTierra, cristales: true },
+  /* el Plano: gris y chato, sin degradé, sin pasto, sin esquinas redondas */
+  plano: { tope: RAMPA.gris, cuerpo: RAMPA.gris, chato: true, radio: 0 },
 };
 
 /* pinta el mapa en pedazos de 256x256. esSolido(tx, ty) dice qué es pared */
 export function pintarNivel(anchoT, altoT, esSolido, estilo) {
   const E = ESTILOS[estilo] || ESTILOS.colina;
   const P = 256, piezas = new Map();
-  const sol = (x, y) => (x < 0 || x >= anchoT ? esSolido(Math.max(0, Math.min(anchoT - 1, x)), y) : y < 0 ? false : y >= altoT ? true : esSolido(x, y));
+  /* afuera del mapa: a los costados sigue lo del borde; arriba, si el borde de arriba es pared, sigue la pared (techos de roca) */
+  const sol = (x, y) => { const cx = Math.max(0, Math.min(anchoT - 1, x)); return y < 0 ? esSolido(cx, 0) : y >= altoT ? true : esSolido(cx, y); };
   /* cuántas baldosas sólidas hay arriba (para oscurecer con la profundidad) */
   const hondura = (x, y) => { let k = 0; while (k < 6 && sol(x, y - k - 1)) k++; return k; };
   /* dónde empieza (en píxeles) la tierra de esta columna; se promedia con las
@@ -38,7 +49,7 @@ export function pintarNivel(anchoT, altoT, esSolido, estilo) {
       const S = [-2, -1, 0, 1, 2].map((d) => supT(tx + d, ty));
       for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
         /* esquinas redondas de afuera */
-        const r = 4;
+        const r = E.radio ?? 4;
         const esq = (cx, cy) => { const dx = cx - x - 0.5, dy = cy - y - 0.5; return dx * dx + dy * dy > r * r; };
         if (arr && izq && x < r && y < r && esq(r, r)) continue;
         if (arr && der && x >= T - r && y < r && esq(T - r, r)) continue;
@@ -48,7 +59,10 @@ export function pintarNivel(anchoT, altoT, esSolido, estilo) {
         let col;
         /* el pasto de arriba: grueso, con el filo de brillo, y el borde de abajo gotea en puntas */
         const gota = 7 + Math.floor(h32(X, 0, 3) * 2.5) + (h32(X >> 1, ty, 5) < 0.18 ? 3 : 0) - (h32(X >> 2, ty, 6) < 0.15 ? 2 : 0);
-        if (arr && y < gota) {
+        if (E.chato) {
+          /* el Plano: un solo gris, con el filo de arriba apenas más claro */
+          col = arr && y < 2 ? tope[5] : izq && x === 0 || der && x === T - 1 || aba && y === T - 1 ? tope[2] : tope[3];
+        } else if (arr && y < (E.nube ? 5 : gota)) {
           col = y === 0 ? tope[6] : y === 1 ? tope[6] : y === 2 ? tope[5] : y < gota - 3 ? tope[4] : y < gota - 1 ? tope[3] : tope[2];
           if (y === 0 && h32(X, Y, 9) < 0.35) col = tope[7];
           /* un brillo corto más abajo, como la luz en el pasto mojado */
@@ -68,12 +82,19 @@ export function pintarNivel(anchoT, altoT, esSolido, estilo) {
           const n = h32(X, Y, 1);
           /* piedritas: de 2x2 con su brillo arriba */
           const pq = h32(X >> 1, Y >> 1, 12);
-          if (E.piedras && pq < 0.018) col = (X & 1) === 0 && (Y & 1) === 0 ? cuerpo[Math.min(7, i + 3)] : cuerpo[Math.min(7, i + 1)];
+          /* las ventanas de la ciudad: marcos cada 8 píxeles y reflejos en diagonal */
+          if (E.ventanas) {
+            const mx = X & 7, my = Y & 7;
+            if (mx === 0 || my === 0) col = cuerpo[Math.max(0, i - 2)];
+            else if (((X + Y * 2) % 48 + 48) % 48 < 5) col = cuerpo[Math.min(7, i + 2)];
+            else if (mx === 1 || my === 1) col = cuerpo[Math.min(7, i + 1)];
+          } else if (E.cristales && pq < 0.012) col = (X & 1) ? '#9ff7ff' : '#e9fdff';
+          else if (E.piedras && pq < 0.018) col = (X & 1) === 0 && (Y & 1) === 0 ? cuerpo[Math.min(7, i + 3)] : cuerpo[Math.min(7, i + 1)];
           else if (n < 0.05) col = cuerpo[Math.max(0, i - 1)];
           /* raicitas cerca del pasto */
-          if (arr && y > gota && y < gota + 5 && h32(X, ty, 13) < 0.08) col = cuerpo[Math.max(0, i - 2)];
+          if (!E.nube && !E.ventanas && arr && y > gota && y < gota + 5 && h32(X, ty, 13) < 0.08) col = cuerpo[Math.max(0, i - 2)];
           /* justo abajo del pasto, una sombrita */
-          if (arr && y === gota) col = cuerpo[Math.max(0, i - 2)];
+          if (arr && y === gota && !E.nube) col = cuerpo[Math.max(0, i - 2)];
           if (izq && x === 0 || der && x === T - 1) col = cuerpo[1];
           else if (izq && x === 1 || der && x === T - 2) col = cuerpo[Math.max(0, i - 1)];
           if (aba && y === T - 1) col = cuerpo[0];
@@ -83,11 +104,12 @@ export function pintarNivel(anchoT, altoT, esSolido, estilo) {
         d[k] = col[0]; d[k + 1] = col[1]; d[k + 2] = col[2]; d[k + 3] = 255;
       }
       /* las hojitas de pasto que se asoman arriba */
-      if (arr && ty > 0) for (let x = 0; x < T; x++) {
+      if (arr && ty > 0 && !E.chato) for (let x = 0; x < T; x++) {
         const X = tx * T + x, q = h32(X, ty, 7);
         if (q > 0.45) continue;
         if ((izq && x < 3) || (der && x > T - 4)) continue;
-        const alto = q < 0.12 ? 3 : q < 0.3 ? 2 : 1;
+        /* en las nubes, bollitos en vez de hojitas */
+        const alto = E.nube ? (Math.sin((X + ty * 7) * 0.45) > 0.55 ? 2 : Math.sin((X + ty * 7) * 0.45) > 0.1 ? 1 : 0) : q < 0.12 ? 3 : q < 0.3 ? 2 : 1;
         for (let k2 = 1; k2 <= alto; k2++) {
           const Y = ty * T - k2; if (Y < py * P) continue;
           const kk = ((Y - py * P) * P + (X - px * P)) * 4, cc = k2 === alto ? tope[5] : tope[4];

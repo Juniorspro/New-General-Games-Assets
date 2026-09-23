@@ -10,7 +10,7 @@
    todo se pueda repetir igual.
    ========================================================================== */
 export const T = 16, DT = 1 / 60;
-export const B = { VACIO: 0, PISO: 1, TABLON: 2, PLANO: 3, AGUA: 4, ESTATICA: 5, HONGO: 6 };
+export const B = { VACIO: 0, PISO: 1, TABLON: 2, PLANO: 3, AGUA: 4, ESTATICA: 5, HONGO: 6, AURORA: 7 };
 export const NADA = { x: 0, y: 0, salto: false, saltoE: false, accion: false, accionE: false };
 
 /* cómo se mueve Nick (por paso) */
@@ -25,7 +25,20 @@ export const K = {
   ZUMBIDO_R: 46, ZUMBIDO_CD: 34, MUERTO: 55,
 };
 
-const LETRA = { '#': B.PISO, '=': B.TABLON, '%': B.PLANO, '~': B.AGUA, '^': B.ESTATICA, 'b': B.HONGO };
+const LETRA = { '#': B.PISO, '=': B.TABLON, '%': B.PLANO, '~': B.AGUA, '^': B.ESTATICA, 'b': B.HONGO, 'a': B.AURORA };
+
+/* la Aurora: una ola de luz que camina por las baldosas 'a'. Mientras le pasa
+   por encima, la baldosa es un tablón de vidrio; después, aire. */
+export const AURORA = { periodo: 192, on: 120, paso: 8 };
+export function auroraBrilla(m, tx, t) {
+  const A = m.nivel.aurora || AURORA, k = ((t - tx * A.paso) % A.periodo + A.periodo) % A.periodo;
+  return k < A.on;
+}
+/* cuánto le falta para prenderse (0 si ya está prendida) */
+export function auroraFalta(m, tx, t) {
+  const A = m.nivel.aurora || AURORA, k = ((t - tx * A.paso) % A.periodo + A.periodo) % A.periodo;
+  return k < A.on ? 0 : A.periodo - k;
+}
 
 /* ---------------- armar el mundo ---------------- */
 export function crearMundo(nivel, o = {}) {
@@ -87,6 +100,7 @@ export function baldosa(m, tx, ty) {
   if (ty >= m.H) return B.VACIO;
   const b = m.tiles[ty * m.W + tx];
   if (b === B.PLANO && m.rotos.has(ty * m.W + tx)) return B.VACIO;
+  if (b === B.AURORA) return auroraBrilla(m, tx, m.t) ? B.TABLON : B.VACIO;
   return b;
 }
 const solida = (b) => b === B.PISO || b === B.PLANO || b === B.HONGO;

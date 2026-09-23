@@ -27,6 +27,11 @@ export const RAMPA = {
   blanco: ['#7d93ad', '#9db1c8', '#bccde0', '#d5e2ef', '#e6eff7', '#f1f6fb', '#f8fbfe', '#ffffff'],
   tierra: ['#3b2413', '#5a371b', '#7a4d27', '#9a6636', '#b98249', '#d3a468', '#e8c894', '#f7ebd2'],
   arena: ['#7a5a2a', '#9c7838', '#bd984e', '#d6b46a', '#e8cc8a', '#f3e0ad', '#faefd0', '#fffaee'],
+  /* la roca del arrecife, el vidrio de la ciudad y la noche de la Aurora */
+  roca: ['#0b2a3e', '#123f58', '#1a5673', '#23708d', '#3289a6', '#4da6bf', '#7cc6d6', '#b9e6ee'],
+  vidrio: ['#1d4f86', '#2b6aa8', '#3f88c7', '#5fa6de', '#86c3ee', '#b1dbf7', '#d9effd', '#f5fbff'],
+  noche: ['#062a2a', '#0a3f3b', '#0f5a50', '#167866', '#20987c', '#39b995', '#6fd8b4', '#b8f5dd'],
+  nocheTierra: ['#07071c', '#0e0f2e', '#161941', '#202457', '#2c326d', '#3c4485', '#55609f', '#7d88bd'],
 };
 
 /* la luz viene de arriba a la izquierda y un poco de frente */

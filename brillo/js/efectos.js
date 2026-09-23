@@ -65,21 +65,37 @@ export class BurbujasAmbiente {
   }
 }
 
-/* el pasto de adelante: hojas altas oscuras en el borde de abajo, que se mueven más que el juego */
-export function pastoFrente(ancho, semilla) {
+/* lo de adelante, en el borde de abajo, que se mueve más que el juego:
+   pasto (colina), algas (arrecife), pasto de noche con puntas que brillan
+   (aurora) o bollos de nube (cielo). La ciudad y el Plano no tienen. */
+const FRENTE = {
+  colina: { cols: ['#17601c', '#1d7322', '#23862a', '#145419'], punta: '#8ee05e', brillo: 'rgba(210,255,170,0.8)' },
+  arrecife: { cols: ['#0f6b5a', '#138063', '#0c5a4d', '#0a4d44'], punta: '#ff9ccc', brillo: 'rgba(160,255,220,0.7)', largo: 1.4, ondas: true },
+  aurora: { cols: ['#06302f', '#083b38', '#052523', '#041c1c'], punta: '#7dffc0', brillo: 'rgba(120,255,200,0.45)' },
+};
+export function pastoFrente(ancho, semilla, estilo = 'colina') {
   const al = azar(semilla), alto = 70;
   const [c, g] = lienzo2d(ancho, alto);
+  if (estilo === 'cielo') {
+    for (let i = 0; i < ancho / 24; i++) {
+      const x = al() * ancho, r = 10 + al() * 22, y = alto - r * 0.4;
+      for (const dx of [0, ancho, -ancho]) { g.fillStyle = '#e4f1fc'; g.beginPath(); g.arc(x + dx, y + 3, r, 0, TAU); g.fill(); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x + dx - r * 0.15, y, r * 0.9, 0, TAU); g.fill(); }
+    }
+    return c;
+  }
+  const E = FRENTE[estilo];
+  if (!E) return null;
   for (let i = 0; i < ancho / 7; i++) {
-    const x0 = al() * ancho, largo = 18 + al() * 46, curva = (al() - 0.5) * 26, gr = 3 + Math.floor(al() * 3);
-    const col = ['#17601c', '#1d7322', '#23862a', '#145419'][Math.floor(al() * 4)];
+    const x0 = al() * ancho, largo = (18 + al() * 46) * (E.largo || 1), curva = (al() - 0.5) * 26, gr = 3 + Math.floor(al() * 3);
+    const col = E.cols[Math.floor(al() * 4)];
     for (let k = 0; k < largo; k++) {
-      const t = k / largo, x = x0 + curva * t * t, y = alto - k;
+      const t = k / largo, x = x0 + curva * t * t + (E.ondas ? Math.sin(k * 0.3 + i) * 2 : 0), y = alto - k;
       const w = Math.max(1, Math.round(gr * (1 - t * 0.8)));
-      g.fillStyle = k > largo - 3 ? '#8ee05e' : col;
+      g.fillStyle = k > largo - 3 ? E.punta : col;
       for (const dx of [0, ancho, -ancho]) g.fillRect(Math.round(x + dx), Math.round(y), w, 1);
     }
     /* el brillo de la hoja */
-    g.fillStyle = 'rgba(210,255,170,0.8)';
+    g.fillStyle = E.brillo;
     for (let k = Math.floor(largo * 0.3); k < largo * 0.7; k++) { const t = k / largo; for (const dx of [0, ancho, -ancho]) g.fillRect(Math.round(x0 + curva * t * t + dx), alto - k, 1, 1); }
   }
   return c;
