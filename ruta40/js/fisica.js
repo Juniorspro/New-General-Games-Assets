@@ -53,7 +53,8 @@ function masCercano(S, px, py, radio) {
 }
 
 /* ---------------- el vehículo ---------------- */
-/* def: la ficha del vehículo (ver vehiculos.js); mej: las mejoras (0 a 1 cada una) */
+/* def: la ficha del vehículo (ver vehiculos.js); mej: las mejoras (0 a 1 cada una):
+   motor, llantas, susp, tanque, aire (cuánto se lo gira en el aire) */
 export function crearAuto(def, x, y, mej = {}) {
   const k = (m) => mej[m] || 0;
   const A = {
@@ -64,7 +65,8 @@ export function crearAuto(def, x, y, mej = {}) {
     giroMax: def.motor.giro * (1 + 0.35 * k('motor')),
     agarre: def.agarre * (1 + 0.45 * k('llantas')),
     susK: def.susp.k * (1 + 0.5 * k('susp')), susC: def.susp.c * (1 + 0.6 * k('susp')),
-    traccion: def.traccion || (k('traccion') > 0 ? 'ambas' : 'atras'),
+    traccion: def.traccion || 'atras',
+    aireGiro: def.aireGiro * (1 + 0.6 * k('aire')),
     tanque: def.tanque * (1 + 1.2 * k('tanque')), nafta: 0,
     ruedas: def.ruedas.map((r) => {
       const [mx, my] = rot(r.x, r.y, 0);
@@ -111,48 +113,68 @@ export function pasoAuto(A, S, inp, dt = PASO) {
   /* el torque de reacción levanta la trompa (sentido contrario a las agujas = positivo) */
   A.w += torqueTotal * D.reaccion * dt / A.I;
   /* en el aire: acelerar gira para atrás, frenar para adelante */
-  if (!A.tocaAlguna) A.w += (acel - freno) * D.aireGiro * dt;
+  if (!A.tocaAlguna) A.w += (acel - freno) * A.aireGiro * dt;
   A.w *= 1 - 0.25 * dt;
 
-  /* ---- integrar velocidades → posiciones (primero el chasis, las ruedas después de las restricciones) ---- */
-  /* ---- suspensión (resorte) ---- */
+  /* ---- suspensión: resorte y amortiguador (los topes van como restricciones, abajo) ---- */
   const [ux, uy] = rot(0, -1, A.a), [lx, ly] = rot(1, 0, A.a);
   for (const R of A.ruedas) {
     const [ox, oy] = rot(R.x, R.y, A.a);
-    const ax = A.x + ox, ay = A.y + oy;
-    const vax = A.vx - A.w * oy, vay = A.vy + A.w * ox;
-    const dx = R.px - ax, dy = R.py - ay;
+    const dx = R.px - A.x - ox, dy = R.py - A.y - oy;
     const s = dx * ux + dy * uy;
-    const vr = (R.vx - vax) * ux + (R.vy - vay) * uy;
-    let F = A.susK * (R.reposo - s) - A.susC * vr;
-    if (s < R.reposo * 0.25) F += A.susK * 12 * (R.reposo * 0.25 - s);
-    if (s > R.reposo * 1.6) F -= A.susK * 12 * (s - R.reposo * 1.6);
-    R.compr = 1 - s / R.reposo;
+    const rx = R.px - A.x, ry = R.py - A.y;
+    const vr = (R.vx - (A.vx - A.w * ry)) * ux + (R.vy - (A.vy + A.w * rx)) * uy;
+    const F = A.susK * (R.reposo - s) - A.susC * vr;
+    R.compr = 1 - s / R.reposo; R.s = s;
     const fx = F * ux, fy = F * uy;
     R.vx += fx / R.m * dt; R.vy += fy / R.m * dt;
     A.vx -= fx / A.m * dt; A.vy -= fy / A.m * dt;
-    A.w -= cruz(ox, oy, fx, fy) / A.I * dt;
+    A.w -= cruz(rx, ry, fx, fy) / A.I * dt;
   }
 
-  /* ---- restricciones e impulsos, varias vueltas ---- */
-  for (const R of A.ruedas) { R.jn = 0; R.toca = false; }
+  /* ---- restricciones e impulsos, varias vueltas ----
+     Por qué los topes de la suspensión son restricciones y no resortes duros: cuando el casco
+     pega contra una rampa, el chasis salta y un resorte 12 veces más duro devolvía el golpe
+     multiplicado (el auto salía a 80 m/s). Una restricción solo frena lo que se pasa. */
+  for (const R of A.ruedas) { R.jn = 0; R.jTope = 0; R.jFondo = 0; R.toca = false; }
   let tocan = 0, patina = 0;
+  /* un impulso entre la rueda y el chasis, en la dirección (dx, dy), aplicado donde está la rueda */
+  const tirar = (R, dx, dy, lam, rx, ry) => {
+    R.vx += lam * dx / R.m; R.vy += lam * dy / R.m;
+    A.vx -= lam * dx / A.m; A.vy -= lam * dy / A.m;
+    A.w -= cruz(rx, ry, dx, dy) * lam / A.I;
+  };
   for (let it = 0; it < 6; it++) {
     for (const R of A.ruedas) {
-      /* la rueda no se va de costado: velocidad relativa lateral cero, y corrige el corrimiento */
       const [ox, oy] = rot(R.x, R.y, A.a);
-      const ax = A.x + ox, ay = A.y + oy;
-      const dx = R.px - ax, dy = R.py - ay;
-      const p = dx * lx + dy * ly;
-      const rx = ox + p * lx * 0, ry = oy;
-      const vax = A.vx - A.w * ry, vay = A.vy + A.w * rx;
-      const vrel = (R.vx - vax) * lx + (R.vy - vay) * ly;
-      const rxl = cruz(rx, ry, lx, ly);
-      const k = 1 / R.m + 1 / A.m + rxl * rxl / A.I;
-      const lam = -(vrel + 0.25 * p / dt) / k;
-      R.vx += lam * lx / R.m; R.vy += lam * ly / R.m;
-      A.vx -= lam * lx / A.m; A.vy -= lam * ly / A.m;
-      A.w -= rxl * lam / A.I;
+      const dx = R.px - A.x - ox, dy = R.py - A.y - oy;
+      const rx = R.px - A.x, ry = R.py - A.y;
+      /* la rueda no se va de costado: velocidad relativa lateral cero, y corrige el corrimiento */
+      {
+        const p = dx * lx + dy * ly;
+        const vrel = (R.vx - (A.vx - A.w * ry)) * lx + (R.vy - (A.vy + A.w * rx)) * ly;
+        const rl = cruz(rx, ry, lx, ly), k = 1 / R.m + 1 / A.m + rl * rl / A.I;
+        tirar(R, lx, ly, -(vrel + Math.max(-2, Math.min(2, 0.25 * p / dt))) / k, rx, ry);
+      }
+      /* los topes: ni más estirada que 1,5 veces el reposo ni más hundida que un quinto */
+      {
+        const s = dx * ux + dy * uy;
+        const ru = cruz(rx, ry, ux, uy), k = 1 / R.m + 1 / A.m + ru * ru / A.I;
+        const vr = () => (R.vx - (A.vx - A.w * ry)) * ux + (R.vy - (A.vy + A.w * rx)) * uy;
+        const sMax = R.reposo * 1.5, sMin = R.reposo * 0.2;
+        if (s + vr() * dt > sMax) {
+          const quiero = Math.max(-2, (sMax - s) * 0.3 / dt);
+          let lam = -(vr() - quiero) / k;
+          const v = R.jTope; R.jTope = Math.min(0, v + lam); lam = R.jTope - v;
+          tirar(R, ux, uy, lam, rx, ry);
+        }
+        if (s + vr() * dt < sMin) {
+          const quiero = Math.min(2, (sMin - s) * 0.3 / dt);
+          let lam = -(vr() - quiero) / k;
+          const v = R.jFondo; R.jFondo = Math.max(0, v + lam); lam = R.jFondo - v;
+          tirar(R, ux, uy, lam, rx, ry);
+        }
+      }
       /* el piso */
       const q = masCercano(S, R.px, R.py, R.r + 0.5);
       if (!q) continue;
@@ -165,7 +187,8 @@ export function pasoAuto(A, S, inp, dt = PASO) {
       if (ny < 0 && q.d > 0) { nx = -q.ey / q.L; ny = q.ex / q.L; }
       R.toca = true; R.n = [nx, ny];
       const vn = R.vx * nx + R.vy * ny;
-      const bias = Math.max(0, pen - 0.005) * 0.3 / dt;
+      /* sacarla de adentro del piso, pero sin patadas: con tope */
+      const bias = Math.min(2.5, Math.max(0, pen - 0.005) * 0.3 / dt);
       let jn = -(vn - bias) * R.m;
       const viejo = R.jn; R.jn = Math.max(0, viejo + jn); jn = R.jn - viejo;
       R.vx += nx * jn / R.m; R.vy += ny * jn / R.m;
@@ -196,17 +219,17 @@ export function pasoAuto(A, S, inp, dt = PASO) {
     if (!q || q.d >= 0) continue;
     /* la normal del tramo que toca; se saca para afuera por ahí (con tope, así una pared no lo tira lejos) */
     const nx = -q.ey / q.L, ny = q.ex / q.L;
-    const pen = Math.min(0.08, -q.d * 0.8);
+    const pen = Math.min(0.02, -q.d * 0.5);
     A.x += nx * pen; A.y += ny * pen;
     const vpx = A.vx - A.w * oy, vpy = A.vy + A.w * ox;
     const vn = vpx * nx + vpy * ny;
     if (vn < 0) {
       const rn = cruz(ox, oy, nx, ny), kn = 1 / A.m + rn * rn / A.I;
-      const jn = -vn * 1.05 / kn;
+      const jn = -(vn - Math.min(1.5, -q.d * 0.3 / dt)) / kn;
       A.vx += nx * jn / A.m; A.vy += ny * jn / A.m; A.w += rn * jn / A.I;
       const tx = ny, ty = -nx, vt = (A.vx - A.w * oy) * tx + (A.vy + A.w * ox) * ty;
       const rt = cruz(ox, oy, tx, ty), kt = 1 / A.m + rt * rt / A.I;
-      let jt = -vt / kt; const tope = 0.5 * jn; if (Math.abs(jt) > tope) jt = Math.sign(jt) * tope;
+      let jt = -vt / kt; const tope = 0.3 * jn; if (Math.abs(jt) > tope) jt = Math.sign(jt) * tope;
       A.vx += tx * jt / A.m; A.vy += ty * jt / A.m; A.w += rt * jt / A.I;
       A.golpe = Math.max(A.golpe, -vn);
     }

@@ -1,0 +1,17 @@
+{
+  "_": "Lo que se le pide a Rezona para RUTA 40 (proyecto biJbNhtEOI). Cada entrada: archivo de salida, tamaño, si es transparente y el prompt. La cola de estilo va al final de todos, igual, para que salgan del mismo juego.",
+  "estilo": "Stylized 2D game art, clean vector-like shapes, soft painted shading, bold readable silhouette, warm sunny palette, high detail, no text, no watermark.",
+  "vehiculos": {
+    "chata": "Perfect side view of an old 1970s South American farm pickup truck facing right, pale sky-blue paint with small rust patches, chrome front bumper, round headlight, wooden slat sides on the cargo bed, a spare jerrycan tied in the back. Body ONLY: the two round wheel wells are EMPTY, NO wheels, NO tires. Driver window open and empty, no person.",
+    "escarabajo": "Perfect side view of a small round 1960s compact car facing right, cherry red paint, cream roof, rounded fenders, chrome bumpers, a roof rack with a rolled mattress and a thermos. Body ONLY: the two round wheel wells are EMPTY, NO wheels, NO tires. Side window empty, no person.",
+    "colectivo": "Perfect side view of a classic Argentine city bus (colectivo) facing right, short and tall, bright yellow and red with ornate filete porteño decorations (swirls, flowers, ribbons) painted along the sides, many windows, a destination sign box above the windshield left blank. Body ONLY: the two round wheel wells are EMPTY, NO wheels, NO tires. Windows empty, no people.",
+    "cuatro": "Perfect side view of a rugged off-road 4x4 jeep facing right, olive green, open top with roll bar, snorkel, jerrycans and a shovel on the side, big fender flares. Body ONLY: the two large round wheel wells are EMPTY, NO wheels, NO tires. No person.",
+    "tractor": "Perfect side view of an old farm tractor facing right, bright orange, small front wheel well and a huge rear wheel well, exhaust pipe on the hood, open seat with a sun umbrella. Body ONLY: both round wheel wells EMPTY, NO wheels, NO tires. No person."
+  },
+  "ruedas": {
+    "rueda": "Perfect flat side view of a single car tire with a steel rim, a perfect circle seen straight on, dark rubber with chunky tread on the outer edge, silver rim with five holes and a hub cap, centered.",
+    "rueda4x4": "Perfect flat side view of a single big off-road mud tire with a black steel rim, a perfect circle seen straight on, deep aggressive tread blocks on the outer edge, centered.",
+    "ruedaTractor": "Perfect flat side view of a single big tractor tire with an orange steel rim, a perfect circle seen straight on, deep chevron lugs on the outer edge, centered."
+  },
+  "conductor": "Side view facing right of a friendly cartoon Argentine gaucho driver, head and upper torso only, big nose, thick black mustache, dark boina beret, red neckerchief, white shirt, both hands forward as if holding a steering wheel, big friendly eyes, smiling."
+}
