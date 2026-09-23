@@ -33,7 +33,19 @@ Una entrada por sesión: qué quedó y qué falta. La más nueva arriba.
   mandó (clip de la Cámara, 992×576, 1:05). Tapa entero el zócalo oficial y
   deja libre a la intérprete de señas. Se corrigieron dos errores de tipeo del
   título pedido: LIBETARIO → LIBERTARIO e INFLAGANTI → IN FRAGANTI.
-  **El video no se commitea**: es material de la Cámara, y el repo es público.
+  **El video no se commitea**: es material de la Legislatura, y el repo es público.
+
+## 23/9/2026 — misma rama
+
+- `tiktok/`: el clip en 9:16 para TikTok, con logo de Higgsfield, intro animada
+  (franjas, golpe del logo, rayos), titular en Anton + Playfair en cursiva,
+  subtítulos en Montserrat palabra por palabra (Whisper medium). Publicado
+  (claude.ai/artifact/3UkNUipQpvwZ3J8UNYsThT, privado) y entregado el MP4.
+- **Pendiente de él:** revisar los subtítulos. Dos dudosos: "De fondo puede
+  discutirse…" (0:10, falta la primera palabra, seguramente "Nada") y el "65…"
+  del final, que el clip corta. El .srt va en `tiktok/`.
+- De la cuenta @1.tomasgomez se vio el perfil pero **no los videos** (TikTok los
+  pide con sesión): el estilo no se copió de ahí.
 
 **Qué falta**
 

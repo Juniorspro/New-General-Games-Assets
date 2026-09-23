@@ -29,6 +29,9 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 
 ## Quién pide
 
+- Su canal: **Noticias El Papuchón**. El logo está en
+  `tiktok/logo-noticias-el-papuchon.png` (fondo transparente). Nombró como
+  referencia la cuenta @1.tomasgomez (Tomás Gómez, 277 seguidores el 23/9).
 - **Siempre quiere el HTML para descargar** (lo pidió el 22/9, "siempre"). Toda
   página o app que se haga: además del link, se le **manda el archivo**
   (`SendUserFile`, `display: "attach"`), completo y que ande sin internet.
@@ -71,6 +74,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `herramientas/rezona/` | cliente stdio del MCP de Rezona | [rezona](rezona.md) |
 | `herramientas/descargable/` | arma el HTML descargable de un artifact | su docstring |
 | `herramientas/iblo/`, `mint/`, `audio/` | utilidades sueltas | — |
+| `tiktok/` | versión 9:16: intro con logo, titular, subtítulos; `armar.mjs` arma el video | [video](video.md) |
 | `zocalo/` | zócalo de stream: editor, fuente de OBS, y `quemar.mjs` para videos | [video](video.md) |
 | `termo/` | termo de mate en 3D (three.js): se gira, se ceba, el agua se enfría | [maquina](maquina.md) para capturarlo |
 | `telarana/`, `garfio/`, `pozo/`, `pique*/`, `flores/`, `paraguas/` | juegos | — |

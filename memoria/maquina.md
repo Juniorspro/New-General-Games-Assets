@@ -35,8 +35,10 @@ Cuando algo no sale, primero hay que saber **quién** lo frenó:
 
 - Playwright 1.56.1 está instalado **global**: `require($(npm root -g)/playwright)`.
   Python no lo tiene. Chromium en `/opt/pw-browsers`.
-- **El Chromium no llega a internet**, así que una página que carga three.js
-  de cdnjs queda en blanco. Se baja el `.js` con `curl` y se sirve con
+- **El Chromium no llega a internet solo**: hay que pasarle el proxy y la
+  confianza en el certificado (ver [video](video.md) § Mirar una cuenta de
+  TikTok). Para capturas es más simple no salir: una página que carga three.js
+  de cdnjs queda en blanco si no se hace esto. Se baja el `.js` con `curl` y se sirve con
   `page.route` (`route.fulfill`); todo lo demás se aborta y las fuentes caen a
   las de respaldo — la captura no muestra la tipografía real.
 - WebGL sin GPU anda con `--use-gl=angle --use-angle=swiftshader

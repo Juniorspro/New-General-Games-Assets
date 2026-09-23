@@ -27,6 +27,9 @@ Fuente: `zocalo/quemar.mjs` (cabecera). Ver también: [maquina](maquina.md).
   `curl` (subset latin, trae Á y Ñ) y van **adentro** del HTML como data URI.
   Así el render, OBS sin internet y el artifact usan la misma letra.
 
+El clip es de la **Legislatura de Entre Ríos** (habla María Elena Romero,
+Juntos por Entre Ríos, sobre la reforma jubilatoria), no de la Cámara nacional.
+
 ## Trampas del zócalo (medidas)
 
 - **Nombres de clase que chocan:** la clase del modo (`html.obs`) y la del
@@ -38,3 +41,42 @@ Fuente: `zocalo/quemar.mjs` (cabecera). Ver también: [maquina](maquina.md).
   tolerancia: `scrollWidth` viene redondeado y parecía desbordar siempre.
 - OBS define `window.obsstudio` en sus fuentes de navegador: con eso la página
   se pone sola en modo transparente, sin pasarle nada por la URL.
+
+## 9:16 para TikTok (`tiktok/armar.mjs`, 23/9)
+
+- Tres capas: el video agrandado, desenfocado y oscurecido de relleno; el video
+  entero a 1080 de ancho en y 750; la plantilla HTML transparente arriba.
+- La plantilla **no se captura cuadro por cuadro**: la intro sí, después solo
+  cuando cambia un subtítulo, y ffconcat le da a cada imagen su duración.
+  Medido: 221 capturas, 2 min 7 s para 65 s de video.
+- Zonas de la app de TikTok que tapan: arriba hasta ~y 180, la columna de
+  botones a la derecha y el texto de la publicación desde ~y 1570. Los
+  subtítulos van de 1424 a ~1562 y entre x 90 y 930.
+- `setsar=1` al final: el escalado dejaba SAR 4096:4095 y DAR 256:455 en vez de
+  9:16. No se ve, pero hay plataformas que por eso reencuadran.
+- **Trampa de animación:** un destello con `fill: both` aplica su primer cuadro
+  durante toda la espera. Con 90 % de blanco, el arranque salía lavado. Para
+  algo que tiene que estar apagado hasta su momento: `forwards`.
+
+## Subtítulos automáticos
+
+- `pip install faster-whisper`, modelo `medium` en int8: 72 s para 65 s de audio
+  (21 s de eso es cargar el modelo). Se baja de Hugging Face sin problemas.
+- Se usa `medium` y no `small` porque son palabras de una persona real: un error
+  de transcripción es una cita falsa. Con palabra por palabra
+  (`word_timestamps=True`) se marcan las de confianza baja: en el clip, 5 de 133.
+- Bloques de hasta 4 palabras o 24 caracteres, cortando en puntuación, en
+  pausas de más de 0,4 s y sin dejar una palabra sola al final.
+- **Siempre se entrega el .srt** para que se corrija a mano: Whisper no sabe lo
+  que el clip cortó (en este faltaba la primera palabra de una frase).
+
+## Mirar una cuenta de TikTok
+
+- `curl` con user agent de navegador trae el HTML del perfil, y adentro el JSON
+  `__UNIVERSAL_DATA_FOR_REHYDRATION__`: nombre, bio, seguidores, likes, cantidad
+  de videos. **La grilla de videos no**: pide sesión iniciada, y en el navegador
+  sale "Hubo un problema".
+- Chromium llega a internet si se le pasa el proxy (`proxy: {server:
+  HTTPS_PROXY}`) y se le hace confiar en `/root/.ccr/ca-bundle.crt` con
+  `--ignore-certificate-errors-spki-list` (las claves del bundle, sacadas con
+  openssl). El almacén NSS que menciona la guía del proxy **estaba vacío**.

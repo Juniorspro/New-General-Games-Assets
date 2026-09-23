@@ -7,6 +7,15 @@ Ver también: [rezona](rezona.md).
   imagen de 1024x1024, unos 40 s de punta a punta. Saldo el 22/9: 4.454
   créditos, plan team. **Es otra bolsa: no toca los créditos de Rezona.**
 - `get_cost: true` cotiza sin generar. Conviene antes de una tanda.
+- Medido el 23/9 en el historial: `gpt_image_2_5` cobró **0,25** por imagen
+  (sale como "GPT Image 2.5 Flare"), no 1 como decía la cotización del 22/9;
+  sacar el fondo (`remove_background`) cuesta 1 y tarda ~1 minuto en cola.
+- Escribe bien texto con tildes: "EL PAPUCHÓN" y "ÚLTIMO MOMENTO" salieron
+  perfectos en las dos variantes del logo.
+- El saldo es de un **plan team**: otros gastan de la misma bolsa. El 22/9 entre
+  las 16:38 y las 16:44 (hora argentina) se fueron ~306 créditos en 3D Rigging,
+  Tripo Image to 3D y Nano Banana que no fueron de esta sesión. Si el saldo no
+  cierra, mirar `transactions` antes de sacar conclusiones.
 - Rezona está caído para generar (ver [rezona](rezona.md)). No insistir sin
   antes leer esa nota.
 
