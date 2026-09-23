@@ -22,5 +22,7 @@ se resumen en una sola.
 - **22/09/2026, más tarde, en la misma rama:**
   - Pidió dos juegos 2D "goty" copiando populares. Se eligieron Celeste y
     Silksong.
-  - Quedó ZONDA completo en `zonda/zonda.html`.
-  - LUZ MALA quedó empezado.
+  - Quedaron los dos:
+    - ZONDA, en `zonda/zonda.html`;
+    - LUZ MALA, en `luz-mala/luz-mala.html`.
+  - Cada uno tiene su resolvedor y sus pruebas en Chromium.

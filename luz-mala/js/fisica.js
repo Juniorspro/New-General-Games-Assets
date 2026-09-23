@@ -87,14 +87,37 @@ function crearMundoLM(sala, o) {
     }
   }
   if (!m.spawn) m.spawn = { x: 16, y: 16 };
+  m.ext = anilloVecino(sala, w, h);
   m.p = o.jugadora || nuevaChispa(m);
   return m;
+}
+/* las baldosas de las salas vecinas, en un anillo de 3 alrededor: mientras
+   Chispa cruza un borde choca con lo que hay del otro lado, igual que el
+   resolvedor, que junta las salas en un solo mapa. Donde no hay sala, es roca */
+function anilloVecino(sala, w, h) {
+  if (!sala.pos || typeof SALAS_LM === 'undefined') return null;
+  const M = 3, W2 = w + 2 * M, H2 = h + 2 * M, d = new Uint8Array(W2 * H2);
+  for (let y = -M; y < h + M; y++) for (let x = -M; x < w + M; x++) {
+    if (x >= 0 && y >= 0 && x < w && y < h) continue;
+    const wx = sala.pos[0] + x, wy = sala.pos[1] + y;
+    const v = SALAS_LM.find((q) => q !== sala && wx >= q.pos[0] && wx < q.pos[0] + q.tam[0] && wy >= q.pos[1] && wy < q.pos[1] + q.tam[1]);
+    let t = LT.SOLIDO;
+    if (v) { const c = v.mapa[wy - v.pos[1]][wx - v.pos[0]]; t = c === '#' || c === 'B' ? LT.SOLIDO : c === '=' ? LT.PLAT : LT.VACIO; }
+    d[(y + M) * W2 + (x + M)] = t;
+  }
+  return { M, W2, H2, d };
+}
+function tileAfuera(m, tx, ty) {
+  const e = m.ext;
+  if (!e) return LT.VACIO;
+  const x = tx + e.M, y = ty + e.M;
+  return x < 0 || y < 0 || x >= e.W2 || y >= e.H2 ? LT.VACIO : e.d[y * e.W2 + x];
 }
 
 function nuevaChispa(m) {
   return {
     x: m.spawn.x, y: m.spawn.y, rx: 0, ry: 0, w: LF.ANCHO, h: LF.ALTO, vx: 0, vy: 0, dir: 1,
-    enSuelo: false, coyote: 0, buffer: 0, cortado: false,
+    enSuelo: false, coyote: 0, buffer: 0, cortado: false, bajaT: 0,
     dashT: 0, dashEspera: 0, dashUsado: false, pared: 0, forzT: 0, forzDir: 0,
     golpeT: 0, golpe: null, retroT: 0, retroDir: 0, invulnT: 0, curarT: 0, curando: false,
     vida: 5, vidaMax: 5, luz: 0, ambar: 0, danio: 1, curaRapida: false,
@@ -104,7 +127,7 @@ function nuevaChispa(m) {
 
 /* ---------------- choques ---------------- */
 function solidoLM(m, tx, ty) {
-  if (tx < 0 || tx >= m.w || ty < 0 || ty >= m.h) return false;   // afuera no hay nada: por ahí se pasa a la sala vecina
+  if (tx < 0 || tx >= m.w || ty < 0 || ty >= m.h) return tileAfuera(m, tx, ty) === LT.SOLIDO;   // afuera: lo de la sala vecina
   return m.t[ty * m.w + tx] === LT.SOLIDO;
 }
 function chocaLM(m, x, y, w, h) {
@@ -117,8 +140,10 @@ function sobrePlatLM(m, x, y, w, h) {
   const b = y + h;
   if (b % 8 !== 0) return false;
   const ty = b / 8;
-  if (ty < 0 || ty >= m.h) return false;
-  for (let tx = Math.floor(x / 8); tx <= Math.floor((x + w - 1) / 8); tx++) if (tx >= 0 && tx < m.w && m.t[ty * m.w + tx] === LT.PLAT) return true;
+  for (let tx = Math.floor(x / 8); tx <= Math.floor((x + w - 1) / 8); tx++) {
+    const t = tx >= 0 && tx < m.w && ty >= 0 && ty < m.h ? m.t[ty * m.w + tx] : tileAfuera(m, tx, ty);
+    if (t === LT.PLAT) return true;
+  }
   return false;
 }
 function moverXLM(m, e, dx, alChocar) {
@@ -173,6 +198,7 @@ function pasarChispa(m, inp) {
   if (p.dashEspera > 0) p.dashEspera -= DT;
   if (p.forzT > 0) p.forzT -= DT;
   if (p.retroT > 0) p.retroT -= DT;
+  if (p.bajaT > 0) p.bajaT -= DT;
   if (inp.saltoE) p.buffer = LF.BUFFER; else p.buffer -= DT;
 
   const antes = p.enSuelo;
@@ -236,6 +262,10 @@ function pasarChispa(m, inp) {
     p.vy = Math.min(p.pared ? LF.PARED_DESLIZ : LF.CAIDA, p.vy + g * DT);
     if (p.vy < 0 && !inp.salto) p.cortado = true;
   }
+  /* abajo + salto sobre un tablón: se baja en vez de saltar */
+  if (p.buffer > 0 && inp.y > 0 && p.enSuelo && sobrePlatLM(m, p.x, p.y, p.w, p.h) && !chocaLM(m, p.x, p.y + 1, p.w, p.h)) {
+    p.buffer = 0; p.coyote = 0; p.bajaT = 0.2; p.enSuelo = false; p.vy = 30;
+  }
   /* saltar */
   if (p.buffer > 0) {
     if (p.coyote > 0) { p.buffer = 0; p.coyote = 0; p.vy = LF.SALTO; p.cortado = false; eventoLM(m, 'salto'); }
@@ -258,7 +288,7 @@ function pasarChispa(m, inp) {
     if (p.golpe.t > LF.GOLPE_T * 0.7) p.golpe = null;
   }
   moverXLM(m, p, p.vx * DT, () => { p.vx = 0; });
-  moverYLM(m, p, p.vy * DT, (c, s) => { if (s < 0) p.cortado = true; p.vy = 0; }, inp.y > 0 && inp.salto);
+  moverYLM(m, p, p.vy * DT, (c, s) => { if (s < 0) p.cortado = true; p.vy = 0; }, p.bajaT > 0);
   tocarCosasLM(m, p, inp);
 }
 
@@ -355,7 +385,7 @@ function tocarCosasLM(m, p, inp) {
   /* el ámbar suelto vuela hacia Chispa */
   for (const c of m.cosas) if (c.tipo === 'ambar') {
     const dx = p.x + 4 - c.x, dy = p.y + 6 - c.y, d = Math.hypot(dx, dy);
-    if (d < 70 && c.t > 0.3) { c.vx += dx / d * 900 * DT; c.vy += dy / d * 900 * DT; }
+    if (d < (p.iman ? 150 : 70) && c.t > 0.3) { c.vx += dx / d * 900 * DT; c.vy += dy / d * 900 * DT; }
   }
 }
 

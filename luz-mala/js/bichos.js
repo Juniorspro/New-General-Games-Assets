@@ -53,7 +53,7 @@ function pasarBichos(m) {
       continue;
     }
     switch (b.tipo) {
-      case 'cascarudo': case 'obrera': caminar(m, b, b.tipo === 'obrera' ? 48 : 26); break;
+      case 'cascarudo': case 'obrera': caminar(m, b, b.tipo === 'obrera' ? 40 : 26); break;
       case 'hormiga':
         if (b.est === 'carga') { b.espera -= DT; caminar(m, b, 105); if (b.espera <= 0) b.est = 'anda'; }
         else {

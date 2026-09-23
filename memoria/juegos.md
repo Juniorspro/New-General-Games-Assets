@@ -72,7 +72,20 @@ La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
   - `manos.mjs` toca con dos dedos por CDP (`Input.dispatchTouchEvent`).
   - El mando simulado (`navigator.getGamepads` pisado) se lee en cada
     `requestAnimationFrame`: hay que esperar tiempo real, `anda(n)` no alcanza.
-- **LUZ MALA** está a medio hacer (tipo Silksong). Ya están la física, los
-  bichos, los jefes y el mapa de salas en `luz-mala/js/`; falta el resto. Las
-  salas se ubican en coordenadas del mundo y los huecos de salas vecinas
-  tienen que coincidir.
+- **LUZ MALA** está terminado: tipo Silksong, 9 salas en coordenadas del mundo y
+  3 jefes. Cómo se comprueba, en `luz-mala/README.md`.
+- Lo aprendido con LUZ MALA:
+  - Un resolvedor de recorridos junta las salas vecinas en un solo mapa y
+    comprueba cada tramo con las habilidades de ese momento. También comprueba
+    lo contrario: sin el aleteo, el túnel no se cruza.
+  - En el juego, cada sala tiene que ver un anillo de baldosas de sus vecinas.
+    Si no, al cruzar un borde se atraviesan paredes que el resolvedor sí ve.
+  - Nada de "empujones" al pasar de sala que el resolvedor no conozca: la
+    física tiene que ser la misma de los dos lados.
+  - Para repetir una solución en el HTML, empezar y cargar la repetición en
+    UNA sola llamada a `evaluate`. Entre dos llamadas, el `requestAnimationFrame`
+    corre cuadros sin la repetición y se desfasa.
+  - Correr un tramo con `--guardar` pisaba los demás; ahora combina.
+  - Para ver si un jefe se puede ganar sirve un bot con tácticas por jefe.
+    Primero hay que depurar el bot: medía la distancia al centro del jefe sin
+    contar el ancho y se metía adentro. Recién después se ajusta el jefe.

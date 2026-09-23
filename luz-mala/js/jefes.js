@@ -9,8 +9,8 @@
 
 const JEFES = {
   torito: { nombre: 'EL TORITO', w: 30, h: 20, vida: 30, farol: 'raices', da: 'aleteo' },
-  viuda: { nombre: 'LA VIUDA', w: 22, h: 16, vida: 38, farol: 'tela', da: 'resina' },
-  reina: { nombre: 'LA REINA DE LA MARABUNTA', w: 40, h: 30, vida: 60, farol: 'madre', da: null },
+  viuda: { nombre: 'LA VIUDA', w: 22, h: 16, vida: 32, farol: 'tela', da: 'resina' },
+  reina: { nombre: 'LA REINA DE LA MARABUNTA', w: 40, h: 30, vida: 44, farol: 'madre', da: null },
 };
 
 function crearJefe(tipo, m) {
@@ -19,7 +19,8 @@ function crearJefe(tipo, m) {
     tipo, x: a.x - d.w / 2, y: a.y + 8 - d.h, rx: 0, ry: 0, vx: 0, vy: 0, dir: -1, vidaMax: d.vida,
     fase: 1, est: 'presenta', t: 0, muerto: false, flash: 0, historial: [], toca: true, cuenta: 0,
   });
-  if (tipo === 'viuda') { j.y = 12; j.est = 'presenta'; j.techo = 12; }
+  /* la Viuda cuelga a media altura: desde los tablones (o con un salto) se le llega con el golpe para arriba */
+  if (tipo === 'viuda') { j.y = 20; j.est = 'presenta'; j.techo = 60; }
   if (tipo === 'reina') { j.x = m.w * 8 - d.w - 20; j.dir = -1; }
   return j;
 }
@@ -70,7 +71,8 @@ function pasarTorito(m, j) {
     case 'espera':
       j.vx = 0; j.dir = sig(dx) || j.dir;
       if (j.t > (j.fase >= 2 ? 0.45 : 0.8)) {
-        const a = Math.abs(dx) < 42 ? 'cornada' : elegirAtaque(m, j, [['carga', 5], ['salto', 4]]);
+        /* de cerca cornea o salta por encima, para no quedar contra la pared cuerneando siempre */
+        const a = Math.abs(dx) < 42 ? elegirAtaque(m, j, [['cornada', 6], ['salto', 3]]) : elegirAtaque(m, j, [['carga', 5], ['salto', 4]]);
         cambiar(j, a + 'Prep');
         eventoLM(m, 'aviso', { ataque: a, x: j.x + j.w / 2, y: j.y });
       }
@@ -132,7 +134,8 @@ function pasarViuda(m, j) {
     case 'bajaPrep': if (j.t > 0.45 / k) { cambiar(j, 'baja'); j.vy = 60; } break;
     case 'baja':
       j.vy = Math.min(380, j.vy + 900 * DT);
-      if (moverYLM(m, j, j.vy * DT)) { cambiar(j, 'suelo'); j.vy = 0; eventoLM(m, 'tierra', { x: j.x + j.w / 2, y: j.y + j.h }); m.congelar = 4; }
+      /* baja colgada del hilo hasta el piso: los tablones no la frenan */
+      if (moverYLM(m, j, j.vy * DT, null, true)) { cambiar(j, 'suelo'); j.vy = 0; eventoLM(m, 'tierra', { x: j.x + j.w / 2, y: j.y + j.h }); m.congelar = 4; }
       break;
     case 'suelo': if (j.t > (j.fase >= 2 ? 0.9 : 1.3)) { if (j.fase >= 2 && !j.dobleHecho) { j.dobleHecho = true; cambiar(j, 'sube'); j.otra = true; } else { j.dobleHecho = false; cambiar(j, 'sube'); } } break;
     case 'sube':
@@ -174,8 +177,9 @@ function pasarReina(m, j) {
       }
       break;
     case 'oleadaPrep': if (j.t > 0.6) {
-      const n = j.fase >= 3 ? 5 : 3;
-      for (let i = 0; i < n; i++) { const b = crearBicho('w', j.x - 6 - i * 14, j.y + j.h - 8, m); b.dir = -1; m.bichos.push(b); }
+      /* en fila y separadas: de a una se matan, todas juntas no */
+      const n = j.fase >= 3 ? 4 : 3;
+      for (let i = 0; i < n; i++) { const b = crearBicho('w', j.x - 6 - i * 24, j.y + j.h - 8, m); b.dir = -1; m.bichos.push(b); }
       eventoLM(m, 'oleada', {});
       cambiar(j, j.fase >= 3 ? 'acidoPrep' : 'espera');
     } break;

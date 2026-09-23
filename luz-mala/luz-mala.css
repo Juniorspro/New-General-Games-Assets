@@ -1,0 +1,17 @@
+/* luz-mala/luz-mala.css — lo propio de LUZ MALA encima de motor2d/ui.css:
+   los botones van en verde luciérnaga y los paneles en violeta de noche */
+.boton:not(.gris):not(.azul){background:#5a8a2a;box-shadow:inset -4px -4px 0 #34561a,inset 4px 4px 0 #a8d860,0 0 0 3px #0d0a14,0 6px 0 3px #0d0a14}
+.boton.gris{background:#3a3150;box-shadow:inset -4px -4px 0 #231c34,inset 4px 4px 0 #62507e,0 0 0 3px #0d0a14,0 6px 0 3px #0d0a14}
+.boton.sel{outline-color:#f6ffa8}
+.panel{background:#1a1426;box-shadow:inset -3px -3px 0 #0d0a14,inset 3px 3px 0 #3d3156,0 0 0 2px #0d0a14}
+.capa{background:rgba(5,3,8,.82)}
+.lista{display:flex;flex-direction:column;align-items:center;width:100%;max-width:380px}
+.lista p.txt{margin:-2px 0 8px;font-size:12px;color:#b8b0cc}
+#capaTitulo{padding-bottom:max(28px,env(safe-area-inset-bottom))}
+#capaTitulo .boton{min-width:220px}
+#capaTienda .boton{min-width:260px}
+.panel p.txt + p.txt{margin-top:6px}
+@media (max-height:600px){
+  #capaTitulo .boton{min-height:40px;padding:6px 10px 8px;margin:4px}
+  .capa{padding-top:12px;padding-bottom:12px}
+}

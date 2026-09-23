@@ -1,0 +1,11 @@
+{
+  "salida": "luz-mala.html",
+  "css": ["motor2d/ui.css", "luz-mala/luz-mala.css"],
+  "js": [
+    "motor2d/base.js", "motor2d/pantalla.js", "motor2d/entrada.js", "motor2d/sonido.js", "motor2d/fuente.js",
+    "motor2d/sprites.js", "motor2d/fx.js", "motor2d/bucle.js", "motor2d/ui.js",
+    "luz-mala/js/fisica.js", "luz-mala/js/bichos.js", "luz-mala/js/jefes.js", "luz-mala/js/salas.js",
+    "luz-mala/js/historia.js", "luz-mala/js/arte.js", "luz-mala/js/musica.js",
+    "luz-mala/js/dibujo.js", "luz-mala/js/pantallas.js", "luz-mala/js/juego.js"
+  ]
+}
