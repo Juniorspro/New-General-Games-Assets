@@ -45,6 +45,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026.
 | [rezona](rezona.md) | generar assets con Rezona: ciclo, trampas, lo que anduvo, caídas |
 | [higgsfield](higgsfield.md) | generar con Higgsfield: modelos, costos, lo que anduvo |
 | [juegos](juegos.md) | tocar un juego del repo o hacer uno nuevo |
+| [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el resolvedor y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |
 
@@ -56,6 +57,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026.
 | `motor2d/` | motor 2D en pixel compartido: escala entera, mandos, sonido sintetizado, idiomas | [juegos](juegos.md) |
 | `zonda/` | ZONDA: plataformas tipo Celeste, 20 salas comprobadas por un resolvedor | `zonda/README.md` |
 | `luz-mala/` | LUZ MALA: metroidvania tipo Silksong, 9 salas y 3 jefes, menús en el lienzo, 3 idiomas | `luz-mala/README.md` |
+| `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
 | `perro/` | CAMPO: un perro 3D en tercera persona sobre lomas de pasto | `perro/README.md` |
 | `pique/` `pique2d/` `pique3d/` | corredor de un botón: 2D, pixel art y 2.5D; niveles comprobados solos | su `LEEME.md` |
 | `enjambre/` | supervivencia por oleadas con un pulgar; los assets todavía no existen | `enjambre/README.md` |

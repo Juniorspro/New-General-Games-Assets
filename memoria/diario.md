@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **23/09/2026, más tarde · `claude/fijate-iszyer`:**
+  - Pidió "otro juego aún mejor, buena historia y 2.5D súper goty". Quedó
+    KUNTUR en `kuntur/kuntur.html`, estilo Paper Mario (pedido tras rechazar
+    el low-poly y los vóxeles).
+  - La partida entera y cada copla pasan las pruebas (`kuntur.md`).
+  - Falta: nada pedido. Quedó sin respuesta si prefiere dibujo liso al pixel art.
 - **23/09/2026 · `claude/fijate-iszyer`:**
   - Pidió: pantalla de idioma (es, en, pt) antes del menú en todos los juegos,
     cada juego con su estilo, y cada juego nuevo mucho mejor que el anterior.

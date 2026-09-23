@@ -1,0 +1,23 @@
+# KUNTUR
+
+Una nena, un pichón de cóndor y la montaña que lo espera. Juego 2.5D de papel
+(recortes con pixel art sobre un diorama de cartón, como en Paper Mario) por
+Purmamarca, los Siete Colores, las Salinas Grandes, el Tren a las Nubes, la
+Puna y el Nevado de Chañi. En español, inglés y portugués.
+
+**Jugar:** abrir `kuntur.html` con doble clic. Anda sin internet, con teclado,
+mando o dedos.
+
+- Flechas o A/D: caminar · Espacio o Z: saltar · X o E: hablar, agarrar la
+  piedra y mandar a Apu · Abajo: agacharse · Esc: pausa.
+- Apu va creciendo: en las Salinas aletea (doble salto), en la Puna planea y
+  abre trabas.
+- Las apachetas guardan el lugar. Hay 15 coplas escondidas.
+
+**Armar:** `node kuntur/herramientas/armar.mjs` (usa three y esbuild de
+`bosque/node_modules`). Los mapas salen de `herramientas/mapas.py`.
+
+**Probar:** `node kuntur/pruebas/recorrido.mjs [capítulo] [--guardar]` busca
+con la física de verdad un camino por cada tramo y cada copla, y comprueba que
+lo cerrado esté cerrado; `node kuntur/pruebas/partida.mjs` juega la partida
+entera en Chromium, de la granizada a los créditos.

@@ -23,8 +23,8 @@ La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
 - Los assets generados se buscan por nombre y tienen su reemplazo dibujado o
   sintetizado (`enjambre/`, `perro/`). Así Rezona puede estar caído sin trabar
   el juego.
-- En `pique/`, `pique2d/` y `espejo/`, los niveles los comprueba una máquina
-  antes de publicarse.
+- En `pique/`, `pique2d/`, `espejo/`, `zonda/`, `luz-mala/` y `kuntur/`, los
+  niveles los comprueba una máquina. La vara al 23/09: [kuntur](kuntur.md).
 
 ## El bosque (22/09/2026)
 
