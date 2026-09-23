@@ -33,6 +33,8 @@ Fuente: `ARRANQUE.md § 1` y `§ 7`. Ver también: [desplegar](desplegar.md),
 - Remotion 4.0.527 se instaló en `brillo/trailer/remotion`, porque lo pidió
   ("usá Remotion o instalá un editor de verdad"). Detalles:
   `brillo.md § El tráiler`.
+- **Para mandarle un archivo por el chat, el límite es 30 MiB.** El tráiler
+  (66 MB) salió en una copia de 27,5 MiB: x264 en dos pasadas a 3,8 Mbps.
 - H.264 no se puede ver en el Chromium de Playwright (no trae el códec). Los MP4
   se revisan con `ffprobe` y cuadros sueltos de `ffmpeg`.
 

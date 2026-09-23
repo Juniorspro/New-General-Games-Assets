@@ -160,6 +160,14 @@ function video(idioma) {
     '-c:a', 'copy', '-movflags', '+faststart', '-metadata', 'title=BRILLO — tráiler', dest]);
   fs.unlinkSync(crudo);
   log(`listo ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1024 / 1024).toFixed(1)} MB)`);
+  /* una copia de menos de 30 MiB para mandarla por el chat (x264 en dos pasadas a 3,8 Mbps; se ve igual en el celular) */
+  const liviano = dest.replace('.mp4', '-liviano.mp4'), pases = path.join(SALIDA, 'x264');
+  const comun = ['-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-b:v', '3800k', '-maxrate', '6000k', '-bufsize', '8000k', '-passlogfile', pases];
+  ffmpeg(['-loglevel', 'error', '-i', dest, ...comun, '-pass', '1', '-an', '-f', 'null', '/dev/null']);
+  ffmpeg(['-loglevel', 'error', '-i', dest, ...comun, '-pass', '2', '-profile:v', 'high', '-level', '4.2', '-pix_fmt', 'yuv420p',
+    '-color_range', 'tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-c:a', 'copy', '-movflags', '+faststart', liviano]);
+  for (const f of fs.readdirSync(SALIDA)) if (f.startsWith('x264')) fs.unlinkSync(path.join(SALIDA, f));
+  log(`listo ${path.relative(RAIZ, liviano)} (${(fs.statSync(liviano).size / 1024 / 1024).toFixed(1)} MB)`);
   /* la portada de TikTok */
   remotion(['still', 'src/index.jsx', 'Portada', path.join(SALIDA, `brillo-tiktok-portada-${idioma}.png`), `--props=${JSON.stringify({ idioma })}`]);
 }
