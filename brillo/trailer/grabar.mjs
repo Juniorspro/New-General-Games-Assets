@@ -2,15 +2,15 @@
 //
 //     node brillo/trailer/grabar.mjs tomas  [--idioma=es] [--solo=id,id] [--muestra=t1,t2] [--rehacer]
 //     node brillo/trailer/grabar.mjs audio  [--idioma=es]
-//     node brillo/trailer/grabar.mjs video  [--idioma=es] [--formato=horizontal|vertical|ambos] [--cuadros=0-90]
+//     node brillo/trailer/grabar.mjs video  [--idioma=es] [--cuadros=0-90]
 //     node brillo/trailer/grabar.mjs todo   [--idioma=es|en|pt|todos]
 //
 // tomas: el juego de verdad en Chromium (brillo/brillo.html con un reloj propio metido al
-//   principio, así cada cuadro es exacto aunque la máquina dibuje lento), una toma por escena
-//   de guion.js → remotion/public/tomas/ (las del juego son las mismas en los tres idiomas;
+//   principio, así cada cuadro es exacto aunque la máquina dibuje lento), las TOMAS de guion.js
+//   en vertical → remotion/public/tomas/ (las del juego son las mismas en los tres idiomas;
 //   la Actualización y su chat van por idioma).
 // audio: la música de BRILLO con su propio sintetizador, en los tiempos del guion → remotion/public/audio/<idioma>.wav
-// video: Remotion arma todo (carteles, transiciones, música) → salida/brillo-trailer-<idioma>-<formato>.mp4 (H.264 + AAC)
+// video: Remotion arma todo (carteles, transiciones, música) → salida/brillo-tiktok-<idioma>.mp4 (9:16, H.264 + AAC) y su portada
 //
 // Antes hay que armar el juego (node brillo/herramientas/armar.mjs) y, una vez,
 // instalar Remotion: cd brillo/trailer/remotion && npm install
@@ -34,14 +34,21 @@ const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
 const reloj0 = Date.now();
 const log = (s) => console.log(`${((Date.now() - reloj0) / 1000).toFixed(0).padStart(5)}s ${s}`);
 
-/* el reloj que se mete en el juego: requestAnimationFrame y performance.now los maneja la página
-   que graba, el juego no suena (la música se hace aparte) y no guarda nada */
+/* el reloj que se mete en el juego: requestAnimationFrame, performance.now y también setTimeout
+   los maneja la página que graba. Sin los setTimeout, las cinemáticas del director (que esperan con
+   ellos) corrían en tiempo real: la misma toma salía distinta según lo rápido que anduviera la
+   máquina. El juego no suena (la música se hace aparte) y no guarda nada */
 const RELOJ = `<script>(function(){
-  var cola = [], t = 0;
+  var cola = [], t = 0, relojes = [], sigId = 1;
   window.requestAnimationFrame = function (f) { cola.push(f); return cola.length; };
   window.cancelAnimationFrame = function () {};
   performance.now = function () { return t; };
-  window.__reloj = { cuadro: function (ms) { t += ms; var q = cola.splice(0, cola.length); for (var i = 0; i < q.length; i++) q[i](t); }, get t() { return t; } };
+  window.setTimeout = function (f, ms) { var a = [].slice.call(arguments, 2), id = sigId++; if (typeof f === 'function') relojes.push({ id: id, t: t + Math.max(0, +ms || 0), f: f, a: a }); return id; };
+  window.clearTimeout = function (id) { relojes = relojes.filter(function (r) { return r.id !== id; }); };
+  window.setInterval = function (f, ms) { var id = sigId++, d = Math.max(1, +ms || 1); var otra = function () { relojes.push({ id: id, t: t + d, f: vuelta, a: [] }); }; var vuelta = function () { otra(); f(); }; otra(); return id; };
+  window.clearInterval = window.clearTimeout;
+  function vencidos() { for (var n = 0; n < 2000; n++) { var k = -1; for (var i = 0; i < relojes.length; i++) if (relojes[i].t <= t && (k < 0 || relojes[i].t < relojes[k].t)) k = i; if (k < 0) return; var r = relojes.splice(k, 1)[0]; try { r.f.apply(null, r.a); } catch (e) { console.error(e); } } }
+  window.__reloj = { cuadro: function (ms) { t += ms; vencidos(); var q = cola.splice(0, cola.length); for (var i = 0; i < q.length; i++) q[i](t); }, get t() { return t; } };
   window.AudioContext = undefined; window.webkitAudioContext = undefined;
   var m = {}, q = new URLSearchParams(location.search); if (q.get('idioma')) m['brillo:idioma'] = q.get('idioma');
   try { Object.defineProperty(window, 'localStorage', { value: { getItem: function (k) { return k in m ? m[k] : null; }, setItem: function (k, v) { m[k] = String(v); }, removeItem: function (k) { delete m[k]; } } }); } catch (e) {}
@@ -75,7 +82,7 @@ function servir() {
 }
 
 /* ------------------------------------------------------------ una página que trabaja hasta __terminado */
-async function pagina(archivo, params) {
+async function pagina(archivo, params, espera = 0) {
   const servidor = await servir();
   const require = createRequire('/opt/node22/lib/node_modules/playwright/');
   const { chromium } = require('playwright');
@@ -85,10 +92,11 @@ async function pagina(archivo, params) {
   pag.on('pageerror', (e) => log('ERROR ' + e.message));
   const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== false).map(([k, v]) => [k, v === true ? '1' : String(v)]));
   await pag.goto(`http://127.0.0.1:${servidor.address().port}/brillo/trailer/${archivo}?${q}`);
-  await pag.waitForFunction(() => window.__terminado, null, { timeout: 0, polling: 2000 });
-  const r = await pag.evaluate(() => window.__terminado);
-  await nav.close();
-  servidor.close();
+  let r;
+  try {
+    await pag.waitForFunction(() => window.__terminado, null, { timeout: espera, polling: 2000 });
+    r = await pag.evaluate(() => window.__terminado);
+  } finally { await nav.close(); servidor.close(); }
   if (r.error) throw new Error(`${archivo}: ${r.error}`);
   return r;
 }
@@ -109,12 +117,21 @@ function ffmpeg(args, o = {}) {
 }
 
 async function audio(idioma) {
-  const r = await pagina('audio.html', { idioma });
-  log(`música (${idioma}) lista: ${r.segundos.toFixed(1)} s`);
+  const wav = path.join(PUBLICO, 'audio', `${idioma}.wav`), antes = Date.now();
+  /* a veces la página se queda colgada después de mandar el WAV (la respuesta del POST no le llega):
+     si en 5 minutos no avisa pero el WAV ya está escrito, se sigue */
+  try {
+    const r = await pagina('audio.html', { idioma, soloMusica: !!op.soloMusica }, 5 * 60 * 1000);
+    if (op.soloMusica) return;
+    log(`música (${idioma}) lista: ${r.segundos.toFixed(1)} s`);
+  } catch (e) {
+    if (op.soloMusica || !fs.existsSync(wav) || fs.statSync(wav).mtimeMs < antes) throw e;
+    log('la página de la música no avisó, pero el WAV está: sigo');
+  }
   /* a -14 LUFS con el pico en -1 dBTP, lo que piden YouTube, TikTok e Instagram: en dos pasadas
      (la primera mide, la segunda corrige lineal, así no bombea) */
   if (!FFMPEG_SISTEMA) { log('sin ffmpeg del sistema: la música queda sin normalizar'); return; }
-  const wav = path.join(PUBLICO, 'audio', `${idioma}.wav`), tmp = wav.replace('.wav', '.norm.wav');
+  const tmp = wav.replace('.wav', '.norm.wav');
   const medida = JSON.parse(ffmpeg(['-i', wav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']).match(/\{[\s\S]*\}/)[0]);
   ffmpeg(['-loglevel', 'error', '-i', wav, '-af', `loudnorm=I=-14:TP=-1:LRA=11:measured_I=${medida.input_i}:measured_TP=${medida.input_tp}:measured_LRA=${medida.input_lra}:measured_thresh=${medida.input_thresh}:offset=${medida.target_offset}:linear=true`,
     '-ar', '48000', '-c:a', 'pcm_s16le', tmp]);
@@ -122,49 +139,27 @@ async function audio(idioma) {
   log(`música a -14 LUFS (estaba en ${medida.input_i} LUFS, pico ${medida.input_tp} dBTP)`);
 }
 
-/* los fondos del vertical: cada toma chiquita y desenfocada, hecha una vez con ffmpeg
-   (un filtro blur() de CSS en SwiftShader cuesta 0,7 s por cuadro). El ffmpeg de Remotion no trae
-   gblur: con ese se desenfoca achicando mucho y volviendo a agrandar */
-function fondos(idioma) {
-  const filtro = FFMPEG_SISTEMA ? 'crop=608:1080,scale=270:480:flags=area,gblur=sigma=7,eq=saturation=1.3:brightness=0.02'
-    : 'crop=608:1080,scale=36:64:flags=area,scale=144:256:flags=bicubic';
-  for (const carpeta of ['comun', idioma]) {
-    const dir = path.join(PUBLICO, 'tomas', carpeta);
-    if (!fs.existsSync(dir)) continue;
-    for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.webm'))) {
-      const src = path.join(dir, f), dest = path.join(dir, f.replace('.webm', '.fondo.mp4'));
-      if (!op.rehacer && fs.existsSync(dest) && fs.statSync(dest).mtimeMs > fs.statSync(src).mtimeMs) continue;
-      ffmpeg(['-loglevel', 'error', '-i', src, '-an', '-vf', filtro, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-pix_fmt', 'yuv420p', dest]);
-    }
-  }
-}
 function remotion(args) {
   const r = spawnSync('npx', ['remotion', ...args, `--browser-executable=${CASCARA}`, '--gl=swangle'], { cwd: REMOTION, stdio: 'inherit' });
   if (r.status !== 0) throw new Error(`remotion ${args[0]} terminó con ${r.status}`);
 }
 function video(idioma) {
   fs.mkdirSync(SALIDA, { recursive: true });
-  fondos(idioma);
-  const formatos = op.formato === 'ambos' || !op.formato ? ['horizontal', 'vertical'] : [op.formato];
-  for (const formato of formatos) {
-    const vertical = formato === 'vertical';
-    const dest = path.join(SALIDA, `brillo-trailer-${idioma}-${formato}.mp4`), crudo = dest.replace('.mp4', '.crudo.mp4');
-    const args = ['render', 'src/index.jsx', vertical ? 'TrailerVertical' : 'Trailer', crudo, `--props=${JSON.stringify({ idioma })}`,
-      '--codec=h264', '--crf=17', '--pixel-format=yuv420p', '--audio-codec=aac', '--audio-bitrate=256k', `--concurrency=${op.concurrencia || 3}`, '--log=info'];
-    if (op.cuadros) args.push(`--frames=${op.cuadros}`);
-    log(`video ${idioma} ${formato}…`);
-    remotion(args);
-    /* el índice del MP4 adelante (faststart), así las redes lo empiezan a mostrar antes de bajarlo entero */
-    ffmpeg(['-loglevel', 'error', '-i', crudo, '-c', 'copy', '-movflags', '+faststart', '-metadata', 'title=BRILLO — tráiler', dest]);
-    fs.unlinkSync(crudo);
-    log(`listo ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1024 / 1024).toFixed(1)} MB)`);
-    /* la portada: miniatura de YouTube o tapa de TikTok */
-    const tapa = path.join(SALIDA, `brillo-portada-${idioma}-${formato}.png`);
-    remotion(['still', 'src/index.jsx', vertical ? 'PortadaVertical' : 'Portada', tapa, `--props=${JSON.stringify({ idioma })}`]);
-  }
+  const dest = path.join(SALIDA, `brillo-tiktok-${idioma}.mp4`), crudo = dest.replace('.mp4', '.crudo.mp4');
+  const args = ['render', 'src/index.jsx', 'Trailer', crudo, `--props=${JSON.stringify({ idioma })}`,
+    '--codec=h264', '--crf=16', '--pixel-format=yuv420p', '--audio-codec=aac', '--audio-bitrate=256k', `--concurrency=${op.concurrencia || 3}`, '--log=info'];
+  if (op.cuadros) args.push(`--frames=${op.cuadros}`);
+  log(`video ${idioma}…`);
+  remotion(args);
+  /* el índice del MP4 adelante (faststart), así TikTok lo empieza a mostrar antes de bajarlo entero */
+  ffmpeg(['-loglevel', 'error', '-i', crudo, '-c', 'copy', '-movflags', '+faststart', '-metadata', 'title=BRILLO — tráiler', dest]);
+  fs.unlinkSync(crudo);
+  log(`listo ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1024 / 1024).toFixed(1)} MB)`);
+  /* la portada de TikTok */
+  remotion(['still', 'src/index.jsx', 'Portada', path.join(SALIDA, `brillo-tiktok-portada-${idioma}.png`), `--props=${JSON.stringify({ idioma })}`]);
 }
 
-const PASOS = { tomas, audio, fondos: async (i) => fondos(i), video: async (i) => video(i) };
+const PASOS = { tomas, audio, video: async (i) => video(i) };
 if (!PASOS[paso] && paso !== 'todo') { console.log('pasos: tomas, audio, video, todo'); process.exit(1); }
 for (const idioma of IDIOMAS) {
   if (paso === 'todo') { await tomas(idioma); await audio(idioma); video(idioma); }

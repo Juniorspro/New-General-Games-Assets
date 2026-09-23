@@ -4,6 +4,18 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **23/09/2026, noche · `claude/fijate-iszyer`:**
+  - Pidió un tráiler de BRILLO "completísimo". Después dijo "usá Remotion o
+    instalá un editor de verdad" y que ffmpeg también sirve.
+  - A la mitad aclaró que quería **uno solo, 9:16 para TikTok**, con motion
+    graphics y cinemáticas en pixel art del juego. Quedó
+    `brillo/trailer/salida/brillo-tiktok-es.mp4` (56 s) con su portada.
+    Cómo se hace: `brillo/README.md § El tráiler`. Trampas:
+    `brillo.md § El tráiler`.
+  - Quiso usar la PC Neko: el modo automático bloqueó el `docker pull` de la
+    imagen. Canva está en la cuenta pero sin conectar: iba a dar acceso.
+  - Falta, si lo pide: las versiones en inglés y portugués (`grabar.mjs todo
+    --idioma=en`), y pasar la portada por Canva.
 - **23/09/2026, tarde · `claude/fijate-iszyer`:**
   - Pidió un zip por juego para portar a TikTok. Quedaron `entregas/*.zip`,
     que se arman con `herramientas/empaquetar_juegos.py`, y las guías en

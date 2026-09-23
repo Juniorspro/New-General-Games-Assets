@@ -6,6 +6,13 @@
    ========================================================================== */
 export const TRAILER = {
   es: {
+    gancho: ['Todo', 'brillaba.'],
+    orbes: ['5 Orbes de Aero', '18 guiños escondidos'],
+    chip: ['Música Aero…', '…o en 16 bits'],
+    idiomas: 'todo traducido, hasta los chats',
+    jugalo: 'Jugalo gratis',
+    donde: 'en el navegador y en el celular',
+    bio: 'link en la bio',
     buscarla: 'Se la llevó... Tengo que ir a buscarla.',
     lema: 'Traé el brillo de vuelta.',
     mundo: 'Mundo',
@@ -26,6 +33,13 @@ export const TRAILER = {
     fin2: 'un solo archivo · sin internet',
   },
   en: {
+    gancho: ['Everything', 'shone.'],
+    orbes: ['5 Aero Orbs', '18 hidden winks'],
+    chip: ['Aero music…', '…or 16-bit'],
+    idiomas: 'fully translated, chats included',
+    jugalo: 'Play it free',
+    donde: 'in your browser and on your phone',
+    bio: 'link in bio',
     buscarla: 'It took her... I have to go find her.',
     lema: 'Bring the shine back.',
     mundo: 'World',
@@ -46,6 +60,13 @@ export const TRAILER = {
     fin2: 'a single file · no internet needed',
   },
   pt: {
+    gancho: ['Tudo', 'brilhava.'],
+    orbes: ['5 Orbes Aero', '18 piscadas escondidas'],
+    chip: ['Música Aero…', '…ou em 16 bits'],
+    idiomas: 'tudo traduzido, até os chats',
+    jugalo: 'Jogue grátis',
+    donde: 'no navegador e no celular',
+    bio: 'link na bio',
     buscarla: 'Levou ela... Eu tenho que ir buscá-la.',
     lema: 'Traga o brilho de volta.',
     mundo: 'Mundo',

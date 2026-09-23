@@ -1,7 +1,7 @@
 /* ============================================================================
-   brillo/trailer/tomas.js — graba las tomas del tráiler, una por escena de
-   guion.js, cada una en su WebM (VP9, con WebCodecs). Después Remotion las
-   arma (carteles, transiciones, música).
+   brillo/trailer/tomas.js — graba las tomas del tráiler (TOMAS de guion.js),
+   cada una en su WebM vertical de 1080×1920 (VP9, con WebCodecs). Después
+   Remotion las corta en planos y las arma (carteles, transiciones, música).
 
    Todo lo que se ve es el juego de verdad:
    - brillo.html en iframes, con un reloj controlado (grabar.mjs le mete un
@@ -12,20 +12,24 @@
    - la escena de la Actualización la actúa el director del juego. Su ventana
      de chat es HTML y no sale en el lienzo: se guarda cuadro a cuadro (textos
      y avatares) para que Remotion la dibuje.
+   El recorte es vertical: 540×960 del lienzo del juego (que va a ×3) alrededor
+   de Nick, agrandado ×2 sin suavizar: cada píxel del juego son 6×6 exactos.
+   Cuadro a cuadro se guarda también dónde quedan Nick y Mora en el video, así
+   Remotion puede hacer primeros planos y poner los brillos cerca de ellos.
    También se guarda lo que el juego hizo sonar en cada toma (saltos, gotitas,
    burbujas…) para la mezcla.
-   ?idioma=es · ?solo=id,id (esas tomas) · ?muestra=t1,t2 (PNG en esos segundos, sin video)
+   ?idioma=es · ?solo=id,id (esas tomas) · ?muestra=t1,t2 (PNG en esos segundos, sin video) · ?rehacer
    ========================================================================== */
 import { MuxerWebM } from './webm.js';
 import { ACCIONES, K, entradaDe } from '../pruebas/resolver.mjs';
 import { NIVELES } from '../js/niveles.js';
 import { crearMundo } from '../js/fisica.js';
 import { TEXTOS } from '../js/textos.js';
-import { ESCENAS, FPS, TRANSICION } from './guion.js';
+import { TOMAS, FPS, ANCHO, ALTO, largoDeTomas } from './guion.js';
 
 const q = new URLSearchParams(location.search);
 const IDI = TEXTOS[q.get('idioma')] ? q.get('idioma') : 'es';
-const W = 1920, H = 1080, DT = 1000 / FPS;
+const W = ANCHO, H = ALTO, DT = 1000 / FPS;
 const TX = TEXTOS[IDI];
 const log = (...a) => console.log('[tráiler]', ...a);
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -100,6 +104,7 @@ class Recorrido {
   }
   cuadro() { this.J.cuadro(); return this.J.c; }
   foco() { const p = this.N.m.p; return seguir(this, focoDe(this.N, p.x, p.y - 14)); }
+  actores() { const p = this.N.m.p; return { nick: focoDe(this.N, p.x, p.y - 12) }; }
   cerrar() { this.J.cerrar(); }
 }
 
@@ -166,6 +171,11 @@ class Actualizacion {
     const x = mora ? (p.x + mora.x) / 2 : p.x, y = p.y - 30;
     return seguir(this, focoDe(N, x, y));
   }
+  actores() {
+    const N = this.d.N; if (!N) return {};
+    const p = N.m.p, mora = N.npcs.find((v) => v.id === 'mora' && v.visible !== false);
+    return { nick: focoDe(N, p.x, p.y - 12), ...(mora ? { mora: focoDe(N, mora.x, mora.y - 12) } : {}) };
+  }
   cerrar() { this.J.cerrar(); }
 }
 function leerChat(doc) {
@@ -178,16 +188,14 @@ function leerChat(doc) {
     lineas: [...c.querySelectorAll('.lineas .linea')].map((l) => ({ mia: l.classList.contains('mia'), plana: l.classList.contains('plana'), img: l.querySelector('img'), quien: l.querySelector('b')?.textContent || '', texto: l.querySelector('p')?.textContent || '' })),
   };
 }
-function ponerJuego(c, a = 1, zoom = 1, foco = null) {
-  g.save(); g.globalAlpha = a;
-  const cw = c.width, ch = c.height;
-  /* lo que se recorta del juego: horizontal, la pantalla entera; vertical, un cuadrado */
-  const sw = cw / zoom, sh = ch / zoom;
-  const fx = foco ? foco.x : cw / 2, fy = foco ? foco.y : ch / 2;
-  const sx = clamp(fx - sw / 2, 0, cw - sw), sy = clamp(fy - sh / 2, 0, ch - sh);
-  g.imageSmoothingEnabled = false; g.drawImage(c, sx, sy, sw, sh, 0, 0, W, H);
-  g.imageSmoothingEnabled = true;
-  g.restore();
+/* el recorte vertical: 540×960 del lienzo del juego alrededor del foco, agrandado ×2 sin suavizar.
+   Devuelve dónde quedó la esquina, para pasar posiciones del juego al video */
+const RW = W / 2, RH = H / 2;
+function ponerJuego(c, foco = null) {
+  const fx = foco ? foco.x : c.width / 2, fy = foco ? foco.y : c.height / 2;
+  const sx = Math.round(clamp(fx - RW / 2, 0, c.width - RW)), sy = Math.round(clamp(fy - RH / 2, 0, c.height - RH));
+  g.imageSmoothingEnabled = false; g.drawImage(c, sx, sy, RW, RH, 0, 0, W, H);
+  return { sx, sy };
 }
 /* dónde está Nick en el lienzo del juego (para seguirlo con el recorte) */
 /* el juego está a escala 3 en un iframe de 1920x1080: un píxel del juego son 3 del lienzo */
@@ -200,38 +208,38 @@ function seguir(esc, f) {
 }
 /* la viñeta y un velo de luz, igual para todo el tráiler */
 /* ============================================================== grabar */
-function crearToma(E) {
-  const T = E.toma;
+function crearToma(T) {
   if (T.tipo === 'recorrido') return new Recorrido(T.mundo, T.tramo, T.desde || 0);
   if (T.tipo === 'paisaje') return new Paisaje(T.mundo, T.x || 0, T.foco ? FOCOS[T.foco] : null);
   if (T.tipo === 'actualizacion') return new Actualizacion();
   throw new Error('toma desconocida ' + T.tipo);
 }
 const existe = async (u) => (await fetch(u, { method: 'HEAD' })).ok;
+const leerJSON = async (u, si) => ((await existe(u)) ? (await fetch(u)).json() : si);
 
 async function grabarTodo() {
   const solo = q.has('solo') ? q.get('solo').split(',') : null;
   const muestra = q.has('muestra') ? q.get('muestra').split(',').map(Number) : null;
   const rehacer = q.has('rehacer');
-  /* lo de este idioma: si ya había (por ejemplo con ?solo), se completa */
-  const hay = `/brillo/trailer/remotion/public/tomas/${IDI}.json`;
-  const datos = (await existe(hay)) ? await (await fetch(hay)).json() : { idioma: IDI, medidas: {}, sonidos: {}, chat: {}, avatares: {} };
+  const LARGO = largoDeTomas();
+  const PUB = '/brillo/trailer/remotion/public/';
+  /* lo de este idioma y lo común: si ya había (por ejemplo con ?solo), se completa */
+  const datos = await leerJSON(`${PUB}tomas/${IDI}.json`, { idioma: IDI, medidas: {}, sonidos: {}, chat: {}, avatares: {}, pos: {} });
+  const comun = await leerJSON(`${PUB}tomas/comun.json`, { sonidos: {}, pos: {} });
   /* los avatares del chat son data: URI del juego: se guardan una vez cada uno */
   const avIdx = new Map();
   for (const [k, src] of Object.entries(datos.avatares)) avIdx.set(src, k);
   const claveAvatar = (im) => { if (!im || !im.src) return null; let k = avIdx.get(im.src); if (k == null) { k = String(avIdx.size); avIdx.set(im.src, k); datos.avatares[k] = im.src; } return k; };
-  const comun = (await existe('/brillo/trailer/remotion/public/tomas/comun.json')) ? await (await fetch('/brillo/trailer/remotion/public/tomas/comun.json')).json() : { sonidos: {} };
-  for (const [i, E] of ESCENAS.entries()) {
-    if (solo && !solo.includes(E.id)) continue;
-    const porIdioma = !!E.toma.porIdioma, carpeta = porIdioma ? IDI : 'comun';
-    const archivo = `tomas/${carpeta}/${E.id}.webm`;
-    if (!muestra && !rehacer && !porIdioma && comun.sonidos[E.id] && await existe('/brillo/trailer/remotion/public/' + archivo)) { log(`toma ${E.id}: ya está`); continue; }
-    const sig = ESCENAS[i + 1], cola = sig ? TRANSICION[sig.entra] || 0 : 0;
-    const fijo = E.dur !== 'auto', largo = fijo ? (E.c != null ? E.c * (4 * 60 / 138) : E.dur) : null;
-    const esc = crearToma(E);
+  for (const [id, T] of Object.entries(TOMAS)) {
+    if (solo && !solo.includes(id)) continue;
+    if (!LARGO[id]) continue;                                  // ningún plano la usa
+    const porIdioma = !!T.porIdioma, carpeta = porIdioma ? IDI : 'comun';
+    if (!muestra && !rehacer && !porIdioma && comun.sonidos[id] && await existe(`${PUB}tomas/${carpeta}/${id}.webm`)) { log(`toma ${id}: ya está`); continue; }
+    const largo = LARGO[id];
+    const esc = crearToma(T);
     await esc.preparar();
     sonidos = [];
-    const chat = [];
+    const chat = [], pos = [];
     let mux = null, enc = null;
     if (!muestra) {
       mux = new MuxerWebM({ ancho: W, alto: H }, null);
@@ -239,42 +247,41 @@ async function grabarTodo() {
       enc.configure({ codec: 'vp09.00.40.08', width: W, height: H, bitrate: 14e6, framerate: FPS, latencyMode: 'quality' });
     }
     const t0 = performance.now();
-    let fin = null, n = 0;
+    let n = 0;
     for (; ; n++) {
       const t = n / FPS;
       ahoraToma = t;
-      if (fijo && t >= largo + cola - 1e-6) break;
-      if (!fijo) {
-        if (fin == null && (esc.termino || t >= E.max)) fin = t;
-        if (fin != null && t >= fin + cola - 1e-6) break;
-      }
+      if (t >= largo - 1e-6) break;
       const c = esc.cuadro();
-      g.clearRect(0, 0, W, H);
-      ponerJuego(c, 1, E.toma.zoom || 1, esc.foco ? esc.foco() : null);
+      const r = ponerJuego(c, esc.foco ? esc.foco() : null);
+      /* dónde quedaron Nick y Mora en el video (px de 1080×1920) */
+      const A = esc.actores ? esc.actores() : {};
+      const en = (p) => (p ? [Math.round((p.x - r.sx) * 2), Math.round((p.y - r.sy) * 2)] : null);
+      pos.push(A.nick || A.mora ? { nick: en(A.nick), mora: en(A.mora) } : null);
       if (esc.chat) {
         const ch = esc.chat();
         chat.push(ch ? { nombre: ch.nombre, estado: ch.estado, sale: ch.sale, ve: ch.ve, escribe: ch.escribe, avatar: claveAvatar(ch.avatar),
           lineas: ch.lineas.map((l) => ({ mia: l.mia, plana: l.plana, quien: l.quien, texto: l.texto, avatar: claveAvatar(l.img) })) } : null);
       }
       if (muestra) {
-        if (muestra.some((m) => Math.abs(m - t) < 0.5 / FPS)) { const b = await new Promise((r) => salida.toBlob(r, 'image/png')); await fetch(`/guardar?nombre=toma-${E.id}-${t.toFixed(1)}.png`, { method: 'POST', body: b }); }
+        if (muestra.some((m) => Math.abs(m - t) < 0.5 / FPS)) { const b = await new Promise((r) => salida.toBlob(r, 'image/png')); await fetch(`/guardar?nombre=toma-${id}-${t.toFixed(1)}.png`, { method: 'POST', body: b }); }
         if (t > Math.max(...muestra) + 0.1) break;
       } else {
         const vf = new VideoFrame(salida, { timestamp: Math.round(n * 1e6 / FPS), duration: Math.round(1e6 / FPS) });
         enc.encode(vf, { keyFrame: n % FPS === 0 }); vf.close();
         while (enc.encodeQueueSize > 3) await new Promise((r) => enc.addEventListener('dequeue', r, { once: true }));
       }
-      if (n % 30 === 0) log(`${E.id}: cuadro ${n} · ${((performance.now() - t0) / (n + 1)).toFixed(0)} ms por cuadro`);
+      if (n % 30 === 0) log(`${id}: cuadro ${n} de ${Math.ceil(largo * FPS)} · ${((performance.now() - t0) / (n + 1)).toFixed(0)} ms por cuadro`);
     }
+    if (esc.termino !== undefined) datos.medidas[id] = +(n / FPS).toFixed(3);
     esc.cerrar();
-    if (!fijo) datos.medidas[E.id] = +fin.toFixed(3);
     if (muestra) continue;
     await enc.flush();
     const blob = mux.armar(n * 1000 / FPS);
-    await fetch(`/guardar?carpeta=tomas/${carpeta}&nombre=${E.id}.webm`, { method: 'POST', body: blob });
-    if (porIdioma) { datos.sonidos[E.id] = sonidos; if (chat.length) datos.chat[E.id] = chat; }
-    else { comun.sonidos[E.id] = sonidos; await fetch('/guardar?carpeta=tomas&nombre=comun.json', { method: 'POST', body: JSON.stringify(comun) }); }
-    log(`toma ${E.id}: ${n} cuadros${fijo ? '' : ` (la escena duró ${fin.toFixed(2)} s)`}`);
+    await fetch(`/guardar?carpeta=tomas/${carpeta}&nombre=${id}.webm`, { method: 'POST', body: blob });
+    if (porIdioma) { datos.sonidos[id] = sonidos; datos.pos[id] = pos; if (chat.length) datos.chat[id] = chat; }
+    else { comun.sonidos[id] = sonidos; comun.pos[id] = pos; await fetch('/guardar?carpeta=tomas&nombre=comun.json', { method: 'POST', body: JSON.stringify(comun) }); }
+    log(`toma ${id}: ${n} cuadros`);
   }
   if (!muestra) await fetch(`/guardar?carpeta=tomas&nombre=${IDI}.json`, { method: 'POST', body: JSON.stringify(datos) });
   return { ok: true, medidas: datos.medidas };

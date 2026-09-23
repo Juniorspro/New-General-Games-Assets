@@ -1,71 +1,114 @@
 /* ============================================================================
-   brillo/trailer/guion.js — el guion del tráiler: qué tomas se graban, en qué
-   orden van, cómo entra cada una y qué música suena. Lo leen las tres partes:
-   tomas.js (graba el juego), audio.js (hace la música) y Remotion (arma el
-   video), así las tres cuentan el tiempo igual.
+   brillo/trailer/guion.js — el guion del tráiler para TikTok (9:16, 1080×1920).
+   Lo leen las tres partes: tomas.js (graba el juego), audio.js (hace la
+   música) y Remotion (arma el video), así las tres cuentan el tiempo igual.
 
-   La música del final va a 138 negras por minuto: un compás son 1,739 s. Del
-   logo en adelante cada toma empieza justo en un compás; la transición
-   (burbuja, destello) empieza en el compás y la toma de antes queda debajo
-   hasta que termina.
+   Como en un editor de verdad hay dos listas:
+   - TOMAS: lo que se graba del juego, cada una en su WebM vertical;
+   - PLANOS: el montaje. Cada plano toma un pedazo de una toma (desde, en
+     segundos de la toma), dura lo que dice y entra con su transición.
+   Una toma puede dar varios planos (la Actualización da seis).
+
+   La música del final va a 138 negras por minuto: un compás son 1,739 s. Los
+   planos con `compas` empiezan justo en un compás; la grilla arranca de nuevo
+   en el primero de cada tanda (el gancho y el logo).
    ========================================================================== */
 export const FPS = 30;
+export const ANCHO = 1080, ALTO = 1920;
 export const COMPAS = 4 * 60 / 138;
-/* cuánto dura cada entrada (s) */
-export const TRANSICION = { corte: 0, blanco: 0.35, blancoCorto: 0.18, burbuja: 0.45, fundido: 0.5 };
+/* el juego se ve a 6 píxeles de pantalla por píxel del juego (el lienzo del juego va a ×3 y el recorte a ×2) */
+export const ESCALA = 6;
+/* cuánto dura cada transición (s): mitad antes del corte y mitad después */
+export const TRANSICION = { corte: 0, glitch: 0.4, blanco: 0.3, destello: 0.16, pixeles: 0.5, mosaico: 0.36 };
 
-/* las tomas: qué se graba de cada una. dur en segundos, o compases (c), o 'auto' (lo que dure la escena) */
-export const ESCENAS = [
-  { id: 'frio', toma: { tipo: 'paisaje', mundo: 'colina', x: -170, zoom: 2, foco: 'parejaColina' }, dur: 7.2,
-    entra: 'corte', cartel: { tipo: 'narracion', partes: [['narra.colina', 0, 0.3, 3.4], ['narra.colina', 1, 3.7, 6.7]] }, desdeBlanco: true,
-    musica: [{ t: 0, musica: 'titulo' }] },
-  { id: 'actualizacion', toma: { tipo: 'actualizacion', zoom: 2, porIdioma: true }, dur: 'auto', max: 22,
-    entra: 'fundido', cartel: { tipo: 'chat', narracion: ['narra.colina', 2, 0, 1.6] },
-    musica: [{ t: 0.05, musica: null }, { t: 0.05, sfx: 'plano' }] },
-  { id: 'titulo', toma: { tipo: 'paisaje', mundo: 'cielo', x: 700 }, c: 2, entra: 'blanco', compas: true,
-    cartel: { tipo: 'logo' }, musica: [{ t: -0.4, musica: 'final', golpe: true }, { t: 0, sfx: 'orbe' }] },
-  ...[['colina', 'S43>S114', 0, 3], ['arrecife', 'S95>S151', 10, 3], ['ciudad', 'S50>S102', 0, 3], ['cielo', 'S52>S84', 6, 3], ['aurora', 'S84>S130', 0, 2], ['plano', 'S42>S90', 0, 3]]
-    .map(([m, tramo, desde, c], i) => ({ id: m, toma: { tipo: 'recorrido', mundo: m, tramo, desde, zoom: 2 }, c, entra: i ? 'burbuja' : 'blanco', compas: true, cartel: { tipo: 'mundo', mundo: m, numero: i + 1 } })),
-  ...[['colina', 'S166>orbe', 7], ['arrecife', 'S151>orbe', 0], ['ciudad', 'S126>orbe', 5], ['cielo', 'S122>orbe', 58], ['aurora', 'S130>orbe', 20]]
-    .map(([m, tramo, desde], i) => ({ id: 'rasgo' + i, toma: { tipo: 'recorrido', mundo: m, tramo, desde, zoom: 2 }, c: 2, entra: i === 2 || i === 3 ? 'corte' : 'burbuja', compas: true,
-      cartel: { tipo: 'rasgo', i }, musica: i === 2 ? [{ t: 0, modo: 'chip' }] : i === 3 ? [{ t: 0, modo: 'aero' }] : [] })),
-  { id: 'pregunta', toma: { tipo: 'recorrido', mundo: 'plano', tramo: 'S118>S150', desde: 0, zoom: 2 }, c: 2, entra: 'blanco', compas: true, cartel: { tipo: 'pregunta' } },
-  { id: 'respuesta', toma: { tipo: 'recorrido', mundo: 'colina', tramo: 'S43>S114', desde: 52, zoom: 2 }, c: 2, entra: 'burbuja', compas: true, cartel: { tipo: 'respuesta' } },
-  ...[['ciudad', 'inicio>S50', 0], ['arrecife', 'S44>S95', 20], ['cielo', 'S84>S122', 12], ['aurora', 'S84>S130', 4], ['colina', 'S114>S166', 40], ['ciudad', 'S102>S126', 10], ['cielo', 'S122>orbe', 62], ['plano', 'S42>S90', 20]]
-    .map(([m, tramo, desde], i) => ({ id: 'rafaga' + i, toma: { tipo: 'recorrido', mundo: m, tramo, desde, zoom: 2 }, c: 0.5, entra: i % 2 ? 'corte' : 'blancoCorto', compas: true, cartel: null })),
-  { id: 'cierre', toma: { tipo: 'paisaje', mundo: 'aurora', x: 400 }, c: 5, entra: 'blanco', compas: true, cartel: { tipo: 'cierre' },
-    musica: [{ t: 0, sfx: 'orbe' }, { t: COMPAS * 3.2, apagar: COMPAS * 1.8 }], alNegro: 1.2 },
+/* ------------------------------------------------------------ lo que se graba */
+export const TOMAS = {
+  colina: { tipo: 'recorrido', mundo: 'colina', tramo: 'S43>S114', desde: 0 },
+  arrecife: { tipo: 'recorrido', mundo: 'arrecife', tramo: 'S95>S151', desde: 10 },
+  ciudad: { tipo: 'recorrido', mundo: 'ciudad', tramo: 'S50>S102', desde: 0 },
+  cielo: { tipo: 'recorrido', mundo: 'cielo', tramo: 'S52>S84', desde: 6 },
+  aurora: { tipo: 'recorrido', mundo: 'aurora', tramo: 'S84>S130', desde: 0 },
+  plano: { tipo: 'recorrido', mundo: 'plano', tramo: 'S42>S90', desde: 0 },
+  orbe: { tipo: 'recorrido', mundo: 'colina', tramo: 'S166>orbe', desde: 7 },
+  chip: { tipo: 'recorrido', mundo: 'cielo', tramo: 'S122>orbe', desde: 58 },
+  idiomas: { tipo: 'recorrido', mundo: 'ciudad', tramo: 'S126>orbe', desde: 5 },
+  pregunta: { tipo: 'recorrido', mundo: 'plano', tramo: 'S118>S150', desde: 0 },
+  respuesta: { tipo: 'recorrido', mundo: 'colina', tramo: 'S43>S114', desde: 52 },
+  subida: { tipo: 'recorrido', mundo: 'cielo', tramo: 'S84>S122', desde: 12 },
+  torres: { tipo: 'recorrido', mundo: 'ciudad', tramo: 'S102>S126', desde: 10 },
+  cumbre: { tipo: 'paisaje', mundo: 'cielo', x: 700 },
+  noche: { tipo: 'paisaje', mundo: 'aurora', x: 400 },
+  /* la actúa el director del juego; dura lo que duran las charlas. Se guarda también el chat y dónde están Nick y Mora */
+  actualizacion: { tipo: 'actualizacion', porIdioma: true, max: 20 },
+};
+
+/* ------------------------------------------------------------ el montaje */
+const MUNDOS = ['colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 'plano'];
+export const PLANOS = [
+  /* el gancho: cuatro golpes de juego a tempo y "Todo brillaba." */
+    { id: 'g0', toma: 'ciudad', desde: 0.4, c: 0.5, entra: 'corte', compas: true, musica: [{ t: -0.4, musica: 'final', golpe: true }], capa: { tipo: 'gancho' } },
+  { id: 'g1', toma: 'arrecife', desde: 0.6, c: 0.5, entra: 'destello', compas: true },
+  { id: 'g2', toma: 'cielo', desde: 0.8, c: 0.5, entra: 'destello', compas: true },
+  { id: 'g3', toma: 'aurora', desde: 0.6, c: 0.5, entra: 'destello', compas: true },
+  /* la historia: la Actualización, cortada en seis planos. La música se corta de golpe */
+  { id: 'h1', toma: 'actualizacion', desde: 0.3, dur: 3.4, entra: 'glitch', cam: { zoom: [1, 1.12] }, cartel: { tipo: 'historia', narra: ['narra.colina', 2, 0.1, 1.7] },
+    musica: [{ t: 0, corte: true }, { t: 0, sfx: 'plano' }] },
+  { id: 'h2', toma: 'actualizacion', desde: 3.7, dur: 2.65, entra: 'glitch', cam: { zoom: [1.18, 1.05], sacudir: 0.6 }, cartel: { tipo: 'historia' } },
+  { id: 'h3', toma: 'actualizacion', desde: 6.35, dur: 1.65, entra: 'corte', cam: { zoom: [2, 2], foco: 'mora' }, cartel: { tipo: 'historia' } },
+  { id: 'h4', toma: 'actualizacion', desde: 8.0, dur: 2.35, entra: 'glitch', cam: { zoom: [1, 1.2] }, cartel: { tipo: 'historia' } },
+  { id: 'h5', toma: 'actualizacion', desde: 10.35, dur: 2.85, entra: 'corte', cam: { zoom: [2, 2], foco: 'nick' }, cartel: { tipo: 'historia' } },
+  { id: 'h6', toma: 'actualizacion', desde: 14.9, dur: 2.0, entra: 'mosaico', cam: { zoom: [1.1, 1.3], foco: 'nick' }, cartel: { tipo: 'historia' } },
+  /* el logo, en el golpe */
+  { id: 'logo', toma: 'cumbre', desde: 0.1, c: 2, entra: 'blanco', compas: true, cartel: { tipo: 'logo' }, musica: [{ t: -0.4, musica: 'final', golpe: true }, { t: 0, sfx: 'orbe' }] },
+  /* los seis mundos, un compás cada uno */
+  ...MUNDOS.map((m, i) => ({ id: 'm' + i, toma: m, desde: [0.3, 1.8, 1.6, 1.9, 1.7, 0.3][i], c: 1, entra: i % 2 ? 'mosaico' : 'pixeles', compas: true, cartel: { tipo: 'mundo', mundo: m, numero: i + 1 } })),
+  /* lo que trae */
+  { id: 'r0', toma: 'orbe', desde: 0.2, c: 1, entra: 'pixeles', compas: true, cartel: { tipo: 'rasgo', i: 0 } },
+  { id: 'r1', toma: 'chip', desde: 0.2, c: 1, entra: 'mosaico', compas: true, cartel: { tipo: 'rasgo', i: 1 }, musica: [{ t: -0.4, modo: 'chip' }] },
+  { id: 'r2', toma: 'idiomas', desde: 0.2, c: 1, entra: 'pixeles', compas: true, cartel: { tipo: 'rasgo', i: 2 }, musica: [{ t: -0.4, modo: 'aero' }] },
+  /* PLANO pregunta y Nick contesta */
+  { id: 'q', toma: 'pregunta', desde: 0.1, c: 1, entra: 'glitch', compas: true, cartel: { tipo: 'pregunta' } },
+  { id: 'a', toma: 'respuesta', desde: 0.1, c: 2, entra: 'blanco', compas: true, cartel: { tipo: 'respuesta' } },
+  /* la ráfaga: medio compás cada plano */
+  ...[['ciudad', 3.6], ['arrecife', 3.9], ['subida', 0.2], ['aurora', 3.2], ['colina', 3.6], ['torres', 0.2], ['cielo', 3.8], ['plano', 3.4]]
+    .map(([toma, desde], i) => ({ id: 'f' + i, toma, desde, c: 0.5, entra: i % 2 ? 'destello' : 'corte', compas: true })),
+  /* el cierre */
+  { id: 'fin', toma: 'noche', desde: 0.1, c: 4, entra: 'blanco', compas: true, cartel: { tipo: 'cierre' },
+    musica: [{ t: 0, sfx: 'orbe' }, { t: COMPAS * 2.6, apagar: COMPAS * 1.4 }] },
 ];
 
-/* cuándo empieza y cuánto se ve cada escena, en cuadros.
-   medidas: { [id]: segundos } para las 'auto' (las mide tomas.js).
-   Cada escena se ve desde su inicio hasta el inicio de la siguiente más lo que dure la entrada
-   de la siguiente (en ese rato las dos están en pantalla). */
-export function tiempos(medidas = {}) {
+/* cuándo empieza y cuánto dura cada plano, en segundos y en cuadros.
+   medidas: { [toma]: segundos } para las tomas que duran lo que dura la escena (las mide tomas.js) */
+export function tiempos() {
   const f = (s) => Math.round(s * FPS);
   const out = [];
   let t = 0, grilla = null;
-  for (let i = 0; i < ESCENAS.length; i++) {
-    const E = ESCENAS[i];
-    const largo = E.dur === 'auto' ? (medidas[E.id] ?? E.max) : E.c != null ? E.c * COMPAS : E.dur;
-    /* del logo en adelante, los inicios caen en la grilla de compases */
-    if (E.compas && grilla == null) grilla = t;
-    const inicio = E.compas ? grilla : t;
-    out.push({ ...E, i, inicioS: inicio, largoS: largo });
+  for (const P of PLANOS) {
+    const largo = P.c != null ? P.c * COMPAS : P.dur;
+    /* la grilla de compases arranca en el primer plano de cada tanda a tempo */
+    if (P.compas && grilla == null) grilla = t;
+    if (!P.compas) grilla = null;
+    const inicio = P.compas ? grilla : t;
+    out.push({ ...P, inicioS: inicio, largoS: largo });
     t = inicio + largo;
-    if (E.compas) grilla = t;
-  }
-  /* las entradas: la escena nueva arranca en su inicio; la de antes sigue debajo lo que dura la entrada */
-  for (let i = 0; i < out.length; i++) {
-    const L = TRANSICION[out[i].entra] || 0;
-    out[i].entradaS = i ? L : 0;
+    if (P.compas) grilla = t;
   }
   for (let i = 0; i < out.length; i++) {
-    const sig = out[i + 1];
-    out[i].inicio = f(out[i].inicioS);
-    out[i].visible = f(out[i].inicioS + out[i].largoS + (sig ? sig.entradaS : 0)) - out[i].inicio;   // cuadros que hay que grabar
-    out[i].entrada = f(out[i].entradaS);
+    const P = out[i], sig = out[i + 1];
+    P.inicio = f(P.inicioS);
+    P.cuadros = f(P.inicioS + P.largoS) - P.inicio;
+    P.entradaS = i ? TRANSICION[P.entra] || 0 : 0;
+    P.salida = sig ? sig.entra : null;
+    P.salidaS = sig ? TRANSICION[sig.entra] || 0 : 0;
   }
   const ult = out[out.length - 1];
-  return { escenas: out, total: ult.inicio + f(ult.largoS) };
+  return { planos: out, total: ult.inicio + ult.cuadros };
+}
+
+/* cuánto hay que grabar de cada toma: hasta donde la usa el plano que más lejos llega */
+export function largoDeTomas() {
+  const { planos } = tiempos();
+  const L = {};
+  for (const P of planos) L[P.toma] = Math.max(L[P.toma] || 0, P.desde + P.cuadros / FPS + 0.2);
+  return L;
 }

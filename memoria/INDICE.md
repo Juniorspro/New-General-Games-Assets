@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (RUTA 40).
+mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (tráiler de BRILLO).
 
 ## Reglas que no se discuten
 
@@ -38,6 +38,9 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (RUTA 40).
   (`kuntur.md § Controles de dedo`).
 - **Cada juego nuevo tiene que superar claramente al anterior** en
   animaciones, efectos y todo ("100% mejor", 23/09), sin copiar.
+- **Videos:** para TikTok, 9:16 y uno solo, cinematográfico y "muy
+  profesional", con motion graphics del propio juego. Para editar dijo que
+  se usen Remotion y ffmpeg (23/09): `brillo.md § El tráiler`.
 - Tiene Rezona (446 mil créditos el 22/09; 419 mil el 23/09) y Higgsfield. Prefiere Rezona.
   Para imágenes, dijo que se use Rezona sin preguntar (23/09).
 
@@ -51,7 +54,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (RUTA 40).
 | [higgsfield](higgsfield.md) | generar con Higgsfield: modelos, costos, lo que anduvo |
 | [juegos](juegos.md) | tocar un juego del repo o hacer uno nuevo |
 | [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el resolvedor y sus trampas |
-| [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas y sus trampas |
+| [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas, el tráiler de TikTok y sus trampas |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

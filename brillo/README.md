@@ -173,52 +173,61 @@ Fuentes:
 
 ## El tráiler
 
-`brillo/trailer/` arma un tráiler de ~97 s con el juego de verdad, en MP4
-(H.264 + AAC), horizontal 1920×1080 y vertical 1080×1920 (TikTok, Reels,
-Shorts), en español, inglés o portugués. El armado final lo hace
-[Remotion](https://www.remotion.dev/) (React → video).
+`brillo/trailer/` arma el tráiler para TikTok: 56 s en 9:16 (1080×1920,
+30 fps), MP4 H.264 + AAC a -14 LUFS, con su portada. Todo lo que se ve es el
+juego de verdad; el montaje lo hace [Remotion](https://www.remotion.dev/)
+(React → video).
 
 ```
 node brillo/herramientas/armar.mjs
 cd brillo/trailer/remotion && npm install && cd -          # una vez
-node brillo/trailer/grabar.mjs todo --idioma=es            # o en, pt, todos
-node brillo/trailer/verificar.mjs brillo/trailer/salida/brillo-trailer-es-horizontal.mp4 5,30,60
+node brillo/trailer/grabar.mjs todo --idioma=es            # o en, pt
+node brillo/trailer/verificar.mjs brillo/trailer/salida/brillo-tiktok-es.mp4 2,10,20,40
 ```
 
 Son tres pasos (`grabar.mjs tomas`, `audio`, `video`), que también se
-corren sueltos. Los tres leen el mismo guion (`trailer/guion.js`), así las
-tomas, la música y los cortes cuentan el tiempo igual.
+corren sueltos. Los tres leen el mismo guion (`trailer/guion.js`), que tiene
+dos listas, como un editor: las **tomas** (lo que se graba del juego) y los
+**planos** (el montaje: qué pedazo de qué toma, cuánto dura, cómo entra).
 
+- **El montaje:**
+  1. Gancho: cuatro golpes de juego a tempo y "Todo brillaba.".
+  2. Glitch: la música se corta y empieza la historia. Es la Actualización,
+     en seis planos, con franjas de cine y primeros planos de Mora y de Nick.
+  3. El logo, en el golpe.
+  4. Los seis mundos, un compás cada uno.
+  5. Tres rasgos: los orbes, el modo 16 bits (la música cambia a chip) y los
+     idiomas.
+  6. La pregunta de PLANO y la respuesta de Nick.
+  7. La ráfaga y el cierre: "Jugalo gratis · link en la bio".
+  Del logo en adelante cada corte cae en un compás del tema final (138 bpm).
 - **Las tomas son el juego** (`tomas.js`).
   - `grabar.mjs` levanta un servidor local y le mete a `brillo.html` un reloj
-    propio (`requestAnimationFrame` y `performance.now`), así cada cuadro sale
-    exacto aunque la máquina tarde medio segundo en dibujarlo.
-  - Nick juega solo repitiendo los recorridos del resolvedor
-    (`pruebas/recorridos/`), con la misma física. La cámara se acerca ×2 y
-    sigue a Nick con un foco suave.
-  - La escena de la Actualización la actúa el director del juego. Su ventana
-    de chat es HTML, así que se guarda cuadro a cuadro (textos, quién habla,
-    avatares) y Remotion la dibuja de nuevo, más grande.
-  - Cada toma sale en un WebM (VP9, WebCodecs + `webm.js`) en
-    `remotion/public/tomas/`. Las del juego son las mismas en los tres
-    idiomas; solo la Actualización se graba por idioma.
+    propio: `requestAnimationFrame`, `performance.now` y `setTimeout`. Así
+    cada cuadro sale exacto y la misma toma sale siempre igual, aunque la
+    máquina tarde medio segundo en dibujarlo.
+  - Nick juega solo, repitiendo los recorridos del resolvedor
+    (`pruebas/recorridos/`).
+  - El recorte es vertical de verdad: 540×960 del lienzo alrededor de Nick,
+    agrandado ×2 sin suavizar. Un píxel del juego son 6×6.
+  - La Actualización la actúa el director del juego. Su chat (HTML) se guarda
+    cuadro a cuadro, igual que dónde están Nick y Mora. Remotion usa eso para
+    los globos de diálogo y para los primeros planos.
 - **La música** (`audio.js`) es la del juego, hecha con su sintetizador en un
-  `OfflineAudioContext`:
-  - la bossa del título al principio;
-  - silencio cuando llega el Plano;
-  - el tema del final desde el logo, con los cortes en los compases (138 bpm);
-  - en "…o en 16 bits" cambia al modo chip.
-  - Los efectos (saltos, gotitas, burbujas, zumbidos) son los que el juego
-    pidió en cada toma, en su momento.
-- **El armado** (`remotion/src/`) es Frutiger Aero en HTML y SVG: pastillas
-  brillantes, texto de vidrio con reflejo, burbujas con arcoíris, destellos
-  de lente, transiciones de burbujas y destellos blancos en los compases.
-  - En el vertical, el juego va en una ventana de vidrio con la misma toma
-    desenfocada atrás (la hace ffmpeg: un `blur()` de CSS es carísimo sin
-    placa de video).
-  - Las letras son Open Sans y Nunito (`remotion/public/fuentes/`, OFL).
-- **Para probar:** `grabar.mjs tomas --solo=titulo,cierre` graba solo esas
-  tomas; `--muestra=0.5,2` saca PNG en vez de video; `grabar.mjs video
-  --formato=vertical --cuadros=700-900` hace solo un pedazo.
+  `OfflineAudioContext`, más los efectos que el juego pidió en cada pedazo
+  de toma usado. ffmpeg la lleva a -14 LUFS.
+- **Los motion graphics** (`remotion/src/`) van en pixel art a la escala del
+  juego, más el kit Frutiger Aero del juego:
+  - chispas de cuadraditos y transición de cuadraditos;
+  - mosaico con un filtro SVG, que pixela la imagen de verdad;
+  - glitch del Plano con bandas corridas;
+  - texto que entra palabra por palabra con sombra dura;
+  - pastillas brillantes, logo de vidrio con reflejo, burbujas y destellos.
+  Todo va dentro de la zona segura de TikTok. Las letras son Open Sans y
+  Nunito (`remotion/public/fuentes/`, OFL).
+- **Para probar:**
+  - `grabar.mjs tomas --solo=noche,cumbre` graba solo esas tomas;
+  - `--muestra=0.5,2` saca PNG en vez de video;
+  - `grabar.mjs video --cuadros=550-700` hace solo un pedazo.
 - Tomas, música y videos no van al repo (`trailer/.gitignore`): se vuelven a
   hacer con `grabar.mjs`.
