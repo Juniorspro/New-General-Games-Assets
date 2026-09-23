@@ -148,6 +148,43 @@ export function bloquePlano(f) {
   });
 }
 
+/* los emoticones (lo que se gana con cada guiño): caritas y cositas de vidrio de 20x20 */
+export function emoticon(n) {
+  return hecho('emo' + n, () => {
+    const L = new Lienzo(22, 22), A = RAMPA.amarillo, o = '#5a3c00';
+    const cara = (R = A) => { L.elipse(11, 11, 9, 9, pintura.aero(R, { bajo: 2, alto: 6, gorra: 0.5, punto: 0.06 }), R); };
+    const ojos = (tipo) => {
+      if (tipo === 'guino') { L.punto(7, 8, o); L.punto(8, 8, o); L.punto(7, 9, o); L.punto(8, 9, o); L.punto(13, 9, o); L.punto(14, 8, o); L.punto(15, 9, o); }
+      else if (tipo === 'risa') { L.punto(7, 9, o); L.punto(8, 8, o); L.punto(9, 9, o); L.punto(13, 9, o); L.punto(14, 8, o); L.punto(15, 9, o); }
+      else { for (const x of [7, 14]) { L.punto(x, 8, o); L.punto(x + 1, 8, o); L.punto(x, 9, o); L.punto(x + 1, 9, o); } }
+    };
+    const sonrisa = (grande) => { for (let x = 7; x <= 15; x++) L.punto(x, 14 + (x > 8 && x < 14 ? 1 : 0), o); if (grande) for (let x = 9; x <= 13; x++) L.punto(x, 15, '#c0282e'); L.punto(6, 13, o); L.punto(16, 13, o); };
+    switch (n) {
+      case 'sonrisa': cara(); ojos(); sonrisa(); break;
+      case 'guino': cara(); ojos('guino'); sonrisa(); break;
+      case 'risa': cara(); ojos('risa'); sonrisa(true); break;
+      case 'corazon': { const R = RAMPA.rosa; L.elipse(7.5, 8.5, 5.5, 5.5, pintura.aero(R, { bajo: 2, alto: 6 }), R); L.elipse(14.5, 8.5, 5.5, 5.5, pintura.aero(R, { bajo: 2, alto: 6 }), R); L.poligono([[2.3, 10], [19.7, 10], [11, 20]], (u, v) => R[v < 0 ? 4 : 3], R); break; }
+      case 'nota': { const R = RAMPA.violeta; L.elipse(7, 16, 4, 3.2, pintura.aero(R, { bajo: 2, alto: 6 }), R); L.caja(10, 3, 12, 16, 0, R[3], R); L.caja(10, 3, 18, 6, 1, R[4], R); break; }
+      case 'estrella': { const R = RAMPA.amarillo, p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 4 : 9.5; p.push([11 + Math.cos(a) * r, 11.5 + Math.sin(a) * r]); } L.poligono(p, (u, v) => R[v < -0.3 ? 6 : v < 0.3 ? 5 : 4], R); break; }
+      case 'sol': { const R = RAMPA.naranja; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; L.capsula(11, 11, 11 + Math.cos(a) * 9.5, 11 + Math.sin(a) * 9.5, 1.2, R[5], R); } L.elipse(11, 11, 6, 6, pintura.aero(RAMPA.amarillo, { bajo: 3, alto: 7 }), RAMPA.amarillo); break; }
+      case 'luna': { const R = RAMPA.amarillo; L.elipse(11, 11, 8.5, 8.5, pintura.aero(R, { bajo: 3, alto: 6 }), R); for (let y = 0; y < 22; y++) for (let x = 0; x < 22; x++) if ((x - 15) ** 2 + (y - 8) ** 2 < 49) L.borrar(x, y); break; }
+      case 'flor': { const R = RAMPA.rosa; for (let i = 0; i < 5; i++) { const a = i * Math.PI * 2 / 5; L.elipse(11 + Math.cos(a) * 5.5, 11 + Math.sin(a) * 5.5, 4, 4, pintura.aero(R, { bajo: 2, alto: 6 }), R); } L.elipse(11, 11, 3.5, 3.5, pintura.esfera(RAMPA.amarillo, { bajo: 3, alto: 6 }), RAMPA.amarillo); break; }
+      case 'arcoiris': { const cs = [RAMPA.rosa, RAMPA.naranja, RAMPA.amarillo, RAMPA.verde, RAMPA.azul, RAMPA.violeta]; cs.forEach((R, i) => { const r = 10 - i * 1.4; for (let y = 0; y < 16; y++) for (let x = 0; x < 22; x++) { const d = Math.hypot(x + 0.5 - 11, y + 0.5 - 16); if (d <= r && d > r - 1.5) L.punto(x, y, R[4], R); } }); break; }
+      case 'burbuja': { const R = RAMPA.cian; L.elipse(11, 11, 9, 9, (u, v) => { const q = u * u + v * v; return q > 0.72 ? R[5] : (u + 0.4) ** 2 + (v + 0.45) ** 2 < 0.06 ? '#ffffff' : null; }, R); break; }
+      case 'pez': { const R = RAMPA.naranja; L.elipse(10, 11, 7, 5, pintura.aero(R, { bajo: 2, alto: 6 }), R); L.poligono([[16, 11], [21, 6], [21, 16]], R[4], R); L.punto(6, 10, '#1a0a00'); break; }
+      case 'nube': { const R = RAMPA.blanco; L.elipse(8, 13, 5.5, 4.5, pintura.esfera(R, { bajo: 3, alto: 7 }), R); L.elipse(13, 10, 6, 5.5, pintura.esfera(R, { bajo: 3, alto: 7 }), R); L.elipse(16, 14, 4.5, 3.5, pintura.esfera(R, { bajo: 3, alto: 7 }), R); break; }
+      case 'regalo': { const R = RAMPA.azul; L.caja(3, 9, 19, 20, 2, pintura.vertical(R, 5, 3), R); L.caja(2, 6, 20, 10, 1, R[6], R); L.caja(10, 6, 12, 20, 0, RAMPA.rosa[4], RAMPA.rosa); L.elipse(8, 5, 3, 2, RAMPA.rosa[5], RAMPA.rosa); L.elipse(14, 5, 3, 2, RAMPA.rosa[5], RAMPA.rosa); break; }
+      case 'cafe': { const R = RAMPA.blanco; L.caja(4, 8, 16, 19, 3, pintura.vertical(R, 7, 4), R); L.elipse(17, 13, 3, 3.5, R[5], R); L.elipse(10, 9, 5, 1.5, RAMPA.tierra[3], RAMPA.tierra); for (const x of [8, 11, 14]) { L.punto(x, 5, R[3]); L.punto(x + 1, 3, R[3]); } break; }
+      case 'gato': { const R = RAMPA.gris; L.elipse(11, 12, 8, 7.5, pintura.aero(R, { bajo: 2, alto: 6 }), R); L.poligono([[4, 8], [6, 1], [10, 6]], R[4], R); L.poligono([[18, 8], [16, 1], [12, 6]], R[4], R); for (const x of [7, 14]) { L.punto(x, 11, '#1a3a1a'); L.punto(x + 1, 11, '#1a3a1a'); } L.punto(11, 14, RAMPA.rosa[3]); break; }
+      case 'perro': { const R = RAMPA.tierra; L.elipse(11, 12, 8, 7.5, pintura.aero(R, { bajo: 3, alto: 6 }), R); L.elipse(4, 11, 2.5, 5, R[2], R); L.elipse(18, 11, 2.5, 5, R[2], R); for (const x of [7, 14]) { L.punto(x, 10, '#1a0a00'); L.punto(x + 1, 10, '#1a0a00'); } L.elipse(11, 15, 2, 1.5, '#1a0a00'); break; }
+      case 'abrazo': { const V = RAMPA.verde, Az = RAMPA.azul; L.elipse(7, 7, 4.2, 4.2, pintura.aero(Az, { bajo: 2, alto: 6 }), Az); L.elipse(15, 7, 4.2, 4.2, pintura.aero(V, { bajo: 2, alto: 6 }), V); L.elipse(7, 16, 5, 5, pintura.aero(Az, { bajo: 2, alto: 5 }), Az); L.elipse(15, 16, 5, 5, pintura.aero(V, { bajo: 2, alto: 5 }), V); break; }
+      default: cara(); ojos(); sonrisa();
+    }
+    L.contorno({ tono: 0 });
+    return L.aCanvas();
+  });
+}
+
 /* la estática: ruido gris que cambia cada cuadro (se dibuja directo) */
 export function estatica(g, x, y, f) {
   for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j += 2) {
