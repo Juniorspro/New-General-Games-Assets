@@ -86,6 +86,47 @@ que hace falta para tocarlo sin romperlo.
 - **Los techos que tocan el borde de arriba.** Arriba del mapa cuenta como
   pared si la fila 0 es pared. Si no, les salía pasto o arena encima.
 
+## El tráiler (`brillo/trailer/`)
+
+Cómo se corre y qué es cada parte: `brillo/README.md § El tráiler`. Lo que
+costó aprenderlo:
+
+- **Tres pasos con un solo guion** (`guion.js`): tomas (el juego), audio (la
+  música) y video (Remotion). Si el guion cambia de lugar, los golpes de la
+  música dejan de caer en los cortes.
+- **Las tomas son el juego con un reloj propio.** `performance.now` y
+  `requestAnimationFrame` falsos, metidos en `<head>` por el servidor de
+  `grabar.mjs`.
+  - Nick repite los recorridos del resolvedor (K = 6 pasos por acción) y se
+    evitan los tramos con muertes.
+  - Graban a ~450 ms por cuadro: las 25 tomas en español tardan 26 min. Las
+    del juego sirven para los tres idiomas; en inglés y portugués se graba
+    solo la Actualización (~5 min).
+- **WebCodecs pide un origen seguro:** en `about:blank` no existe
+  `VideoEncoder`. Todo va por `http://127.0.0.1`. Hay VP9 y Opus, pero no
+  H.264 ni AAC: el MP4 lo hace Remotion.
+- **El chat del juego es HTML**, no sale en el lienzo. Se lee del DOM cuadro a
+  cuadro (`.chat`, con `.ve` y `.sale`) y Remotion lo dibuja de nuevo. Los
+  avatares son data: URI y se guardan una vez cada uno.
+- **Remotion en esta máquina:**
+  - hay que pasarle `--browser-executable` con el `headless_shell` de
+    `/opt/pw-browsers` y `--gl=swangle`;
+  - la horizontal sale a ~1 s por cuadro con 3 pestañas: 97 s de video tardan
+    ~50 min;
+  - un `filter: blur()` de CSS cuesta +0,7 s por cuadro. El fondo borroso del
+    vertical lo hace ffmpeg antes (`<id>.fondo.mp4`);
+  - `will-change: transform` no desenfoca: pinta pixelado;
+  - un `<En>` con `left` y `translate(-50%)` se achica a la mitad del ancho
+    que queda: hace falta `width: max-content`;
+  - `--muted` igual busca el WAV: para probar, `sinMusica: true` en las props.
+- **El ffmpeg que trae Remotion es mínimo:** no tiene `gblur`, `eq` ni
+  `loudnorm`. Se instaló el del sistema con `apt-get install ffmpeg` (6.1.1).
+  - La música se lleva a -14 LUFS en dos pasadas (salía a -19,8).
+  - El MP4 se pasa con `+faststart`.
+- **Portadas:** son las composiciones `Portada` (1280×720) y
+  `PortadaVertical`. La toma sigue a Nick, así que Nick queda donde caen sus
+  pies: `ny` en `Portada.jsx`.
+
 ## Lo que falta o no se probó
 
 - No se probó en un teléfono de verdad: ni fps ni sonido. La música se midió

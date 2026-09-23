@@ -213,7 +213,7 @@ function Pregunta({ t, d, frame, TT, L, W }) {
   const dx = glitch ? (azar(frame, 3) - 0.5) * 16 : 0;
   return (
     <En x={W / 2} y={L.vertical ? L.arriba - 10 : 1080 * 0.24} a={ventana(t, 0, d - 0.3, 0.3)} dx={dx}>
-      <Banda texto={TT.pregunta} tam={L.vertical ? 46 : 58} ancho={W * 0.86} mono glitch={glitch} color="#eef0f3" sombra="rgba(0,0,0,0.9)" peso={700} />
+      <Banda texto={TT.pregunta} tam={L.vertical ? 46 : 52} ancho={W * 0.9} mono glitch={glitch} color="#eef0f3" sombra="rgba(0,0,0,0.9)" peso={700} />
     </En>
   );
 }
@@ -240,7 +240,7 @@ function Respuesta({ t, d, TT, L, W, nick }) {
 /* ------------------------------------------------------------ el cierre */
 function Cierre({ t, TT, L, W, H }) {
   const tam = L.vertical ? 210 : 240, y = H * (L.vertical ? 0.38 : 0.34), k = rebote(t / 0.8);
-  const z = y + (L.vertical ? 430 : 360);
+  const z = y + (L.vertical ? 440 : 405);
   return (
     <>
       <BurbujasSuben W={W} H={H} t={t} a={0.9} />

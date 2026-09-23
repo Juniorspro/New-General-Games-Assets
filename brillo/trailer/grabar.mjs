@@ -97,47 +97,74 @@ async function tomas(idioma) {
   const r = await pagina('tomas.html', { idioma, solo: op.solo, muestra: op.muestra, rehacer: !!op.rehacer });
   log(`tomas (${idioma}) listas: ${JSON.stringify(r.medidas)}`);
 }
+/* ffmpeg: el del sistema si está (trae gblur y loudnorm); si no, el de Remotion, que viene recortado */
+const BIN_REMOTION = path.join(REMOTION, 'node_modules/@remotion/compositor-linux-x64-gnu');
+const FFMPEG_SISTEMA = fs.existsSync('/usr/bin/ffmpeg');
+function ffmpeg(args, o = {}) {
+  const bin = FFMPEG_SISTEMA ? '/usr/bin/ffmpeg' : path.join(BIN_REMOTION, 'ffmpeg');
+  const env = FFMPEG_SISTEMA ? process.env : { ...process.env, LD_LIBRARY_PATH: BIN_REMOTION };
+  const r = spawnSync(bin, ['-hide_banner', '-y', ...args], { env, encoding: 'utf8', maxBuffer: 1 << 26 });
+  if (r.status !== 0 && !o.tolerar) throw new Error('ffmpeg falló: ' + (r.stderr || '').split('\n').slice(-6).join('\n'));
+  return r.stderr || '';
+}
+
 async function audio(idioma) {
   const r = await pagina('audio.html', { idioma });
   log(`música (${idioma}) lista: ${r.segundos.toFixed(1)} s`);
+  /* a -14 LUFS con el pico en -1 dBTP, lo que piden YouTube, TikTok e Instagram: en dos pasadas
+     (la primera mide, la segunda corrige lineal, así no bombea) */
+  if (!FFMPEG_SISTEMA) { log('sin ffmpeg del sistema: la música queda sin normalizar'); return; }
+  const wav = path.join(PUBLICO, 'audio', `${idioma}.wav`), tmp = wav.replace('.wav', '.norm.wav');
+  const medida = JSON.parse(ffmpeg(['-i', wav, '-af', 'loudnorm=I=-14:TP=-1:LRA=11:print_format=json', '-f', 'null', '-']).match(/\{[\s\S]*\}/)[0]);
+  ffmpeg(['-loglevel', 'error', '-i', wav, '-af', `loudnorm=I=-14:TP=-1:LRA=11:measured_I=${medida.input_i}:measured_TP=${medida.input_tp}:measured_LRA=${medida.input_lra}:measured_thresh=${medida.input_thresh}:offset=${medida.target_offset}:linear=true`,
+    '-ar', '48000', '-c:a', 'pcm_s16le', tmp]);
+  fs.renameSync(tmp, wav);
+  log(`música a -14 LUFS (estaba en ${medida.input_i} LUFS, pico ${medida.input_tp} dBTP)`);
 }
-/* los fondos del vertical: cada toma chiquita y desenfocada, hecha una vez con el ffmpeg de Remotion
-   (un filtro blur() de CSS en SwiftShader cuesta 0,7 s por cuadro). Ese ffmpeg no trae gblur:
-   se desenfoca achicando mucho y volviendo a agrandar */
+
+/* los fondos del vertical: cada toma chiquita y desenfocada, hecha una vez con ffmpeg
+   (un filtro blur() de CSS en SwiftShader cuesta 0,7 s por cuadro). El ffmpeg de Remotion no trae
+   gblur: con ese se desenfoca achicando mucho y volviendo a agrandar */
 function fondos(idioma) {
-  const BIN = path.join(REMOTION, 'node_modules/@remotion/compositor-linux-x64-gnu');
+  const filtro = FFMPEG_SISTEMA ? 'crop=608:1080,scale=270:480:flags=area,gblur=sigma=7,eq=saturation=1.3:brightness=0.02'
+    : 'crop=608:1080,scale=36:64:flags=area,scale=144:256:flags=bicubic';
   for (const carpeta of ['comun', idioma]) {
     const dir = path.join(PUBLICO, 'tomas', carpeta);
     if (!fs.existsSync(dir)) continue;
     for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.webm'))) {
       const src = path.join(dir, f), dest = path.join(dir, f.replace('.webm', '.fondo.mp4'));
-      if (fs.existsSync(dest) && fs.statSync(dest).mtimeMs > fs.statSync(src).mtimeMs) continue;
-      const r = spawnSync(path.join(BIN, 'ffmpeg'), ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-an',
-        '-vf', 'crop=608:1080,scale=36:64:flags=area,scale=144:256:flags=bicubic', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '26', '-pix_fmt', 'yuv420p', dest],
-      { env: { ...process.env, LD_LIBRARY_PATH: BIN }, stdio: 'inherit' });
-      if (r.status !== 0) throw new Error('ffmpeg no pudo hacer ' + dest);
+      if (!op.rehacer && fs.existsSync(dest) && fs.statSync(dest).mtimeMs > fs.statSync(src).mtimeMs) continue;
+      ffmpeg(['-loglevel', 'error', '-i', src, '-an', '-vf', filtro, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '24', '-pix_fmt', 'yuv420p', dest]);
     }
   }
+}
+function remotion(args) {
+  const r = spawnSync('npx', ['remotion', ...args, `--browser-executable=${CASCARA}`, '--gl=swangle'], { cwd: REMOTION, stdio: 'inherit' });
+  if (r.status !== 0) throw new Error(`remotion ${args[0]} terminó con ${r.status}`);
 }
 function video(idioma) {
   fs.mkdirSync(SALIDA, { recursive: true });
   fondos(idioma);
   const formatos = op.formato === 'ambos' || !op.formato ? ['horizontal', 'vertical'] : [op.formato];
   for (const formato of formatos) {
-    const comp = formato === 'vertical' ? 'TrailerVertical' : 'Trailer';
-    const dest = path.join(SALIDA, `brillo-trailer-${idioma}-${formato}.mp4`);
-    const args = ['remotion', 'render', 'src/index.jsx', comp, dest, `--props=${JSON.stringify({ idioma })}`,
-      `--browser-executable=${CASCARA}`, '--gl=swangle', '--codec=h264', '--crf=17', '--pixel-format=yuv420p',
-      '--audio-codec=aac', '--audio-bitrate=256k', `--concurrency=${op.concurrencia || 3}`, '--log=info'];
+    const vertical = formato === 'vertical';
+    const dest = path.join(SALIDA, `brillo-trailer-${idioma}-${formato}.mp4`), crudo = dest.replace('.mp4', '.crudo.mp4');
+    const args = ['render', 'src/index.jsx', vertical ? 'TrailerVertical' : 'Trailer', crudo, `--props=${JSON.stringify({ idioma })}`,
+      '--codec=h264', '--crf=17', '--pixel-format=yuv420p', '--audio-codec=aac', '--audio-bitrate=256k', `--concurrency=${op.concurrencia || 3}`, '--log=info'];
     if (op.cuadros) args.push(`--frames=${op.cuadros}`);
     log(`video ${idioma} ${formato}…`);
-    const r = spawnSync('npx', args, { cwd: REMOTION, stdio: 'inherit' });
-    if (r.status !== 0) throw new Error(`remotion render terminó con ${r.status}`);
+    remotion(args);
+    /* el índice del MP4 adelante (faststart), así las redes lo empiezan a mostrar antes de bajarlo entero */
+    ffmpeg(['-loglevel', 'error', '-i', crudo, '-c', 'copy', '-movflags', '+faststart', '-metadata', 'title=BRILLO — tráiler', dest]);
+    fs.unlinkSync(crudo);
     log(`listo ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1024 / 1024).toFixed(1)} MB)`);
+    /* la portada: miniatura de YouTube o tapa de TikTok */
+    const tapa = path.join(SALIDA, `brillo-portada-${idioma}-${formato}.png`);
+    remotion(['still', 'src/index.jsx', vertical ? 'PortadaVertical' : 'Portada', tapa, `--props=${JSON.stringify({ idioma })}`]);
   }
 }
 
-const PASOS = { tomas, audio, video: async (i) => video(i) };
+const PASOS = { tomas, audio, fondos: async (i) => fondos(i), video: async (i) => video(i) };
 if (!PASOS[paso] && paso !== 'todo') { console.log('pasos: tomas, audio, video, todo'); process.exit(1); }
 for (const idioma of IDIOMAS) {
   if (paso === 'todo') { await tomas(idioma); await audio(idioma); video(idioma); }

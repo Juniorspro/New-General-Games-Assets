@@ -4,6 +4,7 @@ import React from 'react';
 import { Composition, staticFile } from 'remotion';
 import { FPS, tiempos } from '../../guion.js';
 import { Trailer } from './Trailer.jsx';
+import { Portada } from './Portada.jsx';
 import './fuentes.js';
 
 const calcular = async ({ props }) => {
@@ -17,5 +18,8 @@ export const Root = () => (
       defaultProps={{ idioma: 'es', vertical: false, datos: null }} calculateMetadata={calcular} />
     <Composition id="TrailerVertical" component={Trailer} width={1080} height={1920} fps={FPS} durationInFrames={2700}
       defaultProps={{ idioma: 'es', vertical: true, datos: null }} calculateMetadata={calcular} />
+    {/* las tapas: miniatura de YouTube y portada de TikTok/Reels */}
+    <Composition id="Portada" component={Portada} width={1280} height={720} fps={FPS} durationInFrames={1} defaultProps={{ idioma: 'es' }} />
+    <Composition id="PortadaVertical" component={Portada} width={1080} height={1920} fps={FPS} durationInFrames={1} defaultProps={{ idioma: 'es' }} />
   </>
 );

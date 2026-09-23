@@ -24,7 +24,17 @@ Fuente: `ARRANQUE.md § 1` y `§ 7`. Ver también: [desplegar](desplegar.md),
 - Chromium de Playwright en `/opt/pw-browsers/chromium`. El módulo está en
   `/opt/node22/lib/node_modules/playwright` y se carga con `createRequire`.
   **Nunca `npx playwright install`.**
-- docker: está el binario; `dockerd` se arranca a mano.
+- docker: está el binario; `dockerd` se arranca a mano. El 23/09 el modo
+  automático **bloqueó el `docker pull` de la imagen de Neko**: hace falta que
+  la persona lo habilite en sus permisos.
+- ffmpeg no viene. `apt-get update && apt-get install -y --no-install-recommends
+  ffmpeg` anda directo (6.1.1, con `gblur`, `loudnorm` y `libx264`). El que
+  trae Remotion (`@remotion/compositor-linux-x64-gnu`) está recortado.
+- Remotion 4.0.527 se instaló en `brillo/trailer/remotion`, porque lo pidió
+  ("usá Remotion o instalá un editor de verdad"). Detalles:
+  `brillo.md § El tráiler`.
+- H.264 no se puede ver en el Chromium de Playwright (no trae el códec). Los MP4
+  se revisan con `ffprobe` y cuadros sueltos de `ffmpeg`.
 
 ## La red (sale por un proxy)
 
