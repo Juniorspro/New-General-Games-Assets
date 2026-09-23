@@ -24,7 +24,9 @@ La receta visual completa está en `GUIA-JUEGOS.md`: abrila por sección, y la
   sintetizado (`enjambre/`, `perro/`). Así Rezona puede estar caído sin trabar
   el juego.
 - En `pique/`, `pique2d/`, `espejo/`, `zonda/`, `luz-mala/` y `kuntur/`, los
-  niveles los comprueba una máquina. La vara al 23/09: [kuntur](kuntur.md).
+  niveles los comprueba una máquina. La vara al 23/09: [kuntur](kuntur.md)
+  para 2.5D y [brillo](brillo.md) para 2D. BRILLO es el último: el próximo
+  tiene que superarlo.
 
 ## El bosque (22/09/2026)
 

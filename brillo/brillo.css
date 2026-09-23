@@ -127,6 +127,7 @@ img.emo{width:1.2em;height:1.2em;vertical-align:-.2em;image-rendering:pixelated}
 
 /* ================= la charla (ventana de conversación) ================= */
 .chat{position:absolute;left:calc(var(--lx) + var(--lw) * .5);bottom:calc(100% - var(--ly) - var(--lh) + 2.5 * var(--u));translate:-50% 0;width:min(calc(118*var(--u)),calc(var(--lw) * .92));border-radius:calc(2*var(--u));overflow:hidden;z-index:30;pointer-events:none;opacity:0;transform:translateY(calc(6*var(--u))) scale(.96);transition:opacity .25s,transform .35s cubic-bezier(.3,1.5,.5,1)}
+.chat.arriba{bottom:auto;top:calc(var(--ly) + 2.5*var(--u))}
 .chat.ve{opacity:1;transform:none}
 .chat.sale{opacity:0;transform:translateY(calc(4*var(--u)));transition:opacity .3s,transform .3s}
 .chat .barra{display:flex;align-items:center;gap:calc(1.4*var(--u));padding:calc(.8*var(--u)) calc(1.6*var(--u));background:linear-gradient(180deg,rgba(120,195,250,.7),rgba(50,135,220,.6) 50%,rgba(30,105,200,.62) 51%,rgba(90,170,240,.6));color:#fff;text-shadow:0 1px 1px rgba(0,40,100,.8)}

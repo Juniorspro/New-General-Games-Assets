@@ -43,6 +43,8 @@ export class Nivel {
     this.quieto = false; this.alEvento = null;
     /* los que aparecen en las escenas (el Plano): { x, y (los pies), img(t), visible } */
     this.actores = []; this.orbeTomado = false;
+    /* el gris del Plano: se le saca el color a todo menos a Nick (0 = color, 1 = gris) */
+    this.gris = 0;
     this.parpado = 0; this.tParpado = 2;
     this.fase = 0; this.tAterriza = 0;
     this.camara(0, true);
@@ -172,6 +174,10 @@ export class Nivel {
     /* los vecinos */
     for (const v of this.npcs) if (v.visible) g.drawImage(cuadro(v.id, v.anim, Math.floor(t * (v.anim === 'habla' ? 8 : 6)), v.mira < 0), X(v.x - 15), Y(v.y - 35));
     for (const a of this.actores) if (a.visible !== false) { const img = a.img(t); g.drawImage(img, X(a.x - img.width / 2), Y(a.y - img.height)); }
+    /* en el Plano, todo lo de atrás pierde el color; Nick no */
+    if (this.gris > 0.005) {
+      g.save(); g.globalCompositeOperation = 'saturation'; g.globalAlpha = Math.min(1, this.gris); g.fillStyle = '#808080'; g.fillRect(0, 0, w, h); g.restore();
+    }
     /* Nick */
     const p = m.p;
     const [quien, anim, fr] = this.poseNick();

@@ -33,7 +33,7 @@ for (const id of ORDEN) {
   const N = NIVELES[id], m0 = crearMundo(N);
   const paradas = [{ x: m0.inicio.x, y: m0.inicio.y, id: null, nombre: 'inicio' }, ...m0.sesiones.map((s) => ({ ...s, nombre: s.id })), { x: m0.salida.x, y: m0.salida.y, nombre: 'orbe' }];
   const sols = {};
-  /* fotos del camino principal (cada 4 acciones, paradas en el piso): de ahí salen los guiños */
+  /* fotos del camino principal (cada 3 acciones, en el piso, nadando o en el aire): de ahí salen los guiños */
   const fotos = [];
   const sacarFotos = (desde, acciones) => {
     const m = modoResolvedor(crearMundo(N, { en: desde }));
@@ -41,7 +41,7 @@ for (const id of ORDEN) {
     acciones.forEach((ai, i) => {
       for (let f = 0; f < K; f++) { paso(m, entradaDe(ACCIONES[ai], f, prev)); m.eventos.length = 0; }
       prev = ACCIONES[ai];
-      if (i - ultima >= 3 && (m.p.enSuelo || m.p.enAgua) && !m.p.muerto) { fotos.push(copiar(m)); ultima = i; }
+      if (i - ultima >= 3 && !m.p.muerto) { fotos.push(copiar(m)); ultima = i; }
     });
   };
   for (let i = 0; i + 1 < paradas.length; i++) {

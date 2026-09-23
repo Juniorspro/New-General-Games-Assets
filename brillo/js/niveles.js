@@ -319,5 +319,112 @@ const CIELO = (() => {
   };
 })();
 
-export const NIVELES = { colina: COLINA, arrecife: ARRECIFE, ciudad: CIUDAD, cielo: CIELO };
-export const ORDEN = ['colina', 'arrecife', 'ciudad', 'cielo'];
+/* ============================== 5. La Noche Aurora ============================== */
+/* lomas de noche y precipicios; los puentes son de Aurora: se pisan mientras les pasa la luz */
+const AURORA = (() => {
+  const W = 190, H = 28, P = 22;
+  const filas = construir(W, H, (m) => {
+    m.suelo(0, 18, P);
+    m.put(3, P - 1, 'N');
+    m.gotas(5, 10, P - 2);
+    /* el primer puente de luz, a ras de las lomas; abajo hay un pasillo (si te caés, se vuelve a subir) */
+    m.rect(19, P, 34, P, 'a');
+    m.suelo(19, 34, P + 3);
+    m.gotas(20, 33, P - 2);
+    m.suelo(35, 50, P);
+    m.put(42, P - 1, 'S');
+    /* la escalera de luz sobre el precipicio, y arriba a la izquierda, la isla del primer guiño */
+    m.rect(51, 20, 56, 20, 'a'); m.rect(58, 17, 63, 17, 'a'); m.rect(65, 14, 70, 14, 'a');
+    m.rect(75, 10, 78, 10, 'a'); m.rect(79, 6, 82, 7); m.put(80, 5, 'G');
+    m.arco(51, 70, 13, 3);
+    m.suelo(72, 86, 13);
+    m.put(84, 12, 'S');
+    /* el puente largo, con una lomita para descansar en el medio; abajo, la isla del segundo guiño */
+    m.rect(87, 13, 100, 13, 'a'); m.suelo(101, 104, 13); m.rect(105, 13, 118, 13, 'a');
+    m.rect(95, 19, 97, 20); m.put(96, 18, 'G'); m.rect(98, 16, 100, 16, 'a');
+    m.gotas(88, 99, 11); m.gotas(106, 117, 11);
+    m.suelo(119, 140, 15);
+    m.put(130, 14, 'S');
+    /* la subida hasta la puerta de la Aurora; bien arriba, la isla del tercer guiño */
+    m.rect(141, 13, 145, 13, 'a'); m.rect(147, 10, 151, 10, 'a');
+    m.suelo(153, W - 1, 8);
+    m.rect(160, 5, 163, 5, 'a'); m.rect(165, 2, 168, 3); m.put(166, 1, 'G');
+    m.arco(141, 152, 8, 3);
+    m.put(180, 7, 'F');
+  });
+  return {
+    id: 'aurora', mundo: 'aurora', estilo: 'aurora', filas, habil: { zumbido: true, burbuja: true },
+    aurora: { periodo: 192, on: 144, paso: 8 },
+    planitos: [
+      { x0: px(38) + 8, x1: px(48), y: px(P), vel: 0.55 },
+      { x0: px(74) + 8, x1: px(83), y: px(13), vel: 0.6 },
+      { x0: px(122), x1: px(128), y: px(15), vel: 0.6, fase: 50 },
+    ],
+    zonas: [
+      { id: 'vio', x0: px(9), x1: px(13) },
+      { id: 'aurora', x0: px(15), x1: px(18) },
+      { id: 'vio2', x0: px(126), x1: px(130) },
+      { id: 'cima', x0: px(170), x1: px(W) },
+    ],
+    npcs: [{ id: 'vio', x: px(12), y: px(P), mira: -1 }],
+    burbujas: 20,
+  };
+})();
+
+/* ============================== 6. El Plano ============================== */
+/* gris y chato: paredes que se rompen con el zumbido, el vacío, y al final el PLANO con Mora.
+   Cada sesión le devuelve al mundo una capa de color (y de música) */
+const PLANO = (() => {
+  const W = 200, H = 26, P = 20;
+  const filas = construir(W, H, (m) => {
+    m.suelo(0, 30, P);
+    m.put(3, P - 1, 'N');
+    m.gotas(5, 10, P - 2);
+    m.rect(12, P - 4, 13, P - 1, '%');
+    /* un pozo con un tablón en el medio */
+    m.rect(32, P - 3, 34, P - 3, '=');
+    m.arco(30, 37, P - 5, 2);
+    m.suelo(37, 55, P);
+    m.put(42, P - 1, 'S');
+    /* un pocito tapado con bloques grises, con el primer guiño abajo */
+    m.rect(49, P, 51, P + 1, ' '); m.rect(49, P, 51, P, '%'); m.put(50, P + 1, 'G');
+    /* el vacío con una plataforma que va y viene; abajo, el segundo guiño y un hongo para volver */
+    m.rect(62, 23, 68, H - 1); m.put(65, 22, 'G'); m.put(67, 22, 'b');
+    m.gotas(58, 72, P - 3);
+    m.suelo(76, 95, P);
+    m.rect(82, 12, 83, P - 1, '%');
+    m.put(90, P - 1, 'S');
+    /* la torre: zigzag de tablones hasta arriba; arriba, otra caja gris con el tercer guiño */
+    for (const [x, y] of [[97, 17], [101, 14], [97, 11], [101, 8]]) m.rect(x, y, x + 2, y, '=');
+    m.suelo(104, 125, 8);
+    m.put(118, 7, 'S');
+    m.rect(110, 2, 114, 5, '%'); m.rect(111, 3, 113, 4, ' '); m.put(112, 4, 'G');
+    /* la bajada hasta donde espera el PLANO */
+    m.suelo(126, 135, 11); m.suelo(136, 145, 14); m.suelo(146, W - 1, 17);
+    m.put(140, 13, '^');
+    m.put(150, 16, 'S');
+    m.gotas(152, 172, 15);
+    m.put(182, 16, 'F');
+  });
+  return {
+    id: 'plano', mundo: 'plano', estilo: 'plano', filas, habil: { zumbido: true, burbuja: true },
+    plataformas: [{ x0: px(57), y0: px(P - 1), x1: px(71), y1: px(P - 1), w: 3, periodo: 300 }],
+    planitos: [
+      { x0: px(16) + 8, x1: px(27), y: px(P), vel: 0.6 },
+      { x0: px(38) + 8, x1: px(46), y: px(P), vel: 0.55, fase: 60 },
+      { x0: px(85) + 8, x1: px(94), y: px(P), vel: 0.65 },
+      { x0: px(106), x1: px(116), y: px(8), vel: 0.6 },
+      { x0: px(155), x1: px(170), y: px(17), vel: 0.7 },
+    ],
+    zonas: [
+      { id: 'mora5', x0: px(126), x1: px(130) },
+      { id: 'cima', x0: px(176), x1: px(W) },
+    ],
+    npcs: [{ id: 'moraPlana', x: px(189), y: px(17), mira: -1 }],
+    burbujas: 8,
+    sinOrbe: true,
+  };
+})();
+
+export const NIVELES = { colina: COLINA, arrecife: ARRECIFE, ciudad: CIUDAD, cielo: CIELO, aurora: AURORA, plano: PLANO };
+export const ORDEN = ['colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 'plano'];

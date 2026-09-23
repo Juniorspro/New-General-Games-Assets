@@ -95,7 +95,7 @@ export class Director {
     this._cuadro = (ts) => this.cuadro(ts);
     requestAnimationFrame(this._cuadro);
     this.idioma();
-    window.__brillo = this;
+    window.__brillo = this; window.__Sonido = Sonido;
   }
 
   /* ---------------- el bucle ---------------- */
@@ -146,6 +146,7 @@ export class Director {
       if (q.t >= q.dur) { this.tweens.splice(this.tweens.indexOf(q), 1); q.listo(); }
     }
     if (this.grisT) { const g = this.grisT; g.t = Math.min(g.dur, g.t + dt); this.grisV = g.a + (g.b - g.a) * (g.t / g.dur); if (g.t >= g.dur) this.grisT = null; }
+    if (this.grisN && this.N) { const g = this.grisN; g.t = Math.min(g.dur, g.t + dt); this.N.gris = g.a + (g.b - g.a) * (g.t / g.dur); if (g.t >= g.dur) this.grisN = null; }
   }
   control() { return this.guion || this.charlaR ? NADA : Entrada.leer(); }
 
@@ -185,7 +186,7 @@ export class Director {
     this.quitarEscena();
     if (!this.paseo) this.fondoTitulo();
     Sonido.musica('titulo'); Sonido.agua(false);
-    if (conOla) this.ui.olaDestapa();
+    if (conOla || this.ui.ola.classList.contains('tapa')) this.ui.olaDestapa();
     this.menuTitulo();
   }
   menuTitulo(i = 0) {
@@ -221,6 +222,7 @@ export class Director {
   }
   async creditos(final) {
     this.ui.limpiar(); this.ui.verHud(false);
+    if (final) { this.fondoTitulo(); }
     Sonido.musica('creditos');
     await this.ui.creditos(TX().creditos);
     if (final) this.titulo(true);
@@ -305,7 +307,7 @@ export class Director {
 
   /* ---------------- un mundo ---------------- */
   quitarEscena() {
-    this.esperas = []; this.tweens = []; this.grisT = null; this.grisV = 0;
+    this.esperas = []; this.tweens = []; this.grisT = null; this.grisV = 0; this.grisN = null;
     if (this.charlaR) { this.charlaR.cerrar(); this.charlaR = null; }
     this.avanzar = null; this.hablante = null;
     for (const el of this.raiz.querySelectorAll('.narra,.mensaje,.cartelMundo,.creditos')) el.remove();
@@ -346,7 +348,13 @@ export class Director {
     P.mundo = sig || id; P.en = null;
     this.guardar();
     if (sig) this.jugar(sig, null);
-    else this.titulo(true);
+    else {
+      /* el final: los créditos y, después, el título */
+      this.estado = 'final'; this.verTactil();
+      await this.ui.olaTapa();
+      this.quitarEscena(); this.ui.olaDestapa();
+      await this.creditos(true);
+    }
   }
 
   /* lo que avisa la física */
@@ -388,6 +396,7 @@ export class Director {
         P.rotos = P.rotos || {}; P.rotos[this.mundo] = [...N.m.rotos];
         this.guardar();
         this.ui.aviso(tr('sesion'), { titulo: 'BRILLO', img: avatar('nick'), clase: 'verde' });
+        if (H.sesion) H.sesion(this.j, e);
         break;
       }
       case 'zona': {
@@ -406,7 +415,9 @@ export class Director {
     return new Promise((listo) => {
       if (!lineas || !lineas.length) { listo(); return; }
       const otro = o.con || (lineas.find(([q]) => q !== 'nick') || ['nick'])[0];
-      const R = this.charlaR = this.ui.charla(otro);
+      /* si Nick está en la mitad de abajo de la pantalla, la ventana va arriba (no tapa a nadie) */
+      const q = this.N ? this.N.aPantalla(this.N.m.p.x, this.N.m.p.y) : { y: 0 };
+      const R = this.charlaR = this.ui.charla(otro, { arriba: q.y > Pantalla.h * 0.56 });
       this.verTactil();
       let i = 0;
       const decir = () => {
@@ -465,7 +476,7 @@ export class Director {
       camara(x, y) { N.encuadre = x == null ? null : { x, y }; },
       mover: (o, x, y, dur) => vale(new Promise((listo) => d.tweens.push({ o, x0: o.x, y0: o.y, x1: x, y1: y, t: 0, dur, listo }))),
       plano(x, y) {
-        const a = { quien: 'plano', x, y, visible: true, habla: false, img: (t) => dibPlano(a.habla ? Math.floor(t * 8) % 3 : Math.floor(t * 2) % 7 === 6 ? 3 : Math.floor(t * 5) % 11 === 0 ? 1 : 0) };
+        const a = { quien: 'plano', x, y, visible: true, habla: false, tibio: false, img: (t) => dibPlano(a.habla ? Math.floor(t * 8) % 3 : Math.floor(t * 2) % 7 === 6 ? 3 : !a.tibio && Math.floor(t * 5) % 11 === 0 ? 1 : 0, a.tibio) };
         N.actores.push(a);
         return a;
       },
@@ -476,11 +487,11 @@ export class Director {
       },
       charla: (id, o) => vale(d.charla(TX().charlas[id], o)),
       /* esperar a que Nick pise algo, frenar todo, charlar, y seguir */
-      async hablar(id, alFin) {
+      async hablar(id, alFin, con) {
         j.guion(true);
         await j.hastaQue(() => N.m.p.enSuelo || N.m.p.enAgua || N.m.p.muerto);
         N.quieto = true;
-        await j.charla(id);
+        await j.charla(id, con ? { con } : {});
         if (alFin) alFin();
         N.quieto = false;
         j.guion(false);
@@ -531,6 +542,21 @@ export class Director {
         if (L.length > 1) await j.charla(null, { lineas: L.slice(1) });
       },
       terminar: () => d.terminarMundo(),
+      actor: (quien) => N.actores.find((a) => a.quien === quien),
+      /* cuántas sesiones quedaron atrás (en el Plano, cada una es una capa de color) */
+      sesionesPasadas() { const c = N.m.p.checkpoint; if (!c || !c.id) return 0; return N.m.sesiones.findIndex((q) => q.id === c.id) + 1; },
+      /* k capas de color y de música: 0 = todo gris, 5 = todo de vuelta */
+      capas(k, dur = 1.5) {
+        Sonido.ponerCapas(Math.min(4, k));
+        d.grisN = { a: N.gris, b: k >= 5 ? 0 : Math.max(0, 0.96 - k * 0.2), t: 0, dur };
+      },
+      /* el zumbido del final: Nick tiembla entero y la onda sacude al PLANO */
+      zumbidoFinal(x, y) {
+        N.m.p.zumbido = 14; Sonido.sfx('zumbido'); Entrada.zumbar(120);
+        N.ondas.push({ x: N.m.p.x, y: N.m.p.y - 13, t: 0 }); N.ondas.push({ x, y, t: 0, dorada: true }); N.sacudon = 0.6;
+        setTimeout(() => { if (d.vez === vez) N.m.p.zumbido = 0; }, 900);
+      },
+      narrarFin() { const p = ui.narrar(TX().fin, { final: true }); return vale(p); },
     };
     /* charla(null, { lineas }) usa las líneas que se le dan */
     const charlaId = j.charla;

@@ -4,6 +4,16 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **23/09/2026, madrugada · `claude/fijate-iszyer`:**
+  - KUNTUR: las piedras que se mueven eran casi invisibles (cada cara, un
+    recorte suelto) → `texBloque`. Además se arreglaron unos 30 errores
+    (`kuntur.md § Revisión de errores`).
+  - Pidió otro juego 2D completo, Frutiger Aero, con más resolución, historia,
+    un muñequito tipo MSN azul con piernitas y música "frutiger" analizada.
+  - Quedó BRILLO en `brillo/brillo.html`: seis mundos, los tramos y los 18
+    guiños pasan el resolvedor, y el final se probó.
+  - El análisis de la música, con fuentes, está en `brillo/README.md`.
+  - Falta: probarlo en un teléfono de verdad (`brillo.md § Lo que falta`).
 - **23/09/2026, noche, después · `claude/fijate-iszyer`:**
   - "Sí o sí controles personalizados móviles": KUNTUR tiene editor de
     controles de dedo (`kuntur.md § Controles de dedo`). Quedó como regla en el

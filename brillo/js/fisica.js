@@ -29,7 +29,7 @@ const LETRA = { '#': B.PISO, '=': B.TABLON, '%': B.PLANO, '~': B.AGUA, '^': B.ES
 
 /* la Aurora: una ola de luz que camina por las baldosas 'a'. Mientras le pasa
    por encima, la baldosa es un tablón de vidrio; después, aire. */
-export const AURORA = { periodo: 192, on: 120, paso: 8 };
+export const AURORA = { periodo: 192, on: 144, paso: 8 };
 export function auroraBrilla(m, tx, t) {
   const A = m.nivel.aurora || AURORA, k = ((t - tx * A.paso) % A.periodo + A.periodo) % A.periodo;
   return k < A.on;

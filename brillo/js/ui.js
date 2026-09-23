@@ -185,10 +185,10 @@ export class UI {
   }
 
   /* ---------------- la charla: una ventana de conversación ---------------- */
-  charla(conQuien) {
+  charla(conQuien, o = {}) {
     if (this.chat) this.chat.remove();
     const nick = TX().nicks[conQuien] || TX().nombres[conQuien] || conQuien;
-    const c = this.chat = $('div', 'chat', this.r, `<div class="barra"><img src="${avatar(conQuien)}"><span><b>${esc(TX().nombres[conQuien] || conQuien)}</b><small>${esc(nick)}</small></span><i class="x"></i></div><div class="lineas"></div><div class="escribe"></div><div class="toca">${esc(tr('tocar'))} ▸</div>`);
+    const c = this.chat = $('div', 'chat' + (o.arriba ? ' arriba' : ''), this.r, `<div class="barra"><img src="${avatar(conQuien)}"><span><b>${esc(TX().nombres[conQuien] || conQuien)}</b><small>${esc(nick)}</small></span><i class="x"></i></div><div class="lineas"></div><div class="escribe"></div><div class="toca">${esc(tr('tocar'))} ▸</div>`);
     requestAnimationFrame(() => c.classList.add('ve'));
     const lineas = c.querySelector('.lineas'), escribe = c.querySelector('.escribe');
     const R = {
@@ -270,7 +270,7 @@ export class UI {
       const v = $('div', 'rollo vidrio', c);
       lineas.forEach((l, i) => $('p', i === 0 ? 'grande' : '', v, esc(l)));
       const fila = $('div', 'todos', v);
-      for (const q of ['nick', 'mora', 'tito', 'lila', 'sol', 'vio']) $('img', '', fila).src = avatar(q);
+      for (const q of ['nick', 'mora', 'tito', 'dorado', 'lila', 'sol', 'vio']) $('img', '', fila).src = avatar(q);
       let fin = false;
       const cerrar = () => { if (fin) return; fin = true; this.narrando = null; c.classList.add('sale'); setTimeout(() => { c.remove(); listo(); }, 800); };
       this.narrando = cerrar;

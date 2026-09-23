@@ -44,6 +44,7 @@ export const TEXTOS = {
       hongo: ['Los hongos te tiran para arriba', 'Los hongos te tiran para arriba'],
       corriente: ['El aire sube en las columnas: dejate llevar', 'El aire sube en las columnas: dejate llevar'],
       burbujota: ['Metete en una burbuja grande para subir; saltá para salir', 'Metete en una burbuja grande para subir; tocá saltar para salir'],
+      aurora: ['Los puentes de luz se pisan solo mientras brillan: andá detrás de la luz', 'Los puentes de luz se pisan solo mientras brillan: andá detrás de la luz'],
     },
     narra: {
       colina: ['En la Red todo brillaba: el pasto, el agua, hasta las ventanas.', 'Nick y Mora vivían en la Colina Serena, y siempre estaban conectados.', 'Hasta la mañana de la Actualización.'],
@@ -117,6 +118,7 @@ export const TEXTOS = {
       hongo: ['Mushrooms bounce you up', 'Mushrooms bounce you up'],
       corriente: ['The air rises in the columns: ride it', 'The air rises in the columns: ride it'],
       burbujota: ['Get inside a big bubble to rise; jump to get out', 'Get inside a big bubble to rise; tap jump to get out'],
+      aurora: ['Light bridges only hold you while they glow: follow the light', 'Light bridges only hold you while they glow: follow the light'],
     },
     narra: {
       colina: ['In the Net, everything shone: the grass, the water, even the windows.', 'Nick and Mora lived on Serene Hill, and they were always online.', 'Until the morning of the Update.'],
@@ -190,6 +192,7 @@ export const TEXTOS = {
       hongo: ['Os cogumelos jogam você para cima', 'Os cogumelos jogam você para cima'],
       corriente: ['O ar sobe nas colunas: deixe-se levar', 'O ar sobe nas colunas: deixe-se levar'],
       burbujota: ['Entre numa bolha grande para subir; pule para sair', 'Entre numa bolha grande para subir; toque em pular para sair'],
+      aurora: ['As pontes de luz só seguram enquanto brilham: vá atrás da luz', 'As pontes de luz só seguram enquanto brilham: vá atrás da luz'],
     },
     narra: {
       colina: ['Na Rede tudo brilhava: a grama, a água, até as janelas.', 'Nick e Mora moravam na Colina Serena, e estavam sempre online.', 'Até a manhã da Atualização.'],

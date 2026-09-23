@@ -22,7 +22,7 @@ export const ESTILOS = {
   /* la noche: pasto oscuro y tierra azul con cristalitos que brillan */
   aurora: { tope: RAMPA.noche, cuerpo: RAMPA.nocheTierra, cristales: true },
   /* el Plano: gris y chato, sin degradé, sin pasto, sin esquinas redondas */
-  plano: { tope: RAMPA.gris, cuerpo: RAMPA.gris, chato: true, radio: 0 },
+  plano: { tope: RAMPA.vidrio, cuerpo: RAMPA.vidrio, chato: true, radio: 0 },
 };
 
 /* pinta el mapa en pedazos de 256x256. esSolido(tx, ty) dice qué es pared */

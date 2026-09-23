@@ -97,6 +97,8 @@ export function resolver(nivel, o) {
       let muerto = false;
       const prev = n.camino ? ACCIONES[n.camino.a] : null;
       for (let f = 0; f < K; f++) { paso(m, entradaDe(a, f, prev)); m.eventos.length = 0; if (m.p.muerto) { muerto = true; break; } }
+      /* ya cayó por debajo del mapa: no hay vuelta (se ahorra el final de la caída) */
+      if (m.p.y - m.p.h > m.H * T) muerto = true;
       if (muerto) continue;
       const k = claveDe(m);
       const g = n.g + 1;

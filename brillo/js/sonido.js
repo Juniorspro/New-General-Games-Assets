@@ -59,7 +59,7 @@ const TEMA = {
   },
   /* el Arrecife: ambiente de agua, en mi dórico */
   arrecife: {
-    bpm: 84, compas: 4, reverb: 0.7, filtro: 5200,
+    vol: 1.8, bpm: 84, compas: 4, reverb: 0.7, filtro: 5200,
     acordes: [['Em9', 8], ['A13', 8], ['Em9', 8], ['Cmaj7#11', 8]],
     pistas: [
       { inst: 'vibra', vol: 0.5, notas: melodia('B4:2 D5:1 F#5:1 E5:4 -:2 G5:1 F#5:1 D5:2 B4:2 C#5:4 -:4 B4:2 E5:1 F#5:1 G5:3 A5:1 F#5:4 -:4 G5:2 F#5:1 E5:1 D5:2 B4:2 E5:8') },
@@ -83,7 +83,7 @@ const TEMA = {
   },
   /* el Cielo: new age liviano, en sol lidio */
   cielo: {
-    bpm: 100, compas: 4, reverb: 0.6, filtro: 9000,
+    vol: 1.35, bpm: 100, compas: 4, reverb: 0.6, filtro: 9000,
     acordes: [['Gmaj7#11', 4], ['Am7', 4], ['Gmaj9', 4], ['Dadd9', 4]],
     pistas: [
       { inst: 'flauta', vol: 0.42, notas: melodia('B5:1 C#6:1 D6:2 B5:1 A5:1 G5:2 -:2 A5:1 B5:1 E6:2 D6:2 B5:2 D6:2 -:2 C#6:1 B5:1 A5:1 G5:1 F#5:2 G5:2 A5:4') },
@@ -95,7 +95,7 @@ const TEMA = {
   },
   /* la Aurora: canción de cuna para la noche, en si dórico */
   aurora: {
-    bpm: 76, compas: 4, reverb: 0.8, filtro: 7000,
+    vol: 2.0, bpm: 76, compas: 4, reverb: 0.8, filtro: 7000,
     acordes: [['Bm9', 4], ['E9', 4], ['Gmaj7', 4], ['F#m7', 4]],
     pistas: [
       { inst: 'caja', vol: 0.4, notas: melodia('F#5:1 D5:1 E5:1 C#5:1 D5:2 B4:2 G#5:1 E5:1 F#5:1 D5:1 E5:4 D5:1 B4:1 F#5:1 D5:1 G5:2 F#5:2 E5:1 C#5:1 D5:1 A4:1 B4:4') },
@@ -106,7 +106,7 @@ const TEMA = {
   },
   /* el Plano: gris. Las capas 1 a 4 se prenden a medida que vuelve el color */
   plano: {
-    bpm: 90, compas: 4, reverb: 0.1, filtro: 6000, capas: true,
+    vol: 1.3, bpm: 90, compas: 4, reverb: 0.1, filtro: 6000, capas: true,
     acordes: [['Cmaj7', 4], ['Am9', 4], ['Fmaj9', 4], ['G7sus4', 4]],
     pistas: [
       { inst: 'pitido', vol: 0.18, notas: melodia('C5:1 -:1 C5:1 -:1 C5:1 -:1 C5:1 -:1 C5:1 -:1 C5:1 -:1 C5:1 -:1 C5:1 -:1'), capa: 0 },
@@ -306,7 +306,7 @@ export const Sonido = {
     if (this.actual) { const g = this.actual.g; g.gain.setTargetAtTime(0.0001, ahora, 0.6); this.actual.muerto = true; setTimeout(() => g.disconnect(), 4000); }
     const T = TEMA[nombre];
     if (!T) { this.actual = null; return; }
-    const g = c.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(1, ahora + 0.2, 0.5); g.connect(this.bMusica);
+    const g = c.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(T.vol || 1, ahora + 0.2, 0.5); g.connect(this.bMusica);
     this.revIn.gain.setTargetAtTime(T.reverb ?? 0.4, ahora, 0.5);
     this.filtro.frequency.setTargetAtTime(T.filtro || 9000, ahora, 0.5);
     const largo = T.acordes.reduce((s, a) => s + a[1], 0);
@@ -359,7 +359,7 @@ export const Sonido = {
         }
       }
       /* Ciudad: el colchón "respira" con el bombo */
-      if (T.bombeo && Math.abs(b0 % 1) < 1e-6) { const t = tiempo(b0); A.g.gain.setTargetAtTime(0.6, t, 0.01); A.g.gain.setTargetAtTime(1, t + 0.05, 0.12); }
+      if (T.bombeo && Math.abs(b0 % 1) < 1e-6) { const t = tiempo(b0), v = T.vol || 1; A.g.gain.setTargetAtTime(0.6 * v, t, 0.01); A.g.gain.setTargetAtTime(v, t + 0.05, 0.12); }
       A.prox += 0.5;
     }
   },
@@ -402,7 +402,7 @@ export const Sonido = {
       case 'brazada': this.soplido(t, 900, 500, 0.2, 0.05, 1.2); break;
       case 'entra': this.tono(t, 400, 900, 0.3, 0.07, 'sine'); break;
       case 'orbe': this.comoEfecto(() => { [64, 68, 71, 76, 80, 83, 88].forEach((n2, i) => this.vibra(t + i * 0.07, n2, 1, 0.8)); }); break;
-      case 'mover': this.tono(t, 1900, 2100, 0.03, 0.03, 'sine'); break;
+      case 'mover': this.tono(t, 1900, 2100, 0.03, 0.014, 'sine'); break;
       case 'elegir': this.comoEfecto(() => { this.marimba(t, 76, 0.2, 0.9); this.marimba(t + 0.06, 83, 0.3, 0.8); }); break;
       case 'no': this.tono(t, 300, 200, 0.15, 0.06, 'triangle'); break;
       case 'letra': this.tono(t, o.f || 1400, (o.f || 1400) * 0.97, 0.025, 0.015, 'sine'); break;
