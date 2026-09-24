@@ -66,7 +66,9 @@
     M.crearPost();
     M.dirSol = new THREE.Vector3(0, 1, 0);
     M.calor = 0;
+    // La calidad la elige el escaneo de calidad.js; esto es hasta que mida.
     M.escala = matchMedia("(pointer: coarse)").matches ? 0.7 : 1;
+    M.tope = 2; M.piso = 0.6;
     M.lento = 0;
   };
 
@@ -253,7 +255,7 @@
     const r = M.renderer, lienzo = r.domElement;
     const w = lienzo.clientWidth, h = lienzo.clientHeight;
     if (!w || !h) return;
-    const pr = Math.min(devicePixelRatio || 1, 2) * M.escala;
+    const pr = Math.min(devicePixelRatio || 1, M.tope) * M.escala;
     const W = Math.round(w * pr), H = Math.round(h * pr);
     if (!M.rt || M.rt.width !== W || M.rt.height !== H) {
       r.setSize(w, h, false);
@@ -276,11 +278,12 @@
     }
   };
 
-  // Resolución que se adapta: si el cuadro pasa de 40 ms durante 2 s, baja.
+  // Resolución que se adapta: si el cuadro pasa de 40 ms durante 2 s, baja
+  // (hasta el piso del nivel de calidad elegido).
   M.medir = (dtReal, fijo) => {
     if (fijo) return;
     if (dtReal > 0.04) M.lento += dtReal; else M.lento = Math.max(0, M.lento - dtReal * 0.5);
-    if (M.lento > 2 && M.escala > 0.6) { M.escala = Math.max(0.6, M.escala - 0.1); M.lento = 0; }
+    if (M.lento > 2 && M.escala > M.piso) { M.escala = Math.max(M.piso, M.escala - 0.1); M.lento = 0; }
   };
 
   M.dibujar = (t, efectos) => {

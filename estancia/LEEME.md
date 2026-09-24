@@ -22,6 +22,16 @@ internet. Receta seguida: `GUIA-JUEGOS.md`.
 
 En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla.
 
+## Calidad gráfica
+
+La primera vez que se abre, antes de la portada, el juego dibuja el rancho, el
+corral, el monte y la tropa en calidad alta y mide los cuadros por segundo del
+lugar más pesado (`js/calidad.js`). Con 55 o más prueba ultra (se queda si da
+50); con 40 queda en alta; entre 22 y 40 prueba media (35 para quedarse); si
+no, baja. Cada nivel cambia la resolución interna, el techo de píxeles en
+pantallas retina, el mapa de sombras y la densidad del pasto. Queda guardado;
+en Opciones se cambia a mano o se vuelve a medir.
+
 ## De dónde sale cada cosa
 
 | qué | de dónde | archivo |

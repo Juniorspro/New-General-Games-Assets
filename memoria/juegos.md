@@ -74,6 +74,17 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Un silbido de verdad no se genera: se sintetiza (senoidal con glissando,
   vibrato de labio y soplido filtrado). Pedirlo a un TTS dice "fiu".
 
+## Escaneo de cuadros (elegir la calidad)
+
+- Medir con `requestAnimationFrame` (lo que tarda la placa), no con el tiempo
+  de `render()` (eso es lo que tarda JavaScript en mandar, y miente).
+- Manda el lugar más pesado, no el promedio. Tirar los primeros cuadros de
+  cada vista: rearmar sombras y lienzo traba.
+- En una compu lentísima un solo cuadro pasa el medio segundo: saltar niveles
+  (alta < 22 fps → directo a baja) o el escaneo dura un minuto.
+- Las manos de primera persona cuelgan de la cámara: esconderlas en las vistas.
+- Cambiar `shadow.mapSize` en caliente: `map.dispose()` y `map = null`.
+
 ## Menús
 
 - Paneles con `hidden`: una animación CSS arranca sola cada vez que el panel

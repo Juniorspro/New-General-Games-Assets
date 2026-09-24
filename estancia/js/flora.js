@@ -494,6 +494,9 @@
   // ── el pasto ── matas instanciadas en celdas de 10 m alrededor del jugador,
   // sembradas con la semilla de cada celda: al volver a un lugar, las matas
   // están donde estaban (§ 6.6).
+  // Cuántas matas como mucho: 121 celdas × 70 intentos × 1,5 (calidad ultra).
+  const MAX_PASTO = 13000;
+  F.densidadPasto = 1;
   F.crearPasto = () => {
     // La mata de espartillo de Rezona (ya viene sangrada), o la dibujada.
     const rz = !!(window.ARCHIVOS && ARCHIVOS["mata-espartillo.webp"]);
@@ -514,7 +517,7 @@
       g.setAttribute("color", new THREE.BufferAttribute(c, 3));
     }
     const geo = E.juntar([q1, q2]);
-    F.pasto = new THREE.InstancedMesh(geo, mat, 12000);
+    F.pasto = new THREE.InstancedMesh(geo, mat, MAX_PASTO);
     F.pasto.count = 0;
     F.pasto.frustumCulled = false;
     F.pasto.receiveShadow = true;
@@ -530,7 +533,8 @@
     let n = 0;
     for (let j = cj - 5; j <= cj + 5; j++) for (let i = ci - 5; i <= ci + 5; i++) {
       const az = E.azar(Math.imul(i, 73856093) ^ Math.imul(j, 19349663));
-      for (let t = 0; t < 70 && n < 12000; t++) {
+      const intentos = Math.round(70 * F.densidadPasto);
+      for (let t = 0; t < intentos && n < MAX_PASTO; t++) {
         const x = (i + az()) * C, z = (j + az()) * C;
         const pa = T.pasto(x, z);
         if (az() > pa * 1.15) continue;

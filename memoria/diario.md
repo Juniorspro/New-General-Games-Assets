@@ -119,6 +119,11 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
 - El acento no se puede medir: se eligió por instrucción + ortografía, y
   whisper confirmó los 41 textos. **Que lo escuche alguien de acá.**
 
+- **Escaneo de cuadros** al abrir por primera vez: elige baja/media/alta/ultra
+  según los fps del lugar más pesado, lo guarda, y en Opciones se cambia o se
+  vuelve a medir. Solo se probó en SwiftShader (1 fps → baja); **en una placa
+  de verdad no se midió** (sin comprobar).
+
 **Qué falta**
 
 - Música y efectos grabados (el audio de Rezona sigue caído).

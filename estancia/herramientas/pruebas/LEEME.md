@@ -25,4 +25,9 @@ PW=$(npm root -g)/playwright node ojo-prueba.mjs tercera|primera|montado   # la 
 PW=$(npm root -g)/playwright node menus-prueba.mjs                         # portada, opciones, cómo se juega, parte, pausa (PC y celular)
 PW=$(npm root -g)/playwright node portada-prueba.mjs                       # la cámara de la portada en seis momentos
 PW=$(npm root -g)/playwright node audio-prueba.mjs                         # decodifica las 41 voces y hace sonar el silbido
+PW=$(npm root -g)/playwright node escaneo-prueba.mjs                       # el escaneo de cuadros: mide, elige, guarda y no vuelve a medir
 ```
+
+Sin `#fijo` en la dirección, el juego hace el escaneo de cuadros antes de la
+portada; en SwiftShader da ~1 fps y elige "baja" (unos 20 s). Con `#fijo` no
+mide y usa "alta", así las fotos salen siempre iguales.

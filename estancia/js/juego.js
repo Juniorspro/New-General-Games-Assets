@@ -10,7 +10,7 @@
   const miles = new Intl.NumberFormat("es-AR");
 
   // ── opciones ── se guardan en el navegador de cada uno (si se puede).
-  const OPCIONES = { volumen: 0.9, voz: 1, sensib: 1, ojo: true, subtitulos: true };
+  const OPCIONES = { volumen: 0.9, voz: 1, sensib: 1, ojo: true, subtitulos: true, calidad: null, fpsMedido: null };
   E.opciones = { ...OPCIONES };
   try { Object.assign(E.opciones, JSON.parse(localStorage.getItem("estancia-opciones") || "{}")); } catch (e) { /* sin almacenamiento */ }
   const guardarOpciones = () => { try { localStorage.setItem("estancia-opciones", JSON.stringify(E.opciones)); } catch (e) { /* no importa */ } };
@@ -104,21 +104,58 @@
     colocar(0.016);
     try { await E.motor.renderer.compileAsync(E.motor.escena, E.motor.camara); } catch (e) { /* los navegadores viejos no lo tienen */ }
     E.motor.dibujar(0, {});
+    // La portada, al caer el sol (y el escaneo también se ve con esa luz); la
+    // temporada arranca igual al amanecer.
+    G.hora = 18.9; E.motor.actualizarHora(G.hora, 0);
+    // La calidad: la guardada, o el escaneo de cuadros la primera vez.
+    if (G.fijo) E.calidad.aplicar("alta");
+    else if (E.opciones.calidad) E.calidad.aplicar(E.opciones.calidad);
+    else await escaneo();
+    colocar(0.016);
     // La carga se funde y aparece la portada, con la cámara dando vueltas.
     $("carga").style.opacity = 0;
     setTimeout(() => { $("carga").hidden = true; }, 600);
     $("menu").hidden = false;
-    // La portada, al caer el sol; la temporada arranca igual al amanecer.
-    G.hora = 18.9;
     requestAnimationFrame(bucle);
   };
+
+  // ── el escaneo de cuadros ── se ve el campo que se dibuja para medir, los
+  // cuadros por segundo en grande y el nivel que se está probando.
+  async function escaneo() {
+    const C = E.calidad, fps = $("escaneoFps"), lis = [...document.querySelectorAll("#escaneoNiveles li")];
+    const porDefecto = matchMedia("(pointer: coarse)").matches ? "media" : "alta";
+    // En una pestaña de fondo no hay cuadros que medir.
+    if (document.hidden) { C.aplicar(porDefecto); return; }
+    $("carga").classList.add("midiendo");
+    $("escaneo").hidden = false;
+    $("cargaBarra").parentNode.hidden = true;
+    $("cargaTexto").textContent = "Midiendo tu compu para elegir los gráficos…";
+    $("escaneoSaltar").onclick = () => { C.cortar = true; };
+    const marcar = (n, clase) => lis.forEach((li) => li.classList.toggle(clase, li.dataset.n === n));
+    const mostrarFps = (f) => { fps.textContent = Math.round(f); fps.className = f >= 50 ? "bien" : f >= 35 ? "justo" : "mal"; };
+    const r = await C.escanear((n, f) => {
+      marcar(n, "probando"); mostrarFps(f);
+      $("cargaTexto").textContent = `Probando gráficos ${C.NIVELES[n].nombre.toLowerCase()}…`;
+    });
+    marcar(null, "probando");
+    if (!r) { C.aplicar(porDefecto); return; }       // saltado: no se guarda, la próxima vez mide
+    mostrarFps(r.fpsFinal); marcar(r.nivel, "elegido");
+    $("escaneoSaltar").hidden = true;
+    $("cargaTexto").textContent = `Gráficos elegidos: ${C.NIVELES[r.nivel].nombre.toLowerCase()}`;
+    E.opciones.calidad = r.nivel; E.opciones.fpsMedido = Math.round(r.fpsFinal); guardarOpciones();
+    await new Promise((listo) => setTimeout(listo, 1800));
+  }
 
   function conectarInterfaz() {
     $("menuEmpezar").onclick = () => empezar();
     // Cómo se juega y Opciones se abren desde la portada o la pausa, y "Volver"
     // vuelve a donde se estaba.
     let volverA = "menu";
-    const abrir = (id, desde) => { volverA = desde; $(desde).hidden = true; $(id).hidden = false; };
+    const abrir = (id, desde) => {
+      volverA = desde; $(desde).hidden = true; $(id).hidden = false;
+      // El escaneo corre después de conectar la interfaz: se lee al abrir.
+      if (id === "opciones") { $("opCalidad").value = E.calidad.nivel; textoEscaneo(); }
+    };
     $("menuComo").onclick = () => abrir("como", "menu");
     $("menuOpciones").onclick = () => abrir("opciones", "menu");
     $("pausaComo").onclick = () => abrir("como", "pausa");
@@ -138,6 +175,17 @@
     deslizador("opSensib", "sensib", (v) => v.toFixed(1) + "×");
     // La voz se prueba al soltar el deslizador.
     $("opVoz").onchange = () => { E.sonido.iniciar(); E.sonido.voz("apuntar-0"); };
+    // La calidad: se cambia a mano, o se borra la medida y se recarga para medir.
+    const textoEscaneo = () => {
+      const o = E.opciones;
+      $("opEscaneo").textContent = o.fpsMedido ? `Midió ${o.fpsMedido} cuadros por segundo y eligió ${E.calidad.NIVELES[o.calidad].nombre.toLowerCase()}.` : "Todavía no se midió.";
+    };
+    $("opCalidad").value = E.calidad.nivel; textoEscaneo();
+    $("opCalidad").onchange = () => {
+      E.calidad.aplicar($("opCalidad").value);
+      E.opciones.calidad = E.calidad.nivel; guardarOpciones();
+    };
+    $("opMedir").onclick = () => { E.opciones.calidad = null; E.opciones.fpsMedido = null; guardarOpciones(); location.reload(); };
     for (const [id, clave] of [["opOjo", "ojo"], ["opSubs", "subtitulos"]]) {
       $(id).checked = E.opciones[clave];
       $(id).onchange = () => { E.opciones[clave] = $(id).checked; guardarOpciones(); };
