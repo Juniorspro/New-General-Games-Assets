@@ -120,6 +120,23 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Un corral con una sola tranquera necesita dos puntos de paso (afuera y
   adentro de la tranquera): yendo derecho al lugar, se quedan contra el cerco.
 
+## Cientos de animales
+
+- 920 con esqueleto no: simular todos (cerca cada cuadro, lejos un cuarto por
+  cuadro) y dibujarlos con UNA malla instanciada de ~350 triángulos cuyo shader
+  mueve patas, cabeza y cola (la parte de cada vértice va en el color). Los de
+  cerca toman prestado un cuerpo de Rezona de un pozo (pelaje cambiable: los
+  uniforms leen objetos que se mutan; `material.userData.shader`).
+- Separación con grilla de 3 m solo entre los de cerca; 920² pares no.
+- La malla instanciada sin sombra: con `frustumCulled = false` se dibujaba
+  entera también en la pasada de sombras.
+- 3,8–4,8 ms por cuadro de simulación en el contenedor.
+
+## Claridad
+
+- Lo que apagaba la imagen era la viñeta (bordes a la mitad), la niebla y el
+  cielo bajo. Brillo en Opciones: multiplica la exposición.
+
 ## Mapa
 
 - El fondo del mapa sale de las mismas funciones del terreno (monte, pasto,

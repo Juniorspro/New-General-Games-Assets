@@ -10,7 +10,7 @@
   const miles = new Intl.NumberFormat("es-AR");
 
   // ── opciones ── se guardan en el navegador de cada uno (si se puede).
-  const OPCIONES = { volumen: 0.9, voz: 1, sensib: 1, ojo: true, subtitulos: true, calidad: null, fpsMedido: null };
+  const OPCIONES = { brillo: 1, volumen: 0.9, voz: 1, sensib: 1, ojo: true, subtitulos: true, calidad: null, fpsMedido: null };
   E.opciones = { ...OPCIONES };
   try { Object.assign(E.opciones, JSON.parse(localStorage.getItem("estancia-opciones") || "{}")); } catch (e) { /* sin almacenamiento */ }
   const guardarOpciones = () => { try { localStorage.setItem("estancia-opciones", JSON.stringify(E.opciones)); } catch (e) { /* no importa */ } };
@@ -105,6 +105,7 @@
     E.animales.construir();
     E.jugador.iniciar();
     E.perros.construir();
+    E.rodeo.construir();
     E.lazo.construir();
     E.trabajo.construir();
     E.trabajo.conectarCura();
@@ -202,6 +203,8 @@
     deslizador("opVolumen", "volumen", porciento);
     deslizador("opVoz", "voz", porciento);
     deslizador("opSensib", "sensib", (v) => v.toFixed(1) + "×");
+    deslizador("opBrillo", "brillo", porciento);
+    $("opBrillo").addEventListener("input", () => E.motor.actualizarHora(G.hora, G.t));
     // La voz se prueba al soltar el deslizador.
     $("opVoz").onchange = () => { E.sonido.iniciar(); E.sonido.voz("apuntar-0"); };
     // La calidad: se cambia a mano, o se borra la medida y se recarga para medir.
@@ -518,6 +521,7 @@
       ctxAnimales.hora = G.hora; ctxAnimales.horasJuego = G.horasJuego; ctxAnimales.sed = E.motor.calor > 0.5;
       E.animales.actualizar(dt, G.t, E.jugador, ctxAnimales);
       E.perros.actualizar(dt, G.t, E.jugador);
+      E.rodeo.actualizar(dt, G.t, E.jugador, G.hora);
     }
     E.estancia.actualizar(dt, G.t);
     E.mapa.actualizar(dt, G.t);

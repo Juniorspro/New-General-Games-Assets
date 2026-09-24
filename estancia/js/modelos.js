@@ -158,6 +158,7 @@
   // lo blanco queda blanco), manchas (0..1, overa), semilla }
   function conPelaje(mat, pj) {
     mat.onBeforeCompile = (sh) => {
+      mat.userData.shader = sh;              // el rodeo cambia el pelaje de un cuerpo prestado (rodeo.js)
       sh.uniforms.uCuerpo = { value: pj.cuerpo }; sh.uniforms.uBlanco = { value: pj.blanco };
       sh.uniforms.uGuarda = { value: pj.guarda }; sh.uniforms.uManchas = { value: pj.manchas || 0 }; sh.uniforms.uSemilla = { value: pj.semilla || 0 };
       sh.vertexShader = "varying vec3 vPosPelaje;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvPosPelaje = position;");

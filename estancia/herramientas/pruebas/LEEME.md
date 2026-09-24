@@ -43,6 +43,7 @@ PW=$(npm root -g)/playwright node comedero-prueba.mjs  # el encierre: la tropa e
 PW=$(npm root -g)/playwright node mapa-prueba.mjs      # el mapa, un destino, la columna de luz y el pueblo
 PW=$(npm root -g)/playwright node entrada-prueba.mjs   # a caballo por la tranquera de entrada hasta el pueblo
 PW=$(npm root -g)/playwright node ultrabaja-prueba.mjs # alta contra ultra baja (día y noche) y elegir nivel en el escaneo
+PW=$(npm root -g)/playwright node rodeo-prueba.mjs     # el rodeo de 920: de lejos, de cerca y ms de simulación por cuadro
 PW=$(npm root -g)/playwright node chat-prueba.mjs       # el chat con teclado de verdad (PC y celular)
 PW=$(npm root -g)/playwright node rollo-prueba.mjs      # el lazo que se enrolla al cinto y en el recado
 PW=$(npm root -g)/playwright node audio-grabar.mjs      # graba la salida en WAV por escena y mide niveles

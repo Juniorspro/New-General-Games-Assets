@@ -32,6 +32,12 @@ En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla
   colorada, Brahman, Braford, Criolla overa), 2 toros Angus y 6 terneros al pie
   de la madre. Las razas salen de la textura de la Hereford recoloreada en el
   shader (`modelos.js`, `conPelaje`); el toro es su propio modelo.
+- **El rodeo grande** (`js/rodeo.js`): 500 vacas, 20 toros y 400 terneros en
+  nueve rodeos por el campo. Todos se simulan (pastan, se echan a la siesta,
+  huyen de uno y de los perros, el ternero sigue a la madre); se dibujan con un
+  modelo liviano instanciado que camina por shader, y los de cerca toman el
+  modelo de Rezona (4 a 20 según la calidad; en ultra baja, ninguno). No se
+  enlazan ni cuentan en la plata: la hacienda de trabajo es la de abajo.
 - **Perros**: Tigre, Negra y Chispa (`js/perros.js`). La hacienda se aparta de
   un perro como de uno: arrean empujando.
 - **El puesto** (`js/puesto.js`): mates en la galería, guiso en el fogón, agua

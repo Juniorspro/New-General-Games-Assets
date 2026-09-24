@@ -17,7 +17,7 @@
     brillo: ["#000000", "#ff5a22", "#ff7f36", "#ffab68", "#ffe9c8", "#fff2dc"],
     sol:    ["#000000", "#000000", "#ff8e4a", "#ffbe82", "#ffeed8", "#fff5e8"],
     solI:   [0, 0, 1.3, 3.1, 4.3, 4.9],
-    hemiI:  [0.08, 0.13, 0.34, 0.58, 0.8, 0.9],
+    hemiI:  [0.1, 0.17, 0.45, 0.78, 1.05, 1.15],
   };
   const tmpA = new THREE.Color(), tmpB = new THREE.Color();
   function clave(nombre, e, destino) {
@@ -163,7 +163,7 @@
     M.luna.intensity = 0.38 * (1 - E.suave(-8, 0, e));
     // El ojo se acostumbra a la noche: sin esto, de noche era negro total y
     // no se veía ni el horizonte. De día, 1.
-    M.renderer.toneMappingExposure = 1 + 1.3 * (1 - E.suave(-9, 1, e));
+    M.renderer.toneMappingExposure = (1.12 + 1.3 * (1 - E.suave(-9, 1, e))) * (E.opciones ? E.opciones.brillo : 1);
     // Ultra baja (sin sombras): más cielo y un relleno parejo, así el lado que
     // no le da el sol y lo que está bajo techo no quedan negros.
     const k = M.luzExtra || 0;
@@ -179,7 +179,7 @@
     // el horizonte se ve como la línea donde termina el mundo. A la siesta,
     // con el polvo, se cierra un poco más.
     M.escena.fog.color.copy(colH).lerp(colB, 0.18);
-    M.escena.fog.density = 0.0017 + 0.0011 * M.calor + 0.0012 * (1 - E.suave(-6, 6, e));
+    M.escena.fog.density = 0.0011 + 0.0008 * M.calor + 0.0012 * (1 - E.suave(-6, 6, e));
   };
 
   // Caja de sombra que sigue al jugador de a un texel: si se mueve de forma
@@ -233,7 +233,9 @@
             col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))), uSed * 0.6);
           }
           float v = length((vUv - 0.5) * vec2(1.25, 1.0));
-          col *= mix(1.0, smoothstep(1.05, 0.25, v), 0.5 + uSed * 0.4);
+          // La viñeta, suave: a 0,5 apagaba los bordes a la mitad y el juego se
+          // veía oscuro y sucio (pedido: "más claridad").
+          col *= mix(1.0, smoothstep(1.15, 0.25, v), 0.18 + uSed * 0.5);
           col = mix(col, col * vec3(1.4, 0.35, 0.3), uDolor * smoothstep(0.2, 0.9, v));
           // El ojo de águila: el mundo se destiñe a un sepia gris y se cierra,
           // salvo alrededor del blanco, que conserva el color.

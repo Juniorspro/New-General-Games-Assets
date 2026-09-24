@@ -149,3 +149,5 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   nuevo afuera de la tranquera de entrada (que ahora se abre).
 - **Ultra baja**: sin sombras, plantas quietas, poco pasto, luz de relleno; se
   elige antes del menú (el escaneo la propone en equipos flojos).
+- **Más claridad** (viñeta suave, menos niebla, más cielo, Brillo en Opciones) y
+  **rodeo de 920** (500 vacas, 20 toros, 400 terneros) con niveles de detalle.

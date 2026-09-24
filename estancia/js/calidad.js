@@ -18,11 +18,11 @@
   // de los píxeles), las plantas quietas, casi sin pasto, y luz de relleno:
   // sin sombras el campo queda chato y oscuro del lado que no le da el sol.
   C.NIVELES = {
-    ultrabaja: { nombre: "Ultra baja", escala: 0.5, tope: 1, sombra: 0, pasto: 0.15, quieto: true, luz: 1 },
-    baja: { nombre: "Baja", escala: 0.6, tope: 1, sombra: 1024, pasto: 0.4 },
-    media: { nombre: "Media", escala: 0.8, tope: 1.25, sombra: 1024, pasto: 0.7 },
-    alta: { nombre: "Alta", escala: 1, tope: 1.5, sombra: 2048, pasto: 1 },
-    ultra: { nombre: "Ultra", escala: 1, tope: 2, sombra: 4096, pasto: 1.5 },
+    ultrabaja: { nombre: "Ultra baja", escala: 0.5, tope: 1, sombra: 0, pasto: 0.15, quieto: true, luz: 1, rodeoCerca: 0 },
+    baja: { nombre: "Baja", escala: 0.6, tope: 1, sombra: 1024, pasto: 0.4, rodeoCerca: 4 },
+    media: { nombre: "Media", escala: 0.8, tope: 1.25, sombra: 1024, pasto: 0.7, rodeoCerca: 8 },
+    alta: { nombre: "Alta", escala: 1, tope: 1.5, sombra: 2048, pasto: 1, rodeoCerca: 12 },
+    ultra: { nombre: "Ultra", escala: 1, tope: 2, sombra: 4096, pasto: 1.5, rodeoCerca: 20 },
   };
   C.nivel = "alta";
   C.cortar = false;                      // "Saltar": el escaneo lo mira en cada cuadro
@@ -38,6 +38,8 @@
       M.escena.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; });
     }
     E.flora.quieto = !!n.quieto;
+    // Cuántos del rodeo grande toman el modelo de Rezona cuando están cerca.
+    if (E.rodeo) E.rodeo.maxCerca = n.rodeoCerca ?? 8;
     M.luzExtra = n.luz || 0;
     if (E.juego) M.actualizarHora(E.juego.hora, E.juego.t);
     if (conSombra && M.sol.shadow.mapSize.x !== n.sombra) {

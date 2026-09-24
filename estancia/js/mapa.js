@@ -85,7 +85,10 @@
     const [ax, az, esc] = aPantalla(X0, Z0, W, H);
     g.imageSmoothingEnabled = true;
     g.drawImage(fondo, ax, az, (X1 - X0) * esc, (Z1 - Z0) * esc);
-    // La hacienda.
+    // El rodeo grande, en puntitos.
+    g.fillStyle = "rgba(70,45,30,0.7)";
+    for (const a of E.rodeo.lista) { const [x, z] = aPantalla(a.x, a.z, W, H); g.fillRect(x - 0.8 * dpr, z - 0.8 * dpr, (a.k === "ternero" ? 1.2 : 1.8) * dpr, (a.k === "ternero" ? 1.2 : 1.8) * dpr); }
+    // La hacienda de trabajo.
     for (const v of E.animales.vacas) {
       if (v.salud.muerta) continue;
       const [x, z] = aPantalla(v.x, v.z, W, H);
@@ -137,6 +140,8 @@
     gm.beginPath(); gm.arc(R, R, R - 2, 0, Math.PI * 2); gm.clip();
     gm.translate(R, R); gm.rotate(ang - Math.PI);
     gm.drawImage(fondo, (X0 - J.x) * esc, (Z0 - J.z) * esc, (X1 - X0) * esc, (Z1 - Z0) * esc);
+    gm.fillStyle = "rgba(70,45,30,0.75)";
+    for (const a of E.rodeo.lista) if (Math.abs(a.x - J.x) < alcance && Math.abs(a.z - J.z) < alcance) gm.fillRect((a.x - J.x) * esc - 1, (a.z - J.z) * esc - 1, 2, 2);
     for (const v of E.animales.vacas) {
       if (v.salud.muerta || Math.abs(v.x - J.x) > alcance || Math.abs(v.z - J.z) > alcance) continue;
       gm.fillStyle = v.salud.bichera ? "#ff4a3a" : "rgba(50,30,20,0.9)";

@@ -43,7 +43,8 @@
     } },
     { n: "hacienda", d: "Cuántas quedan y dónde están las agusanadas", f: () => {
       const b = E.trabajo.balance(), ag = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta);
-      sistema(`Hacienda: ${b.vivas} de ${b.total} vacas, ${b.trabajadas} trabajadas, más toros y terneros.` + (ag.length ? " Con bichera: " + ag.map((v) => `la ${v.num} (${E.trabajo.rumbo(v.x, v.z)})`).join(", ") + "." : " Ninguna agusanada."));
+      const Rd = E.rodeo.lista, n = (k) => Rd.filter((a) => a.k === k).length;
+      sistema(`Rodeo del campo: ${n("vaca")} vacas, ${n("toro")} toros y ${n("ternero")} terneros. De trabajo: ${b.vivas} de ${b.total} vacas, ${b.trabajadas} trabajadas.` + (ag.length ? " Con bichera: " + ag.map((v) => `la ${v.num} (${E.trabajo.rumbo(v.x, v.z)})`).join(", ") + "." : " Ninguna agusanada."));
     } },
     { n: "razas", d: "Qué razas hay en la tropa", f: () => {
       const cuenta = {};
