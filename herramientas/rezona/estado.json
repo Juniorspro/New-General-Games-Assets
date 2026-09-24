@@ -83,6 +83,13 @@
    "creado": "2026-09-23",
    "version": "sin subir",
    "nota": "Los png se bajan de https://lab.rezona.ai/game/pgcserver/pv/biJbNhtEOI/assets/<nombre>-g1.png (tractor: tractor2-g1). Prompts en ruta40/herramientas/arte.json y en las lecciones de abajo. Se procesan con ruta40/herramientas/procesar_arte.py."
+  },
+  "ikGiQGgkMF": {
+   "nombre": "Miniaturas TikTok (LUZ MALA, KUNTUR, BRILLO)",
+   "para": "videos/: arte sin letras para las miniaturas 9:16 (videos/medios/rezona/<juego>-arte-g1.png)",
+   "creado": "2026-09-24",
+   "version": "sin subir",
+   "nota": "Se bajan de https://lab.rezona.ai/game/pgcserver/pv/ikGiQGgkMF/assets/<juego>-arte-g1.png. Los prompts y las referencias: videos/medios/rezona/prompts.json. El título se pone encima en videos/remotion/src/PortadaArte.jsx."
   }
  },
  "assets": [
@@ -1159,7 +1166,9 @@
   "carroceria_sin_ruedas": "Auto de juego de costado: 'Perfect side view of … facing right … Body ONLY: the two round wheel wells are EMPTY, NO wheels, NO tires. … no person' + transparent:true, 1536x864. Anduvo en 4 de 5 (chata, Fitito, colectivo, 4x4). El colectivo vino mirando a la izquierda (se espeja). El tractor vino al revés y con aros: se pidió de nuevo con 'the engine hood on the RIGHT side … The wheels have been REMOVED for repair: NO wheels, NO tires, NO rims, NO rings, NO hubs'.",
   "fondos_del_mismo_estilo": "Para que todas las capas salgan del mismo juego: source_urls con la portada ya generada + 'in the same painted illustration style as the reference image'. Lejos opaco ('far distance only … horizon in the lower half, nothing in the foreground') y medio transparente ('A single horizontal band … fill only the bottom half … from the left edge to the right edge … Everything above is empty transparent background'). 14 de 14 salieron bien.",
   "hoja_de_adornos": "Varios adornos en un solo pedido: 'A game prop sheet: one horizontal row of 5 separate items, evenly spaced with wide empty gaps between them, not touching, not overlapping, all standing on the same baseline, side view: …'. 5 de 5 hojas se pudieron cortar por columnas vacías (una tenía dos pegados).",
-  "halo_del_recorte": "El fondo transparente automático deja un filo del color del fondo que sacó (rosado) y las columnas de los costados medio transparentes. Hay que pasar los píxeles del borde al color del vecino opaco y recortar 3 px de cada costado antes de repetir la imagen."
+  "halo_del_recorte": "El fondo transparente automático deja un filo del color del fondo que sacó (rosado) y las columnas de los costados medio transparentes. Hay que pasar los píxeles del borde al color del vecino opaco y recortar 3 px de cada costado antes de repetir la imagen.",
+  "miniatura_con_referencias": "24/09: key art 9:16 de un juego propio al primer intento. Referencias por source_urls: el sprite del personaje agrandado ×13–28 con neighbor y APLANADO sobre un color liso (lo transparente se ve blanco), más 1–2 cuadros del juego. Prompt: 'Vertical 9:16 key art poster for a <género> video game. The hero from the first reference image: <rasgos>, shown BIG in the lower center, front view facing the viewer' + jefe o compañero + escenario de las referencias + luz y paleta + 'The top third is empty space for a title. No text, no letters, no logo, no watermark, no UI.' size 864x1536 volvió 768x1376; n=2 devolvió UNA sola (-g1; -g2 da 404).",
+  "fetch_pide_carpeta_rezona": "24/09: fetch_generated_asset se niega a escribir en una carpeta sin .rezona/. El public_url de check_generation_tasks no pide login: se baja con curl directo a donde haga falta."
  },
  "pendiente": "Quedó un proyecto suelto llamado 'Páginas web — assets' creado por error, sin assets. Ignorarlo o borrarlo."
 }

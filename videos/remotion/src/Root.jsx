@@ -5,6 +5,7 @@ import { Composition, Still, staticFile } from 'remotion';
 import { Relato, armar, FPS } from './Relato.jsx';
 import { LARGO_TOMAS } from './montajes.js';
 import { Portada } from './Portada.jsx';
+import { PortadaArte } from './PortadaArte.jsx';
 import './fuentes.js';
 
 const calcular = async ({ props }) => {
@@ -24,5 +25,8 @@ export const Root = () => (
       defaultProps={{ id: 'kuntur', lineas: [] }} calculateMetadata={calcular} />
     <Still id="PortadaLuzMala" component={Portada} width={1080} height={1920} defaultProps={{ id: 'luz-mala' }} />
     <Still id="PortadaKuntur" component={Portada} width={1080} height={1920} defaultProps={{ id: 'kuntur' }} />
+    <Still id="ArteLuzMala" component={PortadaArte} width={1080} height={1920} defaultProps={{ id: 'luz-mala' }} />
+    <Still id="ArteKuntur" component={PortadaArte} width={1080} height={1920} defaultProps={{ id: 'kuntur' }} />
+    <Still id="ArteBrillo" component={PortadaArte} width={1080} height={1920} defaultProps={{ id: 'brillo' }} />
   </>
 );

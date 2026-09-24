@@ -71,6 +71,14 @@ MALA y KUNTUR. Todo vive en `videos/`. Ver también:
   ../salida/PortadaLuzMala.png` y los mismos flags de siempre; después se
   pasan a JPG.
 
+- **Con arte de Rezona (24/09, las que le gustaron):**
+  - `PortadaArte.jsx`, con los Stills `ArteLuzMala`, `ArteKuntur` y `ArteBrillo`.
+  - El arte está en `medios/rezona/` (commiteado, porque costó créditos) y los
+    prompts en `medios/rezona/prompts.json`.
+  - El personaje sale fiel si se le pasa el sprite agrandado como referencia:
+    receta en `estado.json › miniatura_con_referencias`.
+  - El emoji 🫧 no está en la fuente de emojis: no se dibuja.
+
 ## Formatos
 
 - **Completo:** LUZ MALA ya es vertical (360×640 lógico), así que va a
