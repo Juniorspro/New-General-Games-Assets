@@ -153,3 +153,10 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   **rodeo de 920** (500 vacas, 20 toros, 400 terneros) con niveles de detalle.
 - **Radio FM real** (Chaco, Presidencia Roca, Sáenz Peña, Formosa, Corrientes)
   en la galería, y **HUD despejado**.
+- **Isla Royale** (`isla-royale/`, artifact aparte): battle royale isométrico
+  estilo cartoon en un solo HTML React + Canvas 2D. 6 bots que lootean,
+  persiguen a <400, tiran y levantan muros; 18 cofres; muro (Q) y rampa (E);
+  rifle y escopeta; tormenta violeta cada 45 s; minimapa; VICTORY ROYALE con
+  confeti; palancas y botones en el celular. Probado en PC, teléfono acostado y
+  parado (`isla-royale/prueba.mjs`). El sonido no se escuchó: el navegador de
+  prueba no tiene salida de audio (sin comprobar de oído).

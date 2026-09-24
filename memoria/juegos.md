@@ -178,6 +178,26 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - En Playwright, si el juego tomó el puntero (`requestPointerLock`), los clics
   no llegan a los botones: soltarlo antes (`G.soltarPuntero()`).
 
+## Battle royale en Canvas 2D (Isla Royale)
+
+- React por UMD de cdnjs con `h = React.createElement`: sin Babel el archivo
+  arranca al toque y el empaquetador mete React adentro (209 KB, anda sin red).
+- Isométrico: `sx = (x−y)K + ox`, `sy = (x+y)K/2 − z·zoom + oy` con
+  `K = zoom·0,7071`; el suelo entero con `setTransform(K, K/2, −K, K/2, ox, oy)`
+  sobre una isla dibujada una vez en un lienzo aparte; lo parado se ordena por
+  `x + y`. El mouse vuelve al mundo con la inversa (`vista().aMundo`).
+- Bots, números que quedaron jugables (medido): sin tregua te bajaban 200 de
+  vida en 4 s. Ahora: 10 s sin pelear al empezar, 0,7 s de reacción antes del
+  primer tiro, cadencia de bot ×1,8 y aparición a 520–740 del centro. Con eso,
+  un bot a 250 saca ~60 en 3 s.
+- Un árbol que tapa al jugador se dibuja al 35 %: si no, en el bosque no te ves.
+- Trampa del celular: el botón Disparar ponía `E.disparo = true` y la palanca
+  derecha lo pisaba cada cuadro con `false`. Van en banderas separadas.
+- Confeti en fracciones de pantalla: la gravedad va en 0,15/s, no en 60.
+- Teléfono acostado (alto ≤ 520): botones entre las palancas, armas arriba y
+  minimapa chico; si no, se pisan con el minimapa.
+- `window.__isla` es la ref de la partida para las pruebas.
+
 ## Probar
 
 - Congelar el bucle y sacar las fotos a mano (`__juego.congelar`,
