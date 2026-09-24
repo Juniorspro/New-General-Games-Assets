@@ -1,9 +1,10 @@
 /* los videos relatados para TikTok (1080×1920, 30 fps). Cuánto dura cada uno sale de su
    relato (medios/voz/<video>/lineas.json) y de su montaje (montajes.js) */
 import React from 'react';
-import { Composition, staticFile } from 'remotion';
+import { Composition, Still, staticFile } from 'remotion';
 import { Relato, armar, FPS } from './Relato.jsx';
 import { LARGO_TOMAS } from './montajes.js';
+import { Portada } from './Portada.jsx';
 import './fuentes.js';
 
 const calcular = async ({ props }) => {
@@ -21,5 +22,7 @@ export const Root = () => (
       defaultProps={{ id: 'luz-mala', lineas: [] }} calculateMetadata={calcular} />
     <Composition id="Kuntur" component={Relato} width={1080} height={1920} fps={FPS} durationInFrames={1800}
       defaultProps={{ id: 'kuntur', lineas: [] }} calculateMetadata={calcular} />
+    <Still id="PortadaLuzMala" component={Portada} width={1080} height={1920} defaultProps={{ id: 'luz-mala' }} />
+    <Still id="PortadaKuntur" component={Portada} width={1080} height={1920} defaultProps={{ id: 'kuntur' }} />
   </>
 );

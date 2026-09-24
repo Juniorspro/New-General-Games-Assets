@@ -59,6 +59,18 @@ MALA y KUNTUR. Todo vive en `videos/`. Ver también:
      desde ese cuadro y lo empalma sin tocar el sonido. Un arreglo del cierre
      costó ~3 min en vez de ~22.
 
+## Miniaturas
+
+- `remotion/src/Portada.jsx`, con los Stills `PortadaLuzMala` y `PortadaKuntur`
+  (24/09). Lo importante va en el centro 3:4, que es lo que muestra la grilla
+  del perfil.
+- Los cuadros de fondo salen de las tomas: `ffmpeg -ss <s> -i
+  medios/tomas/<juego>/<toma>.mp4 -frames:v 1 medios/portadas/<nombre>.png`
+  (no se commitean). Los tiempos están en `Portada.jsx`, por nombre.
+- Se renderizan con `remotion still src/index.jsx PortadaLuzMala
+  ../salida/PortadaLuzMala.png` y los mismos flags de siempre; después se
+  pasan a JPG.
+
 ## Formatos
 
 - **Completo:** LUZ MALA ya es vertical (360×640 lógico), así que va a
