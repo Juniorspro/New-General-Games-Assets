@@ -52,6 +52,12 @@ MALA y KUNTUR. Todo vive en `videos/`. Ver también:
      como `salida/<id>-tiktok.mp4`;
    - saca `-tiktok-liviano.mp4` en dos pasadas a 3,6 Mbps, para mandarlo por
      el chat (<30 MiB).
+   - Con `--sin-musica`, sobre el render ya hecho: solo voz y efectos, para
+     ponerle un sonido de TikTok desde la app. Remotion no dibuja cuadros para
+     un códec de audio: tarda ~2 min.
+   - Con `--rehacer=<cuadro>`, sobre el render ya hecho: vuelve a dibujar
+     desde ese cuadro y lo empalma sin tocar el sonido. Un arreglo del cierre
+     costó ~3 min en vez de ~22.
 
 ## Formatos
 
@@ -84,6 +90,8 @@ MALA y KUNTUR. Todo vive en `videos/`. Ver también:
   - Los subtítulos tapaban los textos del juego: van en una píldora oscura
     (LUZ MALA, y=1130).
   - El gancho en una línea se salía del cuadro: se parte en dos.
+  - El sticker (que se dibuja después) tapaba "link en la bio": el cierre va
+    más arriba (`yCierre`).
 - **Vosk:**
   - Oye mal los nombres ("Killa" → "que la", "Purmamarca" → "burma marca").
     Por eso las palabras salen del guion y Vosk solo da los tiempos, que se
@@ -94,6 +102,12 @@ MALA y KUNTUR. Todo vive en `videos/`. Ver también:
   - Bing, Pinterest, Reddit y memedroid no dan resultados o bloquean.
   - Las plantillas salieron de la API de imgflip (`medios/memes/fuentes.json`)
     y el texto chaqueño se pone encima (`paneles`).
+  - Mirá la plantilla entera antes de usarla: la de Shaq dormido trae escrito
+    "real shit", y se cambió por el esqueleto esperando.
+  - Pidió de nuevo el chamamé bajado de TikTok. No se hizo: se le dio la
+    versión sin música.
+  - Chamamé libre en Internet Archive o Wikimedia: lo que hay es NC-ND o con
+    "derechos reservados" en la descripción, aunque la ficha diga CC0.
 
 ## Lo que quedó
 
