@@ -1,0 +1,12 @@
+{
+  "name": "aeroplaza",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "armar": "node herramientas/armar.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "three": "^0.186.0"
+  }
+}

@@ -1,0 +1,69 @@
+/* ============================================================================
+   aeroplaza/js/camara.js — la cámara en tercera persona: da vueltas alrededor
+   del muñeco (arrastrando, con la rueda o el palito derecho), no se mete
+   adentro del piso, y tiene el modo cine de las charlas con NPC (se acerca y
+   encuadra a los dos de costado, como en BRILLO pero en 3D).
+   ========================================================================== */
+import * as THREE from 'three';
+
+export class Camara {
+  constructor(cam) {
+    this.cam = cam;
+    this.yaw = Math.PI; this.pitch = 0.3; this.dist = 5.4; this.distObj = 5.4;
+    this.obj = new THREE.Vector3(); this.pos = new THREE.Vector3(); this.mira = new THREE.Vector3();
+    this.cine = null; this.kCine = 0;
+    this.sacudida = 0;
+    this.inicial = true;
+  }
+  girar(dx, dy) { this.yaw -= dx; this.pitch = THREE.MathUtils.clamp(this.pitch + dy, -0.45, 1.25); }
+  acercar(f) { this.distObj = THREE.MathUtils.clamp(this.distObj * f, 2.4, 14); }
+  /* modo cine: a (el jugador) y b (quien habla) */
+  ponerCine(a, b) { this.cine = a ? { a: a.clone(), b: b.clone() } : null; }
+  detras(rumbo) { this.yaw = rumbo + Math.PI; }
+  actualizar(dt, jugador, mundo) {
+    const k = jugador.escala;
+    const alto = 1.25 * k + (jugador.modo === 'burbuja' ? 0.3 : 0);
+    this.obj.set(jugador.p.x, jugador.p.y + alto, jugador.p.z);
+    this.kCine += ((this.cine ? 1 : 0) - this.kCine) * Math.min(1, dt * 3);
+    this.dist += (this.distObj * (0.75 + 0.25 * k) * (jugador.modo === 'montado' ? 1.35 : 1) - this.dist) * Math.min(1, dt * 6);
+    const cp = Math.cos(this.pitch);
+    const desde = new THREE.Vector3(
+      this.obj.x + Math.sin(this.yaw) * cp * this.dist,
+      this.obj.y + Math.sin(this.pitch) * this.dist,
+      this.obj.z + Math.cos(this.yaw) * cp * this.dist);
+    const mira = this.obj.clone();
+    if (this.kCine > 0.001 && this.cine) {
+      /* de costado, a la altura de las caras, cerca: el plano de dos */
+      const { a, b } = this.cine;
+      const medio = a.clone().add(b).multiplyScalar(0.5); medio.y += 1.05;
+      const ab = b.clone().sub(a); ab.y = 0; const L = Math.max(1.2, ab.length()); ab.normalize();
+      const lado = new THREE.Vector3(-ab.z, 0, ab.x);
+      /* del lado donde ya estaba la cámara (no cruza el eje) */
+      if (lado.dot(desde.clone().sub(medio)) < 0) lado.negate();
+      const cine = medio.clone().addScaledVector(lado, 1.6 + L * 0.9).addScaledVector(ab, -0.35); cine.y += 0.3;
+      desde.lerp(cine, this.kCine); mira.lerp(medio, this.kCine);
+    }
+    /* que no se meta en el piso ni atrás de una loma: se busca el primer tramo libre */
+    if (mundo) {
+      const dir = desde.clone().sub(mira), L = dir.length(); dir.divideScalar(L);
+      let libre = L;
+      for (let i = 1; i <= 12; i++) {
+        const t = i / 12 * L, x = mira.x + dir.x * t, y = mira.y + dir.y * t, z = mira.z + dir.z * t;
+        if (y < mundo.altura(x, z) + 0.35) { libre = Math.max(1.2, t - 0.4); break; }
+      }
+      desde.copy(mira).addScaledVector(dir, libre);
+      const piso = mundo.altura(desde.x, desde.z) + 0.4;
+      if (desde.y < piso) desde.y = piso;
+      /* el agua: la cámara no queda justo en la superficie (se ve feo el corte) */
+      if (mundo.agua != null && Math.abs(desde.y - mundo.agua) < 0.25 && !jugador.bajoAgua) desde.y = mundo.agua + 0.25;
+    }
+    if (this.inicial) { this.pos.copy(desde); this.mira.copy(mira); this.inicial = false; }
+    const s = 1 - Math.exp(-dt * 14);
+    this.pos.lerp(desde, s); this.mira.lerp(mira, 1 - Math.exp(-dt * 18));
+    this.cam.position.copy(this.pos);
+    if (this.sacudida > 0) { this.sacudida -= dt; const q = this.sacudida * 0.15; this.cam.position.x += (Math.random() - 0.5) * q; this.cam.position.y += (Math.random() - 0.5) * q; }
+    this.cam.lookAt(this.mira);
+  }
+  /* para mover al muñeco: los ejes de la cámara sobre el piso */
+  ejes() { return { adelante: new THREE.Vector2(-Math.sin(this.yaw), -Math.cos(this.yaw)), derecha: new THREE.Vector2(Math.cos(this.yaw), -Math.sin(this.yaw)) }; }
+}

@@ -1,0 +1,8 @@
+# lo que llega de Rezona tal cual, lo armado y lo que sacan las pruebas
+crudo/
+dist/
+node_modules
+pruebas/salida/
+# con las canciones que mandó quien pide (son de Nintendo y el repo es público)
+aeroplaza-con-canciones.html
+pruebas/mqtt.min.js
