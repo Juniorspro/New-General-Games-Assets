@@ -28,6 +28,13 @@
     guacho: { rot: null, medida: ["y", 1.74], centroZ: 0,
       roles: { cadera: "Hip", cabeza: "Head", brazoD: "R_Upperarm", codoD: "R_Forearm", manoD: "R_Hand",
         brazoI: "L_Upperarm", codoI: "L_Forearm", musloI: "L_Thigh", musloD: "R_Thigh", rodillaI: "L_Calf", rodillaD: "R_Calf", torso: "Spine01" } },
+    // El toro viene como la vaca (la cabeza a -z); el perro, al revés.
+    toro: { rot: Math.PI, medida: ["z", 2.6], centroZ: 0.3,
+      roles: { cuello: "tripoHead_0", cabeza: "tripoHead_2", lomo: "tripoSpine_1" } },
+    perro: { rot: 0, medida: ["y", 0.72], centroZ: 0, roles: { cabeza: "tripoHead_2", lomo: "tripoSpine_2" } },
+    heladera: { rot: 0, medida: ["y", 1.55], centroZ: 0 },
+    silla: { rot: 0, medida: ["y", 0.92], centroZ: 0 },
+    pava: { rot: 0, medida: ["max", 0.26], centroZ: 0 },
     chata: { rot: Math.PI / 2, medida: ["z", 5.2], centroZ: 0 },
     rollo: { rot: 0, medida: ["max", 1.5], centroZ: 0 },
   };
@@ -45,12 +52,23 @@
     return l;
   }
 
+  // Los GLB vienen comprimidos con gzip (armar_datos.py): se descomprimen con
+  // DecompressionStream, que anda también desde file://.
+  async function glb(A, n) {
+    if (A[n + ".glb"]) return bytes(A[n + ".glb"]);
+    if (!A[n + ".glb.gz"] || typeof DecompressionStream === "undefined") return null;
+    const flujo = new Blob([bytes(A[n + ".glb.gz"])]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return new Response(flujo).arrayBuffer();
+  }
   M.cargar = async () => {
     const A = window.ARCHIVOS || {}, l = cargador();
-    const nombres = Object.keys(AJUSTES).filter((n) => A[n + ".glb"]);
-    await Promise.all(nombres.map((n) => new Promise((ok) => {
-      l.parse(bytes(A[n + ".glb"]), "", (g) => { try { preparar(n, g); } catch (e) { console.warn("modelo " + n, e); } ok(); }, (e) => { console.warn("modelo " + n, e); ok(); });
-    })));
+    const nombres = Object.keys(AJUSTES).filter((n) => A[n + ".glb"] || A[n + ".glb.gz"]);
+    await Promise.all(nombres.map(async (n) => {
+      let buf = null;
+      try { buf = await glb(A, n); } catch (e) { console.warn("modelo " + n, e); }
+      if (!buf) return;
+      await new Promise((ok) => l.parse(buf, "", (g) => { try { preparar(n, g); } catch (e) { console.warn("modelo " + n, e); } ok(); }, (e) => { console.warn("modelo " + n, e); ok(); }));
+    }));
     // Las animaciones del Guacho que vinieron aparte (mismo esqueleto).
     const gu = M.listos.guacho;
     if (gu) for (const n of ["idle", "run"]) {
@@ -130,8 +148,38 @@
     }
   }
 
+  // El pelaje de cada raza sobre la textura de la Hereford: la textura trae el
+  // cuero colorado (luminancia lineal ~0,05) y lo blanco (~0,46) bien
+  // separados, así que en el shader se reparte cada píxel entre "cuerpo" y
+  // "blanco" y se pinta con los colores de la raza, conservando el sombreado
+  // del pelo (la luminancia relativa). Multiplicar el color no alcanzaba: una
+  // Angus quedaba colorada oscura con la cara blanca.
+  // pelaje: { cuerpo, blanco (THREE.Color, lineales), guarda (0..1: cuánto de
+  // lo blanco queda blanco), manchas (0..1, overa), semilla }
+  function conPelaje(mat, pj) {
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uCuerpo = { value: pj.cuerpo }; sh.uniforms.uBlanco = { value: pj.blanco };
+      sh.uniforms.uGuarda = { value: pj.guarda }; sh.uniforms.uManchas = { value: pj.manchas || 0 }; sh.uniforms.uSemilla = { value: pj.semilla || 0 };
+      sh.vertexShader = "varying vec3 vPosPelaje;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvPosPelaje = position;");
+      sh.fragmentShader = "varying vec3 vPosPelaje; uniform vec3 uCuerpo, uBlanco; uniform float uGuarda, uManchas, uSemilla;\n" + sh.fragmentShader.replace("#include <map_fragment>", `
+        #ifdef USE_MAP
+          vec4 texelColor = texture2D(map, vMapUv);
+          float lumP = dot(texelColor.rgb, vec3(0.299, 0.587, 0.114));
+          float blancoP = smoothstep(0.1, 0.28, lumP);
+          float sombraP = clamp(mix(lumP / 0.048, lumP / 0.456, blancoP), 0.35, 1.7);
+          vec3 q = vPosPelaje * 6.0 + uSemilla;
+          float nP = sin(q.x * 1.3 + sin(q.z * 0.9)) * sin(q.z * 1.1 + 1.7 * sin(q.y * 1.4)) * sin(q.y * 1.7 + q.x * 0.5);
+          float manchaP = uManchas * smoothstep(0.02, 0.16, nP);
+          float b = max(blancoP * uGuarda, manchaP);
+          texelColor.rgb = mix(uCuerpo, uBlanco, b) * sombraP;
+          diffuseColor *= texelColor;
+        #endif`);
+    };
+    mat.customProgramCacheKey = () => "pelaje";
+  }
+
   // Un clon listo para poner en la escena. tinte: multiplica el color base.
-  M.clonar = (nombre, { tinte, sinClips } = {}) => {
+  M.clonar = (nombre, { tinte, sinClips, pelaje } = {}) => {
     const L = M.listos[nombre];
     if (!L) return null;
     const raiz = new THREE.Group();
@@ -143,6 +191,7 @@
       if (o.isMesh) {
         mallas.push(o);
         if (tinte) { o.material = o.material.clone(); o.material.color.multiply(tinte); }
+        if (pelaje) { o.material = o.material.clone(); conPelaje(o.material, pelaje); }
       }
     });
     const roles = {};

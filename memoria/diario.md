@@ -128,3 +128,17 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
 
 - Música y efectos grabados (el audio de Rezona sigue caído).
 - Las copas siguen siendo tarjetas.
+
+## 24/9/2026 (noche) — Estancia: chat, perros, razas, puesto, audio
+
+- **Chat de comandos** estilo Roblox (Enter o /; globito en el celular), con
+  sugerencias: /saludar, /perros, /mate, /comer, /caballo, /hacienda, /razas…
+- **Audio**: medido grabando la salida; rebalanceado, voces recodificadas desde
+  el original, reverb oscura, limitador. **No se escuchó con oídos**: los
+  números están parejos (campo −36, mugidos −28, voz −24, silbido −21 dB).
+- **Hacienda**: seis razas por shader, 2 toros (modelo Rezona con esqueleto),
+  6 terneros. **Perros**: Tigre, Negra, Chispa (modelo Rezona), 4 órdenes.
+- **Puesto**: sillas, heladera y pava de Rezona; mate, guiso, agua fría.
+  **Zaino**: se ensucia, baño en el tanque, forraje en el comedero, y al otro
+  día se nota. **Lazo** que se enrolla solo.
+- Rezona: ~2.200 créditos (saldo 346.230). Higgsfield: 20 voces, 0,4 créditos.

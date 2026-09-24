@@ -138,7 +138,8 @@
       poste(0.1, H + 0.1, mad, R.x + dx, R.z + dz, 0.3);                          // horcones de la galería
       C.circulos.push({ x: R.x + dx, z: R.z + dz, r: 0.18 });
     }
-    // La mesa de la galería con el jarro de mate cocido y las galletas.
+    // La mesa de la galería con el jarro y las galletas (la mesa de Rezona vino
+    // rota, una cuña: queda la de tablas; las sillas y la pava las pone puesto.js).
     caja(1.6, 0.06, 0.8, tab, R.x - 1.5, y0 + 0.78, R.z + 3.8);
     for (const [dx, dz] of [[-0.7, -0.33], [0.7, -0.33], [-0.7, 0.33], [0.7, 0.33]]) caja(0.06, 0.76, 0.06, tab, R.x - 1.5 + dx, y0 + 0.38, R.z + 3.8 + dz);
     caja(1.8, 0.05, 0.35, tab, R.x - 1.5, y0 + 0.45, R.z + 4.55);                   // banco

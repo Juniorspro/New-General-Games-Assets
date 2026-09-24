@@ -439,9 +439,14 @@
     return `${lejos}para ${n}`;
   };
   W.balance = () => {
-    const A = E.animales, vivas = A.vacas.filter((v) => !v.salud.muerta);
+    // Las cuentas de la temporada son las de las vacas: los toros y los
+    // terneros suman a lo que vale la hacienda pero no al conteo (si no, con
+    // la tropa más grande fundir era más difícil).
+    const A = E.animales, todos = A.vacas.filter((v) => !v.salud.muerta), vivas = todos.filter((v) => !v.toro && !v.ternero);
     const trabajadas = vivas.filter(W.trabajada).length;
-    const hacienda = vivas.reduce((s, v) => s + VALOR_VACA * (W.trabajada(v) ? 1.1 : v.salud.vacunada ? 1.03 : 1), 0);
-    return { vivas: vivas.length, total: A.vacas.length, trabajadas, vacunadas: vivas.filter((v) => v.salud.vacunada).length, hacienda, patrimonio: hacienda + E.juego.dinero };
+    const valor = (v) => VALOR_VACA * (v.toro ? 2.2 : v.ternero ? 0.35 : 1) * (W.trabajada(v) ? 1.1 : v.salud.vacunada ? 1.03 : 1);
+    const hacienda = todos.reduce((s, v) => s + valor(v), 0);
+    const total = A.vacas.filter((v) => !v.toro && !v.ternero).length;
+    return { vivas: vivas.length, total, trabajadas, vacunadas: vivas.filter((v) => v.salud.vacunada).length, hacienda, patrimonio: hacienda + E.juego.dinero };
   };
 })();

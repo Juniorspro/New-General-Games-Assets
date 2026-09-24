@@ -2,11 +2,16 @@
 
     python3 armar_datos.py carpeta/ [carpeta2/ ...] [--quitar prefijo]
 
+Los GLB se guardan comprimidos con gzip (nombre.glb.gz): la geometría de
+Rezona viene sin índices y comprime ~20 %, y con cinco animales el HTML
+pasaba los 16 MB que acepta un artifact. modelos.js los descomprime al
+cargar (DecompressionStream).
+
 Conserva lo que ya estaba en datos.js y agrega o reemplaza por nombre de
 archivo. Las imágenes, los GLB y el audio van como data URI; los .json van
 como objeto (sin base64, pesan un tercio menos).
 """
-import base64, json, os, re, sys
+import base64, gzip, json, os, re, sys
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 DATOS = os.path.join(AQUI, "..", "js", "datos.js")
@@ -43,6 +48,10 @@ def main(args):
                 hay[n] = json.dumps(json.load(open(ruta)), separators=(",", ":"))
             elif ext in TIPOS:
                 hay[n] = json.dumps("data:%s;base64,%s" % (TIPOS[ext], base64.b64encode(open(ruta, "rb").read()).decode()))
+    # Los GLB, comprimidos (también los que ya estaban sin comprimir).
+    for n in [n for n in hay if n.endswith(".glb")]:
+        crudo = base64.b64decode(json.loads(hay.pop(n)).split(",", 1)[1])
+        hay[n + ".gz"] = json.dumps("data:application/gzip;base64,%s" % base64.b64encode(gzip.compress(crudo, 9, mtime=0)).decode())
     with open(DATOS, "w") as f:
         f.write(CABEZA)
         for n, v in hay.items():

@@ -63,6 +63,44 @@
       cola: ["tripoTail_0", "bone_33"],
       bajaEchada: 0.55,
     },
+    // El toro: el mismo esqueleto de Rezona que la vaca pero con otros
+    // nombres. La izquierda del animal es la -x del modelo crudo (va girado π).
+    toro: {
+      patas: {
+        DI: ["del", "tripo0_Left_Limb_0", "tripo0_Left_Limb_1", "tripo0_Left_Limb_2", "tripo0_Left_Limb_4"],
+        DD: ["del", "tripo0_Right_Limb_0", "tripo0_Right_Limb_1", "tripo0_Right_Limb_2", "tripo0_Right_Limb_4"],
+        TI: ["tra", "bone_22", "tripo1_Left_Limb_0", "tripo1_Left_Limb_1", "tripo1_Left_Limb_3"],
+        TD: ["tra", "tripo1_Right_Limb_0", "tripo1_Right_Limb_1", "tripo1_Right_Limb_2", "tripo1_Right_Limb_4"],
+      },
+      cuello: [["tripoHead_0", 0.75], ["tripoHead_1", 0.3], ["tripoHead_2", 0.2]],
+      cabeza: "tripoHead_2",
+      orejas: [],
+      cola: ["bone_32", "bone_33", "bone_34"],
+      bajaEchada: 0.6,
+    },
+    // El perro: mira a +z tal cual viene. A la trasera derecha le falta el
+    // último hueso (la pata entera pesa en el garrón): su punta se saca
+    // espejando la de la izquierda. Las manos cuelgan del último hueso del
+    // lomo, que es el que baja para olfatear: se contra-giran.
+    perro: {
+      patas: {
+        DI: ["del", "tripo0_Left_Limb_0", "tripo0_Left_Limb_1", "tripo0_Left_Limb_2", "tripo0_Left_Limb_3"],
+        DD: ["del", "tripo0_Right_Limb_0", "tripo0_Right_Limb_1", "tripo0_Right_Limb_2", "tripo0_Right_Limb_3"],
+        TI: ["tra", "tripo1_Left_Limb_0", "tripo1_Left_Limb_1", "tripo1_Left_Limb_2", "tripo1_Left_Limb_3"],
+        TD: ["tra", "tripo1_Right_Limb_0", "tripo1_Right_Limb_1", "tripo1_Right_Limb_2", null],
+      },
+      espejo: { TD: "TI" },
+      // Patas cortas: a la misma velocidad da muchos más pasos que una vaca
+      // (con la cadencia de la vaca el tranco le quedaba más largo que la pata).
+      frec: 2.1,
+      alza: 0.45,
+      cuello: [["tripoSpine_4", 0.45], ["tripoHead_0", 0.35], ["tripoHead_1", 0.15]],
+      hombros: "tripoSpine_4",
+      cabeza: "tripoHead_2",
+      orejas: ["bone_13", "bone_14"],
+      cola: ["tripoTail_0", "bone_3", "bone_4"],
+      bajaEchada: 0.25,
+    },
   };
 
   // Los aires. beta: qué parte de la vuelta la pata está apoyada. of: el
@@ -86,11 +124,15 @@
     const H = (n) => p.huesos[n] || null;
     const enModelo = (h) => p.raiz.worldToLocal(h.getWorldPosition(new V()));
     p.patas = {};
+    const espejo = esq.espejo || {};
     for (const [k, [tipo, ...nombres]] of Object.entries(esq.patas)) {
-      const b = nombres.map(H);
-      if (b.some((x) => !x)) { p.patas = null; break; }
+      const b = nombres.map((n) => (n ? H(n) : null));
+      if (b.some((x, i) => !x && !(i === 3 && espejo[k]))) { p.patas = null; break; }
       const [arriba, , bajo, punta] = b;
-      const P0 = enModelo(arriba), J = enModelo(bajo), T = enModelo(punta);
+      let T;
+      if (punta) T = enModelo(punta);
+      else { const [, , , , pn] = esq.patas[espejo[k]]; T = enModelo(H(pn)); T.x = -T.x; }
+      const P0 = enModelo(arriba), J = enModelo(bajo);
       p.patas[k] = {
         tipo, b, P0, T0: T,
         L1: Math.hypot(J.y - P0.y, J.z - P0.z), L2: Math.hypot(T.y - J.y, T.z - J.z),
@@ -111,18 +153,24 @@
     // Cuánto baja para echarse: hasta apoyar la panza, medida con un rayo
     // desde el piso entre las patas (a ojo quedaba flotando).
     // (una vez por especie: todas las vacas son el mismo modelo)
-    if (esq.panza === undefined) {
+    // (por especie y por tamaño: el ternero es la vaca achicada)
+    const clave = "panza" + (p.escalaExtra || 1);
+    if (esq[clave] === undefined) {
       const panza = (z) => {
         const o = p.raiz.localToWorld(new V(0, 0.02, z)), dir = new V(0, 1, 0).transformDirection(p.raiz.matrixWorld);
         const hit = new THREE.Raycaster(o, dir, 0, 3).intersectObjects(E.modelos.quietas(p), false)[0];
         return hit ? p.raiz.worldToLocal(hit.point.clone()).y : Infinity;
       };
-      esq.panza = Math.min(panza(-0.15), panza(0.1), panza(0.35));
+      esq[clave] = Math.min(panza(-0.15), panza(0.1), panza(0.35));
     }
-    p.bajaEchada = isFinite(esq.panza) ? esq.panza + 0.04 : esq.bajaEchada;
+    p.bajaEchada = isFinite(esq[clave]) ? esq[clave] + 0.04 : esq.bajaEchada * (p.escalaExtra || 1);
 
     p.fase = Math.random();
     p.agacha = 0;
+    p.frec = esq.frec || 1;
+    // Lo que sube el casco en el aire, a la medida de la pata (el ternero y el
+    // perro levantaban la mano como una vaca grande).
+    p.alzaK = (esq.alza || 1) * (p.escalaExtra || 1);
   };
 
   // En qué punto de su vuelta está una pata: s va de -1 (adelante) a +1
@@ -160,6 +208,8 @@
     const w = { paso: 1 - aTrote, trote: aTrote * (1 - aGalope), galope: aGalope };
     let f = 0, beta = 0, alza = 0, tope = 0;
     for (const [n, a] of Object.entries(AIRES)) { f += w[n] * a.f(va); beta += w[n] * a.beta; alza += w[n] * a.alza; tope += w[n] * a.agacha; }
+    f *= p.frec || 1;
+    alza *= p.alzaK || 1;
     const quieto = E.suave(0.03, 0.3, va);
     if (quieto > 0) p.fase = (((p.fase + f * dt * Math.sign(e.v)) % 1) + 1) % 1;
     // Lo que avanza el casco apoyado tiene que ser lo que avanza el cuerpo:
@@ -239,7 +289,7 @@
       if (!del && echar > 0) g(medio, X, 2.0 * echar);
       g(bajo, X, dl);
       // El casco se voltea un poco en el aire (el menudillo).
-      g(punta, X, (del ? 0.6 : 0.5) * flick);
+      if (punta) g(punta, X, (del ? 0.6 : 0.5) * flick);
     }
 
     if (p.cabezaB) g(p.cabezaB, Y, (e.mira || 0) * (1 - (e.cabeza || 0) * 0.7));

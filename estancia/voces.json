@@ -2,7 +2,7 @@
  "modelo": "qwen_audio_tts (Higgsfield)",
  "voz": "Julian (preset 95429266-c0ac-4137-a209-63b8812b0f23), pitch_rate 0.9",
  "instruccion": "Gaucho argentino, 50 años. Acento rioplatense marcado (ll e y como sh), voseo. Voz grave y natural, nada extranjera.",
- "nota": "Sin malas palabras. 'tts' es el texto que se le mandó: la ll y la y escritas 'sh' para forzar el rioplatense; 't' es el subtítulo.",
+ "nota": "Sin malas palabras. 'tts' es el texto que se le mandó: la ll y la y escritas 'sh' para forzar el rioplatense; 't' es el subtítulo. Mezcla: 24 kHz mono 64 kbps, normalizadas a -18 LUFS (antes 44 kHz a 56 kbps: se escuchaban aguadas).",
  "costo": "0,02 créditos por frase",
  "frases": [
   {
@@ -173,6 +173,86 @@
    "n": "apuntar-2",
    "t": "Ya sos mía.",
    "tts": "Sha sos mía."
+  },
+  {
+   "n": "perros-0",
+   "t": "¡Vengan, perros!"
+  },
+  {
+   "n": "perros-1",
+   "t": "¡Vamos, Tigre! ¡Negra, vení!"
+  },
+  {
+   "n": "quietos-0",
+   "t": "¡Quietos ahí!"
+  },
+  {
+   "n": "quietos-1",
+   "t": "¡Echate, Chispa!"
+  },
+  {
+   "n": "junten-0",
+   "t": "¡Junten, junten la hacienda!"
+  },
+  {
+   "n": "junten-1",
+   "t": "¡Vaya, vaya! ¡Juntela!"
+  },
+  {
+   "n": "busquen-0",
+   "t": "¡Busque, busque!"
+  },
+  {
+   "n": "busquen-1",
+   "t": "¡Traela, Tigre!"
+  },
+  {
+   "n": "mate-0",
+   "t": "Un matecito y seguimos."
+  },
+  {
+   "n": "mate-1",
+   "t": "Qué rico este mate amargo."
+  },
+  {
+   "n": "comida-0",
+   "t": "A ver qué hay pa' comer."
+  },
+  {
+   "n": "comida-1",
+   "t": "Un guiso de arroz, como Dios manda."
+  },
+  {
+   "n": "heladera-0",
+   "t": "Agüita fresca, qué lindo."
+  },
+  {
+   "n": "banar-0",
+   "t": "Vení, zaino, que te baño."
+  },
+  {
+   "n": "banar-1",
+   "t": "Ahí está, limpito."
+  },
+  {
+   "n": "forraje-0",
+   "t": "Tomá, comé tranquilo."
+  },
+  {
+   "n": "saludar-0",
+   "t": "¡Buenas! ¿Cómo andan?"
+  },
+  {
+   "n": "saludar-1",
+   "t": "¡Buen día, paisano!"
+  },
+  {
+   "n": "puesto-0",
+   "t": "Por fin en el puesto."
+  },
+  {
+   "n": "caballoSucio-0",
+   "t": "Este zaino está hecho un barro."
   }
  ]
 }

@@ -45,9 +45,55 @@
     m4.compose(a, qd, sd);
     malla.setMatrixAt(i, m4);
   }
+  // ── el rollo ── sin usar, el lazo va enrollado: colgado del cinto a pie, del
+  // recado a caballo. Antes quedaba la armada colgando de la mano para siempre
+  // después de errar o de soltar, arrastrándose y enredándose con todo.
+  const VUELTAS = 4, POR_VUELTA = 12, rollo = [];
+  for (let i = 0; i < VUELTAS * POR_VUELTA + 1; i++) rollo.push(new V());
+  const rCen = new V(), rNor = new V(), rUno = new V(), rDos = new V(), rDel = new V();
+  function armarRollo() {
+    const J = E.jugador;
+    if (J.montado) {
+      // Adelante del recado, del lado de montar (el derecho del jinete): ahí
+      // se ata el lazo en el tiento.
+      const c = E.animales.caballo, f = rDel.set(Math.sin(c.yaw), 0, Math.cos(c.yaw));
+      J.asiento(rCen).addScaledVector(f, 0.32).add(rNor.set(-f.z, 0, f.x).multiplyScalar(0.3));
+      rCen.y -= 0.28;
+    } else {
+      const r = J.cuerpo.rotation.y, f = rDel.set(Math.sin(r), 0, Math.cos(r));
+      const cadera = J.piel && J.piel.roles.cadera;
+      if (cadera && J.piel.raiz.visible) cadera.getWorldPosition(rCen); else rCen.set(J.x, E.terreno.altura(J.x, J.z) + 1.0, J.z);
+      rNor.set(-f.z, 0, f.x);
+      rCen.addScaledVector(rNor, 0.2).addScaledVector(f, 0.02); rCen.y -= 0.08;
+    }
+    // Las vueltas en el plano del costado: normal hacia afuera, un poco
+    // corridas entre sí y de radio parejo, como un rollo de verdad.
+    rNor.normalize(); rUno.set(0, 1, 0); rDos.crossVectors(rNor, rUno).normalize();
+    const n = rollo.length - 1;
+    for (let i = 0; i <= n; i++) {
+      const a = (i / POR_VUELTA) * Math.PI * 2, k = i / n, r = 0.15 + 0.012 * Math.sin(k * 9);
+      rollo[i].copy(rCen).addScaledVector(rUno, Math.cos(a) * r * 1.15 - 0.03).addScaledVector(rDos, Math.sin(a) * r).addScaledVector(rNor, (k - 0.5) * 0.05);
+    }
+  }
+  function dibujarRollo() {
+    let n = 0;
+    for (let i = 0; i < rollo.length - 1; i++) tramo(n++, rollo[i], rollo[i + 1], 0.012);
+    malla.count = n;
+    malla.instanceMatrix.needsUpdate = true;
+  }
+
   function dibujar(mano) {
     if (!malla) return;
-    if (Z.estado === "guardado") { malla.count = 0; return; }
+    if (Z.estado === "guardado") {
+      if (!Z.tieneLazo) { malla.count = 0; return; }
+      armarRollo(); dibujarRollo(); return;
+    }
+    if (Z.estado === "enrollando") {
+      // La armada y la cuerda se van juntando hacia el rollo.
+      armarRollo();
+      const u = E.suave(0, 1, Z.enrolla), todos = armada.concat(cuerda);
+      for (let i = 0; i < todos.length; i++) todos[i].p.lerp(rollo[Math.floor((i / todos.length) * (rollo.length - 1))], u * 0.5);
+    }
     let n = 0;
     for (let i = 0; i < NA; i++) tramo(n++, armada[i].p, armada[(i + 1) % NA].p, 0.011);
     tramo(n++, mano, cuerda[0].p, 0.011);
@@ -107,18 +153,19 @@
   // ── acciones ──
   Z.equipar = () => {
     if (!Z.tieneLazo) { E.juego.decir("sinLazo"); return; }
-    if (Z.estado === "guardado") { Z.estado = "listo"; colgar(); }
-    else if (Z.estado === "listo") Z.estado = "guardado";
+    if (Z.estado === "guardado" || Z.estado === "enrollando") { Z.estado = "listo"; Z.ocioso = 0; colgar(); }
+    else if (Z.estado === "listo") { Z.estado = "enrollando"; Z.enrolla = 0; }
   };
   // La armada colgando de la mano, lista.
   function colgar() {
+    Z.ocioso = 0;
     const mano = E.jugador.mano(new V());
     for (let i = 0; i < NA; i++) { const a = (i / NA) * Math.PI * 2; armada[i].p.set(mano.x + Math.cos(a) * 0.3, mano.y - 0.6 + Math.sin(a) * 0.3, mano.z); armada[i].q.copy(armada[i].p); }
     for (let i = 0; i < NL; i++) { cuerda[i].p.copy(mano); cuerda[i].q.copy(mano); }
   }
 
   Z.empezarRevoleo = () => {
-    if (Z.estado === "guardado") Z.equipar();
+    if (Z.estado === "guardado" || Z.estado === "enrollando") Z.equipar();
     if (Z.estado !== "listo") return;
     Z.estado = "revoleando"; Z.omega = 1; Z.revoleo = 0;
   };
@@ -218,7 +265,14 @@
     Z.espera = Math.max(0, (Z.espera || 0) - dt);
     if (Z.estado === "listo") {
       // Cuelga de la mano: física suelta, con la presilla pegada a la mano.
+      // Si no se revolea enseguida, se enrolla solo.
       paso(dt, mano, 0.6, false);
+      Z.ocioso = (Z.ocioso || 0) + dt;
+      if (Z.ocioso > 1.2) { Z.estado = "enrollando"; Z.enrolla = 0; }
+    } else if (Z.estado === "enrollando") {
+      Z.enrolla += dt / 0.5;
+      paso(dt, mano, 0.3, false);
+      if (Z.enrolla >= 1) Z.estado = "guardado";
     } else if (Z.estado === "revoleando") {
       Z.revoleo += dt;
       Z.omega = Math.min(OMEGA_MAX, Z.omega + dt * (Z.omega < OMEGA_MAX * 0.8 ? 9 : 3));
@@ -396,7 +450,8 @@
     Z.tiron = Math.max(0, (Z.tiron || 0) - dt * 1.6);
     if (Math.random() < dt * (0.5 + v.fatiga * 0.9)) Z.tiron = 0.6 + Math.random() * 0.8 * v.fatiga + v.brava * 0.3;
     const dx = v.x - J.x, dz = v.z - J.z, d0 = Math.hypot(dx, dz) || 1;
-    const querer = (1.2 + 4.2 * v.fatiga) * (0.5 + Z.tiron) * (v.salud.bichera ? 0.8 : 1);
+    // Un toro tira el doble; un ternero, poco.
+    const querer = (1.2 + 4.2 * v.fatiga) * (0.5 + Z.tiron) * (v.salud.bichera ? 0.8 : 1) * (v.fuerza || 1);
     // Una brava enlazada a veces carga contra uno, si está a pie y cerca.
     let carga = false;
     if (!J.montado && v.brava > 0.6 && Z.largo < 6 && v.fatiga > 0.5 && Math.random() < dt * 0.15) Z.carga = 1.2;

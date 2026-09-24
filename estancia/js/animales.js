@@ -100,6 +100,26 @@
     angus: { cuerpo: C("#141212"), blanco: C("#161413"), hocico: C("#1d1a19"), pezuna: C("#1a1716") },
     braford: { cuerpo: C("#7b3a1c"), blanco: C("#ddd2c2"), hocico: C("#2c2320"), pezuna: C("#2a2420") },
   };
+  // Las razas nuevas, para el animal de código (el invisible) usan el pelaje
+  // más parecido.
+  PELAJES.colorada = PELAJES.hereford; PELAJES.criolla = PELAJES.hereford; PELAJES.brahman = PELAJES.braford;
+  // Lo que se ve: el pelaje del shader sobre la textura de la Hereford
+  // (modelos.js, conPelaje). Colores lineales. guarda: cuánto de lo blanco de
+  // la Hereford queda blanco; manchas: overa.
+  const L3 = (r, g, b) => new THREE.Color(r, g, b);
+  const RAZAS = {
+    hereford: { nombre: "Hereford", cuerpo: L3(0.083, 0.036, 0.02), blanco: L3(0.52, 0.44, 0.36), guarda: 1 },
+    angus: { nombre: "Aberdeen Angus", cuerpo: L3(0.011, 0.01, 0.01), blanco: L3(0.011, 0.01, 0.01), guarda: 0 },
+    colorada: { nombre: "Angus colorada", cuerpo: L3(0.1, 0.032, 0.014), blanco: L3(0.1, 0.032, 0.014), guarda: 0 },
+    brahman: { nombre: "Brahman", cuerpo: L3(0.33, 0.31, 0.28), blanco: L3(0.4, 0.38, 0.35), guarda: 0.4 },
+    braford: { nombre: "Braford", cuerpo: L3(0.14, 0.058, 0.028), blanco: L3(0.5, 0.43, 0.35), guarda: 1 },
+    criolla: { nombre: "Criolla overa", cuerpo: L3(0.05, 0.028, 0.016), blanco: L3(0.5, 0.45, 0.38), guarda: 0.5, manchas: 1 },
+  };
+  A.RAZAS = RAZAS;
+  function pelajeDe(tipo, az) {
+    const r = RAZAS[tipo], k = 0.85 + az() * 0.3;
+    return { cuerpo: r.cuerpo.clone().multiplyScalar(k), blanco: r.blanco.clone(), guarda: r.guarda, manchas: r.manchas || 0, semilla: az() * 50 };
+  }
 
   // ── la vaca ──
   function vacaMalla(tipo, semilla) {
@@ -320,10 +340,13 @@
   // esqueleto lógico que usan el lazo, la manga y la cura. El modelo lo copia
   // cuadro a cuadro (posición, giro, tumbe) y camina con su propia animación.
   const TINTES = { hereford: C("#ffffff"), angus: C("#2b2624"), braford: C("#e8cdb8") };
-  function vestirCon(malla, nombre, tinte) {
+  function vestirCon(malla, nombre, tinte, opciones = {}) {
     const M = E.modelos;
-    const piel = M && M.hay(nombre) ? M.clonar(nombre, { tinte, sinClips: true }) : null;
+    const piel = M && M.hay(nombre) ? M.clonar(nombre, { tinte, sinClips: true, pelaje: opciones.pelaje }) : null;
     if (!piel) return null;
+    // El ternero: el mismo modelo, más chico (dentro del pivote, así la marcha
+    // mide las patas ya achicadas).
+    if (opciones.escala) { piel.piv.scale.multiplyScalar(opciones.escala); piel.escalaExtra = opciones.escala; piel.raiz.updateMatrixWorld(true); }
     malla.material.visible = false;
     malla.castShadow = false;
     E.motor.escena.add(piel.raiz);
@@ -416,13 +439,15 @@
     crearRastros();
     const az = E.azar(1985);
     const L = E.lugares;
-    for (let i = 0; i < 18; i++) {
-      const tipo = i % 5 === 1 ? "angus" : i % 7 === 3 ? "braford" : "hereford";
+    const TIPOS = ["hereford", "angus", "braford", "colorada", "brahman", "criolla"];
+    const nueva = (i, tipo, extra = {}) => {
       const { malla, huesos, astada } = vacaMalla(tipo, 500 + i);
+      if (extra.escala) malla.scale.setScalar(extra.escala);
       E.motor.escena.add(malla);
-      const piel = vestirCon(malla, "vaca", TINTES[tipo].clone().multiplyScalar(0.88 + az() * 0.24));
+      const modelo = extra.toro && E.modelos.hay("toro") ? "toro" : "vaca";
+      const piel = vestirCon(malla, modelo, null, { pelaje: modelo === "vaca" ? pelajeDe(tipo, az) : null, escala: extra.escala });
       const ang = az() * Math.PI * 2, r = 30 + az() * 60;
-      const v = {
+      return {
         tipo, malla, huesos, astada, num: 200 + i * 7 + Math.floor(az() * 5),
         x: 110 + Math.cos(ang) * r, z: 60 + Math.sin(ang) * r, yaw: az() * Math.PI * 2,
         v: 0, vReal: 0, fase: az(), altoCuerpo: 0.93,
@@ -430,9 +455,24 @@
         arisca: 0.3 + az() * 0.3, brava: NOMBRES_BRAVA.has(i) ? 0.8 : az() * 0.3,
         fatiga: 1, recorrido: 0, ultimaBosta: az() * 4, mugido: 5 + az() * 30,
         salud: { bichera: null, vacunada: false, desparasitada: false, caravana: false, marcada: false, muerta: false, curada: 0 },
-        caravanaMalla: null, marcaMalla: null, piel,
+        caravanaMalla: null, marcaMalla: null, piel, fuerza: 1, ...extra,
       };
-      A.vacas.push(v);
+    };
+    // Las 18 vacas de siempre (el orden no cambia: el juego cuenta con la 6
+    // agusanada el primer día), ahora de seis razas.
+    for (let i = 0; i < 18; i++) A.vacas.push(nueva(i, TIPOS[(i * 5 + (i >> 2)) % 6]));
+    // Dos toros Angus: más grandes, más bravos, tiran el doble del lazo.
+    for (let k = 0; k < 2; k++) {
+      const t = nueva(30 + k, "angus", { toro: true, fuerza: 2, brava: 0.55 + k * 0.2, arisca: 0.2 });
+      t.altoCuerpo = 1.05;
+      A.vacas.push(t);
+    }
+    // Seis terneros al pie de la madre, de su misma raza.
+    for (let k = 0; k < 6; k++) {
+      const madre = A.vacas[[0, 2, 5, 9, 13, 16][k]];
+      const t = nueva(40 + k, madre.tipo, { ternero: true, madre, escala: 0.52, fuerza: 0.35, brava: 0, arisca: 0.6 });
+      t.x = madre.x + 2; t.z = madre.z + 1; t.altoCuerpo = 0.5;
+      A.vacas.push(t);
     }
     // La querencia de la tropa: el potrero donde pasta de día.
     A.querencia = { x: 115, z: 55 };
@@ -562,8 +602,16 @@
     // Zona de fuga: más chica si uno va a caballo (la hacienda está acostumbrada
     // al jinete), más grande si la vaca está arisca.
     const zona = (jug.montado ? 13 : 8.5) * (1 + v.arisca * 0.9);
-    const intrusion = E.clamp((zona - d) / zona, 0, 1);
-    return { d, dx: dx / (d || 1), dz: dz / (d || 1), intrusion, zona };
+    const r = { d, dx: dx / (d || 1), dz: dz / (d || 1), intrusion: E.clamp((zona - d) / zona, 0, 1), zona };
+    // Los perros también arrean: si un perro aprieta más que uno, la vaca se
+    // aparta del perro (d sigue siendo la distancia a uno: la embestida y la
+    // patada son contra el Guacho). Un toro no le afloja a un perro.
+    if (E.perros && !v.toro) for (const p of E.perros.lista) {
+      const px = v.x - p.x, pz = v.z - p.z, dp = Math.hypot(px, pz), zp = 7 * (1 + v.arisca * 0.6);
+      const ip = E.clamp((zp - dp) / zp, 0, 1) * (p.v > 1 ? 1 : 0.6);
+      if (ip > r.intrusion) { r.intrusion = ip; r.dx = px / (dp || 1); r.dz = pz / (dp || 1); }
+    }
+    return r;
   }
 
   function evitarObstaculos(v, dx, dz) {
@@ -656,6 +704,14 @@
         const B = E.estancia.bebedero, dx = B.x + 1.5 - v.x, dz = B.z - v.z + ((v.num % 5) - 2) * 0.8, d = Math.hypot(dx, dz);
         if (d > 1.6) { objetivo = [dx / d, dz / d]; vel = 1.0; } else { cabezaBaja = 0.8; vel = 0; }
         if (v.t <= 0) { v.estado = "pasta"; v.t = 5; }
+      } else if (v.ternero && v.madre && !v.madre.salud.muerta) {
+        // Al pie de la madre: la sigue, y si se aleja, corre a alcanzarla.
+        v.estado = "pasta"; v.echada = v.madre.echada;
+        const m = v.madre, lado = v.num % 2 ? 1 : -1;
+        const ox = m.x + Math.cos(m.yaw) * 1.6 * lado - Math.sin(m.yaw) * 0.6, oz = m.z - Math.sin(m.yaw) * 1.6 * lado - Math.cos(m.yaw) * 0.6;
+        const dx = ox - v.x, dz = oz - v.z, d = Math.hypot(dx, dz);
+        if (d > 0.8) { objetivo = [dx / d, dz / d]; vel = d > 6 ? 3.5 : d > 2.5 ? 1.2 : 0.4; v.echada = false; }
+        cabezaBaja = d < 1.5 ? m.cabeza : 0;
       } else {
         v.estado = "pasta"; v.echada = false;
         if (v.t <= 0) {

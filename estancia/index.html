@@ -281,6 +281,36 @@
   body.en-manga .subtitulo { bottom: calc(210px + env(safe-area-inset-bottom, 0px)); }
   body.en-manga .aviso { bottom: calc(250px + env(safe-area-inset-bottom, 0px)); }
 
+  /* El chat de comandos, arriba a la izquierda, debajo del reloj (como el de
+     Roblox): las líneas se apagan solas si está cerrado. */
+  #chat { position: fixed; left: 16px; top: calc(70px + env(safe-area-inset-top, 0px)); width: min(440px, 72vw); z-index: 6; display: grid; gap: 6px; }
+  #chatBoton { position: fixed; left: 132px; top: calc(16px + env(safe-area-inset-top, 0px)); width: 40px; height: 40px; border: 0; border-radius: 8px; background: rgba(14,11,9,0.55); cursor: pointer; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.25); transition: background 0.15s, transform 0.15s; }
+  #chatBoton:hover { background: rgba(184,80,42,0.8); transform: translateY(-1px); }
+  #chatBoton svg, #chatForm svg { width: 22px; height: 22px; fill: none; stroke: var(--hueso); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  #chatLog { max-height: 34vh; overflow-y: auto; display: grid; gap: 3px; pointer-events: none; scrollbar-width: none; }
+  .chat-linea { padding: 4px 10px; border-radius: 6px; background: rgba(14,11,9,0.5); font-size: 16px; line-height: 1.3; text-shadow: 0 1px 2px #000; animation: subir 0.25s ease both; transition: opacity 0.8s; overflow-wrap: anywhere; }
+  .chat-linea b { font-weight: 700; margin-right: 2px; }
+  .chat-linea.sistema b { color: #ff5a4a; }
+  .chat-linea.yo b { color: #8fc8ff; }
+  .chat-linea.dice b { color: var(--urgente); }
+  .chat-linea.vieja { opacity: 0; }
+  body.chat-abierto .chat-linea.vieja { opacity: 0.85; }
+  body.chat-abierto #chatLog { pointer-events: auto; }
+  #chatCaja { display: grid; gap: 6px; animation: subir 0.2s ease both; }
+  #chatForm { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 14px; border-radius: 10px; background: rgba(14,11,9,0.72); box-shadow: inset 0 0 0 1px rgba(239,230,212,0.25); }
+  #chatEntrada { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--hueso); font: 500 19px/1.2 var(--cuerpo); padding: 8px 0; }
+  #chatEntrada::placeholder { color: rgba(239,230,212,0.5); }
+  #chatForm button { flex: none; width: 40px; height: 40px; border: 0; border-radius: 8px; background: var(--tierra); cursor: pointer; display: grid; place-items: center; }
+  #chatSugerencias { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-width: 360px; }
+  #chatSugerencias li { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; align-items: baseline; padding: 8px 12px; border-radius: 8px; background: rgba(14,11,9,0.72); cursor: pointer; animation: subir 0.15s ease both; }
+  #chatSugerencias li.elegida { background: rgba(184,80,42,0.85); }
+  #chatSugerencias li b { font-size: 18px; }
+  #chatSugerencias li i { font-style: normal; font-size: 14px; color: var(--hueso-suave); }
+  #chatSugerencias li small { grid-column: 1 / -1; font-size: 14px; color: var(--hueso-suave); }
+  #chatSugerencias li span { grid-column: 1 / -1; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(239,230,212,0.6); }
+  body.chat-abierto .tactil-botones, body.chat-abierto #palanca { display: none !important; }
+  body.cine #chat { opacity: 0; pointer-events: none; }
+
   /* Táctil: aparece solo si se tocó la pantalla. */
   .tactil-botones { display: none; }
   body.tactil .tactil-botones { display: grid; position: fixed; right: 14px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); grid-template-columns: repeat(3, 62px); gap: 8px; }
@@ -328,6 +358,15 @@
   <div class="mensaje" id="mensaje"></div>
 </div>
 
+<div id="chat" hidden>
+  <button id="chatBoton" aria-label="Chat de comandos" title="Chat (Enter o /)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v11H9l-5 4z"/><path d="M8 8h8M8 11h5"/></svg></button>
+  <div id="chatLog" aria-live="polite"></div>
+  <div id="chatCaja" hidden>
+    <form id="chatForm" autocomplete="off"><input id="chatEntrada" maxlength="140" placeholder="Escribí / para ver los comandos" enterkeyhint="send"><button aria-label="Enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l18-8-7 18-3-7z"/></svg></button></form>
+    <ul id="chatSugerencias"></ul>
+  </div>
+</div>
+
 <div class="tactil-botones" aria-label="Controles">
   <button data-boton="lazo" class="grande">Lazo</button>
   <button data-boton="cobrar">Cobrar</button>
@@ -335,6 +374,7 @@
   <button data-boton="pialar">Pialar</button>
   <button data-boton="camara">Cámara</button>
   <button data-boton="silbar">Silbar</button>
+  <button data-boton="perros">Perros</button>
 </div>
 <div id="palanca" hidden><div></div></div>
 
@@ -377,6 +417,7 @@
     <p>La leña de quebracho aguanta toda la noche. El costillar está desde la tarde.</p>
     <div class="botones">
       <button class="boton" id="fogonCalentar">Calentar el hierro</button>
+      <button class="boton" id="fogonGuiso">Preparar un guiso</button>
       <button class="boton" id="fogonComer">Comer asado (de noche)</button>
       <button class="boton secundario" id="fogonCerrar">Nada</button>
     </div>
@@ -434,6 +475,9 @@
       <span><kbd>clic der.</kbd>cobrar lazo · <kbd>P</kbd>pialar</span>
       <span><kbd>C</kbd>caballo al paso · <kbd>H</kbd>silbar al caballo</span>
       <span><kbd>V</kbd>cámara · <kbd>F</kbd>armar un cigarro</span>
+      <span><kbd>G</kbd>perros: vengan · <kbd>X</kbd>quietos</span>
+      <span><kbd>J</kbd>perros: junten la tropa · <kbd>B</kbd>busquen la vaca que mirás</span>
+      <span><kbd>Enter</kbd> o <kbd>/</kbd> el chat de comandos</span>
     </div>
     <h3>Ojo de águila</h3>
     <p>Revoleá con una vaca adelante, entre 4 y 18 metros: el mundo se pone gris, el tiempo se frena y la mira se cierra sobre la cabeza. Cuando se pone roja, soltá: la armada va derecho al cogote y la cámara gira para verla caer.</p>
@@ -486,6 +530,9 @@
 <script src="js/jugador.js"></script>
 <script src="js/lazo.js"></script>
 <script src="js/ojo.js"></script>
+<script src="js/perros.js"></script>
+<script src="js/puesto.js"></script>
+<script src="js/chat.js"></script>
 <script src="js/calidad.js"></script>
 <script src="js/trabajo.js"></script>
 <script src="js/sonido.js"></script>

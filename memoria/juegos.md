@@ -85,10 +85,42 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Las manos de primera persona cuelgan de la cámara: esconderlas en las vistas.
 - Cambiar `shadow.mapSize` en caliente: `map.dispose()` y `map = null`.
 
+## Más animales sobre los mismos modelos
+
+- **Razas sin modelos nuevos**: la textura de la Hereford separa cuero (lum.
+  lineal ~0,05) y blanco (~0,46); en `onBeforeCompile` se reparte cada píxel
+  entre "cuerpo" y "blanco" y se pinta con los colores de la raza, guardando la
+  sombra relativa. Multiplicar el color no alcanza (Angus con cara blanca).
+  Overa: ruido de senos sobre la posición del vértice (`position`, antes del
+  esqueleto: las manchas no nadan).
+- **Ternero = vaca achicada adentro del pivote** (no en la raíz): así la marcha
+  mide las patas ya chicas. Lo que se cachea por especie (la panza) va por
+  especie y tamaño. El casco que se levanta (`alza`) también a escala.
+- **Perro**: patas cortas → multiplicar la cadencia (×2,1); si no, el tranco
+  queda más largo que la pata. A una pata le faltaba el último hueso (Rezona
+  pesó el pie en el garrón): la punta se saca espejando la otra (x → −x).
+- **Arrear con perros**: que la vaca se aparte del perro igual que de uno (una
+  presión más en `sentir`). Abrirse en círculo detrás de la tropa no apretaba a
+  nadie; cada perro empujando a una de las más lejanas, sí (62 → 20 m en 3 min).
+- **Tamaño**: la geometría de Rezona viene sin índices; gzip a los GLB (y
+  `DecompressionStream` al cargar) bajó 1,5 MB y el HTML volvió abajo de 16 MB.
+- Un modelo de Rezona "desde texto" puede venir roto (la mesa salió una
+  cuña). Mirarlo suelto antes de meterlo.
+
+## Audio que "se escucha mal"
+
+- Grabar la salida real (ScriptProcessor sobre la ganancia final) y medir RMS
+  por escena: el mundo iba 22 dB abajo de la voz y el silbido 10 dB arriba.
+- Recomprimir TTS de 24 kHz a 44 kHz/56 kbps lo aguó: dejar 24 kHz, 64 kbps.
+- Reverb con ruido blanco parejo = siseo; oscurecer la cola. Limitador al final.
+
 ## Menús
 
 - Paneles con `hidden`: una animación CSS arranca sola cada vez que el panel
   pasa de `display:none` a visible; no hace falta JS para las entradas.
+- Un campo dentro de un padre oculto no toma el foco: mostrar el padre antes
+  de `focus()` (el chat abría "vacío" con el HUD congelado).
+- Escribiendo en un input, el teclado no es del juego (si no, "hola" camina).
 - En Playwright, si el juego tomó el puntero (`requestPointerLock`), los clics
   no llegan a los botones: soltarlo antes (`G.soltarPuntero()`).
 

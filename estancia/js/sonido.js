@@ -16,21 +16,41 @@
     // bajo el agua; normalmente está abierto del todo.
     filtroLento = ctx.createBiquadFilter(); filtroLento.type = "lowpass"; filtroLento.frequency.value = 20000; filtroLento.Q.value = 0.5;
     // La salida: el volumen general de Opciones. Todo termina acá.
-    salida = ctx.createGain(); salida.gain.value = E.opciones ? E.opciones.volumen : 1; salida.connect(ctx.destination);
+    // Y al final un limitador: en el celular, la voz encima de un mugido y el
+    // lazo pasaba de 0 dB y rompía (el parlante chico recorta feo).
+    const limitador = ctx.createDynamicsCompressor();
+    limitador.threshold.value = -9; limitador.knee.value = 6; limitador.ratio.value = 12;
+    limitador.attack.value = 0.003; limitador.release.value = 0.2;
+    salida = ctx.createGain(); salida.gain.value = E.opciones ? E.opciones.volumen : 1;
+    salida.connect(limitador).connect(ctx.destination);
     filtroLento.connect(salida);
-    master = ctx.createGain(); master.gain.value = 0.8; master.connect(filtroLento);
-    // Reverberación: ruido que se apaga en ~2,6 s, armada al arrancar.
+    S._salida = salida;                                   // para las pruebas: grabar lo que sale
+    // El mundo iba 22 dB por debajo de la voz (medido: -42 contra -20 dB RMS):
+    // no se oía el campo y la voz reventaba. Ahora el mundo sube y la voz baja.
+    master = ctx.createGain(); master.gain.value = 1.6; master.connect(filtroLento);
+    // Reverberación de campo abierto: ruido que se apaga en ~1,8 s y se va
+    // oscureciendo (un pasabajos que se cierra con el tiempo). Con ruido blanco
+    // parejo la cola era un siseo de "shhh" detrás de cada sonido.
     rever = ctx.createConvolver();
-    const largo = Math.floor(ctx.sampleRate * 2.6), ir = ctx.createBuffer(2, largo, ctx.sampleRate);
-    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < largo; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / largo, 3); }
+    const largo = Math.floor(ctx.sampleRate * 1.8), ir = ctx.createBuffer(2, largo, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c);
+      let y = 0;
+      for (let i = 0; i < largo; i++) {
+        const u = i / largo, k = 0.5 * (1 - u) ** 2 + 0.02;          // cuánto deja pasar: abre al principio, oscuro al final
+        y += k * ((Math.random() * 2 - 1) - y);
+        d[i] = y * (1 - u) ** 2.5 * (i < ctx.sampleRate * 0.012 ? i / (ctx.sampleRate * 0.012) : 1);
+      }
+    }
     rever.buffer = ir;
-    const gRev = ctx.createGain(); gRev.gain.value = 0.55;
+    const gRev = ctx.createGain(); gRev.gain.value = 0.3;
     rever.connect(gRev).connect(master);
     ruido = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = ruido.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     S.listo = true;
     armarAmbiente();
+    decodificarTodas();
   };
   const fuenteRuido = () => { const s = ctx.createBufferSource(); s.buffer = ruido; s.loop = true; s.start(0, Math.random() * 2); return s; };
   // Una fuente en el espacio: paneo por dirección y volumen por distancia.
@@ -69,16 +89,24 @@
     // se entiende (una diente de sierra con formantes que cambian).
     const r = fuenteRuido(), fr = ctx.createBiquadFilter(); fr.type = "bandpass"; fr.frequency.value = 1800; fr.Q.value = 0.8;
     const rs = ctx.createGain(); rs.gain.value = 0.05;
-    radioVoz = ctx.createOscillator(); radioVoz.type = "sawtooth"; radioVoz.frequency.value = 130;
+    // El locutor: antes una diente de sierra pura (zumbaba como un mosquito
+    // eléctrico). Ahora una senoidal grave con un poco de ruido, que por los
+    // formantes suena a voz lejana que no se entiende.
+    radioVoz = ctx.createOscillator(); radioVoz.type = "triangle"; radioVoz.frequency.value = 130;
     const f1 = ctx.createBiquadFilter(); f1.type = "bandpass"; f1.frequency.value = 700; f1.Q.value = 4;
     const f2 = ctx.createBiquadFilter(); f2.type = "bandpass"; f2.frequency.value = 1300; f2.Q.value = 5;
     radioVoz.f1 = f1; radioVoz.f2 = f2;
     const rv = ctx.createGain(); rv.gain.value = 0.25; radioVoz.g = rv;
+    const aire = fuenteRuido(), fa = ctx.createBiquadFilter(); fa.type = "bandpass"; fa.frequency.value = 900; fa.Q.value = 1.5;
+    const ga = ctx.createGain(); ga.gain.value = 0.3; aire.connect(fa).connect(ga).connect(f1);
+    // La radio chica: sin graves ni agudos, como un parlante de lata.
+    const lata = ctx.createBiquadFilter(); lata.type = "highpass"; lata.frequency.value = 350;
+    const lata2 = ctx.createBiquadFilter(); lata2.type = "lowpass"; lata2.frequency.value = 3200;
     radioG = ctx.createGain(); radioG.gain.value = 0;
     const panR = espacio(E.estancia.radio.x, E.estancia.radio.y, E.estancia.radio.z);
     r.connect(fr).connect(rs).connect(radioG);
     radioVoz.connect(f1).connect(rv); radioVoz.connect(f2).connect(rv); rv.connect(radioG);
-    radioG.connect(panR).connect(master);
+    radioG.connect(lata).connect(lata2).connect(panR).connect(master);
     radioVoz.start();
     // Fuego: chasquidos del fogón.
     fuegoG = ctx.createGain(); fuegoG.gain.value = 1;
@@ -96,21 +124,64 @@
     g.gain.exponentialRampToValueAtTime(alto, t0 + subida);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + subida + bajada);
   }
-  // Un mugido: diente de sierra que sube y baja, con formantes de "muuu".
+  // Un mugido: dos dientes de sierra apenas desafinadas (la garganta no es
+  // una sola cuerda), un pasabajos que se abre de "mmm" a "uuu" y se cierra, y
+  // un poco de aire. Con una sola sierra y dos filtros sonaba a bocina.
   S.mugido = (v, fuerza = 1) => {
     if (!S.listo) return;
     const t0 = ctx.currentTime, dur = (v.salud && v.salud.bichera ? 2.2 : 1.5) + Math.random() * 0.5;
-    const o = ctx.createOscillator(); o.type = "sawtooth";
-    const f0 = (v.tipo === "angus" ? 95 : 110) * (v.salud && v.salud.bichera ? 0.85 : 1) * (0.92 + Math.random() * 0.16);
-    o.frequency.setValueAtTime(f0 * 0.85, t0); o.frequency.linearRampToValueAtTime(f0 * 1.25, t0 + dur * 0.35); o.frequency.linearRampToValueAtTime(f0 * 0.8, t0 + dur);
-    const a = ctx.createBiquadFilter(); a.type = "bandpass"; a.frequency.value = 520; a.Q.value = 3;
-    const b = ctx.createBiquadFilter(); b.type = "bandpass"; b.frequency.value = 950; b.Q.value = 4;
-    const g = ctx.createGain();
-    envolvente(g, t0, 0.18, 0.5 * fuerza, dur);
+    const grave = v.toro ? 0.72 : v.ternero ? 1.9 : 1;
+    const f0 = (v.tipo === "angus" ? 95 : 110) * grave * (v.salud && v.salud.bichera ? 0.85 : 1) * (0.92 + Math.random() * 0.16);
+    const g = ctx.createGain(), boca = ctx.createBiquadFilter();
+    boca.type = "lowpass"; boca.Q.value = 4;
+    boca.frequency.setValueAtTime(250, t0); boca.frequency.linearRampToValueAtTime(900 * Math.sqrt(grave), t0 + dur * 0.3); boca.frequency.linearRampToValueAtTime(320, t0 + dur);
+    const formante = ctx.createBiquadFilter(); formante.type = "peaking"; formante.frequency.value = 520 * Math.sqrt(grave); formante.Q.value = 2; formante.gain.value = 8;
+    for (const des of [0.996, 1.004]) {
+      const o = ctx.createOscillator(); o.type = "sawtooth";
+      o.frequency.setValueAtTime(f0 * 0.85 * des, t0); o.frequency.linearRampToValueAtTime(f0 * 1.2 * des, t0 + dur * 0.35); o.frequency.linearRampToValueAtTime(f0 * 0.78 * des, t0 + dur);
+      const vib = ctx.createOscillator(), vg = ctx.createGain(); vib.frequency.value = 4.5; vg.gain.value = f0 * 0.015; vib.connect(vg).connect(o.frequency);
+      o.connect(boca); o.start(t0); o.stop(t0 + dur + 0.3); vib.start(t0); vib.stop(t0 + dur + 0.3);
+    }
+    const aire = fuenteRuido(), fa = ctx.createBiquadFilter(), ga = ctx.createGain();
+    fa.type = "bandpass"; fa.frequency.value = 700; fa.Q.value = 1; ga.gain.value = 0.12;
+    aire.connect(fa).connect(ga).connect(boca); aire.stop(t0 + dur + 0.3);
+    boca.connect(formante).connect(g);
+    envolvente(g, t0, 0.2, 0.13 * fuerza, dur);
     const p = espacio(v.x, 1.2, v.z);
-    o.connect(a).connect(g); o.connect(b).connect(g);
-    g.connect(p); p.connect(master); p.connect(rever);
-    o.start(t0); o.stop(t0 + dur + 0.3);
+    g.connect(p); p.connect(master);
+    const r = ctx.createGain(); r.gain.value = 0.5; p.connect(r).connect(rever);
+  };
+  // El ladrido: un golpe de voz que baja ("guau"), con la boca que se abre y
+  // se cierra (un pasabajos que sube y baja) y aire. tono: 1 Tigre, más agudo
+  // los chicos. veces: 1 o 2 ladridos seguidos.
+  S.ladrido = (x, z, tono = 1, veces = 1) => {
+    if (!S.listo) return;
+    const p = espacio(x, 0.6, z);
+    p.connect(master);
+    const r = ctx.createGain(); r.gain.value = 0.6; p.connect(r).connect(rever);
+    for (let k = 0; k < veces; k++) {
+      const t0 = ctx.currentTime + k * (0.19 + Math.random() * 0.06), dur = 0.13 + Math.random() * 0.04;
+      const o = ctx.createOscillator(); o.type = "sawtooth";
+      const f0 = (330 + Math.random() * 60) * tono;
+      o.frequency.setValueAtTime(f0 * 1.35, t0); o.frequency.exponentialRampToValueAtTime(f0, t0 + 0.03); o.frequency.exponentialRampToValueAtTime(f0 * 0.62, t0 + dur);
+      const boca = ctx.createBiquadFilter(); boca.type = "lowpass"; boca.Q.value = 5;
+      boca.frequency.setValueAtTime(500, t0); boca.frequency.linearRampToValueAtTime(1700 * tono, t0 + 0.035); boca.frequency.linearRampToValueAtTime(600, t0 + dur);
+      const aire = fuenteRuido(), fa = ctx.createBiquadFilter(), ga = ctx.createGain();
+      fa.type = "bandpass"; fa.frequency.value = 1400 * tono; fa.Q.value = 1.2; ga.gain.value = 0.35;
+      const g = ctx.createGain(); envolvente(g, t0, 0.008, 0.2, dur);
+      o.connect(boca); aire.connect(fa).connect(ga).connect(boca); boca.connect(g).connect(p);
+      o.start(t0); o.stop(t0 + dur + 0.05); aire.stop(t0 + dur + 0.05);
+    }
+  };
+  // El agua del balde: ruido que cae, grave, en tres baldazos.
+  S.agua = () => {
+    if (!S.listo) return;
+    for (let k = 0; k < 3; k++) {
+      const t0 = ctx.currentTime + 0.2 + k * 0.9, s = fuenteRuido(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+      f.type = "lowpass"; f.frequency.setValueAtTime(2500, t0); f.frequency.exponentialRampToValueAtTime(500, t0 + 0.6);
+      envolvente(g, t0, 0.02, 0.25, 0.6);
+      s.connect(f).connect(g).connect(master); s.stop(t0 + 0.8);
+    }
   };
   // Tero: "teru-teru", notas chillonas que caen, de un lado cualquiera.
   function tero(jx, jz) {
@@ -143,13 +214,13 @@
   S.chasquido = () => {
     if (!S.listo) return;
     const t0 = ctx.currentTime, s = fuenteRuido(), f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 1500;
-    const g = ctx.createGain(); envolvente(g, t0, 0.003, 0.9, 0.15);
+    const g = ctx.createGain(); envolvente(g, t0, 0.003, 0.5, 0.15);
     s.connect(f).connect(g).connect(master); s.stop(t0 + 0.3);
   };
   S.golpeSeco = () => {
     if (!S.listo) return;
     const t0 = ctx.currentTime, o = ctx.createOscillator(); o.frequency.setValueAtTime(90, t0); o.frequency.exponentialRampToValueAtTime(40, t0 + 0.25);
-    const g = ctx.createGain(); envolvente(g, t0, 0.005, 0.8, 0.35);
+    const g = ctx.createGain(); envolvente(g, t0, 0.005, 0.5, 0.35);
     o.connect(g).connect(master); o.start(t0); o.stop(t0 + 0.4);
   };
   S.pinza = () => {
@@ -167,8 +238,8 @@
   };
   S.paso = (fuerte) => {
     if (!S.listo) return;
-    const t0 = ctx.currentTime, s = fuenteRuido(), f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = fuerte ? 300 : 900; f.Q.value = 1.2;
-    const g = ctx.createGain(); envolvente(g, t0, 0.004, fuerte ? 0.3 : 0.12, fuerte ? 0.12 : 0.08);
+    const t0 = ctx.currentTime, s = fuenteRuido(), f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = (fuerte ? 260 : 650) * (0.85 + Math.random() * 0.3); f.Q.value = 1.4;
+    const g = ctx.createGain(); envolvente(g, t0, 0.004, (fuerte ? 0.22 : 0.08) * (0.8 + Math.random() * 0.4), fuerte ? 0.12 : 0.07);
     s.connect(f).connect(g).connect(master); s.stop(t0 + 0.2);
   };
 
@@ -188,23 +259,38 @@
   // datos.js como voz-<clave>-<n>.mp3. Se decodifican la primera vez que se
   // usan. Si no están, queda el subtítulo solo.
   const voces = {};
-  let hablando = null;
-  S.voz = (nombre) => {
-    if (!S.listo) return;
+  let hablando = null, hablandoG = null;
+  // Se decodifican todas al arrancar, de a una: la primera vez que se decía
+  // una frase salía tarde (medio segundo de decodificar) y descolgada.
+  function decodificar(nombre) {
     const dato = window.ARCHIVOS && ARCHIVOS["voz-" + nombre + ".mp3"];
-    if (!dato) return;
-    const sonar = (buf) => {
-      if (hablando) try { hablando.stop(); } catch (e) { /* ya terminó */ }
-      const src = ctx.createBufferSource(), g = ctx.createGain();
-      src.buffer = buf; g.gain.value = 0.75 * (E.opciones ? E.opciones.voz : 1);
-      src.connect(g); g.connect(salida);        // la voz no pasa por el filtro de cámara lenta
-      const r = ctx.createGain(); r.gain.value = 0.12; g.connect(r).connect(rever);   // un poco de campo abierto
-      src.start(); hablando = src;
-    };
-    if (voces[nombre]) return sonar(voces[nombre]);
+    if (!dato) return Promise.resolve(null);
+    if (voces[nombre]) return Promise.resolve(voces[nombre]);
     const b64 = atob(dato.slice(dato.indexOf(",") + 1)), u = new Uint8Array(b64.length);
     for (let i = 0; i < b64.length; i++) u[i] = b64.charCodeAt(i);
-    ctx.decodeAudioData(u.buffer).then((buf) => { voces[nombre] = buf; sonar(buf); }).catch(() => {});
+    return ctx.decodeAudioData(u.buffer).then((buf) => (voces[nombre] = buf)).catch(() => null);
+  }
+  async function decodificarTodas() {
+    for (const k of Object.keys(window.ARCHIVOS || {})) if (k.startsWith("voz-")) await decodificar(k.slice(4, -4));
+  }
+  S.voz = (nombre) => {
+    if (!S.listo) return;
+    const sonar = (buf) => {
+      if (!buf) return;
+      const t = ctx.currentTime;
+      // La frase anterior se apaga en 60 ms: cortada en seco hacía un clic.
+      if (hablando) { try { hablandoG.gain.setTargetAtTime(0, t, 0.02); hablando.stop(t + 0.08); } catch (e) { /* ya terminó */ } }
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = buf; g.gain.value = 0.36 * (E.opciones ? E.opciones.voz : 1);
+      // Un poco de cuerpo y sin el "ssss" del TTS: la voz generada trae los
+      // agudos de 6 a 9 kHz muy arriba, y en el parlante del celular chilla.
+      const deEs = ctx.createBiquadFilter(); deEs.type = "peaking"; deEs.frequency.value = 7000; deEs.Q.value = 1.2; deEs.gain.value = -5;
+      const cuerpo = ctx.createBiquadFilter(); cuerpo.type = "lowshelf"; cuerpo.frequency.value = 220; cuerpo.gain.value = 2;
+      src.connect(deEs).connect(cuerpo).connect(g); g.connect(salida);        // la voz no pasa por el filtro de cámara lenta
+      const r = ctx.createGain(); r.gain.value = 0.06; g.connect(r).connect(rever);   // apenas de campo abierto
+      src.start(); hablando = src; hablandoG = g;
+    };
+    if (voces[nombre]) sonar(voces[nombre]); else decodificar(nombre).then(sonar);
   };
   // El ojo de águila: el mundo apagado, el corazón que late y el clic de la
   // mira que se fija.
@@ -242,8 +328,10 @@
       vib.frequency.value = 5.5 + Math.random(); vg.gain.value = 28;
       vib.connect(vg).connect(o.frequency);
       g.gain.setValueAtTime(0, ini);
-      g.gain.linearRampToValueAtTime(0.22, ini + 0.03);
-      g.gain.setValueAtTime(0.2, ini + dura - 0.07);
+      // Medido: a 0,22 el silbido quedaba 10 dB arriba de la voz, y a 2,5 kHz
+      // es lo que más lastima el oído. Un silbido de campo se oye lejos, no fuerte.
+      g.gain.linearRampToValueAtTime(0.075, ini + 0.03);
+      g.gain.setValueAtTime(0.068, ini + dura - 0.07);
       g.gain.linearRampToValueAtTime(0, ini + dura);
       o.connect(g); g.connect(master);
       const r = ctx.createGain(); r.gain.value = 0.35; g.connect(r).connect(rever);   // el campo abierto
@@ -251,7 +339,7 @@
       const n = fuenteRuido(), bp = ctx.createBiquadFilter(), ng = ctx.createGain();
       bp.type = "bandpass"; bp.Q.value = 12; bp.frequency.setValueAtTime(curva[0], ini);
       curva.slice(1).forEach((f, i) => bp.frequency.linearRampToValueAtTime(f, ini + dura * (i + 1) / (curva.length - 1)));
-      ng.gain.setValueAtTime(0, ini); ng.gain.linearRampToValueAtTime(0.05, ini + 0.03); ng.gain.linearRampToValueAtTime(0, ini + dura);
+      ng.gain.setValueAtTime(0, ini); ng.gain.linearRampToValueAtTime(0.02, ini + 0.03); ng.gain.linearRampToValueAtTime(0, ini + dura);
       n.connect(bp).connect(ng).connect(master);
       o.start(ini); vib.start(ini); o.stop(ini + dura + 0.05); vib.stop(ini + dura + 0.05); n.stop(ini + dura + 0.05);
     };
@@ -280,7 +368,7 @@
     for (const v of E.animales.vacas) if (v.salud.bichera && !v.salud.muerta) cerca = Math.min(cerca, Math.hypot(v.x - jug.x, v.z - jug.z));
     if (!E.trabajo.cura.activa) moscasG.gain.setTargetAtTime(Math.max(0, 1 - cerca / 7) * 0.05, t, 0.3);
     // La radio: voz que cambia de vocal cada tanto, como un locutor lejano.
-    radioG.gain.setTargetAtTime(S.radio ? 0.5 : 0, t, 0.2);
+    radioG.gain.setTargetAtTime(S.radio ? 0.16 : 0, t, 0.2);
     proxVoz -= dt;
     if (S.radio && proxVoz <= 0) {
       proxVoz = 0.09 + Math.random() * 0.14;

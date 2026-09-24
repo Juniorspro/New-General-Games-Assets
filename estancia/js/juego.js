@@ -37,6 +37,18 @@
     manga: ["Vamos, adentro.", "A la manga, vamos."],
     silbar: ["¡Vení, zaino!"],
     apuntar: ["Ahí la tengo…", "Quieta… quieta…", "Ya sos mía."],
+    perros: ["¡Vengan, perros!", "¡Vamos, Tigre! ¡Negra, vení!"],
+    quietos: ["¡Quietos ahí!", "¡Echate, Chispa!"],
+    junten: ["¡Junten, junten la hacienda!", "¡Vaya, vaya! ¡Juntela!"],
+    busquen: ["¡Busque, busque!", "¡Traela, Tigre!"],
+    mate: ["Un matecito y seguimos.", "Qué rico este mate amargo."],
+    comida: ["A ver qué hay pa' comer.", "Un guiso de arroz, como Dios manda."],
+    heladera: ["Agüita fresca, qué lindo."],
+    banar: ["Vení, zaino, que te baño.", "Ahí está, limpito."],
+    forraje: ["Tomá, comé tranquilo."],
+    saludar: ["¡Buenas! ¿Cómo andan?", "¡Buen día, paisano!"],
+    puesto: ["Por fin en el puesto."],
+    caballoSucio: ["Este zaino está hecho un barro."],
   };
 
   let ultimaFrase = 0;
@@ -87,14 +99,17 @@
     E.flora.construir();
     cargando("Rancho, corral y manga…"); await pausa();
     E.estancia.construir();
+    E.puesto.construir();
     cargando("La hacienda…"); await pausa();
     E.animales.construir();
     E.jugador.iniciar();
+    E.perros.construir();
     E.lazo.construir();
     E.trabajo.construir();
     E.trabajo.conectarCura();
     E.trabajo.conectarManga();
     E.ojo.conectar();
+    E.chat.conectar();
     E.conectarEntrada(lienzo);
     conectarInterfaz();
     // Compilar todos los shaders en la carga: si no, lo primero que entra en
@@ -195,9 +210,10 @@
     $("finOtra").onclick = () => location.reload();
     $("fogonCalentar").onclick = () => { $("fogon").hidden = true; retomar(); calentarHierro(); };
     $("fogonComer").onclick = () => { $("fogon").hidden = true; retomar(); comerAsado(); };
+    $("fogonGuiso").onclick = () => { $("fogon").hidden = true; retomar(); E.puesto.cocinar(); };
     $("fogonCerrar").onclick = () => { $("fogon").hidden = true; retomar(); };
     document.addEventListener("pointerlockchange", () => {
-      if (!document.pointerLockElement && G.corriendo && !E.entrada.tactil && !G.enMenu() && !E.trabajo.cura.activa && !E.trabajo.manga.activa && $("fogon").hidden) {
+      if (!document.pointerLockElement && G.corriendo && !E.entrada.tactil && !G.enMenu() && !E.trabajo.cura.activa && !E.trabajo.manga.activa && $("fogon").hidden && !E.chat.abierto) {
         $("pausa").hidden = false;
       }
     });
@@ -250,10 +266,6 @@
   }
 
   // ── la vida de estancia ──
-  function tomarMate() {
-    const J = E.jugador;
-    G.fundir(0.35, () => { J.sed = Math.min(100, J.sed + 45); J.cansancio = Math.min(100, J.cansancio + 18); G.mostrar("Mate cocido con galleta. Uno vuelve a ser persona."); });
-  }
   function tomarAgua() {
     const J = E.jugador, c = E.animales.caballo;
     G.fundir(0.08, () => { J.sed = 100; if (J.montado || Math.hypot(c.x - J.x, c.z - J.z) < 6) { c.aliento = 1; G.mostrar("Tomaste agua, y el zaino también."); } else G.mostrar("Agua del bebedero, tibia pero agua."); });
@@ -282,6 +294,7 @@
   }
   function nuevoDia(mal, motivo) {
     const J = E.jugador, c = E.animales.caballo;
+    const ayer = G.dia;
     G.dia++; G.hora = 6; G.horasJuego = Math.ceil(G.horasJuego / 24) * 24 + 6;
     J.cansancio = mal ? 70 : G.comio ? 100 : 82;
     J.sed = Math.max(J.sed, 80);
@@ -294,6 +307,7 @@
     const b = E.trabajo.balance();
     if (G.dia > E.trabajo.DIAS || b.vivas < 12) { fin(b); return; }
     let texto = motivo ? motivo + " " : "";
+    texto += E.puesto.amanecer(ayer);
     if (muertas.length) texto += `Amaneció muerta ${muertas.map((v) => "la " + v.num).join(" y ")}: la bichera la comió. Los chimangos ya están arriba. `;
     if (nuevas.length) texto += nuevas.map((v) => `El puestero vio la ${v.num} agusanada, ${E.trabajo.rumbo(v.destino.x, v.destino.z)}.`).join(" ") + " ";
     const pend = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta && !nuevas.includes(v));
@@ -327,11 +341,14 @@
     for (const p of E.estancia.puntos) {
       if (Math.hypot(p.x - J.x, p.z - J.z) > p.r) continue;
       if (J.montado && p.id !== "tanque") return { texto: "Bajate del caballo", fn: () => J.desmontar() };
-      if (p.id === "mate") return { texto: p.texto, fn: tomarMate };
+      if (p.id === "mate") return { texto: p.texto, fn: E.puesto.cebarMate };
+      if (p.id === "heladera") return { texto: p.texto, fn: E.puesto.aguaFria };
+      if (p.id === "comedero") return { texto: c.comido === G.dia ? "El zaino ya tiene forraje" : p.texto, fn: () => { if (c.comido !== G.dia) E.puesto.forraje(); } };
+      if (p.id === "tanque" && E.puesto.puedeBanar()) return { texto: "Bañar al zaino con el balde", fn: E.puesto.banar };
       if (p.id === "tanque") return { texto: p.texto, fn: tomarAgua };
       if (p.id === "radio") return { texto: E.sonido.radio ? "Apagar la radio" : "Prender la radio", fn: () => { E.sonido.radio = !E.sonido.radio; } };
       if (p.id === "catre") return { texto: G.hora >= 17 || J.cansancio < 30 ? "Dormir en el catre" : "Todavía es temprano para dormir", fn: () => { if (G.hora >= 17 || J.cansancio < 30) dormir(false); } };
-      if (p.id === "fogon") return { texto: "Fogón: calentar el hierro o comer", fn: () => { $("fogonComer").disabled = G.hora < 18; $("fogon").hidden = false; G.soltarPuntero(); } };
+      if (p.id === "fogon") return { texto: "Fogón: calentar el hierro, cocinar o comer", fn: () => { $("fogonComer").disabled = G.hora < 18; $("fogonGuiso").disabled = G.hora < 11 || G.comio; $("fogon").hidden = false; G.soltarPuntero(); } };
       if (p.id === "manga") return { texto: p.texto, fn: () => W.entrarManga() };
       if (p.id === "tranquera") return { texto: p.texto, fn: () => E.estancia.alternarTranquera() };
     }
@@ -361,6 +378,12 @@
     // El silbido y después la voz.
     if (en.pulsado("KeyH") || en.botonPulsado("silbar")) { E.animales.caballo.destino = { x: J.x, z: J.z }; E.sonido.silbido(); setTimeout(() => G.decir("silbar"), 1050); }
     if (en.pulsado("KeyF") && !G._fumando) { G._fumando = 6; G.decir("fumar"); }
+    // Los perros.
+    if (en.pulsado("KeyG")) E.perros.ordenar("seguir");
+    if (en.pulsado("KeyX")) E.perros.ordenar("quieto");
+    if (en.pulsado("KeyJ")) E.perros.ordenar("juntar");
+    if (en.pulsado("KeyB")) E.perros.ordenar("traer");
+    if (en.botonPulsado("perros")) E.perros.siguiente();
     J.bloqueado = W.manga.activa ? "manga" : Z.estado === "revoleando" || Z.estado === "enganchado" ? "lazo" : null;
   }
 
@@ -371,6 +394,7 @@
     // Con el menú, el parte, la pausa o el final a la vista, la interfaz del
     // juego se esconde (se veía el reloj y las barras por debajo del menú).
     $("hud").hidden = G.enMenu();
+    $("chat").hidden = G.enMenu() || !G.corriendo;
     const hh = Math.floor(G.hora) % 24, mm = Math.floor((G.hora % 1) * 60);
     $("hudDia").textContent = `Día ${G.dia} de ${W.DIAS}`;
     $("hudHora").textContent = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
@@ -396,7 +420,8 @@
       agus.map((v) => `<li class="urgente">La ${v.num} con bichera · ${v.salud.bichera.dias ? v.salud.bichera.dias + (v.salud.bichera.dias === 1 ? " día" : " días") : "de hoy"}</li>`).join("") +
       `<li>Trabajadas en la manga: ${b.trabajadas} de ${b.vivas}</li>` +
       (G.hierroCaliente > 0 ? `<li>Hierro caliente: ${Math.round(G.hierroCaliente * 60)} min</li>` : "") +
-      `<li>${Z.tieneLazo ? (Z.estado === "guardado" ? "Lazo en el recado (1)" : "Lazo en la mano") : "Sin lazo"}${J.montado && J.alPaso ? " · al paso" : ""}</li>`;
+      (E.puesto.pendientes().length ? `<li class="urgente">El zaino: ${E.puesto.pendientes().join(" y ")}</li>` : "") +
+      `<li>${Z.tieneLazo ? (Z.estado === "guardado" || Z.estado === "enrollando" ? (J.montado ? "Lazo enrollado en el recado" : "Lazo enrollado al cinto") : "Lazo en la mano") : "Sin lazo"}${J.montado && J.alPaso ? " · al paso" : ""}</li>`;
     $("aviso").textContent = ctxAccion ? `${E.entrada.tactil ? "✋" : "E"} · ${ctxAccion.texto}` : "";
     $("aviso").classList.toggle("visible", !!ctxAccion);
     // El forcejeo: tensión contra lo que aguanta el cuero, y lo que le queda a la vaca.
@@ -467,8 +492,10 @@
       E.lazo.actualizar(dt, G.t);
       ctxAnimales.hora = G.hora; ctxAnimales.horasJuego = G.horasJuego; ctxAnimales.sed = E.motor.calor > 0.5;
       E.animales.actualizar(dt, G.t, E.jugador, ctxAnimales);
+      E.perros.actualizar(dt, G.t, E.jugador);
     }
     E.estancia.actualizar(dt, G.t);
+    if (activo) { E.puesto.actualizar(dt, G.t); E.puesto.revisarLlegada(); }
     E.terreno.actualizar(G.t);
     E.trabajo.actualizarCura(dt);
     E.trabajo.actualizarManga(dt, G.t);

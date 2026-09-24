@@ -31,3 +31,16 @@ PW=$(npm root -g)/playwright node escaneo-prueba.mjs                       # el 
 Sin `#fijo` en la dirección, el juego hace el escaneo de cuadros antes de la
 portada; en SwiftShader da ~1 fps y elige "baja" (unos 20 s). Con `#fijo` no
 mide y usa "alta", así las fotos salen siempre iguales.
+
+De la hacienda, los perros, el puesto y el chat:
+
+```sh
+PW=$(npm root -g)/playwright node hacienda-prueba.mjs   # las seis razas, un toro y terneros en fila
+PW=$(npm root -g)/playwright node perros-prueba.mjs     # los perros siguiendo, corriendo y echados
+PW=$(npm root -g)/playwright node juntar-prueba.mjs     # simula "junten" y "busquen": distancia de la tropa a uno
+PW=$(npm root -g)/playwright node puesto-prueba.mjs     # galería, heladera, comedero, olla, mate, baño
+PW=$(npm root -g)/playwright node chat-prueba.mjs       # el chat con teclado de verdad (PC y celular)
+PW=$(npm root -g)/playwright node rollo-prueba.mjs      # el lazo que se enrolla al cinto y en el recado
+PW=$(npm root -g)/playwright node audio-grabar.mjs      # graba la salida en WAV por escena y mide niveles
+PW=$(npm root -g)/playwright node huesos-glb.mjs x.glb  # el esqueleto de un GLB: huesos, posición y vértices
+```

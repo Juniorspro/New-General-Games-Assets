@@ -134,8 +134,11 @@ E.entrada = (() => {
     },
     soltarTodo() { teclas.clear(); e.raton.izq = e.raton.der = false; e.botones.clear(); e.palanca.x = e.palanca.y = 0; e.palanca.activa = false; },
   };
+  // Escribiendo en el chat (o en cualquier campo), las teclas no son del juego:
+  // si no, escribir "hola" caminaba y la "e" montaba el caballo.
+  const escribiendo = () => { const a = document.activeElement; return a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA"); };
   addEventListener("keydown", (ev) => {
-    if (ev.repeat) return;
+    if (ev.repeat || escribiendo()) return;
     teclas.add(ev.code); recien.add(ev.code);
     if (["Space", "ArrowUp", "ArrowDown"].includes(ev.code)) ev.preventDefault();
   });

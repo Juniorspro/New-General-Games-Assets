@@ -18,9 +18,27 @@ internet. Receta seguida: `GUIA-JUEGOS.md`.
 | V | primera o tercera persona |
 | H | silbarle al caballo |
 | F | armarse un cigarro |
+| G / X / J / B | perros: vengan / quietos (se echan) / junten la tropa / busquen la vaca que mirás |
+| Enter o / | el chat de comandos (/ayuda, /saludar, /perros junten, /mate, /comer, /caballo, /hacienda, /razas…) |
 | 1–4 en la manga | aftosa, ivermectina, caravana, hierro |
 
-En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla.
+En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla
+(el de "Perros" va pasando de orden en orden; el globito de arriba abre el chat).
+
+## La estancia
+
+- **Hacienda**: 18 vacas de seis razas (Hereford, Aberdeen Angus, Angus
+  colorada, Brahman, Braford, Criolla overa), 2 toros Angus y 6 terneros al pie
+  de la madre. Las razas salen de la textura de la Hereford recoloreada en el
+  shader (`modelos.js`, `conPelaje`); el toro es su propio modelo.
+- **Perros**: Tigre, Negra y Chispa (`js/perros.js`). La hacienda se aparta de
+  un perro como de uno: arrean empujando.
+- **El puesto** (`js/puesto.js`): mates en la galería, guiso en el fogón, agua
+  fría de la heladera. **El zaino** se ensucia andando; bañarlo en el tanque y
+  darle forraje en el comedero. Si no, al otro día amanece flaco o con
+  mataduras.
+- **El lazo** se enrolla solo cuando no se usa: al cinto a pie, en el recado a
+  caballo.
 
 ## Calidad gráfica
 
@@ -41,7 +59,8 @@ en Opciones se cambia a mano o se vuelve a medir.
 | caminata de vaca y caballo; quieto, caminar y correr del guacho | Rezona `rig3d` (una animación por pedido) | idem |
 | revoque, chapa, tablas, barro (+ normales) | Rezona, imagen → `herramientas/procesar_rezona.py` | idem |
 | ramas de quebracho, algarrobo y vinal; matas de espartillo | Rezona con fondo transparente, recortadas y sangradas | idem |
-| la voz del Guacho (41 frases, sin malas palabras) | Higgsfield `qwen_audio_tts`, voz Julian con instrucción de acento rioplatense | `voces.json` |
+| la voz del Guacho (61 frases, sin malas palabras) | Higgsfield `qwen_audio_tts`, voz Julian con instrucción de acento rioplatense; 24 kHz, 64 kbps, -18 LUFS | `voces.json` |
+| perro, toro (con esqueleto), heladera, silla, pava | Rezona: imagen → modelo 3D → `rig3d` (`herramientas/rezona_perro_toro.py`); la mesa vino rota y quedó la de tablas | `js/datos.js` |
 | el silbido del Guacho | sintetizado en `js/sonido.js` (dos notas de silbido humano, con aire y vibrato) | — |
 | viento, chicharras, teros, mugidos, lazo, radio | sintetizado en `js/sonido.js` | — |
 
@@ -71,4 +90,5 @@ python3 herramientas/armar_datos.py carpeta-con-assets/
 python3 ../herramientas/descargable/empaquetar.py index.html estancia.html
 ```
 
-`js/datos.js` pesa 11,5 MB y el HTML empaquetado 12,7 MB (24/9/2026).
+`js/datos.js` pesa 13,5 MB (los GLB van comprimidos con gzip) y el HTML
+empaquetado 14,4 MB (24/9/2026). El límite de un artifact es 16 MB.
