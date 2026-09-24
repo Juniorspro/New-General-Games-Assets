@@ -28,5 +28,13 @@ también: [rezona](rezona.md), [juegos](juegos.md).
     neutro.
   - `seed_audio` pronunciaba mal.
   - Se usó porque el audio de Rezona estaba caído. Ver [videos](videos.md).
+- **Publicar en TikTok (24/09):**
+  - Primero `media_upload`, después un PUT con curl y `media_confirm`.
+  - Después `tiktok_prepare_publish`. El último paso lo hace la persona en un
+    formulario (MCP App) donde elige privacidad, interacciones, etiqueta de
+    IA y música. En Claude Code en la nube ese formulario no se abre: se
+    publica desde claude.ai o desde el celular.
+  - Hay tres cuentas vinculadas ("claudedits", "tiktok-2" y "tiktok"). Son
+    etiquetas: la herramienta no dice cuál es el usuario "Juni36".
 - Herramientas que se usaron: `generate_image_batch`, `remove_background`,
   `generate_3d`, `jobs_wait` y `balance`.
