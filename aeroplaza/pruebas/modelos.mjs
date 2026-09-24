@@ -1,5 +1,5 @@
-// Los modelos 3D de Rezona, cada uno girado a 0, 90, 180 y 270° y mirados
-// desde +z: el que muestra el frente dice el giro fijo (GIRO en js/modelos.js).
+// Las construcciones (js/construcciones.js), cada una girada a 0, 90, 180 y
+// 270° y mirada desde +z, para compararlas con las referencias de Rezona.
 // Saca pruebas/salida/modelo-<nombre>.png y una hoja con todos.
 //     node pruebas/modelos.mjs [nombre…]
 import path from 'node:path';
@@ -7,7 +7,7 @@ import { navegador, abrir, SAL } from './comun.mjs';
 const nav = await navegador();
 const { pag, errores } = await abrir(nav, 'directo&pausa&calidad=media&hora=0.42', { ancho: 1000, alto: 280 });
 await pag.waitForFunction(() => window.__A && window.__A.reino, null, { timeout: 120000, polling: 250 });
-const hay = await pag.evaluate(() => Object.keys(window.__A.Modelos).length && ['casa', 'estacion', 'tienda', 'hotel', 'tren', 'arbol', 'palmera', 'fuente', 'banco', 'farol', 'm-sofa', 'm-sillon', 'm-cama', 'm-tele', 'm-lampara'].filter((n) => window.__A.Modelos.hay(n)));
+const hay = await pag.evaluate(() => Object.keys(window.__A.Modelos).length && ['casa', 'estacion', 'tienda', 'hotel', 'tren', 'arbol', 'arbolRosa', 'palmera', 'fuente', 'banco', 'farol', 'm-sofa', 'm-sillon', 'm-cama', 'm-tele', 'm-lampara'].filter((n) => window.__A.Modelos.hay(n)));
 const pedidos = process.argv.slice(2).length ? process.argv.slice(2) : hay;
 console.log('cargados:', hay.join(' '));
 for (const n of pedidos) {

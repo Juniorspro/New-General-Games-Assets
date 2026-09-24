@@ -10,7 +10,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { Mundo, ruido2, suaveEntre } from '../mundo.js';
 import { terreno, pasto, flores, arboles, brilloso, materialVidrio, materialBurbuja } from '../naturaleza.js';
 import { pecera, puntoSuave } from '../objetos.js';
-import { modelo, cima } from '../modelos.js';
+import { modelo } from '../modelos.js';
 
 const R1 = ruido2(90);
 export function alturaCasa(x, z) {
@@ -22,15 +22,10 @@ export function alturaCasa(x, z) {
 const mat = (c, o) => brilloso(c, o);
 /* cada mueble: una función que arma su grupo, con su "caja" de choque [ancho, fondo, alto] */
 export const FABRICA = {
-  sofa: () => { const g = new THREE.Group(); const b = new THREE.Mesh(new RoundedBoxGeometry(2.2, 0.5, 0.9, 3, 0.2), mat('#6fd0ff')); b.position.y = 0.35; g.add(b); const r = new THREE.Mesh(new RoundedBoxGeometry(2.2, 0.7, 0.3, 3, 0.14), mat('#6fd0ff')); r.position.set(0, 0.75, -0.35); g.add(r); for (const s of [-1, 1]) { const a = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.55, 0.9, 3, 0.14), mat('#3fb0ff')); a.position.set(s * 1.1, 0.55, 0); g.add(a); } return [g, [2.4, 1, 1]]; },
-  sillon: () => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.6, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.6), mat('#ff9ad8', { side: THREE.DoubleSide })); b.rotation.x = Math.PI; b.position.y = 0.75; g.add(b); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.25, 0.4, 12), mat('#ffffff')); p.position.y = 0.2; g.add(p); return [g, [1.2, 1.2, 0.9]]; },
   mesa: () => { const g = new THREE.Group(); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.08, 32), materialVidrio('#bff4ff', 0.5)); t.position.y = 0.75; g.add(t); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.35, 0.75, 16), mat('#ffffff')); p.position.y = 0.37; g.add(p); return [g, [1.6, 1.6, 0.8]]; },
   silla: () => { const g = new THREE.Group(); const s = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.08, 0.5, 2, 0.04), mat('#b6f03a')); s.position.y = 0.45; g.add(s); const r = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.5, 0.06, 2, 0.03), mat('#b6f03a')); r.position.set(0, 0.72, -0.22); g.add(r); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.45, 8), mat('#ffffff')); p.position.y = 0.22; g.add(p); return [g, [0.6, 0.6, 0.5]]; },
-  cama: () => { const g = new THREE.Group(); const b = new THREE.Mesh(new RoundedBoxGeometry(1.5, 0.45, 2.2, 3, 0.18), mat('#ffffff')); b.position.y = 0.25; g.add(b); const c = new THREE.Mesh(new RoundedBoxGeometry(1.45, 0.14, 1.5, 3, 0.07), mat('#9b7bff')); c.position.set(0, 0.52, 0.3); g.add(c); const a = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.16, 0.4, 3, 0.08), mat('#dff4ff')); a.position.set(0, 0.55, -0.8); g.add(a); return [g, [1.6, 2.3, 0.6]]; },
-  lampara: () => { const g = new THREE.Group(); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.2, 1.4, 10), mat('#ffffff')); p.position.y = 0.7; g.add(p); const b = new THREE.Mesh(new THREE.SphereGeometry(0.35, 20, 14), new THREE.MeshStandardMaterial({ color: '#fffbe0', emissive: '#ffe9a0', emissiveIntensity: 1.8, transparent: true, opacity: 0.9 })); b.position.y = 1.6; g.add(b); return [g, [0.5, 0.5, 1.9]]; },
   planta: () => { const g = new THREE.Group(); const m = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.22, 0.45, 16), mat('#ffffff')); m.position.y = 0.22; g.add(m); for (let i = 0; i < 6; i++) { const h = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), mat('#56e05a')); h.scale.set(0.5, 1.4, 0.3); const a = i / 6 * 6.28; h.position.set(Math.cos(a) * 0.15, 0.75, Math.sin(a) * 0.15); h.rotation.set(Math.sin(a) * 0.5, 0, Math.cos(a) * 0.5); g.add(h); } return [g, [0.6, 0.6, 1]]; },
   pecera: () => [pecera(0, 0, 0, 0.55), [1, 1, 1.6]],
-  tele: () => { const g = new THREE.Group(); const c = new THREE.Mesh(new RoundedBoxGeometry(1.1, 0.9, 0.8, 4, 0.2), mat('#e8eef5')); c.position.y = 1.05; g.add(c); const p = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.65), new THREE.MeshBasicMaterial({ color: '#7fd6ff' })); p.position.set(0, 1.05, 0.41); g.add(p); g.userData.pantalla = p; const m = new THREE.Mesh(new RoundedBoxGeometry(1.2, 0.6, 0.7, 3, 0.15), mat('#ffffff')); m.position.y = 0.3; g.add(m); return [g, [1.2, 0.8, 1.5]]; },
   alfombra: () => { const g = new THREE.Group(); const a = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.03, 40), mat('#ffe14a', { roughness: 0.8 })); a.position.y = 0.015; g.add(a); const b = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.05, 6, 40), mat('#ff9a3d', { roughness: 0.8 })); b.rotation.x = Math.PI / 2; b.position.y = 0.035; g.add(b); return [g, [0, 0, 0]]; },
   estante: () => { const g = new THREE.Group(); for (let i = 0; i < 4; i++) { const e = new THREE.Mesh(new RoundedBoxGeometry(1.4, 0.06, 0.4, 2, 0.03), mat('#ffffff')); e.position.y = 0.2 + i * 0.5; g.add(e); for (let k = 0; k < 3; k++) { const l = new THREE.Mesh(new RoundedBoxGeometry(0.12, 0.35, 0.3, 2, 0.03), mat(['#ff6fb0', '#39d6ff', '#ffe14a', '#56e05a'][(i + k) % 4])); l.position.set(-0.45 + k * 0.2 + i * 0.05, 0.4 + i * 0.5, 0); g.add(l); } } for (const s of [-1, 1]) { const p = new THREE.Mesh(new RoundedBoxGeometry(0.06, 1.9, 0.4, 2, 0.03), mat('#ffffff')); p.position.set(s * 0.7, 0.95, 0); g.add(p); } return [g, [1.5, 0.5, 1.9]]; },
   radio: () => { const g = new THREE.Group(); const c = new THREE.Mesh(new RoundedBoxGeometry(0.7, 0.4, 0.25, 3, 0.1), mat('#39d6ff')); c.position.y = 0.2; g.add(c); for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 20), mat('#e8f4ff')); p.rotation.x = Math.PI / 2; p.position.set(s * 0.2, 0.2, 0.13); g.add(p); } return [g, [0.7, 0.3, 0.4]]; },
@@ -40,19 +35,16 @@ export const FABRICA = {
   globo: () => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.6, 24, 16), materialBurbuja()); b.position.y = 1.6; g.add(b); const h = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1.1, 4), new THREE.MeshBasicMaterial({ color: '#ffffff' })); h.position.y = 0.55; g.add(h); return [g, [0, 0, 0]]; },
 };
 
-/* los muebles de Rezona, cuando están: se miden por su ancho (o alto) y la caja
-   de choque sale del modelo. La tele y la lámpara guardan su pantalla y su luz */
-const DE_REZONA = { sofa: ['m-sofa', { ancho: 2.4 }], sillon: ['m-sillon', { alto: 1.35 }], cama: ['m-cama', { ancho: 2.3 }], tele: ['m-tele', { alto: 1.3 }], lampara: ['m-lampara', { alto: 1.9 }] };
-for (const [k, [n, medida]] of Object.entries(DE_REZONA)) {
-  const aMano = FABRICA[k];
+/* los muebles armados en construcciones.js (copiando las referencias de
+   Rezona): se miden por su ancho o su alto y la caja de choque sale del mueble.
+   La tele guarda su pantalla (cambia de color) y la lámpara suma su luz */
+const ARMADOS = { sofa: ['m-sofa', { ancho: 2.4 }], sillon: ['m-sillon', { alto: 1.35 }], cama: ['m-cama', { ancho: 2.3 }], tele: ['m-tele', { alto: 1.3 }], lampara: ['m-lampara', { alto: 1.9 }] };
+for (const [k, [n, medida]] of Object.entries(ARMADOS)) {
   FABRICA[k] = () => {
-    const m = modelo(n, medida);
-    if (!m) return aMano();
-    const T = m.userData.tam;
-    if (k === 'lampara') {
-      const c = cima(n, 0.25).multiplyScalar(m.userData.k);
-      const luz = new THREE.Mesh(new THREE.SphereGeometry(T.y * 0.1, 16, 12), new THREE.MeshBasicMaterial({ color: '#fff4c0', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
-      luz.position.copy(c); m.add(luz);
+    const m = modelo(n, medida), T = m.userData.tam;
+    if (m.userData.bocha) {
+      const luz = new THREE.Mesh(new THREE.SphereGeometry(m.userData.radio * 1.35, 16, 12), new THREE.MeshBasicMaterial({ color: '#fff4c0', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
+      luz.position.copy(m.userData.bocha); m.add(luz);
     }
     return [m, [T.x * 0.9, T.z * 0.9, T.y]];
   };
@@ -74,7 +66,7 @@ export function crearCasa(ctx, { plano = [], dueño = null } = {}) {
   mundo.cilindro(0, 0, 10.6, -5, 1.4, { tipo: 'piedra' });
   /* la casa de Rezona, atrás del patio (se entra al patio; la casa es el decorado) */
   const cm = modelo('casa', { ancho: 9.5 });
-  if (cm) { const y = A(0, -15); cm.position.set(0, y - 0.1, -15); g.add(cm); const T = cm.userData.tam; mundo.caja(0, -15, T.x * 0.45, T.z * 0.45, y - 1, y + T.y * 0.9, 0, { tipo: 'piedra' }); }
+  { const y = A(0, -15); cm.position.set(0, y - 0.1, -15); g.add(cm); const T = cm.userData.tam; mundo.caja(0, -15, T.x * 0.45, T.z * 0.45, y - 1, y + T.y * 0.9, 0, { tipo: 'piedra' }); }
   /* la isla por abajo: una roca que se afina, y nubes alrededor */
   const roca = new THREE.Mesh(new THREE.ConeGeometry(24, 30, 20, 4), brilloso('#b89a7a', { roughness: 0.7 })); roca.rotation.x = Math.PI; roca.position.y = -16; g.add(roca);
   const muebles = new THREE.Group(); g.add(muebles);

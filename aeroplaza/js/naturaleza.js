@@ -183,14 +183,19 @@ function mataDePasto() {
   return g;
 }
 /* el viento (y el muñeco que aparta el pasto) en el shader de vértices */
-function conViento(m, fuerza = 1) {
+export function conViento(m, fuerza = 1) {
+  m.customProgramCacheKey = () => 'viento' + fuerza.toFixed(2);
   m.onBeforeCompile = (s) => {
     s.uniforms.uT = UNI.uT; s.uniforms.uJugador = UNI.uJugador; s.uniforms.uViento = UNI.uViento;
     s.vertexShader = s.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float uT, uViento; uniform vec3 uJugador;')
       .replace('#include <begin_vertex>', `#include <begin_vertex>
         {
-          vec3 base = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+          #ifdef USE_INSTANCING
+            vec3 base = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+          #else
+            vec3 base = vec3(modelMatrix[3].x, 0.0, modelMatrix[3].z);   // (sin instancias: la palmera suelta)
+          #endif
           float h = max(position.y, 0.0);
           float fase = dot(base.xz, vec2(0.21, 0.17));
           vec2 v = vec2(sin(uT * 1.7 + fase) + sin(uT * 2.9 + fase * 1.7) * 0.4, cos(uT * 1.3 + fase * 0.8) * 0.5) * 0.09 * uViento * ${fuerza.toFixed(2)};
@@ -292,20 +297,15 @@ export function flores(altura, donde, { n = 900, area = [-120, -120, 240], sem =
 }
 
 /* ---------------------------------------------------- árboles redondos (aero) */
-function copaGeo(sem) {
-  const r = azar(sem), partes = [];
-  const bolas = [[0, 0, 0, 1], [0.7, -0.2, 0.2, 0.72], [-0.65, -0.15, -0.1, 0.75], [0.1, 0.55, -0.1, 0.72], [-0.1, -0.1, 0.7, 0.7], [0.15, -0.05, -0.7, 0.66]];
-  for (const [x, y, z, rad] of bolas) { const s = new THREE.SphereGeometry(rad * (0.9 + r() * 0.2), 14, 10); s.translate(x, y, z); partes.push(s); }
-  const g = mergeGeometries(partes);
-  /* degradé: más claro arriba (el sol pega de arriba y queda "de juguete") */
-  const p = g.attributes.position, col = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i++) { const t = THREE.MathUtils.clamp((p.getY(i) + 1) / 2.2, 0, 1); col[i * 3] = 0.55 + t * 0.45; col[i * 3 + 1] = 0.7 + t * 0.3; col[i * 3 + 2] = 0.55 + t * 0.3; }
-  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  return g;
-}
+/* el árbol y la palmera se arman en construcciones.js (copiando las referencias de Rezona) */
 /* el borde que brilla (fresnel) en cualquier material estándar */
 export function conBorde(m, color = '#ffffff', fuerza = 0.5, pot = 3.0) {
   const prev = m.onBeforeCompile;
+  /* three reusa el programa si la "clave" es igual, y la de fábrica es el texto de
+     onBeforeCompile: igual para todos los conBorde aunque cambie pot o lo de antes
+     (el viento). Por eso la clave dice qué lleva */
+  const clave = m.customProgramCacheKey();
+  m.customProgramCacheKey = () => clave + '|borde' + pot.toFixed(1);
   m.onBeforeCompile = (s, r) => {
     if (prev) prev(s, r);
     s.uniforms.uBordeCol = { value: new THREE.Color(color) }; s.uniforms.uBorde = { value: fuerza };
@@ -316,69 +316,14 @@ export function conBorde(m, color = '#ffffff', fuerza = 0.5, pot = 3.0) {
   };
   return m;
 }
-/* lugares: [[x, z, escala, variante]] */
-export function arboles(altura, lugares, { colores = ['#55d23a', '#7de04a', '#3fbf55', '#9be64a'], tronco = '#c79a6a', tintes = ['#ffffff', '#e4ffd8', '#fff6d0', '#d8fff0'], modelo = true } = {}) {
-  /* el árbol de burbujas de Rezona, si está (tintes claros: multiplican su textura) */
-  const G = modelo && instancias('arbol', lugares.map(([x, z, esc = 1], i) => [x, altura(x, z) - 0.15, z, esc, i * 2.4]), { alto: 5.4, tintes });
-  if (G) return G;
-  const g = new THREE.Group(), n = lugares.length;
-  const gT = new THREE.CylinderGeometry(0.16, 0.28, 2.6, 10, 3); gT.translate(0, 1.3, 0);
-  const mT = new THREE.MeshStandardMaterial({ color: tronco, roughness: 0.55 });
-  const gC = copaGeo(3); gC.scale(1.35, 1.2, 1.35); gC.translate(0, 3.3, 0);
-  const mC = conBorde(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.3, metalness: 0 }), '#e8ffb0', 0.35);
-  const iT = new THREE.InstancedMesh(gT, mT, n), iC = new THREE.InstancedMesh(gC, mC, n);
-  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), P = new THREE.Vector3(), c = new THREE.Color();
-  lugares.forEach(([x, z, esc = 1], i) => {
-    M.compose(P.set(x, altura(x, z) - 0.1, z), q.setFromEuler(e.set(0, i * 2.4, 0)), s.set(esc, esc, esc));
-    iT.setMatrixAt(i, M); iC.setMatrixAt(i, M); iC.setColorAt(i, c.set(colores[i % colores.length]));
-  });
-  for (const i of [iT, iC]) { i.castShadow = true; i.receiveShadow = true; g.add(i); }
-  return g;
+/* lugares: [[x, z, escala]]. variante: 'arbol' (el de burbujas lima) o 'arbolRosa'.
+   tintes claros: multiplican el color de cada copia, para que no sean iguales */
+export function arboles(altura, lugares, { variante = 'arbol', tintes = ['#ffffff', '#e4ffd8', '#fff6d0', '#d8fff0'] } = {}) {
+  return instancias(variante, lugares.map(([x, z, esc = 1], i) => [x, altura(x, z) - 0.15, z, esc, i * 2.4]), { alto: 5.4, tintes }) || new THREE.Group();
 }
-
-/* ------------------------------------------------------------------ palmeras */
-function palmeraGeo() {
-  const partes = [], cols = [];
-  const pinta = (geo, f) => { const p = geo.attributes.position, c = new Float32Array(p.count * 3); for (let i = 0; i < p.count; i++) { const k = f(p.getX(i), p.getY(i), p.getZ(i)); c[i * 3] = k[0]; c[i * 3 + 1] = k[1]; c[i * 3 + 2] = k[2]; } geo.setAttribute('color', new THREE.BufferAttribute(c, 3)); return geo; };
-  /* el tronco: anillos que se inclinan */
-  const curva = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.3, 2, 0), new THREE.Vector3(0.9, 4, 0), new THREE.Vector3(1.6, 5.6, 0)]);
-  const tubo = new THREE.TubeGeometry(curva, 16, 0.2, 8, false);
-  partes.push(pinta(tubo, (x, y) => { const a = 0.5 + 0.5 * Math.sin(y * 9); return [0.72 + a * 0.12, 0.55 + a * 0.1, 0.36]; }));
-  const top = curva.getPoint(1);
-  for (let i = 0; i < 8; i++) {
-    const a = i / 8 * Math.PI * 2, largo = 2.6 + (i % 3) * 0.3;
-    const pos = [], idx = [];
-    const S = 8;
-    for (let j = 0; j <= S; j++) {
-      const t = j / S, w = Math.sin(t * Math.PI) * 0.42 + 0.05;
-      const r = t * largo, y = Math.sin(t * 1.4) * 0.7 - t * t * 1.9;
-      for (const s of [-1, 1]) {
-        const lx = r, lz = w * s, ly = y - Math.abs(s * w) * 0.25;
-        pos.push(top.x + Math.cos(a) * lx - Math.sin(a) * lz, top.y + ly, top.z + Math.sin(a) * lx + Math.cos(a) * lz);
-      }
-      if (j < S) { const q = j * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); }
-    }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
-    partes.push(pinta(g, (x, y, z) => { const t = Math.hypot(x - top.x, z - top.z) / largo; return [0.2 + t * 0.3, 0.62 + t * 0.25, 0.15]; }));
-  }
-  const coco = new THREE.SphereGeometry(0.2, 10, 8); coco.translate(top.x - 0.1, top.y - 0.25, 0.15);
-  partes.push(pinta(coco, () => [0.45, 0.3, 0.15]));
-  /* para fundir todo tienen que tener los mismos atributos: sin uv y sin índice */
-  const g = mergeGeometries(partes.map((q) => { q.deleteAttribute('uv'); if (!q.attributes.normal) q.computeVertexNormals(); return q.index ? q.toNonIndexed() : q; }));
-  g.computeVertexNormals();
-  return g;
-}
+/* lugares: [[x, z, escala, giro]]; las hojas se mueven con el viento */
 export function palmeras(altura, lugares) {
-  const G = instancias('palmera', lugares.map(([x, z, esc = 1, rot = 0]) => [x, altura(x, z) - 0.2, z, esc, rot]), { alto: 6.8 });
-  if (G) return G;
-  const g = palmeraGeo();
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, side: THREE.DoubleSide });
-  conViento(m, 0.25);
-  const im = new THREE.InstancedMesh(g, m, lugares.length);
-  const M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), P = new THREE.Vector3();
-  lugares.forEach(([x, z, esc = 1, rot = 0], i) => { M.compose(P.set(x, altura(x, z) - 0.2, z), q.setFromEuler(e.set(0, rot, 0)), s.set(esc, esc, esc)); im.setMatrixAt(i, M); });
-  im.castShadow = true;
-  return im;
+  return instancias('palmera', lugares.map(([x, z, esc = 1, rot = 0]) => [x, altura(x, z) - 0.2, z, esc, rot]), { alto: 6.8 }) || new THREE.Group();
 }
 
 /* ------------------------------------------------------------------- piedras */

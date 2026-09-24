@@ -54,15 +54,10 @@ const { MeshoptSimplifier } = require('meshoptimizer');
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 await MeshoptSimplifier.ready;
 const triangulos = (doc) => doc.getRoot().listMeshes().reduce((s, m) => s + m.listPrimitives().reduce((t, p) => t + (p.getIndices() ? p.getIndices().getCount() / 3 : 0), 0), 0);
-/* [crudo, salida, triángulos, lado de la textura de color, lado del mapa de normales (0: sin)]
-   Los de la tercera vuelta (t3/): edificios ~12 mil, árboles y muebles 3-6 mil. */
-const MODELOS = [['delfin-g1.glb', 'delfin.glb', 9000, 1024, 512],
-  ['t3/m3-casa.glb', 'casa.glb', 14000, 1024, 512], ['t3/m3-estacion.glb', 'estacion.glb', 12000, 1024, 512], ['t3/m3-tienda.glb', 'tienda.glb', 12000, 1024, 512],
-  ['t3/m3-hotel.glb', 'hotel.glb', 14000, 1024, 512], ['t3/m3-tren.glb', 'tren.glb', 7000, 1024, 0],
-  ['t3/m3-arbol.glb', 'arbol.glb', 3500, 512, 0], ['t3/m3-palmera.glb', 'palmera.glb', 3500, 512, 0], ['t3/m3-fuente.glb', 'fuente.glb', 8000, 1024, 0],
-  ['t3/m3-banco.glb', 'banco.glb', 2500, 512, 0], ['t3/m3-farol.glb', 'farol.glb', 1500, 256, 0],
-  ['t3/m3-sofa.glb', 'm-sofa.glb', 4000, 512, 0], ['t3/m3-sillon.glb', 'm-sillon.glb', 4000, 512, 0], ['t3/m3-cama.glb', 'm-cama.glb', 4000, 512, 0],
-  ['t3/m3-tele.glb', 'm-tele.glb', 3000, 512, 0], ['t3/m3-lampara.glb', 'm-lampara.glb', 2000, 512, 0]];
+/* [crudo, salida, triángulos, lado de la textura de color, lado del mapa de normales (0: sin)].
+   Las construcciones (casa, estación, tienda…) ya no son GLB: se arman en
+   js/construcciones.js copiando las referencias de Rezona (crudo/t3/ref-*.png) */
+const MODELOS = [['delfin-g1.glb', 'delfin.glb', 9000, 1024, 512]];
 const solo = process.argv[2];   // node herramientas/assets.mjs casa → solo ese modelo
 for (const [c, s, meta, ladoC, ladoN] of MODELOS) {
   if (solo && !s.startsWith(solo)) continue;

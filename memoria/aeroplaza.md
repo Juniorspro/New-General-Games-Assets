@@ -7,9 +7,9 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
 
 ## Armarlo y probarlo
 
-- `node aeroplaza/herramientas/armar.mjs` arma `aeroplaza.html` (8,2 MB, sin
+- `node aeroplaza/herramientas/armar.mjs` arma `aeroplaza.html` (4,2 MB, sin
   las canciones de Nintendo: va al repo) y `aeroplaza-con-canciones.html`
-  (10,2 MB, gitignorado, es el que se le entrega).
+  (6,1 MB, gitignorado, es el que se le entrega).
 - El sonido es el de BRILLO: `../../brillo/js/sonido.js` y `canciones.js`.
   Menú = 'titulo' (Wii Party), plaza = 'colina' (Mii Maker). Los otros cinco
   reinos (arrecife, aurora, cielo, ciudad, casa) suenan con temas de Rezona
@@ -81,15 +81,22 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   - ojos de gelatina del color del cuerpo, más hondos y con filo oscuro, no
     negros; alto = 37 % de la cabeza.
   - `pruebas/muneco.mjs` saca 4 apariencias y el perfil en el estudio.
-- **15 modelos de Tripo** (`js/modelos.js`, `herramientas/assets.mjs`):
-  - estación, tienda, tren, 3 casas (barrio al sur de la plaza; la del medio
-    lleva a Mi casa), 3 hoteles en islotes al norte, fuente, faroles, bancos,
-    árboles y palmeras instanciados en todos los reinos, y 5 muebles.
-  - Cada lugar tiene su respaldo dibujado si el modelo no carga.
-  - El giro de fábrica se mide con `pruebas/modelos.mjs` (4 giros por hoja):
-    casa, tienda, sillón, cama y tele 3π/2; estación y banco π.
-  - El andén, el asiento y el borde de la fuente se miden con un rayo
-    (`modelos.rayo`); la bocha del farol, con `cima`.
+- **Las construcciones, en procedural** (pedido del 24/09, noche: "los quiero
+  procedural… replicá los glb"). `js/construcciones.js` arma 16 cosas en
+  código copiando `crudo/t3/ref-*.png`: casa, estación, tienda, hotel, tren,
+  fuente, banco, farol, árbol (lima y rosa), palmera y 5 muebles.
+  - Una sola vez cada una, fundida por material (2 a 13 llamadas). Las copias
+    comparten todo (`js/modelos.js`, misma API de antes: `modelo`, `instancias`).
+  - Las medidas salen del armado, no de rayos: `anden`, `pared`, `asiento`,
+    `borde`, `bocha`, `radio`; la tele guarda `pantalla`.
+  - Ayudas: `sq`/`sqPunto` (cuadrado redondo), `prisma` (contorno extruido con
+    borde redondo), `cinta` (vidrio que sigue un contorno), `racimo`
+    (arbustos), `cortar` (el hueco del sillón), `arcoSolido` (bancos curvos).
+  - `pruebas/construcciones.mjs` saca cada una de tres cuartos para ponerla al
+    lado de su referencia. Solo el delfín sigue siendo GLB.
+  - Pesan 1.300 a 49 mil triángulos (casa 44 mil, hotel 49 mil); el HTML
+    bajó de 8,2 a 4,2 MB. Los faroles van con 2 materiales: con 4 la plaza
+    pasaba las 379 llamadas.
 - **El cielo**: el panorama de Rezona en 4 copias espejadas alrededor del
   horizonte; lo blanco es nube teñida por la hora. Más la vía láctea de
   noche, noches más azules, arcoíris al norte (plaza, de día) y las nubes
@@ -107,6 +114,13 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   - Bajar: `herramientas/tiktok-bajar.mjs <id>` abre la página del video para tener cookies frescas.
 
 ## Trampas que ya se pagaron
+
+- **Dos materiales con `onBeforeCompile` distinto compartían programa.** three
+  usa el texto de la función como clave: todos los `conBorde` tenían la misma
+  aunque cambiara `pot` o llevaran viento debajo, y uno heredaba el shader del
+  otro. `conBorde` y `conViento` ahora ponen `customProgramCacheKey`.
+- **`conViento` usa `instanceMatrix`:** en una malla suelta (la palmera de la
+  prueba) no compilaba. Tiene su `#ifdef USE_INSTANCING`.
 
 - **`#ui > * { pointer-events: auto }` le ganaba a `.hud { pointer-events: none }`**
   por especificidad (id). El HUD, a pantalla completa, se comía todos los
@@ -155,7 +169,7 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
 
 | calidad | plaza | llamadas | CPU del juego |
 |---|---|---|---|
-| alta | 930 mil triángulos (1,35 millones con los modelos 3D, 24/09) | 205 (268) | 0,34 ms/cuadro (0,40) |
+| alta | 930 mil triángulos (1,59 millones con las construcciones, 24/09) | 205 (345) | 0,34 ms/cuadro (0,35) |
 | baja | 429 mil (sin sombras, pasto ×0,28) | 124 | 0,32 ms/cuadro |
 
 La calidad automática mide 150 cuadros y baja un nivel si pasan 26 ms.

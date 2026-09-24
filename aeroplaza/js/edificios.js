@@ -6,8 +6,8 @@
    ========================================================================== */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { brilloso, materialVidrio, UNI } from './naturaleza.js';
-import { modelo, rayo, cima, tamDe } from './modelos.js';
+import { brilloso } from './naturaleza.js';
+import { modelo } from './modelos.js';
 
 /* un cartel con texto dibujado (los generadores no escriben bien: se escribe acá) */
 export function letrero(texto, { ancho = 4, alto = 1, fondo = '#ffffff', tinta = '#2a9d3a', borde = '#8fe070', tam = 88 } = {}) {
@@ -30,38 +30,11 @@ export function letrero(texto, { ancho = 4, alto = 1, fondo = '#ffffff', tinta =
 export function estacion(mundo, x, z, rot, alturaPiso) {
   const g = new THREE.Group(); g.position.set(x, alturaPiso, z); g.rotation.y = rot;
   const R = 6.5;
-  const blanco = brilloso('#ffffff', { roughness: 0.15 }), verde = brilloso('#45d05a', { roughness: 0.3, borde: 0.4 });
-  /* el pabellón de Rezona, con la entrada mirando a la plaza (-x local); si no está, el armado a mano */
+  const blanco = brilloso('#ffffff', { roughness: 0.15 });
+  /* el pabellón octogonal (construcciones.js), con la entrada mirando a la plaza (-x local) */
   const M = modelo('estacion', { ancho: 2 * R + 1.4 });
-  let anden = 0.5;
-  if (M) {
-    M.rotation.y = -Math.PI / 2; g.add(M);
-    anden = rayo('estacion', 0.35, 0.3, 0.35) * M.userData.k;
-  } else {
-    const piso = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 0.3, 0.5, 6), brilloso('#eef7ff', { roughness: 0.3 })); piso.position.y = 0.25; piso.receiveShadow = true; piso.castShadow = true; g.add(piso);
-    const anillo = new THREE.Mesh(new THREE.CylinderGeometry(R - 0.6, R - 0.6, 0.52, 6), brilloso('#bfe9ff', { roughness: 0.2 })); anillo.position.y = 0.26; g.add(anillo);
-    /* seis columnas y los vidrios (menos la entrada y el lado del tren) */
-    for (let i = 0; i < 6; i++) {
-      const a = i / 6 * Math.PI * 2 + Math.PI / 6;
-      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 4.4, 12), blanco); col.position.set(Math.cos(a) * (R - 0.3), 2.7, Math.sin(a) * (R - 0.3)); col.castShadow = true; g.add(col);
-      if (i === 1 || i === 4) continue;
-      const b = (i + 0.5) / 6 * Math.PI * 2 + Math.PI / 6, L = (R - 0.3);
-      const v = new THREE.Mesh(new THREE.PlaneGeometry(L, 3.6), materialVidrio('#dff9ff', 0.2)); v.material.side = THREE.DoubleSide;
-      v.position.set(Math.cos(b) * L * 0.866, 2.5, Math.sin(b) * L * 0.866); v.rotation.y = -b + Math.PI / 2; v.renderOrder = 4; g.add(v);
-    }
-    /* el techo: una losa de vidrio verdoso y encima un colchón de hojas */
-    const techo = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.4, R + 0.4, 0.25, 6), new THREE.MeshPhysicalMaterial({ color: '#b8ffd0', transparent: true, opacity: 0.55, roughness: 0.05, clearcoat: 1, depthWrite: false })); techo.position.y = 5; g.add(techo);
-    const marco = new THREE.Mesh(new THREE.TorusGeometry(R + 0.4, 0.15, 8, 6), blanco); marco.rotation.x = Math.PI / 2; marco.rotation.z = Math.PI / 6; marco.position.y = 5; g.add(marco);
-    for (let i = 0; i < 26; i++) {
-      const a = i * 2.39996, d = Math.sqrt(i / 26) * (R - 0.4);
-      const h = new THREE.Mesh(new THREE.SphereGeometry(1.25 - d * 0.08, 16, 10), verde);
-      h.scale.set(1, 0.55, 1); h.position.set(Math.cos(a) * d, 5.35 + (1 - d / R) * 0.8, Math.sin(a) * d); h.castShadow = true; g.add(h);
-    }
-    /* un banco y el tablero */
-    const banco = new THREE.Mesh(new RoundedBoxGeometry(2.4, 0.3, 0.7, 3, 0.12), brilloso('#7fd6ff')); banco.position.set(-1.8, 0.95, -2.2); banco.rotation.y = 0.5; g.add(banco);
-    const tablero = letrero('🚆  ✦  ✦  ✦', { ancho: 3, alto: 0.9, tinta: '#1a78c2', borde: '#7fd3ff' }); tablero.position.set(0, 4.1, -R * 0.8); g.add(tablero);
-    g.userData.tablero = tablero;
-  }
+  M.rotation.y = -Math.PI / 2; g.add(M);
+  const anden = M.userData.anden;
   /* las vías: salen de la estación, cruzan el agua sobre pilotes y suben al cielo */
   const ida = (u) => new THREE.Vector3(R + 2 + u * 40, u * u * 18, Math.sin(u * 2) * 6);
   const pts = []; for (let i = 0; i <= 30; i++) pts.push(ida(i / 30 * 4 - 0.6));
@@ -75,34 +48,23 @@ export function estacion(mundo, x, z, rot, alturaPiso) {
     const pil = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, p.y + alturaPiso + 6, 10), blanco); pil.position.set(p.x, (p.y - alturaPiso - 6) / 2 + 0.3, p.z); g.add(pil);
     const trav = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.25, 2.2, 2, 0.08), blanco); trav.position.set(p.x, p.y + 0.4, p.z); g.add(trav);
   }
-  /* el tren: un vagón redondo blanco con franja verde */
+  /* el tren: el monorriel blanco con la franja de vidrio y la lima (construcciones.js) */
   const tren = new THREE.Group();
   const MT = modelo('tren', { ancho: 8.6 });
-  if (MT) { MT.rotation.y = Math.PI / 2; MT.position.y = -1.45; tren.add(MT); }
-  else {
-    const cuerpo = new THREE.Mesh(new THREE.CapsuleGeometry(1.35, 5.2, 10, 24), brilloso('#ffffff', { roughness: 0.12, borde: 0.35 })); cuerpo.rotation.z = Math.PI / 2; cuerpo.scale.set(1.05, 1, 0.9); cuerpo.castShadow = true; tren.add(cuerpo);
-    const franja = new THREE.Mesh(new THREE.CapsuleGeometry(1.37, 5.2, 6, 24), brilloso('#3fcf4f')); franja.rotation.z = Math.PI / 2; franja.scale.set(0.3, 1, 0.905); franja.position.y = -0.62; tren.add(franja);
-    const vidrioT = new THREE.MeshPhysicalMaterial({ color: '#1d5fa8', roughness: 0.02, metalness: 0.3, clearcoat: 1, emissive: '#2d8fff', emissiveIntensity: 0.15 });
-    for (let i = 0; i < 5; i++) for (const s of [-1, 1]) {
-      const w = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.5, 4, 12), vidrioT); w.rotation.z = Math.PI / 2; w.scale.set(1.25, 1, 0.25); w.position.set(-2.4 + i * 1.2, 0.35, s * 1.18); tren.add(w);
-    }
-    const faro = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 10), new THREE.MeshBasicMaterial({ color: '#fffbe0' })); faro.position.set(3.95, 0.2, 0); tren.add(faro);
-  }
-  const RT = M ? M.userData.tam.x / 2 + 4.6 : R + 2;   // el vagón, al lado del pabellón (no adentro)
+  MT.rotation.y = Math.PI / 2; MT.position.y = -1.45; tren.add(MT);
+  const RT = M.userData.tam.x / 2 + 4.6;   // el vagón, al lado del pabellón (no adentro)
   tren.position.set(RT, 1.9, 0); g.add(tren);
   g.userData.tren = tren; g.userData.curva = curva;
   /* los sólidos, en coordenadas del mundo */
   const c = Math.cos(rot), s = Math.sin(rot);
   const aMundo = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
-  mundo.cilindro(x, z, M ? M.userData.tam.x / 2 - 0.2 : R, -5, alturaPiso + anden, { tipo: 'piedra' });
-  if (M) {
-    /* el vidrio del pabellón: una ronda de postes invisibles, menos en la entrada (-x) */
-    const r = M.userData.tam.x / 2 - 0.55;
-    for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; if (Math.cos(a) < -0.8) continue; const [cx, cz] = aMundo(Math.cos(a) * r, Math.sin(a) * r); mundo.cilindro(cx, cz, 0.62, alturaPiso, alturaPiso + 4.5); }
-  } else for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + Math.PI / 6; const [cx, cz] = aMundo(Math.cos(a) * (R - 0.3), Math.sin(a) * (R - 0.3)); mundo.cilindro(cx, cz, 0.25, alturaPiso, alturaPiso + 5); }
+  mundo.cilindro(x, z, M.userData.tam.x / 2 - 0.2, -5, alturaPiso + anden, { tipo: 'piedra' });
+  /* el vidrio del pabellón: una ronda de postes invisibles sobre la pared, menos en la entrada (-x) */
+  const rp = M.userData.pared;
+  for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; if (Math.cos(a) < -0.8) continue; const [cx, cz] = aMundo(Math.cos(a) * rp, Math.sin(a) * rp); mundo.cilindro(cx, cz, 0.55, alturaPiso, alturaPiso + 4.5); }
   const [tx, tz] = aMundo(RT, 0);
   mundo.caja(tx, tz, 4, 1.3, alturaPiso, alturaPiso + 3.3, rot);
-  const [px, pz] = aMundo(R - 1.2, 0);
+  const [px, pz] = aMundo(rp - 1.0, 0);
   g.userData.puntoTren = new THREE.Vector3(px, alturaPiso + anden, pz);
   return g;
 }
@@ -110,23 +72,9 @@ export function estacion(mundo, x, z, rot, alturaPiso) {
 /* ------------------------------------------------------ la tienda de afuera */
 export function tiendaAfuera(mundo, x, z, rot, alturaPiso, nombre = 'AERO·MART') {
   const g = new THREE.Group(); g.position.set(x, alturaPiso, z); g.rotation.y = rot;
-  let W = 11, H = 5.5, D = 8, puertaX = 0;
-  /* la tienda de Rezona (blanca con caños verdes y el toldo en la puerta, a la derecha) */
-  const M = modelo('tienda', { ancho: 12 });
-  if (M) { g.add(M); ({ x: W, y: H, z: D } = M.userData.tam); puertaX = W * 0.2; }
-  else {
-    const casa = new THREE.Mesh(new RoundedBoxGeometry(W, H, D, 4, 1.2), brilloso('#ffffff', { roughness: 0.18 })); casa.position.y = H / 2; casa.castShadow = true; casa.receiveShadow = true; g.add(casa);
-    const banda = new THREE.Mesh(new RoundedBoxGeometry(W + 0.1, 0.6, D + 0.1, 3, 0.3), brilloso('#3fcf4f')); banda.position.y = 1; g.add(banda);
-    const vitrina = new THREE.Mesh(new RoundedBoxGeometry(W * 0.7, H * 0.52, 0.3, 3, 0.14), new THREE.MeshPhysicalMaterial({ color: '#a8e8ff', roughness: 0.02, clearcoat: 1, transparent: true, opacity: 0.7, emissive: '#6fd0ff', emissiveIntensity: 0.25 }));
-    vitrina.position.set(0, H * 0.52, D / 2 + 0.02); g.add(vitrina);
-    const puerta = new THREE.Mesh(new RoundedBoxGeometry(1.8, 2.8, 0.4, 3, 0.3), new THREE.MeshPhysicalMaterial({ color: '#dff9ff', roughness: 0.02, clearcoat: 1, transparent: true, opacity: 0.85, emissive: '#bff0ff', emissiveIntensity: 0.4 }));
-    puerta.position.set(0, 1.4, D / 2 + 0.12); g.add(puerta);
-    const toldo = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, W * 0.8, 24, 1, false, 0, Math.PI), brilloso('#6fe07a')); toldo.rotation.z = Math.PI / 2; toldo.scale.set(1, 1, 0.8); toldo.position.set(0, H * 0.84, D / 2 + 0.3); g.add(toldo);
-    /* los caños verdes de afuera */
-    const caño = brilloso('#34c25a', { roughness: 0.15, metalness: 0.3 });
-    const curva = new THREE.CatmullRomCurve3([new THREE.Vector3(-W / 2 - 0.3, 0, 2), new THREE.Vector3(-W / 2 - 0.3, H - 1, 2), new THREE.Vector3(-W / 2 + 1, H + 0.4, 1), new THREE.Vector3(0, H + 0.3, -1.5), new THREE.Vector3(W / 2 - 1, H + 0.4, -2)]);
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(curva, 40, 0.22, 10), caño));
-  }
+  /* la tienda blanca con caños verdes y el toldo en la puerta, a la derecha (construcciones.js) */
+  const M = modelo('tienda', { ancho: 12 }); g.add(M);
+  const { x: W, y: H, z: D } = M.userData.tam, puertaX = W * 0.2;
   const cartel = letrero(nombre, { ancho: 6.5, alto: 1.4, tinta: '#23a33a', borde: '#6fe07a' }); cartel.position.set(0, H + 0.6, D / 2 - 0.9); cartel.rotation.x = -0.1; g.add(cartel);
   const c = Math.cos(rot), s = Math.sin(rot);
   mundo.caja(x, z, W / 2, D / 2, alturaPiso - 2, alturaPiso + H, rot, { tipo: 'piedra' });
@@ -151,12 +99,10 @@ export function probadorCabina(mundo, x, z, rot, alturaPiso) {
 /* ------------------------------------------------------ faroles y bancos */
 export function farol(mundo, x, z, y) {
   const g = new THREE.Group(); g.position.set(x, y, z);
-  const M = modelo('farol', { alto: 3.7 });
-  let arriba = new THREE.Vector3(0, 3.35, 0), r = 0.34;
-  if (M) { g.add(M); arriba = cima('farol', 0.2).multiplyScalar(M.userData.k); r = M.userData.tam.y * 0.07; }
-  else { const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.12, 3.2, 10), brilloso('#ffffff')); pie.position.y = 1.6; pie.castShadow = true; g.add(pie); }
-  /* la bocha: con el modelo es una cáscara apenas más grande que brilla de noche */
-  const luz = new THREE.Mesh(new THREE.SphereGeometry(r * (M ? 1.12 : 1), 20, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#bff4ff', emissiveIntensity: 0.3, roughness: 0.1, transparent: true, opacity: M ? 0.35 : 0.9, depthWrite: !M }));
+  const M = modelo('farol', { alto: 3.7 }); g.add(M);
+  const arriba = M.userData.bocha, r = M.userData.radio;
+  /* la bocha: una cáscara apenas más grande que brilla de noche */
+  const luz = new THREE.Mesh(new THREE.SphereGeometry(r * 1.12, 20, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#bff4ff', emissiveIntensity: 0.3, roughness: 0.1, transparent: true, opacity: 0.35, depthWrite: false }));
   luz.position.copy(arriba); luz.userData.op0 = luz.material.opacity; g.add(luz);
   g.userData.luz = luz;
   mundo.cilindro(x, z, 0.15, y, y + 3.2);
@@ -164,14 +110,8 @@ export function farol(mundo, x, z, y) {
 }
 export function banco(mundo, x, z, y, rot) {
   const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rot;
-  const M = modelo('banco', { ancho: 2.1 });
-  let asiento = 0.61;
-  if (M) { g.add(M); asiento = rayo('banco', 0, 1, 0.45) * M.userData.k; if (!(asiento > 0.3 && asiento < 0.9)) asiento = 0.55; }
-  else {
-    const as = new THREE.Mesh(new RoundedBoxGeometry(2, 0.22, 0.65, 3, 0.1), brilloso('#7fd6ff')); as.position.y = 0.5; as.castShadow = true; g.add(as);
-    const resp = new THREE.Mesh(new RoundedBoxGeometry(2, 0.6, 0.14, 3, 0.07), brilloso('#7fd6ff')); resp.position.set(0, 0.9, -0.28); g.add(resp);
-    for (const s of [-0.8, 0.8]) { const p = new THREE.Mesh(new RoundedBoxGeometry(0.14, 0.5, 0.55, 2, 0.05), brilloso('#ffffff')); p.position.set(s, 0.25, 0); g.add(p); }
-  }
+  const M = modelo('banco', { ancho: 2.1 }); g.add(M);
+  const asiento = M.userData.asiento;
   mundo.caja(x, z, 1, 0.33, y, y + asiento, rot, { asiento: true });
   return g;
 }

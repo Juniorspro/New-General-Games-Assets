@@ -7,10 +7,10 @@
    ========================================================================== */
 import * as THREE from 'three';
 import { Mundo, azar, ruido2, suaveEntre } from '../mundo.js';
-import { terreno, agua, pasto, flores, arboles, palmeras, piedras, TEX, brilloso, materialVidrio } from '../naturaleza.js';
+import { terreno, agua, pasto, flores, arboles, palmeras, piedras, TEX } from '../naturaleza.js';
 import { Orbes, Mariposas, Cardumen, Burbujas, Frutas, Medusas, pecera, globoCascada, discoMalla } from '../objetos.js';
 import { estacion, tiendaAfuera, probadorCabina, farol, banco, letrero } from '../edificios.js';
-import { modelo, rayo } from '../modelos.js';
+import { modelo } from '../modelos.js';
 
 const R1 = ruido2(3), R2 = ruido2(8);
 const LAGO = [18, -12], ESTACION = [-30, 20], TIENDA = [30, 26], PLAZA = [0, 6], LOMA = [-30, -26], HUERTA = [-4, -38], PROBADOR = [9, 18], BARRIO = [2, 46];
@@ -117,15 +117,9 @@ export function crearPlaza(ctx) {
 
   /* la fuente de burbujas en el medio de la plaza: de ahí salen las grandes que se manejan */
   const fuente = new THREE.Group(); fuente.position.set(PLAZA[0], A(...PLAZA), PLAZA[1]);
-  const MF = modelo('fuente', { ancho: 7.4 });
-  let bola = null, borde = 0.7, alto = 2.9;
-  if (MF) { fuente.add(MF); borde = rayo('fuente', 0.9, 1, 0) * MF.userData.k || 0.7; alto = MF.userData.tam.y; }
-  else {
-    const pileta = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.5, 0.7, 40), brilloso('#ffffff')); pileta.position.y = 0.35; fuente.add(pileta);
-    const aguaF = new THREE.Mesh(new THREE.CylinderGeometry(2.9, 2.9, 0.1, 40), new THREE.MeshPhysicalMaterial({ color: '#3fe0ff', roughness: 0.02, clearcoat: 1, emissive: '#1ab8e0', emissiveIntensity: 0.35, transparent: true, opacity: 0.85 })); aguaF.position.y = 0.66; fuente.add(aguaF);
-    const pico = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.6, 1.4, 20), brilloso('#bfefff')); pico.position.y = 1.2; fuente.add(pico);
-    bola = new THREE.Mesh(new THREE.SphereGeometry(0.7, 28, 20), materialVidrio('#dffaff', 0.35)); bola.position.y = 2.3; fuente.add(bola);
-  }
+  /* la pileta de la bola de vidrio (construcciones.js) */
+  const MF = modelo('fuente', { ancho: 7.4 }); fuente.add(MF);
+  const borde = MF.userData.borde, alto = MF.userData.tam.y;
   g.add(fuente);
   mundo.cilindro(PLAZA[0], PLAZA[1], 3.4, A(...PLAZA) - 1, A(...PLAZA) + borde, { tipo: 'piedra' });
   mundo.cilindro(PLAZA[0], PLAZA[1], 0.7, A(...PLAZA), A(...PLAZA) + alto);
@@ -135,7 +129,6 @@ export function crearPlaza(ctx) {
   CASAS.forEach(([x, z], i) => {
     const y = A(x, z), rot = Math.atan2(PLAZA[0] - x, PLAZA[1] - z);
     const c = modelo('casa', { ancho: i === 1 ? 10.5 : 9 });
-    if (!c) return;
     c.position.set(x, y - 0.05, z); c.rotation.y = rot; g.add(c);
     const T = c.userData.tam;
     mundo.caja(x, z, T.x * 0.44, T.z * 0.44, y - 1, y + T.y * 0.92, rot, { tipo: 'piedra' });
@@ -147,7 +140,6 @@ export function crearPlaza(ctx) {
   /* los hoteles del otro lado del agua (más cerca que la ciudad pintada) */
   HOTELES.forEach(([x, z], i) => {
     const h = modelo('hotel', { ancho: 21 + i * 2 });
-    if (!h) return;
     h.position.set(x, A(x, z) - 0.1, z); h.rotation.y = Math.atan2(-x, -z) + i; g.add(h);
     mundo.cilindro(x, z, 5.5, A(x, z) - 2, A(x, z) + h.userData.tam.y, { tipo: 'piedra' });
   });
@@ -223,7 +215,6 @@ export function crearPlaza(ctx) {
       for (const c of cardumenes) c.actualizar(dt);
       medusas.actualizar(dt);
       frutas.actualizar(dt);
-      if (bola) bola.rotation.y = t * 0.5;
       for (const d of discos) { d.malla.rotation.y = t * 1.6; d.malla.position.y = d.p.y + Math.sin(t * 2) * 0.12; }
       /* de noche se prenden los faroles y las ventanas de la ciudad */
       const noche = 1 - cielo.dia;

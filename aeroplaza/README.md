@@ -61,15 +61,16 @@ Además hay:
   más rápido;
 - controles de dedo personalizables: mover, agrandar, transparencia, tipo de
   palanca, zurdos y vibración;
-- 15 modelos 3D de Rezona (edificios, árboles, palmeras, faroles, bancos,
-  fuente y muebles). Si alguno no carga, va el dibujado a mano.
+- las construcciones armadas en código (`js/construcciones.js`), copiando
+  las referencias que se hicieron con Rezona: casa, estación, tienda, hotel,
+  tren, fuente, bancos, faroles, árboles, palmeras y muebles.
 
 ## Para tocarlo
 
 - `node herramientas/armar.mjs [--dev]` arma `aeroplaza.html`. Si están los
   MP3 en `brillo/musica/`, arma también `aeroplaza-con-canciones.html`.
-- `node herramientas/assets.mjs [nombre]` pasa lo de Rezona de `crudo/` a
-  `assets/` (los modelos, a una cantidad fija de triángulos).
+- `node herramientas/assets.mjs` pasa lo de Rezona de `crudo/` a `assets/`
+  (texturas, el cielo, las nubes y el delfín).
 - `python3 herramientas/musica.py` cose las tomas de 10 s de Rezona en un tema
   por reino, con su bucle.
 - `pruebas/`:
@@ -80,7 +81,8 @@ Además hay:
   - `rendimiento.mjs`: llamadas, triángulos y ms;
   - `canciones.mjs`: comprueba las canciones y los temas de cada reino;
   - `dedos.mjs`: toques de verdad, sin girar y girado;
-  - `modelos.mjs`: cada modelo en 4 giros, para ver adónde mira;
+  - `construcciones.mjs`: cada construcción de tres cuartos, para compararla
+    con su referencia; `modelos.mjs`: cada una en 4 giros;
   - `muneco.mjs` y `fotos.mjs`: el muñeco en el probador y la isla.
 - En la dirección:
   - `?directo`: saltea los menús;

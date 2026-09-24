@@ -32,9 +32,9 @@ export function crearJardin(ctx) {
   const r = azar(5);
   const arb = [];
   for (const [ix, iz, ir] of ISLAS) for (let k = 0; k < Math.floor(ir / 4); k++) { const a = r() * 6.28, d = r() * ir * 0.4, x = ix + Math.cos(a) * d, z = iz + Math.sin(a) * d; if (Math.hypot(x, z) < 6) continue; arb.push([x, z, 0.7 + r() * 0.5]); }
-  /* mitad árboles de burbujas de Rezona, mitad los rosados de acá (el jardín es de flores) */
+  /* mitad árboles de burbujas lima, mitad rosados (el jardín es de flores) */
   g.add(arboles(A, arb.filter((q, i) => i % 2 === 0)));
-  g.add(arboles(A, arb.filter((q, i) => i % 2 === 1), { colores: ['#ff9ad8', '#ffc2e2', '#ffb0e8'], modelo: false }));
+  g.add(arboles(A, arb.filter((q, i) => i % 2 === 1), { variante: 'arbolRosa', tintes: ['#ffffff', '#ffe6f4', '#fff2fa'] }));
   for (const [x, z, e] of arb) mundo.cilindro(x, z, 0.35 * e, A(x, z) - 1, A(x, z) + 2.4 * e);
 
   /* nenúfares: discos verdes sobre el agua que se pisan; algunos con loto */
