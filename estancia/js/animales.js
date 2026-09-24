@@ -245,8 +245,14 @@
     A.huellasFrescas = new THREE.InstancedMesh(hueco, new THREE.MeshStandardMaterial({ map: texH, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }), 1600);
     A.huellasViejas = new THREE.InstancedMesh(hueco, new THREE.MeshStandardMaterial({ map: texH, transparent: true, opacity: 0.35, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2 }), 1600);
     for (const im of [A.huellasFrescas, A.huellasViejas]) { im.count = 0; im.frustumCulled = false; im.receiveShadow = true; E.motor.escena.add(im); }
-    const gB = new THREE.SphereGeometry(0.16, 10, 6).scale(1, 0.25, 1);
-    A.bostaMalla = new THREE.InstancedMesh(gB, new THREE.MeshStandardMaterial({ color: 0x3a3320, roughness: 0.45 }), 200);
+    // La bosta: una torta chata, de bordes irregulares, marrón oscuro (la
+    // esfera gris aplastada de antes parecía una piedra).
+    const gB = new THREE.SphereGeometry(0.17, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    { const pb = gB.attributes.position, azB = E.azar(12);
+      for (let i = 0; i < pb.count; i++) { const x = pb.getX(i), z = pb.getZ(i), a = Math.atan2(z, x); const r = 1 + 0.18 * Math.sin(a * 3 + 1) + 0.1 * Math.sin(a * 7) + (azB() - 0.5) * 0.06; pb.setXYZ(i, x * r, pb.getY(i) * 0.22, z * r); }
+      gB.computeVertexNormals(); }
+    const texB = E.lienzo(64, 64, (g, w, h) => { g.fillStyle = "#3a2a16"; g.fillRect(0, 0, w, h); const az = E.azar(13); for (let i = 0; i < 120; i++) { g.fillStyle = `rgba(${20 + az() * 50},${14 + az() * 30},${6 + az() * 16},0.6)`; g.beginPath(); g.arc(az() * w, az() * h, 1 + az() * 4, 0, Math.PI * 2); g.fill(); } g.strokeStyle = "rgba(15,10,5,0.5)"; for (let r = 6; r < 32; r += 6) { g.beginPath(); g.arc(w / 2, h / 2, r, 0, Math.PI * 2); g.stroke(); } });
+    A.bostaMalla = new THREE.InstancedMesh(gB, new THREE.MeshStandardMaterial({ map: texB, roughness: 0.6 }), 200);
     A.bostaMalla.count = 0; A.bostaMalla.frustumCulled = false; A.bostaMalla.castShadow = true;
     E.motor.escena.add(A.bostaMalla);
     // Moscas: puntos negros que zumban sobre la bosta fresca y la herida.

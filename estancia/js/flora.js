@@ -92,9 +92,11 @@
       const N = img.width >= 1024 ? 1024 : 512, c = document.createElement("canvas");
       c.width = c.height = N;
       const g = c.getContext("2d"), az = E.azar(tipo.length * 17);
-      const n = tipo === "arbusto" ? 5 : 4, abre = tipo === "algarrobo" ? 1.2 : 0.95;
+      // Las ramas enteras adentro del lienzo, con margen: si la punta se sale
+      // del borde queda cortada en recto y la tarjeta se ve como un tablón.
+      const n = tipo === "arbusto" ? 5 : 4, abre = tipo === "algarrobo" ? 0.9 : 0.8;
       for (let i = 0; i < n; i++) {
-        const ang = (i / (n - 1) - 0.5) * abre + (az() - 0.5) * 0.15, sc = 0.7 + az() * 0.3;
+        const ang = (i / (n - 1) - 0.5) * abre + (az() - 0.5) * 0.12, sc = 0.6 + az() * 0.18;
         g.save(); g.translate(N / 2 + (az() - 0.5) * 40, N); g.rotate(ang); g.scale(sc * (az() < 0.5 ? -1 : 1), sc);
         g.drawImage(img, -N / 2, -N, N, N); g.restore();
       }
@@ -161,9 +163,18 @@
         .replace("#include <common>", "#include <common>\nuniform vec3 uSolDirV, uSolColor;")
         // Alfa nítido en todos los mips: si no, de lejos el follaje se desvanece.
         .replace("#include <map_fragment>", `#include <map_fragment>
-          vec2 dxm = dFdx(vMapUv * 512.0), dym = dFdy(vMapUv * 512.0);
+          // Con el tamaño real de la textura (las ramas de Rezona son de 1024)
+          // y con tope: sin tope, de canto la tarjeta entera se volvía opaca
+          // y se veía como un tablón.
+          vec2 tam = vec2(textureSize(map, 0));
+          vec2 dxm = dFdx(vMapUv * tam), dym = dFdy(vMapUv * tam);
           float mipN = max(0.0, 0.5 * log2(max(dot(dxm, dxm), dot(dym, dym))));
-          diffuseColor.a *= 1.0 + mipN * 0.28;
+          diffuseColor.a *= 1.0 + min(mipN, 3.0) * 0.2;
+          // Una tarjeta vista de canto es una tabla finita: se desvanece según
+          // cuánto se la ve de perfil (la normal del plano, no la de luz).
+          vec3 nPlano = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));
+          float deFrente = abs(dot(nPlano, normalize(vViewPosition)));
+          diffuseColor.a *= smoothstep(0.1, 0.32, deFrente);
           // Lo que queda a menos de 1,6 m de la cámara se tramea: si no, la
           // cámara vive adentro de las copas.
           float cercania = smoothstep(0.7, 1.6, length(vViewPosition));

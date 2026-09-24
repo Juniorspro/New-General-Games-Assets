@@ -273,7 +273,7 @@
       const v = Z.vaca;
       if (v) {
         const cu = A.cuello(v, new V());
-        anudarArmada(cu, 0.2);
+        anudarArmada(cu, 0.2, v);
         paso(dt, mano, 0.1, false, false, cu);
       }
     }
@@ -308,10 +308,19 @@
     }
   }
 
-  function anudarArmada(c, r) {
+  // La armada ceñida al cuello: en un plano de canto al cuello (que va para
+  // adelante y un poco para arriba), y más ancha que el cuello de la vaca de
+  // Rezona (con 0,22 m quedaba adentro y no se veía).
+  const ejeCuello = new V(), ladoCuello = new V(), arribaCuello = new V();
+  function anudarArmada(c, r, v) {
+    const yaw = v ? v.yaw : 0;
+    ejeCuello.set(Math.sin(yaw), 0.55, Math.cos(yaw)).normalize();
+    ladoCuello.set(Math.cos(yaw), 0, -Math.sin(yaw));
+    arribaCuello.crossVectors(ejeCuello, ladoCuello).normalize();
+    const radio = v && v.piel ? r + 0.12 : r;
     for (let i = 0; i < NA; i++) {
       const a = (i / NA) * Math.PI * 2;
-      armada[i].p.set(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r * 0.8, c.z + Math.sin(a) * r * 0.3);
+      armada[i].p.copy(c).addScaledVector(ladoCuello, Math.cos(a) * radio).addScaledVector(arribaCuello, Math.sin(a) * radio * 1.1);
       armada[i].q.copy(armada[i].p);
     }
   }
@@ -403,7 +412,7 @@
       Z.pialando.aguja = (Math.sin(t * Math.PI * Z.pialando.vel) + 1) / 2;
     }
 
-    anudarArmada(cu, 0.22);
+    anudarArmada(cu, 0.22, v);
     paso(dt, mano, 0.08, false, false, cu);
   }
 })();
