@@ -4122,8 +4122,10 @@ function dibujarHUD(g, J, t) {
   const ax = x0 + 2 * R + 6, ay = y0 + 13;
   g.fillStyle = '#0d0a14'; g.fillRect(ax, ay, 5, 5);
   g.fillStyle = '#f0a03a'; g.fillRect(ax + 1, ay + 1, 3, 3); g.fillStyle = '#ffe08a'; g.fillRect(ax + 1, ay + 1, 1, 1);
-  textoFino(g, String(J.ambarVisto), ax + 8, ay - 1, { col: '#ffd98a' });
-  if (J.ambarMas > 0) textoFino(g, '+' + J.ambarMas, ax + 8 + anchoFino(String(J.ambarVisto)) + 4, ay - 1, { col: '#fff0a0', halo: '#ffb050' });
+  /* el contador se acerca de a pasos que no son enteros: se muestra redondeado */
+  const ambar = String(Math.round(J.ambarVisto));
+  textoFino(g, ambar, ax + 8, ay - 1, { col: '#ffd98a' });
+  if (J.ambarMas > 0) textoFino(g, '+' + J.ambarMas, ax + 8 + anchoFino(ambar) + 4, ay - 1, { col: '#fff0a0', halo: '#ffb050' });
   /* la barra del jefe */
   const j = J.mundo.jefe;
   if (j && !j.muerto && j.est !== 'presenta') {

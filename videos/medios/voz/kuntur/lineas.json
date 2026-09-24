@@ -1,0 +1,771 @@
+{
+ "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre",
+ "lineas": [
+  {
+   "archivo": "01.mp3",
+   "texto": "Hice un Paper Mario... pero en Jujuy. Y la protagonista es Killa.",
+   "dur": 5.36,
+   "habla": [
+    0.0,
+    5.19
+   ],
+   "palabras": [
+    {
+     "p": "Hice",
+     "t0": 0.0,
+     "t1": 0.338
+    },
+    {
+     "p": "un",
+     "t0": 0.36,
+     "t1": 0.478
+    },
+    {
+     "p": "Paper",
+     "t0": 0.51,
+     "t1": 0.762
+    },
+    {
+     "p": "Mario...",
+     "t0": 0.818,
+     "t1": 1.376
+    },
+    {
+     "p": "pero",
+     "t0": 1.74,
+     "t1": 1.965
+    },
+    {
+     "p": "en",
+     "t0": 2.01,
+     "t1": 2.09
+    },
+    {
+     "p": "Jujuy.",
+     "t0": 2.13,
+     "t1": 2.668
+    },
+    {
+     "p": "Y",
+     "t0": 3.15,
+     "t1": 3.23
+    },
+    {
+     "p": "la",
+     "t0": 3.27,
+     "t1": 3.355
+    },
+    {
+     "p": "protagonista",
+     "t0": 3.39,
+     "t1": 4.16
+    },
+    {
+     "p": "es",
+     "t0": 4.228,
+     "t1": 4.402
+    },
+    {
+     "p": "Killa.",
+     "t0": 4.514,
+     "t1": 5.19
+    }
+   ],
+   "oido": "hice un pay per mario pero en jujuy y la protagonista esquila"
+  },
+  {
+   "archivo": "02.mp3",
+   "texto": "Una granizada le deja un pichón de cóndor en la puerta de su casa, en Purmamarca.",
+   "dur": 5.36,
+   "habla": [
+    0.03,
+    5.34
+   ],
+   "palabras": [
+    {
+     "p": "Una",
+     "t0": 0.03,
+     "t1": 0.267
+    },
+    {
+     "p": "granizada",
+     "t0": 0.27,
+     "t1": 0.977
+    },
+    {
+     "p": "le",
+     "t0": 1.08,
+     "t1": 1.215
+    },
+    {
+     "p": "deja",
+     "t0": 1.23,
+     "t1": 1.482
+    },
+    {
+     "p": "un",
+     "t0": 1.53,
+     "t1": 1.734
+    },
+    {
+     "p": "pichón",
+     "t0": 1.77,
+     "t1": 2.219
+    },
+    {
+     "p": "de",
+     "t0": 2.25,
+     "t1": 2.345
+    },
+    {
+     "p": "cóndor",
+     "t0": 2.37,
+     "t1": 2.837
+    },
+    {
+     "p": "en",
+     "t0": 3.0,
+     "t1": 3.109
+    },
+    {
+     "p": "la",
+     "t0": 3.15,
+     "t1": 3.235
+    },
+    {
+     "p": "puerta",
+     "t0": 3.27,
+     "t1": 3.617
+    },
+    {
+     "p": "de",
+     "t0": 3.66,
+     "t1": 3.74
+    },
+    {
+     "p": "su",
+     "t0": 3.75,
+     "t1": 3.83
+    },
+    {
+     "p": "casa,",
+     "t0": 3.87,
+     "t1": 4.47
+    },
+    {
+     "p": "en",
+     "t0": 4.488,
+     "t1": 4.68
+    },
+    {
+     "p": "Purmamarca.",
+     "t0": 4.687,
+     "t1": 5.34
+    }
+   ],
+   "oido": "una granizada le deja un pichón de cóndor en la puerta de su casa en burma marca"
+  },
+  {
+   "archivo": "03.mp3",
+   "texto": "Y Killa, en vez de llamar a alguien, dice: bueno, lo llevo yo al Nevado de Chañi.",
+   "dur": 4.96,
+   "habla": [
+    0.0,
+    4.53
+   ],
+   "palabras": [
+    {
+     "p": "Y",
+     "t0": 0.0,
+     "t1": 0.166
+    },
+    {
+     "p": "Killa,",
+     "t0": 0.21,
+     "t1": 0.463
+    },
+    {
+     "p": "en",
+     "t0": 0.57,
+     "t1": 0.81
+    },
+    {
+     "p": "vez",
+     "t0": 0.853,
+     "t1": 0.99
+    },
+    {
+     "p": "de",
+     "t0": 1.035,
+     "t1": 1.146
+    },
+    {
+     "p": "llamar",
+     "t0": 1.2,
+     "t1": 1.65
+    },
+    {
+     "p": "a",
+     "t0": 1.681,
+     "t1": 1.761
+    },
+    {
+     "p": "alguien,",
+     "t0": 1.738,
+     "t1": 2.04
+    },
+    {
+     "p": "dice:",
+     "t0": 2.07,
+     "t1": 2.85
+    },
+    {
+     "p": "bueno,",
+     "t0": 2.85,
+     "t1": 3.274
+    },
+    {
+     "p": "lo",
+     "t0": 3.39,
+     "t1": 3.471
+    },
+    {
+     "p": "llevo",
+     "t0": 3.531,
+     "t1": 3.676
+    },
+    {
+     "p": "yo",
+     "t0": 3.714,
+     "t1": 3.794
+    },
+    {
+     "p": "al",
+     "t0": 3.78,
+     "t1": 3.922
+    },
+    {
+     "p": "Nevado",
+     "t0": 3.961,
+     "t1": 4.14
+    },
+    {
+     "p": "de",
+     "t0": 4.184,
+     "t1": 4.271
+    },
+    {
+     "p": "Chañi.",
+     "t0": 4.314,
+     "t1": 4.53
+    }
+   ],
+   "oido": "y que la en vez de a alguien dice bueno lo llevo yo al nevado de"
+  },
+  {
+   "archivo": "04.mp3",
+   "texto": "El pichón se llama Apu, y va creciendo: en las Salinas aletea, y en la Puna ya planea.",
+   "dur": 7.84,
+   "habla": [
+    0.0,
+    7.68
+   ],
+   "palabras": [
+    {
+     "p": "El",
+     "t0": 0.0,
+     "t1": 0.229
+    },
+    {
+     "p": "pichón",
+     "t0": 0.24,
+     "t1": 0.603
+    },
+    {
+     "p": "se",
+     "t0": 0.66,
+     "t1": 0.79
+    },
+    {
+     "p": "llama",
+     "t0": 0.84,
+     "t1": 1.24
+    },
+    {
+     "p": "Apu,",
+     "t0": 1.41,
+     "t1": 1.657
+    },
+    {
+     "p": "y",
+     "t0": 1.765,
+     "t1": 1.872
+    },
+    {
+     "p": "va",
+     "t0": 2.31,
+     "t1": 2.497
+    },
+    {
+     "p": "creciendo:",
+     "t0": 2.602,
+     "t1": 3.295
+    },
+    {
+     "p": "en",
+     "t0": 3.93,
+     "t1": 4.024
+    },
+    {
+     "p": "las",
+     "t0": 4.11,
+     "t1": 4.222
+    },
+    {
+     "p": "Salinas",
+     "t0": 4.249,
+     "t1": 4.76
+    },
+    {
+     "p": "aletea,",
+     "t0": 4.86,
+     "t1": 5.82
+    },
+    {
+     "p": "y",
+     "t0": 5.828,
+     "t1": 5.94
+    },
+    {
+     "p": "en",
+     "t0": 5.94,
+     "t1": 6.081
+    },
+    {
+     "p": "la",
+     "t0": 6.09,
+     "t1": 6.195
+    },
+    {
+     "p": "Puna",
+     "t0": 6.21,
+     "t1": 6.605
+    },
+    {
+     "p": "ya",
+     "t0": 6.81,
+     "t1": 7.016
+    },
+    {
+     "p": "planea.",
+     "t0": 7.11,
+     "t1": 7.68
+    }
+   ],
+   "oido": "el pichón se llama a apu iba creciendo en la salinas aletea y el la puna ya planea"
+  },
+  {
+   "archivo": "05.mp3",
+   "texto": "Mientras tanto, Killa camina, trepa y salta todo el camino. Apu, bien, gracias.",
+   "dur": 6.96,
+   "habla": [
+    0.0,
+    6.84
+   ],
+   "palabras": [
+    {
+     "p": "Mientras",
+     "t0": 0.0,
+     "t1": 0.427
+    },
+    {
+     "p": "tanto,",
+     "t0": 0.45,
+     "t1": 1.08
+    },
+    {
+     "p": "Killa",
+     "t0": 1.093,
+     "t1": 1.346
+    },
+    {
+     "p": "camina,",
+     "t0": 1.403,
+     "t1": 1.936
+    },
+    {
+     "p": "trepa",
+     "t0": 2.16,
+     "t1": 2.566
+    },
+    {
+     "p": "y",
+     "t0": 2.79,
+     "t1": 2.87
+    },
+    {
+     "p": "salta",
+     "t0": 2.94,
+     "t1": 3.352
+    },
+    {
+     "p": "todo",
+     "t0": 3.455,
+     "t1": 3.75
+    },
+    {
+     "p": "el",
+     "t0": 3.849,
+     "t1": 3.929
+    },
+    {
+     "p": "camino.",
+     "t0": 3.962,
+     "t1": 4.416
+    },
+    {
+     "p": "Apu,",
+     "t0": 4.497,
+     "t1": 5.303
+    },
+    {
+     "p": "bien,",
+     "t0": 5.52,
+     "t1": 5.948
+    },
+    {
+     "p": "gracias.",
+     "t0": 6.15,
+     "t1": 6.84
+    }
+   ],
+   "oido": "mientras tanto que la camina trepa y salta todo el camino apu viene gracias"
+  },
+  {
+   "archivo": "06.mp3",
+   "texto": "Hay llamas, un tren que va por las nubes, y quince coplas escondidas en el camino.",
+   "dur": 5.76,
+   "habla": [
+    0.0,
+    5.76
+   ],
+   "palabras": [
+    {
+     "p": "Hay",
+     "t0": 0.0,
+     "t1": 0.289
+    },
+    {
+     "p": "llamas,",
+     "t0": 0.3,
+     "t1": 1.23
+    },
+    {
+     "p": "un",
+     "t0": 1.289,
+     "t1": 1.44
+    },
+    {
+     "p": "tren",
+     "t0": 1.477,
+     "t1": 1.77
+    },
+    {
+     "p": "que",
+     "t0": 1.786,
+     "t1": 1.95
+    },
+    {
+     "p": "va",
+     "t0": 1.959,
+     "t1": 2.1
+    },
+    {
+     "p": "por",
+     "t0": 2.101,
+     "t1": 2.274
+    },
+    {
+     "p": "las",
+     "t0": 2.28,
+     "t1": 2.445
+    },
+    {
+     "p": "nubes,",
+     "t0": 2.46,
+     "t1": 3.33
+    },
+    {
+     "p": "y",
+     "t0": 3.4,
+     "t1": 3.48
+    },
+    {
+     "p": "quince",
+     "t0": 3.511,
+     "t1": 3.96
+    },
+    {
+     "p": "coplas",
+     "t0": 3.971,
+     "t1": 4.433
+    },
+    {
+     "p": "escondidas",
+     "t0": 4.47,
+     "t1": 5.098
+    },
+    {
+     "p": "en",
+     "t0": 5.13,
+     "t1": 5.214
+    },
+    {
+     "p": "el",
+     "t0": 5.25,
+     "t1": 5.33
+    },
+    {
+     "p": "camino.",
+     "t0": 5.34,
+     "t1": 5.76
+    }
+   ],
+   "oido": "hay llamas un tren que va por las nubes y quince coplas escondidas en el camino"
+  },
+  {
+   "archivo": "07.mp3",
+   "texto": "Y todo es un teatrito de papel y cartón, con los cerros de colores de fondo. Mirá eso.",
+   "dur": 5.84,
+   "habla": [
+    0.0,
+    5.7
+   ],
+   "palabras": [
+    {
+     "p": "Y",
+     "t0": 0.0,
+     "t1": 0.17
+    },
+    {
+     "p": "todo",
+     "t0": 0.18,
+     "t1": 0.591
+    },
+    {
+     "p": "es",
+     "t0": 0.72,
+     "t1": 0.875
+    },
+    {
+     "p": "un",
+     "t0": 0.93,
+     "t1": 1.028
+    },
+    {
+     "p": "teatrito",
+     "t0": 1.08,
+     "t1": 1.71
+    },
+    {
+     "p": "de",
+     "t0": 1.753,
+     "t1": 1.833
+    },
+    {
+     "p": "papel",
+     "t0": 1.869,
+     "t1": 2.19
+    },
+    {
+     "p": "y",
+     "t0": 2.202,
+     "t1": 2.282
+    },
+    {
+     "p": "cartón,",
+     "t0": 2.257,
+     "t1": 2.91
+    },
+    {
+     "p": "con",
+     "t0": 2.953,
+     "t1": 3.12
+    },
+    {
+     "p": "los",
+     "t0": 3.143,
+     "t1": 3.297
+    },
+    {
+     "p": "cerros",
+     "t0": 3.306,
+     "t1": 3.619
+    },
+    {
+     "p": "de",
+     "t0": 3.63,
+     "t1": 3.728
+    },
+    {
+     "p": "colores",
+     "t0": 3.75,
+     "t1": 4.173
+    },
+    {
+     "p": "de",
+     "t0": 4.23,
+     "t1": 4.31
+    },
+    {
+     "p": "fondo.",
+     "t0": 4.317,
+     "t1": 4.732
+    },
+    {
+     "p": "Mirá",
+     "t0": 5.01,
+     "t1": 5.232
+    },
+    {
+     "p": "eso.",
+     "t0": 5.283,
+     "t1": 5.7
+    }
+   ],
+   "oido": "y todo es un teatro de papel y cartón con los cerros de colores de fondo mira eso"
+  },
+  {
+   "archivo": "08.mp3",
+   "texto": "Se juega en el celu, en tres idiomas, y es gratis. ¿Llegás al Nevado con Apu? Dale, que no se va a llevar solo.",
+   "dur": 7.68,
+   "habla": [
+    0.0,
+    7.68
+   ],
+   "palabras": [
+    {
+     "p": "Se",
+     "t0": 0.0,
+     "t1": 0.169
+    },
+    {
+     "p": "juega",
+     "t0": 0.18,
+     "t1": 0.504
+    },
+    {
+     "p": "en",
+     "t0": 0.54,
+     "t1": 0.62
+    },
+    {
+     "p": "el",
+     "t0": 0.63,
+     "t1": 0.71
+    },
+    {
+     "p": "celu,",
+     "t0": 0.72,
+     "t1": 1.113
+    },
+    {
+     "p": "en",
+     "t0": 1.29,
+     "t1": 1.429
+    },
+    {
+     "p": "tres",
+     "t0": 1.47,
+     "t1": 1.664
+    },
+    {
+     "p": "idiomas,",
+     "t0": 1.71,
+     "t1": 2.281
+    },
+    {
+     "p": "y",
+     "t0": 2.49,
+     "t1": 2.571
+    },
+    {
+     "p": "es",
+     "t0": 2.64,
+     "t1": 2.782
+    },
+    {
+     "p": "gratis.",
+     "t0": 2.85,
+     "t1": 3.435
+    },
+    {
+     "p": "¿Llegás",
+     "t0": 3.992,
+     "t1": 4.41
+    },
+    {
+     "p": "al",
+     "t0": 4.427,
+     "t1": 4.528
+    },
+    {
+     "p": "Nevado",
+     "t0": 4.533,
+     "t1": 4.844
+    },
+    {
+     "p": "con",
+     "t0": 4.86,
+     "t1": 5.008
+    },
+    {
+     "p": "Apu?",
+     "t0": 5.04,
+     "t1": 5.79
+    },
+    {
+     "p": "Dale,",
+     "t0": 5.801,
+     "t1": 6.42
+    },
+    {
+     "p": "que",
+     "t0": 6.462,
+     "t1": 6.6
+    },
+    {
+     "p": "no",
+     "t0": 6.627,
+     "t1": 6.72
+    },
+    {
+     "p": "se",
+     "t0": 6.736,
+     "t1": 6.84
+    },
+    {
+     "p": "va",
+     "t0": 6.846,
+     "t1": 7.015
+    },
+    {
+     "p": "a",
+     "t0": 7.02,
+     "t1": 7.1
+    },
+    {
+     "p": "llevar",
+     "t0": 7.08,
+     "t1": 7.349
+    },
+    {
+     "p": "solo.",
+     "t0": 7.38,
+     "t1": 7.68
+    }
+   ],
+   "oido": "se juega en el celo en tres idiomas y es gratis llegas al levado con apu dale que no se va a llevar solo"
+  }
+ ]
+}

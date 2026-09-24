@@ -22,5 +22,11 @@ también: [rezona](rezona.md), [juegos](juegos.md).
   un GLB. Las animaciones vienen en el lugar, sin avance de raíz.
 - **Audio:** `sonilo_music` y `mirelo_text_to_audio` solo andan dentro de su
   constructor de juegos, no sueltos. Por eso el bosque suena sintetizado.
+- **Voz (24/09):** `generate_audio` con `text2speech_v2`, variante
+  `elevenlabs`, voz de catálogo "Andre" (`f1e8226e-2248-4d5f-b43c-0a79e9949dbf`).
+  - Cuesta 0,8 créditos por línea y pronuncia bien el castellano con acento
+    neutro.
+  - `seed_audio` pronunciaba mal.
+  - Se usó porque el audio de Rezona estaba caído. Ver [videos](videos.md).
 - Herramientas que se usaron: `generate_image_batch`, `remove_background`,
   `generate_3d`, `jobs_wait` y `balance`.

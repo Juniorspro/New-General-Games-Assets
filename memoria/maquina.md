@@ -33,6 +33,13 @@ Fuente: `ARRANQUE.md § 1` y `§ 7`. Ver también: [desplegar](desplegar.md),
 - Remotion 4.0.527 se instaló en `brillo/trailer/remotion`, porque lo pidió
   ("usá Remotion o instalá un editor de verdad"). Detalles:
   `brillo.md § El tráiler`.
+- Los videos relatados (`videos/remotion`) usan ese mismo Remotion:
+  `node_modules` es un enlace a `brillo/trailer/remotion/node_modules` (no se
+  commitea). Ver [videos](videos.md).
+- Vosk (24/09, para los tiempos de los subtítulos): `pip install --no-deps
+  vosk`, porque la rueda de `srt` no compila. `srt.py` se copió a mano a
+  `/usr/local/lib/python3.11/dist-packages/`. El modelo chico en castellano
+  (`vosk-model-small-es-0.42`) va en el scratchpad y no en el repo.
 - **Para mandarle un archivo por el chat, el límite es 30 MiB.** El tráiler
   (66 MB) salió en una copia de 27,5 MiB: x264 en dos pasadas a 3,8 Mbps.
 - H.264 no se puede ver en el Chromium de Playwright (no trae el códec). Los MP4
@@ -40,9 +47,15 @@ Fuente: `ARRANQUE.md § 1` y `§ 7`. Ver también: [desplegar](desplegar.md),
 
 ## La red (sale por un proxy)
 
-- `curl` llega a internet. **Chromium no:** sin proxy no sale, y con el proxy no
-  confía en su certificado (`ERR_CERT_AUTHORITY_INVALID`). Las pruebas van
-  contra `localhost` o `file://`; producción se verifica con `curl`.
+- `curl` llega a internet. **Chromium solo no:** sin proxy no sale, y con el
+  proxy no confía en su certificado (`ERR_CERT_AUTHORITY_INVALID`). Las pruebas
+  van contra `localhost` o `file://`; producción se verifica con `curl`.
+- Si hace falta una página de afuera en Chromium (24/09):
+  - `launch({ proxy: { server: process.env.HTTPS_PROXY } })`;
+  - `ctx.route('**/*', r => r.fetch().then(x => r.fulfill({ response: x })))`.
+  Así pide Node, que sí confía en el CA (`NODE_EXTRA_CA_CERTS`), y TLS se
+  sigue verificando.
+- Google contesta con captcha: no se saltea. Bing Imágenes no da resultados.
 - Para una captura con Google Fonts: se bajan el CSS y los woff2 con `curl` y se
   incrustan en la copia local.
 - El `https` de Node no usa el proxy por su cuenta. Un `postinstall` que baja

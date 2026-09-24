@@ -4,6 +4,16 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **24/09/2026, madrugada · `claude/fijate-iszyer`:**
+  - Pidió dos videos de gameplay relatados de ~1 min, con sus 7 stickers como
+    narrador y memes bajados (no generados).
+    - LUZ MALA: "bien chaqueño, chamamé", y después "memes chaqueños".
+    - KUNTUR: "la peruanita", que en el video es Killa, de Purmamarca.
+  - Salen a `videos/salida/` (no se commitea), con copia liviana y versión sin
+    música. Cómo se hacen: [videos](videos.md). (En curso al primer commit.)
+  - No se bajó chamamé de TikTok con ssstiktok (son canciones con dueño): va el
+    chamamé del propio juego.
+  - Falta, si lo pide: un tercer video, y los videos en inglés y portugués.
 - **23/09/2026, noche · `claude/fijate-iszyer`:**
   - Pidió un tráiler de BRILLO "completísimo". Después dijo "usá Remotion o
     instalá un editor de verdad" y que ffmpeg también sirve.

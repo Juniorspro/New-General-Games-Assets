@@ -1,0 +1,13 @@
+{
+  "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre",
+  "lineas": [
+    {"archivo": "01.mp3", "texto": "Hice un Paper Mario... pero en Jujuy. Y la protagonista es Killa."},
+    {"archivo": "02.mp3", "texto": "Una granizada le deja un pichón de cóndor en la puerta de su casa, en Purmamarca."},
+    {"archivo": "03.mp3", "texto": "Y Killa, en vez de llamar a alguien, dice: bueno, lo llevo yo al Nevado de Chañi."},
+    {"archivo": "04.mp3", "texto": "El pichón se llama Apu, y va creciendo: en las Salinas aletea, y en la Puna ya planea."},
+    {"archivo": "05.mp3", "texto": "Mientras tanto, Killa camina, trepa y salta todo el camino. Apu, bien, gracias."},
+    {"archivo": "06.mp3", "texto": "Hay llamas, un tren que va por las nubes, y quince coplas escondidas en el camino."},
+    {"archivo": "07.mp3", "texto": "Y todo es un teatrito de papel y cartón, con los cerros de colores de fondo. Mirá eso."},
+    {"archivo": "08.mp3", "texto": "Se juega en el celu, en tres idiomas, y es gratis. ¿Llegás al Nevado con Apu? Dale, que no se va a llevar solo."}
+  ]
+}

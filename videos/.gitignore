@@ -1,0 +1,6 @@
+# lo que se rehace con los scripts de acá (y pesa): las tomas del juego, la música
+# sintetizada, los videos terminados y el enlace a los módulos de Remotion
+medios/tomas/
+medios/musica/
+salida/
+remotion/node_modules

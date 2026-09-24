@@ -1,0 +1,14 @@
+{
+  "name": "videos-tiktok",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "estudio": "remotion studio src/index.jsx --public-dir=../medios"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.527",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "remotion": "4.0.527"
+  }
+}

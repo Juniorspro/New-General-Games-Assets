@@ -1,0 +1,177 @@
+{
+ "drake": {
+  "nombre": "Drake Hotline Bling",
+  "url": "https://i.imgflip.com/30b1gx.jpg",
+  "archivo": "drake.jpg",
+  "ancho": 1200,
+  "alto": 1200
+ },
+ "dos-botones": {
+  "nombre": "Two Buttons",
+  "url": "https://i.imgflip.com/1g8my4.jpg",
+  "archivo": "dos-botones.jpg",
+  "ancho": 600,
+  "alto": 908
+ },
+ "siempre-lo-fue": {
+  "nombre": "Always Has Been",
+  "url": "https://i.imgflip.com/46e43q.png",
+  "archivo": "siempre-lo-fue.png",
+  "ancho": 960,
+  "alto": 540
+ },
+ "apreton": {
+  "nombre": "Epic Handshake",
+  "url": "https://i.imgflip.com/28j0te.jpg",
+  "archivo": "apreton.jpg",
+  "ancho": 900,
+  "alto": 645
+ },
+ "esqueleto-esperando": {
+  "nombre": "Waiting Skeleton",
+  "url": "https://i.imgflip.com/2fm6x.jpg",
+  "archivo": "esqueleto-esperando.jpg",
+  "ancho": 298,
+  "alto": 403
+ },
+ "bici": {
+  "nombre": "Bike Fall",
+  "url": "https://i.imgflip.com/1b42wl.jpg",
+  "archivo": "bici.jpg",
+  "ancho": 500,
+  "alto": 680
+ },
+ "cine-absoluto": {
+  "nombre": "Absolute Cinema",
+  "url": "https://i.imgflip.com/8d317n.png",
+  "archivo": "cine-absoluto.png",
+  "ancho": 936,
+  "alto": 725
+ },
+ "doge-cheems": {
+  "nombre": "Buff Doge vs. Cheems",
+  "url": "https://i.imgflip.com/43a45p.png",
+  "archivo": "doge-cheems.png",
+  "ancho": 937,
+  "alto": 720
+ },
+ "megamind": {
+  "nombre": "Megamind peeking",
+  "url": "https://i.imgflip.com/64sz4u.png",
+  "archivo": "megamind.png",
+  "ancho": 540,
+  "alto": 540
+ },
+ "esto-esta-bien": {
+  "nombre": "This Is Fine",
+  "url": "https://i.imgflip.com/wxica.jpg",
+  "archivo": "esto-esta-bien.jpg",
+  "ancho": 580,
+  "alto": 282
+ },
+ "mono-de-costado": {
+  "nombre": "Monkey Puppet",
+  "url": "https://i.imgflip.com/2gnnjh.jpg",
+  "archivo": "mono-de-costado.jpg",
+  "ancho": 923,
+  "alto": 768
+ },
+ "pensalo": {
+  "nombre": "Roll Safe Think About It",
+  "url": "https://i.imgflip.com/1h7in3.jpg",
+  "archivo": "pensalo.jpg",
+  "ancho": 702,
+  "alto": 395
+ },
+ "harold": {
+  "nombre": "Hide the Pain Harold",
+  "url": "https://i.imgflip.com/gk5el.jpg",
+  "archivo": "harold.jpg",
+  "ancho": 480,
+  "alto": 601
+ },
+ "kermit": {
+  "nombre": "Evil Kermit",
+  "url": "https://i.imgflip.com/1e7ql7.jpg",
+  "archivo": "kermit.jpg",
+  "ancho": 700,
+  "alto": 325
+ },
+ "escondida": {
+  "nombre": "Anime Girl Hiding from Terminator",
+  "url": "https://i.imgflip.com/3po4m7.jpg",
+  "archivo": "escondida.jpg",
+  "ancho": 581,
+  "alto": 633
+ },
+ "panik": {
+  "nombre": "Panik Kalm Panik",
+  "url": "https://i.imgflip.com/3qqcim.png",
+  "archivo": "panik.png",
+  "ancho": 640,
+  "alto": 881
+ },
+ "shaq": {
+  "nombre": "Sleeping Shaq",
+  "url": "https://i.imgflip.com/1nck6k.jpg",
+  "archivo": "shaq.jpg",
+  "ancho": 640,
+  "alto": 631
+ },
+ "abuela": {
+  "nombre": "Grandma Finds The Internet",
+  "url": "https://i.imgflip.com/1bhw.jpg",
+  "archivo": "abuela.jpg",
+  "ancho": 640,
+  "alto": 480
+ },
+ "leo-riendo": {
+  "nombre": "Laughing Leo",
+  "url": "https://i.imgflip.com/4acd7j.png",
+  "archivo": "leo-riendo.png",
+  "ancho": 470,
+  "alto": 470
+ },
+ "boton": {
+  "nombre": "Blank Nut Button",
+  "url": "https://i.imgflip.com/1yxkcp.jpg",
+  "archivo": "boton.jpg",
+  "ancho": 600,
+  "alto": 446
+ },
+ "pikachu": {
+  "nombre": "Surprised Pikachu",
+  "url": "https://i.imgflip.com/2kbn1e.jpg",
+  "archivo": "pikachu.jpg",
+  "ancho": 1893,
+  "alto": 1893
+ },
+ "nene-esceptico": {
+  "nombre": "Third World Skeptical Kid",
+  "url": "https://i.imgflip.com/265k.jpg",
+  "archivo": "nene-esceptico.jpg",
+  "ancho": 426,
+  "alto": 426
+ },
+ "fry": {
+  "nombre": "Futurama Fry",
+  "url": "https://i.imgflip.com/1bgw.jpg",
+  "archivo": "fry.jpg",
+  "ancho": 552,
+  "alto": 414
+ },
+ "leo-brindis": {
+  "nombre": "Leonardo Dicaprio Cheers",
+  "url": "https://i.imgflip.com/39t1o.jpg",
+  "archivo": "leo-brindis.jpg",
+  "ancho": 600,
+  "alto": 400
+ },
+ "capitan-yo": {
+  "nombre": "Look At Me",
+  "url": "https://i.imgflip.com/hmt3v.jpg",
+  "archivo": "capitan-yo.jpg",
+  "ancho": 300,
+  "alto": 300
+ }
+}

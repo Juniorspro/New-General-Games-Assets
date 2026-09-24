@@ -1,0 +1,14 @@
+{
+  "voz": "ElevenLabs (Higgsfield text2speech_v2), voz Andre",
+  "lineas": [
+    {"archivo": "01.mp3", "texto": "¿Viste esa luz que anda de noche por el monte? En el Chaco le dicen la luz mala... y en mi juego, la luz mala sos vos."},
+    {"archivo": "02.mp3", "texto": "Sos Chispa, una luciérnaga con una espina de vinal, y tenés que prender los tres faroles del quebracho."},
+    {"archivo": "03.mp3", "texto": "Arrancás en el pueblo: el mamboretá te da charla, y Don Canasto te vende de todo por ámbar."},
+    {"archivo": "04.mp3", "texto": "Pero abajo, en las raíces, todo te quiere comer. Todo."},
+    {"archivo": "05.mp3", "texto": "Y si te apagás, tu luz queda tirada en una sombra, y tenés que volver a buscarla. Sí, como en Hollow Knight."},
+    {"archivo": "06.mp3", "texto": "El primer jefe es el Torito. Avisa antes de pegar... más o menos."},
+    {"archivo": "07.mp3", "texto": "Le ganás, se prende el farol, y te da el aleteo para cruzar lo que antes no podías."},
+    {"archivo": "08.mp3", "texto": "Después vienen la Viuda, en su telaraña, y la Reina de la Marabunta, en el corazón del quebracho."},
+    {"archivo": "09.mp3", "texto": "Pixel art hecho a mano, chamamé de fondo, y se juega en el celu, gratis. ¿Te animás a prender los tres faroles? ¡Sapucai!"}
+  ]
+}

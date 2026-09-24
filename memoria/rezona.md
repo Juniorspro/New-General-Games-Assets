@@ -101,6 +101,10 @@ salió bien, con sus parámetros:** repetir una tanda cuesta créditos.
 - **Antes, en `perro/`:** los efectos y la música aceptaban el pedido y fallaban
   después, durante dos horas de intentos, mientras `kind: "speech"` andaba.
   Fuente: `perro/README.md § El sonido`.
+- **24/09/2026:** voz y música volvían con `PROVIDER_UNAVAILABLE` o
+  `NOIZ_FAILED`. La música con `duration` u `output_format` da
+  `VALIDATION_ERROR`, que es terminal. La voz de los videos salió de
+  Higgsfield ([higgsfield](higgsfield.md)).
 - Por eso, antes de cada tanda se genera una imagen de prueba. El código busca
   cada asset por nombre y tiene su reemplazo dibujado o sintetizado, así lo
   generado entra después sin tocar una línea.

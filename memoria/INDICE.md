@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (tráiler de BRILLO).
+mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (videos relatados).
 
 ## Reglas que no se discuten
 
@@ -41,6 +41,8 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (tráiler de BRILLO).
 - **Videos:** para TikTok, 9:16 y uno solo, cinematográfico y "muy
   profesional", con motion graphics del propio juego. Para editar dijo que
   se usen Remotion y ffmpeg (23/09): `brillo.md § El tráiler`.
+  Relatados de 1 min con sus stickers y memes **bajados, no generados**
+  (24/09): [videos](videos.md). Audio de TikTok ajeno no se baja.
 - Tiene Rezona (446 mil créditos el 22/09; 419 mil el 23/09) y Higgsfield. Prefiere Rezona.
   Para imágenes, dijo que se use Rezona sin preguntar (23/09).
 
@@ -55,6 +57,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (tráiler de BRILLO).
 | [juegos](juegos.md) | tocar un juego del repo o hacer uno nuevo |
 | [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el resolvedor y sus trampas |
 | [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas, el tráiler de TikTok y sus trampas |
+| [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |
@@ -70,6 +73,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 23/09/2026 (tráiler de BRILLO).
 | `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
 | `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 360 de alto | [brillo](brillo.md) · `brillo/README.md` |
 | `ruta40/` | RUTA 40: autos tipo Hill Climb por la Ruta 40, arte pintado de Rezona, 7 tramos, 5 vehículos, picadas | [ruta40](ruta40.md) · `ruta40/README.md` |
+| `videos/` | videos de TikTok relatados: grabadores de tomas, voz, stickers, memes y el montaje en Remotion | [videos](videos.md) |
 | `entregas/` | los zips de cada juego con la guía para TikTok (no se commitean) | `herramientas/empaquetar_juegos.py` |
 | `perro/` | CAMPO: un perro 3D en tercera persona sobre lomas de pasto | `perro/README.md` |
 | `pique/` `pique2d/` `pique3d/` | corredor de un botón: 2D, pixel art y 2.5D; niveles comprobados solos | su `LEEME.md` |

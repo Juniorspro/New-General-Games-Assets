@@ -39,7 +39,10 @@ async function hacer() {
   let ahora = 0;
   Object.defineProperty(off, 'currentTime', { get: () => ahora });
   window.AudioContext = function () { return off; };
-  window.setTimeout = () => 0;      // las limpiezas de nodos del juego no hacen falta acá
+  /* las limpiezas de nodos del juego no hacen falta acá. El setTimeout de verdad se devuelve al
+     terminar: Playwright lo usa para preguntar si ya está, y sin él la página parecía colgada */
+  const setTimeoutReal = window.setTimeout;
+  window.setTimeout = () => 0;
   Sonido.iniciar(); Sonido.volumenes(0.85, 0.5);
   /* el tema entra de una en el compás, no de a poco */
   /* también el filtro y la reverb van directo a su valor: el sintetizador los abre de a poco (medio
@@ -68,6 +71,7 @@ async function hacer() {
     Sonido.pasar();
   }
   ahora = 0;
+  window.setTimeout = setTimeoutReal;
   const buf = await off.startRendering();
   /* se corta el preámbulo, el final se apaga, y a 16 bits */
   const n = Math.round(dur * fr), o = Math.round(PRE * fr), wav = new DataView(new ArrayBuffer(44 + n * 4));

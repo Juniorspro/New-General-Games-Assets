@@ -118,8 +118,8 @@ function ffmpeg(args, o = {}) {
 
 async function audio(idioma) {
   const wav = path.join(PUBLICO, 'audio', `${idioma}.wav`), antes = Date.now();
-  /* a veces la página se queda colgada después de mandar el WAV (la respuesta del POST no le llega):
-     si en 5 minutos no avisa pero el WAV ya está escrito, se sigue */
+  /* por si la página no avisa (pasaba cuando audio.js dejaba pisado el setTimeout que usa
+     Playwright para preguntar): si en 5 minutos no avisa pero el WAV ya está escrito, se sigue */
   try {
     const r = await pagina('audio.html', { idioma, soloMusica: !!op.soloMusica }, 5 * 60 * 1000);
     if (op.soloMusica) return;
