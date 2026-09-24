@@ -9,8 +9,10 @@ se resumen en una sola.
     narrador y memes bajados (no generados).
     - LUZ MALA: "bien chaqueño, chamamé", y después "memes chaqueños".
     - KUNTUR: "la peruanita", que en el video es Killa, de Purmamarca.
-  - Salen a `videos/salida/` (no se commitea), con copia liviana y versión sin
-    música. Cómo se hacen: [videos](videos.md). (En curso al primer commit.)
+  - Quedaron en `videos/salida/` (no se commitea), y se le mandaron las copias
+    livianas. Cómo se hacen: [videos](videos.md).
+    - LUZ MALA: 65 s, con una versión sin música.
+    - KUNTUR: 56 s.
   - No se bajó chamamé de TikTok con ssstiktok (son canciones con dueño): va el
     chamamé del propio juego.
   - Falta, si lo pide: un tercer video, y los videos en inglés y portugués.
