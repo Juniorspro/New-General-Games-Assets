@@ -37,25 +37,36 @@
     display: grid; gap: 0; text-shadow: 0 2px 6px rgba(0,0,0,0.6);
   }
   .reloj b { font: 400 34px/1 var(--titular); letter-spacing: 0.02em; }
+  .reloj .plata { font: 400 18px/1.1 var(--titular); font-style: normal; letter-spacing: 0.03em; margin-top: 3px; color: var(--hueso); }
   .reloj span { font-size: 15px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--hueso-suave); }
   #hudTemp.calor { color: var(--urgente); }
+  /* Las barras del cuerpo: chicas, y solo a la vista si algo bajó (llenas, se apagan). */
   .cuerpo-barras {
     position: absolute; left: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    display: grid; gap: 7px; width: min(230px, 42vw);
+    display: grid; gap: 5px; width: min(190px, 40vw); transition: opacity 0.6s;
   }
+  .cuerpo-barras.tranquilas { opacity: 0; }
+  .cuerpo-barras .barra { grid-template-columns: 66px 1fr; font-size: 12px; }
+  .cuerpo-barras .barra i { height: 5px; }
   .barra { display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: 8px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; text-shadow: 0 1px 4px #000; }
   .barra i { display: block; height: 7px; background: rgba(0,0,0,0.45); border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.18); }
   .barra i b { display: block; height: 100%; background: var(--hueso); transition: width 0.3s; }
   .barra.bajo { color: var(--urgente); }
   .barra.bajo i b { background: var(--urgente); }
   .estado-chico { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--urgente); }
+  /* Las tareas: una tarjeta chica, tres renglones como mucho, lo urgente primero. */
   .objetivos {
     position: absolute; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px));
-    max-width: min(300px, 48vw); text-align: right; text-shadow: 0 1px 5px #000;
+    max-width: min(280px, 44vw); padding: 7px 12px 8px; border-radius: 10px; background: rgba(14,11,9,0.42);
+    text-shadow: 0 1px 3px #000; transition: opacity 0.3s;
   }
+  .objetivos:empty, .objetivos:has(ul:empty) { opacity: 0; }
   .objetivos .plata { font: 400 22px/1 var(--titular); letter-spacing: 0.03em; }
-  .objetivos ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 2px; font-size: 15px; color: var(--hueso-suave); }
+  .objetivos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 15px; line-height: 1.2; color: var(--hueso-suave); }
+  .objetivos li { position: relative; padding-left: 13px; }
+  .objetivos li::before { content: ""; position: absolute; left: 0; top: 0.45em; width: 6px; height: 6px; border-radius: 50%; background: var(--hueso-suave); }
   .objetivos li.urgente { color: var(--urgente); }
+  .objetivos li.urgente::before { background: var(--urgente); box-shadow: 0 0 6px var(--urgente); }
   .mira { position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: rgba(239,230,212,0.8); box-shadow: 0 0 3px #000; }
   #revoleo { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px; }
   #revoleo circle { fill: none; stroke-width: 3; }
@@ -288,7 +299,7 @@
 
   /* El chat de comandos, arriba a la izquierda, debajo del reloj (como el de
      Roblox): las líneas se apagan solas si está cerrado. */
-  #chat { position: fixed; left: 16px; top: calc(70px + env(safe-area-inset-top, 0px)); width: min(440px, 72vw); z-index: 6; display: grid; gap: 6px; }
+  #chat { position: fixed; left: 16px; top: calc(92px + env(safe-area-inset-top, 0px)); width: min(440px, 72vw); z-index: 6; display: grid; gap: 6px; }
   #chatBoton { position: fixed; left: 132px; top: calc(16px + env(safe-area-inset-top, 0px)); width: 40px; height: 40px; border: 0; border-radius: 8px; background: rgba(14,11,9,0.55); cursor: pointer; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.25); transition: background 0.15s, transform 0.15s; }
   #chatBoton:hover { background: rgba(184,80,42,0.8); transform: translateY(-1px); }
   #chatBoton svg, #chatForm svg { width: 22px; height: 22px; fill: none; stroke: var(--hueso); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
@@ -334,8 +345,29 @@
   #mapaLista li span { font-size: 17px; font-weight: 700; }
   #mapaLista li small { color: var(--hueso-suave); font-size: 14px; }
   @media (max-width: 760px) { #mapa { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .mapa-lado { max-height: 42vh; border-left: 0; border-top: 3px solid var(--tierra); } }
-  #minimapa { position: absolute; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(21,16,12,0.8), 0 0 0 4px rgba(239,230,212,0.4), 0 6px 18px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; background: rgba(21,16,12,0.6); }
-  body.tactil #minimapa { width: 104px; height: 104px; bottom: auto; top: calc(96px + env(safe-area-inset-top, 0px)); }
+  #minimapa { position: absolute; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 128px; height: 128px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(21,16,12,0.8), 0 0 0 4px rgba(239,230,212,0.4), 0 6px 18px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; background: rgba(21,16,12,0.6); }
+  body.tactil #minimapa { width: 96px; height: 96px; bottom: calc(232px + env(safe-area-inset-bottom, 0px)); right: 18px; }
+  body.tactil .objetivos li:nth-child(n+3) { display: none; }
+  /* Lo que suena en la radio, arriba del minimapa. */
+  #radioChip { position: absolute; right: 16px; bottom: calc(158px + env(safe-area-inset-bottom, 0px)); max-width: 220px; display: flex; align-items: center; gap: 7px; padding: 5px 11px 5px 8px; border: 0; border-radius: 16px; background: rgba(14,11,9,0.6); color: var(--hueso); font: 600 13px/1.2 var(--cuerpo); cursor: pointer; pointer-events: auto; animation: subir 0.3s ease both; }
+  #radioChip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #radioChip i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #8fd07a; box-shadow: 0 0 6px #8fd07a; animation: parpadeo 1.6s ease-in-out infinite; }
+  #radioChip.sin i { background: var(--urgente); box-shadow: 0 0 6px var(--urgente); }
+  #radioChip.lejos { opacity: 0.5; }
+  body.tactil #radioChip { bottom: calc(336px + env(safe-area-inset-bottom, 0px)); right: 14px; max-width: 170px; }
+  /* El dial. */
+  .radio-hoja #radioEstado { color: var(--urgente); font-size: 17px; margin: 0 0 10px; }
+  .radio-mandos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .radio-mandos label { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 15px; color: var(--hueso-suave); }
+  .radio-mandos input { accent-color: var(--tierra-clara); width: 120px; }
+  #radioLista { list-style: none; margin: 0 0 8px; padding: 0; max-height: min(46vh, 380px); overflow-y: auto; display: grid; gap: 3px; }
+  #radioLista li { display: grid; padding: 7px 10px; border-radius: 6px; background: rgba(239,230,212,0.06); cursor: pointer; transition: background 0.15s; }
+  #radioLista li:hover { background: rgba(239,230,212,0.14); }
+  #radioLista li.grupo { background: none; cursor: default; padding: 8px 2px 2px; font: 400 15px/1 var(--titular); letter-spacing: 0.06em; color: var(--tierra-clara); }
+  #radioLista li.sonando { background: var(--tierra); }
+  #radioLista li.no, #radioLista li.caida { opacity: 0.45; }
+  #radioLista li b { font-size: 16px; } #radioLista li small { color: var(--hueso-suave); font-size: 13px; }
+  .radio-nota { font-size: 14px !important; color: var(--hueso-suave); }
   body.en-manga #minimapa, body.cine #minimapa { display: none; }
   #brujula { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 20px; background: rgba(14,11,9,0.62); font: 700 17px/1 var(--cuerpo); letter-spacing: 0.04em; text-shadow: 0 1px 3px #000; animation: subir 0.3s ease both; }
   #brujulaFlecha { width: 26px; height: 26px; display: block; background: var(--tierra-clara); clip-path: polygon(50% 0, 92% 88%, 50% 68%, 8% 88%); transition: transform 0.1s linear; }
@@ -362,8 +394,8 @@
 <canvas id="lienzo" aria-label="La estancia"></canvas>
 
 <div class="hud" id="hud" hidden>
-  <div class="reloj"><b id="hudHora">06:00</b><span><span id="hudDia">Día 1</span> · <span id="hudTemp">23 °C</span></span></div>
-  <div class="objetivos"><div class="plata" id="hudPlata">$ 1.500.000</div><ul id="hudObjetivos"></ul></div>
+  <div class="reloj"><b id="hudHora">06:00</b><span><span id="hudDia">Día 1</span> · <span id="hudTemp">23 °C</span></span><em class="plata" id="hudPlata">$ 1.500.000</em></div>
+  <div class="objetivos"><ul id="hudObjetivos"></ul></div>
   <div class="cuerpo-barras">
     <div class="estado-chico" id="hudCostilla" hidden>Costilla quebrada</div>
     <div class="estado-chico" id="hudLesion" hidden>Caballo lesionado</div>
@@ -383,6 +415,7 @@
     <div id="tensionTexto"></div>
   </div>
   <canvas id="minimapa" width="170" height="170" aria-label="Minimapa (tocá para abrir el mapa)"></canvas>
+  <button id="radioChip" hidden title="La radio (tocá para cambiar la emisora)"><i></i><span id="radioChipTexto"></span></button>
   <div id="brujula" hidden><i id="brujulaFlecha"></i><span id="brujulaTexto"></span></div>
   <div class="aviso" id="aviso"></div>
   <div class="subtitulo" id="subtitulo"></div>
@@ -496,6 +529,22 @@
   </div>
 </div>
 
+<div class="panel" id="radio" hidden>
+  <div class="hoja ancha radio-hoja">
+    <h2>Radio</h2>
+    <p id="radioEstado">Apagada</p>
+    <div class="radio-mandos">
+      <button class="boton secundario" id="radioAnterior" aria-label="Emisora anterior">◀</button>
+      <button class="boton" id="radioPrender">Prender</button>
+      <button class="boton secundario" id="radioSiguiente" aria-label="Emisora siguiente">▶</button>
+      <label>Volumen <input type="range" id="radioVolumen" min="0" max="1" step="0.05"></label>
+    </div>
+    <ul id="radioLista"></ul>
+    <p class="radio-nota">FM del Chaco, Formosa y Corrientes por internet. Se escucha cerca del rancho y se apaga de a poco a medida que te alejás.</p>
+    <div class="botones"><button class="boton" id="radioCerrar">Listo</button></div>
+  </div>
+</div>
+
 <div id="mapa" hidden>
   <div class="mapa-caja">
     <canvas id="mapaLienzo"></canvas>
@@ -583,6 +632,7 @@
 <script src="js/comedero.js"></script>
 <script src="js/mapa.js"></script>
 <script src="js/rodeo.js"></script>
+<script src="js/radiofm.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/calidad.js"></script>
 <script src="js/trabajo.js"></script>

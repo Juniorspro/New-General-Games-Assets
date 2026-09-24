@@ -49,6 +49,13 @@ En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla
   alambre, como en un feedlot. Adentro, 8 novillos de engorde: cargarles el
   comedero (desde la calle de carga, al lado de la silobolsa) todos los días o
   bajan de kilos. Con comida en la batea, la tropa de cerca también viene.
+- **La radio FM** (`js/radiofm.js`): una radio a transistores en la galería
+  (y la de adentro) con emisoras reales por internet: Presidencia Roca (La
+  Radio 104.7, LRR 410), Sáenz Peña (Fly 99.3, La Red 92.9, Futuro 98.9),
+  Resistencia, Barranqueras, Formosa y Corrientes, más lo que devuelva el
+  directorio Radio Browser. Se oye cerca del rancho y se apaga al alejarse.
+  En una página https las emisoras http no suenan (contenido mixto): esas
+  andan en el archivo descargado.
 - **El pueblo**, Paraje El Quebrachal (`estancia.js`, `pueblo()`): afuera de la
   tranquera de entrada, al final del camino (se abre con E, también a
   caballo). Almacén de ramos generales (provisiones, un lazo), capilla,

@@ -67,7 +67,15 @@
     { n: "puesto", d: "Para qué lado queda el rancho", f: () => { const R = E.lugares.rancho; sistema(`El rancho queda ${E.trabajo.rumbo(R.x, R.z)}, a ${Math.round(Math.hypot(R.x - E.jugador.x, R.z - E.jugador.z))} m.`); } },
     { n: "fumar", d: "Armarse un cigarro", f: () => { if (!G()._fumando) { G()._fumando = 6; G().decir("fumar"); } } },
     { n: "camara", d: "Primera o tercera persona", f: () => { const J = E.jugador; J.camara = J.camara === "primera" ? "tercera" : "primera"; sistema(`Cámara en ${J.camara} persona.`); } },
-    { n: "radio", d: "Prender o apagar la radio del rancho", f: () => { const p = punto("radio"); if (!cerca(p.x, p.z, 6)) return sistema("La radio está adentro del rancho."); E.sonido.radio = !E.sonido.radio; sistema(E.sonido.radio ? "Radio prendida: AM, chamamé y el pronóstico." : "Radio apagada."); } },
+    { n: "radio", a: "apagar | siguiente | nombre", d: "La radio FM (Chaco, Formosa, Corrientes)", f: (arg) => {
+      const R2 = E.radioFM, a2 = (arg || "").toLowerCase();
+      if (!a2) return R2.abrir();
+      if (a2 === "apagar") { R2.apagar(); return sistema("Radio apagada."); }
+      if (a2 === "siguiente") { R2.siguiente(1); return sistema(`Sintonizando ${R2.actual ? R2.actual.nombre : "…"}.`); }
+      const e = R2.EMISORAS.find((x) => x.nombre.toLowerCase().includes(a2) || x.lugar.toLowerCase().includes(a2));
+      if (!e) return sistema(`No encuentro "${arg}". Probá /radio para ver el dial.`);
+      R2.sintonizar(e); sistema(`Sintonizando ${e.nombre} (${e.lugar}).`);
+    } },
     { n: "limpiar", d: "Borrar el chat", f: () => { log.innerHTML = ""; } },
   ];
 

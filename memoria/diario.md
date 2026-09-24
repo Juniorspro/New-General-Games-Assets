@@ -151,3 +151,5 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   elige antes del menú (el escaneo la propone en equipos flojos).
 - **Más claridad** (viñeta suave, menos niebla, más cielo, Brillo en Opciones) y
   **rodeo de 920** (500 vacas, 20 toros, 400 terneros) con niveles de detalle.
+- **Radio FM real** (Chaco, Presidencia Roca, Sáenz Peña, Formosa, Corrientes)
+  en la galería, y **HUD despejado**.

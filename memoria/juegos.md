@@ -137,6 +137,20 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Lo que apagaba la imagen era la viñeta (bordes a la mitad), la niebla y el
   cielo bajo. Brillo en Opciones: multiplica la exposición.
 
+## Radio por internet y HUD
+
+- Las emisoras suenan con un `<audio>` común: por WebAudio saldrían mudas (no
+  mandan CORS). El volumen por distancia se hace a mano con `audio.volume`.
+- Radio Browser (de1/fi1/at1.api.radio-browser.info) tiene CORS y lista por
+  provincia, pero del interior del Chaco casi no tiene nada: las de Sáenz Peña
+  y Presidencia Roca salieron de las páginas de cada emisora (el stream está
+  en el HTML).
+- El Chromium de Playwright no sale a internet solo: `launch({ proxy:
+  { server: HTTPS_PROXY } })` e `ignoreHTTPSErrors`. Desde este contenedor los
+  puertos raros (:8022, :9068…) no pasan por el proxy: quedan "sin comprobar".
+- HUD más liviano: tareas en tarjeta de 3 renglones (lo urgente primero), las
+  barras se apagan si están llenas, la plata bajo el reloj.
+
 ## Mapa
 
 - El fondo del mapa sale de las mismas funciones del terreno (monte, pasto,

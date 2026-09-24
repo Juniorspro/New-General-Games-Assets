@@ -79,7 +79,7 @@
   };
   G.gastar = (monto, que) => { G.dinero -= monto; };
   G.soltarPuntero = () => { if (document.pointerLockElement) document.exitPointerLock(); };
-  const MENUS = ["menu", "parte", "fin", "pausa", "como", "opciones", "mapa"];
+  const MENUS = ["menu", "parte", "fin", "pausa", "como", "opciones", "mapa", "radio"];
   G.enMenu = () => MENUS.some((id) => !$(id).hidden);
 
   // ── arranque ──
@@ -101,6 +101,7 @@
     E.estancia.construir();
     E.puesto.construir();
     E.comedero.construir();
+    E.radioFM.construir();
     cargando("La hacienda…"); await pausa();
     E.animales.construir();
     E.jugador.iniciar();
@@ -113,6 +114,7 @@
     E.ojo.conectar();
     E.chat.conectar();
     E.mapa.conectar();
+    E.radioFM.conectar();
     E.conectarEntrada(lienzo);
     conectarInterfaz();
     // Compilar todos los shaders en la carga: si no, lo primero que entra en
@@ -372,7 +374,7 @@
       if (p.id === "comedero") return { texto: c.comido === G.dia ? "El zaino ya tiene forraje" : p.texto, fn: () => { if (c.comido !== G.dia) E.puesto.forraje(); } };
       if (p.id === "tanque" && E.puesto.puedeBanar()) return { texto: "Bañar al zaino con el balde", fn: E.puesto.banar };
       if (p.id === "tanque") return { texto: p.texto, fn: tomarAgua };
-      if (p.id === "radio") return { texto: E.sonido.radio ? "Apagar la radio" : "Prender la radio", fn: () => { E.sonido.radio = !E.sonido.radio; } };
+      if (p.id === "radio" || p.id === "radioFM") return { texto: "Radio FM: elegir la emisora", fn: E.radioFM.abrir };
       if (p.id === "catre") return { texto: G.hora >= 17 || J.cansancio < 30 ? "Dormir en el catre" : "Todavía es temprano para dormir", fn: () => { if (G.hora >= 17 || J.cansancio < 30) dormir(false); } };
       if (p.id === "fogon") return { texto: "Fogón: calentar el hierro, cocinar o comer", fn: () => { $("fogonComer").disabled = G.hora < 18; $("fogonGuiso").disabled = G.hora < 11 || G.comio; $("fogon").hidden = false; G.soltarPuntero(); } };
       if (p.id === "manga") return { texto: p.texto, fn: () => W.entrarManga() };
@@ -430,8 +432,11 @@
     $("barSed").style.width = J.sed + "%"; $("barSed").parentElement.classList.toggle("bajo", J.sed < 25);
     $("barCans").style.width = J.cansancio + "%"; $("barCans").parentElement.classList.toggle("bajo", J.cansancio < 20);
     $("barSalud").style.width = J.salud + "%"; $("barSalud").parentElement.classList.toggle("bajo", J.salud < 30);
-    $("hudCaballo").hidden = !J.montado;
+    $("hudCaballo").hidden = !J.montado || c.aliento > 0.9;
     $("barCaballo").style.width = c.aliento * 100 + "%";
+    // Llenas, las barras se apagan: el HUD estaba muy cargado.
+    const alguna = J.sed < 85 || J.cansancio < 85 || J.salud < 90 || (J.montado && c.aliento < 0.9) || c.lesion > 0 || J.costilla > 0;
+    document.querySelector(".cuerpo-barras").classList.toggle("tranquilas", !alguna);
     $("hudLesion").hidden = !(c.lesion > 0);
     $("hudCostilla").hidden = !(J.costilla > 0);
     const plata = Math.round(G.dinero);
@@ -443,13 +448,17 @@
     }
     const b = W.balance();
     const agus = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta);
-    $("hudObjetivos").innerHTML =
-      agus.map((v) => `<li class="urgente">La ${v.num} con bichera · ${v.salud.bichera.dias ? v.salud.bichera.dias + (v.salud.bichera.dias === 1 ? " día" : " días") : "de hoy"}</li>`).join("") +
-      `<li>Trabajadas en la manga: ${b.trabajadas} de ${b.vivas}</li>` +
-      (G.hierroCaliente > 0 ? `<li>Hierro caliente: ${Math.round(G.hierroCaliente * 60)} min</li>` : "") +
-      (E.comedero.nivel < 0.15 ? `<li class="urgente">El comedero del encierre está vacío</li>` : `<li>Comedero: ${Math.round(E.comedero.nivel * 100)} %</li>`) +
-      (E.puesto.pendientes().length ? `<li class="urgente">El zaino: ${E.puesto.pendientes().join(" y ")}</li>` : "") +
-      `<li>${Z.tieneLazo ? (Z.estado === "guardado" || Z.estado === "enrollando" ? (J.montado ? "Lazo enrollado en el recado" : "Lazo enrollado al cinto") : "Lazo en la mano") : "Sin lazo"}${J.montado && J.alPaso ? " · al paso" : ""}</li>`;
+    // Las tareas: lo urgente primero y tres como mucho (antes eran seis
+    // renglones con el lazo y el comedero siempre a la vista).
+    const tareas = [];
+    for (const v of agus) tareas.push([`La ${v.num} con bichera · ${v.salud.bichera.dias ? v.salud.bichera.dias + (v.salud.bichera.dias === 1 ? " día" : " días") : "de hoy"}`, true]);
+    if (!Z.tieneLazo) tareas.push(["Sin lazo: hay en la galería o en el almacén", true]);
+    if (E.puesto.pendientes().length) tareas.push([`El zaino: ${E.puesto.pendientes().join(" y ")}`, true]);
+    if (E.comedero.nivel < 0.15) tareas.push(["Comedero del encierre vacío", true]);
+    if (G.hierroCaliente > 0) tareas.push([`Hierro caliente: ${Math.round(G.hierroCaliente * 60)} min`, false]);
+    tareas.push([`Manga: ${b.trabajadas} de ${b.vivas} trabajadas`, false]);
+    const html = tareas.slice(0, 3).map(([t, u]) => `<li${u ? ' class="urgente"' : ""}>${t}</li>`).join("");
+    if (html !== ultimasTareas) { $("hudObjetivos").innerHTML = html; ultimasTareas = html; }
     $("aviso").textContent = ctxAccion ? `${E.entrada.tactil ? "✋" : "E"} · ${ctxAccion.texto}` : "";
     $("aviso").classList.toggle("visible", !!ctxAccion);
     // El forcejeo: tensión contra lo que aguanta el cuero, y lo que le queda a la vaca.
@@ -478,7 +487,7 @@
     hora: 6, horasJuego: 6, escalaHoras: HORAS_POR_SEGUNDO, sed: false,
   };
   const ctxJugador = { dh: 0, aviso: (t) => G.decir(t) };
-  let ultimaPlata = null;
+  let ultimaPlata = null, ultimasTareas = "";
   // La cámara de la portada: va y viene despacio por delante del Guacho, que
   // mira a cámara con el rancho atrás (dar la vuelta entera metía la cámara
   // en la pared del rancho).
@@ -525,6 +534,7 @@
     }
     E.estancia.actualizar(dt, G.t);
     E.mapa.actualizar(dt, G.t);
+    E.radioFM.actualizar();
     if (activo) { E.puesto.actualizar(dt, G.t); E.puesto.revisarLlegada(); E.comedero.actualizar(dt); }
     E.terreno.actualizar(G.t);
     E.trabajo.actualizarCura(dt);
