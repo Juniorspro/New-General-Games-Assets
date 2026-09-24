@@ -16,9 +16,21 @@
     m.userData.tam = tam;
     return m;
   }
+  // La tierra colorada que salpica la lluvia al pie de la pared: medio metro
+  // de rojo que se esfuma hacia arriba (la altura del piso la pone el rancho).
+  const pie = { value: 0 };
+  function salpicado(m) {
+    return E.parchear(m, "revoque-pie", (sh) => {
+      sh.uniforms.uPie = pie;
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vAltoMundo;")
+        .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvAltoMundo = (modelMatrix * vec4(transformed, 1.0)).y;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nuniform float uPie; varying float vAltoMundo;")
+        .replace("#include <map_fragment>", "#include <map_fragment>\nfloat tierra = 1.0 - smoothstep(0.02, 0.65, vAltoMundo - uPie);\ndiffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 0.42, 0.26), tierra * 0.8);");
+    });
+  }
   function matRevoque() {
     const rz = matRezona("revoque", 2.2, { roughness: 0.95 });
-    if (rz) return rz;
+    if (rz) return salpicado(rz);
     const t = E.lienzo(512, 512, (g, w, h) => {
       g.fillStyle = "#d9cfbd"; g.fillRect(0, 0, w, h);
       const az = E.azar(3);
@@ -56,8 +68,10 @@
     }, { repetir: true });
     return new THREE.MeshStandardMaterial({ map: t, roughness: 0.55, metalness: 0.55 });
   }
+  // Postes y horcones de quebracho: la corteza sin oscurecer (con el tinte
+  // de antes, a la sombra de la galería quedaban negros).
   const madera = () => {
-    const m = new THREE.MeshStandardMaterial({ map: E.textura("corteza.webp"), normalMap: E.textura("corteza-n.webp", { srgb: false }), roughness: 0.9, color: 0xb4a898 });
+    const m = new THREE.MeshStandardMaterial({ map: E.textura("corteza.webp"), normalMap: E.textura("corteza-n.webp", { srgb: false }), roughness: 0.9, color: 0xf2e6d6 });
     return m;
   };
   const tablas = () => matRezona("tablas", 1.4, { roughness: 0.88 }) || new THREE.MeshStandardMaterial({
@@ -104,6 +118,7 @@
 
     // ── el rancho ── 8 × 5 m, frente al sur (+z), con galería.
     const R = L.rancho, y0 = T.altura(R.x, R.z);
+    pie.value = y0;
     const W = 8, D = 5, H = 2.5, g = 0.3;
     caja(W, H, g, revoque, R.x, y0 + H / 2, R.z - D / 2);                          // fondo
     caja(g, H, D, revoque, R.x - W / 2, y0 + H / 2, R.z);                          // lado oeste
@@ -157,7 +172,33 @@
     // El asador en cruz, clavado de costado al fuego, con el costillar con cuero.
     const asador = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.8, 6), new THREE.MeshStandardMaterial({ color: 0x2b2b2b, metalness: 0.8, roughness: 0.5 }));
     asador.position.set(Fg.x - 0.9, yf + 0.8, Fg.z); asador.rotation.z = 0.35; E.motor.escena.add(asador);
-    const costillar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.55), new THREE.MeshStandardMaterial({ color: 0x7a3a22, roughness: 0.7 }));
+    // El costillar: carne dorada con las costillas marcadas, la grasa arriba y
+    // lo quemado en los bordes (antes era una tabla roja lisa), y las puntas
+    // de los huesos asomando.
+    const texCostillar = E.lienzo(256, 320, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, w, 0);
+      gr.addColorStop(0, "#5a2a14"); gr.addColorStop(0.2, "#9a5226"); gr.addColorStop(0.8, "#a85d2c"); gr.addColorStop(1, "#4a2210");
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      const az = E.azar(31);
+      for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${60 + az() * 90},${25 + az() * 40},${10 + az() * 15},${0.15 + az() * 0.25})`; g.fillRect(az() * w, az() * h, 2 + az() * 5, 1 + az() * 3); }
+      // Las costillas: franjas claras atravesadas, con la carne entre medio.
+      for (let y = 22; y < h - 10; y += 38) {
+        const hg = g.createLinearGradient(0, y - 7, 0, y + 7);
+        hg.addColorStop(0, "rgba(60,25,10,0)"); hg.addColorStop(0.5, "rgba(214,190,150,0.85)"); hg.addColorStop(1, "rgba(60,25,10,0)");
+        g.fillStyle = hg; g.fillRect(w * 0.08, y - 7, w * 0.84, 14);
+      }
+      // La grasa de arriba y lo tostado.
+      g.fillStyle = "rgba(226,200,150,0.55)"; g.fillRect(0, 0, w, 14);
+      for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(20,8,4,${0.25 + az() * 0.4})`; g.beginPath(); g.ellipse(az() < 0.5 ? az() * 30 : w - az() * 30, az() * h, 3 + az() * 8, 2 + az() * 6, 0, 0, Math.PI * 2); g.fill(); }
+    });
+    const matCostillar = new THREE.MeshStandardMaterial({ map: texCostillar, roughness: 0.55 });
+    const costillar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.7, 0.55), matCostillar);
+    const hueso = new THREE.MeshStandardMaterial({ color: 0xe3d6bc, roughness: 0.6 });
+    for (let k = 0; k < 8; k++) {
+      const pt = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.06, 6), hueso);
+      pt.rotation.x = Math.PI / 2; pt.position.set(0, 0.35 - 0.035 - k * 0.083, 0.29);
+      costillar.add(pt);
+    }
     costillar.position.set(Fg.x - 0.78, yf + 0.95, Fg.z); costillar.rotation.z = 0.35; costillar.castShadow = true; E.motor.escena.add(costillar);
     C.costillar = costillar;
     // El hierro de marcar, con la punta en las brasas.
@@ -194,17 +235,20 @@
       if (Math.abs(E.angulo(am - Co.puerta)) < abertPuerta / radio || Math.abs(E.angulo(am)) < abertManga / radio) continue;
       pared(Co.x + Math.cos(a0) * radio, Co.z + Math.sin(a0) * radio, Co.x + Math.cos(a1) * radio, Co.z + Math.sin(a1) * radio, 0.3);
     }
-    // La manga: dos filas de postes con tablas, hasta el cepo.
+    // La manga: dos filas de postes más bajos y más separados que los del
+    // corral, con tres tablas, hasta el cepo. Del lado de la pasarela se
+    // trabaja por encima: con los postes del corral (2 m, cada 35 cm) la
+    // cámara de la manga no veía la vaca.
     const Mg = L.manga;
-    for (let x = Mg.x0 - 2; x <= Mg.x1; x += 0.35) for (const s of [-1, 1]) postes.push([x, Mg.z + s * Mg.ancho / 2 + s * 0.12]);
+    for (let x = Mg.x0 - 2; x <= Mg.x1 + 0.01; x += 0.7) for (const s of [-1, 1]) postes.push([x, Mg.z + s * Mg.ancho / 2 + s * 0.12, 1.55]);
     pared(Co.x + radio - 0.2, Mg.z - Mg.ancho / 2 - 0.1, Mg.x1, Mg.z - Mg.ancho / 2 - 0.1, 0.2);
     pared(Co.x + radio - 0.2, Mg.z + Mg.ancho / 2 + 0.1, Mg.x1, Mg.z + Mg.ancho / 2 + 0.1, 0.2);
     pared(Mg.x1 + 0.3, Mg.z - 0.6, Mg.x1 + 0.3, Mg.z + 0.6, 0.2);                  // el cepo cierra la punta
     const gp = new THREE.CylinderGeometry(0.085, 0.1, 2.6, 6);
     const ip = new THREE.InstancedMesh(gp, mad, postes.length);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new V(), p = new V(), az = E.azar(77);
-    postes.forEach(([x, z], i) => {
-      const alto = 1.9 + az() * 0.35;
+    postes.forEach(([x, z, bajo], i) => {
+      const alto = bajo ? bajo + az() * 0.1 : 1.9 + az() * 0.35;
       p.set(x, T.altura(x, z) + alto / 2 - 0.35, z);
       q.setFromEuler(new THREE.Euler((az() - 0.5) * 0.06, az() * 6, (az() - 0.5) * 0.06));
       s.set(0.9 + az() * 0.3, alto / 2.2, 0.9 + az() * 0.3);
@@ -212,7 +256,10 @@
     });
     ip.castShadow = true; ip.receiveShadow = true;
     E.motor.escena.add(ip);
-    for (const s2 of [-1, 1]) for (const h of [0.55, 1.15]) caja(Mg.x1 - Mg.x0 + 2, 0.18, 0.04, tab, (Mg.x0 + Mg.x1) / 2 - 1, yc + h, Mg.z + s2 * (Mg.ancho / 2 + 0.2));
+    for (const s2 of [-1, 1]) for (const h of [0.45, 0.85, 1.25]) caja(Mg.x1 - Mg.x0 + 2, 0.18, 0.04, tab, (Mg.x0 + Mg.x1) / 2 - 1, yc + h, Mg.z + s2 * (Mg.ancho / 2 + 0.2));
+    // La pasarela: un tablón alto al costado, de donde se trabaja la vaca.
+    caja(Mg.x1 - Mg.x0 + 1.5, 0.08, 0.55, tab, (Mg.x0 + Mg.x1) / 2 - 0.5, yc + 0.55, Mg.z - Mg.ancho / 2 - 0.62);
+    for (let x = Mg.x0 - 0.5; x <= Mg.x1 + 0.6; x += 1.6) caja(0.1, 0.55, 0.1, tab, x, yc + 0.27, Mg.z - Mg.ancho / 2 - 0.62);
     // El cepo: un marco de tablas donde queda agarrada la cabeza.
     caja(0.12, 2, 0.12, tab, Mg.x1 + 0.3, yc + 1, Mg.z - 0.55);
     caja(0.12, 2, 0.12, tab, Mg.x1 + 0.3, yc + 1, Mg.z + 0.55);
@@ -238,8 +285,10 @@
 
     // ── el tanque australiano y el molino ──
     const Tq = L.tanque, yt = T.altura(Tq.x, Tq.z);
-    // Sin mapa de entorno un metal refleja negro: poco metal y más rugoso.
-    const zinc = new THREE.MeshStandardMaterial({ color: 0xc4cbd0, metalness: 0.2, roughness: 0.5, map: chapa.map });
+    // Chapa galvanizada, gris claro: sin mapa de entorno un metal refleja
+    // negro (poco metal y más rugoso), y la chapa oxidada del techo lo dejaba
+    // como un aro oscuro.
+    const zinc = new THREE.MeshStandardMaterial({ color: 0xb4bcc2, metalness: 0.25, roughness: 0.45 });
     const pared2 = new THREE.Mesh(new THREE.CylinderGeometry(Tq.r, Tq.r, 1.3, 48, 1, true), zinc);
     pared2.position.set(Tq.x, yt + 0.65, Tq.z); pared2.castShadow = true; pared2.receiveShadow = true;
     pared2.material.side = THREE.DoubleSide;

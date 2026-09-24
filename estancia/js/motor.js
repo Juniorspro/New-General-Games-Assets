@@ -17,7 +17,7 @@
     brillo: ["#000000", "#ff5a22", "#ff7f36", "#ffab68", "#ffe9c8", "#fff2dc"],
     sol:    ["#000000", "#000000", "#ff8e4a", "#ffbe82", "#ffeed8", "#fff5e8"],
     solI:   [0, 0, 1.3, 3.1, 4.3, 4.9],
-    hemiI:  [0.05, 0.12, 0.34, 0.58, 0.8, 0.9],
+    hemiI:  [0.08, 0.13, 0.34, 0.58, 0.8, 0.9],
   };
   const tmpA = new THREE.Color(), tmpB = new THREE.Color();
   function clave(nombre, e, destino) {
@@ -110,9 +110,14 @@
           // El disco del sol, en HDR: satura como una cámara.
           col += uBrillo * smoothstep(0.99955, 0.99985, cs) * 30.0 * uSolI;
           if (uNoche > 0.0 && h > 0.0) {
+            // El cielo del Chaco sin luna de pueblo: muchas estrellas chicas,
+            // unas pocas fuertes, y la Vía Láctea cruzando de lado a lado.
             vec3 p = floor(d * 380.0);
-            float s = step(0.9982, h3(p)) * (0.5 + 0.5 * sin(uTiempo * 3.0 + h3(p + 1.0) * 60.0));
-            col += vec3(s) * uNoche * 1.4 * smoothstep(0.0, 0.3, h);
+            float s = step(0.9975, h3(p)) * (0.4 + 0.6 * sin(uTiempo * 3.0 + h3(p + 1.0) * 60.0));
+            vec3 q = floor(d * 160.0);
+            float f = step(0.9992, h3(q + 7.0)) * 3.5;
+            float banda = exp(-pow(dot(d, normalize(vec3(0.35, 0.2, 0.92))) * 3.2, 2.0)) * (0.35 + 0.65 * fbm(d.xz * 9.0 + d.y * 3.0));
+            col += (vec3(s * 1.6 + f) + vec3(0.55, 0.6, 0.75) * banda * 0.09) * uNoche * smoothstep(0.0, 0.25, h);
           }
           gl_FragColor = vec4(col, 1.0);
         }`,
@@ -150,7 +155,10 @@
     M.sol.intensity = clave("solI", e);
     M.hemi.intensity = clave("hemiI", e);
     M.hemi.color.copy(colZ).lerp(colH, 0.4);
-    M.luna.intensity = 0.18 * (1 - E.suave(-8, 0, e));
+    M.luna.intensity = 0.38 * (1 - E.suave(-8, 0, e));
+    // El ojo se acostumbra a la noche: sin esto, de noche era negro total y
+    // no se veía ni el horizonte. De día, 1.
+    M.renderer.toneMappingExposure = 1 + 1.3 * (1 - E.suave(-9, 1, e));
     M.temp = M.temperatura(hora);
     M.calor = E.suave(31, 40, M.temp);
     // La niebla es el horizonte, un poco teñida hacia el sol. Si no coincide,

@@ -172,7 +172,7 @@
         // color de vértice. Es lo que más dice "atardecer".
         .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
           float contra = pow(max(dot(normalize(-vViewPosition), uSolDirV), 0.0), 5.0);
-          totalEmissiveRadiance += diffuseColor.rgb * uSolColor * contra * 0.55 * vColor;`);
+          totalEmissiveRadiance += diffuseColor.rgb * uSolColor * contra * 0.32 * vColor;`);
     });
     return mat;
   }
@@ -485,8 +485,11 @@
   // están donde estaban (§ 6.6).
   F.crearPasto = () => {
     // La mata de espartillo de Rezona (ya viene sangrada), o la dibujada.
-    const tex = window.ARCHIVOS && ARCHIVOS["mata-espartillo.webp"] ? E.textura("mata-espartillo.webp", { repetir: false }) : tarjetaPasto();
-    const mat = parcheViento(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9, vertexColors: true }), "pasto", true);
+    const rz = !!(window.ARCHIVOS && ARCHIVOS["mata-espartillo.webp"]);
+    const tex = rz ? E.textura("mata-espartillo.webp", { repetir: false }) : tarjetaPasto();
+    // Las puntas del espartillo de Rezona tiran a lila: al sol del Chaco se
+    // veía rosado. Un poco de paja dorada.
+    const mat = parcheViento(new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 0.9, vertexColors: true, color: rz ? 0xf0dcae : 0xffffff }), "pasto", true);
     const q1 = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
     const q2 = q1.clone().rotateY(Math.PI / 2);
     for (const g of [q1, q2]) {

@@ -187,7 +187,9 @@
           vec3 mapN = normalize(mix(nS, nP, mPasto));
           mapN.xy *= normalScale * (1.0 - vHumedo * 0.6);
           normal = normalize(tbn * mapN);`)
-        .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.35, vHumedo * 0.8);");
+        // El barro mojado brilla un poco, no como un espejo: con 0,35, a la
+        // tarde con el sol bajo, la orilla del estero era una mancha blanca.
+        .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.68, vHumedo * 0.8);");
     });
     const malla = (T.malla = new THREE.Mesh(g, mat));
     malla.receiveShadow = true;
@@ -253,10 +255,13 @@
           vec3 r = reflect(-v, n);
           vec3 cielo = mix(uHoriz, uZenit, pow(clamp(r.y, 0.0, 1.0), 0.6));
           float fres = 0.04 + 0.96 * pow(1.0 - max(dot(v, n), 0.0), 5.0);
-          vec3 fondo = vec3(0.055, 0.05, 0.03);                // agua de estero: té con barro
-          vec3 col = mix(fondo, cielo * 0.9, fres);
-          col += uBrillo * pow(max(dot(r, uSolDir), 0.0), 350.0) * 12.0;
-          gl_FragColor = vec4(col, 0.93);
+          // Agua de estero: té con barro. Turbia, con camalotes: refleja
+          // bastante menos que un espejo (reflejando el cielo entero, de lejos
+          // y rasante se veía como una mancha de pintura blanca).
+          vec3 fondo = vec3(0.07, 0.065, 0.04) * (0.8 + 0.4 * rn(p * 0.15));
+          vec3 col = mix(fondo, cielo * 0.55 + fondo * 0.4, fres * 0.72);
+          col += uBrillo * pow(max(dot(r, uSolDir), 0.0), 400.0) * 4.0;
+          gl_FragColor = vec4(col, 0.95);
           #include <fog_fragment>
         }`,
     });

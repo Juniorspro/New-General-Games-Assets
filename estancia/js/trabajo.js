@@ -223,6 +223,7 @@
     E.jugador.bloqueado = "manga";
     E.juego.soltarPuntero();
     $("manga").hidden = false;
+    document.body.classList.add("en-manga");
     marcarHerramienta();
     E.juego.decir("manga");
   };
@@ -255,6 +256,7 @@
     if (manga.herramienta) manga.herramienta.visible = false;
     E.jugador.bloqueado = null;
     $("manga").hidden = true;
+    document.body.classList.remove("en-manga");
   };
   // La herramienta en 3D: jeringa, aplicador de caravana o hierro.
   function crearHerramientas() {
@@ -346,10 +348,12 @@
   }
   function humo(p) {
     const tex = E.lienzo(32, 32, (g, w, h) => { const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, "rgba(255,255,255,0.9)"); gr.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); });
-    for (let i = 0; i < 14; i++) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: 0x4a4540, transparent: true, depthWrite: false, opacity: 0.5 }));
+    // Un hilo de humo gris claro que sube despacio y se aleja de la pasarela:
+    // la nube oscura de antes llegaba a la cámara y tapaba toda la vaca.
+    for (let i = 0; i < 8; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: 0x8a847c, transparent: true, depthWrite: false, opacity: 0.35 }));
       s.position.copy(p);
-      s.userData = { v: new V((Math.random() - 0.5) * 0.3, 0.5 + Math.random() * 0.5, (Math.random() - 0.5) * 0.3), vida: 1.6 + Math.random() };
+      s.userData = { v: new V((Math.random() - 0.5) * 0.15, 0.25 + Math.random() * 0.25, 0.12 + Math.random() * 0.15), vida: 1.6 + Math.random() };
       E.motor.escena.add(s);
       W.humos.push(s);
     }
@@ -362,8 +366,8 @@
     // Los humos de la marca, vivan donde vivan.
     for (let i = W.humos.length - 1; i >= 0; i--) {
       const s = W.humos[i], u = s.userData;
-      u.vida -= dt; s.position.addScaledVector(u.v, dt); s.scale.setScalar(0.15 + (2 - u.vida) * 0.35);
-      s.material.opacity = Math.max(0, u.vida * 0.3);
+      u.vida -= dt; s.position.addScaledVector(u.v, dt); s.scale.setScalar(0.1 + Math.max(0, 2.6 - u.vida) * 0.18);
+      s.material.opacity = Math.max(0, Math.min(0.35, u.vida * 0.2));
       if (u.vida <= 0) { E.motor.escena.remove(s); W.humos.splice(i, 1); }
     }
     if (!manga.activa) return;
@@ -378,9 +382,10 @@
     } else {
       v.vReal = 0;
     }
-    // La cámara al costado de la manga, del lado izquierdo de la vaca.
-    const foco = new V(v.x - 0.25, E.terreno.altura(v.x, v.z) + 1.0, v.z);
-    const pos = new V(v.x - 0.2, E.terreno.altura(v.x, v.z) + 1.55, v.z - 2.1);
+    // La cámara desde la pasarela, del lado izquierdo de la vaca, mirando por
+    // encima de las tablas: se ven la oreja, el cuello y el anca a la vez.
+    const foco = new V(v.x - 0.3, E.terreno.altura(v.x, v.z) + 0.9, v.z);
+    const pos = new V(v.x - 0.3, E.terreno.altura(v.x, v.z) + 2.45, v.z - 1.75);
     cam.position.lerp(pos, Math.min(1, dt * 4));
     cam.lookAt(foco);
     E.jugador.manos.visible = false;

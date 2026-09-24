@@ -267,6 +267,9 @@
   let proxHud = 0, proxHuellas = 0;
   function hud(ctxAccion) {
     const J = E.jugador, Z = E.lazo, c = E.animales.caballo, W = E.trabajo;
+    // Con el menú, el parte, la pausa o el final a la vista, la interfaz del
+    // juego se esconde (se veía el reloj y las barras por debajo del menú).
+    $("hud").hidden = G.enMenu();
     const hh = Math.floor(G.hora) % 24, mm = Math.floor((G.hora % 1) * 60);
     $("hudDia").textContent = `Día ${G.dia} de ${W.DIAS}`;
     $("hudHora").textContent = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
@@ -372,11 +375,15 @@
     if (proxHud <= 0) { proxHud = 0.1; hud(ctxAccion); }
     E.entrada.finCuadro();
   };
+  let congelado = false;
   function bucle(ahora) {
     // El dt nunca negativo: la marca de requestAnimationFrame puede ser anterior
     // al performance.now() que se tomó al armar (§ 6.1).
     const real = (ahora - antes) / 1000;
     antes = ahora;
+    // Congelado (solo lo usan las pruebas): no se simula ni se dibuja, así la
+    // foto que se sacó con una cámara puesta a mano no la pisa el cuadro que sigue.
+    if (congelado) { requestAnimationFrame(bucle); return; }
     const dt = Math.max(0, Math.min(0.05, real));
     E.motor.acomodar();
     E.motor.medir(real, G.fijo);
@@ -395,6 +402,15 @@
     hora(h) { G.hora = h; E.motor.actualizarHora(h, G.t); },
     paso(dt, n = 1) { for (let i = 0; i < n; i++) G.simular(dt); },
     foto() { E.motor.acomodar(); E.motor.dibujar(G.t, {}); return E.motor.renderer.info.render; },
+    congelar(si = true) { congelado = si; },
+    // Una foto con la cámara donde se quiera (con el bucle congelado).
+    fotoDesde(pos, mira) {
+      const cam = E.motor.camara;
+      cam.position.set(pos[0], pos[1], pos[2]); cam.lookAt(mira[0], mira[1], mira[2]); cam.updateMatrixWorld();
+      E.flora.actualizar(cam, G.t); E.flora.actualizarSol(cam);
+      E.motor.acomodar(); E.motor.dibujar(G.t, {});
+      return E.motor.renderer.info.render.triangles;
+    },
     info() { const r = E.motor.renderer.info; return { triangulos: r.render.triangles, llamadas: r.render.calls, geometrias: r.memory.geometries, texturas: r.memory.textures, escala: E.motor.escala }; },
   };
 

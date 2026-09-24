@@ -75,6 +75,15 @@
     else if (fijoB) a.p.addScaledVector(tmp, dif);
     else { a.p.addScaledVector(tmp, dif * 0.5); b.p.addScaledVector(tmp, -dif * 0.5); }
   }
+  // Rigidez de doblez: dos nudos salteados no se acercan a menos de "min".
+  // Sin esto, la cuerda floja en el piso se plegaba en zigzag de punta.
+  function separar(a, b, min, rigidez) {
+    tmp.copy(b.p).sub(a.p);
+    const d = tmp.length();
+    if (d >= min || d < 1e-6) return;
+    const dif = ((d - min) / d) * rigidez * 0.5;
+    a.p.addScaledVector(tmp, dif); b.p.addScaledVector(tmp, -dif);
+  }
   function suelo(n) {
     const h = E.terreno.altura(n.p.x, n.p.z) + 0.02;
     if (n.p.y < h) { n.p.y = h; tmp.copy(n.p).sub(n.q); n.q.x = n.p.x - tmp.x * 0.3; n.q.z = n.p.z - tmp.z * 0.3; n.q.y = n.p.y; }
@@ -205,15 +214,20 @@
       radioArmada = E.lerp(0.55, 1.15, E.suave(2, OMEGA_MAX, Z.omega));
       if (Z.revoleo > 3.5) { radioArmada *= 1 - E.suave(3.5, 6, Z.revoleo) * 0.4; J.cansancio = Math.max(0, J.cansancio - dt * 2); }
       // La armada gira sobre la cabeza, un poco adelante y a la derecha, y
-      // apenas inclinada hacia donde se mira.
+      // apenas inclinada hacia donde se mira (el frente, más bajo). En
+      // primera persona, más adelante y más baja: que el arco de adelante
+      // pase por arriba de la vista y se vea. En tercera, sobre la mano del
+      // Guacho, a pie o a caballo (antes, a caballo, giraba alrededor de la
+      // cámara, cinco metros atrás).
       const dir = J.adelante(new V()); dir.y = 0; dir.normalize();
       const der = new V(-dir.z, 0, dir.x);
-      const cabeza = E.motor.camara.position;
-      const centro = new V().copy(J.montado || J.camara === "primera" ? cabeza : mano).add(new V(0, J.camara === "primera" && !J.montado ? 0.42 : 0.55, 0)).addScaledVector(dir, 0.35).addScaledVector(der, 0.3);
+      const primera = J.camara === "primera";
+      const centro = new V().copy(primera ? E.motor.camara.position : mano).add(new V(0, primera ? 0.3 : 0.45, 0))
+        .addScaledVector(dir, primera ? 0.55 : 0.3).addScaledVector(der, primera ? 0.25 : 0.1);
       for (let i = 0; i < NA; i++) {
         const a = Z.angulo + (i / NA) * Math.PI * 2;
         const x = Math.cos(a) * radioArmada, z = Math.sin(a) * radioArmada;
-        const inclina = 0.18 * (x * dir.x + z * dir.z) / radioArmada;
+        const inclina = -(primera ? 0.24 : 0.16) * (x * dir.x + z * dir.z) / radioArmada;
         armada[i].p.set(centro.x + x, centro.y + inclina, centro.z + z);
         armada[i].q.copy(armada[i].p);
       }
@@ -244,6 +258,11 @@
       }
     } else if (Z.estado === "errado") {
       Z.errado -= dt;
+      // Erró: la cobra. El largo nunca pasa de lo que hay hasta la armada (la
+      // cuerda de sobra se amontonaba en zigzag al lado de la mano) y se va
+      // acortando: la armada vuelve arrastrándose por el piso.
+      const hasta = centroArmada(cen).distanceTo(mano);
+      Z.largo = Math.max(1.2, Math.min(Z.largo - dt * 7, hasta + 0.4));
       paso(dt, mano, 0.05, false, true);
       if (Z.errado <= 0) { Z.estado = "listo"; colgar(); }
     } else if (Z.estado === "enganchado") {
@@ -278,6 +297,7 @@
     for (let it = 0; it < 8; it++) {
       cuerda[0].p.copy(mano);
       for (let i = 0; i < NL - 1; i++) distancia(cuerda[i], cuerda[i + 1], seg, 1, i === 0);
+      for (let i = 0; i < NL - 2; i++) separar(cuerda[i], cuerda[i + 2], seg * 1.55, 0.35);
       distancia(cuerda[NL - 1], armada[0], seg, 1, false, !!fijo);
       if (!fijo) for (let i = 0; i < NA; i++) distancia(armada[i], armada[(i + 1) % NA], tramoA, 1);
       if (abierta) {
@@ -306,6 +326,8 @@
     E.juego.decir("enlazada", v);
     E.sonido && E.sonido.mugido(v, 1.3);
   }
+  // Para las pruebas: enlazar una vaca sin tener que embocarla.
+  Z.probarEnganche = (v) => { if (Z.estado === "guardado") Z.equipar(); enganchar(v); };
   function errar(c) {
     Z.estado = "errado"; Z.errado = 1.3;
     // La que estaba cerca se espanta.

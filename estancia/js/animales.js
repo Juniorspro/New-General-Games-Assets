@@ -253,7 +253,9 @@
     const n = 400;
     const gM = new THREE.BufferGeometry();
     gM.setAttribute("position", new THREE.BufferAttribute(new Float32Array(n * 3), 3));
-    A.moscas = new THREE.Points(gM, new THREE.PointsMaterial({ color: 0x0a0a0a, size: 0.018, sizeAttenuation: true }));
+    // Redondas: un Points sin textura dibuja cuadrados.
+    const punto = E.lienzo(16, 16, (g) => { g.fillStyle = "#fff"; g.beginPath(); g.arc(8, 8, 6, 0, Math.PI * 2); g.fill(); });
+    A.moscas = new THREE.Points(gM, new THREE.PointsMaterial({ color: 0x0a0a0a, size: 0.014, sizeAttenuation: true, map: punto, alphaTest: 0.5 }));
     A.moscas.frustumCulled = false;
     E.motor.escena.add(A.moscas);
   }
@@ -314,57 +316,92 @@
   const TINTES = { hereford: C("#ffffff"), angus: C("#2b2624"), braford: C("#e8cdb8") };
   function vestirCon(malla, nombre, tinte) {
     const M = E.modelos;
-    const piel = M && M.hay(nombre) ? M.clonar(nombre, { tinte }) : null;
+    const piel = M && M.hay(nombre) ? M.clonar(nombre, { tinte, sinClips: true }) : null;
     if (!piel) return null;
     malla.material.visible = false;
     malla.castShadow = false;
     E.motor.escena.add(piel.raiz);
+    E.marcha.preparar(piel, nombre);
     return piel;
   }
-  function recadoMalla() {
+  // El recado, en capas amoldadas al lomo del caballo de Rezona: se tiran
+  // rayos contra el modelo desde afuera, en abanico alrededor del lomo, y cada
+  // capa es una sábana apenas separada de esa superficie (a ojo, con cajas o
+  // con caños, o flotaba o quedaba adentro del caballo). Carona con guarda,
+  // bastos de cuero, cojinillo de oveja, la cabeza del recado y los estribos.
+  function recadoMalla(piel, lomo) {
     const g = new THREE.Group();
-    const m = (c, r = 0.85) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
-    const pieza = (geo, mat, x, y, z) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
-    pieza(new THREE.BoxGeometry(0.7, 0.04, 0.95), m(0x7a1e1a), 0, 0, 0);                        // la carona
-    pieza(new THREE.BoxGeometry(0.6, 0.09, 0.62), m(0x3b2616, 0.7), 0, 0.06, 0.02);             // los bastos
-    pieza(new THREE.BoxGeometry(0.56, 0.08, 0.55), m(0xcfc2a8, 1), 0, 0.13, 0.02);  // el cojinillo de oveja
+    const m = (c, r = 0.85, mapa) => new THREE.MeshStandardMaterial({ color: c, roughness: r, map: mapa || null, side: THREE.DoubleSide });
+    piel.raiz.updateMatrixWorld(true);
+    const centroY = lomo - 0.34, ZS = [-0.45, -0.3, -0.15, 0, 0.15, 0.3, 0.45], AS = [];
+    for (let k = -6; k <= 6; k++) AS.push(k * 0.2);
+    const ray = new THREE.Raycaster(), o = new V(), d = new V();
+    // superficie[iz][ia] = [punto del cuero, normal hacia afuera] en el marco del caballo
+    const sup = ZS.map((z) => AS.map((a) => {
+      const dir = new V(Math.sin(a), Math.cos(a), 0);
+      o.set(dir.x * 1.2, centroY + dir.y * 1.2, z + 0.05);
+      d.copy(dir).negate();
+      ray.set(piel.raiz.localToWorld(o.clone()), d.clone().transformDirection(piel.raiz.matrixWorld)); ray.far = 1.3;
+      const hit = ray.intersectObjects(E.modelos.quietas(piel), false)[0];
+      const pt = hit ? piel.raiz.worldToLocal(hit.point.clone()) : new V(dir.x * 0.3, centroY + dir.y * 0.34, z + 0.05);
+      return [pt, dir];
+    }));
+    // Una capa: de la fila z0 a z1 y del ángulo -abre a +abre, a "sep" del cuero.
+    const capa = (iz0, iz1, abre, sep, mat, repetir = 1) => {
+      const pos = [], uv = [], idx = [];
+      const cols = AS.map((a, ia) => ia).filter((ia) => Math.abs(AS[ia]) <= abre + 1e-6);
+      for (let iz = iz0; iz <= iz1; iz++) cols.forEach((ia, c) => {
+        const [pt, dir] = sup[iz][ia];
+        pos.push(pt.x + dir.x * sep, pt.y + dir.y * sep, pt.z);
+        uv.push((c / (cols.length - 1)) * repetir, (iz - iz0) / (iz1 - iz0));
+      });
+      const n = cols.length;
+      for (let r = 0; r < iz1 - iz0; r++) for (let c = 0; c < n - 1; c++) { const a = r * n + c; idx.push(a, a + 1, a + n, a + 1, a + n + 1, a + n); }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+      geo.setIndex(idx); geo.computeVertexNormals();
+      const malla = new THREE.Mesh(geo, mat); malla.castShadow = true; malla.receiveShadow = true; g.add(malla);
+      return malla;
+    };
+    const guarda = E.lienzo(32, 128, (c, w, h) => { c.fillStyle = "#7a1e1a"; c.fillRect(0, 0, w, h); c.fillStyle = "#c9a45a"; c.fillRect(0, 3, w, 3); c.fillRect(0, h - 6, w, 3); });
+    capa(0, 6, 1.21, 0.012, m(0xffffff, 0.9, guarda));                                     // la carona
+    capa(1, 5, 0.81, 0.028, m(0x4a2e1a, 0.6));                                              // los bastos
+    const lana = E.lienzo(64, 64, (c, w, h) => { c.fillStyle = "#d8ccb2"; c.fillRect(0, 0, w, h); const az = E.azar(9); for (let k = 0; k < 500; k++) { c.fillStyle = `rgba(${150 + az() * 80},${140 + az() * 70},${110 + az() * 60},0.5)`; c.beginPath(); c.arc(az() * w, az() * h, 1 + az() * 2.5, 0, Math.PI * 2); c.fill(); } }, { repetir: true });
+    capa(2, 4, 0.61, 0.07, m(0xffffff, 1, lana), 2);                                       // el cojinillo
+    const tope = sup[5][6][0];
+    const cabeza = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.06), m(0x3b2616, 0.6));
+    cabeza.position.set(0, tope.y + 0.07, tope.z); cabeza.castShadow = true; g.add(cabeza);
     for (const s of [1, -1]) {
-      pieza(new THREE.BoxGeometry(0.015, 0.6, 0.03), m(0x2a1a10), s * 0.35, -0.26, 0.1);        // la acción del estribo
-      const e = pieza(new THREE.TorusGeometry(0.06, 0.012, 4, 10), new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.8, roughness: 0.4 }), s * 0.36, -0.58, 0.1);
-      e.rotation.y = Math.PI / 2;
+      const lado = sup[3][s > 0 ? 12 : 0][0];
+      // La acción baja un poco para adelante, adonde llega el pie del jinete.
+      const accion = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.6, 0.035), m(0x2a1a10));
+      accion.position.set(lado.x + s * 0.035, lado.y - 0.27, 0.2); accion.rotation.x = -0.28; accion.rotation.z = s * 0.05; g.add(accion);
+      const estribo = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 4, 12), new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.6, roughness: 0.4 }));
+      estribo.position.set(lado.x + s * 0.05, lado.y - 0.56, 0.28); estribo.rotation.y = Math.PI / 2; estribo.castShadow = true; g.add(estribo);
     }
+    // El asiento: arriba del cojinillo, en el medio.
+    const medio = sup[3][6][0];
+    g.userData.asiento = new V(0, medio.y + 0.09, medio.z);
     return g;
   }
-  const qTmp = new THREE.Quaternion();
-  function vestir(a, dt) {
-    const p = a.piel, h = a.huesos, M = E.modelos;
-    // De lejos, el animal de código (3 mil triángulos contra 19 mil) y sin
-    // mezclador de animación: a 70 m no se nota y la tropa entera cuesta poco.
-    const lejos = E.motor.camara.position.distanceToSquared(a.malla.position) > 70 * 70;
-    p.raiz.visible = !lejos;
-    a.malla.material.visible = lejos; a.malla.castShadow = lejos;
-    if (lejos) return;
-    const caido = a.estado === "tumbada" || a.estado === "levanta" || (a.salud && a.salud.muerta);
+  // El modelo copia al animal lógico (posición, rumbo, tumbe) y mueve las
+  // patas con la marcha de marcha.js, a la velocidad a la que de verdad se
+  // movió en este cuadro.
+  function vestir(a, dt, t) {
+    const p = a.piel, h = a.huesos, s = a.salud || {};
     p.raiz.position.copy(a.malla.position);
     p.raiz.quaternion.copy(a.malla.quaternion);
-    // El bote del paso y el cabeceo del galope; la echada no (el modelo no
-    // sabe plegar las patas: se queda parada, quieta).
-    if (!caido) {
-      p.raiz.position.y += h.cuerpo.position.y - a.altoCuerpo + (a.echar || 0) * 0.55;
-      p.raiz.quaternion.multiply(qTmp.setFromAxisAngle(M.X, h.cuerpo.rotation.x));
-    }
-    if (p.mixer) {
-      const v = caido ? 0 : a.vReal;
-      M.mezclar(p, { walk: E.suave(0.04, 0.35, v) }, { walk: E.clamp(v * p.andar, 0.5, 4.2) });
-      p.mixer.update(dt);
-    }
-    p.raiz.updateMatrixWorld(true);
-    const r = p.roles;
-    M.girar(p, r.cuello, M.X, h.cuello.rotation.x * p.cuanto.cuello);
-    if (r.nuca) M.girar(p, r.nuca, M.X, h.cuello.rotation.x * 0.3);
-    M.girar(p, r.cabeza, M.X, h.cabeza.rotation.x * p.cuanto.cabeza);
-    M.girar(p, r.cabeza, M.Y, h.cabeza.rotation.y);
-    if (r.cola) M.girar(p, r.cola, M.Y, h.cola.rotation.z * 1.5);
+    const tumbada = a.estado === "tumbada" || a.estado === "levanta";
+    a.tTumbada = tumbada ? (a.tTumbada || 0) + dt : 0;
+    const Z = E.lazo;
+    E.marcha.animar(p, {
+      v: a.vAnim || 0, cabeza: a.cabeza || 0, echar: a.echar || 0,
+      tumbe: tumbada ? a.tumbe || 0 : 0, tumbeT: a.tTumbada, muerta: !!s.muerta,
+      tiron: Z && Z.vaca === a && Z.estado === "enganchado" ? E.clamp(Z.tension, 0, 1) : 0,
+      cepo: a.estado === "cepo" ? 1 : 0, mira: h.cabeza.rotation.y,
+      moscas: s.bichera ? 2.2 : 1, t, num: a.num || 0,
+    }, dt);
   }
 
   // ── la tropa ──
@@ -404,10 +441,10 @@
     };
     if (pielC) {
       const lomo = E.modelos.alturaLomo(pielC, 0.05) ?? 1.42;
-      const recado = recadoMalla();
-      recado.position.set(0, lomo - 0.02, 0.05);
+      const recado = recadoMalla(pielC, lomo);
       pielC.raiz.add(recado);
-      A.caballo.sillaY = lomo + 0.15;
+      A.caballo.sillaY = recado.userData.asiento.y;
+      A.caballo.recado = recado;
     }
   };
 
@@ -415,9 +452,21 @@
   const tmp = new V();
   A.cabeza = (a, destino) => (a.piel && a.piel.roles.cabeza ? a.piel.roles.cabeza.getWorldPosition(destino) : a.huesos.cabeza.localToWorld(destino.set(0, -0.08, 0.2)));
   A.cuello = (a, destino) => (a.piel && a.piel.roles.cuello ? a.piel.roles.cuello.getWorldPosition(destino) : a.huesos.cuello.getWorldPosition(destino));
+  // La herida va en el anca, sobre el cuero. Con el modelo de Rezona (más
+  // ancho que el de código) el punto se busca con un rayo desde afuera la
+  // primera vez y se guarda en el marco del cuerpo lógico.
   A.puntoHerida = (v, destino) => {
-    const lado = v.salud.bichera ? v.salud.bichera.lado : 1;
-    destino.set(lado * (v.piel ? v.piel.anchoHerida || 0.36 : 0.3), 0.05, -0.35);
+    const b = v.salud.bichera, lado = b ? b.lado : 1;
+    if (v.piel && b) {
+      if (!b.local) {
+        const cu = v.huesos.cuerpo, desde = cu.localToWorld(new V(lado * 1.5, 0.05, -0.35)), hacia = cu.localToWorld(new V(0, 0.05, -0.35));
+        const ray = new THREE.Raycaster(desde, hacia.clone().sub(desde).normalize(), 0, 2);
+        const hit = ray.intersectObjects(v.piel.mallas, false)[0];
+        b.local = hit ? cu.worldToLocal(hit.point.clone()).add(new V(lado * 0.01, 0, 0)) : new V(lado * 0.42, 0.05, -0.35);
+      }
+      return v.huesos.cuerpo.localToWorld(destino.copy(b.local));
+    }
+    destino.set(lado * 0.3, 0.05, -0.35);
     return v.huesos.cuerpo.localToWorld(destino);
   };
   A.cercana = (x, z, max, filtro = () => true) => {
@@ -429,6 +478,60 @@
     }
     return mejor;
   };
+
+  // ── la herida a la vista ── la bichera es una llaga oscura con gusanos en
+  // el anca (antes solo se veían las moscas); curada, queda la mancha violeta
+  // del curabichera unos días.
+  let texLlaga = null, texVioleta = null;
+  function texturasHerida() {
+    texLlaga = E.lienzo(128, 128, (g, w, h) => {
+      const az = E.azar(66);
+      for (let i = 0; i < 9; i++) {
+        const x = w / 2 + (az() - 0.5) * 30, y = h / 2 + (az() - 0.5) * 26, r = 18 + az() * 22;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, "rgba(58,10,6,0.95)"); gr.addColorStop(0.6, "rgba(90,22,12,0.75)"); gr.addColorStop(1, "rgba(90,40,20,0)");
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      }
+      for (let i = 0; i < 70; i++) {                       // los gusanos
+        const a = az() * Math.PI * 2, r = az() * 26;
+        g.fillStyle = `rgba(${225 + az() * 25},${210 + az() * 25},${170 + az() * 30},0.95)`;
+        g.beginPath(); g.ellipse(w / 2 + Math.cos(a) * r, h / 2 + Math.sin(a) * r * 0.85, 2.6, 1.1, az() * 3, 0, Math.PI * 2); g.fill();
+      }
+    });
+    texVioleta = E.lienzo(128, 128, (g, w, h) => {
+      const az = E.azar(67);
+      for (let i = 0; i < 12; i++) {
+        const x = w / 2 + (az() - 0.5) * 40, y = h / 2 + (az() - 0.5) * 34, r = 16 + az() * 24;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, "rgba(92,40,140,0.9)"); gr.addColorStop(1, "rgba(92,40,140,0)");
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      }
+      g.strokeStyle = "rgba(92,40,140,0.6)"; g.lineWidth = 3;           // lo que chorrea
+      for (let i = 0; i < 6; i++) { const x = w / 2 + (az() - 0.5) * 50; g.beginPath(); g.moveTo(x, h / 2); g.lineTo(x + (az() - 0.5) * 6, h / 2 + 30 + az() * 30); g.stroke(); }
+    });
+  }
+  function herida(v) {
+    const b = v.salud.bichera, curada = !b && v.salud.curada && E.juego && E.juego.dia - v.salud.curada <= 3;
+    if (!b && !curada) { if (v.heridaMalla) { v.heridaMalla.parent.remove(v.heridaMalla); v.heridaMalla = null; } return; }
+    if (!texLlaga) texturasHerida();
+    const tipo = b ? "llaga" : "violeta";
+    if (v.heridaMalla && v.heridaMalla.userData.tipo === tipo) {
+      if (b) v.heridaMalla.scale.setScalar(1 + Math.min(2, b.dias) * 0.3);
+      return;
+    }
+    if (!v.heridaMalla) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.22), new THREE.MeshStandardMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, roughness: 0.35 }));
+      const punto = A.puntoHerida(v, new V()), lado = (b || v.salud.ultimaHerida || { lado: 1 }).lado;
+      if (v.piel) E.modelos.pegar(v.piel, m, punto, new V(lado, 0, 0).transformDirection(v.piel.raiz.matrixWorld));
+      else { v.huesos.cuerpo.attach(m); m.position.copy(v.huesos.cuerpo.worldToLocal(punto.clone())); m.rotation.set(0, lado * Math.PI / 2, 0); }
+      v.heridaMalla = m;
+    }
+    if (b) v.salud.ultimaHerida = { lado: b.lado };
+    v.heridaMalla.material.map = tipo === "llaga" ? texLlaga : texVioleta;
+    v.heridaMalla.material.roughness = tipo === "llaga" ? 0.3 : 0.7;
+    v.heridaMalla.material.needsUpdate = true;
+    v.heridaMalla.userData.tipo = tipo;
+  }
 
   A.enfermar = (v) => {
     v.salud.bichera = { dias: 0, lado: Math.random() < 0.5 ? 1 : -1, gusanos: 9 + Math.floor(Math.random() * 6) };
@@ -474,6 +577,8 @@
 
   function conducta(v, dt, jug, ctx) {
     if (v.salud.muerta) { v.v = 0; return; }
+    // Para las pruebas: velocidad y postura forzadas, sin conducta.
+    if (v.prueba) { const P = v.prueba; v.v = P.v || 0; v.cabezaObj = P.cabeza || 0; v.echada = !!P.echada; if (P.estado) v.estado = P.estado; return; }
     v.t -= dt;
     const s = sentir(v, jug);
     let objetivo = null, vel = 0, cabezaBaja = 0;
@@ -591,15 +696,26 @@
       const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
       if (d < 1.6 && d > 1e-4) {
         const e = (1.6 - d) / 2;
-        if (a.estado !== "cepo" && a.estado !== "tumbada") { a.x -= (dx / d) * e; a.z -= (dz / d) * e; }
-        if (b.estado !== "cepo" && b.estado !== "tumbada") { b.x += (dx / d) * e; b.z += (dz / d) * e; }
+        const quieta = (w) => w.estado === "cepo" || w.estado === "tumbada" || w.estado === "manga";
+        if (!quieta(a)) { a.x -= (dx / d) * e; a.z -= (dz / d) * e; }
+        if (!quieta(b)) { b.x += (dx / d) * e; b.z += (dz / d) * e; }
       }
     }
   }
 
   function posar(a, dt, t) {
+    // La velocidad para las patas sale de lo que el animal se movió de verdad
+    // desde el cuadro anterior, con signo (para atrás es negativa): así camina
+    // también cuando lo arrastra el lazo o lo lleva la manga, que lo mueven
+    // sin pasar por mover().
+    if (dt > 0) {
+      const dx = a.x - (a.px ?? a.x), dz = a.z - (a.pz ?? a.z);
+      const vf = E.clamp((dx * Math.sin(a.yaw) + dz * Math.cos(a.yaw)) / dt, -4, 12);
+      a.vAnim = (a.vAnim || 0) + (vf - (a.vAnim || 0)) * Math.min(1, dt * 7);
+    }
+    a.px = a.x; a.pz = a.z;
     posarLogico(a, dt, t);
-    if (a.piel) vestir(a, dt);
+    if (a.piel) vestir(a, dt, t);
   }
   function posarLogico(a, dt, t) {
     const y = E.terreno.altura(a.x, a.z) - Math.min(0.6, E.terreno.agua(a.x, a.z) * 0.35);
@@ -653,7 +769,9 @@
     A.centroTropa = n ? { x: cx / n, z: cz / n } : A.querencia;
     for (const v of A.vacas) {
       conducta(v, dt, jug, ctx);
-      if (!v.salud.muerta && v.estado !== "tumbada" && v.estado !== "cepo") mover(v, dt);
+      // En la manga la lleva trabajo.js: con el choque de mover() (radio
+      // 0,55 contra una manga de 0,95 de ancho) quedaba trabada en la entrada.
+      if (!v.salud.muerta && v.estado !== "tumbada" && v.estado !== "cepo" && v.estado !== "manga") mover(v, dt);
       // Huellas cada 0,9 m recorridos; bosta de vez en cuando; y la agusanada,
       // más seguido y blanda.
       v.recorrido += v.vReal * dt;
@@ -674,7 +792,7 @@
       }
     }
     separar();
-    for (const v of A.vacas) { posar(v, dt, t); v.malla.updateMatrixWorld(true); }
+    for (const v of A.vacas) { posar(v, dt, t); v.malla.updateMatrixWorld(true); if (v.salud.bichera || v.heridaMalla) herida(v); }
     A.actualizarCaballo(dt, t, jug);
     moverMoscas(t, ctx.horasJuego);
   };
@@ -683,6 +801,9 @@
   // dejó; con un silbido, viene.
   A.actualizarCaballo = (dt, t, jug) => {
     const c = A.caballo;
+    if (c.prueba && !c.montado) { c.v = c.prueba.v || 0; c.cabezaObj = c.prueba.cabeza || 0; mover(c, dt); posar(c, dt, t); c.malla.updateMatrixWorld(true); return; }
+    // Montado, la cabeza arriba (si se lo montó pastando, se quedaba gacho).
+    if (c.montado) c.cabezaObj = c.vReal < 0.3 ? 0.12 : 0;
     if (!c.montado) {
       let vel = 0;
       if (c.destino) {
