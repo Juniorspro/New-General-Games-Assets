@@ -160,3 +160,10 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   confeti; palancas y botones en el celular. Probado en PC, teléfono acostado y
   parado (`isla-royale/prueba.mjs`). El sonido no se escuchó: el navegador de
   prueba no tiene salida de audio (sin comprobar de oído).
+- **Isla Royale 3D**: el usuario vio pantalla celeste y pidió "más realista,
+  como el original y 3D". Rehecho en three.js: salto del autobús con caída libre
+  y planeador, isla con relieve, agua con espuma, cinco pueblos con casas y
+  muelle, caminos, bosque, pasto, personajes articulados, cámara al hombro,
+  rayos de disparo, muros y rampas de madera, tormenta violeta, números de daño,
+  baile y confeti en la victoria. Probado en PC y teléfono (SwiftShader, con
+  `simular`); en un teléfono real no se midió (sin comprobar).

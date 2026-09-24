@@ -178,25 +178,37 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - En Playwright, si el juego tomó el puntero (`requestPointerLock`), los clics
   no llegan a los botones: soltarlo antes (`G.soltarPuntero()`).
 
-## Battle royale en Canvas 2D (Isla Royale)
+## Battle royale 3D (Isla Royale)
 
-- React por UMD de cdnjs con `h = React.createElement`: sin Babel el archivo
-  arranca al toque y el empaquetador mete React adentro (209 KB, anda sin red).
-- Isométrico: `sx = (x−y)K + ox`, `sy = (x+y)K/2 − z·zoom + oy` con
-  `K = zoom·0,7071`; el suelo entero con `setTransform(K, K/2, −K, K/2, ox, oy)`
-  sobre una isla dibujada una vez en un lienzo aparte; lo parado se ordena por
-  `x + y`. El mouse vuelve al mundo con la inversa (`vista().aMundo`).
-- Bots, números que quedaron jugables (medido): sin tregua te bajaban 200 de
-  vida en 4 s. Ahora: 10 s sin pelear al empezar, 0,7 s de reacción antes del
-  primer tiro, cadencia de bot ×1,8 y aparición a 520–740 del centro. Con eso,
-  un bot a 250 saca ~60 en 3 s.
-- Un árbol que tapa al jugador se dibuja al 35 %: si no, en el bosque no te ves.
-- Trampa del celular: el botón Disparar ponía `E.disparo = true` y la palanca
-  derecha lo pisaba cada cuadro con `false`. Van en banderas separadas.
-- Confeti en fracciones de pantalla: la gravedad va en 0,15/s, no en 60.
-- Teléfono acostado (alto ≤ 520): botones entre las palancas, armas arriba y
-  minimapa chico; si no, se pisan con el minimapa.
-- `window.__isla` es la ref de la partida para las pruebas.
+- La primera versión (Canvas 2D isométrica) no gustó: "se ve celeste, hacelo
+  3D y como el original". Se rehízo en three.js r160 + React (UI) por UMD,
+  tercera persona detrás del hombro. Lo del celeste: el fondo del body sin
+  JS corriendo (visor de archivos del teléfono sin JavaScript, probable). Ahora
+  el HTML trae un "Cargando…" que explica eso y un cartel rojo con el error si
+  algo revienta, así nunca queda la pantalla vacía.
+- Escala: 1 px del pedido = 0,2 m (mapa 400 m, "persigue a <400" = 80 m).
+- Relieve: grilla de 2 m (261²) que sirve igual para la malla y para
+  `terreno(x,z)` bilineal; el agua lee la misma grilla como textura de bytes
+  (profundidad → color, espuma en la orilla).
+- Cielo y niebla empalman escribiendo el mismo color crudo: `fog.color` con
+  `setRGB(..., LinearSRGBColorSpace)` y el cielo sin conversión de color.
+- Todo instanciado (árboles, rocas, matas, 7000 pastitos que se mecen en el
+  vértice con `instanceMatrix[3]`); cada casa es una sola malla con color por
+  vértice (`unir` + `colorear`).
+- Personajes: piezas con grupos por articulación (hombro/codo/cadera/rodilla);
+  frente = −Z, `yaw` como la cámara (`rotation.order = "YXZ"`).
+- Disparos por rayo analítico (cilindros, esferas, cajas, plano de la rampa y
+  el suelo marchando de a 1 m). La mira apunta con un rayo desde la cámara y
+  la bala sale de la boca hacia ese punto.
+- Cámara: choca solo con casas, construcciones y suelo; las copas y rocas
+  pegadas a la cámara se deshacen con `discard` por dithering (onBeforeCompile).
+- SwiftShader dibuja a 1–3 cuadros por segundo (la CPU queda ociosa: es el
+  rasterizado). Para probar: `__isla.simular(seg)` avanza sin dibujar; tiene que
+  llamar también a `efectos` o las estelas quedan pegadas en la foto.
+- Números que dan juego: bots con 14 s de tregua, 0,7 s de reacción y cadencia
+  ×1,8; la tormenta pega 8/s a la vida (ignora escudo), como en el original.
+- En el teléfono: sin antialiasing, calidad Media; si los primeros 4 s van a
+  menos de 28 cuadros, baja sola un escalón y avisa.
 
 ## Probar
 

@@ -1,184 +1,259 @@
 <title>Isla Royale</title>
-<meta name="description" content="Battle royale isométrico en el navegador: 7 jugadores, cofres dorados, construcción y tormenta.">
+<meta name="description" content="Battle royale en 3D en el navegador: saltás del autobús, abrís cofres dorados, construís y sobrevivís a la tormenta.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Nunito:wght@700;800;900&display=swap">
 <style>
-  /* Un solo mundo visual (una isla de dibujo animado a pleno sol): no cambia con
-     el tema del visor, así que todos los colores van fijos. */
+  /* Un solo mundo visual (una isla a pleno sol): no cambia con el tema del
+     visor, así que los colores van fijos. */
   :root {
     color-scheme: light;
-    --mar: #2ec4d6; --pasto: #5ccf4f; --arena: #f5dc8f; --tormenta: #8a3dff; --oro: #ffc62e;
-    --panel: rgba(26, 33, 80, 0.72); --panel-lleno: #1a2150; --tinta: #ffffff; --tinta-suave: rgba(255, 255, 255, 0.78);
+    --tormenta: #8a3dff; --oro: #ffc62e;
+    --panel: rgba(18, 24, 60, 0.66); --panel-lleno: #141a44; --tinta: #ffffff; --tinta-suave: rgba(255, 255, 255, 0.8);
     --vida: #4ee06a; --escudo: #3cb4ff; --peligro: #ff4d6d;
     --titular: "Luckiest Guy", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
     --cuerpo: "Nunito", "Segoe UI", system-ui, sans-serif;
   }
   html, body { height: 100%; }
-  body { margin: 0; background: #7fd4f5; color: var(--tinta); font: 800 15px/1.3 var(--cuerpo); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+  body { margin: 0; background: linear-gradient(180deg, #3f8fe0, #a9dcf7); color: var(--tinta); font: 800 15px/1.3 var(--cuerpo); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
   #raiz { position: fixed; inset: 0; }
-  canvas.juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
-  button { font: inherit; }
+  .cargando { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; }
+  .cargando b { display: block; font: 400 44px/1 var(--titular); margin-bottom: 10px; }
+  .cargando small { display: block; max-width: 34ch; margin: 12px auto 0; color: var(--tinta-suave); font-size: 13px; }
+  #error { position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 9; padding: 10px 14px; border-radius: 12px; background: rgba(160, 0, 40, 0.92); font-size: 14px; }
+  canvas.juego, canvas.capa { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  canvas.capa { pointer-events: none; }
+  button { font: inherit; color: inherit; }
 
   /* ── HUD ── */
-  .hud { position: absolute; inset: 0; pointer-events: none; padding: calc(12px + env(safe-area-inset-top, 0px)) 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
-  .vitales { position: absolute; left: 14px; top: calc(12px + env(safe-area-inset-top, 0px)); display: grid; gap: 6px; width: min(270px, 46vw); }
-  .barra { position: relative; height: 22px; border-radius: 6px; background: rgba(10, 14, 40, 0.55); overflow: hidden; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18); transform: skewX(-10deg); }
-  .barra > i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; transition: width 0.18s ease-out; }
-  .barra.escudo > i { background: linear-gradient(180deg, #7fd3ff, var(--escudo)); }
-  .barra.vida > i { background: linear-gradient(180deg, #9af2a4, var(--vida)); }
-  .barra.vida.baja > i { background: linear-gradient(180deg, #ff9aac, var(--peligro)); }
-  .barra > span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; transform: skewX(10deg); font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); font-variant-numeric: tabular-nums; }
-  .recursos { display: flex; gap: 8px; margin-top: 2px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 12px; background: var(--panel); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .chip b { font-weight: 900; }
+  .hud { position: absolute; inset: 0; pointer-events: none; }
+  .vitales { position: absolute; left: 14px; top: calc(12px + env(safe-area-inset-top, 0px)); display: grid; gap: 6px; width: min(270px, 42vw); }
+  .barra { position: relative; height: 22px; border-radius: 5px; background: rgba(8, 12, 36, 0.55); overflow: hidden; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18); transform: skewX(-12deg); }
+  .barra > i { position: absolute; inset: 0 auto 0 0; transition: width 0.18s ease-out; }
+  .barra.escudo > i { background: linear-gradient(180deg, #8fdcff, var(--escudo)); }
+  .barra.vida > i { background: linear-gradient(180deg, #a6f5ae, var(--vida)); }
+  .barra.vida.baja > i { background: linear-gradient(180deg, #ffa3b3, var(--peligro)); }
+  .barra > span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; transform: skewX(12deg); font-size: 13px; text-shadow: 0 1px 2px rgba(0,0,0,0.7); font-variant-numeric: tabular-nums; }
+  .recursos { display: flex; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 12px; background: var(--panel); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .madera::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: repeating-linear-gradient(90deg, #d99a55 0 3px, #b8743a 3px 5px); }
 
   .arriba-der { position: absolute; right: 14px; top: calc(12px + env(safe-area-inset-top, 0px)); display: grid; justify-items: end; gap: 6px; }
-  .minimapa { width: clamp(108px, 22vw, 160px); height: clamp(108px, 22vw, 160px); border-radius: 12px; background: var(--panel-lleno); box-shadow: 0 0 0 3px rgba(255,255,255,0.35), 0 6px 18px rgba(0,0,0,0.3); }
-  .vivos { display: flex; gap: 6px; }
-  .tormenta-aviso { font-size: 13px; padding: 4px 10px; border-radius: 10px; background: var(--panel); text-align: right; max-width: 220px; }
-  .tormenta-aviso.cierra { background: rgba(138, 61, 255, 0.8); animation: latir 1s ease-in-out infinite; }
-  @keyframes latir { 50% { transform: scale(1.04); } }
+  .minimapa { width: clamp(110px, 20vw, 170px); height: clamp(110px, 20vw, 170px); border-radius: 10px; background: var(--panel-lleno); box-shadow: 0 0 0 3px rgba(255,255,255,0.4), 0 6px 18px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer; }
+  .fila { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .tormenta-aviso { font-size: 13px; padding: 4px 10px; border-radius: 10px; background: var(--panel); }
+  .tormenta-aviso.cierra { background: rgba(138, 61, 255, 0.85); animation: latir 1s ease-in-out infinite; }
+  @keyframes latir { 50% { transform: scale(1.05); } }
 
-  .feed { position: absolute; right: 14px; top: calc(clamp(108px, 22vw, 160px) + 96px + env(safe-area-inset-top, 0px)); display: grid; justify-items: end; gap: 4px; font-size: 13px; }
-  .feed div { padding: 3px 9px; border-radius: 8px; background: rgba(10, 14, 40, 0.5); animation: entrar 0.25s ease-out both; }
-  .feed .yo { background: rgba(255, 198, 46, 0.85); color: #2a1f00; }
-  @keyframes entrar { from { opacity: 0; transform: translateX(20px); } }
+  .feed { position: absolute; left: 14px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 4px; font-size: 13px; }
+  .feed div { padding: 3px 9px; border-radius: 8px; background: rgba(8, 12, 36, 0.55); animation: entrar 0.25s ease-out both; }
+  .feed .yo { background: rgba(255, 198, 46, 0.9); color: #2a1f00; }
+  @keyframes entrar { from { opacity: 0; transform: translateX(-16px); } }
 
-  .armas { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 8px; align-items: flex-end; }
-  .ranura { width: 92px; padding: 6px 8px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15); text-align: center; font-size: 12px; pointer-events: auto; cursor: pointer; border: 0; color: inherit; }
-  .ranura.activa { background: rgba(255, 198, 46, 0.92); color: #2a1f00; box-shadow: inset 0 0 0 2px #fff, 0 4px 14px rgba(0,0,0,0.25); transform: translateY(-4px); }
+  .armas { position: absolute; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 8px; align-items: flex-end; }
+  .ranura { width: 96px; padding: 6px 8px; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15); text-align: center; font-size: 12px; pointer-events: auto; cursor: pointer; border: 0; }
+  .ranura.activa { background: rgba(255, 198, 46, 0.94); color: #2a1f00; box-shadow: inset 0 0 0 2px #fff, 0 4px 14px rgba(0,0,0,0.25); transform: translateY(-4px); }
   .ranura strong { display: block; font: 400 17px/1.1 var(--titular); letter-spacing: 0.02em; }
   .ranura small { font-variant-numeric: tabular-nums; }
-  .recarga { position: absolute; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 4px 12px; border-radius: 10px; background: var(--panel); font-size: 13px; }
-  .aviso { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font: 400 clamp(20px, 4vw, 34px)/1 var(--titular); letter-spacing: 0.03em; text-shadow: 0 3px 0 rgba(0,0,0,0.25); animation: entrar 0.3s ease-out both; white-space: nowrap; }
-  .danio { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px rgba(255, 40, 70, 0.55); animation: desvanece 0.4s ease-out forwards; }
-  .en-tormenta { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px rgba(138, 61, 255, 0.6); }
+  .recarga { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); padding: 3px 10px; border-radius: 10px; background: var(--panel); font-size: 13px; }
+
+  .mira { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+  .mira i { position: absolute; background: #fff; box-shadow: 0 0 2px rgba(0,0,0,0.9); }
+  .mira .p { left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%; }
+  .mira .a, .mira .b { left: -1px; width: 2px; height: 9px; } .mira .a { top: -17px; } .mira .b { top: 8px; }
+  .mira .c, .mira .d { top: -1px; width: 9px; height: 2px; } .mira .c { left: -17px; } .mira .d { left: 8px; }
+  .mira.escopeta .a { top: -26px; } .mira.escopeta .b { top: 17px; } .mira.escopeta .c { left: -26px; } .mira.escopeta .d { left: 17px; }
+  .mira .x { display: none; left: -9px; top: -1px; width: 18px; height: 2px; background: #fff; }
+  .mira.pego .x { display: block; } .mira.pego .x1 { transform: rotate(45deg); } .mira.pego .x2 { transform: rotate(-45deg); }
+  .mira.cabeza .x { background: #ffd84a; }
+
+  .aviso { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font: 400 clamp(22px, 4.2vw, 38px)/1 var(--titular); letter-spacing: 0.03em; text-shadow: 0 3px 0 rgba(0,0,0,0.3); animation: entrar2 0.3s ease-out both; white-space: nowrap; }
+  @keyframes entrar2 { from { opacity: 0; transform: translate(-50%, -10px); } }
+  .caida { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); padding: 8px 16px; border-radius: 12px; background: var(--panel); text-align: center; font-size: 14px; max-width: 90vw; }
+  .caida b { display: block; font: 400 24px/1.1 var(--titular); letter-spacing: 0.03em; color: var(--oro); }
+  .clic { position: absolute; left: 50%; bottom: 20%; transform: translateX(-50%); padding: 8px 16px; border-radius: 12px; background: var(--panel); font-size: 14px; white-space: nowrap; }
+  .danio { position: absolute; inset: 0; box-shadow: inset 0 0 110px rgba(255, 40, 70, 0.6); animation: desvanece 0.45s ease-out forwards; }
+  .en-tormenta { position: absolute; inset: 0; background: rgba(110, 40, 220, 0.18); box-shadow: inset 0 0 140px rgba(138, 61, 255, 0.75); }
   @keyframes desvanece { to { opacity: 0; } }
+  .mapa-grande { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(8, 12, 36, 0.55); pointer-events: auto; }
+  .mapa-grande canvas { width: min(88vw, 82vh); height: min(88vw, 82vh); border-radius: 14px; box-shadow: 0 0 0 4px rgba(255,255,255,0.5); }
 
   /* ── controles táctiles ── */
   .tactil { position: absolute; inset: 0; pointer-events: none; }
-  .palanca { position: absolute; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); width: 128px; height: 128px; border-radius: 50%; background: rgba(255,255,255,0.14); box-shadow: inset 0 0 0 3px rgba(255,255,255,0.4); pointer-events: auto; touch-action: none; }
+  .zona-mirar { position: absolute; right: 0; top: 0; width: 60%; height: 100%; pointer-events: auto; touch-action: none; }
+  .palanca { position: absolute; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: 124px; height: 124px; border-radius: 50%; background: rgba(255,255,255,0.14); box-shadow: inset 0 0 0 3px rgba(255,255,255,0.4); pointer-events: auto; touch-action: none; }
   .palanca.izq { left: 22px; } .palanca.der { right: 22px; }
-  .palanca i { position: absolute; left: 39px; top: 39px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.75); box-shadow: 0 3px 8px rgba(0,0,0,0.25); }
-  .palanca.der i { background: rgba(255, 90, 110, 0.85); }
-  .palanca span { position: absolute; top: -20px; left: 0; right: 0; text-align: center; font-size: 11px; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
-  .botones-t { position: absolute; right: 22px; bottom: calc(186px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(2, 58px); gap: 8px; pointer-events: auto; }
-  .botones-t button { height: 46px; border: 0; border-radius: 12px; background: var(--panel); color: #fff; font-size: 12px; padding: 0 2px; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.3); }
-  .botones-t button:active { background: rgba(255,198,46,0.9); color: #2a1f00; }
-  .tactil-si .armas { bottom: calc(186px + env(safe-area-inset-bottom, 0px)); }
-  .tactil-si .recarga { bottom: calc(256px + env(safe-area-inset-bottom, 0px)); }
+  .palanca i { position: absolute; left: 37px; top: 37px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.75); box-shadow: 0 3px 8px rgba(0,0,0,0.25); }
+  .palanca span { position: absolute; top: -19px; left: 0; right: 0; text-align: center; font-size: 11px; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+  .btn-t { position: absolute; border: 0; border-radius: 50%; pointer-events: auto; touch-action: none; box-shadow: inset 0 0 0 3px rgba(255,255,255,0.5), 0 4px 12px rgba(0,0,0,0.25); font-size: 12px; }
+  .disparo-der { right: 160px; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); width: 84px; height: 84px; background: rgba(255, 77, 109, 0.88); }
+  .disparo-izq { left: 36px; bottom: calc(176px + env(safe-area-inset-bottom, 0px)); width: 62px; height: 62px; background: rgba(255, 77, 109, 0.8); }
+  .btn-t:active, .btn-t.activo { background: rgba(255,198,46,0.95); color: #2a1f00; }
+  .botones-t { position: absolute; right: 16px; bottom: calc(166px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: repeat(2, 64px); gap: 6px; pointer-events: auto; }
+  .botones-t button { height: 42px; border: 0; border-radius: 12px; background: var(--panel); font-size: 12px; padding: 0 2px; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.3); touch-action: none; }
+  .botones-t button:active, .botones-t button.activo { background: rgba(255,198,46,0.95); color: #2a1f00; }
+  .tactil-si .armas { right: auto; left: 50%; transform: translateX(-50%); top: calc(10px + env(safe-area-inset-top, 0px)); bottom: auto; }
+  .tactil-si .ranura { width: 82px; padding: 4px 6px; }
+  .tactil-si .feed { display: none; }
 
   /* ── pantallas ── */
   .pantalla { position: absolute; inset: 0; display: grid; place-items: center; padding: 20px 16px; overflow-y: auto; pointer-events: auto; }
-  .pantalla.menu { background: radial-gradient(120% 90% at 50% 110%, rgba(92,207,79,0.55), transparent 60%), linear-gradient(180deg, rgba(40,140,230,0.25), rgba(26,33,80,0.55)); }
-  .tarjeta { width: min(560px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; }
-  .logo { margin: 0; font: 400 clamp(52px, 13vw, 104px)/0.9 var(--titular); letter-spacing: 0.02em; color: #fff; text-shadow: 0 6px 0 #1f7fd1, 0 10px 0 rgba(0,0,0,0.18); transform: rotate(-3deg); }
-  .logo span { color: var(--oro); text-shadow: 0 6px 0 #c77d00, 0 10px 0 rgba(0,0,0,0.18); }
-  .bajada { margin: 0; max-width: 42ch; color: var(--tinta-suave); font-size: 16px; }
-  .jugar { padding: 14px 42px; border: 0; border-radius: 16px; background: linear-gradient(180deg, #ffe066, var(--oro)); color: #3a2600; font: 400 30px/1 var(--titular); letter-spacing: 0.04em; box-shadow: 0 6px 0 #c77d00, 0 12px 24px rgba(0,0,0,0.25); cursor: pointer; transition: transform 0.1s; }
+  .pantalla.menu { background: radial-gradient(90% 70% at 50% 50%, rgba(10, 20, 60, 0.15), rgba(10, 20, 60, 0.55)); }
+  .tarjeta { width: min(580px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; }
+  .logo { margin: 0; font: 400 clamp(52px, 12vw, 108px)/0.9 var(--titular); letter-spacing: 0.02em; color: #fff; text-shadow: 0 6px 0 #1f6fd1, 0 12px 24px rgba(0,0,0,0.35); transform: rotate(-3deg); }
+  .logo span { color: var(--oro); text-shadow: 0 6px 0 #c77d00, 0 12px 24px rgba(0,0,0,0.35); }
+  .bajada { margin: 0; max-width: 44ch; color: var(--tinta-suave); font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .jugar { padding: 14px 44px; border: 0; border-radius: 16px; background: linear-gradient(180deg, #ffe066, var(--oro)); color: #3a2600; font: 400 30px/1 var(--titular); letter-spacing: 0.04em; box-shadow: 0 6px 0 #c77d00, 0 12px 24px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.1s; }
   .jugar:hover { transform: translateY(-2px); } .jugar:active { transform: translateY(4px); box-shadow: 0 2px 0 #c77d00; }
-  .jugar:focus-visible, .ranura:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
-  .teclas { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; width: 100%; padding: 12px 14px; border-radius: 14px; background: var(--panel); font-size: 13px; text-align: left; }
+  .jugar.sec { padding: 10px 26px; font-size: 20px; background: linear-gradient(180deg, #ffffff, #d9e6ff); box-shadow: 0 5px 0 #7d93c7, 0 10px 20px rgba(0,0,0,0.25); }
+  .jugar:focus-visible, .ranura:focus-visible, .chip-cal:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .calidad { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .chip-cal { padding: 5px 12px; border: 0; border-radius: 10px; background: var(--panel); cursor: pointer; font-size: 13px; }
+  .chip-cal.activa { background: rgba(255, 198, 46, 0.94); color: #2a1f00; }
+  .teclas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 6px 14px; width: 100%; padding: 12px 14px; border-radius: 14px; background: var(--panel); font-size: 13px; text-align: left; }
   .teclas kbd { display: inline-block; min-width: 20px; padding: 1px 6px; margin-right: 6px; border-radius: 5px; background: rgba(255,255,255,0.2); font: 900 12px/1.4 var(--cuerpo); text-align: center; }
-  .victoria { margin: 0; font: 400 clamp(46px, 11vw, 96px)/0.95 var(--titular); letter-spacing: 0.03em; color: var(--oro); text-shadow: 0 6px 0 #c77d00, 0 12px 26px rgba(0,0,0,0.35); animation: golpe 0.7s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
-  .victoria.perdio { color: #fff; text-shadow: 0 6px 0 var(--peligro), 0 12px 26px rgba(0,0,0,0.35); }
+  .victoria { margin: 0; font: 400 clamp(46px, 11vw, 100px)/0.95 var(--titular); letter-spacing: 0.03em; color: var(--oro); text-shadow: 0 6px 0 #c77d00, 0 12px 26px rgba(0,0,0,0.4); animation: golpe 0.7s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+  .victoria.perdio { color: #fff; text-shadow: 0 6px 0 var(--peligro), 0 12px 26px rgba(0,0,0,0.4); }
   @keyframes golpe { from { transform: scale(2.2); opacity: 0; } }
   .datos { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
   .datos div { padding: 8px 14px; border-radius: 12px; background: var(--panel); font-size: 13px; }
   .datos b { display: block; font: 400 26px/1 var(--titular); }
-  .pantalla.fin { background: rgba(26, 33, 80, 0.35); }
-  @media (max-width: 560px) { .ranura { width: 76px; } .feed { display: none; } .tactil-si .armas { left: 16px; transform: none; } }
-  /* Teléfono acostado: los botones van entre las dos palancas y las armas arriba. */
+  .botonera { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .pantalla.fin { background: rgba(14, 20, 60, 0.3); }
+  @media (max-width: 620px) { .feed { display: none; } .ranura { width: 80px; } }
+  /* Teléfono acostado: todo más chico para que el centro quede libre. */
   @media (max-height: 520px) {
-    .minimapa { width: 104px; height: 104px; }
-    .botones-t { right: 166px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); grid-template-columns: repeat(3, 64px); gap: 6px; }
-    .botones-t button { height: 40px; font-size: 11px; }
-    .tactil-si .armas { top: 10px; bottom: auto; left: 50%; transform: translateX(-50%); }
-    .tactil-si .ranura { width: 78px; }
-    .tactil-si .recarga { bottom: calc(118px + env(safe-area-inset-bottom, 0px)); }
-    .palanca { width: 112px; height: 112px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
-    .palanca i { left: 31px; top: 31px; }
+    .minimapa { width: 96px; height: 96px; }
+    .arriba-der { grid-auto-flow: column; align-items: start; }
+    .fila { flex-direction: column; align-items: flex-end; }
+    .palanca { width: 108px; height: 108px; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+    .palanca i { left: 29px; top: 29px; }
+    .disparo-der { right: 138px; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: 74px; height: 74px; }
+    .disparo-izq { left: 30px; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); width: 56px; height: 56px; }
+    .botones-t { bottom: calc(136px + env(safe-area-inset-bottom, 0px)); grid-template-columns: repeat(3, 56px); }
+    .botones-t button { height: 36px; font-size: 11px; }
+    .vitales { width: min(230px, 34vw); } .barra { height: 19px; }
+    .caida { top: 20%; font-size: 12px; } .caida b { font-size: 19px; }
   }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
 </style>
 
-<div id="raiz"></div>
-
+<div id="raiz"><div class="cargando"><div><b>Isla Royale</b>Cargando la isla…<small>Si esta pantalla no cambia, abrí el archivo con Chrome o Safari: algunos visores de archivos del teléfono no ejecutan juegos.</small></div></div></div>
+<div id="error" hidden></div>
+<script>
+  // Si algo falla, que se vea en la pantalla y no quede todo celeste.
+  window.addEventListener("error", function (e) {
+    var d = document.getElementById("error"); d.hidden = false;
+    d.textContent = "Algo falló al arrancar el juego: " + (e.message || "error desconocido");
+  });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
 <script>
 "use strict";
-const { useState, useEffect, useRef, useCallback } = React;
+if (!window.THREE || !window.React || !window.ReactDOM) throw new Error("no se cargaron las librerías (three.js y React). Revisá la conexión a internet.");
+const { useState, useEffect, useRef } = React;
 const h = React.createElement;
 
 // ════════════════════════════════════════════════════════════════════════
 // Reglas
 // ════════════════════════════════════════════════════════════════════════
-const MUNDO = 2000, CELDA = 100, RADIO_J = 18, CANT_BOTS = 6, CANT_COFRES = 18;
-const COSTO = 20, ALTO_MURO = 70, VIDA_MURO = 150, DANO_TORMENTA = 8, CICLO_TORMENTA = 45, CIERRE = 10;
+// El pedido habla en píxeles de un mapa de 2000×2000; acá cada píxel es 0,2 m,
+// así que la isla entra en un cuadrado de 400 m y "a menos de 400" son 80 m.
+const PX = 0.2, MUNDO = 2000 * PX, BORDE = MUNDO / 2 + 10;
+const CANT_BOTS = 6, CANT_COFRES = 18;
+const CELDA = 4, ALTO = 3.4, COSTO = 20, VIDA_MURO = 150, VIDA_RAMPA = 140;
+const DANO_TORMENTA = 8, CICLO_TORMENTA = 45, CIERRE = 15;
+const RADIO_J = 0.42, ALTO_J = 1.8, VEL = 6.4, GRAVEDAD = 24, SALTO = 7.6;
+const ALTURA_SALTO = 115, DIST_PERSIGUE = 400 * PX;
 const ARMAS = [
-  { nombre: "Rifle", dano: 15, cadencia: 0.11, cargador: 30, recarga: 1.5, vel: 1500, disp: 0.045, perdigones: 1, alcance: 950, auto: true },
+  { nombre: "Rifle", dano: 15, cadencia: 0.11, cargador: 30, recarga: 1.5, disp: 0.014, perdigones: 1, alcance: 170, retroceso: 0.006 },
   // La escopeta: 40 de daño por tiro, repartido en 5 perdigones de 8.
-  { nombre: "Escopeta", dano: 8, cadencia: 0.9, cargador: 5, recarga: 2.1, vel: 1250, disp: 0.2, perdigones: 5, alcance: 430, auto: false },
+  { nombre: "Escopeta", dano: 8, cadencia: 0.9, cargador: 5, recarga: 2.1, disp: 0.075, perdigones: 5, alcance: 40, retroceso: 0.045 },
 ];
+const FASES = [720, 470, 290, 160, 70, 0].map((r) => r * PX);
+const R_INICIAL = 1150 * PX;
 const NOMBRES = ["Kiwi", "Mango", "Lima", "Coco", "Uva", "Pomelo"];
-const COLORES = [
-  { ropa: "#ff7a3d", pelo: "#6b3b1f" }, // vos
-  { ropa: "#8bdc3f", pelo: "#2e2a24" }, { ropa: "#ffb627", pelo: "#a13d2d" }, { ropa: "#3fd4c6", pelo: "#1d1d2c" },
-  { ropa: "#f2f2e6", pelo: "#6b4a2a" }, { ropa: "#b46cff", pelo: "#ffd35c" }, { ropa: "#ff6fae", pelo: "#3a2616" },
+const LOOKS = [
+  { ropa: "#ff7a3d", pantalon: "#2d3a5c", pelo: "#5a3218", piel: "#f1c29a", mochila: "#ffc62e" }, // vos
+  { ropa: "#7ccf3a", pantalon: "#3b3226", pelo: "#1f1b17", piel: "#c98e62", mochila: "#2f4a1f" },
+  { ropa: "#2f6fe0", pantalon: "#e8e1cf", pelo: "#a13d2d", piel: "#f5d0b0", mochila: "#1b2d5e" },
+  { ropa: "#20c4b4", pantalon: "#24242e", pelo: "#101014", piel: "#8d5a3b", mochila: "#e8e1cf" },
+  { ropa: "#f2efe4", pantalon: "#5c3a8a", pelo: "#6b4a2a", piel: "#eab896", mochila: "#b33b3b" },
+  { ropa: "#a45cff", pantalon: "#2b2b3a", pelo: "#ffd35c", piel: "#f3c9a4", mochila: "#3a3a4d" },
+  { ropa: "#ff5a9a", pantalon: "#1f3a4a", pelo: "#2e1d10", piel: "#b67a52", mochila: "#ffe066" },
 ];
-const FASES = [720, 470, 290, 160, 70, 0];
 
 // ════════════════════════════════════════════════════════════════════════
 // Utilidades
 // ════════════════════════════════════════════════════════════════════════
 function azar(semilla) { let s = semilla >>> 0; return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const dist = (a, b, c, d) => Math.hypot(c - a, d - b);
+const lerp = (a, b, t) => a + (b - a) * t;
+const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const angDif = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-const radioIsla = (ang) => 880 + 60 * Math.sin(ang * 3 + 1) + 38 * Math.sin(ang * 5 + 2) + 20 * Math.sin(ang * 9);
-const enIsla = (x, y, margen = 0) => { const dx = x - MUNDO / 2, dy = y - MUNDO / 2; return Math.hypot(dx, dy) < radioIsla(Math.atan2(dy, dx)) - margen; };
+const dist2 = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const dirDe = (yaw, pitch) => ({ x: -Math.sin(yaw) * Math.cos(pitch), y: Math.sin(pitch), z: -Math.cos(yaw) * Math.cos(pitch) });
+const radioIsla = (a) => 168 + 13 * Math.sin(a * 3 + 1) + 9 * Math.sin(a * 5 + 2) + 5 * Math.sin(a * 9 + 0.5);
+// Metros hasta la orilla (positivo adentro de la isla, negativo en el mar).
+const costa = (x, z) => radioIsla(Math.atan2(z, x)) - Math.hypot(x, z);
+function crearRuido(r) {
+  const v = new Float32Array(65536); for (let i = 0; i < v.length; i++) v[i] = r();
+  const en = (i, j) => v[((j & 255) << 8) | (i & 255)];
+  return (x, y) => {
+    const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const a = en(i, j), b = en(i + 1, j), c = en(i, j + 1), d = en(i + 1, j + 1);
+    return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+  };
+}
+function distSegmento(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax, dz = bz - az, t = clamp(((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+  return Math.hypot(px - ax - dx * t, pz - az - dz * t);
+}
 
 // ════════════════════════════════════════════════════════════════════════
 // Sonido: todo sintetizado con Web Audio
 // ════════════════════════════════════════════════════════════════════════
 const Sonido = (() => {
-  let ctx = null, maestro = null, ruido = null, tormentaG = null;
+  let ctx = null, maestro = null, ruido = null, tormentaG = null, vientoG = null;
+  function bucleRuido(tipo, frec, q) {
+    const s = ctx.createBufferSource(); s.buffer = ruido; s.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = tipo; f.frequency.value = frec; if (q) f.Q.value = q;
+    const g = ctx.createGain(); g.gain.value = 0; s.connect(f).connect(g).connect(maestro); s.start(); return g;
+  }
   function iniciar() {
     if (ctx) { if (ctx.state === "suspended") ctx.resume(); return; }
     try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
     maestro = ctx.createGain(); maestro.gain.value = 0.55;
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6;
     maestro.connect(comp).connect(ctx.destination);
-    ruido = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    ruido = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const d = ruido.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    // El zumbido de la tormenta, siempre andando, con volumen según cuán adentro esté uno.
-    const s = ctx.createBufferSource(); s.buffer = ruido; s.loop = true;
-    const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 260;
-    tormentaG = ctx.createGain(); tormentaG.gain.value = 0;
-    s.connect(f).connect(tormentaG).connect(maestro); s.start();
+    tormentaG = bucleRuido("lowpass", 240);
+    vientoG = bucleRuido("bandpass", 700, 0.6);
   }
   const salida = (vol, pan) => {
     const g = ctx.createGain(); g.gain.value = vol;
     if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = clamp(pan || 0, -1, 1); g.connect(p).connect(maestro); } else g.connect(maestro);
     return g;
   };
-  function pew(vol = 1, pan = 0, grave = false) {
-    if (!ctx) return;
-    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = "square"; o.frequency.setValueAtTime(grave ? 620 : 980, t); o.frequency.exponentialRampToValueAtTime(grave ? 180 : 260, t + 0.09);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09 * vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-    o.connect(g).connect(salida(1, pan)); o.start(t); o.stop(t + 0.12);
+  function pew(vol = 1, pan = 0) {
+    if (!ctx || vol < 0.02) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(), s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g2 = ctx.createGain();
+    o.type = "square"; o.frequency.setValueAtTime(900, t); o.frequency.exponentialRampToValueAtTime(220, t + 0.08);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08 * vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    const sal = salida(1, pan); o.connect(g).connect(sal); o.start(t); o.stop(t + 0.1);
+    s.buffer = ruido; f.type = "highpass"; f.frequency.value = 1500; g2.gain.setValueAtTime(0.18 * vol, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    s.connect(f).connect(g2).connect(sal); s.start(t, Math.random()); s.stop(t + 0.08);
   }
   function bum(vol = 1, pan = 0) {
-    if (!ctx) return;
-    const t = ctx.currentTime, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    s.buffer = ruido; f.type = "lowpass"; f.frequency.setValueAtTime(2400, t); f.frequency.exponentialRampToValueAtTime(300, t + 0.25);
-    g.gain.setValueAtTime(0.35 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-    s.connect(f).connect(g).connect(salida(1, pan)); s.start(t); s.stop(t + 0.32);
-    const o = ctx.createOscillator(), g2 = ctx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.2);
-    g2.gain.setValueAtTime(0.3 * vol, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.22); o.connect(g2).connect(salida(1, pan)); o.start(t); o.stop(t + 0.25);
+    if (!ctx || vol < 0.02) return;
+    const t = ctx.currentTime, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(), sal = salida(1, pan);
+    s.buffer = ruido; f.type = "lowpass"; f.frequency.setValueAtTime(2600, t); f.frequency.exponentialRampToValueAtTime(260, t + 0.3);
+    g.gain.setValueAtTime(0.4 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+    s.connect(f).connect(g).connect(sal); s.start(t, Math.random()); s.stop(t + 0.36);
+    const o = ctx.createOscillator(), g2 = ctx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.22);
+    g2.gain.setValueAtTime(0.35 * vol, t); g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.connect(g2).connect(sal); o.start(t); o.stop(t + 0.26);
   }
   function toc(frec = 190, vol = 1) {
     if (!ctx) return;
@@ -197,594 +272,1206 @@ const Sonido = (() => {
       o.connect(g).connect(maestro); o.start(t); o.stop(t + largo * 1.7);
     });
   }
+  function paso(vol = 1) {
+    if (!ctx) return;
+    const t = ctx.currentTime, s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = ruido; f.type = "bandpass"; f.frequency.value = 420 + Math.random() * 200; f.Q.value = 1.2;
+    g.gain.setValueAtTime(0.1 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    s.connect(f).connect(g).connect(maestro); s.start(t, Math.random()); s.stop(t + 0.08);
+  }
   return {
-    iniciar, pew, bum, toc,
-    golpe: () => notas([180, 120], "sawtooth", 0.1, 0.06),
-    acierto: () => notas([1400], "sine", 0.06, 0.04),
+    iniciar, pew, bum, toc, paso,
+    golpe: () => notas([170, 110], "sawtooth", 0.1, 0.06),
+    acierto: (cabeza) => notas(cabeza ? [1760, 2200] : [1400], "sine", 0.06, 0.04),
     cofre: () => notas([523, 659, 784, 1047, 1319], "triangle", 0.12, 0.09),
     eliminado: () => notas([880, 660, 440], "square", 0.06, 0.08),
     recarga: () => notas([300, 420], "square", 0.05, 0.05),
     victoria: () => notas([523, 523, 659, 784, 659, 784, 1047], "triangle", 0.16, 0.16),
     derrota: () => notas([392, 330, 262, 196], "sawtooth", 0.08, 0.2),
     tormenta: (k) => { if (tormentaG) tormentaG.gain.setTargetAtTime(k * 0.35, ctx.currentTime, 0.2); },
+    viento: (k) => { if (vientoG) vientoG.gain.setTargetAtTime(k * 0.22, ctx.currentTime, 0.3); },
   };
 })();
 
 // ════════════════════════════════════════════════════════════════════════
-// El mundo
+// La isla (datos): relieve, pueblos, caminos, casas, cofres, árboles y rocas
 // ════════════════════════════════════════════════════════════════════════
-function crearMundo(semilla) {
-  const r = azar(semilla);
-  const libre = (x, y, lista, dmin) => lista.every((o) => dist(x, y, o.x, o.y) > dmin);
-  const lugar = (margen, otros, dmin, intentos = 200) => {
-    for (let i = 0; i < intentos; i++) {
-      const x = 100 + r() * (MUNDO - 200), y = 100 + r() * (MUNDO - 200);
-      if (enIsla(x, y, margen) && otros.every(([l, d]) => libre(x, y, l, d))) return { x, y };
-    }
-    return null;
+const T0 = -260, RES = 2, NG = 261; // la grilla del relieve: 520 m a 2 m
+function crearIsla(semilla) {
+  const r = azar(semilla), ruido = crearRuido(r), ruido2 = crearRuido(r), ruido3 = crearRuido(r);
+  const fbm = (x, z) => ruido(x, z) * 0.55 + ruido(x * 2.13, z * 2.13) * 0.28 + ruido(x * 4.37, z * 4.37) * 0.17;
+  const altoNatural = (x, z) => {
+    const c = costa(x, z);
+    if (c < 0) return Math.max(-7, -0.4 + c * 0.1);
+    const m = suave(14, 55, c);
+    return -0.4 + Math.min(c, 16) * 0.11 + m * Math.max(-1, fbm(x / 75 + 3, z / 75 + 7) * 22 - 8) + ruido2(x / 11, z / 11) * 0.7 * m;
   };
-  const arboles = [], rocas = [], cofres = [], matas = [];
-  for (let i = 0; i < 18; i++) { const c = lugar(120, [[cofres, 250]]); if (c) cofres.push({ ...c, abierto: false, brillo: r() * 6 }); }
-  while (cofres.length < CANT_COFRES) { const c = lugar(80, [[cofres, 120]]); if (c) cofres.push({ ...c, abierto: false, brillo: r() * 6 }); else break; }
-  for (let i = 0; i < 100; i++) { const a = lugar(60, [[arboles, 70], [cofres, 70]]); if (a) arboles.push({ ...a, r: 26 + r() * 12, rosa: r() < 0.18, fase: r() * 6 }); }
-  for (let i = 0; i < 55; i++) { const p = lugar(50, [[arboles, 60], [rocas, 80], [cofres, 70]]); if (p) rocas.push({ ...p, r: 20 + r() * 20, forma: Array.from({ length: 7 }, () => 0.75 + r() * 0.35) }); }
-  for (let i = 0; i < 160; i++) { const m = lugar(30, []); if (m) matas.push({ ...m, t: r(), c: r() }); }
-  return { arboles, rocas, cofres, matas, estructuras: [] };
-}
+  // Pueblos: tres adentro, uno en la bahía y un muelle.
+  const pueblos = [];
+  for (const [nombre, cmin, cmax] of [["Pueblo Pintoresco", 50, 999], ["Loma Linda", 45, 999], ["Granja Feliz", 45, 999], ["Bahía Bonita", 26, 40], ["Muelle Viejo", 18, 26]]) {
+    for (let k = 0; k < 600; k++) {
+      const x = (r() - 0.5) * 340, z = (r() - 0.5) * 340, c = costa(x, z);
+      if (c < cmin || c > cmax || pueblos.some((p) => Math.hypot(p.x - x, p.z - z) < 90)) continue;
+      pueblos.push({ nombre, x, z, y: Math.max(1.4, altoNatural(x, z)), radio: nombre === "Muelle Viejo" ? 12 : 24 }); break;
+    }
+  }
+  // Caminos de tierra entre pueblos vecinos (en ronda, ordenados por ángulo).
+  const orden = pueblos.slice().sort((a, b) => Math.atan2(a.z, a.x) - Math.atan2(b.z, b.x));
+  const caminos = [];
+  for (let i = 0; i < orden.length; i++) { const a = orden[i], b = orden[(i + 1) % orden.length]; if (costa((a.x + b.x) / 2, (a.z + b.z) / 2) > 10) caminos.push([a.x, a.z, b.x, b.z]); }
+  const distCamino = (x, z) => { let d = 1e9; for (const s of caminos) d = Math.min(d, distSegmento(x, z, s[0], s[1], s[2], s[3])); return d; };
+  const alto = (x, z) => {
+    let y = altoNatural(x, z);
+    for (const p of pueblos) { const w = suave(p.radio + 14, p.radio - 4, Math.hypot(x - p.x, z - p.z)); if (w > 0) y = lerp(y, p.y, w); }
+    return y;
+  };
+  const alturas = new Float32Array(NG * NG);
+  for (let j = 0; j < NG; j++) for (let i = 0; i < NG; i++) alturas[j * NG + i] = alto(T0 + i * RES, T0 + j * RES);
+  const terreno = (x, z) => {
+    const fx = (x - T0) / RES, fz = (z - T0) / RES;
+    if (fx < 0 || fz < 0 || fx >= NG - 1 || fz >= NG - 1) return -7;
+    const i = fx | 0, j = fz | 0, u = fx - i, v = fz - j, k = j * NG + i;
+    const a = alturas[k], b = alturas[k + 1], c = alturas[k + NG], d = alturas[k + NG + 1];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
 
-// El suelo visto desde arriba, dibujado una vez (medio píxel por unidad).
-function dibujarSuelo(mundo) {
-  const c = document.createElement("canvas"), E = 0.5; c.width = c.height = MUNDO * E;
-  const g = c.getContext("2d"), r = azar(99);
-  g.scale(E, E);
-  const contorno = (margen) => { g.beginPath(); for (let i = 0; i <= 120; i++) { const a = (i / 120) * Math.PI * 2, rr = radioIsla(a) + margen; const x = MUNDO / 2 + Math.cos(a) * rr, y = MUNDO / 2 + Math.sin(a) * rr; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
-  // Espuma, arena y pasto.
-  contorno(26); g.fillStyle = "rgba(255,255,255,0.55)"; g.fill();
-  contorno(0); g.fillStyle = "#f5dc8f"; g.fill();
-  contorno(-48); const gr = g.createRadialGradient(MUNDO / 2, MUNDO / 2, 100, MUNDO / 2, MUNDO / 2, 950); gr.addColorStop(0, "#6ad85a"); gr.addColorStop(1, "#4cc444"); g.fillStyle = gr; g.fill();
-  g.save(); contorno(-48); g.clip();
-  // Manchas de pasto más oscuro y más claro, y flores.
-  for (let i = 0; i < 260; i++) { g.fillStyle = r() < 0.5 ? "rgba(40,150,40,0.16)" : "rgba(170,240,120,0.16)"; g.beginPath(); g.ellipse(r() * MUNDO, r() * MUNDO, 30 + r() * 90, 20 + r() * 60, r() * 3, 0, Math.PI * 2); g.fill(); }
-  for (let i = 0; i < 900; i++) { g.fillStyle = ["#fff7a8", "#ffffff", "#ff9ecb", "#ffd166"][Math.floor(r() * 4)]; g.beginPath(); g.arc(r() * MUNDO, r() * MUNDO, 2.5 + r() * 2, 0, Math.PI * 2); g.fill(); }
-  // Un sendero de tierra que cruza la isla.
-  g.strokeStyle = "rgba(214,170,100,0.7)"; g.lineWidth = 36; g.lineCap = "round"; g.beginPath(); g.moveTo(300, 1200); g.bezierCurveTo(700, 900, 1100, 1350, 1700, 820); g.stroke();
-  g.strokeStyle = "rgba(214,170,100,0.55)"; g.lineWidth = 28; g.beginPath(); g.moveTo(1000, 260); g.bezierCurveTo(900, 700, 1150, 1100, 1020, 1760); g.stroke();
-  g.restore();
-  return { lienzo: c, escala: E };
+  // Casas: cajas alineadas con los ejes (así chocan y frenan balas sin vueltas).
+  const casas = [], plataformas = [];
+  const PAREDES = ["#f3e6c8", "#cfe6f2", "#f5c6b0", "#d6efd0", "#f7f1e3", "#e9d3f0"], TECHOS = ["#c0463a", "#6b4a3a", "#4a6a8a", "#a8553a"];
+  const libre = (mnx, mnz, mxx, mxz, margen) => !casas.some((c) => mnx < c.max.x + margen && mxx > c.min.x - margen && mnz < c.max.z + margen && mxz > c.min.z - margen);
+  for (const p of pueblos) {
+    const muelle = p.nombre === "Muelle Viejo", granja = p.nombre === "Granja Feliz";
+    const cant = muelle ? 2 : granja ? 3 : 4 + (r() < 0.5 ? 1 : 0);
+    for (let k = 0, hechas = 0; k < 80 && hechas < cant; k++) {
+      const a = r() * Math.PI * 2, d = (muelle ? 5 : 8) + r() * (muelle ? 7 : 14);
+      const grande = granja && hechas === 0;
+      const w = grande ? 11 : 6 + r() * 3.5, dd = grande ? 8 : 6 + r() * 3.5, x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
+      if (costa(x, z) < 9 || !libre(x - w / 2, z - dd / 2, x + w / 2, z + dd / 2, 3)) continue;
+      const y0 = Math.min(terreno(x - w / 2, z - dd / 2), terreno(x + w / 2, z - dd / 2), terreno(x - w / 2, z + dd / 2), terreno(x + w / 2, z + dd / 2)) - 0.3;
+      const altoC = grande ? 6 : r() < 0.3 ? 6.2 : 4.2, techo = Math.min(w, dd) * 0.45;
+      casas.push({ x, z, w, d: dd, y0, alto: altoC, techo, pared: grande ? "#b8302a" : PAREDES[(r() * PAREDES.length) | 0], color: grande ? "#f4efe6" : TECHOS[(r() * TECHOS.length) | 0], haciaX: p.x - x, haciaZ: p.z - z,
+        min: { x: x - w / 2, y: y0, z: z - dd / 2 }, max: { x: x + w / 2, y: y0 + altoC + techo * 0.7, z: z + dd / 2 } });
+      hechas++;
+    }
+    if (muelle) {
+      // El muelle: tablones que salen derecho hacia el mar, por el eje más cercano.
+      const ax = Math.abs(p.x) > Math.abs(p.z), sx = Math.sign(p.x), sz = Math.sign(p.z), largo = 30;
+      const mn = ax ? { x: Math.min(p.x, p.x + sx * largo), z: p.z - 1.6 } : { x: p.x - 1.6, z: Math.min(p.z, p.z + sz * largo) };
+      const mx = ax ? { x: Math.max(p.x, p.x + sx * largo), z: p.z + 1.6 } : { x: p.x + 1.6, z: Math.max(p.z, p.z + sz * largo) };
+      plataformas.push({ min: mn, max: mx, top: 1.0 });
+    }
+  }
+  const enCasa = (x, z, m) => casas.some((c) => x > c.min.x - m && x < c.max.x + m && z > c.min.z - m && z < c.max.z + m);
+
+  // Cofres: primero al lado de las casas, después sueltos por el campo.
+  const cofres = [];
+  for (const c of casas.slice().sort(() => r() - 0.5)) {
+    if (cofres.length >= 11) break;
+    const lado = (r() * 4) | 0, x = lado === 0 ? c.max.x + 1.3 : lado === 1 ? c.min.x - 1.3 : c.x + (r() - 0.5) * c.w * 0.6;
+    const z = lado === 2 ? c.max.z + 1.3 : lado === 3 ? c.min.z - 1.3 : c.z + (r() - 0.5) * c.d * 0.6;
+    if (enCasa(x, z, 0.6)) continue;
+    cofres.push({ x, z, y: terreno(x, z), rot: r() * Math.PI * 2 });
+  }
+  for (let k = 0; k < 900 && cofres.length < CANT_COFRES; k++) {
+    const x = (r() - 0.5) * 340, z = (r() - 0.5) * 340;
+    if (costa(x, z) < 14 || enCasa(x, z, 3) || cofres.some((c) => Math.hypot(c.x - x, c.z - z) < 30)) continue;
+    cofres.push({ x, z, y: terreno(x, z), rot: r() * Math.PI * 2 });
+  }
+
+  // Árboles (en manchones de monte), rocas, matas y pasto.
+  const arboles = [], rocas = [], matas = [], pasto = [];
+  const cerca = (lista, x, z, d) => lista.some((o) => Math.abs(o.x - x) < d && Math.abs(o.z - z) < d && Math.hypot(o.x - x, o.z - z) < d);
+  for (let k = 0; k < 3000 && arboles.length < 300; k++) {
+    const x = (r() - 0.5) * 380, z = (r() - 0.5) * 380, c = costa(x, z);
+    if (c < 16 || enCasa(x, z, 4) || distCamino(x, z) < 3.5 || cerca(cofres, x, z, 4) || cerca(arboles, x, z, 5.5)) continue;
+    if (r() > (ruido3(x / 45, z / 45) > 0.5 ? 1 : 0.18)) continue;
+    const y0 = terreno(x, z), s = 0.85 + r() * 0.5, pino = (y0 > 5 && r() < 0.7) || r() < 0.22;
+    arboles.push({ x, z, y0, s, pino, rot: r() * 6.3, tono: r(), rt: 0.38 * s, alto: (pino ? 3 : 3.6) * s, copaY: y0 + (pino ? 4.6 : 5.0) * s, copaR: (pino ? 2.1 : 2.5) * s });
+  }
+  for (let k = 0; k < 1500 && rocas.length < 85; k++) {
+    const x = (r() - 0.5) * 380, z = (r() - 0.5) * 380;
+    if (costa(x, z) < 6 || enCasa(x, z, 3) || distCamino(x, z) < 3 || cerca(cofres, x, z, 4) || cerca(arboles, x, z, 4.5) || cerca(rocas, x, z, 8)) continue;
+    const s = 0.9 + r() * 2.2;
+    rocas.push({ x, z, y0: terreno(x, z), s, sy: s * (0.55 + r() * 0.4), rot: r() * 6.3, tono: r(), radio: s * 0.95 });
+  }
+  for (let k = 0; k < 2000 && matas.length < 240; k++) {
+    const x = (r() - 0.5) * 380, z = (r() - 0.5) * 380;
+    if (costa(x, z) < 12 || enCasa(x, z, 1.5) || distCamino(x, z) < 2.5 || cerca(cofres, x, z, 2)) continue;
+    matas.push({ x, z, y0: terreno(x, z), s: 0.7 + r() * 0.7, rot: r() * 6.3, tono: r() });
+  }
+  for (let k = 0; k < 30000 && pasto.length < 7000; k++) {
+    const x = (r() - 0.5) * 380, z = (r() - 0.5) * 380;
+    if (costa(x, z) < 12 || enCasa(x, z, 0.5) || distCamino(x, z) < 2.3 || r() > ruido2(x / 20, z / 20) * 1.4) continue;
+    pasto.push({ x, z, y0: terreno(x, z), s: 0.6 + r() * 0.8, rot: r() * 6.3, tono: r() });
+  }
+  return { pueblos, caminos, distCamino, alturas, terreno, casas, plataformas, cofres, arboles, rocas, matas, pasto, fbm, ruido2 };
 }
 
 // ════════════════════════════════════════════════════════════════════════
-// La partida
+// Gráficos: texturas, geometrías y materiales
 // ════════════════════════════════════════════════════════════════════════
-function nuevaPartida() {
-  const semilla = (Math.random() * 1e9) | 0, mundo = crearMundo(semilla), r = azar(semilla + 7);
-  const jugadores = [];
-  for (let i = 0; i <= CANT_BOTS; i++) {
-    const a = (i / (CANT_BOTS + 1)) * Math.PI * 2 + r() * 0.4, rr = 520 + r() * 220;
-    let x = MUNDO / 2 + Math.cos(a) * rr, y = MUNDO / 2 + Math.sin(a) * rr;
-    jugadores.push({
-      id: i, bot: i > 0, nombre: i ? NOMBRES[i - 1] : "Vos", color: COLORES[i], x, y, ang: 0, vida: 100, escudo: i ? 0 : 100, madera: i ? 60 : 100,
-      arma: 0, mun: [30, 5], reserva: [120, 20], cd: 0, recargando: 0, vivo: true, z: 0, bajas: 0, pasos: 0, golpeado: 0,
-      ia: { estado: "botin", objetivo: null, t: 0, muro: 0, lado: r() < 0.5 ? 1 : -1, puntera: 0.2 + r() * 0.2 },
+function texCanvas(tam, dibujar, repetir) {
+  const c = document.createElement("canvas"); c.width = c.height = tam; dibujar(c.getContext("2d"), tam);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  if (repetir) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+const texDetalle = () => texCanvas(256, (g, n) => {
+  g.fillStyle = "#e4e4e4"; g.fillRect(0, 0, n, n);
+  const r = azar(9);
+  for (let i = 0; i < 3200; i++) {
+    const x = r() * n, y = r() * n, l = 2 + r() * 5, a = -Math.PI / 2 + (r() - 0.5) * 0.9;
+    g.strokeStyle = r() < 0.5 ? `rgba(40,60,20,${0.1 + r() * 0.18})` : `rgba(255,255,230,${0.12 + r() * 0.2})`;
+    g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+  }
+  for (let i = 0; i < 60; i++) { g.fillStyle = `rgba(0,0,0,${r() * 0.05})`; g.beginPath(); g.arc(r() * n, r() * n, 6 + r() * 18, 0, 7); g.fill(); }
+}, true);
+const texMadera = () => texCanvas(256, (g, n) => {
+  const r = azar(4);
+  for (let i = 0; i < 5; i++) {
+    const y = (i * n) / 5, tono = 180 + r() * 30;
+    g.fillStyle = `rgb(${tono},${tono * 0.66},${tono * 0.38})`; g.fillRect(0, y, n, n / 5);
+    for (let k = 0; k < 14; k++) { g.strokeStyle = `rgba(90,50,20,${0.15 + r() * 0.2})`; g.beginPath(); const yy = y + 4 + r() * (n / 5 - 8); g.moveTo(0, yy); g.bezierCurveTo(n * 0.3, yy + (r() - 0.5) * 6, n * 0.6, yy + (r() - 0.5) * 6, n, yy); g.stroke(); }
+    g.fillStyle = "rgba(60,30,10,0.75)"; g.fillRect(0, y, n, 3);
+    g.fillStyle = "rgba(40,40,40,0.9)"; for (const x of [12, n - 16]) { g.beginPath(); g.arc(x, y + n / 10, 3, 0, 7); g.fill(); }
+  }
+  g.strokeStyle = "rgba(60,30,10,0.9)"; g.lineWidth = 6; g.strokeRect(3, 3, n - 6, n - 6);
+}, false);
+const texBrillo = () => texCanvas(64, (g, n) => {
+  const gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
+  gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.35, "rgba(255,255,255,0.5)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, n, n);
+}, false);
+const texFogonazo = () => texCanvas(64, (g, n) => {
+  g.translate(n / 2, n / 2);
+  for (let i = 0; i < 6; i++) { g.rotate(Math.PI / 3); g.fillStyle = "rgba(255,230,150,0.9)"; g.beginPath(); g.moveTo(-3, 0); g.lineTo(0, -n / 2); g.lineTo(3, 0); g.fill(); }
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, n / 3); gr.addColorStop(0, "#fff"); gr.addColorStop(1, "rgba(255,180,60,0)"); g.fillStyle = gr; g.fillRect(-n / 2, -n / 2, n, n);
+}, false);
+
+// Pega varias geometrías en una sola (para gastar un solo dibujado).
+function unir(lista) {
+  const partes = lista.map((g) => (g.index ? g.toNonIndexed() : g));
+  let total = 0; for (const g of partes) total += g.attributes.position.count;
+  const pos = new Float32Array(total * 3), nor = new Float32Array(total * 3), col = new Float32Array(total * 3);
+  let o = 0;
+  for (const g of partes) {
+    const n = g.attributes.position.count;
+    pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3);
+    if (g.attributes.color) col.set(g.attributes.color.array, o * 3); else col.fill(1, o * 3, (o + n) * 3);
+    o += n;
+  }
+  const r = new THREE.BufferGeometry();
+  r.setAttribute("position", new THREE.BufferAttribute(pos, 3)); r.setAttribute("normal", new THREE.BufferAttribute(nor, 3)); r.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  r.computeBoundingSphere(); return r;
+}
+// Pinta una geometría: de un color abajo a otro arriba (una sombra de contacto barata).
+function pintar(geo, abajo, arriba) {
+  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, c1 = new THREE.Color(abajo), c2 = new THREE.Color(arriba || abajo);
+  let mn = Infinity, mx = -Infinity; for (let i = 0; i < p.count; i++) { mn = Math.min(mn, p.getY(i)); mx = Math.max(mx, p.getY(i)); }
+  const col = new Float32Array(p.count * 3), c = new THREE.Color();
+  for (let i = 0; i < p.count; i++) { c.copy(c1).lerp(c2, (p.getY(i) - mn) / (mx - mn || 1)); col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+  g.setAttribute("color", new THREE.BufferAttribute(col, 3)); return g;
+}
+// Deforma una esfera según la posición (así los vértices repetidos no se abren).
+function abollar(geo, k, semilla) {
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), n = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + semilla) * 43758.5453;
+    const f = 1 + (n - Math.floor(n) - 0.5) * k; p.setXYZ(i, x * f, y * f, z * f);
+  }
+  geo.computeVertexNormals(); return geo;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Los personajes: un cuerpo armado con piezas, con huesos para animar
+// ════════════════════════════════════════════════════════════════════════
+let GEO = null;
+function geos() {
+  if (GEO) return GEO;
+  const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
+  GEO = {
+    torso: cap(0.19, 0.26).scale(1, 1, 0.72), cadera: cap(0.165, 0.08).scale(1, 1, 0.8), cuello: new THREE.CylinderGeometry(0.06, 0.07, 0.12, 8),
+    cabeza: new THREE.SphereGeometry(0.15, 18, 14).scale(0.92, 1.05, 1), pelo: new THREE.SphereGeometry(0.16, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateX(0.6).scale(0.97, 1.05, 1.05), // inclinado: tapa la nuca, deja la cara
+    ojo: new THREE.SphereGeometry(0.02, 6, 5), brazo: cap(0.058, 0.22), antebrazo: cap(0.05, 0.2), mano: new THREE.SphereGeometry(0.055, 8, 6),
+    muslo: cap(0.085, 0.28), pierna: cap(0.07, 0.28), zapato: new THREE.BoxGeometry(0.12, 0.09, 0.26), mochila: new THREE.BoxGeometry(0.3, 0.36, 0.14),
+    cajaRifle: new THREE.BoxGeometry(0.07, 0.1, 0.5), canio: new THREE.CylinderGeometry(0.018, 0.018, 0.34, 8).rotateX(Math.PI / 2),
+    cargador: new THREE.BoxGeometry(0.05, 0.16, 0.08), culata: new THREE.BoxGeometry(0.06, 0.12, 0.2), visor: new THREE.CylinderGeometry(0.025, 0.025, 0.14, 8).rotateX(Math.PI / 2),
+    cajaEsc: new THREE.BoxGeometry(0.085, 0.11, 0.4), canioEsc: new THREE.CylinderGeometry(0.03, 0.03, 0.36, 8).rotateX(Math.PI / 2), bomba: new THREE.BoxGeometry(0.075, 0.07, 0.17),
+  };
+  // El planeador: un ala triangular de dos colores.
+  const ala = new THREE.BufferGeometry();
+  ala.setAttribute("position", new THREE.BufferAttribute(new Float32Array([0, 0.1, -1.1, -1.7, -0.25, 0.7, 0, 0.25, 0.4, 0, 0.1, -1.1, 0, 0.25, 0.4, 1.7, -0.25, 0.7]), 3));
+  ala.computeVertexNormals(); GEO.ala = ala;
+  GEO.varilla = new THREE.CylinderGeometry(0.015, 0.015, 1.2, 5);
+  return GEO;
+}
+const MAT_ARMA = { metal: null, madera: null, acento: null };
+function crearPersonaje(look) {
+  const G = geos();
+  if (!MAT_ARMA.metal) { MAT_ARMA.metal = new THREE.MeshStandardMaterial({ color: "#2a2d34", roughness: 0.45, metalness: 0.6 }); MAT_ARMA.madera = new THREE.MeshStandardMaterial({ color: "#8a5a33", roughness: 0.7 }); MAT_ARMA.acento = new THREE.MeshStandardMaterial({ color: "#3a82ff", roughness: 0.4, metalness: 0.3 }); }
+  const m = (c, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.78 }, extra));
+  const piel = m(look.piel, { roughness: 0.6 }), ropa = m(look.ropa), pant = m(look.pantalon), pelo = m(look.pelo, { roughness: 0.9 }), negro = m("#1d1f26", { roughness: 0.55 }), mochila = m(look.mochila);
+  const pieza = (geo, mat, x, y, z, padre) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; padre.add(o); return o; };
+  const raiz = new THREE.Group(), cuerpo = new THREE.Group(); cuerpo.position.y = 0.95; raiz.add(cuerpo);
+  pieza(G.cadera, pant, 0, 0.04, 0, cuerpo); pieza(G.torso, ropa, 0, 0.36, 0, cuerpo); pieza(G.mochila, mochila, 0, 0.4, 0.15, cuerpo); pieza(G.cuello, piel, 0, 0.66, 0, cuerpo);
+  const cabeza = new THREE.Group(); cabeza.position.y = 0.8; cuerpo.add(cabeza);
+  pieza(G.cabeza, piel, 0, 0, 0, cabeza); pieza(G.pelo, pelo, 0, 0.01, 0.01, cabeza);
+  pieza(G.ojo, negro, -0.05, 0.015, -0.135, cabeza); pieza(G.ojo, negro, 0.05, 0.015, -0.135, cabeza);
+  const brazo = (lado) => {
+    const hombro = new THREE.Group(); hombro.position.set(lado * 0.25, 0.58, 0); cuerpo.add(hombro);
+    pieza(G.brazo, ropa, 0, -0.16, 0, hombro);
+    const codo = new THREE.Group(); codo.position.y = -0.31; hombro.add(codo);
+    pieza(G.antebrazo, piel, 0, -0.14, 0, codo); pieza(G.mano, piel, 0, -0.29, 0, codo);
+    return [hombro, codo];
+  };
+  const pierna = (lado) => {
+    const cad = new THREE.Group(); cad.position.set(lado * 0.1, 0, 0); cuerpo.add(cad);
+    pieza(G.muslo, pant, 0, -0.22, 0, cad);
+    const rod = new THREE.Group(); rod.position.y = -0.45; cad.add(rod);
+    pieza(G.pierna, pant, 0, -0.2, 0, rod); pieza(G.zapato, negro, 0, -0.44, -0.04, rod);
+    return [cad, rod];
+  };
+  const [hombroI, codoI] = brazo(-1), [hombroD, codoD] = brazo(1), [cadI, rodI] = pierna(-1), [cadD, rodD] = pierna(1);
+  const arma = new THREE.Group(); arma.position.set(0.1, 0.46, -0.2); cuerpo.add(arma);
+  const rifle = new THREE.Group(); arma.add(rifle);
+  pieza(G.cajaRifle, MAT_ARMA.metal, 0, 0, -0.2, rifle); pieza(G.canio, MAT_ARMA.metal, 0, 0.01, -0.6, rifle); pieza(G.cargador, MAT_ARMA.acento, 0, -0.11, -0.2, rifle);
+  pieza(G.culata, MAT_ARMA.metal, 0, -0.02, 0.12, rifle); pieza(G.visor, MAT_ARMA.metal, 0, 0.08, -0.18, rifle);
+  const escopeta = new THREE.Group(); arma.add(escopeta);
+  pieza(G.cajaEsc, MAT_ARMA.metal, 0, 0, -0.15, escopeta); pieza(G.canioEsc, MAT_ARMA.metal, 0, 0.02, -0.5, escopeta);
+  pieza(G.bomba, MAT_ARMA.madera, 0, -0.07, -0.42, escopeta); pieza(G.culata, MAT_ARMA.madera, 0, -0.03, 0.12, escopeta);
+  const planeador = new THREE.Group(); planeador.position.y = 2.55; raiz.add(planeador);
+  const tela = new THREE.Mesh(G.ala, new THREE.MeshStandardMaterial({ color: look.ropa, side: THREE.DoubleSide, roughness: 0.6 })); tela.castShadow = true; planeador.add(tela);
+  for (const x of [-0.3, 0.3]) { const v = new THREE.Mesh(G.varilla, MAT_ARMA.metal); v.position.set(x, -0.55, 0.1); v.rotation.z = x * 0.6; planeador.add(v); }
+  planeador.visible = false;
+  return { raiz, cuerpo, cabeza, hombroI, codoI, hombroD, codoD, cadI, rodI, cadD, rodD, arma, rifle, escopeta, planeador };
+}
+function animar(p, dt, t) {
+  const M = p.malla;
+  M.raiz.position.set(p.x, p.y, p.z); M.raiz.rotation.y = p.yaw;
+  M.rifle.visible = p.arma === 0; M.escopeta.visible = p.arma === 1;
+  M.planeador.visible = p.vivo && p.estado === "planea";
+  if (!p.vivo) {
+    const k = Math.min(1, p.muerte / 0.6);
+    M.cuerpo.rotation.set(k * 1.45, 0, 0); M.cuerpo.position.y = 0.95 - k * 0.72;
+    M.raiz.visible = p.muerte < 2.2; return;
+  }
+  M.raiz.visible = true; M.cuerpo.rotation.set(0, 0, 0); M.cuerpo.position.y = 0.95;
+  if (p.estado === "cae") {
+    M.cuerpo.rotation.x = -1.25;
+    M.hombroI.rotation.set(0.2, 0, -1.3); M.hombroD.rotation.set(0.2, 0, 1.3); M.codoI.rotation.set(0, 0, 0); M.codoD.rotation.set(0, 0, 0);
+    M.cadI.rotation.set(-0.25, 0, -0.15); M.cadD.rotation.set(-0.25, 0, 0.15); M.rodI.rotation.x = M.rodD.rotation.x = -0.5;
+    M.arma.visible = false; return;
+  }
+  if (p.estado === "planea") {
+    M.cuerpo.rotation.x = -0.12;
+    M.hombroI.rotation.set(2.95, 0, 0.22); M.hombroD.rotation.set(2.95, 0, -0.22); M.codoI.rotation.x = M.codoD.rotation.x = 0;
+    const s = Math.sin(t * 3) * 0.15; M.cadI.rotation.set(s, 0, 0); M.cadD.rotation.set(-s, 0, 0); M.rodI.rotation.x = M.rodD.rotation.x = -0.3;
+    M.arma.visible = false; return;
+  }
+  M.arma.visible = !p.baila;
+  if (p.baila) {
+    const s = Math.sin(t * 8);
+    M.cuerpo.rotation.y = Math.sin(t * 4) * 0.5; M.cuerpo.position.y = 0.95 + Math.abs(s) * 0.08;
+    M.hombroI.rotation.set(2.6 + s * 0.4, 0, 0.5); M.hombroD.rotation.set(2.6 - s * 0.4, 0, -0.5); M.codoI.rotation.x = M.codoD.rotation.x = 0.6;
+    M.cadI.rotation.set(s * 0.3, 0, 0); M.cadD.rotation.set(-s * 0.3, 0, 0); M.rodI.rotation.x = M.rodD.rotation.x = -0.3;
+    return;
+  }
+  const vel = Math.hypot(p.vx, p.vz), k = Math.min(1, vel / 3);
+  p.fase += vel * dt * 1.75;
+  const s = Math.sin(p.fase);
+  if (p.enSuelo) {
+    M.cadI.rotation.set(s * 0.75 * k, 0, 0); M.cadD.rotation.set(-s * 0.75 * k, 0, 0);
+    M.rodI.rotation.x = -Math.max(0, Math.sin(p.fase + 1.3)) * 1.1 * k; M.rodD.rotation.x = -Math.max(0, Math.sin(p.fase + 1.3 + Math.PI)) * 1.1 * k;
+    M.cuerpo.position.y = 0.95 + Math.abs(Math.cos(p.fase)) * 0.035 * k;
+  } else { M.cadI.rotation.set(0.6, 0, 0); M.cadD.rotation.set(-0.15, 0, 0); M.rodI.rotation.x = -0.9; M.rodD.rotation.x = -0.4; }
+  const pt = p.pitch;
+  M.hombroD.rotation.set(0.55 + pt, 0, -0.3); M.codoD.rotation.x = 1.35;
+  M.hombroI.rotation.set(1.25 + pt, 0, 0.62); M.codoI.rotation.x = 0.3;
+  M.arma.rotation.x = pt; M.arma.position.z = -0.2 + p.patada * 0.07; M.cabeza.rotation.x = pt * 0.6;
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// El motor: escena, partida, reglas y bucle
+// ════════════════════════════════════════════════════════════════════════
+const CALIDADES = {
+  alta: { dpr: 1.75, sombra: 2048, pasto: 7000, nombre: "Alta" },
+  media: { dpr: 1.25, sombra: 1024, pasto: 3500, nombre: "Media" },
+  baja: { dpr: 0.85, sombra: 0, pasto: 0, nombre: "Baja" },
+};
+
+function crearMotor({ lienzo, capa, alHud, alFin, alBloqueo, alTactil, alMapa, alCalidad }) {
+  // En el teléfono la pantalla ya es muy densa: el antialiasing cuesta mucho y casi no se nota.
+  const tocable = matchMedia("(pointer: coarse)").matches;
+  const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: !tocable && (window.devicePixelRatio || 1) < 2, powerPreference: "high-performance" });
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const escena = new THREE.Scene();
+  const camara = new THREE.PerspectiveCamera(72, 1, 0.1, 1500); camara.rotation.order = "YXZ";
+  const uTiempo = { value: 0 };
+  const HORIZONTE = new THREE.Color().setRGB(0.78, 0.9, 1.0, THREE.LinearSRGBColorSpace);
+  escena.fog = new THREE.Fog(HORIZONTE.clone(), 110, 560);
+  const SOL = new THREE.Vector3(0.5, 0.78, 0.38).normalize();
+
+  const isla = crearIsla(20260924);
+  const { terreno } = isla;
+
+  // ── cielo ── (escribe el color tal cual, igual que la niebla, así el horizonte empalma)
+  const cielo = new THREE.Mesh(new THREE.SphereGeometry(1000, 32, 16), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    uniforms: { uHor: { value: HORIZONTE }, uSol: { value: SOL } },
+    vertexShader: `varying vec3 vDir; void main() { vDir = normalize(position); vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`,
+    fragmentShader: `varying vec3 vDir; uniform vec3 uHor; uniform vec3 uSol;
+      void main() {
+        float y = vDir.y;
+        vec3 cenit = vec3(0.22, 0.52, 0.93);
+        vec3 c = mix(uHor, cenit, pow(clamp(y, 0.0, 1.0), 0.55));
+        if (y < 0.0) c = mix(uHor, vec3(0.5, 0.72, 0.86), clamp(-y * 5.0, 0.0, 1.0));
+        float s = max(dot(normalize(vDir), uSol), 0.0);
+        c += vec3(1.0, 0.92, 0.75) * (pow(s, 900.0) * 3.0 + pow(s, 14.0) * 0.22);
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  }));
+  cielo.renderOrder = -1; cielo.frustumCulled = false; escena.add(cielo);
+
+  // ── luces ── (el cielo también ilumina: un mapa de entorno sacado de él)
+  const hemi = new THREE.HemisphereLight(0xd6ecff, 0x5d7f3e, 0.55); escena.add(hemi);
+  const sol = new THREE.DirectionalLight(0xfff0d8, 2.7);
+  sol.shadow.camera.left = sol.shadow.camera.bottom = -45; sol.shadow.camera.right = sol.shadow.camera.top = 45;
+  sol.shadow.camera.near = 1; sol.shadow.camera.far = 320; sol.shadow.bias = -0.0006; sol.shadow.normalBias = 0.04;
+  escena.add(sol, sol.target);
+  let entorno = null;
+  {
+    const pm = new THREE.PMREMGenerator(renderer), aparte = new THREE.Scene(); aparte.add(cielo.clone());
+    entorno = pm.fromScene(aparte, 0.02).texture; escena.environment = entorno; pm.dispose();
+  }
+
+  // ── relieve ──
+  const geoT = new THREE.PlaneGeometry(520, 520, NG - 1, NG - 1); geoT.rotateX(-Math.PI / 2);
+  {
+    const p = geoT.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setY(i, terreno(p.getX(i), p.getZ(i)));
+    geoT.computeVertexNormals();
+    const n = geoT.attributes.normal, col = new Float32Array(p.count * 3), c = new THREE.Color();
+    const arena = new THREE.Color("#ecd9a0"), arenaMojada = new THREE.Color("#c7ac72"), pasto1 = new THREE.Color("#5fb13b"), pasto2 = new THREE.Color("#8cc84b"), pastoAlto = new THREE.Color("#4f9a3a");
+    const roca = new THREE.Color("#8e9088"), tierra = new THREE.Color("#b8925c"), plaza = new THREE.Color("#cdbb92"), fondo = new THREE.Color("#b89a66");
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), z = p.getZ(i), y = p.getY(i), cs = costa(x, z);
+      if (y < 0.05) c.copy(fondo).lerp(arenaMojada, clamp(1 + y * 0.5, 0, 1));
+      else {
+        c.copy(pasto1).lerp(pasto2, clamp(isla.fbm(x / 30, z / 30) * 1.6 - 0.3, 0, 1)).lerp(pastoAlto, clamp((y - 5) / 6, 0, 0.6));
+        c.lerp(roca, clamp((0.84 - n.getY(i)) * 5, 0, 1));
+        const playa = suave(24, 10, cs) * suave(2.2, 0.9, y); c.lerp(y < 0.35 ? arenaMojada : arena, playa);
+        c.lerp(tierra, suave(2.6, 1.2, isla.distCamino(x, z)) * 0.85);
+        for (const pu of isla.pueblos) c.lerp(plaza, suave(11, 6, Math.hypot(x - pu.x, z - pu.z)) * 0.8);
+      }
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+    }
+    geoT.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    const uv = geoT.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 110, uv.getY(i) * 110);
+  }
+  const suelo = new THREE.Mesh(geoT, new THREE.MeshStandardMaterial({ vertexColors: true, map: texDetalle(), roughness: 0.95, envMapIntensity: 0.6 }));
+  suelo.receiveShadow = true; escena.add(suelo);
+
+  // ── agua ── (sabe qué tan honda es por un mapa de alturas: espuma en la orilla)
+  const datosAlto = new Uint8Array(NG * NG * 4);
+  for (let i = 0; i < NG * NG; i++) { const v = clamp(((isla.alturas[i] + 8) / 24) * 255, 0, 255); datosAlto[i * 4] = v; datosAlto[i * 4 + 3] = 255; }
+  const texAlto = new THREE.DataTexture(datosAlto, NG, NG); texAlto.magFilter = texAlto.minFilter = THREE.LinearFilter; texAlto.needsUpdate = true;
+  const agua = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400).rotateX(-Math.PI / 2), new THREE.ShaderMaterial({
+    transparent: true, fog: true, depthWrite: false,
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uT: { value: 0 }, uSol: { value: SOL }, uAlto: { value: null } }]),
+    // Los #include tienen que ir solos en su renglón: son del preprocesador.
+    vertexShader: `varying vec3 vW;
+      #include <fog_pars_vertex>
+      void main() {
+        vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vec4 mvPosition = viewMatrix * w; gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }`,
+    fragmentShader: `varying vec3 vW; uniform float uT; uniform vec3 uSol; uniform sampler2D uAlto;
+      #include <fog_pars_fragment>
+      void main() {
+        vec2 p = vW.xz; float t = uT;
+        vec2 uv = (p + 260.0) / 520.0;
+        float hT = (uv.x > 0.0 && uv.x < 1.0 && uv.y > 0.0 && uv.y < 1.0) ? texture2D(uAlto, uv).r * 24.0 - 8.0 : -8.0;
+        float prof = max(0.0, -hT);
+        vec3 n = normalize(vec3(sin(p.x * 0.35 + t * 1.3) * 0.05 + sin(p.y * 0.9 + p.x * 0.3 - t * 2.1) * 0.03, 1.0, cos(p.y * 0.3 - t * 1.1) * 0.05 + cos(p.x * 0.8 - p.y * 0.4 + t * 1.7) * 0.03));
+        vec3 v = normalize(cameraPosition - vW);
+        float fres = pow(1.0 - max(dot(n, v), 0.0), 4.0);
+        vec3 c = mix(vec3(0.2, 0.78, 0.8), vec3(0.02, 0.26, 0.52), smoothstep(0.0, 6.0, prof));
+        c = mix(c, vec3(0.72, 0.88, 1.0), fres * 0.65);
+        float brillo = pow(max(dot(reflect(-uSol, n), v), 0.0), 160.0) * 2.2;
+        float espuma = clamp(smoothstep(1.1, 0.0, prof) * (0.6 + 0.4 * sin(prof * 9.0 - t * 2.4 + p.x * 0.06 + p.y * 0.04)), 0.0, 1.0);
+        c = mix(c, vec3(1.0), espuma * 0.75) + brillo;
+        float a = max(mix(0.5, 0.93, smoothstep(0.0, 3.5, prof)), espuma * 0.85);
+        gl_FragColor = vec4(c, a);
+        #include <fog_fragment>
+      }`,
+  }));
+  agua.material.uniforms.uAlto.value = texAlto; agua.renderOrder = 1; escena.add(agua);
+
+  // ── árboles, rocas, matas y pasto (instanciados: un dibujado por tipo) ──
+  const matVeg = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 });
+  // Lo que queda pegado a la cámara (una copa, una roca) se deshace en puntitos: si no, tapa todo.
+  matVeg.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader.replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+      float dCam = length(vViewPosition);
+      if (dCam < 2.8 && dCam / 2.8 < fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453)) discard;`);
+  };
+  const instanciar = (geo, lista, fn, sombra, mat) => {
+    const m = new THREE.InstancedMesh(geo, mat || matVeg, Math.max(1, lista.length)), o = new THREE.Object3D(), c = new THREE.Color();
+    lista.forEach((it, i) => { fn(it, o, c); o.updateMatrix(); m.setMatrixAt(i, o.matrix); m.setColorAt(i, c); });
+    m.count = lista.length; m.castShadow = sombra; m.receiveShadow = true; escena.add(m); return m;
+  };
+  const robles = isla.arboles.filter((a) => !a.pino), pinos = isla.arboles.filter((a) => a.pino);
+  const geoTronco = pintar(new THREE.CylinderGeometry(0.22, 0.36, 4.4, 7).translate(0, 2.2, 0), "#5a3a22", "#8a5d3a");
+  const copaRoble = unir([[0, 5.2, 0, 2.2], [-1.5, 4.4, 0.6, 1.6], [1.4, 4.6, -0.5, 1.7], [0.3, 4.3, 1.5, 1.5], [-0.4, 6.4, -0.3, 1.5]].map(([x, y, z, r], i) => pintar(abollar(new THREE.IcosahedronGeometry(r, 1), 0.18, i).translate(x, y, z), "#3f8a2c", "#9fdc6a")));
+  const copaPino = unir([[2.3, 3.0, 2.2], [1.8, 2.6, 3.9], [1.25, 2.2, 5.3]].map(([r, hh, y]) => pintar(new THREE.ConeGeometry(r, hh, 8).translate(0, y, 0), "#2c6a34", "#5fae5a")));
+  const ubicar = (a, o) => { o.position.set(a.x, a.y0 - 0.2, a.z); o.rotation.set(0, a.rot, 0); o.scale.setScalar(a.s); };
+  instanciar(geoTronco, isla.arboles, (a, o, c) => { ubicar(a, o); c.setRGB(1, 1, 1); }, true);
+  instanciar(copaRoble, robles, (a, o, c) => { ubicar(a, o); c.setHSL(0.24 + a.tono * 0.08, 0.55, a.tono < 0.12 ? 0.6 : 0.8); if (a.tono < 0.08) c.setHSL(0.08, 0.7, 0.75); }, true);
+  instanciar(copaPino, pinos, (a, o, c) => { ubicar(a, o); c.setHSL(0.3, 0.3, 0.75 + a.tono * 0.2); }, true);
+  const geoRoca = pintar(abollar(new THREE.IcosahedronGeometry(1, 1), 0.5, 3), "#6f726c", "#b9bcb4");
+  instanciar(geoRoca, isla.rocas, (r, o, c) => { o.position.set(r.x, r.y0 + r.sy * 0.25, r.z); o.rotation.set(0, r.rot, 0); o.scale.set(r.s, r.sy, r.s * 0.85); c.setHSL(0.1, 0.05, 0.75 + r.tono * 0.25); }, true);
+  const geoMata = pintar(abollar(new THREE.IcosahedronGeometry(0.9, 1), 0.3, 7).scale(1, 0.75, 1), "#3a7f2a", "#8fd060");
+  instanciar(geoMata, isla.matas, (m, o, c) => { o.position.set(m.x, m.y0 + 0.35 * m.s, m.z); o.rotation.set(0, m.rot, 0); o.scale.setScalar(m.s); c.setHSL(0.25, 0.5, 0.75 + m.tono * 0.2); }, false);
+  // El pasto: tres hojitas por mata, que se mecen con el viento en el vértice.
+  const geoPasto = (() => {
+    const pos = [], col = [], nor = [], base = new THREE.Color("#3f7f25"), punta = new THREE.Color("#b7e36e");
+    for (let k = 0; k < 3; k++) {
+      const a = (k / 3) * Math.PI, ca = Math.cos(a), sa = Math.sin(a), incl = 0.12 * (k - 1);
+      pos.push(-0.06 * ca, 0, -0.06 * sa, 0.06 * ca, 0, 0.06 * sa, incl * sa, 0.55, -incl * ca);
+      col.push(base.r, base.g, base.b, base.r, base.g, base.b, punta.r, punta.g, punta.b);
+      nor.push(0, 1, 0, 0, 1, 0, 0, 1, 0);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3)); g.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3)); return g;
+  })();
+  const matPasto = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 });
+  matPasto.onBeforeCompile = (sh) => {
+    sh.uniforms.uT = uTiempo;
+    sh.vertexShader = "uniform float uT;\n" + sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
+      float fase = instanceMatrix[3].x * 0.21 + instanceMatrix[3].z * 0.17;
+      transformed.x += sin(uT * 1.8 + fase) * 0.08 * position.y; transformed.z += cos(uT * 1.4 + fase) * 0.06 * position.y;`);
+  };
+  const pasto = instanciar(geoPasto, isla.pasto, (p, o, c) => { o.position.set(p.x, p.y0 - 0.03, p.z); o.rotation.set(0, p.rot, 0); o.scale.setScalar(p.s); c.setHSL(0.24, 0.3, 0.8 + p.tono * 0.2); }, false, matPasto);
+  pasto.receiveShadow = false;
+
+  // ── casas y muelle ── (cada casa, una sola malla con colores por vértice)
+  const matCasa = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 });
+  const colorear = (g, c) => { const col = new THREE.Color(c); g = g.index ? g.toNonIndexed() : g; const n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { a[i * 3] = col.r; a[i * 3 + 1] = col.g; a[i * 3 + 2] = col.b; } g.setAttribute("color", new THREE.BufferAttribute(a, 3)); return g; };
+  for (const c of isla.casas) {
+    const partes = [colorear(new THREE.BoxGeometry(c.w, c.alto, c.d).translate(0, c.alto / 2, 0), c.pared), colorear(new THREE.BoxGeometry(c.w + 0.2, 0.5, c.d + 0.2).translate(0, 0.25, 0), "#8b8b86")];
+    const corto = Math.min(c.w, c.d), largo = Math.max(c.w, c.d), forma = new THREE.Shape();
+    forma.moveTo(-corto / 2 - 0.45, 0); forma.lineTo(corto / 2 + 0.45, 0); forma.lineTo(0, c.techo); forma.closePath();
+    const techo = new THREE.ExtrudeGeometry(forma, { depth: largo + 0.7, bevelEnabled: false }).translate(0, 0, -(largo + 0.7) / 2);
+    if (c.w > c.d) techo.rotateY(Math.PI / 2);
+    partes.push(colorear(techo.translate(0, c.alto, 0), c.color));
+    // Puerta hacia la plaza; ventanas en las otras paredes.
+    const lados = [[1, 0], [-1, 0], [0, 1], [0, -1]], frente = Math.abs(c.haciaX) > Math.abs(c.haciaZ) ? [Math.sign(c.haciaX), 0] : [0, Math.sign(c.haciaZ)];
+    for (const [lx, lz] of lados) {
+      const ancho = lx ? c.d : c.w, fx = lx * (c.w / 2 + 0.04), fz = lz * (c.d / 2 + 0.04), pisos = c.alto > 5 ? 2 : 1;
+      const caja = (a, al, y, off, color) => colorear(lx ? new THREE.BoxGeometry(0.08, al, a).translate(fx, y, off) : new THREE.BoxGeometry(a, al, 0.08).translate(off, y, fz), color);
+      if (lx === frente[0] && lz === frente[1]) { partes.push(caja(1.2, 2.2, 1.1, 0, "#6b4226"), caja(1.5, 0.25, 2.3, 0, "#f7f7f2")); }
+      else for (let pz = 0; pz < pisos; pz++) for (const off of [-ancho * 0.25, ancho * 0.25]) partes.push(caja(1.1, 1.0, 2.0 + pz * 2.6, off, "#8fc7df"), caja(1.3, 0.14, 1.45 + pz * 2.6, off, "#f7f7f2"));
+    }
+    const malla = new THREE.Mesh(unir(partes), matCasa); malla.position.set(c.x, c.y0, c.z); malla.castShadow = malla.receiveShadow = true; escena.add(malla);
+  }
+  for (const pl of isla.plataformas) {
+    const w = pl.max.x - pl.min.x, d = pl.max.z - pl.min.z, cx = (pl.min.x + pl.max.x) / 2, cz = (pl.min.z + pl.max.z) / 2, partes = [];
+    partes.push(colorear(new THREE.BoxGeometry(w, 0.2, d).translate(cx, pl.top - 0.1, cz), "#9a6a3c"));
+    for (let t = 0; t <= 1; t += 0.2) for (const s of [-1, 1]) { const x = w > d ? pl.min.x + w * t : cx + s * (w / 2 - 0.2), z = w > d ? cz + s * (d / 2 - 0.2) : pl.min.z + d * t; partes.push(colorear(new THREE.CylinderGeometry(0.15, 0.15, 7, 6).translate(x, pl.top - 3.6, z), "#6b4a2e")); }
+    const m = new THREE.Mesh(unir(partes), matCasa); m.castShadow = m.receiveShadow = true; escena.add(m);
+  }
+
+  // ── cofres ──
+  const matCofre = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.75, roughness: 0.3, emissive: "#4a2e00", emissiveIntensity: 0.5 });
+  const matBotin = new THREE.MeshStandardMaterial({ color: "#4f9dff", metalness: 0.4, roughness: 0.35, emissive: "#0a2a66", emissiveIntensity: 0.6 });
+  const ORO = "#ffc53a", OSCURO = "#5a3514";
+  const geoCofre = unir([colorear(new THREE.BoxGeometry(0.95, 0.5, 0.6).translate(0, 0.25, 0), ORO), colorear(new THREE.BoxGeometry(0.08, 0.52, 0.62).translate(-0.3, 0.26, 0), OSCURO), colorear(new THREE.BoxGeometry(0.08, 0.52, 0.62).translate(0.3, 0.26, 0), OSCURO), colorear(new THREE.BoxGeometry(0.14, 0.16, 0.05).translate(0, 0.4, -0.31), "#fff2b0")]);
+  const semi = (r, l) => new THREE.CylinderGeometry(r, r, l, 14, 1, false, 0, Math.PI).rotateZ(Math.PI / 2);
+  const geoTapa = unir([colorear(semi(0.3, 0.95), ORO), colorear(semi(0.31, 0.08).translate(-0.3, 0, 0), OSCURO), colorear(semi(0.31, 0.08).translate(0.3, 0, 0), OSCURO)]).translate(0, 0, -0.3);
+  const brillo = texBrillo(), fogonazo = texFogonazo();
+  function mallaCofre(c, botin) {
+    const g = new THREE.Group(), mat = botin ? matBotin : matCofre;
+    const base = new THREE.Mesh(geoCofre, mat), tapa = new THREE.Group(), tapaM = new THREE.Mesh(geoTapa, mat);
+    base.castShadow = tapaM.castShadow = true; tapa.position.set(0, 0.5, 0.3); tapa.add(tapaM); g.add(base, tapa);
+    const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: brillo, color: botin ? 0x66aaff : 0xffc850, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.7 }));
+    aura.scale.setScalar(2.6); aura.position.y = 0.5; g.add(aura);
+    g.position.set(c.x, c.y, c.z); g.rotation.y = c.rot; escena.add(g);
+    return { grupo: g, tapa, aura };
+  }
+  const mallasCofres = isla.cofres.map((c) => mallaCofre(c, false));
+
+  // ── nubes y autobús ──
+  const nubes = [];
+  {
+    const r = azar(77), matNube = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 1, emissive: "#a8bccc", emissiveIntensity: 0.55, fog: false });
+    for (let i = 0; i < 14; i++) {
+      const partes = []; for (let k = 0; k < 7; k++) partes.push(new THREE.SphereGeometry(6 + r() * 7, 10, 8).scale(1, 0.6, 1).translate((r() - 0.5) * 26, (r() - 0.3) * 4, (r() - 0.5) * 14));
+      const m = new THREE.Mesh(unir(partes), matNube); m.position.set((r() - 0.5) * 700, 125 + r() * 45, (r() - 0.5) * 700); escena.add(m); nubes.push(m);
+    }
+  }
+  const bus = new THREE.Group();
+  {
+    const partes = [colorear(new THREE.BoxGeometry(3, 2.4, 9).translate(0, 1.2, 0), "#2f7fe0"), colorear(new THREE.BoxGeometry(3.05, 0.8, 7.5).translate(0, 1.7, -0.3), "#bfe6ff"), colorear(new THREE.BoxGeometry(3.1, 0.3, 9.1).translate(0, 0.35, 0), "#ffc62e")];
+    for (const [x, z] of [[-1.5, -3], [1.5, -3], [-1.5, 3], [1.5, 3]]) partes.push(colorear(new THREE.CylinderGeometry(0.55, 0.55, 0.4, 12).rotateZ(Math.PI / 2).translate(x, 0.1, z), "#222"));
+    partes.push(colorear(new THREE.SphereGeometry(5, 18, 14).translate(0, 10, 0), "#e8f3ff"), colorear(new THREE.SphereGeometry(5.05, 18, 14, 0, Math.PI * 2, 0.9, 0.5).translate(0, 10, 0), "#ff7a3d"));
+    const m = new THREE.Mesh(unir(partes), matCasa); m.castShadow = true; bus.add(m); bus.visible = false; escena.add(bus);
+  }
+
+  // ── tormenta ──
+  const tormenta = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 96, 1, true), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false, uniforms: { uT: uTiempo },
+    vertexShader: `varying vec2 vUv; varying float vY; void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vY = w.y; gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `varying vec2 vUv; varying float vY; uniform float uT;
+      void main() {
+        float franjas = 0.5 + 0.5 * sin(vUv.x * 520.0 + vY * 0.08 - uT * 1.6) * sin(vUv.x * 140.0 - uT * 0.7 + vY * 0.03);
+        float a = (0.32 + 0.22 * franjas) * smoothstep(260.0, 60.0, vY);
+        gl_FragColor = vec4(mix(vec3(0.42, 0.14, 0.85), vec3(0.8, 0.55, 1.0), franjas), a);
+      }`,
+  }));
+  tormenta.renderOrder = 2; tormenta.visible = false; escena.add(tormenta);
+
+  // ── efectos: chispas, trazas, fogonazos ──
+  const MAXP = 600, partPos = new Float32Array(MAXP * 3), partCol = new Float32Array(MAXP * 3), particulas = [];
+  const geoP = new THREE.BufferGeometry();
+  geoP.setAttribute("position", new THREE.BufferAttribute(partPos, 3).setUsage(THREE.DynamicDrawUsage)); geoP.setAttribute("color", new THREE.BufferAttribute(partCol, 3).setUsage(THREE.DynamicDrawUsage));
+  const puntos = new THREE.Points(geoP, new THREE.PointsMaterial({ size: 0.22, map: brillo, vertexColors: true, transparent: true, depthWrite: false, sizeAttenuation: true }));
+  puntos.frustumCulled = false; escena.add(puntos);
+  const trazos = [], geoTrazo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0, 0.5);
+  for (let i = 0; i < 40; i++) { const m = new THREE.Mesh(geoTrazo, new THREE.MeshBasicMaterial({ color: 0xfff1a0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })); m.visible = false; escena.add(m); trazos.push({ m, vida: 0 }); }
+  const flashes = [];
+  for (let i = 0; i < 12; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: fogonazo, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); s.visible = false; escena.add(s); flashes.push({ s, vida: 0 }); }
+  const luzBoca = new THREE.PointLight(0xffc966, 0, 9, 2); escena.add(luzBoca);
+  const matMadera = new THREE.MeshStandardMaterial({ map: texMadera(), roughness: 0.8 });
+  const geoMuro = new THREE.BoxGeometry(CELDA, ALTO + 1.2, 0.22).translate(0, (ALTO + 1.2) / 2 - 1.2, 0);
+  const geoRampa = new THREE.BoxGeometry(CELDA, 0.22, Math.hypot(CELDA, ALTO));
+
+  // ── mapa (una imagen de la isla vista de arriba, hecha una vez) ──
+  const imgMapa = document.createElement("canvas"); imgMapa.width = imgMapa.height = 256;
+  {
+    const g = imgMapa.getContext("2d"), img = g.createImageData(256, 256), c = new THREE.Color();
+    for (let j = 0; j < 256; j++) for (let i = 0; i < 256; i++) {
+      const x = -200 + (i + 0.5) * (400 / 256), z = -200 + (j + 0.5) * (400 / 256), y = terreno(x, z), k = (j * 256 + i) * 4;
+      if (y < 0) c.setRGB(0.1, 0.45 + y * 0.03, 0.72 + y * 0.02); else if (costa(x, z) < 12 && y < 2) c.setRGB(0.93, 0.85, 0.6);
+      else { c.setRGB(0.36 - y * 0.008, 0.68 - y * 0.012, 0.25); if (isla.distCamino(x, z) < 2.2) c.setRGB(0.72, 0.57, 0.36); }
+      img.data[k] = c.r * 255; img.data[k + 1] = c.g * 255; img.data[k + 2] = c.b * 255; img.data[k + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    const a = (v) => ((v + 200) / 400) * 256;
+    g.fillStyle = "rgba(30,90,30,0.55)"; for (const t of isla.arboles) { g.beginPath(); g.arc(a(t.x), a(t.z), 1.4, 0, 7); g.fill(); }
+    for (const c2 of isla.casas) { g.fillStyle = c2.color; g.fillRect(a(c2.min.x), a(c2.min.z), (c2.w / 400) * 256, (c2.d / 400) * 256); }
+    g.fillStyle = "#9a6a3c"; for (const pl of isla.plataformas) g.fillRect(a(pl.min.x), a(pl.min.z), ((pl.max.x - pl.min.x) / 400) * 256, ((pl.max.z - pl.min.z) / 400) * 256);
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // La partida
+  // ════════════════════════════════════════════════════════════════════
+  let P = null, modo = "menu", tactil = false, calidadActual = "alta";
+  const entrada = { mx: 0, my: 0, dYaw: 0, dPitch: 0, mirar: { dx: 0, dy: 0, activa: false }, raton: false, dedo1: false, dedo2: false, apuntar: false, muro: false, rampa: false, recargar: false, saltar: false, cambiar: null };
+  const teclas = new Set();
+  const personajes = LOOKS.map((l) => { const m = crearPersonaje(l); m.raiz.visible = false; escena.add(m.raiz); return m; });
+
+  function nuevaPartida() {
+    for (const s of P ? P.estructuras : []) quitarEstructura(s, false);
+    for (const c of P ? P.cofres : []) if (c.botin) escena.remove(c.malla.grupo);
+    const r = azar((Math.random() * 1e9) | 0);
+    // La ruta del autobús cruza la isla; cada uno salta en un punto distinto.
+    const ang = r() * Math.PI * 2, ax = Math.cos(ang) * 230, az = Math.sin(ang) * 230;
+    const jugadores = LOOKS.map((look, i) => {
+      const t = i === 0 ? 0.38 + r() * 0.24 : 0.2 + ((i - 1) / (CANT_BOTS - 1)) * 0.6 + (r() - 0.5) * 0.05;
+      const x = lerp(-ax, ax, t), z = lerp(-az, az, t);
+      return {
+        id: i, bot: i > 0, nombre: i ? NOMBRES[i - 1] : "Vos", malla: personajes[i],
+        x, z, y: Math.max(0, terreno(x, z)) + ALTURA_SALTO, vx: Math.cos(ang) * 8, vy: 0, vz: Math.sin(ang) * 8, yaw: Math.atan2(-Math.cos(ang), -Math.sin(ang)), pitch: -0.25,
+        estado: "cae", enSuelo: false, vida: 100, escudo: i ? 0 : 100, madera: i ? 60 : 100, arma: 0, mun: [30, 5], reserva: [120, 20],
+        cd: 0, recargando: 0, vivo: true, muerte: 0, bajas: 0, fase: 0, golpeado: 0, patada: 0, tormentaAcum: 0, apuntando: false, baila: false, pasoT: 0,
+        ia: { destino: null, enemigo: null, visto: 0, vista: 0, t: 0, muro: 0, lado: r() < 0.5 ? 1 : -1, puntera: 0.2 + r() * 0.25, chequeo: 1, px: x, pz: z, desvio: 0, atacante: null },
+      };
     });
+    // A dónde se tiran los bots: un cofre cada uno, repartidos.
+    const libres = isla.cofres.slice().sort(() => r() - 0.5);
+    jugadores.slice(1).forEach((b, i) => { const c = libres[i % libres.length]; b.ia.destino = { x: c.x + (r() - 0.5) * 6, z: c.z + (r() - 0.5) * 6 }; });
+    const cofres = isla.cofres.map((c, i) => { const m = mallasCofres[i]; m.tapa.rotation.x = 0; m.aura.visible = true; return { ...c, abierto: false, abre: 0, malla: m }; });
+    P = {
+      jugadores, cofres, estructuras: [], feed: [], numeros: [], t: 0, fin: null, finAvisado: false, aviso: null, danoFlash: 0, danoId: 0, sacudida: 0, lugar: null,
+      tormenta: { x: 0, z: 0, r: R_INICIAL, desde: null, hacia: null, fase: 0, t: CICLO_TORMENTA, cerrando: false },
+      bus: { x: -ax * 1.3, z: -az * 1.3, vx: (ax / 230) * 26, vz: (az / 230) * 26, y: 150 },
+      confeti: [], orbita: 0, fps: { t: 0, n: 0, listo: false },
+    };
+    for (const p of jugadores) p.malla.raiz.visible = true;
+    avisar("¡Saltá a la isla!", 2.5);
   }
+  function avisar(texto, t = 1.8) { if (P) P.aviso = { texto, t }; }
+  function alFeed(texto, yo) { P.feed.push({ texto, yo, t: 6, id: Math.random() }); if (P.feed.length > 5) P.feed.shift(); }
+
+  // ── construcción ──
+  function dir4(yaw) { const fx = -Math.sin(yaw), fz = -Math.cos(yaw); return Math.abs(fx) > Math.abs(fz) ? [Math.sign(fx), 0] : [0, Math.sign(fz)]; }
+  const nivel = (y, g) => g + Math.max(0, Math.round((y - g) / ALTO)) * ALTO;
+  function construir(p, tipo) {
+    if (!p.vivo || p.madera < COSTO || p.estado !== "tierra") return false;
+    const [dx, dz] = dir4(p.yaw), cx = Math.floor(p.x / CELDA), cz = Math.floor(p.z / CELDA);
+    let s;
+    if (tipo === "muro") {
+      if (dx) { const ex = (cx + (dx > 0 ? 1 : 0)) * CELDA, mz = (cz + 0.5) * CELDA, base = nivel(p.y, terreno(ex, mz)); s = { tipo, clave: `x${ex},${cz},${base.toFixed(1)}`, eje: "x", x: ex, z: mz, base, min: { x: ex - 0.12, y: base - 1.2, z: cz * CELDA }, max: { x: ex + 0.12, y: base + ALTO, z: (cz + 1) * CELDA } }; }
+      else { const ez = (cz + (dz > 0 ? 1 : 0)) * CELDA, mx = (cx + 0.5) * CELDA, base = nivel(p.y, terreno(mx, ez)); s = { tipo, clave: `z${ez},${cx},${base.toFixed(1)}`, eje: "z", x: mx, z: ez, base, min: { x: cx * CELDA, y: base - 1.2, z: ez - 0.12 }, max: { x: (cx + 1) * CELDA, y: base + ALTO, z: ez + 0.12 } }; }
+    } else {
+      const nx = cx + dx, nz = cz + dz, mx = (nx + 0.5) * CELDA, mz = (nz + 0.5) * CELDA, base = nivel(p.y, terreno(mx - (dx * CELDA) / 2, mz - (dz * CELDA) / 2));
+      s = { tipo, clave: `r${nx},${nz},${base.toFixed(1)}`, cx: mx, cz: mz, dx, dz, base, min: { x: nx * CELDA, y: base, z: nz * CELDA }, max: { x: (nx + 1) * CELDA, y: base + ALTO, z: (nz + 1) * CELDA } };
+    }
+    if (P.estructuras.some((o) => o.clave === s.clave)) return false;
+    if (isla.casas.some((c) => s.min.x < c.max.x && s.max.x > c.min.x && s.min.z < c.max.z && s.max.z > c.min.z)) return false;
+    s.vida = s.vidaMax = tipo === "muro" ? VIDA_MURO : VIDA_RAMPA; s.crece = 0;
+    s.mat = matMadera.clone();
+    if (tipo === "muro") { s.malla = new THREE.Mesh(geoMuro, s.mat); s.malla.position.set(s.x, s.base, s.z); if (s.eje === "x") s.malla.rotation.y = Math.PI / 2; }
+    else { s.malla = new THREE.Group(); const tabla = new THREE.Mesh(geoRampa, s.mat); tabla.rotation.x = Math.atan2(ALTO, CELDA); tabla.position.y = ALTO / 2; tabla.castShadow = tabla.receiveShadow = true; s.malla.add(tabla); s.malla.position.set(s.cx, s.base, s.cz); s.malla.rotation.y = Math.atan2(-dx, -dz); }
+    s.malla.castShadow = s.malla.receiveShadow = true; s.malla.scale.y = 0.2; escena.add(s.malla);
+    p.madera -= COSTO; P.estructuras.push(s);
+    const d = Math.hypot(p.x - camara.position.x, p.z - camara.position.z); if (d < 60) Sonido.toc(p.bot ? 170 : 200, 1 - d / 60);
+    return true;
+  }
+  function quitarEstructura(s, efectos = true) {
+    escena.remove(s.malla); s.mat.dispose();
+    if (efectos) { const [x, z] = s.tipo === "muro" ? [s.x, s.z] : [s.cx, s.cz]; chispas(x, s.base + 1.5, z, 30, [0xc98f55, 0x8a5a33, 0xe0b27a], 5, 0.8, 12); Sonido.toc(120, 0.7); }
+    if (P) P.estructuras = P.estructuras.filter((o) => o !== s);
+  }
+  function danarEstructura(s, dano) {
+    s.vida -= dano;
+    if (s.vida <= 0) quitarEstructura(s); else s.mat.color.setRGB(1, 1, 1).lerp(new THREE.Color("#6b4a30"), 1 - s.vida / s.vidaMax);
+  }
+  const alturaRampa = (s, x, z) => {
+    if (x < s.min.x || x > s.max.x || z < s.min.z || z > s.max.z) return -Infinity;
+    return s.base + (((x - s.cx) * s.dx + (z - s.cz) * s.dz) / CELDA + 0.5) * ALTO + 0.12;
+  };
+
+  // ── física ──
+  function sueloEn(x, z, y) {
+    let s = Math.max(terreno(x, z), -1.1); // en el agua honda se hace pie a -1,1: se vadea
+    for (const pl of isla.plataformas) if (x > pl.min.x && x < pl.max.x && z > pl.min.z && z < pl.max.z && y + 0.6 >= pl.top) s = Math.max(s, pl.top);
+    if (P) for (const e of P.estructuras) if (e.tipo === "rampa") { const hr = alturaRampa(e, x, z); if (hr > s && y + 1.0 >= hr) s = hr; }
+    return s;
+  }
+  function empujarCaja(p, mn, mx) {
+    if (p.y > mx.y - 0.25 || p.y + ALTO_J < mn.y) return;
+    const x0 = mn.x - RADIO_J, x1 = mx.x + RADIO_J, z0 = mn.z - RADIO_J, z1 = mx.z + RADIO_J;
+    if (p.x <= x0 || p.x >= x1 || p.z <= z0 || p.z >= z1) return;
+    const dxa = p.x - x0, dxb = x1 - p.x, dza = p.z - z0, dzb = z1 - p.z, m = Math.min(dxa, dxb, dza, dzb);
+    if (m === dxa) p.x = x0; else if (m === dxb) p.x = x1; else if (m === dza) p.z = z0; else p.z = z1;
+  }
+  function empujarFuera(p) {
+    for (const a of isla.arboles) { if (p.y > a.y0 + a.alto) continue; const dx = p.x - a.x, dz = p.z - a.z; if (Math.abs(dx) > 2 || Math.abs(dz) > 2) continue; const d = Math.hypot(dx, dz), m = a.rt + RADIO_J; if (d < m && d > 1e-4) { p.x = a.x + (dx / d) * m; p.z = a.z + (dz / d) * m; } }
+    for (const r of isla.rocas) { if (p.y > r.y0 + r.sy * 1.1) continue; const dx = p.x - r.x, dz = p.z - r.z; if (Math.abs(dx) > 5 || Math.abs(dz) > 5) continue; const d = Math.hypot(dx, dz), m = r.radio * 0.85 + RADIO_J; if (d < m && d > 1e-4) { p.x = r.x + (dx / d) * m; p.z = r.z + (dz / d) * m; } }
+    for (const c of isla.casas) empujarCaja(p, c.min, c.max);
+    for (const e of P.estructuras) if (e.tipo === "muro") empujarCaja(p, e.min, e.max);
+    for (const o of P.jugadores) { if (o === p || !o.vivo || Math.abs(o.y - p.y) > 1.5) continue; const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz); if (d < RADIO_J * 2 && d > 1e-4) { const k = (RADIO_J * 2 - d) / 2; p.x += (dx / d) * k; p.z += (dz / d) * k; } }
+  }
+  function mover(p, wx, wz, dt, saltar, corre, abrir) {
+    if (p.estado === "cae" || p.estado === "planea") {
+      const s = sueloEn(p.x, p.z, p.y), vel = p.estado === "cae" ? 17 : 12;
+      p.vx = lerp(p.vx, wx * vel, Math.min(1, dt * 1.8)); p.vz = lerp(p.vz, wz * vel, Math.min(1, dt * 1.8));
+      if (p.estado === "cae") { p.vy = Math.max(p.vy - GRAVEDAD * dt, -28); if (p.y - s < 36 || (abrir && p.y - s < 90)) { p.estado = "planea"; if (!p.bot) Sonido.toc(260, 0.6); } }
+      else p.vy = lerp(p.vy, -5.8, Math.min(1, dt * 3));
+      p.x = clamp(p.x + p.vx * dt, -BORDE, BORDE); p.z = clamp(p.z + p.vz * dt, -BORDE, BORDE); p.y += p.vy * dt;
+      if (p.y <= s) { p.y = s; p.vy = 0; p.estado = "tierra"; p.enSuelo = true; if (!p.bot) { Sonido.paso(1.5); P.sacudida = 4; } }
+      return;
+    }
+    const agua = terreno(p.x, p.z) < -0.3 ? 0.6 : 1, v = VEL * (corre ? 1.25 : 1) * agua * (p.apuntando ? 0.7 : 1);
+    const k = Math.min(1, dt * (p.enSuelo ? 12 : 3));
+    p.vx = lerp(p.vx, wx * v, k); p.vz = lerp(p.vz, wz * v, k);
+    p.vy -= GRAVEDAD * dt;
+    if (saltar && p.enSuelo) { p.vy = SALTO; p.enSuelo = false; }
+    p.x = clamp(p.x + p.vx * dt, -BORDE, BORDE); p.z = clamp(p.z + p.vz * dt, -BORDE, BORDE);
+    if (costa(p.x, p.z) < -24) { p.x -= p.vx * dt; p.z -= p.vz * dt; }
+    p.y += p.vy * dt;
+    empujarFuera(p);
+    const s = sueloEn(p.x, p.z, p.y);
+    if (p.y <= s) { p.y = s; p.vy = 0; p.enSuelo = true; }
+    else if (p.enSuelo && p.vy <= 0 && p.y - s < 0.5) { p.y = s; p.vy = 0; }
+    else p.enSuelo = false;
+    // Pasos (los propios y los de los bots cercanos: sirven para saber que hay alguien).
+    const vel = Math.hypot(p.vx, p.vz);
+    if (p.enSuelo && vel > 1.5) { p.pasoT -= dt * vel; if (p.pasoT <= 0) { p.pasoT = 2.1; const d = Math.hypot(p.x - camara.position.x, p.z - camara.position.z); if (d < 30) Sonido.paso(p.bot ? (1 - d / 30) * 0.8 : 0.5); } }
+  }
+
+  // ── disparos: rayos contra todo lo que hay ──
+  function cajaRayo(o, d, mn, mx) {
+    let t0 = 0, t1 = Infinity;
+    for (const k of ["x", "y", "z"]) {
+      if (Math.abs(d[k]) < 1e-9) { if (o[k] < mn[k] || o[k] > mx[k]) return Infinity; continue; }
+      let a = (mn[k] - o[k]) / d[k], b = (mx[k] - o[k]) / d[k]; if (a > b) { const t = a; a = b; b = t; }
+      t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) return Infinity;
+    }
+    return t0 > 0 ? t0 : Infinity;
+  }
+  function esferaRayo(o, d, cx, cy, cz, r) {
+    const ox = o.x - cx, oy = o.y - cy, oz = o.z - cz, b = ox * d.x + oy * d.y + oz * d.z, c = ox * ox + oy * oy + oz * oz - r * r, disc = b * b - c;
+    if (disc < 0) return Infinity; const t = -b - Math.sqrt(disc); return t > 0 ? t : Infinity;
+  }
+  function cilindroRayo(o, d, cx, cz, r, y0, y1) {
+    const ox = o.x - cx, oz = o.z - cz, a = d.x * d.x + d.z * d.z; if (a < 1e-8) return Infinity;
+    const b = ox * d.x + oz * d.z, c = ox * ox + oz * oz - r * r, disc = b * b - a * c; if (disc < 0) return Infinity;
+    const t = (-b - Math.sqrt(disc)) / a; if (t <= 0) return Infinity;
+    const y = o.y + d.y * t; return y >= y0 && y <= y1 ? t : Infinity;
+  }
+  function rayo(o, d, max, ignorar, conJugadores = true, conPlantas = true) {
+    let mejor = max, que = null, ref = null, parte = null, t;
+    if (P && conJugadores) for (const p of P.jugadores) {
+      if (!p.vivo || p.id === ignorar) continue;
+      t = cilindroRayo(o, d, p.x, p.z, RADIO_J, p.y, p.y + ALTO_J);
+      if (t < mejor) { mejor = t; que = "jugador"; ref = p; parte = o.y + d.y * t - p.y > 1.5 ? "cabeza" : "cuerpo"; }
+    }
+    for (const c of isla.casas) { t = cajaRayo(o, d, c.min, c.max); if (t < mejor) { mejor = t; que = "casa"; ref = c; } }
+    if (P) for (const s of P.estructuras) {
+      if (s.tipo === "muro") t = cajaRayo(o, d, s.min, s.max);
+      else {
+        const k = ALTO / CELDA, den = d.y - k * (d.x * s.dx + d.z * s.dz);
+        t = Math.abs(den) < 1e-6 ? Infinity : (s.base + ALTO / 2 + k * ((o.x - s.cx) * s.dx + (o.z - s.cz) * s.dz) - o.y) / den;
+        if (t > 0 && t < mejor) { const x = o.x + d.x * t, z = o.z + d.z * t; if (x < s.min.x || x > s.max.x || z < s.min.z || z > s.max.z) t = Infinity; } else t = Infinity;
+      }
+      if (t < mejor) { mejor = t; que = "estructura"; ref = s; }
+    }
+    if (conPlantas) for (const a of isla.arboles) {
+      if (esferaRayo(o, d, a.x, a.y0 + a.alto, a.z, a.alto + 3) === Infinity && Math.hypot(o.x - a.x, o.z - a.z) > a.alto + 3) continue;
+      t = Math.min(cilindroRayo(o, d, a.x, a.z, a.rt, a.y0, a.y0 + a.alto + 1), esferaRayo(o, d, a.x, a.copaY, a.z, a.copaR));
+      if (t < mejor) { mejor = t; que = "arbol"; ref = a; }
+    }
+    if (conPlantas) for (const r of isla.rocas) { t = esferaRayo(o, d, r.x, r.y0 + r.sy * 0.3, r.z, r.radio * 0.9); if (t < mejor) { mejor = t; que = "roca"; ref = r; } }
+    for (t = 0.4; t < mejor; t += 1) {
+      const x = o.x + d.x * t, y = o.y + d.y * t, z = o.z + d.z * t;
+      if (y < terreno(x, z)) { let a = Math.max(0, t - 1), b = t; for (let k = 0; k < 6; k++) { const m = (a + b) / 2; if (o.y + d.y * m < terreno(o.x + d.x * m, o.z + d.z * m)) b = m; else a = m; } mejor = b; que = "suelo"; ref = null; break; }
+    }
+    return { t: mejor, que, ref, parte, x: o.x + d.x * mejor, y: o.y + d.y * mejor, z: o.z + d.z * mejor };
+  }
+  const ojo = (p) => ({ x: p.x, y: p.y + 1.6, z: p.z });
+  const pecho = (p) => ({ x: p.x, y: p.y + 1.25, z: p.z });
+  const boca = (p) => ({ x: p.x - Math.sin(p.yaw) * 0.55 + Math.cos(p.yaw) * 0.12, y: p.y + 1.42, z: p.z - Math.cos(p.yaw) * 0.55 - Math.sin(p.yaw) * 0.12 });
+  function lineaLibre(a, b) { const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, l = Math.hypot(dx, dy, dz); return rayo(a, { x: dx / l, y: dy / l, z: dz / l }, l - 0.3, -1, false).que === null; }
+  function desviar(d, k) {
+    let x, y, z; do { x = Math.random() * 2 - 1; y = Math.random() * 2 - 1; z = Math.random() * 2 - 1; } while (x * x + y * y + z * z > 1);
+    const r = { x: d.x + x * k, y: d.y + y * k, z: d.z + z * k }, l = Math.hypot(r.x, r.y, r.z); r.x /= l; r.y /= l; r.z /= l; return r;
+  }
+  let distCam = 3.3;
+  const v3 = new THREE.Vector3();
+  function disparar(p) {
+    const A = ARMAS[p.arma];
+    if (p.cd > 0 || p.recargando > 0 || !p.vivo || p.estado !== "tierra") return;
+    if (p.mun[p.arma] <= 0) { recargar(p); return; }
+    p.cd = A.cadencia * (p.bot ? 1.8 : 1); p.mun[p.arma]--; p.patada = 1;
+    const b = boca(p);
+    let obj;
+    if (!p.bot) {
+      // Lo que está en el centro de la mira, visto desde la cámara.
+      camara.getWorldDirection(v3);
+      const cd = { x: v3.x, y: v3.y, z: v3.z }, co = { x: camara.position.x + cd.x * distCam, y: camara.position.y + cd.y * distCam, z: camara.position.z + cd.z * distCam };
+      const r = rayo(co, cd, 300, p.id); obj = r;
+    } else { const d = dirDe(p.yaw, p.pitch); obj = { x: b.x + d.x * 100, y: b.y + d.y * 100, z: b.z + d.z * 100 }; }
+    let dx = obj.x - b.x, dy = obj.y - b.y, dz = obj.z - b.z; const l = Math.hypot(dx, dy, dz) || 1; dx /= l; dy /= l; dz /= l;
+    const disp = A.disp * (Math.hypot(p.vx, p.vz) > 1 ? 1.6 : 1) * (p.enSuelo ? 1 : 2) * (p.apuntando ? 0.45 : 1) * (p.bot ? 1 + p.ia.puntera * 2 : 1);
+    // La traza sale de la punta del arma que se ve.
+    let desde = b;
+    if (p.malla.raiz.visible) { p.malla.arma.updateWorldMatrix(true, false); v3.set(0, 0.02, p.arma ? -0.72 : -0.8); p.malla.arma.localToWorld(v3); desde = { x: v3.x, y: v3.y, z: v3.z }; }
+    for (let k = 0; k < A.perdigones; k++) {
+      const d = desviar({ x: dx, y: dy, z: dz }, disp), r = rayo(b, d, A.alcance, p.id);
+      impacto(p, r, A, d);
+      trazo(desde, r);
+    }
+    fogonazoEn(desde, p.arma ? 1.1 : 0.7);
+    if (!p.bot) { (p.arma ? Sonido.bum : Sonido.pew)(1, 0); P.sacudida = Math.max(P.sacudida, p.arma ? 6 : 1.5); p.pitch = Math.min(1.2, p.pitch + A.retroceso * (0.6 + Math.random() * 0.6)); luzBoca.position.set(desde.x, desde.y, desde.z); luzBoca.intensity = 6; }
+    else sonidoLejos(p, (v, pan) => (p.arma ? Sonido.bum(v, pan) : Sonido.pew(v, pan)));
+    if (p.mun[p.arma] === 0) recargar(p);
+  }
+  function impacto(p, r, A, d) {
+    if (r.que === "jugador") {
+      const cabeza = r.parte === "cabeza", lejos = A.perdigones > 1 && r.t > 15 ? 0.6 : 1;
+      herir(r.ref, A.dano * (cabeza ? 1.5 : 1) * lejos, p, cabeza);
+      chispas(r.x, r.y, r.z, 6, [0xffffff, 0x9fe6ff], 3, 0.3, 6);
+    } else if (r.que === "estructura") { danarEstructura(r.ref, A.dano); chispas(r.x, r.y, r.z, 7, [0xc98f55, 0x8a5a33], 4, 0.5, 12); }
+    else if (r.que === "arbol") chispas(r.x, r.y, r.z, 6, [0x6fbf45, 0x8a5a33], 3, 0.6, 8);
+    else if (r.que === "roca") chispas(r.x, r.y, r.z, 6, [0xcfd2cc, 0xfff3b0], 5, 0.35, 10);
+    else if (r.que === "casa") chispas(r.x, r.y, r.z, 5, [0xf3e6c8, 0x999999], 4, 0.4, 10);
+    else if (r.que === "suelo") chispas(r.x, r.y + 0.05, r.z, 6, [0xb8925c, 0x7a6a4a], 3, 0.5, 9);
+  }
+  function recargar(p) {
+    const A = ARMAS[p.arma];
+    if (p.recargando > 0 || p.mun[p.arma] >= A.cargador || p.reserva[p.arma] <= 0) return;
+    p.recargando = A.recarga; if (!p.bot) Sonido.recarga();
+  }
+  function sonidoLejos(p, fn) {
+    const dx = p.x - camara.position.x, dz = p.z - camara.position.z, d = Math.hypot(dx, dz), yaw = camara.rotation.y;
+    const lado = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+    fn(Math.pow(clamp(1 - d / 150, 0, 1), 1.6), clamp(lado / (d || 1), -1, 1) * 0.8);
+  }
+  function herir(v, dano, atacante, cabeza, esTormenta) {
+    if (!v.vivo || (P.fin && P.fin.gano)) return;
+    const aEscudo = esTormenta ? 0 : Math.min(v.escudo, dano); v.escudo -= aEscudo;
+    v.vida -= Math.min(v.vida, dano - aEscudo); v.golpeado = 0.6;
+    if (atacante) v.ia.atacante = atacante.id;
+    if (atacante && !atacante.bot) { P.numeros.push({ x: v.x, y: v.y + 2.1, z: v.z, texto: String(Math.round(dano)), color: cabeza ? "#ffd84a" : aEscudo > 0 ? "#8fd8ff" : "#ffffff", t: 0.9, dx: (Math.random() - 0.5) * 30 }); marcarAcierto(cabeza); Sonido.acierto(cabeza); }
+    if (!v.bot) { P.danoFlash = 0.5; P.danoId++; Sonido.golpe(); }
+    if (v.vida <= 0) morir(v, atacante);
+  }
+  function morir(v, atacante) {
+    v.vivo = false; v.muerte = 0; v.vx = v.vz = 0; v.dejoBotin = false;
+    alFeed(`${atacante ? atacante.nombre : "La tormenta"} eliminó a ${v.nombre}`, !v.bot || (atacante && !atacante.bot));
+    if (atacante) atacante.bajas++;
+    if (atacante && !atacante.bot) { Sonido.eliminado(); avisar(`¡Eliminaste a ${v.nombre}!`, 2); }
+    if (!v.bot) P.asesino = atacante ? atacante.nombre : "la tormenta";
+  }
+  function abrirCofre(c, p) {
+    c.abierto = true; c.malla.aura.visible = false;
+    if (c.botin) { p.escudo = Math.min(100, p.escudo + 25); p.madera += 50; p.reserva[0] += 60; p.reserva[1] += 10; }
+    else { p.escudo = Math.min(100, p.escudo + 50); p.vida = Math.min(100, p.vida + 25); p.madera += 100; p.reserva[0] += 60; p.reserva[1] += 10; }
+    chispas(c.x, c.y + 0.8, c.z, 30, c.botin ? [0x7fc4ff, 0xffffff] : [0xffd54a, 0xfff3b0, 0xffffff], 4, 0.9, 5);
+    if (!p.bot) { Sonido.cofre(); avisar(c.botin ? "+25 escudo · +50 madera" : "+50 escudo · +25 vida · +100 madera", 2.2); }
+  }
+
+  // ── los bots ──
+  function pensarBot(b, dt) {
+    const ia = b.ia, T = P.tormenta;
+    ia.t -= dt; ia.muro -= dt; ia.vista -= dt;
+    if (b.estado !== "tierra") {
+      const dx = ia.destino.x - b.x, dz = ia.destino.z - b.z, d = Math.hypot(dx, dz);
+      if (d > 2) b.yaw += angDif(Math.atan2(-dx, -dz) - b.yaw) * Math.min(1, dt * 3);
+      return { wx: d > 2 ? dx / d : 0, wz: d > 2 ? dz / d : 0, abrir: d < 40 };
+    }
+    if (ia.vista <= 0) {
+      ia.vista = 0.25;
+      let mejor = null, dm = DIST_PERSIGUE;
+      for (const o of P.jugadores) { if (o === b || !o.vivo || o.estado === "cae") continue; const d = dist2(b, o); if (d < dm && lineaLibre(ojo(b), pecho(o))) { dm = d; mejor = o; } }
+      if (!mejor && ia.atacante !== null) { const a = P.jugadores[ia.atacante]; if (a && a.vivo && dist2(b, a) < 130) mejor = a; }
+      if (P.t < 14) mejor = null; // al principio, todos lootean
+      ia.enemigo = mejor;
+    }
+    let enemigo = ia.enemigo; if (enemigo && !enemigo.vivo) enemigo = ia.enemigo = null;
+    ia.visto = enemigo ? ia.visto + dt : 0;
+    let wx = 0, wz = 0, saltar = false;
+    const fuera = Math.hypot(b.x - T.x, b.z - T.z) > T.r - 8;
+    if (fuera && !(enemigo && dist2(b, enemigo) < 20)) {
+      const dx = T.x - b.x, dz = T.z - b.z, d = Math.hypot(dx, dz) || 1; wx = dx / d; wz = dz / d;
+      b.yaw += angDif(Math.atan2(-wx, -wz) - b.yaw) * Math.min(1, dt * 5); b.pitch *= 0.9;
+    } else if (enemigo) {
+      const dx = enemigo.x - b.x, dz = enemigo.z - b.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+      const ideal = b.arma === 1 ? 7 : 24, acerca = d > ideal + 6 ? 1 : d < ideal - 6 ? -1 : 0;
+      if (ia.t <= 0) { ia.t = 1 + Math.random() * 1.5; ia.lado *= -1; if (Math.random() < 0.3) saltar = true; }
+      wx = ux * acerca - uz * ia.lado * 0.7; wz = uz * acerca + ux * ia.lado * 0.7;
+      const quiere = d < 14 && b.mun[1] + b.reserva[1] > 0 ? 1 : 0; if (quiere !== b.arma && b.recargando <= 0) b.arma = quiere;
+      const m = boca(b), ox = enemigo.x - m.x, oy = enemigo.y + 1.2 - m.y, oz = enemigo.z - m.z;
+      const yawObj = Math.atan2(-ox, -oz), pitchObj = Math.atan2(oy, Math.hypot(ox, oz)), tiembla = Math.sin(P.t * 2.3 + b.id * 1.7) * 0.03 * (1 + ia.puntera * 3);
+      b.yaw += angDif(yawObj + tiembla - b.yaw) * Math.min(1, dt * 6); b.pitch += (pitchObj - b.pitch) * Math.min(1, dt * 6);
+      // Tardan un poco en reaccionar cuando te ven (0,7 s): si no, no hay cómo ganarles.
+      if (Math.abs(angDif(yawObj - b.yaw)) < 0.12 && ia.visto > 0.7 && d < ARMAS[b.arma].alcance * 0.9) disparar(b);
+      if (b.golpeado > 0 && ia.muro <= 0 && b.madera >= COSTO && b.vida + b.escudo < 140) { const y0 = b.yaw; b.yaw = yawObj; construir(b, Math.random() < 0.3 ? "rampa" : "muro"); b.yaw = y0; ia.muro = 2.5 + Math.random() * 2; }
+    } else {
+      let cof = null, dc = 160;
+      for (const c of P.cofres) { if (c.abierto) continue; const d = dist2(b, c); if (d < dc && Math.hypot(c.x - T.x, c.z - T.z) < T.r - 10) { dc = d; cof = c; } }
+      const tx = cof ? cof.x : T.x + Math.cos(b.id * 2.1 + P.t * 0.03) * T.r * 0.4, tz = cof ? cof.z : T.z + Math.sin(b.id * 2.1 + P.t * 0.03) * T.r * 0.4;
+      const dx = tx - b.x, dz = tz - b.z, d = Math.hypot(dx, dz);
+      if (d > 1.2) { wx = dx / d; wz = dz / d; }
+      if (wx || wz) b.yaw += angDif(Math.atan2(-wx, -wz) - b.yaw) * Math.min(1, dt * 5);
+      b.pitch *= 0.9;
+    }
+    // Esquivar lo que tiene adelante.
+    for (const a of isla.arboles) { const dx = b.x - a.x, dz = b.z - a.z; if (Math.abs(dx) > 3 || Math.abs(dz) > 3) continue; const d = Math.hypot(dx, dz), m = a.rt + 2.2; if (d < m && d > 1e-3) { wx += (dx / d) * (1 - d / m) * 1.4; wz += (dz / d) * (1 - d / m) * 1.4; } }
+    for (const r of isla.rocas) { const dx = b.x - r.x, dz = b.z - r.z; if (Math.abs(dx) > 7 || Math.abs(dz) > 7) continue; const d = Math.hypot(dx, dz), m = r.radio + 2.5; if (d < m && d > 1e-3) { wx += (dx / d) * (1 - d / m) * 1.4; wz += (dz / d) * (1 - d / m) * 1.4; } }
+    // Trabado: si casi no avanzó, salta y rodea.
+    ia.chequeo -= dt;
+    if (ia.chequeo <= 0) { ia.chequeo = 1.2; if ((wx || wz) && Math.hypot(b.x - ia.px, b.z - ia.pz) < 1) { saltar = true; ia.lado *= -1; ia.desvio = 1.3; } ia.px = b.x; ia.pz = b.z; }
+    if (ia.desvio > 0) { ia.desvio -= dt; const t = wx; wx = -wz * ia.lado; wz = t * ia.lado; }
+    const l = Math.hypot(wx, wz); if (l > 1) { wx /= l; wz /= l; }
+    if (b.mun[b.arma] === 0) recargar(b);
+    return { wx, wz, saltar };
+  }
+
+  // ── el jugador ──
+  function asistencia(yo, dt, disparando) {
+    // En el celular, la mira se pega un poco al enemigo que tenés cerca del centro.
+    let mejor = null, mejorA = disparando ? 0.14 : 0.07;
+    for (const o of P.jugadores) {
+      if (o === yo || !o.vivo || o.estado === "cae") continue;
+      const m = boca(yo), dx = o.x - m.x, dy = o.y + 1.2 - m.y, dz = o.z - m.z, d = Math.hypot(dx, dz);
+      if (d > ARMAS[yo.arma].alcance) continue;
+      const a = Math.abs(angDif(Math.atan2(-dx, -dz) - yo.yaw)) + Math.abs(Math.atan2(dy, d) - yo.pitch) * 0.5;
+      if (a < mejorA && lineaLibre(ojo(yo), pecho(o))) { mejorA = a; mejor = { yaw: Math.atan2(-dx, -dz), pitch: Math.atan2(dy, d) }; }
+    }
+    if (mejor) { const k = Math.min(1, dt * (disparando ? 5 : 2)); yo.yaw += angDif(mejor.yaw - yo.yaw) * k; yo.pitch += (mejor.pitch - yo.pitch) * k; }
+  }
+  function controlJugador(yo, dt) {
+    const E = entrada, k = teclas;
+    if (P.fin && P.fin.gano) return { wx: 0, wz: 0 };
+    yo.yaw -= E.dYaw; yo.pitch = clamp(yo.pitch - E.dPitch, -1.25, 1.2); E.dYaw = 0; E.dPitch = 0;
+    if (E.mirar.activa) { yo.yaw -= E.mirar.dx * Math.abs(E.mirar.dx) * 2.8 * dt; yo.pitch = clamp(yo.pitch - E.mirar.dy * Math.abs(E.mirar.dy) * 1.7 * dt, -1.25, 1.2); }
+    if (k.has("ArrowLeft")) yo.yaw += 2.2 * dt; if (k.has("ArrowRight")) yo.yaw -= 2.2 * dt;
+    if (k.has("ArrowUp")) yo.pitch = Math.min(1.2, yo.pitch + 1.4 * dt); if (k.has("ArrowDown")) yo.pitch = Math.max(-1.25, yo.pitch - 1.4 * dt);
+    let ix = (k.has("KeyD") ? 1 : 0) - (k.has("KeyA") ? 1 : 0) + E.mx, iz = (k.has("KeyS") ? 1 : 0) - (k.has("KeyW") ? 1 : 0) + E.my;
+    const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
+    const s = Math.sin(yo.yaw), c = Math.cos(yo.yaw), wx = c * ix + s * iz, wz = -s * ix + c * iz;
+    const saltar = k.has("Space") || E.saltar; E.saltar = false;
+    if (E.cambiar !== null) { if (E.cambiar !== yo.arma) { yo.arma = E.cambiar; yo.recargando = 0; yo.cd = Math.max(yo.cd, 0.25); Sonido.toc(420, 0.4); } E.cambiar = null; }
+    if (E.recargar) { recargar(yo); E.recargar = false; }
+    if (E.muro) { construir(yo, "muro"); E.muro = false; }
+    if (E.rampa) { construir(yo, "rampa"); E.rampa = false; }
+    yo.apuntando = E.apuntar && yo.estado === "tierra";
+    const disparando = E.raton || E.dedo1 || E.dedo2;
+    if (tactil && yo.estado === "tierra") asistencia(yo, dt, disparando);
+    if (disparando && yo.estado === "tierra") disparar(yo);
+    return { wx, wz, saltar, corre: k.has("ShiftLeft") || k.has("ShiftRight"), abrir: saltar };
+  }
+
+  // ── un paso de la simulación ──
+  function paso(dt) {
+    P.t += dt;
+    const T = P.tormenta, yo = P.jugadores[0];
+    if (!P.fin) {
+      T.t -= dt;
+      if (!T.cerrando && T.t <= 0 && T.fase < FASES.length) {
+        const nr = FASES[T.fase];
+        let nx = T.x, nz = T.z;
+        for (let k = 0; k < 20; k++) { const a = Math.random() * Math.PI * 2, m = Math.random() * Math.max(0, T.r - nr) * 0.7, x = T.x + Math.cos(a) * m, z = T.z + Math.sin(a) * m; if (costa(x, z) > Math.min(40, nr)) { nx = x; nz = z; break; } }
+        T.desde = { x: T.x, z: T.z, r: T.r }; T.hacia = { x: nx, z: nz, r: nr }; T.cerrando = true; T.t = CIERRE;
+        avisar("¡La tormenta se cierra!", 2);
+      } else if (T.cerrando) {
+        const k = 1 - Math.max(0, T.t) / CIERRE;
+        T.x = lerp(T.desde.x, T.hacia.x, k); T.z = lerp(T.desde.z, T.hacia.z, k); T.r = lerp(T.desde.r, T.hacia.r, k);
+        if (T.t <= 0) { T.cerrando = false; T.fase++; T.t = CICLO_TORMENTA; }
+      }
+    }
+    for (const p of P.jugadores) {
+      p.cd = Math.max(0, p.cd - dt); p.golpeado = Math.max(0, p.golpeado - dt); p.patada = Math.max(0, p.patada - dt * 6);
+      if (p.recargando > 0) { p.recargando -= dt; if (p.recargando <= 0) { const A = ARMAS[p.arma], n = Math.min(A.cargador - p.mun[p.arma], p.reserva[p.arma]); p.mun[p.arma] += n; p.reserva[p.arma] -= n; } }
+      if (!p.vivo) {
+        p.muerte += dt;
+        if (!p.dejoBotin && p.muerte > 1.2) { p.dejoBotin = true; const c = { x: p.x, z: p.z, y: sueloEn(p.x, p.z, p.y + 1), rot: p.yaw, abierto: false, abre: 0, botin: true }; c.malla = mallaCofre(c, true); P.cofres.push(c); }
+        continue;
+      }
+      const ctrl = p.bot ? pensarBot(p, dt) : controlJugador(p, dt);
+      mover(p, ctrl.wx, ctrl.wz, dt, ctrl.saltar, ctrl.corre, ctrl.abrir);
+      if (Math.hypot(p.x - T.x, p.z - T.z) > T.r && p.estado === "tierra") { p.tormentaAcum += dt; if (p.tormentaAcum >= 1) { p.tormentaAcum -= 1; herir(p, DANO_TORMENTA, null, false, true); } }
+      else p.tormentaAcum = 0;
+      if (p.vivo && p.estado === "tierra") for (const c of P.cofres) if (!c.abierto && Math.abs(c.x - p.x) < 2 && Math.abs(c.z - p.z) < 2 && Math.abs(c.y - p.y) < 2 && Math.hypot(c.x - p.x, c.z - p.z) < 1.9) abrirCofre(c, p);
+    }
+    // Entrar a un pueblo: el nombre en grande, como en el original.
+    if (yo.vivo && yo.estado === "tierra") { const pu = isla.pueblos.find((q) => Math.hypot(q.x - yo.x, q.z - yo.z) < q.radio + 6); if (pu && pu !== P.lugar) avisar(pu.nombre, 2.4); P.lugar = pu || null; }
+    const vivos = P.jugadores.filter((p) => p.vivo);
+    if (!P.fin) {
+      if (!yo.vivo) { P.fin = { gano: false, puesto: vivos.length + 1, bajas: yo.bajas, tiempo: P.t, asesino: P.asesino }; Sonido.derrota(); }
+      else if (vivos.length === 1) { P.fin = { gano: true, puesto: 1, bajas: yo.bajas, tiempo: P.t }; yo.baila = true; Sonido.victoria(); lanzarConfeti(); }
+    }
+    Sonido.tormenta(yo.vivo && Math.hypot(yo.x - T.x, yo.z - T.z) > T.r ? 1 : 0);
+    Sonido.viento(yo.vivo && yo.estado !== "tierra" ? (yo.estado === "cae" ? 1 : 0.5) : 0);
+    for (const s of P.estructuras) if (s.crece < 1) { s.crece = Math.min(1, s.crece + dt * 4); s.malla.scale.y = 0.2 + 0.8 * s.crece; }
+    for (const c of P.cofres) { if (c.abierto && c.abre < 1) { c.abre = Math.min(1, c.abre + dt * 3); c.malla.tapa.rotation.x = c.abre * 1.9; } if (!c.abierto) c.malla.aura.material.opacity = 0.5 + Math.sin(P.t * 3 + c.x) * 0.2; }
+    P.feed = P.feed.filter((f) => (f.t -= dt) > 0);
+    if (P.aviso && (P.aviso.t -= dt) <= 0) P.aviso = null;
+    P.danoFlash = Math.max(0, P.danoFlash - dt); P.sacudida = Math.max(0, P.sacudida - dt * 25);
+    if (P.fin && !P.finAvisado) { P.finAvisado = true; setTimeout(() => alFin(P.fin), P.fin.gano ? 1200 : 1800); }
+    // El autobús sigue su ruta y se va.
+    P.bus.x += P.bus.vx * dt; P.bus.z += P.bus.vz * dt; bus.position.set(P.bus.x, P.bus.y, P.bus.z); bus.rotation.y = Math.atan2(P.bus.vx, P.bus.vz); bus.visible = Math.hypot(P.bus.x, P.bus.z) < 420;
+  }
+
+  // ── efectos ──
+  const colTmp = new THREE.Color();
+  function chispas(x, y, z, n, colores, vel = 4, vida = 0.5, grav = 9) {
+    if (Math.hypot(x - camara.position.x, z - camara.position.z) > 160) return;
+    for (let i = 0; i < n && particulas.length < MAXP; i++) { colTmp.setHex(colores[i % colores.length]); particulas.push({ x, y, z, vx: (Math.random() - 0.5) * vel * 2, vy: Math.random() * vel, vz: (Math.random() - 0.5) * vel * 2, vida: vida * (0.6 + Math.random() * 0.6), r: colTmp.r, g: colTmp.g, b: colTmp.b, grav }); }
+  }
+  function trazo(a, r) {
+    const t = trazos.find((q) => q.vida <= 0); if (!t) return;
+    const len = Math.hypot(r.x - a.x, r.y - a.y, r.z - a.z); if (len < 0.5) return;
+    t.m.position.set(a.x, a.y, a.z); t.m.lookAt(r.x, r.y, r.z); t.m.scale.set(0.035, 0.035, len); t.m.visible = true; t.m.material.opacity = 0.9; t.vida = 0.07;
+  }
+  function fogonazoEn(a, tam) { const f = flashes.find((q) => q.vida <= 0); if (!f) return; f.s.position.set(a.x, a.y, a.z); f.s.scale.setScalar(tam); f.s.material.rotation = Math.random() * 6; f.s.visible = true; f.vida = 0.05; }
+  function efectos(dt) {
+    let i = 0;
+    for (let k = particulas.length - 1; k >= 0; k--) { const q = particulas[k]; q.vida -= dt; if (q.vida <= 0) { particulas.splice(k, 1); continue; } q.vy -= q.grav * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; }
+    for (const q of particulas) { partPos[i * 3] = q.x; partPos[i * 3 + 1] = q.y; partPos[i * 3 + 2] = q.z; partCol[i * 3] = q.r; partCol[i * 3 + 1] = q.g; partCol[i * 3 + 2] = q.b; i++; }
+    for (; i < MAXP; i++) partPos[i * 3 + 1] = -9999;
+    geoP.attributes.position.needsUpdate = true; geoP.attributes.color.needsUpdate = true;
+    for (const t of trazos) if (t.vida > 0) { t.vida -= dt; t.m.material.opacity = Math.max(0, t.vida / 0.07) * 0.9; if (t.vida <= 0) t.m.visible = false; }
+    for (const f of flashes) if (f.vida > 0) { f.vida -= dt; if (f.vida <= 0) f.s.visible = false; }
+    luzBoca.intensity = Math.max(0, luzBoca.intensity - dt * 120);
+  }
+  function lanzarConfeti() {
+    const cols = ["#ffc62e", "#ff5d8f", "#3cb4ff", "#4ee06a", "#b46cff", "#ffffff"];
+    P.confeti = Array.from({ length: 240 }, (_, i) => ({ x: Math.random(), y: -Math.random() * 1.2, vx: (Math.random() - 0.5) * 0.08, vy: 0.12 + Math.random() * 0.22, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10, c: cols[i % cols.length], w: 6 + Math.random() * 8 }));
+  }
+
+  // ── cámara ──
+  let orbita = 0;
+  function camaraMenu(dt) {
+    orbita += dt * 0.05;
+    camara.position.set(Math.cos(orbita) * 215, 78, Math.sin(orbita) * 215); camara.lookAt(0, 6, 0);
+    if (camara.fov !== 60) { camara.fov = 60; camara.updateProjectionMatrix(); }
+  }
+  function camaraJuego(dt) {
+    const yo = P.jugadores[0];
+    if (P.fin && P.fin.gano) {
+      P.orbita += dt * 0.45;
+      camara.position.set(yo.x + Math.sin(P.orbita) * 4.6, yo.y + 2, yo.z + Math.cos(P.orbita) * 4.6); camara.lookAt(yo.x, yo.y + 1.1, yo.z); return;
+    }
+    const aire = yo.estado !== "tierra", apunta = yo.apuntando;
+    distCam = lerp(distCam, aire ? 6.5 : apunta ? 1.9 : 3.3, Math.min(1, dt * 6));
+    const lado = aire ? 0 : apunta ? 0.6 : 0.75, alto = aire ? 2.2 : 1.62;
+    const d = dirDe(yo.yaw, yo.pitch), foco = { x: yo.x + Math.cos(yo.yaw) * lado, y: yo.y + alto, z: yo.z - Math.sin(yo.yaw) * lado };
+    if (!yo.vivo) foco.y = yo.y + 1 + Math.min(3, yo.muerte * 1.5);
+    const r = rayo(foco, { x: -d.x, y: -d.y, z: -d.z }, distCam, yo.id, false, false), dd = Math.max(0.6, Math.min(distCam, r.t - 0.25));
+    let cx = foco.x - d.x * dd, cy = foco.y - d.y * dd, cz = foco.z - d.z * dd;
+    cy = Math.max(cy, terreno(cx, cz) + 0.35);
+    const s = P.sacudida * 0.012; cx += (Math.random() - 0.5) * s; cy += (Math.random() - 0.5) * s;
+    camara.position.set(cx, cy, cz); camara.rotation.set(yo.pitch, yo.yaw, 0);
+    const fov = apunta ? 52 : aire ? 78 : 72; if (Math.abs(camara.fov - fov) > 0.1) { camara.fov = lerp(camara.fov, fov, Math.min(1, dt * 10)); camara.updateProjectionMatrix(); }
+  }
+
+  // ── capa 2D: números de daño y confeti ──
+  const g2 = capa.getContext("2d");
+  function dibujarCapa(dt) {
+    const w = capa.clientWidth, hh = capa.clientHeight;
+    g2.clearRect(0, 0, w, hh);
+    if (!P) return;
+    g2.textAlign = "center"; g2.lineJoin = "round";
+    P.numeros = P.numeros.filter((n) => (n.t -= dt) > 0);
+    for (const n of P.numeros) {
+      v3.set(n.x, n.y + (0.9 - n.t) * 0.8, n.z).project(camara); if (v3.z > 1) continue;
+      const x = (v3.x * 0.5 + 0.5) * w + n.dx * (0.9 - n.t), y = (-v3.y * 0.5 + 0.5) * hh;
+      g2.globalAlpha = Math.min(1, n.t * 3); g2.font = `400 ${n.color === "#ffd84a" ? 30 : 24}px "Luckiest Guy", "Arial Black", sans-serif`;
+      g2.lineWidth = 5; g2.strokeStyle = "rgba(0,0,0,0.75)"; g2.strokeText(n.texto, x, y); g2.fillStyle = n.color; g2.fillText(n.texto, x, y);
+    }
+    g2.globalAlpha = 1;
+    for (const c of P.confeti) {
+      c.vy = Math.min(0.45, c.vy + 0.15 * dt); c.x += c.vx * dt + Math.sin(c.rot) * 0.02 * dt; c.y += c.vy * dt; c.rot += c.vr * dt; if (c.y > 1.1) { c.y = -0.1; c.x = Math.random(); }
+      g2.save(); g2.translate(c.x * w, c.y * hh); g2.rotate(c.rot); g2.fillStyle = c.c; g2.fillRect(-c.w / 2, -c.w / 4, c.w, c.w / 2); g2.restore();
+    }
+  }
+
+  // ── minimapa ──
+  let lienzoMini = null, lienzoGrande = null, elMira = null, miraT = 0;
+  function dibujarMapa(cv) {
+    const S = cv.width, g = cv.getContext("2d"), a = (v) => ((v + 200) / 400) * S, T = P ? P.tormenta : null;
+    g.drawImage(imgMapa, 0, 0, S, S);
+    g.font = `800 ${Math.max(9, S / 22)}px Nunito, sans-serif`; g.textAlign = "center"; g.fillStyle = "#fff"; g.strokeStyle = "rgba(0,0,0,0.6)"; g.lineWidth = 3;
+    for (const pu of isla.pueblos) { g.strokeText(pu.nombre, a(pu.x), a(pu.z) - 4); g.fillText(pu.nombre, a(pu.x), a(pu.z) - 4); }
+    if (!P) return;
+    g.fillStyle = "rgba(128, 50, 240, 0.45)"; g.beginPath(); g.rect(0, 0, S, S); g.arc(a(T.x), a(T.z), (T.r / 400) * S, 0, Math.PI * 2, true); g.fill("evenodd");
+    g.strokeStyle = "rgba(200,150,255,0.95)"; g.lineWidth = 2; g.beginPath(); g.arc(a(T.x), a(T.z), (T.r / 400) * S, 0, Math.PI * 2); g.stroke();
+    if (T.cerrando && T.hacia) { g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.arc(a(T.hacia.x), a(T.hacia.z), Math.max(1, (T.hacia.r / 400) * S), 0, Math.PI * 2); g.stroke(); }
+    else if (T.fase < FASES.length && !T.cerrando) { g.setLineDash([4, 4]); g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 1.5; g.beginPath(); g.arc(a(T.x), a(T.z), Math.max(1, (FASES[T.fase] / 400) * S), 0, Math.PI * 2); g.stroke(); g.setLineDash([]); }
+    if (P.t < 25) { g.strokeStyle = "rgba(255,255,255,0.8)"; g.setLineDash([6, 5]); g.beginPath(); g.moveTo(a(P.bus.x - P.bus.vx * 40), a(P.bus.z - P.bus.vz * 40)); g.lineTo(a(P.bus.x + P.bus.vx * 40), a(P.bus.z + P.bus.vz * 40)); g.stroke(); g.setLineDash([]); }
+    const yo = P.jugadores[0], ang = Math.atan2(-Math.cos(yo.yaw), -Math.sin(yo.yaw));
+    g.save(); g.translate(a(yo.x), a(yo.z)); g.rotate(ang); g.fillStyle = "#ffc62e"; g.strokeStyle = "#1a1a1a"; g.lineWidth = 1.5;
+    const k = Math.max(1, S / 170); g.beginPath(); g.moveTo(8 * k, 0); g.lineTo(-5 * k, 5 * k); g.lineTo(-2 * k, 0); g.lineTo(-5 * k, -5 * k); g.closePath(); g.fill(); g.stroke(); g.restore();
+  }
+  function marcarAcierto(cabeza) {
+    if (!elMira) return;
+    elMira.classList.add("pego"); elMira.classList.toggle("cabeza", !!cabeza); miraT = 0.14;
+  }
+
+  // ── calidad ──
+  function calidad(nombre) {
+    calidadActual = nombre; const C = CALIDADES[nombre];
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, C.dpr));
+    sol.castShadow = C.sombra > 0;
+    if (C.sombra > 0 && sol.shadow.mapSize.x !== C.sombra) { sol.shadow.mapSize.set(C.sombra, C.sombra); if (sol.shadow.map) { sol.shadow.map.dispose(); sol.shadow.map = null; } }
+    pasto.count = Math.min(isla.pasto.length, C.pasto);
+    // En Baja, sin la luz del cielo como mapa de entorno (es lo que más cuesta en placas flojas).
+    escena.environment = C.sombra > 0 ? entorno : null; hemi.intensity = C.sombra > 0 ? 0.55 : 1.25;
+    ajustar();
+  }
+  function ajustar() {
+    const w = lienzo.clientWidth || innerWidth, hh = lienzo.clientHeight || innerHeight;
+    renderer.setSize(w, hh, false); camara.aspect = w / hh; camara.updateProjectionMatrix();
+    const dpr = Math.min(2, window.devicePixelRatio || 1); capa.width = w * dpr; capa.height = hh * dpr; g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // ── estado para el HUD ──
+  function estadoHud() {
+    const yo = P.jugadores[0], T = P.tormenta;
+    return {
+      vida: Math.ceil(yo.vida), escudo: Math.ceil(yo.escudo), madera: yo.madera, arma: yo.arma, mun: yo.mun.slice(), reserva: yo.reserva.slice(), recargando: yo.recargando > 0,
+      vivos: P.jugadores.filter((p) => p.vivo).length, bajas: yo.bajas, vivo: yo.vivo, estado: yo.estado, altura: Math.max(0, Math.round(yo.y - sueloEn(yo.x, yo.z, yo.y))),
+      tormenta: { t: Math.max(0, Math.ceil(T.t)), cerrando: T.cerrando, fin: T.fase >= FASES.length }, feed: P.feed.map((f) => ({ texto: f.texto, yo: f.yo, id: f.id })),
+      aviso: P.aviso && P.aviso.texto, dano: P.danoFlash > 0.3 ? P.danoId : 0, enTormenta: yo.vivo && Math.hypot(yo.x - T.x, yo.z - T.z) > T.r, apuntando: yo.apuntando, fin: !!P.fin,
+    };
+  }
+
+  // ── entrada: teclado y mouse ──
+  let bloqueado = false, sinBloqueo = false;
+  const abajo = (e) => {
+    if (modo !== "juego" || e.repeat) return;
+    teclas.add(e.code);
+    if (e.code === "KeyQ") entrada.muro = true; else if (e.code === "KeyE") entrada.rampa = true; else if (e.code === "KeyR") entrada.recargar = true;
+    else if (e.code === "Digit1") entrada.cambiar = 0; else if (e.code === "Digit2") entrada.cambiar = 1; else if (e.code === "KeyM") alMapa();
+    if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+  };
+  const arriba = (e) => teclas.delete(e.code);
+  const suelta = () => { teclas.clear(); entrada.raton = false; entrada.apuntar = false; };
+  const ratonAbajo = (e) => {
+    if (modo !== "juego" || e.pointerType === "touch") return;
+    Sonido.iniciar();
+    if (!bloqueado && !sinBloqueo && lienzo.requestPointerLock) { try { const pr = lienzo.requestPointerLock(); if (pr && pr.catch) pr.catch(() => { sinBloqueo = true; }); } catch (err) { sinBloqueo = true; } }
+    if (e.button === 0) entrada.raton = true; else if (e.button === 2) entrada.apuntar = true;
+  };
+  const ratonArriba = (e) => { if (e.button === 0) entrada.raton = false; else if (e.button === 2) entrada.apuntar = false; };
+  const ratonMueve = (e) => { if (modo !== "juego" || e.pointerType === "touch") return; if (bloqueado || sinBloqueo) { entrada.dYaw += (e.movementX || 0) * 0.0024; entrada.dPitch += (e.movementY || 0) * 0.0024; } };
+  const rueda = (e) => { if (modo === "juego" && P) entrada.cambiar = (P.jugadores[0].arma + 1) % 2; };
+  const cambioBloqueo = () => { bloqueado = document.pointerLockElement === lienzo; alBloqueo(bloqueado || sinBloqueo); };
+  const errorBloqueo = () => { sinBloqueo = true; alBloqueo(true); };
+  const toque = (e) => { if (e.pointerType === "touch" && !tactil) { tactil = true; alTactil(true); } };
+  addEventListener("keydown", abajo); addEventListener("keyup", arriba); addEventListener("blur", suelta); addEventListener("resize", ajustar);
+  lienzo.addEventListener("pointerdown", ratonAbajo); addEventListener("pointerup", ratonArriba); addEventListener("pointermove", ratonMueve); addEventListener("pointerdown", toque, true);
+  lienzo.addEventListener("wheel", rueda, { passive: true }); lienzo.addEventListener("contextmenu", (e) => e.preventDefault());
+  document.addEventListener("pointerlockchange", cambioBloqueo); document.addEventListener("pointerlockerror", errorBloqueo);
+
+  // ── el bucle ──
+  let ultimo = performance.now(), cuadro = 0, idA = 0;
+  function bucle(ahora) {
+    idA = requestAnimationFrame(bucle);
+    const dt = Math.min(0.05, (ahora - ultimo) / 1000); ultimo = ahora; cuadro++;
+    uTiempo.value += dt; agua.material.uniforms.uT.value = uTiempo.value;
+    let foco;
+    if (modo === "juego" && P) {
+      paso(dt);
+      for (const p of P.jugadores) animar(p, dt, uTiempo.value);
+      camaraJuego(dt);
+      const yo = P.jugadores[0]; foco = yo;
+      const T = P.tormenta; tormenta.visible = true; tormenta.scale.set(Math.max(0.1, T.r), 320, Math.max(0.1, T.r)); tormenta.position.set(T.x, 100, T.z);
+      // Medir cómo anda en los primeros segundos: si va trabado, bajar los gráficos.
+      const F = P.fps; if (!F.listo && P.t > 1) { F.t += dt; F.n++; if (F.t > 4) { F.listo = true; const fps = F.n / F.t; if (fps < 28 && calidadActual !== "baja") alCalidad(calidadActual === "alta" ? "media" : "baja", Math.round(fps)); } }
+    } else { camaraMenu(dt); foco = { x: 0, y: 0, z: 0 }; tormenta.visible = false; }
+    for (const n of nubes) { n.position.x += dt * 3; if (n.position.x > 380) n.position.x = -380; }
+    efectos(dt);
+    sol.target.position.set(foco.x, foco.y, foco.z); sol.position.set(foco.x + SOL.x * 150, foco.y + SOL.y * 150, foco.z + SOL.z * 150);
+    cielo.position.copy(camara.position);
+    renderer.render(escena, camara);
+    dibujarCapa(dt);
+    if (miraT > 0 && (miraT -= dt) <= 0 && elMira) elMira.classList.remove("pego", "cabeza");
+    if (modo === "juego" && P) {
+      if (cuadro % 6 === 0) alHud(estadoHud());
+      if (cuadro % 5 === 0) { if (lienzoMini) dibujarMapa(lienzoMini); if (lienzoGrande) dibujarMapa(lienzoGrande); }
+    }
+  }
+  calidad("alta"); ajustar(); idA = requestAnimationFrame(bucle);
+
   return {
-    mundo, suelo: dibujarSuelo(mundo), jugadores, balas: [], particulas: [], confeti: [],
-    tormenta: { x: MUNDO / 2, y: MUNDO / 2, r: 1150, desde: { x: MUNDO / 2, y: MUNDO / 2, r: 1150 }, hacia: null, fase: 0, t: CICLO_TORMENTA, cerrando: false },
-    feed: [], t: 0, fin: null, sacudida: 0, nubes: Array.from({ length: 9 }, (_, i) => ({ x: r() * MUNDO * 1.4 - 200, y: r() * MUNDO, s: 0.7 + r() * 0.8 })),
+    entrada,
+    empezar() { nuevaPartida(); modo = "juego"; distCam = 3.3; camara.fov = 72; camara.updateProjectionMatrix(); alHud(estadoHud()); },
+    menu() { modo = "menu"; if (P) { for (const p of P.jugadores) p.malla.raiz.visible = false; P.confeti = []; P.numeros = []; } bus.visible = false; if (document.exitPointerLock && bloqueado) document.exitPointerLock(); Sonido.tormenta(0); Sonido.viento(0); },
+    calidad, tactil(v) { tactil = v; },
+    ponerMinimapa(c) { lienzoMini = c; if (c) { c.width = c.height = 256; } },
+    ponerMapaGrande(c) { lienzoGrande = c; if (c) { c.width = c.height = 640; dibujarMapa(c); } },
+    ponerMira(el) { elMira = el; },
+    get partida() { return P; },
+    // Para las pruebas: avanza la simulación sin dibujar (el navegador de prueba no tiene placa de video).
+    simular(seg) { for (let t = 0; t < seg && modo === "juego"; t += 1 / 30) { paso(1 / 30); for (const p of P.jugadores) animar(p, 1 / 30, uTiempo.value); camaraJuego(1 / 30); efectos(1 / 30); } },
+    destruir() { cancelAnimationFrame(idA); removeEventListener("keydown", abajo); removeEventListener("keyup", arriba); removeEventListener("blur", suelta); removeEventListener("resize", ajustar); removeEventListener("pointerup", ratonArriba); removeEventListener("pointermove", ratonMueve); removeEventListener("pointerdown", toque, true); renderer.dispose(); },
   };
 }
 
-// ── construcción ──
-// Un muro va en el borde de la celda del jugador que da hacia donde apunta; una
-// rampa, en la celda de al lado, subiendo hacia allá.
-function direccion4(ang) { const a = ((ang % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2); return Math.round(a / (Math.PI / 2)) % 4; } // 0 +x, 1 +y, 2 -x, 3 -y
-function construir(p, P, tipo) {
-  if (p.madera < COSTO || !p.vivo) return false;
-  const cx = Math.floor(p.x / CELDA), cy = Math.floor(p.y / CELDA), d = direccion4(p.ang);
-  const E = P.mundo.estructuras;
-  let s;
-  if (tipo === "muro") {
-    const bordes = [[cx + 1, cy, cx + 1, cy + 1], [cx, cy + 1, cx + 1, cy + 1], [cx, cy, cx, cy + 1], [cx, cy, cx + 1, cy]][d];
-    s = { tipo, ax: bordes[0] * CELDA, ay: bordes[1] * CELDA, bx: bordes[2] * CELDA, by: bordes[3] * CELDA, vida: VIDA_MURO, crece: 0, dueno: p.id };
-    if (E.some((o) => o.tipo === "muro" && o.ax === s.ax && o.ay === s.ay && o.bx === s.bx && o.by === s.by)) return false;
-  } else {
-    const [dx, dy] = [[1, 0], [0, 1], [-1, 0], [0, -1]][d];
-    s = { tipo, cx: cx + dx, cy: cy + dy, dir: d, vida: VIDA_MURO, crece: 0, dueno: p.id };
-    if (E.some((o) => o.tipo === "rampa" && o.cx === s.cx && o.cy === s.cy)) return false;
-  }
-  p.madera -= COSTO; E.push(s);
-  const [mx, my] = centroEstructura(s);
-  chispas(P, mx, my, 30, 14, ["#d99a55", "#f0c07a", "#8a5a2b"]);
-  if (!p.bot) Sonido.toc(); else sonidoLejos(P, p, () => Sonido.toc(190, 0.4));
-  return true;
-}
-const centroEstructura = (s) => (s.tipo === "muro" ? [(s.ax + s.bx) / 2, (s.ay + s.by) / 2] : [(s.cx + 0.5) * CELDA, (s.cy + 0.5) * CELDA]);
-// Altura sobre una rampa (0 en la punta baja, ALTO_MURO en la alta).
-function alturaRampa(x, y, E) {
-  for (const s of E) {
-    if (s.tipo !== "rampa") continue;
-    const u = x / CELDA - s.cx, v = y / CELDA - s.cy;
-    if (u < 0 || u > 1 || v < 0 || v > 1) continue;
-    const k = [u, v, 1 - u, 1 - v][s.dir];
-    return k * ALTO_MURO * s.crece;
-  }
-  return 0;
-}
-
-// ── choques ──
-function empujarFuera(o, P) {
-  const W = P.mundo;
-  for (const c of W.arboles) { const d = dist(o.x, o.y, c.x, c.y), m = c.r * 0.55 + RADIO_J; if (d < m && d > 0.01) { o.x = c.x + ((o.x - c.x) / d) * m; o.y = c.y + ((o.y - c.y) / d) * m; } }
-  for (const c of W.rocas) { const d = dist(o.x, o.y, c.x, c.y), m = c.r + RADIO_J - 4; if (d < m && d > 0.01) { o.x = c.x + ((o.x - c.x) / d) * m; o.y = c.y + ((o.y - c.y) / d) * m; } }
-  for (const s of W.estructuras) {
-    if (s.tipo !== "muro") continue;
-    // Un muro es un segmento con grosor.
-    const vx = s.bx - s.ax, vy = s.by - s.ay, t = clamp(((o.x - s.ax) * vx + (o.y - s.ay) * vy) / (vx * vx + vy * vy), 0, 1);
-    const px = s.ax + vx * t, py = s.ay + vy * t, d = dist(o.x, o.y, px, py), m = RADIO_J + 6;
-    if (d < m && d > 0.01) { o.x = px + ((o.x - px) / d) * m; o.y = py + ((o.y - py) / d) * m; }
-  }
-  // El agua: no se sale de la isla (la arena sí se pisa).
-  const dx = o.x - MUNDO / 2, dy = o.y - MUNDO / 2, a = Math.atan2(dy, dx), lim = radioIsla(a) - 12;
-  if (Math.hypot(dx, dy) > lim) { o.x = MUNDO / 2 + Math.cos(a) * lim; o.y = MUNDO / 2 + Math.sin(a) * lim; }
-}
-function cruzaSegmento(x1, y1, x2, y2, s) {
-  const d = (x2 - x1) * (s.by - s.ay) - (y2 - y1) * (s.bx - s.ax);
-  if (Math.abs(d) < 1e-6) return false;
-  const u = ((s.ax - x1) * (s.by - s.ay) - (s.ay - y1) * (s.bx - s.ax)) / d, v = ((s.ax - x1) * (y2 - y1) - (s.ay - y1) * (x2 - x1)) / d;
-  return u >= 0 && u <= 1 && v >= 0 && v <= 1;
-}
-// ¿Hay algo que tape el tiro entre dos puntos? (para la puntería de los bots)
-function lineaLibre(P, x1, y1, x2, y2) {
-  for (const s of P.mundo.estructuras) if (s.tipo === "muro" && cruzaSegmento(x1, y1, x2, y2, s)) return false;
-  for (const c of P.mundo.rocas) { const t = clamp(((c.x - x1) * (x2 - x1) + (c.y - y1) * (y2 - y1)) / ((x2 - x1) ** 2 + (y2 - y1) ** 2 || 1), 0, 1); if (dist(c.x, c.y, x1 + (x2 - x1) * t, y1 + (y2 - y1) * t) < c.r) return false; }
-  return true;
-}
-
-// ── tiros ──
-function disparar(p, P) {
-  const A = ARMAS[p.arma];
-  if (p.cd > 0 || p.recargando > 0 || !p.vivo) return;
-  if (p.mun[p.arma] <= 0) { recargar(p); return; }
-  p.cd = A.cadencia * (p.bot ? 1.8 : 1); p.mun[p.arma]--; // los bots tiran más despacio
-  const bx = p.x + Math.cos(p.ang) * 26, by = p.y + Math.sin(p.ang) * 26;
-  for (let k = 0; k < A.perdigones; k++) {
-    const a = p.ang + (Math.random() - 0.5) * A.disp * 2 * (p.bot ? 1 + p.ia.puntera : 1);
-    P.balas.push({ x: bx, y: by, vx: Math.cos(a) * A.vel, vy: Math.sin(a) * A.vel, dano: A.dano, dueno: p.id, vida: A.alcance / A.vel, alto: p.z > ALTO_MURO * 0.5, color: p.arma ? "#ffdd55" : "#fff6b0" });
-  }
-  // Fogonazo.
-  chispas(P, bx, by, 18, p.arma ? 10 : 4, ["#fff3a0", "#ffb347"], 0.12);
-  if (!p.bot) { (p.arma ? Sonido.bum : Sonido.pew)(1, 0); P.sacudida = Math.max(P.sacudida, p.arma ? 7 : 2); }
-  else sonidoLejos(P, p, (v, pan) => (p.arma ? Sonido.bum(v, pan) : Sonido.pew(v, pan, true)));
-  if (p.mun[p.arma] === 0) recargar(p);
-}
-function recargar(p) {
-  const A = ARMAS[p.arma];
-  if (p.recargando > 0 || p.mun[p.arma] >= A.cargador || p.reserva[p.arma] <= 0) return;
-  p.recargando = A.recarga;
-  if (!p.bot) Sonido.recarga();
-}
-function sonidoLejos(P, p, fn) {
-  const yo = P.jugadores[0], d = dist(p.x, p.y, yo.x, yo.y);
-  if (d > 900) return;
-  fn(clamp(1 - d / 900, 0, 1) * 0.7, clamp((p.x - yo.x - (p.y - yo.y)) / 600, -1, 1));
-}
-function herir(v, dano, P, autor) {
-  if (!v.vivo) return;
-  const aEscudo = Math.min(v.escudo, dano); v.escudo -= aEscudo; v.vida -= dano - aEscudo; v.golpeado = 0.4;
-  if (!v.bot) { P.sacudida = Math.max(P.sacudida, 6); P.danoFlash = 0.4; Sonido.golpe(); }
-  if (autor === 0 && v.bot) Sonido.acierto();
-  if (v.bot && autor !== undefined && autor >= 0) v.ia.atacante = autor;
-  if (v.vida <= 0) {
-    v.vida = 0; v.vivo = false;
-    chispas(P, v.x, v.y, 30, 40, [v.color.ropa, "#ffffff", "#ffd166", v.color.pelo], 0.8, 260);
-    const quien = autor === -1 ? "La tormenta" : P.jugadores[autor] ? P.jugadores[autor].nombre : "?";
-    if (autor >= 0 && P.jugadores[autor]) P.jugadores[autor].bajas++;
-    P.feed.unshift({ texto: `${quien} ${autor === -1 ? "se llevó a" : "eliminó a"} ${v.nombre}`, yo: autor === 0 || !v.bot, t: 6 });
-    if (autor === 0) Sonido.eliminado();
-    // Lo que tenía queda tirado como un cofre abierto de botín.
-    if (v.bot) P.mundo.cofres.push({ x: v.x, y: v.y, abierto: false, botin: true, brillo: 0 });
-  }
-}
-
-// ── partículas ──
-function chispas(P, x, y, z, n, colores, vida = 0.5, vel = 160) {
-  if (P.particulas.length > 700) return;
-  for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, s = vel * (0.3 + Math.random());
-    P.particulas.push({ x, y, z, vx: Math.cos(a) * s, vy: Math.sin(a) * s, vz: 80 + Math.random() * 180, vida: vida * (0.6 + Math.random() * 0.8), max: vida, color: colores[i % colores.length], t: 2 + Math.random() * 3 });
-  }
-}
-
-// ── la IA ──
-function pensarBot(b, P, dt) {
-  const ia = b.ia, T = P.tormenta, W = P.mundo;
-  ia.t -= dt; ia.muro -= dt;
-  let mx = 0, my = 0;
-  // El enemigo más cerca: a vos te persiguen si estás a menos de 400; entre bots, también.
-  let enemigo = null, dMin = 400;
-  for (const o of P.jugadores) { if (o === b || !o.vivo) continue; const d = dist(b.x, b.y, o.x, o.y); if (d < dMin) { dMin = d; enemigo = o; } }
-  if (!enemigo && ia.atacante !== undefined && P.jugadores[ia.atacante] && P.jugadores[ia.atacante].vivo && dist(b.x, b.y, P.jugadores[ia.atacante].x, P.jugadores[ia.atacante].y) < 650) enemigo = P.jugadores[ia.atacante];
-  // Los primeros segundos nadie pelea: tiempo para lootear.
-  if (P.t < 10) enemigo = null;
-  // Tardan un poco en reaccionar cuando te ven.
-  ia.visto = enemigo ? (ia.visto || 0) + dt : 0;
-  const fueraTormenta = dist(b.x, b.y, T.x, T.y) > T.r - 60;
-  if (fueraTormenta) {
-    // Primero salir de la tormenta.
-    const a = Math.atan2(T.y - b.y, T.x - b.x); mx = Math.cos(a); my = Math.sin(a); ia.estado = "huye";
-  } else if (enemigo) {
-    ia.estado = "pelea";
-    const d = dist(b.x, b.y, enemigo.x, enemigo.y), a = Math.atan2(enemigo.y - b.y, enemigo.x - b.x);
-    // Mantiene distancia según el arma y camina de costado.
-    const ideal = b.arma === 1 ? 140 : 260;
-    const acerca = d > ideal + 40 ? 1 : d < ideal - 40 ? -1 : 0;
-    if (ia.t <= 0) { ia.t = 1 + Math.random() * 1.5; ia.lado *= -1; }
-    mx = Math.cos(a) * acerca + Math.cos(a + Math.PI / 2) * ia.lado * 0.7; my = Math.sin(a) * acerca + Math.sin(a + Math.PI / 2) * ia.lado * 0.7;
-    // Elige arma: escopeta de cerca, rifle de lejos.
-    const quiere = d < 170 && b.mun[1] + b.reserva[1] > 0 ? 1 : 0;
-    if (quiere !== b.arma && b.recargando <= 0) b.arma = quiere;
-    // Apunta con un poco de demora y error.
-    const apunta = a + Math.sin(P.t * 3 + b.id) * 0.08;
-    b.ang += angDif(apunta - b.ang) * Math.min(1, dt * 7);
-    if (Math.abs(angDif(apunta - b.ang)) < 0.25 && lineaLibre(P, b.x, b.y, enemigo.x, enemigo.y) && d < ARMAS[b.arma].alcance * 0.95 && ia.visto > 0.7) disparar(b, P);
-    // Si le pegan y tiene madera, levanta un muro entre los dos.
-    if (b.golpeado > 0.2 && ia.muro <= 0 && b.madera >= COSTO && b.vida + b.escudo < 140) { const guarda = b.ang; b.ang = a; construir(b, P, Math.random() < 0.25 ? "rampa" : "muro"); b.ang = guarda; ia.muro = 2.5 + Math.random() * 2; }
-  } else {
-    // Botín: el cofre sin abrir más cerca (que esté adentro de la zona); si no hay, al centro de la zona.
-    let cof = null, dc = 900;
-    for (const c of W.cofres) { if (c.abierto) continue; const d = dist(b.x, b.y, c.x, c.y); if (d < dc && dist(c.x, c.y, T.x, T.y) < T.r - 40) { dc = d; cof = c; } }
-    ia.estado = cof ? "botin" : "zona";
-    const tx = cof ? cof.x : T.x + Math.cos(b.id * 2.1 + P.t * 0.05) * T.r * 0.4, ty = cof ? cof.y : T.y + Math.sin(b.id * 2.1 + P.t * 0.05) * T.r * 0.4;
-    const a = Math.atan2(ty - b.y, tx - b.x);
-    if (dist(b.x, b.y, tx, ty) > 20) { mx = Math.cos(a); my = Math.sin(a); }
-    b.ang += angDif(a - b.ang) * Math.min(1, dt * 4);
-  }
-  // Esquiva árboles y rocas que tiene adelante.
-  for (const c of W.rocas.concat(W.arboles)) {
-    const dx = b.x - c.x, dy = b.y - c.y, d = Math.hypot(dx, dy), m = (c.r || 20) + 50;
-    if (d < m && d > 0.01) { mx += (dx / d) * (1 - d / m) * 1.3; my += (dy / d) * (1 - d / m) * 1.3; }
-  }
-  if (b.mun[b.arma] === 0) recargar(b);
-  return [mx, my];
-}
-
-// ── un paso de la simulación ──
-function paso(P, dt, entrada) {
-  if (P.fin) { actualizarEfectos(P, dt); return; }
-  P.t += dt;
-  const T = P.tormenta, W = P.mundo, yo = P.jugadores[0];
-  // La tormenta: 45 s quieta, 10 s cerrándose hacia la zona siguiente.
-  T.t -= dt;
-  if (!T.cerrando && T.t <= 0 && T.fase < FASES.length) {
-    const nr = FASES[T.fase], ang = Math.random() * Math.PI * 2, mueve = Math.random() * Math.max(0, T.r - nr) * 0.7;
-    let nx = T.x + Math.cos(ang) * mueve, ny = T.y + Math.sin(ang) * mueve;
-    if (!enIsla(nx, ny, Math.min(300, nr))) { nx = T.x; ny = T.y; }
-    T.desde = { x: T.x, y: T.y, r: T.r }; T.hacia = { x: nx, y: ny, r: nr }; T.cerrando = true; T.t = CIERRE;
-  } else if (T.cerrando) {
-    const k = 1 - clamp(T.t / CIERRE, 0, 1);
-    T.x = T.desde.x + (T.hacia.x - T.desde.x) * k; T.y = T.desde.y + (T.hacia.y - T.desde.y) * k; T.r = T.desde.r + (T.hacia.r - T.desde.r) * k;
-    if (T.t <= 0) { T.cerrando = false; T.fase++; T.t = CICLO_TORMENTA; }
-  }
-  // La próxima zona (se ve antes de que se cierre).
-  if (!T.cerrando && T.fase < FASES.length && !T.proxima) T.proxima = null;
-
-  for (const p of P.jugadores) {
-    if (!p.vivo) continue;
-    p.cd = Math.max(0, p.cd - dt); p.golpeado = Math.max(0, p.golpeado - dt);
-    if (p.recargando > 0) {
-      p.recargando -= dt;
-      if (p.recargando <= 0) { const A = ARMAS[p.arma], falta = Math.min(A.cargador - p.mun[p.arma], p.reserva[p.arma]); p.mun[p.arma] += falta; p.reserva[p.arma] -= falta; p.recargando = 0; }
-    }
-    let mx, my;
-    if (p.bot) [mx, my] = pensarBot(p, P, dt);
-    else {
-      mx = entrada.mx; my = entrada.my; p.ang = entrada.ang;
-      if (entrada.cambiar !== null && entrada.cambiar !== p.arma && entrada.cambiar < 2) { p.arma = entrada.cambiar; p.recargando = 0; p.cd = 0.25; }
-      entrada.cambiar = null;
-      if (entrada.disparo && (ARMAS[p.arma].auto || !entrada.disparoPrevio)) disparar(p, P);
-      entrada.disparoPrevio = entrada.disparo;
-      if (entrada.muro) { if (!construir(p, P, "muro") && p.madera < COSTO) P.aviso = { texto: "Falta madera", t: 1.2 }; entrada.muro = false; }
-      if (entrada.rampa) { if (!construir(p, P, "rampa") && p.madera < COSTO) P.aviso = { texto: "Falta madera", t: 1.2 }; entrada.rampa = false; }
-      if (entrada.recargar) { recargar(p); entrada.recargar = false; }
-    }
-    const l = Math.hypot(mx, my);
-    if (l > 1) { mx /= l; my /= l; }
-    const vel = 260 * (p.recargando > 0 ? 0.8 : 1);
-    p.x += mx * vel * dt; p.y += my * vel * dt;
-    if (l > 0.1) p.pasos += dt * 9;
-    empujarFuera(p, P);
-    p.z = alturaRampa(p.x, p.y, W.estructuras);
-    // Cofres: se abren al pisarlos.
-    for (const c of W.cofres) {
-      if (c.abierto || dist(p.x, p.y, c.x, c.y) > 40) continue;
-      c.abierto = true;
-      p.escudo = Math.min(100, p.escudo + 50); p.vida = Math.min(100, p.vida + 25); p.madera = Math.min(999, p.madera + 100);
-      p.reserva[0] += 60; p.reserva[1] += 10;
-      chispas(P, c.x, c.y, 30, 36, ["#ffe066", "#ffc62e", "#ffffff", "#7fd3ff"], 0.9, 200);
-      if (!p.bot) { Sonido.cofre(); P.aviso = { texto: "+50 escudo  +25 vida  +100 madera", t: 2 }; }
-    }
-    // Afuera de la tormenta: 8 por segundo.
-    if (dist(p.x, p.y, T.x, T.y) > T.r) { p.danoTormenta = (p.danoTormenta || 0) + DANO_TORMENTA * dt; if (p.danoTormenta >= 1) { const d = Math.floor(p.danoTormenta); p.danoTormenta -= d; const e = p.escudo; p.escudo = 0; herir(p, d, P, -1); p.escudo = e; } }
-  }
-  // Separación entre jugadores.
-  for (let i = 0; i < P.jugadores.length; i++) for (let j = i + 1; j < P.jugadores.length; j++) {
-    const a = P.jugadores[i], b = P.jugadores[j]; if (!a.vivo || !b.vivo) continue;
-    const d = dist(a.x, a.y, b.x, b.y); if (d < RADIO_J * 2 && d > 0.01) { const e = (RADIO_J * 2 - d) / 2; a.x -= ((b.x - a.x) / d) * e; a.y -= ((b.y - a.y) / d) * e; b.x += ((b.x - a.x) / d) * e; b.y += ((b.y - a.y) / d) * e; }
-  }
-  // Las balas.
-  for (let i = P.balas.length - 1; i >= 0; i--) {
-    const b = P.balas[i], x0 = b.x, y0 = b.y;
-    b.x += b.vx * dt; b.y += b.vy * dt; b.vida -= dt;
-    let pega = b.vida <= 0 || !enIsla(b.x, b.y, -120);
-    if (!pega && !b.alto) for (const s of W.estructuras) {
-      if (s.tipo !== "muro" || s.crece < 0.5) continue;
-      if (cruzaSegmento(x0, y0, b.x, b.y, s)) { s.vida -= b.dano; pega = true; chispas(P, b.x, b.y, 40, 5, ["#d99a55", "#f0c07a"], 0.35); if (s.vida <= 0) { const [cx, cy] = centroEstructura(s); chispas(P, cx, cy, 35, 26, ["#d99a55", "#8a5a2b", "#f0c07a"], 0.8, 220); Sonido.toc(120, 0.6); } break; }
-    }
-    if (!pega) for (const c of W.rocas) if (dist(b.x, b.y, c.x, c.y) < c.r) { pega = true; chispas(P, b.x, b.y, 20, 5, ["#d8dde6", "#9aa3b2"], 0.3); break; }
-    if (!pega) for (const c of W.arboles) if (dist(b.x, b.y, c.x, c.y) < c.r * 0.45) { pega = true; chispas(P, b.x, b.y, 30, 5, ["#7ee06b", "#4cbf44"], 0.35); break; }
-    if (!pega) for (const p of P.jugadores) {
-      if (!p.vivo || p.id === b.dueno) continue;
-      if (dist(b.x, b.y, p.x, p.y) < RADIO_J + 4) { herir(p, b.dano * (b.alto ? 1.1 : 1), P, b.dueno); pega = true; chispas(P, b.x, b.y, 30, 6, ["#ffffff", "#ff8fa3"], 0.3); break; }
-    }
-    if (pega) P.balas.splice(i, 1);
-  }
-  W.estructuras = W.estructuras.filter((s) => s.vida > 0);
-  for (const s of W.estructuras) s.crece = Math.min(1, s.crece + dt * 5);
-  for (const f of P.feed) f.t -= dt;
-  P.feed = P.feed.filter((f) => f.t > 0).slice(0, 5);
-  // ¿Terminó?
-  const vivos = P.jugadores.filter((p) => p.vivo);
-  if (!yo.vivo && !P.fin) { P.fin = { gano: false, puesto: vivos.length + 1, bajas: yo.bajas, tiempo: P.t }; Sonido.derrota(); }
-  else if (vivos.length === 1 && !P.fin) { P.fin = { gano: vivos[0] === yo, puesto: 1, bajas: yo.bajas, tiempo: P.t }; if (P.fin.gano) { Sonido.victoria(); lanzarConfeti(P); } }
-  Sonido.tormenta(yo.vivo && dist(yo.x, yo.y, T.x, T.y) > T.r ? 1 : 0);
-  actualizarEfectos(P, dt);
-}
-function actualizarEfectos(P, dt) {
-  for (let i = P.particulas.length - 1; i >= 0; i--) {
-    const q = P.particulas[i]; q.vida -= dt;
-    q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; q.vz -= 520 * dt; q.vx *= 0.96; q.vy *= 0.96;
-    if (q.z < 0) { q.z = 0; q.vz *= -0.35; }
-    if (q.vida <= 0) P.particulas.splice(i, 1);
-  }
-  for (const c of P.confeti) { c.x += c.vx * dt; c.y += c.vy * dt; c.vy = Math.min(0.45, c.vy + 0.15 * dt); c.x += Math.sin(c.rot) * 0.02 * dt; c.rot += c.vr * dt; if (c.y > 1.1) { c.y = -0.1; c.x = Math.random(); } }
-  P.sacudida = Math.max(0, P.sacudida - dt * 30);
-  if (P.danoFlash) P.danoFlash = Math.max(0, P.danoFlash - dt);
-  if (P.aviso) { P.aviso.t -= dt; if (P.aviso.t <= 0) P.aviso = null; }
-  for (const n of P.nubes) { n.x += 14 * dt; if (n.x > MUNDO * 1.3) n.x = -400; }
-}
-function lanzarConfeti(P) {
-  const cols = ["#ffc62e", "#ff5d8f", "#3cb4ff", "#4ee06a", "#b46cff", "#ffffff"];
-  P.confeti = Array.from({ length: 220 }, (_, i) => ({ x: Math.random(), y: -Math.random() * 1.2, vx: (Math.random() - 0.5) * 0.08, vy: 0.12 + Math.random() * 0.25, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 10, c: cols[i % cols.length], w: 6 + Math.random() * 8 }));
-}
-
 // ════════════════════════════════════════════════════════════════════════
-// Dibujo isométrico
-// ════════════════════════════════════════════════════════════════════════
-// Mundo (x, y, z) → pantalla: x−y a la derecha, x+y abajo (achatado a la mitad), z para arriba.
-function vista(cw, ch, yo, zoom, P) {
-  const K = zoom * 0.7071, s = P.sacudida;
-  const ox = cw / 2 - (yo.x - yo.y) * K + (Math.random() - 0.5) * s, oy = ch / 2 + 40 - (yo.x + yo.y) * K * 0.5 + (Math.random() - 0.5) * s;
-  return { K, ox, oy, zoom, P: (x, y, z = 0) => [(x - y) * K + ox, (x + y) * K * 0.5 - z * zoom + oy], aMundo: (sx, sy) => { const u = (sx - ox) / K, v = (sy - oy) / (K * 0.5); return [(u + v) / 2, (v - u) / 2]; } };
-}
-function dibujar(g, cw, ch, P, V, t, mira) {
-  const { P: pr, K, zoom } = V;
-  // El mar, con brillos que se mueven.
-  const mar = g.createLinearGradient(0, 0, 0, ch); mar.addColorStop(0, "#5fd6ea"); mar.addColorStop(1, "#1fb0cf");
-  g.fillStyle = mar; g.fillRect(0, 0, cw, ch);
-  g.save(); g.setTransform(K, K * 0.5, -K, K * 0.5, V.ox, V.oy);
-  g.strokeStyle = "rgba(255,255,255,0.35)"; g.lineWidth = 3 / zoom;
-  for (let i = 0; i < 40; i++) { const x = ((i * 397) % 2600) - 300, y = ((i * 211) % 2600) - 300, o = Math.sin(t * 1.3 + i) * 12; g.beginPath(); g.arc(x + o, y, 18, 0.2, 1.4); g.stroke(); }
-  // La isla (el suelo dibujado de antemano) y la sombra de todo lo que está parado.
-  g.drawImage(P.suelo.lienzo, 0, 0, MUNDO, MUNDO);
-  g.fillStyle = "rgba(20,60,20,0.22)";
-  for (const a of P.mundo.arboles) { g.beginPath(); g.ellipse(a.x + 10, a.y + 10, a.r * 0.9, a.r * 0.9, 0, 0, Math.PI * 2); g.fill(); }
-  for (const r of P.mundo.rocas) { g.beginPath(); g.ellipse(r.x + 6, r.y + 6, r.r, r.r, 0, 0, Math.PI * 2); g.fill(); }
-  // La tormenta: todo lo de afuera, violeta; el borde brillante y la próxima zona en blanco.
-  const T = P.tormenta;
-  g.fillStyle = "rgba(138, 61, 255, 0.32)";
-  g.beginPath(); g.rect(-1500, -1500, MUNDO + 3000, MUNDO + 3000); g.arc(T.x, T.y, Math.max(1, T.r), 0, Math.PI * 2, true); g.fill("evenodd");
-  g.strokeStyle = "rgba(200, 150, 255, 0.95)"; g.lineWidth = 8 / zoom * 2; g.beginPath(); g.arc(T.x, T.y, Math.max(1, T.r), 0, Math.PI * 2); g.stroke();
-  if (T.hacia && T.cerrando) { g.setLineDash([22, 16]); g.strokeStyle = "rgba(255,255,255,0.9)"; g.lineWidth = 4; g.beginPath(); g.arc(T.hacia.x, T.hacia.y, Math.max(1, T.hacia.r), 0, Math.PI * 2); g.stroke(); g.setLineDash([]); }
-  // Las celdas de construcción cerca de uno (ayuda a apuntar el muro).
-  const yo = P.jugadores[0];
-  if (yo.vivo) {
-    const cx = Math.floor(yo.x / CELDA), cy = Math.floor(yo.y / CELDA), d = direccion4(yo.ang);
-    g.strokeStyle = "rgba(255,255,255,0.22)"; g.lineWidth = 2;
-    g.strokeRect(cx * CELDA, cy * CELDA, CELDA, CELDA);
-    const b = [[cx + 1, cy, cx + 1, cy + 1], [cx, cy + 1, cx + 1, cy + 1], [cx, cy, cx, cy + 1], [cx, cy, cx + 1, cy]][d];
-    g.strokeStyle = yo.madera >= COSTO ? "rgba(90,200,255,0.8)" : "rgba(255,90,110,0.7)"; g.lineWidth = 6;
-    g.beginPath(); g.moveTo(b[0] * CELDA, b[1] * CELDA); g.lineTo(b[2] * CELDA, b[3] * CELDA); g.stroke();
-  }
-  // Las sombras de los jugadores.
-  g.fillStyle = "rgba(0,0,0,0.22)";
-  for (const p of P.jugadores) if (p.vivo) { g.beginPath(); g.ellipse(p.x, p.y, 16, 16, 0, 0, Math.PI * 2); g.fill(); }
-  g.restore();
-
-  // Todo lo que está parado, ordenado por profundidad (x + y).
-  const cosas = [];
-  const [izq, arr] = V.aMundo(-120, -160), [der, abj] = V.aMundo(cw + 120, ch + 260), [a2, b2] = V.aMundo(cw + 120, -160), [a3, b3] = V.aMundo(-120, ch + 260);
-  const minS = Math.min(izq + arr, a2 + b2) - 100, maxS = Math.max(der + abj, a3 + b3) + 100, minD = Math.min(izq - arr, a3 - b3) - 100, maxD = Math.max(der - abj, a2 - b2) + 100;
-  const visible = (x, y) => { const s = x + y, d = x - y; return s > minS && s < maxS && d > minD && d < maxD; };
-  for (const a of P.mundo.arboles) if (visible(a.x, a.y)) cosas.push([a.x + a.y, 0, a]);
-  for (const r of P.mundo.rocas) if (visible(r.x, r.y)) cosas.push([r.x + r.y, 1, r]);
-  for (const c of P.mundo.cofres) if (visible(c.x, c.y)) cosas.push([c.x + c.y, 2, c]);
-  for (const m of P.mundo.matas) if (visible(m.x, m.y)) cosas.push([m.x + m.y - 20, 6, m]);
-  for (const s of P.mundo.estructuras) { const [x, y] = centroEstructura(s); if (visible(x, y)) cosas.push([s.tipo === "muro" ? Math.max(s.ax + s.ay, s.bx + s.by) - 2 : (s.cx + s.cy + 1) * CELDA - 50, 3, s]); }
-  for (const p of P.jugadores) if (p.vivo && visible(p.x, p.y)) cosas.push([p.x + p.y, 4, p]);
-  cosas.sort((a, b) => a[0] - b[0]);
-  for (const [, tipo, o] of cosas) {
-    if (tipo === 0) {
-      // Un árbol que te tapa se vuelve transparente.
-      const tapa = yo.vivo && o.x + o.y > yo.x + yo.y && Math.abs(o.x - o.y - (yo.x - yo.y)) < 90 && o.x + o.y - (yo.x + yo.y) < 190;
-      if (tapa) g.globalAlpha = 0.35;
-      dibujarArbol(g, pr, o, zoom, t); g.globalAlpha = 1;
-    }
-    else if (tipo === 1) dibujarRoca(g, pr, o, zoom);
-    else if (tipo === 2) dibujarCofre(g, pr, o, zoom, t);
-    else if (tipo === 3) dibujarEstructura(g, pr, o, zoom);
-    else if (tipo === 4) dibujarJugador(g, pr, o, zoom, t);
-    else if (tipo === 6) dibujarMata(g, pr, o, zoom);
-  }
-  // Balas: una estela corta.
-  g.lineCap = "round";
-  for (const b of P.balas) {
-    const [x1, y1] = pr(b.x, b.y, b.alto ? 90 : 26), [x2, y2] = pr(b.x - b.vx * 0.025, b.y - b.vy * 0.025, b.alto ? 90 : 26);
-    g.strokeStyle = b.color; g.lineWidth = 3.5 * zoom; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
-  }
-  // Partículas.
-  for (const q of P.particulas) {
-    const [x, y] = pr(q.x, q.y, q.z), k = clamp(q.vida / q.max, 0, 1);
-    g.globalAlpha = k; g.fillStyle = q.color; g.fillRect(x - q.t * zoom / 2, y - q.t * zoom / 2, q.t * zoom, q.t * zoom);
-  }
-  g.globalAlpha = 1;
-  // Nubes (el cielo, arriba de todo, con su sombra ya en el suelo).
-  for (const n of P.nubes) {
-    const [x, y] = pr(n.x, n.y, 420);
-    g.fillStyle = "rgba(255,255,255,0.55)";
-    for (const [dx, dy, r] of [[0, 0, 48], [46, 8, 38], [-44, 10, 36], [18, -24, 34], [-16, -18, 30]]) { g.beginPath(); g.arc(x + dx * n.s * zoom, y + dy * n.s * zoom, r * n.s * zoom, 0, Math.PI * 2); g.fill(); }
-  }
-  // La mira.
-  if (mira && yo.vivo) {
-    g.strokeStyle = "#fff"; g.lineWidth = 2.5; g.beginPath(); g.arc(mira.x, mira.y, 11, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { g.moveTo(mira.x + dx * 6, mira.y + dy * 6); g.lineTo(mira.x + dx * 16, mira.y + dy * 16); } g.stroke();
-  }
-  // Confeti de la victoria.
-  for (const c of P.confeti) { g.save(); g.translate(c.x * cw, c.y * ch); g.rotate(c.rot); g.fillStyle = c.c; g.fillRect(-c.w / 2, -c.w / 4, c.w, c.w / 2); g.restore(); }
-}
-function dibujarArbol(g, pr, a, zoom, t) {
-  const [x, y] = pr(a.x, a.y, 0), s = zoom * a.r / 30, balanceo = Math.sin(t * 1.2 + a.fase) * 1.5 * s;
-  g.fillStyle = "#8a5a33"; g.fillRect(x - 5 * s, y - 34 * s, 10 * s, 34 * s);
-  g.fillStyle = "#6e4526"; g.fillRect(x + 1 * s, y - 34 * s, 4 * s, 34 * s);
-  // La copa de algodón: bolas superpuestas, con luz arriba a la izquierda.
-  const base = a.rosa ? ["#f59ac8", "#ffb7da", "#ffd6ea"] : ["#3fbf4a", "#62d85a", "#9af07e"];
-  const bolas = [[0, -62, 30], [-22, -48, 22], [22, -46, 23], [-10, -80, 20], [14, -76, 19]];
-  g.fillStyle = base[0]; for (const [dx, dy, r] of bolas) { g.beginPath(); g.arc(x + dx * s + balanceo, y + dy * s, r * s, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = base[1]; for (const [dx, dy, r] of bolas) { g.beginPath(); g.arc(x + (dx - 4) * s + balanceo, y + (dy - 4) * s, r * 0.78 * s, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = base[2]; for (const [dx, dy, r] of bolas.slice(0, 3)) { g.beginPath(); g.arc(x + (dx - 9) * s + balanceo, y + (dy - 9) * s, r * 0.38 * s, 0, Math.PI * 2); g.fill(); }
-}
-function dibujarRoca(g, pr, r, zoom) {
-  const [x, y] = pr(r.x, r.y, 0), s = zoom * r.r;
-  g.fillStyle = "#8c96a8"; g.beginPath();
-  r.forma.forEach((k, i) => { const a = (i / r.forma.length) * Math.PI * 2 + 0.3; const px = x + Math.cos(a) * s * k, py = y - s * 0.5 + Math.sin(a) * s * k * 0.62; i ? g.lineTo(px, py) : g.moveTo(px, py); });
-  g.closePath(); g.fill();
-  g.fillStyle = "#b4bdcc"; g.beginPath(); g.ellipse(x - s * 0.2, y - s * 0.72, s * 0.5, s * 0.28, -0.2, 0, Math.PI * 2); g.fill();
-  g.fillStyle = "#d9dfe8"; g.beginPath(); g.ellipse(x - s * 0.32, y - s * 0.82, s * 0.18, s * 0.09, -0.2, 0, Math.PI * 2); g.fill();
-}
-function dibujarMata(g, pr, m, zoom) {
-  const [x, y] = pr(m.x, m.y, 0), s = zoom;
-  g.fillStyle = m.c < 0.5 ? "#3fae3c" : "#58c44a";
-  for (const [dx, r] of [[-7, 7], [0, 9], [7, 7]]) { g.beginPath(); g.arc(x + dx * s, y - 5 * s, r * s, 0, Math.PI * 2); g.fill(); }
-}
-function dibujarCofre(g, pr, c, zoom, t) {
-  const [x, y] = pr(c.x, c.y, 0), s = zoom;
-  if (!c.abierto) {
-    // El brillo que late.
-    const k = 0.5 + 0.5 * Math.sin(t * 3 + c.brillo);
-    const gr = g.createRadialGradient(x, y - 18 * s, 2, x, y - 18 * s, 50 * s); gr.addColorStop(0, `rgba(255,220,90,${0.35 + 0.25 * k})`); gr.addColorStop(1, "rgba(255,220,90,0)");
-    g.fillStyle = gr; g.beginPath(); g.arc(x, y - 18 * s, 50 * s, 0, Math.PI * 2); g.fill();
-  }
-  g.fillStyle = c.abierto ? "#9a8a6a" : "#e0a21f"; g.fillRect(x - 18 * s, y - 22 * s, 36 * s, 20 * s);
-  g.fillStyle = c.abierto ? "#b8a888" : "#ffc62e";
-  if (c.abierto) g.fillRect(x - 18 * s, y - 40 * s, 36 * s, 8 * s); else { g.beginPath(); g.moveTo(x - 20 * s, y - 22 * s); g.quadraticCurveTo(x, y - 40 * s, x + 20 * s, y - 22 * s); g.fill(); }
-  g.fillStyle = c.abierto ? "#6b5e48" : "#8a5a00"; g.fillRect(x - 3 * s, y - 24 * s, 6 * s, 8 * s);
-  if (!c.abierto && c.botin) { g.fillStyle = "#3cb4ff"; g.fillRect(x - 18 * s, y - 14 * s, 36 * s, 3 * s); }
-}
-function dibujarEstructura(g, pr, s, zoom) {
-  const k = s.crece, dano = 1 - s.vida / VIDA_MURO;
-  if (s.tipo === "muro") {
-    const h = ALTO_MURO * k;
-    const [a1, b1] = pr(s.ax, s.ay, 0), [a2, b2] = pr(s.bx, s.by, 0), [a3, b3] = pr(s.bx, s.by, h), [a4, b4] = pr(s.ax, s.ay, h);
-    g.fillStyle = "#c98a4b"; g.beginPath(); g.moveTo(a1, b1); g.lineTo(a2, b2); g.lineTo(a3, b3); g.lineTo(a4, b4); g.closePath(); g.fill();
-    // Las tablas.
-    g.strokeStyle = "#9b6331"; g.lineWidth = 2 * zoom;
-    for (let i = 1; i < 4; i++) { const f = i / 4; g.beginPath(); g.moveTo(a1 + (a4 - a1) * f, b1 + (b4 - b1) * f); g.lineTo(a2 + (a3 - a2) * f, b2 + (b3 - b2) * f); g.stroke(); }
-    g.strokeStyle = "#7a4a22"; g.lineWidth = 3 * zoom; g.beginPath(); g.moveTo(a1, b1); g.lineTo(a2, b2); g.lineTo(a3, b3); g.lineTo(a4, b4); g.closePath(); g.stroke();
-    g.fillStyle = "#e3a765"; g.fillRect(Math.min(a3, a4), Math.min(b3, b4) - 3 * zoom, Math.abs(a3 - a4), 4 * zoom);
-    if (dano > 0.3) { g.strokeStyle = "rgba(60,30,10,0.8)"; g.lineWidth = 2; g.beginPath(); const mx = (a1 + a3) / 2, my = (b1 + b3) / 2; g.moveTo(mx - 10 * zoom, my - 8 * zoom); g.lineTo(mx, my); g.lineTo(mx + 6 * zoom, my + 10 * zoom); if (dano > 0.6) { g.moveTo(mx, my); g.lineTo(mx + 12 * zoom, my - 6 * zoom); } g.stroke(); }
-  } else {
-    // La rampa: un plano de tablas que sube hacia su dirección.
-    const x0 = s.cx * CELDA, y0 = s.cy * CELDA, x1 = x0 + CELDA, y1 = y0 + CELDA, H = ALTO_MURO * k;
-    const esq = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-    const alto = (x, y) => { const u = (x - x0) / CELDA, v = (y - y0) / CELDA; return [u, v, 1 - u, 1 - v][s.dir] * H; };
-    const pts = esq.map(([x, y]) => pr(x, y, alto(x, y)));
-    // El costado (para que se vea sólida).
-    g.fillStyle = "#a86a33";
-    for (let i = 0; i < 4; i++) { const [xa, ya] = esq[i], [xb, yb] = esq[(i + 1) % 4]; if (alto(xa, ya) + alto(xb, yb) < 1) continue; const p1 = pr(xa, ya, 0), p2 = pr(xb, yb, 0); g.beginPath(); g.moveTo(p1[0], p1[1]); g.lineTo(p2[0], p2[1]); g.lineTo(pts[(i + 1) % 4][0], pts[(i + 1) % 4][1]); g.lineTo(pts[i][0], pts[i][1]); g.closePath(); g.fill(); }
-    g.fillStyle = "#d69a57"; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fill();
-    g.strokeStyle = "#9b6331"; g.lineWidth = 2 * zoom;
-    for (let i = 1; i < 5; i++) { const f = i / 5; const a = [0, 1, 2, 3].map((j) => pts[j]); const L = s.dir % 2 === 0 ? [a[0], a[3], a[1], a[2]] : [a[0], a[1], a[3], a[2]]; g.beginPath(); g.moveTo(L[0][0] + (L[2][0] - L[0][0]) * f, L[0][1] + (L[2][1] - L[0][1]) * f); g.lineTo(L[1][0] + (L[3][0] - L[1][0]) * f, L[1][1] + (L[3][1] - L[1][1]) * f); g.stroke(); }
-    g.strokeStyle = "#7a4a22"; g.lineWidth = 3 * zoom; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.stroke();
-  }
-}
-// Un personaje chibi: cabeza grande, cuerpo chico, arma hacia donde apunta.
-function dibujarJugador(g, pr, p, zoom, t) {
-  const [x, y] = pr(p.x, p.y, p.z), s = zoom * 1.05;
-  const [ax, ay] = pr(p.x + Math.cos(p.ang) * 30, p.y + Math.sin(p.ang) * 30, p.z), aa = Math.atan2(ay - y, ax - x);
-  const mira = Math.cos(aa) >= 0 ? 1 : -1, pie = Math.sin(p.pasos) * 4 * s, rebote = Math.abs(Math.sin(p.pasos)) * 2 * s;
-  const golpe = p.golpeado > 0.25;
-  // Piernas.
-  g.fillStyle = "#2c2f4a";
-  g.fillRect(x - 8 * s, y - 14 * s + pie * 0.5, 6 * s, 14 * s); g.fillRect(x + 2 * s, y - 14 * s - pie * 0.5, 6 * s, 14 * s);
-  // El arma, detrás del cuerpo si apunta para arriba.
-  const arma = () => {
-    g.save(); g.translate(x + mira * 6 * s, y - 24 * s - rebote); g.rotate(aa);
-    g.fillStyle = p.arma ? "#6b4a2a" : "#3d4150"; g.fillRect(0, -3.5 * s, (p.arma ? 28 : 34) * s, 7 * s);
-    g.fillStyle = p.arma ? "#9a9fae" : "#6fd3ff"; g.fillRect((p.arma ? 12 : 22) * s, -2.5 * s, (p.arma ? 18 : 12) * s, 5 * s);
-    g.restore();
-  };
-  if (Math.sin(aa) < 0) arma();
-  // Cuerpo.
-  g.fillStyle = golpe ? "#ffffff" : p.color.ropa;
-  g.beginPath(); g.roundRect ? g.roundRect(x - 11 * s, y - 34 * s - rebote, 22 * s, 22 * s, 7 * s) : g.rect(x - 11 * s, y - 34 * s - rebote, 22 * s, 22 * s); g.fill();
-  g.fillStyle = "rgba(0,0,0,0.12)"; g.fillRect(x - 11 * s, y - 18 * s - rebote, 22 * s, 5 * s);
-  // Cabeza.
-  const hx = x, hy = y - 50 * s - rebote;
-  g.fillStyle = "#ffd9b3"; g.beginPath(); g.arc(hx, hy, 17 * s, 0, Math.PI * 2); g.fill();
-  g.fillStyle = p.color.pelo; g.beginPath(); g.arc(hx, hy - 3 * s, 17.5 * s, Math.PI * 1.02, Math.PI * 1.98); g.fill();
-  g.beginPath(); g.ellipse(hx - mira * 8 * s, hy - 12 * s, 11 * s, 6 * s, -0.4 * mira, 0, Math.PI * 2); g.fill();
-  // Ojos que miran hacia donde apunta.
-  g.fillStyle = "#1c1c2a";
-  g.beginPath(); g.ellipse(hx + mira * 4 * s, hy + 2 * s, 2.6 * s, 3.6 * s, 0, 0, Math.PI * 2); g.ellipse(hx + mira * 11 * s, hy + 2 * s, 2.6 * s, 3.6 * s, 0, 0, Math.PI * 2); g.fill();
-  g.fillStyle = "rgba(255,120,120,0.45)"; g.beginPath(); g.arc(hx + mira * 2 * s, hy + 8 * s, 3 * s, 0, Math.PI * 2); g.fill();
-  if (Math.sin(aa) >= 0) arma();
-  // Nombre y vida de los bots.
-  if (p.bot) {
-    g.font = `900 ${Math.max(10, 11 * zoom)}px Nunito, sans-serif`; g.textAlign = "center";
-    g.fillStyle = "rgba(10,14,40,0.55)"; const w = g.measureText(p.nombre).width + 10; g.fillRect(hx - w / 2, hy - 38 * s, w, 14 * zoom);
-    g.fillStyle = "#fff"; g.fillText(p.nombre, hx, hy - 27 * s);
-    g.fillStyle = "rgba(0,0,0,0.4)"; g.fillRect(hx - 18 * s, hy - 44 * s, 36 * s, 4 * s);
-    g.fillStyle = "#4ee06a"; g.fillRect(hx - 18 * s, hy - 44 * s, 36 * s * (p.vida / 100), 4 * s);
-    if (p.escudo > 0) { g.fillStyle = "#3cb4ff"; g.fillRect(hx - 18 * s, hy - 48 * s, 36 * s * (p.escudo / 100), 3 * s); }
-  }
-}
-function dibujarMinimapa(g, P, tam) {
-  g.clearRect(0, 0, tam, tam);
-  const k = tam / MUNDO;
-  g.fillStyle = "#2ec4d6"; g.fillRect(0, 0, tam, tam);
-  g.drawImage(P.suelo.lienzo, 0, 0, tam, tam);
-  const T = P.tormenta;
-  g.fillStyle = "rgba(138,61,255,0.45)"; g.beginPath(); g.rect(0, 0, tam, tam); g.arc(T.x * k, T.y * k, Math.max(0.5, T.r * k), 0, Math.PI * 2, true); g.fill("evenodd");
-  g.strokeStyle = "#e3c8ff"; g.lineWidth = 2; g.beginPath(); g.arc(T.x * k, T.y * k, Math.max(0.5, T.r * k), 0, Math.PI * 2); g.stroke();
-  if (T.hacia) { g.strokeStyle = "#fff"; g.setLineDash([4, 3]); g.beginPath(); g.arc(T.hacia.x * k, T.hacia.y * k, Math.max(0.5, T.hacia.r * k), 0, Math.PI * 2); g.stroke(); g.setLineDash([]); }
-  for (const c of P.mundo.cofres) if (!c.abierto) { g.fillStyle = "#ffc62e"; g.fillRect(c.x * k - 1.5, c.y * k - 1.5, 3, 3); }
-  const yo = P.jugadores[0];
-  if (yo.vivo) {
-    g.save(); g.translate(yo.x * k, yo.y * k); g.rotate(yo.ang);
-    g.fillStyle = "#fff"; g.strokeStyle = "#1a2150"; g.lineWidth = 1.5; g.beginPath(); g.moveTo(7, 0); g.lineTo(-5, 5); g.lineTo(-2, 0); g.lineTo(-5, -5); g.closePath(); g.fill(); g.stroke();
-    g.restore();
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════
-// React: el juego, el HUD y las pantallas
+// Interfaz (React)
 // ════════════════════════════════════════════════════════════════════════
 function Palanca({ lado, etiqueta, onMover }) {
   const ref = useRef(null), perilla = useRef(null), dedo = useRef(null);
   const mover = (e) => {
     const r = ref.current.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     let dx = (e.clientX - cx) / (r.width / 2), dy = (e.clientY - cy) / (r.height / 2); const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
-    perilla.current.style.transform = `translate(${dx * 38}px, ${dy * 38}px)`; onMover(dx, dy, true);
+    perilla.current.style.transform = `translate(${dx * 36}px, ${dy * 36}px)`; onMover(dx, dy, true);
   };
   const soltar = () => { dedo.current = null; perilla.current.style.transform = ""; onMover(0, 0, false); };
   return h("div", {
@@ -794,164 +1481,116 @@ function Palanca({ lado, etiqueta, onMover }) {
     onPointerUp: soltar, onPointerCancel: soltar,
   }, h("span", null, etiqueta), h("i", { ref: perilla }));
 }
-
-function Juego({ alTerminar }) {
-  const lienzo = useRef(null), mini = useRef(null), partida = useRef(null), entrada = useRef({ mx: 0, my: 0, ang: 0, disparo: false, disparoPrevio: false, muro: false, rampa: false, recargar: false, cambiar: null }), raton = useRef(null), teclas = useRef(new Set());
-  const [hud, setHud] = useState(null);
-  const [tactil, setTactil] = useState(() => matchMedia("(pointer: coarse)").matches);
-  const palancaDer = useRef({ dx: 0, dy: 0, activa: false });
-
-  useEffect(() => {
-    partida.current = nuevaPartida(); window.__isla = partida; // para las pruebas
-    const c = lienzo.current, g = c.getContext("2d");
-    let ultimo = performance.now(), cuadro = 0, id = 0, finAvisado = false;
-    const ajustar = () => { const dpr = Math.min(2, window.devicePixelRatio || 1); c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0); };
-    ajustar(); addEventListener("resize", ajustar);
-    const bucle = (ahora) => {
-      id = requestAnimationFrame(bucle);
-      const dt = Math.min(0.05, (ahora - ultimo) / 1000); ultimo = ahora;
-      const P = partida.current, yo = P.jugadores[0], cw = c.clientWidth, ch = c.clientHeight;
-      // Zoom: se ven ~1200 unidades de ancho en PC y un poco menos en el teléfono.
-      const zoom = clamp(Math.min(cw, ch * 1.6) / 1250, 0.5, 1.15);
-      const V = vista(cw, ch, yo, zoom, P);
-      // La entrada: teclado + mouse, o las dos palancas.
-      const E = entrada.current, k = teclas.current;
-      if (!tactilRef.current) {
-        let ix = (k.has("KeyD") || k.has("ArrowRight") ? 1 : 0) - (k.has("KeyA") || k.has("ArrowLeft") ? 1 : 0), iy = (k.has("KeyS") || k.has("ArrowDown") ? 1 : 0) - (k.has("KeyW") || k.has("ArrowUp") ? 1 : 0);
-        // Pantalla → mundo: derecha en pantalla es (+x, −y), abajo es (+x, +y).
-        E.mx = ix * 0.7071 + iy * 0.7071; E.my = -ix * 0.7071 + iy * 0.7071;
-        if (raton.current) { const [wx, wy] = V.aMundo(raton.current.x, raton.current.y); E.ang = Math.atan2(wy - yo.y, wx - yo.x); }
-      } else {
-        const pd = palancaDer.current;
-        if (pd.activa && Math.hypot(pd.dx, pd.dy) > 0.2) { E.ang = Math.atan2(pd.dx * 0.7071 * 2 + pd.dy * 0.7071 * 2, -pd.dx * 0.7071 * 2 + pd.dy * 0.7071 * 2); }
-        E.disparo = E.botonDisparo || (pd.activa && Math.hypot(pd.dx, pd.dy) > 0.55);
-      }
-      paso(P, dt, E);
-      dibujar(g, cw, ch, P, V, P.t, !tactilRef.current && raton.current);
-      cuadro++;
-      if (cuadro % 6 === 0) {
-        const vivos = P.jugadores.filter((p) => p.vivo).length, T = P.tormenta;
-        setHud({ vida: Math.ceil(yo.vida), escudo: Math.ceil(yo.escudo), madera: yo.madera, arma: yo.arma, mun: yo.mun.slice(), reserva: yo.reserva.slice(), recarga: yo.recargando, vivos, bajas: yo.bajas,
-          tormenta: { t: Math.ceil(T.t), cerrando: T.cerrando, fase: T.fase, fin: T.fase >= FASES.length }, feed: P.feed.map((f) => ({ ...f })), aviso: P.aviso && P.aviso.texto, dano: P.danoFlash > 0.3 ? cuadro : 0,
-          enTormenta: yo.vivo && Math.hypot(yo.x - T.x, yo.y - T.y) > T.r });
-        if (mini.current) { const mg = mini.current.getContext("2d"); dibujarMinimapa(mg, P, mini.current.width); }
-      }
-      if (P.fin && !finAvisado) { finAvisado = true; setTimeout(() => alTerminar(P.fin), P.fin.gano ? 900 : 1400); }
-    };
-    id = requestAnimationFrame(bucle);
-    // Teclado y mouse.
-    const abajo = (e) => {
-      if (e.repeat) return;
-      teclas.current.add(e.code);
-      const E = entrada.current;
-      if (e.code === "KeyQ") E.muro = true;
-      if (e.code === "KeyE") E.rampa = true;
-      if (e.code === "KeyR") E.recargar = true;
-      if (e.code === "Digit1") E.cambiar = 0;
-      if (e.code === "Digit2") E.cambiar = 1;
-      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
-    };
-    const arriba = (e) => teclas.current.delete(e.code);
-    const suelta = () => teclas.current.clear();
-    addEventListener("keydown", abajo); addEventListener("keyup", arriba); addEventListener("blur", suelta);
-    return () => { cancelAnimationFrame(id); removeEventListener("resize", ajustar); removeEventListener("keydown", abajo); removeEventListener("keyup", arriba); removeEventListener("blur", suelta); Sonido.tormenta(0); };
-  }, []);
-  const tactilRef = useRef(tactil); tactilRef.current = tactil;
-
-  const E = entrada.current;
-  const eventosLienzo = {
-    onPointerMove: (e) => { if (e.pointerType === "mouse") raton.current = { x: e.clientX, y: e.clientY }; },
-    onPointerDown: (e) => {
-      if (e.pointerType === "touch") { if (!tactil) setTactil(true); return; }
-      if (tactil) setTactil(false);
-      raton.current = { x: e.clientX, y: e.clientY };
-      if (e.button === 0) E.disparo = true;
-    },
-    onPointerUp: (e) => { if (e.button === 0) E.disparo = false; },
-    onPointerLeave: () => { E.disparo = false; },
-    onContextMenu: (e) => e.preventDefault(),
-    onWheel: (e) => { E.cambiar = (partida.current.jugadores[0].arma + 1) % 2; },
-  };
-  const H = hud;
-  return h("div", { className: tactil ? "tactil-si" : "", style: { position: "absolute", inset: 0 } },
-    h("canvas", { ref: lienzo, className: "juego", ...eventosLienzo, "aria-label": "Isla Royale: la partida" }),
-    H && h("div", { className: "hud" },
-      h("div", { className: "vitales" },
-        h("div", { className: "barra escudo" }, h("i", { style: { width: H.escudo + "%" } }), h("span", null, h("b", null, "Escudo"), h("b", null, H.escudo))),
-        h("div", { className: "barra vida" + (H.vida < 35 ? " baja" : "") }, h("i", { style: { width: H.vida + "%" } }), h("span", null, h("b", null, "Vida"), h("b", null, H.vida))),
-        h("div", { className: "recursos" }, h("span", { className: "chip madera" }, h("b", null, H.madera)), h("span", { className: "chip" }, "Bajas ", h("b", null, H.bajas)))),
-      h("div", { className: "arriba-der" },
-        h("canvas", { ref: mini, className: "minimapa", width: 320, height: 320, "aria-label": "Minimapa" }),
-        h("div", { className: "vivos" }, h("span", { className: "chip" }, "Vivos ", h("b", null, H.vivos))),
-        h("div", { className: "tormenta-aviso" + (H.tormenta.cerrando ? " cierra" : "") },
-          H.tormenta.fin ? "La tormenta cubrió la isla" : H.tormenta.cerrando ? `¡La tormenta se cierra! ${H.tormenta.t} s` : `La tormenta se cierra en ${Math.floor(H.tormenta.t / 60)}:${String(H.tormenta.t % 60).padStart(2, "0")}`)),
-      h("div", { className: "feed" }, H.feed.map((f, i) => h("div", { key: f.texto + i, className: f.yo ? "yo" : "" }, f.texto))),
-      H.aviso && h("div", { className: "aviso", key: H.aviso }, H.aviso),
-      H.recarga > 0 && h("div", { className: "recarga" }, `Recargando… ${H.recarga.toFixed(1)} s`),
-      h("div", { className: "armas" }, ARMAS.map((A, i) => h("button", { key: A.nombre, className: "ranura" + (H.arma === i ? " activa" : ""), onClick: () => { E.cambiar = i; } },
-        h("small", null, i + 1), h("strong", null, A.nombre), h("small", null, `${H.mun[i]} / ${H.reserva[i]}`)))),
-      H.enTormenta && h("div", { className: "en-tormenta" }),
-      H.dano ? h("div", { className: "danio", key: H.dano }) : null),
-    tactil && h("div", { className: "tactil" },
-      h(Palanca, { lado: "izq", etiqueta: "Mover", onMover: (dx, dy) => { E.mx = dx * 0.7071 + dy * 0.7071; E.my = -dx * 0.7071 + dy * 0.7071; } }),
-      h(Palanca, { lado: "der", etiqueta: "Apuntar y disparar", onMover: (dx, dy, activa) => { palancaDer.current = { dx, dy, activa }; } }),
-      h("div", { className: "botones-t" },
-        h("button", { onPointerDown: (e) => { e.preventDefault(); E.muro = true; } }, "Construir"),
-        h("button", { onPointerDown: (e) => { e.preventDefault(); E.rampa = true; } }, "Rampa"),
-        h("button", { onPointerDown: (e) => { e.preventDefault(); E.recargar = true; } }, "Recargar"),
-        h("button", { onPointerDown: (e) => { e.preventDefault(); E.cambiar = (partida.current.jugadores[0].arma + 1) % 2; } }, "Arma"),
-        h("button", { style: { gridColumn: "span 2", background: "rgba(255,77,109,0.85)" }, onPointerDown: (e) => { e.preventDefault(); E.botonDisparo = true; }, onPointerUp: () => { E.botonDisparo = false; }, onPointerCancel: () => { E.botonDisparo = false; }, onPointerLeave: () => { E.botonDisparo = false; } }, "Disparar"))));
+// Un botón que vale mientras se lo aprieta (sirve con varios dedos a la vez).
+function Mantener({ clase, texto, poner }) {
+  const [activo, setActivo] = useState(false);
+  const v = (b) => { setActivo(b); poner(b); };
+  return h("button", { className: clase + (activo ? " activo" : ""), onPointerDown: (e) => { e.preventDefault(); e.currentTarget.setPointerCapture && e.currentTarget.setPointerCapture(e.pointerId); v(true); }, onPointerUp: () => v(false), onPointerCancel: () => v(false), onContextMenu: (e) => e.preventDefault() }, texto);
 }
-
-// La isla de fondo del menú: una partida sin jugador, que gira despacio.
-function Fondo() {
-  const ref = useRef(null);
-  useEffect(() => {
-    const c = ref.current, g = c.getContext("2d"), P = nuevaPartida(); P.jugadores.forEach((p) => (p.vivo = false));
-    const cam = { x: MUNDO / 2, y: MUNDO / 2 };
-    let id = 0;
-    const bucle = (t) => {
-      id = requestAnimationFrame(bucle);
-      const dpr = Math.min(2, devicePixelRatio || 1);
-      if (c.width !== c.clientWidth * dpr) { c.width = c.clientWidth * dpr; c.height = c.clientHeight * dpr; }
-      g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cam.x = MUNDO / 2 + Math.cos(t / 9000) * 380; cam.y = MUNDO / 2 + Math.sin(t / 9000) * 380;
-      actualizarEfectos(P, 1 / 60);
-      const V = vista(c.clientWidth, c.clientHeight, cam, clamp(Math.min(c.clientWidth, c.clientHeight * 1.6) / 1400, 0.45, 1), P);
-      dibujar(g, c.clientWidth, c.clientHeight, P, V, t / 1000, null);
-    };
-    id = requestAnimationFrame(bucle);
-    return () => cancelAnimationFrame(id);
-  }, []);
-  return h("canvas", { ref, className: "juego", style: { cursor: "default" }, "aria-hidden": true });
+function Tactil({ motor, apuntando }) {
+  const E = motor.entrada, arrastre = useRef(null);
+  const toca = (fn) => (e) => { e.preventDefault(); fn(); };
+  return h("div", { className: "tactil" },
+    h("div", {
+      className: "zona-mirar",
+      onPointerDown: (e) => { arrastre.current = { id: e.pointerId, x: e.clientX, y: e.clientY }; e.currentTarget.setPointerCapture(e.pointerId); },
+      onPointerMove: (e) => { const a = arrastre.current; if (!a || a.id !== e.pointerId) return; E.dYaw += (e.clientX - a.x) * 0.0065; E.dPitch += (e.clientY - a.y) * 0.0055; a.x = e.clientX; a.y = e.clientY; },
+      onPointerUp: () => { arrastre.current = null; }, onPointerCancel: () => { arrastre.current = null; },
+    }),
+    h(Palanca, { lado: "izq", etiqueta: "Mover", onMover: (dx, dy) => { E.mx = dx; E.my = dy; } }),
+    h(Palanca, { lado: "der", etiqueta: "Mirar", onMover: (dx, dy, activa) => { E.mirar = { dx, dy, activa }; } }),
+    h(Mantener, { clase: "btn-t disparo-der", texto: "Disparar", poner: (b) => { E.dedo1 = b; } }),
+    h(Mantener, { clase: "btn-t disparo-izq", texto: "Disparar", poner: (b) => { E.dedo2 = b; } }),
+    h("div", { className: "botones-t" },
+      h("button", { onPointerDown: toca(() => { E.muro = true; }) }, "Muro"),
+      h("button", { onPointerDown: toca(() => { E.rampa = true; }) }, "Rampa"),
+      h("button", { onPointerDown: toca(() => { E.saltar = true; }) }, "Saltar"),
+      h("button", { onPointerDown: toca(() => { E.recargar = true; }) }, "Recargar"),
+      h("button", { onPointerDown: toca(() => { E.cambiar = motor.partida ? (motor.partida.jugadores[0].arma + 1) % 2 : 0; }) }, "Arma"),
+      h("button", { className: apuntando ? "activo" : "", onPointerDown: toca(() => { E.apuntar = !E.apuntar; }) }, "Apuntar")));
 }
-
+function Hud({ H, motor, tactil, bloqueado }) {
+  const mini = useRef(null), grande = useRef(null), mira = useRef(null);
+  const [mapa, setMapa] = useState(false);
+  useEffect(() => { motor.ponerMinimapa(mini.current); motor.ponerMira(mira.current); return () => { motor.ponerMinimapa(null); motor.ponerMira(null); }; }, []);
+  useEffect(() => { motor.ponerMapaGrande(mapa ? grande.current : null); }, [mapa]);
+  useEffect(() => { motor.alMapa = () => setMapa((v) => !v); }, []);
+  const vida = H.vida, esc = H.escudo, T = H.tormenta, E = motor.entrada;
+  return h("div", { className: "hud" + (tactil ? " tactil-si" : "") },
+    H.enTormenta && h("div", { className: "en-tormenta" }),
+    H.dano ? h("div", { className: "danio", key: H.dano }) : null,
+    h("div", { className: "vitales" },
+      h("div", { className: "barra escudo" }, h("i", { style: { width: esc + "%" } }), h("span", null, h("b", null, "Escudo"), h("b", null, esc))),
+      h("div", { className: "barra vida" + (vida <= 30 ? " baja" : "") }, h("i", { style: { width: vida + "%" } }), h("span", null, h("b", null, "Vida"), h("b", null, vida))),
+      h("div", { className: "recursos" }, h("span", { className: "chip madera" }, h("b", null, H.madera)), h("span", { className: "chip" }, "Bajas ", h("b", null, H.bajas)))),
+    h("div", { className: "arriba-der" },
+      h("canvas", { className: "minimapa", ref: mini, onClick: () => setMapa(true), title: "Ver el mapa (M)" }),
+      h("div", { className: "fila" },
+        h("span", { className: "chip" }, "Vivos ", h("b", null, H.vivos)),
+        h("span", { className: "tormenta-aviso" + (T.cerrando ? " cierra" : "") }, T.fin ? "La tormenta cubrió todo" : T.cerrando ? `¡Se cierra! ${T.t} s` : `Tormenta en ${Math.floor(T.t / 60)}:${String(T.t % 60).padStart(2, "0")}`))),
+    h("div", { className: "feed" }, H.feed.map((f) => h("div", { key: f.id, className: f.yo ? "yo" : "" }, f.texto))),
+    H.vivo && H.estado === "tierra" && !H.fin && h("div", { ref: mira, className: "mira" + (H.arma === 1 ? " escopeta" : "") }, ["p", "a", "b", "c", "d"].map((k) => h("i", { key: k, className: k })), h("i", { className: "x x1" }), h("i", { className: "x x2" })),
+    H.recargando && h("div", { className: "recarga" }, "Recargando…"),
+    H.estado !== "tierra" && H.vivo && h("div", { className: "caida" }, h("b", null, H.estado === "cae" ? "¡En caída libre!" : "Planeando"), `Altura ${H.altura} m · `, tactil ? "dirigí con la palanca" : H.estado === "cae" ? "WASD para dirigir · Espacio abre el planeador" : "WASD para dirigir"),
+    H.aviso && h("div", { className: "aviso", key: H.aviso }, H.aviso),
+    !tactil && !bloqueado && H.vivo && !H.fin && h("div", { className: "clic" }, "Hacé clic para apuntar con el mouse"),
+    h("div", { className: "armas" }, ARMAS.map((A, i) => h("button", { key: A.nombre, className: "ranura" + (H.arma === i ? " activa" : ""), onClick: () => { E.cambiar = i; } },
+      h("small", null, i + 1), h("strong", null, A.nombre), h("small", null, `${H.mun[i]} / ${H.reserva[i]}`)))),
+    mapa && h("div", { className: "mapa-grande", onClick: () => setMapa(false) }, h("canvas", { ref: grande })));
+}
+function Menu({ jugar, calidad, setCalidad, tactil }) {
+  return h("div", { className: "pantalla menu" }, h("div", { className: "tarjeta" },
+    h("h1", { className: "logo" }, "Isla ", h("span", null, "Royale")),
+    h("p", { className: "bajada" }, "Siete jugadores saltan del autobús a una isla. Abrí los cofres dorados, construí para cubrirte y quedate adentro del círculo: la tormenta se cierra cada 45 segundos."),
+    h("button", { className: "jugar", onClick: jugar, autoFocus: true }, "Jugar"),
+    h("div", { className: "calidad" }, "Gráficos:", Object.keys(CALIDADES).map((c) => h("button", { key: c, className: "chip-cal" + (calidad === c ? " activa" : ""), onClick: () => setCalidad(c) }, CALIDADES[c].nombre))),
+    tactil
+      ? h("div", { className: "teclas" }, h("div", null, "Palanca izquierda: moverte"), h("div", null, "Palanca derecha o arrastrar: mirar"), h("div", null, "Disparar: los botones rojos"), h("div", null, "Muro y Rampa: 20 de madera"))
+      : h("div", { className: "teclas" },
+        h("div", null, h("kbd", null, "WASD"), "moverse"), h("div", null, h("kbd", null, "Mouse"), "mirar y apuntar"), h("div", null, h("kbd", null, "Clic"), "disparar"),
+        h("div", null, h("kbd", null, "Clic der."), "apuntar fino"), h("div", null, h("kbd", null, "Q"), "muro (20)"), h("div", null, h("kbd", null, "E"), "rampa (20)"),
+        h("div", null, h("kbd", null, "R"), "recargar"), h("div", null, h("kbd", null, "1"), h("kbd", null, "2"), "armas"), h("div", null, h("kbd", null, "Espacio"), "saltar / planear"),
+        h("div", null, h("kbd", null, "Shift"), "correr"), h("div", null, h("kbd", null, "M"), "mapa"))));
+}
+function Fin({ fin, jugar, alMenu }) {
+  const m = Math.floor(fin.tiempo / 60), s = String(Math.floor(fin.tiempo % 60)).padStart(2, "0");
+  return h("div", { className: "pantalla fin" }, h("div", { className: "tarjeta" },
+    h("h1", { className: "victoria" + (fin.gano ? "" : " perdio") }, fin.gano ? "VICTORY ROYALE" : "Eliminado"),
+    h("p", { className: "bajada" }, fin.gano ? "Quedaste último en pie. La isla es tuya." : `Te eliminó ${fin.asesino || "alguien"}. Terminaste en el puesto #${fin.puesto} de 7.`),
+    h("div", { className: "datos" }, h("div", null, h("b", null, "#" + fin.puesto), "puesto"), h("div", null, h("b", null, fin.bajas), "bajas"), h("div", null, h("b", null, `${m}:${s}`), "tiempo")),
+    h("div", { className: "botonera" }, h("button", { className: "jugar", onClick: jugar, autoFocus: true }, "Jugar otra vez"), h("button", { className: "jugar sec", onClick: alMenu }, "Menú"))));
+}
 function App() {
-  const [fase, setFase] = useState("menu");
-  const [fin, setFin] = useState(null);
-  const [partidaId, setPartidaId] = useState(0);
-  const jugar = () => { Sonido.iniciar(); setFin(null); setPartidaId((n) => n + 1); setFase("jugando"); };
-  const terminar = useCallback((f) => { setFin(f); setFase("fin"); }, []);
-  const minSeg = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const lienzo = useRef(null), capa = useRef(null), motor = useRef(null);
+  const [pantalla, setPantalla] = useState("menu"), [hud, setHud] = useState(null), [fin, setFin] = useState(null), [error, setError] = useState(null);
+  const tocable = matchMedia("(pointer: coarse)").matches;
+  const [calidad, setCalidad] = useState(tocable ? "media" : "alta"), [tactil, setTactil] = useState(tocable), [bloqueado, setBloqueado] = useState(false), [nota, setNota] = useState(null);
+  useEffect(() => {
+    try {
+      motor.current = crearMotor({
+        lienzo: lienzo.current, capa: capa.current, alHud: setHud, alBloqueo: setBloqueado, alTactil: setTactil,
+        alFin: (f) => { setFin(f); setPantalla("fin"); },
+        alMapa: () => motor.current && motor.current.alMapa && motor.current.alMapa(),
+        alCalidad: (c, fps) => { setCalidad(c); setNota(`Iba a ${fps} cuadros por segundo: bajé los gráficos a ${CALIDADES[c].nombre}.`); setTimeout(() => setNota(null), 4000); },
+      });
+      motor.current.tactil(tocable);
+      window.__isla = motor.current; // para las pruebas
+    } catch (e) { setError(String((e && e.message) || e)); }
+    return () => motor.current && motor.current.destruir();
+  }, []);
+  useEffect(() => { if (motor.current) motor.current.calidad(calidad); }, [calidad]);
+  useEffect(() => { if (motor.current) motor.current.tactil(tactil); }, [tactil]);
+  const jugar = () => { Sonido.iniciar(); setFin(null); motor.current.empezar(); setPantalla("juego"); };
+  const alMenu = () => { motor.current.menu(); setPantalla("menu"); setHud(null); };
   return h(React.Fragment, null,
-    fase === "menu" && h(Fondo),
-    fase !== "menu" && h(Juego, { key: partidaId, alTerminar: terminar }),
-    fase === "menu" && h("div", { className: "pantalla menu" },
-      h("div", { className: "tarjeta" },
-        h("h1", { className: "logo" }, "Isla ", h("span", null, "Royale")),
-        h("p", { className: "bajada" }, "Siete en una isla, uno solo sale ganando. Abrí los cofres dorados, construí para cubrirte y quedate adentro del círculo: la tormenta se cierra cada 45 segundos."),
-        h("button", { className: "jugar", onClick: jugar, autoFocus: true }, "Jugar"),
-        h("div", { className: "teclas" },
-          h("span", null, h("kbd", null, "WASD"), "moverse"), h("span", null, h("kbd", null, "Mouse"), "apuntar"), h("span", null, h("kbd", null, "Clic"), "disparar"),
-          h("span", null, h("kbd", null, "Q"), "muro (20 de madera)"), h("span", null, h("kbd", null, "E"), "rampa (20)"), h("span", null, h("kbd", null, "R"), "recargar"),
-          h("span", null, h("kbd", null, "1"), h("kbd", null, "2"), "rifle / escopeta"), h("span", null, h("kbd", null, "✋"), "celular: dos palancas y botones")))),
-    fase === "fin" && fin && h("div", { className: "pantalla fin" },
-      h("div", { className: "tarjeta" },
-        h("h1", { className: "victoria" + (fin.gano ? "" : " perdio") }, fin.gano ? "VICTORY ROYALE" : "Eliminado"),
-        h("p", { className: "bajada" }, fin.gano ? "Quedaste último en pie. La isla es tuya." : `Terminaste en el puesto #${fin.puesto} de ${CANT_BOTS + 1}.`),
-        h("div", { className: "datos" }, h("div", null, h("b", null, "#" + fin.puesto), "puesto"), h("div", null, h("b", null, fin.bajas), "bajas"), h("div", null, h("b", null, minSeg(fin.tiempo)), "tiempo")),
-        h("button", { className: "jugar", onClick: jugar, autoFocus: true }, "Jugar otra vez"))));
+    h("canvas", { className: "juego", ref: lienzo }),
+    h("canvas", { className: "capa", ref: capa }),
+    error && h("div", { className: "pantalla" }, h("div", { className: "tarjeta" }, h("h1", { className: "logo" }, "Uy"), h("p", { className: "bajada" }, "Este navegador no pudo arrancar los gráficos 3D (WebGL). Probá con Chrome o Safari actualizados."), h("p", { className: "bajada" }, error))),
+    !error && pantalla !== "menu" && hud && h(Hud, { H: hud, motor: motor.current, tactil, bloqueado }),
+    !error && pantalla === "juego" && tactil && hud && h(Tactil, { motor: motor.current, apuntando: hud.apuntando }),
+    !error && pantalla === "menu" && h(Menu, { jugar, calidad, setCalidad, tactil }),
+    !error && pantalla === "fin" && fin && h(Fin, { fin, jugar, alMenu }),
+    nota && h("div", { className: "clic", style: { bottom: "auto", top: "40%" } }, nota));
 }
-
 ReactDOM.createRoot(document.getElementById("raiz")).render(h(App));
 </script>

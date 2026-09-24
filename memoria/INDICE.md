@@ -52,7 +52,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | [maquina](maquina.md) | algo falle por red, disco, Docker o permisos de la sesión |
 | [neko](neko.md) | haga falta un escritorio gráfico o manejar un navegador |
 | [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico |
-| [juegos](juegos.md) | haya que animar modelos de Rezona en three.js, probar un juego cuadro a cuadro, hacer un Dead Eye, voces con acento o un juego 2D isométrico con bots |
+| [juegos](juegos.md) | haya que animar modelos de Rezona en three.js, probar un juego cuadro a cuadro, hacer un Dead Eye, voces con acento o un shooter 3D con bots |
 | [diario](diario.md) | quieras saber qué pasó en la sesión anterior y qué quedó |
 
 ## Los tres documentos largos (no se leen enteros)
@@ -78,7 +78,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `tiktok/` | versión 9:16: intro con logo, titular, subtítulos; `armar.mjs` arma el video | [video](video.md) |
 | `zocalo/` | zócalo de stream: editor, fuente de OBS, y `quemar.mjs` para videos | [video](video.md) |
 | `estancia/` | juego "Estancia — La Ley del Monte" (three.js, modelos de Rezona) | `estancia/LEEME.md` |
-| `isla-royale/` | battle royale isométrico en Canvas 2D + React (un solo HTML); `prueba.mjs` lo recorre | [juegos](juegos.md) § Battle royale |
+| `isla-royale/` | battle royale 3D (three.js + React, un solo HTML); `prueba.mjs` lo recorre | [juegos](juegos.md) § Battle royale 3D |
 | `termo/` | termo de mate en 3D (three.js): se gira, se ceba, el agua se enfría | [maquina](maquina.md) para capturarlo |
 | `telarana/`, `garfio/`, `pozo/`, `pique*/`, `flores/`, `paraguas/` | juegos | — |
 | `Prompts/` | colecciones de prompts | — |
