@@ -50,6 +50,11 @@
       for (const v of E.animales.vacas) if (!v.salud.muerta && !v.ternero) { const n = (E.animales.RAZAS[v.tipo] || { nombre: v.tipo }).nombre + (v.toro ? " (toro)" : ""); cuenta[n] = (cuenta[n] || 0) + 1; }
       sistema(Object.entries(cuenta).map(([n, k]) => `${k} ${n}`).join(", ") + `, y ${E.animales.vacas.filter((v) => v.ternero && !v.salud.muerta).length} terneros.`);
     } },
+    { n: "comedero", d: "Cómo está el comedero y los novillos", f: () => {
+      const K = E.comedero, nov = E.animales.vacas.filter((v) => v.engorde && !v.salud.muerta), comiendo = E.animales.vacas.filter((v) => v.estado === "come").length;
+      const kg = nov.length ? Math.round(nov.reduce((s, v) => s + (v.kilos || 320), 0) / nov.length) : 0;
+      sistema(`Comedero al ${Math.round(K.nivel * 100)} %, ${comiendo} comiendo ahora. Novillos del encierre: ${nov.length}, promedian ${kg} kg. La tranquera del encierre está ${K.tranquera.abierta ? "abierta" : "cerrada"}.`);
+    } },
     { n: "hora", d: "La hora y el día", f: () => { const h = Math.floor(G().hora), m = Math.floor((G().hora % 1) * 60); sistema(`Son las ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} del día ${G().dia} de ${E.trabajo.DIAS}.`); } },
     { n: "puesto", d: "Para qué lado queda el rancho", f: () => { const R = E.lugares.rancho; sistema(`El rancho queda ${E.trabajo.rumbo(R.x, R.z)}, a ${Math.round(Math.hypot(R.x - E.jugador.x, R.z - E.jugador.z))} m.`); } },
     { n: "fumar", d: "Armarse un cigarro", f: () => { if (!G()._fumando) { G()._fumando = 6; G().decir("fumar"); } } },

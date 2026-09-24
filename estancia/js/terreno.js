@@ -22,7 +22,8 @@
     estero: { x: -165, z: -175, r: 52 },
     tranquera: { x: 0, z: 392 },
     limite: 390,                                          // el alambrado perimetral
-    centro: { x: 14, z: 12 },                             // lo aplanado de la estancia
+    centro: { x: 14, z: 12 },
+    encierre: { x0: 26, x1: 47, z0: 28, z1: 46 },           // el corral del comedero, con la calle de carga (comedero.js)                             // lo aplanado de la estancia
   });
   // La zanja cruza el campo de este a oeste al norte de las casas, con un vado
   // cerca de x = 10: para traer una vaca del monte hay que buscarlo o
@@ -71,6 +72,9 @@
     p *= E.suave(14, 22, Math.hypot(x - L.corral.x, z - L.corral.z));
     p *= E.suave(10, 18, Math.hypot(x - L.rancho.x, z - L.rancho.z));
     p *= E.suave(8, 14, Math.hypot(x - L.tanque.x, z - L.tanque.z));
+    // El encierre del comedero y su calle de carga: tierra pisoteada.
+    const en = L.encierre, fx = Math.max(en.x0 - x, x - en.x1, 0), fz = Math.max(en.z0 - z, z - en.z1, 0);
+    p *= E.suave(0.5, 5, Math.hypot(fx, fz));
     return p * E.suave(0.9, 1.25, T.estero(x, z));
   };
 

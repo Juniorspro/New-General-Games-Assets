@@ -37,6 +37,11 @@ En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla
   fría de la heladera. **El zaino** se ensucia andando; bañarlo en el tanque y
   darle forraje en el comedero. Si no, al otro día amanece flaco o con
   mataduras.
+- **El encierre** (`js/comedero.js`): corral de tablas con un comedero de
+  hormigón sobre pilares de ladrillo, silo de maíz picado y dos hilos de
+  alambre, como en un feedlot. Adentro, 8 novillos de engorde: cargarles el
+  comedero (desde la calle de carga, al lado de la silobolsa) todos los días o
+  bajan de kilos. Con comida en la batea, la tropa de cerca también viene.
 - **El lazo** se enrolla solo cuando no se usa: al cinto a pie, en el recado a
   caballo.
 

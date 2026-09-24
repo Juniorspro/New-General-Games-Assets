@@ -107,6 +107,15 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Un modelo de Rezona "desde texto" puede venir roto (la mesa salió una
   cuña). Mirarlo suelto antes de meterlo.
 
+## El comedero (feedlot)
+
+- Lugares numerados en la batea, uno por vaca, y la separación entre dos que
+  comen baja de 1,6 a 0,95 m: si no, no entran hombro con hombro.
+- Con el alambre de por medio, la zona de fuga casi no cuenta: uno parado en
+  la calle de carga no las dejaba acercarse a comer.
+- Un corral con una sola tranquera necesita dos puntos de paso (afuera y
+  adentro de la tranquera): yendo derecho al lugar, se quedan contra el cerco.
+
 ## Audio que "se escucha mal"
 
 - Grabar la salida real (ScriptProcessor sobre la ganancia final) y medir RMS

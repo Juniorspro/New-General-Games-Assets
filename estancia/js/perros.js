@@ -96,7 +96,7 @@
     // círculo detrás de la tropa no apretaba a nadie: la tropa está desparramada.)
     let asignadas = [];
     if (P.orden === "juntar") {
-      const lejos = A.vacas.filter((v) => !v.salud.muerta && !v.ternero && !v.toro && !["enlazada", "tumbada", "cepo", "manga", "corral"].includes(v.estado))
+      const lejos = A.vacas.filter((v) => !v.salud.muerta && !v.ternero && !v.toro && !v.engorde && !["enlazada", "tumbada", "cepo", "manga", "corral", "come", "encierre"].includes(v.estado))
         .map((v) => [v, Math.hypot(v.x - px0, v.z - pz0)]).sort((a, b) => b[1] - a[1]);
       if (!lejos.length || lejos[0][1] < 22) { E.juego.mostrar("La hacienda está junta."); P.orden = "seguir"; }
       else if (t - (P.inicioOrden || 0) > 300) P.orden = "seguir";

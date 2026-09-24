@@ -467,6 +467,14 @@
       t.altoCuerpo = 1.05;
       A.vacas.push(t);
     }
+    // Ocho novillos de engorde, encerrados en el corral del comedero
+    // (comedero.js): hay que darles de comer todos los días.
+    if (E.comedero && E.comedero.caja) for (let k = 0; k < 8; k++) {
+      const K = E.comedero.caja;
+      const t = nueva(50 + k, TIPOS[(k * 3 + 1) % 6], { engorde: true, kilos: 310 + az() * 30, escala: 0.9, arisca: 0.15 + az() * 0.2, brava: 0 });
+      t.x = K.X0 + 3 + (k % 4) * 3.5; t.z = K.Z0 + 4 + Math.floor(k / 4) * 4; t.estado = "encierre";
+      A.vacas.push(t);
+    }
     // Seis terneros al pie de la madre, de su misma raza.
     for (let k = 0; k < 6; k++) {
       const madre = A.vacas[[0, 2, 5, 9, 13, 16][k]];
@@ -635,7 +643,11 @@
     if (v.prueba) { const P = v.prueba; v.v = P.v || 0; v.cabezaObj = P.cabeza || 0; v.echada = !!P.echada; if (P.estado) v.estado = P.estado; return; }
     v.t -= dt;
     const s = sentir(v, jug);
-    let objetivo = null, vel = 0, cabezaBaja = 0;
+    // Comiendo en la batea o encerradas, con el alambre de por medio, la
+    // hacienda del encierre está hecha a la gente: solo se aparta si uno se le
+    // viene encima (si no, uno parado en la calle de carga no las dejaba comer).
+    if (v.estado === "come" || v.estado === "encierre") s.intrusion = E.clamp((2.5 - s.d) / 2.5, 0, 1) * 0.5;
+    let objetivo = null, vel = 0, cabezaBaja = 0, guia = null;
     const est = v.estado;
     if (est === "enlazada" || est === "tumbada" || est === "manga" || est === "cepo") { v.v = 0; return; }
     if (est === "levanta") {
@@ -689,6 +701,9 @@
         const dx = (v.x < L.corral.x - L.corral.r ? A.querencia.x : px) - v.x, dz = (v.x < L.corral.x - L.corral.r ? A.querencia.z : pz) - v.z, d = Math.hypot(dx, dz);
         objetivo = [dx / d, dz / d]; vel = 1.2;
         if (Math.hypot(v.x - A.querencia.x, v.z - A.querencia.z) < 30) v.estado = "pasta";
+      } else if (E.comedero && (guia = E.comedero.guiar(v, dt))) {
+        // El encierre y el comedero (comedero.js).
+        objetivo = guia.objetivo; vel = guia.vel; cabezaBaja = guia.cabeza; v.echada = false;
       } else if (hora > 12 && hora < 16.5 && v.estado !== "bebe") {
         // La siesta: a la sombra del algarrobo más cercano, a echarse.
         if (!v.sombra || v.t <= 0) { v.sombra = E.flora.sombraCercana(v.x, v.z, 90); v.t = 30; }
@@ -756,8 +771,11 @@
       const a = vs[i], b = vs[j];
       if (a.salud.muerta || b.salud.muerta) continue;
       const dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz);
-      if (d < 1.6 && d > 1e-4) {
-        const e = (1.6 - d) / 2;
+      // Comiendo en la batea van hombro con hombro (1,6 m las separaba de más
+      // y no entraban en su lugar).
+      const min = a.estado === "come" && b.estado === "come" ? 0.95 : 1.6;
+      if (d < min && d > 1e-4) {
+        const e = (min - d) / 2;
         const quieta = (w) => w.estado === "cepo" || w.estado === "tumbada" || w.estado === "manga";
         if (!quieta(a)) { a.x -= (dx / d) * e; a.z -= (dz / d) * e; }
         if (!quieta(b)) { b.x += (dx / d) * e; b.z += (dz / d) * e; }

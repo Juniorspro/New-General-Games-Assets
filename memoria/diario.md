@@ -142,3 +142,6 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   **Zaino**: se ensucia, baño en el tanque, forraje en el comedero, y al otro
   día se nota. **Lazo** que se enrolla solo.
 - Rezona: ~2.200 créditos (saldo 346.230). Higgsfield: 20 voces, 0,4 créditos.
+- **Encierre con comedero** (pedido con dos fotos: feedlot y corral de tablas):
+  batea de hormigón sobre ladrillos, silo, alambre; 8 novillos de engorde que
+  ganan o pierden kilos según se les cargue el comedero; la tropa viene a comer.

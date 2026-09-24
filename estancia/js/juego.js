@@ -100,6 +100,7 @@
     cargando("Rancho, corral y manga…"); await pausa();
     E.estancia.construir();
     E.puesto.construir();
+    E.comedero.construir();
     cargando("La hacienda…"); await pausa();
     E.animales.construir();
     E.jugador.iniciar();
@@ -308,6 +309,7 @@
     if (G.dia > E.trabajo.DIAS || b.vivas < 12) { fin(b); return; }
     let texto = motivo ? motivo + " " : "";
     texto += E.puesto.amanecer(ayer);
+    texto += E.comedero.amanecer();
     if (muertas.length) texto += `Amaneció muerta ${muertas.map((v) => "la " + v.num).join(" y ")}: la bichera la comió. Los chimangos ya están arriba. `;
     if (nuevas.length) texto += nuevas.map((v) => `El puestero vio la ${v.num} agusanada, ${E.trabajo.rumbo(v.destino.x, v.destino.z)}.`).join(" ") + " ";
     const pend = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta && !nuevas.includes(v));
@@ -343,6 +345,8 @@
       if (J.montado && p.id !== "tanque") return { texto: "Bajate del caballo", fn: () => J.desmontar() };
       if (p.id === "mate") return { texto: p.texto, fn: E.puesto.cebarMate };
       if (p.id === "heladera") return { texto: p.texto, fn: E.puesto.aguaFria };
+      if (p.id === "comederoHacienda") return { texto: E.comedero.nivel > 0.85 ? "El comedero está lleno" : `${p.texto} ($ ${miles.format(E.comedero.COSTO)})`, fn: E.comedero.cargar };
+      if (p.id === "tranqueraEncierre") return { texto: p.texto, fn: E.comedero.alternarTranquera };
       if (p.id === "comedero") return { texto: c.comido === G.dia ? "El zaino ya tiene forraje" : p.texto, fn: () => { if (c.comido !== G.dia) E.puesto.forraje(); } };
       if (p.id === "tanque" && E.puesto.puedeBanar()) return { texto: "Bañar al zaino con el balde", fn: E.puesto.banar };
       if (p.id === "tanque") return { texto: p.texto, fn: tomarAgua };
@@ -420,6 +424,7 @@
       agus.map((v) => `<li class="urgente">La ${v.num} con bichera · ${v.salud.bichera.dias ? v.salud.bichera.dias + (v.salud.bichera.dias === 1 ? " día" : " días") : "de hoy"}</li>`).join("") +
       `<li>Trabajadas en la manga: ${b.trabajadas} de ${b.vivas}</li>` +
       (G.hierroCaliente > 0 ? `<li>Hierro caliente: ${Math.round(G.hierroCaliente * 60)} min</li>` : "") +
+      (E.comedero.nivel < 0.15 ? `<li class="urgente">El comedero del encierre está vacío</li>` : `<li>Comedero: ${Math.round(E.comedero.nivel * 100)} %</li>`) +
       (E.puesto.pendientes().length ? `<li class="urgente">El zaino: ${E.puesto.pendientes().join(" y ")}</li>` : "") +
       `<li>${Z.tieneLazo ? (Z.estado === "guardado" || Z.estado === "enrollando" ? (J.montado ? "Lazo enrollado en el recado" : "Lazo enrollado al cinto") : "Lazo en la mano") : "Sin lazo"}${J.montado && J.alPaso ? " · al paso" : ""}</li>`;
     $("aviso").textContent = ctxAccion ? `${E.entrada.tactil ? "✋" : "E"} · ${ctxAccion.texto}` : "";
@@ -495,7 +500,7 @@
       E.perros.actualizar(dt, G.t, E.jugador);
     }
     E.estancia.actualizar(dt, G.t);
-    if (activo) { E.puesto.actualizar(dt, G.t); E.puesto.revisarLlegada(); }
+    if (activo) { E.puesto.actualizar(dt, G.t); E.puesto.revisarLlegada(); E.comedero.actualizar(dt); }
     E.terreno.actualizar(G.t);
     E.trabajo.actualizarCura(dt);
     E.trabajo.actualizarManga(dt, G.t);
