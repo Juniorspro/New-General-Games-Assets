@@ -147,3 +147,5 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   ganan o pierden kilos según se les cargue el comedero; la tropa viene a comer.
 - **Mapa** (M): lugares para ir, columna de luz, brújula, minimapa. **Pueblo**
   nuevo afuera de la tranquera de entrada (que ahora se abre).
+- **Ultra baja**: sin sombras, plantas quietas, poco pasto, luz de relleno; se
+  elige antes del menú (el escaneo la propone en equipos flojos).

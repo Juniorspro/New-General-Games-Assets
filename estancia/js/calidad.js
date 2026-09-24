@@ -14,7 +14,11 @@
   // escala: resolución interna; tope: techo del devicePixelRatio (las pantallas
   // retina a 2× cuadruplican los píxeles); sombra: lado del mapa de sombras;
   // pasto: densidad de matas.
+  // ultrabaja: para los equipos más flojos. Sin sombras (lo más caro después
+  // de los píxeles), las plantas quietas, casi sin pasto, y luz de relleno:
+  // sin sombras el campo queda chato y oscuro del lado que no le da el sol.
   C.NIVELES = {
+    ultrabaja: { nombre: "Ultra baja", escala: 0.5, tope: 1, sombra: 0, pasto: 0.15, quieto: true, luz: 1 },
     baja: { nombre: "Baja", escala: 0.6, tope: 1, sombra: 1024, pasto: 0.4 },
     media: { nombre: "Media", escala: 0.8, tope: 1.25, sombra: 1024, pasto: 0.7 },
     alta: { nombre: "Alta", escala: 1, tope: 1.5, sombra: 2048, pasto: 1 },
@@ -27,7 +31,16 @@
     const n = C.NIVELES[nombre] || C.NIVELES.alta, M = E.motor;
     C.nivel = nombre in C.NIVELES ? nombre : "alta";
     M.escala = n.escala; M.tope = n.tope; M.piso = Math.max(0.5, n.escala - 0.3); M.lento = 0;
-    if (M.sol.shadow.mapSize.x !== n.sombra) {
+    // Prender o apagar las sombras obliga a recompilar los materiales.
+    const conSombra = n.sombra > 0;
+    if (M.renderer.shadowMap.enabled !== conSombra) {
+      M.renderer.shadowMap.enabled = conSombra; M.sol.castShadow = conSombra;
+      M.escena.traverse((o) => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; });
+    }
+    E.flora.quieto = !!n.quieto;
+    M.luzExtra = n.luz || 0;
+    if (E.juego) M.actualizarHora(E.juego.hora, E.juego.t);
+    if (conSombra && M.sol.shadow.mapSize.x !== n.sombra) {
       M.sol.shadow.mapSize.set(n.sombra, n.sombra);
       // Sin mapa, three arma uno nuevo del tamaño pedido en el cuadro que sigue.
       if (M.sol.shadow.map) { M.sol.shadow.map.dispose(); M.sol.shadow.map = null; }
@@ -82,6 +95,15 @@
     const r = { fps: {}, nivel: "alta" };
     const alta = (r.fps.alta = await medirNivel("alta", alMedir));
     if (C.cortar) return null;
+    if (alta < 12) {
+      // Ni en baja va a andar bien: directo a la ultra baja.
+      r.nivel = "ultrabaja";
+      r.fps.ultrabaja = await medirNivel("ultrabaja", alMedir);
+      if (C.cortar) return null;
+      r.fpsFinal = r.fps.ultrabaja;
+      C.aplicar(r.nivel);
+      return r;
+    }
     if (alta >= 55) {
       const ultra = (r.fps.ultra = await medirNivel("ultra", alMedir));
       r.nivel = ultra >= 50 ? "ultra" : "alta";
@@ -90,11 +112,13 @@
       const media = (r.fps.media = await medirNivel("media", alMedir));
       r.nivel = media >= 35 ? "media" : "baja";
       if (r.nivel === "baja") r.fps.baja = await medirNivel("baja", alMedir);
+      if (r.nivel === "baja" && r.fps.baja < 20) { r.nivel = "ultrabaja"; r.fps.ultrabaja = await medirNivel("ultrabaja", alMedir); }
     } else {
       // Tan lejos que media no alcanza: directo a baja (en una compu así cada
       // nivel medido son varios segundos de espera).
       r.nivel = "baja";
       r.fps.baja = await medirNivel("baja", alMedir);
+      if (r.fps.baja < 20) { r.nivel = "ultrabaja"; r.fps.ultrabaja = await medirNivel("ultrabaja", alMedir); }
     }
     if (C.cortar) return null;
     r.fpsFinal = r.fps[r.nivel];

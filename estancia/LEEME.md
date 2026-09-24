@@ -57,7 +57,10 @@ En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla
 
 La primera vez que se abre, antes de la portada, el juego dibuja el rancho, el
 corral, el monte y la tropa en calidad alta y mide los cuadros por segundo del
-lugar más pesado (`js/calidad.js`). Con 55 o más prueba ultra (se queda si da
+lugar más pesado (`js/calidad.js`). Antes del menú se puede tocar otro nivel;
+**Ultra baja** (para equipos flojos) apaga las sombras, deja las plantas quietas,
+casi saca el pasto y agrega luz de relleno para que no quede oscuro; el
+escaneo la elige solo si ni en baja llega a 20 cuadros. Con 55 o más prueba ultra (se queda si da
 50); con 40 queda en alta; entre 22 y 40 prueba media (35 para quedarse); si
 no, baja. Cada nivel cambia la resolución interna, el techo de píxeles en
 pantallas retina, el mapa de sombras y la densidad del pasto. Queda guardado;

@@ -84,6 +84,10 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
   (alta < 22 fps → directo a baja) o el escaneo dura un minuto.
 - Las manos de primera persona cuelgan de la cámara: esconderlas en las vistas.
 - Cambiar `shadow.mapSize` en caliente: `map.dispose()` y `map = null`.
+- Apagar las sombras en caliente (`shadowMap.enabled`) obliga a
+  `material.needsUpdate` en toda la escena. Sin sombras hace falta luz de
+  relleno (ambiente + más cielo) o el lado sin sol queda negro; de noche,
+  poca, o parece atardecer. En la escena del rancho: 908 mil → 597 mil triángulos.
 
 ## Más animales sobre los mismos modelos
 

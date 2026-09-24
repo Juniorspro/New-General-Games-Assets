@@ -198,6 +198,11 @@
   .escaneo li.probando { color: var(--hueso); box-shadow: inset 0 0 0 2px var(--hueso); animation: parpadeo 0.8s ease-in-out infinite; }
   .escaneo li.elegido { background: var(--tierra); color: var(--hueso); box-shadow: none; transform: scale(1.12); animation: none; }
   .escaneo .boton { padding: 8px 14px; font-size: 14px; }
+  .escaneo ol li { cursor: pointer; }
+  .escaneo ol li:hover { color: var(--hueso); box-shadow: inset 0 0 0 2px var(--hueso-suave); }
+  #escaneoAyuda { margin: 0; max-width: 34ch; text-align: center; text-transform: none; letter-spacing: 0.02em; font-size: 16px; color: var(--hueso); }
+  .escaneo .botones { justify-content: center; margin: 0; }
+  @media (max-width: 520px) { .escaneo ol { flex-wrap: wrap; justify-content: center; } }
 
   /* El parte del puestero: un papel escrito a la mañana. */
   #parte .hoja { background: #e9dfc8; color: #231a12; border-top-color: var(--tierra); }
@@ -534,7 +539,7 @@
     <label class="opcion">Volumen general<input type="range" id="opVolumen" min="0" max="1" step="0.05"><output id="opVolumenV"></output></label>
     <label class="opcion">Voz del Guacho<input type="range" id="opVoz" min="0" max="1" step="0.05"><output id="opVozV"></output></label>
     <label class="opcion">Sensibilidad del ratón<input type="range" id="opSensib" min="0.3" max="2.5" step="0.1"><output id="opSensibV"></output></label>
-    <label class="opcion">Calidad gráfica<select id="opCalidad"><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option><option value="ultra">Ultra</option></select><output id="opCalidadV"></output></label>
+    <label class="opcion">Calidad gráfica<select id="opCalidad"><option value="ultrabaja">Ultra baja (sin sombras)</option><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option><option value="ultra">Ultra</option></select><output id="opCalidadV"></output></label>
     <div class="opcion tilde"><span>Escaneo de cuadros<small id="opEscaneo">Todavía no se midió.</small></span><button class="boton secundario" id="opMedir">Medir de nuevo</button></div>
     <label class="opcion tilde"><span>Ojo de águila<small>Cámara lenta y mira al revolear. Sin esto, se emboca a pulso.</small></span><input type="checkbox" id="opOjo"></label>
     <label class="opcion tilde"><span>Subtítulos<small>Lo que dice el Guacho, escrito abajo.</small></span><input type="checkbox" id="opSubs"></label>
@@ -550,8 +555,9 @@
   <span id="cargaTexto">Cargando…</span>
   <div class="escaneo" id="escaneo" hidden>
     <div class="fps"><b id="escaneoFps">--</b><small>cuadros por segundo</small></div>
-    <ol id="escaneoNiveles"><li data-n="baja">Baja</li><li data-n="media">Media</li><li data-n="alta">Alta</li><li data-n="ultra">Ultra</li></ol>
-    <button class="boton secundario" id="escaneoSaltar">Saltar</button>
+    <ol id="escaneoNiveles"><li data-n="ultrabaja">Ultra baja</li><li data-n="baja">Baja</li><li data-n="media">Media</li><li data-n="alta">Alta</li><li data-n="ultra">Ultra</li></ol>
+    <p id="escaneoAyuda" hidden>¿Anda trabado? Tocá <b>Ultra baja</b>: sin sombras, plantas quietas y más luz.</p>
+    <div class="botones"><button class="boton secundario" id="escaneoSaltar">Saltar</button><button class="boton" id="escaneoSeguir" hidden>Seguir</button></div>
   </div>
 </div>
 <div id="girar"><svg viewBox="0 0 90 90" aria-hidden="true"><rect x="27" y="10" width="36" height="70" rx="6"/></svg><div>Girá el teléfono: la estancia se ve acostada.</div></div>

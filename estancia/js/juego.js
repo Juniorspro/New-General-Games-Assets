@@ -160,9 +160,19 @@
     if (!r) { C.aplicar(porDefecto); return; }       // saltado: no se guarda, la próxima vez mide
     mostrarFps(r.fpsFinal); marcar(r.nivel, "elegido");
     $("escaneoSaltar").hidden = true;
-    $("cargaTexto").textContent = `Gráficos elegidos: ${C.NIVELES[r.nivel].nombre.toLowerCase()}`;
-    E.opciones.calidad = r.nivel; E.opciones.fpsMedido = Math.round(r.fpsFinal); guardarOpciones();
-    await new Promise((listo) => setTimeout(listo, 1800));
+    // Antes del menú se puede elegir otro nivel tocándolo (la ultra baja, para
+    // los equipos flojos). Si no se toca nada, sigue solo.
+    let elegido = r.nivel, tocado = false;
+    const decir = () => { $("cargaTexto").textContent = `Gráficos: ${C.NIVELES[elegido].nombre.toLowerCase()}${tocado ? "" : " (elegidos por el escaneo)"}`; };
+    decir();
+    $("escaneoAyuda").hidden = false; $("escaneoSeguir").hidden = false;
+    await new Promise((listo) => {
+      const solo = setTimeout(listo, 6000);
+      lis.forEach((li) => { li.onclick = () => { clearTimeout(solo); tocado = true; elegido = li.dataset.n; C.aplicar(elegido); marcar(elegido, "elegido"); decir(); }; });
+      $("escaneoSeguir").onclick = () => { clearTimeout(solo); listo(); };
+    });
+    lis.forEach((li) => { li.onclick = null; });
+    E.opciones.calidad = elegido; E.opciones.fpsMedido = Math.round(r.fpsFinal); guardarOpciones();
   }
 
   function conectarInterfaz() {

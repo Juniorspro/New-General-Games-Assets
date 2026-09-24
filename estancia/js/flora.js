@@ -449,7 +449,10 @@
   // detrás de la cámara nada salvo lo que está a menos de 30 m, cuya sombra sí
   // puede verse (§ 6.6). Los arbustos solo cerca.
   F.actualizar = (cam, t) => {
-    uViento.uTiempo.value = t;
+    // En calidad ultra baja las plantas no se mueven (el viento es cálculo en
+    // cada vértice de cada hoja).
+    uViento.uTiempo.value = F.quieto ? 0 : t;
+    if (F.quieto) uViento.uRacha.value = 0;
     const ult = F.ultima;
     const dir = new THREE.Vector3(); cam.getWorldDirection(dir);
     const giro = Math.acos(E.clamp(dir.x * ult.dx + dir.z * ult.dz, -1, 1));

@@ -61,6 +61,9 @@
     M.luna = new THREE.DirectionalLight(0x6f86b8, 0);
     M.luna.position.set(-40, 80, 30);
     M.escena.add(M.luna);
+    // Relleno parejo, apagado salvo en calidad ultra baja (calidad.js).
+    M.relleno = new THREE.AmbientLight(0xfff1dc, 0);
+    M.escena.add(M.relleno);
 
     M.crearCielo();
     M.crearPost();
@@ -161,6 +164,15 @@
     // El ojo se acostumbra a la noche: sin esto, de noche era negro total y
     // no se veía ni el horizonte. De día, 1.
     M.renderer.toneMappingExposure = 1 + 1.3 * (1 - E.suave(-9, 1, e));
+    // Ultra baja (sin sombras): más cielo y un relleno parejo, así el lado que
+    // no le da el sol y lo que está bajo techo no quedan negros.
+    const k = M.luzExtra || 0;
+    if (k) {
+      M.hemi.intensity *= 1 + 0.9 * k;
+      M.relleno.intensity = k * (0.18 + 0.27 * E.suave(-6, 10, e));
+      M.luna.intensity *= 1 + 0.4 * k;
+      M.renderer.toneMappingExposure *= 1 + 0.08 * k;
+    } else M.relleno.intensity = 0;
     M.temp = M.temperatura(hora);
     M.calor = E.suave(31, 40, M.temp);
     // La niebla es el horizonte, un poco teñida hacia el sol. Si no coincide,
