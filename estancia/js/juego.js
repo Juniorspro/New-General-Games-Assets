@@ -9,27 +9,36 @@
   const HORAS_POR_SEGUNDO = 1 / 60;           // una hora de juego, un minuto real
   const miles = new Intl.NumberFormat("es-AR");
 
-  // ── lo que dice el Guacho ── corto, en argentino, puteando poco pero bien.
+  // ── opciones ── se guardan en el navegador de cada uno (si se puede).
+  const OPCIONES = { volumen: 0.9, voz: 1, sensib: 1, ojo: true, subtitulos: true };
+  E.opciones = { ...OPCIONES };
+  try { Object.assign(E.opciones, JSON.parse(localStorage.getItem("estancia-opciones") || "{}")); } catch (e) { /* sin almacenamiento */ }
+  const guardarOpciones = () => { try { localStorage.setItem("estancia-opciones", JSON.stringify(E.opciones)); } catch (e) { /* no importa */ } };
+
+  // ── lo que dice el Guacho ── corto, en argentino y sin malas palabras.
+  // Sin malas palabras: rioplatense de campo, con "la pucha" y "qué macana".
   const FRASES = {
-    errar: ["¡La puta madre!", "¡Me cago en…!", "Uh, la concha de la lora.", "¡Pero la puta que te parió!"],
-    enlazada: ["¡Ahí está, guacha!", "¡Tomá, desgraciada!", "¡Ya te tengo!", "Quedate quieta, negra."],
-    cortado: ["¡Se cortó el lazo, la puta madre!", "Me cago en el tiento podrido."],
-    seFue: ["¡Se me fue con lazo y todo!", "¡Ahí va el lazo, la reputa…!"],
-    pialada: ["¡Abajo!", "¡Echate, carajo!", "Ahí está. Quieta."],
+    errar: ["¡Uh, la pucha!", "¡Pucha, digo!", "Se me fue por un pelo.", "¡Ay, mamita, qué tiro!"],
+    enlazada: ["¡Ahí está, ya te tengo!", "¡Tomá, mañera!", "¡Quieta, quieta!", "Tranquila, negra."],
+    cortado: ["¡Se cortó el lazo, pucha digo!", "Este tiento estaba podrido."],
+    seFue: ["¡Se me fue con lazo y todo!", "¡Ahí va mi lazo, qué macana!"],
+    pialada: ["¡Abajo!", "¡Echate, vamos!", "Ahí está. Quieta."],
     errarPial: ["¡Pará, pará…!", "Casi, casi. Otra vez."],
     todaviaNo: ["Está entera todavía. Hay que cansarla.", "Que se canse primero."],
-    patada: ["¡Ay, la puta! La costilla…", "¡Hija de puta, qué patada!"],
-    cornada: ["¡Me ensartó, la guacha!", "¡Ay, carajo!"],
+    patada: ["¡Ay! ¡La costilla…!", "¡Uh, qué patada me pegó!"],
+    cornada: ["¡Me ensartó, la mañera!", "¡Ay, ay, ay!"],
     embiste: ["¡Uy, viene!", "¡Cuidado que carga!"],
     sed: ["Me muero de sed.", "Tengo la garganta hecha polvo."],
-    calor: ["Qué calor de mierda.", "Cuarenta a la sombra, y sin sombra."],
+    calor: ["Qué calor bárbaro.", "Cuarenta a la sombra, y sin sombra."],
     curada: ["Listo, negra. Ya está.", "Así, curadita."],
     lesion: ["Se me mancó el zaino. Lo reventé.", "Uh, el caballo viene rengo."],
     sinLazo: ["No tengo lazo. Hay uno colgado en la galería."],
-    fumar: ["Un armado y seguimos.", "…"],
+    fumar: ["Un armado y seguimos."],
     manga: ["Vamos, adentro.", "A la manga, vamos."],
-    silbar: ["¡Fiiiu! Vení, zaino."],
+    silbar: ["¡Vení, zaino!"],
+    apuntar: ["Ahí la tengo…", "Quieta… quieta…", "Ya sos mía."],
   };
+
   let ultimaFrase = 0;
   G.decir = (clave, v) => {
     const l = FRASES[clave];
@@ -38,7 +47,7 @@
     E.sonido.voz(clave + "-" + i);
     const s = $("subtitulo");
     s.textContent = texto;
-    s.classList.add("visible");
+    if (E.opciones.subtitulos) s.classList.add("visible");
     clearTimeout(G._sub);
     G._sub = setTimeout(() => s.classList.remove("visible"), 2600);
     ultimaFrase = G.t;
@@ -58,12 +67,14 @@
   };
   G.gastar = (monto, que) => { G.dinero -= monto; };
   G.soltarPuntero = () => { if (document.pointerLockElement) document.exitPointerLock(); };
-  G.enMenu = () => !$("menu").hidden || !$("parte").hidden || !$("fin").hidden || !$("pausa").hidden;
+  const MENUS = ["menu", "parte", "fin", "pausa", "como", "opciones"];
+  G.enMenu = () => MENUS.some((id) => !$(id).hidden);
 
   // ── arranque ──
   G.iniciar = async () => {
     const lienzo = $("lienzo");
-    const cargando = (t) => { $("cargaTexto").textContent = t; };
+    let pasoCarga = 0;
+    const cargando = (t) => { $("cargaTexto").textContent = t; $("cargaBarra").style.width = (++pasoCarga / 7) * 100 + "%"; };
     const pausa = () => new Promise((r) => setTimeout(r, 0));
     cargando("Encendiendo…"); await pausa();
     E.motor.iniciar(lienzo);
@@ -83,6 +94,7 @@
     E.trabajo.construir();
     E.trabajo.conectarCura();
     E.trabajo.conectarManga();
+    E.ojo.conectar();
     E.conectarEntrada(lienzo);
     conectarInterfaz();
     // Compilar todos los shaders en la carga: si no, lo primero que entra en
@@ -92,13 +104,44 @@
     colocar(0.016);
     try { await E.motor.renderer.compileAsync(E.motor.escena, E.motor.camara); } catch (e) { /* los navegadores viejos no lo tienen */ }
     E.motor.dibujar(0, {});
-    $("carga").hidden = true;
+    // La carga se funde y aparece la portada, con la cámara dando vueltas.
+    $("carga").style.opacity = 0;
+    setTimeout(() => { $("carga").hidden = true; }, 600);
     $("menu").hidden = false;
+    // La portada, al caer el sol; la temporada arranca igual al amanecer.
+    G.hora = 18.9;
     requestAnimationFrame(bucle);
   };
 
   function conectarInterfaz() {
     $("menuEmpezar").onclick = () => empezar();
+    // Cómo se juega y Opciones se abren desde la portada o la pausa, y "Volver"
+    // vuelve a donde se estaba.
+    let volverA = "menu";
+    const abrir = (id, desde) => { volverA = desde; $(desde).hidden = true; $(id).hidden = false; };
+    $("menuComo").onclick = () => abrir("como", "menu");
+    $("menuOpciones").onclick = () => abrir("opciones", "menu");
+    $("pausaComo").onclick = () => abrir("como", "pausa");
+    $("pausaOpciones").onclick = () => abrir("opciones", "pausa");
+    for (const b of document.querySelectorAll("[data-volver]")) b.onclick = () => { b.closest(".panel").hidden = true; $(volverA).hidden = false; };
+    const deslizador = (id, clave, texto) => {
+      const el = $(id), out = $(id + "V");
+      el.value = E.opciones[clave]; out.textContent = texto(E.opciones[clave]);
+      el.oninput = () => {
+        E.opciones[clave] = Number(el.value); out.textContent = texto(E.opciones[clave]); guardarOpciones();
+        if (clave === "volumen") E.sonido.volumen(E.opciones.volumen);
+      };
+    };
+    const porciento = (v) => Math.round(v * 100) + "%";
+    deslizador("opVolumen", "volumen", porciento);
+    deslizador("opVoz", "voz", porciento);
+    deslizador("opSensib", "sensib", (v) => v.toFixed(1) + "×");
+    // La voz se prueba al soltar el deslizador.
+    $("opVoz").onchange = () => { E.sonido.iniciar(); E.sonido.voz("apuntar-0"); };
+    for (const [id, clave] of [["opOjo", "ojo"], ["opSubs", "subtitulos"]]) {
+      $(id).checked = E.opciones[clave];
+      $(id).onchange = () => { E.opciones[clave] = $(id).checked; guardarOpciones(); };
+    }
     $("parteSeguir").onclick = () => { $("parte").hidden = true; retomar(); };
     $("pausaSeguir").onclick = () => { $("pausa").hidden = true; retomar(); };
     $("finOtra").onclick = () => location.reload();
@@ -116,7 +159,16 @@
   }
   function empezar() {
     $("menu").hidden = true;
+    document.body.classList.add("jugando");
+    G.hora = 6; E.motor.actualizarHora(G.hora, G.t);
     E.sonido.iniciar();
+    // En el celular: pantalla completa y acostado, si el navegador deja.
+    if (matchMedia("(pointer: coarse)").matches) {
+      const d = document.documentElement;
+      Promise.resolve(d.requestFullscreen && d.requestFullscreen())
+        .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape"))
+        .catch(() => { /* iPhone y otros no dejan: queda el cartel de girar */ });
+    }
     G.corriendo = true;
     // El primer día arranca con una vaca agusanada.
     const v = E.animales.vacas[6];
@@ -258,7 +310,8 @@
     G._lazoTactil = en.boton("lazo");
     if (en.pulsado("KeyP") || en.botonPulsado("pialar")) Z.pialar();
     if (en.pulsado("KeyV") || en.botonPulsado("camara")) J.camara = J.camara === "primera" ? "tercera" : "primera";
-    if (en.pulsado("KeyH") || en.botonPulsado("silbar")) { E.animales.caballo.destino = { x: J.x, z: J.z }; G.decir("silbar"); }
+    // El silbido y después la voz.
+    if (en.pulsado("KeyH") || en.botonPulsado("silbar")) { E.animales.caballo.destino = { x: J.x, z: J.z }; E.sonido.silbido(); setTimeout(() => G.decir("silbar"), 1050); }
     if (en.pulsado("KeyF") && !G._fumando) { G._fumando = 6; G.decir("fumar"); }
     J.bloqueado = W.manga.activa ? "manga" : Z.estado === "revoleando" || Z.estado === "enganchado" ? "lazo" : null;
   }
@@ -282,7 +335,13 @@
     $("barCaballo").style.width = c.aliento * 100 + "%";
     $("hudLesion").hidden = !(c.lesion > 0);
     $("hudCostilla").hidden = !(J.costilla > 0);
-    $("hudPlata").textContent = `$ ${miles.format(Math.round(G.dinero))}`;
+    const plata = Math.round(G.dinero);
+    if (plata !== ultimaPlata) {
+      const el = $("hudPlata");
+      el.textContent = `$ ${miles.format(plata)}`;
+      if (ultimaPlata !== null) { el.classList.remove("sube", "baja"); void el.offsetWidth; el.classList.add(plata > ultimaPlata ? "sube" : "baja"); }
+      ultimaPlata = plata;
+    }
     const b = W.balance();
     const agus = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta);
     $("hudObjetivos").innerHTML =
@@ -318,6 +377,22 @@
     hora: 6, horasJuego: 6, escalaHoras: HORAS_POR_SEGUNDO, sed: false,
   };
   const ctxJugador = { dh: 0, aviso: (t) => G.decir(t) };
+  let ultimaPlata = null;
+  // La cámara de la portada: va y viene despacio por delante del Guacho, que
+  // mira a cámara con el rancho atrás (dar la vuelta entera metía la cámara
+  // en la pared del rancho).
+  function camaraDePortada(dt, t) {
+    const J = E.jugador, cam = E.motor.camara, T = E.terreno, R = E.lugares.rancho;
+    const a = Math.sin(t * 0.05) * 1.0, r = 7.5 + Math.sin(t * 0.07) * 1.5;
+    const x = J.x + Math.sin(a) * r, z = J.z + Math.cos(a) * r, suelo = T.altura(J.x, J.z);
+    cam.position.set(x, Math.max(T.altura(x, z) + 1.6, suelo + 2.1 + Math.sin(t * 0.11) * 0.4), z);
+    // El Guacho en el tercio derecho: la portada ocupa la izquierda. En una
+    // pantalla angosta (la portada abajo) va al centro.
+    const corrido = innerWidth > 760 ? 2.2 : 0;
+    const fx = J.x - x, fz = J.z - z, l = Math.hypot(fx, fz) || 1;
+    cam.lookAt(E.lerp(J.x, R.x, 0.25) + (fz / l) * corrido, suelo + 1.4, E.lerp(J.z, R.z, 0.25) - (fx / l) * corrido);
+    J.portada(dt, t);
+  }
   let antes = performance.now();
   function colocar(dt) {
     // Poner todo en su lugar sin avanzar el mundo (para la carga y las fotos).
@@ -351,6 +426,7 @@
     E.trabajo.actualizarManga(dt, G.t);
     // El hierro brilla si está caliente.
     E.estancia.hierro.punta.material.emissiveIntensity = G.hierroCaliente > 0 ? 2.5 + Math.sin(G.t * 3) * 0.4 : 0;
+    if (!$("menu").hidden || (!$("como").hidden || !$("opciones").hidden) && !G.corriendo) camaraDePortada(dt, G.t);
     const cam = E.motor.camara;
     E.flora.actualizar(cam, G.t);
     E.flora.actualizarPasto(cam.position);
@@ -387,10 +463,12 @@
     const dt = Math.max(0, Math.min(0.05, real));
     E.motor.acomodar();
     E.motor.medir(real, G.fijo);
-    G.simular(dt);
+    // El ojo de águila va con el tiempo de verdad y frena el del mundo.
+    E.ojo.actualizar(dt);
+    G.simular(dt * E.ojo.escala);
     const negro = avanzarFundido(dt);
     const J = E.jugador;
-    E.motor.dibujar(G.t, { sed: E.clamp((30 - J.sed) / 30, 0, 1) * 0.8, dolor: J.dolor, negro });
+    E.motor.dibujar(G.t, { sed: E.clamp((30 - J.sed) / 30, 0, 1) * 0.8, dolor: J.dolor, negro, ojo: E.ojo.activo, foco: E.ojo.foco });
     requestAnimationFrame(bucle);
   }
 
@@ -400,15 +478,15 @@
     empezar: () => { empezar(); $("parte").hidden = true; },
     ir(x, z, yaw = 0, pitch = 0) { const J = E.jugador; J.x = x; J.z = z; J.yaw = yaw; J.pitch = pitch; if (J.montado) { E.animales.caballo.x = x; E.animales.caballo.z = z; } colocar(0); },
     hora(h) { G.hora = h; E.motor.actualizarHora(h, G.t); },
-    paso(dt, n = 1) { for (let i = 0; i < n; i++) G.simular(dt); },
-    foto() { E.motor.acomodar(); E.motor.dibujar(G.t, {}); return E.motor.renderer.info.render; },
+    paso(dt, n = 1) { for (let i = 0; i < n; i++) { E.ojo.actualizar(dt); G.simular(dt * E.ojo.escala); } },
+    foto() { E.motor.acomodar(); E.motor.dibujar(G.t, { ojo: E.ojo.activo, foco: E.ojo.foco }); return E.motor.renderer.info.render; },
     congelar(si = true) { congelado = si; },
     // Una foto con la cámara donde se quiera (con el bucle congelado).
     fotoDesde(pos, mira) {
       const cam = E.motor.camara;
       cam.position.set(pos[0], pos[1], pos[2]); cam.lookAt(mira[0], mira[1], mira[2]); cam.updateMatrixWorld();
       E.flora.actualizar(cam, G.t); E.flora.actualizarSol(cam);
-      E.motor.acomodar(); E.motor.dibujar(G.t, {});
+      E.motor.acomodar(); E.motor.dibujar(G.t, { ojo: E.ojo.activo, foco: E.ojo.foco });
       return E.motor.renderer.info.render.triangles;
     },
     info() { const r = E.motor.renderer.info; return { triangulos: r.render.triangles, llamadas: r.render.calls, geometrias: r.memory.geometries, texturas: r.memory.textures, escala: E.motor.escala }; },

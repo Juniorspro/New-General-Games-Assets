@@ -13,6 +13,7 @@ internet. Receta seguida: `GUIA-JUEGOS.md`.
 | E | la acción de lo que se tiene cerca (montar, mate, catre, manga, tranquera…) |
 | 1 o L | sacar el lazo |
 | clic sostenido / soltar | revolear / tirar; clic derecho: cobrar |
+| (revoleando, con una vaca adelante) | ojo de águila: todo gris y lento, la mira se cierra sobre la cabeza; soltá con la mira roja y el tiro va guiado |
 | P | pialar (en la ventana de la aguja) |
 | V | primera o tercera persona |
 | H | silbarle al caballo |
@@ -30,7 +31,8 @@ En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla.
 | caminata de vaca y caballo; quieto, caminar y correr del guacho | Rezona `rig3d` (una animación por pedido) | idem |
 | revoque, chapa, tablas, barro (+ normales) | Rezona, imagen → `herramientas/procesar_rezona.py` | idem |
 | ramas de quebracho, algarrobo y vinal; matas de espartillo | Rezona con fondo transparente, recortadas y sangradas | idem |
-| la voz del Guacho (38 frases) | Higgsfield `seed_audio`, voz Barrett | `voces.json` |
+| la voz del Guacho (41 frases, sin malas palabras) | Higgsfield `qwen_audio_tts`, voz Julian con instrucción de acento rioplatense | `voces.json` |
+| el silbido del Guacho | sintetizado en `js/sonido.js` (dos notas de silbido humano, con aire y vibrato) | — |
 | viento, chicharras, teros, mugidos, lazo, radio | sintetizado en `js/sonido.js` | — |
 
 Lo que no está (música, efectos grabados): Rezona devolvió "servicio no
@@ -59,4 +61,4 @@ python3 herramientas/armar_datos.py carpeta-con-assets/
 python3 ../herramientas/descargable/empaquetar.py index.html estancia.html
 ```
 
-`js/datos.js` pesa 11,4 MB y el HTML empaquetado 12,2 MB (23/9/2026).
+`js/datos.js` pesa 11,5 MB y el HTML empaquetado 12,7 MB (24/9/2026).

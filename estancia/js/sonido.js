@@ -7,12 +7,18 @@
 "use strict";
 (() => {
   const S = (E.sonido = { listo: false });
-  let ctx, master, rever, ruido;
+  let ctx, master, rever, ruido, filtroLento, salida;
 
   S.iniciar = () => {
     if (S.listo) return;
     try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
-    master = ctx.createGain(); master.gain.value = 0.8; master.connect(ctx.destination);
+    // Todo pasa por un pasabajos que en cámara lenta cierra el sonido, como
+    // bajo el agua; normalmente está abierto del todo.
+    filtroLento = ctx.createBiquadFilter(); filtroLento.type = "lowpass"; filtroLento.frequency.value = 20000; filtroLento.Q.value = 0.5;
+    // La salida: el volumen general de Opciones. Todo termina acá.
+    salida = ctx.createGain(); salida.gain.value = E.opciones ? E.opciones.volumen : 1; salida.connect(ctx.destination);
+    filtroLento.connect(salida);
+    master = ctx.createGain(); master.gain.value = 0.8; master.connect(filtroLento);
     // Reverberación: ruido que se apaga en ~2,6 s, armada al arrancar.
     rever = ctx.createConvolver();
     const largo = Math.floor(ctx.sampleRate * 2.6), ir = ctx.createBuffer(2, largo, ctx.sampleRate);
@@ -178,7 +184,7 @@
   };
   S.moscas = (x) => { if (S.listo) moscasG.gain.setTargetAtTime(x * 0.06, ctx.currentTime, 0.3); };
   S.rociar = (si) => { if (S.listo) sprayG.gain.setTargetAtTime(si ? 0.25 : 0, ctx.currentTime, 0.04); };
-  // La voz del Guacho: frases grabadas con Higgsfield (seed_audio), en
+  // La voz del Guacho: frases grabadas con Higgsfield (qwen_audio_tts, acento rioplatense), en
   // datos.js como voz-<clave>-<n>.mp3. Se decodifican la primera vez que se
   // usan. Si no están, queda el subtítulo solo.
   const voces = {};
@@ -190,8 +196,8 @@
     const sonar = (buf) => {
       if (hablando) try { hablando.stop(); } catch (e) { /* ya terminó */ }
       const src = ctx.createBufferSource(), g = ctx.createGain();
-      src.buffer = buf; g.gain.value = 0.9;
-      src.connect(g); g.connect(master);
+      src.buffer = buf; g.gain.value = 0.75 * (E.opciones ? E.opciones.voz : 1);
+      src.connect(g); g.connect(salida);        // la voz no pasa por el filtro de cámara lenta
       const r = ctx.createGain(); r.gain.value = 0.12; g.connect(r).connect(rever);   // un poco de campo abierto
       src.start(); hablando = src;
     };
@@ -199,6 +205,58 @@
     const b64 = atob(dato.slice(dato.indexOf(",") + 1)), u = new Uint8Array(b64.length);
     for (let i = 0; i < b64.length; i++) u[i] = b64.charCodeAt(i);
     ctx.decodeAudioData(u.buffer).then((buf) => { voces[nombre] = buf; sonar(buf); }).catch(() => {});
+  };
+  // El ojo de águila: el mundo apagado, el corazón que late y el clic de la
+  // mira que se fija.
+  S.volumen = (v) => { if (S.listo) salida.gain.setTargetAtTime(v, ctx.currentTime, 0.05); };
+  S.lento = (k) => { if (S.listo) filtroLento.frequency.setTargetAtTime(20000 - 19000 * Math.min(1, k) ** 0.5, ctx.currentTime, 0.08); };
+  S.latido = () => {
+    if (!S.listo) return;
+    const t = ctx.currentTime;
+    for (const [d, a] of [[0, 1], [0.18, 0.7]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(62, t + d); o.frequency.exponentialRampToValueAtTime(38, t + d + 0.14);
+      g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(0.55 * a, t + d + 0.012); g.gain.exponentialRampToValueAtTime(0.001, t + d + 0.2);
+      o.connect(g).connect(salida); o.start(t + d); o.stop(t + d + 0.22);
+    }
+  };
+  S.clic = () => {
+    if (!S.listo) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = "triangle"; o.frequency.setValueAtTime(1500, t); o.frequency.exponentialRampToValueAtTime(700, t + 0.08);
+    g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o.connect(g).connect(salida); o.start(t); o.stop(t + 0.14);
+  };
+  // El silbido para llamar al caballo: "fiu… fiuuu", dos notas que suben,
+  // con vibrato de labio y el soplido. Sintetizado: un silbido es casi una
+  // senoidal pura, y así suena de verdad (no una voz diciendo "fiu").
+  S.silbido = () => {
+    if (!S.listo) return;
+    const t0 = ctx.currentTime + 0.02;
+    const nota = (ini, dura, curva) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.setValueAtTime(curva[0], ini);
+      curva.slice(1).forEach((f, i) => o.frequency.linearRampToValueAtTime(f, ini + dura * (i + 1) / (curva.length - 1)));
+      const vib = ctx.createOscillator(), vg = ctx.createGain();
+      vib.frequency.value = 5.5 + Math.random(); vg.gain.value = 28;
+      vib.connect(vg).connect(o.frequency);
+      g.gain.setValueAtTime(0, ini);
+      g.gain.linearRampToValueAtTime(0.22, ini + 0.03);
+      g.gain.setValueAtTime(0.2, ini + dura - 0.07);
+      g.gain.linearRampToValueAtTime(0, ini + dura);
+      o.connect(g); g.connect(master);
+      const r = ctx.createGain(); r.gain.value = 0.35; g.connect(r).connect(rever);   // el campo abierto
+      // El soplido: ruido angosto que sigue a la nota, muy bajito.
+      const n = fuenteRuido(), bp = ctx.createBiquadFilter(), ng = ctx.createGain();
+      bp.type = "bandpass"; bp.Q.value = 12; bp.frequency.setValueAtTime(curva[0], ini);
+      curva.slice(1).forEach((f, i) => bp.frequency.linearRampToValueAtTime(f, ini + dura * (i + 1) / (curva.length - 1)));
+      ng.gain.setValueAtTime(0, ini); ng.gain.linearRampToValueAtTime(0.05, ini + 0.03); ng.gain.linearRampToValueAtTime(0, ini + dura);
+      n.connect(bp).connect(ng).connect(master);
+      o.start(ini); vib.start(ini); o.stop(ini + dura + 0.05); vib.stop(ini + dura + 0.05); n.stop(ini + dura + 0.05);
+    };
+    nota(t0, 0.2, [1750, 2500]);
+    nota(t0 + 0.3, 0.62, [2050, 2850, 2900, 2450]);
   };
   S.radio = false;
 

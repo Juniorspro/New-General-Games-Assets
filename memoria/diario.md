@@ -91,7 +91,7 @@ Una entrada por sesión: qué quedó y qué falta. La más nueva arriba.
 
 ## 24/9/2026 — Estancia: la pasada de bugs de animación y visuales
 
-Él pidió arreglar "los muchos bugs visuales y de rigs, uno por uno". Se
+Pidió arreglar "los muchos bugs visuales y de rigs, uno por uno". Se
 filmó todo cuadro a cuadro y salieron, entre otros: la vaca caminaba con una
 sola pata delantera (rig mal etiquetado), cuellos que giraban solos (giros
 acumulados), el guacho avanzaba y volvía de golpe (avance de raíz), a caballo
@@ -103,3 +103,23 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
 
 - Música y efectos grabados (el audio de Rezona no volvió en 90 minutos).
 - Las copas siguen siendo tarjetas: de muy cerca se nota.
+
+## 24/9/2026 (tarde) — Estancia: ojo de águila, voz argentina, menús
+
+- **Ojo de águila** al revolear con una vaca a 3,5–18 m: gris, cámara lenta,
+  mira que se cierra en la cabeza; soltando con la mira roja el tiro va guiado
+  y la cámara gira 90° para verlo de costado. Probado en tercera, primera y
+  montado: engancha en los tres (`herramientas/pruebas/ojo-prueba.mjs`).
+- **Sin malas palabras** y **voz rioplatense**: 41 frases nuevas con Qwen/Julian
+  (0,82 créditos). **Silbido sintetizado** antes de "¡Vení, zaino!".
+- **Menús**: portada con cámara que va y viene frente al Guacho al atardecer,
+  Cómo se juega, Opciones (volumen, voz, sensibilidad, ojo de águila,
+  subtítulos; se guardan en el navegador), pausa con las dos, parte con sello,
+  barra de carga, animaciones del HUD y cartel de "girá el teléfono".
+- El acento no se puede medir: se eligió por instrucción + ortografía, y
+  whisper confirmó los 41 textos. **Que lo escuche alguien de acá.**
+
+**Qué falta**
+
+- Música y efectos grabados (el audio de Rezona sigue caído).
+- Las copas siguen siendo tarjetas.

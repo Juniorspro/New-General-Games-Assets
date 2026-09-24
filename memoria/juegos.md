@@ -49,6 +49,38 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Rugosidad baja + sol bajo = espejo: el barro mojado a 0,35 era una mancha
   blanca.
 
+## Ojo de águila (el Dead Eye para enlazar)
+
+- `estancia/js/ojo.js`. Va con el dt **real**; el mundo corre a `dt × escala`
+  (0,3 apuntando, 0,35 en la toma). Si se simula con el dt lento, la mira
+  tarda el triple en cerrarse.
+- Tiro guiado = curva armada a mano (lerp + parábola baja + caída al final) y
+  `enganchar` al llegar; nada de física. Con la física pura se erraba igual.
+- La toma de costado gira alrededor del punto medio Guacho–vaca. Para salir,
+  primero vuelve a girar a espaldas y **recién ahí** se funde: fundir de
+  costado a atrás la hacía atravesar al Guacho.
+- El foco del gris (uniform `uFoco`) hay que seguirlo a la vaca también en la
+  toma; si no, queda pintado donde estaba la mira.
+- El tope de la toma tiene que cubrir el vuelo lento: vuelo ≈ 1 s de juego ÷
+  0,35 = ~3 s reales. Con tope de 3,5 s cortaba antes de agarrar.
+
+## Voces con acento (Higgsfield)
+
+- Las voces preset son gringas. `qwen_audio_tts` con voz Julian + `instruction`
+  (≤128 caracteres: "Gaucho argentino… rioplatense, ll e y como sh, voseo")
+  da rioplatense creíble a 0,02 créditos la frase. Barrett no existe en Qwen.
+- Escribir "sha" por "ya" en el texto que se manda fuerza el sonido; el
+  subtítulo va con la ortografía de verdad (`voces.json`: `t` y `tts`).
+- Un silbido de verdad no se genera: se sintetiza (senoidal con glissando,
+  vibrato de labio y soplido filtrado). Pedirlo a un TTS dice "fiu".
+
+## Menús
+
+- Paneles con `hidden`: una animación CSS arranca sola cada vez que el panel
+  pasa de `display:none` a visible; no hace falta JS para las entradas.
+- En Playwright, si el juego tomó el puntero (`requestPointerLock`), los clics
+  no llegan a los botones: soltarlo antes (`G.soltarPuntero()`).
+
 ## Probar
 
 - Congelar el bucle y sacar las fotos a mano (`__juego.congelar`,

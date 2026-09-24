@@ -192,9 +192,10 @@
         tColor: { value: null }, tProf: { value: null }, uCerca: { value: 0.12 }, uLejos: { value: 4000 },
         uTiempo: { value: 0 }, uCalor: { value: 0 }, uSed: { value: 0 }, uDolor: { value: 0 },
         uNegro: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) },
+        uOjo: { value: 0 }, uFoco: { value: new THREE.Vector3(0.5, 0.5, 0.2) },
       },
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
-      fragmentShader: `uniform sampler2D tColor, tProf; uniform float uCerca, uLejos, uTiempo, uCalor, uSed, uDolor, uNegro; uniform vec2 uRes;
+      fragmentShader: `uniform sampler2D tColor, tProf; uniform float uCerca, uLejos, uTiempo, uCalor, uSed, uDolor, uNegro, uOjo; uniform vec2 uRes; uniform vec3 uFoco;
         varying vec2 vUv;
         float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float rn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
@@ -220,6 +221,16 @@
           float v = length((vUv - 0.5) * vec2(1.25, 1.0));
           col *= mix(1.0, smoothstep(1.05, 0.25, v), 0.5 + uSed * 0.4);
           col = mix(col, col * vec3(1.4, 0.35, 0.3), uDolor * smoothstep(0.2, 0.9, v));
+          // El ojo de águila: el mundo se destiñe a un sepia gris y se cierra,
+          // salvo alrededor del blanco, que conserva el color.
+          if (uOjo > 0.001) {
+            float l = dot(col, vec3(0.3, 0.59, 0.11));
+            float fd = length((vUv - uFoco.xy) * vec2(uRes.x / uRes.y, 1.0));
+            float foco = 1.0 - smoothstep(uFoco.z * 0.55, uFoco.z, fd);
+            col = mix(col, vec3(l) * vec3(1.08, 1.0, 0.84), uOjo * (0.92 - 0.7 * foco));
+            col *= mix(1.0, smoothstep(1.15, 0.15, v), uOjo * 0.7);
+            col *= 1.0 + uOjo * 0.12 * foco;
+          }
           gl_FragColor = vec4(col, 1.0);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
@@ -282,6 +293,8 @@
     u.uTiempo.value = t; u.uCalor.value = M.calor;
     u.uCerca.value = M.camara.near; u.uLejos.value = M.camara.far;
     u.uSed.value = efectos.sed || 0; u.uDolor.value = efectos.dolor || 0; u.uNegro.value = efectos.negro || 0;
+    u.uOjo.value = efectos.ojo || 0;
+    if (efectos.foco) u.uFoco.value.copy(efectos.foco);
     r.render(M.postEscena, M.postCam);
   };
 })();

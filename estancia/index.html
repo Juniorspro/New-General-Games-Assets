@@ -95,11 +95,17 @@
   #pialVentana { position: absolute; top: 0; bottom: 0; width: 22%; background: rgba(143,208,122,0.55); border-radius: 7px; }
   #pialAguja { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1px; background: var(--hueso); }
 
-  /* ── paneles ── */
+  /* ── paneles ── entran fundiendo el fondo y subiendo la hoja. */
   .panel {
     position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; box-sizing: border-box;
     background: rgba(10, 7, 5, 0.55); overflow-y: auto;
+    animation: fundirPanel 0.35s ease both;
   }
+  .panel .hoja { animation: subirHoja 0.45s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
+  @keyframes fundirPanel { from { background-color: rgba(10, 7, 5, 0); } }
+  @keyframes subirHoja { from { opacity: 0; transform: translateY(28px) scale(0.97); } }
+  @keyframes subir { from { opacity: 0; transform: translateY(22px); } }
+  @keyframes aparecer { from { opacity: 0; } }
   .hoja {
     box-sizing: border-box; width: min(560px, 100%); padding: 26px 28px 24px;
     background: var(--hollin-lleno); border-top: 4px solid var(--tierra); box-shadow: 0 20px 60px rgba(0,0,0,0.6);
@@ -110,14 +116,56 @@
     appearance: none; border: 0; border-radius: 3px; padding: 12px 20px; cursor: pointer;
     background: var(--tierra); color: var(--hueso); font: 700 18px/1 var(--cuerpo); letter-spacing: 0.08em; text-transform: uppercase;
   }
-  .boton:hover { background: var(--tierra-clara); }
+  .boton { position: relative; overflow: hidden; transition: background 0.15s, transform 0.15s, box-shadow 0.15s; }
+  .boton:hover { background: var(--tierra-clara); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.35); }
+  .boton:active { transform: translateY(0) scale(0.97); }
+  /* Un brillo que cruza el botón al pasarle por encima. */
+  .boton::after { content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.22), transparent); transform: skewX(-18deg); transition: left 0.5s ease; pointer-events: none; }
+  .boton:hover::after { left: 130%; }
+  .boton.grande { padding: 16px 28px; font-size: 21px; }
   .boton.secundario { background: transparent; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.35); }
   .boton:disabled { opacity: 0.4; cursor: not-allowed; }
   .boton:focus-visible { outline: 2px solid var(--hueso); outline-offset: 2px; }
   .botones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 
   /* El menú: el título en letras de madera, y la calificación bien a la vista. */
-  #menu { background: linear-gradient(180deg, rgba(10,7,5,0.35), rgba(10,7,5,0.85) 70%); place-items: end center; }
+  #menu { background: linear-gradient(180deg, rgba(10,7,5,0.1), rgba(10,7,5,0.25) 35%, rgba(10,7,5,0.9) 78%); place-items: end center; animation: aparecer 1.2s ease both; }
+  /* En pantalla ancha la portada va en columna a la izquierda y el Guacho,
+     con el rancho atrás, queda a la vista a la derecha. */
+  @media (min-width: 761px) {
+    #menu { background: linear-gradient(90deg, rgba(10,7,5,0.92) 0%, rgba(10,7,5,0.72) 34%, rgba(10,7,5,0) 62%), linear-gradient(0deg, rgba(10,7,5,0.5), transparent 30%); place-items: center start; padding-left: max(24px, 5vw); }
+    #menu .portada { width: min(580px, 58vw); padding-bottom: 0; }
+    #menu .boton.secundario { padding: 12px 15px; }
+    #menu .boton.grande { padding: 14px 22px; font-size: 19px; }
+    #menu .portada h1 { font-size: clamp(64px, 9.5vw, 136px); }
+  }
+  /* La portada entra de a una cosa por vez, de arriba abajo. */
+  .portada > * { animation: subir 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .portada > :nth-child(1) { animation-delay: 0.3s; }
+  .portada > :nth-child(2) { animation-delay: 0.45s; }
+  .portada > :nth-child(3) { animation-delay: 0.9s; }
+  .portada > :nth-child(4) { animation-delay: 1.05s; }
+  .portada > :nth-child(5) { animation-delay: 1.2s; }
+  .portada > :nth-child(6) { animation-delay: 1.35s; }
+  .portada .marca { font-size: 15px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--pasto); margin-bottom: 4px; }
+  .portada h1 .t { display: inline-block; background: linear-gradient(180deg, #fff6e4 0%, var(--hueso) 45%, #c9b48f 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 6px 22px rgba(0,0,0,0.65)); }
+  /* La firma: un lazo que se dibuja solo debajo del título. */
+  .lazo-firma { display: block; width: min(560px, 90%); height: 34px; margin: 4px 0 0; overflow: visible; }
+  .lazo-firma path { fill: none; stroke: var(--tierra-clara); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 900; stroke-dashoffset: 900; animation: dibujarLazo 1.6s 0.7s ease-out forwards; }
+  @keyframes dibujarLazo { to { stroke-dashoffset: 0; } }
+  .menu-botones { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  #menuEmpezar { animation: latir 2.4s 2.2s ease-in-out infinite; }
+  @keyframes latir { 0%, 100% { box-shadow: 0 0 0 0 rgba(216,116,63,0.55); } 50% { box-shadow: 0 0 0 10px rgba(216,116,63,0); } }
+  /* Cómo se juega y Opciones */
+  .hoja.ancha { width: min(760px, 100%); }
+  .hoja h3 { margin: 16px 0 6px; font: 400 20px/1 var(--titular); letter-spacing: 0.04em; color: var(--tierra-clara); }
+  .hoja .teclas { color: var(--hueso-suave); }
+  .opcion { display: grid; grid-template-columns: 1fr minmax(120px, 220px) 48px; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(239,230,212,0.1); font-size: 18px; }
+  .opcion output { text-align: right; color: var(--hueso-suave); font-variant-numeric: tabular-nums; }
+  .opcion input[type=range] { width: 100%; accent-color: var(--tierra-clara); }
+  .opcion.tilde { grid-template-columns: 1fr auto; }
+  .opcion small { display: block; font-size: 14px; color: var(--hueso-suave); }
+  .opcion input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--tierra-clara); }
   .portada { width: min(760px, 100%); padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
   .portada h1 { margin: 0; font: 400 clamp(64px, 14vw, 150px)/0.82 var(--titular); letter-spacing: 0.01em; color: var(--hueso); text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
   .portada h1 small { display: block; font: 400 clamp(24px, 4.6vw, 44px)/1 var(--titular); color: var(--tierra-clara); letter-spacing: 0.04em; margin-top: 8px; }
@@ -127,11 +175,47 @@
   .portada p { font-size: 19px; max-width: 62ch; margin: 0 0 14px; }
   .teclas { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 3px 18px; margin: 0 0 18px; font-size: 16px; color: var(--hueso-suave); }
   .teclas kbd { display: inline-block; min-width: 18px; padding: 1px 6px; margin-right: 6px; border-radius: 3px; background: rgba(239,230,212,0.14); color: var(--hueso); font: 700 14px/1.3 var(--cuerpo); text-align: center; }
-  .carga { position: fixed; inset: 0; display: grid; place-items: center; background: #0d0a08; font-size: 20px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hueso-suave); }
+  .carga { position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: 16px; background: radial-gradient(ellipse at 50% 60%, #2a150c, #0d0a08 70%); font-size: 20px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hueso-suave); transition: opacity 0.6s; }
+  .carga h2 { margin: 0; font: 400 clamp(40px, 9vw, 80px)/1 var(--titular); letter-spacing: 0.02em; color: var(--hueso); text-transform: none; }
+  .carga svg { width: 64px; height: 64px; animation: revolear 1.1s linear infinite; }
+  .carga svg ellipse { fill: none; stroke: var(--tierra-clara); stroke-width: 3; }
+  .carga svg path { fill: none; stroke: var(--hueso-suave); stroke-width: 2; }
+  @keyframes revolear { to { transform: rotate(360deg); } }
+  .carga-barra { width: min(320px, 70vw); height: 4px; background: rgba(239,230,212,0.12); border-radius: 2px; overflow: hidden; }
+  .carga-barra i { display: block; height: 100%; width: 0; background: var(--tierra-clara); transition: width 0.4s ease; }
 
   /* El parte del puestero: un papel escrito a la mañana. */
   #parte .hoja { background: #e9dfc8; color: #231a12; border-top-color: var(--tierra); }
-  #parte .hoja p { color: #3a2c1e; }
+  #parte .hoja p { color: #3a2c1e; animation: aparecer 0.9s 0.35s ease both; }
+  #parte .hoja { position: relative; transform: rotate(-0.8deg); animation-name: subirPapel; background-image: repeating-linear-gradient(180deg, transparent 0 31px, rgba(90,60,30,0.12) 31px 32px); box-shadow: 0 24px 60px rgba(0,0,0,0.6), inset 0 0 60px rgba(120,80,30,0.18); }
+  @keyframes subirPapel { from { opacity: 0; transform: translateY(40px) rotate(-4deg); } }
+  #parte .sello { position: absolute; right: 18px; top: -14px; padding: 4px 10px; border: 2px solid var(--sangre); color: var(--sangre); font: 400 14px/1 var(--titular); letter-spacing: 0.12em; text-transform: uppercase; transform: rotate(6deg); background: #e9dfc8; animation: sellar 0.35s 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+  @keyframes sellar { from { opacity: 0; transform: rotate(6deg) scale(2.2); } }
+  #fin h2 { font-size: clamp(34px, 7vw, 56px); animation: golpeTitulo 0.6s 0.2s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+  @keyframes golpeTitulo { from { opacity: 0; transform: scale(1.8); letter-spacing: 0.2em; } }
+  #fin p { animation: subir 0.6s both; }
+  #fin p:nth-child(2) { animation-delay: 0.9s; } #fin p:nth-child(1) { animation-delay: 0.7s; } #fin p:nth-child(3) { animation-delay: 1.1s; }
+  /* Girá el teléfono: el juego se juega acostado. */
+  #girar { display: none; position: fixed; inset: 0; z-index: 20; place-content: center; justify-items: center; gap: 18px; background: #0d0a08; text-align: center; font-size: 20px; padding: 24px; }
+  #girar svg { width: 90px; height: 90px; animation: girarTelefono 2.2s ease-in-out infinite; }
+  #girar svg rect { fill: none; stroke: var(--hueso); stroke-width: 4; }
+  @keyframes girarTelefono { 0%, 25% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
+  @media (orientation: portrait) and (pointer: coarse) { body.jugando #girar { display: grid; } }
+  /* El HUD también se mueve: los carteles suben, la plata parpadea al cambiar. */
+  .aviso { transform: translate(-50%, 10px); transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+  .aviso.visible { transform: translate(-50%, 0); }
+  .subtitulo { transform: translate(-50%, 8px); transition: opacity 0.3s, transform 0.35s ease; }
+  .subtitulo.visible { transform: translate(-50%, 0); }
+  .mensaje { transform: translate(-50%, -14px); transition: opacity 0.3s, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+  .mensaje.visible { transform: translate(-50%, 0); }
+  .objetivos .plata { transition: color 0.3s; }
+  .objetivos .plata.sube { animation: plata 0.9s ease; --c: #a6e08f; }
+  .objetivos .plata.baja { animation: plata 0.9s ease; --c: #ff8a6a; }
+  @keyframes plata { 0% { transform: scale(1); } 20% { transform: scale(1.18); color: var(--c); } 100% { transform: scale(1); } }
+  .barra.bajo i b { animation: parpadeo 1s ease-in-out infinite; }
+  @keyframes parpadeo { 50% { opacity: 0.45; } }
+  #hud { animation: aparecer 0.6s ease both; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
 
   /* La cura */
   #cura { background: rgba(8,5,3,0.82); }
@@ -156,6 +240,28 @@
   .ayuda-manga { font-size: 15px; color: var(--hueso-suave); text-shadow: 0 1px 4px #000; text-align: center; }
   /* En la manga el panel ocupa el pie de la pantalla: las barras del cuerpo se
      esconden y el subtítulo y el aviso suben por encima del panel (se pisaban). */
+  /* El ojo de águila: la mira que se cierra sobre la cabeza de la vaca y
+     las franjas de cine cuando la cámara gira a ver el tiro. */
+  #ojoMira { position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  #ojoMira.visible { opacity: 1; }
+  #ojoMira i { position: absolute; width: 24%; height: 24%; border: 3px solid rgba(239,230,212,0.92); filter: drop-shadow(0 0 3px #000); transition: border-color 0.15s; }
+  #ojoMira i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; }
+  #ojoMira i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; }
+  #ojoMira i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; }
+  #ojoMira i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; }
+  #ojoMira b { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; background: #d8342a; box-shadow: 0 0 6px #000; }
+  #ojoMira.fija i { border-color: #e0392d; }
+  #ojoMira.fija { animation: fija 0.9s ease-in-out infinite; }
+  @keyframes fija { 50% { transform: translate(-50%, -50%) scale(1.08); } }
+  #ojoTexto { position: absolute; left: 50%; top: 64%; transform: translateX(-50%); font: 400 20px/1 var(--titular); letter-spacing: 0.12em; text-transform: uppercase; text-shadow: 0 2px 6px #000; opacity: 0; transition: opacity 0.2s; }
+  #ojoTexto.visible { opacity: 1; }
+  body.ojo .mira, body.ojo #revoleo, body.ojo #aviso, body.cine #aviso { opacity: 0; }
+  .franja { position: fixed; left: 0; right: 0; height: 11vh; background: #000; z-index: 5; transition: transform 0.35s ease; pointer-events: none; }
+  .franja.arriba { top: 0; transform: translateY(-100%); }
+  .franja.abajo { bottom: 0; transform: translateY(100%); }
+  body.cine .franja { transform: none; }
+  #hud .reloj, #hud .objetivos, #hud .cuerpo-barras, #hud .tension { transition: opacity 0.3s; }
+  body.cine #hud .reloj, body.cine #hud .objetivos, body.cine #hud .cuerpo-barras, body.cine #hud .tension { opacity: 0; }
   body.en-manga .cuerpo-barras { display: none; }
   body.en-manga .subtitulo { bottom: calc(210px + env(safe-area-inset-bottom, 0px)); }
   body.en-manga .aviso { bottom: calc(250px + env(safe-area-inset-bottom, 0px)); }
@@ -194,6 +300,8 @@
   </div>
   <div class="mira"></div>
   <svg id="revoleo" viewBox="0 0 56 56" hidden><circle class="fondo" cx="28" cy="28" r="20"></circle><circle id="revoleoArco" cx="28" cy="28" r="20"></circle></svg>
+  <div id="ojoMira"><i></i><i></i><i></i><i></i><b></b></div>
+  <div id="ojoTexto"></div>
   <div class="tension" id="tension" hidden>
     <div class="fila"><span>Tensión</span><i><b id="tensionBarra"></b></i></div>
     <div class="fila"><span>La vaca</span><i><b id="fatigaBarra"></b></i></div>
@@ -262,6 +370,7 @@
 
 <div class="panel" id="parte" hidden>
   <div class="hoja">
+    <div class="sello">Parte del puestero</div>
     <h2 id="parteTitulo"></h2>
     <p id="parteTexto"></p>
     <div class="botones"><button class="boton" id="parteSeguir">Salir al campo</button></div>
@@ -272,7 +381,7 @@
   <div class="hoja">
     <h2>Pausa</h2>
     <p>El monte espera. Las moscas no.</p>
-    <div class="botones"><button class="boton" id="pausaSeguir">Seguir</button></div>
+    <div class="botones"><button class="boton" id="pausaSeguir">Seguir</button><button class="boton secundario" id="pausaComo">Cómo se juega</button><button class="boton secundario" id="pausaOpciones">Opciones</button></div>
   </div>
 </div>
 
@@ -286,9 +395,23 @@
 
 <div class="panel" id="menu" hidden>
   <div class="portada">
-    <h1>ESTANCIA<small>La Ley del Monte</small></h1>
-    <div class="calificacion"><b>M</b><span><strong>+18.</strong> Sangre y trabajo veterinario sin maquillaje, animales que lastiman, lenguaje fuerte y tabaco. No es una caricatura.</span></div>
+    <div class="marca">Chaco · temporada de verano</div>
+    <h1><span class="t">ESTANCIA</span><small>La Ley del Monte</small></h1>
+    <svg class="lazo-firma" viewBox="0 0 600 40" aria-hidden="true"><path d="M4 30 C 110 6, 210 38, 320 20 S 500 6, 548 20 q 26 10 10 16 q -18 6 -22 -8 q -2 -14 30 -12"/></svg>
+    <div class="calificacion"><b>M</b><span><strong>+18.</strong> Sangre y trabajo veterinario sin maquillaje, animales que lastiman y tabaco. No es una caricatura.</span></div>
     <p>Chaco, verano. Quinientas hectáreas de tierra colorada, quebrachales y algarrobos. Sos El Guacho: sin poderes, sin magia. Rastrear, enlazar, pialar, curar la bichera, arrear al corral y trabajar en la manga. Veinte días. Si se te muere más de un tercio de la hacienda, fundís.</p>
+    <nav class="menu-botones">
+      <button class="boton grande" id="menuEmpezar">Empezar la temporada</button>
+      <button class="boton secundario" id="menuComo">Cómo se juega</button>
+      <button class="boton secundario" id="menuOpciones">Opciones</button>
+    </nav>
+  </div>
+</div>
+
+<div class="panel" id="como" hidden>
+  <div class="hoja ancha">
+    <h2>Cómo se juega</h2>
+    <h3>Las teclas</h3>
     <div class="teclas">
       <span><kbd>W A S D</kbd>caminar · <kbd>Shift</kbd>correr / galopar</span>
       <span><kbd>E</kbd>usar, montar, curar</span>
@@ -297,11 +420,34 @@
       <span><kbd>C</kbd>caballo al paso · <kbd>H</kbd>silbar al caballo</span>
       <span><kbd>V</kbd>cámara · <kbd>F</kbd>armar un cigarro</span>
     </div>
-    <button class="boton" id="menuEmpezar">Empezar la temporada</button>
+    <h3>Ojo de águila</h3>
+    <p>Revoleá con una vaca adelante, entre 4 y 18 metros: el mundo se pone gris, el tiempo se frena y la mira se cierra sobre la cabeza. Cuando se pone roja, soltá: la armada va derecho al cogote y la cámara gira para verla caer.</p>
+    <h3>En el celular</h3>
+    <p>El teléfono acostado. Palanca a la izquierda, mirar deslizando a la derecha, los botones en pantalla.</p>
+    <div class="botones"><button class="boton" data-volver>Volver</button></div>
   </div>
 </div>
 
-<div class="carga" id="carga"><span id="cargaTexto">Cargando…</span></div>
+<div class="panel" id="opciones" hidden>
+  <div class="hoja ancha">
+    <h2>Opciones</h2>
+    <label class="opcion">Volumen general<input type="range" id="opVolumen" min="0" max="1" step="0.05"><output id="opVolumenV"></output></label>
+    <label class="opcion">Voz del Guacho<input type="range" id="opVoz" min="0" max="1" step="0.05"><output id="opVozV"></output></label>
+    <label class="opcion">Sensibilidad del ratón<input type="range" id="opSensib" min="0.3" max="2.5" step="0.1"><output id="opSensibV"></output></label>
+    <label class="opcion tilde"><span>Ojo de águila<small>Cámara lenta y mira al revolear. Sin esto, se emboca a pulso.</small></span><input type="checkbox" id="opOjo"></label>
+    <label class="opcion tilde"><span>Subtítulos<small>Lo que dice el Guacho, escrito abajo.</small></span><input type="checkbox" id="opSubs"></label>
+    <div class="botones"><button class="boton" data-volver>Listo</button></div>
+  </div>
+</div>
+
+<div class="franja arriba"></div><div class="franja abajo"></div>
+<div class="carga" id="carga">
+  <h2>Estancia</h2>
+  <svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="26" rx="22" ry="9"/><path d="M32 60 Q 30 44 12 28"/></svg>
+  <div class="carga-barra"><i id="cargaBarra"></i></div>
+  <span id="cargaTexto">Cargando…</span>
+</div>
+<div id="girar"><svg viewBox="0 0 90 90" aria-hidden="true"><rect x="27" y="10" width="36" height="70" rx="6"/></svg><div>Girá el teléfono: la estancia se ve acostada.</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script src="js/vendor/GLTFLoader.js"></script>
@@ -317,6 +463,7 @@
 <script src="js/animales.js"></script>
 <script src="js/jugador.js"></script>
 <script src="js/lazo.js"></script>
+<script src="js/ojo.js"></script>
 <script src="js/trabajo.js"></script>
 <script src="js/sonido.js"></script>
 <script src="js/juego.js"></script>

@@ -127,6 +127,18 @@
   Z.tirar = () => {
     if (Z.estado !== "revoleando") return;
     const J = E.jugador, dir = J.adelante(new V());
+    // Con la mira del ojo de águila cerrada, el tiro va guiado: la armada
+    // hace el arco hasta arriba de la cabeza de esa vaca y cae ceñida.
+    const guia = E.ojo && E.ojo.guiado();
+    if (guia) {
+      const desde = centroArmada(new V()), hasta = E.animales.cabeza(guia, new V());
+      Z.guiado = { v: guia, t: 0, dura: 0.45 + desde.distanceTo(hasta) / 18, desde, radio: radioArmada };
+      Z.calidad = 1; Z.estado = "volando"; Z.vuelo = 0; Z.largo = 1.2;
+      E.ojo.empezarCine(guia);
+      E.sonido && E.sonido.zumbido(0);
+      J.cansancio = Math.max(0, J.cansancio - 1.5);
+      return;
+    }
     Z.calidad = calidadActual();
     const vel = 7 + 9 * Z.calidad;
     const empuje = new V().copy(dir).multiplyScalar(vel).add(new V(0, vel * 0.22, 0));
@@ -194,7 +206,7 @@
   function cortar(motivo) {
     const v = Z.vaca;
     if (v) { v.estado = "escapa"; v.t = 12; v.fatiga = 1; }
-    Z.vaca = null; Z.estado = "guardado"; Z.tieneLazo = false; Z.tension = 0; Z.pialando = null;
+    Z.vaca = null; Z.estado = "guardado"; Z.tieneLazo = false; Z.tension = 0; Z.pialando = null; Z.guiado = null;
     E.juego.decir(motivo);
     E.sonido && E.sonido.chasquido();
   }
@@ -234,6 +246,8 @@
       circ = 2 * Math.PI * radioArmada;
       for (let i = 0; i < NL; i++) { cuerda[i].p.lerpVectors(mano, armada[0].p, i / (NL - 1)); cuerda[i].q.copy(cuerda[i].p); }
       E.sonido && E.sonido.zumbido(Z.omega / OMEGA_MAX);
+    } else if (Z.estado === "volando" && Z.guiado) {
+      vueloGuiado(dt, mano);
     } else if (Z.estado === "volando") {
       Z.vuelo += dt;
       Z.largo = Math.min(LARGO_MAX, Z.largo + dt * 14);          // el lazo se va dando de los rollos
@@ -252,7 +266,8 @@
           if (Math.hypot(c1.x - v.x, c1.z - v.z) > 5) continue;
           const dh = Math.hypot(c1.x - hc.x, c1.z - hc.z);
           const r = radioMedido(c1);
-          if (dh < r * 0.85 && c0.y > hc.y - 0.05 && c1.y <= hc.y + 0.12 && Math.abs(n.y) > 0.45) { enganchar(v); return; }
+          // Más perdonador que antes (era 0,85 del radio y -0,05 de alto).
+          if (dh < r * 1.1 && c0.y > hc.y - 0.25 && c1.y <= hc.y + 0.2 && Math.abs(n.y) > 0.35) { enganchar(v); return; }
         }
         if (c1.y < E.terreno.altura(c1.x, c1.z) + 0.15 || Z.vuelo > 2.6) { errar(c1); return; }
       }
@@ -335,6 +350,34 @@
     E.juego.decir("enlazada", v);
     E.sonido && E.sonido.mugido(v, 1.3);
   }
+  // El vuelo guiado: la armada abierta y acostada, girando, sigue un arco del
+  // centro de revoleo a medio metro arriba de la cabeza (que se mueve), baja
+  // y engancha. La cuerda va de la mano a la armada, con panza.
+  function vueloGuiado(dt, mano) {
+    const g = Z.guiado, v = g.v;
+    g.t += dt;
+    const u = Math.min(1, g.t / g.dura), cab = E.animales.cabeza(v, new V());
+    const suave = u * u * (3 - 2 * u);
+    const c = new V().lerpVectors(g.desde, cab.clone().add(new V(0, 0.55, 0)), suave);
+    c.y += (0.6 + g.desde.distanceTo(cab) * 0.04) * 4 * u * (1 - u);
+    if (u > 0.82) c.y -= 0.7 * E.suave(0.82, 1, u);
+    const r = E.lerp(g.radio, 0.6, u);
+    Z.angulo += 9 * dt;
+    for (let i = 0; i < NA; i++) {
+      const a = Z.angulo + (i / NA) * Math.PI * 2;
+      armada[i].p.set(c.x + Math.cos(a) * r, c.y + Math.sin(a * 2) * 0.03, c.z + Math.sin(a) * r);
+      armada[i].q.copy(armada[i].p);
+    }
+    const panza = 0.35 * (1 - u) + 0.1;
+    for (let i = 0; i < NL; i++) {
+      const f = i / (NL - 1);
+      cuerda[i].p.lerpVectors(mano, armada[0].p, f); cuerda[i].p.y -= panza * Math.sin(Math.PI * f);
+      cuerda[i].q.copy(cuerda[i].p);
+    }
+    Z.largo = Math.min(LARGO_MAX, mano.distanceTo(c) + 0.6);
+    if (u >= 1) { Z.guiado = null; enganchar(v); }
+  }
+
   // Para las pruebas: enlazar una vaca sin tener que embocarla.
   Z.probarEnganche = (v) => { if (Z.estado === "guardado") Z.equipar(); enganchar(v); };
   function errar(c) {

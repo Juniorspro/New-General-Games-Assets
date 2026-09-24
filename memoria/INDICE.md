@@ -52,7 +52,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | [maquina](maquina.md) | algo falle por red, disco, Docker o permisos de la sesión |
 | [neko](neko.md) | haga falta un escritorio gráfico o manejar un navegador |
 | [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico |
-| [juegos](juegos.md) | haya que animar modelos de Rezona en three.js, o probar un juego cuadro a cuadro |
+| [juegos](juegos.md) | haya que animar modelos de Rezona en three.js, probar un juego cuadro a cuadro, hacer un Dead Eye o voces con acento |
 | [diario](diario.md) | quieras saber qué pasó en la sesión anterior y qué quedó |
 
 ## Los tres documentos largos (no se leen enteros)

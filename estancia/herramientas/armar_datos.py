@@ -1,6 +1,6 @@
 """Mete archivos en js/datos.js, que es lo que el juego lee antes que la red.
 
-    python3 armar_datos.py carpeta/ [carpeta2/ ...]
+    python3 armar_datos.py carpeta/ [carpeta2/ ...] [--quitar prefijo]
 
 Conserva lo que ya estaba en datos.js y agrega o reemplaza por nombre de
 archivo. Las imágenes, los GLB y el audio van como data URI; los .json van
@@ -26,8 +26,16 @@ def leer():
             hay[m.group(1)] = m.group(2)
     return hay
 
-def main(carpetas):
+def main(args):
     hay = leer()
+    carpetas = []
+    while args:
+        a = args.pop(0)
+        if a == "--quitar":
+            pre = args.pop(0)
+            for n in [n for n in hay if n.startswith(pre)]: del hay[n]
+        else:
+            carpetas.append(a)
     for c in carpetas:
         for n in sorted(os.listdir(c)):
             ruta, ext = os.path.join(c, n), os.path.splitext(n)[1].lower()

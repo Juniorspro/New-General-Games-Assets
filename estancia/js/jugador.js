@@ -124,7 +124,10 @@
       if (c.recado) return c.recado.localToWorld(destino.copy(c.recado.userData.asiento).add(tmp2.set(0, 0.12, 0.3)));
       return c.huesos.cuerpo.localToWorld(destino.set(0, 0.5, 0.35));
     }
-    if (J.camara === "primera") return J.manos.userData.mano.getWorldPosition(destino);
+    // (en la toma de cine del ojo de águila se ve al Guacho de afuera: la mano
+    // es la del cuerpo, no la de primera persona, que va pegada a la cámara)
+    const cine = E.ojo && E.ojo.cine;
+    if (J.camara === "primera" && !cine) return J.manos.userData.mano.getWorldPosition(destino);
     if (J.piel && J.piel.roles.manoD) return J.piel.roles.manoD.getWorldPosition(destino);
     return J.huesos.codoD.localToWorld(destino.set(0, -0.32, 0));
   };
@@ -140,6 +143,14 @@
     return dano;
   };
 
+  // En la portada la cámara da vueltas lejos: el Guacho se ve de cuerpo entero,
+  // quieto y respirando, sin las manos de primera persona.
+  J.portada = (dt, t) => {
+    J.cuerpo.visible = true;
+    if (J.piel) J.piel.raiz.visible = true;
+    J.manos.visible = false;
+    posarCuerpo(dt, t);
+  };
   J.montar = () => {
     const c = E.animales.caballo;
     J.montado = true; c.montado = true; c.destino = null;
@@ -157,13 +168,14 @@
   };
 
   const tmp = new V(), tmp2 = new V();
+  const sensib = () => (E.opciones ? E.opciones.sensib : 1);
   J.actualizar = (dt, t, ctx) => {
     const en = E.entrada, T = E.terreno, c = E.animales.caballo;
     const libre = !J.bloqueado;
     // Mirar
     if (libre || J.bloqueado === "lazo") {
-      J.yaw -= en.raton.dx * 0.0022;
-      J.pitch = E.clamp(J.pitch - en.raton.dy * 0.0022, -1.35, 1.2);
+      J.yaw -= en.raton.dx * 0.0022 * sensib();
+      J.pitch = E.clamp(J.pitch - en.raton.dy * 0.0022 * sensib(), -1.35, 1.2);
       if (en.raton.dx || en.raton.dy) J.ultimoArrastre = t;
     }
     // Caminar (teclado o palanca)
@@ -296,8 +308,35 @@
       if (J.piel) J.piel.raiz.visible = true;
       J.manos.visible = false;
     }
+    tomaDeCine(cam, ojo);
     posarCuerpo(dt, t);
     animarManos(dt, t);
+  }
+
+  // El ojo de águila: al tirar guiado, la cámara gira 90° alrededor del punto
+  // medio entre el Guacho y la vaca, para ver volar la armada de costado.
+  const pivote = new V(), orbita = new V(), haciaVaca = new V(), costado = new V(), qCine = new THREE.Quaternion(), mCine = new THREE.Matrix4();
+  function tomaDeCine(cam, ojo) {
+    const cq = E.ojo && E.ojo.cuadroCine();
+    if (!cq) return;
+    const T = E.terreno, cab = E.animales.cabeza(cq.v, tmp2);
+    pivote.set(J.x, ojo - 0.4, J.z).lerp(cab, 0.5);
+    haciaVaca.set(cab.x - J.x, 0, cab.z - J.z);
+    const dist = haciaVaca.length() || 1;
+    haciaVaca.divideScalar(dist);
+    costado.set(-haciaVaca.z, 0, haciaVaca.x);
+    const ds = E.clamp(dist * 0.85, 4.5, 12);
+    orbita.copy(pivote).addScaledVector(haciaVaca, -ds * Math.cos(cq.ang)).addScaledVector(costado, ds * Math.sin(cq.ang));
+    orbita.y = Math.max(pivote.y + 1.0, T.altura(orbita.x, orbita.z) + 1.2);
+    cam.position.lerp(orbita, cq.mezcla);
+    mCine.lookAt(cam.position, pivote, cam.up);
+    qCine.setFromRotationMatrix(mCine);
+    cam.quaternion.slerp(qCine, cq.mezcla);
+    if (cq.mezcla > 0.3) {
+      J.cuerpo.visible = true;
+      if (J.piel) J.piel.raiz.visible = true;
+      J.manos.visible = false;
+    }
   }
 
   function posarCuerpo(dt, t) {

@@ -1,47 +1,50 @@
 {
- "modelo": "seed_audio (Higgsfield)",
- "voz": "Barrett (preset d603a8cd-3fe1-55e0-9245-617a2589131e)",
- "costo": "0,1 créditos por frase",
+ "modelo": "qwen_audio_tts (Higgsfield)",
+ "voz": "Julian (preset 95429266-c0ac-4137-a209-63b8812b0f23), pitch_rate 0.9",
+ "instruccion": "Gaucho argentino, 50 años. Acento rioplatense marcado (ll e y como sh), voseo. Voz grave y natural, nada extranjera.",
+ "nota": "Sin malas palabras. 'tts' es el texto que se le mandó: la ll y la y escritas 'sh' para forzar el rioplatense; 't' es el subtítulo.",
+ "costo": "0,02 créditos por frase",
  "frases": [
   {
    "n": "errar-0",
-   "t": "¡La puta madre!"
+   "t": "¡Uh, la pucha!"
   },
   {
    "n": "errar-1",
-   "t": "¡Me cago en…!"
+   "t": "¡Pucha, digo!"
   },
   {
    "n": "errar-2",
-   "t": "Uh, la concha de la lora."
+   "t": "Se me fue por un pelo."
   },
   {
    "n": "errar-3",
-   "t": "¡Pero la puta que te parió!"
+   "t": "¡Ay, mamita, qué tiro!"
   },
   {
    "n": "enlazada-0",
-   "t": "¡Ahí está, guacha!"
+   "t": "¡Ahí está, ya te tengo!",
+   "tts": "¡Ahí está, sha te tengo!"
   },
   {
    "n": "enlazada-1",
-   "t": "¡Tomá, desgraciada!"
+   "t": "¡Tomá, mañera!"
   },
   {
    "n": "enlazada-2",
-   "t": "¡Ya te tengo!"
+   "t": "¡Quieta, quieta!"
   },
   {
    "n": "enlazada-3",
-   "t": "Quedate quieta, negra."
+   "t": "Tranquila, negra."
   },
   {
    "n": "cortado-0",
-   "t": "¡Se cortó el lazo, la puta madre!"
+   "t": "¡Se cortó el lazo, pucha digo!"
   },
   {
    "n": "cortado-1",
-   "t": "Me cago en el tiento podrido."
+   "t": "Este tiento estaba podrido."
   },
   {
    "n": "seFue-0",
@@ -49,7 +52,7 @@
   },
   {
    "n": "seFue-1",
-   "t": "¡Ahí va el lazo, la reputa…!"
+   "t": "¡Ahí va mi lazo, qué macana!"
   },
   {
    "n": "pialada-0",
@@ -57,7 +60,7 @@
   },
   {
    "n": "pialada-1",
-   "t": "¡Echate, carajo!"
+   "t": "¡Echate, vamos!"
   },
   {
    "n": "pialada-2",
@@ -81,19 +84,20 @@
   },
   {
    "n": "patada-0",
-   "t": "¡Ay, la puta! La costilla…"
+   "t": "¡Ay! ¡La costilla…!",
+   "tts": "¡Ay! ¡La costisha…!"
   },
   {
    "n": "patada-1",
-   "t": "¡Hija de puta, qué patada!"
+   "t": "¡Uh, qué patada me pegó!"
   },
   {
    "n": "cornada-0",
-   "t": "¡Me ensartó, la guacha!"
+   "t": "¡Me ensartó, la mañera!"
   },
   {
    "n": "cornada-1",
-   "t": "¡Ay, carajo!"
+   "t": "¡Ay, ay, ay!"
   },
   {
    "n": "embiste-0",
@@ -113,7 +117,7 @@
   },
   {
    "n": "calor-0",
-   "t": "Qué calor de mierda."
+   "t": "Qué calor bárbaro."
   },
   {
    "n": "calor-1",
@@ -121,7 +125,8 @@
   },
   {
    "n": "curada-0",
-   "t": "Listo, negra. Ya está."
+   "t": "Listo, negra. Ya está.",
+   "tts": "Listo, negra. Sha está."
   },
   {
    "n": "curada-1",
@@ -133,7 +138,8 @@
   },
   {
    "n": "lesion-1",
-   "t": "Uh, el caballo viene rengo."
+   "t": "Uh, el caballo viene rengo.",
+   "tts": "Uh, el cabasho viene rengo."
   },
   {
    "n": "sinLazo-0",
@@ -153,7 +159,20 @@
   },
   {
    "n": "silbar-0",
-   "t": "¡Fiiiu! Vení, zaino."
+   "t": "¡Vení, zaino!"
+  },
+  {
+   "n": "apuntar-0",
+   "t": "Ahí la tengo…"
+  },
+  {
+   "n": "apuntar-1",
+   "t": "Quieta… quieta…"
+  },
+  {
+   "n": "apuntar-2",
+   "t": "Ya sos mía.",
+   "tts": "Sha sos mía."
   }
  ]
 }
