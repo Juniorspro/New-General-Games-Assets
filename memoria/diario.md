@@ -145,3 +145,5 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
 - **Encierre con comedero** (pedido con dos fotos: feedlot y corral de tablas):
   batea de hormigón sobre ladrillos, silo, alambre; 8 novillos de engorde que
   ganan o pierden kilos según se les cargue el comedero; la tropa viene a comer.
+- **Mapa** (M): lugares para ir, columna de luz, brújula, minimapa. **Pueblo**
+  nuevo afuera de la tranquera de entrada (que ahora se abre).

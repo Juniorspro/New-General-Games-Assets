@@ -116,6 +116,16 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 - Un corral con una sola tranquera necesita dos puntos de paso (afuera y
   adentro de la tranquera): yendo derecho al lugar, se quedan contra el cerco.
 
+## Mapa
+
+- El fondo del mapa sale de las mismas funciones del terreno (monte, pasto,
+  agua, camino, relieve) a 2,2 m por píxel: se dibuja una vez al cargar y el
+  mapa, el minimapa y lo vivo (hacienda, perros, uno) van encima.
+- Minimapa que gira con uno: rotar el lienzo `ang − π` (ang = atan2(f.x, f.z) de
+  la cámara); la flecha grande del mapa, `π − ang`.
+- Antes de poner una tranquera, mirar por dónde pasa el camino: la de entrada
+  quedaba con el poste en el medio del camino.
+
 ## Audio que "se escucha mal"
 
 - Grabar la salida real (ScriptProcessor sobre la ganancia final) y medir RMS

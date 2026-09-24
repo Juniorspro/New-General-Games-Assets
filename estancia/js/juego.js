@@ -79,14 +79,14 @@
   };
   G.gastar = (monto, que) => { G.dinero -= monto; };
   G.soltarPuntero = () => { if (document.pointerLockElement) document.exitPointerLock(); };
-  const MENUS = ["menu", "parte", "fin", "pausa", "como", "opciones"];
+  const MENUS = ["menu", "parte", "fin", "pausa", "como", "opciones", "mapa"];
   G.enMenu = () => MENUS.some((id) => !$(id).hidden);
 
   // ── arranque ──
   G.iniciar = async () => {
     const lienzo = $("lienzo");
     let pasoCarga = 0;
-    const cargando = (t) => { $("cargaTexto").textContent = t; $("cargaBarra").style.width = (++pasoCarga / 7) * 100 + "%"; };
+    const cargando = (t) => { $("cargaTexto").textContent = t; $("cargaBarra").style.width = (++pasoCarga / 8) * 100 + "%"; };
     const pausa = () => new Promise((r) => setTimeout(r, 0));
     cargando("Encendiendo…"); await pausa();
     E.motor.iniciar(lienzo);
@@ -111,10 +111,13 @@
     E.trabajo.conectarManga();
     E.ojo.conectar();
     E.chat.conectar();
+    E.mapa.conectar();
     E.conectarEntrada(lienzo);
     conectarInterfaz();
     // Compilar todos los shaders en la carga: si no, lo primero que entra en
     // pantalla traba el juego (§ 6.1).
+    cargando("Dibujando el mapa del campo…"); await pausa();
+    E.mapa.preparar();
     cargando("Preparando la luz…"); await pausa();
     E.motor.acomodar();
     colocar(0.016);
@@ -342,7 +345,13 @@
     if (!J.montado && Math.hypot(c.x - J.x, c.z - J.z) < 2.6) return { texto: "Montar el zaino", fn: () => J.montar() };
     for (const p of E.estancia.puntos) {
       if (Math.hypot(p.x - J.x, p.z - J.z) > p.r) continue;
+      if (p.id === "tranqueraEntrada") return { texto: p.texto, fn: E.estancia.alternarEntrada };
+      if (p.id === "tranqueraEncierre") return { texto: p.texto, fn: E.comedero.alternarTranquera };
       if (J.montado && p.id !== "tanque") return { texto: "Bajate del caballo", fn: () => J.desmontar() };
+      if (p.id === "almacen") {
+        if (!Z.tieneLazo) return { texto: `Comprar un lazo en el almacén ($ ${miles.format(W.COSTO.lazo)})`, fn: () => { Z.tieneLazo = true; Z.desgaste = 0; G.gastar(W.COSTO.lazo, "Lazo"); G.mostrar("Don Benito te vendió un lazo de ocho tientos. Bien trenzado."); } };
+        return { texto: "Almacén: una gaseosa fría, yerba y galletas ($ 12.000)", fn: () => G.fundir(0.3, () => { J.sed = 100; J.cansancio = Math.min(100, J.cansancio + 15); J.salud = Math.min(100, J.salud + 5); G.gastar(12000, "Almacén"); G.mostrar("Una gaseosa fría en la galería del almacén, y Don Benito con las noticias del pueblo."); }) };
+      }
       if (p.id === "mate") return { texto: p.texto, fn: E.puesto.cebarMate };
       if (p.id === "heladera") return { texto: p.texto, fn: E.puesto.aguaFria };
       if (p.id === "comederoHacienda") return { texto: E.comedero.nivel > 0.85 ? "El comedero está lleno" : `${p.texto} ($ ${miles.format(E.comedero.COSTO)})`, fn: E.comedero.cargar };
@@ -388,6 +397,7 @@
     if (en.pulsado("KeyJ")) E.perros.ordenar("juntar");
     if (en.pulsado("KeyB")) E.perros.ordenar("traer");
     if (en.botonPulsado("perros")) E.perros.siguiente();
+    if (en.botonPulsado("mapa")) E.mapa.abrir();
     J.bloqueado = W.manga.activa ? "manga" : Z.estado === "revoleando" || Z.estado === "enganchado" ? "lazo" : null;
   }
 
@@ -500,6 +510,7 @@
       E.perros.actualizar(dt, G.t, E.jugador);
     }
     E.estancia.actualizar(dt, G.t);
+    E.mapa.actualizar(dt, G.t);
     if (activo) { E.puesto.actualizar(dt, G.t); E.puesto.revisarLlegada(); E.comedero.actualizar(dt); }
     E.terreno.actualizar(G.t);
     E.trabajo.actualizarCura(dt);

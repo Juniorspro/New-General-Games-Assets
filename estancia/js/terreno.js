@@ -20,10 +20,12 @@
     manga: { x0: 54, x1: 64, z: 8, ancho: 0.95 },
     tanque: { x: -36, z: -6, r: 5 },
     estero: { x: -165, z: -175, r: 52 },
-    tranquera: { x: 0, z: 392 },
+    tranquera: { x: -1.5, z: 392 },                        // centrada en el camino (x = 2,5·sen(0,012·z) ≈ -2,5 acá)
     limite: 390,                                          // el alambrado perimetral
     centro: { x: 14, z: 12 },
-    encierre: { x0: 26, x1: 47, z0: 28, z1: 46 },           // el corral del comedero, con la calle de carga (comedero.js)                             // lo aplanado de la estancia
+    encierre: { x0: 26, x1: 47, z0: 28, z1: 46 },
+    // El pueblo: afuera de la tranquera de entrada, donde sigue el camino.
+    pueblo: { x: 0, z: 448, r: 44, nombre: "Paraje El Quebrachal" },           // el corral del comedero, con la calle de carga (comedero.js)                             // lo aplanado de la estancia
   });
   // La zanja cruza el campo de este a oeste al norte de las casas, con un vado
   // cerca de x = 10: para traer una vaca del monte hay que buscarlo o
@@ -59,6 +61,7 @@
     m *= E.suave(7, 16, T.distCamino(x, z));
     m *= E.suave(1.05, 1.35, T.estero(x, z));
     m *= E.suave(4, 9, T.distZanja(x, z));
+    m *= E.suave(L.pueblo.r, L.pueblo.r + 35, Math.hypot(x - L.pueblo.x, z - L.pueblo.z));
     return m;
   };
 
@@ -75,6 +78,7 @@
     // El encierre del comedero y su calle de carga: tierra pisoteada.
     const en = L.encierre, fx = Math.max(en.x0 - x, x - en.x1, 0), fz = Math.max(en.z0 - z, z - en.z1, 0);
     p *= E.suave(0.5, 5, Math.hypot(fx, fz));
+    p *= E.lerp(0.25, 1, E.suave(18, 40, Math.hypot(x - L.pueblo.x, z - L.pueblo.z)));
     return p * E.suave(0.9, 1.25, T.estero(x, z));
   };
 
@@ -82,6 +86,7 @@
     let h = (E.fbm(x * 0.0035, z * 0.0035, 4) - 0.5) * 3.2 + (E.fbm(x * 0.03, z * 0.03, 2) - 0.5) * 0.35;
     const hEst = 0.2;
     h = E.lerp(h, hEst, 1 - E.suave(58, 88, T.distEstancia(x, z)));
+    h = E.lerp(h, 0.25, 1 - E.suave(L.pueblo.r + 5, L.pueblo.r + 40, Math.hypot(x - L.pueblo.x, z - L.pueblo.z)));
     const dz = T.distZanja(x, z);
     const hondo = T.enVado(x) ? 0.35 : 1.9;
     h -= hondo * Math.exp(-((dz / 2.4) ** 2));

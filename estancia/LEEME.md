@@ -19,6 +19,7 @@ internet. Receta seguida: `GUIA-JUEGOS.md`.
 | H | silbarle al caballo |
 | F | armarse un cigarro |
 | G / X / J / B | perros: vengan / quietos (se echan) / junten la tropa / busquen la vaca que mirás |
+| M | el mapa: tocá un lugar (casco, corral, comedero, aguada, estero, pueblo, el zaino, la agusanada) y aparece una columna de luz y la brújula; abajo a la derecha, el minimapa |
 | Enter o / | el chat de comandos (/ayuda, /saludar, /perros junten, /mate, /comer, /caballo, /hacienda, /razas…) |
 | 1–4 en la manga | aftosa, ivermectina, caravana, hierro |
 
@@ -42,6 +43,13 @@ En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla
   alambre, como en un feedlot. Adentro, 8 novillos de engorde: cargarles el
   comedero (desde la calle de carga, al lado de la silobolsa) todos los días o
   bajan de kilos. Con comida en la batea, la tropa de cerca también viene.
+- **El pueblo**, Paraje El Quebrachal (`estancia.js`, `pueblo()`): afuera de la
+  tranquera de entrada, al final del camino (se abre con E, también a
+  caballo). Almacén de ramos generales (provisiones, un lazo), capilla,
+  comisaría, casitas, tanque de agua, surtidor y palenque.
+- **El mapa** (`js/mapa.js`): el terreno visto desde arriba se dibuja una vez al
+  cargar; la hacienda, los perros y uno encima, en vivo. `/mapa` e `/ir corral`
+  en el chat.
 - **El lazo** se enrolla solo cuando no se usa: al cinto a pie, en el recado a
   caballo.
 

@@ -311,6 +311,30 @@
   body.chat-abierto .tactil-botones, body.chat-abierto #palanca { display: none !important; }
   body.cine #chat { opacity: 0; pointer-events: none; }
 
+  /* El mapa, el minimapa y la brújula. */
+  #mapa { position: fixed; inset: 0; z-index: 8; display: grid; grid-template-columns: 1fr min(340px, 34vw); background: rgba(10,7,5,0.92); animation: aparecer 0.25s ease both; }
+  .mapa-caja { position: relative; min-height: 0; }
+  #mapaLienzo { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+  .mapa-botones { position: absolute; left: 14px; top: 14px; display: grid; gap: 6px; }
+  .mapa-botones button { width: 42px; height: 42px; border: 0; border-radius: 8px; background: rgba(21,16,12,0.85); color: var(--hueso); font: 700 22px/1 var(--cuerpo); cursor: pointer; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.3); }
+  .mapa-botones button:hover { background: var(--tierra); }
+  .mapa-lado { padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px)); overflow-y: auto; background: var(--hollin-lleno); border-left: 3px solid var(--tierra); display: grid; align-content: start; gap: 8px; animation: subir 0.35s ease both; }
+  .mapa-lado h2 { margin: 0; font: 400 30px/1 var(--titular); }
+  .mapa-lado p { margin: 0; color: var(--hueso-suave); font-size: 16px; }
+  #mapaLista { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 4px; }
+  #mapaLista li { display: grid; grid-template-columns: 30px 1fr; gap: 0 8px; padding: 8px 10px; border-radius: 6px; background: rgba(239,230,212,0.06); cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  #mapaLista li:hover { background: rgba(239,230,212,0.14); transform: translateX(3px); }
+  #mapaLista li.elegido { background: var(--tierra); }
+  #mapaLista li b { grid-row: span 2; display: grid; place-items: center; font-size: 20px; }
+  #mapaLista li span { font-size: 17px; font-weight: 700; }
+  #mapaLista li small { color: var(--hueso-suave); font-size: 14px; }
+  @media (max-width: 760px) { #mapa { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .mapa-lado { max-height: 42vh; border-left: 0; border-top: 3px solid var(--tierra); } }
+  #minimapa { position: absolute; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(21,16,12,0.8), 0 0 0 4px rgba(239,230,212,0.4), 0 6px 18px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; background: rgba(21,16,12,0.6); }
+  body.tactil #minimapa { width: 104px; height: 104px; bottom: auto; top: calc(96px + env(safe-area-inset-top, 0px)); }
+  body.en-manga #minimapa, body.cine #minimapa { display: none; }
+  #brujula { position: absolute; left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 20px; background: rgba(14,11,9,0.62); font: 700 17px/1 var(--cuerpo); letter-spacing: 0.04em; text-shadow: 0 1px 3px #000; animation: subir 0.3s ease both; }
+  #brujulaFlecha { width: 26px; height: 26px; display: block; background: var(--tierra-clara); clip-path: polygon(50% 0, 92% 88%, 50% 68%, 8% 88%); transition: transform 0.1s linear; }
+
   /* Táctil: aparece solo si se tocó la pantalla. */
   .tactil-botones { display: none; }
   body.tactil .tactil-botones { display: grid; position: fixed; right: 14px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); grid-template-columns: repeat(3, 62px); gap: 8px; }
@@ -353,6 +377,8 @@
     <div class="pial" id="pial" hidden><div id="pialVentana"></div><div id="pialAguja"></div></div>
     <div id="tensionTexto"></div>
   </div>
+  <canvas id="minimapa" width="170" height="170" aria-label="Minimapa (tocá para abrir el mapa)"></canvas>
+  <div id="brujula" hidden><i id="brujulaFlecha"></i><span id="brujulaTexto"></span></div>
   <div class="aviso" id="aviso"></div>
   <div class="subtitulo" id="subtitulo"></div>
   <div class="mensaje" id="mensaje"></div>
@@ -375,6 +401,7 @@
   <button data-boton="camara">Cámara</button>
   <button data-boton="silbar">Silbar</button>
   <button data-boton="perros">Perros</button>
+  <button data-boton="mapa">Mapa</button>
 </div>
 <div id="palanca" hidden><div></div></div>
 
@@ -464,6 +491,19 @@
   </div>
 </div>
 
+<div id="mapa" hidden>
+  <div class="mapa-caja">
+    <canvas id="mapaLienzo"></canvas>
+    <div class="mapa-botones"><button id="mapaMas" aria-label="Acercar">+</button><button id="mapaMenos" aria-label="Alejar">−</button><button id="mapaYo" aria-label="Centrar en mí">◎</button></div>
+  </div>
+  <aside class="mapa-lado">
+    <h2>El campo</h2>
+    <p>Tocá un lugar para ir. Aparece una columna de luz y arriba la brújula.</p>
+    <ul id="mapaLista"></ul>
+    <div class="botones"><button class="boton secundario" id="mapaSacar">Sacar el destino</button><button class="boton" id="mapaCerrar">Volver (M)</button></div>
+  </aside>
+</div>
+
 <div class="panel" id="como" hidden>
   <div class="hoja ancha">
     <h2>Cómo se juega</h2>
@@ -478,6 +518,7 @@
       <span><kbd>G</kbd>perros: vengan · <kbd>X</kbd>quietos</span>
       <span><kbd>J</kbd>perros: junten la tropa · <kbd>B</kbd>busquen la vaca que mirás</span>
       <span><kbd>Enter</kbd> o <kbd>/</kbd> el chat de comandos</span>
+      <span><kbd>M</kbd> el mapa: corral, casco, pueblo, comedero, aguada</span>
     </div>
     <h3>Ojo de águila</h3>
     <p>Revoleá con una vaca adelante, entre 4 y 18 metros: el mundo se pone gris, el tiempo se frena y la mira se cierra sobre la cabeza. Cuando se pone roja, soltá: la armada va derecho al cogote y la cámara gira para verla caer.</p>
@@ -533,6 +574,7 @@
 <script src="js/perros.js"></script>
 <script src="js/puesto.js"></script>
 <script src="js/comedero.js"></script>
+<script src="js/mapa.js"></script>
 <script src="js/chat.js"></script>
 <script src="js/calidad.js"></script>
 <script src="js/trabajo.js"></script>

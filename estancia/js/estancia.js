@@ -347,16 +347,116 @@
           hilos.push(xa, T.altura(xa, za) + h, za, xb, T.altura(xb, zb) + h, zb);
         }
       }
-      pared(x0, z0, x1, z1, 0.15);
+      // El lado sur deja el hueco de la tranquera de entrada (se abre para ir al pueblo).
+      if (z0 === lim && z1 === lim) { pared(x0, z0, L.tranquera.x + 2.3, z1, 0.15); pared(L.tranquera.x - 2.3, z0, x1, z1, 0.15); }
+      else pared(x0, z0, x1, z1, 0.15);
     };
     lado(-lim, -lim, lim, -lim); lado(lim, -lim, lim, lim); lado(lim, lim, -lim, lim); lado(-lim, lim, -lim, -lim);
     const gh = new THREE.BufferGeometry();
     gh.setAttribute("position", new THREE.Float32BufferAttribute(hilos, 3));
     E.motor.escena.add(new THREE.LineSegments(gh, new THREE.LineBasicMaterial({ color: 0x8a8d8f })));
-    // La tranquera de entrada (cerrada: el campo termina acá).
-    for (const h of [0.3, 0.65, 1.0, 1.3]) caja(4.6, 0.12, 0.05, tab, L.tranquera.x, T.altura(0, lim) + h, lim);
+    // La tranquera de entrada: da al camino del pueblo. Se abre para afuera.
+    const te = new THREE.Group();
+    for (const h of [0.3, 0.65, 1.0, 1.3]) { const b = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.12, 0.05), tab); b.position.set(2.3, h, 0); b.castShadow = true; te.add(b); }
+    const diag = new THREE.Mesh(new THREE.BoxGeometry(4.9, 0.1, 0.05), tab); diag.position.set(2.3, 0.8, 0); diag.rotation.z = 0.22; te.add(diag);
+    te.position.set(L.tranquera.x - 2.3, T.altura(0, lim), lim); E.motor.escena.add(te);
+    const segE = { ax: L.tranquera.x - 2.3, az: lim, bx: L.tranquera.x + 2.3, bz: lim, g: 0.15, apagado: false };
+    C.segmentos.push(segE);
+    C.tranqueraEntrada = { grupo: te, abierta: false, angulo: 0, segmento: segE };
+    C.puntos.push({ id: "tranqueraEntrada", x: L.tranquera.x + 2, z: lim - 2.2, r: 3, texto: "Abrir la tranquera de entrada (camino al pueblo)" });
+    C.animados.push((dt) => { const t2 = C.tranqueraEntrada; t2.angulo += ((t2.abierta ? -1.8 : 0) - t2.angulo) * Math.min(1, dt * 3); t2.grupo.rotation.y = t2.angulo; });
     utiles();
+    pueblo();
   };
+
+  C.alternarEntrada = () => {
+    const t = C.tranqueraEntrada; t.abierta = !t.abierta; t.segmento.apagado = t.abierta;
+    C.puntos.find((p) => p.id === "tranqueraEntrada").texto = t.abierta ? "Cerrar la tranquera de entrada" : "Abrir la tranquera de entrada (camino al pueblo)";
+  };
+
+  // Un cartel pintado a mano: texto en un lienzo sobre una tabla.
+  function cartel(texto, ancho, alto, fondo = "#e9e0c8", tinta = "#3a2210") {
+    const t = E.lienzo(512, Math.round((512 * alto) / ancho), (g, w, h) => {
+      g.fillStyle = fondo; g.fillRect(0, 0, w, h);
+      g.strokeStyle = tinta; g.lineWidth = 6; g.strokeRect(8, 8, w - 16, h - 16);
+      g.fillStyle = tinta; g.textAlign = "center"; g.textBaseline = "middle";
+      const lineas = texto.split("\n");
+      const tam = Math.min(h / (lineas.length + 0.6), (w * 1.6) / Math.max(...lineas.map((l) => l.length)));
+      g.font = `700 ${tam}px Anton, Impact, sans-serif`;
+      lineas.forEach((l, i) => g.fillText(l, w / 2, h / 2 + (i - (lineas.length - 1) / 2) * tam * 1.05));
+    });
+    return new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshStandardMaterial({ map: t, roughness: 0.8 }));
+  }
+
+  // ── el pueblo ── Paraje El Quebrachal, al final del camino, afuera de la
+  // tranquera de entrada: el almacén de ramos generales, la capilla, unas
+  // casitas, el tanque de agua, el surtidor y el palenque. Todo mira a la calle
+  // (el camino); dir = 1 si el frente da a +x, -1 si da a -x.
+  function pueblo() {
+    const T = E.terreno, L = E.lugares, P = L.pueblo, esc = E.motor.escena;
+    const rev = matRevoque(), ch = matChapa(), tab = tablas(), mad = madera();
+    const blanco = new THREE.MeshStandardMaterial({ color: 0xece6da, roughness: 0.92 });
+    const celeste = new THREE.MeshStandardMaterial({ color: 0x8fb4c8, roughness: 0.85 });
+    const oscuro = new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 0.8 });
+    const vidrio = new THREE.MeshStandardMaterial({ color: 0x28323a, roughness: 0.25, metalness: 0.3 });
+    C.pueblo = { edificios: [] };
+    const casa = (cx, cz, w, d, h, dir, mat, nombre, galeria) => {
+      const y = T.altura(cx, cz), fx = cx + dir * w / 2;
+      caja(w, h, 0.25, mat, cx, y + h / 2, cz - d / 2);
+      caja(w, h, 0.25, mat, cx, y + h / 2, cz + d / 2);
+      caja(0.25, h, d, mat, cx - dir * w / 2, y + h / 2, cz);
+      caja(0.25, h, d, mat, fx, y + h / 2, cz);
+      // Puerta y ventanas en el frente, con marco.
+      caja(0.08, 2.1, 1.1, oscuro, fx + dir * 0.13, y + 1.05, cz);
+      for (const s2 of [-1, 1]) { caja(0.06, 1.0, 0.9, vidrio, fx + dir * 0.13, y + 1.5, cz + s2 * d * 0.3); caja(0.1, 1.15, 1.05, celeste, fx + dir * 0.1, y + 1.5, cz + s2 * d * 0.3); }
+      const techo = caja(w + 0.9, 0.06, d + 0.9, ch, cx + (galeria ? dir * 1.2 : 0), y + h + 0.3, cz);
+      techo.scale.x = galeria ? (w + 3.3) / (w + 0.9) : 1;
+      techo.rotation.z = dir * 0.1;
+      if (galeria) for (const s2 of [-1, -0.33, 0.33, 1]) poste(0.08, h + 0.1, mad, fx + dir * 2.6, cz + s2 * (d / 2 - 0.3), 0.3);
+      pared(cx - w / 2, cz - d / 2, cx + w / 2, cz - d / 2); pared(cx - w / 2, cz + d / 2, cx + w / 2, cz + d / 2);
+      pared(cx - w / 2, cz - d / 2, cx - w / 2, cz + d / 2); pared(cx + w / 2, cz - d / 2, cx + w / 2, cz + d / 2);
+      C.pueblo.edificios.push({ x: cx, z: cz, w, d, nombre });
+      return { y, fx };
+    };
+    const calle = (z) => 2.5 * Math.sin(z * 0.012);           // el camino (terreno.js, distCamino)
+    // El almacén de ramos generales, con galería y el cartel.
+    const al = casa(calle(440) - 13, 440, 10, 9, 3.4, 1, rev, "Almacén de Ramos Generales", true);
+    const c1 = cartel("ALMACÉN DE RAMOS GENERALES\nDON BENITO", 7, 1.2);
+    c1.position.set(al.fx + 0.16, al.y + 2.85, 440); c1.rotation.y = Math.PI / 2; esc.add(c1);
+    // Un banco en la galería y el surtidor al borde de la calle.
+    caja(0.4, 0.06, 2.2, tab, al.fx + 1.6, al.y + 0.45, 437.2);
+    const rojo = new THREE.MeshStandardMaterial({ color: 0xa8321f, roughness: 0.6 });
+    caja(0.55, 1.6, 0.45, rojo, calle(434) - 5.2, T.altura(-5, 434) + 0.8, 434);
+    caja(0.58, 0.35, 0.48, blanco, calle(434) - 5.2, T.altura(-5, 434) + 1.45, 434);
+    C.circulos.push({ x: calle(434) - 5.2, z: 434, r: 0.5 });
+    C.puntos.push({ id: "almacen", x: al.fx + 2, z: 441.5, r: 3, texto: "Almacén" });
+    // La capilla, blanca, con la espadaña y la cruz.
+    const cap = casa(calle(463) - 12, 463, 11, 7, 4.2, 1, blanco, "Capilla", false);
+    caja(0.45, 2.6, 3, blanco, cap.fx + 0.1, cap.y + 5.4, 463);
+    const campana = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.28, 0.45, 12, 1, true), new THREE.MeshStandardMaterial({ color: 0x8a6a2a, metalness: 0.8, roughness: 0.35, side: THREE.DoubleSide }));
+    campana.position.set(cap.fx + 0.1, cap.y + 5.2, 463); esc.add(campana);
+    caja(0.12, 1.1, 0.12, oscuro, cap.fx + 0.1, cap.y + 7.2, 463); caja(0.12, 0.12, 0.7, oscuro, cap.fx + 0.1, cap.y + 7.35, 463);
+    // Las casitas del otro lado de la calle, de colores gastados.
+    const rosa = new THREE.MeshStandardMaterial({ color: 0xd8b3a0, roughness: 0.95 }), amarillo = new THREE.MeshStandardMaterial({ color: 0xdcc58f, roughness: 0.95 });
+    casa(calle(430) + 11, 430, 7, 6, 2.8, -1, rosa, "Casa", false);
+    casa(calle(446) + 12, 446, 8, 6.5, 2.8, -1, rev, "Comisaría", false);
+    const cc = cartel("POLICÍA\nDESTACAMENTO", 2.6, 0.9, "#1f3b5a", "#f2efe6");
+    cc.position.set(calle(446) + 12 - 4.16, T.altura(12, 446) + 2.45, 446); cc.rotation.y = -Math.PI / 2; esc.add(cc);
+    casa(calle(462) + 11, 462, 7, 6, 2.8, -1, amarillo, "Casa", false);
+    // El tanque de agua elevado, en patas de hierro.
+    const tx = 24, tz = 470, yt = T.altura(tx, tz);
+    for (const [dx, dz] of [[-1.1, -1.1], [1.1, -1.1], [-1.1, 1.1], [1.1, 1.1]]) caja(0.12, 8, 0.12, oscuro, tx + dx, yt + 4, tz + dz);
+    const tanque = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 2.6, 20), new THREE.MeshStandardMaterial({ color: 0xb6bcbf, metalness: 0.3, roughness: 0.5 }));
+    tanque.position.set(tx, yt + 9.3, tz); tanque.castShadow = true; esc.add(tanque);
+    C.circulos.push({ x: tx, z: tz, r: 1.8 });
+    // El palenque para atar el caballo, frente al almacén.
+    for (const dz of [-1.4, 1.4]) poste(0.07, 1.1, mad, calle(446) - 5, 446 + dz, 0.3);
+    caja(0.09, 0.09, 3, mad, calle(446) - 5, T.altura(-5, 446) + 1.0, 446);
+    // El cartel del camino, adentro de la tranquera: para dónde queda el pueblo.
+    const cp = cartel(`${P.nombre.toUpperCase()}\n↓ 60 m`, 2.8, 1.1);
+    poste(0.06, 1.8, mad, 6.2, 386.5, 0.3); poste(0.06, 1.8, mad, 9, 386.5, 0.3);
+    cp.position.set(7.6, T.altura(7.6, 386.5) + 1.45, 386.4); cp.rotation.y = Math.PI; esc.add(cp);
+  }
 
   // La chata al costado del rancho y los rollos de pasto al lado del corral
   // (modelos de Rezona; si no cargaron, no están y listo).

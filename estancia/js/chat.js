@@ -55,6 +55,13 @@
       const kg = nov.length ? Math.round(nov.reduce((s, v) => s + (v.kilos || 320), 0) / nov.length) : 0;
       sistema(`Comedero al ${Math.round(K.nivel * 100)} %, ${comiendo} comiendo ahora. Novillos del encierre: ${nov.length}, promedian ${kg} kg. La tranquera del encierre está ${K.tranquera.abierta ? "abierta" : "cerrada"}.`);
     } },
+    { n: "mapa", d: "Abrir el mapa del campo", f: () => E.mapa.abrir() },
+    { n: "ir", a: "casco | corral | comedero | aguada | pueblo | estero | zaino", d: "Marcar a dónde ir", f: (arg) => {
+      if (!arg) return sistema("¿Adónde? /ir casco, corral, comedero, aguada, pueblo, estero o zaino.");
+      const l = E.mapa.buscar(arg === "zaino" ? "caballo" : arg);
+      if (!l) return sistema(`No sé dónde queda "${arg}". Probá /mapa.`);
+      E.mapa.ir(l); sistema(`${l.nombre}: ${E.trabajo.rumbo(l.x, l.z)}, a ${Math.round(Math.hypot(l.x - E.jugador.x, l.z - E.jugador.z))} m. Seguí la columna de luz.`);
+    } },
     { n: "hora", d: "La hora y el día", f: () => { const h = Math.floor(G().hora), m = Math.floor((G().hora % 1) * 60); sistema(`Son las ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} del día ${G().dia} de ${E.trabajo.DIAS}.`); } },
     { n: "puesto", d: "Para qué lado queda el rancho", f: () => { const R = E.lugares.rancho; sistema(`El rancho queda ${E.trabajo.rumbo(R.x, R.z)}, a ${Math.round(Math.hypot(R.x - E.jugador.x, R.z - E.jugador.z))} m.`); } },
     { n: "fumar", d: "Armarse un cigarro", f: () => { if (!G()._fumando) { G()._fumando = 6; G().decir("fumar"); } } },
