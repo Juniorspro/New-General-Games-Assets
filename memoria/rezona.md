@@ -43,7 +43,7 @@ además aloja juegos. Fuente: `ARRANQUE.md § 6`,
 - En `submit_retexture_generation`, `text_prompt` e `image_prompt_url` son
   excluyentes.
 
-## Lo que anduvo: 79 lecciones en `estado.json › lo_que_funciono`
+## Lo que anduvo: 97 lecciones en `estado.json › lo_que_funciono`
 
 No abras el archivo (61 KB): buscá la clave con
 `grep -n '"clave"' herramientas/rezona/estado.json`.
@@ -62,6 +62,9 @@ No abras el archivo (61 KB): buscá la clave con
   modelos_3d_variante_web_v2, ratio_fijo_de_simplify_no_sirve,
   modelos_3d_de_uno_en_uno, modelos_3d_no_respeta_medidas,
   modelos_3d_no_miran_a_camara, modelos_3d_sin_transparencia,
+  modelos_3d_en_paralelo, modelos_3d_variante_web_v3, modelos_3d_palito_abajo,
+  modelos_3d_quantize_satura, musica_dura_10s, musica_tomas_distintas,
+  musica_falla_y_reintento, panorama_como_nubes,
   modelos_3d_retexturizar, retextura_se_va_al_naranja,
   imagen_a_3d_pierde_piezas_finas, pose_A_para_imagen_a_3d,
   rig3d_devuelve_tres_presets, pixelar_tapa_la_reconstruccion,
@@ -105,6 +108,11 @@ salió bien, con sus parámetros:** repetir una tanda cuesta créditos.
   `NOIZ_FAILED`. La música con `duration` u `output_format` da
   `VALIDATION_ERROR`, que es terminal. La voz de los videos salió de
   Higgsfield ([higgsfield](higgsfield.md)).
+- **24/09/2026, más tarde:** la música anda pero sale siempre de 9 a 10,5 s.
+  `extra.music_length_ms` se acepta y se ignora; `model` es solo para voz. Para
+  temas largos: 3 tomas con el mismo pedido, cosidas con
+  `aeroplaza/herramientas/musica.py`. De 9 pedidas, 4 fallaron
+  (`NOIZ_FAILED`) y al reenviarlas salieron. Tope: 12 generaciones en vuelo.
 - Por eso, antes de cada tanda se genera una imagen de prueba. El código busca
   cada asset por nombre y tiene su reemplazo dibujado o sintetizado, así lo
   generado entra después sin tocar una línea.

@@ -11,6 +11,8 @@
 //   entran al repo, que es público: aeroplaza.html sale sin ellas (música
 //   sintetizada) y, si los MP3 están en la máquina, sale además
 //   aeroplaza-con-canciones.html, que es el que se entrega.
+// - Los temas de los reinos (musica/*.mp3, hechos con Rezona y cosidos con
+//   herramientas/musica.py) son originales: van en los dos.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -21,6 +23,8 @@ const require = createRequire(path.join(RAIZ, 'bosque/node_modules/x.js'));
 const esbuild = require('esbuild');
 const dev = process.argv.includes('--dev');
 const MUSICA = path.join(RAIZ, 'brillo/musica');
+/* los temas de los reinos, hechos con Rezona (herramientas/musica.py): son originales, van siempre */
+const PROPIA = path.join(AQUI, 'musica');
 
 /* el módulo 'canciones-datos' que lee brillo/js/canciones.js: las grabadas que haya */
 function canciones(con) {
@@ -29,10 +33,10 @@ function canciones(con) {
     setup(b) {
       b.onResolve({ filter: /^canciones-datos$/ }, () => ({ path: 'canciones-datos', namespace: 'canciones' }));
       b.onLoad({ filter: /.*/, namespace: 'canciones' }, () => {
-        const lista = fs.existsSync(path.join(MUSICA, 'canciones.json')) ? JSON.parse(fs.readFileSync(path.join(MUSICA, 'canciones.json'), 'utf8')) : {};
-        const hay = con ? Object.entries(lista).filter(([, c]) => fs.existsSync(path.join(MUSICA, c.archivo))) : [];
-        const imp = hay.map(([, c], i) => `import d${i} from ${JSON.stringify(path.join(MUSICA, c.archivo))};`).join('\n');
-        const exp = hay.map(([t, c], i) => `${JSON.stringify(t)}: { ...${JSON.stringify(c)}, datos: d${i} }`).join(',\n');
+        const de = (dir) => { const l = fs.existsSync(path.join(dir, 'canciones.json')) ? JSON.parse(fs.readFileSync(path.join(dir, 'canciones.json'), 'utf8')) : {}; return Object.entries(l).map(([t, c]) => [t, { ...c, f: path.join(dir, c.archivo) }]).filter(([, c]) => fs.existsSync(c.f)); };
+        const hay = [...de(PROPIA), ...(con ? de(MUSICA) : [])];
+        const imp = hay.map(([, c], i) => `import d${i} from ${JSON.stringify(c.f)};`).join('\n');
+        const exp = hay.map(([t, { f, ...c }], i) => `${JSON.stringify(t)}: { ...${JSON.stringify(c)}, datos: d${i} }`).join(',\n');
         return { contents: `${imp}\nexport default {\n${exp}\n};`, resolveDir: MUSICA, loader: 'js' };
       });
     },

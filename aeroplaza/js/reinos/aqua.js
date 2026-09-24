@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Mundo, azar, ruido2, suaveEntre } from '../mundo.js';
 import { terreno, agua, pasto, palmeras, piedras, brilloso, materialVidrio } from '../naturaleza.js';
-import { Orbes, Cardumen, Burbujas, discoMalla, Chispas } from '../objetos.js';
+import { Orbes, Cardumen, Burbujas, discoMalla, Chispas, Medusas } from '../objetos.js';
 import { Delfin } from '../delfin.js';
 import { letrero } from '../edificios.js';
 
@@ -93,6 +93,8 @@ export function crearAqua(ctx) {
   }
   g.add(coral);
   const peces = [new Cardumen(g, new THREE.Vector3(38, -2.5, -5), { radio: 9, n: 24, alto: 1.2 }), new Cardumen(g, new THREE.Vector3(-20, -3, 50), { radio: 14, n: 18, colores: ['#ffe14a', '#ffffff'], vel: -0.2 })];
+  /* medusas de gelatina: unas en el aire sobre la laguna, otras abajo del agua */
+  const medusas = new Medusas(g, [[30, 4, 10, 1.3, 3], [36, 6.5, -12, 1, 2.5], [-14, 5, 30, 1.5, 3], [-26, 3.5, 44, 1.1, 2], [10, -2.2, 58, 1.2, 2], [42, -2.6, 2, 0.9, 2], [-4, 7, -20, 1.4, 3]]);
   const burbujas = new Burbujas(g, [[38, -4, -5, 16], [-6, 0, 30, 6]], { n: 40, alto: 6, tam: [0.08, 0.3] });
 
   /* la carrera: diez aros dorados en ronda alrededor de la isla, sobre el agua */
@@ -145,6 +147,7 @@ export function crearAqua(ctx) {
       t += dt; if (carrera.activa) carrera.t += dt;
       for (const d of delfines) d.actualizar(dt);
       for (const p of peces) p.actualizar(dt);
+      medusas.actualizar(dt);
       burbujas.actualizar(dt, null);
       chispas.actualizar(dt);
       aros.forEach((a, i) => { const toca = carrera.activa ? i === carrera.i + 1 : i === 0; a.m.material.emissiveIntensity = toca ? 0.8 + Math.sin(t * 6) * 0.4 : 0.15; a.m.scale.setScalar(toca ? 1 + Math.sin(t * 4) * 0.05 : 1); });

@@ -9,6 +9,7 @@ import { t, ponerIdioma, idioma, IDIOMAS } from './textos.js';
 import { RANURAS, PALETA, PALETA_PELO, loTengo, precio, DE_MISION, MUEBLES } from './catalogo.js';
 import { NPCS } from './misiones.js';
 import { ESTILOS, ALTOS_PIXEL } from './motor.js';
+import { Pantalla } from './pantalla.js';
 
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
@@ -138,14 +139,14 @@ export const UI = {
     if (id === 'creditos') return this.creditos();
     if (id === 'salas') return this.salas();
     if (id === 'estilo') return this.estilo();
-    const r = desde.getBoundingClientRect();
+    const r = Pantalla.caja(desde);
     const fondo = window.ARCHIVOS && window.ARCHIVOS['fondo-menu.webp'];
     const titulo = id === 'plaza' ? t('canal_plaza') : id === 'probador' ? t('canal_probador') : t('canal_casa');
     const desc = id === 'plaza' ? t('plaza_desc') : id === 'probador' ? t('prob_titulo') : t('reino_casa_d');
     const vista = id === 'plaza' ? `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>` : id === 'probador' ? `<div class="vista probador">${muneco(J.G.A.color, 46)}</div>` : `<div class="vista icono" style="font-size:20vmin">🏡</div>`;
     const c = this.poner(el(`<div class="canal-abierto"><div class="grande">${vista}<div class="titulo-canal">${titulo}</div><div class="desc">${esc(desc)}</div></div>
       <div class="pie"><button class="boton" data-a="menu">${t('menu')}</button><button class="boton primario" data-a="empezar">${t('empezar')}</button></div></div>`));
-    c.animate([{ clipPath: `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px round 18px)` }, { clipPath: 'inset(0 0 0 0 round 0)' }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    c.animate([{ clipPath: `inset(${r.top}px ${Pantalla.w - r.right}px ${Pantalla.h - r.bottom}px ${r.left}px round 18px)` }, { clipPath: 'inset(0 0 0 0 round 0)' }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
     $('[data-a=menu]', c).onclick = () => { c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200 }).onfinish = () => c.remove(); };
     $('[data-a=empezar]', c).onclick = () => { J.sfx('sesion'); J.empezar(id === 'plaza' ? 'plaza' : id === 'casa' ? 'casa' : 'plaza', { probador: id === 'probador' }); };
     this.focoTeclado(c, '[data-a=empezar]');
@@ -334,6 +335,8 @@ export const UI = {
     c.appendChild(this.fila(t('op_invertir'), this.segmentos([[false, t('no')], [true, t('si')]], O.invertirY, (v) => { O.invertirY = v; J.guardar(); })));
     c.appendChild(this.fila(t('op_nombres'), this.segmentos([[true, t('si')], [false, t('no')]], O.nombres, (v) => { O.nombres = v; J.guardar(); J.mostrarNombres(); })));
     c.appendChild(this.fila(t('op_reloj'), this.segmentos([[true, t('si')], [false, t('no')]], O.reloj24, (v) => { O.reloj24 = v; J.guardar(); })));
+    /* con el celu parado el juego se acuesta solo (sin pantalla completa); para qué lado, o no girarlo */
+    if (Pantalla.tactil) c.appendChild(this.fila(t('op_giro'), this.segmentos([['auto', t('giro_auto')], ['normal', t('giro_normal')], ['reves', t('giro_reves')], ['no', t('giro_no')]], O.giro || 'auto', (v) => { O.giro = v; J.guardar(); Pantalla.ponerGiro(v); })));
     const borrar = el(`<button class="boton chico" style="border-color:#ffb3c0;color:#e0405e">${t('op_borrar')}</button>`);
     borrar.onclick = () => this.confirmar(t('op_borrar_seguro'), () => J.borrarTodo());
     c.appendChild(this.fila('', borrar));
@@ -429,13 +432,16 @@ export const UI = {
     return { cerrar: () => { const a = v.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 450 }); a.onfinish = () => v.remove(); } };
   },
   /* ------------------------------------------------------------ el probador */
-  probador(alCerrar) {
+  probador(alCerrar, alGirar = () => {}) {
     const J = this.J, G = J.G;
     let pest = 'color';
-    const pestanas = [['color', t('prob_color')], ['color2', t('prob_color2')], ['motivo', t('prob_motivo')], ['material', t('prob_material')], ['sombrero', t('prob_sombrero')], ['peinado', t('prob_pelo')], ['colorPelo', t('prob_color_pelo')], ['anteojos', t('prob_anteojos')], ['espalda', t('prob_espalda')], ['particulas', t('prob_particulas')]];
+    const pestanas = [['color', t('prob_color')], ['color2', t('prob_color2')], ['ojos', t('prob_ojos')], ['motivo', t('prob_motivo')], ['motivoCabeza', t('prob_cabeza')], ['material', t('prob_material')], ['sombrero', t('prob_sombrero')], ['peinado', t('prob_pelo')], ['colorPelo', t('prob_color_pelo')], ['anteojos', t('prob_anteojos')], ['espalda', t('prob_espalda')], ['particulas', t('prob_particulas')]];
     const p = this.poner(el(`<div class="probador"><div class="cabeza" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px"><h2 style="margin:0;font-size:22px">${t('prob_titulo')}</h2><span class="pildora" style="font-size:15px"><i class="orbe-icono"></i><span class="p-orbes"></span></span></div>
       <div class="pestanas">${pestanas.map(([k, n]) => `<button data-p="${k}">${n}</button>`).join('')}</div><div class="opciones-prob"></div>
       <div class="prob-pie"><input maxlength="16"><button class="boton chico" data-a="azar">🎲</button><button class="boton chico primario" data-a="listo">${t('listo')}</button></div></div>`));
+    /* las flechas verdes para girar el muñeco (como en los videos); también se gira arrastrando */
+    const giros = this.poner(el(`<div class="giros"><button class="flecha-giro" data-g="-1">⟲</button><button class="flecha-giro" data-g="1">⟳</button></div>`));
+    giros.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => alGirar(+b.dataset.g * 0.8));
     const nombre = $('input', p); nombre.value = G.nombre; nombre.placeholder = t('prob_nombre');
     nombre.onfocus = () => { J.ent.bloqueado = true; }; nombre.onblur = () => { J.ent.bloqueado = false; };
     nombre.onkeydown = (e) => e.stopPropagation();
@@ -447,6 +453,7 @@ export const UI = {
       grilla.innerHTML = '';
       if (pest === 'color' || pest === 'color2' || pest === 'colorPelo') {
         const lista = pest === 'colorPelo' ? PALETA_PELO : PALETA;
+        if (pest === 'color2') { const d = el(`<div class="deslizador"><span>${t('prob_degrade')}</span></div>`); d.appendChild(this.deslizador(0, 1, 0.05, G.A.degrade ?? 0.55, (v) => { G.A.degrade = v; J.aplicarApariencia(); })); grilla.appendChild(d); }
         for (const c of lista) { const b = el(`<button class="color ${G.A[pest] === c ? 'si' : ''}" style="background:${c}"></button>`); b.onclick = () => { G.A[pest] = c; J.aplicarApariencia(); dibujar(); }; grilla.appendChild(b); }
         const libre = el(`<label class="color" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);display:block"><input type="color" style="opacity:0;width:100%;height:100%"></label>`);
         const inp = $('input', libre); inp.value = G.A[pest]; inp.oninput = () => { G.A[pest] = inp.value; J.aplicarApariencia(); };
@@ -461,9 +468,9 @@ export const UI = {
       }
       for (const v of R.lista) {
         const clave = pest + ':' + v, tiene = loTengo(G, clave), pr = precio(clave), mis = DE_MISION[clave];
-        const tex = pest === 'motivo' && v !== 'ninguno' && window.ARCHIVOS && window.ARCHIVOS['motivo-' + v + '.webp'];
+        const tex = (pest === 'motivo' || pest === 'motivoCabeza') && v !== 'ninguno' && v !== 'igual' && window.ARCHIVOS && window.ARCHIVOS['motivo-' + v + '.webp'];
         const b = el(`<button class="item ${G.A[pest] === v ? 'si' : ''} ${tiene ? '' : 'bloq'}">${tex ? `<span class="muestra" style="background-image:url(${tex})"></span>` : ''}<span class="n"></span>${tiene ? '' : mis ? `<span class="precio">🔒</span>` : `<span class="precio"><i class="orbe-icono"></i>${pr}</span>`}${tiene ? '' : '<span class="candado">🔒</span>'}</button>`);
-        $('.n', b).textContent = t(R.pre + '_' + v);
+        $('.n', b).textContent = v === 'igual' ? t('mot_igual') : t(R.pre + '_' + v);
         b.onclick = () => {
           if (tiene) { G.A[pest] = v; J.aplicarApariencia(); dibujar(); return; }
           if (mis) { J.avisarPantalla(t('prob_bloq_mision') + ' · ' + t('npc_' + mis)); J.probarPuesto(pest, v); return; }
@@ -479,9 +486,10 @@ export const UI = {
       const r = (l) => l[Math.floor(Math.random() * l.length)];
       G.A.color = r(PALETA); G.A.color2 = r(PALETA); G.A.colorPelo = r(PALETA_PELO); G.A.cubre = Math.random() * 0.9;
       for (const R of RANURAS) { const ok = R.lista.filter((v) => loTengo(G, R.r + ':' + v)); G.A[R.r] = r(ok); }
+      G.A.degrade = Math.random(); if (Math.random() < 0.7) G.A.motivoCabeza = 'igual'; if (Math.random() < 0.6) G.A.ojos = 'ovalos';
       J.aplicarApariencia(); dibujar();
     };
-    $('[data-a=listo]', p).onclick = () => { p.remove(); J.ent.bloqueado = false; alCerrar(); };
+    $('[data-a=listo]', p).onclick = () => { p.remove(); giros.remove(); J.ent.bloqueado = false; alCerrar(); };
     dibujar();
     this._probador = p;
   },

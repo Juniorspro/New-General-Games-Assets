@@ -32,7 +32,9 @@ export function crearJardin(ctx) {
   const r = azar(5);
   const arb = [];
   for (const [ix, iz, ir] of ISLAS) for (let k = 0; k < Math.floor(ir / 4); k++) { const a = r() * 6.28, d = r() * ir * 0.4, x = ix + Math.cos(a) * d, z = iz + Math.sin(a) * d; if (Math.hypot(x, z) < 6) continue; arb.push([x, z, 0.7 + r() * 0.5]); }
-  g.add(arboles(A, arb, { colores: ['#7de04a', '#ff9ad8', '#b6f03a', '#ffc2e2'] }));
+  /* mitad árboles de burbujas de Rezona, mitad los rosados de acá (el jardín es de flores) */
+  g.add(arboles(A, arb.filter((q, i) => i % 2 === 0)));
+  g.add(arboles(A, arb.filter((q, i) => i % 2 === 1), { colores: ['#ff9ad8', '#ffc2e2', '#ffb0e8'], modelo: false }));
   for (const [x, z, e] of arb) mundo.cilindro(x, z, 0.35 * e, A(x, z) - 1, A(x, z) + 2.4 * e);
 
   /* nenúfares: discos verdes sobre el agua que se pisan; algunos con loto */
@@ -90,6 +92,30 @@ export function crearJardin(ctx) {
     floresG.push(cabeza);
   });
 
+  /* flores de agua gigantes (el Geyser Garden nuevo de los videos): copas de
+     pétalos anchas que flotan en el estanque y se pisan; el loto rosa con su
+     capullo blanco, la naranja, la margarita y la violeta */
+  const floresAgua = [], TIPOS = [['#ff8fcf', '#ffffff', 'capullo'], ['#ffb13d', '#ffe14a', 'centro'], ['#ffffff', '#ffd23f', 'centro'], ['#c77bff', '#fff27a', 'centro'], ['#ff8fcf', '#ffffff', 'capullo']];
+  for (let i = 0; i < 90 && floresAgua.length < TIPOS.length; i++) {
+    const a = i * 2.39996, d = 14 + (i % 17) * 3.2, x = Math.cos(a) * d, z = Math.sin(a) * d;
+    if (A(x, z) > -0.5 || floresAgua.some((f) => Math.hypot(f.x - x, f.z - z) < 16) || floresG.some((c) => Math.hypot(c.parent.position.x - x, c.parent.position.z - z) < 7) || geiseres.some((q) => Math.hypot(q.x - x, q.z - z) < 7)) continue;
+    const [cp, cc, tipo] = TIPOS[floresAgua.length], R = 2.6 + (floresAgua.length % 2) * 0.6;
+    const f = new THREE.Group(); f.position.set(x, 0.05, z); f.rotation.y = a;
+    const matP = brilloso(cp, { roughness: 0.2, borde: 0.45 }), n = tipo === 'capullo' ? 12 : 14;
+    for (let k = 0; k < n; k++) {
+      const b = k / n * 6.28, anillo = k % 2;
+      const p = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), matP); p.scale.set(R * 0.62, 0.16 + anillo * 0.05, R * 0.3);
+      p.position.set(Math.cos(b) * R * (anillo ? 0.5 : 0.62), 0.25 + anillo * 0.25, Math.sin(b) * R * (anillo ? 0.5 : 0.62)); p.rotation.set(0, -b, anillo ? 0.55 : 0.3); f.add(p);
+    }
+    const hoja = new THREE.Mesh(new THREE.CylinderGeometry(R * 1.25, R * 1.25, 0.08, 36, 1, false, 0.3, 5.9), brilloso('#4fd13a', { roughness: 0.3 })); hoja.position.y = -0.02; f.add(hoja);
+    if (tipo === 'capullo') { const c = new THREE.Mesh(new THREE.SphereGeometry(0.9, 20, 14), brilloso(cc, { roughness: 0.15, borde: 0.5, emissive: '#fff0fa', emissiveIntensity: 0.15 })); c.scale.set(0.8, 1.35, 0.8); c.position.y = 1.2; f.add(c); mundo.cilindro(x, z, 0.75, 0, 2.3); }
+    else { const c = new THREE.Mesh(new THREE.SphereGeometry(R * 0.36, 20, 12), brilloso(cc, { emissive: '#ffb000', emissiveIntensity: 0.25 })); c.scale.y = 0.35; c.position.y = 0.42; f.add(c); }
+    f.traverse((q) => { if (q.isMesh) { q.castShadow = true; q.receiveShadow = true; } }); g.add(f);
+    /* se pisa el piso de la copa (y la hoja de abajo, que queda al ras del agua) */
+    mundo.cilindro(x, z, R * 0.55, -3, 0.5);
+    mundo.cilindro(x, z, R * 1.2, -3, 0.08);
+    floresAgua.push({ f, x, z, fase: i });
+  }
   const burbujas = new Burbujas(g, [[0, 0, 0, 30], [-26, 0, -32, 12], [30, 0, 26, 12]], { n: 60, alto: 18, tam: [0.2, 0.9] });
   const mariposas = new Mariposas(g, [[0, A(0, 0), 0, 8], [-34, A(-34, 18), 18, 5], [30, A(30, 26), 26, 5]], 16, ['#ffd6f5', '#ffffff', '#fff6c2']);
   const orbLug = [];
@@ -109,6 +135,7 @@ export function crearJardin(ctx) {
     orbes, discos, npcs, burbujas, mariposas, geiseres,
     actualizar(dt, jp, cielo) {
       t += dt;
+      for (const q of floresAgua) { q.f.position.y = 0.05 + Math.sin(t * 0.9 + q.fase) * 0.04; q.f.rotation.z = Math.sin(t * 0.7 + q.fase) * 0.015; }
       for (const G2 of geiseres) {
         /* ciclo de 7 s: 2,5 soplando */
         const c = ((t + G2.fase) % 7) / 7, activo = c > 0.64;

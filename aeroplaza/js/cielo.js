@@ -17,7 +17,8 @@ const CIELO_VS = /* glsl */`
   void main() { vDir = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`;
 const CIELO_FS = /* glsl */`
   uniform vec3 uSol, uLuna, uCenit, uHorizonte, uAtar;
-  uniform float uDia, uAtardecer, uAurora, uT, uEstrellas;
+  uniform float uDia, uAtardecer, uAurora, uT, uEstrellas, uHayPano, uNubes, uArco;
+  uniform sampler2D uPano;
   varying vec3 vDir;
   float h13(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
   float ruido(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -32,6 +33,42 @@ const CIELO_FS = /* glsl */`
     vec3 col = mix(uCenit, hor, t);
     /* abajo del horizonte: la bruma del mar */
     if (h < 0.0) col = mix(hor, uHorizonte * 0.7, smoothstep(0.0, -0.3, h));
+    /* la vía láctea: una franja de ruido celeste y violeta que cruza el cielo de noche */
+    if (uEstrellas > 0.01 && h > 0.0) {
+      float b = dot(d, normalize(vec3(0.55, 0.35, -0.76)));
+      float nube = ruido(d.xz / (h + 0.4) * 6.0) * 0.6 + ruido(d.xz / (h + 0.4) * 17.0) * 0.4;
+      col += mix(vec3(0.18, 0.3, 0.75), vec3(0.45, 0.25, 0.7), nube) * exp(-b * b * 22.0) * nube * 0.22 * uEstrellas * smoothstep(0.0, 0.3, h);
+    }
+    float tapa = 0.0;   // cuánto tapan las nubes del panorama (para el arcoíris)
+    /* el panorama de nubes de Rezona alrededor del horizonte: cuatro copias
+       espejadas (así no hay costura) hasta 52° de alto. Lo blanco es nube y se
+       tiñe con la hora; lo azul de la foto se mezcla solo de día */
+    if (uHayPano > 0.5 && h > -0.02) {
+      float el = asin(clamp(h, 0.0, 1.0)) / 0.9;
+      vec2 uv = vec2((atan(d.x, d.z) / 6.2831853 + 0.5) * 4.0, el * 0.97 + 0.025);
+      if (uv.y < 1.0) {
+        vec3 p = texture2D(uPano, uv).rgb;
+        float mx = max(p.r, max(p.g, p.b)), mn = min(p.r, min(p.g, p.b));
+        float blanco = smoothstep(0.42, 0.85, mn / max(mx, 1e-3)) * uNubes;
+        float arriba = 1.0 - smoothstep(0.62, 0.98, uv.y);
+        vec3 tNube = mix(vec3(0.07, 0.1, 0.22), vec3(1.0), uDia);
+        tNube = mix(tNube, vec3(1.25, 0.72, 0.62), uAtardecer * 0.7);
+        col = mix(col, p, 0.5 * uDia * (1.0 - uAtardecer) * arriba * (1.0 - blanco) * uNubes);
+        col = mix(col, p * tNube, blanco * arriba);
+        tapa = blanco * arriba;
+      }
+    }
+    /* el arcoíris sobre el mar del norte (el de los fondos de 2007): un anillo de
+       ~36° alrededor de un punto justo abajo del horizonte; las nubes del panorama lo tapan */
+    if (uArco > 0.01 && h > -0.02) {
+      float a = acos(clamp(dot(d, normalize(vec3(0.3, -0.12, -1.0))), -1.0, 1.0));
+      float x = (a - 0.6) / 0.075;
+      if (x > 0.0 && x < 1.0) {
+        vec3 arco = clamp(abs(mod((1.0 - x) * 4.6 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+        col += arco * 0.9 * (1.0 - tapa * 0.7) * uArco * sin(x * 3.14159) * smoothstep(-0.02, 0.12, h) * (1.0 - smoothstep(0.35, 0.6, h));
+      }
+    }
+
     /* el sol, con su halo grande y blando (para que el bloom lo abra en flare) */
     float s = max(dot(d, uSol), 0.0);
     col += vec3(1.0, 0.92, 0.75) * (smoothstep(0.9993, 0.9997, s) * 24.0 + pow(s, 280.0) * 2.2 + pow(s, 12.0) * 0.28) * smoothstep(-0.1, 0.05, uSol.y);
@@ -94,13 +131,15 @@ function texDestello(tipo) {
 const PIEZAS = [[0, 'disco', 3.2, '#fff6dc'], [0.22, 'hex', 0.5, '#b8ffd8'], [0.38, 'anillo', 0.9, '#bfe8ff'], [0.55, 'hex', 0.35, '#ffd6f0'], [0.72, 'disco', 0.25, '#d8f0ff'], [0.9, 'hex', 0.7, '#c8e6ff'], [1.15, 'anillo', 1.4, '#e0ffd0']];
 
 export class Cielo {
-  constructor(motor, texturasNube = []) {
+  constructor(motor, texturasNube = [], pano = null) {
     this.motor = motor;
     const U = this.U = {
       uSol: { value: new THREE.Vector3(0, 1, 0) }, uLuna: { value: new THREE.Vector3(0, -1, 0) },
       uCenit: { value: new THREE.Color() }, uHorizonte: { value: new THREE.Color() }, uAtar: { value: new THREE.Color('#ff9a6b') },
       uDia: { value: 1 }, uAtardecer: { value: 0 }, uAurora: { value: 0 }, uT: { value: 0 }, uEstrellas: { value: 0 },
+      uPano: { value: pano }, uHayPano: { value: pano ? 1 : 0 }, uNubes: { value: 1 }, uArco: { value: 0 },
     };
+    if (pano) { pano.wrapS = THREE.MirroredRepeatWrapping; pano.wrapT = THREE.ClampToEdgeWrapping; pano.generateMipmaps = false; pano.minFilter = THREE.LinearFilter; pano.needsUpdate = true; }
     const mat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: CIELO_VS, fragmentShader: CIELO_FS, side: THREE.BackSide, depthWrite: false, fog: false });
     this.domo = new THREE.Mesh(new THREE.SphereGeometry(1000, 48, 24), mat);
     this.domo.frustumCulled = false; this.domo.renderOrder = -10;
@@ -128,11 +167,12 @@ export class Cielo {
     this.nubes = new THREE.Group(); motor.escena.add(this.nubes);
     const tex = texturasNube.length ? texturasNube : [nubeDibujada(7), nubeDibujada(91), nubeDibujada(333)];
     this.matsNube = tex.map((t) => new THREE.SpriteMaterial({ map: t, fog: false, depthWrite: false, transparent: true }));
-    for (let i = 0; i < 30; i++) {
+    const N = pano ? 18 : 30;   // con el panorama, las del horizonte ya están: estas van más altas
+    for (let i = 0; i < N; i++) {
       const s = new THREE.Sprite(this.matsNube[i % this.matsNube.length]);
-      const a = (i / 30) * Math.PI * 2 + Math.sin(i * 7.1) * 0.3, r = 380 + (i * 97) % 380;
+      const a = (i / N) * Math.PI * 2 + Math.sin(i * 7.1) * 0.3, r = 380 + (i * 97) % 380;
       const esc = 110 + (i * 53) % 120;
-      s.userData = { a, r, y: 70 + (i * 37) % 150, v: 0.004 + (i % 5) * 0.001 };
+      s.userData = { a, r, y: (pano ? 150 : 70) + (i * 37) % 150, v: 0.004 + (i % 5) * 0.001 };
       s.scale.set(esc, esc * 0.52, 1);
       s.renderOrder = -5;
       this.nubes.add(s);
@@ -159,9 +199,11 @@ export class Cielo {
     U.uDia.value = dia; U.uAtardecer.value = atar;
     U.uEstrellas.value = 1 - THREE.MathUtils.smoothstep(sol.y, -0.1, 0.12);
     U.uAurora.value = Math.max(this.modo.aurora, 0);
-    const cenit = U.uCenit.value.setRGB(0.012, 0.02, 0.07).lerp(new THREE.Color(0.06, 0.32, 0.92), dia);
+    U.uNubes.value = this.modo.nubes ?? 1;
+    U.uArco.value = (this.modo.arcoiris || 0) * dia * (1 - atar);
+    const cenit = U.uCenit.value.setRGB(0.018, 0.04, 0.13).lerp(new THREE.Color(0.05, 0.3, 0.95), dia);
     cenit.lerp(new THREE.Color(0.2, 0.22, 0.52), atar * 0.45);
-    const hor = U.uHorizonte.value.setRGB(0.04, 0.08, 0.2).lerp(new THREE.Color(0.55, 0.82, 1.0), dia);
+    const hor = U.uHorizonte.value.setRGB(0.05, 0.13, 0.32).lerp(new THREE.Color(0.55, 0.84, 1.0), dia);
     /* el sol, o la luna de noche, es la luz principal (una sola sombra) */
     const esNoche = sol.y < 0.02;
     const dir = esNoche ? U.uLuna.value : sol;

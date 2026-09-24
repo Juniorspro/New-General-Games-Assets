@@ -7,12 +7,13 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
 
 ## Armarlo y probarlo
 
-- `node aeroplaza/herramientas/armar.mjs` arma `aeroplaza.html` (2,3 MB, sin
-  canciones: va al repo) y `aeroplaza-con-canciones.html` (4,2 MB, gitignorado,
-  es el que se le entrega).
+- `node aeroplaza/herramientas/armar.mjs` arma `aeroplaza.html` (8,2 MB, sin
+  las canciones de Nintendo: va al repo) y `aeroplaza-con-canciones.html`
+  (10,2 MB, gitignorado, es el que se le entrega).
 - El sonido es el de BRILLO: `../../brillo/js/sonido.js` y `canciones.js`.
-  Menú = 'titulo' (Wii Party), plaza = 'colina' (Mii Maker). Los demás reinos
-  usan los temas sintetizados: arrecife, aurora, cielo y ciudad.
+  Menú = 'titulo' (Wii Party), plaza = 'colina' (Mii Maker). Los otros cinco
+  reinos (arrecife, aurora, cielo, ciudad, casa) suenan con temas de Rezona
+  cosidos, en `aeroplaza/musica/`: son originales y van en los dos HTML.
 - Las pruebas abren el HTML por `file://` con `?directo&pausa` y avanzan el
   juego a mano con `__A.paso(dt, dibujar)`:
   - se dibuja solo el último cuadro;
@@ -72,6 +73,39 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   `<html>`/`<head>`/`<body>` y sin canciones. Ahí el CSP bloquea los
   WebSocket, así que se juega solo; la red deja de insistir tras 4 fallos.
 
+## Tercera vuelta: modelos 3D, muñeco, cielo, música y girar (24/09)
+
+- **El muñeco, medido sobre los videos** (`fs/caras.png` del scratchpad):
+  - piernas casi tan altas como la cabeza (la base del cuerpo a 0,38);
+  - brazos gordos (r 0,084) que cuelgan por fuera hasta la base;
+  - ojos de gelatina del color del cuerpo, más hondos y con filo oscuro, no
+    negros; alto = 37 % de la cabeza.
+  - `pruebas/muneco.mjs` saca 4 apariencias y el perfil en el estudio.
+- **15 modelos de Tripo** (`js/modelos.js`, `herramientas/assets.mjs`):
+  - estación, tienda, tren, 3 casas (barrio al sur de la plaza; la del medio
+    lleva a Mi casa), 3 hoteles en islotes al norte, fuente, faroles, bancos,
+    árboles y palmeras instanciados en todos los reinos, y 5 muebles.
+  - Cada lugar tiene su respaldo dibujado si el modelo no carga.
+  - El giro de fábrica se mide con `pruebas/modelos.mjs` (4 giros por hoja):
+    casa, tienda, sillón, cama y tele 3π/2; estación y banco π.
+  - El andén, el asiento y el borde de la fuente se miden con un rayo
+    (`modelos.rayo`); la bocha del farol, con `cima`.
+- **El cielo**: el panorama de Rezona en 4 copias espejadas alrededor del
+  horizonte; lo blanco es nube teñida por la hora. Más la vía láctea de
+  noche, noches más azules, arcoíris al norte (plaza, de día) y las nubes
+  sueltas sin borde gris (se aclaró el color bajo el alfa).
+- **Girar 90° sin pantalla completa** (`js/pantalla.js`, receta de KUNTUR):
+  - todo va en `#app`; el CSS usa `--vw`/`--vh`, y en vez de `@media` las
+    clases `angosta`, `a700`, `a560` y `b460`;
+  - los dedos pasan por `Pantalla.aJuego`; Opciones › "Con el celu parado":
+    girar solo, ⟳, ⟲ o no girar. `?giro=` para las pruebas.
+  - `pruebas/dedos.mjs` prueba sin girar y girado para los dos lados: 30 de 30.
+- **De los videos nuevos** (23 bajados de #frutigeraero, solo imagen):
+  - medusas de gelatina (lago y Aqua) y flores de agua gigantes para pisar en
+    el Jardín, como el Geyser Garden nuevo de @frutiger_space.
+  - Buscar: `herramientas/tiktok-buscar.mjs` (hashtag y búsqueda, sin captcha).
+  - Bajar: `herramientas/tiktok-bajar.mjs <id>` abre la página del video para tener cookies frescas.
+
 ## Trampas que ya se pagaron
 
 - **`#ui > * { pointer-events: auto }` le ganaba a `.hud { pointer-events: none }`**
@@ -121,7 +155,7 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
 
 | calidad | plaza | llamadas | CPU del juego |
 |---|---|---|---|
-| alta | 930 mil triángulos | 205 | 0,34 ms/cuadro |
+| alta | 930 mil triángulos (1,35 millones con los modelos 3D, 24/09) | 205 (268) | 0,34 ms/cuadro (0,40) |
 | baja | 429 mil (sin sombras, pasto ×0,28) | 124 | 0,32 ms/cuadro |
 
 La calidad automática mide 150 cuadros y baja un nivel si pasan 26 ms.
@@ -129,6 +163,9 @@ No se probó en un teléfono de verdad.
 
 ## Lo que falta o se podría
 
+- Temas de más de 30 s: Rezona da 10 s por toma; se pueden pedir más tomas y
+  sumarlas en `herramientas/musica.py`.
+
 - Probarlo contra `broker.emqx.io` desde una computadora con internet.
-- Las canciones de los otros reinos, si las manda. Se suman con
+- Si manda canciones para los otros reinos, pisan a las de Rezona: se suman con
   `brillo/herramientas/canciones.py` y el nombre del tema del reino.

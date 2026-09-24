@@ -17,10 +17,12 @@ anda sin servidor.
   aviso y el menú de canales; el canal Plaza lleva al juego.
 - **Sin internet anda igual.** Se juega solo y el cartel de arriba dice
   "sin conexión".
-- La música de este archivo es sintetizada. La versión con las canciones que
-  mandó quien pide (el menú de Wii Party y Mii Maker) es
-  `aeroplaza-con-canciones.html`. No está en el repo, que es público: se arma
-  en la máquina que tenga los MP3.
+- Cada reino tiene su tema, hecho con Rezona (`musica/`). La versión con las
+  canciones que mandó quien pide (el menú de Wii Party y la plaza de Mii
+  Maker) es `aeroplaza-con-canciones.html`. No está en el repo, que es
+  público: se arma en la máquina que tenga los MP3.
+- Con el celu parado el juego se acuesta solo, sin pantalla completa
+  (Opciones › "Con el celu parado": girar solo, ⟳, ⟲ o no girar).
 
 ## Multijugador
 
@@ -42,12 +44,12 @@ Detalle: `js/red.js` y `js/remotos.js`.
 
 | reino | qué tiene |
 |---|---|
-| Plaza | lago, globo con cascada, peceras, estación hexagonal, Aero·Mart, probador, huerta de frutas con poderes, fuente de burbujas manejables, ciudad de vidrio |
-| Aqua | hotel en la playa, palmeras, islotes, delfines para montar, carrera de 10 aros, arrecife con aros hundidos |
+| Plaza | lago con medusas, globo con cascada, peceras, estación y tren, Aero·Mart, probador, barrio de casas (la tuya lleva a Mi casa), huerta de frutas con poderes, fuente de burbujas manejables, hoteles en islotes, arcoíris y la ciudad de vidrio |
+| Aqua | hotel en la playa, palmeras, islotes, medusas, delfines para montar, carrera de 10 aros, arrecife con aros hundidos |
 | Aurora | noche con aurora, cristales, lago de hielo, delfines que vuelan por aros dorados, estrellas que caen, el cristal del sueño colectivo |
-| Jardín de géiseres | nenúfares que se pisan, lotos, géiseres que soplan, flores gigantes que rebotan |
+| Jardín de géiseres | nenúfares que se pisan, lotos, flores de agua gigantes, géiseres que soplan, flores que rebotan |
 | Aero·Mart | la tienda por dentro, con vitrinas y Menta |
-| Mi casa | una isla entre las nubes con 16 muebles para poner |
+| Mi casa | una isla entre las nubes, con la casa y 16 muebles para poner |
 
 Además hay:
 
@@ -58,24 +60,33 @@ Además hay:
   Boy, 8 bits y VHS. Dibujan de verdad a baja resolución, así que además van
   más rápido;
 - controles de dedo personalizables: mover, agrandar, transparencia, tipo de
-  palanca, zurdos y vibración.
+  palanca, zurdos y vibración;
+- 15 modelos 3D de Rezona (edificios, árboles, palmeras, faroles, bancos,
+  fuente y muebles). Si alguno no carga, va el dibujado a mano.
 
 ## Para tocarlo
 
 - `node herramientas/armar.mjs [--dev]` arma `aeroplaza.html`. Si están los
   MP3 en `brillo/musica/`, arma también `aeroplaza-con-canciones.html`.
-- `node herramientas/assets.mjs` pasa lo de Rezona de `crudo/` a `assets/`.
+- `node herramientas/assets.mjs [nombre]` pasa lo de Rezona de `crudo/` a
+  `assets/` (los modelos, a una cantidad fija de triángulos).
+- `python3 herramientas/musica.py` cose las tomas de 10 s de Rezona en un tema
+  por reino, con su bucle.
 - `pruebas/`:
   - `multijugador.mjs`: dos navegadores contra `broker.mjs`, un broker MQTT
     mínimo en Node puro;
   - `flujo.mjs [--movil]`: recorre las pantallas como una persona;
   - `reinos.mjs`: una foto de cada reino;
   - `rendimiento.mjs`: llamadas, triángulos y ms;
-  - `canciones.mjs`: comprueba las canciones.
+  - `canciones.mjs`: comprueba las canciones y los temas de cada reino;
+  - `dedos.mjs`: toques de verdad, sin girar y girado;
+  - `modelos.mjs`: cada modelo en 4 giros, para ver adónde mira;
+  - `muneco.mjs` y `fotos.mjs`: el muñeco en el probador y la isla.
 - En la dirección:
   - `?directo`: saltea los menús;
   - `?reino=aqua`: arranca en ese reino;
   - `?broker=ws://…`: usa otro broker;
   - `?calidad=baja`: fija la calidad;
-  - `?hora=0.5`: fija la hora del día.
+  - `?hora=0.5`: fija la hora del día;
+  - `?giro=no|normal|reves`: el giro del celu parado.
 - Las trampas que ya se pagaron están en `memoria/aeroplaza.md`.

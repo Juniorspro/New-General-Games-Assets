@@ -4,6 +4,15 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **24/09/2026, noche (4) · `claude/fijate-iszyer`:**
+  - Pidió: más videos de Frutiger Aero, arreglar los cielos, música en vez de
+    la sintetizada, modelos 3D mucho mejores, el muñeco igual al de los videos
+    con ojitos y girar 90° sin pantalla completa.
+  - Quedó todo: [aeroplaza](aeroplaza.md) § Tercera vuelta. 15 modelos de
+    Tripo, temas de Rezona cosidos, panorama de cielo, `js/pantalla.js`.
+  - No mandó archivos de música nuevos con este pedido: se usaron temas de
+    Rezona para los reinos, y se le avisó.
+  - Falta: probarlo en un teléfono de verdad (el giro y el peso de 8 MB).
 - **24/09/2026, noche (3) · `claude/fijate-iszyer`:**
   - Dijo "no me deja jugar" (sin detalle) y pidió mejorar todo y efectos
     pixel. Se blindó el arranque y se agregaron siete estilos retro a baja

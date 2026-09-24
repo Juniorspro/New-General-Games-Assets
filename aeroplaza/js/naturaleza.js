@@ -7,6 +7,7 @@
    Todo lo que se repite va instanciado: un árbol o mil cuestan una llamada.
    ========================================================================== */
 import * as THREE from 'three';
+import { instancias } from './modelos.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { azar } from './mundo.js';
 
@@ -316,7 +317,10 @@ export function conBorde(m, color = '#ffffff', fuerza = 0.5, pot = 3.0) {
   return m;
 }
 /* lugares: [[x, z, escala, variante]] */
-export function arboles(altura, lugares, { colores = ['#55d23a', '#7de04a', '#3fbf55', '#9be64a'], tronco = '#c79a6a' } = {}) {
+export function arboles(altura, lugares, { colores = ['#55d23a', '#7de04a', '#3fbf55', '#9be64a'], tronco = '#c79a6a', tintes = ['#ffffff', '#e4ffd8', '#fff6d0', '#d8fff0'], modelo = true } = {}) {
+  /* el árbol de burbujas de Rezona, si está (tintes claros: multiplican su textura) */
+  const G = modelo && instancias('arbol', lugares.map(([x, z, esc = 1], i) => [x, altura(x, z) - 0.15, z, esc, i * 2.4]), { alto: 5.4, tintes });
+  if (G) return G;
   const g = new THREE.Group(), n = lugares.length;
   const gT = new THREE.CylinderGeometry(0.16, 0.28, 2.6, 10, 3); gT.translate(0, 1.3, 0);
   const mT = new THREE.MeshStandardMaterial({ color: tronco, roughness: 0.55 });
@@ -365,6 +369,8 @@ function palmeraGeo() {
   return g;
 }
 export function palmeras(altura, lugares) {
+  const G = instancias('palmera', lugares.map(([x, z, esc = 1, rot = 0]) => [x, altura(x, z) - 0.2, z, esc, rot]), { alto: 6.8 });
+  if (G) return G;
   const g = palmeraGeo();
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, side: THREE.DoubleSide });
   conViento(m, 0.25);

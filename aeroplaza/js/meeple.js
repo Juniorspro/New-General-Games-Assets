@@ -20,9 +20,10 @@ export const ANTEOJOS = ['ninguno', 'sol', 'redondos', 'visor'];
 export const ESPALDAS = ['ninguno', 'alas', 'mochila', 'aleta'];
 export const PEINADOS = ['ninguno', 'mechon', 'rulos', 'pinches', 'melena', 'rodete', 'colitas', 'cresta', 'nube'];
 export const PARTICULAS = ['ninguna', 'burbujas', 'estrellas', 'hojas', 'notas'];
+export const OJOS = ['ovalos', 'redondos', 'felices', 'ninguno'];
 
 export const APARIENCIA_INICIAL = () => ({
-  color: '#2f9bff', color2: '#b8f0ff', motivo: 'agua', cubre: 0.32, material: 'gelatina',
+  color: '#2f9bff', color2: '#b8f0ff', motivo: 'agua', cubre: 0.42, material: 'gelatina', degrade: 0.55, ojos: 'ovalos', motivoCabeza: 'igual',
   sombrero: 'ninguno', anteojos: 'ninguno', espalda: 'ninguno', peinado: 'ninguno', colorPelo: '#ffd23f', particulas: 'ninguna',
 });
 
@@ -30,49 +31,103 @@ export const APARIENCIA_INICIAL = () => ({
 export const TEXTURAS_MOTIVO = {};
 
 /* ---------------------------------------------------------------- geometrías */
-/* cada vértice lleva su altura en la pose de reposo (aAlto, 0 a 1,25 m) y un
-   uv cilíndrico (aUvm): el motivo se pinta con eso, así no se deforma cuando
-   el muñeco se mueve y todas las piezas empalman */
+/* Las medidas salen de los videos de referencia (el muñeco de Frutiger Space):
+   cabeza grande y aparte, cuerpo de cúpula con la base plana, brazos largos y
+   gruesos colgando de los hombros, piernas cortas y separadas. 1,21 m en total.
+   Cada vértice lleva:
+   - aAlto: la altura en la pose de reposo (para el uv del motivo);
+   - aParte: de 0 (abajo) a 1 (arriba) DENTRO de su pieza: el degradé y el
+     motivo van por pieza, como en el original (cada pieza tiene su "agua" abajo);
+   - aUvm: uv cilíndrico alrededor del eje de la pieza. */
+export const MEDIDAS = { cabezaY: 1.1, cabezaR: 0.215, hombroX: 0.292, hombroY: 0.79, caderaX: 0.128, caderaY: 0.42 };
 function conAlto(g, dy, dx = 0) {
   /* la geometría queda en su lugar de la pose de reposo; la malla se corre
      -articulación adentro de su articulación, así gira desde ahí */
   g.translate(dx, dy, 0);
+  g.computeBoundingBox();
+  const bb = g.boundingBox, y0 = bb.min.y, y1 = bb.max.y;
   const p = g.attributes.position, n = p.count;
-  const alto = new Float32Array(n), uvm = new Float32Array(n * 2);
+  const alto = new Float32Array(n), parte = new Float32Array(n), uvm = new Float32Array(n * 2);
   for (let i = 0; i < n; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    alto[i] = y;
-    uvm[i * 2] = (Math.atan2(x, z) / (Math.PI * 2) + 0.5) * 3;
+    alto[i] = y; parte[i] = (y - y0) / (y1 - y0);
+    uvm[i * 2] = (Math.atan2(x - dx, z) / (Math.PI * 2) + 0.5) * 2;
     uvm[i * 2 + 1] = y * 2.2;
   }
   g.setAttribute('aAlto', new THREE.BufferAttribute(alto, 1));
+  g.setAttribute('aParte', new THREE.BufferAttribute(parte, 1));
   g.setAttribute('aUvm', new THREE.BufferAttribute(uvm, 2));
   return g;
 }
-function capsula(r, largo, seg = 14) { return new THREE.CapsuleGeometry(r, largo, 5, seg); }
+function capsula(r, largo, seg = 16) { return new THREE.CapsuleGeometry(r, largo, 6, seg); }
 
 let GEOS = null;
 function geometrias() {
   if (GEOS) return GEOS;
-  /* el cuerpo: una campana torneada, más ancha abajo, con los hombros redondos */
-  const perfil = [];
-  const P = [[0, 0.27], [0.1, 0.268], [0.17, 0.285], [0.215, 0.33], [0.238, 0.4], [0.236, 0.48], [0.222, 0.56], [0.198, 0.63], [0.168, 0.69], [0.13, 0.74], [0.08, 0.772], [0, 0.785]];
-  for (const [x, y] of P) perfil.push(new THREE.Vector2(x, y));
-  const cuerpo = new THREE.LatheGeometry(new THREE.SplineCurve(perfil).getPoints(28), 32);
+  /* el cuerpo: una cúpula torneada, de base casi plana y hombros redondos */
+  /* (en los videos las piernas son largas: la base del cuerpo va a 0,38) */
+  const P = [[0, 0.38], [0.17, 0.38], [0.222, 0.392], [0.243, 0.425], [0.252, 0.49], [0.252, 0.59], [0.243, 0.675], [0.222, 0.745], [0.184, 0.798], [0.128, 0.83], [0.064, 0.846], [0, 0.85]];
+  const cuerpo = new THREE.LatheGeometry(new THREE.SplineCurve(P.map(([x, y]) => new THREE.Vector2(x, y))).getPoints(30), 36);
   cuerpo.computeVertexNormals();
+  const M = MEDIDAS;
   GEOS = {
     cuerpo: conAlto(cuerpo, 0),
-    cabeza: conAlto(new THREE.SphereGeometry(0.235, 32, 20), 1.03),
-    brazo: [-1, 1].map((s) => conAlto(capsula(0.066, 0.25).translate(0, -0.16, 0), 0.68, s * 0.2)),
-    pierna: [-1, 1].map((s) => conAlto(capsula(0.085, 0.13).translate(0, -0.15, 0), 0.3, s * 0.1)),
+    cabeza: conAlto(new THREE.SphereGeometry(M.cabezaR, 36, 24), M.cabezaY),
+    /* el brazo, gordo, cuelga del hombro por fuera del cuerpo hasta la base: 0,5 m */
+    brazo: [-1, 1].map((s) => conAlto(capsula(0.084, 0.33).translate(0, -0.2, 0), M.hombroY, s * M.hombroX)),
+    /* las piernas, casi tan altas como la cabeza, con una ranura entre las dos */
+    pierna: [-1, 1].map((s) => conAlto(capsula(0.11, 0.2).translate(0, -0.2, 0), M.caderaY, s * M.caderaX)),
   };
   return GEOS;
 }
 
+/* los ojos: dos óvalos verticales como lentes de gelatina, del color del cuerpo
+   pero más hondos, con un filo oscuro y el reflejo arriba (así en los videos).
+   Van pegados a la esfera de la cabeza, mirando para afuera */
+const matsOjo = new Map();
+function matOjo(c, k, env) {
+  const h = c.getHexString() + k;
+  if (!matsOjo.has(h)) matsOjo.set(h, new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: env }));
+  return matsOjo.get(h);
+}
+function ojos(tipo, color, color2) {
+  const g = new THREE.Group();
+  if (tipo === 'ninguno') return g;
+  const c = new THREE.Color(color).lerp(new THREE.Color(color2 || color), 0.25);
+  const lente = matOjo(c.clone().multiplyScalar(0.5).lerp(new THREE.Color('#0b1a33'), 0.18), 'l', 2.6);
+  const filo = matOjo(c.clone().multiplyScalar(0.2).lerp(new THREE.Color('#0b1a33'), 0.5), 'f', 1);
+  const brillo = matsOjo.get('brillo') || new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.9 });
+  matsOjo.set('brillo', brillo);
+  const R = MEDIDAS.cabezaR, redondo = tipo === 'redondos';
+  const ax = redondo ? 0.07 : 0.06, ay = redondo ? 0.07 : 0.155;
+  for (const s of [-1, 1]) {
+    const ojo = new THREE.Group();
+    /* sobre la esfera, a 20° del centro y apenas abajo del ecuador */
+    const az = s * 0.35, el = -0.03;
+    ojo.position.set(Math.sin(az) * Math.cos(el) * R * 0.975, Math.sin(el) * R, Math.cos(az) * Math.cos(el) * R * 0.975);
+    ojo.lookAt(ojo.position.clone().multiplyScalar(2));
+    let forma;
+    if (tipo === 'felices') { forma = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.011, 8, 16, Math.PI), filo); forma.position.y = -0.01; }
+    else {
+      forma = new THREE.Group();
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.5, 18, 12), filo); f.scale.set(ax * 1.18, ay * 1.08, 0.022); forma.add(f);
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.5, 18, 12), lente); l.scale.set(ax, ay, 0.036); l.position.z = 0.004; forma.add(l);
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 8), brillo); b.scale.set(ax * 0.32, ay * (redondo ? 0.3 : 0.24), 0.008); b.position.set(-0.012 * s, ay * 0.24, 0.02); forma.add(b);
+    }
+    ojo.add(forma);
+    ojo.userData.forma = forma;
+    g.add(ojo);
+  }
+  return g;
+}
+
 /* ---------------------------------------------------------------- materiales */
 const cacheMat = new Map();
-export function materialMeeple(A) {
-  const clave = [A.color, A.color2, A.motivo, A.cubre.toFixed(2), A.material].join('|');
+export function materialMeeple(A, pieza = 'cuerpo') {
+  /* la cabeza puede llevar otro motivo (la "Tierra" en la cabeza de los videos): entonces la cubre entera */
+  const mot = pieza === 'cabeza' && A.motivoCabeza && A.motivoCabeza !== 'igual' ? A.motivoCabeza : A.motivo;
+  const cubre = pieza === 'cabeza' && A.motivoCabeza && A.motivoCabeza !== 'igual' ? (mot === 'ninguno' ? 0 : 1.2) : A.cubre;
+  const clave = [A.color, A.color2, mot, (+cubre).toFixed(2), A.material, (+(A.degrade ?? 0.55)).toFixed(2)].join('|');
   if (cacheMat.has(clave)) return cacheMat.get(clave);
   const tipo = A.material;
   const m = new THREE.MeshPhysicalMaterial({
@@ -82,9 +137,9 @@ export function materialMeeple(A) {
     sheen: tipo === 'perla' ? 1 : 0.3, sheenColor: new THREE.Color(A.color2), sheenRoughness: 0.4,
     transparent: tipo === 'vidrio', opacity: tipo === 'vidrio' ? 0.62 : 1, envMapIntensity: tipo === 'cromo' ? 3.2 : 2.2,
   });
-  const tex = A.motivo !== 'ninguno' ? TEXTURAS_MOTIVO[A.motivo] : null;
+  const tex = mot !== 'ninguno' ? TEXTURAS_MOTIVO[mot] : null;
   const U = {
-    uTex: { value: tex }, uHay: { value: tex ? 1 : 0 }, uCubre: { value: A.cubre }, uCol2: { value: new THREE.Color(A.color2) },
+    uTex: { value: tex }, uHay: { value: tex ? 1 : 0 }, uCubre: { value: cubre }, uCol2: { value: new THREE.Color(A.color2) }, uDegrade: { value: A.degrade ?? 0.55 },
     uBrillo: { value: tipo === 'neon' ? 1.6 : tipo === 'gelatina' ? 0.55 : tipo === 'vidrio' ? 0.8 : 0.25 },
     uAdentro: { value: tipo === 'neon' ? 0.55 : tipo === 'gelatina' ? 0.22 : tipo === 'vidrio' ? 0.12 : 0.0 },
   };
@@ -92,21 +147,21 @@ export function materialMeeple(A) {
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, U);
     s.vertexShader = s.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aAlto; attribute vec2 aUvm; varying float vAlto; varying vec2 vUvm;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAlto = aAlto; vUvm = aUvm;');
+      .replace('#include <common>', '#include <common>\nattribute float aAlto, aParte; attribute vec2 aUvm; varying float vAlto, vParte; varying vec2 vUvm;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAlto = aAlto; vParte = aParte; vUvm = aUvm;');
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vAlto; varying vec2 vUvm; uniform sampler2D uTex; uniform float uHay, uCubre, uBrillo, uAdentro; uniform vec3 uCol2;')
-      /* el motivo sube desde los pies hasta "cubre" (en metros de la pose de reposo), con el borde en ola */
+      .replace('#include <common>', '#include <common>\nvarying float vAlto, vParte; varying vec2 vUvm; uniform sampler2D uTex; uniform float uHay, uCubre, uBrillo, uAdentro, uDegrade; uniform vec3 uCol2;')
+      /* el degradé de cada pieza (arriba el color, abajo el segundo) y el motivo,
+         que sube desde abajo de CADA pieza hasta "cubre", con el borde en ola */
       .replace('#include <map_fragment>', `#include <map_fragment>
-        float ola = sin(vUvm.x * 6.2832 * 1.3) * 0.025 + sin(vUvm.x * 6.2832 * 3.1 + 1.7) * 0.012;
-        float banda = 1.0 - smoothstep(uCubre - 0.018, uCubre + 0.018, vAlto + ola);
+        diffuseColor.rgb = mix(uCol2, diffuseColor.rgb, mix(1.0, smoothstep(0.0, 0.85, vParte), uDegrade));
+        float ola = sin(vUvm.x * 6.2832 * 1.5) * 0.045 + sin(vUvm.x * 6.2832 * 3.3 + 1.7) * 0.02;
+        float banda = 1.0 - smoothstep(uCubre - 0.03, uCubre + 0.03, vParte + ola);
         if (uHay > 0.5) {
           vec3 mt = texture2D(uTex, vUvm).rgb;
           diffuseColor.rgb = mix(diffuseColor.rgb, mt, banda);
-          /* un filo claro en el borde del motivo */
-          diffuseColor.rgb += uCol2 * 0.35 * (1.0 - smoothstep(0.0, 0.02, abs(vAlto + ola - uCubre)));
-        } else {
-          diffuseColor.rgb = mix(diffuseColor.rgb, uCol2, banda * 0.85);
+          /* un filo blanco espumoso en el borde del motivo, como en los videos */
+          diffuseColor.rgb += vec3(0.85) * (1.0 - smoothstep(0.0, 0.035, abs(vParte + ola - uCubre))) * step(0.01, uCubre) * step(uCubre, 1.0);
         }`)
       /* la gelatina: brilla de adentro y tiene el borde encendido (fresnel) */
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
@@ -159,12 +214,12 @@ function espalda(tipo, col) {
   const g = new THREE.Group();
   if (tipo === 'alas') {
     const m = new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.05, transparent: true, opacity: 0.55, iridescence: 1, side: THREE.DoubleSide, clearcoat: 1 });
-    for (const s of [-1, 1]) { const f = new THREE.Shape(); f.moveTo(0, 0); f.bezierCurveTo(0.12, 0.3, 0.42, 0.34, 0.44, 0.1); f.bezierCurveTo(0.42, -0.08, 0.2, -0.16, 0, 0); const w = new THREE.Mesh(new THREE.ShapeGeometry(f, 20), m); w.scale.x = s; w.position.set(s * 0.05, 0.58, -0.2); w.rotation.y = s * 0.5; w.userData.ala = s; g.add(w); }
+    for (const s of [-1, 1]) { const f = new THREE.Shape(); f.moveTo(0, 0); f.bezierCurveTo(0.12, 0.3, 0.42, 0.34, 0.44, 0.1); f.bezierCurveTo(0.42, -0.08, 0.2, -0.16, 0, 0); const w = new THREE.Mesh(new THREE.ShapeGeometry(f, 20), m); w.scale.x = s; w.position.set(s * 0.05, 0.68, -0.2); w.rotation.y = s * 0.5; w.userData.ala = s; g.add(w); }
   } else if (tipo === 'mochila') {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 16), new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.04, transparent: true, opacity: 0.6, clearcoat: 1, iridescence: 0.8 })); b.position.set(0, 0.5, -0.24); g.add(b);
-    const f = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), simple('#ff8a3d')); f.position.set(0.04, 0.46, -0.28); g.add(f);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 16), new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.04, transparent: true, opacity: 0.6, clearcoat: 1, iridescence: 0.8 })); b.position.set(0, 0.6, -0.24); g.add(b);
+    const f = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), simple('#ff8a3d')); f.position.set(0.04, 0.56, -0.28); g.add(f);
   } else if (tipo === 'aleta') {
-    const f = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.28, 16), simple(col)); f.scale.z = 0.35; f.rotation.x = -0.5; f.position.set(0, 0.7, -0.17); g.add(f);
+    const f = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.28, 16), simple(col)); f.scale.z = 0.35; f.rotation.x = -0.5; f.position.set(0, 0.8, -0.17); g.add(f);
   }
   return g;
 }
@@ -187,20 +242,20 @@ function peinado(tipo, col) {
 
 /* ---------------------------------------------------------------- carteles */
 /* el nombre flotando arriba (y el globo de chat): un sprite con un canvas */
-function cartel(texto, { fondo = 'rgba(255,255,255,0.92)', tinta = '#1a78c2', borde = '#7fd3ff', alto = 44, max = 22 } = {}) {
+function cartel(texto, { tinta = '#29384a', borde = 'rgba(255,255,255,0.95)', alto = 48, max = 22 } = {}) {
+  /* el nombre flota en texto solo, oscuro con un borde blanco (como en los videos) */
   const t = String(texto).slice(0, max);
   const c = document.createElement('canvas'), g = c.getContext('2d');
-  g.font = `600 ${alto * 0.62}px "Nunito","Arial Rounded MT Bold","Segoe UI",system-ui,sans-serif`;
-  const w = Math.ceil(g.measureText(t).width + alto * 0.9);
+  const fuente = `800 ${alto * 0.66}px "Nunito","Arial Rounded MT Bold","Segoe UI",system-ui,sans-serif`;
+  g.font = fuente;
+  const w = Math.ceil(g.measureText(t).width + alto * 0.6);
   c.width = w; c.height = alto;
-  g.font = `600 ${alto * 0.62}px "Nunito","Arial Rounded MT Bold","Segoe UI",system-ui,sans-serif`;
-  const r = alto / 2;
-  g.fillStyle = fondo; g.strokeStyle = borde; g.lineWidth = 3;
-  g.beginPath(); g.roundRect(1.5, 1.5, w - 3, alto - 3, r - 2); g.fill(); g.stroke();
-  g.fillStyle = tinta; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, w / 2, alto / 2 + 1);
+  g.font = fuente; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  g.strokeStyle = borde; g.lineWidth = alto * 0.16; g.strokeText(t, w / 2, alto / 2 + 1);
+  g.fillStyle = tinta; g.fillText(t, w / 2, alto / 2 + 1);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.minFilter = THREE.LinearFilter;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, transparent: true }));
-  const k = 0.0052;
+  const k = 0.0046;
   s.scale.set(w * k, alto * k, 1);
   s.renderOrder = 5;
   return s;
@@ -234,12 +289,15 @@ export class Meeple {
     this.cadera = new THREE.Group();        // lo que sube y baja al caminar
     this.raiz.add(this.cadera);
     this.cuerpo = new THREE.Mesh(G.cuerpo);
-    this.cabeza = new THREE.Group(); this.cabeza.position.y = 1.03;
-    this.cabezaM = new THREE.Mesh(G.cabeza); this.cabezaM.position.y = -1.03; this.cabeza.add(this.cabezaM);
-    this.brazos = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.2, 0.68, 0); const m = new THREE.Mesh(G.brazo[(s + 1) / 2]); m.position.set(-s * 0.2, -0.68, 0); p.add(m); p.userData.m = m; return p; });
-    this.piernas = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * 0.1, 0.3, 0); const m = new THREE.Mesh(G.pierna[(s + 1) / 2]); m.position.set(-s * 0.1, -0.3, 0); p.add(m); p.userData.m = m; return p; });
+    const M = MEDIDAS;
+    this.cabeza = new THREE.Group(); this.cabeza.position.y = M.cabezaY;
+    this.cabezaM = new THREE.Mesh(G.cabeza); this.cabezaM.position.y = -M.cabezaY; this.cabeza.add(this.cabezaM);
+    this.brazos = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * M.hombroX, M.hombroY, 0); const m = new THREE.Mesh(G.brazo[(s + 1) / 2]); m.position.set(-s * M.hombroX, -M.hombroY, 0); p.add(m); p.userData.m = m; return p; });
+    this.piernas = [-1, 1].map((s) => { const p = new THREE.Group(); p.position.set(s * M.caderaX, M.caderaY, 0); const m = new THREE.Mesh(G.pierna[(s + 1) / 2]); m.position.set(-s * M.caderaX, -M.caderaY, 0); p.add(m); p.userData.m = m; return p; });
     this.cadera.add(this.cuerpo, this.cabeza, ...this.brazos, ...this.piernas);
     this.extras = new THREE.Group(); this.cabeza.add(this.extras);
+    this.ojos = new THREE.Group(); this.cabeza.add(this.ojos);
+    this.tParpadeo = 2 + Math.random() * 3;
     this.atras = new THREE.Group(); this.cadera.add(this.atras);
     for (const m of [this.cuerpo, this.cabezaM, ...this.brazos.map((b) => b.userData.m), ...this.piernas.map((b) => b.userData.m)]) { m.castShadow = true; m.receiveShadow = false; }
     this.fase = 0; this.t = Math.random() * 10; this.estado = 'quieto'; this.gesto = null; this.tGesto = 0;
@@ -251,9 +309,12 @@ export class Meeple {
   ponerApariencia(A) {
     this.A = { ...APARIENCIA_INICIAL(), ...A };
     const m = materialMeeple(this.A);
-    for (const q of [this.cuerpo, this.cabezaM, ...this.brazos.map((b) => b.userData.m), ...this.piernas.map((b) => b.userData.m)]) q.material = m;
+    for (const q of [this.cuerpo, ...this.brazos.map((b) => b.userData.m), ...this.piernas.map((b) => b.userData.m)]) q.material = m;
+    this.cabezaM.material = materialMeeple(this.A, 'cabeza');
+    this.ojos.clear(); this.ojos.add(ojos(this.A.ojos || 'ovalos', this.A.color, this.A.color2));
     this.extras.clear(); this.atras.clear();
-    const cab = new THREE.Group(); cab.position.y = 0; this.extras.add(cab);
+    /* los accesorios se dibujaron para una cabeza de 0,235: se achican a la de ahora */
+    const cab = new THREE.Group(); cab.scale.setScalar(MEDIDAS.cabezaR / 0.235); this.extras.add(cab);
     if (this.A.peinado !== 'ninguno') cab.add(peinado(this.A.peinado, this.A.colorPelo));
     if (this.A.sombrero !== 'ninguno') cab.add(sombrero(this.A.sombrero, this.A.color2));
     if (this.A.anteojos !== 'ninguno') cab.add(anteojos(this.A.anteojos, this.A.color2));
@@ -274,13 +335,13 @@ export class Meeple {
   ponerNombre(nombre, esYo = false) {
     if (this.cartel) this.raiz.remove(this.cartel);
     this.nombre = nombre;
-    this.cartel = cartel(nombre, esYo ? { borde: '#6fe07a', tinta: '#2c8a2e' } : {});
+    this.cartel = cartel(nombre, esYo ? { tinta: '#1f7a2e' } : {});
     this.cartel.position.y = 1.52;
     this.raiz.add(this.cartel);
   }
   decir(texto) {
     if (this.globo) { this.raiz.remove(this.globo); this.globo.material.map.dispose(); }
-    this.globo = globo(texto); this.globo.position.y = 1.68; this.tGlobo = 6;
+    this.globo = globo(texto); this.globo.position.y = 1.66; this.tGlobo = 6;
     this.raiz.add(this.globo);
   }
   /* un gesto de un rato: saludar, bailar1..3, festejar, sentarse (este queda hasta moverse) */
@@ -296,7 +357,7 @@ export class Meeple {
     const t = this.t, R = {};
     /* la pose de base */
     R.cy = 0; R.cx = 0; R.cz = 0; R.hy = 0; R.hx = 0; R.hz = 0;
-    R.bl = [0, 0, -0.42]; R.br = [0, 0, 0.42];     // [rx, ry, rz] de cada brazo
+    R.bl = [0, 0, -0.2]; R.br = [0, 0, 0.2];     // [rx, ry, rz] de cada brazo (cuelgan por fuera del cuerpo)
     R.pl = [0, 0, 0]; R.pr = [0, 0, 0];
     R.sy = 1; R.ry = 0;
     if (estado === 'camina' || estado === 'corre') {
@@ -304,7 +365,7 @@ export class Meeple {
       this.fase += dt * (corre ? 13 : 9) * Math.min(1.4, 0.35 + vel / (corre ? 5 : 2.6));
       const s = Math.sin(this.fase), k = corre ? 1.25 : 0.85;
       R.pl = [s * 0.75 * k, 0, 0]; R.pr = [-s * 0.75 * k, 0, 0];
-      R.bl = [-s * 0.7 * k, 0, -0.38]; R.br = [s * 0.7 * k, 0, 0.38];
+      R.bl = [-s * 0.7 * k, 0, -0.17]; R.br = [s * 0.7 * k, 0, 0.17];
       R.cy = Math.abs(Math.cos(this.fase)) * (corre ? 0.06 : 0.035); R.cx = corre ? 0.18 : 0.06; R.cz = Math.sin(this.fase) * 0.04;
       R.hx = corre ? -0.1 : -0.03;
     } else if (estado === 'salta' || estado === 'cae') {
@@ -324,7 +385,7 @@ export class Meeple {
       R.cy = -0.18; R.pl = [-1.45, 0, 0.35]; R.pr = [-1.45, 0, -0.35]; R.bl = [-1.2, 0, -0.25]; R.br = [-1.2, 0, 0.25]; R.cx = 0.25; R.hx = -0.1;
     } else {
       /* quieto: respira y se balancea un poquito */
-      R.sy = 1 + Math.sin(t * 2.2) * 0.012; R.bl = [Math.sin(t * 1.1) * 0.05, 0, -0.42]; R.br = [-Math.sin(t * 1.1) * 0.05, 0, 0.42];
+      R.sy = 1 + Math.sin(t * 2.2) * 0.012; R.bl = [Math.sin(t * 1.1) * 0.05, 0, -0.2 - Math.sin(t * 2.2) * 0.02]; R.br = [-Math.sin(t * 1.1) * 0.05, 0, 0.2 + Math.sin(t * 2.2) * 0.02];
       R.hy = Math.sin(t * 0.37) * 0.25; R.hz = Math.sin(t * 0.5) * 0.04;
     }
     /* los gestos, encima de la pose */
@@ -346,6 +407,11 @@ export class Meeple {
     this.cabeza.rotation.set(v('hx', R.hx), v('hy', R.hy), v('hz', R.hz));
     ['bl', 'br'].forEach((n, i) => { const q = this.brazos[i]; q.rotation.set(v(n + 'x', R[n][0]), v(n + 'y', R[n][1]), v(n + 'z', R[n][2])); });
     ['pl', 'pr'].forEach((n, i) => { const q = this.piernas[i]; q.rotation.set(v(n + 'x', R[n][0]), v(n + 'y', R[n][1]), v(n + 'z', R[n][2])); });
+    /* parpadea cada tanto (y dos veces seguidas, a veces) */
+    this.tParpadeo -= dt;
+    const cierre = this.tParpadeo < 0.12 && this.tParpadeo > 0 ? 0.12 : 1;
+    if (this.tParpadeo <= 0) this.tParpadeo = Math.random() < 0.2 ? 0.3 : 2.5 + Math.random() * 3.5;
+    for (const o of this.ojos.children[0]?.children || []) o.scale.y = cierre;
     /* las alas aletean */
     for (const o of this.atras.children) for (const w of o.children) if (w.userData.ala) w.rotation.y = w.userData.ala * (0.5 + Math.sin(t * (estado === 'cae' ? 18 : 4)) * 0.25);
     /* las partículas dan vueltas alrededor */

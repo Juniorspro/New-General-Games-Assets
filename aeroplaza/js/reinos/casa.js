@@ -10,6 +10,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { Mundo, ruido2, suaveEntre } from '../mundo.js';
 import { terreno, pasto, flores, arboles, brilloso, materialVidrio, materialBurbuja } from '../naturaleza.js';
 import { pecera, puntoSuave } from '../objetos.js';
+import { modelo, cima } from '../modelos.js';
 
 const R1 = ruido2(90);
 export function alturaCasa(x, z) {
@@ -39,6 +40,24 @@ export const FABRICA = {
   globo: () => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.6, 24, 16), materialBurbuja()); b.position.y = 1.6; g.add(b); const h = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1.1, 4), new THREE.MeshBasicMaterial({ color: '#ffffff' })); h.position.y = 0.55; g.add(h); return [g, [0, 0, 0]]; },
 };
 
+/* los muebles de Rezona, cuando están: se miden por su ancho (o alto) y la caja
+   de choque sale del modelo. La tele y la lámpara guardan su pantalla y su luz */
+const DE_REZONA = { sofa: ['m-sofa', { ancho: 2.4 }], sillon: ['m-sillon', { alto: 1.35 }], cama: ['m-cama', { ancho: 2.3 }], tele: ['m-tele', { alto: 1.3 }], lampara: ['m-lampara', { alto: 1.9 }] };
+for (const [k, [n, medida]] of Object.entries(DE_REZONA)) {
+  const aMano = FABRICA[k];
+  FABRICA[k] = () => {
+    const m = modelo(n, medida);
+    if (!m) return aMano();
+    const T = m.userData.tam;
+    if (k === 'lampara') {
+      const c = cima(n, 0.25).multiplyScalar(m.userData.k);
+      const luz = new THREE.Mesh(new THREE.SphereGeometry(T.y * 0.1, 16, 12), new THREE.MeshBasicMaterial({ color: '#fff4c0', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }));
+      luz.position.copy(c); m.add(luz);
+    }
+    return [m, [T.x * 0.9, T.z * 0.9, T.y]];
+  };
+}
+
 export function crearCasa(ctx, { plano = [], dueño = null } = {}) {
   const A = alturaCasa;
   const mundo = new Mundo(A); mundo.agua = null; mundo.limite = 24;
@@ -53,6 +72,9 @@ export function crearCasa(ctx, { plano = [], dueño = null } = {}) {
   const borde = new THREE.Mesh(new THREE.TorusGeometry(10.5, 0.18, 10, 64), brilloso('#7fd6ff')); borde.rotation.x = Math.PI / 2; borde.position.y = 1.4; g.add(borde);
   for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; const arco = new THREE.Mesh(new THREE.TorusGeometry(10.3, 0.1, 8, 40, Math.PI), brilloso('#ffffff')); arco.position.y = 1.4; arco.rotation.y = a; g.add(arco); }
   mundo.cilindro(0, 0, 10.6, -5, 1.4, { tipo: 'piedra' });
+  /* la casa de Rezona, atrás del patio (se entra al patio; la casa es el decorado) */
+  const cm = modelo('casa', { ancho: 9.5 });
+  if (cm) { const y = A(0, -15); cm.position.set(0, y - 0.1, -15); g.add(cm); const T = cm.userData.tam; mundo.caja(0, -15, T.x * 0.45, T.z * 0.45, y - 1, y + T.y * 0.9, 0, { tipo: 'piedra' }); }
   /* la isla por abajo: una roca que se afina, y nubes alrededor */
   const roca = new THREE.Mesh(new THREE.ConeGeometry(24, 30, 20, 4), brilloso('#b89a7a', { roughness: 0.7 })); roca.rotation.x = Math.PI; roca.position.y = -16; g.add(roca);
   const muebles = new THREE.Group(); g.add(muebles);
@@ -87,7 +109,7 @@ export function crearCasa(ctx, { plano = [], dueño = null } = {}) {
   const anden = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.8, 0.1, 6), brilloso('#bfe9ff')); anden.position.set(0, 1.45, 8.5); g.add(anden);
   let t = 0;
   return {
-    id: 'casa', mundo, grupo: g, inicio: new THREE.Vector3(0, 1.45, 7), rumboInicio: Math.PI, musica: 'titulo', cielo: { aurora: 0 },
+    id: 'casa', mundo, grupo: g, inicio: new THREE.Vector3(0, 1.45, 7), rumboInicio: Math.PI, musica: 'casa', cielo: { aurora: 0 },
     discos: [], orbes: null, npcs: [], dueño, plano,
     rehacer(lista) { this.plano = lista; armar(lista); },
     ponerFantasma,

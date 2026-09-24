@@ -4,11 +4,13 @@
    (p. ej. 'sombrero:corona'), la misma que viaja en la apariencia.
    Los colores son todos gratis: son lo primero que cada quien quiere tocar.
    ========================================================================== */
-import { MATERIALES, MOTIVOS, SOMBREROS, ANTEOJOS, ESPALDAS, PEINADOS, PARTICULAS } from './meeple.js';
+import { MATERIALES, MOTIVOS, SOMBREROS, ANTEOJOS, ESPALDAS, PEINADOS, PARTICULAS, OJOS } from './meeple.js';
 
 export const RANURAS = [
   { r: 'material', lista: MATERIALES, pre: 'mat' },
   { r: 'motivo', lista: MOTIVOS, pre: 'mot' },
+  { r: 'motivoCabeza', lista: ['igual', ...MOTIVOS], pre: 'mot', como: 'motivo' },
+  { r: 'ojos', lista: OJOS, pre: 'ojo' },
   { r: 'sombrero', lista: SOMBREROS, pre: 'som' },
   { r: 'peinado', lista: PEINADOS, pre: 'pei' },
   { r: 'anteojos', lista: ANTEOJOS, pre: 'ant' },
@@ -31,8 +33,13 @@ export const DE_MISION = {
   'sombrero:flor': 'nimbo', 'peinado:rulos': 'lima', 'motivo:burbujas': 'burbu', 'espalda:aleta': 'coral',
   'sombrero:aureola': 'estela', 'motivo:galaxia': 'estela', 'motivo:aurora': 'loto', 'particulas:notas': 'guia',
 };
-export function loTengo(G, clave) { return GRATIS.has(clave) || G.tengo.includes(clave); }
-export function precio(clave) { return PRECIO[clave] ?? null; }
+export function loTengo(G, clave) {
+  /* los ojos son gratis; el motivo de la cabeza se tiene si se tiene ese motivo */
+  if (clave.startsWith('ojos:') || clave === 'motivoCabeza:igual') return true;
+  if (clave.startsWith('motivoCabeza:')) clave = 'motivo:' + clave.slice(13);
+  return GRATIS.has(clave) || G.tengo.includes(clave);
+}
+export function precio(clave) { if (clave.startsWith('motivoCabeza:')) clave = 'motivo:' + clave.slice(13); return PRECIO[clave] ?? null; }
 
 export const PALETA = ['#2f9bff', '#39d6ff', '#3fffd0', '#56e05a', '#b6f03a', '#ffe14a', '#ffb13d', '#ff7a3d', '#ff4f6e', '#ff6fb0', '#e46fff', '#9b7bff',
   '#6a7dff', '#1d4fbf', '#0f8f7a', '#2f7a2f', '#8a5a2b', '#ffffff', '#d9e6f2', '#9aa9b8', '#56606b', '#22262b', '#ffd6e8', '#d9fff5'];

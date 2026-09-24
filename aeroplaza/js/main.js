@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { Motor, TACTIL, ESTILOS } from './motor.js';
 import { Cielo } from './cielo.js';
 import { TEX, UNI, JUGADOR, aguaSigueCielo, materialBurbuja } from './naturaleza.js';
-import { TEXTURAS_MOTIVO, Meeple, APARIENCIA_INICIAL, MATERIALES, MOTIVOS, SOMBREROS, ANTEOJOS, ESPALDAS, PEINADOS, PARTICULAS } from './meeple.js';
+import { TEXTURAS_MOTIVO, Meeple, APARIENCIA_INICIAL, MATERIALES, MOTIVOS, SOMBREROS, ANTEOJOS, ESPALDAS, PEINADOS, PARTICULAS, OJOS } from './meeple.js';
 import { crearPlaza } from './reinos/plaza.js';
 import { crearAqua } from './reinos/aqua.js';
 import { crearAurora } from './reinos/aurora.js';
@@ -27,12 +27,16 @@ import { Remotos } from './remotos.js';
 import { Misiones, NPCS } from './misiones.js';
 import { FRUTAS, Chispas } from './objetos.js';
 import { cargarDelfin } from './delfin.js';
+import * as Modelos from './modelos.js';
+import { Pantalla } from './pantalla.js';
+import { Estudio } from './probador.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
 
 const Q = new URLSearchParams(location.search);
 const CREAR = { plaza: crearPlaza, aqua: crearAqua, aurora: crearAurora, jardin: crearJardin, tienda: crearTienda, casa: crearCasa };
-const MUSICA_DE = { plaza: 'colina', aqua: 'arrecife', aurora: 'aurora', jardin: 'cielo', tienda: 'ciudad', casa: 'titulo' };
+/* plaza y menú: las dos canciones que mandó quien pide; los demás reinos: los temas hechos con Rezona (musica/) */
+const MUSICA_DE = { plaza: 'colina', aqua: 'arrecife', aurora: 'aurora', jardin: 'cielo', tienda: 'ciudad', casa: 'casa' };
 
 async function cargarTexturas() {
   const L = new THREE.TextureLoader(), A = window.ARCHIVOS || {};
@@ -50,6 +54,7 @@ function apariencia(A) {
   const col = (c, d) => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : d);
   const de = (v, l, d) => (l.includes(v) ? v : d);
   return { color: col(A.color, B.color), color2: col(A.color2, B.color2), colorPelo: col(A.colorPelo, B.colorPelo), cubre: Math.max(0, Math.min(1.3, +A.cubre || 0)),
+    degrade: Math.max(0, Math.min(1, Number.isFinite(+A.degrade) ? +A.degrade : B.degrade)), ojos: de(A.ojos, OJOS, B.ojos), motivoCabeza: de(A.motivoCabeza, ['igual', ...MOTIVOS], 'igual'),
     motivo: de(A.motivo, MOTIVOS, B.motivo), material: de(A.material, MATERIALES, B.material), sombrero: de(A.sombrero, SOMBREROS, B.sombrero), anteojos: de(A.anteojos, ANTEOJOS, B.anteojos),
     espalda: de(A.espalda, ESPALDAS, B.espalda), peinado: de(A.peinado, PEINADOS, B.peinado), particulas: de(A.particulas, PARTICULAS, B.particulas) };
 }
@@ -68,8 +73,11 @@ function fatal(texto, alTocar) {
 
 async function iniciar() {
   await cargarTexturas();
-  await cargarDelfin();
+  await Promise.all([cargarDelfin(), Modelos.cargarModelos()]);
   const G = Guardado.cargar();
+  /* con el celu parado se acuesta el juego entero (sin pantalla completa): ?giro= para las pruebas */
+  Pantalla.giro = Q.get('giro') || G.opciones.giro || 'auto'; if (Pantalla.giro === 'auto') Pantalla.sensor();
+  Pantalla.actualizar();
   const ID = miId();
   if (Q.has('nombre')) G.nombre = Q.get('nombre').slice(0, 16);
   if (G.idioma) ponerIdioma(G.idioma);
@@ -90,8 +98,9 @@ async function iniciar() {
   /* si la placa se reinicia (pasa en celulares con poca memoria), se vuelve en calidad baja */
   motor.lienzo.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); G.opciones.calidad = 'baja'; Guardado.ya(); fatal(t('contexto_perdido'), () => location.reload()); });
   const nubes = ['nube-1', 'nube-2', 'nube-3'].map((k) => TEX[k]).filter(Boolean);
-  const cielo = new Cielo(motor, nubes);
+  const cielo = new Cielo(motor, nubes, TEX.cielo || null);
   const ent = new Entrada(motor.lienzo, document.getElementById('dedos'));
+  Pantalla.alCambiar.push(() => ent.ubicarDedos());
   if (G.controles) ent.ponerConfig(G.controles);
   const cam = new Camara(motor.camara);
   const red = new Red({ id: ID, nombre: G.nombre });
@@ -99,7 +108,7 @@ async function iniciar() {
   const efectos = new THREE.Group(); motor.escena.add(efectos);
   const chispas = new Chispas(efectos, '#ffffff', 160);
 
-  let tuto = null;
+  let tuto = null, estudio = null;
   let reino = null, yo = null, enJuego = false, pausado = false, enDialogo = false, probador = false, modoFoto = false, construyendo = null;
   let tHud = 0, tPresencia = 0, gestoN = 0, tDisparo = 0, tSinGolpe = 9, tMedir = 0, cuadros = 0, sumaDt = 0, midiendo = true;
   const cache = {};
@@ -111,7 +120,7 @@ async function iniciar() {
     G, id: ID, red, remotos, ent, misiones: Misiones, slot: 1, musicaElegida: null,
     get yo() { return yo; }, get enJuego() { return enJuego; },
     sfx(n, o) { try { Sonido.sfx(n, o); } catch { /* sin audio */ } },
-    musica(n) { try { Sonido.musica(n); } catch { /* nada */ } },
+    musica(n) { try { Sonido.musica(n === 'casa' && !Sonido.grabadas.casa ? 'titulo' : n); } catch { /* nada */ } },
     volumen() { try { Sonido.volumenes(G.opciones.musica, G.opciones.efectos); } catch { /* nada */ } },
     guardar() { Guardado.guardar(); },
     guardarControles() { G.controles = ent.config; Guardado.guardar(); },
@@ -128,8 +137,8 @@ async function iniciar() {
     decir(txt) { const x = red.chat(txt) || String(txt).trim().slice(0, 120); if (!x) return; UI.lineaChat(G.nombre, x); yo.m.decir(x); },
     finDialogo() { enDialogo = false; cam.ponerCine(null); },
     abrirProbador() { abrirProbador(); },
-    aplicarApariencia() { yo.m.ponerApariencia(G.A); G.av = hash(G.A); red.accion({ type: 'apariencia', A: G.A, av: G.av }); Guardado.guardar(); },
-    probarPuesto(ranura, valor) { yo.m.ponerApariencia({ ...G.A, [ranura]: valor }); },
+    aplicarApariencia() { yo.m.ponerApariencia(G.A); estudio?.ponerApariencia(G.A); G.av = hash(G.A); red.accion({ type: 'apariencia', A: G.A, av: G.av }); Guardado.guardar(); },
+    probarPuesto(ranura, valor) { const A = { ...G.A, [ranura]: valor }; yo.m.ponerApariencia(A); estudio?.ponerApariencia(A); },
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
     gesto(g) { yo.m.hacerGesto(g); gestoN++; J.gestoActual = g + '#' + gestoN; setTimeout(() => { if (J.gestoActual && J.gestoActual.endsWith('#' + gestoN)) J.gestoActual = null; }, g === 'sentarse' ? 60000 : 8000); },
@@ -260,11 +269,19 @@ async function iniciar() {
   }
 
   /* ---------------------------------------------------------------- acciones del jugador */
+  /* el probador es un estudio aparte (probador.js): mientras está abierto se dibuja ese en vez del mundo */
   function abrirProbador() {
-    probador = true; cam.giroProb = 0;
+    probador = true;
+    estudio ||= new Estudio(motor);
+    estudio.mostrar(G.A, G.nombre); estudio.giro = 0;
+    motor.aplicarPS1(estudio.escena);
+    motor.pRender.scene = estudio.escena; motor.pRender.camera = estudio.cam;
     ent.mostrarDedos(false);
     UI.hud && UI.hud.classList.add('oculto');
-    UI.probador(() => { probador = false; ent.mostrarDedos(true); UI.hud && UI.hud.classList.remove('oculto'); J.aplicarApariencia(); UI.actualizarHud(); });
+    UI.probador(() => {
+      probador = false; motor.pRender.scene = motor.escena; motor.pRender.camera = motor.camara;
+      ent.mostrarDedos(true); UI.hud && UI.hud.classList.remove('oculto'); J.aplicarApariencia(); UI.actualizarHud();
+    }, (d) => { if (estudio) estudio.giro += d; });
   }
   function usarHotbar(n) {
     if (n < 0) n = ((J.slot - 1 + (n === -1 ? -1 : 1) + 5) % 5) + 1;
@@ -324,6 +341,7 @@ async function iniciar() {
     switch (o.accion) {
       case 'viajar': pausado = true; UI.viaje(reino.id, (id, casaDe, nombreCasa) => { pausado = false; viajar(id, { casaDe, nombreCasa }); }); break;
       case 'entrar_tienda': viajar('tienda'); break;
+      case 'mi_casa': viajar('casa'); break;
       case 'salir_tienda': { const P = cache.plaza; viajar('plaza', { en: P ? P.tienda.userData.puerta.clone().setY(P.mundo.altura(P.tienda.userData.puerta.x, P.tienda.userData.puerta.z) + 0.1) : undefined, rumbo: 0.6 }); break; }
       case 'probador': case 'comprar': abrirProbador(); break;
       case 'burbuja': yo.p.copy(reino.fuenteBurbujas); yo.entrarBurbuja(); UI.avisar(t(ent.tactil ? 'dedo_burbuja' : 'burbuja_bajar')); break;
@@ -381,8 +399,7 @@ async function iniciar() {
     }
     /* la cámara */
     const O = G.opciones;
-    if (probador) cam.giroProb = (cam.giroProb || 0) + E.camX;
-    else cam.girar(E.camX * O.sensCam, E.camY * O.sensCam * (O.invertirY ? -1 : 1));
+    if (!probador) cam.girar(E.camX * O.sensCam, E.camY * O.sensCam * (O.invertirY ? -1 : 1));
     if (E.zoom !== 1) cam.acercar(E.zoom);
     /* el muñeco */
     antes.copy(yo.modo === 'montado' && yo.montura ? yo.montura.p : yo.p);
@@ -393,7 +410,6 @@ async function iniciar() {
     const usa = Em.accion && yo.modo !== 'burbuja' && yo.modo !== 'montado';
     if (usa) Em.accion = false;
     yo.actualizar(dt, Em, reino.mundo); yo.paso(dt);
-    if (probador) { yo.rumbo = cam.yaw + Math.PI + (cam.giroProb || 0) * 2; yo.sync(); }
     JUGADOR.copy(yo.p);
     for (const ev of yo.eventos) {
       if (ev === 'salto') J.sfx('salto'); else if (ev === 'doble') { J.sfx('burbuja'); chispas.soltar(yo.p, 8, 2); } else if (ev === 'aterriza') J.sfx('aterriza');
@@ -496,18 +512,8 @@ async function iniciar() {
     cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
     /* adentro: la cámara no sale de las paredes */
     if (reino.caja) { const [x0, x1, z0, z1, y1] = reino.caja, c = motor.camara.position; c.x = Math.max(x0, Math.min(x1, c.x)); c.z = Math.max(z0, Math.min(z1, c.z)); c.y = Math.min(y1, c.y); }
-    if (probador) {
-      /* el probador: la cámara de frente, el muñeco a un costado de la ventana */
-      const vertical = innerWidth < innerHeight;
-      const r = yo.rumbo, f = new THREE.Vector3(Math.sin(r), 0, Math.cos(r)), der = new THREE.Vector3(Math.cos(r), 0, -Math.sin(r));
-      const k = yo.escala;
-      /* der es la derecha de la cámara: correrse para ese lado deja al muñeco a la izquierda, libre del panel */
-      /* en vertical el panel tapa la mitad de abajo: se mira más abajo y el muñeco sube */
-      const mira = yo.p.clone().add(new THREE.Vector3(0, vertical ? -0.45 * k : 0.8 * k, 0)).addScaledVector(der, vertical ? 0 : 0.95 * k);
-      motor.camara.position.copy(yo.p).addScaledVector(f, (vertical ? 4.6 : 3.1) * k).add(new THREE.Vector3(0, (vertical ? 1.9 : 1.05) * k, 0)).addScaledVector(der, vertical ? 0 : 0.95 * k);
-      motor.camara.lookAt(mira);
-    }
-    const bajo = reino.mundo.agua != null && motor.camara.position.y < reino.mundo.agua - 0.05;
+    if (probador) estudio.actualizar(dt, E.camX, motor.ancho, motor.alto);
+    const bajo = !probador && reino.mundo.agua != null && motor.camara.position.y < reino.mundo.agua - 0.05;
     motor.pFinal.uniforms.uAgua.value += ((bajo ? 1 : 0) - motor.pFinal.uniforms.uAgua.value) * Math.min(1, dt * 6);
     cielo.bajoAgua = bajo;
     if (bajo !== J._bajo) { J._bajo = bajo; try { Sonido.agua(bajo); } catch { /* nada */ } motor.escena.fog.near = bajo ? 2 : 140; motor.escena.fog.far = bajo ? 45 : 950; }
@@ -546,7 +552,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { Sonido, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, cam, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
+  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, cam, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

@@ -12,6 +12,7 @@
      baja (lo que se aprendió con BRILLO).
    ========================================================================== */
 import * as THREE from 'three';
+import { Pantalla } from './pantalla.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -132,7 +133,7 @@ export class Motor {
     this.retro = { ...ESTILOS.normal };
     this.armarCadena();
     this.ponerCalidad('alta');
-    addEventListener('resize', () => this.medir());
+    Pantalla.alCambiar.push(() => this.medir());   // (Pantalla escucha el resize y el giro)
     this.t = 0;
   }
   armarCadena() {
@@ -163,7 +164,7 @@ export class Motor {
     for (const f of this.alCambiarCalidad || []) f(Q);
   }
   medir() {
-    const w = innerWidth, h = innerHeight;
+    const w = Pantalla.w, h = Pantalla.h;   // el tamaño lógico (con el celu parado, el juego va girado)
     let dpr = Math.min(devicePixelRatio || 1, this.Q.dprMax) * this.Q.escala;
     /* pixelado: se dibuja con pocas líneas y se agranda "a lo bruto" */
     const lineas = ALTOS_PIXEL[this.retro.pix] || 0;

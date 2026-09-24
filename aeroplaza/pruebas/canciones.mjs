@@ -21,5 +21,17 @@ await pag.waitForTimeout(1500);
 const plaza = await pag.evaluate(() => { const S = window.__A.Sonido; return { suena: S.actual && S.actual.nombre, grabada: !!(S.actual && S.actual.fuente || S.grabadas.colina.buffer) }; });
 console.log('plaza:', JSON.stringify(plaza));
 console.log(menu.suena === 'titulo' && plaza.suena === 'colina' ? '✓ suenan donde van' : '✗ no suenan donde van');
+/* los temas de Rezona de cada reino (musica/): que se decodifiquen y suenen grabados */
+let bien = true;
+for (const [reino, tema] of [['aqua', 'arrecife'], ['jardin', 'cielo'], ['aurora', 'aurora'], ['tienda', 'ciudad'], ['casa', 'casa']]) {
+  await pag.evaluate((r) => window.__A.viajar(r), reino);
+  await pag.waitForFunction((r) => window.__A.reino && window.__A.reino.id === r, reino, { timeout: 60000, polling: 300 });
+  await pag.waitForFunction((t) => { const S = window.__A.Sonido; return S.grabadas[t] && S.grabadas[t].buffer && S.actual && S.actual.nombre === t; }, tema, { timeout: 30000, polling: 300 }).catch(() => {});
+  const r = await pag.evaluate((t) => { const S = window.__A.Sonido, G = S.grabadas[t]; return { suena: S.actual && S.actual.nombre, grabada: !!(S.actual && S.actual.grabada), dura: G && G.buffer ? G.buffer.duration.toFixed(1) : null, bucle: G && G.bucle }; }, tema);
+  const ok = r.suena === tema && r.grabada && +r.dura > 15;
+  bien = bien && ok;
+  console.log(`${ok ? '✓' : '✗'} ${reino}: ${JSON.stringify(r)}`);
+}
+console.log(bien ? '✓ los temas de Rezona suenan en cada reino' : '✗ falta algún tema de Rezona');
 console.log(errores.filter((e) => !e.includes('ERR_FAILED')).join('\n') || 'sin errores');
 await nav.close();

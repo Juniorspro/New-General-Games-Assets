@@ -238,6 +238,70 @@ export class Burbujas {
   }
 }
 
+/* ------------------------------------------------------------------ medusas */
+/* medusas de gelatina que flotan (están en casi todos los videos de Frutiger
+   Aero): una campana con borde que brilla y rayitas, y tentáculos que ondean.
+   Laten (la campana se achica y se agranda) y derivan despacio.
+   lugares: [[x, y, z, escala, radio de la deriva]] */
+function matMedusa(color) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uT: UNI.uT, uCol: { value: new THREE.Color(color) } },
+    transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.NormalBlending,
+    vertexShader: /* glsl */`
+      uniform float uT; varying vec3 vN, vV; varying vec2 vUv; varying float vY;
+      void main() {
+        vec3 p = position; vUv = uv; vY = p.y;
+        float f = modelMatrix[3].x * 0.37 + modelMatrix[3].z * 0.23;
+        /* los tentáculos (y < 0) ondean más cuanto más abajo */
+        float k = max(0.0, -p.y);
+        p.x += sin(uT * 2.1 + p.y * 3.0 + f) * 0.09 * k; p.z += cos(uT * 1.7 + p.y * 2.6 + f) * 0.09 * k;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: /* glsl */`
+      uniform vec3 uCol; varying vec3 vN, vV; varying vec2 vUv; varying float vY;
+      void main() {
+        float borde = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2);
+        float rayas = smoothstep(0.82, 1.0, sin(vUv.x * 6.2832 * 8.0)) * 0.35 * step(0.0, vY);
+        vec3 c = mix(uCol * 0.9, vec3(1.0), borde * 0.7 + rayas);
+        float a = vY < 0.0 ? 0.5 * (1.0 + vY * 0.3) : 0.3 + borde * 0.6 + rayas;
+        gl_FragColor = vec4(c * (1.15 + borde * 1.2), clamp(a, 0.0, 0.92));
+      }`,
+  });
+}
+function geoMedusa() {
+  const campana = new THREE.SphereGeometry(0.5, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
+  campana.scale(1, 0.75, 1);
+  const partes = [campana];
+  for (let i = 0; i < 7; i++) {
+    const a = i / 7 * Math.PI * 2, r = i % 2 ? 0.3 : 0.15, largo = 1.0 + (i % 3) * 0.35;
+    const t = new THREE.PlaneGeometry(0.06, largo, 1, 10); t.translate(Math.cos(a) * r, -largo / 2 + 0.05, Math.sin(a) * r); t.rotateY(-a);
+    partes.push(t);
+  }
+  return mergeGeometries(partes.map((q) => (q.index ? q : q)));
+}
+export class Medusas {
+  constructor(grupo, lugares, { colores = ['#9ff0ff', '#d6b8ff', '#ffc2ea', '#b8ffdc'] } = {}) {
+    const G = geoMedusa();
+    this.m = lugares.map(([x, y, z, esc = 1, deriva = 2], i) => {
+      const o = new THREE.Mesh(G, matMedusa(colores[i % colores.length]));
+      o.renderOrder = 4; o.scale.setScalar(esc); o.position.set(x, y, z); grupo.add(o);
+      return { o, x, y, z, esc, deriva, f: i * 1.9 };
+    });
+    this.t = 0;
+  }
+  actualizar(dt) {
+    this.t += dt;
+    for (const q of this.m) {
+      const t = this.t * 0.25 + q.f, late = Math.sin(this.t * 2.4 + q.f);
+      q.o.position.set(q.x + Math.cos(t) * q.deriva, q.y + Math.sin(this.t * 0.6 + q.f) * 0.6 + Math.max(0, late) * 0.15, q.z + Math.sin(t * 1.3) * q.deriva);
+      q.o.scale.set(q.esc * (1 - late * 0.08), q.esc * (1 + late * 0.1), q.esc * (1 - late * 0.08));
+      q.o.rotation.z = Math.sin(t) * 0.15;
+    }
+  }
+}
+
 /* ------------------------------------------------------------------- frutas */
 /* las frutas cuelgan de los árboles; comerlas cambia el muñeco un rato */
 export const FRUTAS = {

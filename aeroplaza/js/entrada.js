@@ -5,6 +5,8 @@
    tipo de palanca (fija o que aparece donde se apoya el dedo), se espeja para
    zurdos y se elige si vibra. Se guarda.
    ========================================================================== */
+import { Pantalla } from './pantalla.js';
+
 const TECLAS = {
   adelante: ['KeyW', 'ArrowUp'], atras: ['KeyS', 'ArrowDown'], izq: ['KeyA', 'ArrowLeft'], der: ['KeyD', 'ArrowRight'],
   salta: ['Space'], corre: ['ShiftLeft', 'ShiftRight'], accion: ['KeyE', 'Enter'], baja: ['KeyC', 'ControlLeft', 'KeyQ'],
@@ -42,12 +44,13 @@ export class Entrada {
     addEventListener('keyup', (e) => this.abajo.delete(e.code));
     addEventListener('blur', () => this.abajo.clear());
     /* la cámara con el mouse: arrastrando sobre el lienzo */
-    lienzo.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') { this.mouse.arrastra = true; this.mouse.x = e.clientX; this.mouse.y = e.clientY; } });
+    lienzo.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') { const q = Pantalla.aJuego(e.clientX, e.clientY); this.mouse.arrastra = true; this.mouse.x = q.x; this.mouse.y = q.y; } });
     addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;
       if (document.pointerLockElement === lienzo) { this.mouse.dx += e.movementX; this.mouse.dy += e.movementY; return; }
       if (!this.mouse.arrastra) return;
-      this.mouse.dx += e.clientX - this.mouse.x; this.mouse.dy += e.clientY - this.mouse.y; this.mouse.x = e.clientX; this.mouse.y = e.clientY;
+      const q = Pantalla.aJuego(e.clientX, e.clientY);
+      this.mouse.dx += q.x - this.mouse.x; this.mouse.dy += q.y - this.mouse.y; this.mouse.x = q.x; this.mouse.y = q.y;
     });
     addEventListener('pointerup', (e) => { if (e.pointerType === 'mouse') this.mouse.arrastra = false; });
     lienzo.addEventListener('wheel', (e) => { this.mouse.rueda += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
@@ -73,6 +76,8 @@ export class Entrada {
     /* la palanca y los botones con toques (varios dedos a la vez) */
     const toques = new Map();
     const zona = c;
+    /* con el celu parado el juego va girado: el dedo se pasa a coordenadas del juego */
+    const aJ = (e) => Pantalla.aJuego(e.clientX, e.clientY);
     zona.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'mouse' && !this.editando) return;
       const b = e.target.closest('[data-b]');
@@ -85,26 +90,27 @@ export class Entrada {
         else this.dedo[n] = true;
         return;
       }
-      const w = innerWidth, h = innerHeight;
-      const izquierdo = this.config.zurdo ? e.clientX > w * 0.5 : e.clientX < w * 0.5;
+      const w = Pantalla.w, q = aJ(e);
+      const izquierdo = this.config.zurdo ? q.x > w * 0.5 : q.x < w * 0.5;
       if (izquierdo || (b && b.dataset.b === 'palanca')) {
-        const P = this.el.palanca, r = P.getBoundingClientRect();
+        const P = this.el.palanca, r = Pantalla.caja(P);
         let cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        if (this.config.palanca === 'flotante' && !(b && b.dataset.b === 'palanca')) { cx = e.clientX; cy = e.clientY; P.style.left = (cx - r.width / 2) + 'px'; P.style.top = (cy - r.height / 2) + 'px'; P.style.right = 'auto'; P.style.bottom = 'auto'; }
+        if (this.config.palanca === 'flotante' && !(b && b.dataset.b === 'palanca')) { cx = q.x; cy = q.y; P.style.left = (cx - r.width / 2) + 'px'; P.style.top = (cy - r.height / 2) + 'px'; P.style.right = 'auto'; P.style.bottom = 'auto'; }
         toques.set(e.pointerId, { tipo: 'palanca', cx, cy, R: r.width * 0.42 });
         P.classList.add('activa');
-        this.moverPalanca(e.clientX, e.clientY, toques.get(e.pointerId));
+        this.moverPalanca(q.x, q.y, toques.get(e.pointerId));
       } else {
-        toques.set(e.pointerId, { tipo: 'camara', x: e.clientX, y: e.clientY });
+        toques.set(e.pointerId, { tipo: 'camara', x: q.x, y: q.y });
       }
     }, { passive: false });
     zona.addEventListener('pointermove', (e) => {
       if (this.editando) { this.moverArrastre(e); return; }
       const t = toques.get(e.pointerId); if (!t) return;
-      if (t.tipo === 'palanca') this.moverPalanca(e.clientX, e.clientY, t);
+      const q = aJ(e);
+      if (t.tipo === 'palanca') this.moverPalanca(q.x, q.y, t);
       else if (t.tipo === 'camara') {
         const k = this.config.sensibilidad;
-        this.dedosCam.dx += (e.clientX - t.x) * k; this.dedosCam.dy += (e.clientY - t.y) * k; t.x = e.clientX; t.y = e.clientY;
+        this.dedosCam.dx += (q.x - t.x) * k; this.dedosCam.dy += (q.y - t.y) * k; t.x = q.x; t.y = q.y;
         /* dos dedos en la cámara: pellizco para acercar */
         const cams = [...toques.values()].filter((q) => q.tipo === 'camara');
         if (cams.length === 2) { const d = Math.hypot(cams[0].x - cams[1].x, cams[0].y - cams[1].y); if (this._d0) this.pinza *= this._d0 / Math.max(20, d); this._d0 = d; } else this._d0 = 0;
@@ -133,7 +139,7 @@ export class Entrada {
   }
   ubicarDedos() {
     if (!this.el) return;
-    const C = this.config, base = Math.min(innerWidth, innerHeight);
+    const C = this.config, base = Math.min(Pantalla.w, Pantalla.h);
     this.capa.style.setProperty('--op', C.opacidad);
     for (const [n, d] of Object.entries(this.el)) {
       const b = C.botones[n] || BOTONES[n];
@@ -150,7 +156,8 @@ export class Entrada {
   /* ---- el editor: arrastrar para mover; el tamaño lo cambia la barrita de la interfaz */
   editar(si) { this.editando = si; this.capa.classList.toggle('editando', si); if (si) this.capa.classList.add('visible'); this.elegido = null; }
   empezarArrastre(e, b) {
-    this.arr = { n: b.dataset.b, x0: e.clientX, y0: e.clientY, b: { ...this.config.botones[b.dataset.b] } };
+    const q = Pantalla.aJuego(e.clientX, e.clientY);
+    this.arr = { n: b.dataset.b, x0: q.x, y0: q.y, b: { ...this.config.botones[b.dataset.b] } };
     this.elegido = b.dataset.b;
     for (const d of Object.values(this.el)) d.classList.toggle('elegido', d === b);
     this.alElegir?.(this.elegido);
@@ -158,7 +165,7 @@ export class Entrada {
   moverArrastre(e) {
     if (!this.arr) return;
     const n = this.arr.n, aIzq = BOTONES[n].izquierda ? !this.config.zurdo : this.config.zurdo;
-    const dx = (e.clientX - this.arr.x0) / innerWidth * 100, dy = (e.clientY - this.arr.y0) / innerHeight * 100;
+    const q = Pantalla.aJuego(e.clientX, e.clientY), dx = (q.x - this.arr.x0) / Pantalla.w * 100, dy = (q.y - this.arr.y0) / Pantalla.h * 100;
     const b = this.config.botones[n];
     b.x = Math.max(4, Math.min(96, this.arr.b.x + (aIzq ? dx : -dx)));
     b.y = Math.max(4, Math.min(92, this.arr.b.y - dy));

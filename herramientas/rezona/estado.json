@@ -100,7 +100,7 @@
   },
   "ItLImpyNnh": {
    "nombre": "AEROPLAZA — juego social 3D Frutiger Aero",
-   "para": "aeroplaza/: motivos del muñeco (agua, nubes, tierra, galaxia, hojas, burbujas, flores, aurora), pasto, arena, nube, ciudad, mariposa, fondo del menú y el delfín 3D (Tripo)",
+   "para": "aeroplaza/: motivos del muñeco (agua, nubes, tierra, galaxia, hojas, burbujas, flores, aurora), pasto, arena, nube, ciudad, mariposa, fondo del menú y el delfín 3D (Tripo); tanda 3: 15 modelos 3D (casa, estación, tienda, hotel, tren, árbol, palmera, fuente, banco, farol, sofá, sillón huevo, cama, tele, lámpara), cielo panorama y 15 músicas de 10 s (3 por reino)",
    "creado": "2026-09-24",
    "version": "sin subir",
    "nota": "Lo bajado queda en aeroplaza/crudo/ (no se commitea). assets/ sale de ahí con aeroplaza/herramientas/assets.mjs. Detalle: memoria/aeroplaza.md."
@@ -1190,7 +1190,15 @@
   "n_mayor_que_uno_devuelve_uno": "submit_image_generation con n:3 devolvió UNA imagen (nube-g1); nube-g2 y g3 dan 404. Pedir de a una por pedido, o sacar variantes espejando y recortando (aeroplaza/herramientas/assets.mjs). 24/09.",
   "texturas_seamless_como_grano": "El pasto y la arena seamless de Rezona, usados como color, dejan el suelo lavado o plano. Se usan de grano: en el shader se divide por su último mip (texture2D(t, uv, 12.)) y el color lo da el vértice. aeroplaza/js/naturaleza.js › terreno. 24/09.",
   "delfin_de_tripo_mira_atras": "El delfín (Tripo desde una referencia de costado) sale mirando a -z: giro fijo π. Se mide con una hoja de cuatro giros de a 90° (aeroplaza/pruebas/delfin.mjs). 641 mil triángulos → 9.000 con color a 1024: 214 KB. 24/09.",
-  "receta_frutiger_aero_para_texturas": "Para texturas que se repiten (motivos), sirve 'Seamless tileable texture of … flat top-down view, no objects, no text'; para recortes (nube, ciudad, mariposa), la cola Frutiger Aero + 'isolated on a fully transparent background' con transparent:true. Las 15 de AEROPLAZA salieron al primer intento. 24/09."
+  "receta_frutiger_aero_para_texturas": "Para texturas que se repiten (motivos), sirve 'Seamless tileable texture of … flat top-down view, no objects, no text'; para recortes (nube, ciudad, mariposa), la cola Frutiger Aero + 'isolated on a fully transparent background' con transparent:true. Las 15 de AEROPLAZA salieron al primer intento. 24/09.",
+  "modelos_3d_en_paralelo": "24/09 (AEROPLAZA): 12 modelos de Tripo mandados juntos salieron todos bien en ~3,5 min (211 s el más lento). El tope son 12 en vuelo: el 13.º da GENERATION_TOO_MANY_IN_FLIGHT, que es pasajero.",
+  "modelos_3d_variante_web_v3": "24/09 (AEROPLAZA): simplify a una CANTIDAD por modelo (edificios 12-14 mil, árboles 3.500, muebles 2-4 mil), color webp 1024 o 512, normales solo en edificios (512) y fuera el metalRough. 15 modelos: 40-620 KB cada uno, 3,6 MB en total (herramientas/assets.mjs de aeroplaza).",
+  "modelos_3d_palito_abajo": "24/09: al hotel Tripo le puso un palito fino que cuelga debajo de la base: la caja del modelo lo incluía y el edificio quedaba flotando. Se corta lo que queda debajo del primer corte horizontal ancho (aeroplaza/js/modelos.js › recortar).",
+  "modelos_3d_quantize_satura": "gltf-transform quantize() deja las posiciones en enteros normalizados con la escala en el nodo. Si se hornea la matriz del nodo en esa geometría (applyMatrix4) se satura en ±1: primero pasar todos los atributos a Float32 (aeroplaza/js/modelos.js › enFloat).",
+  "musica_dura_10s": "24/09: la música sale siempre de 9 a 10,5 s. duration da VALIDATION_ERROR; extra.music_length_ms se acepta (ignored_params null) pero se ignora; model es solo para voz (GENERATION_MODEL_UNSUPPORTED). Para temas largos se piden 3 tomas con el mismo pedido y se cosen (aeroplaza/herramientas/musica.py).",
+  "musica_tomas_distintas": "Tres tomas del mismo pedido de música se parecen en tonalidad (croma 0,67-0,92 contra la primera) pero no siempre: una de aurora dio 0,39 y se descartó. Fundido de igual potencia de 0,9-1,8 s.",
+  "musica_falla_y_reintento": "24/09: de 9 músicas, 4 volvieron PROVIDER_UNAVAILABLE/NOIZ_FAILED a los ~7 min. Reenviadas igual salieron bien en 80 s.",
+  "panorama_como_nubes": "Un cielo de Rezona (1376×768, no repite) sirve de horizonte si se ponen 4 copias espejadas (MirroredRepeat: no hay costura) hasta ~52° de alto. Lo blanco (min/max del rgb) se usa como nube y se tiñe con la hora (aeroplaza/js/cielo.js)."
  },
  "pendiente": "Quedó un proyecto suelto llamado 'Páginas web — assets' creado por error, sin assets. Ignorarlo o borrarlo."
 }
