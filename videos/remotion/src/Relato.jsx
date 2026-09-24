@@ -70,7 +70,7 @@ export function Relato({ id, lineas, sinMusica }) {
       }))}
       {M.gancho && <Gancho texto={M.gancho.texto} t={t} hasta={M.gancho.hasta} color={M.color} tinta={M.tinta} y={M.yGancho} />}
       {t < cierre.ini && <Karaoke linea={actual} t={tl} x={540} y={M.yTexto || 1130} color={M.color} />}
-      {t >= cierre.ini && <Cierre t={t - cierre.ini} cta={M.cierre.cta} nombre={M.cierre.nombre} color={M.color} tinta={M.tinta} />}
+      {t >= cierre.ini && <Cierre t={t - cierre.ini} cta={M.cierre.cta} nombre={M.cierre.nombre} color={M.color} tinta={M.tinta} y={M.yCierre} />}
       <Narrador cara={actual.sticker} desdeCambio={t - actual.ini} t={t} hablando={hablando && t < cierre.ini} x={24} y={M.ySticker || 1250} tam={M.tamSticker || 360} />
       <Barra u={clamp(t / cierre.fin)} color={M.color} />
       {/* el sonido: música del juego, la voz y los efectos del montaje */}

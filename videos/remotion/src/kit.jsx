@@ -198,16 +198,17 @@ export function Destello({ u, color }) {
 }
 
 /* ------------------------------------------------------------ el cierre */
-export function Cierre({ t, cta, nombre, color, tinta }) {
+/* va arriba del sticker (que queda abajo a la izquierda) para que no le tape el texto */
+export function Cierre({ t, cta, nombre, color, tinta, y = 1030 }) {
   const e1 = rebote((t - 0.1) / 0.4), e2 = rebote((t - 0.45) / 0.4);
   return (
     <>
       <div style={{ ...lleno, background: 'linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.65))' }} />
-      <div style={{ position: 'absolute', left: 540, top: 1180, transform: `translate(-50%, -50%) scale(${e1})`, padding: '26px 50px', borderRadius: 999, background: color,
+      <div style={{ position: 'absolute', left: 540, top: y, transform: `translate(-50%, -50%) scale(${e1})`, padding: '26px 50px', borderRadius: 999, background: color,
         border: `7px solid ${tinta}`, boxShadow: `0 14px 0 ${tinta}, 0 26px 40px rgba(0,0,0,0.5)`, whiteSpace: 'nowrap' }}>
         <span style={{ font: `900 84px ${LETRA}`, color: tinta }}>{cta[0]}</span>
       </div>
-      <div style={{ position: 'absolute', left: 540, top: 1330, transform: `translate(-50%, -50%) scale(${e2})` }}>
+      <div style={{ position: 'absolute', left: 540, top: y + 140, transform: `translate(-50%, -50%) scale(${e2})` }}>
         <Grueso texto={cta[1]} tam={66} />
       </div>
     </>
