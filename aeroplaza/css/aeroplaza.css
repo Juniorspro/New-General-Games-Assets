@@ -14,7 +14,8 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--fondo); touch-action: none; -webkit-user-select: none; user-select: none; font-family: var(--letra); color: var(--tinta); -webkit-tap-highlight-color: transparent; }
 #lienzo { position: fixed; inset: 0; display: block; }
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
-#ui > * { pointer-events: auto; }
+/* el HUD NO: ocupa toda la pantalla y se comía los toques de la palanca y los botones de dedo (y el mouse de la cámara) */
+#ui > *:not(.hud) { pointer-events: auto; }
 #ui .paso { pointer-events: none; }
 #ui .paso > * { pointer-events: auto; }
 button { font-family: inherit; color: inherit; cursor: pointer; -webkit-appearance: none; appearance: none; }

@@ -74,6 +74,12 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
 
 ## Trampas que ya se pagaron
 
+- **`#ui > * { pointer-events: auto }` le ganaba a `.hud { pointer-events: none }`**
+  por especificidad (id). El HUD, a pantalla completa, se comía todos los
+  toques: no andaban la palanca, ⤒ ni ✋, y en compu no se giraba la cámara
+  con el mouse. Se vio recién con dedos de verdad (CDP `Input.dispatchTouchEvent`
+  + `elementFromPoint`, `pruebas/dedos.mjs`). Tocar botones de la interfaz no
+  alcanza para probar los controles.
 - **`addEventListener(…, true)` se saca con `removeEventListener(…, true)`.**
   Si no, la ventana cerrada deja su Escape en captura y se come la pausa.
 - **`confirm()` no anda en todos lados:** en los Artifacts devuelve false y no
