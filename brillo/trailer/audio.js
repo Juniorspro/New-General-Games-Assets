@@ -12,6 +12,9 @@
    se pide desde `ahora`. Con 0 borraba también las subidas de antes (el
    gancho entero sonaba a 0,0001 porque el corte de la historia le borró la
    entrada).
+   Las canciones grabadas del juego (musica/canciones.json, la del menú desde
+   el 24/09) se cargan y se decodifican ANTES de programar: si no, arrancarían
+   cuando ya pasó todo el guion.
    ========================================================================== */
 import { Sonido } from '../js/sonido.js';
 import { tiempos, TOMAS } from './guion.js';
@@ -43,15 +46,20 @@ async function hacer() {
      terminar: Playwright lo usa para preguntar si ya está, y sin él la página parecía colgada */
   const setTimeoutReal = window.setTimeout;
   window.setTimeout = () => 0;
+  const lista = await leer('/brillo/musica/canciones.json');
+  for (const [tema, c] of Object.entries(lista)) Sonido.registrar(tema, { ...c, datos: await (await fetch('/brillo/musica/' + c.archivo)).arrayBuffer() });
   Sonido.iniciar(); Sonido.volumenes(0.85, 0.5);
+  await Promise.all(Object.keys(Sonido.grabadas).map((n) => Sonido.decodificar(n)));
   /* el tema entra de una en el compás, no de a poco */
   /* también el filtro y la reverb van directo a su valor: el sintetizador los abre de a poco (medio
      segundo de constante) y al arrancar el tráiler el gancho sonaba apagado */
   const golpe = () => {
     if (!Sonido.actual) return;
     const T = Sonido.actual.T, G = Sonido.actual.g.gain, chip = Sonido.modo === 'chip', v = (T.vol || 1) * (chip ? 1.15 : 1);
-    G.cancelScheduledValues(ahora); G.setValueAtTime(0.0001, ahora); G.linearRampToValueAtTime(v, ahora + 0.38);
     const F = Sonido.filtro && Sonido.filtro.frequency; if (F) { F.cancelScheduledValues(ahora); F.setValueAtTime(T.filtro || 9000, ahora); }
+    /* una canción grabada ya entra sola con su golpe en el compás: rehacerle la subida la taparía */
+    if (Sonido.actual.grabada) return;
+    G.cancelScheduledValues(ahora); G.setValueAtTime(0.0001, ahora); G.linearRampToValueAtTime(v, ahora + 0.38);
     const R = Sonido.revIn && Sonido.revIn.gain; if (R) { R.cancelScheduledValues(ahora); R.setValueAtTime((T.reverb ?? 0.4) * (chip ? 0.3 : 1), ahora); }
   };
   let apagar = null;

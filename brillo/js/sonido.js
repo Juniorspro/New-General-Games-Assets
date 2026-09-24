@@ -10,6 +10,9 @@
    "de parlante viejo" que da la nostalgia).
    Cada mundo tiene su tema, compuesto acá. El del Plano empieza gris (un
    pitido) y va sumando instrumentos a medida que vuelve el color.
+   Algunos temas son canciones grabadas que eligió quien pide (24/09): el menú
+   y el mundo 1. Van en MP3 con el bucle ya cosido (herramientas/canciones.py)
+   y los registra js/canciones.js; si una no carga, suena el tema sintetizado.
    ========================================================================== */
 const NOTAS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 export function nm(s) { const m = /^([A-G])([#b]?)(-?\d)$/.exec(s); if (!m) return 60; return 12 * (+m[3] + 1) + NOTAS[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0); }
@@ -161,12 +164,70 @@ export const Sonido = {
     crush.curve = curva; crush.oversample = 'none';
     const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6800; lp.Q.value = 0.5;
     this.chipIn.connect(crush); crush.connect(lp); lp.connect(this.bMusica);
+    /* las canciones grabadas en 16 bits: con 28 escalones una mezcla entera es
+       puro ruido, así que pasan por un reductor de 64 (curva de largo impar,
+       que da 0 justo en el silencio) y después por el mismo filtro y eco */
+    this.chipGrab = c.createGain();
+    const crush2 = c.createWaveShaper(), curva2 = new Float32Array(4097);
+    for (let i = 0; i < 4097; i++) { const x = i / 2048 - 1; curva2[i] = Math.round(x * 64) / 64; }
+    crush2.curve = curva2; crush2.oversample = 'none';
+    this.chipGrab.connect(crush2); crush2.connect(lp);
     const eco = c.createDelay(1), efb = c.createGain(), elp = c.createBiquadFilter(), eIn = c.createGain();
     eco.delayTime.value = 0.19; efb.gain.value = 0.42; elp.type = 'lowpass'; elp.frequency.value = 2800; eIn.gain.value = 0.32;
     lp.connect(eIn); eIn.connect(eco); eco.connect(elp); elp.connect(efb); efb.connect(eco); elp.connect(this.bMusica);
     const despertar = () => { if (c.state !== 'running') c.resume(); };
     addEventListener('pointerdown', despertar, true); addEventListener('keydown', despertar, true);
+    for (const nombre of Object.keys(this.grabadas)) this.decodificar(nombre);
     if (this.pendiente) { const p = this.pendiente; this.pendiente = null; this.musica(p); }
+  },
+
+  /* ---------------- las canciones grabadas ---------------- */
+  grabadas: {},
+  /** c: { datos (bytes del MP3), bucle: [desde, hasta] en s, golpe (el primer tiempo fuerte), vol } */
+  registrar(nombre, c) { this.grabadas[nombre] = { ...c, buffer: null, cargando: null }; if (this.ctx) this.decodificar(nombre); },
+  decodificar(nombre) {
+    const G = this.grabadas[nombre];
+    if (!G || G.buffer || G.cargando) return G && G.cargando;
+    const d = G.datos, copia = d.buffer ? d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength) : d.slice(0);   // decodeAudioData se queda con los bytes
+    G.cargando = new Promise((listo) => {
+      const falla = () => { G.fallo = true; listo(null); };
+      try { const p = this.ctx.decodeAudioData(copia, (b) => { G.buffer = b; listo(b); }, falla); if (p && p.catch) p.catch(falla); } catch (e) { falla(); }
+    });
+    return G.cargando;
+  },
+  /* una grabada que suena: el primer golpe cae 0,4 s después de pedirla, como en
+     los temas sintetizados (si la canción tarda más en llegar a su golpe,
+     arranca ya, desde el principio). `pos` es para seguir donde iba */
+  tocarGrabada(nombre, G, pos = null, en = null) {
+    const c = this.ctx, ahora = c.currentTime, chip = this.modo === 'chip';
+    const T = { vol: G.vol || 1, filtro: 16000, reverb: this.revIn.gain.value };
+    const g = c.createGain(); g.gain.value = 0.0001; g.connect(chip ? this.chipGrab : this.bMusica);
+    this.filtro.frequency.setTargetAtTime(T.filtro, ahora, 0.3);
+    const A = { nombre, T, g, grabada: true, t0: null, fuente: null };
+    const arrancar = (b) => {
+      if (A.muerto || !b) { if (!b && !A.muerto && this.actual === A) { this.actual = null; this.musica(nombre); } return; }
+      const s = c.createBufferSource(); s.buffer = b; s.loop = true; s.loopStart = G.bucle[0]; s.loopEnd = G.bucle[1]; s.connect(g);
+      const ya = c.currentTime + 0.02;
+      let cuando = pos != null ? Math.max(ya, en || 0) : ahora + 0.4 - (G.golpe || 0), desde = pos != null ? pos : 0;
+      if (cuando < ya) { desde += ya - cuando; cuando = ya; }
+      s.start(cuando, desde); A.fuente = s; A.t0 = cuando - desde;
+      g.gain.setTargetAtTime(T.vol * (chip ? 0.9 : 1), cuando, 0.02);
+    };
+    if (G.buffer) arrancar(G.buffer); else this.decodificar(nombre).then(arrancar);
+    return A;
+  },
+  /* dónde va la grabada que suena (en segundos del archivo, dentro del bucle) */
+  posicion(A, en = this.ctx.currentTime) {
+    const G = this.grabadas[A.nombre], [a, b] = G.bucle;
+    let p = en - A.t0;
+    if (p >= b) p = a + ((p - a) % (b - a));
+    return Math.max(0, p);
+  },
+  /* se apaga lo que sonaba (y se para la grabada cuando ya no se oye) */
+  soltar(A, tau) {
+    if (!A) return;
+    A.g.gain.setTargetAtTime(0.0001, this.ctx.currentTime, tau); A.muerto = true;
+    setTimeout(() => { A.g.disconnect(); if (A.fuente) try { A.fuente.stop(); } catch (e) { /* ya paró */ } }, 4000);
   },
   volumenes(m, e) {
     this.vMusica = m; this.vEfectos = e;
@@ -372,7 +433,9 @@ export const Sonido = {
     if (!this.ctx) { this.pendiente = nombre; return; }
     if (this.actual && this.actual.nombre === nombre) return;
     const c = this.ctx, ahora = c.currentTime;
-    if (this.actual) { const g = this.actual.g; g.gain.setTargetAtTime(0.0001, ahora, 0.6); this.actual.muerto = true; setTimeout(() => g.disconnect(), 4000); }
+    this.soltar(this.actual, 0.6);
+    const G = this.grabadas[nombre];
+    if (G && !G.fallo) { this.actual = this.tocarGrabada(nombre, G); return; }
     const T = TEMA[nombre];
     if (!T) { this.actual = null; return; }
     const chip = this.modo === 'chip';
@@ -388,7 +451,19 @@ export const Sonido = {
     this.modo = m;
     const A = this.actual;
     if (!A || !this.ctx) return;
-    A.g.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.2); A.muerto = true; setTimeout(() => A.g.disconnect(), 3000);
+    if (A.grabada) {
+      /* la grabada no vuelve a empezar: sigue donde iba, con el otro sonido. El
+         cambio cae 0,4 s después de pedirlo, como un tema nuevo (así el tráiler
+         lo pide 0,4 s antes del compás y cambia justo en el compás) */
+      const G = this.grabadas[A.nombre];
+      if (A.t0 == null) { this.soltar(A, 0.05); this.actual = this.tocarGrabada(A.nombre, G); return; }
+      const cuando = this.ctx.currentTime + 0.4, pos = this.posicion(A, cuando);
+      A.g.gain.setTargetAtTime(0.0001, cuando, 0.02); A.muerto = true;
+      setTimeout(() => { A.g.disconnect(); try { A.fuente.stop(); } catch (e) { /* ya paró */ } }, 3000);
+      this.actual = this.tocarGrabada(A.nombre, G, pos, cuando);
+      return;
+    }
+    this.soltar(A, 0.2);
     this.actual = null;
     this.musica(A.nombre);
   },
@@ -397,7 +472,7 @@ export const Sonido = {
   acordeEn(T, b) { let s = 0; for (const [nombre, dur] of T.acordes) { if (b < s + dur) return { ...acorde(nombre), desde: s, dur }; s += dur; } return { ...acorde(T.acordes[0][0]), desde: 0, dur: T.acordes[0][1] }; },
   pasar() {
     const A = this.actual, c = this.ctx;
-    if (!A || !c || A.muerto) return;
+    if (!A || !c || A.muerto || A.grabada) return;
     const T = A.T, seg = 60 / T.bpm, hasta = c.currentTime + 0.25;
     /* con la pestaña escondida no se programa nada: al volver se salta lo perdido */
     if (A.t0 + A.prox * seg < c.currentTime - 0.1) A.prox = Math.ceil((c.currentTime - A.t0) / seg * 2) / 2;
@@ -452,6 +527,16 @@ export const Sonido = {
     o.connect(g); g.connect(dest || this.bEfectos); const r = c.createGain(); r.gain.value = 0.3; g.connect(r); r.connect(this.revInFx);
     o.start(t); o.stop(t + dur + 0.02);
   },
+  /* "pup": un seno que sube rápido y se apaga enseguida (lo que suena una burbuja
+     al reventar en el agua), con un soplo cortito adelante para la "p" */
+  pup(t, f = 1, v = 0.22) {
+    const c = this.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(300 * f, t); o.frequency.exponentialRampToValueAtTime(720 * f, t + 0.05);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.09);
+    o.connect(g); g.connect(this.bEfectos); const r = c.createGain(); r.gain.value = 0.18; g.connect(r); r.connect(this.revInFx);
+    o.start(t); o.stop(t + 0.11);
+    this.soplido(t, 1600 * f, 900 * f, 0.018, 0.035, 1.2);
+  },
   soplido(t, f0, f1, dur, v, q = 1) {
     const c = this.ctx, r = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
     r.buffer = this.ruido; fl.type = 'bandpass'; fl.Q.value = q; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
@@ -468,7 +553,9 @@ export const Sonido = {
       case 'aterriza': this.soplido(t, 900, 300, 0.1, 0.06, 1); break;
       case 'burbuja': this.tono(t, 300, 1200, 0.18, 0.08, 'sine'); this.tono(t + 0.08, 900, 1600, 0.1, 0.04, 'sine'); break;
       case 'pop': this.tono(t, 1400, 500, 0.06, 0.1, 'sine'); this.soplido(t, 3000, 1500, 0.05, 0.05, 2); break;
-      case 'gota': { const k = o.k || 0; this.comoEfecto(() => this.campana(t, 84 + [0, 2, 4, 7, 9, 12][k % 6], 0.3, 0.7)); break; }
+      /* la gota: un "pup" redondo, de burbuja, y no la campanita (pedido 24/09:
+         "que las gotas sean pup, no tiring"). Las seguidas suben por la escala */
+      case 'gota': { const k = o.k || 0; this.pup(t, Math.pow(2, [0, 2, 4, 7, 9, 12][k % 6] / 12)); break; }
       case 'guino': this.comoEfecto(() => { [76, 80, 83, 88].forEach((n2, i) => this.vibra(t + i * 0.08, n2, 0.6, 0.9)); }); break;
       /* "iniciaste sesión": dos notas que suben, como las de los programas de chat (propias) */
       case 'sesion': this.comoEfecto(() => { this.marimba(t, 79, 0.3, 1); this.marimba(t + 0.12, 86, 0.4, 1); this.campana(t + 0.12, 91, 0.6, 0.5); }); break;

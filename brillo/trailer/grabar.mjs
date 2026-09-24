@@ -30,7 +30,7 @@ const op = Object.fromEntries(resto.map((a) => a.replace(/^--/, '').split('=')).
 const IDIOMAS = op.idioma === 'todos' ? ['es', 'en', 'pt'] : [op.idioma || 'es'];
 const NAVEGADOR = '/opt/pw-browsers/chromium';
 const CASCARA = '/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell';   // el que usa Remotion
-const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png', '.css': 'text/css', '.webm': 'video/webm', '.wav': 'audio/wav' };
+const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.woff2': 'font/woff2', '.png': 'image/png', '.css': 'text/css', '.webm': 'video/webm', '.wav': 'audio/wav', '.mp3': 'audio/mpeg' };
 const reloj0 = Date.now();
 const log = (s) => console.log(`${((Date.now() - reloj0) / 1000).toFixed(0).padStart(5)}s ${s}`);
 

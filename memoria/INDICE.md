@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (NEVADA).
+mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (canciones de BRILLO).
 
 ## Reglas que no se discuten
 
@@ -40,9 +40,10 @@ mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (NEVADA).
   animaciones, efectos y todo ("100% mejor", 23/09), sin copiar.
 - **Videos:** para TikTok, 9:16 y uno solo, cinematográfico y "muy
   profesional", con motion graphics del propio juego. Para editar dijo que
-  se usen Remotion y ffmpeg (23/09): `brillo.md § El tráiler`.
+  se usen Remotion y ffmpeg (23/09): [brillo-trailer](brillo-trailer.md).
   Relatados de 1 min con sus stickers y memes **bajados, no generados**
-  (24/09): [videos](videos.md). Audio de TikTok ajeno no se baja.
+  (24/09): [videos](videos.md). Audio de TikTok ajeno no se baja; las
+  canciones que manda quien pide sí se usan (24/09, BRILLO: una por mundo).
 - Tiene Rezona (446 mil créditos el 22/09; 419 mil el 23/09) y Higgsfield. Prefiere Rezona.
   Para imágenes, dijo que se use Rezona sin preguntar (23/09).
 
@@ -56,7 +57,8 @@ mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (NEVADA).
 | [higgsfield](higgsfield.md) | generar con Higgsfield: modelos, costos, lo que anduvo |
 | [juegos](juegos.md) | tocar un juego del repo o hacer uno nuevo |
 | [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el resolvedor y sus trampas |
-| [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas, el tráiler de TikTok y sus trampas |
+| [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas, las canciones grabadas y sus trampas |
+| [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |

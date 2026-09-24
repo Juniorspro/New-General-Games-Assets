@@ -9,13 +9,15 @@
      segundos de la toma), dura lo que dice y entra con su transición.
    Una toma puede dar varios planos (la Actualización da seis).
 
-   La música del final va a 138 negras por minuto: un compás son 1,739 s. Los
-   planos con `compas` empiezan justo en un compás; la grilla arranca de nuevo
-   en el primero de cada tanda (el gancho y el logo).
+   La música es la canción del menú ('titulo', la grabada del Wii Party que
+   eligió quien pide el 24/09), a 110 negras por minuto: un compás son
+   2,182 s. Los planos con `compas` empiezan justo en un compás; la grilla
+   arranca de nuevo en el primero de cada tanda (el gancho y el logo). Antes
+   era el tema 'final' sintetizado, a 138 (1,739 s el compás).
    ========================================================================== */
 export const FPS = 30;
 export const ANCHO = 1080, ALTO = 1920;
-export const COMPAS = 4 * 60 / 138;
+export const COMPAS = 4 * 60 / 110;
 /* el juego se ve a 6 píxeles de pantalla por píxel del juego (el lienzo del juego va a ×3 y el recorte a ×2) */
 export const ESCALA = 6;
 /* cuánto dura cada transición (s): mitad antes del corte y mitad después */
@@ -46,7 +48,7 @@ export const TOMAS = {
 const MUNDOS = ['colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 'plano'];
 export const PLANOS = [
   /* el gancho: cuatro golpes de juego a tempo y "Todo brillaba." */
-    { id: 'g0', toma: 'ciudad', desde: 0.4, c: 0.5, entra: 'corte', compas: true, musica: [{ t: -0.4, musica: 'final', golpe: true }], capa: { tipo: 'gancho' } },
+    { id: 'g0', toma: 'ciudad', desde: 0.4, c: 0.5, entra: 'corte', compas: true, musica: [{ t: -0.4, musica: 'titulo', golpe: true }], capa: { tipo: 'gancho' } },
   { id: 'g1', toma: 'arrecife', desde: 0.6, c: 0.5, entra: 'destello', compas: true },
   { id: 'g2', toma: 'cielo', desde: 0.8, c: 0.5, entra: 'destello', compas: true },
   { id: 'g3', toma: 'aurora', desde: 0.6, c: 0.5, entra: 'destello', compas: true },
@@ -59,7 +61,7 @@ export const PLANOS = [
   { id: 'h5', toma: 'actualizacion', desde: 10.35, dur: 2.85, entra: 'corte', cam: { zoom: [2, 2], foco: 'nick' }, cartel: { tipo: 'historia' } },
   { id: 'h6', toma: 'actualizacion', desde: 14.9, dur: 2.0, entra: 'mosaico', cam: { zoom: [1.1, 1.3], foco: 'nick' }, cartel: { tipo: 'historia' } },
   /* el logo, en el golpe */
-  { id: 'logo', toma: 'cumbre', desde: 0.1, c: 2, entra: 'blanco', compas: true, cartel: { tipo: 'logo' }, musica: [{ t: -0.4, musica: 'final', golpe: true }, { t: 0, sfx: 'orbe' }] },
+  { id: 'logo', toma: 'cumbre', desde: 0.1, c: 2, entra: 'blanco', compas: true, cartel: { tipo: 'logo' }, musica: [{ t: -0.4, musica: 'titulo', golpe: true }, { t: 0, sfx: 'orbe' }] },
   /* los seis mundos, un compás cada uno */
   ...MUNDOS.map((m, i) => ({ id: 'm' + i, toma: m, desde: [0.3, 1.8, 1.6, 1.9, 1.7, 0.3][i], c: 1, entra: i % 2 ? 'mosaico' : 'pixeles', compas: true, cartel: { tipo: 'mundo', mundo: m, numero: i + 1 } })),
   /* lo que trae */

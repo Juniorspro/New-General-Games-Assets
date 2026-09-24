@@ -3,7 +3,7 @@
 Gameplay de ~1 min con un narrador en sticker, voz, subtítulos tipo karaoke,
 memes, carteles y la música del propio juego. Hechos el 24/09/2026 para LUZ
 MALA y KUNTUR. Todo vive en `videos/`. Ver también:
-- [brillo](brillo.md) § El tráiler, que es de donde sale el reloj de las tomas;
+- [brillo-trailer](brillo-trailer.md), que es de donde sale el reloj de las tomas;
 - [maquina](maquina.md) para Remotion, ffmpeg, Vosk y el proxy;
 - [higgsfield](higgsfield.md) para la voz.
 

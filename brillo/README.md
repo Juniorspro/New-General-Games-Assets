@@ -135,7 +135,7 @@ Lo mismo se ve en las referencias más citadas:
   - marimba, vibráfono, piano eléctrico, campanitas y coro;
   - guitarra y arpa punteadas;
   - flauta y cajita de música.
-  - Todo sintetizado con WebAudio, sin un solo archivo de audio.
+  - Todo sintetizado con WebAudio, salvo las canciones grabadas (abajo).
 - **La mezcla:**
   - reverb grande y clara;
   - un eco que rebota de lado a lado;
@@ -157,7 +157,39 @@ Lo mismo se ve en las referencias más citadas:
 - **Los efectos:**
   - el "iniciaste sesión" de las sesiones son dos notas que suben, hechas
     para BRILLO (no es el de ningún programa);
-  - las gotitas suben la escala si se juntan seguidas.
+  - las gotitas hacen "pup" (un seno de 300 a 720 Hz en 50 ms, como una
+    burbuja que revienta) y suben la escala si se juntan seguidas.
+
+### Las canciones grabadas
+
+Desde el 24/09, algunos temas son canciones de verdad que eligió quien pide,
+en vez del tema sintetizado:
+
+| tema | canción | de dónde |
+|---|---|---|
+| título (el menú) y el tráiler | la música del menú de Wii Party | un video de TikTok (@trilharetro) |
+| Colina (el mundo 1) | la música de Mii Maker (Wii U) | un video de TikTok |
+
+- Son de Nintendo y las mandó quien pide. Si el juego o el tráiler se
+  publican, TikTok puede silenciar o reclamar el video.
+- **No están en el repo, que es público.** Los MP3 quedan en `musica/`, que no
+  se commitea, y `armar.mjs` saca dos archivos:
+  - `brillo.html`, el del repo, sin las canciones y con los temas
+    sintetizados;
+  - `brillo-con-canciones.html` (2,2 MB con las dos), que es el que se
+    entrega. Sigue siendo un solo archivo: los MP3 entran como bytes.
+- Lo que sí está en el repo es `musica/canciones.json`: de qué video sale cada
+  una y dónde va su bucle. Con los mismos videos se rehacen con un comando.
+- Para sumar otra:
+  1. `python3 herramientas/canciones.py analizar <video>` da el pulso y dónde
+     se repite;
+  2. `python3 herramientas/canciones.py hacer <tema> <video> <a> <b>` corta,
+     cose el bucle, nivela y comprime;
+  3. se mide su nivel al lado de los otros temas y se pone `vol` en
+     `musica/canciones.json`. `armar.mjs` la mete sola.
+- En el modo 16 bits la canción sigue donde iba, por un reductor de bits más
+  suave, el filtro bajo y el eco de la época.
+- Si una no carga, suena el tema sintetizado de siempre.
 
 Fuentes:
 
@@ -173,7 +205,7 @@ Fuentes:
 
 ## El tráiler
 
-`brillo/trailer/` arma el tráiler para TikTok: 56 s en 9:16 (1080×1920,
+`brillo/trailer/` arma el tráiler para TikTok: 67 s en 9:16 (1080×1920,
 30 fps), MP4 H.264 + AAC a -14 LUFS, con su portada. Todo lo que se ve es el
 juego de verdad; el montaje lo hace [Remotion](https://www.remotion.dev/)
 (React → video).
@@ -200,7 +232,7 @@ dos listas, como un editor: las **tomas** (lo que se graba del juego) y los
      idiomas.
   6. La pregunta de PLANO y la respuesta de Nick.
   7. La ráfaga y el cierre: "Jugalo gratis · link en la bio".
-  Del logo en adelante cada corte cae en un compás del tema final (138 bpm).
+  Del logo en adelante cada corte cae en un compás de la canción (110 BPM).
 - **Las tomas son el juego** (`tomas.js`).
   - `grabar.mjs` levanta un servidor local y le mete a `brillo.html` un reloj
     propio: `requestAnimationFrame`, `performance.now` y `setTimeout`. Así
@@ -213,9 +245,14 @@ dos listas, como un editor: las **tomas** (lo que se graba del juego) y los
   - La Actualización la actúa el director del juego. Su chat (HTML) se guarda
     cuadro a cuadro, igual que dónde están Nick y Mora. Remotion usa eso para
     los globos de diálogo y para los primeros planos.
-- **La música** (`audio.js`) es la del juego, hecha con su sintetizador en un
+- **La música** (`audio.js`) es la del juego, hecha con su sonido en un
   `OfflineAudioContext`, más los efectos que el juego pidió en cada pedazo
   de toma usado. ffmpeg la lleva a -14 LUFS.
+  - Desde el 24/09 suena la canción del menú (la grabada de Wii Party, a
+    110 BPM). Por eso la grilla del montaje va a 110 BPM: un compás son
+    2,182 s y el tráiler dura 67 s.
+  - Se corta en el glitch de la historia y vuelve desde el principio en el
+    logo, con el golpe en el compás.
 - **Los motion graphics** (`remotion/src/`) van en pixel art a la escala del
   juego, más el kit Frutiger Aero del juego:
   - chispas de cuadraditos y transición de cuadraditos;

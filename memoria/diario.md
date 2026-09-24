@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **24/09/2026, tarde · `claude/fijate-iszyer`:**
+  - Mandó dos videos de TikTok con música de Nintendo para BRILLO: el menú de
+    Wii Party ("f9") va al menú y al tráiler, y Mii Maker ("9c") al mundo 1.
+    Va a mandar más, una por mundo. También pidió que las gotas hagan "pup".
+  - Quedó en `brillo/musica/` con su herramienta. El tráiler se volvió a
+    grabar a 110 BPM para que los cortes caigan en la canción (67 s). Cómo y
+    trampas: [brillo](brillo.md), [brillo-trailer](brillo-trailer.md).
+  - Falta: las canciones de los mundos 2 a 6, cuando las mande.
 - **24/09/2026, mañana · `claude/fijate-iszyer`:**
   - Pasó un TikTok de @m4jor3d × @W-SE (auto malva y tigre blanco en la nieve,
     16,5 s) y pidió "logra esto en three.js en html". Quedó NEVADA:
@@ -32,7 +40,7 @@ se resumen en una sola.
     graphics y cinemáticas en pixel art del juego. Quedó
     `brillo/trailer/salida/brillo-tiktok-es.mp4` (56 s) con su portada.
     Cómo se hace: `brillo/README.md § El tráiler`. Trampas:
-    `brillo.md § El tráiler`.
+    [brillo-trailer](brillo-trailer.md).
   - Quiso usar la PC Neko: el modo automático bloqueó el `docker pull` de la
     imagen. Canva está en la cuenta pero sin conectar: iba a dar acceso.
   - Falta, si lo pide: las versiones en inglés y portugués (`grabar.mjs todo

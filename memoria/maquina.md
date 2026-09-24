@@ -32,7 +32,7 @@ Fuente: `ARRANQUE.md § 1` y `§ 7`. Ver también: [desplegar](desplegar.md),
   trae Remotion (`@remotion/compositor-linux-x64-gnu`) está recortado.
 - Remotion 4.0.527 se instaló en `brillo/trailer/remotion`, porque lo pidió
   ("usá Remotion o instalá un editor de verdad"). Detalles:
-  `brillo.md § El tráiler`.
+  [brillo-trailer](brillo-trailer.md).
 - Los videos relatados (`videos/remotion`) usan ese mismo Remotion:
   `node_modules` es un enlace a `brillo/trailer/remotion/node_modules` (no se
   commitea). Ver [videos](videos.md).

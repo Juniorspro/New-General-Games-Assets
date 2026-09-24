@@ -1,0 +1,24 @@
+{
+ "titulo": {
+  "archivo": "titulo.mp3",
+  "bucle": [
+   0.7375,
+   53.0941
+  ],
+  "de": "60b4bbd7-f9af1c3e556325ad5c264eb817c9fc48.mp4",
+  "dura": 53.294,
+  "golpe": 0.3875,
+  "vol": 0.8
+ },
+ "colina": {
+  "archivo": "colina.mp3",
+  "bucle": [
+   1.85,
+   38.04834
+  ],
+  "de": "8659951b-9c25475da830f328232ae3e950fbe854.mp4",
+  "dura": 38.248,
+  "golpe": 1.0522,
+  "vol": 1.0
+ }
+}

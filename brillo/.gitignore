@@ -1,0 +1,4 @@
+# las canciones grabadas son de otros (Nintendo) y el repo es público: quedan solo en la máquina
+musica/*.mp3
+musica/.*.wav
+brillo-con-canciones.html
