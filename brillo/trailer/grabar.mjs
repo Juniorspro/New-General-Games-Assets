@@ -160,9 +160,12 @@ function video(idioma) {
     '-c:a', 'copy', '-movflags', '+faststart', '-metadata', 'title=BRILLO — tráiler', dest]);
   fs.unlinkSync(crudo);
   log(`listo ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1024 / 1024).toFixed(1)} MB)`);
-  /* una copia de menos de 30 MiB para mandarla por el chat (x264 en dos pasadas a 3,8 Mbps; se ve igual en el celular) */
+  /* una copia de menos de 30 MiB para mandarla por el chat (x264 en dos pasadas; se ve igual en el celular).
+     La tasa sale del largo: a 3,8 Mbps fijos, el tráiler de 67 s daba 34 MB */
   const liviano = dest.replace('.mp4', '-liviano.mp4'), pases = path.join(SALIDA, 'x264');
-  const comun = ['-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-b:v', '3800k', '-maxrate', '6000k', '-bufsize', '8000k', '-passlogfile', pases];
+  const dur = parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', dest], { encoding: 'utf8' }).stdout) || 60;
+  const kbps = Math.min(3800, Math.floor((28.5 * 8 * 1024 * 1024 / dur) / 1000 - 270));
+  const comun = ['-c:v', 'libx264', '-preset', 'slow', '-tune', 'animation', '-b:v', `${kbps}k`, '-maxrate', `${Math.round(kbps * 1.6)}k`, '-bufsize', `${kbps * 2}k`, '-passlogfile', pases];
   ffmpeg(['-loglevel', 'error', '-i', dest, ...comun, '-pass', '1', '-an', '-f', 'null', '/dev/null']);
   ffmpeg(['-loglevel', 'error', '-i', dest, ...comun, '-pass', '2', '-profile:v', 'high', '-level', '4.2', '-pix_fmt', 'yuv420p',
     '-color_range', 'tv', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-c:a', 'copy', '-movflags', '+faststart', liviano]);

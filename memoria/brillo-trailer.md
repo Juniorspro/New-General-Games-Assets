@@ -81,3 +81,8 @@ graphics en pixel art del juego. Una versión horizontal más vertical de
   no, en el `OfflineAudioContext` arrancarían cuando ya pasó todo.
 - `golpe()` no toca la ganancia de una grabada: ya entra sola con su primer
   golpe a los 0,4 s. Rehacerle la subida le tapaba la entrada.
+- La copia liviana (para el chat, tope 30 MiB) iba a 3,8 Mbps fijos. Con 67 s
+  dio 34 MB, así que ahora la tasa sale del largo: 3.280 kbps y 28,5 MiB
+  (`grabar.mjs › video`).
+- 24/09: el render completo (tomas 26 min, audio 0,5 min, video 33 min) dio
+  -14 LUFS y pico -0,9 dBTP.
