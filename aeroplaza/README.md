@@ -54,8 +54,9 @@ Además hay:
 - ocho misiones y seis discos escondidos que desbloquean canciones;
 - una barra de 5 lugares (burbujero, gestos, música, foto y mapa);
 - día y noche sincronizados para todos, por el reloj;
-- efectos retro en Opciones: pixelado, tramado, colores, líneas de TV, tubo y
-  aberración;
+- siete estilos retro con el botón 👾: Normal, Pixel, PS1, Tele de tubo, Game
+  Boy, 8 bits y VHS. Dibujan de verdad a baja resolución, así que además van
+  más rápido;
 - controles de dedo personalizables: mover, agrandar, transparencia, tipo de
   palanca, zurdos y vibración.
 

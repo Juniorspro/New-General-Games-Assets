@@ -25,7 +25,7 @@ export async function abrir(nav, params = '', { ancho = 960, alto = 540, red = '
   const errores = [];
   pag.on('pageerror', (e) => errores.push('pageerror: ' + e.message));
   pag.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); if (process.env.VERBOSO) console.log('[consola]', m.text()); });
-  await pag.route('https://unpkg.com/**', (r) => {
+  await pag.route(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//, (r) => {
     const local = red === 'local' ? clienteMQTT() : '';
     if (red === 'local' && fs.existsSync(local)) r.fulfill({ body: fs.readFileSync(local), contentType: 'text/javascript' });
     else r.abort();

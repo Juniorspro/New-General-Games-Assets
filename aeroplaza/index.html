@@ -10,6 +10,15 @@
 <!--CSS-->
 </head>
 <body>
+<!-- lo primero que se ve, sin JavaScript: si un visor no corre el juego, al menos dice qué hacer -->
+<div id="precarga">
+  <div style="font-size:44px;font-weight:900;color:#34bef0;letter-spacing:.04em">AERO<span style="color:#56d05a">PLAZA</span></div>
+  <div style="width:46px;height:46px;border-radius:50%;border:6px solid #dfe6ec;border-top-color:#34bef0;animation:gira .9s linear infinite"></div>
+  <b>Cargando… · Loading… · Carregando…</b>
+  <small id="precarga-ayuda" style="max-width:460px;font-weight:700;color:#8a9098;opacity:0;transition:opacity 1s">¿Sigue acá? Abrí el archivo con Chrome, Safari, Edge o Firefox (no desde una vista previa).<br>Still here? Open the file in Chrome, Safari, Edge or Firefox (not in a preview).<br>Ainda aqui? Abra o arquivo no Chrome, Safari, Edge ou Firefox (não numa pré-visualização).</small>
+</div>
+<noscript><div style="position:fixed;inset:0;z-index:40;background:#fff;display:flex;align-items:center;justify-content:center;font:700 20px system-ui;padding:24px;text-align:center">AEROPLAZA necesita JavaScript: abrilo en Chrome, Safari, Edge o Firefox.</div></noscript>
+<script>setTimeout(function(){var a=document.getElementById('precarga-ayuda');if(a)a.style.opacity=1;},7000);</script>
 <canvas id="lienzo"></canvas>
 <div id="dedos"></div>
 <div id="ui"></div>

@@ -73,4 +73,13 @@ async function armar(conCanciones, destino) {
   console.log(`${path.relative(RAIZ, destino)}: ${(fs.statSync(destino).size / 1048576).toFixed(2)} MB · código propio ${(propio / 1024).toFixed(0)} KB · assets ${(bytesAssets / 1048576).toFixed(2)} MB · ${mp3} canciones${dev ? ' · sin minificar' : ''}`);
 }
 await armar(false, path.join(AQUI, 'aeroplaza.html'));
+/* la versión para publicar como página (Artifact de claude.ai): la envuelven en su propio
+   <html><head><body>, así que se sacan esas etiquetas y las meta (el título queda arriba) */
+{
+  const h = fs.readFileSync(path.join(AQUI, 'aeroplaza.html'), 'utf8')
+    .replace(/<!doctype html>\s*/i, '').replace(/<\/?html[^>]*>\s*/gi, '').replace(/<\/?head>\s*/gi, '').replace(/<\/?body>\s*/gi, '').replace(/<meta [^>]*>\s*/gi, '');
+  fs.mkdirSync(path.join(AQUI, 'dist'), { recursive: true });
+  fs.writeFileSync(path.join(AQUI, 'dist/aeroplaza-web.html'), h);
+  console.log(`aeroplaza/dist/aeroplaza-web.html: ${(h.length / 1048576).toFixed(2)} MB (para publicar; título en el byte ${h.indexOf('<title>')})`);
+}
 if (fs.existsSync(MUSICA) && fs.readdirSync(MUSICA).some((f) => f.endsWith('.mp3'))) await armar(true, path.join(AQUI, 'aeroplaza-con-canciones.html'));

@@ -44,7 +44,7 @@ export function crearAurora(ctx) {
   const colores = ['#7ff6ff', '#b58bff', '#ff9ad8', '#9bffcf'];
   for (let i = 0; i < 46; i++) {
     const a = r() * 6.28, d = 14 + r() * 70, x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (Math.hypot(x + 30, z - 25) < 15) continue;
+    if (Math.hypot(x + 30, z - 25) < 15 || Math.hypot(x, z - 40) < 9) continue;   // ni en el lago ni en el andén
     const alto = 1 + r() * 4, c = colores[i % colores.length];
     const m = new THREE.Mesh(new THREE.CylinderGeometry(0, alto * 0.28, alto, 6), new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.05, clearcoat: 1, transparent: true, opacity: 0.8, emissive: c, emissiveIntensity: 0.5 }));
     const base = new THREE.Mesh(new THREE.CylinderGeometry(alto * 0.28, alto * 0.22, alto * 0.4, 6), m.material); base.position.y = -alto * 0.7;
@@ -56,7 +56,7 @@ export function crearAurora(ctx) {
   /* pinos de hielo */
   for (let i = 0; i < 30; i++) {
     const a = r() * 6.28, d = 20 + r() * 60, x = Math.cos(a) * d, z = Math.sin(a) * d;
-    if (Math.hypot(x + 30, z - 25) < 16) continue;
+    if (Math.hypot(x + 30, z - 25) < 16 || Math.hypot(x, z - 40) < 10 || Math.hypot(x, z) < 12) continue;
     const pino = new THREE.Group(); pino.position.set(x, A(x, z), z);
     for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry(1.6 - k * 0.4, 1.8, 7), brilloso('#e8f6ff', { roughness: 0.3, emissive: '#7fb0ff', emissiveIntensity: 0.08 })); c.position.y = 1.2 + k * 1.1; c.castShadow = true; pino.add(c); }
     g.add(pino); mundo.cilindro(x, z, 0.5, A(x, z) - 1, A(x, z) + 3.5);

@@ -82,6 +82,17 @@ function nubeDibujada(sem) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
+/* el destello del sol: discos, anillos y hexágonos sobre la línea que va del
+   sol al centro de la pantalla (el "lens flare" de los fondos de 2007) */
+function texDestello(tipo) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  if (tipo === 'disco') { const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.25, 'rgba(255,250,220,0.6)'); r.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }
+  else if (tipo === 'anillo') { const r = g.createRadialGradient(64, 64, 40, 64, 64, 62); r.addColorStop(0, 'rgba(255,255,255,0)'); r.addColorStop(0.6, 'rgba(180,240,255,0.55)'); r.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); }
+  else { g.fillStyle = 'rgba(200,255,230,0.35)'; g.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.lineTo(64 + Math.cos(a) * 58, 64 + Math.sin(a) * 58); } g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const PIEZAS = [[0, 'disco', 3.2, '#fff6dc'], [0.22, 'hex', 0.5, '#b8ffd8'], [0.38, 'anillo', 0.9, '#bfe8ff'], [0.55, 'hex', 0.35, '#ffd6f0'], [0.72, 'disco', 0.25, '#d8f0ff'], [0.9, 'hex', 0.7, '#c8e6ff'], [1.15, 'anillo', 1.4, '#e0ffd0']];
+
 export class Cielo {
   constructor(motor, texturasNube = []) {
     this.motor = motor;
@@ -126,6 +137,10 @@ export class Cielo {
       s.renderOrder = -5;
       this.nubes.add(s);
     }
+    this.destello = PIEZAS.map(([u, tipo, tam, col]) => {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texDestello(tipo), color: col, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+      s.userData = { u, tam }; s.renderOrder = 999; s.frustumCulled = false; s.visible = false; motor.escena.add(s); return s;
+    });
     this.modo = { hora: null, aurora: 0, nubes: 1 };
     this.hora = 0.5;
     this.colSol = new THREE.Color(); this.colCielo = new THREE.Color();
@@ -183,5 +198,21 @@ export class Cielo {
       this.motor.escena.environmentIntensity = 0.3 + dia * 0.4;
     }
     this.motor.r.toneMappingExposure = 1.0 + (1 - dia) * 0.25;
+    this.ponerDestello(sol, dia);
+  }
+  ponerDestello(sol, dia) {
+    const cam = this.motor.camara;
+    const p = cam.position.clone().addScaledVector(sol, 500).project(cam);
+    const fuera = Math.max(Math.abs(p.x), Math.abs(p.y));
+    const k = p.z < 1 && !this.modo.interior && !this.modo.aurora && !this.bajoAgua ? dia * (1 - THREE.MathUtils.smoothstep(fuera, 0.75, 1.15)) * THREE.MathUtils.smoothstep(sol.y, 0.02, 0.2) : 0;
+    const escala = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * 2;
+    for (const s of this.destello) {
+      s.visible = k > 0.01; if (!s.visible) continue;
+      const q = new THREE.Vector3(p.x * (1 - s.userData.u * 2), p.y * (1 - s.userData.u * 2), 0.5).unproject(cam).sub(cam.position).normalize();
+      s.position.copy(cam.position).addScaledVector(q, 6);
+      const tam = s.userData.tam * escala * 0.55;
+      s.scale.set(tam, tam, 1);
+      s.material.opacity = k * (s.userData.u === 0 ? 0.55 : 0.4);
+    }
   }
 }

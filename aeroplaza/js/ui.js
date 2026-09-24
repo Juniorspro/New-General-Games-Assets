@@ -8,11 +8,44 @@
 import { t, ponerIdioma, idioma, IDIOMAS } from './textos.js';
 import { RANURAS, PALETA, PALETA_PELO, loTengo, precio, DE_MISION, MUEBLES } from './catalogo.js';
 import { NPCS } from './misiones.js';
+import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
 /* el muñeco de gelatina dibujado, para los canales */
-const muneco = (c, alto) => `<svg class="muneco" style="height:${alto}%" viewBox="0 0 60 100"><defs><radialGradient id="g${c.slice(1)}" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".85"/></radialGradient></defs><ellipse cx="30" cy="96" rx="20" ry="3" fill="rgba(0,0,0,.12)"/><path d="M10 94 Q6 60 20 46 Q30 38 40 46 Q54 60 50 94 Z" fill="url(#g${c.slice(1)})"/><circle cx="30" cy="24" r="17" fill="url(#g${c.slice(1)})"/><ellipse cx="24" cy="17" rx="5" ry="3" fill="#fff" opacity=".8"/></svg>`;
+const muneco = (c, alto) => `<svg class="muneco" style="position:absolute;left:0;right:0;margin:auto;top:${(100 - alto) / 2 - 4}%;height:${alto}%" viewBox="0 0 60 100"><defs><radialGradient id="g${c.slice(1)}" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".85"/></radialGradient></defs><ellipse cx="30" cy="96" rx="20" ry="3" fill="rgba(0,0,0,.12)"/><path d="M10 94 Q6 60 20 46 Q30 38 40 46 Q54 60 50 94 Z" fill="url(#g${c.slice(1)})"/><circle cx="30" cy="24" r="17" fill="url(#g${c.slice(1)})"/><ellipse cx="24" cy="17" rx="5" ry="3" fill="#fff" opacity=".8"/></svg>`;
+/* la muestra de cada estilo: el fondo del menú achicado y pasado por el efecto (en un canvas 2D) */
+const MUESTRAS = {};
+function muestraEstilo(n) {
+  if (MUESTRAS[n] !== undefined) return MUESTRAS[n];
+  const url = window.ARCHIVOS && window.ARCHIVOS['fondo-menu.webp']; if (!url) return (MUESTRAS[n] = '');
+  MUESTRAS[n] = '';
+  const img = new Image();
+  img.onload = () => {
+    const E = ESTILOS[n], lin = ALTOS_PIXEL[E.pix] || 180, h = Math.round(lin / 4), w = Math.round(h * 16 / 9);
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+    g.drawImage(img, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h), p = d.data;
+    const GB = [[8, 24, 32], [52, 104, 86], [136, 192, 112], [224, 248, 208]];
+    const P8 = ['1a1c2c','5d275d','b13e53','ef7d57','ffcd75','a7f070','38b764','257179','29366f','3b5dc9','41a6f6','73eff7','f4f4f4','94b0c2','566c86','333c57'].map((x) => [0, 2, 4].map((i) => parseInt(x.slice(i, i + 2), 16)));
+    const B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const k = (y * w + x) * 4, tr = (B[(y % 4) * 4 + (x % 4)] / 16 - 0.5) * (E.trama ? 1 : 0);
+      let r = p[k], gg = p[k + 1], b = p[k + 2];
+      if (E.paleta === 1) { const l = Math.min(0.999, Math.max(0, Math.pow((0.299 * r + 0.587 * gg + 0.114 * b) / 255, 1.3) * 1.15 + tr * 0.28)); [r, gg, b] = GB[Math.floor(l * 4)]; }
+      else if (E.paleta === 2) { const L = 0.299 * r + 0.587 * gg + 0.114 * b; r = L + (r - L) * 1.3; gg = L + (gg - L) * 1.3; b = L + (b - L) * 1.3; let m = 1e9, e = P8[0]; for (const q of P8) { const dd = (r + tr * 36 - q[0]) ** 2 * 0.9 + (gg + tr * 36 - q[1]) ** 2 * 1.3 + (b + tr * 36 - q[2]) ** 2 * 0.6; if (dd < m) { m = dd; e = q; } } [r, gg, b] = e; }
+      else if (E.niveles) { const n2 = [0, 31, 15, 7, 4][E.niveles]; [r, gg, b] = [r, gg, b].map((v) => Math.round(Math.floor(v / 255 * n2 + 0.5 + tr) / n2 * 255)); }
+      if (E.vhs) { r = Math.min(255, r * 1.05 + (Math.random() - 0.5) * 30); b = Math.min(255, b * 1.05); }
+      if (E.barrido && y % 2) { r *= 0.8; gg *= 0.8; b *= 0.8; }
+      p[k] = r; p[k + 1] = gg; p[k + 2] = b;
+    }
+    g.putImageData(d, 0, 0);
+    MUESTRAS[n] = c.toDataURL();
+    document.querySelectorAll('.muestra-estilo.' + n).forEach((q) => { q.style.backgroundImage = `url(${MUESTRAS[n]})`; });
+  };
+  img.src = url;
+  return '';
+}
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
 const HOT = [['burbujero', '🫧'], ['gestos', '👋'], ['discos', '💿'], ['foto', '📷'], ['mapa', '🗺️']];
@@ -27,6 +60,8 @@ export const UI = {
     this.raiz.addEventListener('pointerover', (e) => { const b = e.target.closest('button'); if (b && b !== this._ult) { this._ult = b; J.sfx('mover'); } });
     this.raiz.addEventListener('click', (e) => { if (e.target.closest('button')) J.sfx('elegir'); });
     document.body.classList.toggle('calidadBaja', J.G.opciones.calidad === 'baja');
+    /* el cartel de "cargando" que trae el HTML (por si el visor no corre JavaScript) ya no hace falta */
+    document.getElementById('precarga')?.remove();
   },
   limpiar() { this.raiz.innerHTML = ''; this.hud = null; this.ventanaAbierta = null; },
   poner(nodo) { this.raiz.appendChild(nodo); return nodo; },
@@ -61,22 +96,26 @@ export const UI = {
     const fondo = window.ARCHIVOS && window.ARCHIVOS['fondo-menu.webp'];
     const canales = [
       ['plaza', `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>${[10, 30, 55, 75, 88].map((x, i) => `<i class="burbujita" style="left:${x}%;animation-delay:${i * 0.9}s"></i>`).join('')}`],
-      ['probador', `<div class="vista probador">${muneco(J.G.A.color, 30)}</div>`],
+      ['probador', `<div class="vista probador">${muneco(J.G.A.color, 62)}</div>`],
       ['salas', `<div class="vista salas"><b class="cuenta-linea">·</b><small>${t('en_linea')}</small></div>`],
       ['casa', `<div class="vista icono"><span>🏡</span></div>`],
       ['discos', `<div class="vista icono"><div class="disco"></div></div>`],
       ['opciones', `<div class="vista icono gira"><span>⚙️</span></div>`],
       ['controles', `<div class="vista icono"><span>🎮</span></div>`],
       ['creditos', `<div class="vista icono"><span style="font-size:.5em;font-weight:900;color:#34bef0">AERO<span style="color:#56d05a">PLAZA</span></span></div>`],
+      ['estilo', `<div class="vista estilo"><span>👾</span></div>`],
     ];
     const vacios = 12 - canales.length;
     const p = this.poner(el(`<div class="pantalla menu"><div class="rayado"></div>
+      <button class="boton primario jugar-grande" data-a="jugar">▶ ${t('jugar')}</button>
       <div class="canales" style="position:relative">${canales.map(([id, v]) => `<button class="canal" data-c="${id}">${v}<div class="nombre">${t('canal_' + id)}</div></button>`).join('')}${'<div class="canal vacio"></div>'.repeat(vacios)}</div>
       <div class="barra-abajo"><svg viewBox="0 0 1000 150" preserveAspectRatio="none"><path d="M0 40 Q 180 40 250 70 Q 320 100 500 100 Q 680 100 750 70 Q 820 40 1000 40 L1000 150 L0 150 Z" fill="#f4f6f8" stroke="#d9dde1" stroke-width="3"/></svg>
         <div class="reloj">--:--</div><div class="fecha"></div>
         <div class="izq"><button class="redondo" data-c="plaza" title="AEROPLAZA">A·P</button></div>
         <div class="der"><button class="redondo" data-c="salas"><span class="punto ${J.red.estado}"></span></button></div></div></div>`));
     p.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => this.abrirCanal(b.dataset.c, b));
+    /* el atajo: directo a la plaza, sin pasar por el canal */
+    $('[data-a=jugar]', p).onclick = () => { J.sfx('sesion'); J.empezar('plaza'); };
     const reloj = () => {
       if (!p.isConnected) return;
       const d = new Date(), h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0');
@@ -87,7 +126,7 @@ export const UI = {
       setTimeout(reloj, 1000);
     };
     reloj();
-    this.focoTeclado(p);
+    this.focoTeclado(p, '[data-a=jugar]');
     J.musica('titulo');
   },
   /* el zoom al canal: el cuadrito se agranda hasta ocupar la pantalla */
@@ -98,11 +137,12 @@ export const UI = {
     if (id === 'discos') return this.discos();
     if (id === 'creditos') return this.creditos();
     if (id === 'salas') return this.salas();
+    if (id === 'estilo') return this.estilo();
     const r = desde.getBoundingClientRect();
     const fondo = window.ARCHIVOS && window.ARCHIVOS['fondo-menu.webp'];
     const titulo = id === 'plaza' ? t('canal_plaza') : id === 'probador' ? t('canal_probador') : t('canal_casa');
     const desc = id === 'plaza' ? t('plaza_desc') : id === 'probador' ? t('prob_titulo') : t('reino_casa_d');
-    const vista = id === 'plaza' ? `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>` : id === 'probador' ? `<div class="vista probador">${muneco(J.G.A.color, 20)}</div>` : `<div class="vista icono" style="font-size:20vmin">🏡</div>`;
+    const vista = id === 'plaza' ? `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>` : id === 'probador' ? `<div class="vista probador">${muneco(J.G.A.color, 46)}</div>` : `<div class="vista icono" style="font-size:20vmin">🏡</div>`;
     const c = this.poner(el(`<div class="canal-abierto"><div class="grande">${vista}<div class="titulo-canal">${titulo}</div><div class="desc">${esc(desc)}</div></div>
       <div class="pie"><button class="boton" data-a="menu">${t('menu')}</button><button class="boton primario" data-a="empezar">${t('empezar')}</button></div></div>`));
     c.animate([{ clipPath: `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px round 18px)` }, { clipPath: 'inset(0 0 0 0 round 0)' }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
@@ -110,7 +150,7 @@ export const UI = {
     $('[data-a=empezar]', c).onclick = () => { J.sfx('sesion'); J.empezar(id === 'plaza' ? 'plaza' : id === 'casa' ? 'casa' : 'plaza', { probador: id === 'probador' }); };
     this.focoTeclado(c, '[data-a=empezar]');
   },
-  cargando() { this.limpiar(); this.poner(el(`<div class="pantalla carga"><div class="rayado"></div><div class="ruedita" style="position:relative"></div><b style="position:relative">${t('cargando')}</b></div>`)); },
+  cargando() { this.limpiar(); this.poner(el(`<div class="pantalla carga"><div class="rayado"></div><div class="ruedita" style="position:relative"></div><b style="position:relative">${t('cargando')}</b><small style="position:relative;font-weight:700;color:#8a9098;max-width:80vw;text-align:center">${t('consejo_' + (1 + Math.floor(Math.random() * 4)))}</small></div>`)); },
 
   /* ------------------------------------------------------------ el HUD del juego */
   juego() {
@@ -120,13 +160,14 @@ export const UI = {
       <div class="franja arriba"></div><div class="franja abajo"></div>
       <div class="arriba-izq"><div class="pildora"><i class="orbe-icono"></i><span class="orbes">0</span></div><div class="espuma" title="${t('espuma')}"><i style="width:100%"></i></div><div class="misiones"></div></div>
       <div class="arriba-der"><div class="pildora estado-red"><span><span class="punto"></span> <span class="red-txt"></span></span><small class="sala-txt"></small></div>
-        <button class="redondo" data-a="chat" title="Chat">💬</button><button class="redondo siempre" data-a="pausa" title="${t('pausa')}">☰</button></div>
+        <button class="redondo" data-a="estilo" title="${t('estilo_titulo')}">👾</button><button class="redondo" data-a="chat" title="Chat">💬</button><button class="redondo siempre" data-a="pausa" title="${t('pausa')}">☰</button></div>
       <div class="avisos"></div>
       <div class="chat"></div>
       <div class="hotbar">${HOT.map(([k, e], i) => `<button class="ranura" data-h="${i + 1}" title="${t('hot_' + k)}"><small>${i + 1}</small>${e}</button>`).join('')}</div>
     </div>`));
     $('[data-a=pausa]', h).onclick = () => J.pausar(true);
     $('[data-a=chat]', h).onclick = () => this.abrirChat();
+    $('[data-a=estilo]', h).onclick = () => { J.pausar(true, true); this.estilo(() => J.pausar(false, true)); };
     h.querySelectorAll('[data-h]').forEach((b) => b.onclick = () => J.hotbar(+b.dataset.h));
     this.actualizarHud(); this.actualizarMisiones(); this.actualizarRed();
   },
@@ -240,7 +281,8 @@ export const UI = {
     $('h2', v).textContent = titulo;
     const c = $('.cuerpo', v);
     if (typeof cuerpo === 'string') c.innerHTML = cuerpo; else c.appendChild(cuerpo);
-    const cerrar = () => { v.remove(); if (this.ventanaAbierta === v) this.ventanaAbierta = null; removeEventListener('keydown', tecla); alCerrar && alCerrar(); };
+    /* ojo: se agregó en captura, así que se saca en captura (si no, queda enganchado y se come el Escape de la pausa) */
+    const cerrar = () => { if (!v.isConnected) return; v.remove(); if (this.ventanaAbierta === v) this.ventanaAbierta = null; removeEventListener('keydown', tecla, true); alCerrar && alCerrar(); };
     const tecla = (e) => { if (e.code === 'Escape' && !e.target.closest('input')) { e.preventDefault(); e.stopPropagation(); cerrar(); } };
     addEventListener('keydown', tecla, true);
     $('[data-a=x]', v).onclick = cerrar;
@@ -255,7 +297,8 @@ export const UI = {
     const cuerpo = el(`<div class="pausa-menu">
       <button class="boton primario" data-a="seguir">${t('seguir')}</button><button class="boton" data-a="probador">${t('canal_probador')}</button>
       <button class="boton" data-a="opciones">${t('canal_opciones')}</button><button class="boton" data-a="controles">${t('canal_controles')}</button>
-      <button class="boton" data-a="discos">${t('canal_discos')}</button><button class="boton" data-a="menu">${t('salir_menu')}</button></div>`);
+      <button class="boton" data-a="estilo">👾 ${t('estilo_titulo')}</button><button class="boton" data-a="discos">${t('canal_discos')}</button>
+      <button class="boton" data-a="menu" style="grid-column:1/-1">${t('salir_menu')}</button></div>`);
     const pie = `<div class="barra-pausa"><span class="p-nombre"></span><span><i class="orbe-icono" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></i> ${J.G.orbes}</span><span class="p-sala"></span></div>`;
     const v = this.ventana(t('pausa'), cuerpo, { alCerrar: () => J.pausar(false), pie });
     $('.p-nombre', v).textContent = J.G.nombre;
@@ -265,6 +308,7 @@ export const UI = {
     cuerpo.querySelector('[data-a=opciones]').onclick = () => this.opciones(() => this.pausa());
     cuerpo.querySelector('[data-a=controles]').onclick = () => this.controles(() => this.pausa());
     cuerpo.querySelector('[data-a=discos]').onclick = () => this.discos(() => this.pausa());
+    cuerpo.querySelector('[data-a=estilo]').onclick = () => this.estilo(() => this.pausa());
     cuerpo.querySelector('[data-a=menu]').onclick = () => { v.remove(); this.ventanaAbierta = null; J.salirAlMenu(); };
     this.focoTeclado(v, '[data-a=seguir]');
   },
@@ -282,23 +326,16 @@ export const UI = {
     c.appendChild(this.fila(t('op_musica'), this.deslizador(0, 1, 0.05, O.musica, (v) => { O.musica = v; J.volumen(); J.guardar(); })));
     c.appendChild(this.fila(t('op_efectos'), this.deslizador(0, 1, 0.05, O.efectos, (v) => { O.efectos = v; J.volumen(); J.guardar(); })));
     c.appendChild(this.fila(t('op_calidad'), this.segmentos(['auto', 'alta', 'media', 'baja'].map((q) => [q, t('cal_' + q)]), O.calidad, (q) => { O.calidad = q; J.ponerCalidad(q); J.guardar(); document.body.classList.toggle('calidadBaja', q === 'baja'); })));
-    c.appendChild(el(`<div class="op"><h3>${t('op_retro')}</h3></div>`));
-    const R = O.retro;
-    const niveles = (k, n) => this.segmentos([[0, t('op_ninguno')], ...Array.from({ length: n }, (_, i) => [i + 1, String(i + 1)])], R[k], (v) => { R[k] = v; J.ponerRetro(); J.guardar(); });
-    c.appendChild(this.fila(t('op_pix'), niveles('pix', 4)));
-    c.appendChild(this.fila(t('op_niveles'), niveles('niveles', 4)));
-    const onoff = (k) => this.segmentos([[0, t('no')], [1, t('si')]], R[k] ? 1 : 0, (v) => { R[k] = v; J.ponerRetro(); J.guardar(); });
-    c.appendChild(this.fila(t('op_trama'), onoff('trama')));
-    c.appendChild(this.fila(t('op_barrido'), onoff('barrido')));
-    c.appendChild(this.fila(t('op_tubo'), onoff('tubo')));
-    c.appendChild(this.fila(t('op_aberracion'), onoff('aberracion')));
+    const btnEstilo = el(`<button class="boton chico primario">👾 ${t('estilo_titulo')}</button>`);
+    btnEstilo.onclick = () => this.estilo(() => this.opciones(volver));
+    c.appendChild(this.fila(t('op_retro'), btnEstilo));
     c.appendChild(el('<div class="op"><h3>·</h3></div>'));
     c.appendChild(this.fila(t('op_camara'), this.deslizador(0.3, 2.5, 0.1, O.sensCam, (v) => { O.sensCam = v; J.guardar(); })));
     c.appendChild(this.fila(t('op_invertir'), this.segmentos([[false, t('no')], [true, t('si')]], O.invertirY, (v) => { O.invertirY = v; J.guardar(); })));
     c.appendChild(this.fila(t('op_nombres'), this.segmentos([[true, t('si')], [false, t('no')]], O.nombres, (v) => { O.nombres = v; J.guardar(); J.mostrarNombres(); })));
     c.appendChild(this.fila(t('op_reloj'), this.segmentos([[true, t('si')], [false, t('no')]], O.reloj24, (v) => { O.reloj24 = v; J.guardar(); })));
     const borrar = el(`<button class="boton chico" style="border-color:#ffb3c0;color:#e0405e">${t('op_borrar')}</button>`);
-    borrar.onclick = () => { if (confirm(t('op_borrar_seguro'))) J.borrarTodo(); };
+    borrar.onclick = () => this.confirmar(t('op_borrar_seguro'), () => J.borrarTodo());
     c.appendChild(this.fila('', borrar));
     this.ventana(t('canal_opciones'), c, { alCerrar: volver });
   },
@@ -432,8 +469,7 @@ export const UI = {
           if (mis) { J.avisarPantalla(t('prob_bloq_mision') + ' · ' + t('npc_' + mis)); J.probarPuesto(pest, v); return; }
           J.probarPuesto(pest, v);
           if (G.orbes < pr) { J.avisarPantalla(t('prob_faltan', { n: pr - G.orbes })); J.sfx('no'); return; }
-          if (confirm(t('prob_comprar', { q: t(R.pre + '_' + v), n: pr }))) { G.orbes -= pr; G.tengo.push(clave); G.A[pest] = v; J.aplicarApariencia(); J.sfx('orbe'); J.avisarPantalla(t('prob_comprado')); dibujar(); }
-          else J.aplicarApariencia();
+          this.confirmar(t('prob_comprar', { q: t(R.pre + '_' + v), n: pr }), () => { G.orbes -= pr; G.tengo.push(clave); G.A[pest] = v; J.aplicarApariencia(); J.sfx('orbe'); J.avisarPantalla(t('prob_comprado')); dibujar(); }, () => J.aplicarApariencia());
         };
         grilla.appendChild(b);
       }
@@ -470,6 +506,55 @@ export const UI = {
     $('[data-a=girar]', p).onclick = alGirar; $('[data-a=quitar]', p).onclick = alQuitar;
     $('[data-a=listo]', p).onclick = () => { p.remove(); alListo(); };
     return p;
+  },
+  /* ------------------------------------------------------------ estilo retro */
+  estilo(volver) {
+    const J = this.J, G = J.G;
+    const c = document.createElement('div');
+    const iconos = { normal: '✨', pixel: '👾', ps1: '🕹️', tubo: '📺', gameboy: '🟩', ochobits: '🎨', vhs: '📼' };
+    const g = el('<div class="estilos"></div>');
+    for (const n of Object.keys(ESTILOS)) {
+      const b = el(`<button class="estilo-carta ${G.opciones.estilo === n ? 'si' : ''}" data-e="${n}"><span class="muestra-estilo ${n}" style="${muestraEstilo(n) ? `background-image:url(${MUESTRAS[n]})` : ''}"><span>${iconos[n]}</span></span><b>${t('est_' + n)}</b><small>${t('est_' + n + '_d')}</small>${ESTILOS[n].pix >= 2 ? `<i class="rapido">⚡ ${t('est_rapido')}</i>` : ''}</button>`);
+      b.onclick = () => { J.ponerEstilo(n); J.sfx('guino'); this.estilo(volver); };
+      g.appendChild(b);
+    }
+    c.appendChild(g);
+    c.appendChild(el(`<div class="op"><h3>${t('estilo_ajuste')}</h3></div>`));
+    const R = G.opciones.retro;
+    const pon = (k, v) => { R[k] = v; J.ponerRetro(); J.guardar(); c.querySelectorAll('.estilo-carta').forEach((q) => q.classList.remove('si')); };
+    c.appendChild(this.fila(t('op_pix'), this.segmentos([[0, t('op_ninguno')], ...ALTOS_PIXEL.slice(1).map((a, i) => [i + 1, a + 'p'])], R.pix, (v) => pon('pix', v))));
+    c.appendChild(this.fila(t('estilo_paleta'), this.segmentos([[0, t('paleta_no')], [1, t('paleta_gb')], [2, t('paleta_8')]], R.paleta || 0, (v) => pon('paleta', v))));
+    c.appendChild(this.fila(t('op_niveles'), this.segmentos([[0, t('op_ninguno')], [1, '32'], [2, '16'], [3, '8'], [4, '5']], R.niveles, (v) => pon('niveles', v))));
+    const onoff = (k) => this.segmentos([[0, t('no')], [1, t('si')]], R[k] ? 1 : 0, (v) => pon(k, v));
+    for (const [k, n] of [['trama', 'op_trama'], ['ps1', 'estilo_ps1'], ['barrido', 'op_barrido'], ['tubo', 'op_tubo'], ['aberracion', 'op_aberracion'], ['vhs', 'est_vhs']]) c.appendChild(this.fila(t(n), onoff(k)));
+    this.ventana(t('estilo_titulo'), c, { ancho: 720, alCerrar: volver });
+  },
+  /* preguntar sí o no dentro del juego (confirm() del navegador no anda en todos lados) */
+  confirmar(texto, alSi, alNo = () => {}) {
+    const d = this.poner(el(`<div class="velo" style="z-index:25"><div class="ventana" style="width:min(440px,92vw)"><div class="cuerpo" style="display:flex;flex-direction:column;gap:16px;text-align:center"><b style="font-size:19px;line-height:1.4"></b><div class="fila"><button class="boton chico" data-a="no">${t('no')}</button><button class="boton chico primario" data-a="si">${t('si')}</button></div></div></div></div>`));
+    $('b', d).textContent = texto;
+    const fin = (f) => { d.remove(); f(); };
+    $('[data-a=si]', d).onclick = () => fin(alSi); $('[data-a=no]', d).onclick = () => fin(alNo);
+    setTimeout(() => $('[data-a=si]', d).focus(), 50);
+  },
+  /* un error: se avisa sin tapar el juego, con dos salidas */
+  error(msg, alBajar) {
+    if (!this.raiz) return;
+    const d = this.poner(el(`<div class="cartel-error"><b>⚠️ ${t('error_titulo')}</b><p></p><small></small><div class="fila"><button class="boton chico" data-a="baja">${t('error_baja')}</button><button class="boton chico" data-a="recargar">${t('error_recargar')}</button><button class="boton chico primario" data-a="ok">${t('seguir')}</button></div></div>`));
+    $('p', d).textContent = t('error_texto'); $('small', d).textContent = msg;
+    $('[data-a=ok]', d).onclick = () => d.remove();
+    $('[data-a=baja]', d).onclick = () => { alBajar(); d.remove(); };
+    $('[data-a=recargar]', d).onclick = () => location.reload();
+  },
+  /* el cartel del tutorial (null lo saca) */
+  tuto(texto) {
+    if (!this.hud) return;
+    let d = $('.tuto', this.hud);
+    if (!texto) { d && d.remove(); this._tuto = null; return; }
+    if (this._tuto === texto && d) return;
+    this._tuto = texto;
+    if (!d) { d = el('<div class="tuto"></div>'); this.hud.appendChild(d); }
+    d.textContent = texto; d.style.animation = 'none'; void d.offsetWidth; d.style.animation = '';
   },
   /* flechas y Enter para moverse entre botones (con teclado o mando) */
   focoTeclado(raiz, primero) {

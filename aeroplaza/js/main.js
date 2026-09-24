@@ -6,7 +6,7 @@
    ?calidad=baja, ?pausa (sin bucle: lo avanzan las pruebas), ?x=&z=&yaw=…
    ========================================================================== */
 import * as THREE from 'three';
-import { Motor } from './motor.js';
+import { Motor, TACTIL, ESTILOS } from './motor.js';
 import { Cielo } from './cielo.js';
 import { TEX, UNI, JUGADOR, aguaSigueCielo, materialBurbuja } from './naturaleza.js';
 import { TEXTURAS_MOTIVO, Meeple, APARIENCIA_INICIAL, MATERIALES, MOTIVOS, SOMBREROS, ANTEOJOS, ESPALDAS, PEINADOS, PARTICULAS } from './meeple.js';
@@ -54,6 +54,18 @@ function apariencia(A) {
     espalda: de(A.espalda, ESPALDAS, B.espalda), peinado: de(A.peinado, PEINADOS, B.peinado), particulas: de(A.particulas, PARTICULAS, B.particulas) };
 }
 
+/* un cartel que tapa todo, para cuando no se puede seguir (sin WebGL, placa reiniciada) */
+function fatal(texto, alTocar) {
+  document.getElementById('precarga')?.remove();
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(0deg,#f4f6f8 0 3px,#e9ecef 3px 4px);font:700 20px/1.5 system-ui,sans-serif;color:#5b6168;text-align:center;padding:24px';
+  const c = document.createElement('div');
+  c.style.cssText = 'background:#fff;border:3px solid #d9dde1;border-radius:24px;padding:28px 30px;max-width:520px;box-shadow:0 6px 18px rgba(40,60,80,.12)';
+  c.textContent = texto; d.appendChild(c);
+  if (alTocar) d.addEventListener('pointerdown', alTocar);
+  document.body.appendChild(d);
+}
+
 async function iniciar() {
   await cargarTexturas();
   await cargarDelfin();
@@ -62,7 +74,21 @@ async function iniciar() {
   if (Q.has('nombre')) G.nombre = Q.get('nombre').slice(0, 16);
   if (G.idioma) ponerIdioma(G.idioma);
   Misiones.G = G;
-  const motor = new Motor(document.getElementById('lienzo'));
+  /* sin WebGL no hay juego: se dice por qué y qué hacer, en vez de quedar en blanco */
+  let motor;
+  try { motor = new Motor(document.getElementById('lienzo')); } catch (e) { console.error(e); fatal(t('sin_webgl')); return; }
+  /* cualquier error se muestra en un cartel y el juego sigue (antes, uno solo congelaba todo) */
+  const vistos = new Set();
+  const mostrarError = (e) => {
+    const m = String((e && (e.message || (e.reason && e.reason.message) || e.reason)) || e).slice(0, 180);
+    console.error(e);
+    if (vistos.has(m) || vistos.size > 4) return; vistos.add(m);
+    try { UI.error(m, () => { J.ponerCalidad('baja'); G.opciones.calidad = 'baja'; Guardado.guardar(); }); } catch { /* la interfaz todavía no está */ }
+  };
+  addEventListener('error', (ev) => { if (ev.error) mostrarError(ev.error); });
+  addEventListener('unhandledrejection', (ev) => mostrarError(ev.reason));
+  /* si la placa se reinicia (pasa en celulares con poca memoria), se vuelve en calidad baja */
+  motor.lienzo.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); G.opciones.calidad = 'baja'; Guardado.ya(); fatal(t('contexto_perdido'), () => location.reload()); });
   const nubes = ['nube-1', 'nube-2', 'nube-3'].map((k) => TEX[k]).filter(Boolean);
   const cielo = new Cielo(motor, nubes);
   const ent = new Entrada(motor.lienzo, document.getElementById('dedos'));
@@ -73,6 +99,7 @@ async function iniciar() {
   const efectos = new THREE.Group(); motor.escena.add(efectos);
   const chispas = new Chispas(efectos, '#ffffff', 160);
 
+  let tuto = null;
   let reino = null, yo = null, enJuego = false, pausado = false, enDialogo = false, probador = false, modoFoto = false, construyendo = null;
   let tHud = 0, tPresencia = 0, gestoN = 0, tDisparo = 0, tSinGolpe = 9, tMedir = 0, cuadros = 0, sumaDt = 0, midiendo = true;
   const cache = {};
@@ -88,8 +115,9 @@ async function iniciar() {
     volumen() { try { Sonido.volumenes(G.opciones.musica, G.opciones.efectos); } catch { /* nada */ } },
     guardar() { Guardado.guardar(); },
     guardarControles() { G.controles = ent.config; Guardado.guardar(); },
-    ponerCalidad(q) { if (q === 'auto') { midiendo = true; cuadros = 0; sumaDt = 0; tMedir = 0; q = 'alta'; } else midiendo = false; motor.ponerCalidad(q); for (const k in cache) delete cache[k]; },
-    ponerRetro() { motor.ponerRetro(G.opciones.retro); },
+    ponerCalidad(q) { if (q === 'auto') { midiendo = true; cuadros = 0; sumaDt = 0; tMedir = 0; q = TACTIL ? 'media' : 'alta'; } else midiendo = false; motor.ponerCalidad(q); for (const k in cache) if (cache[k] !== reino) delete cache[k]; },
+    ponerRetro() { G.opciones.estilo = 'libre'; motor.ponerRetro(G.opciones.retro); },
+    ponerEstilo(n) { G.opciones.estilo = n; G.opciones.retro = { ...ESTILOS[n] }; motor.ponerRetro(G.opciones.retro); Guardado.guardar(); },
     mostrarNombres() { for (const r of remotos.m.values()) if (r.m.cartel) r.m.cartel.visible = G.opciones.nombres; },
     alCambiarIdioma() { if (reino) for (const n of reino.npcMallas || []) n.m.ponerNombre(t('npc_' + n.id)); },
     borrarTodo() { Guardado.borrar(); location.reload(); },
@@ -169,6 +197,7 @@ async function iniciar() {
     for (const d of disparos) efectos.remove(d.m); disparos.length = 0;
     reino = construirReino(id, o);
     motor.escena.add(reino.grupo);
+    motor.aplicarPS1(reino.grupo);
     cielo.ponerModo(reino.cielo || {});
     if (Q.has('hora') && reino.cielo?.hora == null) cielo.ponerModo({ ...(reino.cielo || {}), hora: +Q.get('hora') });
     cielo.sol.intensity = 0;
@@ -203,6 +232,7 @@ async function iniciar() {
   function empezarJuego(id = 'plaza', o = {}) {
     UI.cargando();
     setTimeout(() => {
+     try {
       if (!yo) yo = new Jugador(motor.escena, G.A, G.nombre);
       yo.m.ponerApariencia(G.A); yo.m.ponerNombre(G.nombre, true);
       entrarReino(Q.get('reino') || id);
@@ -212,7 +242,13 @@ async function iniciar() {
       UI.juego();
       ent.mostrarDedos(true);
       if (o.probador) abrirProbador();
-      else if (!G.visto.bienvenida) { G.visto.bienvenida = true; setTimeout(() => UI.avisar(t('plaza_desc').split('.')[0] + '.', 'azul'), 800); }
+      else if (!G.visto.tuto) tuto = { paso: 0, t: 0, lejos: 0, giro: 0, desde: yo.p.clone() };
+     } catch (e) {
+      /* si armar el reino falla (poca memoria, placa rara), se reintenta una vez en calidad baja */
+      console.error(e);
+      if (!J._reintento) { J._reintento = true; motor.ponerCalidad('baja'); for (const k in cache) delete cache[k]; reino = null; empezarJuego(id, o); }
+      else { mostrarError(e); UI.menu(); }
+     }
     }, 60);
   }
   function salirAlMenu() {
@@ -473,27 +509,55 @@ async function iniciar() {
     }
     const bajo = reino.mundo.agua != null && motor.camara.position.y < reino.mundo.agua - 0.05;
     motor.pFinal.uniforms.uAgua.value += ((bajo ? 1 : 0) - motor.pFinal.uniforms.uAgua.value) * Math.min(1, dt * 6);
+    cielo.bajoAgua = bajo;
     if (bajo !== J._bajo) { J._bajo = bajo; try { Sonido.agua(bajo); } catch { /* nada */ } motor.escena.fog.near = bajo ? 2 : 140; motor.escena.fog.far = bajo ? 45 : 950; }
     if (bajo) motor.escena.fog.color.set('#1a8fc0');
-    /* la calidad automática: los primeros segundos se mide y se baja si hace falta */
+    /* la calidad automática: se miden 60 cuadros de verdad (no el dt recortado) y se sube o baja */
     if (midiendo && G.opciones.calidad === 'auto' && !Q.has('calidad')) {
-      tMedir += dt; if (tMedir > 2) { cuadros++; sumaDt += dt; }
-      if (cuadros > 150) {
-        const ms = sumaDt / cuadros * 1000; cuadros = 0; sumaDt = 0;
-        const q = motor.nombreCalidad;
-        if (ms > 26 && q !== 'baja') motor.ponerCalidad(q === 'alta' ? 'media' : 'baja');
+      tMedir += dt; if (tMedir > 1.5 && J.dtReal) { cuadros++; sumaDt += Math.min(0.25, J.dtReal); }
+      if (cuadros >= 60) {
+        const ms = sumaDt / cuadros * 1000, q = motor.nombreCalidad; cuadros = 0; sumaDt = 0; tMedir = 0.5;
+        if (ms > 30 && q !== 'baja') { motor.ponerCalidad(q === 'alta' ? 'media' : 'baja'); UI.avisar(t('subio_calidad', { n: t('cal_' + motor.nombreCalidad) })); }
+        else if (ms > 45 && !G.opciones.retro.pix) { UI.avisar(t('lento_pixel'), 'azul'); midiendo = false; }
+        else if (ms < 13 && q === 'media' && !TACTIL && !J._subio) { J._subio = true; motor.ponerCalidad('alta'); }
         else midiendo = false;
       }
     }
+    /* los materiales nuevos (gente que llega, ropa nueva) también tiemblan en PS1 */
+    if (G.opciones.retro.ps1) { J._tPS1 = (J._tPS1 || 0) + dt; if (J._tPS1 > 1.5) { J._tPS1 = 0; motor.aplicarPS1(); } }
+    if (tuto) seguirTuto(dt, E);
     tHud += dt; if (tHud > 0.25) { tHud = 0; UI.actualizarHud(); }
     if (dibujar) motor.dibujar(dt);
   }
 
+  /* el tutorial de primeros pasos: un cartel por vez, que se va cuando se hizo */
+  function seguirTuto(dt, E) {
+    const pasos = ['mover', 'saltar', 'camara', 'hablar', 'listo'];
+    const n = pasos[tuto.paso]; if (!n) { tuto = null; return; }
+    const dedo = ent.tactil && !['camara', 'listo'].includes(n) ? '_dedo' : '';
+    UI.tuto(t('tuto_' + n + dedo));
+    tuto.t += dt;
+    let hecho = false;
+    if (n === 'mover') hecho = yo.p.distanceTo(tuto.desde) > 4;
+    else if (n === 'saltar') hecho = yo.eventos.includes('salto') || yo.eventos.includes('doble');
+    else if (n === 'camara') { tuto.giro += Math.abs(E.camX) + Math.abs(E.camY); hecho = tuto.giro > 1.2 || tuto.t > 8; }
+    else if (n === 'hablar') hecho = Misiones.estado('nimbo').e !== 'nueva' || tuto.t > 40;
+    else if (n === 'listo') hecho = tuto.t > 4;
+    if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
+  }
+
   window.__A = { Sonido, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, cam, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
   let ult = performance.now();
-  const bucle = (tt) => { const dt = Math.min(0.05, (tt - ult) / 1000); ult = tt; if (!window.__pausa) paso(dt); requestAnimationFrame(bucle); };
+  /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
+  const bucle = (tt) => {
+    requestAnimationFrame(bucle);
+    const real = (tt - ult) / 1000; ult = tt; J.dtReal = real;
+    if (window.__pausa) return;
+    try { paso(Math.min(0.05, real)); } catch (e) { mostrarError(e); }
+  };
   if (!Q.has('pausa')) requestAnimationFrame(bucle);
   if (G.opciones.calidad !== 'auto') { midiendo = false; motor.ponerCalidad(G.opciones.calidad); }
+  else motor.ponerCalidad(TACTIL ? 'media' : 'alta');
   if (Q.has('calidad')) motor.ponerCalidad(Q.get('calidad'));
   motor.ponerRetro(G.opciones.retro);
 
@@ -506,4 +570,4 @@ async function iniciar() {
   if (!G.idioma) UI.idioma((i) => { G.idioma = i; Guardado.guardar(); aMenu(); });
   else aMenu();
 }
-iniciar();
+iniciar().catch((e) => { console.error(e); fatal(String(e && e.message || e)); });

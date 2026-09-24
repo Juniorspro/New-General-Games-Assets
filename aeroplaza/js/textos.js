@@ -5,6 +5,13 @@
    ========================================================================== */
 const T = {
   es: {
+    jugar: 'Jugar', canal_estilo: 'Estilo retro', estilo_titulo: 'Estilo retro', estilo_ajuste: 'Ajuste fino', estilo_ps1: 'Temblor PS1', estilo_paleta: 'Paleta', paleta_no: 'Libre', paleta_gb: 'Game Boy', paleta_8: '8 bits',
+    est_normal: 'Normal', est_normal_d: 'Nítido, con brillo y reflejos.', est_pixel: 'Pixel', est_pixel_d: '270 líneas, 16 tonos y tramado. Va más rápido.', est_ps1: 'PS1', est_ps1_d: 'Vértices que tiemblan, 200 líneas, color de 15 bits.',
+    est_tubo: 'Tele de tubo', est_tubo_d: 'Pantalla curva, líneas y colores corridos.', est_gameboy: 'Game Boy', est_gameboy_d: 'Cuatro verdes y 144 líneas.', est_ochobits: '8 bits', est_ochobits_d: '16 colores de consola de fantasía.', est_vhs: 'VHS', est_vhs_d: 'Cinta vieja: tiembla, raya y ruido.',
+    est_rapido: 'Va rápido', error_titulo: 'Uy, algo falló', error_texto: 'El juego sigue andando. Si se traba, probá la calidad baja o el estilo Pixel (es el más liviano).', error_baja: 'Calidad baja', error_recargar: 'Recargar', sin_webgl: 'Este navegador no puede dibujar en 3D (WebGL). Abrí el archivo con Chrome, Edge, Firefox o Safari.', contexto_perdido: 'La placa de video se reinició. Tocá para seguir en calidad baja.',
+    lento_pixel: 'Va lento en este aparato: probá el estilo Pixel (👾), es muchísimo más rápido', subio_calidad: 'Calidad: {n}',
+    tuto_mover: 'Movete con WASD o las flechas · en el celu, con la palanca', tuto_mover_dedo: 'Movete con la palanca de la izquierda', tuto_saltar: 'Saltá con Espacio (dos veces: doble salto)', tuto_saltar_dedo: 'Saltá con ⤒ (dos veces: doble salto)', tuto_camara: 'Arrastrá para mirar alrededor', tuto_hablar: 'Buscá a Nimbo (gorro blanco) y hablale con E', tuto_hablar_dedo: 'Buscá a Nimbo (gorro blanco) y hablale con ✋', tuto_listo: '¡Listo! Explorá, juntá orbes y tomá el tren 🚆',
+    consejo_1: 'Consejo: el tren de la estación lleva a los otros reinos', consejo_2: 'Consejo: con 👾 cambiás a estilo Pixel, PS1, Game Boy o VHS', consejo_3: 'Consejo: las frutas de la huerta te agrandan, te achican o te pintan', consejo_4: 'Consejo: en la fuente de la plaza hay burbujas para volar',
     idioma_titulo: 'Elegí tu idioma', aviso_titulo: '¡Hola!', aviso_texto: 'AEROPLAZA es un lugar para pasear con gente de todo el mundo. Sé amable en el chat, tomate un descanso cada tanto y tomá agua.',
     aviso_seguir: 'Tocá la pantalla para seguir', aviso_seguir_pc: 'Hacé clic o apretá una tecla para seguir',
     canal_plaza: 'Plaza', canal_probador: 'Probador', canal_salas: 'Salas', canal_opciones: 'Opciones', canal_controles: 'Controles', canal_creditos: 'Créditos', canal_discos: 'Discos', canal_casa: 'Mi casa',
@@ -47,6 +54,13 @@ const T = {
     npc_nimbo: 'Nimbo', npc_lima: 'Lima', npc_burbu: 'Burbu', npc_vendedora: 'Menta', npc_coral: 'Coral', npc_estela: 'Estela', npc_loto: 'Loto', npc_guia: 'Guía',
   },
   en: {
+    jugar: 'Play', canal_estilo: 'Retro style', estilo_titulo: 'Retro style', estilo_ajuste: 'Fine tuning', estilo_ps1: 'PS1 wobble', estilo_paleta: 'Palette', paleta_no: 'Free', paleta_gb: 'Game Boy', paleta_8: '8-bit',
+    est_normal: 'Normal', est_normal_d: 'Sharp, with glow and reflections.', est_pixel: 'Pixel', est_pixel_d: '270 lines, 16 tones and dithering. Runs faster.', est_ps1: 'PS1', est_ps1_d: 'Wobbly vertices, 200 lines, 15-bit colour.',
+    est_tubo: 'CRT TV', est_tubo_d: 'Curved screen, scanlines and colour fringing.', est_gameboy: 'Game Boy', est_gameboy_d: 'Four greens and 144 lines.', est_ochobits: '8-bit', est_ochobits_d: '16 fantasy-console colours.', est_vhs: 'VHS', est_vhs_d: 'Old tape: wobble, tracking and noise.',
+    est_rapido: 'Fast', error_titulo: 'Oops, something went wrong', error_texto: 'The game keeps running. If it gets stuck, try low quality or the Pixel style (the lightest).', error_baja: 'Low quality', error_recargar: 'Reload', sin_webgl: 'This browser cannot draw 3D (WebGL). Open the file in Chrome, Edge, Firefox or Safari.', contexto_perdido: 'The graphics card restarted. Tap to continue in low quality.',
+    lento_pixel: "It's slow on this device: try the Pixel style (👾), it's much faster", subio_calidad: 'Quality: {n}',
+    tuto_mover: 'Move with WASD or the arrows · on phones, with the stick', tuto_mover_dedo: 'Move with the stick on the left', tuto_saltar: 'Jump with Space (twice: double jump)', tuto_saltar_dedo: 'Jump with ⤒ (twice: double jump)', tuto_camara: 'Drag to look around', tuto_hablar: 'Find Nimbo (white beanie) and press E to talk', tuto_hablar_dedo: 'Find Nimbo (white beanie) and tap ✋ to talk', tuto_listo: 'All set! Explore, collect orbs and take the train 🚆',
+    consejo_1: 'Tip: the station train goes to the other realms', consejo_2: 'Tip: with 👾 you switch to Pixel, PS1, Game Boy or VHS style', consejo_3: 'Tip: orchard fruit makes you big, small or paints you', consejo_4: 'Tip: the plaza fountain has bubbles to fly in',
     idioma_titulo: 'Choose your language', aviso_titulo: 'Hi there!', aviso_texto: 'AEROPLAZA is a place to hang out with people from all over the world. Be kind in the chat, take a break now and then, and drink some water.',
     aviso_seguir: 'Tap the screen to continue', aviso_seguir_pc: 'Click or press a key to continue',
     canal_plaza: 'Plaza', canal_probador: 'Dressing room', canal_salas: 'Rooms', canal_opciones: 'Settings', canal_controles: 'Controls', canal_creditos: 'Credits', canal_discos: 'Discs', canal_casa: 'My home',
@@ -89,6 +103,13 @@ const T = {
     npc_nimbo: 'Nimbo', npc_lima: 'Lime', npc_burbu: 'Bubs', npc_vendedora: 'Mint', npc_coral: 'Coral', npc_estela: 'Stella', npc_loto: 'Lotus', npc_guia: 'Guide',
   },
   pt: {
+    jugar: 'Jogar', canal_estilo: 'Estilo retrô', estilo_titulo: 'Estilo retrô', estilo_ajuste: 'Ajuste fino', estilo_ps1: 'Tremor de PS1', estilo_paleta: 'Paleta', paleta_no: 'Livre', paleta_gb: 'Game Boy', paleta_8: '8 bits',
+    est_normal: 'Normal', est_normal_d: 'Nítido, com brilho e reflexos.', est_pixel: 'Pixel', est_pixel_d: '270 linhas, 16 tons e pontilhado. Mais rápido.', est_ps1: 'PS1', est_ps1_d: 'Vértices que tremem, 200 linhas, cor de 15 bits.',
+    est_tubo: 'TV de tubo', est_tubo_d: 'Tela curva, linhas e cores borradas.', est_gameboy: 'Game Boy', est_gameboy_d: 'Quatro verdes e 144 linhas.', est_ochobits: '8 bits', est_ochobits_d: '16 cores de console de fantasia.', est_vhs: 'VHS', est_vhs_d: 'Fita velha: tremida, riscos e ruído.',
+    est_rapido: 'Rápido', error_titulo: 'Ops, algo falhou', error_texto: 'O jogo continua. Se travar, tente a qualidade baixa ou o estilo Pixel (o mais leve).', error_baja: 'Qualidade baixa', error_recargar: 'Recarregar', sin_webgl: 'Este navegador não desenha em 3D (WebGL). Abra o arquivo no Chrome, Edge, Firefox ou Safari.', contexto_perdido: 'A placa de vídeo reiniciou. Toque para continuar em qualidade baixa.',
+    lento_pixel: 'Está lento neste aparelho: tente o estilo Pixel (👾), é muito mais rápido', subio_calidad: 'Qualidade: {n}',
+    tuto_mover: 'Ande com WASD ou as setas · no celular, com a alavanca', tuto_mover_dedo: 'Ande com a alavanca da esquerda', tuto_saltar: 'Pule com Espaço (duas vezes: pulo duplo)', tuto_saltar_dedo: 'Pule com ⤒ (duas vezes: pulo duplo)', tuto_camara: 'Arraste para olhar em volta', tuto_hablar: 'Procure o Nimbo (gorro branco) e fale com E', tuto_hablar_dedo: 'Procure o Nimbo (gorro branco) e fale com ✋', tuto_listo: 'Pronto! Explore, junte orbes e pegue o trem 🚆',
+    consejo_1: 'Dica: o trem da estação leva aos outros reinos', consejo_2: 'Dica: com 👾 você muda para Pixel, PS1, Game Boy ou VHS', consejo_3: 'Dica: as frutas do pomar te aumentam, diminuem ou pintam', consejo_4: 'Dica: na fonte da praça tem bolhas para voar',
     idioma_titulo: 'Escolha seu idioma', aviso_titulo: 'Olá!', aviso_texto: 'AEROPLAZA é um lugar para passear com gente do mundo todo. Seja gentil no chat, faça uma pausa de vez em quando e beba água.',
     aviso_seguir: 'Toque na tela para continuar', aviso_seguir_pc: 'Clique ou aperte uma tecla para continuar',
     canal_plaza: 'Praça', canal_probador: 'Provador', canal_salas: 'Salas', canal_opciones: 'Opções', canal_controles: 'Controles', canal_creditos: 'Créditos', canal_discos: 'Discos', canal_casa: 'Minha casa',

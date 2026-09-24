@@ -36,6 +36,8 @@ export class Red {
   conectar(url = BROKER) {
     const intentar = (vueltas) => {
       if (window.mqtt && window.mqtt.connect) return this._conectar(url);
+      /* si unpkg no respondió en 4 s, se prueba la misma biblioteca desde jsDelivr */
+      if (vueltas === 15 && !document.getElementById('mqtt-respaldo')) { const s = document.createElement('script'); s.id = 'mqtt-respaldo'; s.async = true; s.src = 'https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js'; document.head.appendChild(s); }
       if (vueltas <= 0) { this.ponerEstado('sin_red'); return; }
       setTimeout(() => intentar(vueltas - 1), 400);
     };
@@ -58,7 +60,13 @@ export class Red {
       this.presencia(true);
     });
     c.on('reconnect', () => this.ponerEstado('conectando'));
-    c.on('close', () => this.ponerEstado(this.cli && this.cli.reconnecting ? 'conectando' : 'sin_red'));
+    /* si nunca conectó y ya falló 4 veces (sin internet, o una página que no deja abrir WebSocket), se deja de insistir */
+    let fallos = 0, alguna = false;
+    c.on('connect', () => { alguna = true; });
+    c.on('close', () => {
+      if (!alguna && ++fallos >= 4) { try { c.end(true); } catch { /* nada */ } this.ponerEstado('sin_red'); return; }
+      this.ponerEstado(this.cli && this.cli.reconnecting ? 'conectando' : 'sin_red');
+    });
     c.on('offline', () => this.ponerEstado('sin_red'));
     c.on('error', (e) => { console.warn('red:', e && e.message); this.ponerEstado('sin_red'); });
     c.on('message', (tema, datos) => this.recibir(tema, datos));

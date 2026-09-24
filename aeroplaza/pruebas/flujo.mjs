@@ -26,6 +26,7 @@ await pag.waitForSelector('.canales');
 await esperar(600);
 await foto('3-menu');
 prueba('menú de canales con 12 lugares', (await pag.locator('.canal').count()) === 12);
+prueba('hay un botón grande de Jugar', await pag.locator('.jugar-grande').isVisible());
 await tocar('.canal[data-c=plaza]');
 await esperar(600);
 await foto('4-canal');
@@ -33,6 +34,16 @@ await tocar('[data-a=empezar]');
 await pag.waitForSelector('.hud', { timeout: 60000 });
 await avanzar(pag, 30);
 await foto('5-juego');
+prueba('el tutorial dice cómo moverse', /palanca|WASD/.test(await pag.locator('.tuto').textContent().catch(() => '')));
+/* la ventana de estilos retro, desde el botón 👾 del HUD */
+await tocar('[data-a=estilo]'); await esperar(900);
+await foto('5b-estilos');
+prueba('la ventana de estilos tiene 7 estilos', (await pag.locator('.estilo-carta').count()) === 7);
+await tocar('.estilo-carta[data-e=pixel]'); await avanzar(pag, 3);
+prueba('el estilo Pixel dibuja a 270 líneas', await pag.evaluate(() => window.__A.motor.r.domElement.height) === 270);
+await pag.evaluate(() => window.__A.UI.cerrarVentana()); await avanzar(pag, 2);
+await foto('5c-pixel');
+await pag.evaluate(() => window.__A.J.ponerEstilo('normal'));
 prueba('HUD con hotbar de 5', (await pag.locator('.ranura').count()) === 5);
 /* hablar con Nimbo: se lo pone al lado y se aprieta usar */
 await pag.evaluate(() => { const A = window.__A, n = A.reino.npcMallas.find((q) => q.id === 'nimbo').m.raiz.position; A.yo.p.set(n.x + 1.5, n.y, n.z); A.yo.rumbo = -Math.PI / 2; });
@@ -54,7 +65,11 @@ prueba('la misión aparece arriba a la izquierda', mis === 1);
 await pag.evaluate(() => window.__A.J.abrirProbador());
 await avanzar(pag, 10);
 await tocar('.pestanas [data-p=sombrero]');
-await tocar('.opciones-prob .item:nth-child(4)');   // galera (se compra)
+await tocar('.opciones-prob .item:nth-child(4)');   // galera: 25 orbes, hay 15 → avisa que faltan
+await pag.evaluate(() => { window.__A.G.orbes = 40; });
+await tocar('.opciones-prob .item:nth-child(4)');
+await tocar('.velo [data-a=si]');
+prueba('se compra con la confirmación propia', await pag.evaluate(() => window.__A.G.tengo.includes('sombrero:galera') && window.__A.G.orbes === 15));
 await avanzar(pag, 5);
 await esperar(400); await foto('7-probador');
 prueba('el probador muestra el muñeco y los sombreros', (await pag.locator('.opciones-prob .item').count()) > 8);

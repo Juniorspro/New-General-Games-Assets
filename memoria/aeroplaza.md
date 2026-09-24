@@ -18,8 +18,7 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   - se dibuja solo el último cuadro;
   - después un `readPixels` espera a SwiftShader. Si no, `screenshot` se
     cuelga 30 s esperando los cuadros encolados.
-- Tiempos: `reinos.mjs` ~15 s por reino; `multijugador.mjs` ~3 min;
-  `flujo.mjs` ~4 min.
+- Tiempos: `reinos.mjs` ~15 s por reino, `multijugador.mjs` ~3 min, `flujo.mjs` ~4 min.
 
 ## La red (lo que pidió, punto por punto)
 
@@ -48,8 +47,41 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   - A los 5 s se va el que no manda, y sin red queda "sin conexión" y se juega.
 - **No se probó contra el broker público de verdad** (sin salida desde acá).
 
+## Segunda vuelta: "no me deja jugar" + efectos pixel (24/09)
+
+- No se supo la causa exacta: no hubo captura ni mensaje. Se arreglaron todas las causas probables.
+  - **El bucle se pedía después de dibujar:** un error en un cuadro congelaba
+    todo. Ahora primero va `requestAnimationFrame(bucle)` y después `try`, más
+    un cartel de error con "calidad baja" y "recargar"
+    (`pruebas/resiste.mjs`).
+  - **En el celu arrancaba en alta**, con MSAA, doble de píxeles y sombras de
+    2048. Ahora arranca en media. La automática mide 60 cuadros de tiempo real
+    (no el dt recortado) y baja; en compu puede subir.
+  - Hay un cartel de "cargando" en el HTML mismo, que se ve sin JavaScript. A
+    los 7 s dice que se abra con Chrome o Safari. También hay `<noscript>`,
+    aviso sin WebGL y aviso de contexto perdido.
+  - Hay un botón grande "▶ Jugar" en el menú y un tutorial de 5 pasos.
+- **Estilos retro** (`motor.js › ESTILOS`, botón 👾): Pixel 270p, PS1 200p
+  con temblor, Tubo, Game Boy 144p, 8 bits (paleta Sweetie 16) y VHS.
+  - Se dibuja de verdad a pocas líneas, con `image-rendering: pixelated`: por
+    eso también son la calidad más liviana.
+  - El temblor de PS1 es un `#define PS1` en `ShaderChunk.project_vertex`, que
+    se agrega a los materiales recorriendo la escena.
+  - Las líneas de TV son una capa CSS a la resolución de la pantalla.
+- `dist/aeroplaza-web.html` es la versión para publicar como Artifact: sin
+  `<html>`/`<head>`/`<body>` y sin canciones. Ahí el CSP bloquea los
+  WebSocket, así que se juega solo; la red deja de insistir tras 4 fallos.
+
 ## Trampas que ya se pagaron
 
+- **`addEventListener(…, true)` se saca con `removeEventListener(…, true)`.**
+  Si no, la ventana cerrada deja su Escape en captura y se come la pausa.
+- **`confirm()` no anda en todos lados:** en los Artifacts devuelve false y no
+  se podía comprar. Se pregunta con `UI.confirmar`.
+- **Game Boy y 8 bits:** la escena es clara y todo caía en los tonos de
+  arriba. Se usa una curva `pow(l, 1.3)` y la paleta de emulador. La de
+  consola de fantasía pintaba el pasto de violeta; la Sweetie 16 tiene los
+  celestes y verdes del Aero.
 - **La animación CSS pisa el centrado.** Un `@keyframes` con
   `transform: scale()` le borró el `translateX(-50%)` al diálogo, y el botón
   Aceptar quedó fuera de pantalla. Los centrados usan `apareceC`.
@@ -75,9 +107,7 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   lo tapa.
 - **Rezona con `n: 3`** devolvió una sola nube (g2 y g3 dan 404). Las otras
   dos se sacan espejando y recortando.
-- **`PCFSoftShadowMap` ya no existe** en three 0.186: avisa y usa `PCFShadowMap`.
-- **Apagar las sombras en caliente:** con `sol.castShadow = false` three
-  recompila solo.
+- **`PCFSoftShadowMap` ya no existe** en three 0.186. Las sombras se apagan en caliente con `sol.castShadow = false` (three recompila solo).
 - **La hora fija de un reino.** La Aurora es de noche siempre: `?hora=` no la
   pisa.
 

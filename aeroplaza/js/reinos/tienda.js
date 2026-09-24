@@ -64,7 +64,7 @@ export function crearTienda() {
   const npcs = [{ id: 'vendedora', pos: [0, -D / 2 + 1.8], rot: 0, y: 0 }];
   let t = 0;
   return {
-    id: 'tienda', mundo, grupo: g, inicio: new THREE.Vector3(0, 0, D / 2 - 3.5), rumboInicio: Math.PI, caja: [-W / 2 + 0.6, W / 2 - 0.6, -D / 2 + 0.6, D / 2 - 0.6, H - 0.8], musica: 'ciudad', interior: true, cielo: { hora: 0.5, aurora: 0, nubes: 0 },
+    id: 'tienda', mundo, grupo: g, inicio: new THREE.Vector3(0, 0, D / 2 - 3.5), rumboInicio: Math.PI, caja: [-W / 2 + 0.6, W / 2 - 0.6, -D / 2 + 0.6, D / 2 - 0.6, H - 0.8], musica: 'ciudad', interior: true, cielo: { hora: 0.5, aurora: 0, nubes: 0, interior: true },
     npcs, discos: [], orbes: null,
     actualizar(dt) { t += dt; pedestales.forEach((p, i) => { p.m.raiz.rotation.y += dt * 0.8; p.m.animar(dt, 'quieto', 0); }); },
   };

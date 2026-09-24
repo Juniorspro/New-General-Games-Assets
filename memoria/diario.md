@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **24/09/2026, noche (3) · `claude/fijate-iszyer`:**
+  - Dijo "no me deja jugar" (sin detalle) y pidió mejorar todo y efectos
+    pixel. Se blindó el arranque y se agregaron siete estilos retro a baja
+    resolución: [aeroplaza](aeroplaza.md) § Segunda vuelta.
+  - Falta saber en qué aparato le falló, para confirmar que era eso.
 - **24/09/2026, noche (2) · `claude/fijate-iszyer`:**
   - Pidió replicar en HTML el juego de @frutiger_space (TikTok), "mejorado un
     1000%", con multijugador global por salas públicas sin código. Tenía que
