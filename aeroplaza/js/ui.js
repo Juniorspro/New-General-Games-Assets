@@ -11,6 +11,8 @@ import { NPCS } from './misiones.js';
 
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
+/* el muñeco de gelatina dibujado, para los canales */
+const muneco = (c, alto) => `<svg class="muneco" style="height:${alto}%" viewBox="0 0 60 100"><defs><radialGradient id="g${c.slice(1)}" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".85"/></radialGradient></defs><ellipse cx="30" cy="96" rx="20" ry="3" fill="rgba(0,0,0,.12)"/><path d="M10 94 Q6 60 20 46 Q30 38 40 46 Q54 60 50 94 Z" fill="url(#g${c.slice(1)})"/><circle cx="30" cy="24" r="17" fill="url(#g${c.slice(1)})"/><ellipse cx="24" cy="17" rx="5" ry="3" fill="#fff" opacity=".8"/></svg>`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
 const HOT = [['burbujero', '🫧'], ['gestos', '👋'], ['discos', '💿'], ['foto', '📷'], ['mapa', '🗺️']];
@@ -59,7 +61,7 @@ export const UI = {
     const fondo = window.ARCHIVOS && window.ARCHIVOS['fondo-menu.webp'];
     const canales = [
       ['plaza', `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>${[10, 30, 55, 75, 88].map((x, i) => `<i class="burbujita" style="left:${x}%;animation-delay:${i * 0.9}s"></i>`).join('')}`],
-      ['probador', `<div class="vista probador"><div class="muneco" style="--c:${J.G.A.color}"></div></div>`],
+      ['probador', `<div class="vista probador">${muneco(J.G.A.color, 30)}</div>`],
       ['salas', `<div class="vista salas"><b class="cuenta-linea">·</b><small>${t('en_linea')}</small></div>`],
       ['casa', `<div class="vista icono"><span>🏡</span></div>`],
       ['discos', `<div class="vista icono"><div class="disco"></div></div>`],
@@ -100,7 +102,7 @@ export const UI = {
     const fondo = window.ARCHIVOS && window.ARCHIVOS['fondo-menu.webp'];
     const titulo = id === 'plaza' ? t('canal_plaza') : id === 'probador' ? t('canal_probador') : t('canal_casa');
     const desc = id === 'plaza' ? t('plaza_desc') : id === 'probador' ? t('prob_titulo') : t('reino_casa_d');
-    const vista = id === 'plaza' ? `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>` : id === 'probador' ? `<div class="vista probador"><div class="muneco" style="--c:${J.G.A.color};width:18%"></div></div>` : `<div class="vista icono" style="font-size:20vmin">🏡</div>`;
+    const vista = id === 'plaza' ? `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>` : id === 'probador' ? `<div class="vista probador">${muneco(J.G.A.color, 20)}</div>` : `<div class="vista icono" style="font-size:20vmin">🏡</div>`;
     const c = this.poner(el(`<div class="canal-abierto"><div class="grande">${vista}<div class="titulo-canal">${titulo}</div><div class="desc">${esc(desc)}</div></div>
       <div class="pie"><button class="boton" data-a="menu">${t('menu')}</button><button class="boton primario" data-a="empezar">${t('empezar')}</button></div></div>`));
     c.animate([{ clipPath: `inset(${r.top}px ${innerWidth - r.right}px ${innerHeight - r.bottom}px ${r.left}px round 18px)` }, { clipPath: 'inset(0 0 0 0 round 0)' }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });

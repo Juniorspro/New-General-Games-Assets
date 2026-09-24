@@ -466,8 +466,9 @@ async function iniciar() {
       const r = yo.rumbo, f = new THREE.Vector3(Math.sin(r), 0, Math.cos(r)), der = new THREE.Vector3(Math.cos(r), 0, -Math.sin(r));
       const k = yo.escala;
       /* der es la derecha de la cámara: correrse para ese lado deja al muñeco a la izquierda, libre del panel */
-      const mira = yo.p.clone().add(new THREE.Vector3(0, vertical ? 0.1 * k : 0.8 * k, 0)).addScaledVector(der, vertical ? 0 : 0.95 * k);
-      motor.camara.position.copy(yo.p).addScaledVector(f, (vertical ? 4.2 : 3.1) * k).add(new THREE.Vector3(0, 1.05 * k, 0)).addScaledVector(der, vertical ? 0 : 0.95 * k);
+      /* en vertical el panel tapa la mitad de abajo: se mira más abajo y el muñeco sube */
+      const mira = yo.p.clone().add(new THREE.Vector3(0, vertical ? -0.45 * k : 0.8 * k, 0)).addScaledVector(der, vertical ? 0 : 0.95 * k);
+      motor.camara.position.copy(yo.p).addScaledVector(f, (vertical ? 4.6 : 3.1) * k).add(new THREE.Vector3(0, (vertical ? 1.9 : 1.05) * k, 0)).addScaledVector(der, vertical ? 0 : 0.95 * k);
       motor.camara.lookAt(mira);
     }
     const bajo = reino.mundo.agua != null && motor.camara.position.y < reino.mundo.agua - 0.05;
@@ -488,7 +489,7 @@ async function iniciar() {
     if (dibujar) motor.dibujar(dt);
   }
 
-  window.__A = { motor, cielo, get reino() { return reino; }, get yo() { return yo; }, cam, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
+  window.__A = { Sonido, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, cam, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
   let ult = performance.now();
   const bucle = (tt) => { const dt = Math.min(0.05, (tt - ult) / 1000); ult = tt; if (!window.__pausa) paso(dt); requestAnimationFrame(bucle); };
   if (!Q.has('pausa')) requestAnimationFrame(bucle);

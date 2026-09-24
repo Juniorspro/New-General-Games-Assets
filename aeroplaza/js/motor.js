@@ -18,7 +18,7 @@ export const CALIDADES = {
   /* escala: fracción de los píxeles de la pantalla; sombra: lado del mapa */
   alta: { escala: 1, dprMax: 2, bloom: true, sombra: 2048, msaa: 4, pasto: 1 },
   media: { escala: 0.8, dprMax: 1.5, bloom: true, sombra: 1024, msaa: 0, pasto: 0.6 },
-  baja: { escala: 0.62, dprMax: 1, bloom: false, sombra: 512, msaa: 0, pasto: 0.3 },
+  baja: { escala: 0.62, dprMax: 1, bloom: false, sombra: 0, msaa: 0, pasto: 0.28 },
 };
 
 const FINAL = {
@@ -117,7 +117,8 @@ export class Motor {
     if (antes && antes.msaa !== Q.msaa) { this.cadena.dispose(); this.armarCadena(); }
     this.pBloom.enabled = Q.bloom;
     this.r.shadowMap.enabled = true;
-    if (this.sol) { this.sol.shadow.mapSize.set(Q.sombra, Q.sombra); if (this.sol.shadow.map) { this.sol.shadow.map.dispose(); this.sol.shadow.map = null; } }
+    /* en baja no hay sombras: sin la pasada de sombras se dibuja casi la mitad (apagarlas en la luz hace que three recompile solo) */
+    if (this.sol) { this.sol.castShadow = Q.sombra > 0; if (Q.sombra) this.sol.shadow.mapSize.set(Q.sombra, Q.sombra); if (this.sol.shadow.map) { this.sol.shadow.map.dispose(); this.sol.shadow.map = null; } }
     this.medir();
     for (const f of this.alCambiarCalidad || []) f(Q);
   }

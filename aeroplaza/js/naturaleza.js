@@ -260,12 +260,16 @@ export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 
 
 /* ------------------------------------------------------------------- flores */
 export function flores(altura, donde, { n = 900, area = [-120, -120, 240], sem = 21, colores = ['#ffffff', '#ffd1ec', '#fff27a', '#b9e3ff', '#ffb0b0', '#e3c7ff'] } = {}) {
-  const petalo = [];
-  for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; const p = new THREE.SphereGeometry(0.05, 8, 5); p.scale(1, 0.3, 0.6); p.translate(0.055, 0, 0); p.rotateY(a); petalo.push(p); }
-  const gP = mergeGeometries(petalo); gP.translate(0, 0.2, 0);
-  const tallo = new THREE.CylinderGeometry(0.008, 0.01, 0.2, 5); tallo.translate(0, 0.1, 0);
-  const gC = new THREE.SphereGeometry(0.03, 8, 6); gC.scale(1, 0.6, 1); gC.translate(0, 0.21, 0);
-  const mP = new THREE.MeshStandardMaterial({ roughness: 0.4 }), mC = new THREE.MeshStandardMaterial({ color: '#ffc21f', roughness: 0.4, emissive: '#ff9d00', emissiveIntensity: 0.15 }), mT = new THREE.MeshLambertMaterial({ color: '#3f9a2a' });
+  /* la flor: una forma plana de cinco pétalos, apenas ahuecada (~40 triángulos
+     en vez de 500 de cinco esferas: con 1.400 flores eran la mitad de la isla) */
+  const forma = new THREE.Shape();
+  for (let i = 0; i <= 60; i++) { const a = i / 60 * Math.PI * 2, r = 0.05 + 0.055 * Math.pow(Math.abs(Math.cos(a * 2.5)), 0.7); const x = Math.cos(a) * r, y = Math.sin(a) * r; if (i === 0) forma.moveTo(x, y); else forma.lineTo(x, y); }
+  const gP = new THREE.ShapeGeometry(forma, 1).rotateX(-Math.PI / 2);
+  { const p = gP.attributes.position; for (let i = 0; i < p.count; i++) { const d = Math.hypot(p.getX(i), p.getZ(i)); p.setY(i, d * d * 4); } gP.computeVertexNormals(); }
+  gP.translate(0, 0.2, 0);
+  const tallo = new THREE.CylinderGeometry(0.008, 0.01, 0.2, 4, 1, true); tallo.translate(0, 0.1, 0);
+  const gC = new THREE.SphereGeometry(0.03, 6, 4); gC.scale(1, 0.6, 1); gC.translate(0, 0.21, 0);
+  const mP = new THREE.MeshStandardMaterial({ roughness: 0.4, side: THREE.DoubleSide }), mC = new THREE.MeshStandardMaterial({ color: '#ffc21f', roughness: 0.4, emissive: '#ff9d00', emissiveIntensity: 0.15 }), mT = new THREE.MeshLambertMaterial({ color: '#3f9a2a' });
   for (const m of [mP, mC, mT]) conViento(m, 0.6);
   const iP = new THREE.InstancedMesh(gP, mP, n), iC = new THREE.InstancedMesh(gC, mC, n), iT = new THREE.InstancedMesh(tallo, mT, n);
   const r = azar(sem), M = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), P = new THREE.Vector3(), c = new THREE.Color();
@@ -290,7 +294,7 @@ export function flores(altura, donde, { n = 900, area = [-120, -120, 240], sem =
 function copaGeo(sem) {
   const r = azar(sem), partes = [];
   const bolas = [[0, 0, 0, 1], [0.7, -0.2, 0.2, 0.72], [-0.65, -0.15, -0.1, 0.75], [0.1, 0.55, -0.1, 0.72], [-0.1, -0.1, 0.7, 0.7], [0.15, -0.05, -0.7, 0.66]];
-  for (const [x, y, z, rad] of bolas) { const s = new THREE.SphereGeometry(rad * (0.9 + r() * 0.2), 18, 12); s.translate(x, y, z); partes.push(s); }
+  for (const [x, y, z, rad] of bolas) { const s = new THREE.SphereGeometry(rad * (0.9 + r() * 0.2), 14, 10); s.translate(x, y, z); partes.push(s); }
   const g = mergeGeometries(partes);
   /* degradé: más claro arriba (el sol pega de arriba y queda "de juguete") */
   const p = g.attributes.position, col = new Float32Array(p.count * 3);

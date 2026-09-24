@@ -21,7 +21,9 @@ export function crearTienda() {
   const piso = new THREE.Mesh(new THREE.PlaneGeometry(W, D).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.15, metalness: 0 })); piso.receiveShadow = true; g.add(piso);
   const paredM = new THREE.MeshStandardMaterial({ color: '#f2fff4', roughness: 0.5, side: THREE.BackSide });
   const caja = new THREE.Mesh(new RoundedBoxGeometry(W, H * 2, D, 4, 1.2), paredM); caja.position.y = H - 0.01; g.add(caja);
-  const zocalo = new THREE.Mesh(new THREE.BoxGeometry(W - 0.2, 0.5, D - 0.2), new THREE.MeshStandardMaterial({ color: '#3fcf4f', roughness: 0.3, side: THREE.BackSide })); zocalo.position.y = 0.25; g.add(zocalo);
+  /* el zócalo verde: cuatro tiras (una caja entera tapaba el piso con su cara de abajo) */
+  const matZ = new THREE.MeshStandardMaterial({ color: '#3fcf4f', roughness: 0.3 });
+  for (const [x, z, w, r] of [[0, -D / 2 + 0.12, W, 0], [0, D / 2 - 0.12, W, Math.PI], [-W / 2 + 0.12, 0, D, Math.PI / 2], [W / 2 - 0.12, 0, D, -Math.PI / 2]]) { const z2 = new THREE.Mesh(new THREE.PlaneGeometry(w, 0.5), matZ); z2.position.set(x, 0.25, z); z2.rotation.y = r; g.add(z2); }
   /* los caños del techo */
   const caño = brilloso('#34c25a', { roughness: 0.12, metalness: 0.35 });
   for (let i = 0; i < 4; i++) {

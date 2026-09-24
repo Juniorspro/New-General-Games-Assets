@@ -4,6 +4,17 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **24/09/2026, noche (2) · `claude/fijate-iszyer`:**
+  - Pidió replicar en HTML el juego de @frutiger_space (TikTok), "mejorado un
+    1000%", con multijugador global por salas públicas sin código. Tenía que
+    ser por MQTT público, siguiendo su receta al pie de la letra, y con sus
+    canciones.
+  - Quedó AEROPLAZA (`aeroplaza/aeroplaza.html`). Cinco reinos, tienda, casa,
+    misiones y probador. El arte es de Rezona (proyecto ItLImpyNnh).
+  - La red se probó con un broker local (16 de 16). Cómo y trampas:
+    [aeroplaza](aeroplaza.md).
+  - Falta probarlo contra el broker público de verdad (desde acá no hay
+    salida) y en un teléfono de verdad.
 - **24/09/2026, noche · `claude/fijate-iszyer`:**
   - Dijo que BRILLO "va muy lag" y pidió bajar la resolución, acercar la
     cámara y cinemáticas al hablar con los NPC. Hecho y medido:

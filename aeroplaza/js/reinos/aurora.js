@@ -23,10 +23,10 @@ export function alturaAurora(x, z) {
 }
 function colorAurora(x, z, h) {
   const dl = Math.hypot(x + 30, z - 25);
-  if (dl < 13.5) return [0.55, 0.8, 1.0, 0];
-  if (Math.hypot(x, z) < 9) { const k = Math.floor(Math.hypot(x, z) / 1.5) % 2; return k ? [0.75, 0.8, 1.0, 0] : [0.6, 0.6, 0.95, 0]; }
+  if (dl < 13.5) return [0.55, 0.8, 1.0, 1];
+  if (Math.hypot(x, z) < 9) { const k = Math.floor(Math.hypot(x, z) / 1.5) % 2; return k ? [0.75, 0.8, 1.0, 1] : [0.6, 0.6, 0.95, 1]; }
   const v = 0.86 + R2(x * 0.3, z * 0.3) * 0.08;
-  return [v * 0.9, v * 0.95, v, 0];
+  return [v * 0.9, v * 0.95, v, 1];   // la arena de Rezona como grano: parece nieve venteada
 }
 
 export function crearAurora(ctx) {
@@ -113,7 +113,7 @@ export function crearAurora(ctx) {
   mundo.interactivo({ id: 'sueno', pos: new THREE.Vector3(0, A(0, 0) + 0.6, 0), radio: 4.2, accion: 'sueno', icono: '✨' });
   let t = 0;
   return {
-    id: 'aurora', mundo, grupo: g, inicio: new THREE.Vector3(0, A(0, 40) + 0.55, 38), rumboInicio: Math.PI, musica: 'aurora', cielo: { hora: 0.02, aurora: 1, nubes: 0 },
+    id: 'aurora', mundo, grupo: g, inicio: new THREE.Vector3(0, A(0, 40) + 0.55, 38), rumboInicio: Math.PI, musica: 'aurora', cielo: { hora: 0.02, aurora: 1, nubes: 0, hemi: 0.95, hemiColor: '#9fb8ff' },
     orbes, discos, npcs, sueno, estrellas,
     empezarSueno() { sueno.activo = true; sueno.t = 60; sueno.total = 0; mundo.sueno = true; },
     /* devuelve cuántas estrellas juntó el jugador este cuadro */

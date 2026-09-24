@@ -49,7 +49,7 @@ function conAlto(g, dy, dx = 0) {
   g.setAttribute('aUvm', new THREE.BufferAttribute(uvm, 2));
   return g;
 }
-function capsula(r, largo, seg = 20) { return new THREE.CapsuleGeometry(r, largo, 8, seg); }
+function capsula(r, largo, seg = 14) { return new THREE.CapsuleGeometry(r, largo, 5, seg); }
 
 let GEOS = null;
 function geometrias() {
@@ -58,11 +58,11 @@ function geometrias() {
   const perfil = [];
   const P = [[0, 0.27], [0.1, 0.268], [0.17, 0.285], [0.215, 0.33], [0.238, 0.4], [0.236, 0.48], [0.222, 0.56], [0.198, 0.63], [0.168, 0.69], [0.13, 0.74], [0.08, 0.772], [0, 0.785]];
   for (const [x, y] of P) perfil.push(new THREE.Vector2(x, y));
-  const cuerpo = new THREE.LatheGeometry(new THREE.SplineCurve(perfil).getPoints(40), 40);
+  const cuerpo = new THREE.LatheGeometry(new THREE.SplineCurve(perfil).getPoints(28), 32);
   cuerpo.computeVertexNormals();
   GEOS = {
     cuerpo: conAlto(cuerpo, 0),
-    cabeza: conAlto(new THREE.SphereGeometry(0.235, 40, 28), 1.03),
+    cabeza: conAlto(new THREE.SphereGeometry(0.235, 32, 20), 1.03),
     brazo: [-1, 1].map((s) => conAlto(capsula(0.066, 0.25).translate(0, -0.16, 0), 0.68, s * 0.2)),
     pierna: [-1, 1].map((s) => conAlto(capsula(0.085, 0.13).translate(0, -0.15, 0), 0.3, s * 0.1)),
   };

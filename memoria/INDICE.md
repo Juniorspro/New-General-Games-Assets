@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (BRILLO más liviano).
+mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (AEROPLAZA).
 
 ## Reglas que no se discuten
 
@@ -62,6 +62,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (BRILLO más liviano)
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
+| [aeroplaza](aeroplaza.md) | AEROPLAZA: el 3D social Frutiger Aero con multijugador MQTT (salas, broker de prueba en Node, trampas de three) |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |
@@ -77,6 +78,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (BRILLO más liviano)
 | `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
 | `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 288 de alto | [brillo](brillo.md) · `brillo/README.md` |
 | `ruta40/` | RUTA 40: autos tipo Hill Climb por la Ruta 40, arte pintado de Rezona, 7 tramos, 5 vehículos, picadas | [ruta40](ruta40.md) · `ruta40/README.md` |
+| `aeroplaza/` | AEROPLAZA: 3D social Frutiger Aero, multijugador por MQTT sin servidor, 5 reinos, muñecos de gelatina, 3 idiomas | [aeroplaza](aeroplaza.md) · `aeroplaza/README.md` |
 | `videos/` | videos de TikTok relatados: grabadores de tomas, voz, stickers, memes y el montaje en Remotion | [videos](videos.md) |
 | `nevada/` | NEVADA: cinemática three.js 9:16 de un superdeportivo y un tigre blanco en el bosque nevado, un solo HTML | [nevada](nevada.md) · `nevada/README.md` |
 | `entregas/` | los zips de cada juego con la guía para TikTok (no se commitean) | `herramientas/empaquetar_juegos.py` |

@@ -13,12 +13,12 @@ const TECLAS = {
 };
 /* los botones en pantalla, con su lugar por defecto (en % de la pantalla, desde abajo a la derecha) */
 export const BOTONES = {
-  palanca: { x: 16, y: 24, tam: 1.0, izquierda: true },
-  salta: { x: 12, y: 16, tam: 1.15, icono: '⤒' },
-  accion: { x: 27, y: 12, tam: 0.9, icono: '✋' },
-  corre: { x: 10, y: 34, tam: 0.8, icono: '»' },
-  dispara: { x: 25, y: 27, tam: 0.85, icono: '◎' },
-  baja: { x: 36, y: 8, tam: 0.7, icono: '⤓' },
+  palanca: { x: 17, y: 27, tam: 1.0, izquierda: true },
+  salta: { x: 13, y: 20, tam: 1.15, icono: '⤒' },
+  accion: { x: 30, y: 15, tam: 0.9, icono: '✋' },
+  corre: { x: 9, y: 37, tam: 0.8, icono: '»' },
+  dispara: { x: 28, y: 30, tam: 0.85, icono: '◎' },
+  baja: { x: 9, y: 49, tam: 0.7, icono: '⤓' },
 };
 export const CONTROLES_INICIALES = () => ({ botones: JSON.parse(JSON.stringify(BOTONES)), opacidad: 0.7, palanca: 'flotante', zurdo: false, vibra: true, sensibilidad: 1 });
 

@@ -74,7 +74,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; -webkit-appearan
 .vista .burbujita { position: absolute; bottom: -20px; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.2) 40%, rgba(120, 220, 255, 0.35) 70%, rgba(255, 255, 255, 0.8)); animation: sube 5s linear infinite; }
 @keyframes sube { to { transform: translateY(-260px) translateX(20px); opacity: 0; } }
 .vista.probador { background: linear-gradient(160deg, #ffe7f5, #e4f5ff); display: grid; place-items: center; }
-.muneco { position: relative; width: 20%; aspect-ratio: 1 / 1.6; animation: saluda 3s ease-in-out infinite; }
+.muneco { display: block; overflow: visible; animation: saluda 3s ease-in-out infinite; transform-origin: 50% 100%; }
 .muneco::before { content: ""; position: absolute; left: 22%; width: 56%; top: 0; height: 35%; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--c, #34bef0) 45%); }
 .muneco::after { content: ""; position: absolute; left: 6%; width: 88%; bottom: 0; height: 60%; border-radius: 45% 45% 30% 30%; background: radial-gradient(circle at 35% 25%, #fff, var(--c, #34bef0) 50%); }
 @keyframes saluda { 50% { transform: rotate(-6deg) translateY(-4%); } }
@@ -131,7 +131,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; -webkit-appearan
 .aviso-accion { position: absolute; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 90px); transform: translateX(-50%); pointer-events: none; animation: apareceC 0.25s both; }
 .tecla { display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 50%; background: var(--azul); color: #fff; font-size: 14px; font-weight: 900; }
 .avisos { position: absolute; top: calc(max(14px, env(safe-area-inset-top)) + 64px); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
-.avisito { background: #fff; border-radius: 999px; padding: 8px 18px; font-weight: 900; font-size: 17px; box-shadow: var(--sombra); border: 3px solid var(--gris2); animation: avisito 3.2s ease both; white-space: nowrap; }
+.avisito { background: #fff; border-radius: 20px; max-width: 86vw; box-sizing: border-box; text-align: center; padding: 8px 18px; font-weight: 900; font-size: 17px; box-shadow: var(--sombra); border: 3px solid var(--gris2); animation: avisito 3.2s ease both; }
 .avisito.bien { border-color: var(--verde); color: #2c9a33; }
 .avisito.azul { border-color: var(--azul); color: var(--azul2); }
 @keyframes avisito { 0% { opacity: 0; transform: translateY(-12px) scale(0.9); } 8% { opacity: 1; transform: none; } 85% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }

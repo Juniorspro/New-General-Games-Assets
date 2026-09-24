@@ -104,8 +104,8 @@ export class Cielo {
 
     /* la luz */
     const sol = this.sol = motor.sol = new THREE.DirectionalLight('#fff4e0', 2.6);
-    sol.castShadow = true;
-    sol.shadow.mapSize.set(motor.Q.sombra, motor.Q.sombra);
+    sol.castShadow = motor.Q.sombra > 0;
+    sol.shadow.mapSize.set(motor.Q.sombra || 512, motor.Q.sombra || 512);
     const S = sol.shadow.camera; S.left = -28; S.right = 28; S.top = 28; S.bottom = -28; S.near = 1; S.far = 160;
     sol.shadow.bias = -0.0004; sol.shadow.normalBias = 0.03;
     motor.escena.add(sol, sol.target);
@@ -158,6 +158,8 @@ export class Cielo {
     this.hemi.color.copy(hor).lerp(new THREE.Color(1, 1, 1), 0.5);
     this.hemi.groundColor.set('#4a7a30').multiplyScalar(0.3 + dia * 0.7);
     this.hemi.intensity = 0.18 + dia * 0.32;
+    /* la Aurora es de noche siempre: la nieve se ilumina con un ambiente azul propio */
+    if (this.modo.hemi) { this.hemi.intensity = this.modo.hemi; this.hemi.color.set(this.modo.hemiColor || '#ffffff'); }
     const niebla = this.motor.escena.fog;
     niebla.color.copy(hor).lerp(U.uAtar.value, atar * 0.35);
     /* las nubes giran y se tiñen con la hora */

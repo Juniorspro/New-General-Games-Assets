@@ -19,10 +19,10 @@ export class Orbes {
   constructor(grupo, lugares, { color = '#7ff6ff', valor = 1 } = {}) {
     this.lugares = lugares.map(([x, y, z]) => ({ p: new THREE.Vector3(x, y, z), fuera: 0 }));
     this.valor = valor;
-    const g = new THREE.IcosahedronGeometry(0.26, 3);
+    const g = new THREE.IcosahedronGeometry(0.26, 2);
     const m = new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: color, emissiveIntensity: 1.6, roughness: 0.1, transparent: true, opacity: 0.92 });
     this.im = new THREE.InstancedMesh(g, m, this.lugares.length);
-    const gh = new THREE.TorusGeometry(0.4, 0.025, 6, 32);
+    const gh = new THREE.TorusGeometry(0.4, 0.025, 4, 24);
     this.aro = new THREE.InstancedMesh(gh, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7 }), this.lugares.length);
     this.im.frustumCulled = this.aro.frustumCulled = false;
     grupo.add(this.im, this.aro);

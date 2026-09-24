@@ -97,6 +97,13 @@
    "creado": "2026-09-24",
    "version": "sin subir",
    "nota": "Lo bajado queda en nevada/crudo/ (no se commitea): ref-*.png, tex-*.png, cielo-bosque.png y los GLB m-*.glb de Tripo. Lo que usa el juego sale de ahí con nevada/herramientas/optimizar_modelos.mjs y procesar_texturas.py. Detalle: memoria/nevada.md."
+  },
+  "ItLImpyNnh": {
+   "nombre": "AEROPLAZA — juego social 3D Frutiger Aero",
+   "para": "aeroplaza/: motivos del muñeco (agua, nubes, tierra, galaxia, hojas, burbujas, flores, aurora), pasto, arena, nube, ciudad, mariposa, fondo del menú y el delfín 3D (Tripo)",
+   "creado": "2026-09-24",
+   "version": "sin subir",
+   "nota": "Lo bajado queda en aeroplaza/crudo/ (no se commitea). assets/ sale de ahí con aeroplaza/herramientas/assets.mjs. Detalle: memoria/aeroplaza.md."
   }
  },
  "assets": [
@@ -1179,7 +1186,11 @@
   "modelos_3d_cuantizados": "Si la cadena termina en quantize (KHR_mesh_quantization), las posiciones quedan en enteros de 16 bits normalizados y la escala para volver a metros va en la matriz del nodo. Girar o escalar esa geometría en three.js la recorta contra ±1: el auto de NEVADA quedó hecho una caja. Antes de tocarla se pasa a Float32 con la matriz horneada (nevada/js/modelos.js › aFloat). 24/09.",
   "modelos_3d_peso_tripo_2026_09": "El 24/09 los cuatro de NEVADA (texture+pbr, detailed) llegaron de 35 a 46 MB y de 650 mil a 970 mil triángulos, con tres texturas de 4096. Apuntando a 70 mil triángulos (auto) y 30-36 mil (tigres), color a 2048 y webp, quedan de 1,3 a 1,8 MB (nevada/herramientas/optimizar_modelos.mjs).",
   "ruedas_de_un_modelo_de_una_pieza": "Tripo entrega el auto en una sola malla. Para que las ruedas giren se recortan: el centro de cada una es donde las distancias de los vértices se juntan en anillos (se prueba cada centro y gana la mayor suma de cuadrados del histograma), y el radio es la altura del centro porque la goma apoya. La mediana de lo que toca el piso NO sirve de centro: el paragolpes la corre 13 cm (nevada/js/modelos.js › centroDeAnillos). 24/09.",
-  "tigre_con_rig_propio": "Para un cuadrúpedo, el rig de Rezona da una caminata de perro con patas en tijera: se arma a mano midiendo la malla (nevada/js/rig.js). Las patas se toman como columnas: lo que está bajo la panza pero lejos de la pata va con el cuerpo, si no al caminar cuelga una lona. 24/09."
+  "tigre_con_rig_propio": "Para un cuadrúpedo, el rig de Rezona da una caminata de perro con patas en tijera: se arma a mano midiendo la malla (nevada/js/rig.js). Las patas se toman como columnas: lo que está bajo la panza pero lejos de la pata va con el cuerpo, si no al caminar cuelga una lona. 24/09.",
+  "n_mayor_que_uno_devuelve_uno": "submit_image_generation con n:3 devolvió UNA imagen (nube-g1); nube-g2 y g3 dan 404. Pedir de a una por pedido, o sacar variantes espejando y recortando (aeroplaza/herramientas/assets.mjs). 24/09.",
+  "texturas_seamless_como_grano": "El pasto y la arena seamless de Rezona, usados como color, dejan el suelo lavado o plano. Se usan de grano: en el shader se divide por su último mip (texture2D(t, uv, 12.)) y el color lo da el vértice. aeroplaza/js/naturaleza.js › terreno. 24/09.",
+  "delfin_de_tripo_mira_atras": "El delfín (Tripo desde una referencia de costado) sale mirando a -z: giro fijo π. Se mide con una hoja de cuatro giros de a 90° (aeroplaza/pruebas/delfin.mjs). 641 mil triángulos → 9.000 con color a 1024: 214 KB. 24/09.",
+  "receta_frutiger_aero_para_texturas": "Para texturas que se repiten (motivos), sirve 'Seamless tileable texture of … flat top-down view, no objects, no text'; para recortes (nube, ciudad, mariposa), la cola Frutiger Aero + 'isolated on a fully transparent background' con transparent:true. Las 15 de AEROPLAZA salieron al primer intento. 24/09."
  },
  "pendiente": "Quedó un proyecto suelto llamado 'Páginas web — assets' creado por error, sin assets. Ignorarlo o borrarlo."
 }
