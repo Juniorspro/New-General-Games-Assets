@@ -131,9 +131,11 @@ que hace falta para tocarlo sin romperlo.
 - **Las gotas:** pidió "pup, no tiring". Ahora suenan como un seno que sube de
   300 a 720 Hz en 50 ms (`sonido.js › pup`), en vez de la campanita.
 
-## El tráiler
+## El tráiler y el rendimiento
 
-Está en su propia nota: [brillo-trailer](brillo-trailer.md).
+- El tráiler está en su propia nota: [brillo-trailer](brillo-trailer.md).
+- Qué lo hacía lento, la cámara más cerca (288 de alto) y las cinemáticas
+  de charla: [brillo-rendimiento](brillo-rendimiento.md).
 
 ## Lo que falta o no se probó
 

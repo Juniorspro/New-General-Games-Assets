@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **24/09/2026, noche · `claude/fijate-iszyer`:**
+  - Dijo que BRILLO "va muy lag" y pidió bajar la resolución, acercar la
+    cámara y cinemáticas al hablar con los NPC. Hecho y medido:
+    [brillo-rendimiento](brillo-rendimiento.md).
+  - No se probó en un teléfono de verdad (solo en Chromium con la placa
+    simulada).
 - **24/09/2026, tarde · `claude/fijate-iszyer`:**
   - Mandó dos videos de TikTok con música de Nintendo para BRILLO: el menú de
     Wii Party ("f9") va al menú y al tráiler, y Mii Maker ("9c") al mundo 1.

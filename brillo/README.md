@@ -65,19 +65,29 @@ Los bancos de prueba se abren con `brillo.html?prueba=sprites`,
 
 ## Cómo se ve
 
-- **Pixel art de 360 de alto** (el doble que KUNTUR) y de 560 a 880 de ancho.
-  Siempre se escala en números enteros.
+- **Pixel art de 288 de alto** y de 448 a 704 de ancho: desde el 24/09 la
+  cámara está un 20 % más cerca que con los 360 de antes ("más pocket"). Llena
+  la pantalla con cualquier escala; la última pasada ("sharp bilinear") deja
+  cada píxel como un cuadrado parejo. `?alto=360` vuelve al tamaño de antes.
 - Todo se pinta con código, sin imágenes:
   - rampas de 8 tonos;
   - el brillo de vidrio (la mitad de arriba más clara, con corte nítido);
   - un punto de luz y el contorno del color de cada rampa.
-- **WebGL** pone encima:
+- **WebGL** pone encima, a la resolución del juego (no a la de la pantalla, que
+  en un teléfono son 3 millones de píxeles):
   - bloom;
   - el destello del sol en el lente;
   - rayos de luz;
   - la gradación de cada mundo;
   - un velo claro en los bordes (el Aero aclara, no oscurece);
   - la ondulación bajo el agua.
+- **Calidad:** automática de fábrica. Arranca en alta y, si mientras se juega
+  no llega a 48 cuadros por segundo, baja a media (bloom más simple, sin
+  rayos, hasta 2 píxeles por punto) y después a baja (sin efectos ni vidrio
+  esmerilado). También se elige a mano en Opciones.
+- **Las charlas son cinemáticas:** la cámara se acerca (hasta 1,55×) a Nick y
+  al que habla, entran franjas de cine, los dos se miran, y al terminar
+  vuelve. `?sinzoom` las apaga (el tráiler graba así).
 - **Cada mundo tiene sus capas de parallax y su piso:**
 
 | mundo | fondo | detalle |

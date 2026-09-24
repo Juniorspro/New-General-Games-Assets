@@ -252,20 +252,27 @@ export class Nivel {
         if (a.x1 < m.W && m.tiles[a.y * m.W + a.x1] === B.VACIO) g.fillRect(x1 - 1, y0, 1, T);
       }
       if (a.sup) {
-        /* la superficie que se mueve, con su filo de luz */
-        for (let x = x0; x < x1; x++) {
+        /* la superficie que se mueve, con su filo de luz (juntada en dos trazos:
+           de a un rectángulo por columna eran miles de llamadas) */
+        const xa = Math.max(x0, 0), xb = Math.min(x1, w), filo = new Path2D(), luz = new Path2D();
+        for (let x = xa; x < xb; x++) {
           const o = Math.round(Math.sin((x + cam.x) * 0.18 + t * 3) * 1.2 + Math.sin((x + cam.x) * 0.07 - t * 1.7));
-          g.fillStyle = 'rgba(230,250,255,0.85)'; g.fillRect(x, y0 + o, 1, 1);
-          g.fillStyle = 'rgba(160,230,255,0.5)'; g.fillRect(x, y0 + o + 1, 1, 2);
+          filo.rect(x, y0 + o, 1, 1); luz.rect(x, y0 + o + 1, 1, 2);
         }
+        g.fillStyle = 'rgba(230,250,255,0.85)'; g.fill(filo);
+        g.fillStyle = 'rgba(160,230,255,0.5)'; g.fill(luz);
       } else {
-        /* la luz del fondo (cáusticas) que se mueve */
-        const pas = mar ? 4 : 2, xa = Math.max(x0, 0), xb = Math.min(x1, w);
+        /* la luz del fondo (cáusticas) que se mueve. Los tres senos dependen
+           de la columna, de la fila y de la diagonal: se calculan una vez por
+           cuadro en tablas (con el mar entero eran 33 mil senos por cuadro) */
+        const pas = mar ? 4 : 2, xa = Math.max(x0, 0), xb = Math.min(x1, w), C = this.causticas(w, h, cam, t);
         g.fillStyle = 'rgba(210,250,255,0.35)';
-        for (let x = xa - ((xa + cam.x) % pas + pas) % pas; x < xb; x += pas) for (let y = y0; y < y0 + T; y += pas) {
-          const c = Math.sin((x + cam.x) * 0.23 + t * 1.3) + Math.sin((y + cam.y) * 0.31 - t * 1.1) + Math.sin((x + y + cam.x) * 0.11 + t);
-          if (c > 2.2) g.fillRect(x, y, pas, 1);
+        const brillos = new Path2D();
+        for (let x = xa - ((xa + cam.x) % pas + pas) % pas; x < xb; x += pas) {
+          const cx = C.sx[x + 8];
+          for (let y = y0; y < y0 + T; y += pas) if (cx + C.sy[y + 24] + C.sd[x + y + 32] > 2.2) brillos.rect(x, y, pas, 1);
         }
+        g.fill(brillos);
       }
     }
     /* lo de adelante: pasto alto y burbujas grandes */
@@ -276,6 +283,17 @@ export class Nivel {
     }
     this.burbujas.dibujar(g, cam, t, w, h, 'frente');
     this.camVista = cam;
+  }
+  /* las tablas de las cáusticas de este cuadro (índices corridos: x+8, y+24, x+y+32) */
+  causticas(w, h, cam, t) {
+    const C = this._cau || (this._cau = { t: NaN });
+    if (C.t === t && C.cx === cam.x && C.cy === cam.y && C.w === w && C.h === h) return C;
+    if (!C.sx || C.w !== w || C.h !== h) { C.sx = new Float32Array(w + 16); C.sy = new Float32Array(h + T + 48); C.sd = new Float32Array(w + h + T + 64); }
+    for (let i = 0; i < C.sx.length; i++) C.sx[i] = Math.sin((i - 8 + cam.x) * 0.23 + t * 1.3);
+    for (let i = 0; i < C.sy.length; i++) C.sy[i] = Math.sin((i - 24 + cam.y) * 0.31 - t * 1.1);
+    for (let i = 0; i < C.sd.length; i++) C.sd[i] = Math.sin((i - 32 + cam.x) * 0.11 + t);
+    Object.assign(C, { t, cx: cam.x, cy: cam.y, w, h });
+    return C;
   }
   /* dónde está algo del mundo en la pantalla del juego */
   aPantalla(x, y) { const c = this.camVista || this.cam; return { x: x - c.x, y: y - c.y }; }

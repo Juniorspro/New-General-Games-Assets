@@ -24,7 +24,7 @@ export function probarFondo() {
   const cuadroN = () => {
     requestAnimationFrame(cuadroN);
     const w = Pantalla.w, h = Pantalla.h;
-    if (base.width !== w || base.height !== h) { [base, g] = lienzo2d(w, h); post.tamano(w, h, Pantalla.escala, Pantalla.lienzo); }
+    if (base.width !== w || base.height !== h) { [base, g] = lienzo2d(w, h); post.tamano(w, h, Pantalla.lienzo, Pantalla.dpr); }
     const t = q.has('t') ? +q.get('t') : (performance.now() - t0) / 1000;
     if (q.has('mover')) cam.x = +(q.get('x') || 0) + t * 40;
     F.atras(g, cam, t, w, h, cam.y);
@@ -38,7 +38,7 @@ export function probarFondo() {
     B.dibujar(g, cam, t, w, h, 'frente');
     post.mostrar(base, { ...F.post, sol: F.sol, grado: F.grado, t });
   };
-  post.tamano(Pantalla.w, Pantalla.h, Pantalla.escala, Pantalla.lienzo);
+  post.tamano(Pantalla.w, Pantalla.h, Pantalla.lienzo, Pantalla.dpr);
   requestAnimationFrame(cuadroN);
   window.__listo = true;
 }

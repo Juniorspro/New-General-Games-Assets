@@ -274,3 +274,9 @@ img.emo{width:1.2em;height:1.2em;vertical-align:-.2em;image-rendering:pixelated}
 .acomoda .foco{scale:1.06;box-shadow:inset 0 0 0 1px rgba(40,130,210,.7),0 0 0 3px rgba(150,230,255,.8)}
 .chip.par button.foco{background:rgba(200,240,255,.9)}
 html.bajita .acomoda small{display:none}
+/* mientras se juega, sin vidrio esmerilado: el desenfoque de lo de atrás se recalcula en cada cuadro
+   encima del juego que se mueve, y en un teléfono eso cuesta. Se compensa con un fondo más opaco */
+.hud>span{-webkit-backdrop-filter:none;backdrop-filter:none;background-color:rgba(150,205,250,.42)}
+.tactil *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.tactil .aro,.tactil .bSalto,.tactil .bZumbido,.tactil .bPausa{background-color:rgba(120,190,245,.18)}
+html.calidadBaja *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}

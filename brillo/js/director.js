@@ -37,8 +37,12 @@ const MANDO = { 0: ['salto', 'aceptar'], 1: ['accion', 'volver'], 2: 'accion', 3
 /* la voz de cada uno cuando escribe (el tic de las letras) */
 const VOZ = { nick: 1250, mora: 1700, tito: 950, plano: 520, dorado: 1100, lila: 1850, sol: 1450, vio: 1550 };
 
+/* ?sinzoom: sin la cinemática de las charlas (el tráiler graba el juego y calcula dónde están Nick y Mora en la pantalla) */
+const SIN_ZOOM = new URLSearchParams(location.search).has('sinzoom');
+
 const PARTIDA_NUEVA = () => ({ mundo: ORDEN[0], en: null, juntadas: [], rotos: {}, habil: {}, hechos: [] });
-const OPCIONES = () => ({ musica: 7, efectos: 8, estilo: 'aero', calidad: 'alta', giro: 'auto', tactil: TACTIL_INICIAL() });
+const OPCIONES = () => ({ v: 2, musica: 7, efectos: 8, estilo: 'aero', calidad: 'auto', calidadAuto: 'alta', giro: 'auto', tactil: TACTIL_INICIAL() });
+const NIVELES_CALIDAD = ['alta', 'media', 'baja'];
 
 /* todos los guiños del juego en orden (mundo por mundo, de izquierda a
    derecha): el guiño número i destapa el emoticón número i */
@@ -55,7 +59,10 @@ function listaGuinos() {
 
 export class Director {
   constructor() {
-    this.opc = Object.assign(OPCIONES(), leer(OPC) || {});
+    const guardadas = leer(OPC) || {};
+    /* las opciones de antes del 24/09 decían 'alta' a mano: pasan a 'auto', que mide el teléfono */
+    if (!guardadas.v) { guardadas.v = 2; guardadas.calidad = 'auto'; }
+    this.opc = Object.assign(OPCIONES(), guardadas);
     this.opc.tactil = Object.assign(TACTIL_INICIAL(), this.opc.tactil || {});
     this.partida = leer(GUARDA);
     if (this.partida) this.partida = Object.assign(PARTIDA_NUEVA(), this.partida);
@@ -63,7 +70,8 @@ export class Director {
     Pantalla.giro = this.opc.giro;
     Pantalla.iniciar();
     this.post = new Post(document.getElementById('c'));
-    this.post.calidad = this.opc.calidad;
+    this.ponerCalidad();
+    this.medida = { t: 0, n: 0 };
     this.raiz = document.getElementById('ui');
     const ui = this.ui = new UI(this.raiz);
     /* entrada: teclado, mando y dedos (en el teléfono se arranca con los dedos) */
@@ -92,6 +100,7 @@ export class Director {
     this.vez = 0; this.estado = 'idioma'; this.pausado = false; this.guion = false;
     this.esperas = []; this.tweens = []; this.grisT = null; this.grisV = 0;
     this.acum = 0; this.ult = 0;
+    this.cine = { k: 0, meta: 0, con: null, arriba: false };
     this.fondoTitulo();
     this._cuadro = (ts) => this.cuadro(ts);
     requestAnimationFrame(this._cuadro);
@@ -106,8 +115,12 @@ export class Director {
     Entrada.leerMando();
     Sonido.pasar();
     const w = Pantalla.w, h = Pantalla.h;
-    if (!this.base || this.base.width !== w || this.base.height !== h) { [this.base, this.g] = lienzo2d(w, h); this.post.tamano(w, h, Pantalla.escala, Pantalla.lienzo); }
+    if (!this.base || this.base.width !== w || this.base.height !== h) [this.base, this.g] = lienzo2d(w, h);
+    /* el lienzo de la pantalla se rehace si cambió la pantalla o la calidad (que pone un tope de píxeles) */
+    const clave = Pantalla.version + ':' + this.post.calidad;
+    if (this.clavePost !== clave) { this.clavePost = clave; this.post.tamano(w, h, Pantalla.lienzo, Pantalla.dpr); }
     this.pasarEntrada();
+    this.medirCalidad(dt);
     const N = this.N;
     if (!N) return;
     const corre = !this.pausado;
@@ -126,8 +139,60 @@ export class Director {
     }
     if (this.charlaR) { this.charlaR.pasar(dt); this.animarHablante(); }
     N.dibujar(this.g, w, h);
-    const F = N.fondo;
-    this.post.mostrar(this.base, { ...F.post, sol: F.sol, grado: this.grado(F.grado), t: N.t });
+    const F = N.fondo, C = this.vistaCine(dt, w, h);
+    this.post.mostrar(this.base, { ...F.post, sol: F.sol, grado: this.grado(F.grado), t: N.t, vista: C.vista, barras: C.barras });
+  }
+  /* ---------------- la cinemática de las charlas ----------------
+     Al hablar, la cámara se acerca (hasta 1,55×) al medio entre Nick y el que
+     habla, los deja en el pedazo de pantalla que no tapa la ventana de la charla
+     y entran franjas de cine. El zoom lo hace la última pasada del post:
+     el mundo se dibuja igual y se agranda un recorte, así que no cuesta nada. */
+  cineCharla(otro, arriba) {
+    const C = this.cine, N = this.N;
+    C.meta = 0; C.con = null;
+    if (SIN_ZOOM || !N || this.estado !== 'jugando') return;
+    const p = N.m.p;
+    let v = N.npcs.find((x) => x.visible && (x.orig || x.id) === otro) || N.actores.find((a) => a.visible !== false && a.quien === otro) || null;
+    if (v && Math.abs(v.x - p.x) > Pantalla.w * 0.8) v = null;     // lejos: solo Nick
+    C.con = v; C.arriba = arriba; C.meta = 1;
+    /* se miran */
+    if (v && !p.muerto) { p.dir = v.x >= p.x ? 1 : -1; if ('mira' in v) v.mira = p.x >= v.x ? 1 : -1; }
+  }
+  vistaCine(dt, w, h) {
+    const C = this.cine;
+    C.k += (C.meta - C.k) * (1 - Math.exp(-dt * (C.meta ? 4.5 : 6)));
+    if (!C.meta && C.k < 0.003) { C.k = 0; return { vista: null, barras: 0 }; }
+    const N = this.N;
+    if (!N) return { vista: null, barras: 0 };
+    const e = C.k * C.k * (3 - 2 * C.k), p = N.m.p;
+    let fx = p.x, fy = p.y - 16, zMax = 1.35;
+    if (C.con) {
+      const d = Math.abs(C.con.x - p.x);
+      fx = (p.x + C.con.x) / 2; fy = (p.y + C.con.y) / 2 - 16;
+      zMax = Math.max(1.2, Math.min(1.55, (w * 0.72) / (d + 40)));   // que entren los dos
+    }
+    const z = 1 + (zMax - 1) * e, s = N.aPantalla(fx, fy);
+    const ty = C.arriba ? 0.64 : 0.38;
+    const cx = Math.min(1 - 0.5 / z, Math.max(0.5 / z, s.x / w));
+    const cy = Math.min(1 - 0.5 / z, Math.max(0.5 / z, s.y / h - (ty - 0.5) / z));
+    return { vista: { x: cx, y: cy, z }, barras: 0.085 * e };
+  }
+  /* la calidad: la que se eligió, o la que midió el modo automático */
+  ponerCalidad() {
+    this.post.calidad = this.opc.calidad === 'auto' ? this.opc.calidadAuto || 'alta' : this.opc.calidad;
+    document.documentElement.classList.toggle('calidadBaja', this.post.calidad === 'baja');
+  }
+  /* el modo automático: mientras se juega, cada 2,5 s mira cuántos cuadros por
+     segundo salen; por debajo de 48 baja un escalón (y queda guardado). Nunca
+     sube solo, así no va y viene */
+  medirCalidad(dt) {
+    const O = this.opc, M = this.medida;
+    if (O.calidad !== 'auto' || this.estado !== 'jugando' || this.pausado) { M.t = 0; M.n = 0; return; }
+    M.t += dt; M.n++;
+    if (M.t < 2.5) return;
+    const fps = M.n / M.t; M.t = 0; M.n = 0;
+    const i = NIVELES_CALIDAD.indexOf(O.calidadAuto);
+    if (fps < 48 && i < NIVELES_CALIDAD.length - 1) { O.calidadAuto = NIVELES_CALIDAD[i + 1]; this.ponerCalidad(); this.guardarOpc(); console.info(`calidad: ${fps.toFixed(0)} cuadros por segundo, baja a ${O.calidadAuto}`); }
   }
   /* el color: el Plano lo apaga (0 = normal, 1 = gris) */
   grado(G) {
@@ -240,7 +305,7 @@ export class Director {
       { nombre: () => tr('musica'), valor: () => barra(O.musica), cambiar: (d) => { O.musica = Math.max(0, Math.min(10, O.musica + d)); Sonido.volumenes(O.musica / 10, O.efectos / 10); this.guardarOpc(); } },
       { nombre: () => tr('efectos'), valor: () => barra(O.efectos), cambiar: (d) => { O.efectos = Math.max(0, Math.min(10, O.efectos + d)); Sonido.volumenes(O.musica / 10, O.efectos / 10); Sonido.sfx('gota', { k: O.efectos }); this.guardarOpc(); } },
       { nombre: () => tr('estiloMusica'), valor: () => tr(O.estilo === 'chip' ? 'chip' : 'aero'), cambiar: () => { O.estilo = O.estilo === 'chip' ? 'aero' : 'chip'; Sonido.ponerModo(O.estilo); this.guardarOpc(); } },
-      { nombre: () => tr('calidad'), valor: () => tr(O.calidad), cambiar: (d) => { O.calidad = ciclo(['alta', 'baja'], O.calidad, d); this.post.calidad = O.calidad; this.guardarOpc(); } },
+      { nombre: () => tr('calidad'), valor: () => O.calidad === 'auto' ? `${tr('auto')} (${tr(O.calidadAuto)})` : tr(O.calidad), cambiar: (d) => { O.calidad = ciclo(['auto', ...NIVELES_CALIDAD], O.calidad, d); if (O.calidad === 'auto') O.calidadAuto = 'alta'; this.ponerCalidad(); this.guardarOpc(); } },
     ];
     if (document.documentElement.requestFullscreen) filas.push({ nombre: () => tr('pantalla'), valor: () => tr(document.fullscreenElement ? 'si' : 'no'), cambiar: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else Pantalla.acostar(); } catch (_) {} } });
     if (esTactil()) {
@@ -312,6 +377,7 @@ export class Director {
     this.esperas = []; this.tweens = []; this.grisT = null; this.grisV = 0; this.grisN = null;
     if (this.charlaR) { this.charlaR.cerrar(); this.charlaR = null; }
     this.avanzar = null; this.hablante = null;
+    this.cine.meta = 0; this.cine.k = 0; this.cine.con = null;
     for (const el of this.raiz.querySelectorAll('.narra,.mensaje,.cartelMundo,.creditos')) el.remove();
     this.ui.narrando = null;
     this.ui.limpiar();
@@ -419,7 +485,9 @@ export class Director {
       const otro = o.con || (lineas.find(([q]) => q !== 'nick') || ['nick'])[0];
       /* si Nick está en la mitad de abajo de la pantalla, la ventana va arriba (no tapa a nadie) */
       const q = this.N ? this.N.aPantalla(this.N.m.p.x, this.N.m.p.y) : { y: 0 };
-      const R = this.charlaR = this.ui.charla(otro, { arriba: q.y > Pantalla.h * 0.56 });
+      const arriba = q.y > Pantalla.h * 0.56;
+      const R = this.charlaR = this.ui.charla(otro, { arriba });
+      this.cineCharla(otro, arriba);
       this.verTactil();
       let i = 0;
       const decir = () => {
@@ -435,6 +503,7 @@ export class Director {
         if (i < lineas.length) { decir(); return; }
         this.callarHablante();
         R.cerrar(); this.charlaR = null; this.avanzar = null; this.hablante = null;
+        this.cine.meta = 0;
         this.verTactil();
         listo();
       };

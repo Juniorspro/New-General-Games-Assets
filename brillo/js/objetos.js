@@ -186,12 +186,22 @@ export function emoticon(n) {
 }
 
 /* la estática: ruido gris que cambia cada cuadro (se dibuja directo) */
+/* la estática de TV: 128 rectangulitos por baldosa y por cuadro era lo más
+   caro del Arrecife. Ahora son 8 cuadros × 4 variantes, pintados una vez */
+const ESTATICA = new Map();
 export function estatica(g, x, y, f) {
-  for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j += 2) {
-    const n = ((x * 31 + i * 7 + j * 13 + f * 17) * 2654435761 >>> 0) / 4294967296;
-    g.fillStyle = n < 0.33 ? '#5c6068' : n < 0.66 ? '#8a8f97' : '#b5bac1';
-    g.fillRect(x + i, y + j, 1, 2);
+  const k = (((x >> 4) & 3) << 3) | (f & 7);
+  let c = ESTATICA.get(k);
+  if (!c) {
+    let e; [c, e] = lienzo2d(16, 16);
+    for (let i = 0; i < 16; i++) for (let j = 0; j < 16; j += 2) {
+      const n = ((((k >> 3) * 16) * 31 + i * 7 + j * 13 + (k & 7) * 17) * 2654435761 >>> 0) / 4294967296;
+      e.fillStyle = n < 0.33 ? '#5c6068' : n < 0.66 ? '#8a8f97' : '#b5bac1';
+      e.fillRect(i, j, 1, 2);
+    }
+    ESTATICA.set(k, c);
   }
+  g.drawImage(c, x, y);
 }
 
 /* la Aurora: una cinta de luz arriba de la baldosa. Prendida, brilla y cambia

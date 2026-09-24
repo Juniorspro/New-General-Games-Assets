@@ -329,24 +329,32 @@ export const MUNDOS_FONDO = {
     const [ci, gi] = lienzo2d(1600, 220);
     for (let i = 0; i < 6; i++) { const I = isla(al, 30 + Math.floor(al() * 40)); gi.drawImage(I, Math.floor(i / 6 * 1600 + al() * 120), Math.floor(20 + al() * 100)); }
     const S = sol();
+    let arco = null;
+    const pintarArco = (w, h) => {
+      const m = 40, [c, ga] = lienzo2d(w + m * 2, h);
+      const cx = w * 0.42 + m, cy = h * 1.05, R0 = h * 0.85;
+      const COL = ['#ff5a5a', '#ffa23a', '#ffe23a', '#5fe05a', '#4aa8ff', '#8a6bff'];
+      for (let i = 0; i < 6; i++) {
+        for (let a = Math.PI; a < TAU; a += 0.004) {
+          const x = cx + Math.cos(a) * (R0 - i * 5), y = cy + Math.sin(a) * (R0 - i * 5);
+          const gris = a > Math.PI * 1.55;
+          ga.fillStyle = gris ? '#c8cdd4' : COL[i]; ga.globalAlpha = gris ? 0.22 : 0.3;
+          ga.fillRect(Math.round(x), Math.round(y), 2, 5);
+        }
+      }
+      return { c, w, h, m };
+    };
     return {
       cielo, sol: [0.78, 0.18], nubes, S,
       grado: { tinte: [1, 1.01, 1.03], levantar: [0.01, 0.02, 0.03], sat: 1.12, contraste: 1.03 },
       post: { bloom: 0.5, destello: 0.9, rayos: 0.55, umbral: 0.82, velo: 0.14 },
       capas: [{ c: lejos, f: 0.06, y: 250, fy: 0.05 }, { c: ci, f: 0.14, y: 40, fy: 0.08 }, { c: cerca, f: 0.32, y: 300, fy: 0.14 }],
       antes(g, cam, t, w, h) {
-        /* el arcoíris: la mitad de la derecha ya perdió los colores */
-        const cx = w * 0.42 - cam.x * 0.02, cy = h * 1.05, R0 = h * 0.85;
-        const COL = ['#ff5a5a', '#ffa23a', '#ffe23a', '#5fe05a', '#4aa8ff', '#8a6bff'];
-        for (let i = 0; i < 6; i++) {
-          for (let a = Math.PI; a < TAU; a += 0.004) {
-            const x = cx + Math.cos(a) * (R0 - i * 5), y = cy + Math.sin(a) * (R0 - i * 5);
-            const gris = a > Math.PI * 1.55;
-            g.fillStyle = gris ? '#c8cdd4' : COL[i]; g.globalAlpha = gris ? 0.22 : 0.3;
-            g.fillRect(Math.round(x), Math.round(y), 2, 5);
-          }
-        }
-        g.globalAlpha = 1;
+        /* el arcoíris: la mitad de la derecha ya perdió los colores. Son 4.700
+           rectangulitos: se pintan una vez en su propio lienzo (costaba 30 ms
+           por cuadro) y después solo se corre con la cámara */
+        if (!arco || arco.w !== w || arco.h !== h) arco = pintarArco(w, h);
+        g.drawImage(arco.c, Math.round(-cam.x * 0.02) - arco.m, 0);
       },
     };
   },
@@ -367,6 +375,38 @@ export const MUNDOS_FONDO = {
     grA.addColorStop(0, 'rgba(160,255,210,0)'); grA.addColorStop(0.2, 'rgba(140,255,200,0.55)'); grA.addColorStop(0.55, 'rgba(90,220,230,0.25)'); grA.addColorStop(1, 'rgba(150,110,255,0)');
     gA.fillStyle = grA; gA.fillRect(0, 0, 1, 80);
     const luciernagas = Array.from({ length: 24 }, () => ({ x: al() * 900, y: 150 + al() * 170, f: al() * TAU }));
+    /* el degradé de la tira, ya multiplicado por su transparencia (para sumar luz) */
+    const tono = gA.getImageData(0, 0, 1, 80).data, TONO = new Float32Array(80 * 3);
+    for (let i = 0; i < 80; i++) { const a = tono[i * 4 + 3] / 255; TONO[i * 3] = tono[i * 4] * a; TONO[i * 3 + 1] = tono[i * 4 + 1] * a; TONO[i * 3 + 2] = tono[i * 4 + 2] * a; }
+    const cortinas = {
+      c: null, g: null, img: null, suma: null, w: 0, h: 0, cw: 0, ch: 0, cuadro: 0, t0: -9,
+      armar(w, h) {
+        this.w = w; this.h = h; this.cw = Math.ceil(w / 2); this.ch = Math.ceil(Math.min(h, 260) / 2);
+        /* en memoria y no en la placa (willReadFrequently): el putImageData en un lienzo de la placa la frenaba */
+        this.c = document.createElement('canvas'); this.c.width = this.cw; this.c.height = this.ch;
+        this.g = this.c.getContext('2d', { willReadFrequently: true });
+        this.img = this.g.createImageData(this.cw, this.ch); this.suma = new Float32Array(this.cw * this.ch * 3);
+      },
+      pintar(cam, t) {
+        const { cw, ch, suma } = this; suma.fill(0);
+        for (let k = 0; k < 3; k++) {
+          const base = 40 + k * 34, alto = 70 + k * 20;
+          for (let cx = 0; cx < cw; cx++) {
+            const X = cx * 2 + cam.x * (0.03 + k * 0.02);
+            const y = base + Math.sin(X * 0.008 + t * 0.35 + k) * 22 + Math.sin(X * 0.021 - t * 0.5) * 9;
+            const a = 0.5 + 0.45 * Math.sin(X * 0.013 + t * 0.8 + k * 2);
+            const f0 = Math.max(0, Math.ceil(y / 2)), f1 = Math.min(ch, Math.floor((y + alto) / 2));
+            for (let f = f0; f < f1; f++) {
+              const i = Math.min(79, Math.floor((f * 2 - y) / alto * 80)) * 3, o = (f * cw + cx) * 3;
+              suma[o] += TONO[i] * a; suma[o + 1] += TONO[i + 1] * a; suma[o + 2] += TONO[i + 2] * a;
+            }
+          }
+        }
+        const d = this.img.data;
+        for (let i = 0, j = 0; i < suma.length; i += 3, j += 4) { d[j] = suma[i]; d[j + 1] = suma[i + 1]; d[j + 2] = suma[i + 2]; d[j + 3] = 255; }
+        this.g.putImageData(this.img, 0, 0);
+      },
+    };
     return {
       cielo, sol: [0.18, 0.16], nubes: [], S: L,
       grado: { tinte: [0.98, 1.02, 1.04], levantar: [0.0, 0.02, 0.04], sat: 1.12, contraste: 1.05 },
@@ -380,18 +420,17 @@ export const MUNDOS_FONDO = {
           if (e.b > 0.93) { g.fillRect(Math.round(x) - 1, Math.round(e.y), 3, 1); g.fillRect(Math.round(x), Math.round(e.y) - 1, 1, 3); }
         }
         g.globalAlpha = 1;
-        /* las cortinas: tiras verticales que ondulan */
+        /* las cortinas: tiras verticales que ondulan. Eran 930 drawImage por
+           cuadro en modo 'lighter' (hasta 120 ms en el perfil): ahora se
+           calculan a mano en un búfer de media resolución, cada dos cuadros, y
+           se pegan agrandadas de una vez */
+        cortinas.cuadro++;
+        if (!cortinas.c || cortinas.w !== w || cortinas.h !== h) cortinas.armar(w, h);
+        if (cortinas.cuadro % 2 === 0 || cortinas.t0 !== cortinas.cuadro - 1) cortinas.pintar(cam, t);
+        cortinas.t0 = cortinas.cuadro;
         g.globalCompositeOperation = 'lighter';
-        for (let k = 0; k < 3; k++) {
-          const base = 40 + k * 34, alto = 70 + k * 20;
-          for (let x = 0; x < w; x += 2) {
-            const X = x + cam.x * (0.03 + k * 0.02);
-            const y = base + Math.sin(X * 0.008 + t * 0.35 + k) * 22 + Math.sin(X * 0.021 - t * 0.5) * 9;
-            g.globalAlpha = 0.5 + 0.45 * Math.sin(X * 0.013 + t * 0.8 + k * 2);
-            g.drawImage(tiraA, x, Math.round(y), 2, alto);
-          }
-        }
-        g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+        g.drawImage(cortinas.c, 0, 0, cortinas.cw, cortinas.ch, 0, 0, cortinas.cw * 2, cortinas.ch * 2);
+        g.globalCompositeOperation = 'source-over';
       },
       despues(g, cam, t, w, h) {
         for (const q of luciernagas) {

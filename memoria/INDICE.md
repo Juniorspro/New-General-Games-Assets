@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (canciones de BRILLO).
+mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (BRILLO más liviano).
 
 ## Reglas que no se discuten
 
@@ -58,6 +58,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (canciones de BRILLO)
 | [juegos](juegos.md) | tocar un juego del repo o hacer uno nuevo |
 | [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el resolvedor y sus trampas |
 | [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas, las canciones grabadas y sus trampas |
+| [brillo-rendimiento](brillo-rendimiento.md) | BRILLO: qué lo hacía lento, la cámara más cerca, las cinemáticas de charla y la calidad automática |
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
@@ -74,7 +75,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 24/09/2026 (canciones de BRILLO)
 | `zonda/` | ZONDA: plataformas tipo Celeste, 20 salas comprobadas por un resolvedor | `zonda/README.md` |
 | `luz-mala/` | LUZ MALA: metroidvania tipo Silksong, 9 salas y 3 jefes, menús en el lienzo, 3 idiomas | `luz-mala/README.md` |
 | `kuntur/` | KUNTUR: 2.5D de papel tipo Paper Mario, 7 capítulos con historia, 3 idiomas | [kuntur](kuntur.md) |
-| `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 360 de alto | [brillo](brillo.md) · `brillo/README.md` |
+| `brillo/` | BRILLO: plataformas 2D Frutiger Aero, 6 mundos con historia, pixel art de 288 de alto | [brillo](brillo.md) · `brillo/README.md` |
 | `ruta40/` | RUTA 40: autos tipo Hill Climb por la Ruta 40, arte pintado de Rezona, 7 tramos, 5 vehículos, picadas | [ruta40](ruta40.md) · `ruta40/README.md` |
 | `videos/` | videos de TikTok relatados: grabadores de tomas, voz, stickers, memes y el montaje en Remotion | [videos](videos.md) |
 | `nevada/` | NEVADA: cinemática three.js 9:16 de un superdeportivo y un tigre blanco en el bosque nevado, un solo HTML | [nevada](nevada.md) · `nevada/README.md` |

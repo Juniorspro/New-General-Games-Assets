@@ -26,14 +26,14 @@ export function probarNivel() {
     requestAnimationFrame(cuadroN);
     const dt = ult ? Math.min(0.1, (ts - ult) / 1000) : DT; ult = ts;
     const w = Pantalla.w, h = Pantalla.h;
-    if (base.width !== w || base.height !== h) { [base, g] = lienzo2d(w, h); post.tamano(w, h, Pantalla.escala, Pantalla.lienzo); }
+    if (base.width !== w || base.height !== h) { [base, g] = lienzo2d(w, h); post.tamano(w, h, Pantalla.lienzo, Pantalla.dpr); }
     if (!window.__congelado) { acum += dt; let n = 0; while (acum >= DT && n < 5) { N.paso(leer()); acum -= DT; n++; } }
     N.cuadro(dt);
     N.dibujar(g, w, h);
     const F = N.fondo;
     post.mostrar(base, { ...F.post, sol: F.sol, grado: F.grado, t: N.t });
   };
-  post.tamano(Pantalla.w, Pantalla.h, Pantalla.escala, Pantalla.lienzo);
+  post.tamano(Pantalla.w, Pantalla.h, Pantalla.lienzo, Pantalla.dpr);
   requestAnimationFrame(cuadroN);
   window.__listo = true;
 }

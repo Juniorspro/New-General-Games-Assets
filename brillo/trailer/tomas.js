@@ -46,7 +46,8 @@ const pedir = (n, o) => sonidos.push({ t: +ahoraToma.toFixed(3), n, ...(o && Obj
 const FOCOS = { parejaColina: (t) => ({ x: (255 + 170 - 40 * t) * 3, y: 262 * 3 }) };
 
 class Juego {
-  constructor(params) { this.url = '/brillo-reloj.html?' + new URLSearchParams({ ...params, idioma: IDI }); }
+  /* el juego se graba como era: 360 de alto (a ×3 en 1920×1080) y sin el zoom de las charlas */
+  constructor(params) { this.url = '/brillo-reloj.html?' + new URLSearchParams({ ...params, idioma: IDI, alto: 360, sinzoom: 1 }); }
   async cargar() {
     const f = this.f = document.createElement('iframe');
     f.src = this.url; JUEGOS.append(f);
