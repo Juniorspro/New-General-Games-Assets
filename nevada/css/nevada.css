@@ -1,0 +1,41 @@
+/* NEVADA — la interfaz: poca, fría, de película. Letras finas y espaciadas,
+   vidrio esmerilado sobre la nieve, nada que compita con la imagen. */
+:root { --tinta: #f3f5f7; --suave: rgba(243, 245, 247, 0.72); --vidrio: rgba(20, 24, 30, 0.34); --borde: rgba(255, 255, 255, 0.28); }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #0b0d10; overflow: hidden; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--tinta); -webkit-tap-highlight-color: transparent; }
+body { display: grid; place-items: center; }
+#cuadro { position: relative; overflow: hidden; background: #cfd4d8; box-shadow: 0 0 80px rgba(0, 0, 0, 0.6); container-type: size; }
+#cuadro canvas { display: block; width: 100% !important; height: 100% !important; }
+.capa { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 8%; text-align: center;
+  background: linear-gradient(180deg, rgba(10, 12, 16, 0.45), rgba(10, 12, 16, 0.15) 45%, rgba(10, 12, 16, 0.55)); transition: opacity 0.6s; }
+.capa.abajo { justify-content: flex-end; padding-bottom: 12%; background: linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0) 55%, rgba(10, 12, 16, 0.6)); pointer-events: none; }
+.capa.abajo * { pointer-events: auto; }
+.oculto { opacity: 0; pointer-events: none !important; }
+.oculto * { pointer-events: none !important; }
+h1 { margin: 0; font-weight: 200; font-size: 44px; font-size: min(12cqw, 110px); letter-spacing: 0.32em; margin-right: -0.32em; text-shadow: 0 4px 30px rgba(0, 0, 0, 0.35); }
+.bajada { margin: 0; max-width: 30ch; font-size: clamp(13px, 2.1vh, 17px); line-height: 1.5; color: var(--suave); font-weight: 300; }
+.chico { font-size: 12px; letter-spacing: 0.08em; color: var(--suave); }
+.copo { font-size: 42px; opacity: 0.85; animation: gira 9s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
+.botones { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+button { font: inherit; font-size: 14px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--tinta); padding: 12px 20px; border-radius: 999px; cursor: pointer;
+  background: var(--vidrio); border: 1px solid var(--borde); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background 0.2s, transform 0.15s; }
+button:hover { background: rgba(255, 255, 255, 0.18); }
+button:active { transform: scale(0.97); }
+button.grande { padding: 16px 30px; font-size: 15px; background: rgba(255, 255, 255, 0.16); }
+button:disabled { opacity: 0.6; cursor: wait; }
+.credito { position: absolute; bottom: 3.5%; margin: 0; font-size: 11px; letter-spacing: 0.06em; color: rgba(243, 245, 247, 0.55); }
+.capa.abajo .credito { position: static; }
+.ayuda { margin: 0; font-size: 12px; color: var(--suave); letter-spacing: 0.04em; }
+#sonido { position: absolute; top: 14px; right: 14px; width: 40px; height: 40px; padding: 0; letter-spacing: 0; font-size: 16px; z-index: 5; }
+#sonido.apagado { opacity: 0.45; text-decoration: line-through; }
+/* los rótulos de la cinemática: el título del final y la marca del desglose */
+#rotulos { position: absolute; inset: 0; pointer-events: none; }
+#rDesglose { position: absolute; top: 18px; left: 16px; display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(28, 32, 18, 0.72); opacity: 0; font-variant-numeric: tabular-nums; }
+#rDesglose .punto { width: 7px; height: 7px; border-radius: 50%; background: #d8483a; box-shadow: 0 0 6px rgba(216, 72, 58, 0.7); }
+#rTc { opacity: 0.75; letter-spacing: 0.12em; }
+#rTitulo { position: absolute; left: 0; right: 0; top: 41%; margin: 0; text-align: center; font-weight: 200; font-size: 40px; font-size: 11cqw; line-height: 1;
+  letter-spacing: 0.3em; padding-left: 0.3em; color: #f6f8fa; opacity: 0; text-shadow: 0 0 28px rgba(10, 14, 20, 0.45), 0 4px 40px rgba(0, 0, 0, 0.35); }
+#rFin { position: absolute; left: 8%; right: 8%; top: calc(41% + 40px + 20px); top: calc(41% + 11cqw + 20px); margin: 0; text-align: center; font-size: 11px; line-height: 1.6;
+  letter-spacing: 0.14em; text-transform: uppercase; color: rgba(243, 245, 247, 0.78); opacity: 0; }

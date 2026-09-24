@@ -4,6 +4,15 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **24/09/2026, mañana · `claude/fijate-iszyer`:**
+  - Pasó un TikTok de @m4jor3d × @W-SE (auto malva y tigre blanco en la nieve,
+    16,5 s) y pidió "logra esto en three.js en html". Quedó NEVADA:
+    `nevada/nevada-en-un-archivo.html` (10 MB), con sus assets de Rezona y un
+    phonk propio. Cómo se arma y sus trampas: [nevada](nevada.md).
+  - Antes, en esta misma sesión: miniaturas con Rezona para los tres videos, y
+    los videos preparados para TikTok. Publicar lo hace quien pide, desde el
+    widget de Higgsfield.
+  - Falta, si lo pide: un MP4 de la cinemática y subirla a Rezona.
 - **24/09/2026, madrugada · `claude/fijate-iszyer`:**
   - Pidió dos videos de gameplay relatados de ~1 min, con sus 7 stickers como
     narrador y memes bajados (no generados).

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NEVADA</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/nevada.css">
+</head>
+<body>
+<div id="cuadro">
+  <!-- los rótulos de la cinemática: los mueve el reloj de la cinemática, no el CSS -->
+  <div id="rotulos" aria-hidden="true">
+    <div id="rDesglose"><span class="punto"></span><span data-t="desglose"></span><span id="rTc">0000</span></div>
+    <h2 id="rTitulo">NEVADA</h2>
+    <p id="rFin" data-t="fin"></p>
+  </div>
+  <!-- elegir el idioma, siempre antes que nada -->
+  <section id="idioma" class="capa">
+    <div class="copo">❄</div>
+    <p class="chico">Elegí el idioma · Choose your language · Escolha o idioma</p>
+    <div class="botones">
+      <button data-i="es">Español</button>
+      <button data-i="en">English</button>
+      <button data-i="pt">Português</button>
+    </div>
+  </section>
+  <!-- el título -->
+  <section id="menu" class="capa oculto">
+    <h1 data-t="titulo">NEVADA</h1>
+    <p class="bajada" data-t="bajada"></p>
+    <button id="ver" class="grande" data-t="ver"></button>
+    <p class="credito" data-t="credito"></p>
+  </section>
+  <!-- después de la cinemática -->
+  <section id="final" class="capa abajo oculto">
+    <p class="ayuda" data-t="ayudaLibre"></p>
+    <div class="botones">
+      <button id="otra" data-t="otraVez"></button>
+      <button id="arcilla" data-t="arcilla"></button>
+    </div>
+    <p class="credito" data-t="credito"></p>
+  </section>
+  <button id="sonido" title="♪">♪</button>
+</div>
+<script src="juego.js"></script>
+</body>
+</html>

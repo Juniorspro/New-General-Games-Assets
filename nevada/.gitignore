@@ -1,0 +1,6 @@
+# los modelos y las imágenes tal cual llegan de Rezona (pesan decenas de MB): se optimizan a assets/
+crudo/
+dist/
+node_modules
+# lo que sacan las pruebas (fotos, el WAV de la música)
+pruebas/salida/

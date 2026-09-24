@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ver modelos</title>
+<style>html,body{margin:0;background:#777}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+/* hoja de prueba: cada modelo desde seis ángulos, para saber para dónde mira */
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const q = new URLSearchParams(location.search);
+const archivo = q.get('m') || 'auto.glb';
+const W = 1800, H = 600;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(W, H); r.setScissorTest(true); document.body.appendChild(r.domElement);
+r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping;
+const esc = new THREE.Scene(); esc.background = new THREE.Color('#8a8f94');
+esc.add(new THREE.HemisphereLight('#ffffff', '#555555', 2.2));
+const d = new THREE.DirectionalLight('#ffffff', 2); d.position.set(3, 5, 4); esc.add(d);
+const g = await new GLTFLoader().loadAsync('/assets/' + archivo);
+const m = g.scene; esc.add(m);
+const caja = new THREE.Box3().setFromObject(m); const c = caja.getCenter(new THREE.Vector3()); const s = caja.getSize(new THREE.Vector3());
+m.position.sub(c);
+// un eje: X rojo, Z azul, para leer la orientación
+esc.add(new THREE.AxesHelper(Math.max(s.x, s.y, s.z) * 0.8));
+const cam = new THREE.PerspectiveCamera(35, 1, 0.01, 50);
+const R = Math.max(s.x, s.y, s.z) * 1.9;
+const angs = [0, 1, 2, 3, 4, 5].map((k) => (k * Math.PI) / 3);
+angs.forEach((a, k) => {
+  const x = (k % 6) * 300;
+  r.setViewport(x, 0, 300, 600); r.setScissor(x, 0, 300, 600);
+  cam.aspect = 300 / 600; cam.updateProjectionMatrix();
+  cam.position.set(Math.sin(a) * R, R * 0.35, Math.cos(a) * R); cam.lookAt(0, 0, 0);
+  r.render(esc, cam);
+});
+window.__listo = { tam: s.toArray(), centro: c.toArray() };
+</script>
+</body></html>
