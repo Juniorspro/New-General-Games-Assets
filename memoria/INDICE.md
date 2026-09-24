@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 23/9/2026.
+Última puesta al día: 24/9/2026.
 
 Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raíz).
 
@@ -52,6 +52,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | [maquina](maquina.md) | algo falle por red, disco, Docker o permisos de la sesión |
 | [neko](neko.md) | haga falta un escritorio gráfico o manejar un navegador |
 | [video](video.md) | haya que tocar un video, hacer un zócalo o quemar un gráfico |
+| [juegos](juegos.md) | haya que animar modelos de Rezona en three.js, o probar un juego cuadro a cuadro |
 | [diario](diario.md) | quieras saber qué pasó en la sesión anterior y qué quedó |
 
 ## Los tres documentos largos (no se leen enteros)

@@ -88,3 +88,18 @@ Una entrada por sesión: qué quedó y qué falta. La más nueva arriba.
   guarda los que salieron.
 - Las copas de los árboles con las ramas de Rezona se ven algo borrosas de
   cerca; los animales de Rezona no se echan (se quedan parados).
+
+## 24/9/2026 — Estancia: la pasada de bugs de animación y visuales
+
+Él pidió arreglar "los muchos bugs visuales y de rigs, uno por uno". Se
+filmó todo cuadro a cuadro y salieron, entre otros: la vaca caminaba con una
+sola pata delantera (rig mal etiquetado), cuellos que giraban solos (giros
+acumulados), el guacho avanzaba y volvía de golpe (avance de raíz), a caballo
+la cámara miraba para atrás, el recado flotaba o quedaba adentro, la vaca se
+trababa en la manga, la mancha blanca del estero era el barro, la noche era
+negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
+
+**Qué falta**
+
+- Música y efectos grabados (el audio de Rezona no volvió en 90 minutos).
+- Las copas siguen siendo tarjetas: de muy cerca se nota.

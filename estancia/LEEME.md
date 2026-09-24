@@ -39,8 +39,16 @@ modelos de música y efectos fuera de su propio generador de juegos. Queda el
 sonido sintetizado.
 
 Cada modelo tiene su plan B: si un GLB no carga, el animal armado por código
-aparece en su lugar (y de lejos, a más de 70 m, se usa siempre ese, que pesa
-3 mil triángulos contra 19 mil).
+aparece en su lugar. Ese animal de código sigue estando, invisible: es el
+esqueleto lógico que usan el lazo, la manga y la cura.
+
+La vaca y el caballo no usan la caminata de Rezona: se mueven con
+`js/marcha.js` (paso, trote y galope por código, con IK en las patas, y las
+posturas: pastar, echada, tumbada, muerta, tirando del lazo, en el cepo).
+El Guacho sí usa sus clips (quieto, caminar, correr), sin avance de raíz y a
+la velocidad medida del clip.
+
+Pruebas cuadro a cuadro: `herramientas/pruebas/LEEME.md`.
 
 ## Rearmar
 

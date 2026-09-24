@@ -1,0 +1,50 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PW);
+const b = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const p = await b.newPage({ viewport: { width: 960, height: 540 } });
+const errores = []; p.on("pageerror", (e) => errores.push(e.message));
+await p.route("**/*", (r) => r.request().url().startsWith("file://") ? r.continue() : r.abort());
+await p.goto("file://" + process.cwd() + "/estancia.html#fijo");
+await p.waitForSelector("#menu:not([hidden])", { timeout: 180000 });
+await p.evaluate(() => { __juego.empezar(); __juego.congelar(true); E.flora.pasto.visible = false; });
+const info0 = await p.evaluate(() => {
+  const j = __juego, A = j.A(), W = j.W(), L = E.lugares; j.hora(10);
+  const v = A.vacas[2]; v.prueba = null; v.salud.bichera = null;
+  Object.assign(v, { x: L.corral.x - 2, z: L.corral.z, yaw: 1.5, estado: "corral", px: L.corral.x - 2, pz: L.corral.z });
+  const J = j.J(); J.x = L.corral.x - 6; J.z = L.corral.z + 3;
+  window.vaca = v; W.entrarManga();
+  for (let i = 0; i < 1200 && W.manga.fase !== "cepo"; i++) j.paso(1 / 30, 1);
+  j.paso(1 / 30, 30);
+  return { fase: W.manga.fase, x: v.x.toFixed(2), estado: v.estado };
+});
+console.log("manga:", JSON.stringify(info0));
+// Clic en un punto del mundo: se proyecta a la pantalla y se dispara el pointerdown del lienzo.
+const clic = async (herr, puntoFn) => {
+  const r = await p.evaluate(([herr, puntoFn]) => {
+    const j = __juego, W = j.W(); W.manga.herr = herr; E.juego.hierroCaliente = 5;
+    const v = window.vaca, pt = (0, eval)("(" + puntoFn + ")")(v);
+    const cam = E.motor.camara; cam.updateMatrixWorld();
+    const s = pt.clone().project(cam), lz = E.motor.renderer.domElement.getBoundingClientRect();
+    const cx = lz.left + (s.x + 1) / 2 * lz.width, cy = lz.top + (1 - s.y) / 2 * lz.height;
+    E.motor.renderer.domElement.dispatchEvent(new PointerEvent("pointerdown", { clientX: cx, clientY: cy, bubbles: true }));
+    const accion = W.manga.accion ? W.manga.accion.parte : null;
+    for (let i = 0; i < 100; i++) j.paso(1 / 30, 1);
+    const s2 = v.salud;
+    return { accion, cx: Math.round(cx), cy: Math.round(cy), mensaje: document.getElementById("mensaje").textContent, hecho: { vacunada: s2.vacunada, desparasitada: s2.desparasitada, caravana: s2.caravana, marcada: s2.marcada } };
+  }, [herr, puntoFn.toString()]);
+  console.log(herr, JSON.stringify(r));
+};
+const V = "THREE.Vector3";
+await clic("aftosa", `(v) => E.animales.cuello(v, new THREE.Vector3()).add(new THREE.Vector3(0, -0.05, -0.25))`);
+await clic("ivermectina", `(v) => E.animales.cuello(v, new THREE.Vector3()).add(new THREE.Vector3(-0.1, -0.1, -0.25))`);
+await clic("caravana", `(v) => { const h = v.piel.roles.cabeza.getWorldPosition(new THREE.Vector3()); const izq = new THREE.Vector3(1, 0, 0).transformDirection(v.piel.raiz.matrixWorld); return h.addScaledVector(izq, 0.22).add(new THREE.Vector3(0, -0.12, 0)); }`);
+await clic("hierro", `(v) => v.huesos.cuerpo.localToWorld(new THREE.Vector3(0.35, 0.12, -0.55))`);
+await p.evaluate(() => { const j = __juego; j.fotoDesde(E.motor.camara.position.toArray(), window.vaca.huesos.cuerpo.getWorldPosition(new THREE.Vector3()).toArray()); });
+await p.screenshot({ path: "tiras/manga-general.png" });
+await p.evaluate(() => { const v = window.vaca, h = v.piel.roles.cabeza.getWorldPosition(new THREE.Vector3()); const izq = new THREE.Vector3(1, 0, 0).transformDirection(v.piel.raiz.matrixWorld); __juego.fotoDesde(h.clone().addScaledVector(izq, 1.0).add(new THREE.Vector3(0.3, 0.1, 0)).toArray(), h.toArray()); });
+await p.screenshot({ path: "tiras/manga-oreja.png" });
+await p.evaluate(() => { const v = window.vaca, c = v.huesos.cuerpo.localToWorld(new THREE.Vector3(0, 0.1, -0.55)); const izq = new THREE.Vector3(1, 0, 0).transformDirection(v.piel.raiz.matrixWorld); __juego.fotoDesde(c.clone().addScaledVector(izq, 1.3).toArray(), c.toArray()); });
+await p.screenshot({ path: "tiras/manga-anca.png" });
+console.log(errores.length ? errores.join("\n") : "sin errores");
+await b.close();
