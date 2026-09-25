@@ -4,6 +4,17 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **26/09/2026 · `claude/fijate-iszyer`:**
+  - Pidió:
+    - deslizarse cuando quiera;
+    - brazos más bajos y ver caminar, correr y deslizar en primera persona;
+    - el runner más extremo, con sustos y DESPIERTA o WAKE UP;
+    - que no spameen los avisos;
+    - un Stellarium en el telescopio;
+    - mejores modelos (GLB y después procedural).
+  - Quedó todo ([aeroplaza-10](aeroplaza-10.md)).
+  - Los sustos se apagan en Opciones › Juego.
+  - Falta: escuchar el grito sintetizado en un aparato de verdad.
 - **25/09/2026, noche (3) · `claude/fijate-iszyer`:**
   - Pidió: dos canciones nuevas (una breakcore), la Zona de Juegos como mapa
     con puertas y más de 10 juegos, un runner que dure lo que la canción y se

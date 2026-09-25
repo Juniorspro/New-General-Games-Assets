@@ -298,6 +298,10 @@ por lo que dijo en el texto.
 
 En su propia nota: [aeroplaza-9](aeroplaza-9.md).
 
+## Novena vuelta: Estelario, modelos, deslizar y el runner extremo (26/09)
+
+En su propia nota: [aeroplaza-10](aeroplaza-10.md).
+
 ## Trampas que ya se pagaron
 
 - **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una

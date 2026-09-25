@@ -53,10 +53,10 @@ Detalle: `js/red.js` y `js/remotos.js`.
 | Aero·Mart | la tienda por dentro: vitrinas, percheros, sombrerero, estantes, globos, neón, maniquíes y Menta |
 | Mi casa | una isla entre las nubes, con la casa y 16 muebles para poner |
 | Zona de Juegos | un mapa propio: una plaza con 11 puertas que te llevan (con su efecto) a cada juego o lugar, y más de 10 cosas para hacer: 6 mesas para sentarse a jugar de a dos (damas, ta-te-ti, cuatro en línea, memotest y piedra, papel o tijera; contra otra persona de la sala o contra la compu), la canchita de fútbol con arcos y marcador, básquet, bolos, siete trampolines, hamacas, tobogán y una pista de baile con bola de espejos |
-| Runner · Aero.exe | un solo nivel largo: se corre solo y rápido saltando plataformas grandes y separadas, deslizándose por debajo de compuertas, saltando vallas y esquivando paredes y cubos que se mueven al ritmo. Hay que llegar al portal antes de que termine la canción (el breakcore suena solo acá), y todo arranca Frutiger y se va rompiendo en glitches con la música |
+| Runner · Aero.exe | un solo nivel largo: se corre solo y rápido saltando plataformas grandes y separadas, deslizándose por debajo de compuertas, saltando vallas y esquivando paredes y cubos que se mueven al ritmo. Hay que llegar al portal antes de que termine la canción (el breakcore suena solo acá), y todo arranca Frutiger y se va rompiendo en glitches con la música. Y se pone extremo con la canción: tres sustos (se apagan en Opciones), DESPIERTA / WAKE UP gigantes en los golpes, cajas de rastreo, siluetas negras que se deshacen al acercarte, la cámara que pega y cuadros congelados |
 | Parkour Aero | el primer minijuego, en la Zona de Juegos: 6 mapas (Nubes, Acuario, Jardín, Ciudad, Órbita y Azoteas) con plataformas que se mueven, barras que giran, rebotes, cintas, géiseres, tubos y muros, controles, estrellas por tiempo y récords. Se corre, se salta, se desliza, se rueda, se trepan bordes y se rebota en paredes (C, Q o ⤓ para bajar), y se puede jugar en primera persona (👁) |
 | Tiro de Burbujas | minijuego en primera persona desde un balcón sobre la laguna: 60 s para reventar burbujas de 1, 2 y 5 puntos que se mueven, con racha que multiplica hasta ×4 |
-| Adentro de los edificios | en primera persona, con un punto para apuntar y usar: los 5 hoteles (lobby con recepción, columna-acuario y piano; ascensor de vidrio a la suite y a la azotea con pileta, bar y telescopio), el Café Burbuja del pabellón y las casas de dos vecinos |
+| Adentro de los edificios | en primera persona, con un punto para apuntar y usar: los 5 hoteles (lobby con recepción, columna-acuario y piano; ascensor de vidrio a la suite y a la azotea con pileta, bar y telescopio, que abre el Estelario: el cielo de verdad de Buenos Aires, con 5044 estrellas, constelaciones, la Luna con su fase, los planetas, la Vía Láctea y el tiempo para adelantar), el Café Burbuja del pabellón y las casas de dos vecinos |
 
 Además hay:
 
@@ -71,7 +71,7 @@ Además hay:
 - en primera persona se ven los brazos, que acompañan cada movimiento, y mirando abajo el cuerpo y las piernas;
 - los caminos de la isla sin nada que estorbe;
 - efectos especiales (el gesto ✦ Poder: carga, estrella, destello, onda, grietas y un orbe con estelas) y el movimiento del video: al correr la cámara se inclina y tiembla, se saltan vallas solo, se suben paredes corriendo y se corre por las paredes;
-- caminar y correr copiados del video que mandó quien pide, y deslizarse (C, Q o ⤓) siempre, caminando o parado;
+- caminar y correr copiados del video que mandó quien pide, y deslizarse (C, Q o ⤓) siempre, caminando o parado, y sosteniéndolo se sigue deslizando;
 - avisos arriba, chiquitos, estilo Windows 7 y con sus campanitas; las misiones se abren con el botón 📜 y en el parkour no queda nada que tape;
 - siete estilos retro con el botón 👾: Normal, Pixel, PS1, Tele de tubo, Game
   Boy, 8 bits y VHS. Dibujan de verdad a baja resolución, así que además van
