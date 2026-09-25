@@ -19,3 +19,5 @@ __pycache__/
 
 # el enlace a los módulos globales para las pruebas (lo arma correr.sh)
 tajo/node_modules
+# el juego en un solo archivo: se arma con python3 empaquetar.py (no se commitea, pesa 900 KB por versión)
+tajo/tajo-en-un-archivo.html

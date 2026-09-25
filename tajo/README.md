@@ -16,7 +16,8 @@ con el dedo**.
   arma el mapa. El audio no sale del teléfono.
 - **Sin un solo archivo de audio ni de imagen.** La música la toca un
   sintetizador, el escenario se arma con código. El juego entero es
-  `tajo-en-un-archivo.html`: **907 KB**, abre con doble clic.
+  `tajo-en-un-archivo.html`: **907 KB**, abre con doble clic. No está en el
+  repo (sería otro megabyte en cada cambio): se arma con `python3 empaquetar.py`.
 
 > **Sobre la canción del video.** *Runaway Baby* es de Bruno Mars y tiene
 > derechos: no se puede meter en el juego. Por eso las canciones son
