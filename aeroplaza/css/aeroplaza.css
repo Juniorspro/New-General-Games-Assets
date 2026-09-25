@@ -633,3 +633,11 @@ html.b460 .pk-ayuda { display: none; }
 .pk-carta b { font-size: 13px; line-height: 1.15; } .pk-carta small { font-size: 11px; } .pk-carta .est { font-size: 15px; letter-spacing: 1px; }
 html.angosta .pk-cartas { grid-template-columns: repeat(4, 1fr) !important; }
 html.b460 .pk-carta b { font-size: 11px; } html.b460 .pk-carta .est { font-size: 12px; } html.b460 .pk-opciones { margin-bottom: 6px; }
+
+/* ---- 25/09: textos más chicos en pantalla ("al entrar al hotel hay textos muy grandes") ---- */
+/* el cartel de lo que se puede usar: chico, de vidrio, que no tape */
+.aviso-accion.pildora { font-size: 13px; font-weight: 800; gap: 6px; padding: 3px 11px 3px 4px; border-width: 2px; background: rgba(255, 255, 255, 0.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 84px); }
+.aviso-accion.pildora .tecla { width: 20px; height: 20px; min-width: 20px; font-size: 11px; line-height: 20px; }
+html.a700 .aviso-accion.pildora { font-size: 12px; }
+/* el viaje: el nombre del lugar más chico */
+.viaje p { font-size: 16px; font-weight: 800; margin-top: 20px; }

@@ -245,9 +245,10 @@ export const UI = {
   },
   /* los avisos: globitos de vidrio arriba de todo, como las notificaciones de
      Windows 7 (ícono, título, texto, la cruz y una rayita que marca el tiempo),
-     con su campanita (timbres.js). Se apilan hasta tres, el nuevo arriba; si
-     llega uno igual a uno que está, ese se renueva y suma ×2 en vez de repetirse.
-     En el parkour no se muestran: no tapan la carrera. */
+     con su campanita (timbres.js). **Uno solo a la vez** (25/09: al pasar de
+     una zona a otra salían dos o tres): el nuevo reemplaza al que estaba, sin
+     animación de salida. Si llega uno igual al que está, ese se renueva y suma
+     ×2 en vez de repetirse. En el parkour no se muestran: no tapan la carrera. */
   notificar({ titulo = '', texto = '', icono = 'ℹ️', tipo = 'info', sonido = true }) {
     const c = this.hud && $('.notis', this.hud); if (!c) return null;
     if (this.hud.classList.contains('modo-parkour') && tipo !== 'error') return null;
@@ -261,8 +262,8 @@ export const UI = {
     d._clave = clave;
     this.ubicarNotis();
     $('.noti-x', d).onclick = (e) => { e.stopPropagation(); this.cerrarNoti(d); };
+    for (const q of [...c.children]) { clearTimeout(q._t); q.remove(); }
     c.prepend(d);
-    while (c.children.length > 3) c.lastElementChild.remove();
     this.programarNoti(d);
     if (sonido) timbre(tipo);
     return d;

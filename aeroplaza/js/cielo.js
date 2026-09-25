@@ -25,6 +25,8 @@ const CIELO_FS = /* glsl */`
   float ruido(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     float a = h13(vec3(i, 1.0)), b = h13(vec3(i + vec2(1, 0), 1.0)), c = h13(vec3(i + vec2(0, 1), 1.0)), d = h13(vec3(i + vec2(1, 1), 1.0));
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); }
+  float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a * ruido(p); p = p * 2.03 + vec2(17.1, 3.7); a *= 0.5; } return v; }
+  float fbm3(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 3; i++) { v += a * ruido(p); p = p * 2.07 + vec2(5.3, 11.9); a *= 0.5; } return v; }
   void main() {
     vec3 d = normalize(vDir);
     float h = d.y;
@@ -42,8 +44,10 @@ const CIELO_FS = /* glsl */`
     }
     float tapa = 0.0;   // cuánto tapan las nubes del panorama (para el arcoíris)
     /* el panorama de nubes de Rezona alrededor del horizonte: cuatro copias
-       espejadas (así no hay costura) hasta 52° de alto. Lo blanco es nube y se
-       tiñe con la hora; lo azul de la foto se mezcla solo de día */
+       hasta 52° de alto. La foto se hizo repetible (los bordes fundidos): antes
+       iba espejada y en cada unión salía una nube simétrica, como una mancha de
+       Rorschach. Lo blanco es nube y se tiñe con la hora; lo azul de la foto se
+       mezcla solo de día */
     if (uHayPano > 0.5 && h > -0.02) {
       float el = asin(clamp(h, 0.0, 1.0)) / 0.9;
       vec2 uv = vec2((atan(d.x, d.z) / 6.2831853 + 0.5) * 4.0, el * 0.97 + 0.025);
@@ -57,6 +61,33 @@ const CIELO_FS = /* glsl */`
         col = mix(col, p, 0.5 * uDia * (1.0 - uAtardecer) * arriba * (1.0 - blanco) * uNubes);
         col = mix(col, p * tNube, blanco * arriba);
         tapa = blanco * arriba;
+      }
+    }
+    /* las nubes de arriba (25/09: antes eran carteles con la foto de una nube, con
+       borde rosado y una cortada a los costados): cúmulos de ruido sobre un techo
+       plano, que el viento corre. Se ilumina mirando hacia el sol (lo que queda
+       de espaldas al sol es la panza gris azulada), con el borde plateado cerca
+       del sol, y se funden en el horizonte, donde ya está el panorama */
+    if (uNubes > 0.01 && h > 0.015) {
+      vec2 q = d.xz / (h + 0.08);
+      vec2 p = q * 0.42 + vec2(uT * 0.006, uT * 0.0022);
+      vec2 wq = vec2(fbm3(p * 0.7 + 3.0), fbm3(p * 0.7 + 8.3)) - 0.5;
+      vec2 pw = p + wq * 1.1;
+      float den = fbm(pw);
+      float cob = 0.53 + 0.05 * sin(uT * 0.01);
+      float c = smoothstep(cob, cob + 0.2, den);
+      if (c > 0.001) {
+        vec2 sd = normalize(uSol.xz + 1e-4) * 0.09;
+        float luz = clamp(0.55 + (den - fbm(pw + sd)) * 4.0, 0.0, 1.0);
+        float borde = 1.0 - smoothstep(cob, cob + 0.1, den);
+        vec3 blanco = mix(vec3(0.08, 0.11, 0.24), vec3(1.0), uDia);
+        blanco = mix(blanco, vec3(1.25, 0.74, 0.62), uAtardecer * 0.75);
+        vec3 panza = blanco * mix(vec3(0.55, 0.62, 0.8), vec3(0.74, 0.82, 0.96), uDia);
+        vec3 cn = mix(panza, blanco * 1.06, luz);
+        cn += vec3(1.0, 0.95, 0.82) * pow(max(dot(d, uSol), 0.0), 6.0) * borde * 1.2 * uDia;
+        float fade = smoothstep(0.015, 0.2, h) * (1.0 - tapa * 0.85);
+        col = mix(col, cn, c * fade * uNubes * 0.96);
+        tapa = max(tapa, c * fade);
       }
     }
     /* el arcoíris sobre el mar del norte (el de los fondos de 2007): un anillo de
@@ -107,19 +138,6 @@ const CIELO_FS = /* glsl */`
     gl_FragColor = vec4(col, 1.0);
   }`;
 
-/* una nube de repuesto, dibujada (si la de Rezona no está) */
-function nubeDibujada(sem) {
-  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
-  let s = sem; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  for (let i = 0; i < 26; i++) {
-    const x = 90 + rnd() * 330, y = 120 + (rnd() - 0.5) * 60 - Math.sin((x - 90) / 330 * Math.PI) * 50, r = 30 + rnd() * 55;
-    const gr = g.createRadialGradient(x, y - r * 0.3, r * 0.1, x, y, r);
-    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.7, 'rgba(236,246,255,0.95)'); gr.addColorStop(1, 'rgba(210,230,255,0)');
-    g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
-}
-
 /* el destello del sol: discos, anillos y hexágonos sobre la línea que va del
    sol al centro de la pantalla (el "lens flare" de los fondos de 2007) */
 function texDestello(tipo) {
@@ -132,7 +150,7 @@ function texDestello(tipo) {
 const PIEZAS = [[0, 'disco', 3.2, '#fff6dc'], [0.22, 'hex', 0.5, '#b8ffd8'], [0.38, 'anillo', 0.9, '#bfe8ff'], [0.55, 'hex', 0.35, '#ffd6f0'], [0.72, 'disco', 0.25, '#d8f0ff'], [0.9, 'hex', 0.7, '#c8e6ff'], [1.15, 'anillo', 1.4, '#e0ffd0']];
 
 export class Cielo {
-  constructor(motor, texturasNube = [], pano = null) {
+  constructor(motor, pano = null) {
     this.motor = motor;
     const U = this.U = {
       uSol: { value: new THREE.Vector3(0, 1, 0) }, uLuna: { value: new THREE.Vector3(0, -1, 0) },
@@ -140,7 +158,7 @@ export class Cielo {
       uDia: { value: 1 }, uAtardecer: { value: 0 }, uAurora: { value: 0 }, uT: { value: 0 }, uEstrellas: { value: 0 },
       uPano: { value: pano }, uHayPano: { value: pano ? 1 : 0 }, uNubes: { value: 1 }, uArco: { value: 0 },
     };
-    if (pano) { pano.wrapS = THREE.MirroredRepeatWrapping; pano.wrapT = THREE.ClampToEdgeWrapping; pano.generateMipmaps = false; pano.minFilter = THREE.LinearFilter; pano.needsUpdate = true; }
+    if (pano) { pano.wrapS = THREE.RepeatWrapping; pano.wrapT = THREE.ClampToEdgeWrapping; pano.generateMipmaps = false; pano.minFilter = THREE.LinearFilter; pano.needsUpdate = true; }
     const mat = new THREE.ShaderMaterial({ uniforms: U, vertexShader: CIELO_VS, fragmentShader: CIELO_FS, side: THREE.BackSide, depthWrite: false, fog: false });
     this.domo = new THREE.Mesh(new THREE.SphereGeometry(1000, 48, 24), mat);
     this.domo.frustumCulled = false; this.domo.renderOrder = -10;
@@ -164,20 +182,8 @@ export class Cielo {
     motor.escena.add(this.hemi);
     motor.escena.fog = new THREE.Fog('#bfe6ff', 140, 950);
 
-    /* las nubes: carteles grandes que dan la vuelta despacio */
+    /* (las nubes van en el shader del cielo: ya no hay carteles) */
     this.nubes = new THREE.Group(); motor.escena.add(this.nubes);
-    const tex = texturasNube.length ? texturasNube : [nubeDibujada(7), nubeDibujada(91), nubeDibujada(333)];
-    this.matsNube = tex.map((t) => new THREE.SpriteMaterial({ map: t, fog: false, depthWrite: false, transparent: true }));
-    const N = pano ? 18 : 30;   // con el panorama, las del horizonte ya están: estas van más altas
-    for (let i = 0; i < N; i++) {
-      const s = new THREE.Sprite(this.matsNube[i % this.matsNube.length]);
-      const a = (i / N) * Math.PI * 2 + Math.sin(i * 7.1) * 0.3, r = 380 + (i * 97) % 380;
-      const esc = 110 + (i * 53) % 120;
-      s.userData = { a, r, y: (pano ? 150 : 70) + (i * 37) % 150, v: 0.004 + (i % 5) * 0.001 };
-      s.scale.set(esc, esc * 0.52, 1);
-      s.renderOrder = -5;
-      this.nubes.add(s);
-    }
     this.destello = PIEZAS.map(([u, tipo, tam, col]) => {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texDestello(tipo), color: col, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
       s.userData = { u, tam }; s.renderOrder = 999; s.frustumCulled = false; s.visible = false; motor.escena.add(s); return s;
@@ -221,14 +227,6 @@ export class Cielo {
     if (this.modo.hemi) { this.hemi.intensity = this.modo.hemi; this.hemi.color.set(this.modo.hemiColor || '#ffffff'); }
     const niebla = this.motor.escena.fog;
     niebla.color.copy(hor).lerp(U.uAtar.value, atar * 0.35);
-    /* las nubes giran y se tiñen con la hora */
-    const tinte = new THREE.Color(1, 1, 1).lerp(new THREE.Color('#ffc2a8'), atar * 0.7).multiplyScalar(0.18 + dia * 0.85);
-    if (this.modo.aurora > 0.3) tinte.multiplyScalar(0.5);
-    for (const m of this.matsNube) m.color.copy(tinte);
-    for (const s of this.nubes.children) {
-      const u = s.userData; u.a += u.v * dt * 0.3;
-      s.position.set(c.x + Math.cos(u.a) * u.r, u.y, c.z + Math.sin(u.a) * u.r);
-    }
     this.domo.position.copy(this.motor.camara.position);
     /* el mapa de reflejos: se rehace cada tanto (cuesta un cubo chico) */
     this.tRefl += dt;

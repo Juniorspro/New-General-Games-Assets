@@ -13,9 +13,9 @@
    - 'chop': a saltos, como la animación cuadro a cuadro: cada pose se queda
      quieta y salta a la próxima con un solo intermedio, y todo va a 12
      cuadros por segundo. Marcado, con golpe.
-   Las poses están exageradas a propósito, a la manera de las animaciones de
-   Roblox: el correr con los brazos bien largos y el cuerpo inclinado, el
-   salto con los brazos arriba, el aterrizaje que aplasta.
+   Caminar y correr son los del video de Roblox que mandó quien pide (abajo);
+   el resto, exagerado a la misma manera: el salto con los brazos arriba, el
+   aterrizaje que aplasta.
    ========================================================================== */
 export const ESTILOS_ANIM = ['suave', 'lineal', 'chop'];
 export const CUADROS_CHOP = 12;
@@ -31,17 +31,22 @@ const espejo = (P) => {
   if (P.ry != null) q.ry = -P.ry; if (P.cz != null) q.cz = -P.cz; if (P.hy != null) q.hy = -P.hy; if (P.hz != null) q.hz = -P.hz;
   return q;
 };
-/* correr: contacto, abajo, cruce, vuelo; y lo mismo del otro lado */
-const C0 = { pl: [0.95, 0, 0.04], pr: [-1.05, 0, -0.04], bl: [-1.25, 0, -0.22], br: [0.95, 0, 0.22], cx: 0.3, cy: 0.0, ry: 0.16, hx: -0.2, hy: -0.08, sy: 0.98 };
-const C1 = { pl: [0.35, 0, 0.04], pr: [-0.35, 0, -0.04], bl: [-0.45, 0, -0.2], br: [0.35, 0, 0.2], cx: 0.34, cy: -0.05, ry: 0.05, hx: -0.16, sy: 0.93 };
-const C2 = { pl: [-0.25, 0, 0.04], pr: [0.2, 0, -0.04], bl: [0.25, 0, -0.2], br: [-0.3, 0, 0.2], cx: 0.3, cy: 0.1, ry: -0.04, hx: -0.22, sy: 1.05 };
-/* caminar: más corto y parado */
-const K0 = { pl: [0.55, 0, 0], pr: [-0.6, 0, 0], bl: [-0.55, 0, -0.18], br: [0.5, 0, 0.18], cx: 0.06, cy: 0.0, ry: 0.08, hx: -0.04, sy: 0.99 };
-const K1 = { pl: [0.1, 0, 0], pr: [-0.1, 0, 0], bl: [-0.1, 0, -0.18], br: [0.1, 0, 0.18], cx: 0.07, cy: 0.045, ry: 0.0, hx: -0.05, sy: 1.02 };
+/* caminar y correr: copiados del video que mandó quien pide (25/09, "Walking and
+   running animations", dos R6 de Roblox), mirado cuadro por cuadro:
+   - caminar (0,8 s el ciclo): rodilla bien alta (la pierna de adelante sube
+     casi a 70°) y el brazo del MISMO lado va adelante y abierto; el otro va
+     atrás, abierto y para arriba. El cuerpo gira un poco hacia el brazo de
+     adelante y se ladea sobre la pierna de apoyo;
+   - correr (0,6 s): muy inclinado para adelante, la pierna patea hasta quedar
+     horizontal, los brazos bombean abiertos y bien altos, y rebota. */
+const K0 = { pr: [-1.32, 0, 0.06], pl: [0.2, 0, -0.02], br: [-0.85, 0, 0.55], bl: [0.8, 0, -1.35], ry: -0.14, cz: 0.05, cy: 0.035, cx: 0.05, hy: 0.07, hx: -0.02, sy: 1.01 };
+const K1 = { pr: [-0.35, 0, 0.03], pl: [0.02, 0, -0.01], br: [-0.05, 0, 0.36], bl: [0.1, 0, -0.46], ry: 0, cz: 0, cy: -0.015, cx: 0.05, hy: 0, hx: 0, sy: 0.99 };
+const C0 = { pr: [-1.65, 0, 0.1], pl: [0.7, 0, -0.06], br: [-1.9, 0, 0.6], bl: [1.05, 0, -1.35], cx: 0.5, ry: -0.3, cz: 0.1, cy: 0.09, hx: -0.38, hy: 0.12, sy: 1.05 };
+const C1 = { pr: [-0.4, 0, 0.05], pl: [0.22, 0, -0.02], br: [-0.3, 0, 0.6], bl: [0.2, 0, -0.7], cx: 0.38, ry: 0, cz: 0, cy: -0.06, hx: -0.3, hy: 0, sy: 0.95 };
 
 export const CLIPS = {
-  corre: { dur: 0.52, loop: true, k: [{ t: 0, ...C0 }, { t: 0.09, ...C1 }, { t: 0.17, ...C2 }, { t: 0.26, ...espejo(C0) }, { t: 0.35, ...espejo(C1) }, { t: 0.43, ...espejo(C2) }] },
-  camina: { dur: 1.0, loop: true, k: [{ t: 0, ...K0 }, { t: 0.25, ...K1 }, { t: 0.5, ...espejo(K0) }, { t: 0.75, ...espejo(K1) }] },
+  corre: { dur: 0.6, loop: true, k: [{ t: 0, ...C0 }, { t: 0.15, ...C1 }, { t: 0.3, ...espejo(C0) }, { t: 0.45, ...espejo(C1) }] },
+  camina: { dur: 0.8, loop: true, k: [{ t: 0, ...K0 }, { t: 0.2, ...K1 }, { t: 0.4, ...espejo(K0) }, { t: 0.6, ...espejo(K1) }] },
   /* el salto: se agacha con los brazos atrás, sale con los brazos arriba y una rodilla alta */
   salta: { dur: 0.42, loop: false, k: [
     { t: 0, cy: -0.1, cx: 0.25, bl: [0.9, 0, -0.35], br: [0.9, 0, 0.35], pl: [0.35, 0, 0.05], pr: [0.3, 0, -0.05], sy: 0.9, hx: 0.1 },

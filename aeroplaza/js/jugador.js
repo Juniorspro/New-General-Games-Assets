@@ -6,10 +6,15 @@
    Los géiseres y las flores gigantes lo tiran para arriba (mundo.solidos con
    "rebote"). Todo en metros y segundos.
    Los movimientos de parkour (this.mov), con la tecla de bajar (C / Q / ⤓):
-   - corriendo: se desliza (más rápido al empezar, bajito: pasa por debajo de
-     las barras; si salta en el medio, sale con toda la velocidad);
-   - caminando o quieto: rueda para adelante;
-   - en el aire: rueda al caer. Si cae de muy alto corriendo, rueda solo.
+   - en el piso, SIEMPRE se desliza (corriendo, caminando o quieto: antes,
+     sin el botón de correr prendido rodaba, y en el celu parecía que el
+     deslizamiento no andaba): más rápido al empezar, bajito (pasa por
+     debajo de las barras); si salta en el medio, sale con toda la velocidad;
+   - en el aire: si lo aprieta justo antes de tocar el piso (o lo tiene
+     apretado), se desliza al caer; si lo apretó antes, rueda al caer. Si cae
+     de muy alto corriendo, rueda solo.
+   - El reino puede cambiar la velocidad de correr (mundo.corre, el runner):
+     ahí el deslizamiento no frena por debajo de esa velocidad.
    - Saltando contra un borde a la altura del pecho, lo trepa solo.
    - En el aire contra una pared, saltar rebota en la pared.
    ========================================================================== */
@@ -41,7 +46,7 @@ export class Jugador {
     this.eventos = [];   // lo que pasó este cuadro (para el sonido y la red): 'salto', 'aterriza', 'chapuzon', 'rebote'…
     this.montura = null;
   }
-  ponerEn(p, rumbo = 0) { this.p.copy(p); this.v.set(0, 0, 0); this.rumbo = rumbo; this.modo = 'pie'; this.burbuja.visible = false; this.montura = null; this.mov = null; this.pared = null; this.ruedaAlCaer = false; this.sync(); }
+  ponerEn(p, rumbo = 0) { this.p.copy(p); this.v.set(0, 0, 0); this.rumbo = rumbo; this.modo = 'pie'; this.burbuja.visible = false; this.montura = null; this.mov = null; this.pared = null; this.bajaAire = null; this.coyote = 0; this.enPiso = false; this.sync(); }
   sync() { this.m.raiz.position.copy(this.p); this.m.raiz.rotation.y = this.rumbo; this.m.raiz.scale.setScalar(this.escala); }
   entrarBurbuja() { this.modo = 'burbuja'; this.tBurbuja = 40; this.burbuja.visible = true; this.v.y = 2; this.eventos.push('burbuja'); }
   salirBurbuja(reventar = true) { if (this.modo !== 'burbuja') return; this.modo = 'pie'; this.burbuja.visible = false; this.v.y = 3; if (reventar) this.eventos.push('pop'); }
@@ -112,25 +117,23 @@ export class Jugador {
 
     /* a pie */
     const vadea = agua != null && hondo > 0.15 && this.p.y < agua;
-    const velMax = (E.corre ? CORRE : CAMINA) * (vadea ? 0.6 : 1) * (0.75 + 0.25 * k) * (this.efecto === 'liviano' ? 1.15 : 1);
+    const velMax = (E.corre ? W.corre || CORRE : CAMINA) * (vadea ? 0.6 : 1) * (0.75 + 0.25 * k) * (this.efecto === 'liviano' ? 1.15 : 1);
     let acel = this.enPiso ? ACEL_PISO : ACEL_AIRE;
     const obj = new THREE.Vector2(quiere.x * velMax * cuanto, quiere.y * velMax * cuanto);
-    /* bajar recién apretado: deslizarse (corriendo), rodar (caminando) o rodar al caer (en el aire) */
+    /* bajar recién apretado: en el piso se desliza siempre; en el aire, se anota cuándo (al caer decide) */
     const bajaYa = !!E.baja && !this._baja; this._baja = !!E.baja;
     const horiz0 = Math.hypot(this.v.x, this.v.z);
-    if (bajaYa && !vadea && !this.mov) {
-      if (this.enPiso) {
-        const dir = horiz0 > 0.5 ? new THREE.Vector2(this.v.x, this.v.z).normalize() : new THREE.Vector2(Math.sin(this.rumbo), Math.cos(this.rumbo));
-        if (horiz0 > CAMINA + 0.5) this.empezarMov('desliza', dir, Math.max(horiz0 * 1.12, 8.4), DESLIZA);
-        else this.empezarMov('rueda', dir, 6.2, RUEDA);
-      } else this.ruedaAlCaer = true;
+    if (bajaYa && !vadea && (!this.mov || this.mov.tipo === 'rueda')) {
+      if (this.enPiso || this.coyote > 0) this.deslizar(horiz0, quiere, cuanto);
+      else this.bajaAire = 0;
     }
+    if (this.bajaAire != null) this.bajaAire += dt;
     if (this.mov) {
       const M = this.mov; M.t += dt;
       if (M.tipo === 'trepa') return this.seguirTrepa(dt);
       if (M.tipo === 'desliza' || M.tipo === 'rueda') {
         if (cuanto > 0.1) M.dir.lerp(quiere, Math.min(1, dt * (M.tipo === 'desliza' ? 1.2 : 2.5))).normalize();
-        const vel = M.tipo === 'desliza' ? Math.max(2.4, M.v0 - 6 * M.t) : M.v0;
+        const vel = M.tipo === 'desliza' ? Math.max(W.corre || 2.4, M.v0 - 6 * M.t) : M.v0;
         obj.set(M.dir.x * vel, M.dir.y * vel); acel = 80;
       } else if (M.tipo === 'pared') acel = 2.5;   // (el empujón de la pared no se lo come el palito)
       if (M.t >= M.dur) this.terminarMov(W, k);
@@ -177,9 +180,13 @@ export class Jugador {
       this.enPiso = true; this.saltos = 0; this.lanzado = false;
       if (s.s && s.s.rebote) { this.v.y = s.s.rebote; this.enPiso = false; this.saltos = 1; this.lanzado = true; this.eventos.push('rebote'); if (s.s.alRebotar) s.s.alRebotar(); }
       else if (!antes && golpe > 4) this.eventos.push('aterriza');
-      /* rodar al caer: si lo pidió en el aire, o cae de muy alto corriendo */
-      if (!antes && !this.mov && (this.ruedaAlCaer || golpe > 11.5) && Math.hypot(this.v.x, this.v.z) > 2.4) this.empezarMov('rueda', new THREE.Vector2(this.v.x, this.v.z).normalize(), Math.max(Math.hypot(this.v.x, this.v.z), 6.2), RUEDA);
-      if (!antes) this.ruedaAlCaer = false;
+      /* al caer: deslizarse si apretó bajar recién (o lo tiene apretado); rodar si lo apretó antes, o si cae de muy alto corriendo */
+      if (!antes && (!this.mov || this.mov.tipo === 'pared')) {
+        const h = Math.hypot(this.v.x, this.v.z), pidio = this.bajaAire != null;
+        if (pidio && (this.bajaAire < 0.35 || E.baja)) this.deslizar(h, quiere, cuanto);
+        else if ((pidio || golpe > 11.5) && h > 2.4) this.empezarMov('rueda', new THREE.Vector2(this.v.x, this.v.z).normalize(), Math.max(h, 6.2), RUEDA);
+      }
+      if (!antes) this.bajaAire = null;
       this.pisando = s.s;
     } else {
       /* bajando una rampa: pegarse al piso en vez de salir volando */
@@ -215,6 +222,12 @@ export class Jugador {
     }
   }
   /* ------------------------------------------------ los movimientos de parkour */
+  /* deslizarse para donde va (o para donde apunta el palito, o para donde mira si está quieto) */
+  deslizar(h, quiere, cuanto) {
+    const dir = h > 0.5 ? new THREE.Vector2(this.v.x, this.v.z).normalize() : cuanto > 0.1 ? quiere.clone() : new THREE.Vector2(Math.sin(this.rumbo), Math.cos(this.rumbo));
+    this.empezarMov('desliza', dir, Math.max(h * 1.12, h > CAMINA + 0.5 ? 8.4 : 7.6), DESLIZA);
+    this.bajaAire = null;
+  }
   empezarMov(tipo, dir, v0, dur) { this.mov = { tipo, t: 0, dur, dir: dir.clone(), v0 }; this.eventos.push(tipo); }
   hayTecho(W, k) { return W.techo(this.p.x, this.p.z, this.p.y, ALTO * k) < this.p.y + ALTO * k; }
   /* se termina, salvo el deslizarse debajo de algo: ahí sigue bajito hasta salir */

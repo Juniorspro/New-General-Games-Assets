@@ -28,5 +28,25 @@
   "golpe": 0.1553,
   "de": "a0df6103-14fa67ee7cae8665eb153f8535c97603.mp4",
   "dura": 27.7
+ },
+ "juegos": {
+  "archivo": "juegos.mp3",
+  "bucle": [
+   32.05,
+   78.2677
+  ],
+  "golpe": 0.0145,
+  "de": "954536c6-b6a5aab95f4f54665fb6ea73e5df87af.mp4",
+  "dura": 78.468
+ },
+ "runner": {
+  "archivo": "runner.mp3",
+  "bucle": [
+   0.35,
+   66.9
+  ],
+  "golpe": 0.1306,
+  "de": "d1e4de45-bea8eda438f24a60e40ddca3f953cf60.mp4",
+  "dura": 67.1
  }
 }

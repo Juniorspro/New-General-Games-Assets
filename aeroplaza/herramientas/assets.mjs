@@ -33,17 +33,22 @@ for (const [c, s, ancho, q, alfa] of IMAGENES) {
   await img.webp({ quality: q, alphaQuality: 90, effort: 6 }).toFile(path.join(SAL, s));
   console.log(`${s}: ${(fs.statSync(path.join(SAL, s)).size / 1024).toFixed(0)} KB`);
 }
-/* las nubes: donde la imagen es transparente, el color de abajo era oscuro y al
-   filtrar la textura salía un borde gris. Se aclara el color de los bordes
-   (sin tocar el alfa) y de ahí salen las tres: la misma, espejada y recortada
-   (Rezona devolvió una sola de las tres pedidas) */
-if (fs.existsSync(path.join(CRUDO, 'nube-g1.png'))) {
-  const { data, info } = await sharp(path.join(CRUDO, 'nube-g1.png')).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  for (let i = 0; i < data.length; i += 4) { const a = data[i + 3] / 255; if (a < 0.98) for (let c = 0; c < 3; c++) data[i + c] = Math.round(255 + (data[i + c] - 255) * Math.pow(a, 0.6)); }
-  const limpia = await sharp(data, { raw: info }).png().toBuffer();
-  await sharp(limpia).resize({ width: 768 }).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(SAL, 'nube-1.webp'));
-  await sharp(limpia).flop().resize({ width: 640 }).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(SAL, 'nube-2.webp'));
-  await sharp(limpia).extract({ left: Math.round(info.width * 0.08), top: 0, width: Math.round(info.width * 0.6), height: info.height }).resize({ width: 512 }).webp({ quality: 82, alphaQuality: 90 }).toFile(path.join(SAL, 'nube-3.webp'));
+/* el panorama del cielo, repetible: se funde el final con el principio en 320 px
+   (antes iba espejado en el juego y en cada unión salía una nube simétrica).
+   Las nubes de arriba ya no son imágenes: van en el shader del cielo (cielo.js) */
+/* (solo si recién se hizo desde el crudo: sobre la ya repetible la achicaría otra vez) */
+if (fs.existsSync(path.join(CRUDO, 't3/cielo-panorama.png'))) {
+  const f = path.join(SAL, 'cielo.webp');
+  const { data, info } = await sharp(f).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, B = 320, W2 = W - B, sal = Buffer.alloc(W2 * H * 3);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W2; x++) for (let c = 0; c < 3; c++) {
+    const i = (y * W + x) * 3 + c;
+    let v = data[i];
+    if (x < B) { let w = x / (B - 1); w = w * w * (3 - 2 * w); v = data[(y * W + x + W2) * 3 + c] * (1 - w) + data[i] * w; }
+    sal[(y * W2 + x) * 3 + c] = Math.round(v);
+  }
+  await sharp(sal, { raw: { width: W2, height: H, channels: 3 } }).webp({ quality: 88, effort: 6 }).toFile(f + '.tmp');
+  fs.renameSync(f + '.tmp', f);
 }
 
 /* el delfín */

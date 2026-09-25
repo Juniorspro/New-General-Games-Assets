@@ -1,8 +1,9 @@
 // LOS MOVIMIENTOS DE PARKOUR (jugador.js) con las teclas de verdad, en un piso
 // plano de prueba (se vacía el mundo de la plaza y se ponen obstáculos):
 // deslizarse corriendo (más rápido y bajito: pasa por debajo de una barra que
-// parado no se pasa), saltar deslizándose sin perder velocidad, rodar
-// caminando, rodar solo al caer de alto corriendo, trepar un cajón a la altura
+// parado no se pasa), deslizarse también caminando o quieto, saltar
+// deslizándose sin perder velocidad, rodar si se aprieta en el aire, rodar solo
+// al caer de alto corriendo, trepar un cajón a la altura
 // del pecho saltando contra él, y rebotar en una pared. Y que el muñeco anime
 // cada uno (estado y poses sin NaN) en los tres estilos.
 //     node pruebas/movimientos.mjs
@@ -63,19 +64,36 @@ prueba('saltar en el medio del deslizamiento sale rápido', r.e === 'salta' && r
 await pag.keyboard.up('KeyW'); await pag.keyboard.up('ShiftLeft');
 await pag.evaluate(() => window.__P.pasos(40));
 
-/* 4. rodar caminando */
+/* 4. caminando (sin correr) C también desliza: antes rodaba, y en el celu (sin » prendido) parecía que no andaba */
 await pag.evaluate(() => window.__P.en(0, 0));
 await pag.keyboard.down('KeyW');
 await pag.evaluate(() => window.__P.pasos(10));
-const z0 = await pag.evaluate(() => window.__P.p().z);
 await pulsar('KeyC', 1);
-r = await pag.evaluate(() => { const P = window.__P, S = P.pasos(14, () => [P.estado(), window.__A.yo.m.cadera.rotation.x]); return { S, z: P.p().z }; });
-const giros = r.S.map(([, x]) => x), maxGiro = Math.max(...giros);
-prueba('caminando, C rueda para adelante (da la vuelta)', r.S.filter(([e]) => e === 'rueda').length >= 10 && maxGiro > 4 && r.z - z0 > 2.5, `avanza ${(r.z - z0).toFixed(1)} m · giro máx ${maxGiro.toFixed(1)} rad`);
+r = await pag.evaluate(() => { const P = window.__P; return P.pasos(8, () => [P.estado(), P.vel()]); });
+prueba('caminando, C desliza (siempre, no solo corriendo)', r.filter(([e]) => e === 'desliza').length >= 7 && r[0][1] > 6, r.map(([e, v]) => e + ' ' + v.toFixed(1)).slice(0, 3).join(' · '));
 await pag.keyboard.up('KeyW');
+await pag.evaluate(() => window.__P.pasos(30));
+await pag.evaluate(() => window.__P.en(0, 0));
+await pulsar('KeyC', 1);
+r = await pag.evaluate(() => { const P = window.__P; return P.pasos(6, () => P.estado()); });
+prueba('quieto, C también desliza (para donde mira)', r.filter((e) => e === 'desliza').length >= 5, r.join(','));
+await pag.evaluate(() => window.__P.pasos(30));
+/* 4b. C apretado en el aire con tiempo: rueda al caer (y da la vuelta); justo antes de tocar el piso: desliza */
+await pag.evaluate(() => { window.__P.en(0, 0, 3.2); window.__A.yo.v.set(0, 0, 4); });
+await pag.keyboard.down('KeyW');
+await pulsar('KeyC', 1);
+r = await pag.evaluate(() => { const P = window.__P, S = P.pasos(34, () => [P.estado(), window.__A.yo.m.cadera.rotation.x]); return { S: S.map(([e]) => e), giro: Math.max(...S.map(([, x]) => x)) }; });
+prueba('C en el aire (con tiempo): rueda al caer y da la vuelta', r.S.includes('rueda') && r.giro > 4, [...new Set(r.S)].join(' → ') + ` · giro ${r.giro.toFixed(1)}`);
 await pag.evaluate(() => window.__P.pasos(20));
+await pag.evaluate(() => { window.__P.en(0, 0, 3.2); window.__A.yo.v.set(0, 0, 4); });
+r = await pag.evaluate(() => { const P = window.__P; let k = 0; while (P.estado() !== 'cae' || window.__A.yo.p.y > 0.35) { P.pasos(1); if (++k > 90) break; } return k; });
+await pulsar('KeyC', 1);
+r = await pag.evaluate(() => { const P = window.__P; return P.pasos(10, () => P.estado()); });
+prueba('C justo antes de tocar el piso: desliza al caer', r.includes('desliza') && !r.includes('rueda'), [...new Set(r)].join(' → '));
+await pag.keyboard.up('KeyW');
+await pag.evaluate(() => window.__P.pasos(30));
 r = await pag.evaluate(() => ({ e: window.__P.estado(), x: window.__A.yo.m.cadera.rotation.x }));
-prueba('y después queda derecho', r.e !== 'rueda' && Math.abs(r.x) < 0.5, JSON.stringify(r));
+prueba('y después queda derecho', r.e !== 'rueda' && r.e !== 'desliza' && Math.abs(r.x) < 0.5, JSON.stringify(r));
 
 /* 5. caer de alto corriendo: rueda solo */
 await pag.evaluate(() => { window.__P.en(0, 0, 9); window.__A.yo.v.set(0, 0, 6); });

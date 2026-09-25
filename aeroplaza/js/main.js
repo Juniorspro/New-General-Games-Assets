@@ -115,8 +115,7 @@ async function iniciar() {
   motor.lienzo.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); G.opciones.calidad = 'baja'; Guardado.ya(); fatal(t('contexto_perdido'), () => location.reload()); });
   /* qué aparato es: de ahí sale la calidad con la que arranca la automática */
   const aparato = detectarAparato(motor.r);
-  const nubes = ['nube-1', 'nube-2', 'nube-3'].map((k) => TEX[k]).filter(Boolean);
-  const cielo = new Cielo(motor, nubes, TEX.cielo || null);
+  const cielo = new Cielo(motor, TEX.cielo || null);
   const ent = new Entrada(motor.lienzo, document.getElementById('dedos'));
   Pantalla.alCambiar.push(() => ent.ubicarDedos());
   if (G.controles) ent.ponerConfig(G.controles);

@@ -406,9 +406,12 @@ export class Meeple {
     let clip = false;
     if (estado === 'camina' || estado === 'corre') {
       const corre = estado === 'corre';
-      this.fase += dt * (corre ? 13 : 9) * Math.min(1.4, 0.35 + vel / (corre ? 5 : 2.6));
-      /* una vuelta de la fase (2π) es un ciclo entero del clip (los dos pasos) */
-      const C = CLIPS[estado]; aplicarClip(R, C, this.fase / (Math.PI * 2) * C.dur, estilo); clip = true;
+      /* el clip va a su velocidad (la del video) cuando se camina a 3,4 m/s o se corre a 7,2;
+         más despacio o más rápido, se acelera con la velocidad (sin pasarse) */
+      const C = CLIPS[estado], vref = corre ? 7.2 : 3.4;
+      this._tPaso = (this._tPaso || 0) + dt * Math.max(0.45, Math.min(1.5, vel / vref));
+      this.fase = this._tPaso / C.dur * Math.PI * 2;
+      aplicarClip(R, C, this._tPaso, estilo); clip = true;
     } else if (estado === 'salta') { aplicarClip(R, CLIPS.salta, this._tEst, estilo); clip = true; }
     else if (estado === 'cae') { aplicarClip(R, CLIPS.cae, t, estilo); clip = true; }
     else if (CLIPS[estado] && ['desliza', 'rueda', 'trepa', 'pared'].includes(estado)) { aplicarClip(R, CLIPS[estado], estado === 'desliza' ? t : this._tEst, estilo); clip = true; }
