@@ -123,6 +123,27 @@ Sigue de [aeroplaza-10](aeroplaza-10.md). Rama `claude/fijate-iszyer`.
 - **Los hongos no tienen nombre**: se encuentran por sus sólidos con
   `rebote`.
 
+## La portada (`remotion/src/Portada.jsx`)
+
+- Se hace con `node aeroplaza/trailer/grabar.mjs portada`. Sale en dos
+  tamaños:
+  - `aeroplaza-tiktok-portada.png`, en 9:16;
+  - `aeroplaza-tiktok-portada-3x4.png`, de 1080×1440.
+- **La grilla del perfil de TikTok es 3:4**: recorta el medio del 9:16.
+  Cuando alguien pide "4:3", se refiere a eso. Por eso todo lo importante va
+  en una caja de 1440 de alto, centrada.
+- **El diseño**:
+  - el muñeco de galera (cuadro 50 de `muneco`) va en una burbuja de 720;
+  - hay cuatro burbujas chicas: hongos, aurora, delfín y runner;
+  - arriba, el logo; abajo, "¡Jugá con amigos!" con la etiqueta GRATIS.
+  - Los últimos ~80 px de abajo quedan libres, porque ahí TikTok pone las
+    vistas.
+- Cada burbuja (`Bola`) muestra un cuadro de la toma con `startFrom`, con el
+  punto (cx, cy) de la toma en el centro.
+- La etiqueta tiene que ir **después** del botón en el JSX. Si no, queda
+  tapada.
+- Para ver si se lee, se achica a 360×480, más o menos como en la grilla.
+
 ## Cómo entregar el video (pesa 153 MiB)
 
 - **Por el chat entran 30 MiB como mucho.** Para eso está

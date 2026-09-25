@@ -222,7 +222,12 @@ function video() {
     '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv', '-c:a', 'aac', '-b:a', '256k', '-movflags', '+faststart', dest]);
   log(`video → ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1048576).toFixed(1)} MB)`);
   liviano(dest);
+  portada();
+}
+/* las portadas: 9:16 y la 3:4 de la grilla del perfil de TikTok (lo importante va en la caja 3:4 de las dos) */
+function portada() {
   remotion(['still', 'src/index.jsx', 'Portada', path.join(SALIDA, 'aeroplaza-tiktok-portada.png')]);
+  remotion(['still', 'src/index.jsx', 'Portada34', path.join(SALIDA, 'aeroplaza-tiktok-portada-3x4.png')]);
 }
 /* la copia para mandar por el chat (tope ~30 MiB): la tasa sale del largo, en dos pasadas (lo de BRILLO) */
 function liviano(dest = path.join(SALIDA, 'aeroplaza-tiktok.mp4')) {
@@ -240,5 +245,6 @@ if (paso === 'tomas') await tomas();
 else if (paso === 'audio') audio();
 else if (paso === 'video') video();
 else if (paso === 'liviano') liviano();
+else if (paso === 'portada') portada();
 else if (paso === 'todo') { await tomas(); audio(); video(); }
-else console.log('pasos: tomas, audio, video, todo');
+else console.log('pasos: tomas, audio, video, liviano, portada, todo');
