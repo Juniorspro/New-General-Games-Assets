@@ -86,8 +86,8 @@ function Cartel({ q, f, L }) {
           <Burbujas f={f + 131} n={14} semilla={4} alfa={0.8} />
           <div style={{ ...lleno, background: '#fff', opacity: 0.9 * Math.max(0, 1 - f / 5) }} />
           <div style={{ position: 'absolute', left: 0, width: 1080, top: 640 - sal * 260, display: 'flex', flexDirection: 'column', alignItems: 'center', transform: `scale(${1 - sal * 0.35})` }}>
-            <Logo f={f} tam={176} />
-            <div style={{ marginTop: 24, opacity: clamp((f - 16) / 8), transform: `translateY(${(1 - sale((f - 16) / 10)) * 30}px)` }}>
+            <Logo f={f} tam={128} />
+            <div style={{ marginTop: 44, opacity: clamp((f - 16) / 8), transform: `translateY(${(1 - sale((f - 16) / 10)) * 30}px)` }}>
               <Tarjeta style={{ padding: '16px 34px', fontSize: 40 }}>la plaza Frutiger Aero para jugar con amigos</Tarjeta>
             </div>
           </div>
@@ -201,7 +201,7 @@ function Cartel({ q, f, L }) {
           <div style={{ ...lleno, background: 'linear-gradient(180deg, rgba(236,239,242,0.1), rgba(236,239,242,0.72) 30%, rgba(236,239,242,0.82) 70%, rgba(236,239,242,0.35))', opacity: clamp(f / 12) }} />
           <Burbujas f={f + 400} n={12} semilla={11} alfa={0.7} />
           <div style={{ position: 'absolute', left: 0, width: 1080, top: 480, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 30 }}>
-            <Logo f={f} tam={168} />
+            <Logo f={f} tam={124} />
             <div style={{ fontFamily: LETRA, fontWeight: 800, fontSize: 42, color: C.tinta2, opacity: clamp((f - 14) / 8) }}>plaza · mundos · juegos · amigos</div>
           </div>
           <div style={{ position: 'absolute', left: 0, width: 1080, top: 1010, display: 'flex', justifyContent: 'center', opacity: clamp((f - 20) / 6), transform: `scale(${0.6 + 0.4 * rebote((f - 20) / 12)})` }}>

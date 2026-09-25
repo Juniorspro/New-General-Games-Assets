@@ -32,7 +32,8 @@ export function Logo({ f, tam = 150, entra = 0, brillo = true, style }) {
   });
   return (
     <div style={{ position: 'relative', fontFamily: LETRA, fontWeight: 900, fontSize: tam, letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', transform: `scale(${0.85 + 0.15 * k})`,
-      textShadow: `0 ${tam * 0.04}px 0 #fff, 0 ${tam * 0.08}px ${tam * 0.18}px rgba(52,190,240,0.45), 0 0 ${tam * 0.02}px rgba(0,0,0,0.12)`, ...style }}>
+      WebkitTextStroke: `${Math.round(tam * 0.06)}px #ffffff`, paintOrder: 'stroke fill',
+      textShadow: `0 ${tam * 0.05}px 0 rgba(20,90,150,0.35), 0 ${tam * 0.1}px ${tam * 0.22}px rgba(0,60,120,0.45)`, ...style }}>
       {letra('AERO', C.azul, 0)}{letra('PLAZA', C.verde, 4)}
       {brillo && barrido > 0 && barrido < 0.35 && (
         <div style={{ ...lleno, background: `linear-gradient(105deg, transparent ${barrido * 300 - 30}%, rgba(255,255,255,0.85) ${barrido * 300 - 10}%, transparent ${barrido * 300 + 10}%)`, mixBlendMode: 'screen', WebkitMaskImage: 'linear-gradient(#000,#000)', pointerEvents: 'none' }} />
