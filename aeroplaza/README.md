@@ -50,6 +50,8 @@ Detalle: `js/red.js` y `js/remotos.js`.
 | Jardín de géiseres | nenúfares que se pisan, lotos, flores de agua gigantes, géiseres que soplan, flores que rebotan |
 | Aero·Mart | la tienda por dentro: vitrinas, percheros, sombrerero, estantes, globos, neón, maniquíes y Menta |
 | Mi casa | una isla entre las nubes, con la casa y 16 muebles para poner |
+| Parkour Aero | el primer minijuego, en la Zona de Juegos (piso de cristal y un farol gigante con puertas que brillan): 5 mapas (Nubes, Acuario, Jardín, Ciudad y Órbita) con plataformas que se mueven, barras que giran, rebotes, cintas, géiseres, controles, estrellas por tiempo y récords |
+| Adentro de los edificios | en primera persona, con un punto para apuntar y usar: los 5 hoteles (lobby con recepción, columna-acuario y piano; ascensor de vidrio a la suite y a la azotea con pileta, bar y telescopio), el Café Burbuja del pabellón y las casas de dos vecinos |
 
 Además hay:
 
@@ -57,7 +59,8 @@ Además hay:
 - la calidad arranca según el aparato (`js/aparato.js`: placa, memoria, núcleos, pantalla) y después se ajusta midiendo;
 - menús con pestañas y páginas, pensados para entrar sin desplazar en un celu acostado;
 - una barra de 5 lugares (burbujero, gestos, música, foto y mapa);
-- día y noche sincronizados para todos, por el reloj;
+- día y noche iguales para todos: 5 minutos de día y 5 de noche, por el reloj;
+- en el celu, un teclado propio de vidrio (acostado, con acentos, símbolos y emojis) y botones Frutiger con onda de luz;
 - siete estilos retro con el botón 👾: Normal, Pixel, PS1, Tele de tubo, Game
   Boy, 8 bits y VHS. Dibujan de verdad a baja resolución, así que además van
   más rápido;

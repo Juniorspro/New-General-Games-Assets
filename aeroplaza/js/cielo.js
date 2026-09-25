@@ -2,14 +2,15 @@
    aeroplaza/js/cielo.js — el cielo, el sol, la luna, las estrellas, la aurora,
    las nubes y la luz del día.
    La hora sale del reloj de la computadora (Date.now), así TODOS los que están
-   jugando ven la misma hora sin que haya un servidor: un día dura 20 minutos,
-   con 13 de sol y 7 de noche.
+   jugando ven la misma hora sin que haya un servidor (Date.now es igual en
+   todo el mundo, no depende de la hora de cada país): una vuelta dura 10
+   minutos, 5 de día y 5 de noche (pedido del 25/09).
    Cada reino puede fijar la hora (la Aurora es siempre de noche) y la fuerza
    de la aurora.
    ========================================================================== */
 import * as THREE from 'three';
 
-export const CICLO = 20 * 60;
+export const CICLO = 10 * 60;
 export function horaGlobal() { return ((Date.now() / 1000) / CICLO + 0.18) % 1; }
 
 const CIELO_VS = /* glsl */`
@@ -191,8 +192,9 @@ export class Cielo {
     U.uT.value += dt;
     const hora = this.hora = this.modo.hora ?? horaGlobal();
     const ang = (hora - 0.25) * Math.PI * 2;
-    const sol = U.uSol.value.set(Math.cos(ang), Math.sin(ang) + 0.28, 0.42).normalize();
-    U.uLuna.value.set(-Math.cos(ang) * 0.9, -Math.sin(ang) + 0.34, -0.5).normalize();
+    /* sin corrimiento: el sol está arriba justo la mitad de la vuelta */
+    const sol = U.uSol.value.set(Math.cos(ang), Math.sin(ang) + 0.02, 0.42).normalize();
+    U.uLuna.value.set(-Math.cos(ang) * 0.9, -Math.sin(ang) + 0.1, -0.5).normalize();
     const dia = THREE.MathUtils.smoothstep(sol.y, -0.12, 0.28);
     const atar = Math.max(0, 1 - Math.abs(sol.y - 0.06) / 0.2);
     this.dia = dia; this.atardecer = atar;

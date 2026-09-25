@@ -3,6 +3,8 @@
    del muñeco (arrastrando, con la rueda o el palito derecho), no se mete
    adentro del piso, y tiene el modo cine de las charlas con NPC (se acerca y
    encuadra a los dos de costado, como en BRILLO pero en 3D).
+   Adentro de los edificios va en primera persona (fp): en los ojos, con el
+   paso que hamaca un poco la cabeza, y al charlar mira sola a quien habla.
    ========================================================================== */
 import * as THREE from 'three';
 
@@ -14,13 +16,15 @@ export class Camara {
     this.cine = null; this.kCine = 0;
     this.sacudida = 0;
     this.inicial = true;
+    this.fp = false; this.sentado = false; this.bajaFP = 0; this.fase = 0;
   }
-  girar(dx, dy) { this.yaw -= dx; this.pitch = THREE.MathUtils.clamp(this.pitch + dy, -0.45, 1.25); }
-  acercar(f) { this.distObj = THREE.MathUtils.clamp(this.distObj * f, 2.4, 14); }
+  girar(dx, dy) { this.yaw -= dx; this.pitch = THREE.MathUtils.clamp(this.pitch + dy, this.fp ? -0.95 : -0.45, this.fp ? 1.55 : 1.25); }
+  acercar(f) { if (this.fp) return; this.distObj = THREE.MathUtils.clamp(this.distObj * f, 2.4, 14); }
   /* modo cine: a (el jugador) y b (quien habla) */
   ponerCine(a, b) { this.cine = a ? { a: a.clone(), b: b.clone() } : null; }
   detras(rumbo) { this.yaw = rumbo + Math.PI; }
   actualizar(dt, jugador, mundo) {
+    if (this.fp) { this.actualizarFP(dt, jugador); return; }
     const k = jugador.escala;
     const alto = 1.25 * k + (jugador.modo === 'burbuja' ? 0.3 : 0);
     this.obj.set(jugador.p.x, jugador.p.y + alto, jugador.p.z);
@@ -67,6 +71,27 @@ export class Camara {
     this.cam.position.copy(this.pos);
     if (this.sacudida > 0) { this.sacudida -= dt; const q = this.sacudida * 0.15; this.cam.position.x += (Math.random() - 0.5) * q; this.cam.position.y += (Math.random() - 0.5) * q; }
     this.cam.lookAt(this.mira);
+  }
+  /* primera persona: pitch 0,3 es mirar derecho (igual que la de atrás en reposo) */
+  actualizarFP(dt, j) {
+    const k = j.escala, vel = Math.hypot(j.v.x, j.v.z);
+    this.fase += dt * vel * 2.4;
+    const hamaca = j.enPiso ? Math.sin(this.fase) * 0.035 * Math.min(1, vel / 3.4) : 0;
+    this.bajaFP += ((this.sentado ? -0.6 : 0) - this.bajaFP) * Math.min(1, dt * 6);
+    this.pos.set(j.p.x, j.p.y + 1.5 * k + hamaca + this.bajaFP, j.p.z);
+    /* en una charla, la vista va sola hacia la cara de quien habla */
+    if (this.cine) {
+      const b = this.cine.b, dx = b.x - this.pos.x, dz = b.z - this.pos.z, dy = b.y + 1.1 - this.pos.y;
+      let d = Math.atan2(-dx, -dz) - this.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+      this.yaw += d * Math.min(1, dt * 5);
+      this.pitch += (0.3 - Math.atan2(dy, Math.hypot(dx, dz)) - this.pitch) * Math.min(1, dt * 5);
+    }
+    const p = this.pitch - 0.3, cp = Math.cos(p);
+    this.mira.set(this.pos.x - Math.sin(this.yaw) * cp, this.pos.y - Math.sin(p), this.pos.z - Math.cos(this.yaw) * cp);
+    this.cam.position.copy(this.pos);
+    if (this.sacudida > 0) { this.sacudida -= dt; const q = this.sacudida * 0.08; this.cam.position.x += (Math.random() - 0.5) * q; this.cam.position.y += (Math.random() - 0.5) * q; }
+    this.cam.lookAt(this.mira);
+    this.inicial = true;
   }
   /* para mover al muñeco: los ejes de la cámara sobre el piso */
   ejes() { return { adelante: new THREE.Vector2(-Math.sin(this.yaw), -Math.cos(this.yaw)), derecha: new THREE.Vector2(Math.cos(this.yaw), -Math.sin(this.yaw)) }; }

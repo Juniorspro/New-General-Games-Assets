@@ -6,6 +6,7 @@
    ?calidad=baja, ?pausa (sin bucle: lo avanzan las pruebas), ?x=&z=&yaw=…
    ========================================================================== */
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Motor, TACTIL, ESTILOS } from './motor.js';
 import { Cielo } from './cielo.js';
 import { TEX, UNI, JUGADOR, ARBOLEDAS, aguaSigueCielo, materialBurbuja } from './naturaleza.js';
@@ -16,6 +17,8 @@ import { crearAurora } from './reinos/aurora.js';
 import { crearJardin } from './reinos/jardin.js';
 import { crearTienda } from './reinos/tienda.js';
 import { crearCasa } from './reinos/casa.js';
+import { crearParkour, NIVELES, formatoTiempo } from './reinos/parkour.js';
+import { crearInterior } from './reinos/interior.js';
 import { Jugador } from './jugador.js';
 import { Camara } from './camara.js';
 import { Entrada } from './entrada.js';
@@ -153,7 +156,7 @@ async function iniciar() {
   const DISCO_CANCION = { 'disco-loma': 'colina', 'disco-lago': 'arrecife', 'disco-hotel': 'ciudad', 'disco-aurora': 'aurora', 'disco-jardin': 'cielo', 'disco-flor': 'titulo', 'disco-faro': 'playa', 'disco-arbol': 'bosque', 'disco-cumbre': 'cielo', 'disco-ciudad': 'ciudad' };
   /* la música del lugar: la de la zona de la isla donde está, o la del reino */
   let zona = null, tZona = 0;
-  const musicaDelLugar = () => zona?.musica || MUSICA_DE[reino?.id] || 'colina';
+  const musicaDelLugar = () => zona?.musica || MUSICA_DE[reino?.id] || reino?.musica || 'colina';
   G.av = hash(G.A);
   UI.iniciar(J);
 
@@ -193,20 +196,26 @@ async function iniciar() {
 
   /* ---------------------------------------------------------------- los reinos */
   function construirReino(id, o = {}) {
+    if (id === 'parkour') return crearParkour({ calidad: motor.Q }, o.nivel || 0);
+    /* adentro de un edificio: se arma cada vez (son chicos) con su gente */
+    if (id === 'interior') { const R = crearInterior({ calidad: motor.Q }, o.tipo || 'hotel', o); ponerGente(R); return R; }
     if (id === 'casa') return crearCasa({ calidad: motor.Q }, o.casaDe && o.casaDe !== ID ? { dueño: o.casaDe, plano: [] } : { plano: G.casa });
     if (!cache[id]) {
       const R = CREAR[id]({ calidad: motor.Q });
-      /* la gente del lugar */
-      R.npcMallas = (R.npcs || []).map((n) => {
-        const m = new Meeple({ ...APARIENCIA_INICIAL(), ...NPCS[n.id].A }, t('npc_' + n.id));
-        m.raiz.position.set(n.pos[0], n.y, n.pos[1]); m.raiz.rotation.y = n.rot; R.grupo.add(m.raiz);
-        R.mundo.cilindro(n.pos[0], n.pos[1], 0.42, n.y - 1, n.y + 1.3);
-        R.mundo.interactivo({ id: 'npc', npc: n.id, pos: m.raiz.position, radio: 2.4, accion: 'hablar', icono: '💬' });
-        return { id: n.id, m, rot: n.rot };
-      });
+      ponerGente(R);
       cache[id] = R;
     }
     return cache[id];
+  }
+  /* la gente del lugar */
+  function ponerGente(R) {
+    R.npcMallas = (R.npcs || []).map((n) => {
+      const m = new Meeple({ ...APARIENCIA_INICIAL(), ...NPCS[n.id].A }, t('npc_' + n.id));
+      m.raiz.position.set(n.pos[0], n.y, n.pos[1]); m.raiz.rotation.y = n.rot; R.grupo.add(m.raiz);
+      R.mundo.cilindro(n.pos[0], n.pos[1], 0.42, n.y - 1, n.y + 1.3);
+      R.mundo.interactivo({ id: 'npc', npc: n.id, pos: m.raiz.position, radio: 2.4, accion: 'hablar', icono: '💬' });
+      return { id: n.id, m, rot: n.rot };
+    });
   }
   function limpiarArboledas() {
     const vivos = new Set([...Object.values(cache).map((R) => R.grupo), reino?.grupo].filter(Boolean));
@@ -228,23 +237,30 @@ async function iniciar() {
     yo.ponerEn(p, o.rumbo ?? reino.rumboInicio ?? 0);
     yo.hp = 100;
     cam.detras(yo.rumbo); cam.inicial = true;
+    /* adentro de los edificios, en primera persona: el muñeco propio no se ve y aparece el punto */
+    const FP = !!reino.primeraPersona;
+    cam.fp = FP; cam.sentado = false; J.sentado = false; J._tZoom = 0; reino.apuntables = null;
+    if (FP) cam.pitch = 0.3;
+    yo.m.raiz.visible = !FP; cielo.tRefl = 99;
+    UI.mira(FP);
     UNI.uViento.value = 1;
     zona = null; tZona = 9; J.esperaTren = null; UI.estadoTren(null);
     if (reino.zonaEn) zona = reino.zonaEn(p.x, p.z);
     if (!J.musicaElegida) J.musica(musicaDelLugar());
     /* la sala pública: la casa es de su dueño; el resto, la que tenga gente y lugar */
-    const sala = id === 'casa' ? 'casa-' + (o.casaDe || ID) : id === 'tienda' ? 'tienda-1' : red.elegirSala(id);
+    const sala = id === 'casa' ? 'casa-' + (o.casaDe || ID) : id === 'tienda' ? 'tienda-1' : id === 'parkour' ? 'parkour-' + reino.nivel : id === 'interior' ? 'interior-' + reino.tipo + reino.i : red.elegirSala(id);
+    UI.parkourHud(null);
     red.casaAbierta = id === 'casa' && !o.casaDe;
     red.entrar(sala, id);
     red.mirarCasa(id === 'casa' && o.casaDe && o.casaDe !== ID ? o.casaDe : null);
     if (red.casaAbierta) { red.publicarCasa(G.casa); UI.avisar(t('casa_visitas'), 'azul'); }
     red.accion({ type: 'apariencia', A: G.A, av: G.av });
     UI.actualizarRed();
-    G.ultimoReino = id === 'tienda' || id === 'casa' ? 'plaza' : id; Guardado.guardar();
+    G.ultimoReino = ['tienda', 'casa', 'parkour'].includes(id) || reino.interior ? 'plaza' : id; Guardado.guardar();
   }
   async function viajar(id, o = {}) {
     if (!reino) return;
-    const nombre = id === 'casa' && o.nombreCasa ? t('reino_casa_de', { n: o.nombreCasa }) : t('reino_' + id);
+    const nombre = o.nombre || (id === 'casa' && o.nombreCasa ? t('reino_casa_de', { n: o.nombreCasa }) : t('reino_' + id));
     const pant = UI.pantallaViaje(nombre);
     pausado = true; J.sfx('entra');
     await new Promise((r) => setTimeout(r, 380));
@@ -260,7 +276,7 @@ async function iniciar() {
      try {
       if (!yo) yo = new Jugador(motor.escena, G.A, G.nombre);
       yo.m.ponerApariencia(G.A); yo.m.ponerNombre(G.nombre, true);
-      entrarReino(Q.get('reino') || id);
+      entrarReino(Q.get('reino') || id, { nivel: +Q.get('nivel') || 0 });
       if (Q.has('x')) yo.p.set(+Q.get('x'), Q.has('y') ? +Q.get('y') : reino.mundo.altura(+Q.get('x'), +Q.get('z')) + 0.1, +Q.get('z'));
       if (Q.has('yaw')) cam.yaw = +Q.get('yaw'); if (Q.has('pitch')) cam.pitch = +Q.get('pitch'); if (Q.has('dist')) cam.dist = cam.distObj = +Q.get('dist');
       enJuego = true; pausado = false;
@@ -277,7 +293,7 @@ async function iniciar() {
     }, 60);
   }
   function salirAlMenu() {
-    enJuego = false; ent.mostrarDedos(false); probador = false; construyendo = null;
+    enJuego = false; ent.mostrarDedos(false); probador = false; construyendo = null; cam.fp = false; UI.mira(false);
     if (reino) { motor.escena.remove(reino.grupo); reino = null; }
     red.entrar(null, null); remotos.vaciar();
     Guardado.ya();
@@ -369,6 +385,66 @@ async function iniciar() {
       case 'molino': reino.soplar(o.molino); J.sfx('ola'); chispas.soltar(yo.p.clone().setY(yo.p.y + 1.5), 14, 3); UI.avisar(t('molino_sopla'), 'azul'); contar('molino', 1, o.clave); break;
       case 'botella': enDialogo = true; J.sfx('guino'); UI.dialogo('🍾', [t(o.texto)], [], () => {}); contar('botella', 1, o.clave); break;
       case 'mapa': UI.mapa(dibujarMapa); break;
+      case 'minijuego': abrirParkour(); break;
+      /* los edificios con interior (interior.js) y lo que se usa adentro apuntando */
+      case 'entrar': viajar('interior', { tipo: o.tipo, i: o.i, salida: o.salida, rumbo: o.rumbo, nombre: t('lugar_' + o.tipo, { n: t(o.i === 2 ? 'npc_vecino' : 'npc_vecina') }) }); break;
+      case 'salir_edificio': viajar('plaza', reino.salida ? { en: reino.salida.clone(), rumbo: reino.rumboSalida } : {}); break;
+      case 'accionar': o.a.alUsar(J); break;
+    }
+  }
+  /* ---------------------------------------------------------------- lo que usan los interiores */
+  J.avisar = (x, k) => UI.avisar(x, k);
+  J.hablarCon = (id) => { if (reino?.npcMallas?.some((n) => n.id === id)) hablar(id); };
+  J.efecto = (ef) => { yo.ponerEfecto(ef); };
+  J.zoom = (seg) => { J._tZoom = seg; };
+  J.sentarseEn = (pos, rot) => { yo.ponerEn(pos, rot); yo.v.set(0, 0, 0); cam.yaw = rot + Math.PI; cam.pitch = 0.3; cam.sentado = true; J.sentado = true; J.gesto('sentarse'); J.sfx('aterriza'); };
+  J.siguienteCancion = () => {
+    const todas = [...new Set(['titulo', 'colina', ...Object.values(DISCO_CANCION)])].filter((k) => J.cancionDesbloqueada(k));
+    const k = todas[(todas.indexOf(J.musicaElegida || J.sonando) + 1) % todas.length];
+    J.elegirMusica(k); UI.avisar('🎵 ' + t('can_' + k), 'azul');
+  };
+  J.leer = (titulo, texto) => { enDialogo = true; UI.dialogo(titulo, [texto], [], () => {}); };
+  /* lo que se apunta con el punto del medio: lo primero que corta el rayo, si es algo que se usa y está cerca */
+  const rayo = new THREE.Raycaster(), CENTRO = new THREE.Vector2(0, 0);
+  function apuntado() {
+    if (!reino.apuntables) { reino.apuntables = []; reino.grupo.traverse((q) => { if (q.isMesh && !q.userData.sinApunte && (!q.isInstancedMesh || q.userData.acc)) reino.apuntables.push(q); }); }
+    motor.camara.updateMatrixWorld(); rayo.setFromCamera(CENTRO, motor.camara); rayo.far = 6.5;
+    const h = rayo.intersectObjects(reino.apuntables, false)[0], a = h?.object.userData.acc;
+    return a && h.distance < a.dist ? a : null;
+  }
+
+  /* ---------------------------------------------------------------- el parkour */
+  G.parkour ||= { mejor: {}, estrellas: {} };
+  function abrirParkour() {
+    pausado = true;
+    UI.menuParkour(G.parkour, (n) => { pausado = false; viajar('parkour', { nivel: n }); }, () => { pausado = false; });
+  }
+  J.parkourReiniciar = () => { if (reino?.parkour) { reino.reiniciar(yo); UI.cerrarVentana(); J.sfx('entra'); } };
+  J.parkourSalir = () => {
+    const P = cache.plaza?.puntos;
+    viajar('plaza', P ? { en: new THREE.Vector3(P.puertaJuegos[0] + Math.sin(P.rumboJuegos) * 3, 0, P.puertaJuegos[1] + Math.cos(P.rumboJuegos) * 3).setY(cache.plaza.mundo.altura(P.puertaJuegos[0] + Math.sin(P.rumboJuegos) * 3, P.puertaJuegos[1] + Math.cos(P.rumboJuegos) * 3) + 0.1), rumbo: P.rumboJuegos } : {});
+  };
+  function seguirParkour(dt) {
+    const E = reino.parkour;
+    if (E.fase === 'cuenta') UI.cuenta(String(Math.max(1, Math.ceil(E.cuenta - 0.4))));
+    UI.parkourHud(E);
+    for (const ev of E.eventos.splice(0)) {
+      if (ev.tipo === 'ya') { UI.cuenta(t('pk_ya'), true); J.sfx('restaura'); }
+      else if (ev.tipo === 'control') { UI.avisar(t('pk_control'), 'bien'); J.sfx('orbe'); }
+      else if (ev.tipo === 'golpe') { J.sfx('pop'); cam.sacudida = 0.25; ent.vibrar(30); }
+      else if (ev.tipo === 'caida') { reino.reaparecer(yo); cam.inicial = true; J.sfx('pop'); UI.avisar('💧 ' + E.caidas + ' ' + t('pk_caidas')); break; }
+      else if (ev.tipo === 'meta') {
+        const n = E.nivel, P = G.parkour, N = NIVELES[n];
+        const est = ev.tiempo < N.estrellas[0] ? 3 : ev.tiempo < N.estrellas[1] ? 2 : 1;
+        const record = !P.mejor[n] || ev.tiempo < P.mejor[n], primera = !P.mejor[n];
+        let premio = (primera ? 20 : 0) + Math.max(0, est - (P.estrellas[n] || 0)) * 5;
+        if (record) P.mejor[n] = +ev.tiempo.toFixed(2);
+        P.estrellas[n] = Math.max(P.estrellas[n] || 0, est);
+        G.orbes += premio; Guardado.guardar(); UI.actualizarHud();
+        J.sfx('restaura'); yo.m.hacerGesto('festejar');
+        setTimeout(() => UI.resultadoParkour({ nivel: n, tiempo: ev.tiempo, caidas: ev.caidas, estrellas: est, record, premio, hay: n < NIVELES.length - 1 },
+          () => viajar('parkour', { nivel: n + 1 }), () => J.parkourReiniciar(), () => J.parkourSalir()), 900);
+      }
     }
   }
   /* el monorriel: subirse es montarlo, como al delfín (jugador.js); se baja solo cuando para */
@@ -448,7 +524,7 @@ async function iniciar() {
     /* si hace un rato que no se toca la cámara y se camina, se acomoda sola atrás
        (despacio, y no cuando se viene hacia la cámara: ahí daría media vuelta) */
     if (Math.abs(E.camX) + Math.abs(E.camY) > 0.0005) J._tCam = 0; else J._tCam = (J._tCam || 0) + dt;
-    if (O.camAuto !== false && !quieto && !probador && J._tCam > 1.2 && yo && yo.modo !== 'burbuja') {
+    if (O.camAuto !== false && !cam.fp && !quieto && !probador && J._tCam > 1.2 && yo && yo.modo !== 'burbuja') {
       const vel = Math.hypot(yo.v.x, yo.v.z), obj = (yo.modo === 'montado' ? yo.rumbo : Math.atan2(yo.v.x, yo.v.z)) + Math.PI;
       let d = obj - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
       if ((vel > 1.2 || yo.modo === 'montado') && Math.abs(d) < 2.3) cam.yaw += d * Math.min(1, dt * (yo.modo === 'montado' ? 0.9 : 0.55) * Math.min(1, (J._tCam - 1.2) * 2));
@@ -462,7 +538,11 @@ async function iniciar() {
     /* el E de usar lo toma primero la interacción (si no está en burbuja ni montado) */
     const usa = Em.accion && yo.modo !== 'burbuja' && yo.modo !== 'montado';
     if (usa) Em.accion = false;
+    if (J.sentado && (Math.abs(Em.x) + Math.abs(Em.z) > 0.15 || Em.salta)) { J.sentado = false; cam.sentado = false; J.gestoActual = null; yo.m.gesto = null; }
+    if (reino.antesDelJugador) reino.antesDelJugador(dt, yo, Em);
     yo.actualizar(dt, Em, reino.mundo); yo.paso(dt);
+    /* en primera persona el cuerpo mira para donde mira la cámara */
+    if (cam.fp) { yo.rumbo = cam.yaw + Math.PI; yo.sync(); }
     JUGADOR.copy(yo.p);
     for (const ev of yo.eventos) {
       if (ev === 'salto') J.sfx('salto'); else if (ev === 'doble') { J.sfx('burbuja'); chispas.soltar(yo.p, 8, 2); } else if (ev === 'aterriza') J.sfx('aterriza');
@@ -535,6 +615,11 @@ async function iniciar() {
     seguirTren();
     if (reino.id === 'aurora') { const n = reino.actualizar(dt, yo.p, cielo); if (n) { G.estrellas += n; UI.avisar(t('estrella'), 'azul'); J.sfx('guino'); contar('estrella', n); } }
     else reino.actualizar(dt, yo.p, cielo);
+    if (reino.parkour) seguirParkour(dt);
+    if (reino.ascensor) for (const ev of reino.ascensor.eventos.splice(0)) {
+      if (ev.tipo === 'llega') { UI.avisar(t('asc_llega', { n: t(ev.n) }), 'bien'); J.sfx('guino'); }
+      else { UI.avisar(t(ev.tipo === 'sube' ? 'asc_sube' : 'asc_baja'), 'azul'); J.sfx('entra'); }
+    }
     /* la gente del lugar mira a quien se acerca */
     for (const n of reino.npcMallas || []) {
       const d = Math.hypot(yo.p.x - n.m.raiz.position.x, yo.p.z - n.m.raiz.position.z);
@@ -549,11 +634,14 @@ async function iniciar() {
     /* lo que se puede usar cerca: el cartel y la tecla */
     let cerca = null;
     if (!quieto && !probador && yo.modo !== 'burbuja') {
-      cerca = yo.modo === 'montado' ? { accion: 'bajar' } : reino.mundo.cercano(yo.p);
+      const a = cam.fp && reino.accionables ? apuntado() : null;
+      cerca = yo.modo === 'montado' ? { accion: 'bajar' } : a ? { accion: 'accionar', a } : reino.mundo.cercano(yo.p);
       if (!cerca && reino.frutas) { const i = reino.frutas.cerca(yo.p); if (i >= 0) cerca = { accion: 'fruta', i }; }
       if (construyendo) cerca = construyendo.k ? { accion: 'poner' } : null;
     }
-    UI.accion(cerca ? (cerca.accion === 'poner' ? t('casa_construir') : cerca.accion === 'hablar' ? `${t('accion_hablar')} · ${t('npc_' + cerca.npc)}` : t('accion_' + cerca.accion)) : null);
+    accionCerca = cerca;
+    if (cam.fp) UI.mira(true, cerca?.accion === 'accionar');
+    UI.accion(cerca ? (cerca.accion === 'poner' ? t('casa_construir') : cerca.accion === 'hablar' ? `${t('accion_hablar')} · ${t('npc_' + cerca.npc)}` : cerca.accion === 'accionar' ? cerca.a.texto() : cerca.texto ? t(cerca.texto) : t('accion_' + cerca.accion)) : null);
     if (usa && cerca) {
       if (cerca.accion === 'fruta') {
         const f = reino.frutas.f[cerca.i]; reino.frutas.sacar(cerca.i); red.accion({ type: 'fruta', i: cerca.i });
@@ -579,8 +667,18 @@ async function iniciar() {
     /* el cielo, el agua, la cámara */
     cielo.actualizar(dt, yo.p);
     if (reino.interior) { cielo.sol.intensity *= 0.35; cielo.hemi.intensity = 1.1; }
+    /* adentro de los edificios la luz de abajo no es la del pasto (el techo salía verde) */
+    if (reino.primeraPersona) {
+      cielo.hemi.groundColor.set('#f2eee8'); cielo.hemi.color.set('#ffffff'); cielo.hemi.intensity = 0.7;
+      /* y los reflejos son los de una sala blanca (el mapa del cielo tiene el pasto abajo) */
+      if (!J._envSala) { const pm = new THREE.PMREMGenerator(motor.r); J._envSala = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); }
+      motor.escena.environment = J._envSala; motor.escena.environmentIntensity = 0.38;
+    }
     if (reino.mar) aguaSigueCielo(reino.mar, cielo);
     cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
+    J._tZoom = Math.max(0, (J._tZoom || 0) - dt);
+    const fov = J._tZoom > 0 ? 18 : (motor.alto > motor.ancho ? 72 : 58) + (cam.fp ? 12 : 0), fc = motor.camara;
+    if (Math.abs(fc.fov - fov) > 0.05) { fc.fov += (fov - fc.fov) * Math.min(1, dt * 5); fc.updateProjectionMatrix(); }
     /* los árboles de cerca con detalle y los de lejos livianos (naturaleza.js) */
     for (const a of ARBOLEDAS) { let q = a; while (q.parent) q = q.parent; if (q === motor.escena) a.actualizar(dt, motor.camara.position); }
     /* adentro: la cámara no sale de las paredes */
@@ -626,7 +724,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, cam, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
+  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

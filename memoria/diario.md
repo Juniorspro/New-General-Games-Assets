@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **25/09/2026, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: día y noche igual para todos (5+5 min), botones y teclado propio
+    Frutiger, la Zona de Juegos con un parkour de 5 mapas, y edificios que
+    se entran en primera persona con ascensor y cosas para usar. Quedó todo
+    ([aeroplaza](aeroplaza.md) § Quinta vuelta).
+  - Pruebas nuevas: `parkour.mjs`, `interiores.mjs`, `teclado.mjs`.
+  - Falta: probarlo en un teléfono de verdad; los interiores no tienen
+    minimapa propio.
 - **25/09/2026 · `claude/fijate-iszyer`:**
   - Pidió "mundo, no isla" y de todo: árboles que se muevan, la tienda
     decorada, el tren con su establecimiento, un mapa en el spawn, gráficos

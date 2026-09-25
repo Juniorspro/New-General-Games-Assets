@@ -21,6 +21,7 @@ import { tiendaAfuera, probadorCabina, faroles as hacerFaroles, bancos as hacerB
 import { modelo, instancias } from '../modelos.js';
 import { Monorriel } from '../monorriel.js';
 import { sumar, t } from '../textos.js';
+import { miniaturaParkour } from './parkour.js';
 
 const R1 = ruido2(3), R2 = ruido2(8), R3 = ruido2(21);
 /* el centro de siempre */
@@ -29,6 +30,8 @@ const CASAS = [[-13, 43], [2, 51], [17, 43]];
 /* lo nuevo: la terminal (la vía la cruza de sur a norte por x = -62), el spawn en su puerta y las regiones */
 const TERMINAL = [-62, 14], SPAWN = [-43.5, 14], CARTEL = [-38.5, 8.2];
 const CIUDAD = [132, -28], PRADERA = [-122, 118], BOSQUE = [-128, -108], MONTE = [30, -178], POZO = [24, -130];
+/* la Zona de Juegos: el claro entre el lago y el camino al monte */
+const JUEGOS = [52, -50];
 const BAHIA = 0.79;   // para dónde queda la bahía (ángulo desde el centro)
 const LOMAS_PRADERA = [[-140, 96, 9, 22], [-100, 140, 7, 20], [-150, 140, 11, 24], [-110, 100, 5, 16], [-170, 110, 8, 20]];
 const MOLINOS = [[-140, 96], [-150, 140], [-100, 140], [-172, 112], [-88, 162]];
@@ -79,6 +82,7 @@ export function alturaPlaza(x, z) {
   h = plano(h, x, z, BARRIO, 15, 7, 1.7);
   { const d = Math.max(Math.abs(x - TERMINAL[0] - 3) - 20, Math.abs(z - TERMINAL[1]) - 27, 0); h = h + (1.7 - h) * suaveEntre(9, 0, d); }
   h = plano(h, x, z, CIUDAD, 46, 12, 2.4);
+  h = plano(h, x, z, JUEGOS, 18, 8, 1.9);
   h = plano(h, x, z, MONTE, 6, 5, 34.5);
   for (const M of MOLINOS) h = plano(h, x, z, M, 2.5, 3, ALTO_MOLINO.get(M));
   return h;
@@ -91,7 +95,8 @@ const CAMINOS = [[SPAWN, PLAZA], [PLAZA, TIENDA], [PLAZA, [10, -2]], [PLAZA, [-1
   [[32, 34], [78, 76]], [[78, 76], [110, 108]],
   [[-16, 44], [-64, 78]], [[-64, 78], [-104, 112]],
   [[-24, -38], [-70, -70]], [[-70, -70], [-108, -96]],
-  [[2, -48], [14, -96]], [[14, -96], [POZO[0] - 4, POZO[1] + 17]]];
+  [[2, -48], [14, -96]], [[14, -96], [POZO[0] - 4, POZO[1] + 17]],
+  [PLAZA, [40, 4]], [[40, 4], [JUEGOS[0] - 4, JUEGOS[1] + 18]]];
 function enCamino(x, z) {
   let m = Infinity;
   for (const [[ax, az], [bx, bz]] of CAMINOS) {
@@ -105,12 +110,15 @@ function enCamino(x, z) {
 /* baldosas: la plaza, la explanada de la terminal y la ciudad */
 const enTerminal = (x, z) => Math.abs(x - TERMINAL[0] - 3) < 21 && Math.abs(z - TERMINAL[1]) < 27;
 const enCiudad = (x, z) => Math.hypot(x - CIUDAD[0], z - CIUDAD[1]) < 45;
+const enJuegos = (x, z) => Math.hypot(x - JUEGOS[0], z - JUEGOS[1]) < 18;
 /* el color de verdad del suelo (la textura de Rezona solo le pone el grano) */
 const PASTO = [0.3, 0.7, 0.14], PASTO2 = [0.45, 0.8, 0.16], ARENA = [0.97, 0.9, 0.72], CAMINO = [0.86, 0.84, 0.78], ROCA = [0.62, 0.7, 0.66];
 const mezcla = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 function colorSuelo(x, z, h, pend) {
   const dp = Math.hypot(x - PLAZA[0], z - PLAZA[1]);
   if (dp < 10) { const anillo = Math.floor(dp / 2.5) % 2; return anillo ? [0.84, 0.88, 0.94, 1] : [0.55, 0.76, 0.94, 1]; }
+  /* bajo el piso de cristal: agua azul (se ve a través) */
+  if (enJuegos(x, z)) return [0.25, 0.62, 0.92, 0];
   if (enTerminal(x, z) || enCiudad(x, z)) { const l = (Math.abs(((x + 400) % 3.2) - 1.6) > 1.45 || Math.abs(((z + 400) % 3.2) - 1.6) > 1.45) ? 0.8 : 0.92; return [l * 0.97, l, l * 1.04, 1]; }
   const cam = enCamino(x, z);
   if (cam < 1.7 && h > 0.8) return [...CAMINO, 0.9];
@@ -127,7 +135,7 @@ function colorSuelo(x, z, h, pend) {
 }
 const hayPasto = (x, z) => {
   const h = alturaPlaza(x, z);
-  return h > 1.2 && h < 28 && enCamino(x, z) > 2 && Math.hypot(x - PLAZA[0], z - PLAZA[1]) > 10.5 && !enTerminal(x, z) && !enCiudad(x, z) && Math.hypot(x - TIENDA[0], z - TIENDA[1]) > 8.5 && !CASAS.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 6.5);
+  return h > 1.2 && h < 28 && enCamino(x, z) > 2 && Math.hypot(x - PLAZA[0], z - PLAZA[1]) > 10.5 && !enTerminal(x, z) && !enCiudad(x, z) && Math.hypot(x - JUEGOS[0], z - JUEGOS[1]) > 18.5 && Math.hypot(x - TIENDA[0], z - TIENDA[1]) > 8.5 && !CASAS.some(([cx, cz]) => Math.hypot(x - cx, z - cz) < 6.5);
 };
 
 /* ---------------------------------------------------------------- los textos */
@@ -161,6 +169,7 @@ sumar({
 /* las zonas: para la música, el cartel al entrar y la misión de Brújula (de la más chica a la más grande) */
 export const ZONAS = [
   { id: 'terminal', c: TERMINAL, r: 34, musica: 'ciudad', icono: '🚉' },
+  { id: 'juegos', c: JUEGOS, r: 26, musica: 'titulo', icono: '🎮' },
   { id: 'ciudad', c: CIUDAD, r: 58, musica: 'ciudad', icono: '🏙️' },
   { id: 'bahia', c: [Math.cos(BAHIA) * 162, Math.sin(BAHIA) * 162], r: 74, musica: 'playa', icono: '⛵' },
   { id: 'pradera', c: PRADERA, r: 70, musica: 'cielo', icono: '🌾' },
@@ -288,7 +297,7 @@ export function crearPlaza(ctx) {
   /* ------------------------------------------------ los árboles, por región */
   const r = azar(41), arb = [], rosa = [], pal = [], pie = [];
   const libre = (x, z, lista, d) => !lista.some(([ax, az]) => Math.abs(ax - x) < d && Math.abs(az - z) < d && Math.hypot(ax - x, az - z) < d);
-  const lejosDeTodo = (x, z) => enCamino(x, z) > 3.5 && !enTerminal(x, z) && !enCiudad(x, z) && Math.hypot(x - LAGO[0], z - LAGO[1]) > 20 && Math.hypot(x - HUERTA[0], z - HUERTA[1]) > 9 && Math.hypot(x - BARRIO[0], z - BARRIO[1]) > 18 && Math.hypot(x - POZO[0], z - POZO[1]) > 18 && Math.hypot(x - CARTEL[0], z - CARTEL[1]) > 8;
+  const lejosDeTodo = (x, z) => enCamino(x, z) > 3.5 && !enTerminal(x, z) && !enCiudad(x, z) && Math.hypot(x - LAGO[0], z - LAGO[1]) > 20 && Math.hypot(x - HUERTA[0], z - HUERTA[1]) > 9 && Math.hypot(x - BARRIO[0], z - BARRIO[1]) > 18 && Math.hypot(x - POZO[0], z - POZO[1]) > 18 && Math.hypot(x - CARTEL[0], z - CARTEL[1]) > 8 && Math.hypot(x - JUEGOS[0], z - JUEGOS[1]) > 22;
   const sembrar = (n, cx, cz, R, dmin, lista, esc = [0.8, 0.6], prueba = () => true) => {
     for (let i = 0, k = 0; i < n * 8 && k < n; i++) {
       const a = r() * 6.28, d = Math.sqrt(r()) * R, x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
@@ -344,12 +353,15 @@ export function crearPlaza(ctx) {
   mundo.cilindro(PLAZA[0], PLAZA[1], 3.4, A(...PLAZA) - 1, A(...PLAZA) + MF.userData.borde, { tipo: 'piedra' });
   mundo.cilindro(PLAZA[0], PLAZA[1], 0.7, A(...PLAZA), A(...PLAZA) + MF.userData.tam.y);
   let puertaCasa = null;
+  const entradas = [];
   CASAS.forEach(([x, z], i) => {
     const y = A(x, z), rot = Math.atan2(PLAZA[0] - x, PLAZA[1] - z);
     const c = modelo('casa', { ancho: i === 1 ? 10.5 : 9 });
     c.position.set(x, y - 0.05, z); c.rotation.y = rot; g.add(c);
     const T = c.userData.tam;
     mundo.caja(x, z, T.x * 0.44, T.z * 0.44, y - 1, y + T.y * 0.92, rot, { tipo: 'piedra' });
+    /* las otras dos son de los vecinos: se entra tocando el timbre (interior.js) */
+    if (i !== 1) entradas.push({ tipo: 'casa', i, x, z, y, rot, d: T.z / 2 + 0.9, sale: T.z / 2 + 3.4 });
     if (i === 1) {
       puertaCasa = new THREE.Vector3(x + Math.sin(rot) * (T.z / 2 + 0.9), y, z + Math.cos(rot) * (T.z / 2 + 0.9));
       const cartel = letrero('🏠', { ancho: 1.4, alto: 0.9, tinta: '#1a78c2', borde: '#7fd3ff', tam: 150 }); cartel.position.set(x + Math.sin(rot) * (T.z / 2 + 0.3), y + T.y * 0.62, z + Math.cos(rot) * (T.z / 2 + 0.3)); cartel.rotation.y = rot; g.add(cartel);
@@ -397,7 +409,12 @@ export function crearPlaza(ctx) {
     const h = modelo('hotel', { ancho });
     h.position.set(x, A(x, z) - 0.1, z); h.rotation.y = Math.atan2(CIUDAD[0] - x, CIUDAD[1] - z) + (i % 2 ? 0.4 : -0.3); g.add(h);
     mundo.cilindro(x, z, ancho * 0.26, A(x, z) - 2, A(x, z) + h.userData.tam.y, { tipo: 'piedra' });
+    /* la puerta de vidrio de la entrada, abajo de la marquesina */
+    const k = h.userData.k;
+    entradas.push({ tipo: 'hotel', i, x, z, y: A(x, z), rot: h.rotation.y, d: 7.6 * k, sale: 11.5 * k });
   });
+  /* el pabellón: adentro está el café */
+  { const e = pab.userData.entrada, rot = Math.atan2(e.x - CIUDAD[0], e.z - CIUDAD[1]); entradas.push({ tipo: 'cafe', i: 0, x: CIUDAD[0], z: CIUDAD[1], y: yCi, rot, d: Math.hypot(e.x - CIUDAD[0], e.z - CIUDAD[1]) - 0.6, sale: Math.hypot(e.x - CIUDAD[0], e.z - CIUDAD[1]) + 2.4 }); }
   for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; ponFarol(CIUDAD[0] + Math.cos(a) * 22, CIUDAD[1] + Math.sin(a) * 22); }
   for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + 0.25; ponBanco(CIUDAD[0] + Math.cos(a) * 12.5, CIUDAD[1] + Math.sin(a) * 12.5, -a - Math.PI / 2); }
   for (const [x, z] of [[CIUDAD[0] - 36, CIUDAD[1] - 8], [CIUDAD[0] - 20, CIUDAD[1] + 30]]) { const f = modelo('fuente', { ancho: 5 }); f.position.set(x, A(x, z), z); g.add(f); mundo.cilindro(x, z, 2.3, A(x, z) - 1, A(x, z) + f.userData.borde, { tipo: 'piedra' }); }
@@ -472,6 +489,38 @@ export function crearPlaza(ctx) {
   const dirC = [MONTE[0] - POZO[0], MONTE[1] - POZO[1]], lc = Math.hypot(...dirC);
   const casc = cascada(A, [POZO[0] + dirC[0] / lc * 19, POZO[1] + dirC[1] / lc * 19], [POZO[0] + dirC[0] / lc * 3, POZO[1] + dirC[1] / lc * 3], 5.5); g.add(casc);
 
+  /* ------------------------------------------------ la Zona de Juegos */
+  const yJ = A(...JUEGOS);
+  const pisoCristal = new THREE.Mesh(new THREE.CircleGeometry(17, 72).rotateX(-Math.PI / 2), new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, uniforms: { uT: UNI.uT },
+    vertexShader: 'varying vec2 vP; void main(){ vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: /* glsl */`
+      uniform float uT; varying vec2 vP;
+      void main() {
+        float r = length(vP);
+        /* baldosas hexagonales de cristal con la junta que brilla */
+        vec2 q = vP * 0.55; vec2 h = vec2(q.x * 1.1547, q.y + q.x * 0.57735); vec2 f = fract(h); float e = min(min(f.x, f.y), min(1.0 - f.x, 1.0 - f.y));
+        float junta = 1.0 - smoothstep(0.0, 0.06, e);
+        float ola = 0.5 + 0.5 * sin(r * 1.2 - uT * 2.0);
+        float caus = pow(abs(sin(vP.x * 1.3 + sin(vP.y * 1.1 + uT) * 1.5) * sin(vP.y * 1.2 + sin(vP.x * 0.9 - uT * 0.8) * 1.4)), 6.0);
+        vec3 c = mix(vec3(0.62, 0.9, 1.0), vec3(0.85, 0.97, 1.0), ola * 0.4) + vec3(0.6, 1.0, 1.0) * caus * 0.35 + vec3(1.0) * junta * (0.45 + ola * 0.35);
+        float borde = smoothstep(17.0, 16.2, r);
+        gl_FragColor = vec4(c, (0.55 + junta * 0.35 + caus * 0.2) * borde);
+      }`,
+  }));
+  pisoCristal.position.set(JUEGOS[0], yJ + 0.04, JUEGOS[1]); pisoCristal.renderOrder = 2; g.add(pisoCristal);
+  const aroJ = new THREE.Mesh(new THREE.TorusGeometry(17, 0.22, 10, 90).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#7fe6ff', emissiveIntensity: 0.6, roughness: 0.1 })); aroJ.position.set(JUEGOS[0], yJ + 0.1, JUEGOS[1]); g.add(aroJ);
+  const farolJ = modelo('farolJuegos'), rotJ = Math.atan2(PLAZA[0] - JUEGOS[0], PLAZA[1] - JUEGOS[1]);
+  farolJ.position.set(JUEGOS[0], yJ, JUEGOS[1]); farolJ.rotation.y = rotJ; g.add(farolJ);
+  farolJ.userData.pantalla.material = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(miniaturaParkour(-1, 900, 540)), toneMapped: false });
+  farolJ.userData.pantalla.material.map.colorSpace = THREE.SRGBColorSpace;
+  mundo.cilindro(JUEGOS[0], JUEGOS[1], 6.3, yJ - 1, yJ + 0.9, { tipo: 'piedra' });
+  mundo.cilindro(JUEGOS[0], JUEGOS[1], 4.4, yJ + 0.9, yJ + 10);
+  const puertaJ = farolJ.userData.puerta.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), rotJ).add(farolJ.position);
+  for (let k = 0; k < 3; k++) { const ex = JUEGOS[0] + Math.sin(rotJ) * (6.9 - k * 0.7), ez = JUEGOS[1] + Math.cos(rotJ) * (6.9 - k * 0.7); mundo.caja(ex, ez, 2.1, 0.4, yJ - 1, yJ + 0.3 * (k + 1), rotJ, { tipo: 'piedra' }); }
+  for (let i = 0; i < 6; i++) { const a = rotJ + Math.PI / 6 + i * Math.PI / 3; if (i === 0 || i === 5) continue; ponFarol(JUEGOS[0] + Math.sin(a) * 14, JUEGOS[1] + Math.cos(a) * 14); }
+  const burJ = new Burbujas(g, [[JUEGOS[0], yJ, JUEGOS[1], 28, 0]], { n: 40, alto: 22, tam: [0.2, 0.9] });
+
   /* bancos para mirar: en el muelle, la pradera, el pozo y la bahía */
   ponBanco(PRADERA[0] + 8, PRADERA[1] - 14, 2.4); ponBanco(PRADERA[0] + 14, PRADERA[1] - 4, 1.6);
   ponBanco(POZO[0] - 16, POZO[1] + 12, -2.3); ponBanco(POZO[0] + 16, POZO[1] + 12, 2.3);
@@ -540,10 +589,17 @@ export function crearPlaza(ctx) {
   mono.paradas.forEach((q, k) => { if (!q.terminal) mundo.interactivo({ id: 'monorriel', parada: k, pos: q.puerta, radio: 3, accion: 'monorriel', icono: '🚝' }); });
   mundo.interactivo({ id: 'tienda', pos: tienda.userData.puerta, radio: 2.4, accion: 'entrar_tienda', icono: '🛍️' });
   if (puertaCasa) mundo.interactivo({ id: 'mi_casa', pos: puertaCasa, radio: 2.8, accion: 'mi_casa', icono: '🏠' });
+  /* las puertas que llevan adentro (en primera persona): hoteles, café y casas de los vecinos */
+  for (const E of entradas) {
+    const pos = new THREE.Vector3(E.x + Math.sin(E.rot) * E.d, 0, E.z + Math.cos(E.rot) * E.d); pos.y = A(pos.x, pos.z);
+    const sx = E.x + Math.sin(E.rot) * E.sale, sz = E.z + Math.cos(E.rot) * E.sale;
+    mundo.interactivo({ id: 'entrar-' + E.tipo + E.i, pos, radio: E.tipo === 'casa' ? 2.2 : 2.6, accion: 'entrar', texto: 'entrar_' + E.tipo, tipo: E.tipo, i: E.i, salida: new THREE.Vector3(sx, A(sx, sz) + 0.1, sz), rumbo: E.rot, icono: '🚪' });
+  }
   mundo.interactivo({ id: 'probador', pos: new THREE.Vector3(PROBADOR[0], A(...PROBADOR), PROBADOR[1]), radio: 2.4, accion: 'probador', icono: '👕' });
   mundo.interactivo({ id: 'fuente', pos: new THREE.Vector3(PLAZA[0], A(...PLAZA) + 0.7, PLAZA[1]), radio: 4.2, accion: 'burbuja', icono: '🫧' });
   const frenteCartel = new THREE.Vector3(CARTEL[0] + Math.sin(cartel.rotation.y) * 2.2, yC, CARTEL[1] + Math.cos(cartel.rotation.y) * 2.2);
   mundo.interactivo({ id: 'mapa', pos: frenteCartel, radio: 2.6, accion: 'mapa', icono: '🗺️' });
+  mundo.interactivo({ id: 'minijuego', pos: puertaJ, radio: 3.2, accion: 'minijuego', icono: '🎮' });
   for (const M of molinos) mundo.interactivo({ id: 'molino', clave: M.clave, molino: M, pos: M.pos, radio: 2.6, accion: 'molino', icono: '🌬️' });
   for (const B of botellas) mundo.interactivo({ id: 'botella', clave: B.clave, texto: B.texto, pos: B.p, radio: 1.8, accion: 'botella', icono: '🍾' });
 
@@ -555,13 +611,15 @@ export function crearPlaza(ctx) {
     id: 'plaza', mundo, grupo: g, mar, inicio, rumboInicio, musica: 'colina', cielo: { aurora: 0, arcoiris: 1 },
     orbes, mariposas, burbujas, frutas, discos, npcs, cardumenes, monorriel: mono, mapa, zonas: ZONAS, zonaEn,
     /* los lugares importantes (para las pruebas y el mapa) */
-    puntos: { spawn: SPAWN, cartel: CARTEL, terminal: TERMINAL, faro: FARO, muelle: [mx0, mz0], finMuelle, casaArbol: CA, monte: MONTE, pozo: POZO, ciudad: CIUDAD, pradera: PRADERA, bosque: BOSQUE },
+    puntos: { juegos: JUEGOS, puertaJuegos: [puertaJ.x, puertaJ.z], rumboJuegos: rotJ, spawn: SPAWN, cartel: CARTEL, terminal: TERMINAL, faro: FARO, muelle: [mx0, mz0], finMuelle, casaArbol: CA, monte: MONTE, pozo: POZO, ciudad: CIUDAD, pradera: PRADERA, bosque: BOSQUE },
     tienda, fuenteBurbujas: new THREE.Vector3(PLAZA[0], A(...PLAZA) + 3, PLAZA[1]),
     /* soplar un molino: gira rápido un rato */
     soplar(M) { M.extra = 3.2; },
     actualizar(dt, jp, cielo) {
       tt += dt;
       globo.userData.actualizar(tt, dt);
+      /* el farol de los juegos: el núcleo late, el aro gira y las puertas brillan */
+      { const U = farolJ.userData; if (U.nucleo) U.nucleo.scale.setScalar(1 + Math.sin(tt * 2.2) * 0.06); if (U.aro) U.aro.rotation.z = tt * 0.7; if (U.puertaD) U.puertaD.material.emissiveIntensity = 0.9 + Math.sin(tt * 3) * 0.45; aroJ.material.emissiveIntensity = 0.45 + Math.sin(tt * 2) * 0.25; burJ.actualizar(dt, null); }
       tienda.userData.actualizar(tt, dt);
       casc.userData.actualizar(tt, dt);
       for (const p of peceras) p.userData.actualizar(tt);

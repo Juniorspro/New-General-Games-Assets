@@ -10,6 +10,8 @@ import { RANURAS, PALETA, PALETA_PELO, loTengo, precio, DE_MISION, MUEBLES } fro
 import { NPCS } from './misiones.js';
 import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
+import { Teclado } from './teclado.js';
+import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
 
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
@@ -58,6 +60,12 @@ const CANCIONES = ['titulo', 'colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 
 export const UI = {
   J: null, raiz: null, ventanaAbierta: null,
   iniciar(J) {
+    /* la onda de luz al apretar cualquier botón (también los de dedo) */
+    document.addEventListener('pointerdown', (e) => {
+      const b = e.target.closest && e.target.closest('.boton, .redondo, .ranura, .dedo-boton, .tecla-aero');
+      if (!b || b.disabled) return;
+      const o = document.createElement('i'); o.className = 'onda'; b.appendChild(o); setTimeout(() => o.remove(), 600);
+    }, true);
     this.J = J; this.raiz = document.getElementById('ui');
     /* los sonidos de la interfaz: pasar por encima y elegir */
     this.raiz.addEventListener('pointerover', (e) => { const b = e.target.closest('button'); if (b && b !== this._ult) { this._ult = b; J.sfx('mover'); } });
@@ -215,6 +223,60 @@ export const UI = {
     this.hud.appendChild(d); this.historial = [...(this.historial || []), '@' + nombre].slice(-30);
     setTimeout(() => d.remove(), 3600);
   },
+  /* ------------------------------------------------------------ PARKOUR AERO */
+  /* el menú de los cinco mapas: miniatura, nombre, récord, estrellas y candado */
+  menuParkour(P, alElegir, alCerrar) {
+    const c = el('<div class="pk-cartas"></div>');
+    NIVELES.forEach((N, n) => {
+      const abierto = n === 0 || P.mejor[n - 1] != null, est = P.estrellas[n] || 0;
+      const b = el(`<button class="pk-carta ${abierto ? '' : 'bloq'}"><img alt=""><b></b><span class="est">${'★'.repeat(est)}${'☆'.repeat(3 - est)}</span><small></small>${abierto ? '' : '<i class="candado">🔒</i>'}</button>`);
+      $('img', b).src = miniaturaParkour(n, 320, 200).toDataURL('image/jpeg', 0.85);
+      $('b', b).textContent = `${n + 1}. ${t('pk_' + N.id)}`;
+      $('small', b).textContent = !abierto ? t('pk_bloq') : P.mejor[n] != null ? t('pk_mejor', { s: formatoTiempo(P.mejor[n]) }) : t('pk_sin');
+      if (abierto) b.onclick = () => { this.J.sfx('elegir'); v.cerrar(true); alElegir(n); };
+      c.appendChild(b);
+    });
+    const v = this.ventana('🎮 ' + t('pk_titulo'), c, { ancho: 900, alCerrar: () => alCerrar && alCerrar() });
+    const cerrar0 = v.cerrar; v.cerrar = (sin) => { if (sin) { const f = alCerrar; alCerrar = null; cerrar0(); alCerrar = f; } else cerrar0(); };
+    this.focoTeclado(v);
+  },
+  /* la píldora de arriba mientras se corre: mapa, reloj, caídas, reiniciar y salir */
+  parkourHud(E) {
+    if (!this.hud) return;
+    let d = $('.pk-hud', this.hud);
+    if (!E) { d && d.remove(); return; }
+    if (!d) {
+      d = el(`<div class="pk-hud"><span class="pk-nombre"></span><span class="pk-reloj">0:00.0</span><span class="pk-caidas"></span><button class="redondo" data-a="otra" title="${t('pk_repetir')}">⟲</button><button class="redondo" data-a="salir" title="${t('pk_volver')}">✕</button></div>`);
+      $('[data-a=otra]', d).onclick = () => this.J.parkourReiniciar(); $('[data-a=salir]', d).onclick = () => this.J.parkourSalir();
+      this.hud.appendChild(d);
+    }
+    const tx = formatoTiempo(E.tiempo);
+    if (d._t !== tx) { d._t = tx; $('.pk-reloj', d).textContent = '⏱ ' + tx; }
+    const cc = `💧 ${E.caidas}`; if (d._c !== cc) { d._c = cc; $('.pk-caidas', d).textContent = cc; }
+    const nn = `${NIVELES[E.nivel].icono} ${E.nombre}`; if (d._n !== nn) { d._n = nn; $('.pk-nombre', d).textContent = nn; }
+    d.classList.toggle('fin', E.fase === 'fin');
+  },
+  /* 3, 2, 1, ¡YA! en grande en el medio */
+  cuenta(txt, ya = false) {
+    if (!this.hud || this._cuenta === txt) return;
+    this._cuenta = txt;
+    $('.pk-cuenta', this.hud)?.remove();
+    const d = el(`<div class="pk-cuenta ${ya ? 'ya' : ''}"></div>`); d.textContent = txt; this.hud.appendChild(d);
+    if (!ya) this.J.sfx('letra', { f: 900 });
+    setTimeout(() => { d.remove(); if (this._cuenta === txt) this._cuenta = null; }, ya ? 900 : 1000);
+  },
+  resultadoParkour(R, alSiguiente, alRepetir, alVolver) {
+    const N = NIVELES[R.nivel];
+    const c = el(`<div class="pk-resultado"><div class="pk-est">${[0, 1, 2].map((i) => `<i class="${i < R.estrellas ? 'si' : ''}" style="animation-delay:${0.2 + i * 0.25}s">★</i>`).join('')}</div>
+      <div class="pk-cifras"><div><small>${t('pk_tiempo')}</small><b>${formatoTiempo(R.tiempo)}</b></div><div><small>${t('pk_caidas')}</small><b>${R.caidas}</b></div><div><small>${t('pk_orbes')}</small><b>+${R.premio}</b></div></div>
+      ${R.record ? `<div class="pk-record">🏆 ${t('pk_record')}</div>` : ''}
+      <div class="fila">${R.hay ? `<button class="boton primario" data-a="sig">${t('pk_siguiente')} ▶</button>` : ''}<button class="boton" data-a="otra">⟲ ${t('pk_repetir')}</button><button class="boton" data-a="volver">${t('pk_volver')}</button></div></div>`);
+    const v = this.ventana(`${N.icono} ${t('pk_fin')}`, c, { ancho: 560 });
+    $('[data-a=otra]', c).onclick = () => { v.cerrar(); alRepetir(); };
+    $('[data-a=volver]', c).onclick = () => { v.cerrar(); alVolver(); };
+    if (R.hay) $('[data-a=sig]', c).onclick = () => { v.cerrar(); alSiguiente(); };
+    this.focoTeclado(v, R.hay ? '[data-a=sig]' : '[data-a=otra]');
+  },
   /* la pildorita del monorriel: cuánto falta, la próxima parada (null la saca) */
   estadoTren(texto) {
     if (!this.hud) return;
@@ -224,6 +286,14 @@ export const UI = {
     this._tren = texto;
     if (!d) { d = el('<div class="tren-estado pildora"><i>🚝</i> <span></span></div>'); this.hud.appendChild(d); }
     d.lastElementChild.textContent = texto;
+  },
+  /* el punto del medio de la primera persona: se agranda y brilla cuando apunta a algo que se usa */
+  mira(si, apunta = false) {
+    let m = this.hud && $('.mira', this.hud);
+    if (!si) { if (m) m.remove(); return; }
+    if (!this.hud) return;
+    if (!m) { m = el('<div class="mira"><i></i><b></b></div>'); this.hud.appendChild(m); }
+    m.classList.toggle('apunta', !!apunta);
   },
   /* el cartel de "E  Viajar" */
   accion(texto) {
@@ -253,11 +323,13 @@ export const UI = {
     const f = el(`<form class="chat-entrada"><input maxlength="120" enterkeyhint="send" autocomplete="off"><button class="boton chico primario" type="submit">${t('chat_enviar')}</button></form>`);
     const i = $('input', f); i.placeholder = t('chat_poner');
     $('.chat', this.hud).classList.add('abierto');
-    const cerrar = () => { f.remove(); J.ent.bloqueado = false; this.hud && $('.chat', this.hud).classList.remove('abierto'); };
+    const cerrar = () => { if (!f.isConnected) return; f.remove(); Teclado.cerrar(true); J.ent.bloqueado = false; this.hud && $('.chat', this.hud).classList.remove('abierto'); };
     f.onsubmit = (e) => { e.preventDefault(); if (i.value.trim()) J.decir(i.value); cerrar(); };
     i.onkeydown = (e) => { if (e.key === 'Escape') cerrar(); e.stopPropagation(); };
-    i.onblur = () => setTimeout(() => { if (f.isConnected) cerrar(); }, 150);
-    this.hud.appendChild(f); i.focus();
+    this.hud.appendChild(f);
+    /* en el celu, el teclado propio (el del sistema sale parado con el juego acostado) */
+    if (J.ent.tactil) Teclado.abrir(i, { alEnviar: () => { if (i.value.trim()) J.decir(i.value); cerrar(); }, alCerrar: cerrar, sonido: () => J.sfx('letra', { f: 1200 + Math.random() * 400 }) });
+    else { i.onblur = () => setTimeout(() => { if (f.isConnected) cerrar(); }, 150); i.focus(); }
   },
   /* ------------------------------------------------------------ diálogo con NPC */
   dialogo(quien, lineas, botones = [], alTerminar = () => {}) {
@@ -522,7 +594,8 @@ export const UI = {
     const giros = this.poner(el(`<div class="giros"><button class="flecha-giro" data-g="-1">⟲</button><button class="flecha-giro" data-g="1">⟳</button></div>`));
     giros.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => alGirar(+b.dataset.g * 0.8));
     const nombre = $('input', p); nombre.value = G.nombre; nombre.placeholder = t('prob_nombre');
-    nombre.onfocus = () => { J.ent.bloqueado = true; }; nombre.onblur = () => { J.ent.bloqueado = false; };
+    nombre.onfocus = () => { J.ent.bloqueado = true; }; nombre.onblur = () => { if (!Teclado.abierto) J.ent.bloqueado = false; };
+    if (J.ent.tactil) nombre.onpointerdown = (e) => { e.preventDefault(); J.ent.bloqueado = true; Teclado.abrir(nombre, { alEnviar: () => { J.ent.bloqueado = false; }, alCerrar: () => { J.ent.bloqueado = false; }, sonido: () => J.sfx('letra', { f: 1200 + Math.random() * 400 }) }); };
     nombre.onkeydown = (e) => e.stopPropagation();
     nombre.oninput = () => { const v = nombre.value.replace(/[<>]/g, '').trim(); if (v) { G.nombre = v.slice(0, 16); J.cambiarNombre(); } };
     const grilla = $('.opciones-prob', p);
@@ -572,7 +645,7 @@ export const UI = {
       G.A.degrade = Math.random(); if (Math.random() < 0.7) G.A.motivoCabeza = 'igual'; if (Math.random() < 0.6) G.A.ojos = 'ovalos';
       J.aplicarApariencia(); dibujar();
     };
-    $('[data-a=listo]', p).onclick = () => { p.remove(); giros.remove(); J.ent.bloqueado = false; Pantalla.alCambiar.splice(Pantalla.alCambiar.indexOf(alGirarPantalla), 1); alCerrar(); };
+    $('[data-a=listo]', p).onclick = () => { Teclado.cerrar(true); p.remove(); giros.remove(); J.ent.bloqueado = false; Pantalla.alCambiar.splice(Pantalla.alCambiar.indexOf(alGirarPantalla), 1); alCerrar(); };
     requestAnimationFrame(() => dibujar());
     this._probador = p;
   },

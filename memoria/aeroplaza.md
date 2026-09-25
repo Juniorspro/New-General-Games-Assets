@@ -171,6 +171,50 @@ sin desplazar, más animaciones y las tres canciones que mandó.
   Aqua, Frutiger Aero Ahhh → bosque y monte, la de itsalyzee → la bahía. En
   la pública suenan los temas de Rezona (`SI_FALTA` en main.js).
 
+## Quinta vuelta: día y noche, teclado, parkour e interiores (25/09)
+
+Pedido: que no arranque de noche por la hora local (misma hora para todos,
+ciclo rápido 5 min de día y 5 de noche), botones y un teclado propio
+Frutiger, la Zona de Juegos con el primer minijuego (parkour en 5 mapas) y
+edificios que se entran en primera persona, con ascensor.
+
+- **El ciclo** (`cielo.js`, `CICLO = 600`): sale de `Date.now()`, igual en
+  todas las compus; el sol está arriba la mitad del tiempo.
+- **Teclado** (`teclado.js`): va adentro de `#app` (se acuesta con el juego;
+  el del sistema saldría parado). Solo en táctil: pone el input `readOnly` y
+  `inputmode=none`. Mantener una vocal 420 ms abre los acentos; ⇧ dos veces
+  bloquea. Prueba: `pruebas/teclado.mjs` (acostado y parado).
+- **Zona de Juegos** (`plaza.js`, `JUEGOS = [52, -50]`): piso de cristal con
+  shader, el farol gigante (`construcciones.js › farolJuegos`) con puertas
+  que brillan y el cartel con la miniatura (`miniaturaParkour`). La puerta
+  es el interactivo `minijuego`.
+- **Parkour** (`reinos/parkour.js`): 5 mapas en `NIVELES` (nubes, acuario,
+  jardín, ciudad, órbita), cada uno con estrellas por tiempo. API de armado:
+  `plat`, `movil`, `barra`, `rebote`, `fragil`, `cinta`, `geiser`, `control`,
+  `meta`. Las plataformas que se mueven cambian `x, z, y0, y1` del sólido y
+  llevan al jugador si lo pisa; por eso `mundo.sinRejilla`. Los récords van
+  en `G.parkour`. Prueba: `pruebas/parkour.mjs` (21 bien).
+- **Interiores** (`reinos/interior.js`, `crearInterior(ctx, tipo, o)`):
+  hotel (lobby, suite en y=24, azotea en y=48), café (octógono) y casa del
+  vecino (redonda). Se entra por 8 puertas de la isla (`accion: 'entrar'`,
+  5 hoteles, el pabellón y las casas 0 y 2); cada puerta guarda dónde se
+  aparece al salir (`salida`, `rumbo`).
+  - **Primera persona:** `cam.fp` (`camara.js › actualizarFP`): ojos a
+    1,5 m, pitch 0,3 = mirar derecho, hamaca al caminar, y en una charla la
+    vista va sola a la cara. El muñeco propio se oculta; el `rumbo` sigue a
+    la cámara (los demás te ven mirar). FOV +12°, el telescopio lo cierra a 18°.
+  - **El punto** (`UI.mira`): un rayo desde el centro contra todas las
+    mallas del reino (no solo las usables: las paredes tapan). Lo usable
+    guarda `userData.acc = { texto(), alUsar(J), dist }` en cada pieza.
+  - **El ascensor:** el piso de la cabina es un sólido que sube y lleva al
+    jugador (`A.antes` en `antesDelJugador`). Las trabas de las puertas son
+    sólidos `fantasma` según la puerta. Avisa con `ascensor.eventos`.
+  - **Afuera:** calle, 30 torres fundidas (de noche prenden las ventanas) y
+    el telón; el hotel tiene un casco sin tapas que desde adentro no se ve.
+  - **La gente de adentro** (`misiones.js`, `charla: true`): Perla, Moka,
+    Rulo y Nube; solo charlan.
+  - Prueba: `pruebas/interiores.mjs` (32 bien, ~4 min).
+
 ## Trampas que ya se pagaron
 
 - **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una
@@ -232,6 +276,21 @@ sin desplazar, más animaciones y las tres canciones que mandó.
 - **La hora fija de un reino.** La Aurora es de noche siempre: `?hora=` no la
   pisa.
 
+- **Un rayo con la cámara sin dibujar usa la matriz vieja.** Con `?pausa`
+  y `paso(dt, false)` no se renderiza, y `matrixWorld` queda dos cuadros
+  atrás (lookAt solo actualiza la del cuadro anterior). Antes de
+  `setFromCamera`: `camara.updateMatrixWorld()`.
+- **Adentro, el techo salía verde:** la luz de hemisferio y el mapa de
+  reflejos del cielo tienen el pasto abajo. En primera persona se cambian por
+  un `RoomEnvironment` y un suelo claro (main.js, después de `cielo.actualizar`).
+- **Paredes redondas de cilindros:** con 20 alrededor de 6,6 m quedaban
+  huecos de 1,2 m y el muñeco (radio 0,32) salía. Van 40.
+- **Un piso visual entero tapa lo que hay abajo:** la pileta y el hueco del
+  ascensor necesitan el piso en pedazos (`pisoConHueco` hace los sólidos y
+  los planos con uv del mundo, para que la textura siga).
+- **`fundir` pierde los grupos de caras** (un `BoxGeometry` al que se le
+  sacaron tapas vuelve a tenerlas): no fundir esos (se marcan `sinApunte`).
+
 ## Rendimiento (medido en 390×844)
 
 | calidad | plaza | llamadas | CPU del juego |
@@ -239,6 +298,7 @@ sin desplazar, más animaciones y las tres canciones que mandó.
 | alta | 930 mil triángulos (1,59 millones con las construcciones, 24/09) | 205 (345) | 0,34 ms/cuadro (0,35) |
 | alta, isla grande (25/09) | 2,49 millones en el spawn (con la pasada de sombras) | 543 | 0,61 ms/cuadro |
 | baja | 429 mil (sin sombras, pasto ×0,28) | 124 | 0,32 ms/cuadro |
+| media, lobby del hotel (25/09) | 244 mil | 255 (421 sin fundir los muebles) | — |
 
 La calidad automática arranca con la de `aparato.js` (SwiftShader → baja),
 mide y baja un nivel si pasan 30 ms, o sube uno si anda sobrado. Lo que más

@@ -29,6 +29,8 @@ export class Mundo {
      una rejilla de 16 m y cada consulta mira solo su casilla. Cada sólido va en
      todas las casillas que toca, agrandado 1,5 m (lo más que empuja una consulta) */
   cerca(x, z) {
+    /* los reinos con cosas que se mueven (el parkour) no usan rejilla: son pocos sólidos */
+    if (this.sinRejilla) return this.solidos;
     if (!this._rejilla) {
       const R = this._rejilla = new Map();
       for (const s of this.solidos) {

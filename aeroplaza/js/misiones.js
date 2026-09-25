@@ -20,6 +20,11 @@ export const NPCS = {
   brisa: { A: { color: '#d9fff5', color2: '#39d6ff', motivo: 'nubes', cubre: 0.55, material: 'vidrio', sombrero: 'ninguno', peinado: 'nube', colorPelo: '#ffffff', anteojos: 'ninguno', espalda: 'molinete', particulas: 'hojas' }, mision: { tipo: 'molino', meta: 4, orbes: 25, cosas: ['espalda:molinete'] } },
   musgo: { A: { color: '#2f7a2f', color2: '#b6f03a', motivo: 'hojas', cubre: 0.5, material: 'mate', sombrero: 'hongo', peinado: 'ninguno', anteojos: 'ninguno', espalda: 'ninguno', particulas: 'hojas' }, mision: { tipo: 'hongo', meta: 5, orbes: 25, cosas: ['sombrero:hongo'] } },
   marea: { A: { color: '#1d4fbf', color2: '#ffffff', motivo: 'agua', cubre: 0.45, material: 'perla', sombrero: 'capitan', peinado: 'melena', colorPelo: '#ffd23f', anteojos: 'sol', espalda: 'ninguno', particulas: 'burbujas' }, mision: { tipo: 'botella', meta: 3, orbes: 30, cosas: ['sombrero:capitan'] } },
+  /* los de adentro de los edificios (interior.js): no piden nada, charlan */
+  recepcion: { A: { color: '#ffffff', color2: '#7fd3ff', motivo: 'ninguno', cubre: 0.3, material: 'perla', sombrero: 'gorra', peinado: 'rodete', colorPelo: '#22262b', anteojos: 'ninguno', espalda: 'ninguno', particulas: 'ninguna' }, charla: true },
+  barista: { A: { color: '#c8905a', color2: '#fff1d6', motivo: 'ninguno', cubre: 0.35, material: 'gelatina', sombrero: 'ninguno', peinado: 'pinches', colorPelo: '#6b3f1f', anteojos: 'redondos', espalda: 'ninguno', particulas: 'ninguna' }, charla: true },
+  vecina: { A: { color: '#ff9ad8', color2: '#ffffff', motivo: 'flores', cubre: 0.4, material: 'gelatina', sombrero: 'ninguno', peinado: 'melena', colorPelo: '#ffd23f', anteojos: 'ninguno', espalda: 'ninguno', particulas: 'ninguna' }, charla: true },
+  vecino: { A: { color: '#9fe3ff', color2: '#ffffff', motivo: 'nubes', cubre: 0.5, material: 'vidrio', sombrero: 'gorro', peinado: 'nube', colorPelo: '#ffffff', anteojos: 'redondos', espalda: 'ninguno', particulas: 'ninguna' }, charla: true },
 };
 
 /* lo que dice cada uno, en los tres idiomas: saludo (y pide), recuerda, gracias, charla */
@@ -111,6 +116,7 @@ export const Misiones = {
   hablar(id) {
     const N = NPCS[id];
     if (N.tienda) return { lineas: t('d_' + id + '_0').split('|'), que: 'tienda' };
+    if (N.charla) return { lineas: t('d_' + id + '_0').split('|'), que: 'charla' };
     const s = this.estado(id), M = N.mision;
     if (s.e === 'nueva') return { lineas: t('d_' + id + '_0').split('|'), que: 'ofrece' };
     if (s.e === 'activa') return { lineas: [t('d_' + id + '_1', { n: s.n, m: M.meta })], que: 'recuerda' };

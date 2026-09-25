@@ -129,6 +129,7 @@ const HACER = {
   pantallaAzul: () => new THREE.MeshBasicMaterial({ color: '#9fe8ff' }),
   tablero: () => new THREE.MeshBasicMaterial({ map: texTablero() }),
   esfera: () => new THREE.MeshBasicMaterial({ color: '#f7fbff' }),
+  puertasLuz: () => new THREE.MeshStandardMaterial({ color: '#fff6d0', emissive: '#ffd98a', emissiveIntensity: 1.2, roughness: 0.15, transparent: true, opacity: 0.92 }),
   vela: () => brilloso('#ffffff', { roughness: 0.5, borde: 0.1, side: THREE.DoubleSide }),
   velaAqua: () => brilloso('#43d8cd', { roughness: 0.5, borde: 0.1, side: THREE.DoubleSide }),
   aguja: () => new THREE.MeshBasicMaterial({ color: '#2a4a6a' }),
@@ -1098,10 +1099,51 @@ export function paradasMonorriel(lista) {
   return g;
 }
 
+/* ======================================================= el farol de los juegos */
+/* un farol enorme que es un edificio: base octogonal con escalones, el cuerpo
+   de vidrio hexagonal con un núcleo de luz adentro, las puertas del frente que
+   brillan (aparte: se animan), el techo aqua y un brazo curvo que sostiene el
+   cartel con la miniatura del juego (la pantalla, aparte), rodeado de foquitos */
+function farolJuegos() {
+  const O = new Obra(), R = 4.2, H = 9, Y0 = 0.9;
+  O.pon(new THREE.CylinderGeometry(6.2, 6.6, Y0, 8), 'blanco', 0, Y0 / 2, 0, { ry: Math.PI / 8 });
+  O.pon(new THREE.TorusGeometry(6.35, 0.12, 6, 8).rotateX(Math.PI / 2), 'aqua', 0, Y0, 0, { ry: Math.PI / 8 });
+  for (let k = 0; k < 3; k++) O.pon(caja(4.2 - k * 0.3, 0.3, 0.8, 0.08), k % 2 ? 'perla' : 'blanco', 0, 0.15 + k * 0.3, 6.9 - k * 0.7);
+  const vert = (k) => { const a = (k * 60 + 30) * Math.PI / 180; return [Math.sin(a) * R, Math.cos(a) * R]; };
+  for (let k = 0; k < 6; k++) {
+    const [x, z] = vert(k), [x2, z2] = vert(k + 1);
+    O.pon(cil(0.24, H, 14), 'blanco', x, Y0 + H / 2, z);
+    const mx = (x + x2) / 2, mz = (z + z2) / 2, giro = Math.atan2(mx, mz);
+    if (k !== 5) O.pon(new THREE.PlaneGeometry(R, H - 0.4), 'vidrioAzul', mx * 0.99, Y0 + H / 2, mz * 0.99, { ry: giro });
+    for (const y of [Y0 + 0.15, Y0 + H - 0.15, Y0 + H / 2]) O.pon(caja(R + 0.1, 0.22, 0.22, 0.08), 'blanco', mx, y, mz, { ry: giro });
+  }
+  /* las puertas del frente (+z): dos hojas que brillan y el arco */
+  const zf = R * Math.cos(Math.PI / 6);
+  for (const s of [-1, 1]) O.pon(caja(1.85, 4.6, 0.18, 0.3), 'puertasLuz', s * 0.97, Y0 + 2.3, zf, { nombre: 'puerta' + (s > 0 ? 'D' : 'I') });
+  O.pon(new THREE.TorusGeometry(2.05, 0.16, 10, 30, Math.PI), 'aqua', 0, Y0 + 4.6, zf + 0.05);
+  O.pon(new THREE.CircleGeometry(2.0, 30, 0, Math.PI), 'vidrioAzul', 0, Y0 + 4.6, zf);
+  O.pon(caja(4.6, 0.25, 0.3, 0.1), 'blanco', 0, Y0 + 4.62, zf + 0.05);
+  /* el núcleo de luz adentro */
+  O.pon(esfera(1.8, 28, 20), 'luzCalida', 0, Y0 + H * 0.55, 0, { nombre: 'nucleo' });
+  O.pon(new THREE.TorusGeometry(2.4, 0.08, 8, 40), 'amarillo', 0, Y0 + H * 0.55, 0, { r: [Math.PI / 2, 0, 0], nombre: 'aro' });
+  /* el techo, la punta y el brazo curvo del cartel */
+  O.pon(new THREE.CylinderGeometry(R + 0.8, R + 0.8, 0.5, 6), 'blanco', 0, Y0 + H + 0.25, 0, { ry: Math.PI / 6 });
+  O.pon(new THREE.CylinderGeometry(0.6, R + 0.5, 3.2, 6), 'aqua', 0, Y0 + H + 2.1, 0, { ry: Math.PI / 6 });
+  O.pon(esfera(0.55, 16, 12), 'blanco', 0, Y0 + H + 4, 0);
+  O.pon(tubo([[0, Y0 + H + 3.6, 0], [0, Y0 + H + 6.2, 0.4], [0, Y0 + H + 7.4, 1.6]], 0.3, 30, 10), 'blanco');
+  const YC = Y0 + H + 9.4, WC = 9, HC = 5.4;
+  O.pon(caja(WC + 0.7, HC + 0.7, 0.4, 0.3), 'blanco', 0, YC, 1.4);
+  O.pon(caja(WC + 0.9, 0.25, 0.5, 0.1), 'aqua', 0, YC - HC / 2 - 0.4, 1.4);
+  O.pon(new THREE.PlaneGeometry(WC, HC), 'pantallaAzul', 0, YC, 1.62, { nombre: 'pantalla' });
+  for (let i = 0; i < 26; i++) { const u = i / 26, per = 2 * (WC + HC), d = u * per; let x, y; if (d < WC) { x = -WC / 2 + d; y = HC / 2 + 0.22; } else if (d < WC + HC) { x = WC / 2 + 0.22; y = HC / 2 - (d - WC); } else if (d < 2 * WC + HC) { x = WC / 2 - (d - WC - HC); y = -HC / 2 - 0.22; } else { x = -WC / 2 - 0.22; y = -HC / 2 + (d - 2 * WC - HC); } O.pon(esfera(0.13, 8, 6), 'luzCalida', x, YC + y, 1.65); }
+  O.medidas = { puerta: V3(0, Y0, zf + 1.6), alto: YC + HC / 2 };
+  return O.cerrar();
+}
+
 /* lo que se puede pedir por nombre (modelos.js) */
 export const CONSTRUIR = {
   casa, estacion, tienda, hotel, tren, fuente, banco, farol, arbol, palmera,
-  terminal, molino, faro, reposera, guardavidas, botella, hongo, casaArbol, glorieta, muelle, velero, cartelMapa,
+  terminal, molino, faro, reposera, guardavidas, botella, hongo, casaArbol, glorieta, muelle, velero, cartelMapa, farolJuegos,
   vagon: () => tren(false), sombrilla, sombrillaRosa: () => sombrilla('#ff8fcf', '#ffffff'),
   arbolRosa: () => arbol(['#e45fa8', '#ff8fcf', '#ffd0ea']),
   arbolLejos: () => arbol(undefined, true), arbolRosaLejos: () => arbol(['#e45fa8', '#ff8fcf', '#ffd0ea'], true), palmeraLejos,
