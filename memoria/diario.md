@@ -5,6 +5,10 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 se resumen en una sola.
 
 - **25/09/2026, noche (2) · `claude/fijate-iszyer`:**
+  - Después pidió que suenen solo las canciones que mandó (va a mandar más):
+    se borraron los temas de Rezona y se apagaron los sintetizados; la versión
+    sin canciones (repo y artefacto) queda sin música ([aeroplaza](aeroplaza.md)
+    § Armarlo y probarlo).
   - Pidió: caminos sin obstáculos, animar en chop, lineal y estilo Roblox,
     correr, saltar, deslizar y rodar en el parkour, y minijuegos en primera
     persona con brazos, cuerpo y piernas. Quedó todo ([aeroplaza](aeroplaza.md)

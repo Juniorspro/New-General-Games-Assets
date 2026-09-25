@@ -11,9 +11,15 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   las canciones de Nintendo: va al repo) y `aeroplaza-con-canciones.html`
   (6,1 MB, gitignorado, es el que se le entrega).
 - El sonido es el de BRILLO: `../../brillo/js/sonido.js` y `canciones.js`.
-  Menú = 'titulo' (Wii Party), plaza = 'colina' (Mii Maker). Los otros cinco
-  reinos (arrecife, aurora, cielo, ciudad, casa) suenan con temas de Rezona
-  cosidos, en `aeroplaza/musica/`: son originales y van en los dos HTML.
+  **Solo suenan las canciones que mandó quien pide** (25/09: "eliminá todas
+  las que no sean las que te pasé, te pasaré más"): menú = 'titulo' (Wii
+  Party), plaza = 'colina' (Mii Maker), 'arrecife' (Aquatic Ambience),
+  'bosque' (Frutiger Aero Ahhh), 'playa' (itsalyzee). Los temas de Rezona
+  (`musica/`) se borraron y `Sonido.soloGrabadas` apaga los sintetizados.
+  Un tema sin su canción toma otra por `EN_VEZ` (main.js); una nueva se suma
+  con `brillo/herramientas/canciones.py --dest=aeroplaza/musica-ajena` y el
+  nombre del tema (aurora, cielo, ciudad, casa…) y pisa sola. `aeroplaza.html`
+  y el artefacto salen **sin música**.
 - Las pruebas abren el HTML por `file://` con `?directo&pausa` y avanzan el
   juego a mano con `__A.paso(dt, dibujar)`:
   - se dibuja solo el último cuadro;
@@ -168,8 +174,7 @@ sin desplazar, más animaciones y las tres canciones que mandó.
 - **Controles**: la cámara se acomoda sola atrás al caminar si no se la toca
   (Opciones › Juego › "Cámara que sigue"); correr pasó de 6,6 a 7,2 m/s.
 - **Canciones** (van solo en la versión con canciones): Aquatic Ambience →
-  Aqua, Frutiger Aero Ahhh → bosque y monte, la de itsalyzee → la bahía. En
-  la pública suenan los temas de Rezona (`SI_FALTA` en main.js).
+  Aqua, Frutiger Aero Ahhh → bosque y monte, la de itsalyzee → la bahía.
 
 ## Quinta vuelta: día y noche, teclado, parkour e interiores (25/09)
 
@@ -405,9 +410,8 @@ No se probó en un teléfono de verdad.
 
 ## Lo que falta o se podría
 
-- Temas de más de 30 s: Rezona da 10 s por toma; se pueden pedir más tomas y
-  sumarlas en `herramientas/musica.py`.
 
 - Probarlo contra `broker.emqx.io` desde una computadora con internet.
-- Si manda canciones para los otros reinos, pisan a las de Rezona: se suman con
-  `brillo/herramientas/canciones.py` y el nombre del tema del reino.
+- Va a mandar más canciones: cada una con el nombre del tema que le toca
+  (aurora, cielo, ciudad, casa o uno nuevo, con su `can_…` en los tres
+  idiomas y su lugar en `CANCIONES` de ui.js).

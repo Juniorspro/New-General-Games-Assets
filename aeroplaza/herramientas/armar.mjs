@@ -7,15 +7,12 @@
 //   window.ARCHIVOS: no hace falta servidor.
 // - El cliente MQTT NO va adentro: lo carga index.html desde unpkg (así lo pide
 //   el multijugador). Sin internet el juego anda igual, solo, sin la red.
-// - Las canciones que mandó quien pide (brillo/musica/*.mp3, de Nintendo) no
-//   entran al repo, que es público: aeroplaza.html sale sin ellas (música
-//   sintetizada) y, si los MP3 están en la máquina, sale además
-//   aeroplaza-con-canciones.html, que es el que se entrega.
-// - Los temas de los reinos (musica/*.mp3, hechos con Rezona y cosidos con
-//   herramientas/musica.py) son originales: van en los dos.
-// - Las canciones que mandó para AEROPLAZA (musica-ajena/, hechas con
-//   brillo/herramientas/canciones.py --dest=aeroplaza/musica-ajena) van solo
-//   en la de canciones, y pisan a la de Rezona del mismo tema.
+// - Solo suenan las canciones que mandó quien pide (25/09): las de Nintendo
+//   (brillo/musica/*.mp3) y las de AEROPLAZA (musica-ajena/, hechas con
+//   brillo/herramientas/canciones.py --dest=aeroplaza/musica-ajena). No
+//   entran al repo, que es público: aeroplaza.html sale sin música y, si los
+//   MP3 están en la máquina, sale además aeroplaza-con-canciones.html, que es
+//   el que se entrega. Los temas de Rezona se sacaron.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -26,8 +23,6 @@ const require = createRequire(path.join(RAIZ, 'bosque/node_modules/x.js'));
 const esbuild = require('esbuild');
 const dev = process.argv.includes('--dev');
 const MUSICA = path.join(RAIZ, 'brillo/musica');
-/* los temas de los reinos, hechos con Rezona (herramientas/musica.py): son originales, van siempre */
-const PROPIA = path.join(AQUI, 'musica');
 /* las que mandó quien pide para AEROPLAZA (de TikTok, de otros: musica-ajena/*.mp3 no se commitea) */
 const AJENA = path.join(AQUI, 'musica-ajena');
 
@@ -39,9 +34,7 @@ function canciones(con) {
       b.onResolve({ filter: /^canciones-datos$/ }, () => ({ path: 'canciones-datos', namespace: 'canciones' }));
       b.onLoad({ filter: /.*/, namespace: 'canciones' }, () => {
         const de = (dir) => { const l = fs.existsSync(path.join(dir, 'canciones.json')) ? JSON.parse(fs.readFileSync(path.join(dir, 'canciones.json'), 'utf8')) : {}; return Object.entries(l).map(([t, c]) => [t, { ...c, f: path.join(dir, c.archivo) }]).filter(([, c]) => fs.existsSync(c.f)); };
-        /* con las ajenas, la propia del mismo tema no va (pisaría y pesaría de más) */
-        const ajenas = con ? [...de(MUSICA), ...de(AJENA)] : [], temas = new Set(ajenas.map(([t]) => t));
-        const hay = [...de(PROPIA).filter(([t]) => !temas.has(t)), ...ajenas];
+        const hay = con ? [...de(MUSICA), ...de(AJENA)] : [];
         const imp = hay.map(([, c], i) => `import d${i} from ${JSON.stringify(c.f)};`).join('\n');
         const exp = hay.map(([t, { f, ...c }], i) => `${JSON.stringify(t)}: { ...${JSON.stringify(c)}, datos: d${i} }`).join(',\n');
         return { contents: `${imp}\nexport default {\n${exp}\n};`, resolveDir: MUSICA, loader: 'js' };

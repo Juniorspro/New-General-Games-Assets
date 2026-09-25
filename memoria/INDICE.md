@@ -44,6 +44,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 25/09/2026 (AEROPLAZA: animació
   Relatados de 1 min con sus stickers y memes **bajados, no generados**
   (24/09): [videos](videos.md). Audio de TikTok ajeno no se baja; las
   canciones que manda quien pide sí se usan (24/09, BRILLO: una por mundo).
+  **En AEROPLAZA suenan solo esas** (25/09): nada de temas de Rezona ni sintetizados.
 - Tiene Rezona (446 mil créditos el 22/09; 419 mil el 23/09) y Higgsfield. Prefiere Rezona.
   Para imágenes, dijo que se use Rezona sin preguntar (23/09).
 

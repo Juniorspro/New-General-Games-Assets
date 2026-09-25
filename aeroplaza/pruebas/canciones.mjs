@@ -1,6 +1,9 @@
-// La versión con las canciones que mandó quien pide: que estén adentro, que se
-// decodifiquen y que suenen donde van (menú: Wii Party = 'titulo'; la plaza:
-// Mii Maker = 'colina'; la terminal, la bahía y el bosque, las suyas). Solo corre si existe aeroplaza-con-canciones.html.
+// Solo suenan las canciones que mandó quien pide (25/09). En la versión con
+// canciones: que estén adentro solo esas cinco, que se decodifiquen y que suenen
+// donde van (menú: Wii Party = 'titulo'; la plaza: Mii Maker = 'colina'; la
+// bahía y el bosque, las suyas; los reinos sin la suya, la que más se parece).
+// En la versión sin canciones: que no suene nada (ni sintetizado).
+// Solo corre si existe aeroplaza-con-canciones.html.
 import fs from 'node:fs';
 import path from 'node:path';
 import { navegador, abrir, AQUI } from './comun.mjs';
@@ -20,24 +23,39 @@ await pag.waitForSelector('.hud', { timeout: 60000 });
 await pag.waitForTimeout(1500);
 const plaza = await pag.evaluate(() => { const S = window.__A.Sonido; return { suena: S.actual && S.actual.nombre, grabada: !!(S.actual && S.actual.fuente || S.grabadas.colina.buffer) }; });
 console.log('plaza:', JSON.stringify(plaza));
-/* se arranca en la Terminal (suena la de la ciudad); caminando a otras zonas cambia: la plaza, la bahía (la de itsalyzee) y el bosque (Frutiger Aero Ahhh) */
+/* se arranca en la Terminal (la de la ciudad no llegó: suena Mii Maker); caminando a otras zonas cambia: la plaza, la bahía (la de itsalyzee) y el bosque (Frutiger Aero Ahhh) */
 const zonas = {};
 for (const [z, x, zz] of [['plaza', 0, 16], ['bahia', 118, 118], ['bosque', -128, -100]]) {
   zonas[z] = await pag.evaluate(([x, z]) => { const A = window.__A; A.yo.ponerEn(new A.THREE.Vector3(x, A.reino.mundo.altura(x, z) + 0.1, z), 0); for (let i = 0; i < 40; i++) A.paso(1 / 30, i === 39); return window.__A.Sonido.actual && window.__A.Sonido.actual.nombre; }, [x, zz]);
 }
 console.log('zonas:', JSON.stringify(zonas));
-console.log(menu.suena === 'titulo' && plaza.suena === 'ciudad' && zonas.plaza === 'colina' && zonas.bahia === 'playa' && zonas.bosque === 'bosque' ? '✓ suenan donde van (y cambian por zona)' : '✗ no suenan donde van');
-/* los temas de Rezona de cada reino (musica/): que se decodifiquen y suenen grabados */
-let bien = true;
-for (const [reino, tema] of [['aqua', 'arrecife'], ['jardin', 'cielo'], ['aurora', 'aurora'], ['tienda', 'ciudad'], ['casa', 'casa']]) {
+console.log(menu.suena === 'titulo' && plaza.suena === 'colina' && zonas.plaza === 'colina' && zonas.bahia === 'playa' && zonas.bosque === 'bosque' ? '✓ suenan donde van (y cambian por zona)' : '✗ no suenan donde van');
+/* adentro solo las cinco que mandó */
+const SUYAS = ['arrecife', 'bosque', 'colina', 'playa', 'titulo'];
+let bien = menu.temas.slice().sort().join() === SUYAS.join();
+console.log(`${bien ? '✓' : '✗'} solo las suyas adentro: ${menu.temas.slice().sort().join(', ')}`);
+/* cada reino con una de las suyas, grabada (aurora → Aquatic Ambience, jardín → Frutiger Aero Ahhh, tienda → Mii Maker, casa → Wii Party) */
+for (const [reino, tema] of [['aqua', 'arrecife'], ['jardin', 'bosque'], ['aurora', 'arrecife'], ['tienda', 'colina'], ['casa', 'titulo']]) {
   await pag.evaluate((r) => window.__A.viajar(r), reino);
   await pag.waitForFunction((r) => window.__A.reino && window.__A.reino.id === r, reino, { timeout: 60000, polling: 300 });
   await pag.waitForFunction((t) => { const S = window.__A.Sonido; return S.grabadas[t] && S.grabadas[t].buffer && S.actual && S.actual.nombre === t; }, tema, { timeout: 30000, polling: 300 }).catch(() => {});
-  const r = await pag.evaluate((t) => { const S = window.__A.Sonido, G = S.grabadas[t]; return { suena: S.actual && S.actual.nombre, grabada: !!(S.actual && S.actual.grabada), dura: G && G.buffer ? G.buffer.duration.toFixed(1) : null, bucle: G && G.bucle }; }, tema);
+  const r = await pag.evaluate((t) => { const S = window.__A.Sonido, G = S.grabadas[t]; return { suena: S.actual && S.actual.nombre, grabada: !!(S.actual && S.actual.grabada), dura: G && G.buffer ? G.buffer.duration.toFixed(1) : null }; }, tema);
   const ok = r.suena === tema && r.grabada && +r.dura > 15;
   bien = bien && ok;
   console.log(`${ok ? '✓' : '✗'} ${reino}: ${JSON.stringify(r)}`);
 }
-console.log(bien ? '✓ los temas de Rezona suenan en cada reino' : '✗ falta algún tema de Rezona');
+console.log(bien ? '✓ cada reino suena con una de las suyas' : '✗ algún reino no suena con una de las suyas');
+/* la versión sin canciones: silencio (nada sintetizado) */
+{
+  const { pag: p2, ctx: c2 } = await abrir(nav, 'pausa&calidad=baja', { ancho: 800, alto: 450 });
+  await p2.waitForSelector('.idiomas', { timeout: 120000 });
+  await p2.click('[data-i=es]'); await p2.waitForSelector('.aviso'); await p2.mouse.click(200, 200); await p2.waitForSelector('.canales');
+  await p2.click('.canal[data-c=plaza]'); await p2.waitForTimeout(500); await p2.click('[data-a=empezar]');
+  await p2.waitForSelector('.hud', { timeout: 60000 }); await p2.waitForTimeout(1500);
+  const r = await p2.evaluate(() => { const A = window.__A, S = A.Sonido; A.viajar('aurora'); for (let i = 0; i < 20; i++) A.paso(1 / 30, false); return { grabadas: Object.keys(S.grabadas).length, suena: S.actual && S.actual.nombre }; });
+  const ok = r.grabadas === 0 && !r.suena;
+  console.log(`${ok ? '✓' : '✗'} sin canciones no suena nada: ${JSON.stringify(r)}`);
+  await c2.close();
+}
 console.log(errores.filter((e) => !e.includes('ERR_FAILED')).join('\n') || 'sin errores');
 await nav.close();

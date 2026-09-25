@@ -436,7 +436,8 @@ export const Sonido = {
     this.soltar(this.actual, 0.6);
     const G = this.grabadas[nombre];
     if (G && !G.fallo) { this.actual = this.tocarGrabada(nombre, G); return; }
-    const T = TEMA[nombre];
+    /* soloGrabadas (AEROPLAZA): sin la grabada no suena nada, ni el tema sintetizado */
+    const T = this.soloGrabadas ? null : TEMA[nombre];
     if (!T) { this.actual = null; return; }
     const chip = this.modo === 'chip';
     const g = c.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime((T.vol || 1) * (chip ? 1.15 : 1), ahora + 0.2, 0.5); g.connect(chip ? this.chipIn : this.bMusica);

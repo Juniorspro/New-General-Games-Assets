@@ -622,7 +622,8 @@ export const UI = {
     const auto = el(`<button class="disco-fila ${!J.musicaElegida ? 'si' : ''}"><div class="disco"></div><span>${t('cal_auto')}</span></button>`);
     auto.onclick = () => { J.elegirMusica(null); this.discos(volver); };
     c.appendChild(auto);
-    for (const k of CANCIONES) {
+    /* solo las canciones que están en esta versión */
+    for (const k of CANCIONES.filter((k) => J.hayCancion(k))) {
       const tiene = J.cancionDesbloqueada(k);
       const b = el(`<button class="disco-fila ${tiene ? '' : 'bloq'} ${J.musicaElegida === k ? 'si' : ''}"><div class="disco"></div><span></span></button>`);
       b.lastElementChild.textContent = tiene ? t('can_' + k) + (J.musicaElegida === k ? ' · ' + t('disco_sonando') : '') : '??? · ' + t('disco_bloq');

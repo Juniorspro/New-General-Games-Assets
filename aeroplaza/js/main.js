@@ -44,10 +44,15 @@ import '../../brillo/js/canciones.js';
 
 const Q = new URLSearchParams(location.search);
 const CREAR = { plaza: crearPlaza, aqua: crearAqua, aurora: crearAurora, jardin: crearJardin, tienda: crearTienda, casa: crearCasa };
-/* plaza y menú: las dos canciones que mandó quien pide; los demás reinos: los temas hechos con Rezona (musica/) */
+/* el tema de cada reino (las zonas de la isla y el parkour traen el suyo) */
 const MUSICA_DE = { plaza: 'colina', aqua: 'arrecife', aurora: 'aurora', jardin: 'cielo', tienda: 'ciudad', casa: 'casa' };
-/* las canciones que mandó quien pide para la playa y el bosque van solo en la versión con canciones: en la otra suenan estas */
-const SI_FALTA = { playa: 'arrecife', bosque: 'cielo', casa: 'titulo' };
+/* Solo suenan las canciones que mandó quien pide (25/09: "eliminá todas las que no
+   sean las que te pasé"): ni temas de Rezona ni sintetizados. Mientras no mande la
+   de un tema, suena la suya que más se le parece; cuando la mande, la pisa sola.
+   En la versión sin canciones (la del repo y el artefacto) no suena música. */
+const EN_VEZ = { aurora: 'arrecife', cielo: 'bosque', ciudad: 'colina', casa: 'titulo', playa: 'arrecife', bosque: 'colina', arrecife: 'colina', titulo: 'colina', colina: 'titulo' };
+Sonido.soloGrabadas = true;
+const cancionDe = (k) => { for (let i = 0; k && i < 4; i++, k = EN_VEZ[k]) if (Sonido.grabadas[k]) return k; return null; };
 
 async function cargarTexturas() {
   const L = new THREE.TextureLoader(), A = window.ARCHIVOS || {};
@@ -136,7 +141,7 @@ async function iniciar() {
     get yo() { return yo; }, get enJuego() { return enJuego; },
     /* el 'aviso' de siempre ahora es la campanita estilo Windows 7 (timbres.js) */
     sfx(n, o) { try { if (n === 'aviso' && Sonido.ctx?.state === 'running') { timbre('info'); return; } Sonido.sfx(n, o); } catch { /* sin audio */ } },
-    musica(n) { try { J.sonando = n; Sonido.musica(!Sonido.grabadas[n] && SI_FALTA[n] ? SI_FALTA[n] : n); } catch { /* nada */ } },
+    musica(n) { try { J.sonando = cancionDe(n); Sonido.musica(J.sonando); } catch { /* nada */ } },
     volumen() { try { Sonido.volumenes(G.opciones.musica, G.opciones.efectos); } catch { /* nada */ } },
     guardar() { Guardado.guardar(); },
     guardarControles() { G.controles = ent.config; Guardado.guardar(); },
@@ -159,7 +164,8 @@ async function iniciar() {
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
     gesto(g) { yo.m.hacerGesto(g); gestoN++; J.gestoActual = g + '#' + gestoN; setTimeout(() => { if (J.gestoActual && J.gestoActual.endsWith('#' + gestoN)) J.gestoActual = null; }, g === 'sentarse' ? 60000 : 8000); },
-    cancionDesbloqueada(k) { return k === 'titulo' || k === 'colina' || G.discos.some((d) => DISCO_CANCION[d] === k); },
+    hayCancion(k) { return !!Sonido.grabadas[k]; },
+    cancionDesbloqueada(k) { return !!Sonido.grabadas[k] && (k === 'titulo' || k === 'colina' || G.discos.some((d) => DISCO_CANCION[d] === k)); },
     elegirMusica(k) { J.musicaElegida = k; J.musica(k || musicaDelLugar()); },
   };
   const DISCO_CANCION = { 'disco-loma': 'colina', 'disco-lago': 'arrecife', 'disco-hotel': 'ciudad', 'disco-aurora': 'aurora', 'disco-jardin': 'cielo', 'disco-flor': 'titulo', 'disco-faro': 'playa', 'disco-arbol': 'bosque', 'disco-cumbre': 'cielo', 'disco-ciudad': 'ciudad' };
@@ -424,6 +430,7 @@ async function iniciar() {
   J.sentarseEn = (pos, rot) => { yo.ponerEn(pos, rot); yo.v.set(0, 0, 0); cam.yaw = rot + Math.PI; cam.pitch = 0.3; cam.sentado = true; J.sentado = true; J.gesto('sentarse'); J.sfx('aterriza'); };
   J.siguienteCancion = () => {
     const todas = [...new Set(['titulo', 'colina', ...Object.values(DISCO_CANCION)])].filter((k) => J.cancionDesbloqueada(k));
+    if (!todas.length) { UI.avisar('🎵 ' + t('sin_canciones'), 'azul'); return; }
     const k = todas[(todas.indexOf(J.musicaElegida || J.sonando) + 1) % todas.length];
     J.elegirMusica(k); UI.avisar('🎵 ' + t('can_' + k), 'azul');
   };
@@ -652,7 +659,7 @@ async function iniciar() {
       if (G.discos.includes(d.id)) { d.malla.visible = false; continue; }
       if (d.malla.position.distanceTo(yo.p.clone().setY(yo.p.y + 0.8)) < 1.4) {
         G.discos.push(d.id); d.malla.visible = false; chispas.soltar(d.malla.position, 30, 4); J.sfx('orbe');
-        UI.avisar(t('disco_nuevo', { n: t('can_' + d.cancion) }), 'bien'); contar('disco'); Guardado.guardar();
+        UI.avisar(Sonido.grabadas[d.cancion] ? t('disco_nuevo', { n: t('can_' + d.cancion) }) : t('disco_vacio'), 'bien'); contar('disco'); Guardado.guardar();
       }
     }
     if (reino.id === 'aqua') {

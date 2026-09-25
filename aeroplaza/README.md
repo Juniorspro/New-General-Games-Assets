@@ -17,10 +17,12 @@ anda sin servidor.
   aviso y el menú de canales; el canal Plaza lleva al juego.
 - **Sin internet anda igual.** Se juega solo y el cartel de arriba dice
   "sin conexión".
-- Cada reino tiene su tema, hecho con Rezona (`musica/`). La versión con las
-  canciones que mandó quien pide (el menú de Wii Party y la plaza de Mii
-  Maker) es `aeroplaza-con-canciones.html`. No está en el repo, que es
-  público: se arma en la máquina que tenga los MP3.
+- Solo suenan las canciones que mandó quien pide: Wii Party (menú), Mii Maker
+  (plaza), Aquatic Ambience, Frutiger Aero Ahhh y la de itsalyzee. Cada lugar
+  tiene su tema y, mientras no llegue la suya, suena la que más se parece
+  (`EN_VEZ` en `js/main.js`). Van solo en `aeroplaza-con-canciones.html`, que
+  no está en el repo (es público): se arma en la máquina que tenga los MP3.
+  `aeroplaza.html` y el artefacto salen sin música.
 - Con el celu parado el juego se acuesta solo, sin pantalla completa
   (Opciones › "Con el celu parado": girar solo, ⟳, ⟲ o no girar).
 
@@ -83,15 +85,15 @@ Además hay:
   `aeroplaza-con-canciones.html`.
 - `node herramientas/assets.mjs` pasa lo de Rezona de `crudo/` a `assets/`
   (texturas, el cielo, las nubes y el delfín).
-- `python3 herramientas/musica.py` cose las tomas de 10 s de Rezona en un tema
-  por reino, con su bucle.
+- `python3 herramientas/musica.py` cosía los temas de Rezona; ya no se usa
+  (25/09: solo las canciones que manda quien pide).
 - `pruebas/`:
   - `multijugador.mjs`: dos navegadores contra `broker.mjs`, un broker MQTT
     mínimo en Node puro;
   - `flujo.mjs [--movil]`: recorre las pantallas como una persona;
   - `reinos.mjs`: una foto de cada reino;
   - `rendimiento.mjs`: llamadas, triángulos y ms;
-  - `canciones.mjs`: comprueba las canciones y los temas de cada reino;
+  - `canciones.mjs`: que solo estén y suenen las canciones de quien pide (y que sin ellas no suene nada);
   - `dedos.mjs`: toques de verdad, sin girar y girado;
   - `construcciones.mjs`: cada construcción de tres cuartos, para compararla
     con su referencia; `modelos.mjs`: cada una en 4 giros;
