@@ -434,13 +434,13 @@ probado; lo que falta es que alguien lo use.
 | Rotar la clave de IBLO | pasó por el chat | el dueño |
 | IA de respaldo en IBLO | agregar Groq o Gemini | se puede |
 | Publicaciones duplicadas | ids 21 y 22 se muestran dos veces | se puede |
-| Compilar el APK | no hay SDK de Android y no entra en el disco | **trabado acá** |
+| Compilar el APK | se arma sin Gradle con `mundo-ar/construir.sh` (~130 MB de herramientas) | se puede |
 
 ## Lo que NO se puede hacer desde esta máquina
 
 Dicho para que nadie lo prometa de nuevo:
 
-- **Compilar un APK** — no hay SDK y no entra (2-3 GB, quedan ~2,4).
+- **Probar un APK** — no hay emulador (y ARCore no corre en uno sin placa). Compilarlo sí: `mundo-ar/construir.sh`.
 - **Subir a MediaFire** — haría falta la contraseña de la cuenta guardada en el
   servidor. Una clave guardada para que un programa la use es una clave que se
   puede filtrar entera.

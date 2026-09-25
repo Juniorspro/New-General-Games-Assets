@@ -27,8 +27,11 @@ clonado y **se borra cuando termina la sesión**.
 - **El disco es una cuota fija.** `df` miente: "Avail" en 0 con poco "Used"
   quiere decir que se acabó la cuota, no que la máquina esté rota. Borrar
   archivos grandes libera espacio al instante.
-- **No hay SDK de Android** y no entra (pesa 2-3 GB, quedan ~2,4 GB). O sea:
-  **acá no se puede compilar un APK.** Si hace falta una app, se hace web.
+- **No hay SDK de Android entero, pero para un APK no hace falta.** Con las
+  build-tools, `android.jar` y javac/d8 (~130 MB, se bajan de dl.google.com)
+  se arma a mano, sin Gradle: ver `mundo-ar/construir.sh` (medido 25/09/2026:
+  APK de 320 KB con ARCore, firma v2+v3 verificada). Lo que sigue sin haber
+  es emulador: el APK se prueba en un teléfono.
 
 ### Lo que sí está puesto
 
