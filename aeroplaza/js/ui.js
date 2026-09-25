@@ -7,7 +7,10 @@
    ========================================================================== */
 import { t, sumar, ponerIdioma, idioma, IDIOMAS } from './textos.js';
 import { timbre } from './timbres.js';
-import { RANURAS, PALETA, PALETA_PELO, loTengo, precio, DE_MISION, MUEBLES } from './catalogo.js';
+import { RANURAS, PALETA, PALETA_PELO, loTengo, precio, precioJoyas, DE_MISION, MUEBLES } from './catalogo.js';
+import { tiendaJoyas, verAnuncio, anunciosQuedan } from './joyas.js';
+import { Caja } from './caja.js';
+import { Guardado } from './guardar.js';
 import { NPCS } from './misiones.js';
 import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
@@ -178,7 +181,7 @@ export const UI = {
     const J = this.J;
     const h = this.hud = this.poner(el(`<div class="hud">
       <div class="franja arriba"></div><div class="franja abajo"></div>
-      <div class="arriba-izq"><div class="pildora"><i class="orbe-icono"></i><span class="orbes">0</span></div><div class="espuma" title="${t('espuma')}"><i style="width:100%"></i></div></div>
+      <div class="arriba-izq"><div class="pildora"><i class="orbe-icono"></i><span class="orbes">0</span></div><button class="pildora joyas-p" data-a="joyas" title="${t('tienda_joyas')}"><i class="joya-icono"></i><span class="joyas">0</span></button><div class="espuma" title="${t('espuma')}"><i style="width:100%"></i></div></div>
       <div class="arriba-der"><div class="pildora estado-red"><span><span class="punto"></span> <span class="red-txt"></span><b class="red-n"></b></span><small class="sala-txt"></small></div>
         <button class="redondo" data-a="voz" title="${t('boton_voz')}">🎤</button><button class="redondo" data-a="misiones" title="${t('boton_misiones')}">📜<i class="insignia"></i></button><button class="redondo" data-a="estilo" title="${t('estilo_titulo')}">👾</button><button class="redondo" data-a="chat" title="Chat">💬</button><button class="redondo siempre" data-a="pausa" title="${t('pausa')}">☰</button></div>
       <div class="notis"></div>
@@ -186,6 +189,7 @@ export const UI = {
       <div class="hotbar">${HOT.map(([k, e], i) => `<button class="ranura" data-h="${i + 1}" title="${t('hot_' + k)}"><small>${i + 1}</small>${e}</button>`).join('')}</div>
     </div>`));
     $('[data-a=pausa]', h).onclick = () => J.pausar(true);
+    $('[data-a=joyas]', h).onclick = () => { J.sfx('elegir'); J.pausar(true, true); tiendaJoyas(J, this, { alCerrar: () => J.pausar(false, true) }); };
     $('[data-a=chat]', h).onclick = () => this.abrirChat();
     $('[data-a=misiones]', h).onclick = () => this.panelMisiones();
     $('[data-a=voz]', h).onclick = () => J.alternarVoz && J.alternarVoz();
@@ -197,6 +201,7 @@ export const UI = {
     if (!this.hud) return;
     const J = this.J;
     $('.orbes', this.hud).textContent = J.G.orbes;
+    $('.joyas', this.hud).textContent = J.G.joyas || 0;
     $('.espuma i', this.hud).style.width = Math.max(0, J.yo ? J.yo.hp : 100) + '%';
     this.hud.querySelectorAll('.ranura').forEach((b, i) => b.classList.toggle('elegida', J.slot === i + 1));
   },
@@ -365,6 +370,7 @@ export const UI = {
       <div class="pk-cifras"><div><small>${t('tiro_puntos')}</small><b>${R.puntos}</b></div><div><small>${t('tiro_aciertos')}</small><b>${R.aciertos}</b></div><div><small>${t('tiro_punteria')}</small><b>${punteria}%</b></div><div><small>${t('pk_orbes')}</small><b>+${R.premio}</b></div></div>
       ${R.record ? `<div class="pk-record">🏆 ${t('pk_record')}</div>` : ''}
       <div class="fila"><button class="boton primario" data-a="otra">⟲ ${t('pk_repetir')}</button><button class="boton" data-a="volver">${t('pk_volver')}</button></div></div>`);
+    this.botonDuplicar(c, R.premio);
     const v = this.ventana(`🎯 ${t('tiro_fin')}`, c, { ancho: 560 });
     $('[data-a=otra]', c).onclick = () => { v.cerrar(); alRepetir(); };
     $('[data-a=volver]', c).onclick = () => { v.cerrar(); alVolver(); };
@@ -398,6 +404,7 @@ export const UI = {
       <div class="pk-cifras">${cifras}<div><small>${t('rn_caidas')}</small><b>${R.caidas}</b></div><div><small>${t('rn_golpes')}</small><b>${R.golpes}</b></div>${R.premio ? `<div><small>${t('pk_orbes')}</small><b>+${R.premio}</b></div>` : ''}</div>
       ${R.record ? `<div class="pk-record">🏆 ${t('pk_record')}</div>` : ''}
       <div class="fila"><button class="boton primario" data-a="otra">⟲ ${t('pk_repetir')}</button><button class="boton" data-a="volver">${t('pk_volver')}</button></div></div>`);
+    this.botonDuplicar(c, R.premio);
     const v = this.ventana(R.ok ? `⚡ ${t('rn_fin')}` : `♪ ${t('rn_tarde')}`, c, { ancho: 560 });
     $('[data-a=otra]', c).onclick = () => { v.cerrar(); alRepetir(); };
     $('[data-a=volver]', c).onclick = () => { v.cerrar(); alVolver(); };
@@ -423,6 +430,7 @@ export const UI = {
       <div class="pk-cifras"><div><small>${t('pk_tiempo')}</small><b>${formatoTiempo(R.tiempo)}</b></div><div><small>${t('pk_caidas')}</small><b>${R.caidas}</b></div><div><small>${t('pk_orbes')}</small><b>+${R.premio}</b></div></div>
       ${R.record ? `<div class="pk-record">🏆 ${t('pk_record')}</div>` : ''}
       <div class="fila">${R.hay ? `<button class="boton primario" data-a="sig">${t('pk_siguiente')} ▶</button>` : ''}<button class="boton" data-a="otra">⟲ ${t('pk_repetir')}</button><button class="boton" data-a="volver">${t('pk_volver')}</button></div></div>`);
+    this.botonDuplicar(c, R.premio);
     const v = this.ventana(`${N.icono} ${t('pk_fin')}`, c, { ancho: 560 });
     $('[data-a=otra]', c).onclick = () => { v.cerrar(); alRepetir(); };
     $('[data-a=volver]', c).onclick = () => { v.cerrar(); alVolver(); };
@@ -546,7 +554,7 @@ export const UI = {
       <button class="boton" data-a="opciones">${t('canal_opciones')}</button><button class="boton" data-a="controles">${t('canal_controles')}</button>
       <button class="boton" data-a="estilo">👾 ${t('estilo_titulo')}</button><button class="boton" data-a="discos">${t('canal_discos')}</button>
       <button class="boton" data-a="menu" style="grid-column:1/-1">${t('salir_menu')}</button></div>`);
-    const pie = `<div class="barra-pausa"><span class="p-nombre"></span><span><i class="orbe-icono" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></i> ${J.G.orbes}</span><span class="p-sala"></span></div>`;
+    const pie = `<div class="barra-pausa"><span class="p-nombre"></span><span><i class="orbe-icono" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></i> ${J.G.orbes}</span><span><i class="joya-icono" style="width:14px;height:14px;vertical-align:-2px"></i> ${J.G.joyas || 0}</span><span class="p-sala"></span></div>`;
     const v = this.ventana(t('pausa'), cuerpo, { alCerrar: () => J.pausar(false), pie });
     $('.p-nombre', v).textContent = J.G.nombre;
     $('.p-sala', v).textContent = J.red.estado === 'en_linea' && J.red.sala ? `${J.red.sala} · ${J.remotos.cuantos + 1}` : t('solo');
@@ -614,7 +622,7 @@ export const UI = {
       }],
       ['datos', '💾', t('op_t_datos'), (p) => {
         const res = el('<div class="resumen"></div>');
-        for (const [emo, n] of [['🫧', J.G.orbes + ' ' + t('orbes')], ['💿', J.G.discos.length + '/' + TOTAL_DISCOS], ['✅', Object.values(J.G.misiones || {}).filter((m) => m.e === 'hecha').length + ' ' + t('op_misiones')], ['👕', (J.G.tengo || []).length + ' ' + t('op_cosas')]]) { const d = el('<div><i></i><b></b></div>'); d.firstElementChild.textContent = emo; d.lastElementChild.textContent = n; res.appendChild(d); }
+        for (const [emo, n] of [['🫧', J.G.orbes + ' ' + t('orbes')], ['💎', (J.G.joyas || 0) + ' ' + t('joyas')], ['💿', J.G.discos.length + '/' + TOTAL_DISCOS], ['✅', Object.values(J.G.misiones || {}).filter((m) => m.e === 'hecha').length + ' ' + t('op_misiones')], ['👕', (J.G.tengo || []).length + ' ' + t('op_cosas')]]) { const d = el('<div><i></i><b></b></div>'); d.firstElementChild.textContent = emo; d.lastElementChild.textContent = n; res.appendChild(d); }
         p.appendChild(res);
         const borrar = el(`<button class="boton chico" style="border-color:#ffb3c0;color:#e0405e">${t('op_borrar')}</button>`);
         borrar.onclick = () => this.confirmar(t('op_borrar_seguro'), () => J.borrarTodo());
@@ -719,16 +727,20 @@ export const UI = {
   probador(alCerrar, alGirar = () => {}) {
     const J = this.J, G = J.G;
     let pest = 'color', grupo = 'cuerpo', pag = 0;
+    /* lo que se está probando sin tenerlo: ranura → valor. Se ve puesto en el muñeco del estudio
+       y abajo aparece la barra para comprarlo (o sacarlo); al salir, lo que no se compró se saca */
+    let prueba = {};
     /* dos grupos de seis pestañas (el cuerpo y las cosas): entran en una fila sin desplazar */
     const GRUPOS = {
       cuerpo: [['color', '🎨', t('prob_color')], ['color2', '🌈', t('prob_color2')], ['ojos', '👀', t('prob_ojos')], ['motivo', '🌀', t('prob_motivo')], ['motivoCabeza', '🙂', t('prob_cabeza')], ['material', '✨', t('prob_material')]],
       cosas: [['sombrero', '🎩', t('prob_sombrero')], ['peinado', '💇', t('prob_pelo')], ['colorPelo', '🖌️', t('prob_color_pelo')], ['anteojos', '🕶️', t('prob_anteojos')], ['espalda', '🎒', t('prob_espalda')], ['particulas', '💫', t('prob_particulas')]],
     };
-    const p = this.poner(el(`<div class="probador"><div class="cabeza" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px"><h2 style="margin:0;font-size:22px">${t('prob_titulo')}</h2><div class="segmentos grupos"><button data-g="cuerpo">${t('prob_cuerpo')}</button><button data-g="cosas">${t('prob_cosas')}</button></div><span class="pildora" style="font-size:15px"><i class="orbe-icono"></i><span class="p-orbes"></span></span></div>
+    const p = this.poner(el(`<div class="probador"><div class="cabeza" style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px"><h2 style="margin:0;font-size:22px">${t('prob_titulo')}</h2><div class="segmentos grupos"><button data-g="cuerpo">${t('prob_cuerpo')}</button><button data-g="cosas">${t('prob_cosas')}</button></div><span class="saldos"><span class="pildora" style="font-size:15px"><i class="orbe-icono"></i><span class="p-orbes"></span></span><button class="pildora joyas-p" data-a="joyas" style="font-size:15px"><i class="joya-icono"></i><span class="p-joyas"></span></button></span></div>
       <div class="pestanas"></div><div class="opciones-prob"></div>
       <div class="paginas"><button class="redondo" data-pg="-1">◀</button><span></span><button class="redondo" data-pg="1">▶</button></div>
+      <div class="prob-prueba"></div>
       <div class="prob-pie"><input maxlength="16"><button class="boton chico" data-a="azar">🎲</button><button class="boton chico primario" data-a="listo">${t('listo')}</button></div></div>`));
-    const tira = $('.pestanas', p), paginas = $('.paginas', p);
+    const tira = $('.pestanas', p), paginas = $('.paginas', p), barra = $('.prob-prueba', p);
     const ponerTira = () => {
       tira.innerHTML = GRUPOS[grupo].map(([k, e, n]) => `<button data-p="${k}"><i>${e}</i><span>${n}</span></button>`).join('');
       tira.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => { pest = b.dataset.p; pag = 0; J.sfx('elegir'); dibujar(); });
@@ -736,6 +748,8 @@ export const UI = {
     };
     p.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => { grupo = b.dataset.g; pest = GRUPOS[grupo][0][0]; pag = 0; ponerTira(); dibujar(); });
     paginas.querySelectorAll('[data-pg]').forEach((b) => b.onclick = () => { pag += +b.dataset.pg; J.sfx('elegir'); dibujar(); });
+    $('[data-a=joyas]', p).onclick = () => { J.sfx('elegir'); tiendaJoyas(J, this); };
+    this._alCambiarJoyas = () => { if (p.isConnected) dibujar(); };
     /* lo que no entra va en páginas (◀ ▶) en vez de desplazar: se mide cuántas caben */
     const paginar = (extra, items) => {
       grilla.innerHTML = ''; if (extra) grilla.appendChild(extra);
@@ -758,37 +772,78 @@ export const UI = {
     nombre.onkeydown = (e) => e.stopPropagation();
     nombre.oninput = () => { const v = nombre.value.replace(/[<>]/g, '').trim(); if (v) { G.nombre = v.slice(0, 16); J.cambiarNombre(); } };
     const grilla = $('.opciones-prob', p);
+    const RP = (r) => RANURAS.find((q) => q.r === r);
+    const nombreDe = (r, v) => v === 'igual' ? t('mot_igual') : t(RP(r).pre + '_' + v);
+    const mostrarPrueba = () => J.probarPuestos(prueba);
+    /* la barra de lo que se está probando: qué es, cuánto sale y comprar o sacar */
+    const dibujarBarra = () => {
+      const lista = Object.entries(prueba);
+      barra.classList.toggle('abierta', lista.length > 0);
+      if (!lista.length) { barra.innerHTML = ''; return; }
+      let orbes = 0, joyas = 0; const nombres = [], deMision = [];
+      for (const [r, v] of lista) {
+        const clave = r + ':' + v, mis = DE_MISION[r === 'motivoCabeza' ? 'motivo:' + v : clave];
+        if (mis) { deMision.push(nombreDe(r, v)); continue; }
+        nombres.push(nombreDe(r, v));
+        const pj = precioJoyas(clave); if (pj != null) joyas += pj; else orbes += precio(clave) || 0;
+      }
+      const faltaO = Math.max(0, orbes - G.orbes), faltaJ = Math.max(0, joyas - (G.joyas || 0)), puede = nombres.length && !faltaO && !faltaJ;
+      barra.innerHTML = `<div class="pp-que"><small>👁 ${t('pp_probando')}</small><b></b></div>
+        <div class="pp-precio">${orbes ? `<span><i class="orbe-icono"></i>${orbes}</span>` : ''}${joyas ? `<span><i class="joya-icono"></i>${joyas}</span>` : ''}</div>
+        <button class="boton chico" data-a="sacar">${t('pp_sacar')}</button>
+        ${!nombres.length ? '' : puede ? `<button class="boton chico primario" data-a="comprar">${t('pp_comprar')}</button>`
+          : faltaJ ? `<button class="boton chico joyas-b" data-a="conseguir">${t('pp_conseguir')}</button>`
+          : anunciosQuedan(G) && Caja.hayAnuncios() ? `<button class="boton chico" data-a="anuncio">${t('pp_ver_anuncio', { n: 30 })}</button>` : `<span class="pp-falta">${t('pp_faltan', { n: faltaO })}</span>`}`;
+      $('.pp-que b', barra).textContent = [...nombres, ...deMision.map((n) => '🔒 ' + n)].join(' · ');
+      $('[data-a=sacar]', barra).onclick = () => { prueba = {}; J.sfx('pop'); mostrarPrueba(); dibujar(); };
+      const bc = $('[data-a=comprar]', barra);
+      if (bc) bc.onclick = () => {
+        const cobrar = () => {
+          G.orbes -= orbes; G.joyas = (G.joyas || 0) - joyas;
+          for (const [r, v] of lista) { const clave = r + ':' + v; if (DE_MISION[clave]) continue; if (!G.tengo.includes(clave)) G.tengo.push(clave); G.A[r] = v; }
+          prueba = {}; J.aplicarApariencia(); J.festejarProbador?.(); J.sfx('orbe'); J.avisarPantalla(t('prob_comprado')); this.actualizarHud(); dibujar();
+        };
+        /* las joyas cuestan conseguirlas: se pregunta una vez (el muñeco ya lo tiene puesto, se ve igual) */
+        if (joyas) this.confirmar(t('pp_gastar', { n: joyas }), cobrar); else cobrar();
+      };
+      const bj = $('[data-a=conseguir]', barra); if (bj) bj.onclick = () => { J.sfx('elegir'); tiendaJoyas(J, this); };
+      const ba = $('[data-a=anuncio]', barra);
+      if (ba) ba.onclick = async () => { if (await verAnuncio(J, this)) { G.orbes += 30; Guardado.guardar(); this.avisar(t('mas_orbes', { n: 30 }), 'bien'); J.sfx('orbe'); this.actualizarHud(); } dibujar(); };
+    };
     const dibujar = () => {
-      $('.p-orbes', p).textContent = G.orbes;
+      $('.p-orbes', p).textContent = G.orbes; $('.p-joyas', p).textContent = G.joyas || 0;
       p.querySelectorAll('[data-p]').forEach((b) => b.classList.toggle('si', b.dataset.p === pest));
       grilla.classList.toggle('colores', pest === 'color' || pest === 'color2' || pest === 'colorPelo');
+      dibujarBarra();
       const items = []; let extra = null;
       if (pest === 'color' || pest === 'color2' || pest === 'colorPelo') {
         const lista = pest === 'colorPelo' ? PALETA_PELO : PALETA;
-        if (pest === 'color2') { extra = el(`<div class="deslizador"><span>${t('prob_degrade')}</span></div>`); extra.appendChild(this.deslizador(0, 1, 0.05, G.A.degrade ?? 0.55, (v) => { G.A.degrade = v; J.aplicarApariencia(); })); }
-        for (const c of lista) { const b = el(`<button class="color ${G.A[pest] === c ? 'si' : ''}" style="background:${c}"></button>`); b.onclick = () => { G.A[pest] = c; J.aplicarApariencia(); dibujar(); }; items.push(b); }
+        if (pest === 'color2') { extra = el(`<div class="deslizador"><span>${t('prob_degrade')}</span></div>`); extra.appendChild(this.deslizador(0, 1, 0.05, G.A.degrade ?? 0.55, (v) => { G.A.degrade = v; J.aplicarApariencia(); mostrarPrueba(); })); }
+        for (const c of lista) { const b = el(`<button class="color ${G.A[pest] === c ? 'si' : ''}" style="background:${c}"></button>`); b.onclick = () => { G.A[pest] = c; J.aplicarApariencia(); mostrarPrueba(); dibujar(); }; items.push(b); }
         const libre = el(`<label class="color" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);display:block"><input type="color" style="opacity:0;width:100%;height:100%"></label>`);
-        const inp = $('input', libre); inp.value = G.A[pest]; inp.oninput = () => { G.A[pest] = inp.value; J.aplicarApariencia(); };
+        const inp = $('input', libre); inp.value = G.A[pest]; inp.oninput = () => { G.A[pest] = inp.value; J.aplicarApariencia(); mostrarPrueba(); };
         items.push(libre);
         paginar(extra, items);
         return;
       }
-      const R = RANURAS.find((q) => q.r === pest);
+      const R = RP(pest);
       if (pest === 'motivo') {
         extra = el(`<div class="deslizador"><span>${t('prob_cubre')}</span></div>`);
-        extra.appendChild(this.deslizador(0, 1.3, 0.02, G.A.cubre, (v) => { G.A.cubre = v; J.aplicarApariencia(); }));
+        extra.appendChild(this.deslizador(0, 1.3, 0.02, G.A.cubre, (v) => { G.A.cubre = v; J.aplicarApariencia(); mostrarPrueba(); }));
       }
+      const puesto = prueba[pest] ?? G.A[pest];
       for (const v of R.lista) {
-        const clave = pest + ':' + v, tiene = loTengo(G, clave), pr = precio(clave), mis = DE_MISION[clave];
-        const tex = (pest === 'motivo' || pest === 'motivoCabeza') && v !== 'ninguno' && v !== 'igual' && window.ARCHIVOS && window.ARCHIVOS['motivo-' + v + '.webp'];
-        const b = el(`<button class="item ${G.A[pest] === v ? 'si' : ''} ${tiene ? '' : 'bloq'}">${tex ? `<span class="muestra" style="background-image:url(${tex})"></span>` : ''}<span class="n"></span>${tiene ? '' : mis ? `<span class="precio">🔒</span>` : `<span class="precio"><i class="orbe-icono"></i>${pr}</span>`}${tiene ? '' : '<span class="candado">🔒</span>'}</button>`);
-        $('.n', b).textContent = v === 'igual' ? t('mot_igual') : t(R.pre + '_' + v);
+        const clave = pest + ':' + v, tiene = loTengo(G, clave), pr = precio(clave), pj = precioJoyas(clave), mis = DE_MISION[clave];
+        const tex = (pest === 'motivo' || pest === 'motivoCabeza') && v !== 'ninguno' && v !== 'igual' && (window.ARCHIVOS && window.ARCHIVOS['motivo-' + v + '.webp']);
+        const etiqueta = tiene ? '' : mis ? `<span class="precio">🔒</span>` : pj != null ? `<span class="precio joyas"><i class="joya-icono"></i>${pj}</span>` : `<span class="precio"><i class="orbe-icono"></i>${pr}</span>`;
+        const b = el(`<button class="item ${puesto === v ? 'si' : ''} ${tiene ? '' : 'bloq'} ${prueba[pest] === v ? 'probando' : ''} ${pj != null && !tiene ? 'de-joyas' : ''}">${tex ? `<span class="muestra" style="background-image:url(${tex})"></span>` : ''}<span class="n"></span>${etiqueta}${tiene ? '' : '<span class="candado">🔒</span>'}</button>`);
+        $('.n', b).textContent = nombreDe(pest, v);
         b.onclick = () => {
-          if (tiene) { G.A[pest] = v; J.aplicarApariencia(); dibujar(); return; }
-          if (mis) { J.avisarPantalla(t('prob_bloq_mision') + ' · ' + t('npc_' + mis)); J.probarPuesto(pest, v); return; }
-          J.probarPuesto(pest, v);
-          if (G.orbes < pr) { J.avisarPantalla(t('prob_faltan', { n: pr - G.orbes })); J.sfx('no'); return; }
-          this.confirmar(t('prob_comprar', { q: t(R.pre + '_' + v), n: pr }), () => { G.orbes -= pr; G.tengo.push(clave); G.A[pest] = v; J.aplicarApariencia(); J.sfx('orbe'); J.avisarPantalla(t('prob_comprado')); dibujar(); }, () => J.aplicarApariencia());
+          if (tiene) { delete prueba[pest]; G.A[pest] = v; J.aplicarApariencia(); mostrarPrueba(); J.sfx('elegir'); dibujar(); return; }
+          /* tocar lo que no se tiene lo prueba (y tocarlo de nuevo lo saca) */
+          if (prueba[pest] === v) delete prueba[pest]; else prueba[pest] = v;
+          if (mis && prueba[pest] === v) J.avisarPantalla(t('prob_bloq_mision') + ' · ' + t('npc_' + mis));
+          J.sfx('elegir'); mostrarPrueba(); dibujar();
         };
         items.push(b);
       }
@@ -802,11 +857,35 @@ export const UI = {
       G.A.color = r(PALETA); G.A.color2 = r(PALETA); G.A.colorPelo = r(PALETA_PELO); G.A.cubre = Math.random() * 0.9;
       for (const R of RANURAS) { const ok = R.lista.filter((v) => loTengo(G, R.r + ':' + v)); G.A[R.r] = r(ok); }
       G.A.degrade = Math.random(); if (Math.random() < 0.7) G.A.motivoCabeza = 'igual'; if (Math.random() < 0.6) G.A.ojos = 'ovalos';
-      J.aplicarApariencia(); dibujar();
+      prueba = {}; J.aplicarApariencia(); mostrarPrueba(); dibujar();
     };
-    $('[data-a=listo]', p).onclick = () => { Teclado.cerrar(true); p.remove(); giros.remove(); J.ent.bloqueado = false; Pantalla.alCambiar.splice(Pantalla.alCambiar.indexOf(alGirarPantalla), 1); alCerrar(); };
+    $('[data-a=listo]', p).onclick = () => {
+      if (Object.keys(prueba).length) { prueba = {}; J.avisarPantalla(t('pp_se_saco')); }
+      Teclado.cerrar(true); p.remove(); giros.remove(); J.ent.bloqueado = false; this._alCambiarJoyas = null; Pantalla.alCambiar.splice(Pantalla.alCambiar.indexOf(alGirarPantalla), 1); J.aplicarApariencia(); alCerrar();
+    };
     requestAnimationFrame(() => dibujar());
     this._probador = p;
+  },
+  /* después de un minijuego: ver un anuncio duplica los orbes ganados (si quedan anuncios hoy) */
+  botonDuplicar(c, premio) {
+    const J = this.J, fila = $('.fila', c);
+    if (!premio || !fila || !Caja.hayAnuncios() || anunciosQuedan(J.G) <= 0) return;
+    const b = el(`<button class="boton joyas-b" data-a="duplicar">${t('ad_duplicar')} · +${premio}</button>`); fila.appendChild(b);
+    b.onclick = async () => {
+      b.disabled = true;
+      if (await verAnuncio(J, this)) { J.G.orbes += premio; Guardado.guardar(); this.actualizarHud(); J.sfx('orbe'); this.avisar(t('ad_duplicado', { n: premio }), 'bien'); b.textContent = t('ad_duplicado', { n: premio }); }
+      else b.disabled = false;
+    };
+  },
+  /* lo que el panel del probador deja libre para el muñeco (píxeles lógicos): el estudio lo centra ahí */
+  libreProbador() {
+    const p = this._probador;
+    if (!p || !p.isConnected) return null;
+    const W = this.J.motor?.ancho || innerWidth, H = this.J.motor?.alto || innerHeight;
+    const x = p.offsetLeft, y = p.offsetTop, w = p.offsetWidth, h = p.offsetHeight;
+    /* panel a la derecha (compu, celu acostado) o abajo (celu parado sin girar) */
+    if (y > H * 0.25) return { x: 0, y: 0, w: W, h: y };
+    return { x: 0, y: 0, w: Math.max(80, x), h: H - 70 };   // (70 px de abajo: las flechas de girar)
   },
   /* ------------------------------------------------------------ gestos, mapa, construir */
   gestos() {

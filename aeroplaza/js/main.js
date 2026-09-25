@@ -47,6 +47,7 @@ import { CuerpoFP } from './primera.js';
 import { timbre } from './timbres.js';
 import { detectarAparato } from './aparato.js';
 import { Estudio } from './probador.js';
+import { regaloDelDia } from './joyas.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
 
@@ -174,7 +175,9 @@ async function iniciar() {
     finDialogo() { enDialogo = false; cam.ponerCine(null); },
     abrirProbador() { abrirProbador(); },
     aplicarApariencia() { cuerpoFP.ponerApariencia(G.A); yo.m.ponerApariencia(G.A); if (yo.m.enPrimera) yo.m.primeraPersona(true); estudio?.ponerApariencia(G.A); G.av = hash(G.A); red.accion({ type: 'apariencia', A: G.A, av: G.av }); Guardado.guardar(); },
-    probarPuesto(ranura, valor) { const A = { ...G.A, [ranura]: valor }; yo.m.ponerApariencia(A); estudio?.ponerApariencia(A); },
+    /* lo que se prueba en el probador solo se ve en el estudio (ni el muñeco del mundo ni la red se enteran) */
+    probarPuestos(P) { estudio?.ponerApariencia({ ...G.A, ...P }); estudio?.probando(Object.keys(P).length > 0); },
+    festejarProbador() { estudio?.festejar(); },
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
     gesto(g) {
@@ -334,6 +337,7 @@ async function iniciar() {
       if (!Q.has('pausa')) { cam.actualizar(0, yo, reino.interior ? null : reino.mundo); await motor.precompilar(); }
       enJuego = true; pausado = false;
       UI.juego();
+      regaloDelDia(J, UI);
       ent.mostrarDedos(true);
       if (o.probador) abrirProbador();
       else if (!G.visto.tuto) tuto = { paso: 0, t: 0, lejos: 0, giro: 0, desde: yo.p.clone() };
@@ -870,7 +874,7 @@ async function iniciar() {
     for (const a of ARBOLEDAS) { let q = a; while (q.parent) q = q.parent; if (q === motor.escena) a.actualizar(dt, motor.camara.position); }
     /* adentro: la cámara no sale de las paredes */
     if (reino.caja) { const [x0, x1, z0, z1, y1] = reino.caja, c = motor.camara.position; c.x = Math.max(x0, Math.min(x1, c.x)); c.z = Math.max(z0, Math.min(z1, c.z)); c.y = Math.min(y1, c.y); }
-    if (probador) estudio.actualizar(dt, E.camX, motor.ancho, motor.alto);
+    if (probador) estudio.actualizar(dt, E.camX, motor.ancho, motor.alto, UI.libreProbador());
     const bajo = !probador && reino.mundo.agua != null && motor.camara.position.y < reino.mundo.agua - 0.05;
     motor.pFinal.uniforms.uAgua.value += ((bajo ? 1 : 0) - motor.pFinal.uniforms.uAgua.value) * Math.min(1, dt * 6);
     cielo.bajoAgua = bajo;
@@ -918,7 +922,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

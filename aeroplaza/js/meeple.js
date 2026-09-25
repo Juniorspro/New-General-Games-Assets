@@ -14,13 +14,13 @@ import * as THREE from 'three';
 import { CLIPS, aplicarClip, CUADROS_CHOP } from './animador.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
-export const MATERIALES = ['gelatina', 'vidrio', 'perla', 'cromo', 'mate', 'neon'];
-export const MOTIVOS = ['ninguno', 'agua', 'nubes', 'tierra', 'galaxia', 'hojas', 'burbujas', 'flores', 'aurora'];
-export const SOMBREROS = ['ninguno', 'conico', 'gorro', 'galera', 'corona', 'flor', 'auriculares', 'casco', 'aureola', 'brote', 'gorra', 'explorador', 'hongo', 'capitan'];
-export const ANTEOJOS = ['ninguno', 'sol', 'redondos', 'visor'];
-export const ESPALDAS = ['ninguno', 'alas', 'mochila', 'aleta', 'molinete'];
+export const MATERIALES = ['gelatina', 'vidrio', 'perla', 'cromo', 'mate', 'neon', 'holo', 'diamante'];
+export const MOTIVOS = ['ninguno', 'agua', 'nubes', 'tierra', 'galaxia', 'hojas', 'burbujas', 'flores', 'aurora', 'arcoiris'];
+export const SOMBREROS = ['ninguno', 'conico', 'gorro', 'galera', 'corona', 'flor', 'auriculares', 'casco', 'aureola', 'brote', 'gorra', 'explorador', 'hongo', 'capitan', 'tiara', 'arcoiris'];
+export const ANTEOJOS = ['ninguno', 'sol', 'redondos', 'visor', 'estrella'];
+export const ESPALDAS = ['ninguno', 'alas', 'mochila', 'aleta', 'molinete', 'mariposa', 'capa'];
 export const PEINADOS = ['ninguno', 'mechon', 'rulos', 'pinches', 'melena', 'rodete', 'colitas', 'cresta', 'nube'];
-export const PARTICULAS = ['ninguna', 'burbujas', 'estrellas', 'hojas', 'notas'];
+export const PARTICULAS = ['ninguna', 'burbujas', 'estrellas', 'hojas', 'notas', 'destellos'];
 export const OJOS = ['ovalos', 'redondos', 'felices', 'ninguno'];
 
 export const APARIENCIA_INICIAL = () => ({
@@ -123,6 +123,25 @@ function ojos(tipo, color, color2) {
 }
 
 /* ---------------------------------------------------------------- materiales */
+/* el motivo de joyas: bandas del arcoíris que dan la vuelta, con destellos (se dibuja acá: no hay
+   textura de Rezona para este) */
+function texArcoiris() {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 256; const g = c.getContext('2d');
+  ['#ff4f6e', '#ffb13d', '#ffe14a', '#56e05a', '#39d6ff', '#6a7dff', '#e46fff'].forEach((col, i, L) => { g.fillStyle = col; g.fillRect(0, i * 256 / L.length, 256, 256 / L.length + 1); });
+  const brillo = g.createLinearGradient(0, 0, 0, 256); brillo.addColorStop(0, 'rgba(255,255,255,0.35)'); brillo.addColorStop(0.5, 'rgba(255,255,255,0)'); brillo.addColorStop(1, 'rgba(255,255,255,0.25)');
+  g.fillStyle = brillo; g.fillRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  for (let i = 0; i < 26; i++) { const x = (i * 97) % 256, y = (i * 53) % 256, r = 2 + (i % 3) * 1.5; g.beginPath(); g.moveTo(x, y - r * 2.5); g.lineTo(x + r * 0.6, y); g.lineTo(x, y + r * 2.5); g.lineTo(x - r * 0.6, y); g.fill(); g.beginPath(); g.moveTo(x - r * 2.5, y); g.lineTo(x, y + r * 0.6); g.lineTo(x + r * 2.5, y); g.lineTo(x, y - r * 0.6); g.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1);
+  return t;
+}
+/* una gema: vidrio de color con tornasol, que brilla un poco sola */
+const matsGema = new Map();
+function gema(color) {
+  if (!matsGema.has(color)) matsGema.set(color, new THREE.MeshPhysicalMaterial({ color, roughness: 0.02, metalness: 0.1, clearcoat: 1, iridescence: 1, iridescenceIOR: 2, emissive: color, emissiveIntensity: 0.35, envMapIntensity: 3, flatShading: true }));
+  return matsGema.get(color);
+}
+const ARCOIRIS = ['#ff4f6e', '#ffb13d', '#ffe14a', '#56e05a', '#39d6ff', '#9b7bff'];
 const cacheMat = new Map();
 export function materialMeeple(A, pieza = 'cuerpo') {
   /* la cabeza puede llevar otro motivo (la "Tierra" en la cabeza de los videos): entonces la cubre entera */
@@ -131,18 +150,24 @@ export function materialMeeple(A, pieza = 'cuerpo') {
   const clave = [A.color, A.color2, mot, (+cubre).toFixed(2), A.material, (+(A.degrade ?? 0.55)).toFixed(2)].join('|');
   if (cacheMat.has(clave)) return cacheMat.get(clave);
   const tipo = A.material;
+  /* los de joyas: el holográfico cambia de color según de dónde se lo mire (película gruesa de
+     tornasol) y el diamante va facetado (sombreado plano) y refleja más que el cromo */
+  const holo = tipo === 'holo', diamante = tipo === 'diamante';
   const m = new THREE.MeshPhysicalMaterial({
-    color: A.color, roughness: tipo === 'mate' ? 0.62 : tipo === 'cromo' ? 0.08 : 0.14,
-    metalness: tipo === 'cromo' ? 1 : 0, clearcoat: tipo === 'mate' ? 0 : 1, clearcoatRoughness: 0.05,
-    iridescence: tipo === 'perla' ? 1 : tipo === 'vidrio' ? 0.4 : 0.15, iridescenceIOR: 1.35,
-    sheen: tipo === 'perla' ? 1 : 0.3, sheenColor: new THREE.Color(A.color2), sheenRoughness: 0.4,
-    transparent: tipo === 'vidrio', opacity: tipo === 'vidrio' ? 0.62 : 1, envMapIntensity: tipo === 'cromo' ? 3.2 : 2.2,
+    color: A.color, roughness: tipo === 'mate' ? 0.62 : tipo === 'cromo' ? 0.08 : diamante ? 0.02 : holo ? 0.1 : 0.14,
+    metalness: tipo === 'cromo' ? 1 : holo ? 0.25 : diamante ? 0.1 : 0, clearcoat: tipo === 'mate' ? 0 : 1, clearcoatRoughness: 0.05,
+    iridescence: tipo === 'perla' || holo ? 1 : diamante ? 0.7 : tipo === 'vidrio' ? 0.4 : 0.15, iridescenceIOR: holo ? 1.9 : diamante ? 2.2 : 1.35,
+    iridescenceThicknessRange: holo ? [150, 1100] : [100, 400],
+    sheen: tipo === 'perla' || holo ? 1 : 0.3, sheenColor: new THREE.Color(A.color2), sheenRoughness: 0.4, flatShading: diamante,
+    transparent: tipo === 'vidrio', opacity: tipo === 'vidrio' ? 0.62 : 1, envMapIntensity: tipo === 'cromo' ? 3.2 : diamante ? 3.8 : holo ? 2.8 : 2.2,
   });
+  if (mot === 'arcoiris' && !TEXTURAS_MOTIVO.arcoiris) TEXTURAS_MOTIVO.arcoiris = texArcoiris();
   const tex = mot !== 'ninguno' ? TEXTURAS_MOTIVO[mot] : null;
   const U = {
     uTex: { value: tex }, uHay: { value: tex ? 1 : 0 }, uCubre: { value: cubre }, uCol2: { value: new THREE.Color(A.color2) }, uDegrade: { value: A.degrade ?? 0.55 },
-    uBrillo: { value: tipo === 'neon' ? 1.6 : tipo === 'gelatina' ? 0.55 : tipo === 'vidrio' ? 0.8 : 0.25 },
-    uAdentro: { value: tipo === 'neon' ? 0.55 : tipo === 'gelatina' ? 0.22 : tipo === 'vidrio' ? 0.12 : 0.0 },
+    uBrillo: { value: tipo === 'neon' ? 1.6 : tipo === 'gelatina' ? 0.55 : tipo === 'vidrio' || holo ? 0.8 : diamante ? 0.7 : 0.25 },
+    uAdentro: { value: tipo === 'neon' ? 0.55 : tipo === 'gelatina' ? 0.22 : tipo === 'vidrio' ? 0.12 : diamante ? 0.18 : holo ? 0.1 : 0.0 },
+    uFacetas: { value: diamante ? 1 : 0 },
   };
   m.userData.U = U;
   m.onBeforeCompile = (s) => {
@@ -151,7 +176,7 @@ export function materialMeeple(A, pieza = 'cuerpo') {
       .replace('#include <common>', '#include <common>\nattribute float aAlto, aParte; attribute vec2 aUvm; varying float vAlto, vParte; varying vec2 vUvm;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAlto = aAlto; vParte = aParte; vUvm = aUvm;');
     s.fragmentShader = s.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vAlto, vParte; varying vec2 vUvm; uniform sampler2D uTex; uniform float uHay, uCubre, uBrillo, uAdentro, uDegrade; uniform vec3 uCol2;')
+      .replace('#include <common>', '#include <common>\nvarying float vAlto, vParte; varying vec2 vUvm; uniform sampler2D uTex; uniform float uHay, uCubre, uBrillo, uAdentro, uDegrade, uFacetas; uniform vec3 uCol2;')
       /* el degradé de cada pieza (arriba el color, abajo el segundo) y el motivo,
          que sube desde abajo de CADA pieza hasta "cubre", con el borde en ola */
       .replace('#include <map_fragment>', `#include <map_fragment>
@@ -163,11 +188,15 @@ export function materialMeeple(A, pieza = 'cuerpo') {
           diffuseColor.rgb = mix(diffuseColor.rgb, mt, banda);
           /* un filo blanco espumoso en el borde del motivo, como en los videos */
           diffuseColor.rgb += vec3(0.85) * (1.0 - smoothstep(0.0, 0.035, abs(vParte + ola - uCubre))) * step(0.01, uCubre) * step(uCubre, 1.0);
-        }`)
+        }
+        /* el diamante: la superficie en facetas (celdas con su brillo) que destellan según de dónde se mire */
+        float hcF = fract(sin(dot(floor(vUvm * vec2(22.0, 14.0)), vec2(12.9898, 78.233))) * 43758.5453);
+        if (uFacetas > 0.5) diffuseColor.rgb *= 0.72 + 0.5 * hcF;`)
       /* la gelatina: brilla de adentro y tiene el borde encendido (fresnel) */
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-        float fres = pow(1.0 - saturate(dot(normalize(vNormal), normalize(vViewPosition))), 2.6);
-        totalEmissiveRadiance += mix(diffuseColor.rgb, uCol2, 0.5) * fres * uBrillo + diffuseColor.rgb * uAdentro;`);
+        float fres = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 2.6);   // (normal y no vNormal: con sombreado plano, vNormal no existe)
+        totalEmissiveRadiance += mix(diffuseColor.rgb, uCol2, 0.5) * fres * uBrillo + diffuseColor.rgb * uAdentro;
+        if (uFacetas > 0.5) totalEmissiveRadiance += vec3(1.3) * pow(max(0.0, sin(hcF * 60.0 + dot(normal, normalize(vViewPosition)) * 26.0)), 28.0) * step(0.55, hcF);`);
   };
   m.customProgramCacheKey = () => 'meeple';
   cacheMat.set(clave, m);
@@ -199,6 +228,22 @@ function sombrero(tipo, col) {
     /* los de las misiones nuevas: el de exploración (Brújula), el hongo (Musgo) y la gorra de capitán (Marea) */
     case 'explorador': { const k = simple('#e8d3a0', { roughness: 0.6 }); add(new THREE.CylinderGeometry(0.38, 0.4, 0.025, 40), k, 0, 0.17); add(new THREE.CylinderGeometry(0.2, 0.23, 0.17, 32), k, 0, 0.27); add(new THREE.SphereGeometry(0.2, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), k, 0, 0.35).scale.y = 0.35; add(new THREE.CylinderGeometry(0.233, 0.233, 0.045, 32), simple('#5a8f3a'), 0, 0.21); break; }
     case 'hongo': { const c = add(new THREE.SphereGeometry(0.34, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), simple('#ff4f6e', { clearcoat: 1 }), 0, 0.1); c.scale.y = 0.62; for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + 0.3, e = 0.5 + (i % 2) * 0.35; add(new THREE.SphereGeometry(0.045, 12, 8), simple('#ffffff'), Math.cos(a) * Math.sin(e) * 0.33, 0.1 + Math.cos(e) * 0.2, Math.sin(a) * Math.sin(e) * 0.33).scale.y = 0.4; } add(new THREE.SphereGeometry(0.07, 12, 8), simple('#ffffff'), 0, 0.31, 0).scale.y = 0.4; break; }
+    /* los de joyas: la tiara de plata con cinco gemas y el arcoíris que se para detrás de la cabeza */
+    case 'tiara': {
+      const plata = simple('#eef3fa', { metalness: 1, roughness: 0.1 });
+      const b = add(new THREE.TorusGeometry(0.205, 0.024, 8, 48), plata, 0, 0.19, 0.01, Math.PI / 2 - 0.28);
+      for (let i = -2; i <= 2; i++) {
+        const a = i * 0.42, q = add(new THREE.OctahedronGeometry(i === 0 ? 0.075 : 0.045, 0), gema(['#ff6fb0', '#39d6ff', '#e8fbff', '#39d6ff', '#ff6fb0'][i + 2]), Math.sin(a) * 0.2, 0.23 + (i === 0 ? 0.05 : 0.01) - Math.abs(i) * 0.012, Math.cos(a) * 0.19);
+        q.scale.y = 1.5; q.rotation.y = a;
+        if (i !== 0) { const p = add(new THREE.ConeGeometry(0.016, 0.07, 6), plata, Math.sin(a) * 0.2, 0.225, Math.cos(a) * 0.19); p.rotation.set(0, 0, 0); }
+      }
+      b.rotation.y = 0; break;
+    }
+    case 'arcoiris': {
+      ARCOIRIS.forEach((c, i) => { const q = add(new THREE.TorusGeometry(0.42 - i * 0.026, 0.014, 6, 40, Math.PI), new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.55, roughness: 0.3 }), 0, 0.02, -0.12); q.castShadow = false; });
+      for (const s of [-1, 1]) for (let k = 0; k < 3; k++) add(new THREE.SphereGeometry(0.06 - k * 0.012, 12, 8), simple('#ffffff', { roughness: 0.5 }), s * (0.36 + k * 0.05), 0.04 + (k % 2) * 0.03, -0.12);
+      break;
+    }
     case 'capitan': { add(new THREE.CylinderGeometry(0.27, 0.235, 0.13, 36), simple('#ffffff'), 0, 0.22); add(new THREE.CylinderGeometry(0.238, 0.238, 0.06, 36), simple('#1d3f7a'), 0, 0.17); const v = add(new THREE.CylinderGeometry(0.21, 0.21, 0.02, 32, 1, false, -Math.PI / 2, Math.PI), simple('#1a2230'), 0, 0.15, 0.1); v.scale.set(1, 1, 1.15); v.rotation.x = 0.2; add(new THREE.TorusGeometry(0.035, 0.012, 8, 18), simple('#ffd23f', { metalness: 1, roughness: 0.2 }), 0, 0.23, 0.26); break; }
   }
   return g;
@@ -207,6 +252,17 @@ function anteojos(tipo, col) {
   const g = new THREE.Group();
   const vidrio = new THREE.MeshPhysicalMaterial({ color: tipo === 'sol' ? '#1a2a44' : '#bff4ff', roughness: 0.02, metalness: 0.2, clearcoat: 1, transparent: true, opacity: tipo === 'sol' ? 0.92 : 0.45, iridescence: 1 });
   const marco = simple(col, { metalness: 0.6 });
+  if (tipo === 'estrella') {
+    /* anteojos estrella: el marco de color y el vidrio rosa, de cinco puntas */
+    const f = new THREE.Shape(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 0.04 : 0.088, a = i / 10 * Math.PI * 2 + Math.PI / 2; f[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); }
+    const marcoE = simple(col, { metalness: 0.4, emissive: col, emissiveIntensity: 0.25 }), vidrioE = new THREE.MeshPhysicalMaterial({ color: '#ff9fd0', roughness: 0.02, transparent: true, opacity: 0.6, iridescence: 1, clearcoat: 1 });
+    for (const s of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.ExtrudeGeometry(f, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.01, bevelSegments: 2 }), marcoE); m.position.set(s * 0.095, 0.035, 0.222); g.add(m);
+      const v = new THREE.Mesh(new THREE.ShapeGeometry(f), vidrioE); v.scale.setScalar(0.72); v.position.set(s * 0.095, 0.035, 0.24); g.add(v);
+    }
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.05, 8), marcoE); p.rotation.z = Math.PI / 2; p.position.set(0, 0.045, 0.232); g.add(p);
+    return g;
+  }
   if (tipo === 'visor') { const v = new THREE.Mesh(new THREE.CylinderGeometry(0.245, 0.245, 0.09, 40, 1, true, -1.1, 2.2), new THREE.MeshPhysicalMaterial({ color: col, roughness: 0.02, transparent: true, opacity: 0.75, iridescence: 1, side: THREE.DoubleSide, emissive: col, emissiveIntensity: 0.4 })); v.position.set(0, 0.03, 0); g.add(v); return g; }
   for (const s of [-1, 1]) {
     const l = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.02, 28), vidrio); l.rotation.x = Math.PI / 2; l.position.set(s * 0.09, 0.03, 0.225); g.add(l);
@@ -225,6 +281,26 @@ function espalda(tipo, col) {
     const f = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), simple('#ff8a3d')); f.position.set(0.04, 0.56, -0.28); g.add(f);
   } else if (tipo === 'aleta') {
     const f = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.28, 16), simple(col)); f.scale.z = 0.35; f.rotation.x = -0.5; f.position.set(0, 0.8, -0.17); g.add(f);
+  } else if (tipo === 'mariposa') {
+    /* alas de mariposa: cuatro, de vidrio tornasolado con manchas; aletean como las otras */
+    const m = new THREE.MeshPhysicalMaterial({ color: col, map: texAlaMariposa(), roughness: 0.08, transparent: true, opacity: 0.85, iridescence: 1, iridescenceIOR: 1.8, side: THREE.DoubleSide, clearcoat: 1, emissive: col, emissiveIntensity: 0.15 });
+    for (const s of [-1, 1]) for (const abajo of [0, 1]) {
+      const f = new THREE.Shape(); f.moveTo(0, 0);
+      if (!abajo) { f.bezierCurveTo(0.08, 0.34, 0.5, 0.52, 0.56, 0.3); f.bezierCurveTo(0.6, 0.1, 0.3, 0.02, 0, 0); }
+      else { f.bezierCurveTo(0.2, -0.04, 0.42, -0.14, 0.34, -0.34); f.bezierCurveTo(0.24, -0.46, 0.06, -0.3, 0, 0); }
+      const geo = new THREE.ShapeGeometry(f, 20), uv = geo.attributes.uv, pos = geo.attributes.position;
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / 0.6, pos.getY(i) / 0.55 + 0.5);
+      const w = new THREE.Mesh(geo, m); w.scale.x = s; w.position.set(s * 0.04, 0.72, -0.21); w.rotation.y = s * 0.5; w.userData.ala = s; g.add(w);
+    }
+  } else if (tipo === 'capa') {
+    /* la capa de estrellas: cuelga de los hombros y se levanta cuando se corre */
+    const geo = new THREE.PlaneGeometry(0.5, 0.72, 6, 10); geo.translate(0, -0.36, 0);
+    /* envuelve la espalda: los bordes van hacia adelante y abajo se abre un poco */
+    const pos = geo.attributes.position; for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i); pos.setZ(i, x * x * 1.4); pos.setX(i, x * (1 - y * 0.3)); }
+    geo.computeVertexNormals();
+    const capa = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({ map: texCapa(col), roughness: 0.35, sheen: 1, sheenColor: new THREE.Color('#ffffff'), side: THREE.DoubleSide, clearcoat: 0.4 }));
+    capa.position.set(0, 0.88, -0.27); capa.userData.capa = true; g.add(capa);
+    for (const s of [-1, 1]) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), gema('#ffe14a')); b.position.set(s * 0.2, 0.88, -0.2); g.add(b); }
   } else if (tipo === 'molinete') {
     /* el molinete de papel en un palito (el premio de Brisa): gira más rápido cuando se corre */
     const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.62, 8), simple('#ffffff')); palo.position.set(0.1, 0.78, -0.22); palo.rotation.z = -0.25; g.add(palo);
@@ -297,6 +373,7 @@ function globo(texto) {
 
 /* ---------------------------------------------------------------- el muñeco */
 const suave = (a, b, k) => a + (b - a) * k;
+const _v = new THREE.Vector3();
 export class Meeple {
   static estiloAnim = 'suave';   // cómo pasan las poses: 'suave' | 'lineal' | 'chop' (Opciones › Imagen)
   constructor(apariencia = APARIENCIA_INICIAL(), nombre = '') {
@@ -343,15 +420,25 @@ export class Meeple {
     if (this.A.anteojos !== 'ninguno') cab.add(anteojos(this.A.anteojos, this.A.color2));
     if (this.A.espalda !== 'ninguno') this.atras.add(espalda(this.A.espalda, this.A.color2));
     this.ponerParticulas(this.A.particulas);
+    /* el nombre flota arriba de lo que lleve en la cabeza (la galera o el arcoíris lo tapaban):
+       la caja de los accesorios, medida en la cabeza, más 12 cm */
+    let alto = 1.52;
+    if (cab.children.length) {
+      this.raiz.updateMatrixWorld(true);
+      const b = new THREE.Box3().setFromObject(cab), y0 = this.raiz.getWorldPosition(_v).y;
+      alto = Math.max(alto, b.max.y - y0 + 0.12);
+    }
+    this.altoNombre = alto;
+    if (this.cartel) this.cartel.position.y = alto;
   }
   ponerParticulas(tipo) {
     if (this.particulas) { this.raiz.remove(this.particulas); this.particulas = null; }
     if (!tipo || tipo === 'ninguna') return;
-    const col = { burbujas: '#d8f6ff', estrellas: '#fff4a8', hojas: '#8df06a', notas: '#ff9ad8' }[tipo];
+    const col = { burbujas: '#d8f6ff', estrellas: '#fff4a8', hojas: '#8df06a', notas: '#ff9ad8', destellos: '#e8fbff' }[tipo];
     const n = 14, g = new THREE.BufferGeometry(), p = new Float32Array(n * 3), f = new Float32Array(n);
     for (let i = 0; i < n; i++) { f[i] = Math.random(); }
     g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('fase', new THREE.BufferAttribute(f, 1));
-    const mat = new THREE.PointsMaterial({ color: col, size: tipo === 'burbujas' ? 0.09 : 0.07, transparent: true, opacity: 0.85, depthWrite: false, map: puntoTex(tipo) });
+    const mat = new THREE.PointsMaterial({ color: col, size: tipo === 'burbujas' ? 0.09 : tipo === 'destellos' ? 0.1 : 0.07, transparent: true, opacity: 0.85, depthWrite: false, map: puntoTex(tipo) });
     this.particulas = new THREE.Points(g, mat); this.particulas.frustumCulled = false;
     this.raiz.add(this.particulas);
   }
@@ -359,12 +446,12 @@ export class Meeple {
     if (this.cartel) this.raiz.remove(this.cartel);
     this.nombre = nombre;
     this.cartel = cartel(nombre, esYo ? { tinta: '#1f7a2e' } : {});
-    this.cartel.position.y = 1.52;
+    this.cartel.position.y = this.altoNombre ?? 1.52;
     this.raiz.add(this.cartel);
   }
   decir(texto) {
     if (this.globo) { this.raiz.remove(this.globo); this.globo.material.map.dispose(); }
-    this.globo = globo(texto); this.globo.position.y = 1.66; this.tGlobo = 6;
+    this.globo = globo(texto); this.globo.position.y = (this.altoNombre ?? 1.52) + 0.14; this.tGlobo = 6;
     this.raiz.add(this.globo);
   }
   /* un gesto de un rato: saludar, bailar1..3, festejar, sentarse (este queda hasta moverse) */
@@ -486,12 +573,12 @@ export class Meeple {
     if (this.tParpadeo <= 0) this.tParpadeo = Math.random() < 0.2 ? 0.3 : 2.5 + Math.random() * 3.5;
     for (const o of this.ojos.children[0]?.children || []) o.scale.y = cierre;
     /* las alas aletean */
-    for (const o of this.atras.children) for (const w of o.children) { if (w.userData.ala) w.rotation.y = w.userData.ala * (0.5 + Math.sin(t * (estado === 'cae' ? 18 : 4)) * 0.25); if (w.userData.gira) w.rotation.z -= dt * (2.5 + vel * 2.2); }
+    for (const o of this.atras.children) for (const w of o.children) { if (w.userData.ala) w.rotation.y = w.userData.ala * (0.5 + Math.sin(t * (estado === 'cae' ? 18 : 4)) * 0.25); if (w.userData.gira) w.rotation.z -= dt * (2.5 + vel * 2.2); if (w.userData.capa) w.rotation.x = suave(w.rotation.x, 0.1 + Math.min(0.95, vel * 0.11) + Math.sin(t * 2.4) * 0.05, 1 - Math.exp(-dt * 6)); }
     /* las partículas dan vueltas alrededor */
     if (this.particulas) {
       const p = this.particulas.geometry.attributes.position, f = this.particulas.geometry.attributes.fase;
       for (let i = 0; i < p.count; i++) { const q = (f.getX(i) + t * 0.12) % 1, a = f.getX(i) * 40 + t * 0.8; p.setXYZ(i, Math.cos(a) * 0.45, 0.2 + q * 1.3, Math.sin(a) * 0.45); }
-      p.needsUpdate = true; this.particulas.material.opacity = 0.85;
+      p.needsUpdate = true; this.particulas.material.opacity = this.A.particulas === 'destellos' ? 0.55 + Math.sin(t * 7) * 0.4 : 0.85;
     }
     if (this.globo) { this.tGlobo -= dt; if (this.tGlobo <= 0) { this.raiz.remove(this.globo); this.globo = null; } else this.globo.material.opacity = Math.min(1, this.tGlobo * 2); }
   }
@@ -511,6 +598,27 @@ export class Meeple {
   quitar() { this.raiz.removeFromParent(); }
 }
 
+/* el ala de mariposa: degradé con el borde oscuro y manchas claras (el color lo pone el material) */
+let _texAla = null;
+function texAlaMariposa() {
+  if (_texAla) return _texAla;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(0, 64, 4, 0, 64, 128); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.7, '#dfe8ff'); gr.addColorStop(0.92, '#6a5a9a'); gr.addColorStop(1, '#2a2346');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  g.fillStyle = 'rgba(255,255,255,0.95)'; for (const [x, y, r] of [[92, 30, 9], [104, 58, 6], [80, 96, 8], [60, 18, 5], [110, 86, 5]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+  g.strokeStyle = 'rgba(40,30,70,0.45)'; g.lineWidth = 2; for (let k = 0; k < 6; k++) { g.beginPath(); g.moveTo(0, 64); g.quadraticCurveTo(50, 64 + (k - 2.5) * 20, 128, 64 + (k - 2.5) * 46); g.stroke(); }
+  _texAla = new THREE.CanvasTexture(c); _texAla.colorSpace = THREE.SRGBColorSpace; return _texAla;
+}
+const _texCapas = new Map();
+function texCapa(col) {
+  if (_texCapas.has(col)) return _texCapas.get(col);
+  const c = document.createElement('canvas'); c.width = 128; c.height = 160; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 160); gr.addColorStop(0, col); gr.addColorStop(1, '#1d2a6a'); g.fillStyle = gr; g.fillRect(0, 0, 128, 160);
+  g.fillStyle = '#fff6c2';
+  for (let i = 0; i < 18; i++) { const x = (i * 71) % 128, y = 10 + (i * 37) % 150, r = 3 + (i % 3) * 2; g.beginPath(); for (let k = 0; k < 10; k++) { const rr = k % 2 ? r * 0.45 : r, a = k / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.fill(); }
+  g.fillStyle = '#ffe14a'; g.fillRect(0, 150, 128, 10);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; _texCapas.set(col, t); return t;
+}
 const puntos = {};
 function puntoTex(tipo) {
   if (puntos[tipo]) return puntos[tipo];
@@ -518,6 +626,11 @@ function puntoTex(tipo) {
   if (tipo === 'burbujas') { g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineWidth = 5; g.beginPath(); g.arc(32, 32, 24, 0, 7); g.stroke(); g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.arc(24, 22, 6, 0, 7); g.fill(); }
   else if (tipo === 'estrellas') { g.fillStyle = '#fff'; g.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 11 : 28, a = i / 10 * Math.PI * 2 - Math.PI / 2; g.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r); } g.fill(); }
   else if (tipo === 'hojas') { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(32, 32, 26, 12, 0.7, 0, 7); g.fill(); }
+  else if (tipo === 'destellos') {
+    /* el destello de cuatro puntas con su halo */
+    const h = g.createRadialGradient(32, 32, 0, 32, 32, 30); h.addColorStop(0, 'rgba(255,255,255,0.9)'); h.addColorStop(0.3, 'rgba(200,245,255,0.35)'); h.addColorStop(1, 'rgba(200,245,255,0)'); g.fillStyle = h; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(32, 2); g.lineTo(36, 28); g.lineTo(62, 32); g.lineTo(36, 36); g.lineTo(32, 62); g.lineTo(28, 36); g.lineTo(2, 32); g.lineTo(28, 28); g.fill();
+  }
   else { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(24, 44, 12, 9, -0.4, 0, 7); g.fill(); g.fillRect(32, 10, 5, 34); g.fillRect(32, 10, 18, 6); }
   const t = new THREE.CanvasTexture(c); puntos[tipo] = t; return t;
 }

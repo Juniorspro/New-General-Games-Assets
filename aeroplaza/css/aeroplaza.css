@@ -707,3 +707,76 @@ html.b460 .estelario .es-barra button { min-width: 30px; height: 30px; font-size
 /* lo extremo del runner (delirio.js): arriba del juego, debajo de los botones */
 .delirio { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; display: none; }
 .delirio.on { display: block; }
+
+/* ---------------------------------------------------------------- joyas (vuelta 12) */
+/* la joya: un rombo tornasolado de CSS (sin emoji, así se ve igual en todos lados) */
+.joya-icono { display: inline-block; width: 22px; height: 22px; flex: none; background: linear-gradient(135deg, #ffd6f0 0%, #ff6fb0 30%, #b87bff 55%, #39d6ff 85%); clip-path: polygon(50% 0, 100% 34%, 50% 100%, 0 34%); filter: drop-shadow(0 0 4px rgba(230, 111, 255, 0.6)); }
+.joya-icono.grande { width: 40px; height: 40px; }
+.item .precio .joya-icono { width: 12px; height: 12px; }
+.joyas-p { cursor: pointer; font: inherit; font-weight: 900; color: inherit; }
+.arriba-izq .joyas-p { font-size: 18px; }
+html.a700 .arriba-izq .joyas-p { font-size: 15px; }
+.joyas-p.late { animation: lateJoya 0.5s ease 4; }
+@keyframes lateJoya { 50% { transform: scale(1.15); box-shadow: 0 0 0 4px rgba(230, 111, 255, 0.35), var(--sombra); } }
+.probador .saldos { display: flex; gap: 6px; }
+.item .precio.joyas { color: #b04ad8; }
+.item.de-joyas { background: linear-gradient(160deg, #fff6fd, #f1ecff); }
+/* lo que se está probando: borde dorado que late y un ojito */
+.item.probando { border-color: #ffb13d; box-shadow: 0 0 0 3px rgba(255, 177, 61, 0.3); animation: probando 1.2s ease-in-out infinite; }
+.item.probando::after { content: '👁'; position: absolute; top: 3px; left: 6px; font-size: 12px; }
+@keyframes probando { 50% { box-shadow: 0 0 0 5px rgba(255, 177, 61, 0.18); } }
+/* la barra de la prueba: aparece sobre el pie del panel */
+.prob-prueba { display: none; align-items: center; gap: 8px; padding: 8px 12px; border-top: 3px solid #ffd79a; background: linear-gradient(180deg, #fffaf0, #fff3dc); }
+.prob-prueba.abierta { display: flex; animation: entraAbajo 0.25s ease both; }
+.prob-prueba .pp-que { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.prob-prueba .pp-que small { font-size: 11px; font-weight: 800; color: #c07a10; }
+.prob-prueba .pp-que b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prob-prueba .pp-precio { display: flex; gap: 8px; font-weight: 900; font-size: 15px; }
+.prob-prueba .pp-precio span { display: flex; align-items: center; gap: 3px; }
+.prob-prueba .pp-precio .orbe-icono, .prob-prueba .pp-precio .joya-icono { width: 16px; height: 16px; }
+.prob-prueba .pp-falta { font-size: 12px; font-weight: 800; color: #d04a4a; }
+.boton.joyas-b { background: linear-gradient(180deg, #ffffff66, transparent 50%), linear-gradient(180deg, #d98bff, #9b5bff); color: #fff; }
+html.b460 .prob-prueba { padding: 5px 10px; } html.b460 .prob-prueba .pp-que small { display: none; }
+
+/* la tienda de joyas */
+.tienda-joyas { display: flex; flex-direction: column; gap: 12px; }
+.tj-saldo { display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 900; font-size: 30px; }
+.tj-saldo > span:first-child { font-size: 15px; color: var(--tinta2); }
+.tj-saldo .tj-orbes { display: flex; align-items: center; gap: 4px; font-size: 16px; color: var(--tinta2); margin-left: 8px; }
+.tj-saldo .tj-orbes .orbe-icono { width: 16px; height: 16px; }
+.tj-anuncio { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 20px; border: 3px solid #bfe9ff; background: linear-gradient(180deg, #f2fbff, #dff3ff); font: inherit; text-align: left; cursor: pointer; }
+.tj-anuncio:disabled { opacity: 0.55; cursor: default; }
+.tj-anuncio .tj-tele { font-size: 30px; }
+.tj-anuncio b { display: block; font-size: 17px; } .tj-anuncio small { font-weight: 700; color: var(--tinta2); }
+.tienda-joyas h3 { margin: 4px 0 0; font-size: 15px; color: var(--tinta2); }
+.tj-paquetes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+html.angosta .tj-paquetes { grid-template-columns: repeat(2, 1fr); }
+.tj-paquete { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 14px 6px 10px; border-radius: 20px; border: 3px solid color-mix(in srgb, var(--c) 45%, white); background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--c) 14%, white)); font: inherit; cursor: pointer; }
+.tj-paquete:disabled { opacity: 0.55; cursor: default; }
+.tj-paquete b { font-size: 22px; } .tj-paquete small { font-size: 11px; font-weight: 700; color: var(--tinta2); text-align: center; min-height: 26px; }
+.tj-paquete .tj-precio { margin-top: 4px; padding: 5px 12px; border-radius: 999px; background: var(--c); color: #fff; font-weight: 900; font-size: 13px; }
+.tj-paquete.popular { transform: translateY(-3px); box-shadow: 0 8px 20px color-mix(in srgb, var(--c) 35%, transparent); }
+.tj-cinta { position: absolute; top: -10px; padding: 2px 8px; border-radius: 999px; background: #ffb13d; color: #fff; font-size: 10px; font-weight: 900; white-space: nowrap; }
+.tj-nota { margin: 0; font-size: 12px; font-weight: 700; color: var(--tinta2); text-align: center; }
+
+/* el anuncio de prueba: una tarjeta propia (en TikTok va el de verdad) */
+.anuncio-prueba { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #bff0ff, #3a8fd8); animation: aparece 0.2s ease both; }
+.ap-caja { position: relative; width: min(560px, 90vw); padding: 26px 24px 18px; border-radius: 28px; background: linear-gradient(180deg, #ffffffee, #eaf7ffee); box-shadow: 0 20px 60px rgba(0, 40, 90, 0.35); text-align: center; overflow: hidden; }
+.ap-cinta { position: absolute; top: 12px; left: 12px; padding: 3px 10px; border-radius: 999px; background: #ffb13d; color: #fff; font-weight: 900; font-size: 12px; }
+.ap-logo { font-size: 44px; font-weight: 900; color: var(--azul); letter-spacing: 0.04em; } .ap-logo b { color: #56d05a; }
+.ap-caja p { margin: 6px 0 14px; font-weight: 800; color: var(--tinta2); }
+.ap-barra { height: 10px; border-radius: 999px; background: #d9eef9; overflow: hidden; } .ap-barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #39d6ff, #56e05a); }
+.ap-pie { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-weight: 800; color: var(--tinta2); }
+.anuncio-prueba.listo .ap-falta { color: #2f9e2a; }
+.ap-burbujas i { position: absolute; bottom: -40px; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 32% 28%, #fff 0 10%, transparent 40%), radial-gradient(circle, transparent 60%, rgba(160, 225, 255, 0.6) 90%); animation: subeBurbuja 4s linear infinite; }
+.ap-burbujas i:nth-child(1) { left: 8%; animation-delay: 0s; } .ap-burbujas i:nth-child(2) { left: 20%; animation-delay: 1.2s; } .ap-burbujas i:nth-child(3) { left: 33%; animation-delay: 2.4s; }
+.ap-burbujas i:nth-child(4) { left: 46%; animation-delay: 0.6s; } .ap-burbujas i:nth-child(5) { left: 58%; animation-delay: 1.8s; } .ap-burbujas i:nth-child(6) { left: 70%; animation-delay: 3s; }
+.ap-burbujas i:nth-child(7) { left: 82%; animation-delay: 0.9s; } .ap-burbujas i:nth-child(8) { left: 90%; animation-delay: 2.1s; } .ap-burbujas i:nth-child(9) { left: 64%; animation-delay: 3.4s; }
+@keyframes subeBurbuja { to { transform: translateY(-420px); opacity: 0; } }
+.compra-prueba { z-index: 61; }
+.cp-producto { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 26px; font-weight: 900; padding: 10px; border-radius: 18px; background: color-mix(in srgb, var(--c) 14%, white); }
+.cp-aviso { text-align: center; font-weight: 900; color: #c07a10; }
+.fila-botones { display: flex; gap: 10px; justify-content: center; }
+/* con poco alto, el título del probador se va: dejaba "Cuerpo / Cosas" en dos renglones */
+html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: none; }
+.probador .cabeza .segmentos { flex-wrap: nowrap; white-space: nowrap; }

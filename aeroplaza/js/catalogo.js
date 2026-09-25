@@ -5,6 +5,7 @@
    Los colores son todos gratis: son lo primero que cada quien quiere tocar.
    ========================================================================== */
 import { MATERIALES, MOTIVOS, SOMBREROS, ANTEOJOS, ESPALDAS, PEINADOS, PARTICULAS, OJOS } from './meeple.js';
+import { sumar } from './textos.js';
 
 export const RANURAS = [
   { r: 'material', lista: MATERIALES, pre: 'mat' },
@@ -28,6 +29,13 @@ export const PRECIO = {
   'espalda:alas': 70, 'espalda:mochila': 30,
   'particulas:burbujas': 25, 'particulas:estrellas': 40, 'particulas:hojas': 25,
 };
+/* lo que se paga con joyas (💎): 10 de regalo por día, anuncios con premio o paquetes. Todo
+   cuesta 100 o más: se junta de a poco o se compra */
+export const PRECIO_JOYAS = {
+  'material:holo': 120, 'material:diamante': 300, 'motivo:arcoiris': 100,
+  'sombrero:tiara': 150, 'sombrero:arcoiris': 180, 'anteojos:estrella': 100,
+  'espalda:mariposa': 200, 'espalda:capa': 120, 'particulas:destellos': 150,
+};
 /* lo que solo se gana con una misión: la clave → el NPC que la da */
 export const DE_MISION = {
   'sombrero:flor': 'nimbo', 'peinado:rulos': 'lima', 'motivo:burbujas': 'burbu', 'espalda:aleta': 'coral',
@@ -41,6 +49,13 @@ export function loTengo(G, clave) {
   return GRATIS.has(clave) || G.tengo.includes(clave);
 }
 export function precio(clave) { if (clave.startsWith('motivoCabeza:')) clave = 'motivo:' + clave.slice(13); return PRECIO[clave] ?? null; }
+export function precioJoyas(clave) { if (clave.startsWith('motivoCabeza:')) clave = 'motivo:' + clave.slice(13); return PRECIO_JOYAS[clave] ?? null; }
+
+sumar({
+  es: { mat_holo: 'Holográfico', mat_diamante: 'Diamante', mot_arcoiris: 'Arcoíris', som_tiara: 'Tiara de joyas', som_arcoiris: 'Arcoíris', ant_estrella: 'Estrella', esp_mariposa: 'Alas de mariposa', esp_capa: 'Capa de estrellas', par_destellos: 'Destellos' },
+  en: { mat_holo: 'Holographic', mat_diamante: 'Diamond', mot_arcoiris: 'Rainbow', som_tiara: 'Jewel tiara', som_arcoiris: 'Rainbow', ant_estrella: 'Star', esp_mariposa: 'Butterfly wings', esp_capa: 'Star cape', par_destellos: 'Sparkles' },
+  pt: { mat_holo: 'Holográfico', mat_diamante: 'Diamante', mot_arcoiris: 'Arco-íris', som_tiara: 'Tiara de joias', som_arcoiris: 'Arco-íris', ant_estrella: 'Estrela', esp_mariposa: 'Asas de borboleta', esp_capa: 'Capa de estrelas', par_destellos: 'Brilhos' },
+});
 
 export const PALETA = ['#2f9bff', '#39d6ff', '#3fffd0', '#56e05a', '#b6f03a', '#ffe14a', '#ffb13d', '#ff7a3d', '#ff4f6e', '#ff6fb0', '#e46fff', '#9b7bff',
   '#6a7dff', '#1d4fbf', '#0f8f7a', '#2f7a2f', '#8a5a2b', '#ffffff', '#d9e6f2', '#9aa9b8', '#56606b', '#22262b', '#ffd6e8', '#d9fff5'];
