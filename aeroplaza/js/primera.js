@@ -82,8 +82,8 @@ export class CuerpoFP {
       if (e === 'camina' || e === 'corre') {
         /* el que va adelante sube y se cierra hacia el medio (entra en cuadro); el de atrás baja y sale */
         const corre = e === 'corre', q = Math.sin(f + (s > 0 ? 0 : Math.PI)), adel = Math.max(0, q);
-        obj.z += q * (corre ? 0.14 : 0.08); obj.x -= s * adel * (corre ? 0.07 : 0.03);
-        obj.y += adel * (corre ? 0.13 : 0.05) - Math.max(0, -q) * 0.05 + Math.abs(Math.cos(f)) * 0.015;
+        obj.z += q * (corre ? 0.1 : 0.07) - adel * (corre ? 0.08 : 0.03); obj.x -= s * adel * (corre ? 0.04 : 0.02);
+        obj.y += adel * (corre ? 0.1 : 0.075) - Math.max(0, -q) * 0.05 + Math.abs(Math.cos(f)) * 0.015;
         rot.x += q * (corre ? 0.7 : 0.35) + (corre ? 0.25 : 0); rot.z -= s * adel * (corre ? 0.35 : 0.12);
       }
       else if (e === 'desliza' && s < 0) { obj.y += Math.sin(t * 30) * 0.004; }   // (la mano de atrás va rozando el piso) else if (e === 'quieto') { obj.y += Math.sin(t * 2.2 + s) * 0.008; rot.x += Math.sin(t * 1.1) * 0.03; }

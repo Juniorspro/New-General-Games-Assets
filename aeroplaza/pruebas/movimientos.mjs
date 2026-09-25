@@ -164,6 +164,32 @@ r = await pag.evaluate(() => {
 });
 prueba('las poses no dan NaN en ningún estilo', !r.suave.nan && !r.lineal.nan && !r.chop.nan, JSON.stringify(r));
 prueba('chop va a saltos (menos poses distintas que suave)', r.chop.distintos < r.suave.distintos * 0.75, `suave ${r.suave.distintos} · lineal ${r.lineal.distintos} · chop ${r.chop.distintos}`);
+/* 9. deslizar cuando uno quiere: mantener C sigue, soltar y volver a apretar desliza de nuevo, y el botón del dedo se suelta */
+await pag.evaluate(() => { window.__A.reino.mundo.solidos.length = 0; window.__P.en(0, 0); });
+await pag.keyboard.down('KeyW'); await pag.keyboard.down('ShiftLeft');
+await pag.evaluate(() => window.__P.pasos(40));
+await pag.keyboard.down('KeyC');
+r = await pag.evaluate(() => { const P = window.__P; return P.pasos(40, () => P.estado()); });
+await pag.keyboard.up('KeyC');
+const largo = r.findIndex((e) => e !== 'desliza');
+prueba('manteniendo C sigue deslizando más de 1 s', r.slice(0, 34).every((e) => e === 'desliza'), `${largo < 0 ? r.length : largo} cuadros deslizando`);
+await pag.evaluate(() => window.__P.pasos(20));
+r = await pag.evaluate(() => window.__P.estado());
+await pulsar('KeyC', 2);
+const otra = await pag.evaluate(() => { const P = window.__P; return P.pasos(4, () => P.estado()); });
+prueba('soltar y volver a apretar C desliza de nuevo', r !== 'desliza' && otra.every((e) => e === 'desliza'), `${r} → ${otra.join()}`);
+await pag.evaluate(() => window.__P.pasos(40));
+const dedoBaja = async (tipo) => pag.evaluate((tipo) => { const b = document.querySelector('#dedos [data-b=baja]'); if (!b) return 'sin botón'; b.dispatchEvent(new PointerEvent(tipo, { pointerType: 'touch', pointerId: 7, bubbles: true, cancelable: true, clientX: 50, clientY: 400 })); return b.classList.contains('apretado'); }, tipo);
+const toques = [];
+for (let i = 0; i < 3; i++) {
+  const ap = await dedoBaja('pointerdown');
+  const S = await pag.evaluate(() => { const P = window.__P; return P.pasos(4, () => P.estado()); });
+  const su = await dedoBaja('pointerup');
+  await pag.evaluate(() => window.__P.pasos(45));
+  toques.push({ ap, su, e: S[S.length - 1], despues: await pag.evaluate(() => window.__P.estado()) });
+}
+prueba('el botón ⤓ del dedo desliza cada vez y se suelta', toques.every((t) => t.ap === true && t.su === false && t.e === 'desliza' && t.despues !== 'desliza'), JSON.stringify(toques));
+await pag.keyboard.up('KeyW'); await pag.keyboard.up('ShiftLeft');
 const e = errores.filter((x) => !x.includes('ERR_FAILED'));
 if (e.length) { mal++; console.log('✗ errores:', [...new Set(e)].join(' | ')); }
 await ctx.close(); await nav.close();
