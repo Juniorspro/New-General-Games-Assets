@@ -210,8 +210,10 @@ export function farol(mundo, x, z, y) {
    prenden de noche) en otra. lugares: [[x, z, y]]. Devuelve el grupo; su luz en userData.luz */
 export function faroles(mundo, lugares) {
   const g = new THREE.Group(), M = modelo('farol', { alto: 3.7 }), k = M.userData.k, arriba = M.userData.bocha, r = M.userData.radio;
-  g.add(instancias('farol', lugares.map(([x, z, y]) => [x, y, z, 1, 0]), { alto: 3.7 }));
-  const luz = new THREE.InstancedMesh(new THREE.SphereGeometry(r * 1.12, 20, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#bff4ff', emissiveIntensity: 0.3, roughness: 0.1, transparent: true, opacity: 0.35, depthWrite: false }), lugares.length);
+  /* alcance (detalle.js): en alta no se corta nada y los 43 faroles de la isla eran 98 mil triángulos
+     desde cualquier lado; más allá de 160 m miden un par de píxeles. El halo sí se ve de lejos */
+  const cuerpo = instancias('farol', lugares.map(([x, z, y]) => [x, y, z, 1, 0]), { alto: 3.7 }); cuerpo.traverse((o) => { if (o.isInstancedMesh) o.userData.alcance = 160; }); g.add(cuerpo);
+  const luz = new THREE.InstancedMesh(new THREE.SphereGeometry(r * 1.12, 14, 10), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#bff4ff', emissiveIntensity: 0.3, roughness: 0.1, transparent: true, opacity: 0.35, depthWrite: false }), lugares.length);
   const T = new THREE.Matrix4();
   lugares.forEach(([x, z, y], i) => { luz.setMatrixAt(i, T.makeTranslation(x + arriba.x, y + arriba.y, z + arriba.z)); mundo.cilindro(x, z, 0.15, y, y + 3.2); });
   luz.computeBoundingSphere(); luz.userData.op0 = 0.35; g.add(luz);
@@ -222,7 +224,9 @@ export function faroles(mundo, lugares) {
 export function bancos(mundo, lugares, ancho = 2.1) {
   const T = tamDe('banco'), k = ancho / Math.max(T.x, T.z), asiento = modelo('banco', { ancho }).userData.asiento;
   for (const [x, z, y, rot] of lugares) mundo.caja(x, z, 1, 0.33, y, y + asiento, rot, { asiento: true });
-  return instancias('banco', lugares.map(([x, z, y, rot]) => [x, y, z, 1, rot]), { alto: T.y * k });
+  const I = instancias('banco', lugares.map(([x, z, y, rot]) => [x, y, z, 1, rot]), { alto: T.y * k });
+  I.traverse((o) => { if (o.isInstancedMesh) o.userData.alcance = 90; });   // (un banco a más de 90 m no se distingue)
+  return I;
 }
 export function banco(mundo, x, z, y, rot) {
   const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rot;

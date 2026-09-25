@@ -28,8 +28,8 @@ export const CALIDADES = {
      refl: cada cuántos segundos se rehace el mapa de reflejos (cielo.js);
      directo: sin la cadena de efectos (se dibuja derecho a la pantalla, sin brillo ni
      posproceso); simple: sin barniz ni tornasol en los materiales (motor.simplificar) */
-  alta: { escala: 1, dprMax: TACTIL ? 1.5 : 2, bloom: true, sombra: 2048, msaa: TACTIL ? 0 : 4, pasto: 1, lejos: Infinity, arbolCerca: Infinity, burbujas: 1, refl: 8, seg: 3, curvas: 1 },
-  media: { escala: 0.85, dprMax: 1.25, bloom: true, sombra: 1024, msaa: 0, pasto: 0.55, lejos: 300, arbolCerca: 45, burbujas: 1, refl: 12, seg: 3, curvas: 1 },
+  alta: { escala: 1, dprMax: TACTIL ? 1.5 : 2, bloom: true, sombra: 2048, sombraCada: TACTIL ? 2 : 1, msaa: TACTIL ? 0 : 4, pasto: 1, lejos: Infinity, arbolCerca: Infinity, burbujas: 1, refl: 8, seg: 3, curvas: 1 },
+  media: { escala: 0.85, dprMax: 1.25, bloom: true, sombra: 1024, sombraCada: 2, msaa: 0, pasto: 0.55, lejos: 300, arbolCerca: 45, burbujas: 1, refl: 12, seg: 3, curvas: 1 },
   baja: { escala: 0.7, dprMax: 1, bloom: false, sombra: 0, msaa: 0, pasto: 0.25, lejos: 170, arbolCerca: 30, burbujas: 0.6, refl: 20, seg: 2, curvas: 0.75 },
   /* (26/09: "quitá sombras, brillos, etc., para todos los celulares") */
   minima: { escala: 0.6, dprMax: 1, bloom: false, sombra: 0, msaa: 0, pasto: 0, lejos: 95, arbolCerca: 18, burbujas: 0.3, refl: 60, seg: 1, curvas: 0.5, directo: true, simple: true },
@@ -261,6 +261,11 @@ export class Motor {
   get usaCadena() { const R = this.retro; return !this.Q.directo || !!(R.pix || R.trama || R.niveles || R.barrido || R.tubo || R.aberracion || R.paleta || R.vhs); }
   dibujar(dt) {
     this.t += dt;
+    /* sombraCada: en el celu las sombras se rehacen un cuadro sí y uno no (la pasada de sombras
+       era cerca del 5 % del cuadro en alta; a 60 cuadros por segundo no se nota el retraso) */
+    const cada = this.Q.sombraCada || 1;
+    this.r.shadowMap.autoUpdate = cada === 1;
+    if (cada > 1) this.r.shadowMap.needsUpdate = ((this._nSombra = (this._nSombra || 0) + 1) % cada) === 0;
     this.pFinal.uniforms.uT.value = this.t;
     if (this.usaCadena) this.cadena.render(dt);
     else { this.r.setRenderTarget(null); this.r.render(this.escena, this.camara); }

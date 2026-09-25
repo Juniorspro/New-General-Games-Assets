@@ -209,7 +209,8 @@ export class Cardumen {
 export class Burbujas {
   constructor(grupo, fuentes, { n = 60, alto = 14, tam = [0.2, 0.7] } = {}) {
     this.fuentes = fuentes; this.alto = alto;
-    this.im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 24, 16), materialBurbuja(), n);
+    /* 16×12 alcanza (miden de 20 a 70 cm): con 24×16 las 90 de la plaza eran 65 mil triángulos */
+    this.im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 16, 12), materialBurbuja(), n);
     this.im.frustumCulled = false; this.im.renderOrder = 3; this.im.userData.pasa = true;   // (se revientan al tocarlas)
     const r = this.r = azar(33);
     this.b = [];

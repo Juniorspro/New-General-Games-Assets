@@ -218,14 +218,20 @@ export function conViento(m, fuerza = 1) {
    pasto tupido donde se mira y nada lejos, donde la textura del suelo alcanza.
    La altura del terreno y dónde puede haber pasto van horneados en una textura,
    porque el shader de vértices no puede llamar a altura(x, z). */
-export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 26, sem = 11 } = {}) {
-  const N = area[2] > 340 ? 512 : 256, datos = new Float32Array(N * N * 4);
-  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-    const x = area[0] + (i + 0.5) / N * area[2], z = area[1] + (j + 0.5) / N * area[2], k = (j * N + i) * 4;
-    datos[k] = altura(x, z); datos[k + 1] = donde(x, z) ? 1 : 0;
+/* desde: el radio donde empieza (la capa de lejos no se dibuja adentro de la de cerca); esc: el
+   tamaño de las matas; mapa: el de otra capa (la altura y dónde hay pasto, que es lo caro de armar) */
+export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 26, sem = 11, desde = 0, esc: escala = 1, mapa: mapaDe = null } = {}) {
+  const N = mapaDe ? mapaDe.image.width : area[2] > 340 ? 512 : 256;
+  let mapa = mapaDe;
+  if (!mapa) {
+    const datos = new Float32Array(N * N * 4);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const x = area[0] + (i + 0.5) / N * area[2], z = area[1] + (j + 0.5) / N * area[2], k = (j * N + i) * 4;
+      datos[k] = altura(x, z); datos[k + 1] = donde(x, z) ? 1 : 0;
+    }
+    mapa = new THREE.DataTexture(datos, N, N, THREE.RGBAFormat, THREE.FloatType);
+    mapa.magFilter = mapa.minFilter = THREE.NearestFilter; mapa.needsUpdate = true;
   }
-  const mapa = new THREE.DataTexture(datos, N, N, THREE.RGBAFormat, THREE.FloatType);
-  mapa.magFilter = mapa.minFilter = THREE.NearestFilter; mapa.needsUpdate = true;
   const base = mataDePasto();
   const g = new THREE.InstancedBufferGeometry();
   g.index = base.index; g.attributes = base.attributes;
@@ -234,13 +240,13 @@ export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 
   g.setAttribute('aInst', new THREE.InstancedBufferAttribute(inst, 4));
   g.instanceCount = n;
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
-  const U = { uMapa: { value: mapa }, uArea: { value: new THREE.Vector3(...area) }, uR: { value: R }, uN: { value: N } };
+  const U = { uMapa: { value: mapa }, uArea: { value: new THREE.Vector3(...area) }, uR: { value: R }, uN: { value: N }, uDesde: { value: desde }, uEsc: { value: escala } };
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, U);
     s.uniforms.uT = UNI.uT; s.uniforms.uJugador = UNI.uJugador; s.uniforms.uViento = UNI.uViento;
     s.vertexShader = s.vertexShader
       .replace('#include <common>', `#include <common>
-        attribute vec4 aInst; uniform sampler2D uMapa; uniform vec3 uArea; uniform float uR, uT, uViento, uN; uniform vec3 uJugador;
+        attribute vec4 aInst; uniform sampler2D uMapa; uniform vec3 uArea; uniform float uR, uT, uViento, uN, uDesde, uEsc; uniform vec3 uJugador;
         /* bilineal a mano: la textura es de flotantes y no todas las placas la filtran */
         vec2 mapa(vec2 p) {
           vec2 q = (p - uArea.xy) / uArea.z * uN - 0.5; vec2 i = floor(q), f = fract(q);
@@ -253,7 +259,7 @@ export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 
           vec2 base = uJugador.xz + mod(aInst.xy - uJugador.xz + uR, 2.0 * uR) - uR;
           vec2 hm = mapa(base);
           float lejos = length(base - uJugador.xz) / uR;
-          float esc = aInst.w * step(0.5, hm.y) * (1.0 - smoothstep(0.7, 1.0, lejos));
+          float esc = aInst.w * uEsc * step(0.5, hm.y) * (1.0 - smoothstep(0.7, 1.0, lejos)) * (uDesde > 0.0 ? smoothstep(uDesde - 2.0, uDesde, lejos * uR) : 1.0);
           float c = cos(aInst.z), s = sin(aInst.z);
           vec3 p = vec3(transformed.x * c - transformed.z * s, transformed.y, transformed.x * s + transformed.z * c) * esc;
           float h = max(p.y, 0.0);
@@ -266,9 +272,20 @@ export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 
           transformed = p + vec3(base.x, hm.x - 0.02, base.y);
         }`);
   };
+  m.customProgramCacheKey = () => 'pasto';
   const malla = new THREE.Mesh(g, m);
-  malla.frustumCulled = false; malla.receiveShadow = true;
+  /* (sinCorte: la caja de la malla es la de una mata en el origen; detalle.js la cortaba de lejos del centro) */
+  malla.frustumCulled = false; malla.receiveShadow = true; malla.userData.mapa = mapa; malla.userData.sinCorte = true;
   return malla;
+}
+/* el pasto en dos capas: cerca (13 m) con la densidad de siempre y lejos (hasta 26 m) con la mitad
+   de matas, un 20 % más grandes. Cerca se ve igual y son un cuarto menos de matas (el pasto era lo
+   que más costaba dibujar: la mitad de pasto ahorraba el 11 % del cuadro). n: las que tendría una
+   sola capa de 26 m */
+export function pastoDoble(altura, donde, { n, area, sem = 11 }) {
+  const g = new THREE.Group(), cerca = pasto(altura, donde, { n: Math.round(n / 4), area, R: 13, sem }); g.userData.sinCorte = true;
+  g.add(cerca, pasto(altura, donde, { n: Math.round(n / 2), area, R: 26, sem: sem + 1, desde: 11, esc: 1.2, mapa: cerca.userData.mapa }));
+  return g;
 }
 
 /* ------------------------------------------------------------------- flores */

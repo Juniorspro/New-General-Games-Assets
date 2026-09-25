@@ -132,9 +132,11 @@ export class VR {
     const aspecto = c.aspect; c.aspect = (w / 2) / h; c.updateProjectionMatrix();
     c.updateMatrixWorld(); this.estereo.aspect = 1; this.estereo.update(c);
     r.setRenderTarget(null); r.setScissorTest(true);
+    /* las sombras, una vez por cuadro y no una por ojo */
+    const au = r.shadowMap.autoUpdate; if (au) { r.shadowMap.autoUpdate = false; r.shadowMap.needsUpdate = true; }
     r.setScissor(0, 0, w / 2, h); r.setViewport(0, 0, w / 2, h); r.render(motor.escena, this.estereo.cameraL);
     r.setScissor(w / 2, 0, w / 2, h); r.setViewport(w / 2, 0, w / 2, h); r.render(motor.escena, this.estereo.cameraR);
-    r.setScissorTest(false); r.setViewport(0, 0, w, h);
+    r.setScissorTest(false); r.setViewport(0, 0, w, h); r.shadowMap.autoUpdate = au;
     c.aspect = aspecto; c.updateProjectionMatrix();
   }
 }

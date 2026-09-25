@@ -5,7 +5,7 @@
    ========================================================================== */
 import * as THREE from 'three';
 import { Mundo, azar, ruido2, suaveEntre } from '../mundo.js';
-import { terreno, agua, pasto, flores, arboles, brilloso, UNI } from '../naturaleza.js';
+import { terreno, agua, pasto, pastoDoble, flores, arboles, brilloso, UNI } from '../naturaleza.js';
 import { Orbes, Mariposas, Burbujas, discoMalla, Chispas, puntoSuave } from '../objetos.js';
 
 const R1 = ruido2(71), R2 = ruido2(33);
@@ -27,7 +27,7 @@ export function crearJardin(ctx) {
   g.add(terreno(A, { tam: 220, seg: 170, color: colorJardin }));
   const estanque = agua(0, A, { rect: [-110, -110, 220], colorPlaya: '#6ff0c8', colorHondo: '#138a8a' }); g.add(estanque);
   const hayPasto = (x, z) => A(x, z) > 1.0;
-  g.add(pasto(A, hayPasto, { n: Math.round(12000 * ctx.calidad.pasto), area: [-110, -110, 220] }));
+  g.add(pastoDoble(A, hayPasto, { n: Math.round(12000 * ctx.calidad.pasto), area: [-110, -110, 220] }));
   g.add(flores(A, hayPasto, { n: 900, area: [-70, -70, 140], colores: ['#ffd1ec', '#ffffff', '#ff9ad8', '#fff27a'] }));
   const r = azar(5);
   const arb = [];

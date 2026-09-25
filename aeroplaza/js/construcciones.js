@@ -636,7 +636,7 @@ function arbol(paleta = ['#4fb52a', '#7fd83a', '#b6f03a'], lejos = false) {
     [0.95, 3.25, 0.8, 0.75], [-0.95, 3.25, -0.8, 0.75], [0, 3.15, 0, 0.95], [0.55, 4.95, -0.4, 0.78], [-0.55, 4.9, 0.4, 0.78], [0.1, 3.5, 1.3, 0.62], [-1.35, 3.7, 0.3, 0.62]];
   /* de lejos: las nueve bolas grandes, de pocas caras (las chicas no se ven) */
   const usar = lejos ? bolas.filter(([, , , r], i) => r >= 0.78 && i !== 9) : bolas;
-  const gs = usar.map(([x, y, z, r], i) => { const g = lejos ? esfera(r * 1.04, 8, 6) : esfera(r, 12, 9); g.translate(x, y, z); return pintar(g, (px, py) => cA.clone().lerp(cB, THREE.MathUtils.clamp((py - 2.9) / 1.6, 0, 1)).lerp(cC, THREE.MathUtils.clamp((py - y) / r, 0, 1) * 0.55 + (i % 3) * 0.04)); });
+  const gs = usar.map(([x, y, z, r], i) => { const g = lejos ? esfera(r * 1.05, 7, 5) : esfera(r, 12, 9); /* (de lejos, 7×5: 504 triángulos por copa en vez de 720; son cientos) */ g.translate(x, y, z); return pintar(g, (px, py) => cA.clone().lerp(cB, THREE.MathUtils.clamp((py - 2.9) / 1.6, 0, 1)).lerp(cC, THREE.MathUtils.clamp((py - y) / r, 0, 1) * 0.55 + (i % 3) * 0.04)); });
   O.pon(mergeGeometries(gs.map((g) => g.toNonIndexed())), 'copaViento');
   return O.cerrar();
 }

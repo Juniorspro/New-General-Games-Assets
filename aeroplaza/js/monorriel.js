@@ -65,8 +65,18 @@ export class Monorriel {
       for (let j = 0; j < C; j++) { const a = i * C + j, b = i * C + (j + 1) % C, c = i2 * C + j, d = i2 * C + (j + 1) % C; idx.push(a, c, b, b, c, d); }
     }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
-    const m = new THREE.Mesh(g, brilloso('#ffffff', { vertexColors: true, roughness: 0.2, borde: 0.3 })); m.castShadow = true; m.receiveShadow = true;
-    this.g.add(m);
+    /* en tramos de ~40 m: la viga de 887 m en una sola malla se dibujaba entera (también en la pasada
+       de sombras, que es de 56 m) aunque se viera un pedazo. Las normales se calculan con la viga
+       entera y después se copian a cada tramo: así no quedan costuras */
+    const matViga = brilloso("#ffffff", { vertexColors: true, roughness: 0.2, borde: 0.3 }), nor = g.attributes.normal.array, CH = Math.max(8, Math.round(40 / this.ds));
+    for (let i0 = 0; i0 < N; i0 += CH) {
+      const R = Math.min(N, i0 + CH) - i0 + 1, p2 = new Float32Array(R * C * 3), n2 = new Float32Array(R * C * 3), c2 = new Float32Array(R * C * 3), id = [];
+      for (let r = 0; r < R; r++) { const o = ((i0 + r) % N) * C * 3; p2.set(pos.subarray(o, o + C * 3), r * C * 3); n2.set(nor.subarray(o, o + C * 3), r * C * 3); c2.set(col.subarray(o, o + C * 3), r * C * 3); }
+      for (let r = 0; r < R - 1; r++) for (let j = 0; j < C; j++) { const a = r * C + j, b = r * C + (j + 1) % C, c = (r + 1) * C + j, d = (r + 1) * C + (j + 1) % C; id.push(a, c, b, b, c, d); }
+      const gt = new THREE.BufferGeometry(); gt.setAttribute('position', new THREE.BufferAttribute(p2, 3)); gt.setAttribute('normal', new THREE.BufferAttribute(n2, 3)); gt.setAttribute('color', new THREE.BufferAttribute(c2, 3)); gt.setIndex(id); gt.computeBoundingSphere();
+      const m = new THREE.Mesh(gt, matViga); m.castShadow = true; m.receiveShadow = true; this.g.add(m);
+    }
+    g.dispose();
     /* los pilares: cada 18 m donde la viga va alta, con capitel. Chocan */
     const pil = [], cap = [], M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S = new THREE.Vector3(), V = new THREE.Vector3();
     for (let i0 = 0; i0 < N; i0 += Math.round(18 / this.ds)) {

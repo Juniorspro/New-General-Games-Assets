@@ -62,7 +62,7 @@ export class Detalle {
       for (let i = 0; i < n; i++) { M.fromArray(mat, i * 16); V.setFromMatrixPosition(M).applyMatrix4(o.matrixWorld); pos.set([V.x, V.y, V.z], i * 3); x0 = Math.min(x0, V.x); x1 = Math.max(x1, V.x); z0 = Math.min(z0, V.z); z1 = Math.max(z1, V.z); }
       /* (si están todas juntas, conviene la pieza entera o nada) */
       if (Math.max(x1 - x0, z1 - z0) < 40) return;
-      this.inst.push({ o, n, pos, mat, col, version: o.instanceMatrix.version, hay: n });
+      this.inst.push({ o, n, pos, mat, col, version: o.instanceMatrix.version, hay: n, alc: o.userData.alcance ?? Infinity });
     });
   }
   /* cada 0,35 s: lim es la distancia de la calidad (Infinity: todo) */
@@ -82,11 +82,14 @@ export class Detalle {
     for (const q of this.inst) {
       const im = q.o;
       /* alguien más le escribe (se mueve sola): se deja como estaba */
-      if (im.instanceMatrix.version !== q.version) { im.count = q.n; this.inst.splice(this.inst.indexOf(q), 1); continue; }
-      let k = 0; const l2 = (lim + 2) * (lim + 2), A = im.instanceMatrix.array, CA = im.instanceColor?.array;
+      /* (y la cantidad la maneja quien le escribe: las flores tienen su propio corte a 60 m; antes se les ponía la cantidad entera) */
+      if (im.instanceMatrix.version !== q.version) { this.inst.splice(this.inst.indexOf(q), 1); continue; }
+      /* (cada uno puede tener su alcance: las flores no se ven más allá de 70 m aunque la calidad no corte nada) */
+      const L = Math.min(lim, q.alc);
+      let k = 0; const l2 = (L + 2) * (L + 2), A = im.instanceMatrix.array, CA = im.instanceColor?.array;
       for (let i = 0; i < q.n; i++) {
         const dx = q.pos[i * 3] - p.x, dz = q.pos[i * 3 + 2] - p.z;
-        if (Number.isFinite(lim) && dx * dx + dz * dz > l2) continue;
+        if (Number.isFinite(L) && dx * dx + dz * dz > l2) continue;
         if (k !== i || q.hay !== q.n) { A.set(q.mat.subarray(i * 16, i * 16 + 16), k * 16); if (CA && q.col) CA.set(q.col.subarray(i * 3, i * 3 + 3), k * 3); }
         k++;
       }

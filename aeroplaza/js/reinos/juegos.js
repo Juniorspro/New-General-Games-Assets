@@ -24,7 +24,7 @@
    ========================================================================== */
 import * as THREE from 'three';
 import { Mundo, azar, ruido2, suaveEntre } from '../mundo.js';
-import { terreno, agua, pasto, flores, arboles, palmeras, brilloso, materialVidrio, materialBurbuja, UNI } from '../naturaleza.js';
+import { terreno, agua, pasto, pastoDoble, flores, arboles, palmeras, brilloso, materialVidrio, materialBurbuja, UNI } from '../naturaleza.js';
 import { Orbes, Burbujas, discoMalla, Chispas } from '../objetos.js';
 import { letrero, fundir } from '../edificios.js';
 import { Mesas } from '../mesas.js';
@@ -310,7 +310,7 @@ export function crearJuegos(ctx) {
   g.add(palmeras(A, pal));
   for (const [x, z, e] of [...arb, ...pal]) mundo.cilindro(x, z, 0.35 * e, PISO - 1, PISO + 2.5 * e);
   const hayPasto = (x, z) => A(x, z) > 0.8 && libre(x, z) && Math.hypot(x, z) > 16;
-  g.add(pasto(A, hayPasto, { n: Math.round(14000 * ctx.calidad.pasto), area: [-110, -110, 220] }));
+  g.add(pastoDoble(A, hayPasto, { n: Math.round(14000 * ctx.calidad.pasto), area: [-110, -110, 220] }));
   g.add(flores(A, hayPasto, { n: 700, area: [-100, -100, 200] }));
   const burbujas = new Burbujas(g, [[0, PISO, 0, 12], [dx0, PISO, dz0, 5], [tx0, PISO, tz0, 7]], { n: 70, alto: 20, tam: [0.2, 0.9] });
   const orbLug = [];
