@@ -141,3 +141,4 @@ lo de esta vuelta. Rama `claude/fijate-iszyer`.
   y con 2 golpes; revisa la compuerta, la caída, lo roto, el fin por tiempo y
   la salida.
 - `pruebas/movimientos.mjs`: 19 bien.
+- `pruebas/avisos.mjs` ahora pide **un aviso a la vez**: el último, y el igual suma ×2. Antes eran hasta 3. Da 26 bien.

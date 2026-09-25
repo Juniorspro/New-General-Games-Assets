@@ -1,7 +1,8 @@
 // LOS AVISOS Y LO QUE TAPA LA PANTALLA: los avisos estilo Windows 7 van arriba
 // de todo, en el hueco entre los dos grupos de botones (sin tapar ninguno), en
 // compu, en el celu acostado y en el celu parado; la zona nueva es un aviso (no
-// un cartel en el medio); los iguales se juntan (×2); hay tres como mucho; se
+// un cartel en el medio); los iguales se juntan (×2); hay uno solo a la vez (el
+// último: pasar de zona en zona no apila dos o tres, lo pidió el 25/09); se
 // van solos y con la cruz; suena la campanita (y no dos juntas). Las misiones
 // solo se ven tocando 📜. En el parkour se esconde todo lo que no sirve para
 // correr y no aparecen avisos. El tutorial es una pista chica.
@@ -22,21 +23,23 @@ for (const [ancho, alto, movil, nombre] of [[960, 540, false, 'compu'], [844, 39
   let r = await pag.evaluate((PISA) => {
     const pisa = eval(PISA), A = window.__A, U = A.UI;
     U.lugar('Ciudad de Vidrio', '🏙️'); U.avisar('Nimbo · 1/3'); U.avisar('¡Misión nueva!', 'azul');
+    const ultimo = [...document.querySelectorAll('.noti')].map((n) => n.textContent).join('|');
+    U.lugar('Bahía del Faro', '⚓');
     const notis = [...document.querySelectorAll('.noti')], R = notis.map((n) => n.getBoundingClientRect());
     const botones = [...document.querySelectorAll('.arriba-der > *, .arriba-izq > *')].map((b) => b.getBoundingClientRect());
     const tapa = R.some((a) => botones.some((b) => pisa(a, b)));
     const zona = document.querySelector('.noti.zona');
     const c = document.querySelector('.notis');   /* medidas en el juego (offset: el celu parado gira todo) */
-    return { n: notis.length, tapa, arriba: c.offsetTop, zona: zona ? zona.textContent : '', cartelViejo: !!document.querySelector('.lugar, .avisito'), alto: Math.max(...notis.map((q) => q.offsetHeight)), ancho: Math.max(...notis.map((q) => q.offsetWidth)) };
+    return { n: notis.length, ultimo: /Misión nueva/.test(ultimo) && !/Nimbo|Ciudad/.test(ultimo), tapa, arriba: c.offsetTop, zona: zona ? zona.textContent : '', cartelViejo: !!document.querySelector('.lugar, .avisito'), alto: Math.max(...notis.map((q) => q.offsetHeight)), ancho: Math.max(...notis.map((q) => q.offsetWidth)) };
   }, PISA);
-  prueba(`${nombre}: los avisos no tapan ningún botón`, r.n === 3 && !r.tapa, JSON.stringify(r));
+  prueba(`${nombre}: tres avisos de golpe dejan uno solo (el último), sin tapar botones`, r.n === 1 && r.ultimo && !r.tapa, JSON.stringify(r));
   prueba(`${nombre}: van arriba de todo y chicos`, r.alto < 64 && r.ancho <= 330 && r.arriba < 70, `arriba ${Math.round(r.arriba)} · ${Math.round(r.ancho)}×${Math.round(r.alto)}`);
-  prueba(`${nombre}: la zona nueva es un aviso con su título (no el cartel del medio)`, /Nueva zona/.test(r.zona) && /Ciudad de Vidrio/.test(r.zona) && !r.cartelViejo, r.zona);
+  prueba(`${nombre}: la zona nueva es un aviso con su título (no el cartel del medio)`, /Nueva zona/.test(r.zona) && /Bahía del Faro/.test(r.zona) && !r.cartelViejo, r.zona);
   await pag.screenshot({ path: path.join(SAL, `avisos-${nombre.replace(' ', '-')}.png`) });
   if (nombre === 'compu') {
     r = await pag.evaluate(async () => {
       const U = window.__A.UI, S = {};
-      U.avisar('Nimbo · 1/3'); S.juntos = document.querySelectorAll('.noti').length; S.x2 = [...document.querySelectorAll('.noti-n')].map((e) => e.textContent).join('');
+      U.avisar('Nimbo · 1/3'); U.avisar('Nimbo · 1/3'); S.juntos = document.querySelectorAll('.noti').length; S.x2 = [...document.querySelectorAll('.noti-n')].map((e) => e.textContent).join('');
       for (let i = 0; i < 5; i++) U.avisar('aviso ' + i); S.maximo = document.querySelectorAll('.noti').length;
       document.querySelector('.noti .noti-x').click(); await new Promise((ok) => setTimeout(ok, 400)); S.cerrado = document.querySelectorAll('.noti').length;
       await new Promise((ok) => setTimeout(ok, 7000)); S.solos = document.querySelectorAll('.noti').length;
@@ -45,9 +48,9 @@ for (const [ancho, alto, movil, nombre] of [[960, 540, false, 'compu'], [844, 39
       S.suena = window.__A.timbre('zona'); S.otra = window.__A.timbre('info');
       return S;
     });
-    prueba('uno igual a uno que está se junta (×2)', r.juntos === 3 && r.x2 === '×2', JSON.stringify(r));
-    prueba('como mucho tres a la vez', r.maximo === 3);
-    prueba('la cruz lo cierra', r.cerrado === 2);
+    prueba('uno igual al que está se junta (×2)', r.juntos === 1 && r.x2 === '×2', JSON.stringify(r));
+    prueba('uno solo a la vez', r.maximo === 1);
+    prueba('la cruz lo cierra', r.cerrado === 0);
     prueba('se van solos', r.solos === 0);
     prueba('suena la campanita y no dos juntas', r.suena === true && r.otra === false);
     /* las misiones: solo con el botón */
