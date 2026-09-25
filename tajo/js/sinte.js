@@ -87,7 +87,7 @@ export class Sinte {
 
     // Reverb compartida.
     this.rev = c.createConvolver();
-    this.rev.buffer = impulso(c, 2.6, 2.8);
+    this.rev.buffer = impulso(c, 2.0, 2.6);
     this.envioRev = c.createGain(); this.envioRev.gain.value = 1;
     this.revVuelta = c.createGain(); this.revVuelta.gain.value = 0.32;
     this.envioRev.connect(this.rev); this.rev.connect(this.revVuelta); this.revVuelta.connect(this.salida);
@@ -141,7 +141,7 @@ export class Sinte {
   }
 
   /** El agache del bombeo: se hunde con el bombo y vuelve en una negra. */
-  bombear(t, cuanto = 0.55) {
+  bombear(t, cuanto = 0.38) {
     const g = this.bombeoGain;
     g.setTargetAtTime(1 - cuanto, t, 0.004);
     g.setTargetAtTime(1, t + 0.03, 0.11);
@@ -149,20 +149,24 @@ export class Sinte {
 
   // ── batería ──
   bombo(t, v = 1, bombeo = true) {
+    // POR QUÉ TANTO GOLPE. En un juego de ritmo el bombo ES el pulso: si el
+    // bajo o el bombeo tienen más ataque que él, el oído (y el detector de
+    // "tu canción", medido) se va al contratiempo. El barrido de tono es
+    // rápido y el chasquido del parche es duro a propósito.
     const c = this.ctx;
     const o = c.createOscillator(); o.type = "sine";
-    o.frequency.setValueAtTime(165, t);
-    o.frequency.exponentialRampToValueAtTime(58, t + 0.07);
-    o.frequency.exponentialRampToValueAtTime(44, t + 0.32);
+    o.frequency.setValueAtTime(230, t);
+    o.frequency.exponentialRampToValueAtTime(62, t + 0.045);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.3);
     const g = this._gain(0);
-    this._env(g, t, 0.002, 1.05 * v, 0.40);
+    this._env(g, t, 0.0015, 1.35 * v, 0.38);
     const sat = c.createWaveShaper(); sat.curve = this.curvaSuave;
     o.connect(g); g.connect(sat); sat.connect(this.busBateria);
-    o.start(t); o.stop(t + 0.46);
+    o.start(t); o.stop(t + 0.44);
     // El "click" del parche: sin esto el bombo no se oye en un parlante chico.
-    const gc = this._gain(0); this._env(gc, t, 0.001, 0.32 * v, 0.012);
-    const hp = this._filtro("highpass", 2400); hp.connect(gc); gc.connect(this.busBateria);
-    this._ruido(t, 0.02, hp);
+    const gc = this._gain(0); this._env(gc, t, 0.0008, 0.55 * v, 0.016);
+    const hp = this._filtro("highpass", 1800); hp.connect(gc); gc.connect(this.busBateria);
+    this._ruido(t, 0.025, hp);
     if (bombeo) this.bombear(t);
   }
 
@@ -255,7 +259,7 @@ export class Sinte {
     lp.frequency.exponentialRampToValueAtTime(420, t + 0.14);
     const sat = c.createWaveShaper(); sat.curve = this.curvaSuave;
     lp.connect(sat); sat.connect(g); g.connect(this.busBombeo);
-    const oscs = [["sawtooth", 1, 0.55], ["square", 0.5, 0.45], ["sawtooth", 1.004, 0.3]];
+    const oscs = [["sawtooth", 1, 0.7], ["square", 0.5, 0.45]];
     for (const [tipo, k, a] of oscs) {
       const o = c.createOscillator(); o.type = tipo;
       o.frequency.setValueAtTime(f * k, t);
@@ -263,6 +267,59 @@ export class Sinte {
       const ga = this._gain(a); o.connect(ga); ga.connect(lp);
       o.start(t); o.stop(fin + 0.06);
     }
+  }
+
+  // ── bajo 808: una senoidal larga que se desliza (reggaetón, trap) ──
+  bajo808(t, m, dur, v = 1, desliza = 0) {
+    const c = this.ctx, f = mtof(m);
+    const o = c.createOscillator(); o.type = "sine";
+    o.frequency.setValueAtTime(f * 1.02, t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.03);
+    const fin = t + Math.max(0.08, dur);
+    if (desliza) o.frequency.exponentialRampToValueAtTime(mtof(m + desliza), fin);
+    const g = this._gain(0);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.19 * v, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.115 * v, t + Math.min(0.5, dur * 0.8));
+    g.gain.setValueAtTime(0.115 * v, Math.max(t + 0.01, fin - 0.03));
+    g.gain.exponentialRampToValueAtTime(0.0001, fin + 0.05);
+    // La saturación le da armónicos: sin eso un 808 no se oye en un teléfono.
+    const sat = c.createWaveShaper(); sat.curve = this.curvaFuerte;
+    const pre = this._gain(0.8);
+    o.connect(pre); pre.connect(sat); sat.connect(g); g.connect(this.busBombeo);
+    o.start(t); o.stop(fin + 0.08);
+  }
+
+  // ── pluck: el arpegio del house (sierra con filtro que cierra rápido) ──
+  pluck(t, notas, v = 1, pan = 0) {
+    const c = this.ctx;
+    const lp = this._filtro("lowpass", 800, 3);
+    lp.frequency.setValueAtTime(4200 * (0.6 + 0.4 * v), t);
+    lp.frequency.exponentialRampToValueAtTime(420, t + 0.18);
+    const g = this._gain(0); this._env(g, t, 0.003, 0.2 * v, 0.28);
+    lp.connect(g);
+    const p = this._paneo(pan, this.busBombeo); g.connect(p);
+    const e = this._gain(0.25); g.connect(e); e.connect(this.envioEco);
+    const r = this._gain(0.3); g.connect(r); r.connect(this.envioRev);
+    for (const m of notas) {
+      for (const d of [-9, 9]) {
+        const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = mtof(m); o.detune.value = d;
+        o.connect(lp); o.start(t); o.stop(t + 0.34);
+      }
+    }
+  }
+
+  // ── el "tick" del reggaetón: un golpe corto y seco ──
+  tick(t, v = 1) {
+    const bp = this._filtro("bandpass", 2600, 2.2);
+    const g = this._gain(0); this._env(g, t, 0.001, 6.0 * v, 0.07);
+    bp.connect(g); const p = this._paneo(0.1, this.busBateria); g.connect(p);
+    const r = this._gain(0.18); g.connect(r); r.connect(this.envioRev);
+    this._ruido(t, 0.09, bp);
+    const o = this.ctx.createOscillator(); o.type = "triangle";
+    o.frequency.setValueAtTime(900, t); o.frequency.exponentialRampToValueAtTime(420, t + 0.03);
+    const go = this._gain(0); this._env(go, t, 0.001, 1.1 * v, 0.04);
+    o.connect(go); go.connect(this.busBateria); o.start(t); o.stop(t + 0.06);
   }
 
   // ── guitarra funk (rasguido corto y apagado) ──
@@ -307,12 +364,12 @@ export class Sinte {
     const r = this._gain(0.22); g.connect(r); r.connect(this.envioRev);
     const e = this._gain(0.12); g.connect(e); e.connect(this.envioEco);
     for (const m of notas) {
-      for (const d of [-8, 0, 8]) {
+      for (const d of [-7, 7]) {
         const o = c.createOscillator(); o.type = "sawtooth";
         o.frequency.value = mtof(m); o.detune.value = d;
         // Una caída de afinación al principio: el "ataque" del labio.
         o.detune.setValueAtTime(d - 40, t); o.detune.linearRampToValueAtTime(d, t + 0.05);
-        const ga = this._gain(0.33); o.connect(ga); ga.connect(lp);
+        const ga = this._gain(0.45); o.connect(ga); ga.connect(lp);
         o.start(t); o.stop(fin + 0.15);
       }
     }

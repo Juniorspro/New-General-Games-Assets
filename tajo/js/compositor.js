@@ -90,6 +90,16 @@ export const BATERIAS = {
   mitad: { bombo: "x.........x.....", caja: "........X.......", hat: "x...x...x...x..." },
   mitadFin: { bombo: "x.........x.....", caja: "........X...", tambor: "............xxxx" },
   final: { bombo: "X...............", platillo: "X..............." },
+  // Reggaetón: el dembow. Bombo en cada tiempo y el "tick" en el tresillo.
+  dembow: { bombo: "x...x...x...x...", tick: "...x..x....x..x.", hat: "x.x.x.x.x.x.x.x." },
+  dembowB: { bombo: "x...x...x...x...", tick: "...x..x....x..x.", hat: "x.x.x.x.x.xxx.x.", palmas: "............X..." },
+  dembowSuave: { bombo: "x.......x.......", tick: "...x..x....x..x." },
+  // House: cuatro en el piso, palmas en el 2 y el 4, abierto en el "y".
+  house: { bombo: "X...x...X...x...", palmas: "....X.......X...", abierto: "..o...o...o...o.", hat: "x.xgx.xgx.xgx.xg" },
+  houseB: { bombo: "X...x...X...x...", palmas: "....X.......X...", abierto: "..o...o...o...o.", hat: "x.xgx.xgx.xgx.xg", caja: "..............gg" },
+  subeHouse: { bombo: "x...x...x...x...", caja: "x.x.x.x.x.x.x.x." },
+  redobleHouse: { bombo: "x...x...x...x...", caja: "xxxxxxxxXXXXXXXX" },
+  quieto: { hat: "x...x...x...x..." },
 };
 
 // Bajo: [paso, intervalo desde la raíz, duración en pasos, fuerza].
@@ -102,6 +112,18 @@ export const BAJOS = {
     [12, 0, 2, 0.9], [14, 12, 1, 0.8], [15, 10, 1, 0.7]],
   largo: [[0, 0, 15, 0.8]],
   pulso: [[0, 0, 3, 1], [8, 0, 3, 0.8]],
+  // El bajo del dembow: tres más tres más dos (el tresillo).
+  tresillo: [[0, 0, 3, 1], [3, 0, 3, 0.8], [6, 0, 2, 0.75], [8, 0, 3, 1], [11, 0, 3, 0.8], [14, 0, 2, 0.75]],
+  // House: en el contratiempo, rodando.
+  rodante: [[2, 0, 2, 1], [6, 0, 2, 1], [10, 0, 2, 1], [14, 0, 2, 1]],
+  pisada: [[0, 0, 4, 1], [4, 0, 4, 0.9], [8, 0, 4, 1], [12, 0, 4, 0.9]],
+};
+
+// Pluck: X el acorde entero, un número = esa nota del acorde (arpegio).
+export const PLUCKS = {
+  arpegio: "0.1.2.3.2.1.0.1.",
+  offbeat: "..X...X...X...X.",
+  drop: "X..X..X...X..X..",
 };
 
 // Guitarra funk: X rasguido del acorde, m rasguido mudo.
@@ -180,6 +202,7 @@ export function componer(def) {
             case "abierto": sonar(t, "hat", rv * vol, true); pista(t, "hat", rv * 0.35); break;
             case "platillo": sonar(t, "platillo", rv * vol); pista(t, "platillo", 1.3); break;
             case "tambor": sonar(t, "tambor", rv * vol, (p % 4) - 1.5); pista(t, "tambor", rv * 0.8); break;
+            case "tick": sonar(t, "tick", rv * vol); pista(t, "caja", rv * 0.9); break;
           }
         }
       }
@@ -187,12 +210,12 @@ export function componer(def) {
       if (sec.platillos && k % 4 === 0) { sonar(tDe(c), "platillo", 0.85); pista(tDe(c), "platillo", 1.2); }
 
       // Bajo.
-      const raizBajo = 28 + ((ac.raiz - 4 + 12) % 12);   // de E1 (28) a D#2
+      const raizBajo = 28 + ((ac.raiz - 4 + 12) % 12) + 12 * (sec.octavaBajo || 0);   // de E1 (28) a D#2
       const bajo = BAJOS[sec.bajo];
       if (bajo) {
         for (const [p, iv, d, v] of bajo) {
           const m = raizBajo + 12 + iv;       // una octava arriba: E2..
-          sonar(tDe(c, p), "bajo", m, d * paso * 0.92, v * (sec.volBajo ?? 1));
+          sonar(tDe(c, p), sec.instBajo || "bajo", m, d * paso * 0.92, v * (sec.volBajo ?? 1));
           pista(tDe(c, p), "bajo", v * 0.4, m);
         }
       }
@@ -205,6 +228,17 @@ export function componer(def) {
           const t = tDe(c, p);
           if (patron[p] === "X") { sonar(t, "guitarra", voces, 0.9, p % 2 ? 0.35 : 0.25, 0.09); }
           else if (patron[p] === "m") sonar(t, "rasguidoMudo", 0.8, 0.3);
+        }
+      }
+      // Pluck: el acorde en arpegio o en golpes, según el patrón.
+      if (sec.pluck) {
+        const voces = voicear(ac, 64, 81, null, 4);
+        const patron = PLUCKS[sec.pluck];
+        for (let p = 0; p < 16; p++) {
+          const ch = patron[p];
+          if (ch === ".") continue;
+          const notas = ch === "X" ? voces : [voces[(Number(ch) || 0) % voces.length]];
+          sonar(tDe(c, p), "pluck", notas, ch === "X" ? 0.9 : 0.7, (p % 2 ? 0.3 : -0.3));
         }
       }
       // Piano eléctrico: el acorde en el uno y un toque sincopado.
@@ -383,7 +417,7 @@ export function programarLuces(sec, compas, tDe, audio, luz, giros, t0, fin, pas
           luz(t, G.PISTA, MODO.DESVANECER, S, 0.5);
         }
         break;
-      case "caja": case "palmas": {
+      case "caja": case "palmas": case "tick": {
         const lado = Math.round((t - t0) / (paso * 8)) % 2 ? G.ALA_IZQ : G.ALA_DER;
         if (tipo === "coro" || tipo === "verso") luz(t, lado, MODO.DESTELLO, tipo === "coro" ? B : 3);
         if (tipo === "coro") luz(t, G.VERTICAL, MODO.DESTELLO, colorCompas === P ? S : P);

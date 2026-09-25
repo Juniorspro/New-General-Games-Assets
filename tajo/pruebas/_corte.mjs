@@ -2,16 +2,17 @@
 // antes de un bloque, dibuja un trazo que lo cruza y saca capturas a los
 // 0, 40, 120 y 300 ms.
 import { chromium } from "playwright";
-const [carpeta, dif = "experto", tNota = "55"] = process.argv.slice(2);
+const [carpeta, dif = "experto", tNota = "55", cancion = "0"] = process.argv.slice(2);
 const nav = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium",
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--autoplay-policy=no-user-gesture-required"] });
 const pg = await nav.newPage({ viewport: { width: 412, height: 892 }, deviceScaleFactor: 1 });
 pg.on("pageerror", e => console.log("PAGEERROR:", e.message));
 await pg.goto("http://127.0.0.1:8811/index.html?fijo");
 await pg.waitForFunction(() => window.__TAJO && window.__TAJO.listo === true);
+await pg.evaluate((c) => { window.__cancion = c; }, cancion);
 const info = await pg.evaluate(async ([d, tN]) => {
   const T = window.__TAJO, J = T.juego;
-  T.jugar(0, d, { bot: false, reloj: 0 });
+  T.jugar(Number(window.__cancion || 0), d, { bot: false, reloj: 0 });
   J.puntaje.sinPerder = true;
   T.congelar(true);
   const n = J.notas.find(n => n.t > tN);

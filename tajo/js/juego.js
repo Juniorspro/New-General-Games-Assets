@@ -89,6 +89,7 @@ export class Juego {
     this.ventDespues = Math.max(0.12, 1.4 / njs);
     this.particulas.vaciar();
     this.letra.cargar(cancion.letra);
+    this.luces.usarPaleta(cancion.paleta || "dragon");
     this.luces.cargar(cancion.luces || [], cancion.giros || []);
     this.tPrevio = -1;
     this.estadisticas = null;

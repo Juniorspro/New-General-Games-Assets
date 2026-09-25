@@ -19,7 +19,7 @@ import { Hud } from "./hud.js";
 import { Juego } from "./juego.js";
 import { componer } from "./compositor.js";
 import { CANCIONES } from "./canciones.js";
-import { generarMapa, DIFICULTADES } from "./mapa.js";
+import { generarMapa, validarMapa, DIFICULTADES } from "./mapa.js";
 import * as guardado from "./guardado.js";
 import { analizarArchivo } from "./auto.js";
 
@@ -118,6 +118,7 @@ $("#btn-opciones").addEventListener("click", () => { tocarBoton(); cargarOpcione
 $("#btn-como").addEventListener("click", () => { tocarBoton(); mostrar("p-como"); });
 
 // ── canciones ──
+const ACENTOS = { dragon: "#9b6bff", fuego: "#ff5a6e", hielo: "#3fd8ff" };
 function fmtTiempo(s) { const m = Math.floor(s / 60); return `${m}:${String(Math.round(s % 60)).padStart(2, "0")}`; }
 
 function armarLista() {
@@ -126,6 +127,7 @@ function armarLista() {
   canciones.forEach((c, i) => {
     const b = document.createElement("button");
     b.className = "cancion";
+    b.style.setProperty("--acento", ACENTOS[c.paleta] || "#9b6bff");
     b.setAttribute("aria-pressed", String(i === indiceCancion));
     const r = guardado.record(c.id, dificultad);
     b.innerHTML = `<span class="nom"></span><span class="dat"></span><span class="rec"></span>`;
@@ -346,18 +348,21 @@ function unCuadro(dt, ahora, dibujar = true) {
 
 // ─────────────────────────── sondas para las pruebas ───────────────────────────
 window.__TAJO = {
-  motor, juego, luces, reproductor, entrada, canciones, generarMapa, opciones: () => opciones,
+  motor, juego, luces, reproductor, entrada, canciones, generarMapa, validarMapa, opciones: () => opciones,
   modo: () => modo,
   /** Arranca una partida sin menús (para las pruebas). */
-  jugar(indice = 0, dif = "normal", { bot = true, reloj = null } = {}) {
+  jugar(indice = 0, dif = "normal", { bot = true, reloj = null, cancion = null } = {}) {
     pararDemo();
     dificultad = dif;
-    const c = canciones[indice];
+    const c = cancion || canciones[indice];
     ultimaPartida = c;
-    const mapa = generarMapa(c, dif);
+    const mapa = c.mapaPropio ? c.mapaPropio(dif) : generarMapa(c, dif);
     juego.bot = bot;
     juego.relojManual = reloj;
-    juego.cargar(c, mapa, { sinPerder: false, libre: false });
+    // Arrancar con el reloj adelantado es arrancar a mitad de canción: lo
+    // anterior se da por jugado (si no, todo cuenta como perdido y se pierde
+    // al primer cuadro).
+    juego.cargar(c, mapa, { sinPerder: false, libre: false }, reloj || 0);
     hud.reiniciar(); hud.mostrar(true); mostrar("");
     modo = "juego";
     juego.empezar(0);
@@ -369,6 +374,7 @@ window.__TAJO = {
       malos: p.malos, energia: p.energia, total: juego.notas.length, stats: juego.estadisticas } : { estado: juego.estado };
   },
   congelar(v) { congelado = v; },
+  cancionTuya: () => cancionTuya,
   paso(dt, ahora) { unCuadro(dt, ahora); },
   /** Juega `seg` segundos de canción en tiempo simulado, sin dibujar: la
    *  lógica entera (bot, cortes, puntaje) a toda velocidad. */

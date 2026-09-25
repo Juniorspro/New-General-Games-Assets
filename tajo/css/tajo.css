@@ -62,7 +62,9 @@ button:focus-visible, .archivo:focus-within { outline: 2px solid var(--cian); ou
 .archivo { display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; margin-top: 8px; }
 .archivo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
-.barra { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.barra { display: flex; align-items: center; gap: 12px; margin: 0 auto 12px; width: 100%; max-width: 440px; padding: 6px;
+  background: rgba(8, 4, 20, 0.62); border: 1px solid rgba(170, 130, 255, 0.18); border-radius: 16px;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .barra h2 { margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 0.06em; }
 
 /* ── lista de canciones ── */
@@ -72,10 +74,11 @@ button:focus-visible, .archivo:focus-within { outline: 2px solid var(--cian); ou
 .cancion .nom { font-size: 18px; }
 .cancion .dat { grid-column: 1; font-size: 13px; color: var(--tenue); font-weight: 600; }
 .cancion .rec { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-size: 22px; color: var(--dorado); }
-.cancion[aria-pressed="true"] { border-color: var(--dorado); box-shadow: 0 0 20px rgba(242, 207, 107, 0.35); }
+.cancion { border-left: 5px solid var(--acento, var(--violeta)); }
+.cancion[aria-pressed="true"] { border-color: var(--dorado); border-left-color: var(--acento, var(--violeta)); box-shadow: 0 0 20px rgba(242, 207, 107, 0.35); }
 .pie-panel { width: 100%; max-width: 440px; margin: 12px auto 0; }
-.difs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-.difs button { flex: 1 1 60px; min-height: 44px; font-size: 13px; padding: 6px 4px; }
+.difs { display: flex; gap: 5px; justify-content: center; }
+.difs button { flex: 1 1 0; min-width: 0; min-height: 46px; font-size: 12px; padding: 6px 2px; letter-spacing: 0; }
 .difs button[aria-checked="true"] { background: var(--dorado); color: #1b1206; border-color: #fff4c9; box-shadow: 0 0 14px rgba(242, 207, 107, 0.7); }
 .record { text-align: center; color: var(--tenue); font-size: 14px; margin: 10px 0 4px; min-height: 20px; }
 
@@ -147,5 +150,26 @@ button:focus-visible, .archivo:focus-within { outline: 2px solid var(--cian); ou
 @keyframes flota { 0% { opacity: 0; transform: translate(-50%, -30%) scale(0.7); } 15% { opacity: 1; transform: translate(-50%, -60%) scale(1.08); }
   100% { opacity: 0; transform: translate(-50%, -190%) scale(0.95); } }
 
+/* Acostado (360-460 px de alto): todo tiene que entrar sin desplazar. */
+@media (max-height: 460px) {
+  .pantalla { padding-top: calc(6px + var(--seguro-arriba)); padding-bottom: calc(6px + var(--seguro-abajo)); }
+  .panel { padding: 12px; }
+  .grande { min-height: 44px; font-size: 15px; padding: 8px 14px; }
+  .botones { gap: 6px; margin-top: 8px; }
+  .final .botones { flex-direction: row; }
+  .rango-grande { font-size: 60px; }
+  .numeros { grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0; }
+  .numeros b { font-size: 17px; }
+  .final .bajada { margin: 4px 0; }
+  .logo { font-size: 56px; }
+  .portada .arriba { margin-top: 0; }
+}
+@media (max-height: 460px) and (orientation: landscape) {
+  #p-canciones { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; gap: 0 12px; align-content: start; }
+  #p-canciones .barra { grid-column: 1 / -1; max-width: none; }
+  #p-canciones .lista, #p-canciones .pie-panel { margin: 0; max-width: none; }
+  #p-canciones .pie-panel { align-self: start; }
+  .cancion { min-height: 52px; padding: 8px 12px; }
+}
 @media (prefers-reduced-motion: reduce) { .logo { animation: none; } .flota { animation-duration: 0.5s; } }
 @media (min-aspect-ratio: 1/1) { .portada .abajo { max-width: 360px; } .logo { font-size: clamp(56px, 12vh, 110px); } }

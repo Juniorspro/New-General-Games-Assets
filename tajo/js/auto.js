@@ -21,7 +21,9 @@ import { programarLuces } from "./compositor.js";
 import { generarMapa } from "./mapa.js";
 
 const SR = 11025;
-const N = 1024, SALTO = 128;
+// Perillas para las pruebas (pruebas/_variantes.mjs): en el juego no se tocan.
+const OPC = () => globalThis.__autoOpc || {};
+const N = 512, SALTO = 128;
 
 function fft(re, im) {
   const n = re.length;
@@ -58,7 +60,7 @@ function decodificar(ctx, datos) {
 /** Envolvente de ataques en tres bandas, una muestra cada SALTO/SR s. */
 async function flujo(mono, progreso, sr = SR) {
   const cuadros = Math.max(1, Math.floor((mono.length - N) / SALTO));
-  const bajo = new Float32Array(cuadros), medio = new Float32Array(cuadros), alto = new Float32Array(cuadros), energia = new Float32Array(cuadros);
+  const bajo = new Float32Array(cuadros), medio = new Float32Array(cuadros), alto = new Float32Array(cuadros), todo = new Float32Array(cuadros), energia = new Float32Array(cuadros);
   const ventana = new Float32Array(N);
   for (let i = 0; i < N; i++) ventana[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
   const re = new Float32Array(N), im = new Float32Array(N);
@@ -71,18 +73,18 @@ async function flujo(mono, progreso, sr = SR) {
     for (let i = 0; i < N; i++) { const x = mono[o + i]; re[i] = x * ventana[i]; im[i] = 0; e += x * x; }
     energia[c] = Math.sqrt(e / N);
     fft(re, im);
-    let fb = 0, fm = 0, fa = 0;
+    let fb = 0, fm = 0, fa = 0, ft = 0;
     for (let k = 1; k < N / 2; k++) {
       const m = Math.log1p(100 * Math.hypot(re[k], im[k]));
       actual[k] = m;
       const d = m - previo[k];
-      if (d > 0) { if (k < b1) fb += d; else if (k < b2) fm += d; else if (k < b3) fa += d; }
+      if (d > 0) { ft += d; if (k < b1) fb += d; else if (k < b2) fm += d; else if (k < b3) fa += d; }
     }
-    bajo[c] = fb; medio[c] = fm; alto[c] = fa;
+    bajo[c] = fb; medio[c] = fm; alto[c] = fa; todo[c] = ft;
     const t = previo; previo = actual; actual = t;
     if (c % 2000 === 0) { progreso && progreso(`Escuchando… ${Math.round(c / cuadros * 100)}%`); await esperar(); }
   }
-  return { bajo, medio, alto, energia, cuadros, dt: SALTO / sr };
+  return { bajo, medio, alto, todo, energia, cuadros, dt: SALTO / sr };
 }
 
 /** Resta el promedio local (0,4 s) y normaliza: queda sólo lo que "salta". */
@@ -108,24 +110,32 @@ function realzar(x, dt) {
 }
 
 function estimarTempo(o, dt) {
-  const minL = Math.round(60 / 200 / dt), maxL = Math.round(60 / 60 / dt);
+  // Autocorrelación del flujo. OJO con la resolución: a un cuadro de 11,6 ms,
+  // un cuadro de más en el período de una canción a 115 bpm es un 2 % de
+  // tempo, y un 2 % corre medio pulso cada 25 pulsos (medido: con música real
+  // daba 114,9 donde librosa dice 117,5). Por eso se usa un "peine": se suma
+  // la autocorrelación en 1, 2, 3 y 4 veces el período, con período
+  // fraccionario. En 4 períodos un cuadro es 0,5 %.
   const n = o.length;
-  let mejor = 0, mejorL = minL;
-  const puntaje = [];
-  for (let L = minL; L <= maxL; L++) {
+  const maxL = Math.round(60 / 60 / dt) * 4 + 2;
+  const acf = new Float32Array(maxL + 1);
+  for (let L = 1; L <= maxL; L++) {
     let s = 0;
     for (let i = L; i < n; i++) s += o[i] * o[i - L];
-    s /= (n - L);
-    const bpm = 60 / (L * dt);
+    acf[L] = s / (n - L);
+  }
+  const en = (x) => { const a = Math.floor(x), f = x - a; return a + 1 <= maxL ? acf[a] * (1 - f) + acf[a + 1] * f : 0; };
+  const minP = 60 / 200 / dt, maxP = 60 / 60 / dt;
+  let mejor = -1, mejorP = minP;
+  for (let P = minP; P <= maxP; P += 0.05) {
+    let v = 0;
+    for (let k = 1; k <= 4; k++) v += en(P * k) * (k === 1 ? 1 : 0.7);
+    const bpm = 60 / (P * dt);
     // Preferencia por el rango jugable (una campana en escala logarítmica).
     const w = Math.exp(-0.5 * Math.pow(Math.log2(bpm / 125) / 0.9, 2));
-    puntaje[L] = s * w;
-    if (s * w > mejor) { mejor = s * w; mejorL = L; }
+    if (v * w > mejor) { mejor = v * w; mejorP = P; }
   }
-  // Refinado parabólico alrededor del pico.
-  const a = puntaje[mejorL - 1] || 0, b = puntaje[mejorL], c = puntaje[mejorL + 1] || 0;
-  const d = (a - 2 * b + c) ? 0.5 * (a - c) / (a - 2 * b + c) : 0;
-  let periodo = (mejorL + Math.max(-0.5, Math.min(0.5, d))) * dt;
+  let periodo = mejorP * dt;
   let bpm = 60 / periodo;
   while (bpm > 170) { bpm /= 2; periodo *= 2; }
   while (bpm < 80) { bpm *= 2; periodo /= 2; }
@@ -136,7 +146,7 @@ function estimarTempo(o, dt) {
 function seguirPulsos(o, dt, periodo) {
   const n = o.length, P = periodo / dt;
   const puntaje = new Float32Array(n), previo = new Int32Array(n).fill(-1);
-  const alfa = 120;
+  const alfa = OPC().alfa || 260;
   for (let i = 0; i < n; i++) {
     let mejor = -1e9, arg = -1;
     const desde = Math.max(0, Math.round(i - 2 * P)), hasta = Math.round(i - P / 2);
@@ -160,6 +170,13 @@ export async function analizarArchivo(archivo, ctx, progreso) {
   progreso && progreso("Decodificando…");
   const datos = await archivo.arrayBuffer();
   const buffer = await decodificar(ctx, datos);
+  const titulo = (archivo.name || "Tu canción").replace(/\.[^.]+$/, "").slice(0, 60);
+  return analizarBuffer(buffer, titulo, progreso);
+}
+
+/** El análisis sobre cualquier cosa con forma de AudioBuffer (en las pruebas,
+ *  un WAV leído a mano en Node). */
+export async function analizarBuffer(buffer, titulo, progreso) {
   const factor = Math.max(1, Math.round(buffer.sampleRate / SR));
   const srReal = buffer.sampleRate / factor;
   const n = Math.floor(buffer.length / factor);
@@ -174,15 +191,69 @@ export async function analizarArchivo(archivo, ctx, progreso) {
   await esperar();
   const f = await flujo(mono, progreso, srReal);
   const dt = (SALTO / srReal);
+  // La hora de un cuadro de análisis es la de su CENTRO, no la de su comienzo:
+  // el flujo espectral salta cuando el golpe llega al medio de la ventana.
+  // Sin esto todos los pulsos caían 46 ms antes (medido con una canción de
+  // pulso conocido), y un bloque 46 ms adelantado se siente "apurado".
+  const OFF = N / 2 / srReal;
   progreso && progreso("Buscando el pulso…");
   await esperar();
   const oB = realzar(f.bajo, dt), oM = realzar(f.medio, dt), oA = realzar(f.alto, dt);
   const total = new Float32Array(f.cuadros);
-  for (let i = 0; i < f.cuadros; i++) total[i] = oB[i] * 1.1 + oM[i] + oA[i] * 0.6;
+  // Los agudos pesan poco: los hats marcan TODAS las semicorcheas por igual
+  // y sólo confunden la fase.
+  const pesos = OPC().pesos || [1, 1, 1, 0];
+  const oT = realzar(f.todo, dt);
+  for (let i = 0; i < f.cuadros; i++) total[i] = oB[i] * pesos[0] + oM[i] * pesos[1] + oA[i] * pesos[2] + oT[i] * (pesos[3] || 0);
   const { bpm, periodo } = estimarTempo(total, dt);
   await esperar();
-  const pulsos = seguirPulsos(total, dt, periodo);
-  const valor = (arr, t) => { const i = Math.round(t / dt); let m = 0; for (let k = i - 2; k <= i + 2; k++) if (arr[k] > m) m = arr[k]; return m; };
+  let pulsos = seguirPulsos(total, dt, periodo).map(t => t + OFF);
+  const valor = (arr, t) => { const i = Math.round((t - OFF) / dt); let m = 0; for (let k = i - 2; k <= i + 2; k++) if (arr[k] > m) m = arr[k]; return m; };
+  // El seguidor puede engancharse corrido (en el contratiempo o una
+  // semicorchea antes) y quedarse así minutos: en música con hats y guitarra
+  // en todas las semicorcheas, la fase equivocada junta casi tanto como la
+  // buena y cambiar de fase le cuesta. Medido con la canción propia: del
+  // segundo 14 al 78 los pulsos caían 100-200 ms corridos.
+  // Arreglo por tramos, con la regla más universal de la música popular: el
+  // "backbeat". La caja (medios) cae en un pulso sí y otro no (el 2 y el 4) y
+  // el bombo (graves) en los otros. Cada 8 pulsos se prueban los corrimientos
+  // de -3 a +4 semicorcheas y gana el que mejor calza con esa plantilla. Con
+  // "el que junta más ataques" no alcanzaba: en un verso funk el bajo y la
+  // guitarra marcan el "y" tanto como el tiempo.
+  // La caja se mide en los agudos (su ruido) y un poco en los medios (su
+  // cuerpo): medido en la canción propia, la caja cae casi entera arriba de
+  // 1,8 kHz. El bombo se suma en TODOS los pulsos, no sólo en los impares:
+  // en el four-on-the-floor está en cada uno.
+  const plantilla = (tramo, s) => {
+    let mejor = 0;
+    for (const q of [0, 1]) {
+      let v = 0;
+      tramo.forEach((t0, i) => {
+        const t = t0 + s * periodo / 4;
+        v += valor(oB, t);
+        if (i % 2 === q) v += 1.6 * (valor(oA, t) + 0.35 * valor(oM, t));
+      });
+      mejor = Math.max(mejor, v);
+    }
+    return mejor;
+  };
+  const usarPlantilla = OPC().plantilla !== false;
+  const TR = 8, decisiones = [];
+  for (let a = 0; a < pulsos.length; a += TR) {
+    const tramo = pulsos.slice(a, a + TR);
+    const base = plantilla(tramo, 0);
+    let mejor = base * (OPC().margen || 1.1), mejorS = 0;
+    for (const s of [-3, -2, -1, 1, 2, 3, 4]) {
+      const v = plantilla(tramo, s);
+      if (v > mejor) { mejor = v; mejorS = s; }
+    }
+    decisiones.push(usarPlantilla ? mejorS : 0);
+  }
+  const suaves = decisiones.map((d, i) => {
+    const v = [decisiones[i - 1], d, decisiones[i + 1]].filter(x => x !== undefined).sort((a, b) => a - b);
+    return v[v.length >> 1];
+  });
+  pulsos = pulsos.map((t, i) => t + suaves[Math.floor(i / TR)] * periodo / 4);
 
   // El "uno": la fase de cuatro que junta más graves.
   let fase = 0, mfase = -1;
@@ -193,7 +264,7 @@ export async function analizarArchivo(archivo, ctx, progreso) {
   }
 
   // Intensidad por compás (energía suavizada, relativa a la canción).
-  const energiaEn = (a, b) => { let s = 0, c = 0; for (let i = Math.floor(a / dt); i < Math.min(f.cuadros, b / dt); i++) { s += f.energia[i]; c++; } return c ? s / c : 0; };
+  const energiaEn = (a, b) => { let s = 0, c = 0; for (let i = Math.max(0, Math.floor((a - OFF) / dt)); i < Math.min(f.cuadros, (b - OFF) / dt); i++) { s += f.energia[i]; c++; } return c ? s / c : 0; };
   const compases = [];
   for (let i = fase; i + 4 < pulsos.length; i += 4) compases.push({ t: pulsos[i], fin: pulsos[i + 4], e: energiaEn(pulsos[i], pulsos[i + 4]) });
   const orden = compases.map(c => c.e).sort((a, b) => a - b);
@@ -247,7 +318,6 @@ export async function analizarArchivo(archivo, ctx, progreso) {
     programarLuces({ ...s, compases: Math.max(1, Math.round((s.fin - s.t) / (periodo * 4))) }, 0, null, golpes, luz, giros, s.t, s.fin, paso);
   }
 
-  const titulo = (archivo.name || "Tu canción").replace(/\.[^.]+$/, "").slice(0, 60);
   const cancion = {
     id: "tuya", titulo, autor: "tu archivo", bpm, duracion: buffer.duration, negra: periodo, arranque: pulsos[fase] || 0,
     pistas, letra: [], luces, giros, secciones, buffer, sinRecord: true, pulsos,
