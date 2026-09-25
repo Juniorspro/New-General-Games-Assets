@@ -126,6 +126,10 @@ lo de esta vuelta. Rama `claude/fijate-iszyer`.
   llama `RemotePlayer`, no `Remoto`.
 - Con `?pausa`, los uniformes no cambian hasta que corre un `paso`. Las
   pruebas tienen que avanzar cuadros antes de leer.
+- **La valla automática te sacaba de la casa**: tomaba el marco de la
+  ventana como valla. Ahora pide lugar para el cuerpo entero arriba en todo el
+  salto, y adentro está apagada (`mundo.sinValla`). La cazó
+  `interiores.mjs › de la casa no se sale`.
 - `pkill -f nombre` también mata la shell que lo corre (sale con 144).
 
 ## Pruebas

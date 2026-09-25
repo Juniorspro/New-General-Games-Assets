@@ -217,7 +217,7 @@ export class Jugador {
     /* correr por la pared: en el aire, tocándola y yendo a lo largo */
     if (!this.enPiso && (!this.mov || (this.mov.tipo === 'pared' && this.mov.t > 0.2)) && this.pared && cuanto > 0.3) this.probarCorrerPared(W, k);
     /* la valla: en el piso, corriendo contra algo a la altura de la cintura */
-    if (this.enPiso && !this.mov && cuanto > 0.5 && horiz0 > 3.0) this.probarValla(W, k, quiere, horiz0);
+    if (this.enPiso && !this.mov && !W.sinValla && cuanto > 0.5 && horiz0 > 3.0) this.probarValla(W, k, quiere, horiz0);
     if (this.mov && (this.mov.tipo === 'valla' || this.mov.tipo === 'subePared')) { this.estado = this.mov.tipo; this.sync(); this.m.animar(dt, this.estado, 0); return; }
     if (this.mov && this.mov.tipo === 'trepa') { this.estado = 'trepa'; this.sync(); this.m.animar(dt, 'trepa', 0); return; }
     const horiz = Math.hypot(this.v.x, this.v.z);
@@ -289,7 +289,9 @@ export class Jugador {
     for (let s = 0.3; s <= 2.4; s += 0.15) { const h = W.suelo(fx + quiere.x * s, fz + quiere.y * s, tope.y + 0.1).y; if (h < tope.y - 0.3) { fin = s; break; } }
     const dist = fin != null ? d + fin + 0.6 : d + 0.9;
     const x1 = this.p.x + quiere.x * dist, z1 = this.p.z + quiere.y * dist, y1 = fin != null ? W.suelo(x1, z1, tope.y).y : tope.y;
-    if (W.techo(fx, fz, tope.y, ALTO * k) < tope.y + 1.0 || W.techo(x1, z1, y1, ALTO * k) < y1 + ALTO * k) return;
+    /* arriba de la valla tiene que caber el cuerpo entero (si no, un marco de ventana es una valla y te saca por la ventana) */
+    for (const u of [0, 0.5, 1]) { const qx = fx + (x1 - fx) * u, qz = fz + (z1 - fz) * u; if (W.techo(qx, qz, tope.y, ALTO * k + 0.4) < tope.y + ALTO * k + 0.3) return; }
+    if (W.techo(x1, z1, y1, ALTO * k) < y1 + ALTO * k) return;
     this.mov = { tipo: 'valla', t: 0, dur: 0.3 + dist * 0.05, p0: this.p.clone(), p1: new THREE.Vector3(x1, y1, z1), cima: tope.y + 0.3 * k, dir: quiere.clone(), v0: Math.max(horiz, 5.5) };
     this.rumbo = Math.atan2(quiere.x, quiere.y); this.eventos.push('valla');
   }

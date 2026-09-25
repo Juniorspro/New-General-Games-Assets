@@ -123,6 +123,7 @@ function ciudadAfuera(r0) {
 /* ---------------------------------------------------------------- el armado */
 export function crearInterior(ctx, tipo = 'hotel', o = {}) {
   const mundo = new Mundo(() => 0); mundo.agua = null; mundo.limite = 60; mundo.sinRejilla = true;
+  mundo.sinValla = true;   // (adentro no se saltan muebles ni marcos de ventana solo: te sacaba de la casa)
   const g = new THREE.Group(), r = azar(3 + (o.i || 0));
   const acc = [], npcs = [], vivos = [];
   const MAT = new Map(), B = (c, op) => { const k = c + JSON.stringify(op || {}); if (!MAT.has(k)) MAT.set(k, brilloso(c, op)); return MAT.get(k); };
