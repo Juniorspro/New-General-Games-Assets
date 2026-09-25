@@ -14,8 +14,9 @@ se resumen en una sola.
   - Falta:
     - el servidor de las compras de TikTok (la orden y el webhook) y los IDs
       de anuncio: van en `window.AEROPLAZA_CAJA`;
-    - probar el VR en un celu de verdad con visor;
-    - el telescopio en `pruebas/interiores.mjs` (ya fallaba).
+    - probar el VR en un celu de verdad con visor.
+  - La tanda entera da bien (el telescopio de `interiores` quedó a hora fija);
+    `voz` solo falla dentro de la tanda, por carga.
 - **26/09/2026, más tarde · `claude/fijate-iszyer`:**
   - Pidió optimizar para todos los celulares (sin sombras, brillos, etc.) y
     un tráiler como el de BRILLO pero mucho mejor, con las canciones del

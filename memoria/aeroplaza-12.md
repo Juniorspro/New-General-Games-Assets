@@ -175,3 +175,9 @@ Sigue de [aeroplaza-11](aeroplaza-11.md). Rama `claude/fijate-iszyer`.
   esta vuelta). Ahora la prueba fija la hora (`Date.UTC(2026, 8, 26, 6)`) y
   el cielo quieto: 32 bien.
 - `flujo` compra con la barra del probador: 14 bien.
+- **La tanda entera** (26/09) da bien, salvo `voz` en "y escucha a Ana
+  igual": nivel 0 dentro de la tanda y 10 bien corrida sola. `voz.js` no se
+  tocó; con la máquina cargada, el audio después de reconectar tarda más que
+  los 3 s que espera. Si vuelve a pasar, correrla sola antes de buscar.
+- `choques` da 12 bien con el armado nuevo (la rampa), y `caminos` y
+  `mundo` (el monorriel) siguen bien.
