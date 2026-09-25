@@ -12,12 +12,22 @@ tocar, una arena sobre el piso, botón de linterna y la pantalla acostada.
 
 ## La página
 
-Hosteada en el repo (raw.githack sirve el HTML del repo con el tipo correcto;
-`raw.githubusercontent.com` lo manda como texto plano y no abre):
+Hosteada desde el repo:
 
 ```
 https://raw.githack.com/Juniorspro/New-General-Games-Assets/claude/hola-80z86i/mundo-ar/web/index.html
 ```
+
+- **githack muestra un aviso la primera vez** ("One more step"): se toca
+  **Open the page** y abre. Así se probó, con los CDN de verdad, y el SLAM
+  engancha.
+- `raw.githubusercontent.com`, jsDelivr y statically mandan el HTML como
+  texto plano y no abre.
+- Para una dirección limpia y sin aviso, hay que activar **GitHub Pages** en
+  la configuración del repo (Settings → Pages → la rama). Queda en
+  `https://juniorspro.github.io/New-General-Games-Assets/mundo-ar/web/`.
+- Para un WebView propio conviene lo que hace el APK: llevar la página en
+  los assets.
 
 Tiene que ir por **https**, porque sin eso el navegador no presta la cámara.
 Al abrirla mira qué hay y ofrece los modos, del mejor al peor:
