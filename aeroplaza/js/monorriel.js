@@ -22,7 +22,9 @@ export class Monorriel {
      recta). terminal: { x, z0, z1, y } el tramo que va al ras del andén.
      paradas: [{ id, en: [x, z] }] (la primera, la terminal): cada una se pone en
      el punto de la vía más cercano, del lado donde está "en" */
-  constructor(mundo, altura, puntos, paradas, terminal) {
+  /* libre(x, z): dónde puede ir un pilar (la isla le pasa "lejos de los caminos") */
+  constructor(mundo, altura, puntos, paradas, terminal, libre = () => true) {
+    this.libre = libre;
     this.g = new THREE.Group();
     const curva = new THREE.CatmullRomCurve3(puntos.map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'centripetal');
     const L = this.L = curva.getLength(), N = this.N = Math.round(L / PASO);
@@ -67,7 +69,10 @@ export class Monorriel {
     this.g.add(m);
     /* los pilares: cada 18 m donde la viga va alta, con capitel. Chocan */
     const pil = [], cap = [], M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S = new THREE.Vector3(), V = new THREE.Vector3();
-    for (let i = 0; i < N; i += Math.round(18 / this.ds)) {
+    for (let i0 = 0; i0 < N; i0 += Math.round(18 / this.ds)) {
+      /* si cae en un camino, se corre unos metros por la vía (para un lado o el otro) */
+      let i = i0;
+      for (const k of [0, 3, -3, 6, -6, 9, -9]) { const j = (i0 + Math.round(k / this.ds) + N) % N; if (this.libre(P[j].x, P[j].z)) { i = j; break; } }
       const p = P[i], suelo = altura(p.x, p.z), h = p.y - 0.9 - suelo;
       if (h < 2.2 || enTerminal(p) < 26) continue;
       const rot = Math.atan2(T[i].x, T[i].z);

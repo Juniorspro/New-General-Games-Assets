@@ -70,7 +70,7 @@ prueba('el cartel de la puerta dice qué es', /hotel/i.test(etiqueta), etiqueta.
 await pag.evaluate(() => window.__T.usar());
 await esperar(2600);
 await pag.evaluate(() => window.__T.pasos(10));
-let r = await pag.evaluate(() => { const A = window.__A; return { id: A.reino.id, tipo: A.reino.tipo, fp: A.cam.fp, visible: A.yo.m.raiz.visible, mira: !!document.querySelector('.mira'), fov: A.motor.camara.fov, sala: A.red.sala || '' }; });
+let r = await pag.evaluate(() => { const A = window.__A; return { id: A.reino.id, tipo: A.reino.tipo, fp: A.cam.fp, visible: !A.yo.m.enPrimera, mira: !!document.querySelector('.mira'), fov: A.motor.camara.fov, sala: A.red.sala || '' }; });
 prueba('adentro del hotel, en primera persona, sin el muñeco propio y con el punto', r.id === 'interior' && r.tipo === 'hotel' && r.fp && !r.visible && r.mira, JSON.stringify(r));
 await pag.evaluate(() => { window.__A.cam.yaw = 0; window.__A.cam.pitch = 0.32; });
 await foto('1-lobby');
@@ -175,7 +175,7 @@ prueba('en la puerta giratoria dice salir', salir);
 await pag.evaluate(() => window.__T.usar());
 await esperar(2600);
 await pag.evaluate(() => window.__T.pasos(8));
-r = await pag.evaluate(([hx, hz]) => { const A = window.__A; return { id: A.reino.id, fp: A.cam.fp, visible: A.yo.m.raiz.visible, mira: !!document.querySelector('.mira'), d: +Math.hypot(A.yo.p.x - hx, A.yo.p.z - hz).toFixed(1), fov: +A.motor.camara.fov.toFixed(0) }; }, [hotel.sx, hotel.sz]);
+r = await pag.evaluate(([hx, hz]) => { const A = window.__A; return { id: A.reino.id, fp: A.cam.fp, visible: !A.yo.m.enPrimera, mira: !!document.querySelector('.mira'), d: +Math.hypot(A.yo.p.x - hx, A.yo.p.z - hz).toFixed(1), fov: +A.motor.camara.fov.toFixed(0) }; }, [hotel.sx, hotel.sz]);
 prueba('vuelve a la isla, delante del hotel y en tercera persona', r.id === 'plaza' && !r.fp && r.visible && !r.mira && r.d < 1.5, JSON.stringify(r));
 
 /* ---------------------------------------------------- el café */

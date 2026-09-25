@@ -11,6 +11,7 @@
        peinado, colorPelo, particulas }
    ========================================================================== */
 import * as THREE from 'three';
+import { CLIPS, aplicarClip, CUADROS_CHOP } from './animador.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const MATERIALES = ['gelatina', 'vidrio', 'perla', 'cromo', 'mate', 'neon'];
@@ -297,6 +298,7 @@ function globo(texto) {
 /* ---------------------------------------------------------------- el muñeco */
 const suave = (a, b, k) => a + (b - a) * k;
 export class Meeple {
+  static estiloAnim = 'suave';   // cómo pasan las poses: 'suave' | 'lineal' | 'chop' (Opciones › Imagen)
   constructor(apariencia = APARIENCIA_INICIAL(), nombre = '') {
     const G = geometrias();
     this.raiz = new THREE.Group();          // en el piso, mirando a +z
@@ -368,14 +370,19 @@ export class Meeple {
   /* un gesto de un rato: saludar, bailar1..3, festejar, sentarse (este queda hasta moverse) */
   hacerGesto(g) { this.gesto = g; this.tGesto = g === 'sentarse' ? 999 : g.startsWith('bailar') ? 8 : g === 'voltereta' ? 1.1 : g === 'aplaudir' ? 3 : 2.4; this.tG0 = this.tGesto; }
 
-  /* estado: quieto | camina | corre | salta | cae | nada | flota | monta | sentado.
-     vel: velocidad horizontal (m/s) para el paso */
+  /* estado: quieto | camina | corre | salta | cae | nada | flota | monta | sentado,
+     y los del parkour: desliza | rueda | trepa | pared. vel: velocidad horizontal
+     (m/s) para el paso. Correr, caminar, saltar, caer, aterrizar y los del
+     parkour salen de poses clave (animador.js) con el estilo de Meeple.estiloAnim */
   animar(dt, estado, vel = 0) {
     this.t += dt;
-    if (this.estado !== estado) { this.estado = estado; if (estado !== 'quieto' && this.gesto === 'sentarse') this.gesto = null; }
+    if (this.estado !== estado) { this.estado = estado; this._tEst = 0; if (estado !== 'quieto' && this.gesto === 'sentarse') this.gesto = null; }
+    this._tEst = (this._tEst || 0) + dt;
+    const estilo = Meeple.estiloAnim, chop = estilo === 'chop';
     if (this.gesto && estado !== 'quieto' && estado !== 'flota') { if (this.gesto !== 'saludar') this.gesto = null; }
     if (this.gesto) { this.tGesto -= dt; if (this.tGesto <= 0) this.gesto = null; }
-    const t = this.t, R = {};
+    /* en chop todo va a 12 cuadros por segundo (también respirar y los gestos) */
+    const t = chop ? Math.floor(this.t * CUADROS_CHOP) / CUADROS_CHOP : this.t, R = {};
     /* lo que da vida (se calcula antes de la pose): inclinarse en las curvas según
        lo que gira por segundo, aplastarse al caer y estirarse al saltar, y cada
        tanto, si está quieto, estirarse o mirar alrededor */
@@ -383,7 +390,7 @@ export class Meeple {
     const giro = dt > 0 ? dyaw / dt : 0;
     this._incl = suave(this._incl || 0, Math.max(-0.32, Math.min(0.32, -giro * 0.07 * Math.min(1, vel / 3.5))), 1 - Math.exp(-dt * 8));
     const enAire = (q) => q === 'salta' || q === 'cae';
-    if (enAire(this._antes) && !enAire(estado) && estado !== 'nada') this._aplasta = Math.min(1, 0.5 + (this._tAire || 0) * 0.8);
+    if (enAire(this._antes) && !enAire(estado) && estado !== 'nada') { this._aplasta = Math.min(1, 0.5 + (this._tAire || 0) * 0.8) * 0.6; if ((this._tAire || 0) > 0.3 && estado !== 'rueda') this._tAterriza = 0; }
     if (estado === 'salta' && this._antes !== 'salta') this._estira = 1;
     this._tAire = enAire(estado) ? (this._tAire || 0) + dt : 0;
     this._antes = estado;
@@ -395,22 +402,17 @@ export class Meeple {
     R.cy = 0; R.cx = 0; R.cz = 0; R.hy = 0; R.hx = 0; R.hz = 0;
     R.bl = [0, 0, -0.2]; R.br = [0, 0, 0.2];     // [rx, ry, rz] de cada brazo (cuelgan por fuera del cuerpo)
     R.pl = [0, 0, 0]; R.pr = [0, 0, 0];
-    R.sy = 1; R.ry = 0;
+    R.sy = 1; R.ry = 0; R.pz = 0;
+    let clip = false;
     if (estado === 'camina' || estado === 'corre') {
       const corre = estado === 'corre';
       this.fase += dt * (corre ? 13 : 9) * Math.min(1.4, 0.35 + vel / (corre ? 5 : 2.6));
-      const s = Math.sin(this.fase), k = corre ? 1.25 : 0.85;
-      R.pl = [s * 0.75 * k, 0, 0]; R.pr = [-s * 0.75 * k, 0, 0];
-      R.bl = [-s * 0.7 * k, 0, -0.17]; R.br = [s * 0.7 * k, 0, 0.17];
-      R.cy = Math.abs(Math.cos(this.fase)) * (corre ? 0.07 : 0.04); R.cx = corre ? 0.2 : 0.07; R.cz = Math.sin(this.fase) * 0.05; R.ry = Math.sin(this.fase) * (corre ? 0.12 : 0.07);
-      R.hx = corre ? -0.12 : -0.04; R.hy = -Math.sin(this.fase) * 0.06; R.hz = -Math.sin(this.fase) * 0.03;
-      R.sy = 1 + Math.cos(this.fase * 2) * (corre ? 0.025 : 0.015);
-    } else if (estado === 'salta' || estado === 'cae') {
-      const sube = estado === 'salta';
-      R.bl = [sube ? -0.3 : 0.2, 0, -1.9]; R.br = [sube ? -0.3 : 0.2, 0, 1.9];
-      R.pl = [sube ? -0.6 : 0.25, 0, 0.05]; R.pr = [sube ? 0.3 : -0.25, 0, -0.05];
-      R.hx = sube ? -0.15 : 0.1;
-    } else if (estado === 'nada') {
+      /* una vuelta de la fase (2π) es un ciclo entero del clip (los dos pasos) */
+      const C = CLIPS[estado]; aplicarClip(R, C, this.fase / (Math.PI * 2) * C.dur, estilo); clip = true;
+    } else if (estado === 'salta') { aplicarClip(R, CLIPS.salta, this._tEst, estilo); clip = true; }
+    else if (estado === 'cae') { aplicarClip(R, CLIPS.cae, t, estilo); clip = true; }
+    else if (CLIPS[estado] && ['desliza', 'rueda', 'trepa', 'pared'].includes(estado)) { aplicarClip(R, CLIPS[estado], estado === 'desliza' ? t : this._tEst, estilo); clip = true; }
+    else if (estado === 'nada') {
       const s = Math.sin(t * 5);
       R.cx = 1.25; R.cy = 0.35 + Math.sin(t * 10) * 0.03; R.ry = s * 0.18;
       R.bl = [-2.4 + s * 1.1, 0, -0.5]; R.br = [-2.4 - s * 1.1, 0, 0.5];
@@ -433,6 +435,12 @@ export class Meeple {
         else { R.hy = Math.sin(this._ocio.t * 2.4) * 0.9 * k; R.hx = -0.1 * k; }
       }
     }
+    /* el golpe al aterrizar, encima de lo que venga (se va en 0,3 s) */
+    if (this._tAterriza != null) {
+      this._tAterriza += dt;
+      if (this._tAterriza < CLIPS.aterriza.dur && !enAire(estado)) { const q = this._tAterriza / CLIPS.aterriza.dur; aplicarClip(R, CLIPS.aterriza, this._tAterriza, estilo, 1 - q * q); clip = true; }
+      else this._tAterriza = null;
+    }
     /* los gestos, encima de la pose */
     if (this.gesto) {
       const g = this.gesto;
@@ -448,10 +456,13 @@ export class Meeple {
       else if (g === 'bailar3') { const s = Math.sin(t * 10); R.cy = Math.max(0, s) * 0.22; R.bl = [-2.9, 0, -0.3]; R.br = [-2.9, 0, 0.3]; R.pl = [s * 0.6, 0, 0.2]; R.pr = [-s * 0.6, 0, -0.2]; R.hx = s * 0.15; }
     }
     /* acercar lo actual a la pose (transiciones suaves) */
-    const k = 1 - Math.exp(-dt * 14), r = this.rot;
+    /* con poses clave casi no se suaviza (si no, se borran); en chop, nada */
+    const k = chop ? 1 : 1 - Math.exp(-dt * (clip ? 26 : 14)), r = this.rot;
     const v = (n, x) => (r[n] = r[n] === undefined ? x : suave(r[n], x, k));
-    if (this.gesto === 'voltereta') r.cx = R.cx; else if (r.cx < -Math.PI) r.cx += Math.PI * 2;
+    /* las vueltas enteras (voltereta para atrás, rodar para adelante) van sin suavizar y después se acomodan */
+    if (this.gesto === 'voltereta' || estado === 'rueda') r.cx = R.cx; else { if (r.cx < -Math.PI) r.cx += Math.PI * 2; if (r.cx > Math.PI) r.cx -= Math.PI * 2; }
     this.cadera.position.y = v('cy', R.cy);
+    this.cadera.position.z = v('pz', R.pz);
     this.cadera.rotation.set(v('cx', R.cx), v('ry', R.ry), v('cz', R.cz) + this._incl);
     const ap = this._aplasta * this._aplasta, es = this._estira;
     this.cadera.scale.y = v('sy', R.sy) * (1 - ap * 0.26 + es * 0.12);
@@ -473,6 +484,19 @@ export class Meeple {
       p.needsUpdate = true; this.particulas.material.opacity = 0.85;
     }
     if (this.globo) { this.tGlobo -= dt; if (this.tGlobo <= 0) { this.raiz.remove(this.globo); this.globo = null; } else this.globo.material.opacity = Math.min(1, this.tGlobo * 2); }
+  }
+  /* en primera persona: la cabeza (ahí va la cámara), el cuerpo de campana (taparía las
+     piernas al mirar abajo) y los brazos (van los de la cámara, primera.js) no se ven, pero
+     siguen dando sombra: en el piso está el muñeco entero. Mirando abajo se ven las piernas */
+  primeraPersona(si) {
+    const sombra = Meeple._sombra ||= new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+    for (const q of [this.cuerpo, this.cabezaM, ...this.brazos.map((b) => b.userData.m)]) {
+      if (si) { if (q.material !== sombra) q.userData.mat0 = q.material; q.material = sombra; }
+      else if (q.userData.mat0) { q.material = q.userData.mat0; q.userData.mat0 = null; }
+    }
+    this.ojos.visible = this.extras.visible = this.atras.visible = !si;
+    if (this.cartel) this.cartel.visible = !si; if (this.globo) this.globo.visible = !si;
+    this.enPrimera = si;
   }
   quitar() { this.raiz.removeFromParent(); }
 }

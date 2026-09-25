@@ -13,11 +13,12 @@ import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
 import { Teclado } from './teclado.js';
 import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
+import { miniaturaTiro, TIRO } from './reinos/tiro.js';
 
 sumar({
-  es: { noti_zona: 'Nueva zona', noti_bien: '¡Listo!', noti_info: 'AEROPLAZA', noti_error: 'Ups', mis_titulo: 'Misiones', mis_ninguna: 'No tenés misiones. Hablá con la gente de la isla (💬) y te van a pedir cosas.', mis_volver: '✓ Listo: volvé a hablar con {n}.', mis_hechas: 'Hechas: {n}', boton_misiones: 'Misiones', boton_voz: 'Chat de voz' },
-  en: { noti_zona: 'New area', noti_bien: 'Done!', noti_info: 'AEROPLAZA', noti_error: 'Oops', mis_titulo: 'Quests', mis_ninguna: 'No quests yet. Talk to the people on the island (💬) and they will ask you for things.', mis_volver: '✓ Done: go back and talk to {n}.', mis_hechas: 'Completed: {n}', boton_misiones: 'Quests', boton_voz: 'Voice chat' },
-  pt: { noti_zona: 'Nova área', noti_bien: 'Pronto!', noti_info: 'AEROPLAZA', noti_error: 'Opa', mis_titulo: 'Missões', mis_ninguna: 'Sem missões. Fale com o pessoal da ilha (💬) e eles vão pedir coisas.', mis_volver: '✓ Pronto: volte e fale com {n}.', mis_hechas: 'Feitas: {n}', boton_misiones: 'Missões', boton_voz: 'Chat de voz' },
+  es: { op_anim: 'Animaciones', anim_suave: 'Suave', anim_lineal: 'Lineal', anim_chop: 'Chop', noti_zona: 'Nueva zona', noti_bien: '¡Listo!', noti_info: 'AEROPLAZA', noti_error: 'Ups', mis_titulo: 'Misiones', mis_ninguna: 'No tenés misiones. Hablá con la gente de la isla (💬) y te van a pedir cosas.', mis_volver: '✓ Listo: volvé a hablar con {n}.', mis_hechas: 'Hechas: {n}', boton_misiones: 'Misiones', boton_voz: 'Chat de voz' },
+  en: { op_anim: 'Animations', anim_suave: 'Smooth', anim_lineal: 'Linear', anim_chop: 'Chop', noti_zona: 'New area', noti_bien: 'Done!', noti_info: 'AEROPLAZA', noti_error: 'Oops', mis_titulo: 'Quests', mis_ninguna: 'No quests yet. Talk to the people on the island (💬) and they will ask you for things.', mis_volver: '✓ Done: go back and talk to {n}.', mis_hechas: 'Completed: {n}', boton_misiones: 'Quests', boton_voz: 'Voice chat' },
+  pt: { op_anim: 'Animações', anim_suave: 'Suave', anim_lineal: 'Linear', anim_chop: 'Chop', noti_zona: 'Nova área', noti_bien: 'Pronto!', noti_info: 'AEROPLAZA', noti_error: 'Opa', mis_titulo: 'Missões', mis_ninguna: 'Sem missões. Fale com o pessoal da ilha (💬) e eles vão pedir coisas.', mis_volver: '✓ Pronto: volte e fale com {n}.', mis_hechas: 'Feitas: {n}', boton_misiones: 'Missões', boton_voz: 'Chat de voz' },
 });
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
@@ -293,8 +294,13 @@ export const UI = {
   },
   /* ------------------------------------------------------------ PARKOUR AERO */
   /* el menú de los cinco mapas: miniatura, nombre, récord, estrellas y candado */
-  menuParkour(P, alElegir, alCerrar) {
-    const c = el('<div class="pk-cartas"></div>');
+  menuParkour(P, alElegir, alCerrar, alTiro) {
+    const todo = el('<div class="pk-menu"><div class="pk-opciones"></div><div class="pk-cartas"></div></div>'), c = $('.pk-cartas', todo);
+    /* el parkour en primera persona (como Mirror's Edge) o de atrás */
+    const fp = el('<button class="boton chico pk-fp"></button>'), pintarFP = () => { fp.textContent = `${t('pk_fp')}: ${t(P.fp ? 'pk_fp_si' : 'pk_fp_no')}`; fp.classList.toggle('primario', !!P.fp); };
+    fp.onclick = () => { P.fp = !P.fp; pintarFP(); this.J.sfx('elegir'); this.J.guardar(); }; pintarFP();
+    const ayuda = el('<small class="pk-ayuda"></small>'); ayuda.textContent = t('pk_mov');
+    $('.pk-opciones', todo).append(fp, ayuda);
     NIVELES.forEach((N, n) => {
       const abierto = n === 0 || P.mejor[n - 1] != null, est = P.estrellas[n] || 0;
       const b = el(`<button class="pk-carta ${abierto ? '' : 'bloq'}"><img alt=""><b></b><span class="est">${'★'.repeat(est)}${'☆'.repeat(3 - est)}</span><small></small>${abierto ? '' : '<i class="candado">🔒</i>'}</button>`);
@@ -304,7 +310,16 @@ export const UI = {
       if (abierto) b.onclick = () => { this.J.sfx('elegir'); v.cerrar(true); alElegir(n); };
       c.appendChild(b);
     });
-    const v = this.ventana('🎮 ' + t('pk_titulo'), c, { ancho: 900, alCerrar: () => alCerrar && alCerrar() });
+    /* el tiro de burbujas (primera persona) */
+    if (alTiro) {
+      const T = this.J.G.tiro || {}, est = T.estrellas || 0;
+      const b = el(`<button class="pk-carta tiro"><img alt=""><b></b><span class="est">${'★'.repeat(est)}${'☆'.repeat(3 - est)}</span><small></small></button>`);
+      $('img', b).src = miniaturaTiro(320, 200).toDataURL('image/jpeg', 0.85);
+      $('b', b).textContent = '🎯 ' + t('tiro_titulo'); $('small', b).textContent = T.mejor ? t('tiro_mejor', { n: T.mejor }) : t('tiro_desc');
+      b.onclick = () => { this.J.sfx('elegir'); v.cerrar(true); alTiro(); };
+      c.appendChild(b);
+    }
+    const v = this.ventana('🎮 ' + t('pk_titulo'), todo, { ancho: 900, alCerrar: () => alCerrar && alCerrar() });
     const cerrar0 = v.cerrar; v.cerrar = (sin) => { if (sin) { const f = alCerrar; alCerrar = null; cerrar0(); alCerrar = f; } else cerrar0(); };
     this.focoTeclado(v);
   },
@@ -324,6 +339,33 @@ export const UI = {
     const cc = `💧 ${E.caidas}`; if (d._c !== cc) { d._c = cc; $('.pk-caidas', d).textContent = cc; }
     const nn = `${NIVELES[E.nivel].icono} ${E.nombre}`; if (d._n !== nn) { d._n = nn; $('.pk-nombre', d).textContent = nn; }
     d.classList.toggle('fin', E.fase === 'fin');
+  },
+  /* TIRO DE BURBUJAS: la píldora de arriba (tiempo, puntos, racha, reiniciar y salir) */
+  tiroHud(E) {
+    if (!this.hud) return;
+    let d = $('.pk-hud.tiro', this.hud);
+    if (!E) { d && d.remove(); if (!$('.pk-hud', this.hud)) this.hud.classList.remove('modo-parkour'); return; }
+    this.hud.classList.add('modo-parkour');
+    if (!d) {
+      d = el(`<div class="pk-hud tiro"><span class="pk-nombre">🎯 ${t('tiro_titulo')}</span><span class="pk-reloj">1:00</span><span class="pk-puntos">✨ 0</span><span class="pk-mult"></span><button class="redondo" data-a="otra" title="${t('pk_repetir')}">⟲</button><button class="redondo" data-a="salir" title="${t('pk_volver')}">✕</button></div>`);
+      $('[data-a=otra]', d).onclick = () => this.J.tiroReiniciar(); $('[data-a=salir]', d).onclick = () => this.J.tiroSalir();
+      this.hud.appendChild(d);
+    }
+    const s = Math.ceil(E.tiempo), tx = `⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    if (d._t !== tx) { d._t = tx; $('.pk-reloj', d).textContent = tx; d.classList.toggle('apurado', E.fase === 'juega' && E.tiempo < 10); }
+    const pt = `✨ ${E.puntos}`; if (d._p !== pt) { d._p = pt; $('.pk-puntos', d).textContent = pt; }
+    const mu = E.mult > 1 ? `×${E.mult}` : ''; if (d._m !== mu) { d._m = mu; const q = $('.pk-mult', d); q.textContent = mu; q.classList.remove('sube'); void q.offsetWidth; if (mu) q.classList.add('sube'); }
+  },
+  resultadoTiro(R, alRepetir, alVolver) {
+    const punteria = R.tiros ? Math.round(R.aciertos / R.tiros * 100) : 0;
+    const c = el(`<div class="pk-resultado"><div class="pk-est">${[0, 1, 2].map((i) => `<i class="${i < R.estrellas ? 'si' : ''}" style="animation-delay:${0.2 + i * 0.25}s">★</i>`).join('')}</div>
+      <div class="pk-cifras"><div><small>${t('tiro_puntos')}</small><b>${R.puntos}</b></div><div><small>${t('tiro_aciertos')}</small><b>${R.aciertos}</b></div><div><small>${t('tiro_punteria')}</small><b>${punteria}%</b></div><div><small>${t('pk_orbes')}</small><b>+${R.premio}</b></div></div>
+      ${R.record ? `<div class="pk-record">🏆 ${t('pk_record')}</div>` : ''}
+      <div class="fila"><button class="boton primario" data-a="otra">⟲ ${t('pk_repetir')}</button><button class="boton" data-a="volver">${t('pk_volver')}</button></div></div>`);
+    const v = this.ventana(`🎯 ${t('tiro_fin')}`, c, { ancho: 560 });
+    $('[data-a=otra]', c).onclick = () => { v.cerrar(); alRepetir(); };
+    $('[data-a=volver]', c).onclick = () => { v.cerrar(); alVolver(); };
+    this.focoTeclado(v, '[data-a=otra]');
   },
   /* un destello verde en el reloj (el control, en vez de un aviso que tape) */
   pkDestello(clase = 'control') {
@@ -511,6 +553,7 @@ export const UI = {
         p.appendChild(this.fila('🎤 ' + t('op_voz'), this.deslizador(0, 1.5, 0.05, O.volVoz ?? 1, (v) => J.volumenVoz(v))));
       }],
       ['imagen', '🖥️', t('op_t_imagen'), (p) => {
+        p.appendChild(this.fila(t('op_anim'), this.segmentos(['suave', 'lineal', 'chop'].map((q) => [q, t('anim_' + q)]), O.animEstilo || 'suave', (q) => { O.animEstilo = q; J.ponerAnim(q); J.guardar(); })));
         p.appendChild(this.fila(t('op_calidad'), this.segmentos(['auto', 'alta', 'media', 'baja'].map((q) => [q, t('cal_' + q)]), O.calidad, (q) => { O.calidad = q; J.ponerCalidad(q); J.guardar(); document.body.classList.toggle('calidadBaja', q === 'baja'); })));
         const ap = el('<div class="aparato"><i>🔎</i><div><b></b><small></small></div></div>');
         $('b', ap).textContent = t('op_aparato', { q: t('cal_' + (A.calidad || 'media')) });

@@ -5,6 +5,13 @@
    ↓), adentro de una burbuja grande (flota y se maneja) y montado (delfín).
    Los géiseres y las flores gigantes lo tiran para arriba (mundo.solidos con
    "rebote"). Todo en metros y segundos.
+   Los movimientos de parkour (this.mov), con la tecla de bajar (C / Q / ⤓):
+   - corriendo: se desliza (más rápido al empezar, bajito: pasa por debajo de
+     las barras; si salta en el medio, sale con toda la velocidad);
+   - caminando o quieto: rueda para adelante;
+   - en el aire: rueda al caer. Si cae de muy alto corriendo, rueda solo.
+   - Saltando contra un borde a la altura del pecho, lo trepa solo.
+   - En el aire contra una pared, saltar rebota en la pared.
    ========================================================================== */
 import * as THREE from 'three';
 import { Meeple } from './meeple.js';
@@ -13,6 +20,7 @@ import { materialBurbuja } from './naturaleza.js';
 const RADIO = 0.32, ALTO = 1.35;
 const CAMINA = 3.4, CORRE = 7.2, SALTO = 8.6, NADA = 2.8;   // (correr un poco más: la isla ahora es grande)
 const ACEL_PISO = 38, ACEL_AIRE = 9;
+const RUEDA = 0.56, DESLIZA = 0.8, TREPA = 0.46, PARED = 0.36;   // lo que dura cada uno (igual que su clip)
 
 export class Jugador {
   constructor(escena, apariencia, nombre) {
@@ -33,7 +41,7 @@ export class Jugador {
     this.eventos = [];   // lo que pasó este cuadro (para el sonido y la red): 'salto', 'aterriza', 'chapuzon', 'rebote'…
     this.montura = null;
   }
-  ponerEn(p, rumbo = 0) { this.p.copy(p); this.v.set(0, 0, 0); this.rumbo = rumbo; this.modo = 'pie'; this.burbuja.visible = false; this.montura = null; this.sync(); }
+  ponerEn(p, rumbo = 0) { this.p.copy(p); this.v.set(0, 0, 0); this.rumbo = rumbo; this.modo = 'pie'; this.burbuja.visible = false; this.montura = null; this.mov = null; this.pared = null; this.ruedaAlCaer = false; this.sync(); }
   sync() { this.m.raiz.position.copy(this.p); this.m.raiz.rotation.y = this.rumbo; this.m.raiz.scale.setScalar(this.escala); }
   entrarBurbuja() { this.modo = 'burbuja'; this.tBurbuja = 40; this.burbuja.visible = true; this.v.y = 2; this.eventos.push('burbuja'); }
   salirBurbuja(reventar = true) { if (this.modo !== 'burbuja') return; this.modo = 'pie'; this.burbuja.visible = false; this.v.y = 3; if (reventar) this.eventos.push('pop'); }
@@ -105,8 +113,28 @@ export class Jugador {
     /* a pie */
     const vadea = agua != null && hondo > 0.15 && this.p.y < agua;
     const velMax = (E.corre ? CORRE : CAMINA) * (vadea ? 0.6 : 1) * (0.75 + 0.25 * k) * (this.efecto === 'liviano' ? 1.15 : 1);
-    const acel = this.enPiso ? ACEL_PISO : ACEL_AIRE;
+    let acel = this.enPiso ? ACEL_PISO : ACEL_AIRE;
     const obj = new THREE.Vector2(quiere.x * velMax * cuanto, quiere.y * velMax * cuanto);
+    /* bajar recién apretado: deslizarse (corriendo), rodar (caminando) o rodar al caer (en el aire) */
+    const bajaYa = !!E.baja && !this._baja; this._baja = !!E.baja;
+    const horiz0 = Math.hypot(this.v.x, this.v.z);
+    if (bajaYa && !vadea && !this.mov) {
+      if (this.enPiso) {
+        const dir = horiz0 > 0.5 ? new THREE.Vector2(this.v.x, this.v.z).normalize() : new THREE.Vector2(Math.sin(this.rumbo), Math.cos(this.rumbo));
+        if (horiz0 > CAMINA + 0.5) this.empezarMov('desliza', dir, Math.max(horiz0 * 1.12, 8.4), DESLIZA);
+        else this.empezarMov('rueda', dir, 6.2, RUEDA);
+      } else this.ruedaAlCaer = true;
+    }
+    if (this.mov) {
+      const M = this.mov; M.t += dt;
+      if (M.tipo === 'trepa') return this.seguirTrepa(dt);
+      if (M.tipo === 'desliza' || M.tipo === 'rueda') {
+        if (cuanto > 0.1) M.dir.lerp(quiere, Math.min(1, dt * (M.tipo === 'desliza' ? 1.2 : 2.5))).normalize();
+        const vel = M.tipo === 'desliza' ? Math.max(2.4, M.v0 - 6 * M.t) : M.v0;
+        obj.set(M.dir.x * vel, M.dir.y * vel); acel = 80;
+      } else if (M.tipo === 'pared') acel = 2.5;   // (el empujón de la pared no se lo come el palito)
+      if (M.t >= M.dur) this.terminarMov(W, k);
+    }
     const dv = new THREE.Vector2(obj.x - this.v.x, obj.y - this.v.z);
     const paso = acel * dt;
     if (dv.length() > paso) dv.setLength(paso);
@@ -117,14 +145,30 @@ export class Jugador {
     /* saltar: del piso (con un poquito de tiempo de gracia) o el doble salto de burbuja */
     this.coyote = this.enPiso ? 0.12 : this.coyote - dt;
     if (this.bufferSalto > 0) {
-      if (this.coyote > 0) { this.v.y = SALTO * (0.9 + 0.1 * k); this.saltos = 1; this.coyote = 0; this.bufferSalto = 0; this.eventos.push('salto'); this.lanzado = false; }
+      /* (saltar deslizándose sale con toda la velocidad: el truco del parkour) */
+      if (this.coyote > 0) { this.v.y = SALTO * (0.9 + 0.1 * k); this.saltos = 1; this.coyote = 0; this.bufferSalto = 0; this.eventos.push('salto'); this.lanzado = false; if (this.mov && this.mov.tipo !== 'pared' && !this.hayTecho(W, k)) this.mov = null; }
+      else if (this.pared && this.pared.t > 0 && !(this.mov && this.mov.tipo === 'pared')) {
+        /* rebote en la pared: sale para el otro lado y para arriba (lo que iba a lo largo de la
+           pared se conserva: así se avanza de pared en pared), y le queda el doble salto */
+        const n = this.pared, vn = this.v.x * n.nx + this.v.z * n.nz, tx = (this.v.x - vn * n.nx) * 0.92, tz = (this.v.z - vn * n.nz) * 0.92;
+        this.v.x = tx + n.nx * 6.8; this.v.z = tz + n.nz * 6.8; this.v.y = SALTO * 0.95;
+        this.rumbo = Math.atan2(this.v.x, this.v.z); this.saltos = 1; this.bufferSalto = 0; this.lanzado = true; this.pared = null;
+        this.mov = { tipo: 'pared', t: 0, dur: PARED }; this.eventos.push('pared');
+      }
       else if (this.saltos < 2) { this.v.y = SALTO * 0.85; this.saltos = 2; this.bufferSalto = 0; this.eventos.push('doble'); this.lanzado = false; }
     }
+    /* deslizándose o rodando se es bajito (pasa por debajo de las barras) */
+    const bajo = this.mov && (this.mov.tipo === 'desliza' || this.mov.tipo === 'rueda'), alto = (bajo ? 0.72 : ALTO) * k;
     this.p.x += this.v.x * dt; this.p.z += this.v.z * dt;
-    W.empujar(this.p, RADIO * k, ALTO * k);
+    const x0 = this.p.x, z0 = this.p.z;
+    W.empujar(this.p, RADIO * k, alto);
+    /* tocar una pared en el aire (para el rebote): para dónde lo empujó es para dónde mira la pared */
+    const ex = this.p.x - x0, ez = this.p.z - z0, e = Math.hypot(ex, ez);
+    if (!this.enPiso && e > 0.002) this.pared = { nx: ex / e, nz: ez / e, t: 0.22 };
+    else if (this.pared) { this.pared.t -= dt; if (this.pared.t <= 0 || this.enPiso) this.pared = null; }
     this.p.y += this.v.y * dt;
-    const techo = W.techo(this.p.x, this.p.z, this.p.y, ALTO * k);
-    if (this.p.y + ALTO * k > techo) { this.p.y = techo - ALTO * k; this.v.y = Math.min(0, this.v.y); }
+    const techo = W.techo(this.p.x, this.p.z, this.p.y, alto);
+    if (this.p.y + alto > techo) { this.p.y = techo - alto; this.v.y = Math.min(0, this.v.y); }
     const s = W.suelo(this.p.x, this.p.z, this.p.y + Math.max(0, -this.v.y * dt));
     const antes = this.enPiso;
     if (this.p.y <= s.y + 0.02 && this.v.y <= 0.01) {
@@ -133,6 +177,9 @@ export class Jugador {
       this.enPiso = true; this.saltos = 0; this.lanzado = false;
       if (s.s && s.s.rebote) { this.v.y = s.s.rebote; this.enPiso = false; this.saltos = 1; this.lanzado = true; this.eventos.push('rebote'); if (s.s.alRebotar) s.s.alRebotar(); }
       else if (!antes && golpe > 4) this.eventos.push('aterriza');
+      /* rodar al caer: si lo pidió en el aire, o cae de muy alto corriendo */
+      if (!antes && !this.mov && (this.ruedaAlCaer || golpe > 11.5) && Math.hypot(this.v.x, this.v.z) > 2.4) this.empezarMov('rueda', new THREE.Vector2(this.v.x, this.v.z).normalize(), Math.max(Math.hypot(this.v.x, this.v.z), 6.2), RUEDA);
+      if (!antes) this.ruedaAlCaer = false;
       this.pisando = s.s;
     } else {
       /* bajando una rampa: pegarse al piso en vez de salir volando */
@@ -142,12 +189,16 @@ export class Jugador {
     /* los géiseres empujan desde abajo aunque no se los pise */
     for (const q of W.solidos) if (q.empuje && q.activo && W.dentro(q, this.p.x, this.p.z) && this.p.y < q.y1 + q.empujeAlto) { this.v.y = Math.max(this.v.y, q.empuje); this.enPiso = false; this.lanzado = true; if (!this._enGeiser) this.eventos.push('geiser'); this._enGeiser = q; }
     if (this._enGeiser && !W.dentro(this._enGeiser, this.p.x, this.p.z)) this._enGeiser = null;
+    /* trepar: en el aire, yendo contra un borde a la altura del pecho */
+    if (!this.enPiso && !this.mov && cuanto > 0.4 && this.v.y < 4.5) this.probarTrepa(W, k, quiere);
+    if (this.mov && this.mov.tipo === 'trepa') { this.estado = 'trepa'; this.sync(); this.m.animar(dt, 'trepa', 0); return; }
     const horiz = Math.hypot(this.v.x, this.v.z);
-    if (horiz > 0.3 && cuanto > 0.05) this.rumbo = girarHacia(this.rumbo, Math.atan2(this.v.x, this.v.z), dt * 12);
+    if (horiz > 0.3 && (cuanto > 0.05 || bajo)) this.rumbo = girarHacia(this.rumbo, Math.atan2(this.v.x, this.v.z), dt * 12);
     if (this.p.y < -30) this.eventos.push('caida');
     this.tAire = this.enPiso ? 0 : this.tAire + dt;
     this.estado = !this.enPiso ? (this.v.y > 0 ? 'salta' : 'cae') : horiz > CAMINA + 0.6 ? 'corre' : horiz > 0.25 ? 'camina' : 'quieto';
     if (this.estado === 'cae' && this.tAire < 0.12) this.estado = horiz > 0.25 ? 'camina' : 'quieto';
+    if (this.mov) this.estado = this.mov.tipo;
     if (vadea && horiz > 1 && Math.random() < dt * 6) this.eventos.push('salpica');
     this.sync(); this.m.animar(dt, this.estado, horiz);
   }
@@ -162,6 +213,35 @@ export class Jugador {
       if (d.puedeBajar && !d.puedeBajar()) this.eventos.push('noBaja');
       else { const sale = d.salida && d.salida(); this.bajarse(W); if (sale) { this.p.copy(sale); this.v.set(0, 0, 0); this.sync(); this.eventos.push('bajaTren'); } }
     }
+  }
+  /* ------------------------------------------------ los movimientos de parkour */
+  empezarMov(tipo, dir, v0, dur) { this.mov = { tipo, t: 0, dur, dir: dir.clone(), v0 }; this.eventos.push(tipo); }
+  hayTecho(W, k) { return W.techo(this.p.x, this.p.z, this.p.y, ALTO * k) < this.p.y + ALTO * k; }
+  /* se termina, salvo el deslizarse debajo de algo: ahí sigue bajito hasta salir */
+  terminarMov(W, k) {
+    const M = this.mov;
+    if (M.tipo === 'desliza' && this.hayTecho(W, k)) { M.dur += 0.1; M.v0 = Math.max(M.v0, 2.4 + 6 * M.t); return; }
+    this.mov = null;
+  }
+  /* ¿hay un borde adelante, entre la rodilla y un poco más arriba de la cabeza, con lugar arriba? */
+  probarTrepa(W, k, quiere) {
+    const d = RADIO * k + 0.3, fx = this.p.x + quiere.x * d, fz = this.p.z + quiere.y * d;
+    const tope = W.suelo(fx, fz, this.p.y + 2.0 * k - 0.45);
+    const alto = tope.y - this.p.y;
+    if (!tope.s || alto < 0.45 * k || alto > 2.0 * k || tope.s.rebote || (tope.s.t === 'c' && tope.s.r < 0.5)) return;
+    const lx = this.p.x + quiere.x * (d + 0.4), lz = this.p.z + quiere.y * (d + 0.4);
+    if (Math.abs(W.suelo(lx, lz, tope.y + 0.1).y - tope.y) > 0.3) return;   // arriba sigue habiendo piso (no es el canto de una pared)
+    if (W.techo(lx, lz, tope.y, ALTO * k) < tope.y + ALTO * k) return;
+    this.mov = { tipo: 'trepa', t: 0, dur: TREPA, p0: this.p.clone(), p1: new THREE.Vector3(lx, tope.y, lz) };
+    this.v.set(0, 0, 0); this.rumbo = Math.atan2(quiere.x, quiere.y); this.eventos.push('trepa');
+  }
+  /* trepar va solo: primero sube (agarrado), después pasa arriba */
+  seguirTrepa(dt) {
+    const M = this.mov, u = Math.min(1, M.t / M.dur), up = Math.min(1, u / 0.6), fw = Math.max(0, (u - 0.45) / 0.55), e = 1 - (1 - up) * (1 - up);
+    this.p.set(M.p0.x + (M.p1.x - M.p0.x) * fw, M.p0.y + (M.p1.y - M.p0.y) * e, M.p0.z + (M.p1.z - M.p0.z) * fw);
+    this.v.set(0, 0, 0); this.enPiso = false;
+    if (u >= 1) { this.mov = null; this.p.copy(M.p1); this.enPiso = true; this.saltos = 0; this.coyote = 0.12; }
+    this.estado = 'trepa'; this.sync(); this.m.animar(dt, 'trepa', 0);
   }
   montar(d) { this.modo = 'montado'; this.montura = d; d.jinete = this; this.eventos.push('monta'); }
   bajarse() { if (!this.montura) return; this.montura.jinete = null; this.montura = null; this.modo = 'pie'; this.v.set(0, 4, 0); }

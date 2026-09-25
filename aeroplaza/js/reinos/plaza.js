@@ -90,11 +90,14 @@ export function alturaPlaza(x, z) {
 const ALTO_MOLINO = new Map(MOLINOS.map((M) => [M, relieve(...M)]));
 
 /* los caminos de piedra clara: el centro y los que van a cada región */
-const CAMINOS = [[SPAWN, PLAZA], [PLAZA, TIENDA], [PLAZA, [10, -2]], [PLAZA, [-10, -30]], [PLAZA, PROBADOR], [PLAZA, BARRIO],
+/* (van hasta la puerta, no al medio de lo que hay al final; los que cruzaban la
+   torre de una parada del monorriel o nacían adentro de una casa, la rodean) */
+const PUERTA_TIENDA = [23.8, 21.5];
+const CAMINOS = [[SPAWN, PLAZA], [PLAZA, PUERTA_TIENDA], [PLAZA, [10, -2]], [PLAZA, [-10, -30]], [PLAZA, PROBADOR], [PLAZA, BARRIO],
   [[40, 4], [88, -14]], [[88, -14], [CIUDAD[0] - 44, CIUDAD[1]]],
-  [[32, 34], [78, 76]], [[78, 76], [110, 108]],
-  [[-16, 44], [-64, 78]], [[-64, 78], [-104, 112]],
-  [[-24, -38], [-70, -70]], [[-70, -70], [-108, -96]],
+  [[32, 34], [78, 76]], [[78, 76], [99, 99]],
+  [[-7, 51], [-64, 78]], [[-64, 78], [-104, 112]],
+  [[-24, -38], [-70, -70]], [[-70, -70], [-89.3, -87.5]], [[-89.3, -87.5], [-108, -96]],
   [[2, -48], [14, -96]], [[14, -96], [POZO[0] - 4, POZO[1] + 17]],
   [PLAZA, [40, 4]], [[40, 4], [JUEGOS[0] - 4, JUEGOS[1] + 18]]];
 function enCamino(x, z) {
@@ -102,10 +105,20 @@ function enCamino(x, z) {
   for (const [[ax, az], [bx, bz]] of CAMINOS) {
     const vx = bx - ax, vz = bz - az, L = Math.hypot(vx, vz), t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (L * L)));
     if (Math.abs(x - ax - vx * t) > 12 || Math.abs(z - az - vz * t) > 12) continue;
-    const ondula = Math.sin(t * L * 0.28 + ax) * 1.2;
+    /* ondula, pero llega derecho a las puntas (a una puerta, a un muelle) */
+    const ondula = Math.sin(t * L * 0.28 + ax) * 1.2 * Math.min(1, t * L / 6, (1 - t) * L / 6);
     m = Math.min(m, Math.hypot(x - ax - vx * t - ondula * vz / L, z - az - vz * t + ondula * vx / L));
   }
   return m;
+}
+/* corre un punto a un costado del camino hasta quedar a d metros (para que nada quede en el medio) */
+function apartar(x, z, d = 3) {
+  for (let i = 0; i < 40; i++) {
+    if (enCamino(x, z) >= d) break;
+    const gx = enCamino(x + 0.2, z) - enCamino(x - 0.2, z), gz = enCamino(x, z + 0.2) - enCamino(x, z - 0.2), L = Math.hypot(gx, gz) || 1;
+    x += gx / L * 0.4; z += gz / L * 0.4;
+  }
+  return [x, z];
 }
 /* baldosas: la plaza, la explanada de la terminal y la ciudad */
 const enTerminal = (x, z) => Math.abs(x - TERMINAL[0] - 3) < 21 && Math.abs(z - TERMINAL[1]) < 27;
@@ -368,7 +381,7 @@ export function crearPlaza(ctx) {
     }
   });
   const globo = globoCascada(LAGO[0], 17, LAGO[1], 5.2, 0); g.add(globo);
-  const peceras = [[8, -1], [-15, 9], [27, 6], [-2, -20]].map(([x, z], i) => { const p = pecera(x, A(x, z), z, 0.9 + (i % 2) * 0.35); g.add(p); mundo.cilindro(x, z, 1.2, A(x, z) - 1, A(x, z) + 0.5 + (0.9 + (i % 2) * 0.35) * 2); return p; });
+  const peceras = [[8, -1], [-15, 9], [27, 6], [-2, -20]].map(([x0, z0], i) => { const [x, z] = apartar(x0, z0, 4.4); const p = pecera(x, A(x, z), z, 0.9 + (i % 2) * 0.35); g.add(p); mundo.cilindro(x, z, 1.2, A(x, z) - 1, A(x, z) + 0.5 + (0.9 + (i % 2) * 0.35) * 2); return p; });
 
   /* ------------------------------------------------ la terminal y el spawn */
   const yT = A(...TERMINAL);
@@ -397,7 +410,7 @@ export function crearPlaza(ctx) {
   const mono = new Monorriel(mundo, A, VIA, [
     { id: 'terminal', en: [TERMINAL[0] + 10, TERMINAL[1]], bajada: bajadaTerminal },
     { id: 'pradera', en: PRADERA }, { id: 'bahia', en: [110, 110] }, { id: 'ciudad', en: CIUDAD }, { id: 'monte', en: [POZO[0] - 30, POZO[1] + 6] }, { id: 'bosque', en: BOSQUE },
-  ].map((q) => ({ ...q, nombre: t('zona_' + q.id) })), { x: TERMINAL[0], z0: TERMINAL[1] - 22, z1: TERMINAL[1] + 22, y: yT + 0.2 });
+  ].map((q) => ({ ...q, nombre: t('zona_' + q.id) })), { x: TERMINAL[0], z0: TERMINAL[1] - 22, z1: TERMINAL[1] + 22, y: yT + 0.2 }, (x, z) => enCamino(x, z) > 3);
   g.add(mono.g);
   const mapa = dibujarIsla(A, mono.P.filter((_, i) => i % 6 === 0), mono.paradas);
   cartel.userData.pantalla.material = new THREE.MeshBasicMaterial({ map: lienzoCartel(mapa, SPAWN), toneMapped: false });
@@ -462,7 +475,7 @@ export function crearPlaza(ctx) {
   const rh = azar(17), CA = [BOSQUE[0] + 18, BOSQUE[1] - 10];
   for (let i = 0, k = 0; i < 200 && k < 12; i++) {
     const a = rh() * 6.28, d = 8 + Math.sqrt(rh()) * 48, x = BOSQUE[0] + Math.cos(a) * d, z = BOSQUE[1] + Math.sin(a) * d;
-    if (!hayPasto(x, z) || !libre(x, z, arb, 4.5) || !libre(x, z, rosa, 4.5) || !libre(x, z, hongos.map((q) => [q.x, q.z]), 7) || Math.hypot(x - CA[0], z - CA[1]) < 12 || !lejosDeVia(x, z)) continue;
+    if (!hayPasto(x, z) || enCamino(x, z) < 5 || !libre(x, z, arb, 4.5) || !libre(x, z, rosa, 4.5) || !libre(x, z, hongos.map((q) => [q.x, q.z]), 7) || Math.hypot(x - CA[0], z - CA[1]) < 12 || !lejosDeVia(x, z)) continue;
     const esc = 1.1 + (k % 4) * 0.35, m = modelo('hongo', { escala: esc }), y = A(x, z);
     m.position.set(x, y - 0.1, z); m.rotation.y = rh() * 6; g.add(m);
     const tope = y - 0.1 + m.userData.tope, R = m.userData.radio;
@@ -530,6 +543,9 @@ export function crearPlaza(ctx) {
     const L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L, nz = (bx - ax) / L;
     for (let d = 12; d < L - 6; d += 26) { const t = d / L, s2 = (Math.floor(d / 26) + j) % 2 ? 1 : -1, x = ax + (bx - ax) * t + nx * 3.2 * s2, z = az + (bz - az) * t + nz * 3.2 * s2; if (A(x, z) > 0.8 && enCamino(x, z) > 1.6) ponFarol(x, z); }
   });
+  /* ninguno en el medio de un camino */
+  for (const L of lugFaroles) if (enCamino(L[0], L[1]) < 2.2) { const [x, z] = apartar(L[0], L[1], 2.4); L[0] = x; L[1] = z; L[2] = A(x, z); }
+  for (let i = lugBancos.length - 1; i >= 0; i--) if (enCamino(lugBancos[i][0], lugBancos[i][1]) < 3.8) lugBancos.splice(i, 1);   // (un banco corrido queda raro: se saca)
   const faroles = hacerFaroles(mundo, lugFaroles); g.add(faroles);
   g.add(hacerBancos(mundo, lugBancos));
 
@@ -581,7 +597,7 @@ export function crearPlaza(ctx) {
     { id: 'brisa', pos: [PRADERA[0] + 12, PRADERA[1] - 10], rot: 0.8 },
     { id: 'musgo', pos: [CA[0] - 6, CA[1] + 5], rot: 2.2 },
     { id: 'marea', pos: [mx0 - u[0] * 3 + u[1] * 2.5, mz0 - u[1] * 3 - u[0] * 2.5], rot: rotMu },
-  ].map((n) => ({ ...n, y: A(n.pos[0], n.pos[1]) }));
+  ].map((n) => { const pos = apartar(n.pos[0], n.pos[1], 2.8); return { ...n, pos, y: A(pos[0], pos[1]) }; });   // (nadie parado en el medio de un camino)
 
   /* lo interactivo */
   for (const p of term.userData.maquinas) mundo.interactivo({ id: 'tren', pos: p.clone().add(new THREE.Vector3(TERMINAL[0], yT, TERMINAL[1])), radio: 2.2, accion: 'viajar', icono: '🚆' });
@@ -609,6 +625,7 @@ export function crearPlaza(ctx) {
   const zonaEn = (x, z) => ZONAS.find((Z) => Math.hypot(x - Z.c[0], z - Z.c[1]) < Z.r) || null;
   return {
     id: 'plaza', mundo, grupo: g, mar, inicio, rumboInicio, musica: 'colina', cielo: { aurora: 0, arcoiris: 1 },
+    caminos: CAMINOS, enCamino,   // (para las pruebas: que no haya nada en el medio)
     orbes, mariposas, burbujas, frutas, discos, npcs, cardumenes, monorriel: mono, mapa, zonas: ZONAS, zonaEn,
     /* los lugares importantes (para las pruebas y el mapa) */
     puntos: { juegos: JUEGOS, puertaJuegos: [puertaJ.x, puertaJ.z], rumboJuegos: rotJ, spawn: SPAWN, cartel: CARTEL, terminal: TERMINAL, faro: FARO, muelle: [mx0, mz0], finMuelle, casaArbol: CA, monte: MONTE, pozo: POZO, ciudad: CIUDAD, pradera: PRADERA, bosque: BOSQUE },

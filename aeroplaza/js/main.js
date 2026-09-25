@@ -19,6 +19,7 @@ import { crearTienda } from './reinos/tienda.js';
 import { crearCasa } from './reinos/casa.js';
 import { crearParkour, NIVELES, formatoTiempo } from './reinos/parkour.js';
 import { crearInterior } from './reinos/interior.js';
+import { crearTiro, TIRO } from './reinos/tiro.js';
 import { Jugador } from './jugador.js';
 import { Camara } from './camara.js';
 import { Entrada } from './entrada.js';
@@ -33,6 +34,8 @@ import { cargarDelfin } from './delfin.js';
 import * as Modelos from './modelos.js';
 import { Pantalla } from './pantalla.js';
 import { Voz } from './voz.js';
+import { ESTILOS_ANIM } from './animador.js';
+import { CuerpoFP } from './primera.js';
 import { timbre } from './timbres.js';
 import { detectarAparato } from './aparato.js';
 import { Estudio } from './probador.js';
@@ -118,6 +121,7 @@ async function iniciar() {
   const remotos = new Remotos(motor.escena);
   const efectos = new THREE.Group(); motor.escena.add(efectos);
   const chispas = new Chispas(efectos, '#ffffff', 160);
+  const cuerpoFP = new CuerpoFP(motor.escena);   // los brazos de la primera persona (primera.js)
 
   let tuto = null, estudio = null;
   let reino = null, yo = null, enJuego = false, pausado = false, enDialogo = false, probador = false, modoFoto = false, construyendo = null;
@@ -138,6 +142,7 @@ async function iniciar() {
     guardarControles() { G.controles = ent.config; Guardado.guardar(); },
     ponerCalidad(q) { if (q === 'auto') { midiendo = true; cuadros = 0; sumaDt = 0; tMedir = 0; q = aparato.calidad; J._subio = false; } else midiendo = false; motor.ponerCalidad(q); for (const k in cache) if (cache[k] !== reino) delete cache[k]; },
     ponerRetro() { G.opciones.estilo = 'libre'; motor.ponerRetro(G.opciones.retro); },
+    ponerAnim(q) { Meeple.estiloAnim = q; },
     ponerEstilo(n) { G.opciones.estilo = n; G.opciones.retro = { ...ESTILOS[n] }; motor.ponerRetro(G.opciones.retro); Guardado.guardar(); },
     mostrarNombres() { for (const r of remotos.m.values()) if (r.m.cartel) r.m.cartel.visible = G.opciones.nombres; },
     alCambiarIdioma() { if (reino) for (const n of reino.npcMallas || []) n.m.ponerNombre(t('npc_' + n.id)); },
@@ -149,7 +154,7 @@ async function iniciar() {
     decir(txt) { const x = red.chat(txt) || String(txt).trim().slice(0, 120); if (!x) return; UI.lineaChat(G.nombre, x); yo.m.decir(x); },
     finDialogo() { enDialogo = false; cam.ponerCine(null); },
     abrirProbador() { abrirProbador(); },
-    aplicarApariencia() { yo.m.ponerApariencia(G.A); estudio?.ponerApariencia(G.A); G.av = hash(G.A); red.accion({ type: 'apariencia', A: G.A, av: G.av }); Guardado.guardar(); },
+    aplicarApariencia() { cuerpoFP.ponerApariencia(G.A); yo.m.ponerApariencia(G.A); if (yo.m.enPrimera) yo.m.primeraPersona(true); estudio?.ponerApariencia(G.A); G.av = hash(G.A); red.accion({ type: 'apariencia', A: G.A, av: G.av }); Guardado.guardar(); },
     probarPuesto(ranura, valor) { const A = { ...G.A, [ranura]: valor }; yo.m.ponerApariencia(A); estudio?.ponerApariencia(A); },
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
@@ -201,7 +206,8 @@ async function iniciar() {
 
   /* ---------------------------------------------------------------- los reinos */
   function construirReino(id, o = {}) {
-    if (id === 'parkour') return crearParkour({ calidad: motor.Q }, o.nivel || 0);
+    if (id === 'parkour') return crearParkour({ calidad: motor.Q }, o.nivel || 0, o);
+    if (id === 'tiro') return crearTiro({ calidad: motor.Q });
     /* adentro de un edificio: se arma cada vez (son chicos) con su gente */
     if (id === 'interior') { const R = crearInterior({ calidad: motor.Q }, o.tipo || 'hotel', o); ponerGente(R); return R; }
     if (id === 'casa') return crearCasa({ calidad: motor.Q }, o.casaDe && o.casaDe !== ID ? { dueño: o.casaDe, plano: [] } : { plano: G.casa });
@@ -246,22 +252,22 @@ async function iniciar() {
     const FP = !!reino.primeraPersona;
     cam.fp = FP; cam.sentado = false; J.sentado = false; J._tZoom = 0; reino.apuntables = null;
     if (FP) cam.pitch = 0.3;
-    yo.m.raiz.visible = !FP; cielo.tRefl = 99;
-    UI.mira(FP);
+    yo.m.raiz.visible = true; yo.m.primeraPersona(FP); cuerpoFP.ponerApariencia(G.A); cuerpoFP.mostrar(FP); cielo.tRefl = 99;
+    UI.mira(FP && !!(reino.accionables || reino.tiro));
     UNI.uViento.value = 1;
     zona = null; tZona = 9; J.esperaTren = null; UI.estadoTren(null);
     if (reino.zonaEn) zona = reino.zonaEn(p.x, p.z);
     if (!J.musicaElegida) J.musica(musicaDelLugar());
     /* la sala pública: la casa es de su dueño; el resto, la que tenga gente y lugar */
-    const sala = id === 'casa' ? 'casa-' + (o.casaDe || ID) : id === 'tienda' ? 'tienda-1' : id === 'parkour' ? 'parkour-' + reino.nivel : id === 'interior' ? 'interior-' + reino.tipo + reino.i : red.elegirSala(id);
-    UI.parkourHud(null);
+    const sala = id === 'casa' ? 'casa-' + (o.casaDe || ID) : id === 'tienda' ? 'tienda-1' : id === 'parkour' ? 'parkour-' + reino.nivel : id === 'tiro' ? 'tiro-1' : id === 'interior' ? 'interior-' + reino.tipo + reino.i : red.elegirSala(id);
+    UI.parkourHud(null); UI.tiroHud(null);
     red.casaAbierta = id === 'casa' && !o.casaDe;
     red.entrar(sala, id);
     red.mirarCasa(id === 'casa' && o.casaDe && o.casaDe !== ID ? o.casaDe : null);
     if (red.casaAbierta) { red.publicarCasa(G.casa); UI.avisar(t('casa_visitas'), 'azul'); }
     red.accion({ type: 'apariencia', A: G.A, av: G.av });
     UI.actualizarRed();
-    G.ultimoReino = ['tienda', 'casa', 'parkour'].includes(id) || reino.interior ? 'plaza' : id; Guardado.guardar();
+    G.ultimoReino = ['tienda', 'casa', 'parkour', 'tiro'].includes(id) || reino.interior ? 'plaza' : id; Guardado.guardar();
   }
   async function viajar(id, o = {}) {
     if (!reino) return;
@@ -298,7 +304,7 @@ async function iniciar() {
     }, 60);
   }
   function salirAlMenu() {
-    enJuego = false; ent.mostrarDedos(false); probador = false; construyendo = null; cam.fp = false; UI.mira(false); voz.apagar();
+    enJuego = false; ent.mostrarDedos(false); probador = false; construyendo = null; cam.fp = false; UI.mira(false); voz.apagar(); cuerpoFP.mostrar(false);
     if (reino) { motor.escena.remove(reino.grupo); reino = null; }
     red.entrar(null, null); remotos.vaciar();
     Guardado.ya();
@@ -431,12 +437,36 @@ async function iniciar() {
     return a && h.distance < a.dist ? a : null;
   }
 
+  /* ---------------------------------------------------------------- el tiro de burbujas (tiro.js) */
+  G.tiro ||= { mejor: 0, estrellas: 0 };
+  J.tiroReiniciar = () => { if (reino?.tiro) { reino.reiniciar(yo); UI.cerrarVentana(); J.sfx('entra'); } };
+  J.tiroSalir = () => J.parkourSalir();
+  function seguirTiro(dt) {
+    const E = reino.tiro;
+    if (E.fase === 'cuenta') UI.cuenta(String(Math.max(1, Math.ceil(E.cuenta - 0.4))));
+    UI.tiroHud(E);
+    for (const ev of E.eventos.splice(0)) {
+      if (ev.tipo === 'ya') { UI.cuenta(t('pk_ya'), true); J.sfx('restaura'); }
+      else if (ev.tipo === 'pop') { J.sfx('pop'); if (ev.oro) J.sfx('orbe'); if (ev.subeRacha) { J.sfx('gota', { k: ev.mult * 2 }); UI.pkDestello('control'); } ent.vibrar(12); }
+      else if (ev.tipo === 'fin') {
+        const P = G.tiro, est = ev.puntos >= TIRO.estrellas[2] ? 3 : ev.puntos >= TIRO.estrellas[1] ? 2 : ev.puntos >= TIRO.estrellas[0] ? 1 : 0;
+        const record = ev.puntos > (P.mejor || 0), primera = !P.jugado;
+        const premio = (primera ? 15 : 0) + Math.max(0, est - (P.estrellas || 0)) * 5;
+        if (record) P.mejor = ev.puntos; P.estrellas = Math.max(P.estrellas || 0, est); P.jugado = true;
+        G.orbes += premio; Guardado.guardar(); UI.actualizarHud(); J.sfx('restaura');
+        setTimeout(() => UI.resultadoTiro({ puntos: ev.puntos, aciertos: ev.aciertos, tiros: ev.tiros, estrellas: est, record, premio }, () => J.tiroReiniciar(), () => J.tiroSalir()), 700);
+      }
+    }
+  }
+
   /* ---------------------------------------------------------------- el parkour */
   G.parkour ||= { mejor: {}, estrellas: {} };
   function abrirParkour() {
     pausado = true;
-    UI.menuParkour(G.parkour, (n) => { pausado = false; viajar('parkour', { nivel: n }); }, () => { pausado = false; });
+    UI.menuParkour(G.parkour, (n) => { pausado = false; irParkour(n); }, () => { pausado = false; }, () => { pausado = false; viajar('tiro'); });
   }
+  /* el parkour se juega en tercera o en primera persona (el botón 👁 del menú) */
+  const irParkour = (n) => viajar('parkour', { nivel: n, fp: !!G.parkour.fp, nombre: `${NIVELES[n].icono} ${t('pk_' + NIVELES[n].id)}` });
   J.parkourReiniciar = () => { if (reino?.parkour) { reino.reiniciar(yo); UI.cerrarVentana(); J.sfx('entra'); } };
   J.parkourSalir = () => {
     const P = cache.plaza?.puntos;
@@ -461,7 +491,7 @@ async function iniciar() {
         G.orbes += premio; Guardado.guardar(); UI.actualizarHud();
         J.sfx('restaura'); yo.m.hacerGesto('festejar');
         setTimeout(() => UI.resultadoParkour({ nivel: n, tiempo: ev.tiempo, caidas: ev.caidas, estrellas: est, record, premio, hay: n < NIVELES.length - 1 },
-          () => viajar('parkour', { nivel: n + 1 }), () => J.parkourReiniciar(), () => J.parkourSalir()), 900);
+          () => irParkour(n + 1), () => J.parkourReiniciar(), () => J.parkourSalir()), 900);
       }
     }
   }
@@ -565,6 +595,7 @@ async function iniciar() {
     for (const ev of yo.eventos) {
       if (ev === 'salto') J.sfx('salto'); else if (ev === 'doble') { J.sfx('burbuja'); chispas.soltar(yo.p, 8, 2); } else if (ev === 'aterriza') J.sfx('aterriza');
       else if (ev === 'chapuzon' || ev === 'monta') { J.sfx('agua'); chispas.soltar(yo.p.clone().setY(reino.mundo.agua ?? yo.p.y), 16, 3); } else if (ev === 'rebote') { J.sfx('hongo'); const c = yo.pisando?.clave; if (c && c.startsWith('hongo')) contar('hongo', 1, c); }
+      else if (ev === 'desliza') J.sfx('ola'); else if (ev === 'rueda') J.sfx('aterriza'); else if (ev === 'trepa') J.sfx('salto'); else if (ev === 'pared') { J.sfx('hongo'); chispas.soltar(yo.p.clone().setY(yo.p.y + 0.9), 10, 2.5); }
       else if (ev === 'noBaja') UI.avisar(t('tren_espera'), 'azul');
       else if (ev === 'bajaTren') { J.sfx('aterriza'); cam.inicial = true; UI.estadoTren(null); } else if (ev === 'brazada') J.sfx('brazada');
       else if (ev === 'geiser') { J.sfx('ola'); if (yo._enGeiser?.clave) contar('geiser', 1, yo._enGeiser.clave); } else if (ev === 'pop') { J.sfx('pop'); chispas.soltar(yo.p.clone().setY(yo.p.y + 0.8), 20, 3); } else if (ev === 'burbuja') J.sfx('burbuja');
@@ -574,10 +605,21 @@ async function iniciar() {
     tSinGolpe += dt; if (tSinGolpe > 4 && yo.hp < 100) yo.hp = Math.min(100, yo.hp + dt * 8);
     /* los disparos de burbuja */
     tDisparo -= dt;
-    if (!quieto && !probador && E.dispara && tDisparo <= 0 && yo.modo !== 'montado') {
-      tDisparo = 0.45;
-      const dir = new THREE.Vector3(Math.sin(yo.rumbo), 0.12, Math.cos(yo.rumbo)).normalize().multiplyScalar(15);
-      const desde = yo.p.clone().add(new THREE.Vector3(Math.sin(yo.rumbo) * 0.6, 1.0 * yo.escala, Math.cos(yo.rumbo) * 0.6));
+    if (!quieto && !probador && E.dispara && tDisparo <= 0 && yo.modo !== 'montado' && (!reino.tiro || reino.tiro.fase === 'juega')) {
+      if (reino.contarTiro) reino.contarTiro();
+      tDisparo = reino.tiro ? 0.26 : 0.45;
+      let dir, desde;
+      if (cam.fp) {
+        /* en primera persona sale de la mano derecha hacia donde se mira */
+        const c = motor.camara, f = new THREE.Vector3(); c.getWorldDirection(f);
+        const der = new THREE.Vector3().crossVectors(f, c.up).normalize();
+        dir = f.clone().add(new THREE.Vector3(0, 0.03, 0)).normalize().multiplyScalar(reino.tiro ? 24 : 18);
+        desde = c.position.clone().addScaledVector(der, 0.24).addScaledVector(f, 0.55).add(new THREE.Vector3(0, -0.14, 0));
+        cuerpoFP.tirar();
+      } else {
+        dir = new THREE.Vector3(Math.sin(yo.rumbo), 0.12, Math.cos(yo.rumbo)).normalize().multiplyScalar(15);
+        desde = yo.p.clone().add(new THREE.Vector3(Math.sin(yo.rumbo) * 0.6, 1.0 * yo.escala, Math.cos(yo.rumbo) * 0.6));
+      }
       disparar(desde, dir, true);
       red.accion({ type: 'disparo', x: +desde.x.toFixed(2), y: +desde.y.toFixed(2), z: +desde.z.toFixed(2), dx: +dir.x.toFixed(2), dy: +dir.y.toFixed(2), dz: +dir.z.toFixed(2) });
       if (J.slot !== 1) { J.slot = 1; UI.actualizarHud(); }
@@ -587,6 +629,9 @@ async function iniciar() {
       d.vida -= dt; d.v.y -= 3 * dt; d.m.position.addScaledVector(d.v, dt);
       d.m.scale.setScalar(1 + Math.sin(d.vida * 20) * 0.05);
       let fin = d.vida <= 0 || d.m.position.y < reino.mundo.altura(d.m.position.x, d.m.position.z);
+      /* el tiro de burbujas: ¿le pegó a un blanco? (y si se perdió, se corta la racha) */
+      if (d.mio && !fin && reino.golpe && reino.golpe(d.m.position)) { fin = true; d.pego = true; }
+      if (fin && d.mio && !d.pego && reino.fallo) reino.fallo();
       if (d.mio && !fin) for (const r of remotos.m.values()) {
         if (Math.hypot(r.x - d.m.position.x, r.z - d.m.position.z) < 0.7 && d.m.position.y > r.y && d.m.position.y < r.y + 1.5) {
           red.accion({ type: 'hit_player', targetId: r.id, dmg: 10, byName: G.nombre }); fin = true; J.sfx('pop'); break;
@@ -634,6 +679,7 @@ async function iniciar() {
     if (reino.id === 'aurora') { const n = reino.actualizar(dt, yo.p, cielo); if (n) { G.estrellas += n; UI.avisar(t('estrella'), 'azul'); J.sfx('guino'); contar('estrella', n); } }
     else reino.actualizar(dt, yo.p, cielo);
     if (reino.parkour) seguirParkour(dt);
+    if (reino.tiro) seguirTiro(dt);
     if (reino.ascensor) for (const ev of reino.ascensor.eventos.splice(0)) {
       if (ev.tipo === 'llega') { UI.avisar(t('asc_llega', { n: t(ev.n) }), 'bien'); J.sfx('guino'); }
       else { UI.avisar(t(ev.tipo === 'sube' ? 'asc_sube' : 'asc_baja'), 'azul'); J.sfx('entra'); }
@@ -658,9 +704,10 @@ async function iniciar() {
       if (construyendo) cerca = construyendo.k ? { accion: 'poner' } : null;
     }
     accionCerca = cerca;
-    if (cam.fp) UI.mira(true, cerca?.accion === 'accionar');
+    if (cam.fp && (reino.accionables || reino.tiro)) UI.mira(true, cerca?.accion === 'accionar');
     UI.accion(cerca ? (cerca.accion === 'poner' ? t('casa_construir') : cerca.accion === 'hablar' ? `${t('accion_hablar')} · ${t('npc_' + cerca.npc)}` : cerca.accion === 'accionar' ? cerca.a.texto() : cerca.texto ? t(cerca.texto) : t('accion_' + cerca.accion)) : null);
     if (usa && cerca) {
+      if (cam.fp) cuerpoFP.usar();
       if (cerca.accion === 'fruta') {
         const f = reino.frutas.f[cerca.i]; reino.frutas.sacar(cerca.i); red.accion({ type: 'fruta', i: cerca.i });
         const ef = FRUTAS[f.tipo].efecto; yo.ponerEfecto(ef); UI.avisar(t('fruta_' + ef), 'bien'); J.sfx('hongo'); contar('fruta');
@@ -700,6 +747,7 @@ async function iniciar() {
       voz.actualizar(dt, oido, remotos.m);
       const nv = Math.round(voz.nivel * 20) / 20; if (nv !== J._nivelVoz) { J._nivelVoz = nv; UI.estadoVoz(voz.estado, nv); }
     }
+    cuerpoFP.actualizar(dt, motor.camara, yo);
     J._tZoom = Math.max(0, (J._tZoom || 0) - dt);
     const fov = J._tZoom > 0 ? 18 : (motor.alto > motor.ancho ? 72 : 58) + (cam.fp ? 12 : 0), fc = motor.camara;
     if (Math.abs(fc.fov - fov) > 0.05) { fc.fov += (fov - fc.fov) * Math.min(1, dt * 5); fc.updateProjectionMatrix(); }
@@ -748,7 +796,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
+  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {
@@ -762,6 +810,8 @@ async function iniciar() {
   else motor.ponerCalidad(aparato.calidad);
   if (Q.has('calidad')) motor.ponerCalidad(Q.get('calidad'));
   motor.ponerRetro(G.opciones.retro);
+  /* cómo pasan las poses de las animaciones: suave, lineal o chop (Opciones › Imagen) */
+  Meeple.estiloAnim = ESTILOS_ANIM.includes(G.opciones.animEstilo) ? G.opciones.animEstilo : 'suave';
 
   /* el camino de pantallas */
   const arrancarAudio = () => { try { Sonido.iniciar(); J.volumen(); } catch { /* sin audio */ } };

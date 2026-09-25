@@ -33,23 +33,25 @@ export const NIVELES = [
   { id: 'jardin', icono: '🌸', musica: 'bosque', cielo: { hora: 0.3, aurora: 0 }, fondo: ['#9be63a', '#fff6c2'], estrellas: [70, 100] },
   { id: 'ciudad', icono: '🌃', musica: 'ciudad', cielo: { hora: 0.97, aurora: 0.7 }, fondo: ['#1a2a6c', '#ff6fb0'], estrellas: [75, 105] },
   { id: 'orbita', icono: '🪐', musica: 'aurora', cielo: { hora: 0.02, aurora: 1 }, fondo: ['#0b1a4a', '#9b7bff'], estrellas: [85, 120] },
+  /* el de los movimientos nuevos: deslizarse, trepar, rebotar en la pared y rodar al caer */
+  { id: 'azoteas', icono: '🌇', musica: 'ciudad', cielo: { hora: 0.735, aurora: 0 }, fondo: ['#ff8a5a', '#ffe3b0'], estrellas: [45, 70] },
 ];
 sumar({
   es: {
-    pk_titulo: 'PARKOUR AERO', pk_mapas: '5 mapas', pk_elegi: 'Elegí un mapa', pk_bloq: 'Terminá el anterior', pk_mejor: 'Récord {s}', pk_sin: 'Sin tiempo todavía',
-    pk_nubes: 'Nubes de Algodón', pk_acuario: 'Acuario Burbuja', pk_jardin: 'Jardín de Cristal', pk_ciudad: 'Ciudad Aurora', pk_orbita: 'Órbita Aero',
+    pk_titulo: 'PARKOUR AERO', pk_mapas: '6 mapas', pk_elegi: 'Elegí un mapa', pk_bloq: 'Terminá el anterior', pk_mejor: 'Récord {s}', pk_sin: 'Sin tiempo todavía',
+    pk_azoteas: 'Azoteas de Vidrio', pk_mov: 'Deslizate con C (⤓), trepá saltando contra un borde, rebotá en las paredes y rodá al caer', pk_nubes: 'Nubes de Algodón', pk_acuario: 'Acuario Burbuja', pk_jardin: 'Jardín de Cristal', pk_ciudad: 'Ciudad Aurora', pk_orbita: 'Órbita Aero',
     pk_ya: '¡YA!', pk_control: '¡Punto de control!', pk_caidas: 'caídas', pk_fin: '¡Llegaste!', pk_tiempo: 'Tiempo', pk_record: '¡Récord nuevo!', pk_siguiente: 'Siguiente mapa', pk_repetir: 'Repetir', pk_volver: 'Volver a la isla', pk_orbes: 'orbes',
     accion_minijuego: 'Entrar a PARKOUR AERO', zona_juegos: 'Zona de Juegos', pk_premio: '+{n} orbes por terminarlo',
   },
   en: {
-    pk_titulo: 'AERO PARKOUR', pk_mapas: '5 maps', pk_elegi: 'Pick a map', pk_bloq: 'Finish the previous one', pk_mejor: 'Best {s}', pk_sin: 'No time yet',
-    pk_nubes: 'Cotton Clouds', pk_acuario: 'Bubble Aquarium', pk_jardin: 'Crystal Garden', pk_ciudad: 'Aurora City', pk_orbita: 'Aero Orbit',
+    pk_titulo: 'AERO PARKOUR', pk_mapas: '6 maps', pk_elegi: 'Pick a map', pk_bloq: 'Finish the previous one', pk_mejor: 'Best {s}', pk_sin: 'No time yet',
+    pk_azoteas: 'Glass Rooftops', pk_mov: 'Slide with C (⤓), climb by jumping at a ledge, kick off walls and roll when you land', pk_nubes: 'Cotton Clouds', pk_acuario: 'Bubble Aquarium', pk_jardin: 'Crystal Garden', pk_ciudad: 'Aurora City', pk_orbita: 'Aero Orbit',
     pk_ya: 'GO!', pk_control: 'Checkpoint!', pk_caidas: 'falls', pk_fin: 'You made it!', pk_tiempo: 'Time', pk_record: 'New record!', pk_siguiente: 'Next map', pk_repetir: 'Retry', pk_volver: 'Back to the island', pk_orbes: 'orbs',
     accion_minijuego: 'Enter AERO PARKOUR', zona_juegos: 'Game Zone', pk_premio: '+{n} orbs for finishing',
   },
   pt: {
-    pk_titulo: 'PARKOUR AERO', pk_mapas: '5 mapas', pk_elegi: 'Escolha um mapa', pk_bloq: 'Termine o anterior', pk_mejor: 'Recorde {s}', pk_sin: 'Sem tempo ainda',
-    pk_nubes: 'Nuvens de Algodão', pk_acuario: 'Aquário Bolha', pk_jardin: 'Jardim de Cristal', pk_ciudad: 'Cidade Aurora', pk_orbita: 'Órbita Aero',
+    pk_titulo: 'PARKOUR AERO', pk_mapas: '6 mapas', pk_elegi: 'Escolha um mapa', pk_bloq: 'Termine o anterior', pk_mejor: 'Recorde {s}', pk_sin: 'Sem tempo ainda',
+    pk_azoteas: 'Terraços de Vidro', pk_mov: 'Deslize com C (⤓), escale pulando contra uma borda, quique nas paredes e role ao cair', pk_nubes: 'Nuvens de Algodão', pk_acuario: 'Aquário Bolha', pk_jardin: 'Jardim de Cristal', pk_ciudad: 'Cidade Aurora', pk_orbita: 'Órbita Aero',
     pk_ya: 'JÁ!', pk_control: 'Ponto de controle!', pk_caidas: 'quedas', pk_fin: 'Você chegou!', pk_tiempo: 'Tempo', pk_record: 'Recorde novo!', pk_siguiente: 'Próximo mapa', pk_repetir: 'Repetir', pk_volver: 'Voltar para a ilha', pk_orbes: 'orbes',
     accion_minijuego: 'Entrar no PARKOUR AERO', zona_juegos: 'Zona de Jogos', pk_premio: '+{n} orbes por terminar',
   },
@@ -71,7 +73,7 @@ export function miniaturaParkour(n = -1, W = 640, H = 400) {
   /* burbujas */
   for (let i = 0; i < 26; i++) { const x = r() * W, y = r() * H, rr = 4 + r() * 18; g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, rr, 0, 7); g.stroke(); g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(x - rr * 0.35, y - rr * 0.35, rr * 0.25, 0, 7); g.fill(); }
   /* las plataformas en perspectiva, subiendo hacia el fondo */
-  const colPlat = n < 0 ? ['#ffffff', '#8ff0ff', '#9be63a', '#ff6fb0', '#9b7bff'] : [[['#ffffff'], ['#43d8cd'], ['#7fe04a'], ['#2a3a7a'], ['#b8a8ff']][n][0]];
+  const colPlat = n < 0 ? ['#ffffff', '#8ff0ff', '#9be63a', '#ff6fb0', '#9b7bff', '#ffb07a'] : [[['#ffffff'], ['#43d8cd'], ['#7fe04a'], ['#2a3a7a'], ['#b8a8ff'], ['#ffb07a']][n][0]];
   for (let i = 0; i < 6; i++) {
     const u = i / 5, x = W * (0.12 + u * 0.68) + Math.sin(i * 2.1) * 30, y = H * (0.84 - u * 0.5), w = 120 - u * 60, h = 26 - u * 12;
     const col = colPlat[i % colPlat.length];
@@ -119,7 +121,7 @@ function texCinta() {
   const t0 = new THREE.CanvasTexture(c); t0.wrapS = t0.wrapT = THREE.RepeatWrapping; t0.colorSpace = THREE.SRGBColorSpace; return t0;
 }
 
-export function crearParkour(ctx, nivel = 0) {
+export function crearParkour(ctx, nivel = 0, o = {}) {
   const N = NIVELES[nivel], mundo = new Mundo(() => -500);
   mundo.agua = null; mundo.limite = 400; mundo.sinRejilla = true;
   const g = new THREE.Group(), quieto = new THREE.Group(), r = azar(11 + nivel * 7);
@@ -252,6 +254,23 @@ export function crearParkour(ctx, nivel = 0) {
     orbe(x, y, z) { P.orbes.push([x, y + 0.9, z]); },
     linea(a, b, n) { for (let i = 1; i <= n; i++) { const u = i / (n + 1); P.orbe(a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u); } },
     deco(o) { g.add(o); return o; },
+    /* un caño bajo de lado a lado: se pasa deslizándose (o, con doble salto, por arriba) */
+    tubo(x, y, z, largo, rot = 0, alto = 0.95) {
+      const G0 = new THREE.Group(); G0.position.set(x, y, z); G0.rotation.y = rot; quieto.add(G0);
+      const c = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, largo - 0.52, 4, 14), B('#ff9d3a', { roughness: 0.15, emissive: '#ff6a00', emissiveIntensity: 0.3 })); c.rotation.z = Math.PI / 2; c.position.y = alto + 0.26; G0.add(c);
+      for (const sx of [-1, 1]) { const q = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, alto + 0.52, 10), B('#ffffff', { roughness: 0.2 })); q.position.set(sx * largo / 2, (alto + 0.52) / 2, 0); G0.add(q); }
+      for (let k = 0; k < Math.floor(largo / 1.2); k++) { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.22, 14), B('#ffffff', { roughness: 0.2 })); f.rotation.z = Math.PI / 2; f.position.set(-largo / 2 + 0.6 + k * 1.2, alto + 0.26, 0); G0.add(f); }
+      mundo.caja(x, z, largo / 2, 0.26, y + alto, y + alto + 0.52, rot);
+    },
+    /* una pared alta de vidrio con marco blanco, para rebotar */
+    muro(x, y, z, largo, alto, rot = 0) {
+      const G0 = new THREE.Group(); G0.position.set(x, y, z); G0.rotation.y = rot; g.add(G0);
+      const v = new THREE.Mesh(new RoundedBoxGeometry(largo, alto, 0.3, 2, 0.08), vidrioP()); v.position.y = alto / 2 - 0.4; v.renderOrder = 3; G0.add(v);
+      const marco = B('#ffffff', { roughness: 0.15 }), M0 = new THREE.Group(); M0.position.copy(G0.position); M0.rotation.copy(G0.rotation); quieto.add(M0);
+      for (const [w, h, px, py] of [[largo + 0.2, 0.22, 0, alto - 0.4], [largo + 0.2, 0.22, 0, -0.4], [0.22, alto, -largo / 2, alto / 2 - 0.4], [0.22, alto, largo / 2, alto / 2 - 0.4]]) { const q = new THREE.Mesh(new RoundedBoxGeometry(w, h, 0.36, 2, 0.06), marco); q.position.set(px, py, 0); M0.add(q); }
+      const tira = new THREE.Mesh(new THREE.BoxGeometry(largo - 0.3, 0.08, 0.34), B('#43d8cd', { emissive: '#1fb0ea', emissiveIntensity: 0.9 })); tira.position.y = alto * 0.45; M0.add(tira);
+      mundo.caja(x, z, largo / 2, 0.18, y - 0.5, y + alto - 0.4, rot);
+    },
   };
 
   /* ------------------------------------------ los cinco mapas */
@@ -349,7 +368,46 @@ export function crearParkour(ctx, nivel = 0) {
     for (let i = 0; i < 60; i++) { let x = (r() - 0.5) * 200, z = -70 + (r() - 0.5) * 220; if (Math.abs(x) < 16) x += Math.sign(x || 1) * 24; const h = 30 + r() * 60, w = 6 + r() * 10; im.setMatrixAt(i, M4.compose(V(x, -10, z), new THREE.Quaternion(), V(w, h, w * (0.7 + r() * 0.5)))); }
     im.computeBoundingSphere(); g.add(im);
     for (let i = 0; i < 8; i++) { const aro = new THREE.Mesh(new THREE.TorusGeometry(4 + r() * 5, 0.15, 8, 60), new THREE.MeshBasicMaterial({ color: ['#ff5fd0', '#3fe0ff', '#ffe14a'][i % 3] })); aro.position.set((r() - 0.5) * 60, 70 + r() * 30, -30 - i * 16); aro.rotation.set(r(), r(), 0); g.add(aro); const v = 0.3 + r() * 0.5; vivos.push((tt) => { aro.rotation.z = tt * v; }); }
-  } else {
+  } else if (nivel === 5) {
+    /* AZOTEAS DE VIDRIO, al atardecer: el mapa de los movimientos nuevos.
+       Deslizarse por debajo de los caños, trepar un borde, caer rodando a una
+       terraza de abajo, el pasillo de paredes para rebotar de una a la otra (o
+       la plataforma lenta, para quien no se anime), otra caída, la escalera de
+       bordes para trepar y los caños del final. */
+    P.inicio(0, 60, 3); P.plat(0, 60, -2, 10, 14, 'techo');
+    P.tubo(0, 60, -6, 9);
+    P.plat(0, 60, -15.5, 8, 7, 'techo'); P.linea([0, 60, -9], [0, 60, -12], 1);
+    P.plat(0, 61.4, -21, 8, 3, 'vidrio', { alto: 1.4 });
+    P.plat(0, 61.4, -28.5, 8, 12, 'techo'); P.control(0, 61.4, -26);
+    P.tubo(0, 61.4, -30.5, 8); P.tubo(0, 61.4, -32.6, 8);
+    P.plat(0, 55, -44, 9, 9, 'techo'); P.control(0, 55, -44);
+    for (const sx of [-1, 1]) P.muro(sx * 2.5, 55, -55.5, 12, 7, Math.PI / 2);
+    P.movil([[0, 54.4, -50.5], [0, 54.4, -60.5]], 2.6, 2.6, 7, 'vidrio');
+    for (let i = 0; i < 3; i++) P.orbe(i % 2 ? 1.4 : -1.4, 56.5, -51 - i * 4);
+    P.plat(0, 54.5, -66, 7, 8, 'techo'); P.control(0, 54.5, -66);
+    P.plat(0, 47, -80, 10, 10, 'techo');
+    for (let i = 0; i < 3; i++) P.plat(0, 48.3 + i * 1.3, -86.5 - i * 3, 7, 3, 'vidrio', { alto: 1.3 + i * 1.3 });
+    P.plat(0, 50.9, -100, 8, 12, 'techo');
+    P.tubo(0, 50.9, -97, 8); P.tubo(0, 50.9, -99.1, 8); P.tubo(0, 50.9, -101.2, 8);
+    P.plat(0, 50.9, -110, 8, 8, 'techo'); P.meta(0, 50.9, -110.5);
+    killY = 38;
+    /* la ciudad al atardecer: torres con ventanas, techos con aparatos y antenas */
+    const torre = new THREE.BoxGeometry(1, 1, 1); torre.translate(0, 0.5, 0);
+    const im = new THREE.InstancedMesh(torre, ventanas(), 70), M4 = new THREE.Matrix4();
+    for (let i = 0; i < 70; i++) { let x = (r() - 0.5) * 220, z = -55 + (r() - 0.5) * 240; if (Math.abs(x) < 14) x += Math.sign(x || 1) * 22; const h = 20 + r() * 55, w = 6 + r() * 10; im.setMatrixAt(i, M4.compose(V(x, 0, z), new THREE.Quaternion(), V(w, h, w * (0.7 + r() * 0.6)))); }
+    im.computeBoundingSphere(); g.add(im);
+    /* debajo de cada terraza, su edificio (se ve al caer) */
+    for (const [x, z, w, d, y] of [[0, -2, 10, 14, 60], [0, -15.5, 8, 7, 60], [0, -28.5, 8, 12, 61.4], [0, -44, 9, 9, 55], [0, -66, 7, 8, 54.5], [0, -80, 10, 10, 47], [0, -100, 8, 12, 50.9], [0, -110, 8, 8, 50.9]]) {
+      const q = new THREE.Mesh(new THREE.BoxGeometry(w * 0.96, y - 0.7, d * 0.96), ventanas()); q.position.set(x, (y - 0.7) / 2, z); g.add(q);
+    }
+    for (const [x, y, z] of [[-3.5, 60, 1], [3.6, 61.4, -33.5], [-3.6, 55, -47], [3.6, 47, -83], [-3.3, 50.9, -104]]) {
+      const ac = new THREE.Group(); ac.position.set(x, y, z); quieto.add(ac);
+      const caja = new THREE.Mesh(new RoundedBoxGeometry(1.4, 0.9, 1.1, 2, 0.12), B('#e8eef4', { metalness: 0.4, roughness: 0.25 })); caja.position.y = 0.45; ac.add(caja);
+      const rej = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.06, 20), B('#8a98a6', { metalness: 0.6 })); rej.position.set(0, 0.92, 0); ac.add(rej);
+      mundo.caja(x, z, 0.7, 0.55, y - 0.5, y + 0.9);
+    }
+    for (const [x, y, z] of [[4.2, 60, -8], [-3.8, 55, -40], [3.2, 50.9, -106]]) { const a = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 5, 8), B('#ffffff')); a.position.set(x, y + 2.5, z); quieto.add(a); const lz = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), B('#ff4f6e', { emissive: '#ff2040', emissiveIntensity: 1.5 })); lz.position.set(x, y + 5.1, z); quieto.add(lz); }
+  } else if (nivel === 4) {
     /* ÓRBITA AERO: poca gravedad, órbitas, dos barras y el planeta de vidrio */
     mundo.gravedad = 15;
     P.inicio(0, 50, 3); P.disco(0, 50, 0, 5, 'asteroide');
@@ -378,6 +436,7 @@ export function crearParkour(ctx, nivel = 0) {
   let tt = 0;
   for (const M of movs) { const p0 = M.en(0); M.G0.position.copy(p0); M.prev.copy(p0); }
   return {
+    primeraPersona: !!o.fp,   // (el botón 👁 del menú: como Mirror's Edge, con los brazos y las piernas)
     id: 'parkour', nivel, mundo, grupo: g, inicio, rumboInicio, musica: N.musica, cielo: { ...N.cielo, nubes: nivel >= 3 ? 0 : 1 },
     orbes, discos: [], npcs: [], parkour: E, sinZonas: true,
     /* antes de mover al muñeco: las plataformas se corren y lo llevan; las barras lo empujan */

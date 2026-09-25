@@ -5,7 +5,7 @@
 //     node pruebas/parkour.mjs [nivel,…]
 import path from 'node:path';
 import { navegador, abrir, avanzar, SAL } from './comun.mjs';
-const pedidos = (process.argv[2] || '0,1,2,3,4').split(',').map(Number);
+const pedidos = (process.argv[2] || '0,1,2,3,4,5').split(',').map(Number);
 const nav = await navegador();
 let bien = 0, mal = 0;
 const prueba = (n, ok, extra = '') => { ok ? bien++ : mal++; console.log(`${ok ? '✓' : '✗'} ${n}${extra ? ' · ' + extra : ''}`); };

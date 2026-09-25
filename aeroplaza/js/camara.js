@@ -77,8 +77,12 @@ export class Camara {
     const k = j.escala, vel = Math.hypot(j.v.x, j.v.z);
     this.fase += dt * vel * 2.4;
     const hamaca = j.enPiso ? Math.sin(this.fase) * 0.035 * Math.min(1, vel / 3.4) : 0;
-    this.bajaFP += ((this.sentado ? -0.6 : 0) - this.bajaFP) * Math.min(1, dt * 6);
-    this.pos.set(j.p.x, j.p.y + 1.5 * k + hamaca + this.bajaFP, j.p.z);
+    /* sentado, deslizándose o rodando, los ojos van más abajo */
+    const bajito = j.mov && (j.mov.tipo === 'desliza' || j.mov.tipo === 'rueda');
+    this.bajaFP += ((this.sentado ? -0.6 : bajito ? -0.72 : 0) - this.bajaFP) * Math.min(1, dt * (bajito ? 12 : 6));
+    /* los ojos van un poco adelante del cuerpo: mirando abajo se ven la panza y las piernas */
+    const adelante = (0.16 + Math.max(0, this.pitch - 0.9) * 0.16) * k;   // (mirando abajo, más adelante: se ven las piernas y no solo la panza)
+    this.pos.set(j.p.x - Math.sin(this.yaw) * adelante, j.p.y + 1.5 * k + hamaca + this.bajaFP, j.p.z - Math.cos(this.yaw) * adelante);
     /* en una charla, la vista va sola hacia la cara de quien habla */
     if (this.cine) {
       const b = this.cine.b, dx = b.x - this.pos.x, dz = b.z - this.pos.z, dy = b.y + 1.1 - this.pos.y;
