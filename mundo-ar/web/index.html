@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#07030f">
+<title>Mundo AR</title>
+<!--
+  Mundo AR en una página: el mismo mundo 3D de la app nativa, con TRES
+  maneras de seguir el teléfono, de la mejor a la peor. Elige sola la mejor
+  que haya:
+
+   1. WebXR ("immersive-ar"): el 6DoF lo hace ARCore. Anda en Chrome de
+      Android. NO anda dentro de un WebView: el WebView no trae WebXR.
+   2. SLAM por cámara con AlvaAR (WebAssembly): 6DoF calculado acá, con la
+      imagen de la cámara reducida a 320 px y el giróscopo. Es el que anda
+      dentro de un WebView. Se procesa a 18 cuadros por segundo y la cámara 3D
+      se interpola a 60, para que no tiemble.
+   3. Sólo giróscopo (3DoF): girás y el mundo acompaña, pero caminar no mueve
+      nada. Es lo último que queda si no hay SLAM.
+
+  Gama baja, a propósito: sin antialias, pixelRatio 1, sin luces ni sombras
+  (la sombra de cada cara está "horneada" en el color del vértice) y menos de
+  mil triángulos en total.
+
+  AlvaAR (github.com/alanross/AlvaAR) es GPL-3.0: no se copia acá, se baja al
+  arrancar desde el repo de su autor, fijado a un commit.
+-->
+<!-- three.module.min.js pide "./three.core.js" SIN minificar (1,4 MB): el mapa lo cambia por el minificado. -->
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
+  "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js"
+} }
+</script>
+<style>
+  :root { color-scheme: dark; --fondo: #07030f; --texto: #f2eeff; --tenue: #b3a8d6; --dorado: #f2cf6b; --violeta: #8b5cff;
+    --panel: rgba(10, 5, 24, 0.66); --borde: rgba(185, 150, 255, 0.4); --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--texto); font-family: var(--fuente); overflow: hidden;
+    -webkit-user-select: none; user-select: none; }
+  #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+  #lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #capa { position: fixed; inset: 0; pointer-events: none; }
+  #capa > * { pointer-events: auto; }
+  .hud { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(12px + env(safe-area-inset-left, 0px));
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 8px 12px; font-size: 13px; line-height: 1.45;
+    pointer-events: none !important; font-variant-numeric: tabular-nums; max-width: 60vw; }
+  .hud b { font-size: 22px; color: var(--dorado); letter-spacing: 0.02em; }
+  .botones { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 8px; }
+  button { font: 700 14px var(--fuente); color: #fff; background: rgba(90, 47, 217, 0.82); border: 1px solid #c9b0ff; border-radius: 14px;
+    min-height: 44px; padding: 8px 14px; cursor: pointer; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.45; }
+  button:focus-visible { outline: 2px solid #5ce1ff; outline-offset: 2px; }
+  .aviso { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    background: var(--panel); border: 1px solid var(--borde); border-radius: 14px; padding: 8px 14px; font-size: 14px; font-weight: 600;
+    text-align: center; max-width: min(92vw, 560px); pointer-events: none !important; }
+  .mira { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2px solid rgba(255,255,255,0.7);
+    border-radius: 50%; pointer-events: none !important; }
+  #inicio { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+    background: radial-gradient(ellipse at 50% 30%, #2a1060 0%, #07030f 70%); }
+  .caja { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 12px; }
+  h1 { margin: 0; font-size: clamp(34px, 9vw, 54px); letter-spacing: 0.06em; text-align: center; text-shadow: 0 0 18px var(--violeta); }
+  .bajada { margin: 0; color: var(--tenue); text-align: center; font-size: 14px; line-height: 1.5; }
+  .modos { display: flex; flex-direction: column; gap: 8px; }
+  .modos button { text-align: left; display: flex; flex-direction: column; gap: 2px; }
+  .modos button small { font-weight: 500; color: #ddd3ff; font-size: 12px; }
+  .modos button.mejor { background: linear-gradient(180deg, #8a55ff, #5a2fd9); box-shadow: 0 0 18px rgba(123, 61, 255, 0.6); }
+  .fila { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--tenue); }
+  .fila input { flex: 1; accent-color: var(--violeta); }
+  [hidden] { display: none !important; }
+  @media (max-height: 420px) { .caja { gap: 8px; } h1 { font-size: 32px; } .modos { flex-direction: row; flex-wrap: wrap; } .modos button { flex: 1 1 30%; } }
+</style>
+</head>
+<body>
+<video id="video" playsinline muted hidden></video>
+<canvas id="lienzo"></canvas>
+
+<div id="capa" hidden>
+  <div class="hud" id="hud"><b>0</b> puntos</div>
+  <div class="botones">
+    <button id="b-linterna" type="button">Linterna: no</button>
+    <button id="b-imu" type="button" hidden>Giróscopo: sí</button>
+    <button id="b-reiniciar" type="button">Reiniciar</button>
+    <button id="b-salir" type="button">Salir</button>
+  </div>
+  <div class="mira" id="mira" hidden></div>
+  <div class="aviso" id="aviso">Arrancando…</div>
+</div>
+
+<main id="inicio">
+  <div class="caja">
+    <h1>MUNDO AR</h1>
+    <p class="bajada" id="detalle">Mirando qué sabe hacer este teléfono…</p>
+    <div class="modos" id="modos"></div>
+    <label class="fila" for="fov">Campo de la cámara <input id="fov" type="range" min="50" max="85" step="1"> <output id="fov-v">66°</output></label>
+    <p class="bajada">Se usa el celular acostado. El modo por cámara baja AlvaAR (4 MB) la primera vez.</p>
+  </div>
+</main>
+
+<script type="module">
+import * as THREE from "three";
+
+// ─────────────────────────── constantes ───────────────────────────
+// AlvaAR fijado a un commit: si mañana cambia su API, esta página no se rompe.
+const ALVA_URL = "https://rawcdn.githack.com/alanross/AlvaAR/7796af500ee92001ac2a9888363ff64d7a3bee75/examples/public/assets/alva_ar.js";
+const SLAM_FPS = 18;          // el prompt pide 15-20: el SLAM es lo que come CPU
+// Lado CORTO del cuadro que ve el SLAM. Medido con el video de AlvaAR: con
+// 288 px o más engancha en 1-3 s; con 260 o menos (el 320×240 de la receta)
+// encuentra puntos pero no arranca nunca. El largo, hasta 640.
+const SLAM_CORTO = 320, SLAM_TOPE = 640;
+const DORADO = new THREE.Color("#d6a93f"), VIOLETA = new THREE.Color("#7b3dff");
+
+const $ = (s) => document.querySelector(s);
+const hud = $("#hud"), aviso = $("#aviso"), capa = $("#capa"), inicio = $("#inicio"), video = $("#video"), mira = $("#mira");
+const leer = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ventana privada */ } };
+let fovLargo = leer("mundoar.fov", 66);   // campo horizontal de la cámara entera, en grados
+$("#fov").value = fovLargo; $("#fov-v").textContent = fovLargo + "°";
+$("#fov").addEventListener("input", (e) => { fovLargo = Number(e.target.value); $("#fov-v").textContent = fovLargo + "°"; guardar("mundoar.fov", fovLargo); });
+
+// ─────────────────────────── el renderer ───────────────────────────
+// Sin antialias y a pixelRatio 1: en gama baja el cuadro lo paga el relleno de
+// píxeles, y en realidad aumentada la imagen de la cámara tapa los serruchos.
+const lienzo = $("#lienzo");
+const renderer = new THREE.WebGLRenderer({ canvas: lienzo, antialias: false, alpha: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(1);
+renderer.setClearColor(0x000000, 0);
+const escena = new THREE.Scene();
+const camara = new THREE.PerspectiveCamera(50, 1, 0.02, 200);
+camara.rotation.order = "YXZ";
+escena.add(camara);
+
+function medir() {
+  const w = innerWidth, h = innerHeight;
+  if (!renderer.xr.isPresenting) renderer.setSize(w, h, false);
+  camara.aspect = w / h;
+  camara.updateProjectionMatrix();
+}
+addEventListener("resize", () => { medir(); if (modo === "slam") { recalcularRecorte(); if (recorte && recorte.cambio && ClaseAlva) armarSlam(); } });
+medir();
+
+// ─────────────────────────── el mundo ───────────────────────────
+// Un cubo con la luz "horneada": cada cara con su tono fijo, en colores de
+// vértice. MeshBasicMaterial no calcula luz: cero costo, y se lee volumétrico.
+function geoCubo() {
+  const g = new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
+  const n = g.attributes.normal, c = new Float32Array(n.count * 3);
+  const luz = new THREE.Vector3(0.35, 0.9, 0.25).normalize(), v = new THREE.Vector3();
+  for (let i = 0; i < n.count; i++) {
+    v.fromBufferAttribute(n, i);
+    const k = 0.42 + 0.58 * Math.max(0, v.dot(luz));
+    c[i * 3] = c[i * 3 + 1] = c[i * 3 + 2] = k;
+  }
+  g.setAttribute("color", new THREE.BufferAttribute(c, 3));
+  return g;
+}
+const CUBO = geoCubo();
+const mundo = new THREE.Group();
+escena.add(mundo);
+const blancos = [];           // los que se pueden tocar
+const girando = [];           // los que giran solos (tótem, lámparas)
+let anillo = null, arena = null, puntos = 0, combo = 0, ultimoAcierto = -99, tocados = 0;
+const azar = (() => { let s = 7; return () => ((s = Math.imul(s ^ (s >>> 15), 0x2c1b3c6d) + 0x6d2b79f5 | 0) >>> 0) / 4294967296; })();
+
+function cubo(color, tam, brillo = 0) {
+  const m = new THREE.Mesh(CUBO, new THREE.MeshBasicMaterial({ vertexColors: true, color: color.clone().multiplyScalar(1 + brillo), transparent: true }));
+  m.scale.setScalar(tam);
+  return m;
+}
+
+function nuevoBlanco(padre, x, y, z, tam, color, rango) {
+  const m = cubo(color, tam);
+  m.position.set(x, y, z);
+  m.userData = { blanco: true, tam, base: m.position.clone(), fase: azar() * 6.28, giro: 1.2 + azar(), estalla: -1, aparece: 1, rango };
+  padre.add(m);
+  blancos.push(m);
+  return m;
+}
+
+function reubicar(m) {
+  const r = m.userData.rango, a = azar() * Math.PI * 2, d = (0.3 + 0.7 * azar()) * r.radio;
+  m.userData.base.set(r.cx + Math.cos(a) * d, r.yMin + azar() * (r.yMax - r.yMin), r.cz + Math.sin(a) * d);
+  m.userData.aparece = 0;
+}
+
+/** Ocho blancos alrededor de donde arrancaste: el 6DoF se prueba sin buscar el piso. */
+function ponerAnillo(centro, radio = 1.4) {
+  anillo = new THREE.Group();
+  anillo.position.copy(centro);
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * Math.PI * 2;
+    nuevoBlanco(anillo, Math.cos(a) * radio, -0.25 + azar() * 0.5, Math.sin(a) * radio, 0.16 * radio / 1.4,
+      i % 2 ? VIOLETA : DORADO, { cx: 0, cz: 0, radio: radio * 1.15, yMin: -0.35 * radio / 1.4, yMax: 0.35 * radio / 1.4 });
+  }
+  mundo.add(anillo);
+}
+
+/** La arena sobre el piso: plataforma, pilares con lámparas, tótem y blancos. `esc` = metros por unidad. */
+function ponerArena(posicion, cuaternion, esc = 1) {
+  arena = new THREE.Group();
+  arena.position.copy(posicion);
+  if (cuaternion) arena.quaternion.copy(cuaternion);
+  arena.scale.setScalar(esc);
+  const piso = cubo(new THREE.Color("#1f1238"), 1); piso.scale.set(1.1, 0.03, 1.1); piso.position.y = 0.015; arena.add(piso);
+  for (let i = 0; i < 4; i++) {
+    const px = i % 2 ? 0.5 : -0.5, pz = i < 2 ? -0.5 : 0.5;
+    const p = cubo(DORADO, 1); p.scale.set(0.06, 0.52, 0.06); p.position.set(px, 0.28, pz); arena.add(p);
+    const l = cubo(new THREE.Color("#5ce1ff"), 0.09, 0.3); l.position.set(px, 0.58, pz); l.userData.giro = 1.5; girando.push(l); arena.add(l);
+  }
+  for (let i = 0; i < 3; i++) {
+    const t = cubo(VIOLETA, 0.14 - i * 0.03, i * 0.12); t.position.y = 0.12 + i * 0.17; t.userData.giro = i % 2 ? -1.3 : 0.9; girando.push(t); arena.add(t);
+  }
+  for (let i = 0; i < 5; i++) {
+    const m = nuevoBlanco(arena, 0, 0.3, 0, 0.12, i % 2 ? VIOLETA : DORADO, { cx: 0, cz: 0, radio: 0.4, yMin: 0.18, yMax: 0.6 });
+    reubicar(m); m.userData.aparece = 1;
+  }
+  mundo.add(arena);
+}
+
+function ponerBlancoSuelto(posicion, esc = 1) {
+  if (blancos.length >= 28) return;
+  const g = new THREE.Group(); g.position.copy(posicion); g.scale.setScalar(esc); mundo.add(g);
+  nuevoBlanco(g, 0, 0.2, 0, 0.12, azar() < 0.5 ? DORADO : VIOLETA, { cx: 0, cz: 0, radio: 0.2, yMin: 0.15, yMax: 0.35 });
+}
+
+function reiniciarMundo() {
+  mundo.clear();
+  blancos.length = 0; girando.length = 0;
+  anillo = arena = null; puntos = combo = tocados = 0; tEnganche = 0;
+  if (reticula) { reticula.visible = false; mundo.add(reticula); }
+}
+
+function animar(t, dt) {
+  for (const m of blancos) {
+    const u = m.userData;
+    m.rotation.set(0.6, t * u.giro + u.fase, 0.6);
+    m.position.copy(u.base); m.position.y += 0.025 * Math.sin(t * 2.2 + u.fase);
+    let s = u.tam;
+    if (u.estalla >= 0) {
+      u.estalla += dt;
+      s *= 1 + u.estalla * 3.2;
+      m.material.opacity = Math.max(0, 1 - u.estalla / 0.28);
+      if (u.estalla > 0.28) { u.estalla = -1; m.material.opacity = 1; reubicar(m); }
+    } else if (u.aparece < 1) {
+      u.aparece = Math.min(1, u.aparece + dt * 3.5);
+      const k = u.aparece - 1; s *= 1 + 2.7 * k * k * k + 1.7 * k * k;
+    }
+    m.scale.setScalar(Math.max(0.0001, s));
+  }
+  for (const m of girando) m.rotation.y = t * m.userData.giro;
+}
+
+// ── el toque: un rayo contra los blancos ──
+const rayo = new THREE.Raycaster();
+let ctxAudio = null;
+function pitido() {
+  try {
+    ctxAudio = ctxAudio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctxAudio.createOscillator(), g = ctxAudio.createGain(), t = ctxAudio.currentTime;
+    o.frequency.setValueAtTime(880 + combo * 110, t); o.frequency.exponentialRampToValueAtTime(1760, t + 0.07);
+    g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+    o.connect(g); g.connect(ctxAudio.destination); o.start(t); o.stop(t + 0.13);
+  } catch (e) { /* sin audio */ }
+}
+function tocarBlancos(t) {
+  const vivos = blancos.filter(m => m.userData.estalla < 0 && m.visible);
+  // Radio generoso: se agranda la caja de cada blanco para el rayo (un dedo es más gordo que un cubo de 12 cm).
+  let mejor = null, dMejor = Infinity;
+  const centro = new THREE.Vector3(), esf = new THREE.Sphere();
+  for (const m of vivos) {
+    m.getWorldPosition(centro);
+    const s = new THREE.Vector3(); m.getWorldScale(s);
+    esf.set(centro, s.x * 0.9 + 0.03);
+    const p = rayo.ray.intersectSphere(esf, new THREE.Vector3());
+    if (p) { const d = p.distanceTo(rayo.ray.origin); if (d < dMejor) { dMejor = d; mejor = m; } }
+  }
+  if (!mejor) return false;
+  mejor.userData.estalla = 0;
+  combo = t - ultimoAcierto < 1.6 ? Math.min(5, combo + 1) : 1;
+  ultimoAcierto = t; puntos += 10 * combo; tocados++;
+  pitido();
+  if (navigator.vibrate) try { navigator.vibrate(18); } catch (e) { /* no */ }
+  return true;
+}
+
+// ─────────────────────────── estado común ───────────────────────────
+let modo = null;              // "xr" | "slam" | "giro" | "sin-camara"
+let estadoSeguimiento = "—", fps = 0, cuadros = 0, tHud = 0;
+let pista = null, linterna = false;
+const reloj = new THREE.Clock();
+
+// Los avisos de cada cuadro no pisan a uno "de un rato" (un error, un piso que no se encontró).
+let avisoHasta = 0;
+function avisar(s) { if (performance.now() < avisoHasta) return; aviso.textContent = s; aviso.hidden = !s; }
+function avisarUnRato(s, ms = 2800) { avisoHasta = 0; avisar(s); avisoHasta = performance.now() + ms; }
+
+function pintarHud() {
+  const p = camara.position;
+  const m = modo === "xr" ? "WebXR (ARCore) · 6DoF" : modo === "slam" ? "SLAM por cámara · 6DoF" : modo === "giro" ? "giróscopo · 3DoF" : "sin cámara";
+  hud.innerHTML = `<b>${puntos}</b> puntos${combo > 1 ? ` · x${combo}` : ""}<br>${m}<br>${estadoSeguimiento} · ${fps} FPS<br>` +
+    `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)}`;
+}
+
+// ── la linterna (sólo con getUserMedia: en WebXR la cámara es de ARCore) ──
+const bLinterna = $("#b-linterna");
+async function cambiarLinterna() {
+  if (!pista) return;
+  try {
+    await pista.applyConstraints({ advanced: [{ torch: !linterna }] });
+    linterna = !linterna;
+  } catch (e) { avisarUnRato("Este navegador no deja prender la linterna con la cámara abierta."); }
+  bLinterna.textContent = linterna ? "Linterna: sí" : "Linterna: no";
+}
+bLinterna.addEventListener("click", cambiarLinterna);
+const bIMU = $("#b-imu");
+const pintarIMU = () => { bIMU.textContent = conIMU ? "Giróscopo: sí" : "Giróscopo: no"; };
+bIMU.addEventListener("click", () => { conIMU = !conIMU; guardar("mundoar.imu", conIMU); pintarIMU(); if (alva) alva.reset(); poseObjetivo.hay = false; });
+$("#b-reiniciar").addEventListener("click", () => { reiniciarMundo(); poseObjetivo.hay = false; if (alva) alva.reset(); if (modo === "giro" || modo === "sin-camara") ponerAnillo(new THREE.Vector3(0, 0, 0)); });
+$("#b-salir").addEventListener("click", () => location.reload());
+// En WebXR con "dom-overlay", un toque en un botón no tiene que disparar además un "select" del mundo.
+for (const b of document.querySelectorAll("#capa button")) b.addEventListener("beforexrselect", (e) => e.preventDefault());
+
+const enWebView = /; wv\)/.test(navigator.userAgent);
+// Con tope: hay navegadores (y WebViews) que nunca contestan estos pedidos.
+const aTiempo = (p, ms = 700) => Promise.race([p, new Promise((ok) => setTimeout(ok, ms))]).catch(() => {});
+async function acostar() {
+  // "Girado 90°": pantalla completa y orientación horizontal si el navegador deja.
+  // En el WebView no hace falta: la app ya es pantalla completa y acostada.
+  if (enWebView) return;
+  if (!document.fullscreenElement && document.documentElement.requestFullscreen) await aTiempo(document.documentElement.requestFullscreen({ navigationUI: "hide" }));
+  if (screen.orientation && screen.orientation.lock) await aTiempo(screen.orientation.lock("landscape"));
+}
+
+async function abrirCamara() {
+  const s = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: false,
+  });
+  video.srcObject = s; video.hidden = false;
+  await video.play();
+  pista = s.getVideoTracks()[0];
+  const cap = pista.getCapabilities ? pista.getCapabilities() : {};
+  bLinterna.disabled = !cap.torch;
+  if (!cap.torch) bLinterna.textContent = "Linterna: no hay";
+  return s;
+}
+
+// ─────────────────────────── 1. WebXR ───────────────────────────
+let reticula = null, fuenteHit = null, xrListo = false;
+async function arrancarXR() {
+  modo = "xr";
+  renderer.xr.enabled = true;
+  const sesion = await navigator.xr.requestSession("immersive-ar", {
+    requiredFeatures: ["hit-test"], optionalFeatures: ["dom-overlay", "local-floor"], domOverlay: { root: capa },
+  });
+  renderer.xr.setReferenceSpaceType("local");
+  await renderer.xr.setSession(sesion);
+  const vista = await sesion.requestReferenceSpace("viewer");
+  fuenteHit = await sesion.requestHitTestSource({ space: vista });
+  reticula = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x5ce1ff }));
+  reticula.matrixAutoUpdate = false; reticula.visible = false;
+  mundo.add(reticula);
+  bLinterna.disabled = true; bLinterna.textContent = "Linterna: no (ARCore)";
+  sesion.addEventListener("select", (ev) => {
+    const ref = renderer.xr.getReferenceSpace();
+    const pose = ev.frame.getPose(ev.inputSource.targetRaySpace, ref);
+    if (pose) {
+      const m = new THREE.Matrix4().fromArray(pose.transform.matrix);
+      rayo.ray.origin.setFromMatrixPosition(m);
+      rayo.ray.direction.set(0, 0, -1).transformDirection(m);
+      if (tocarBlancos(reloj.elapsedTime)) return;
+    }
+    if (reticula.visible) {
+      const p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+      reticula.matrix.decompose(p, q, s);
+      if (!arena) ponerArena(p, q, 1); else ponerBlancoSuelto(p, 1);
+    }
+  });
+  sesion.addEventListener("end", () => location.reload());
+  capa.hidden = false; inicio.hidden = true;
+  renderer.setAnimationLoop((t, frame) => cuadroXR(frame));
+}
+
+function cuadroXR(frame) {
+  const dt = Math.min(0.1, reloj.getDelta()), t = reloj.elapsedTime;
+  if (frame) {
+    const ref = renderer.xr.getReferenceSpace();
+    const pose = frame.getViewerPose(ref);
+    estadoSeguimiento = pose ? (pose.emulatedPosition ? "6DoF: sólo giro" : "6DoF: OK") : "6DoF: buscando…";
+    if (pose) {
+      camara.position.fromArray([pose.transform.position.x, pose.transform.position.y, pose.transform.position.z]);
+      if (!anillo) ponerAnillo(camara.position.clone());
+    }
+    const hits = fuenteHit ? frame.getHitTestResults(fuenteHit) : [];
+    if (hits.length) {
+      reticula.visible = true;
+      reticula.matrix.fromArray(hits[0].getPose(ref).transform.matrix);
+    } else reticula.visible = false;
+    avisar(!pose ? "Mové el teléfono despacio…" : !arena ? (reticula.visible ? "Tocá para poner la arena donde está el aro" : "Apuntá al piso y movete un poco")
+      : "Tocá los cubos · caminá alrededor: tienen que quedarse quietos");
+  }
+  animar(t, dt);
+  contarCuadro();
+  renderer.render(escena, camara);
+}
+
+// ─────────────────────────── 2. SLAM (AlvaAR) ───────────────────────────
+let alva = null, procesador = null, ctxProc = null, recorte = null, usaIMU = false, tSlam = 0;
+let conIMU = leer("mundoar.imu", true);   // se puede apagar: si el giro de los ejes estuviera mal en algún teléfono, el SLAM solo anda igual
+const imu = { orientacion: { x: 0, y: 0, z: 0, w: 1 }, movimiento: [], vista: false };
+const poseObjetivo = { p: new THREE.Vector3(), q: new THREE.Quaternion(), hay: false };
+let buscarPiso = null;        // {x, y} del toque que pidió el piso
+let tEnganche = 0, tPruebaPlano = 0;
+let perdido = 0;
+
+function quatEuler(x, y, z) {
+  // Orden ZXY, el de deviceorientation (alfa, beta, gama).
+  const c1 = Math.cos(x / 2), c2 = Math.cos(y / 2), c3 = Math.cos(z / 2), s1 = Math.sin(x / 2), s2 = Math.sin(y / 2), s3 = Math.sin(z / 2);
+  return { x: s1 * c2 * c3 - c1 * s2 * s3, y: c1 * s2 * c3 + s1 * c2 * s3, z: c1 * c2 * s3 + s1 * s2 * c3, w: c1 * c2 * c3 - s1 * s2 * s3 };
+}
+function quatMul(a, b) {
+  return { x: a.x * b.w + a.w * b.x + a.y * b.z - a.z * b.y, y: a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
+    z: a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x, w: a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z };
+}
+const esIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+// El SLAM espera la orientación del teléfono en su propio marco: en Android,
+// girada 90° sobre Y respecto de la de deviceorientation; en iOS, -90° sobre X.
+const MARCO = esIOS ? { x: Math.sin(-Math.PI / 4), y: 0, z: 0, w: Math.cos(-Math.PI / 4) } : { x: 0, y: Math.sin(Math.PI / 4), z: 0, w: Math.cos(Math.PI / 4) };
+const G2R = Math.PI / 180;
+// Los sensores hablan en ejes del TELÉFONO; la imagen que ve el SLAM, acostada,
+// tiene los ejes de la PANTALLA, girados 90°. Se giran los ejes x-y de los
+// sensores lo mismo que la pantalla (la misma cuenta que DeviceOrientationControls).
+const anguloPantalla = () => ((screen.orientation ? screen.orientation.angle : window.orientation) || 0) * G2R;
+function escucharIMU() {
+  addEventListener("deviceorientation", (e) => {
+    if (e.alpha === null) return;
+    imu.vista = true;
+    const th = anguloPantalla();
+    const qz = { x: 0, y: 0, z: Math.sin(-th / 2), w: Math.cos(-th / 2) };
+    imu.orientacion = quatMul(MARCO, quatMul(quatEuler(e.beta * G2R, e.gamma * G2R, e.alpha * G2R), qz));
+  });
+  addEventListener("devicemotion", (e) => {
+    if (!e.rotationRate || !e.acceleration || e.acceleration.x === null) return;
+    const th = anguloPantalla(), c = Math.cos(th), s = Math.sin(th);
+    const gx = e.rotationRate.beta * G2R, gy = e.rotationRate.gamma * G2R, ax = e.acceleration.x, ay = e.acceleration.y;
+    imu.movimiento.push({ timestamp: Date.now(), gx: c * gx + s * gy, gy: -s * gx + c * gy, gz: e.rotationRate.alpha * G2R,
+      ax: c * ax + s * ay, ay: -s * ax + c * ay, az: e.acceleration.z });
+    if (imu.movimiento.length > 120) imu.movimiento.splice(0, 60);
+  });
+}
+
+/** Dos cuadros con el mismo centro óptico:
+ *  - el SLAM ve la imagen ENTERA de la cámara, achicada (más puntos, costo fijo);
+ *  - la cámara 3D, sólo lo que se ve en pantalla (el recorte de object-fit: cover).
+ *  Los dos campos salen de la misma focal, así el mundo queda pegado a la imagen. */
+function recalcularRecorte() {
+  const vw = video.videoWidth, vh = video.videoHeight, A = innerWidth / innerHeight;
+  if (!vw || !vh) return;
+  // Focal en píxeles de la cámara, de su campo a lo largo (ajustable).
+  const tanPx = Math.tan(fovLargo * G2R / 2) / (Math.max(vw, vh) / 2);
+  // Lo que se ve en pantalla → campo vertical de la cámara 3D.
+  const vsh = vw / vh > A ? vh : vw / A;
+  camara.fov = 2 * Math.atan(tanPx * vsh / 2) / G2R; camara.aspect = A; camara.updateProjectionMatrix();
+  // El cuadro del SLAM.
+  const k = Math.min(SLAM_CORTO / Math.min(vw, vh), SLAM_TOPE / Math.max(vw, vh));
+  const w = Math.round(vw * k), h = Math.round(vh * k);
+  const fovH = 2 * Math.atan(tanPx * vw / 2) / G2R, fovV = 2 * Math.atan(tanPx * vh / 2) / G2R;
+  // Si cambió de forma (se giró el teléfono), el SLAM se arma de nuevo.
+  const cambio = !!procesador && (procesador.width !== w || procesador.height !== h);
+  recorte = { w, h, fovH, fovV, As: w / h, fov3d: camara.fov, cambio };
+}
+
+let ClaseAlva = null, armando = null;
+async function armarSlam() {
+  if (armando) return armando;
+  armando = (async () => {
+    procesador = document.createElement("canvas");
+    procesador.width = recorte.w; procesador.height = recorte.h;
+    ctxProc = procesador.getContext("2d", { alpha: false, willReadFrequently: true });
+    // AlvaAR arma la focal así: en horizontal toma `fov` como vertical y el
+    // horizontal lo saca MULTIPLICANDO por el aspecto (no con tangentes), y se
+    // queda con la focal más corta, que es la de ese horizontal. Para que le dé
+    // la focal verdadera hay que pasarle el horizontal real dividido el aspecto.
+    // Un SLAM nuevo es un mapa nuevo: lo puesto en el viejo ya no tiene dónde estar.
+    if (alva) { alva = null; reiniciarMundo(); }
+    alva = await ClaseAlva.Initialize(recorte.w, recorte.h, recorte.As >= 1 ? recorte.fovH / recorte.As : recorte.fovH);
+    recorte.cambio = false; poseObjetivo.hay = false;
+  })();
+  try { await armando; } finally { armando = null; }
+}
+
+async function arrancarSlam() {
+  modo = "slam";
+  avisar("Abriendo la cámara…");
+  capa.hidden = false; inicio.hidden = true;
+  await abrirCamara();
+  if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === "function") {
+    try { await DeviceMotionEvent.requestPermission(); } catch (e) { /* sin IMU */ }
+  }
+  escucharIMU();
+  bIMU.hidden = false; pintarIMU();
+  recalcularRecorte();
+  avisar("Bajando el SLAM (AlvaAR, 4 MB)…");
+  ClaseAlva = (await import(ALVA_URL)).AlvaAR;
+  await armarSlam();
+  // Si el teléfono se gira y la cámara cambia de forma, el SLAM se rearma con el cuadro nuevo.
+  video.addEventListener("resize", () => { recalcularRecorte(); if (recorte && recorte.cambio) armarSlam(); });
+  avisar("Mové el teléfono de costado, despacio, para que arme el mapa…");
+  lienzo.addEventListener("pointerdown", (e) => {
+    rayo.setFromCamera(new THREE.Vector2(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camara);
+    if (!tocarBlancos(reloj.elapsedTime)) buscarPiso = { x: e.clientX, y: e.clientY, hasta: performance.now() + 1500 };
+  });
+  renderer.setAnimationLoop(cuadroSlam);
+}
+
+function pasoSlam(ahora) {
+  const r = recorte;
+  if (r.w !== procesador.width || r.h !== procesador.height) return;   // se giró: espera a que se rearme
+  ctxProc.drawImage(video, 0, 0, r.w, r.h);
+  const img = ctxProc.getImageData(0, 0, r.w, r.h);
+  usaIMU = conIMU && imu.vista && imu.movimiento.length > 0;
+  // AlvaAR guarda las muestras en un búfer de 256 números (5 + 7 por muestra)
+  // y no avisa si se pasa: escribe encima de su propia memoria. Van las 30 últimas.
+  if (imu.movimiento.length > 30) imu.movimiento.splice(0, imu.movimiento.length - 30);
+  const pose = usaIMU ? alva.findCameraPoseWithIMU(img, imu.orientacion, imu.movimiento) : alva.findCameraPose(img);
+  imu.movimiento.length = 0;
+  if (!pose || !Number.isFinite(pose[12] + pose[13] + pose[14] + pose[0])) { perdido++; poseObjetivo.hay = false; return; }
+  perdido = 0;
+  // De la convención de AlvaAR a la de three.js (y hacia arriba, -z adelante).
+  const m = new THREE.Matrix4().fromArray(pose);
+  const q = new THREE.Quaternion().setFromRotationMatrix(m);
+  poseObjetivo.q.set(-q.x, q.y, q.z, q.w);
+  poseObjetivo.p.set(pose[12], -pose[13], -pose[14]);
+  // Al (re)enganchar, la cámara salta a la pose: acercarse de a poco desde una vieja se vería nadar.
+  if (!poseObjetivo.hay) { camara.position.copy(poseObjetivo.p); camara.quaternion.copy(poseObjetivo.q); }
+  poseObjetivo.hay = true;
+  // El SLAM de una cámara no sabe de metros: su unidad sale del primer paso
+  // que dio. Para que el anillo no quede pegado a la cara ni en la otra
+  // punta, se mide la distancia a la primera superficie que encuentre
+  // (a lo sumo 3 s) y el anillo va a media distancia.
+  if (!anillo) {
+    if (!tEnganche) tEnganche = ahora;
+    let radio = 0;
+    if (ahora - tPruebaPlano > 350) {
+      tPruebaPlano = ahora;
+      const pl = alva.findPlane(120);
+      if (pl) radio = Math.hypot(pl[12] - pose[12], pl[13] - pose[13], pl[14] - pose[14]) * 0.5;
+    }
+    if (!radio && ahora - tEnganche > 3000) radio = 1;
+    if (radio) ponerAnillo(poseObjetivo.p.clone(), radio);
+  }
+  // El piso se pide en el mismo cuadro de una pose buena (así lo pide AlvaAR).
+  if (buscarPiso && !arena) {
+    const plano = alva.findPlane();
+    if (plano) {
+      const mp = new THREE.Matrix4().fromArray(plano), qp = new THREE.Quaternion().setFromRotationMatrix(mp);
+      const pos = new THREE.Vector3(plano[12], -plano[13], -plano[14]);
+      // El plano de AlvaAR tiene la normal en su +z; la arena, en su +y: se
+      // gira 90° sobre x. Y la normal tiene que mirar hacia la cámara.
+      const q = new THREE.Quaternion(-qp.x, qp.y, qp.z, qp.w).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2));
+      const arriba = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+      if (arriba.dot(poseObjetivo.p.clone().sub(pos)) < 0) q.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
+      // El SLAM de una sola cámara no sabe de metros: la arena se escala a la distancia.
+      // 0,3 de la distancia: una arena de ~30 cm vista a un metro.
+      const esc = Math.max(0.1, pos.distanceTo(poseObjetivo.p) * 0.3);
+      if ([q.x, q.y, q.z, q.w, pos.x, pos.y, pos.z].every(Number.isFinite)) ponerArena(pos, q, esc);
+      else avisarUnRato("El piso salió raro: tocá de nuevo.");
+      buscarPiso = null;
+    } else if (ahora > buscarPiso.hasta) {
+      // findPlane es RANSAC sobre los puntos del mapa: a veces sale en el segundo o tercer intento. Se insiste 1,5 s.
+      avisarUnRato("No encontré el piso: apuntá a una superficie con textura y tocá de nuevo."); buscarPiso = null;
+    }
+  } else if (buscarPiso && arena) {
+    // Con la arena puesta, un toque suelta un blanco a la altura de la arena, delante tuyo.
+    rayo.setFromCamera(new THREE.Vector2(buscarPiso.x / innerWidth * 2 - 1, -(buscarPiso.y / innerHeight) * 2 + 1), camara);
+    const plano = new THREE.Plane().setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0).applyQuaternion(arena.quaternion), arena.position);
+    const p = rayo.ray.intersectPlane(plano, new THREE.Vector3());
+    if (p && p.distanceTo(camara.position) < arena.scale.x * 12) ponerBlancoSuelto(p, arena.scale.x);
+    buscarPiso = null;
+  }
+}
+
+function cuadroSlam() {
+  const dt = Math.min(0.1, reloj.getDelta()), t = reloj.elapsedTime, ahora = performance.now();
+  if (alva && ahora - tSlam >= 1000 / SLAM_FPS && video.readyState >= 2) { tSlam = ahora; pasoSlam(ahora); }
+  // El SLAM late a 18; la cámara se mueve a 60 acercándose a la última pose (LERP/SLERP).
+  if (poseObjetivo.hay) {
+    const k = 1 - Math.exp(-dt * 20);
+    camara.position.lerp(poseObjetivo.p, k);
+    camara.quaternion.slerp(poseObjetivo.q, k);
+  }
+  mundo.visible = poseObjetivo.hay || perdido < 6;
+  estadoSeguimiento = poseObjetivo.hay ? `6DoF: OK${usaIMU ? " (+giróscopo)" : ""}` : "6DoF: perdido, mové despacio";
+  if (poseObjetivo.hay) avisar(buscarPiso && !arena ? "Buscando el piso…" : !anillo ? "Midiendo el cuarto…" : !arena ? "Tocá el piso para poner la arena · tocá los cubos" : "Tocá los cubos · caminá alrededor: tienen que quedarse quietos");
+  else if (anillo) avisar("Perdí el seguimiento: volvé a apuntar a donde estabas, despacio");
+  animar(t, dt);
+  contarCuadro();
+  renderer.render(escena, camara);
+}
+
+// ─────────────────────────── 3. sólo giróscopo ───────────────────────────
+const giro = { a: 0, b: 90, g: 0, hay: false };
+async function arrancarGiro(conCamara = true) {
+  modo = conCamara ? "giro" : "sin-camara";
+  capa.hidden = false; inicio.hidden = true;
+  if (conCamara) { try { await abrirCamara(); } catch (e) { modo = "sin-camara"; } }
+  if (!conCamara || modo === "sin-camara") { bLinterna.disabled = true; bLinterna.textContent = "Linterna: no hay"; renderer.setClearColor(0x07030f, 1); }
+  if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === "function") {
+    try { await DeviceOrientationEvent.requestPermission(); } catch (e) { /* sin giro */ }
+  }
+  addEventListener("deviceorientation", (e) => { if (e.alpha === null) return; giro.a = e.alpha; giro.b = e.beta; giro.g = e.gamma; giro.hay = true; });
+  // Sin giróscopo (una compu): se mira arrastrando.
+  let arrastre = null, yaw = 0, pitch = 0;
+  lienzo.addEventListener("pointerdown", (e) => {
+    arrastre = { x: e.clientX, y: e.clientY, mov: 0 };
+  });
+  lienzo.addEventListener("pointermove", (e) => {
+    if (!arrastre || giro.hay) return;
+    yaw -= (e.clientX - arrastre.x) * 0.005; pitch -= (e.clientY - arrastre.y) * 0.005;
+    pitch = Math.max(-1.4, Math.min(1.4, pitch));
+    arrastre.mov += Math.abs(e.clientX - arrastre.x) + Math.abs(e.clientY - arrastre.y);
+    arrastre.x = e.clientX; arrastre.y = e.clientY;
+  });
+  lienzo.addEventListener("pointerup", (e) => {
+    const fue = arrastre; arrastre = null;
+    if (fue && fue.mov > 12) return;
+    rayo.setFromCamera(new THREE.Vector2(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camara);
+    if (tocarBlancos(reloj.elapsedTime)) return;
+    // Sin piso de verdad: la arena va a 1,4 m por debajo de los ojos, donde apuntó el toque.
+    const p = rayo.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 1.4), new THREE.Vector3());
+    if (p && p.length() < 6) { if (!arena) ponerArena(p, null, 1); else ponerBlancoSuelto(p, 1); }
+  });
+  camara.position.set(0, 0, 0);
+  camara.fov = 60; camara.updateProjectionMatrix();
+  ponerAnillo(new THREE.Vector3(0, 0, 0));
+  const zee = new THREE.Vector3(0, 0, 1), euler = new THREE.Euler(), q0 = new THREE.Quaternion(), q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+  renderer.setAnimationLoop(() => {
+    const dt = Math.min(0.1, reloj.getDelta()), t = reloj.elapsedTime;
+    if (giro.hay) {
+      // La cuenta estándar de deviceorientation a cámara (la de DeviceOrientationControls).
+      const orient = (screen.orientation ? screen.orientation.angle : window.orientation || 0) * G2R;
+      euler.set(giro.b * G2R, giro.a * G2R, -giro.g * G2R, "YXZ");
+      camara.quaternion.setFromEuler(euler).multiply(q1).multiply(q0.setFromAxisAngle(zee, -orient));
+      estadoSeguimiento = "3DoF: giro OK (caminar no mueve)";
+    } else {
+      camara.rotation.set(pitch, yaw, 0, "YXZ");
+      estadoSeguimiento = "sin giróscopo: arrastrá para mirar";
+    }
+    avisar(!arena ? "Tocá abajo para poner la arena · tocá los cubos" : "Tocá los cubos");
+    animar(t, dt);
+    contarCuadro();
+    renderer.render(escena, camara);
+  });
+}
+
+function contarCuadro() {
+  cuadros++;
+  const ahora = performance.now();
+  if (ahora - tHud > 250) { fps = Math.round(cuadros * 1000 / (ahora - tHud || 1)); cuadros = 0; tHud = ahora; pintarHud(); }
+}
+
+// ─────────────────────────── arranque ───────────────────────────
+async function detectar() {
+  const xr = !!(navigator.xr && await navigator.xr.isSessionSupported("immersive-ar").catch(() => false));
+  const cam = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext !== false;
+  const wasm = typeof WebAssembly === "object";
+  const opciones = [
+    { id: "xr", ok: xr, titulo: "AR nativo (ARCore, WebXR)", nota: "6DoF del sistema, con piso detectado. Chrome de Android.", fn: arrancarXR },
+    { id: "slam", ok: cam && wasm, titulo: "AR por cámara (SLAM)", nota: "6DoF calculado en la página. Anda en un WebView. Linterna.", fn: arrancarSlam },
+    { id: "giro", ok: cam, titulo: "Sólo giróscopo (3DoF)", nota: "Girás y el mundo acompaña; caminar no lo mueve. Linterna.", fn: () => arrancarGiro(true) },
+    { id: "sin-camara", ok: true, titulo: "Sin cámara", nota: "El mundo 3D solo, para mirarlo.", fn: () => arrancarGiro(false) },
+  ];
+  const cont = $("#modos");
+  let primero = true;
+  for (const o of opciones) {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "modo-" + o.id;
+    b.innerHTML = `<span></span><small></small>`;
+    b.querySelector("span").textContent = o.titulo;
+    b.querySelector("small").textContent = o.ok ? o.nota : "No disponible acá.";
+    b.disabled = !o.ok;
+    if (o.ok && primero) { b.classList.add("mejor"); primero = false; }
+    b.addEventListener("click", async () => {
+      await acostar();
+      try { await o.fn(); }
+      catch (e) {
+        console.error(e);
+        inicio.hidden = false; capa.hidden = true;
+        $("#detalle").textContent = `No arrancó "${o.titulo}": ${e && e.message ? e.message : e}. Probá otro modo.`;
+        renderer.setAnimationLoop(null);
+      }
+    });
+    cont.appendChild(b);
+  }
+  $("#detalle").textContent = xr ? "Este navegador tiene WebXR: el 6DoF lo hace ARCore."
+    : enWebView ? "Estás en un WebView: no hay WebXR, el 6DoF sale del SLAM por cámara."
+    : cam ? "Sin WebXR acá: el 6DoF sale del SLAM por cámara." : "Sin cámara disponible (hace falta https).";
+}
+
+window.__MUNDO = { estado: () => ({ modo, puntos, tocados, blancos: blancos.length, anillo: !!anillo, arena: !!arena, fps, seguimiento: estadoSeguimiento,
+  pos: camara.position.toArray().map(v => +v.toFixed(3)), recorte }), tocarCentro: () => {
+  rayo.setFromCamera(new THREE.Vector2(0, 0), camara); return tocarBlancos(reloj.elapsedTime); }, camara, blancos, THREE };
+detectar();
+</script>
+</body>
+</html>

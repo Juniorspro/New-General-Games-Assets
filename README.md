@@ -17,7 +17,7 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `docs/biblioteca/` | la galería / biblioteca | — |
 | `electro-silver/` | sitio de Electro Silver (Presidencia Roca, Chaco) | electro-silver.pages.dev |
 | `telarana/` | juego de un botón: colgarse de un hilo y recorrer una ciudad | — |
-| `mundo-ar/` | APK de prueba de 6DoF nativo con ARCore: cámara, mundo 3D anclado, linterna, acostado | se arma con `mundo-ar/construir.sh` |
+| `mundo-ar/` | Prueba de 6DoF: un mundo 3D anclado con cámara, linterna y pantalla acostada. Viene en tres formatos: página web (WebXR o SLAM con AlvaAR), APK WebView y APK nativo ARCore | página en `mundo-ar/web/`; los APK se arman con `mundo-ar/construir.sh` |
 | `tajo/` | juego de ritmo 3D: cortás bloques al ritmo dibujando el tajo con el dedo (dragón de neón, 3 canciones propias, "tu canción") | se arma con `python3 tajo/empaquetar.py` |
 | `edificio/` | una torre de oficinas armada por script en Blender + visor three.js | — |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |
