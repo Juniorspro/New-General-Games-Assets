@@ -123,7 +123,7 @@ export class Jugador {
     /* a pie */
     const vadea = agua != null && hondo > 0.15 && this.p.y < agua;
     const velMax = (E.corre ? W.corre || CORRE : CAMINA) * (vadea ? 0.6 : 1) * (0.75 + 0.25 * k) * (this.efecto === 'liviano' ? 1.15 : 1);
-    let acel = this.enPiso ? ACEL_PISO : ACEL_AIRE;
+    let acel = this.enPiso ? ACEL_PISO : W.acelAire || ACEL_AIRE;   // (el runner deja doblar más en el aire)
     const obj = new THREE.Vector2(quiere.x * velMax * cuanto, quiere.y * velMax * cuanto);
     /* bajar recién apretado: en el piso se desliza siempre; en el aire, se anota cuándo (al caer decide) */
     const bajaYa = !!E.baja && !this._baja; this._baja = !!E.baja;
@@ -235,7 +235,7 @@ export class Jugador {
     d.manejar(dt, E, quiere, cuanto, W);
     this.p.copy(d.asiento()); this.rumbo = d.rumbo;
     this.estado = 'monta'; this.enPiso = false; this.bajoAgua = d.bajoAgua;
-    this.sync(); this.m.animar(dt, d.tren ? 'sentado' : 'monta', 0);
+    this.sync(); this.m.animar(dt, d.pose || (d.tren ? 'sentado' : 'monta'), d.hamacaFase || 0);
     /* el monorriel solo deja bajar cuando para, y baja en la parada (no donde está el asiento) */
     if (E.accion) {
       if (d.puedeBajar && !d.puedeBajar()) this.eventos.push('noBaja');

@@ -30,12 +30,12 @@ for (const [z, x, zz] of [['plaza', 0, 16], ['bahia', 118, 118], ['bosque', -128
 }
 console.log('zonas:', JSON.stringify(zonas));
 console.log(menu.suena === 'titulo' && plaza.suena === 'colina' && zonas.plaza === 'colina' && zonas.bahia === 'playa' && zonas.bosque === 'bosque' ? '✓ suenan donde van (y cambian por zona)' : '✗ no suenan donde van');
-/* adentro solo las cinco que mandó */
-const SUYAS = ['arrecife', 'bosque', 'colina', 'playa', 'titulo'];
+/* adentro solo las que mandó (juegos y runner, el breakcore, llegaron el 25/09) */
+const SUYAS = ['arrecife', 'bosque', 'colina', 'juegos', 'playa', 'runner', 'titulo'];
 let bien = menu.temas.slice().sort().join() === SUYAS.join();
 console.log(`${bien ? '✓' : '✗'} solo las suyas adentro: ${menu.temas.slice().sort().join(', ')}`);
 /* cada reino con una de las suyas, grabada (aurora → Aquatic Ambience, jardín → Frutiger Aero Ahhh, tienda → Mii Maker, casa → Wii Party) */
-for (const [reino, tema] of [['aqua', 'arrecife'], ['jardin', 'bosque'], ['aurora', 'arrecife'], ['tienda', 'colina'], ['casa', 'titulo']]) {
+for (const [reino, tema] of [['aqua', 'arrecife'], ['jardin', 'bosque'], ['aurora', 'arrecife'], ['tienda', 'colina'], ['casa', 'titulo'], ['juegos', 'juegos']]) {
   await pag.evaluate((r) => window.__A.viajar(r), reino);
   await pag.waitForFunction((r) => window.__A.reino && window.__A.reino.id === r, reino, { timeout: 60000, polling: 300 });
   await pag.waitForFunction((t) => { const S = window.__A.Sonido; return S.grabadas[t] && S.grabadas[t].buffer && S.actual && S.actual.nombre === t; }, tema, { timeout: 30000, polling: 300 }).catch(() => {});
@@ -45,6 +45,23 @@ for (const [reino, tema] of [['aqua', 'arrecife'], ['jardin', 'bosque'], ['auror
   console.log(`${ok ? '✓' : '✗'} ${reino}: ${JSON.stringify(r)}`);
 }
 console.log(bien ? '✓ cada reino suena con una de las suyas' : '✗ algún reino no suena con una de las suyas');
+/* el runner: callado en la cuenta y con el ¡YA! el breakcore desde el principio (solo ahí) */
+{
+  await pag.evaluate(() => window.__A.viajar('runner'));
+  await pag.waitForFunction(() => window.__A.reino && window.__A.reino.id === 'runner', null, { timeout: 60000, polling: 300 });
+  await pag.waitForTimeout(1500);
+  const antes = await pag.evaluate(() => { const S = window.__A.Sonido; return S.actual && S.actual.nombre; });
+  await pag.evaluate(() => { const A = window.__A, E = A.reino.runner; let n = 0; while (E.fase === 'cuenta' && n++ < 200) A.paso(1 / 30, false); A.paso(1 / 30, false); });
+  await pag.waitForFunction(() => { const S = window.__A.Sonido; return S.actual && S.actual.nombre === 'runner' && S.actual.t0 != null; }, null, { timeout: 30000, polling: 200 }).catch(() => {});
+  const r = await pag.evaluate(() => { const S = window.__A.Sonido, A = S.actual; return { suena: A && A.nombre, pos: A && A.t0 != null ? +S.posicion(A).toFixed(2) : null }; });
+  const ok = !antes && r.suena === 'runner' && r.pos != null && r.pos < 3;
+  console.log(`${ok ? '✓' : '✗'} runner: callado en la cuenta (${antes}) y el breakcore arranca con el ¡YA! ${JSON.stringify(r)}`);
+  await pag.evaluate(() => window.__A.J.runnerSalir());
+  await pag.waitForFunction(() => window.__A.reino && window.__A.reino.id === 'juegos', null, { timeout: 60000, polling: 300 });
+  await pag.waitForFunction(() => { const S = window.__A.Sonido; return S.actual && S.actual.nombre === 'juegos'; }, null, { timeout: 30000, polling: 300 }).catch(() => {});
+  const s2 = await pag.evaluate(() => { const S = window.__A.Sonido; return S.actual && S.actual.nombre; });
+  console.log(`${s2 === 'juegos' ? '✓' : '✗'} al salir del runner vuelve la de la Zona de Juegos: ${s2}`);
+}
 /* la versión sin canciones: silencio (nada sintetizado) */
 {
   const { pag: p2, ctx: c2 } = await abrir(nav, 'pausa&calidad=baja', { ancho: 800, alto: 450 });

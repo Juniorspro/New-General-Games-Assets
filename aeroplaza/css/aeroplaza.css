@@ -624,6 +624,16 @@ html.b460 .hud.modo-parkour .pk-cuenta { font-size: 52px; }
 .pk-hud.tiro .pk-puntos { color: #1b5a99; font-size: 18px; font-variant-numeric: tabular-nums; min-width: 56px; }
 .pk-hud.tiro .pk-mult { color: #ff5fa2; font-size: 18px; min-width: 28px; }
 .pk-hud.tiro .pk-mult.sube { animation: latido 0.45s ease both; }
+/* el runner: la barra del camino, con el muñeco y la notita de la canción */
+.pk-hud.runner .rn-barra { position: relative; width: min(190px, 30vw); height: 12px; border-radius: 99px; background: linear-gradient(180deg, rgba(26,58,106,0.18), rgba(26,58,106,0.08)); box-shadow: inset 0 1px 3px rgba(20,60,120,0.3); margin: 0 6px; }
+.pk-hud.runner .rn-lleno { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 99px; background: linear-gradient(180deg, #9ff0ff, #1fb0ea); box-shadow: 0 0 8px rgba(31,176,234,0.6); }
+.pk-hud.runner .rn-yo { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffffff, #39c6ff 55%, #1576c8); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(20,90,160,0.4); }
+.pk-hud.runner .rn-nota { position: absolute; top: -13px; margin-left: -6px; font-style: normal; font-weight: 900; font-size: 14px; color: #ff4fa8; text-shadow: 0 1px 0 #fff; }
+.pk-hud.runner .rn-meta { position: absolute; right: -6px; top: 50%; margin-top: -9px; font-style: normal; font-size: 14px; color: #1fb0ea; }
+.pk-hud.runner .pk-reloj { min-width: 58px; }
+.pk-hud.runner.apurado .rn-lleno { background: linear-gradient(180deg, #ffb0d8, #ff4fa8); box-shadow: 0 0 8px rgba(255,79,168,0.7); }
+.pk-hud.runner.apurado .pk-reloj { color: #ff3f8f; animation: latido 0.6s ease-in-out infinite; }
+html.a700 .pk-hud.runner .rn-barra { width: 26vw; }
 .pk-hud.tiro.apurado .pk-reloj { color: #ff4f6e; animation: latido 0.6s ease-in-out infinite; }
 html.b460 .pk-ayuda { display: none; }
 /* (7 tarjetas: 6 mapas y el tiro) en una fila de 7 que entra sin desplazar; en angosto, de a 4 */
@@ -641,3 +651,25 @@ html.b460 .pk-carta b { font-size: 11px; } html.b460 .pk-carta .est { font-size:
 html.a700 .aviso-accion.pildora { font-size: 12px; }
 /* el viaje: el nombre del lugar más chico */
 .viaje p { font-size: 16px; font-weight: 800; margin-top: 20px; }
+
+/* ---- la Zona de Juegos (juegos.js y mesas.js) ---- */
+.vista.juegos { background-size: cover; background-position: center; }
+/* el tablero de las mesas: un panel de vidrio a la derecha, cuadrado, que entra acostado y parado */
+.panel-mesa { position: absolute; right: max(12px, env(safe-area-inset-right)); top: calc(max(10px, env(safe-area-inset-top)) + 64px); width: min(340px, 42vw, calc((100% - 150px) * 0.8)); max-height: calc(100% - 150px);
+  display: flex; flex-direction: column; gap: 6px; padding: 10px; box-sizing: border-box; border-radius: 22px; pointer-events: auto; z-index: 6;
+  background: linear-gradient(160deg, rgba(255,255,255,0.86), rgba(223,246,255,0.78)); border: 2px solid rgba(255,255,255,0.95); box-shadow: 0 10px 30px rgba(20,80,140,0.22), inset 0 1px 0 #fff;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); animation: apareceDer 0.3s cubic-bezier(.2,.9,.3,1.2) both; }
+.panel-mesa canvas { width: 100%; aspect-ratio: 1 / 1; max-height: calc(100vh - 290px); object-fit: contain; border-radius: 14px; touch-action: none; cursor: pointer; }
+.panel-mesa .pm-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 4px; }
+.panel-mesa .pm-cab b { font-size: 15px; font-weight: 900; color: var(--azul2); }
+.panel-mesa .pm-cab small { font-size: 12px; font-weight: 800; color: var(--tinta2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel-mesa .pm-estado { text-align: center; font-size: 13px; font-weight: 900; color: var(--tinta); min-height: 18px; }
+.panel-mesa .pm-estado.mio { color: #2fa84a; animation: latidoBoton 1.6s ease-in-out infinite; }
+.panel-mesa .pm-pie { display: flex; gap: 6px; justify-content: space-between; }
+.panel-mesa .pm-pie .boton { flex: 1; }
+html.en-mesa .dedo-boton { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.2s; }
+@keyframes apareceDer { from { opacity: 0; transform: translateX(30px) scale(0.96); } to { opacity: 1; transform: none; } }
+html.b460 .panel-mesa { width: min(250px, 40vw); padding: 7px; gap: 4px; top: calc(max(8px, env(safe-area-inset-top)) + 52px); }
+html.b460 .panel-mesa { max-height: none; }
+html.b460 .panel-mesa canvas { max-height: calc(100vh - 225px); }
+html.b460 .panel-mesa .pm-pie .boton { font-size: 12px; padding: 6px 8px; min-height: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

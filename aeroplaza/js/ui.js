@@ -14,6 +14,7 @@ import { Pantalla } from './pantalla.js';
 import { Teclado } from './teclado.js';
 import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
 import { miniaturaTiro, TIRO } from './reinos/tiro.js';
+import { miniaturaJuegos } from './reinos/juegos.js';
 
 sumar({
   es: { op_anim: 'Animaciones', anim_suave: 'Suave', anim_lineal: 'Lineal', anim_chop: 'Chop', noti_zona: 'Nueva zona', noti_bien: '¡Listo!', noti_info: 'AEROPLAZA', noti_error: 'Ups', mis_titulo: 'Misiones', mis_ninguna: 'No tenés misiones. Hablá con la gente de la isla (💬) y te van a pedir cosas.', mis_volver: '✓ Listo: volvé a hablar con {n}.', mis_hechas: 'Hechas: {n}', boton_misiones: 'Misiones', boton_voz: 'Chat de voz' },
@@ -57,12 +58,12 @@ function muestraEstilo(n) {
   return '';
 }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
+const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['juegos', '🎮', 'linear-gradient(160deg,#e6ffe0,#fff2d6)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
 const HOT = [['burbujero', '🫧'], ['gestos', '👋'], ['discos', '💿'], ['foto', '📷'], ['mapa', '🗺️']];
 const GESTOS = ['saludar', 'festejar', 'aplaudir', 'saltito', 'voltereta', 'pensar', 'sentarse', 'bailar1', 'bailar2', 'bailar3', 'poder'];
 /* todos los discos escondidos en los reinos (6 en la isla y uno en cada otro reino) */
-const TOTAL_DISCOS = 10;
-const CANCIONES = ['titulo', 'colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 'playa', 'bosque'];
+const TOTAL_DISCOS = 11;
+const CANCIONES = ['titulo', 'colina', 'arrecife', 'juegos', 'ciudad', 'cielo', 'aurora', 'playa', 'bosque'];
 
 export const UI = {
   J: null, raiz: null, ventanaAbierta: null,
@@ -116,6 +117,7 @@ export const UI = {
       ['plaza', `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>${[10, 30, 55, 75, 88].map((x, i) => `<i class="burbujita" style="left:${x}%;animation-delay:${i * 0.9}s"></i>`).join('')}`],
       ['probador', `<div class="vista probador">${muneco(J.G.A.color, 62)}</div>`],
       ['salas', `<div class="vista salas"><b class="cuenta-linea">·</b><small>${t('en_linea')}</small></div>`],
+      ['juegos', `<div class="vista juegos" style="background-image:url(${miniaturaJuegos(320, 200).toDataURL()})"></div>`],
       ['casa', `<div class="vista icono"><span>🏡</span></div>`],
       ['discos', `<div class="vista icono"><div class="disco"></div></div>`],
       ['opciones', `<div class="vista icono gira"><span>⚙️</span></div>`],
@@ -158,14 +160,14 @@ export const UI = {
     if (id === 'estilo') return this.estilo();
     const r = Pantalla.caja(desde);
     const fondo = window.ARCHIVOS && window.ARCHIVOS['fondo-menu.webp'];
-    const titulo = id === 'plaza' ? t('canal_plaza') : id === 'probador' ? t('canal_probador') : t('canal_casa');
-    const desc = id === 'plaza' ? t('plaza_desc') : id === 'probador' ? t('prob_titulo') : t('reino_casa_d');
-    const vista = id === 'plaza' ? `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>` : id === 'probador' ? `<div class="vista probador">${muneco(J.G.A.color, 46)}</div>` : `<div class="vista icono" style="font-size:20vmin">🏡</div>`;
+    const titulo = id === 'plaza' ? t('canal_plaza') : id === 'probador' ? t('canal_probador') : id === 'juegos' ? t('canal_juegos') : t('canal_casa');
+    const desc = id === 'plaza' ? t('plaza_desc') : id === 'probador' ? t('prob_titulo') : id === 'juegos' ? t('reino_juegos_d') : t('reino_casa_d');
+    const vista = id === 'juegos' ? `<div class="vista juegos" style="background-image:url(${miniaturaJuegos(640, 400).toDataURL()})"></div>` : id === 'plaza' ? `<div class="vista plaza" style="background-image:url(${fondo || ''});background-color:#bfe9ff"></div>` : id === 'probador' ? `<div class="vista probador">${muneco(J.G.A.color, 46)}</div>` : `<div class="vista icono" style="font-size:20vmin">🏡</div>`;
     const c = this.poner(el(`<div class="canal-abierto"><div class="grande">${vista}<div class="titulo-canal">${titulo}</div><div class="desc">${esc(desc)}</div></div>
       <div class="pie"><button class="boton" data-a="menu">${t('menu')}</button><button class="boton primario" data-a="empezar">${t('empezar')}</button></div></div>`));
     c.animate([{ clipPath: `inset(${r.top}px ${Pantalla.w - r.right}px ${Pantalla.h - r.bottom}px ${r.left}px round 18px)` }, { clipPath: 'inset(0 0 0 0 round 0)' }], { duration: 420, easing: 'cubic-bezier(.2,.8,.2,1)' });
     $('[data-a=menu]', c).onclick = () => { c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200 }).onfinish = () => c.remove(); };
-    $('[data-a=empezar]', c).onclick = () => { J.sfx('sesion'); J.empezar(id === 'plaza' ? 'plaza' : id === 'casa' ? 'casa' : 'plaza', { probador: id === 'probador' }); };
+    $('[data-a=empezar]', c).onclick = () => { J.sfx('sesion'); J.empezar(id === 'plaza' ? 'plaza' : id === 'casa' ? 'casa' : id === 'juegos' ? 'juegos' : 'plaza', { probador: id === 'probador' }); };
     this.focoTeclado(c, '[data-a=empezar]');
   },
   cargando() { this.limpiar(); this.poner(el(`<div class="pantalla carga"><div class="rayado"></div><div class="ruedita" style="position:relative"></div><b style="position:relative">${t('cargando')}</b><small style="position:relative;font-weight:700;color:#8a9098;max-width:80vw;text-align:center">${t('consejo_' + (1 + Math.floor(Math.random() * 4)))}</small></div>`)); },
@@ -364,6 +366,39 @@ export const UI = {
       ${R.record ? `<div class="pk-record">🏆 ${t('pk_record')}</div>` : ''}
       <div class="fila"><button class="boton primario" data-a="otra">⟲ ${t('pk_repetir')}</button><button class="boton" data-a="volver">${t('pk_volver')}</button></div></div>`);
     const v = this.ventana(`🎯 ${t('tiro_fin')}`, c, { ancho: 560 });
+    $('[data-a=otra]', c).onclick = () => { v.cerrar(); alRepetir(); };
+    $('[data-a=volver]', c).onclick = () => { v.cerrar(); alVolver(); };
+    this.focoTeclado(v, '[data-a=otra]');
+  },
+  /* RUNNER: la píldora de arriba con la barra del camino: el muñeco (lo que avanzaste) contra
+     la notita (lo que va de la canción). Si la nota te pasa, no llegás */
+  runnerHud(E) {
+    if (!this.hud) return;
+    let d = $('.pk-hud.runner', this.hud);
+    if (!E) { d && d.remove(); if (!$('.pk-hud', this.hud)) this.hud.classList.remove('modo-parkour'); return; }
+    this.hud.classList.add('modo-parkour');
+    if (!d) {
+      d = el(`<div class="pk-hud runner"><span class="pk-nombre">⚡ ${t('rn_titulo')}</span><div class="rn-barra"><i class="rn-lleno"></i><i class="rn-nota">♪</i><i class="rn-yo"></i><i class="rn-meta">◎</i></div><span class="pk-reloj">1:03</span><button class="redondo" data-a="otra" title="${t('pk_repetir')}">⟲</button><button class="redondo" data-a="salir" title="${t('pk_volver')}">✕</button></div>`);
+      $('[data-a=otra]', d).onclick = () => this.J.runnerReiniciar(); $('[data-a=salir]', d).onclick = () => this.J.runnerSalir();
+      this.hud.appendChild(d);
+    }
+    const queda = Math.max(0, Math.ceil(E.limite - E.tiempo)), tx = `♪ ${Math.floor(queda / 60)}:${String(queda % 60).padStart(2, '0')}`;
+    if (d._t !== tx) { d._t = tx; $('.pk-reloj', d).textContent = tx; }
+    const yo = Math.round(E.prog * 1000) / 10, nota = Math.round(Math.min(1, E.tiempo / E.limite) * 1000) / 10;
+    if (d._y !== yo) { d._y = yo; $('.rn-yo', d).style.left = yo + '%'; $('.rn-lleno', d).style.width = yo + '%'; }
+    if (d._n !== nota) { d._n = nota; $('.rn-nota', d).style.left = nota + '%'; }
+    d.classList.toggle('apurado', E.fase === 'corre' && nota > yo + 2);
+    d.classList.toggle('fin', E.fase === 'fin' && !!E.fin?.ok);
+  },
+  resultadoRunner(R, alRepetir, alVolver) {
+    const cifras = R.ok
+      ? `<div><small>${t('rn_tiempo')}</small><b>${formatoTiempo(R.tiempo)}</b></div><div><small>${t('rn_sobra')}</small><b>${R.sobra.toFixed(1)} s</b></div>`
+      : `<div><small>${t('rn_llegaste')}</small><b>${R.pct}%</b></div>`;
+    const c = el(`<div class="pk-resultado"><div class="pk-est">${[0, 1, 2].map((i) => `<i class="${i < R.estrellas ? 'si' : ''}" style="animation-delay:${0.2 + i * 0.25}s">★</i>`).join('')}</div>
+      <div class="pk-cifras">${cifras}<div><small>${t('rn_caidas')}</small><b>${R.caidas}</b></div><div><small>${t('rn_golpes')}</small><b>${R.golpes}</b></div>${R.premio ? `<div><small>${t('pk_orbes')}</small><b>+${R.premio}</b></div>` : ''}</div>
+      ${R.record ? `<div class="pk-record">🏆 ${t('pk_record')}</div>` : ''}
+      <div class="fila"><button class="boton primario" data-a="otra">⟲ ${t('pk_repetir')}</button><button class="boton" data-a="volver">${t('pk_volver')}</button></div></div>`);
+    const v = this.ventana(R.ok ? `⚡ ${t('rn_fin')}` : `♪ ${t('rn_tarde')}`, c, { ancho: 560 });
     $('[data-a=otra]', c).onclick = () => { v.cerrar(); alRepetir(); };
     $('[data-a=volver]', c).onclick = () => { v.cerrar(); alVolver(); };
     this.focoTeclado(v, '[data-a=otra]');

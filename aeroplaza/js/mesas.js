@@ -267,6 +267,7 @@ export class Mesas {
     this.panel = null;
     this.r = azarDe(Date.now() & 0xffff);
     this.tRecordar = 0;
+    this.reglas = REGLAS;   // (para las pruebas)
   }
   armar(grupo, mundo, M, i) {
     const g = new THREE.Group(); g.position.set(M.x, M.y, M.z); g.rotation.y = M.rot; grupo.add(g);
@@ -418,6 +419,7 @@ export class Mesas {
     const p = document.createElement('div'); p.className = 'panel-mesa';
     p.innerHTML = `<div class="pm-cab"><b></b><small></small></div><canvas></canvas><div class="pm-estado"></div><div class="pm-pie"><button class="boton chico" data-a="otra"></button><button class="boton chico primario" data-a="levantarse"></button></div>`;
     hud.appendChild(p); this.panel = p;
+    document.documentElement.classList.add('en-mesa');   // (en el celu se esconden los botones de la derecha: ahí va el tablero)
     const cv = p.querySelector('canvas'); this.cv = cv;
     p.querySelector('[data-a=otra]').textContent = t('mesa_otra');
     p.querySelector('[data-a=levantarse]').textContent = t('mesa_levantarse');
@@ -428,7 +430,7 @@ export class Mesas {
     cv.addEventListener('pointermove', (e) => { const M2 = this.lista[this.mia?.i]; if (!M2) return; const [u, v] = aUV(e); const h = tocar(M2.juego, M2.S, u, v, { yo: this.mia.silla }); if (h !== this.hover) { this.hover = h; this.pintarPanel(); } });
     this.pintarPanel();
   }
-  cerrarPanel() { if (this.panel) { this.panel.remove(); this.panel = null; } }
+  cerrarPanel() { if (this.panel) { this.panel.remove(); this.panel = null; } document.documentElement.classList.remove('en-mesa'); }
   toque(u, v) {
     const M = this.lista[this.mia?.i]; if (!M) return;
     const R = REGLAS[M.juego], yo = this.mia.silla, S = M.S;

@@ -428,6 +428,9 @@ export class Meeple {
     } else if (estado === 'sentado') {
       /* en el asiento del monorriel: piernas adelante, manos en las rodillas, mira por la ventana */
       R.cy = -0.2; R.pl = [-1.5, 0, 0.1]; R.pr = [-1.5, 0, -0.1]; R.bl = [-0.5, 0, -0.25]; R.br = [-0.5, 0, 0.25]; R.hy = 0.9 + Math.sin(t * 0.3) * 0.35; R.hx = Math.sin(t * 0.7) * 0.04;
+    } else if (estado === 'hamaca') {
+      /* en la hamaca: agarrado de las cadenas, y las piernas se estiran cuando va para adelante (vel es el ángulo) */
+      const a = Math.max(-1, Math.min(1, vel)); R.cy = -0.18; R.pl = [-1.5 - a * 0.5, 0, 0.08]; R.pr = [-1.5 - a * 0.5, 0, -0.08]; R.bl = [-2.3, 0, -0.32]; R.br = [-2.3, 0, 0.32]; R.cx = -0.1 + a * 0.25; R.hx = -a * 0.2;
     } else if (estado === 'monta') {
       R.cy = -0.18; R.pl = [-1.45, 0, 0.35]; R.pr = [-1.45, 0, -0.35]; R.bl = [-1.2, 0, -0.25]; R.br = [-1.2, 0, 0.25]; R.cx = 0.25; R.hx = -0.1;
     } else {

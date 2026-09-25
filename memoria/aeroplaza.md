@@ -294,6 +294,10 @@ por lo que dijo en el texto.
   Lissajous, racha que multiplica hasta ×4, estrellas en 30/60/95. Carta en
   el menú de juegos. Prueba: `pruebas/primera.mjs` (9 bien).
 
+## Octava vuelta: Zona de Juegos, runner, efectos y movimiento (25/09)
+
+En su propia nota: [aeroplaza-9](aeroplaza-9.md).
+
 ## Trampas que ya se pagaron
 
 - **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una

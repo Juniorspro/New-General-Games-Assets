@@ -4,6 +4,16 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **25/09/2026, noche (3) · `claude/fijate-iszyer`:**
+  - Pidió: dos canciones nuevas (una breakcore), la Zona de Juegos como mapa
+    con puertas y más de 10 juegos, un runner que dure lo que la canción y se
+    llene de glitches, deslizar siempre, las manos más abajo, un aviso a la
+    vez, caminar y correr de su video, efectos especiales y nubes sin recortes.
+    Quedó todo ([aeroplaza-9](aeroplaza-9.md)).
+  - El R6 de Roblox real lo rechazó: las poses son las de su video.
+  - Los links de TikTok no se bajan (permiso negado); los mp4 que manda sí.
+  - Pruebas nuevas: `juegos.mjs` y `runner.mjs` (con un bot que lo gana).
+  - Falta: probar las mesas y la pelota entre dos personas de verdad.
 - **25/09/2026, noche (2) · `claude/fijate-iszyer`:**
   - Después pidió que suenen solo las canciones que mandó (va a mandar más):
     se borraron los temas de Rezona y se apagaron los sintetizados; la versión

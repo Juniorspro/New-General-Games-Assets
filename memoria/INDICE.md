@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 25/09/2026 (AEROPLAZA: animación por poses, parkour y primera persona).
+mantiene: `MEMORIA.md`. Última puesta al día: 25/09/2026 (AEROPLAZA: Zona de Juegos con mesas, runner con glitches, efectos y movimiento).
 
 ## Reglas que no se discuten
 
@@ -64,6 +64,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 25/09/2026 (AEROPLAZA: animació
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA: el 3D social Frutiger Aero con multijugador MQTT (salas, broker de prueba en Node, trampas de three); la isla grande, el monorriel, el detalle por distancia, los menús sin desplazar; el día y noche común, el teclado propio, el parkour y los interiores en primera persona; los avisos estilo Windows 7 y el chat de voz por cercanía (WebRTC); los caminos libres, la animación por poses (suave, lineal, chop), los movimientos de parkour y la primera persona con cuerpo |
+| [aeroplaza-9](aeroplaza-9.md) | AEROPLAZA, octava vuelta: la Zona de Juegos (puertas, mesas en red, pelota, juegos), el runner Aero.exe (nivel, saltos medidos, glitches al ritmo del breakcore, bot), los efectos (✦ Poder), el movimiento del video, caminar y correr, las nubes |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

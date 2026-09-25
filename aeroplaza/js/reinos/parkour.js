@@ -40,19 +40,19 @@ sumar({
   es: {
     pk_titulo: 'PARKOUR AERO', pk_mapas: '6 mapas', pk_elegi: 'Elegí un mapa', pk_bloq: 'Terminá el anterior', pk_mejor: 'Récord {s}', pk_sin: 'Sin tiempo todavía',
     pk_azoteas: 'Azoteas de Vidrio', pk_mov: 'Deslizate con C (⤓), trepá saltando contra un borde, rebotá en las paredes y rodá al caer', pk_nubes: 'Nubes de Algodón', pk_acuario: 'Acuario Burbuja', pk_jardin: 'Jardín de Cristal', pk_ciudad: 'Ciudad Aurora', pk_orbita: 'Órbita Aero',
-    pk_ya: '¡YA!', pk_control: '¡Punto de control!', pk_caidas: 'caídas', pk_fin: '¡Llegaste!', pk_tiempo: 'Tiempo', pk_record: '¡Récord nuevo!', pk_siguiente: 'Siguiente mapa', pk_repetir: 'Repetir', pk_volver: 'Volver a la isla', pk_orbes: 'orbes',
+    pk_ya: '¡YA!', pk_control: '¡Punto de control!', pk_caidas: 'caídas', pk_fin: '¡Llegaste!', pk_tiempo: 'Tiempo', pk_record: '¡Récord nuevo!', pk_siguiente: 'Siguiente mapa', pk_repetir: 'Repetir', pk_volver: 'Volver a la Zona de Juegos', pk_orbes: 'orbes',
     accion_minijuego: 'Entrar a PARKOUR AERO', zona_juegos: 'Zona de Juegos', pk_premio: '+{n} orbes por terminarlo',
   },
   en: {
     pk_titulo: 'AERO PARKOUR', pk_mapas: '6 maps', pk_elegi: 'Pick a map', pk_bloq: 'Finish the previous one', pk_mejor: 'Best {s}', pk_sin: 'No time yet',
     pk_azoteas: 'Glass Rooftops', pk_mov: 'Slide with C (⤓), climb by jumping at a ledge, kick off walls and roll when you land', pk_nubes: 'Cotton Clouds', pk_acuario: 'Bubble Aquarium', pk_jardin: 'Crystal Garden', pk_ciudad: 'Aurora City', pk_orbita: 'Aero Orbit',
-    pk_ya: 'GO!', pk_control: 'Checkpoint!', pk_caidas: 'falls', pk_fin: 'You made it!', pk_tiempo: 'Time', pk_record: 'New record!', pk_siguiente: 'Next map', pk_repetir: 'Retry', pk_volver: 'Back to the island', pk_orbes: 'orbs',
+    pk_ya: 'GO!', pk_control: 'Checkpoint!', pk_caidas: 'falls', pk_fin: 'You made it!', pk_tiempo: 'Time', pk_record: 'New record!', pk_siguiente: 'Next map', pk_repetir: 'Retry', pk_volver: 'Back to the Game Zone', pk_orbes: 'orbs',
     accion_minijuego: 'Enter AERO PARKOUR', zona_juegos: 'Game Zone', pk_premio: '+{n} orbs for finishing',
   },
   pt: {
     pk_titulo: 'PARKOUR AERO', pk_mapas: '6 mapas', pk_elegi: 'Escolha um mapa', pk_bloq: 'Termine o anterior', pk_mejor: 'Recorde {s}', pk_sin: 'Sem tempo ainda',
     pk_azoteas: 'Terraços de Vidro', pk_mov: 'Deslize com C (⤓), escale pulando contra uma borda, quique nas paredes e role ao cair', pk_nubes: 'Nuvens de Algodão', pk_acuario: 'Aquário Bolha', pk_jardin: 'Jardim de Cristal', pk_ciudad: 'Cidade Aurora', pk_orbita: 'Órbita Aero',
-    pk_ya: 'JÁ!', pk_control: 'Ponto de controle!', pk_caidas: 'quedas', pk_fin: 'Você chegou!', pk_tiempo: 'Tempo', pk_record: 'Recorde novo!', pk_siguiente: 'Próximo mapa', pk_repetir: 'Repetir', pk_volver: 'Voltar para a ilha', pk_orbes: 'orbes',
+    pk_ya: 'JÁ!', pk_control: 'Ponto de controle!', pk_caidas: 'quedas', pk_fin: 'Você chegou!', pk_tiempo: 'Tempo', pk_record: 'Recorde novo!', pk_siguiente: 'Próximo mapa', pk_repetir: 'Repetir', pk_volver: 'Voltar à Zona de Jogos', pk_orbes: 'orbes',
     accion_minijuego: 'Entrar no PARKOUR AERO', zona_juegos: 'Zona de Jogos', pk_premio: '+{n} orbes por terminar',
   },
 });

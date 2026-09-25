@@ -38,6 +38,7 @@ export class RemotePlayer {
     if (d.gesto && d.gesto !== this.gesto) { const g = String(d.gesto).split('#')[0].slice(0, 20); this.m.hacerGesto(g); RemotePlayer.alGesto?.(this, g); }
     this.gesto = d.gesto || null;
     this.modo = d.modo || 'pie';
+    this.mesa = typeof d.mesa === 'string' ? d.mesa.slice(0, 8) : null;   // en qué silla de qué mesa (la Zona de Juegos)
     this.voz = d.voz === 1 || d.voz === 2 ? d.voz : 0;   // en el chat de voz: 1 con micrófono, 2 escuchando
     if (d.name && d.name !== this.name) { this.name = String(d.name).slice(0, 20); this.m.ponerNombre(this.name); }
   }
