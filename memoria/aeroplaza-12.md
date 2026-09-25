@@ -155,6 +155,12 @@ Sigue de [aeroplaza-11](aeroplaza-11.md). Rama `claude/fijate-iszyer`.
   deja hacer `stash pop`. Primero `git checkout -- aeroplaza/aeroplaza.html`.
 - **Achicar un sólido de hotel cambia los caminos**: dos quedaban contra el
   zócalo o el espejo. `pruebas/caminos.mjs` lo encontró y se corrieron.
+- **La viga del monorriel junto a la terminal**: sus sólidos se salteaban a
+  menos de 22 m de la terminal, y la rampa baja al foso se atravesaba. Ahora
+  se saltean solo adentro (`enTerminal < 0,5`) y el foso tiene tapas en las
+  puntas (`plaza.js`).
+- **La prueba del flujo compraba con el `confirm` viejo**: con el probador
+  nuevo se compra desde la barra (`.prob-prueba [data-a=comprar]`).
 
 ## Pruebas
 
@@ -164,5 +170,8 @@ Sigue de [aeroplaza-11](aeroplaza-11.md). Rama `claude/fijate-iszyer`.
     pantallas, la tienda, el anuncio, TikTok falso y duplicar;
   - `vr` (14).
 - `caminos` da bien después de correr dos caminos.
-- `interiores` falla en "el telescopio abre el Estelario". **Ya fallaba antes
-  de esta vuelta**: se probó con el código de antes.
+- `interiores`: "el telescopio abre el Estelario" contaba los nombres del
+  cielo a la hora real y fallaba según cuándo se corriera (ya pasaba antes de
+  esta vuelta). Ahora la prueba fija la hora (`Date.UTC(2026, 8, 26, 6)`) y
+  el cielo quieto: 32 bien.
+- `flujo` compra con la barra del probador: 14 bien.
