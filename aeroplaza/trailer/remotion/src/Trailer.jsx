@@ -31,9 +31,11 @@ function Toma({ q, f, L }) {
     const g = q.c0 + f, ultimo = GOLPES_C.filter((c) => c <= g).pop() ?? -99, d = g - ultimo;
     escala += 0.07 * Math.exp(-d / 2.5);
   }
+  /* (el cielo del Estelario sale oscuro en el video: se levanta un poco) */
+  const filtro = q.cartel === 'cielo' ? `brightness(${(1.45 * brillo).toFixed(3)}) contrast(1.15) saturate(1.2)` : brillo !== 1 ? `brightness(${brillo.toFixed(3)})` : undefined;
   const video = (
     <OffthreadVideo src={staticFile(`tomas/${q.toma}.mp4`)} startFrom={Math.round(q.en)} muted
-      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${escala})`, filter: brillo !== 1 ? `brightness(${brillo.toFixed(3)})` : undefined }} />
+      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${escala})`, filter: filtro }} />
   );
   if (!canal) return <AbsoluteFill>{video}</AbsoluteFill>;
   return (
@@ -148,7 +150,7 @@ function Cartel({ q, f, L }) {
       <>
         <div style={{ ...lleno, background: 'radial-gradient(ellipse at center, transparent 60%, rgba(0,10,30,0.6) 100%)' }} />
         <div style={{ position: 'absolute', left: 0, width: 1080, top: 1200, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
-          <div style={{ fontFamily: LETRA, fontWeight: 900, fontSize: 84, color: '#fff', textShadow: '0 0 24px rgba(120,190,255,0.9), 0 4px 0 rgba(0,0,0,0.3)', opacity: clamp((f - 4) / 8), transform: `translateY(${(1 - sale((f - 4) / 12)) * 40}px)` }}>🔭 Mirá el cielo de verdad</div>
+          <div style={{ fontFamily: LETRA, fontWeight: 900, fontSize: 72, color: '#fff', textShadow: '0 0 24px rgba(120,190,255,0.9), 0 4px 0 rgba(0,0,0,0.3)', opacity: clamp((f - 4) / 8), transform: `translateY(${(1 - sale((f - 4) / 12)) * 40}px)` }}>🔭 Mirá el cielo de verdad</div>
           <div style={{ fontFamily: LETRA, fontWeight: 800, fontSize: 40, color: '#cfe6ff', opacity: clamp((f - 20) / 8) }}>5044 estrellas · 88 constelaciones · Buenos Aires</div>
         </div>
       </>
