@@ -1,0 +1,19 @@
+#!/bin/sh
+# OpenCV mínimo para WebAssembly: sólo los módulos que usa XRSLAM (imagen,
+# flujo óptico, esquinas, PnP). Estáticas, con SIMD de wasm, sin hilos.
+#   opencv-wasm.sh <fuente de opencv 4.10> <carpeta de salida>
+set -e
+S=$1; B=$2
+emcmake cmake -S "$S" -B "$B" -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DENABLE_PIC=FALSE \
+  -DCPU_BASELINE='' -DCPU_DISPATCH='' -DCV_TRACE=OFF -DBUILD_SHARED_LIBS=OFF \
+  -DBUILD_LIST=core,imgproc,calib3d,features2d,flann,video \
+  -DCV_ENABLE_INTRINSICS=ON -DCMAKE_C_FLAGS="-msimd128" -DCMAKE_CXX_FLAGS="-msimd128" \
+  -DWITH_1394=OFF -DWITH_ADE=OFF -DWITH_VTK=OFF -DWITH_EIGEN=OFF -DWITH_FFMPEG=OFF -DWITH_GSTREAMER=OFF \
+  -DWITH_GTK=OFF -DWITH_IPP=OFF -DWITH_JASPER=OFF -DWITH_JPEG=OFF -DWITH_WEBP=OFF -DWITH_OPENEXR=OFF \
+  -DWITH_OPENGL=OFF -DWITH_OPENVX=OFF -DWITH_OPENNI=OFF -DWITH_OPENNI2=OFF -DWITH_PNG=OFF -DWITH_TBB=OFF \
+  -DWITH_TIFF=OFF -DWITH_V4L=OFF -DWITH_OPENCL=OFF -DWITH_GPHOTO2=OFF -DWITH_LAPACK=OFF -DWITH_ITT=OFF \
+  -DWITH_QUIRC=OFF -DWITH_PROTOBUF=OFF -DWITH_PTHREADS_PF=OFF -DBUILD_ZLIB=ON -DBUILD_opencv_apps=OFF \
+  -DBUILD_EXAMPLES=OFF -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_DOCS=OFF -DBUILD_PACKAGE=OFF \
+  -DBUILD_opencv_js=OFF -DBUILD_opencv_python3=OFF -DBUILD_opencv_java=OFF
+cmake --build "$B" -j4
+cmake --install "$B" --prefix "$B/instalado"

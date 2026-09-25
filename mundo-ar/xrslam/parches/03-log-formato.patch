@@ -1,0 +1,16 @@
+diff --git a/xrslam/src/xrslam/utility/debug.cpp b/xrslam/src/xrslam/utility/debug.cpp
+index 6f0f527..b9d1d25 100644
+--- a/xrslam/src/xrslam/utility/debug.cpp
++++ b/xrslam/src/xrslam/utility/debug.cpp
+@@ -60,7 +60,10 @@ void log_message(LogLevel level, const char *format, ...) {
+         lvl = spdlog::level::critical;
+         break;
+     }
+-    logger()->log(lvl, msgbuf.data());
++    // El mensaje va como argumento, no como formato: con llaves adentro
++    // ("{...}") el formato se rompía, y los fmt nuevos no aceptan un formato
++    // que no se conoce al compilar.
++    logger()->log(lvl, "{}", msgbuf.data());
+ }
+ 
+ } // namespace xrslam

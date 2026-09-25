@@ -1,0 +1,14 @@
+diff --git a/xrslam-interface/include/XRSLAM.h b/xrslam-interface/include/XRSLAM.h
+index cf9542a..81ac261 100644
+--- a/xrslam-interface/include/XRSLAM.h
++++ b/xrslam-interface/include/XRSLAM.h
+@@ -6,6 +6,9 @@
+ #ifndef _XRSLAM_H_
+ #define _XRSLAM_H_
+ #include <stdint.h>
++#ifdef __cplusplus
++#include <vector> // XRSLAMFeatures usa std::vector
++#endif
+ 
+ #ifdef __cplusplus
+ extern "C" {

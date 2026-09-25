@@ -1,0 +1,12 @@
+diff --git a/xrslam/src/xrslam/localizer/base64.h b/xrslam/src/xrslam/localizer/base64.h
+index 906b137..68a1af3 100644
+--- a/xrslam/src/xrslam/localizer/base64.h
++++ b/xrslam/src/xrslam/localizer/base64.h
+@@ -25,6 +25,7 @@
+  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  */
+ 
++#include <cstdint>
+ #include <string>
+ 
+ namespace macaron {
