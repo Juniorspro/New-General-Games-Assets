@@ -302,6 +302,10 @@ En su propia nota: [aeroplaza-9](aeroplaza-9.md).
 
 En su propia nota: [aeroplaza-10](aeroplaza-10.md).
 
+## Décima vuelta: super optimización y el tráiler (26/09)
+
+En su propia nota: [aeroplaza-11](aeroplaza-11.md).
+
 ## Trampas que ya se pagaron
 
 - **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una

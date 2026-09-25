@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **26/09/2026, más tarde · `claude/fijate-iszyer`:**
+  - Pidió optimizar para todos los celulares (sin sombras, brillos, etc.) y
+    un tráiler como el de BRILLO pero mucho mejor, con las canciones del
+    juego y motion graphics.
+  - Quedó la calidad mínima con el corte por distancia, la carga más rápida y
+    el tráiler de 61 s ([aeroplaza-11](aeroplaza-11.md)).
+  - Falta: medir mínima en un celu flojo de verdad.
 - **26/09/2026 · `claude/fijate-iszyer`:**
   - Pidió:
     - deslizarse cuando quiera;

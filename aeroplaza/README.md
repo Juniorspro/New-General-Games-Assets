@@ -61,7 +61,7 @@ Detalle: `js/red.js` y `js/remotos.js`.
 Además hay:
 
 - doce misiones y diez discos escondidos que desbloquean canciones;
-- la calidad arranca según el aparato (`js/aparato.js`: placa, memoria, núcleos, pantalla) y después se ajusta midiendo;
+- la calidad arranca según el aparato (`js/aparato.js`: placa, memoria, núcleos, pantalla) y después se ajusta midiendo. Son cuatro: alta, media, baja y **mínima** (para los celus más flojos: sin sombras, sin brillo ni posproceso, sin barniz en los materiales, menos píxeles y lo lejano cortado detrás de la niebla, `js/detalle.js`); los shaders se compilan con la pantalla de carga puesta;
 - menús con pestañas y páginas, pensados para entrar sin desplazar en un celu acostado;
 - una barra de 5 lugares (burbujero, gestos, música, foto y mapa);
 - día y noche iguales para todos: 5 minutos de día y 5 de noche, por el reloj;
@@ -81,6 +81,20 @@ Además hay:
 - las construcciones armadas en código (`js/construcciones.js`), copiando
   las referencias que se hicieron con Rezona: casa, estación, tienda, hotel,
   tren, fuente, bancos, faroles, árboles, palmeras y muebles.
+
+## El tráiler
+
+`trailer/` arma el tráiler para TikTok: 61 s en 9:16 (1080×1920, 30 fps), con
+cuatro canciones del juego cortadas en sus golpes. Todo lo que se ve es el juego
+de verdad, grabado cuadro por cuadro con un reloj propio; el montaje y los
+carteles (estilo Wii y Windows 7, como la interfaz) los hace Remotion.
+
+```
+node aeroplaza/herramientas/armar.mjs
+node aeroplaza/trailer/grabar.mjs tomas      # ~1,5 h en SwiftShader (--vista: chiquitas, para encuadrar)
+node aeroplaza/trailer/grabar.mjs audio      # necesita musica-ajena/ (no está en el repo)
+node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tiktok.mp4 y su portada
+```
 
 ## Para tocarlo
 
