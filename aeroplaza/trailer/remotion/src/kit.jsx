@@ -120,7 +120,9 @@ export function VentanaError({ x, y, w = 760, titulo = 'Aero.exe', txt, f = 0, t
 }
 
 /* ------------------------------------------------------------ la palabra gigante rota (DESPIERTA, WAKE UP…) */
-export function Palabra({ f, txt, tam = 230, color = '#ffffff', y = 820, semilla = 1 }) {
+export function Palabra({ f, txt, tam: tam0 = 230, color = '#ffffff', y = 820, semilla = 1 }) {
+  /* (que entre en 960 px: Nunito Black ocupa ~0,66 em por letra en mayúsculas) */
+  const tam = Math.min(tam0, 960 / (txt.length * 0.66));
   const N = 7, alto = tam * 1.15, t = Math.floor(f / 2);
   const capa = (col, dx, blend) => (
     <div style={{ position: 'absolute', left: 0, width: 1080, textAlign: 'center', top: 0, color: col, mixBlendMode: blend, transform: `translateX(${dx}px)` }}>{txt}</div>

@@ -191,7 +191,7 @@ function Cartel({ q, f, L }) {
       <>
         <div style={{ ...lleno, background: '#fff', opacity: 1 - sale(f / 20) }} />
         <Burbujas f={f} n={16} semilla={8} alfa={0.85} />
-        <div style={{ position: 'absolute', left: 0, width: 1080, top: 1240, textAlign: 'center', fontFamily: LETRA, fontWeight: 900, fontSize: 88, color: '#fff', textShadow: '0 4px 0 rgba(26,160,216,0.7), 0 10px 30px rgba(0,60,120,0.45)', opacity: clamp((f - 14) / 10), transform: `translateY(${(1 - sale((f - 14) / 14)) * 50}px)` }}>Todo vuelve a brillar ✨</div>
+        <div style={{ position: 'absolute', left: 0, width: 1080, top: 1240, textAlign: 'center', fontFamily: LETRA, fontWeight: 900, fontSize: 74, color: '#fff', textShadow: '0 4px 0 rgba(26,160,216,0.7), 0 10px 30px rgba(0,60,120,0.45)', opacity: clamp((f - 14) / 10), transform: `translateY(${(1 - sale((f - 14) / 14)) * 50}px)` }}>Todo vuelve a brillar ✨</div>
       </>
     );
     case 'cierre': {
