@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#07030f">
+<title>Tajo — cortá al ritmo</title>
+<meta name="description" content="Cortá los bloques al ritmo de la música dibujando el tajo con el dedo. En 3D, con un dragón de neón, en el teléfono y sin descargar nada.">
+<link rel="stylesheet" href="css/tajo.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%2307030f'/><rect x='3' y='3' width='6' height='6' rx='1.5' fill='%23c9a64e'/><rect x='7' y='7' width='6' height='6' rx='1.5' fill='%237b3dff'/><path d='M2 14 L14 2' stroke='%23fff' stroke-width='1.3'/></svg>">
+</head>
+<body>
+<canvas id="lienzo" aria-label="El escenario"></canvas>
+<div id="flotantes" aria-hidden="true"></div>
+
+<!-- ───────────── marcador ───────────── -->
+<div id="hud" hidden>
+  <div class="h-arriba">
+    <button id="h-pausa" class="h-pausa" aria-label="Pausa"><span></span><span></span></button>
+    <div class="h-barra"><div id="h-progreso"></div></div>
+  </div>
+  <div class="h-izq"><span class="h-et">combo</span><b id="h-combo">0</b></div>
+  <div class="h-der">
+    <b id="h-puntos">0</b>
+    <span class="h-sub"><i id="h-porc">100,0%</i><i id="h-rango" class="h-rango">SS</i></span>
+    <div class="h-mult">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" class="aro-fondo"/><circle id="h-aro" cx="32" cy="32" r="26" class="aro"/></svg>
+      <b id="h-mult">x1</b>
+    </div>
+  </div>
+  <div class="h-energia"><div id="h-energia"></div></div>
+</div>
+
+<!-- ───────────── carga ───────────── -->
+<main id="p-carga" class="pantalla centrado">
+  <div class="caja">
+    <h1 class="logo chico">TAJO</h1>
+    <p id="carga-detalle" class="bajada">Armando el escenario…</p>
+    <button id="btn-tocar" class="grande primario" hidden>Tocá para empezar</button>
+  </div>
+</main>
+
+<!-- ───────────── aviso de luces ───────────── -->
+<main id="p-aviso" class="pantalla centrado" hidden>
+  <div class="caja panel">
+    <h2>Antes de jugar</h2>
+    <p>Este juego tiene <b>luces que destellan</b> al ritmo de la música. Si te molestan los destellos o sos sensible a las luces intermitentes, prendé <b>Luces suaves</b>.</p>
+    <div class="botones">
+      <button id="aviso-suaves" class="grande">Usar luces suaves</button>
+      <button id="aviso-seguir" class="grande primario">Entendido</button>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── inicio ───────────── -->
+<main id="p-inicio" class="pantalla portada" hidden>
+  <div class="arriba">
+    <h1 class="logo">TAJO</h1>
+    <p class="lema">cortá al ritmo</p>
+  </div>
+  <div class="botones abajo">
+    <button id="btn-jugar" class="grande primario">Jugar</button>
+    <button id="btn-tuya" class="grande">Tu canción</button>
+    <div class="fila">
+      <button id="btn-opciones" class="mediano">Opciones</button>
+      <button id="btn-como" class="mediano">Cómo se juega</button>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── canciones ───────────── -->
+<main id="p-canciones" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver="p-inicio" class="chico">← Atrás</button>
+    <h2>Canciones</h2>
+  </header>
+  <div id="lista-canciones" class="lista"></div>
+  <div class="pie-panel panel">
+    <div id="difs" class="difs" role="radiogroup" aria-label="Dificultad"></div>
+    <p id="record" class="record">—</p>
+    <button id="btn-empezar" class="grande primario">¡A cortar!</button>
+  </div>
+</main>
+
+<!-- ───────────── tu canción ───────────── -->
+<main id="p-tuya" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver="p-inicio" class="chico">← Atrás</button>
+    <h2>Tu canción</h2>
+  </header>
+  <div class="caja panel">
+    <p>Elegí un archivo de audio de tu teléfono (mp3, m4a, ogg, wav). El juego escucha la canción, encuentra el pulso y arma el mapa solo. No sale de tu teléfono: se analiza acá mismo.</p>
+    <label class="grande primario archivo">Elegir archivo<input id="archivo" type="file" accept="audio/*,.mp3,.m4a,.aac,.ogg,.wav,.flac"></label>
+    <p id="tuya-estado" class="bajada">—</p>
+    <div id="tuya-listo" hidden>
+      <div id="difs-tuya" class="difs" role="radiogroup" aria-label="Dificultad"></div>
+      <button id="btn-tuya-jugar" class="grande primario">¡A cortar!</button>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── opciones ───────────── -->
+<main id="p-opciones" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver="p-inicio" class="chico">← Atrás</button>
+    <h2>Opciones</h2>
+  </header>
+  <div class="caja panel opciones">
+    <label class="op"><span><b>Colores libres</b><small>Cualquier sable corta cualquier color. Apagado: dorado con la mitad izquierda, violeta con la derecha.</small></span><input type="checkbox" id="op-libre"></label>
+    <label class="op"><span><b>Sin perder</b><small>La energía no te saca de la canción.</small></span><input type="checkbox" id="op-sinperder"></label>
+    <label class="op"><span><b>Luces suaves</b><small>Sin destellos fuertes.</small></span><input type="checkbox" id="op-suaves"></label>
+    <label class="op"><span><b>Ocultar marcador</b><small>Para grabar la pantalla limpia.</small></span><input type="checkbox" id="op-hud"></label>
+    <label class="op rango"><span><b>Música</b></span><input type="range" id="op-musica" min="0" max="1" step="0.05"></label>
+    <label class="op rango"><span><b>Efectos</b></span><input type="range" id="op-efectos" min="0" max="1" step="0.05"></label>
+    <label class="op"><span><b>Calidad</b><small>Automática baja la resolución si el teléfono no llega.</small></span>
+      <select id="op-calidad"><option value="auto">Automática</option><option value="alta">Alta</option><option value="baja">Baja</option></select></label>
+    <div class="op columna">
+      <span><b>Desfase del audio: <output id="op-desfase-v">0 ms</output></b><small>Con auriculares Bluetooth el sonido llega tarde. Tocá el botón con cada golpe del metrónomo.</small></span>
+      <input type="range" id="op-desfase" min="-100" max="400" step="5">
+      <button id="btn-calibrar" class="mediano">Calibrar con el metrónomo</button>
+      <p id="calibra-estado" class="bajada"></p>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── cómo se juega ───────────── -->
+<main id="p-como" class="pantalla" hidden>
+  <header class="barra">
+    <button data-volver="p-inicio" class="chico">← Atrás</button>
+    <h2>Cómo se juega</h2>
+  </header>
+  <div class="caja panel texto">
+    <p><b>Dibujá el tajo con el dedo.</b> Pasá el dedo rápido por encima del bloque, en la dirección de la flecha. Si el bloque tiene una estrella sola, cualquier dirección sirve.</p>
+    <p><b>Cada mano, su color.</b> Si arrancás el trazo en la <span class="dorado">mitad izquierda</span> es el sable dorado; en la <span class="violeta">mitad derecha</span>, el violeta. Podés usar dos dedos a la vez.</p>
+    <p><b>El puntaje premia el gesto entero:</b> hasta 70 por el impulso que traés antes de entrar, 30 por seguir después de salir y 15 por pasar por el centro. 115 es perfecto.</p>
+    <p><b>No toques las bombas</b> (las esferas negras con púas).</p>
+    <p>El multiplicador sube a x2, x4 y x8 con los aciertos seguidos. La barra de abajo es la energía: si se vacía, perdés.</p>
+  </div>
+</main>
+
+<!-- ───────────── pausa ───────────── -->
+<main id="p-pausa" class="pantalla centrado velo" hidden>
+  <div class="caja panel">
+    <h2>Pausa</h2>
+    <div class="botones">
+      <button id="btn-seguir" class="grande primario">Seguir</button>
+      <button id="btn-reiniciar" class="grande">Empezar de nuevo</button>
+      <button id="btn-salir" class="grande">Salir</button>
+    </div>
+  </div>
+</main>
+
+<!-- ───────────── final ───────────── -->
+<main id="p-final" class="pantalla centrado velo" hidden>
+  <div class="caja panel final">
+    <p id="f-titulo" class="bajada">—</p>
+    <div id="f-rango" class="rango-grande">A</div>
+    <p id="f-nuevo" class="nuevo" hidden>¡Récord nuevo!</p>
+    <div class="numeros">
+      <div><small>puntos</small><b id="f-puntos">0</b></div>
+      <div><small>precisión</small><b id="f-precision">0%</b></div>
+      <div><small>combo máximo</small><b id="f-combo">0</b></div>
+      <div><small>cortes</small><b id="f-cortes">0/0</b></div>
+    </div>
+    <p id="f-detalle" class="bajada"></p>
+    <div class="botones">
+      <button id="btn-otra" class="grande primario">Otra vez</button>
+      <button id="btn-menu" class="grande">Menú</button>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es-AR"><head><meta charset="utf-8"><title>Tajo — grabar la música</title></head>
+<body>
+<script type="module">
+// Graba una canción entera sin parlantes (OfflineAudioContext) y devuelve
+// números: pico, volumen por sección, y un WAV mono para mirarlo afuera.
+import { componer } from "../js/compositor.js";
+import { CANCIONES } from "../js/canciones.js";
+import { grabarFueraDeLinea } from "../js/reproductor.js";
+
+window.grabar = async (indice = 0, sr = 44100, hasta = null, solo = null, desde = 0) => {
+  const c0 = componer(CANCIONES[indice]);
+  // `solo`: grabar sólo esos instrumentos (para medir cada uno por separado).
+  const c = { ...c0, audio: c0.audio.filter(e => (!solo || solo.includes(e.f)) && e.t >= desde).map(e => ({ ...e, t: e.t - desde })) };
+  const dur = hasta ?? c.duracion;
+  const ctx = new OfflineAudioContext(2, Math.ceil(dur * sr), sr);
+  const t0 = performance.now();
+  const tAgenda = 0;
+  const buf = await grabarFueraDeLinea(ctx, ctx.destination, c, dur);
+  const tGrabar = performance.now() - t0 - tAgenda;
+  const L = buf.getChannelData(0), R = buf.getChannelData(1);
+  let pico = 0, recortes = 0;
+  for (let i = 0; i < L.length; i++) {
+    const a = Math.max(Math.abs(L[i]), Math.abs(R[i]));
+    if (a > pico) pico = a;
+    if (a >= 0.999) recortes++;
+  }
+  const rms = (a, b) => { let s = 0, n = 0; for (let i = Math.floor(a * sr); i < Math.min(L.length, b * sr); i++) { s += L[i] * L[i] + R[i] * R[i]; n += 2; } return n ? 20 * Math.log10(Math.sqrt(s / n) + 1e-9) : -120; };
+  const secciones = c.secciones.filter(s => s.t < dur).map(s => ({ nombre: s.nombre, dB: +rms(s.t, Math.min(s.fin, dur)).toFixed(1) }));
+  // WAV mono a 22050 para analizar afuera.
+  const k = Math.round(sr / 22050), n = Math.floor(L.length / k);
+  const pcm = new Int16Array(n);
+  for (let i = 0; i < n; i++) { const v = (L[i * k] + R[i * k]) * 0.5; pcm[i] = Math.max(-32767, Math.min(32767, Math.round(v * 32767))); }
+  const cab = new ArrayBuffer(44), dv = new DataView(cab);
+  const esc = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  esc(0, "RIFF"); dv.setUint32(4, 36 + n * 2, true); esc(8, "WAVE"); esc(12, "fmt ");
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true); dv.setUint32(24, 22050, true);
+  dv.setUint32(28, 44100, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); esc(36, "data"); dv.setUint32(40, n * 2, true);
+  const bytes = new Uint8Array(44 + n * 2); bytes.set(new Uint8Array(cab), 0); bytes.set(new Uint8Array(pcm.buffer), 44);
+  let bin = ""; for (let i = 0; i < bytes.length; i += 32768) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
+  return { titulo: c.titulo, dur, pico: +pico.toFixed(3), recortes, total: +rms(0, dur).toFixed(1), secciones,
+    msAgenda: Math.round(tAgenda), msGrabar: Math.round(tGrabar), wav: btoa(bin) };
+};
+window.__listo = true;
+</script>
+</body></html>

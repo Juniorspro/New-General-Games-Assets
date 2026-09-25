@@ -16,3 +16,6 @@ __pycache__/
 
 # secretos de la prueba local: NUNCA se suben
 .dev.vars
+
+# el enlace a los módulos globales para las pruebas (lo arma correr.sh)
+tajo/node_modules
