@@ -126,7 +126,12 @@ Sigue de [aeroplaza-10](aeroplaza-10.md). Rama `claude/fijate-iszyer`.
 ## Cómo entregar el video (pesa 153 MiB)
 
 - **Por el chat entran 30 MiB como mucho.** Para eso está
-  `grabar.mjs liviano` (~28 MiB).
+  `grabar.mjs liviano`:
+  - tarda 1 min 48 s y da 28,0 MiB a 3645 kbps, en dos pasadas;
+  - SSIM 0,961 contra el completo;
+  - el pico queda en -0,2 dBFS con el AAC.
+  El completo es un máster a crf 14 (~21 Mbps). TikTok lo recomprime igual
+  a unos pocos Mbps.
 - **MediaFire** da 403 desde este servidor: Cloudflare pide "Just a
   moment…". **Litterbox** contesta "No". No se saltean.
 - **Gofile** anda sin cuenta:
