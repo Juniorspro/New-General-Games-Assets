@@ -1,0 +1,64 @@
+diff --git a/xrslam/src/xrslam/core/detail.cpp b/xrslam/src/xrslam/core/detail.cpp
+index 11902e7..9639f47 100644
+--- a/xrslam/src/xrslam/core/detail.cpp
++++ b/xrslam/src/xrslam/core/detail.cpp
+@@ -130,11 +130,39 @@ Pose XRSLAM::Detail::track_camera(std::shared_ptr<Image> image) {
+ void XRSLAM::Detail::track_imu(const ImuData &imu) {
+     frontal_imus.emplace_back(imu);
+     imus.emplace_back(imu);
++    // Cada cuadro tiene que integrar el tramo [t anterior, t propio] entero.
++    // Antes empezaba en la primera muestra de IMU después del cuadro
++    // anterior y el pedazo previo se perdía: a 200 Hz eran ~2,5 ms por
++    // cuadro, a 60 Hz (lo que da un navegador) ~8 ms de cada 50, y la
++    // estimación se iba. Ahora, al cerrar un cuadro se interpola una
++    // muestra justo en su hora: cierra ese tramo y abre el siguiente.
+     while (imus.size() > 0 && frames.size() > 0) {
+-        if (imus.front().t <= frames.front()->image->t) {
+-            frames.front()->preintegration.data.push_back(imus.front());
++        auto &datos = frames.front()->preintegration.data;
++        const double tf = frames.front()->image->t;
++        if (datos.empty() && hay_borde_imu && borde_imu.t < tf &&
++            (imus.front().t > borde_imu.t)) {
++            datos.push_back(borde_imu);
++        }
++        if (imus.front().t <= tf) {
++            datos.push_back(imus.front());
++            ultima_imu = imus.front();
++            hay_ultima_imu = true;
+             imus.pop_front();
+         } else {
++            if (hay_ultima_imu && ultima_imu.t < tf) {
++                const ImuData &sig = imus.front();
++                const double l = (tf - ultima_imu.t) / (sig.t - ultima_imu.t);
++                ImuData m;
++                m.t = tf;
++                m.w = ultima_imu.w + l * (sig.w - ultima_imu.w);
++                m.a = ultima_imu.a + l * (sig.a - ultima_imu.a);
++                datos.push_back(m);
++                borde_imu = m;
++                hay_borde_imu = true;
++            } else if (hay_ultima_imu) {
++                borde_imu = ultima_imu;
++                hay_borde_imu = true;
++            }
+             feature_tracker->track_frame(std::move(frames.front()));
+             frames.pop_front();
+         }
+diff --git a/xrslam/src/xrslam/core/detail.h b/xrslam/src/xrslam/core/detail.h
+index 834ed7f..09d2ae8 100644
+--- a/xrslam/src/xrslam/core/detail.h
++++ b/xrslam/src/xrslam/core/detail.h
+@@ -66,6 +66,13 @@ struct XRSLAM::Detail {
+     std::deque<ImuData> imus;
+     std::deque<std::unique_ptr<Frame>> frames;
+     std::deque<ImuData> frontal_imus;
++    // La última muestra de IMU entregada a un cuadro, y la muestra
++    // interpolada en la hora del último cuadro cerrado (con la que arranca el
++    // tramo del cuadro siguiente).
++    bool hay_ultima_imu = false;
++    ImuData ultima_imu;
++    bool hay_borde_imu = false;
++    ImuData borde_imu;
+ 
+     std::shared_ptr<Config> config;
+ };
