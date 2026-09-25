@@ -167,3 +167,12 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   rayos de disparo, muros y rampas de madera, tormenta violeta, números de daño,
   baile y confeti en la victoria. Probado en PC y teléfono (SwiftShader, con
   `simular`); en un teléfono real no se midió (sin comprobar).
+- **Isla Royale completo** ("recrealo a la perfección"): pantalla de carga con
+  consejos y barra real, vestíbulo 3D con casillero (6 trajes), opciones
+  (idioma ES/EN/PT, sensibilidad, asistencia, disparo automático, calidad,
+  tamaño de botones), búsqueda de partida; autobús con salto, caída libre y
+  planeador; 8 lugares con rutas y casas con interior; 5 armas × rarezas,
+  francotirador con bala que cae, curas, pico y materiales, 4 piezas con
+  fantasma azul; 14 bots por defecto; tormenta por fases; brújula, minimapa,
+  mapa con marcas, espectar, estadísticas y XP guardadas. Probado en PC y
+  teléfono acostado con SwiftShader; en un teléfono real no se midió.

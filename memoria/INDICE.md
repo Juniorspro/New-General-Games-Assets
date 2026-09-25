@@ -78,7 +78,7 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
 | `tiktok/` | versión 9:16: intro con logo, titular, subtítulos; `armar.mjs` arma el video | [video](video.md) |
 | `zocalo/` | zócalo de stream: editor, fuente de OBS, y `quemar.mjs` para videos | [video](video.md) |
 | `estancia/` | juego "Estancia — La Ley del Monte" (three.js, modelos de Rezona) | `estancia/LEEME.md` |
-| `isla-royale/` | battle royale 3D (three.js + React, un solo HTML); `prueba.mjs` lo recorre | [juegos](juegos.md) § Battle royale 3D |
+| `isla-royale/` | battle royale 3D (three.js + React) en módulos `js/`; `prueba.mjs pc|tel` lo recorre | [juegos](juegos.md) § Battle royale 3D |
 | `termo/` | termo de mate en 3D (three.js): se gira, se ceba, el agua se enfría | [maquina](maquina.md) para capturarlo |
 | `telarana/`, `garfio/`, `pozo/`, `pique*/`, `flores/`, `paraguas/` | juegos | — |
 | `Prompts/` | colecciones de prompts | — |

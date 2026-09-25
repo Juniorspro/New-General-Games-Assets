@@ -180,35 +180,31 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
 
 ## Battle royale 3D (Isla Royale)
 
-- La primera versión (Canvas 2D isométrica) no gustó: "se ve celeste, hacelo
-  3D y como el original". Se rehízo en three.js r160 + React (UI) por UMD,
-  tercera persona detrás del hombro. Lo del celeste: el fondo del body sin
-  JS corriendo (visor de archivos del teléfono sin JavaScript, probable). Ahora
-  el HTML trae un "Cargando…" que explica eso y un cartel rojo con el error si
-  algo revienta, así nunca queda la pantalla vacía.
-- Escala: 1 px del pedido = 0,2 m (mapa 400 m, "persigue a <400" = 80 m).
-- Relieve: grilla de 2 m (261²) que sirve igual para la malla y para
-  `terreno(x,z)` bilineal; el agua lee la misma grilla como textura de bytes
-  (profundidad → color, espuma en la orilla).
-- Cielo y niebla empalman escribiendo el mismo color crudo: `fog.color` con
-  `setRGB(..., LinearSRGBColorSpace)` y el cielo sin conversión de color.
-- Todo instanciado (árboles, rocas, matas, 7000 pastitos que se mecen en el
-  vértice con `instanceMatrix[3]`); cada casa es una sola malla con color por
-  vértice (`unir` + `colorear`).
-- Personajes: piezas con grupos por articulación (hombro/codo/cadera/rodilla);
-  frente = −Z, `yaw` como la cámara (`rotation.order = "YXZ"`).
-- Disparos por rayo analítico (cilindros, esferas, cajas, plano de la rampa y
-  el suelo marchando de a 1 m). La mira apunta con un rayo desde la cámara y
-  la bala sale de la boca hacia ese punto.
-- Cámara: choca solo con casas, construcciones y suelo; las copas y rocas
-  pegadas a la cámara se deshacen con `discard` por dithering (onBeforeCompile).
-- SwiftShader dibuja a 1–3 cuadros por segundo (la CPU queda ociosa: es el
-  rasterizado). Para probar: `__isla.simular(seg)` avanza sin dibujar; tiene que
-  llamar también a `efectos` o las estelas quedan pegadas en la foto.
-- Números que dan juego: bots con 14 s de tregua, 0,7 s de reacción y cadencia
-  ×1,8; la tormenta pega 8/s a la vida (ignora escudo), como en el original.
-- En el teléfono: sin antialiasing, calidad Media; si los primeros 4 s van a
-  menos de 28 cuadros, baja sola un escalón y avisa.
+- Pedido final: "recrealo a la perfección": controles del teléfono, menús,
+  carga, idioma, mapa, armas y movilidad. Se armó en módulos
+  (`isla-royale/js/`: base, sonido, isla, graficos, juego, motor, ui) que el
+  artifact publica con `files` y el empaquetador mete adentro para la descarga.
+  Los scripts clásicos comparten el ámbito global: `const` de arriba de un
+  archivo se ve en los siguientes.
+- Datos del original (guías y wikis; videos no se pueden mirar): HUD táctil por
+  defecto con disparo doble, saltar, agacharse, apuntar, muro/piso/escalera/
+  pirámide y cambio de material; armas con rareza gris→dorado y multiplicador
+  de cabeza (escopeta ×1,8, francotirador ×2,5); correr, deslizarse (agachar
+  corriendo), trepar bordes, daño por caída; tormenta que pega más por fase
+  (1,1,2,5,8,10). Construir cuesta 10; madera 150, piedra 300, metal 500.
+- Trampa: `Object.assign(M, { get modo() {...} })` copia el valor del momento,
+  no el getter; una propiedad viva va con `Object.defineProperty`.
+- Grilla espacial de 8 m con recorrido DDA para los rayos: sin ella cada tiro
+  miraba ~800 cajas. El objeto tocado se guarda dentro del recorrido (no con
+  marcas `_t` sueltas en los objetos).
+- Casas con interior: paredes armadas con cajas que dejan huecos de puerta y
+  ventana; los bots entran y salen por la puerta (`puntoDePaso`).
+- Construcción anclada a lo ya construido cerca (si no hay nada, al piso): así
+  las escaleras encadenadas no se desfasan por el relieve.
+- Escala: celda de 5 m y 4 m de alto; isla de ~470 m; relieve a 2,5 m (257²).
+- Relieve, cielo/niebla, instanciado, dithering de copas pegadas a la cámara y
+  `__isla.simular(seg)` para probar: igual que la versión anterior (abajo en el
+  diario). SwiftShader: 1–3 cuadros por segundo, la CPU queda ociosa.
 
 ## Probar
 
