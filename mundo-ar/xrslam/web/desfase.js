@@ -79,8 +79,9 @@ export function giroComoFlujo(imus, qCamIMU) {
 
 // Correlación normalizada de dos series de vectores, corriendo una contra la
 // otra. vis: [{t, v}] (en la hora de la cámara); imu: [{t, v}] (en la de la
-// IMU). Devuelve { desfase, calidad }: desfase en s, lo que hay que SUMAR a la
-// hora de cada cuadro para llevarla a la de la IMU.
+// IMU). Devuelve { desfase, calidad, escala }: desfase en s, lo que hay que
+// SUMAR a la hora de cada cuadro para llevarla a la de la IMU; escala es la
+// pendiente vis ≈ escala·imu en ese desfase (con giroComoFlujo, la focal en px).
 export function estimarDesfase(vis, imus, { maxDesfase = 0.2, paso = 0.001 } = {}) {
   if (vis.length < 30 || imus.length < 30) return { desfase: 0, calidad: 0 };
   const it = imus.map((m) => m.t);
@@ -106,7 +107,7 @@ export function estimarDesfase(vis, imus, { maxDesfase = 0.2, paso = 0.001 } = {
     if (n < 20) continue;
     const c = sxy / Math.sqrt(sxx * syy);
     curva.push([d, c]);
-    if (c > mejor.calidad) mejor = { desfase: d, calidad: c };
+    if (c > mejor.calidad) mejor = { desfase: d, calidad: c, escala: sxy / syy };
   }
   // Afinado subpaso: parábola por el máximo y sus vecinos.
   const i = curva.findIndex(([d]) => d === mejor.desfase);

@@ -4,6 +4,8 @@
 //
 //   xr_crear(slamYaml, sensorYaml)    las dos configuraciones, como TEXTO
 //   xr_imu(t, wx, wy, wz, ax, ay, az) una muestra de IMU (s, rad/s, m/s²)
+//   xr_giro(t, x, y, z) · xr_acel(t, x, y, z)  giróscopo y acelerómetro por
+//                                     separado (XRSLAM los junta interpolando)
 //   xr_imagen(t, gris)                un cuadro gris del tamaño configurado
 //   xr_estado()                       0 iniciando · 1 siguiendo · 2 perdido
 //   xr_pose(salida, cual)             8 doubles: t, x, y, z, qx, qy, qz, qw
@@ -49,6 +51,18 @@ EMSCRIPTEN_KEEPALIVE void xr_imu(double t, double wx, double wy, double wz, doub
     XRSLAMGyroscope g{{wx, wy, wz}, t};
     XRSLAMAcceleration a{{ax, ay, az}, t};
     XRSLAMPushSensorData(XRSLAM_SENSOR_GYROSCOPE, &g);
+    XRSLAMPushSensorData(XRSLAM_SENSOR_ACCELERATION, &a);
+}
+
+EMSCRIPTEN_KEEPALIVE void xr_giro(double t, double x, double y, double z) {
+    if (!g_vivo) return;
+    XRSLAMGyroscope g{{x, y, z}, t};
+    XRSLAMPushSensorData(XRSLAM_SENSOR_GYROSCOPE, &g);
+}
+
+EMSCRIPTEN_KEEPALIVE void xr_acel(double t, double x, double y, double z) {
+    if (!g_vivo) return;
+    XRSLAMAcceleration a{{x, y, z}, t};
     XRSLAMPushSensorData(XRSLAM_SENSOR_ACCELERATION, &a);
 }
 

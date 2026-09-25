@@ -36,6 +36,11 @@ if (ESCALA !== 1) {
   textoSensor = textoSensor.replace(/resolution: \[([^\]]*)\]/, (_, r) => "resolution: [" + r.split(",").map(v => Math.round(Number(v) * ESCALA)).join(", ") + "]")
     .replace(/intrinsics: \[([^\]]*)\]/, (_, r) => "intrinsics: [" + r.split(",").map(v => Number(v) * ESCALA).join(", ") + "]");
 }
+if (process.env.FOCAL_X) {
+  // Focal equivocada a propósito: fx y fy por este factor (el centro queda).
+  const f = Number(process.env.FOCAL_X);
+  textoSensor = textoSensor.replace(/intrinsics: \[([^\]]*)\]/, (_, r) => "intrinsics: [" + r.split(",").map((v, i) => Number(v) * (i < 2 ? f : 1)).join(", ") + "]");
+}
 const pSlam = cad(fs.readFileSync(slamYaml, "utf8")), pSensor = cad(textoSensor);
 if (!M._xr_crear(pSlam, pSensor)) { console.error("xr_crear falló"); process.exit(1); }
 
@@ -143,7 +148,7 @@ if (process.env.CALIBRAR) {
   const qbc = JSON.parse(textoSensor.match(/q_bc: (\[[^\]]*\])/)[1]);
   const e = estimarDesfase(r.flujos, giroComoFlujo(imus, qbc));
   desfase = e.desfase;
-  console.log(`desfase estimado ${(desfase * 1000).toFixed(1)} ms (calidad ${e.calidad.toFixed(3)}, con ${r.flujos.length} flujos)`);
+  console.log(`desfase estimado ${(desfase * 1000).toFixed(1)} ms · focal estimada ${e.escala.toFixed(1)} px (calidad ${e.calidad.toFixed(3)}, con ${r.flujos.length} flujos)`);
   M._xr_destruir();
   if (!M._xr_crear(pSlam, pSensor)) { console.error("xr_crear falló"); process.exit(1); }
 }

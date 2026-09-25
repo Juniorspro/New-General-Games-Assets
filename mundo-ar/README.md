@@ -9,6 +9,9 @@ tocar, una arena sobre el piso, botón de linterna y la pantalla acostada.
 | `web/index.html` | una página, para hostear o abrir en cualquier navegador | WebXR (ARCore) en Chrome de Android; si no hay, **SLAM por cámara** (AlvaAR) | 40 KB (+ three y AlvaAR de CDN) |
 | `salida/mundo-ar-web.apk` | la misma página dentro de un WebView | SLAM por cámara (el WebView no trae WebXR) | 32 KB |
 | `salida/mundo-ar.apk` | app nativa con ARCore | ARCore directo | 320 KB |
+| **`xrslam/web/index.html`** | **XRSLAM en WebAssembly: SLAM visual-inercial en la página, anda en un WebView** | **cámara + giróscopo + acelerómetro, en metros** | 4,3 MB de wasm |
+
+> **Lo nuevo: [`xrslam/`](xrslam/README.md).** En EuRoC tiene 0,158 m de error en la página contra 1,20 m de AlvaAR.
 
 ## La página
 
