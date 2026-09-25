@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Un cubo dorado y uno violeta sobre fondo oscuro, como los bloques de Tajo. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#07030F" android:pathData="M8,0h32a8,8 0,0 1,8 8v32a8,8 0,0 1,-8 8h-32a8,8 0,0 1,-8 -8v-32a8,8 0,0 1,8 -8z" />
+    <path android:fillColor="#C9A64E" android:pathData="M9,14l10,-5l10,5l-10,5z M9,14v12l10,5v-12z M29,14v12l-10,5v-12z" />
+    <path android:fillColor="#7B3DFF" android:pathData="M21,25l9,-4.5l9,4.5l-9,4.5z M21,25v11l9,4.5v-11z M39,25v11l-9,4.5v-11z" />
+</vector>

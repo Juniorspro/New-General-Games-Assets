@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mundo AR: prueba de 6DoF nativo con ARCore. Acostado (girado 90°),
+     pantalla completa, cámara trasera y linterna. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.juniorspro.mundoar"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Sin ARCore no hay 6DoF: el Play Store sólo la ofrece a teléfonos que lo tienen. -->
+    <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
+    <uses-feature android:glEsVersion="0x00020000" android:required="true" />
+
+    <!-- Lo que pide el aar de ARCore (se copia a mano: acá no hay Gradle que junte manifiestos). -->
+    <queries>
+        <package android:name="com.google.ar.core" />
+        <package android:name="com.android.vending" />
+        <intent>
+            <action android:name="com.google.android.play.core.install.BIND_INSTALL_SERVICE" />
+        </intent>
+    </queries>
+
+    <application
+        android:label="@string/nombre"
+        android:icon="@drawable/icono"
+        android:allowBackup="false"
+        android:extractNativeLibs="true"
+        android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
+
+        <meta-data android:name="com.google.ar.core" android:value="required" />
+        <meta-data android:name="com.google.ar.core.min_apk_version" android:value="261960000" />
+
+        <activity
+            android:name=".Principal"
+            android:exported="true"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:resizeableActivity="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.google.ar.core.InstallActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Material.Light.Dialog.Alert" />
+    </application>
+</manifest>
