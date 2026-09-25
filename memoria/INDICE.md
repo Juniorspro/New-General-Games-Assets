@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 25/09/2026 (AEROPLAZA: Zona de Juegos con mesas, runner con glitches, efectos y movimiento).
+mantiene: `MEMORIA.md`. Última puesta al día: 26/09/2026 (AEROPLAZA: probador, joyas, anuncios y compras, choques, VR y alta más liviana).
 
 ## Reglas que no se discuten
 
@@ -66,7 +66,8 @@ mantiene: `MEMORIA.md`. Última puesta al día: 25/09/2026 (AEROPLAZA: Zona de J
 | [aeroplaza](aeroplaza.md) | AEROPLAZA: el 3D social Frutiger Aero con multijugador MQTT (salas, broker de prueba en Node, trampas de three); la isla grande, el monorriel, el detalle por distancia, los menús sin desplazar; el día y noche común, el teclado propio, el parkour y los interiores en primera persona; los avisos estilo Windows 7 y el chat de voz por cercanía (WebRTC); los caminos libres, la animación por poses (suave, lineal, chop), los movimientos de parkour y la primera persona con cuerpo |
 | [aeroplaza-9](aeroplaza-9.md) | AEROPLAZA, octava vuelta: la Zona de Juegos (puertas, mesas en red, pelota, juegos), el runner Aero.exe (nivel, saltos medidos, glitches al ritmo del breakcore, bot), los efectos (✦ Poder), el movimiento del video, caminar y correr, las nubes |
 | [aeroplaza-10](aeroplaza-10.md) | AEROPLAZA, novena vuelta: el Estelario del telescopio (cielo real de Buenos Aires), los modelos GLB pasados a procedural, deslizar sosteniendo, la primera persona que se mueve, el spam de avisos y el runner extremo (sustos, DESPIERTA/WAKE UP, rastreo, figuras) |
-| [aeroplaza-11](aeroplaza-11.md) | AEROPLAZA, décima vuelta: la calidad mínima y el corte por distancia (qué pesaba de verdad, medido), la carga más rápida, y el tráiler 9:16 (tomas del juego cuadro por cuadro, guion a tempo, Remotion) con sus trampas de cámara |
+| [aeroplaza-11](aeroplaza-11.md) | AEROPLAZA, décima vuelta: la calidad mínima y el corte por distancia (qué pesaba de verdad, medido), la carga más rápida, y el tráiler 9:16 (tomas del juego cuadro por cuadro, guion a tempo, Remotion) con sus trampas de cámara; la portada 3:4 y cómo entregar el video |
+| [aeroplaza-12](aeroplaza-12.md) | AEROPLAZA, undécima vuelta: el probador que no tapa y probarse antes de comprar; las joyas (regalo diario, ropa de 100 a 300); anuncios con premio y compras (TikTok Minis con su API y el modo de prueba); la prueba de choques y lo que se atravesaba; el modo VR con giroscopio; la calidad alta más liviana (medido) |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

@@ -4,6 +4,18 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **26/09/2026, noche · `claude/fijate-iszyer`:**
+  - Pidió: que no se tape el muñeco en el probador, probarse la ropa antes de
+    comprar, joyas (10 por día, ropa de 100 para arriba), IAA e IAP, no
+    atravesar edificios, optimizar la calidad alta y un modo VR con
+    giroscopio, sin controles, con o sin SBS.
+  - Quedó todo ([aeroplaza-12](aeroplaza-12.md)). Antes: la portada 3:4 del
+    tráiler y el video subido a Gofile ([aeroplaza-11](aeroplaza-11.md)).
+  - Falta:
+    - el servidor de las compras de TikTok (la orden y el webhook) y los IDs
+      de anuncio: van en `window.AEROPLAZA_CAJA`;
+    - probar el VR en un celu de verdad con visor;
+    - el telescopio en `pruebas/interiores.mjs` (ya fallaba).
 - **26/09/2026, más tarde · `claude/fijate-iszyer`:**
   - Pidió optimizar para todos los celulares (sin sombras, brillos, etc.) y
     un tráiler como el de BRILLO pero mucho mejor, con las canciones del

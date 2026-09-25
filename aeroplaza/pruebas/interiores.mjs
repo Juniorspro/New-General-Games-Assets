@@ -146,7 +146,10 @@ await foto('5-azotea');
 r = await pag.evaluate(() => {
   const T = window.__T, A = window.__A, R = {}, Y = 48.02;
   /* el telescopio abre el Estelario (el cielo de verdad) y se cierra con la ✕ */
-  T.parar(9.4, Y, 0); R.telescopio = T.apuntar(T.buscar('telescopio')); R.cerca = A.cerca?.accion + ':' + (A.cerca?.a?.texto?.() || ''); T.usar(); T.pasos(10);
+  T.parar(9.4, Y, 0); R.telescopio = T.apuntar(T.buscar('telescopio')); R.cerca = A.cerca?.accion + ':' + (A.cerca?.a?.texto?.() || ''); T.usar();
+  /* (a una hora fija: con la de verdad, los rótulos iban de 13 a 40 según cuándo se corriera) */
+  if (A.estelario.abierto) { A.estelario.ms = Date.UTC(2026, 8, 26, 6, 0, 0); A.estelario.vel = 0; }
+  T.pasos(10);
   const E = A.estelario; R.abre = E.abierto && !!document.querySelector('.estelario .es-barra') && getComputedStyle(document.getElementById('ui')).display === 'none';
   R.estrellas = E.cat?.length || 0; R.rotulos = (E.hits || []).length;
   document.querySelector('.estelario [data-a=cerrar]')?.click(); T.pasos(10); R.cierra = !E.abierto && !document.querySelector('.estelario') && getComputedStyle(document.getElementById('ui')).display !== 'none';

@@ -306,6 +306,10 @@ En su propia nota: [aeroplaza-10](aeroplaza-10.md).
 
 En su propia nota: [aeroplaza-11](aeroplaza-11.md).
 
+## Undécima vuelta: probador, joyas, anuncios, choques, VR y alta (26/09)
+
+En su propia nota: [aeroplaza-12](aeroplaza-12.md).
+
 ## Trampas que ya se pagaron
 
 - **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una

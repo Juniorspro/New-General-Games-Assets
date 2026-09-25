@@ -69,7 +69,7 @@ Además hay:
 - chat de voz por cercanía (botón 🎤): se escucha a los que están a menos de 12 m, del lado donde están y más bajo cuanto más lejos. Usa WebRTC y pide el micrófono; en el visor de artefactos no hay micrófono, así que ahí solo se escucha;
 - animaciones por poses clave, estilo Roblox, en tres estilos para elegir en Opciones: suave, lineal y chop (a saltos, a 12 cuadros);
 - en primera persona se ven los brazos, que acompañan cada movimiento, y mirando abajo el cuerpo y las piernas;
-- los caminos de la isla sin nada que estorbe;
+- los caminos de la isla sin nada que estorbe, y nada que se vea se atraviesa (`pruebas/choques.mjs` lo revisa en cada reino);
 - efectos especiales (el gesto ✦ Poder: carga, estrella, destello, onda, grietas y un orbe con estelas) y el movimiento del video: al correr la cámara se inclina y tiembla, se saltan vallas solo, se suben paredes corriendo y se corre por las paredes;
 - caminar y correr copiados del video que mandó quien pide, y deslizarse (C, Q o ⤓) siempre, caminando o parado, y sosteniéndolo se sigue deslizando;
 - avisos arriba, chiquitos, estilo Windows 7 y con sus campanitas; las misiones se abren con el botón 📜 y en el parkour no queda nada que tape;
@@ -81,6 +81,34 @@ Además hay:
 - las construcciones armadas en código (`js/construcciones.js`), copiando
   las referencias que se hicieron con Rezona: casa, estación, tienda, hotel,
   tren, fuente, bancos, faroles, árboles, palmeras y muebles.
+
+## Probador, joyas, anuncios y compras
+
+- En el probador, tocar lo que no se tiene **te lo probás** en el muñeco del
+  estudio. Abajo aparece cuánto sale, con Comprar o Sacar, y el muñeco queda
+  siempre a la vista del panel.
+- **Joyas (💎)**: 10 de regalo por día. Nueve cosas nuevas cuestan de 100 a
+  300: holográfico, diamante, arcoíris, tiara, anteojos estrella, alas de
+  mariposa, capa de estrellas y destellos.
+- **Anuncios con premio**: +5 💎 en la tienda, +30 orbes en el probador o
+  duplicar lo ganado en un minijuego, hasta 5 por día.
+- **Paquetes de joyas** y el de bienvenida (una sola vez).
+- En TikTok Minis usa `TTMinis.createRewardedVideoAd` y `TTMinis.game.pay`.
+  La página que envuelve el juego pone `window.AEROPLAZA_CAJA = { tiktok: {
+  anuncio: 'id del bloque', servidor: 'https://…' } }`. El servidor crea la
+  orden (`POST /orden`) y confirma la entrega (`GET /entrega?orden=`) cuando
+  le llega el aviso de TikTok. Ese servidor no está en el repo.
+- En el navegador todo va en **modo de prueba**: el anuncio es propio y la
+  compra dice que no cobra nada.
+
+## Modo VR
+
+Pausa › 🥽 Modo VR: con visor (pantalla doble, SBS) o sin visor.
+
+- Se mira moviendo el celu, sin botones.
+- Un toque camina o frena, o usa lo que haya cerca, y dos toques saltan.
+- Para salir, mirar abajo 2 segundos, o Escape.
+- En la compu se mira arrastrando.
 
 ## El tráiler
 
