@@ -122,3 +122,16 @@ Sigue de [aeroplaza-10](aeroplaza-10.md). Rama `claude/fijate-iszyer`.
   `G.s.activo`): se espera a que empiece.
 - **Los hongos no tienen nombre**: se encuentran por sus sólidos con
   `rebote`.
+
+## Cómo entregar el video (pesa 153 MiB)
+
+- **Por el chat entran 30 MiB como mucho.** Para eso está
+  `grabar.mjs liviano` (~28 MiB).
+- **MediaFire** da 403 desde este servidor: Cloudflare pide "Just a
+  moment…". **Litterbox** contesta "No". No se saltean.
+- **Gofile** anda sin cuenta:
+  ```
+  curl -F "file=@salida/aeroplaza-tiktok.mp4" https://upload.gofile.io/uploadfile
+  ```
+  Devuelve `downloadPage`. Hay que comparar el `md5` con `md5sum`. El link
+  no va al repo, porque el video tiene las canciones.
