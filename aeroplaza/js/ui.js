@@ -587,6 +587,8 @@ export const UI = {
         p.appendChild(this.fila(t('op_musica'), this.deslizador(0, 1, 0.05, O.musica, (v) => { O.musica = v; J.volumen(); J.guardar(); })));
         p.appendChild(this.fila(t('op_efectos'), this.deslizador(0, 1, 0.05, O.efectos, (v) => { O.efectos = v; J.volumen(); J.guardar(); })));
         p.appendChild(this.fila('🎤 ' + t('op_voz'), this.deslizador(0, 1.5, 0.05, O.volVoz ?? 1, (v) => J.volumenVoz(v))));
+        /* (el runner: la cara y el grito; en Juego ya no entraba sin desplazar en el celu) */
+        p.appendChild(this.fila(t('op_sustos'), this.segmentos([[true, t('si')], [false, t('no')]], O.sustos !== false, (v) => { O.sustos = v; J.guardar(); })));
       }],
       ['imagen', '🖥️', t('op_t_imagen'), (p) => {
         p.appendChild(this.fila(t('op_anim'), this.segmentos(['suave', 'lineal', 'chop'].map((q) => [q, t('anim_' + q)]), O.animEstilo || 'suave', (q) => { O.animEstilo = q; J.ponerAnim(q); J.guardar(); })));
@@ -603,7 +605,6 @@ export const UI = {
         p.appendChild(this.fila(t('op_camara'), this.deslizador(0.3, 2.5, 0.1, O.sensCam, (v) => { O.sensCam = v; J.guardar(); })));
         p.appendChild(this.fila(t('op_invertir'), this.segmentos([[false, t('no')], [true, t('si')]], O.invertirY, (v) => { O.invertirY = v; J.guardar(); })));
         p.appendChild(this.fila(t('op_cam_auto'), this.segmentos([[true, t('si')], [false, t('no')]], O.camAuto !== false, (v) => { O.camAuto = v; J.guardar(); })));
-        p.appendChild(this.fila(t('op_sustos'), this.segmentos([[true, t('si')], [false, t('no')]], O.sustos !== false, (v) => { O.sustos = v; J.guardar(); })));
         p.appendChild(this.fila(t('op_nombres'), this.segmentos([[true, t('si')], [false, t('no')]], O.nombres, (v) => { O.nombres = v; J.guardar(); J.mostrarNombres(); })));
         p.appendChild(this.fila(t('op_reloj'), this.segmentos([[true, t('si')], [false, t('no')]], O.reloj24, (v) => { O.reloj24 = v; J.guardar(); })));
         /* con el celu parado el juego se acuesta solo (sin pantalla completa); para qué lado, o no girarlo */

@@ -81,7 +81,7 @@ Sigue de [aeroplaza-9](aeroplaza-9.md) (Zona de Juegos, runner, movimiento). Ram
     perdería el último.
   - Muestran un destello blanco y después la cara de `assets/susto.webp`, en
     tiras corridas, con un grito sintetizado (`grito()`).
-  - Se apagan en Opciones › Juego › Sustos del runner
+  - Se apagan en Opciones › Sonido › Sustos del runner
     (`G.opciones.sustos`). El aviso de entrada lo avisa.
 - **Palabras**:
   - en los golpes fuertes, gigantes, con rojo y celeste corridos, tiras y

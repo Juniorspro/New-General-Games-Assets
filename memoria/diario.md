@@ -13,7 +13,7 @@ se resumen en una sola.
     - un Stellarium en el telescopio;
     - mejores modelos (GLB y después procedural).
   - Quedó todo ([aeroplaza-10](aeroplaza-10.md)).
-  - Los sustos se apagan en Opciones › Juego.
+  - Los sustos se apagan en Opciones › Sonido.
   - Falta: escuchar el grito sintetizado en un aparato de verdad.
 - **25/09/2026, noche (3) · `claude/fijate-iszyer`:**
   - Pidió: dos canciones nuevas (una breakcore), la Zona de Juegos como mapa

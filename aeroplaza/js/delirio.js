@@ -5,7 +5,7 @@
    juego (debajo de los botones) que dibuja, con la canción:
    - los SUSTOS: la cara de assets/susto.webp de golpe, cortada en tiras, con un
      grito sintetizado (tres, en golpes fuertes: 20,1 · 32,1 · 47,5 s, antes de que llegue el que corre bien).
-     Se apagan en Opciones › Juego (G.opciones.sustos) y avisa al entrar.
+     Se apagan en Opciones › Sonido (G.opciones.sustos) y avisa al entrar.
    - las PALABRAS: DESPIERTA / WAKE UP / ACORDA… gigantes en cada golpe fuerte,
      con el rojo y el celeste corridos, tiras que saltan y líneas de tele; en
      los golpes medianos, una palabra de un cuadro (subliminal).
