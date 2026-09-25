@@ -142,9 +142,14 @@ tapa sale gratis: las caras de atrás se pintan de un color plano.
 ## Cómo se corre
 
 ```
-python3 empaquetar.py        # arma tajo-en-un-archivo.html
-./pruebas/correr.sh          # todas las pruebas
+python3 empaquetar.py                        # arma tajo-en-un-archivo.html
+python3 empaquetar.py --artifact /tmp/tajo.html   # además, la versión para publicar en claude.ai
+./pruebas/correr.sh                          # todas las pruebas
 ```
+
+La versión para claude.ai no trae `<html>` ni `<head>` (la plataforma pone
+los suyos), se llama sólo "Tajo" y pide Montserrat a Google Fonts; el archivo
+único no, porque tiene que abrir sin red.
 
 Para mirar: `python3 -m http.server` en esta carpeta y abrir `index.html`
 (los módulos no cargan desde `file://`; el archivo único sí).

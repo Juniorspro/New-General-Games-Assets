@@ -33,6 +33,9 @@ export class Letra {
     this.alto = alto;
     escena.add(this.malla);
     this.cache = new Map();
+    // Si la tipografía llega tarde (se baja de la red), las palabras ya
+    // dibujadas quedaron con la de repuesto: se tiran y se redibujan.
+    try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.vaciar()); } catch (e) { /* no hay */ }
     this.lista = [];
     this.i = 0;
     this.actual = null;
@@ -97,4 +100,10 @@ export class Letra {
   }
 
   ocultar() { this.malla.visible = false; }
+
+  vaciar() {
+    for (const v of this.cache.values()) v.tex.dispose();
+    this.cache.clear();
+    this.actual = null;
+  }
 }

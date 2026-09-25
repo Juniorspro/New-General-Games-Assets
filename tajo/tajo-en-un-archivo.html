@@ -9,6 +9,8 @@
 <style>
 /* Tajo — menús de neón encima del escenario 3D. */
 :root {
+  /* El juego es una sala de neón: oscuro siempre, a propósito. */
+  color-scheme: dark;
   --fondo: #07030f;
   --panel: rgba(14, 8, 30, 0.72);
   --borde: rgba(170, 130, 255, 0.35);
@@ -2252,6 +2254,9 @@ class Letra {
     this.alto = alto;
     escena.add(this.malla);
     this.cache = new Map();
+    // Si la tipografía llega tarde (se baja de la red), las palabras ya
+    // dibujadas quedaron con la de repuesto: se tiran y se redibujan.
+    try { if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.vaciar()); } catch (e) { /* no hay */ }
     this.lista = [];
     this.i = 0;
     this.actual = null;
@@ -2316,6 +2321,12 @@ class Letra {
   }
 
   ocultar() { this.malla.visible = false; }
+
+  vaciar() {
+    for (const v of this.cache.values()) v.tex.dispose();
+    this.cache.clear();
+    this.actual = null;
+  }
 }
 return { Letra };
 })();

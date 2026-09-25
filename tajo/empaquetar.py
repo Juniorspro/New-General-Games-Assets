@@ -2,6 +2,7 @@
 """Arma tajo-en-un-archivo.html: el juego entero en un solo HTML.
 
     python3 empaquetar.py
+    python3 empaquetar.py --artifact ruta/tajo.html   # ademas, la version para claude.ai
 
 Que resuelve. El juego son veintitres modulos de JavaScript mas three.js, y
 un modulo cargado desde file:// lo bloquea CORS: con doble clic no abre.
@@ -14,7 +15,7 @@ cada modulo se envuelve en una funcion que devuelve sus exportaciones y los
 `import` se reescriben como lecturas de ese objeto. Pegar los archivos uno
 atras del otro NO sirve: hay nombres que se repiten entre modulos.
 """
-import pathlib, re
+import pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
 # En orden de dependencias: cada modulo se ejecuta al envolverse, asi que
@@ -123,6 +124,21 @@ def main():
     destino.write_text(html, encoding="utf-8")
     kb = destino.stat().st_size / 1024
     print(f"{destino.name}: {kb:.0f} KB · {len(ORDEN) + 1} modulos + three.js · 0 binarios")
+
+    # La version para publicar en claude.ai: la plataforma pone su propio
+    # esqueleto (doctype, head con charset y viewport), asi que va solo el
+    # contenido, con el nombre como titulo. Ahi si se puede pedir la
+    # tipografia a Google Fonts: en el archivo unico no, porque tiene que
+    # abrir sin red.
+    if "--artifact" in sys.argv:
+        salida = pathlib.Path(sys.argv[sys.argv.index("--artifact") + 1])
+        cuerpo = re.search(r"<body>(.*)</body>", html, re.S).group(1)
+        estilo = re.search(r"<style>.*?</style>", html, re.S).group(0)
+        fuente = ('<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+                  '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+                  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800;900&display=swap">')
+        salida.write_text(f"<title>Tajo</title>\n{fuente}\n{estilo}\n{cuerpo}", encoding="utf-8")
+        print(f"{salida}: {salida.stat().st_size / 1024:.0f} KB (para publicar)")
 
 
 main()
