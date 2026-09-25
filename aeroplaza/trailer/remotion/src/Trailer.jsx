@@ -103,8 +103,8 @@ function Cartel({ q, f, L }) {
           <div style={{ position: 'absolute', left: 0, width: 1080, top: 262, display: 'flex', justifyContent: 'center', opacity: clamp(f / 5) }}>
             <Tarjeta style={{ padding: '18px 44px', fontSize: 66, fontWeight: 900, color: C.azul2, transform: `translateY(${(1 - sale(f / 8)) * -40}px)` }}>Armá tu muñeco</Tarjeta>
           </div>
-          <Pastilla f={fb} txt={MUNECO[b]} y={1290} />
-          {f > 15.65 * 5 && <div style={{ position: 'absolute', left: 0, width: 1080, top: 1440, textAlign: 'center', fontFamily: LETRA, fontWeight: 900, fontSize: 38, color: '#fff', textShadow: '0 3px 10px rgba(0,40,80,0.6)', opacity: clamp((f - 15.65 * 5) / 8) }}>más de 2 millones de combinaciones</div>}
+          <Pastilla f={fb} txt={MUNECO[b]} y={1370} />
+          {f > 15.65 * 5 && <div style={{ position: 'absolute', left: 0, width: 1080, top: 1300, textAlign: 'center', fontFamily: LETRA, fontWeight: 900, fontSize: 38, color: '#fff', textShadow: '0 3px 10px rgba(0,40,80,0.6)', opacity: clamp((f - 15.65 * 5) / 8) }}>más de 2 millones de combinaciones</div>}
         </>
       );
     }

@@ -221,11 +221,24 @@ function video() {
   ffmpeg(['-loglevel', 'error', '-i', crudo, '-vf', 'scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-tune', 'film',
     '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv', '-c:a', 'aac', '-b:a', '256k', '-movflags', '+faststart', dest]);
   log(`video → ${path.relative(RAIZ, dest)} (${(fs.statSync(dest).size / 1048576).toFixed(1)} MB)`);
+  liviano(dest);
   remotion(['still', 'src/index.jsx', 'Portada', path.join(SALIDA, 'aeroplaza-tiktok-portada.png')]);
+}
+/* la copia para mandar por el chat (tope ~30 MiB): la tasa sale del largo, en dos pasadas (lo de BRILLO) */
+function liviano(dest = path.join(SALIDA, 'aeroplaza-tiktok.mp4')) {
+  const sal = path.join(SALIDA, 'aeroplaza-tiktok-liviano.mp4'), log0 = path.join(CUADROS, 'x264-liviano');
+  const dur = parseFloat(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', dest], { encoding: 'utf8' }).stdout) || DURACION;
+  const kbps = Math.floor((28.5 * 8 * 1024) / dur - 160);
+  const comun = ['-c:v', 'libx264', '-preset', 'slow', '-b:v', kbps + 'k', '-maxrate', Math.round(kbps * 1.6) + 'k', '-bufsize', kbps * 2 + 'k', '-passlogfile', log0];
+  ffmpeg(['-loglevel', 'error', '-i', dest, ...comun, '-pass', '1', '-an', '-f', 'null', '/dev/null']);
+  ffmpeg(['-loglevel', 'error', '-i', dest, ...comun, '-pass', '2', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
+    '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', sal]);
+  log(`copia liviana → ${path.relative(RAIZ, sal)} (${(fs.statSync(sal).size / 1048576).toFixed(1)} MB, ${kbps} kbps)`);
 }
 
 if (paso === 'tomas') await tomas();
 else if (paso === 'audio') audio();
 else if (paso === 'video') video();
+else if (paso === 'liviano') liviano();
 else if (paso === 'todo') { await tomas(); audio(); video(); }
 else console.log('pasos: tomas, audio, video, todo');
