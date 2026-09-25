@@ -706,8 +706,8 @@ class Motor {
     this.ancho = 1; this.alto = 1;
     this.pendienteMedir = true;
 
-    this.brillo = { intensidad: 1.0, umbral: 1.0, rodilla: 0.5 };
-    this.expo = 1.0;
+    this.brillo = { intensidad: 0.78, umbral: 1.05, rodilla: 0.5 };
+    this.expo = 0.92;
     this.flash = 0; this.flashColor = new THREE.Color(1, 1, 1);
     this.satura = 1.12;
 
@@ -1386,13 +1386,13 @@ function ala(lado, raiz, escala, giroY, grupo) {
     const pts = [];
     for (let j = 0; j <= 28; j++) pts.push(curva(k, j / 28));
     const exterior = k === M;
-    geos.push(cinta(pts, exterior ? 0.26 : 0.11, { grupo, fuerza: exterior ? 1.2 : 0.75, fase: k }));
+    geos.push(cinta(pts, exterior ? 0.22 : 0.1, { grupo, fuerza: exterior ? 0.95 : 0.55, fase: k }));
   }
   for (let j = 1; j < N; j++) {
     const s = j / N;
     const pts = [];
     for (let k = 0; k <= M; k++) pts.push(curva(k, s));
-    geos.push(cinta(pts, 0.07, { grupo, fuerza: 0.6, fase: j * 0.7 }));
+    geos.push(cinta(pts, 0.065, { grupo, fuerza: 0.42, fase: j * 0.7 }));
   }
   const g = unir(geos);
   g.scale(escala, escala, escala);
@@ -1453,13 +1453,13 @@ function lucesPista() {
   // escorzo solo ya los junta.
   for (let z = PISTA.frente - 3.2, i = 0; z > PISTA.fondo + 1; z -= 2.6, i++) {
     out.push(barra(new THREE.Vector3(-w + 0.08, y, z), new THREE.Vector3(w - 0.08, y, z), 0.07, arriba,
-      { grupo: G.PISTA, fuerza: 0.85, fase: i * 0.6 }));
+      { grupo: G.PISTA, fuerza: 0.38, fase: i * 0.6 }));
   }
   // El borde de adelante (la línea blanca) y los dos laterales.
   out.push(barra(new THREE.Vector3(-w, y, PISTA.frente - 0.03), new THREE.Vector3(w, y, PISTA.frente - 0.03), 0.07, arriba,
-    { grupo: G.PISTA, fuerza: 1.5 }));
+    { grupo: G.PISTA, fuerza: 0.85 }));
   out.push(barra(new THREE.Vector3(-w, PISTA.tope - 0.02, PISTA.frente + 0.004), new THREE.Vector3(w, PISTA.tope - 0.02, PISTA.frente + 0.004), 0.05,
-    new THREE.Vector3(0, 0, 1), { grupo: G.PISTA, fuerza: 1.1 }));
+    new THREE.Vector3(0, 0, 1), { grupo: G.PISTA, fuerza: 0.55 }));
   for (const s of [-1, 1]) {
     out.push(barra(new THREE.Vector3(s * (w - 0.02), y, PISTA.frente), new THREE.Vector3(s * (w - 0.02), y, PISTA.fondo), 0.05, arriba,
       { grupo: G.PISTA, fuerza: 0.9 }));
@@ -1548,7 +1548,7 @@ class Escenario {
     this.espejo = new THREE.Group();
     this.espejo.scale.y = -1;
     this.espejo.position.y = 2 * PISO_Y;
-    const rNeon = new THREE.Mesh(geoNeon, matNeon(U, 0.32)); rNeon.renderOrder = 1;
+    const rNeon = new THREE.Mesh(geoNeon, matNeon(U, 0.2)); rNeon.renderOrder = 1;
     const rHaz = new THREE.Mesh(geoHaz, matHaz(U, 0.3)); rHaz.renderOrder = 1; rHaz.frustumCulled = false;
     this.espejo.add(rNeon, rHaz);
     raiz.add(this.espejo);
@@ -2137,7 +2137,7 @@ class Sables {
     const s = lado === 0 ? -1 : 1;
     const mece = Math.sin(t * 1.3 + lado * 2) * 0.012;
     this.punto(this.w * (0.5 + s * 0.34), this.h * 1.04, 1.5, mano);
-    this.punto(this.w * (0.5 + s * (0.3 + mece)), this.h * (0.7 + mece), 2.6, punta);
+    this.punto(this.w * (0.5 + s * (0.33 + mece)), this.h * (0.8 + mece), 2.2, punta);
   }
 
   /** Un evento del dedo: agrega una muestra a la estela. */
@@ -2181,6 +2181,11 @@ class Sables {
       s.halo.material.uniforms.uB.value.copy(s.punta);
       s.halo.material.uniforms.uAncho.value = 0.03;
       s.grupo.visible = s.halo.visible = this.visibles;
+      // En reposo la hoja brilla menos: si no, dos columnas de luz tapan la
+      // parte de abajo de la pantalla (medido contra el video: ahí casi no se ven).
+      const reposo = s.activo ? 1 : 0.45 + 0.55 * (1 - s.vuelta);
+      s.hoja.material.color.copy(COLORES_SABLE[s.lado].nucleo).multiplyScalar(reposo);
+      s.halo.material.uniforms.uColor.value.copy(COLORES_SABLE[s.lado].halo).multiplyScalar(reposo);
       this._armarEstela(s, t);
     }
   }
@@ -3127,6 +3132,10 @@ class Reproductor {
     }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
+    // iPhone con la tecla de silencio: el audio web va por el canal del
+    // "timbre" y se calla. Pedir la sesión de reproducción (iOS 17+) lo pasa
+    // al canal de la música, como un reproductor.
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { /* no hay */ }
     try { this.ctx = new AC({ latencyHint: "interactive" }); } catch (e) { return false; }
     const c = this.ctx;
     this.maestro = c.createGain(); this.maestro.gain.value = 1;
@@ -4078,7 +4087,7 @@ function programarLuces(sec, compas, tDe, audio, luz, giros, t0, fin, paso) {
     case "verso":
       luz(t0, G.FONDO, MODO.DESTELLO, P); luz(t0, G.PISTA, MODO.PRENDER, B, 0.9);
       luz(t0, G.VERTICAL, MODO.PRENDER, B, 0.5); luz(t0, G.ABANICO, MODO.APAGAR);
-      luz(t0, G.ALA_IZQ, MODO.PRENDER, B, 0.8); luz(t0, G.ALA_DER, MODO.PRENDER, B, 0.8);
+      luz(t0, G.ALA_IZQ, MODO.PRENDER, S, 0.8); luz(t0, G.ALA_DER, MODO.PRENDER, S, 0.8);
       luz(t0, G.CUERNOS, MODO.PRENDER, P); luz(t0, G.ROCAS, MODO.PRENDER, S, 0.9);
       giros.push({ t: t0, v: 0.12 });
       break;
@@ -4090,7 +4099,7 @@ function programarLuces(sec, compas, tDe, audio, luz, giros, t0, fin, paso) {
     case "coro":
       luz(t0, G.FONDO, MODO.DESTELLO, B); luz(t0, G.ABANICO, MODO.DESTELLO, B);
       luz(t0, G.VERTICAL, MODO.DESTELLO, B); luz(t0, G.PISTA, MODO.DESTELLO, B);
-      luz(t0, G.ALA_IZQ, MODO.DESTELLO, B); luz(t0, G.ALA_DER, MODO.DESTELLO, B);
+      luz(t0, G.ALA_IZQ, MODO.DESTELLO, S); luz(t0, G.ALA_DER, MODO.DESTELLO, S);
       luz(t0, G.CUERNOS, MODO.DESTELLO, P); luz(t0, G.ROCAS, MODO.PRENDER, S);
       giros.push({ t: t0, v: 0.9 });
       break;
@@ -4131,7 +4140,7 @@ function programarLuces(sec, compas, tDe, audio, luz, giros, t0, fin, paso) {
         break;
       case "caja": case "palmas": case "tick": {
         const lado = Math.round((t - t0) / (paso * 8)) % 2 ? G.ALA_IZQ : G.ALA_DER;
-        if (tipo === "coro" || tipo === "verso") luz(t, lado, MODO.DESTELLO, tipo === "coro" ? B : 3);
+        if (tipo === "coro" || tipo === "verso") luz(t, lado, MODO.DESTELLO, tipo === "coro" && c % 4 === 3 ? B : S);
         if (tipo === "coro") luz(t, G.VERTICAL, MODO.DESTELLO, colorCompas === P ? S : P);
         if (tipo === "pre") luz(t, G.VERTICAL, MODO.DESTELLO, B, 0.8 + 0.4 * (c / sec.compases));
         break;
@@ -5432,6 +5441,15 @@ $("#btn-empezar").addEventListener("click", () => { tocarBoton(); empezarPartida
 
 // ── la partida ──
 let ultimaPartida = null;
+// Que la pantalla no se apague a mitad de canción: nadie toca la pantalla
+// "para despertarla" durante un coro, se corta el tajo. Si el navegador no
+// deja, no pasa nada: el juego anda igual.
+let candado = null;
+async function pedirPantalla() {
+  try { if (navigator.wakeLock && !candado) { candado = await navigator.wakeLock.request("screen"); candado.addEventListener("release", () => { candado = null; }); } }
+  catch (e) { candado = null; }
+}
+function soltarPantalla() { try { candado && candado.release(); } catch (e) { /* ya */ } candado = null; }
 function empezarPartida(cancion) {
   pararDemo();
   ultimaPartida = cancion;
@@ -5443,6 +5461,7 @@ function empezarPartida(cancion) {
   hud.mostrar(!opciones.ocultarHud);
   mostrar("");
   modo = "juego";
+  pedirPantalla();
   juego.empezar(0);
 }
 
@@ -5452,6 +5471,7 @@ juego.alTerminar = (est) => {
 };
 
 function mostrarFinal(est) {
+  soltarPantalla();
   const c = ultimaPartida;
   const D = DIFICULTADES.find(d => d.id === dificultad);
   $("#f-titulo").textContent = `${c.titulo} · ${D.nombre}`;
@@ -5482,13 +5502,18 @@ $("#btn-otra").addEventListener("click", () => { tocarBoton(); empezarPartida(ul
 $("#btn-menu").addEventListener("click", () => { tocarBoton(); volverAlMenu(); });
 
 function volverAlMenu() {
+  soltarPantalla();
   juego.abandonar();
   hud.mostrar(false); hud.limpiarFlotantes();
   mostrar("p-inicio");
   arrancarDemo();
 }
 
-document.addEventListener("visibilitychange", () => { if (document.hidden) pausar(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) pausar();
+  // El candado se suelta solo al esconder la pestaña: se vuelve a pedir.
+  else if (modo === "juego" && (juego.estado === "jugando" || juego.estado === "pausa")) pedirPantalla();
+});
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" || e.key === "p") { if (juego.estado === "jugando") pausar(); else if (juego.estado === "pausa") { mostrar(""); juego.reanudar(); } }
 });
@@ -5637,6 +5662,17 @@ window.__TAJO = {
       malos: p.malos, energia: p.energia, total: juego.notas.length, stats: juego.estadisticas } : { estado: juego.estado };
   },
   congelar(v) { congelado = v; },
+  /** Llamadas de dibujo y triángulos de UN cuadro, sumando todas las pasadas
+   *  (con autoReset, info cuenta sólo la última: el triángulo del revelado). */
+  info() {
+    const r = motor.renderer;
+    r.info.autoReset = false; r.info.reset();
+    motor.dibujar();
+    const i = { llamadas: r.info.render.calls, triangulos: r.info.render.triangles, programas: r.info.programs.length,
+      geometrias: r.info.memory.geometries, texturas: r.info.memory.textures, ancho: motor.ancho, alto: motor.alto };
+    r.info.autoReset = true;
+    return i;
+  },
   cancionTuya: () => cancionTuya,
   paso(dt, ahora) { unCuadro(dt, ahora); },
   /** Juega `seg` segundos de canción en tiempo simulado, sin dibujar: la

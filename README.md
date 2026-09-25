@@ -17,6 +17,7 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `docs/biblioteca/` | la galería / biblioteca | — |
 | `electro-silver/` | sitio de Electro Silver (Presidencia Roca, Chaco) | electro-silver.pages.dev |
 | `telarana/` | juego de un botón: colgarse de un hilo y recorrer una ciudad | — |
+| `tajo/` | juego de ritmo 3D: cortás bloques al ritmo dibujando el tajo con el dedo (dragón de neón, 3 canciones propias, "tu canción") | `tajo/tajo-en-un-archivo.html` |
 | `edificio/` | una torre de oficinas armada por script en Blender + visor three.js | — |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |
 | `iblo-eventos/` | material de IBLO: imágenes, publicaciones, investigación | — |

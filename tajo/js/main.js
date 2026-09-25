@@ -169,6 +169,15 @@ $("#btn-empezar").addEventListener("click", () => { tocarBoton(); empezarPartida
 
 // ── la partida ──
 let ultimaPartida = null;
+// Que la pantalla no se apague a mitad de canción: nadie toca la pantalla
+// "para despertarla" durante un coro, se corta el tajo. Si el navegador no
+// deja, no pasa nada: el juego anda igual.
+let candado = null;
+async function pedirPantalla() {
+  try { if (navigator.wakeLock && !candado) { candado = await navigator.wakeLock.request("screen"); candado.addEventListener("release", () => { candado = null; }); } }
+  catch (e) { candado = null; }
+}
+function soltarPantalla() { try { candado && candado.release(); } catch (e) { /* ya */ } candado = null; }
 function empezarPartida(cancion) {
   pararDemo();
   ultimaPartida = cancion;
@@ -180,6 +189,7 @@ function empezarPartida(cancion) {
   hud.mostrar(!opciones.ocultarHud);
   mostrar("");
   modo = "juego";
+  pedirPantalla();
   juego.empezar(0);
 }
 
@@ -189,6 +199,7 @@ juego.alTerminar = (est) => {
 };
 
 function mostrarFinal(est) {
+  soltarPantalla();
   const c = ultimaPartida;
   const D = DIFICULTADES.find(d => d.id === dificultad);
   $("#f-titulo").textContent = `${c.titulo} · ${D.nombre}`;
@@ -219,13 +230,18 @@ $("#btn-otra").addEventListener("click", () => { tocarBoton(); empezarPartida(ul
 $("#btn-menu").addEventListener("click", () => { tocarBoton(); volverAlMenu(); });
 
 function volverAlMenu() {
+  soltarPantalla();
   juego.abandonar();
   hud.mostrar(false); hud.limpiarFlotantes();
   mostrar("p-inicio");
   arrancarDemo();
 }
 
-document.addEventListener("visibilitychange", () => { if (document.hidden) pausar(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) pausar();
+  // El candado se suelta solo al esconder la pestaña: se vuelve a pedir.
+  else if (modo === "juego" && (juego.estado === "jugando" || juego.estado === "pausa")) pedirPantalla();
+});
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" || e.key === "p") { if (juego.estado === "jugando") pausar(); else if (juego.estado === "pausa") { mostrar(""); juego.reanudar(); } }
 });
@@ -374,6 +390,17 @@ window.__TAJO = {
       malos: p.malos, energia: p.energia, total: juego.notas.length, stats: juego.estadisticas } : { estado: juego.estado };
   },
   congelar(v) { congelado = v; },
+  /** Llamadas de dibujo y triángulos de UN cuadro, sumando todas las pasadas
+   *  (con autoReset, info cuenta sólo la última: el triángulo del revelado). */
+  info() {
+    const r = motor.renderer;
+    r.info.autoReset = false; r.info.reset();
+    motor.dibujar();
+    const i = { llamadas: r.info.render.calls, triangulos: r.info.render.triangles, programas: r.info.programs.length,
+      geometrias: r.info.memory.geometries, texturas: r.info.memory.textures, ancho: motor.ancho, alto: motor.alto };
+    r.info.autoReset = true;
+    return i;
+  },
   cancionTuya: () => cancionTuya,
   paso(dt, ahora) { unCuadro(dt, ahora); },
   /** Juega `seg` segundos de canción en tiempo simulado, sin dibujar: la

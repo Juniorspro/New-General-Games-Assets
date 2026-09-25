@@ -156,7 +156,7 @@ export class Sables {
     const s = lado === 0 ? -1 : 1;
     const mece = Math.sin(t * 1.3 + lado * 2) * 0.012;
     this.punto(this.w * (0.5 + s * 0.34), this.h * 1.04, 1.5, mano);
-    this.punto(this.w * (0.5 + s * (0.3 + mece)), this.h * (0.7 + mece), 2.6, punta);
+    this.punto(this.w * (0.5 + s * (0.33 + mece)), this.h * (0.8 + mece), 2.2, punta);
   }
 
   /** Un evento del dedo: agrega una muestra a la estela. */
@@ -200,6 +200,11 @@ export class Sables {
       s.halo.material.uniforms.uB.value.copy(s.punta);
       s.halo.material.uniforms.uAncho.value = 0.03;
       s.grupo.visible = s.halo.visible = this.visibles;
+      // En reposo la hoja brilla menos: si no, dos columnas de luz tapan la
+      // parte de abajo de la pantalla (medido contra el video: ahí casi no se ven).
+      const reposo = s.activo ? 1 : 0.45 + 0.55 * (1 - s.vuelta);
+      s.hoja.material.color.copy(COLORES_SABLE[s.lado].nucleo).multiplyScalar(reposo);
+      s.halo.material.uniforms.uColor.value.copy(COLORES_SABLE[s.lado].halo).multiplyScalar(reposo);
       this._armarEstela(s, t);
     }
   }

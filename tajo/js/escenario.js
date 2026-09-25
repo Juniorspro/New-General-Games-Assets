@@ -373,13 +373,13 @@ function ala(lado, raiz, escala, giroY, grupo) {
     const pts = [];
     for (let j = 0; j <= 28; j++) pts.push(curva(k, j / 28));
     const exterior = k === M;
-    geos.push(cinta(pts, exterior ? 0.26 : 0.11, { grupo, fuerza: exterior ? 1.2 : 0.75, fase: k }));
+    geos.push(cinta(pts, exterior ? 0.22 : 0.1, { grupo, fuerza: exterior ? 0.95 : 0.55, fase: k }));
   }
   for (let j = 1; j < N; j++) {
     const s = j / N;
     const pts = [];
     for (let k = 0; k <= M; k++) pts.push(curva(k, s));
-    geos.push(cinta(pts, 0.07, { grupo, fuerza: 0.6, fase: j * 0.7 }));
+    geos.push(cinta(pts, 0.065, { grupo, fuerza: 0.42, fase: j * 0.7 }));
   }
   const g = unir(geos);
   g.scale(escala, escala, escala);
@@ -440,13 +440,13 @@ function lucesPista() {
   // escorzo solo ya los junta.
   for (let z = PISTA.frente - 3.2, i = 0; z > PISTA.fondo + 1; z -= 2.6, i++) {
     out.push(barra(new THREE.Vector3(-w + 0.08, y, z), new THREE.Vector3(w - 0.08, y, z), 0.07, arriba,
-      { grupo: G.PISTA, fuerza: 0.85, fase: i * 0.6 }));
+      { grupo: G.PISTA, fuerza: 0.38, fase: i * 0.6 }));
   }
   // El borde de adelante (la línea blanca) y los dos laterales.
   out.push(barra(new THREE.Vector3(-w, y, PISTA.frente - 0.03), new THREE.Vector3(w, y, PISTA.frente - 0.03), 0.07, arriba,
-    { grupo: G.PISTA, fuerza: 1.5 }));
+    { grupo: G.PISTA, fuerza: 0.85 }));
   out.push(barra(new THREE.Vector3(-w, PISTA.tope - 0.02, PISTA.frente + 0.004), new THREE.Vector3(w, PISTA.tope - 0.02, PISTA.frente + 0.004), 0.05,
-    new THREE.Vector3(0, 0, 1), { grupo: G.PISTA, fuerza: 1.1 }));
+    new THREE.Vector3(0, 0, 1), { grupo: G.PISTA, fuerza: 0.55 }));
   for (const s of [-1, 1]) {
     out.push(barra(new THREE.Vector3(s * (w - 0.02), y, PISTA.frente), new THREE.Vector3(s * (w - 0.02), y, PISTA.fondo), 0.05, arriba,
       { grupo: G.PISTA, fuerza: 0.9 }));
@@ -535,7 +535,7 @@ export class Escenario {
     this.espejo = new THREE.Group();
     this.espejo.scale.y = -1;
     this.espejo.position.y = 2 * PISO_Y;
-    const rNeon = new THREE.Mesh(geoNeon, matNeon(U, 0.32)); rNeon.renderOrder = 1;
+    const rNeon = new THREE.Mesh(geoNeon, matNeon(U, 0.2)); rNeon.renderOrder = 1;
     const rHaz = new THREE.Mesh(geoHaz, matHaz(U, 0.3)); rHaz.renderOrder = 1; rHaz.frustumCulled = false;
     this.espejo.add(rNeon, rHaz);
     raiz.add(this.espejo);

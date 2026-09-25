@@ -366,7 +366,7 @@ export function programarLuces(sec, compas, tDe, audio, luz, giros, t0, fin, pas
     case "verso":
       luz(t0, G.FONDO, MODO.DESTELLO, P); luz(t0, G.PISTA, MODO.PRENDER, B, 0.9);
       luz(t0, G.VERTICAL, MODO.PRENDER, B, 0.5); luz(t0, G.ABANICO, MODO.APAGAR);
-      luz(t0, G.ALA_IZQ, MODO.PRENDER, B, 0.8); luz(t0, G.ALA_DER, MODO.PRENDER, B, 0.8);
+      luz(t0, G.ALA_IZQ, MODO.PRENDER, S, 0.8); luz(t0, G.ALA_DER, MODO.PRENDER, S, 0.8);
       luz(t0, G.CUERNOS, MODO.PRENDER, P); luz(t0, G.ROCAS, MODO.PRENDER, S, 0.9);
       giros.push({ t: t0, v: 0.12 });
       break;
@@ -378,7 +378,7 @@ export function programarLuces(sec, compas, tDe, audio, luz, giros, t0, fin, pas
     case "coro":
       luz(t0, G.FONDO, MODO.DESTELLO, B); luz(t0, G.ABANICO, MODO.DESTELLO, B);
       luz(t0, G.VERTICAL, MODO.DESTELLO, B); luz(t0, G.PISTA, MODO.DESTELLO, B);
-      luz(t0, G.ALA_IZQ, MODO.DESTELLO, B); luz(t0, G.ALA_DER, MODO.DESTELLO, B);
+      luz(t0, G.ALA_IZQ, MODO.DESTELLO, S); luz(t0, G.ALA_DER, MODO.DESTELLO, S);
       luz(t0, G.CUERNOS, MODO.DESTELLO, P); luz(t0, G.ROCAS, MODO.PRENDER, S);
       giros.push({ t: t0, v: 0.9 });
       break;
@@ -419,7 +419,7 @@ export function programarLuces(sec, compas, tDe, audio, luz, giros, t0, fin, pas
         break;
       case "caja": case "palmas": case "tick": {
         const lado = Math.round((t - t0) / (paso * 8)) % 2 ? G.ALA_IZQ : G.ALA_DER;
-        if (tipo === "coro" || tipo === "verso") luz(t, lado, MODO.DESTELLO, tipo === "coro" ? B : 3);
+        if (tipo === "coro" || tipo === "verso") luz(t, lado, MODO.DESTELLO, tipo === "coro" && c % 4 === 3 ? B : S);
         if (tipo === "coro") luz(t, G.VERTICAL, MODO.DESTELLO, colorCompas === P ? S : P);
         if (tipo === "pre") luz(t, G.VERTICAL, MODO.DESTELLO, B, 0.8 + 0.4 * (c / sec.compases));
         break;

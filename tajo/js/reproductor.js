@@ -77,6 +77,10 @@ export class Reproductor {
     }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
+    // iPhone con la tecla de silencio: el audio web va por el canal del
+    // "timbre" y se calla. Pedir la sesión de reproducción (iOS 17+) lo pasa
+    // al canal de la música, como un reproductor.
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { /* no hay */ }
     try { this.ctx = new AC({ latencyHint: "interactive" }); } catch (e) { return false; }
     const c = this.ctx;
     this.maestro = c.createGain(); this.maestro.gain.value = 1;

@@ -140,8 +140,8 @@ export class Motor {
     this.ancho = 1; this.alto = 1;
     this.pendienteMedir = true;
 
-    this.brillo = { intensidad: 1.0, umbral: 1.0, rodilla: 0.5 };
-    this.expo = 1.0;
+    this.brillo = { intensidad: 0.78, umbral: 1.05, rodilla: 0.5 };
+    this.expo = 0.92;
     this.flash = 0; this.flashColor = new THREE.Color(1, 1, 1);
     this.satura = 1.12;
 
