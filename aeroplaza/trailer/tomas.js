@@ -46,8 +46,9 @@ export const TOMAS = {
       ];
       const k = Math.min(7, Math.floor((f + 2) / 15.65));
       if (k !== T.k) { T.k = k; T.apariencia(LOOKS[k]); if (k > 0) A.J.gesto(k % 2 ? 'saltito' : 'saludar'); }
-      const p = A.yo.p, a = 2.4 + f * 0.012, r = 4.3 - f * 0.005;
-      T.camara([p.x + Math.sin(a) * r, p.y + 1.35, p.z + Math.cos(a) * r], [p.x, p.y + 0.78, p.z], 36);
+      /* de frente (el muñeco mira a rumbo 0,4) y rodeándolo despacio */
+      const p = A.yo.p, a = -0.25 + f * 0.009, r = 5 - f * 0.004;
+      T.camara([p.x + Math.sin(a) * r, p.y + 1.3, p.z + Math.cos(a) * r], [p.x, p.y + 0.8, p.z], 38);
     },
   },
   /* montado en un delfín, por el agua */
