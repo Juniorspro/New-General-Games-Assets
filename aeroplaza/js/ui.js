@@ -553,6 +553,7 @@ export const UI = {
       <button class="boton primario" data-a="seguir">${t('seguir')}</button><button class="boton" data-a="probador">${t('canal_probador')}</button>
       <button class="boton" data-a="opciones">${t('canal_opciones')}</button><button class="boton" data-a="controles">${t('canal_controles')}</button>
       <button class="boton" data-a="estilo">👾 ${t('estilo_titulo')}</button><button class="boton" data-a="discos">${t('canal_discos')}</button>
+      <button class="boton" data-a="vr">🥽 ${t('vr_titulo')}</button><button class="boton" data-a="joyas"><i class="joya-icono" style="width:16px;height:16px;vertical-align:-3px"></i> ${t('tienda_joyas')}</button>
       <button class="boton" data-a="menu" style="grid-column:1/-1">${t('salir_menu')}</button></div>`);
     const pie = `<div class="barra-pausa"><span class="p-nombre"></span><span><i class="orbe-icono" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></i> ${J.G.orbes}</span><span><i class="joya-icono" style="width:14px;height:14px;vertical-align:-2px"></i> ${J.G.joyas || 0}</span><span class="p-sala"></span></div>`;
     const v = this.ventana(t('pausa'), cuerpo, { alCerrar: () => J.pausar(false), pie });
@@ -565,6 +566,8 @@ export const UI = {
     cuerpo.querySelector('[data-a=discos]').onclick = () => this.discos(() => this.pausa());
     cuerpo.querySelector('[data-a=estilo]').onclick = () => this.estilo(() => this.pausa());
     cuerpo.querySelector('[data-a=menu]').onclick = () => { v.remove(); this.ventanaAbierta = null; J.salirAlMenu(); };
+    cuerpo.querySelector('[data-a=vr]').onclick = () => this.menuVR(() => this.pausa());
+    cuerpo.querySelector('[data-a=joyas]').onclick = () => tiendaJoyas(J, this, { alCerrar: () => this.pausa() });
     this.focoTeclado(v, '[data-a=seguir]');
   },
   segmentos(opciones, actual, alElegir) {
@@ -865,6 +868,15 @@ export const UI = {
     };
     requestAnimationFrame(() => dibujar());
     this._probador = p;
+  },
+  /* el modo VR: con visor (pantalla doble) o sin visor; la explicación de cómo se usa sin botones */
+  menuVR(alVolver) {
+    const J = this.J, c = el(`<div class="menu-vr"><p>${t('vr_texto')}</p><div class="vr-opciones">
+      <button class="vr-op" data-sbs="1"><b>${t('vr_sbs')}</b><small>${t('vr_sbs_d')}</small><i class="vr-dibujo doble"><span></span><span></span></i></button>
+      <button class="vr-op" data-sbs="0"><b>${t('vr_simple')}</b><small>${t('vr_simple_d')}</small><i class="vr-dibujo"><span></span></i></button></div></div>`);
+    let elegido = false;
+    const v = this.ventana('🥽 ' + t('vr_titulo'), c, { ancho: 560, alCerrar: () => { if (!elegido) alVolver && alVolver(); } });
+    c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarVR(b.dataset.sbs === '1'); });
   },
   /* después de un minijuego: ver un anuncio duplica los orbes ganados (si quedan anuncios hoy) */
   botonDuplicar(c, premio) {

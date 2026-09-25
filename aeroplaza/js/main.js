@@ -48,6 +48,7 @@ import { timbre } from './timbres.js';
 import { detectarAparato } from './aparato.js';
 import { Estudio } from './probador.js';
 import { regaloDelDia } from './joyas.js';
+import { VR } from './vr.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
 
@@ -141,6 +142,7 @@ async function iniciar() {
   const cuerpoFP = new CuerpoFP(motor.escena);   // los brazos de la primera persona (primera.js)
 
   let tuto = null, estudio = null;
+  const vr = new VR();
   let reino = null, yo = null, enJuego = false, pausado = false, enDialogo = false, probador = false, modoFoto = false, construyendo = null;
   let tHud = 0, tPresencia = 0, gestoN = 0, tDisparo = 0, tSinGolpe = 9, tMedir = 0, cuadros = 0, sumaDt = 0, midiendo = true;
   const cache = {};
@@ -178,6 +180,13 @@ async function iniciar() {
     /* lo que se prueba en el probador solo se ve en el estudio (ni el muñeco del mundo ni la red se enteran) */
     probarPuestos(P) { estudio?.ponerApariencia({ ...G.A, ...P }); estudio?.probando(Object.keys(P).length > 0); },
     festejarProbador() { estudio?.festejar(); },
+    /* el modo VR (vr.js): sin la interfaz ni los dedos, la cabeza mueve la cámara */
+    entrarVR(sbs) {
+      UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
+      vr.entrar(sbs, { raiz: UI.raiz, cam, avisar: (x) => UI.avisar(x), alSalir: () => { ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; } });
+    },
+    salirVR() { vr.salir(); },
+    get enVR() { return vr.activo; },
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
     gesto(g) {
@@ -665,6 +674,9 @@ async function iniciar() {
     /* mirando por el telescopio: el juego queda quieto y se dibuja el cielo */
     if (estelario.abierto) { estelario.cuadro(dt, dibujar); return; }
     const E = ent.leer();
+    /* (una ventana, una charla o el probador son de la interfaz plana: en el visor no se verían, así que se sale del VR) */
+    if (vr.activo && (UI.ventanaAbierta || enDialogo || probador || estelario.abierto)) vr.salir();
+    if (vr.activo) { if (E.pausa) { vr.salir(); E.pausa = false; } else vr.entrada(E, dt, !!accionCerca); }
     if (E.pausa && !UI.ventanaAbierta && !probador && !enDialogo) { J.pausar(!pausado); }
     const quieto = pausado || enDialogo;
     if (!quieto) {
@@ -854,7 +866,9 @@ async function iniciar() {
     }
     if (reino.mar) aguaSigueCielo(reino.mar, cielo);
     cam.rollExtra = reino.camRoll || 0;   // (el runner: la cámara se ladea con los golpes)
+    if (vr.activo) cam.fp = true;          // (en VR siempre primera persona, también después de viajar)
     cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
+    if (vr.activo) { vr.orientar(motor.camara, cam, dt); vr.el?.classList.toggle('hay-algo', !!accionCerca); }
     /* la voz: el oído va en la cabeza propia, mirando para donde mira la cámara */
     if (voz.activa) {
       oido.pos.set(yo.p.x, yo.p.y + 1.3 * yo.escala, yo.p.z); motor.camara.getWorldDirection(oido.adelante);
@@ -902,7 +916,7 @@ async function iniciar() {
     tHud += dt; if (tHud > 0.25) { tHud = 0; UI.actualizarHud(); }
     /* el runner a veces congela un par de cuadros (no se dibuja: queda el anterior) y encima va delirio.js */
     const congela = reino.congela > 0;
-    if (dibujar && !congela) motor.dibujar(dt);
+    if (dibujar && !congela) { if (vr.activo && vr.sbs) vr.dibujar(motor); else motor.dibujar(dt); }
     delirio.cuadro(dt, reino, motor.camara, dibujar, dibujar && !congela);
   }
 
@@ -922,7 +936,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

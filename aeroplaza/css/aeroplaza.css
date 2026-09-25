@@ -780,3 +780,26 @@ html.angosta .tj-paquetes { grid-template-columns: repeat(2, 1fr); }
 /* con poco alto, el título del probador se va: dejaba "Cuerpo / Cosas" en dos renglones */
 html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: none; }
 .probador .cabeza .segmentos { flex-wrap: nowrap; white-space: nowrap; }
+
+/* ---------------------------------------------------------------- el modo VR (vr.js) */
+.vr-capa { position: absolute; inset: 0; z-index: 40; display: flex; touch-action: none; user-select: none; -webkit-user-select: none; }
+.vr-ojo { position: relative; flex: 1; }
+.vr-capa .vr-medio { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #000; }
+/* el punto del centro: un aro que se llena mirando abajo (salir); con ✋ si hay algo para usar */
+.vr-punto { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 2px rgba(20, 60, 110, 0.45); transition: transform 0.2s; }
+.vr-punto b { position: absolute; inset: -9px; border-radius: 50%; background: conic-gradient(#ffb13d calc(var(--salir, 0) * 360deg), transparent 0); -webkit-mask: radial-gradient(circle, transparent 55%, #000 57%); mask: radial-gradient(circle, transparent 55%, #000 57%); opacity: 0; }
+.vr-capa.saliendo .vr-punto b { opacity: 1; }
+.vr-capa.camina .vr-punto { transform: scale(0.7); }
+.vr-capa.hay-algo .vr-punto { width: 26px; height: 26px; margin: -13px 0 0 -13px; background: #fff; }
+.vr-capa.hay-algo .vr-punto::after { content: '✋'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; }
+.vr-salir { position: absolute; left: 50%; top: calc(50% + 22px); transform: translateX(-50%); font-weight: 900; font-size: 13px; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); opacity: 0; }
+.vr-capa.saliendo .vr-salir { opacity: 1; }
+.vr-ayuda { position: absolute; left: 8%; right: 8%; bottom: 14%; margin: 0; text-align: center; font-weight: 800; font-size: 13px; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); transition: opacity 0.6s; }
+.vr-capa.sin-ayuda .vr-ayuda { opacity: 0; }
+/* el menú para elegir */
+.menu-vr p { margin: 0 0 12px; font-weight: 700; color: var(--tinta2); }
+.vr-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.vr-op { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 8px; border-radius: 20px; border: 3px solid var(--gris2); background: linear-gradient(180deg, #fff, #eef8ff); font: inherit; cursor: pointer; }
+.vr-op b { font-size: 18px; } .vr-op small { font-weight: 700; color: var(--tinta2); }
+.vr-dibujo { display: flex; gap: 4px; width: 110px; height: 56px; padding: 5px; border-radius: 12px; background: #22262b; margin-top: 6px; }
+.vr-dibujo span { flex: 1; border-radius: 7px; background: linear-gradient(180deg, #8fdcff, #56d05a); }
