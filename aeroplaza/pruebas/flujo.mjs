@@ -66,11 +66,11 @@ await pag.evaluate(() => window.__A.J.abrirProbador());
 await avanzar(pag, 10);
 await tocar('.probador [data-g=cosas]');   // los sombreros están en el grupo de las cosas
 await tocar('.pestanas [data-p=sombrero]');
-await tocar('.opciones-prob .item:nth-child(4)');   // galera: 25 orbes, hay 15 → avisa que faltan
-await pag.evaluate(() => { window.__A.G.orbes = 40; });
-await tocar('.opciones-prob .item:nth-child(4)');
-await tocar('.velo [data-a=si]');
-prueba('se compra con la confirmación propia', await pag.evaluate(() => window.__A.G.tengo.includes('sombrero:galera') && window.__A.G.orbes === 15));
+await tocar('.opciones-prob .item:nth-child(4)');   // galera: 25 orbes, hay 15 → se la prueba y la barra dice que faltan
+const faltan = await pag.evaluate(() => !document.querySelector('.prob-prueba [data-a=comprar]') && /Galera/.test(document.querySelector('.prob-prueba').textContent));
+await pag.evaluate(() => { window.__A.G.orbes = 40; window.__A.UI._alCambiarJoyas(); });
+await tocar('.prob-prueba [data-a=comprar]');
+prueba('se prueba y se compra desde la barra de la prueba', faltan && await pag.evaluate(() => window.__A.G.tengo.includes('sombrero:galera') && window.__A.G.orbes === 15));
 await avanzar(pag, 5);
 await esperar(400); await foto('7-probador');
 prueba('el probador muestra el muñeco y los sombreros', (await pag.locator('.opciones-prob .item').count()) > 8);
