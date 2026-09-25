@@ -34,7 +34,8 @@ export class RemotePlayer {
     this.estado = typeof d.estado === 'string' ? d.estado : this.isMoving ? 'camina' : 'quieto';
     this.velRed = Number.isFinite(d.vel) ? d.vel : 0;
     this.esc = Number.isFinite(d.esc) ? Math.max(0.4, Math.min(2, d.esc)) : 1;
-    if (d.gesto && d.gesto !== this.gesto) this.m.hacerGesto(d.gesto);
+    /* el gesto llega como "saludar#3" (el número es para repetir el mismo): el muñeco quiere solo el nombre */
+    if (d.gesto && d.gesto !== this.gesto) { const g = String(d.gesto).split('#')[0].slice(0, 20); this.m.hacerGesto(g); RemotePlayer.alGesto?.(this, g); }
     this.gesto = d.gesto || null;
     this.modo = d.modo || 'pie';
     this.voz = d.voz === 1 || d.voz === 2 ? d.voz : 0;   // en el chat de voz: 1 con micrófono, 2 escuchando

@@ -50,11 +50,13 @@ const FINAL = {
     uTrama: { value: 0 }, uNiveles: { value: 0 }, uBarrido: { value: 0 }, uPaleta: { value: 0 }, uVHS: { value: 0 },
     uTubo: { value: 0 }, uAberracion: { value: 0 }, uSat: { value: 1.12 }, uVineta: { value: 0.22 },
     uFundido: { value: 0 }, uColorFundido: { value: new THREE.Color('#ffffff') }, uAgua: { value: 0 },
+    /* los efectos (efectos.js y el runner): destello de pantalla, glitch y líneas de velocidad */
+    uDestello: { value: 0 }, uColorDestello: { value: new THREE.Color('#bfe4ff') }, uGlitch: { value: 0 }, uVelocidad: { value: 0 }, uOscuro: { value: 0 },
   },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: /* glsl */`
-    uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uT, uTrama, uNiveles, uBarrido, uPaleta, uVHS, uTubo, uAberracion, uSat, uVineta, uFundido, uAgua;
-    uniform vec3 uColorFundido;
+    uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uT, uTrama, uNiveles, uBarrido, uPaleta, uVHS, uTubo, uAberracion, uSat, uVineta, uFundido, uAgua, uDestello, uGlitch, uVelocidad, uOscuro;
+    uniform vec3 uColorFundido, uColorDestello;
     varying vec2 vUv;
     float bayer(vec2 p) {
       /* la matriz de Bayer de 4x4, armada con bits: el tramado de las consolas viejas */
@@ -82,11 +84,28 @@ const FINAL = {
       }
       /* bajo el agua: se ondula todo */
       if (uAgua > 0.0) uv += vec2(sin(uv.y * 40.0 + uT * 2.0), cos(uv.x * 34.0 + uT * 1.7)) * 0.0022 * uAgua;
+      /* el glitch: franjas que se corren, bloques que se pixelan (a 18 saltos por segundo) */
+      float tg = floor(uT * 18.0);
+      if (uGlitch > 0.0) {
+        float banda = floor(uv.y * mix(10.0, 44.0, azar(vec2(tg, 3.1))));
+        if (azar(vec2(banda, tg)) < uGlitch * 0.4) uv.x += (azar(vec2(banda, tg + 7.0)) - 0.5) * 0.14 * uGlitch;
+        vec2 bl = floor(uv * vec2(14.0, 8.0));
+        if (azar(bl + tg) < uGlitch * 0.1) uv = (floor(uv * uRes / 14.0) + 0.5) * 14.0 / uRes;
+      }
       vec3 col;
-      if (uAberracion > 0.0) {
-        vec2 d = (uv - 0.5) * uAberracion * 0.006 + vec2(uVHS * 0.0025, 0.0);
+      float ab = uAberracion + uDestello * 3.0 + uGlitch * 5.0;
+      if (ab > 0.0) {
+        vec2 d = (uv - 0.5) * ab * 0.006 + vec2(uVHS * 0.0025 + uGlitch * 0.006 * (azar(vec2(tg, 1.0)) - 0.3), 0.0);
         col = vec3(texture2D(tDiffuse, uv + d).r, texture2D(tDiffuse, uv).g, texture2D(tDiffuse, uv - d).b);
       } else col = texture2D(tDiffuse, uv).rgb;
+      /* la velocidad: desenfoque hacia el centro y rayas que salen de él */
+      if (uVelocidad > 0.0) {
+        vec2 c = uv - 0.5; float r = length(c);
+        vec3 s = col; for (int i = 1; i < 5; i++) s += texture2D(tDiffuse, 0.5 + c * (1.0 - float(i) * 0.012 * uVelocidad * r)).rgb;
+        col = mix(col, s / 5.0, smoothstep(0.15, 0.6, r));
+        float ang = atan(c.y, c.x), raya = pow(azar(vec2(floor(ang * 90.0), floor(uT * 20.0))), 18.0);
+        col += vec3(0.85, 0.95, 1.0) * raya * smoothstep(0.28, 0.7, r) * uVelocidad * 0.5;
+      }
       /* saturación: el Aero es "hipersaturado" */
       float l = dot(col, vec3(0.299, 0.587, 0.114));
       col = mix(vec3(l), col, uSat);
@@ -113,6 +132,15 @@ const FINAL = {
       vec2 v = vUv - 0.5;
       col *= 1.0 - dot(v, v) * (uVineta + uTubo * 0.9);
       if (uTubo > 0.0 && (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)) col = vec3(0.0);
+      if (uGlitch > 0.0) {
+        vec2 bl2 = floor(uv * vec2(9.0, 6.0));
+        if (azar(bl2 + tg * 1.37) < uGlitch * 0.06) col = 1.0 - col;
+        if (azar(vec2(tg, floor(uv.y * 30.0))) > 1.0 - uGlitch * 0.12) col = col.brg * vec3(1.2, 0.8, 1.3);
+        col += (azar(cel + tg) - 0.5) * 0.16 * uGlitch;
+      }
+      /* mientras se carga un poder, el mundo se apaga un poco (así la energía resalta de día) */
+      if (uOscuro > 0.0) col = mix(col, col * vec3(0.42, 0.5, 0.78), uOscuro * (0.6 + 0.4 * length(vUv - 0.5) * 2.0));
+      col += uColorDestello * uDestello;
       col = mix(col, uColorFundido, uFundido);
       gl_FragColor = vec4(col, 1.0);
     }`,

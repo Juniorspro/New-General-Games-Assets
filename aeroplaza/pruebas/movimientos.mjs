@@ -124,13 +124,38 @@ r = await pag.evaluate(() => ({ e: window.__P.estado(), vz: window.__A.yo.v.z, v
 prueba('en el aire contra la pared, saltar rebota para atrás y arriba', r.e === 'pared' && r.vz < -3 && r.vy > 3, JSON.stringify(r));
 await pag.evaluate(() => window.__P.pasos(40));
 
+/* 7b. los del video de movimiento: la valla, subirse de un salto, subir la pared corriendo y correr por la pared */
+const corrida = async (armar, desde, teclas, n, saltarEn = -1) => {
+  await pag.evaluate(([armar, desde]) => { const W = window.__A.reino.mundo; W.solidos.length = 0; for (const c of armar) W.caja(...c); window.__P.en(...desde); }, [armar, desde]);
+  for (const k of teclas) await pag.keyboard.down(k);
+  const S = [];
+  for (let i = 0; i < n; i++) { if (i === saltarEn) await pag.keyboard.down('Space'); if (i === saltarEn + 2) await pag.keyboard.up('Space'); S.push(await pag.evaluate(() => { const P = window.__P; P.pasos(1); const p = P.p(); return [P.estado(), +p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2)]; })); }
+  for (const k of teclas) await pag.keyboard.up(k);
+  await pag.evaluate(() => window.__P.pasos(30));
+  return S;
+};
+let S = await corrida([[0, 8, 3, 0.2, -1, 0.9]], [0, 3], ['KeyW', 'ShiftLeft'], 40);
+prueba('corriendo contra una valla a la cintura, la salta', S.some(([e]) => e === 'valla') && S[S.length - 1][3] > 9.5, [...new Set(S.map(([e]) => e))].join(' → ') + ' · z ' + S[S.length - 1][3]);
+S = await corrida([[0, 12, 3, 4, -1, 1.0]], [0, 3], ['KeyW', 'ShiftLeft'], 50);
+prueba('contra una plataforma a la cintura, se sube de un salto', S.some(([e]) => e === 'valla') && Math.abs(S[S.length - 1][2] - 1.0) < 0.05, [...new Set(S.map(([e]) => e))].join(' → ') + ' · y ' + S[S.length - 1][2]);
+S = await corrida([[0, 12, 4, 4, -1, 3.2]], [0, 4.4], ['KeyW', 'ShiftLeft'], 50, 8);
+prueba('saltando contra una pared de 3,2 m, la sube corriendo y trepa', S.some(([e]) => e === 'subePared') && S.some(([e]) => e === 'trepa') && Math.abs(S[S.length - 1][2] - 3.2) < 0.05, [...new Set(S.map(([e]) => e))].join(' → ') + ' · y ' + S[S.length - 1][2]);
+/* para qué lado va D (según la cámara del arenero) */
+await pag.evaluate(() => { window.__A.reino.mundo.solidos.length = 0; window.__P.en(0, 0); });
+await pag.keyboard.down('KeyD'); const lado = await pag.evaluate(() => { window.__P.pasos(6); return Math.sign(window.__A.yo.v.x); }); await pag.keyboard.up('KeyD'); await pag.evaluate(() => window.__P.pasos(20));
+S = await corrida([[lado * 1.6, 14, 0.3, 14, -1, 6]], [lado * 0.9, 0], ['KeyW', 'ShiftLeft', 'KeyD'], 50, 12);
+const enPared = S.filter(([e]) => e === 'corrPared');
+const bajo = enPared.length ? enPared[0][2] - Math.min(...enPared.map(([, , y]) => y)) : 9, anduvo = enPared.length ? enPared[enPared.length - 1][3] - enPared[0][3] : 0;
+prueba('saltando pegado a una pared, corre por ella (casi sin caer)', enPared.length >= 12 && bajo < 1.5 && anduvo > 5, `${enPared.length} cuadros · anduvo ${anduvo.toFixed(1)} m · bajó ${bajo.toFixed(2)} m`);
+await pag.evaluate(() => { window.__A.reino.mundo.solidos.length = 0; });
+
 /* 8. las poses en los tres estilos: sin NaN, y chop va a saltos */
 r = await pag.evaluate(() => {
   const A = window.__A, m = A.yo.m, S = {};
   for (const estilo of ['suave', 'lineal', 'chop']) {
     A.J.ponerAnim(estilo);
     let nan = false; const xs = [];
-    for (const e of ['corre', 'salta', 'cae', 'desliza', 'rueda', 'trepa', 'pared', 'camina', 'quieto']) for (let i = 0; i < 20; i++) { m.animar(1 / 60, e, 6); const q = [m.cadera.rotation.x, m.cadera.position.y, ...m.brazos.map((b) => b.rotation.x), ...m.piernas.map((b) => b.rotation.x)]; if (q.some((v) => !Number.isFinite(v))) nan = true; if (e === 'corre') xs.push(m.piernas[0].rotation.x); }
+    for (const e of ['corre', 'salta', 'cae', 'desliza', 'rueda', 'trepa', 'pared', 'valla', 'subePared', 'corrPared', 'camina', 'quieto']) for (let i = 0; i < 20; i++) { m.animar(1 / 60, e, 6); const q = [m.cadera.rotation.x, m.cadera.position.y, ...m.brazos.map((b) => b.rotation.x), ...m.piernas.map((b) => b.rotation.x)]; if (q.some((v) => !Number.isFinite(v))) nan = true; if (e === 'corre') xs.push(m.piernas[0].rotation.x); }
     const distintos = new Set(xs.map((v) => v.toFixed(4))).size;
     S[estilo] = { nan, distintos };
   }

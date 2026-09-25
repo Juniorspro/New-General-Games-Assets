@@ -77,6 +77,15 @@ export const CLIPS = {
     { t: 0.2, cx: 0.55, cy: 0.12, bl: [-1.6, 0, -0.3], br: [-1.6, 0, 0.3], pl: [-1.5, 0, 0.1], pr: [-0.9, 0, -0.1], hx: -0.1, sy: 0.92 },
     { t: 0.34, cx: 0.45, cy: 0.1, bl: [-0.3, 0, -0.35], br: [-0.3, 0, 0.35], pl: [-1.2, 0, 0.1], pr: [0.2, 0, -0.1], hx: 0.05, sy: 0.95 },
     { t: 0.46, cx: 0.1, cy: 0, bl: [0, 0, -0.2], br: [0, 0, 0.2], pl: [0, 0, 0], pr: [0, 0, 0], hx: 0, sy: 1 }] },
+  /* la valla: una mano apoyada abajo, la otra afuera para el equilibrio, las piernas juntas por el costado */
+  valla: { dur: 0.4, loop: false, k: [
+    { t: 0, cx: 0.35, cz: 0.22, ry: 0.4, cy: 0.05, bl: [-1.3, 0, -0.3], br: [-0.4, 0, 1.2], pl: [-1.35, 0, 0.45], pr: [-1.25, 0, 0.55], hx: -0.2, sy: 0.96 },
+    { t: 0.2, cx: 0.22, cz: 0.35, ry: 0.7, cy: 0.12, bl: [-0.9, 0, -0.1], br: [-0.2, 0, 1.45], pl: [-1.5, 0, 0.8], pr: [-1.4, 0, 0.9], hx: -0.25, sy: 0.94 },
+    { t: 0.4, cx: 0.1, cz: 0.04, ry: 0.1, cy: 0, bl: [-0.3, 0, -0.3], br: [0.2, 0, 0.6], pl: [-0.5, 0, 0.1], pr: [0.2, 0, 0], hx: -0.05, sy: 1 }] },
+  /* subir la pared corriendo: mirando para arriba, una mano que busca el borde y una rodilla alta, alternando */
+  subePared: { dur: 0.36, loop: true, k: [
+    { t: 0, cx: 0.18, cy: 0.04, hx: -0.55, bl: [-2.9, 0, -0.2], br: [-1.5, 0, 0.3], pl: [-1.25, 0, 0.05], pr: [0.3, 0, -0.05], sy: 1.05 },
+    { t: 0.18, cx: 0.18, cy: 0.04, hx: -0.55, bl: [-1.5, 0, -0.3], br: [-2.9, 0, 0.2], pl: [0.3, 0, 0.05], pr: [-1.25, 0, -0.05], sy: 1.05 }] },
   /* el rebote en la pared: patada con una pierna atrás, abierto, girado */
   pared: { dur: 0.36, loop: false, k: [
     { t: 0, cx: -0.25, cz: 0.2, ry: 0.5, bl: [-2.5, 0, -1.1], br: [-0.8, 0, 1.3], pl: [0.95, 0, 0.1], pr: [-0.7, 0, -0.1], hx: -0.25, sy: 1.06 },

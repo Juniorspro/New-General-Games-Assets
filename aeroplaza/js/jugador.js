@@ -15,8 +15,13 @@
      de muy alto corriendo, rueda solo.
    - El reino puede cambiar la velocidad de correr (mundo.corre, el runner):
      ahí el deslizamiento no frena por debajo de esa velocidad.
-   - Saltando contra un borde a la altura del pecho, lo trepa solo.
-   - En el aire contra una pared, saltar rebota en la pared.
+   - Saltando contra un borde a la altura del pecho, lo trepa solo; si el borde
+     está más alto (hasta 3,4 m), sube la pared corriendo y después trepa.
+   - Corriendo contra algo a la altura de la cintura, lo salta apoyando una
+     mano (una valla); si es una plataforma, se sube de un salto.
+   - En el aire contra una pared, yendo a lo largo de ella, corre por la pared
+     (hasta 1,1 s, casi sin caer); saltar rebota en la pared.
+   (Los cuatro últimos salen del video de movimiento que mandó quien pide.)
    ========================================================================== */
 import * as THREE from 'three';
 import { Meeple } from './meeple.js';
@@ -25,7 +30,7 @@ import { materialBurbuja } from './naturaleza.js';
 const RADIO = 0.32, ALTO = 1.35;
 const CAMINA = 3.4, CORRE = 7.2, SALTO = 8.6, NADA = 2.8;   // (correr un poco más: la isla ahora es grande)
 const ACEL_PISO = 38, ACEL_AIRE = 9;
-const RUEDA = 0.56, DESLIZA = 0.8, TREPA = 0.46, PARED = 0.36;   // lo que dura cada uno (igual que su clip)
+const RUEDA = 0.56, DESLIZA = 0.8, TREPA = 0.46, PARED = 0.36, CORRE_PARED = 1.1;   // lo que dura cada uno (igual que su clip)
 
 export class Jugador {
   constructor(escena, apariencia, nombre) {
@@ -131,6 +136,16 @@ export class Jugador {
     if (this.mov) {
       const M = this.mov; M.t += dt;
       if (M.tipo === 'trepa') return this.seguirTrepa(dt);
+      if (M.tipo === 'valla') return this.seguirValla(dt, W);
+      if (M.tipo === 'subePared') return this.seguirSube(dt, W, k);
+      if (M.tipo === 'corrPared') {
+        /* a lo largo de la pared, apretado contra ella (así sigue tocándola) */
+        const n = this.pared || M.n; M.n = n;
+        const vel = Math.max(M.v0, W.corre ? W.corre * 0.9 : 6.5);
+        obj.set(M.dir.x * vel - n.nx * 1.2, M.dir.y * vel - n.nz * 1.2); acel = 60;
+        if (!this.pared) M.sinPared = (M.sinPared || 0) + dt; else M.sinPared = 0;
+        if (M.sinPared > 0.12 || this.enPiso) M.t = M.dur;
+      }
       if (M.tipo === 'desliza' || M.tipo === 'rueda') {
         if (cuanto > 0.1) M.dir.lerp(quiere, Math.min(1, dt * (M.tipo === 'desliza' ? 1.2 : 2.5))).normalize();
         const vel = M.tipo === 'desliza' ? Math.max(W.corre || 2.4, M.v0 - 6 * M.t) : M.v0;
@@ -145,6 +160,7 @@ export class Jugador {
     const g = W.gravedad * (this.efecto === 'liviano' ? 0.45 : 1) * (W.sueno ? 0.3 : 1);
     this.v.y -= g * dt;
     if (!E.sostiene && this.v.y > 0 && !this.lanzado) this.v.y -= g * dt * 1.1;   // salto corto si se suelta
+    if (this.mov && this.mov.tipo === 'corrPared') this.v.y = Math.max(this.v.y + g * dt * 0.8, -1.2);   // (corriendo por la pared casi no se cae)
     /* saltar: del piso (con un poquito de tiempo de gracia) o el doble salto de burbuja */
     this.coyote = this.enPiso ? 0.12 : this.coyote - dt;
     if (this.bufferSalto > 0) {
@@ -179,7 +195,7 @@ export class Jugador {
       this.p.y = s.y; this.v.y = 0;
       this.enPiso = true; this.saltos = 0; this.lanzado = false;
       if (s.s && s.s.rebote) { this.v.y = s.s.rebote; this.enPiso = false; this.saltos = 1; this.lanzado = true; this.eventos.push('rebote'); if (s.s.alRebotar) s.s.alRebotar(); }
-      else if (!antes && golpe > 4) this.eventos.push('aterriza');
+      else if (!antes && golpe > 4) { this.eventos.push('aterriza'); if (golpe > 14) { this.golpe = golpe; this.eventos.push('impacto'); } }   // (caer fuerte: grietas y la cámara que tiembla)
       /* al caer: deslizarse si apretó bajar recién (o lo tiene apretado); rodar si lo apretó antes, o si cae de muy alto corriendo */
       if (!antes && (!this.mov || this.mov.tipo === 'pared')) {
         const h = Math.hypot(this.v.x, this.v.z), pidio = this.bajaAire != null;
@@ -196,8 +212,13 @@ export class Jugador {
     /* los géiseres empujan desde abajo aunque no se los pise */
     for (const q of W.solidos) if (q.empuje && q.activo && W.dentro(q, this.p.x, this.p.z) && this.p.y < q.y1 + q.empujeAlto) { this.v.y = Math.max(this.v.y, q.empuje); this.enPiso = false; this.lanzado = true; if (!this._enGeiser) this.eventos.push('geiser'); this._enGeiser = q; }
     if (this._enGeiser && !W.dentro(this._enGeiser, this.p.x, this.p.z)) this._enGeiser = null;
-    /* trepar: en el aire, yendo contra un borde a la altura del pecho */
-    if (!this.enPiso && !this.mov && cuanto > 0.4 && this.v.y < 4.5) this.probarTrepa(W, k, quiere);
+    /* trepar: en el aire, yendo contra un borde a la altura del pecho (o más alto: sube la pared) */
+    if (!this.enPiso && !this.mov && cuanto > 0.4) this.probarTrepa(W, k, quiere);
+    /* correr por la pared: en el aire, tocándola y yendo a lo largo */
+    if (!this.enPiso && (!this.mov || (this.mov.tipo === 'pared' && this.mov.t > 0.2)) && this.pared && cuanto > 0.3) this.probarCorrerPared(W, k);
+    /* la valla: en el piso, corriendo contra algo a la altura de la cintura */
+    if (this.enPiso && !this.mov && cuanto > 0.5 && horiz0 > 3.0) this.probarValla(W, k, quiere, horiz0);
+    if (this.mov && (this.mov.tipo === 'valla' || this.mov.tipo === 'subePared')) { this.estado = this.mov.tipo; this.sync(); this.m.animar(dt, this.estado, 0); return; }
     if (this.mov && this.mov.tipo === 'trepa') { this.estado = 'trepa'; this.sync(); this.m.animar(dt, 'trepa', 0); return; }
     const horiz = Math.hypot(this.v.x, this.v.z);
     if (horiz > 0.3 && (cuanto > 0.05 || bajo)) this.rumbo = girarHacia(this.rumbo, Math.atan2(this.v.x, this.v.z), dt * 12);
@@ -236,17 +257,63 @@ export class Jugador {
     if (M.tipo === 'desliza' && this.hayTecho(W, k)) { M.dur += 0.1; M.v0 = Math.max(M.v0, 2.4 + 6 * M.t); return; }
     this.mov = null;
   }
-  /* ¿hay un borde adelante, entre la rodilla y un poco más arriba de la cabeza, con lugar arriba? */
+  /* ¿hay un borde adelante, entre la rodilla y un poco más arriba de la cabeza, con lugar arriba?
+     Si está más alto (hasta 3,4 m) y viene recién saltado contra la pared, la sube corriendo */
   probarTrepa(W, k, quiere) {
     const d = RADIO * k + 0.3, fx = this.p.x + quiere.x * d, fz = this.p.z + quiere.y * d;
-    const tope = W.suelo(fx, fz, this.p.y + 2.0 * k - 0.45);
+    let tope = W.suelo(fx, fz, this.p.y + 2.0 * k - 0.45), sube = false;
+    if (!tope.s || tope.y - this.p.y < 0.45 * k) { const t2 = W.suelo(fx, fz, this.p.y + 3.4 * k - 0.45); if (t2.s && t2.y - this.p.y > 2.0 * k && this.tAire < 0.55 && this.v.y > -2) { tope = t2; sube = true; } }
     const alto = tope.y - this.p.y;
-    if (!tope.s || alto < 0.45 * k || alto > 2.0 * k || tope.s.rebote || (tope.s.t === 'c' && tope.s.r < 0.5)) return;
+    if (!tope.s || alto < 0.45 * k || alto > (sube ? 3.4 : 2.0) * k || tope.s.rebote || (tope.s.t === 'c' && tope.s.r < 0.5)) return;
+    if (!sube && this.v.y >= 4.5) return;   // (trepar, recién cuando el salto ya no sube fuerte; subir la pared, en cualquier momento)
     const lx = this.p.x + quiere.x * (d + 0.4), lz = this.p.z + quiere.y * (d + 0.4);
     if (Math.abs(W.suelo(lx, lz, tope.y + 0.1).y - tope.y) > 0.3) return;   // arriba sigue habiendo piso (no es el canto de una pared)
     if (W.techo(lx, lz, tope.y, ALTO * k) < tope.y + ALTO * k) return;
+    if (sube) { this.mov = { tipo: 'subePared', t: 0, dur: 2, p1: new THREE.Vector3(lx, tope.y, lz), tope: tope.y, dir: quiere.clone() }; this.v.set(0, 0, 0); this.rumbo = Math.atan2(quiere.x, quiere.y); this.eventos.push('subePared'); return; }
     this.mov = { tipo: 'trepa', t: 0, dur: TREPA, p0: this.p.clone(), p1: new THREE.Vector3(lx, tope.y, lz) };
     this.v.set(0, 0, 0); this.rumbo = Math.atan2(quiere.x, quiere.y); this.eventos.push('trepa');
+  }
+  /* subir la pared corriendo: para arriba a 5,5 m/s hasta tener el borde al pecho, y ahí trepa */
+  seguirSube(dt, W, k) {
+    const M = this.mov;
+    this.p.y += 5.5 * dt; this.v.set(0, 0, 0); this.enPiso = false;
+    if (this.p.y >= M.tope - 1.35 * k || M.t > 0.9) { this.mov = { tipo: 'trepa', t: 0, dur: TREPA, p0: this.p.clone(), p1: M.p1 }; this.eventos.push('trepa'); }
+    this.estado = 'subePared'; this.sync(); this.m.animar(dt, 'subePared', 0);
+  }
+  /* la valla: algo entre la cintura y el pecho, adelante; si del otro lado baja, se pasa por arriba; si no, se sube */
+  probarValla(W, k, quiere, horiz) {
+    const d = RADIO * k + 0.3, fx = this.p.x + quiere.x * d, fz = this.p.z + quiere.y * d;
+    const tope = W.suelo(fx, fz, this.p.y + 1.3 * k), alto = tope.y - this.p.y;
+    if (!tope.s || alto < 0.5 * k || alto > 1.25 * k || tope.s.rebote || tope.s.fantasma) return;
+    let fin = null;
+    for (let s = 0.3; s <= 2.4; s += 0.15) { const h = W.suelo(fx + quiere.x * s, fz + quiere.y * s, tope.y + 0.1).y; if (h < tope.y - 0.3) { fin = s; break; } }
+    const dist = fin != null ? d + fin + 0.6 : d + 0.9;
+    const x1 = this.p.x + quiere.x * dist, z1 = this.p.z + quiere.y * dist, y1 = fin != null ? W.suelo(x1, z1, tope.y).y : tope.y;
+    if (W.techo(fx, fz, tope.y, ALTO * k) < tope.y + 1.0 || W.techo(x1, z1, y1, ALTO * k) < y1 + ALTO * k) return;
+    this.mov = { tipo: 'valla', t: 0, dur: 0.3 + dist * 0.05, p0: this.p.clone(), p1: new THREE.Vector3(x1, y1, z1), cima: tope.y + 0.3 * k, dir: quiere.clone(), v0: Math.max(horiz, 5.5) };
+    this.rumbo = Math.atan2(quiere.x, quiere.y); this.eventos.push('valla');
+  }
+  seguirValla(dt, W) {
+    const M = this.mov, u = Math.min(1, M.t / M.dur);
+    /* por arriba: sube hasta la cima a los 0,45 y baja al otro lado */
+    const y = u < 0.45 ? M.p0.y + (M.cima - M.p0.y) * Math.sin(u / 0.45 * Math.PI / 2) : M.cima + (M.p1.y - M.cima) * Math.pow((u - 0.45) / 0.55, 2);
+    this.p.set(M.p0.x + (M.p1.x - M.p0.x) * u, y, M.p0.z + (M.p1.z - M.p0.z) * u);
+    this.v.set(M.dir.x * M.v0, 0, M.dir.y * M.v0); this.enPiso = false;
+    if (u >= 1) { this.mov = null; this.p.copy(M.p1); this.enPiso = true; this.saltos = 0; this.coyote = 0.12; }
+    this.estado = 'valla'; this.sync(); this.m.animar(dt, 'valla', 0);
+  }
+  /* correr por la pared: tocándola en el aire y yendo a lo largo (lo de ir contra ella es para el rebote) */
+  probarCorrerPared(W, k) {
+    const n = this.pared, vn = this.v.x * n.nx + this.v.z * n.nz, tx = this.v.x - vn * n.nx, tz = this.v.z - vn * n.nz, vt = Math.hypot(tx, tz);
+    if (vt < 3.5 || this.p.y - W.suelo(this.p.x, this.p.z, this.p.y).y < 0.7 || (this._tCorrPared || 0) > performance.now() - 450) return;
+    /* hay pared de verdad al costado (y alta): se prueba un punto adentro */
+    const px = this.p.x - n.nx * (RADIO * k + 0.15), pz = this.p.z - n.nz * (RADIO * k + 0.15);
+    if (!W.cerca(px, pz).some((s) => !s.fantasma && s.y1 > this.p.y + 1.2 && s.y0 < this.p.y + 0.3 && W.dentro(s, px, pz))) return;
+    this._tCorrPared = performance.now();
+    this.mov = { tipo: 'corrPared', t: 0, dur: CORRE_PARED, dir: new THREE.Vector2(tx / vt, tz / vt), v0: vt, n };
+    /* de qué lado está la pared (para ladear el cuerpo): + a la derecha del que corre */
+    this.m.ladoPared = Math.sign(n.nx * tz / vt - n.nz * tx / vt) || 1;
+    this.v.y = Math.max(this.v.y, 2.2); this.eventos.push('corrPared');
   }
   /* trepar va solo: primero sube (agarrado), después pasa arriba */
   seguirTrepa(dt) {

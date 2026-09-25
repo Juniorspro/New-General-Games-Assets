@@ -59,7 +59,7 @@ function muestraEstilo(n) {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
 const HOT = [['burbujero', '🫧'], ['gestos', '👋'], ['discos', '💿'], ['foto', '📷'], ['mapa', '🗺️']];
-const GESTOS = ['saludar', 'festejar', 'aplaudir', 'saltito', 'voltereta', 'pensar', 'sentarse', 'bailar1', 'bailar2', 'bailar3'];
+const GESTOS = ['saludar', 'festejar', 'aplaudir', 'saltito', 'voltereta', 'pensar', 'sentarse', 'bailar1', 'bailar2', 'bailar3', 'poder'];
 /* todos los discos escondidos en los reinos (6 en la isla y uno en cada otro reino) */
 const TOTAL_DISCOS = 10;
 const CANCIONES = ['titulo', 'colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 'playa', 'bosque'];

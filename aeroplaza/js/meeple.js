@@ -368,7 +368,7 @@ export class Meeple {
     this.raiz.add(this.globo);
   }
   /* un gesto de un rato: saludar, bailar1..3, festejar, sentarse (este queda hasta moverse) */
-  hacerGesto(g) { this.gesto = g; this.tGesto = g === 'sentarse' ? 999 : g.startsWith('bailar') ? 8 : g === 'voltereta' ? 1.1 : g === 'aplaudir' ? 3 : 2.4; this.tG0 = this.tGesto; }
+  hacerGesto(g) { this.gesto = g; this.tGesto = g === 'sentarse' ? 999 : g.startsWith('bailar') ? 8 : g === 'voltereta' ? 1.1 : g === 'aplaudir' ? 3 : g === 'poder' ? 3.6 : 2.4; this.tG0 = this.tGesto; }
 
   /* estado: quieto | camina | corre | salta | cae | nada | flota | monta | sentado,
      y los del parkour: desliza | rueda | trepa | pared. vel: velocidad horizontal
@@ -414,7 +414,9 @@ export class Meeple {
       aplicarClip(R, C, this._tPaso, estilo); clip = true;
     } else if (estado === 'salta') { aplicarClip(R, CLIPS.salta, this._tEst, estilo); clip = true; }
     else if (estado === 'cae') { aplicarClip(R, CLIPS.cae, t, estilo); clip = true; }
-    else if (CLIPS[estado] && ['desliza', 'rueda', 'trepa', 'pared'].includes(estado)) { aplicarClip(R, CLIPS[estado], estado === 'desliza' ? t : this._tEst, estilo); clip = true; }
+    else if (CLIPS[estado] && ['desliza', 'rueda', 'trepa', 'pared', 'valla', 'subePared'].includes(estado)) { aplicarClip(R, CLIPS[estado], estado === 'desliza' || estado === 'subePared' ? t : this._tEst, estilo); clip = true; }
+    /* correr por la pared: el correr, más rápido, con el cuerpo ladeado hacia afuera de la pared (los pies contra ella) */
+    else if (estado === 'corrPared') { this._tPaso = (this._tPaso || 0) + dt * 1.3; aplicarClip(R, CLIPS.corre, this._tPaso, estilo); R.cz = (R.cz || 0) - (this.ladoPared || 1) * 0.5; R.cx = (R.cx || 0) - 0.12; clip = true; }
     else if (estado === 'nada') {
       const s = Math.sin(t * 5);
       R.cx = 1.25; R.cy = 0.35 + Math.sin(t * 10) * 0.03; R.ry = s * 0.18;
@@ -454,6 +456,8 @@ export class Meeple {
       else if (g === 'bailar2') { const s = Math.sin(t * 6); R.ry = t * 4; R.bl = [s, 0, -1.2]; R.br = [-s, 0, 1.2]; R.pl = [s * 0.5, 0, 0]; R.pr = [-s * 0.5, 0, 0]; }
       else if (g === 'aplaudir') { const s2 = Math.max(0, Math.sin(t * 15)); R.bl = [-1.25, 0, -0.05 + s2 * 0.3]; R.br = [-1.25, 0, 0.05 - s2 * 0.3]; R.hx = -0.1; R.cy = Math.abs(Math.sin(t * 7.5)) * 0.03; }
       else if (g === 'voltereta') { const p = 1 - Math.max(0, this.tGesto) / this.tG0; R.cx = -p * Math.PI * 2; R.cy = Math.sin(p * Math.PI) * 0.95; R.bl = [0, 0, -2.2]; R.br = [0, 0, 2.2]; R.pl = [-1.2 * Math.sin(p * Math.PI), 0, 0]; R.pr = [-1.2 * Math.sin(p * Math.PI), 0, 0]; }
+      /* el poder (el TearDrop de efectos.js): junta la energía con los brazos arriba, y a los 1,5 s la empuja para adelante */
+      else if (g === 'poder') { const p = this.tG0 - Math.max(0, this.tGesto); if (p < 1.45) { const k = Math.min(1, p / 0.4); R.bl = [-2.5 * k, 0, -0.5 - Math.sin(t * 20) * 0.05]; R.br = [-2.5 * k, 0, 0.5 + Math.sin(t * 20) * 0.05]; R.cx = -0.12 * k; R.hx = -0.25 * k; R.cy = Math.sin(t * 30) * 0.01; } else { const k = Math.min(1, (p - 1.45) / 0.12); R.bl = [-2.5 + 1.0 * k, 0, -0.5 + 0.35 * k]; R.br = [-2.5 + 1.0 * k, 0, 0.5 - 0.35 * k]; R.cx = 0.28 * k; R.pl = [-0.5 * k, 0, 0.1]; R.pr = [0.45 * k, 0, -0.1]; R.cy = -0.08 * k; R.hx = -0.1; } }
       else if (g === 'pensar') { R.br = [-2.1, 0, 0.75]; R.bl = [-0.6, 0, -0.5]; R.hz = 0.18; R.hy = Math.sin(t * 0.8) * 0.2; R.hx = 0.1; }
       else if (g === 'saltito') { const s2 = Math.abs(Math.sin(t * 9)); R.cy = s2 * 0.26; R.bl = [0, 0, -0.8 - s2 * 0.8]; R.br = [0, 0, 0.8 + s2 * 0.8]; R.pl = [-s2 * 0.4, 0, 0]; R.pr = [-s2 * 0.4, 0, 0]; R.sy = 1 + (1 - s2) * -0.06; }
       else if (g === 'bailar3') { const s = Math.sin(t * 10); R.cy = Math.max(0, s) * 0.22; R.bl = [-2.9, 0, -0.3]; R.br = [-2.9, 0, 0.3]; R.pl = [s * 0.6, 0, 0.2]; R.pr = [-s * 0.6, 0, -0.2]; R.hx = s * 0.15; }

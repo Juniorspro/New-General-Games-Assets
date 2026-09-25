@@ -14,7 +14,7 @@ export class Camara {
     this.yaw = Math.PI; this.pitch = 0.3; this.dist = 5.4; this.distObj = 5.4;
     this.obj = new THREE.Vector3(); this.pos = new THREE.Vector3(); this.mira = new THREE.Vector3();
     this.cine = null; this.kCine = 0;
-    this.sacudida = 0;
+    this.sacudida = 0; this.kSprint = 0; this.fasePaso = 0; this.ladeo = 0;
     this.inicial = true;
     this.fp = false; this.sentado = false; this.bajaFP = 0; this.fase = 0;
   }
@@ -70,7 +70,17 @@ export class Camara {
     this.pos.lerp(desde, s); this.mira.lerp(mira, 1 - Math.exp(-dt * 18));
     this.cam.position.copy(this.pos);
     if (this.sacudida > 0) { this.sacudida -= dt; const q = this.sacudida * 0.15; this.cam.position.x += (Math.random() - 0.5) * q; this.cam.position.y += (Math.random() - 0.5) * q; }
+    /* el sprint (el video de movimiento): corriendo rápido la cámara tiembla con cada
+       paso y se ladea en las curvas; main.js además abre el campo con kSprint */
+    const vel = Math.hypot(jugador.v.x, jugador.v.z), sprint = jugador.modo === 'pie' && jugador.enPiso && vel > 5.5 ? Math.min(1, (vel - 5.5) / 1.8) : 0;
+    this.kSprint += (sprint - this.kSprint) * Math.min(1, dt * 4);
+    this.fasePaso += dt * vel * 1.9;
+    if (this.kSprint > 0.01) { this.cam.position.y += Math.abs(Math.sin(this.fasePaso)) * 0.07 * this.kSprint; this.cam.position.x += Math.sin(this.fasePaso * 0.5) * 0.035 * this.kSprint; }
+    let dr = jugador.rumbo - (this._rumbo ?? jugador.rumbo); while (dr > Math.PI) dr -= Math.PI * 2; while (dr < -Math.PI) dr += Math.PI * 2; this._rumbo = jugador.rumbo;
+    const ladeo = Math.max(-0.14, Math.min(0.14, -(dt > 0 ? dr / dt : 0) * 0.035 * this.kSprint));
+    this.ladeo += (ladeo - this.ladeo) * Math.min(1, dt * 5);
     this.cam.lookAt(this.mira);
+    if (Math.abs(this.ladeo) > 0.001) this.cam.rotateZ(this.ladeo);
   }
   /* primera persona: pitch 0,3 es mirar derecho (igual que la de atrás en reposo) */
   actualizarFP(dt, j) {

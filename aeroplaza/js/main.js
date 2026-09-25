@@ -27,7 +27,8 @@ import { Guardado, miId } from './guardar.js';
 import { t, ponerIdioma } from './textos.js';
 import { UI } from './ui.js';
 import { Red, BROKER } from './red.js';
-import { Remotos } from './remotos.js';
+import { Remotos, RemotePlayer } from './remotos.js';
+import { Efectos } from './efectos.js';
 import { Misiones, NPCS } from './misiones.js';
 import { FRUTAS, Chispas } from './objetos.js';
 import { cargarDelfin } from './delfin.js';
@@ -125,6 +126,7 @@ async function iniciar() {
   const remotos = new Remotos(motor.escena);
   const efectos = new THREE.Group(); motor.escena.add(efectos);
   const chispas = new Chispas(efectos, '#ffffff', 160);
+  const efx = new Efectos(motor.escena);   // los efectos especiales (efectos.js)
   const cuerpoFP = new CuerpoFP(motor.escena);   // los brazos de la primera persona (primera.js)
 
   let tuto = null, estudio = null;
@@ -162,12 +164,19 @@ async function iniciar() {
     probarPuesto(ranura, valor) { const A = { ...G.A, [ranura]: valor }; yo.m.ponerApariencia(A); estudio?.ponerApariencia(A); },
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
-    gesto(g) { yo.m.hacerGesto(g); gestoN++; J.gestoActual = g + '#' + gestoN; setTimeout(() => { if (J.gestoActual && J.gestoActual.endsWith('#' + gestoN)) J.gestoActual = null; }, g === 'sentarse' ? 60000 : 8000); },
+    gesto(g) {
+      /* el poder: el TearDrop adelante del muñeco (con un rato de espera entre uno y otro) */
+      if (g === 'poder') { if (performance.now() - (J._tPoder || -1e9) < 4500) return; J._tPoder = performance.now(); tirarPoder(yo.p, yo.rumbo); J.sfx('restaura'); setTimeout(() => { J.sfx('ola'); J.sfx('pop'); ent.vibrar(60); }, 1550); }
+      yo.m.hacerGesto(g); gestoN++; J.gestoActual = g + '#' + gestoN; setTimeout(() => { if (J.gestoActual && J.gestoActual.endsWith('#' + gestoN)) J.gestoActual = null; }, g === 'sentarse' ? 60000 : 8000); },
     hayCancion(k) { return !!Sonido.grabadas[k]; },
     cancionDesbloqueada(k) { return !!Sonido.grabadas[k] && (k === 'titulo' || k === 'colina' || G.discos.some((d) => DISCO_CANCION[d] === k)); },
     elegirMusica(k) { J.musicaElegida = k; J.musica(k || musicaDelLugar()); },
   };
   const DISCO_CANCION = { 'disco-loma': 'colina', 'disco-lago': 'arrecife', 'disco-hotel': 'ciudad', 'disco-aurora': 'aurora', 'disco-jardin': 'cielo', 'disco-flor': 'titulo', 'disco-faro': 'playa', 'disco-arbol': 'bosque', 'disco-cumbre': 'cielo', 'disco-ciudad': 'ciudad' };
+  /* el TearDrop: a 2,2 m adelante, a la altura del pecho (lo ven todos: va con el gesto) */
+  const tirarPoder = (p, rumbo) => efx.lagrima(new THREE.Vector3(p.x + Math.sin(rumbo) * 2.2, p.y + 1.35, p.z + Math.cos(rumbo) * 2.2), p.y);
+  RemotePlayer.alGesto = (r, g) => { if (g === 'poder' && enJuego) tirarPoder(r.m.raiz.position, r.m.raiz.rotation.y); };
+  J.festejo = () => efx.festejo(yo.p);
   /* la música del lugar: la de la zona de la isla donde está, o la del reino */
   let zona = null, tZona = 0;
   const musicaDelLugar = () => zona?.musica || MUSICA_DE[reino?.id] || reino?.musica || 'colina';
@@ -241,7 +250,7 @@ async function iniciar() {
   function entrarReino(id, o = {}) {
     if (reino) motor.escena.remove(reino.grupo);
     remotos.vaciar();
-    for (const d of disparos) efectos.remove(d.m); disparos.length = 0;
+    for (const d of disparos) efectos.remove(d.m); disparos.length = 0; efx.vaciar();
     reino = construirReino(id, o);
     motor.escena.add(reino.grupo);
     limpiarArboledas();
@@ -601,7 +610,8 @@ async function iniciar() {
     for (const ev of yo.eventos) {
       if (ev === 'salto') J.sfx('salto'); else if (ev === 'doble') { J.sfx('burbuja'); chispas.soltar(yo.p, 8, 2); } else if (ev === 'aterriza') J.sfx('aterriza');
       else if (ev === 'chapuzon' || ev === 'monta') { J.sfx('agua'); chispas.soltar(yo.p.clone().setY(reino.mundo.agua ?? yo.p.y), 16, 3); } else if (ev === 'rebote') { J.sfx('hongo'); const c = yo.pisando?.clave; if (c && c.startsWith('hongo')) contar('hongo', 1, c); }
-      else if (ev === 'desliza') J.sfx('ola'); else if (ev === 'rueda') J.sfx('aterriza'); else if (ev === 'trepa') J.sfx('salto'); else if (ev === 'pared') { J.sfx('hongo'); chispas.soltar(yo.p.clone().setY(yo.p.y + 0.9), 10, 2.5); }
+      else if (ev === 'impacto') { efx.impacto(yo.p.clone(), Math.min(1.6, (yo.golpe - 13) / 7)); J.sfx('pop'); ent.vibrar(45); }
+      else if (ev === 'desliza') J.sfx('ola'); else if (ev === 'valla' || ev === 'subePared') J.sfx('salto'); else if (ev === 'corrPared') { J.sfx('ola'); efx.polvo(yo.p.clone().add(new THREE.Vector3(0, 0.3, 0)), new THREE.Vector3(Math.sin(yo.rumbo), 0, Math.cos(yo.rumbo))); } else if (ev === 'rueda') J.sfx('aterriza'); else if (ev === 'trepa') J.sfx('salto'); else if (ev === 'pared') { J.sfx('hongo'); chispas.soltar(yo.p.clone().setY(yo.p.y + 0.9), 10, 2.5); }
       else if (ev === 'noBaja') UI.avisar(t('tren_espera'), 'azul');
       else if (ev === 'bajaTren') { J.sfx('aterriza'); cam.inicial = true; UI.estadoTren(null); } else if (ev === 'brazada') J.sfx('brazada');
       else if (ev === 'geiser') { J.sfx('ola'); if (yo._enGeiser?.clave) contar('geiser', 1, yo._enGeiser.clave); } else if (ev === 'pop') { J.sfx('pop'); chispas.soltar(yo.p.clone().setY(yo.p.y + 0.8), 20, 3); } else if (ev === 'burbuja') J.sfx('burbuja');
@@ -646,6 +656,8 @@ async function iniciar() {
       if (fin) { chispas.soltar(d.m.position, 10, 2.5); efectos.remove(d.m); disparos.splice(i, 1); }
     }
     chispas.actualizar(dt);
+    /* polvo al deslizarse */
+    if ((yo.estado === 'desliza' || yo.estado === 'corrPared') && Math.random() < dt * 30) efx.polvo(yo.p.clone().add(new THREE.Vector3(0, 0.1, 0)), new THREE.Vector3(Math.sin(yo.rumbo), 0, Math.cos(yo.rumbo)));
     /* lo que hay para juntar */
     if (reino.orbes) for (const i of reino.orbes.actualizar(dt, yo.p)) {
       G.orbes++; J.sfx('gota', { k: (J._racha = ((J._racha || 0) + 1)) }); clearTimeout(J._tRacha); J._tRacha = setTimeout(() => { J._racha = 0; }, 900);
@@ -754,8 +766,11 @@ async function iniciar() {
       const nv = Math.round(voz.nivel * 20) / 20; if (nv !== J._nivelVoz) { J._nivelVoz = nv; UI.estadoVoz(voz.estado, nv); }
     }
     cuerpoFP.actualizar(dt, motor.camara, yo);
+    efx.actualizar(dt, motor.camara, motor.alto * (motor.dpr || 1));
+    motor.pFinal.uniforms.uDestello.value = efx.destello; motor.pFinal.uniforms.uOscuro.value = efx.oscuro;
+    if (efx.sacudida > 0) { cam.sacudida = Math.max(cam.sacudida, efx.sacudida); efx.sacudida = 0; }
     J._tZoom = Math.max(0, (J._tZoom || 0) - dt);
-    const fov = J._tZoom > 0 ? 18 : (motor.alto > motor.ancho ? 72 : 58) + (cam.fp ? 12 : 0), fc = motor.camara;
+    const fov = J._tZoom > 0 ? 18 : (motor.alto > motor.ancho ? 72 : 58) + (cam.fp ? 12 : 0) + cam.kSprint * 7 + (reino.fovExtra || 0), fc = motor.camara;
     if (Math.abs(fc.fov - fov) > 0.05) { fc.fov += (fov - fc.fov) * Math.min(1, dt * 5); fc.updateProjectionMatrix(); }
     /* los árboles de cerca con detalle y los de lejos livianos (naturaleza.js) */
     for (const a of ARBOLEDAS) { let q = a; while (q.parent) q = q.parent; if (q === motor.escena) a.actualizar(dt, motor.camara.position); }
@@ -802,7 +817,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
+  window.__A = { efx, Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {
