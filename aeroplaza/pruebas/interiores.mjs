@@ -192,12 +192,14 @@ r = await pag.evaluate(() => {
   const sillas = A.reino.accionables.filter((a) => /Sentarse/.test(a.texto())); R.sillas = sillas.length;
   const s = sillas[0], c = s.obj.position; T.parar(c.x + 0.9, 0.02, c.z + 0.9); R.silla = T.apuntar(s); T.usar(); T.pasos(30);
   R.sentado = A.J.sentado && A.cam.bajaFP < -0.4 && A.yo.p.distanceTo(c) < 0.2;
-  const m0 = A.J.sonando; T.parar(4.6, 0.02, -2.4); R.rocola = T.apuntar(T.buscar('canción')); T.usar(); R.cancion = A.J.sonando !== m0;
+  /* con canciones cambia de canción; sin canciones (esta versión) avisa que no hay */
+  const m0 = A.J.sonando, hay = Object.keys(A.Sonido.grabadas).length > 0; T.parar(4.6, 0.02, -2.4); R.rocola = T.apuntar(T.buscar('canción')); T.usar();
+  R.cancion = hay ? A.J.sonando !== m0 : [...document.querySelectorAll('.noti')].some((n) => n.textContent.includes('no trae canciones'));
   return R;
 });
 prueba('el café: la cafetera sirve una taza', r.tipo === 'cafe' && r.cafetera && r.taza, JSON.stringify(r));
 prueba('hay 8 sillas y sentarse baja la vista', r.sillas === 8 && r.silla && r.sentado);
-prueba('la rocola cambia la canción', r.rocola && r.cancion);
+prueba('la rocola cambia la canción (o avisa que no hay)', r.rocola && r.cancion);
 await pag.keyboard.down('KeyW'); await pag.evaluate(() => window.__T.pasos(20)); await pag.keyboard.up('KeyW');
 r = await pag.evaluate(() => !window.__A.J.sentado);
 prueba('al caminar se levanta', r);
