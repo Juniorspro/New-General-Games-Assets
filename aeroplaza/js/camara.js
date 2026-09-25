@@ -81,6 +81,7 @@ export class Camara {
     this.ladeo += (ladeo - this.ladeo) * Math.min(1, dt * 5);
     this.cam.lookAt(this.mira);
     if (Math.abs(this.ladeo) > 0.001) this.cam.rotateZ(this.ladeo);
+    if (this.rollExtra) this.cam.rotateZ(this.rollExtra);
   }
   /* primera persona: pitch 0,3 es mirar derecho (igual que la de atrás en reposo) */
   actualizarFP(dt, j) {

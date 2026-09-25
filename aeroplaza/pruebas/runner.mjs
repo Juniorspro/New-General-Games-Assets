@@ -131,16 +131,23 @@ prueba('después se va rompiendo cada vez más', r[25] > 0 && r[55] > r[25] && r
 /* 6. el bot corre el nivel entero */
 r = await pag.evaluate(() => {
   const A = window.__A, R = A.reino, E = R.runner, B = window.__B;
-  R.reiniciar(A.yo); B.log.length = 0; B.activo = true;
-  let n = 0, maxGl = 0; const ev = [];
+  R.reiniciar(A.yo); B.log.length = 0; B.activo = true; A.delirio.reiniciar();
+  let n = 0, maxGl = 0, maxCajas = 0, maxRoll = 0, congelas = 0; const ev = [];
   const E0 = E.eventos;
-  while (n++ < 30 * 75 && E.fase !== 'fin') { A.paso(1 / 30, false); maxGl = Math.max(maxGl, R.glitch); }
+  while (n++ < 30 * 75 && E.fase !== 'fin') { A.paso(1 / 30, false); maxGl = Math.max(maxGl, R.glitch); maxCajas = Math.max(maxCajas, A.delirio.stats.cajas); maxRoll = Math.max(maxRoll, Math.abs(R.camRoll)); if (R.congela > 0) congelas++; }
   B.activo = false;
+  window.__D = { ...A.delirio.stats, maxCajas, maxRoll: +maxRoll.toFixed(3), congelas, figuras: R.figuras.filter((F) => F.ido).length };
   return { fase: E.fase, ok: !!E.fin?.ok, tiempo: +E.tiempo.toFixed(2), prog: +E.prog.toFixed(3), caidas: E.caidas, golpes: E.golpes, maxGl: +maxGl.toFixed(2), saltos: B.log.filter((q) => q[0] === 'salta').length, dobles: B.log.filter((q) => q[0] === 'doble').length, desliza: B.log.filter((q) => q[0] === 'desliza').length, z: +A.yo.p.z.toFixed(0) };
 });
 prueba('el bot llega al portal antes de que termine la canción', r.ok && r.tiempo < 63.5, `${r.tiempo} s de 63,5 · ${r.caidas} caídas · ${r.golpes} golpes · z ${r.z} · ${Math.round(r.prog * 100)}%`);
 prueba('…sin caerse, y usando saltos, dobles y deslizadas', r.caidas === 0 && r.saltos > 10 && r.dobles >= 1 && r.desliza >= 5, `${r.saltos} saltos · ${r.dobles} dobles · ${r.desliza} deslizadas`);
 prueba('…con margen para las tres estrellas (≥ 8 s)', 63.5 - r.tiempo >= 8, `sobran ${(63.5 - r.tiempo).toFixed(1)} s`);
+/* lo extremo (delirio.js), en la misma corrida del bot */
+const D = await pag.evaluate(() => window.__D);
+prueba('lo extremo: los tres sustos, cada uno a su hora', D.sustos === 3, JSON.stringify(D));
+prueba('…palabras gigantes en los golpes (DESPIERTA, WAKE UP…) y alguna de un cuadro', D.palabras >= 10 && D.sublim >= 1, `${D.palabras} palabras · ${D.sublim} subliminales · la última: ${D.ultima}`);
+prueba('…el rastreo sigue las cosas de la pista, y las figuras se deshacen al acercarse', D.maxCajas >= 3 && D.figuras >= 3, `hasta ${D.maxCajas} cajas · ${D.figuras} figuras`);
+prueba('…la cámara pega con los golpes y a veces se congela un cuadro', D.maxRoll > 0.05 && D.congelas >= 2, `ladeo ${D.maxRoll} · ${D.congelas} cuadros congelados`);
 r = await pag.evaluate(() => { const A = window.__A; for (let i = 0; i < 60; i++) A.paso(1 / 30, false); return { gl: A.reino.glitch, hud: !!document.querySelector('.pk-hud.runner') }; });
 prueba('al llegar todo vuelve a ser Frutiger', r.gl < 0.02, `glitch ${r.gl.toFixed(3)}`);
 await pag.waitForTimeout(1800);
@@ -159,13 +166,28 @@ await pag.waitForTimeout(1200);
 r = await pag.evaluate(() => { const v = document.querySelector('.ventana'); return v ? v.textContent.replace(/\s+/g, ' ').slice(0, 100) : ''; });
 prueba('…con su resultado (hasta dónde llegaste)', /%/.test(r), r);
 
+/* 7b. el susto se dibuja (la cara, encima del juego) y con los sustos apagados no hay */
+r = await pag.evaluate(() => {
+  const A = window.__A, R = A.reino, E = R.runner, D = A.delirio, out = {};
+  A.J.runnerReiniciar(); let n = 0; while (E.fase === 'cuenta' && n++ < 200) A.paso(1 / 30, false);
+  E.tiempo = 47.3; for (let i = 0; i < 10; i++) A.paso(1 / 30, true);
+  const c = document.querySelector('canvas.delirio.on'), g = c && c.getContext('2d'), px = g ? g.getImageData(c.width / 2 | 0, c.height / 2 | 0, 1, 1).data : [0, 0, 0, 0];
+  out.si = { sustos: D.stats.sustos, activo: !!D.susto, alfa: px[3], lienzo: !!c };
+  A.G.opciones.sustos = false; A.J.runnerReiniciar(); n = 0; while (E.fase === 'cuenta' && n++ < 200) A.paso(1 / 30, false);
+  E.tiempo = 20.0; for (let i = 0; i < 10; i++) A.paso(1 / 30, true);
+  out.no = { sustos: D.stats.sustos, activo: !!D.susto };
+  A.G.opciones.sustos = true;
+  return out;
+});
+prueba('el susto se dibuja encima del juego, y apagado en Opciones no aparece', r.si.sustos === 1 && r.si.activo && r.si.alfa > 200 && r.no.sustos === 0 && !r.no.activo, JSON.stringify(r));
+
 /* 8. salir vuelve a la Zona de Juegos, delante de la puerta del runner */
 await pag.evaluate(() => window.__A.J.runnerSalir());
 await pag.waitForFunction(() => window.__A.reino.id === 'juegos', null, { timeout: 20000, polling: 100 });
 await pag.waitForTimeout(1400);
 await avanzar(pag, 3);
-r = await pag.evaluate(() => { const A = window.__A, P = A.reino.portales.find((q) => q.destino === 'runner'); return { d: +Math.hypot(A.yo.p.x - P.pos.x, A.yo.p.z - P.pos.z).toFixed(1), gl: A.motor.pFinal.uniforms.uGlitch.value, hud: !!document.querySelector('.pk-hud.runner') }; });
-prueba('salir te deja en la Zona de Juegos, frente a la puerta', r.d < 4 && r.gl === 0 && !r.hud, JSON.stringify(r));
+r = await pag.evaluate(() => { const A = window.__A, P = A.reino.portales.find((q) => q.destino === 'runner'); return { d: +Math.hypot(A.yo.p.x - P.pos.x, A.yo.p.z - P.pos.z).toFixed(1), gl: A.motor.pFinal.uniforms.uGlitch.value, hud: !!document.querySelector('.pk-hud.runner'), delirio: !!document.querySelector('canvas.delirio.on') }; });
+prueba('salir te deja en la Zona de Juegos, frente a la puerta (y sin lo extremo)', r.d < 4 && r.gl === 0 && !r.hud && !r.delirio, JSON.stringify(r));
 
 const errs = errores.filter((e) => !e.includes('ERR_FAILED') && !e.includes('net::'));
 prueba('sin errores en la consola', errs.length === 0, errs.slice(0, 3).join(' | '));

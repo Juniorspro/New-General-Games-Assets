@@ -603,6 +603,7 @@ export const UI = {
         p.appendChild(this.fila(t('op_camara'), this.deslizador(0.3, 2.5, 0.1, O.sensCam, (v) => { O.sensCam = v; J.guardar(); })));
         p.appendChild(this.fila(t('op_invertir'), this.segmentos([[false, t('no')], [true, t('si')]], O.invertirY, (v) => { O.invertirY = v; J.guardar(); })));
         p.appendChild(this.fila(t('op_cam_auto'), this.segmentos([[true, t('si')], [false, t('no')]], O.camAuto !== false, (v) => { O.camAuto = v; J.guardar(); })));
+        p.appendChild(this.fila(t('op_sustos'), this.segmentos([[true, t('si')], [false, t('no')]], O.sustos !== false, (v) => { O.sustos = v; J.guardar(); })));
         p.appendChild(this.fila(t('op_nombres'), this.segmentos([[true, t('si')], [false, t('no')]], O.nombres, (v) => { O.nombres = v; J.guardar(); J.mostrarNombres(); })));
         p.appendChild(this.fila(t('op_reloj'), this.segmentos([[true, t('si')], [false, t('no')]], O.reloj24, (v) => { O.reloj24 = v; J.guardar(); })));
         /* con el celu parado el juego se acuesta solo (sin pantalla completa); para qué lado, o no girarlo */

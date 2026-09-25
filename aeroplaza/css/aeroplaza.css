@@ -701,3 +701,7 @@ html.en-estelario #ui, html.en-estelario #dedos { display: none !important; }
   background: linear-gradient(180deg, rgba(40,70,120,0.85), rgba(10,20,45,0.9)); border: 1px solid rgba(160,210,255,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .estelario .es-lista button { padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(170,215,255,0.25); background: rgba(255,255,255,0.08); color: #e8f2ff; font-size: 13px; cursor: pointer; white-space: nowrap; }
 html.b460 .estelario .es-barra button { min-width: 30px; height: 30px; font-size: 14px; } html.b460 .estelario .es-info { width: min(220px, 40vw); } html.b460 .estelario .es-lista { grid-template-columns: repeat(3, auto); }
+
+/* lo extremo del runner (delirio.js): arriba del juego, debajo de los botones */
+.delirio { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; display: none; }
+.delirio.on { display: block; }

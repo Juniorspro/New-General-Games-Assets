@@ -22,6 +22,7 @@ import { crearInterior } from './reinos/interior.js';
 import { crearTiro, TIRO } from './reinos/tiro.js';
 import { crearJuegos } from './reinos/juegos.js';
 import { crearRunner, RUNNER } from './reinos/runner.js';
+import { Delirio } from './delirio.js';
 import { Jugador } from './jugador.js';
 import { Camara } from './camara.js';
 import { Entrada } from './entrada.js';
@@ -131,6 +132,7 @@ async function iniciar() {
   const efectos = new THREE.Group(); motor.escena.add(efectos);
   const chispas = new Chispas(efectos, '#ffffff', 160);
   const estelario = new Estelario(motor);   // el cielo del telescopio (estelario.js)
+  const delirio = new Delirio(motor);       // lo extremo del runner (delirio.js)
   const efx = new Efectos(motor.escena);   // los efectos especiales (efectos.js)
   const cuerpoFP = new CuerpoFP(motor.escena);   // los brazos de la primera persona (primera.js)
 
@@ -286,7 +288,7 @@ async function iniciar() {
     if (reino.zonaEn) zona = reino.zonaEn(p.x, p.z);
     if (reino.alEntrar) reino.alEntrar(J);
     /* (el runner arranca callado: su canción empieza con el ¡YA!; al salir vuelve la que había) */
-    if (reino.runner) { J.callar(); UI.avisar(t('rn_ayuda'), 'azul'); } else J.musica(J.musicaElegida || musicaDelLugar());
+    if (reino.runner) { J.callar(); UI.avisar(t('rn_ayuda') + (G.opciones.sustos !== false ? ' · ' + t('dl_aviso') : ''), 'azul'); } else J.musica(J.musicaElegida || musicaDelLugar());
     /* (y la cámara más lejos y más baja, para ver lo que viene; al salir vuelve a la de antes) */
     if (reino.runner) { J._distAntes ??= cam.distObj; cam.distObj = 7.2; cam.pitch = 0.2; } else if (J._distAntes != null) { cam.distObj = J._distAntes; J._distAntes = null; }
     /* la sala pública: la casa es de su dueño; el resto, la que tenga gente y lugar */
@@ -503,12 +505,14 @@ async function iniciar() {
 
   /* ---------------------------------------------------------------- el runner (runner.js) */
   G.runner ||= { mejor: 0, estrellas: 0, pct: 0 };
+  delirio.alSusto = () => { cam.sacudida = Math.max(cam.sacudida, 0.6); ent.vibrar(160); };
   J.runnerReiniciar = () => { if (reino?.runner) { reino.reiniciar(yo); UI.cerrarVentana(); J.callar(); cam.detras(0); cam.inicial = true; J.sfx('entra'); } };
   J.runnerSalir = () => volverAJuegos('runner');
   function seguirRunner(dt) {
     const E = reino.runner;
     if (E.fase === 'cuenta') UI.cuenta(String(Math.max(1, Math.ceil(E.cuenta - 0.4))));
     UI.runnerHud(E);
+    if (reino.golpe === 2 && reino.corrupcion > 0.25) { cam.sacudida = Math.max(cam.sacudida, 0.22); ent.vibrar(12); }
     for (const ev of E.eventos.splice(0)) {
       if (ev.tipo === 'ya') { UI.cuenta(t('pk_ya'), true); J.sfx('restaura'); J.musicaDeNuevo('runner'); }
       else if (ev.tipo === 'golpe') { J.sfx('pop'); J.sfx('hongo'); cam.sacudida = Math.max(cam.sacudida, 0.35); efx.chispas(ev.p, { n: 46, vel: 6, vida: 0.55, tam: 0.3, color: '#ff00dc', color2: '#00ffe6', arrastre: 2 }); efx.destelloEn(ev.p, { tam: 3.5, dur: 0.25, color: '#ff4fe8' }); ent.vibrar(40); }
@@ -836,6 +840,7 @@ async function iniciar() {
       motor.escena.environment = J._envSala; motor.escena.environmentIntensity = 0.38;
     }
     if (reino.mar) aguaSigueCielo(reino.mar, cielo);
+    cam.rollExtra = reino.camRoll || 0;   // (el runner: la cámara se ladea con los golpes)
     cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
     /* la voz: el oído va en la cabeza propia, mirando para donde mira la cámara */
     if (voz.activa) {
@@ -878,7 +883,10 @@ async function iniciar() {
     if (G.opciones.retro.ps1) { J._tPS1 = (J._tPS1 || 0) + dt; if (J._tPS1 > 1.5) { J._tPS1 = 0; motor.aplicarPS1(); } }
     if (tuto) seguirTuto(dt, E);
     tHud += dt; if (tHud > 0.25) { tHud = 0; UI.actualizarHud(); }
-    if (dibujar) motor.dibujar(dt);
+    /* el runner a veces congela un par de cuadros (no se dibuja: queda el anterior) y encima va delirio.js */
+    const congela = reino.congela > 0;
+    if (dibujar && !congela) motor.dibujar(dt);
+    delirio.cuadro(dt, reino, motor.camara, dibujar, dibujar && !congela);
   }
 
   /* el tutorial de primeros pasos: un cartel por vez, que se va cuando se hizo */
@@ -897,7 +905,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { efx, estelario, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { efx, estelario, delirio, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

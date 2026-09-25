@@ -178,6 +178,19 @@ const TRAMOS = [
   [50, { hueco: 12, dy: 1, ancho: 16, cosas: [['cubos', 13], ['meta', 40]] }],
 ];
 
+/* la silueta: 3 m, flaca, brazos largos hasta las rodillas (la cabeza va aparte, para que tiemble) */
+function cuerpoFigura() {
+  const P = [];
+  for (const s of [-1, 1]) {
+    P.push(new THREE.CapsuleGeometry(0.085, 1.35, 4, 8).translate(s * 0.13, 0.76, 0));
+    P.push(new THREE.CapsuleGeometry(0.06, 1.5, 4, 8).rotateZ(s * 0.07).translate(s * 0.36, 1.72, 0));
+    P.push(new THREE.SphereGeometry(0.1, 10, 8).translate(s * 0.3, 2.5, 0));
+  }
+  P.push(new THREE.CapsuleGeometry(0.25, 0.85, 4, 12).scale(1, 1, 0.62).translate(0, 1.98, 0));
+  P.push(new THREE.CylinderGeometry(0.07, 0.09, 0.3, 8).translate(0, 2.68, 0));
+  return mergeGeometries(P.map((q) => q.index ? q.toNonIndexed() : q));
+}
+
 export function crearRunner(ctx) {
   const Y0 = 40;
   const mundo = new Mundo(() => -500); mundo.agua = null; mundo.limite = 3000; mundo.gravedad = 21; mundo.corre = RUNNER.vel; mundo.acelAire = 26;
@@ -343,6 +356,19 @@ export function crearRunner(ctx) {
     m.position.set(lado * (10 + r() * 9), Y0 + 3 + r() * 9, zz); m.rotation.y = Math.PI + lado * (0.35 + r() * 0.3); m.renderOrder = 5; m.visible = false; g.add(m);
     errores.push({ m, umbral: 0.3 + (i / 22) * 0.6, base: m.position.clone(), f: r() * 9 });
   }
+  /* las figuras: una silueta negra, alta, de ojos blancos, parada al borde de la pista más
+     adelante (con lo roto ya fuerte); si te acercás se deshace y dice "no mires atrás" */
+  const figuras = [], geoFig = cuerpoFigura(), matFig = new THREE.MeshBasicMaterial({ color: '#000000' });
+  const geoOjos = mergeGeometries([-1, 1].map((s) => new THREE.SphereGeometry(0.05, 8, 6).scale(1, 0.7, 1).translate(s * 0.08, 0, 0.19))), matOjos = new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false });
+  for (const [i, lado] of [[10, 1], [12, -1], [14, 1], [16, -1], [18, 1]]) {
+    const T = tramos[i]; if (!T) continue;
+    const F = new THREE.Group(), cuerpo = new THREE.Mesh(geoFig, matFig), cabeza = new THREE.Group();
+    cabeza.add(new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 10).scale(0.9, 1.25, 0.95), matFig), new THREE.Mesh(geoOjos, matOjos)); cabeza.position.y = 2.92;
+    F.add(cuerpo, cabeza); F.position.set(T.x + lado * (T.w / 2 + 3.2), T.y, T.z0 + (T.z1 - T.z0) * 0.5);
+    /* parada afuera de la pista, en un pedestal negro (así ninguna pared la tapa) */
+    const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.5, 2.4, 10), matFig); ped.position.set(F.position.x, T.y - 1.2, F.position.z); g.add(ped); F.visible = false; g.add(F);
+    figuras.push({ g: F, cabeza, x: F.position.x, y: T.y, z: F.position.z, ido: false, tFin: 0 });
+  }
   /* la lluvia de píxeles (alrededor del jugador) */
   const NP = 140, pix = new THREE.InstancedMesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({ color: '#ffffff' }), NP);
   pix.frustumCulled = false; g.add(pix);
@@ -352,12 +378,14 @@ export function crearRunner(ctx) {
 
   /* ------------------------------------------ el estado */
   const E = { fase: 'cuenta', cuenta: 3.4, tiempo: 0, caidas: 0, golpes: 0, control: inicio.clone(), prog: 0, aturdido: 0, boost: 0, eventos: [], limite: RUNNER.limite, fin: null, largo: largoTotal - inicio.z, restaura: 0 };
-  let tt = 0, pulso = 0, golpeGl = 0, fov = 12, yo = null;
+  let tt = 0, pulso = 0, golpeGl = 0, fov = 12, yo = null, iEnergia = -1, pegada = 0, ladoRoll = 1;
   const tramoEn = (p) => tramos.find((T) => p.z >= T.z0 - 0.5 && p.z <= T.z1 + 0.5 && Math.abs(p.x - T.x) < T.w / 2 + 0.6);
   const R = {
     get reloj() { return tt; },
     id: 'runner', runner: E, mundo, grupo: g, inicio, rumboInicio: 0, musica: 'runner', cielo: { hora: 0.42, arcoiris: 1, aurora: 0, nubes: 1 },
-    orbes: null, discos: [], npcs: [], sinZonas: true, camYaw: Math.PI, fovExtra: 12, glitch: 0, velFx: 0, tramos, obst, aros, largoTotal, meta,
+    orbes: null, discos: [], npcs: [], sinZonas: true, camYaw: Math.PI, fovExtra: 12, glitch: 0, velFx: 0, tramos, obst, aros, largoTotal, meta, figuras,
+    /* para delirio.js y main.js: lo roto, el pulso, los golpes (2 fuerte, 1 mediano), la cámara ladeada y los cuadros congelados */
+    corrupcion: 0, pulsoAct: 0, golpe: 0, camRoll: 0, congela: 0, figura: 0,
     antesDelJugador(dt, y0, Em) {
       yo = y0; tt += dt;
       if (E.fase === 'cuenta') {
@@ -387,9 +415,23 @@ export function crearRunner(ctx) {
       let c = E.fase === 'cuenta' ? 0 : corrupcionEn(tm) * (0.88 + 0.28 * en);
       if (E.fin?.ok) { E.restaura = Math.min(1, E.restaura + dt * 0.9); c *= Math.max(0, 1 - E.restaura * 3); }
       golpeGl = Math.max(0, golpeGl - dt * 2.5);
-      GL.uC.value = Math.min(1, c + golpeGl * 0.35); GL.uPulso.value = pulso;
-      this.glitch = Math.min(0.85, c * 0.22 + pulso * c * 0.5 + golpeGl * 0.7);
-      const fovObj = E.fase === 'corre' ? 12 + (E.boost > 0 ? 12 : 0) + pulso * c * 3 : 4;
+      /* los golpes de la canción (cada 100 ms del análisis): uno fuerte pega en la cámara, a
+         veces congela un par de cuadros (desde el quiebre de los 42 s) y delirio.js dice algo */
+      this.golpe = 0;
+      const iE = Math.floor(tm * 10);
+      if (E.fase === 'corre' && iE !== iEnergia) {
+        const a = energiaEn(tm), b = energiaEn(tm - 0.1);
+        this.golpe = a >= 0.85 && b < 0.85 ? 2 : a >= 0.75 && b < 0.75 ? 1 : 0;
+        iEnergia = iE;
+      }
+      if (this.golpe === 2 && c > 0.22) { pegada = 1; ladoRoll = -ladoRoll; if (tm > 42 && Math.random() < 0.4) this.congela = 0.05 + Math.random() * 0.07; }
+      pegada = Math.max(0, pegada - dt * 3.5);
+      this.congela = Math.max(0, this.congela - dt);
+      this.camRoll = pegada * pegada * 0.13 * ladoRoll + (c > 0.6 ? Math.sin(tt * 1.3) * 0.05 * (c - 0.6) : 0);
+      GL.uC.value = Math.min(1, c + golpeGl * 0.35 + pegada * 0.2 * c); GL.uPulso.value = pulso;
+      this.corrupcion = GL.uC.value; this.pulsoAct = pulso;
+      this.glitch = Math.min(0.9, c * 0.22 + pulso * c * 0.5 + golpeGl * 0.7 + pegada * c * 0.35);
+      const fovObj = E.fase === 'corre' ? 12 + (E.boost > 0 ? 12 : 0) + pulso * c * 3 + pegada * 10 * Math.min(1, c * 2) : 4;
       fov += (fovObj - fov) * Math.min(1, dt * 4); this.fovExtra = fov;
       this.velFx = E.fase === 'corre' ? Math.min(1, 0.22 + (E.boost > 0 ? 0.75 : 0) + c * 0.15) : 0;
       /* ---- el avance, los controles y las caídas */
@@ -444,6 +486,21 @@ export function crearRunner(ctx) {
         W.m.visible = ve && !(pulso > 0.7 && Math.sin(W.f + tt * 30) > 0.3);
         if (ve) { const k = Math.floor(tt * 10 + W.f); W.m.position.set(W.base.x + (k % 3 === 0 ? (Math.sin(k) * 0.8) : 0), W.base.y + Math.sin(tt + W.f) * 0.3, W.base.z); }
       }
+      for (const F of figuras) {
+        const dz = F.z - jp.z;
+        if (F.tFin > 0) {
+          F.tFin -= dt; F.g.visible = F.tFin > 0 && Math.floor(F.tFin * 40) % 2 === 0;
+          F.g.scale.set(1 + (Math.random() - 0.5) * 1.4, 1 + Math.random() * 0.5, 1); F.g.position.x = F.x + (Math.random() - 0.5) * 0.8;
+          continue;
+        }
+        const ve = !F.ido && C > 0.35 && dz > 14 && dz < 150;
+        if (!F.ido && F.visto && dz <= 14 && dz > -3) { F.ido = true; F.tFin = 0.28; this.figura = 1; chispas.soltar(F.g.position.clone().setY(F.y + 2), 30, 4); continue; }
+        F.g.visible = ve && !(pulso > 0.7 && Math.random() < 0.35);
+        if (ve) {
+          F.visto = true; F.g.rotation.y = Math.atan2(jp.x - F.x, jp.z - F.z); F.g.scale.set(1, 1 + pulso * 0.12, 1); F.g.position.x = F.x;
+          if (pulso > 0.6) F.cabeza.rotation.set((Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.9);
+        }
+      }
       pix.visible = C > 0.45;
       if (pix.visible) {
         const n = Math.floor(NP * Math.min(1, (C - 0.45) * 2.2));
@@ -455,11 +512,23 @@ export function crearRunner(ctx) {
         pix.instanceMatrix.needsUpdate = true;
       }
     },
+    /* delirio.js: lo que sigue el rastreo (ordenado por z) */
+    rastreables() {
+      const L = [], nom = { valla: 'fence', puerta: 'gate', muro: 'wall', cubo: 'cube' };
+      obst.forEach((O, i) => { if (O.malla.visible) L.push({ x: O.malla.position.x, y: O.malla.position.y, z: O.z, tipo: nom[O.tipo] || 'obj', id: i }); });
+      aros.forEach((A, i) => L.push({ x: A.x, y: A.y + 2.1, z: A.z, tipo: 'ring', id: i }));
+      errores.forEach((W, i) => { if (W.m.visible) L.push({ x: W.m.position.x, y: W.m.position.y, z: W.m.position.z, tipo: 'err', id: i }); });
+      figuras.forEach((F, i) => { if (F.g.visible) L.push({ x: F.x, y: F.y + 2.3, z: F.z, tipo: 'fig', id: i, raro: true }); });
+      if (meta) L.push({ x: meta.p.x, y: meta.p.y + 4.4, z: meta.p.z, tipo: 'exit', id: 0 });
+      return L.sort((a, b) => a.z - b.z);
+    },
     /* main.js: volver al último control después de caerse */
     reaparecer(y0) { E.caidas++; y0.ponerEn(E.control.clone(), 0); golpeGl = 0.8; chispas.soltar(y0.p.clone().setY(y0.p.y + 1), 24, 3); },
     reiniciar(y0) {
       Object.assign(E, { fase: 'cuenta', cuenta: 3.4, tiempo: 0, caidas: 0, golpes: 0, prog: 0, aturdido: 0, boost: 0, fin: null, restaura: 0 });
       E.control.copy(inicio); for (const A of aros) A.usado = false; for (const O of obst) { O.tGhost = 0; O.malla.visible = true; }
+      for (const F of figuras) { F.ido = false; F.visto = false; F.tFin = 0; F.g.visible = false; F.g.scale.set(1, 1, 1); F.g.position.x = F.x; }
+      pegada = 0; this.congela = 0; this.camRoll = 0; iEnergia = -1;
       golpeGl = 0; if (y0) y0.ponerEn(inicio, 0);
     },
   };
