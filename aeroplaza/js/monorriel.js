@@ -100,7 +100,8 @@ export class Monorriel {
     /* donde la viga pasa baja (las rampas de la terminal) choca y se puede caminar arriba */
     for (let i = 0; i < N; i += 2) {
       const p = P[i], suelo = altura(p.x, p.z);
-      if (p.y - suelo > 4.2 || enTerminal(p) < 22) continue;
+      /* (adentro de la terminal no: ahí va por el foso; afuera sí, también en la rampa de al lado, que antes se cruzaba) */
+      if (p.y - suelo > 4.2 || enTerminal(p) < 0.5) continue;
       mundo.caja(p.x, p.z, 0.45, PASO * 1.1, suelo - 1, p.y, Math.atan2(T[i].x, T[i].z));
     }
   }

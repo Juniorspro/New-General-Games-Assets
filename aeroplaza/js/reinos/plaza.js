@@ -418,6 +418,8 @@ export function crearPlaza(ctx) {
     for (const s of [-1, 1]) mundo.caja(x + W / 2 - 0.5, z + s * (3.8 + (Lg / 2 - 3.8) / 2), 0.25, (Lg / 2 - 3.8) / 2, yT + HA, yT + HA + 3.4, 0);
     for (const [ex, eh] of U.escalones) mundo.caja(x + ex, z, 0.31, 4, yT - 1, yT + eh, 0, { tipo: 'piedra' });
     mundo.cilindro(x - 8.4, z + 8, 1.45, yT + HA, yT + HA + 1.2);
+    /* las puntas del foso de la vía, cerradas: por arriba de la viga se entraba caminando al foso */
+    for (const s of [-1, 1]) mundo.caja(x, z + s * (Lg / 2 + 0.3), 1.72, 0.3, yT - 1, yT + HA + 3, 0);
   }
   const reloj = { h: term.userData.agujaH, m: term.userData.agujaM };
   /* el cartel del mapa (se dibuja cuando está la vía) */
