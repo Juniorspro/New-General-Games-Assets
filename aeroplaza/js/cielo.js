@@ -230,7 +230,7 @@ export class Cielo {
     this.domo.position.copy(this.motor.camara.position);
     /* el mapa de reflejos: se rehace cada tanto (cuesta un cubo chico) */
     this.tRefl += dt;
-    if (this.tRefl > 8) {
+    if (this.tRefl > (this.motor.Q.refl || 8)) {   // (en las calidades bajas, mucho menos seguido: cuesta un cubo y su desenfoque)
       this.tRefl = 0;
       this.pisoRefl.material.color.set('#5fb04a').multiplyScalar(0.15 + dia * 0.85);
       const nuevo = this.pmrem.fromScene(this.escenaRefl, 0.02);

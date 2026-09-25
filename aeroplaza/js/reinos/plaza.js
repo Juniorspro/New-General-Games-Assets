@@ -300,7 +300,7 @@ export function crearPlaza(ctx) {
   const mundo = new Mundo(A); mundo.agua = 0; mundo.limite = 292;
   const g = new THREE.Group();
   const Q = ctx.calidad;
-  g.add(terreno(A, { tam: 580, seg: Q.pasto > 0.5 ? 320 : 220, color: colorSuelo, apretar: 0.45 }));
+  g.add(terreno(A, { tam: 580, seg: Q.pasto > 0.5 ? 320 : Q.pasto > 0 ? 220 : 150, color: colorSuelo, apretar: 0.45 }));
   const mar = agua(0, A, { rect: [-290, -290, 580] }); g.add(mar);
   g.add(pasto(A, hayPasto, { n: Math.round(16000 * Q.pasto), area: [-245, -245, 490] }));
   g.add(flores(A, (x, z) => hayPasto(x, z) && R2(x * 0.06 + 3, z * 0.06) > 0.1, { n: Math.round(2600 * Math.max(0.4, Q.pasto)), area: [-230, -230, 460] }));

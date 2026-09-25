@@ -78,7 +78,7 @@ export const UI = {
     /* los sonidos de la interfaz: pasar por encima y elegir */
     this.raiz.addEventListener('pointerover', (e) => { const b = e.target.closest('button'); if (b && b !== this._ult) { this._ult = b; J.sfx('mover'); } });
     this.raiz.addEventListener('click', (e) => { if (e.target.closest('button')) J.sfx('elegir'); });
-    document.body.classList.toggle('calidadBaja', J.G.opciones.calidad === 'baja');
+    this.calidadBaja();
     /* el cartel de "cargando" que trae el HTML (por si el visor no corre JavaScript) ya no hace falta */
     document.getElementById('precarga')?.remove();
   },
@@ -577,6 +577,8 @@ export const UI = {
     c.ir = ir; setTimeout(() => ir(inicial), 0);
     return c;
   },
+  /* en baja y mínima la interfaz va sin vidrio esmerilado (backdrop-filter cuesta mucho en un celu flojo) */
+  calidadBaja() { const q = this.J.motor?.nombreCalidad || this.J.G.opciones.calidad; document.body.classList.toggle('calidadBaja', q === 'baja' || q === 'minima'); },
   fila(etiqueta, control) { const f = el('<div class="op"><span></span></div>'); f.firstElementChild.textContent = etiqueta; f.appendChild(control); return f; },
   deslizador(min, max, paso, valor, alMover) { const i = el(`<input type="range" min="${min}" max="${max}" step="${paso}" value="${valor}">`); i.oninput = () => alMover(+i.value); return i; },
   opciones(volver, pest = 'sonido') {
@@ -592,7 +594,7 @@ export const UI = {
       }],
       ['imagen', '🖥️', t('op_t_imagen'), (p) => {
         p.appendChild(this.fila(t('op_anim'), this.segmentos(['suave', 'lineal', 'chop'].map((q) => [q, t('anim_' + q)]), O.animEstilo || 'suave', (q) => { O.animEstilo = q; J.ponerAnim(q); J.guardar(); })));
-        p.appendChild(this.fila(t('op_calidad'), this.segmentos(['auto', 'alta', 'media', 'baja'].map((q) => [q, t('cal_' + q)]), O.calidad, (q) => { O.calidad = q; J.ponerCalidad(q); J.guardar(); document.body.classList.toggle('calidadBaja', q === 'baja'); })));
+        p.appendChild(this.fila(t('op_calidad'), this.segmentos(['auto', 'alta', 'media', 'baja', 'minima'].map((q) => [q, t('cal_' + q)]), O.calidad, (q) => { O.calidad = q; J.ponerCalidad(q); J.guardar(); this.calidadBaja(); })));
         const ap = el('<div class="aparato"><i>🔎</i><div><b></b><small></small></div></div>');
         $('b', ap).textContent = t('op_aparato', { q: t('cal_' + (A.calidad || 'media')) });
         $('small', ap).textContent = [A.gpu || '?', A.mem ? A.mem + ' GB' : '', A.nucleos ? A.nucleos + ' ' + t('op_nucleos') : '', A.tactil ? '✋' : '🖱️'].filter(Boolean).join(' · ');

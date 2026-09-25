@@ -16,6 +16,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { brilloso, materialVidrio, conBorde, conViento, conMeceo, UNI } from './naturaleza.js';
 import { azar } from './mundo.js';
 import { t } from './textos.js';
+import { DETALLE } from './detalle.js';
 
 const TAU = Math.PI * 2;
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -152,9 +153,11 @@ const CACHE = {};
 const M = (k) => CACHE[k] || (CACHE[k] = HACER[k]());
 
 /* ------------------------------------------------------------- geometría */
-const caja = (w, h, d, r = 0.08, seg = 3) => new RoundedBoxGeometry(w, h, d, seg, Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3));
-const cil = (r, h, seg = 12, r2 = r) => new THREE.CylinderGeometry(r2, r, h, seg);
-const esfera = (r, ws = 16, hs = 12) => new THREE.SphereGeometry(r, ws, hs);
+/* (el detalle depende de la calidad al armar: detalle.js › DETALLE.seg y .curvas) */
+const caja = (w, h, d, r = 0.08, seg = 3) => new RoundedBoxGeometry(w, h, d, Math.max(1, Math.min(seg, DETALLE.seg)), Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3));
+const curva = (n, min) => Math.max(Math.min(n, min), Math.round(n * DETALLE.curvas));
+const cil = (r, h, seg = 12, r2 = r) => new THREE.CylinderGeometry(r2, r, h, curva(seg, 6));
+const esfera = (r, ws = 16, hs = 12) => new THREE.SphereGeometry(r, curva(ws, 8), curva(hs, 6));
 /* un torno: perfil [[radio, alto], …] de abajo hacia arriba */
 const torno = (perfil, seg = 40) => new THREE.LatheGeometry(perfil.map(([r, y]) => new THREE.Vector2(r, y)), seg);
 const tubo = (pts, r, seg = 40, radial = 8, cerrado = false) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map((p) => V3(...p)), cerrado), seg, r, radial, cerrado);

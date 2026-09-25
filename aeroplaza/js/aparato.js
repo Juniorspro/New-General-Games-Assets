@@ -20,7 +20,7 @@ export function detectarAparato(r) {
   const dpr = devicePixelRatio || 1, pixeles = (screen.width || innerWidth) * (screen.height || innerHeight) * dpr * dpr;
   const A = { gpu, mem, nucleos, dpr: +dpr.toFixed(2), tactil: TACTIL, pixeles: Math.round(pixeles), puntos: 0, calidad: 'media' };
   /* por software (sin placa): lo más liviano, siempre */
-  if (/swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic/.test(g)) return { ...A, calidad: 'baja', motivo: 'software' };
+  if (/swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic/.test(g)) return { ...A, calidad: 'minima', motivo: 'software' };
   let p = 0;
   const num = (re) => { const m = g.match(re); return m ? +m[1] : 0; };
   if (/nvidia|geforce|quadro|rtx|gtx/.test(g)) p += 3;
@@ -38,6 +38,7 @@ export function detectarAparato(r) {
   if (pixeles > 9e6) p -= 1;
   if (maxTex < 8192) p -= 1;
   A.puntos = p;
-  A.calidad = p >= 4 ? 'alta' : p >= 1 ? 'media' : 'baja';
+  /* (26/09) los más flojos (placa vieja, 2 GB, 4 núcleos) arrancan en mínima: sin posproceso ni brillos */
+  A.calidad = p >= 4 ? 'alta' : p >= 1 ? 'media' : p >= -1 ? 'baja' : 'minima';
   return A;
 }

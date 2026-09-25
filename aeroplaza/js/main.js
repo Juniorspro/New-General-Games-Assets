@@ -23,6 +23,8 @@ import { crearTiro, TIRO } from './reinos/tiro.js';
 import { crearJuegos } from './reinos/juegos.js';
 import { crearRunner, RUNNER } from './reinos/runner.js';
 import { Delirio } from './delirio.js';
+import { Detalle } from './detalle.js';
+import { ORDEN_CALIDAD } from './motor.js';
 import { Jugador } from './jugador.js';
 import { Camara } from './camara.js';
 import { Entrada } from './entrada.js';
@@ -118,7 +120,7 @@ async function iniciar() {
   addEventListener('error', (ev) => { if (ev.error) mostrarError(ev.error); });
   addEventListener('unhandledrejection', (ev) => mostrarError(ev.reason));
   /* si la placa se reinicia (pasa en celulares con poca memoria), se vuelve en calidad baja */
-  motor.lienzo.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); G.opciones.calidad = 'baja'; Guardado.ya(); fatal(t('contexto_perdido'), () => location.reload()); });
+  motor.lienzo.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); G.opciones.calidad = 'minima'; Guardado.ya(); fatal(t('contexto_perdido'), () => location.reload()); });
   /* qué aparato es: de ahí sale la calidad con la que arranca la automática */
   const aparato = detectarAparato(motor.r);
   const cielo = new Cielo(motor, TEX.cielo || null);
@@ -133,6 +135,7 @@ async function iniciar() {
   const chispas = new Chispas(efectos, '#ffffff', 160);
   const estelario = new Estelario(motor);   // el cielo del telescopio (estelario.js)
   const delirio = new Delirio(motor);       // lo extremo del runner (delirio.js)
+  const detalle = new Detalle(motor);       // lo que no se dibuja de lejos (detalle.js)
   const efx = new Efectos(motor.escena);   // los efectos especiales (efectos.js)
   const cuerpoFP = new CuerpoFP(motor.escena);   // los brazos de la primera persona (primera.js)
 
@@ -145,7 +148,7 @@ async function iniciar() {
 
   /* ---------------------------------------------------------------- el J que usa la interfaz */
   const J = {
-    G, id: ID, red, remotos, voz, ent, misiones: Misiones, slot: 1, musicaElegida: null, aparato,
+    G, id: ID, red, remotos, voz, ent, misiones: Misiones, slot: 1, musicaElegida: null, aparato, motor,
     get yo() { return yo; }, get enJuego() { return enJuego; },
     /* el 'aviso' de siempre ahora es la campanita estilo Windows 7 (timbres.js) */
     sfx(n, o) { try { if (n === 'aviso' && Sonido.ctx?.state === 'running') { timbre('info'); return; } Sonido.sfx(n, o); } catch { /* sin audio */ } },
@@ -270,6 +273,8 @@ async function iniciar() {
     motor.escena.add(reino.grupo);
     limpiarArboledas();
     motor.aplicarPS1(reino.grupo);
+    motor.simplificar(); motor.ajustarShaders();   // (toda la escena: también el muñeco propio y los de los demás)
+    detalle.preparar(reino);
     cielo.ponerModo(reino.cielo || {});
     if (Q.has('hora') && reino.cielo?.hora == null) cielo.ponerModo({ ...(reino.cielo || {}), hora: +Q.get('hora') });
     cielo.sol.intensity = 0;
@@ -309,20 +314,24 @@ async function iniciar() {
     pausado = true; J.sfx('entra');
     await new Promise((r) => setTimeout(r, 380));
     entrarReino(id, o);
-    await new Promise((r) => setTimeout(r, 900));
+    /* (mientras está la pantalla del viaje se compilan los shaders nuevos, sin trabar) */
+    await Promise.all([new Promise((r) => setTimeout(r, 900)), Q.has('pausa') ? null : motor.precompilar(6000)]);
     pausado = false; pant.cerrar();
   }
 
   /* ---------------------------------------------------------------- empezar y salir */
   function empezarJuego(id = 'plaza', o = {}) {
     UI.cargando();
-    setTimeout(() => {
+    setTimeout(async () => {
      try {
       if (!yo) yo = new Jugador(motor.escena, G.A, G.nombre);
       yo.m.ponerApariencia(G.A); yo.m.ponerNombre(G.nombre, true);
       entrarReino(Q.get('reino') || id, { nivel: +Q.get('nivel') || 0 });
       if (Q.has('x')) yo.p.set(+Q.get('x'), Q.has('y') ? +Q.get('y') : reino.mundo.altura(+Q.get('x'), +Q.get('z')) + 0.1, +Q.get('z'));
       if (Q.has('yaw')) cam.yaw = +Q.get('yaw'); if (Q.has('pitch')) cam.pitch = +Q.get('pitch'); if (Q.has('dist')) cam.dist = cam.distObj = +Q.get('dist');
+      /* los shaders se compilan con la pantalla de carga puesta (sin trabar la página: antes el
+         primer cuadro compilaba 60 de golpe y en un celu flojo parecía colgado) */
+      if (!Q.has('pausa')) { cam.actualizar(0, yo, reino.interior ? null : reino.mundo); await motor.precompilar(); }
       enJuego = true; pausado = false;
       UI.juego();
       ent.mostrarDedos(true);
@@ -331,7 +340,7 @@ async function iniciar() {
      } catch (e) {
       /* si armar el reino falla (poca memoria, placa rara), se reintenta una vez en calidad baja */
       console.error(e);
-      if (!J._reintento) { J._reintento = true; motor.ponerCalidad('baja'); for (const k in cache) delete cache[k]; reino = null; empezarJuego(id, o); }
+      if (!J._reintento) { J._reintento = true; motor.ponerCalidad('minima'); for (const k in cache) delete cache[k]; reino = null; empezarJuego(id, o); }
       else { mostrarError(e); UI.menu(); }
      }
     }, 60);
@@ -867,20 +876,24 @@ async function iniciar() {
     cielo.bajoAgua = bajo;
     if (bajo !== J._bajo) { J._bajo = bajo; try { Sonido.agua(bajo); } catch { /* nada */ } motor.escena.fog.near = bajo ? 2 : 140; motor.escena.fog.far = bajo ? 45 : 950; }
     if (bajo) motor.escena.fog.color.set('#1a8fc0');
+    detalle.actualizar(dt, motor.camara, motor.Q, bajo);
     /* la calidad automática: se miden 60 cuadros de verdad (no el dt recortado) y se sube o baja */
     if (midiendo && G.opciones.calidad === 'auto' && !Q.has('calidad')) {
       tMedir += dt; if (tMedir > 1.5 && J.dtReal) { cuadros++; sumaDt += Math.min(0.25, J.dtReal); }
       if (cuadros >= 60) {
         const ms = sumaDt / cuadros * 1000, q = motor.nombreCalidad; cuadros = 0; sumaDt = 0; tMedir = 0.5;
-        if (ms > 30 && q !== 'baja') { motor.ponerCalidad(q === 'alta' ? 'media' : 'baja'); UI.avisar(t('subio_calidad', { n: t('cal_' + motor.nombreCalidad) })); }
+        /* (26/09: también de baja a mínima, que va sin posproceso ni brillos) */
+        if (ms > 30 && q !== 'minima') { motor.ponerCalidad(ORDEN_CALIDAD[ORDEN_CALIDAD.indexOf(q) + 1] || 'minima'); UI.calidadBaja(); UI.avisar(t('subio_calidad', { n: t('cal_' + motor.nombreCalidad) })); }
         else if (ms > 45 && !G.opciones.retro.pix) { UI.avisar(t('lento_pixel'), 'azul'); midiendo = false; }
         /* si anda sobrado se sube un escalón (una sola vez; en el celu, solo de baja a media) */
-        else if (ms < 13 && q !== 'alta' && !J._subio && aparato.motivo !== 'software' && (!TACTIL || q === 'baja')) { J._subio = true; motor.ponerCalidad(q === 'baja' ? 'media' : 'alta'); UI.avisar(t('subio_calidad', { n: t('cal_' + motor.nombreCalidad) })); }
+        else if (ms < 13 && q !== 'alta' && !J._subio && aparato.motivo !== 'software' && (!TACTIL || q === 'baja' || q === 'minima')) { J._subio = true; motor.ponerCalidad(ORDEN_CALIDAD[ORDEN_CALIDAD.indexOf(q) - 1] || 'media'); UI.calidadBaja(); UI.avisar(t('subio_calidad', { n: t('cal_' + motor.nombreCalidad) })); }
         else midiendo = false;
       }
     }
     /* los materiales nuevos (gente que llega, ropa nueva) también tiemblan en PS1 */
     if (G.opciones.retro.ps1) { J._tPS1 = (J._tPS1 || 0) + dt; if (J._tPS1 > 1.5) { J._tPS1 = 0; motor.aplicarPS1(); } }
+    /* (y en mínima, lo nuevo también va sin barniz) */
+    if (motor.Q.simple) { J._tSim = (J._tSim || 0) + dt; if (J._tSim > 2.5) { J._tSim = 0; motor.simplificar(); motor.ajustarShaders(); } }
     if (tuto) seguirTuto(dt, E);
     tHud += dt; if (tHud > 0.25) { tHud = 0; UI.actualizarHud(); }
     /* el runner a veces congela un par de cuadros (no se dibuja: queda el anterior) y encima va delirio.js */
@@ -905,7 +918,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { efx, estelario, delirio, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

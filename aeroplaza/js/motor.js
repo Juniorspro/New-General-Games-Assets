@@ -13,6 +13,7 @@
    ========================================================================== */
 import * as THREE from 'three';
 import { Pantalla } from './pantalla.js';
+import { DETALLE } from './detalle.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -21,11 +22,19 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 export const TACTIL = typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window);
 export const CALIDADES = {
-  /* escala: fracción de los píxeles de la pantalla; sombra: lado del mapa (0 = sin sombras) */
-  alta: { escala: 1, dprMax: TACTIL ? 1.5 : 2, bloom: true, sombra: 2048, msaa: TACTIL ? 0 : 4, pasto: 1 },
-  media: { escala: 0.85, dprMax: 1.25, bloom: true, sombra: 1024, msaa: 0, pasto: 0.55 },
-  baja: { escala: 0.7, dprMax: 1, bloom: false, sombra: 0, msaa: 0, pasto: 0.25 },
+  /* escala: fracción de los píxeles de la pantalla; sombra: lado del mapa (0 = sin sombras);
+     lejos: hasta dónde se dibuja (y ahí termina la niebla, detalle.js); arbolCerca: hasta dónde
+     los árboles van con todo el detalle; burbujas: qué parte de las burbujas que suben;
+     refl: cada cuántos segundos se rehace el mapa de reflejos (cielo.js);
+     directo: sin la cadena de efectos (se dibuja derecho a la pantalla, sin brillo ni
+     posproceso); simple: sin barniz ni tornasol en los materiales (motor.simplificar) */
+  alta: { escala: 1, dprMax: TACTIL ? 1.5 : 2, bloom: true, sombra: 2048, msaa: TACTIL ? 0 : 4, pasto: 1, lejos: Infinity, arbolCerca: Infinity, burbujas: 1, refl: 8, seg: 3, curvas: 1 },
+  media: { escala: 0.85, dprMax: 1.25, bloom: true, sombra: 1024, msaa: 0, pasto: 0.55, lejos: 300, arbolCerca: 45, burbujas: 1, refl: 12, seg: 3, curvas: 1 },
+  baja: { escala: 0.7, dprMax: 1, bloom: false, sombra: 0, msaa: 0, pasto: 0.25, lejos: 170, arbolCerca: 30, burbujas: 0.6, refl: 20, seg: 2, curvas: 0.75 },
+  /* (26/09: "quitá sombras, brillos, etc., para todos los celulares") */
+  minima: { escala: 0.6, dprMax: 1, bloom: false, sombra: 0, msaa: 0, pasto: 0, lejos: 95, arbolCerca: 18, burbujas: 0.3, refl: 60, seg: 1, curvas: 0.5, directo: true, simple: true },
 };
+export const ORDEN_CALIDAD = ['alta', 'media', 'baja', 'minima'];
 /* las líneas de cada nivel de pixelado */
 export const ALTOS_PIXEL = [0, 360, 270, 200, 144];
 export const ESTILOS = {
@@ -155,6 +164,9 @@ export class Motor {
     r.toneMappingExposure = 1.0;
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFShadowMap;   // el blando ya no existe en esta versión de three
+    /* revisar cada shader después de compilarlo (getShaderInfoLog) frena la carga: en SwiftShader
+       eran 9 de los 14 s. Se revisa solo con ?depurar */
+    r.debug.checkShaderErrors = /[?&]depurar/.test(location.search);
     this.escena = new THREE.Scene();
     this.camara = new THREE.PerspectiveCamera(60, 1, 0.1, 2400);
     this.nombreCalidad = 'alta';
@@ -180,12 +192,16 @@ export class Motor {
     this.cadena.addPass(this.pFinal);
   }
   ponerCalidad(nombre) {
+    if (!CALIDADES[nombre]) nombre = 'media';
     const antes = CALIDADES[this.nombreCalidad];
     this.nombreCalidad = nombre;
     const Q = this.Q = CALIDADES[nombre];
     if (antes && (this.retro.pix ? 0 : Q.msaa) !== this.msaa) { this.cadena.dispose(); this.armarCadena(); }
     this.pBloom.enabled = Q.bloom;
     this.r.shadowMap.enabled = true;
+    if (!!(antes && antes.simple) !== !!Q.simple) this.simplificar();
+    /* lo que se lee al armar y al dibujar (detalle.js) */
+    Object.assign(DETALLE, { lejos: Q.lejos, cerca: Q.arbolCerca, burbujas: Q.burbujas, seg: Q.seg, curvas: Q.curvas });
     /* en baja no hay sombras: sin la pasada de sombras se dibuja casi la mitad (apagarlas en la luz hace que three recompile solo) */
     if (this.sol) { this.sol.castShadow = Q.sombra > 0; if (Q.sombra) this.sol.shadow.mapSize.set(Q.sombra, Q.sombra); if (this.sol.shadow.map) { this.sol.shadow.map.dispose(); this.sol.shadow.map = null; } }
     this.medir();
@@ -241,9 +257,52 @@ export class Motor {
       }
     });
   }
+  /* la cadena de efectos hace falta si hay algún estilo retro; en mínima, si no, se dibuja derecho */
+  get usaCadena() { const R = this.retro; return !this.Q.directo || !!(R.pix || R.trama || R.niveles || R.barrido || R.tubo || R.aberracion || R.paleta || R.vhs); }
   dibujar(dt) {
     this.t += dt;
     this.pFinal.uniforms.uT.value = this.t;
-    this.cadena.render(dt);
+    if (this.usaCadena) this.cadena.render(dt);
+    else { this.r.setRenderTarget(null); this.r.render(this.escena, this.camara); }
+  }
+  /* compila los shaders del lugar antes del primer cuadro, sin trabar la página (con
+     KHR_parallel_shader_compile, donde lo haya). Tope: si tarda más, sigue igual */
+  async precompilar(tope = 9000) {
+    try {
+      const rt = this.usaCadena ? this.cadena.readBuffer : null;
+      this.r.setRenderTarget(rt);
+      const p = this.r.compileAsync(this.escena, this.camara);
+      this.r.setRenderTarget(null);
+      await Promise.race([p, new Promise((ok) => setTimeout(ok, tope))]);
+    } catch { /* se compila al dibujar, como siempre */ }
+  }
+  /* los ShaderMaterial propios (cielo, mar, burbujas…) escriben el color lineal y lo pasaba a
+     sRGB la última pasada de la cadena. Dibujando derecho (mínima) hace falta que lo hagan ellos:
+     se les agrega al final el tonemapping y el espacio de color, que hacia la cadena no hacen
+     nada (con destino intermedio three los define como lineales) */
+  ajustarShaders(raiz = this.escena) {
+    raiz.traverse((o) => {
+      const m = o.material; if (!m || !m.isShaderMaterial || m.isRawShaderMaterial || m.userData._salida) return;
+      m.userData._salida = true;
+      const f = m.fragmentShader;
+      if (!f || /colorspace_fragment|linearToOutputTexel/.test(f)) return;
+      const k = f.lastIndexOf('}'); if (k < 0) return;
+      m.fragmentShader = f.slice(0, k) + '\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n' + f.slice(k);
+      m.needsUpdate = true;
+    });
+  }
+  /* mínima: sin barniz, tornasol ni brillo de tela en los materiales (lo más caro del Aero en un
+     celu flojo); al salir de mínima vuelven. Se llama al entrar a un lugar y cada tanto (la gente nueva) */
+  simplificar(raiz = this.escena) {
+    const si = !!this.Q.simple;
+    raiz.traverse((o) => {
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of ms) {
+        if (!m.isMeshPhysicalMaterial) continue;
+        const u = m.userData;
+        if (si && !u._orig) { u._orig = { clearcoat: m.clearcoat, iridescence: m.iridescence, sheen: m.sheen, transmission: m.transmission }; if (m.clearcoat || m.iridescence || m.sheen || m.transmission) { m.clearcoat = 0; m.iridescence = 0; m.sheen = 0; m.transmission = 0; m.needsUpdate = true; } }
+        else if (!si && u._orig) { Object.assign(m, u._orig); delete u._orig; m.needsUpdate = true; }
+      }
+    });
   }
 }

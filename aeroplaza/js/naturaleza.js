@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { instancias } from './modelos.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { azar } from './mundo.js';
+import { DETALLE } from './detalle.js';
 
 export const TEX = {};            // las texturas de Rezona que haya (las carga main.js)
 export const RELOJ = { t: 0 };     // el tiempo para los shaders (lo avanza main.js)
@@ -384,6 +385,7 @@ export function conMeceo(m, { fuerza = 1, alto = 5, tiembla = 0, aleteo = 0, pun
 export class Arboleda extends THREE.Group {
   constructor(altura, lugares, { cerca = 'arbol', lejos = 'arbolLejos', alto = 5.4, hundir = 0.15, tintes = null, dist = 75 } = {}) {
     super();
+    this.isArboleda = true;   // (detalle.js no le toca las instancias: las maneja ella)
     this.dist = dist; this.t = 9;
     this.L = lugares.map(([x, z, esc = 1, rot], i) => [x, altura(x, z) - hundir, z, esc, rot ?? i * 2.4]);
     this.col = tintes ? this.L.map((_, i) => new THREE.Color(tintes[i % tintes.length])) : null;
@@ -403,9 +405,12 @@ export class Arboleda extends THREE.Group {
   actualizar(dt, p, forzar = false) {
     if (!this.mC || !this.mL.length) return;
     this.t += dt; if (this.t < 0.5 && !forzar) return; this.t = 0;
-    let nC = 0, nL = 0; const d2 = this.dist * this.dist;
+    /* la calidad (detalle.js) acerca el límite de los de cerca y no dibuja los de más allá de la niebla */
+    const dC = Math.min(this.dist, DETALLE.cerca), d2 = dC * dC, dL = DETALLE.lejos + 6, l2 = Number.isFinite(dL) ? dL * dL : Infinity;
+    let nC = 0, nL = 0;
     for (let i = 0; i < this.L.length; i++) {
-      const [x, , z] = this.L[i], cerca = (x - p.x) ** 2 + (z - p.z) ** 2 < d2;
+      const [x, , z] = this.L[i], dd = (x - p.x) ** 2 + (z - p.z) ** 2, cerca = dd < d2;
+      if (dd > l2) continue;
       for (const im of cerca ? this.mC : this.mL) { const k = cerca ? nC : nL; im.setMatrixAt(k, this.M[i]); if (this.col) im.setColorAt(k, this.col[i]); }
       if (cerca) nC++; else nL++;
     }

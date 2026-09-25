@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { azar } from './mundo.js';
 import { TEX, UNI, materialBurbuja, materialVidrio, brilloso } from './naturaleza.js';
+import { DETALLE } from './detalle.js';
 
 const V = new THREE.Vector3(), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), E = new THREE.Euler(), S = new THREE.Vector3();
 
@@ -222,7 +223,10 @@ export class Burbujas {
   }
   actualizar(dt, jp) {
     let reventada = null;
+    /* (en las calidades bajas se dibujan menos: detalle.js › DETALLE.burbujas) */
+    const n = this.im.count = Math.max(1, Math.ceil(this.b.length * DETALLE.burbujas));
     this.b.forEach((b, i) => {
+      if (i >= n) return;
       b.y += b.v * dt;
       if (b.y - b.y0 > this.alto) Object.assign(b, this.nueva(this.r));
       const x = b.x + Math.sin(b.y * 0.9 + b.f) * 0.4, z = b.z + Math.cos(b.y * 0.7 + b.f) * 0.4;

@@ -251,6 +251,8 @@ html.angosta .probador { top: 48%; width: calc(100 * var(--vw)); border-left: 0;
 .carga { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
 .ruedita { width: 54px; height: 54px; border-radius: 50%; border: 6px solid #dfe6ec; border-top-color: var(--azul); animation: gira 0.9s linear infinite; }
 .calidadBaja .velo { backdrop-filter: none; -webkit-backdrop-filter: none; background: rgba(236, 239, 242, 0.85); }
+/* (26/09) en baja y mínima nada de vidrio esmerilado: cada backdrop-filter vuelve a desenfocar lo de atrás en cada cuadro */
+.calidadBaja * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 /* (clases de js/pantalla.js en vez de @media: con el celu girado, la pantalla física no es la del juego) */
 html.a700 .canales { grid-template-columns: repeat(2, 1fr); }
 html.a700 .boton { font-size: 18px; padding: 12px 22px; min-width: 120px; }
