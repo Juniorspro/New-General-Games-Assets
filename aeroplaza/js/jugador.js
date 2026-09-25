@@ -181,11 +181,18 @@ export class Jugador {
     }
     /* deslizándose o rodando se es bajito (pasa por debajo de las barras) */
     const bajo = this.mov && (this.mov.tipo === 'desliza' || this.mov.tipo === 'rueda'), alto = (bajo ? 0.72 : ALTO) * k;
-    this.p.x += this.v.x * dt; this.p.z += this.v.z * dt;
-    const x0 = this.p.x, z0 = this.p.z;
-    W.empujar(this.p, RADIO * k, alto);
+    /* se avanza de a medio radio: deslizándose va a más de 10 m/s y, de un solo salto, se
+       metía más de la mitad en una pared fina y el empujón lo sacaba del otro lado */
+    const pasos = Math.min(8, Math.max(1, Math.ceil(Math.hypot(this.v.x, this.v.z) * dt / (RADIO * k * 0.5))));
+    let ex = 0, ez = 0;
+    for (let i = 0; i < pasos; i++) {
+      this.p.x += this.v.x * dt / pasos; this.p.z += this.v.z * dt / pasos;
+      const ax = this.p.x, az = this.p.z;
+      W.empujar(this.p, RADIO * k, alto);
+      ex += this.p.x - ax; ez += this.p.z - az;
+    }
     /* tocar una pared en el aire (para el rebote): para dónde lo empujó es para dónde mira la pared */
-    const ex = this.p.x - x0, ez = this.p.z - z0, e = Math.hypot(ex, ez);
+    const e = Math.hypot(ex, ez);
     if (!this.enPiso && e > 0.002) this.pared = { nx: ex / e, nz: ez / e, t: 0.22 };
     else if (this.pared) { this.pared.t -= dt; if (this.pared.t <= 0 || this.enPiso) this.pared = null; }
     this.p.y += this.v.y * dt;

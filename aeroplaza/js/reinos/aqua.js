@@ -86,9 +86,11 @@ export function crearAqua(ctx) {
     const a = r() * 6.28, d = r() * 16, x = 38 + Math.cos(a) * d, z = -5 + Math.sin(a) * d, y = A(x, z);
     const tipo = i % 3, c = colores[i % colores.length];
     let m;
-    if (tipo === 0) { m = new THREE.Mesh(new THREE.ConeGeometry(0.3 + r() * 0.3, 1.2 + r() * 1.5, 8), brilloso(c, { emissive: c, emissiveIntensity: 0.15 })); m.position.set(x, y + 0.6, z); }
-    else if (tipo === 1) { m = new THREE.Mesh(new THREE.SphereGeometry(0.5 + r() * 0.6, 14, 10), brilloso(c, { emissive: c, emissiveIntensity: 0.12 })); m.scale.y = 0.6; m.position.set(x, y + 0.2, z); }
-    else { m = new THREE.Mesh(new THREE.TorusKnotGeometry(0.35, 0.1, 40, 6), brilloso(c, { emissive: c, emissiveIntensity: 0.15 })); m.position.set(x, y + 0.6, z); }
+    /* cada coral es sólido (se nadaba a través): el cono hasta la punta, la esfera aplastada
+       se pisa por arriba y el nudo es una columna de su ancho */
+    if (tipo === 0) { const rc = 0.3 + r() * 0.3, hc = 1.2 + r() * 1.5; m = new THREE.Mesh(new THREE.ConeGeometry(rc, hc, 8), brilloso(c, { emissive: c, emissiveIntensity: 0.15 })); m.position.set(x, y + 0.6, z); mundo.cilindro(x, z, rc * 0.7, y - 1, y + 0.6 + hc / 2); }
+    else if (tipo === 1) { const re = 0.5 + r() * 0.6; m = new THREE.Mesh(new THREE.SphereGeometry(re, 14, 10), brilloso(c, { emissive: c, emissiveIntensity: 0.12 })); m.scale.y = 0.6; m.position.set(x, y + 0.2, z); mundo.cilindro(x, z, re * 0.85, y - 1, y + 0.2 + re * 0.6); }
+    else { m = new THREE.Mesh(new THREE.TorusKnotGeometry(0.35, 0.1, 40, 6), brilloso(c, { emissive: c, emissiveIntensity: 0.15 })); m.position.set(x, y + 0.6, z); mundo.cilindro(x, z, 0.42, y - 1, y + 1.2); }
     coral.add(m);
   }
   g.add(coral);
@@ -103,12 +105,12 @@ export function crearAqua(ctx) {
   for (let i = 0; i < 10; i++) {
     const a = Math.PI / 2 + i / 10 * Math.PI * 2, rr = 52 + Math.sin(i * 1.7) * 8, x = Math.cos(a) * rr, z = Math.sin(a) * rr, y = i % 3 === 1 ? 3.2 : 1.2;
     const aro = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.22, 12, 40), matAro.clone()); aro.position.set(x, y, z);
-    aro.rotation.y = a; g.add(aro);
+    aro.rotation.y = a; aro.userData.pasa = true; g.add(aro);   // (los aros de la carrera se cruzan)
     aros.push({ p: new THREE.Vector3(x, y, z), m: aro, n: new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)) });
   }
   /* aros hundidos en el arrecife (dan orbes) */
   const hundidos = [];
-  for (let i = 0; i < 5; i++) { const a = i / 5 * 6.28, x = 38 + Math.cos(a) * 8, z = -5 + Math.sin(a) * 8, y = -2.6; const m = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.15, 10, 32), brilloso('#3fffd0', { emissive: '#1fd0b0', emissiveIntensity: 0.6 })); m.position.set(x, y, z); m.rotation.y = a; g.add(m); hundidos.push({ p: m.position, m, hecho: false }); }
+  for (let i = 0; i < 5; i++) { const a = i / 5 * 6.28, x = 38 + Math.cos(a) * 8, z = -5 + Math.sin(a) * 8, y = -2.6; const m = new THREE.Mesh(new THREE.TorusGeometry(1.4, 0.15, 10, 32), brilloso('#3fffd0', { emissive: '#1fd0b0', emissiveIntensity: 0.6 })); m.position.set(x, y, z); m.rotation.y = a; m.userData.pasa = true; g.add(m); hundidos.push({ p: m.position, m, hecho: false }); }
 
   const delfines = [0, 1, 2, 3, 4].map((i) => new Delfin(g, new THREE.Vector3(i % 2 ? 10 : -10, 0, 20 + i * 4), 42 + i * 5, 0, i * 1.3));
   const orbLug = [];

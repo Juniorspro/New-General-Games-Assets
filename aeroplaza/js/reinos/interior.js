@@ -141,9 +141,16 @@ export function crearInterior(ctx, tipo = 'hotel', o = {}) {
     return q;
   };
   /* los muebles de modelos.js: fundidos (menos la tele, que cambia la pantalla) */
+  /* los que no traían su sólido a mano (sillón, tele, lámpara) lo sacan de su caja, un poco más
+     chica: se los cruzaba caminando */
+  const CON_SOLIDO = new Set(['m-sillon', 'm-tele', 'm-lampara']);
   const muebles = (n, x, y, z, ry, op) => {
     let m = modelo(n, op);
     if (n !== 'm-tele') { const u = m.userData, R = fundir(m); R.userData = u; m = R; }
+    if (CON_SOLIDO.has(n)) {
+      const b = new THREE.Box3().setFromObject(m), cx = (b.min.x + b.max.x) / 2, cz = (b.min.z + b.max.z) / 2, c = Math.cos(ry), s = Math.sin(ry);
+      mundo.caja(x + cx * c + cz * s, z - cx * s + cz * c, (b.max.x - b.min.x) * 0.45, (b.max.z - b.min.z) * 0.45, y - 1, y + b.max.y, ry);
+    }
     m.position.set(x, y, z); m.rotation.y = ry; g.add(m); return m;
   };
   const chispas = new Chispas(g, '#ffffff', 80);
@@ -230,7 +237,7 @@ export function crearInterior(ctx, tipo = 'hotel', o = {}) {
     muebles('m-sofa', 8, 0, -1.5, -Math.PI / 2, { ancho: 3.2 }); muebles('m-sofa', 8, 0, 4, -Math.PI / 2, { ancho: 3.2 }); muebles('m-sillon', 5, 0, 1.2, Math.PI / 2, { alto: 1.4 });
     for (const [x, z] of [[8, -1.5], [8, 4]]) { mundo.caja(x, z, 0.6, 1.6, -1, 0.55); }
     const mesa = poner(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 32), vidrio, 7.2, 0.5, 1.2); mesa.renderOrder = 3; poner(new THREE.CylinderGeometry(0.08, 0.3, 0.5, 12), B('#ffffff'), 7.2, 0.25, 1.2);
-    for (const [x, z] of [[-12, -9], [12, -9], [-12, 9], [12, 9], [4, -9]]) { poner(new THREE.CylinderGeometry(0.5, 0.4, 0.8, 20), B('#ffffff'), x, 0.4, z); for (let k = 0; k < 6; k++) poner(new THREE.SphereGeometry(0.45 - k * 0.04, 14, 10), B(k % 2 ? '#3fb536' : '#56e05a', { roughness: 0.4 }), x + Math.cos(k * 2.3) * 0.3, 1.1 + k * 0.32, z + Math.sin(k * 2.3) * 0.3); mundo.cilindro(x, z, 0.55, -1, 0.8); }
+    for (const [x, z] of [[-12, -9], [12, -9], [-12, 9], [12, 9], [4, -9]]) { mundo.cilindro(x, z, 0.62, -1, 1.5); poner(new THREE.CylinderGeometry(0.5, 0.4, 0.8, 20), B('#ffffff'), x, 0.4, z); for (let k = 0; k < 6; k++) poner(new THREE.SphereGeometry(0.45 - k * 0.04, 14, 10), B(k % 2 ? '#3fb536' : '#56e05a', { roughness: 0.4 }), x + Math.cos(k * 2.3) * 0.3, 1.1 + k * 0.32, z + Math.sin(k * 2.3) * 0.3); mundo.cilindro(x, z, 0.55, -1, 0.8); }
     /* la araña de burbujas del techo */
     const arana = new THREE.Group(); arana.position.set(0, 5.6, 1.5); g.add(arana);
     for (let k = 0; k < 18; k++) { const a = k / 18 * Math.PI * 2, rr = 2.4 + (k % 3) * 0.5, b = poner(new THREE.SphereGeometry(0.22 + (k % 2) * 0.1, 16, 12), materialBurbuja(1), Math.cos(a) * rr, -0.3 - (k % 4) * 0.25, Math.sin(a) * rr, 0, arana); b.renderOrder = 3; poner(new THREE.CylinderGeometry(0.008, 0.008, 1.4, 4), B('#e8eef4'), Math.cos(a) * rr, 0.4, Math.sin(a) * rr, 0, arana); }
@@ -473,6 +480,7 @@ export function crearInterior(ctx, tipo = 'hotel', o = {}) {
     muebles('m-cama', 3.6, 0, -0.6, -Math.PI / 2, { ancho: 2.6 }); mundo.caja(3.6, -0.6, 1.2, 0.8, -1, 0.5, -Math.PI / 2);
     const hel = new THREE.Group(); hel.position.set(-5.4, 0, -1.8); hel.rotation.y = 1.3; g.add(hel);
     poner(caja(0.9, 1.7, 0.8, 0.15), B('#bff0ff', { roughness: 0.15 }), 0, 0.85, 0, 0, hel);
+    mundo.caja(-5.4, -1.8, 0.47, 0.42, -1, 1.7, 1.3);
     usar(hel, () => t('int_heladera'), (J) => { J.sfx('guino'); J.avisar(t('int_jugo'), 'bien'); J.efecto && J.efecto('liviano'); });
     npcs.push({ id: o.i === 2 ? 'vecino' : 'vecina', pos: [0.8, -2], rot: Math.PI, y: 0 });
     luz(0, H - 0.3, 0, '#fff4dc', 16, 16);

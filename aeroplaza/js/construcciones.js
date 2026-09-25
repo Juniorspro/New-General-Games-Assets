@@ -515,6 +515,8 @@ function hotel() {
   const O = new Obra(), N = 14, fh = 3.0, r0 = 6.2, r1 = 5.5, y0 = 1.05, Ht = N * fh;
   O.pon(prisma(sq(22, 22, 6), 0.8, 0.2), 'arena');
   O.pon(prisma(sq(18.4, 18.4, 3), 0.28, 0.1), 'cesped', 0, 0.78, 0);
+  /* la escalinata de la entrada: el zócalo mide 0,8 y, ahora que es sólido, sin ella había que saltarlo */
+  for (let i = 0; i < 2; i++) O.pon(caja(5.4, 0.54 - i * 0.27, 0.85, 0.05), 'arena', 0, (0.54 - i * 0.27) / 2, 11.35 + i * 0.85);
   for (let k = 0; k < 4; k++) O.pon(caja(2.2, 0.08, 5.5, 0.03), 'blanco', Math.sin(k * TAU / 4) * 8.4, 1.07, Math.cos(k * TAU / 4) * 8.4, { ry: k * TAU / 4 });
   const bs = [];
   for (let k = 0; k < 8; k++) {

@@ -282,8 +282,10 @@ export class Mesas {
       /* dónde se sienta (en el mundo) y para dónde mira */
       const p = new THREE.Vector3(0, 0.38, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), M.rot).add(new THREE.Vector3(M.x, M.y, M.z));
       const rumbo = M.rot + rot;
+      /* la silla choca (se la cruzaba); mientras uno está sentado ahí, su sólido se apaga (si no, lo empuja afuera) */
+      const solido = mundo.cilindro(p.x, p.z, 0.4, M.y - 1, M.y + 0.8);
       const it = mundo.interactivo({ id: `mesa${i}.${s}`, accion: 'mesa', mesa: i, silla: s, pos: new THREE.Vector3(p.x, M.y, p.z), radio: 1.25, texto: null, juego: M.juego });
-      return { p, rumbo, it, ocupa: null };
+      return { p, rumbo, it, ocupa: null, solido };
     });
     mundo.cilindro(M.x, M.z, 0.8, M.y - 1, M.y + 0.86);
     const Mesa = { ...M, i, g, lienzo, tex, tablero, sillas, S: REGLAS[M.juego].nuevo(1), rival: null, vistas: {}, tJugar: 0, tResolver: 0, sucio: true };
@@ -300,7 +302,7 @@ export class Mesas {
     const M = this.lista[i]; if (!M) return;
     if (this.mia) this.levantar(J, true);
     this.mia = { i, silla: s };
-    const S = M.sillas[s]; J.sentarseEn(S.p.clone(), S.rumbo);
+    const S = M.sillas[s]; S.solido.fantasma = true; J.sentarseEn(S.p.clone(), S.rumbo);
     this.J = J;
     const otro = M.sillas[1 - s].ocupa;
     M.rival = otro ? { id: otro.id, nombre: otro.nombre } : null;
@@ -310,7 +312,7 @@ export class Mesas {
   }
   levantar(J, sinAvisar) {
     if (!this.mia) return;
-    const M = this.lista[this.mia.i]; this.mia = null; M.rival = null;
+    const M = this.lista[this.mia.i]; M.sillas[this.mia.silla].solido.fantasma = false; this.mia = null; M.rival = null;
     this.cerrarPanel();
     if (!sinAvisar) J.sfx('pop');
     this.dibujar3D(M);

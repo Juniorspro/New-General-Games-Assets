@@ -26,6 +26,7 @@ export class Orbes {
     const gh = new THREE.TorusGeometry(0.4, 0.025, 4, 24);
     this.aro = new THREE.InstancedMesh(gh, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7 }), this.lugares.length);
     this.im.frustumCulled = this.aro.frustumCulled = false;
+    this.im.userData.pasa = this.aro.userData.pasa = true;   // se atraviesan: se juntan al tocarlos (lo miran las pruebas de choques)
     grupo.add(this.im, this.aro);
     this.t = Math.random() * 10;
     this.chispas = new Chispas(grupo, color);
@@ -182,7 +183,7 @@ export class Cardumen {
   /* un cardumen que nada en el aire alrededor de centro, siguiendo una ronda */
   constructor(grupo, centro, { n = 26, radio = 10, alto = 3, colores = ['#ff8a3d', '#ffd23f', '#3fd0ff', '#ff6fb0'], largo = 0.55, vel = 0.25 } = {}) {
     this.im = new THREE.InstancedMesh(pezGeo(largo), materialPez(), n);
-    this.im.castShadow = true; this.im.frustumCulled = false;
+    this.im.castShadow = true; this.im.frustumCulled = false; this.im.userData.pasa = true;   // (los peces se esquivan solos)
     const r = azar(9), c = new THREE.Color();
     this.p = [];
     for (let i = 0; i < n; i++) { this.p.push({ o: new THREE.Vector3((r() - 0.5) * 3, (r() - 0.5) * 1.6, (r() - 0.5) * 3), f: r() * 6.28 }); this.im.setColorAt(i, c.set(colores[i % colores.length])); }
@@ -209,7 +210,7 @@ export class Burbujas {
   constructor(grupo, fuentes, { n = 60, alto = 14, tam = [0.2, 0.7] } = {}) {
     this.fuentes = fuentes; this.alto = alto;
     this.im = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 24, 16), materialBurbuja(), n);
-    this.im.frustumCulled = false; this.im.renderOrder = 3;
+    this.im.frustumCulled = false; this.im.renderOrder = 3; this.im.userData.pasa = true;   // (se revientan al tocarlas)
     const r = this.r = azar(33);
     this.b = [];
     for (let i = 0; i < n; i++) this.b.push(this.nueva(r, r() * alto, tam));
@@ -289,7 +290,7 @@ export class Medusas {
   constructor(grupo, lugares, { colores = ['#9ff0ff', '#d6b8ff', '#ffc2ea', '#b8ffdc'] } = {}) {
     const G = geoMedusa();
     this.m = lugares.map(([x, y, z, esc = 1, deriva = 2], i) => {
-      const o = new THREE.Mesh(G, matMedusa(colores[i % colores.length]));
+      const o = new THREE.Mesh(G, matMedusa(colores[i % colores.length])); o.userData.pasa = true;   // (flotan y derivan: se atraviesan)
       o.renderOrder = 4; o.scale.setScalar(esc); o.position.set(x, y, z); grupo.add(o);
       return { o, x, y, z, esc, deriva, f: i * 1.9 };
     });
@@ -337,7 +338,7 @@ export class Frutas {
 /* -------------------------------------------------------------------- discos */
 /* un CD tornasolado que gira: cada uno desbloquea una canción */
 export function discoMalla() {
-  const g = new THREE.Group();
+  const g = new THREE.Group(); g.userData.pasa = true;   // se junta al tocarlo
   const m = new THREE.MeshPhysicalMaterial({ color: '#f4f8ff', metalness: 1, roughness: 0.12, iridescence: 1, iridescenceIOR: 1.8, iridescenceThicknessRange: [100, 800], clearcoat: 1 });
   const d = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.02, 48), m); d.rotation.x = Math.PI / 2; g.add(d);
   const c = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.03, 24), new THREE.MeshStandardMaterial({ color: '#cfe8ff', roughness: 0.3, transparent: true, opacity: 0.6 })); c.rotation.x = Math.PI / 2; g.add(c);

@@ -93,8 +93,10 @@ const ALTO_MOLINO = new Map(MOLINOS.map((M) => [M, relieve(...M)]));
 /* (van hasta la puerta, no al medio de lo que hay al final; los que cruzaban la
    torre de una parada del monorriel o nacían adentro de una casa, la rodean) */
 const PUERTA_TIENDA = [23.8, 21.5];
-const CAMINOS = [[SPAWN, PLAZA], [PLAZA, PUERTA_TIENDA], [PLAZA, [10, -2]], [PLAZA, [-10, -30]], [PLAZA, PROBADOR], [PLAZA, BARRIO],
-  [[40, 4], [88, -14]], [[88, -14], [CIUDAD[0] - 44, CIUDAD[1]]],
+/* (el del probador termina al borde de la cabina, delante del espejo, y el de la ciudad entra por el
+   hueco entre dos hoteles: antes moría contra el zócalo del de 3,2 rad, que ahora es sólido) */
+const CAMINOS = [[SPAWN, PLAZA], [PLAZA, PUERTA_TIENDA], [PLAZA, [10, -2]], [PLAZA, [-10, -30]], [PLAZA, [PROBADOR[0] - 1.1, PROBADOR[1] - 1.45]], [PLAZA, BARRIO],
+  [[40, 4], [88, -14]], [[88, -14], [CIUDAD[0] - 27.5, CIUDAD[1] + 14.6]],
   [[32, 34], [78, 76]], [[78, 76], [99, 99]],
   [[-7, 51], [-64, 78]], [[-64, 78], [-104, 112]],
   [[-24, -38], [-70, -70]], [[-70, -70], [-89.3, -87.5]], [[-89.3, -87.5], [-108, -96]],
@@ -295,6 +297,24 @@ function cascada(A, desde, hasta, ancho = 5) {
 }
 
 /* ---------------------------------------------------------------- la isla */
+/* los sólidos del hotel, con las medidas de construcciones.js › hotel() (sin escalar, por k).
+   Antes era un solo cilindro de la torre: se caminaba adentro del zócalo, las macetas y la
+   marquesina. El zócalo es un superelipse (n = 6, 22 de lado): dos cajas cruzadas y cuatro
+   cilindros en las esquinas lo cubren con menos de 0,2 m de error */
+function solidosHotel(mundo, h) {
+  const k = h.userData.k, { x, z } = h.position, y = h.position.y, c = Math.cos(h.rotation.y), s = Math.sin(h.rotation.y), rot = h.rotation.y;
+  const w = (lx, lz) => [x + (lx * c + lz * s) * k, z + (-lx * s + lz * c) * k];
+  const o = { tipo: 'piedra' };
+  mundo.caja(x, z, 11 * k, 8.6 * k, y - 2, y + 0.8 * k, rot, o);
+  mundo.caja(x, z, 8.6 * k, 11 * k, y - 2, y + 0.8 * k, rot, o);
+  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) mundo.cilindro(...w(sx * 7.5, sz * 7.5), 3.1 * k, y - 2, y + 0.8 * k, o);
+  mundo.cilindro(x, z, 9.3 * k, y, y + 1.06 * k, { tipo: 'pasto' });
+  for (let i = 0; i < 8; i++) { const a = (i + 0.5) / 8 * Math.PI * 2; mundo.cilindro(...w(Math.sin(a) * 9, Math.cos(a) * 9), 1.3 * k, y, y + 1.55 * k, o); }
+  mundo.cilindro(x, z, 6.2 * k, y, y + h.userData.tam.y, o);
+  for (const sx of [-1, 1]) mundo.cilindro(...w(sx * 2, 8.3), 0.12 * k, y, y + 4.25 * k, o);
+  for (let i = 0; i < 2; i++) mundo.caja(...w(0, 11.35 + i * 0.85), 2.7 * k, 0.425 * k, y - 1, y + (0.54 - i * 0.27) * k, rot, o);
+}
+
 export function crearPlaza(ctx) {
   const A = alturaPlaza;
   const mundo = new Mundo(A); mundo.agua = 0; mundo.limite = 292;
@@ -419,9 +439,10 @@ export function crearPlaza(ctx) {
   const yCi = A(...CIUDAD);
   const pab = pabellon(mundo, CIUDAD[0], CIUDAD[1], Math.PI, yCi); g.add(pab);
   HOTELES.forEach(([x, z, ancho], i) => {
-    const h = modelo('hotel', { ancho });
+    /* por escala y no por ancho: la escalinata alarga el modelo en z y lo achicaba */
+    const h = modelo('hotel', { escala: ancho / 22 });
     h.position.set(x, A(x, z) - 0.1, z); h.rotation.y = Math.atan2(CIUDAD[0] - x, CIUDAD[1] - z) + (i % 2 ? 0.4 : -0.3); g.add(h);
-    mundo.cilindro(x, z, ancho * 0.26, A(x, z) - 2, A(x, z) + h.userData.tam.y, { tipo: 'piedra' });
+    solidosHotel(mundo, h);
     /* la puerta de vidrio de la entrada, abajo de la marquesina */
     const k = h.userData.k;
     entradas.push({ tipo: 'hotel', i, x, z, y: A(x, z), rot: h.rotation.y, d: 7.6 * k, sale: 11.5 * k });
@@ -456,7 +477,13 @@ export function crearPlaza(ctx) {
     if (Math.hypot(x - mx0, z - mz0) < 6) continue;
     somb[i % 3 ? 0 : 1].push([x, A(x, z) - 0.1, z, 1, i]);
     mundo.cilindro(x, z, 0.1, A(x, z), A(x, z) + 2.6);
-    for (const s of [-1, 1]) { const px = x + s * 1.1 * Math.cos(a + 1.57), pz = z + s * 1.1 * Math.sin(a + 1.57); repos.push([px, A(px, pz), pz, 1, rotMu]); }
+    for (const s of [-1, 1]) {
+      const px = x + s * 1.1 * Math.cos(a + 1.57), pz = z + s * 1.1 * Math.sin(a + 1.57), py = A(px, pz); repos.push([px, py, pz, 1, rotMu]);
+      /* el asiento se pisa (0,42 m, menos que un escalón) y el respaldo frena (construcciones.js › reposera) */
+      const sn = Math.sin(rotMu), cs = Math.cos(rotMu);
+      mundo.caja(px + 0.25 * sn, pz + 0.25 * cs, 0.36, 0.66, py - 0.5, py + 0.42, rotMu, { tipo: 'madera' });
+      mundo.caja(px - 0.62 * sn, pz - 0.62 * cs, 0.36, 0.36, py - 0.5, py + 0.85, rotMu, { tipo: 'madera' });
+    }
   }
   for (const [n, L] of [['sombrilla', somb[0]], ['sombrillaRosa', somb[1]]]) { const q = instancias(n, L, { alto: 3 }); if (q) g.add(q); }
   { const q = instancias('reposera', repos, { alto: 0.9 }); if (q) g.add(q); }
@@ -552,7 +579,7 @@ export function crearPlaza(ctx) {
   /* ------------------------------------------------ las botellas con mensaje */
   const botellas = [[BAHIA - 0.33, 3], [2.55, 6], [-0.55, 4]].map(([a, ad], i) => {
     const rr = costaEn(a) - ad, x = Math.cos(a) * rr, z = Math.sin(a) * rr, y = Math.max(0.1, A(x, z));
-    const m = modelo('botella', { alto: 0.34 }); m.position.set(x, y + 0.05, z); m.rotation.y = i * 2; g.add(m);
+    const m = modelo('botella', { alto: 0.34 }); m.position.set(x, y + 0.05, z); m.rotation.y = i * 2; m.userData.pasa = true; g.add(m);   // (se junta)
     return { m, p: new THREE.Vector3(x, y, z), clave: 'botella' + i, texto: 'botella_' + (i + 1) };
   });
 

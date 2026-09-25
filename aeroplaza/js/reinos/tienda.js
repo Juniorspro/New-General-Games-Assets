@@ -84,6 +84,8 @@ export function crearTienda() {
     const x0 = s * 6.4;
     for (let k = 0; k < 3; k++) { const e = new THREE.Mesh(new RoundedBoxGeometry(3.4, 0.08, 0.6, 2, 0.03), blanco); e.position.set(x0, 1.3 + k * 0.85, -D / 2 + 0.45); g.add(e); }
     for (const sx of [-1, 1]) { const l = new THREE.Mesh(new RoundedBoxGeometry(0.08, 2.6, 0.6, 2, 0.03), blanco); l.position.set(x0 + sx * 1.7, 1.3 + 0.85, -D / 2 + 0.45); g.add(l); }
+    /* el mueble entero es sólido: abajo queda un hueco de 0,85, pero la cabeza se metía entre los estantes */
+    mundo.caja(x0, -D / 2 + 0.45, 1.75, 0.32, 0.85, 3.45);
     const pilas = [];
     for (let k = 0; k < 3; k++) for (let j = 0; j < 4; j++) {
       if ((j + k) % 4 === 3) continue;

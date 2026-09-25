@@ -71,7 +71,7 @@ export function crearJardin(ctx) {
     const pozo = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.35, 10, 24), brilloso('#c7d8e8', { roughness: 0.4 })); pozo.rotation.x = Math.PI / 2; pozo.position.set(x, y + 0.2, z); g.add(pozo);
     const aguaP = new THREE.Mesh(new THREE.CircleGeometry(0.95, 24).rotateX(-Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: '#8ff4ff', emissive: '#3fd0ff', emissiveIntensity: 0.4, roughness: 0.05 })); aguaP.position.set(x, y + 0.25, z); g.add(aguaP);
     const alto = 9 + (i % 3) * 3;
-    const chorro = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, alto, 16, 1, true), matChorro.clone()); chorro.material.uniforms.uT = UNI.uT; chorro.position.set(x, y + alto / 2, z); g.add(chorro);
+    const chorro = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.9, alto, 16, 1, true), matChorro.clone()); chorro.material.uniforms.uT = UNI.uT; chorro.position.set(x, y + alto / 2, z); chorro.userData.pasa = true; g.add(chorro);   // (el chorro empuja para arriba: se entra)
     const s = mundo.cilindro(x, z, 1.0, y - 1, y + 0.25, { empuje: 17 + (i % 3) * 3, empujeAlto: alto * 0.6, activo: false, clave: 'g' + i });
     geiseres.push({ s, chorro, alto, fase: i * 1.7, y, x, z });
   });

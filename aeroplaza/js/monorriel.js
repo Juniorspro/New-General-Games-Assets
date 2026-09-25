@@ -46,7 +46,7 @@ export class Monorriel {
 
     this.viga(mundo, altura, enTerminal);
     this.armarParadas(mundo, altura, paradas);
-    this.armarTrenes();
+    this.armarTrenes(mundo);
     this.jinete = null;
   }
 
@@ -125,7 +125,7 @@ export class Monorriel {
   }
 
   /* ------------------------------------------------------------------ los trenes */
-  armarTrenes() {
+  armarTrenes(mundo) {
     /* el horario: por tramo, lo que tarda (arranca, va, frena) y la espera */
     const Q = this.paradas, L = this.L;
     this.tramos = Q.map((q, k) => {
@@ -142,6 +142,8 @@ export class Monorriel {
     for (const im of this.vagones.children) im.frustumCulled = false;
     this.g.add(this.vagones);
     this.trenes.forEach((tr) => { tr.montura = this.montura(tr); });
+    /* cada vagón choca (se lo cruzaba caminando donde baja, junto a la terminal): una caja que lo sigue */
+    this.solidosVagon = this.trenes.flatMap(() => [0, 1].map(() => mundo.movil({ hx: 1.2, hz: LARGO_VAGON / 2 })));
   }
   reloj() { return Date.now() / 1000; }
   /* dónde anda el tren en el segundo t del período */
@@ -203,6 +205,8 @@ export class Monorriel {
         if (j === 1) _q.multiply(_giro);
         _m.compose(_p, _q, _s.setScalar(1));
         for (const im of this.vagones.children) im.setMatrixAt(k * 2 + j, _m);
+        const S = this.solidosVagon?.[k * 2 + j];
+        if (S) { S.x = _p.x; S.z = _p.z; S.y0 = _p.y - 0.6; S.y1 = _p.y + 3.1; S.rot = rumbo; S.c = Math.cos(rumbo); S.s = Math.sin(rumbo); }
       }
     });
     for (const im of this.vagones.children) im.instanceMatrix.needsUpdate = true;

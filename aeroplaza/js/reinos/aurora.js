@@ -59,7 +59,8 @@ export function crearAurora(ctx) {
     if (Math.hypot(x + 30, z - 25) < 16 || Math.hypot(x, z - 40) < 10 || Math.hypot(x, z) < 12) continue;
     const pino = new THREE.Group(); pino.position.set(x, A(x, z), z);
     for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(new THREE.ConeGeometry(1.6 - k * 0.4, 1.8, 7), brilloso('#e8f6ff', { roughness: 0.3, emissive: '#7fb0ff', emissiveIntensity: 0.08 })); c.position.y = 1.2 + k * 1.1; c.castShadow = true; pino.add(c); }
-    g.add(pino); mundo.cilindro(x, z, 0.5, A(x, z) - 1, A(x, z) + 3.5);
+    /* el cono de abajo mide 1,6 de radio en el piso: con 0,5 el muñeco se metía casi un metro */
+    g.add(pino); mundo.cilindro(x, z, 1.2, A(x, z) - 1, A(x, z) + 3.5);
   }
   /* el cristal del sueño, en el centro */
   const altar = new THREE.Group(); altar.position.set(0, A(0, 0), 0);

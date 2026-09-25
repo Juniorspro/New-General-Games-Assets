@@ -13,6 +13,7 @@ export class Mundo {
   constructor(altura = () => 0) {
     this.altura = altura;
     this.solidos = [];
+    this.moviles = [];           // los sólidos que se mueven solos (los vagones): van aparte de la rejilla
     this.interactivos = [];
     this.agua = null;            // la altura del agua, o null si no hay
     this.limite = 160;           // hasta dónde se puede ir desde el centro
@@ -23,6 +24,8 @@ export class Mundo {
   cilindro(x, z, r, y0, y1, o = {}) { const s = { t: 'c', x, z, r, y0, y1, ...o }; this.solidos.push(s); this._rejilla = null; return s; }
   /* b: caja girada rot radianes sobre el eje y */
   caja(x, z, hx, hz, y0, y1, rot = 0, o = {}) { const s = { t: 'b', x, z, hx, hz, y0, y1, rot, c: Math.cos(rot), s: Math.sin(rot), ...o }; this.solidos.push(s); this._rejilla = null; return s; }
+  /* un sólido que alguien mueve en cada cuadro (cambia x, z, rot, c, s, y0, y1): no entra en la rejilla */
+  movil(o = {}) { const s = { t: 'b', x: 0, z: 0, hx: 1, hz: 1, y0: -1e4, y1: -1e4, rot: 0, c: 1, s: 0, ...o }; this.moviles.push(s); return s; }
   interactivo(o) { this.interactivos.push(o); return o; }
   quitar(s) { const i = this.solidos.indexOf(s); if (i >= 0) this.solidos.splice(i, 1); this._rejilla = null; }
   /* con el mundo grande hay cientos de sólidos (árboles, pilares): se guardan en
@@ -30,7 +33,7 @@ export class Mundo {
      todas las casillas que toca, agrandado 1,5 m (lo más que empuja una consulta) */
   cerca(x, z) {
     /* los reinos con cosas que se mueven (el parkour) no usan rejilla: son pocos sólidos */
-    if (this.sinRejilla) return this.solidos;
+    if (this.sinRejilla) return this.moviles.length ? this.solidos.concat(this.moviles) : this.solidos;
     if (!this._rejilla) {
       const R = this._rejilla = new Map();
       for (const s of this.solidos) {
@@ -40,7 +43,8 @@ export class Mundo {
         }
       }
     }
-    return this._rejilla.get(Math.floor(x / 16) * 4096 + Math.floor(z / 16)) || NADA;
+    const l = this._rejilla.get(Math.floor(x / 16) * 4096 + Math.floor(z / 16)) || NADA;
+    return this.moviles.length ? l.concat(this.moviles) : l;
   }
   /* ¿hay algo sólido en este punto? (para que la cámara no se meta adentro de las casas) */
   tapa(x, y, z) {

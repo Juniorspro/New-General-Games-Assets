@@ -188,6 +188,9 @@ export function probadorCabina(mundo, x, z, rot, alturaPiso) {
   const arco = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.1, 10, 40, Math.PI), brilloso('#7fd6ff')); arco.position.y = 0.3; g.add(arco);
   const cartel = letrero('✂  👕  ✨', { ancho: 2.2, alto: 0.6, tinta: '#d0409a', borde: '#ff8fd0' }); cartel.position.set(0, 3.6, -1.2); g.add(cartel);
   mundo.cilindro(x, z, 2, alturaPiso - 1, alturaPiso + 0.3);
+  /* el espejo con su marco y la pata: se cruzaba el espejo caminando */
+  const ex = x - Math.sin(rot) * 1.22, ez = z - Math.cos(rot) * 1.22;
+  mundo.caja(ex, ez, 1.28, 0.14, alturaPiso + 0.25, alturaPiso + 3.5, rot);
   return g;
 }
 

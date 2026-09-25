@@ -132,10 +132,10 @@ export function crearJuegos(ctx) {
     const col = COLOR_PORTAL[destino];
     /* el aro con su pedestal (construcciones.js, copiado del GLB); la membrana del color de la puerta gira adentro */
     const arco = modelo('portalJuegos', { escala: 1 }); P.add(arco); mundo.cilindro(x, z, 1.5, PISO - 1, PISO + 0.32);
-    const brillo = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.05, 8, 64), new THREE.MeshBasicMaterial({ color: col })); brillo.position.y = 1.72; brillo.position.z = 0.16; P.add(brillo);
+    const brillo = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.05, 8, 64), new THREE.MeshBasicMaterial({ color: col })); brillo.position.y = 1.72; brillo.position.z = 0.16; brillo.userData.pasa = true; P.add(brillo);
     const brillo2 = brillo.clone(); brillo2.position.z = -0.16; P.add(brillo2);
     const pel = new THREE.Mesh(new THREE.CircleGeometry(1.07, 48), new THREE.ShaderMaterial({ uniforms: { uT, uColor: { value: new THREE.Color(col) } }, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: PORTAL_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-    pel.position.y = 1.72; pel.renderOrder = 3; P.add(pel);
+    pel.position.y = 1.72; pel.renderOrder = 3; pel.userData.pasa = true; P.add(pel);   // (la membrana se cruza para viajar)
     const cartel = letrero(t('portal_' + destino), { ancho: 2.6, alto: 0.55, tinta: '#1a78c2', borde: col, tam: 120 }); cartel.position.y = 3.5; P.add(cartel);
     const cartel2 = cartel.clone(); cartel2.rotation.y = Math.PI; P.add(cartel2);
     const pos = new THREE.Vector3(x, PISO, z);
@@ -181,7 +181,7 @@ export function crearJuegos(ctx) {
   const cvP = document.createElement('canvas'); cvP.width = 256; cvP.height = 128; { const q = cvP.getContext('2d'); q.fillStyle = '#ffffff'; q.fillRect(0, 0, 256, 128); q.fillStyle = '#1a8fd8'; for (let i = 0; i < 12; i++) { const x = (i % 6) * 44 + (i >= 6 ? 22 : 0), y = i >= 6 ? 88 : 36; q.beginPath(); for (let k = 0; k < 5; k++) { const a = k / 5 * 6.28 - 1.57; q.lineTo(x + Math.cos(a) * 14, y + Math.sin(a) * 14); } q.fill(); } }
   const texP = new THREE.CanvasTexture(cvP); texP.colorSpace = THREE.SRGBColorSpace;
   const RP = 0.36;
-  const pelotaM = new THREE.Mesh(new THREE.SphereGeometry(RP, 28, 18), new THREE.MeshPhysicalMaterial({ map: texP, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.1 })); pelotaM.castShadow = true; g.add(pelotaM);
+  const pelotaM = new THREE.Mesh(new THREE.SphereGeometry(RP, 28, 18), new THREE.MeshPhysicalMaterial({ map: texP, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.1 })); pelotaM.castShadow = true; pelotaM.userData.pasa = true; g.add(pelotaM);   // (la pelota se patea al tocarla: tiene su propia física)
   const pelota = { p: new THREE.Vector3(cx, PISO + RP, cz), v: new THREE.Vector3(), ultimo: null, tToque: 0, tRed: 0, tEnviar: 0, marcador: [0, 0], tGol: 0 };
   const cvM = document.createElement('canvas'); cvM.width = 512; cvM.height = 160; const texM = new THREE.CanvasTexture(cvM); texM.colorSpace = THREE.SRGBColorSpace;
   const pintarMarcador = () => { const q = cvM.getContext('2d'); const gr = q.createLinearGradient(0, 0, 0, 160); gr.addColorStop(0, '#1a3a6a'); gr.addColorStop(1, '#0b1f3f'); q.fillStyle = gr; q.fillRect(0, 0, 512, 160); q.font = '900 92px sans-serif'; q.textAlign = 'center'; q.textBaseline = 'middle'; q.fillStyle = '#6fd6ff'; q.fillText(String(pelota.marcador[0]), 150, 84); q.fillStyle = '#ffffff'; q.fillText('–', 256, 80); q.fillStyle = '#ff9ad8'; q.fillText(String(pelota.marcador[1]), 362, 84); texM.needsUpdate = true; };
