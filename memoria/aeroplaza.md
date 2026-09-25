@@ -245,6 +245,50 @@ tocar un menú; chat de voz por cercanía con permiso de micrófono (WebRTC).
 - Prueba de la interfaz: `pruebas/avisos.mjs` (26 bien: compu, celu acostado
   y parado).
 
+## Séptima vuelta: caminos libres, animación por poses y primera persona (25/09)
+
+Pedido: que los caminos no tengan obstáculos; animar "como en chop y
+linear" y como Roblox; en el parkour correr, saltar, deslizar y rodar;
+minijuegos en primera persona viendo brazos, cuerpo y piernas. Mandó cuatro
+TikTok de referencia: **no se pudieron bajar** (el permiso lo negó); se hizo
+por lo que dijo en el texto.
+
+- **Caminos** (`plaza.js`): `CAMINOS` tiene los extremos y puntos de paso;
+  `enCamino(x, z)` da la distancia al camino (con la misma ondulación que
+  se dibuja, que se apaga cerca de las puntas). `apartar(x, z, r)` corre lo
+  que cae a menos de `r`: peceras 4,4, faroles, vecinos 2,8; los bancos y
+  hongos sobre el camino se sacan. El monorriel recibe `libre(x, z)` y corre
+  cada pilar a ±3, ±6 o ±9 m. Prueba: `pruebas/caminos.mjs` (4034 puntos, 0
+  choques).
+- **Animador** (`animador.js`): `CLIPS` con poses clave por canal (el rig
+  R6: cadera, cuerpo, cabeza, 2 brazos, 2 piernas; x negativo en un miembro
+  = adelante): corre, camina, salta, cae, aterriza, desliza, rueda (con
+  `giro` 0→2π que también sube y corre el centro), trepa y pared.
+  `curva(f, estilo)`: **suave** (smoothstep), **lineal** y **chop** (tres
+  escalones 0/0,5/1, tiempo cuantizado a 12 cuadros y sin suavizado entre
+  poses). Se elige en Opciones (`op_anim`) y vale para el muñeco y los brazos
+  en primera persona (`Meeple.estiloAnim`).
+- **Movimientos** (`jugador.js`, `jugador.mov`): "bajar" (C, Q o ⤓)
+  corriendo desliza (más rápido, 0,72 m de alto, pasa bajo barras) y
+  caminando rueda; caer de alto corriendo rueda solo; saltando contra un
+  borde a la altura del pecho lo trepa (`probarTrepa`); en el aire contra una
+  pared, saltar rebota (conserva lo tangencial ×0,92 y suma 6,8 hacia
+  afuera). Saltar deslizándose sale con la velocidad del deslizamiento.
+  Prueba: `pruebas/movimientos.mjs` (12 bien, en un arenero plano).
+- **Mapa 6 del parkour, Azoteas** (atardecer, `hora 0.735`): tubos y muros
+  para deslizar y rebotar (`P.tubo`, `P.muro`).
+- **Primera persona** (`primera.js › CuerpoFP`): dos brazos con mano,
+  pegados a la cámara y dibujados encima de todo (`depthTest` apagado), con
+  poses por estado y golpes `usar` y `tirar`. El muñeco sigue ahí: cuerpo,
+  cabeza y brazos pasan a un material que solo hace sombra
+  (`Meeple.primeraPersona`), así mirando abajo se ven las piernas y la sombra
+  entera. El ojo va 0,16 m adelante (hasta 0,32 mirando abajo) y baja al
+  deslizar o rodar. El parkour tiene la opción 👁.
+- **Tiro de Burbujas** (`reinos/tiro.js`): minijuego en primera persona en
+  un balcón a 22 m; 60 s, blancos de 1, 2 y 5 puntos que se mueven en
+  Lissajous, racha que multiplica hasta ×4, estrellas en 30/60/95. Carta en
+  el menú de juegos. Prueba: `pruebas/primera.mjs` (9 bien).
+
 ## Trampas que ya se pagaron
 
 - **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una
@@ -328,6 +372,21 @@ tocar un menú; chat de voz por cercanía con permiso de micrófono (WebRTC).
   también en un `<audio>` (silenciado): `voz.js` le pone uno a cada pareja.
 - **`apareceC` trae `translateX(-50%)`:** reusarla en algo que no está
   centrado lo corre medio ancho (le pasó al tutorial). Cada cosa, su animación.
+
+- **La ondulación del camino con el signo al revés** en la prueba: medía
+  al lado del camino dibujado. La prueba usa la misma fórmula que
+  `enCamino` (`- ondula * n`).
+- **Brazos de primera persona demasiado grandes:** cerca de la cámara todo
+  se agranda; con 0,08 de grosor parecían caños. Quedaron en 0,046, más
+  bajos y abiertos (se ven antebrazo y mano).
+- **La cúpula del muñeco tapa las piernas** mirando abajo: esconderlo corta
+  la sombra; el material "solo sombra" (`colorWrite` y `depthWrite`
+  apagados) la deja.
+- **`miniaturaParkour` tiene un color de plataforma por mapa:** agregar un
+  mapa sin sumar su color rompe el menú.
+- **Siete cartas en el menú de juegos** no entraban: grilla de 7 columnas
+  (4 en `angosta`) y cartas más chicas; medido sin desborde en compu, celu
+  acostado y parado.
 
 ## Rendimiento (medido en 390×844)
 

@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **25/09/2026, noche (2) · `claude/fijate-iszyer`:**
+  - Pidió: caminos sin obstáculos, animar en chop, lineal y estilo Roblox,
+    correr, saltar, deslizar y rodar en el parkour, y minijuegos en primera
+    persona con brazos, cuerpo y piernas. Quedó todo ([aeroplaza](aeroplaza.md)
+    § Séptima vuelta): mapa 6 Azoteas y el Tiro de Burbujas.
+  - Los cuatro TikTok de referencia no se pudieron bajar (permiso negado): si
+    los describe o los manda de otra forma, se ajustan las animaciones.
+  - Pruebas nuevas: `caminos.mjs`, `movimientos.mjs` y `primera.mjs`.
 - **25/09/2026, noche · `claude/fijate-iszyer`:**
   - Pidió: avisos arriba estilo Windows 7 con sus sonidos, menos carteles
     grandes, el parkour despejado, las misiones solo desde un botón y chat de

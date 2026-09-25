@@ -50,7 +50,8 @@ Detalle: `js/red.js` y `js/remotos.js`.
 | Jardín de géiseres | nenúfares que se pisan, lotos, flores de agua gigantes, géiseres que soplan, flores que rebotan |
 | Aero·Mart | la tienda por dentro: vitrinas, percheros, sombrerero, estantes, globos, neón, maniquíes y Menta |
 | Mi casa | una isla entre las nubes, con la casa y 16 muebles para poner |
-| Parkour Aero | el primer minijuego, en la Zona de Juegos (piso de cristal y un farol gigante con puertas que brillan): 5 mapas (Nubes, Acuario, Jardín, Ciudad y Órbita) con plataformas que se mueven, barras que giran, rebotes, cintas, géiseres, controles, estrellas por tiempo y récords |
+| Parkour Aero | el primer minijuego, en la Zona de Juegos (piso de cristal y un farol gigante con puertas que brillan): 6 mapas (Nubes, Acuario, Jardín, Ciudad, Órbita y Azoteas) con plataformas que se mueven, barras que giran, rebotes, cintas, géiseres, tubos y muros, controles, estrellas por tiempo y récords. Se corre, se salta, se desliza, se rueda, se trepan bordes y se rebota en paredes (C, Q o ⤓ para bajar), y se puede jugar en primera persona (👁) |
+| Tiro de Burbujas | minijuego en primera persona desde un balcón sobre la laguna: 60 s para reventar burbujas de 1, 2 y 5 puntos que se mueven, con racha que multiplica hasta ×4 |
 | Adentro de los edificios | en primera persona, con un punto para apuntar y usar: los 5 hoteles (lobby con recepción, columna-acuario y piano; ascensor de vidrio a la suite y a la azotea con pileta, bar y telescopio), el Café Burbuja del pabellón y las casas de dos vecinos |
 
 Además hay:
@@ -62,6 +63,9 @@ Además hay:
 - día y noche iguales para todos: 5 minutos de día y 5 de noche, por el reloj;
 - en el celu, un teclado propio de vidrio (acostado, con acentos, símbolos y emojis) y botones Frutiger con onda de luz;
 - chat de voz por cercanía (botón 🎤): se escucha a los que están a menos de 12 m, del lado donde están y más bajo cuanto más lejos. Usa WebRTC y pide el micrófono; en el visor de artefactos no hay micrófono, así que ahí solo se escucha;
+- animaciones por poses clave, estilo Roblox, en tres estilos para elegir en Opciones: suave, lineal y chop (a saltos, a 12 cuadros);
+- en primera persona se ven los brazos, que acompañan cada movimiento, y mirando abajo el cuerpo y las piernas;
+- los caminos de la isla sin nada que estorbe;
 - avisos arriba, chiquitos, estilo Windows 7 y con sus campanitas; las misiones se abren con el botón 📜 y en el parkour no queda nada que tape;
 - siete estilos retro con el botón 👾: Normal, Pixel, PS1, Tele de tubo, Game
   Boy, 8 bits y VHS. Dibujan de verdad a baja resolución, así que además van
