@@ -8,6 +8,7 @@
    ========================================================================== */
 import * as THREE from 'three';
 
+const NADA = [];
 export class Mundo {
   constructor(altura = () => 0) {
     this.altura = altura;
@@ -19,11 +20,31 @@ export class Mundo {
     this.gravedad = 24;
   }
   /* c: cilindro. rebote: los hongos y flores que hacen saltar. tipo: para el sonido de los pasos */
-  cilindro(x, z, r, y0, y1, o = {}) { const s = { t: 'c', x, z, r, y0, y1, ...o }; this.solidos.push(s); return s; }
+  cilindro(x, z, r, y0, y1, o = {}) { const s = { t: 'c', x, z, r, y0, y1, ...o }; this.solidos.push(s); this._rejilla = null; return s; }
   /* b: caja girada rot radianes sobre el eje y */
-  caja(x, z, hx, hz, y0, y1, rot = 0, o = {}) { const s = { t: 'b', x, z, hx, hz, y0, y1, rot, c: Math.cos(rot), s: Math.sin(rot), ...o }; this.solidos.push(s); return s; }
+  caja(x, z, hx, hz, y0, y1, rot = 0, o = {}) { const s = { t: 'b', x, z, hx, hz, y0, y1, rot, c: Math.cos(rot), s: Math.sin(rot), ...o }; this.solidos.push(s); this._rejilla = null; return s; }
   interactivo(o) { this.interactivos.push(o); return o; }
-  quitar(s) { const i = this.solidos.indexOf(s); if (i >= 0) this.solidos.splice(i, 1); }
+  quitar(s) { const i = this.solidos.indexOf(s); if (i >= 0) this.solidos.splice(i, 1); this._rejilla = null; }
+  /* con el mundo grande hay cientos de sólidos (árboles, pilares): se guardan en
+     una rejilla de 16 m y cada consulta mira solo su casilla. Cada sólido va en
+     todas las casillas que toca, agrandado 1,5 m (lo más que empuja una consulta) */
+  cerca(x, z) {
+    if (!this._rejilla) {
+      const R = this._rejilla = new Map();
+      for (const s of this.solidos) {
+        const e = (s.t === 'c' ? s.r : Math.hypot(s.hx, s.hz)) + 1.5;
+        for (let i = Math.floor((s.x - e) / 16); i <= Math.floor((s.x + e) / 16); i++) for (let j = Math.floor((s.z - e) / 16); j <= Math.floor((s.z + e) / 16); j++) {
+          const k = i * 4096 + j; let l = R.get(k); if (!l) R.set(k, (l = [])); l.push(s);
+        }
+      }
+    }
+    return this._rejilla.get(Math.floor(x / 16) * 4096 + Math.floor(z / 16)) || NADA;
+  }
+  /* ¿hay algo sólido en este punto? (para que la cámara no se meta adentro de las casas) */
+  tapa(x, y, z) {
+    for (const s of this.cerca(x, z)) if (!s.fantasma && !s.pasaCamara && (s.t === 'b' || s.r > 0.6) && y > s.y0 && y < s.y1 + 0.2 && this.dentro(s, x, z, 0.15)) return true;
+    return false;
+  }
 
   /* ¿el punto (x, z) cae dentro del sólido (agrandado r)? */
   dentro(s, x, z, r = 0) {
@@ -34,7 +55,7 @@ export class Mundo {
   /* el suelo bajo (x, z) que está por debajo de y + paso: el terreno o el techo de un sólido */
   suelo(x, z, y, paso = 0.45) {
     let h = this.altura(x, z), cual = null;
-    for (const s of this.solidos) {
+    for (const s of this.cerca(x, z)) {
       if (s.fantasma || s.y1 > y + paso || s.y1 < h) continue;
       if (this.dentro(s, x, z, s.t === 'c' ? -0.05 : -0.02)) { h = s.y1; cual = s; }
     }
@@ -43,12 +64,12 @@ export class Mundo {
   /* un techo sobre la cabeza (para no atravesar los aleros saltando) */
   techo(x, z, y, alto) {
     let h = Infinity;
-    for (const s of this.solidos) if (!s.fantasma && !s.sinTecho && s.y0 > y + 0.2 && s.y0 < y + alto + 0.3 && this.dentro(s, x, z)) h = Math.min(h, s.y0);
+    for (const s of this.cerca(x, z)) if (!s.fantasma && !s.sinTecho && s.y0 > y + 0.2 && s.y0 < y + alto + 0.3 && this.dentro(s, x, z)) h = Math.min(h, s.y0);
     return h;
   }
   /* saca un círculo de radio r (que va de y a y+alto) de adentro de los sólidos */
   empujar(p, r, alto) {
-    for (const s of this.solidos) {
+    for (const s of this.cerca(p.x, p.z)) {
       if (s.fantasma || s.y1 <= p.y + 0.46 || s.y0 >= p.y + alto) continue;
       if (s.t === 'c') {
         const dx = p.x - s.x, dz = p.z - s.z, d2 = dx * dx + dz * dz, R = s.r + r;

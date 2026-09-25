@@ -51,7 +51,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
 const HOT = [['burbujero', '🫧'], ['gestos', '👋'], ['discos', '💿'], ['foto', '📷'], ['mapa', '🗺️']];
 const GESTOS = ['saludar', 'festejar', 'sentarse', 'bailar1', 'bailar2', 'bailar3'];
-const CANCIONES = ['titulo', 'colina', 'arrecife', 'ciudad', 'cielo', 'aurora'];
+const CANCIONES = ['titulo', 'colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 'playa', 'bosque'];
 
 export const UI = {
   J: null, raiz: null, ventanaAbierta: null,
@@ -202,6 +202,26 @@ export const UI = {
     const d = el(`<div class="avisito ${tipo}"></div>`); d.textContent = texto; c.appendChild(d);
     while (c.children.length > 4) c.firstChild.remove();
     setTimeout(() => d.remove(), 3300);
+  },
+  /* el cartel grande al entrar a una región: el ícono, el nombre y una rayita
+     brillante que cruza (se va solo) */
+  lugar(nombre, icono = '') {
+    if (!this.hud) return;
+    $('.lugar', this.hud)?.remove();
+    const d = el('<div class="lugar"><i></i><b></b><span class="brillo"></span></div>');
+    d.firstElementChild.textContent = icono; $('b', d).textContent = nombre;
+    this.hud.appendChild(d); this.historial = [...(this.historial || []), '@' + nombre].slice(-30);
+    setTimeout(() => d.remove(), 3600);
+  },
+  /* la pildorita del monorriel: cuánto falta, la próxima parada (null la saca) */
+  estadoTren(texto) {
+    if (!this.hud) return;
+    let d = $('.tren-estado', this.hud);
+    if (!texto) { d && d.remove(); this._tren = null; return; }
+    if (this._tren === texto && d) return;
+    this._tren = texto;
+    if (!d) { d = el('<div class="tren-estado pildora"><i>🚝</i> <span></span></div>'); this.hud.appendChild(d); }
+    d.lastElementChild.textContent = texto;
   },
   /* el cartel de "E  Viajar" */
   accion(texto) {

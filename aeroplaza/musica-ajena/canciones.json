@@ -1,0 +1,32 @@
+{
+ "arrecife": {
+  "archivo": "arrecife.mp3",
+  "bucle": [
+   24.1,
+   51.58
+  ],
+  "golpe": 0.0131,
+  "de": "c583e8cb-f80c0b871bae01b8ce010958a689ffb0.mp4",
+  "dura": 51.78
+ },
+ "bosque": {
+  "archivo": "bosque.mp3",
+  "bucle": [
+   10.7,
+   94.2
+  ],
+  "golpe": 0.1974,
+  "de": "89e5ce72-aa14247b21ac395818cd2fe2b377b356.mp4",
+  "dura": 94.4
+ },
+ "playa": {
+  "archivo": "playa.mp3",
+  "bucle": [
+   14.1,
+   27.5
+  ],
+  "golpe": 0.1553,
+  "de": "a0df6103-14fa67ee7cae8665eb153f8535c97603.mp4",
+  "dura": 27.7
+ }
+}

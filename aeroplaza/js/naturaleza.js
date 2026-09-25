@@ -18,15 +18,20 @@ const blanca = () => { const t = new THREE.DataTexture(new Uint8Array([255, 255,
 
 /* los shaders que dependen del tiempo leen estos uniformes compartidos */
 export const UNI = { uT: { value: 0 }, uJugador: { value: JUGADOR }, uViento: { value: 1 } };
+/* lo que se reparte según dónde está la cámara (árboles con detalle o livianos, flores
+   de cerca): main.js llama a actualizar(dt, cámara) de las que están en la escena */
+export const ARBOLEDAS = new Set();
 
 /* ------------------------------------------------------------------ terreno */
 /* altura(x, z) → malla. color(x, z, h, pendiente) → [r, g, b, arena 0..1] */
-export function terreno(altura, { tam = 260, seg = 220, centro = [0, 0], color }) {
+/* apretar: los vértices se juntan en el medio (u → u·(1−a+a·u²)), así el centro,
+   donde pasa casi todo, tiene más detalle y lo lejos menos, con los mismos vértices */
+export function terreno(altura, { tam = 260, seg = 220, centro = [0, 0], color, apretar = 0 }) {
   const g = new THREE.PlaneGeometry(tam, tam, seg, seg).rotateX(-Math.PI / 2);
-  const p = g.attributes.position, n = p.count;
+  const p = g.attributes.position, n = p.count, h2 = tam / 2, w = (v) => { const u = v / h2; return h2 * u * (1 - apretar + apretar * u * u); };
   const col = new Float32Array(n * 3), arena = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    const x = p.getX(i) + centro[0], z = p.getZ(i) + centro[1];
+    const x = w(p.getX(i)) + centro[0], z = w(p.getZ(i)) + centro[1];
     const h = altura(x, z);
     p.setXYZ(i, x, h, z);
   }
@@ -67,7 +72,8 @@ export function terreno(altura, { tam = 260, seg = 220, centro = [0, 0], color }
 /* la profundidad se hornea en una textura (el terreno es una función), así el
    agua sabe dónde es playa, dónde va la espuma y dónde se ven las cáusticas */
 export function agua(nivel, altura, { tam = 3000, rect = [-150, -150, 300], colorPlaya = '#3ff0dd', colorHondo = '#0a4fb0' } = {}) {
-  const N = 256, datos = new Uint8Array(N * N);
+  /* un texel cada ~1,2 m: con el mundo grande hacen falta 512 (si no, la espuma de la orilla sale en escalones) */
+  const N = rect[2] > 340 ? 512 : 256, datos = new Uint8Array(N * N);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const x = rect[0] + (i + 0.5) / N * rect[2], z = rect[1] + (j + 0.5) / N * rect[2];
     datos[j * N + i] = Math.max(0, Math.min(255, (nivel - altura(x, z)) * 20));
@@ -212,7 +218,7 @@ export function conViento(m, fuerza = 1) {
    La altura del terreno y dónde puede haber pasto van horneados en una textura,
    porque el shader de vértices no puede llamar a altura(x, z). */
 export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 26, sem = 11 } = {}) {
-  const N = 256, datos = new Float32Array(N * N * 4);
+  const N = area[2] > 340 ? 512 : 256, datos = new Float32Array(N * N * 4);
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const x = area[0] + (i + 0.5) / N * area[2], z = area[1] + (j + 0.5) / N * area[2], k = (j * N + i) * 4;
     datos[k] = altura(x, z); datos[k + 1] = donde(x, z) ? 1 : 0;
@@ -227,18 +233,18 @@ export function pasto(altura, donde, { n = 14000, area = [-150, -150, 300], R = 
   g.setAttribute('aInst', new THREE.InstancedBufferAttribute(inst, 4));
   g.instanceCount = n;
   const m = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
-  const U = { uMapa: { value: mapa }, uArea: { value: new THREE.Vector3(...area) }, uR: { value: R } };
+  const U = { uMapa: { value: mapa }, uArea: { value: new THREE.Vector3(...area) }, uR: { value: R }, uN: { value: N } };
   m.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, U);
     s.uniforms.uT = UNI.uT; s.uniforms.uJugador = UNI.uJugador; s.uniforms.uViento = UNI.uViento;
     s.vertexShader = s.vertexShader
       .replace('#include <common>', `#include <common>
-        attribute vec4 aInst; uniform sampler2D uMapa; uniform vec3 uArea; uniform float uR, uT, uViento; uniform vec3 uJugador;
+        attribute vec4 aInst; uniform sampler2D uMapa; uniform vec3 uArea; uniform float uR, uT, uViento, uN; uniform vec3 uJugador;
         /* bilineal a mano: la textura es de flotantes y no todas las placas la filtran */
         vec2 mapa(vec2 p) {
-          vec2 q = (p - uArea.xy) / uArea.z * 256.0 - 0.5; vec2 i = floor(q), f = fract(q);
-          vec2 a = texture2D(uMapa, (i + 0.5) / 256.0).rg, b = texture2D(uMapa, (i + vec2(1.5, 0.5)) / 256.0).rg;
-          vec2 c = texture2D(uMapa, (i + vec2(0.5, 1.5)) / 256.0).rg, d = texture2D(uMapa, (i + 1.5) / 256.0).rg;
+          vec2 q = (p - uArea.xy) / uArea.z * uN - 0.5; vec2 i = floor(q), f = fract(q);
+          vec2 a = texture2D(uMapa, (i + 0.5) / uN).rg, b = texture2D(uMapa, (i + vec2(1.5, 0.5)) / uN).rg;
+          vec2 c = texture2D(uMapa, (i + vec2(0.5, 1.5)) / uN).rg, d = texture2D(uMapa, (i + 1.5) / uN).rg;
           return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
         }`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -269,12 +275,12 @@ export function flores(altura, donde, { n = 900, area = [-120, -120, 240], sem =
   /* la flor: una forma plana de cinco pétalos, apenas ahuecada (~40 triángulos
      en vez de 500 de cinco esferas: con 1.400 flores eran la mitad de la isla) */
   const forma = new THREE.Shape();
-  for (let i = 0; i <= 60; i++) { const a = i / 60 * Math.PI * 2, r = 0.05 + 0.055 * Math.pow(Math.abs(Math.cos(a * 2.5)), 0.7); const x = Math.cos(a) * r, y = Math.sin(a) * r; if (i === 0) forma.moveTo(x, y); else forma.lineTo(x, y); }
+  for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI * 2, r = 0.05 + 0.055 * Math.pow(Math.abs(Math.cos(a * 2.5)), 0.7); const x = Math.cos(a) * r, y = Math.sin(a) * r; if (i === 0) forma.moveTo(x, y); else forma.lineTo(x, y); }
   const gP = new THREE.ShapeGeometry(forma, 1).rotateX(-Math.PI / 2);
   { const p = gP.attributes.position; for (let i = 0; i < p.count; i++) { const d = Math.hypot(p.getX(i), p.getZ(i)); p.setY(i, d * d * 4); } gP.computeVertexNormals(); }
   gP.translate(0, 0.2, 0);
   const tallo = new THREE.CylinderGeometry(0.008, 0.01, 0.2, 4, 1, true); tallo.translate(0, 0.1, 0);
-  const gC = new THREE.SphereGeometry(0.03, 6, 4); gC.scale(1, 0.6, 1); gC.translate(0, 0.21, 0);
+  const gC = new THREE.SphereGeometry(0.03, 5, 3); gC.scale(1, 0.6, 1); gC.translate(0, 0.21, 0);
   const mP = new THREE.MeshStandardMaterial({ roughness: 0.4, side: THREE.DoubleSide }), mC = new THREE.MeshStandardMaterial({ color: '#ffc21f', roughness: 0.4, emissive: '#ff9d00', emissiveIntensity: 0.15 }), mT = new THREE.MeshLambertMaterial({ color: '#3f9a2a' });
   for (const m of [mP, mC, mT]) conViento(m, 0.6);
   const iP = new THREE.InstancedMesh(gP, mP, n), iC = new THREE.InstancedMesh(gC, mC, n), iT = new THREE.InstancedMesh(tallo, mT, n);
@@ -291,8 +297,23 @@ export function flores(altura, donde, { n = 900, area = [-120, -120, 240], sem =
     iP.setColorAt(k, c.set(colores[Math.floor(r() * colores.length)]));
     k++;
   }
-  const g = new THREE.Group();
-  for (const i of [iP, iC, iT]) { i.count = k; i.frustumCulled = false; g.add(i); }
+  /* se guardan todas y se dibujan solo las que quedan a menos de 60 m de la cámara
+     (con el mundo grande eran medio millón de triángulos de flores que ni se veían) */
+  const M0 = [], C0 = [];
+  for (let j = 0; j < k; j++) { iP.getMatrixAt(j, M); M0.push(M.clone()); iP.getColorAt(j, c); C0.push(c.clone()); }
+  const g = new THREE.Group(), lista = [iP, iC, iT];
+  for (const i of lista) { i.count = k; i.frustumCulled = false; g.add(i); }
+  let tt = 9;
+  g.actualizar = (dt, p) => {
+    tt += dt; if (tt < 0.5) return; tt = 0;
+    let n = 0;
+    for (let j = 0; j < k; j++) {
+      const e = M0[j].elements, dx = e[12] - p.x, dz = e[14] - p.z; if (dx * dx + dz * dz > 3600) continue;
+      for (const i of lista) i.setMatrixAt(n, M0[j]); iP.setColorAt(n, C0[j]); n++;
+    }
+    for (const i of lista) { i.count = n; i.instanceMatrix.needsUpdate = true; } iP.instanceColor.needsUpdate = true;
+  };
+  ARBOLEDAS.add(g);
   return g;
 }
 
@@ -316,14 +337,89 @@ export function conBorde(m, color = '#ffffff', fuerza = 0.5, pot = 3.0) {
   };
   return m;
 }
+/* los árboles se mecen: el árbol entero se dobla desde la base (más cuanto más
+   alto, al cuadrado), con ráfagas que recorren la isla, y las hojas tiemblan un
+   poco hacia afuera. alto: la altura del modelo sin escalar. aleteo: las hojas
+   de palmera suben y bajan más cuanto más lejos del tronco (desde punta [x, z]).
+   El viento sopla siempre para el mismo lado del mundo aunque la copia esté girada */
+export function conMeceo(m, { fuerza = 1, alto = 5, tiembla = 0, aleteo = 0, punta = [0, 0] } = {}) {
+  const f = (v) => v.toFixed(3);
+  m.customProgramCacheKey = () => `meceo${f(fuerza)}|${f(alto)}|${f(tiembla)}|${f(aleteo)}`;
+  m.onBeforeCompile = (s) => {
+    s.uniforms.uT = UNI.uT; s.uniforms.uViento = UNI.uViento;
+    s.vertexShader = s.vertexShader
+      .replace('#include <common>', '#include <common>\nuniform float uT, uViento;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        {
+          #ifdef USE_INSTANCING
+            vec3 base = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+            mat3 giro = mat3(instanceMatrix); float esc = length(giro[0]); giro /= esc;
+          #else
+            vec3 base = modelMatrix[3].xyz; mat3 giro = mat3(1.0);
+          #endif
+          float fase = dot(base.xz, vec2(0.13, 0.11));
+          /* la ráfaga: una ola lenta que cruza la isla en diagonal */
+          float rafaga = 0.55 + 0.45 * sin(uT * 0.45 - dot(base.xz, vec2(0.018, 0.012))) * (0.7 + 0.3 * sin(uT * 0.17 + base.x * 0.01));
+          float s1 = sin(uT * 1.15 + fase) * 0.55 + sin(uT * 2.05 + fase * 1.7) * 0.28 + sin(uT * 3.3 + fase * 2.3) * 0.1;
+          vec2 w = vec2(0.82, 0.57) * (0.45 + s1) * rafaga * ${f(fuerza)} * uViento * 0.075;
+          float k = clamp(position.y / ${f(alto)}, 0.0, 1.4); k *= k;
+          vec3 dl = transpose(giro) * vec3(w.x, 0.0, w.y);
+          transformed.xz += dl.xz * k * ${f(alto)};
+          transformed.y -= dot(w, w) * k * ${f(alto)} * 0.8;
+          ${tiembla ? `transformed += objectNormal * sin(uT * 6.3 + position.x * 3.1 + position.z * 2.7 + fase * 5.0) * ${f(tiembla)} * k * (0.6 + rafaga);` : ''}
+          ${aleteo ? `{ float l = length(position.xz - vec2(${f(punta[0])}, ${f(punta[1])}));
+            transformed.y += sin(uT * 2.4 + fase * 3.0 + atan(position.z - ${f(punta[1])}, position.x - ${f(punta[0])}) * 2.0) * ${f(aleteo)} * l * l * (0.5 + rafaga) * uViento; }` : ''}
+        }`);
+  };
+  return m;
+}
+
+/* Una arboleda: los árboles de cerca con todo el detalle y los de lejos con la
+   versión liviana (~20 veces menos triángulos). Cada medio segundo se reparte
+   quién va en cuál según la distancia a la cámara: son dos o tres llamadas de
+   dibujo por tipo sea cual sea la cantidad de árboles. Es un Group: se agrega
+   a la escena como cualquier cosa, y main.js mueve las que están en la escena
+   (ARBOLEDAS). Mientras nadie la mueve, van todos con detalle.
+   lugares: [[x, z, escala, giro]] */
+export class Arboleda extends THREE.Group {
+  constructor(altura, lugares, { cerca = 'arbol', lejos = 'arbolLejos', alto = 5.4, hundir = 0.15, tintes = null, dist = 75 } = {}) {
+    super();
+    this.dist = dist; this.t = 9;
+    this.L = lugares.map(([x, z, esc = 1, rot], i) => [x, altura(x, z) - hundir, z, esc, rot ?? i * 2.4]);
+    this.col = tintes ? this.L.map((_, i) => new THREE.Color(tintes[i % tintes.length])) : null;
+    const gC = instancias(cerca, this.L, { alto, tintes }), gL = instancias(lejos, this.L, { alto, tintes });
+    if (!gC) return;
+    /* (se copian las listas: al pasar cada pieza a este grupo se sale de la otra, y
+       recorrer la lista mientras se achica se saltea una de cada dos: los árboles
+       quedaban sin copa) */
+    this.mC = [...gC.children]; this.mL = gL ? [...gL.children] : [];
+    this.M = []; const q = new THREE.Matrix4();
+    for (let i = 0; i < this.L.length; i++) { this.mC[0].getMatrixAt(i, q); this.M.push(q.clone()); }
+    for (const im of this.mC) { im.frustumCulled = false; this.add(im); }
+    for (const im of this.mL) { im.frustumCulled = false; im.castShadow = false; im.count = 0; this.add(im); }
+    ARBOLEDAS.add(this);
+  }
+  /* p: la cámara. Cada 0,5 s (o ya, con forzar) */
+  actualizar(dt, p, forzar = false) {
+    if (!this.mC || !this.mL.length) return;
+    this.t += dt; if (this.t < 0.5 && !forzar) return; this.t = 0;
+    let nC = 0, nL = 0; const d2 = this.dist * this.dist;
+    for (let i = 0; i < this.L.length; i++) {
+      const [x, , z] = this.L[i], cerca = (x - p.x) ** 2 + (z - p.z) ** 2 < d2;
+      for (const im of cerca ? this.mC : this.mL) { const k = cerca ? nC : nL; im.setMatrixAt(k, this.M[i]); if (this.col) im.setColorAt(k, this.col[i]); }
+      if (cerca) nC++; else nL++;
+    }
+    for (const [lista, n] of [[this.mC, nC], [this.mL, nL]]) for (const im of lista) { im.count = n; im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; }
+  }
+}
 /* lugares: [[x, z, escala]]. variante: 'arbol' (el de burbujas lima) o 'arbolRosa'.
    tintes claros: multiplican el color de cada copia, para que no sean iguales */
-export function arboles(altura, lugares, { variante = 'arbol', tintes = ['#ffffff', '#e4ffd8', '#fff6d0', '#d8fff0'] } = {}) {
-  return instancias(variante, lugares.map(([x, z, esc = 1], i) => [x, altura(x, z) - 0.15, z, esc, i * 2.4]), { alto: 5.4, tintes }) || new THREE.Group();
+export function arboles(altura, lugares, { variante = 'arbol', tintes = ['#ffffff', '#e4ffd8', '#fff6d0', '#d8fff0'], dist = 50 } = {}) {
+  return new Arboleda(altura, lugares, { cerca: variante, lejos: variante + 'Lejos', alto: 5.4, tintes, dist });
 }
 /* lugares: [[x, z, escala, giro]]; las hojas se mueven con el viento */
-export function palmeras(altura, lugares) {
-  return instancias('palmera', lugares.map(([x, z, esc = 1, rot = 0]) => [x, altura(x, z) - 0.2, z, esc, rot]), { alto: 6.8 }) || new THREE.Group();
+export function palmeras(altura, lugares, { dist = 55 } = {}) {
+  return new Arboleda(altura, lugares, { cerca: 'palmera', lejos: 'palmeraLejos', alto: 6.8, hundir: 0.2, dist });
 }
 
 /* ------------------------------------------------------------------- piedras */

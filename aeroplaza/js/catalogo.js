@@ -32,6 +32,7 @@ export const PRECIO = {
 export const DE_MISION = {
   'sombrero:flor': 'nimbo', 'peinado:rulos': 'lima', 'motivo:burbujas': 'burbu', 'espalda:aleta': 'coral',
   'sombrero:aureola': 'estela', 'motivo:galaxia': 'estela', 'motivo:aurora': 'loto', 'particulas:notas': 'guia',
+  'sombrero:explorador': 'brujula', 'espalda:molinete': 'brisa', 'sombrero:hongo': 'musgo', 'sombrero:capitan': 'marea',
 };
 export function loTengo(G, clave) {
   /* los ojos son gratis; el motivo de la cabeza se tiene si se tiene ese motivo */

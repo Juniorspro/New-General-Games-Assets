@@ -305,3 +305,15 @@ html.a700 .estilos { grid-template-columns: repeat(2, 1fr); } html.a700 .jugar-g
 .flecha-giro { pointer-events: auto; width: 64px; height: 64px; border-radius: 50%; border: 0; background: radial-gradient(circle at 35% 30%, #b8ffd8, #2fcf6f); color: #fff; font-size: 34px; font-weight: 900; box-shadow: 0 6px 16px rgba(30, 140, 80, 0.35); text-shadow: 0 2px 0 rgba(0, 80, 40, 0.3); }
 .flecha-giro:active { transform: scale(0.92); }
 html.angosta .giros { width: 100%; bottom: auto; top: 40%; gap: 62%; }
+
+/* el cartel de la región al entrar (grande, arriba, con un brillo que cruza) */
+.lugar { position: absolute; left: 50%; top: calc(max(14px, env(safe-area-inset-top)) + 96px); transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 12px 30px 12px 20px; border-radius: 999px; overflow: hidden; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(232,248,255,0.95) 48%, rgba(200,236,252,0.95) 52%, rgba(236,250,255,0.97) 100%); border: 3px solid #fff; box-shadow: 0 10px 30px rgba(20, 110, 170, 0.28), inset 0 -3px 0 rgba(60, 170, 230, 0.25); animation: lugar 3.5s cubic-bezier(.2,.8,.2,1) both; white-space: nowrap; max-width: calc(90 * var(--vw)); }
+.lugar i { font-style: normal; font-size: 34px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15)); animation: saluda 1.2s ease-in-out 0.3s 2; }
+.lugar b { font-size: 26px; font-weight: 900; letter-spacing: 0.02em; background: linear-gradient(180deg, #1d8fd8, #0f5f9f); -webkit-background-clip: text; background-clip: text; color: transparent; overflow: hidden; text-overflow: ellipsis; }
+.lugar .brillo { position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.9) 45%, transparent 60%); transform: translateX(-120%); animation: brilloLugar 1.4s ease 0.35s both; }
+@keyframes lugar { 0% { opacity: 0; transform: translate(-50%, -26px) scale(0.86); } 10% { opacity: 1; transform: translate(-50%, 0) scale(1.04); } 16% { transform: translate(-50%, 0) scale(1); } 82% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -12px) scale(0.96); } }
+@keyframes brilloLugar { to { transform: translateX(120%); } }
+html.angosta .lugar b { font-size: 20px; } html.angosta .lugar i { font-size: 26px; }
+.tren-estado { position: absolute; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 142px); transform: translateX(-50%); pointer-events: none; animation: apareceC 0.3s both; white-space: nowrap; }
+.tren-estado i { font-style: normal; }

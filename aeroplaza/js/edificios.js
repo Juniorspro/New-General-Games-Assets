@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { brilloso } from './naturaleza.js';
-import { modelo } from './modelos.js';
+import { modelo, instancias, tamDe, hay } from './modelos.js';
 
 /* un cartel con texto dibujado (los generadores no escriben bien: se escribe acá) */
 export function letrero(texto, { ancho = 4, alto = 1, fondo = '#ffffff', tinta = '#2a9d3a', borde = '#8fe070', tam = 88 } = {}) {
@@ -69,6 +69,21 @@ export function estacion(mundo, x, z, rot, alturaPiso) {
   return g;
 }
 
+/* el pabellón octogonal solo (sin vías ni tren): en el medio de la ciudad */
+export function pabellon(mundo, x, z, rot, y, ancho = 14.4) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rot;
+  const M = modelo('estacion', { ancho }); M.rotation.y = -Math.PI / 2; g.add(M);
+  const anden = M.userData.anden, rp = M.userData.pared, R = M.userData.tam.x / 2;
+  const c = Math.cos(rot), s = Math.sin(rot), aMundo = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
+  /* el piso y un escalón (el piso queda más alto que un paso) */
+  mundo.cilindro(x, z, R - 0.2, y - 5, y + anden, { tipo: 'piedra' });
+  mundo.cilindro(x, z, R + 0.5, y - 5, y + anden * 0.5, { tipo: 'piedra' });
+  for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; if (Math.cos(a) < -0.8) continue; const [cx, cz] = aMundo(Math.cos(a) * rp, Math.sin(a) * rp); mundo.cilindro(cx, cz, 0.55, y, y + 4.5); }
+  const [ex, ez] = aMundo(-rp - 2, 0);
+  g.userData.anden = anden; g.userData.entrada = new THREE.Vector3(ex, y, ez);
+  return g;
+}
+
 /* ------------------------------------------------------ la tienda de afuera */
 export function tiendaAfuera(mundo, x, z, rot, alturaPiso, nombre = 'AERO·MART') {
   const g = new THREE.Group(); g.position.set(x, alturaPiso, z); g.rotation.y = rot;
@@ -107,6 +122,24 @@ export function farol(mundo, x, z, y) {
   g.userData.luz = luz;
   mundo.cilindro(x, z, 0.15, y, y + 3.2);
   return g;
+}
+/* muchos faroles juntos: una llamada por material para todos, y las bochas (que se
+   prenden de noche) en otra. lugares: [[x, z, y]]. Devuelve el grupo; su luz en userData.luz */
+export function faroles(mundo, lugares) {
+  const g = new THREE.Group(), M = modelo('farol', { alto: 3.7 }), k = M.userData.k, arriba = M.userData.bocha, r = M.userData.radio;
+  g.add(instancias('farol', lugares.map(([x, z, y]) => [x, y, z, 1, 0]), { alto: 3.7 }));
+  const luz = new THREE.InstancedMesh(new THREE.SphereGeometry(r * 1.12, 20, 14), new THREE.MeshStandardMaterial({ color: '#ffffff', emissive: '#bff4ff', emissiveIntensity: 0.3, roughness: 0.1, transparent: true, opacity: 0.35, depthWrite: false }), lugares.length);
+  const T = new THREE.Matrix4();
+  lugares.forEach(([x, z, y], i) => { luz.setMatrixAt(i, T.makeTranslation(x + arriba.x, y + arriba.y, z + arriba.z)); mundo.cilindro(x, z, 0.15, y, y + 3.2); });
+  luz.computeBoundingSphere(); luz.userData.op0 = 0.35; g.add(luz);
+  g.userData.luz = luz; g.userData.k = k;
+  return g;
+}
+/* muchos bancos juntos (una llamada por material). lugares: [[x, z, y, giro]] */
+export function bancos(mundo, lugares, ancho = 2.1) {
+  const T = tamDe('banco'), k = ancho / Math.max(T.x, T.z), asiento = modelo('banco', { ancho }).userData.asiento;
+  for (const [x, z, y, rot] of lugares) mundo.caja(x, z, 1, 0.33, y, y + asiento, rot, { asiento: true });
+  return instancias('banco', lugares.map(([x, z, y, rot]) => [x, y, z, 1, rot]), { alto: T.y * k });
 }
 export function banco(mundo, x, z, y, rot) {
   const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rot;

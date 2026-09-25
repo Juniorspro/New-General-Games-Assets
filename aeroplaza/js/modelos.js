@@ -24,8 +24,11 @@ export function modelo(n, { alto, ancho, escala } = {}) {
   const k = escala ?? (alto ? alto / T.y : ancho ? ancho / Math.max(T.x, T.z) : 1);
   const g = new THREE.Group(), o = B.clone(true); o.scale.setScalar(k); g.add(o);
   g.userData.tam = T.clone().multiplyScalar(k); g.userData.k = k;
-  for (const [c, v] of Object.entries(B.userData.medidas || {})) g.userData[c] = v.isVector3 ? v.clone().multiplyScalar(k) : v * k;
-  const pantalla = o.getObjectByName('pantalla'); if (pantalla) g.userData.pantalla = pantalla;
+  const esc = (v) => typeof v === 'number' ? v * k : v?.isVector3 ? v.clone().multiplyScalar(k)
+    : Array.isArray(v) ? (v.every((q) => typeof q === 'number') ? v.map((q, i) => (i < 3 ? q * k : q)) : v.map(esc)) : v;   // [x, z, y, giro]: el giro no se escala
+  for (const [c, v] of Object.entries(B.userData.medidas || {})) g.userData[c] = esc(v);
+  /* las piezas con nombre (se animan): la pantalla de la tele, el rotor del molino, el haz del faro, las agujas del reloj */
+  o.traverse((q) => { if (q.name) g.userData[q.name] = q; });
   return g;
 }
 

@@ -15,6 +15,11 @@ export const NPCS = {
   estela: { A: { color: '#9b7bff', color2: '#d9f7ff', motivo: 'galaxia', cubre: 0.7, material: 'neon', sombrero: 'ninguno', peinado: 'nube', colorPelo: '#ffffff', anteojos: 'visor', espalda: 'alas', particulas: 'estrellas' }, mision: { tipo: 'estrella', meta: 5, orbes: 20, cosas: ['sombrero:aureola', 'motivo:galaxia'] } },
   loto: { A: { color: '#ff9ad8', color2: '#fff6c2', motivo: 'flores', cubre: 0.45, material: 'perla', sombrero: 'flor', peinado: 'rodete', colorPelo: '#ffffff', anteojos: 'ninguno', espalda: 'ninguno', particulas: 'ninguna' }, mision: { tipo: 'geiser', meta: 3, orbes: 20, cosas: ['motivo:aurora'] } },
   guia: { A: { color: '#ffe14a', color2: '#ffffff', motivo: 'ninguno', cubre: 0.3, material: 'cromo', sombrero: 'auriculares', peinado: 'pinches', colorPelo: '#22262b', anteojos: 'ninguno', espalda: 'ninguno', particulas: 'notas' }, mision: { tipo: 'disco', meta: 6, orbes: 30, cosas: ['particulas:notas'] } },
+  /* los de la isla grande: la exploradora del spawn, la de los molinos, el del bosque y la del faro */
+  brujula: { A: { color: '#ffb13d', color2: '#fff6c2', motivo: 'tierra', cubre: 0.4, material: 'gelatina', sombrero: 'explorador', peinado: 'colitas', colorPelo: '#6b3f1f', anteojos: 'redondos', espalda: 'mochila', particulas: 'ninguna' }, mision: { tipo: 'lugar', meta: 6, orbes: 40, cosas: ['sombrero:explorador'] } },
+  brisa: { A: { color: '#d9fff5', color2: '#39d6ff', motivo: 'nubes', cubre: 0.55, material: 'vidrio', sombrero: 'ninguno', peinado: 'nube', colorPelo: '#ffffff', anteojos: 'ninguno', espalda: 'molinete', particulas: 'hojas' }, mision: { tipo: 'molino', meta: 4, orbes: 25, cosas: ['espalda:molinete'] } },
+  musgo: { A: { color: '#2f7a2f', color2: '#b6f03a', motivo: 'hojas', cubre: 0.5, material: 'mate', sombrero: 'hongo', peinado: 'ninguno', anteojos: 'ninguno', espalda: 'ninguno', particulas: 'hojas' }, mision: { tipo: 'hongo', meta: 5, orbes: 25, cosas: ['sombrero:hongo'] } },
+  marea: { A: { color: '#1d4fbf', color2: '#ffffff', motivo: 'agua', cubre: 0.45, material: 'perla', sombrero: 'capitan', peinado: 'melena', colorPelo: '#ffd23f', anteojos: 'sol', espalda: 'ninguno', particulas: 'burbujas' }, mision: { tipo: 'botella', meta: 3, orbes: 30, cosas: ['sombrero:capitan'] } },
 };
 
 /* lo que dice cada uno, en los tres idiomas: saludo (y pide), recuerda, gracias, charla */
@@ -35,6 +40,14 @@ sumar({
     d_loto_1: 'Pará arriba de un géiser y esperá el chorro. Van {n} de {m}.', d_loto_2: '¡Volaste! Te regalo el motivo aurora.', d_loto_3: 'Las flores gigantes rebotan. Probá saltar de una a otra.',
     d_guia_0: '¡Hola! Soy la Guía. Colecciono música.|Hay 6 discos escondidos en los reinos. Cada uno trae una canción. ¿Los encontrás?',
     d_guia_1: 'Llevás {n} de {m} discos. Buscá cosas que brillen y giren.', d_guia_2: '¡La colección completa! Tomá: notas musicales que te siguen.', d_guia_3: 'Con la tecla 3 o el botón de música cambiás la canción que suena.',
+    d_brujula_0: '¡Bienvenida, bienvenido a la isla! Soy Brújula y dibujé ese mapa.|La isla es enorme: hay una ciudad de vidrio, una bahía con faro, molinos, un bosque de hongos y un monte con cascada. ¿Me visitás seis lugares?',
+    d_brujula_1: 'Mirá el mapa (tecla 5 o el cartel) y andá a los lugares: van {n} de {m}. El monorriel te lleva rápido.', d_brujula_2: '¡Conocés la isla mejor que yo! Tomá mi sombrero de explorador.', d_brujula_3: 'Desde la glorieta del monte se ve todo. Subí de noche: el faro gira.',
+    d_brisa_0: 'Fiuuu… ¡hola! Soy Brisa. Los molinos de la pradera andan medio dormidos.|¿Me soplás cuatro? Acercate a la base y apretá usar.',
+    d_brisa_1: 'Soplá los molinos de la pradera. Van {n} de {m}.', d_brisa_2: '¡Mirá cómo giran! Te regalo mi molinete: gira más cuando corrés.', d_brisa_3: 'Cuando sopla fuerte, los árboles de toda la isla se mecen juntos.',
+    d_musgo_0: 'Shh, que se despiertan los hongos… Soy Musgo.|Si saltás arriba de un hongo, te tira bien alto. Rebotá en cinco distintos.',
+    d_musgo_1: 'Saltá en los sombreritos de los hongos. Van {n} de {m}.', d_musgo_2: '¡Boing! Te ganaste un sombrero hongo, igual al mío.', d_musgo_3: 'Arriba de la casa del árbol hay algo que brilla y gira.',
+    d_marea_0: '¡Ahoy! Soy Marea, cuido el faro.|El mar trae botellas con mensajes a las orillas de la isla. Encontrame tres y leelas.',
+    d_marea_1: 'Buscá botellas en las playas, bien en la orilla. Van {n} de {m}.', d_marea_2: '¡Qué lindos mensajes! Tomá mi gorra de capitán.', d_marea_3: 'Si nadás hasta el islote del faro, vas a encontrar un disco.',
     premio_orbes: '{n} orbes',
   },
   en: {
@@ -53,6 +66,14 @@ sumar({
     d_loto_1: 'Stand on a geyser and wait for the burst. {n} of {m}.', d_loto_2: 'You flew! Have the aurora pattern.', d_loto_3: 'The giant flowers are bouncy. Try jumping from one to another.',
     d_guia_0: "Hello! I'm the Guide. I collect music.|There are 6 discs hidden across the realms. Each one has a song. Can you find them?",
     d_guia_1: 'You have {n} of {m} discs. Look for things that shine and spin.', d_guia_2: 'The full collection! Take these music notes that follow you.', d_guia_3: 'Press 3 or the music button to change the song.',
+    d_brujula_0: "Welcome to the island! I'm Compass and I drew that map.|The island is huge: there's a glass city, a bay with a lighthouse, windmills, a mushroom forest and a mountain with a waterfall. Will you visit six places for me?",
+    d_brujula_1: 'Check the map (key 5 or the sign) and go explore: {n} of {m}. The monorail gets you there fast.', d_brujula_2: 'You know the island better than me! Take my explorer hat.', d_brujula_3: 'You can see everything from the mountain gazebo. Go up at night: the lighthouse spins.',
+    d_brisa_0: "Whoosh… hi! I'm Breeze. The meadow windmills are half asleep.|Could you blow four of them? Walk up to the base and press use.",
+    d_brisa_1: 'Blow the meadow windmills. {n} of {m}.', d_brisa_2: 'Look at them spin! Have my pinwheel: it spins faster when you run.', d_brisa_3: 'When the wind blows hard, the trees of the whole island sway together.',
+    d_musgo_0: "Shh, don't wake the mushrooms… I'm Moss.|Jump on a mushroom and it bounces you way up. Bounce on five different ones.",
+    d_musgo_1: 'Jump on the mushroom caps. {n} of {m}.', d_musgo_2: 'Boing! You earned a mushroom hat, just like mine.', d_musgo_3: "There's something shiny spinning up in the tree house.",
+    d_marea_0: "Ahoy! I'm Tide, I keep the lighthouse.|The sea brings bottles with messages to the island shores. Find three and read them.",
+    d_marea_1: 'Look for bottles on the beaches, right by the water. {n} of {m}.', d_marea_2: 'What lovely messages! Take my captain cap.', d_marea_3: "Swim to the lighthouse islet and you'll find a disc.",
     premio_orbes: '{n} orbs',
   },
   pt: {
@@ -71,6 +92,14 @@ sumar({
     d_loto_1: 'Fique em cima de um gêiser e espere o jato. {n} de {m}.', d_loto_2: 'Você voou! Te dou a estampa aurora.', d_loto_3: 'As flores gigantes quicam. Tente pular de uma para outra.',
     d_guia_0: 'Olá! Sou a Guia. Coleciono música.|Há 6 discos escondidos nos reinos. Cada um traz uma música. Você encontra?',
     d_guia_1: 'Você tem {n} de {m} discos. Procure coisas que brilham e giram.', d_guia_2: 'A coleção completa! Toma: notas musicais que te seguem.', d_guia_3: 'Com a tecla 3 ou o botão de música você troca a canção.',
+    d_brujula_0: 'Bem-vindo à ilha! Sou a Bússola e desenhei aquele mapa.|A ilha é enorme: tem uma cidade de vidro, uma baía com farol, moinhos, um bosque de cogumelos e um monte com cachoeira. Visita seis lugares para mim?',
+    d_brujula_1: 'Olhe o mapa (tecla 5 ou a placa) e vá explorar: {n} de {m}. O monotrilho te leva rápido.', d_brujula_2: 'Você conhece a ilha melhor que eu! Toma meu chapéu de explorador.', d_brujula_3: 'Do coreto do monte dá para ver tudo. Suba de noite: o farol gira.',
+    d_brisa_0: 'Fiuuu… oi! Sou a Brisa. Os moinhos da pradaria estão meio dormindo.|Sopra quatro para mim? Chegue perto da base e aperte usar.',
+    d_brisa_1: 'Sopre os moinhos da pradaria. {n} de {m}.', d_brisa_2: 'Olha como giram! Te dou meu cata-vento: gira mais quando você corre.', d_brisa_3: 'Quando venta forte, as árvores da ilha toda balançam juntas.',
+    d_musgo_0: 'Shh, não acorde os cogumelos… Sou o Musgo.|Se você pular em cima de um cogumelo, ele te joga bem alto. Quique em cinco diferentes.',
+    d_musgo_1: 'Pule nos chapeuzinhos dos cogumelos. {n} de {m}.', d_musgo_2: 'Boing! Você ganhou um chapéu cogumelo, igual ao meu.', d_musgo_3: 'Lá em cima da casa da árvore tem algo que brilha e gira.',
+    d_marea_0: 'Ahoy! Sou a Maré, cuido do farol.|O mar traz garrafas com mensagens para as praias da ilha. Encontre três e leia.',
+    d_marea_1: 'Procure garrafas nas praias, bem na beira. {n} de {m}.', d_marea_2: 'Que mensagens lindas! Toma meu quepe de capitão.', d_marea_3: 'Se você nadar até a ilhota do farol, vai achar um disco.',
     premio_orbes: '{n} orbes',
   },
 });

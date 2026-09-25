@@ -13,6 +13,9 @@
 //   aeroplaza-con-canciones.html, que es el que se entrega.
 // - Los temas de los reinos (musica/*.mp3, hechos con Rezona y cosidos con
 //   herramientas/musica.py) son originales: van en los dos.
+// - Las canciones que mandó para AEROPLAZA (musica-ajena/, hechas con
+//   brillo/herramientas/canciones.py --dest=aeroplaza/musica-ajena) van solo
+//   en la de canciones, y pisan a la de Rezona del mismo tema.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -25,6 +28,8 @@ const dev = process.argv.includes('--dev');
 const MUSICA = path.join(RAIZ, 'brillo/musica');
 /* los temas de los reinos, hechos con Rezona (herramientas/musica.py): son originales, van siempre */
 const PROPIA = path.join(AQUI, 'musica');
+/* las que mandó quien pide para AEROPLAZA (de TikTok, de otros: musica-ajena/*.mp3 no se commitea) */
+const AJENA = path.join(AQUI, 'musica-ajena');
 
 /* el módulo 'canciones-datos' que lee brillo/js/canciones.js: las grabadas que haya */
 function canciones(con) {
@@ -34,7 +39,9 @@ function canciones(con) {
       b.onResolve({ filter: /^canciones-datos$/ }, () => ({ path: 'canciones-datos', namespace: 'canciones' }));
       b.onLoad({ filter: /.*/, namespace: 'canciones' }, () => {
         const de = (dir) => { const l = fs.existsSync(path.join(dir, 'canciones.json')) ? JSON.parse(fs.readFileSync(path.join(dir, 'canciones.json'), 'utf8')) : {}; return Object.entries(l).map(([t, c]) => [t, { ...c, f: path.join(dir, c.archivo) }]).filter(([, c]) => fs.existsSync(c.f)); };
-        const hay = [...de(PROPIA), ...(con ? de(MUSICA) : [])];
+        /* con las ajenas, la propia del mismo tema no va (pisaría y pesaría de más) */
+        const ajenas = con ? [...de(MUSICA), ...de(AJENA)] : [], temas = new Set(ajenas.map(([t]) => t));
+        const hay = [...de(PROPIA).filter(([t]) => !temas.has(t)), ...ajenas];
         const imp = hay.map(([, c], i) => `import d${i} from ${JSON.stringify(c.f)};`).join('\n');
         const exp = hay.map(([t, { f, ...c }], i) => `${JSON.stringify(t)}: { ...${JSON.stringify(c)}, datos: d${i} }`).join(',\n');
         return { contents: `${imp}\nexport default {\n${exp}\n};`, resolveDir: MUSICA, loader: 'js' };
@@ -86,4 +93,5 @@ await armar(false, path.join(AQUI, 'aeroplaza.html'));
   fs.writeFileSync(path.join(AQUI, 'dist/aeroplaza-web.html'), h);
   console.log(`aeroplaza/dist/aeroplaza-web.html: ${(h.length / 1048576).toFixed(2)} MB (para publicar; título en el byte ${h.indexOf('<title>')})`);
 }
-if (fs.existsSync(MUSICA) && fs.readdirSync(MUSICA).some((f) => f.endsWith('.mp3'))) await armar(true, path.join(AQUI, 'aeroplaza-con-canciones.html'));
+const hayMp3 = (d) => fs.existsSync(d) && fs.readdirSync(d).some((f) => f.endsWith('.mp3'));
+if (hayMp3(MUSICA) || hayMp3(AJENA)) await armar(true, path.join(AQUI, 'aeroplaza-con-canciones.html'));

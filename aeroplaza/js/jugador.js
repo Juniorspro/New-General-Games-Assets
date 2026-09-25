@@ -156,8 +156,12 @@ export class Jugador {
     d.manejar(dt, E, quiere, cuanto, W);
     this.p.copy(d.asiento()); this.rumbo = d.rumbo;
     this.estado = 'monta'; this.enPiso = false; this.bajoAgua = d.bajoAgua;
-    this.sync(); this.m.animar(dt, 'monta', 0);
-    if (E.accion) { this.bajarse(W); }
+    this.sync(); this.m.animar(dt, d.tren ? 'sentado' : 'monta', 0);
+    /* el monorriel solo deja bajar cuando para, y baja en la parada (no donde está el asiento) */
+    if (E.accion) {
+      if (d.puedeBajar && !d.puedeBajar()) this.eventos.push('noBaja');
+      else { const sale = d.salida && d.salida(); this.bajarse(W); if (sale) { this.p.copy(sale); this.v.set(0, 0, 0); this.sync(); this.eventos.push('bajaTren'); } }
+    }
   }
   montar(d) { this.modo = 'montado'; this.montura = d; d.jinete = this; this.eventos.push('monta'); }
   bajarse() { if (!this.montura) return; this.montura.jinete = null; this.montura = null; this.modo = 'pie'; this.v.set(0, 4, 0); }

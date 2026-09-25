@@ -13,8 +13,9 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { brilloso, materialVidrio, conBorde, conViento, UNI } from './naturaleza.js';
+import { brilloso, materialVidrio, conBorde, conViento, conMeceo, UNI } from './naturaleza.js';
 import { azar } from './mundo.js';
+import { t } from './textos.js';
 
 const TAU = Math.PI * 2;
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -39,6 +40,17 @@ function texHotel() {
   const b = g.createLinearGradient(0, 0, 128, 256); b.addColorStop(0, 'rgba(255,255,255,0.35)'); b.addColorStop(0.4, 'rgba(255,255,255,0)'); b.addColorStop(1, 'rgba(255,255,255,0.12)');
   g.fillStyle = b; g.fillRect(0, 0, 128, 256);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+}
+/* el tablero de salidas: los destinos del tren, con la hora que cambia sola */
+function texTablero() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#0f3f7a'); gr.addColorStop(1, '#0a2a55'); g.fillStyle = gr; g.fillRect(0, 0, 512, 256);
+  g.fillStyle = '#9ff6ff'; g.font = '800 30px "Nunito","Segoe UI",sans-serif'; g.fillText('🚆 ' + t('tablero_salidas'), 20, 44);
+  g.fillStyle = 'rgba(159,246,255,0.35)'; g.fillRect(20, 58, 472, 3);
+  const dest = [['reino_aqua', '🐬'], ['reino_aurora', '✨'], ['reino_jardin', '🌸'], ['reino_casa', '🏠']];
+  g.font = '700 26px "Nunito","Segoe UI",sans-serif';
+  dest.forEach(([k, e], i) => { const y = 100 + i * 42; g.fillStyle = '#ffffff'; g.fillText(`${e}  ${t(k)}`, 24, y); g.fillStyle = '#ffe14a'; g.textAlign = 'right'; g.fillText(t('tablero_ahora'), 488, y); g.textAlign = 'left'; });
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
 }
 const HACER = {
   blanco: () => brilloso('#ffffff', { roughness: 0.14, borde: 0.35 }),
@@ -94,6 +106,13 @@ const HACER = {
   copa: () => fisico({ vertexColors: true, roughness: 0.16, clearcoatRoughness: 0.08, borde: 0.38, bordeCol: '#f2ffd0' }),
   hojas: () => brilloso('#ffffff', { vertexColors: true, roughness: 0.35, side: THREE.DoubleSide, borde: 0.15 }),
   hojasViento: () => { const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, side: THREE.DoubleSide }); conViento(m, 0.3); return conBorde(m, '#ffffff', 0.15); },
+  /* los de los árboles y palmeras sueltos: se mecen con el viento (conMeceo). Los
+     de cerca y los de lejos comparten estos, así el cambio de detalle no se nota */
+  troncoArbol: () => conBorde(conMeceo(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38 }), MECE_ARBOL), '#ffffff', 0.15),
+  copaViento: () => conBorde(conMeceo(new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.08 }), { ...MECE_ARBOL, tiembla: 0.035 }), '#f2ffd0', 0.38),
+  troncoPalma: () => conBorde(conMeceo(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.38 }), MECE_PALMA), '#ffffff', 0.15),
+  hojasPalma: () => conBorde(conMeceo(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, side: THREE.DoubleSide }), { ...MECE_PALMA, aleteo: 0.02, punta: [1.9, 0] }), '#ffffff', 0.15),
+  cocoPalma: () => conBorde(conMeceo(new THREE.MeshStandardMaterial({ color: '#6b4423', roughness: 0.45 }), MECE_PALMA), '#ffffff', 0.2),
   coco: () => brilloso('#6b4423', { roughness: 0.45, borde: 0.2 }),
   tapizLima: () => brilloso('#9be63a', { roughness: 0.7, borde: 0.25 }),
   tapizLimaDentro: () => brilloso('#8fd836', { roughness: 0.7, borde: 0.1, side: THREE.BackSide }),
@@ -101,7 +120,21 @@ const HACER = {
   colchon: () => brilloso('#f6f8fa', { roughness: 0.6, borde: 0.15 }),
   pantallaTele: () => new THREE.MeshStandardMaterial({ color: '#7ff0ff', emissive: '#3fe0f0', emissiveIntensity: 0.8, roughness: 0.1 }),
   oscuro: () => brilloso('#56606b', { roughness: 0.5, borde: 0 }),
+  rojoHongo: () => fisico({ color: '#ff4f6e', borde: 0.4 }),
+  crema: () => brilloso('#fff4dc', { roughness: 0.35, borde: 0.25 }),
+  madera: () => brilloso('#e9d7b4', { roughness: 0.55, borde: 0.15 }),
+  toldo: () => brilloso('#ffffff', { vertexColors: true, roughness: 0.3, borde: 0.3, side: THREE.DoubleSide }),
+  haz: () => new THREE.MeshBasicMaterial({ color: '#fff6c8', transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }),
+  luzCalida: () => new THREE.MeshBasicMaterial({ color: '#fff1c2' }),
+  pantallaAzul: () => new THREE.MeshBasicMaterial({ color: '#9fe8ff' }),
+  tablero: () => new THREE.MeshBasicMaterial({ map: texTablero() }),
+  esfera: () => new THREE.MeshBasicMaterial({ color: '#f7fbff' }),
+  vela: () => brilloso('#ffffff', { roughness: 0.5, borde: 0.1, side: THREE.DoubleSide }),
+  velaAqua: () => brilloso('#43d8cd', { roughness: 0.5, borde: 0.1, side: THREE.DoubleSide }),
+  aguja: () => new THREE.MeshBasicMaterial({ color: '#2a4a6a' }),
 };
+/* cuánto se mece cada uno: la altura es la del modelo sin escalar */
+const MECE_ARBOL = { fuerza: 0.55, alto: 5.7 }, MECE_PALMA = { fuerza: 1, alto: 6.3 };
 const CACHE = {};
 const M = (k) => CACHE[k] || (CACHE[k] = HACER[k]());
 
@@ -387,8 +420,10 @@ function estacion() {
 /* ================================================================= el tren */
 /* monorriel: cuerpo torneado con nariz de bala, franja de vidrio azul que da
    la vuelta por el parabrisas, franja lima abajo, faros y la viga */
-function tren() {
-  const O = new Obra(), R = 1.25, yc = 2.25;
+/* viga: con su pedazo de viga abajo (el de la estación vieja); sin viga, el
+   vagón del monorriel de la isla, que anda sobre la viga larga: la base es la pollera */
+function tren(viga = true) {
+  const O = new Obra(), R = 1.25, yc = viga ? 2.25 : 1.675;
   const perfil = [];
   for (let i = 0; i <= 10; i++) { const t = i / 10, y = -4.1 + 0.9 * t; perfil.push([R * Math.sqrt(Math.max(0, 1 - ((y + 3.2) / 0.9) ** 2)), y]); }
   for (let i = 1; i <= 10; i++) perfil.push([R, -3.2 + 5.5 * i / 10]);
@@ -404,8 +439,8 @@ function tren() {
   for (let y = -2.3; y < 2.2; y += 1.1) for (const f0 of [1.75, TAU - 2.5]) O.pon(lat([[R * 1.02, y - 0.04], [R * 1.02, y + 0.04]], f0, 0.75), 'blanco');
   for (const f0 of [1.2, TAU - 1.38]) O.pon(lat(tramo(-3.9, 3.35, 1.008), f0, 0.18), 'lima');
   for (const s of [-1, 1]) O.pon(esfera(0.11, 12, 8), 'faro', s * 0.5, yc - 0.85, 3.62);
-  O.pon(caja(1.9, 0.55, 6.6, 0.2), 'gris', 0, 0.85, 0);
-  O.pon(caja(1.1, 0.55, 9.6, 0.12), 'blanco', 0, 0.275, 0);
+  O.pon(caja(1.9, 0.55, 6.6, 0.2), 'gris', 0, yc - 1.4, 0);
+  if (viga) O.pon(caja(1.1, 0.55, 9.6, 0.12), 'blanco', 0, 0.275, 0);
   return O.cerrar();
 }
 
@@ -568,19 +603,23 @@ function lampara() {
 /* ====================================================== árbol y palmera */
 /* el árbol de burbujas: tronco que se abre en raíces, levemente curvo, y una
    copa de esferas brillantes (más oscuras abajo, más claras arriba) */
-function arbol(paleta = ['#4fb52a', '#7fd83a', '#b6f03a']) {
+function arbol(paleta = ['#4fb52a', '#7fd83a', '#b6f03a'], lejos = false) {
   const O = new Obra();
-  const t = torno([[0.62, 0], [0.46, 0.12], [0.34, 0.35], [0.28, 0.9], [0.25, 1.8], [0.23, 2.5], [0.2, 3.1]], 14);
+  const t = torno([[0.62, 0], [0.46, 0.12], [0.34, 0.35], [0.28, 0.9], [0.25, 1.8], [0.23, 2.5], [0.2, 3.1]], lejos ? 6 : 12);
   const P = t.attributes.position; for (let i = 0; i < P.count; i++) { const y = P.getY(i); P.setX(i, P.getX(i) + 0.18 * (y / 3) ** 2); }
   t.computeVertexNormals();
-  O.pon(pintar(t, (x, y) => new THREE.Color('#7a4a24').lerp(new THREE.Color('#b98552'), Math.min(1, y / 3) * 0.7 + (x > 0 ? 0.15 : 0))), 'tronco');
-  for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + 0.4, g = esfera(0.28, 10, 6); g.scale(1.3, 0.45, 0.6); g.rotateY(-a); g.translate(Math.cos(a) * 0.5, 0.08, Math.sin(a) * 0.5); O.pon(pintar(g, '#7a4a24'), 'tronco'); }
-  O.pon(pintar(new THREE.CylinderGeometry(0.95, 1.0, 0.1, 20), '#3f9e2a'), 'tronco', 0, 0.04, 0);
+  O.pon(pintar(t, (x, y) => new THREE.Color('#7a4a24').lerp(new THREE.Color('#b98552'), Math.min(1, y / 3) * 0.7 + (x > 0 ? 0.15 : 0))), 'troncoArbol');
+  if (!lejos) {
+    for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + 0.4, g = esfera(0.28, 10, 6); g.scale(1.3, 0.45, 0.6); g.rotateY(-a); g.translate(Math.cos(a) * 0.5, 0.08, Math.sin(a) * 0.5); O.pon(pintar(g, '#7a4a24'), 'troncoArbol'); }
+    O.pon(pintar(new THREE.CylinderGeometry(0.95, 1.0, 0.1, 20), '#3f9e2a'), 'troncoArbol', 0, 0.04, 0);
+  }
   const cA = new THREE.Color(paleta[0]), cB = new THREE.Color(paleta[1]), cC = new THREE.Color(paleta[2]);
   const bolas = [[0, 4.45, 0, 1.15], [0.95, 4.05, 0.25, 0.95], [-0.95, 4.1, -0.15, 0.95], [0.3, 3.95, 1.0, 0.9], [-0.3, 4.0, -1.0, 0.9], [0.85, 3.35, -0.75, 0.82], [-0.85, 3.3, 0.75, 0.82],
     [0.95, 3.25, 0.8, 0.75], [-0.95, 3.25, -0.8, 0.75], [0, 3.15, 0, 0.95], [0.55, 4.95, -0.4, 0.78], [-0.55, 4.9, 0.4, 0.78], [0.1, 3.5, 1.3, 0.62], [-1.35, 3.7, 0.3, 0.62]];
-  const gs = bolas.map(([x, y, z, r], i) => { const g = esfera(r, 14, 10); g.translate(x, y, z); return pintar(g, (px, py) => cA.clone().lerp(cB, THREE.MathUtils.clamp((py - 2.9) / 1.6, 0, 1)).lerp(cC, THREE.MathUtils.clamp((py - y) / r, 0, 1) * 0.55 + (i % 3) * 0.04)); });
-  O.pon(mergeGeometries(gs.map((g) => g.toNonIndexed())), 'copa');
+  /* de lejos: las nueve bolas grandes, de pocas caras (las chicas no se ven) */
+  const usar = lejos ? bolas.filter(([, , , r], i) => r >= 0.78 && i !== 9) : bolas;
+  const gs = usar.map(([x, y, z, r], i) => { const g = lejos ? esfera(r * 1.04, 8, 6) : esfera(r, 12, 9); g.translate(x, y, z); return pintar(g, (px, py) => cA.clone().lerp(cB, THREE.MathUtils.clamp((py - 2.9) / 1.6, 0, 1)).lerp(cC, THREE.MathUtils.clamp((py - y) / r, 0, 1) * 0.55 + (i % 3) * 0.04)); });
+  O.pon(mergeGeometries(gs.map((g) => g.toNonIndexed())), 'copaViento');
   return O.cerrar();
 }
 /* la palmera: tronco curvo de anillos, hojas con folíolos que caen y cocos.
@@ -637,7 +676,30 @@ function palmeraEn(O, x, y, z, s, giro) {
 }
 function palmera() {
   const O = new Obra(), P = palmeraPartes(true);
-  O.pon(P.tronco, 'tronco'); O.pon(P.hojas, P.hojasMat); O.pon(P.cocos, 'coco');
+  O.pon(P.tronco, 'troncoPalma'); O.pon(P.hojas, 'hojasPalma'); O.pon(P.cocos, 'cocoPalma');
+  return O.cerrar();
+}
+/* la palmera de lejos: el mismo tronco con pocas caras y las hojas como cintas que caen */
+function palmeraLejos() {
+  const O = new Obra();
+  const curva = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0.25, 1.6, 0), V3(0.7, 3.3, 0), V3(1.35, 4.9, 0), V3(1.9, 6.0, 0)]);
+  const tr = new THREE.TubeGeometry(curva, 10, 0.3, 5, false);
+  O.pon(pintar(tr, (x, y) => new THREE.Color('#9a6a3a').lerp(new THREE.Color('#d6aa70'), 0.4 + 0.3 * Math.sin(y * 9))), 'troncoPalma');
+  const top = curva.getPoint(1), pos = [], col = [], c0 = new THREE.Color('#2a8f22'), c1 = new THREE.Color('#7fe04a');
+  for (let h = 0; h < 9; h++) {
+    const L = 2.9 + (h % 3) * 0.3, a = h / 9 * TAU, alza = 0.55 - (h % 3) * 0.25, caida = 2.5 + (h % 4) * 0.3, lado = V3(-Math.sin(a), 0, Math.cos(a));
+    const p = (u) => V3(top.x + Math.cos(a) * L * u, top.y + Math.sin(u * 1.5) * 0.6 + alza * u * 2 - u * u * caida, top.z + Math.sin(a) * L * u);
+    for (let i = 0; i < 4; i++) {
+      const u0 = i / 4, u1 = (i + 1) / 4, w0 = 0.5 * Math.sin(Math.PI * Math.max(0.15, u0)), w1 = 0.5 * Math.sin(Math.PI * u1), A = p(u0), B = p(u1);
+      const a0 = A.clone().addScaledVector(lado, w0).add(V3(0, -w0 * 0.4, 0)), a1 = A.clone().addScaledVector(lado, -w0).add(V3(0, -w0 * 0.4, 0));
+      const b0 = B.clone().addScaledVector(lado, w1).add(V3(0, -w1 * 0.4, 0)), b1 = B.clone().addScaledVector(lado, -w1).add(V3(0, -w1 * 0.4, 0));
+      const k0 = c0.clone().lerp(c1, u0), k1 = c0.clone().lerp(c1, u1);
+      for (const [q, k] of [[a0, k0], [b0, k1], [A, k0], [A, k0], [b0, k1], [B, k1], [a1, k0], [A, k0], [b1, k1], [A, k0], [B, k1], [b1, k1]]) { pos.push(q.x, q.y, q.z); col.push(k.r, k.g, k.b); }
+    }
+  }
+  const hojas = new THREE.BufferGeometry(); hojas.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); hojas.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  hojas.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2)); hojas.computeVertexNormals();
+  O.pon(hojas, 'hojasPalma');
   return O.cerrar();
 }
 
@@ -712,9 +774,336 @@ function tele() {
   return O.cerrar();
 }
 
+/* ============================================================ la terminal */
+/* la Estación Central: un hall de bóveda de vidrio con arcos blancos, un andén
+   a cada lado de la vía del monorriel, los frentes de vidrio en abanico, el
+   reloj, el tablero de salidas, las máquinas de pasajes, bancos, macetas,
+   faroles colgantes y el kiosco. La vía va a lo largo de z, por x = 0 */
+function terminal() {
+  const O = new Obra(), W = 26, L = 44, HA = 1.0, HC = 7, RB = W / 2 - 0.5;
+  /* los andenes (con el borde amarillo) y el canal de la vía */
+  for (const s of [-1, 1]) {
+    O.pon(caja(W / 2 - 1.7, HA, L, 0.12), 'blanco', s * (W / 4 + 0.85), HA / 2, 0);
+    O.pon(caja(0.45, 0.03, L - 0.4, 0.01), 'amarillo', s * 2.05, HA + 0.01, 0);
+  }
+  O.pon(caja(3.4, 0.2, L, 0.05), 'gris', 0, 0.1, 0);
+  /* las mamparas de vidrio del borde de los andenes (como en los metros nuevos): la vía queda aparte */
+  for (const s of [-1, 1]) {
+    for (let z = -L / 2 + 1.5; z < L / 2 - 1; z += 2.5) { O.pon(new THREE.PlaneGeometry(2.3, 1.25), 'vidrio', s * 1.85, HA + 0.66, z + 1.25, { ry: Math.PI / 2 }); O.pon(caja(0.1, 1.4, 0.1, 0.03), 'blanco', s * 1.85, HA + 0.7, z); }
+    O.pon(caja(0.12, 0.1, L - 2.6, 0.04), 'blanco', s * 1.85, HA + 1.4, 0.1);
+  }
+  /* columnas y arcos, cada 4 m */
+  for (let z = -L / 2 + 2; z <= L / 2 - 2; z += 4) {
+    for (const s of [-1, 1]) { O.pon(cil(0.28, HC, 16), 'blanco', s * RB, HA + HC / 2, z); O.pon(caja(0.9, 0.3, 0.9, 0.1), 'blanco', s * RB, HA + HC, z); }
+    O.pon(new THREE.TorusGeometry(RB, 0.26, 8, 40, Math.PI), 'blanco', 0, HA + HC, z);
+  }
+  /* la bóveda de vidrio y los frentes en abanico (norte y sur) */
+  const boveda = new THREE.CylinderGeometry(RB, RB, L - 3.2, 40, 1, true, -Math.PI / 2, Math.PI); boveda.rotateX(-Math.PI / 2);   // -90°: la mitad de arriba (con +90° quedaba abajo del andén)
+  O.pon(boveda, 'vidrioAzul', 0, HA + HC, 0);
+  O.pon(caja(0.5, 0.4, L - 3.2, 0.15), 'blanco', 0, HA + HC + RB, 0);
+  for (const sz of [-1, 1]) {
+    const zf = sz * (L / 2 - 1.6);
+    O.pon(new THREE.CircleGeometry(RB, 40, 0, Math.PI), 'vidrioAzul', 0, HA + HC, zf);
+    for (let k = 1; k < 8; k++) { const a = k / 8 * Math.PI; O.pon(caja(0.14, RB, 0.14, 0.05), 'blanco', Math.cos(a) * RB / 2, HA + HC + Math.sin(a) * RB / 2, zf, { r: [0, 0, a - Math.PI / 2] }); }
+    O.pon(new THREE.TorusGeometry(RB * 0.28, 0.2, 8, 24, Math.PI), 'blanco', 0, HA + HC, zf);
+    O.pon(caja(W - 1, 0.35, 0.5, 0.12), 'blanco', 0, HA + HC, zf);
+  }
+  /* el reloj grande sobre el frente sur, con sus agujas (se mueven con la hora) */
+  const zr = L / 2 - 1.2, yr = HA + HC + 5.2;
+  O.pon(new THREE.TorusGeometry(1.6, 0.18, 10, 40), 'aqua', 0, yr, zr);
+  O.pon(new THREE.CircleGeometry(1.55, 40), 'esfera', 0, yr, zr + 0.02);
+  for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; O.pon(caja(0.08, k % 3 ? 0.18 : 0.32, 0.02, 0.01), 'aguja', Math.sin(a) * 1.3, yr + Math.cos(a) * 1.3, zr + 0.04, { r: [0, 0, -a] }); }
+  const ah = caja(0.12, 0.8, 0.03, 0.02); ah.translate(0, 0.35, 0); O.pon(ah, 'aguja', 0, yr, zr + 0.07, { nombre: 'agujaH' });
+  const am = caja(0.08, 1.2, 0.03, 0.02); am.translate(0, 0.55, 0); O.pon(am, 'aguja', 0, yr, zr + 0.1, { nombre: 'agujaM' });
+  /* las paredes bajas de vidrio a los costados, con la entrada del lado este (+x) en el medio */
+  for (const s of [-1, 1]) for (let z = -L / 2 + 2; z < L / 2 - 2; z += 4) {
+    if (s > 0 && Math.abs(z + 2) < 5) continue;
+    O.pon(new THREE.PlaneGeometry(3.6, 3.4), 'vidrio', s * RB, HA + 1.7, z + 2, { ry: Math.PI / 2 });
+    O.pon(caja(0.12, 0.12, 3.8, 0.04), 'blanco', s * RB, HA + 3.4, z + 2);
+  }
+  /* el tablero de salidas, colgado sobre la vía */
+  O.pon(caja(4.6, 2.4, 0.3, 0.15), 'gris', 0, HA + 5.2, -8);
+  O.pon(new THREE.PlaneGeometry(4.3, 2.1), 'tablero', 0, HA + 5.2, -7.84);
+  O.pon(new THREE.PlaneGeometry(4.3, 2.1), 'tablero', 0, HA + 5.2, -8.16, { ry: Math.PI });
+  for (const s of [-1, 1]) O.pon(cil(0.04, 3.2, 6), 'gris', s * 1.8, HA + 8, -8);
+  /* las máquinas de pasajes, bancos, macetas y faroles colgantes en los andenes */
+  const maquinas = [];
+  for (const [x, z] of [[6.2, 6], [6.2, 9], [-6.2, 6]]) {
+    O.pon(caja(1.1, 1.9, 0.7, 0.25), 'aqua', x, HA + 0.95, z, { ry: x > 0 ? -Math.PI / 2 : Math.PI / 2 });
+    O.pon(caja(0.72, 0.5, 0.05, 0.08), 'pantallaAzul', x + (x > 0 ? -0.36 : 0.36), HA + 1.35, z, { ry: x > 0 ? -Math.PI / 2 : Math.PI / 2 });
+    maquinas.push(V3(x + (x > 0 ? -1.2 : 1.2), HA, z));
+  }
+  const bs = [];
+  for (const s of [-1, 1]) for (const z of [-16, -3, 14]) {
+    const x = s * 8.6;
+    O.pon(caja(0.7, 0.16, 2.6, 0.07), 'celeste', x, HA + 0.5, z); O.pon(caja(0.14, 0.5, 2.6, 0.06), 'celeste', x + s * 0.3, HA + 0.8, z);
+    O.pon(torno([[0.7, 0], [0.78, 0.6], [0.66, 0.7], [0, 0.5]], 20), 'blanco', s * 10.6, HA, z + 3);
+    bs.push([s * 10.6 + 0.2, HA + 0.8, z + 3.2, 0.42, '#3fb536'], [s * 10.6 - 0.25, HA + 0.78, z + 2.8, 0.38, '#52c843']);
+  }
+  O.pon(racimo(bs), 'plantas');
+  for (let z = -L / 2 + 4; z < L / 2 - 2; z += 8) for (const s of [-1, 1]) {
+    O.pon(cil(0.02, 2.2, 5), 'gris', s * 5.5, HA + HC + 2.7, z);
+    O.pon(esfera(0.32, 14, 10), 'globo', s * 5.5, HA + HC + 1.5, z);
+    O.pon(esfera(0.12, 8, 6), 'luzCalida', s * 5.5, HA + HC + 1.5, z);
+  }
+  /* el kiosco del café, en el andén oeste */
+  kioscoEn(O, -8.4, HA, 8, Math.PI / 2);
+  /* la escalinata de la entrada (este): del piso al andén en cuatro escalones */
+  const escalones = [];
+  for (let k = 0; k < 4; k++) { const h = HA * (k + 1) / 4, x = W / 2 + 0.3 + (3 - k) * 0.6; O.pon(caja(0.62, h, 8, 0.05), k % 2 ? 'blanco' : 'perla', x, h / 2, 0); escalones.push([x, h]); }
+  for (const sz of [-1, 1]) O.pon(caja(2.5, 0.9, 0.3, 0.12), 'aqua', W / 2 + 1.25, 0.45, sz * 4.15);
+  O.medidas = { anden: HA, ancho: W, largo: L, maquinas, escalones };
+  return O.cerrar();
+}
+/* un kiosco redondo con toldo a rayas, mostrador y tazas */
+function kioscoEn(O, x, y, z, giro = 0) {
+  const c = Math.cos(giro), s = Math.sin(giro), en = (lx, lz) => [x + lx * c + lz * s, z - lx * s + lz * c];
+  O.pon(torno([[1.4, 0], [1.45, 1.0], [1.35, 1.1], [0, 1.1]], 28), 'blanco', x, y, z);
+  O.pon(torno([[1.36, 1.05], [1.4, 1.2], [0, 1.2]], 28), 'aqua', x, y, z);
+  for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + 0.4; O.pon(cil(0.06, 1.3, 8), 'blanco', x + Math.sin(a) * 1.2, y + 1.8, z + Math.cos(a) * 1.2); }
+  const t0 = new THREE.ConeGeometry(1.9, 0.9, 16, 1, true); t0.translate(0, 0.45, 0);
+  O.pon(pintar(t0, (px, py, pz) => new THREE.Color(Math.floor((Math.atan2(pz, px) / TAU + 1) * 16) % 2 ? '#43d8cd' : '#ffffff')), 'toldo', x, y + 2.45, z);
+  O.pon(esfera(0.18, 12, 8), 'blanco', x, y + 3.4, z);
+  for (let k = 0; k < 4; k++) { const a = k / 4 * TAU; O.pon(cil(0.07, 0.14, 10, 0.06), k % 2 ? 'blanco' : 'aqua', ...(() => { const [px, pz] = en(Math.sin(a) * 0.9, Math.cos(a) * 0.9); return [px, y + 1.27, pz]; })()); }
+}
+
+/* =============================================================== el molino */
+/* aerogenerador blanco (el de los fondos de 2007): torre que se afina, góndola,
+   y el rotor de tres palas aparte (gira) */
+function molino() {
+  const O = new Obra(), H = 34;
+  O.pon(torno([[1.0, 0], [0.95, 0.4], [0.62, 12], [0.45, H], [0, H]], 20), 'blanco');
+  O.pon(torno([[1.05, 0], [1.05, 1.2], [0, 1.2]], 20), 'verde');
+  O.pon(new THREE.CapsuleGeometry(0.75, 2.6, 6, 16), 'blanco', 0, H + 0.4, -0.3, { r: [Math.PI / 2, 0, 0] });
+  const palas = [esfera(0.6, 16, 12).toNonIndexed()];
+  for (let k = 0; k < 3; k++) {
+    const f = new THREE.Shape(); f.moveTo(-0.55, 0); f.quadraticCurveTo(-0.7, 3, -0.35, 9); f.quadraticCurveTo(-0.18, 14, 0, 16.5); f.quadraticCurveTo(0.2, 13, 0.45, 8); f.quadraticCurveTo(0.6, 2, 0.4, 0); f.lineTo(-0.55, 0);
+    const g = new THREE.ExtrudeGeometry(f, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 2, curveSegments: 8 });
+    g.translate(0, 0.4, -0.06); g.rotateY(0.25); g.rotateZ(k / 3 * TAU);
+    palas.push(g.toNonIndexed());
+  }
+  O.pon(mergeGeometries(palas), 'blanco', 0, H + 0.4, 1.35, { nombre: 'rotor' });
+  O.medidas = { alto: H };
+  return O.cerrar();
+}
+
+/* ================================================================= el faro */
+/* sobre una roca: torre blanca con franjas aqua, puertita, ventanitas, balcón,
+   la linterna de vidrio y el haz que gira (aparte) */
+function faro() {
+  const O = new Obra(), H = 15;
+  O.pon(racimo([[0, 0.2, 0, 3.4, '#9fb3bf', 1, 0.5, 1], [1.8, 0, 1.2, 2.2, '#b8c8d2', 1, 0.45, 1], [-1.6, 0, -1.0, 2.4, '#a8bac6', 1, 0.5, 1]], 14, 8), 'plantas');
+  O.pon(torno([[2.3, 1.2], [2.1, 4], [1.75, H - 1], [1.6, H], [0, H]], 28), 'blanco');
+  for (const y of [3.2, 7.2, 11.2]) O.pon(torno([[2.28 - y * 0.045, y], [2.24 - y * 0.045, y + 1.3], [0, y + 1.3]], 28), 'aqua');
+  O.pon(caja(0.9, 1.7, 0.4, 0.3), 'puerta', 0, 2.05, 2.08);
+  for (const y of [5.6, 9.6]) ojoDeBuey(O, 0, y, 2.05 - y * 0.035, 0, 1, 0.26);
+  O.pon(torno([[0, H], [2.5, H], [2.6, H + 0.25], [0, H + 0.3]], 28), 'blanco');
+  for (let k = 0; k < 16; k++) { const a = k / 16 * TAU; O.pon(cil(0.04, 0.8, 5), 'blanco', Math.sin(a) * 2.4, H + 0.7, Math.cos(a) * 2.4); }
+  O.pon(new THREE.TorusGeometry(2.4, 0.06, 6, 40), 'blanco', 0, H + 1.1, 0, { r: [Math.PI / 2, 0, 0] });
+  const lint = new THREE.CylinderGeometry(1.25, 1.25, 2.1, 20, 1, true); lint.translate(0, H + 1.35, 0); O.pon(lint, 'vidrioAzul');
+  O.pon(esfera(0.55, 16, 12), 'luzCalida', 0, H + 1.35, 0);
+  O.pon(torno([[1.4, 0], [1.3, 0.3], [0.6, 1.0], [0, 1.25]], 24), 'aqua', 0, H + 2.4, 0);
+  O.pon(esfera(0.18, 10, 8), 'blanco', 0, H + 3.7, 0);
+  const haz = []; for (const s of [-1, 1]) { const c = new THREE.ConeGeometry(1.6, 16, 16, 1, true); c.translate(0, -8, 0); c.rotateZ(s * Math.PI / 2); haz.push(c.toNonIndexed()); }
+  O.pon(mergeGeometries(haz), 'haz', 0, H + 1.35, 0, { nombre: 'haz' });
+  O.medidas = { luz: V3(0, H + 1.35, 0) };
+  return O.cerrar();
+}
+
+/* ======================================================== cosas de playa */
+function sombrilla(c1 = '#43d8cd', c2 = '#ffffff') {
+  const O = new Obra();
+  O.pon(cil(0.05, 2.5, 8), 'blanco', 0, 1.25, 0);
+  const t0 = new THREE.ConeGeometry(1.7, 0.7, 16, 1, true); t0.translate(0, 2.5, 0);
+  O.pon(pintar(t0, (px, py, pz) => new THREE.Color(Math.floor((Math.atan2(pz, px) / TAU + 1) * 16) % 2 ? c1 : c2)), 'toldo');
+  O.pon(esfera(0.1, 10, 8), 'blanco', 0, 2.9, 0);
+  return O.cerrar();
+}
+function reposera() {
+  const O = new Obra();
+  O.pon(caja(0.7, 0.08, 1.3, 0.04), 'blanco', 0, 0.32, 0.25);
+  O.pon(caja(0.7, 0.08, 0.8, 0.04), 'blanco', 0, 0.6, -0.62, { r: [0.7, 0, 0] });
+  O.pon(caja(0.62, 0.06, 1.2, 0.03), 'aqua', 0, 0.39, 0.25);
+  O.pon(caja(0.62, 0.06, 0.72, 0.03), 'aqua', 0, 0.66, -0.58, { r: [0.7, 0, 0] });
+  for (const [x, z] of [[-0.3, 0.8], [0.3, 0.8], [-0.3, -0.3], [0.3, -0.3]]) O.pon(cil(0.03, 0.3, 6), 'blanco', x, 0.15, z);
+  return O.cerrar();
+}
+function guardavidas() {
+  const O = new Obra();
+  for (const [x, z] of [[-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9], [0.9, 0.9]]) O.pon(cil(0.1, 3.2, 8), 'blanco', x, 1.6, z);
+  O.pon(caja(2.4, 0.2, 2.4, 0.08), 'blanco', 0, 3.2, 0);
+  O.pon(caja(2.0, 1.4, 2.0, 0.3), 'blanco', 0, 4.0, -0.2);
+  O.pon(caja(1.4, 0.7, 0.05, 0.1), 'ventana', 0, 4.1, 0.81);
+  O.pon(torno([[1.6, 0], [1.5, 0.2], [0.2, 0.9], [0, 0.95]], 4), 'aqua', 0, 4.7, -0.2, { r: [0, Math.PI / 4, 0] });
+  for (let k = 0; k < 6; k++) O.pon(caja(0.9, 0.06, 0.12, 0.02), 'blanco', 0, 0.45 + k * 0.5, 1.55 - k * 0.12);
+  for (const s of [-1, 1]) O.pon(cil(0.04, 3.3, 6), 'blanco', s * 0.45, 1.65, 1.25, { r: [0.22, 0, 0] });
+  O.pon(cil(0.03, 1.6, 6), 'blanco', 0.9, 5.4, 0.7);
+  const b = new THREE.PlaneGeometry(0.8, 0.5); b.translate(0.4, 0, 0); O.pon(b, 'rojoHongo', 0.9, 6.0, 0.7);
+  return O.cerrar();
+}
+function botella() {
+  const O = new Obra();
+  O.pon(torno([[0, 0], [0.12, 0], [0.13, 0.25], [0.06, 0.34], [0.05, 0.45], [0, 0.45]], 14), 'vidrioAzul', 0, 0.1, 0, { r: [0, 0, 1.2] });
+  O.pon(cil(0.05, 0.2, 8), 'crema', -0.1, 0.12, 0, { r: [0, 0, 1.2] });
+  O.pon(cil(0.052, 0.07, 8), 'madera', -0.38, 0.23, 0, { r: [0, 0, 1.2] });
+  return O.cerrar();
+}
+
+/* ========================================================== el bosque */
+/* hongo gigante rojo de lunares, brilloso: se rebota en el sombrero */
+function hongo() {
+  const O = new Obra(), R = 1.7, Y = 2.3;
+  O.pon(torno([[0.62, 0], [0.5, 0.4], [0.42, 1.4], [0.5, Y], [0, Y]], 18), 'crema');
+  const cap = new THREE.SphereGeometry(R, 32, 16, 0, TAU, 0, Math.PI / 2); cap.scale(1, 0.62, 1); O.pon(cap, 'rojoHongo', 0, Y - 0.15, 0);
+  O.pon(new THREE.CircleGeometry(R, 32).rotateX(Math.PI / 2), 'crema', 0, Y - 0.15, 0);
+  const r = azar(9), pts = [];
+  for (let k = 0; k < 14; k++) { const a = r() * TAU, e = 0.25 + r() * 1.1, x = Math.cos(a) * Math.sin(e) * R, z = Math.sin(a) * Math.sin(e) * R, y = Math.cos(e) * R * 0.62; pts.push([x, Y - 0.15 + y, z, 0.16 + r() * 0.12, '#ffffff', 1, 0.35, 1]); }
+  O.pon(racimo(pts, 10, 6), 'plantas');
+  O.medidas = { tope: Y - 0.15 + R * 0.62, radio: R };
+  return O.cerrar();
+}
+/* la casa del árbol: un árbol enorme de burbujas, una plataforma redonda con
+   baranda, una casita con cúpula y una escalera caracol alrededor del tronco */
+function casaArbol() {
+  const O = new Obra(), YP = 6.2;
+  const tr = torno([[1.8, 0], [1.3, 0.4], [1.0, 1.5], [0.9, 5], [0.85, YP + 3]], 18); O.pon(pintar(tr, (x, y) => new THREE.Color('#7a4a24').lerp(new THREE.Color('#b98552'), y / 9)), 'tronco');
+  const cA = new THREE.Color('#4fb52a'), cB = new THREE.Color('#9be63a');
+  const bolas = []; const r = azar(4);
+  for (let k = 0; k < 16; k++) { const a = k / 16 * TAU + r(), d = 2.2 + r() * 2.2, y = YP + 3.5 + r() * 3; bolas.push([Math.cos(a) * d, y, Math.sin(a) * d, 1.4 + r() * 0.9, cA.clone().lerp(cB, (y - YP - 3) / 3)]); }
+  bolas.push([0, YP + 7.2, 0, 2.2, cB]);
+  O.pon(racimo(bolas, 14, 10), 'copa');
+  O.pon(torno([[0, 0], [3.6, 0], [3.7, 0.3], [0, 0.35]], 32), 'madera', 0, YP - 0.3, 0);
+  for (let k = 0; k < 20; k++) { const a = k / 20 * TAU; if (Math.abs(Math.atan2(Math.sin(a - 1.2), Math.cos(a - 1.2))) < 0.3) continue; O.pon(cil(0.05, 0.9, 5), 'blanco', Math.sin(a) * 3.5, YP + 0.45, Math.cos(a) * 3.5); }
+  O.pon(new THREE.TorusGeometry(3.5, 0.06, 6, 40), 'blanco', 0, YP + 0.9, 0, { r: [Math.PI / 2, 0, 0] });
+  const cx = -1.2, cz = -1.3;
+  O.pon(torno([[1.7, 0], [1.7, 2.1], [0, 2.1]], 24), 'blanco', cx, YP, cz);
+  O.pon(new THREE.SphereGeometry(1.85, 24, 10, 0, TAU, 0, Math.PI / 2), 'aqua', cx, YP + 2.05, cz);
+  O.pon(caja(0.9, 1.6, 0.2, 0.3), 'puerta', cx + 0.6, YP + 0.85, cz + 1.55, { ry: 0.35 });
+  ojoDeBuey(O, cx - 1.66, YP + 1.3, cz, -1, 0, 0.3);
+  const escalones = [];
+  /* por afuera de la plataforma (si no, la cabeza pega en el piso de arriba) y
+     el último escalón en el hueco de la baranda */
+  for (let k = 0; k < 22; k++) {
+    const a = 1.2 - (21 - k) * TAU * 1.05 / 22, y = 0.28 * (k + 1), rr = 4.25;
+    const x = Math.sin(a) * rr, z = Math.cos(a) * rr;
+    O.pon(caja(1.3, 0.12, 0.62, 0.04), 'madera', x, y - 0.06, z, { ry: a + Math.PI / 2 });
+    escalones.push([x, z, y, a + Math.PI / 2]);
+  }
+  O.medidas = { plataforma: YP, escalones };
+  return O.cerrar();
+}
+/* la glorieta del mirador: seis columnas, cúpula y bancos */
+function glorieta() {
+  const O = new Obra(), R = 3.2;
+  O.pon(torno([[0, 0], [R + 0.5, 0], [R + 0.55, 0.35], [0, 0.4]], 32), 'blanco');
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; O.pon(cil(0.16, 3.2, 12), 'blanco', Math.sin(a) * R, 2.0, Math.cos(a) * R); }
+  O.pon(torno([[0, 3.5], [R + 0.4, 3.5], [R + 0.45, 3.75], [0, 3.8]], 32), 'blanco');
+  O.pon(new THREE.SphereGeometry(R + 0.2, 32, 12, 0, TAU, 0, Math.PI / 2), 'cupula', 0, 3.75, 0);
+  O.pon(esfera(0.25, 12, 8), 'aqua', 0, 3.75 + R + 0.25, 0);
+  for (const a of [0.6, 2.7, 4.8]) O.pon(arcoSolido(R - 1.0, R - 0.4, a, a + 1.1, 0.5, 0.08), 'celeste', 0, 0.4, 0);
+  return O.cerrar();
+}
+
+/* ======================================================= el muelle y el velero */
+/* de tablas claras sobre pilotes blancos, con baranda de soga, faroles bajos y
+   una plataforma cuadrada al final. Sale hacia +z; la cubierta está a 1,25 m */
+function muelle() {
+  const O = new Obra(), L = 48, W = 3.2, Y = 1.25, F = 7;
+  const tablas = [];
+  for (let z = 0.3; z < L; z += 0.5) { const g = caja(W, 0.12, 0.44, 0.03, 1); g.translate(0, Y - 0.06, z); tablas.push(pintar(g.toNonIndexed(), new THREE.Color('#e9d7b4').offsetHSL(0, 0, ((z * 7.3) % 1) * 0.06 - 0.03))); }
+  for (let x = -F / 2 + 0.25; x < F / 2; x += 0.5) { const g = caja(0.44, 0.12, F, 0.03, 1); g.translate(x, Y - 0.06, L + F / 2); tablas.push(pintar(g.toNonIndexed(), new THREE.Color('#e9d7b4').offsetHSL(0, 0, ((x * 5.1 + 9) % 1) * 0.06 - 0.03))); }
+  O.pon(mergeGeometries(tablas), 'toldo');
+  for (let z = 2; z < L; z += 4) for (const sx of [-1, 1]) { O.pon(cil(0.16, Y + 3, 10), 'blanco', sx * (W / 2 - 0.1), (Y - 3) / 2, z); O.pon(cil(0.06, 1.0, 6), 'blanco', sx * (W / 2 - 0.1), Y + 0.5, z); }
+  for (const [x, z] of [[-F / 2, L], [F / 2, L], [-F / 2, L + F], [F / 2, L + F], [0, L + F]]) O.pon(cil(0.2, Y + 3, 10), 'blanco', x, (Y - 3) / 2, z);
+  for (const sx of [-1, 1]) O.pon(tubo([[sx * (W / 2 - 0.1), Y + 0.95, 2], [sx * (W / 2 - 0.1), Y + 0.85, L / 2], [sx * (W / 2 - 0.1), Y + 0.95, L - 2]], 0.035, 30, 5), 'crema');
+  for (const z of [12, 28, 44]) { O.pon(cil(0.07, 1.6, 8), 'blanco', W / 2 - 0.1, Y + 0.8, z); O.pon(esfera(0.2, 12, 8), 'luzCalida', W / 2 - 0.1, Y + 1.7, z); }
+  /* salvavidas colgado y dos bitas */
+  O.pon(new THREE.TorusGeometry(0.34, 0.1, 10, 24), 'rojoHongo', -W / 2 + 0.05, Y + 0.7, 20, { ry: Math.PI / 2 });
+  for (const x of [-2.6, 2.6]) O.pon(torno([[0.18, 0], [0.14, 0.3], [0.22, 0.38], [0, 0.4]], 12), 'gris', x, Y, L + F - 0.8);
+  O.medidas = { cubierta: Y, largo: L, ancho: W, fin: F };
+  return O.cerrar();
+}
+function velero() {
+  const O = new Obra();
+  const casco = torno([[0, -0.35], [0.5, -0.3], [0.85, 0.1], [0.95, 0.55], [0.9, 0.6]], 24); casco.scale(1, 1, 2.8); O.pon(casco, 'blanco', 0, 0.35, 0);
+  O.pon(caja(1.6, 0.06, 4.6, 0.3), 'madera', 0, 0.92, 0);
+  O.pon(new THREE.TorusGeometry(0.93, 0.05, 6, 40), 'aqua', 0, 0.9, 0, { r: [Math.PI / 2, 0, 0], s: [1, 2.78, 1] });
+  O.pon(cil(0.06, 6, 8), 'cromo', 0, 3.9, 0.4);
+  const f = new THREE.Shape(); f.moveTo(0, 0); f.lineTo(0, 5.2); f.quadraticCurveTo(1.4, 2.2, 2.6, 0.1); f.lineTo(0, 0);
+  const vela = new THREE.ShapeGeometry(f, 8); vela.rotateY(-Math.PI / 2); O.pon(vela, 'vela', 0.04, 1.3, 0.45);
+  const f2 = new THREE.Shape(); f2.moveTo(0, 0); f2.lineTo(0, 4.4); f2.lineTo(1.7, 0.2); f2.lineTo(0, 0);
+  const foque = new THREE.ShapeGeometry(f2); foque.rotateY(Math.PI / 2); O.pon(foque, 'velaAqua', 0, 1.2, 0.3);
+  O.pon(caja(0.1, 0.1, 2.6, 0.03), 'cromo', 0, 1.35, -0.85);
+  return O.cerrar();
+}
+
+/* ================================================== el cartel del mapa (spawn) */
+/* un marco blanco redondeado con filete aqua y brillo arriba, dos postes de
+   cromo, un alerito de vidrio y una maceta de plantas al pie. La pantalla
+   (aparte, con nombre) la dibuja el reino con el mapa de la isla */
+function cartelMapa() {
+  const O = new Obra(), W = 4.6, H = 3.3, Y = 1.2;
+  for (const s of [-1, 1]) O.pon(cil(0.1, Y + H + 0.3, 12), 'cromo', s * (W / 2 + 0.05), (Y + H + 0.3) / 2, -0.12);
+  O.pon(caja(W + 0.4, H + 0.4, 0.22, 0.18), 'blanco', 0, Y + H / 2, -0.12);
+  O.pon(caja(W + 0.5, 0.12, 0.26, 0.05), 'aqua', 0, Y - 0.05, -0.12);
+  O.pon(new THREE.PlaneGeometry(W, H), 'pantallaAzul', 0, Y + H / 2, 0.005, { nombre: 'pantalla' });
+  const alero = new THREE.CylinderGeometry(0.9, 0.9, W + 0.8, 24, 1, true, 0, Math.PI); alero.rotateZ(Math.PI / 2); alero.scale(1, 0.35, 1);
+  O.pon(alero, 'vidrioAzul', 0, Y + H + 0.3, 0.2);
+  O.pon(caja(W + 0.9, 0.08, 0.08, 0.03), 'blanco', 0, Y + H + 0.32, 0.9);
+  O.pon(torno([[0.9, 0], [1.0, 0.5], [0.85, 0.58], [0, 0.45]], 24), 'blanco', 0, 0, 0.6, { s: [2.6, 1, 0.7] });
+  const r = azar(12), bs = [];
+  for (let k = 0; k < 11; k++) bs.push([(k / 10 - 0.5) * 4.2, 0.62 + r() * 0.15, 0.6 + (r() - 0.5) * 0.4, 0.3 + r() * 0.12, k % 3 ? '#3fb536' : '#52c843']);
+  for (let k = 0; k < 5; k++) bs.push([(r() - 0.5) * 4, 0.95, 0.65, 0.12, ['#ffffff', '#ff8fcf', '#fff27a'][k % 3], 1, 1, 1]);
+  O.pon(racimo(bs), 'plantas');
+  O.medidas = { panel: [W, H, Y] };
+  return O.cerrar();
+}
+
+/* ============================================== las paradas del monorriel */
+/* Todas juntas en una sola obra (se funden: cinco llamadas para las seis).
+   Cada una: el andén elevado al costado de la viga, con mampara y techito de
+   vidrio, la torre del ascensor de vidrio y la entrada abajo.
+   lista: [{ x, y, z, giro, lado, alto }] — (x, y, z) el piso bajo la viga, giro
+   para que +z local vaya como la vía, lado ±1 y alto: la viga sobre el piso.
+   Devuelve también, por parada, la puerta de abajo, el andén y dónde va el cartel */
+export function paradasMonorriel(lista) {
+  const O = new Obra(), sitios = [];
+  for (const { x, y, z, giro, lado, alto } of lista) {
+    const c = Math.cos(giro), s = Math.sin(giro), en = (lx, ly, lz) => [x + lx * c + lz * s, y + ly, z - lx * s + lz * c];
+    const pon = (g, k, lx, ly, lz) => O.pon(g, k, ...en(lx, ly, lz), { ry: giro });
+    const piso = alto + 0.45, X = (v) => v * lado;
+    pon(caja(3.1, 0.36, 12, 0.1), 'blanco', X(2.95), piso - 0.18, 0);
+    pon(caja(0.3, 0.02, 11.6, 0.01), 'amarillo', X(1.65), piso + 0.01, 0);
+    pon(new THREE.PlaneGeometry(12, 1.1).rotateY(Math.PI / 2), 'vidrio', X(4.42), piso + 0.55, 0);
+    pon(caja(0.1, 0.1, 12, 0.03), 'blanco', X(4.42), piso + 1.1, 0);
+    const techo = new THREE.CylinderGeometry(1.9, 1.9, 10.5, 20, 1, true, -Math.PI / 2, Math.PI); techo.rotateX(-Math.PI / 2); techo.scale(1, 0.45, 1);
+    pon(techo, 'vidrioAzul', X(2.95), piso + 2.55, 0);
+    for (const lz of [-4.8, -1.6, 1.6, 4.8]) { pon(cil(0.07, 2.6, 8), 'blanco', X(4.25), piso + 1.3, lz); const a = new THREE.TorusGeometry(1.9, 0.07, 6, 20, Math.PI); a.scale(1, 0.45, 1); pon(a, 'blanco', X(2.95), piso + 2.55, lz); }
+    for (const lz of [-4, 4]) pon(cil(0.3, piso, 12), 'blanco', X(2.95), piso / 2 - 0.2, lz);
+    /* el ascensor: tubo de vidrio con aros blancos, tapa con cúpula aqua y la cabina abajo */
+    const H = piso + 2.8;
+    pon(new THREE.CylinderGeometry(1.15, 1.15, H, 24, 1, true), 'vidrio', X(5.4), H / 2, 0);
+    for (let ly = 0.1; ly < H; ly += 2.2) pon(new THREE.TorusGeometry(1.16, 0.07, 6, 28).rotateX(Math.PI / 2), 'blanco', X(5.4), ly, 0);
+    pon(cil(1.3, 0.3, 24), 'blanco', X(5.4), H + 0.15, 0);
+    pon(new THREE.SphereGeometry(1.0, 20, 8, 0, TAU, 0, Math.PI / 2), 'aqua', X(5.4), H + 0.3, 0);
+    pon(caja(1.3, 2.2, 1.3, 0.25), 'vidrioAzul', X(5.4), 1.2, 0);
+    pon(cil(1.5, 0.3, 24), 'blanco', X(5.4), 0.1, 0);
+    /* la entrada: un alerito aqua y el marco de la puerta, mirando para afuera */
+    pon(caja(0.24, 2.6, 2.0, 0.08), 'blanco', X(6.6), 1.3, 0);
+    pon(caja(1.6, 0.18, 2.6, 0.09), 'aqua', X(7.3), 2.7, 0);
+    for (const lz of [-1.1, 1.1]) pon(cil(0.06, 2.6, 8), 'blanco', X(7.95), 1.35, lz);
+    sitios.push({ puerta: V3(...en(X(8.1), 0, 0)), anden: V3(...en(X(2.9), piso, 0)), cartel: V3(...en(X(6.62), H - 0.6, 0)), giroCartel: giro + (lado > 0 ? Math.PI / 2 : -Math.PI / 2), piso: y + piso });
+  }
+  const g = O.cerrar(); g.userData.sitios = sitios;
+  return g;
+}
+
 /* lo que se puede pedir por nombre (modelos.js) */
 export const CONSTRUIR = {
   casa, estacion, tienda, hotel, tren, fuente, banco, farol, arbol, palmera,
+  terminal, molino, faro, reposera, guardavidas, botella, hongo, casaArbol, glorieta, muelle, velero, cartelMapa,
+  vagon: () => tren(false), sombrilla, sombrillaRosa: () => sombrilla('#ff8fcf', '#ffffff'),
   arbolRosa: () => arbol(['#e45fa8', '#ff8fcf', '#ffd0ea']),
+  arbolLejos: () => arbol(undefined, true), arbolRosaLejos: () => arbol(['#e45fa8', '#ff8fcf', '#ffd0ea'], true), palmeraLejos,
   'm-sofa': sofa, 'm-sillon': sillon, 'm-cama': cama, 'm-tele': tele, 'm-lampara': lampara,
 };

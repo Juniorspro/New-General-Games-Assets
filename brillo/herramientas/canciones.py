@@ -4,7 +4,7 @@ Canciones grabadas para BRILLO: de un video (los que manda quien pide, bajados
 de TikTok) a un MP3 que el juego repite sin que se note el salto.
 
     python3 brillo/herramientas/canciones.py analizar <video>
-    python3 brillo/herramientas/canciones.py hacer <tema> <video> <a> <b> [--cruce=0.15] [--golpe=s]
+    python3 brillo/herramientas/canciones.py hacer <tema> <video> <a> <b> [--cruce=0.15] [--golpe=s] [--dest=carpeta]
 
 - analizar: el pulso (BPM) y los períodos en que la canción se repite, para
   elegir a y b.
@@ -117,7 +117,10 @@ def hacer(tema, video, a, b, cruce=0.15, golpe=None):
 
 if __name__ == '__main__':
     arg = [s for s in sys.argv[1:] if not s.startswith('--')]
-    op = {s.split('=')[0][2:]: float(s.split('=')[1]) for s in sys.argv[1:] if s.startswith('--') and '=' in s}
+    # --dest=carpeta: otro destino (AEROPLAZA guarda las suyas en aeroplaza/musica-ajena)
+    dest = next((s.split('=', 1)[1] for s in sys.argv[1:] if s.startswith('--dest=')), None)
+    if dest: DEST = Path(dest).resolve()
+    op = {s.split('=')[0][2:]: float(s.split('=')[1]) for s in sys.argv[1:] if s.startswith('--') and '=' in s and not s.startswith('--dest=')}
     if arg[:1] == ['analizar']: analizar(arg[1])
     elif arg[:1] == ['hacer']: hacer(arg[1], arg[2], float(arg[3]), float(arg[4]), op.get('cruce', 0.15), op.get('golpe'))
     else: print(__doc__)

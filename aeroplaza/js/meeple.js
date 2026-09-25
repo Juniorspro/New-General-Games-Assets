@@ -15,9 +15,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const MATERIALES = ['gelatina', 'vidrio', 'perla', 'cromo', 'mate', 'neon'];
 export const MOTIVOS = ['ninguno', 'agua', 'nubes', 'tierra', 'galaxia', 'hojas', 'burbujas', 'flores', 'aurora'];
-export const SOMBREROS = ['ninguno', 'conico', 'gorro', 'galera', 'corona', 'flor', 'auriculares', 'casco', 'aureola', 'brote', 'gorra'];
+export const SOMBREROS = ['ninguno', 'conico', 'gorro', 'galera', 'corona', 'flor', 'auriculares', 'casco', 'aureola', 'brote', 'gorra', 'explorador', 'hongo', 'capitan'];
 export const ANTEOJOS = ['ninguno', 'sol', 'redondos', 'visor'];
-export const ESPALDAS = ['ninguno', 'alas', 'mochila', 'aleta'];
+export const ESPALDAS = ['ninguno', 'alas', 'mochila', 'aleta', 'molinete'];
 export const PEINADOS = ['ninguno', 'mechon', 'rulos', 'pinches', 'melena', 'rodete', 'colitas', 'cresta', 'nube'];
 export const PARTICULAS = ['ninguna', 'burbujas', 'estrellas', 'hojas', 'notas'];
 export const OJOS = ['ovalos', 'redondos', 'felices', 'ninguno'];
@@ -195,6 +195,10 @@ function sombrero(tipo, col) {
     case 'aureola': add(new THREE.TorusGeometry(0.17, 0.025, 12, 40), new THREE.MeshBasicMaterial({ color: '#fff5b0' }), 0, 0.36, 0, Math.PI / 2); break;
     case 'brote': add(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 8), simple('#4caf2a'), 0, 0.29); { const h = add(new THREE.SphereGeometry(0.07, 14, 10), simple('#6fdc3a'), 0.05, 0.36); h.scale.set(1, 0.4, 0.6); const h2 = add(new THREE.SphereGeometry(0.07, 14, 10), simple('#6fdc3a'), -0.05, 0.34); h2.scale.set(1, 0.4, 0.6); } break;
     case 'gorra': add(new THREE.SphereGeometry(0.245, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), m, 0, 0.04); { const v = add(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 32, 1, false, -Math.PI / 2, Math.PI), m, 0, 0.06, 0.12); v.scale.set(1, 1, 1.2); } break;
+    /* los de las misiones nuevas: el de exploración (Brújula), el hongo (Musgo) y la gorra de capitán (Marea) */
+    case 'explorador': { const k = simple('#e8d3a0', { roughness: 0.6 }); add(new THREE.CylinderGeometry(0.38, 0.4, 0.025, 40), k, 0, 0.17); add(new THREE.CylinderGeometry(0.2, 0.23, 0.17, 32), k, 0, 0.27); add(new THREE.SphereGeometry(0.2, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), k, 0, 0.35).scale.y = 0.35; add(new THREE.CylinderGeometry(0.233, 0.233, 0.045, 32), simple('#5a8f3a'), 0, 0.21); break; }
+    case 'hongo': { const c = add(new THREE.SphereGeometry(0.34, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), simple('#ff4f6e', { clearcoat: 1 }), 0, 0.1); c.scale.y = 0.62; for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + 0.3, e = 0.5 + (i % 2) * 0.35; add(new THREE.SphereGeometry(0.045, 12, 8), simple('#ffffff'), Math.cos(a) * Math.sin(e) * 0.33, 0.1 + Math.cos(e) * 0.2, Math.sin(a) * Math.sin(e) * 0.33).scale.y = 0.4; } add(new THREE.SphereGeometry(0.07, 12, 8), simple('#ffffff'), 0, 0.31, 0).scale.y = 0.4; break; }
+    case 'capitan': { add(new THREE.CylinderGeometry(0.27, 0.235, 0.13, 36), simple('#ffffff'), 0, 0.22); add(new THREE.CylinderGeometry(0.238, 0.238, 0.06, 36), simple('#1d3f7a'), 0, 0.17); const v = add(new THREE.CylinderGeometry(0.21, 0.21, 0.02, 32, 1, false, -Math.PI / 2, Math.PI), simple('#1a2230'), 0, 0.15, 0.1); v.scale.set(1, 1, 1.15); v.rotation.x = 0.2; add(new THREE.TorusGeometry(0.035, 0.012, 8, 18), simple('#ffd23f', { metalness: 1, roughness: 0.2 }), 0, 0.23, 0.26); break; }
   }
   return g;
 }
@@ -220,6 +224,16 @@ function espalda(tipo, col) {
     const f = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 8), simple('#ff8a3d')); f.position.set(0.04, 0.56, -0.28); g.add(f);
   } else if (tipo === 'aleta') {
     const f = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.28, 16), simple(col)); f.scale.z = 0.35; f.rotation.x = -0.5; f.position.set(0, 0.8, -0.17); g.add(f);
+  } else if (tipo === 'molinete') {
+    /* el molinete de papel en un palito (el premio de Brisa): gira más rápido cuando se corre */
+    const palo = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.62, 8), simple('#ffffff')); palo.position.set(0.1, 0.78, -0.22); palo.rotation.z = -0.25; g.add(palo);
+    const rueda = new THREE.Group(); rueda.position.set(0.18, 1.08, -0.2); rueda.userData.gira = 1;
+    ['#ff6fb0', '#39d6ff', '#ffe14a', '#56e05a'].forEach((c, i) => {
+      const f = new THREE.Shape(); f.moveTo(0, 0); f.lineTo(0.16, 0.02); f.quadraticCurveTo(0.17, 0.13, 0.02, 0.15); f.lineTo(0, 0);
+      const a = new THREE.Mesh(new THREE.ShapeGeometry(f, 6), simple(c, { side: THREE.DoubleSide })); a.rotation.z = i * Math.PI / 2; rueda.add(a);
+    });
+    const eje = new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 8), simple('#ffffff')); eje.position.z = 0.01; rueda.add(eje);
+    g.add(rueda);
   }
   return g;
 }
@@ -381,6 +395,9 @@ export class Meeple {
     } else if (estado === 'flota') {
       R.bl = [0, 0, -1.2 + Math.sin(t * 1.3) * 0.2]; R.br = [0, 0, 1.2 - Math.sin(t * 1.3) * 0.2];
       R.pl = [0.35, 0, 0.1]; R.pr = [-0.1, 0, -0.1]; R.cz = Math.sin(t * 0.8) * 0.2; R.cx = Math.sin(t * 0.6) * 0.15; R.cy = 0.1;
+    } else if (estado === 'sentado') {
+      /* en el asiento del monorriel: piernas adelante, manos en las rodillas, mira por la ventana */
+      R.cy = -0.2; R.pl = [-1.5, 0, 0.1]; R.pr = [-1.5, 0, -0.1]; R.bl = [-0.5, 0, -0.25]; R.br = [-0.5, 0, 0.25]; R.hy = 0.9 + Math.sin(t * 0.3) * 0.35; R.hx = Math.sin(t * 0.7) * 0.04;
     } else if (estado === 'monta') {
       R.cy = -0.18; R.pl = [-1.45, 0, 0.35]; R.pr = [-1.45, 0, -0.35]; R.bl = [-1.2, 0, -0.25]; R.br = [-1.2, 0, 0.25]; R.cx = 0.25; R.hx = -0.1;
     } else {
@@ -413,7 +430,7 @@ export class Meeple {
     if (this.tParpadeo <= 0) this.tParpadeo = Math.random() < 0.2 ? 0.3 : 2.5 + Math.random() * 3.5;
     for (const o of this.ojos.children[0]?.children || []) o.scale.y = cierre;
     /* las alas aletean */
-    for (const o of this.atras.children) for (const w of o.children) if (w.userData.ala) w.rotation.y = w.userData.ala * (0.5 + Math.sin(t * (estado === 'cae' ? 18 : 4)) * 0.25);
+    for (const o of this.atras.children) for (const w of o.children) { if (w.userData.ala) w.rotation.y = w.userData.ala * (0.5 + Math.sin(t * (estado === 'cae' ? 18 : 4)) * 0.25); if (w.userData.gira) w.rotation.z -= dt * (2.5 + vel * 2.2); }
     /* las partículas dan vueltas alrededor */
     if (this.particulas) {
       const p = this.particulas.geometry.attributes.position, f = this.particulas.geometry.attributes.fase;

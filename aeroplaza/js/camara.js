@@ -25,7 +25,7 @@ export class Camara {
     const alto = 1.25 * k + (jugador.modo === 'burbuja' ? 0.3 : 0);
     this.obj.set(jugador.p.x, jugador.p.y + alto, jugador.p.z);
     this.kCine += ((this.cine ? 1 : 0) - this.kCine) * Math.min(1, dt * 3);
-    this.dist += (this.distObj * (0.75 + 0.25 * k) * (jugador.modo === 'montado' ? 1.35 : 1) - this.dist) * Math.min(1, dt * 6);
+    this.dist += (this.distObj * (0.75 + 0.25 * k) * (jugador.modo === 'montado' ? jugador.montura?.camDist ?? 1.35 : 1) - this.dist) * Math.min(1, dt * 6);
     const cp = Math.cos(this.pitch);
     const desde = new THREE.Vector3(
       this.obj.x + Math.sin(this.yaw) * cp * this.dist,
@@ -43,15 +43,19 @@ export class Camara {
       const cine = medio.clone().addScaledVector(lado, 1.6 + L * 0.9).addScaledVector(ab, -0.35); cine.y += 0.3;
       desde.lerp(cine, this.kCine); mira.lerp(medio, this.kCine);
     }
-    /* que no se meta en el piso ni atrás de una loma: se busca el primer tramo libre */
+    /* que no se meta en el piso, atrás de una loma ni adentro de una casa: se
+       busca el primer tramo libre. Se acerca rápido y se aleja despacio (si no,
+       al pasar junto a un árbol la cámara salta para adelante y para atrás) */
     if (mundo) {
       const dir = desde.clone().sub(mira), L = dir.length(); dir.divideScalar(L);
       let libre = L;
-      for (let i = 1; i <= 12; i++) {
-        const t = i / 12 * L, x = mira.x + dir.x * t, y = mira.y + dir.y * t, z = mira.z + dir.z * t;
-        if (y < mundo.altura(x, z) + 0.35) { libre = Math.max(1.2, t - 0.4); break; }
+      const montado = jugador.modo === 'montado';
+      for (let i = 1; i <= 16; i++) {
+        const t = i / 16 * L, x = mira.x + dir.x * t, y = mira.y + dir.y * t, z = mira.z + dir.z * t;
+        if (y < mundo.altura(x, z) + 0.35 || (!montado && t > 0.6 && mundo.tapa(x, y, z))) { libre = Math.max(1.2, t - 0.45); break; }
       }
-      desde.copy(mira).addScaledVector(dir, libre);
+      this.libre = this.libre == null || libre < this.libre ? libre : this.libre + (libre - this.libre) * Math.min(1, dt * 2.5);
+      desde.copy(mira).addScaledVector(dir, Math.min(libre + 0.8, this.libre));
       const piso = mundo.altura(desde.x, desde.z) + 0.4;
       if (desde.y < piso) desde.y = piso;
       /* el agua: la cámara no queda justo en la superficie (se ve feo el corte) */

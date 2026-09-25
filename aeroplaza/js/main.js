@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import { Motor, TACTIL, ESTILOS } from './motor.js';
 import { Cielo } from './cielo.js';
-import { TEX, UNI, JUGADOR, aguaSigueCielo, materialBurbuja } from './naturaleza.js';
+import { TEX, UNI, JUGADOR, ARBOLEDAS, aguaSigueCielo, materialBurbuja } from './naturaleza.js';
 import { TEXTURAS_MOTIVO, Meeple, APARIENCIA_INICIAL, MATERIALES, MOTIVOS, SOMBREROS, ANTEOJOS, ESPALDAS, PEINADOS, PARTICULAS, OJOS } from './meeple.js';
 import { crearPlaza } from './reinos/plaza.js';
 import { crearAqua } from './reinos/aqua.js';
@@ -37,6 +37,8 @@ const Q = new URLSearchParams(location.search);
 const CREAR = { plaza: crearPlaza, aqua: crearAqua, aurora: crearAurora, jardin: crearJardin, tienda: crearTienda, casa: crearCasa };
 /* plaza y menú: las dos canciones que mandó quien pide; los demás reinos: los temas hechos con Rezona (musica/) */
 const MUSICA_DE = { plaza: 'colina', aqua: 'arrecife', aurora: 'aurora', jardin: 'cielo', tienda: 'ciudad', casa: 'casa' };
+/* las canciones que mandó quien pide para la playa y el bosque van solo en la versión con canciones: en la otra suenan estas */
+const SI_FALTA = { playa: 'arrecife', bosque: 'cielo', casa: 'titulo' };
 
 async function cargarTexturas() {
   const L = new THREE.TextureLoader(), A = window.ARCHIVOS || {};
@@ -120,7 +122,7 @@ async function iniciar() {
     G, id: ID, red, remotos, ent, misiones: Misiones, slot: 1, musicaElegida: null,
     get yo() { return yo; }, get enJuego() { return enJuego; },
     sfx(n, o) { try { Sonido.sfx(n, o); } catch { /* sin audio */ } },
-    musica(n) { try { Sonido.musica(n === 'casa' && !Sonido.grabadas.casa ? 'titulo' : n); } catch { /* nada */ } },
+    musica(n) { try { J.sonando = n; Sonido.musica(!Sonido.grabadas[n] && SI_FALTA[n] ? SI_FALTA[n] : n); } catch { /* nada */ } },
     volumen() { try { Sonido.volumenes(G.opciones.musica, G.opciones.efectos); } catch { /* nada */ } },
     guardar() { Guardado.guardar(); },
     guardarControles() { G.controles = ent.config; Guardado.guardar(); },
@@ -143,9 +145,12 @@ async function iniciar() {
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
     gesto(g) { yo.m.hacerGesto(g); gestoN++; J.gestoActual = g + '#' + gestoN; setTimeout(() => { if (J.gestoActual && J.gestoActual.endsWith('#' + gestoN)) J.gestoActual = null; }, g === 'sentarse' ? 60000 : 8000); },
     cancionDesbloqueada(k) { return k === 'titulo' || k === 'colina' || G.discos.some((d) => DISCO_CANCION[d] === k); },
-    elegirMusica(k) { J.musicaElegida = k; J.musica(k || MUSICA_DE[reino?.id] || 'colina'); },
+    elegirMusica(k) { J.musicaElegida = k; J.musica(k || musicaDelLugar()); },
   };
-  const DISCO_CANCION = { 'disco-loma': 'colina', 'disco-lago': 'arrecife', 'disco-hotel': 'ciudad', 'disco-aurora': 'aurora', 'disco-jardin': 'cielo', 'disco-flor': 'titulo' };
+  const DISCO_CANCION = { 'disco-loma': 'colina', 'disco-lago': 'arrecife', 'disco-hotel': 'ciudad', 'disco-aurora': 'aurora', 'disco-jardin': 'cielo', 'disco-flor': 'titulo', 'disco-faro': 'playa', 'disco-arbol': 'bosque', 'disco-cumbre': 'cielo', 'disco-ciudad': 'ciudad' };
+  /* la música del lugar: la de la zona de la isla donde está, o la del reino */
+  let zona = null, tZona = 0;
+  const musicaDelLugar = () => zona?.musica || MUSICA_DE[reino?.id] || 'colina';
   G.av = hash(G.A);
   UI.iniciar(J);
 
@@ -215,7 +220,9 @@ async function iniciar() {
     yo.hp = 100;
     cam.detras(yo.rumbo); cam.inicial = true;
     UNI.uViento.value = 1;
-    if (!J.musicaElegida) J.musica(MUSICA_DE[id] || 'colina');
+    zona = null; tZona = 9; J.esperaTren = null; UI.estadoTren(null);
+    if (reino.zonaEn) zona = reino.zonaEn(p.x, p.z);
+    if (!J.musicaElegida) J.musica(musicaDelLugar());
     /* la sala pública: la casa es de su dueño; el resto, la que tenga gente y lugar */
     const sala = id === 'casa' ? 'casa-' + (o.casaDe || ID) : id === 'tienda' ? 'tienda-1' : red.elegirSala(id);
     red.casaAbierta = id === 'casa' && !o.casaDe;
@@ -349,7 +356,33 @@ async function iniciar() {
       case 'montar': if (!o.delfin.jinete) { yo.montar(o.delfin); J.sfx('agua'); } break;
       case 'sueno': if (G.estrellas > 0) { const n = G.estrellas; G.estrellas = 0; reino.sueno.total += n; red.accion({ type: 'sueno_suma', n }); chispas.soltar(yo.p.clone().setY(yo.p.y + 3), 30, 4); J.sfx('guino'); Guardado.guardar(); revisarSueno(true); } else UI.avisar(t('sueno_falta', { n: reino.sueno.total, t: Math.min(20, 5 + remotos.cuantos * 3) }), 'azul'); break;
       case 'construir': empezarConstruir(); break;
+      case 'monorriel': { const M = reino.monorriel, tr = M.paradoEn(o.parada); if (tr) subirTren(tr); else { J.esperaTren = { k: o.parada, desde: yo.p.clone() }; J.sfx('aviso'); } break; }
+      case 'molino': reino.soplar(o.molino); J.sfx('ola'); chispas.soltar(yo.p.clone().setY(yo.p.y + 1.5), 14, 3); UI.avisar(t('molino_sopla'), 'azul'); contar('molino', 1, o.clave); break;
+      case 'botella': enDialogo = true; J.sfx('guino'); UI.dialogo('🍾', [t(o.texto)], [], () => {}); contar('botella', 1, o.clave); break;
+      case 'mapa': UI.mapa(dibujarMapa); break;
     }
+  }
+  /* el monorriel: subirse es montarlo, como al delfín (jugador.js); se baja solo cuando para */
+  function subirTren(tr) {
+    J.esperaTren = null;
+    yo.montar(tr.montura); J.sfx('entra'); UI.avisar(t('tren_arriba'), 'bien'); ent.vibrar(20);
+  }
+  function seguirTren() {
+    const M = reino.monorriel; if (!M) return;
+    const tr = yo.modo === 'montado' ? yo.montura?.tren : null;
+    if (tr) {
+      const q = M.paradas[tr.parada >= 0 ? tr.parada : tr.prox];
+      UI.estadoTren(t(tr.parada >= 0 ? 'tren_parado' : 'tren_proxima', { n: q.nombre }));
+      return;
+    }
+    if (J.esperaTren) {
+      const E = J.esperaTren, tr2 = M.paradoEn(E.k);
+      if (yo.p.distanceTo(E.desde) > 9) { J.esperaTren = null; UI.estadoTren(null); return; }
+      if (tr2) { subirTren(tr2); return; }
+      UI.estadoTren(t('tren_llega', { n: Math.ceil(M.llega(E.k)) }));
+      return;
+    }
+    UI.estadoTren(null);
   }
   function empezarConstruir() {
     if (construyendo) return;
@@ -362,8 +395,9 @@ async function iniciar() {
     );
   }
   function dibujarMapa(cv) {
-    const g = cv.getContext('2d'), W = cv.width, M = reino.mundo, L = reino.id === 'casa' ? 30 : reino.id === 'tienda' ? 14 : 130;
-    if (!reino._mapa || reino._mapaL !== L) {
+    const g = cv.getContext('2d'), W = cv.width, M = reino.mundo, L = reino.mapa ? reino.mapa.L : reino.id === 'casa' ? 30 : reino.id === 'tienda' ? 14 : 130;
+    if (reino.mapa) g.drawImage(reino.mapa.canvas, 0, 0, W, W);
+    else if (!reino._mapa || reino._mapaL !== L) {
       const img = g.createImageData(W, W);
       for (let j = 0; j < W; j++) for (let i = 0; i < W; i++) {
         const x = (i / W - 0.5) * 2 * L, z = (j / W - 0.5) * 2 * L, h = M.altura(x, z), k = (j * W + i) * 4;
@@ -373,10 +407,12 @@ async function iniciar() {
       }
       reino._mapa = img; reino._mapaL = L;
     }
-    g.putImageData(reino._mapa, 0, 0);
+    if (!reino.mapa) g.putImageData(reino._mapa, 0, 0);
     const P = (x, z) => [(x / (2 * L) + 0.5) * W, (z / (2 * L) + 0.5) * W];
     const punto = (x, z, c, r = 6) => { const [a, b] = P(x, z); g.fillStyle = c; g.beginPath(); g.arc(a, b, r, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 2; g.stroke(); };
-    for (const o of M.interactivos) { const q = typeof o.pos === 'function' ? o.pos() : o.pos; if (o.accion === 'viajar') { g.font = '22px sans-serif'; const [a, b] = P(q.x, q.z); g.fillText('🚆', a - 11, b + 8); } }
+    if (!reino.mapa) for (const o of M.interactivos) { const q = typeof o.pos === 'function' ? o.pos() : o.pos; if (o.accion === 'viajar') { g.font = '22px sans-serif'; const [a, b] = P(q.x, q.z); g.fillText('🚆', a - 11, b + 8); } }
+    /* los trenes del monorriel, andando */
+    if (reino.monorriel) for (const tr of reino.monorriel.trenes) if (tr.base) { const [a, b] = P(tr.base.x, tr.base.z); g.fillStyle = '#ffffff'; g.fillRect(a - 7, b - 7, 14, 14); g.fillStyle = '#27b9e8'; g.fillRect(a - 5, b - 5, 10, 10); }
     for (const n of reino.npcMallas || []) punto(n.m.raiz.position.x, n.m.raiz.position.z, '#ffd23f', 7);
     for (const r of remotos.m.values()) punto(r.x, r.z, '#ff6fb0', 6);
     const [a, b] = P(yo.p.x, yo.p.z);
@@ -413,7 +449,9 @@ async function iniciar() {
     JUGADOR.copy(yo.p);
     for (const ev of yo.eventos) {
       if (ev === 'salto') J.sfx('salto'); else if (ev === 'doble') { J.sfx('burbuja'); chispas.soltar(yo.p, 8, 2); } else if (ev === 'aterriza') J.sfx('aterriza');
-      else if (ev === 'chapuzon' || ev === 'monta') { J.sfx('agua'); chispas.soltar(yo.p.clone().setY(reino.mundo.agua ?? yo.p.y), 16, 3); } else if (ev === 'rebote') J.sfx('hongo'); else if (ev === 'brazada') J.sfx('brazada');
+      else if (ev === 'chapuzon' || ev === 'monta') { J.sfx('agua'); chispas.soltar(yo.p.clone().setY(reino.mundo.agua ?? yo.p.y), 16, 3); } else if (ev === 'rebote') { J.sfx('hongo'); const c = yo.pisando?.clave; if (c && c.startsWith('hongo')) contar('hongo', 1, c); }
+      else if (ev === 'noBaja') UI.avisar(t('tren_espera'), 'azul');
+      else if (ev === 'bajaTren') { J.sfx('aterriza'); cam.inicial = true; UI.estadoTren(null); } else if (ev === 'brazada') J.sfx('brazada');
       else if (ev === 'geiser') { J.sfx('ola'); if (yo._enGeiser?.clave) contar('geiser', 1, yo._enGeiser.clave); } else if (ev === 'pop') { J.sfx('pop'); chispas.soltar(yo.p.clone().setY(yo.p.y + 0.8), 20, 3); } else if (ev === 'burbuja') J.sfx('burbuja');
       else if (ev === 'caida') { yo.ponerEn(reino.inicio, reino.rumboInicio); }
     }
@@ -466,11 +504,25 @@ async function iniciar() {
         else if (ev.tipo === 'hundido') { G.orbes += 3; UI.avisar(t('mas_orbes', { n: 3 }), 'bien'); J.sfx('orbe'); }
       }
     }
+    /* la zona de la isla: el cartel, la música y la misión de Brújula (con margen, para no titilar en el borde) */
+    if (reino.zonaEn && (tZona += dt) > 0.5) {
+      tZona = 0;
+      const z = reino.zonaEn(yo.p.x, yo.p.z);
+      const sigue = zona && Math.hypot(yo.p.x - zona.c[0], yo.p.z - zona.c[1]) < zona.r * 1.08;
+      if (z && z !== zona && !(sigue && z.r > zona.r)) {
+        zona = z; UI.lugar(t('zona_' + z.id), z.icono); J.sfx('aviso');
+        if (!J.musicaElegida) J.musica(z.musica);
+        contar('lugar', 1, z.id);
+      }
+    }
+    seguirTren();
     if (reino.id === 'aurora') { const n = reino.actualizar(dt, yo.p, cielo); if (n) { G.estrellas += n; UI.avisar(t('estrella'), 'azul'); J.sfx('guino'); contar('estrella', n); } }
     else reino.actualizar(dt, yo.p, cielo);
     /* la gente del lugar mira a quien se acerca */
     for (const n of reino.npcMallas || []) {
       const d = Math.hypot(yo.p.x - n.m.raiz.position.x, yo.p.z - n.m.raiz.position.z);
+      /* de lejos no se ven (y no se animan): cada muñeco son muchas piezas */
+      n.m.raiz.visible = d < 110; if (!n.m.raiz.visible) continue;
       const obj = d < 5 ? Math.atan2(yo.p.x - n.m.raiz.position.x, yo.p.z - n.m.raiz.position.z) : n.rot;
       let dd = obj - n.m.raiz.rotation.y; while (dd > Math.PI) dd -= Math.PI * 2; while (dd < -Math.PI) dd += Math.PI * 2;
       n.m.raiz.rotation.y += dd * Math.min(1, dt * 3);
@@ -510,6 +562,8 @@ async function iniciar() {
     if (reino.interior) { cielo.sol.intensity *= 0.35; cielo.hemi.intensity = 1.1; }
     if (reino.mar) aguaSigueCielo(reino.mar, cielo);
     cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
+    /* los árboles de cerca con detalle y los de lejos livianos (naturaleza.js) */
+    for (const a of ARBOLEDAS) { let q = a; while (q.parent) q = q.parent; if (q === motor.escena) a.actualizar(dt, motor.camara.position); }
     /* adentro: la cámara no sale de las paredes */
     if (reino.caja) { const [x0, x1, z0, z1, y1] = reino.caja, c = motor.camara.position; c.x = Math.max(x0, Math.min(x1, c.x)); c.z = Math.max(z0, Math.min(z1, c.z)); c.y = Math.min(y1, c.y); }
     if (probador) estudio.actualizar(dt, E.camX, motor.ancho, motor.alto);
