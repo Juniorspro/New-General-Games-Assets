@@ -52,6 +52,16 @@ r = await pag.evaluate(() => {
 });
 prueba('al llegar no se tiene una puerta delante ni encima', r.every((x) => !x), `${r.filter(Boolean).length} tapadas`);
 
+/* quedarse en una zona no manda avisos (spameaba "Nueva zona" dos veces por segundo) */
+r = await pag.evaluate(() => {
+  const A = window.__A, R = A.reino, U = A.UI, L = R.llegadas.mesas; let n = 0;
+  const orig = U.notificar.bind(U); U.notificar = (o) => { n++; return orig(o); };
+  A.yo.ponerEn(L.p.clone(), L.rumbo); window.__P.pasos(30); const n0 = n;
+  for (let i = 0; i < 300; i++) A.paso(1 / 30, false);
+  U.notificar = orig; return { entrar: n0, quieto: n - n0 };
+});
+prueba('quedarse 10 s en una zona no manda avisos', r.quieto === 0 && r.entrar <= 1, JSON.stringify(r));
+
 /* 2. las mesas: sentarse y jugar contra la compu hasta que alguien gane (o empate) */
 r = await pag.evaluate(() => {
   const A = window.__A, R = A.reino, Ms = R.mesas, out = {};
@@ -61,7 +71,7 @@ r = await pag.evaluate(() => {
     const panel = !!document.querySelector('.panel-mesa');
     const Rg = Ms.reglas[M.juego];
     let n = 0, fin = null;
-    while (n++ < 2400 && !(fin = Rg.ganador(M.S))) {
+    while (n++ < 9000 && !(fin = Rg.ganador(M.S))) {
       /* si me toca, juego la primera jugada que haya */
       const toca = M.juego === 'ppt' ? M.S.e[0] == null : M.S.turno === 0 && !(M.juego === 'memo' && M.S.abiertas.length === 2);
       if (toca) {

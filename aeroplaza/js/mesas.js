@@ -17,7 +17,7 @@
    ========================================================================== */
 import * as THREE from 'three';
 import { t, sumar } from './textos.js';
-import { brilloso, materialVidrio } from './naturaleza.js';
+import { modelo } from './modelos.js';
 
 sumar({
   es: { mesa_damas: 'Damas', mesa_tateti: 'Ta-te-ti', mesa_cuatro: 'Cuatro en línea', mesa_memo: 'Memotest', mesa_ppt: 'Piedra, papel o tijera',
@@ -271,19 +271,14 @@ export class Mesas {
   }
   armar(grupo, mundo, M, i) {
     const g = new THREE.Group(); g.position.set(M.x, M.y, M.z); g.rotation.y = M.rot; grupo.add(g);
-    /* la mesa redonda de vidrio con el tablero arriba, y dos sillas de burbuja */
-    const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.35, 0.78, 16), brilloso('#ffffff', { roughness: 0.2 })); pata.position.y = 0.39; g.add(pata);
-    const tapa = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.78, 0.08, 40), materialVidrio('#e6fbff', 0.55)); tapa.position.y = 0.8; tapa.renderOrder = 2; g.add(tapa);
-    const borde = new THREE.Mesh(new THREE.TorusGeometry(0.78, 0.035, 8, 48).rotateX(Math.PI / 2), brilloso('#43d8cd', { emissive: '#1fb0ea', emissiveIntensity: 0.4 })); borde.position.y = 0.84; g.add(borde);
+    /* la mesa redonda de vidrio con el tablero arriba, y dos sillas burbuja (construcciones.js, copiadas del GLB) */
+    g.add(modelo('mesaJuego', { escala: 1 }));
     const lienzo = document.createElement('canvas'); lienzo.width = lienzo.height = 256;
     const tex = new THREE.CanvasTexture(lienzo); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-    const tablero = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true })); tablero.position.y = 0.85; g.add(tablero);
+    const tablero = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tex, transparent: true })); tablero.position.y = 0.836; tablero.renderOrder = 4; g.add(tablero);
     const sillas = [0, 1].map((s) => {
       const z = s === 0 ? 1.15 : -1.15, rot = s === 0 ? Math.PI : 0;
-      const silla = new THREE.Group(); silla.position.set(0, 0, z); g.add(silla);
-      const asiento = new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.55), brilloso(s === 0 ? '#6fd6ff' : '#ff9ad8', { roughness: 0.15, side: THREE.DoubleSide })); asiento.scale.y = 0.7; asiento.rotation.x = Math.PI; asiento.position.y = 0.52; silla.add(asiento);
-      const respaldo = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 12, 0, Math.PI, 0, Math.PI / 2), brilloso(s === 0 ? '#bff0ff' : '#ffd6ec', { roughness: 0.15, side: THREE.DoubleSide })); respaldo.rotation.set(-Math.PI / 2, s === 0 ? Math.PI : 0, 0); respaldo.position.set(0, 0.6, s === 0 ? 0.3 : -0.3); silla.add(respaldo);
-      const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.25, 0.3, 12), brilloso('#ffffff')); pie.position.y = 0.15; silla.add(pie);
+      const silla = modelo(s === 0 ? 'sillaBurbuja' : 'sillaBurbujaRosa', { escala: 1 }); silla.position.set(0, 0, z); silla.rotation.y = s === 0 ? Math.PI : 0; g.add(silla);
       /* dónde se sienta (en el mundo) y para dónde mira */
       const p = new THREE.Vector3(0, 0.38, z).applyAxisAngle(new THREE.Vector3(0, 1, 0), M.rot).add(new THREE.Vector3(M.x, M.y, M.z));
       const rumbo = M.rot + rot;

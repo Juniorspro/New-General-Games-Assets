@@ -128,7 +128,10 @@ export class Jugador {
     /* bajar recién apretado: en el piso se desliza siempre; en el aire, se anota cuándo (al caer decide) */
     const bajaYa = !!E.baja && !this._baja; this._baja = !!E.baja;
     const horiz0 = Math.hypot(this.v.x, this.v.z);
-    if (bajaYa && !vadea && (!this.mov || this.mov.tipo === 'rueda')) {
+    /* apretado y moviéndose, vuelve a deslizar solo (con un respiro de 0,25 s entre uno y otro) */
+    this.tDesliza = (this.tDesliza || 0) - dt;
+    const sigueBajo = E.baja && !this.mov && this.enPiso && horiz0 > 2.5 && this.tDesliza <= 0;
+    if ((bajaYa || sigueBajo) && !vadea && (!this.mov || this.mov.tipo === 'rueda')) {
       if (this.enPiso || this.coyote > 0) this.deslizar(horiz0, quiere, cuanto);
       else this.bajaAire = 0;
     }
@@ -255,6 +258,9 @@ export class Jugador {
   terminarMov(W, k) {
     const M = this.mov;
     if (M.tipo === 'desliza' && this.hayTecho(W, k)) { M.dur += 0.1; M.v0 = Math.max(M.v0, 2.4 + 6 * M.t); return; }
+    /* mientras se tenga apretado bajar, sigue deslizando (hasta 1,6 s) */
+    if (M.tipo === 'desliza' && this._baja && M.t < 1.6) { M.dur += 0.1; return; }
+    if (M.tipo === 'desliza') this.tDesliza = 0.25;
     this.mov = null;
   }
   /* ¿hay un borde adelante, entre la rodilla y un poco más arriba de la cabeza, con lugar arriba?

@@ -86,13 +86,30 @@ export class Camara {
   actualizarFP(dt, j) {
     const k = j.escala, vel = Math.hypot(j.v.x, j.v.z);
     this.fase += dt * vel * 2.4;
-    const hamaca = j.enPiso ? Math.sin(this.fase) * 0.035 * Math.min(1, vel / 3.4) : 0;
+    /* la cabeza acompaña los pasos (26/09: "correr, caminar y deslizarse deben verse en primera
+       persona"): baja en cada pisada, se mece de un lado al otro y se ladea un poco; corriendo, más */
+    const corre = vel > 5.2, amp = j.enPiso && !j.mov ? Math.min(1, vel / 3.4) : 0;
+    const hamaca = -Math.abs(Math.sin(this.fase)) * (corre ? 0.07 : 0.04) * amp;
+    const meceX = Math.sin(this.fase) * (corre ? 0.035 : 0.02) * amp;
+    let ladeoFP = Math.sin(this.fase) * (corre ? 0.022 : 0.012) * amp;
+    /* al caer, la cabeza se hunde y vuelve (como un resorte) */
+    if (j.enPiso && !this._pisoFP && (this._vyFP || 0) < -4) this.golpeFP = Math.min(0.22, -(this._vyFP) * 0.014);
+    this._pisoFP = j.enPiso; this._vyFP = j.v.y;
+    this.golpeFP = Math.max(0, (this.golpeFP || 0) - dt * 0.9);
+    const hundo = Math.sin(Math.min(1, this.golpeFP / 0.22) * Math.PI) * this.golpeFP;
+    /* deslizándose se ladea; corriendo por la pared, para el otro lado de la pared */
+    const tipo = j.mov?.tipo;
+    let ladeoObj = tipo === 'desliza' ? 0.09 : tipo === 'corrPared' ? -0.22 * (j.m.ladoPared || 1) : 0;
+    this.ladeoFP += (ladeoObj - (this.ladeoFP || 0)) * Math.min(1, dt * 8);
+    ladeoFP += this.ladeoFP;
+    /* rodando: la vuelta entera para adelante */
+    this.vueltaFP = tipo === 'rueda' ? Math.min(1, j.mov.t / j.mov.dur) * Math.PI * 2 : 0;
     /* sentado, deslizándose o rodando, los ojos van más abajo */
     const bajito = j.mov && (j.mov.tipo === 'desliza' || j.mov.tipo === 'rueda');
     this.bajaFP += ((this.sentado ? -0.6 : bajito ? -0.72 : 0) - this.bajaFP) * Math.min(1, dt * (bajito ? 12 : 6));
     /* los ojos van un poco adelante del cuerpo: mirando abajo se ven la panza y las piernas */
     const adelante = (0.16 + Math.max(0, this.pitch - 0.9) * 0.16) * k;   // (mirando abajo, más adelante: se ven las piernas y no solo la panza)
-    this.pos.set(j.p.x - Math.sin(this.yaw) * adelante, j.p.y + 1.5 * k + hamaca + this.bajaFP, j.p.z - Math.cos(this.yaw) * adelante);
+    this.pos.set(j.p.x - Math.sin(this.yaw) * adelante + Math.cos(this.yaw) * meceX, j.p.y + 1.5 * k + hamaca + this.bajaFP - hundo, j.p.z - Math.cos(this.yaw) * adelante - Math.sin(this.yaw) * meceX);
     /* en una charla, la vista va sola hacia la cara de quien habla */
     if (this.cine) {
       const b = this.cine.b, dx = b.x - this.pos.x, dz = b.z - this.pos.z, dy = b.y + 1.1 - this.pos.y;
@@ -105,6 +122,9 @@ export class Camara {
     this.cam.position.copy(this.pos);
     if (this.sacudida > 0) { this.sacudida -= dt; const q = this.sacudida * 0.08; this.cam.position.x += (Math.random() - 0.5) * q; this.cam.position.y += (Math.random() - 0.5) * q; }
     this.cam.lookAt(this.mira);
+    if (Math.abs(ladeoFP) > 0.0005) this.cam.rotateZ(ladeoFP);
+    if (this.vueltaFP > 0) this.cam.rotateX(-this.vueltaFP);
+    else if (tipo === 'desliza') this.cam.rotateX(-0.06);   // (un poco para abajo: se ven las piernas adelante)
     this.inicial = true;
   }
   /* para mover al muñeco: los ejes de la cámara sobre el piso */

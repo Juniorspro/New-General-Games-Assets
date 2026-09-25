@@ -145,14 +145,17 @@ await pag.evaluate(() => { window.__A.cam.yaw = Math.PI * 0.8; window.__A.cam.pi
 await foto('5-azotea');
 r = await pag.evaluate(() => {
   const T = window.__T, A = window.__A, R = {}, Y = 48.02;
-  T.parar(9.4, Y, 0); R.telescopio = T.apuntar(T.buscar('telescopio')); T.usar(); T.pasos(30); R.fov = +A.motor.camara.fov.toFixed(1);
-  T.pasos(200); R.fovDespues = +A.motor.camara.fov.toFixed(1);
+  /* el telescopio abre el Estelario (el cielo de verdad) y se cierra con la ✕ */
+  T.parar(9.4, Y, 0); R.telescopio = T.apuntar(T.buscar('telescopio')); R.cerca = A.cerca?.accion + ':' + (A.cerca?.a?.texto?.() || ''); T.usar(); T.pasos(10);
+  const E = A.estelario; R.abre = E.abierto && !!document.querySelector('.estelario .es-barra') && getComputedStyle(document.getElementById('ui')).display === 'none';
+  R.estrellas = E.cat?.length || 0; R.rotulos = (E.hits || []).length;
+  document.querySelector('.estelario [data-a=cerrar]')?.click(); T.pasos(10); R.cierra = !E.abierto && !document.querySelector('.estelario') && getComputedStyle(document.getElementById('ui')).display !== 'none';
   T.parar(-5.1, Y, -5); R.bar = T.apuntar(T.buscar('licuado'));
   /* la pileta: se baja 40 cm */
   T.parar(6, Y + 0.2, 2); T.pasos(20); R.enPileta = +A.yo.p.y.toFixed(2);
   return R;
 });
-prueba('el telescopio cierra la vista y después vuelve', r.telescopio && r.fov < 30 && r.fovDespues > 60, `${r.fov}° → ${r.fovDespues}°`);
+prueba('el telescopio abre el Estelario (el cielo de verdad) y la ✕ vuelve al juego', r.telescopio && r.abre && r.estrellas > 5000 && r.rotulos > 20 && r.cierra, JSON.stringify({ cerca: r.cerca, abre: r.abre, estrellas: r.estrellas, rotulos: r.rotulos, cierra: r.cierra }));
 prueba('el bar de licuados se apunta', r.bar);
 prueba('adentro de la pileta se está 40 cm más abajo', Math.abs(r.enPileta - 47.6) < 0.05, String(r.enPileta));
 await pag.evaluate(() => { const A = window.__A; A.cam.yaw = -Math.PI / 2; A.cam.pitch = 0.5; });

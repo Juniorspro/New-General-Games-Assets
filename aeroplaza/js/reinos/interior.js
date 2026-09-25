@@ -350,12 +350,11 @@ export function crearInterior(ctx, tipo = 'hotel', o = {}) {
     for (const [c, x] of [['#ff6fb0', -0.8], ['#ffe14a', -0.3], ['#56e05a', 0.3]]) { poner(new THREE.CylinderGeometry(0.1, 0.08, 0.3, 12), B(c), x, 1.3, 1.2, 0, bar); }
     mundo.cilindro(-7.5, -6.5, 1.8, Y2 - 1, Y2 + 1.1);
     usar(bar, () => t('int_bar'), (J) => { J.sfx('hongo'); J.avisar(t('int_licuado'), 'bien'); chispas.soltar(new THREE.Vector3(-7.5, Y2 + 1.6, -6.5), 12, 2); });
-    /* el telescopio: al mirar, la cámara se cierra (menos campo) un rato */
-    const tel = new THREE.Group(); tel.userData.fundir = true; tel.position.set(11, Y2, 0); tel.rotation.y = -Math.PI / 2; g.add(tel);
-    for (let k = 0; k < 3; k++) { const a = k / 3 * Math.PI * 2, p = poner(new THREE.CylinderGeometry(0.03, 0.03, 1.3, 6), B('#b8c4ce', { metalness: 0.8 }), Math.cos(a) * 0.3, 0.6, Math.sin(a) * 0.3, 0, tel); p.rotation.set(Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25); }
-    const tubo = poner(new THREE.CylinderGeometry(0.14, 0.2, 1.1, 20), B('#1d8fd8', { roughness: 0.15 }), 0, 1.35, 0, 0, tel); tubo.rotation.x = -1.1;
-    mundo.cilindro(11, 0, 0.4, Y2 - 1, Y2 + 1.2);
-    usar(tel, () => t('int_telescopio'), (J) => { J.zoom && J.zoom(5); J.sfx('guino'); });
+    /* el telescopio (construcciones.js, copiado del GLB): al mirar se abre el Estelario, el cielo de verdad (estelario.js) */
+    const tel = muebles('telescopio', 11, Y2, 0, -Math.PI / 2, { alto: 2.07 });
+    { const caja = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.1, 1.9), new THREE.MeshBasicMaterial({ visible: false })); caja.position.set(0, 1.05, 0.2); tel.add(caja); }   // (para apuntarle: entre las patas del trípode el rayo pasaba de largo)
+    mundo.cilindro(11, 0, 0.55, Y2 - 1, Y2 + 1.3);
+    usar(tel, () => t('int_telescopio'), (J) => { if (J.abrirEstelario) J.abrirEstelario(); else if (J.zoom) J.zoom(5); J.sfx('guino'); });
     /* la fuente redonda con burbujas y los canteros de flores del borde */
     const fu = muebles('fuente', -6.5, Y2, 1, 0, { ancho: 3.6 }); mundo.cilindro(-6.5, 1, 1.8, Y2 - 1, Y2 + (fu.userData.borde || 0.6));
     const burbF = new Burbujas(g, [[-6.5, Y2 + 0.8, 1, 1.2, 0]], { n: 20, alto: 5, tam: [0.08, 0.3] }); vivos.push((tt, dt) => burbF.actualizar(dt, null));

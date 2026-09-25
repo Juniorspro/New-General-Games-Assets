@@ -121,7 +121,8 @@ export class Entrada {
       const t = toques.get(e.pointerId); if (!t) return;
       toques.delete(e.pointerId);
       if (t.tipo === 'palanca') { this.dedo.x = 0; this.dedo.z = 0; const P = this.el.palanca; P.classList.remove('activa'); P.querySelector('.palanca-bola').style.transform = ''; if (this.config.palanca === 'flotante') this.ubicarDedos(); }
-      if (t.tipo === 'boton') { this.el[t.n].classList.remove('apretado'); if (t.n === 'salta') this.dedo.sostiene = false; }
+      /* (bajar se mantiene: si no se suelta acá queda apretado para siempre y ya no desliza nunca más) */
+      if (t.tipo === 'boton') { this.el[t.n].classList.remove('apretado'); if (t.n === 'salta') this.dedo.sostiene = false; if (t.n === 'baja') this.dedo.baja = false; }
       if (t.tipo === 'camara') this._d0 = 0;
     };
     zona.addEventListener('pointerup', fin); zona.addEventListener('pointercancel', fin);

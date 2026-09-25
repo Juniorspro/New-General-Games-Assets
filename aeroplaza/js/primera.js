@@ -19,15 +19,19 @@ import { curva, CUADROS_CHOP } from './animador.js';
 
 const suave = (a, b, k) => a + (b - a) * k;
 /* las poses de cada brazo: [x, y, z] del hombro (adelante-abajo de la cámara) y [rx, ry, rz] */
-/* (los hombros van bien abajo y a los costados, fuera de cuadro: se ven las manos y un poco de antebrazo, 25/09: "las manos deberían estar bajas") */
+/* (26/09: "los brazos aún quedan levantados": quieto no se ven, apenas asoman las puntas de las
+   manos abajo; al caminar y correr entran de a uno bombeando; saltando se ven bajitos, nunca a
+   media pantalla. Con 70° de campo, abajo de y/z = -0,7 queda fuera de cuadro) */
 const POSES = {
-  quieto: { d: [[0.27, -0.46, -0.06], [0.3, 0.14, -0.08]], i: [[-0.27, -0.46, -0.06], [0.3, -0.14, 0.08]] },
-  arriba: { d: [[0.32, -0.38, -0.12], [0.8, 0.22, -0.4]], i: [[-0.32, -0.38, -0.12], [0.8, -0.22, 0.4]] },
-  desliza: { d: [[0.24, -0.4, -0.14], [0.6, 0.1, -0.08]], i: [[-0.32, -0.52, 0.0], [-0.4, -0.2, 0.4]] },
-  rueda: { d: [[0.2, -0.7, -0.1], [0.2, 0, 0]], i: [[-0.2, -0.7, -0.1], [0.2, 0, 0]] },
-  agarra: { d: [[0.24, -0.24, -0.2], [1.1, 0.05, -0.1]], i: [[-0.24, -0.24, -0.2], [1.1, -0.05, 0.1]] },
-  empuja: { d: [[0.24, -0.48, -0.16], [0.1, 0.05, -0.08]], i: [[-0.24, -0.48, -0.16], [0.1, -0.05, 0.08]] },
-  pared: { d: [[0.3, -0.32, -0.16], [0.8, 0.5, -0.25]], i: [[-0.32, -0.38, -0.14], [0.65, -0.4, 0.3]] },
+  quieto: { d: [[0.3, -0.58, -0.04], [0.28, 0.12, -0.08]], i: [[-0.3, -0.58, -0.04], [0.28, -0.12, 0.08]] },
+  arriba: { d: [[0.32, -0.54, -0.1], [0.5, 0.2, -0.35]], i: [[-0.32, -0.54, -0.1], [0.5, -0.2, 0.35]] },
+  desliza: { d: [[0.22, -0.5, -0.12], [0.45, 0.1, -0.08]], i: [[-0.34, -0.6, 0.04], [-0.5, -0.25, 0.5]] },
+  rueda: { d: [[0.2, -0.8, -0.1], [0.2, 0, 0]], i: [[-0.2, -0.8, -0.1], [0.2, 0, 0]] },
+  agarra: { d: [[0.24, -0.3, -0.2], [1.05, 0.05, -0.1]], i: [[-0.24, -0.3, -0.2], [1.05, -0.05, 0.1]] },
+  empuja: { d: [[0.24, -0.52, -0.16], [0.05, 0.05, -0.08]], i: [[-0.24, -0.52, -0.16], [0.05, -0.05, 0.08]] },
+  pared: { d: [[0.3, -0.4, -0.16], [0.7, 0.5, -0.25]], i: [[-0.32, -0.46, -0.14], [0.55, -0.4, 0.3]] },
+  valla: { d: [[0.22, -0.5, -0.22], [-0.1, 0.1, -0.1]], i: [[-0.22, -0.5, -0.22], [-0.1, -0.1, 0.1]] },
+  corrPared: { d: [[0.34, -0.46, -0.08], [0.55, 0.7, -0.6]], i: [[-0.3, -0.56, -0.06], [0.3, -0.14, 0.1]] },
 };
 
 export class CuerpoFP {
@@ -66,6 +70,9 @@ export class CuerpoFP {
     else if (e === 'desliza') P = POSES.desliza;
     else if (e === 'rueda') P = POSES.rueda;
     else if (e === 'pared') P = POSES.pared;
+    else if (e === 'valla') P = POSES.valla;
+    else if (e === 'subePared') P = Math.floor(this.t * 6) % 2 ? POSES.agarra : POSES.empuja;
+    else if (e === 'corrPared') { P = POSES.corrPared; if ((yo.m.ladoPared || 1) < 0) P = { d: [[-P.i[0][0], P.i[0][1], P.i[0][2]], [P.i[1][0], -P.i[1][1], -P.i[1][2]]], i: [[-P.d[0][0], P.d[0][1], P.d[0][2]], [P.d[1][0], -P.d[1][1], -P.d[1][2]]] }; }
     else if (e === 'trepa') { const u = yo.mov ? yo.mov.t / yo.mov.dur : 1; P = u < 0.45 ? POSES.agarra : POSES.empuja; }
     const k = chop ? 1 : 1 - Math.exp(-dt * 16);
     for (const B of this.brazos) {
@@ -73,9 +80,13 @@ export class CuerpoFP {
       const obj = new THREE.Vector3(...p0), rot = new THREE.Vector3(...r0);
       /* el vaivén: quieto respira; caminando y corriendo, cada brazo para adelante cuando el otro va atrás */
       if (e === 'camina' || e === 'corre') {
-        const a = e === 'corre' ? 1 : 0.45, q = Math.sin(f + (s > 0 ? 0 : Math.PI));
-        obj.z += q * 0.12 * a; obj.y += Math.abs(Math.cos(f)) * 0.03 * a + (e === 'corre' ? 0.04 : 0); rot.x += q * 0.55 * a + (e === 'corre' ? 0.35 : 0);
-      } else if (e === 'quieto') { obj.y += Math.sin(t * 2.2 + s) * 0.008; rot.x += Math.sin(t * 1.1) * 0.03; }
+        /* el que va adelante sube y se cierra hacia el medio (entra en cuadro); el de atrás baja y sale */
+        const corre = e === 'corre', q = Math.sin(f + (s > 0 ? 0 : Math.PI)), adel = Math.max(0, q);
+        obj.z += q * (corre ? 0.14 : 0.08); obj.x -= s * adel * (corre ? 0.07 : 0.03);
+        obj.y += adel * (corre ? 0.13 : 0.05) - Math.max(0, -q) * 0.05 + Math.abs(Math.cos(f)) * 0.015;
+        rot.x += q * (corre ? 0.7 : 0.35) + (corre ? 0.25 : 0); rot.z -= s * adel * (corre ? 0.35 : 0.12);
+      }
+      else if (e === 'desliza' && s < 0) { obj.y += Math.sin(t * 30) * 0.004; }   // (la mano de atrás va rozando el piso) else if (e === 'quieto') { obj.y += Math.sin(t * 2.2 + s) * 0.008; rot.x += Math.sin(t * 1.1) * 0.03; }
       else if (e === 'cae') { rot.z += Math.sin(t * 9 + s) * 0.18 * s; obj.y += Math.sin(t * 11 + s) * 0.02; }
       /* los golpes de la mano derecha */
       if (this.golpe && s > 0) {

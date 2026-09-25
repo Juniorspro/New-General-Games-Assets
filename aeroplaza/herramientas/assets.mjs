@@ -25,6 +25,7 @@ const IMAGENES = [
   ['mariposa-g1.png', 'mariposa.webp', 256, 85, true],
   ['fondo-menu-g1.png', 'fondo-menu.webp', 1280, 74, false],
   ['t3/cielo-panorama.png', 'cielo.webp', 1376, 78, false],
+  ['t10/susto-g1.png', 'susto.webp', 512, 78, false],   // el susto del runner (25/09)
 ];
 for (const [c, s, ancho, q, alfa] of IMAGENES) {
   const f = path.join(CRUDO, c); if (!fs.existsSync(f)) { console.log('falta', c); continue; }

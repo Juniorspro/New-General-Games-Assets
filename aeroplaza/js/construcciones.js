@@ -68,6 +68,18 @@ const HACER = {
   arena: () => brilloso('#efe0bd', { roughness: 0.7, borde: 0.1 }),
   cesped: () => brilloso('#5cc63f', { roughness: 0.55, borde: 0.15 }),
   vidrio: () => vidrio('#dcf7ff', 0.2),
+  /* los de la Zona de Juegos y el telescopio (26/09) */
+  rosaJ: () => brilloso('#ff8fc8', { roughness: 0.16, borde: 0.35 }),
+  azulJ: () => fisico({ color: '#3f8fe8', borde: 0.4 }),
+  naranjaJ: () => brilloso('#ff7a1f', { roughness: 0.2, emissive: '#ff5a00', emissiveIntensity: 0.25 }),
+  gomaJ: () => brilloso('#2b313b', { roughness: 0.42, borde: 0.12 }),
+  lenteJ: () => new THREE.MeshPhysicalMaterial({ color: '#9fe0ff', roughness: 0.03, metalness: 0.1, clearcoat: 1, emissive: '#1f6fb0', emissiveIntensity: 0.4 }),
+  vidrioAquaJ: () => vidrio('#bff4ff', 0.38),
+  luzAquaJ: () => new THREE.MeshBasicMaterial({ color: '#bff8ff' }),
+  colorJ: () => brilloso('#ffffff', { vertexColors: true, roughness: 0.25, borde: 0.3 }),
+  sillaAzulJ: () => fisico({ color: '#6db8f2', side: THREE.DoubleSide, borde: 0.45 }),
+  sillaRosaJ: () => fisico({ color: '#ff9ad2', side: THREE.DoubleSide, borde: 0.45 }),
+  redJ: () => new THREE.MeshBasicMaterial({ map: texRed(), transparent: true, alphaTest: 0.35, side: THREE.DoubleSide }),
   vidrioAzul: () => vidrio('#a8dcff', 0.46),
   cupula: () => vidrio('#bff0ff', 0.3),
   bola: () => vidrio('#bfeaff', 0.34),
@@ -1140,6 +1152,207 @@ function farolJuegos() {
   return O.cerrar();
 }
 
+/* ============================================= la Zona de Juegos y el telescopio */
+/* (26/09: "arreglar los modelos que no me convencen: hacer glb y después pasarlo a
+   procedural") copiados de los GLB de Tripo por Rezona: crudo/t10/m10-*.glb, con sus
+   fotos de cuatro lados en crudo/t10/ref-*.png */
+function texRed() {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  g.strokeStyle = '#ffffff'; g.lineWidth = 4; g.beginPath(); g.moveTo(0, 2); g.lineTo(64, 2); g.moveTo(2, 0); g.lineTo(2, 64); g.stroke();
+  const tx = new THREE.CanvasTexture(c); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4; return tx;
+}
+/* un cuadrilátero a, b, c, d (en orden) con su uv repetida su × sv veces (las redes) */
+function quad(a, b, c, d, su = 1, sv = 1) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...d], 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, su, 0, su, sv, 0, sv], 2));
+  g.setIndex([0, 1, 2, 0, 2, 3]); g.computeVertexNormals(); return g;
+}
+/* el telescopio refractor: trípode blanco con collares azules, montura azul con perillas
+   lima, tubo blanco con tres anillos celestes, parasol oscuro con la lente, buscador arriba */
+function telescopio() {
+  const O = new Obra(), AP = V3(0, 1.08, 0);
+  for (let k = 0; k < 3; k++) {
+    const a = k / 3 * TAU + Math.PI / 6, pie = V3(Math.sin(a) * 0.55, 0.03, Math.cos(a) * 0.55);
+    const L = pie.distanceTo(AP), mid = AP.clone().lerp(pie, 0.5);
+    O.pon(cil(0.052, L, 12, 0.036).rotateX(Math.PI / 2), 'blanco', mid.x, mid.y, mid.z, { mirar: pie });
+    const c = AP.clone().lerp(pie, 0.42); O.pon(cil(0.056, 0.08, 14).rotateX(Math.PI / 2), 'azulJ', c.x, c.y, c.z, { mirar: pie });
+    const c2 = AP.clone().lerp(pie, 0.78); O.pon(cil(0.046, 0.05, 12).rotateX(Math.PI / 2), 'gris', c2.x, c2.y, c2.z, { mirar: pie });
+    O.pon(esfera(0.06, 12, 8), 'gomaJ', pie.x, 0.035, pie.z, { s: [1, 0.6, 1] });
+  }
+  O.pon(cil(0.12, 0.1, 24), 'azulJ', 0, AP.y + 0.02, 0);
+  O.pon(caja(0.14, 0.2, 0.16, 0.04), 'azulJ', 0, AP.y + 0.17, 0);
+  for (const s of [-1, 1]) O.pon(esfera(0.045, 14, 10), 'lima', s * 0.1, AP.y + 0.24, 0);
+  O.pon(cil(0.014, 0.42, 8).rotateX(Math.PI / 2), 'cromo', 0, AP.y + 0.1, -0.2, { r: [-0.5, 0, 0] });
+  O.pon(cil(0.055, 0.09, 18).rotateX(Math.PI / 2), 'cromo', 0, AP.y + 0.0, -0.4, { r: [-0.5, 0, 0] });
+  /* el tubo, inclinado 32° para arriba (todo lo del tubo se arma a lo largo de z y después se inclina) */
+  const inc = new THREE.Matrix4().makeRotationX(-0.56).setPosition(0, AP.y + 0.34, 0.02);
+  const pz = (geo, x, y, z) => geo.translate(x, y, z).applyMatrix4(inc);
+  const aZ = (g) => g.rotateX(Math.PI / 2);
+  O.pon(pz(aZ(cil(0.17, 1.2, 40)), 0, 0, 0.08), 'blanco');
+  for (const z of [-0.33, 0.07, 0.43]) O.pon(pz(aZ(cil(0.178, 0.09, 40)), 0, 0, z), 'celeste');
+  O.pon(pz(aZ(cil(0.2, 0.22, 40)), 0, 0, 0.78), 'gomaJ');
+  O.pon(pz(new THREE.CircleGeometry(0.17, 40), 0, 0, 0.85), 'lenteJ');
+  O.pon(pz(new THREE.TorusGeometry(0.188, 0.016, 8, 44), 0, 0, 0.89), 'blanco');
+  O.pon(pz(aZ(cil(0.174, 0.07, 40)), 0, 0, -0.52), 'lima');
+  O.pon(pz(aZ(cil(0.14, 0.07, 32)), 0, 0, -0.57), 'gomaJ');
+  O.pon(pz(aZ(cil(0.036, 0.18, 16)), 0, 0, -0.7), 'gris');
+  O.pon(pz(aZ(cil(0.045, 0.07, 16)), 0, 0, -0.8), 'gomaJ');
+  /* el buscador: tubito blanco y negro con la punta lima, sobre dos soportes */
+  O.pon(pz(aZ(cil(0.04, 0.34, 18)), 0, 0.27, 0.12), 'blanco');
+  O.pon(pz(aZ(cil(0.045, 0.06, 18)), 0, 0.27, 0.3), 'lima');
+  O.pon(pz(aZ(cil(0.034, 0.06, 18)), 0, 0.27, -0.07), 'gomaJ');
+  for (const z of [0.02, 0.22]) O.pon(pz(caja(0.045, 0.1, 0.045, 0.01), 0, 0.2, z), 'gris');
+  O.medidas = { ocular: V3(0, AP.y + 0.34 - Math.sin(0.56) * 0.8, 0.02 - Math.cos(0.56) * 0.8) };
+  return O.cerrar();
+}
+/* la mesa de juegos: tapa de vidrio con borde blanco, pie cromado y base de vidrio */
+function mesaJuego() {
+  const O = new Obra();
+  O.pon(torno([[0, 0], [0.44, 0], [0.47, 0.02], [0.45, 0.05], [0, 0.05]], 48), 'vidrioAquaJ');
+  O.pon(new THREE.TorusGeometry(0.455, 0.018, 8, 48).rotateX(Math.PI / 2), 'blanco', 0, 0.035, 0);
+  O.pon(cil(0.036, 0.74, 16), 'cromo', 0, 0.42, 0);
+  O.pon(cil(0.1, 0.04, 20, 0.07), 'cromo', 0, 0.78, 0);
+  O.pon(cil(0.8, 0.05, 56), 'vidrioAquaJ', 0, 0.8, 0);
+  O.pon(new THREE.TorusGeometry(0.8, 0.028, 8, 72).rotateX(Math.PI / 2), 'blanco', 0, 0.8, 0);
+  O.medidas = { tapa: 0.83 };
+  return O.cerrar();
+}
+/* la silla burbuja: un huevo abierto adelante, con almohadón, sobre un pie corto */
+function sillaBurbuja(mat) {
+  const O = new Obra();
+  O.pon(torno([[0, 0], [0.3, 0], [0.32, 0.02], [0.3, 0.04], [0, 0.04]], 32), 'vidrioAquaJ');
+  O.pon(cil(0.04, 0.3, 14), 'cromo', 0, 0.18, 0);
+  /* (una concha fina sacada de una esfera: el cuenco de abajo y el respaldo que sube atrás, como en el GLB) */
+  /* el borde sube suave de adelante (a la altura del asiento) hasta atrás (el respaldo): una
+     esfera recortada por un ángulo que cambia con el giro, con el filo liso */
+  const N = 64, Mv = 18, pos = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const f = i / N * TAU, tMin = Math.PI * (0.6 - 0.34 * (1 - Math.cos(f)) / 2);
+    for (let j = 0; j <= Mv; j++) { const th = Math.PI - (Math.PI - tMin) * j / Mv; pos.push(0.34 * Math.sin(th) * Math.sin(f), 0.34 * Math.cos(th), 0.34 * Math.sin(th) * Math.cos(f)); }
+  }
+  for (let i = 0; i < N; i++) for (let j = 0; j < Mv; j++) { const a = i * (Mv + 1) + j, b = a + Mv + 1; idx.push(a, b, a + 1, a + 1, b, b + 1); }
+  const concha = new THREE.BufferGeometry(); concha.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); concha.setIndex(idx); concha.computeVertexNormals();
+  O.pon(concha, mat, 0, 0.64, 0, { s: [1.12, 1, 1] });
+  /* el filo redondo del borde */
+  const filo = []; for (let i = 0; i <= N; i++) { const f = i / N * TAU, th = Math.PI * (0.6 - 0.34 * (1 - Math.cos(f)) / 2); filo.push([0.34 * 1.12 * Math.sin(th) * Math.sin(f), 0.64 + 0.34 * Math.cos(th), 0.34 * Math.sin(th) * Math.cos(f)]); }
+  O.pon(tubo(filo.slice(0, -1), 0.018, 128, 6, true), mat);
+  O.pon(esfera(0.3, 28, 14), mat, 0, 0.46, 0.03, { s: [1.05, 0.2, 1] });
+  O.medidas = { asiento: 0.45 };
+  return O.cerrar();
+}
+/* la puerta de los juegos: un aro grueso parado, de aqua con filos blancos y lucecitas,
+   sobre un pedestal redondo de dos escalones (la membrana que gira la pone juegos.js) */
+function portalJuegos() {
+  const O = new Obra(), Y = 1.72, R1 = 1.36, R0 = 1.08, P = 0.15;
+  O.pon(torno([[0, 0], [1.55, 0], [1.6, 0.05], [1.58, 0.16], [1.52, 0.2], [0, 0.2]], 64), 'blanco');
+  O.pon(torno([[0, 0.2], [1.3, 0.2], [1.34, 0.24], [1.3, 0.32], [0, 0.32]], 64), 'perla');
+  O.pon(new THREE.TorusGeometry(1.31, 0.028, 8, 72).rotateX(Math.PI / 2), 'luzAquaJ', 0, 0.26, 0);
+  const sec = [[R0, -P + 0.04], [R0 + 0.03, -P], [R1 - 0.03, -P], [R1, -P + 0.04], [R1, P - 0.04], [R1 - 0.03, P], [R0 + 0.03, P], [R0, P - 0.04], [R0, -P + 0.04]];
+  O.pon(torno(sec, 112).rotateX(Math.PI / 2), 'aqua', 0, Y, 0);
+  for (const z of [-P, P]) { O.pon(new THREE.TorusGeometry(R1, 0.04, 10, 112), 'blanco', 0, Y, z); O.pon(new THREE.TorusGeometry(R0, 0.035, 10, 112), 'blanco', 0, Y, z); }
+  for (let k = 0; k < 24; k++) { const a = k / 24 * TAU; for (const z of [-P - 0.012, P + 0.012]) O.pon(esfera(0.042, 10, 8), 'luzAquaJ', Math.sin(a) * (R0 + R1) / 2, Y + Math.cos(a) * (R0 + R1) / 2, z); }
+  O.pon(caja(0.8, 0.14, 0.44, 0.05), 'blanco', 0, 0.37, 0);
+  O.medidas = { centro: Y, radio: R0 };
+  return O.cerrar();
+}
+/* el arco de fútbol: palos y travesaño blancos de una pieza, el marco de atrás celeste y la red */
+function arcoFutbol() {
+  const O = new Obra(), W = 5.0, H = 2.2, D = 1.5, HB = 1.9, r = 0.075, e = 0.14;
+  O.pon(tubo([[-W / 2, 0.02, 0], [-W / 2, H - e, 0], [-W / 2 + e * 0.3, H - e * 0.3, 0], [-W / 2 + e, H, 0], [W / 2 - e, H, 0], [W / 2 - e * 0.3, H - e * 0.3, 0], [W / 2, H - e, 0], [W / 2, 0.02, 0]], r, 160, 12), 'blanco');
+  const b = 0.05;
+  O.pon(tubo([[-W / 2, b, -D], [W / 2, b, -D]], b, 2, 8), 'celeste');
+  O.pon(tubo([[-W / 2, HB, -D], [W / 2, HB, -D]], b, 2, 8), 'celeste');
+  for (const s of [-1, 1]) {
+    O.pon(tubo([[s * W / 2, b, 0], [s * W / 2, b, -D]], b, 2, 8), 'celeste');
+    O.pon(tubo([[s * W / 2, b, -D], [s * W / 2, HB, -D]], b, 2, 8), 'celeste');
+    O.pon(tubo([[s * W / 2, H, 0], [s * W / 2, HB, -D]], b, 2, 8), 'celeste');
+    O.pon(esfera(0.1, 12, 8), 'blanco', s * W / 2, 0.04, 0, { s: [1, 0.55, 1] });
+    O.pon(esfera(0.08, 12, 8), 'celeste', s * W / 2, 0.04, -D, { s: [1, 0.6, 1] });
+    O.pon(quad([s * W / 2, 0, 0], [s * W / 2, 0, -D], [s * W / 2, HB, -D], [s * W / 2, H, 0], D / 0.12, H / 0.12), 'redJ');
+  }
+  O.pon(quad([-W / 2, 0, -D], [W / 2, 0, -D], [W / 2, HB, -D], [-W / 2, HB, -D], W / 0.12, HB / 0.12), 'redJ');
+  O.pon(quad([-W / 2, H, 0], [W / 2, H, 0], [W / 2, HB, -D], [-W / 2, HB, -D], W / 0.12, D / 0.12), 'redJ');
+  return O.cerrar();
+}
+/* el aro de básquet: base redonda pesada, caño blanco que sube y se curva hacia adelante,
+   tablero de vidrio con marco azul y el cuadradito blanco, aro naranja (la red la anima juegos.js) */
+function aroBasquet() {
+  const O = new Obra(), RZ = 0.45;
+  O.pon(torno([[0, 0], [0.62, 0], [0.66, 0.05], [0.6, 0.2], [0.45, 0.3], [0.2, 0.35], [0, 0.36]], 48), 'blanco', 0, 0, -1.35);
+  O.pon(tubo([[0, 0.3, -1.35], [0, 2.2, -1.35], [0, 2.95, -1.3], [0, 3.3, -1.02], [0, 3.46, -0.6], [0, 3.48, -0.1]], 0.1, 80, 16), 'blanco');
+  O.pon(caja(1.8, 1.1, 0.05, 0.02), 'vidrioAquaJ', 0, 3.5, 0);
+  O.pon(caja(1.92, 0.08, 0.09, 0.03), 'azulJ', 0, 4.06, 0); O.pon(caja(1.92, 0.08, 0.09, 0.03), 'azulJ', 0, 2.94, 0);
+  for (const s of [-1, 1]) O.pon(caja(0.08, 1.2, 0.09, 0.03), 'azulJ', s * 0.92, 3.5, 0);
+  for (const [w, h, x, y] of [[0.6, 0.04, 0, 3.47], [0.6, 0.04, 0, 3.12], [0.04, 0.39, -0.3, 3.295], [0.04, 0.39, 0.3, 3.295]]) O.pon(caja(w, h, 0.02, 0.01), 'blanco', x, y, 0.035);
+  O.pon(new THREE.TorusGeometry(0.235, 0.02, 10, 40).rotateX(Math.PI / 2), 'naranjaJ', 0, 3.05, RZ);
+  O.pon(caja(0.22, 0.05, RZ - 0.2, 0.02), 'naranjaJ', 0, 3.04, (RZ - 0.2) / 2 + 0.03);
+  O.medidas = { aro: V3(0, 3.05, RZ), base: V3(0, 0, -1.35) };
+  return O.cerrar();
+}
+/* el trampolín de radio R: almohadón de gajos rosa y blanco, resortes, patas rosas con aro abajo (la tela la anima juegos.js) */
+export function trampolinDe(R) {
+  const O = new Obra(), Y = 0.36;
+  const pad = new THREE.TorusGeometry(R, 0.17, 12, 72).rotateX(Math.PI / 2);
+  pintar(pad, (x, y, z) => new THREE.Color(Math.floor((Math.atan2(z, x) / TAU + 1) * 8) % 2 ? '#ff9ad0' : '#ffffff'));
+  O.pon(pad, 'colorJ', 0, Y, 0, { s: [1, 0.55, 1] });
+  O.pon(new THREE.TorusGeometry(R - 0.02, 0.045, 8, 72).rotateX(Math.PI / 2), 'rosaJ', 0, Y - 0.1, 0);
+  const nr = Math.round(R * 18);
+  for (let k = 0; k < nr; k++) { const a = k / nr * TAU; O.pon(cil(0.011, 0.16, 5).rotateZ(Math.PI / 2), 'cromo', Math.cos(a) * (R - 0.14), Y - 0.02, Math.sin(a) * (R - 0.14), { ry: -a }); }
+  const np = Math.max(6, Math.round(R * 4));
+  for (let k = 0; k < np; k++) { const a = (k + 0.5) / np * TAU, x = Math.cos(a) * (R - 0.04), z = Math.sin(a) * (R - 0.04); O.pon(cil(0.035, Y - 0.1, 10), 'rosaJ', x, (Y - 0.1) / 2, z); O.pon(esfera(0.05, 10, 6), 'rosaJ', x, 0.02, z, { s: [1, 0.5, 1] }); }
+  O.pon(new THREE.TorusGeometry(R - 0.04, 0.022, 6, 72).rotateX(Math.PI / 2), 'rosaJ', 0, 0.1, 0);
+  return O.cerrar();
+}
+/* el armazón de las hamacas: dos A de aqua con sus uniones, la barra de arriba y los ganchos (10,8 × 5,3 m) */
+function hamacas() {
+  const O = new Obra(), W = 10.8, H = 5.3, S = 1.5;
+  for (const s of [-1, 1]) {
+    const x = s * W / 2;
+    for (const e of [-1, 1]) { O.pon(tubo([[x, 0.02, e * S], [x, H - 0.12, e * 0.06]], 0.12, 2, 14), 'aqua'); O.pon(esfera(0.16, 14, 10), 'blanco', x, 0.05, e * S, { s: [1, 0.5, 1] }); }
+    O.pon(esfera(0.22, 18, 14), 'aqua', x, H, 0);
+    O.pon(cil(0.13, 0.05, 18).rotateZ(Math.PI / 2), 'blanco', x + s * 0.21, H, 0);
+  }
+  O.pon(cil(0.11, W, 18).rotateZ(Math.PI / 2), 'aqua', 0, H, 0);
+  for (let i = 0; i < 3; i++) for (const e of [-0.32, 0.32]) O.pon(new THREE.TorusGeometry(0.05, 0.014, 6, 14), 'cromo', (i - 1) * 3.2 + e, H - 0.12, 0, { ry: Math.PI / 2 });
+  return O.cerrar();
+}
+/* una cadena de L metros que cuelga de y = 0 (eslabones que alternan de lado) */
+export function cadenaHamaca(L) {
+  const geos = [], paso = 0.075, n = Math.floor(L / paso);
+  for (let i = 0; i < n; i++) { const g = new THREE.TorusGeometry(0.028, 0.008, 5, 10); g.scale(1, 1.5, 1); if (i % 2) g.rotateY(Math.PI / 2); g.translate(0, -i * paso - paso / 2, 0); geos.push(g); }
+  return mergeGeometries(geos);
+}
+/* el asiento de goma de la hamaca: una U baja y redonda */
+export function asientoHamaca() {
+  const pts = [];
+  for (let i = 0; i <= 16; i++) { const u = i / 16 * 2 - 1; pts.push(new THREE.Vector2(u * 0.4, 0.12 * u * u * u * u)); }
+  for (let i = 16; i >= 0; i--) { const u = i / 16 * 2 - 1; pts.push(new THREE.Vector2(u * 0.4, 0.12 * u * u * u * u + 0.06)); }
+  const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 0.36, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.02, bevelSegments: 3, curveSegments: 8 });
+  g.translate(0, 0, -0.18); return g;
+}
+/* la torre del tobogán: cuatro postes blancos, plataforma, barandas de vidrio con marco,
+   y el techito de cúpula con la puntita (la plataforma arriba a 4,2 m; la rampa y la escalera
+   las pone juegos.js, que les da la física) */
+function torreTobogan() {
+  const O = new Obra(), L = 1.4, Y = 4.2, T = 6.1;
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { O.pon(cil(0.11, T, 16), 'blanco', sx * (L - 0.1), T / 2, sz * (L - 0.1)); O.pon(esfera(0.14, 12, 8), 'blanco', sx * (L - 0.1), 0.04, sz * (L - 0.1), { s: [1, 0.5, 1] }); }
+  O.pon(caja(L * 2, 0.22, L * 2, 0.08), 'perla', 0, Y - 0.11, 0);
+  O.pon(caja(L * 2 + 0.1, 0.08, L * 2 + 0.1, 0.03), 'celeste', 0, Y - 0.24, 0);
+  /* barandas en los lados sin salida (±z), con marco blanco y vidrio */
+  for (const s of [-1, 1]) {
+    O.pon(caja(L * 2 - 0.2, 0.9, 0.04, 0.02), 'vidrioAquaJ', 0, Y + 0.55, s * (L - 0.1));
+    O.pon(caja(L * 2 - 0.1, 0.08, 0.1, 0.04), 'blanco', 0, Y + 1.02, s * (L - 0.1));
+    for (let k = 0; k < 3; k++) O.pon(esfera(0.1, 12, 8), 'luzAquaJ', (k - 1) * 0.8, Y + 0.55, s * (L - 0.07));
+  }
+  /* (los lados ±x quedan abiertos: de un lado llega la escalera y del otro sale la rampa) */
+  O.pon(caja(L * 2 + 0.3, 0.16, L * 2 + 0.3, 0.07), 'blanco', 0, T, 0);
+  O.pon(new THREE.SphereGeometry(L * 1.12, 36, 16, 0, TAU, 0, Math.PI / 2), 'blanco', 0, T + 0.06, 0, { s: [1, 0.62, 1] });
+  for (let k = 0; k < 8; k++) O.pon(tubo(Array.from({ length: 9 }, (_, i) => { const u = i / 8 * Math.PI / 2, a = k / 8 * TAU; return [Math.cos(a) * Math.cos(u) * L * 1.13, T + 0.06 + Math.sin(u) * L * 1.13 * 0.62, Math.sin(a) * Math.cos(u) * L * 1.13]; }), 0.03, 16, 5), 'celeste');
+  O.pon(cil(0.03, 0.4, 8), 'blanco', 0, T + 0.06 + L * 0.7 + 0.2, 0); O.pon(esfera(0.1, 12, 8), 'celeste', 0, T + 0.06 + L * 0.7 + 0.42, 0);
+  return O.cerrar();
+}
+
 /* lo que se puede pedir por nombre (modelos.js) */
 export const CONSTRUIR = {
   casa, estacion, tienda, hotel, tren, fuente, banco, farol, arbol, palmera,
@@ -1148,4 +1361,5 @@ export const CONSTRUIR = {
   arbolRosa: () => arbol(['#e45fa8', '#ff8fcf', '#ffd0ea']),
   arbolLejos: () => arbol(undefined, true), arbolRosaLejos: () => arbol(['#e45fa8', '#ff8fcf', '#ffd0ea'], true), palmeraLejos,
   'm-sofa': sofa, 'm-sillon': sillon, 'm-cama': cama, 'm-tele': tele, 'm-lampara': lampara,
+  telescopio, mesaJuego, sillaBurbuja: () => sillaBurbuja('sillaAzulJ'), sillaBurbujaRosa: () => sillaBurbuja('sillaRosaJ'), portalJuegos, arcoFutbol, aroBasquet, hamacas, torreTobogan,
 };

@@ -28,6 +28,8 @@ import { terreno, agua, pasto, flores, arboles, palmeras, brilloso, materialVidr
 import { Orbes, Burbujas, discoMalla, Chispas } from '../objetos.js';
 import { letrero, fundir } from '../edificios.js';
 import { Mesas } from '../mesas.js';
+import { modelo } from '../modelos.js';
+import { trampolinDe, cadenaHamaca, asientoHamaca } from '../construcciones.js';
 import { t, sumar } from '../textos.js';
 
 sumar({
@@ -61,6 +63,8 @@ export const AREAS = {
   jhamacas: { c: [0, 68], r: 15, icono: '🛝', portal: 'hamacas' },
   jbaile: { c: [40, -58], r: 10, icono: '🪩', portal: 'baile' },
 };
+/* una sola vez cada zona (main.js las compara por id, pero así tampoco se arma nada nuevo cada medio segundo) */
+const ZONAS_J = Object.fromEntries(Object.entries(AREAS).map(([id, a]) => [id, { id, c: a.c, r: a.r, icono: a.icono, musica: 'juegos' }]));
 const DESTINOS = ['parkour', 'runner', 'tiro', 'mesas', 'cancha', 'basquet', 'bolos', 'trampolines', 'hamacas', 'baile', 'isla'];
 const COLOR_PORTAL = { parkour: '#56d05a', runner: '#ff5fb0', tiro: '#ffd23f', mesas: '#39b8f0', cancha: '#3fd08a', basquet: '#ff9a3d', bolos: '#9b7bff', trampolines: '#ff6fb0', hamacas: '#43d8cd', baile: '#c77bff', isla: '#7fe8ff', centro: '#bff0ff' };
 /* el tobogán: una rampa que es parte del piso (así el muñeco la baja sola) */
@@ -126,11 +130,13 @@ export function crearJuegos(ctx) {
   const hacerPortal = (x, z, rot, destino, grupo = g) => {
     const P = new THREE.Group(); P.position.set(x, PISO, z); P.rotation.y = rot; grupo.add(P);
     const col = COLOR_PORTAL[destino];
-    const arco = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.14, 12, 40), brilloso(col, { roughness: 0.15, emissive: col, emissiveIntensity: 0.35 })); arco.position.y = 1.55; P.add(arco);
-    const pel = new THREE.Mesh(new THREE.CircleGeometry(1.14, 40), new THREE.ShaderMaterial({ uniforms: { uT, uColor: { value: new THREE.Color(col) } }, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: PORTAL_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-    pel.position.y = 1.55; pel.renderOrder = 3; P.add(pel);
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.15, 0.22, 24), blanco); base.position.y = 0.11; P.add(base);
-    const cartel = letrero(t('portal_' + destino), { ancho: 2.6, alto: 0.55, tinta: '#1a78c2', borde: col, tam: 120 }); cartel.position.y = 3.25; P.add(cartel);
+    /* el aro con su pedestal (construcciones.js, copiado del GLB); la membrana del color de la puerta gira adentro */
+    const arco = modelo('portalJuegos', { escala: 1 }); P.add(arco); mundo.cilindro(x, z, 1.5, PISO - 1, PISO + 0.32);
+    const brillo = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.05, 8, 64), new THREE.MeshBasicMaterial({ color: col })); brillo.position.y = 1.72; brillo.position.z = 0.16; P.add(brillo);
+    const brillo2 = brillo.clone(); brillo2.position.z = -0.16; P.add(brillo2);
+    const pel = new THREE.Mesh(new THREE.CircleGeometry(1.07, 48), new THREE.ShaderMaterial({ uniforms: { uT, uColor: { value: new THREE.Color(col) } }, vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }', fragmentShader: PORTAL_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    pel.position.y = 1.72; pel.renderOrder = 3; P.add(pel);
+    const cartel = letrero(t('portal_' + destino), { ancho: 2.6, alto: 0.55, tinta: '#1a78c2', borde: col, tam: 120 }); cartel.position.y = 3.5; P.add(cartel);
     const cartel2 = cartel.clone(); cartel2.rotation.y = Math.PI; P.add(cartel2);
     const pos = new THREE.Vector3(x, PISO, z);
     mundo.interactivo({ id: 'portal-' + destino + '-' + portales.length, accion: 'portal', destino, pos, radio: 1.9, icono: '🌀', textoFn: () => t('portal_ir', { n: t('portal_' + destino) }) });
@@ -165,10 +171,9 @@ export function crearJuegos(ctx) {
   /* los bordes bajitos de vidrio (con entradas en las esquinas) y los arcos */
   for (const s of [-1, 1]) { caja(cx, PISO + 0.25, cz + s * (LZ + 0.6), LX * 2 - 6, 0.5, 0.15, vidrio); mundo.caja(cx, cz + s * (LZ + 0.6), LX - 3, 0.1, PISO - 1, PISO + 0.5); }
   const arcos = [-1, 1].map((s) => {
-    const G2 = new THREE.Group(); G2.position.set(cx + s * LX, PISO, cz); fijo.add(G2);
-    for (const zz of [-2.5, 2.5]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 10), blanco); p.position.set(0, 1.1, zz); G2.add(p); mundo.cilindro(cx + s * LX, cz + zz, 0.12, PISO - 1, PISO + 2.2); }
-    const trav = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 5.1, 10).rotateX(Math.PI / 2), blanco); trav.position.y = 2.2; G2.add(trav);
-    const red = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 5), new THREE.MeshStandardMaterial({ color: '#ffffff', transparent: true, opacity: 0.22, side: THREE.DoubleSide, wireframe: true })); red.position.set(s * 0.7, 1.1, 0); G2.add(red);
+    /* el arco (construcciones.js, copiado del GLB): la boca mira a la cancha */
+    const G2 = modelo('arcoFutbol', { escala: 1 }); G2.position.set(cx + s * LX, PISO, cz); G2.rotation.y = -s * Math.PI / 2; g.add(G2);
+    for (const zz of [-2.5, 2.5]) mundo.cilindro(cx + s * LX, cz + zz, 0.12, PISO - 1, PISO + 2.2);
     mundo.caja(cx + s * (LX + 1.45), cz, 0.05, 2.6, PISO - 1, PISO + 2.2);
     return G2;
   });
@@ -190,9 +195,9 @@ export function crearJuegos(ctx) {
   const texB = new THREE.CanvasTexture(cvB); texB.colorSpace = THREE.SRGBColorSpace;
   const pisoB = new THREE.Mesh(new THREE.PlaneGeometry(14, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: texB, roughness: 0.5 })); pisoB.position.set(bx, PISO + 0.03, bz); g.add(pisoB);
   const ARO = new THREE.Vector3(bx + 5.6, PISO + 3.05, bz);
-  cil(bx + 6.9, PISO + 1.9, bz, 0.12, 0.14, 3.8); mundo.cilindro(bx + 6.9, bz, 0.16, PISO - 1, PISO + 3.8);
-  const tablero = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.1, 1.8), materialVidrio('#ffffff', 0.5)); tablero.position.set(ARO.x + 0.5, ARO.y + 0.45, ARO.z); tablero.renderOrder = 3; g.add(tablero);
-  const aro = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.022, 8, 28).rotateX(Math.PI / 2), brilloso('#ff9a3d', { emissive: '#ff6a00', emissiveIntensity: 0.3 })); aro.position.copy(ARO); g.add(aro);
+  /* el aro (construcciones.js, copiado del GLB): el aro queda justo en ARO y el tablero 0,45 atrás */
+  const aroM = modelo('aroBasquet', { escala: 1 }); aroM.position.set(ARO.x + 0.45, PISO, ARO.z); aroM.rotation.y = -Math.PI / 2; g.add(aroM);
+  mundo.cilindro(ARO.x + 1.8, bz, 0.62, PISO - 1, PISO + 0.36); mundo.cilindro(ARO.x + 1.8, bz, 0.13, PISO - 1, PISO + 3.4);
   const redB = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.15, 0.42, 12, 1, true), new THREE.MeshBasicMaterial({ color: '#ffffff', wireframe: true, transparent: true, opacity: 0.7 })); redB.position.set(ARO.x, ARO.y - 0.21, ARO.z); g.add(redB);
   const pelB = new THREE.Mesh(new THREE.SphereGeometry(0.12, 20, 14), brilloso('#ff9a3d', { roughness: 0.35 })); pelB.visible = false; pelB.castShadow = true; g.add(pelB);
   const basquet = { vuela: null, racha: 0, mejor: 0 };
@@ -225,9 +230,10 @@ export function crearJuegos(ctx) {
   const TR = [[0, 0, 2.6, 24], [-6, -4, 1.4, 13], [6, -4, 1.4, 15], [-7, 4, 1.4, 14], [7, 4, 1.4, 16], [-2.5, 7.5, 1.2, 12], [2.5, -8, 1.2, 18]];
   TR.forEach(([dx, dz, R, fuerza], i) => {
     const x = tx0 + dx, z = tz0 + dz, col = ['#ff6fb0', '#39b8f0', '#56d05a', '#ffd23f', '#c77bff', '#43d8cd', '#ff9a3d'][i];
-    const marco = new THREE.Mesh(new THREE.TorusGeometry(R, 0.16, 10, 40).rotateX(Math.PI / 2), brilloso(col, { roughness: 0.2 })); marco.position.set(x, PISO + 0.36, z); fijo.add(marco);
-    const tela = new THREE.Mesh(new THREE.CircleGeometry(R - 0.08, 36).rotateX(-Math.PI / 2), brilloso('#1a3a6a', { roughness: 0.4, side: THREE.DoubleSide })); tela.position.set(x, PISO + 0.34, z); g.add(tela);
-    for (let k = 0; k < 6; k++) { const a = k / 6 * 6.28; cil(x + Math.cos(a) * R, PISO + 0.17, z + Math.sin(a) * R, 0.05, 0.05, 0.34); }
+    /* el armazón (construcciones.js, copiado del GLB) y la tela, que se hunde en cada rebote */
+    const arm = trampolinDe(R); arm.position.set(x, PISO, z); g.add(arm);
+    const tela = new THREE.Mesh(new THREE.CircleGeometry(R - 0.2, 48).rotateX(-Math.PI / 2), brilloso('#1a3a6a', { roughness: 0.55, side: THREE.DoubleSide, borde: 0.1 })); tela.position.set(x, PISO + 0.34, z); g.add(tela);
+    const anillo = new THREE.Mesh(new THREE.TorusGeometry(R - 0.2, 0.03, 6, 48).rotateX(Math.PI / 2), brilloso(col, { emissive: col, emissiveIntensity: 0.3 })); anillo.position.set(x, PISO + 0.35, z); g.add(anillo);
     const s = mundo.cilindro(x, z, R - 0.1, PISO - 1, PISO + 0.36, { rebote: fuerza, sinTecho: true, clave: 'tramp' + i });
     s.alRebotar = () => { tela.userData.aplasta = 1; if (reinoJ.J) { reinoJ.saltosTramp++; const n = reinoJ.saltosTramp; if ([5, 10, 20, 30].includes(n)) { reinoJ.J.avisar(t('jg_rebotes', { n }), 'bien'); reinoJ.J.sfx('gota', { k: n / 5 }); } } };
     tramp.push({ tela, x, z, R });
@@ -236,13 +242,15 @@ export function crearJuegos(ctx) {
   /* ------------------------------------------------ hamacas y tobogán */
   const [hx, hz] = AREAS.jhamacas.c;
   const hamacas = [];
-  for (const s of [-1, 1]) { for (const e of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 5.6, 12), blanco); p.position.set(hx - 8 + s * 5.4, PISO + 2.6, hz + e * 1.1); p.rotation.x = e * 0.22; fijo.add(p); } mundo.cilindro(hx - 8 + s * 5.4, hz, 0.3, PISO - 1, PISO + 5); }
-  const barra = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 11, 12).rotateZ(Math.PI / 2), aqua); barra.position.set(hx - 8, PISO + 5.3, hz); fijo.add(barra);
+  /* el armazón (construcciones.js, copiado del GLB): dos A de aqua y la barra a 5,3 m */
+  const armH = modelo('hamacas', { escala: 1 }); armH.position.set(hx - 8, PISO, hz); g.add(armH);
+  for (const s of [-1, 1]) for (const e of [-1, 1]) mundo.cilindro(hx - 8 + s * 5.4, hz + e * 1.35, 0.16, PISO - 1, PISO + 1.5);
+  const geoCadena = cadenaHamaca(3.9), geoAsiento = asientoHamaca(), matCadena = new THREE.MeshStandardMaterial({ color: '#e8eef4', metalness: 1, roughness: 0.2 });
   for (let i = 0; i < 3; i++) {
     const px = hx - 8 + (i - 1) * 3.2, pz = hz, L = 3.9, colA = ['#ff6fb0', '#39b8f0', '#ffd23f'][i];
     const piv = new THREE.Group(); piv.position.set(px, PISO + 5.3, pz); g.add(piv);
-    for (const e of [-0.32, 0.32]) { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, L, 6), blanco); c.position.set(e, -L / 2, 0); piv.add(c); }
-    const asiento = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.42), brilloso(colA, { roughness: 0.2 })); asiento.position.y = -L; piv.add(asiento);
+    for (const e of [-0.32, 0.32]) { const c = new THREE.Mesh(geoCadena, matCadena); c.position.set(e, -0.08, 0); piv.add(c); }
+    const asiento = new THREE.Mesh(geoAsiento, brilloso(colA, { roughness: 0.2 })); asiento.position.y = -L - 0.03; asiento.castShadow = true; piv.add(asiento);
     const H = {
       piv, L, ang: 0, w: 0, jinete: null, rumbo: 0, bajoAgua: false, pose: 'hamaca', px, pz, p: new THREE.Vector3(px, PISO + 1, pz),   // (p: dónde está, para la cámara y la red)
       manejar(dt, E, quiere, cuanto) {
@@ -261,19 +269,25 @@ export function crearJuegos(ctx) {
   }
   /* el tobogán: torre con escalera, la plataforma y la rampa (que es parte del piso) */
   const TX = RAMPA.x0 - 1.4;
-  caja(TX, RAMPA.y0 - 0.1, RAMPA.z, 2.8, 0.2, 2.8, mat('#ff9ad8', { roughness: 0.2 })); mundo.caja(TX, RAMPA.z, 1.4, 1.4, PISO - 1, RAMPA.y0);
-  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cil(TX + sx * 1.25, (PISO + RAMPA.y0) / 2, RAMPA.z + sz * 1.25, 0.1, 0.1, RAMPA.y0 - PISO);
-  const baranda = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.05, 6, 4, Math.PI * 1.5).rotateX(Math.PI / 2), aqua); baranda.position.set(TX, RAMPA.y0 + 0.9, RAMPA.z); baranda.rotation.y = Math.PI * 0.25; fijo.add(baranda);
+  /* la torre (construcciones.js, copiada del GLB): postes, plataforma a 4,2 m, barandas de vidrio y la cúpula */
+  const torreT = modelo('torreTobogan', { escala: 1 }); torreT.position.set(TX, PISO, RAMPA.z); g.add(torreT);
+  mundo.caja(TX, RAMPA.z, 1.4, 1.4, PISO - 1, RAMPA.y0);
+  for (const s of [-1, 1]) mundo.caja(TX, RAMPA.z + s * 1.3, 1.4, 0.08, RAMPA.y0 - 0.2, RAMPA.y0 + 1.1);
   const escalones = 12;
   for (let i = 0; i < escalones; i++) {
     const y = PISO + (i + 1) * (RAMPA.y0 - PISO) / escalones, x = TX - 1.4 - (escalones - i) * 0.36;
     caja(x + 0.18, y - 0.08, RAMPA.z, 0.4, 0.16, 1.1, mat('#bff0ff', { roughness: 0.25 })); mundo.caja(x + 0.18, RAMPA.z, 0.2, 0.55, PISO - 1, y);
   }
-  /* la rampa: una cinta rosada que sigue alturaRampa, con los bordes levantados (y sólidos a los costados) */
-  { const N = 40, pos = [], idx = [];
-    for (let i = 0; i <= N; i++) { const x = RAMPA.x0 + (RAMPA.x1 - RAMPA.x0) * i / N, y = alturaRampa(x); for (const [dz, dy] of [[-RAMPA.a - 0.12, 0.35], [-RAMPA.a, 0.02], [RAMPA.a, 0.02], [RAMPA.a + 0.12, 0.35]]) pos.push(x, y + dy, RAMPA.z + dz); if (i < N) for (let k = 0; k < 3; k++) { const a = i * 4 + k, b = a + 4; idx.push(a, b, a + 1, a + 1, b, b + 1); } }
+  /* la rampa: una canaleta celeste en U (como la del GLB) que sigue alturaRampa, con los bordes redondos (y sólidos a los costados) */
+  { const N = 60, K = 12, pos = [], idx = [];
+    const perfil = Array.from({ length: K + 1 }, (_, k) => { const u = k / K * Math.PI; return [-Math.cos(u) * (RAMPA.a + 0.1), 0.02 + (1 - Math.sin(u)) * 0.38]; });
+    perfil.unshift([-(RAMPA.a + 0.16), 0.44]); perfil.push([RAMPA.a + 0.16, 0.44]);
+    const P = perfil.length;
+    for (let i = 0; i <= N; i++) { const x = RAMPA.x0 + (RAMPA.x1 - RAMPA.x0) * i / N, y = alturaRampa(x); for (const [dz, dy] of perfil) pos.push(x, y + dy, RAMPA.z + dz); if (i < N) for (let k = 0; k < P - 1; k++) { const a = i * P + k, b = a + P; idx.push(a, b, a + 1, a + 1, b, b + 1); } }
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
-    const rampa = new THREE.Mesh(geo, brilloso('#ff6fb0', { roughness: 0.12, side: THREE.DoubleSide })); rampa.castShadow = true; g.add(rampa);
+    const rampa = new THREE.Mesh(geo, brilloso('#6fc4ff', { roughness: 0.08, side: THREE.DoubleSide, borde: 0.45 })); rampa.castShadow = true; g.add(rampa);
+    /* los pasamanos de la escalera, blancos */
+    for (const sz of [-0.62, 0.62]) { const pts = [new THREE.Vector3(TX - 1.4 - escalones * 0.36, PISO + 0.9, RAMPA.z + sz), new THREE.Vector3(TX - 1.3, RAMPA.y0 + 0.95, RAMPA.z + sz)]; const t2 = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 4, 0.05, 8), blanco); fijo.add(t2); for (const q of [0, 1]) cil(pts[q].x, (pts[q].y + (q ? RAMPA.y0 : PISO)) / 2, pts[q].z, 0.04, 0.04, pts[q].y - (q ? RAMPA.y0 : PISO)); }
     for (let i = 0; i < 8; i++) { const x = RAMPA.x0 + (RAMPA.x1 - RAMPA.x0) * (i + 0.5) / 8, y = alturaRampa(x); for (const s of [-1, 1]) mundo.caja(x, RAMPA.z + s * (RAMPA.a + 0.15), (RAMPA.x1 - RAMPA.x0) / 16 + 0.05, 0.08, y - 1, y + 0.45); if (i < 7) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, y - PISO, 8), blanco); p.position.set(x, (y + PISO) / 2, RAMPA.z - RAMPA.a - 0.2); fijo.add(p); } }
   }
 
@@ -318,7 +332,7 @@ export function crearJuegos(ctx) {
   const reinoJ = {
     id: 'juegos', mundo, grupo: g, mar, inicio: new THREE.Vector3(0, PISO + 0.12, 5.5), rumboInicio: 0, musica: 'juegos', cielo: { arcoiris: 0.6 },
     orbes, discos, npcs: [], burbujas, mesas, pelota, hamacas, llegadas, portales, basquet, bolos, tramp, ARO, RAMPA, PISO, CANCHA: { cx, cz, LX, LZ }, saltosTramp: 0, J: null,
-    zonaEn(x, z) { let mejor = null, md = 1e9; for (const [id, a] of Object.entries(AREAS)) { const d = Math.hypot(x - a.c[0], z - a.c[1]); if (d < a.r && d < md) { md = d; mejor = { id, c: a.c, r: a.r, icono: a.icono, musica: 'juegos' }; } } return mejor; },
+    zonaEn(x, z) { let mejor = null, md = 1e9; for (const [id, a] of Object.entries(AREAS)) { const d = Math.hypot(x - a.c[0], z - a.c[1]); if (d < a.r && d < md) { md = d; mejor = ZONAS_J[id]; } } return mejor; },
     alEntrar(J) { this.J = J; },
     /* el tobogán: en la rampa se baja solo, deslizándose */
     antesDelJugador(dt, yo) {
@@ -363,7 +377,7 @@ export function crearJuegos(ctx) {
       /* la torre y las puertas */
       anillos.forEach((a, i) => { a.position.y = ((tt * 1.6 + i * 2.5) % 10); a.material.emissiveIntensity = 0.6 + Math.sin(tt * 3 + i) * 0.3; });
       esfera.position.y = 11.2 + Math.sin(tt * 1.3) * 0.25;
-      for (const P of portales) { P.arco.rotation.z = Math.sin(tt * 1.2 + P.pos.x) * 0.04; P.pel.scale.setScalar(1 + Math.sin(tt * 2.2 + P.pos.z) * 0.02); }
+      for (const P of portales) P.pel.scale.setScalar(1 + Math.sin(tt * 2.2 + P.pos.z) * 0.02);
       if (J) mesas.actualizar(dt, J, J.remotos);
       /* ---- la pelota */
       const P = pelota;

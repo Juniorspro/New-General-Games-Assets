@@ -31,10 +31,12 @@ import { UI } from './ui.js';
 import { Red, BROKER } from './red.js';
 import { Remotos, RemotePlayer } from './remotos.js';
 import { Efectos } from './efectos.js';
+import { Estelario } from './estelario.js';
 import { Misiones, NPCS } from './misiones.js';
 import { FRUTAS, Chispas } from './objetos.js';
 import { cargarDelfin } from './delfin.js';
 import * as Modelos from './modelos.js';
+import * as Construir from './construcciones.js';
 import { Pantalla } from './pantalla.js';
 import { Voz } from './voz.js';
 import { ESTILOS_ANIM } from './animador.js';
@@ -128,6 +130,7 @@ async function iniciar() {
   const remotos = new Remotos(motor.escena);
   const efectos = new THREE.Group(); motor.escena.add(efectos);
   const chispas = new Chispas(efectos, '#ffffff', 160);
+  const estelario = new Estelario(motor);   // el cielo del telescopio (estelario.js)
   const efx = new Efectos(motor.escena);   // los efectos especiales (efectos.js)
   const cuerpoFP = new CuerpoFP(motor.escena);   // los brazos de la primera persona (primera.js)
 
@@ -478,6 +481,8 @@ async function iniciar() {
   G.tiro ||= { mejor: 0, estrellas: 0 };
   J.tiroReiniciar = () => { if (reino?.tiro) { reino.reiniciar(yo); UI.cerrarVentana(); J.sfx('entra'); } };
   J.tiroSalir = () => J.volverAJuegos('tiro');
+  /* el telescopio de la azotea: el Estelario (el cielo de verdad, estelario.js) */
+  J.abrirEstelario = () => { pausado = true; ent.mostrarDedos(false); estelario.abrir({ alCerrar: () => { pausado = false; ent.mostrarDedos(true); J.sfx('pop'); } }); };
   function seguirTiro(dt) {
     const E = reino.tiro;
     if (E.fase === 'cuenta') UI.cuenta(String(Math.max(1, Math.ceil(E.cuenta - 0.4))));
@@ -640,6 +645,8 @@ async function iniciar() {
   function paso(dt, dibujar = true) {
     UNI.uT.value += dt;
     if (!enJuego || !reino) { return; }
+    /* mirando por el telescopio: el juego queda quieto y se dibuja el cielo */
+    if (estelario.abierto) { estelario.cuadro(dt, dibujar); return; }
     const E = ent.leer();
     if (E.pausa && !UI.ventanaAbierta && !probador && !enDialogo) { J.pausar(!pausado); }
     const quieto = pausado || enDialogo;
@@ -756,7 +763,8 @@ async function iniciar() {
       tZona = 0;
       const z = reino.zonaEn(yo.p.x, yo.p.z);
       const sigue = zona && Math.hypot(yo.p.x - zona.c[0], yo.p.z - zona.c[1]) < zona.r * 1.08;
-      if (z && z !== zona && !(sigue && z.r > zona.r)) {
+      /* (se compara por id: un reino que arma la zona de nuevo en cada consulta avisaba dos veces por segundo) */
+      if (z && z.id !== zona?.id && !(sigue && z.r > zona.r)) {
         zona = z; UI.lugar(t('zona_' + z.id), z.icono); J.sfx('aviso');
         if (!J.musicaElegida) J.musica(z.musica);
         contar('lugar', 1, z.id);
@@ -889,7 +897,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { efx, Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { efx, estelario, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {
