@@ -131,3 +131,10 @@ Sigue de [aeroplaza-9](aeroplaza-9.md) (Zona de Juegos, runner, movimiento). Ram
 - **Una caja de rastreo invertida** hace que la figura negra se vea blanca.
   No es un error.
 - **El `susto` tapaba la palabra**: la palabra se dibuja al final.
+- **Una fila más en Opciones › Juego** hace que en el celu se pase 11 px y
+  haya que desplazar (lo caza `menus.mjs`). Sonido tenía lugar.
+
+## Pruebas
+
+La tanda entera (22 archivos de `pruebas/`) da bien. Las nuevas o cambiadas
+son `movimientos` (22), `runner` (26), `juegos` (26) e `interiores` (32).
