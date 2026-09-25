@@ -111,8 +111,7 @@ export class Monorriel {
       q.puerta.y = altura(q.puerta.x, q.puerta.z);
       /* el cartel con el nombre de la parada, arriba de la torre */
       const c = letrero(q.nombre, { ancho: 3.4, alto: 0.8, tinta: '#1a78c2', borde: '#7fd3ff', tam: 120 });
-      c.position.copy(q.cartel); c.rotation.y = q.giroCartel; this.g.add(c);
-      const c2 = c.clone(); c2.rotation.y += Math.PI; c2.position.addScaledVector(new THREE.Vector3(Math.sin(q.giroCartel), 0, Math.cos(q.giroCartel)), -0.02); this.g.add(c2);
+      c.position.copy(q.cartel); c.rotation.y = q.giroCartel; c.material.side = THREE.DoubleSide; this.g.add(c);
       /* los sólidos: la torre y el andén de arriba */
       const [tx, tz] = [q.p.x - T[q.i].z * q.lado * 5.4, q.p.z + T[q.i].x * q.lado * 5.4];
       mundo.cilindro(tx, tz, 1.3, q.puerta.y - 1, q.piso + 2.9, { tipo: 'piedra' });

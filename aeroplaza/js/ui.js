@@ -50,7 +50,9 @@ function muestraEstilo(n) {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
 const HOT = [['burbujero', '🫧'], ['gestos', '👋'], ['discos', '💿'], ['foto', '📷'], ['mapa', '🗺️']];
-const GESTOS = ['saludar', 'festejar', 'sentarse', 'bailar1', 'bailar2', 'bailar3'];
+const GESTOS = ['saludar', 'festejar', 'aplaudir', 'saltito', 'voltereta', 'pensar', 'sentarse', 'bailar1', 'bailar2', 'bailar3'];
+/* todos los discos escondidos en los reinos (6 en la isla y uno en cada otro reino) */
+const TOTAL_DISCOS = 10;
 const CANCIONES = ['titulo', 'colina', 'arrecife', 'ciudad', 'cielo', 'aurora', 'playa', 'bosque'];
 
 export const UI = {
@@ -338,44 +340,75 @@ export const UI = {
     for (const [v, txt] of opciones) { const b = el(`<button class="${v === actual ? 'si' : ''}"></button>`); b.textContent = txt; b.onclick = () => { s.querySelectorAll('button').forEach((q) => q.classList.remove('si')); b.classList.add('si'); alElegir(v); }; s.appendChild(b); }
     return s;
   },
+  /* pestañas arriba y el contenido abajo, para que nada tenga que desplazarse.
+     defs: [[id, 'emoji', 'nombre', (caja) => {...}]] */
+  pestanas(defs, inicial = defs[0][0], alCambiar = () => {}) {
+    const c = el('<div class="con-pestanas"><div class="tira"></div><div class="panel"></div></div>'), tira = $('.tira', c), panel = $('.panel', c);
+    const ir = (id) => {
+      tira.querySelectorAll('button').forEach((b) => b.classList.toggle('si', b.dataset.t === id));
+      panel.innerHTML = ''; const d = defs.find((q) => q[0] === id); d[3](panel); panel.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 180 });
+      alCambiar(id); this.J.sfx('elegir');
+    };
+    for (const [id, emo, nombre] of defs) { const b = el(`<button data-t="${id}"><i>${emo}</i><span></span></button>`); b.lastElementChild.textContent = nombre; b.onclick = () => ir(id); tira.appendChild(b); }
+    c.ir = ir; setTimeout(() => ir(inicial), 0);
+    return c;
+  },
   fila(etiqueta, control) { const f = el('<div class="op"><span></span></div>'); f.firstElementChild.textContent = etiqueta; f.appendChild(control); return f; },
   deslizador(min, max, paso, valor, alMover) { const i = el(`<input type="range" min="${min}" max="${max}" step="${paso}" value="${valor}">`); i.oninput = () => alMover(+i.value); return i; },
-  opciones(volver) {
-    const J = this.J, O = J.G.opciones;
-    const c = document.createElement('div');
-    c.appendChild(this.fila(t('op_idioma'), this.segmentos(IDIOMAS.map((i) => [i, i.toUpperCase()]), idioma(), (i) => { ponerIdioma(i); J.G.idioma = i; J.guardar(); J.alCambiarIdioma(); this.opciones(volver); })));
-    c.appendChild(this.fila(t('op_musica'), this.deslizador(0, 1, 0.05, O.musica, (v) => { O.musica = v; J.volumen(); J.guardar(); })));
-    c.appendChild(this.fila(t('op_efectos'), this.deslizador(0, 1, 0.05, O.efectos, (v) => { O.efectos = v; J.volumen(); J.guardar(); })));
-    c.appendChild(this.fila(t('op_calidad'), this.segmentos(['auto', 'alta', 'media', 'baja'].map((q) => [q, t('cal_' + q)]), O.calidad, (q) => { O.calidad = q; J.ponerCalidad(q); J.guardar(); document.body.classList.toggle('calidadBaja', q === 'baja'); })));
-    const btnEstilo = el(`<button class="boton chico primario">👾 ${t('estilo_titulo')}</button>`);
-    btnEstilo.onclick = () => this.estilo(() => this.opciones(volver));
-    c.appendChild(this.fila(t('op_retro'), btnEstilo));
-    c.appendChild(el('<div class="op"><h3>·</h3></div>'));
-    c.appendChild(this.fila(t('op_camara'), this.deslizador(0.3, 2.5, 0.1, O.sensCam, (v) => { O.sensCam = v; J.guardar(); })));
-    c.appendChild(this.fila(t('op_invertir'), this.segmentos([[false, t('no')], [true, t('si')]], O.invertirY, (v) => { O.invertirY = v; J.guardar(); })));
-    c.appendChild(this.fila(t('op_nombres'), this.segmentos([[true, t('si')], [false, t('no')]], O.nombres, (v) => { O.nombres = v; J.guardar(); J.mostrarNombres(); })));
-    c.appendChild(this.fila(t('op_reloj'), this.segmentos([[true, t('si')], [false, t('no')]], O.reloj24, (v) => { O.reloj24 = v; J.guardar(); })));
-    /* con el celu parado el juego se acuesta solo (sin pantalla completa); para qué lado, o no girarlo */
-    if (Pantalla.tactil) c.appendChild(this.fila(t('op_giro'), this.segmentos([['auto', t('giro_auto')], ['normal', t('giro_normal')], ['reves', t('giro_reves')], ['no', t('giro_no')]], O.giro || 'auto', (v) => { O.giro = v; J.guardar(); Pantalla.ponerGiro(v); })));
-    const borrar = el(`<button class="boton chico" style="border-color:#ffb3c0;color:#e0405e">${t('op_borrar')}</button>`);
-    borrar.onclick = () => this.confirmar(t('op_borrar_seguro'), () => J.borrarTodo());
-    c.appendChild(this.fila('', borrar));
-    this.ventana(t('canal_opciones'), c, { alCerrar: volver });
+  opciones(volver, pest = 'sonido') {
+    const J = this.J, O = J.G.opciones, A = J.aparato || {};
+    const c = this.pestanas([
+      ['sonido', '🔊', t('op_t_sonido'), (p) => {
+        p.appendChild(this.fila(t('op_idioma'), this.segmentos(IDIOMAS.map((i) => [i, i.toUpperCase()]), idioma(), (i) => { ponerIdioma(i); J.G.idioma = i; J.guardar(); J.alCambiarIdioma(); this.opciones(volver, 'sonido'); })));
+        p.appendChild(this.fila(t('op_musica'), this.deslizador(0, 1, 0.05, O.musica, (v) => { O.musica = v; J.volumen(); J.guardar(); })));
+        p.appendChild(this.fila(t('op_efectos'), this.deslizador(0, 1, 0.05, O.efectos, (v) => { O.efectos = v; J.volumen(); J.guardar(); })));
+      }],
+      ['imagen', '🖥️', t('op_t_imagen'), (p) => {
+        p.appendChild(this.fila(t('op_calidad'), this.segmentos(['auto', 'alta', 'media', 'baja'].map((q) => [q, t('cal_' + q)]), O.calidad, (q) => { O.calidad = q; J.ponerCalidad(q); J.guardar(); document.body.classList.toggle('calidadBaja', q === 'baja'); })));
+        const ap = el('<div class="aparato"><i>🔎</i><div><b></b><small></small></div></div>');
+        $('b', ap).textContent = t('op_aparato', { q: t('cal_' + (A.calidad || 'media')) });
+        $('small', ap).textContent = [A.gpu || '?', A.mem ? A.mem + ' GB' : '', A.nucleos ? A.nucleos + ' ' + t('op_nucleos') : '', A.tactil ? '✋' : '🖱️'].filter(Boolean).join(' · ');
+        p.appendChild(ap);
+        const btnEstilo = el(`<button class="boton chico primario">👾 ${t('estilo_titulo')}</button>`);
+        btnEstilo.onclick = () => this.estilo(() => this.opciones(volver, 'imagen'));
+        p.appendChild(this.fila(t('op_retro'), btnEstilo));
+      }],
+      ['juego', '🎮', t('op_t_juego'), (p) => {
+        p.appendChild(this.fila(t('op_camara'), this.deslizador(0.3, 2.5, 0.1, O.sensCam, (v) => { O.sensCam = v; J.guardar(); })));
+        p.appendChild(this.fila(t('op_invertir'), this.segmentos([[false, t('no')], [true, t('si')]], O.invertirY, (v) => { O.invertirY = v; J.guardar(); })));
+        p.appendChild(this.fila(t('op_cam_auto'), this.segmentos([[true, t('si')], [false, t('no')]], O.camAuto !== false, (v) => { O.camAuto = v; J.guardar(); })));
+        p.appendChild(this.fila(t('op_nombres'), this.segmentos([[true, t('si')], [false, t('no')]], O.nombres, (v) => { O.nombres = v; J.guardar(); J.mostrarNombres(); })));
+        p.appendChild(this.fila(t('op_reloj'), this.segmentos([[true, t('si')], [false, t('no')]], O.reloj24, (v) => { O.reloj24 = v; J.guardar(); })));
+        /* con el celu parado el juego se acuesta solo (sin pantalla completa); para qué lado, o no girarlo */
+        if (Pantalla.tactil) p.appendChild(this.fila(t('op_giro'), this.segmentos([['auto', t('giro_auto')], ['normal', t('giro_normal')], ['reves', t('giro_reves')], ['no', t('giro_no')]], O.giro || 'auto', (v) => { O.giro = v; J.guardar(); Pantalla.ponerGiro(v); })));
+      }],
+      ['datos', '💾', t('op_t_datos'), (p) => {
+        const res = el('<div class="resumen"></div>');
+        for (const [emo, n] of [['🫧', J.G.orbes + ' ' + t('orbes')], ['💿', J.G.discos.length + '/' + TOTAL_DISCOS], ['✅', Object.values(J.G.misiones || {}).filter((m) => m.e === 'hecha').length + ' ' + t('op_misiones')], ['👕', (J.G.tengo || []).length + ' ' + t('op_cosas')]]) { const d = el('<div><i></i><b></b></div>'); d.firstElementChild.textContent = emo; d.lastElementChild.textContent = n; res.appendChild(d); }
+        p.appendChild(res);
+        const borrar = el(`<button class="boton chico" style="border-color:#ffb3c0;color:#e0405e">${t('op_borrar')}</button>`);
+        borrar.onclick = () => this.confirmar(t('op_borrar_seguro'), () => J.borrarTodo());
+        p.appendChild(this.fila('', borrar));
+      }],
+    ], pest);
+    this.ventana(t('canal_opciones'), c, { alCerrar: volver, ancho: 660 });
   },
   controles(volver) {
     const J = this.J, C = J.ent.config;
-    const c = document.createElement('div');
-    const txt = (s) => { const p = el('<p style="font-weight:700;line-height:1.6;margin:6px 0 14px"></p>'); p.textContent = s; return p; };
-    c.appendChild(el(`<div class="op"><h3>${t('ctl_teclado')}</h3></div>`)); c.appendChild(txt(t('ctl_teclas')));
-    c.appendChild(el(`<div class="op"><h3>${t('ctl_mando')}</h3></div>`)); c.appendChild(txt(t('ctl_mando_txt')));
-    c.appendChild(el(`<div class="op"><h3>${t('ctl_dedos')}</h3></div>`));
-    const editar = el(`<button class="boton primario chico">${t('ctl_editar')}</button>`);
-    editar.onclick = () => { this.cerrarVentana(); this.editorDedos(volver); };
-    c.appendChild(this.fila('', editar));
-    c.appendChild(this.fila(t('ctl_palanca'), this.segmentos([['fija', t('ctl_fija')], ['flotante', t('ctl_flotante')]], C.palanca, (v) => { C.palanca = v; J.guardarControles(); })));
-    c.appendChild(this.fila(t('ctl_zurdo'), this.segmentos([[false, t('no')], [true, t('si')]], C.zurdo, (v) => { C.zurdo = v; J.ent.ubicarDedos(); J.guardarControles(); })));
-    c.appendChild(this.fila(t('ctl_vibra'), this.segmentos([[true, t('si')], [false, t('no')]], C.vibra, (v) => { C.vibra = v; J.guardarControles(); })));
-    this.ventana(t('ctl_titulo'), c, { alCerrar: volver });
+    const txt = (p, s2) => { const q = el('<p class="texto-ctl"></p>'); q.textContent = s2; p.appendChild(q); };
+    const c = this.pestanas([
+      ['teclado', '⌨️', t('ctl_teclado'), (p) => txt(p, t('ctl_teclas'))],
+      ['mando', '🎮', t('ctl_mando'), (p) => txt(p, t('ctl_mando_txt'))],
+      ['dedos', '✋', t('ctl_dedos'), (p) => {
+        const editar = el(`<button class="boton primario chico">${t('ctl_editar')}</button>`);
+        editar.onclick = () => { this.cerrarVentana(); this.editorDedos(volver); };
+        p.appendChild(this.fila(t('ctl_botones'), editar));
+        p.appendChild(this.fila(t('ctl_palanca'), this.segmentos([['fija', t('ctl_fija')], ['flotante', t('ctl_flotante')]], C.palanca, (v) => { C.palanca = v; J.guardarControles(); })));
+        p.appendChild(this.fila(t('ctl_zurdo'), this.segmentos([[false, t('no')], [true, t('si')]], C.zurdo, (v) => { C.zurdo = v; J.ent.ubicarDedos(); J.guardarControles(); })));
+        p.appendChild(this.fila(t('ctl_vibra'), this.segmentos([[true, t('si')], [false, t('no')]], C.vibra, (v) => { C.vibra = v; J.guardarControles(); })));
+      }],
+    ], J.ent.tactil ? 'dedos' : 'teclado');
+    this.ventana(t('ctl_titulo'), c, { alCerrar: volver, ancho: 620 });
   },
   /* el editor de los botones de dedo: arrastrar, agrandar, transparencia */
   editorDedos(volver) {
@@ -395,7 +428,7 @@ export const UI = {
   },
   discos(volver) {
     const J = this.J;
-    const c = el('<div class="lista-discos"></div>');
+    const c = el('<div class="lista-discos grilla"></div>');
     const auto = el(`<button class="disco-fila ${!J.musicaElegida ? 'si' : ''}"><div class="disco"></div><span>${t('cal_auto')}</span></button>`);
     auto.onclick = () => { J.elegirMusica(null); this.discos(volver); };
     c.appendChild(auto);
@@ -406,7 +439,7 @@ export const UI = {
       if (tiene) b.onclick = () => { J.elegirMusica(k); this.discos(volver); };
       c.appendChild(b);
     }
-    this.ventana(t('discos_titulo') + ` · ${J.G.discos.length}/6`, c, { alCerrar: volver });
+    this.ventana(t('discos_titulo') + ` · ${J.G.discos.length}/${TOTAL_DISCOS}`, c, { alCerrar: volver, ancho: 720 });
   },
   creditos() {
     const c = el(`<div style="text-align:center;font-weight:800;line-height:1.7"><div class="logo" style="font-size:40px">AERO<span>PLAZA</span></div><p></p><p style="color:#8a9098"></p></div>`);
@@ -454,11 +487,37 @@ export const UI = {
   /* ------------------------------------------------------------ el probador */
   probador(alCerrar, alGirar = () => {}) {
     const J = this.J, G = J.G;
-    let pest = 'color';
-    const pestanas = [['color', t('prob_color')], ['color2', t('prob_color2')], ['ojos', t('prob_ojos')], ['motivo', t('prob_motivo')], ['motivoCabeza', t('prob_cabeza')], ['material', t('prob_material')], ['sombrero', t('prob_sombrero')], ['peinado', t('prob_pelo')], ['colorPelo', t('prob_color_pelo')], ['anteojos', t('prob_anteojos')], ['espalda', t('prob_espalda')], ['particulas', t('prob_particulas')]];
-    const p = this.poner(el(`<div class="probador"><div class="cabeza" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px"><h2 style="margin:0;font-size:22px">${t('prob_titulo')}</h2><span class="pildora" style="font-size:15px"><i class="orbe-icono"></i><span class="p-orbes"></span></span></div>
-      <div class="pestanas">${pestanas.map(([k, n]) => `<button data-p="${k}">${n}</button>`).join('')}</div><div class="opciones-prob"></div>
+    let pest = 'color', grupo = 'cuerpo', pag = 0;
+    /* dos grupos de seis pestañas (el cuerpo y las cosas): entran en una fila sin desplazar */
+    const GRUPOS = {
+      cuerpo: [['color', '🎨', t('prob_color')], ['color2', '🌈', t('prob_color2')], ['ojos', '👀', t('prob_ojos')], ['motivo', '🌀', t('prob_motivo')], ['motivoCabeza', '🙂', t('prob_cabeza')], ['material', '✨', t('prob_material')]],
+      cosas: [['sombrero', '🎩', t('prob_sombrero')], ['peinado', '💇', t('prob_pelo')], ['colorPelo', '🖌️', t('prob_color_pelo')], ['anteojos', '🕶️', t('prob_anteojos')], ['espalda', '🎒', t('prob_espalda')], ['particulas', '💫', t('prob_particulas')]],
+    };
+    const p = this.poner(el(`<div class="probador"><div class="cabeza" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px"><h2 style="margin:0;font-size:22px">${t('prob_titulo')}</h2><div class="segmentos grupos"><button data-g="cuerpo">${t('prob_cuerpo')}</button><button data-g="cosas">${t('prob_cosas')}</button></div><span class="pildora" style="font-size:15px"><i class="orbe-icono"></i><span class="p-orbes"></span></span></div>
+      <div class="pestanas"></div><div class="opciones-prob"></div>
+      <div class="paginas"><button class="redondo" data-pg="-1">◀</button><span></span><button class="redondo" data-pg="1">▶</button></div>
       <div class="prob-pie"><input maxlength="16"><button class="boton chico" data-a="azar">🎲</button><button class="boton chico primario" data-a="listo">${t('listo')}</button></div></div>`));
+    const tira = $('.pestanas', p), paginas = $('.paginas', p);
+    const ponerTira = () => {
+      tira.innerHTML = GRUPOS[grupo].map(([k, e, n]) => `<button data-p="${k}"><i>${e}</i><span>${n}</span></button>`).join('');
+      tira.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => { pest = b.dataset.p; pag = 0; J.sfx('elegir'); dibujar(); });
+      p.querySelectorAll('[data-g]').forEach((b) => b.classList.toggle('si', b.dataset.g === grupo));
+    };
+    p.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => { grupo = b.dataset.g; pest = GRUPOS[grupo][0][0]; pag = 0; ponerTira(); dibujar(); });
+    paginas.querySelectorAll('[data-pg]').forEach((b) => b.onclick = () => { pag += +b.dataset.pg; J.sfx('elegir'); dibujar(); });
+    /* lo que no entra va en páginas (◀ ▶) en vez de desplazar: se mide cuántas caben */
+    const paginar = (extra, items) => {
+      grilla.innerHTML = ''; if (extra) grilla.appendChild(extra);
+      for (const b of items) grilla.appendChild(b);
+      const cols = Math.max(1, getComputedStyle(grilla).gridTemplateColumns.split(' ').length);
+      const alto = items[0] ? items[0].offsetHeight + 10 : 90, libre = grilla.clientHeight - 24 - (extra ? extra.offsetHeight + 10 : 0);
+      const filas = Math.max(1, Math.floor((libre + 10) / alto)), por = filas * cols, n = Math.max(1, Math.ceil(items.length / por));
+      pag = Math.max(0, Math.min(n - 1, pag));
+      items.forEach((b, i) => { if (i < pag * por || i >= (pag + 1) * por) b.remove(); });
+      paginas.classList.toggle('una', n <= 1);
+      paginas.querySelector('span').textContent = `${pag + 1} / ${n}`;
+      paginas.querySelector('[data-pg="-1"]').disabled = pag <= 0; paginas.querySelector('[data-pg="1"]').disabled = pag >= n - 1;
+    };
     /* las flechas verdes para girar el muñeco (como en los videos); también se gira arrastrando */
     const giros = this.poner(el(`<div class="giros"><button class="flecha-giro" data-g="-1">⟲</button><button class="flecha-giro" data-g="1">⟳</button></div>`));
     giros.querySelectorAll('[data-g]').forEach((b) => b.onclick = () => alGirar(+b.dataset.g * 0.8));
@@ -470,21 +529,22 @@ export const UI = {
     const dibujar = () => {
       $('.p-orbes', p).textContent = G.orbes;
       p.querySelectorAll('[data-p]').forEach((b) => b.classList.toggle('si', b.dataset.p === pest));
-      grilla.innerHTML = '';
+      grilla.classList.toggle('colores', pest === 'color' || pest === 'color2' || pest === 'colorPelo');
+      const items = []; let extra = null;
       if (pest === 'color' || pest === 'color2' || pest === 'colorPelo') {
         const lista = pest === 'colorPelo' ? PALETA_PELO : PALETA;
-        if (pest === 'color2') { const d = el(`<div class="deslizador"><span>${t('prob_degrade')}</span></div>`); d.appendChild(this.deslizador(0, 1, 0.05, G.A.degrade ?? 0.55, (v) => { G.A.degrade = v; J.aplicarApariencia(); })); grilla.appendChild(d); }
-        for (const c of lista) { const b = el(`<button class="color ${G.A[pest] === c ? 'si' : ''}" style="background:${c}"></button>`); b.onclick = () => { G.A[pest] = c; J.aplicarApariencia(); dibujar(); }; grilla.appendChild(b); }
+        if (pest === 'color2') { extra = el(`<div class="deslizador"><span>${t('prob_degrade')}</span></div>`); extra.appendChild(this.deslizador(0, 1, 0.05, G.A.degrade ?? 0.55, (v) => { G.A.degrade = v; J.aplicarApariencia(); })); }
+        for (const c of lista) { const b = el(`<button class="color ${G.A[pest] === c ? 'si' : ''}" style="background:${c}"></button>`); b.onclick = () => { G.A[pest] = c; J.aplicarApariencia(); dibujar(); }; items.push(b); }
         const libre = el(`<label class="color" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);display:block"><input type="color" style="opacity:0;width:100%;height:100%"></label>`);
         const inp = $('input', libre); inp.value = G.A[pest]; inp.oninput = () => { G.A[pest] = inp.value; J.aplicarApariencia(); };
-        grilla.appendChild(libre);
+        items.push(libre);
+        paginar(extra, items);
         return;
       }
       const R = RANURAS.find((q) => q.r === pest);
       if (pest === 'motivo') {
-        const d = el(`<div class="deslizador"><span>${t('prob_cubre')}</span></div>`);
-        d.appendChild(this.deslizador(0, 1.3, 0.02, G.A.cubre, (v) => { G.A.cubre = v; J.aplicarApariencia(); }));
-        grilla.appendChild(d);
+        extra = el(`<div class="deslizador"><span>${t('prob_cubre')}</span></div>`);
+        extra.appendChild(this.deslizador(0, 1.3, 0.02, G.A.cubre, (v) => { G.A.cubre = v; J.aplicarApariencia(); }));
       }
       for (const v of R.lista) {
         const clave = pest + ':' + v, tiene = loTengo(G, clave), pr = precio(clave), mis = DE_MISION[clave];
@@ -498,10 +558,13 @@ export const UI = {
           if (G.orbes < pr) { J.avisarPantalla(t('prob_faltan', { n: pr - G.orbes })); J.sfx('no'); return; }
           this.confirmar(t('prob_comprar', { q: t(R.pre + '_' + v), n: pr }), () => { G.orbes -= pr; G.tengo.push(clave); G.A[pest] = v; J.aplicarApariencia(); J.sfx('orbe'); J.avisarPantalla(t('prob_comprado')); dibujar(); }, () => J.aplicarApariencia());
         };
-        grilla.appendChild(b);
+        items.push(b);
       }
+      paginar(extra, items);
     };
-    p.querySelectorAll('[data-p]').forEach((b) => b.onclick = () => { pest = b.dataset.p; dibujar(); });
+    ponerTira();
+    const alGirarPantalla = () => { if (p.isConnected) dibujar(); };
+    Pantalla.alCambiar.push(alGirarPantalla);
     $('[data-a=azar]', p).onclick = () => {
       const r = (l) => l[Math.floor(Math.random() * l.length)];
       G.A.color = r(PALETA); G.A.color2 = r(PALETA); G.A.colorPelo = r(PALETA_PELO); G.A.cubre = Math.random() * 0.9;
@@ -509,8 +572,8 @@ export const UI = {
       G.A.degrade = Math.random(); if (Math.random() < 0.7) G.A.motivoCabeza = 'igual'; if (Math.random() < 0.6) G.A.ojos = 'ovalos';
       J.aplicarApariencia(); dibujar();
     };
-    $('[data-a=listo]', p).onclick = () => { p.remove(); giros.remove(); J.ent.bloqueado = false; alCerrar(); };
-    dibujar();
+    $('[data-a=listo]', p).onclick = () => { p.remove(); giros.remove(); J.ent.bloqueado = false; Pantalla.alCambiar.splice(Pantalla.alCambiar.indexOf(alGirarPantalla), 1); alCerrar(); };
+    requestAnimationFrame(() => dibujar());
     this._probador = p;
   },
   /* ------------------------------------------------------------ gestos, mapa, construir */
@@ -536,27 +599,33 @@ export const UI = {
     return p;
   },
   /* ------------------------------------------------------------ estilo retro */
-  estilo(volver) {
+  estilo(volver, pest = 'estilos') {
     const J = this.J, G = J.G;
-    const c = document.createElement('div');
     const iconos = { normal: '✨', pixel: '👾', ps1: '🕹️', tubo: '📺', gameboy: '🟩', ochobits: '🎨', vhs: '📼' };
-    const g = el('<div class="estilos"></div>');
-    for (const n of Object.keys(ESTILOS)) {
-      const b = el(`<button class="estilo-carta ${G.opciones.estilo === n ? 'si' : ''}" data-e="${n}"><span class="muestra-estilo ${n}" style="${muestraEstilo(n) ? `background-image:url(${MUESTRAS[n]})` : ''}"><span>${iconos[n]}</span></span><b>${t('est_' + n)}</b><small>${t('est_' + n + '_d')}</small>${ESTILOS[n].pix >= 2 ? `<i class="rapido">⚡ ${t('est_rapido')}</i>` : ''}</button>`);
-      b.onclick = () => { J.ponerEstilo(n); J.sfx('guino'); this.estilo(volver); };
-      g.appendChild(b);
-    }
-    c.appendChild(g);
-    c.appendChild(el(`<div class="op"><h3>${t('estilo_ajuste')}</h3></div>`));
     const R = G.opciones.retro;
-    const pon = (k, v) => { R[k] = v; J.ponerRetro(); J.guardar(); c.querySelectorAll('.estilo-carta').forEach((q) => q.classList.remove('si')); };
-    c.appendChild(this.fila(t('op_pix'), this.segmentos([[0, t('op_ninguno')], ...ALTOS_PIXEL.slice(1).map((a, i) => [i + 1, a + 'p'])], R.pix, (v) => pon('pix', v))));
-    c.appendChild(this.fila(t('estilo_paleta'), this.segmentos([[0, t('paleta_no')], [1, t('paleta_gb')], [2, t('paleta_8')]], R.paleta || 0, (v) => pon('paleta', v))));
-    c.appendChild(this.fila(t('op_niveles'), this.segmentos([[0, t('op_ninguno')], [1, '32'], [2, '16'], [3, '8'], [4, '5']], R.niveles, (v) => pon('niveles', v))));
-    const onoff = (k) => this.segmentos([[0, t('no')], [1, t('si')]], R[k] ? 1 : 0, (v) => pon(k, v));
-    for (const [k, n] of [['trama', 'op_trama'], ['ps1', 'estilo_ps1'], ['barrido', 'op_barrido'], ['tubo', 'op_tubo'], ['aberracion', 'op_aberracion'], ['vhs', 'est_vhs']]) c.appendChild(this.fila(t(n), onoff(k)));
-    this.ventana(t('estilo_titulo'), c, { ancho: 720, alCerrar: volver });
+    const c = this.pestanas([
+      ['estilos', '👾', t('estilo_titulo'), (p) => {
+        const g = el('<div class="estilos"></div>');
+        for (const n of Object.keys(ESTILOS)) {
+          const b = el(`<button class="estilo-carta ${G.opciones.estilo === n ? 'si' : ''}" data-e="${n}"><span class="muestra-estilo ${n}" style="${muestraEstilo(n) ? `background-image:url(${MUESTRAS[n]})` : ''}"><span>${iconos[n]}</span></span><b>${t('est_' + n)}</b><small>${t('est_' + n + '_d')}</small>${ESTILOS[n].pix >= 2 ? `<i class="rapido">⚡ ${t('est_rapido')}</i>` : ''}</button>`);
+          b.onclick = () => { J.ponerEstilo(n); J.sfx('guino'); this.estilo(volver, 'estilos'); };
+          g.appendChild(b);
+        }
+        p.appendChild(g);
+      }],
+      ['ajuste', '🎛️', t('estilo_ajuste'), (p) => {
+        const pon = (k, v) => { R[k] = v; J.ponerRetro(); J.guardar(); };
+        const dos = el('<div class="dos-columnas"></div>'); p.appendChild(dos);
+        dos.appendChild(this.fila(t('op_pix'), this.segmentos([[0, t('op_ninguno')], ...ALTOS_PIXEL.slice(1).map((a, i) => [i + 1, a + 'p'])], R.pix, (v) => pon('pix', v))));
+        dos.appendChild(this.fila(t('estilo_paleta'), this.segmentos([[0, t('paleta_no')], [1, t('paleta_gb')], [2, t('paleta_8')]], R.paleta || 0, (v) => pon('paleta', v))));
+        dos.appendChild(this.fila(t('op_niveles'), this.segmentos([[0, t('op_ninguno')], [1, '32'], [2, '16'], [3, '8'], [4, '5']], R.niveles, (v) => pon('niveles', v))));
+        const onoff = (k) => this.segmentos([[0, t('no')], [1, t('si')]], R[k] ? 1 : 0, (v) => pon(k, v));
+        for (const [k, n] of [['trama', 'op_trama'], ['ps1', 'estilo_ps1'], ['barrido', 'op_barrido'], ['tubo', 'op_tubo'], ['aberracion', 'op_aberracion'], ['vhs', 'est_vhs']]) dos.appendChild(this.fila(t(n), onoff(k)));
+      }],
+    ], pest);
+    this.ventana(t('estilo_titulo'), c, { ancho: 760, alCerrar: volver });
   },
+
   /* preguntar sí o no dentro del juego (confirm() del navegador no anda en todos lados) */
   confirmar(texto, alSi, alNo = () => {}) {
     const d = this.poner(el(`<div class="velo" style="z-index:25"><div class="ventana" style="width:min(440px,92vw)"><div class="cuerpo" style="display:flex;flex-direction:column;gap:16px;text-align:center"><b style="font-size:19px;line-height:1.4"></b><div class="fila"><button class="boton chico" data-a="no">${t('no')}</button><button class="boton chico primario" data-a="si">${t('si')}</button></div></div></div></div>`));

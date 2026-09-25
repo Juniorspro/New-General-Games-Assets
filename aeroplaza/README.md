@@ -44,16 +44,18 @@ Detalle: `js/red.js` y `js/remotos.js`.
 
 | reino | qué tiene |
 |---|---|
-| Plaza | lago con medusas, globo con cascada, peceras, estación y tren, Aero·Mart, probador, barrio de casas (la tuya lleva a Mi casa), huerta de frutas con poderes, fuente de burbujas manejables, hoteles en islotes, arcoíris y la ciudad de vidrio |
+| La isla (Plaza) | una isla grande con seis regiones: el centro (lago con medusas, globo con cascada, peceras, Aero·Mart, probador, barrio, huerta, fuente de burbujas), la Terminal Aero con los trenes a los reinos, la Ciudad de Vidrio, la Bahía del Faro (muelle, velero, faro), la Pradera de los Molinos, el Bosque de Hongos (casa del árbol) y el Monte de la Cascada. Un monorriel da la vuelta con seis paradas, y en el spawn hay un cartel con el mapa |
 | Aqua | hotel en la playa, palmeras, islotes, medusas, delfines para montar, carrera de 10 aros, arrecife con aros hundidos |
 | Aurora | noche con aurora, cristales, lago de hielo, delfines que vuelan por aros dorados, estrellas que caen, el cristal del sueño colectivo |
 | Jardín de géiseres | nenúfares que se pisan, lotos, flores de agua gigantes, géiseres que soplan, flores que rebotan |
-| Aero·Mart | la tienda por dentro, con vitrinas y Menta |
+| Aero·Mart | la tienda por dentro: vitrinas, percheros, sombrerero, estantes, globos, neón, maniquíes y Menta |
 | Mi casa | una isla entre las nubes, con la casa y 16 muebles para poner |
 
 Además hay:
 
-- ocho misiones y seis discos escondidos que desbloquean canciones;
+- doce misiones y diez discos escondidos que desbloquean canciones;
+- la calidad arranca según el aparato (`js/aparato.js`: placa, memoria, núcleos, pantalla) y después se ajusta midiendo;
+- menús con pestañas y páginas, pensados para entrar sin desplazar en un celu acostado;
 - una barra de 5 lugares (burbujero, gestos, música, foto y mapa);
 - día y noche sincronizados para todos, por el reloj;
 - siete estilos retro con el botón 👾: Normal, Pixel, PS1, Tele de tubo, Game
@@ -68,7 +70,8 @@ Además hay:
 ## Para tocarlo
 
 - `node herramientas/armar.mjs [--dev]` arma `aeroplaza.html`. Si están los
-  MP3 en `brillo/musica/`, arma también `aeroplaza-con-canciones.html`.
+  MP3 en `brillo/musica/` o en `musica-ajena/` (no se commitean), arma también
+  `aeroplaza-con-canciones.html`.
 - `node herramientas/assets.mjs` pasa lo de Rezona de `crudo/` a `assets/`
   (texturas, el cielo, las nubes y el delfín).
 - `python3 herramientas/musica.py` cose las tomas de 10 s de Rezona en un tema
@@ -83,7 +86,9 @@ Además hay:
   - `dedos.mjs`: toques de verdad, sin girar y girado;
   - `construcciones.mjs`: cada construcción de tres cuartos, para compararla
     con su referencia; `modelos.mjs`: cada una en 4 giros;
-  - `muneco.mjs` y `fotos.mjs`: el muñeco en el probador y la isla.
+  - `muneco.mjs` y `fotos.mjs`: el muñeco en el probador y la isla;
+  - `mundo.mjs [lugar,…]`: recorre las regiones con fotos y prueba el monorriel;
+  - `menus.mjs`: que ninguna ventana se pase del alto (celu 844×390 y compu).
 - En la dirección:
   - `?directo`: saltea los menús;
   - `?reino=aqua`: arranca en ese reino;

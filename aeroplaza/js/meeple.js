@@ -320,6 +320,13 @@ export class Meeple {
     this.ponerApariencia(apariencia);
     if (nombre) this.ponerNombre(nombre);
   }
+  /* de lejos alcanza el cuerpo: los accesorios, el pelo y los ojos son la mayoría
+     de las piezas (hasta 30 llamadas de dibujo por muñeco) */
+  detalle(si) {
+    if (this._detalle === si) return; this._detalle = si;
+    this.extras.visible = this.ojos.visible = this.atras.visible = si;
+    if (this.particulas) this.particulas.visible = si;
+  }
   ponerApariencia(A) {
     this.A = { ...APARIENCIA_INICIAL(), ...A };
     const m = materialMeeple(this.A);
@@ -359,7 +366,7 @@ export class Meeple {
     this.raiz.add(this.globo);
   }
   /* un gesto de un rato: saludar, bailar1..3, festejar, sentarse (este queda hasta moverse) */
-  hacerGesto(g) { this.gesto = g; this.tGesto = g === 'sentarse' ? 999 : g.startsWith('bailar') ? 8 : 2.4; }
+  hacerGesto(g) { this.gesto = g; this.tGesto = g === 'sentarse' ? 999 : g.startsWith('bailar') ? 8 : g === 'voltereta' ? 1.1 : g === 'aplaudir' ? 3 : 2.4; this.tG0 = this.tGesto; }
 
   /* estado: quieto | camina | corre | salta | cae | nada | flota | monta | sentado.
      vel: velocidad horizontal (m/s) para el paso */
@@ -369,6 +376,21 @@ export class Meeple {
     if (this.gesto && estado !== 'quieto' && estado !== 'flota') { if (this.gesto !== 'saludar') this.gesto = null; }
     if (this.gesto) { this.tGesto -= dt; if (this.tGesto <= 0) this.gesto = null; }
     const t = this.t, R = {};
+    /* lo que da vida (se calcula antes de la pose): inclinarse en las curvas según
+       lo que gira por segundo, aplastarse al caer y estirarse al saltar, y cada
+       tanto, si está quieto, estirarse o mirar alrededor */
+    const yaw = this.raiz.rotation.y; let dyaw = yaw - (this._yaw ?? yaw); while (dyaw > Math.PI) dyaw -= Math.PI * 2; while (dyaw < -Math.PI) dyaw += Math.PI * 2; this._yaw = yaw;
+    const giro = dt > 0 ? dyaw / dt : 0;
+    this._incl = suave(this._incl || 0, Math.max(-0.32, Math.min(0.32, -giro * 0.07 * Math.min(1, vel / 3.5))), 1 - Math.exp(-dt * 8));
+    const enAire = (q) => q === 'salta' || q === 'cae';
+    if (enAire(this._antes) && !enAire(estado) && estado !== 'nada') this._aplasta = Math.min(1, 0.5 + (this._tAire || 0) * 0.8);
+    if (estado === 'salta' && this._antes !== 'salta') this._estira = 1;
+    this._tAire = enAire(estado) ? (this._tAire || 0) + dt : 0;
+    this._antes = estado;
+    this._aplasta = Math.max(0, (this._aplasta || 0) - dt * 3.2); this._estira = Math.max(0, (this._estira || 0) - dt * 3.5);
+    this._tQuieto = estado === 'quieto' && !this.gesto ? (this._tQuieto || 0) + dt : 0;
+    if (this._tQuieto > 9 && !this._ocio) { this._ocio = { tipo: Math.random() < 0.5 ? 'estira' : 'mira', t: 0 }; }
+    if (this._ocio) { this._ocio.t += dt; if (this._ocio.t > 2.6 || estado !== 'quieto') { this._ocio = null; this._tQuieto = 0; } }
     /* la pose de base */
     R.cy = 0; R.cx = 0; R.cz = 0; R.hy = 0; R.hx = 0; R.hz = 0;
     R.bl = [0, 0, -0.2]; R.br = [0, 0, 0.2];     // [rx, ry, rz] de cada brazo (cuelgan por fuera del cuerpo)
@@ -380,8 +402,9 @@ export class Meeple {
       const s = Math.sin(this.fase), k = corre ? 1.25 : 0.85;
       R.pl = [s * 0.75 * k, 0, 0]; R.pr = [-s * 0.75 * k, 0, 0];
       R.bl = [-s * 0.7 * k, 0, -0.17]; R.br = [s * 0.7 * k, 0, 0.17];
-      R.cy = Math.abs(Math.cos(this.fase)) * (corre ? 0.06 : 0.035); R.cx = corre ? 0.18 : 0.06; R.cz = Math.sin(this.fase) * 0.04;
-      R.hx = corre ? -0.1 : -0.03;
+      R.cy = Math.abs(Math.cos(this.fase)) * (corre ? 0.07 : 0.04); R.cx = corre ? 0.2 : 0.07; R.cz = Math.sin(this.fase) * 0.05; R.ry = Math.sin(this.fase) * (corre ? 0.12 : 0.07);
+      R.hx = corre ? -0.12 : -0.04; R.hy = -Math.sin(this.fase) * 0.06; R.hz = -Math.sin(this.fase) * 0.03;
+      R.sy = 1 + Math.cos(this.fase * 2) * (corre ? 0.025 : 0.015);
     } else if (estado === 'salta' || estado === 'cae') {
       const sube = estado === 'salta';
       R.bl = [sube ? -0.3 : 0.2, 0, -1.9]; R.br = [sube ? -0.3 : 0.2, 0, 1.9];
@@ -389,7 +412,7 @@ export class Meeple {
       R.hx = sube ? -0.15 : 0.1;
     } else if (estado === 'nada') {
       const s = Math.sin(t * 5);
-      R.cx = 1.25; R.cy = 0.35;
+      R.cx = 1.25; R.cy = 0.35 + Math.sin(t * 10) * 0.03; R.ry = s * 0.18;
       R.bl = [-2.4 + s * 1.1, 0, -0.5]; R.br = [-2.4 - s * 1.1, 0, 0.5];
       R.pl = [s * 0.5, 0, 0]; R.pr = [-s * 0.5, 0, 0]; R.hx = -1.0;
     } else if (estado === 'flota') {
@@ -404,6 +427,11 @@ export class Meeple {
       /* quieto: respira y se balancea un poquito */
       R.sy = 1 + Math.sin(t * 2.2) * 0.012; R.bl = [Math.sin(t * 1.1) * 0.05, 0, -0.2 - Math.sin(t * 2.2) * 0.02]; R.br = [-Math.sin(t * 1.1) * 0.05, 0, 0.2 + Math.sin(t * 2.2) * 0.02];
       R.hy = Math.sin(t * 0.37) * 0.25; R.hz = Math.sin(t * 0.5) * 0.04;
+      if (this._ocio) {
+        const k = Math.sin(Math.min(1, this._ocio.t / 2.6) * Math.PI);
+        if (this._ocio.tipo === 'estira') { R.bl = [0, 0, -0.2 - k * 2.6]; R.br = [0, 0, 0.2 + k * 2.6]; R.sy = 1 + k * 0.06; R.hx = -k * 0.3; }
+        else { R.hy = Math.sin(this._ocio.t * 2.4) * 0.9 * k; R.hx = -0.1 * k; }
+      }
     }
     /* los gestos, encima de la pose */
     if (this.gesto) {
@@ -413,14 +441,21 @@ export class Meeple {
       else if (g === 'sentarse' && estado === 'quieto') { R.cy = -0.2; R.pl = [-1.5, 0, 0.1]; R.pr = [-1.5, 0, -0.1]; R.bl = [-0.3, 0, -0.25]; R.br = [-0.3, 0, 0.25]; R.cx = -0.05; }
       else if (g === 'bailar1') { const s = Math.sin(t * 8); R.cz = s * 0.25; R.bl = [0, 0, -1.6 - s * 0.9]; R.br = [0, 0, 1.6 - s * 0.9]; R.cy = Math.abs(Math.sin(t * 8)) * 0.06; R.hz = -s * 0.2; }
       else if (g === 'bailar2') { const s = Math.sin(t * 6); R.ry = t * 4; R.bl = [s, 0, -1.2]; R.br = [-s, 0, 1.2]; R.pl = [s * 0.5, 0, 0]; R.pr = [-s * 0.5, 0, 0]; }
+      else if (g === 'aplaudir') { const s2 = Math.max(0, Math.sin(t * 15)); R.bl = [-1.25, 0, -0.05 + s2 * 0.3]; R.br = [-1.25, 0, 0.05 - s2 * 0.3]; R.hx = -0.1; R.cy = Math.abs(Math.sin(t * 7.5)) * 0.03; }
+      else if (g === 'voltereta') { const p = 1 - Math.max(0, this.tGesto) / this.tG0; R.cx = -p * Math.PI * 2; R.cy = Math.sin(p * Math.PI) * 0.95; R.bl = [0, 0, -2.2]; R.br = [0, 0, 2.2]; R.pl = [-1.2 * Math.sin(p * Math.PI), 0, 0]; R.pr = [-1.2 * Math.sin(p * Math.PI), 0, 0]; }
+      else if (g === 'pensar') { R.br = [-2.1, 0, 0.75]; R.bl = [-0.6, 0, -0.5]; R.hz = 0.18; R.hy = Math.sin(t * 0.8) * 0.2; R.hx = 0.1; }
+      else if (g === 'saltito') { const s2 = Math.abs(Math.sin(t * 9)); R.cy = s2 * 0.26; R.bl = [0, 0, -0.8 - s2 * 0.8]; R.br = [0, 0, 0.8 + s2 * 0.8]; R.pl = [-s2 * 0.4, 0, 0]; R.pr = [-s2 * 0.4, 0, 0]; R.sy = 1 + (1 - s2) * -0.06; }
       else if (g === 'bailar3') { const s = Math.sin(t * 10); R.cy = Math.max(0, s) * 0.22; R.bl = [-2.9, 0, -0.3]; R.br = [-2.9, 0, 0.3]; R.pl = [s * 0.6, 0, 0.2]; R.pr = [-s * 0.6, 0, -0.2]; R.hx = s * 0.15; }
     }
     /* acercar lo actual a la pose (transiciones suaves) */
     const k = 1 - Math.exp(-dt * 14), r = this.rot;
     const v = (n, x) => (r[n] = r[n] === undefined ? x : suave(r[n], x, k));
+    if (this.gesto === 'voltereta') r.cx = R.cx; else if (r.cx < -Math.PI) r.cx += Math.PI * 2;
     this.cadera.position.y = v('cy', R.cy);
-    this.cadera.rotation.set(v('cx', R.cx), v('ry', R.ry), v('cz', R.cz));
-    this.cadera.scale.y = v('sy', R.sy);
+    this.cadera.rotation.set(v('cx', R.cx), v('ry', R.ry), v('cz', R.cz) + this._incl);
+    const ap = this._aplasta * this._aplasta, es = this._estira;
+    this.cadera.scale.y = v('sy', R.sy) * (1 - ap * 0.26 + es * 0.12);
+    this.cadera.scale.x = this.cadera.scale.z = 1 + ap * 0.14 - es * 0.05;
     this.cabeza.rotation.set(v('hx', R.hx), v('hy', R.hy), v('hz', R.hz));
     ['bl', 'br'].forEach((n, i) => { const q = this.brazos[i]; q.rotation.set(v(n + 'x', R[n][0]), v(n + 'y', R[n][1]), v(n + 'z', R[n][2])); });
     ['pl', 'pr'].forEach((n, i) => { const q = this.piernas[i]; q.rotation.set(v(n + 'x', R[n][0]), v(n + 'y', R[n][1]), v(n + 'z', R[n][2])); });

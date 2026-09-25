@@ -113,8 +113,75 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   - Buscar: `herramientas/tiktok-buscar.mjs` (hashtag y búsqueda, sin captcha).
   - Bajar: `herramientas/tiktok-bajar.mjs <id>` abre la página del video para tener cookies frescas.
 
+## Cuarta vuelta: la isla grande (25/09)
+
+Pedido: "mundo, no isla", la tienda decorada, árboles que se mueven, el tren
+con su establecimiento, un mapa en el spawn, gráficos según el aparato, menús
+sin desplazar, más animaciones y las tres canciones que mandó.
+
+- **La isla** (`reinos/plaza.js`): radio ~222 con bahía al noreste. El centro
+  de siempre queda igual; alrededor, seis zonas (`ZONAS`, de la más chica a la
+  más grande): Terminal, Ciudad de Vidrio, Bahía del Faro, Pradera de los
+  Molinos, Bosque de Hongos, Monte de la Cascada.
+  - `relieve()` es la altura sin achatar; `alturaPlaza()` le suma los cuencos
+    y lo plano. El monte es un `max()` que sale del mar.
+  - El terreno usa `apretar`: los vértices se juntan en el centro (0,45).
+  - `reino.puntos` tiene los lugares clave para las pruebas.
+- **La terminal** (`construcciones.js › terminal`): andenes con mamparas,
+  escalinata al este, reloj con la hora del cielo, tablero, máquinas de
+  pasajes (= viajar a otro reino). El spawn es al pie de la escalinata.
+- **El monorriel** (`js/monorriel.js`): curva cerrada por las zonas, la viga
+  es una malla propia (corte de 16 puntos, sin torsión), pilares instanciados,
+  seis paradas fundidas en una obra (`paradasMonorriel`). Los dos trenes no se
+  simulan: la posición sale de `Date.now()`, así todos los ven igual.
+  - Subir: el tren es una montura (`asiento`, `puedeBajar`, `salida`). En una
+    parada sin tren, se espera al lado (`J.esperaTren`) y sube solo al llegar.
+  - Vuelta de 887 m, período 189 s. `pruebas/mundo.mjs` sube, viaja y baja.
+- **Cartel del mapa**: `dibujarIsla()` hace el mapa una vez (relieve, caminos,
+  vía, paradas, nombres); el cartel y la tecla 5 usan el mismo dibujo.
+- **Zonas**: cartel grande al entrar (`UI.lugar`), música por zona y la misión
+  de Brújula (`tipo: 'lugar'`). Con margen de 8 % para no titilar en el borde.
+- **Vecinos nuevos**: Brújula (visitar 6 lugares), Brisa (soplar 4 molinos),
+  Musgo (rebotar en 5 hongos), Marea (leer 3 botellas). Premios nuevos en
+  `meeple.js`: sombreros explorador, hongo y capitán; el molinete que gira.
+- **Árboles vivos** (`naturaleza.js › conMeceo`): se doblan desde la base
+  (k = (y/alto)²), con ráfagas que cruzan la isla; el viento va para el mismo
+  lado del mundo aunque la copia esté girada (`transpose(giro)`). Las palmeras
+  además aletean. Cerca y lejos comparten material: el cambio no se nota.
+- **Detalle por distancia** (`Arboleda`, un Group): cada 0,5 s reparte los
+  árboles entre la versión con detalle (50 m en alta) y la liviana (~600
+  triángulos). Las flores se dibujan solo a menos de 60 m. Faroles y bancos
+  de toda la isla van instanciados (`edificios.js › faroles, bancos`).
+- **Rejilla de sólidos** (`mundo.cerca`, casillas de 16 m): con cientos de
+  árboles y pilares cada consulta mira solo su casilla. `mundo.tapa()` le dice
+  a la cámara si un punto está adentro de algo (ya no se mete en las casas).
+- **El aparato** (`js/aparato.js`): nombre de la placa (WEBGL_debug_renderer_info),
+  memoria, núcleos, píxeles y si es táctil → puntos → calidad inicial. Por
+  software siempre baja. Después la automática mide y sube o baja un escalón.
+- **Menús sin desplazar**: `UI.pestanas()` (Opciones, Controles, Estilo), el
+  probador con dos grupos de seis pestañas y páginas ◀ ▶ que miden cuántas
+  cosas caben. `pruebas/menus.mjs` abre todo en 844×390 y en compu, y falla
+  si algo se pasa del alto.
+- **Animaciones**: se inclina en las curvas, se aplasta al caer (más cuanto más
+  tiempo en el aire), se estira al saltar, se estira o mira alrededor si queda
+  quieto 9 s. Gestos nuevos: aplaudir, saltito, voltereta, pensar.
+- **Controles**: la cámara se acomoda sola atrás al caminar si no se la toca
+  (Opciones › Juego › "Cámara que sigue"); correr pasó de 6,6 a 7,2 m/s.
+- **Canciones** (van solo en la versión con canciones): Aquatic Ambience →
+  Aqua, Frutiger Aero Ahhh → bosque y monte, la de itsalyzee → la bahía. En
+  la pública suenan los temas de Rezona (`SI_FALTA` en main.js).
+
 ## Trampas que ya se pagaron
 
+- **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una
+  de cada dos (`add` las saca de la lista mientras se recorre): los árboles
+  quedaban sin copa. Se copia la lista antes (`[...g.children]`).
+- **`CylinderGeometry(…, -π/2, π)` con `rotateX(+π/2)` queda boca abajo.** La
+  bóveda de vidrio de la terminal estaba bajo el andén; va con `-π/2`.
+- **Las flores instanciadas en toda la isla** eran medio millón de triángulos
+  que ni se veían: se dibujan solo las de cerca.
+- **Un `flex: 1` con `overflow: hidden` crece con su contenido** si no tiene
+  `min-height: 0`: el probador medía mal cuántas cosas entraban por página.
 - **Dos materiales con `onBeforeCompile` distinto compartían programa.** three
   usa el texto de la función como clave: todos los `conBorde` tenían la misma
   aunque cambiara `pot` o llevaran viento debajo, y uno heredaba el shader del
@@ -170,9 +237,13 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
 | calidad | plaza | llamadas | CPU del juego |
 |---|---|---|---|
 | alta | 930 mil triángulos (1,59 millones con las construcciones, 24/09) | 205 (345) | 0,34 ms/cuadro (0,35) |
+| alta, isla grande (25/09) | 2,49 millones en el spawn (con la pasada de sombras) | 543 | 0,61 ms/cuadro |
 | baja | 429 mil (sin sombras, pasto ×0,28) | 124 | 0,32 ms/cuadro |
 
-La calidad automática mide 150 cuadros y baja un nivel si pasan 26 ms.
+La calidad automática arranca con la de `aparato.js` (SwiftShader → baja),
+mide y baja un nivel si pasan 30 ms, o sube uno si anda sobrado. Lo que más
+llamadas suma en la isla grande: los muñecos cerca (hasta 30 piezas cada uno;
+de lejos solo el cuerpo, `Meeple.detalle`), la tienda, la terminal y los hoteles.
 No se probó en un teléfono de verdad.
 
 ## Lo que falta o se podría

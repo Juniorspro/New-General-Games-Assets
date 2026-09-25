@@ -18,7 +18,7 @@ import { Mundo, azar, ruido2, suaveEntre } from '../mundo.js';
 import { terreno, agua, pasto, flores, arboles, palmeras, piedras, UNI } from '../naturaleza.js';
 import { Orbes, Mariposas, Cardumen, Burbujas, Frutas, Medusas, pecera, globoCascada, discoMalla, puntoSuave } from '../objetos.js';
 import { tiendaAfuera, probadorCabina, faroles as hacerFaroles, bancos as hacerBancos, letrero, pabellon } from '../edificios.js';
-import { modelo } from '../modelos.js';
+import { modelo, instancias } from '../modelos.js';
 import { Monorriel } from '../monorriel.js';
 import { sumar, t } from '../textos.js';
 
@@ -419,13 +419,17 @@ export function crearPlaza(ctx) {
   const velero = modelo('velero'); const vPos = [mx0 + u[0] * 30 - u[1] * 18, mz0 + u[1] * 30 + u[0] * 18];
   velero.position.set(vPos[0], 0, vPos[1]); velero.rotation.y = rotMu + 1.2; g.add(velero);
   mundo.caja(vPos[0], vPos[1], 0.9, 2.5, -2, 1.0, velero.rotation.y);
+  /* la playa de la bahía: sombrillas con dos reposeras cada una (instanciadas: una llamada por material) */
+  const somb = [[], []], repos = [];
   for (let i = 0; i < 9; i++) {
     const a = BAHIA + (i - 4) * 0.075, rr = costaEn(a) - 10 - (i % 2) * 3, x = Math.cos(a) * rr, z = Math.sin(a) * rr;
     if (Math.hypot(x - mx0, z - mz0) < 6) continue;
-    const som = modelo(i % 3 ? 'sombrilla' : 'sombrillaRosa', { alto: 3 }); som.position.set(x, A(x, z) - 0.1, z); som.rotation.z = (i % 2 - 0.5) * 0.12; g.add(som);
+    somb[i % 3 ? 0 : 1].push([x, A(x, z) - 0.1, z, 1, i]);
     mundo.cilindro(x, z, 0.1, A(x, z), A(x, z) + 2.6);
-    for (const s of [-1, 1]) { const rp = modelo('reposera', { alto: 0.9 }), px = x + s * 1.1 * Math.cos(a + 1.57), pz = z + s * 1.1 * Math.sin(a + 1.57); rp.position.set(px, A(px, pz), pz); rp.rotation.y = rotMu; g.add(rp); }
+    for (const s of [-1, 1]) { const px = x + s * 1.1 * Math.cos(a + 1.57), pz = z + s * 1.1 * Math.sin(a + 1.57); repos.push([px, A(px, pz), pz, 1, rotMu]); }
   }
+  for (const [n, L] of [['sombrilla', somb[0]], ['sombrillaRosa', somb[1]]]) { const q = instancias(n, L, { alto: 3 }); if (q) g.add(q); }
+  { const q = instancias('reposera', repos, { alto: 0.9 }); if (q) g.add(q); }
   { const a = BAHIA + 0.42, rr = costaEn(a) - 14, x = Math.cos(a) * rr, z = Math.sin(a) * rr; const gv = modelo('guardavidas', { alto: 6.3 }); gv.position.set(x, A(x, z), z); gv.rotation.y = Math.atan2(Math.cos(a), Math.sin(a)); g.add(gv); mundo.caja(x, z, 1.2, 1.2, A(x, z) - 1, A(x, z) + 3.2, gv.rotation.y); }
 
   /* ------------------------------------------------ la pradera de los molinos */
@@ -558,6 +562,7 @@ export function crearPlaza(ctx) {
     actualizar(dt, jp, cielo) {
       tt += dt;
       globo.userData.actualizar(tt, dt);
+      tienda.userData.actualizar(tt, dt);
       casc.userData.actualizar(tt, dt);
       for (const p of peceras) p.userData.actualizar(tt);
       for (const c of cardumenes) c.actualizar(dt);

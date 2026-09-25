@@ -11,7 +11,7 @@ import { Meeple } from './meeple.js';
 import { materialBurbuja } from './naturaleza.js';
 
 const RADIO = 0.32, ALTO = 1.35;
-const CAMINA = 3.4, CORRE = 6.6, SALTO = 8.6, NADA = 2.8;
+const CAMINA = 3.4, CORRE = 7.2, SALTO = 8.6, NADA = 2.8;   // (correr un poco más: la isla ahora es grande)
 const ACEL_PISO = 38, ACEL_AIRE = 9;
 
 export class Jugador {

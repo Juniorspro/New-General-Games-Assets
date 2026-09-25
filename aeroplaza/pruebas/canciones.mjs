@@ -1,6 +1,6 @@
 // La versión con las canciones que mandó quien pide: que estén adentro, que se
-// decodifiquen y que suenen donde van (menú: Wii Party = 'titulo'; plaza:
-// Mii Maker = 'colina'). Solo corre si existe aeroplaza-con-canciones.html.
+// decodifiquen y que suenen donde van (menú: Wii Party = 'titulo'; la plaza:
+// Mii Maker = 'colina'; la terminal, la bahía y el bosque, las suyas). Solo corre si existe aeroplaza-con-canciones.html.
 import fs from 'node:fs';
 import path from 'node:path';
 import { navegador, abrir, AQUI } from './comun.mjs';
@@ -20,7 +20,13 @@ await pag.waitForSelector('.hud', { timeout: 60000 });
 await pag.waitForTimeout(1500);
 const plaza = await pag.evaluate(() => { const S = window.__A.Sonido; return { suena: S.actual && S.actual.nombre, grabada: !!(S.actual && S.actual.fuente || S.grabadas.colina.buffer) }; });
 console.log('plaza:', JSON.stringify(plaza));
-console.log(menu.suena === 'titulo' && plaza.suena === 'colina' ? '✓ suenan donde van' : '✗ no suenan donde van');
+/* se arranca en la Terminal (suena la de la ciudad); caminando a otras zonas cambia: la plaza, la bahía (la de itsalyzee) y el bosque (Frutiger Aero Ahhh) */
+const zonas = {};
+for (const [z, x, zz] of [['plaza', 0, 16], ['bahia', 118, 118], ['bosque', -128, -100]]) {
+  zonas[z] = await pag.evaluate(([x, z]) => { const A = window.__A; A.yo.ponerEn(new A.THREE.Vector3(x, A.reino.mundo.altura(x, z) + 0.1, z), 0); for (let i = 0; i < 40; i++) A.paso(1 / 30, i === 39); return window.__A.Sonido.actual && window.__A.Sonido.actual.nombre; }, [x, zz]);
+}
+console.log('zonas:', JSON.stringify(zonas));
+console.log(menu.suena === 'titulo' && plaza.suena === 'ciudad' && zonas.plaza === 'colina' && zonas.bahia === 'playa' && zonas.bosque === 'bosque' ? '✓ suenan donde van (y cambian por zona)' : '✗ no suenan donde van');
 /* los temas de Rezona de cada reino (musica/): que se decodifiquen y suenen grabados */
 let bien = true;
 for (const [reino, tema] of [['aqua', 'arrecife'], ['jardin', 'cielo'], ['aurora', 'aurora'], ['tienda', 'ciudad'], ['casa', 'casa']]) {

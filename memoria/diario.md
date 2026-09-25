@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **25/09/2026 · `claude/fijate-iszyer`:**
+  - Pidió "mundo, no isla" y de todo: árboles que se muevan, la tienda
+    decorada, el tren con su establecimiento, un mapa en el spawn, gráficos
+    según el aparato, menús sin desplazar, más animaciones y tres canciones.
+    Quedó todo ([aeroplaza](aeroplaza.md) § Cuarta vuelta).
+  - Las canciones van solo en `aeroplaza-con-canciones.html` (los mp3 en
+    `aeroplaza/musica-ajena/`, sin commitear).
+  - Falta: probarlo en un teléfono de verdad (todo se midió con SwiftShader).
 - **24/09/2026, noche (5) · `claude/fijate-iszyer`:**
   - Pidió las construcciones en procedural, copiando los GLB. Quedaron en
     `js/construcciones.js` ([aeroplaza](aeroplaza.md) § Tercera vuelta); se

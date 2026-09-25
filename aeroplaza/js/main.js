@@ -29,6 +29,7 @@ import { FRUTAS, Chispas } from './objetos.js';
 import { cargarDelfin } from './delfin.js';
 import * as Modelos from './modelos.js';
 import { Pantalla } from './pantalla.js';
+import { detectarAparato } from './aparato.js';
 import { Estudio } from './probador.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
@@ -99,6 +100,8 @@ async function iniciar() {
   addEventListener('unhandledrejection', (ev) => mostrarError(ev.reason));
   /* si la placa se reinicia (pasa en celulares con poca memoria), se vuelve en calidad baja */
   motor.lienzo.addEventListener('webglcontextlost', (ev) => { ev.preventDefault(); G.opciones.calidad = 'baja'; Guardado.ya(); fatal(t('contexto_perdido'), () => location.reload()); });
+  /* qué aparato es: de ahí sale la calidad con la que arranca la automática */
+  const aparato = detectarAparato(motor.r);
   const nubes = ['nube-1', 'nube-2', 'nube-3'].map((k) => TEX[k]).filter(Boolean);
   const cielo = new Cielo(motor, nubes, TEX.cielo || null);
   const ent = new Entrada(motor.lienzo, document.getElementById('dedos'));
@@ -119,14 +122,14 @@ async function iniciar() {
 
   /* ---------------------------------------------------------------- el J que usa la interfaz */
   const J = {
-    G, id: ID, red, remotos, ent, misiones: Misiones, slot: 1, musicaElegida: null,
+    G, id: ID, red, remotos, ent, misiones: Misiones, slot: 1, musicaElegida: null, aparato,
     get yo() { return yo; }, get enJuego() { return enJuego; },
     sfx(n, o) { try { Sonido.sfx(n, o); } catch { /* sin audio */ } },
     musica(n) { try { J.sonando = n; Sonido.musica(!Sonido.grabadas[n] && SI_FALTA[n] ? SI_FALTA[n] : n); } catch { /* nada */ } },
     volumen() { try { Sonido.volumenes(G.opciones.musica, G.opciones.efectos); } catch { /* nada */ } },
     guardar() { Guardado.guardar(); },
     guardarControles() { G.controles = ent.config; Guardado.guardar(); },
-    ponerCalidad(q) { if (q === 'auto') { midiendo = true; cuadros = 0; sumaDt = 0; tMedir = 0; q = TACTIL ? 'media' : 'alta'; } else midiendo = false; motor.ponerCalidad(q); for (const k in cache) if (cache[k] !== reino) delete cache[k]; },
+    ponerCalidad(q) { if (q === 'auto') { midiendo = true; cuadros = 0; sumaDt = 0; tMedir = 0; q = aparato.calidad; J._subio = false; } else midiendo = false; motor.ponerCalidad(q); for (const k in cache) if (cache[k] !== reino) delete cache[k]; },
     ponerRetro() { G.opciones.estilo = 'libre'; motor.ponerRetro(G.opciones.retro); },
     ponerEstilo(n) { G.opciones.estilo = n; G.opciones.retro = { ...ESTILOS[n] }; motor.ponerRetro(G.opciones.retro); Guardado.guardar(); },
     mostrarNombres() { for (const r of remotos.m.values()) if (r.m.cartel) r.m.cartel.visible = G.opciones.nombres; },
@@ -205,12 +208,18 @@ async function iniciar() {
     }
     return cache[id];
   }
+  function limpiarArboledas() {
+    const vivos = new Set([...Object.values(cache).map((R) => R.grupo), reino?.grupo].filter(Boolean));
+    /* (se sube hasta encontrar el grupo de un reino: la raíz de todo es la escena) */
+    for (const a of ARBOLEDAS) { let q = a; while (q && !vivos.has(q)) q = q.parent; if (!q) ARBOLEDAS.delete(a); }
+  }
   function entrarReino(id, o = {}) {
     if (reino) motor.escena.remove(reino.grupo);
     remotos.vaciar();
     for (const d of disparos) efectos.remove(d.m); disparos.length = 0;
     reino = construirReino(id, o);
     motor.escena.add(reino.grupo);
+    limpiarArboledas();
     motor.aplicarPS1(reino.grupo);
     cielo.ponerModo(reino.cielo || {});
     if (Q.has('hora') && reino.cielo?.hora == null) cielo.ponerModo({ ...(reino.cielo || {}), hora: +Q.get('hora') });
@@ -328,7 +337,7 @@ async function iniciar() {
     if (n) { n.m.raiz.rotation.y = Math.atan2(yo.p.x - n.m.raiz.position.x, yo.p.z - n.m.raiz.position.z); yo.rumbo = Math.atan2(n.m.raiz.position.x - yo.p.x, n.m.raiz.position.z - yo.p.z); yo.sync(); n.m.hacerGesto('saludar'); cam.ponerCine(yo.p, n.m.raiz.position); }
     const H = Misiones.hablar(id), nombre = t('npc_' + id);
     let botones = [];
-    if (H.que === 'ofrece') botones = [[t('despues'), () => {}], [t('aceptar'), () => { Misiones.aceptar(id); UI.avisar(t('mis_nueva'), 'azul'); J.sfx('aviso'); UI.actualizarMisiones(); Guardado.guardar(); }, true]];
+    if (H.que === 'ofrece') botones = [[t('despues'), () => {}], [t('aceptar'), () => { Misiones.aceptar(id); UI.avisar(t('mis_nueva'), 'azul'); J.sfx('aviso'); UI.actualizarMisiones(); Guardado.guardar(); if (NPCS[id].mision?.tipo === 'lugar' && zona) contar('lugar', 1, zona.id); }, true]];
     else if (H.que === 'tienda') botones = [[t('cerrar'), () => {}], [t('accion_comprar'), () => abrirProbador(), true]];
     UI.dialogo(nombre, H.lineas, botones, () => {
       if (H.que === 'premia') {
@@ -436,6 +445,14 @@ async function iniciar() {
     /* la cámara */
     const O = G.opciones;
     if (!probador) cam.girar(E.camX * O.sensCam, E.camY * O.sensCam * (O.invertirY ? -1 : 1));
+    /* si hace un rato que no se toca la cámara y se camina, se acomoda sola atrás
+       (despacio, y no cuando se viene hacia la cámara: ahí daría media vuelta) */
+    if (Math.abs(E.camX) + Math.abs(E.camY) > 0.0005) J._tCam = 0; else J._tCam = (J._tCam || 0) + dt;
+    if (O.camAuto !== false && !quieto && !probador && J._tCam > 1.2 && yo && yo.modo !== 'burbuja') {
+      const vel = Math.hypot(yo.v.x, yo.v.z), obj = (yo.modo === 'montado' ? yo.rumbo : Math.atan2(yo.v.x, yo.v.z)) + Math.PI;
+      let d = obj - cam.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+      if ((vel > 1.2 || yo.modo === 'montado') && Math.abs(d) < 2.3) cam.yaw += d * Math.min(1, dt * (yo.modo === 'montado' ? 0.9 : 0.55) * Math.min(1, (J._tCam - 1.2) * 2));
+    }
     if (E.zoom !== 1) cam.acercar(E.zoom);
     /* el muñeco */
     antes.copy(yo.modo === 'montado' && yo.montura ? yo.montura.p : yo.p);
@@ -523,6 +540,7 @@ async function iniciar() {
       const d = Math.hypot(yo.p.x - n.m.raiz.position.x, yo.p.z - n.m.raiz.position.z);
       /* de lejos no se ven (y no se animan): cada muñeco son muchas piezas */
       n.m.raiz.visible = d < 110; if (!n.m.raiz.visible) continue;
+      n.m.detalle(d < 32);
       const obj = d < 5 ? Math.atan2(yo.p.x - n.m.raiz.position.x, yo.p.z - n.m.raiz.position.z) : n.rot;
       let dd = obj - n.m.raiz.rotation.y; while (dd > Math.PI) dd -= Math.PI * 2; while (dd < -Math.PI) dd += Math.PI * 2;
       n.m.raiz.rotation.y += dd * Math.min(1, dt * 3);
@@ -556,6 +574,7 @@ async function iniciar() {
       gesto: J.gestoActual || null, esc: +yo.escala.toFixed(2), ef: yo.efecto, av: G.av, modo: yo.modo,
     });
     remotos.actualizar(dt);
+    for (const r of remotos.m.values()) if (r.m?.detalle) r.m.detalle(Math.hypot(r.x - yo.p.x, r.z - yo.p.z) < 32);
     tPresencia += dt; if (tPresencia > 1) { tPresencia = 0; red.limpiar(); }
     /* el cielo, el agua, la cámara */
     cielo.actualizar(dt, yo.p);
@@ -579,7 +598,8 @@ async function iniciar() {
         const ms = sumaDt / cuadros * 1000, q = motor.nombreCalidad; cuadros = 0; sumaDt = 0; tMedir = 0.5;
         if (ms > 30 && q !== 'baja') { motor.ponerCalidad(q === 'alta' ? 'media' : 'baja'); UI.avisar(t('subio_calidad', { n: t('cal_' + motor.nombreCalidad) })); }
         else if (ms > 45 && !G.opciones.retro.pix) { UI.avisar(t('lento_pixel'), 'azul'); midiendo = false; }
-        else if (ms < 13 && q === 'media' && !TACTIL && !J._subio) { J._subio = true; motor.ponerCalidad('alta'); }
+        /* si anda sobrado se sube un escalón (una sola vez; en el celu, solo de baja a media) */
+        else if (ms < 13 && q !== 'alta' && !J._subio && aparato.motivo !== 'software' && (!TACTIL || q === 'baja')) { J._subio = true; motor.ponerCalidad(q === 'baja' ? 'media' : 'alta'); UI.avisar(t('subio_calidad', { n: t('cal_' + motor.nombreCalidad) })); }
         else midiendo = false;
       }
     }
@@ -601,7 +621,7 @@ async function iniciar() {
     if (n === 'mover') hecho = yo.p.distanceTo(tuto.desde) > 4;
     else if (n === 'saltar') hecho = yo.eventos.includes('salto') || yo.eventos.includes('doble');
     else if (n === 'camara') { tuto.giro += Math.abs(E.camX) + Math.abs(E.camY); hecho = tuto.giro > 1.2 || tuto.t > 8; }
-    else if (n === 'hablar') hecho = Misiones.estado('nimbo').e !== 'nueva' || tuto.t > 40;
+    else if (n === 'hablar') hecho = Misiones.estado('brujula').e !== 'nueva' || Misiones.estado('nimbo').e !== 'nueva' || tuto.t > 40;
     else if (n === 'listo') hecho = tuto.t > 4;
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
@@ -617,7 +637,7 @@ async function iniciar() {
   };
   if (!Q.has('pausa')) requestAnimationFrame(bucle);
   if (G.opciones.calidad !== 'auto') { midiendo = false; motor.ponerCalidad(G.opciones.calidad); }
-  else motor.ponerCalidad(TACTIL ? 'media' : 'alta');
+  else motor.ponerCalidad(aparato.calidad);
   if (Q.has('calidad')) motor.ponerCalidad(Q.get('calidad'));
   motor.ponerRetro(G.opciones.retro);
 

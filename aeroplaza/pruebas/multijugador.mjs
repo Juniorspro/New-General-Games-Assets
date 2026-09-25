@@ -68,7 +68,9 @@ await Bb.pag.screenshot({ path: path.join(SAL, 'multi-beto.png') });
 await A.pag.screenshot({ path: path.join(SAL, 'multi-ana.png') });
 /* el estado solo se manda si algo cambió: quieta, Ana manda poco (latido cada 1,5 s) */
 B.porTema.clear(); const m0 = B.mensajes; const r0 = Date.now(); await juntos([A.pag], 3); const m1 = B.mensajes; console.log('   por tema:', JSON.stringify(Object.fromEntries(B.porTema)), `en ${((Date.now() - r0) / 1000).toFixed(1)} s reales`);
-prueba('quieta manda poco (no a ciegas cada cuadro)', m1 - m0 < 12, `${m1 - m0} mensajes en 3 s`);
+/* el latido va por reloj real: con la placa por software 3 s de juego tardan más, así que se cuenta contra el tiempo real */
+const reales = (Date.now() - r0) / 1000, estados = B.porTema.get('state') || 0;
+prueba('quieta manda poco (no a ciegas cada cuadro)', estados <= Math.ceil(reales / 1.5) + 2 && m1 - m0 < 90 * 0.2, `${estados} estados en ${reales.toFixed(1)} s reales (a ciegas serían ~90)`);
 /* Beto se va: a los 5 s Ana lo borra */
 await Bb.ctx.close();
 const t0 = Date.now();

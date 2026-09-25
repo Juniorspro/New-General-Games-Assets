@@ -64,6 +64,7 @@ prueba('la misión aparece arriba a la izquierda', mis === 1);
 /* el probador */
 await pag.evaluate(() => window.__A.J.abrirProbador());
 await avanzar(pag, 10);
+await tocar('.probador [data-g=cosas]');   // los sombreros están en el grupo de las cosas
 await tocar('.pestanas [data-p=sombrero]');
 await tocar('.opciones-prob .item:nth-child(4)');   // galera: 25 orbes, hay 15 → avisa que faltan
 await pag.evaluate(() => { window.__A.G.orbes = 40; });

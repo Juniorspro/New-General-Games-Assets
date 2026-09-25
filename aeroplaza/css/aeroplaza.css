@@ -317,3 +317,67 @@ html.angosta .giros { width: 100%; bottom: auto; top: 40%; gap: 62%; }
 html.angosta .lugar b { font-size: 20px; } html.angosta .lugar i { font-size: 26px; }
 .tren-estado { position: absolute; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 142px); transform: translateX(-50%); pointer-events: none; animation: apareceC 0.3s both; white-space: nowrap; }
 .tren-estado i { font-style: normal; }
+
+/* ---- menús sin desplazar: pestañas, páginas y versiones compactas ---- */
+.con-pestanas .tira { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
+.con-pestanas .tira button, .pestanas button { display: flex; align-items: center; gap: 6px; border: 3px solid transparent; background: #fff; border-radius: 14px; padding: 7px 12px; font-weight: 800; font-size: 15px; color: var(--tinta2); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
+.con-pestanas .tira button i, .pestanas button i { font-style: normal; font-size: 18px; }
+.con-pestanas .tira button.si, .pestanas button.si { border-color: var(--azul); color: var(--azul2); background: linear-gradient(#ffffff, #e9f8ff); }
+.con-pestanas .panel .op:last-child { border-bottom: 0; }
+.aparato { display: flex; align-items: center; gap: 12px; margin: 8px 0; padding: 10px 14px; border-radius: 16px; background: linear-gradient(#f4fbff, #e6f5ff); border: 2px solid #cfeaff; }
+.aparato i { font-style: normal; font-size: 24px; } .aparato b { display: block; font-size: 15px; color: var(--azul2); } .aparato small { display: block; font-weight: 700; color: var(--tinta2); font-size: 12px; overflow-wrap: anywhere; }
+.resumen { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+.resumen div { background: #f5f8fa; border-radius: 16px; padding: 10px 6px; text-align: center; font-weight: 800; }
+.resumen i { font-style: normal; display: block; font-size: 24px; } .resumen b { font-size: 14px; }
+.texto-ctl { font-weight: 700; line-height: 1.6; margin: 4px 0; white-space: pre-line; }
+.lista-discos.grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.lista-discos.grilla .disco-fila { padding: 8px 10px; font-size: 15px; gap: 10px; }
+.lista-discos.grilla .disco-fila .disco { width: 34px; }
+.dos-columnas { display: grid; grid-template-columns: 1fr 1fr; column-gap: 22px; }
+.dos-columnas .op { font-size: 14px; padding: 7px 0; } .dos-columnas .segmentos button { padding: 5px 9px; font-size: 13px; }
+/* el probador: dos grupos arriba, seis pestañas que entran y páginas abajo */
+.probador .grupos button { padding: 6px 12px; }
+.probador .pestanas { flex-wrap: wrap; overflow: visible; padding: 8px 10px; gap: 5px; }
+.probador .pestanas button { flex: 1 1 auto; padding: 5px 8px; font-size: 13px; justify-content: center; }
+.probador .pestanas button i { font-size: 16px; }
+.opciones-prob { overflow: hidden; }
+.opciones-prob.colores { grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+.paginas { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 4px 0 6px; font-weight: 900; color: var(--tinta2); }
+.paginas .redondo { width: 38px; height: 38px; font-size: 15px; }
+.paginas .redondo:disabled { opacity: 0.35; }
+.paginas.una { visibility: hidden; height: 0; padding: 0; overflow: hidden; }
+.mapa canvas { width: min(100%, calc(66 * var(--vh))); margin: 0 auto; }
+.gestos { grid-template-columns: repeat(5, 1fr); }
+html.a700 .gestos { grid-template-columns: repeat(3, 1fr); }
+html.b460 .ventana { max-height: calc(94 * var(--vh)); }
+html.b460 .ventana .cabeza { padding: 8px 14px; } html.b460 .ventana .cabeza h2 { font-size: 18px; }
+html.b460 .ventana .cuerpo { padding: 10px 14px 12px; }
+html.b460 .op { padding: 6px 0; font-size: 14px; }
+html.b460 .con-pestanas .tira button { padding: 5px 10px; font-size: 13px; }
+html.b460 .reino { min-height: 0; padding: 8px 10px; gap: 2px; } html.b460 .reino small { display: none; } html.b460 .reino .emoji { font-size: 24px; } html.b460 .reino b { font-size: 16px; }
+html.b460 .reinos { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+html.b460 .gestos .boton { padding: 9px 6px; font-size: 14px; }
+html.b460 .estilo-carta small { display: none; }
+html.b460 .lista-discos.grilla { grid-template-columns: repeat(4, 1fr); gap: 6px; } html.b460 .lista-discos.grilla .disco-fila { font-size: 13px; padding: 6px 8px; }
+html.b460 .probador .cabeza { padding: 6px 10px !important; } html.b460 .probador .cabeza h2 { font-size: 18px !important; }
+html.b460 .prob-pie { padding: 6px 10px; } html.b460 .prob-pie input { padding: 6px 12px; }
+html.angosta .resumen { grid-template-columns: repeat(2, 1fr); }
+html.angosta .dos-columnas { grid-template-columns: 1fr; }
+html.angosta .lista-discos.grilla { grid-template-columns: repeat(2, 1fr); }
+.opciones-prob { min-height: 0; }
+.probador .pestanas { flex-wrap: nowrap; }
+.probador .pestanas button { flex: 1 1 0; min-width: 0; padding: 5px 4px; flex-direction: column; gap: 1px; }
+.probador .pestanas button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+html.b460 .probador .pestanas { padding: 5px 8px; }
+html.b460 .probador .pestanas button { flex-direction: row; gap: 4px; }
+html.b460 .opciones-prob { padding: 8px 10px; gap: 8px; }
+html.b460 .opciones-prob.colores { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+html.b460 .item { min-height: 58px; padding: 4px; font-size: 12px; }
+html.b460 .item .muestra { width: 28px; height: 28px; }
+html.b460 .paginas { padding: 0 0 4px; } html.b460 .paginas .redondo { width: 32px; height: 32px; }
+html.b460 .pausa-menu { grid-template-columns: repeat(3, 1fr); gap: 8px; } html.b460 .pausa-menu .boton { padding: 10px 8px; font-size: 16px; min-width: 0; }
+html.b460 .estilos { grid-template-columns: repeat(4, 1fr); gap: 6px; } html.b460 .muestra-estilo { aspect-ratio: 16 / 7; } html.b460 .estilo-carta { padding: 5px; gap: 2px; } html.b460 .estilo-carta b { font-size: 14px; }
+html.b460 .probador .pestanas button:not(.si) span { display: none; }
+html.b460 .con-pestanas .op { padding: 4px 0; min-height: 0; }
+html.b460 .con-pestanas .segmentos button { padding: 4px 9px; font-size: 13px; }
+html.b460 .con-pestanas .tira { margin-bottom: 6px; }
