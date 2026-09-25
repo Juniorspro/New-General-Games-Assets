@@ -111,7 +111,7 @@ export class Red {
     if (ahora - this.tUltimo < 100) return;
     const u = this.ultimo;
     const cambio = !u || Math.abs(u.x - s.x) + Math.abs(u.y - s.y) + Math.abs(u.z - s.z) > 0.02 || Math.abs(u.facingAngle - s.facingAngle) > 0.05 ||
-      u.hp !== s.hp || u.estado !== s.estado || u.gesto !== s.gesto || u.av !== s.av || u.esc !== s.esc || u.ef !== s.ef;
+      u.hp !== s.hp || u.estado !== s.estado || u.gesto !== s.gesto || u.av !== s.av || u.esc !== s.esc || u.ef !== s.ef || u.voz !== s.voz;
     if (!cambio && ahora - this.tLatido < 1500) return;
     this.tUltimo = ahora; this.tLatido = ahora;
     this.ultimo = { ...s };

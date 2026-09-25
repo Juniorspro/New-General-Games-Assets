@@ -61,6 +61,8 @@ Además hay:
 - una barra de 5 lugares (burbujero, gestos, música, foto y mapa);
 - día y noche iguales para todos: 5 minutos de día y 5 de noche, por el reloj;
 - en el celu, un teclado propio de vidrio (acostado, con acentos, símbolos y emojis) y botones Frutiger con onda de luz;
+- chat de voz por cercanía (botón 🎤): se escucha a los que están a menos de 12 m, del lado donde están y más bajo cuanto más lejos. Usa WebRTC y pide el micrófono; en el visor de artefactos no hay micrófono, así que ahí solo se escucha;
+- avisos arriba, chiquitos, estilo Windows 7 y con sus campanitas; las misiones se abren con el botón 📜 y en el parkour no queda nada que tape;
 - siete estilos retro con el botón 👾: Normal, Pixel, PS1, Tele de tubo, Game
   Boy, 8 bits y VHS. Dibujan de verdad a baja resolución, así que además van
   más rápido;

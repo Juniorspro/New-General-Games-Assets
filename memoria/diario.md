@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **25/09/2026, noche · `claude/fijate-iszyer`:**
+  - Pidió: avisos arriba estilo Windows 7 con sus sonidos, menos carteles
+    grandes, el parkour despejado, las misiones solo desde un botón y chat de
+    voz por cercanía. Quedó todo ([aeroplaza](aeroplaza.md) § Sexta vuelta).
+  - Pruebas nuevas: `avisos.mjs` y `voz.mjs` (el micrófono falso está en
+    `comun.mjs`).
+  - Falta: probar la voz entre dos redes de verdad (sin TURN, algunas no
+    conectan).
 - **25/09/2026, más tarde · `claude/fijate-iszyer`:**
   - Pidió: día y noche igual para todos (5+5 min), botones y teclado propio
     Frutiger, la Zona de Juegos con un parkour de 5 mapas, y edificios que

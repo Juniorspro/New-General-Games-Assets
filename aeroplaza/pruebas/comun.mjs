@@ -16,7 +16,9 @@ export function clienteMQTT() {
 }
 export async function navegador() {
   const { chromium } = createRequire('/opt/node22/lib/node_modules/playwright/')('playwright');
-  return chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+  return chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required',
+    /* el chat de voz: un micrófono falso (un tono con pitidos) que se da sin preguntar */
+    '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 }
 /* abre el juego; red: 'no' (sin internet) o 'local' (mqtt.js de la carpeta) */
 export async function abrir(nav, params = '', { ancho = 960, alto = 540, red = 'no', archivo = 'aeroplaza.html', movil = false } = {}) {

@@ -5,7 +5,8 @@
    probador, viaje en tren, diálogos con NPC, discos, gestos, mapa y construir.
    Lo que escribe la gente (nombres, chat) va siempre como texto, nunca como HTML.
    ========================================================================== */
-import { t, ponerIdioma, idioma, IDIOMAS } from './textos.js';
+import { t, sumar, ponerIdioma, idioma, IDIOMAS } from './textos.js';
+import { timbre } from './timbres.js';
 import { RANURAS, PALETA, PALETA_PELO, loTengo, precio, DE_MISION, MUEBLES } from './catalogo.js';
 import { NPCS } from './misiones.js';
 import { ESTILOS, ALTOS_PIXEL } from './motor.js';
@@ -13,6 +14,11 @@ import { Pantalla } from './pantalla.js';
 import { Teclado } from './teclado.js';
 import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
 
+sumar({
+  es: { noti_zona: 'Nueva zona', noti_bien: '¡Listo!', noti_info: 'AEROPLAZA', noti_error: 'Ups', mis_titulo: 'Misiones', mis_ninguna: 'No tenés misiones. Hablá con la gente de la isla (💬) y te van a pedir cosas.', mis_volver: '✓ Listo: volvé a hablar con {n}.', mis_hechas: 'Hechas: {n}', boton_misiones: 'Misiones', boton_voz: 'Chat de voz' },
+  en: { noti_zona: 'New area', noti_bien: 'Done!', noti_info: 'AEROPLAZA', noti_error: 'Oops', mis_titulo: 'Quests', mis_ninguna: 'No quests yet. Talk to the people on the island (💬) and they will ask you for things.', mis_volver: '✓ Done: go back and talk to {n}.', mis_hechas: 'Completed: {n}', boton_misiones: 'Quests', boton_voz: 'Voice chat' },
+  pt: { noti_zona: 'Nova área', noti_bien: 'Pronto!', noti_info: 'AEROPLAZA', noti_error: 'Opa', mis_titulo: 'Missões', mis_ninguna: 'Sem missões. Fale com o pessoal da ilha (💬) e eles vão pedir coisas.', mis_volver: '✓ Pronto: volte e fale com {n}.', mis_hechas: 'Feitas: {n}', boton_misiones: 'Missões', boton_voz: 'Chat de voz' },
+});
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
 /* el muñeco de gelatina dibujado, para los canales */
@@ -169,15 +175,17 @@ export const UI = {
     const J = this.J;
     const h = this.hud = this.poner(el(`<div class="hud">
       <div class="franja arriba"></div><div class="franja abajo"></div>
-      <div class="arriba-izq"><div class="pildora"><i class="orbe-icono"></i><span class="orbes">0</span></div><div class="espuma" title="${t('espuma')}"><i style="width:100%"></i></div><div class="misiones"></div></div>
-      <div class="arriba-der"><div class="pildora estado-red"><span><span class="punto"></span> <span class="red-txt"></span></span><small class="sala-txt"></small></div>
-        <button class="redondo" data-a="estilo" title="${t('estilo_titulo')}">👾</button><button class="redondo" data-a="chat" title="Chat">💬</button><button class="redondo siempre" data-a="pausa" title="${t('pausa')}">☰</button></div>
-      <div class="avisos"></div>
+      <div class="arriba-izq"><div class="pildora"><i class="orbe-icono"></i><span class="orbes">0</span></div><div class="espuma" title="${t('espuma')}"><i style="width:100%"></i></div></div>
+      <div class="arriba-der"><div class="pildora estado-red"><span><span class="punto"></span> <span class="red-txt"></span><b class="red-n"></b></span><small class="sala-txt"></small></div>
+        <button class="redondo" data-a="voz" title="${t('boton_voz')}">🎤</button><button class="redondo" data-a="misiones" title="${t('boton_misiones')}">📜<i class="insignia"></i></button><button class="redondo" data-a="estilo" title="${t('estilo_titulo')}">👾</button><button class="redondo" data-a="chat" title="Chat">💬</button><button class="redondo siempre" data-a="pausa" title="${t('pausa')}">☰</button></div>
+      <div class="notis"></div>
       <div class="chat"></div>
       <div class="hotbar">${HOT.map(([k, e], i) => `<button class="ranura" data-h="${i + 1}" title="${t('hot_' + k)}"><small>${i + 1}</small>${e}</button>`).join('')}</div>
     </div>`));
     $('[data-a=pausa]', h).onclick = () => J.pausar(true);
     $('[data-a=chat]', h).onclick = () => this.abrirChat();
+    $('[data-a=misiones]', h).onclick = () => this.panelMisiones();
+    $('[data-a=voz]', h).onclick = () => J.alternarVoz && J.alternarVoz();
     $('[data-a=estilo]', h).onclick = () => { J.pausar(true, true); this.estilo(() => J.pausar(false, true)); };
     h.querySelectorAll('[data-h]').forEach((b) => b.onclick = () => J.hotbar(+b.dataset.h));
     this.actualizarHud(); this.actualizarMisiones(); this.actualizarRed();
@@ -189,14 +197,39 @@ export const UI = {
     $('.espuma i', this.hud).style.width = Math.max(0, J.yo ? J.yo.hp : 100) + '%';
     this.hud.querySelectorAll('.ranura').forEach((b, i) => b.classList.toggle('elegida', J.slot === i + 1));
   },
+  /* las misiones ya no quedan siempre a la vista: el botón 📜 dice cuántas hay
+     (y se pone verde si alguna está lista) y abre el panel */
   actualizarMisiones() {
     if (!this.hud) return;
-    const c = $('.misiones', this.hud); c.innerHTML = '';
-    for (const m of this.J.misiones.activas()) {
-      const d = el(`<div class="mision ${m.e === 'lista' ? 'lista' : ''}"><span></span><div class="barrita"><i style="width:${Math.round(m.n / m.meta * 100)}%"></i></div></div>`);
-      d.firstElementChild.textContent = `${t('npc_' + m.id)} · ${m.e === 'lista' ? '✓' : `${m.n}/${m.meta}`}`;
-      c.appendChild(d);
+    const A = this.J.misiones.activas(), b = $('[data-a=misiones]', this.hud);
+    if (b) { const i = $('.insignia', b); i.textContent = A.length || ''; b.classList.toggle('con', A.length > 0); b.classList.toggle('lista', A.some((m) => m.e === 'lista')); }
+    const p = $('.panel-misiones', this.hud); if (p) this.llenarMisiones(p);
+  },
+  panelMisiones() {
+    if (!this.hud) return;
+    let p = $('.panel-misiones', this.hud);
+    if (p) { p.classList.add('sale'); setTimeout(() => p.remove(), 200); $('[data-a=misiones]', this.hud)?.classList.remove('abierto'); return; }
+    p = el(`<div class="panel-misiones"><div class="pm-cabeza"><b>📜 ${t('mis_titulo')}</b><button class="noti-x" aria-label="cerrar">✕</button></div><div class="pm-lista"></div><small class="pm-hechas"></small></div>`);
+    $('.noti-x', p).onclick = () => this.panelMisiones();
+    this.hud.appendChild(p); $('[data-a=misiones]', this.hud)?.classList.add('abierto');
+    this.llenarMisiones(p); this.J.sfx('elegir');
+  },
+  llenarMisiones(p) {
+    const J = this.J, L = $('.pm-lista', p), A = J.misiones.activas(); L.innerHTML = '';
+    if (!A.length) { const v = el('<p class="pm-nada"></p>'); v.textContent = t('mis_ninguna'); L.appendChild(v); }
+    for (const m of A) {
+      const d = el(`<div class="pm-mision ${m.e === 'lista' ? 'lista' : ''}"><div class="pm-fila"><b></b><span></span></div><div class="barrita"><i style="width:${Math.round(m.n / m.meta * 100)}%"></i></div><small></small></div>`);
+      $('b', d).textContent = t('npc_' + m.id); $('span', d).textContent = m.e === 'lista' ? '✓' : `${m.n}/${m.meta}`;
+      $('small', d).textContent = m.e === 'lista' ? t('mis_volver', { n: t('npc_' + m.id) }) : t('d_' + m.id + '_1', { n: m.n, m: m.meta });
+      L.appendChild(d);
     }
+    const hechas = Object.values(J.G.misiones || {}).filter((s) => s.e === 'hecha').length;
+    $('.pm-hechas', p).textContent = hechas ? t('mis_hechas', { n: hechas }) : '';
+  },
+  /* el botón del micrófono: apagado, prendido, hablando, sin permiso */
+  estadoVoz(estado, nivel = 0) {
+    const b = this.hud && $('[data-a=voz]', this.hud); if (!b) return;
+    b.dataset.voz = estado; b.style.setProperty('--nivel', Math.min(1, nivel).toFixed(2));
   },
   actualizarRed() {
     if (!this.hud) return;
@@ -204,24 +237,59 @@ export const UI = {
     $('.estado-red .punto', this.hud).className = 'punto ' + R.estado;
     $('.red-txt', this.hud).textContent = t(R.estado === 'en_linea' ? 'en_linea' : R.estado === 'conectando' ? 'conectando' : 'sin_red');
     $('.sala-txt', this.hud).textContent = R.estado === 'en_linea' && R.sala ? `${t('sala')} ${R.sala} · ${t('jugadores', { n: this.J.remotos.cuantos + 1 })}` : t('solo');
+    /* compacta: el punto y cuántos hay; lo demás, al pasar por encima */
+    $('.red-n', this.hud).textContent = R.estado === 'en_linea' ? String(this.J.remotos.cuantos + 1) : '';
+    $('.estado-red', this.hud).title = $('.red-txt', this.hud).textContent + ' · ' + $('.sala-txt', this.hud).textContent;
+    this.ubicarNotis();
   },
-  /* un cartelito arriba que se va solo */
+  /* los avisos: globitos de vidrio arriba de todo, como las notificaciones de
+     Windows 7 (ícono, título, texto, la cruz y una rayita que marca el tiempo),
+     con su campanita (timbres.js). Se apilan hasta tres, el nuevo arriba; si
+     llega uno igual a uno que está, ese se renueva y suma ×2 en vez de repetirse.
+     En el parkour no se muestran: no tapan la carrera. */
+  notificar({ titulo = '', texto = '', icono = 'ℹ️', tipo = 'info', sonido = true }) {
+    const c = this.hud && $('.notis', this.hud); if (!c) return null;
+    if (this.hud.classList.contains('modo-parkour') && tipo !== 'error') return null;
+    const clave = titulo + '|' + texto, igual = [...c.children].find((q) => q._clave === clave && !q.classList.contains('sale'));
+    if (igual) {
+      igual._veces = (igual._veces || 1) + 1; $('.noti-n', igual).textContent = '×' + igual._veces;
+      this.programarNoti(igual); return igual;
+    }
+    const d = el(`<div class="noti ${tipo}" role="status"><div class="noti-ico"></div><div class="noti-txt">${titulo ? '<b></b>' : ''}<span></span></div><em class="noti-n"></em><button class="noti-x" aria-label="cerrar">✕</button><i class="noti-t"></i></div>`);
+    $('.noti-ico', d).textContent = icono; if (titulo) $('b', d).textContent = titulo; $('span', d).textContent = texto;
+    d._clave = clave;
+    this.ubicarNotis();
+    $('.noti-x', d).onclick = (e) => { e.stopPropagation(); this.cerrarNoti(d); };
+    c.prepend(d);
+    while (c.children.length > 3) c.lastElementChild.remove();
+    this.programarNoti(d);
+    if (sonido) timbre(tipo);
+    return d;
+  },
+  /* van en el hueco entre los dos grupos de arriba; si no entran, una fila más abajo */
+  ubicarNotis() {
+    const h = this.hud, c = h && $('.notis', h), L = h && $('.arriba-izq', h), R = h && $('.arriba-der', h); if (!c || !L || !R) return;
+    const W = h.offsetWidth, izq = L.offsetLeft + L.offsetWidth + 10, der = R.offsetLeft - 10, ancho = Math.min(320, der - izq);
+    if (ancho >= 210) { c.style.width = ancho + 'px'; c.style.left = Math.round((izq + der) / 2) + 'px'; c.style.top = ''; }
+    else { c.style.width = Math.min(320, W - 24) + 'px'; c.style.left = Math.round(W / 2) + 'px'; c.style.top = (Math.max(L.offsetTop + L.offsetHeight, R.offsetTop + R.offsetHeight) + 6) + 'px'; }
+  },
+  programarNoti(d) {
+    const dur = Math.min(6500, 3200 + d.textContent.length * 35);
+    clearTimeout(d._t); d._t = setTimeout(() => this.cerrarNoti(d), dur);
+    const barra = $('.noti-t', d); barra.style.animation = 'none'; void barra.offsetWidth; barra.style.animation = ''; barra.style.setProperty('--dur', dur + 'ms');
+  },
+  cerrarNoti(d) { if (!d.isConnected || d.classList.contains('sale')) return; clearTimeout(d._t); d.classList.add('sale'); setTimeout(() => d.remove(), 280); },
+  /* el aviso de siempre: si empieza con un emoji, ese es el ícono */
   avisar(texto, tipo = '') {
     this.historial = [...(this.historial || []), texto].slice(-30);   // (para las pruebas)
-    const c = this.hud && $('.avisos', this.hud); if (!c) return;
-    const d = el(`<div class="avisito ${tipo}"></div>`); d.textContent = texto; c.appendChild(d);
-    while (c.children.length > 4) c.firstChild.remove();
-    setTimeout(() => d.remove(), 3300);
+    const m = /^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*(.*)$/su.exec(String(texto));
+    const k = tipo === 'bien' ? 'bien' : tipo === 'error' ? 'error' : 'info';
+    this.notificar({ titulo: tipo ? t('noti_' + k) : '', texto: m ? m[2] : texto, icono: m ? m[1] : k === 'bien' ? '✔️' : k === 'error' ? '⛔' : 'ℹ️', tipo: k, sonido: !!tipo });
   },
-  /* el cartel grande al entrar a una región: el ícono, el nombre y una rayita
-     brillante que cruza (se va solo) */
+  /* al entrar a una región: el aviso con su ícono (antes era un cartel grande en el medio) */
   lugar(nombre, icono = '') {
-    if (!this.hud) return;
-    $('.lugar', this.hud)?.remove();
-    const d = el('<div class="lugar"><i></i><b></b><span class="brillo"></span></div>');
-    d.firstElementChild.textContent = icono; $('b', d).textContent = nombre;
-    this.hud.appendChild(d); this.historial = [...(this.historial || []), '@' + nombre].slice(-30);
-    setTimeout(() => d.remove(), 3600);
+    this.historial = [...(this.historial || []), '@' + nombre].slice(-30);
+    this.notificar({ titulo: t('noti_zona'), texto: nombre, icono: icono || '📍', tipo: 'zona' });
   },
   /* ------------------------------------------------------------ PARKOUR AERO */
   /* el menú de los cinco mapas: miniatura, nombre, récord, estrellas y candado */
@@ -244,6 +312,7 @@ export const UI = {
   parkourHud(E) {
     if (!this.hud) return;
     let d = $('.pk-hud', this.hud);
+    this.hud.classList.toggle('modo-parkour', !!E);
     if (!E) { d && d.remove(); return; }
     if (!d) {
       d = el(`<div class="pk-hud"><span class="pk-nombre"></span><span class="pk-reloj">0:00.0</span><span class="pk-caidas"></span><button class="redondo" data-a="otra" title="${t('pk_repetir')}">⟲</button><button class="redondo" data-a="salir" title="${t('pk_volver')}">✕</button></div>`);
@@ -256,7 +325,12 @@ export const UI = {
     const nn = `${NIVELES[E.nivel].icono} ${E.nombre}`; if (d._n !== nn) { d._n = nn; $('.pk-nombre', d).textContent = nn; }
     d.classList.toggle('fin', E.fase === 'fin');
   },
-  /* 3, 2, 1, ¡YA! en grande en el medio */
+  /* un destello verde en el reloj (el control, en vez de un aviso que tape) */
+  pkDestello(clase = 'control') {
+    const d = this.hud && $('.pk-hud', this.hud); if (!d) return;
+    d.classList.remove(clase); void d.offsetWidth; d.classList.add(clase); setTimeout(() => d.classList.remove(clase), 700);
+  },
+  /* 3, 2, 1, ¡YA! (chico y arriba: no tapa el camino) */
   cuenta(txt, ya = false) {
     if (!this.hud || this._cuenta === txt) return;
     this._cuenta = txt;
@@ -434,6 +508,7 @@ export const UI = {
         p.appendChild(this.fila(t('op_idioma'), this.segmentos(IDIOMAS.map((i) => [i, i.toUpperCase()]), idioma(), (i) => { ponerIdioma(i); J.G.idioma = i; J.guardar(); J.alCambiarIdioma(); this.opciones(volver, 'sonido'); })));
         p.appendChild(this.fila(t('op_musica'), this.deslizador(0, 1, 0.05, O.musica, (v) => { O.musica = v; J.volumen(); J.guardar(); })));
         p.appendChild(this.fila(t('op_efectos'), this.deslizador(0, 1, 0.05, O.efectos, (v) => { O.efectos = v; J.volumen(); J.guardar(); })));
+        p.appendChild(this.fila('🎤 ' + t('op_voz'), this.deslizador(0, 1.5, 0.05, O.volVoz ?? 1, (v) => J.volumenVoz(v))));
       }],
       ['imagen', '🖥️', t('op_t_imagen'), (p) => {
         p.appendChild(this.fila(t('op_calidad'), this.segmentos(['auto', 'alta', 'media', 'baja'].map((q) => [q, t('cal_' + q)]), O.calidad, (q) => { O.calidad = q; J.ponerCalidad(q); J.guardar(); document.body.classList.toggle('calidadBaja', q === 'baja'); })));

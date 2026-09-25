@@ -59,8 +59,8 @@ const botones = await pag.locator('.dialogo .acciones button').count();
 prueba('Nimbo ofrece la misión (Aceptar / Después)', botones === 2);
 await tocar('.dialogo .acciones .primario');
 await avanzar(pag, 5);
-const mis = await pag.locator('.mision').count();
-prueba('la misión aparece arriba a la izquierda', mis === 1);
+const mis = await pag.evaluate(() => document.querySelector('[data-a=misiones] .insignia')?.textContent);
+prueba('el botón de misiones cuenta la nueva', mis === '1', mis);
 /* el probador */
 await pag.evaluate(() => window.__A.J.abrirProbador());
 await avanzar(pag, 10);

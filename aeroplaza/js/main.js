@@ -32,6 +32,8 @@ import { FRUTAS, Chispas } from './objetos.js';
 import { cargarDelfin } from './delfin.js';
 import * as Modelos from './modelos.js';
 import { Pantalla } from './pantalla.js';
+import { Voz } from './voz.js';
+import { timbre } from './timbres.js';
 import { detectarAparato } from './aparato.js';
 import { Estudio } from './probador.js';
 import { Sonido } from '../../brillo/js/sonido.js';
@@ -112,6 +114,7 @@ async function iniciar() {
   if (G.controles) ent.ponerConfig(G.controles);
   const cam = new Camara(motor.camara);
   const red = new Red({ id: ID, nombre: G.nombre });
+  const voz = new Voz(red); voz.volumen = G.opciones.volVoz ?? 1;
   const remotos = new Remotos(motor.escena);
   const efectos = new THREE.Group(); motor.escena.add(efectos);
   const chispas = new Chispas(efectos, '#ffffff', 160);
@@ -125,9 +128,10 @@ async function iniciar() {
 
   /* ---------------------------------------------------------------- el J que usa la interfaz */
   const J = {
-    G, id: ID, red, remotos, ent, misiones: Misiones, slot: 1, musicaElegida: null, aparato,
+    G, id: ID, red, remotos, voz, ent, misiones: Misiones, slot: 1, musicaElegida: null, aparato,
     get yo() { return yo; }, get enJuego() { return enJuego; },
-    sfx(n, o) { try { Sonido.sfx(n, o); } catch { /* sin audio */ } },
+    /* el 'aviso' de siempre ahora es la campanita estilo Windows 7 (timbres.js) */
+    sfx(n, o) { try { if (n === 'aviso' && Sonido.ctx?.state === 'running') { timbre('info'); return; } Sonido.sfx(n, o); } catch { /* sin audio */ } },
     musica(n) { try { J.sonando = n; Sonido.musica(!Sonido.grabadas[n] && SI_FALTA[n] ? SI_FALTA[n] : n); } catch { /* nada */ } },
     volumen() { try { Sonido.volumenes(G.opciones.musica, G.opciones.efectos); } catch { /* nada */ } },
     guardar() { Guardado.guardar(); },
@@ -186,6 +190,7 @@ async function iniciar() {
       case 'sueno_suma': if (reino?.sueno) { reino.sueno.total += Math.max(0, Math.min(20, +a.n || 0)); revisarSueno(false); } break;
       case 'sueno': if (reino?.sueno && !reino.sueno.activo) { reino.empezarSueno(); UI.avisar(t('sueno_empieza'), 'bien'); J.sfx('restaura'); } break;
       case 'chau': if (r) { r.visto = 0; } break;
+      case 'rtc': voz.recibir(a); break;
     }
   };
   red.alCasa = (d) => {
@@ -293,7 +298,7 @@ async function iniciar() {
     }, 60);
   }
   function salirAlMenu() {
-    enJuego = false; ent.mostrarDedos(false); probador = false; construyendo = null; cam.fp = false; UI.mira(false);
+    enJuego = false; ent.mostrarDedos(false); probador = false; construyendo = null; cam.fp = false; UI.mira(false); voz.apagar();
     if (reino) { motor.escena.remove(reino.grupo); reino = null; }
     red.entrar(null, null); remotos.vaciar();
     Guardado.ya();
@@ -392,6 +397,19 @@ async function iniciar() {
       case 'accionar': o.a.alUsar(J); break;
     }
   }
+  /* ---------------------------------------------------------------- el chat de voz (voz.js) */
+  voz.alCambiar = (e) => { UI.estadoVoz(e); red.ultimo = null; };   // (el estado nuevo sale ya, sin esperar el latido)
+  voz.alConectar = (id) => { const r = remotos.get(id); UI.avisar('🔊 ' + t('voz_cerca', { n: r ? r.name : '?' })); };
+  J.alternarVoz = async () => {
+    if (voz.activa) { voz.apagar(); UI.avisar('🎤 ' + t('voz_no')); return; }
+    if (!voz.soporte) { UI.estadoVoz('denegada'); UI.avisar('🎤 ' + t('voz_sin'), 'error'); return; }
+    UI.avisar('🎤 ' + t('voz_pide'), 'azul');
+    const e = await voz.prender();
+    if (e === 'activa') UI.avisar('🎤 ' + t('voz_si'), 'bien');
+    else UI.avisar('🎤 ' + t(voz.error === 'NotFoundError' || voz.error === 'NotAllowedError' ? 'voz_denegada' : 'voz_sin'), 'error');
+  };
+  J.volumenVoz = (v) => { G.opciones.volVoz = v; voz.ponerVolumen(v); Guardado.guardar(); };
+
   /* ---------------------------------------------------------------- lo que usan los interiores */
   J.avisar = (x, k) => UI.avisar(x, k);
   J.hablarCon = (id) => { if (reino?.npcMallas?.some((n) => n.id === id)) hablar(id); };
@@ -430,9 +448,9 @@ async function iniciar() {
     UI.parkourHud(E);
     for (const ev of E.eventos.splice(0)) {
       if (ev.tipo === 'ya') { UI.cuenta(t('pk_ya'), true); J.sfx('restaura'); }
-      else if (ev.tipo === 'control') { UI.avisar(t('pk_control'), 'bien'); J.sfx('orbe'); }
+      else if (ev.tipo === 'control') { UI.pkDestello('control'); J.sfx('orbe'); }
       else if (ev.tipo === 'golpe') { J.sfx('pop'); cam.sacudida = 0.25; ent.vibrar(30); }
-      else if (ev.tipo === 'caida') { reino.reaparecer(yo); cam.inicial = true; J.sfx('pop'); UI.avisar('💧 ' + E.caidas + ' ' + t('pk_caidas')); break; }
+      else if (ev.tipo === 'caida') { reino.reaparecer(yo); cam.inicial = true; J.sfx('pop'); break; }
       else if (ev.tipo === 'meta') {
         const n = E.nivel, P = G.parkour, N = NIVELES[n];
         const est = ev.tiempo < N.estrellas[0] ? 3 : ev.tiempo < N.estrellas[1] ? 2 : 1;
@@ -505,7 +523,7 @@ async function iniciar() {
   }
 
   /* ---------------------------------------------------------------- el cuadro */
-  const antes = new THREE.Vector3();
+  const antes = new THREE.Vector3(), oido = { pos: new THREE.Vector3(), adelante: new THREE.Vector3() };
   let accionCerca = null;
   function paso(dt, dibujar = true) {
     UNI.uT.value += dt;
@@ -659,7 +677,7 @@ async function iniciar() {
     red.publicarEstado({
       x: +yo.p.x.toFixed(2), y: +yo.p.y.toFixed(2), z: +yo.p.z.toFixed(2), hp: Math.round(yo.hp), facingAngle: +yo.rumbo.toFixed(2),
       isMoving: yo.estado === 'camina' || yo.estado === 'corre' || yo.estado === 'nada', estado: yo.estado, vel: +Math.hypot(yo.v.x, yo.v.z).toFixed(1),
-      gesto: J.gestoActual || null, esc: +yo.escala.toFixed(2), ef: yo.efecto, av: G.av, modo: yo.modo,
+      gesto: J.gestoActual || null, esc: +yo.escala.toFixed(2), ef: yo.efecto, av: G.av, modo: yo.modo, voz: voz.marca,
     });
     remotos.actualizar(dt);
     for (const r of remotos.m.values()) if (r.m?.detalle) r.m.detalle(Math.hypot(r.x - yo.p.x, r.z - yo.p.z) < 32);
@@ -676,6 +694,12 @@ async function iniciar() {
     }
     if (reino.mar) aguaSigueCielo(reino.mar, cielo);
     cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
+    /* la voz: el oído va en la cabeza propia, mirando para donde mira la cámara */
+    if (voz.activa) {
+      oido.pos.set(yo.p.x, yo.p.y + 1.3 * yo.escala, yo.p.z); motor.camara.getWorldDirection(oido.adelante);
+      voz.actualizar(dt, oido, remotos.m);
+      const nv = Math.round(voz.nivel * 20) / 20; if (nv !== J._nivelVoz) { J._nivelVoz = nv; UI.estadoVoz(voz.estado, nv); }
+    }
     J._tZoom = Math.max(0, (J._tZoom || 0) - dt);
     const fov = J._tZoom > 0 ? 18 : (motor.alto > motor.ancho ? 72 : 58) + (cam.fp ? 12 : 0), fc = motor.camara;
     if (Math.abs(fc.fov - fov) > 0.05) { fc.fov += (fov - fc.fov) * Math.min(1, dt * 5); fc.updateProjectionMatrix(); }
@@ -724,7 +748,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
+  window.__A = { Sonido, Modelos, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

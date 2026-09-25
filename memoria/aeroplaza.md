@@ -215,6 +215,36 @@ edificios que se entran en primera persona, con ascensor.
     Rulo y Nube; solo charlan.
   - Prueba: `pruebas/interiores.mjs` (32 bien, ~4 min).
 
+## Sexta vuelta: avisos Windows 7, misiones en su botón y voz por cercanía (25/09)
+
+Pedido: menos carteles grandes y textos que molestan; los avisos (zona nueva
+y demás) bien arriba, estilo notificación de Windows 7 con sonidos
+parecidos; que el parkour no tenga nada que tape; las misiones solo al
+tocar un menú; chat de voz por cercanía con permiso de micrófono (WebRTC).
+
+- **Avisos** (`ui.js › notificar`): globos de vidrio arriba, en el hueco
+  entre los dos grupos de botones (`ubicarNotis` mide con `offsetLeft`:
+  con el celu parado todo está girado y `getBoundingClientRect` engaña).
+  Hasta tres; uno igual a uno que está suma ×2. `avisar()` y `lugar()` pasan
+  por ahí (el cartel grande de zona ya no existe). En el parkour no salen.
+- **Sonidos** (`timbres.js`): campanitas sintetizadas a la manera de Windows 7
+  (info, bien, zona, error), por el bus de efectos, una cada 0,35 s como
+  mucho. `J.sfx('aviso')` también va ahí.
+- **Misiones:** el botón 📜 con la insignia (verde si hay una lista) abre el
+  panel con qué hacer. El tutorial es una pista chica arriba a la izquierda.
+- **Parkour:** la clase `hud.modo-parkour` esconde todo menos el reloj chico,
+  la pausa y el micrófono; el control es un destello en el reloj.
+- **Voz** (`voz.js`): 🎤 pide el micrófono; el estado lleva `voz` (1 con
+  micrófono, 2 solo escuchando). Se conecta a menos de 12 m y se corta a más
+  de 18; abre el de id más chico; oferta y respuesta enteras (sin goteo) por
+  la acción `rtc` de la sala MQTT; STUN de Google, sin TURN. El audio pasa por
+  un PannerNode HRTF (entero a 2 m, nada a 14). Prueba: `pruebas/voz.mjs`
+  (10 bien), con el micrófono falso de Chromium.
+  - **En el visor de artefactos no hay micrófono** (no existe esa capacidad):
+    queda en "escuchando" y lo avisa. Con el HTML suelto sí.
+- Prueba de la interfaz: `pruebas/avisos.mjs` (26 bien: compu, celu acostado
+  y parado).
+
 ## Trampas que ya se pagaron
 
 - **Pasar las piezas de un grupo a otro recorriendo `children`** saltea una
@@ -290,6 +320,14 @@ edificios que se entran en primera persona, con ascensor.
   los planos con uv del mundo, para que la textura siga).
 - **`fundir` pierde los grupos de caras** (un `BoxGeometry` al que se le
   sacaron tapas vuelve a tenerlas): no fundir esos (se marcan `sinApunte`).
+
+- **Dos micrófonos falsos se cancelan:** los dos dan el mismo tono y el
+  cancelador de eco de WebRTC lo borra (llegaba 0,005). Para medir que se
+  escucha, el que escucha apaga su pista (`track.enabled = false`).
+- **Chrome no pasa a Web Audio el audio de WebRTC** si el stream no está
+  también en un `<audio>` (silenciado): `voz.js` le pone uno a cada pareja.
+- **`apareceC` trae `translateX(-50%)`:** reusarla en algo que no está
+  centrado lo corre medio ancho (le pasó al tutorial). Cada cosa, su animación.
 
 ## Rendimiento (medido en 390×844)
 
