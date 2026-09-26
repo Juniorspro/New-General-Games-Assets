@@ -24,6 +24,13 @@ export function mediapipe() {
   const m = path.join(d, 'hand_landmarker.task'); if (!fs.existsSync(m)) execFileSync('curl', ['-sSL', '-o', m, MP_MODELO]);
   return d;
 }
+/* IWER (Meta, MIT): un Quest 3 de mentira para probar el modo del visor (WebXR) sin visor. Se baja
+   con curl a pruebas/iwer.min.js la primera vez; no se guarda en el repo */
+export function iwer() {
+  const f = path.join(AQUI, 'iwer.min.js');
+  if (!fs.existsSync(f)) execFileSync('curl', ['-sSL', '-o', f, 'https://cdn.jsdelivr.net/npm/iwer@2.5.0/build/iwer.min.js']);
+  return fs.readFileSync(f, 'utf8');
+}
 export async function navegador() {
   const { chromium } = createRequire('/opt/node22/lib/node_modules/playwright/')('playwright');
   return chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required',
@@ -31,9 +38,14 @@ export async function navegador() {
     '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 }
 /* abre el juego; red: 'no' (sin internet) o 'local' (mqtt.js de la carpeta) */
-export async function abrir(nav, params = '', { ancho = 960, alto = 540, red = 'no', archivo = 'aeroplaza.html', movil = false, manos = false } = {}) {
+export async function abrir(nav, params = '', { ancho = 960, alto = 540, red = 'no', archivo = 'aeroplaza.html', movil = false, manos = false, xr = false } = {}) {
   const ctx = await nav.newContext({ viewport: { width: ancho, height: alto }, hasTouch: movil, isMobile: movil, deviceScaleFactor: 1 });
   const pag = await ctx.newPage();
+  /* el visor de mentira, antes que el juego (así navigator.xr ya está) */
+  /* (IWER 2.5 copia el XRRigidTransform del espacio desplazado como si fuera una matriz y el
+     desplazamiento se pierde; en un visor de verdad anda: acá se le pasa la matriz) */
+  if (xr) await pag.addInitScript({ content: iwer() + `;window.__xrdev = new IWER.XRDevice(IWER.metaQuest3); window.__xrdev.installRuntime({ forceInstall: true });
+    { const P = XRReferenceSpace.prototype, o = P.getOffsetReferenceSpace; P.getOffsetReferenceSpace = function (t) { return o.call(this, t && t.matrix ? t.matrix : t); }; }` });
   const errores = [];
   pag.on('pageerror', (e) => errores.push('pageerror: ' + e.message));
   pag.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); if (process.env.VERBOSO) console.log('[consola]', m.text()); });

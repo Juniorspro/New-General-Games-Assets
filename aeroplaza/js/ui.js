@@ -11,6 +11,7 @@ import { RANURAS, PALETA, PALETA_PELO, loTengo, precio, precioJoyas, DE_MISION, 
 import { tiendaJoyas, verAnuncio, anunciosQuedan } from './joyas.js';
 import { Caja } from './caja.js';
 import { Guardado } from './guardar.js';
+import { VisorXR } from './vr-xr.js';
 import { NPCS } from './misiones.js';
 import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
@@ -879,6 +880,13 @@ export const UI = {
     const v = this.ventana('🥽 ' + t('vr_titulo'), c, { ancho: 560, alCerrar: () => { if (!elegido) alVolver && alVolver(); } });
     c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !J.G.opciones[k]; b.classList.toggle('si', J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
     c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarVR(b.dataset.sbs === '1'); });
+    /* con un visor de verdad (Quest, Pico, la compu con visor): una tercera opción, arriba de todo */
+    VisorXR.soportado().then((si) => {
+      if (!si || !c.isConnected) return;
+      const b = el(`<button class="vr-op vr-xr" data-xr="1"><b>${t('vr_xr')}</b><small>${t('vr_xr_d')}</small></button>`);
+      c.querySelector('.vr-opciones').prepend(b); c.querySelector('.vr-opciones').classList.add('con-xr');
+      b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarXR(); };
+    });
   },
   /* después de un minijuego: ver un anuncio duplica los orbes ganados (si quedan anuncios hoy) */
   botonDuplicar(c, premio) {

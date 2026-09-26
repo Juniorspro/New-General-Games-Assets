@@ -51,6 +51,7 @@ import { regaloDelDia } from './joyas.js';
 import { VR } from './vr.js';
 import { ManosCamara } from './manos-camara.js';
 import { Manos } from './manos.js';
+import { VisorXR } from './vr-xr.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
 
@@ -145,6 +146,9 @@ async function iniciar() {
 
   let tuto = null, estudio = null;
   const vr = new VR();
+  /* el visor de verdad (WebXR: Quest y compañía) */
+  const visor = new VisorXR();
+  let tXR = 0;
   /* las manos del VR (manos.js), por la cámara del celu (manos-camara.js, MediaPipe en un worker) */
   const manos = new Manos();
   let camManos = null;
@@ -226,6 +230,18 @@ async function iniciar() {
       manos.menu.fps = vr.verFps;
       if (conManos) p.then(() => { if (vr.activo) prenderManos(); });
       return p;
+    },
+    /* con un visor de verdad: el bucle es el del visor (hasta 120 Hz) y las manos son las del visor */
+    async entrarXR() {
+      UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
+      const volver = () => { ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; manos.activa = false; manos.escena.removeFromParent(); for (const m of manos.manos) m.visible = false; manos.menu.cerrar(); cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); };
+      /* (primero el VR en modo visor, así el primer cuadro del visor ya es en primera persona) */
+      await vr.entrar(false, { raiz: UI.raiz, cam, xr: visor, alSalir: volver });
+      manos.activa = true; manos.fuente = 'xr'; motor.escena.add(manos.escena);
+      try {
+        await visor.entrar(motor, { alCuadro: (tt) => { const dt = tXR ? (tt - tXR) / 1000 : 1 / 72; tXR = tt; if (!(dt > 0)) return; J.dtReal = dt; try { paso(Math.min(0.05, dt), true); } catch (e) { mostrarError(e); } }, alSalir: () => { tXR = 0; vr.salir(); } });
+      } catch (e) { console.warn('visor:', e); vr.salir(); UI.avisar(t('vr_xr_error'), 'azul'); return false; }
+      return true;
     },
     salirVR() { vr.salir(); },
     get enVR() { return vr.activo; },
@@ -909,11 +925,13 @@ async function iniciar() {
     if (reino.mar) aguaSigueCielo(reino.mar, cielo);
     cam.rollExtra = reino.camRoll || 0;   // (el runner: la cámara se ladea con los golpes)
     if (vr.activo) cam.fp = true;          // (en VR siempre primera persona, también después de viajar)
-    cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
-    if (vr.activo) { vr.orientar(motor.camara, cam, dt); vr.el?.classList.toggle('hay-algo', !!accionCerca); }
+    /* (en el visor, la cámara la pone el visor: el juego no la mueve) */
+    if (!visor.activo) cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
+    if (vr.activo) { if (visor.activo) vr.orientarXR(motor.camara, cam); else vr.orientar(motor.camara, cam, dt); vr.el?.classList.toggle('hay-algo', !!accionCerca); }
     /* las manos: la cabeza de este cuadro (para ubicar lo que ve la cámara), y lo que hicieron */
     if (vr.activo && manos.activa) {
-      manos.registrarCabeza(vr.tVer || performance.now(), motor.camara.quaternion, motor.camara.position, vr.giroCSS);
+      if (visor.activo) visor.leerManos(manos, performance.now() / 1000);
+      else manos.registrarCabeza(vr.tVer || performance.now(), motor.camara.quaternion, motor.camara.position, vr.giroCSS);
       manos.menu.camina = vr.camina;
       const ev = manos.actualizar(dt, vr.tVer || performance.now(), {
         cabezaP: motor.camara.position, cabezaQ: motor.camara.quaternion, interactivos: apuntablesVR(),
@@ -991,6 +1009,8 @@ async function iniciar() {
     const congela = reino.congela > 0;
     /* en VR se dibuja por vr-dibujo.js (el mundo una vez, reproyectado a cada ojo con la cabeza de
        ese instante); real: lo que pasó de verdad desde el cuadro anterior (para ver si se llega) */
+    /* el visor: su origen en los pies del muñeco, girado con el rumbo del VR */
+    if (visor.activo) visor.ponerOrigen(yo.p, vr.base);
     if (dibujar && !congela) { if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt, manos.activa && manos.algo ? (ojo) => manos.dibujarOjo(motor.r, ojo) : null); else motor.dibujar(dt); }
     delirio.cuadro(dt, reino, motor.camara, dibujar, dibujar && !congela);
   }
@@ -1011,13 +1031,14 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { ManosCamara, manos, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { visor, VisorXR, ManosCamara, manos, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {
     requestAnimationFrame(bucle);
-    const real = (tt - ult) / 1000; ult = tt; J.dtReal = real;
-    if (window.__pausa) return;
+    const real = (tt - ult) / 1000; ult = tt;
+    if (window.__pausa || visor.activo) return;   // (con el visor, el bucle es el suyo)
+    J.dtReal = real;
     try { paso(Math.min(0.05, real)); } catch (e) { mostrarError(e); }
   };
   if (!Q.has('pausa')) requestAnimationFrame(bucle);

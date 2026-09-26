@@ -27,9 +27,9 @@ import { Pantalla } from './pantalla.js';
 import { DibujoVR } from './vr-dibujo.js';
 
 sumar({
-  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo' },
-  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world', vr_manos: '✋ Hands with the camera', vr_manos_d: 'Like Meta Quest: pinch to use', vr_fps: '⏱ Frames per second', vr_fps_d: 'Above each eye' },
-  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo', vr_manos: '✋ Mãos com a câmera', vr_manos_d: 'Como no Meta Quest: pinça para usar', vr_fps: '⏱ Quadros por segundo', vr_fps_d: 'Em cima de cada olho' },
+  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo', vr_xr: '🥽 Visor VR', vr_xr_d: 'Quest y otros: hasta 120 Hz, con tus manos', vr_xr_error: 'El visor no pudo arrancar' },
+  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world', vr_manos: '✋ Hands with the camera', vr_manos_d: 'Like Meta Quest: pinch to use', vr_fps: '⏱ Frames per second', vr_fps_d: 'Above each eye', vr_xr: '🥽 VR headset', vr_xr_d: 'Quest and others: up to 120 Hz, with your hands', vr_xr_error: 'The headset couldn’t start' },
+  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo', vr_manos: '✋ Mãos com a câmera', vr_manos_d: 'Como no Meta Quest: pinça para usar', vr_fps: '⏱ Quadros por segundo', vr_fps_d: 'Em cima de cada olho', vr_xr: '🥽 Óculos VR', vr_xr_d: 'Quest e outros: até 120 Hz, com suas mãos', vr_xr_error: 'Os óculos não conseguiram iniciar' },
 });
 
 const Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0), Q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
@@ -68,8 +68,14 @@ export class VR {
     };
   }
   /* se llama desde el toque del botón (en iOS el permiso tiene que pedirse ahí) */
-  async entrar(sbs, { raiz, cam, alSalir, avisar }) {
+  async entrar(sbs, { raiz, cam, alSalir, avisar, xr = null }) {
     if (this.activo) return true;   // (ya adentro: una segunda capa y el "antes" de la cámara quedaban mal)
+    /* con un visor de verdad (vr-xr.js) la cabeza y el dibujo son del visor: sin sensores ni capa */
+    if (xr) {
+      this.xr = xr; this.activo = true; this.sbs = false; this.alSalir = alSalir; this.cam = cam;
+      this.fpAntes = cam.fp; cam.fp = true; cam.enVR = true; this.base = cam.yaw; this.camina = false; this.tAbajo = 0;
+      return true;
+    }
     const DOE = window.DeviceOrientationEvent;
     if (DOE && typeof DOE.requestPermission === 'function') {
       try { if ((await DOE.requestPermission()) !== 'granted') avisar?.(t('vr_permiso')); } catch { avisar?.(t('vr_permiso')); }
@@ -91,6 +97,7 @@ export class VR {
   salir() {
     if (!this.activo) return;
     this.activo = false; this.camina = false;
+    if (this.xr) { const x = this.xr; this.xr = null; x.salir(); this.cam.fp = this.fpAntes; this.cam.enVR = false; this.alSalir?.(); return; }
     removeEventListener('deviceorientation', this._orient);
     removeEventListener('devicemotion', this._mov);
     try { screen.orientation?.unlock?.(); if (document.fullscreenElement) document.exitFullscreen?.(); } catch { /* nada */ }
@@ -161,6 +168,7 @@ export class VR {
   /* antes de mover al muñeco: lo que "tocó" (E es lo que leyó entrada.js) */
   entrada(E, dt, hayAlgo) {
     E.camX = 0; E.camY = 0; E.zoom = 1;
+    if (this.xr) this.xr.leerMandos(E, dt, (lado) => { this.base += lado * Math.PI / 4; });
     if (this.toque) { this.toque = false; if (hayAlgo) { E.accion = true; this.camina = false; } else this.camina = !this.camina; }
     if (this.salta) { this.salta = false; E.salta = true; E.sostiene = true; this._tSalto = 0.25; }
     if (this._tSalto > 0) { this._tSalto -= dt; E.sostiene = true; }
@@ -180,13 +188,19 @@ export class VR {
     if (this.el) { this.el.style.setProperty('--salir', Math.min(1, this.tAbajo / SALIR_TRAS)); this.el.classList.toggle('saliendo', this.tAbajo > 0.2); this.el.classList.toggle('camina', this.camina); }
     if (this.tAbajo >= SALIR_TRAS) this.salir();
   }
+  /* en el visor: la cabeza ya la puso el visor al dibujar; de ahí salen el rumbo y la mirada */
+  orientarXR(camara, cam) {
+    _v.set(0, 0, -1).applyQuaternion(camara.quaternion);
+    cam.yaw = Math.atan2(-_v.x, -_v.z);
+    cam.pitch = THREE.MathUtils.clamp(0.3 - Math.asin(THREE.MathUtils.clamp(_v.y, -1, 1)), -0.95, 1.55);
+  }
   get fov() { return this.sbs ? FOV.sbs : FOV.simple; }
   /* cuánto está girado el juego por CSS respecto de la pantalla (lo usa la cámara de las manos: el
      video llega derecho para la pantalla, no para el juego) */
   get giroCSS() { return Pantalla.girado ? (Pantalla.invertido ? -Math.PI / 2 : Math.PI / 2) : 0; }
   /* un cartelito en cada ojo por unos segundos (la interfaz normal no se ve en VR) */
   decir(texto, seg = 3.5) {
-    if (!this.el) return;
+    if (!this.el) { this.alDecir?.(texto, seg); return; }
     for (const p of this.el.querySelectorAll('.vr-ayuda')) p.textContent = texto;
     this.el.classList.remove('sin-ayuda'); clearTimeout(this._tDecir);
     this._tDecir = setTimeout(() => this.el?.classList.add('sin-ayuda'), seg * 1000);
@@ -221,6 +235,13 @@ export class VR {
   }
   /* el dibujo de cada cuadro (el de la pantalla: real es lo que pasó de verdad desde el anterior) */
   dibujar(motor, dt, real = dt, encima = null) {
+    /* en el visor, three dibuja los dos ojos (a la frecuencia del visor); las sombras, como siempre */
+    if (this.xr) {
+      const r = motor.r, cada = motor.Q.sombraCada || 1;
+      r.shadowMap.autoUpdate = cada === 1; if (cada > 1) r.shadowMap.needsUpdate = ((this._nSombra = (this._nSombra || 0) + 1) % cada) === 0;
+      r.setRenderTarget(null); r.render(motor.escena, motor.camara);
+      return;
+    }
     if (!this.dib) this.dib = new DibujoVR(motor);
     this.motor = motor;
     this.dib.medir(this.sbs, this.fov);
