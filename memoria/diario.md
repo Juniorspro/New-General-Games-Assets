@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la tarde · `claude/fijate-iszyer`:**
+  - Pidió: un video de su celu y "lentoooo".
+  - Quedó ([aeroplaza-21](aeroplaza-21.md)): el adelanto sin el tope que lo
+    frenaba con una cámara lenta (con la foto a 194 ms, de costado 97 → 26 ms
+    atrás), con tope de 10 cm para los manotazos.
+  - Falta: la captura del cartel de ⏱ de su celu (fotos/s, ms, ms/red, GPU):
+    sin eso no se sabe cuánto tarda la foto ahí.
 - **27/09/2026, al mediodía · `claude/fijate-iszyer`:**
   - Pidió: "de palma va bien pero tarda en seguirme; al darla vuelta se deforma
     todo y no la sigue". Mandó su "Recreo" de referencia.

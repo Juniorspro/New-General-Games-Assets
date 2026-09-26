@@ -147,6 +147,8 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
   a la profundidad que le da la forma 3D. Al darse vuelta, una sola cámara no
   sabe para qué lado está girada la mano: queda la versión que sigue lo que
   venía (la mano no se dispara ni se deforma).
+- El adelanto tapa lo que tarda la foto hasta 0,35 s (con un celu de cámara
+  lenta, un poco más), y el centro no se adelanta más de 10 cm.
 - **✋ Las manos: Rápidas · Medio · Suaves** (abajo de las llaves). Rápidas van
   pegadas a la mano y tiemblan un poco, como un Quest; Suaves, quietas no
   tiemblan y van un poco atrás. De entrada, Medio.

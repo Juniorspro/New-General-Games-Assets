@@ -104,6 +104,10 @@ const FRENO = 0.08;    // y después frena en esto (si la red no la ve, no se co
 const LMAX = 0.1089;   // lo más que se adelanta de costado por el atraso de la cámara (s) (con la cámara, lo dice cada nivel: SUAVIDAD)
 const LMAX_H = 0.1;    // y en profundidad (s)
 const AMORT = 0.8012;  // cuánto de la velocidad se usa para adelantar
+/* (vuelta 21: con la cámara lenta, lo que tarda de más se adelanta un poco más, hasta AMORT + AMORT_MAS
+   con 0,26 s. Con la foto a 0,19 s, medio iba 97 ms atrás de costado; ahora 24. Hasta 0,13 s, igual que
+   antes. LAT_TOPE: lo más que se cree que tarda) */
+const LAT_TOPE = 0.35, AMORT_MAS = 0.24, LAT_REF = 0.13, ADEL_MAX = 0.1;
 const TAU = 0.0321;    // en cuánto se reparte el salto de cada foto nueva: un resorte (s)
 const SNAP = 0.4;      // un salto más grande que esto no se reparte: se va derecho (m), más 2 m/s por lo que estuvo sin fotos
 const RARA = 0.08;     // una foto que cae más lejos que esto de donde tenía que estar se espera (m)
@@ -347,14 +351,16 @@ const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }
    - Rápidas: sin anclas y adelantando todo lo que tarda la cámara: va pegada a la mano y tiembla un
      poco, como un Quest. El adelanto del centro, de a poco entre v0 y v1 (m/s): casi quieta, la
      velocidad es ruido.
+   - Los topes (lmax, lmaxH) van a 0,35 s en los tres (vuelta 21): con la cámara lenta de un celu, el
+     tope de antes (0,13-0,2 s) dejaba la mano 100-220 ms atrás.
    - Medio y suaves: de una búsqueda (vuelta 17, herramientas/manos-lento.mjs: 450 al azar, con las
      semillas 1-5; comprobado con las 6-10). Medio, otra vez en la vuelta 20 (300, contando cuánto
      tarda en arrancar y los movimientos chicos: "tarda en seguirme"), con vs: con el borde empujado y
      el centro a más de vs (m/s), el ancla de costado se suelta sin esperar te */
 export const SUAVIDAD = {
-  rapida: { anclas: null, lmax: 0.2, lmaxH: 0.15, v0: 0.03, v1: 0.1 },
-  media: { lmax: 0.1575, lmaxH: 0.1247, anclas: { rl: 0.0038, rh: 0.0106, tq: 0.2645, tqH: 0.1799, te: 0.0426, teH: 0.0172, ts: 0.038, tsH: 0.0491, vs: 0.0568 } },
-  suave: { lmax: 0.135, lmaxH: 0.1945, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514 } },
+  rapida: { anclas: null, lmax: 0.35, lmaxH: 0.35, v0: 0.03, v1: 0.1 },
+  media: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0048, rh: 0.0106, tq: 0.2645, tqH: 0.1799, te: 0.0426, teH: 0.0172, ts: 0.038, tsH: 0.0491, vs: 0.0568 } },
+  suave: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514 } },
 };
 class Mano {
   constructor(derecha) {
@@ -436,7 +442,7 @@ class Mano {
     if (!this.visible) { this.visible = true; this.pellizca = false; this.anulado = false; this.profAntes = undefined; }
   }
   /* al cuadro que se dibuja: lo filtrado más la velocidad por lo que pasó desde que LLEGÓ la foto
-     (así se sigue moviendo parejo entre foto y foto) y por lo que tarda la cámara (hasta 100 ms) */
+     (así se sigue moviendo parejo entre foto y foto) y por lo que tarda la cámara (hasta LAT_TOPE) */
   adelantar(tDibujo, adelanta) {
     const E = this.euro;
     const edad = Math.max(0, tDibujo - this.tLlego), sola = edad < HMAX ? edad : HMAX + FRENO * (1 - Math.exp(-(edad - HMAX) / FRENO));
@@ -444,15 +450,21 @@ class Mano {
        ruido. Solo la del centro: girando en el lugar, o moviendo los dedos, el centro no se mueve y las
        anclas creían que estaba quieta; se apagaba todo el adelanto y el giro iba 20° atrás) */
     const pa = this.pesoAd ?? 1;
-    const k = adelanta ? (sola + Math.min(this.lmax ?? LMAX, this.lat)) * AMORT : 0;
+    const la = Math.min(LAT_TOPE, this.lat), am = AMORT + AMORT_MAS * Math.min(1, Math.max(0, (la - LAT_REF) / 0.13));
+    let k = adelanta ? (sola + Math.min(this.lmax ?? LMAX, la)) * am : 0;
     /* (y a qué velocidad se mueve eso: la del filtro mientras sigue sola, frenando después) */
     const kv = adelanta ? AMORT * pa * (edad < HMAX ? 1 : Math.exp(-(edad - HMAX) / FRENO)) : 0;
     const r = this.rayo;
     if (!r) { for (let i = 0; i < 63; i++) { this.p[i] = E.x[i] + E.dx[i] * k * pa; this.vb[i] = E.dx[i] * kv; } return; }
     /* con la cámara: de costado y en profundidad, cada uno con su tope */
-    const kh = adelanta ? (sola + Math.min(this.lmaxH ?? LMAX_H, this.lat)) * AMORT : 0;
+    let kh = adelanta ? (sola + Math.min(this.lmaxH ?? LMAX_H, la)) * am : 0;
     let c0 = 0, c1 = 0, c2 = 0; for (const i of CENTRO) { c0 += E.dx[i * 3] / 5; c1 += E.dx[i * 3 + 1] / 5; c2 += E.dx[i * 3 + 2] / 5; }
     const q = 1 - pa, vc = [c0 * q, c1 * q, c2 * q];
+    /* (y lo que se corre el centro, con tope: con la foto a 0,19 s, en un manotazo a 1 m/s que va y
+       vuelve el adelanto la pasaba 50 cm y después saltaba de golpe) */
+    { const a0 = c0 * pa, a1 = c1 * pa, a2 = c2 * pa, ah = a0 * r[0] + a1 * r[1] + a2 * r[2];
+      const d = Math.hypot((a0 - ah * r[0]) * k + ah * r[0] * kh, (a1 - ah * r[1]) * k + ah * r[1] * kh, (a2 - ah * r[2]) * k + ah * r[2] * kh);
+      if (d > ADEL_MAX) { k *= ADEL_MAX / d; kh *= ADEL_MAX / d; } }
     for (let i = 0; i < 63; i += 3) {
       const vx = E.dx[i] - vc[0], vy = E.dx[i + 1] - vc[1], vz = E.dx[i + 2] - vc[2], vh = vx * r[0] + vy * r[1] + vz * r[2];
       const w = [vx, vy, vz];
