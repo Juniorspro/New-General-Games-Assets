@@ -81,8 +81,8 @@ Sigue de [aeroplaza-12](aeroplaza-12.md). Rama `claude/fijate-iszyer`.
   - se adelantan con su velocidad hasta el cuadro que se dibuja (como mucho
     70 ms).
   - Medido:
-    - quieta, 0,33 mm contra 0,87 del ruido;
-    - a 1 m/s, 7 mm de error contra 46 sin adelantar.
+    - quieta, 0,27-0,29 mm contra 0,87 del ruido;
+    - a 1 m/s, 7,1 mm de error contra 44 sin adelantar.
 - **El dibujo**:
   - las 48 cápsulas de las dos manos en una `InstancedBufferGeometry`: el
     shader arma cada cápsula con dos puntos y dos radios;
@@ -120,7 +120,8 @@ Sigue de [aeroplaza-12](aeroplaza-12.md). Rama `claude/fijate-iszyer`.
 - Las piezas de verdad quedan escondidas, para los choques y los rayos.
 - Si una se mueve o el juego la muestra o la esconde, su grupo vuelve a ser
   piezas sueltas.
-- Resultado: 29 tandas y 138 piezas, un 8 % menos de llamadas.
+- Resultado (en la plaza, alta, tres vistas): 26 tandas y 127 piezas; 759
+  llamadas contra 828, un 8 % menos.
 - La imagen no cambia: entre dos corridas iguales sin instanciar ya hay 26 a
   34 dB de ruido (burbujas, NPC).
 - Para comparar: `?sinInstanciar`.
@@ -189,6 +190,13 @@ Sigue de [aeroplaza-12](aeroplaza-12.md). Rama `claude/fijate-iszyer`.
 - `xr` (9): con IWER.
 - MediaPipe (`pruebas/mediapipe/`) e IWER (`pruebas/iwer.min.js`) se bajan con
   curl y no se commitean.
+
+## Tanda completa
+
+- Todas bien con el armado final (las 32). Las que fallaron en la primera
+  pasada (choques, delfín, manos) eran las tres trampas de arriba.
+- `fotos` avisa `ERR_FAILED` en medusas y jardín: ya pasaba en la vuelta 12
+  (algo de afuera que las pruebas cortan).
 
 ## Lo que falta
 
