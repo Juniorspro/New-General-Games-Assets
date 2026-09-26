@@ -87,6 +87,7 @@ const toque = (pag) => pag.evaluate(() => { const c = document.querySelector('.v
   prueba('mirar abajo 2 s sale y vuelve la interfaz', !r7.activo && r7.hud === '' && !r7.capa, JSON.stringify(r7));
   /* una ventana (el mapa, una charla…) es de la interfaz plana: se sale del VR */
   await pag.evaluate(() => window.__A.J.entrarVR(true)); await pag.waitForTimeout(200); await avanzar(pag, 2);
+  prueba('con visor no hay botón de flash (no se puede tocar la pantalla)', await pag.evaluate(() => window.__A.vr.sbs && !document.querySelector('.vr-capa .vr-flash')));
   await pag.evaluate(() => window.__A.UI.ventana('x', 'y')); await avanzar(pag, 2);
   prueba('abrir una ventana sale del VR', await pag.evaluate(() => !window.__A.vr.activo && window.__A.UI.hud.style.display === ''));
   await pag.evaluate(() => window.__A.UI.cerrarVentana());
@@ -104,6 +105,38 @@ const toque = (pag) => pag.evaluate(() => { const c = document.querySelector('.v
   await avanzar(pag, 3);
   const r = await pag.evaluate((y0) => ({ sbs: window.__A.vr.sbs, ojos: document.querySelectorAll('.vr-capa .vr-ojo').length, dy: +(window.__A.cam.yaw - y0).toFixed(2), camina: window.__A.vr.camina }), y0);
   prueba('sin visor: una vista; sin giroscopio se mira arrastrando (y arrastrar no cuenta como toque)', !r.sbs && r.ojos === 1 && Math.abs(r.dy) > 0.5 && !r.camina, JSON.stringify(r));
+  /* el flash: solo sin visor; un toque lo prende y otro lo apaga, sin caminar; si el celu no deja, avisa */
+  const rf = await pag.evaluate(async () => {
+    const A = window.__A, b = document.querySelector('.vr-capa .vr-flash'); if (!b) return { boton: false };
+    const orig = A.vr.alFlash, pedidos = [];
+    A.vr.alFlash = async (on) => { pedidos.push(on); return on; };
+    A.vr.toque = false; const camina0 = A.vr.camina;
+    const tocar = async () => { b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); b.click(); await new Promise((ok) => setTimeout(ok, 50)); };
+    await tocar(); const prendido = b.classList.contains('prendido') && b.getAttribute('aria-pressed') === 'true';
+    await tocar(); const apagado = !b.classList.contains('prendido');
+    await new Promise((ok) => setTimeout(ok, 600));   // (lo que tarda la capa en tomar un toque como "caminar")
+    const camina = A.vr.camina !== camina0 || !!A.vr.toque;
+    A.vr.alFlash = async () => 'no'; await tocar(); const aviso = document.querySelector('.vr-ayuda')?.textContent || '';
+    A.vr.alFlash = orig;
+    const r = b.getBoundingClientRect();
+    return { boton: true, pedidos, prendido, apagado, camina, aviso, noHay: b.classList.contains('no-hay'), lugar: [Math.round(r.right), Math.round(r.top), Math.round(r.width)] };
+  });
+  await pag.screenshot({ path: path.join(SAL, 'vr-flash.png') });
+  prueba('sin visor hay botón de flash: prende y apaga, y tocarlo no camina', rf.boton && JSON.stringify(rf.pedidos) === '[true,false]' && rf.prendido && rf.apagado && !rf.camina, JSON.stringify(rf));
+  prueba('si el celu no deja prender el flash, avisa', rf.noHay && /flash/i.test(rf.aviso), rf.aviso);
+  /* la linterna de verdad (manos-camara.js), con una cámara de mentira: con torch prende y apaga (y
+     cierra la cámara si no hay manos); sin torch dice que no y no deja la cámara abierta */
+  const rl = await pag.evaluate(async () => {
+    const A = window.__A, mc = new A.ManosCamara({}), pedidos = []; let torch = false;
+    const pista = { getCapabilities: () => ({ torch: true }), applyConstraints: async (c) => { pedidos.push(c.advanced[0].torch); torch = c.advanced[0].torch; }, getSettings: () => ({ torch }), stop() { pista.parada = true; } };
+    mc.abrirCamara = async () => { mc.stream = { getVideoTracks: () => [pista], getTracks: () => [pista] }; return mc.stream; };
+    const a = await mc.linterna(true), b = mc.flash, c = await mc.linterna(false), cerrada = !mc.stream && !!pista.parada;
+    const p2 = { getCapabilities: () => ({}), applyConstraints: async () => {}, getSettings: () => ({}), stop() { p2.parada = true; } };
+    mc.abrirCamara = async () => { mc.stream = { getVideoTracks: () => [p2], getTracks: () => [p2] }; return mc.stream; };
+    const d = await mc.linterna(true);
+    return { a, b, c, cerrada, pedidos, d, cerrada2: !mc.stream && !!p2.parada };
+  });
+  prueba('la linterna: con torch prende, apaga y cierra la cámara; sin torch dice que no', rl.a === true && rl.b && rl.c === false && rl.cerrada && JSON.stringify(rl.pedidos) === '[true,false]' && rl.d === 'no' && rl.cerrada2, JSON.stringify(rl));
   await pag.keyboard.press('Escape'); await avanzar(pag, 2);
   prueba('Escape sale del modo VR', await pag.evaluate(() => !window.__A.vr.activo));
   prueba('sin errores (VR sin visor)', !errores.some((e) => !/ERR_FAILED/.test(e)), errores.filter((e) => !/ERR_FAILED/.test(e)).slice(0, 2).join(' | '));

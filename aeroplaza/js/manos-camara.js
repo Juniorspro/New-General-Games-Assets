@@ -99,51 +99,97 @@ export class ManosCamara {
     this.alLlegar = alLlegar; this.avisar = avisar;
     this.hfov = hfov;            // el campo de la cámara de atrás, del lado largo (se puede ajustar)
     this.estado = 'apagada';     // apagada · cargando · lista · error
-    this.ocupado = false; this.stats = { cuadros: 0, ms: 0, saltados: 0, latencia: 0, ahorrados: 0 };
-    this.tMano = -1e9; this.nCuadro = 0;
+    this.stats = { cuadros: 0, ms: 0, saltados: 0, latencia: 0, ahorrados: 0, tarde: 0 };
+    this.ultimaT = -1e9; this.redes = null; this.listo = null;
+    this.tMano = -1e9; this.nCuadro = 0; this.flash = false; this.activa = false;
     this.cfg = { base: MANOS_BASE, modelo: MANOS_MODELO, ...(window.AEROPLAZA_MANOS || {}) };
   }
-  /* el worker con MediaPipe (se puede usar sin cámara: probar() le pasa imágenes) */
-  /* (en CPU: en el worker va en otro núcleo y no le saca tiempo a la placa, que está dibujando a
-     120; con la GPU la red era más rápida pero se peleaba con el dibujo) */
-  async iniciarRed({ delegado = 'CPU', tope = 60000 } = {}) {
-    if (this.worker) return this.listo;
-    this.estado = 'cargando';
-    const url = URL.createObjectURL(new Blob([WORKER()], { type: 'text/javascript' }));
-    this.worker = new Worker(url);
-    this.listo = new Promise((ok, mal) => {
-      const t = setTimeout(() => mal(new Error('la red de las manos tardó demasiado')), tope);
-      this.worker.onerror = (e) => { clearTimeout(t); mal(new Error(e.message || 'worker')); };
-      this.worker.onmessage = (e) => {
-        const d = e.data;
-        if (d.tipo === 'listo') { clearTimeout(t); this.estado = 'lista'; this.delegado = d.delegado; this.worker.onmessage = (e2) => this.recibir(e2.data); ok(d.delegado); }
-        else if (d.tipo === 'error') { clearTimeout(t); mal(new Error(d.error)); }
-      };
+  /* los workers con MediaPipe (se pueden usar sin cámara: probar() le pasa imágenes)
+     (en CPU: en el worker va en otro núcleo y no le saca tiempo a la placa, que está dibujando a
+     120; con la GPU la red era más rápida pero se peleaba con el dibujo)
+     DOS redes a la par si el celu tiene 6 núcleos o más: una lee una foto y la otra la siguiente. Una
+     sola lee 14-20 por segundo (tarda más que lo que tarda la cámara en dar la próxima); dos, casi
+     todas. Simulado (pruebas/manos-celu.mjs): el atraso baja un 18 %, tiembla menos y no titila. Sin
+     manos a la vista trabaja una sola */
+  async iniciarRed({ delegado = 'CPU', tope = 60000, dos = null } = {}) {
+    if (this.listo) return this.listo;
+    this.estado = 'cargando'; this.redes = [];
+    this.url ||= URL.createObjectURL(new Blob([WORKER()], { type: 'text/javascript' }));
+    this.listo = this.nuevaRed(delegado, tope).then((r) => {
+      this.worker = r.w; this.estado = 'lista'; this.delegado = r.delegado;
+      /* (la segunda después, con los archivos ya en la caché; si no arranca, queda una) */
+      if (dos ?? (navigator.hardwareConcurrency || 4) >= 6) this.nuevaRed(r.delegado, tope).catch(() => {});
+      return r.delegado;
     }).catch((e) => { this.estado = 'error'; this.error = e.message; throw e; });
-    this.worker.postMessage({ tipo: 'iniciar', base: this.cfg.base, modelo: this.cfg.modelo, delegado });
     return this.listo;
+  }
+  nuevaRed(delegado, tope) {
+    const w = new Worker(this.url), red = { w, ocupado: false };
+    return new Promise((ok, mal) => {
+      const t = setTimeout(() => { w.terminate(); mal(new Error('la red de las manos tardó demasiado')); }, tope);
+      w.onerror = (e) => { clearTimeout(t); w.terminate(); mal(new Error(e.message || 'worker')); };
+      w.onmessage = (e) => {
+        const d = e.data;
+        if (d.tipo === 'listo') { clearTimeout(t); if (!this.redes) { w.terminate(); return; } this.redes.push(red); w.onmessage = (e2) => this.recibir(e2.data, red); ok({ w, delegado: d.delegado }); }
+        else if (d.tipo === 'error') { clearTimeout(t); w.terminate(); mal(new Error(d.error)); }
+      };
+      w.postMessage({ tipo: 'iniciar', base: this.cfg.base, modelo: this.cfg.modelo, delegado });
+    });
   }
   /* la cámara de atrás, chica y rápida */
   async prender() {
     await this.iniciarRed();
-    const stream = this.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60, max: 60 } } });
-    const v = this.video = document.createElement('video');
-    v.playsInline = true; v.muted = true; v.srcObject = stream;
-    /* en la página, chiquito y casi transparente: un video suelto (fuera del documento) en algunos
-       celus deja de dar cuadros o los da de a saltos, y la mano se cortaba */
-    v.setAttribute('aria-hidden', 'true');
-    Object.assign(v.style, { position: 'fixed', left: '0', top: '0', width: '2px', height: '2px', opacity: '0.01', pointerEvents: 'none', zIndex: '-1' });
-    document.body.appendChild(v);
-    await v.play();
+    await this.abrirCamara();
     this.activa = true; this.pedir();
     return true;
   }
-  apagar() {
-    this.activa = false;
-    this.stream?.getTracks().forEach((t) => t.stop()); this.stream = null;
+  async abrirCamara() {
+    if (this.stream) return this.stream;
+    if (this._abriendo) return this._abriendo;
+    this._abriendo = (async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60, max: 60 } } });
+      const v = this.video = document.createElement('video');
+      v.playsInline = true; v.muted = true; v.srcObject = stream;
+      /* en la página, chiquito y casi transparente: un video suelto (fuera del documento) en algunos
+         celus deja de dar cuadros o los da de a saltos, y la mano se cortaba */
+      v.setAttribute('aria-hidden', 'true');
+      Object.assign(v.style, { position: 'fixed', left: '0', top: '0', width: '2px', height: '2px', opacity: '0.01', pointerEvents: 'none', zIndex: '-1' });
+      document.body.appendChild(v);
+      await v.play();
+      this.stream = stream;
+      return stream;
+    })();
+    try { return await this._abriendo; } finally { this._abriendo = null; }
+  }
+  cerrarCamara() {
+    this.stream?.getTracks().forEach((t) => t.stop()); this.stream = null; this.flash = false;
     if (this.video) { this.video.srcObject = null; this.video.remove(); this.video = null; }
   }
-  soltar() { this.apagar(); this.worker?.terminate(); this.worker = null; this.estado = 'apagada'; }
+  /* sin manos; la cámara queda si el flash está prendido. todo: también el flash (al salir del VR) */
+  apagar({ todo = false } = {}) {
+    this.activa = false;
+    if (todo || !this.flash) this.cerrarCamara();
+  }
+  /* el flash de la cámara de atrás (la linterna): alumbra las manos en un lugar oscuro, donde la red
+     casi no las ve. Anda con las manos o sin ellas (abre la cámara solo para eso). Devuelve si quedó
+     prendido; 'no' si el celu no deja (iOS, y los que no dicen torch en sus capacidades) */
+  async linterna(prender) {
+    if (!prender) {
+      const tr = this.stream?.getVideoTracks()[0];
+      try { if (tr && this.flash) await tr.applyConstraints({ advanced: [{ torch: false }] }); } catch { /* ya está */ }
+      this.flash = false;
+      if (!this.activa) this.cerrarCamara();
+      return false;
+    }
+    await this.abrirCamara();
+    const tr = this.stream.getVideoTracks()[0], caps = tr.getCapabilities?.() || {};
+    if (!caps.torch) { if (!this.activa) this.cerrarCamara(); return 'no'; }
+    await tr.applyConstraints({ advanced: [{ torch: true }] });
+    this.flash = tr.getSettings?.().torch !== false;
+    if (!this.flash && !this.activa) this.cerrarCamara();
+    return this.flash || 'no';
+  }
+  soltar() { this.apagar({ todo: true }); for (const r of this.redes || []) r.w.terminate(); this.redes = null; this.worker = null; this.listo = null; this.estado = 'apagada'; }
   /* cada cuadro nuevo de la cámara (requestVideoFrameCallback: sale justo cuando llega, con la hora
      en que se sacó; si no está, cada 16 ms) */
   pedir() {
@@ -158,22 +204,27 @@ export class ManosCamara {
     if (performance.now() - this.tMano > 1000 && (this.nCuadro++ & 1)) { this.stats.ahorrados++; return; }
     this.cuadro(t);
   }
-  async cuadro(t, fuente = this.video) {
-    if (!this.worker || this.estado !== 'lista') return;
-    if (this.ocupado) { this.stats.saltados++; return; }
+  async cuadro(t, fuente = this.video, soloPrimera = false) {
+    if (this.estado !== 'lista' || !this.redes?.length) return;
+    /* la primera red libre (sin manos a la vista, solo la primera) */
+    const quieta = soloPrimera || performance.now() - this.tMano > 1000;
+    const red = this.redes.find((r, i) => !r.ocupado && (i === 0 || !quieta));
+    if (!red) { this.stats.saltados++; return; }
     const w = fuente.videoWidth || fuente.width, h = fuente.videoHeight || fuente.height; if (!w || !h) return;
-    this.ocupado = true; this.aspecto = w / h;
+    red.ocupado = true; this.aspecto = w / h;
     try {
       const imagen = await createImageBitmap(fuente, { resizeWidth: ANCHO_RED, resizeHeight: Math.round(ANCHO_RED * h / w), resizeQuality: 'low' });
-      this.worker.postMessage({ tipo: 'cuadro', imagen, ts: t, t }, [imagen]);
-    } catch { this.ocupado = false; }
+      red.w.postMessage({ tipo: 'cuadro', imagen, ts: t, t }, [imagen]);
+    } catch { red.ocupado = false; }
   }
-  /* para las pruebas (y para ver si anda sin cámara): una imagen suelta */
-  probar(imagen, t = performance.now()) { this.ocupado = false; return this.cuadro(t, imagen); }
-  recibir(d) {
-    if (d.tipo === 'fallo') { this.ocupado = false; return; }
+  /* para las pruebas (y para ver si anda sin cámara): una imagen suelta, a la primera red */
+  probar(imagen, t = performance.now()) { if (this.redes?.[0]) this.redes[0].ocupado = false; return this.cuadro(t, imagen, true); }
+  recibir(d, red) {
+    if (red) red.ocupado = false;
     if (d.tipo !== 'manos') return;
-    this.ocupado = false;
+    /* (con dos redes, una foto puede volver después que la siguiente: la vieja no sirve) */
+    if (d.t < this.ultimaT) { this.stats.tarde++; return; }
+    this.ultimaT = d.t;
     const llego = performance.now();
     const S = this.stats; S.cuadros++; S.ms += (d.ms - S.ms) * 0.1; S.latencia += (llego - d.t - S.latencia) * 0.1;
     if (d.n) this.tMano = llego;

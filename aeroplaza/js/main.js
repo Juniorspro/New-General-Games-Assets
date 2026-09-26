@@ -153,8 +153,11 @@ async function iniciar() {
   /* las manos del VR (manos.js), por la cámara del celu (manos-camara.js, MediaPipe en un worker) */
   const manos = new Manos();
   let camManos = null;
+  const laCamara = () => (camManos ||= new ManosCamara({ alLlegar: (lista, tt, llego) => { if (manos.activa) manos.recibirCamara(lista, tt, llego); } }));
+  /* el flash del VR sin visor (vr.js pone el botón): la linterna de la cámara de atrás */
+  vr.alFlash = (prender) => laCamara().linterna(prender);
   const prenderManos = async () => {
-    if (!camManos) camManos = new ManosCamara({ alLlegar: (lista, tt, llego) => { if (manos.activa) manos.recibirCamara(lista, tt, llego); } });
+    laCamara();
     manos.activa = true; manos.fuente = 'camara';
     vr.decir(t('mn_manos_cargando'), 30);
     try {
@@ -165,7 +168,7 @@ async function iniciar() {
     }
     catch (e) { console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos(); }
   };
-  const apagarManos = () => { camManos?.apagar(); manos.activa = false; manos.limpiar(); };
+  const apagarManos = () => { camManos?.apagar({ todo: !vr.activo }); manos.activa = false; manos.limpiar(); };
   /* lo que las manos pueden apuntar: lo interactivo del lugar a menos de 15 m, con su cartel */
   const cacheApuntables = new Map();
   const apuntablesVR = () => {

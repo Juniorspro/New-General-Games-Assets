@@ -27,9 +27,9 @@ import { Pantalla } from './pantalla.js';
 import { DibujoVR } from './vr-dibujo.js';
 
 sumar({
-  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo', vr_xr: '🥽 Visor VR', vr_xr_d: 'Quest y otros: hasta 120 Hz, con tus manos', vr_xr_error: 'El visor no pudo arrancar' },
-  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world', vr_manos: '✋ Hands with the camera', vr_manos_d: 'Like Meta Quest: pinch to use', vr_fps: '⏱ Frames per second', vr_fps_d: 'Above each eye', vr_xr: '🥽 VR headset', vr_xr_d: 'Quest and others: up to 120 Hz, with your hands', vr_xr_error: 'The headset couldn’t start' },
-  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo', vr_manos: '✋ Mãos com a câmera', vr_manos_d: 'Como no Meta Quest: pinça para usar', vr_fps: '⏱ Quadros por segundo', vr_fps_d: 'Em cima de cada olho', vr_xr: '🥽 Óculos VR', vr_xr_d: 'Quest e outros: até 120 Hz, com suas mãos', vr_xr_error: 'Os óculos não conseguiram iniciar' },
+  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo', vr_xr: '🥽 Visor VR', vr_xr_d: 'Quest y otros: hasta 120 Hz, con tus manos', vr_xr_error: 'El visor no pudo arrancar', vr_flash: 'Flash', vr_flash_no: 'Este celu no deja prender el flash desde el navegador', vr_flash_error: 'No se pudo prender el flash (¿permiso de la cámara?)' },
+  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world', vr_manos: '✋ Hands with the camera', vr_manos_d: 'Like Meta Quest: pinch to use', vr_fps: '⏱ Frames per second', vr_fps_d: 'Above each eye', vr_xr: '🥽 VR headset', vr_xr_d: 'Quest and others: up to 120 Hz, with your hands', vr_xr_error: 'The headset couldn’t start', vr_flash: 'Flash', vr_flash_no: 'This phone doesn’t let the browser turn on the flash', vr_flash_error: 'Couldn’t turn on the flash (camera permission?)' },
+  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo', vr_manos: '✋ Mãos com a câmera', vr_manos_d: 'Como no Meta Quest: pinça para usar', vr_fps: '⏱ Quadros por segundo', vr_fps_d: 'Em cima de cada olho', vr_xr: '🥽 Óculos VR', vr_xr_d: 'Quest e outros: até 120 Hz, com suas mãos', vr_xr_error: 'Os óculos não conseguiram iniciar', vr_flash: 'Flash', vr_flash_no: 'Este celular não deixa o navegador ligar o flash', vr_flash_error: 'Não foi possível ligar o flash (permissão da câmera?)' },
 });
 
 const Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0), Q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
@@ -97,6 +97,7 @@ export class VR {
   salir() {
     if (!this.activo) return;
     this.activo = false; this.camina = false;
+    if (this.flash) { this.flash = false; this.alFlash?.(false)?.catch?.(() => {}); }
     if (this.xr) { const x = this.xr; this.xr = null; x.salir(); this.cam.fp = this.fpAntes; this.cam.enVR = false; this.alSalir?.(); return; }
     removeEventListener('deviceorientation', this._orient);
     removeEventListener('devicemotion', this._mov);
@@ -112,6 +113,9 @@ export class VR {
     const ojos = this.sbs ? 2 : 1;
     const el = this.el = document.createElement('div'); el.className = 'vr-capa' + (this.sbs ? ' sbs' : '') + (this.verFps ? ' con-fps' : '');
     el.innerHTML = Array.from({ length: ojos }, () => `<div class="vr-ojo"><i class="vr-punto"><b></b></i><span class="vr-salir">${t('vr_salir')}</span><p class="vr-ayuda">${t('vr_ayuda')}</p><span class="vr-fps"></span></div>`).join('') + (this.sbs ? '<i class="vr-medio"></i>' : '');
+    /* sin visor (el celu en la mano, la pantalla a la vista): el flash, que alumbra las manos para la
+       cámara de atrás cuando hay poca luz. (Con visor no se puede tocar la pantalla) */
+    if (!this.sbs && this.alFlash) this.botonFlash(el.querySelector('.vr-ojo'));
     raiz.appendChild(el);
     setTimeout(() => el.classList.add('sin-ayuda'), 5000);
     let ultimo = -1, espera = null, arr = null;
@@ -204,6 +208,27 @@ export class VR {
     for (const p of this.el.querySelectorAll('.vr-ayuda')) p.textContent = texto;
     this.el.classList.remove('sin-ayuda'); clearTimeout(this._tDecir);
     this._tDecir = setTimeout(() => this.el?.classList.add('sin-ayuda'), seg * 1000);
+  }
+  botonFlash(donde) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'vr-flash'; b.setAttribute('aria-label', t('vr_flash')); b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"/></svg>';
+    /* (el toque del botón no llega a la capa: si no, además caminaba) */
+    b.addEventListener('pointerdown', (e) => e.stopPropagation());
+    b.addEventListener('pointerup', (e) => e.stopPropagation());
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation(); if (b.disabled) return;
+      b.disabled = true; b.classList.add('pensando');
+      let r; try { r = await this.alFlash(!this.flash); } catch { r = 'error'; }
+      b.disabled = false; b.classList.remove('pensando');
+      if (!this.activo) return;
+      if (r === 'no') { this.decir(t('vr_flash_no'), 4); b.classList.add('no-hay'); }
+      else if (r === 'error') this.decir(t('vr_flash_error'), 4);
+      this.flash = r === true;
+      b.classList.toggle('prendido', this.flash); b.setAttribute('aria-pressed', String(this.flash));
+    });
+    donde.appendChild(b);
+    return b;
   }
   ponerFps(si) { this.verFps = si; this.el?.classList.toggle('con-fps', si); }
   /* cada cuánto llegan los cuadros (real, en s): la pantalla (el refresco) y si se llega o no.

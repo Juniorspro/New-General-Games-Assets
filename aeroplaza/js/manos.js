@@ -61,6 +61,34 @@ class Euro {
   }
 }
 
+/* -------------------------------------------------- el One Euro por ejes, para la cámara del celu.
+   Lo que peor adivina una sola cámara es la PROFUNDIDAD (lo lejos que está la mano sale del tamaño
+   con que se ve); de costado, en cambio, la foto es precisa. Cada punto se filtra en dos partes: de
+   costado (el plano de la foto) y a lo largo del rayo que va de los ojos a la mano, más fuerte. Así
+   la mano quieta no "respira" para adelante y para atrás, y de costado sigue igual de rápida */
+class EuroEjes {
+  constructor(n, lado, hondo) { this.n = n; this.x = new Float32Array(n * 3); this.dx = new Float32Array(n * 3); this.t = -1; this.lado = lado; this.hondo = hondo; this.r = [0, 0, -1]; }
+  reiniciar(v, t) { this.x.set(v); this.dx.fill(0); this.t = t; }
+  filtrar(v, t, r = this.r) {
+    this.r = r;
+    if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t); return this.x; }
+    const dt = Math.max(1e-3, t - this.t); this.t = t;
+    const L = this.lado, H = this.hondo, aL = Euro.a(L.corteD, dt), aH = Euro.a(H.corteD, dt), [rx, ry, rz] = r, x = this.x, dx = this.dx;
+    for (let j = 0; j < this.n; j++) {
+      const i = j * 3, ex = v[i] - x[i], ey = v[i + 1] - x[i + 1], ez = v[i + 2] - x[i + 2];
+      /* lo que se movió, partido: a lo largo del rayo (eh) y de costado (el) */
+      const eh = ex * rx + ey * ry + ez * rz, elx = ex - eh * rx, ely = ey - eh * ry, elz = ez - eh * rz;
+      let vh = dx[i] * rx + dx[i + 1] * ry + dx[i + 2] * rz, vx = dx[i] - vh * rx, vy = dx[i + 1] - vh * ry, vz = dx[i + 2] - vh * rz;
+      vh += aH * (eh / dt - vh); vx += aL * (elx / dt - vx); vy += aL * (ely / dt - vy); vz += aL * (elz / dt - vz);
+      const sl = Math.hypot(vx, vy, vz), sh = Math.abs(vh);
+      const kL = Euro.a(L.corte + L.beta * sl, dt), kH = Euro.a(H.corte + H.beta * Math.max(sh, sl * H.cruce), dt);
+      x[i] += kL * elx + kH * eh * rx; x[i + 1] += kL * ely + kH * eh * ry; x[i + 2] += kL * elz + kH * eh * rz;
+      dx[i] = vx + vh * rx; dx[i + 1] = vy + vh * ry; dx[i + 2] = vz + vh * rz;
+    }
+    return this.x;
+  }
+}
+
 /* -------------------------------------------------- una mano */
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
 /* el centro de la palma (muñeca y los cuatro nudillos) de 21 puntos */
@@ -81,10 +109,16 @@ const RARA = 0.08;     // una foto que cae más lejos que esto de donde tenía q
 const E_CORTE = 1.2;   // el One Euro de los puntos: corte quieta (Hz),
 const E_BETA = 10;     // cuánto se abre por cada m/s
 const E_CORTED = 2.0;  // y el corte de la velocidad (Hz)
+/* (con la cámara: de costado como arriba; en profundidad, más fuerte. cruce: cuánto abre el de
+   profundidad la velocidad de costado) */
+const H_CORTE = 0.5, H_BETA = 5, H_CORTED = 1.0, H_CRUCE = 1.0;
+const LMAX_H = 0.0;    // lo que se adelanta en profundidad por el atraso (la velocidad ahí es ruido) (s)
 class Mano {
   constructor(derecha) {
     this.derecha = derecha; this.visible = false; this.t = -1; this.conf = 0;
-    this.euro = new Euro(63, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED });
+    this.euroIso = new Euro(63, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED });
+    this.euroEjes = new EuroEjes(21, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED }, { corte: H_CORTE, beta: H_BETA, corteD: H_CORTED, cruce: H_CRUCE });
+    this.euro = this.euroIso; this.rayo = null;   // (el de ejes, con la cámara: rayo es de los ojos a la mano)
     this.p = new Float32Array(63);        // lo que se dibuja (filtrado, adelantado y sin saltos)
     this.pellizca = false; this.fuerza = 0; this.tPellizco = -9; this.soltoEn = -9;
     this.rayoO = new THREE.Vector3(); this.rayoD = new THREE.Vector3(0, 0, -1);
@@ -115,6 +149,11 @@ class Mano {
      abre el pellizco (0 = tocándose; la escala es el largo de la palma); crudo: sin filtro (el visor) */
   recibir(P, t, tLlego, pell, conf = 1, crudo = false, ojo = null) {
     this.faltas = 0;
+    /* (el filtro según de dónde viene: con la cámara, el de ejes; si cambia, sigue desde donde estaba) */
+    const F = ojo && !crudo ? this.euroEjes : this.euroIso;
+    if (F !== this.euro) { F.x.set(this.euro.x); F.dx.set(this.euro.dx); F.t = this.euro.t; this.euro = F; }
+    if (ojo && !crudo) { const c = centroPalma(P), rx = c[0] - ojo.x, ry = c[1] - ojo.y, rz = c[2] - ojo.z, rl = Math.hypot(rx, ry, rz) || 1; this.rayo = [rx / rl, ry / rl, rz / rl]; }
+    else this.rayo = null;
     if (crudo) { this.euro.reiniciar(P, t); }
     else {
       /* si la mano estaba perdida o saltó más de 25 cm (imposible en una foto: es otra detección), el
@@ -133,7 +172,7 @@ class Mano {
            vieja de una y la nueva se prende suave) */
         this.seguida = this.seguida && this.alfa > 0.3 && salto < SNAP;
         if (!this.seguida) { this.alfa = 0; this.gen++; }
-      } else this.euro.filtrar(P, t);
+      } else this.euro.filtrar(P, t, this.rayo);
     }
     /* el atraso de la cámara, promediado (así el adelanto no cambia de foto en foto) */
     const lat = THREE.MathUtils.clamp(tLlego - t, 0, 0.4);
@@ -149,7 +188,15 @@ class Mano {
     const k = adelanta ? (sola + Math.min(LMAX, this.lat)) * AMORT : 0;
     /* (y a qué velocidad se mueve eso: la del filtro mientras sigue sola, frenando después) */
     const kv = adelanta ? AMORT * (edad < HMAX ? 1 : Math.exp(-(edad - HMAX) / FRENO)) : 0;
-    for (let i = 0; i < 63; i++) { this.p[i] = E.x[i] + E.dx[i] * k; this.vb[i] = E.dx[i] * kv; }
+    const r = this.rayo;
+    if (!r) { for (let i = 0; i < 63; i++) { this.p[i] = E.x[i] + E.dx[i] * k; this.vb[i] = E.dx[i] * kv; } return; }
+    /* con la cámara: de costado se adelanta por el atraso; en profundidad casi no (ahí la velocidad
+       es más que nada ruido de la foto) */
+    const kh = adelanta ? (sola + Math.min(LMAX_H, this.lat)) * AMORT : 0;
+    for (let i = 0; i < 63; i += 3) {
+      const vx = E.dx[i], vy = E.dx[i + 1], vz = E.dx[i + 2], vh = vx * r[0] + vy * r[1] + vz * r[2];
+      for (let c = 0; c < 3; c++) { const v = E.dx[i + c], h = vh * r[c]; this.p[i + c] = E.x[i + c] + (v - h) * k + h * kh; this.vb[i + c] = v * kv; }
+    }
   }
   /* sin saltos: con cada foto nueva, la diferencia entre lo que se venía mostrando y lo nuevo se
      reparte con un resorte crítico (ni la posición ni la velocidad pegan un salto: se ve como un
@@ -342,7 +389,7 @@ export class Manos {
     this.cartelL = document.createElement('canvas'); this.cartelL.width = 512; this.cartelL.height = 96;
     this.cartel = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(this.cartelL), depthTest: false, transparent: true, toneMapped: false }));
     this.cartel.material.map.colorSpace = THREE.SRGBColorSpace; this.cartel.visible = false; this.cartel.renderOrder = 7; this.escena.add(this.cartel);
-    this.objetivo = null; this.salto = null; this.eventos = []; this.tAnt = -1;
+    this.objetivo = null; this.salto = null; this.eventos = []; this.tAnt = -1; this.tCapUlt = -1e9;
     this.stats = { lecturas: 0, dibujos: 0, msActualizar: 0 };
   }
   /* ------------------------------------------ la cabeza en cada cuadro (t en ms, como performance.now) */
@@ -362,8 +409,11 @@ export class Manos {
   /* ------------------------------------------ lo que llega de la cámara (puntos en la cámara de three).
      tCaptura: cuándo se sacó la foto; tLlego: cuándo volvió de la red (ms, como performance.now) */
   recibirCamara(lista, tCaptura, tLlego = performance.now()) {
+    /* (con dos redes una foto puede llegar después que la siguiente: la vieja no sirve) */
+    if (tCaptura <= this.tCapUlt) return;
     const q = new THREE.Quaternion(), p = new THREE.Vector3();
     if (!this.cabezaEn(tCaptura, q, p)) return;
+    this.tCapUlt = tCaptura;
     const ts = tCaptura / 1000, tl = tLlego / 1000;
     const dets = lista.map((m) => {
       const W = new Float32Array(63);
@@ -431,7 +481,7 @@ export class Manos {
   }
   perder(der) { const M = this.manos[der ? 1 : 0]; M.visible = false; M.seguida = false; }
   /* todo apagado de golpe (al salir del VR) */
-  limpiar() { for (const M of this.manos) { M.visible = false; M.alfa = 0; M.seguida = false; } this.menu.cerrar(); }
+  limpiar() { for (const M of this.manos) { M.visible = false; M.alfa = 0; M.seguida = false; } this.menu.cerrar(); this.tCapUlt = -1e9; }
   /* ------------------------------------------ cada cuadro. ctx: lo del juego que hace falta
      { cabezaP, cabezaQ, interactivos: [{ o, pos, texto }], altura(x, z), sePuede(x, y, z), tocar(p) }
      devuelve los eventos: usar, ir, saltar, menú */

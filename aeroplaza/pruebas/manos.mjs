@@ -290,7 +290,8 @@ const MANO = () => {
     const A = window.__A, out = {};
     const mc = new A.ManosCamara({ alLlegar: (m) => { window.__ult = m; } });
     const t0 = performance.now();
-    try { out.delegado = await mc.iniciarRed({ delegado: 'CPU' }); } catch (e) { return { error: e.message }; }
+    try { out.delegado = await mc.iniciarRed({ delegado: 'CPU', dos: true }); }   // (las dos redes aunque el contenedor tenga menos de 6 núcleos)
+    catch (e) { return { error: e.message }; }
     out.cargaMs = Math.round(performance.now() - t0);
     for (const [n, u] of Object.entries(fotos)) {
       const im = new Image(); im.src = u; await im.decode();
@@ -303,10 +304,23 @@ const MANO = () => {
       });
     }
     out.msRed = +mc.stats.ms.toFixed(0);
+    /* dos redes a la par (en el celu, con 6 núcleos o más): dos fotos seguidas, cada una a una red */
+    out.nucleos = navigator.hardwareConcurrency || 0;
+    const t2 = performance.now(); while ((mc.redes?.length || 0) < 2 && performance.now() - t2 < 30000) await new Promise((ok) => setTimeout(ok, 50));
+    out.redes = mc.redes?.length || 0;
+    const im = new Image(); im.src = fotos['manos-abiertas']; await im.decode();
+    mc.tMano = performance.now(); let llegaron = 0; mc.alLlegar = () => { llegaron++; };
+    const c0 = mc.stats.cuadros, tarde0 = mc.stats.tarde, t3 = performance.now();
+    await Promise.all([mc.cuadro(t3, im), mc.cuadro(t3 + 1, im)]);
+    out.ocupadas = mc.redes.filter((r) => r.ocupado).length;
+    while (mc.redes.some((r) => r.ocupado) && performance.now() - t3 < 20000) await new Promise((ok) => setTimeout(ok, 20));
+    out.leidas = mc.stats.cuadros - c0 + mc.stats.tarde - tarde0; out.llegaron = llegaron;
+    mc.soltar();
     return out;
   }, fotos);
   const [a, b] = (r['manos-abiertas'] || []).slice().sort((x, y) => x.x - y.x);
   prueba('MediaPipe carga en su worker (sin trabar el juego)', !r.error && !!r.delegado, `${r.delegado} · ${r.cargaMs} ms · ${r.msRed} ms por foto en este contenedor`);
+  prueba('dos redes a la par: dos fotos seguidas van una a cada una (y la que vuelve tarde no pisa a la nueva)', r.redes === 2 && r.ocupadas === 2 && r.leidas === 2 && r.llegaron >= 1, JSON.stringify({ nucleos: r.nucleos, redes: r.redes, ocupadas: r.ocupadas, leidas: r.leidas, llegaron: r.llegaron }));
   prueba('las dos manos abiertas: la de la izquierda es la izquierda, a 20-45 cm, de tamaño de mano', !!a && !!b && a.derecha === false && b.derecha === true && [a, b].every((h) => h.dist > 0.2 && h.dist < 0.45 && h.palma > 0.06 && h.palma < 0.12 && h.pell > 0.46), JSON.stringify(r['manos-abiertas']));
   prueba('el pellizco de la foto se reconoce como pellizco', r['mano-pellizco']?.length === 1 && r['mano-pellizco'][0].pell < 0.3, JSON.stringify(r['mano-pellizco']));
   prueba('la palma de frente: una mano abierta', r['mano-palma']?.length === 1 && r['mano-palma'][0].pell > 0.46, JSON.stringify(r['mano-palma']));

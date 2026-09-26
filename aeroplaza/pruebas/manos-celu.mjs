@@ -22,7 +22,7 @@ const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0
   [-0.022, 0.085, 0], [-0.025, 0.125, 0], [-0.027, 0.15, 0], [-0.028, 0.172, 0], [0, 0.088, 0], [0, 0.132, 0], [0, 0.16, 0], [0, 0.185, 0],
   [0.02, 0.083, 0], [0.021, 0.122, 0], [0.022, 0.148, 0], [0.023, 0.17, 0], [0.038, 0.074, 0], [0.041, 0.1, 0], [0.043, 0.118, 0], [0.045, 0.135, 0]];
 
-function simular({ L = 90, semilla = 1, dos = false, limpio = false }) {
+function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2 }) {
   let s = semilla * 2654435761 >>> 0;
   const azar = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const gauss = () => Math.sqrt(-2 * Math.log(azar() + 1e-12)) * Math.cos(2 * Math.PI * azar());
@@ -58,15 +58,16 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false }) {
   const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3();
   const ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
   const DT = 1000 / 120, FIN = 9500, CAP = 1000 / 30, esperadas = dos ? 2 : 1;
-  let proxCaptura = azar() * CAP, ocupado = false, resultados = [], perdida = [false, false], clarasAntes = 0, antes = null;
-  const R = { cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], lat: [] };
+  let proxCaptura = azar() * CAP, ocupado = 0, resultados = [], perdida = [false, false], clarasAntes = 0, antes = null;
+  const R = { n: 0, cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], lat: [] };
   for (let T = 0; T < FIN; T += DT) {
-    for (const r of resultados.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega); R.lat.push(r.llega - r.tc); ocupado = false; }
+    for (const r of resultados.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega); R.lat.push(r.llega - r.tc); ocupado--; R.n++; }
     resultados = resultados.filter((r) => r.llega > T);
     while (proxCaptura + L <= T) {
       const tc = proxCaptura; proxCaptura += CAP * (0.95 + 0.1 * azar());
-      if (ocupado) continue;
-      ocupado = true;
+      /* (manos-camara.js: dos redes a la par; sin manos a la vista hace 1 s, una sola) */
+      if (ocupado >= redes) continue;
+      ocupado++;
       const lista = [], dd = detectar(true, tc / 1000, perdida[1]); perdida[1] = !dd; if (dd) lista.push(dd);
       if (dos) { const di = detectar(false, tc / 1000, perdida[0]); perdida[0] = !di; if (di) lista.push(di); }
       resultados.push({ lista, tc, llega: T + 4 + 40 + 20 * azar() + (perdida[1] ? 15 : 0) });
@@ -98,23 +99,28 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false }) {
   const media = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
   const mq = media(R.quieta);
   return {
-    lat: media(R.lat), sin: 100 * R.sin / R.cuadros, titila: R.titila / (FIN / 60000), dobles: 100 * R.dobles / R.cuadros,
+    porSeg: R.n / (FIN / 1000), lat: media(R.lat), sin: 100 * R.sin / R.cuadros, titila: R.titila / (FIN / 60000), dobles: 100 * R.dobles / R.cuadros,
     err: media(R.err), tironP99: pct(R.tiron, 0.99), tironMax: Math.max(0, ...R.tiron), quieta: Math.sqrt(media(R.quieta.map((x) => (x - mq) ** 2))),
   };
 }
 /* cada caso con tres semillas: el promedio (el peor para el tirón máximo) */
 const caso = (op) => {
   const r = [1, 2, 3].map((semilla) => simular({ ...op, semilla })), m = (k) => r.reduce((a, x) => a + x[k], 0) / r.length;
-  return { lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta') };
+  return { porSeg: m('porSeg'), lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta') };
 };
 const f = (x, d = 1) => x.toFixed(d);
 for (const dos of [false, true]) {
   for (const L of [30, 90, 150]) {
     const r = caso({ L, dos }), n = `${dos ? 'dos manos' : 'una mano'}, la foto llega a los ${f(r.lat, 0)} ms`;
-    const datos = `${f(r.sin)} % sin mano · ${f(r.titila)} titileos/min · ${f(r.dobles)} % dobles · tirón p99 ${f(r.tironP99)} mm, máx ${f(r.tironMax)} · quieta ${f(r.quieta)} mm · error ${f(r.err, 0)} mm`;
+    const datos = `${f(r.porSeg)} fotos/s · ${f(r.sin)} % sin mano · ${f(r.titila)} titileos/min · ${f(r.dobles)} % dobles · tirón p99 ${f(r.tironP99)} mm, máx ${f(r.tironMax)} · quieta ${f(r.quieta)} mm · error ${f(r.err, 0)} mm`;
     prueba(`${n}: no titila ni se duplica`, r.sin < 6 && r.titila < 15 && r.dobles === 0, datos);
     prueba(`${n}: no pega tirones y quieta no tiembla`, r.tironP99 < 20 && r.tironMax < 60 && r.quieta < (dos ? 9 : 6));
   }
+}
+/* con una sola red (celus de menos de 6 núcleos): lo mismo, un poco peor */
+{
+  const r = caso({ L: 90, redes: 1 });
+  prueba('con una sola red tampoco titila ni pega tirones', r.sin < 6 && r.titila < 15 && r.dobles === 0 && r.tironP99 < 20 && r.tironMax < 60 && r.quieta < 6, `${f(r.porSeg)} fotos/s · ${f(r.titila)} titileos/min · tirón p99 ${f(r.tironP99)} mm · quieta ${f(r.quieta)} mm · error ${f(r.err, 0)} mm`);
 }
 /* el atraso, solo (sin errores de la red): lo que se ve atrás de la mano de verdad, yendo a 0,4 m/s de promedio */
 {
