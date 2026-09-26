@@ -198,6 +198,15 @@ Sigue de [aeroplaza-12](aeroplaza-12.md). Rama `claude/fijate-iszyer`.
 - `fotos` avisa `ERR_FAILED` en medusas y jardín: ya pasaba en la vuelta 12
   (algo de afuera que las pruebas cortan).
 
+## Link para jugar
+
+- GitHub raw lo manda como texto (`text/plain`, `nosniff`): no se juega.
+- raw.githack.com sirve el mismo archivo como `text/html`:
+  - `https://raw.githack.com/Juniorspro/New-General-Games-Assets/<rama>/aeroplaza/aeroplaza.html`
+    sigue la rama;
+  - `rawcdn.githack.com/.../<commit>/...` queda fijo en un commit.
+- Va por https, así que el navegador deja pedir la cámara y el visor.
+
 ## Lo que falta
 
 - **Probar en un celu de verdad**:
