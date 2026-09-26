@@ -72,7 +72,7 @@ Sigue de [aeroplaza-18](aeroplaza-18.md). Rama `claude/fijate-iszyer`.
   y 1,8° en los nudillos; lo dibujado, 0,5 % y 1,1°.
 - **Navegador**: `manos` 19/19, `manos-directo` 10/10 (prueba nueva: la forma),
   `manos-celu` 22/22 (prueba nueva: los nudillos a menos de 8°, dan 3,8°),
-  `vr` 19/19, `xr` 10/10, `vr120` 12/12.
+  `vr` 19/19, `xr` 10/10, `vr120` 12/12. La tanda entera da bien.
 
 ## La búsqueda
 
