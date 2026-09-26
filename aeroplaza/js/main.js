@@ -49,6 +49,8 @@ import { detectarAparato } from './aparato.js';
 import { Estudio } from './probador.js';
 import { regaloDelDia } from './joyas.js';
 import { VR } from './vr.js';
+import { ManosCamara } from './manos-camara.js';
+import { Manos } from './manos.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
 
@@ -143,6 +145,42 @@ async function iniciar() {
 
   let tuto = null, estudio = null;
   const vr = new VR();
+  /* las manos del VR (manos.js), por la cámara del celu (manos-camara.js, MediaPipe en un worker) */
+  const manos = new Manos();
+  let camManos = null;
+  const prenderManos = async () => {
+    if (!camManos) camManos = new ManosCamara({ alLlegar: (lista, tt) => { if (manos.activa) manos.recibirCamara(lista, tt); } });
+    manos.activa = true; manos.fuente = 'camara';
+    vr.decir(t('mn_manos_cargando'), 30);
+    try { await camManos.prender(); if (vr.activo) vr.decir(t('mn_manos_listas'), 5); }
+    catch (e) { console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos(); }
+  };
+  const apagarManos = () => { camManos?.apagar(); manos.activa = false; for (const m of manos.manos) m.visible = false; manos.menu.cerrar(); };
+  /* lo que las manos pueden apuntar: lo interactivo del lugar a menos de 15 m, con su cartel */
+  const cacheApuntables = new Map();
+  const apuntablesVR = () => {
+    const W = reino.mundo, lista = [];
+    for (const o of W.interactivos) {
+      if (o.activo === false) continue;
+      const q = typeof o.pos === 'function' ? o.pos() : o.pos; if (!q) continue;
+      if (Math.abs(q.x - yo.p.x) > 15 || Math.abs(q.z - yo.p.z) > 15) continue;
+      let it = cacheApuntables.get(o); if (!it) cacheApuntables.set(o, (it = { o, pos: new THREE.Vector3() }));
+      it.pos.set(q.x, (q.y ?? W.altura(q.x, q.z)) + (q.y == null ? 1 : 0.4), q.z); it.radio = Math.min(1.2, (o.radio || 2.2) * 0.3);
+      it.texto = o.textoFn ? o.textoFn() : o.accion === 'hablar' ? `${t('accion_hablar')} · ${t('npc_' + o.npc)}` : o.texto ? t(o.texto) : t('accion_' + o.accion);
+      lista.push(it);
+    }
+    return lista;
+  };
+  /* ¿se puede caer parado ahí? (no adentro de algo, no en el agua honda) */
+  const sePuedeVR = (x, y, z) => {
+    const W = reino.mundo;
+    if (W.agua != null && y < W.agua - 0.3) return false;
+    for (const s of W.cerca(x, z)) if (!s.fantasma && s.y1 > y + 0.45 && s.y0 < y + 1.6 && W.dentro(s, x, z, 0.35)) return false;
+    return true;
+  };
+  /* el parpadeo del teletransporte y de los giros (en VR marea ver deslizar el mundo) */
+  let parpadeo = 0;
+  const saltarA = (p) => { yo.p.set(p.x, p.y + 0.05, p.z); yo.v.set(0, 0, 0); parpadeo = 0.22; J.sfx('pop'); };
   let reino = null, yo = null, enJuego = false, pausado = false, enDialogo = false, probador = false, modoFoto = false, construyendo = null;
   let tHud = 0, tPresencia = 0, gestoN = 0, tDisparo = 0, tSinGolpe = 9, tMedir = 0, cuadros = 0, sumaDt = 0, midiendo = true;
   const cache = {};
@@ -181,9 +219,13 @@ async function iniciar() {
     probarPuestos(P) { estudio?.ponerApariencia({ ...G.A, ...P }); estudio?.probando(Object.keys(P).length > 0); },
     festejarProbador() { estudio?.festejar(); },
     /* el modo VR (vr.js): sin la interfaz ni los dedos, la cabeza mueve la cámara */
-    entrarVR(sbs) {
+    entrarVR(sbs, conManos = G.opciones.vrManos) {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
-      vr.entrar(sbs, { raiz: UI.raiz, cam, avisar: (x) => UI.avisar(x), alSalir: () => { ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
+      vr.verFps = !!G.opciones.vrFps;
+      const p = vr.entrar(sbs, { raiz: UI.raiz, cam, avisar: (x) => UI.avisar(x), alSalir: () => { apagarManos(); ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
+      manos.menu.fps = vr.verFps;
+      if (conManos) p.then(() => { if (vr.activo) prenderManos(); });
+      return p;
     },
     salirVR() { vr.salir(); },
     get enVR() { return vr.activo; },
@@ -869,6 +911,33 @@ async function iniciar() {
     if (vr.activo) cam.fp = true;          // (en VR siempre primera persona, también después de viajar)
     cam.actualizar(dt, yo, reino.interior ? null : reino.mundo);
     if (vr.activo) { vr.orientar(motor.camara, cam, dt); vr.el?.classList.toggle('hay-algo', !!accionCerca); }
+    /* las manos: la cabeza de este cuadro (para ubicar lo que ve la cámara), y lo que hicieron */
+    if (vr.activo && manos.activa) {
+      manos.registrarCabeza(vr.tVer || performance.now(), motor.camara.quaternion, motor.camara.position, vr.giroCSS);
+      manos.menu.camina = vr.camina;
+      const ev = manos.actualizar(dt, vr.tVer || performance.now(), {
+        cabezaP: motor.camara.position, cabezaQ: motor.camara.quaternion, interactivos: apuntablesVR(),
+        altura: (x, z, y = 1e4) => reino.mundo.suelo(x, z, y, 0).y, sePuede: sePuedeVR,
+        tocar: (p) => {
+          if (reino.burbujas?.tocar(p)) { J.sfx('pop'); contar('burbuja'); }
+          if (reino.orbes) for (const i of reino.orbes.tocar(p)) { G.orbes++; J.sfx('gota', { k: (J._racha = ((J._racha || 0) + 1)) }); red.accion({ type: 'recoger', i }); Guardado.guardar(); }
+        },
+      });
+      for (const e of ev) {
+        if (e.tipo === 'usar') { J.sfx('elegir'); interactuar(e.o); }
+        else if (e.tipo === 'ir') saltarA(e.p);
+        else if (e.tipo === 'saltar') vr.salta = true;
+        else if (e.tipo === 'sonido') J.sfx(e.s);
+        else if (e.tipo === 'menu') {
+          if (e.accion === 'izq' || e.accion === 'der') { vr.base += e.accion === 'izq' ? Math.PI / 4 : -Math.PI / 4; parpadeo = 0.16; }
+          else if (e.accion === 'caminar') vr.camina = !vr.camina;
+          else if (e.accion === 'fps') { vr.ponerFps(e.fps); G.opciones.vrFps = e.fps; Guardado.guardar(); }
+          else if (e.accion === 'salir') vr.salir();
+        }
+      }
+    }
+    if (parpadeo > 0) { parpadeo = Math.max(0, parpadeo - dt); motor.pFinal.uniforms.uFundido.value = Math.sin(Math.min(1, parpadeo / 0.22) * Math.PI); motor.pFinal.uniforms.uColorFundido.value.set('#0b2a44'); }
+    else if (motor.pFinal.uniforms.uFundido.value > 0) motor.pFinal.uniforms.uFundido.value = 0;
     /* la voz: el oído va en la cabeza propia, mirando para donde mira la cámara */
     if (voz.activa) {
       oido.pos.set(yo.p.x, yo.p.y + 1.3 * yo.escala, yo.p.z); motor.camara.getWorldDirection(oido.adelante);
@@ -922,7 +991,7 @@ async function iniciar() {
     const congela = reino.congela > 0;
     /* en VR se dibuja por vr-dibujo.js (el mundo una vez, reproyectado a cada ojo con la cabeza de
        ese instante); real: lo que pasó de verdad desde el cuadro anterior (para ver si se llega) */
-    if (dibujar && !congela) { if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt); else motor.dibujar(dt); }
+    if (dibujar && !congela) { if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt, manos.activa && manos.algo ? (ojo) => manos.dibujarOjo(motor.r, ojo) : null); else motor.dibujar(dt); }
     delirio.cuadro(dt, reino, motor.camara, dibujar, dibujar && !congela);
   }
 
@@ -942,7 +1011,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { ManosCamara, manos, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

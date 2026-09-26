@@ -806,3 +806,11 @@ html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: non
 .vr-op b { font-size: 18px; } .vr-op small { font-weight: 700; color: var(--tinta2); }
 .vr-dibujo { display: flex; gap: 4px; width: 110px; height: 56px; padding: 5px; border-radius: 12px; background: #22262b; margin-top: 6px; }
 .vr-dibujo span { flex: 1; border-radius: 7px; background: linear-gradient(180deg, #8fdcff, #56d05a); }
+/* las llaves de abajo (manos, cuadros por segundo): una píldora con su interruptor */
+.vr-llaves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.vr-llave { position: relative; display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; text-align: left; padding: 8px 10px; border-radius: 16px; border: 2px solid var(--gris2); background: linear-gradient(180deg, #ffffff, #f2faff); font: inherit; cursor: pointer; }
+.vr-llave i { grid-row: span 2; width: 34px; height: 20px; border-radius: 99px; background: #c9d6e0; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25); position: relative; transition: background 0.2s; }
+.vr-llave i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); transition: transform 0.2s; }
+.vr-llave.si i { background: linear-gradient(180deg, #5fd0ff, #1f9be0); }
+.vr-llave.si i::after { transform: translateX(14px); }
+.vr-llave b { font-size: 14px; } .vr-llave small { font-weight: 700; font-size: 11px; color: var(--tinta2); }

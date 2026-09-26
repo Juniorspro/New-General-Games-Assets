@@ -873,9 +873,11 @@ export const UI = {
   menuVR(alVolver) {
     const J = this.J, c = el(`<div class="menu-vr"><p>${t('vr_texto')}</p><div class="vr-opciones">
       <button class="vr-op" data-sbs="1"><b>${t('vr_sbs')}</b><small>${t('vr_sbs_d')}</small><i class="vr-dibujo doble"><span></span><span></span></i></button>
-      <button class="vr-op" data-sbs="0"><b>${t('vr_simple')}</b><small>${t('vr_simple_d')}</small><i class="vr-dibujo"><span></span></i></button></div></div>`);
+      <button class="vr-op" data-sbs="0"><b>${t('vr_simple')}</b><small>${t('vr_simple_d')}</small><i class="vr-dibujo"><span></span></i></button></div>
+      <div class="vr-llaves">${[['vrManos', 'vr_manos', 'vr_manos_d'], ['vrFps', 'vr_fps', 'vr_fps_d']].map(([k, n, d]) => `<button class="vr-llave${J.G.opciones[k] ? ' si' : ''}" data-o="${k}"><i></i><b>${t(n)}</b><small>${t(d)}</small></button>`).join('')}</div></div>`);
     let elegido = false;
     const v = this.ventana('🥽 ' + t('vr_titulo'), c, { ancho: 560, alCerrar: () => { if (!elegido) alVolver && alVolver(); } });
+    c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !J.G.opciones[k]; b.classList.toggle('si', J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
     c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarVR(b.dataset.sbs === '1'); });
   },
   /* después de un minijuego: ver un anuncio duplica los orbes ganados (si quedan anuncios hoy) */

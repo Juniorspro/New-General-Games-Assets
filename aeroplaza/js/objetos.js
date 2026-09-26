@@ -39,6 +39,7 @@ export class Orbes {
       if (L.fuera > 0) { L.fuera -= dt; M.makeScale(0, 0, 0); this.im.setMatrixAt(i, M); this.aro.setMatrixAt(i, M); return; }
       const y = L.p.y + Math.sin(this.t * 2 + i) * 0.15;
       const s = 1 + Math.sin(this.t * 5 + i * 2) * 0.06;
+      L.y = y;
       M.compose(V.set(L.p.x, y, L.p.z), Q.setFromEuler(E.set(0, this.t + i, 0)), S.set(s, s, s)); this.im.setMatrixAt(i, M);
       M.compose(V, Q.setFromEuler(E.set(Math.PI / 2 + Math.sin(this.t + i) * 0.5, this.t * 1.5, 0)), S.set(1, 1, 1)); this.aro.setMatrixAt(i, M);
       if (jp && Math.abs(jp.x - L.p.x) < 1.1 && Math.abs(jp.z - L.p.z) < 1.1 && Math.abs(jp.y + 0.7 - y) < 1.4) { L.fuera = 90; tocados.push(i); this.chispas.soltar(V.set(L.p.x, y, L.p.z), 14); }
@@ -49,6 +50,15 @@ export class Orbes {
   }
 }
 
+/* (Orbes) con la yema de un dedo, en VR (manos.js): devuelve los que tocó */
+Orbes.prototype.tocar = function (p, r = 0.07) {
+  const tocados = [];
+  this.lugares.forEach((L, i) => {
+    if (L.fuera > 0 || L.y == null) return;
+    if (Math.hypot(p.x - L.p.x, p.y - L.y, p.z - L.p.z) < 0.26 + r) { L.fuera = 90; tocados.push(i); this.chispas.soltar(V.set(L.p.x, L.y, L.p.z), 14); }
+  });
+  return tocados;
+};
 /* chispas: puntitos que saltan y se apagan (al juntar algo, al reventar) */
 export class Chispas {
   constructor(grupo, color = '#ffffff', n = 120) {
@@ -236,6 +246,7 @@ export class Burbujas {
       if (jp && !reventada && b.s > 0.35 && Math.hypot(jp.x - x, jp.z - z) < b.s + 0.35 && jp.y + 0.2 < b.y + b.s && jp.y + 1.3 > b.y - b.s) {
         reventada = new THREE.Vector3(x, b.y, z); this.chispas.soltar(reventada, 12, 2.5); Object.assign(b, this.nueva(this.r));
       }
+      b.px = x; b.pz = z; b.ps = s;
       M.compose(V.set(x, b.y, z), Q.identity(), S.set(s, s * (1 + Math.sin(b.y * 5) * 0.04), s)); this.im.setMatrixAt(i, M);
     });
     this.im.instanceMatrix.needsUpdate = true;
@@ -243,6 +254,16 @@ export class Burbujas {
     return reventada;
   }
 }
+
+/* (Burbujas) con la yema de un dedo, en VR: revienta la que toca (también las chicas) */
+Burbujas.prototype.tocar = function (p, r = 0.03) {
+  const n = this.im.count;
+  for (let i = 0; i < n; i++) {
+    const b = this.b[i]; if (b.px == null || b.ps < 0.08) continue;
+    if (Math.hypot(p.x - b.px, p.y - b.y, p.z - b.pz) < b.ps + r) { const q = new THREE.Vector3(b.px, b.y, b.pz); this.chispas.soltar(q, 12, 2.5); Object.assign(b, this.nueva(this.r)); b.px = null; return q; }
+  }
+  return null;
+};
 
 /* ------------------------------------------------------------------ medusas */
 /* medusas de gelatina que flotan (están en casi todos los videos de Frutiger

@@ -27,9 +27,9 @@ import { Pantalla } from './pantalla.js';
 import { DibujoVR } from './vr-dibujo.js';
 
 sumar({
-  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo' },
-  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world' },
-  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo' },
+  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo' },
+  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world', vr_manos: '✋ Hands with the camera', vr_manos_d: 'Like Meta Quest: pinch to use', vr_fps: '⏱ Frames per second', vr_fps_d: 'Above each eye' },
+  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo', vr_manos: '✋ Mãos com a câmera', vr_manos_d: 'Como no Meta Quest: pinça para usar', vr_fps: '⏱ Quadros por segundo', vr_fps_d: 'Em cima de cada olho' },
 });
 
 const Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0), Q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
@@ -69,6 +69,7 @@ export class VR {
   }
   /* se llama desde el toque del botón (en iOS el permiso tiene que pedirse ahí) */
   async entrar(sbs, { raiz, cam, alSalir, avisar }) {
+    if (this.activo) return true;   // (ya adentro: una segunda capa y el "antes" de la cámara quedaban mal)
     const DOE = window.DeviceOrientationEvent;
     if (DOE && typeof DOE.requestPermission === 'function') {
       try { if ((await DOE.requestPermission()) !== 'granted') avisar?.(t('vr_permiso')); } catch { avisar?.(t('vr_permiso')); }
@@ -169,7 +170,7 @@ export class VR {
      ponen de la vista (para caminar para donde se mira y para el cuerpo de primera persona) */
   orientar(camara, cam, dt) {
     /* se adelanta un cuadro y medio: lo que tarda en verse lo que se dibuja ahora */
-    const q = this.orientacion(performance.now() + Math.min(30, this.ritmo.refresco * 1.5));
+    const q = this.orientacion(this.tVer = performance.now() + Math.min(30, this.ritmo.refresco * 1.5));
     camara.quaternion.copy(q);
     _v.set(0, 0, -1).applyQuaternion(q);
     cam.yaw = Math.atan2(-_v.x, -_v.z);
@@ -180,6 +181,17 @@ export class VR {
     if (this.tAbajo >= SALIR_TRAS) this.salir();
   }
   get fov() { return this.sbs ? FOV.sbs : FOV.simple; }
+  /* cuánto está girado el juego por CSS respecto de la pantalla (lo usa la cámara de las manos: el
+     video llega derecho para la pantalla, no para el juego) */
+  get giroCSS() { return Pantalla.girado ? (Pantalla.invertido ? -Math.PI / 2 : Math.PI / 2) : 0; }
+  /* un cartelito en cada ojo por unos segundos (la interfaz normal no se ve en VR) */
+  decir(texto, seg = 3.5) {
+    if (!this.el) return;
+    for (const p of this.el.querySelectorAll('.vr-ayuda')) p.textContent = texto;
+    this.el.classList.remove('sin-ayuda'); clearTimeout(this._tDecir);
+    this._tDecir = setTimeout(() => this.el?.classList.add('sin-ayuda'), seg * 1000);
+  }
+  ponerFps(si) { this.verFps = si; this.el?.classList.toggle('con-fps', si); }
   /* cada cuánto llegan los cuadros (real, en s): la pantalla (el refresco) y si se llega o no.
      Dibujando entero, si los cuadros tardan un 30 % más que la pantalla durante 0,6 s, se parte;
      partido, si se llega sobrado 3 s, se prueba de nuevo entero (cada vez esperando el doble) */
