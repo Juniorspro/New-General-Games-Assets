@@ -41,12 +41,12 @@
     mate.position.set(R.x - 0.95, yMesa, R.z + 3.7); esc.add(mate);
     P.mate = mate;
     const pm = C.puntos.find((p) => p.id === "mate");
-    if (pm) pm.texto = "Cebar unos mates";
+    if (pm) pm.texto = "punto.mateCebar";
 
     // ── adentro: la heladera contra la pared del este ──
     P.heladera = modelo("heladera", R.x + 3.35, y0, R.z + 0.9, -Math.PI / 2);
     C.circulos.push({ x: R.x + 3.35, z: R.z + 0.9, r: 0.45 });
-    C.puntos.push({ id: "heladera", x: R.x + 2.5, z: R.z + 0.9, r: 1.4, texto: "Tomar agua fría de la heladera" });
+    C.puntos.push({ id: "heladera", x: R.x + 2.5, z: R.z + 0.9, r: 1.4, texto: "punto.heladera" });
 
     // ── el fogón: la olla del guiso (se ve cuando se cocina) ──
     const Fg = L.fogon, yf = T.altura(Fg.x, Fg.z);
@@ -71,7 +71,7 @@
     comedero.position.set(cx, yc, cz); comedero.rotation.y = 0.3; esc.add(comedero);
     P.comedero = { x: cx, z: cz, pasto };
     C.circulos.push({ x: cx, z: cz, r: 0.8 });
-    C.puntos.push({ id: "comedero", x: cx - 1.2, z: cz + 0.4, r: 1.8, texto: "Darle forraje al zaino" });
+    C.puntos.push({ id: "comedero", x: cx - 1.2, z: cz + 0.4, r: 1.8, texto: "punto.forraje" });
     const Tq = L.tanque, bx = Tq.x + Tq.r + 1.2, bz = Tq.z + 1.4, yb = T.altura(bx, bz);
     const chapa = new THREE.MeshStandardMaterial({ color: 0x9aa3a8, metalness: 0.7, roughness: 0.45 });
     const balde = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.3, 14, 1, true), chapa);
@@ -142,12 +142,12 @@
     E.juego.decir("mate");
     if (P.mate) P.vapor(P.mate.getWorldPosition(new V()).add(new V(0, 0.1, 0)), 25);
     if (P.pava) P.vapor(P.pava.raiz.getWorldPosition(new V()).add(new V(0, 0.22, 0)), 25);
-    G().fundir(0.35, () => { J.sed = Math.min(100, J.sed + 45); J.cansancio = Math.min(100, J.cansancio + 18); G().mostrar("Unos mates amargos con galleta, mirando el monte. Uno vuelve a ser persona."); });
+    G().fundir(0.35, () => { J.sed = Math.min(100, J.sed + 45); J.cansancio = Math.min(100, J.cansancio + 18); G().mostrar(t("msj.mate")); });
   };
   P.aguaFria = () => {
     const J = E.jugador;
     E.juego.decir("heladera");
-    G().fundir(0.05, () => { J.sed = 100; G().mostrar("Agua fría de la heladera: la gloria."); });
+    G().fundir(0.05, () => { J.sed = 100; G().mostrar(t("msj.heladera")); });
   };
   P.cocinar = () => {
     const J = E.jugador, Fg = E.lugares.fogon;
@@ -156,7 +156,7 @@
     P.vapor(new V(Fg.x + 0.05, E.terreno.altura(Fg.x, Fg.z) + 0.5, Fg.z - 0.05), 40);
     G().fundir(0.8, () => {
       J.cansancio = Math.min(100, J.cansancio + 38); J.salud = Math.min(100, J.salud + 8); G().comio = true;
-      G().mostrar("Guiso de arroz con carne y zapallo. Panza llena, corazón contento.");
+      G().mostrar(t("msj.guiso"));
       setTimeout(() => { P.olla.visible = false; }, 60000);
     });
   };
@@ -167,7 +167,7 @@
     G().fundir(0.5, () => {
       c.sucio = 0; c.banado = G().dia;
       setTimeout(() => { E.juego.decir("banar"); }, 400);
-      G().mostrar("Le echaste unos baldes y lo cepillaste. El zaino brilla.");
+      G().mostrar(t("msj.banar"));
     });
   };
   P.forraje = () => {
@@ -177,7 +177,7 @@
     c.comido = G().dia;
     // El zaino viene solo al comedero (si no está montado).
     if (!c.montado) c.destino = { x: Cm.x - 1.4, z: Cm.z + 0.6 };
-    G().mostrar("Un fardo de alfalfa en el comedero. El zaino ya viene.");
+    G().mostrar(t("msj.forraje"));
   };
 
   // Lo que se ofrece en el tanque: bañar al zaino (si está cerca y sucio) o tomar agua.
@@ -193,13 +193,14 @@
     if (Math.hypot(J.x - R.x, J.z - R.z) > 14) return;
     P.avisoDia = Gm.dia;
     Gm.decir("puesto");
-    setTimeout(() => Gm.mostrar("En el puesto: cebá unos mates en la mesa, prepará la comida en el fogón, y al zaino bañalo en el tanque y dale forraje en el comedero.", 7000), 1800);
+    setTimeout(() => Gm.mostrar(t("msj.puesto"), 7000), 1800);
   };
   P.pendientes = () => {
     const c = E.animales.caballo, Gm = G(), falta = [];
     if (Gm.hora < 16) return falta;
-    if (c.banado !== Gm.dia && (c.sucio || 0) > 0.08) falta.push("bañar al zaino");
-    if (c.comido !== Gm.dia) falta.push("darle forraje");
+    // Claves de idioma.js: el HUD las traduce al armar la tarea.
+    if (c.banado !== Gm.dia && (c.sucio || 0) > 0.08) falta.push("tarea.banar");
+    if (c.comido !== Gm.dia) falta.push("tarea.forraje");
     return falta;
   };
 
@@ -210,13 +211,13 @@
     let texto = "";
     if (c.comido !== diaAnterior) {
       c.aliento = 0.6;
-      texto += "El zaino amaneció flaco: anoche no le diste forraje, y hoy se va a cansar enseguida. ";
+      texto += t("parte.zainoFlaco");
     }
     if ((c.sucio || 0) > 0.35 && c.banado !== diaAnterior) {
-      if (Math.random() < 0.45) { c.lesion = Math.max(c.lesion, 1); texto += "Lo dejaste con el sudor y el barro encima: amaneció con mataduras en el lomo y rengo. "; }
-      else texto += "El zaino sigue sucio desde ayer; si no lo bañás le van a salir mataduras. ";
+      if (Math.random() < 0.45) { c.lesion = Math.max(c.lesion, 1); texto += t("parte.mataduras"); }
+      else texto += t("parte.sucio");
     }
-    if (c.comido === diaAnterior && c.banado === diaAnterior) texto += "El zaino amaneció limpio y comido, con ganas de trabajar. ";
+    if (c.comido === diaAnterior && c.banado === diaAnterior) texto += t("parte.zainoBien");
     return texto;
   };
 })();

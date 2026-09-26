@@ -14,19 +14,22 @@
 
   // Los lugares a los que se puede ir.
   MP.lugares = () => {
+    // El nombre y el corto salen del idioma elegido en cada llamada (la lista
+    // se arma de nuevo cada vez: el zaino y las agusanadas se mueven).
+    const nom = (id, vars) => ({ nombre: t("lugar." + id, vars), corto: t("lugar." + id + "C", vars) });
     const L = E.lugares, K = E.comedero && E.comedero.caja, lista = [
-      { id: "casco", nombre: "Casco de la estancia", corto: "Casco", x: L.rancho.x, z: L.rancho.z + 6, icono: "casa" },
-      { id: "corral", nombre: "Corral y manga", corto: "Corral", x: L.corral.x - L.corral.r - 2.5, z: L.corral.z + 1, icono: "corral" },
-      { id: "comedero", nombre: "Comedero (encierre)", corto: "Comedero", x: K ? (K.X0 + K.X1) / 2 : 37, z: K ? K.Z0 - 2 : 30, icono: "comedero" },
-      { id: "aguada", nombre: "Aguada: tanque y molino", corto: "Aguada", x: L.tanque.x + L.tanque.r + 2, z: L.tanque.z, icono: "agua" },
-      { id: "estero", nombre: "Estero (aguada natural)", corto: "Estero", x: L.estero.x + L.estero.r * 0.9, z: L.estero.z + L.estero.r * 0.5, icono: "agua" },
-      { id: "fogon", nombre: "Fogón", corto: "Fogón", x: L.fogon.x, z: L.fogon.z + 1.5, icono: "fuego" },
-      { id: "tranquera", nombre: "Tranquera de entrada", corto: "Tranquera", x: L.tranquera.x, z: L.tranquera.z - 3, icono: "tranquera" },
-      { id: "pueblo", nombre: L.pueblo.nombre + " (el pueblo)", corto: "Pueblo", x: L.pueblo.x - 4, z: L.pueblo.z - 6, icono: "pueblo" },
+      { id: "casco", ...nom("casco"), x: L.rancho.x, z: L.rancho.z + 6, icono: "casa" },
+      { id: "corral", ...nom("corral"), x: L.corral.x - L.corral.r - 2.5, z: L.corral.z + 1, icono: "corral" },
+      { id: "comedero", ...nom("comedero"), x: K ? (K.X0 + K.X1) / 2 : 37, z: K ? K.Z0 - 2 : 30, icono: "comedero" },
+      { id: "aguada", ...nom("aguada"), x: L.tanque.x + L.tanque.r + 2, z: L.tanque.z, icono: "agua" },
+      { id: "estero", ...nom("estero"), x: L.estero.x + L.estero.r * 0.9, z: L.estero.z + L.estero.r * 0.5, icono: "agua" },
+      { id: "fogon", ...nom("fogon"), x: L.fogon.x, z: L.fogon.z + 1.5, icono: "fuego" },
+      { id: "tranquera", ...nom("tranquera"), x: L.tranquera.x, z: L.tranquera.z - 3, icono: "tranquera" },
+      { id: "pueblo", ...nom("pueblo", { nombre: L.pueblo.nombre }), x: L.pueblo.x - 4, z: L.pueblo.z - 6, icono: "pueblo" },
     ];
     const c = E.animales.caballo;
-    if (c && !c.montado) lista.push({ id: "caballo", nombre: "El zaino", corto: "Zaino", x: c.x, z: c.z, icono: "caballo", vivo: true });
-    for (const v of E.animales.vacas) if (v.salud.bichera && !v.salud.muerta) lista.push({ id: "vaca" + v.num, nombre: `La ${v.num} (con bichera)`, corto: `La ${v.num}`, x: v.x, z: v.z, icono: "vaca", vivo: v });
+    if (c && !c.montado) lista.push({ id: "caballo", ...nom("caballo"), x: c.x, z: c.z, icono: "caballo", vivo: true });
+    for (const v of E.animales.vacas) if (v.salud.bichera && !v.salud.muerta) lista.push({ id: "vaca" + v.num, ...nom("vaca", { num: v.num }), x: v.x, z: v.z, icono: "vaca", vivo: v });
     return lista;
   };
 
@@ -179,7 +182,7 @@
     MP.destino = lugar;
     if (!columna) armarColumna();
     columna.visible = anillo.visible = !!lugar;
-    if (lugar) E.juego.mostrar(`Destino marcado: ${lugar.nombre}. Seguí la columna de luz.`);
+    if (lugar) E.juego.mostrar(t("mapa.destino", { nombre: lugar.nombre }));
     $("brujula").hidden = !lugar;
   };
   MP.buscar = (texto) => {
@@ -189,6 +192,7 @@
   };
 
   let proxMini = 0;
+  // Acá "t" es el tiempo: los textos van por IDIOMA.t y no por el t() global.
   MP.actualizar = (dt, t) => {
     if (!fondo) return;
     const J = E.jugador, d = MP.destino;
@@ -204,7 +208,7 @@
       const a = Math.atan2(d.x - J.x, d.z - J.z) - Math.atan2(f.x, f.z);
       $("brujulaFlecha").style.transform = `rotate(${-a}rad)`;
       $("brujulaTexto").textContent = `${d.corto} · ${dist < 1000 ? Math.round(dist) + " m" : (dist / 1000).toFixed(1) + " km"}`;
-      if (dist < (d.vivo ? 4 : 7)) { E.juego.mostrar(`Llegaste: ${d.nombre}.`); MP.ir(null); }
+      if (dist < (d.vivo ? 4 : 7)) { E.juego.mostrar(IDIOMA.t("mapa.llegaste", { nombre: d.nombre })); MP.ir(null); }
     }
     // El minimapa, a 15 cuadros por segundo: no hace falta más.
     proxMini -= dt;
@@ -216,7 +220,10 @@
   MP.conectar = () => {
     lienzo = $("mapaLienzo"); g = lienzo.getContext("2d");
     mini = $("minimapa"); gm = mini.getContext("2d");
-    const ajustar = () => { const r = lienzo.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); lienzo.width = Math.max(1, r.width * dpr); lienzo.height = Math.max(1, r.height * dpr); };
+    // clientWidth/clientHeight y no getBoundingClientRect: con el teléfono
+    // parado la caja está girada y el rectángulo de pantalla viene con los ejes
+    // cambiados (el mapa salía estirado).
+    const ajustar = () => { const dpr = Math.min(2, devicePixelRatio || 1); lienzo.width = Math.max(1, lienzo.clientWidth * dpr); lienzo.height = Math.max(1, lienzo.clientHeight * dpr); };
     addEventListener("resize", () => MP.abierto && ajustar());
     $("mapaCerrar").onclick = () => MP.cerrar();
     $("mapaMas").onclick = () => { zoom = Math.min(8, zoom * 1.6); };
@@ -224,11 +231,13 @@
     $("mapaYo").onclick = () => { centro = { x: E.jugador.x, z: E.jugador.z }; zoom = Math.max(zoom, 4); };
     $("mapaSacar").onclick = () => MP.ir(null);
     lienzo.addEventListener("wheel", (ev) => { ev.preventDefault(); zoom = E.clamp(zoom * (ev.deltaY < 0 ? 1.2 : 1 / 1.2), 1, 8); }, { passive: false });
-    lienzo.addEventListener("pointerdown", (ev) => { arrastre = { x: ev.clientX, y: ev.clientY, cx: centro.x, cz: centro.z, movio: false }; lienzo.setPointerCapture(ev.pointerId); });
+    // Arrastrar: las posiciones pasan por GIRO.aLocal, así la resta ya da el
+    // corrimiento en los ejes del mapa aunque el juego esté girado.
+    lienzo.addEventListener("pointerdown", (ev) => { const q = GIRO.aLocal(ev.clientX, ev.clientY); arrastre = { x: q.x, y: q.y, cx: centro.x, cz: centro.z, movio: false }; lienzo.setPointerCapture(ev.pointerId); });
     lienzo.addEventListener("pointermove", (ev) => {
       if (!arrastre) return;
       const dpr = lienzo.width / lienzo.clientWidth, esc = zoom * Math.min(lienzo.width / (X1 - X0), lienzo.height / (Z1 - Z0)) / dpr;
-      const dx = ev.clientX - arrastre.x, dy = ev.clientY - arrastre.y;
+      const q = GIRO.aLocal(ev.clientX, ev.clientY), dx = q.x - arrastre.x, dy = q.y - arrastre.y;
       if (Math.hypot(dx, dy) > 4) arrastre.movio = true;
       centro = { x: arrastre.cx - dx / esc, z: arrastre.cz - dy / esc };
     });
@@ -236,12 +245,12 @@
       const a = arrastre; arrastre = null;
       if (!a || a.movio) return;
       // Un toque: el lugar más cercano (si está cerca), si no, un punto suelto.
-      const r = lienzo.getBoundingClientRect(), dpr = lienzo.width / r.width;
-      const [x, z] = aMundo((ev.clientX - r.left) * dpr, (ev.clientY - r.top) * dpr, lienzo.width, lienzo.height);
+      const q = GIRO.enElemento(ev.clientX, ev.clientY, lienzo), dpr = lienzo.width / q.w;
+      const [x, z] = aMundo(q.x * dpr, q.y * dpr, lienzo.width, lienzo.height);
       const esc = zoom * Math.min(lienzo.width / (X1 - X0), lienzo.height / (Z1 - Z0)) / dpr;
       let mejor = null, dmin = 22 / esc;
       for (const l of MP.lugares()) { const d = Math.hypot(l.x - x, l.z - z); if (d < dmin) { dmin = d; mejor = l; } }
-      MP.ir(mejor || { id: "punto", nombre: "el punto marcado", corto: "Punto", x, z });
+      MP.ir(mejor || { id: "punto", nombre: t("lugar.punto"), corto: t("lugar.puntoC"), x, z });
       pintarLista();
     });
     MP._ajustar = ajustar;

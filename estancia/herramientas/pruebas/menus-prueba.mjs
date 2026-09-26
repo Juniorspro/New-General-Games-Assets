@@ -9,13 +9,18 @@ for (const [w, h, nom] of [[960, 540, "pc"], [390, 800, "tel"]]) {
   await p.route("**/*", (r) => r.request().url().startsWith("file://") ? r.continue() : r.abort());
   await p.goto("file://" + process.cwd() + "/estancia.html");
   await p.waitForTimeout(400); await p.screenshot({ path: `tiras/m-${nom}-00.png` });
-  await p.waitForSelector("#menu:not([hidden])", { timeout: 180000 });
+  // Antes del menú sale la pantalla de idioma (cada vez que se abre el juego).
+  await p.waitForSelector("#idioma:not([hidden])", { timeout: 180000 });
+  await p.waitForTimeout(500); await p.screenshot({ path: `tiras/m-${nom}-00b-idioma.png` });
+  await p.click('[data-idioma="es"]');
+  await p.waitForSelector("#menu:not([hidden])", { timeout: 20000 });
   await p.waitForTimeout(700); await p.screenshot({ path: `tiras/m-${nom}-01.png` });
   await p.waitForTimeout(3000); await p.screenshot({ path: `tiras/m-${nom}-02.png` });
   if (nom === "tel") { await p.evaluate(() => __juego.empezar()); await p.waitForTimeout(500); await p.screenshot({ path: `tiras/m-${nom}-03.png` }); await p.close(); continue; }
   await p.click("#menuOpciones"); await p.waitForTimeout(700); await p.screenshot({ path: `tiras/m-${nom}-03.png` });
-  await p.click("#opciones [data-volver]"); await p.click("#menuComo"); await p.waitForTimeout(700); await p.screenshot({ path: `tiras/m-${nom}-04.png` });
-  await p.click("#como [data-volver]"); await p.click("#menuEmpezar"); await p.waitForTimeout(1200); await p.screenshot({ path: `tiras/m-${nom}-05.png` });
+  await p.click("#opciones [data-volver]"); await p.click("#menuComo"); await p.waitForTimeout(700); await p.screenshot({ path: `tiras/m-${nom}-04a-pestana.png` });
+  await p.click("#menuTeclas"); await p.waitForTimeout(700); await p.screenshot({ path: `tiras/m-${nom}-04.png` });
+  await p.click("#como [data-volver]"); await p.click('.pestana-boton[data-pestana="jugar"]'); await p.waitForTimeout(3000); await p.click("#menuEmpezar"); await p.waitForTimeout(1200); await p.screenshot({ path: `tiras/m-${nom}-05.png` });
   await p.click("#parteSeguir"); await p.waitForTimeout(800);
   await p.evaluate(() => { E.juego.soltarPuntero(); E.juego.dinero += 50000; document.getElementById("pausa").hidden = false; }); await p.waitForTimeout(700); await p.screenshot({ path: `tiras/m-${nom}-06.png` });
   await p.click("#pausaOpciones"); await p.waitForTimeout(300); await p.click("#opciones [data-volver]"); await p.waitForTimeout(300);

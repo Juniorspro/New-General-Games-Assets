@@ -1,9 +1,14 @@
-// El sonido, sintetizado entero.
+// El sonido: grabaciones donde hay una con licencia que sirva (sonidos.js:
+// viento, pájaros, fogón, agua, galope, ladridos, pasos en el pasto,
+// tranquera, el lazo), y sintetizado el resto y como respaldo.
 //
 // GUIA-JUEGOS.md § 7: la música no se compone en código (el agente no la oye).
 // Acá no hay música: hay monte. Viento con rachas, chicharras a la siesta,
 // teros y chimangos lejos (con reverberación, si no el mundo suena a una
 // habitación), las vacas, el lazo, las moscas y la radio AM de fondo.
+//
+// Mugidos, relinchos, resoplidos y los cascos al paso no tienen grabación con
+// licencia aceptable: siguen sintetizados. La voz y el silbido, igual que antes.
 "use strict";
 (() => {
   const S = (E.sonido = { listo: false });
@@ -50,6 +55,7 @@
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     S.listo = true;
     armarAmbiente();
+    decodificarMuestras();
     decodificarTodas();
   };
   const fuenteRuido = () => { const s = ctx.createBufferSource(); s.buffer = ruido; s.loop = true; s.start(0, Math.random() * 2); return s; };
@@ -118,6 +124,64 @@
     sp.connect(fs).connect(sprayG).connect(master);
   }
 
+  // ── las grabaciones ── SONIDOS_B64 (js/sonidos.js, generado por
+  // sonidos/incrustar.py) trae los mp3 en base64: decodeAudioData es
+  // asincrónico, así que hasta que cada una esté lista (o si falla) suena lo
+  // sintetizado de siempre. Los grupos (perro_ladrido_1..3, pasos_pasto_1..4)
+  // son el id sin el número final, igual que el campo "grupo" de
+  // sonidos/manifiesto.json.
+  const muestras = {}, grupos = {}, lazos = {};
+  S.muestras = muestras;                                // para las pruebas: cuántos buffers hay
+  S.contarMuestras = () => Object.keys(muestras).length;
+  S.estado = () => ({ contexto: ctx ? ctx.state : null, buffers: Object.keys(muestras).length, loops: Object.keys(lazos), grupos: Object.fromEntries(Object.entries(grupos).map(([k, v]) => [k, v.length])) });
+  function decodificarMuestras() {
+    const datos = typeof SONIDOS_B64 !== "undefined" ? SONIDOS_B64 : null;   // const global, no cuelga de window
+    if (!datos) return;
+    for (const [id, b64] of Object.entries(datos)) {
+      let u;
+      try { const bin = atob(b64); u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); } catch (e) { continue; }
+      ctx.decodeAudioData(u.buffer).then((buf) => {
+        muestras[id] = buf;
+        const g = id.replace(/_\d+$/, "");
+        (grupos[g] = grupos[g] || []).push(id);
+        if (LOOPS[id]) armarLazo(id);
+      }).catch(() => { /* ese mp3 no se pudo leer: queda lo sintetizado */ });
+    }
+  }
+  // Una suelta: un id o un grupo (elige una variante al azar). Devuelve false
+  // si todavía no hay buffer, para que el que llama use lo sintetizado.
+  function muestra(idOGrupo, { vol = 1, rate = 1, cuando = 0, pos = null, eco = 0 } = {}) {
+    if (!S.listo) return false;
+    const lista = grupos[idOGrupo], id = lista ? lista[Math.floor(Math.random() * lista.length)] : idOGrupo;
+    const buf = muestras[id];
+    if (!buf) return false;
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = buf; src.playbackRate.value = rate; g.gain.value = vol;
+    src.connect(g);
+    const destino = pos ? espacio(pos[0], pos[1], pos[2]) : null;
+    if (destino) { g.connect(destino); destino.connect(master); } else g.connect(master);
+    if (eco) { const r = ctx.createGain(); r.gain.value = eco; (destino || g).connect(r).connect(rever); }
+    src.start(ctx.currentTime + cuando);
+    return true;
+  }
+  S.muestra = muestra;
+  // Los continuos: una fuente en loop por grabación, con su ganancia en 0
+  // hasta que S.actualizar la sube. El galope y el fogón van ubicados en el
+  // espacio (el galope sigue al caballo).
+  const LOOPS = { viento_campo: {}, pajaros_dia: {}, fogon: { pos: true }, agua: {}, cascos_galope: { pos: true }, lazo_zumbido: {} };
+  function armarLazo(id) {
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = muestras[id]; src.loop = true; g.gain.value = 0;
+    src.connect(g);
+    let p = null;
+    if (LOOPS[id].pos) { p = espacio(0, 0.6, 0); g.connect(p).connect(master); } else g.connect(master);
+    // Arrancan en un punto cualquiera del loop: si no, viento y pájaros
+    // empezaban juntos siempre en el mismo compás.
+    src.start(0, Math.random() * muestras[id].duration);
+    lazos[id] = { src, g, p };
+  }
+  const nivel = (id, v, t, tau = 0.3) => { const l = lazos[id]; if (l) l.g.gain.setTargetAtTime(v, t, tau); return !!l; };
+
   // ── sueltos ──
   function envolvente(g, t0, subida, alto, bajada) {
     g.gain.setValueAtTime(0.0001, t0);
@@ -156,6 +220,10 @@
   // los chicos. veces: 1 o 2 ladridos seguidos.
   S.ladrido = (x, z, tono = 1, veces = 1) => {
     if (!S.listo) return;
+    // Grabado: la misma perra, un poco más aguda para los chicos (tono).
+    let grabado = true;
+    for (let k = 0; k < veces && grabado; k++) grabado = muestra("perro_ladrido", { vol: 0.7, rate: tono * (0.94 + Math.random() * 0.12), cuando: k * (0.22 + Math.random() * 0.08), pos: [x, 0.6, z], eco: 0.5 });
+    if (grabado) return;
     const p = espacio(x, 0.6, z);
     p.connect(master);
     const r = ctx.createGain(); r.gain.value = 0.6; p.connect(r).connect(rever);
@@ -176,6 +244,8 @@
   // El agua del balde: ruido que cae, grave, en tres baldazos.
   S.agua = () => {
     if (!S.listo) return;
+    // Tres baldazos: el chapoteo grabado, cada uno un poco distinto.
+    if (muestras.agua_chapoteo) { for (let k = 0; k < 3; k++) muestra("agua_chapoteo", { vol: 0.55, rate: 0.85 + Math.random() * 0.25, cuando: 0.2 + k * 0.9 }); return; }
     for (let k = 0; k < 3; k++) {
       const t0 = ctx.currentTime + 0.2 + k * 0.9, s = fuenteRuido(), f = ctx.createBiquadFilter(), g = ctx.createGain();
       f.type = "lowpass"; f.frequency.setValueAtTime(2500, t0); f.frequency.exponentialRampToValueAtTime(500, t0 + 0.6);
@@ -229,6 +299,11 @@
     const g = ctx.createGain(); envolvente(g, t0, 0.002, 0.05, 0.03);
     o.connect(g).connect(master); o.start(t0); o.stop(t0 + 0.05);
   };
+  // La tranquera (y la puerta de la manga): la bisagra grabada, en su lugar.
+  S.tranquera = (x, z) => {
+    if (!S.listo) return;
+    if (!muestra("tranquera", { vol: 0.8, rate: 0.9 + Math.random() * 0.15, pos: x === undefined ? null : [x, 1, z], eco: 0.3 })) S.golpeSeco();
+  };
   S.chirrido = () => {
     if (!S.listo) return;
     const t0 = ctx.currentTime, s = fuenteRuido(), f = ctx.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 4000;
@@ -236,8 +311,12 @@
     const trem = ctx.createOscillator(); trem.frequency.value = 23; const tg = ctx.createGain(); tg.gain.value = 0.15; trem.connect(tg).connect(g.gain); trem.start(t0); trem.stop(t0 + 2);
     s.connect(f).connect(g).connect(master); s.stop(t0 + 2);
   };
-  S.paso = (fuerte) => {
+  // fuerte: los cascos al paso (sintetizados, no hay grabación que sirva);
+  // si no, un paso en el pasto grabado. enAgua: el chapoteo en vez del paso.
+  S.paso = (fuerte, enAgua) => {
     if (!S.listo) return;
+    if (enAgua && muestra("agua_chapoteo", { vol: fuerte ? 0.35 : 0.22, rate: 1.1 + Math.random() * 0.4 })) return;
+    if (!fuerte && muestra("pasos_pasto", { vol: 0.5 * (0.8 + Math.random() * 0.4), rate: 0.9 + Math.random() * 0.2 })) return;
     const t0 = ctx.currentTime, s = fuenteRuido(), f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = (fuerte ? 260 : 650) * (0.85 + Math.random() * 0.3); f.Q.value = 1.4;
     const g = ctx.createGain(); envolvente(g, t0, 0.004, (fuerte ? 0.22 : 0.08) * (0.8 + Math.random() * 0.4), fuerte ? 0.12 : 0.07);
     s.connect(f).connect(g).connect(master); s.stop(t0 + 0.2);
@@ -247,6 +326,13 @@
   S.zumbido = (x) => {
     if (!S.listo) return;
     const t = ctx.currentTime;
+    // Grabado: la soga girando, más rápida y fuerte cuanto más se revolea.
+    if (lazos.lazo_zumbido) {
+      nivel("lazo_zumbido", x * 0.55, t, 0.05);
+      lazos.lazo_zumbido.src.playbackRate.setTargetAtTime(0.75 + x * 0.55, t, 0.1);
+      lazoG.gain.setTargetAtTime(0, t, 0.05);
+      return;
+    }
     lazoF.frequency.setTargetAtTime(300 + x * 900, t, 0.05);
     // Late con cada vuelta: sube cuando la armada pasa por delante.
     const vuelta = E.lazo.angulo % (Math.PI * 2);
@@ -359,10 +445,35 @@
       l.forwardX.value = f.x; l.forwardY.value = f.y; l.forwardZ.value = f.z; l.upX.value = 0; l.upY.value = 1; l.upZ.value = 0;
     } else { l.setPosition(cam.position.x, cam.position.y, cam.position.z); l.setOrientation(f.x, f.y, f.z, 0, 1, 0); }
     const racha = E.flora.uniformes.uRacha.value;
-    viento.gain.setTargetAtTime(0.05 + racha * 0.12 + (jug.montado ? jug.vel * 0.006 : 0), t, 0.5);
+    const fuerzaViento = 0.05 + racha * 0.12 + (jug.montado ? jug.vel * 0.006 : 0);
+    // El viento grabado reemplaza al sintetizado apenas está listo.
+    if (nivel("viento_campo", fuerzaViento * 2.2, t, 0.5)) viento.gain.setTargetAtTime(0, t, 0.5);
+    else viento.gain.setTargetAtTime(fuerzaViento, t, 0.5);
     const dia = hora > 7 && hora < 19;
+    // Pájaros de día: entran con la luz y se van a la tardecita.
+    nivel("pajaros_dia", E.suave(5.5, 7.5, hora) * (1 - E.suave(18.5, 20, hora)) * 0.32, t, 1.2);
+    // El fogón: de cerca nomás (el panner solo lo dejaba oír en todo el campo).
+    const Fg = E.lugares.fogon, dF = Math.hypot(jug.x - Fg.x, jug.z - Fg.z);
+    if (lazos.fogon) { lazos.fogon.p.positionX.value = Fg.x; lazos.fogon.p.positionZ.value = Fg.z; }
+    const hayFogon = nivel("fogon", E.clamp(1 - (dF - 3) / 32, 0, 1) * 0.9, t, 0.4);
+    // El agua: cerca del bebedero o del estero (o metido en el agua).
+    const Tq = E.lugares.tanque, T = E.terreno;
+    const dTq = Math.hypot(jug.x - Tq.x, jug.z - Tq.z) - Tq.r, dEs = (T.estero(jug.x, jug.z) - 1) * E.lugares.estero.r;
+    const mojado = T.agua(jug.x, jug.z) > 0.05;
+    nivel("agua", Math.max(E.clamp(1 - dTq / 12, 0, 1), E.clamp(1 - dEs / 28, 0, 1), mojado ? 1 : 0) * 0.3, t, 0.5);
+    // El galope grabado: sigue al caballo, sube con la velocidad desde el trote
+    // largo; al paso y al trote corto quedan los cascos sintetizados.
+    const c = E.animales.caballo;
+    let galope = 0;
+    if (lazos.cascos_galope && c) {
+      galope = E.suave(4.2, 7.5, Math.abs(c.vReal || 0));
+      const L = lazos.cascos_galope;
+      L.p.positionX.value = c.x; L.p.positionY.value = E.terreno.altura(c.x, c.z) + 0.3; L.p.positionZ.value = c.z;
+      L.src.playbackRate.setTargetAtTime(0.8 + 0.3 * E.clamp(Math.abs(c.vReal || 0) / 8.8, 0, 1), t, 0.2);
+      nivel("cascos_galope", galope * 0.85, t, 0.15);
+    }
     chicharras.gain.setTargetAtTime(dia ? E.motor.calor * 0.07 * (0.6 + 0.4 * Math.sin(t * 0.8)) : 0, t, 0.6);
-    if (E.lazo.estado !== "revoleando") lazoG.gain.setTargetAtTime(0, t, 0.05);
+    if (E.lazo.estado !== "revoleando") { lazoG.gain.setTargetAtTime(0, t, 0.05); nivel("lazo_zumbido", 0, t, 0.05); }
     // Moscas cerca de la herida o la bosta.
     let cerca = 99;
     for (const v of E.animales.vacas) if (v.salud.bichera && !v.salud.muerta) cerca = Math.min(cerca, Math.hypot(v.x - jug.x, v.z - jug.z));
@@ -382,7 +493,7 @@
     proxChimango -= dt;
     if (proxChimango <= 0 && dia) { proxChimango = 50 + Math.random() * 90; chimango(jug.x, jug.z); }
     proxFuego -= dt;
-    if (proxFuego <= 0) {
+    if (!hayFogon && proxFuego <= 0) {
       proxFuego = 0.05 + Math.random() * 0.3;
       const s = fuenteRuido(), fc = ctx.createBiquadFilter(); fc.type = "highpass"; fc.frequency.value = 2000;
       const g = ctx.createGain(); envolvente(g, t, 0.002, 0.2 * Math.random(), 0.04);
@@ -390,6 +501,7 @@
     }
     // Pasos: a pie en cada paso de la cámara; a caballo, el golpe de los cascos.
     pasos += jug.vel * dt / (jug.montado ? 0.9 : 0.75);
-    if (pasos > 1 && jug.vel > 0.3) { pasos = 0; S.paso(jug.montado); }
+    // Al galope, los cascos son los de la grabación: no se doblan con los sintetizados.
+    if (pasos > 1 && jug.vel > 0.3) { pasos = 0; if (!(jug.montado && galope > 0.5)) S.paso(jug.montado, mojado); }
   };
 })();

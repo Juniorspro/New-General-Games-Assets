@@ -13,71 +13,83 @@
   const cerca = (x, z, r) => Math.hypot(E.jugador.x - x, E.jugador.z - z) < r;
   const punto = (id) => E.estancia.puntos.find((p) => p.id === id);
 
-  // Los comandos: nombre, argumentos (para mostrar), qué hace, y la función.
+  // Los comandos: n es el nombre en castellano (y la clave en idioma.js); el
+  // que se muestra es el del idioma elegido ("cmd.<n>"), con sus argumentos
+  // ("cmd.<n>A") y lo que hace ("cmd.<n>D"). Se aceptan los dos: el que
+  // aprendió "/ayuda" y después cambió a inglés no se queda sin chat.
+  const nombre = (c) => t("cmd." + c.n);
+  const sinTildes = (x) => (x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  // Una palabra en cualquiera de los tres idiomas (para los argumentos).
+  const enAlguno = (clave, palabra) => IDIOMA.CODIGOS.some((k) => sinTildes(IDIOMA.DICC[k][clave]) === sinTildes(palabra));
   const COMANDOS = [
-    { n: "ayuda", d: "La lista de comandos", f: () => { sistema("Comandos: " + COMANDOS.map((c) => "/" + c.n).join("  ")); } },
-    { n: "saludar", d: "El Guacho saluda", f: () => { G().decir("saludar"); sistema(`¡Hola, ${nombreJugador()}! Este comando funciona en celular.`); } },
-    { n: "perros", a: "vengan | quietos | junten | busquen", d: "Órdenes a los perros", f: (arg) => {
-      const o = { vengan: "seguir", vengan_: "seguir", seguir: "seguir", quietos: "quieto", quieto: "quieto", echate: "quieto", junten: "juntar", juntar: "juntar", busquen: "traer", busque: "traer", traer: "traer" }[(arg || "").toLowerCase()];
-      if (!E.perros.lista.length) return sistema("No hay perros en esta estancia.");
-      if (!o) return sistema("¿Qué les decís? /perros vengan, quietos, junten o busquen.");
-      if (E.perros.ordenar(o)) sistema(`${E.perros.ORDENES[o].texto} Los perros: ${E.perros.ORDENES[o].ayuda}.`);
+    { n: "ayuda", f: () => { sistema(t("cmd.ayudaR") + COMANDOS.map((c) => "/" + nombre(c)).join("  ")); } },
+    { n: "saludar", f: () => { G().decir("saludar"); sistema(t("cmd.saludarR", { nombre: nombreJugador() })); } },
+    { n: "perros", a: true, f: (arg) => {
+      const palabras = { vengan_: "seguir", seguir: "seguir", quieto: "quieto", echate: "quieto", juntar: "juntar", busque: "traer", traer: "traer" };
+      for (const k of IDIOMA.CODIGOS) Object.assign(palabras, IDIOMA.DICC[k]["cmd.perrosPalabras"]);
+      const o = palabras[sinTildes(arg)];
+      if (!E.perros.lista.length) return sistema(t("cmd.perrosNo"));
+      if (!o) return sistema(t("cmd.perrosQue", { cmd: t("cmd.perros") }));
+      if (E.perros.ordenar(o)) sistema(t("cmd.perrosR", { texto: t(E.perros.ORDENES[o].texto), ayuda: t(E.perros.ORDENES[o].ayuda) }));
     } },
-    { n: "silbar", d: "Silbarle al zaino para que venga", f: () => { const J = E.jugador; E.animales.caballo.destino = { x: J.x, z: J.z }; E.sonido.silbido(); setTimeout(() => G().decir("silbar"), 1050); } },
-    { n: "mate", d: "Cebar unos mates (en la galería)", f: () => {
+    { n: "silbar", f: () => { const J = E.jugador; E.animales.caballo.destino = { x: J.x, z: J.z }; E.sonido.silbido(); setTimeout(() => G().decir("silbar"), 1050); } },
+    { n: "mate", f: () => {
       const p = punto("mate");
-      if (!cerca(p.x, p.z, 4)) return sistema(`La yerba y la pava están en la mesa de la galería, ${E.trabajo.rumbo(p.x, p.z)}.`);
+      if (!cerca(p.x, p.z, 4)) return sistema(t("cmd.mateLejos", { rumbo: E.trabajo.rumbo(p.x, p.z) }));
       E.puesto.cebarMate();
     } },
-    { n: "comer", d: "Preparar un guiso en el fogón", f: () => {
+    { n: "comer", f: () => {
       const F = E.lugares.fogon;
-      if (!cerca(F.x, F.z, 4)) return sistema(`El fogón está ${E.trabajo.rumbo(F.x, F.z)}.`);
-      if (G().comio) return sistema("Ya comiste hoy.");
-      if (G().hora < 11) return sistema("Es muy temprano para el guiso. Tomate unos mates.");
+      if (!cerca(F.x, F.z, 4)) return sistema(t("cmd.comerLejos", { rumbo: E.trabajo.rumbo(F.x, F.z) }));
+      if (G().comio) return sistema(t("cmd.comerYa"));
+      if (G().hora < 11) return sistema(t("cmd.comerTemprano"));
       E.puesto.cocinar();
     } },
-    { n: "caballo", d: "Cómo está el zaino", f: () => {
+    { n: "caballo", f: () => {
       const c = E.animales.caballo;
-      const estado = [`aliento ${Math.round(c.aliento * 100)}%`, c.lesion > 0 ? "rengo" : "sano", (c.sucio || 0) > 0.35 ? "muy sucio" : (c.sucio || 0) > 0.08 ? "algo sucio" : "limpio", c.comido === G().dia ? "comido" : "sin forraje hoy"];
-      sistema(`El zaino: ${estado.join(", ")}.${c.montado ? "" : ` Está ${E.trabajo.rumbo(c.x, c.z)}.`}`);
+      const estado = [t("cmd.caballoAliento", { n: Math.round(c.aliento * 100) }), t(c.lesion > 0 ? "cmd.rengo" : "cmd.sano"), t((c.sucio || 0) > 0.35 ? "cmd.muySucio" : (c.sucio || 0) > 0.08 ? "cmd.algoSucio" : "cmd.limpio"), t(c.comido === G().dia ? "cmd.comido" : "cmd.sinForraje")];
+      sistema(t("cmd.caballoR", { estado: estado.join(", ") }) + (c.montado ? "" : t("cmd.caballoDonde", { rumbo: E.trabajo.rumbo(c.x, c.z) })));
     } },
-    { n: "hacienda", d: "Cuántas quedan y dónde están las agusanadas", f: () => {
+    { n: "hacienda", f: () => {
       const b = E.trabajo.balance(), ag = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta);
       const Rd = E.rodeo.lista, n = (k) => Rd.filter((a) => a.k === k).length;
-      sistema(`Rodeo del campo: ${n("vaca")} vacas, ${n("toro")} toros y ${n("ternero")} terneros. De trabajo: ${b.vivas} de ${b.total} vacas, ${b.trabajadas} trabajadas.` + (ag.length ? " Con bichera: " + ag.map((v) => `la ${v.num} (${E.trabajo.rumbo(v.x, v.z)})`).join(", ") + "." : " Ninguna agusanada."));
+      sistema(t("cmd.haciendaR", { v: n("vaca"), t: n("toro"), te: n("ternero"), vivas: b.vivas, total: b.total, trab: b.trabajadas }) +
+        (ag.length ? t("cmd.conBichera", { lista: ag.map((v) => t("cmd.vacaDonde", { num: v.num, rumbo: E.trabajo.rumbo(v.x, v.z) })).join(", ") }) : t("cmd.ninguna")));
     } },
-    { n: "razas", d: "Qué razas hay en la tropa", f: () => {
+    { n: "razas", f: () => {
       const cuenta = {};
-      for (const v of E.animales.vacas) if (!v.salud.muerta && !v.ternero) { const n = (E.animales.RAZAS[v.tipo] || { nombre: v.tipo }).nombre + (v.toro ? " (toro)" : ""); cuenta[n] = (cuenta[n] || 0) + 1; }
-      sistema(Object.entries(cuenta).map(([n, k]) => `${k} ${n}`).join(", ") + `, y ${E.animales.vacas.filter((v) => v.ternero && !v.salud.muerta).length} terneros.`);
+      const raza = (v) => { const nombreEs = (E.animales.RAZAS[v.tipo] || { nombre: v.tipo }).nombre; return IDIOMA.DICC.es["raza." + v.tipo] ? t("raza." + v.tipo) : nombreEs; };
+      for (const v of E.animales.vacas) if (!v.salud.muerta && !v.ternero) { const n = raza(v) + (v.toro ? t("cmd.toro") : ""); cuenta[n] = (cuenta[n] || 0) + 1; }
+      sistema(t("cmd.razasR", { lista: Object.entries(cuenta).map(([n, k]) => `${k} ${n}`).join(", "), n: E.animales.vacas.filter((v) => v.ternero && !v.salud.muerta).length }));
     } },
-    { n: "comedero", d: "Cómo está el comedero y los novillos", f: () => {
+    { n: "comedero", f: () => {
       const K = E.comedero, nov = E.animales.vacas.filter((v) => v.engorde && !v.salud.muerta), comiendo = E.animales.vacas.filter((v) => v.estado === "come").length;
       const kg = nov.length ? Math.round(nov.reduce((s, v) => s + (v.kilos || 320), 0) / nov.length) : 0;
-      sistema(`Comedero al ${Math.round(K.nivel * 100)} %, ${comiendo} comiendo ahora. Novillos del encierre: ${nov.length}, promedian ${kg} kg. La tranquera del encierre está ${K.tranquera.abierta ? "abierta" : "cerrada"}.`);
+      sistema(t("cmd.comederoR", { n: Math.round(K.nivel * 100), c: comiendo, nov: nov.length, kg, estado: t(K.tranquera.abierta ? "cmd.abierta" : "cmd.cerrada") }));
     } },
-    { n: "mapa", d: "Abrir el mapa del campo", f: () => E.mapa.abrir() },
-    { n: "ir", a: "casco | corral | comedero | aguada | pueblo | estero | zaino", d: "Marcar a dónde ir", f: (arg) => {
-      if (!arg) return sistema("¿Adónde? /ir casco, corral, comedero, aguada, pueblo, estero o zaino.");
-      const l = E.mapa.buscar(arg === "zaino" ? "caballo" : arg);
-      if (!l) return sistema(`No sé dónde queda "${arg}". Probá /mapa.`);
-      E.mapa.ir(l); sistema(`${l.nombre}: ${E.trabajo.rumbo(l.x, l.z)}, a ${Math.round(Math.hypot(l.x - E.jugador.x, l.z - E.jugador.z))} m. Seguí la columna de luz.`);
+    { n: "mapa", f: () => E.mapa.abrir() },
+    { n: "ir", a: true, f: (arg) => {
+      if (!arg) return sistema(t("cmd.irAdonde", { cmd: t("cmd.ir") }));
+      const l = E.mapa.buscar(enAlguno("cmd.irZaino", arg) ? "caballo" : arg);
+      if (!l) return sistema(t("cmd.irNoSe", { arg, mapa: t("cmd.mapa") }));
+      E.mapa.ir(l); sistema(t("cmd.irR", { nombre: l.nombre, rumbo: E.trabajo.rumbo(l.x, l.z), m: Math.round(Math.hypot(l.x - E.jugador.x, l.z - E.jugador.z)) }));
     } },
-    { n: "hora", d: "La hora y el día", f: () => { const h = Math.floor(G().hora), m = Math.floor((G().hora % 1) * 60); sistema(`Son las ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} del día ${G().dia} de ${E.trabajo.DIAS}.`); } },
-    { n: "puesto", d: "Para qué lado queda el rancho", f: () => { const R = E.lugares.rancho; sistema(`El rancho queda ${E.trabajo.rumbo(R.x, R.z)}, a ${Math.round(Math.hypot(R.x - E.jugador.x, R.z - E.jugador.z))} m.`); } },
-    { n: "fumar", d: "Armarse un cigarro", f: () => { if (!G()._fumando) { G()._fumando = 6; G().decir("fumar"); } } },
-    { n: "camara", d: "Primera o tercera persona", f: () => { const J = E.jugador; J.camara = J.camara === "primera" ? "tercera" : "primera"; sistema(`Cámara en ${J.camara} persona.`); } },
-    { n: "radio", a: "apagar | siguiente | nombre", d: "La radio FM (Chaco, Formosa, Corrientes)", f: (arg) => {
-      const R2 = E.radioFM, a2 = (arg || "").toLowerCase();
+    { n: "hora", f: () => { const h = Math.floor(G().hora), m = Math.floor((G().hora % 1) * 60); sistema(t("cmd.horaR", { hh: String(h).padStart(2, "0"), mm: String(m).padStart(2, "0"), d: G().dia, n: E.trabajo.DIAS })); } },
+    { n: "puesto", f: () => { const R = E.lugares.rancho; sistema(t("cmd.puestoR", { rumbo: E.trabajo.rumbo(R.x, R.z), m: Math.round(Math.hypot(R.x - E.jugador.x, R.z - E.jugador.z)) })); } },
+    { n: "fumar", f: () => { if (!G()._fumando) { G()._fumando = 6; G().decir("fumar"); } } },
+    { n: "camara", f: () => { const J = E.jugador; J.camara = J.camara === "primera" ? "tercera" : "primera"; sistema(t(J.camara === "primera" ? "cmd.camaraPrimera" : "cmd.camaraTercera")); } },
+    { n: "radio", a: true, f: (arg) => {
+      const R2 = E.radioFM, a2 = sinTildes(arg);
       if (!a2) return R2.abrir();
-      if (a2 === "apagar") { R2.apagar(); return sistema("Radio apagada."); }
-      if (a2 === "siguiente") { R2.siguiente(1); return sistema(`Sintonizando ${R2.actual ? R2.actual.nombre : "…"}.`); }
-      const e = R2.EMISORAS.find((x) => x.nombre.toLowerCase().includes(a2) || x.lugar.toLowerCase().includes(a2));
-      if (!e) return sistema(`No encuentro "${arg}". Probá /radio para ver el dial.`);
-      R2.sintonizar(e); sistema(`Sintonizando ${e.nombre} (${e.lugar}).`);
+      if (a2 === "apagar" || enAlguno("cmd.radioApagar", a2)) { R2.apagar(); return sistema(t("cmd.radioApagada")); }
+      if (a2 === "siguiente" || enAlguno("cmd.radioSiguiente", a2)) { R2.siguiente(1); return sistema(t("cmd.sintonizando", { nombre: R2.actual ? R2.actual.nombre : "…" })); }
+      const e = R2.EMISORAS.find((x) => sinTildes(x.nombre).includes(a2) || sinTildes(x.lugar).includes(a2));
+      if (!e) return sistema(t("cmd.radioNo", { arg, cmd: t("cmd.radio") }));
+      R2.sintonizar(e); sistema(t("cmd.sintonizandoLugar", { nombre: e.nombre, lugar: e.lugar }));
     } },
-    { n: "limpiar", d: "Borrar el chat", f: () => { log.innerHTML = ""; } },
+    { n: "limpiar", f: () => { log.innerHTML = ""; } },
   ];
+  const buscarComando = (cmd) => { const c = sinTildes(cmd); return COMANDOS.find((k) => k.n === c || sinTildes(nombre(k)) === c); };
 
   const nombreJugador = () => "Guacho";
 
@@ -100,7 +112,7 @@
         CH.abrir(ev.key === "/" ? "/" : "");
       }
     });
-    sistema("Escribí /ayuda para ver los comandos. Enter o / abren el chat.");
+    sistema(t("chat.bienvenida", { ayuda: t("cmd.ayuda") }));
   };
 
   CH.abrir = (texto = "") => {
@@ -123,26 +135,26 @@
   };
 
   function enviar() {
-    const t = entrada.value.trim();
-    if (t) {
-      if (t.startsWith("/")) {
-        const [cmd, ...resto] = t.slice(1).split(/\s+/);
-        const c = COMANDOS.find((k) => k.n === cmd.toLowerCase()) || (lista.length && t.length > 1 ? null : null);
-        linea("Vos", t, "yo");
-        if (c) c.f(resto.join(" ")); else sistema(`No conozco "/${cmd}". Probá /ayuda.`);
+    const texto = entrada.value.trim();
+    if (texto) {
+      if (texto.startsWith("/")) {
+        const [cmd, ...resto] = texto.slice(1).split(/\s+/);
+        const c = buscarComando(cmd);
+        linea(t("chat.vos"), texto, "yo");
+        if (c) c.f(resto.join(" ")); else sistema(t("chat.noConozco", { cmd, ayuda: t("cmd.ayuda") }));
       } else {
-        linea(nombreJugador(), t, "dice");
+        linea(nombreJugador(), texto, "dice");
       }
     }
     CH.cerrar();
   }
 
   function sugerir() {
-    const t = entrada.value;
+    const escrito = entrada.value;
     elegida = 0;
-    if (!t.startsWith("/") || t.includes(" ")) { lista = []; sugerencias.innerHTML = ""; return; }
-    const pre = t.slice(1).toLowerCase();
-    lista = COMANDOS.filter((c) => c.n.startsWith(pre)).slice(0, 6);
+    if (!escrito.startsWith("/") || escrito.includes(" ")) { lista = []; sugerencias.innerHTML = ""; return; }
+    const pre = sinTildes(escrito.slice(1));
+    lista = COMANDOS.filter((c) => sinTildes(nombre(c)).startsWith(pre) || c.n.startsWith(pre)).slice(0, 6);
     pintarSugerencias();
   }
   function pintarSugerencias() {
@@ -150,13 +162,13 @@
     lista.forEach((c, i) => {
       const li = document.createElement("li");
       li.className = i === elegida ? "elegida" : "";
-      li.innerHTML = `<b>/${c.n}</b>${c.a ? ` <i>${c.a}</i>` : ""}<small>${c.d}</small><span>Usar comando</span>`;
+      li.innerHTML = `<b>/${nombre(c)}</b>${c.a ? ` <i>${t("cmd." + c.n + "A")}</i>` : ""}<small>${t("cmd." + c.n + "D")}</small><span>${t("chat.usar")}</span>`;
       li.addEventListener("pointerdown", (ev) => { ev.preventDefault(); completar(c); });
       sugerencias.appendChild(li);
     });
   }
   function completar(c) {
-    entrada.value = "/" + c.n + (c.a ? " " : "");
+    entrada.value = "/" + nombre(c) + (c.a ? " " : "");
     entrada.focus();
     if (!c.a) { enviar(); return; }
     sugerir();
@@ -166,13 +178,13 @@
   function linea(quien, texto, clase) {
     const d = document.createElement("div");
     d.className = "chat-linea " + clase;
-    const b = document.createElement("b"); b.textContent = clase === "sistema" ? "[Sistema]:" : quien + ":";
+    const b = document.createElement("b"); b.textContent = clase === "sistema" ? t("chat.sistema") : quien + ":";
     d.append(b, " " + texto);
     log.appendChild(d);
     while (log.children.length > 40) log.firstChild.remove();
     log.scrollTop = log.scrollHeight;
     setTimeout(() => d.classList.add("vieja"), 12000);
   }
-  const sistema = (t) => linea("Sistema", t, "sistema");
+  const sistema = (texto) => linea("Sistema", texto, "sistema");
   CH.sistema = sistema;
 })();

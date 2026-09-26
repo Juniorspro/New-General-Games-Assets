@@ -17,10 +17,11 @@
     { nombre: "Chispa", tinte: [1.3, 1.12, 0.95], escala: 0.84, tono: 1.3 },
   ];
   P.ORDENES = {
-    seguir: { texto: "¡Vengan!", voz: "perros", ayuda: "los perros te siguen" },
-    quieto: { texto: "¡Quietos!", voz: "quietos", ayuda: "se echan donde están" },
-    juntar: { texto: "¡Junten!", voz: "junten", ayuda: "arrean la tropa hacia vos" },
-    traer: { texto: "¡Busque!", voz: "busquen", ayuda: "Tigre te trae la vaca que mirás" },
+    // texto y ayuda son claves de idioma.js (se traducen al mostrarse).
+    seguir: { texto: "perro.seguir", voz: "perros", ayuda: "perro.seguirT" },
+    quieto: { texto: "perro.quieto", voz: "quietos", ayuda: "perro.quietoT" },
+    juntar: { texto: "perro.juntar", voz: "junten", ayuda: "perro.juntarT" },
+    traer: { texto: "perro.traer", voz: "busquen", ayuda: "perro.traerT" },
   };
 
   P.construir = () => {
@@ -62,12 +63,12 @@
     const o = P.ORDENES[orden];
     if (orden === "traer") {
       P.blanco = vacaApuntada();
-      if (!P.blanco) { E.juego.mostrar("No hay ninguna vaca adelante para ir a buscar. Mirá hacia una."); return false; }
+      if (!P.blanco) { E.juego.mostrar(t("perro.sinVaca")); return false; }
     }
     P.orden = orden;
     P.inicioOrden = E.juego.t;
     E.juego.decir(o.voz);
-    E.juego.mostrar(`${o.texto} — ${orden === "traer" ? `Tigre va a buscar la ${P.blanco.num}` : o.ayuda}.`);
+    E.juego.mostrar(t("perro.orden", { texto: t(o.texto), ayuda: orden === "traer" ? t("perro.vaABuscar", { num: P.blanco.num }) : t(o.ayuda) }));
     P.lista.forEach((d, k) => { d.proxLadrido = 0.5 + k * 0.3; d.quieto = 0; });
     return true;
   };
@@ -76,6 +77,7 @@
 
   // ── cada cuadro ──
   const tmp = new V();
+  // Acá "t" es el tiempo: los textos van por IDIOMA.t y no por el t() global.
   P.actualizar = (dt, t, J) => {
     if (!P.lista.length) return;
     const A = E.animales, T = E.terreno;
@@ -89,7 +91,7 @@
     if (P.orden === "traer") {
       const v = P.blanco;
       if (!v || v.salud.muerta || ["enlazada", "tumbada", "cepo", "manga"].includes(v.estado)) P.orden = "seguir";
-      else if (Math.hypot(v.x - px0, v.z - pz0) < 9) { E.juego.mostrar(`Tigre te trajo la ${v.num}.`); P.orden = "seguir"; }
+      else if (Math.hypot(v.x - px0, v.z - pz0) < 9) { E.juego.mostrar(IDIOMA.t("perro.trajo", { num: v.num })); P.orden = "seguir"; }
     }
     // Juntar: cada perro se hace cargo de una de las más alejadas de uno y la
     // empuja para acá; al acercarse esa, toma la que sigue. (Abrirse en un
@@ -98,7 +100,7 @@
     if (P.orden === "juntar") {
       const lejos = A.vacas.filter((v) => !v.salud.muerta && !v.ternero && !v.toro && !v.engorde && !["enlazada", "tumbada", "cepo", "manga", "corral", "come", "encierre"].includes(v.estado))
         .map((v) => [v, Math.hypot(v.x - px0, v.z - pz0)]).sort((a, b) => b[1] - a[1]);
-      if (!lejos.length || lejos[0][1] < 22) { E.juego.mostrar("La hacienda está junta."); P.orden = "seguir"; }
+      if (!lejos.length || lejos[0][1] < 22) { E.juego.mostrar(IDIOMA.t("perro.junta")); P.orden = "seguir"; }
       else if (t - (P.inicioOrden || 0) > 300) P.orden = "seguir";
       asignadas = lejos.slice(0, P.lista.length).map(([v]) => v);
     }

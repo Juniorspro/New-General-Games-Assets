@@ -91,7 +91,7 @@
     mira.style.width = mira.style.height = tam + "px";
     mira.classList.add("visible");
     mira.classList.toggle("fija", O.bloqueo >= 1);
-    texto.textContent = O.bloqueo >= 1 ? "Soltá para tirar" : "Fijando…";
+    texto.textContent = t(O.bloqueo >= 1 ? "ojo.soltar" : "ojo.fijando");
     texto.classList.add("visible");
     O.foco.set(x, 1 - y, 0.16 + 0.08 * (1 - O.bloqueo));
   }

@@ -148,15 +148,15 @@
     const galleta = new THREE.MeshStandardMaterial({ color: 0xd9b778, roughness: 0.9 });
     for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), galleta); m.scale.y = 0.55; m.position.set(R.x - 1.3 + i * 0.09, y0 + 0.83, R.z + 3.85); E.motor.escena.add(m); }
     C.circulos.push({ x: R.x - 1.5, z: R.z + 3.9, r: 0.8 });
-    C.puntos.push({ id: "mate", x: R.x - 1.5, z: R.z + 4.6, r: 1.8, texto: "Tomar mate cocido con galleta" });
+    C.puntos.push({ id: "mate", x: R.x - 1.5, z: R.z + 4.6, r: 1.8, texto: "punto.mate" });
     // Adentro: el catre con un cuero y la radio en un estante.
     caja(0.8, 0.05, 1.9, new THREE.MeshStandardMaterial({ color: 0x7a5a3c, roughness: 0.95 }), R.x - 2.8, y0 + 0.45, R.z - 0.9);
     caja(0.9, 0.42, 2.0, tab, R.x - 2.8, y0 + 0.21, R.z - 0.9);
     C.circulos.push({ x: R.x - 2.8, z: R.z - 0.9, r: 0.7 });
-    C.puntos.push({ id: "catre", x: R.x - 2.1, z: R.z - 0.6, r: 1.6, texto: "Dormir en el catre" });
+    C.puntos.push({ id: "catre", x: R.x - 2.1, z: R.z - 0.6, r: 1.6, texto: "punto.catre" });
     caja(0.9, 0.04, 0.3, tab, R.x + 3.3, y0 + 1.4, R.z - 2.2);
     caja(0.32, 0.2, 0.14, new THREE.MeshStandardMaterial({ color: 0x5a3b28, roughness: 0.6 }), R.x + 3.3, y0 + 1.52, R.z - 2.2);
-    C.puntos.push({ id: "radio", x: R.x + 3.0, z: R.z - 1.6, r: 1.5, texto: "Prender la radio" });
+    C.puntos.push({ id: "radio", x: R.x + 3.0, z: R.z - 1.6, r: 1.5, texto: "punto.radio" });
     C.radio = new V(R.x + 3.3, y0 + 1.5, R.z - 2.2);
 
     // ── el fogón ── piedras, leña, el asador con el costillar y el hierro.
@@ -212,7 +212,7 @@
     E.motor.escena.add(hierro);
     C.hierro = { grupo: hierro, punta: marca };
     C.circulos.push({ x: Fg.x, z: Fg.z, r: 0.8 });
-    C.puntos.push({ id: "fogon", x: Fg.x, z: Fg.z + 1.3, r: 1.9, texto: "Fogón" });
+    C.puntos.push({ id: "fogon", x: Fg.x, z: Fg.z + 1.3, r: 1.9, texto: "punto.fogon" });
     // Fuego: llamas con valores por encima de 1 (satura como una cámara) y una
     // luz que tiembla, sin sombra.
     C.fuego = crearFuego(new V(Fg.x, yf + 0.05, Fg.z));
@@ -265,7 +265,7 @@
     caja(0.12, 2, 0.12, tab, Mg.x1 + 0.3, yc + 1, Mg.z - 0.55);
     caja(0.12, 2, 0.12, tab, Mg.x1 + 0.3, yc + 1, Mg.z + 0.55);
     caja(0.12, 0.14, 1.3, tab, Mg.x1 + 0.3, yc + 1.95, Mg.z);
-    C.puntos.push({ id: "manga", x: Mg.x1 - 1.5, z: Mg.z - 1.5, r: 2.2, texto: "Trabajar en la manga" });
+    C.puntos.push({ id: "manga", x: Mg.x1 - 1.5, z: Mg.z - 1.5, r: 2.2, texto: "punto.manga" });
     C.cepo = new V(Mg.x1 + 0.3, yc, Mg.z);
     // La tranquera del corral, de tablas, que se abre para afuera.
     const tranq = new THREE.Group();
@@ -282,7 +282,7 @@
     C.tranquera.angCerrado = -Math.atan2(sg.bz - sg.az, sg.bx - sg.ax);
     C.tranquera.angAbierto = Math.PI;
     C.tranquera.angulo = C.tranquera.angAbierto;
-    C.puntos.push({ id: "tranquera", x: Co.x - radio - 1.4, z: Co.z + 1.8, r: 2.2, texto: "Cerrar la tranquera del corral" });
+    C.puntos.push({ id: "tranquera", x: Co.x - radio - 1.4, z: Co.z + 1.8, r: 2.2, texto: "punto.corralCerrar" });
 
     // ── el tanque australiano y el molino ──
     const Tq = L.tanque, yt = T.altura(Tq.x, Tq.z);
@@ -302,7 +302,7 @@
     const aguaB = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 3.9), E.terreno.aguaMalla.material);
     aguaB.rotation.x = -Math.PI / 2; aguaB.position.set(Tq.x + Tq.r + 0.8, yt + 0.44, Tq.z); E.motor.escena.add(aguaB);
     C.circulos.push({ x: Tq.x + Tq.r + 0.8, z: Tq.z, r: 0.5 }, { x: Tq.x + Tq.r + 0.8, z: Tq.z + 1.5, r: 0.5 }, { x: Tq.x + Tq.r + 0.8, z: Tq.z - 1.5, r: 0.5 });
-    C.puntos.push({ id: "tanque", x: Tq.x + Tq.r + 1.8, z: Tq.z, r: 2.4, texto: "Tomar agua en el bebedero" });
+    C.puntos.push({ id: "tanque", x: Tq.x + Tq.r + 1.8, z: Tq.z, r: 2.4, texto: "punto.tanque" });
     C.bebedero = new V(Tq.x + Tq.r + 0.8, yt, Tq.z);
     // Molino: torre de hierro, rueda de aspas que gira con el viento y cola.
     const hierroM = new THREE.MeshStandardMaterial({ color: 0x5c5a55, metalness: 0.6, roughness: 0.6 });
@@ -363,7 +363,7 @@
     const segE = { ax: L.tranquera.x - 2.3, az: lim, bx: L.tranquera.x + 2.3, bz: lim, g: 0.15, apagado: false };
     C.segmentos.push(segE);
     C.tranqueraEntrada = { grupo: te, abierta: false, angulo: 0, segmento: segE };
-    C.puntos.push({ id: "tranqueraEntrada", x: L.tranquera.x + 2, z: lim - 2.2, r: 3, texto: "Abrir la tranquera de entrada (camino al pueblo)" });
+    C.puntos.push({ id: "tranqueraEntrada", x: L.tranquera.x + 2, z: lim - 2.2, r: 3, texto: "punto.entradaAbrir" });
     C.animados.push((dt) => { const t2 = C.tranqueraEntrada; t2.angulo += ((t2.abierta ? -1.8 : 0) - t2.angulo) * Math.min(1, dt * 3); t2.grupo.rotation.y = t2.angulo; });
     utiles();
     pueblo();
@@ -371,7 +371,9 @@
 
   C.alternarEntrada = () => {
     const t = C.tranqueraEntrada; t.abierta = !t.abierta; t.segmento.apagado = t.abierta;
-    C.puntos.find((p) => p.id === "tranqueraEntrada").texto = t.abierta ? "Cerrar la tranquera de entrada" : "Abrir la tranquera de entrada (camino al pueblo)";
+    const pt = C.puntos.find((p) => p.id === "tranqueraEntrada");
+    pt.texto = t.abierta ? "punto.entradaCerrar" : "punto.entradaAbrir";
+    E.sonido.tranquera && E.sonido.tranquera(pt.x, pt.z);
   };
 
   // Un cartel pintado a mano: texto en un lienzo sobre una tabla.
@@ -429,7 +431,7 @@
     caja(0.55, 1.6, 0.45, rojo, calle(434) - 5.2, T.altura(-5, 434) + 0.8, 434);
     caja(0.58, 0.35, 0.48, blanco, calle(434) - 5.2, T.altura(-5, 434) + 1.45, 434);
     C.circulos.push({ x: calle(434) - 5.2, z: 434, r: 0.5 });
-    C.puntos.push({ id: "almacen", x: al.fx + 2, z: 441.5, r: 3, texto: "Almacén" });
+    C.puntos.push({ id: "almacen", x: al.fx + 2, z: 441.5, r: 3, texto: "punto.almacen" });
     // La capilla, blanca, con la espadaña y la cruz.
     const cap = casa(calle(463) - 12, 463, 11, 7, 4.2, 1, blanco, "Capilla", false);
     caja(0.45, 2.6, 3, blanco, cap.fx + 0.1, cap.y + 5.4, 463);
@@ -534,7 +536,8 @@
     tq.abierta = !tq.abierta;
     tq.segmento.apagado = tq.abierta;
     const p = C.puntos.find((q) => q.id === "tranquera");
-    p.texto = tq.abierta ? "Cerrar la tranquera del corral" : "Abrir la tranquera del corral";
+    p.texto = tq.abierta ? "punto.corralCerrar" : "punto.corralAbrir";
+    E.sonido.tranquera && E.sonido.tranquera(p.x, p.z);
   };
 
   C.actualizar = (dt, t) => {

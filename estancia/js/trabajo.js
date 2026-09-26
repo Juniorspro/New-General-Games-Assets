@@ -74,9 +74,10 @@
     $("curaPinza").classList.toggle("elegido", cura.herr === "pinza");
     $("curaSpray").classList.toggle("elegido", cura.herr === "spray");
   }
+  // El punto en píxeles del lienzo, con el juego girado o no (js/giro.js).
   function puntoLienzo(ev) {
-    const lz = $("curaLienzo"), r = lz.getBoundingClientRect();
-    return { x: ((ev.clientX - r.left) / r.width) * lz.width, y: ((ev.clientY - r.top) / r.height) * lz.height };
+    const lz = $("curaLienzo"), p = GIRO.enElemento(ev.clientX, ev.clientY, lz);
+    return { x: (p.x / p.w) * lz.width, y: (p.y / p.h) * lz.height };
   }
   W.conectarCura = () => {
     const lz = $("curaLienzo");
@@ -132,6 +133,7 @@
       v.destino = null;
       E.juego.gastar(COSTO.curabichera, "Curabichera");
       E.juego.decir("curada");
+      E.libreta.sumar("curadas");
     }
     cura.activa = false;
     $("cura").hidden = true;
@@ -205,7 +207,7 @@
     const quedan = cura.gusanos.filter((w) => !w.afuera).length;
     const cob = cobertura();
     $("curaPaciencia").style.width = cura.paciencia * 100 + "%";
-    $("curaTexto").textContent = `Gusanos: ${quedan} · Curabichera: ${Math.round(cob * 100)} %`;
+    $("curaTexto").textContent = t("cura.estado", { q: quedan, c: Math.round(cob * 100) });
     $("curaListo").disabled = !puedeTerminar();
   };
 
@@ -217,9 +219,11 @@
   W.trabajada = (v) => v.salud.vacunada && v.salud.desparasitada && v.salud.caravana && v.salud.marcada;
   W.entrarManga = () => {
     const v = E.animales.vacas.find((x) => !x.salud.muerta && x.estado === "corral" && !W.trabajada(x));
-    if (!v) { E.juego.mostrar("No hay ninguna vaca sin trabajar adentro del corral."); return; }
+    if (!v) { E.juego.mostrar(t("manga.noHay")); return; }
     manga.vaca = v; manga.activa = true; manga.fase = "entrando"; manga.t = 0; manga.herr = "aftosa"; manga.accion = null;
     v.estado = "manga";
+    // La puerta de la manga que se abre para que entre.
+    E.sonido.tranquera && E.sonido.tranquera(E.lugares.manga.x0, E.lugares.manga.z);
     E.jugador.bloqueado = "manga";
     E.juego.soltarPuntero();
     $("manga").hidden = false;
@@ -232,10 +236,10 @@
     const v = manga.vaca;
     if (!v) return;
     const s = v.salud;
-    $("mangaEstado").innerHTML = [["Aftosa", s.vacunada], ["Ivermectina", s.desparasitada], ["Caravana", s.caravana], ["Marca", s.marcada]]
-      .map(([n, ok]) => `<span class="${ok ? "hecho" : ""}">${ok ? "✓" : "·"} ${n}</span>`).join("");
+    $("mangaEstado").innerHTML = [["manga.hAftosa", s.vacunada], ["manga.hIvermectina", s.desparasitada], ["manga.hCaravana", s.caravana], ["manga.hMarca", s.marcada]]
+      .map(([n, ok]) => `<span class="${ok ? "hecho" : ""}">${ok ? "✓" : "·"} ${t(n)}</span>`).join("");
     const caliente = E.juego.hierroCaliente > 0;
-    $("mangaHierro").textContent = caliente ? "Hierro (caliente)" : "Hierro (frío)";
+    $("mangaHierro").textContent = t(caliente ? "manga.hierroCaliente" : "manga.hierroFrio");
   }
   W.conectarManga = () => {
     document.querySelectorAll("#manga [data-herr]").forEach((b) => { b.onclick = () => { manga.herr = b.dataset.herr; marcarHerramienta(); }; });
@@ -279,8 +283,10 @@
   }
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   function aplicar(cx, cy) {
-    const v = manga.vaca, cam = E.motor.camara, lz = E.motor.renderer.domElement.getBoundingClientRect();
-    ndc.set(((cx - lz.left) / lz.width) * 2 - 1, -((cy - lz.top) / lz.height) * 2 + 1);
+    // Con el teléfono parado el lienzo está girado: el toque se pasa a
+    // coordenadas del lienzo antes de armar el rayo (js/giro.js).
+    const v = manga.vaca, cam = E.motor.camara, p = GIRO.enElemento(cx, cy, E.motor.renderer.domElement);
+    ndc.set((p.x / p.w) * 2 - 1, -(p.y / p.h) * 2 + 1);
     ray.setFromCamera(ndc, cam);
     // Con el modelo de Rezona se apunta a lo que se ve, no al esqueleto lógico.
     const hit = (v.piel ? ray.intersectObjects(v.piel.mallas, false) : ray.intersectObject(v.malla, false))[0];
@@ -296,9 +302,9 @@
     else if (enCuerpo.z < -0.25 && enCuerpo.y > -0.15) parte = "anca";
     const h = manga.herr, s = v.salud;
     const quiere = { aftosa: "cuello", ivermectina: "cuello", caravana: "oreja", hierro: "anca" }[h];
-    if (parte !== quiere) { E.juego.mostrar({ cuello: "La vacuna va en la tabla del cuello.", oreja: "La caravana va en la oreja.", anca: "La marca va en el anca." }[quiere]); return; }
-    if ((h === "aftosa" && s.vacunada) || (h === "ivermectina" && s.desparasitada) || (h === "caravana" && s.caravana) || (h === "hierro" && s.marcada)) { E.juego.mostrar("Eso ya está hecho."); return; }
-    if (h === "hierro" && E.juego.hierroCaliente <= 0) { E.juego.mostrar("El hierro está frío. Calentalo en el fogón."); return; }
+    if (parte !== quiere) { E.juego.mostrar(t("manga." + quiere)); return; }
+    if ((h === "aftosa" && s.vacunada) || (h === "ivermectina" && s.desparasitada) || (h === "caravana" && s.caravana) || (h === "hierro" && s.marcada)) { E.juego.mostrar(t("manga.hecho")); return; }
+    if (h === "hierro" && E.juego.hierroCaliente <= 0) { E.juego.mostrar(t("manga.frio")); return; }
     manga.accion = { herr: h, punto: hit.point.clone(), normal: hit.face ? hit.face.normal.clone() : new V(0, 0, 1), t: 0, dura: h === "hierro" ? 2.2 : h === "caravana" ? 0.8 : 1.3, parte };
     const pieza = manga.piezas[h];
     for (const p of Object.values(manga.piezas)) p.visible = false;
@@ -339,7 +345,7 @@
     }
     E.sonido && E.sonido.mugido(v, 1.2);
     marcarHerramienta();
-    if (W.trabajada(v)) E.juego.mostrar("Lista. Soltala con el botón o con E.");
+    if (W.trabajada(v)) { E.juego.mostrar(t("manga.lista")); E.libreta.sumar("trabajadas"); }
   }
   // Hacia afuera del costado donde cayó el punto (para pegar caravana y marca).
   function afuera(v, punto) {
@@ -433,10 +439,8 @@
   W.rumbo = (x, z) => {
     const L = E.lugares.rancho, dx = x - L.x, dz = z - L.z, d = Math.hypot(dx, dz);
     const a = Math.atan2(dx, -dz) * 180 / Math.PI;          // 0 = norte, 90 = este
-    const nombres = ["el norte", "el noreste", "el este", "el sureste", "el sur", "el suroeste", "el oeste", "el noroeste"];
-    const n = nombres[((Math.round(a / 45) % 8) + 8) % 8];
-    const lejos = d > 220 ? "lejos, " : d > 110 ? "" : "cerquita, ";
-    return `${lejos}para ${n}`;
+    // El orden de las palabras cambia con el idioma: la frase la arma idioma.js.
+    return t("rumbo", { i: ((Math.round(a / 45) % 8) + 8) % 8, lejos: d > 220 ? 2 : d > 110 ? 1 : 0 });
   };
   W.balance = () => {
     // Las cuentas de la temporada son las de las vacas: los toros y los

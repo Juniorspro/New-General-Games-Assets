@@ -23,6 +23,7 @@ Del ojo de águila, los menús y el sonido:
 ```sh
 PW=$(npm root -g)/playwright node ojo-prueba.mjs tercera|primera|montado   # la mira, el tiro guiado y la toma de costado
 PW=$(npm root -g)/playwright node menus-prueba.mjs                         # portada, opciones, cómo se juega, parte, pausa (PC y celular)
+PW=$(npm root -g)/playwright node giro-idioma-prueba.mjs [pc|acostado|parado]  # idioma antes del menú, los tres idiomas, menú nuevo, y el teléfono parado girado: palanca, mirar, mapa y cura con toques de verdad
 PW=$(npm root -g)/playwright node portada-prueba.mjs                       # la cámara de la portada en seis momentos
 PW=$(npm root -g)/playwright node audio-prueba.mjs                         # decodifica las 41 voces y hace sonar el silbido
 PW=$(npm root -g)/playwright node escaneo-prueba.mjs                       # el escaneo de cuadros: mide, elige, guarda y no vuelve a medir

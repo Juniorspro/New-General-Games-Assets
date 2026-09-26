@@ -402,6 +402,7 @@
     Z.tension = 0; Z.sobreTension = 0; Z.tiron = 0.8; Z.pialando = null;
     v.fatiga = Math.max(v.fatiga, 0.85);
     E.juego.decir("enlazada", v);
+    E.libreta && E.libreta.sumar("enlazadas");
     E.sonido && E.sonido.mugido(v, 1.3);
   }
   // El vuelo guiado: la armada abierta y acostada, girando, sigue un arco del

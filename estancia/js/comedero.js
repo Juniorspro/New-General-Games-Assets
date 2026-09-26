@@ -108,7 +108,7 @@
     const diag = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 3.9), tablon); diag.rotation.x = 0.3; diag.position.set(0, 0.8, (PUERTA.z1 - PUERTA.z0) / 2); tq.add(diag);
     tq.position.set(X1, T.altura(X1, PUERTA.z0), PUERTA.z0); esc.add(tq);
     K.tranquera = { grupo: tq, abierta: false, angulo: 0, segmento: pared(X1, PUERTA.z0, X1, PUERTA.z1, false) };
-    C.puntos.push({ id: "tranqueraEncierre", x: X1 + 1.5, z: PUERTA.z1 + 1.2, r: 2.2, texto: "Abrir la tranquera del encierre" });
+    C.puntos.push({ id: "tranqueraEncierre", x: X1 + 1.5, z: PUERTA.z1 + 1.2, r: 2.2, texto: "punto.encierreAbrir" });
 
     // ── el comedero: batea de hormigón con el borde redondeado, sobre pilares ──
     const hormigon = new THREE.MeshStandardMaterial({ map: texHormigon(), roughness: 0.85 });
@@ -142,7 +142,7 @@
     silo.castShadow = false;
     K.silo = silo; K.yVacio = yb + 0.09; K.yLleno = yb + 0.3;
     K.zBatea = zc;
-    C.puntos.push({ id: "comederoHacienda", x: (X0 + X1) / 2, z: Z0 - 1.9, r: 3.2, texto: "Cargar el comedero con silo" });
+    C.puntos.push({ id: "comederoHacienda", x: (X0 + X1) / 2, z: Z0 - 1.9, r: 3.2, texto: "punto.comederoHacienda" });
 
     // ── la silobolsa: el tubo blanco de plástico donde se guarda el silo ──
     const bolsa = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 12, 24, 1), new THREE.MeshStandardMaterial({ color: 0xeeeeea, roughness: 0.55 }));
@@ -164,18 +164,20 @@
     K.silo.position.y = E.lerp(K.yVacio, K.yLleno, K.nivel);
   };
   K.alternarTranquera = () => {
-    const t = K.tranquera; t.abierta = !t.abierta; t.segmento.apagado = t.abierta;
-    E.estancia.puntos.find((p) => p.id === "tranqueraEncierre").texto = t.abierta ? "Cerrar la tranquera del encierre" : "Abrir la tranquera del encierre";
+    const tq = K.tranquera; tq.abierta = !tq.abierta; tq.segmento.apagado = tq.abierta;
+    const pt = E.estancia.puntos.find((p) => p.id === "tranqueraEncierre");
+    pt.texto = tq.abierta ? "punto.encierreCerrar" : "punto.encierreAbrir";
+    E.sonido.tranquera && E.sonido.tranquera(pt.x, pt.z);
   };
 
   // Cargar: un rato con la pala desde la silobolsa. La hacienda de cerca viene.
   K.cargar = () => {
     const G = E.juego;
-    if (K.nivel > 0.85) { G.mostrar("El comedero ya está lleno."); return; }
+    if (K.nivel > 0.85) { G.mostrar(t("msj.comederoLleno")); return; }
     G.fundir(0.4, () => {
       K.fijarNivel(1);
       G.gastar(K.COSTO, "Silo");
-      G.mostrar(`Cargaste el comedero con silo de maíz ($ ${new Intl.NumberFormat("es-AR").format(K.COSTO)}). La hacienda ya levanta la cabeza.`);
+      G.mostrar(t("msj.comederoCargado", { p: IDIOMA.numero(K.COSTO) }));
       llamar(160);
     });
   };
@@ -260,7 +262,7 @@
     const comieron = nov.filter((v) => v.comioHoy).length;
     for (const v of nov) { v.kilos = (v.kilos || 320) + (v.comioHoy ? 1.2 : -0.9) * 1; v.comioHoy = false; }
     const kg = Math.round(nov.reduce((s, v) => s + v.kilos, 0) / nov.length);
-    texto += comieron === nov.length ? `Los novillos del encierre comieron bien: promedian ${kg} kg. ` : comieron ? `Solo ${comieron} de ${nov.length} novillos alcanzaron el comedero; promedian ${kg} kg. ` : `Los novillos del encierre pasaron el día sin comer: bajaron a ${kg} kg. Hay que cargarles el comedero. `;
+    texto += comieron === nov.length ? t("parte.novillosBien", { kg }) : comieron ? t("parte.novillosAlgunos", { c: comieron, n: nov.length, kg }) : t("parte.novillosNada", { kg });
     K.comieron = false;
     return texto;
   };

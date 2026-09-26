@@ -3,11 +3,15 @@
 (() => {
   const G = (E.juego = {
     corriendo: false, pausa: false, dia: 1, hora: 6, horasJuego: 6, dinero: 1500000,
-    hierroCaliente: 0, comio: false, t: 0, fijo: location.hash === "#fijo",
+    hierroCaliente: 0, comio: false, t: 0, fijo: /fijo/.test(location.hash),
+    // Las pruebas viejas entran con "#fijo" y esperan el menú derecho; con
+    // "#fijo-idioma" (o sin nada) sale la pantalla de idioma como a cualquiera.
+    saltarIdioma: location.hash === "#fijo",
   });
   const $ = (id) => document.getElementById(id);
   const HORAS_POR_SEGUNDO = 1 / 60;           // una hora de juego, un minuto real
-  const miles = new Intl.NumberFormat("es-AR");
+  // La plata con los puntos o las comas de cada idioma (1.500.000 / 1,500,000).
+  const miles = { format: (n) => IDIOMA.numero(n) };
 
   // ── opciones ── se guardan en el navegador de cada uno (si se puede).
   const OPCIONES = { brillo: 1, volumen: 0.9, voz: 1, sensib: 1, ojo: true, subtitulos: true, calidad: null, fpsMedido: null };
@@ -15,47 +19,15 @@
   try { Object.assign(E.opciones, JSON.parse(localStorage.getItem("estancia-opciones") || "{}")); } catch (e) { /* sin almacenamiento */ }
   const guardarOpciones = () => { try { localStorage.setItem("estancia-opciones", JSON.stringify(E.opciones)); } catch (e) { /* no importa */ } };
 
-  // ── lo que dice el Guacho ── corto, en argentino y sin malas palabras.
-  // Sin malas palabras: rioplatense de campo, con "la pucha" y "qué macana".
-  const FRASES = {
-    errar: ["¡Uh, la pucha!", "¡Pucha, digo!", "Se me fue por un pelo.", "¡Ay, mamita, qué tiro!"],
-    enlazada: ["¡Ahí está, ya te tengo!", "¡Tomá, mañera!", "¡Quieta, quieta!", "Tranquila, negra."],
-    cortado: ["¡Se cortó el lazo, pucha digo!", "Este tiento estaba podrido."],
-    seFue: ["¡Se me fue con lazo y todo!", "¡Ahí va mi lazo, qué macana!"],
-    pialada: ["¡Abajo!", "¡Echate, vamos!", "Ahí está. Quieta."],
-    errarPial: ["¡Pará, pará…!", "Casi, casi. Otra vez."],
-    todaviaNo: ["Está entera todavía. Hay que cansarla.", "Que se canse primero."],
-    patada: ["¡Ay! ¡La costilla…!", "¡Uh, qué patada me pegó!"],
-    cornada: ["¡Me ensartó, la mañera!", "¡Ay, ay, ay!"],
-    embiste: ["¡Uy, viene!", "¡Cuidado que carga!"],
-    sed: ["Me muero de sed.", "Tengo la garganta hecha polvo."],
-    calor: ["Qué calor bárbaro.", "Cuarenta a la sombra, y sin sombra."],
-    curada: ["Listo, negra. Ya está.", "Así, curadita."],
-    lesion: ["Se me mancó el zaino. Lo reventé.", "Uh, el caballo viene rengo."],
-    sinLazo: ["No tengo lazo. Hay uno colgado en la galería."],
-    fumar: ["Un armado y seguimos."],
-    manga: ["Vamos, adentro.", "A la manga, vamos."],
-    silbar: ["¡Vení, zaino!"],
-    apuntar: ["Ahí la tengo…", "Quieta… quieta…", "Ya sos mía."],
-    perros: ["¡Vengan, perros!", "¡Vamos, Tigre! ¡Negra, vení!"],
-    quietos: ["¡Quietos ahí!", "¡Echate, Chispa!"],
-    junten: ["¡Junten, junten la hacienda!", "¡Vaya, vaya! ¡Juntela!"],
-    busquen: ["¡Busque, busque!", "¡Traela, Tigre!"],
-    mate: ["Un matecito y seguimos.", "Qué rico este mate amargo."],
-    comida: ["A ver qué hay pa' comer.", "Un guiso de arroz, como Dios manda."],
-    heladera: ["Agüita fresca, qué lindo."],
-    banar: ["Vení, zaino, que te baño.", "Ahí está, limpito."],
-    forraje: ["Tomá, comé tranquilo."],
-    saludar: ["¡Buenas! ¿Cómo andan?", "¡Buen día, paisano!"],
-    puesto: ["Por fin en el puesto."],
-    caballoSucio: ["Este zaino está hecho un barro."],
-  };
-
+  // ── lo que dice el Guacho ── corto, en argentino y sin malas palabras
+  // ("la pucha", "qué macana"). Las frases están en idioma.js: la voz grabada
+  // es siempre la castellana (clave-índice) y el subtítulo sale en el idioma
+  // elegido, con el mismo índice.
   let ultimaFrase = 0;
   G.decir = (clave, v) => {
-    const l = FRASES[clave];
+    const l = IDIOMA.DICC.es["frase." + clave];
     if (!l) return;
-    const i = Math.floor(Math.random() * l.length), texto = l[i];
+    const i = Math.floor(Math.random() * l.length), texto = IDIOMA.lista("frase." + clave)[i] || l[i];
     E.sonido.voz(clave + "-" + i);
     const s = $("subtitulo");
     s.textContent = texto;
@@ -75,34 +47,34 @@
     E.jugador.golpe(tipo);
     G.decir(tipo);
     E.sonido.golpeSeco();
-    if (E.jugador.costilla > 0 && tipo === "patada") G.mostrar("Costilla quebrada: dos días sin correr y con menos fuerza en el lazo.");
+    if (E.jugador.costilla > 0 && tipo === "patada") G.mostrar(t("msj.costilla"));
   };
   G.gastar = (monto, que) => { G.dinero -= monto; };
   G.soltarPuntero = () => { if (document.pointerLockElement) document.exitPointerLock(); };
-  const MENUS = ["menu", "parte", "fin", "pausa", "como", "opciones", "mapa", "radio"];
+  const MENUS = ["menu", "idioma", "parte", "fin", "pausa", "como", "opciones", "mapa", "radio"];
   G.enMenu = () => MENUS.some((id) => !$(id).hidden);
 
   // ── arranque ──
   G.iniciar = async () => {
     const lienzo = $("lienzo");
     let pasoCarga = 0;
-    const cargando = (t) => { $("cargaTexto").textContent = t; $("cargaBarra").style.width = (++pasoCarga / 8) * 100 + "%"; };
+    const cargando = (clave) => { $("cargaTexto").textContent = t(clave); $("cargaBarra").style.width = (++pasoCarga / 8) * 100 + "%"; };
     const pausa = () => new Promise((r) => setTimeout(r, 0));
-    cargando("Encendiendo…"); await pausa();
+    cargando("carga.encendiendo"); await pausa();
     E.motor.iniciar(lienzo);
     E.motor.actualizarHora(G.hora, 0);
-    cargando("Los animales y el Guacho…"); await pausa();
+    cargando("carga.animales"); await pausa();
     try { await E.modelos.cargar(); } catch (e) { console.warn("sin modelos", e); }
-    cargando("Tierra colorada…"); await pausa();
+    cargando("carga.tierra"); await pausa();
     E.terreno.construir();
-    cargando("El monte: quebrachos y algarrobos…"); await pausa();
+    cargando("carga.monte"); await pausa();
     E.flora.construir();
-    cargando("Rancho, corral y manga…"); await pausa();
+    cargando("carga.rancho"); await pausa();
     E.estancia.construir();
     E.puesto.construir();
     E.comedero.construir();
     E.radioFM.construir();
-    cargando("La hacienda…"); await pausa();
+    cargando("carga.hacienda"); await pausa();
     E.animales.construir();
     E.jugador.iniciar();
     E.perros.construir();
@@ -117,11 +89,12 @@
     E.radioFM.conectar();
     E.conectarEntrada(lienzo);
     conectarInterfaz();
+    E.menu.conectar();
     // Compilar todos los shaders en la carga: si no, lo primero que entra en
     // pantalla traba el juego (§ 6.1).
-    cargando("Dibujando el mapa del campo…"); await pausa();
+    cargando("carga.mapa"); await pausa();
     E.mapa.preparar();
-    cargando("Preparando la luz…"); await pausa();
+    cargando("carga.luz"); await pausa();
     E.motor.acomodar();
     colocar(0.016);
     try { await E.motor.renderer.compileAsync(E.motor.escena, E.motor.camara); } catch (e) { /* los navegadores viejos no lo tienen */ }
@@ -134,11 +107,13 @@
     else if (E.opciones.calidad) E.calidad.aplicar(E.opciones.calidad);
     else await escaneo();
     colocar(0.016);
-    // La carga se funde y aparece la portada, con la cámara dando vueltas.
+    // La carga se funde; el campo ya se mueve atrás mientras se elige el
+    // idioma, y después aparece la portada con la cámara dando vueltas.
     $("carga").style.opacity = 0;
     setTimeout(() => { $("carga").hidden = true; }, 600);
-    $("menu").hidden = false;
     requestAnimationFrame(bucle);
+    if (!G.saltarIdioma) await E.menu.elegirIdioma();
+    E.menu.mostrar();
   };
 
   // ── el escaneo de cuadros ── se ve el campo que se dibuja para medir, los
@@ -151,13 +126,13 @@
     $("carga").classList.add("midiendo");
     $("escaneo").hidden = false;
     $("cargaBarra").parentNode.hidden = true;
-    $("cargaTexto").textContent = "Midiendo tu compu para elegir los gráficos…";
+    $("cargaTexto").textContent = t("escaneo.midiendo");
     $("escaneoSaltar").onclick = () => { C.cortar = true; };
     const marcar = (n, clase) => lis.forEach((li) => li.classList.toggle(clase, li.dataset.n === n));
     const mostrarFps = (f) => { fps.textContent = Math.round(f); fps.className = f >= 50 ? "bien" : f >= 35 ? "justo" : "mal"; };
     const r = await C.escanear((n, f) => {
       marcar(n, "probando"); mostrarFps(f);
-      $("cargaTexto").textContent = `Probando gráficos ${C.NIVELES[n].nombre.toLowerCase()}…`;
+      $("cargaTexto").textContent = t("escaneo.probando", { nivel: t("calidad." + n).toLowerCase() });
     });
     marcar(null, "probando");
     if (!r) { C.aplicar(porDefecto); return; }       // saltado: no se guarda, la próxima vez mide
@@ -166,7 +141,7 @@
     // Antes del menú se puede elegir otro nivel tocándolo (la ultra baja, para
     // los equipos flojos). Si no se toca nada, sigue solo.
     let elegido = r.nivel, tocado = false;
-    const decir = () => { $("cargaTexto").textContent = `Gráficos: ${C.NIVELES[elegido].nombre.toLowerCase()}${tocado ? "" : " (elegidos por el escaneo)"}`; };
+    const decir = () => { $("cargaTexto").textContent = t(tocado ? "escaneo.graficos" : "escaneo.graficosSolo", { nivel: t("calidad." + elegido).toLowerCase() }); };
     decir();
     $("escaneoAyuda").hidden = false; $("escaneoSeguir").hidden = false;
     await new Promise((listo) => {
@@ -183,12 +158,17 @@
     // Cómo se juega y Opciones se abren desde la portada o la pausa, y "Volver"
     // vuelve a donde se estaba.
     let volverA = "menu";
+    // Desde la portada el menú queda abajo, visible: escondido y vuelto a
+    // mostrar, todas sus animaciones de entrada arrancaban de nuevo al volver
+    // de Opciones (y el botón de empezar se corría mientras uno lo tocaba).
     const abrir = (id, desde) => {
-      volverA = desde; $(desde).hidden = true; $(id).hidden = false;
+      volverA = desde; if (desde !== "menu") $(desde).hidden = true; $(id).hidden = false;
       // El escaneo corre después de conectar la interfaz: se lee al abrir.
       if (id === "opciones") { $("opCalidad").value = E.calidad.nivel; textoEscaneo(); }
     };
-    $("menuComo").onclick = () => abrir("como", "menu");
+    // En el menú, "Cómo se juega" es una pestaña con tarjetas; las teclas de
+    // siempre se abren desde ahí.
+    $("menuTeclas").onclick = () => abrir("como", "menu");
     $("menuOpciones").onclick = () => abrir("opciones", "menu");
     $("pausaComo").onclick = () => abrir("como", "pausa");
     $("pausaOpciones").onclick = () => abrir("opciones", "pausa");
@@ -212,8 +192,9 @@
     // La calidad: se cambia a mano, o se borra la medida y se recarga para medir.
     const textoEscaneo = () => {
       const o = E.opciones;
-      $("opEscaneo").textContent = o.fpsMedido ? `Midió ${o.fpsMedido} cuadros por segundo y eligió ${E.calidad.NIVELES[o.calidad].nombre.toLowerCase()}.` : "Todavía no se midió.";
+      $("opEscaneo").textContent = o.fpsMedido && o.calidad ? t("op.medido", { fps: o.fpsMedido, nivel: t("calidad." + o.calidad).toLowerCase() }) : t("op.noMedido");
     };
+    IDIOMA.alCambiar(textoEscaneo);
     $("opCalidad").value = E.calidad.nivel; textoEscaneo();
     $("opCalidad").onchange = () => {
       E.calidad.aplicar($("opCalidad").value);
@@ -245,19 +226,14 @@
     document.body.classList.add("jugando");
     G.hora = 6; E.motor.actualizarHora(G.hora, G.t);
     E.sonido.iniciar();
-    // En el celular: pantalla completa y acostado, si el navegador deja.
-    if (matchMedia("(pointer: coarse)").matches) {
-      const d = document.documentElement;
-      Promise.resolve(d.requestFullscreen && d.requestFullscreen())
-        .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape"))
-        .catch(() => { /* iPhone y otros no dejan: queda el cartel de girar */ });
-    }
+    // En el celular ya no se pide pantalla completa ni se traba la orientación:
+    // con el teléfono parado el juego se gira solo (js/giro.js).
+    E.libreta.sumar("jugadas");
     G.corriendo = true;
     // El primer día arranca con una vaca agusanada.
     const v = E.animales.vacas[6];
     E.animales.enfermar(v);
-    parte(`Día 1 de ${E.trabajo.DIAS}. Amanece en la estancia, 23 °C y se viene pesado.`,
-      `El puestero vio la ${v.num} con la bichera, rengueando ${E.trabajo.rumbo(v.destino.x, v.destino.z)}, metida en el monte. Buscá las huellas frescas y la bosta con moscas. El zaino está ensillado al lado del rancho.`);
+    parte(t("parte.dia1Titulo", { n: E.trabajo.DIAS }), t("parte.dia1Texto", { num: v.num, rumbo: E.trabajo.rumbo(v.destino.x, v.destino.z) }));
   }
   function parte(titulo, texto) {
     $("parteTitulo").textContent = titulo;
@@ -287,14 +263,14 @@
   // ── la vida de estancia ──
   function tomarAgua() {
     const J = E.jugador, c = E.animales.caballo;
-    G.fundir(0.08, () => { J.sed = 100; if (J.montado || Math.hypot(c.x - J.x, c.z - J.z) < 6) { c.aliento = 1; G.mostrar("Tomaste agua, y el zaino también."); } else G.mostrar("Agua del bebedero, tibia pero agua."); });
+    G.fundir(0.08, () => { J.sed = 100; if (J.montado || Math.hypot(c.x - J.x, c.z - J.z) < 6) { c.aliento = 1; G.mostrar(t("msj.aguaAmbos")); } else G.mostrar(t("msj.agua")); });
   }
   function calentarHierro() {
-    G.fundir(0.4, () => { G.hierroCaliente = 1.5; G.mostrar("El hierro está al rojo. Tenés una hora y media."); });
+    G.fundir(0.4, () => { G.hierroCaliente = 1.5; G.mostrar(t("msj.hierro")); });
   }
   function comerAsado() {
     const J = E.jugador;
-    G.fundir(0.7, () => { J.cansancio = Math.min(100, J.cansancio + 45); G.comio = true; G.mostrar("Asado al costillar, con cuero. Grasa y humo."); });
+    G.fundir(0.7, () => { J.cansancio = Math.min(100, J.cansancio + 45); G.comio = true; G.mostrar(t("msj.asado")); });
   }
   function dormir(forzado) {
     const J = E.jugador;
@@ -314,6 +290,7 @@
   function nuevoDia(mal, motivo) {
     const J = E.jugador, c = E.animales.caballo;
     const ayer = G.dia;
+    E.libreta.sumar("dias");
     G.dia++; G.hora = 6; G.horasJuego = Math.ceil(G.horasJuego / 24) * 24 + 6;
     J.cansancio = mal ? 70 : G.comio ? 100 : 82;
     J.sed = Math.max(J.sed, 80);
@@ -328,22 +305,23 @@
     let texto = motivo ? motivo + " " : "";
     texto += E.puesto.amanecer(ayer);
     texto += E.comedero.amanecer();
-    if (muertas.length) texto += `Amaneció muerta ${muertas.map((v) => "la " + v.num).join(" y ")}: la bichera la comió. Los chimangos ya están arriba. `;
-    if (nuevas.length) texto += nuevas.map((v) => `El puestero vio la ${v.num} agusanada, ${E.trabajo.rumbo(v.destino.x, v.destino.z)}.`).join(" ") + " ";
+    if (muertas.length) texto += t("parte.muertas", { lista: muertas.map((v) => t("vaca.la", { num: v.num })).join(t("y")) });
+    if (nuevas.length) texto += nuevas.map((v) => t("parte.nueva", { num: v.num, rumbo: E.trabajo.rumbo(v.destino.x, v.destino.z) })).join(" ") + " ";
     const pend = E.animales.vacas.filter((v) => v.salud.bichera && !v.salud.muerta && !nuevas.includes(v));
-    if (pend.length) texto += `Siguen con bichera: ${pend.map((v) => `la ${v.num} (${v.salud.bichera.dias} ${v.salud.bichera.dias === 1 ? "día" : "días"})`).join(", ")}. A los tres días se mueren. `;
-    if (!muertas.length && !nuevas.length && !pend.length) texto += "Nadie agusanado hoy. Día para la manga: vacunar, caravanear y marcar. ";
-    texto += `Hacienda: ${b.vivas} de ${b.total}, ${b.trabajadas} trabajadas.`;
-    parte(`Día ${G.dia} de ${E.trabajo.DIAS}.`, texto);
+    if (pend.length) texto += t("parte.siguen", { lista: pend.map((v) => t("parte.sigueItem", { num: v.num, dias: t("dias", { n: v.salud.bichera.dias }) })).join(", ") });
+    if (!muertas.length && !nuevas.length && !pend.length) texto += t("parte.nadie");
+    texto += t("parte.hacienda", { vivas: b.vivas, total: b.total, trab: b.trabajadas });
+    parte(t("parte.diaTitulo", { d: G.dia, n: E.trabajo.DIAS }), texto);
   }
   function fin(b) {
     G.corriendo = false;
     const fundiste = b.vivas < 12 || b.patrimonio < 1500000 + 18 * 850000 * 0.7;
-    $("finTitulo").textContent = fundiste ? "Fundiste la estancia." : "Salvaste la temporada.";
+    E.libreta.terminar({ salvada: !fundiste, dia: Math.min(G.dia, E.trabajo.DIAS), vivas: b.vivas, total: b.total, plata: G.dinero });
+    $("finTitulo").textContent = t(fundiste ? "fin.fundiste" : "fin.salvaste");
     $("finTexto").innerHTML =
-      `<p>Hacienda viva: <b>${b.vivas} de ${b.total}</b>. Vacunadas contra aftosa: <b>${b.vacunadas}</b>. Trabajadas completas: <b>${b.trabajadas}</b>.</p>` +
-      `<p>Plata en la caja: <b>$ ${miles.format(Math.round(G.dinero))}</b>. La hacienda vale <b>$ ${miles.format(Math.round(b.hacienda))}</b>.</p>` +
-      `<p>${fundiste ? "Con lo que se murió y lo que no se vacunó, no alcanza para seguir. El banco se queda con el campo." : "La estancia sigue viva un año más. Nadie te va a dar las gracias, pero el campo sigue."}</p>`;
+      `<p>${t("fin.p1", { vivas: b.vivas, total: b.total, vac: b.vacunadas, trab: b.trabajadas })}</p>` +
+      `<p>${t("fin.p2", { plata: miles.format(Math.round(G.dinero)), hac: miles.format(Math.round(b.hacienda)) })}</p>` +
+      `<p>${t(fundiste ? "fin.malo" : "fin.bueno")}</p>`;
     $("fin").hidden = false;
     G.soltarPuntero();
   }
@@ -351,39 +329,40 @@
   // ── interacción ── lo mismo arma el cartel y ejecuta la acción.
   function contexto() {
     const J = E.jugador, Z = E.lazo, W = E.trabajo, c = E.animales.caballo;
-    if (W.manga.activa) return W.manga.fase === "cepo" ? { texto: W.trabajada(W.manga.vaca) ? "Soltar la vaca" : "Soltarla sin terminar", fn: () => W.salirManga(W.trabajada(W.manga.vaca)) } : null;
+    if (W.manga.activa) return W.manga.fase === "cepo" ? { texto: t(W.trabajada(W.manga.vaca) ? "accion.soltarVaca" : "accion.soltarSinTerminar"), fn: () => W.salirManga(W.trabajada(W.manga.vaca)) } : null;
     if (Z.estado === "atada" && Z.vaca && Math.hypot(Z.vaca.x - J.x, Z.vaca.z - J.z) < 3) {
-      if (J.montado) return { texto: "Bajate para trabajarla", fn: () => J.desmontar() };
-      if (Z.vaca.salud.bichera) return { texto: `Curar la bichera de la ${Z.vaca.num}`, fn: () => W.abrirCura(Z.vaca) };
-      return { texto: `Soltar la ${Z.vaca.num}`, fn: () => Z.soltar() };
+      if (J.montado) return { texto: t("accion.bajate"), fn: () => J.desmontar() };
+      if (Z.vaca.salud.bichera) return { texto: t("accion.curar", { num: Z.vaca.num }), fn: () => W.abrirCura(Z.vaca) };
+      return { texto: t("accion.soltar", { num: Z.vaca.num }), fn: () => Z.soltar() };
     }
-    if (!J.montado && Math.hypot(c.x - J.x, c.z - J.z) < 2.6) return { texto: "Montar el zaino", fn: () => J.montar() };
+    if (!J.montado && Math.hypot(c.x - J.x, c.z - J.z) < 2.6) return { texto: t("accion.montar"), fn: () => J.montar() };
     for (const p of E.estancia.puntos) {
       if (Math.hypot(p.x - J.x, p.z - J.z) > p.r) continue;
-      if (p.id === "tranqueraEntrada") return { texto: p.texto, fn: E.estancia.alternarEntrada };
-      if (p.id === "tranqueraEncierre") return { texto: p.texto, fn: E.comedero.alternarTranquera };
-      if (J.montado && p.id !== "tanque") return { texto: "Bajate del caballo", fn: () => J.desmontar() };
+      // p.texto es la clave del cartel de ese lugar (idioma.js, "punto.…").
+      if (p.id === "tranqueraEntrada") return { texto: t(p.texto), fn: E.estancia.alternarEntrada };
+      if (p.id === "tranqueraEncierre") return { texto: t(p.texto), fn: E.comedero.alternarTranquera };
+      if (J.montado && p.id !== "tanque") return { texto: t("accion.bajarse"), fn: () => J.desmontar() };
       if (p.id === "almacen") {
-        if (!Z.tieneLazo) return { texto: `Comprar un lazo en el almacén ($ ${miles.format(W.COSTO.lazo)})`, fn: () => { Z.tieneLazo = true; Z.desgaste = 0; G.gastar(W.COSTO.lazo, "Lazo"); G.mostrar("Don Benito te vendió un lazo de ocho tientos. Bien trenzado."); } };
-        return { texto: "Almacén: una gaseosa fría, yerba y galletas ($ 12.000)", fn: () => G.fundir(0.3, () => { J.sed = 100; J.cansancio = Math.min(100, J.cansancio + 15); J.salud = Math.min(100, J.salud + 5); G.gastar(12000, "Almacén"); G.mostrar("Una gaseosa fría en la galería del almacén, y Don Benito con las noticias del pueblo."); }) };
+        if (!Z.tieneLazo) return { texto: t("accion.comprarLazo", { p: miles.format(W.COSTO.lazo) }), fn: () => { Z.tieneLazo = true; Z.desgaste = 0; G.gastar(W.COSTO.lazo, "Lazo"); G.mostrar(t("msj.lazoComprado")); } };
+        return { texto: t("accion.almacen", { p: miles.format(12000) }), fn: () => G.fundir(0.3, () => { J.sed = 100; J.cansancio = Math.min(100, J.cansancio + 15); J.salud = Math.min(100, J.salud + 5); G.gastar(12000, "Almacén"); G.mostrar(t("msj.almacen")); }) };
       }
-      if (p.id === "mate") return { texto: p.texto, fn: E.puesto.cebarMate };
-      if (p.id === "heladera") return { texto: p.texto, fn: E.puesto.aguaFria };
-      if (p.id === "comederoHacienda") return { texto: E.comedero.nivel > 0.85 ? "El comedero está lleno" : `${p.texto} ($ ${miles.format(E.comedero.COSTO)})`, fn: E.comedero.cargar };
-      if (p.id === "tranqueraEncierre") return { texto: p.texto, fn: E.comedero.alternarTranquera };
-      if (p.id === "comedero") return { texto: c.comido === G.dia ? "El zaino ya tiene forraje" : p.texto, fn: () => { if (c.comido !== G.dia) E.puesto.forraje(); } };
-      if (p.id === "tanque" && E.puesto.puedeBanar()) return { texto: "Bañar al zaino con el balde", fn: E.puesto.banar };
-      if (p.id === "tanque") return { texto: p.texto, fn: tomarAgua };
-      if (p.id === "radio" || p.id === "radioFM") return { texto: "Radio FM: elegir la emisora", fn: E.radioFM.abrir };
-      if (p.id === "catre") return { texto: G.hora >= 17 || J.cansancio < 30 ? "Dormir en el catre" : "Todavía es temprano para dormir", fn: () => { if (G.hora >= 17 || J.cansancio < 30) dormir(false); } };
-      if (p.id === "fogon") return { texto: "Fogón: calentar el hierro, cocinar o comer", fn: () => { $("fogonComer").disabled = G.hora < 18; $("fogonGuiso").disabled = G.hora < 11 || G.comio; $("fogon").hidden = false; G.soltarPuntero(); } };
-      if (p.id === "manga") return { texto: p.texto, fn: () => W.entrarManga() };
-      if (p.id === "tranquera") return { texto: p.texto, fn: () => E.estancia.alternarTranquera() };
+      if (p.id === "mate") return { texto: t(p.texto), fn: E.puesto.cebarMate };
+      if (p.id === "heladera") return { texto: t(p.texto), fn: E.puesto.aguaFria };
+      if (p.id === "comederoHacienda") return { texto: E.comedero.nivel > 0.85 ? t("accion.comederoLleno") : `${t(p.texto)} ($ ${miles.format(E.comedero.COSTO)})`, fn: E.comedero.cargar };
+      if (p.id === "tranqueraEncierre") return { texto: t(p.texto), fn: E.comedero.alternarTranquera };
+      if (p.id === "comedero") return { texto: c.comido === G.dia ? t("accion.zainoComio") : t(p.texto), fn: () => { if (c.comido !== G.dia) E.puesto.forraje(); } };
+      if (p.id === "tanque" && E.puesto.puedeBanar()) return { texto: t("accion.banar"), fn: E.puesto.banar };
+      if (p.id === "tanque") return { texto: t(p.texto), fn: tomarAgua };
+      if (p.id === "radio" || p.id === "radioFM") return { texto: t("accion.radio"), fn: E.radioFM.abrir };
+      if (p.id === "catre") return { texto: t(G.hora >= 17 || J.cansancio < 30 ? "punto.catre" : "accion.temprano"), fn: () => { if (G.hora >= 17 || J.cansancio < 30) dormir(false); } };
+      if (p.id === "fogon") return { texto: t("accion.fogon"), fn: () => { $("fogonComer").disabled = G.hora < 18; $("fogonGuiso").disabled = G.hora < 11 || G.comio; $("fogon").hidden = false; G.soltarPuntero(); } };
+      if (p.id === "manga") return { texto: t(p.texto), fn: () => W.entrarManga() };
+      if (p.id === "tranquera") return { texto: t(p.texto), fn: () => E.estancia.alternarTranquera() };
     }
     if (!Z.tieneLazo && Math.hypot(E.lugares.rancho.x + 3.5 - J.x, E.lugares.rancho.z + 3 - J.z) < 2.2 && !J.montado) {
-      return { texto: `Agarrar el lazo nuevo de la galería ($ ${miles.format(W.COSTO.lazo)})`, fn: () => { Z.tieneLazo = true; Z.desgaste = 0; G.gastar(W.COSTO.lazo, "Lazo"); Z.equipar(); } };
+      return { texto: t("accion.lazoGaleria", { p: miles.format(W.COSTO.lazo) }), fn: () => { Z.tieneLazo = true; Z.desgaste = 0; G.gastar(W.COSTO.lazo, "Lazo"); Z.equipar(); } };
     }
-    if (J.montado && c.vReal < 0.6) return { texto: "Desmontar", fn: () => J.desmontar() };
+    if (J.montado && c.vReal < 0.6) return { texto: t("accion.desmontar"), fn: () => J.desmontar() };
     return null;
   }
 
@@ -423,9 +402,10 @@
     // Con el menú, el parte, la pausa o el final a la vista, la interfaz del
     // juego se esconde (se veía el reloj y las barras por debajo del menú).
     $("hud").hidden = G.enMenu();
-    $("chat").hidden = G.enMenu() || !G.corriendo;
+    // Tampoco en la cura: el globito del chat quedaba encima del título.
+    $("chat").hidden = G.enMenu() || !G.corriendo || W.cura.activa;
     const hh = Math.floor(G.hora) % 24, mm = Math.floor((G.hora % 1) * 60);
-    $("hudDia").textContent = `Día ${G.dia} de ${W.DIAS}`;
+    $("hudDia").textContent = t("hud.dia", { d: G.dia, n: W.DIAS });
     $("hudHora").textContent = `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
     $("hudTemp").textContent = `${Math.round(E.motor.temp)} °C`;
     $("hudTemp").classList.toggle("calor", E.motor.temp > 36);
@@ -451,13 +431,13 @@
     // Las tareas: lo urgente primero y tres como mucho (antes eran seis
     // renglones con el lazo y el comedero siempre a la vista).
     const tareas = [];
-    for (const v of agus) tareas.push([`La ${v.num} con bichera · ${v.salud.bichera.dias ? v.salud.bichera.dias + (v.salud.bichera.dias === 1 ? " día" : " días") : "de hoy"}`, true]);
-    if (!Z.tieneLazo) tareas.push(["Sin lazo: hay en la galería o en el almacén", true]);
-    if (E.puesto.pendientes().length) tareas.push([`El zaino: ${E.puesto.pendientes().join(" y ")}`, true]);
-    if (E.comedero.nivel < 0.15) tareas.push(["Comedero del encierre vacío", true]);
-    if (G.hierroCaliente > 0) tareas.push([`Hierro caliente: ${Math.round(G.hierroCaliente * 60)} min`, false]);
-    tareas.push([`Manga: ${b.trabajadas} de ${b.vivas} trabajadas`, false]);
-    const html = tareas.slice(0, 3).map(([t, u]) => `<li${u ? ' class="urgente"' : ""}>${t}</li>`).join("");
+    for (const v of agus) tareas.push([t("tarea.bichera", { num: v.num, dias: v.salud.bichera.dias }), true]);
+    if (!Z.tieneLazo) tareas.push([t("tarea.sinLazo"), true]);
+    if (E.puesto.pendientes().length) tareas.push([t("tarea.zaino", { cosas: E.puesto.pendientes().map((k) => t(k)).join(t("y")) }), true]);
+    if (E.comedero.nivel < 0.15) tareas.push([t("tarea.comedero"), true]);
+    if (G.hierroCaliente > 0) tareas.push([t("tarea.hierro", { min: Math.round(G.hierroCaliente * 60) }), false]);
+    tareas.push([t("tarea.manga", { t: b.trabajadas, v: b.vivas }), false]);
+    const html = tareas.slice(0, 3).map(([texto, u]) => `<li${u ? ' class="urgente"' : ""}>${texto}</li>`).join("");
     if (html !== ultimasTareas) { $("hudObjetivos").innerHTML = html; ultimasTareas = html; }
     $("aviso").textContent = ctxAccion ? `${E.entrada.tactil ? "✋" : "E"} · ${ctxAccion.texto}` : "";
     $("aviso").classList.toggle("visible", !!ctxAccion);
@@ -469,7 +449,7 @@
       $("tensionBarra").style.width = Math.min(100, (Z.tension / resiste) * 100) + "%";
       $("tensionBarra").className = Z.tension > resiste * 0.85 ? "rojo" : Z.tension > resiste * 0.55 ? "amarillo" : "";
       $("fatigaBarra").style.width = Z.vaca.fatiga * 100 + "%";
-      $("tensionTexto").textContent = Z.vaca.fatiga < 0.38 ? "Cansada: pialala (P)" : "Aguantá y cobrá (botón derecho)";
+      $("tensionTexto").textContent = t(Z.vaca.fatiga < 0.38 ? "hud.cansada" : "hud.aguanta");
       $("pial").hidden = !Z.pialando;
       if (Z.pialando) { $("pialAguja").style.left = Z.pialando.aguja * 100 + "%"; $("pialVentana").style.left = (Z.pialando.ventana - 0.11) * 100 + "%"; }
     } else $("pial").hidden = true;
@@ -498,7 +478,7 @@
     cam.position.set(x, Math.max(T.altura(x, z) + 1.6, suelo + 2.1 + Math.sin(t * 0.11) * 0.4), z);
     // El Guacho en el tercio derecho: la portada ocupa la izquierda. En una
     // pantalla angosta (la portada abajo) va al centro.
-    const corrido = innerWidth > 760 ? 2.2 : 0;
+    const corrido = GIRO.ancho > 760 ? 2.2 : 0;
     const fx = J.x - x, fz = J.z - z, l = Math.hypot(fx, fz) || 1;
     cam.lookAt(E.lerp(J.x, R.x, 0.25) + (fz / l) * corrido, suelo + 1.4, E.lerp(J.z, R.z, 0.25) - (fx / l) * corrido);
     J.portada(dt, t);
@@ -541,7 +521,7 @@
     E.trabajo.actualizarManga(dt, G.t);
     // El hierro brilla si está caliente.
     E.estancia.hierro.punta.material.emissiveIntensity = G.hierroCaliente > 0 ? 2.5 + Math.sin(G.t * 3) * 0.4 : 0;
-    if (!$("menu").hidden || (!$("como").hidden || !$("opciones").hidden) && !G.corriendo) camaraDePortada(dt, G.t);
+    if (!$("menu").hidden || !$("idioma").hidden || (!$("como").hidden || !$("opciones").hidden) && !G.corriendo) camaraDePortada(dt, G.t);
     const cam = E.motor.camara;
     E.flora.actualizar(cam, G.t);
     E.flora.actualizarPasto(cam.position);
@@ -552,9 +532,9 @@
     E.sonido.actualizar(dt, E.jugador, G.hora);
     if (activo) {
       const J = E.jugador;
-      if (J.sed <= 0) desmayo("Te agarró un golpe de calor. Te encontró el puestero tirado y te trajo al rancho.");
-      else if (J.salud <= 0) desmayo("Te dejó de cama. Te trajeron al rancho entre dos.");
-      else if (G.hora >= 23.5) { G.mostrar("Te agarró la noche. Te dormiste donde estabas."); dormir(true); }
+      if (J.sed <= 0) desmayo(t("msj.golpeCalor"));
+      else if (J.salud <= 0) desmayo(t("msj.deCama"));
+      else if (G.hora >= 23.5) { G.mostrar(t("msj.noche")); dormir(true); }
       if (J.sed < 20 && G.t - ultimaFrase > 25) G.decir("sed");
       else if (E.motor.temp > 38 && G.t - ultimaFrase > 60 && Math.random() < dt * 0.05) G.decir("calor");
     }
@@ -590,7 +570,7 @@
   // ── para las pruebas (Playwright) ──
   window.__juego = {
     G, J: () => E.jugador, A: () => E.animales, Z: () => E.lazo, W: () => E.trabajo,
-    empezar: () => { empezar(); $("parte").hidden = true; },
+    empezar: () => { $("idioma").hidden = true; empezar(); $("parte").hidden = true; },
     ir(x, z, yaw = 0, pitch = 0) { const J = E.jugador; J.x = x; J.z = z; J.yaw = yaw; J.pitch = pitch; if (J.montado) { E.animales.caballo.x = x; E.animales.caballo.z = z; } colocar(0); },
     hora(h) { G.hora = h; E.motor.actualizarHora(h, G.t); },
     paso(dt, n = 1) { for (let i = 0; i < n; i++) { E.ojo.actualizar(dt); G.simular(dt * E.ojo.escala); } },
@@ -607,5 +587,5 @@
     info() { const r = E.motor.renderer.info; return { triangulos: r.render.triangles, llamadas: r.render.calls, geometrias: r.memory.geometries, texturas: r.memory.textures, escala: E.motor.escala }; },
   };
 
-  addEventListener("load", () => G.iniciar().catch((e) => { $("cargaTexto").textContent = "No se pudo arrancar: " + e.message; console.error(e); }));
+  addEventListener("load", () => G.iniciar().catch((e) => { $("cargaTexto").textContent = t("carga.error", { e: e.message }); console.error(e); }));
 })();

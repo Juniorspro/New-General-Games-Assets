@@ -138,7 +138,7 @@
     g.position.set(R.x + 2.0, y0 + 1.3, R.z + 2.8); esc.add(g);
     g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     RF.pos = g.position.clone();
-    C.puntos.push({ id: "radioFM", x: R.x + 2.0, z: R.z + 3.8, r: 1.8, texto: "Radio FM: elegir la emisora" });
+    C.puntos.push({ id: "radioFM", x: R.x + 2.0, z: R.z + 3.8, r: 1.8, texto: "accion.radio" });
   };
 
   // ── cada cuadro: el volumen según lo lejos que esté uno de la radio ──
@@ -158,20 +158,22 @@
     let grupo = null;
     for (const e of RF.EMISORAS) {
       const prov = e.lugar.includes("Chaco") ? "Chaco" : e.lugar.includes("Formosa") ? "Formosa" : e.lugar.includes("Corrientes") ? "Corrientes" : "Otras";
-      if (prov !== grupo) { grupo = prov; const h = document.createElement("li"); h.className = "grupo"; h.textContent = prov; ul.appendChild(h); }
+      if (prov !== grupo) { grupo = prov; const h = document.createElement("li"); h.className = "grupo"; h.textContent = prov === "Otras" ? t("radio.otras") : prov; ul.appendChild(h); }
       const li = document.createElement("li");
       const ok = seguraOk(e);
       li.className = (RF.actual === e && RF.prendida ? "sonando " : "") + (ok ? "" : "no ") + (e.caida ? "caida" : "");
-      li.innerHTML = `<b>${e.nombre}</b><small>${e.lugar}${e.comprobada ? "" : " · sin comprobar"}${e.caida ? " · sin señal" : ""}${ok ? "" : " · solo en el archivo descargado"}</small>`;
+      li.innerHTML = `<b>${e.nombre}</b><small>${e.lugar}${e.comprobada ? "" : t("radio.sinComprobar")}${e.caida ? t("radio.sinSenal") : ""}${ok ? "" : t("radio.soloArchivo")}</small>`;
       if (ok) li.onclick = () => RF.sintonizar(e);
       ul.appendChild(li);
     }
   }
+  const textoEstado = () => RF.estado === "apagada" ? t("radio.apagada2") : RF.estado.startsWith("esta emisora") ? t("radio.solo archivo") : t("radio." + RF.estado);
   function pintar() {
     const est = $("radioEstado"), chip = $("radioChip");
-    if (est) est.textContent = RF.prendida && RF.actual ? `${RF.actual.nombre} — ${RF.estado}` : "Apagada";
+    // RF.estado se compara en otros lados: queda en castellano y se traduce acá.
+    if (est) est.textContent = RF.prendida && RF.actual ? `${RF.actual.nombre} — ${textoEstado()}` : t("radio.apagada");
     if (chip) { chip.hidden = !RF.prendida; $("radioChipTexto").textContent = RF.actual ? RF.actual.nombre : ""; chip.classList.toggle("sin", RF.estado !== "en el aire"); }
-    if ($("radioPrender")) $("radioPrender").textContent = RF.prendida ? "Apagar" : "Prender";
+    if ($("radioPrender")) $("radioPrender").textContent = t(RF.prendida ? "radio.apagar" : "radio.prender");
     pintarLista();
   }
   RF.abrir = () => {

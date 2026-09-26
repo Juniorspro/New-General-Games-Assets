@@ -25,6 +25,17 @@ internet. Receta seguida: `GUIA-JUEGOS.md`.
 
 En el celular: palanca a la izquierda, mirar a la derecha, botones en pantalla
 (el de "Perros" va pasando de orden en orden; el globito de arriba abre el chat).
+Con el teléfono parado el juego se gira solo 90° (sin pantalla completa): la
+caja `#raiz` se rota por CSS y todo toque propio pasa por `js/giro.js`
+(`GIRO.aLocal`, `GIRO.delta`, `GIRO.enElemento`). La interfaz mide con
+`@container`/`cqw`/`cqh`, no con `@media`/`vw`/`vh`.
+
+Idiomas: castellano, inglés y portugués, elegidos en una pantalla antes del
+menú (cada vez que se abre; la última elección queda marcada) y en Opciones.
+Todo texto pasa por `t("clave")` (`js/idioma.js`) o `data-t` en el HTML; las
+voces grabadas quedan en castellano y el subtítulo se traduce. El menú
+(`js/menu.js`) tiene pestañas Jugar, Libreta (perfil y estadísticas guardadas
+en `localStorage`), Cómo se juega, Opciones y Créditos.
 
 ## La estancia
 
@@ -91,9 +102,10 @@ en Opciones se cambia a mano o se vuelve a medir.
 | la voz del Guacho (61 frases, sin malas palabras) | Higgsfield `qwen_audio_tts`, voz Julian con instrucción de acento rioplatense; 24 kHz, 64 kbps, -18 LUFS | `voces.json` |
 | perro, toro (con esqueleto), heladera, silla, pava | Rezona: imagen → modelo 3D → `rig3d` (`herramientas/rezona_perro_toro.py`); la mesa vino rota y quedó la de tablas | `js/datos.js` |
 | el silbido del Guacho | sintetizado en `js/sonido.js` (dos notas de silbido humano, con aire y vibrato) | — |
-| viento, chicharras, teros, mugidos, lazo, radio | sintetizado en `js/sonido.js` | — |
+| viento, pájaros, fogón, agua, chapoteo, galope, ladridos, pasos en el pasto, tranquera, zumbido del lazo | grabaciones CC0 y CC-BY de `sonidos/` (`python3 ../sonidos/incrustar.py estancia js/sonidos.js`); mientras no se decodifican, o si fallan, suena lo sintetizado | `js/sonidos.js` |
+| chicharras, teros, chimangos, mugidos, cascos al paso, moscas, radio AM | sintetizado en `js/sonido.js` (no hay grabación con licencia que sirva) | — |
 
-Lo que no está (música, efectos grabados): Rezona devolvió "servicio no
+Lo que no está (la música; los efectos grabados llegaron el 26/9 desde `sonidos/`): Rezona devolvió "servicio no
 disponible" toda la noche del 23/9, sin cobrar; Higgsfield no deja usar sus
 modelos de música y efectos fuera de su propio generador de juegos. Queda el
 sonido sintetizado.
@@ -119,5 +131,6 @@ python3 herramientas/armar_datos.py carpeta-con-assets/
 python3 ../herramientas/descargable/empaquetar.py index.html estancia.html
 ```
 
-`js/datos.js` pesa 13,5 MB (los GLB van comprimidos con gzip) y el HTML
-empaquetado 14,4 MB (24/9/2026). El límite de un artifact es 16 MB.
+`js/datos.js` pesa 13,5 MB (los GLB van comprimidos con gzip), `js/sonidos.js`
+446 KB, y el HTML empaquetado 15,46 MB (15.460.318 bytes, 26/9/2026). El
+límite de un artifact es 16 MB: quedan ~1,3 MB.

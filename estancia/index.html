@@ -26,8 +26,17 @@
     --cuerpo: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   }
   [hidden] { display: none !important; }
+  /* Sin el recuadro azul que el teléfono le pone a lo que se toca. */
+  button, canvas, li { -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body { margin: 0; background: #0d0a08; color: var(--hueso); font: 500 17px/1.35 var(--cuerpo); overflow: hidden; }
+  /* La caja de todo el juego. Es contenedor de tamaño: la interfaz mide con
+     cqw/cqh y @container en vez de vw/vh y @media, así con el teléfono parado
+     (la caja girada 90°, ver js/giro.js) todo se acomoda al ancho y alto del
+     juego y no al de la pantalla. La contención también la vuelve el marco de
+     los position: fixed de adentro. */
+  #raiz { position: fixed; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; container: raiz / size; }
+  html.girado #raiz { transform-origin: top left; }
   #lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
   /* ── HUD ── */
@@ -43,7 +52,7 @@
   /* Las barras del cuerpo: chicas, y solo a la vista si algo bajó (llenas, se apagan). */
   .cuerpo-barras {
     position: absolute; left: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    display: grid; gap: 5px; width: min(190px, 40vw); transition: opacity 0.6s;
+    display: grid; gap: 5px; width: min(190px, 40cqw); transition: opacity 0.6s;
   }
   .cuerpo-barras.tranquilas { opacity: 0; }
   .cuerpo-barras .barra { grid-template-columns: 66px 1fr; font-size: 12px; }
@@ -57,7 +66,7 @@
   /* Las tareas: una tarjeta chica, tres renglones como mucho, lo urgente primero. */
   .objetivos {
     position: absolute; right: 16px; top: calc(14px + env(safe-area-inset-top, 0px));
-    max-width: min(280px, 44vw); padding: 7px 12px 8px; border-radius: 10px; background: rgba(14,11,9,0.42);
+    max-width: min(280px, 44cqw); padding: 7px 12px 8px; border-radius: 10px; background: rgba(14,11,9,0.42);
     text-shadow: 0 1px 3px #000; transition: opacity 0.3s;
   }
   .objetivos:empty, .objetivos:has(ul:empty) { opacity: 0; }
@@ -76,24 +85,24 @@
   .aviso {
     position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     padding: 6px 14px; background: var(--hollin); border-radius: 4px; font-size: 18px; letter-spacing: 0.04em;
-    opacity: 0; transition: opacity 0.2s; white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transition: opacity 0.2s; white-space: nowrap; max-width: 92cqw; overflow: hidden; text-overflow: ellipsis;
   }
   .aviso.visible { opacity: 1; }
   .subtitulo {
     position: absolute; left: 50%; bottom: calc(52px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     font-size: 22px; font-style: italic; text-shadow: 0 2px 6px #000, 0 0 2px #000; opacity: 0; transition: opacity 0.3s;
-    white-space: nowrap; max-width: 94vw; text-align: center;
+    white-space: nowrap; max-width: 94cqw; text-align: center;
   }
   .subtitulo.visible { opacity: 1; }
   .mensaje {
     position: absolute; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
-    max-width: min(560px, 90vw); padding: 8px 16px; background: var(--hollin); border-left: 3px solid var(--tierra-clara);
+    max-width: min(560px, 90cqw); padding: 8px 16px; background: var(--hollin); border-left: 3px solid var(--tierra-clara);
     font-size: 17px; opacity: 0; transition: opacity 0.3s; text-align: center;
   }
   .mensaje.visible { opacity: 1; }
   .tension {
     position: absolute; left: 50%; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
-    width: min(340px, 80vw); display: grid; gap: 5px; text-shadow: 0 1px 4px #000; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase;
+    width: min(340px, 80cqw); display: grid; gap: 5px; text-shadow: 0 1px 4px #000; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase;
   }
   .tension .fila { display: grid; grid-template-columns: 70px 1fr; gap: 8px; align-items: center; }
   .tension i { display: block; height: 9px; background: rgba(0,0,0,0.5); border-radius: 5px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.2); }
@@ -139,34 +148,178 @@
   .boton:focus-visible { outline: 2px solid var(--hueso); outline-offset: 2px; }
   .botones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 
-  /* El menú: el título en letras de madera, y la calificación bien a la vista. */
-  #menu { background: linear-gradient(180deg, rgba(10,7,5,0.1), rgba(10,7,5,0.25) 35%, rgba(10,7,5,0.9) 78%); place-items: end center; animation: aparecer 1.2s ease both; }
-  /* En pantalla ancha la portada va en columna a la izquierda y el Guacho,
-     con el rancho atrás, queda a la vista a la derecha. */
-  @media (min-width: 761px) {
-    #menu { background: linear-gradient(90deg, rgba(10,7,5,0.92) 0%, rgba(10,7,5,0.72) 34%, rgba(10,7,5,0) 62%), linear-gradient(0deg, rgba(10,7,5,0.5), transparent 30%); place-items: center start; padding-left: max(24px, 5vw); }
-    #menu .portada { width: min(580px, 58vw); padding-bottom: 0; }
-    #menu .boton.secundario { padding: 12px 15px; }
-    #menu .boton.grande { padding: 14px 22px; font-size: 19px; }
-    #menu .portada h1 { font-size: clamp(64px, 9.5vw, 136px); }
-  }
+  /* ── el menú principal ── Encima del campo en 3D (la cámara de la portada
+     va y viene delante del Guacho): logo grande, pestañas y tarjetas. Todo
+     mide contra la caja del juego (@container), no contra la pantalla, así el
+     teléfono parado y girado se ve igual que acostado. */
+  #menu { background: linear-gradient(180deg, rgba(10,7,5,0.25), rgba(10,7,5,0.55) 38%, rgba(10,7,5,0.93) 78%); place-items: end center; animation: aparecer 1.2s ease both; }
+  /* Polvo a contraluz: puntitos que suben despacio. Se mueve con transform y
+     no con background-position: correr el fondo obligaba a repintar la
+     pantalla entera en cada cuadro y el menú caía de 2,7 a 0,7 cuadros por
+     segundo en SwiftShader. Así es una capa que se pinta una vez y se desliza
+     (sube un mosaico entero, 140 px, y el ciclo no tiene costura). */
+  #menu::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(100% + 140px); pointer-events: none; opacity: 0.45; will-change: transform;
+    background-image: radial-gradient(circle at 20px 30px, rgba(255,214,160,0.7) 0 1px, transparent 1.6px), radial-gradient(circle at 95px 100px, rgba(255,230,190,0.45) 0 1.4px, transparent 2px);
+    background-size: 140px 140px; animation: polvo 16s linear infinite; }
+  @keyframes polvo { from { transform: translateY(0); } to { transform: translateY(-140px); } }
+  .portada { position: relative; width: min(760px, 100%); display: grid; gap: 12px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
   /* La portada entra de a una cosa por vez, de arriba abajo. */
   .portada > * { animation: subir 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
   .portada > :nth-child(1) { animation-delay: 0.3s; }
-  .portada > :nth-child(2) { animation-delay: 0.45s; }
-  .portada > :nth-child(3) { animation-delay: 0.9s; }
-  .portada > :nth-child(4) { animation-delay: 1.05s; }
-  .portada > :nth-child(5) { animation-delay: 1.2s; }
-  .portada > :nth-child(6) { animation-delay: 1.35s; }
+  .portada > :nth-child(2) { animation-delay: 0.75s; }
+  .portada > :nth-child(3) { animation-delay: 0.95s; }
   .portada .marca { font-size: 15px; letter-spacing: 0.34em; text-transform: uppercase; color: var(--pasto); margin-bottom: 4px; }
+  .portada h1 { margin: 0; font: 400 clamp(64px, 14cqw, 150px)/0.82 var(--titular); letter-spacing: 0.01em; color: var(--hueso); text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
+  .portada h1 small { display: block; font: 400 clamp(24px, 4.6cqw, 44px)/1 var(--titular); color: var(--tierra-clara); letter-spacing: 0.04em; margin-top: 8px; }
   .portada h1 .t { display: inline-block; background: linear-gradient(180deg, #fff6e4 0%, var(--hueso) 45%, #c9b48f 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 6px 22px rgba(0,0,0,0.65)); }
   /* La firma: un lazo que se dibuja solo debajo del título. */
   .lazo-firma { display: block; width: min(560px, 90%); height: 34px; margin: 4px 0 0; overflow: visible; }
   .lazo-firma path { fill: none; stroke: var(--tierra-clara); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 900; stroke-dashoffset: 900; animation: dibujarLazo 1.6s 0.7s ease-out forwards; }
   @keyframes dibujarLazo { to { stroke-dashoffset: 0; } }
+  .ico { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* Las pestañas: un renglón con la raya de tierra debajo de la elegida. */
+  .pestanas { display: flex; gap: 2px; border-bottom: 1px solid rgba(239,230,212,0.16); overflow-x: auto; scrollbar-width: none; }
+  .pestana-boton { appearance: none; border: 0; background: transparent; color: var(--hueso-suave); cursor: pointer; display: flex; align-items: center; gap: 7px; padding: 10px 12px 9px; border-bottom: 3px solid transparent; margin-bottom: -1px; font: 700 16px/1 var(--cuerpo); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; transition: color 0.15s, background 0.15s, border-color 0.25s; }
+  .pestana-boton:hover { color: var(--hueso); background: rgba(239,230,212,0.06); }
+  .pestana-boton.activa { color: var(--hueso); border-bottom-color: var(--tierra-clara); }
+  .pestana-boton:focus-visible { outline: 2px solid var(--hueso); outline-offset: -2px; }
+  .pestanas-cuerpo { min-height: 0; overflow-y: auto; max-height: 56cqh; scrollbar-width: thin; }
+  /* Cada pestaña entra subiendo (pasar de hidden a visible arranca la animación sola). */
+  .pestana { animation: subir 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+  .calificacion { display: flex; gap: 12px; align-items: center; margin: 4px 0 10px; }
+  .calificacion b { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border: 3px solid var(--hueso); font: 400 28px/1 var(--titular); }
+  .calificacion span { font-size: 15px; color: var(--hueso-suave); max-width: 52ch; }
+  .portada .intro { font-size: 18px; max-width: 62ch; margin: 0 0 12px; }
+  /* Tres datos de la temporada, en tarjetas que entran de a una. */
+  .hitos { list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .hitos li { display: grid; grid-template-columns: 32px 1fr; column-gap: 10px; align-items: center; padding: 9px 12px; background: rgba(21,16,12,0.72); border: 1px solid rgba(239,230,212,0.1); border-left: 3px solid var(--tierra); border-radius: 4px; animation: subir 0.6s calc(1.1s + var(--i) * 0.12s) both; }
+  .hitos .ico { grid-row: span 2; width: 30px; height: 30px; color: var(--tierra-clara); }
+  .hitos b { font: 400 22px/1.05 var(--titular); letter-spacing: 0.02em; }
+  .hitos span { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hueso-suave); }
   .menu-botones { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
   #menuEmpezar { animation: latir 2.4s 2.2s ease-in-out infinite; }
   @keyframes latir { 0%, 100% { box-shadow: 0 0 0 0 rgba(216,116,63,0.55); } 50% { box-shadow: 0 0 0 10px rgba(216,116,63,0); } }
+  .chip-idioma { display: inline-flex; align-items: center; gap: 8px; }
+  /* La tarjeta del perfil: lleva a la libreta. */
+  .perfil-mini { appearance: none; border: 0; display: inline-flex; align-items: center; gap: 12px; margin-top: 12px; padding: 7px 16px 7px 7px; border-radius: 40px; background: rgba(21,16,12,0.66); color: var(--hueso); cursor: pointer; text-align: left; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.14); font-family: var(--cuerpo); transition: background 0.15s, transform 0.15s; }
+  .perfil-mini:hover { background: rgba(58,34,18,0.85); transform: translateY(-2px); }
+  .perfil-mini .avatar { width: 40px; height: 40px; }
+  .perfil-mini b { display: block; font: 400 17px/1.1 var(--titular); letter-spacing: 0.04em; }
+  .perfil-mini small { display: block; font-size: 14px; color: var(--hueso-suave); }
+  .avatar { flex: none; display: block; }
+  /* La libreta. */
+  .perfil { display: grid; grid-template-columns: 72px 1fr; gap: 16px; align-items: center; padding: 14px 16px; margin-bottom: 10px; background: rgba(21,16,12,0.8); border-top: 3px solid var(--tierra); }
+  .perfil .avatar { width: 72px; height: 72px; }
+  .perfil h3 { margin: 0; font: 700 14px/1 var(--cuerpo); letter-spacing: 0.2em; text-transform: uppercase; color: var(--pasto); }
+  .perfil strong { display: block; margin: 4px 0 2px; font: 400 32px/1 var(--titular); letter-spacing: 0.02em; }
+  .progreso { height: 6px; margin: 8px 0 5px; background: rgba(239,230,212,0.12); border-radius: 3px; overflow: hidden; }
+  .progreso i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--tierra), var(--urgente)); transition: width 1.1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .perfil small { font-size: 14px; color: var(--hueso-suave); }
+  .estadisticas { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .estadisticas li { padding: 9px 12px; background: rgba(21,16,12,0.72); border: 1px solid rgba(239,230,212,0.1); border-radius: 4px; animation: subir 0.5s calc(var(--i) * 0.05s) both; }
+  .estadisticas b { display: block; font: 400 26px/1.05 var(--titular); letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .estadisticas span { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--hueso-suave); }
+  .portada .nota { margin: 0 0 10px; font-size: 14px; color: var(--hueso-suave); }
+  .boton.chico { padding: 8px 12px; font-size: 14px; }
+  /* Cómo se juega: una tarjeta por trabajo. */
+  .tarjetas { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .tarjetas li { display: grid; grid-template-columns: 36px 1fr; gap: 3px 10px; align-content: start; padding: 10px 12px; background: rgba(21,16,12,0.8); border: 1px solid rgba(239,230,212,0.1); border-radius: 4px; animation: subir 0.5s calc(var(--i) * 0.05s) both; transition: transform 0.2s, border-color 0.2s; }
+  .tarjetas li:hover { transform: translateY(-2px); border-color: rgba(216,116,63,0.6); }
+  .tarjetas .ico { grid-row: span 2; width: 34px; height: 34px; color: var(--tierra-clara); }
+  .tarjetas b { font: 400 19px/1.1 var(--titular); letter-spacing: 0.03em; }
+  .tarjetas span { font-size: 15px; line-height: 1.25; color: var(--hueso-suave); }
+  /* Créditos. */
+  .portada .lema { margin: 2px 0 10px; font-size: 18px; }
+  .creditos { margin: 0; display: grid; }
+  .creditos div { display: grid; grid-template-columns: minmax(130px, 34%) 1fr; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(239,230,212,0.1); animation: subir 0.5s calc(var(--i) * 0.05s) both; }
+  .creditos dt { font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hueso-suave); }
+  .creditos dd { margin: 0; font-size: 17px; }
+  /* Los sonidos CC-BY: la licencia pide autor, obra y enlace a la vista. */
+  .creditos-sonidos { margin-top: 12px; }
+  .creditos-sonidos h3 { margin: 0 0 6px; font: 700 14px/1.2 var(--cuerpo); letter-spacing: 0.1em; text-transform: uppercase; color: var(--pasto); }
+  .creditos-sonidos ul { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 4px; }
+  .creditos-sonidos li { font-size: 15px; line-height: 1.3; }
+  .creditos-sonidos a { color: var(--tierra-clara); }
+  .creditos-sonidos p { margin: 0; font-size: 14px; color: var(--hueso-suave); }
+  /* El consejo del puestero: cambia solo cada tanto, abajo a la derecha. */
+  .consejo { display: none; position: absolute; right: max(20px, 3cqw); bottom: calc(22px + env(safe-area-inset-bottom, 0px)); width: min(330px, 28cqw); padding: 11px 16px 12px; background: rgba(14,11,9,0.72); border-left: 3px solid var(--urgente); animation: subir 0.8s 1.8s both; }
+  .consejo small { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--urgente); }
+  .consejo p { margin: 4px 0 0; font-size: 16px; line-height: 1.3; transition: opacity 0.45s; }
+  .consejo.cambia p { opacity: 0; }
+  /* En pantalla ancha la portada va en columna a la izquierda y el Guacho,
+     con el rancho atrás, queda a la vista a la derecha. */
+  @container raiz (min-width: 761px) {
+    #menu { background: linear-gradient(90deg, rgba(10,7,5,0.94) 0%, rgba(10,7,5,0.78) 36%, rgba(10,7,5,0) 64%), linear-gradient(0deg, rgba(10,7,5,0.55), transparent 32%); place-items: center start; padding-left: max(24px, 5cqw); }
+    /* La columna ocupa el alto que haya y lo que sobra es de la pestaña, que
+       se desplaza sola: con un tope fijo quedaba cortada la tarjeta del perfil. */
+    #menu .portada { width: min(640px, 56cqw); padding-bottom: 0; max-height: calc(100cqh - 36px); grid-template-rows: auto auto minmax(0, 1fr); }
+    #menu .boton.secundario { padding: 12px 15px; }
+    #menu .boton.grande { padding: 14px 22px; font-size: 19px; }
+    #menu .portada h1 { font-size: clamp(60px, 8cqw, 124px); }
+    .portada .intro { font-size: 17px; }
+    .pestanas-cuerpo { max-height: none; }
+    .consejo { display: block; }
+  }
+  /* Pantalla baja (el teléfono acostado o girado): el logo y las pestañas en
+     una columna a la izquierda, y lo de cada pestaña a la derecha, con su
+     propio desplazamiento. En una sola columna no entraba ni el botón. */
+  @container raiz (max-height: 520px) {
+    #menu { place-items: stretch; padding: 12px 16px; background: linear-gradient(90deg, rgba(10,7,5,0.95), rgba(10,7,5,0.82) 60%, rgba(10,7,5,0.6)); }
+    #menu .portada { width: 100%; max-width: 1000px; height: 100%; grid-template-columns: minmax(170px, 28%) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: 22px; row-gap: 10px; padding: 0; }
+    .portada .logo { grid-column: 1; grid-row: 1; }
+    .portada .pestanas { grid-column: 1; grid-row: 2; align-self: start; flex-direction: column; border-bottom: 0; border-left: 1px solid rgba(239,230,212,0.16); }
+    .pestana-boton { border-bottom: 0; border-left: 3px solid transparent; margin: 0 0 0 -1px; padding: 8px 10px; font-size: 14px; }
+    .pestana-boton.activa { border-left-color: var(--tierra-clara); background: rgba(239,230,212,0.06); }
+    .pestana-boton .ico { width: 17px; height: 17px; }
+    .portada .pestanas-cuerpo { grid-column: 2; grid-row: 1 / span 2; max-height: none; height: 100%; padding-right: 6px; }
+    #menu .portada h1 { font-size: 46px; }
+    .portada h1 small { font-size: 19px; margin-top: 4px; }
+    .portada .marca { font-size: 10px; letter-spacing: 0.24em; }
+    .lazo-firma { height: 16px; }
+    .calificacion { margin: 0 0 6px; }
+    .calificacion b { width: 42px; height: 42px; font-size: 21px; border-width: 2px; }
+    .calificacion span { font-size: 13px; }
+    .portada .intro { font-size: 15px; margin-bottom: 8px; }
+    .hitos { margin-bottom: 10px; }
+    .hitos li { padding: 6px 8px; grid-template-columns: 24px 1fr; }
+    .hitos .ico { width: 22px; height: 22px; }
+    .hitos b { font-size: 17px; }
+    .hitos span { font-size: 11px; }
+    #menu .boton.grande { padding: 12px 18px; font-size: 17px; }
+    .perfil-mini { margin-top: 8px; }
+    .tarjetas { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+    .tarjetas span { font-size: 13px; }
+    .estadisticas b { font-size: 21px; }
+    /* El consejo tapaba la columna de la pestaña: acá no hay lugar. */
+    .consejo { display: none; }
+  }
+
+  /* La pantalla de idioma: antes del menú, cada vez que se abre el juego. Cada
+     botón está escrito en su propio idioma (para elegir no hace falta entender
+     los otros dos), y el de la vez anterior viene marcado y con el foco. */
+  #idioma { background: radial-gradient(ellipse at 50% 40%, rgba(42,21,12,0.78), rgba(13,10,8,0.95) 75%); }
+  .idioma { display: grid; justify-items: center; gap: 16px; width: min(820px, 100%); text-align: center; }
+  .idioma .logo-chico { font: 400 clamp(36px, 6cqw, 60px)/0.9 var(--titular); letter-spacing: 0.02em; animation: subir 0.6s ease both; }
+  .idioma .logo-chico small { display: block; font-size: 0.42em; color: var(--tierra-clara); letter-spacing: 0.05em; margin-top: 4px; }
+  .idioma h2 { margin: 0; display: flex; align-items: center; gap: 10px; font: 700 15px/1 var(--cuerpo); letter-spacing: 0.3em; text-transform: uppercase; color: var(--pasto); animation: subir 0.6s 0.1s ease both; }
+  .idiomas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; }
+  .idioma-boton { appearance: none; border: 0; cursor: pointer; position: relative; display: grid; justify-items: center; gap: 6px; padding: 24px 14px 18px; border-radius: 6px; background: rgba(21,16,12,0.86); color: var(--hueso); font-family: var(--cuerpo); box-shadow: inset 0 0 0 1px rgba(239,230,212,0.18); transition: transform 0.2s, box-shadow 0.2s, background 0.2s; animation: subir 0.6s calc(0.2s + var(--i) * 0.1s) both; }
+  .idioma-boton:hover, .idioma-boton:focus-visible { transform: translateY(-4px); outline: none; background: rgba(40,24,16,0.94); box-shadow: inset 0 0 0 2px var(--tierra-clara), 0 12px 30px rgba(0,0,0,0.45); }
+  .idioma-boton .cod { font: 400 56px/1 var(--titular); letter-spacing: 0.02em; color: var(--tierra-clara); }
+  .idioma-boton b { font: 700 25px/1 var(--cuerpo); letter-spacing: 0.04em; }
+  .idioma-boton small { font-size: 14px; line-height: 1.25; color: var(--hueso-suave); }
+  .idioma-boton .ultimo { display: none; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); padding: 4px 10px; border-radius: 10px; background: var(--urgente); color: #1a120c; font: 700 12px/1 var(--cuerpo); letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+  .idioma-boton.elegido { background: rgba(58,34,18,0.92); box-shadow: inset 0 0 0 2px var(--urgente); }
+  .idioma-boton.elegido .ultimo { display: block; }
+  .idioma > p { margin: 0; font-size: 16px; color: var(--hueso-suave); animation: aparecer 0.6s 0.6s ease both; }
+  @container raiz (max-height: 460px) {
+    .idioma { gap: 10px; }
+    .idioma-boton { padding: 16px 10px 12px; gap: 4px; }
+    .idioma-boton .cod { font-size: 38px; }
+    .idioma-boton b { font-size: 20px; }
+    .idioma .logo-chico { font-size: 32px; }
+  }
+  @container raiz (max-width: 520px) { .idiomas { grid-template-columns: 1fr; } .idioma-boton { grid-template-columns: auto 1fr; justify-items: start; text-align: left; column-gap: 14px; padding: 14px; } .idioma-boton .cod { grid-row: span 2; font-size: 40px; } }
   /* Cómo se juega y Opciones */
   .hoja.ancha { width: min(760px, 100%); }
   .hoja h3 { margin: 16px 0 6px; font: 400 20px/1 var(--titular); letter-spacing: 0.04em; color: var(--tierra-clara); }
@@ -178,30 +331,23 @@
   .opcion small { display: block; font-size: 14px; color: var(--hueso-suave); }
   .opcion select { font: 600 17px/1 var(--cuerpo); padding: 6px 8px; background: #241a13; color: var(--hueso); border: 1px solid rgba(239,230,212,0.3); border-radius: 3px; }
   .opcion input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--tierra-clara); }
-  .portada { width: min(760px, 100%); padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
-  .portada h1 { margin: 0; font: 400 clamp(64px, 14vw, 150px)/0.82 var(--titular); letter-spacing: 0.01em; color: var(--hueso); text-shadow: 0 6px 30px rgba(0,0,0,0.6); }
-  .portada h1 small { display: block; font: 400 clamp(24px, 4.6vw, 44px)/1 var(--titular); color: var(--tierra-clara); letter-spacing: 0.04em; margin-top: 8px; }
-  .calificacion { display: flex; gap: 12px; align-items: center; margin: 18px 0 10px; }
-  .calificacion b { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border: 3px solid var(--hueso); font: 400 30px/1 var(--titular); }
-  .calificacion span { font-size: 15px; color: var(--hueso-suave); max-width: 52ch; }
-  .portada p { font-size: 19px; max-width: 62ch; margin: 0 0 14px; }
   .teclas { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 3px 18px; margin: 0 0 18px; font-size: 16px; color: var(--hueso-suave); }
   .teclas kbd { display: inline-block; min-width: 18px; padding: 1px 6px; margin-right: 6px; border-radius: 3px; background: rgba(239,230,212,0.14); color: var(--hueso); font: 700 14px/1.3 var(--cuerpo); text-align: center; }
   .carga { position: fixed; inset: 0; display: grid; place-content: center; justify-items: center; gap: 16px; background: radial-gradient(ellipse at 50% 60%, #2a150c, #0d0a08 70%); font-size: 20px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hueso-suave); transition: opacity 0.6s; }
-  .carga h2 { margin: 0; font: 400 clamp(40px, 9vw, 80px)/1 var(--titular); letter-spacing: 0.02em; color: var(--hueso); text-transform: none; }
+  .carga h2 { margin: 0; font: 400 clamp(40px, 9cqw, 80px)/1 var(--titular); letter-spacing: 0.02em; color: var(--hueso); text-transform: none; }
   .carga svg { width: 64px; height: 64px; animation: revolear 1.1s linear infinite; }
   .carga svg ellipse { fill: none; stroke: var(--tierra-clara); stroke-width: 3; }
   .carga svg path { fill: none; stroke: var(--hueso-suave); stroke-width: 2; }
   @keyframes revolear { to { transform: rotate(360deg); } }
-  .carga-barra { width: min(320px, 70vw); height: 4px; background: rgba(239,230,212,0.12); border-radius: 2px; overflow: hidden; }
+  .carga-barra { width: min(320px, 70cqw); height: 4px; background: rgba(239,230,212,0.12); border-radius: 2px; overflow: hidden; }
   .carga-barra i { display: block; height: 100%; width: 0; background: var(--tierra-clara); transition: width 0.4s ease; }
   /* El escaneo de cuadros: la carga se vuelve transparente y se ve el campo
      que se está dibujando para medir. */
-  .carga.midiendo { background: linear-gradient(180deg, rgba(13,10,8,0.2), rgba(13,10,8,0.82) 75%); place-content: end center; padding-bottom: 8vh; }
+  .carga.midiendo { background: linear-gradient(180deg, rgba(13,10,8,0.2), rgba(13,10,8,0.82) 75%); place-content: end center; padding-bottom: 8cqh; }
   .carga.midiendo h2, .carga.midiendo svg { display: none; }
   .escaneo { display: grid; justify-items: center; gap: 14px; animation: subir 0.5s ease both; }
   .escaneo .fps { display: grid; justify-items: center; }
-  .escaneo .fps b { font: 400 clamp(56px, 12vw, 104px)/1 var(--titular); color: var(--hueso); font-variant-numeric: tabular-nums; text-shadow: 0 4px 20px rgba(0,0,0,0.7); transition: color 0.3s; }
+  .escaneo .fps b { font: 400 clamp(56px, 12cqw, 104px)/1 var(--titular); color: var(--hueso); font-variant-numeric: tabular-nums; text-shadow: 0 4px 20px rgba(0,0,0,0.7); transition: color 0.3s; }
   .escaneo .fps b.bien { color: #a6e08f; } .escaneo .fps b.justo { color: var(--urgente); } .escaneo .fps b.mal { color: #ff8a6a; }
   .escaneo .fps small { font-size: 14px; letter-spacing: 0.2em; }
   .escaneo ol { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; }
@@ -213,7 +359,7 @@
   .escaneo ol li:hover { color: var(--hueso); box-shadow: inset 0 0 0 2px var(--hueso-suave); }
   #escaneoAyuda { margin: 0; max-width: 34ch; text-align: center; text-transform: none; letter-spacing: 0.02em; font-size: 16px; color: var(--hueso); }
   .escaneo .botones { justify-content: center; margin: 0; }
-  @media (max-width: 520px) { .escaneo ol { flex-wrap: wrap; justify-content: center; } }
+  @container raiz (max-width: 520px) { .escaneo ol { flex-wrap: wrap; justify-content: center; } }
 
   /* El parte del puestero: un papel escrito a la mañana. */
   #parte .hoja { background: #e9dfc8; color: #231a12; border-top-color: var(--tierra); }
@@ -222,16 +368,10 @@
   @keyframes subirPapel { from { opacity: 0; transform: translateY(40px) rotate(-4deg); } }
   #parte .sello { position: absolute; right: 18px; top: -14px; padding: 4px 10px; border: 2px solid var(--sangre); color: var(--sangre); font: 400 14px/1 var(--titular); letter-spacing: 0.12em; text-transform: uppercase; transform: rotate(6deg); background: #e9dfc8; animation: sellar 0.35s 0.6s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
   @keyframes sellar { from { opacity: 0; transform: rotate(6deg) scale(2.2); } }
-  #fin h2 { font-size: clamp(34px, 7vw, 56px); animation: golpeTitulo 0.6s 0.2s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
+  #fin h2 { font-size: clamp(34px, 7cqw, 56px); animation: golpeTitulo 0.6s 0.2s cubic-bezier(0.3, 1.5, 0.5, 1) both; }
   @keyframes golpeTitulo { from { opacity: 0; transform: scale(1.8); letter-spacing: 0.2em; } }
   #fin p { animation: subir 0.6s both; }
   #fin p:nth-child(2) { animation-delay: 0.9s; } #fin p:nth-child(1) { animation-delay: 0.7s; } #fin p:nth-child(3) { animation-delay: 1.1s; }
-  /* Girá el teléfono: el juego se juega acostado. */
-  #girar { display: none; position: fixed; inset: 0; z-index: 20; place-content: center; justify-items: center; gap: 18px; background: #0d0a08; text-align: center; font-size: 20px; padding: 24px; }
-  #girar svg { width: 90px; height: 90px; animation: girarTelefono 2.2s ease-in-out infinite; }
-  #girar svg rect { fill: none; stroke: var(--hueso); stroke-width: 4; }
-  @keyframes girarTelefono { 0%, 25% { transform: rotate(0); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0); } }
-  @media (orientation: portrait) and (pointer: coarse) { body.jugando #girar { display: grid; } }
   /* El HUD también se mueve: los carteles suben, la plata parpadea al cambiar. */
   .aviso { transform: translate(-50%, 10px); transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
   .aviso.visible { transform: translate(-50%, 0); }
@@ -254,7 +394,7 @@
   .cura h2 { margin: 0; font: 400 26px/1 var(--titular); letter-spacing: 0.02em; }
   /* El lienzo se achica también por alto: en una pantalla baja se salía por
      abajo y se perdían la pinza, el spray y el botón de terminar. */
-  #curaLienzo { width: min(100%, calc((100vh - 200px) * 4 / 3)); width: min(100%, calc((100dvh - 200px) * 4 / 3)); height: auto; aspect-ratio: 4 / 3; display: block; margin: 0 auto; background: #2a120a; border-radius: 3px; touch-action: none; cursor: crosshair; }
+  #curaLienzo { width: min(100%, calc((100cqh - 200px) * 4 / 3)); height: auto; aspect-ratio: 4 / 3; display: block; margin: 0 auto; background: #2a120a; border-radius: 3px; touch-action: none; cursor: crosshair; }
   .cura .fila { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
   .cura .elegido { background: var(--tierra-clara); box-shadow: inset 0 0 0 2px var(--hueso); }
   .paciencia { flex: 1 1 180px; display: grid; gap: 3px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -263,7 +403,7 @@
   #curaTexto { font-size: 17px; color: var(--hueso-suave); }
 
   /* La manga */
-  #manga { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: grid; gap: 8px; justify-items: center; width: min(720px, 96vw); }
+  #manga { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: grid; gap: 8px; justify-items: center; width: min(720px, 96cqw); }
   #manga .herr { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
   #manga .elegido { background: var(--tierra-clara); box-shadow: inset 0 0 0 2px var(--hueso); }
   #mangaEstado { display: flex; flex-wrap: wrap; gap: 12px; font-size: 16px; color: var(--hueso-suave); text-shadow: 0 1px 4px #000; }
@@ -287,7 +427,7 @@
   #ojoTexto { position: absolute; left: 50%; top: 64%; transform: translateX(-50%); font: 400 20px/1 var(--titular); letter-spacing: 0.12em; text-transform: uppercase; text-shadow: 0 2px 6px #000; opacity: 0; transition: opacity 0.2s; }
   #ojoTexto.visible { opacity: 1; }
   body.ojo .mira, body.ojo #revoleo, body.ojo #aviso, body.cine #aviso { opacity: 0; }
-  .franja { position: fixed; left: 0; right: 0; height: 11vh; background: #000; z-index: 5; transition: transform 0.35s ease; pointer-events: none; }
+  .franja { position: fixed; left: 0; right: 0; height: 11cqh; background: #000; z-index: 5; transition: transform 0.35s ease; pointer-events: none; }
   .franja.arriba { top: 0; transform: translateY(-100%); }
   .franja.abajo { bottom: 0; transform: translateY(100%); }
   body.cine .franja { transform: none; }
@@ -299,11 +439,12 @@
 
   /* El chat de comandos, arriba a la izquierda, debajo del reloj (como el de
      Roblox): las líneas se apagan solas si está cerrado. */
-  #chat { position: fixed; left: 16px; top: calc(92px + env(safe-area-inset-top, 0px)); width: min(440px, 72vw); z-index: 6; display: grid; gap: 6px; }
-  #chatBoton { position: fixed; left: 132px; top: calc(16px + env(safe-area-inset-top, 0px)); width: 40px; height: 40px; border: 0; border-radius: 8px; background: rgba(14,11,9,0.55); cursor: pointer; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.25); transition: background 0.15s, transform 0.15s; }
+  #chat { position: fixed; left: 16px; top: calc(92px + env(safe-area-inset-top, 0px)); width: min(440px, 72cqw); z-index: 6; display: grid; gap: 6px; }
+  /* A la derecha del renglón "Día 1 de 20 · 29 °C" (antes quedaba encima). */
+  #chatBoton { position: fixed; left: 196px; top: calc(16px + env(safe-area-inset-top, 0px)); width: 40px; height: 40px; border: 0; border-radius: 8px; background: rgba(14,11,9,0.55); cursor: pointer; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(239,230,212,0.25); transition: background 0.15s, transform 0.15s; }
   #chatBoton:hover { background: rgba(184,80,42,0.8); transform: translateY(-1px); }
   #chatBoton svg, #chatForm svg { width: 22px; height: 22px; fill: none; stroke: var(--hueso); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-  #chatLog { max-height: 34vh; overflow-y: auto; display: grid; gap: 3px; pointer-events: none; scrollbar-width: none; }
+  #chatLog { max-height: 34cqh; overflow-y: auto; display: grid; gap: 3px; pointer-events: none; scrollbar-width: none; }
   .chat-linea { padding: 4px 10px; border-radius: 6px; background: rgba(14,11,9,0.5); font-size: 16px; line-height: 1.3; text-shadow: 0 1px 2px #000; animation: subir 0.25s ease both; transition: opacity 0.8s; overflow-wrap: anywhere; }
   .chat-linea b { font-weight: 700; margin-right: 2px; }
   .chat-linea.sistema b { color: #ff5a4a; }
@@ -328,7 +469,7 @@
   body.cine #chat { opacity: 0; pointer-events: none; }
 
   /* El mapa, el minimapa y la brújula. */
-  #mapa { position: fixed; inset: 0; z-index: 8; display: grid; grid-template-columns: 1fr min(340px, 34vw); background: rgba(10,7,5,0.92); animation: aparecer 0.25s ease both; }
+  #mapa { position: fixed; inset: 0; z-index: 8; display: grid; grid-template-columns: 1fr min(340px, 34cqw); background: rgba(10,7,5,0.92); animation: aparecer 0.25s ease both; }
   .mapa-caja { position: relative; min-height: 0; }
   #mapaLienzo { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
   .mapa-botones { position: absolute; left: 14px; top: 14px; display: grid; gap: 6px; }
@@ -344,7 +485,7 @@
   #mapaLista li b { grid-row: span 2; display: grid; place-items: center; font-size: 20px; }
   #mapaLista li span { font-size: 17px; font-weight: 700; }
   #mapaLista li small { color: var(--hueso-suave); font-size: 14px; }
-  @media (max-width: 760px) { #mapa { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .mapa-lado { max-height: 42vh; border-left: 0; border-top: 3px solid var(--tierra); } }
+  @container raiz (max-width: 760px) { #mapa { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } .mapa-lado { max-height: 42cqh; border-left: 0; border-top: 3px solid var(--tierra); } }
   #minimapa { position: absolute; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 128px; height: 128px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(21,16,12,0.8), 0 0 0 4px rgba(239,230,212,0.4), 0 6px 18px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; background: rgba(21,16,12,0.6); }
   body.tactil #minimapa { width: 96px; height: 96px; bottom: calc(232px + env(safe-area-inset-bottom, 0px)); right: 18px; }
   body.tactil .objetivos li:nth-child(n+3) { display: none; }
@@ -360,7 +501,7 @@
   .radio-mandos { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
   .radio-mandos label { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 15px; color: var(--hueso-suave); }
   .radio-mandos input { accent-color: var(--tierra-clara); width: 120px; }
-  #radioLista { list-style: none; margin: 0 0 8px; padding: 0; max-height: min(46vh, 380px); overflow-y: auto; display: grid; gap: 3px; }
+  #radioLista { list-style: none; margin: 0 0 8px; padding: 0; max-height: min(46cqh, 380px); overflow-y: auto; display: grid; gap: 3px; }
   #radioLista li { display: grid; padding: 7px 10px; border-radius: 6px; background: rgba(239,230,212,0.06); cursor: pointer; transition: background 0.15s; }
   #radioLista li:hover { background: rgba(239,230,212,0.14); }
   #radioLista li.grupo { background: none; cursor: default; padding: 8px 2px 2px; font: 400 15px/1 var(--titular); letter-spacing: 0.06em; color: var(--tierra-clara); }
@@ -384,38 +525,37 @@
   #palanca { position: fixed; width: 120px; height: 120px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(239,230,212,0.35); pointer-events: none; }
   #palanca div { position: absolute; left: 36px; top: 36px; width: 48px; height: 48px; border-radius: 50%; background: rgba(239,230,212,0.4); }
   body.tactil .cuerpo-barras { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
-  @media (max-height: 460px) {
-    .portada h1 { font-size: 64px; }
-    .portada p, .teclas { display: none; }
+  @container raiz (max-height: 460px) {
     .reloj b { font-size: 26px; }
   }
 </style>
 
-<canvas id="lienzo" aria-label="La estancia"></canvas>
+<div id="raiz">
+<canvas id="lienzo" aria-label="La estancia" data-t-aria="titulo"></canvas>
 
 <div class="hud" id="hud" hidden>
   <div class="reloj"><b id="hudHora">06:00</b><span><span id="hudDia">Día 1</span> · <span id="hudTemp">23 °C</span></span><em class="plata" id="hudPlata">$ 1.500.000</em></div>
   <div class="objetivos"><ul id="hudObjetivos"></ul></div>
   <div class="cuerpo-barras">
-    <div class="estado-chico" id="hudCostilla" hidden>Costilla quebrada</div>
-    <div class="estado-chico" id="hudLesion" hidden>Caballo lesionado</div>
-    <div class="barra"><span>Sed</span><i><b id="barSed" style="width:100%"></b></i></div>
-    <div class="barra"><span>Cansancio</span><i><b id="barCans" style="width:100%"></b></i></div>
-    <div class="barra"><span>Salud</span><i><b id="barSalud" style="width:100%"></b></i></div>
-    <div class="barra" id="hudCaballo" hidden><span>Caballo</span><i><b id="barCaballo" style="width:100%"></b></i></div>
+    <div class="estado-chico" id="hudCostilla" data-t="hud.costilla" hidden>Costilla quebrada</div>
+    <div class="estado-chico" id="hudLesion" data-t="hud.lesion" hidden>Caballo lesionado</div>
+    <div class="barra"><span data-t="hud.sed">Sed</span><i><b id="barSed" style="width:100%"></b></i></div>
+    <div class="barra"><span data-t="hud.cansancio">Cansancio</span><i><b id="barCans" style="width:100%"></b></i></div>
+    <div class="barra"><span data-t="hud.salud">Salud</span><i><b id="barSalud" style="width:100%"></b></i></div>
+    <div class="barra" id="hudCaballo" hidden><span data-t="hud.caballo">Caballo</span><i><b id="barCaballo" style="width:100%"></b></i></div>
   </div>
   <div class="mira"></div>
   <svg id="revoleo" viewBox="0 0 56 56" hidden><circle class="fondo" cx="28" cy="28" r="20"></circle><circle id="revoleoArco" cx="28" cy="28" r="20"></circle></svg>
   <div id="ojoMira"><i></i><i></i><i></i><i></i><b></b></div>
   <div id="ojoTexto"></div>
   <div class="tension" id="tension" hidden>
-    <div class="fila"><span>Tensión</span><i><b id="tensionBarra"></b></i></div>
-    <div class="fila"><span>La vaca</span><i><b id="fatigaBarra"></b></i></div>
+    <div class="fila"><span data-t="hud.tension">Tensión</span><i><b id="tensionBarra"></b></i></div>
+    <div class="fila"><span data-t="hud.laVaca">La vaca</span><i><b id="fatigaBarra"></b></i></div>
     <div class="pial" id="pial" hidden><div id="pialVentana"></div><div id="pialAguja"></div></div>
     <div id="tensionTexto"></div>
   </div>
-  <canvas id="minimapa" width="170" height="170" aria-label="Minimapa (tocá para abrir el mapa)"></canvas>
-  <button id="radioChip" hidden title="La radio (tocá para cambiar la emisora)"><i></i><span id="radioChipTexto"></span></button>
+  <canvas id="minimapa" width="170" height="170" aria-label="Minimapa (tocá para abrir el mapa)" data-t-aria="hud.minimapa"></canvas>
+  <button id="radioChip" hidden title="La radio (tocá para cambiar la emisora)" data-t-title="radio.chip"><i></i><span id="radioChipTexto"></span></button>
   <div id="brujula" hidden><i id="brujulaFlecha"></i><span id="brujulaTexto"></span></div>
   <div class="aviso" id="aviso"></div>
   <div class="subtitulo" id="subtitulo"></div>
@@ -423,54 +563,54 @@
 </div>
 
 <div id="chat" hidden>
-  <button id="chatBoton" aria-label="Chat de comandos" title="Chat (Enter o /)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v11H9l-5 4z"/><path d="M8 8h8M8 11h5"/></svg></button>
+  <button id="chatBoton" aria-label="Chat de comandos" title="Chat (Enter o /)" data-t-aria="chat.boton" data-t-title="chat.botonTitulo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v11H9l-5 4z"/><path d="M8 8h8M8 11h5"/></svg></button>
   <div id="chatLog" aria-live="polite"></div>
   <div id="chatCaja" hidden>
-    <form id="chatForm" autocomplete="off"><input id="chatEntrada" maxlength="140" placeholder="Escribí / para ver los comandos" enterkeyhint="send"><button aria-label="Enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l18-8-7 18-3-7z"/></svg></button></form>
+    <form id="chatForm" autocomplete="off"><input id="chatEntrada" maxlength="140" placeholder="Escribí / para ver los comandos" data-t-ph="chat.placeholder" enterkeyhint="send"><button aria-label="Enviar" data-t-aria="chat.enviar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l18-8-7 18-3-7z"/></svg></button></form>
     <ul id="chatSugerencias"></ul>
   </div>
 </div>
 
-<div class="tactil-botones" aria-label="Controles">
-  <button data-boton="lazo" class="grande">Lazo</button>
-  <button data-boton="cobrar">Cobrar</button>
-  <button data-boton="accion">Acción</button>
-  <button data-boton="pialar">Pialar</button>
-  <button data-boton="camara">Cámara</button>
-  <button data-boton="silbar">Silbar</button>
-  <button data-boton="perros">Perros</button>
-  <button data-boton="mapa">Mapa</button>
+<div class="tactil-botones" aria-label="Controles" data-t-aria="tactil.controles">
+  <button data-boton="lazo" class="grande" data-t="tactil.lazo">Lazo</button>
+  <button data-boton="cobrar" data-t="tactil.cobrar">Cobrar</button>
+  <button data-boton="accion" data-t="tactil.accion">Acción</button>
+  <button data-boton="pialar" data-t="tactil.pialar">Pialar</button>
+  <button data-boton="camara" data-t="tactil.camara">Cámara</button>
+  <button data-boton="silbar" data-t="tactil.silbar">Silbar</button>
+  <button data-boton="perros" data-t="tactil.perros">Perros</button>
+  <button data-boton="mapa" data-t="tactil.mapa">Mapa</button>
 </div>
 <div id="palanca" hidden><div></div></div>
 
 <div id="manga" hidden>
   <div id="mangaEstado"></div>
   <div class="herr">
-    <button class="boton" data-herr="aftosa">1 · Aftosa</button>
-    <button class="boton" data-herr="ivermectina">2 · Ivermectina</button>
-    <button class="boton" data-herr="caravana">3 · Caravana</button>
-    <button class="boton" data-herr="hierro" id="mangaHierro">4 · Hierro</button>
-    <button class="boton secundario" id="mangaSoltar">Soltar (E)</button>
+    <button class="boton" data-herr="aftosa" data-t="manga.aftosa">1 · Aftosa</button>
+    <button class="boton" data-herr="ivermectina" data-t="manga.ivermectina">2 · Ivermectina</button>
+    <button class="boton" data-herr="caravana" data-t="manga.caravana">3 · Caravana</button>
+    <button class="boton" data-herr="hierro" id="mangaHierro" data-t="manga.hierro">4 · Hierro</button>
+    <button class="boton secundario" id="mangaSoltar" data-t="manga.soltar">Soltar (E)</button>
   </div>
-  <div class="ayuda-manga">Elegí la herramienta y tocá la vaca: la vacuna en la tabla del cuello, la caravana en la oreja, la marca en el anca.</div>
+  <div class="ayuda-manga" data-t="manga.ayuda">Elegí la herramienta y tocá la vaca: la vacuna en la tabla del cuello, la caravana en la oreja, la marca en el anca.</div>
 </div>
 
 <div class="panel" id="cura" hidden>
   <div class="cura">
-    <h2>Bichera</h2>
+    <h2 data-t="cura.titulo">Bichera</h2>
     <canvas id="curaLienzo" width="640" height="480"></canvas>
     <div class="fila">
       <div class="botones">
-        <button class="boton" id="curaPinza">Pinza</button>
-        <button class="boton" id="curaSpray">Curabichera</button>
+        <button class="boton" id="curaPinza" data-t="cura.pinza">Pinza</button>
+        <button class="boton" id="curaSpray" data-t="cura.spray">Curabichera</button>
       </div>
-      <div class="paciencia"><span>Paciencia de la vaca</span><i><b id="curaPaciencia"></b></i></div>
+      <div class="paciencia"><span data-t="cura.paciencia">Paciencia de la vaca</span><i><b id="curaPaciencia"></b></i></div>
     </div>
     <div class="fila">
       <span id="curaTexto"></span>
       <div class="botones">
-        <button class="boton secundario" id="curaSalir">Dejar</button>
-        <button class="boton" id="curaListo" disabled>Listo</button>
+        <button class="boton secundario" id="curaSalir" data-t="cura.dejar">Dejar</button>
+        <button class="boton" id="curaListo" data-t="boton.listo" disabled>Listo</button>
       </div>
     </div>
   </div>
@@ -478,31 +618,31 @@
 
 <div class="panel" id="fogon" hidden>
   <div class="hoja">
-    <h2>El fogón</h2>
-    <p>La leña de quebracho aguanta toda la noche. El costillar está desde la tarde.</p>
+    <h2 data-t="fogon.titulo">El fogón</h2>
+    <p data-t="fogon.texto">La leña de quebracho aguanta toda la noche. El costillar está desde la tarde.</p>
     <div class="botones">
-      <button class="boton" id="fogonCalentar">Calentar el hierro</button>
-      <button class="boton" id="fogonGuiso">Preparar un guiso</button>
-      <button class="boton" id="fogonComer">Comer asado (de noche)</button>
-      <button class="boton secundario" id="fogonCerrar">Nada</button>
+      <button class="boton" id="fogonCalentar" data-t="fogon.calentar">Calentar el hierro</button>
+      <button class="boton" id="fogonGuiso" data-t="fogon.guiso">Preparar un guiso</button>
+      <button class="boton" id="fogonComer" data-t="fogon.comer">Comer asado (de noche)</button>
+      <button class="boton secundario" id="fogonCerrar" data-t="fogon.nada">Nada</button>
     </div>
   </div>
 </div>
 
 <div class="panel" id="parte" hidden>
   <div class="hoja">
-    <div class="sello">Parte del puestero</div>
+    <div class="sello" data-t="parte.sello">Parte del puestero</div>
     <h2 id="parteTitulo"></h2>
     <p id="parteTexto"></p>
-    <div class="botones"><button class="boton" id="parteSeguir">Salir al campo</button></div>
+    <div class="botones"><button class="boton" id="parteSeguir" data-t="parte.seguir">Salir al campo</button></div>
   </div>
 </div>
 
 <div class="panel" id="pausa" hidden>
   <div class="hoja">
-    <h2>Pausa</h2>
-    <p>El monte espera. Las moscas no.</p>
-    <div class="botones"><button class="boton" id="pausaSeguir">Seguir</button><button class="boton secundario" id="pausaComo">Cómo se juega</button><button class="boton secundario" id="pausaOpciones">Opciones</button></div>
+    <h2 data-t="pausa.titulo">Pausa</h2>
+    <p data-t="pausa.texto">El monte espera. Las moscas no.</p>
+    <div class="botones"><button class="boton" id="pausaSeguir" data-t="pausa.seguir">Seguir</button><button class="boton secundario" id="pausaComo" data-t="boton.como">Cómo se juega</button><button class="boton secundario" id="pausaOpciones" data-t="boton.opciones">Opciones</button></div>
   </div>
 </div>
 
@@ -510,90 +650,138 @@
   <div class="hoja">
     <h2 id="finTitulo"></h2>
     <div id="finTexto"></div>
-    <div class="botones"><button class="boton" id="finOtra">Otra temporada</button></div>
+    <div class="botones"><button class="boton" id="finOtra" data-t="fin.otra">Otra temporada</button></div>
   </div>
 </div>
 
 <div class="panel" id="menu" hidden>
   <div class="portada">
-    <div class="marca">Chaco · temporada de verano</div>
-    <h1><span class="t">ESTANCIA</span><small>La Ley del Monte</small></h1>
-    <svg class="lazo-firma" viewBox="0 0 600 40" aria-hidden="true"><path d="M4 30 C 110 6, 210 38, 320 20 S 500 6, 548 20 q 26 10 10 16 q -18 6 -22 -8 q -2 -14 30 -12"/></svg>
-    <div class="calificacion"><b>M</b><span><strong>+18.</strong> Sangre y trabajo veterinario sin maquillaje, animales que lastiman y tabaco. No es una caricatura.</span></div>
-    <p>Chaco, verano. Quinientas hectáreas de tierra colorada, quebrachales y algarrobos. Sos El Guacho: sin poderes, sin magia. Rastrear, enlazar, pialar, curar la bichera, arrear al corral y trabajar en la manga. Veinte días. Si se te muere más de un tercio de la hacienda, fundís.</p>
-    <nav class="menu-botones">
-      <button class="boton grande" id="menuEmpezar">Empezar la temporada</button>
-      <button class="boton secundario" id="menuComo">Cómo se juega</button>
-      <button class="boton secundario" id="menuOpciones">Opciones</button>
+    <header class="logo">
+      <div class="marca" data-t="menu.marca">Chaco · temporada de verano</div>
+      <h1><span class="t">ESTANCIA</span><small data-t="menu.subtitulo">La Ley del Monte</small></h1>
+      <svg class="lazo-firma" viewBox="0 0 600 40" aria-hidden="true"><path d="M4 30 C 110 6, 210 38, 320 20 S 500 6, 548 20 q 26 10 10 16 q -18 6 -22 -8 q -2 -14 30 -12"/></svg>
+    </header>
+    <nav class="pestanas" role="tablist">
+      <button class="pestana-boton activa" role="tab" data-pestana="jugar"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><span data-t="menu.jugar">Jugar</span></button>
+      <button class="pestana-boton" role="tab" data-pestana="libreta" id="menuLibreta"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg><span data-t="menu.libreta">Libreta</span></button>
+      <button class="pestana-boton" role="tab" data-pestana="como" id="menuComo"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17.5v.01"/></svg><span data-t="menu.como">Cómo se juega</span></button>
+      <button class="pestana-boton" id="menuOpciones"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span data-t="menu.opciones">Opciones</span></button>
+      <button class="pestana-boton" role="tab" data-pestana="creditos" id="menuCreditos"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg><span data-t="menu.creditos">Créditos</span></button>
     </nav>
+    <div class="pestanas-cuerpo">
+      <section class="pestana" data-pestana="jugar" role="tabpanel">
+        <div class="calificacion"><b>M</b><span data-t-html="menu.calificacion"><strong>+18.</strong> Sangre y trabajo veterinario sin maquillaje, animales que lastiman y tabaco. No es una caricatura.</span></div>
+        <p class="intro" data-t="menu.intro">Chaco, verano. Quinientas hectáreas de tierra colorada, quebrachales y algarrobos. Sos El Guacho: sin poderes, sin magia. Rastrear, enlazar, pialar, curar la bichera, arrear al corral y trabajar en la manga. Veinte días. Si se te muere más de un tercio de la hacienda, fundís.</p>
+        <ul class="hitos">
+          <li style="--i:0"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><b id="hitoDias">20 días</b><span data-t="menu.hitoDiasSub">de temporada</span></li>
+          <li style="--i:1"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6c1 2 3 3 5 3M20 6c-1 2-3 3-5 3"/><path d="M8 9h8l1 5c0 3-2 6-5 6s-5-3-5-6z"/><path d="M10 16.5h.01M14 16.5h.01"/></svg><b id="hitoVacas"></b><span data-t="menu.hitoVacasSub">a tu cargo</span></li>
+          <li style="--i:2"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 0 0-7 7c0 2.5 1.3 4 3 5v3h8v-3c1.7-1 3-2.5 3-5a7 7 0 0 0-7-7z"/><circle cx="9.5" cy="10.5" r="1.5"/><circle cx="14.5" cy="10.5" r="1.5"/><path d="M10 18v2M14 18v2"/></svg><b data-t="menu.hitoFundis">1/3</b><span data-t="menu.hitoFundisSub">muertas y fundís</span></li>
+        </ul>
+        <div class="menu-botones">
+          <button class="boton grande" id="menuEmpezar" data-t="menu.empezar">Empezar la temporada</button>
+          <button class="boton secundario chip-idioma" id="menuIdioma"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg><span data-t="idioma.nombre">Español</span></button>
+        </div>
+        <button class="perfil-mini" id="perfilMini"><svg class="avatar" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#b8502a"/><path d="M16 27c1 6 4 10 8 10s7-4 8-10" fill="#e9c9a4" stroke="#2a1a10" stroke-width="1.5"/><path d="M15 23c0-6 3-10 9-10s9 4 9 10" fill="#2a1a10"/><path d="M8 23.5h32" stroke="#2a1a10" stroke-width="3.5" stroke-linecap="round"/><path d="M19 34c3 2 7 2 10 0" fill="none" stroke="#2a1a10" stroke-width="1.5"/></svg><span><b data-t="libreta.nombre">El Guacho</b><small id="perfilMiniTexto"></small></span></button>
+      </section>
+      <section class="pestana" data-pestana="libreta" role="tabpanel" hidden>
+        <div class="perfil"><svg class="avatar" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="23" fill="#b8502a"/><path d="M16 27c1 6 4 10 8 10s7-4 8-10" fill="#e9c9a4" stroke="#2a1a10" stroke-width="1.5"/><path d="M15 23c0-6 3-10 9-10s9 4 9 10" fill="#2a1a10"/><path d="M8 23.5h32" stroke="#2a1a10" stroke-width="3.5" stroke-linecap="round"/><path d="M19 34c3 2 7 2 10 0" fill="none" stroke="#2a1a10" stroke-width="1.5"/></svg><div><h3 data-t="libreta.titulo">Libreta del Guacho</h3><strong id="libretaRango"></strong><div class="progreso"><i id="libretaBarra"></i></div><small id="libretaProximo"></small></div></div>
+        <ul class="estadisticas" id="libretaStats"></ul>
+        <p class="nota"><span id="libretaUltima"></span> <span data-t="libreta.nota">Se guarda en este navegador.</span></p>
+        <button class="boton secundario chico" id="libretaBorrar" data-t="libreta.borrar">Borrar la libreta</button>
+      </section>
+      <section class="pestana" data-pestana="como" role="tabpanel" hidden>
+        <ul class="tarjetas"><li style="--i:0"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4c-2 3-2 9 0 13 1 2 3 2 3 0V5c0-2-2-2-3-1zM16 4c2 3 2 9 0 13-1 2-3 2-3 0V5c0-2 2-2 3-1z"/></svg><b data-t="como.rastrear"></b><span data-t="como.rastrearT"></span></li><li style="--i:1"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="8" rx="8" ry="4"/><path d="M12 12c0 4-2 6-6 8"/></svg><b data-t="como.enlazar"></b><span data-t="como.enlazarT"></span></li><li style="--i:2"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17a9 9 0 0 1 18 0"/><path d="M12 17l5-6"/><path d="M6 17h.01M18 17h.01"/></svg><b data-t="como.pialar"></b><span data-t="como.pialarT"></span></li><li style="--i:3"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg><b data-t="como.curar"></b><span data-t="como.curarT"></span></li><li style="--i:4"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 3l3 3M16 5l3 3M17 7l-9 9-3 1 1-3 9-9M11 9l2 2M9 11l2 2M5 19l-2 2"/></svg><b data-t="como.manga"></b><span data-t="como.mangaT"></span></li><li style="--i:5"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l3 3h8l3-3v7c0 4-3 8-7 8s-7-4-7-8z"/><path d="M9.5 12h.01M14.5 12h.01M11 16h2"/></svg><b data-t="como.perros"></b><span data-t="como.perrosT"></span></li><li style="--i:6"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10l-1 8a4 4 0 0 1-8 0z"/><path d="M13 9l3-6"/></svg><b data-t="como.puesto"></b><span data-t="como.puestoT"></span></li><li style="--i:7"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20v-9a5 5 0 0 1 10 0v9"/><path d="M5 20h4M15 20h4M7 14h.01M17 14h.01"/></svg><b data-t="como.zaino"></b><span data-t="como.zainoT"></span></li></ul>
+        <button class="boton secundario" id="menuTeclas" data-t="como.teclasBoton">Todas las teclas y el celular</button>
+      </section>
+      <section class="pestana" data-pestana="creditos" role="tabpanel" hidden>
+        <p class="lema" data-t="cred.lema">Un simulador crudo de trabajo de campo en el monte chaqueño.</p>
+        <dl class="creditos"><div style="--i:0"><dt data-t="cred.motor"></dt><dd>three.js r160</dd></div><div style="--i:1"><dt data-t="cred.modelos"></dt><dd>Rezona</dd></div><div style="--i:2"><dt data-t="cred.texturas"></dt><dd>Higgsfield</dd></div><div style="--i:3"><dt data-t="cred.voz"></dt><dd data-t="cred.vozValor"></dd></div><div style="--i:4"><dt data-t="cred.sonido"></dt><dd data-t="cred.sonidoValor"></dd></div><div style="--i:5"><dt data-t="cred.letras"></dt><dd data-t="cred.letrasValor"></dd></div><div style="--i:6"><dt data-t="cred.radio"></dt><dd data-t="cred.radioValor"></dd></div><div style="--i:7"><dt data-t="cred.idiomas"></dt><dd data-t="cred.idiomasValor"></dd></div></dl>
+        <div class="creditos-sonidos"><h3 data-t="cred.grabaciones">Sonidos grabados con licencia CC-BY</h3><ul id="creditosSonidos"></ul><p data-t="cred.grabacionesNota"></p></div>
+      </section>
+    </div>
+  </div>
+  <aside class="consejo" id="consejo"><small data-t="consejo.titulo">Consejo del puestero</small><p id="consejoTexto"></p></aside>
+</div>
+
+<div class="panel" id="idioma" hidden>
+  <div class="idioma">
+    <div class="logo-chico">ESTANCIA<small data-t="menu.subtitulo">La Ley del Monte</small></div>
+    <h2><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>Idioma · Language · Língua</h2>
+    <div class="idiomas">
+      <button class="idioma-boton" data-idioma="es" lang="es" style="--i:0"><span class="ultimo">Última elección</span><span class="cod">ES</span><b>Español</b><small>Castellano rioplatense</small></button>
+      <button class="idioma-boton" data-idioma="en" lang="en" style="--i:1"><span class="ultimo">Last choice</span><span class="cod">EN</span><b>English</b><small>Voices in Spanish, English subtitles</small></button>
+      <button class="idioma-boton" data-idioma="pt" lang="pt" style="--i:2"><span class="ultimo">Última escolha</span><span class="cod">PT</span><b>Português</b><small>Vozes em espanhol, legendas em português</small></button>
+    </div>
+    <p data-t="idioma.nota">Lo podés cambiar después en Opciones.</p>
   </div>
 </div>
 
 <div class="panel" id="radio" hidden>
   <div class="hoja ancha radio-hoja">
-    <h2>Radio</h2>
+    <h2 data-t="radio.titulo">Radio</h2>
     <p id="radioEstado">Apagada</p>
     <div class="radio-mandos">
-      <button class="boton secundario" id="radioAnterior" aria-label="Emisora anterior">◀</button>
+      <button class="boton secundario" id="radioAnterior" aria-label="Emisora anterior" data-t-aria="radio.anterior">◀</button>
       <button class="boton" id="radioPrender">Prender</button>
-      <button class="boton secundario" id="radioSiguiente" aria-label="Emisora siguiente">▶</button>
-      <label>Volumen <input type="range" id="radioVolumen" min="0" max="1" step="0.05"></label>
+      <button class="boton secundario" id="radioSiguiente" aria-label="Emisora siguiente" data-t-aria="radio.siguiente">▶</button>
+      <label><span data-t="radio.volumen">Volumen</span> <input type="range" id="radioVolumen" min="0" max="1" step="0.05"></label>
     </div>
     <ul id="radioLista"></ul>
-    <p class="radio-nota">FM del Chaco, Formosa y Corrientes por internet. Se escucha cerca del rancho y se apaga de a poco a medida que te alejás.</p>
-    <div class="botones"><button class="boton" id="radioCerrar">Listo</button></div>
+    <p class="radio-nota" data-t="radio.nota">FM del Chaco, Formosa y Corrientes por internet. Se escucha cerca del rancho y se apaga de a poco a medida que te alejás.</p>
+    <div class="botones"><button class="boton" id="radioCerrar" data-t="boton.listo">Listo</button></div>
   </div>
 </div>
 
 <div id="mapa" hidden>
   <div class="mapa-caja">
     <canvas id="mapaLienzo"></canvas>
-    <div class="mapa-botones"><button id="mapaMas" aria-label="Acercar">+</button><button id="mapaMenos" aria-label="Alejar">−</button><button id="mapaYo" aria-label="Centrar en mí">◎</button></div>
+    <div class="mapa-botones"><button id="mapaMas" aria-label="Acercar" data-t-aria="mapa.acercar">+</button><button id="mapaMenos" aria-label="Alejar" data-t-aria="mapa.alejar">−</button><button id="mapaYo" aria-label="Centrar en mí" data-t-aria="mapa.yo">◎</button></div>
   </div>
   <aside class="mapa-lado">
-    <h2>El campo</h2>
-    <p>Tocá un lugar para ir. Aparece una columna de luz y arriba la brújula.</p>
+    <h2 data-t="mapa.titulo">El campo</h2>
+    <p data-t="mapa.ayuda">Tocá un lugar para ir. Aparece una columna de luz y arriba la brújula.</p>
     <ul id="mapaLista"></ul>
-    <div class="botones"><button class="boton secundario" id="mapaSacar">Sacar el destino</button><button class="boton" id="mapaCerrar">Volver (M)</button></div>
+    <div class="botones"><button class="boton secundario" id="mapaSacar" data-t="mapa.sacar">Sacar el destino</button><button class="boton" id="mapaCerrar" data-t="mapa.volver">Volver (M)</button></div>
   </aside>
 </div>
 
 <div class="panel" id="como" hidden>
   <div class="hoja ancha">
-    <h2>Cómo se juega</h2>
-    <h3>Las teclas</h3>
+    <h2 data-t="como.titulo">Cómo se juega</h2>
+    <h3 data-t="como.teclas">Las teclas</h3>
     <div class="teclas">
-      <span><kbd>W A S D</kbd>caminar · <kbd>Shift</kbd>correr / galopar</span>
-      <span><kbd>E</kbd>usar, montar, curar</span>
-      <span><kbd>1</kbd>el lazo · mantener <kbd>clic</kbd> revolear, soltar tirar</span>
-      <span><kbd>clic der.</kbd>cobrar lazo · <kbd>P</kbd>pialar</span>
-      <span><kbd>C</kbd>caballo al paso · <kbd>H</kbd>silbar al caballo</span>
-      <span><kbd>V</kbd>cámara · <kbd>F</kbd>armar un cigarro</span>
-      <span><kbd>G</kbd>perros: vengan · <kbd>X</kbd>quietos</span>
-      <span><kbd>J</kbd>perros: junten la tropa · <kbd>B</kbd>busquen la vaca que mirás</span>
-      <span><kbd>Enter</kbd> o <kbd>/</kbd> el chat de comandos</span>
-      <span><kbd>M</kbd> el mapa: corral, casco, pueblo, comedero, aguada</span>
+      <span data-t-html="como.t1"><kbd>W A S D</kbd>caminar · <kbd>Shift</kbd>correr / galopar</span>
+      <span data-t-html="como.t2"><kbd>E</kbd>usar, montar, curar</span>
+      <span data-t-html="como.t3"><kbd>1</kbd>el lazo · mantener <kbd>clic</kbd> revolear, soltar tirar</span>
+      <span data-t-html="como.t4"><kbd>clic der.</kbd>cobrar lazo · <kbd>P</kbd>pialar</span>
+      <span data-t-html="como.t5"><kbd>C</kbd>caballo al paso · <kbd>H</kbd>silbar al caballo</span>
+      <span data-t-html="como.t6"><kbd>V</kbd>cámara · <kbd>F</kbd>armar un cigarro</span>
+      <span data-t-html="como.t7"><kbd>G</kbd>perros: vengan · <kbd>X</kbd>quietos</span>
+      <span data-t-html="como.t8"><kbd>J</kbd>perros: junten la tropa · <kbd>B</kbd>busquen la vaca que mirás</span>
+      <span data-t-html="como.t9"><kbd>Enter</kbd> o <kbd>/</kbd> el chat de comandos</span>
+      <span data-t-html="como.t10"><kbd>M</kbd> el mapa: corral, casco, pueblo, comedero, aguada</span>
     </div>
-    <h3>Ojo de águila</h3>
-    <p>Revoleá con una vaca adelante, entre 4 y 18 metros: el mundo se pone gris, el tiempo se frena y la mira se cierra sobre la cabeza. Cuando se pone roja, soltá: la armada va derecho al cogote y la cámara gira para verla caer.</p>
-    <h3>En el celular</h3>
-    <p>El teléfono acostado. Palanca a la izquierda, mirar deslizando a la derecha, los botones en pantalla.</p>
-    <div class="botones"><button class="boton" data-volver>Volver</button></div>
+    <h3 data-t="como.ojo">Ojo de águila</h3>
+    <p data-t="como.ojoT">Revoleá con una vaca adelante, entre 4 y 18 metros: el mundo se pone gris, el tiempo se frena y la mira se cierra sobre la cabeza. Cuando se pone roja, soltá: la armada va derecho al cogote y la cámara gira para verla caer.</p>
+    <h3 data-t="como.celular">En el celular</h3>
+    <p data-t="como.celularT">Acostado o parado: si lo tenés parado, el juego se gira solo. Palanca a la izquierda, mirar deslizando a la derecha, los botones en pantalla.</p>
+    <div class="botones"><button class="boton" data-volver data-t="boton.volver">Volver</button></div>
   </div>
 </div>
 
 <div class="panel" id="opciones" hidden>
   <div class="hoja ancha">
-    <h2>Opciones</h2>
-    <label class="opcion">Brillo<input type="range" id="opBrillo" min="0.7" max="1.8" step="0.05"><output id="opBrilloV"></output></label>
-    <label class="opcion">Volumen general<input type="range" id="opVolumen" min="0" max="1" step="0.05"><output id="opVolumenV"></output></label>
-    <label class="opcion">Voz del Guacho<input type="range" id="opVoz" min="0" max="1" step="0.05"><output id="opVozV"></output></label>
-    <label class="opcion">Sensibilidad del ratón<input type="range" id="opSensib" min="0.3" max="2.5" step="0.1"><output id="opSensibV"></output></label>
-    <label class="opcion">Calidad gráfica<select id="opCalidad"><option value="ultrabaja">Ultra baja (sin sombras)</option><option value="baja">Baja</option><option value="media">Media</option><option value="alta">Alta</option><option value="ultra">Ultra</option></select><output id="opCalidadV"></output></label>
-    <div class="opcion tilde"><span>Escaneo de cuadros<small id="opEscaneo">Todavía no se midió.</small></span><button class="boton secundario" id="opMedir">Medir de nuevo</button></div>
-    <label class="opcion tilde"><span>Ojo de águila<small>Cámara lenta y mira al revolear. Sin esto, se emboca a pulso.</small></span><input type="checkbox" id="opOjo"></label>
-    <label class="opcion tilde"><span>Subtítulos<small>Lo que dice el Guacho, escrito abajo.</small></span><input type="checkbox" id="opSubs"></label>
-    <div class="botones"><button class="boton" data-volver>Listo</button></div>
+    <h2 data-t="op.titulo">Opciones</h2>
+    <label class="opcion"><span data-t="idioma.opcion">Idioma</span><select id="opIdioma"><option value="es" lang="es">Español</option><option value="en" lang="en">English</option><option value="pt" lang="pt">Português</option></select><output></output></label>
+    <label class="opcion"><span data-t="op.brillo">Brillo</span><input type="range" id="opBrillo" min="0.7" max="1.8" step="0.05"><output id="opBrilloV"></output></label>
+    <label class="opcion"><span data-t="op.volumen">Volumen general</span><input type="range" id="opVolumen" min="0" max="1" step="0.05"><output id="opVolumenV"></output></label>
+    <label class="opcion"><span data-t="op.voz">Voz del Guacho</span><input type="range" id="opVoz" min="0" max="1" step="0.05"><output id="opVozV"></output></label>
+    <label class="opcion"><span data-t="op.sensib">Sensibilidad del ratón</span><input type="range" id="opSensib" min="0.3" max="2.5" step="0.1"><output id="opSensibV"></output></label>
+    <label class="opcion"><span data-t="op.calidad">Calidad gráfica</span><select id="opCalidad"><option value="ultrabaja" data-t="calidad.ultrabajaLarga">Ultra baja (sin sombras)</option><option value="baja" data-t="calidad.baja">Baja</option><option value="media" data-t="calidad.media">Media</option><option value="alta" data-t="calidad.alta">Alta</option><option value="ultra" data-t="calidad.ultra">Ultra</option></select><output id="opCalidadV"></output></label>
+    <div class="opcion tilde"><span><span data-t="op.escaneo">Escaneo de cuadros</span><small id="opEscaneo">Todavía no se midió.</small></span><button class="boton secundario" id="opMedir" data-t="op.medir">Medir de nuevo</button></div>
+    <label class="opcion tilde"><span><span data-t="op.ojo">Ojo de águila</span><small data-t="op.ojoT">Cámara lenta y mira al revolear. Sin esto, se emboca a pulso.</small></span><input type="checkbox" id="opOjo"></label>
+    <label class="opcion tilde"><span><span data-t="op.subs">Subtítulos</span><small data-t="op.subsT">Lo que dice el Guacho, escrito abajo.</small></span><input type="checkbox" id="opSubs"></label>
+    <div class="botones"><button class="boton" data-volver data-t="boton.listo">Listo</button></div>
   </div>
 </div>
 
@@ -602,16 +790,18 @@
   <h2>Estancia</h2>
   <svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="26" rx="22" ry="9"/><path d="M32 60 Q 30 44 12 28"/></svg>
   <div class="carga-barra"><i id="cargaBarra"></i></div>
-  <span id="cargaTexto">Cargando…</span>
+  <span id="cargaTexto" data-t="carga.cargando">Cargando…</span>
   <div class="escaneo" id="escaneo" hidden>
-    <div class="fps"><b id="escaneoFps">--</b><small>cuadros por segundo</small></div>
-    <ol id="escaneoNiveles"><li data-n="ultrabaja">Ultra baja</li><li data-n="baja">Baja</li><li data-n="media">Media</li><li data-n="alta">Alta</li><li data-n="ultra">Ultra</li></ol>
-    <p id="escaneoAyuda" hidden>¿Anda trabado? Tocá <b>Ultra baja</b>: sin sombras, plantas quietas y más luz.</p>
-    <div class="botones"><button class="boton secundario" id="escaneoSaltar">Saltar</button><button class="boton" id="escaneoSeguir" hidden>Seguir</button></div>
+    <div class="fps"><b id="escaneoFps">--</b><small data-t="escaneo.fps">cuadros por segundo</small></div>
+    <ol id="escaneoNiveles"><li data-n="ultrabaja" data-t="calidad.ultrabaja">Ultra baja</li><li data-n="baja" data-t="calidad.baja">Baja</li><li data-n="media" data-t="calidad.media">Media</li><li data-n="alta" data-t="calidad.alta">Alta</li><li data-n="ultra" data-t="calidad.ultra">Ultra</li></ol>
+    <p id="escaneoAyuda" data-t-html="escaneo.ayuda" hidden>¿Anda trabado? Tocá <b>Ultra baja</b>: sin sombras, plantas quietas y más luz.</p>
+    <div class="botones"><button class="boton secundario" id="escaneoSaltar" data-t="escaneo.saltar">Saltar</button><button class="boton" id="escaneoSeguir" data-t="escaneo.seguir" hidden>Seguir</button></div>
   </div>
 </div>
-<div id="girar"><svg viewBox="0 0 90 90" aria-hidden="true"><rect x="27" y="10" width="36" height="70" rx="6"/></svg><div>Girá el teléfono: la estancia se ve acostada.</div></div>
+</div>
 
+<script src="js/giro.js"></script>
+<script src="js/idioma.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
 <script src="js/vendor/GLTFLoader.js"></script>
 <script src="js/vendor/SkeletonUtils.js"></script>
@@ -636,5 +826,7 @@
 <script src="js/chat.js"></script>
 <script src="js/calidad.js"></script>
 <script src="js/trabajo.js"></script>
+<script src="js/sonidos.js"></script>
 <script src="js/sonido.js"></script>
+<script src="js/menu.js"></script>
 <script src="js/juego.js"></script>

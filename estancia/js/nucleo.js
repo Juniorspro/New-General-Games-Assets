@@ -164,29 +164,33 @@ E.conectarEntrada = (lienzo) => {
   });
   lienzo.addEventListener("contextmenu", (ev) => ev.preventDefault());
   addEventListener("mousemove", (ev) => {
-    if (document.pointerLockElement === lienzo) { en.raton.dx += ev.movementX; en.raton.dy += ev.movementY; }
+    if (document.pointerLockElement === lienzo) { const m = GIRO.delta(ev.movementX, ev.movementY); en.raton.dx += m.x; en.raton.dy += m.y; }
   });
 
-  // Táctil
+  // Táctil. Todo en coordenadas del juego (GIRO.aLocal): con el teléfono
+  // parado la caja está girada, y en coordenadas de pantalla "empujar la
+  // palanca para adelante" caminaba de costado.
   const dedos = new Map();
   const palanca = document.getElementById("palanca"), perilla = palanca && palanca.firstElementChild;
   lienzo.addEventListener("pointerdown", (ev) => {
     if (ev.pointerType !== "touch") return;
     en.tactil = true;
     document.body.classList.add("tactil");
-    const izquierda = ev.clientX < innerWidth * 0.45;
-    dedos.set(ev.pointerId, { x0: ev.clientX, y0: ev.clientY, x: ev.clientX, y: ev.clientY, tipo: izquierda ? "palanca" : "mirar" });
+    const p = GIRO.aLocal(ev.clientX, ev.clientY);
+    const izquierda = p.x < GIRO.ancho * 0.45;
+    dedos.set(ev.pointerId, { x0: p.x, y0: p.y, x: p.x, y: p.y, tipo: izquierda ? "palanca" : "mirar" });
     try { lienzo.setPointerCapture(ev.pointerId); } catch (e) { /* ya se fue */ }
     if (izquierda && palanca) {
-      palanca.style.left = ev.clientX - 60 + "px"; palanca.style.top = ev.clientY - 60 + "px"; palanca.hidden = false;
+      palanca.style.left = p.x - 60 + "px"; palanca.style.top = p.y - 60 + "px"; palanca.hidden = false;
       en.palanca.activa = true;
     }
   });
   lienzo.addEventListener("pointermove", (ev) => {
     const d = dedos.get(ev.pointerId);
     if (!d) return;
-    if (d.tipo === "mirar") { en.raton.dx += (ev.clientX - d.x) * 1.6; en.raton.dy += (ev.clientY - d.y) * 1.6; }
-    d.x = ev.clientX; d.y = ev.clientY;
+    const p = GIRO.aLocal(ev.clientX, ev.clientY);
+    if (d.tipo === "mirar") { en.raton.dx += (p.x - d.x) * 1.6; en.raton.dy += (p.y - d.y) * 1.6; }
+    d.x = p.x; d.y = p.y;
     if (d.tipo === "palanca") {
       let vx = (d.x - d.x0) / 55, vy = (d.y - d.y0) / 55;
       const l = Math.hypot(vx, vy);
