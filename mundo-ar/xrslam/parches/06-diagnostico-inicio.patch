@@ -1,0 +1,143 @@
+diff --git a/xrslam/src/xrslam/core/feature_tracker.cpp b/xrslam/src/xrslam/core/feature_tracker.cpp
+index 7d91c00..9b48c23 100644
+--- a/xrslam/src/xrslam/core/feature_tracker.cpp
++++ b/xrslam/src/xrslam/core/feature_tracker.cpp
+@@ -6,6 +6,7 @@
+ #include <xrslam/geometry/stereo.h>
+ #include <xrslam/inspection.h>
+ #include <xrslam/localizer/localizer.h>
++#include <xrslam/core/initializer.h>
+ #include <xrslam/map/frame.h>
+ #include <xrslam/map/map.h>
+ #include <xrslam/map/track.h>
+@@ -127,6 +128,7 @@ void FeatureTracker::work(std::unique_lock<std::mutex> &l) {
+ 
+         if (slidind_window_frame_tag)
+             frame->detect_keypoints(config.get());
++        diag_esquinas((double)frame->keypoint_num());   // esquinas que sigue este cuadro
+         map->attach_frame(std::move(frame));
+ 
+         size_t max_frame_num = is_initialized? config->feature_tracker_max_frames(): config->feature_tracker_max_init_frames();
+diff --git a/xrslam/src/xrslam/core/initializer.cpp b/xrslam/src/xrslam/core/initializer.cpp
+index 48cf820..5812fea 100644
+--- a/xrslam/src/xrslam/core/initializer.cpp
++++ b/xrslam/src/xrslam/core/initializer.cpp
+@@ -15,6 +15,17 @@
+ 
+ namespace xrslam {
+ 
++// Por qué no arranca: el último motivo de falla de la inicialización y sus
++// números, para mostrarlos (antes sólo había log_debug, apagado).
++//   motivo: 0 nada aún · 1 pocos cuadros · 2 pocas coincidencias · 3 poca
++//   paralaje · 4 rotación pura · 5 triangulación · 6 BA visual · 7 escala · 8 arrancó
++namespace {
++double g_diag[8] = {0, 0, 0, 0, 0, 0, 0, 0};   // intentos, motivo, coincidencias, paralaje, triangulados, escala, esquinas, -
++void diag(int motivo) { g_diag[1] = motivo; }
++} // namespace
++void diag_inicio(double *salida) { for (int i = 0; i < 8; ++i) salida[i] = g_diag[i]; }
++void diag_esquinas(double n) { g_diag[6] = n; }
++
+ Initializer::Initializer(std::shared_ptr<Config> config) : config(config) {}
+ 
+ Initializer::~Initializer() = default;
+@@ -31,6 +42,7 @@ void Initializer::mirror_keyframe_map(Map *feature_tracking_map,
+ 
+     if (init_frame_index_last < init_frame_index_distance) {
+         map.reset();
++        diag(1);
+         return;
+     }
+ 
+@@ -78,10 +90,14 @@ void Initializer::mirror_keyframe_map(Map *feature_tracking_map,
+ std::unique_ptr<SlidingWindowTracker> Initializer::initialize() {
+     if (!map)
+         return nullptr;
++    g_diag[0] += 1;
+     if (!init_sfm())
+         return nullptr;
+-    if (!init_imu())
++    if (!init_imu()) {
++        diag(7);
+         return nullptr;
++    }
++    diag(8);
+ 
+     map->get_frame(0)->tag(FT_FIX_POSE) = true;
+ 
+@@ -188,11 +204,17 @@ bool Initializer::init_sfm() {
+         common_track_num++;
+     }
+ 
+-    if (common_track_num < (int)config->initializer_min_matches())
++    g_diag[2] = common_track_num;
++    if (common_track_num < (int)config->initializer_min_matches()) {
++        diag(2);
+         return false;
++    }
+     total_parallax /= std::max(common_track_num, 1);
+-    if (total_parallax < config->initializer_min_parallax())
++    g_diag[3] = total_parallax;
++    if (total_parallax < config->initializer_min_parallax()) {
++        diag(3);
+         return false;
++    }
+ 
+     std::vector<matrix<3>> Rs;
+     std::vector<vector<3>> Ts;
+@@ -204,6 +226,7 @@ bool Initializer::init_sfm() {
+                                          1000, config->random());
+     if (!decompose_homography(H, RH1, RH2, TH1, TH2, nH1, nH2)) {
+         log_debug("SfM init fail: pure rotation.");
++        diag(4);
+         return false; // is pure rotation
+     }
+     TH1 = TH1.normalized();
+@@ -275,8 +298,10 @@ bool Initializer::init_sfm() {
+     init_point_status.swap(triangulation_status[best_rt_index]);
+     size_t triangulated_num = triangulation_counts[best_rt_index];
+ 
++    g_diag[4] = (double)triangulated_num;
+     if (triangulated_num < config->initializer_min_triangulation()) {
+         log_debug("SfM init fail: triangulation (%zd).", triangulated_num);
++        diag(5);
+         return false;
+     }
+ 
+@@ -370,6 +395,7 @@ bool Initializer::init_sfm() {
+         }
+     }
+     if (!solver->solve()) {
++        diag(6);
+         return false;
+     }
+ 
+@@ -386,12 +412,14 @@ bool Initializer::init_imu() {
+     reset_states();
+     solve_gyro_bias();
+     solve_gravity_scale_velocity();
++    g_diag[5] = scale;
+     if (scale < 0.001 || scale > 1.0)
+         return false;
+     if (!config->initializer_refine_imu()) {
+         return apply_init();
+     }
+     refine_scale_velocity_via_gravity();
++    g_diag[5] = scale;
+     if (scale < 0.001 || scale > 1.0)
+         return false;
+     return apply_init();
+diff --git a/xrslam/src/xrslam/core/initializer.h b/xrslam/src/xrslam/core/initializer.h
+index aff6b11..9e91cf2 100644
+--- a/xrslam/src/xrslam/core/initializer.h
++++ b/xrslam/src/xrslam/core/initializer.h
+@@ -5,6 +5,10 @@
+ 
+ namespace xrslam {
+ 
++// Diagnóstico de la inicialización (ver initializer.cpp).
++void diag_inicio(double *salida);
++void diag_esquinas(double n);
++
+ class Config;
+ class Map;
+ class SlidingWindowTracker;

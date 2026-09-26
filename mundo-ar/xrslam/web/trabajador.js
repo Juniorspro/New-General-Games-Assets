@@ -18,13 +18,13 @@
 //        hora); ms = lo que costó, IMU incluida. Recién ahí conviene mandar otro.
 import XRSLAM from "./dist/xrslam.mjs";
 
-let M = null, pImg = 0, tamImg = 0, pPose = 0, pPts = 0;
+let M = null, pImg = 0, tamImg = 0, pPose = 0, pPts = 0, pDiag = 0;
 let ultimaT = -1, cuadros = 0, msCuadro = 0;
 let estadoAvisado = -1;
 let tPendiente = null, tGiro = -Infinity, tAcel = -Infinity, acumulado = 0;
 const MAX_PUNTOS = 3000;
 const listo = XRSLAM({ print: () => {}, printErr: (s) => { if (/error|fatal/i.test(s)) console.warn("[xrslam]", s); } })
-  .then((m) => { M = m; pPose = M._malloc(8 * 8); pPts = M._malloc(MAX_PUNTOS * 3 * 8); postMessage({ tipo: "cargado" }); })
+  .then((m) => { M = m; pPose = M._malloc(8 * 8); pDiag = M._malloc(8 * 8); pPts = M._malloc(MAX_PUNTOS * 3 * 8); postMessage({ tipo: "cargado" }); })
   .catch((e) => { postMessage({ tipo: "error", mensaje: String(e && e.message ? e.message : e) }); throw e; });
 
 function avisarPose() {
@@ -47,7 +47,9 @@ function avisarPose() {
 function quizasLibre() {
   if (tPendiente !== null && tGiro > tPendiente && tAcel > tPendiente) {
     msCuadro = acumulado; acumulado = 0; tPendiente = null;
-    postMessage({ tipo: "libre", ms: msCuadro });
+    // Con el diagnóstico de la inicialización: por qué no arranca, si no arranca.
+    M._xr_diag(pDiag);
+    postMessage({ tipo: "libre", ms: msCuadro, diag: Array.from(M.HEAPF64.subarray(pDiag / 8, pDiag / 8 + 8)) });
   }
 }
 

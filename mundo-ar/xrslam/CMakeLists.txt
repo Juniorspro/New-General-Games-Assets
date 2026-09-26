@@ -80,7 +80,7 @@ if(EMSCRIPTEN)
     # La pila de Emscripten es de 64 KB; Ceres y Eigen ponen matrices grandes
     # en la pila (Linux da 8 MB): con 64 KB se pisa la memoria.
     -sSTACK_SIZE=8MB
-    -sEXPORTED_FUNCTIONS=_xr_crear,_xr_imu,_xr_giro,_xr_acel,_xr_imagen,_xr_estado,_xr_pose,_xr_puntos,_xr_destruir,_malloc,_free
+    -sEXPORTED_FUNCTIONS=_xr_crear,_xr_imu,_xr_giro,_xr_acel,_xr_imagen,_xr_estado,_xr_pose,_xr_puntos,_xr_diag,_xr_destruir,_malloc,_free
     -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPF64,stringToNewUTF8)
 else()
   add_executable(corredor corredor/corredor.cpp)

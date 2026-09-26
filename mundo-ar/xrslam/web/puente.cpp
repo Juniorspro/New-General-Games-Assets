@@ -11,6 +11,9 @@
 //   xr_pose(salida, cual)             8 doubles: t, x, y, z, qx, qy, qz, qw
 //                                     (cual: 0 cuerpo/IMU, 1 cámara)
 //   xr_puntos(salida, max)            hasta max puntos 3D del mapa (x, y, z)
+//   xr_diag(salida)                   8 doubles: intentos de inicialización, motivo
+//                                     de la última falla, coincidencias, paralaje (px),
+//                                     triangulados, escala, esquinas del último cuadro
 //   xr_destruir()
 //
 // El orden importa: XRSLAM procesa una imagen recién cuando le llega IMU
@@ -21,6 +24,11 @@
 
 #include <cstdio>
 #include <cstring>
+
+// xrslam es un espacio de nombres con la versión adentro (xrslam_0_5_0):
+// hay que declararlo con su encabezado, no a mano.
+#include <xrslam/xrslam.h>
+namespace xrslam { void diag_inicio(double *salida); }
 
 namespace {
 void *g_config = nullptr;
@@ -106,6 +114,8 @@ EMSCRIPTEN_KEEPALIVE int xr_puntos(double *salida, int max) {
     }
     return n;
 }
+
+EMSCRIPTEN_KEEPALIVE void xr_diag(double *salida) { xrslam::diag_inicio(salida); }
 
 EMSCRIPTEN_KEEPALIVE void xr_destruir() {
     if (g_vivo) XRSLAMDestroy();

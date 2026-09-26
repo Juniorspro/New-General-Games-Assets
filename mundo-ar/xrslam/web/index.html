@@ -337,6 +337,8 @@ let pose = null;        // { t, p: Vector3(three), q: Quaternion(three), qxr: [.
 const giros = [];       // [t, x, y, z] recientes: predicción y calibración
 let lote = { giro: [], acel: [] };
 let fuenteIMU = "—", hzIMU = 0, cuentaIMU = 0, tHz = performance.now();
+let diagInicio = null;             // [intentos, motivo, coincidencias, paralaje, triangulados, escala, esquinas]
+const acels = [];                  // [t, |a|] de los últimos 2 s: en reposo tiene que dar ~9,8
 let pisoY = null;       // altura del piso (three), de los puntos del mapa
 let t0Datos = null, tArranque = 0;
 
@@ -357,9 +359,15 @@ const relojes = {};
 function aReloj(nombre, crudoMs) {
   const ahora = performance.now();
   let r = relojes[nombre];
-  if (!r) r = relojes[nombre] = { corr: Math.abs(crudoMs - ahora) < 1000 ? 0 : ahora - crudoMs, raro: Math.abs(crudoMs - ahora) >= 1000 };
-  if (r.raro && crudoMs + r.corr > ahora) r.corr = ahora - crudoMs;   // nunca en el futuro
-  return (crudoMs + r.corr) / 1000;
+  if (!r) r = relojes[nombre] = { corr: Math.abs(crudoMs - ahora) < 1000 ? 0 : ahora - crudoMs, raro: Math.abs(crudoMs - ahora) >= 1000, ultimo: -Infinity };
+  // La corrección se queda con la menor demora vista, pero baja DE A POCO
+  // (0,5 ms por lectura): si bajara de golpe, las horas saltarían para atrás
+  // y XRSLAM tira la IMU que va hacia atrás (no puede integrar tiempo negativo).
+  if (r.raro && crudoMs + r.corr > ahora) r.corr = Math.max(ahora - crudoMs, r.corr - 0.5);
+  let t = crudoMs + r.corr;
+  if (t <= r.ultimo) t = r.ultimo + 0.1;   // nunca para atrás
+  r.ultimo = t;
+  return t / 1000;
 }
 
 // ───────────────────── sensores ─────────────────────
@@ -371,7 +379,13 @@ function llegaGiro(t, x, y, z) {
   if (giros.length > 64 && t - giros[0][0] > 15) { let k = 0; while (t - giros[k][0] > 12) k++; giros.splice(0, k); }
   cuentaIMU++;
 }
-function llegaAcel(t, x, y, z) { lote.acel.push(t, x, y, z); }
+function llegaAcel(t, x, y, z) {
+  lote.acel.push(t, x, y, z);
+  acels.push([t, Math.hypot(x, y, z)]);
+  while (acels.length && t - acels[0][0] > 2) acels.shift();
+}
+const MOTIVOS = ["—", "juntando cuadros", "pocas coincidencias entre cuadros", "poco desplazamiento (paralaje)", "sólo giro, sin desplazarse",
+  "pocos puntos triangulados", "el ajuste visual no cerró", "la IMU no cuadra con la imagen (escala)", "arrancó"];
 function mandarIMU() {
   if (fase !== "slam") { lote.giro.length = 0; lote.acel.length = 0; return; }
   if (lote.giro.length) trabajador.postMessage({ tipo: "giro", d: Float64Array.from(lote.giro) });
@@ -573,6 +587,7 @@ trabajador.onmessage = (e) => {
     libre = true;
   } else if (m.tipo === "libre") {
     libre = true; msSlam = m.ms; cuadrosSlam++;
+    if (m.diag) diagInicio = m.diag;
   } else if (m.tipo === "pose") {
     estadoSlam = m.estado;
     if (m.camara) {
@@ -681,7 +696,15 @@ renderer.setAnimationLoop(() => {
       : !arena ? "Tocá el piso (la grilla celeste) para poner la arena · las paredes también se tocan"
       : "Tocá los cubos · caminá alrededor: tienen que quedarse quietos");
     else if (estadoSlam === 2) avisar("Se perdió: volvé a apuntar a donde estabas");
-    else avisar("Arrancando el SLAM: mové el teléfono de costado, despacio (hace falta movimiento)");
+    else {
+      // Qué pedir según por qué no arranca (la calibración pidió girar sin
+      // moverse; para arrancar hace falta lo contrario: desplazarse).
+      const mot = diagInicio ? diagInicio[1] : 0;
+      avisar(mot === 4 || mot === 3 ? "Para arrancar: DESPLAZÁ el teléfono ~30 cm de costado (un paso), sin girarlo, mirando algo con textura"
+        : mot === 2 || mot === 5 ? "Para arrancar: apuntá a algo con más detalle (muebles, objetos) y desplazate de costado"
+        : mot === 7 ? "Para arrancar: desplazate de costado con un movimiento más marcado (ida y vuelta)"
+        : "Arrancando el SLAM: desplazá el teléfono de costado ~30 cm, despacio, sin girarlo");
+    }
   }
   animar(t, dt);
   renderer.render(escena, camara);
@@ -696,6 +719,9 @@ function pintarHud() {
     (calib ? `desfase ${(calib.desfase * 1000).toFixed(0)} ms · focal ${calib.focal.toFixed(0)} px${calib.montaje ? " · montaje " + calib.montaje : ""}<br>` : "") +
     (fase === "calibrando" ? `cámara ${fpsCam}/s · flujos ${flujos.length}` + (ultimoIntento ? ` · r² ${ultimoIntento.r2.toFixed(2)} · corr ${ultimoIntento.correlacion.toFixed(2)} · giro ${ultimoIntento.exX.toFixed(2)}/${ultimoIntento.exY.toFixed(2)} · f ${ultimoIntento.focal.toFixed(0)} · d ${(ultimoIntento.desfase * 1000).toFixed(0)} ms` : "") + "<br>" : "") +
     (Object.keys(relojes).some((k) => relojes[k].raro) ? `relojes corregidos: ${Object.keys(relojes).filter((k) => relojes[k].raro).join(", ")}<br>` : "") +
+    (fase === "slam" && estadoSlam !== 1 && diagInicio ? `inicio: ${diagInicio[0]} intentos · ${MOTIVOS[diagInicio[1]] || diagInicio[1]}<br>` +
+      `coinc ${diagInicio[2]} · paralaje ${diagInicio[3].toFixed(1)} px · triang ${diagInicio[4]} · escala ${diagInicio[5].toFixed(3)} · esquinas ${diagInicio[6]}<br>` : "") +
+    (fase !== "inicio" && !PRUEBA ? `acel |a| ${acels.length ? (acels.reduce((s, a) => s + a[1], 0) / acels.length).toFixed(1) : "—"} m/s² · pantalla ${anguloPantalla}°<br>` : "") +
     (fase === "slam" ? `planos ${planosInfo.n}: piso ${planosInfo.piso ? "sí" : "—"} · paredes ${planosInfo.paredes} · mapa ${planosInfo.tamano} pts · ${planosInfo.ms.toFixed(0)} ms<br>` : "") +
     `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)} m${pisoY !== null ? ` · piso ${(pisoY - p.y).toFixed(2)}` : ""}`;
 }
@@ -833,7 +859,7 @@ async function arrancarPrueba() {
 
 // Para las pruebas automáticas.
 window.__XR = { estado: () => ({ fase, estadoSlam, fpsSlam, msSlam, fpsDib, ancho, alto, calib, pisoY, puntos, tocados, blancos: blancos.length,
-  anillo: !!anillo, arena: !!arena, pos: pose ? pose.p.toArray() : null, t: pose ? pose.t : null, hzIMU, fuenteIMU }), camara, THREE };
+  anillo: !!anillo, arena: !!arena, diagInicio, pos: pose ? pose.p.toArray() : null, t: pose ? pose.t : null, hzIMU, fuenteIMU }), camara, THREE };
 // Para las pruebas: dónde tocar en pantalla para dar con un plano de ese tipo.
 window.__XR.buscarEnPantalla = (tipo) => {
   for (let fy = 0.95; fy > 0.05; fy -= 0.05) for (let fx = 0.1; fx < 0.9; fx += 0.05) {
