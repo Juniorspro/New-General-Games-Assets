@@ -308,7 +308,8 @@ En su propia nota: [aeroplaza-11](aeroplaza-11.md).
 
 ## Undécima vuelta: probador, joyas, anuncios, choques, VR y alta (26/09)
 
-En su propia nota: [aeroplaza-12](aeroplaza-12.md).
+En su propia nota: [aeroplaza-12](aeroplaza-12.md). Y después, el VR a 120, las manos y el visor:
+[aeroplaza-13](aeroplaza-13.md).
 
 ## Trampas que ya se pagaron
 

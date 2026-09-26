@@ -103,12 +103,46 @@ Además hay:
 
 ## Modo VR
 
-Pausa › 🥽 Modo VR: con visor (pantalla doble, SBS) o sin visor.
+Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
+**Visor VR** si el navegador tiene uno (Meta Quest, Pico, la compu con visor).
 
 - Se mira moviendo el celu, sin botones.
 - Un toque camina o frena, o usa lo que haya cerca, y dos toques saltan.
 - Para salir, mirar abajo 2 segundos, o Escape.
 - En la compu se mira arrastrando.
+
+**A lo que dé la pantalla (120 donde hay 120)**, sin bajar los gráficos
+(`js/vr-dibujo.js`):
+
+- El mundo se dibuja una vez, desde el medio de los ojos y con todos los
+  efectos (brillo, color, viñeta). Cada ojo lo reproyecta con la cabeza de ese
+  instante (*timewarp*) y con la profundidad (paralaje).
+- Si el celu no llega, se dibuja partido: la mitad en un cuadro y la otra en
+  el siguiente. La cabeza va a la velocidad de la pantalla.
+- La pose del giroscopio se adelanta al momento en que se va a ver.
+- Llave **⏱ Cuadros por segundo**: los muestra arriba de cada ojo, los de la
+  cabeza y los del mundo.
+
+**Manos como en Meta Quest** (llave **✋ Manos con la cámara**):
+
+- La cámara de atrás del celu las sigue con MediaPipe en un worker. Se baja
+  la primera vez, unos 20 MB, de jsdelivr y de Google; se puede servir desde
+  otro lado con `window.AEROPLAZA_MANOS = { base, modelo }`.
+- En el Visor VR son las manos del visor.
+- **Usar:** el rayo sale del hombro; pellizcar (pulgar con índice) usa lo que
+  se apunta.
+- **Ir:** apuntando al piso sale un arco; al soltar el pellizco se salta ahí,
+  con un parpadeo.
+- **Menú:** la palma a la cara y un pellizco abren el menú (caminar, girar
+  45°, FPS, salir). Se toca con la yema o con el rayo.
+- **Tocar:** la yema del índice revienta burbujas y junta orbes.
+- **Saltar:** dos pellizcos a la vez.
+
+**Visor VR** (`js/vr-xr.js`, WebXR):
+
+- Pide la frecuencia más alta hasta 120 Hz.
+- **Controles:** palanca izquierda camina, la derecha gira 45°, el gatillo
+  usa y A/X salta.
 
 ## El tráiler
 
@@ -145,12 +179,20 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
     con su referencia; `modelos.mjs`: cada una en 4 giros;
   - `muneco.mjs` y `fotos.mjs`: el muñeco en el probador y la isla;
   - `mundo.mjs [lugar,…]`: recorre las regiones con fotos y prueba el monorriel;
-  - `menus.mjs`: que ninguna ventana se pase del alto (celu 844×390 y compu).
+  - `menus.mjs`: que ninguna ventana se pase del alto (celu 844×390 y compu);
+  - `vr120.mjs`: cada ojo reproyectado contra dibujarlo derecho, el
+    timewarp, el dibujo partido, la predicción y el ritmo;
+  - `manos.mjs`: las manos (filtro, pellizco, rayo, arco, menú, burbujas) y
+    MediaPipe de verdad con las fotos de `pruebas/manos/` (hechas con Rezona);
+  - `xr.mjs`: el Visor VR con IWER, el Quest 3 de mentira de Meta.
+
+  MediaPipe e IWER se bajan con curl la primera vez y no se commitean.
 - En la dirección:
   - `?directo`: saltea los menús;
   - `?reino=aqua`: arranca en ese reino;
   - `?broker=ws://…`: usa otro broker;
   - `?calidad=baja`: fija la calidad;
   - `?hora=0.5`: fija la hora del día;
-  - `?giro=no|normal|reves`: el giro del celu parado.
+  - `?giro=no|normal|reves`: el giro del celu parado;
+  - `?sinInstanciar`: sin juntar las copias de un mismo modelo (para comparar).
 - Las trampas que ya se pagaron están en `memoria/aeroplaza.md`.

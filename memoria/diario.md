@@ -4,6 +4,17 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026 · `claude/fijate-iszyer`:**
+  - Pidió: el VR a 120 sin bajar gráficos, manos como Meta Quest "súper
+    optimizadas", y trabajar horas para dejarlo fluido.
+  - Quedó ([aeroplaza-13](aeroplaza-13.md)):
+    - el VR reproyectado (una vuelta al mundo por cuadro, con efectos);
+    - manos por la cámara con MediaPipe y por el visor;
+    - el modo Visor VR (WebXR, 120 Hz);
+    - las copias instanciadas.
+  - Falta:
+    - probar en un celu con pantalla de 120 y en un Quest de verdad;
+    - ver si TikTok deja la cámara y bajar MediaPipe.
 - **26/09/2026, noche · `claude/fijate-iszyer`:**
   - Pidió: que no se tape el muñeco en el probador, probarse la ropa antes de
     comprar, joyas (10 por día, ropa de 100 para arriba), IAA e IAP, no

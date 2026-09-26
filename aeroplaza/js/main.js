@@ -52,6 +52,7 @@ import { VR } from './vr.js';
 import { ManosCamara } from './manos-camara.js';
 import { Manos } from './manos.js';
 import { VisorXR } from './vr-xr.js';
+import { instanciarCopias, revisarCopias } from './instanciar.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
 
@@ -156,7 +157,12 @@ async function iniciar() {
     if (!camManos) camManos = new ManosCamara({ alLlegar: (lista, tt) => { if (manos.activa) manos.recibirCamara(lista, tt); } });
     manos.activa = true; manos.fuente = 'camara';
     vr.decir(t('mn_manos_cargando'), 30);
-    try { await camManos.prender(); if (vr.activo) vr.decir(t('mn_manos_listas'), 5); }
+    try {
+      await camManos.prender();
+      /* (si mientras cargaba se salió del VR, la cámara no queda prendida) */
+      if (!vr.activo || !manos.activa) { camManos.apagar(); return; }
+      vr.decir(t('mn_manos_listas'), 5);
+    }
     catch (e) { console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos(); }
   };
   const apagarManos = () => { camManos?.apagar(); manos.activa = false; for (const m of manos.manos) m.visible = false; manos.menu.cerrar(); };
@@ -344,6 +350,8 @@ async function iniciar() {
     limpiarArboledas();
     motor.aplicarPS1(reino.grupo);
     motor.simplificar(); motor.ajustarShaders();   // (toda la escena: también el muñeco propio y los de los demás)
+    /* las copias quietas de un mismo modelo, en una llamada por material (instanciar.js); una vez por lugar */
+    if (!reino.primeraPersona && !reino.interior && !reino._copias) reino._copias = Q.has('sinInstanciar') ? [] : instanciarCopias(reino.grupo);
     detalle.preparar(reino);
     cielo.ponerModo(reino.cielo || {});
     if (Q.has('hora') && reino.cielo?.hora == null) cielo.ponerModo({ ...(reino.cielo || {}), hora: +Q.get('hora') });
@@ -1005,6 +1013,8 @@ async function iniciar() {
     if (motor.Q.simple) { J._tSim = (J._tSim || 0) + dt; if (J._tSim > 2.5) { J._tSim = 0; motor.simplificar(); motor.ajustarShaders(); } }
     if (tuto) seguirTuto(dt, E);
     tHud += dt; if (tHud > 0.25) { tHud = 0; UI.actualizarHud(); }
+    /* (y cada segundo, si alguna copia se movió o la cambiaron, vuelve a ser pieza suelta) */
+    J._tCopias = (J._tCopias || 0) + dt; if (J._tCopias > 1 && reino._copias?.length) { J._tCopias = 0; revisarCopias(reino._copias); }
     /* el runner a veces congela un par de cuadros (no se dibuja: queda el anterior) y encima va delirio.js */
     const congela = reino.congela > 0;
     /* en VR se dibuja por vr-dibujo.js (el mundo una vez, reproyectado a cada ojo con la cabeza de

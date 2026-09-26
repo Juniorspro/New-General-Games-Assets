@@ -93,7 +93,9 @@ export class ManosCamara {
     this.cfg = { base: MANOS_BASE, modelo: MANOS_MODELO, ...(window.AEROPLAZA_MANOS || {}) };
   }
   /* el worker con MediaPipe (se puede usar sin cámara: probar() le pasa imágenes) */
-  async iniciarRed({ delegado = 'GPU', tope = 60000 } = {}) {
+  /* (en CPU: en el worker va en otro núcleo y no le saca tiempo a la placa, que está dibujando a
+     120; con la GPU la red era más rápida pero se peleaba con el dibujo) */
+  async iniciarRed({ delegado = 'CPU', tope = 60000 } = {}) {
     if (this.worker) return this.listo;
     this.estado = 'cargando';
     const url = URL.createObjectURL(new Blob([WORKER()], { type: 'text/javascript' }));

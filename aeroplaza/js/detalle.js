@@ -53,7 +53,7 @@ export class Detalle {
       this.piezas.push({ o, d: cortable(o), off: ESF.center.clone().sub(V), r: ESF.radius });
     }
     g.traverse((o) => {
-      if (!o.isInstancedMesh || o.count < 12 || o.userData.sinCorte || o.parent?.isArboleda) return;
+      if (!o.isInstancedMesh || (o.count < 12 && !o.userData.copias) || o.userData.sinCorte || o.parent?.isArboleda) return;
       const n = o.count, pos = new Float32Array(n * 3), mat = o.instanceMatrix.array.slice(0, n * 16), col = o.instanceColor ? o.instanceColor.array.slice(0, n * 3) : null;
       o.updateMatrixWorld();
       /* (la esfera para el recorte de cámara se calcula con todas: si no, después quedaría chica) */
