@@ -138,6 +138,9 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
 - La primera vez, con la mano a la vista, se prueba MediaPipe en la GPU contra la
   CPU unos segundos y se queda con la que ande mejor en ese celu (se recuerda
   una semana).
+- La mano tiene siempre la misma forma: aprende de las fotos el largo de cada
+  hueso y la palma, y cada cuadro se arma con eso (no se estira al girar ni al
+  ir rápido).
 - **✋ Las manos: Rápidas · Medio · Suaves** (abajo de las llaves). Rápidas van
   pegadas a la mano y tiemblan un poco, como un Quest; Suaves, quietas no
   tiemblan y van un poco atrás. De entrada, Medio.
@@ -189,8 +192,8 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   (25/09: solo las canciones que manda quien pide).
 - `node herramientas/manos-lento.mjs [manos.js] [ms de la cámara]` mide las
   manos en movimientos lentos (el atraso, el temblor, cuánto se pasan al
-  frenar), para afinar las constantes de `js/manos.js` (`SUAVE=`, `RED=`,
-  `SEMILLAS=`, `CORTO=1`).
+  frenar, cuánto se estiran, el giro y los movimientos chicos), para afinar las
+  constantes de `js/manos.js` (`SUAVE=`, `RED=`, `SEMILLAS=`, `CORTO=1`).
 - `pruebas/`:
   - `multijugador.mjs`: dos navegadores contra `broker.mjs`, un broker MQTT
     mínimo en Node puro;

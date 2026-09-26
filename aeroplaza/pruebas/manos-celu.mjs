@@ -29,6 +29,9 @@ const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0
    palmas si sigue menos manos que las que busca (cupo), o en la primera foto después de cambiar el
    cupo. 'nueva': el cupo lo elige manos-camara.js (una mano a la vista, busca una); 'vieja': siempre
    dos (hasta la vuelta 16) */
+/* los huesos de los dedos y la palma, y su largo de verdad (ABIERTA) */
+const HUESOS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
+const LARGO = HUESOS.map(([i, j]) => Math.hypot(...[0, 1, 2].map((c) => ABIERTA[i][c] - ABIERTA[j][c])));
 function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, suavidad = 'media', red = 'nueva', escala = 0.7, entra = 0 }) {
   let s = semilla * 2654435761 >>> 0;
   const azar = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -70,7 +73,7 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
   const R_ = Array.from({ length: redes }, () => ({ libre: -1, cupo: 2, recien: false, siguiendo: 0 }));
   for (const r of R_) r.w = { postMessage: (m) => { if (m.tipo === 'cupo' && m.n !== r.cupo) { r.cupo = m.n; r.recien = true; } } };
   const mc = new ManosCamara(); mc.redes = R_; mc.activa = true; mc.cfg.siempreDos = red === 'vieja';
-  const R = { n: 0, cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], tiembla: [], lat: [] };
+  const R = { n: 0, cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], tiembla: [], lat: [], estira: [] };
   for (let T = 0; T < FIN; T += DT) {
     for (const r of resultados.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega, r.cupo); if (!r.primera) mc.medirRedes(r.red, r.ms, r.cupo, r.lista.length); mc.elegirCupos({ n: r.lista.length, cupo: r.cupo }, r.red, r.llega); R.lat.push(r.llega - r.tc); R.n++; }
     resultados = resultados.filter((r) => r.llega > T);
@@ -106,6 +109,8 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
     if (mejor && antes && (antes.id !== id || antes.gen !== id.gen)) { antes = null; R.reaparece++; }
     if (mejor && T > 300) {
       if (aM >= 0.5) R.err.push(md * 1000);
+      /* (lo que se estira: el hueso que más se aleja de su largo, en %) */
+      if (aM >= 0.5 && T > 1500) R.estira.push(Math.max(...HUESOS.map(([a, b], h) => Math.abs(Math.hypot(id.p[a * 3] - id.p[b * 3], id.p[a * 3 + 1] - id.p[b * 3 + 1], id.p[a * 3 + 2] - id.p[b * 3 + 2]) / LARGO[h] - 1))) * 100);
       if (antes && antes.dv) {
         const dv = [0, 1, 2].map((k) => mejor[k] - antes.c[k]), dr = [0, 1, 2].map((k) => cv[k] - antes.v[k]);
         R.tiron.push(Math.hypot(...[0, 1, 2].map((k) => dv[k] - antes.dv[k] - (dr[k] - antes.dr[k]))) * 1000);
@@ -123,13 +128,13 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
   const mq = media(R.quieta);
   return {
     porSeg: R.n / (FIN / 1000), lat: media(R.lat), sin: 100 * R.sin / R.cuadros, titila: R.titila / (FIN / 60000), dobles: 100 * R.dobles / R.cuadros,
-    vioIzq: R.vioIzq ?? NaN, err: media(R.err), tironP99: pct(R.tiron, 0.99), tironMax: Math.max(0, ...R.tiron), quieta: Math.sqrt(media(R.quieta.map((x) => (x - mq) ** 2))), tiembla: Math.sqrt(media(R.tiembla.map((x) => x * x))),
+    estira: pct(R.estira, 0.95), vioIzq: R.vioIzq ?? NaN, err: media(R.err), tironP99: pct(R.tiron, 0.99), tironMax: Math.max(0, ...R.tiron), quieta: Math.sqrt(media(R.quieta.map((x) => (x - mq) ** 2))), tiembla: Math.sqrt(media(R.tiembla.map((x) => x * x))),
   };
 }
 /* cada caso con tres semillas: el promedio (el peor para el tirón máximo) */
 const caso = (op) => {
   const r = [1, 2, 3].map((semilla) => simular({ ...op, semilla })), m = (k) => r.reduce((a, x) => a + x[k], 0) / r.length;
-  return { vioIzq: m('vioIzq'), porSeg: m('porSeg'), lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta'), tiembla: m('tiembla') };
+  return { estira: m('estira'), vioIzq: m('vioIzq'), porSeg: m('porSeg'), lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta'), tiembla: m('tiembla') };
 };
 const f = (x, d = 1) => x.toFixed(d);
 for (const dos of [false, true]) {
@@ -169,6 +174,13 @@ for (const dos of [false, true]) {
     ant = [M.p[0], M.p[1], M.p[2]];
   }
   prueba('una foto por cuadro (el juego a 30): quieta se queda quieta', viaja === 0 && mov < 5e-4, `${viaja} cuadros "de viaje", se movió ${f(mov * 1000, 2)} mm`);
+}
+/* la mano no se estira (vuelta 18): filtrar y adelantar cada punto por su cuenta la deformaba; ahora la
+   palma va con su molde y cada dedo con el largo de sus huesos, aprendidos de las fotos */
+{
+  const r = Object.fromEntries(['rapida', 'media', 'suave'].map((suavidad) => [suavidad, caso({ L: 90, suavidad })]));
+  prueba('la mano dibujada no se estira ni se deforma (en el 95 % de los cuadros, ningún hueso más de un 10 % fuera de su largo)', Object.values(r).every((x) => x.estira < 10),
+    Object.entries(r).map(([k, x]) => `${k} ${f(x.estira)} %`).join(' · '));
 }
 /* cuántas manos busca cada red (vuelta 17): con una a la vista, una. MediaPipe buscando dos busca
    palmas en cada foto por si aparece la otra; buscando una, solo sigue la que tiene */

@@ -115,16 +115,32 @@ const E_CORTE = 1.2, E_BETA = 10, E_CORTED = 2.0;
    y en profundidad (cruce: cuánto abre el de profundidad la velocidad de costado) */
 const C_CORTE = 2.7586, C_BETA = 33.0921, C_CORTED = 2.9938;
 const CH_CORTE = 2.0, CH_BETA = 20, CH_CORTED = 1.1853, CH_CRUCE = 0.3034;
+/* la forma de la mano (Mano.enderezar): la palma, un molde; los dedos, hueso por hueso */
+const PALMA6 = [0, 1, 5, 9, 13, 17];
+const DEDOS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
+const TRAMOS_DEDO = DEDOS.flatMap((d) => d.slice(1).map((b, k) => [d[k], b]));
+/* los ejes de la palma de 21 puntos: x de meñique a índice (por los nudillos), y de la muñeca al
+   medio, z la normal; en e (9 números) */
+function ejesPalma(P, e) {
+  let x0 = P[15] - P[51], x1 = P[16] - P[52], x2 = P[17] - P[53];
+  const lx = Math.hypot(x0, x1, x2) || 1; x0 /= lx; x1 /= lx; x2 /= lx;
+  const v0 = P[27] - P[0], v1 = P[28] - P[1], v2 = P[29] - P[2];
+  let z0 = x1 * v2 - x2 * v1, z1 = x2 * v0 - x0 * v2, z2 = x0 * v1 - x1 * v0;
+  const lz = Math.hypot(z0, z1, z2) || 1; z0 /= lz; z1 /= lz; z2 /= lz;
+  e[0] = x0; e[1] = x1; e[2] = x2; e[3] = z1 * x2 - z2 * x1; e[4] = z2 * x0 - z0 * x2; e[5] = z0 * x1 - z1 * x0; e[6] = z0; e[7] = z1; e[8] = z2;
+  return e;
+}
 /* lo que elige cada uno en el menú del VR ("Manos"): lo más que se adelanta por el atraso de la
    cámara (s), de costado y en profundidad, y las anclas (Mano.estabilizar): la zona (m), cuánto
    tiene que quedarse adentro para anclarse (tq), cuánto tiene que empujar el borde para soltarse (te)
    y en cuánto se suelta (ts, s); de costado y en profundidad (…H).
    - Rápidas: sin anclas y adelantando todo lo que tarda la cámara: va pegada a la mano y tiembla un
-     poco, como un Quest.
+     poco, como un Quest. El adelanto del centro, de a poco entre v0 y v1 (m/s): casi quieta, la
+     velocidad es ruido.
    - Medio y suaves: de una búsqueda (vuelta 17, herramientas/manos-lento.mjs: 450 al azar, con las
      semillas 1-5; comprobado con las 6-10) */
 export const SUAVIDAD = {
-  rapida: { anclas: null, lmax: 0.2, lmaxH: 0.15 },
+  rapida: { anclas: null, lmax: 0.2, lmaxH: 0.15, v0: 0.03, v1: 0.1 },
   media: { lmax: 0.1371, lmaxH: 0.1491, anclas: { rl: 0.0043, rh: 0.0101, tq: 0.2444, tqH: 0.1778, te: 0.0495, teH: 0.0184, ts: 0.0282, tsH: 0.0536 } },
   suave: { lmax: 0.135, lmaxH: 0.1945, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514 } },
 };
@@ -189,6 +205,7 @@ class Mano {
         if (this.visible && salto < 0.25 && fueraPred && fueraMed) { this.rara++; return; }
       }
       this.rara = 0;
+      this.aprenderForma(P);
       if (!this.visible || salto > 0.25 || t - this.t > 0.5) {
         this.euro.reiniciar(P, t); this.euroRayo.t = -1; this.fijoHasta = 0;
         /* (si se estaba apagando cerca, llega deslizándose; si no, aparece donde está: se apaga la
@@ -209,21 +226,27 @@ class Mano {
   adelantar(tDibujo, adelanta) {
     const E = this.euro;
     const edad = Math.max(0, tDibujo - this.tLlego), sola = edad < HMAX ? edad : HMAX + FRENO * (1 - Math.exp(-(edad - HMAX) / FRENO));
-    /* (pesoAd: con la cámara, 0 mientras la mano está anclada, quieta: ahí la velocidad es ruido) */
+    /* (pesoAd: con la cámara, 0 mientras la mano está anclada, quieta: ahí la velocidad del centro es
+       ruido. Solo la del centro: girando en el lugar, o moviendo los dedos, el centro no se mueve y las
+       anclas creían que estaba quieta; se apagaba todo el adelanto y el giro iba 20° atrás) */
     const pa = this.pesoAd ?? 1;
-    const k = adelanta ? (sola + Math.min(this.lmax ?? LMAX, this.lat)) * AMORT * pa : 0;
+    const k = adelanta ? (sola + Math.min(this.lmax ?? LMAX, this.lat)) * AMORT : 0;
     /* (y a qué velocidad se mueve eso: la del filtro mientras sigue sola, frenando después) */
     const kv = adelanta ? AMORT * pa * (edad < HMAX ? 1 : Math.exp(-(edad - HMAX) / FRENO)) : 0;
     const r = this.rayo;
-    if (!r) { for (let i = 0; i < 63; i++) { this.p[i] = E.x[i] + E.dx[i] * k; this.vb[i] = E.dx[i] * kv; } return; }
-    /* con la cámara: de costado se adelanta por el atraso; en profundidad casi no (ahí la velocidad
-       es más que nada ruido de la foto) */
-    const kh = adelanta ? (sola + Math.min(this.lmaxH ?? LMAX_H, this.lat)) * AMORT * pa : 0;
+    if (!r) { for (let i = 0; i < 63; i++) { this.p[i] = E.x[i] + E.dx[i] * k * pa; this.vb[i] = E.dx[i] * kv; } return; }
+    /* con la cámara: de costado y en profundidad, cada uno con su tope */
+    const kh = adelanta ? (sola + Math.min(this.lmaxH ?? LMAX_H, this.lat)) * AMORT : 0;
+    let c0 = 0, c1 = 0, c2 = 0; for (const i of CENTRO) { c0 += E.dx[i * 3] / 5; c1 += E.dx[i * 3 + 1] / 5; c2 += E.dx[i * 3 + 2] / 5; }
+    const q = 1 - pa, vc = [c0 * q, c1 * q, c2 * q];
     for (let i = 0; i < 63; i += 3) {
-      const vx = E.dx[i], vy = E.dx[i + 1], vz = E.dx[i + 2], vh = vx * r[0] + vy * r[1] + vz * r[2];
-      for (let c = 0; c < 3; c++) { const v = E.dx[i + c], h = vh * r[c]; this.p[i + c] = E.x[i + c] + (v - h) * k + h * kh; this.vb[i + c] = v * kv; }
+      const vx = E.dx[i] - vc[0], vy = E.dx[i + 1] - vc[1], vz = E.dx[i + 2] - vc[2], vh = vx * r[0] + vy * r[1] + vz * r[2];
+      const w = [vx, vy, vz];
+      for (let c = 0; c < 3; c++) { const v = w[c], h = vh * r[c]; this.p[i + c] = E.x[i + c] + (v - h) * k + h * kh; this.vb[i + c] = E.dx[i + c] * kv; }
     }
   }
+  /* la velocidad del centro de la palma, del filtro (m/s) */
+  velCentro() { const D = this.euro.dx; let a = 0, b = 0, c = 0; for (const i of CENTRO) { a += D[i * 3] / 5; b += D[i * 3 + 1] / 5; c += D[i * 3 + 2] / 5; } return Math.hypot(a, b, c); }
   /* quieta, no tiembla: dos anclas, una de costado y otra en profundidad (a lo largo del rayo de los
      ojos a la mano). Si el centro de la mano no sale de su zona durante un rato, lo que se muestra se
      queda quieto en ese eje: el temblor de la foto no la mueve. Si se sale, la arrastra (queda en el
@@ -265,6 +288,37 @@ class Mano {
     this.quieta = quietas === 2;
     const [a, b] = this.anclas;
     for (let i = 0; i < 63; i += 3) { p[i] += a.o[0] + b.o[0]; p[i + 1] += a.o[1] + b.o[1]; p[i + 2] += a.o[2] + b.o[2]; }
+  }
+  /* la forma de la mano de quien juega, de las fotos (sin filtrar: la forma que da MediaPipe no depende
+     de lo lejos que esté): el largo de cada hueso de los dedos y la palma en sus propios ejes. Promedio
+     de las primeras 20 y después lento; una foto con un hueso mucho más largo o más corto no cuenta */
+  aprenderForma(P) {
+    const F = this.forma ||= { n: 0, largo: new Float32Array(TRAMOS_DEDO.length), palma: new Float32Array(18), e: new Float32Array(9) };
+    const a = F.n < 20 ? 1 / (F.n + 1) : 0.03;
+    const L = TRAMOS_DEDO.map(([i, j]) => Math.hypot(P[i * 3] - P[j * 3], P[i * 3 + 1] - P[j * 3 + 1], P[i * 3 + 2] - P[j * 3 + 2]));
+    if (F.n >= 20 && L.some((l, k) => l > F.largo[k] * 1.6 || l < F.largo[k] * 0.6)) return;
+    L.forEach((l, k) => { F.largo[k] += (l - F.largo[k]) * a; });
+    const e = ejesPalma(P, F.e), c = centroPalma(P);
+    PALMA6.forEach((i, k) => {
+      const d0 = P[i * 3] - c[0], d1 = P[i * 3 + 1] - c[1], d2 = P[i * 3 + 2] - c[2];
+      for (let q = 0; q < 3; q++) F.palma[k * 3 + q] += (d0 * e[q * 3] + d1 * e[q * 3 + 1] + d2 * e[q * 3 + 2] - F.palma[k * 3 + q]) * a;
+    });
+    F.n++;
+  }
+  /* que la mano dibujada tenga siempre la misma forma. Filtrar y adelantar cada punto por su cuenta la
+     estiraba: al girar o ir rápido, la punta de un dedo va más rápido que la muñeca y se adelanta más
+     (medido: en el 5 % de los cuadros, algún hueso un 45 % más largo o más corto). La palma va con su
+     molde, en el centro y con los ejes de lo que se ve; cada dedo, hueso por hueso, con la dirección de
+     lo que se ve y su largo de siempre */
+  enderezar() {
+    const F = this.forma; if (!F || F.n < 5) return;
+    const p = this.p, o = this._o ||= new Float32Array(63), e = ejesPalma(p, this._e ||= new Float32Array(9)), c = centroPalma(p);
+    o.set(p);
+    PALMA6.forEach((i, k) => { for (let q = 0; q < 3; q++) p[i * 3 + q] = c[q] + F.palma[k * 3] * e[q] + F.palma[k * 3 + 1] * e[3 + q] + F.palma[k * 3 + 2] * e[6 + q]; });
+    TRAMOS_DEDO.forEach(([a, b], k) => {
+      const d0 = o[b * 3] - o[a * 3], d1 = o[b * 3 + 1] - o[a * 3 + 1], d2 = o[b * 3 + 2] - o[a * 3 + 2], l = Math.hypot(d0, d1, d2) || 1, f = F.largo[k] / l;
+      p[b * 3] = p[a * 3] + d0 * f; p[b * 3 + 1] = p[a * 3 + 1] + d1 * f; p[b * 3 + 2] = p[a * 3 + 2] + d2 * f;
+    });
   }
   /* sin saltos: con cada foto nueva, la diferencia entre lo que se venía mostrando y lo nuevo se
      reparte con un resorte crítico (ni la posición ni la velocidad pegan un salto: se ve como un
@@ -583,7 +637,15 @@ export class Manos {
       if (!xr) {
         M.suavizar(h);
         /* (las anclas, si el nivel las tiene) */
-        if (z?.anclas) M.estabilizar(h, z.anclas); else { M.pesoAd = 1; M.seguidaAncla = false; M.quieta = false; }
+        if (z?.anclas) M.estabilizar(h, z.anclas);
+        else {
+          M.seguidaAncla = false; M.quieta = false;
+          /* (sin anclas: casi quieta, la velocidad del centro es ruido de la foto y adelantarla hacía
+             pasear la mano 9 mm; se adelanta de a poco desde v0 hasta v1 m/s) */
+          const vv = z?.v1 ? M.velCentro() : 1, g = z?.v1 ? THREE.MathUtils.smoothstep(vv, z.v0, z.v1) : 1;
+          M.pesoAd = (M.pesoAd ?? 1) + (g - (M.pesoAd ?? 1)) * Math.min(1, h / 0.05);
+        }
+        if (M.rayo) M.enderezar();
       } else { M.seguida = true; M.conResorte = false; }
       /* el pellizco, con histéresis (se prende más cerrado de lo que se apaga) */
       const antes = M.pellizca;

@@ -4,6 +4,15 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, al amanecer · `claude/fijate-iszyer`:**
+  - Pidió: "fluido, pero no sigue a la mano del todo bien; se estira, se
+    deforma en vez de tener siempre la misma proporción".
+  - Quedó ([aeroplaza-18](aeroplaza-18.md)): la mano con su forma aprendida
+    (el peor hueso 58 % → 5 % fuera de su largo); el giro con adelanto
+    aunque la mano esté anclada (21° → 13,5° atrás); rápidas pasea menos
+    quieta.
+  - Falta: que diga si ahora la sigue; si no, probar "Rápidas" (sigue los
+    movimientos chicos en 140 ms contra 360 de medio).
 - **27/09/2026, a la madrugada · `claude/fijate-iszyer`:**
   - Pidió: "mejoralo un 700 %, que la mano replique los movimientos sin
     retraso".
