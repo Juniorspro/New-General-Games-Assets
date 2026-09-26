@@ -796,6 +796,9 @@ html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: non
 .vr-capa.saliendo .vr-salir { opacity: 1; }
 .vr-ayuda { position: absolute; left: 8%; right: 8%; bottom: 14%; margin: 0; text-align: center; font-weight: 800; font-size: 13px; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); transition: opacity 0.6s; }
 .vr-capa.sin-ayuda .vr-ayuda { opacity: 0; }
+/* los cuadros por segundo (los de la cabeza y los del mundo), arriba de cada ojo */
+.vr-fps { display: none; position: absolute; left: 50%; top: 16%; transform: translateX(-50%); padding: 2px 9px; border-radius: 99px; background: rgba(8, 30, 60, 0.45); color: #bff4ff; font: 800 11px/1.5 system-ui, sans-serif; letter-spacing: 0.03em; white-space: nowrap; }
+.vr-capa.con-fps .vr-fps { display: block; }
 /* el menú para elegir */
 .menu-vr p { margin: 0 0 12px; font-weight: 700; color: var(--tinta2); }
 .vr-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

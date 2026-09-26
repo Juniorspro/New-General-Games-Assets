@@ -183,7 +183,7 @@ async function iniciar() {
     /* el modo VR (vr.js): sin la interfaz ni los dedos, la cabeza mueve la cámara */
     entrarVR(sbs) {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
-      vr.entrar(sbs, { raiz: UI.raiz, cam, avisar: (x) => UI.avisar(x), alSalir: () => { ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; } });
+      vr.entrar(sbs, { raiz: UI.raiz, cam, avisar: (x) => UI.avisar(x), alSalir: () => { ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
     },
     salirVR() { vr.salir(); },
     get enVR() { return vr.activo; },
@@ -875,6 +875,10 @@ async function iniciar() {
       voz.actualizar(dt, oido, remotos.m);
       const nv = Math.round(voz.nivel * 20) / 20; if (nv !== J._nivelVoz) { J._nivelVoz = nv; UI.estadoVoz(voz.estado, nv); }
     }
+    /* (en VR no van los brazos pegados a la cámara: la cabeza se mueve sola y quedaban flotando) */
+    if (vr.activo && cuerpoFP.g.visible) cuerpoFP.mostrar(false);
+    /* (y el muñeco propio sin cabeza, cuerpo ni brazos: se ven las piernas, como adentro) */
+    if (vr.activo && !yo.m.enPrimera) yo.m.primeraPersona(true);
     cuerpoFP.actualizar(dt, motor.camara, yo);
     efx.actualizar(dt, motor.camara, motor.alto * (motor.dpr || 1));
     const UF = motor.pFinal.uniforms;
@@ -916,7 +920,9 @@ async function iniciar() {
     tHud += dt; if (tHud > 0.25) { tHud = 0; UI.actualizarHud(); }
     /* el runner a veces congela un par de cuadros (no se dibuja: queda el anterior) y encima va delirio.js */
     const congela = reino.congela > 0;
-    if (dibujar && !congela) { if (vr.activo && vr.sbs) vr.dibujar(motor); else motor.dibujar(dt); }
+    /* en VR se dibuja por vr-dibujo.js (el mundo una vez, reproyectado a cada ojo con la cabeza de
+       ese instante); real: lo que pasó de verdad desde el cuadro anterior (para ver si se llega) */
+    if (dibujar && !congela) { if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt); else motor.dibujar(dt); }
     delirio.cuadro(dt, reino, motor.camara, dibujar, dibujar && !congela);
   }
 

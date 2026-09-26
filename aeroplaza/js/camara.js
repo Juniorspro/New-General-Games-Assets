@@ -89,7 +89,8 @@ export class Camara {
     this.fase += dt * vel * 2.4;
     /* la cabeza acompaña los pasos (26/09: "correr, caminar y deslizarse deben verse en primera
        persona"): baja en cada pisada, se mece de un lado al otro y se ladea un poco; corriendo, más */
-    const corre = vel > 5.2, amp = j.enPiso && !j.mov ? Math.min(1, vel / 3.4) : 0;
+    /* en VR la cabeza es la del jugador: nada de hamacar, mecer ni ladear (marea) */
+    const corre = vel > 5.2, amp = j.enPiso && !j.mov && !this.enVR ? Math.min(1, vel / 3.4) : 0;
     const hamaca = -Math.abs(Math.sin(this.fase)) * (corre ? 0.07 : 0.04) * amp;
     const meceX = Math.sin(this.fase) * (corre ? 0.035 : 0.02) * amp;
     let ladeoFP = Math.sin(this.fase) * (corre ? 0.022 : 0.012) * amp;
@@ -121,6 +122,7 @@ export class Camara {
     const p = this.pitch - 0.3, cp = Math.cos(p);
     this.mira.set(this.pos.x - Math.sin(this.yaw) * cp, this.pos.y - Math.sin(p), this.pos.z - Math.cos(this.yaw) * cp);
     this.cam.position.copy(this.pos);
+    if (this.enVR) { this.sacudida = 0; this.golpeFP = 0; this.ladeoFP = 0; }
     if (this.sacudida > 0) { this.sacudida -= dt; const q = this.sacudida * 0.08; this.cam.position.x += (Math.random() - 0.5) * q; this.cam.position.y += (Math.random() - 0.5) * q; }
     this.cam.lookAt(this.mira);
     if (Math.abs(ladeoFP) > 0.0005) this.cam.rotateZ(ladeoFP);

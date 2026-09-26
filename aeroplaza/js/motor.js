@@ -184,6 +184,22 @@ export class Motor {
     this.cadena = new EffectComposer(this.r, rt);
     this.pRender = new RenderPass(this.escena, this.camara);
     this.pBloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.38, 0.55, 1.45);
+    /* el brillo toma las luces a un cuarto de la resolución, con UNA muestra: los reflejos chicos
+       (los brillitos de los árboles, el sol entre las hojas) caían o no según la grilla y
+       titilaban al moverse. Con cuatro muestras (cada una promedia 2×2) se toma todo el cuadradito
+       (27/09: lo encontró la prueba del VR, que dibuja con otra grilla) */
+    const HP = this.pBloom.materialHighPassFilter;
+    this.pBloom.highPassUniforms.uPaso = HP.uniforms.uPaso = { value: new THREE.Vector2(1 / 1024, 1 / 1024) };
+    HP.fragmentShader = HP.fragmentShader
+      .replace('uniform float smoothWidth;', 'uniform float smoothWidth; uniform vec2 uPaso;')
+      .replace(/vec4 texel = texture2D\( tDiffuse, vUv \);[\s\S]*gl_FragColor = mix\( outputColor, texel, alpha \);/,
+        `vec4 outputColor = vec4( defaultColor.rgb, defaultOpacity ), suma = vec4( 0.0 );
+      for ( int i = 0; i < 4; i ++ ) {
+        vec4 texel = texture2D( tDiffuse, vUv + uPaso * vec2( i == 0 || i == 2 ? -1.0 : 1.0, i < 2 ? -1.0 : 1.0 ) );
+        suma += mix( outputColor, texel, smoothstep( luminosityThreshold, luminosityThreshold + smoothWidth, luminance( texel.xyz ) ) );
+      }
+      gl_FragColor = suma * 0.25;`);
+    HP.needsUpdate = true;
     this.pSalida = new OutputPass();
     this.pFinal = new ShaderPass(FINAL);
     this.cadena.addPass(this.pRender);
@@ -221,6 +237,7 @@ export class Motor {
     this.cadena.setSize(w, h);
     /* el brillo a media resolución: casi igual y cuesta la cuarta parte */
     this.pBloom.setSize(Math.max(16, Math.round(w * dpr / 2)), Math.max(16, Math.round(h * dpr / 2)));
+    this.pBloom.highPassUniforms.uPaso.value.set(1 / Math.max(1, w * dpr), 1 / Math.max(1, h * dpr));
     this.camara.aspect = w / h;
     /* en vertical se abre el campo para que no quede todo apretado */
     this.camara.fov = w < h ? 72 : 58;
