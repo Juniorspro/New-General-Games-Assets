@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: "va titilando la mano, optimizalo un 700 %" (en el celu, por el
+    link de githack).
+  - Quedó ([aeroplaza-14](aeroplaza-14.md)): las manos por cámara sin titilar
+    ni duplicarse, sin tirones (p99 ~100 → ~10 mm), y la prueba
+    `manos-celu` que simula el celu.
+  - Falta: probarlo en el celu de verdad.
 - **27/09/2026 · `claude/fijate-iszyer`:**
   - Pidió: el VR a 120 sin bajar gráficos, manos como Meta Quest "súper
     optimizadas", y trabajar horas para dejarlo fluido.

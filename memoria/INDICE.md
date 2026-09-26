@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: VR a 120, manos como Meta Quest, visor WebXR).
+mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: las manos por cámara sin titilar).
 
 ## Reglas que no se discuten
 
@@ -69,6 +69,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: VR a 120,
 | [aeroplaza-11](aeroplaza-11.md) | AEROPLAZA, décima vuelta: la calidad mínima y el corte por distancia (qué pesaba de verdad, medido), la carga más rápida, y el tráiler 9:16 (tomas del juego cuadro por cuadro, guion a tempo, Remotion) con sus trampas de cámara; la portada 3:4 y cómo entregar el video |
 | [aeroplaza-12](aeroplaza-12.md) | AEROPLAZA, undécima vuelta: el probador que no tapa y probarse antes de comprar; las joyas (regalo diario, ropa de 100 a 300); anuncios con premio y compras (TikTok Minis con su API y el modo de prueba); la prueba de choques y lo que se atravesaba; el modo VR con giroscopio; la calidad alta más liviana (medido) |
 | [aeroplaza-13](aeroplaza-13.md) | AEROPLAZA, duodécima vuelta: el VR a 120 sin bajar gráficos (el mundo una vez y reproyectado a cada ojo, timewarp, dibujo partido, predicción del giroscopio; medido contra dibujar cada ojo); las manos como Meta Quest (MediaPipe en un worker, One Euro, rayo, pellizco, arco, menú de la palma); el visor de verdad con WebXR (Quest, 120 Hz) probado con IWER; las copias instanciadas |
+| [aeroplaza-14](aeroplaza-14.md) | AEROPLAZA, decimotercera vuelta: por qué titilaban las manos en el celu (se perdían por lo vieja de la foto, MediaPipe cambiaba de mano, escalones entre fotos) y cómo se arregló (perder por fotos faltantes, identidad por continuidad, resorte crítico, fundido, la cámara); el simulador del celu `pruebas/manos-celu.mjs`, lo medido y lo que no sirvió |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

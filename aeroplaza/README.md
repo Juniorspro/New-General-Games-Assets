@@ -184,6 +184,9 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
     timewarp, el dibujo partido, la predicción y el ritmo;
   - `manos.mjs`: las manos (filtro, pellizco, rayo, arco, menú, burbujas) y
     MediaPipe de verdad con las fotos de `pruebas/manos/` (hechas con Rezona);
+  - `manos-celu.mjs`: las manos por la cámara con el atraso y las fallas de un
+    celu, simuladas sin navegador (que no titilen, no se dupliquen ni peguen
+    tirones);
   - `xr.mjs`: el Visor VR con IWER, el Quest 3 de mentira de Meta.
 
   MediaPipe e IWER se bajan con curl la primera vez y no se commitean.
