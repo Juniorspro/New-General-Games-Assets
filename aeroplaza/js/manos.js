@@ -136,6 +136,8 @@ function ejesPalma(P, e) {
    (Kabsch: lo más parecido a Σ d·Tᵀ que es un giro; por el método iterativo de Müller y otros, 2016,
    arrancando de q, los ejes de esa foto: tres o cuatro vueltas alcanzan) */
 const KABSCH = [0, 5, 9, 13, 17].map((i) => [PALMA6.indexOf(i), i]);
+/* (una mano no gira más de 20 rad/s: más que eso es una foto mala) */
+const W_MAX = 20;
 function ajustarGiro(v, c, T, q) {
   let a0 = 0, a1 = 0, a2 = 0, b0 = 0, b1 = 0, b2 = 0, c0 = 0, c1 = 0, c2 = 0;
   for (const [k, i] of KABSCH) {
@@ -205,34 +207,65 @@ class PoseMano {
     this.dedos = new EuroDedos(dedos); this.dedosAd = dedos.adelanto || 0; this.dedosV = [dedos.v0 || 0, dedos.v1 || 0];
     this.q = new THREE.Quaternion(); this.qm = new THREE.Quaternion(); this.qAnt = new THREE.Quaternion(); this.w = new THREE.Vector3(); this.tm = -1;
     this.Lm = new Float32Array(63); this.Lc = new Float32Array(63); this.c = [0, 0, 0]; this.e = new Float32Array(9); this.forma = null;
+    this.vE = new Float32Array(63); this.LE = new Float32Array(63); this.qE = new THREE.Quaternion(); this.cE = [0, 0, 0]; this.espejos = 0;
   }
   get Lf() { return this.dedos.x; }
   /* de 21 puntos: el centro, el giro (qm) y la forma en los ejes de la palma (Lm) */
-  medir(v) {
-    const c = centroPalma(v, this.c), e = ejesPalma(v, this.e);
-    this.qm.setFromRotationMatrix(_mp.set(e[0], e[3], e[6], 0, e[1], e[4], e[7], 0, e[2], e[5], e[8], 0, 0, 0, 0, 1));
+  medir(v, qm = this.qm, Lm = this.Lm, c = this.c) {
+    centroPalma(v, c); const e = ejesPalma(v, this.e);
+    qm.setFromRotationMatrix(_mp.set(e[0], e[3], e[6], 0, e[1], e[4], e[7], 0, e[2], e[5], e[8], 0, 0, 0, 0, 1));
     /* (con la forma aprendida, el giro que mejor lleva el molde de la palma a lo que se ve: con cinco
        puntos y no con cuatro, tiembla menos. El nudillo del pulgar no: se mueve con el pulgar) */
     if (this.forma && this.forma.n >= 20) {
-      ajustarGiro(v, c, this.forma.palma, this.qm);
-      const R = _mp.makeRotationFromQuaternion(this.qm).elements;
+      ajustarGiro(v, c, this.forma.palma, qm);
+      const R = _mp.makeRotationFromQuaternion(qm).elements;
       e[0] = R[0]; e[1] = R[1]; e[2] = R[2]; e[3] = R[4]; e[4] = R[5]; e[5] = R[6]; e[6] = R[8]; e[7] = R[9]; e[8] = R[10];
     }
     for (let i = 0; i < 21; i++) {
       const d0 = v[i * 3] - c[0], d1 = v[i * 3 + 1] - c[1], d2 = v[i * 3 + 2] - c[2];
-      for (let q = 0; q < 3; q++) this.Lm[i * 3 + q] = d0 * e[q * 3] + d1 * e[q * 3 + 1] + d2 * e[q * 3 + 2];
+      for (let q = 0; q < 3; q++) Lm[i * 3 + q] = d0 * e[q * 3] + d1 * e[q * 3 + 1] + d2 * e[q * 3 + 2];
     }
   }
-  reiniciar(v, t) {
-    this.medir(v); this.centro.reiniciar(this.c, t); this.q.copy(this.qm); this.qAnt.copy(this.qm); this.w.set(0, 0, 0);
+  /* UNA SOLA CÁMARA NO SABE PARA QUÉ LADO ESTÁ GIRADA LA MANO (vuelta 20): la misma foto sale de la mano
+     girada para un lado o su espejo en profundidad (lo cerca se va lejos y al revés), y de canto
+     MediaPipe a veces da una y a veces la otra. Una sola foto así hacía girar la mano dibujada 90° y
+     tardaba 300 ms en volver. Se arma el espejo (cada punto por su rayo desde la cámara, O, a la
+     profundidad del otro lado del centro) y queda la que sigue lo que venía: el giro, contra lo que
+     se esperaba con su velocidad, y los dedos, contra los filtrados */
+  elegirEspejo(v, O, r, dtm, conGiro = true) {
+    const c = this.c, E = this.vE, dc = (c[0] - O[0]) * r[0] + (c[1] - O[1]) * r[1] + (c[2] - O[2]) * r[2];
+    for (let i = 0; i < 63; i += 3) {
+      const ux = v[i] - O[0], uy = v[i + 1] - O[1], uz = v[i + 2] - O[2], d = ux * r[0] + uy * r[1] + uz * r[2];
+      const f = d > 1e-3 ? Math.max(0.2, (2 * dc - d) / d) : 1;
+      E[i] = O[0] + ux * f; E[i + 1] = O[1] + uy * f; E[i + 2] = O[2] + uz * f;
+    }
+    this.medir(E, this.qE, this.LE, this.cE);
+    _qa.copy(this.qAnt).premultiply(expQ(_va.copy(this.w).multiplyScalar(dtm), _qb));   // (lo que se esperaba)
+    const ang = (q) => 2 * Math.acos(Math.min(1, Math.abs(q.dot(_qa))));
+    const L = this.dedos.x; let a = 0, b = 0;
+    for (let p = 0; p < 21; p++) {
+      if (EN_PALMA[p]) continue;
+      for (let i = p * 3; i < p * 3 + 3; i++) { a += (this.Lm[i] - L[i]) ** 2; b += (this.LE[i] - L[i]) ** 2; }
+    }
+    /* (1 cm de los dedos, como 0,2 rad de giro; la de MediaPipe gana los empates) */
+    const cm = (conGiro ? ang(this.qm) ** 2 : 0) + 400 * a / 15, ce = (conGiro ? ang(this.qE) ** 2 : 0) + 400 * b / 15;
+    if (ce < cm * 0.8) { this.qm.copy(this.qE); this.Lm.set(this.LE); this.espejos++; }
+  }
+  reiniciar(v, t, r = null, O = null) {
+    this.medir(v);
+    /* (al volver a encontrarla, sin giro con qué comparar: la que tiene los dedos como los tenía. Si
+       no, una mano de dorso que MediaPipe da como la otra se armaba con el molde al revés) */
+    if (O && r && this.forma && this.dedos.t >= 0) this.elegirEspejo(v, O, r, 0, false);
+    this.centro.reiniciar(this.c, t); this.q.copy(this.qm); this.qAnt.copy(this.qm); this.w.set(0, 0, 0);
     this.dedos.reiniciar(this.Lm, t); this.t = this.tm = t; this.componer();
   }
   desde(x, t) { this.reiniciar(x, t); }
-  filtrar(v, t, r = this.r) {
+  filtrar(v, t, r = this.r, O = null) {
     this.r = r;
     if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t); return this.x; }
     const dt = Math.max(1e-3, t - this.t); this.t = t;
     this.medir(v);
+    if (O) this.elegirEspejo(v, O, r, Math.max(1e-3, t - this.tm));
     this.centro.filtrar(this.c, t, r);
     /* el giro: la velocidad, de una foto a la otra (filtrada); lo filtrado va hacia lo medido, más
        rápido cuanto más rápido gira */
@@ -240,6 +273,8 @@ class PoseMano {
     if (qm.dot(this.qAnt) < 0) qm.set(-qm.x, -qm.y, -qm.z, -qm.w);
     const dtm = Math.max(1e-3, t - this.tm);
     logQ(_qa.copy(qm).multiply(_qb.copy(this.qAnt).invert()), _va).multiplyScalar(1 / dtm);
+    /* (con tope: una foto mala, de canto, daba 90 rad/s y se llevaba la mano lejos) */
+    if (_va.lengthSq() > W_MAX * W_MAX) _va.setLength(W_MAX);
     this.w.lerp(_va, Euro.a(G.corteD, dt));
     logQ(_qa.copy(qm).multiply(_qb.copy(this.q).invert()), _va);
     _va.multiplyScalar(Euro.a(G.corte + G.beta * this.w.length(), dt));
@@ -313,10 +348,12 @@ const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }
      poco, como un Quest. El adelanto del centro, de a poco entre v0 y v1 (m/s): casi quieta, la
      velocidad es ruido.
    - Medio y suaves: de una búsqueda (vuelta 17, herramientas/manos-lento.mjs: 450 al azar, con las
-     semillas 1-5; comprobado con las 6-10) */
+     semillas 1-5; comprobado con las 6-10). Medio, otra vez en la vuelta 20 (300, contando cuánto
+     tarda en arrancar y los movimientos chicos: "tarda en seguirme"), con vs: con el borde empujado y
+     el centro a más de vs (m/s), el ancla de costado se suelta sin esperar te */
 export const SUAVIDAD = {
   rapida: { anclas: null, lmax: 0.2, lmaxH: 0.15, v0: 0.03, v1: 0.1 },
-  media: { lmax: 0.1371, lmaxH: 0.1491, anclas: { rl: 0.0043, rh: 0.0101, tq: 0.2444, tqH: 0.1778, te: 0.0495, teH: 0.0184, ts: 0.0282, tsH: 0.0536 } },
+  media: { lmax: 0.1575, lmaxH: 0.1247, anclas: { rl: 0.0038, rh: 0.0106, tq: 0.2645, tqH: 0.1799, te: 0.0426, teH: 0.0172, ts: 0.038, tsH: 0.0491, vs: 0.0568 } },
   suave: { lmax: 0.135, lmaxH: 0.1945, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514 } },
 };
 class Mano {
@@ -353,7 +390,7 @@ class Mano {
   }
   /* una lectura nueva: puntos en el mundo; t: cuándo se sacó; tLlego: cuándo llegó; pell: cuánto se
      abre el pellizco (0 = tocándose; la escala es el largo de la palma); crudo: sin filtro (el visor) */
-  recibir(P, t, tLlego, pell, conf = 1, crudo = false, ojo = null) {
+  recibir(P, t, tLlego, pell, conf = 1, crudo = false, ojo = null, camara = null) {
     this.faltas = 0;
     /* (el filtro según de dónde viene: con la cámara, el de ejes; si cambia, sigue desde donde estaba) */
     const F = ojo && !crudo ? this.euroEjes : this.euroIso;
@@ -381,12 +418,12 @@ class Mano {
       }
       this.rara = 0;
       if (!this.visible || salto > 0.25 || t - this.t > 0.5) {
-        this.euro.reiniciar(P, t); this.euroRayo.t = -1; this.fijoHasta = 0;
+        this.euro.reiniciar(P, t, this.rayo, camara); this.euroRayo.t = -1; this.fijoHasta = 0;
         /* (si se estaba apagando cerca, llega deslizándose; si no, aparece donde está: se apaga la
            vieja de una y la nueva se prende suave) */
         this.seguida = this.seguida && this.alfa > 0.3 && salto < SNAP;
         if (!this.seguida) { this.alfa = 0; this.gen++; this.seguidaAncla = false; }
-      } else this.euro.filtrar(P, t, this.rayo);
+      } else this.euro.filtrar(P, t, this.rayo, camara);
       /* (la forma, de los dedos filtrados en los ejes de la palma: con el ruido de cada foto, el largo
          de los huesos salía más largo) */
       if (this.euro === this.euroEjes) { this.aprenderForma(this.euroEjes.Lf); this.euroEjes.forma = this.forma; }
@@ -436,10 +473,14 @@ class Mano {
     const hondo = (a, b) => (a[0] - b[0]) * r[0] + (a[1] - b[1]) * r[1] + (a[2] - b[2]) * r[2];
     const lado = (a, b) => { const h = hondo(a, b); return [a[0] - b[0] - h * r[0], a[1] - b[1] - h * r[1], a[2] - b[2] - h * r[2]]; };
     if (!this.seguidaAncla || this.zonas !== z) {
-      this.anclas = [{ zona: z.rl, tq: z.tq, te: z.te, ts: z.ts }, { zona: z.rh, tq: z.tqH, te: z.teH, ts: z.tsH }].map((a) => ({ ...a, quieta: false, ref: cf.slice(), A: c.slice(), tQ: 0, empuje: 0, o: [0, 0, 0] }));
+      this.anclas = [{ zona: z.rl, tq: z.tq, te: z.te, ts: z.ts, vs: z.vs }, { zona: z.rh, tq: z.tqH, te: z.teH, ts: z.tsH, vs: z.vsH }].map((a) => ({ ...a, quieta: false, ref: cf.slice(), A: c.slice(), tQ: 0, empuje: 0, o: [0, 0, 0] }));
       this.seguidaAncla = true; this.zonas = z; this.pesoAd = 1;
     }
     let quietas = 0;
+    /* (la velocidad del centro, de costado y en profundidad: con el borde empujado y más rápido que vs
+       (m/s), se suelta ya, sin esperar te: quieta, la velocidad no llega a tanto) */
+    const V = this.euro.dx; let v0 = 0, v1 = 0, v2 = 0; for (const i of CENTRO) { v0 += V[i * 3] / 5; v1 += V[i * 3 + 1] / 5; v2 += V[i * 3 + 2] / 5; }
+    const vh = v0 * r[0] + v1 * r[1] + v2 * r[2], vel = [Math.hypot(v0 - vh * r[0], v1 - vh * r[1], v2 - vh * r[2]), Math.abs(vh)];
     for (const [k, an] of this.anclas.entries()) {
       /* (lo que va de a hasta b en este eje: de costado, un vector en el plano de la foto; en profundidad, a lo largo del rayo) */
       const parte = (a, b) => { if (k === 0) return lado(a, b); const h = hondo(a, b); return [h * r[0], h * r[1], h * r[2]]; };
@@ -455,7 +496,7 @@ class Mano {
           const f = an.zona / L; o[0] = d[0] * f; o[1] = d[1] * f; o[2] = d[2] * f;
           /* (el ancla se corre con la mano, en este eje) */
           for (let j = 0; j < 3; j++) an.A[j] += d[j] * (f - 1);
-          an.empuje += dt; if (an.empuje > an.te) { an.quieta = false; an.ref = cf.slice(); an.tQ = 0; }
+          an.empuje += dt; if (an.empuje > an.te || (an.vs && vel[k] > an.vs)) { an.quieta = false; an.ref = cf.slice(); an.tQ = 0; }
         } else { o[0] = d[0]; o[1] = d[1]; o[2] = d[2]; an.empuje = Math.max(0, an.empuje - dt); }
       }
       if (an.quieta) quietas++;
@@ -717,6 +758,8 @@ export class Manos {
     const vieja = tCaptura <= this.tCapUlt;
     if (!vieja) this.tCapUlt = tCaptura;
     const ts = tCaptura / 1000, tl = tLlego / 1000;
+    /* (de dónde salen los rayos de la foto: la cámara, unos centímetros adelante de los ojos) */
+    const camO = _e.set(0, 0, -0.06).applyQuaternion(q).add(p).toArray();
     const dets = lista.map((m) => {
       const W = new Float32Array(63);
       for (let i = 0; i < 21; i++) {
@@ -725,8 +768,10 @@ export class Manos {
         W[i * 3] = _a.x; W[i * 3 + 1] = _a.y; W[i * 3 + 2] = _a.z;
       }
       /* el pellizco: en la imagen (lo más claro) y en metros; relativo al largo de la palma */
-      const I = m.img, e2 = Math.hypot(I[0] - I[27], I[1] - I[28]) || 1, e3 = Math.hypot(m.puntos[0] - m.puntos[27], m.puntos[1] - m.puntos[28], m.puntos[2] - m.puntos[29]) || 1;
-      const p2 = Math.hypot(I[12] - I[24], I[13] - I[25]) / e2, p3 = Math.hypot(m.puntos[12] - m.puntos[24], m.puntos[13] - m.puntos[25], m.puntos[14] - m.puntos[26]) / e3;
+      /* (en metros, con la forma de MediaPipe tal cual: los puntos van por la imagen, y las dos puntas
+         casi tocándose en la foto quedaban un poco más lejos) */
+      const I = m.img, F = m.forma || m.puntos, e2 = Math.hypot(I[0] - I[27], I[1] - I[28]) || 1, e3 = Math.hypot(F[0] - F[27], F[1] - F[28], F[2] - F[29]) || 1;
+      const p2 = Math.hypot(I[12] - I[24], I[13] - I[25]) / e2, p3 = Math.hypot(F[12] - F[24], F[13] - F[25], F[14] - F[26]) / e3;
       return { m, W, c: centroPalma(W), pell: Math.max(p2, p3 * 0.62), der: m.derecha ?? (m.puntos[0] > 0), M: null };
     });
     const dist = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1], u[2] - v[2]);
@@ -757,7 +802,7 @@ export class Manos {
     }
     for (const d of dets) {
       if (!d.M || (d.M.visible && ts <= d.M.t)) continue;   // (esa mano ya tiene algo más nuevo)
-      d.M.recibir(d.W, ts, tl, d.pell, d.m.confianza, false, p);
+      d.M.recibir(d.W, ts, tl, d.pell, d.m.confianza, false, p, camO);
       if (d.m.derecha != null) d.M.votos = THREE.MathUtils.clamp(d.M.votos + (d.m.derecha === d.M.derecha ? 1 : -1), -6, 6);
       this.stats.lecturas++;
     }

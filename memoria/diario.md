@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, al mediodía · `claude/fijate-iszyer`:**
+  - Pidió: "de palma va bien pero tarda en seguirme; al darla vuelta se deforma
+    todo y no la sigue". Mandó su "Recreo" de referencia.
+  - Quedó ([aeroplaza-20](aeroplaza-20.md)): los puntos por la imagen, el
+    espejo en profundidad que sigue lo que venía (dándose vuelta, los dedos
+    15° → 6°, el giro 45° → 14°) y el nivel Medio más rápido al arrancar.
+  - Falta: que diga cómo le va y, si sigue lenta, que mande el cartel de ⏱
+    (fotos por segundo, ms por red, latencia) de su celu.
 - **27/09/2026, a la mañana · `claude/fijate-iszyer`:**
   - Pidió: "se estira demasiado y se dobla y deforma todo; tomate las horas que
     sean para optimizar todo".

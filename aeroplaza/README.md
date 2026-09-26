@@ -143,6 +143,10 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
   aprendido. Las puntas de los dedos se doblan solo hacia la palma, y el
   adelanto de los dedos y del giro entra solo cuando se mueven de verdad (no se
   estira, no se dobla ni se deforma al girar o ir rápido).
+- Cada punto va por el rayo de su lugar en la imagen (lo preciso de MediaPipe),
+  a la profundidad que le da la forma 3D. Al darse vuelta, una sola cámara no
+  sabe para qué lado está girada la mano: queda la versión que sigue lo que
+  venía (la mano no se dispara ni se deforma).
 - **✋ Las manos: Rápidas · Medio · Suaves** (abajo de las llaves). Rápidas van
   pegadas a la mano y tiemblan un poco, como un Quest; Suaves, quietas no
   tiemblan y van un poco atrás. De entrada, Medio.
@@ -196,7 +200,8 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   manos en movimientos lentos (el atraso, el temblor, cuánto se pasan al
   frenar, cuánto se estiran y se doblan los dedos, el giro, el dedo que se
   cierra y los movimientos chicos), para afinar las constantes de
-  `js/manos.js` (`SUAVE=`, `RED=`, `SEMILLAS=`, `RUIDO=`, `CORTO=1`).
+  `js/manos.js` (`SUAVE=`, `RED=`, `SEMILLAS=`, `RUIDO=`, `MP=1` como
+  MediaPipe de verdad y con la mano que se da vuelta, `CORTO=1`).
 - `pruebas/`:
   - `multijugador.mjs`: dos navegadores contra `broker.mjs`, un broker MQTT
     mínimo en Node puro;
@@ -223,6 +228,9 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
     `pruebas/manos`) y MediaPipe de verdad: lo de antes contra lo de ahora, el
     lector, el reloj, la carrera de la GPU y cuánto cambia de forma la mano
     dibujada contra la que llega;
+  - en `manos.mjs` también las fotos de canto y de dorso girada (de Rezona) y
+    que cada punto caiga sobre la imagen; en `manos-celu.mjs`, la mano que se
+    da vuelta (con `manos-lento` y `MP=1`);
   - `xr.mjs`: el Visor VR con IWER, el Quest 3 de mentira de Meta.
 
   MediaPipe e IWER se bajan con curl la primera vez y no se commitean.

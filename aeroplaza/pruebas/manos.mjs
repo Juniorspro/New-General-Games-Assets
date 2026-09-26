@@ -285,7 +285,7 @@ const MANO = () => {
 {
   const { pag, ctx, errores } = await abrir(nav, 'directo&pausa&calidad=baja', { manos: true });
   await pag.waitForFunction(() => window.__A && window.__A.reino, null, { timeout: 120000, polling: 250 });
-  const fotos = Object.fromEntries(['manos-abiertas', 'mano-pellizco', 'mano-palma'].map((n) => [n, 'data:image/jpeg;base64,' + fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'manos', n + '.jpg')).toString('base64')]));
+  const fotos = Object.fromEntries(['manos-abiertas', 'mano-pellizco', 'mano-palma', 'mano-canto', 'mano-dorso-girada'].map((n) => [n, 'data:image/jpeg;base64,' + fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname), 'manos', n + '.jpg')).toString('base64')]));
   const r = await pag.evaluate(async (fotos) => {
     const A = window.__A, out = {};
     const mc = new A.ManosCamara({ alLlegar: (m) => { window.__ult = m; } });
@@ -298,9 +298,12 @@ const MANO = () => {
       let m = null;
       for (let k = 0; k < 2; k++) { window.__ult = null; await mc.probar(im, performance.now()); const t1 = performance.now(); while (!window.__ult && performance.now() - t1 < 20000) await new Promise((ok) => setTimeout(ok, 20)); m = window.__ult; }
       out[n] = (m || []).map((h) => {
-        const I = h.img, P = h.puntos, e2 = Math.hypot(I[0] - I[27], I[1] - I[28]), e3 = Math.hypot(P[0] - P[27], P[1] - P[28], P[2] - P[29]);
-        const pell = Math.max(Math.hypot(I[12] - I[24], I[13] - I[25]) / e2, Math.hypot(P[12] - P[24], P[13] - P[25], P[14] - P[26]) / e3 * 0.62);
-        return { derecha: h.derecha, x: +P[0].toFixed(3), dist: +(-P[2]).toFixed(2), palma: +e3.toFixed(3), pell: +pell.toFixed(2) };
+        const I = h.img, P = h.puntos, F = h.forma || P, e2 = Math.hypot(I[0] - I[27], I[1] - I[28]), e3 = Math.hypot(F[0] - F[27], F[1] - F[28], F[2] - F[29]);
+        const pell = Math.max(Math.hypot(I[12] - I[24], I[13] - I[25]) / e2, Math.hypot(F[12] - F[24], F[13] - F[25], F[14] - F[26]) / e3 * 0.62);
+        /* (cuánto se corren los puntos en metros de su lugar en la imagen, en mm a la distancia de la mano) */
+        const asp = mc.aspecto || 4 / 3, lg = Math.tan(mc.hfov / 2 * Math.PI / 180), tx = asp >= 1 ? lg : lg * asp, ty = asp >= 1 ? lg / asp : lg;
+        let img = 0; for (let i = 0; i < 21; i++) { const z = -P[i * 3 + 2]; img = Math.max(img, Math.hypot(P[i * 3] / z - (I[i * 3] - 0.5) * 2 * tx, -P[i * 3 + 1] / z - (I[i * 3 + 1] - 0.5) * 2 * ty) * z * 1000); }
+        return { derecha: h.derecha, x: +P[0].toFixed(3), dist: +(-P[2]).toFixed(2), palma: +e3.toFixed(3), pell: +pell.toFixed(2), img: +img.toFixed(2) };
       });
     }
     out.msRed = +mc.stats.ms.toFixed(0);
@@ -324,6 +327,10 @@ const MANO = () => {
   prueba('las dos manos abiertas: la de la izquierda es la izquierda, a 20-45 cm, de tamaño de mano', !!a && !!b && a.derecha === false && b.derecha === true && [a, b].every((h) => h.dist > 0.2 && h.dist < 0.45 && h.palma > 0.06 && h.palma < 0.12 && h.pell > 0.46), JSON.stringify(r['manos-abiertas']));
   prueba('el pellizco de la foto se reconoce como pellizco', r['mano-pellizco']?.length === 1 && r['mano-pellizco'][0].pell < 0.3, JSON.stringify(r['mano-pellizco']));
   prueba('la palma de frente: una mano abierta', r['mano-palma']?.length === 1 && r['mano-palma'][0].pell > 0.46, JSON.stringify(r['mano-palma']));
+  /* (vuelta 20: la forma 3D de MediaPipe no cae sobre la imagen, y de canto se corre hasta 2 cm; cada
+     punto va por el rayo de su lugar en la imagen) */
+  prueba('de canto y de dorso girada también la ve, y cada punto cae justo sobre su lugar en la imagen', ['mano-canto', 'mano-dorso-girada'].every((n) => r[n]?.length === 1) && ['manos-abiertas', 'mano-pellizco', 'mano-palma', 'mano-canto', 'mano-dorso-girada'].every((n) => (r[n] || []).every((h) => h.img < 0.5)),
+    ['mano-canto', 'mano-dorso-girada'].map((n) => `${n}: ${JSON.stringify(r[n])}`).join(' · '));
   prueba('sin errores (MediaPipe)', !errores.some((e) => !/ERR_FAILED|INFO: Created TensorFlow/.test(e)), errores.filter((e) => !/ERR_FAILED|INFO: Created/.test(e)).slice(0, 2).join(' | '));
   await ctx.close();
 }

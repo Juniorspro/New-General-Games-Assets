@@ -246,5 +246,15 @@ for (const dos of [false, true]) {
   const bien2 = probar(50, 55, 58), pelean = probar(50, 80, 80), lenta = probar(50, 52, 95);
   prueba('la segunda red se apaga sola si no conviene', bien2 && !pelean && !lenta, `las dos parejas: ${bien2 ? 'quedan dos' : 'se apagó'} · se pelean: ${pelean ? 'quedan dos' : 'queda una'} · la segunda lenta: ${lenta ? 'quedan dos' : 'queda una'}`);
 }
+/* la mano que se da vuelta (vuelta 20), con MediaPipe como es: la imagen precisa y la forma 3D aparte, y
+   de canto a veces al revés en profundidad (herramientas/manos-lento.mjs con MP=1). Una sola foto así
+   hacía girar la mano dibujada 90° y tardaba 300 ms en volver: los dedos, el 5 % peor, se doblaban 15°
+   de más y el giro iba 45° atrás */
+{
+  const { execFileSync } = await import('node:child_process');
+  const r = JSON.parse(execFileSync('node', [new URL('../herramientas/manos-lento.mjs', import.meta.url).pathname, '', '90', '1', '2'], { env: { ...process.env, MP: '1', CORTO: '1', RED: 'nueva', SUAVE: 'media', SEMILLAS: '1,2,3,4,5' } }).toString().trim().split('\n').pop());
+  prueba('al darla vuelta la mano no se dispara ni se deforma (el 5 % peor de los dedos, a menos de 10°; el giro, a menos de 25° atrás)', r.doblaVp95 < 10 && r.giro < 25 && r.estiraV < 10,
+    `dedos ${f(r.doblaVp95)}° · giro ${f(r.giro)}° · huesos ${f(r.estiraV)} % · se corre ${f(r.verV)} mm (el 5 % peor, ${f(r.verVp95)})`);
+}
 console.log(`${bien} bien, ${mal} mal`);
 process.exit(mal ? 1 : 0);

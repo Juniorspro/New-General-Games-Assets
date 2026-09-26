@@ -147,6 +147,21 @@ export function trasladar(img, mundo, tanX, tanY, o = 0, oW = 63) {
   return [det(col(0, R)) / D, det(col(1, R)) / D, det(col(2, R)) / D];
 }
 
+/* los 21 puntos en metros, con la cámara de three (y arriba, z atrás). La forma 3D de MediaPipe no cae
+   justo sobre la imagen: con las fotos de pruebas/manos, 4-6 mm en promedio y hasta 16 en las puntas
+   (vuelta 20). Así que cada punto va por el rayo de SU lugar en la imagen, que es lo preciso, a la
+   profundidad que le da la forma. La mano dibujada cae sobre la de verdad aunque la forma venga
+   torcida (al dar vuelta la mano, una sola cámara confunde para qué lado está girada) */
+export function puntosMano(img, mundo, tanX, tanY, o = 0, oW = 63) {
+  const T = trasladar(img, mundo, tanX, tanY, o, oW); if (!T) return null;
+  const P = new Float32Array(63);
+  for (let i = 0; i < 21; i++) {
+    const z = Math.max(0.05, mundo[oW + i * 3 + 2] + T[2]), a = (img[o + i * 3] - 0.5) * 2 * tanX, b = (img[o + i * 3 + 1] - 0.5) * 2 * tanY;
+    P[i * 3] = a * z; P[i * 3 + 1] = -b * z; P[i * 3 + 2] = -z;
+  }
+  return P;
+}
+
 /* lo que salió de la carrera de la GPU en este celu (vale una semana) */
 const CLAVE_GPU = 'aeroplaza.manosGPU';
 function guardadoGPU() {
@@ -495,19 +510,12 @@ export class ManosCamara {
     const asp = this.aspecto || 4 / 3, largo = Math.tan(THREE.MathUtils.degToRad(this.hfov) / 2);
     const manos = [], tanX = asp >= 1 ? largo : largo * asp, tanY = asp >= 1 ? largo / asp : largo;
     for (let k = 0; k < d.n; k++) {
-      const o = k * 128, T = trasladar(d.buf, d.buf, tanX, tanY, o, o + 63); if (!T) continue;
-      const P = new Float32Array(63);
-      /* de la cámara (x derecha, y abajo, z adelante) a la de three (y arriba, z atrás) */
-      for (let i = 0; i < 21; i++) {
-        P[i * 3] = d.buf[o + 63 + i * 3] + T[0];
-        P[i * 3 + 1] = -(d.buf[o + 63 + i * 3 + 1] + T[1]);
-        P[i * 3 + 2] = -(d.buf[o + 63 + i * 3 + 2] + T[2]);
-      }
+      const o = k * 128, P = puntosMano(d.buf, d.buf, tanX, tanY, o, o + 63); if (!P) continue;
       /* (MediaPipe dice que nombra las manos como en un espejo, pero en primera persona, con la
          cámara de atrás, acierta tal cual: medido con las tres fotos de pruebas/manos, de dorso y de
          palma) */
       const et = d.buf[o + 126];
-      manos.push({ derecha: et < 0 ? null : et > 0.5, puntos: P, confianza: d.buf[o + 127], img: d.buf.slice(o, o + 63) });
+      manos.push({ derecha: et < 0 ? null : et > 0.5, puntos: P, confianza: d.buf[o + 127], img: d.buf.slice(o, o + 63), forma: d.buf.slice(o + 63, o + 126) });
     }
     this.alLlegar?.(manos, d.t, llego, d.cupo ?? 2);
   }
