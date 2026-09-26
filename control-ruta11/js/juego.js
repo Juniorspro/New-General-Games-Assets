@@ -485,7 +485,7 @@ const Juego = (() => {
   function obstaculos() {
     const o = [];
     for (const v of cola.concat(yendose, otros, patrulla ? [patrulla] : [])) o.push([v.x, v.z, v.ancho / 2 + 0.3, v.largo / 2 + 0.3, v.rumbo]);
-    o.push([PUESTO.garita[0], PUESTO.garita[2], 3.2, 2.1, 0]);
+    o.push([PUESTO.garita[0], PUESTO.garita[2], 1.9, 3.3, 0]);
     if (M.patrulleroParado) o.push([PUESTO.patrullero[0], PUESTO.patrullero[2], 1.6, 2.9, M.patrulleroParado.rotation.y]);
     return o;
   }

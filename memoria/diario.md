@@ -193,4 +193,10 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   oído (el navegador de prueba no tiene audio); en un teléfono real no se midió.
 - Quedó: el C# de referencia no compila con `mcs` viejo (funciones locales);
   en Unity sí debería (sin comprobar).
+- **Segunda pasada de modelos, de a uno** (pedido del usuario): revisados los 14
+  con tiras de 4 vistas; rehechos 7 (algarrobo, garita, camión, sedán, compacto,
+  hatch → "Fiat Uno", patrullero Hilux). ~3.300 créditos propios; saldo 308.518
+  (con consumo ajeno en el medio). Los personajes, las motos, la pickup y el
+  quebracho pasaron la revisión y quedaron. Artifact v2 publicado, prueba pc
+  12/12 sin errores.
 

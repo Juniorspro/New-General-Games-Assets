@@ -13,16 +13,19 @@ const CR = "../../crudos/", SAL = "../../procesados/";
 fs.mkdirSync(SAL, { recursive: true });
 const tris = (doc) => doc.getRoot().listMeshes().reduce((s, m) => s + m.listPrimitives().reduce((a, p) => a + (p.getIndices() ? p.getIndices().getCount() : p.getAttribute("POSITION").getCount()) / 3, 0), 0);
 // Cuántos triángulos se quiere para cada uno (se ven de cerca: autos y garita).
-const ESTATICOS = { pickup: 7000, sedan: 6000, compacto: 6000, hatch: 6000, camion: 7000, moto: 4000, patrullero: 8000, motopol: 5000, garita: 3000, algarrobo: 2500, quebracho: 2500 };
+const ESTATICOS = { pickup: 7000, sedan: 8000, compacto: 8000, hatch: 8000, camion: 9000, moto: 4000, patrullero: 9000, motopol: 5000, garita: 4000, algarrobo: 3000, quebracho: 2500 };
+// La segunda pasada (de a uno, revisando cada imagen y cada 3D) dejó versiones
+// mejores de algunos en crudos/uno/: si están, se usan esas.
+const origen = (k) => { const v2 = CR + `uno/v2-modelo-${k}-g1.glb`; return fs.existsSync(v2) ? v2 : CR + `modelo-${k}-g1.glb`; };
 await MeshoptSimplifier.ready;
 for (const [k, meta] of Object.entries(ESTATICOS)) {
-  const doc = await io.read(CR + `modelo-${k}-g1.glb`); const antes = tris(doc);
+  const doc = await io.read(origen(k)); const antes = tris(doc);
   await doc.transform(weld({ tolerance: 0.0001 }), dedup());
   const ratio = Math.min(1, meta / tris(doc));
   if (ratio < 0.98) await doc.transform(simplify({ simplifier: MeshoptSimplifier, ratio, error: 0.02 }));
   await doc.transform(prune());
   await io.write(SAL + `${k}.glb`, doc);
-  console.log(k, antes, "→", Math.round(tris(doc)));
+  console.log(k, origen(k).includes("/uno/") ? "(v2)" : "", antes, "→", Math.round(tris(doc)));
 }
 // Personajes: el quieto con la caminata copiada.
 for (const k of ["conductor", "conductora", "policia"]) {

@@ -13,7 +13,7 @@ const LUGARES = ["Resistencia", "Formosa", "Clorinda", "Presidencia Roca", "Pamp
 const MODELOS = [
   { nombre: "Toyota Hilux", malla: "pickup", tipo: "camioneta" }, { nombre: "Ford Ranger", malla: "pickup", tipo: "camioneta" },
   { nombre: "Renault 12", malla: "sedan", tipo: "auto" }, { nombre: "Fiat Siena", malla: "compacto", tipo: "auto" }, { nombre: "Chevrolet Prisma", malla: "compacto", tipo: "auto" },
-  { nombre: "VW Gol", malla: "hatch", tipo: "auto" }, { nombre: "Peugeot 206", malla: "hatch", tipo: "auto" },
+  { nombre: "Fiat Uno", malla: "hatch", tipo: "auto" }, { nombre: "VW Gol", malla: "hatch", tipo: "auto" },
   { nombre: "Mercedes-Benz 1114", malla: "camion", tipo: "camion" }, { nombre: "Honda Wave 110", malla: "moto", tipo: "moto" },
 ];
 const COLORES = [["Blanco", "#f2f2ee"], ["Gris plata", "#a9adb3"], ["Negro", "#222326"], ["Rojo", "#b3261e"], ["Azul", "#2a4f9a"], ["Verde", "#3b6e44"], ["Celeste", "#86b6d8"], ["Bordó", "#6a1522"], ["Beige", "#d8c7a0"]];

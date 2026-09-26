@@ -594,6 +594,207 @@
    "output_path": "assets/rig-conductora-idle-g1.glb",
    "estado": "ready",
    "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/rig-conductora-idle-g1.glb"
+  },
+  "v2-fuente-algarrobo": {
+   "type": "image",
+   "params": {
+    "prompt": "A single algarrobo tree (Prosopis alba) from the dry Chaco forest of northern Argentina, as a stylized low-poly game asset: a wide flat umbrella-shaped crown built from five or six large chunky faceted clusters of olive green foliage, a short twisted dark brown trunk that splits into three thick branches holding the crown, full tree visible with margin, three-quarter view from slightly above. Semi-realistic colors, clean solid shapes, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-db2f601ac81d4f789df2",
+   "output_path": "assets/v2-fuente-algarrobo-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-algarrobo-g1.png"
+  },
+  "v2-modelo-algarrobo": {
+   "type": "model3d",
+   "params": {
+    "prompt": "low poly algarrobo tree with umbrella crown",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-algarrobo-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 10000
+   },
+   "task_id": "gtask-f050bd4ba8ff448b913c",
+   "output_path": "assets/v2-modelo-algarrobo-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-algarrobo-g1.glb"
+  },
+  "v2-fuente-garita": {
+   "type": "image",
+   "params": {
+    "prompt": "A small roadside police guard booth built from a white 10-foot shipping container, as a clean semi-realistic game asset: straight rigid white corrugated steel walls with crisp vertical ribs, a closed grey metal door with a small window on the long side, one sliding window, a flat roof with a slight overhang, a thin dark blue stripe along the top edge, standing on four small concrete blocks. Three-quarter view from slightly above showing the front and one side, whole object visible with margin. Soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-ccfb047354e8407b87ed",
+   "output_path": "assets/v2-fuente-garita-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-garita-g1.png"
+  },
+  "v2-modelo-garita": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white shipping container guard booth with grey door and window",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-garita-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-18f4804e79974d56a3fc",
+   "output_path": "assets/v2-modelo-garita-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-garita-g1.glb"
+  },
+  "v2-fuente-camion": {
+   "type": "image",
+   "params": {
+    "prompt": "A single medium-duty box truck typical of Argentine roads, generic 1990s design with a rounded white cab with a short hood and a light grey aluminium closed cargo box with vertical ribs and rear roll-up door, dual rear wheels, clean smooth panels with crisp edges, chrome front bumper, dark tinted windows. Clean semi-realistic game asset, three-quarter front view from slightly above, whole vehicle visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-13ab53652cbc46a988d4",
+   "output_path": "assets/v2-fuente-camion-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-camion-g1.png"
+  },
+  "v2-modelo-camion": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white box truck with grey cargo box",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-camion-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-567b5b09d46e4769affc",
+   "output_path": "assets/v2-modelo-camion-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-camion-g1.glb"
+  },
+  "v2-fuente-sedan": {
+   "type": "image",
+   "params": {
+    "prompt": "A single classic 1970s-1980s French four-door family sedan, generic design inspired by cars common in Argentina, white paint, sloping rear, rectangular headlights, chrome bumpers, black plastic grille, clean smooth body panels with crisp edges and no dents, dark tinted windows, steel wheels with hubcaps. Clean semi-realistic game asset, three-quarter front view from slightly above, whole car visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-06fc7ed20a2a4084af1e",
+   "output_path": "assets/v2-fuente-sedan-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-sedan-g1.png"
+  },
+  "v2-modelo-sedan": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white classic 1970s four door sedan",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-sedan-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-23207b6133314f0a8135",
+   "output_path": "assets/v2-modelo-sedan-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-sedan-g1.glb"
+  },
+  "v2-fuente-compacto": {
+   "type": "image",
+   "params": {
+    "prompt": "A single small 2000s four-door compact sedan common in South America, generic design, white paint, rounded smooth shapes, short trunk, body-colored bumpers, clean smooth body panels with crisp edges and no dents, dark tinted windows, simple steel wheels with plastic covers. Clean semi-realistic game asset, three-quarter front view from slightly above, whole car visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-6dba576b203e458b99f4",
+   "output_path": "assets/v2-fuente-compacto-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-compacto-g1.png"
+  },
+  "v2-modelo-compacto": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white small compact four door sedan",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-compacto-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-7b5742f8a04f463ca9a5",
+   "output_path": "assets/v2-modelo-compacto-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-compacto-g1.glb"
+  },
+  "v2-fuente-hatch": {
+   "type": "image",
+   "params": {
+    "prompt": "A single small 1990s-2000s three-door hatchback common in Argentina, generic design, white paint, boxy compact shape with a short hood and an upright rear hatch, black plastic bumpers and side trim, clean smooth body panels with crisp edges and no dents, dark tinted windows, steel wheels with plastic covers. Clean semi-realistic game asset, three-quarter front view from slightly above, whole car visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-cdd938247b1048c7b3bb",
+   "output_path": "assets/v2-fuente-hatch-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-hatch-g1.png"
+  },
+  "v2-modelo-hatch": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white small three door hatchback",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-hatch-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-b18b7c351c474c799a43",
+   "output_path": "assets/v2-modelo-hatch-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-hatch-g1.glb"
+  },
+  "v2-fuente-patrullero": {
+   "type": "image",
+   "params": {
+    "prompt": "A single modern double-cab pickup truck used as a highway police patrol vehicle, generic design, white body with a bold royal blue stripe along the sides and doors, a slim red and blue LED light bar on the roof, black bumpers and push bar, clean smooth body panels with crisp edges, dark tinted windows, no words, no emblems. Clean semi-realistic game asset, three-quarter front view from slightly above, whole vehicle visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-435b116fc9374535895d",
+   "output_path": "assets/v2-fuente-patrullero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-patrullero-g1.png"
+  },
+  "v2b-fuente-patrullero": {
+   "type": "image",
+   "params": {
+    "prompt": "A single mid-size double-cab pickup truck like those used by provincial highway police in northern Argentina (generic design similar to a 2015 Toyota Hilux), white body with a bold royal blue stripe along the sides and doors, a slim red and blue LED light bar on the roof, black bumpers and a small black push bar, clean smooth body panels with crisp edges, dark tinted windows, no words, no emblems, no badges on the grille. Clean semi-realistic game asset, three-quarter front view from slightly above, whole vehicle visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-48fd3cd2a7aa4662b25e",
+   "output_path": "assets/v2b-fuente-patrullero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2b-fuente-patrullero-g1.png"
+  },
+  "v2-modelo-patrullero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white police double cab pickup with blue stripe and light bar",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2b-fuente-patrullero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-2460ee3be59441d8aaf6",
+   "output_path": "assets/v2-modelo-patrullero-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-patrullero-g1.glb"
   }
  },
  "ref": "RTkRyBVlZq"

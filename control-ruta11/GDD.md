@@ -77,14 +77,17 @@ personas y los casos son inventados.
 Todo lo que se ve en 3D salió de **Rezona** (`herramientas/rezona/pedidos.json`,
 35 pedidos, 6.030 créditos): imagen de referencia → modelo 3D → rig con
 caminar y quieto para los personajes. Después pasan por `herramientas/gltf/`
-(simplificación con meshoptimizer), `herramientas/procesar.py` (texturas a
+(simplificación con meshoptimizer; `crudos/uno/` tiene prioridad, ver
+`herramientas/rezona/uno.py`), `herramientas/procesar.py` (texturas a
 JPEG) y `herramientas/armar_datos.py` (van adentro de `js/datos.js`, 6,2 MB).
 
 | Asset | Origen | Triángulos |
 |---|---|---|
-| Pickup, sedán, compacto, hatch, camión, moto | Rezona | 4.000–7.000 |
-| Patrullero, moto policial, garita | Rezona | 3.000–8.000 |
-| Quebracho, algarrobo | Rezona | 2.500 / 2.360 |
+| Pickup, moto | Rezona (primera tanda) | 7.000 / 4.000 |
+| Sedán (tipo Renault 12), compacto (tipo Siena), hatch (tipo Uno), camión (tipo Mercedes 1114) | Rezona, **de a uno** con revisión | 8.000–9.000 |
+| Patrullero (Hilux con franja y balizas), garita (contenedor con puerta y ventana) | Rezona, de a uno | 9.000 / 4.000 |
+| Moto policial, quebracho | Rezona (primera tanda, pasaron la revisión) | 5.000 / 2.500 |
+| Algarrobo (copa de racimos) | Rezona, de a uno | 3.000 |
 | Conductor, conductora, policía (con caminar y quieto) | Rezona | 9.000 |
 | Portada de la pantalla de carga | Rezona (imagen) | — |
 | Caras de DNI, sistema y ventanilla | Dibujadas por código (`dibujarRostro`) | — |

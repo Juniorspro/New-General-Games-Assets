@@ -89,7 +89,9 @@ function crearMundo(renderer) {
 
   // ── el puesto ──
   const colocar = (n, x, y, z, rot = 0, color) => { const o = Modelos.clonar(n, color); if (!o) return null; o.position.set(x, y, z); o.rotation.y = rot; escena.add(o); return o; };
-  colocar("garita", PUESTO.garita[0], 0, PUESTO.garita[2], Math.PI / 2);
+  // La garita de la segunda pasada tiene la puerta en el lado largo (+X del modelo):
+  // queda paralela a la ruta con la puerta mirando al carril.
+  colocar("garita", PUESTO.garita[0], 0, PUESTO.garita[2], 0);
   for (let i = 0; i < 4; i++) colocar("motopol", -7.2, 0, -6.5 + i * 2.1, Math.PI / 2 - 0.25);
   const patrulleroParado = colocar("patrullero", PUESTO.patrullero[0], 0, PUESTO.patrullero[2], Math.PI / 2 + 0.35);
   // Carteles.

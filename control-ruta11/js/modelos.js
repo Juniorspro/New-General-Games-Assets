@@ -8,7 +8,7 @@
 const Modelos = (() => {
   // largo = medida a lo largo (m); alto = para árboles y personas; giro = si el frente quedó para atrás.
   const AJUSTES = {
-    pickup: { largo: 5.3, giro: 0 }, sedan: { largo: 4.4, giro: 0 }, compacto: { largo: 4.35, giro: 0 }, hatch: { largo: 3.9, giro: 0 }, camion: { largo: 7.2, giro: 0 },
+    pickup: { largo: 5.3, giro: 0 }, sedan: { largo: 4.4, giro: 0 }, compacto: { largo: 4.35, giro: 0 }, hatch: { largo: 3.9, giro: 0, umbral: [0.3, 0.52] }, camion: { largo: 7.2, giro: 0 },
     moto: { largo: 1.9, giro: 0 }, patrullero: { largo: 5.3, giro: 0 }, motopol: { largo: 2.25, giro: 0 }, garita: { largo: 6.0, giro: 0 },
     algarrobo: { alto: 7.5 }, quebracho: { alto: 11 },
     conductor: { alto: 1.76, rig: true, giro: -Math.PI / 2 }, conductora: { alto: 1.64, rig: true, giro: -Math.PI / 2 }, policia: { alto: 1.78, rig: true, giro: -Math.PI / 2 },
@@ -29,14 +29,17 @@ const Modelos = (() => {
     return l;
   }
   // Tinte de chapa: lo blanco y poco saturado toma el color de la pintura.
-  function conPintura(mat) {
-    mat.userData.pintura = { value: new THREE.Color(1, 1, 1) };
+  // umbral: desde qué luminancia de la textura se considera chapa blanca (el Uno
+  // de la segunda pasada vino con un blanco más gris y quedaba rosado).
+  function conPintura(mat, umbral = [0.42, 0.68]) {
+    mat.userData.pintura = mat.userData.pintura || { value: new THREE.Color(1, 1, 1) };
+    mat.userData.umbral = { value: new THREE.Vector2(umbral[0], umbral[1]) };
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.uPintura = mat.userData.pintura;
-      sh.fragmentShader = "uniform vec3 uPintura;\n" + sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+      sh.uniforms.uPintura = mat.userData.pintura; sh.uniforms.uUmbral = mat.userData.umbral;
+      sh.fragmentShader = "uniform vec3 uPintura; uniform vec2 uUmbral;\n" + sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
         { vec3 c = diffuseColor.rgb; float mx = max(c.r, max(c.g, c.b)), mn = min(c.r, min(c.g, c.b));
           float sat = mx > 0.001 ? (mx - mn) / mx : 0.0, lum = dot(c, vec3(0.299, 0.587, 0.114));
-          float k = smoothstep(0.42, 0.68, lum) * (1.0 - smoothstep(0.08, 0.2, sat));
+          float k = smoothstep(uUmbral.x, uUmbral.y, lum) * (1.0 - smoothstep(0.08, 0.2, sat));
           diffuseColor.rgb = mix(c, uPintura * (0.35 + lum * 0.75), k); }`);
     };
     mat.customProgramCacheKey = () => "pintura";
@@ -86,7 +89,7 @@ const Modelos = (() => {
     }
     // La textura del algarrobo vino muy oscura: de lejos era una mancha negra.
     if (n === "algarrobo") grupo.traverse((o) => { if (o.isMesh && o.material) o.material.color.setRGB(1.9, 2.0, 1.7); });
-    if (["pickup", "sedan", "compacto", "hatch", "camion", "moto"].includes(n)) grupo.traverse((o) => { if (o.isMesh && o.material && o.material.map) o.material = conPintura(o.material.clone()); });
+    if (["pickup", "sedan", "compacto", "hatch", "camion", "moto"].includes(n)) grupo.traverse((o) => { if (o.isMesh && o.material && o.material.map) o.material = conPintura(o.material.clone(), aj.umbral); });
   }
   async function cargar(progreso) {
     const l = cargador(), nombres = Object.keys(AJUSTES);
@@ -102,7 +105,7 @@ const Modelos = (() => {
   function clonar(n, color) {
     const L = listos[n]; if (!L) return null;
     const o = L.rig ? THREE.SkeletonUtils.clone(L.escena) : L.escena.clone(true);
-    if (color) o.traverse((m) => { if (m.isMesh && m.material && m.material.userData.pintura) { const nm = m.material.clone(); nm.userData.pintura = { value: new THREE.Color(color) }; conPintura(nm); nm.userData.pintura.value.set(color); m.material = nm; } });
+    if (color) o.traverse((m) => { if (m.isMesh && m.material && m.material.userData.pintura) { const u = m.material.userData.umbral.value, nm = m.material.clone(); nm.userData.pintura = { value: new THREE.Color(color) }; conPintura(nm, [u.x, u.y]); m.material = nm; } });
     return o;
   }
   return { cargar, clonar, listos, AJUSTES };

@@ -39,6 +39,17 @@ Fuente: `PAPA-DEL-PATRON.md § 9`. Ver también: [imagenes](imagenes.md).
 - Tandas: `control-ruta11/herramientas/rezona/tanda.py pedidos.json` (dependencias
   `@clave`, retoma lo que quedó en vuelo). **No lo mates con
   `pkill -f "tanda.py pedidos.json"`**: el patrón matchea la propia shell (exit 144).
+- **De a uno sale mejor** (lo pidió el usuario el 26/9): `control-ruta11/herramientas/rezona/uno.py`
+  (imagen → mirarla → modelo → tira de 4 vistas contra el viejo → quedarse con el
+  mejor). Prompts que ayudaron: "clean smooth body panels with crisp edges and no
+  dents", vista 3/4 "from slightly above", y para árboles "five or six large
+  chunky faceted clusters" (se reconstruyen limpios). La 1.ª imagen del
+  patrullero salió una F-150 yanqui: se pidió "similar to a 2015 Toyota Hilux".
+- Costos con `texture_quality: "detailed"`: imagen 54, modelo **360** (igual que
+  standard; medido con el saldo quieto). **La cuenta la usan otros a la vez**
+  (~150 créditos/min el 26/9): el "gastado" de una tanda puede incluir lo ajeno.
+- `GENERATION_RATE_LIMITED` puede durar más de 3 min: `uno.py` reintenta 8 veces
+  cada 120 s.
 - Simplificar: el algarrobo (hojas sueltas) no baja con `simplify`; con
   `simplifySloppy` (firma: índices, posiciones, 3, **null**, meta, error) sí
   (7.614 → 2.360), pero de cerca se ve feo: solo de fondo. Sin eso, un
