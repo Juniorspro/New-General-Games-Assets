@@ -206,6 +206,8 @@ Sigue de [aeroplaza-12](aeroplaza-12.md). Rama `claude/fijate-iszyer`.
     sigue la rama;
   - `rawcdn.githack.com/.../<commit>/...` queda fijo en un commit.
 - Va por https, así que el navegador deja pedir la cámara y el visor.
+- `raw.githack` tarda unos minutos en tomar un commit nuevo (sirve el anterior).
+  El de `rawcdn` con el hash es exacto desde el primer momento.
 
 ## Lo que falta
 
