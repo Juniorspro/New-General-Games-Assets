@@ -176,3 +176,21 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   fantasma azul; 14 bots por defecto; tormenta por fases; brújula, minimapa,
   mapa con marcas, espectar, estadísticas y XP guardadas. Probado en PC y
   teléfono acostado con SwiftShader; en un teléfono real no se midió.
+
+## 26/9/2026 — Control Policial: Ruta 11
+
+- Pidió un simulador de puesto policial en la Ruta 11 (foto del puesto real) y
+  después "todo en HTML y usá Rezona". Hecho en `control-ruta11/`: 35 pedidos a
+  Rezona (6.030 créditos; saldo 321.760), GLB optimizados en `js/datos.js`
+  (6,2 MB), juego three.js + React. Artifact:
+  https://claude.ai/artifact/RwrNA3aAr4djuLtJpmHC5q · descargable de 7,3 MB.
+- Mecánicas: documentos (DNI, licencia, cédula, seguro), tablet (personas,
+  vehículos, novedades), alcoholímetro 0–2,5, baúl con linterna y cosas
+  escondidas, multar/retener/arrestar, esposas, Zona de Detenidos, patrullero
+  con sirena, radio con avisos de búsqueda, 30 % sospechosos, resumen del turno.
+- Probado con `prueba.mjs pc` y `tel`: 12/12 vehículos, baúl con hallazgo,
+  arresto, traslado y resumen; sin errores de página. Sonido sin comprobar de
+  oído (el navegador de prueba no tiene audio); en un teléfono real no se midió.
+- Quedó: el C# de referencia no compila con `mcs` viejo (funciones locales);
+  en Unity sí debería (sin comprobar).
+

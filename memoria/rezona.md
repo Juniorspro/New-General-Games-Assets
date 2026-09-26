@@ -33,7 +33,15 @@ Fuente: `PAPA-DEL-PATRON.md § 9`. Ver también: [imagenes](imagenes.md).
   `verification_url`; él aprueba el link y se pollea
   `POST …/authorizations/poll` con `{code, authorization_secret}`.
 - **La API no devuelve la URL pública del asset.** Se arma:
-  `{base}/pv/{proyecto}/{output_path}` (200 sin llave). Sin eso, un
+  `{base}/pv/{proyecto}/{output_path}` (200 sin llave). **`{proyecto}` es el
+  `public_id`** (ej. `RTkRyBVlZq`), no el id numérico: con el número da 404 y
+  el `model3d` sale desde texto sin avisar (26/9, Ruta 11: 8 pedidos rehechos).
+- Tandas: `control-ruta11/herramientas/rezona/tanda.py pedidos.json` (dependencias
+  `@clave`, retoma lo que quedó en vuelo). **No lo mates con
+  `pkill -f "tanda.py pedidos.json"`**: el patrón matchea la propia shell (exit 144).
+- Simplificar: el algarrobo (hojas sueltas) no baja con `simplify`; con
+  `simplifySloppy` (firma: índices, posiciones, 3, **null**, meta, error) sí
+  (7.614 → 2.360), pero de cerca se ve feo: solo de fondo. Sin eso, un
   `model3d` "desde imagen" sale **desde texto** sin avisar: me pasó con la
   vaca y el guacho (1.170 créditos tirados).
 - Costos medidos: imagen 54; `model3d` desde texto 234, desde imagen 360;

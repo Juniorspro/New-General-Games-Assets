@@ -206,6 +206,31 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
   `__isla.simular(seg)` para probar: igual que la versión anterior (abajo en el
   diario). SwiftShader: 1–3 cuadros por segundo, la CPU queda ociosa.
 
+## Puesto policial (Ruta 11)
+
+- Pedido: "200 % mejor que ESTANCIA", simulador de puesto caminero en la Ruta 11
+  (Presidencia Roca). Primero pidió Unity/C# y después **"todo en HTML, lo de
+  Unity es para saber trabajar"**: el C# quedó en `control-ruta11/referencia-unity/`.
+- Estructura: `js/` base, generador (conductores, faltas, caras 2D), sonido,
+  modelos (GLB gzip de `datos.js`, tinte de chapa), mundo, juego (fila, policía,
+  inspección, puntaje, patrullero, radio), ui (React). Diseño en `GDD.md`.
+- **Mano derecha en three.js**: mirando a +Z, la derecha es **−X**. Un auto en
+  x = +1,9 yendo a +Z va por la mano de la izquierda. El puesto quedó en −X y el
+  conductor (izquierda del auto) del lado del eje.
+- La lógica "en un rato" va con el **reloj del juego** (`luego(seg, fn)`), no con
+  `setTimeout`: con el bucle ocupado (o congelado en la prueba) los autos
+  resueltos quedaban parados minutos.
+- El estado de la interfaz se vuelca **al instante** tras cada acción
+  (`avisar(true)` → `volcar()`), no solo en el cuadro siguiente.
+- Un `<canvas>` con `object-fit: contain` tiene franjas: el puntero hay que
+  pasarlo descontándolas (el baúl agarraba otra cosa).
+- Caras de identidad: retrato 2D por código (tiembla, esquiva la mirada, ojos
+  rojos, cinturón) — las cabezas 3D de Rezona no sirven para "se parece pero no es".
+- Medido: ~540 mil triángulos en alta (antes 1,08 M; los algarrobos con sombra
+  eran la mitad). Solo dan sombra los árboles a < 75 m del puesto.
+- Prueba: `__ruta.congelar(true)` + `__ruta.simular(seg)`; SwiftShader tarda
+  10–15 s por foto con el canvas grande (timeout de 120 s).
+
 ## Probar
 
 - Congelar el bucle y sacar las fotos a mano (`__juego.congelar`,
