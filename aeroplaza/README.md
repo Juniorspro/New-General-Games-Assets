@@ -129,12 +129,19 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
   la primera vez, unos 20 MB, de jsdelivr y de Google; se puede servir desde
   otro lado con `window.AEROPLAZA_MANOS = { base, modelo }`.
 - En celus de 6 núcleos o más van dos redes a la par (el doble de fotos por
-  segundo).
+  segundo). Si con las dos el celu se pone más lento, se apaga una sola.
+- **✋ Las manos: Rápidas · Medio · Suaves** (abajo de las llaves). Rápidas van
+  pegadas a la mano y tiemblan un poco, como un Quest; Suaves, quietas no
+  tiemblan y van un poco atrás. De entrada, Medio.
+- Con ⏱ prendido, al lado de los cuadros se ve cómo van las manos: fotos por
+  segundo, atraso de la cámara y cuánto tarda la red (`✋ 27/s · 150 ms · 45
+  ms/red ×2`).
 - **Flash:** sin visor, el botón ⚡ de arriba a la derecha prende la linterna
   de la cámara para ver las manos con poca luz (si el celu deja: en iOS no).
 - En el Visor VR son las manos del visor.
-- **Usar:** el rayo sale del hombro; pellizcar (pulgar con índice) usa lo que
-  se apunta.
+- **Usar:** el rayo sale de los ojos y va para donde está la mano (con la
+  mano apenas abajo de la vista apunta al piso; en el visor sale del hombro);
+  pellizcar (pulgar con índice) usa lo que se apunta.
 - **Ir:** apuntando al piso sale un arco; al soltar el pellizco se salta ahí,
   con un parpadeo.
 - **Menú:** la palma a la cara y un pellizco abren el menú (caminar, girar
@@ -190,7 +197,8 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
     MediaPipe de verdad con las fotos de `pruebas/manos/` (hechas con Rezona);
   - `manos-celu.mjs`: las manos por la cámara con el atraso y las fallas de un
     celu, simuladas sin navegador, con dos redes y con una (que no titilen, no
-    se dupliquen ni peguen tirones);
+    se dupliquen ni peguen tirones), los tres niveles, que el rayo baje al
+    piso y cuándo se apaga la segunda red;
   - `xr.mjs`: el Visor VR con IWER, el Quest 3 de mentira de Meta.
 
   MediaPipe e IWER se bajan con curl la primera vez y no se commitean.

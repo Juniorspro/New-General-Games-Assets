@@ -825,3 +825,24 @@ html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: non
 .vr-llave.si i { background: linear-gradient(180deg, #5fd0ff, #1f9be0); }
 .vr-llave.si i::after { transform: translateX(14px); }
 .vr-llave b { font-size: 14px; } .vr-llave small { font-weight: 700; font-size: 11px; color: var(--tinta2); }
+.vr-suave { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; margin-top: 8px; padding: 8px 10px; border-radius: 16px; border: 2px solid var(--gris2); background: linear-gradient(180deg, #ffffff, #f2faff); transition: opacity 0.2s; }
+.vr-suave.apagada { opacity: 0.45; }
+.vr-suave > b { font-size: 14px; }
+.vr-suave > small { grid-column: 1 / -1; font-weight: 700; font-size: 11px; color: var(--tinta2); text-align: center; min-height: 1.3em; }
+.vr-tres { display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; border-radius: 99px; background: #dbe7f0; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.22); }
+.vr-tres button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 30px; padding: 4px 10px; white-space: nowrap; border: 0; border-radius: 99px; background: transparent; font: inherit; font-size: 12px; font-weight: 800; color: var(--tinta2); cursor: pointer; transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
+.vr-tres button.si { background: linear-gradient(180deg, #7fdcff, #1f9be0); color: #fff; text-shadow: 0 1px 1px rgba(0, 50, 100, 0.45); box-shadow: 0 2px 6px rgba(0, 80, 150, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.7); }
+.vr-tres button:focus-visible { outline: 3px solid #1f9be0; outline-offset: 1px; }
+/* (el dibujito: tres rayitas; rápidas, derechas; suaves, una onda cada vez más quieta) */
+.vr-tres i { width: 14px; height: 10px; flex: none; background: currentColor; -webkit-mask: var(--m) center / contain no-repeat; mask: var(--m) center / contain no-repeat; }
+.vr-tres i.rapida { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 2h9M3 5h10M1 8h9' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.vr-tres i.media { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5c2-4 4 4 6 0s4-4 6 0' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.vr-tres i.suave { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5c3-2 5 2 12 0' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
+/* (en pantallas bajas, como el celu acostado: todo más apretado para que entre sin desplazar) */
+html.b460 .menu-vr p { margin-bottom: 8px; font-size: 13px; line-height: 1.3; }
+html.b460 .vr-op { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 10px; padding: 7px 12px; row-gap: 0; text-align: left; } html.b460 .vr-op b { font-size: 16px; } html.b460 .vr-op small { font-size: 12px; }
+html.b460 .vr-dibujo { grid-column: 2; grid-row: 1 / span 2; width: 64px; height: 30px; padding: 3px; gap: 3px; border-radius: 9px; margin-top: 0; } html.b460 .vr-dibujo span { border-radius: 5px; }
+html.b460 .vr-llaves { margin-top: 6px; gap: 6px; } html.b460 .vr-llave { padding: 5px 8px; }
+html.b460 .vr-suave { grid-template-columns: auto auto minmax(0, 1fr); margin-top: 6px; padding: 5px 8px; }
+html.b460 .vr-suave > small { grid-column: auto; text-align: left; line-height: 1.25; }
+html.b460 .vr-tres button { min-height: 28px; }

@@ -208,7 +208,7 @@ export class ManosCamara {
     if (this.estado !== 'lista' || !this.redes?.length) return;
     /* la primera red libre (sin manos a la vista, solo la primera) */
     const quieta = soloPrimera || performance.now() - this.tMano > 1000;
-    const red = this.redes.find((r, i) => !r.ocupado && (i === 0 || !quieta));
+    const red = this.redes.find((r, i) => !r.ocupado && !r.apagada && (i === 0 || !quieta));
     if (!red) { this.stats.saltados++; return; }
     const w = fuente.videoWidth || fuente.width, h = fuente.videoHeight || fuente.height; if (!w || !h) return;
     red.ocupado = true; this.aspecto = w / h;
@@ -217,11 +217,31 @@ export class ManosCamara {
       red.w.postMessage({ tipo: 'cuadro', imagen, ts: t, t }, [imagen]);
     } catch { red.ocupado = false; }
   }
+  /* ¿las dos redes le convienen a este celu? Cada red lleva lo que tarda por foto. Si con las dos la
+     primera se pone mucho más lenta que cuando estaba sola (se pelean por los núcleos buenos), o si
+     la segunda tarda mucho más que la primera (le tocó un núcleo lento), la segunda se apaga: cada
+     foto llegaría más vieja y la mano se vería más atrasada */
+  medirRedes(red, ms) {
+    if (!red || !(ms > 0)) return;
+    red.n = (red.n || 0) + 1; red.ms = red.ms ? red.ms + (ms - red.ms) * 0.1 : ms;
+    const [a, b] = this.redes || [];
+    if (red === a && !b) { a.sola = a.sola ? a.sola + (ms - a.sola) * 0.1 : ms; a.nSola = (a.nSola || 0) + 1; }
+    if (!a || !b || b.apagada || b.n < 15 || a.n < 15) return;
+    if ((a.nSola >= 10 && a.ms > a.sola * 1.35) || b.ms > a.ms * 1.5) { b.apagada = true; this.stats.segundaApagada = true; }
+  }
+  /* lo que se muestra con los cuadros por segundo: fotos por segundo y atraso de las manos */
+  datos() {
+    const S = this.stats, ahora = performance.now();
+    if (!this._d || ahora - this._d.t > 1000) { const porSeg = this._d ? (S.cuadros - this._d.n) / ((ahora - this._d.t) / 1000) : 0; this._d = { t: ahora, n: S.cuadros, porSeg }; }
+    const redes = (this.redes || []).filter((r) => !r.apagada).length;
+    return `✋ ${Math.round(this._d.porSeg)}/s · ${Math.round(S.latencia)} ms · ${Math.round(S.ms)} ms/red ×${redes}`;
+  }
   /* para las pruebas (y para ver si anda sin cámara): una imagen suelta, a la primera red */
   probar(imagen, t = performance.now()) { if (this.redes?.[0]) this.redes[0].ocupado = false; return this.cuadro(t, imagen, true); }
   recibir(d, red) {
     if (red) red.ocupado = false;
     if (d.tipo !== 'manos') return;
+    this.medirRedes(red, d.ms);
     /* (con dos redes, una foto puede volver después que la siguiente: la vieja no sirve) */
     if (d.t < this.ultimaT) { this.stats.tarde++; return; }
     this.ultimaT = d.t;

@@ -6,7 +6,7 @@
 //   profundidad (±12 cm, una de cada 50) y dice que es la otra mano (una de cada 8);
 // - se dibuja a 120 por segundo.
 // Se mide: cuadros sin mano, cuántas veces titila (se apaga y se prende), manos dobles, el tirón de
-// cada cuadro (la aceleración contra la de verdad: un salto o un escalón se ve acá), el temblor
+// cada cuadro (la aceleración contra la de verdad: un salto o un escalón se ve acá), el temblor (y lo que se mueve de un cuadro al otro)
 // quieta y el atraso. Con la versión anterior de manos.js (la de la vuelta 13) daba, con 150 ms de
 // atraso: 13 % sin mano, 105 titileos por minuto, tirón p99 111 mm; con 210 ms, 79 % sin mano.
 //     node pruebas/manos-celu.mjs
@@ -22,7 +22,7 @@ const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0
   [-0.022, 0.085, 0], [-0.025, 0.125, 0], [-0.027, 0.15, 0], [-0.028, 0.172, 0], [0, 0.088, 0], [0, 0.132, 0], [0, 0.16, 0], [0, 0.185, 0],
   [0.02, 0.083, 0], [0.021, 0.122, 0], [0.022, 0.148, 0], [0.023, 0.17, 0], [0.038, 0.074, 0], [0.041, 0.1, 0], [0.043, 0.118, 0], [0.045, 0.135, 0]];
 
-function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2 }) {
+function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, suavidad = 'media' }) {
   let s = semilla * 2654435761 >>> 0;
   const azar = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const gauss = () => Math.sqrt(-2 * Math.log(azar() + 1e-12)) * Math.cos(2 * Math.PI * azar());
@@ -54,12 +54,12 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2 }
     const bienLado = limpio || azar() > 0.12;
     return { derecha: bienLado ? der : !der, puntos: P, confianza: 0.9, img };
   };
-  const manos = new Manos(); manos.activa = true; manos.fuente = 'camara';
+  const manos = new Manos(); manos.activa = true; manos.fuente = 'camara'; manos.suavidad = suavidad;
   const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3();
   const ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
   const DT = 1000 / 120, FIN = 9500, CAP = 1000 / 30, esperadas = dos ? 2 : 1;
   let proxCaptura = azar() * CAP, ocupado = 0, resultados = [], perdida = [false, false], clarasAntes = 0, antes = null;
-  const R = { n: 0, cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], lat: [] };
+  const R = { n: 0, cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], tiembla: [], lat: [] };
   for (let T = 0; T < FIN; T += DT) {
     for (const r of resultados.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega); R.lat.push(r.llega - r.tc); ocupado--; R.n++; }
     resultados = resultados.filter((r) => r.llega > T);
@@ -91,7 +91,11 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2 }
         const dv = [0, 1, 2].map((k) => mejor[k] - antes.c[k]), dr = [0, 1, 2].map((k) => cv[k] - antes.v[k]);
         R.tiron.push(Math.hypot(...[0, 1, 2].map((k) => dv[k] - antes.dv[k] - (dr[k] - antes.dr[k]))) * 1000);
       }
-      if (QUIETA.some(([a, b]) => tS > a + 0.6 && tS < b)) R.quieta.push(md * 1000);
+      if (QUIETA.some(([a, b]) => tS > a + 0.6 && tS < b)) {
+        R.quieta.push(md * 1000);
+        /* (lo que se mueve de un cuadro al otro, quieta: el temblor que se ve) */
+        if (antes && antes.id === id) R.tiembla.push(Math.hypot(mejor[0] - antes.c[0], mejor[1] - antes.c[1], mejor[2] - antes.c[2]) * 1000);
+      }
       antes = { id, gen: id.gen, c: mejor, v: cv, dv: antes ? [0, 1, 2].map((k) => mejor[k] - antes.c[k]) : null, dr: antes ? [0, 1, 2].map((k) => cv[k] - antes.v[k]) : null };
     } else antes = null;
   }
@@ -100,13 +104,13 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2 }
   const mq = media(R.quieta);
   return {
     porSeg: R.n / (FIN / 1000), lat: media(R.lat), sin: 100 * R.sin / R.cuadros, titila: R.titila / (FIN / 60000), dobles: 100 * R.dobles / R.cuadros,
-    err: media(R.err), tironP99: pct(R.tiron, 0.99), tironMax: Math.max(0, ...R.tiron), quieta: Math.sqrt(media(R.quieta.map((x) => (x - mq) ** 2))),
+    err: media(R.err), tironP99: pct(R.tiron, 0.99), tironMax: Math.max(0, ...R.tiron), quieta: Math.sqrt(media(R.quieta.map((x) => (x - mq) ** 2))), tiembla: Math.sqrt(media(R.tiembla.map((x) => x * x))),
   };
 }
 /* cada caso con tres semillas: el promedio (el peor para el tirón máximo) */
 const caso = (op) => {
   const r = [1, 2, 3].map((semilla) => simular({ ...op, semilla })), m = (k) => r.reduce((a, x) => a + x[k], 0) / r.length;
-  return { porSeg: m('porSeg'), lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta') };
+  return { porSeg: m('porSeg'), lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta'), tiembla: m('tiembla') };
 };
 const f = (x, d = 1) => x.toFixed(d);
 for (const dos of [false, true]) {
@@ -146,6 +150,48 @@ for (const dos of [false, true]) {
     ant = [M.p[0], M.p[1], M.p[2]];
   }
   prueba('una foto por cuadro (el juego a 30): quieta se queda quieta', viaja === 0 && mov < 5e-4, `${viaja} cuadros "de viaje", se movió ${f(mov * 1000, 2)} mm`);
+}
+/* los tres niveles del menú (✋ Manos): rápidas atrasa menos y tiembla más; suaves, al revés */
+{
+  const r = Object.fromEntries(['rapida', 'media', 'suave'].map((suavidad) => [suavidad, caso({ L: 90, suavidad })]));
+  const l = Object.fromEntries(['rapida', 'media', 'suave'].map((suavidad) => [suavidad, caso({ L: 90, suavidad, limpio: true })]));
+  prueba('rápidas atrasa menos y suaves tiembla menos (el medio, en el medio)', l.rapida.err <= l.media.err + 0.5 && l.media.err <= l.suave.err + 0.5 && r.suave.tiembla < r.media.tiembla && r.media.tiembla < r.rapida.tiembla && r.rapida.titila < 15 && r.rapida.tironP99 < 20,
+    ['rapida', 'media', 'suave'].map((k) => `${k}: atraso ${f(l[k].err, 0)} mm, tiembla ${f(r[k].tiembla, 2)} mm por cuadro`).join(' · '));
+}
+/* el rayo con la cámara sale de los ojos: con la mano un poco abajo de la vista apunta al piso (y sale
+   el arco para saltar); con el modelo del hombro, la mano tenía que ir muy abajo y "no bajaba" */
+{
+  const rayo = (grados) => {
+    const manos = new Manos(); manos.activa = true; manos.fuente = 'camara';
+    const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3(), ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -1.6, sePuede: () => true };
+    /* (el medio entre el nudillo del índice y la base del pulgar, a 35 cm y a tantos grados de la vista) */
+    const y = -0.35 * Math.tan(THREE.MathUtils.degToRad(grados)) - 0.065, W = new Float32Array(63), img = new Float32Array(63);
+    ABIERTA.forEach(([x, yy, z], i) => { W[i * 3] = 0.084 + x; W[i * 3 + 1] = y + yy; W[i * 3 + 2] = -0.35 + z + 0.06; });
+    for (let k = 0; k < 45; k++) {
+      const T = 1000 + k * 33.3;
+      manos.registrarCabeza(T, q0, p0, 0);
+      manos.recibirCamara([{ derecha: true, puntos: W, confianza: 0.9, img }], T - 60, T);
+      manos.actualizar(1 / 30, T + 10, ctx);
+    }
+    return { y: manos.manos[1].rayoD.y, arco: !!manos.salto?.valido };
+  };
+  const abajo = rayo(20), poco = rayo(8), arriba = rayo(-10);
+  prueba('con la cámara el rayo baja al piso con la mano apenas abajo de la vista', abajo.y < -0.6 && abajo.arco && poco.y < -0.2 && arriba.y > 0.3 && !arriba.arco,
+    `20° abajo: rayo ${f(abajo.y, 2)} ${abajo.arco ? 'con arco' : 'SIN arco'} · 8° abajo: ${f(poco.y, 2)} · 10° arriba: ${f(arriba.y, 2)}`);
+}
+/* las dos redes: si con la segunda la primera se pone más lenta (se pelean por los núcleos) o la
+   segunda es mucho más lenta, se apaga la segunda; si no, quedan las dos */
+{
+  globalThis.window ??= {};
+  const { ManosCamara } = await import('../js/manos-camara.js');
+  const probar = (sola, conA, conB) => {
+    const mc = new ManosCamara(), a = {}, b = {};
+    mc.redes = [a]; for (let i = 0; i < 20; i++) mc.medirRedes(a, sola);
+    mc.redes = [a, b]; for (let i = 0; i < 40; i++) { mc.medirRedes(a, conA); mc.medirRedes(b, conB); }
+    return !b.apagada;
+  };
+  const bien2 = probar(50, 55, 58), pelean = probar(50, 80, 80), lenta = probar(50, 52, 95);
+  prueba('la segunda red se apaga sola si no conviene', bien2 && !pelean && !lenta, `las dos parejas: ${bien2 ? 'quedan dos' : 'se apagó'} · se pelean: ${pelean ? 'quedan dos' : 'queda una'} · la segunda lenta: ${lenta ? 'quedan dos' : 'queda una'}`);
 }
 console.log(`${bien} bien, ${mal} mal`);
 process.exit(mal ? 1 : 0);

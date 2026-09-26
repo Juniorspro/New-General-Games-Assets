@@ -5,7 +5,8 @@
 // - girar el celu gira la vista (30° de alfa → 30° de rumbo) y levantarlo la inclina;
 // - un toque camina para donde se mira y otro frena; dos toques saltan;
 // - con SBS se dibujan dos mitades (una por ojo, apenas corridas) con la raya del medio;
-// - mirar abajo 2 s sale y vuelve todo; sin giroscopio (la compu) se mira arrastrando.
+// - mirar abajo 2 s sale y vuelve todo; sin giroscopio (la compu) se mira arrastrando;
+// - en el menú se elige cómo van las manos (rápidas, en el medio, suaves).
 //     node pruebas/vr.mjs
 import path from 'node:path';
 import { navegador, abrir, avanzar, SAL } from './comun.mjs';
@@ -24,6 +25,9 @@ const toque = (pag) => pag.evaluate(() => { const c = document.querySelector('.v
   await pag.evaluate(() => document.querySelector('[data-a=vr]').click());
   await pag.waitForTimeout(200);
   const menu = await pag.evaluate(() => document.querySelectorAll('.vr-op').length);
+  /* cómo van las manos: rápidas, en el medio (de entrada) o suaves; se guarda y el VR lo usa */
+  const rs = await pag.evaluate(() => { const A = window.__A, antes = A.G.opciones.vrSuave, marcada = document.querySelector('.vr-tres .si')?.dataset.suave, b = document.querySelector('.vr-tres [data-suave=suave]'); b.click(); return { antes, marcada, ahora: A.G.opciones.vrSuave, si: b.classList.contains('si'), marcadas: document.querySelectorAll('.vr-tres .si').length, texto: document.querySelector('.vr-suave small').textContent }; });
+  await pag.screenshot({ path: path.join(SAL, 'vr-menu.png') });
   await giro(pag, 0, 0, -90);
   await pag.evaluate(() => document.querySelector('.vr-op[data-sbs="1"]').click());
   await pag.waitForTimeout(300);
@@ -31,6 +35,8 @@ const toque = (pag) => pag.evaluate(() => { const c = document.querySelector('.v
   await avanzar(pag, 4);
   const r1 = await pag.evaluate(() => { const A = window.__A; return { activo: A.vr.activo, sbs: A.vr.sbs, fp: A.cam.fp, hud: A.UI.hud.style.display, ojos: document.querySelectorAll('.vr-capa .vr-ojo').length, yaw: A.cam.yaw }; });
   prueba('se entra desde la pausa: con visor, primera persona, sin interfaz, dos ojos', menu === 2 && r1.activo && r1.sbs && r1.fp && r1.hud === 'none' && r1.ojos === 2, JSON.stringify(r1));
+  rs.enVR = await pag.evaluate(() => window.__A.manos.suavidad);
+  prueba('se elige cómo van las manos (de entrada, medio) y el VR lo usa', rs.antes === 'media' && rs.marcada === 'media' && rs.ahora === 'suave' && rs.si && rs.marcadas === 1 && rs.texto.length > 5 && rs.enVR === 'suave', JSON.stringify(rs));
   await giro(pag, 30, 0, -90); await avanzar(pag, 2);
   const yaw2 = await pag.evaluate(() => window.__A.cam.yaw);
   let d = (yaw2 - r1.yaw) * 180 / Math.PI; while (d > 180) d -= 360; while (d < -180) d += 360;

@@ -156,6 +156,8 @@ async function iniciar() {
   const laCamara = () => (camManos ||= new ManosCamara({ alLlegar: (lista, tt, llego) => { if (manos.activa) manos.recibirCamara(lista, tt, llego); } }));
   /* el flash del VR sin visor (vr.js pone el botón): la linterna de la cámara de atrás */
   vr.alFlash = (prender) => laCamara().linterna(prender);
+  /* (con los cuadros por segundo prendidos, también lo de las manos: fotos por segundo y atraso) */
+  vr.datosManos = () => (camManos?.activa && manos.activa ? camManos.datos() : '');
   const prenderManos = async () => {
     laCamara();
     manos.activa = true; manos.fuente = 'camara';
@@ -236,7 +238,7 @@ async function iniciar() {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
       vr.verFps = !!G.opciones.vrFps;
       const p = vr.entrar(sbs, { raiz: UI.raiz, cam, avisar: (x) => UI.avisar(x), alSalir: () => { apagarManos(); ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
-      manos.menu.fps = vr.verFps;
+      manos.menu.fps = vr.verFps; manos.suavidad = G.opciones.vrSuave || 'media';
       if (conManos) p.then(() => { if (vr.activo) prenderManos(); });
       return p;
     },

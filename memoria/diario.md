@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, más tarde todavía · `claude/fijate-iszyer`:**
+  - Pidió: la mano va "muy muy lenta" (la vuelta 14, que temblaba, parecía un
+    Quest): un punto medio. Y el rayo para elegir no bajaba.
+  - Quedó ([aeroplaza-16](aeroplaza-16.md)): tres niveles en el menú del VR
+    (medio de entrada: tiembla como la 15 y atrasa 70 contra 99 ms de costado
+    y 101 contra 141 en profundidad); el rayo desde los ojos, que baja al
+    piso; los números de las manos en el cartel de ⏱.
+  - Falta: que mande los números de ⏱ de su celu y cuál nivel le gusta.
 - **27/09/2026, a la noche · `claude/fijate-iszyer`:**
   - Pidió: un botón de flash en el modo sin SBS, menos temblor y que la mano
     vaya "súper igual a la mano real".

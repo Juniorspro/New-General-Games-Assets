@@ -1,0 +1,114 @@
+// LAS MANOS EN MOVIMIENTOS LENTOS, los de todos los días (sin navegador, como pruebas/manos-celu.mjs;
+// es para afinar las constantes de js/manos.js, no una prueba que pasa o no pasa):
+//     node aeroplaza/herramientas/manos-lento.mjs [manos.js] [la cámara tarda (ms) = 90] [ruido en profundidad = 1] [redes = 2]
+//     SUAVE=rapida|media|suave  el nivel del menú (de entrada, media)
+//     SEMILLAS=1,2,3,4,5        con qué semillas (se promedia)
+//     CORTO=1                   una línea con lo principal (para comparar versiones)
+// Mide, contra la mano de verdad:
+// - quieta: lo que se va de su lugar (deriva, mm) y lo que se mueve de un cuadro al otro (tiembla, mm:
+//   lo que se ve como temblor);
+// - el atraso (ms) en rampas de costado a 5, 10, 20 y 40 cm/s, para arriba a 15 y en profundidad a 10;
+// - cuánto tarda en arrancar (1 cm), cuánto se pasa al frenar y el tirón p99.
+// (una versión vieja de manos.js se compara con: git show <commit>:aeroplaza/js/manos.js > /tmp/manos-viejo.js,
+// y pasándole esa ruta, absoluta)
+const lienzo = () => { const ctx = new Proxy({}, { get: (o, k) => (k in o ? o[k] : k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}), set: (o, k, v) => ((o[k] = v), true) }); return { width: 0, height: 0, getContext: () => ctx }; };
+globalThis.document = { createElement: lienzo, documentElement: {} };
+const { Manos } = await import(process.argv[2] ? new URL(process.argv[2], 'file://' + process.cwd() + '/').href : '../js/manos.js');
+const THREE = await import('three');
+const LCAM = +(process.argv[3] || 90), HONDO = +(process.argv[4] || 1), REDES = +(process.argv[5] || 2);
+const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0.06, 0.063, -0.02], [-0.07, 0.082, -0.025],
+  [-0.022, 0.085, 0], [-0.025, 0.125, 0], [-0.027, 0.15, 0], [-0.028, 0.172, 0], [0, 0.088, 0], [0, 0.132, 0], [0, 0.16, 0], [0, 0.185, 0],
+  [0.02, 0.083, 0], [0.021, 0.122, 0], [0.022, 0.148, 0], [0.023, 0.17, 0], [0.038, 0.074, 0], [0.041, 0.1, 0], [0.043, 0.118, 0], [0.045, 0.135, 0]];
+/* los tramos: [empieza, dura, velocidad (m/s)] y quieta entre medio; la velocidad sube y baja en 80 ms */
+const TRAMOS = [
+  { t: 3.5, d: 1.0, v: [0.05, 0, 0], n: 'costado 5 cm/s' },
+  { t: 5.1, d: 1.0, v: [-0.1, 0, 0], n: 'costado 10 cm/s' },
+  { t: 6.7, d: 0.75, v: [0.2, 0, 0], n: 'costado 20 cm/s' },
+  { t: 8.1, d: 0.5, v: [-0.4, 0, 0], n: 'costado 40 cm/s' },
+  { t: 9.2, d: 0.6, v: [0, 0.15, 0], n: 'arriba 15 cm/s' },
+  { t: 10.4, d: 1.0, v: [0, 0, -0.1], n: 'lejos 10 cm/s' },
+  { t: 12.0, d: 1.0, v: [0, 0, 0.1], n: 'cerca 10 cm/s' },
+];
+const FIN = 15.5, SUAVE = 0.08;
+const perfil = (tr, t) => { const a = t - tr.t; if (a <= 0 || a >= tr.d) return 0; const s = (x) => x * x * (3 - 2 * x); return Math.min(1, s(Math.min(1, a / SUAVE)), s(Math.min(1, (tr.d - a) / SUAVE))); };
+const PASO = 0.0005, POS = [];
+{ let p = [0.08, -0.12, -0.37]; for (let t = 0; t <= FIN + 0.5; t += PASO) { POS.push(p.slice()); for (const tr of TRAMOS) { const k = perfil(tr, t); for (let c = 0; c < 3; c++) p[c] += tr.v[c] * k * PASO; } } }
+const muneca = (t) => POS[Math.max(0, Math.min(POS.length - 1, Math.round(t / PASO)))];
+const puntos = (t) => { const m = muneca(t), W = new Float32Array(63); ABIERTA.forEach(([x, y, z], i) => { W[i * 3] = m[0] + x; W[i * 3 + 1] = m[1] + y; W[i * 3 + 2] = m[2] + z; }); return W; };
+const centro = (P) => { let x = 0, y = 0, z = 0; for (let i = 0; i < 21; i++) { x += P[i * 3]; y += P[i * 3 + 1]; z += P[i * 3 + 2]; } return [x / 21, y / 21, z / 21]; };
+
+function correr(semilla) {
+  let s = semilla * 2654435761 >>> 0;
+  const azar = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const gauss = () => Math.sqrt(-2 * Math.log(azar() + 1e-12)) * Math.cos(2 * Math.PI * azar());
+  const TAN = 0.65;
+  const detectar = (tc) => {
+    if (azar() < 0.05) return null;
+    const W = puntos(tc), P = new Float32Array(63), img = new Float32Array(63);
+    const tx = gauss() * 0.002, ty = gauss() * 0.002, tz = gauss() * 0.006 * HONDO + (azar() < 0.02 ? (azar() < 0.5 ? -1 : 1) * 0.12 : 0);
+    for (let i = 0; i < 21; i++) {
+      P[i * 3] = W[i * 3] + tx + gauss() * 0.0015; P[i * 3 + 1] = W[i * 3 + 1] + ty + gauss() * 0.0015; P[i * 3 + 2] = W[i * 3 + 2] + 0.06 + tz + gauss() * 0.002;
+      const z = -P[i * 3 + 2]; img[i * 3] = 0.5 + P[i * 3] / z / (2 * TAN); img[i * 3 + 1] = 0.5 - P[i * 3 + 1] / z / (2 * TAN);
+    }
+    return { derecha: true, puntos: P, confianza: 0.9, img };
+  };
+  const manos = new Manos(); manos.activa = true; manos.fuente = 'camara'; if (process.env.SUAVE) manos.suavidad = process.env.SUAVE;
+  const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3(), ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
+  const DT = 1000 / 120, CAP = 1000 / 30;
+  let prox = azar() * CAP, ocupado = 0, res = [], lat = [];
+  const traza = [];   // [t, mostrado(3), real(3), alfa]
+  for (let T = 0; T < FIN * 1000; T += DT) {
+    for (const r of res.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega); lat.push(r.llega - r.tc); ocupado--; }
+    res = res.filter((r) => r.llega > T);
+    while (prox + LCAM <= T) {
+      const tc = prox; prox += CAP * (0.95 + 0.1 * azar());
+      if (ocupado >= REDES) continue;
+      ocupado++;
+      const d = detectar(tc / 1000);
+      res.push({ lista: d ? [d] : [], tc, llega: T + 4 + 40 + 20 * azar() });
+    }
+    const tVer = T + 25;
+    manos.registrarCabeza(tVer, q0, p0, 0);
+    manos.actualizar(DT / 1000, tVer, ctx);
+    const M = manos.manos.find((m) => (m.alfa ?? (m.visible ? 1 : 0)) > 0.5), tS = tVer / 1000;
+    traza.push([tS, M ? centro(M.p) : null, centro(puntos(tS))]);
+  }
+  const latMedia = lat.reduce((a, b) => a + b, 0) / lat.length;
+  /* medir */
+  const out = { lat: latMedia };
+  /* quieta: 1-2 s */
+  const reposo = (a, b) => {
+    const q = traza.filter(([t, m]) => t > a && t < b && m).map(([, m, r]) => m.map((x, c) => x - r[c]));
+    const mm = [0, 1, 2].map((c) => q.reduce((s, v) => s + v[c], 0) / q.length);
+    const deriva = Math.sqrt(q.reduce((s, v) => s + v.reduce((u, x, c) => u + (x - mm[c]) ** 2, 0), 0) / q.length) * 1000;
+    let t2 = 0; for (let i = 1; i < q.length; i++) t2 += (q[i][0] - q[i - 1][0]) ** 2 + (q[i][1] - q[i - 1][1]) ** 2 + (q[i][2] - q[i - 1][2]) ** 2;
+    return { deriva, tiembla: Math.sqrt(t2 / Math.max(1, q.length - 1)) * 1000 };
+  };
+  { const a = reposo(1.5, 3.4), b = reposo(14.0, 15.4); out.quieta = (a.deriva + b.deriva) / 2; out.tiembla = (a.tiembla + b.tiembla) / 2; out.quieta2 = b.deriva; }
+  for (const tr of TRAMOS) {
+    const sp = Math.hypot(...tr.v), dir = tr.v.map((x) => x / sp);
+    /* atraso en la parte pareja: lo que el real va adelante, en el sentido del movimiento, sobre la velocidad */
+    const par = traza.filter(([t, m]) => m && t > tr.t + 0.35 && t < tr.t + tr.d - 0.05);
+    const atraso = par.reduce((a, [, m, r]) => a + (r[0] - m[0]) * dir[0] + (r[1] - m[1]) * dir[1] + (r[2] - m[2]) * dir[2], 0) / par.length / sp * 1000;
+    /* arranque: cuándo se movió 1 cm lo mostrado, contra cuándo se movió 1 cm lo real */
+    const i0 = traza.findIndex(([t]) => t >= tr.t - 0.02), b = traza[i0], m0 = b[1], r0 = b[2];
+    const avanzo = (p, q) => (p[0] - q[0]) * dir[0] + (p[1] - q[1]) * dir[1] + (p[2] - q[2]) * dir[2];
+    const tR = traza.slice(i0).find(([, , r]) => avanzo(r, r0) > 0.01)?.[0], tM = m0 ? traza.slice(i0).find(([, m]) => m && avanzo(m, m0) > 0.01)?.[0] : null;
+    /* al frenar: cuánto se pasa lo mostrado de donde quedó el real */
+    const fin = traza.filter(([t, m]) => m && t > tr.t + tr.d && t < tr.t + tr.d + 0.5), rf = muneca(tr.t + tr.d + 0.3), cf = centro(puntos(tr.t + tr.d + 0.3));
+    const pasa = Math.max(0, ...fin.map(([, m]) => avanzo(m, cf))) * 1000;
+    out[tr.n] = { atraso, arranque: tR && tM ? (tM - tR) * 1000 : NaN, pasa };
+  }
+  /* tirón p99: la aceleración de lo mostrado contra la real */
+  const tir = []; for (let i = 2; i < traza.length; i++) { const [a, b, c] = [traza[i - 2], traza[i - 1], traza[i]]; if (!a[1] || !b[1] || !c[1]) continue; tir.push(Math.hypot(...[0, 1, 2].map((k) => (c[1][k] - 2 * b[1][k] + a[1][k]) - (c[2][k] - 2 * b[2][k] + a[2][k]))) * 1000); }
+  tir.sort((x, y) => x - y); out.tironP99 = tir[Math.floor(tir.length * 0.99)];
+  return out;
+}
+const rs = (process.env.SEMILLAS ? process.env.SEMILLAS.split(",").map(Number) : [1, 2, 3]).map(correr), m = (f) => rs.reduce((a, r) => a + f(r), 0) / rs.length;
+const res = { lat: +m((r) => r.lat).toFixed(0), quieta: +m((r) => r.quieta).toFixed(2), quieta2: +m((r) => r.quieta2).toFixed(2), tiembla: +m((r) => r.tiembla).toFixed(3), tironP99: +m((r) => r.tironP99).toFixed(1) };
+for (const tr of TRAMOS) res[tr.n] = { atraso: +m((r) => r[tr.n].atraso).toFixed(0), arranque: +m((r) => r[tr.n].arranque).toFixed(0), pasa: +m((r) => r[tr.n].pasa).toFixed(1) };
+if (process.env.CORTO) {
+  const lados = ['costado 5 cm/s', 'costado 10 cm/s', 'costado 20 cm/s', 'costado 40 cm/s', 'arriba 15 cm/s'], hon = ['lejos 10 cm/s', 'cerca 10 cm/s'];
+  const med = (ks, k) => ks.reduce((a, n) => a + res[n][k], 0) / ks.length;
+  console.log(JSON.stringify({ lat: res.lat, quieta: res.quieta, q2: res.quieta2, tiembla: res.tiembla, p99: res.tironP99, atrasoLado: +med(lados, 'atraso').toFixed(0), atraso5: res['costado 5 cm/s'].atraso, atraso10: res['costado 10 cm/s'].atraso, arranqueLado: +med(lados, 'arranque').toFixed(0), pasaLado: +med(lados, 'pasa').toFixed(1), atrasoHondo: +med(hon, 'atraso').toFixed(0), arranqueHondo: +med(hon, 'arranque').toFixed(0) }));
+} else console.log(JSON.stringify(res, null, 1));

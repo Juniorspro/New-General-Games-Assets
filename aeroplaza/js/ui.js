@@ -533,7 +533,8 @@ export const UI = {
   /* ------------------------------------------------------------ ventanas */
   ventana(titulo, cuerpo, { alCerrar, ancho, pie = '' } = {}) {
     this.cerrarVentana();
-    const v = this.poner(el(`<div class="velo"><div class="ventana" ${ancho ? `style="width:min(${ancho}px,94vw)"` : ''}><div class="cabeza"><h2></h2><button class="redondo" data-a="x" style="width:40px;height:40px;font-size:18px">✕</button></div><div class="cuerpo"></div>${pie}</div></div>`));
+    /* (el ancho con --vw, el de la pantalla del juego: con el celu parado va girada y 94vw era el alto) */
+    const v = this.poner(el(`<div class="velo"><div class="ventana" ${ancho ? `style="width:min(${ancho}px,calc(94 * var(--vw)))"` : ''}><div class="cabeza"><h2></h2><button class="redondo" data-a="x" style="width:40px;height:40px;font-size:18px">✕</button></div><div class="cuerpo"></div>${pie}</div></div>`));
     $('h2', v).textContent = titulo;
     const c = $('.cuerpo', v);
     if (typeof cuerpo === 'string') c.innerHTML = cuerpo; else c.appendChild(cuerpo);
@@ -875,10 +876,15 @@ export const UI = {
     const J = this.J, c = el(`<div class="menu-vr"><p>${t('vr_texto')}</p><div class="vr-opciones">
       <button class="vr-op" data-sbs="1"><b>${t('vr_sbs')}</b><small>${t('vr_sbs_d')}</small><i class="vr-dibujo doble"><span></span><span></span></i></button>
       <button class="vr-op" data-sbs="0"><b>${t('vr_simple')}</b><small>${t('vr_simple_d')}</small><i class="vr-dibujo"><span></span></i></button></div>
-      <div class="vr-llaves">${[['vrManos', 'vr_manos', 'vr_manos_d'], ['vrFps', 'vr_fps', 'vr_fps_d']].map(([k, n, d]) => `<button class="vr-llave${J.G.opciones[k] ? ' si' : ''}" data-o="${k}"><i></i><b>${t(n)}</b><small>${t(d)}</small></button>`).join('')}</div></div>`);
+      <div class="vr-llaves">${[['vrManos', 'vr_manos', 'vr_manos_d'], ['vrFps', 'vr_fps', 'vr_fps_d']].map(([k, n, d]) => `<button class="vr-llave${J.G.opciones[k] ? ' si' : ''}" data-o="${k}"><i></i><b>${t(n)}</b><small>${t(d)}</small></button>`).join('')}</div>
+      <div class="vr-suave${J.G.opciones.vrManos ? '' : ' apagada'}"><b>${t('vr_suave')}</b><div class="vr-tres">${['rapida', 'media', 'suave'].map((k) => `<button data-suave="${k}"><i class="${k}"></i>${t('vr_suave_' + k)}</button>`).join('')}</div><small></small></div></div>`);
     let elegido = false;
     const v = this.ventana('🥽 ' + t('vr_titulo'), c, { ancho: 560, alCerrar: () => { if (!elegido) alVolver && alVolver(); } });
-    c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !J.G.opciones[k]; b.classList.toggle('si', J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
+    c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !J.G.opciones[k]; b.classList.toggle('si', J.G.opciones[k]); if (k === 'vrManos') $('.vr-suave', c).classList.toggle('apagada', !J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
+    /* cómo van las manos con la cámara (manos.js › SUAVIDAD): rápidas, en el medio o suaves */
+    const ponerSuave = (k) => { J.G.opciones.vrSuave = k; c.querySelectorAll('[data-suave]').forEach((b) => b.classList.toggle('si', b.dataset.suave === k)); $('.vr-suave small', c).textContent = t('vr_suave_' + k + '_d'); };
+    ponerSuave(['rapida', 'media', 'suave'].includes(J.G.opciones.vrSuave) ? J.G.opciones.vrSuave : 'media');
+    c.querySelectorAll('[data-suave]').forEach((b) => b.onclick = () => { ponerSuave(b.dataset.suave); Guardado.guardar(); J.sfx('elegir'); });
     c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarVR(b.dataset.sbs === '1'); });
     /* con un visor de verdad (Quest, Pico, la compu con visor): una tercera opción, arriba de todo */
     VisorXR.soportado().then((si) => {
