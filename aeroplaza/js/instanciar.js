@@ -31,8 +31,11 @@ export function instanciarCopias(grupo) {
     if (!o.isMesh || o.isInstancedMesh || o.isSkinnedMesh || o.parent === grupo || o.userData.sinInstanciar || o.userData.copiaDe) return;
     const m = o.material; if (!m || Array.isArray(m) || m.transparent || !seVe(o, grupo)) return;
     if (o.onBeforeRender !== THREE.Object3D.prototype.onBeforeRender || o.morphTargetInfluences) return;
-    const k = `${o.geometry.uuid}|${m.uuid}|${+o.castShadow}${+o.receiveShadow}|${o.renderOrder}|${!!o.userData.pasa}|${o.frustumCulled}`;
-    let t = tandas.get(k); if (!t) tandas.set(k, (t = []));
+    /* (lo que se atraviesa a propósito lleva `pasa` en ella o en algo de arriba, como un portal: la
+       instancia cuelga del grupo y tiene que heredarlo) */
+    let pasa = false; for (let x = o; x && x !== grupo; x = x.parent) if (x.userData.pasa) pasa = true;
+    const k = `${o.geometry.uuid}|${m.uuid}|${+o.castShadow}${+o.receiveShadow}|${o.renderOrder}|${pasa}|${o.frustumCulled}`;
+    let t = tandas.get(k); if (!t) tandas.set(k, (t = Object.assign([], { pasa })));
     t.push(o);
   });
   const hechas = [];
@@ -40,7 +43,7 @@ export function instanciarCopias(grupo) {
     if (piezas.length < MINIMO) continue;
     const a = piezas[0], im = new THREE.InstancedMesh(a.geometry, a.material, piezas.length);
     im.castShadow = a.castShadow; im.receiveShadow = a.receiveShadow; im.renderOrder = a.renderOrder;
-    im.userData.pasa = a.userData.pasa; im.userData.copias = piezas; im.userData.sinInstanciar = true;
+    im.userData.pasa = piezas.pasa; im.userData.copias = piezas; im.userData.sinInstanciar = true;
     piezas.forEach((o, i) => {
       im.setMatrixAt(i, _m.multiplyMatrices(inv, o.matrixWorld));
       /* la pieza de verdad queda, escondida; su "visible" pasa a ser lo que quiere el juego */
