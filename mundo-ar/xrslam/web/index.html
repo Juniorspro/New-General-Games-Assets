@@ -19,12 +19,44 @@
   ?prueba=euroc&datos=<url>  reproduce una secuencia EuRoC exportada (sin
   cámara ni sensores) para probar todo en una compu.
 -->
-<!-- three.module.min.js pide "./three.core.js" SIN minificar (1,4 MB): el mapa lo cambia por el minificado. -->
-<script type="importmap">
-{ "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.min.js",
-  "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.min.js"
-} }
+<script>
+  // Script clásico (no módulo) a propósito: corre aunque el resto de la
+  // página no pueda (un WebView viejo sin módulos, un archivo que no baja).
+  // Muestra en pantalla cualquier error y, si en 20 s no cargó, qué le falta
+  // al navegador. Así "no carga" siempre viene con un motivo.
+  (function () {
+    var caja = null, lineas = [];
+    function mostrar(msg) {
+      lineas.push(String(msg));
+      if (!document.body) { document.addEventListener("DOMContentLoaded", function () { mostrar(lineas.pop()); }); return; }
+      if (!caja) {
+        caja = document.createElement("div"); caja.id = "falla";
+        caja.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#3a0b1e;color:#fff;border:1px solid #ff6b8b;" +
+          "border-radius:12px;padding:10px 12px;font:13px/1.45 system-ui,sans-serif;white-space:pre-wrap;max-height:45vh;overflow:auto";
+        document.body.appendChild(caja);
+      }
+      caja.textContent = "⚠ " + lineas.join("\n⚠ ");
+    }
+    window.__falla = mostrar;
+    addEventListener("error", function (e) {
+      var t = e.target && e.target !== window ? (e.target.src || e.target.href || e.target.tagName) : "";
+      mostrar("Error: " + (e.message || (t === "SCRIPT" ? "no bajó un script de la página (el principal o three.js): revisá la conexión" : "no se pudo cargar " + t)));
+    }, true);
+    addEventListener("unhandledrejection", function (e) { mostrar("Error: " + (e.reason && e.reason.message ? e.reason.message : e.reason)); });
+    var falta = [];
+    if (!window.WebAssembly) falta.push("WebAssembly");
+    if (!("noModule" in document.createElement("script"))) falta.push("módulos de JavaScript");
+    if (!window.Worker) falta.push("Web Workers");
+    if (window.isSecureContext === false) falta.push("https (contexto seguro): sin eso no hay cámara");
+    else if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) falta.push("cámara (getUserMedia)");
+    var m = navigator.userAgent.match(/Chrome\/(\d+)/);
+    var nav = m ? "Chrome " + m[1] + (/; wv\)/.test(navigator.userAgent) ? " (WebView)" : "") : navigator.userAgent;
+    window.__navegador = nav;
+    if (falta.length) mostrar("Este navegador no tiene: " + falta.join(", ") + ". (" + nav + ")");
+    setTimeout(function () {
+      if (!window.__cargo) mostrar("No terminó de cargar en 20 s. " + (window.__etapa ? "Se quedó en: " + window.__etapa + ". " : "El script principal ni arrancó (¿navegador viejo?). ") + "(" + nav + ")");
+    }, 20000);
+  })();
 </script>
 <style>
   :root { color-scheme: dark; --fondo: #07030f; --texto: #f2eeff; --tenue: #b3a8d6; --dorado: #f2cf6b; --violeta: #8b5cff;
@@ -93,7 +125,9 @@
 </main>
 
 <script type="module">
-import * as THREE from "three";
+// three desde este mismo repo (el de Tajo, un solo archivo): sin CDN ni import map.
+import * as THREE from "../../../tajo/vendor/three.module.min.js";
+window.__etapa = "el script principal arrancó";
 import { Flujo, calibrarCamaraIMU } from "./desfase.js";
 
 const $ = (s) => document.querySelector(s);
@@ -609,8 +643,23 @@ async function acostar() {
 }
 
 // ───────────────────── arranque ─────────────────────
-textoSlam = await (await fetch(new URL("./slam.yaml", import.meta.url))).text();
-$("#empezar").disabled = false; $("#empezar").textContent = PRUEBA ? "Reproducir EuRoC" : "Empezar";
+// El botón se habilita cuando están la configuración Y el wasm (4 MB) listo en el Worker.
+let wasmListo = false, yamlListo = false;
+const quizasHabilitar = () => {
+  if (!(wasmListo && yamlListo)) return;
+  window.__cargo = true; window.__etapa = "listo";
+  $("#empezar").disabled = false; $("#empezar").textContent = PRUEBA ? "Reproducir EuRoC" : "Empezar";
+};
+window.__etapa = "bajando la configuración y XRSLAM (4 MB)";
+$("#empezar").textContent = "Cargando XRSLAM (4 MB)…";
+fetch(new URL("./slam.yaml", import.meta.url)).then((r) => { if (!r.ok) throw new Error("slam.yaml: " + r.status); return r.text(); })
+  .then((t) => { textoSlam = t; yamlListo = true; quizasHabilitar(); })
+  .catch((e) => window.__falla("No bajó la configuración: " + e.message));
+trabajador.addEventListener("message", (e) => {
+  if (e.data.tipo === "cargado") { wasmListo = true; quizasHabilitar(); }
+  else if (e.data.tipo === "error") window.__falla("XRSLAM no cargó en el Worker: " + e.data.mensaje);
+});
+trabajador.addEventListener("error", (e) => window.__falla("El Worker no arrancó: " + (e.message || "sin detalle") + " (¿el WebView no tiene Workers de tipo módulo?)"));
 $("#empezar").addEventListener("click", async () => {
   inicio.hidden = true; capa.hidden = false;
   try {

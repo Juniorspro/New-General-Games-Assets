@@ -16,7 +16,9 @@ fs.mkdirSync(salida, { recursive: true });
 const tipos = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".wasm": "application/wasm", ".yaml": "text/plain" };
 const serv = http.createServer((q, r) => {
   const url = decodeURIComponent(q.url.split("?")[0]);
-  const f = url.startsWith("/euroc/") ? path.join(datos, url.slice(7)) : path.join(web, url === "/" ? "index.html" : url);
+  // La página pide three a ../../../tajo/vendor: desde la raíz del servidor queda en /tajo/.
+  const raiz = path.join(web, "..", "..", "..");
+  const f = url.startsWith("/euroc/") ? path.join(datos, url.slice(7)) : url.startsWith("/tajo/") ? path.join(raiz, url) : path.join(web, url === "/" ? "index.html" : url);
   if (!fs.existsSync(f)) { r.writeHead(404); return r.end(); }
   const tam = fs.statSync(f).size, rango = q.headers.range && /bytes=(\d+)-(\d+)/.exec(q.headers.range);
   const cab = { "content-type": tipos[path.extname(f)] || "application/octet-stream" };
@@ -32,12 +34,18 @@ await new Promise((ok) => serv.on("listening", ok));
 const nav = await chromium.launch({ args: ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const ctx = await nav.newContext({ viewport: { width: 800, height: 450 } });
 await ctx.route("https://cdn.jsdelivr.net/npm/three@0.186.1/build/*", (r) => r.fulfill({ contentType: "text/javascript", body: fs.readFileSync(path.join(threeDir, path.basename(new URL(r.request().url()).pathname))) }));
+if (process.env.BLOQUEAR) await ctx.route(new RegExp(process.env.BLOQUEAR), (r) => r.abort());
 const p = await ctx.newPage();
 const errores = [];
 p.on("pageerror", (e) => errores.push(e.message));
 p.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errores.push(m.text()); });
 await p.goto(`http://127.0.0.1:${serv.address().port}/?prueba=euroc&datos=/euroc${calibrar ? "&calibrar=1" : ""}${extra ? "&" + extra : ""}`);
-await p.waitForFunction(() => !document.querySelector("#empezar").disabled, null, { timeout: 60000 });
+const listo = await p.waitForFunction(() => !document.querySelector("#empezar").disabled, null, { timeout: Number(process.env.ESPERA || 60000) }).then(() => true, () => false);
+if (!listo) {
+  console.log("no cargó. En pantalla:", await p.evaluate(() => (document.querySelector("#falla") || {}).textContent || "(nada)"));
+  console.log("botón:", await p.textContent("#empezar"));
+  await nav.close(); serv.close(); process.exit(0);
+}
 await p.click("#empezar");
 const seg = Number(segTxt || 150), t0 = Date.now(), muestras = [];
 let captura = 0;

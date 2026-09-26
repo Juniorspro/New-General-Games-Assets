@@ -24,7 +24,8 @@ let estadoAvisado = -1;
 let tPendiente = null, tGiro = -Infinity, tAcel = -Infinity, acumulado = 0;
 const MAX_PUNTOS = 3000;
 const listo = XRSLAM({ print: () => {}, printErr: (s) => { if (/error|fatal/i.test(s)) console.warn("[xrslam]", s); } })
-  .then((m) => { M = m; pPose = M._malloc(8 * 8); pPts = M._malloc(MAX_PUNTOS * 3 * 8); });
+  .then((m) => { M = m; pPose = M._malloc(8 * 8); pPts = M._malloc(MAX_PUNTOS * 3 * 8); postMessage({ tipo: "cargado" }); })
+  .catch((e) => { postMessage({ tipo: "error", mensaje: String(e && e.message ? e.message : e) }); throw e; });
 
 function avisarPose() {
   const estado = M._xr_estado();
