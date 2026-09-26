@@ -15,9 +15,12 @@ const MODELOS = [
   { nombre: "Renault 12", malla: "sedan", tipo: "auto" }, { nombre: "Fiat Siena", malla: "compacto", tipo: "auto" }, { nombre: "Chevrolet Prisma", malla: "compacto", tipo: "auto" },
   { nombre: "Fiat Uno", malla: "hatch", tipo: "auto" }, { nombre: "VW Gol", malla: "hatch", tipo: "auto" },
   { nombre: "Mercedes-Benz 1114", malla: "camion", tipo: "camion" }, { nombre: "Honda Wave 110", malla: "moto", tipo: "moto" },
+  // El gaucho viene sentado en el modelo (una sola malla); al bajarse se cambia por el cuatri vacío.
+  { nombre: "Cuatriciclo 250 cc", malla: "cuatrigaucho", tipo: "cuatri" },
 ];
 const COLORES = [["Blanco", "#f2f2ee"], ["Gris plata", "#a9adb3"], ["Negro", "#222326"], ["Rojo", "#b3261e"], ["Azul", "#2a4f9a"], ["Verde", "#3b6e44"], ["Celeste", "#86b6d8"], ["Bordó", "#6a1522"], ["Beige", "#d8c7a0"]];
 const ASEGURADORAS = ["La Segunda", "Sancor Seguros", "Federación Patronal", "Rivadavia Seguros", "La Caja", "Mercantil Andina"];
+const CARGAS_CAMPO = ["Un rollo de alambre y el mate", "Sal para la hacienda", "Nada, oficial, voy al campo de un vecino", "Unas bolsas de alimento para los terneros", "El lazo y el poncho, nomás"];
 const CARGAS = ["Mercadería para el almacén", "Bolsos con ropa", "Herramientas de trabajo", "Verduras y frutas", "Una garrafa y el auxilio", "Nada, oficial, el auxilio nomás", "Repuestos para el campo", "Cajas de la mudanza"];
 const OBJETOS_BAUL = [["Bolso deportivo", "#2d3d6b"], ["Caja de cartón", "#b58b55"], ["Rueda de auxilio", "#1c1c1e"], ["Cajón de verdura", "#7a9a3a"], ["Garrafa", "#3a78c8"], ["Caja de herramientas", "#c0392b"], ["Bolsa de mercadería", "#e8e2d0"], ["Mochila", "#4a4a4a"]];
 
@@ -117,6 +120,8 @@ function dibujarRostro(g, f, o) {
   if (o.ojosRojos) { g.fillStyle = "rgba(220,70,60,0.22)"; for (const l of [-1, 1]) { g.beginPath(); g.ellipse(cx + l * w * 0.6, cy + hh * 0.18, s * 0.08, s * 0.05, 0, 0, Math.PI * 2); g.fill(); } }
   // Pelo de adelante.
   dibujarPelo(g, f, cx, cy, w, hh, s);
+  if (!o.foto) dibujarGorro(g, f, cx, cy, w, hh, s); // en la foto del DNI, sin gorro
+  if (f.panuelo) { g.fillStyle = "#b3261e"; g.beginPath(); g.moveTo(cx - s * 0.2, cy + s * 0.5); g.lineTo(cx + s * 0.2, cy + s * 0.5); g.lineTo(cx, cy + s * 0.78); g.fill(); g.fillRect(cx - s * 0.16, cy + s * 0.44, s * 0.32, s * 0.08); }
   // Anteojos.
   if (f.anteojos) { g.strokeStyle = "#1a1a1a"; g.lineWidth = s * 0.012; for (const l of [-1, 1]) { g.beginPath(); g.roundRect ? g.roundRect(cx + l * w * 0.42 - s * 0.09, ey - s * 0.06, s * 0.18, s * 0.12, s * 0.03) : g.rect(cx + l * w * 0.42 - s * 0.09, ey - s * 0.06, s * 0.18, s * 0.12); g.stroke(); } g.beginPath(); g.moveTo(cx - w * 0.42 + s * 0.09, ey - s * 0.01); g.lineTo(cx + w * 0.42 - s * 0.09, ey - s * 0.01); g.stroke(); }
   // Transpiración (nervios).
@@ -134,6 +139,13 @@ function dibujarPelo(g, f, cx, cy, w, hh, s) {
     case 4: for (let k = 0; k < 16; k++) { const a = Math.PI * (0.05 + (k / 15) * 0.9); g.beginPath(); g.arc(cx - Math.cos(a) * w * 1.02, cy - hh * 0.25 - Math.sin(a) * hh * 0.82, s * 0.09, 0, Math.PI * 2); g.fill(); } break;
     case 5: g.fillStyle = "#1f3a78"; tapa(0.18, 0.28); g.fillStyle = "#16295a"; g.beginPath(); g.ellipse(cx + w * 0.15, cy - hh * 0.68, w * 0.9, s * 0.04, -0.05, 0, Math.PI * 2); g.fill(); break;
   }
+}
+// Boina del gaucho, gorra del camionero, gorra plana del señor mayor.
+function dibujarGorro(g, f, cx, cy, w, hh, s) {
+  if (!f.gorro) return;
+  if (f.gorro === "boina") { g.fillStyle = "#15161a"; g.beginPath(); g.ellipse(cx + w * 0.12, cy - hh * 0.78, w * 1.2, hh * 0.34, -0.08, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(cx + w * 0.1, cy - hh * 1.1, s * 0.02, 0, Math.PI * 2); g.fill(); }
+  else if (f.gorro === "gorra") { g.fillStyle = "#b3261e"; g.beginPath(); g.ellipse(cx, cy - hh * 0.72, w * 1.05, hh * 0.42, 0, Math.PI, Math.PI * 2); g.fill(); g.fillRect(cx - w * 1.05, cy - hh * 0.74, w * 2.1, hh * 0.1); g.fillStyle = "#8f1d17"; g.beginPath(); g.ellipse(cx, cy - hh * 0.62, w * 0.95, hh * 0.1, 0, 0, Math.PI); g.fill(); }
+  else if (f.gorro === "plana") { g.fillStyle = "#3a3b3f"; g.beginPath(); g.moveTo(cx - w * 1.08, cy - hh * 0.55); g.quadraticCurveTo(cx - w * 0.2, cy - hh * 1.25, cx + w * 1.0, cy - hh * 0.8); g.lineTo(cx + w * 1.1, cy - hh * 0.55); g.closePath(); g.fill(); }
 }
 function aclarar(hex, k) {
   const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, gg = (n >> 8) & 255, b = n & 255;
@@ -168,13 +180,21 @@ function crearRegistro() { const personas = new Map(), vehiculos = new Map(); re
 
 // 30 % sospechosos, como pide el diseño. Devuelve el perfil y lo carga en el registro.
 function generarConductor(r, registro, dificultad = 1) {
-  const mujer = r() < 0.28, edad = 19 + Math.floor(r() * 52), nac = sumarDias(HOY, -Math.floor(edad * 365.25 + r() * 365));
-  const modelo = elegir(r, MODELOS), [colorNombre, color] = elegir(r, COLORES);
+  const modelo = elegir(r, MODELOS), gaucho = modelo.tipo === "cuatri";
+  const mujer = !gaucho && r() < 0.28, edad = gaucho ? 30 + Math.floor(r() * 35) : 19 + Math.floor(r() * 52), nac = sumarDias(HOY, -Math.floor(edad * 365.25 + r() * 365));
+  const [colorNombre, color] = gaucho ? ["Rojo", "#b3261e"] : elegir(r, COLORES);
   const p = { mujer, edad, nacimiento: nac, rostro: rostroAzar(r, mujer, edad), nombre: nombreAzar(r, mujer), modelo, colorNombre, color, patente: patenteAzar(r) };
   p.dni = dniAzar(r, nac.getFullYear());
   p.origen = elegir(r, LUGARES); do p.destino = elegir(r, LUGARES); while (p.destino === p.origen);
-  p.carga = elegir(r, CARGAS);
-  const cat = modelo.tipo === "moto" ? "A.2.1" : modelo.tipo === "camion" ? "C.1" : r() < 0.7 ? "B.1" : "B.2";
+  p.carga = elegir(r, gaucho ? CARGAS_CAMPO : CARGAS);
+  // Qué personaje 3D baja del vehículo (la cara 2D sale de los mismos rasgos).
+  p.figura = gaucho ? "gaucho" : modelo.tipo === "camion" && !mujer ? "camionero" : mujer ? (edad >= 55 ? "senora" : "conductora") : edad >= 58 ? "mayor" : edad < 30 ? "joven" : "conductor";
+  if (gaucho) { p.rostro.gorro = "boina"; p.rostro.barba = 1; p.rostro.peinado = 1; p.rostro.panuelo = true; p.rostro.ropa = "#8fb3d9"; if (r() < 0.6) { p.origen = elegir(r, ["Presidencia Roca", "Pampa del Indio", "El Colorado"]); p.destino = elegir(r, ["un campo sobre la 11", "la estancia de los Benítez", "Presidencia Roca"]); } }
+  else if (p.figura === "camionero") { p.rostro.gorro = "gorra"; p.rostro.barba = 2; p.rostro.ropa = "#243a6b"; }
+  else if (p.figura === "mayor") { p.rostro.gorro = "plana"; p.rostro.barba = 1; p.rostro.pelo = "#8a8a8a"; p.rostro.ropa = "#8b6a44"; }
+  else if (p.figura === "senora") { p.rostro.anteojos = true; p.rostro.pelo = "#8f857c"; p.rostro.peinado = 4; p.rostro.ropa = "#b79acb"; }
+  else if (p.figura === "joven") { p.rostro.barba = 2; p.rostro.peinado = 0; p.rostro.ropa = "#2f5a3b"; }
+  const cat = modelo.tipo === "moto" ? "A.2.1" : modelo.tipo === "cuatri" ? "A.3" : modelo.tipo === "camion" ? "C.1" : r() < 0.7 ? "B.1" : "B.2";
   p.docs = {
     dni: { numero: p.dni, nombre: p.nombre, nacimiento: nac, rostro: p.rostro },
     licencia: { presente: true, numero: p.dni, nombre: p.nombre, categoria: cat, vence: sumarDias(HOY, 60 + Math.floor(r() * 1500)) },
@@ -182,7 +202,7 @@ function generarConductor(r, registro, dificultad = 1) {
     seguro: { presente: true, compania: elegir(r, ASEGURADORAS), poliza: String(100000 + Math.floor(r() * 899999)), vence: sumarDias(HOY, 15 + Math.floor(r() * 300)) },
   };
   // Faltas comunes.
-  p.sinCinturon = modelo.tipo !== "moto" && r() < 0.15; p.sinCasco = modelo.tipo === "moto" && r() < 0.3;
+  p.sinCinturon = modelo.tipo !== "moto" && !gaucho && r() < 0.15; p.sinCasco = modelo.tipo === "moto" ? r() < 0.3 : gaucho && r() < 0.55;
   p.lucesQuemadas = r() < 0.12;
   if (r() < 0.1) { if (r() < 0.5) p.docs.seguro.presente = false; else p.docs.seguro.vence = sumarDias(HOY, -10 - Math.floor(r() * 200)); }
   const lic = r(); if (lic < 0.08) p.docs.licencia.vence = sumarDias(HOY, -5 - Math.floor(r() * 300)); else if (lic < 0.13) p.docs.licencia.vence = sumarDias(HOY, -400 - Math.floor(r() * 900));
@@ -226,7 +246,7 @@ function faltasReales(p) {
   if (p.sinCinturon || p.sinCasco) f.push("sinCinturon");
   if (p.lucesQuemadas) f.push("lucesQuemadas");
   if (!d.seguro.presente || d.seguro.vence < HOY) f.push("sinSeguro");
-  const habilita = d.licencia.presente && (p.modelo.tipo === "moto" ? d.licencia.categoria.startsWith("A") : p.modelo.tipo === "camion" ? /^[CE]/.test(d.licencia.categoria) : /^[BCDE]/.test(d.licencia.categoria));
+  const habilita = d.licencia.presente && (p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri" ? d.licencia.categoria.startsWith("A") : p.modelo.tipo === "camion" ? /^[CE]/.test(d.licencia.categoria) : /^[BCDE]/.test(d.licencia.categoria));
   const dias = d.licencia.presente ? diasEntre(d.licencia.vence, HOY) : 0;
   if (!habilita) f.push("sinLicencia"); else if (dias > 365) f.push("licenciaVieja"); else if (dias > 0) f.push("licenciaVencida");
   if (p.alcohol > 0.5) f.push("alcohol");

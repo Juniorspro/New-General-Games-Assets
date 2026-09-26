@@ -10,7 +10,7 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const SAL = "../../procesados/";
 const tris = (doc) => doc.getRoot().listMeshes().reduce((s, m) => s + m.listPrimitives().reduce((a, p) => a + (p.getIndices() ? p.getIndices().getCount() : p.getAttribute("POSITION").getCount()) / 3, 0), 0);
 await MeshoptSimplifier.ready;
-for (const [k, meta, error] of [["conductor", 9000, 0.012], ["conductora", 9000, 0.012], ["policia", 9000, 0.012]]) {
+for (const [k, meta, error] of [["mayor", 9000, 0.012], ["joven", 9000, 0.012], ["camionero", 9000, 0.012], ["senora", 9000, 0.012], ["gaucho", 9000, 0.012], ["conductor", 9000, 0.012], ["conductora", 9000, 0.012], ["policia", 9000, 0.012]]) {
   const doc = await io.read(SAL + `${k}.glb`), antes = tris(doc);
   await doc.transform(weld({ tolerance: 0.0005 }), simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, meta / antes), error }), prune());
   await io.write(SAL + `${k}.glb`, doc);

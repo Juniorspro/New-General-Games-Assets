@@ -13,7 +13,7 @@ const CR = "../../crudos/", SAL = "../../procesados/";
 fs.mkdirSync(SAL, { recursive: true });
 const tris = (doc) => doc.getRoot().listMeshes().reduce((s, m) => s + m.listPrimitives().reduce((a, p) => a + (p.getIndices() ? p.getIndices().getCount() : p.getAttribute("POSITION").getCount()) / 3, 0), 0);
 // Cuántos triángulos se quiere para cada uno (se ven de cerca: autos y garita).
-const ESTATICOS = { pickup: 7000, sedan: 8000, compacto: 8000, hatch: 8000, camion: 9000, moto: 4000, patrullero: 9000, motopol: 5000, garita: 4000, algarrobo: 3000, quebracho: 2500 };
+const ESTATICOS = { pickup: 7000, sedan: 8000, compacto: 8000, hatch: 8000, camion: 9000, moto: 4000, patrullero: 9000, motopol: 5000, garita: 4000, algarrobo: 3000, quebracho: 2500, cuatrigaucho: 9000, cuatri: 6000 };
 // La segunda pasada (de a uno, revisando cada imagen y cada 3D) dejó versiones
 // mejores de algunos en crudos/uno/: si están, se usan esas.
 const origen = (k) => { const v2 = CR + `uno/v2-modelo-${k}-g1.glb`; return fs.existsSync(v2) ? v2 : CR + `modelo-${k}-g1.glb`; };
@@ -28,8 +28,10 @@ for (const [k, meta] of Object.entries(ESTATICOS)) {
   console.log(k, origen(k).includes("/uno/") ? "(v2)" : "", antes, "→", Math.round(tris(doc)));
 }
 // Personajes: el quieto con la caminata copiada.
-for (const k of ["conductor", "conductora", "policia"]) {
-  const doc = await io.read(CR + `rig-${k}-idle-g1.glb`), otro = await io.read(CR + `rig-${k}-walk-g1.glb`);
+// Los de la segunda pasada (de a uno) viven en crudos/uno/ con prefijo v2-.
+const rig = (k, a) => { const v2 = CR + `uno/v2-rig-${k}-${a}-g1.glb`; return fs.existsSync(v2) ? v2 : CR + `rig-${k}-${a}-g1.glb`; };
+for (const k of ["conductor", "conductora", "policia", "mayor", "joven", "camionero", "senora", "gaucho"]) {
+  const doc = await io.read(rig(k, "idle")), otro = await io.read(rig(k, "walk"));
   const nodos = new Map(doc.getRoot().listNodes().map((n) => [n.getName(), n]));
   const buf = doc.getRoot().listBuffers()[0];
   doc.getRoot().listAnimations().forEach((a) => a.setName("idle"));

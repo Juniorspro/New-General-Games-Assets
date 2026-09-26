@@ -795,6 +795,338 @@
    "output_path": "assets/v2-modelo-patrullero-g1.glb",
    "estado": "ready",
    "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-patrullero-g1.glb"
+  },
+  "v2-fuente-mayor": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 68-year-old man from rural northern Argentina, slightly heavy build, grey moustache, dark flat cap, light blue long-sleeve button shirt under a brown knitted wool vest, grey dress trousers, black leather shoes. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-651e2d0cd6a845b8b322",
+   "output_path": "assets/v2-fuente-mayor-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-mayor-g1.png"
+  },
+  "v2-modelo-mayor": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old man in A-pose, flat cap, wool vest, grey trousers",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-mayor-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-3a07c853d1a84e12a1ef",
+   "output_path": "assets/v2-modelo-mayor-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-mayor-g1.glb"
+  },
+  "v2-rig-mayor-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-3a07c853d1a84e12a1ef",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-fdf99f97a8be4e31a667",
+   "output_path": "assets/v2-rig-mayor-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-mayor-walk-g1.glb"
+  },
+  "v2-rig-mayor-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-3a07c853d1a84e12a1ef",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-564f7ca4bab3479c963a",
+   "output_path": "assets/v2-rig-mayor-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-mayor-idle-g1.glb"
+  },
+  "v2-fuente-joven": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 22-year-old slim young man from northern Argentina, short black hair with faded sides, thin beard, dark green hoodie with no print, black track pants with a white side stripe, white sneakers. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-d88c8145dc594cce9c59",
+   "output_path": "assets/v2-fuente-joven-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-joven-g1.png"
+  },
+  "v2-modelo-joven": {
+   "type": "model3d",
+   "params": {
+    "prompt": "young man in A-pose, green hoodie, black track pants",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-joven-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-f25012a288d243bb8401",
+   "output_path": "assets/v2-modelo-joven-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-joven-g1.glb"
+  },
+  "v2-rig-joven-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-f25012a288d243bb8401",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-3743c1942f8048cb87ff",
+   "output_path": "assets/v2-rig-joven-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-joven-walk-g1.glb"
+  },
+  "v2-rig-joven-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-f25012a288d243bb8401",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-975910a65f484d5da87f",
+   "output_path": "assets/v2-rig-joven-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-joven-idle-g1.glb"
+  },
+  "v2-fuente-camionero": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 50-year-old heavyset Argentine truck driver with a round belly, short grey stubble beard, red baseball cap with no logo, short-sleeve navy blue work shirt with two chest pockets, khaki cargo work trousers, brown work boots. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-756b4e8db5314dc9913f",
+   "output_path": "assets/v2-fuente-camionero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-camionero-g1.png"
+  },
+  "v2-modelo-camionero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "heavyset man in A-pose, red cap, navy work shirt, khaki pants",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-camionero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-e00f1cc8d3274d8f9908",
+   "output_path": "assets/v2-modelo-camionero-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-camionero-g1.glb"
+  },
+  "v2-rig-camionero-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-e00f1cc8d3274d8f9908",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-27d3cbee475046b7996e",
+   "output_path": "assets/v2-rig-camionero-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-camionero-walk-g1.glb"
+  },
+  "v2-rig-camionero-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-e00f1cc8d3274d8f9908",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-987f0c540f004c69a8c1",
+   "output_path": "assets/v2-rig-camionero-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-camionero-idle-g1.glb"
+  },
+  "v2-fuente-senora": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 62-year-old woman from northern Argentina, short wavy grey-brown hair, small reading glasses, lilac cardigan over a white blouse, knee-length dark grey skirt, flat black shoes. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-10a437abe3d4448eb934",
+   "output_path": "assets/v2-fuente-senora-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-senora-g1.png"
+  },
+  "v2-modelo-senora": {
+   "type": "model3d",
+   "params": {
+    "prompt": "older woman in A-pose, lilac cardigan, grey skirt, glasses",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-senora-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-a83a07bcb2434781902a",
+   "output_path": "assets/v2-modelo-senora-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-senora-g1.glb"
+  },
+  "v2-rig-senora-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-a83a07bcb2434781902a",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-99fbb8747b084ffc84b7",
+   "output_path": "assets/v2-rig-senora-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-senora-walk-g1.glb"
+  },
+  "v2-rig-senora-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-a83a07bcb2434781902a",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-f89b2d8ae0ed42a593b3",
+   "output_path": "assets/v2-rig-senora-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-senora-idle-g1.glb"
+  },
+  "v2-fuente-gaucho": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 45-year-old Argentine gaucho from the Chaco countryside, tanned skin, thick black moustache, black wool beret (boina) worn flat, red neckerchief tied at the neck, light blue long-sleeve work shirt, wide beige bombacha de campo trousers gathered at the ankle, wide dark leather belt with silver coins (rastra), brown leather riding boots, no knife, no weapons. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-c9133bac50804f509ce9",
+   "output_path": "assets/v2-fuente-gaucho-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-gaucho-g1.png"
+  },
+  "v2-modelo-gaucho": {
+   "type": "model3d",
+   "params": {
+    "prompt": "gaucho man in A-pose, black beret, red neckerchief, beige bombacha trousers, boots",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-gaucho-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-4d7bdf454f4149578e3e",
+   "output_path": "assets/v2-modelo-gaucho-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-gaucho-g1.glb"
+  },
+  "v2-rig-gaucho-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-4d7bdf454f4149578e3e",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-ff9e4396403e4765be5e",
+   "output_path": "assets/v2-rig-gaucho-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-gaucho-walk-g1.glb"
+  },
+  "v2-rig-gaucho-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-4d7bdf454f4149578e3e",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-b7fb11823c994184a7ea",
+   "output_path": "assets/v2-rig-gaucho-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-gaucho-idle-g1.glb"
+  },
+  "v2-fuente-cuatrigaucho": {
+   "type": "image",
+   "params": {
+    "prompt": "A single red utility farm ATV quad bike with front and rear black steel cargo racks, chunky off-road tyres, ridden by an Argentine gaucho sitting on it with both hands on the handlebars and feet on the footrests: black wool beret, thick moustache, red neckerchief, light blue shirt, beige bombacha trousers, brown leather boots, no helmet, no weapons. Clean semi-realistic game asset, three-quarter front view from slightly above, the whole quad and rider visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-58cfc294298c4b82b6d9",
+   "output_path": "assets/v2-fuente-cuatrigaucho-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-cuatrigaucho-g1.png"
+  },
+  "v2-modelo-cuatrigaucho": {
+   "type": "model3d",
+   "params": {
+    "prompt": "red farm ATV quad with a seated gaucho rider",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-cuatrigaucho-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-2533b38038264f5c8467",
+   "output_path": "assets/v2-modelo-cuatrigaucho-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-cuatrigaucho-g1.glb"
+  },
+  "v2-fuente-cuatri": {
+   "type": "image",
+   "params": {
+    "prompt": "The same red utility farm ATV quad bike as in the reference image, but empty with nobody on it, parked: front and rear black steel cargo racks with a rolled wool poncho on the front rack and a coiled rope and a metal box on the rear rack, chunky off-road tyres. Clean semi-realistic game asset, three-quarter front view from slightly above, the whole quad visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, no people, nothing else.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-cuatrigaucho-g1.png"
+    ]
+   },
+   "task_id": "gtask-0812d58459b1463196d7",
+   "output_path": "assets/v2-fuente-cuatri-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-cuatri-g1.png"
+  },
+  "v2-modelo-cuatri": {
+   "type": "model3d",
+   "params": {
+    "prompt": "empty red farm ATV quad with racks",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-cuatri-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-efbfc3ccf5854b589093",
+   "output_path": "assets/v2-modelo-cuatri-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-cuatri-g1.glb"
   }
  },
  "ref": "RTkRyBVlZq"

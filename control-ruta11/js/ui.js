@@ -177,7 +177,7 @@ function Retrato() {
     const dibujar = (ms) => {
       raf = requestAnimationFrame(dibujar);
       const I = Juego.insp; if (!I) return;
-      const p = I.p, t = ms / 1000, ahora = performance.now(), moto = p.modelo.tipo === "moto", noche = Juego.est.noche;
+      const p = I.p, t = ms / 1000, ahora = performance.now(), moto = p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri", noche = Juego.est.noche;
       const nerv = p.estado === "nervioso" ? 1 : p.estado === "falso" ? 0.55 : 0, borr = p.estado === "borracho";
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       // Fondo: el interior del auto (o la ruta detrás de la moto).
@@ -255,7 +255,7 @@ function Documentos({ insp }) {
           h("dl", null, h("dt", null, "Apellido y nombre"), h("dd", null, d.dni.nombre), h("dt", null, "Nacimiento"), h("dd", null, fecha(d.dni.nacimiento)), h("dt", null, "Documento"), h("dd", { className: "grande" }, dniTexto(d.dni.numero))))),
       d.licencia.presente ? h("div", { className: "doc lic" },
         h("div", { className: "doc-cab" }, "LICENCIA DE CONDUCIR"),
-        h("dl", null, h("dt", null, "Titular"), h("dd", null, d.licencia.nombre), h("dt", null, "N.º"), h("dd", null, dniTexto(d.licencia.numero)), h("dt", null, "Clase"), h("dd", null, d.licencia.categoria + (d.licencia.categoria.startsWith("A") ? " (motos)" : d.licencia.categoria.startsWith("C") ? " (camiones)" : " (autos y camionetas)")), h("dt", null, "Vence"), h("dd", null, h(Vence, { fecha: d.licencia.vence })))) : falta("LICENCIA DE CONDUCIR"),
+        h("dl", null, h("dt", null, "Titular"), h("dd", null, d.licencia.nombre), h("dt", null, "N.º"), h("dd", null, dniTexto(d.licencia.numero)), h("dt", null, "Clase"), h("dd", null, d.licencia.categoria + (d.licencia.categoria === "A.3" ? " (cuatriciclos)" : d.licencia.categoria.startsWith("A") ? " (motos)" : d.licencia.categoria.startsWith("C") ? " (camiones)" : " (autos y camionetas)")), h("dt", null, "Vence"), h("dd", null, h(Vence, { fecha: d.licencia.vence })))) : falta("LICENCIA DE CONDUCIR"),
       d.cedula.presente ? h("div", { className: "doc ced" },
         h("div", { className: "doc-cab" }, "CÉDULA DE IDENTIFICACIÓN DEL AUTOMOTOR"),
         h("dl", null, h("dt", null, "Dominio"), h("dd", { className: "grande" }, d.cedula.patente), h("dt", null, "Titular"), h("dd", null, d.cedula.titular), h("dt", null, "Modelo"), h("dd", null, d.cedula.modelo), h("dt", null, "Color"), h("dd", null, d.cedula.color))) : falta("CÉDULA VERDE"),
@@ -355,7 +355,7 @@ function Acta({ acta }) {
 const BW = 820, BH = 500;
 function armarBaul(insp) {
   if (insp.baulCosas) return insp.baulCosas;
-  const p = insp.p, r = Math.random, cosas = [], moto = p.modelo.tipo === "moto", camion = p.modelo.tipo === "camion";
+  const p = insp.p, r = Math.random, cosas = [], moto = p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri", camion = p.modelo.tipo === "camion";
   const tam = (n) => (n.includes("Rueda") ? [150, 150, "circulo"] : n.includes("Garrafa") ? [96, 96, "circulo"] : n.includes("herramientas") ? [170, 80] : n.includes("Bolso") ? [190, 100] : n.includes("Mochila") ? [120, 110] : n.includes("Paquete") ? [74, 48] : n.includes("Arma") ? [118, 44, "arma"] : n.includes("Cajón") ? [150, 100] : [140, 105]);
   const escala = moto ? 0.8 : 1, zona = moto ? { x: 230, y: 110, w: 360, h: 280 } : { x: 70, y: 80, w: BW - 140, h: BH - 150 };
   const legales = p.baul.filter((o) => !o.ilegal), ocultos = p.baul.filter((o) => o.ilegal && o.escondido), vistos = p.baul.filter((o) => o.ilegal && !o.escondido);
@@ -412,7 +412,7 @@ function Baul({ est }) {
   if (!insp) return null;
   const ha = insp.hallazgos;
   return h("div", { className: "baul", role: "dialog", "aria-label": "Revisión del baúl" },
-    h("div", { className: "baul-cab" }, h("div", null, h("b", null, insp.p.modelo.tipo === "camion" ? "Carga del camión" : insp.p.modelo.tipo === "moto" ? "Baulito de la moto" : "Baúl"), h("small", null, " · Mové las cosas con la linterna para ver lo de abajo. Tocá lo sospechoso para secuestrarlo.")), h("button", { className: "boton sec chico", onClick: () => { Sonido.baul(); Juego.cerrarPanel(); } }, "Cerrar ", h("kbd", null, "Esc"))),
+    h("div", { className: "baul-cab" }, h("div", null, h("b", null, insp.p.modelo.tipo === "camion" ? "Carga del camión" : insp.p.modelo.tipo === "moto" ? "Baulito de la moto" : insp.p.modelo.tipo === "cuatri" ? "Carga del cuatri" : "Baúl"), h("small", null, " · Mové las cosas con la linterna para ver lo de abajo. Tocá lo sospechoso para secuestrarlo.")), h("button", { className: "boton sec chico", onClick: () => { Sonido.baul(); Juego.cerrarPanel(); } }, "Cerrar ", h("kbd", null, "Esc"))),
     h("canvas", { ref, className: "baul-lienzo" }),
     h("div", { className: cx("baul-pie", ha.length && "mal") }, ha.length ? `⚠ Secuestraste: ${ha.map((o) => o.nombre.toLowerCase()).join(", ")}. Eso es delito: corresponde arresto.` : "Nada sospechoso a la vista… por ahora."));
 }

@@ -228,6 +228,12 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
   rojos, cinturón) — las cabezas 3D de Rezona no sirven para "se parece pero no es".
 - Medido: ~540 mil triángulos en alta (antes 1,08 M; los algarrobos con sombra
   eran la mitad). Solo dan sombra los árboles a < 75 m del puesto.
+- **Jinete en cuatriciclo**: se genera el vehículo CON el gaucho sentado como una sola
+  malla estática (un rig parado arriba de un asiento queda mal) y otro vacío con
+  `ref_image_urls` de la primera imagen para que sea el mismo; al bajarse se cambia
+  la malla. El personaje que baja sale de `p.figura` (edad, sexo, vehículo).
+- El peso de `datos.js` lo ponen la geometría y los 2 clips de 123 canales de cada
+  personaje, no las texturas: bajar el color a 768 ahorró <5 %. 8 personajes → 11 MB.
 - Prueba: `__ruta.congelar(true)` + `__ruta.simular(seg)`; SwiftShader tarda
   10–15 s por foto con el canvas grande (timeout de 120 s).
 

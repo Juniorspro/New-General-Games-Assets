@@ -199,4 +199,10 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   (con consumo ajeno en el medio). Los personajes, las motos, la pickup y el
   quebracho pasaron la revisión y quedaron. Artifact v2 publicado, prueba pc
   12/12 sin errores.
+- **Conductores nuevos y gauchos en cuatri** (pedido del usuario, de a uno): señor
+  mayor, pibe, camionero, señora y gaucho, cada uno imagen → 3D → caminar → quieto,
+  revisados; cuatri con gaucho sentado + cuatri vacío (con referencia). Retrato 2D
+  con boina/gorra/pañuelo; licencia A.3; al bajarse el cuatri queda vacío.
+  Artifact v3, pruebas pc y tel 12/12 sin errores. Saldo 250.503 (la cuenta la usan
+  otros en paralelo: bajó ~58 mil en la sesión, lo propio ~7.500).
 

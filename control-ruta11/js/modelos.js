@@ -11,6 +11,9 @@ const Modelos = (() => {
     pickup: { largo: 5.3, giro: 0 }, sedan: { largo: 4.4, giro: 0 }, compacto: { largo: 4.35, giro: 0 }, hatch: { largo: 3.9, giro: 0, umbral: [0.3, 0.52] }, camion: { largo: 7.2, giro: 0 },
     moto: { largo: 1.9, giro: 0 }, patrullero: { largo: 5.3, giro: 0 }, motopol: { largo: 2.25, giro: 0 }, garita: { largo: 6.0, giro: 0 },
     algarrobo: { alto: 7.5 }, quebracho: { alto: 11 },
+    cuatrigaucho: { largo: 2.05, giro: 0 }, cuatri: { largo: 2.05, giro: 0 },
+    mayor: { alto: 1.70, rig: true, giro: -Math.PI / 2 }, joven: { alto: 1.77, rig: true, giro: -Math.PI / 2 }, camionero: { alto: 1.79, rig: true, giro: -Math.PI / 2 },
+    senora: { alto: 1.60, rig: true, giro: -Math.PI / 2 }, gaucho: { alto: 1.74, rig: true, giro: -Math.PI / 2 },
     conductor: { alto: 1.76, rig: true, giro: -Math.PI / 2 }, conductora: { alto: 1.64, rig: true, giro: -Math.PI / 2 }, policia: { alto: 1.78, rig: true, giro: -Math.PI / 2 },
   };
   const listos = {};

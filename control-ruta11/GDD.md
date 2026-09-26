@@ -88,6 +88,8 @@ JPEG) y `herramientas/armar_datos.py` (van adentro de `js/datos.js`, 6,2 MB).
 | Patrullero (Hilux con franja y balizas), garita (contenedor con puerta y ventana) | Rezona, de a uno | 9.000 / 4.000 |
 | Moto policial, quebracho | Rezona (primera tanda, pasaron la revisión) | 5.000 / 2.500 |
 | Algarrobo (copa de racimos) | Rezona, de a uno | 3.000 |
+| Cuatriciclo con gaucho sentado (una malla) y cuatriciclo vacío | Rezona, de a uno | 9.000 / 6.000 |
+| Conductores: señor mayor (gorra y chaleco), pibe (buzo), camionero, señora; gaucho (boina, pañuelo, bombacha) — con caminar y quieto | Rezona, de a uno | 9.000 c/u |
 | Conductor, conductora, policía (con caminar y quieto) | Rezona | 9.000 |
 | Portada de la pantalla de carga | Rezona (imagen) | — |
 | Caras de DNI, sistema y ventanilla | Dibujadas por código (`dibujarRostro`) | — |

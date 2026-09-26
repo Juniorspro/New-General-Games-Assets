@@ -75,8 +75,9 @@ const Juego = (() => {
     const m = Modelos.clonar(malla, color); if (m) g.add(m);
     const tam = L ? L.tam.clone() : new V(2, 1.5, 4.4);
     const v = { g, malla, tam, largo: tam.z, ancho: tam.x, x: RUTA.carril, z: -250, rumbo: 0, vel: 0, vmax: 16, ruta: null, estado: "cola", luces: [], freno: 0 };
-    const moto = malla === "moto" || malla === "motopol", camion = malla === "camion";
-    const y = tam.y * (camion ? 0.28 : moto ? 0.55 : 0.4), sep = moto ? 0 : tam.x / 2 - 0.32;
+    const moto = malla === "moto" || malla === "motopol", camion = malla === "camion", cuatri = malla.startsWith("cuatri");
+    // En el cuatri con gaucho el alto incluye al jinete: los faros van a altura fija.
+    const y = cuatri ? 0.55 : tam.y * (camion ? 0.28 : moto ? 0.55 : 0.4), sep = moto ? 0 : tam.x / 2 - (cuatri ? 0.38 : 0.32);
     const disco = new THREE.CircleGeometry(moto ? 0.09 : 0.11, 14), discoStop = new THREE.CircleGeometry(0.065, 12);
     const lados = moto ? [0] : [-1, 1], apagado = o.quemada ? (moto ? 0 : rnd() < 0.5 ? -1 : 1) : null;
     for (const l of lados) {
@@ -90,10 +91,10 @@ const Juego = (() => {
     if (!o.sinHaz) { const haz = new THREE.Mesh(new THREE.PlaneGeometry(moto ? 2.2 : 3.4, 9).rotateX(-Math.PI / 2), MAT.haz); haz.position.set(0, 0.05, tam.z / 2 + 4.6); haz.renderOrder = 2; g.add(haz); }
     if (o.patente) {
       const pm = new THREE.MeshBasicMaterial({ map: texPatente(o.patente) });
-      const trasera = new THREE.Mesh(new THREE.PlaneGeometry(moto ? 0.3 : 0.42, moto ? 0.1 : 0.14), pm); trasera.position.set(0, tam.y * (camion ? 0.2 : moto ? 0.45 : 0.3), -tam.z / 2 - 0.03); trasera.rotation.y = Math.PI; g.add(trasera);
-      if (!moto) { const del = trasera.clone(); del.position.z = tam.z / 2 + 0.03; del.rotation.y = 0; del.position.y = tam.y * (camion ? 0.2 : 0.25); g.add(del); }
+      const trasera = new THREE.Mesh(new THREE.PlaneGeometry(moto ? 0.3 : 0.42, moto ? 0.1 : 0.14), pm); trasera.position.set(0, cuatri ? 0.6 : tam.y * (camion ? 0.2 : moto ? 0.45 : 0.3), -tam.z / 2 - 0.03); trasera.rotation.y = Math.PI; g.add(trasera);
+      if (!moto && !cuatri) { const del = trasera.clone(); del.position.z = tam.z / 2 + 0.03; del.rotation.y = 0; del.position.y = tam.y * (camion ? 0.2 : 0.25); g.add(del); }
     }
-    escena.add(g); poner(v);
+    v.malla3d = m; escena.add(g); poner(v);
     return v;
   }
   function poner(v) { v.g.position.set(v.x, lomo(v), v.z); v.g.rotation.y = v.rumbo; }
@@ -120,9 +121,11 @@ const Juego = (() => {
   function llegaVehiculo() {
     const p = conductores[proximo++]; if (!p) return;
     const v = armarVehiculo(p.modelo.malla, p.color, { patente: p.patente, quemada: p.lucesQuemadas });
+    // El gaucho del modelo no trae casco: si el perfil dice que lo usa, se le pone uno.
+    if (p.modelo.tipo === "cuatri" && !p.sinCasco) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), MAT.casco); c.position.set(0, v.tam.y - 0.14, -v.largo * 0.06); c.castShadow = true; v.g.add(c); }
     v.p = p; v.estado = "llegando"; v.z = cola.length ? Math.min(-120, cola[cola.length - 1].z - 40) : -140; v.vel = 13; poner(v);
     if (p.modelo.tipo === "moto") {
-      const pe = crearPersona(p.mujer ? "conductora" : "conductor", 0, -0.12, 0, v.g);
+      const pe = crearPersona(p.figura || (p.mujer ? "conductora" : "conductor"), 0, -0.12, 0, v.g);
       if (pe) { v.jinete = pe; if (!p.sinCasco) ponerCasco(pe); }
     }
     cola.push(v);
@@ -202,7 +205,7 @@ const Juego = (() => {
       const m = elegir(Math.random, MODELOS), [, color] = elegir(Math.random, COLORES);
       const v = armarVehiculo(m.malla, color, { patente: patenteAzar(Math.random) });
       v.x = -RUTA.carril; v.z = 330; v.rumbo = Math.PI; v.vel = 18; v.vmax = m.tipo === "camion" ? 17 : 21; v.ruta = [[-RUTA.carril, -340]]; v.sigue = true; v.estado = "paso";
-      if (m.tipo === "moto") { const pe = crearPersona(Math.random() < 0.3 ? "conductora" : "conductor", 0, -0.12, 0, v.g); if (pe) { v.jinete = pe; ponerCasco(pe); } }
+      if (m.tipo === "moto") { const pe = crearPersona(elegir(Math.random, ["conductora", "conductor", "joven", "joven"]), 0, -0.12, 0, v.g); if (pe) { v.jinete = pe; ponerCasco(pe); } }
       otros.push(v);
     }
     for (let i = otros.length - 1; i >= 0; i--) { const v = otros[i]; seguirRuta(v, dt); if (v.z < -330) { quitarVehiculo(v); otros.splice(i, 1); } }
@@ -261,10 +264,12 @@ const Juego = (() => {
   function bajarConductor(v) {
     const p = v.p;
     if (v.jinete) { quitarPersona(v.jinete); v.jinete = null; }
+    // El gaucho venía sentado en la misma malla del cuatri: se cambia por el cuatri vacío.
+    if (v.malla === "cuatrigaucho" && Modelos.listos.cuatri) { v.g.remove(v.malla3d); v.malla3d = Modelos.clonar("cuatri"); v.g.add(v.malla3d); v.malla = "cuatri"; }
     // Si el policía está parado en la puerta, se baja un poco más adelante (no encima).
     let z = v.z + v.largo * 0.08; if (cercaDe(yo.x, yo.z, v.x + v.ancho / 2 + 0.55, z, 1.2)) z = yo.z + 1.3;
-    const pe = crearPersona(p.mujer ? "conductora" : "conductor", v.x + v.ancho / 2 + 0.55, z, Math.PI / 2);
-    if (pe) { pe.p = p; pe.mirarA = [yo.x, yo.z]; if (p.modelo.tipo === "moto" && !p.sinCasco) ponerCasco(pe); }
+    const pe = crearPersona(p.figura || (p.mujer ? "conductora" : "conductor"), v.x + v.ancho / 2 + 0.55, z, Math.PI / 2);
+    if (pe) { pe.p = p; pe.mirarA = [yo.x, yo.z]; if ((p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri") && !p.sinCasco) ponerCasco(pe); }
     Sonido.puerta();
     return pe;
   }
@@ -358,7 +363,7 @@ const Juego = (() => {
   // ── puntaje ──
   let reputacion = 100, recaudado = 0, atendidos = 0;
   function sumar(n, porque) { reputacion += n; aviso(`${n >= 0 ? "+" : ""}${n} · ${porque}`, n >= 0 ? "bien" : "mal", 4); if (reputacion < 0 && modo === "jugando" && finEn < 0) { motivoFin = "relevado"; finEn = t + 3; } }
-  function nombreFalta(k, p) { return k === "sinCinturon" && p && p.modelo.tipo === "moto" ? "Sin casco reglamentario" : FALTAS[k].nombre; }
+  function nombreFalta(k, p) { return k === "sinCinturon" && p && (p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri") ? "Sin casco reglamentario" : FALTAS[k].nombre; }
   function evaluar(p, decision, cargos) {
     const reales = faltasReales(p), correcta = resolucionCorrecta(reales);
     const lista = reales.map((k) => nombreFalta(k, p)).join(", ") || "sin faltas";
@@ -412,7 +417,7 @@ const Juego = (() => {
   // ════════════════════════════════════════════════════════════════════
   function puntos() {
     const v = parado; if (!v) return {};
-    const moto = v.malla === "moto";
+    const moto = v.malla === "moto" || v.malla.startsWith("cuatri");
     return { ventanilla: [v.x + v.ancho / 2 + 0.5, v.z + (moto ? 0 : v.largo * 0.1)], baul: [v.x, v.z - v.largo / 2 - 0.7] };
   }
   function enZona(x, z) { return Math.abs(x - PUESTO.zona[0]) < 3.4 && Math.abs(z - PUESTO.zona[2]) < 2.4; }
@@ -425,7 +430,7 @@ const Juego = (() => {
     const P = puntos();
     if (parado && insp && !insp.resuelto) {
       if (cercaDe(yo.x, yo.z, P.ventanilla[0], P.ventanilla[1], 1.9)) a.push({ tecla: "E", texto: "Hablar con el conductor", id: "ventanilla" });
-      if (cercaDe(yo.x, yo.z, P.baul[0], P.baul[1], 1.9)) a.push({ tecla: "F", texto: parado.malla === "camion" ? "Revisar la carga con la linterna" : parado.malla === "moto" ? "Revisar el baulito de la moto" : "Revisar el baúl con la linterna", id: "baul" });
+      if (cercaDe(yo.x, yo.z, P.baul[0], P.baul[1], 1.9)) a.push({ tecla: "F", texto: parado.malla === "camion" ? "Revisar la carga con la linterna" : parado.malla === "moto" ? "Revisar el baulito de la moto" : parado.malla.startsWith("cuatri") ? "Revisar la carga del cuatri" : "Revisar el baúl con la linterna", id: "baul" });
     }
     return a;
   }

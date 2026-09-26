@@ -16,6 +16,10 @@ DEST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../crudos/un
 modo, clave = sys.argv[1], sys.argv[2]
 if modo == "imagen":
     p = {"clave": clave, "type": "image", "output_path": f"assets/{clave}.png", "params": {"prompt": sys.argv[3], "size": "1024x1024", "n": 1}}
+    # Referencia opcional (clave de otra imagen ya hecha): para que dos assets sean el mismo objeto.
+    if len(sys.argv) > 4:
+        ref = tanda.E["pedidos"][sys.argv[4]]
+        p["params"]["ref_image_urls"] = [tanda.publica(ref["output_path"])]
 elif modo == "modelo":
     caras = int(sys.argv[5]) if len(sys.argv) > 5 else 30000
     p = {"clave": clave, "type": "model3d", "output_path": f"assets/{clave}.glb", "params": {"prompt": sys.argv[4], "source_url": "@" + sys.argv[3], "texture": True, "pbr": True, "texture_quality": "detailed", "face_limit": caras}}

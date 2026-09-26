@@ -35,6 +35,9 @@ def glb_liviano(src, dst, lado_color=1024, lado_resto=512, sin_imagenes=False):
 if __name__ == "__main__":
     os.makedirs("finales", exist_ok=True)
     lados = {"algarrobo": (512, 256), "quebracho": (512, 256), "garita": (512, 256), "moto": (512, 256), "motopol": (1024, 512)}
+    # Personajes: el color a 768 (alcanza aun de cerca, al esposarlos), relieve y brillo a
+    # 256: con 8 personajes el paquete llegaba a 12 MB.
+    for k in ("conductor", "conductora", "policia", "mayor", "joven", "camionero", "senora", "gaucho"): lados[k] = (768, 256)
     for f in sorted(os.listdir("procesados")):
         k = f[:-4]; lc, lr = lados.get(k, (1024, 512))
         a, b = glb_liviano("procesados/" + f, "finales/" + f, lc, lr)
