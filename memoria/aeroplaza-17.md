@@ -105,7 +105,8 @@ Sigue de [aeroplaza-16](aeroplaza-16.md). Rama `claude/fijate-iszyer`.
   y 0,79).
 - **Lo que empeoró**: al frenar de golpe se pasa más, 36-47 mm (antes 32).
 - **Navegador**: `manos` 19/19, `manos-directo` 9/9, `vr` 19/19, `xr` 10/10,
-  `vr120` 12/12; `manos-celu` 20/20 con los tres niveles.
+  `vr120` 12/12; `manos-celu` 20/20 con los tres niveles. La tanda entera da
+  bien.
 
 ## Lo que se probó y no sirvió
 
