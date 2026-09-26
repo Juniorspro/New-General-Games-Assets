@@ -100,6 +100,8 @@ Deriva: lo que se va de su lugar. Atraso: en rampas lentas.
   - el atraso limpio: 36 mm a 89 ms (antes 38) y 74 mm a 209 ms (antes 82);
   - no titila;
   - el tirón p99, 9-11 mm.
+- **Navegador**: `manos` 19/19 (tres veces), `vr` 19/19 (con el selector),
+  `xr` 10/10, `vr120` 12/12; la tanda entera da bien (`menus`: todas entran).
 
 ## Lo que se probó y no sirvió
 
