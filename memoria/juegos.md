@@ -234,6 +234,17 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
   la malla. El personaje que baja sale de `p.figura` (edad, sexo, vehículo).
 - El peso de `datos.js` lo ponen la geometría y los 2 clips de 123 canales de cada
   personaje, no las texturas: bajar el color a 768 ahorró <5 %. 8 personajes → 11 MB.
+- **Vidrios de los autos de Rezona** (vienen pintados en la textura, malla única,
+  hueca): `separarVidrios` en `modelos.js` parte la malla al cargar. Por color solo
+  (oscuro) no anduvo: se escapaban parabrisas y marcaba la caja de la pickup. Lo que
+  sirvió: zona medida por modelo (alto de cintura a techo y largo de la cabina) +
+  "no es chapa blanca" (máx. canal < 138) + sin espejos (|x| > 0,43 del ancho) ni
+  techo. La del conductor (+X, mitad de adelante) baja con un `discard` por altura.
+- Interior: una caja entera se veía como panel negro por los vidrios de atrás. Va
+  solo una "tina" debajo de la cintura, un techo fino y asientos; arriba se ve a
+  través del auto. Conductor = el rig con muslos a escala 0,001 (el clip trae
+  escala: hay que reponerla después de cada `mixer.update`) y brazos girados sobre
+  los ejes del personaje (hacia el cuerpo y hacia el volante).
 - Prueba: `__ruta.congelar(true)` + `__ruta.simular(seg)`; SwiftShader tarda
   10–15 s por foto con el canvas grande (timeout de 120 s).
 

@@ -205,4 +205,8 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   con boina/gorra/pañuelo; licencia A.3; al bajarse el cuatri queda vacío.
   Artifact v3, pruebas pc y tel 12/12 sin errores. Saldo 250.503 (la cuenta la usan
   otros en paralelo: bajó ~58 mil en la sesión, lo propio ~7.500).
+- **Vidrios transparentes y ventanilla que baja**: detección de vidrios al cargar
+  (6 vehículos revisados con render de control verde/magenta), cabina con asientos,
+  tablero, volante y el conductor sentado; baja el vidrio con motorcito cuando el
+  policía está a < 4 m. Artifact v4; pruebas pc y tel 12/12 sin errores.
 

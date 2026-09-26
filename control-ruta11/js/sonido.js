@@ -83,6 +83,8 @@ const Sonido = (() => {
     hallazgo() { tono(660, 0.12, { tipo: "square", vol: 0.08 }); tono(880, 0.12, { tipo: "square", vol: 0.08, cuando: 0.12 }); tono(1320, 0.3, { tipo: "square", vol: 0.08, cuando: 0.24 }); },
     bien() { tono(880, 0.1, { vol: 0.08 }); tono(1320, 0.18, { vol: 0.08, cuando: 0.1 }); },
     mal() { tono(300, 0.2, { tipo: "sawtooth", vol: 0.06 }); tono(200, 0.3, { tipo: "sawtooth", vol: 0.06, cuando: 0.18 }); },
+    // Motorcito del levantavidrios eléctrico.
+    levantavidrios() { if (!ctx) return; const t = t0(), o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter(); o.type = "sawtooth"; o.frequency.setValueAtTime(95, t); o.frequency.linearRampToValueAtTime(120, t + 1.3); f.type = "bandpass"; f.frequency.value = 700; f.Q.value = 2; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.05); g.gain.setValueAtTime(0.05, t + 1.2); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4); o.connect(f).connect(g).connect(maestro); o.start(t); o.stop(t + 1.45); },
     clic() { tono(1200, 0.03, { tipo: "triangle", vol: 0.05 }); },
   };
 })();

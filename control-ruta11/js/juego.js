@@ -65,6 +65,10 @@ const Juego = (() => {
     MAT.haloRojo = new THREE.SpriteMaterial({ map: brillo(), color: "#ff3020", blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 });
     MAT.haz = new THREE.MeshBasicMaterial({ map: M.texCanvas(64, (g, n) => { const gr = g.createRadialGradient(n / 2, n * 0.15, 0, n / 2, n * 0.15, n * 0.85); gr.addColorStop(0, "rgba(255,240,200,0.9)"); gr.addColorStop(1, "rgba(255,240,200,0)"); g.fillStyle = gr; g.fillRect(0, 0, n, n); }), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, toneMapped: false });
     MAT.casco = new THREE.MeshStandardMaterial({ color: "#1c1c22", roughness: 0.35, metalness: 0.2 });
+    MAT.cabina = new THREE.MeshStandardMaterial({ color: "#1d1f23", roughness: 1, side: THREE.BackSide });
+    MAT.cabina2 = new THREE.MeshStandardMaterial({ color: "#26282c", roughness: 0.9 });
+    MAT.asiento = new THREE.MeshStandardMaterial({ color: "#34363b", roughness: 0.95 });
+    MAT.goma = new THREE.MeshStandardMaterial({ color: "#111", roughness: 0.6 });
   }
 
   // ════════════════════════════════════════════════════════════════════
@@ -95,7 +99,51 @@ const Juego = (() => {
       if (!moto && !cuatri) { const del = trasera.clone(); del.position.z = tam.z / 2 + 0.03; del.rotation.y = 0; del.position.y = tam.y * (camion ? 0.2 : 0.25); g.add(del); }
     }
     v.malla3d = m; escena.add(g); poner(v);
+    if (L && L.vidrios) armarCabina(v, L.vidrios, o.conductor);
     return v;
+  }
+  // Adentro del auto: cabina oscura, asientos, tablero, volante y el conductor sentado
+  // (el mismo personaje con esqueleto que después se baja, con las piernas plegadas:
+  // desde afuera solo se ve del pecho para arriba por la ventanilla).
+  function armarCabina(v, vid, figura) {
+    // Solo se tapa lo que está debajo de la línea de las ventanillas (la carrocería por
+    // dentro no tiene nada: se veía el piso de la ruta) y un techo fino. Una caja entera
+    // se veía como un panel negro por los vidrios de atrás: así, por arriba se ve a
+    // través del auto hasta los vidrios del otro lado, como en uno de verdad.
+    const h = vid.hueco, g = new THREE.Group(), cint = vid.puerta ? vid.puerta.min.y : h.min.y + 0.1;
+    const z0 = h.min.z + 0.12, z1 = h.max.z - 0.12, piso = cint - 0.75;
+    const tina = new THREE.Mesh(new THREE.BoxGeometry(v.ancho * 0.76, cint - 0.03 - piso, z1 - z0), MAT.cabina); tina.position.set(0, (cint - 0.03 + piso) / 2, (z0 + z1) / 2); g.add(tina);
+    const cielo = new THREE.Mesh(new THREE.BoxGeometry(v.ancho * 0.6, 0.03, (z1 - z0) * 0.5), MAT.cabina2); cielo.position.set(0, h.max.y - 0.1, (z0 + z1) / 2 - (z1 - z0) * 0.12); g.add(cielo);
+    const pz = vid.puerta ? (vid.puerta.min.z + vid.puerta.max.z) / 2 - 0.12 : z0 + (z1 - z0) * 0.55;
+    const asientoY = cint - 0.42;
+    for (const lx of [1, -1]) {
+      const x = lx * v.ancho * 0.21;
+      const resp = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.62, 0.12), MAT.asiento); resp.position.set(x, asientoY + 0.36, pz - 0.3); resp.rotation.x = -0.12; g.add(resp);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.1), MAT.asiento); cab.position.set(x, asientoY + 0.8, pz - 0.35); g.add(cab);
+    }
+    const tablero = new THREE.Mesh(new THREE.BoxGeometry(v.ancho * 0.68, 0.22, 0.4), MAT.cabina2); tablero.position.set(0, cint - 0.02, pz + 0.62); g.add(tablero);
+    const volante = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 6, 18), MAT.goma); volante.position.set(v.ancho * 0.21, cint + 0.05, pz + 0.42); volante.rotation.x = -0.45; g.add(volante);
+    v.g.add(g); v.cabina = g;
+    if (figura) {
+      const pe = crearPersona(figura, v.ancho * 0.21, pz - 0.12, 0, v.g);
+      if (pe) {
+        pe.sentado = ["L_Thigh", "R_Thigh"].map((k) => pe.o.getObjectByName(k)).filter(Boolean);
+        pe.brazos = ["L_Upperarm", "R_Upperarm"].map((k) => pe.o.getObjectByName(k)).filter(Boolean);
+        pe.o.updateMatrixWorld(true); const cad = pe.o.getObjectByName("Hip"), hy = cad ? cad.getWorldPosition(new THREE.Vector3()).y - pe.o.getWorldPosition(new THREE.Vector3()).y : 0.9;
+        pe.o.position.y = asientoY + 0.08 - hy; v.adentro = pe;
+      }
+    }
+    // La ventanilla del conductor: baja cuando el policía se acerca.
+    v.vidriosC = []; v.g.traverse((m) => { if (m.userData && m.userData.vidrioConductor) v.vidriosC.push(m.material.userData.corte); });
+    v.vidrioAlto = h.max.y + 0.05; v.vidrioBajo = vid.puerta ? vid.puerta.min.y + 0.01 : h.min.y; v.bajada = 0; v.bajar = 0;
+  }
+  function ventanillas(dt) {
+    for (const v of cola.concat(yendose, otros)) {
+      if (!v.vidriosC || !v.vidriosC.length) continue;
+      const antes = v.bajada; v.bajada = clamp(v.bajada + (v.bajar ? 1 : -1) * dt / 1.4, 0, 1);
+      if (v.bajada !== antes && ((antes === 0 && v.bajar) || (antes === 1 && !v.bajar))) Sonido.levantavidrios && Sonido.levantavidrios();
+      const y = lerp(v.vidrioAlto, v.vidrioBajo, v.bajada) + v.g.position.y; for (const u of v.vidriosC) u.value = y;
+    }
   }
   function poner(v) { v.g.position.set(v.x, lomo(v), v.z); v.g.rotation.y = v.rumbo; }
   // El lomo de burro: el auto sube un poco al pasar.
@@ -120,7 +168,7 @@ const Juego = (() => {
   // Vehículo nuevo del puesto, con su conductor.
   function llegaVehiculo() {
     const p = conductores[proximo++]; if (!p) return;
-    const v = armarVehiculo(p.modelo.malla, p.color, { patente: p.patente, quemada: p.lucesQuemadas });
+    const v = armarVehiculo(p.modelo.malla, p.color, { patente: p.patente, quemada: p.lucesQuemadas, conductor: p.figura });
     // El gaucho del modelo no trae casco: si el perfil dice que lo usa, se le pone uno.
     if (p.modelo.tipo === "cuatri" && !p.sinCasco) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), MAT.casco); c.position.set(0, v.tam.y - 0.14, -v.largo * 0.06); c.castShadow = true; v.g.add(c); }
     v.p = p; v.estado = "llegando"; v.z = cola.length ? Math.min(-120, cola[cola.length - 1].z - 40) : -140; v.vel = 13; poner(v);
@@ -203,7 +251,7 @@ const Juego = (() => {
     if (esperaOtro <= 0 && otros.length < 3) {
       esperaOtro = 7 + Math.random() * 16;
       const m = elegir(Math.random, MODELOS), [, color] = elegir(Math.random, COLORES);
-      const v = armarVehiculo(m.malla, color, { patente: patenteAzar(Math.random) });
+      const v = armarVehiculo(m.malla, color, { patente: patenteAzar(Math.random), conductor: m.tipo === "camion" ? "camionero" : elegir(Math.random, ["conductor", "conductora", "mayor", "joven", "senora"]) });
       v.x = -RUTA.carril; v.z = 330; v.rumbo = Math.PI; v.vel = 18; v.vmax = m.tipo === "camion" ? 17 : 21; v.ruta = [[-RUTA.carril, -340]]; v.sigue = true; v.estado = "paso";
       if (m.tipo === "moto") { const pe = crearPersona(elegir(Math.random, ["conductora", "conductor", "joven", "joven"]), 0, -0.12, 0, v.g); if (pe) { v.jinete = pe; ponerCasco(pe); } }
       otros.push(v);
@@ -227,6 +275,24 @@ const Juego = (() => {
   function animar(pe, nombre, escala = 1) {
     const a = pe.acc[nombre]; if (!a) return; a.timeScale = escala;
     if (pe.anim === nombre) return; const b = pe.acc[pe.anim]; a.reset().play(); if (b) a.crossFadeFrom(b, 0.25, false); pe.anim = nombre;
+  }
+  // Sentado al volante: piernas plegadas y brazos hacia adelante. El giro se hace
+  // sobre el eje lateral del personaje (en el mundo), no sobre los ejes del hueso:
+  // cada rig trae los suyos (memoria/juegos.md § Animar por código).
+  const qEje = new THREE.Quaternion(), qPadre = new THREE.Quaternion(), qTmp = new THREE.Quaternion(), vEje = new V(), vAde = new V();
+  function sentar(pe) {
+    for (const b of pe.sentado) b.scale.setScalar(0.001);
+    if (!pe.brazos) return;
+    pe.o.updateMatrixWorld(true);
+    vEje.set(1, 0, 0).applyQuaternion(pe.o.getWorldQuaternion(qPadre)).normalize();
+    vAde.set(0, 0, 1).applyQuaternion(pe.o.getWorldQuaternion(qPadre)).normalize();
+    for (const b of pe.brazos) {
+      // Primero hacia el cuerpo (sobre el eje de adelante), después hacia el volante.
+      if (b.userData.lado === undefined) b.userData.lado = Math.sign(pe.o.worldToLocal(b.getWorldPosition(new V())).x) || 1;
+      b.parent.getWorldQuaternion(qPadre);
+      qEje.setFromAxisAngle(vAde, -0.45 * b.userData.lado).premultiply(qTmp.setFromAxisAngle(vEje, -1.0));
+      b.quaternion.premultiply(qPadre.clone().invert().multiply(qEje).multiply(qPadre));
+    }
   }
   function ponerCasco(pe) {
     const cab = pe.o.getObjectByName("Head"); if (!cab) return;
@@ -257,13 +323,14 @@ const Juego = (() => {
       if (!pe.padre) { pe.o.position.set(pe.x, 0, pe.z); pe.o.rotation.y = pe.rumbo; }
       // Los lejanos se animan menos seguido: con 15 personas el esqueleto pesa.
       const lejos = (pe.x - yo.x) ** 2 + (pe.z - yo.z) ** 2 > 900;
-      pe.acum = (pe.acum || 0) + dt; if (!lejos || pe.acum > 0.1) { pe.mixer.update(pe.acum); pe.acum = 0; }
+      pe.acum = (pe.acum || 0) + dt; if (!lejos || pe.acum > 0.1) { pe.mixer.update(pe.acum); pe.acum = 0; if (pe.sentado) sentar(pe); }
     }
   }
   // El conductor se baja por la puerta izquierda (+X, del lado del eje).
   function bajarConductor(v) {
     const p = v.p;
     if (v.jinete) { quitarPersona(v.jinete); v.jinete = null; }
+    if (v.adentro) { quitarPersona(v.adentro); v.adentro = null; }
     // El gaucho venía sentado en la misma malla del cuatri: se cambia por el cuatri vacío.
     if (v.malla === "cuatrigaucho" && Modelos.listos.cuatri) { v.g.remove(v.malla3d); v.malla3d = Modelos.clonar("cuatri"); v.g.add(v.malla3d); v.malla = "cuatri"; }
     // Si el policía está parado en la puerta, se baja un poco más adelante (no encima).
@@ -284,7 +351,7 @@ const Juego = (() => {
     radio(`Puesto Ruta 11 a Central: solicito móvil para traslado de ${esperan.length} detenido${esperan.length > 1 ? "s" : ""}. — Central: recibido, el móvil 7 va en camino.`);
     // Viene del norte por su mano (x = +1,9, hacia −Z) y para frente a la zona:
     // los detenidos cruzan la ruta custodiados y el tránsito de esa mano espera.
-    const v = armarVehiculo("patrullero", null, {}), lado = -RUTA.carril;
+    const v = armarVehiculo("patrullero", null, { conductor: "policia" }), lado = -RUTA.carril;
     v.x = lado; v.z = 300; v.rumbo = Math.PI; v.vel = 20; v.vmax = 20; v.estado = "patrulla"; v.sigue = false;
     v.ruta = [[lado, PUESTO.zona[2]]]; v.rumboFinal = Math.PI;
     barraLuces(v); poner(v); patrulla = v; v.fase = "viene"; Sonido.sirena(true);
@@ -590,6 +657,9 @@ const Juego = (() => {
     if (!pausado) {
       reloj += dt;
       for (let i = tareas.length - 1; i >= 0; i--) if (tareas[i].t <= reloj) { const f = tareas[i].fn; tareas.splice(i, 1); f(); }
+      // El conductor baja la ventanilla cuando el policía se le acerca.
+      for (const v of cola) v.bajar = v === parado && insp && !insp.resuelto && cercaDe(yo.x, yo.z, v.x + v.ancho / 2 + 0.5, v.z, 4) ? 1 : 0;
+      ventanillas(dt);
       actualizarCola(dt); actualizarYendose(dt); actualizarOtros(dt); actualizarPatrulla(dt); actualizarPersonas(dt);
       if (M.patrulleroParado && M.patrulleroParado.userData.v) destellar(M.patrulleroParado.userData.v);
       conos(dt);
@@ -659,7 +729,7 @@ const Juego = (() => {
     escena.add(cam);
     linterna = new THREE.SpotLight(0xfff3dc, 0, 30, 0.42, 0.55, 1.4); linterna.position.set(0.25, -0.2, 0); cam.add(linterna); cam.add(linterna.target); linterna.target.position.set(0, -0.5, -6);
     // El patrullero estacionado, con las balizas prendidas como en la foto.
-    if (M.patrulleroParado) { const v = { g: M.patrulleroParado, tam: Modelos.listos.patrullero.tam }; barraLuces(v); M.patrulleroParado.userData.v = v; }
+    if (M.patrulleroParado) { const v = { g: M.patrulleroParado, tam: Modelos.listos.patrullero.tam, ancho: Modelos.listos.patrullero.tam.x }; barraLuces(v); if (Modelos.listos.patrullero.vidrios) armarCabina(v, Modelos.listos.patrullero.vidrios, null); M.patrulleroParado.userData.v = v; }
     // Compañeros: uno en la garita y otro cerca de las motos.
     compas = [crearPersona("policia", -8.3, -0.6, Math.PI / 2), crearPersona("policia", -6.0, -13.5, Math.PI / 2 - 0.4)].filter(Boolean);
     compas.forEach((pe) => (pe.mirarA = [0, pe.z - 6]));
