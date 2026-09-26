@@ -14,6 +14,8 @@ const lienzo = () => { const ctx = new Proxy({}, { get: (o, k) => (k in o ? o[k]
 globalThis.document = { createElement: lienzo, documentElement: {} };
 const { Manos } = await import('../js/manos.js');
 const THREE = await import('three');
+globalThis.window ??= {};
+const { ManosCamara } = await import('../js/manos-camara.js');
 let bien = 0, mal = 0;
 const prueba = (n, ok, extra = '') => { ok ? bien++ : mal++; console.log(`${ok ? '✓' : '✗'} ${n}${extra ? ' · ' + extra : ''}`); };
 
@@ -22,7 +24,12 @@ const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0
   [-0.022, 0.085, 0], [-0.025, 0.125, 0], [-0.027, 0.15, 0], [-0.028, 0.172, 0], [0, 0.088, 0], [0, 0.132, 0], [0, 0.16, 0], [0, 0.185, 0],
   [0.02, 0.083, 0], [0.021, 0.122, 0], [0.022, 0.148, 0], [0.023, 0.17, 0], [0.038, 0.074, 0], [0.041, 0.1, 0], [0.043, 0.118, 0], [0.045, 0.135, 0]];
 
-function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, suavidad = 'media' }) {
+/* red: lo que tarda MediaPipe por foto, medido en el contenedor (pruebas/manos-directo.mjs y la nota
+   aeroplaza-17) y escalado a un celu (escala): buscar palmas 38 ms, los dedos de cada mano 36 ms. Busca
+   palmas si sigue menos manos que las que busca (cupo), o en la primera foto después de cambiar el
+   cupo. 'nueva': el cupo lo elige manos-camara.js (una mano a la vista, busca una); 'vieja': siempre
+   dos (hasta la vuelta 16) */
+function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, suavidad = 'media', red = 'nueva', escala = 0.7, entra = 0 }) {
   let s = semilla * 2654435761 >>> 0;
   const azar = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const gauss = () => Math.sqrt(-2 * Math.log(azar() + 1e-12)) * Math.cos(2 * Math.PI * azar());
@@ -58,19 +65,30 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
   const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3();
   const ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
   const DT = 1000 / 120, FIN = 9500, CAP = 1000 / 30, esperadas = dos ? 2 : 1;
-  let proxCaptura = azar() * CAP, ocupado = 0, resultados = [], perdida = [false, false], clarasAntes = 0, antes = null;
+  let proxCaptura = azar() * CAP, resultados = [], perdida = [false, false], clarasAntes = 0, antes = null;
+  /* las redes (con el cupo que les manda manos-camara.js) */
+  const R_ = Array.from({ length: redes }, () => ({ libre: -1, cupo: 2, recien: false, siguiendo: 0 }));
+  for (const r of R_) r.w = { postMessage: (m) => { if (m.tipo === 'cupo' && m.n !== r.cupo) { r.cupo = m.n; r.recien = true; } } };
+  const mc = new ManosCamara(); mc.redes = R_; mc.activa = true; mc.cfg.siempreDos = red === 'vieja';
   const R = { n: 0, cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], tiembla: [], lat: [] };
   for (let T = 0; T < FIN; T += DT) {
-    for (const r of resultados.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega); R.lat.push(r.llega - r.tc); ocupado--; R.n++; }
+    for (const r of resultados.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega, r.cupo); if (!r.primera) mc.medirRedes(r.red, r.ms, r.cupo, r.lista.length); mc.elegirCupos({ n: r.lista.length, cupo: r.cupo }, r.red, r.llega); R.lat.push(r.llega - r.tc); R.n++; }
     resultados = resultados.filter((r) => r.llega > T);
     while (proxCaptura + L <= T) {
       const tc = proxCaptura; proxCaptura += CAP * (0.95 + 0.1 * azar());
-      /* (manos-camara.js: dos redes a la par; sin manos a la vista hace 1 s, una sola) */
-      if (ocupado >= redes) continue;
-      ocupado++;
-      const lista = [], dd = detectar(true, tc / 1000, perdida[1]); perdida[1] = !dd; if (dd) lista.push(dd);
-      if (dos) { const di = detectar(false, tc / 1000, perdida[0]); perdida[0] = !di; if (di) lista.push(di); }
-      resultados.push({ lista, tc, llega: T + 4 + 40 + 20 * azar() + (perdida[1] ? 15 : 0) });
+      /* (manos-camara.js: la primera red libre; la que busca la segunda mano, antes) */
+      const rd = R_[mc.primero || 0]?.libre <= T ? R_[mc.primero || 0] : R_.find((x) => x.libre <= T);
+      if (!rd) continue;
+      let lista = [];
+      const dd = detectar(true, tc / 1000, perdida[1]); perdida[1] = !dd; if (dd) lista.push(dd);
+      /* (entra: la izquierda aparece recién a esa hora) */
+      if (dos && tc / 1000 >= entra) { const di = detectar(false, tc / 1000, perdida[0]); perdida[0] = !di; if (di) lista.push(di); }
+      /* con cupo 1 trae una sola (la que venía siguiendo) */
+      if (rd.cupo === 1 && lista.length > 1) lista = [lista[rd.siguiendo % lista.length]];
+      const palmas = rd.recien || lista.length < rd.cupo || (lista.length && !rd.antes);
+      const ms = escala * ((palmas ? 38 : 0) + 36 * lista.length) * (0.9 + 0.2 * azar());
+      resultados.push({ lista, tc, llega: T + 4 + ms, cupo: rd.cupo, red: rd, ms, primera: rd.recien });
+      rd.recien = false; rd.antes = lista.length > 0; rd.libre = T + 4 + ms;
     }
     const tVer = T + 25;
     manos.registrarCabeza(tVer, q0, p0, 0);
@@ -78,7 +96,8 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
     /* medir (sobre la derecha de verdad) */
     const tS = tVer / 1000, cv = centro(puntos(true, tS)), dib = manos.manos.filter((M) => M.alfa > 0.02), claras = manos.manos.filter((M) => M.alfa >= 0.5).length;
     R.cuadros++;
-    if (claras < esperadas) R.sin++;
+    if (claras < esperadas && tVer >= entra * 1000) R.sin++;
+    if (entra && claras >= 2 && tVer >= entra * 1000) R.vioIzq ??= tVer - entra * 1000;
     if (dib.length > esperadas) R.dobles++;
     if (clarasAntes >= esperadas && claras < esperadas && T > 300) R.titila++;
     clarasAntes = claras;
@@ -104,13 +123,13 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
   const mq = media(R.quieta);
   return {
     porSeg: R.n / (FIN / 1000), lat: media(R.lat), sin: 100 * R.sin / R.cuadros, titila: R.titila / (FIN / 60000), dobles: 100 * R.dobles / R.cuadros,
-    err: media(R.err), tironP99: pct(R.tiron, 0.99), tironMax: Math.max(0, ...R.tiron), quieta: Math.sqrt(media(R.quieta.map((x) => (x - mq) ** 2))), tiembla: Math.sqrt(media(R.tiembla.map((x) => x * x))),
+    vioIzq: R.vioIzq ?? NaN, err: media(R.err), tironP99: pct(R.tiron, 0.99), tironMax: Math.max(0, ...R.tiron), quieta: Math.sqrt(media(R.quieta.map((x) => (x - mq) ** 2))), tiembla: Math.sqrt(media(R.tiembla.map((x) => x * x))),
   };
 }
 /* cada caso con tres semillas: el promedio (el peor para el tirón máximo) */
 const caso = (op) => {
   const r = [1, 2, 3].map((semilla) => simular({ ...op, semilla })), m = (k) => r.reduce((a, x) => a + x[k], 0) / r.length;
-  return { porSeg: m('porSeg'), lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta'), tiembla: m('tiembla') };
+  return { vioIzq: m('vioIzq'), porSeg: m('porSeg'), lat: m('lat'), sin: m('sin'), titila: m('titila'), dobles: m('dobles'), err: m('err'), tironP99: m('tironP99'), tironMax: Math.max(...r.map((x) => x.tironMax)), quieta: m('quieta'), tiembla: m('tiembla') };
 };
 const f = (x, d = 1) => x.toFixed(d);
 for (const dos of [false, true]) {
@@ -150,6 +169,16 @@ for (const dos of [false, true]) {
     ant = [M.p[0], M.p[1], M.p[2]];
   }
   prueba('una foto por cuadro (el juego a 30): quieta se queda quieta', viaja === 0 && mov < 5e-4, `${viaja} cuadros "de viaje", se movió ${f(mov * 1000, 2)} mm`);
+}
+/* cuántas manos busca cada red (vuelta 17): con una a la vista, una. MediaPipe buscando dos busca
+   palmas en cada foto por si aparece la otra; buscando una, solo sigue la que tiene */
+{
+  const v1 = caso({ L: 90, redes: 1, red: 'vieja' }), n1 = caso({ L: 90, redes: 1 }), v2 = caso({ L: 90, red: 'vieja' }), n2 = caso({ L: 90 });
+  const vl = caso({ L: 90, limpio: true, red: 'vieja' }), nl = caso({ L: 90, limpio: true });
+  prueba('con una mano, buscando una sola la foto llega antes y la mano va más pegada', n1.lat < v1.lat - 15 && n2.lat < v2.lat - 15 && n1.err < v1.err && nl.err < vl.err && n1.titila < 15,
+    `una red: ${f(v1.lat, 0)} → ${f(n1.lat, 0)} ms, ${f(v1.porSeg)} → ${f(n1.porSeg)} fotos/s, error ${f(v1.err, 0)} → ${f(n1.err, 0)} mm · dos redes: ${f(v2.lat, 0)} → ${f(n2.lat, 0)} ms · sin errores de la red: ${f(vl.err, 0)} → ${f(nl.err, 0)} mm`);
+  const e1 = caso({ L: 90, dos: true, entra: 3, redes: 1 }), e2 = caso({ L: 90, dos: true, entra: 3 });
+  prueba('la segunda mano que entra aparece enseguida (la busca una red cada tanto)', e2.vioIzq < 900 && e1.vioIzq < 2400 && e2.titila < 15, `con dos redes a los ${f(e2.vioIzq, 0)} ms, con una a los ${f(e1.vioIzq, 0)} ms`);
 }
 /* los tres niveles del menú (✋ Manos): rápidas atrasa menos y tiembla más; suaves, al revés */
 {

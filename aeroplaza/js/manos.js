@@ -470,12 +470,15 @@ export class Manos {
   }
   /* ------------------------------------------ lo que llega de la cámara (puntos en la cámara de three).
      tCaptura: cuándo se sacó la foto; tLlego: cuándo volvió de la red (ms, como performance.now) */
-  recibirCamara(lista, tCaptura, tLlego = performance.now()) {
-    /* (con dos redes una foto puede llegar después que la siguiente: la vieja no sirve) */
-    if (tCaptura <= this.tCapUlt) return;
+  recibirCamara(lista, tCaptura, tLlego = performance.now(), cupo = 2) {
+    /* cupo: cuántas manos buscaba la red en esa foto (manos-camara.js: con una sola a la vista, busca
+       una; que no esté la otra no quiere decir que se perdió).
+       Con dos redes una foto puede llegar después que la siguiente: sirve para la mano que la nueva
+       no traía (la que buscaba la otra red); para las demás es vieja (se fija mano por mano) */
     const q = new THREE.Quaternion(), p = new THREE.Vector3();
     if (!this.cabezaEn(tCaptura, q, p)) return;
-    this.tCapUlt = tCaptura;
+    const vieja = tCaptura <= this.tCapUlt;
+    if (!vieja) this.tCapUlt = tCaptura;
     const ts = tCaptura / 1000, tl = tLlego / 1000;
     const dets = lista.map((m) => {
       const W = new Float32Array(63);
@@ -516,12 +519,13 @@ export class Manos {
       d.M = M; tomadas.add(M);
     }
     for (const d of dets) {
-      if (!d.M) continue;
+      if (!d.M || (d.M.visible && ts <= d.M.t)) continue;   // (esa mano ya tiene algo más nuevo)
       d.M.recibir(d.W, ts, tl, d.pell, d.m.confianza, false, p);
       if (d.m.derecha != null) d.M.votos = THREE.MathUtils.clamp(d.M.votos + (d.m.derecha === d.M.derecha ? 1 : -1), -6, 6);
       this.stats.lecturas++;
     }
-    for (const M of this.manos) if (!tomadas.has(M)) M.faltas++;
+    /* (una que no vino es una falta solo si la red tenía lugar para traerla, y si la foto no es vieja) */
+    if (!vieja && dets.length < cupo) for (const M of this.manos) if (!tomadas.has(M)) M.faltas++;
     /* 3) si una mano viene seguido con la etiqueta del otro lado (y la otra no está, o también está
        al revés), se dan vuelta: así la palma y el hombro del rayo son los de esa mano */
     const [I, D] = this.manos;

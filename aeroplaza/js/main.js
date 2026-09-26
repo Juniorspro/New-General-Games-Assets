@@ -153,7 +153,7 @@ async function iniciar() {
   /* las manos del VR (manos.js), por la cámara del celu (manos-camara.js, MediaPipe en un worker) */
   const manos = new Manos();
   let camManos = null;
-  const laCamara = () => (camManos ||= new ManosCamara({ alLlegar: (lista, tt, llego) => { if (manos.activa) manos.recibirCamara(lista, tt, llego); } }));
+  const laCamara = () => (camManos ||= new ManosCamara({ alLlegar: (lista, tt, llego, cupo) => { if (manos.activa) manos.recibirCamara(lista, tt, llego, cupo); } }));
   /* el flash del VR sin visor (vr.js pone el botón): la linterna de la cámara de atrás */
   vr.alFlash = (prender) => laCamara().linterna(prender);
   /* (con los cuadros por segundo prendidos, también lo de las manos: fotos por segundo y atraso) */

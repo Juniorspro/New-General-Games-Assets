@@ -9,6 +9,14 @@
    - A la red va una imagen chica (320 de ancho: la mano, en primera persona,
      ocupa un tercio del cuadro) y nunca más de un cuadro a la vez: si está
      ocupada, el cuadro nuevo se saltea. Así no se acumula atraso.
+   - Las fotos no pasan por el hilo del juego (que está dibujando a 120): un
+     worker lector las toma directo de la cámara (MediaStreamTrackProcessor) y
+     se las da a la red que esté libre. Donde no hay, como antes
+     (requestVideoFrameCallback + createImageBitmap en el hilo del juego:
+     7-23 ms más por foto).
+   - Cada red busca UNA mano mientras se ve una sola: con dos, MediaPipe busca
+     palmas en cada foto por si aparece la segunda (74 ms por foto contra 38 en
+     el contenedor). Cada tanto una red se fija si apareció la otra.
    - De cada mano llegan 21 puntos en la imagen y 21 en metros (la forma, con
      el centro en la mano). La posición en metros se resuelve con los dos: la
      traslación que hace que la forma caiga justo sobre la imagen (mínimos
@@ -27,14 +35,15 @@ const ANCHO_RED = 320;
    se abre como archivo, porque el origen es "null"; y MediaPipe, en un worker clásico, carga su
    parte de WebAssembly con importScripts) */
 const WORKER = () => `
-let lm = null, ultimo = -1;
-self.onmessage = async (e) => {
-  const d = e.data;
+let lm = null, ultimo = -1, cupo = 2, cambio = null, recien = false;
+/* d: el mensaje; via: el puerto del lector si vino de ahí (se le avisa cuando queda libre) */
+const atender = async (d, via) => {
   if (d.tipo === 'iniciar') {
     try {
       const { FilesetResolver, HandLandmarker } = await import(d.base + '/vision_bundle.mjs');
       const fs = await FilesetResolver.forVisionTasks(d.base + '/wasm');
-      const op = (delegate) => ({ baseOptions: { modelAssetPath: d.modelo, delegate }, runningMode: 'VIDEO', numHands: 2,
+      cupo = d.cupo || 2;
+      const op = (delegate) => ({ baseOptions: { modelAssetPath: d.modelo, delegate }, runningMode: 'VIDEO', numHands: cupo,
         minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.4, minTrackingConfidence: 0.4 });
       /* (presencia y seguimiento un poco más tolerantes que lo de fábrica: con 0,5 soltaba la mano
          en cuanto se movía rápido o se ponía de costado, y volver a encontrarla cuesta una foto entera
@@ -46,11 +55,24 @@ self.onmessage = async (e) => {
     } catch (err) { self.postMessage({ tipo: 'error', error: String((err && err.message) || err) }); }
     return;
   }
+  /* las fotos que manda el lector llegan por este puerto */
+  if (d.tipo === 'puerto') { d.puerto.onmessage = (e) => atender(e.data, d.puerto); return; }
+  /* cuántas manos busca: cambiarlo cuesta ~12 ms (y la foto siguiente vuelve a buscar palmas) */
+  if (d.tipo === 'cupo') {
+    if (!lm || d.n === cupo) return;
+    cupo = d.n; recien = true; const n = cupo;
+    cambio = (cambio || Promise.resolve()).then(() => lm.setOptions({ numHands: n })).catch(() => {});
+    return;
+  }
   if (d.tipo === 'cuadro') {
-    if (!lm) { d.imagen.close(); self.postMessage({ tipo: 'manos', n: 0, buf: new Float32Array(0), t: d.t, ms: 0 }); return; }
-    const t0 = performance.now(), ts = Math.max(ultimo + 1, Math.round(d.ts)); ultimo = ts;
+    const libre = () => { if (via) via.postMessage({ tipo: 'libre' }); };
+    if (cambio) { const c = cambio; await c; if (cambio === c) cambio = null; }
+    if (!lm) { d.imagen.close(); self.postMessage({ tipo: 'manos', n: 0, buf: new Float32Array(0), t: d.t, ms: 0, cupo, lector: !!via, a: d.aspecto }); libre(); return; }
+    /* (primera: la primera foto después de cambiar el cupo, que vuelve a buscar palmas: no cuenta para
+       medir cuánto tarda la red) */
+    const t0 = performance.now(), ts = Math.max(ultimo + 1, Math.round(d.ts)), usado = cupo, primera = recien; ultimo = ts; recien = false;
     let r;
-    try { r = lm.detectForVideo(d.imagen, ts); } catch (err) { d.imagen.close(); self.postMessage({ tipo: 'fallo', error: String(err), t: d.t }); return; }
+    try { r = lm.detectForVideo(d.imagen, ts); } catch (err) { d.imagen.close(); self.postMessage({ tipo: 'fallo', error: String(err), t: d.t, lector: !!via }); libre(); return; }
     d.imagen.close();
     const n = r.landmarks.length, buf = new Float32Array(n * 128);
     for (let h = 0; h < n; h++) {
@@ -61,9 +83,49 @@ self.onmessage = async (e) => {
       }
       buf[o + 126] = H ? (H.categoryName === 'Right' ? 1 : 0) : -1; buf[o + 127] = H ? H.score : 0;
     }
-    self.postMessage({ tipo: 'manos', n, buf, t: d.t, ms: performance.now() - t0 }, [buf.buffer]);
+    self.postMessage({ tipo: 'manos', n, buf, t: d.t, ms: performance.now() - t0, cupo: usado, primera, lector: !!via, a: d.aspecto }, [buf.buffer]);
+    libre();
   }
-};`;
+};
+self.onmessage = (e) => atender(e.data, null);`;
+
+/* el lector: toma las fotos de la cámara (sin el hilo del juego) y se las da a la red libre.
+   - La hora de cada foto viene en otro reloj (el de la cámara): se pasa al del juego con lo que dice
+     el juego (offset, calibrado con captureTime) o, mientras tanto, con cuándo llegó la más rápida.
+   - Sin manos a la vista hace un segundo (quieta), una foto sí y una no, y solo a la primera red */
+const LECTOR = () => `
+let redes = [], offset = null, origen = 0, quieta = false, n = 0, offMin = Infinity, primero = 0;
+const ultimos = [], S = { leidos: 0, saltados: 0, ahorrados: 0 };
+self.onmessage = (e) => {
+  const d = e.data;
+  if (d.tipo === 'iniciar') { origen = d.origen; leer(d.readable.getReader(), d.ancho); }
+  else if (d.tipo === 'red') { const r = { puerto: d.puerto, ocupado: false, apagada: false }; d.puerto.onmessage = (ev) => { if (ev.data.tipo === 'libre') r.ocupado = false; }; redes[d.i] = r; }
+  else if (d.tipo === 'reloj') offset = d.offset;
+  else if (d.tipo === 'estado') { quieta = d.quieta; primero = d.primero || 0; (d.apagadas || []).forEach((a, i) => { if (redes[i]) redes[i].apagada = a; }); }
+};
+async function leer(rd, ancho) {
+  for (;;) {
+    let f;
+    try { const r = await rd.read(); if (r.done) break; f = r.value; } catch (err) { break; }
+    const ts = f.timestamp / 1000, llega = performance.timeOrigin + performance.now() - origen;
+    S.leidos++; offMin = Math.min(offMin, llega - ts);
+    ultimos.push(ts); if (ultimos.length > 12) ultimos.shift();
+    const w = f.displayWidth, h = f.displayHeight;
+    if (S.leidos % 15 === 1) self.postMessage({ tipo: 'ts', ts: ultimos.slice(), offMin, leidos: S.leidos, saltados: S.saltados, ahorrados: S.ahorrados, ancho: w, alto: h });
+    if (quieta && (n++ & 1)) { S.ahorrados++; f.close(); continue; }
+    /* (primero: la red que está buscando la segunda mano, si está libre; si no, la primera libre) */
+    const puede = (x, k) => x && !x.ocupado && !x.apagada && (k === 0 || !quieta);
+    const i = puede(redes[primero], primero) ? primero : redes.findIndex(puede);
+    if (i < 0) { S.saltados++; f.close(); continue; }
+    const r = redes[i], t = ts + (offset ?? offMin); r.ocupado = true;
+    try {
+      const imagen = await createImageBitmap(f, { resizeWidth: ancho, resizeHeight: Math.round(ancho * h / w), resizeQuality: 'low' });
+      r.puerto.postMessage({ tipo: 'cuadro', imagen, ts: t, t, aspecto: w / h }, [imagen]);
+    } catch (err) { r.ocupado = false; }
+    f.close();
+  }
+  self.postMessage({ tipo: 'fin' });
+}`;
 
 /* la traslación T (metros, cámara con x a la derecha, y abajo, z adelante) que hace que la forma W
    (21 puntos alrededor del centro de la mano) caiga sobre la imagen: x/z = a, y/z = b.
@@ -101,6 +163,8 @@ export class ManosCamara {
     this.estado = 'apagada';     // apagada · cargando · lista · error
     this.stats = { cuadros: 0, ms: 0, saltados: 0, latencia: 0, ahorrados: 0, tarde: 0 };
     this.ultimaT = -1e9; this.redes = null; this.listo = null;
+    this.lector = null; this.directo = false;   // (las fotos directo de la cámara al worker lector)
+    this.vistas = { una: -1e9, dos: -1e9, prueba: -1e9, desde: -1e9 };   // cuándo se vio una mano, dos, y la última vez que se buscó la segunda
     this.tMano = -1e9; this.nCuadro = 0; this.flash = false; this.activa = false;
     this.cfg = { base: MANOS_BASE, modelo: MANOS_MODELO, ...(window.AEROPLAZA_MANOS || {}) };
   }
@@ -130,17 +194,74 @@ export class ManosCamara {
       w.onerror = (e) => { clearTimeout(t); w.terminate(); mal(new Error(e.message || 'worker')); };
       w.onmessage = (e) => {
         const d = e.data;
-        if (d.tipo === 'listo') { clearTimeout(t); if (!this.redes) { w.terminate(); return; } this.redes.push(red); w.onmessage = (e2) => this.recibir(e2.data, red); ok({ w, delegado: d.delegado }); }
+        if (d.tipo === 'listo') { clearTimeout(t); if (!this.redes) { w.terminate(); return; } red.cupo = 2; this.redes.push(red); w.onmessage = (e2) => this.recibir(e2.data, red); if (this.lector) this.conectar(red); ok({ w, delegado: d.delegado }); }
         else if (d.tipo === 'error') { clearTimeout(t); w.terminate(); mal(new Error(d.error)); }
       };
-      w.postMessage({ tipo: 'iniciar', base: this.cfg.base, modelo: this.cfg.modelo, delegado });
+      w.postMessage({ tipo: 'iniciar', base: this.cfg.base, modelo: this.cfg.modelo, delegado, cupo: 2 });
     });
   }
+  /* un canal directo entre el lector y una red (las fotos no pasan por el hilo del juego) */
+  conectar(red) {
+    const ch = new MessageChannel(), i = this.redes.indexOf(red);
+    this.lector.postMessage({ tipo: 'red', i, puerto: ch.port1 }, [ch.port1]);
+    red.w.postMessage({ tipo: 'puerto', puerto: ch.port2 }, [ch.port2]);
+    this.avisarLector();
+  }
+  /* el lector: si el navegador deja pasar la cámara a un worker (Chrome, Edge, Samsung Internet) */
+  abrirLector() {
+    if (typeof MediaStreamTrackProcessor !== 'function' || this.cfg.sinLector) return false;
+    try {
+      const tr = this.stream.getVideoTracks()[0], p = new MediaStreamTrackProcessor({ track: tr });
+      this.urlLector ||= URL.createObjectURL(new Blob([LECTOR()], { type: 'text/javascript' }));
+      const L = this.lector = new Worker(this.urlLector);
+      L.onmessage = (e) => this.delLector(e.data);
+      L.postMessage({ tipo: 'iniciar', readable: p.readable, origen: performance.timeOrigin, ancho: ANCHO_RED }, [p.readable]);
+      this.directo = true; this.reloj = null; this.caps = [];
+      for (const r of this.redes || []) this.conectar(r);
+      this.medirReloj();
+      return true;
+    } catch (err) { this.lector?.terminate(); this.lector = null; this.directo = false; return false; }
+  }
+  /* el reloj de las fotos del lector es el de la cámara: se calibra contra captureTime, que da el
+     video en el reloj del juego. La misma foto tiene la misma diferencia entre los dos (medido: 39
+     de 40 fotos, ±0,2 ms); se busca esa diferencia repetida entre todos los pares */
+  medirReloj() {
+    const v = this.video;
+    if (!v?.requestVideoFrameCallback) return;
+    const f = (ahora, meta) => {
+      if (!this.directo || this.video !== v) return;
+      if (typeof meta?.captureTime === 'number') { this.caps.push(meta.captureTime); if (this.caps.length > 20) this.caps.shift(); }
+      if (!this.reloj) v.requestVideoFrameCallback(f);
+    };
+    v.requestVideoFrameCallback(f);
+  }
+  delLector(d) {
+    if (d.tipo === 'fin') { this.lector?.terminate(); this.lector = null; this.directo = false; return; }
+    if (d.tipo !== 'ts') return;
+    this.aspecto = d.ancho / d.alto;
+    Object.assign(this.stats, { leidos: d.leidos, saltadosLector: d.saltados, ahorradosLector: d.ahorrados });
+    this.stats.offMin = d.offMin;   // (ya en el reloj del juego: el lector le resta el origen)
+    if (this.reloj || this.caps.length < 6) return;
+    const difs = [];
+    for (const c of this.caps) for (const t of d.ts) difs.push(c - t);
+    difs.sort((x, y) => x - y);
+    /* (la misma foto da la misma diferencia, al microsegundo; de fotos distintas, parecida pero con el
+       temblor del intervalo: ventana de 0,05 ms. Si hay dos iguales de buenas, la más cerca de la
+       llegada: una foto corrida da 33 ms de error) */
+    const grupos = [];
+    for (let i = 0, j = 0; i < difs.length; i++) { while (j + 1 < difs.length && difs[j + 1] - difs[i] < 0.05) j++; grupos.push({ n: j - i + 1, v: difs[(i + j) >> 1] }); }
+    const max = Math.max(0, ...grupos.map((g) => g.n)), lim = this.stats.offMin + 1;
+    const buenos = grupos.filter((g) => g.n >= Math.max(8, max - 1) && g.v <= lim).sort((a, b) => Math.abs(a.v - lim) - Math.abs(b.v - lim));
+    if (buenos.length) { this.reloj = buenos[0].v; this.lector.postMessage({ tipo: 'reloj', offset: this.reloj }); }
+  }
+  /* lo que el lector tiene que saber: si no hay manos a la vista, y qué redes están apagadas */
+  avisarLector() { this.lector?.postMessage({ tipo: 'estado', quieta: this.quieta, primero: this.primero || 0, apagadas: (this.redes || []).map((r) => !!r.apagada) }); }
   /* la cámara de atrás, chica y rápida */
   async prender() {
     await this.iniciarRed();
     await this.abrirCamara();
-    this.activa = true; this.pedir();
+    this.activa = true;
+    if (!this.lector && !this.abrirLector()) this.pedir();
     return true;
   }
   async abrirCamara() {
@@ -156,12 +277,13 @@ export class ManosCamara {
       Object.assign(v.style, { position: 'fixed', left: '0', top: '0', width: '2px', height: '2px', opacity: '0.01', pointerEvents: 'none', zIndex: '-1' });
       document.body.appendChild(v);
       await v.play();
-      this.stream = stream;
+      this.stream = stream; this.fpsCamara = stream.getVideoTracks()[0]?.getSettings?.().frameRate || 30;
       return stream;
     })();
     try { return await this._abriendo; } finally { this._abriendo = null; }
   }
   cerrarCamara() {
+    this.lector?.terminate(); this.lector = null; this.directo = false;
     this.stream?.getTracks().forEach((t) => t.stop()); this.stream = null; this.flash = false;
     if (this.video) { this.video.srcObject = null; this.video.remove(); this.video = null; }
   }
@@ -169,6 +291,8 @@ export class ManosCamara {
   apagar({ todo = false } = {}) {
     this.activa = false;
     if (todo || !this.flash) this.cerrarCamara();
+    /* (con el flash la cámara sigue abierta: el lector deja de mandar fotos) */
+    else { this.lector?.terminate(); this.lector = null; this.directo = false; }
   }
   /* el flash de la cámara de atrás (la linterna): alumbra las manos en un lugar oscuro, donde la red
      casi no las ve. Anda con las manos o sin ellas (abre la cámara solo para eso). Devuelve si quedó
@@ -217,37 +341,84 @@ export class ManosCamara {
       red.w.postMessage({ tipo: 'cuadro', imagen, ts: t, t }, [imagen]);
     } catch { red.ocupado = false; }
   }
-  /* ¿las dos redes le convienen a este celu? Cada red lleva lo que tarda por foto. Si con las dos la
-     primera se pone mucho más lenta que cuando estaba sola (se pelean por los núcleos buenos), o si
-     la segunda tarda mucho más que la primera (le tocó un núcleo lento), la segunda se apaga: cada
-     foto llegaría más vieja y la mano se vería más atrasada */
-  medirRedes(red, ms) {
+  /* ¿las dos redes le convienen a este celu? Cada red lleva lo que tarda por foto (aparte buscando
+     una mano y dos: una tarda la mitad). Si con las dos la primera se pone mucho más lenta que cuando
+     estaba sola (se pelean por los núcleos buenos), o si la segunda tarda mucho más que la primera
+     (le tocó un núcleo lento), la segunda se apaga: cada foto llegaría más vieja y la mano se vería
+     más atrasada */
+  medirRedes(red, ms, cupo = 2, manos = 0) {
     if (!red || !(ms > 0)) return;
-    red.n = (red.n || 0) + 1; red.ms = red.ms ? red.ms + (ms - red.ms) * 0.1 : ms;
+    /* (siempre con el mismo trabajo: cuántas manos buscaba y cuántas encontró. Sin manos, solo busca
+       palmas; con una, palmas y dedos: comparar una cosa con la otra apagaba la segunda sin razón) */
+    const k = cupo + ':' + Math.min(2, manos), M = red.med ||= {}, x = M[k] ||= { n: 0, ms: 0 };
+    x.n++; x.ms = x.n > 1 ? x.ms + (ms - x.ms) * 0.1 : ms;
+    red[cupo > 1 ? 'ms2' : 'ms1'] = x.ms;
     const [a, b] = this.redes || [];
-    if (red === a && !b) { a.sola = a.sola ? a.sola + (ms - a.sola) * 0.1 : ms; a.nSola = (a.nSola || 0) + 1; }
-    if (!a || !b || b.apagada || b.n < 15 || a.n < 15) return;
-    if ((a.nSola >= 10 && a.ms > a.sola * 1.35) || b.ms > a.ms * 1.5) { b.apagada = true; this.stats.segundaApagada = true; }
+    if (red === a && !b) { const so = (a.sola ||= {})[k] ||= { n: 0, ms: 0 }; so.n++; so.ms = so.n > 1 ? so.ms + (ms - so.ms) * 0.1 : ms; }
+    if (!a || !b || b.apagada) return;
+    const A = a.med?.[k], B = b.med?.[k], S = a.sola?.[k];
+    if (!A || !B || A.n < 15 || B.n < 15) return;
+    if ((S && S.n >= 10 && A.ms > S.ms * 1.35) || B.ms > A.ms * 1.5) { b.apagada = true; this.stats.segundaApagada = k; this.avisarLector(); }
+  }
+  /* cuántas manos busca cada red. Con una sola a la vista, la primera busca una (la mitad de tiempo
+     por foto). Por si aparece la otra:
+     - con dos redes, si la primera sola alcanza a leer todas las fotos de la cámara, la segunda queda
+       buscando dos (sin cambiar, que cuesta una foto lenta) y cada 350 ms recibe una foto antes que
+       la primera; si no alcanza, las dos siguen la mano a la par (el doble de fotos) y cada 700 ms
+       la segunda busca dos en una foto;
+     - con una sola red, cada 1,2 s busca dos en una foto y vuelve.
+     Con dos a la vista, o con ninguna, todas buscan dos */
+  elegirCupos(d, red, llego) {
+    if (this.cfg.siempreDos) return;   // (como antes: para comparar en las pruebas)
+    const V = this.vistas, redes = (this.redes || []).filter((r) => !r.apagada);
+    if (d.n >= 1) V.una = llego;
+    if (d.n >= 2) V.dos = llego;
+    const hay = llego - V.dos < 500 ? 2 : llego - V.una < 800 ? 1 : 0;
+    if (hay !== this.hay) V.desde = llego;
+    this.hay = hay;
+    /* (recién aparecida una mano, un rato más buscando dos: la otra suele aparecer junto, y si en la
+       primera foto no salió, sin esto quedaba esperando a que alguna red la buscara) */
+    const una = hay === 1 && llego - V.desde > 400, dos = redes.length > 1, busca = redes[dos ? 1 : 0];
+    const m1 = redes[0]?.med?.['1:1'], fps = this.fpsCamara || 30;
+    const sobra = dos && !!m1 && m1.n >= 10 && m1.ms < 850 / fps;
+    if (!una) { for (const r of redes) r.probando = false; }
+    else if (busca) {
+      if (busca.probando && red === busca && (sobra || d.cupo === 2)) { busca.probando = false; V.prueba = llego; }
+      else if (!busca.probando && llego - V.prueba > (sobra ? 350 : dos ? 700 : 1200)) busca.probando = true;
+    }
+    for (const r of redes) {
+      const c = !una ? 2 : r !== busca ? 1 : sobra || r.probando ? 2 : 1;
+      if (r.cupo !== c) { r.cupo = c; r.w.postMessage({ tipo: 'cupo', n: c }); }
+    }
+    /* (la que busca, primera en recibir foto: si no, con la otra rápida no le llegaba ninguna) */
+    const primero = una && busca?.probando ? this.redes.indexOf(busca) : 0;
+    if (primero !== (this.primero || 0)) { this.primero = primero; this.avisarLector(); }
   }
   /* lo que se muestra con los cuadros por segundo: fotos por segundo y atraso de las manos */
   datos() {
     const S = this.stats, ahora = performance.now();
     if (!this._d || ahora - this._d.t > 1000) { const porSeg = this._d ? (S.cuadros - this._d.n) / ((ahora - this._d.t) / 1000) : 0; this._d = { t: ahora, n: S.cuadros, porSeg }; }
-    const redes = (this.redes || []).filter((r) => !r.apagada).length;
-    return `✋ ${Math.round(this._d.porSeg)}/s · ${Math.round(S.latencia)} ms · ${Math.round(S.ms)} ms/red ×${redes}`;
+    const redes = (this.redes || []).filter((r) => !r.apagada), r0 = redes[0], ms = r0?.ms1 && this.hay === 1 ? r0.ms1 : S.ms;
+    const fps = this.stream?.getVideoTracks()[0]?.getSettings?.().frameRate;
+    return `✋ ${Math.round(this._d.porSeg)}/s · ${Math.round(S.latencia)} ms · ${Math.round(ms)} ms/red ×${redes.length}${fps ? ` · 📷${Math.round(fps)}` : ''}${this.directo ? '⚡' : ''}`;
   }
   /* para las pruebas (y para ver si anda sin cámara): una imagen suelta, a la primera red */
   probar(imagen, t = performance.now()) { if (this.redes?.[0]) this.redes[0].ocupado = false; return this.cuadro(t, imagen, true); }
   recibir(d, red) {
-    if (red) red.ocupado = false;
+    if (red && !d.lector) red.ocupado = false;
     if (d.tipo !== 'manos') return;
-    this.medirRedes(red, d.ms);
-    /* (con dos redes, una foto puede volver después que la siguiente: la vieja no sirve) */
-    if (d.t < this.ultimaT) { this.stats.tarde++; return; }
-    this.ultimaT = d.t;
+    if (!d.primera) this.medirRedes(red, d.ms, d.cupo, d.n);
+    if (d.a) this.aspecto = d.a;
+    /* (con dos redes, una foto puede volver después que la siguiente: sirve para la mano que la otra
+       no buscaba; manos.js se fija mano por mano) */
+    if (d.t < this.ultimaT) this.stats.tarde++;
+    this.ultimaT = Math.max(this.ultimaT, d.t);
     const llego = performance.now();
-    const S = this.stats; S.cuadros++; S.ms += (d.ms - S.ms) * 0.1; S.latencia += (llego - d.t - S.latencia) * 0.1;
+    const S = this.stats; S.cuadros++; if (!d.primera) S.ms += (d.ms - S.ms) * 0.1; S.latencia += (llego - d.t - S.latencia) * 0.1;
     if (d.n) this.tMano = llego;
+    if (this.activa) this.elegirCupos(d, red, llego);
+    const quieta = llego - this.tMano > 1000;
+    if (quieta !== this.quieta) { this.quieta = quieta; this.avisarLector(); }
     /* el campo es el del lado largo del cuadro (con el juego girado, el video llega parado) */
     const asp = this.aspecto || 4 / 3, largo = Math.tan(THREE.MathUtils.degToRad(this.hfov) / 2);
     const manos = [], tanX = asp >= 1 ? largo : largo * asp, tanY = asp >= 1 ? largo / asp : largo;
@@ -266,6 +437,6 @@ export class ManosCamara {
       const et = d.buf[o + 126];
       manos.push({ derecha: et < 0 ? null : et > 0.5, puntos: P, confianza: d.buf[o + 127], img: d.buf.slice(o, o + 63) });
     }
-    this.alLlegar?.(manos, d.t, llego);
+    this.alLlegar?.(manos, d.t, llego, d.cupo ?? 2);
   }
 }

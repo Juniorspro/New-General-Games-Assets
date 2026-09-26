@@ -31,11 +31,27 @@ export function iwer() {
   if (!fs.existsSync(f)) execFileSync('curl', ['-sSL', '-o', f, 'https://cdn.jsdelivr.net/npm/iwer@2.5.0/build/iwer.min.js']);
   return fs.readFileSync(f, 'utf8');
 }
-export async function navegador() {
+export async function navegador({ video = null } = {}) {
   const { chromium } = createRequire('/opt/node22/lib/node_modules/playwright/')('playwright');
   return chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required',
     /* el chat de voz: un micrófono falso (un tono con pitidos) que se da sin preguntar */
-    '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
+    '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream',
+    /* (y la cámara falsa puede ser un video: el de las manos, videoManos()) */
+    ...(video ? ['--use-file-for-fake-video-capture=' + video] : [])] });
+}
+/* una cámara de mentira con manos de verdad (las fotos de pruebas/manos, moviéndose): 0-4 s una mano,
+   4-8 s las dos, 8-11 s el pellizco, 11-13 s ninguna; 640 × 480 a 30. Se arma con ffmpeg la primera vez
+   (en pruebas/salida, no se guarda en el repo); sin ffmpeg, null */
+export function videoManos() {
+  const f = path.join(SAL, 'manos.mjpeg'), M = path.join(AQUI, 'manos');
+  if (fs.existsSync(f)) return f;
+  const mov = "x='50*sin(2*PI*0.5*t)':y='20*sin(2*PI*0.3*t)'";
+  try {
+    execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-loop', '1', '-i', path.join(M, 'mano-palma.jpg'), '-loop', '1', '-i', path.join(M, 'manos-abiertas.jpg'), '-loop', '1', '-i', path.join(M, 'mano-pellizco.jpg'),
+      '-f', 'lavfi', '-i', 'color=c=0x303030:s=640x480:r=30', '-filter_complex', `[3][0]overlay=${mov}:enable='lt(t,4)'[a];[a][1]overlay=${mov}:enable='between(t,4,8)'[b];[b][2]overlay=${mov}:enable='between(t,8,11)'`,
+      '-t', '13', '-r', '30', '-q:v', '4', '-f', 'mjpeg', f]);
+    return f;
+  } catch { return null; }
 }
 /* abre el juego; red: 'no' (sin internet) o 'local' (mqtt.js de la carpeta) */
 export async function abrir(nav, params = '', { ancho = 960, alto = 540, red = 'no', archivo = 'aeroplaza.html', movil = false, manos = false, xr = false } = {}) {
