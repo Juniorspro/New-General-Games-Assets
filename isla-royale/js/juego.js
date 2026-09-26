@@ -163,7 +163,7 @@ function instalarJuego(M) {
     const ang = r() * Math.PI * 2, ax = Math.cos(ang) * 330, az = Math.sin(ang) * 330, off = (r() - 0.5) * 120;
     const bus = { ax: -ax - Math.sin(ang) * off, az: -az + Math.cos(ang) * off, bx: ax - Math.sin(ang) * off, bz: az + Math.cos(ang) * off, y: 175, vel: 26, t: 0 };
     bus.dur = Math.hypot(bus.bx - bus.ax, bus.bz - bus.az) / bus.vel;
-    const cant = 1 + clamp(opc.rivales, 1, 30), jugadores = [];
+    const cant = 1 + clamp(opc.rivales, 1, 30), jugadores = [], modo = MODOS[opc.modo] || MODOS.solo;
     const nombres = NOMBRES_BOTS.slice().sort(() => r() - 0.5);
     for (let i = 0; i < cant; i++) {
       const traje = i === 0 ? TRAJES[opc.traje] : Object.assign({}, TRAJES[(r() * TRAJES.length) | 0], { ropa: `hsl(${(r() * 360) | 0},65%,55%)`, pantalon: `hsl(${(r() * 360) | 0},30%,30%)` });
@@ -185,8 +185,14 @@ function instalarJuego(M) {
     for (const c of isla.cajasMun) cofres.push(nuevoCofre(c, "municion"));
     P = {
       jugadores, cofres, botin: [], estructuras: [], proyectiles: [], feed: [], numeros: [], t: 0, fin: null, finAvisado: false, aviso: null, eliminacion: null, danoFlash: 0, danoId: 0, danoDir: null, sacudida: 0, lugar: null,
-      bus, tormenta: { x: 0, z: 0, r: R0, fase: 0, estado: "espera", t: FASES_TORMENTA[0].espera, desde: null, hacia: null, sig: null }, marca: null, espectando: null, confeti: [], orbita: 0,
+      bus, tormenta: { x: 0, z: 0, r: R0, fase: 0, estado: "espera", t: FASES_TORMENTA[0].espera * modo.ritmo, desde: null, hacia: null, sig: null }, marca: null, espectando: null, confeti: [], orbita: 0,
+      modo: opc.modo in MODOS ? opc.modo : "solo", ritmo: modo.ritmo, cofresYo: 0,
     };
+    // Arsenal: todos caen armados, así la pelea no espera a que aparezca un cofre.
+    if (modo.kit) for (const p of jugadores) {
+      p.inv[1] = { tipo: "arma", arma: "rifle", rareza: 2, mun: ARMAS.rifle.cargador }; p.inv[2] = { tipo: "arma", arma: "escopeta", rareza: 2, mun: ARMAS.escopeta.cargador };
+      p.inv[3] = { tipo: "consumible", c: "miniescudo", cant: 3 }; p.mun.mediana = 120; p.mun.cartuchos = 20; p.mats.madera = 200; p.mats.piedra = 100; p.escudo = 50;
+    }
     elegirSiguienteCirculo();
     // Botín del piso.
     for (const pt of isla.puntosBotin) { if (r() > 0.72) continue; const k = r(); if (k < 0.55) { const it = armaAlAzar(r, PROB_PISO); soltar(it, pt.x, pt.y, pt.z, 0); soltar({ tipo: "municion", m: ARMAS[it.arma].mun, cant: MUNICIONES[ARMAS[it.arma].mun].caja }, pt.x + 0.7, pt.y, pt.z + 0.3, 0); } else if (k < 0.8) soltar(consumibleAlAzar(r), pt.x, pt.y, pt.z, 0); else { const m = Object.keys(MUNICIONES)[(r() * 4) | 0]; soltar({ tipo: "municion", m, cant: MUNICIONES[m].caja }, pt.x, pt.y, pt.z, 0); } }
@@ -224,7 +230,7 @@ function instalarJuego(M) {
       soltar({ tipo: "material", mat: LISTA_MAT[(r() * 3) | 0], cant: 30 }, c.x, c.y, c.z);
     } else for (let k = 0; k < 2; k++) { const m = Object.keys(MUNICIONES)[(r() * 4) | 0]; soltar({ tipo: "municion", m, cant: MUNICIONES[m].caja }, c.x, c.y, c.z); }
     M.chispas(c.x, c.y + 0.8, c.z, 30, c.tipo === "cofre" ? [0xffd54a, 0xfff3b0, 0xffffff] : [0x7fe07f, 0xffffff], 4, 0.9, 5);
-    if (!p.bot) Sonido.cofre();
+    if (!p.bot) { Sonido.cofre(); if (c.tipo === "cofre") P.cofresYo++; }
   }
   const nombreItem = (it) => it.tipo === "arma" ? t(it.arma) : it.tipo === "consumible" ? t(it.c) : it.tipo === "municion" ? t(it.m) : t(it.mat);
   // Agarrar: municiones y materiales, directo; armas y curas, a un lugar libre (o cambiando por lo que tiene en la mano).
@@ -633,11 +639,11 @@ function instalarJuego(M) {
     if (B.t < B.dur + 30) B.t += dt;
     if (!P.fin) {
       T.t -= dt;
-      if (T.estado === "espera" && T.t <= 0 && FASES_TORMENTA[T.fase]) { T.estado = "cierra"; T.desde = { x: T.x, z: T.z, r: T.r }; T.hacia = T.sig; T.t = FASES_TORMENTA[T.fase].cierre; avisar(t("tormentaCierra"), 2.2); }
+      if (T.estado === "espera" && T.t <= 0 && FASES_TORMENTA[T.fase]) { T.estado = "cierra"; T.desde = { x: T.x, z: T.z, r: T.r }; T.hacia = T.sig; T.t = FASES_TORMENTA[T.fase].cierre * P.ritmo; avisar(t("tormentaCierra"), 2.2); }
       else if (T.estado === "cierra") {
-        const k = 1 - Math.max(0, T.t) / FASES_TORMENTA[T.fase].cierre;
+        const k = 1 - Math.max(0, T.t) / (FASES_TORMENTA[T.fase].cierre * P.ritmo);
         T.x = lerp(T.desde.x, T.hacia.x, k); T.z = lerp(T.desde.z, T.hacia.z, k); T.r = lerp(T.desde.r, T.hacia.r, k);
-        if (T.t <= 0) { T.fase++; if (FASES_TORMENTA[T.fase]) { T.estado = "espera"; T.t = FASES_TORMENTA[T.fase].espera; elegirSiguienteCirculo(); avisar(t("ojoTormenta"), 2); } else { T.estado = "fin"; T.t = 0; } }
+        if (T.t <= 0) { T.fase++; if (FASES_TORMENTA[T.fase]) { T.estado = "espera"; T.t = FASES_TORMENTA[T.fase].espera * P.ritmo; elegirSiguienteCirculo(); avisar(t("ojoTormenta"), 2); } else { T.estado = "fin"; T.t = 0; } }
       }
     }
     const danoT = (FASES_TORMENTA[Math.min(T.fase, FASES_TORMENTA.length - 1)] || { dano: 10 }).dano;
@@ -684,8 +690,8 @@ function instalarJuego(M) {
     // Final.
     const vivos = P.jugadores.filter((p) => p.vivo);
     if (!P.fin) {
-      if (!yo.vivo) { P.fin = { gano: false, puesto: yo.puesto, bajas: yo.bajas, tiempo: P.t, asesino: P.asesino, dano: yo.dano, precision: yo.tiros ? yo.aciertos / yo.tiros : 0 }; Sonido.derrota(); }
-      else if (vivos.length === 1) { P.fin = { gano: true, puesto: 1, bajas: yo.bajas, tiempo: P.t, dano: yo.dano, precision: yo.tiros ? yo.aciertos / yo.tiros : 0 }; yo.baila = true; Sonido.victoria(); M.lanzarConfeti(); }
+      if (!yo.vivo) { P.fin = { gano: false, puesto: yo.puesto, bajas: yo.bajas, tiempo: P.t, asesino: P.asesino, dano: yo.dano, modo: P.modo, cofres: P.cofresYo, total: P.jugadores.length, precision: yo.tiros ? yo.aciertos / yo.tiros : 0 }; Sonido.derrota(); }
+      else if (vivos.length === 1) { P.fin = { gano: true, puesto: 1, bajas: yo.bajas, tiempo: P.t, dano: yo.dano, modo: P.modo, cofres: P.cofresYo, total: P.jugadores.length, precision: yo.tiros ? yo.aciertos / yo.tiros : 0 }; yo.baila = true; Sonido.victoria(); M.lanzarConfeti(); }
     }
     P.feed = P.feed.filter((f) => (f.t -= dt) > 0);
     if (P.aviso && (P.aviso.t -= dt) <= 0) P.aviso = null;
@@ -693,7 +699,7 @@ function instalarJuego(M) {
     if (P.danoDir && (P.danoDir.t -= dt) <= 0) P.danoDir = null;
     P.danoFlash = Math.max(0, P.danoFlash - dt); P.sacudida = Math.max(0, P.sacudida - dt * 25);
     // Entrar a un lugar: el nombre en grande.
-    if (yo.vivo && yo.estado === "tierra") { const pu = isla.lugares.find((q) => Math.hypot(q.x - yo.x, q.z - yo.z) < q.radio + 8); if (pu && pu !== P.lugar) avisar(pu.nombre, 2.4); P.lugar = pu || null; }
+    if (yo.vivo && yo.estado === "tierra") { const pu = isla.lugares.find((q) => Math.hypot(q.x - yo.x, q.z - yo.z) < q.radio + 8); if (pu && pu !== P.lugar) avisar(t(pu.nombre), 2.4); P.lugar = pu || null; }
   }
 
   Object.assign(M, { nuevaPartida, paso, rayo, sueloEn, lineaLibre, construir, calcularPieza, disparar, recargar, usarConsumible, agarrar, abrirCofre, herir, boca, ojo, pecho, altura, alAire, enMano, soltar, nombreItem, saltarDelBus, dir4 });

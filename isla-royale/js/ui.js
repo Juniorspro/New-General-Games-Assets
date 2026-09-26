@@ -45,14 +45,15 @@ function Interruptor({ valor, poner }) { return h("button", { className: "interr
 function Deslizador({ valor, poner, min, max, paso }) { return h("span", { className: "deslizador" }, h("input", { type: "range", min, max, step: paso, value: valor, onChange: (e) => poner(+e.target.value) }), h("b", null, valor.toFixed(paso < 1 ? 1 : 0))); }
 function Chips({ valor, poner, opciones }) { return h("span", { className: "chips" }, opciones.map(([v, txt]) => h("button", { key: v, className: "chip-op" + (valor === v ? " activa" : ""), onClick: () => poner(v) }, txt))); }
 
-function PanelOpciones({ opciones, poner, cerrar }) {
+// El cuerpo de las opciones va suelto porque se usa en dos lados: la pestaña
+// del vestíbulo y el panel que se abre desde la pausa.
+function CuerpoOpciones({ opciones, poner }) {
   const [pest, setPest] = useState("juego");
   const fila = (etq, ctrl) => h("label", { className: "fila-op" }, h("span", null, etq), ctrl);
   const o = opciones, p = (k) => (v) => poner({ ...o, [k]: v });
-  return h("div", { className: "modal", onClick: (e) => { if (e.target === e.currentTarget) cerrar(); } }, h("div", { className: "panel" },
-    h("div", { className: "panel-cab" }, h("h2", null, t("opciones")), h("button", { className: "cerrar", onClick: cerrar, "aria-label": t("cerrar") }, "✕")),
-    h("div", { className: "pestanas" }, ["juego", "video", "audio", "controles"].map((k) => h("button", { key: k, className: pest === k ? "activa" : "", onClick: () => setPest(k) }, t(k)))),
-    h("div", { className: "panel-cuerpo" },
+  return h(React.Fragment, null,
+    h("div", { className: "pestanas" }, ["juego", "video", "audio", "controles", "creditos"].map((k) => h("button", { key: k, className: pest === k ? "activa" : "", onClick: () => setPest(k) }, t(k)))),
+    h("div", { className: "panel-cuerpo", key: pest },
       pest === "juego" && [
         fila(t("idioma"), h(Chips, { key: "i", valor: o.idioma, poner: p("idioma"), opciones: [["es", "Español"], ["en", "English"], ["pt", "Português"]] })),
         fila(t("sens"), h(Deslizador, { key: "s", valor: o.sens, poner: p("sens"), min: 0.3, max: 2.5, paso: 0.1 })),
@@ -68,37 +69,152 @@ function PanelOpciones({ opciones, poner, cerrar }) {
       pest === "audio" && fila(t("volumen"), h(Deslizador, { valor: o.volumen, poner: p("volumen"), min: 0, max: 1, paso: 0.1 })),
       pest === "controles" && [
         fila(t("botones"), h(Deslizador, { key: "b", valor: o.botones, poner: p("botones"), min: 0.7, max: 1.4, paso: 0.1 })),
-        h("div", { key: "tecl", className: "teclas" }, [["WASD", "tecla_mover"], ["Shift", "tecla_correr"], ["C / Ctrl", "tecla_agachar"], [t("espacio"), "tecla_saltar"], ["Clic", "tecla_disparar"], ["Clic der.", "tecla_apuntar"], ["R", "tecla_recargar"], ["E", "tecla_usar"], ["1-5", "tecla_armas"], ["F", "tecla_pico"], ["Q Z X V", "tecla_piezas"], ["Clic der. (construyendo)", "tecla_material"], ["M", "tecla_mapa"], ["G", "tecla_baile"], ["Esc", "tecla_pausa"]].map(([k, d]) => h("div", { key: k }, h("kbd", null, k), t(d)))),
+        h("div", { key: "tecl", className: "teclas" }, [["WASD", "tecla_mover"], ["Shift", "tecla_correr"], ["C / Ctrl", "tecla_agachar"], [t("espacio"), "tecla_saltar"], [t("clic"), "tecla_disparar"], [t("clicDer"), "tecla_apuntar"], ["R", "tecla_recargar"], ["E", "tecla_usar"], ["1-5", "tecla_armas"], ["F", "tecla_pico"], ["Q Z X V", "tecla_piezas"], [t("clicDerConstr"), "tecla_material"], ["M", "tecla_mapa"], ["G", "tecla_baile"], ["Esc", "tecla_pausa"]].map(([k, d]) => h("div", { key: d }, h("kbd", null, k), t(d)))),
         h("p", { key: "tac", className: "nota" }, t("tactil_mover"), " · ", t("tactil_mirar"), " · ", t("tactil_botones")),
-      ])));
+      ],
+      pest === "creditos" && h(Creditos)));
+}
+// CC-BY pide nombrar obra, autor, licencia y de dónde salió: acá, en el juego mismo.
+const LICENCIAS = { "CC-BY 3.0": "https://creativecommons.org/licenses/by/3.0/", "CC-BY 4.0": "https://creativecommons.org/licenses/by/4.0/" };
+function Creditos() {
+  const lista = typeof SONIDOS_CREDITOS === "object" ? SONIDOS_CREDITOS : [];
+  const enlace = (href, txt) => h("a", { href, target: "_blank", rel: "noopener" }, txt);
+  // El texto traducido trae {licencia} y {fuente} en su lugar; se parte ahí para poner los enlaces.
+  const armar = (c) => t("credito").split(/(\{\w+\})/).map((pz, i) => h(React.Fragment, { key: i }, pz === "{obra}" ? h("b", null, t("snd_" + c.id)) : pz === "{autor}" ? c.autor : pz === "{licencia}" ? (LICENCIAS[c.licencia] ? enlace(LICENCIAS[c.licencia], c.licencia) : c.licencia) : pz === "{fuente}" ? enlace(c.fuente, c.fuente) : pz));
+  return h("div", { className: "creditos" },
+    h("h3", { className: "subtitulo" }, "♪ ", t("sonidosTit")),
+    h("ul", null, lista.map((c) => h("li", { key: c.id, "data-credito": c.id }, armar(c)))),
+    h("p", { className: "nota" }, t("restoCC0")));
+}
+function PanelOpciones({ opciones, poner, cerrar }) {
+  return h("div", { className: "modal", onClick: (e) => { if (e.target === e.currentTarget) cerrar(); } }, h("div", { className: "panel" },
+    h("div", { className: "panel-cab" }, h("h2", null, t("opciones")), h("button", { className: "cerrar", onClick: cerrar, "aria-label": t("cerrar") }, "✕")),
+    h(CuerpoOpciones, { opciones, poner })));
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Idioma: se elige cada vez que se abre el juego, antes del menú
+// ════════════════════════════════════════════════════════════════════════
+const IDIOMAS = [["es", "Español", "ES"], ["en", "English", "EN"], ["pt", "Português", "PT"]];
+function ElegirIdioma({ actual, elegir }) {
+  // El título va en los tres idiomas a la vez: todavía no sabemos cuál lee.
+  return h("div", { className: "pantalla-idioma" },
+    h("h1", { className: "logo" }, "Isla ", h("span", null, "Royale")),
+    h("p", { className: "idioma-titulo" }, IDIOMAS.map(([k], i) => h(React.Fragment, { key: k }, i > 0 && h("i", null, " · "), TEXTOS[k].elegiIdioma))),
+    h("div", { className: "idiomas-grandes" }, IDIOMAS.map(([k, nombre, cod], i) => h("button", {
+      key: k, className: "idioma-btn" + (actual === k ? " activa" : ""), style: { "--i": i }, autoFocus: actual === k, lang: k, "data-idioma": k,
+      onClick: () => { Sonido.iniciar(); Sonido.confirmar(); elegir(k); }, // primer gesto: acá arranca el audio y se decodifican las muestras
+    }, h("span", { className: "idioma-cod" }, cod), h("b", null, nombre), actual === k && h("small", null, "✓")))));
 }
 
 // ════════════════════════════════════════════════════════════════════════
 // Vestíbulo
 // ════════════════════════════════════════════════════════════════════════
-function Vestibulo({ opciones, poner, stats, jugar, abrirOpciones, motor }) {
+// Dónde se para el personaje en cada pestaña (fracción de media pantalla hacia la
+// derecha) y si la cámara se acerca: los paneles anchos lo taparían.
+const FOCO_PESTANA = { jugar: [0, false], casillero: [0.3, true], carrera: [0.62, false], pase: [0.62, false], opciones: [0.62, false] };
+const PESTANAS = ["jugar", "casillero", "carrera", "pase", "opciones"];
+const mmss = (seg) => `${Math.floor(seg / 60)}:${String(Math.floor(seg % 60)).padStart(2, "0")}`;
+const horas = (seg) => (seg >= 3600 ? `${Math.floor(seg / 3600)} h ${Math.floor((seg % 3600) / 60)} min` : `${Math.floor(seg / 60)} min`);
+
+function Novedades() {
+  const [i, setI] = useState(0);
+  useEffect(() => { const id = setInterval(() => setI((v) => (v + 1) % 3), 5200); return () => clearInterval(id); }, []);
+  const k = "nov" + (i + 1);
+  return h("div", { className: "novedades" },
+    h("small", null, "★ ", t("novedades")),
+    h("div", { className: "nov-cuerpo", key: i }, h("b", null, t(k)), h("p", null, t(k + "_d"))),
+    h("div", { className: "puntos" }, [0, 1, 2].map((n) => h("button", { key: n, className: n === i ? "activa" : "", onClick: () => setI(n), "aria-label": t("nov" + (n + 1)) }))));
+}
+function PestanaJugar({ opciones, poner }) {
+  return h("div", { className: "col-izq" },
+    h("label", { className: "campo tarjeta-in", style: { "--i": 0 } }, h("span", null, t("tuNombre")), h("input", { value: opciones.nombre, maxLength: 16, placeholder: t("solo"), onChange: (e) => poner({ ...opciones, nombre: e.target.value }) })),
+    h("h3", { className: "subtitulo tarjeta-in", style: { "--i": 1 } }, t("modoJuego")),
+    Object.keys(MODOS).map((m, i) => h("button", {
+      key: m, className: "modo-tarjeta tarjeta-in" + (opciones.modo === m ? " activa" : ""), style: { "--i": i + 2 }, "data-modo": m,
+      onClick: () => { Sonido.boton(); poner({ ...opciones, modo: m }); },
+    }, h("span", { className: "modo-icono" }, MODOS[m].icono), h("span", null, h("b", null, t("modo_" + m)), h("small", null, t("modo_" + m + "_d"))))));
+}
+function PestanaCasillero({ opciones, poner, nivel, motor }) {
+  const [baila, setBaila] = useState(false), [ver, setVer] = useState(opciones.traje);
+  useEffect(() => () => motor.bailarVestibulo(false), []);
+  const libre = (i) => nivel >= TRAJE_NIVEL[i];
+  const R = RAREZAS[RAREZA_TRAJE[ver]];
+  return h("div", { className: "col-izq casillero" },
+    h("h2", { className: "tarjeta-in" }, t("casillero")),
+    h("div", { className: "trajes" }, TRAJES.map((tr, i) => h("button", {
+      key: i, className: "traje tarjeta-in" + (opciones.traje === i ? " activa" : "") + (libre(i) ? "" : " cerrado"), style: { "--c1": tr.ropa, "--c2": tr.pantalon, "--r": RAREZAS[RAREZA_TRAJE[i]].color, "--i": i + 1 },
+      onClick: () => { Sonido.boton(); setVer(i); if (libre(i)) poner({ ...opciones, traje: i }); },
+    }, h("i"), h("span", null, t("traje" + i)), opciones.traje === i ? h("small", null, t("equipado")) : !libre(i) && h("small", { className: "candado" }, "🔒 ", t("bloqueado", { n: TRAJE_NIVEL[i] }))))),
+    h("div", { className: "traje-info tarjeta-in", style: { "--r": R.color, "--i": 8 } },
+      h("small", null, t("r" + RAREZA_TRAJE[ver])), h("b", null, t("traje" + ver)),
+      !libre(ver) && h("span", { className: "nota" }, t("seDesbloquea", { n: TRAJE_NIVEL[ver] })),
+      h("button", { className: "chip-op" + (baila ? " activa" : ""), onClick: () => { const b = !baila; setBaila(b); motor.bailarVestibulo(b); } }, "♪ ", t("bailePrevia"))));
+}
+function PestanaCarrera({ stats }) {
+  const nivel = nivelDe(stats.xp), xpSig = 120 * nivel ** 2, xpNivel = 120 * (nivel - 1) ** 2, P = stats.partidas;
+  const tiles = [["partidas", P], ["victorias", stats.victorias], ["tasaVictorias", P ? Math.round((stats.victorias / P) * 100) + "%" : "—"], ["bajas", stats.bajas], ["bajasPartida", P ? (stats.bajas / P).toFixed(1) : "—"], ["danoTotal", Math.round(stats.dano)], ["tiempoJugado", horas(stats.tiempo)]];
+  const recs = [["mejorPuesto", stats.mejorPuesto ? "#" + stats.mejorPuesto : "—"], ["recBajas", stats.recBajas], ["recDano", Math.round(stats.recDano)], ["recTiempo", stats.recTiempo ? mmss(stats.recTiempo) : "—"]];
+  return h("div", { className: "hoja" },
+    h("div", { className: "carrera-cab tarjeta-in" },
+      h("span", { className: "nivel grande" }, nivel),
+      h("div", null, h("b", null, t("nivel", { n: nivel })), h("div", { className: "xp ancha" }, h("i", { style: { width: ((stats.xp - xpNivel) / (xpSig - xpNivel)) * 100 + "%" } })), h("small", null, t("xpSig", { n: xpSig - stats.xp, m: nivel + 1 })))),
+    h("div", { className: "tiles" }, tiles.map(([k, v], i) => h("div", { key: k, className: "tile tarjeta-in", style: { "--i": i + 1 } }, h("b", null, v), t(k)))),
+    h("h3", { className: "subtitulo" }, "🏆 ", t("records")),
+    h("div", { className: "records" }, recs.map(([k, v], i) => h("div", { key: k, className: "tarjeta-in", style: { "--i": i + 4 } }, h("span", null, t(k)), h("b", null, v)))),
+    h("h3", { className: "subtitulo" }, "🕘 ", t("historial")),
+    stats.historial.length === 0 ? h("p", { className: "nota" }, t("sinPartidas")) :
+      h("ol", { className: "historial" }, stats.historial.map((x, i) => h("li", { key: x.f + "-" + i, className: (x.gano ? "gano " : "") + "tarjeta-in", style: { "--i": i + 6 } },
+        h("b", null, x.gano ? "👑" : "#" + x.puesto), h("span", null, t("modo_" + (x.modo || "solo"))), h("span", null, t("bajasN", { n: x.bajas })), h("span", null, mmss(x.tiempo)), h("small", null, new Date(x.f).toLocaleDateString(IDIOMA))))));
+}
+function PestanaPase({ stats, reclamar }) {
+  const d = diarioDe(stats), nivel = nivelDe(stats.xp);
+  return h("div", { className: "hoja" },
+    h("h3", { className: "subtitulo" }, "⚡ ", t("desafiosHoy"), h("small", null, t("renuevan"))),
+    h("div", { className: "desafios" }, desafiosDeHoy().map((x, i) => {
+      const v = Math.min(x.meta, x.valor(d)), listo = v >= x.meta, cobrado = d.reclamados.includes(x.id);
+      return h("div", { key: x.id, className: "desafio tarjeta-in" + (listo ? " listo" : "") + (cobrado ? " cobrado" : ""), style: { "--i": i }, "data-desafio": x.id },
+        h("div", null, h("b", null, t("des_" + x.id, { n: x.meta })), h("div", { className: "xp ancha" }, h("i", { style: { width: (v / x.meta) * 100 + "%" } })), h("small", null, x.id === "top" ? (listo ? "✓" : "—") : `${v} / ${x.meta}`)),
+        cobrado ? h("span", { className: "sello" }, "✓ ", t("reclamado")) : h("button", { className: "chip-op premio", disabled: !listo, onClick: () => { Sonido.boton(); reclamar(x); } }, listo ? t("reclamar") + " " : "", t("xpN", { n: x.xp })));
+    })),
+    h("h3", { className: "subtitulo" }, "🎁 ", t("recompensas")),
+    h("div", { className: "camino" }, TRAJES.map((tr, i) => ({ tr, i })).filter(({ i }) => TRAJE_NIVEL[i] > 1).map(({ tr, i }, n) => {
+      const libre = nivel >= TRAJE_NIVEL[i];
+      return h("div", { key: i, className: "escalon tarjeta-in" + (libre ? " libre" : ""), style: { "--c1": tr.ropa, "--c2": tr.pantalon, "--r": RAREZAS[RAREZA_TRAJE[i]].color, "--i": n + 3 } },
+        h("span", { className: "nivel" }, TRAJE_NIVEL[i]), h("i"), h("b", null, t("traje" + i)), h("small", null, libre ? "✓ " + t("desbloqueado") : "🔒 " + t("seDesbloquea", { n: TRAJE_NIVEL[i] })));
+    })));
+}
+function Vestibulo({ opciones, poner, stats, jugar, motor, reclamar }) {
   const [pest, setPest] = useState("jugar"), arrastre = useRef(null);
   const nivel = nivelDe(stats.xp), xpNivel = 120 * (nivel - 1) ** 2, xpSig = 120 * nivel ** 2;
-  return h("div", { className: "vestibulo" },
-    h("div", { className: "giro", onPointerDown: (e) => { arrastre.current = e.clientX; e.currentTarget.setPointerCapture(e.pointerId); }, onPointerMove: (e) => { if (arrastre.current == null) return; motor.girarVestibulo((e.clientX - arrastre.current) * 0.01); arrastre.current = e.clientX; }, onPointerUp: () => { arrastre.current = null; } }),
+  useEffect(() => { const [x, cerca] = FOCO_PESTANA[pest]; motor.enfocarVestibulo(x, cerca); }, [pest]);
+  useEffect(() => () => motor.enfocarVestibulo(0, false), []);
+  const ir = (k) => { Sonido.boton(); setPest(k); };
+  const modo = MODOS[opciones.modo] ? opciones.modo : "solo";
+  return h("div", { className: "vestibulo pest-" + pest },
+    h("div", {
+      className: "giro",
+      onPointerDown: (e) => { arrastre.current = GIRO.aLocal(e.clientX, e.clientY).x; e.currentTarget.setPointerCapture(e.pointerId); },
+      onPointerMove: (e) => { if (arrastre.current == null) return; const x = GIRO.aLocal(e.clientX, e.clientY).x; motor.girarVestibulo((x - arrastre.current) * 0.01); arrastre.current = x; },
+      onPointerUp: () => { arrastre.current = null; }, onPointerCancel: () => { arrastre.current = null; },
+    }),
     h("header", { className: "barra-sup" },
       h("div", { className: "marca" }, "ISLA ", h("span", null, "ROYALE")),
-      h("nav", { className: "tabs" },
-        h("button", { className: pest === "jugar" ? "activa" : "", onClick: () => { Sonido.boton(); setPest("jugar"); } }, t("jugar")),
-        h("button", { className: pest === "casillero" ? "activa" : "", onClick: () => { Sonido.boton(); setPest("casillero"); } }, t("casillero")),
-        h("button", { onClick: () => { Sonido.boton(); abrirOpciones(); } }, t("opciones"))),
+      h("nav", { className: "tabs" }, PESTANAS.map((k) => h("button", { key: k, className: pest === k ? "activa" : "", "data-pestana": k, onClick: () => ir(k) }, t(k)))),
       h("div", { className: "perfil" }, h("span", { className: "nivel" }, nivel), h("div", null, h("b", null, opciones.nombre || t("solo")), h("div", { className: "xp" }, h("i", { style: { width: ((stats.xp - xpNivel) / (xpSig - xpNivel)) * 100 + "%" } }))))),
-    pest === "jugar" && h("aside", { className: "lado-izq" },
-      h("label", { className: "campo" }, h("span", null, t("tuNombre")), h("input", { value: opciones.nombre, maxLength: 16, placeholder: t("solo"), onChange: (e) => poner({ ...opciones, nombre: e.target.value }) })),
-      h("div", { className: "stats" }, [["victorias", stats.victorias], ["bajas", stats.bajas], ["partidas", stats.partidas]].map(([k, v]) => h("div", { key: k }, h("b", null, v), t(k)))),
-      h("div", { className: "idiomas" }, [["es", "ES"], ["en", "EN"], ["pt", "PT"]].map(([k, n]) => h("button", { key: k, className: opciones.idioma === k ? "activa" : "", onClick: () => poner({ ...opciones, idioma: k }) }, n)))),
-    pest === "casillero" && h("aside", { className: "lado-izq casillero" },
-      h("h2", null, t("casillero")),
-      h("div", { className: "trajes" }, TRAJES.map((tr, i) => h("button", { key: i, className: "traje" + (opciones.traje === i ? " activa" : ""), onClick: () => { Sonido.boton(); poner({ ...opciones, traje: i }); }, style: { "--c1": tr.ropa, "--c2": tr.pantalon } }, h("i"), h("span", null, t("traje" + i)), opciones.traje === i && h("small", null, t("equipado")))))),
-    h("div", { className: "giro-nota" }, "⟲ ", t("girar")),
-    h("div", { className: "lado-der" },
-      h("div", { className: "modo" }, h("small", null, t("modo")), h("b", null, t("solo")), h("div", { className: "rivales" }, t("rivales"), ": ", h(Chips, { valor: opciones.rivales, poner: (v) => poner({ ...opciones, rivales: v }), opciones: [[6, "6"], [14, "14"], [24, "24"]] }))),
-      h("button", { className: "jugar", onClick: jugar, autoFocus: true }, t("jugar"))));
+    // La key hace que React arme el contenido de nuevo al cambiar de pestaña, y así
+    // corre otra vez la animación de entrada (sin JS de transiciones).
+    h("main", { className: "contenido", key: pest },
+      pest === "jugar" && h(PestanaJugar, { opciones, poner }),
+      pest === "casillero" && h(PestanaCasillero, { opciones, poner, nivel, motor }),
+      pest === "carrera" && h(PestanaCarrera, { stats }),
+      pest === "pase" && h(PestanaPase, { stats, reclamar }),
+      pest === "opciones" && h("div", { className: "hoja opciones-hoja" }, h("h2", null, t("opciones")), h(CuerpoOpciones, { opciones, poner }))),
+    pest === "jugar" && h(Novedades),
+    (pest === "jugar" || pest === "casillero") && h("div", { className: "giro-nota" }, "⟲ ", t("girar")),
+    h("div", { className: "lado-der" + (pest === "jugar" ? "" : " compacto") },
+      pest === "jugar" && h("div", { className: "modo" }, h("small", null, t("jugando")), h("b", null, MODOS[modo].icono, " ", t("modo_" + modo)), h("div", { className: "rivales" }, t("rivales"), ": ", h(Chips, { valor: opciones.rivales, poner: (v) => poner({ ...opciones, rivales: v }), opciones: [[6, "6"], [14, "14"], [24, "24"]] }))),
+      h("button", { className: "jugar", onClick: jugar, autoFocus: pest === "jugar" }, t("jugar"))));
 }
 function Buscando({ total, cancelar }) {
   const [s, setS] = useState(0);
@@ -122,7 +238,7 @@ function Hud({ H, motor, tactil, bloqueado, pausar }) {
   useEffect(() => { motor.alMapa = () => setMapa((v) => !v); }, []);
   const E = motor.entrada, T = H.tormenta;
   const tormentaTxt = T.estado === "fin" ? t("tormentaFin") : T.estado === "cierra" ? `${t("tormentaCierra")} · ${T.t}s` : `${t("tormentaEn")} ${Math.floor(T.t / 60)}:${String(T.t % 60).padStart(2, "0")}`;
-  const marcar = (e) => { const r = e.currentTarget.getBoundingClientRect(); motor.marcar(((e.clientX - r.left) / r.width) * 520 - 260, ((e.clientY - r.top) / r.height) * 520 - 260); };
+  const marcar = (e) => { const r = GIRO.rectLocal(e.currentTarget.getBoundingClientRect()), l = GIRO.aLocal(e.clientX, e.clientY); motor.marcar(((l.x - r.left) / r.width) * 520 - 260, ((l.y - r.top) / r.height) * 520 - 260); };
   const enTierra = H.estado === "tierra" && H.vivo;
   return h("div", { className: "hud" + (tactil ? " tactil-si" : "") },
     H.enTormenta && h("div", { className: "en-tormenta" }),
@@ -161,13 +277,15 @@ function Hud({ H, motor, tactil, bloqueado, pausar }) {
 // ── controles táctiles (disposición como la del original en el teléfono) ──
 function Palanca({ onMover }) {
   const zona = useRef(null), [pos, setPos] = useState(null), [perilla, setPerilla] = useState([0, 0]), dedo = useRef(null);
-  const mover = (e, c) => { let dx = (e.clientX - c.x) / 55, dy = (e.clientY - c.y) / 55; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } setPerilla([dx, dy]); onMover(dx, dy); };
+  // Todo en coordenadas del contenedor: con el juego girado, "arriba" en la palanca no es arriba en la pantalla.
+  const mover = (e, c) => { const q = GIRO.aLocal(e.clientX, e.clientY); let dx = (q.x - c.x) / 55, dy = (q.y - c.y) / 55; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; } setPerilla([dx, dy]); onMover(dx, dy); };
+  const rz = () => GIRO.rectLocal(zona.current.getBoundingClientRect());
   return h("div", {
     ref: zona, className: "zona-mover",
-    onPointerDown: (e) => { dedo.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); const c = { x: e.clientX, y: e.clientY }; setPos(c); mover(e, c); },
+    onPointerDown: (e) => { dedo.current = e.pointerId; e.currentTarget.setPointerCapture(e.pointerId); const c = GIRO.aLocal(e.clientX, e.clientY); setPos(c); mover(e, c); },
     onPointerMove: (e) => { if (dedo.current === e.pointerId && pos) mover(e, pos); },
     onPointerUp: () => { dedo.current = null; setPos(null); setPerilla([0, 0]); onMover(0, 0); }, onPointerCancel: () => { dedo.current = null; setPos(null); setPerilla([0, 0]); onMover(0, 0); },
-  }, h("div", { className: "palanca" + (pos ? " activa" : ""), style: pos ? { left: pos.x - zona.current.getBoundingClientRect().left, top: pos.y - zona.current.getBoundingClientRect().top } : null }, h("i", { style: { transform: `translate(${perilla[0] * 36}px, ${perilla[1] * 36}px)` } })));
+  }, h("div", { className: "palanca" + (pos ? " activa" : ""), style: pos ? { left: pos.x - rz().left, top: pos.y - rz().top } : null }, h("i", { style: { transform: `translate(${perilla[0] * 36}px, ${perilla[1] * 36}px)` } })));
 }
 function Mantener({ clase, texto, poner, titulo }) {
   const [activo, setActivo] = useState(false);
@@ -182,8 +300,8 @@ function Tactil({ motor, H, escala }) {
   return h("div", { className: "tactil", style: { "--escala": escala } },
     h("div", {
       className: "zona-mirar",
-      onPointerDown: (e) => { arrastre.current = { id: e.pointerId, x: e.clientX, y: e.clientY }; e.currentTarget.setPointerCapture(e.pointerId); },
-      onPointerMove: (e) => { const a = arrastre.current; if (!a || a.id !== e.pointerId) return; E.dYaw += (e.clientX - a.x) * 0.0062; E.dPitch += (e.clientY - a.y) * 0.0052; a.x = e.clientX; a.y = e.clientY; },
+      onPointerDown: (e) => { arrastre.current = { id: e.pointerId, ...GIRO.aLocal(e.clientX, e.clientY) }; e.currentTarget.setPointerCapture(e.pointerId); },
+      onPointerMove: (e) => { const a = arrastre.current; if (!a || a.id !== e.pointerId) return; const q = GIRO.aLocal(e.clientX, e.clientY); E.dYaw += (q.x - a.x) * 0.0062; E.dPitch += (q.y - a.y) * 0.0052; a.x = q.x; a.y = q.y; },
       onPointerUp: () => { arrastre.current = null; }, onPointerCancel: () => { arrastre.current = null; },
     }),
     h(Palanca, { onMover: (dx, dy) => { E.mx = dx; E.my = dy; } }),
@@ -241,7 +359,7 @@ function App() {
       if (!vivo) return;
       motor.current = m; window.__isla = m; // para las pruebas
       m.ponerOpciones(opciones); m.tactil = TOCABLE; m.calidad(opciones.calidad);
-      setProg({ k: 1, etapa: "listo" }); setTimeout(() => { m.vestibulo(); setFase("vestibulo"); }, 350);
+      setProg({ k: 1, etapa: "listo" }); setTimeout(() => { m.vestibulo(); setFase("idioma"); }, 350);
     }).catch((e) => { console.error(e); setError(String((e && e.message) || e)); });
     return () => { vivo = false; if (motor.current) motor.current.destruir(); };
   }, []);
@@ -250,10 +368,19 @@ function App() {
     if (!fin) return;
     const xp = Math.round(fin.bajas * 50 + (fin.tiempo / 60) * 20 + fin.dano * 0.2 + (fin.gano ? 500 : 0));
     setXp(xp);
-    setStats((s) => { const n = { partidas: s.partidas + 1, victorias: s.victorias + (fin.gano ? 1 : 0), bajas: s.bajas + fin.bajas, xp: s.xp + xp }; guardar("stats", n); return n; });
+    setStats((s) => {
+      const d = diarioDe(s), mejor = (a, b) => (a && a < b ? a : b);
+      const n = {
+        ...s, partidas: s.partidas + 1, victorias: s.victorias + (fin.gano ? 1 : 0), bajas: s.bajas + fin.bajas, xp: s.xp + xp, dano: s.dano + fin.dano, tiempo: s.tiempo + fin.tiempo,
+        mejorPuesto: mejor(s.mejorPuesto, fin.puesto), recBajas: Math.max(s.recBajas, fin.bajas), recDano: Math.max(s.recDano, fin.dano), recTiempo: Math.max(s.recTiempo, fin.tiempo),
+        historial: [{ f: Date.now(), gano: fin.gano, puesto: fin.puesto, bajas: fin.bajas, tiempo: Math.round(fin.tiempo), modo: fin.modo }].concat(s.historial).slice(0, 8),
+        diario: { ...d, partidas: d.partidas + 1, bajas: d.bajas + fin.bajas, dano: d.dano + fin.dano, mejorPuesto: mejor(d.mejorPuesto, fin.puesto), cofres: d.cofres + (fin.cofres || 0), victorias: d.victorias + (fin.gano ? 1 : 0) },
+      };
+      guardar("stats", n); return n;
+    });
   }, [fin]);
   const jugar = () => {
-    Sonido.iniciar(); Sonido.boton(); setFin(null); setPausa(false); setFase("buscando");
+    Sonido.iniciar(); Sonido.confirmar(); setFin(null); setPausa(false); setFase("buscando");
   };
   const empezarCarga = async () => {
     setFase("cargaPartida"); setProg({ k: 0.1, etapa: "etapa_partida" });
@@ -268,13 +395,16 @@ function App() {
   useEffect(() => { if (fase !== "buscando") return; const id = setTimeout(empezarCarga, 2600); return () => clearTimeout(id); }, [fase]);
   const alVestibulo = () => { motor.current.vestibulo(); setFase("vestibulo"); setFin(null); setHud(null); setPausa(false); };
   const continuar = () => { setPausa(false); motor.current.pausar(false); };
+  const elegirIdioma = (k) => { ponerOpciones({ ...opciones, idioma: k }); setFase("vestibulo"); };
+  const reclamar = (x) => setStats((s) => { const d = diarioDe(s); if (d.reclamados.includes(x.id)) return s; const n = { ...s, xp: s.xp + x.xp, diario: { ...d, reclamados: d.reclamados.concat(x.id) } }; guardar("stats", n); return n; });
   const enJuego = fase === "juego" && hud;
   return h(React.Fragment, null,
     h("canvas", { className: "juego", ref: lienzo }),
     h("canvas", { className: "capa", ref: capa }),
-    error && h("div", { className: "pantalla" }, h("div", { className: "tarjeta" }, h("h1", { className: "logo" }, "Uy"), h("p", { className: "bajada" }, "Este navegador no pudo arrancar los gráficos 3D (WebGL). Probá con Chrome o Safari actualizados."), h("p", { className: "bajada" }, error))),
-    !error && (fase === "carga" || fase === "cargaPartida") && h(Carga, { progreso: prog.k, etapa: prog.etapa, titulo: fase === "cargaPartida" ? `${t("modo")} · ${t("solo")} · ${t("rivalesN", { n: opciones.rivales })}` : null }),
-    !error && (fase === "vestibulo" || fase === "buscando") && motor.current && h(Vestibulo, { opciones, poner: ponerOpciones, stats, jugar, abrirOpciones: () => setVerOpciones(true), motor: motor.current }),
+    error && h("div", { className: "pantalla" }, h("div", { className: "tarjeta" }, h("h1", { className: "logo" }, t("uy")), h("p", { className: "bajada" }, t("sinWebgl")), h("p", { className: "bajada" }, error))),
+    !error && (fase === "carga" || fase === "cargaPartida") && h(Carga, { progreso: prog.k, etapa: prog.etapa, titulo: fase === "cargaPartida" ? `${t("modo")} · ${t("modo_" + (MODOS[opciones.modo] ? opciones.modo : "solo"))} · ${t("rivalesN", { n: opciones.rivales })}` : null }),
+    !error && fase === "idioma" && h(ElegirIdioma, { actual: opciones.idioma, elegir: elegirIdioma }),
+    !error && (fase === "vestibulo" || fase === "buscando") && motor.current && h(Vestibulo, { opciones, poner: ponerOpciones, stats, jugar, motor: motor.current, reclamar }),
     fase === "buscando" && h(Buscando, { total: opciones.rivales + 1, cancelar: () => setFase("vestibulo") }),
     enJuego && h(Hud, { H: hud, motor: motor.current, tactil, bloqueado, pausar: () => { setPausa(true); motor.current.pausar(true); } }),
     enJuego && tactil && !pausa && !(fin && !espectando) && h(Tactil, { motor: motor.current, H: hud, escala: opciones.botones }),
@@ -282,7 +412,6 @@ function App() {
     fase === "juego" && fin && !espectando && h(Fin, { fin, xp: xpGanada, jugar, alVestibulo, espectar: () => { motor.current.espectar(); setEspectando(true); } }),
     fase === "juego" && fin && espectando && h("div", { className: "espectar-barra" }, h("button", { className: "jugar sec", onClick: () => setEspectando(false) }, "✕"), h("button", { className: "jugar sec", onClick: alVestibulo }, t("volver"))),
     verOpciones && h(PanelOpciones, { opciones, poner: ponerOpciones, cerrar: () => setVerOpciones(false) }),
-    nota && h("div", { className: "nota-flotante" }, nota),
-    fase !== "carga" && h("div", { className: "girar-tel" }, "📱↻ ", t("girarTel")));
+    nota && h("div", { className: "nota-flotante" }, nota));
 }
 ReactDOM.createRoot(document.getElementById("raiz")).render(h(App));

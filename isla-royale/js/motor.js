@@ -91,12 +91,14 @@ async function crearMotor({ lienzo, capa, progreso, alHud, alFin, alBloqueo, alT
     if (e.button === 0) entrada.raton = true; else if (e.button === 2) { if (yo && yo.construyendo) entrada.material = true; else entrada.apuntar = true; }
   };
   const ratonArriba = (e) => { if (e.button === 0) entrada.raton = false; else if (e.button === 2) entrada.apuntar = false; };
-  const ratonMueve = (e) => { if (modo !== "juego" || e.pointerType === "touch" || pausado) return; if (bloqueado || sinBloqueo) { entrada.dYaw += (e.movementX || 0) * 0.0024; entrada.dPitch += (e.movementY || 0) * 0.0024; } };
+  const ratonMueve = (e) => { if (modo !== "juego" || e.pointerType === "touch" || pausado) return; if (bloqueado || sinBloqueo) { const d = GIRO.delta(e.movementX || 0, e.movementY || 0); entrada.dYaw += d.x * 0.0024; entrada.dPitch += d.y * 0.0024; } };
   const rueda = (e) => { if (modo === "juego") entrada.rueda += Math.sign(e.deltaY); };
   const cambioBloqueo = () => { bloqueado = document.pointerLockElement === lienzo; alBloqueo(bloqueado || sinBloqueo); if (!bloqueado && !sinBloqueo && modo === "juego" && M.P && !M.P.fin && !M.tactil) alPausa(); };
   const errorBloqueo = () => { sinBloqueo = true; alBloqueo(true); };
   const toque = (e) => { if (e.pointerType === "touch" && !M.tactil) { M.tactil = true; alTactil(true); } };
-  addEventListener("keydown", abajo); addEventListener("keyup", arriba); addEventListener("blur", suelta); addEventListener("resize", ajustar);
+  addEventListener("keydown", abajo); addEventListener("keyup", arriba); addEventListener("blur", suelta);
+  // Por GIRO y no por "resize": así el contenedor ya tiene su tamaño nuevo cuando se mide.
+  const sinAjuste = GIRO.alCambiar(ajustar);
   lienzo.addEventListener("pointerdown", ratonAbajo); addEventListener("pointerup", ratonArriba); addEventListener("pointermove", ratonMueve); addEventListener("pointerdown", toque, true);
   lienzo.addEventListener("wheel", rueda, { passive: true }); lienzo.addEventListener("contextmenu", (e) => e.preventDefault());
   document.addEventListener("pointerlockchange", cambioBloqueo); document.addEventListener("pointerlockerror", errorBloqueo);
@@ -215,7 +217,7 @@ async function crearMotor({ lienzo, capa, progreso, alHud, alFin, alBloqueo, alT
     const S = cv.width, g = cv.getContext("2d"), P = M.P;
     g.drawImage(G.imgMapa, 0, 0, S, S);
     g.font = `900 ${Math.max(11, S / 38)}px Nunito, sans-serif`; g.textAlign = "center"; g.lineWidth = 4; g.strokeStyle = "rgba(0,0,0,0.65)"; g.fillStyle = "#fff";
-    for (const pu of isla.lugares) { g.strokeText(pu.nombre.toUpperCase(), aMapa(pu.x, S), aMapa(pu.z, S)); g.fillText(pu.nombre.toUpperCase(), aMapa(pu.x, S), aMapa(pu.z, S)); }
+    for (const pu of isla.lugares) { const n = t(pu.nombre).toUpperCase(); g.strokeText(n, aMapa(pu.x, S), aMapa(pu.z, S)); g.fillText(n, aMapa(pu.x, S), aMapa(pu.z, S)); }
     if (!P) return;
     dibujarTormenta(g, S, (v) => aMapa(v, S), S / 520);
     const B = P.bus; if (B.t < B.dur) { g.setLineDash([8, 6]); g.strokeStyle = "rgba(255,255,255,0.85)"; g.lineWidth = 2; g.beginPath(); g.moveTo(aMapa(B.ax, S), aMapa(B.az, S)); g.lineTo(aMapa(B.bx, S), aMapa(B.bz, S)); g.stroke(); g.setLineDash([]); }
@@ -325,7 +327,8 @@ async function crearMotor({ lienzo, capa, progreso, alHud, alFin, alBloqueo, alT
     ajustar();
   }
   function ajustar() {
-    const w = lienzo.clientWidth || innerWidth, hh = lienzo.clientHeight || innerHeight;
+    // clientWidth es el tamaño dentro de #raiz, que girado tiene el ancho y el alto de la ventana cambiados.
+    const w = lienzo.clientWidth || GIRO.ancho, hh = lienzo.clientHeight || GIRO.alto;
     renderer.setSize(w, hh, false); camara.aspect = w / hh; camara.updateProjectionMatrix(); V.camara.aspect = w / hh; V.camara.updateProjectionMatrix();
     const dpr = Math.min(2, window.devicePixelRatio || 1); capa.width = w * dpr; capa.height = hh * dpr; g2.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
@@ -379,6 +382,7 @@ async function crearMotor({ lienzo, capa, progreso, alHud, alFin, alBloqueo, alT
     // Medir los primeros segundos: si va trabado, bajar los gráficos.
     if (medir && P.t > 3) { medir.t += dt; medir.n++; if (medir.t > 4) { const fps = medir.n / medir.t; if (fps < 26 && calidadActual !== "baja") alCalidad(calidadActual === "alta" ? "media" : "baja", Math.round(fps)); medir = null; } }
   }
+  let olasT = 0;
   function paso(dt) {
     const P = M.P, yo = P.jugadores[0];
     M.paso(dt, controlJugador);
@@ -394,7 +398,18 @@ async function crearMotor({ lienzo, capa, progreso, alHud, alFin, alBloqueo, alT
       if (yo.pieza === "muro") { f.position.set(s.x, s.base, s.z); f.rotation.y = s.eje === "x" ? Math.PI / 2 : 0; } else { f.position.set(s.cx, s.base, s.cz); if (yo.pieza === "escalera") f.rotation.y = Math.atan2(-s.dx, -s.dz); }
     }
     // Sonidos de ambiente: tormenta, viento, motor del autobús, cofres cerca.
-    Sonido.tormenta(yo.vivo && Math.hypot(yo.x - T.x, yo.z - T.z) > T.r ? 1 : 0);
+    // La tormenta se oye antes de entrar: sube en los últimos 40 m hasta la pared y adentro va a pleno.
+    const aPared = T.r - Math.hypot(yo.x - T.x, yo.z - T.z);
+    Sonido.tormenta(yo.vivo ? (aPared < 0 ? 1 : clamp(1 - aPared / 40, 0, 1) * 0.6) : 0);
+    // Olas: qué parte de un anillo alrededor del jugador es mar. Se mide cada medio segundo de
+    // juego (16 alturas) y no por cuadros, así también anda con simular().
+    if ((olasT -= dt) <= 0) {
+      olasT = 0.5;
+      let mar = 0;
+      for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; if (terreno(yo.x + Math.cos(a) * 22, yo.z + Math.sin(a) * 22) < NIVEL_AGUA) mar += 0.09; if (terreno(yo.x + Math.cos(a) * 50, yo.z + Math.sin(a) * 50) < NIVEL_AGUA) mar += 0.035; }
+      const alto = yo.y - Math.max(NIVEL_AGUA, terreno(yo.x, yo.z));
+      Sonido.olas(yo.vivo && yo.estado !== "bus" ? Math.min(1, mar) * clamp(1 - alto / 60, 0, 1) : 0);
+    }
     Sonido.viento(yo.vivo && M.alAire(yo) ? (yo.estado === "cae" ? 1 : 0.5) : 0);
     Sonido.motor(yo.estado === "bus" ? 1 : 0);
     let dc = 99; for (const c of P.cofres) if (!c.abierto && c.tipo === "cofre") { const d = Math.hypot(c.x - yo.x, c.z - yo.z) + Math.abs(c.y - yo.y) * 2; if (d < dc) dc = d; }
@@ -409,20 +424,20 @@ async function crearMotor({ lienzo, capa, progreso, alHud, alFin, alBloqueo, alT
   // Object.assign copiaría el valor del momento: el modo va como propiedad viva.
   Object.defineProperty(M, "modo", { get: () => modo });
   return Object.assign(M, {
-    vestibulo() { modo = "vestibulo"; if (document.exitPointerLock && bloqueado) document.exitPointerLock(); Sonido.tormenta(0); Sonido.viento(0); Sonido.motor(0); Sonido.zumbidoCofre(0); pausado = false; },
+    vestibulo() { modo = "vestibulo"; if (document.exitPointerLock && bloqueado) document.exitPointerLock(); Sonido.tormenta(0); Sonido.viento(0); Sonido.motor(0); Sonido.zumbidoCofre(0); Sonido.olas(0); pausado = false; },
     async prepararPartida() { M.nuevaPartida(M.opciones); await pausa(); renderer.compile(G.escena, camara); },
     empezar() { modo = "juego"; pausado = false; distCam = 3.3; camara.fov = 72; camara.updateProjectionMatrix(); medir = { t: 0, n: 0 }; for (const k in entrada) if (typeof entrada[k] === "boolean") entrada[k] = false; alHud(estadoHud()); },
     pausar(v) { pausado = v; if (v && document.exitPointerLock && bloqueado) document.exitPointerLock(); if (M.P) alHud(estadoHud()); },
     espectar() { const P = M.P; if (!P) return; const asesino = P.jugadores.find((q) => q.vivo && q.nombre === P.asesino) || P.jugadores.find((q) => q.vivo); P.espectando = asesino ? asesino.id : null; },
     marcar(x, z) { if (M.P) M.P.marca = M.P.marca && Math.hypot(M.P.marca.x - x, M.P.marca.z - z) < 12 ? null : { x, z }; },
-    calidad, girarVestibulo: (d) => V.girar(d),
+    calidad, girarVestibulo: (d) => V.girar(d), enfocarVestibulo: (x, cerca) => V.enfocar(x, cerca), bailarVestibulo: (b) => V.bailar(b),
     ponerOpciones(o) { M.opciones = Object.assign({}, o); Sonido.ponerVolumen(o.volumen); },
     ponerMinimapa(c) { lienzoMini = c; if (c) c.width = c.height = 256; },
     ponerMapaGrande(c) { lienzoGrande = c; if (c) { c.width = c.height = 720; dibujarMapaGrande(c); } },
-    ponerBrujula(c) { lienzoBrujula = c; if (c) { const r = c.getBoundingClientRect(); c.width = Math.max(200, r.width * 2); c.height = Math.max(24, r.height * 2); } },
+    ponerBrujula(c) { lienzoBrujula = c; if (c) { c.width = Math.max(200, c.clientWidth * 2); c.height = Math.max(24, c.clientHeight * 2); } },
     ponerMira(el) { elMira = el; },
     // Para las pruebas: avanza la simulación sin dibujar (el navegador de prueba no tiene placa de video).
     simular(seg) { for (let tt = 0; tt < seg && modo === "juego"; tt += 1 / 30) { paso(1 / 30); efectos(1 / 30); } },
-    destruir() { cancelAnimationFrame(idA); removeEventListener("keydown", abajo); removeEventListener("keyup", arriba); removeEventListener("blur", suelta); removeEventListener("resize", ajustar); removeEventListener("pointerup", ratonArriba); removeEventListener("pointermove", ratonMueve); removeEventListener("pointerdown", toque, true); renderer.dispose(); },
+    destruir() { cancelAnimationFrame(idA); removeEventListener("keydown", abajo); removeEventListener("keyup", arriba); removeEventListener("blur", suelta); sinAjuste(); removeEventListener("pointerup", ratonArriba); removeEventListener("pointermove", ratonMueve); removeEventListener("pointerdown", toque, true); renderer.dispose(); },
   });
 }

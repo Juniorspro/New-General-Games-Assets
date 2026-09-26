@@ -673,15 +673,26 @@ function crearVestibulo() {
   const aro = new THREE.Mesh(new THREE.TorusGeometry(1.32, 0.03, 8, 64), new THREE.MeshBasicMaterial({ color: "#ffc62e" })); aro.rotation.x = Math.PI / 2; aro.position.y = 0.01; escena.add(aro);
   const camara = new THREE.PerspectiveCamera(32, 1, 0.1, 100); camara.position.set(0, 1.35, 5.2); camara.lookAt(0, 1.0, 0);
   let personaje = null, trajeActual = -1, giro = Math.PI - 0.35; // de frente a la cámara
+  // Cada pestaña del menú corre al personaje para que no quede tapado por su panel:
+  // la cámara se desliza en vez de saltar, que es lo que hace sentir la transición.
+  // El foco va en fracción de media pantalla (1 = borde derecho) y no en metros: así el
+  // personaje cae al lado del panel tanto en una pantalla ancha como en una 4:3.
+  let focoPant = 0, focoZ = 5.2, camX = 0, camZ = 5.2;
   const falso = { x: 0, y: 0, z: 0, yaw: 0, pitch: -0.05, vx: 0, vz: 0, vivo: true, estado: "tierra", enSuelo: true, fase: 0, patada: 0, golpe: 0, muerte: 0, enMano: () => null };
   return {
     escena, camara,
     girar(d) { giro += d; },
+    enfocar(x, cerca) { focoPant = x; focoZ = cerca ? 4.6 : 5.2; },
+    bailar(b) { falso.baila = !!b; },
     actualizar(dt, t, traje) {
       if (traje !== trajeActual) { if (personaje) escena.remove(personaje.raiz); personaje = crearPersonaje(TRAJES[traje]); escena.add(personaje.raiz); trajeActual = traje; falso.malla = personaje; }
       fondo.material.uniforms.uT.value = t;
       falso.yaw = giro + Math.sin(t * 0.4) * 0.15;
+      const focoX = -focoPant * Math.tan((camara.fov * Math.PI) / 360) * focoZ * camara.aspect;
+      const k = Math.min(1, dt * 4); camX += (focoX - camX) * k; camZ += (focoZ - camZ) * k;
+      camara.position.set(camX, 1.35, camZ); camara.lookAt(camX, 1.0, 0);
       animar(falso, dt, t);
+      if (falso.baila) return; // el baile ya puso los brazos; respirar encima lo pisaría
       // Respira y cambia el peso de pierna.
       personaje.cuerpo.position.y = 0.95 + Math.sin(t * 1.8) * 0.01; personaje.cabeza.rotation.y = Math.sin(t * 0.7) * 0.25;
       personaje.hombroI.rotation.set(0.05, 0, 0.12 + Math.sin(t * 1.8) * 0.02); personaje.hombroD.rotation.set(0.05, 0, -0.12 - Math.sin(t * 1.8) * 0.02); personaje.codoI.rotation.x = personaje.codoD.rotation.x = 0.2;

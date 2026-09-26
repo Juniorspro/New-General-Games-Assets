@@ -5,7 +5,7 @@
 // Todos los scripts comparten el ámbito global: lo que se declara acá lo ven
 // los que vienen después.
 // ════════════════════════════════════════════════════════════════════════
-if (!window.THREE || !window.React || !window.ReactDOM) throw new Error("no se cargaron las librerías (three.js y React). Revisá la conexión a internet.");
+if (!window.THREE || !window.React || !window.ReactDOM) throw new Error("isla:sin-librerias"); // el aviso traducido lo arma index.html
 
 function azar(semilla) { let s = semilla >>> 0; return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -34,16 +34,59 @@ function elegir(r, pesos) { let s = 0; for (const p of pesos) s += p; let x = r(
 function leer(clave, porDefecto) { try { const v = localStorage.getItem("isla-royale:" + clave); return v ? Object.assign({}, porDefecto, JSON.parse(v)) : Object.assign({}, porDefecto); } catch (e) { return Object.assign({}, porDefecto); } }
 function guardar(clave, valor) { try { localStorage.setItem("isla-royale:" + clave, JSON.stringify(valor)); } catch (e) { /* sin guardado: se juega igual */ } }
 const TOCABLE = matchMedia("(pointer: coarse)").matches;
+
+// ── giro: en el teléfono parado, el juego se acuesta solo ──
+// Pedir pantalla completa y bloquear la orientación no anda en todos lados
+// (Safari del iPhone no deja), y girar el teléfono a mano es justo lo que el
+// jugador no quiere hacer. Así que, si el dedo es el puntero y la ventana está
+// parada, #raiz se rota 90° por CSS y se juega acostado igual.
+// Lo que el navegador resuelve solo (clic en un botón, foco) sigue andando;
+// lo que calculamos con clientX/clientY o movementX/Y tiene que pasar por
+// aLocal/delta, porque el navegador reporta la pantalla y no el contenedor.
+const GIRO = (window.GIRO = (() => {
+  const dedo = matchMedia("(pointer: coarse)"), avisar = [];
+  const G = {
+    activo: false, ancho: innerWidth, alto: innerHeight,
+    // Girado: la x del juego corre hacia abajo de la pantalla y la y, hacia la izquierda.
+    aLocal: (x, y) => (G.activo ? { x: y, y: innerWidth - x } : { x, y }),
+    delta: (dx, dy) => (G.activo ? { x: dy, y: -dx } : { x: dx, y: dy }),
+    // getBoundingClientRect de algo girado da la caja en la pantalla (ancho y alto cambiados).
+    rectLocal(r) { return G.activo ? { left: r.top, top: innerWidth - r.right, width: r.height, height: r.width } : { left: r.left, top: r.top, width: r.width, height: r.height }; },
+    alCambiar(fn) { avisar.push(fn); return () => { const i = avisar.indexOf(fn); if (i >= 0) avisar.splice(i, 1); }; },
+    recalcular() {
+      const W = innerWidth, H = innerHeight, raiz = document.getElementById("raiz"), html = document.documentElement;
+      G.activo = dedo.matches && H > W;
+      G.ancho = G.activo ? H : W; G.alto = G.activo ? W : H;
+      html.classList.toggle("girado", G.activo);
+      // Las media queries miran la ventana, no el contenedor: con el juego girado
+      // mentirían. Estas clases y --vw/--vh las reemplazan con el tamaño lógico.
+      html.classList.toggle("bajo", G.alto <= 520);
+      html.classList.toggle("angosto", G.ancho <= 720);
+      html.style.setProperty("--vw", G.ancho / 100 + "px"); html.style.setProperty("--vh", G.alto / 100 + "px");
+      // En px y no en vh: la barra del navegador del teléfono cambia 100vh y el
+      // contenedor quedaría corrido de la pantalla.
+      if (raiz) Object.assign(raiz.style, G.activo ? { width: H + "px", height: W + "px", transform: `translateX(${W}px) rotate(90deg)` } : { width: "", height: "", transform: "" });
+      for (const fn of avisar.slice()) fn();
+    },
+  };
+  addEventListener("resize", G.recalcular);
+  // Algunos teléfonos avisan el giro antes de tener las medidas nuevas.
+  addEventListener("orientationchange", () => { G.recalcular(); setTimeout(G.recalcular, 250); });
+  G.recalcular();
+  return G;
+})());
 const idiomaInicial = (() => { const l = (navigator.language || "es").slice(0, 2); return l === "en" ? "en" : l === "pt" ? "pt" : "es"; })();
-const OPCIONES_BASE = { idioma: idiomaInicial, calidad: TOCABLE ? "media" : "alta", sens: 1, sensMira: 0.7, volumen: 0.8, autoDisparo: TOCABLE, asistencia: true, autoCorrer: true, botones: 1, fps: false, rivales: 14, traje: 0, nombre: "" };
-const STATS_BASE = { partidas: 0, victorias: 0, bajas: 0, xp: 0 };
+const OPCIONES_BASE = { idioma: idiomaInicial, modo: "solo", calidad: TOCABLE ? "media" : "alta", sens: 1, sensMira: 0.7, volumen: 0.8, autoDisparo: TOCABLE, asistencia: true, autoCorrer: true, botones: 1, fps: false, rivales: 14, traje: 0, nombre: "" };
+// Los récords y el historial se guardan junto con los totales: leer() completa
+// con estos valores lo que falte en un guardado viejo.
+const STATS_BASE = { partidas: 0, victorias: 0, bajas: 0, xp: 0, dano: 0, tiempo: 0, mejorPuesto: 0, recBajas: 0, recDano: 0, recTiempo: 0, historial: [], diario: null };
 
 // ════════════════════════════════════════════════════════════════════════
 // Textos
 // ════════════════════════════════════════════════════════════════════════
 const TEXTOS = {
   es: {
-    girarTel: "Girá el teléfono para jugar mejor", espacio: "Espacio", cargando: "Cargando", etapa_relieve: "Levantando la isla…", etapa_pueblos: "Construyendo los pueblos…", etapa_monte: "Plantando árboles…", etapa_botin: "Escondiendo cofres…", etapa_escena: "Pintando el mundo…", etapa_sombras: "Preparando la luz…", etapa_partida: "Cargando el autobús…", listo: "¡Listo!",
+    espacio: "Espacio", cargando: "Cargando", etapa_relieve: "Levantando la isla…", etapa_pueblos: "Construyendo los pueblos…", etapa_monte: "Plantando árboles…", etapa_botin: "Escondiendo cofres…", etapa_escena: "Pintando el mundo…", etapa_sombras: "Preparando la luz…", etapa_partida: "Cargando el autobús…", listo: "¡Listo!",
     jugar: "JUGAR", casillero: "CASILLERO", opciones: "OPCIONES", modo: "Battle Royale", solo: "Solo", rivalesN: "{n} rivales", buscando: "Buscando partida…", encontrados: "Jugadores encontrados: {n}", cancelar: "Cancelar",
     nivel: "Nivel {n}", victorias: "Victorias", bajas: "Bajas", partidas: "Partidas", girar: "Arrastrá para girar", equipado: "Equipado", equipar: "Equipar", tuNombre: "Tu nombre",
     idioma: "Idioma", calidad: "Gráficos", alta: "Alta", media: "Media", baja: "Baja", sens: "Sensibilidad", sensMira: "Sensibilidad al apuntar", volumen: "Volumen", autoDisparo: "Disparo automático (táctil)", asistencia: "Asistencia de apuntado", autoCorrer: "Correr automático (táctil)", botones: "Tamaño de los botones", fps: "Mostrar cuadros por segundo", rivales: "Rivales", si: "Sí", no: "No", cerrar: "Cerrar", juego: "Juego", video: "Video", audio: "Audio", controles: "Controles",
@@ -60,6 +103,18 @@ const TEXTOS = {
     traje0: "Explorador", traje1: "Comando", traje2: "Surfista", traje3: "Sombra", traje4: "Astronauta", traje5: "Granjera",
     tecla_mover: "Moverse", tecla_correr: "Correr", tecla_agachar: "Agacharse / deslizarse", tecla_saltar: "Saltar / trepar / planeador", tecla_disparar: "Disparar", tecla_apuntar: "Apuntar", tecla_recargar: "Recargar", tecla_usar: "Recoger / abrir", tecla_armas: "Armas", tecla_pico: "Pico", tecla_piezas: "Muro · Piso · Escalera · Techo", tecla_material: "Cambiar material", tecla_mapa: "Mapa", tecla_baile: "Baile", tecla_pausa: "Pausa",
     tactil_mover: "Mitad izquierda: palanca para moverte", tactil_mirar: "Mitad derecha: arrastrá para mirar", tactil_botones: "Botones: disparar, saltar, agacharse, apuntar, construir",
+    elegiIdioma: "Elegí tu idioma", carrera: "CARRERA", pase: "PASE", modoJuego: "Modo de juego", jugando: "Vas a jugar",
+    modo_solo: "Solo", modo_solo_d: "El clásico: saltás del autobús, juntás botín y sobrevivís a la tormenta.",
+    modo_rapida: "Tormenta rápida", modo_rapida_d: "La tormenta espera y se cierra el doble de rápido: partidas de unos 8 minutos.",
+    modo_arsenal: "Arsenal", modo_arsenal_d: "Todos caen con rifle, escopeta, escudo y materiales: se pelea desde el primer segundo.",
+    novedades: "Novedades", nov1: "Dos modos nuevos", nov1_d: "Tormenta rápida para una partida corta y Arsenal para ir directo a los tiros.", nov2: "Pase de temporada", nov2_d: "Tres desafíos por día que dan experiencia, y trajes que se desbloquean por nivel.", nov3: "Tu carrera", nov3_d: "Cada partida queda anotada: récords, historial y precisión.",
+    xpSig: "{n} XP para el nivel {m}", tasaVictorias: "% de victorias", bajasPartida: "Bajas por partida", danoTotal: "Daño total", tiempoJugado: "Tiempo jugado",
+    records: "Récords", mejorPuesto: "Mejor puesto", recBajas: "Más bajas en una partida", recDano: "Más daño en una partida", recTiempo: "Partida más larga",
+    historial: "Últimas partidas", sinPartidas: "Todavía no jugaste ninguna partida. ¡Saltá del autobús!", bajasN: "{n} bajas",
+    desafiosHoy: "Desafíos de hoy", renuevan: "Se renuevan a la medianoche", reclamar: "Reclamar", reclamado: "Reclamado",
+    des_partidas: "Jugá {n} partidas", des_bajas: "Eliminá a {n} rivales", des_dano: "Hacé {n} de daño", des_top: "Quedá entre los {n} mejores", des_cofres: "Abrí {n} cofres", des_victoria: "Ganá una partida",
+    recompensas: "Trajes por nivel", desbloqueado: "Desbloqueado", bloqueado: "Nivel {n}", seDesbloquea: "Se desbloquea en el nivel {n}", bailePrevia: "Probar baile", xpN: "+{n} XP", creditos: "Créditos", sonidosTit: "Sonidos", credito: "{obra} de {autor}, {licencia}, {fuente}", restoCC0: "Los demás sonidos son de dominio público (CC0). Detalle en sonidos/CREDITOS.md del proyecto.", snd_trueno: "Trueno", snd_autobus: "Motor del autobús",
+    clic: "Clic", clicDer: "Clic der.", clicDerConstr: "Clic der. (construyendo)", uy: "Uy", sinWebgl: "Este navegador no pudo arrancar los gráficos 3D (WebGL). Probá con Chrome o Safari actualizados.",
     consejos: [
       "En la caída libre, mirá hacia abajo para llegar primero al suelo.",
       "Los cofres dorados brillan y suenan: seguí el ruidito.",
@@ -78,7 +133,7 @@ const TEXTOS = {
     ],
   },
   en: {
-    girarTel: "Turn your phone sideways to play", espacio: "Space", cargando: "Loading", etapa_relieve: "Raising the island…", etapa_pueblos: "Building the towns…", etapa_monte: "Planting trees…", etapa_botin: "Hiding chests…", etapa_escena: "Painting the world…", etapa_sombras: "Setting up the light…", etapa_partida: "Boarding the bus…", listo: "Ready!",
+    espacio: "Space", cargando: "Loading", etapa_relieve: "Raising the island…", etapa_pueblos: "Building the towns…", etapa_monte: "Planting trees…", etapa_botin: "Hiding chests…", etapa_escena: "Painting the world…", etapa_sombras: "Setting up the light…", etapa_partida: "Boarding the bus…", listo: "Ready!",
     jugar: "PLAY", casillero: "LOCKER", opciones: "SETTINGS", modo: "Battle Royale", solo: "Solo", rivalesN: "{n} opponents", buscando: "Finding a match…", encontrados: "Players found: {n}", cancelar: "Cancel",
     nivel: "Level {n}", victorias: "Wins", bajas: "Eliminations", partidas: "Matches", girar: "Drag to rotate", equipado: "Equipped", equipar: "Equip", tuNombre: "Your name",
     idioma: "Language", calidad: "Graphics", alta: "High", media: "Medium", baja: "Low", sens: "Sensitivity", sensMira: "Aim sensitivity", volumen: "Volume", autoDisparo: "Auto fire (touch)", asistencia: "Aim assist", autoCorrer: "Auto sprint (touch)", botones: "Button size", fps: "Show frame rate", rivales: "Opponents", si: "On", no: "Off", cerrar: "Close", juego: "Game", video: "Video", audio: "Audio", controles: "Controls",
@@ -95,6 +150,20 @@ const TEXTOS = {
     traje0: "Explorer", traje1: "Commando", traje2: "Surfer", traje3: "Shadow", traje4: "Astronaut", traje5: "Farmer",
     tecla_mover: "Move", tecla_correr: "Sprint", tecla_agachar: "Crouch / slide", tecla_saltar: "Jump / mantle / glider", tecla_disparar: "Fire", tecla_apuntar: "Aim", tecla_recargar: "Reload", tecla_usar: "Pick up / open", tecla_armas: "Weapons", tecla_pico: "Pickaxe", tecla_piezas: "Wall · Floor · Stairs · Cone", tecla_material: "Change material", tecla_mapa: "Map", tecla_baile: "Dance", tecla_pausa: "Pause",
     tactil_mover: "Left half: stick to move", tactil_mirar: "Right half: drag to look", tactil_botones: "Buttons: fire, jump, crouch, aim, build",
+    elegiIdioma: "Choose your language", carrera: "CAREER", pase: "PASS", modoJuego: "Game mode", jugando: "You'll play",
+    modo_solo: "Solo", modo_solo_d: "The classic: jump from the bus, gather loot and outlast the storm.",
+    modo_rapida: "Fast Storm", modo_rapida_d: "The storm waits and closes twice as fast: matches of about 8 minutes.",
+    modo_arsenal: "Arsenal", modo_arsenal_d: "Everyone lands with a rifle, shotgun, shield and materials: the fight starts right away.",
+    novedades: "What's new", nov1: "Two new modes", nov1_d: "Fast Storm for a short match and Arsenal to go straight to the action.", nov2: "Season pass", nov2_d: "Three daily challenges that give XP, and outfits that unlock by level.", nov3: "Your career", nov3_d: "Every match is recorded: records, history and accuracy.",
+    xpSig: "{n} XP to level {m}", tasaVictorias: "Win rate", bajasPartida: "Eliminations per match", danoTotal: "Total damage", tiempoJugado: "Time played",
+    records: "Records", mejorPuesto: "Best place", recBajas: "Most eliminations in a match", recDano: "Most damage in a match", recTiempo: "Longest match",
+    historial: "Recent matches", sinPartidas: "You haven't played a match yet. Jump from the bus!", bajasN: "{n} elims",
+    desafiosHoy: "Today's challenges", renuevan: "They refresh at midnight", reclamar: "Claim", reclamado: "Claimed",
+    des_partidas: "Play {n} matches", des_bajas: "Eliminate {n} opponents", des_dano: "Deal {n} damage", des_top: "Finish in the top {n}", des_cofres: "Open {n} chests", des_victoria: "Win a match",
+    recompensas: "Outfits by level", desbloqueado: "Unlocked", bloqueado: "Level {n}", seDesbloquea: "Unlocks at level {n}", bailePrevia: "Try dance", xpN: "+{n} XP", creditos: "Credits", sonidosTit: "Sounds", credito: "{obra} by {autor}, {licencia}, {fuente}", restoCC0: "All other sounds are public domain (CC0). Details in the project's sonidos/CREDITOS.md.", snd_trueno: "Thunder", snd_autobus: "Bus engine",
+    clic: "Click", clicDer: "Right click", clicDerConstr: "Right click (building)", uy: "Oops", sinWebgl: "This browser couldn't start 3D graphics (WebGL). Try an up-to-date Chrome or Safari.",
+    // Los lugares se buscan por su nombre en castellano (el de isla.js): en español t() devuelve la clave tal cual.
+    "Pueblo Pintoresco": "Pleasant Village", "Loma Linda": "Lovely Hill", "Villa Verde": "Green Villa", "Granja Feliz": "Happy Farm", "Depósito Norte": "North Depot", "Estación Sur": "South Station", "Bahía Bonita": "Pretty Bay", "Muelle Viejo": "Old Pier",
     consejos: [
       "While skydiving, look down to reach the ground first.",
       "Golden chests glow and hum: follow the sound.",
@@ -113,7 +182,7 @@ const TEXTOS = {
     ],
   },
   pt: {
-    girarTel: "Gire o celular para jogar melhor", espacio: "Espaço", cargando: "Carregando", etapa_relieve: "Erguendo a ilha…", etapa_pueblos: "Construindo as cidades…", etapa_monte: "Plantando árvores…", etapa_botin: "Escondendo baús…", etapa_escena: "Pintando o mundo…", etapa_sombras: "Preparando a luz…", etapa_partida: "Embarcando no ônibus…", listo: "Pronto!",
+    espacio: "Espaço", cargando: "Carregando", etapa_relieve: "Erguendo a ilha…", etapa_pueblos: "Construindo as cidades…", etapa_monte: "Plantando árvores…", etapa_botin: "Escondendo baús…", etapa_escena: "Pintando o mundo…", etapa_sombras: "Preparando a luz…", etapa_partida: "Embarcando no ônibus…", listo: "Pronto!",
     jugar: "JOGAR", casillero: "ARMÁRIO", opciones: "CONFIGURAÇÕES", modo: "Battle Royale", solo: "Solo", rivalesN: "{n} adversários", buscando: "Procurando partida…", encontrados: "Jogadores encontrados: {n}", cancelar: "Cancelar",
     nivel: "Nível {n}", victorias: "Vitórias", bajas: "Eliminações", partidas: "Partidas", girar: "Arraste para girar", equipado: "Equipado", equipar: "Equipar", tuNombre: "Seu nome",
     idioma: "Idioma", calidad: "Gráficos", alta: "Alta", media: "Média", baja: "Baixa", sens: "Sensibilidade", sensMira: "Sensibilidade ao mirar", volumen: "Volume", autoDisparo: "Disparo automático (toque)", asistencia: "Assistência de mira", autoCorrer: "Corrida automática (toque)", botones: "Tamanho dos botões", fps: "Mostrar quadros por segundo", rivales: "Adversários", si: "Sim", no: "Não", cerrar: "Fechar", juego: "Jogo", video: "Vídeo", audio: "Áudio", controles: "Controles",
@@ -130,6 +199,19 @@ const TEXTOS = {
     traje0: "Explorador", traje1: "Comando", traje2: "Surfista", traje3: "Sombra", traje4: "Astronauta", traje5: "Fazendeira",
     tecla_mover: "Mover", tecla_correr: "Correr", tecla_agachar: "Agachar / deslizar", tecla_saltar: "Pular / escalar / planador", tecla_disparar: "Atirar", tecla_apuntar: "Mirar", tecla_recargar: "Recarregar", tecla_usar: "Pegar / abrir", tecla_armas: "Armas", tecla_pico: "Picareta", tecla_piezas: "Parede · Piso · Escada · Cone", tecla_material: "Trocar material", tecla_mapa: "Mapa", tecla_baile: "Dança", tecla_pausa: "Pausa",
     tactil_mover: "Metade esquerda: alavanca para mover", tactil_mirar: "Metade direita: arraste para olhar", tactil_botones: "Botões: atirar, pular, agachar, mirar, construir",
+    elegiIdioma: "Escolha seu idioma", carrera: "CARREIRA", pase: "PASSE", modoJuego: "Modo de jogo", jugando: "Você vai jogar",
+    modo_solo: "Solo", modo_solo_d: "O clássico: pule do ônibus, junte itens e sobreviva à tempestade.",
+    modo_rapida: "Tempestade rápida", modo_rapida_d: "A tempestade espera e fecha duas vezes mais rápido: partidas de uns 8 minutos.",
+    modo_arsenal: "Arsenal", modo_arsenal_d: "Todos caem com rifle, escopeta, escudo e materiais: a luta começa na hora.",
+    novedades: "Novidades", nov1: "Dois modos novos", nov1_d: "Tempestade rápida para uma partida curta e Arsenal para ir direto aos tiros.", nov2: "Passe de temporada", nov2_d: "Três desafios por dia que dão experiência, e trajes que se desbloqueiam por nível.", nov3: "Sua carreira", nov3_d: "Cada partida fica registrada: recordes, histórico e precisão.",
+    xpSig: "{n} XP para o nível {m}", tasaVictorias: "% de vitórias", bajasPartida: "Eliminações por partida", danoTotal: "Dano total", tiempoJugado: "Tempo jogado",
+    records: "Recordes", mejorPuesto: "Melhor posição", recBajas: "Mais eliminações numa partida", recDano: "Mais dano numa partida", recTiempo: "Partida mais longa",
+    historial: "Últimas partidas", sinPartidas: "Você ainda não jogou nenhuma partida. Pule do ônibus!", bajasN: "{n} elim.",
+    desafiosHoy: "Desafios de hoje", renuevan: "Renovam à meia-noite", reclamar: "Resgatar", reclamado: "Resgatado",
+    des_partidas: "Jogue {n} partidas", des_bajas: "Elimine {n} adversários", des_dano: "Cause {n} de dano", des_top: "Fique entre os {n} melhores", des_cofres: "Abra {n} baús", des_victoria: "Vença uma partida",
+    recompensas: "Trajes por nível", desbloqueado: "Desbloqueado", bloqueado: "Nível {n}", seDesbloquea: "Desbloqueia no nível {n}", bailePrevia: "Testar dança", xpN: "+{n} XP", creditos: "Créditos", sonidosTit: "Sons", credito: "{obra} de {autor}, {licencia}, {fuente}", restoCC0: "Os demais sons são de domínio público (CC0). Detalhes em sonidos/CREDITOS.md do projeto.", snd_trueno: "Trovão", snd_autobus: "Motor do ônibus",
+    clic: "Clique", clicDer: "Clique dir.", clicDerConstr: "Clique dir. (construindo)", uy: "Ops", sinWebgl: "Este navegador não conseguiu iniciar os gráficos 3D (WebGL). Tente o Chrome ou o Safari atualizados.",
+    "Pueblo Pintoresco": "Vila Pitoresca", "Loma Linda": "Colina Linda", "Villa Verde": "Vila Verde", "Granja Feliz": "Fazenda Feliz", "Depósito Norte": "Depósito Norte", "Estación Sur": "Estação Sul", "Bahía Bonita": "Baía Bonita", "Muelle Viejo": "Cais Velho",
     consejos: [
       "Na queda livre, olhe para baixo para chegar primeiro ao chão.",
       "Baús dourados brilham e fazem barulho: siga o som.",
@@ -207,3 +289,31 @@ const TRAJES = [
 ];
 const NOMBRES_BOTS = ["Kiwi", "Mango", "Lima", "Coco", "Uva", "Pomelo", "Tuna", "Chala", "Pampa", "Yerba", "Bruma", "Rayo", "Quique", "Nube", "Tero", "Puma", "Ceibo", "Lapacho", "Cóndor", "Mate", "Churro", "Alfajor", "Dulce", "Tango", "Gaucho", "Pehuén"];
 const nivelDe = (xp) => 1 + Math.floor(Math.sqrt(xp / 120));
+
+// ── modos, trajes por nivel y desafíos del día ──
+// ritmo multiplica los tiempos de la tormenta; kit es lo que cada jugador trae al caer.
+const MODOS = {
+  solo: { icono: "🪂", ritmo: 1, kit: false },
+  rapida: { icono: "🌀", ritmo: 0.5, kit: false },
+  arsenal: { icono: "🎯", ritmo: 0.8, kit: true },
+};
+// Los tres primeros vienen de entrada; el resto se gana subiendo de nivel, que
+// es lo que le da sentido al pase (sin esto la experiencia no servía para nada).
+const TRAJE_NIVEL = [1, 1, 1, 2, 4, 6];
+const RAREZA_TRAJE = [1, 1, 2, 3, 4, 2];
+// Cada día salen tres de la lista, siempre los mismos para esa fecha.
+const DESAFIOS = [
+  { id: "partidas", meta: 3, xp: 150, valor: (d) => d.partidas },
+  { id: "bajas", meta: 5, xp: 200, valor: (d) => d.bajas },
+  { id: "dano", meta: 500, xp: 200, valor: (d) => Math.round(d.dano) },
+  { id: "top", meta: 10, xp: 150, valor: (d) => (d.mejorPuesto && d.mejorPuesto <= 10 ? 10 : 0) },
+  { id: "cofres", meta: 5, xp: 150, valor: (d) => d.cofres },
+  { id: "victoria", meta: 1, xp: 400, valor: (d) => d.victorias },
+];
+const hoy = () => { const f = new Date(); return f.getFullYear() + "-" + String(f.getMonth() + 1).padStart(2, "0") + "-" + String(f.getDate()).padStart(2, "0"); };
+const diarioVacio = () => ({ dia: hoy(), partidas: 0, bajas: 0, dano: 0, mejorPuesto: 0, cofres: 0, victorias: 0, reclamados: [] });
+const diarioDe = (stats) => (stats.diario && stats.diario.dia === hoy() ? stats.diario : diarioVacio());
+function desafiosDeHoy() {
+  const r = azar(hoy().split("-").reduce((a, n) => a * 37 + +n, 7));
+  return DESAFIOS.slice().sort(() => r() - 0.5).slice(0, 3);
+}
