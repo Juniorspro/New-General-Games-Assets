@@ -77,6 +77,7 @@
     <button id="b-puntos" type="button">Mapa: no</button>
     <button id="b-recalibrar" type="button">Recalibrar</button>
     <button id="b-reiniciar" type="button">Reiniciar</button>
+    <button id="b-saltear" type="button" hidden>Sin calibrar</button>
   </div>
   <div class="aviso" id="aviso">Arrancando…<div class="barra" hidden><i></i></div></div>
 </div>
@@ -93,7 +94,7 @@
 
 <script type="module">
 import * as THREE from "three";
-import { Flujo, giroComoFlujo, estimarDesfase } from "./desfase.js";
+import { Flujo, calibrarCamaraIMU } from "./desfase.js";
 
 const $ = (s) => document.querySelector(s);
 const hud = $("#hud"), aviso = $("#aviso"), barra = $("#aviso .barra"), capa = $("#capa"), inicio = $("#inicio"), video = $("#video"), fondo = $("#fondo");
@@ -239,7 +240,7 @@ function qCamaraCuerpo(angulo) {
 // ───────────────────── estado ─────────────────────
 let fase = "inicio";   // inicio | calibrando | slam
 let calib = null;      // { desfase, focal, ancho, alto, qbc }
-let ancho = 0, alto = 0, qbc = [1, 0, 0, 0], anguloPantalla = 0;
+let ancho = 0, alto = 0, qbc = [1, 0, 0, 0], anguloPantalla = 0, qSupuesto = null;
 const trabajador = new Worker(new URL("./trabajador.js", import.meta.url), { type: "module" });
 let libre = true, cuadrosSlam = 0, fpsSlam = 0, tFps = performance.now(), msSlam = 0, estadoSlam = 0;
 let pose = null;        // { t, p: Vector3(three), q: Quaternion(three), qxr: [..] }
@@ -253,6 +254,22 @@ function avisar(s, progreso) {
   aviso.firstChild.textContent = s; aviso.hidden = !s;
   barra.hidden = progreso === undefined;
   if (progreso !== undefined) barra.firstChild.style.width = Math.round(progreso * 100) + "%";
+}
+
+// ───────────────────── relojes ─────────────────────
+// Todo tiene que estar en el reloj de performance.now(). Si una fuente trae
+// horas de otro reloj (algunos navegadores dan captureTime o la hora de los
+// sensores desde el arranque del teléfono, o en ms de época), las series de
+// la cámara y de la IMU nunca se cruzan y la calibración no puede andar. Se
+// detecta (más de 1 s de diferencia con "ahora") y se corre a este reloj,
+// quedándose con la menor demora vista.
+const relojes = {};
+function aReloj(nombre, crudoMs) {
+  const ahora = performance.now();
+  let r = relojes[nombre];
+  if (!r) r = relojes[nombre] = { corr: Math.abs(crudoMs - ahora) < 1000 ? 0 : ahora - crudoMs, raro: Math.abs(crudoMs - ahora) >= 1000 };
+  if (r.raro && crudoMs + r.corr > ahora) r.corr = ahora - crudoMs;   // nunca en el futuro
+  return (crudoMs + r.corr) / 1000;
 }
 
 // ───────────────────── sensores ─────────────────────
@@ -288,8 +305,8 @@ async function abrirSensores() {
         setTimeout(() => mal(new Error("los sensores no arrancan")), 2500);
         g.start(); a.start();
       });
-      g.addEventListener("reading", () => llegaGiro(g.timestamp / 1000, g.x, g.y, g.z));
-      a.addEventListener("reading", () => llegaAcel(a.timestamp / 1000, a.x, a.y, a.z));
+      g.addEventListener("reading", () => llegaGiro(aReloj("giro", g.timestamp), g.x, g.y, g.z));
+      a.addEventListener("reading", () => llegaAcel(aReloj("acel", a.timestamp), a.x, a.y, a.z));
       fuenteIMU = "Generic Sensor";
       return;
     } catch (e) { /* sigue con devicemotion */ }
@@ -304,8 +321,9 @@ async function abrirSensores() {
   addEventListener("devicemotion", (e) => {
     const w = e.rotationRate, ag = e.accelerationIncludingGravity;
     if (!w || !ag || w.alpha === null || ag.x === null) return;
-    horas.push(e.timeStamp / 1000); if (horas.length > 120) horas.shift();
-    let t = e.timeStamp / 1000;
+    const t1 = aReloj("devicemotion", e.timeStamp);
+    horas.push(t1); if (horas.length > 120) horas.shift();
+    let t = t1;
     if (horas.length >= 20) {
       const m = horas.length; let sx = 0, sy = 0, sxx = 0, sxy = 0;
       for (let j = 0; j < m; j++) { sx += j; sy += horas[j]; sxx += j * j; sxy += j * horas[j]; }
@@ -351,7 +369,8 @@ function grisDe(fuente) {
 function cadaCuadroDeVideo() {
   const cb = (ahora, meta) => {
     // captureTime: la hora en que el sensor tomó el cuadro (si el navegador la da).
-    const t = (meta && meta.captureTime ? meta.captureTime : ahora) / 1000;
+    const t = meta && meta.captureTime ? aReloj("camara", meta.captureTime) : ahora / 1000;
+    cuentaCuadros++;
     if (!ancho) medirImagen(video.videoWidth, video.videoHeight);
     const quiere = fase === "calibrando" || (fase === "slam" && libre);
     if (quiere) llegaCuadro(t, grisDe(video));
@@ -364,35 +383,46 @@ function cadaCuadroDeVideo() {
 }
 
 // ───────────────────── calibración ─────────────────────
-let flujo = null, flujos = [], giroAcum = 0, tCalib0 = 0;
-const CALIB_SEG = 4, CALIB_GIRO = 2.0;   // segundos mínimos y radianes girados mínimos
+// Mide sola el desfase cámara-IMU, la focal y cómo está montada la cámara
+// respecto de la IMU (desfase.js). Junta los últimos 8 s y prueba cada 1 s
+// hasta que alcance; si no alcanza, dice por qué.
+let flujo = null, flujos = [], tCalib0 = 0, tIntento = 0, intentos = 0, ultimoIntento = null, cuentaCuadros = 0, fpsCam = 0, tCam = performance.now();
+const VENTANA = 8, CALIB_SEG = 3;
 function empezarCalibracion() {
-  fase = "calibrando"; flujo = new Flujo(ancho, alto); flujos = []; giroAcum = 0; tCalib0 = 0; giros.length = 0;
-  avisar("Calibrando: girá el teléfono de lado a lado y arriba-abajo, sin moverte del lugar", 0);
+  fase = "calibrando"; flujo = new Flujo(ancho, alto); flujos = []; tCalib0 = 0; tIntento = 0; intentos = 0; ultimoIntento = null;
+  $("#b-saltear").hidden = false;
+  avisar("Calibrando: girá el teléfono de lado a lado Y arriba-abajo, sin moverte del lugar, con algo con textura adelante", 0);
 }
 function pasoCalibracion(t, gris) {
   const f = flujo.agregar(t, gris);
   if (f) flujos.push(f);
+  while (flujos.length && t - flujos[0].t > VENTANA) flujos.shift();
   if (!tCalib0) tCalib0 = t;
-  giroAcum = 0;
-  for (let i = 1; i < giros.length; i++) { const g = giros[i]; if (g[0] < tCalib0 - 0.5) continue; giroAcum += Math.hypot(g[1], g[2], g[3]) * (g[0] - giros[i - 1][0]); }
-  const prog = Math.min(1, Math.min((t - tCalib0) / CALIB_SEG, giroAcum / CALIB_GIRO));
-  avisar("Calibrando: girá el teléfono de lado a lado y arriba-abajo, sin moverte del lugar", prog);
-  if (prog < 1 || flujos.length < 60) return;
-  const imus = giros.map((g) => ({ t: g[0], w: [g[1], g[2], g[3]] }));
-  const e = estimarDesfase(flujos, giroComoFlujo(imus, qbc), { maxDesfase: 0.25 });
+  const prog = Math.min(1, (t - tCalib0) / CALIB_SEG);
+  if (prog < 1) { avisar("Calibrando: girá el teléfono de lado a lado Y arriba-abajo, sin moverte del lugar, con algo con textura adelante", prog); return; }
+  if (t - tIntento < 1) return;
+  tIntento = t; intentos++;
+  const imus = giros.filter((g) => g[0] > t - VENTANA - 1).map((g) => ({ t: g[0], w: [g[1], g[2], g[3]] }));
+  const c = calibrarCamaraIMU(flujos, imus, { qPrevio: qSupuesto || qCamaraCuerpo(anguloPantalla), minGiro: Number(P.get("mingiro") || 0.25) });
+  ultimoIntento = c;
+  // Por qué no alcanza, en orden: sin cámara, sin IMU, relojes, poco giro,
+  // montaje, poca coincidencia. Exigente a propósito (con EuRoC, aceptar flojo
+  // daba la focal +31 %): mejor unos segundos más girando que un SLAM mal calibrado.
   const focalFov = (Math.max(ancho, alto) / 2) / Math.tan(fovLargo * Math.PI / 360);
-  if (e.calidad > 0.75 && e.escala > focalFov * 0.6 && e.escala < focalFov * 1.6) {
-    calib = { desfase: e.desfase, focal: e.escala, ancho, alto, calidad: e.calidad };
-    guardar(claveCalib(), calib);
-    arrancarSlam();
-  } else {
-    // No alcanzó: otra vuelta (con el valor del control como respaldo en el HUD).
-    avisar(`No me alcanzó (${e.calidad.toFixed(2)}): girá más, con algo con textura adelante`, 0);
-    flujos = []; tCalib0 = 0; giros.length = 0; flujo = new Flujo(ancho, alto);
-  }
+  let falta = null;
+  if (flujos.length < 40) falta = `casi no hay cuadros utilizables (${flujos.length}): ¿se mueve muy rápido o está muy oscuro?`;
+  else if (imus.length < 60) falta = `casi no llega el giróscopo (${imus.length} muestras en ${VENTANA} s)`;
+  else if (c.n < 30) falta = "las horas de la cámara y del giróscopo no se cruzan (relojes distintos)";
+  else if (c.falta === "giro") falta = `girá más, de lado a lado y arriba-abajo (${c.exX.toFixed(2)} / ${c.exY.toFixed(2)} rad/s)`;
+  else if (c.falta === "montaje") falta = `girá también ${c.exX < c.exY ? "arriba-abajo" : "de lado a lado"}: necesito ver cómo está puesta la cámara (${c.exX.toFixed(2)} / ${c.exY.toFixed(2)} rad/s)`;
+  else if (c.correlacion < 0.85) falta = `la imagen y el giróscopo coinciden poco (${c.correlacion.toFixed(2)}): más luz o más textura adelante, y girá sin trasladarte`;
+  else if (!(c.focal > focalFov * 0.5 && c.focal < focalFov * 2)) falta = `la focal salió rara (${c.focal.toFixed(0)} px)`;
+  if (falta) { avisar(`Calibrando (intento ${intentos}): ${falta}`, 1); return; }
+  calib = { desfase: c.desfase, focal: c.focal, qbc: c.qbc, ancho, alto, calidad: c.correlacion, montaje: c.montaje, version: 2 };
+  guardar(claveCalib(), calib);
+  arrancarSlam();
 }
-const claveCalib = () => `xrslam.calib.${ancho}x${alto}.${anguloPantalla}`;
+const claveCalib = () => `xrslam.calib2.${ancho}x${alto}.${anguloPantalla}`;
 
 // ───────────────────── SLAM ─────────────────────
 let textoSlam = "";
@@ -427,6 +457,9 @@ cam0:
 }
 function arrancarSlam() {
   fase = "slam"; libre = false; pose = null; estadoSlam = 0;
+  $("#b-saltear").hidden = true;
+  // El montaje medido manda sobre el supuesto por el giro de la pantalla.
+  if (calib && calib.qbc) qbc = calib.qbc;
   reiniciarMundo();
   const focal = calib ? calib.focal : (Math.max(ancho, alto) / 2) / Math.tan(fovLargo * Math.PI / 360);
   // El campo de la cámara 3D sale de la misma focal: el mundo queda pegado a la imagen.
@@ -528,6 +561,7 @@ renderer.setAnimationLoop(() => {
   const ahora = performance.now();
   if (ahora - tFps > 1000) { fpsSlam = Math.round(cuadrosSlam * 1000 / (ahora - tFps)); cuadrosSlam = 0; tFps = ahora; }
   if (ahora - tHz > 1000) { hzIMU = Math.round(cuentaIMU * 1000 / (ahora - tHz)); cuentaIMU = 0; tHz = ahora; }
+  if (ahora - tCam > 1000) { fpsCam = Math.round(cuentaCuadros * 1000 / (ahora - tCam)); cuentaCuadros = 0; tCam = ahora; }
   cuadrosDib++; if (ahora - tDib > 500) { fpsDib = Math.round(cuadrosDib * 1000 / (ahora - tDib)); cuadrosDib = 0; tDib = ahora; }
   const pa = fase === "slam" ? poseAhora() : null;
   mundo.visible = !!pa && estadoSlam === 1;
@@ -549,7 +583,9 @@ function pintarHud() {
     `XRSLAM · 6DoF: ${fase === "slam" ? est : fase}<br>` +
     `SLAM ${fpsSlam}/s · ${msSlam.toFixed(0)} ms · dibujo ${fpsDib}/s<br>` +
     `IMU ${fuenteIMU} ${hzIMU} Hz · ${ancho}×${alto}<br>` +
-    (calib ? `desfase ${(calib.desfase * 1000).toFixed(0)} ms · focal ${calib.focal.toFixed(0)} px<br>` : "") +
+    (calib ? `desfase ${(calib.desfase * 1000).toFixed(0)} ms · focal ${calib.focal.toFixed(0)} px${calib.montaje ? " · montaje " + calib.montaje : ""}<br>` : "") +
+    (fase === "calibrando" ? `cámara ${fpsCam}/s · flujos ${flujos.length}` + (ultimoIntento ? ` · r² ${ultimoIntento.r2.toFixed(2)} · corr ${ultimoIntento.correlacion.toFixed(2)} · giro ${ultimoIntento.exX.toFixed(2)}/${ultimoIntento.exY.toFixed(2)} · f ${ultimoIntento.focal.toFixed(0)} · d ${(ultimoIntento.desfase * 1000).toFixed(0)} ms` : "") + "<br>" : "") +
+    (Object.keys(relojes).some((k) => relojes[k].raro) ? `relojes corregidos: ${Object.keys(relojes).filter((k) => relojes[k].raro).join(", ")}<br>` : "") +
     `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)} m${pisoY !== null ? ` · piso ${(pisoY - p.y).toFixed(2)}` : ""}`;
 }
 
@@ -562,6 +598,8 @@ $("#b-linterna").addEventListener("click", async () => {
 $("#b-puntos").addEventListener("click", () => { nube.visible = !nube.visible; $("#b-puntos").textContent = nube.visible ? "Mapa: sí" : "Mapa: no"; });
 $("#b-recalibrar").addEventListener("click", () => { trabajador.postMessage({ tipo: "destruir" }); calib = null; empezarCalibracion(); });
 $("#b-reiniciar").addEventListener("click", () => { if (fase === "slam") arrancarSlam(); });
+// Sin calibrar: focal del control, desfase 0, montaje supuesto por la pantalla.
+$("#b-saltear").addEventListener("click", () => { calib = null; qbc = qSupuesto || qCamaraCuerpo(anguloPantalla); arrancarSlam(); });
 
 async function acostar() {
   const aTiempo = (p, ms = 700) => Promise.race([p, new Promise((ok) => setTimeout(ok, ms))]).catch(() => {});
@@ -587,7 +625,7 @@ $("#empezar").addEventListener("click", async () => {
     medirImagen(video.videoWidth, video.videoHeight);
     cadaCuadroDeVideo();
     calib = leer(claveCalib(), null);
-    if (calib && calib.ancho === ancho && calib.alto === alto) arrancarSlam(); else empezarCalibracion();
+    if (calib && calib.version === 2 && calib.ancho === ancho && calib.alto === alto) arrancarSlam(); else { calib = null; empezarCalibracion(); }
   } catch (e) {
     console.error(e);
     inicio.hidden = false; capa.hidden = true;
@@ -607,7 +645,12 @@ async function arrancarPrueba() {
   ancho = Math.round(w * escala); alto = Math.round(h * escala);
   // Calibración de EuRoC (cam0), llevada al tamaño achicado.
   qbc = [-7.7071797555374275e-03, 1.0499323370587278e-02, 7.0175280029197162e-01, 7.1230146066895372e-01];
-  calib = P.get("calibrar") ? null : { desfase: 0, focal: 458.654 * ancho / w, ancho, alto, calidad: 1 };
+  calib = P.get("calibrar") ? null : { desfase: 0, focal: 458.654 * ancho / w, ancho, alto, calidad: 1, qbc };
+  // Para probar la calibración a ciegas: un montaje supuesto equivocado
+  // (?montaje=mal) y la cámara en otro reloj (?reloj=segundos).
+  qSupuesto = qbc;
+  if (P.get("montaje") === "mal") qbc = qSupuesto = [1, 0, 0, 0];
+  const corrReloj = Number(P.get("reloj") || 0);
   fuenteIMU = "EuRoC 200 Hz";
   fondo.hidden = false; fondo.width = ancho; fondo.height = alto;
   const ctxF = fondo.getContext("2d"), img = ctxF.createImageData(ancho, alto);
@@ -639,7 +682,8 @@ async function arrancarPrueba() {
     const tAhora = t0 + (performance.now() / 1000 - w0) * ritmo;
     while (k < imu.length / 7 && imu[k * 7] <= tAhora) {
       const o = k * 7;
-      llegaGiro(imu[o], imu[o + 1], imu[o + 2], imu[o + 3]); llegaAcel(imu[o], imu[o + 4], imu[o + 5], imu[o + 6]); k++;
+      const ti = corrReloj ? aReloj("imu", imu[o] * 1000) : imu[o];
+      llegaGiro(ti, imu[o + 1], imu[o + 2], imu[o + 3]); llegaAcel(ti, imu[o + 4], imu[o + 5], imu[o + 6]); k++;
     }
     if (!siguiente) {
       if (pidiendo || i >= n) return;
@@ -651,7 +695,10 @@ async function arrancarPrueba() {
     for (let j = 0; j < g.length; j++) { img.data[j * 4] = img.data[j * 4 + 1] = img.data[j * 4 + 2] = g[j]; img.data[j * 4 + 3] = 255; }
     ctxF.putImageData(img, 0, 0);
     const quiere = fase === "calibrando" || (fase === "slam" && libre);
-    if (quiere) llegaCuadro(siguiente.t, g.slice());
+    cuentaCuadros++;
+    // Con ?reloj la cámara trae horas de otro reloj (corridas N s) y las dos
+    // fuentes pasan por aReloj, como en un teléfono con relojes distintos.
+    if (quiere) llegaCuadro(corrReloj ? aReloj("camara", (siguiente.t + corrReloj) * 1000) : siguiente.t, g.slice());
     siguiente = null;
   }, 5);
   window.__XR.fin = () => i >= n && !siguiente;

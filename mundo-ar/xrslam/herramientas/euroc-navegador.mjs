@@ -9,7 +9,7 @@ import http from "http";
 import fs from "fs";
 import path from "path";
 
-const [datos, salida, segTxt, calibrar] = process.argv.slice(2);
+const [datos, salida, segTxt, calibrar, extra] = process.argv.slice(2);
 const web = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "web");
 const threeDir = process.env.THREE_DIR || path.join(process.env.HOME, ".cache/mundo-ar/pruebas");
 fs.mkdirSync(salida, { recursive: true });
@@ -36,7 +36,7 @@ const p = await ctx.newPage();
 const errores = [];
 p.on("pageerror", (e) => errores.push(e.message));
 p.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errores.push(m.text()); });
-await p.goto(`http://127.0.0.1:${serv.address().port}/?prueba=euroc&datos=/euroc${calibrar ? "&calibrar=1" : ""}`);
+await p.goto(`http://127.0.0.1:${serv.address().port}/?prueba=euroc&datos=/euroc${calibrar ? "&calibrar=1" : ""}${extra ? "&" + extra : ""}`);
 await p.waitForFunction(() => !document.querySelector("#empezar").disabled, null, { timeout: 60000 });
 await p.click("#empezar");
 const seg = Number(segTxt || 150), t0 = Date.now(), muestras = [];
@@ -53,7 +53,7 @@ fs.writeFileSync(path.join(salida, "trayectoria.tum"), poses.map((q) => q.map((v
 const ult = muestras[muestras.length - 1];
 const med = (k) => { const v = muestras.filter((m) => m.fase === "slam").map((m) => m[k]).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : 0; };
 console.log(`poses ${poses.length} · SLAM ${med("fpsSlam")} cuadros/s (mediana) · ${med("msSlam").toFixed(0)} ms por cuadro · dibujo ${med("fpsDib")}/s · ${ult.ancho}×${ult.alto}`);
-if (ult.calib) console.log(`calibración: desfase ${(ult.calib.desfase * 1000).toFixed(1)} ms · focal ${ult.calib.focal.toFixed(1)} px · calidad ${ult.calib.calidad.toFixed(3)}`);
+if (ult.calib) console.log(`calibración: desfase ${(ult.calib.desfase * 1000).toFixed(1)} ms · focal ${ult.calib.focal.toFixed(1)} px · r² ${ult.calib.calidad.toFixed(3)}${ult.calib.qbc ? " · q_bc [" + ult.calib.qbc.map((v) => v.toFixed(3)).join(", ") + "]" : ""}`);
 console.log("aviso al final:", await p.evaluate(() => document.querySelector("#aviso").firstChild.textContent));
 console.log(`anillo ${ult.anillo} · piso ${ult.pisoY === null ? "—" : ult.pisoY.toFixed(2)} · errores ${errores.length ? "\n  " + errores.slice(0, 8).join("\n  ") : 0}`);
 await nav.close(); serv.close();

@@ -12,12 +12,14 @@
 //   SIN_FILTRO=1     bajar la IMU tirando muestras (sin promediar: aliasing)
 //   ENDEREZAR=1      corregir el temblor de horas como lo haría la página
 //                    (el sensor late a ritmo fijo: se ajusta una recta)
+//   IMU_ROT=z90      girar los ejes de la IMU (x|y|z + grados): el montaje ya
+//                    no es el de la configuración
 //   CALIBRAR=10      estimar el desfase cámara-IMU con los primeros N s
 //                    (web/desfase.js), reiniciar y correr con las horas corregidas
 import fs from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
-import { estimarDesfase, Flujo, giroComoFlujo } from "../web/desfase.js";
+import { estimarDesfase, calibrarCamaraIMU, Flujo, giroComoFlujo } from "../web/desfase.js";
 
 const [modulo, slamYaml, sensorYaml, carpeta, salida, topeTxt] = process.argv.slice(2);
 const IMU_HZ = Number(process.env.IMU_HZ || 0), TIEMBLA = Number(process.env.TIEMBLA_MS || 0) / 1000;
@@ -80,6 +82,14 @@ if (process.env.ENDEREZAR) {
     for (let j = i0; j <= i; j++) { const x = j - i0; sx += x; sy += ts[j]; sxx += x * x; sxy += x * ts[j]; }
     const b = (m * sxy - sx * sy) / (m * sxx - sx * sx), a = (sy - b * sx) / m;
     imu[i * 7] = Math.max(a + b * (i - i0), i ? imu[(i - 1) * 7] + 1e-4 : -Infinity);
+  }
+}
+if (process.env.IMU_ROT) {
+  const [, eje, grados] = /([xyz])(-?\d+)/.exec(process.env.IMU_ROT), a = Number(grados) * Math.PI / 180;
+  const c = Math.cos(a), sn = Math.sin(a), i0 = "xyz".indexOf(eje), i1 = (i0 + 1) % 3, i2 = (i0 + 2) % 3;
+  for (let i = 0; i < imu.length / 7; i++) for (const o of [1, 4]) {
+    const v = imu.subarray(i * 7 + o, i * 7 + o + 3), y = v[i1], z = v[i2];
+    v[i1] = c * y - sn * z; v[i2] = sn * y + c * z;
   }
 }
 const nImu = imu.length / 7;
@@ -145,12 +155,15 @@ let desfase = 0;
 if (process.env.CALIBRAR) {
   const r = correr(0, Number(process.env.CALIBRAR));
   const imus = []; for (let i = 0; i < nImu; i++) imus.push({ t: imu[i * 7], w: [imu[i * 7 + 1], imu[i * 7 + 2], imu[i * 7 + 3]] });
-  const qbc = JSON.parse(textoSensor.match(/q_bc: (\[[^\]]*\])/)[1]);
-  const e = estimarDesfase(r.flujos, giroComoFlujo(imus, qbc));
-  desfase = e.desfase;
-  console.log(`desfase estimado ${(desfase * 1000).toFixed(1)} ms · focal estimada ${e.escala.toFixed(1)} px (calidad ${e.calidad.toFixed(3)}, con ${r.flujos.length} flujos)`);
+  const c = calibrarCamaraIMU(r.flujos, imus);
+  desfase = c.desfase;
+  console.log(`desfase ${(c.desfase * 1000).toFixed(1)} ms · focal ${c.focal.toFixed(1)} px · q_bc [${c.qbc.map((v) => v.toFixed(3)).join(", ")}]${c.enderezada ? " (a escuadra)" : ""} · r² ${c.r2.toFixed(3)} · giro x ${c.exX.toFixed(2)} y ${c.exY.toFixed(2)} rad/s · ${c.n} flujos`);
+  // Se arranca con lo medido: focal, desfase y montaje.
+  const cen = textoSensor.match(/intrinsics: \[([^\]]*)\]/)[1].split(",").map(Number);
+  const texto2 = textoSensor.replace(/intrinsics: \[([^\]]*)\]/, `intrinsics: [${c.focal}, ${c.focal}, ${cen[2]}, ${cen[3]}]`)
+    .replace(/q_bc: \[[^\]]*\]/, `q_bc: [${c.qbc.join(", ")}]`);
   M._xr_destruir();
-  if (!M._xr_crear(pSlam, pSensor)) { console.error("xr_crear falló"); process.exit(1); }
+  if (!M._xr_crear(pSlam, cad(texto2))) { console.error("xr_crear falló"); process.exit(1); }
 }
 const { lineas, tiempos, bien } = correr(desfase, 0);
 fs.writeFileSync(salida, lineas.join("\n") + "\n");

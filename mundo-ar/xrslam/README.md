@@ -55,6 +55,36 @@ cámara**: la página se calibra sola, sin pedir el campo de visión del lente.
 En el navegador, con EuRoC, dio **focal 286,8 px contra 286,7 reales** y
 desfase 7,7 ms contra 0.
 
+### La calibración en un teléfono
+
+La página no confía en lo que supone. Mide:
+
+- **el desfase** cámara-IMU;
+- **la focal**;
+- **cómo está montada la cámara respecto de la IMU**: ajusta una matriz
+  que lleva el giro 3D del giróscopo al corrimiento 2D de la imagen, y la
+  lleva a la escuadra más cercana;
+- **los relojes**: si la hora de la cámara (`captureTime`) o la de los
+  sensores está a más de 1 s de `performance.now()`, la corre a ese reloj.
+  Con horas en otro reloj, las series nunca se cruzarían.
+
+Si no alcanza, dice por qué: pocos cuadros, falta el giróscopo, relojes que
+no se cruzan, poco giro en algún sentido, montaje dudoso o poca coincidencia.
+Junta los últimos 8 s y reintenta cada segundo. **Sin calibrar** arranca
+con la focal del control, desfase 0 y el montaje supuesto.
+
+Probado en el navegador con EuRoC (`euroc-navegador.mjs … calibrar`):
+
+| caso | focal (real 287 px) | desfase (real 0) | montaje |
+|---|---|---|---|
+| normal | 289,6 px | 12 ms | el supuesto, confirmado |
+| cámara en otro reloj (5000 s corrida) | 289,8 px | 8,7 ms | ✓ |
+| montaje supuesto equivocado | 304 px | −7,5 ms | medido, correcto |
+
+Aceptar con poco rigor daba la focal +31 %. Por eso pide ≥ 0,25 rad/s de
+giro y correlación ≥ 0,85. El dron de EuRoC gira menos que eso: las pruebas
+bajan el mínimo con `?mingiro=`.
+
 Trampas que aparecieron:
 
 - **Bajar la IMU tirando muestras mete aliasing.** El dron vibra, y
