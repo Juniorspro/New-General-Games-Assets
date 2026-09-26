@@ -206,6 +206,17 @@ Eigen) va a `~/.cache/mundo-ar`, fuera del repo. En el repo quedan sólo
 nuestros archivos y los parches. `web/dist/` es lo compilado: está en el repo
 para que la página se pueda hostear.
 
+## Paredes lisas: lo que falta y dónde entraría una red
+
+La geometría encuentra planos donde hay textura. Para una pared blanca lisa
+hace falta estimar la profundidad desde la imagen misma, como la API de
+profundidad de ARCore. Eso **no se entrena de cero**: hay modelos
+preentrenados chicos (por ejemplo Depth Anything V2 Small, o una red de
+segmentación piso/pared/techo), que se pueden afinar con una GPU (una T4 de
+Kaggle alcanza) sobre datos de interiores. Después se pasan a ONNX o TF.js
+y corren en el navegador, a pocos cuadros por segundo: sólo para completar
+planos, no en cada cuadro. No está hecho.
+
 ## Lo que NO se probó
 
 - **En un teléfono.** Esta máquina no tiene uno. Está probado con EuRoC,
