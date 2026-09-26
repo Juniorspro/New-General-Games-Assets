@@ -102,9 +102,10 @@ const MANO = () => {
   const r2 = await pag.evaluate(() => {
     const A = window.__A, THREE = A.THREE, M = A.manos.manos[1], { p, q } = window.__cab();
     const base = p.clone().addScaledVector(new THREE.Vector3(0, 0, -1).applyQuaternion(q), 0.4);
-    /* quieta: 60 lecturas con ±1,5 mm de ruido */
+    /* quieta: 140 lecturas con ±1,5 mm de ruido (el temblor filtrado se mide sobre 120: con pocas
+       muestras, que van muy pegadas entre sí, la medida misma variaba ±20 %) */
     const xs = [];
-    for (let i = 0; i < 60; i++) { A.manos.recibirMundo(true, window.__mano(true, 'abierta', { mira: base, ruido: 0.003 }), 100 + i / 30); M.adelantar(100 + i / 30, true); if (i > 20) xs.push(M.p[24]); }
+    for (let i = 0; i < 140; i++) { A.manos.recibirMundo(true, window.__mano(true, 'abierta', { mira: base, ruido: 0.003 }), 100 + i / 30); M.adelantar(100 + i / 30, true); if (i > 20) xs.push(M.p[24]); }
     const media = xs.reduce((a, b) => a + b, 0) / xs.length, sd = Math.sqrt(xs.reduce((a, b) => a + (b - media) ** 2, 0) / xs.length);
     /* moviéndose a 1 m/s en x: fotos cada 33 ms; se mira 33 ms después de la última (lo que tarda en llegar) */
     let err = 0, errSin = 0, n = 0;

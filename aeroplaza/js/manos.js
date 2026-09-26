@@ -43,9 +43,10 @@ const PUNTA = [4, 8, 12, 16, 20];
 
 /* -------------------------------------------------- el filtro One Euro, para n números a la vez */
 class Euro {
-  /* (corte 1,6 Hz quieto y +8 Hz por cada m/s: medido con la prueba, quieta tiembla menos que la
-     mitad del ruido y tocando un botón a 30 cm/s atrasa menos de 1 cm) */
-  constructor(n, { corte = 1.6, beta = 8, corteD = 1.5 } = {}) { this.x = new Float32Array(n); this.dx = new Float32Array(n); this.t = -1; this.corte = corte; this.beta = beta; this.corteD = corteD; }
+  /* (corte 1,2 Hz quieta y +10 Hz por cada m/s; la velocidad, suavizada a 1 Hz. Simulado con
+     fotos a 30 por segundo: quieta tiembla el 29 % del ruido, a 1 m/s adelantada erra 7 mm y un
+     toque a 30 cm/s no atrasa ni 2 mm) */
+  constructor(n, { corte = 1.2, beta = 10, corteD = 1.0 } = {}) { this.x = new Float32Array(n); this.dx = new Float32Array(n); this.t = -1; this.corte = corte; this.beta = beta; this.corteD = corteD; }
   static a(corte, dt) { const tau = 1 / (2 * Math.PI * corte); return 1 / (1 + tau / dt); }
   reiniciar(v, t) { this.x.set(v); this.dx.fill(0); this.t = t; }
   filtrar(v, t) {
