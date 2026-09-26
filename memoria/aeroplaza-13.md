@@ -76,7 +76,8 @@ Sigue de [aeroplaza-12](aeroplaza-12.md). Rama `claude/fijate-iszyer`.
 - **Al mundo**: con la cabeza del momento en que se sacó la foto
   (`registrarCabeza` / `cabezaEn`, interpolando).
 - **Suaves y a tiempo**:
-  - One Euro con corte de 1,6 Hz y beta 8;
+  - One Euro con corte de 1,2 Hz, beta 10 y corte de la velocidad 1 Hz
+    (elegido simulando: menos temblor quieta y el mismo seguimiento);
   - se adelantan con su velocidad hasta el cuadro que se dibuja (como mucho
     70 ms).
   - Medido:
@@ -164,6 +165,17 @@ Sigue de [aeroplaza-12](aeroplaza-12.md). Rama `claude/fijate-iszyer`.
     `installRuntime({ forceInstall: true })`;
   - su `getOffsetReferenceSpace` copia el `XRRigidTransform` como matriz y
     pierde el desplazamiento. En `pruebas/comun.mjs` se le pasa `.matrix`.
+- **El `clone()` de three copia el `userData` con JSON**: una referencia
+  circular (pieza ↔ instancia) lo colgaba (el delfín). Las referencias van
+  sin enumerar (`Object.defineProperty`).
+- **`pasa` (lo que se atraviesa) puede estar en un padre**, como un portal: la
+  instancia cuelga del grupo y lo tiene que heredar, si no `choques` ve
+  paredes nuevas.
+- **Instanciar al entrar agarraba lo que se mueve** (el delfín nada): ahora se
+  anotan las candidatas y a los 2 s solo van las que no se movieron.
+- **El temblor de la mano quieta varía entre corridas** (el ruido es al azar):
+  con 60 muestras daba 0,33 o 0,46 mm. Se mide con 140 y el filtro se ajustó
+  simulando muchas corridas.
 - **Cuadros por segundo**: la pantalla y el navegador ponen el techo. En iOS
   Safari el `requestAnimationFrame` va a 60 salvo que se cambie un ajuste; en
   el webview de TikTok no se sabe.
