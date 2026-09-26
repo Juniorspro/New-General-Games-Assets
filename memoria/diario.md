@@ -209,4 +209,4 @@ negra. Lo aprendido: [juegos](juegos.md). Commits en la rama.
   (6 vehículos revisados con render de control verde/magenta), cabina con asientos,
   tablero, volante y el conductor sentado; baja el vidrio con motorcito cuando el
   policía está a < 4 m. Artifact v4; pruebas pc y tel 12/12 sin errores.
-
+- **Modo prueba** (pedido): opción "Primer auto con DNI falso", activada de fábrica; `conductorDniFalso` deja el DNI adulterado como única falta. Probado: DNI y tablet con nombres distintos, se le escapa el nombre, arresto +100. Artifact v5.

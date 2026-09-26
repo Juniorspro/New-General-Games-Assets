@@ -760,9 +760,11 @@ const Juego = (() => {
     for (let i = 0; i < 30; i++) { const m = rnd() < 0.3, e = 20 + Math.floor(rnd() * 50), nac = sumarDias(HOY, -e * 365); registro.agregarPersona({ dni: dniAzar(rnd, nac.getFullYear()), nombre: nombreAzar(rnd, m), nacimiento: nac, rostro: rostroAzar(rnd, m, e), captura: rnd() < 0.05, motivo: "Robo — Juzgado de Garantías de Resistencia", antecedentes: "Sin antecedentes" }); }
     proximo = 0; esperaLlegada = 2; t = 0; hist = []; novedades = []; avisos = []; reputacion = 100; recaudado = 0; atendidos = 0; finEn = -1; motivoFin = ""; playa = 0;
     yo.x = -6.8; yo.z = -2.5; yo.yaw = -1.2; yo.pitch = -0.05; yo.mira = null;
+    if (opc.primeroFalso) conductores[0] = conductorDniFalso(rnd, registro);
     planearRadio(conductores.length);
     modo = "jugando"; pausado = false;
     radio("Central a Puesto Ruta 11: comienza su turno. Control de documentación y alcoholemia. Buen servicio.");
+    if (opc.primeroFalso) aviso("Modo prueba: el primer vehículo trae un DNI adulterado. Se apaga en Opciones.", "info", 7);
     avisar(true);
   }
   function terminar() {

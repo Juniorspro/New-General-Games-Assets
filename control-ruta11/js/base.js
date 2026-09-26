@@ -15,7 +15,7 @@ const TOCABLE = matchMedia("(pointer: coarse)").matches;
 
 function leer(clave, base) { try { const v = localStorage.getItem("ruta11:" + clave); return v ? Object.assign({}, base, JSON.parse(v)) : Object.assign({}, base); } catch (e) { return Object.assign({}, base); } }
 function guardar(clave, valor) { try { localStorage.setItem("ruta11:" + clave, JSON.stringify(valor)); } catch (e) { /* sin guardado, se juega igual */ } }
-const OPCIONES_BASE = { calidad: TOCABLE ? "media" : "alta", sens: 1, volumen: 0.8, vehiculos: 12, minutos: 16, turno: "tarde", ayudas: true };
+const OPCIONES_BASE = { calidad: TOCABLE ? "media" : "alta", sens: 1, volumen: 0.8, vehiculos: 12, minutos: 16, turno: "tarde", ayudas: true, primeroFalso: true };
 const STATS_BASE = { turnos: 0, mejor: 0, arrestos: 0, multas: 0, hallazgos: 0 };
 
 // Fecha del juego: el turno arranca hoy a la tarde.

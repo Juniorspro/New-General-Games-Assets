@@ -241,6 +241,23 @@ function identidadFalsa(p, r, registro) {
   if (p.docs.cedula.titular === p.nombre) p.docs.cedula.titular = alias;
   p.captura = r() < 0.5; // muchas veces el que usa un DNI falso es porque lo buscan
 }
+// Para probar el control: un conductor cuya ÚNICA falta es el DNI adulterado (sin
+// alcohol, captura, contrabando ni papeles vencidos), en auto o camioneta para que
+// se lo vea bien por la ventanilla. Lo correcto con él es arrestarlo.
+function conductorDniFalso(r, registro) {
+  let p;
+  for (let i = 0; i < 2000; i++) { p = generarConductor(r, registro); if (p.identidad && (p.modelo.tipo === "auto" || p.modelo.tipo === "camioneta")) break; }
+  const d = p.docs;
+  p.captura = false; p.robado = false; p.alcohol = 0; p.sinCinturon = false; p.sinCasco = false; p.lucesQuemadas = false;
+  p.baul = p.baul.filter((o) => !o.ilegal);
+  d.licencia.presente = true; d.licencia.vence = sumarDias(HOY, 400 + Math.floor(r() * 900)); if (!/^B/.test(d.licencia.categoria)) d.licencia.categoria = "B.1";
+  d.cedula.presente = true; d.cedula.patente = p.patente;
+  d.seguro.presente = true; d.seguro.vence = sumarDias(HOY, 60 + Math.floor(r() * 200));
+  const real = registro.persona(p.dni); if (real) { real.captura = false; real.motivo = ""; }
+  const veh = registro.vehiculo(p.patente); if (veh) veh.robado = false;
+  p.estado = "falso"; p.prueba = true;
+  return p;
+}
 function faltasReales(p) {
   const f = [], d = p.docs;
   if (p.sinCinturon || p.sinCasco) f.push("sinCinturon");

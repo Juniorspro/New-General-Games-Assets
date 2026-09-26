@@ -108,6 +108,7 @@ function Opciones({ opciones, setOpciones, cerrar }) {
       h("label", null, "Calidad gráfica"), h(Segmentado, { etiqueta: "Calidad", valor: opciones.calidad, onChange: set("calidad"), opciones: [["baja", "Baja"], ["media", "Media"], ["alta", "Alta"]] }),
       h("label", null, "Vehículos por turno"), h(Segmentado, { etiqueta: "Vehículos", valor: opciones.vehiculos, onChange: set("vehiculos"), opciones: [[8, "8"], [12, "12"], [16, "16"]] }),
       h("label", null, "Duración del turno"), h(Segmentado, { etiqueta: "Duración", valor: opciones.minutos, onChange: set("minutos"), opciones: [[10, "10 min"], [16, "16 min"], [24, "24 min"]] }),
+      h("label", null, "Primer auto con DNI falso (para probar el control)"), h(Segmentado, { etiqueta: "Primer auto con DNI falso", valor: opciones.primeroFalso, onChange: set("primeroFalso"), opciones: [[true, "Sí"], [false, "No"]] }),
       h("label", null, "Ayudas (vencimientos en días, pistas)"), h(Segmentado, { etiqueta: "Ayudas", valor: opciones.ayudas, onChange: set("ayudas"), opciones: [[true, "Sí"], [false, "No"]] }),
       h("label", { htmlFor: "sens" }, `Sensibilidad de la vista: ${opciones.sens.toFixed(1)}`), h("input", { id: "sens", type: "range", min: 0.4, max: 2.5, step: 0.1, value: opciones.sens, onChange: (e) => set("sens")(+e.target.value) }),
       h("label", { htmlFor: "vol" }, `Volumen: ${Math.round(opciones.volumen * 100)} %`), h("input", { id: "vol", type: "range", min: 0, max: 1, step: 0.05, value: opciones.volumen, onChange: (e) => set("volumen")(+e.target.value) })));
