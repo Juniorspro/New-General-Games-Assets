@@ -242,14 +242,59 @@ Fuente: la pasada de bugs de `estancia/` (24/9/2026). Ver también: [rezona](rez
   techo. La del conductor (+X, mitad de adelante) baja con un `discard` por altura.
 - Interior: una caja entera se veía como panel negro por los vidrios de atrás. Va
   solo una "tina" debajo de la cintura, un techo fino y asientos; arriba se ve a
-  través del auto. Conductor = el rig con muslos a escala 0,001 (el clip trae
-  escala: hay que reponerla después de cada `mixer.update`) y brazos girados sobre
-  los ejes del personaje (hacia el cuerpo y hacia el volante).
+  través del auto. Sentados (v6): **no escalar muslos** (se veían
+  sin piernas). Pose por huesos girados sobre los ejes del mundo del personaje
+  (`girarEnMundo` con el cuaternión del padre), después de cada `mixer.update`
+  (el clip trae 123 canales, escala incluida). `POSES.auto` y `POSES.moto` en
+  `juego.js`; cadera a la altura del asiento + 0,1.
 - Prueba: `__ruta.congelar(true)` + `__ruta.simular(seg)`; SwiftShader tarda
   10–15 s por foto con el canvas grande (timeout de 120 s).
 
+## Girar el juego 90° sin pantalla completa (los tres juegos)
+
+- Si es táctil y `innerHeight > innerWidth`: `html.girado`, y `#raiz` con
+  `width = innerHeight px`, `height = innerWidth px`,
+  `transform: translateX(innerWidth px) rotate(90deg)`, `transform-origin: 0 0`.
+  Toque a coordenadas del juego: x = clientY, y = innerWidth − clientX; los
+  deltas: dx' = dy, dy' = −dx. Renderer y cámara con el tamaño **lógico**.
+- Las media queries miran la ventana (girada es angosta): se cambian por clases
+  que pone JS con el tamaño lógico (`compacto`/`vertical` en Ruta 11,
+  `bajo`/`angosto` en Isla) y `vw`/`vh` por `var(--vw)`/`var(--vh)`.
+- `offsetX/offsetY` ya vienen en coordenadas del elemento (sirven girado);
+  `getBoundingClientRect` no: sale con ancho y alto cambiados.
+- Recalcular también 250 ms después del `orientationchange` (hay teléfonos que
+  avisan antes de tener las medidas nuevas). Sin probar en un teléfono real.
+
+## Idioma antes del menú
+
+- `TEXTOS = {es, en, pt}` + `t(clave, vars)` con `{var}`; arrays para frases al
+  azar (`tv`). Los datos del juego guardan **ids**, no textos, y se traducen al
+  mostrarlos. En Ruta 11 `t` ya era una variable del reloj en `juego.js`: alias `T`.
+- La pantalla de idioma sale en cada arranque, antes del menú, con la elección
+  anterior marcada; las pruebas eligen con `.idioma-btn >> nth=i` y usan
+  selectores que no dependen del idioma.
+
+## Sonidos grabados (`sonidos/`)
+
+- Rezona no tenía el audio andando (`kind` válido: auto|speech|music|sound; daba
+  "servicio no disponible"). Se usó una biblioteca de grabaciones CC0/CC-BY de
+  OpenGameArt (se baja entera con curl) y Kenney (zip CC0 con "Continue without
+  donating"); freesound da 403 desde acá. ffmpeg sin root: `pip install --user
+  imageio-ffmpeg`.
+- `sonidos/manifiesto.json` (id, grupo, licencia, autor, fuente, nota honesta:
+  qué es aproximación o síntesis), `CREDITOS.md`, `procesar.py` (reproducible) y
+  `incrustar.py <juego> <salida.js>` → `SONIDOS_B64` + `SONIDOS_CREDITOS`. Van en
+  base64 porque `fetch` no lee file:// en el descargable.
+- En el juego: `decodeAudioData` al crear el contexto; loops con
+  `AudioBufferSource.loop` (empalman sin clic; `<audio loop>` deja un hueco);
+  lo sintetizado queda de respaldo. Los CC-BY se muestran en Créditos.
+- Falta con licencia aceptable: moto (se usa el motor de auto más agudo), mugido,
+  relincho y cascos al paso (siguen sintetizados).
+
 ## Probar
 
+- Con SwiftShader las animaciones CSS de entrada tardan ~4 s en llegar a
+  opacidad 1: una foto a los 1,5 s muestra el menú "vacío". No es un bug: esperar.
 - Congelar el bucle y sacar las fotos a mano (`__juego.congelar`,
   `__juego.fotoDesde`): si no, el cuadro siguiente pisa la cámara.
 - Tiras cuadro a cuadro de cada aire y postura, con modo prueba de velocidad
