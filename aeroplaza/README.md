@@ -128,6 +128,10 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
 - La cámara de atrás del celu las sigue con MediaPipe en un worker. Se baja
   la primera vez, unos 20 MB, de jsdelivr y de Google; se puede servir desde
   otro lado con `window.AEROPLAZA_MANOS = { base, modelo }`.
+- En celus de 6 núcleos o más van dos redes a la par (el doble de fotos por
+  segundo).
+- **Flash:** sin visor, el botón ⚡ de arriba a la derecha prende la linterna
+  de la cámara para ver las manos con poca luz (si el celu deja: en iOS no).
 - En el Visor VR son las manos del visor.
 - **Usar:** el rayo sale del hombro; pellizcar (pulgar con índice) usa lo que
   se apunta.
@@ -185,8 +189,8 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   - `manos.mjs`: las manos (filtro, pellizco, rayo, arco, menú, burbujas) y
     MediaPipe de verdad con las fotos de `pruebas/manos/` (hechas con Rezona);
   - `manos-celu.mjs`: las manos por la cámara con el atraso y las fallas de un
-    celu, simuladas sin navegador (que no titilen, no se dupliquen ni peguen
-    tirones);
+    celu, simuladas sin navegador, con dos redes y con una (que no titilen, no
+    se dupliquen ni peguen tirones);
   - `xr.mjs`: el Visor VR con IWER, el Quest 3 de mentira de Meta.
 
   MediaPipe e IWER se bajan con curl la primera vez y no se commitean.

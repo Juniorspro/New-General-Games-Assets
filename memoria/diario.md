@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la noche · `claude/fijate-iszyer`:**
+  - Pidió: un botón de flash en el modo sin SBS, menos temblor y que la mano
+    vaya "súper igual a la mano real".
+  - Quedó ([aeroplaza-15](aeroplaza-15.md)): el flash; dos redes a la par;
+    la profundidad filtrada aparte. Quieta 3,9 → 2,3 mm; no titila; el
+    atraso que se suma a la cámara, un 10-14 % menos.
+  - Falta: probar el flash y las dos redes en un celu de verdad.
 - **27/09/2026, más tarde · `claude/fijate-iszyer`:**
   - Pidió: "va titilando la mano, optimizalo un 700 %" (en el celu, por el
     link de githack).

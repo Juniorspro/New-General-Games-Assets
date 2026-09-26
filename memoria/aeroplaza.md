@@ -310,7 +310,8 @@ En su propia nota: [aeroplaza-11](aeroplaza-11.md).
 
 En su propia nota: [aeroplaza-12](aeroplaza-12.md). Y después, el VR a 120, las manos y el visor:
 [aeroplaza-13](aeroplaza-13.md). Las manos que titilaban en el celu:
-[aeroplaza-14](aeroplaza-14.md).
+[aeroplaza-14](aeroplaza-14.md). El flash, las dos redes y la profundidad aparte:
+[aeroplaza-15](aeroplaza-15.md).
 
 ## Trampas que ya se pagaron
 
