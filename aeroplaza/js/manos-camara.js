@@ -35,7 +35,10 @@ self.onmessage = async (e) => {
       const { FilesetResolver, HandLandmarker } = await import(d.base + '/vision_bundle.mjs');
       const fs = await FilesetResolver.forVisionTasks(d.base + '/wasm');
       const op = (delegate) => ({ baseOptions: { modelAssetPath: d.modelo, delegate }, runningMode: 'VIDEO', numHands: 2,
-        minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+        minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.4, minTrackingConfidence: 0.4 });
+      /* (presencia y seguimiento un poco más tolerantes que lo de fábrica: con 0,5 soltaba la mano
+         en cuanto se movía rápido o se ponía de costado, y volver a encontrarla cuesta una foto entera
+         de detección de palmas) */
       let delegado = d.delegado;
       try { lm = await HandLandmarker.createFromOptions(fs, delegado === 'GPU' ? { ...op('GPU'), canvas: new OffscreenCanvas(1, 1) } : op('CPU')); }
       catch (err) { delegado = 'CPU'; lm = await HandLandmarker.createFromOptions(fs, op('CPU')); }
@@ -82,6 +85,13 @@ export function trasladar(img, mundo, tanX, tanY, o = 0, oW = 63) {
   return [det(col(0, R)) / D, det(col(1, R)) / D, det(col(2, R)) / D];
 }
 
+/* cuándo se sacó la foto: captureTime si lo da y tiene sentido (en algunos navegadores falta o viene
+   en otro reloj); si no, cuándo se mostró; si no, ahora */
+function horaFoto(meta) {
+  const ahora = performance.now(), ok = (x) => typeof x === 'number' && ahora - x >= 0 && ahora - x < 600;
+  return ok(meta?.captureTime) ? meta.captureTime : ok(meta?.presentationTime) ? meta.presentationTime : ahora;
+}
+
 export class ManosCamara {
   /* alLlegar(manos, t): cada vez que la red devuelve. manos: [{ derecha, puntos: Float32Array(63) en
      metros y en la cámara de three (x derecha, y arriba, z atrás), confianza }] */
@@ -89,7 +99,8 @@ export class ManosCamara {
     this.alLlegar = alLlegar; this.avisar = avisar;
     this.hfov = hfov;            // el campo de la cámara de atrás, del lado largo (se puede ajustar)
     this.estado = 'apagada';     // apagada · cargando · lista · error
-    this.ocupado = false; this.stats = { cuadros: 0, ms: 0, saltados: 0, latencia: 0 };
+    this.ocupado = false; this.stats = { cuadros: 0, ms: 0, saltados: 0, latencia: 0, ahorrados: 0 };
+    this.tMano = -1e9; this.nCuadro = 0;
     this.cfg = { base: MANOS_BASE, modelo: MANOS_MODELO, ...(window.AEROPLAZA_MANOS || {}) };
   }
   /* el worker con MediaPipe (se puede usar sin cámara: probar() le pasa imágenes) */
@@ -118,6 +129,11 @@ export class ManosCamara {
     const stream = this.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60, max: 60 } } });
     const v = this.video = document.createElement('video');
     v.playsInline = true; v.muted = true; v.srcObject = stream;
+    /* en la página, chiquito y casi transparente: un video suelto (fuera del documento) en algunos
+       celus deja de dar cuadros o los da de a saltos, y la mano se cortaba */
+    v.setAttribute('aria-hidden', 'true');
+    Object.assign(v.style, { position: 'fixed', left: '0', top: '0', width: '2px', height: '2px', opacity: '0.01', pointerEvents: 'none', zIndex: '-1' });
+    document.body.appendChild(v);
     await v.play();
     this.activa = true; this.pedir();
     return true;
@@ -125,7 +141,7 @@ export class ManosCamara {
   apagar() {
     this.activa = false;
     this.stream?.getTracks().forEach((t) => t.stop()); this.stream = null;
-    if (this.video) { this.video.srcObject = null; this.video = null; }
+    if (this.video) { this.video.srcObject = null; this.video.remove(); this.video = null; }
   }
   soltar() { this.apagar(); this.worker?.terminate(); this.worker = null; this.estado = 'apagada'; }
   /* cada cuadro nuevo de la cámara (requestVideoFrameCallback: sale justo cuando llega, con la hora
@@ -133,8 +149,14 @@ export class ManosCamara {
   pedir() {
     if (!this.activa) return;
     const v = this.video;
-    if (v.requestVideoFrameCallback) v.requestVideoFrameCallback((ahora, meta) => { this.cuadro(meta?.captureTime ?? meta?.expectedDisplayTime ?? ahora); this.pedir(); });
-    else setTimeout(() => { this.cuadro(performance.now()); this.pedir(); }, 16);
+    if (v.requestVideoFrameCallback) v.requestVideoFrameCallback((ahora, meta) => { this.nuevo(horaFoto(meta)); this.pedir(); });
+    else setTimeout(() => { this.nuevo(performance.now()); this.pedir(); }, 16);
+  }
+  /* un cuadro nuevo de la cámara. Sin manos a la vista hace más de un segundo, va a la red uno sí y
+     uno no: buscar palmas es lo más caro, y así el celu no se calienta (y no baja de 120) */
+  nuevo(t) {
+    if (performance.now() - this.tMano > 1000 && (this.nCuadro++ & 1)) { this.stats.ahorrados++; return; }
+    this.cuadro(t);
   }
   async cuadro(t, fuente = this.video) {
     if (!this.worker || this.estado !== 'lista') return;
@@ -152,7 +174,9 @@ export class ManosCamara {
     if (d.tipo === 'fallo') { this.ocupado = false; return; }
     if (d.tipo !== 'manos') return;
     this.ocupado = false;
-    const S = this.stats; S.cuadros++; S.ms += (d.ms - S.ms) * 0.1; S.latencia += (performance.now() - d.t - S.latencia) * 0.1;
+    const llego = performance.now();
+    const S = this.stats; S.cuadros++; S.ms += (d.ms - S.ms) * 0.1; S.latencia += (llego - d.t - S.latencia) * 0.1;
+    if (d.n) this.tMano = llego;
     /* el campo es el del lado largo del cuadro (con el juego girado, el video llega parado) */
     const asp = this.aspecto || 4 / 3, largo = Math.tan(THREE.MathUtils.degToRad(this.hfov) / 2);
     const manos = [], tanX = asp >= 1 ? largo : largo * asp, tanY = asp >= 1 ? largo / asp : largo;
@@ -171,6 +195,6 @@ export class ManosCamara {
       const et = d.buf[o + 126];
       manos.push({ derecha: et < 0 ? null : et > 0.5, puntos: P, confianza: d.buf[o + 127], img: d.buf.slice(o, o + 63) });
     }
-    this.alLlegar?.(manos, d.t);
+    this.alLlegar?.(manos, d.t, llego);
   }
 }

@@ -154,7 +154,7 @@ async function iniciar() {
   const manos = new Manos();
   let camManos = null;
   const prenderManos = async () => {
-    if (!camManos) camManos = new ManosCamara({ alLlegar: (lista, tt) => { if (manos.activa) manos.recibirCamara(lista, tt); } });
+    if (!camManos) camManos = new ManosCamara({ alLlegar: (lista, tt, llego) => { if (manos.activa) manos.recibirCamara(lista, tt, llego); } });
     manos.activa = true; manos.fuente = 'camara';
     vr.decir(t('mn_manos_cargando'), 30);
     try {
@@ -165,7 +165,7 @@ async function iniciar() {
     }
     catch (e) { console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos(); }
   };
-  const apagarManos = () => { camManos?.apagar(); manos.activa = false; for (const m of manos.manos) m.visible = false; manos.menu.cerrar(); };
+  const apagarManos = () => { camManos?.apagar(); manos.activa = false; manos.limpiar(); };
   /* lo que las manos pueden apuntar: lo interactivo del lugar a menos de 15 m, con su cartel */
   const cacheApuntables = new Map();
   const apuntablesVR = () => {
@@ -240,7 +240,7 @@ async function iniciar() {
     /* con un visor de verdad: el bucle es el del visor (hasta 120 Hz) y las manos son las del visor */
     async entrarXR() {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
-      const volver = () => { ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; manos.activa = false; manos.escena.removeFromParent(); for (const m of manos.manos) m.visible = false; manos.menu.cerrar(); cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); };
+      const volver = () => { ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; manos.activa = false; manos.escena.removeFromParent(); manos.limpiar(); cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); };
       /* (primero el VR en modo visor, así el primer cuadro del visor ya es en primera persona) */
       await vr.entrar(false, { raiz: UI.raiz, cam, xr: visor, alSalir: volver });
       manos.activa = true; manos.fuente = 'xr'; motor.escena.add(manos.escena);
@@ -943,7 +943,9 @@ async function iniciar() {
       if (visor.activo) visor.leerManos(manos, performance.now() / 1000);
       else manos.registrarCabeza(vr.tVer || performance.now(), motor.camara.quaternion, motor.camara.position, vr.giroCSS);
       manos.menu.camina = vr.camina;
-      const ev = manos.actualizar(dt, vr.tVer || performance.now(), {
+      /* (con el visor, la hora de ahora: vr.tVer es la del giroscopio y queda vieja si antes se usó
+         el VR del celu; con eso la mano del visor no se perdía nunca) */
+      const ev = manos.actualizar(dt, visor.activo ? performance.now() : vr.tVer || performance.now(), {
         cabezaP: motor.camara.position, cabezaQ: motor.camara.quaternion, interactivos: apuntablesVR(),
         altura: (x, z, y = 1e4) => reino.mundo.suelo(x, z, y, 0).y, sePuede: sePuedeVR,
         tocar: (p) => {

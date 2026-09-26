@@ -63,33 +63,116 @@ class Euro {
 
 /* -------------------------------------------------- una mano */
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
+/* el centro de la palma (muñeca y los cuatro nudillos) de 21 puntos */
+const CENTRO = [0, 5, 9, 13, 17];
+function centroPalma(P, v = [0, 0, 0]) {
+  v[0] = v[1] = v[2] = 0;
+  for (const i of CENTRO) { v[0] += P[i * 3] / 5; v[1] += P[i * 3 + 1] / 5; v[2] += P[i * 3 + 2] / 5; }
+  return v;
+}
+/* (ajustado con el simulador de celu: pruebas/manos.mjs y la nota aeroplaza-14) */
+const HMAX = 0.05;     // hasta acá se sigue moviendo sola, pareja, desde la última foto (s)
+const FRENO = 0.08;    // y después frena en esto (si la red no la ve, no se congela de golpe) (s)
+const LMAX = 0.04;      // lo más que se adelanta por el atraso de la cámara (s)
+const AMORT = 0.85;    // cuánto de la velocidad se usa para adelantar
+const TAU = 0.025;     // en cuánto se reparte el salto de cada foto nueva: un resorte (s)
+const SNAP = 0.4;      // un salto más grande que esto no se reparte: se va derecho (m)
+const RARA = 0.08;     // una foto que cae más lejos que esto de donde tenía que estar se espera (m)
+const E_CORTE = 1.2;   // el One Euro de los puntos: corte quieta (Hz),
+const E_BETA = 10;     // cuánto se abre por cada m/s
+const E_CORTED = 2.0;  // y el corte de la velocidad (Hz)
 class Mano {
   constructor(derecha) {
     this.derecha = derecha; this.visible = false; this.t = -1; this.conf = 0;
-    this.euro = new Euro(63);
-    this.p = new Float32Array(63);        // lo que se dibuja (filtrado y adelantado)
+    this.euro = new Euro(63, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED });
+    this.p = new Float32Array(63);        // lo que se dibuja (filtrado, adelantado y sin saltos)
     this.pellizca = false; this.fuerza = 0; this.tPellizco = -9; this.soltoEn = -9;
     this.rayoO = new THREE.Vector3(); this.rayoD = new THREE.Vector3(0, 0, -1);
     this.euroRayo = new Euro(3, { corte: 0.9, beta: 0.9 });
     this.palmaN = new THREE.Vector3(); this.palmaC = new THREE.Vector3(); this.aLaCara = 0;
     this.fijoHasta = 0;                   // (el rayo se queda quieto un ratito al pellizcar: el pellizco lo movía)
+    /* que no titile ni salte:
+       - alfa: se prende y se apaga suave (como en Quest), no de golpe;
+       - tLlego: cuándo llegó la última foto (en el reloj del dibujo), para seguir moviéndola entre foto
+         y foto; lat: cuánto tarda en llegar desde que se saca (la cámara del celu, 100-250 ms);
+       - off: lo que saltaría con cada foto nueva, repartido en unos cuadros;
+       - faltas: fotos seguidas en que la red no la vio; votos: lo que dice MediaPipe de qué mano es */
+    this.alfa = 0; this.gen = 0; this.tLlego = -1; this.lat = 0; this.faltas = 0; this.votos = 0; this.rara = 0;
+    this.off = new Float32Array(63); this.offV = new Float32Array(63); this.pAnt = new Float32Array(63); this.vAnt = new Float32Array(63);
+    this.nueva = false; this.seguida = false; this.vb = new Float32Array(63);
   }
   punto(i, v = new THREE.Vector3()) { return v.set(this.p[i * 3], this.p[i * 3 + 1], this.p[i * 3 + 2]); }
-  /* una lectura nueva: puntos en el mundo; pell: cuánto se abre el pellizco (0 = tocándose; la escala
-     es el largo de la palma); t en segundos */
-  recibir(P, t, pell, conf = 1) {
-    /* si la mano estaba perdida o saltó más de 25 cm (imposible en una foto: es otra detección), el
-       filtro arranca de cero; si no, mezclaba la pose vieja durante varios cuadros */
-    const X = this.euro.x, salto = Math.hypot(P[0] - X[0], P[1] - X[1], P[2] - X[2]);
-    if (!this.visible || salto > 0.25) { this.euro.reiniciar(P, t); this.euroRayo.t = -1; this.fijoHasta = 0; }
-    else this.euro.filtrar(P, t);
-    this.t = t; this.conf = conf; this.pell = pell;
+  /* dónde tendría que estar el centro de la palma en el momento t (s) */
+  predecirCentro(t, v = [0, 0, 0]) {
+    const E = this.euro, k = Math.min(0.2, Math.max(0, t - this.t));
+    v[0] = v[1] = v[2] = 0;
+    for (const i of CENTRO) for (let c = 0; c < 3; c++) v[c] += (E.x[i * 3 + c] + E.dx[i * 3 + c] * k) / 5;
+    return v;
+  }
+  /* una lectura nueva: puntos en el mundo; t: cuándo se sacó; tLlego: cuándo llegó; pell: cuánto se
+     abre el pellizco (0 = tocándose; la escala es el largo de la palma); crudo: sin filtro (el visor) */
+  recibir(P, t, tLlego, pell, conf = 1, crudo = false, ojo = null) {
+    this.faltas = 0;
+    if (crudo) { this.euro.reiniciar(P, t); }
+    else {
+      /* si la mano estaba perdida o saltó más de 25 cm (imposible en una foto: es otra detección), el
+         filtro arranca de cero; si no, mezclaba la pose vieja durante varios cuadros */
+      const c = centroPalma(P), pr = this.predecirCentro(t), salto = Math.hypot(c[0] - pr[0], c[1] - pr[1], c[2] - pr[2]);
+      /* una foto sola que cae lejos EN PROFUNDIDAD (lo que peor adivina una sola cámara: a veces
+         pega un salto): se espera a la siguiente; si esa también, es de verdad. De costado la foto no
+         se equivoca así: eso es la mano que se movió rápido */
+      let hondo = 0;
+      if (ojo) { const rx = pr[0] - ojo.x, ry = pr[1] - ojo.y, rz = pr[2] - ojo.z, rl = Math.hypot(rx, ry, rz) || 1; hondo = Math.abs(((c[0] - pr[0]) * rx + (c[1] - pr[1]) * ry + (c[2] - pr[2]) * rz) / rl); }
+      if (this.visible && hondo > RARA && salto < 0.25 && this.rara < 1) { this.rara++; return; }
+      this.rara = 0;
+      if (!this.visible || salto > 0.25 || t - this.t > 0.5) {
+        this.euro.reiniciar(P, t); this.euroRayo.t = -1; this.fijoHasta = 0;
+        /* (si se estaba apagando cerca, llega deslizándose; si no, aparece donde está: se apaga la
+           vieja de una y la nueva se prende suave) */
+        this.seguida = this.seguida && this.alfa > 0.3 && salto < SNAP;
+        if (!this.seguida) { this.alfa = 0; this.gen++; }
+      } else this.euro.filtrar(P, t);
+    }
+    /* el atraso de la cámara, promediado (así el adelanto no cambia de foto en foto) */
+    const lat = THREE.MathUtils.clamp(tLlego - t, 0, 0.4);
+    this.lat = this.lat > 0 ? this.lat + (lat - this.lat) * 0.1 : lat;
+    this.t = t; this.tLlego = tLlego; this.conf = conf; this.pell = pell; this.nueva = true;
     if (!this.visible) { this.visible = true; this.pellizca = false; this.anulado = false; this.profAntes = undefined; }
   }
-  /* al cuadro que se dibuja: lo filtrado más la velocidad por lo que pasó desde la foto (hasta 70 ms) */
+  /* al cuadro que se dibuja: lo filtrado más la velocidad por lo que pasó desde que LLEGÓ la foto
+     (así se sigue moviendo parejo entre foto y foto) y por lo que tarda la cámara (hasta 100 ms) */
   adelantar(tDibujo, adelanta) {
-    const E = this.euro, k = adelanta ? Math.min(0.07, Math.max(0, tDibujo - this.t)) * 0.85 : 0;
-    for (let i = 0; i < 63; i++) this.p[i] = E.x[i] + E.dx[i] * k;
+    const E = this.euro;
+    const edad = Math.max(0, tDibujo - this.tLlego), sola = edad < HMAX ? edad : HMAX + FRENO * (1 - Math.exp(-(edad - HMAX) / FRENO));
+    const k = adelanta ? (sola + Math.min(LMAX, this.lat)) * AMORT : 0;
+    /* (y a qué velocidad se mueve eso: la del filtro mientras sigue sola, frenando después) */
+    const kv = adelanta ? AMORT * (edad < HMAX ? 1 : Math.exp(-(edad - HMAX) / FRENO)) : 0;
+    for (let i = 0; i < 63; i++) { this.p[i] = E.x[i] + E.dx[i] * k; this.vb[i] = E.dx[i] * kv; }
+  }
+  /* sin saltos: con cada foto nueva, la diferencia entre lo que se venía mostrando y lo nuevo se
+     reparte con un resorte crítico (ni la posición ni la velocidad pegan un salto: se ve como un
+     movimiento, no como un tirón) */
+  suavizar(dt) {
+    const p = this.p, off = this.off, oV = this.offV, pA = this.pAnt, vA = this.vAnt, h = Math.min(dt, 1 / 30);
+    if (!this.seguida) { off.fill(0); oV.fill(0); }
+    else if (this.nueva) {
+      /* lo que se vería ahora sin la foto nueva, y a qué velocidad: de ahí arranca el resorte */
+      for (let i = 0; i < 63; i++) { off[i] = pA[i] + vA[i] * dt - p[i]; oV[i] = vA[i] - this.vb[i]; }
+      const c = centroPalma(off); if (Math.hypot(c[0], c[1], c[2]) > SNAP) { off.fill(0); oV.fill(0); }
+    }
+    this.nueva = false;
+    /* (mientras el resorte está lejos, la mano va de viaje: no toca ni aprieta nada) */
+    const oc = centroPalma(off), viajaba = this.viaja; this.viaja = Math.hypot(oc[0], oc[1], oc[2]) > 0.03;
+    if (viajaba && !this.viaja) this.euroRayo.t = -1;   // (el rayo arranca de nuevo donde llegó)
+    /* (la cuenta exacta del resorte crítico: estable con cualquier paso) */
+    const w = 1 / TAU, e = Math.exp(-w * h);
+    for (let i = 0; i < 63; i++) {
+      const x0 = off[i], v0 = oV[i], a = v0 + w * x0;
+      off[i] = (x0 + a * h) * e; oV[i] = (v0 - w * a * h) * e;
+      p[i] += off[i];
+      vA[i] = this.seguida ? (p[i] - pA[i]) / Math.max(dt, 1e-3) : 0; pA[i] = p[i];
+    }
+    this.seguida = true;
   }
 }
 
@@ -128,8 +211,12 @@ function geoCapsula(seg = 10, anillos = 4) {
 }
 const VERT_MANO = /* glsl */`
   attribute vec3 nrm, iA, iB; attribute float lado; attribute vec2 iR, iBr;
+  uniform float uCorte;
   varying vec3 vN, vV; varying float vBr, vAlfa, vLado;
   void main() {
+    /* (la pasada de profundidad no va para una mano que se está apagando: si no, tapaba lo de atrás
+       mientras se desvanece) */
+    if (iBr.y < uCorte) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
     vec3 d = iB - iA; float L = length(d); vec3 w = L > 1e-5 ? d / L : vec3(0.0, 1.0, 0.0);
     vec3 up = abs(w.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
     vec3 u = normalize(cross(up, w)), v = cross(w, u);
@@ -155,7 +242,9 @@ const FRAG_MANO = /* glsl */`
     c = mix(c, uBorde, smoothstep(0.25, 0.9, f) * 0.85) + vec3(1.0) * brillo * 0.5;
     /* el pellizco se enciende en las puntas */
     c = mix(c, vec3(0.5, 1.0, 1.0), vBr * (0.4 + 0.6 * f));
-    gl_FragColor = vec4(c, clamp(uOpacidad * vAlfa * (0.8 + 0.2 * f) + vBr * 0.25, 0.0, 1.0));
+    /* el borde, suave en un píxel (si no, el contorno claro de cada dedo titila al moverse) */
+    float ndv = max(0.0, dot(n, v)), aa = clamp(ndv / max(fwidth(ndv) * 1.5, 1e-4), 0.0, 1.0);
+    gl_FragColor = vec4(c, clamp((uOpacidad * (0.8 + 0.2 * f) + vBr * 0.25) * vAlfa * aa, 0.0, 1.0));
   }`;
 
 /* -------------------------------------------------- el menú de la muñeca */
@@ -222,7 +311,8 @@ export class Manos {
     const g = this.geo = geoCapsula();
     const U = { uColor: { value: new THREE.Vector3(0.8, 0.88, 0.96) }, uBorde: { value: new THREE.Vector3(0.72, 0.97, 1.0) }, uOpacidad: { value: 0.88 } };
     /* primero solo la profundidad; después el vidrio encima, sin verse doble */
-    this.prof = new THREE.Mesh(g, new THREE.ShaderMaterial({ vertexShader: VERT_MANO, fragmentShader: 'void main() { gl_FragColor = vec4(0.0); }', colorWrite: false }));
+    this.prof = new THREE.Mesh(g, new THREE.ShaderMaterial({ uniforms: { uCorte: { value: 0.6 } }, vertexShader: VERT_MANO, fragmentShader: 'void main() { gl_FragColor = vec4(0.0); }', colorWrite: false }));
+    U.uCorte = { value: -1 };
     this.vidrio = new THREE.Mesh(g, new THREE.ShaderMaterial({ uniforms: U, vertexShader: VERT_MANO, fragmentShader: FRAG_MANO, transparent: true, depthWrite: false, depthFunc: THREE.LessEqualDepth }));
     this.prof.frustumCulled = this.vidrio.frustumCulled = false; this.prof.renderOrder = 1; this.vidrio.renderOrder = 2;
     this.escena.add(this.prof, this.vidrio);
@@ -245,12 +335,12 @@ export class Manos {
     this.cartelL = document.createElement('canvas'); this.cartelL.width = 512; this.cartelL.height = 96;
     this.cartel = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(this.cartelL), depthTest: false, transparent: true, toneMapped: false }));
     this.cartel.material.map.colorSpace = THREE.SRGBColorSpace; this.cartel.visible = false; this.cartel.renderOrder = 7; this.escena.add(this.cartel);
-    this.objetivo = null; this.salto = null; this.eventos = [];
+    this.objetivo = null; this.salto = null; this.eventos = []; this.tAnt = -1;
     this.stats = { lecturas: 0, dibujos: 0, msActualizar: 0 };
   }
   /* ------------------------------------------ la cabeza en cada cuadro (t en ms, como performance.now) */
   registrarCabeza(t, q, p, giro = 0) {
-    const c = this.cabeza.length >= 40 ? this.cabeza.shift() : { q: new THREE.Quaternion(), p: new THREE.Vector3() };
+    const c = this.cabeza.length >= 96 ? this.cabeza.shift() : { q: new THREE.Quaternion(), p: new THREE.Vector3() };
     c.t = t; c.q.copy(q); c.p.copy(p); c.giro = giro; this.cabeza.push(c);
   }
   /* la cabeza en el momento t (interpolando entre dos cuadros) */
@@ -262,16 +352,13 @@ export class Manos {
     if (a.giro) q.multiply(_q.setFromAxisAngle(_d.set(0, 0, 1), a.giro));
     return true;
   }
-  /* ------------------------------------------ lo que llega de la cámara (puntos en la cámara de three) */
-  recibirCamara(lista, tCaptura) {
+  /* ------------------------------------------ lo que llega de la cámara (puntos en la cámara de three).
+     tCaptura: cuándo se sacó la foto; tLlego: cuándo volvió de la red (ms, como performance.now) */
+  recibirCamara(lista, tCaptura, tLlego = performance.now()) {
     const q = new THREE.Quaternion(), p = new THREE.Vector3();
     if (!this.cabezaEn(tCaptura, q, p)) return;
-    const ts = tCaptura / 1000, usadas = new Set();
-    /* a cada mano la suya: por la etiqueta, y si vienen dos iguales, por el lado de la imagen */
-    const conLado = lista.map((m) => ({ m, der: m.derecha ?? (m.puntos[0] > 0) }));
-    if (conLado.length === 2 && conLado[0].der === conLado[1].der) { const [x, y] = conLado; const xDer = x.m.puntos[0] > y.m.puntos[0]; x.der = xDer; y.der = !xDer; }
-    for (const { m, der } of conLado) {
-      const M = this.manos[der ? 1 : 0]; if (usadas.has(M)) continue; usadas.add(M);
+    const ts = tCaptura / 1000, tl = tLlego / 1000;
+    const dets = lista.map((m) => {
       const W = new Float32Array(63);
       for (let i = 0; i < 21; i++) {
         /* (la cámara queda unos centímetros adelante de los ojos en un visor) */
@@ -281,30 +368,84 @@ export class Manos {
       /* el pellizco: en la imagen (lo más claro) y en metros; relativo al largo de la palma */
       const I = m.img, e2 = Math.hypot(I[0] - I[27], I[1] - I[28]) || 1, e3 = Math.hypot(m.puntos[0] - m.puntos[27], m.puntos[1] - m.puntos[28], m.puntos[2] - m.puntos[29]) || 1;
       const p2 = Math.hypot(I[12] - I[24], I[13] - I[25]) / e2, p3 = Math.hypot(m.puntos[12] - m.puntos[24], m.puntos[13] - m.puntos[25], m.puntos[14] - m.puntos[26]) / e3;
-      M.recibir(W, ts, Math.max(p2, p3 * 0.62), m.confianza);
+      return { m, W, c: centroPalma(W), pell: Math.max(p2, p3 * 0.62), der: m.derecha ?? (m.puntos[0] > 0), M: null };
+    });
+    const dist = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1], u[2] - v[2]);
+    /* la misma mano dos veces (pasa de costado): queda la de más confianza */
+    if (dets.length === 2 && dist(dets[0].c, dets[1].c) < 0.04) dets.splice(dets[0].m.confianza >= dets[1].m.confianza ? 1 : 0, 1);
+    /* 1) por dónde estaba: cada mano que se viene siguiendo se queda con la detección más cerca de
+       donde tenía que estar (MediaPipe a veces cambia de idea de cuál es cuál: si se le creía, la mano
+       saltaba a la otra y quedaban dos, una congelada) */
+    /* (contra donde estaba y contra donde iba: si dio la vuelta mientras la red no la veía, la
+       velocidad vieja la mandaba lejos; y cuanto más vieja la última foto, más lejos puede estar) */
+    const tomadas = new Set(), pares = [], ya = [0, 0, 0];
+    /* (también la que se está apagando: si vuelve a aparecer ahí, es ella, aunque la red diga que es
+       la otra; si no, se cruzaban una que se iba y otra que llegaba en el mismo lugar) */
+    for (const M of this.manos) if (M.visible || M.alfa > 0.05) {
+      const pr = M.predecirCentro(ts), aca = M.predecirCentro(M.t, ya), tope = 0.2 + 0.8 * Math.min(0.5, Math.max(0, ts - M.t));
+      for (const d of dets) { const dd = Math.min(dist(pr, d.c), dist(aca, d.c)); if (dd < tope) pares.push([dd, M, d]); }
+    }
+    pares.sort((x, y) => x[0] - y[0]);
+    for (const [, M, d] of pares) if (!tomadas.has(M) && !d.M) { d.M = M; tomadas.add(M); }
+    /* 2) las que aparecen: por lo que dice MediaPipe (y si vienen dos iguales, por el lado de la imagen) */
+    const nuevas = dets.filter((d) => !d.M);
+    if (nuevas.length === 2 && nuevas[0].der === nuevas[1].der) { const [x, y] = nuevas; x.der = x.m.puntos[0] > y.m.puntos[0]; y.der = !x.der; }
+    for (const d of nuevas) {
+      let M = this.manos[d.der ? 1 : 0];
+      if (tomadas.has(M)) M = this.manos[d.der ? 0 : 1];
+      if (tomadas.has(M)) continue;
+      d.M = M; tomadas.add(M);
+    }
+    for (const d of dets) {
+      if (!d.M) continue;
+      d.M.recibir(d.W, ts, tl, d.pell, d.m.confianza, false, p);
+      if (d.m.derecha != null) d.M.votos = THREE.MathUtils.clamp(d.M.votos + (d.m.derecha === d.M.derecha ? 1 : -1), -6, 6);
       this.stats.lecturas++;
     }
+    for (const M of this.manos) if (!tomadas.has(M)) M.faltas++;
+    /* 3) si una mano viene seguido con la etiqueta del otro lado (y la otra no está, o también está
+       al revés), se dan vuelta: así la palma y el hombro del rayo son los de esa mano */
+    const [I, D] = this.manos;
+    if ((I.votos <= -4 && D.votos <= -4) || (I.votos <= -4 && !D.visible) || (D.votos <= -4 && !I.visible)) this.darVuelta();
+  }
+  darVuelta() {
+    const [I, D] = this.manos;
+    I.derecha = true; D.derecha = false; I.votos = -I.votos; D.votos = -D.votos;
+    this.manos = [D, I];
   }
   /* lo que llega ya en el mundo (el visor WebXR, las pruebas): pell en metros de punta a punta */
   recibirMundo(der, W, tSeg, pellMetros = null) {
     const M = this.manos[der ? 1 : 0];
     const e = Math.hypot(W[0] - W[27], W[1] - W[28], W[2] - W[29]) || 0.09;
     const pm = pellMetros ?? Math.hypot(W[12] - W[24], W[13] - W[25], W[14] - W[26]);
-    M.recibir(W, tSeg, pm / e * 1.0, 1);
+    /* (las del visor ya vienen suaves y a tiempo: sin filtro) */
+    M.recibir(W, tSeg, tSeg, pm / e * 1.0, 1, this.fuente === 'xr');
     this.stats.lecturas++;
   }
-  perder(der) { this.manos[der ? 1 : 0].visible = false; }
+  perder(der) { const M = this.manos[der ? 1 : 0]; M.visible = false; M.seguida = false; }
+  /* todo apagado de golpe (al salir del VR) */
+  limpiar() { for (const M of this.manos) { M.visible = false; M.alfa = 0; M.seguida = false; } this.menu.cerrar(); }
   /* ------------------------------------------ cada cuadro. ctx: lo del juego que hace falta
      { cabezaP, cabezaQ, interactivos: [{ o, pos, texto }], altura(x, z), sePuede(x, y, z), tocar(p) }
      devuelve los eventos: usar, ir, saltar, menú */
   actualizar(dt, tMs, ctx) {
     const t0 = performance.now(), ts = tMs / 1000, ev = this.eventos = [];
     const cabP = ctx.cabezaP, cabQ = ctx.cabezaQ;
+    const cam = this.fuente === 'camara', xr = this.fuente === 'xr';
+    /* (el tiempo de verdad entre cuadros, del reloj del dibujo: el dt del juego puede venir recortado
+       o en cámara lenta, y el resorte y el fundido tienen que ir con el reloj de las fotos) */
+    const h = this.tAnt >= 0 && ts > this.tAnt ? Math.min(0.1, ts - this.tAnt) : dt; this.tAnt = ts;
     for (const [k, M] of this.manos.entries()) {
-      /* se pierde si no llega nada hace 250 ms (la cámara) */
-      if (M.visible && ts - M.t > (this.fuente === 'xr' ? 0.15 : 0.25)) M.visible = false;
-      if (!M.visible) { M.pellizca = false; M.fuerza = 0; continue; }
-      M.adelantar(ts, this.adelanta && this.fuente !== 'xr');
+      /* cuándo se pierde: con la cámara, cuando la red no la vio en 4 fotos seguidas (o no llega
+         nada hace 0,6 s); NO por lo vieja que es la foto: en el celu la foto llega con 100-250 ms de
+         atraso y la mano se prendía y se apagaba (titilaba). El visor da una por cuadro */
+      const edad = ts - M.tLlego;
+      if (M.visible && (cam ? M.faltas >= 4 || (M.faltas >= 2 && edad > 0.25) || edad > 0.6 : edad > (xr ? 0.12 : 0.25))) M.visible = false;
+      /* y se prende y se apaga suave (80 ms y 200 ms), quieta mientras se apaga */
+      M.alfa = M.visible ? Math.min(1, M.alfa + h / 0.08) : Math.max(0, M.alfa - h / 0.2);
+      if (!M.visible) { M.pellizca = false; M.fuerza = 0; M.seguida = M.seguida && M.alfa > 0; continue; }
+      M.adelantar(ts, this.adelanta && !xr);
+      if (!xr) M.suavizar(h); else M.seguida = true;
       /* el pellizco, con histéresis (se prende más cerrado de lo que se apaga) */
       const antes = M.pellizca;
       if (!M.pellizca && M.pell < 0.3) M.pellizca = true; else if (M.pellizca && M.pell > 0.46) M.pellizca = false;
@@ -322,9 +463,9 @@ export class Manos {
       const hombro = _c.set(cabP.x + Math.cos(yaw) * (M.derecha ? 0.17 : -0.17), cabP.y - 0.2, cabP.z - Math.sin(yaw) * (M.derecha ? 0.17 : -0.17));
       const mira = M.punto(2, _b).add(M.punto(5, _a)).multiplyScalar(0.5);
       M.rayoO.copy(mira);
-      if (ts > M.fijoHasta) { const d = mira.clone().sub(hombro).normalize(); const f = M.euroRayo.filtrar([d.x, d.y, d.z], ts); M.rayoD.set(f[0], f[1], f[2]).normalize(); }
+      if (ts > M.fijoHasta && !M.viaja) { const d = mira.clone().sub(hombro).normalize(); const f = M.euroRayo.filtrar([d.x, d.y, d.z], ts); M.rayoD.set(f[0], f[1], f[2]).normalize(); }
       /* la yema del índice toca (burbujas, orbes) */
-      ctx.tocar?.(M.punto(8, _a), k);
+      if (!M.viaja) ctx.tocar?.(M.punto(8, _a), k);
     }
     const [I, D] = this.manos;
     /* los dos pellizcos a la vez: salto (las dos con lectura fresca: una mano que se perdió hace un
@@ -333,7 +474,8 @@ export class Manos {
     if (fresca(I) && fresca(D) && (I.empezo || D.empezo) && I.pellizca && D.pellizca && Math.abs(I.tPellizco - D.tPellizco) < 0.25) { ev.push({ tipo: 'saltar' }); this.salto = null; I.anulado = D.anulado = true; }
     /* el menú: la palma a la cara y un pellizco de esa mano; o se toca con la yema de la otra */
     let palma = null;
-    for (const M of this.manos) if (M.visible && M.aLaCara > 0.62) palma = M;
+    for (const M of this.manos) if (M.visible && M.aLaCara > (M === this.palmaAntes ? 0.5 : 0.62)) palma = M;
+    this.palmaAntes = palma;
     this.boton.visible = !!palma && !this.menu.abierto;
     if (palma) { this.boton.position.copy(palma.palmaC).addScaledVector(palma.palmaN, 0.05); this.boton.scale.setScalar(1 + palma.fuerza * 0.8); }
     if (palma && palma.empezo) { palma.anulado = true; if (this.menu.abierto) this.menu.cerrar(); else this.menu.abrir(cabP, cabQ); ev.push({ tipo: 'sonido', s: 'aviso' }); }
@@ -342,7 +484,7 @@ export class Manos {
     for (const [k, M] of this.manos.entries()) {
       const R = this.rayos[k], C = this.cursores[k];
       R.visible = C.visible = false;
-      if (!M.visible || M === palma) { if (M.solto) M.anulado = false; continue; }
+      if (!M.visible || M === palma || M.viaja) { if (M.solto) M.anulado = false; continue; }
       if (M.solto && M.anulado) { M.anulado = false; continue; }
       let fin = null;
       if (this.menu.abierto) {
@@ -368,9 +510,12 @@ export class Manos {
         let mejor = null, ma = 1;
         for (const it of ctx.interactivos || []) {
           const v = _b.copy(it.pos).sub(M.rayoO); const dist = v.length(); if (dist > 14 || dist < 0.2) continue;
-          const ang = Math.acos(THREE.MathUtils.clamp(v.dot(M.rayoD) / dist, -1, 1)), tol = 0.105 + Math.atan2(it.radio || 0.4, dist);
+          /* (lo que ya se apuntaba se queda con un 25 % de ventaja: entre dos cosas pegadas, el cartel
+             saltaba de una a la otra con el temblor del rayo) */
+          const ang = Math.acos(THREE.MathUtils.clamp(v.dot(M.rayoD) / dist, -1, 1)), tol = (0.105 + Math.atan2(it.radio || 0.4, dist)) * (M.apunta === it.o ? 1.25 : 1);
           if (ang / tol < ma) { ma = ang / tol; mejor = it; }
         }
+        M.apunta = mejor?.o ?? null;
         if (mejor) {
           fin = mejor.pos; objetivo = mejor;
           if (M.empezo && !M.anulado) ev.push({ tipo: 'usar', o: mejor.o });
@@ -449,7 +594,7 @@ export class Manos {
     const g = this.geo, A = g.attributes.iA.array, B = g.attributes.iB.array, R = g.attributes.iR.array, Br = g.attributes.iBr.array;
     let n = 0;
     for (const M of this.manos) {
-      if (!M.visible) continue;
+      if (M.alfa <= 0.01) continue;
       const P = M.p, glow = M.fuerza * M.fuerza;
       for (let h = 0; h < N; h++) {
         const [i, j] = HUESOS[h], k = PALMA.has(h) ? 1.35 : 1, a = n * 3;
@@ -457,7 +602,7 @@ export class Manos {
         B[a] = P[j * 3]; B[a + 1] = P[j * 3 + 1]; B[a + 2] = P[j * 3 + 2];
         R[n * 2] = RADIO[i] * k; R[n * 2 + 1] = RADIO[j] * k;
         /* el brillo del pellizco, en las dos últimas falanges del pulgar y del índice */
-        Br[n * 2] = (j === 4 || j === 8 || j === 3 || j === 7) ? glow : 0; Br[n * 2 + 1] = 1;
+        Br[n * 2] = (j === 4 || j === 8 || j === 3 || j === 7) ? glow : 0; Br[n * 2 + 1] = M.alfa;
         n++;
       }
     }
@@ -468,5 +613,5 @@ export class Manos {
   /* por ojo, encima de la reproyección (vr-dibujo.js › encima) o en la escena del visor */
   dibujarOjo(r, ojo) { r.render(this.escena, ojo); }
   /* hay algo que dibujar (si no, ni se llama) */
-  get algo() { return this.manos.some((m) => m.visible) || this.menu.abierto; }
+  get algo() { return this.manos.some((m) => m.alfa > 0.01) || this.menu.abierto; }
 }
