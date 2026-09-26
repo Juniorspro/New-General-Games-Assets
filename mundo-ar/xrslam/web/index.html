@@ -110,6 +110,7 @@
     <button id="b-puntos" type="button">Mapa: no</button>
     <button id="b-recalibrar" type="button">Recalibrar</button>
     <button id="b-reiniciar" type="button">Reiniciar</button>
+    <button id="b-diag" type="button">Copiar diagnóstico</button>
     <button id="b-saltear" type="button" hidden>Sin calibrar</button>
   </div>
   <div class="aviso" id="aviso">Arrancando…<div class="barra" hidden><i></i></div></div>
@@ -338,6 +339,9 @@ const giros = [];       // [t, x, y, z] recientes: predicción y calibración
 let lote = { giro: [], acel: [] };
 let fuenteIMU = "—", hzIMU = 0, cuentaIMU = 0, tHz = performance.now();
 let diagInicio = null;             // [intentos, motivo, coincidencias, paralaje, triangulados, escala, esquinas]
+// Para el informe: motivos de cada intento, esquinas por cuadro, sensores.
+const informe = { motivos: {}, esquinas: [], intentos: 0, giroN: 0, acelN: 0, t0: performance.now() / 1000, acelSuma: [0, 0, 0], acelCuenta: 0,
+  giroSuma: 0, captureTime: null, video: null };
 const acels = [];                  // [t, |a|] de los últimos 2 s: en reposo tiene que dar ~9,8
 let pisoY = null;       // altura del piso (three), de los puntos del mapa
 let t0Datos = null, tArranque = 0;
@@ -374,12 +378,14 @@ function aReloj(nombre, crudoMs) {
 // Todas las horas en segundos del reloj de performance.now() (el mismo que
 // usan los eventos, los sensores y requestVideoFrameCallback).
 function llegaGiro(t, x, y, z) {
+  informe.giroN++; informe.giroSuma += Math.hypot(x, y, z);
   lote.giro.push(t, x, y, z); giros.push([t, x, y, z]);
   // Los últimos 15 s (por tiempo: a 200 Hz o a 60 Hz es lo mismo).
   if (giros.length > 64 && t - giros[0][0] > 15) { let k = 0; while (t - giros[k][0] > 12) k++; giros.splice(0, k); }
   cuentaIMU++;
 }
 function llegaAcel(t, x, y, z) {
+  informe.acelN++; informe.acelSuma[0] += x; informe.acelSuma[1] += y; informe.acelSuma[2] += z; informe.acelCuenta++;
   lote.acel.push(t, x, y, z);
   acels.push([t, Math.hypot(x, y, z)]);
   while (acels.length && t - acels[0][0] > 2) acels.shift();
@@ -474,6 +480,7 @@ function cadaCuadroDeVideo() {
   const cb = (ahora, meta) => {
     // captureTime: la hora en que el sensor tomó el cuadro (si el navegador la da).
     const t = meta && meta.captureTime ? aReloj("camara", meta.captureTime) : ahora / 1000;
+    if (informe.captureTime === null) informe.captureTime = !!(meta && meta.captureTime);
     cuentaCuadros++;
     if (!ancho) medirImagen(video.videoWidth, video.videoHeight);
     const quiere = fase === "calibrando" || (fase === "slam" && libre);
@@ -587,7 +594,11 @@ trabajador.onmessage = (e) => {
     libre = true;
   } else if (m.tipo === "libre") {
     libre = true; msSlam = m.ms; cuadrosSlam++;
-    if (m.diag) diagInicio = m.diag;
+    if (m.diag) {
+      diagInicio = m.diag;
+      if (m.diag[0] > informe.intentos) { informe.intentos = m.diag[0]; const nm = MOTIVOS[m.diag[1]] || m.diag[1]; informe.motivos[nm] = (informe.motivos[nm] || 0) + 1; }
+      informe.esquinas.push(m.diag[6]); if (informe.esquinas.length > 60) informe.esquinas.shift();
+    }
   } else if (m.tipo === "pose") {
     estadoSlam = m.estado;
     if (m.camara) {
@@ -738,6 +749,43 @@ $("#b-recalibrar").addEventListener("click", () => { trabajador.postMessage({ ti
 $("#b-reiniciar").addEventListener("click", () => { if (fase === "slam") arrancarSlam(); });
 // Sin calibrar: focal del control, desfase 0, montaje supuesto por la pantalla.
 $("#b-saltear").addEventListener("click", () => { calib = null; qbc = qSupuesto || qCamaraCuerpo(anguloPantalla); arrancarSlam(); });
+
+// ── informe para pegar en el chat: todo lo que hace falta para saber por qué no anda ──
+function textoInforme() {
+  const seg = performance.now() / 1000 - informe.t0, r = (v, d = 2) => (typeof v === "number" ? +v.toFixed(d) : v);
+  const esq = [...informe.esquinas].sort((a, b) => a - b);
+  const am = informe.acelCuenta ? informe.acelSuma.map((v) => r(v / informe.acelCuenta)) : null;
+  return JSON.stringify({
+    nav: window.__navegador, fase, estado: ["iniciando", "OK", "perdido"][estadoSlam],
+    video: [video.videoWidth, video.videoHeight], slam: [ancho, alto], pantalla: anguloPantalla,
+    imu: { fuente: fuenteIMU, giroHz: r(informe.giroN / seg, 0), acelHz: r(informe.acelN / seg, 0), acelMedia: am,
+      acelModulo: am ? r(Math.hypot(...am)) : null, giroMedio: informe.giroN ? r(informe.giroSuma / informe.giroN, 3) : null },
+    relojes: Object.fromEntries(Object.entries(relojes).map(([k, v]) => [k, v.raro ? r(v.corr / 1000, 1) + " s" : "ok"])),
+    captureTime: informe.captureTime,
+    calib: calib ? { desfase: r(calib.desfase * 1000, 1), focal: r(calib.focal, 1), calidad: r(calib.calidad), montaje: calib.montaje, qbc: calib.qbc && calib.qbc.map((v) => r(v, 3)) } : null,
+    qSupuesto: (qSupuesto || qCamaraCuerpo(anguloPantalla)).map((v) => r(v, 3)),
+    slamFps: fpsSlam, msCuadro: r(msSlam, 0), camFps: fpsCam,
+    inicio: { intentos: informe.intentos, motivos: informe.motivos, ultimo: diagInicio && { coinc: diagInicio[2], paralaje: r(diagInicio[3], 1), triang: diagInicio[4], escala: r(diagInicio[5], 4) },
+      esquinasMediana: esq.length ? esq[esq.length >> 1] : null },
+    planos: planosInfo, segundos: r(seg, 0),
+  });
+}
+$("#b-diag").addEventListener("click", async () => {
+  const txt = textoInforme();
+  let copiado = false;
+  try { await navigator.clipboard.writeText(txt); copiado = true; } catch (e) { /* el WebView puede no dejar */ }
+  // Siempre se muestra también, seleccionable, por si no se pudo copiar.
+  let caja = $("#informe");
+  if (!caja) {
+    caja = document.createElement("div"); caja.id = "informe";
+    caja.style.cssText = "position:fixed;inset:12px;z-index:98;background:#0d0620;border:1px solid #c9b0ff;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px";
+    caja.innerHTML = '<b style="font:700 15px system-ui">Diagnóstico — copialo y pegalo en el chat</b><textarea readonly style="flex:1;font:12px monospace;background:#1a0f33;color:#fff;border:0;border-radius:8px;padding:8px"></textarea><button type="button">Cerrar</button>';
+    caja.querySelector("button").addEventListener("click", () => caja.remove());
+    document.body.appendChild(caja);
+  }
+  const ta = caja.querySelector("textarea"); ta.value = txt; ta.focus(); ta.select();
+  caja.querySelector("b").textContent = copiado ? "Copiado ✓ — pegalo en el chat (también está acá abajo)" : "Mantené apretado, seleccioná todo y copiá; pegalo en el chat";
+});
 
 async function acostar() {
   const aTiempo = (p, ms = 700) => Promise.race([p, new Promise((ok) => setTimeout(ok, ms))]).catch(() => {});

@@ -74,6 +74,7 @@ if (process.env.TOCAR_PISO) {
 const pl = await p.evaluate(() => (window.__XR.planos || []).map((q) => ({ tipo: q.tipo, puntos: q.puntos, area: q.area })));
 console.log(`planos: ${pl.length} · piso ${pl.filter((q) => q.tipo === "piso").length} · horizontales ${pl.filter((q) => q.tipo === "horizontal").length} · paredes ${pl.filter((q) => q.tipo === "pared").length}` +
   ` · HUD: ${await p.evaluate(() => document.querySelector("#hud").innerText.split("\n").find((l) => l.startsWith("planos")) || "")}`);
+if (process.env.INFORME) { await p.click("#b-diag"); await new Promise((ok) => setTimeout(ok, 300)); console.log("informe:", await p.$eval("#informe textarea", (t) => t.value)); }
 console.log("diagnóstico de inicio:", JSON.stringify(ult.diagInicio));
 console.log("aviso al final:", await p.evaluate(() => document.querySelector("#aviso").firstChild.textContent));
 console.log(`anillo ${ult.anillo} · piso ${ult.pisoY === null ? "—" : ult.pisoY.toFixed(2)} · errores ${errores.length ? "\n  " + errores.slice(0, 8).join("\n  ") : 0}`);
