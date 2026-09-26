@@ -7,6 +7,9 @@ Genera dos constantes globales:
   SONIDOS_B64      {id: "<mp3 en base64>"}      (se decodifica con decodeAudioData)
   SONIDOS_CREDITOS [{id, autor, licencia, fuente}] de los que no son CC0,
                    para mostrarlos en los créditos del juego (CC-BY lo exige).
+Además del manifiesto general, lee sonidos/<juego>/manifiesto.json si existe
+(misma forma: lista de entradas con id, archivo relativo a sonidos/, licencia,
+autor, fuente...), para que cada juego sume sus grabaciones sin pisar las otras.
 Los mp3 van adentro del .js para que el descargable de un solo archivo ande
 desde file:// (fetch no puede leer archivos locales).
 """
@@ -20,6 +23,10 @@ def main():
         sys.exit(__doc__)
     juego, salida = sys.argv[1], pathlib.Path(sys.argv[2])
     manifiesto = [m for m in json.loads((AQUI / "manifiesto.json").read_text()) if m["juego"] == juego]
+    propio = AQUI / juego / "manifiesto.json"
+    if propio.exists():
+        vistos = {m["id"] for m in manifiesto}
+        manifiesto += [m for m in json.loads(propio.read_text()) if m["id"] not in vistos]
     if not manifiesto:
         sys.exit(f"no hay sonidos para {juego}")
     datos = {m["id"]: base64.b64encode((AQUI / m["archivo"]).read_bytes()).decode() for m in manifiesto}
