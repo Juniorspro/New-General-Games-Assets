@@ -23,6 +23,9 @@ if modo == "imagen":
 elif modo == "modelo":
     caras = int(sys.argv[5]) if len(sys.argv) > 5 else 30000
     p = {"clave": clave, "type": "model3d", "output_path": f"assets/{clave}.glb", "params": {"prompt": sys.argv[4], "source_url": "@" + sys.argv[3], "texture": True, "pbr": True, "texture_quality": "detailed", "face_limit": caras}}
+elif modo == "audio":
+    # python3 uno.py audio <clave> <sfx|music> <segundos> "<prompt>"  → mp3
+    p = {"clave": clave, "type": "audio", "output_path": f"assets/{clave}.mp3", "params": {"kind": sys.argv[3], "duration": int(sys.argv[4]), "prompt": sys.argv[5]}}
 elif modo == "rig":
     anim = sys.argv[4]
     p = {"clave": clave, "type": "rig3d", "output_path": f"assets/{clave}.glb", "params": {"source_task_id": "@" + sys.argv[3], "rig_type": "biped", "animations": [f"preset:{anim}"]}}

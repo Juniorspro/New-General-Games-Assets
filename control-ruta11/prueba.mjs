@@ -8,10 +8,10 @@ import { createRequire } from "module";
 import fs from "fs";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PW);
-const S = process.env.S, nom = process.argv[2] || "pc", tel = nom === "tel", solo = process.argv[3] || "todo";
+const S = process.env.S, nom = process.argv[2] || "pc", tel = nom === "tel" || nom === "vertical", vertical = nom === "vertical", idioma = process.argv[3] || "es";
 fs.mkdirSync(S + "/tiras", { recursive: true });
 const b = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
-const p = await b.newPage({ viewport: tel ? { width: 844, height: 390 } : { width: 1200, height: 680 }, hasTouch: tel, isMobile: tel });
+const p = await b.newPage({ viewport: vertical ? { width: 390, height: 844 } : tel ? { width: 844, height: 390 } : { width: 1200, height: 680 }, hasTouch: tel, isMobile: tel });
 const errores = [];
 p.on("pageerror", (e) => errores.push("pageerror: " + e.message + " " + (e.stack || "").split("\n").slice(1, 3).join(" | ")));
 p.on("console", (m) => { if ((m.type() === "error" || m.type() === "warning") && !m.text().includes("ERR_FAILED")) errores.push(m.type() + ": " + m.text().slice(0, 300)); });
@@ -23,13 +23,22 @@ await p.goto("file://" + S + "/control-ruta11.html");
 await p.waitForTimeout(1200); await foto("1carga");
 await p.waitForFunction(() => window.__ruta && __ruta.Juego.est.modo === "menu", null, { timeout: 180000 });
 console.log("menú en", Date.now() - t0, "ms");
-await p.waitForTimeout(2500); await foto("2menu");
-await p.click("text=Empezar turno"); await p.waitForTimeout(500);
+await p.waitForTimeout(1500); await foto("2idioma");
+// Pantalla de idioma antes del menú.
+// Con SwiftShader las animaciones de entrada del menú tardan unos 4 s en verse.
+await p.click(`.idioma-btn >> nth=${["es", "en", "pt"].indexOf(idioma)}`); await p.waitForTimeout(4500); await foto("2menu");
+await p.click(".menu-tabs button >> nth=1"); await p.waitForTimeout(4000); await foto("2menu-carrera");
+await p.click(".menu-tabs button >> nth=5"); await p.waitForTimeout(4000); await foto("2menu-creditos");
+await p.click(".menu-tabs button >> nth=0"); await p.waitForTimeout(400);
+await p.evaluate(() => __ruta.Juego.aplicarOpciones({ primeroFalso: false }));
+await p.click(".boton.grande.brillo"); await p.waitForTimeout(500);
 // Congelado: el bucle no dibuja solo; cada simular() avanza y dibuja un cuadro. Así la interfaz
 // no espera detrás de cuadros de SwiftShader de 1 s.
 await q(() => __ruta.congelar(true));
 const medir = (n) => q(() => { __ruta.simular(0.05); const t = performance.now(); __ruta.R.render(__ruta.escena, __ruta.cam); return { ms: Math.round(performance.now() - t), ...__ruta.info }; });
 await q(() => __ruta.simular(1)); await p.waitForTimeout(800); await foto("3inicio");
+await p.waitForFunction(() => Sonido.estado().reales, null, { timeout: 60000 }).catch(() => {});
+console.log("sonido:", JSON.stringify(await q(() => Sonido.estado())));
 console.log("conductores:", await q(() => __ruta.conductores.map((c) => c.estado + (c.identidad ? "/falso" : "") + (c.captura ? "/captura" : "") + (c.robado ? "/robado" : "") + (c.baul.some((o) => o.ilegal) ? "/baul" : "") + ":" + resolucionCorrecta(faltasReales(c))).join(" ")));
 // Hasta que para el primero.
 for (let i = 0; i < 30 && !(await q(() => !!__ruta.parado)); i++) await q(() => __ruta.simular(2));
@@ -43,13 +52,13 @@ await p.waitForTimeout(600); await foto("5atras");
 await q(() => { const y = __ruta.yo, v = __ruta.parado; y.x = v.x + v.ancho / 2 + 0.8; y.z = v.z + v.largo * 0.1; y.yaw = Math.PI / 2; __ruta.simular(0.2); });
 console.log("acciones:", JSON.stringify(await q(() => __ruta.Juego.est.acciones)));
 await p.keyboard.press("e"); await q(() => __ruta.simular(0.5)); await p.waitForTimeout(1500); await foto("6ventanilla");
-await p.click("text=Pedir documentación"); await p.waitForTimeout(900); await foto("7docs");
+await p.click(".vacio .boton"); await p.waitForTimeout(900); await foto("7docs");
 await p.click("button.preg >> nth=0"); await p.waitForTimeout(900);
 await p.click("button.preg >> nth=4"); await p.waitForTimeout(900);
-await p.click("role=tab[name='Tablet']"); await p.click("text=Usar el DNI presentado"); await p.waitForTimeout(600); await foto("8tablet");
-await p.click("text=Vehículos"); await p.click("text=Patente del vehículo"); await p.waitForTimeout(500); await foto("8tablet-veh");
-await p.click("role=tab[name='Alcoholímetro']"); await p.click("text=Hacer soplar"); await p.waitForTimeout(3300); await foto("9alco");
-await p.click("role=tab[name='Resolver']"); await p.waitForTimeout(300);
+await p.click(".tabs button >> nth=1"); await p.click(".tablet .rapido >> nth=0"); await p.waitForTimeout(600); await foto("8tablet");
+await p.click(".tablet-tabs button >> nth=1"); await p.click(".rapidos .rapido >> nth=0"); await p.waitForTimeout(500); await foto("8tablet-veh");
+await p.click(".tabs button >> nth=2"); await p.click(".aparato .boton"); await p.waitForTimeout(3300); await foto("9alco");
+await p.click(".tabs button >> nth=3"); await p.waitForTimeout(300);
 const correcta = await q(() => resolucionCorrecta(faltasReales(__ruta.insp.p)));
 const reales = await q(() => faltasReales(__ruta.insp.p));
 console.log("correcta:", correcta, reales);
@@ -61,7 +70,7 @@ console.log("rep:", await q(() => __ruta.Juego.est.reputacion), "atendidos:", aw
 await q(() => __ruta.simular(4)); await p.waitForTimeout(600); await foto("12despues");
 // Segundo: le metemos droga escondida para probar baúl y arresto.
 for (let i = 0; i < 30 && !(await q(() => !!(__ruta.parado && __ruta.insp))); i++) await q(() => __ruta.simular(2));
-await q(() => { const p = __ruta.insp.p; p.baul.push({ nombre: "Paquete rectangular encintado", color: "#c9b27a", ilegal: "drogas", escondido: true }); });
+await q(() => { const p = __ruta.insp.p; p.baul.push({ id: "paquete", color: "#c9b27a", ilegal: "drogas", escondido: true }); });
 await q(() => { const y = __ruta.yo, v = __ruta.parado; y.x = v.x + 0.3; y.z = v.z - v.largo / 2 - 1.2; y.yaw = Math.PI; y.pitch = -0.35; __ruta.simular(0.2); });
 await p.waitForTimeout(300); await foto("13atras-moto");
 console.log("acciones atrás:", JSON.stringify(await q(() => __ruta.Juego.est.acciones)));
@@ -83,7 +92,7 @@ console.log("hallazgos:", await q(() => __ruta.insp.hallazgos.length));
 await p.keyboard.press("Escape"); await p.waitForTimeout(300);
 await q(() => { const y = __ruta.yo, v = __ruta.parado; y.x = v.x + v.ancho / 2 + 0.8; y.z = v.z + v.largo * 0.1; __ruta.simular(0.2); });
 await p.keyboard.press("e"); await p.waitForTimeout(500);
-await p.click("role=tab[name='Resolver']"); await p.click("button.opcion.arrestar"); await p.click("label.cargo >> text=estupefacientes"); await p.click(".resolver > button.boton");
+await p.click(".tabs button >> nth=3"); await p.click("button.opcion.arrestar"); await p.click("label.cargo >> nth=1"); await p.click(".resolver > button.boton");
 await q(() => __ruta.simular(1)); await p.waitForTimeout(600); await foto("16arresto");
 await q(() => { const y = __ruta.yo, pe = __ruta.personas.find((x) => x.p && !x.esposado && !x.demorado); y.x = pe.x + 1; y.z = pe.z; y.yaw = Math.PI / 2; __ruta.simular(0.2); });
 console.log("acciones arresto:", JSON.stringify(await q(() => __ruta.Juego.est.acciones)));
@@ -118,7 +127,7 @@ for (let n = 0; n < 70; n++) {
 }
 console.log("hora:", await q(() => __ruta.Juego.est.hora), "modo:", await q(() => __ruta.Juego.est.modo));
 console.log("render:", JSON.stringify(await medir()));
-await q(() => __ruta.simular(6)); await p.waitForTimeout(800); await foto("22resumen");
+await q(() => __ruta.simular(6)); await p.waitForTimeout(4500); await foto("22resumen");
 console.log("resumen:", await q(() => { const r = __ruta.Juego.resumen; return r && JSON.stringify({ rep: r.reputacion, at: r.atendidos, tot: r.total, rec: r.recaudado, mal: r.hist.filter((h) => !h.ok).map((h) => h.decision + "≠" + h.correcta + " " + h.msg) }); }));
 console.log("errores:", errores.length ? errores.join("\n") : "ninguno");
 console.log("tiempo total", ((Date.now() - t0) / 1000).toFixed(0), "s");

@@ -127,10 +127,7 @@ const Juego = (() => {
     if (figura) {
       const pe = crearPersona(figura, v.ancho * 0.21, pz - 0.12, 0, v.g);
       if (pe) {
-        pe.sentado = ["L_Thigh", "R_Thigh"].map((k) => pe.o.getObjectByName(k)).filter(Boolean);
-        pe.brazos = ["L_Upperarm", "R_Upperarm"].map((k) => pe.o.getObjectByName(k)).filter(Boolean);
-        pe.o.updateMatrixWorld(true); const cad = pe.o.getObjectByName("Hip"), hy = cad ? cad.getWorldPosition(new THREE.Vector3()).y - pe.o.getWorldPosition(new THREE.Vector3()).y : 0.9;
-        pe.o.position.y = asientoY + 0.08 - hy; v.adentro = pe;
+        sentarEn(pe, "auto", asientoY + 0.1); v.adentro = pe;
       }
     }
     // La ventanilla del conductor: baja cuando el policía se acerca.
@@ -173,8 +170,8 @@ const Juego = (() => {
     if (p.modelo.tipo === "cuatri" && !p.sinCasco) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), MAT.casco); c.position.set(0, v.tam.y - 0.14, -v.largo * 0.06); c.castShadow = true; v.g.add(c); }
     v.p = p; v.estado = "llegando"; v.z = cola.length ? Math.min(-120, cola[cola.length - 1].z - 40) : -140; v.vel = 13; poner(v);
     if (p.modelo.tipo === "moto") {
-      const pe = crearPersona(p.figura || (p.mujer ? "conductora" : "conductor"), 0, -0.12, 0, v.g);
-      if (pe) { v.jinete = pe; if (!p.sinCasco) ponerCasco(pe); }
+      const pe = crearPersona(p.figura || (p.mujer ? "conductora" : "conductor"), 0, -0.2, 0, v.g);
+      if (pe) { sentarEn(pe, "moto", 0.8); v.jinete = pe; if (!p.sinCasco) ponerCasco(pe); }
     }
     cola.push(v);
     // Si la central lo tenía marcado, el aviso llega antes que él.
@@ -196,6 +193,8 @@ const Juego = (() => {
       const antes = v.vel; v.vel = Math.max(0, v.vel + clamp(deseada - v.vel, -8 * dt, 3.2 * dt));
       v.freno = v.vel < antes - 0.01 || v.vel < 0.1 ? 1 : 0;
       v.z = Math.min(v.z + v.vel * dt, Math.max(obj, v.z)); if (v.z >= obj - 0.01 && d >= 0) v.vel = Math.min(v.vel, 0.5);
+      // Los de atrás se impacientan si la revisión se hace larga: un bocinazo cada tanto.
+      if (i > 0) { v.quieto = v.vel < 0.1 ? (v.quieto || 0) + dt : 0; if (v.quieto > (v.paciencia || (v.paciencia = 45 + Math.random() * 60))) { v.quieto = -40 - Math.random() * 40; Sonido.bocina(Math.hypot(v.x - yo.x, v.z - yo.z)); } }
       if (i === 0 && v.estado === "llegando" && Math.abs(v.z - paradaDe(v)) < 0.1) { v.estado = "parado"; v.vel = 0; parado = v; alLlegar(v); }
       poner(v);
     }
@@ -203,7 +202,7 @@ const Juego = (() => {
   function alLlegar(v) {
     const p = v.p;
     insp = { v, p, dialogo: [], docs: false, soplo: null, baul: false, hallazgos: [], preguntas: {}, habla: 0, evita: 0, saludo: false, inicio: t };
-    aviso(`Llegó ${p.modelo.nombre} ${p.colorNombre.toLowerCase()} · ${p.patente}`, "info", 3.5);
+    aviso(T("av.llego", { v: p.modelo.nombre, c: colorTxt(p.colorNombre).toLowerCase(), p: p.patente }), "info", 3.5);
     avisar(true);
   }
 
@@ -253,7 +252,7 @@ const Juego = (() => {
       const m = elegir(Math.random, MODELOS), [, color] = elegir(Math.random, COLORES);
       const v = armarVehiculo(m.malla, color, { patente: patenteAzar(Math.random), conductor: m.tipo === "camion" ? "camionero" : elegir(Math.random, ["conductor", "conductora", "mayor", "joven", "senora"]) });
       v.x = -RUTA.carril; v.z = 330; v.rumbo = Math.PI; v.vel = 18; v.vmax = m.tipo === "camion" ? 17 : 21; v.ruta = [[-RUTA.carril, -340]]; v.sigue = true; v.estado = "paso";
-      if (m.tipo === "moto") { const pe = crearPersona(elegir(Math.random, ["conductora", "conductor", "joven", "joven"]), 0, -0.12, 0, v.g); if (pe) { v.jinete = pe; ponerCasco(pe); } }
+      if (m.tipo === "moto") { const pe = crearPersona(elegir(Math.random, ["conductora", "conductor", "joven", "joven"]), 0, -0.2, 0, v.g); if (pe) { sentarEn(pe, "moto", 0.8); v.jinete = pe; ponerCasco(pe); } }
       otros.push(v);
     }
     for (let i = otros.length - 1; i >= 0; i--) { const v = otros[i]; seguirRuta(v, dt); if (v.z < -330) { quitarVehiculo(v); otros.splice(i, 1); } }
@@ -280,19 +279,37 @@ const Juego = (() => {
   // sobre el eje lateral del personaje (en el mundo), no sobre los ejes del hueso:
   // cada rig trae los suyos (memoria/juegos.md § Animar por código).
   const qEje = new THREE.Quaternion(), qPadre = new THREE.Quaternion(), qTmp = new THREE.Quaternion(), vEje = new V(), vAde = new V();
+  // Poses de sentado (radianes, sobre los ejes del personaje): muslos hacia adelante,
+  // rodillas dobladas, torso, brazos hacia el cuerpo y hacia adelante, antebrazos.
+  const POSES = {
+    auto: { muslo: -1.5, rodilla: 1.55, torso: 0.05, brazoAdentro: 0.35, brazo: -0.95, antebrazo: -0.6 },
+    moto: { muslo: -1.15, rodilla: 1.3, torso: -0.22, brazoAdentro: 0.15, brazo: -0.72, antebrazo: -0.2 },
+  };
+  function girarEnMundo(b, eje, ang) {
+    b.parent.getWorldQuaternion(qPadre); qEje.setFromAxisAngle(eje, ang);
+    b.quaternion.premultiply(qPadre.clone().invert().multiply(qEje).multiply(qPadre)); b.updateMatrixWorld(true);
+  }
+  // Se aplica después de cada mixer.update (el clip reescribe todos los huesos).
   function sentar(pe) {
-    for (const b of pe.sentado) b.scale.setScalar(0.001);
-    if (!pe.brazos) return;
+    const P = pe.pose, H = pe.huesos; if (!P || !H) return;
     pe.o.updateMatrixWorld(true);
     vEje.set(1, 0, 0).applyQuaternion(pe.o.getWorldQuaternion(qPadre)).normalize();
     vAde.set(0, 0, 1).applyQuaternion(pe.o.getWorldQuaternion(qPadre)).normalize();
-    for (const b of pe.brazos) {
-      // Primero hacia el cuerpo (sobre el eje de adelante), después hacia el volante.
-      if (b.userData.lado === undefined) b.userData.lado = Math.sign(pe.o.worldToLocal(b.getWorldPosition(new V())).x) || 1;
-      b.parent.getWorldQuaternion(qPadre);
-      qEje.setFromAxisAngle(vAde, -0.45 * b.userData.lado).premultiply(qTmp.setFromAxisAngle(vEje, -1.0));
-      b.quaternion.premultiply(qPadre.clone().invert().multiply(qEje).multiply(qPadre));
-    }
+    for (const b of H.muslos) girarEnMundo(b, vEje, P.muslo);
+    for (const b of H.rodillas) girarEnMundo(b, vEje, P.rodilla);
+    if (H.torso && P.torso) girarEnMundo(H.torso, vEje, P.torso);
+    for (const b of H.brazos) { girarEnMundo(b, vAde, -P.brazoAdentro * b.userData.lado); girarEnMundo(b, vEje, P.brazo); }
+    for (const b of H.antebrazos) girarEnMundo(b, vEje, P.antebrazo);
+  }
+  // Deja a la persona sentada con la cadera a la altura dada (en el marco de su padre).
+  function sentarEn(pe, pose, alturaCadera) {
+    const o = pe.o, busca = (ks) => ks.map((k) => o.getObjectByName(k)).filter(Boolean);
+    pe.huesos = { muslos: busca(["L_Thigh", "R_Thigh"]), rodillas: busca(["L_Calf", "R_Calf"]), brazos: busca(["L_Upperarm", "R_Upperarm"]), antebrazos: busca(["L_Forearm", "R_Forearm"]), torso: o.getObjectByName("Spine01") };
+    o.updateMatrixWorld(true);
+    for (const b of pe.huesos.brazos) b.userData.lado = Math.sign(o.worldToLocal(b.getWorldPosition(new V())).x) || 1;
+    const cad = o.getObjectByName("Hip"), hy = cad ? cad.getWorldPosition(new V()).y - o.getWorldPosition(new V()).y : 0.9;
+    o.position.y = alturaCadera - hy; pe.pose = POSES[pose];
+    pe.mixer.update(0.01); sentar(pe);
   }
   function ponerCasco(pe) {
     const cab = pe.o.getObjectByName("Head"); if (!cab) return;
@@ -323,7 +340,7 @@ const Juego = (() => {
       if (!pe.padre) { pe.o.position.set(pe.x, 0, pe.z); pe.o.rotation.y = pe.rumbo; }
       // Los lejanos se animan menos seguido: con 15 personas el esqueleto pesa.
       const lejos = (pe.x - yo.x) ** 2 + (pe.z - yo.z) ** 2 > 900;
-      pe.acum = (pe.acum || 0) + dt; if (!lejos || pe.acum > 0.1) { pe.mixer.update(pe.acum); pe.acum = 0; if (pe.sentado) sentar(pe); }
+      pe.acum = (pe.acum || 0) + dt; if (!lejos || pe.acum > 0.1) { pe.mixer.update(pe.acum); pe.acum = 0; if (pe.pose) sentar(pe); }
     }
   }
   // El conductor se baja por la puerta izquierda (+X, del lado del eje).
@@ -337,7 +354,7 @@ const Juego = (() => {
     let z = v.z + v.largo * 0.08; if (cercaDe(yo.x, yo.z, v.x + v.ancho / 2 + 0.55, z, 1.2)) z = yo.z + 1.3;
     const pe = crearPersona(p.figura || (p.mujer ? "conductora" : "conductor"), v.x + v.ancho / 2 + 0.55, z, Math.PI / 2);
     if (pe) { pe.p = p; pe.mirarA = [yo.x, yo.z]; if ((p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri") && !p.sinCasco) ponerCasco(pe); }
-    Sonido.puerta();
+    Sonido.puerta(Math.hypot(v.x - yo.x, v.z - yo.z));
     return pe;
   }
 
@@ -345,10 +362,10 @@ const Juego = (() => {
   // Patrullero que viene a buscar a los detenidos
   // ════════════════════════════════════════════════════════════════════
   function llamarPatrullero() {
-    if (patrulla) { aviso("El patrullero ya está en camino.", "info"); return; }
+    if (patrulla) { aviso(T("av.patYaViene"), "info"); return; }
     const esperan = zona.filter((pe) => pe.arrestado && !pe.subido);
-    if (!esperan.length) { aviso(seguidor ? "Primero dejá al detenido en la Zona de Detenidos." : "No hay detenidos para trasladar.", "info"); return; }
-    radio(`Puesto Ruta 11 a Central: solicito móvil para traslado de ${esperan.length} detenido${esperan.length > 1 ? "s" : ""}. — Central: recibido, el móvil 7 va en camino.`);
+    if (!esperan.length) { aviso(T(seguidor ? "av.primeroZona" : "av.sinDetenidos"), "info"); return; }
+    radio(T("radio.pidoMovil", { n: esperan.length }));
     // Viene del norte por su mano (x = +1,9, hacia −Z) y para frente a la zona:
     // los detenidos cruzan la ruta custodiados y el tránsito de esa mano espera.
     const v = armarVehiculo("patrullero", null, { conductor: "policia" }), lado = -RUTA.carril;
@@ -362,12 +379,12 @@ const Juego = (() => {
     destellar(v);
     const listo = seguirRuta(v, dt);
     if (v.fase === "viene" && listo && v.vel < 0.05) {
-      v.fase = "carga"; Sonido.sirena(false); Sonido.puerta();
+      v.fase = "carga"; Sonido.sirena(false); Sonido.puerta(Math.hypot(v.x - yo.x, v.z - yo.z));
       const esperan = zona.filter((pe) => pe.arrestado && !pe.subido);
       v.faltan = esperan.length;
-      esperan.forEach((pe, i) => { pe.destino = [v.x - v.ancho / 2 - 0.45, v.z + 0.4 - i * 0.55]; pe.vel = 1.2; pe.alFinal = () => { pe.subido = true; quitarPersona(pe); zona.splice(zona.indexOf(pe), 1); v.faltan--; sumar(10, "Detenido trasladado"); }; });
+      esperan.forEach((pe, i) => { pe.destino = [v.x - v.ancho / 2 - 0.45, v.z + 0.4 - i * 0.55]; pe.vel = 1.2; pe.alFinal = () => { pe.subido = true; quitarPersona(pe); zona.splice(zona.indexOf(pe), 1); v.faltan--; sumar(10, T("av.trasladado")); }; });
     } else if (v.fase === "carga" && v.faltan <= 0) {
-      v.fase = "va"; Sonido.puerta(); radio("Móvil 7 a Central: detenidos a bordo, salimos para la comisaría."); v.sigue = true; v.vmax = 18;
+      v.fase = "va"; Sonido.puerta(Math.hypot(v.x - yo.x, v.z - yo.z)); radio(T("radio.aBordo")); v.sigue = true; v.vmax = 18;
       v.ruta = [[-RUTA.carril, -340]];
     } else if (v.fase === "va" && v.z < -320) { quitarVehiculo(v); patrulla = null; avisar(true); }
   }
@@ -383,28 +400,27 @@ const Juego = (() => {
   }
   function saludo() {
     if (!insp || insp.saludo) return; insp.saludo = true;
-    const p = insp.p, h = hora % 24, s = h >= 20 || h < 6 ? "Buenas noches" : h >= 12 ? "Buenas tardes" : "Buen día";
-    const txt = p.estado === "borracho" ? arrastrar(`${s}, oficial... ¿todo bien?`, rnd) : p.estado === "nervioso" || p.estado === "falso" ? `${s}... ¿pasa algo, oficial?` : `${s}, oficial.`;
+    const p = insp.p, h = hora % 24, s = T(h >= 20 || h < 6 ? "dice.saludoNoche" : h >= 12 ? "dice.saludoTarde" : "dice.saludoDia");
+    const txt = p.estado === "borracho" ? arrastrar(T("dice.saludoBorracho", { s }), rnd) : p.estado === "nervioso" || p.estado === "falso" ? T("dice.saludoNervioso", { s }) : T("dice.saludo", { s });
     const I = insp; luego(0.35, () => insp === I && contesta(txt));
   }
-  const PREG = Object.fromEntries(PREGUNTAS);
   function preguntar(q) {
     if (!insp) return; const veces = insp.preguntas[q] || 0; insp.preguntas[q] = veces + 1;
-    decir("yo", PREG[q]);
+    decir("yo", T("preg." + q));
     const p = insp.p, evita = (p.estado === "nervioso" || p.estado === "falso") && (q === "baul" || q === "nombre" || q === "origen" || q === "motivo");
     const I = insp; luego(0.45, () => insp === I && contesta(responder(p, q, veces, rnd), evita));
   }
   function pedirDocs() {
     if (!insp || insp.docs) return; insp.docs = true; const d = insp.p.docs;
-    decir("yo", "Documentación del vehículo y del conductor, por favor.");
-    const faltan = [!d.licencia.presente && "la licencia", !d.cedula.presente && "la cédula", !d.seguro.presente && "el seguro"].filter(Boolean);
-    const txt = faltan.length ? `Tenga... ${faltan.join(" y ")} no la${faltan.length > 1 ? "s" : ""} tengo acá, oficial. La dejé en casa.` : "Sí, oficial. Tenga, acá está todo.";
+    decir("yo", T("yo.papeles"));
+    const faltan = [!d.licencia.presente && T("dice.laLicencia"), !d.cedula.presente && T("dice.laCedula"), !d.seguro.presente && T("dice.elSeguro")].filter(Boolean);
+    const txt = faltan.length ? T("dice.papelesFalta", { x: faltan.join(T("dice.y")) }) : T("dice.papeles");
     const I = insp; luego(0.45, () => { if (insp !== I) return; contesta(insp.p.estado === "borracho" ? arrastrar(txt, rnd) : txt); Sonido.clic(); });
   }
   // El alcoholímetro mide lo que tomó, con un error chico de la lectura.
   function soplar() {
     if (!insp) return 0; const p = insp.p;
-    decir("yo", "Sople fuerte y sostenido por la boquilla, hasta que le diga.");
+    decir("yo", T("yo.soplar"));
     const lectura = p.alcohol > 0 ? clamp(p.alcohol + (rnd() - 0.5) * 0.06, 0, 2.5) : 0;
     insp.soplo = Math.round(lectura * 100) / 100;
     const I = insp; luego(0.3, () => insp === I && contesta(responder(p, "soplar", 0, rnd)));
@@ -417,7 +433,7 @@ const Juego = (() => {
   }
   function secuestrar(obj) {
     if (!insp || !obj.ilegal || obj.visto) return; obj.visto = true; insp.hallazgos.push(obj);
-    Sonido.hallazgo(); sumar(15, obj.ilegal === "drogas" ? "Hallazgo: paquete con sustancia" : "Hallazgo: arma de fuego");
+    Sonido.hallazgo(); sumar(15, T(obj.ilegal === "drogas" ? "av.hallazgoDroga" : "av.hallazgoArma"));
     avisar(true);
   }
   function abrirPanel(nombre) {
@@ -430,22 +446,22 @@ const Juego = (() => {
   // ── puntaje ──
   let reputacion = 100, recaudado = 0, atendidos = 0;
   function sumar(n, porque) { reputacion += n; aviso(`${n >= 0 ? "+" : ""}${n} · ${porque}`, n >= 0 ? "bien" : "mal", 4); if (reputacion < 0 && modo === "jugando" && finEn < 0) { motivoFin = "relevado"; finEn = t + 3; } }
-  function nombreFalta(k, p) { return k === "sinCinturon" && p && (p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri") ? "Sin casco reglamentario" : FALTAS[k].nombre; }
+  function nombreFalta(k, p) { return T(k === "sinCinturon" && p && (p.modelo.tipo === "moto" || p.modelo.tipo === "cuatri") ? "falta.sinCasco" : "falta." + k); }
   function evaluar(p, decision, cargos) {
     const reales = faltasReales(p), correcta = resolucionCorrecta(reales);
-    const lista = reales.map((k) => nombreFalta(k, p)).join(", ") || "sin faltas";
+    const lista = reales.map((k) => nombreFalta(k, p)).join(", ") || T("fin.sinFaltas");
     let d = 0, ok = false, msg;
     if (decision === correcta) {
       ok = true;
       if (decision === "multar") {
         const leves = reales.filter((k) => LEVES.includes(k)), bien = cargos.filter((k) => leves.includes(k)).length, mal = cargos.filter((k) => !leves.includes(k)).length;
         d = Math.round((25 * bien) / Math.max(1, leves.length)) - 10 * mal; ok = mal === 0 && bien === leves.length;
-        msg = ok ? "Multa correcta" : mal ? "Multa con cargos que no correspondían" : "Multa incompleta: se te pasó una falta";
-      } else { d = { pasar: 25, retener: 50, arrestar: 100 }[decision]; msg = { pasar: "Estaba todo en regla", retener: "Vehículo retenido con razón", arrestar: "Arresto correcto" }[decision]; }
-    } else if (decision === "arrestar") { d = -100; msg = "¡Arrestaste a alguien que no había cometido un delito!"; }
-    else if (correcta === "arrestar") { d = decision === "retener" ? -50 : -80; msg = decision === "retener" ? "Correspondía arresto, no solo retener" : "Dejaste ir a alguien que tenía que quedar detenido"; }
-    else if (decision === "retener") { d = -40; msg = "Retuviste un vehículo sin falta grave"; }
-    else { d = -30; msg = correcta === "pasar" ? "Multaste sin motivo" : correcta === "multar" ? "Había faltas para multar" : "Había una falta grave: correspondía retener"; }
+        msg = T(ok ? "ev.multaOk" : mal ? "ev.multaDeMas" : "ev.multaIncompleta");
+      } else { d = { pasar: 25, retener: 50, arrestar: 100 }[decision]; msg = T({ pasar: "ev.pasarOk", retener: "ev.retenerOk", arrestar: "ev.arrestarOk" }[decision]); }
+    } else if (decision === "arrestar") { d = -100; msg = T("ev.inocente"); }
+    else if (correcta === "arrestar") { d = decision === "retener" ? -50 : -80; msg = T(decision === "retener" ? "ev.soloRetener" : "ev.dejasteIr"); }
+    else if (decision === "retener") { d = -40; msg = T("ev.retenerMal"); }
+    else { d = -30; msg = T(correcta === "pasar" ? "ev.multasteSinMotivo" : correcta === "multar" ? "ev.habiaMulta" : "ev.habiaGrave"); }
     return { d, ok, msg, correcta, reales, lista };
   }
   function resolver(decision, cargos = []) {
@@ -453,7 +469,7 @@ const Juego = (() => {
     const { v, p } = insp; insp.resuelto = true;
     const ev = evaluar(p, decision, cargos);
     const monto = decision === "multar" ? cargos.reduce((s, k) => s + (FALTAS[k].monto || 0), 0) : 0;
-    hist.push({ patente: p.patente, nombre: p.docs.dni.nombre, real: p.nombre, vehiculo: `${p.modelo.nombre} ${p.colorNombre.toLowerCase()}`, decision, correcta: ev.correcta, d: ev.d, ok: ev.ok, msg: ev.msg, faltas: ev.lista, monto, soplo: insp.soplo, hallazgos: insp.hallazgos.length, estado: p.estado });
+    hist.push({ patente: p.patente, nombre: p.docs.dni.nombre, real: p.nombre, vehiculo: `${p.modelo.nombre} ${colorTxt(p.colorNombre).toLowerCase()}`, decision, correcta: ev.correcta, d: ev.d, ok: ev.ok, msg: ev.msg, faltas: ev.lista, monto, soplo: insp.soplo, hallazgos: insp.hallazgos.length, estado: p.estado });
     atendidos++; recaudado += monto;
     if (monto) Sonido.impresora();
     (ev.d >= 0 ? Sonido.bien : Sonido.mal)();
@@ -470,7 +486,7 @@ const Juego = (() => {
         } else {
           const txt = responder(p, "esposas", 0, rnd); Sonido.voz(txt, { mujer: p.mujer, borracho: p.estado === "borracho" }); aviso("«" + txt + "»", "voz", 3);
           arresto = { pe, p, correcto: ev.correcta === "arrestar" };
-          if (opc.ayudas) aviso("Acercate y esposalo [R]. Después llevalo a la Zona de Detenidos.", "info", 6);
+          if (opc.ayudas) aviso(T("av.acercate"), "info", 6);
         }
       }
       luego(1.8, () => despachar(v, "secuestro"));
@@ -492,12 +508,12 @@ const Juego = (() => {
   function contexto() {
     const a = [];
     if (modo !== "jugando" || panel) return a;
-    if (seguidor && (enZona(yo.x, yo.z) || enZona(seguidor.x, seguidor.z))) a.push({ tecla: "E", texto: "Dejar en la Zona de Detenidos", id: "zona" });
-    if (arresto && !arresto.pe.esposado && cercaDe(yo.x, yo.z, arresto.pe.x, arresto.pe.z, 2.2)) a.push({ tecla: "R", texto: "Esposar", id: "esposar" });
+    if (seguidor && (enZona(yo.x, yo.z) || enZona(seguidor.x, seguidor.z))) a.push({ tecla: "E", texto: T("acc.zona"), id: "zona" });
+    if (arresto && !arresto.pe.esposado && cercaDe(yo.x, yo.z, arresto.pe.x, arresto.pe.z, 2.2)) a.push({ tecla: "R", texto: T("acc.esposar"), id: "esposar" });
     const P = puntos();
     if (parado && insp && !insp.resuelto) {
-      if (cercaDe(yo.x, yo.z, P.ventanilla[0], P.ventanilla[1], 1.9)) a.push({ tecla: "E", texto: "Hablar con el conductor", id: "ventanilla" });
-      if (cercaDe(yo.x, yo.z, P.baul[0], P.baul[1], 1.9)) a.push({ tecla: "F", texto: parado.malla === "camion" ? "Revisar la carga con la linterna" : parado.malla === "moto" ? "Revisar el baulito de la moto" : parado.malla.startsWith("cuatri") ? "Revisar la carga del cuatri" : "Revisar el baúl con la linterna", id: "baul" });
+      if (cercaDe(yo.x, yo.z, P.ventanilla[0], P.ventanilla[1], 1.9)) a.push({ tecla: "E", texto: T("acc.hablar"), id: "ventanilla" });
+      if (cercaDe(yo.x, yo.z, P.baul[0], P.baul[1], 1.9)) a.push({ tecla: "F", texto: T(parado.malla === "camion" ? "acc.baulCamion" : parado.malla === "moto" ? "acc.baulMoto" : parado.malla.startsWith("cuatri") ? "acc.baulCuatri" : "acc.baul"), id: "baul" });
     }
     return a;
   }
@@ -514,12 +530,12 @@ const Juego = (() => {
       // Cartelito arriba de la cabeza: el clip no tiene pose de esposado.
       const et = new THREE.Sprite(new THREE.SpriteMaterial({ map: M.texCanvas(256, (g, w, h) => { g.fillStyle = "rgba(160,20,30,0.9)"; g.beginPath(); g.roundRect ? g.roundRect(4, 4, w - 8, h - 8, 18) : g.rect(4, 4, w - 8, h - 8); g.fill(); g.fillStyle = "#fff"; g.font = "800 34px Arial"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("⛓ DETENIDO", w / 2, h / 2 + 2); }, false, 64), depthTest: false, transparent: true }));
       et.scale.set(0.9, 0.225, 1); et.position.y = 2.05; et.renderOrder = 5; pe.o.add(et);
-      aviso("Esposado. Llevalo a la Zona de Detenidos (el rectángulo amarillo).", "info", 5);
+      aviso(T("av.esposado"), "info", 5);
     } else if (a.id === "zona") {
       const pe = seguidor, k = zona.length; pe.seguir = false; pe.arrestado = true; pe.destino = [PUESTO.zona[0] - 2 + (k % 5), PUESTO.zona[2] + 1.1]; pe.vel = 1.2; pe.mirarA = [0, PUESTO.zona[2]];
       zona.push(pe); seguidor = null;
-      sumar(arresto && arresto.correcto ? 10 : 0, "Detenido en la zona");
-      arresto = null; if (opc.ayudas) aviso("Cuando quieras, llamá al patrullero [Q] para el traslado.", "info", 5);
+      sumar(arresto && arresto.correcto ? 10 : 0, T("av.enZona"));
+      arresto = null; if (opc.ayudas) aviso(T("av.llamaPat"), "info", 5);
     }
     avisar(true);
   }
@@ -545,13 +561,13 @@ const Juego = (() => {
     document.addEventListener("pointerlockchange", () => avisar(true));
     addEventListener("mousemove", (e) => { if (document.pointerLockElement === lienzo) girar(e.movementX, e.movementY, 0.0022); });
     lienzo.addEventListener("pointerdown", (e) => { if (document.pointerLockElement) return; arrastre.activo = true; arrastre.id = e.pointerId; arrastre.x = e.clientX; arrastre.y = e.clientY; });
-    addEventListener("pointermove", (e) => { if (!arrastre.activo || e.pointerId !== arrastre.id) return; girar(e.clientX - arrastre.x, e.clientY - arrastre.y, TOCABLE ? 0.0055 : 0.004); arrastre.x = e.clientX; arrastre.y = e.clientY; });
+    addEventListener("pointermove", (e) => { if (!arrastre.activo || e.pointerId !== arrastre.id) return; const [dx, dy] = GIRO.delta(e.clientX - arrastre.x, e.clientY - arrastre.y); girar(dx, dy, TOCABLE ? 0.0055 : 0.004); arrastre.x = e.clientX; arrastre.y = e.clientY; });
     const soltar = (e) => { if (e.pointerId === arrastre.id) arrastre.activo = false; };
     addEventListener("pointerup", soltar); addEventListener("pointercancel", soltar);
     addEventListener("resize", ajustar);
   }
   function girar(dx, dy, k) { if (modo !== "jugando" || panel || pausado) return; yo.mira = null; yo.yaw -= dx * k * opc.sens; yo.pitch = clamp(yo.pitch - dy * k * opc.sens, -1.25, 1.1); }
-  function ajustar() { if (!R) return; const w = innerWidth, h = innerHeight; R.setSize(w, h, false); cam.aspect = w / h; cam.fov = w < h ? 78 : 68; cam.updateProjectionMatrix(); }
+  function ajustar() { if (!R) return; const w = GIRO.ancho(), h = GIRO.alto(); R.setSize(w, h, false); cam.aspect = w / h; cam.fov = w < h ? 78 : 68; cam.updateProjectionMatrix(); }
 
   // ── movimiento del policía con choques simples contra vehículos y garita ──
   function obstaculos() {
@@ -589,7 +605,7 @@ const Juego = (() => {
     if (n > 0.05) { yo.x += (mx / mn) * vel * dt; yo.z += (mz / mn) * vel * dt; }
     empujar();
     const d = Math.hypot(yo.x - px, yo.z - pz); yo.paso += d; yo.bob += d * 2.3;
-    if (yo.paso > (correr ? 0.85 : 0.68)) { yo.paso = 0; Sonido.paso(); }
+    if (yo.paso > (correr ? 0.85 : 0.68)) { yo.paso = 0; Sonido.paso(Math.abs(yo.x) > RUTA.ancho / 2); }
   }
   function camaraYo(dt) {
     // Al abrir la ventanilla la vista va sola hacia el conductor.
@@ -612,23 +628,14 @@ const Juego = (() => {
   // ════════════════════════════════════════════════════════════════════
   // Radio: avisos de la central (algunos te anticipan a quién buscar)
   // ════════════════════════════════════════════════════════════════════
-  const CHARLA = [
-    "Central a móviles: se solicita precaución en ruta 11 por animales sueltos a la altura del km 1.030.",
-    "Central a Puesto Ruta 11: se recuerda control de alcoholemia en toda la franja nocturna.",
-    "Móvil 3 a Central: sin novedad en el acceso a Pampa del Indio.",
-    "Central a móviles: visibilidad reducida por humo de quema en banquinas, km 1.042.",
-    "Central a Puesto Ruta 11: recuerden labrar las actas con letra clara, por favor.",
-    "Móvil 12 a Central: accidente menor en ruta 90, sin heridos. Tránsito normal.",
-  ];
   function planearRadio(n) {
     radioPlan = [];
     conductores.forEach((p, i) => {
       if (!(p.robado || p.captura) || rnd() > 0.7) return;
-      const txt = p.robado ? `Central a puestos: buscamos ${p.modelo.nombre} color ${p.colorNombre.toLowerCase()}, patente ${p.patente}, con pedido de secuestro. Puede circular con documentación adulterada.`
-        : `Central a puestos: pedido de captura vigente a nombre de ${nombreLindo(p.nombre)} (${p.nombre}), ${p.edad} años. Se desplaza por ruta 11.`;
+      const txt = p.robado ? T("radio.boloRobado", { v: p.modelo.nombre, c: colorTxt(p.colorNombre).toLowerCase(), p: p.patente }) : T("radio.boloCaptura", { n: nombreLindo(p.nombre), N: p.nombre, e: p.edad });
       radioPlan.push({ antesDe: Math.max(0, i - 1), texto: txt, tipo: "bolo" });
     });
-    for (let k = 0; k < 3; k++) radioPlan.push({ enHora: horaIni + 0.6 + k * (horaFin - horaIni) / 3.4 + rnd() * 0.5, texto: elegir(rnd, CHARLA), tipo: "radio" });
+    for (let k = 0; k < 3; k++) radioPlan.push({ enHora: horaIni + 0.6 + k * (horaFin - horaIni) / 3.4 + rnd() * 0.5, texto: tv("radio.charla", rnd), tipo: "radio" });
   }
   function actualizarRadio() {
     for (let i = radioPlan.length - 1; i >= 0; i--) {
@@ -669,9 +676,11 @@ const Juego = (() => {
     for (const v of cola.concat(yendose)) v.g.children.forEach((c) => { if (c.material === MAT.stop) c.scale.setScalar(v.freno ? 1.25 : 1); });
     linterna.intensity = linternaOn && modo === "jugando" ? 38 : 0;
     Sonido.ambiente(noche);
-    // El motor que se oye es el del vehículo más cercano.
-    let cerca = null, dm = 1e9; for (const v of cola.concat(yendose, otros, patrulla ? [patrulla] : [])) { const d = Math.hypot(v.x - yo.x, v.z - yo.z); if (d < dm) { dm = d; cerca = v; } }
-    if (cerca) Sonido.motor(dm, Math.max(cerca.vel, 1.5), cerca.malla === "camion"); else Sonido.motor(999, 0, false);
+    // Se oyen los motores de los dos vehículos más cercanos, a izquierda o derecha según hacia dónde mires.
+    const sy = Math.sin(yo.yaw), cy = Math.cos(yo.yaw);
+    const motores = cola.concat(yendose, otros, patrulla ? [patrulla] : []).map((v) => { const dx = v.x - yo.x, dz = v.z - yo.z, d = Math.hypot(dx, dz) || 1; return { dist: d, vel: Math.max(v.vel, 1.5), tipo: v.malla === "camion" ? "camion" : v.malla === "moto" || v.malla === "motopol" || v.malla.startsWith("cuatri") ? "moto" : "auto", pan: (dx * cy - dz * sy) / d }; }).sort((a, b) => a.dist - b.dist).slice(0, 2);
+    Sonido.motores(motores);
+    if (patrulla && patrulla.fase === "viene") Sonido.sirena(true, Math.hypot(patrulla.x - yo.x, patrulla.z - yo.z));
     if (modo === "jugando") camaraYo(dt); else camaraMenu();
     volcar();
     avisar();
@@ -710,6 +719,7 @@ const Juego = (() => {
   // ════════════════════════════════════════════════════════════════════
   function aplicarOpciones(o) {
     opc = Object.assign(opc, o || {});
+    if (opc.idioma) ponerIdioma(opc.idioma);
     Sonido.ponerVolumen(opc.volumen);
     if (!R) return;
     const alta = opc.calidad === "alta", baja = opc.calidad === "baja";
@@ -763,17 +773,17 @@ const Juego = (() => {
     if (opc.primeroFalso) conductores[0] = conductorDniFalso(rnd, registro);
     planearRadio(conductores.length);
     modo = "jugando"; pausado = false;
-    radio("Central a Puesto Ruta 11: comienza su turno. Control de documentación y alcoholemia. Buen servicio.");
-    if (opc.primeroFalso) aviso("Modo prueba: el primer vehículo trae un DNI adulterado. Se apaga en Opciones.", "info", 7);
+    radio(T("radio.inicio"));
+    if (opc.primeroFalso) aviso(T("av.modoPrueba"), "info", 7);
     avisar(true);
   }
   function terminar() {
     if (modo !== "jugando") return;
     // Arrestos a medio hacer: el que no se esposó o no se llevó a la zona cuenta como fuga.
-    if (arresto || seguidor) sumar(-20, "Un detenido quedó sin custodia al terminar el turno");
+    if (arresto || seguidor) sumar(-20, T("av.sinCustodia"));
     const sinTrasladar = zona.filter((pe) => pe.arrestado && !pe.subido).length;
     const st = leer("stats", STATS_BASE);
-    st.turnos++; st.mejor = Math.max(st.mejor, reputacion); st.arrestos += hist.filter((h) => h.decision === "arrestar" && h.ok).length; st.multas += hist.filter((h) => h.decision === "multar").length; st.hallazgos += hist.reduce((s, h) => s + h.hallazgos, 0);
+    st.turnos++; st.mejor = Math.max(st.mejor, reputacion); st.arrestos += hist.filter((h) => h.decision === "arrestar" && h.ok).length; st.multas += hist.filter((h) => h.decision === "multar").length; st.hallazgos += hist.reduce((s, h) => s + h.hallazgos, 0); st.recaudado = (st.recaudado || 0) + recaudado;
     guardar("stats", st);
     resumenFinal = { hist: hist.slice(), reputacion, recaudado, atendidos, total: conductores.length, motivo: motivoFin, sinTrasladar, mejor: st.mejor, stats: st };
     modo = "fin"; panel = null; if (document.pointerLockElement) document.exitPointerLock();

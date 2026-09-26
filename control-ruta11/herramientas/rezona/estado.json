@@ -1127,6 +1127,18 @@
    "output_path": "assets/v2-modelo-cuatri-g1.glb",
    "estado": "ready",
    "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-cuatri-g1.glb"
+  },
+  "sfx-puerta": {
+   "type": "audio",
+   "params": {
+    "kind": "sound",
+    "duration": 3,
+    "prompt": "A single car door being closed firmly from outside: solid metallic thunk of an old sedan door, short, close microphone, outdoors, no music, no voices."
+   },
+   "task_id": "gtask-62e1d9bbed2744db8c05",
+   "output_path": "assets/sfx-puerta-g1.mp3",
+   "estado": "failed",
+   "error": "生成服务暂时不可用，请稍后重试。"
   }
  },
  "ref": "RTkRyBVlZq"

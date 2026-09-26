@@ -18,11 +18,13 @@ const MODELOS = [
   // El gaucho viene sentado en el modelo (una sola malla); al bajarse se cambia por el cuatri vacío.
   { nombre: "Cuatriciclo 250 cc", malla: "cuatrigaucho", tipo: "cuatri" },
 ];
-const COLORES = [["Blanco", "#f2f2ee"], ["Gris plata", "#a9adb3"], ["Negro", "#222326"], ["Rojo", "#b3261e"], ["Azul", "#2a4f9a"], ["Verde", "#3b6e44"], ["Celeste", "#86b6d8"], ["Bordó", "#6a1522"], ["Beige", "#d8c7a0"]];
+// Los colores, cargas y objetos van por clave: el texto sale de textos.js en el idioma elegido.
+const COLORES = [["blanco", "#f2f2ee"], ["gris", "#a9adb3"], ["negro", "#222326"], ["rojo", "#b3261e"], ["azul", "#2a4f9a"], ["verde", "#3b6e44"], ["celeste", "#86b6d8"], ["bordo", "#6a1522"], ["beige", "#d8c7a0"]];
 const ASEGURADORAS = ["La Segunda", "Sancor Seguros", "Federación Patronal", "Rivadavia Seguros", "La Caja", "Mercantil Andina"];
-const CARGAS_CAMPO = ["Un rollo de alambre y el mate", "Sal para la hacienda", "Nada, oficial, voy al campo de un vecino", "Unas bolsas de alimento para los terneros", "El lazo y el poncho, nomás"];
-const CARGAS = ["Mercadería para el almacén", "Bolsos con ropa", "Herramientas de trabajo", "Verduras y frutas", "Una garrafa y el auxilio", "Nada, oficial, el auxilio nomás", "Repuestos para el campo", "Cajas de la mudanza"];
-const OBJETOS_BAUL = [["Bolso deportivo", "#2d3d6b"], ["Caja de cartón", "#b58b55"], ["Rueda de auxilio", "#1c1c1e"], ["Cajón de verdura", "#7a9a3a"], ["Garrafa", "#3a78c8"], ["Caja de herramientas", "#c0392b"], ["Bolsa de mercadería", "#e8e2d0"], ["Mochila", "#4a4a4a"]];
+const CARGAS_CAMPO = ["carga.alambre", "carga.sal", "carga.vecino", "carga.alimento", "carga.lazo"];
+const CARGAS = ["carga.almacen", "carga.ropa", "carga.herramientas", "carga.verdura", "carga.garrafa", "carga.auxilio", "carga.repuestos", "carga.mudanza"];
+const OBJETOS_BAUL = [["bolso", "#2d3d6b"], ["caja", "#b58b55"], ["rueda", "#1c1c1e"], ["cajon", "#7a9a3a"], ["garrafa", "#3a78c8"], ["herramientas", "#c0392b"], ["mercaderia", "#e8e2d0"], ["mochila", "#4a4a4a"]];
+const colorTxt = (id) => t("color." + id), objTxt = (id) => t("obj." + id);
 
 // ── faltas ──
 const FALTAS = {
@@ -46,7 +48,7 @@ function resolucionCorrecta(faltas) {
   for (const f of faltas) { const g = FALTAS[f].gravedad; if (g === "delito") return "arrestar"; if (g === "grave") r = "retener"; else if (r === "pasar") r = "multar"; }
   return r;
 }
-const NOMBRE_RESOLUCION = { pasar: "Dejar pasar", multar: "Multar", retener: "Retener vehículo", arrestar: "Arrestar" };
+const nombreResolucion = (k) => t("res." + k);
 
 // ════════════════════════════════════════════════════════════════════════
 // Rostros
@@ -182,14 +184,14 @@ function crearRegistro() { const personas = new Map(), vehiculos = new Map(); re
 function generarConductor(r, registro, dificultad = 1) {
   const modelo = elegir(r, MODELOS), gaucho = modelo.tipo === "cuatri";
   const mujer = !gaucho && r() < 0.28, edad = gaucho ? 30 + Math.floor(r() * 35) : 19 + Math.floor(r() * 52), nac = sumarDias(HOY, -Math.floor(edad * 365.25 + r() * 365));
-  const [colorNombre, color] = gaucho ? ["Rojo", "#b3261e"] : elegir(r, COLORES);
+  const [colorNombre, color] = gaucho ? ["rojo", "#b3261e"] : elegir(r, COLORES);
   const p = { mujer, edad, nacimiento: nac, rostro: rostroAzar(r, mujer, edad), nombre: nombreAzar(r, mujer), modelo, colorNombre, color, patente: patenteAzar(r) };
   p.dni = dniAzar(r, nac.getFullYear());
   p.origen = elegir(r, LUGARES); do p.destino = elegir(r, LUGARES); while (p.destino === p.origen);
   p.carga = elegir(r, gaucho ? CARGAS_CAMPO : CARGAS);
   // Qué personaje 3D baja del vehículo (la cara 2D sale de los mismos rasgos).
   p.figura = gaucho ? "gaucho" : modelo.tipo === "camion" && !mujer ? "camionero" : mujer ? (edad >= 55 ? "senora" : "conductora") : edad >= 58 ? "mayor" : edad < 30 ? "joven" : "conductor";
-  if (gaucho) { p.rostro.gorro = "boina"; p.rostro.barba = 1; p.rostro.peinado = 1; p.rostro.panuelo = true; p.rostro.ropa = "#8fb3d9"; if (r() < 0.6) { p.origen = elegir(r, ["Presidencia Roca", "Pampa del Indio", "El Colorado"]); p.destino = elegir(r, ["un campo sobre la 11", "la estancia de los Benítez", "Presidencia Roca"]); } }
+  if (gaucho) { p.rostro.gorro = "boina"; p.rostro.barba = 1; p.rostro.peinado = 1; p.rostro.panuelo = true; p.rostro.ropa = "#8fb3d9"; if (r() < 0.6) { p.origen = elegir(r, ["Presidencia Roca", "Pampa del Indio", "El Colorado"]); p.destino = elegir(r, ["Presidencia Roca", "Pampa del Indio", "Castelli"]); } }
   else if (p.figura === "camionero") { p.rostro.gorro = "gorra"; p.rostro.barba = 2; p.rostro.ropa = "#243a6b"; }
   else if (p.figura === "mayor") { p.rostro.gorro = "plana"; p.rostro.barba = 1; p.rostro.pelo = "#8a8a8a"; p.rostro.ropa = "#8b6a44"; }
   else if (p.figura === "senora") { p.rostro.anteojos = true; p.rostro.pelo = "#8f857c"; p.rostro.peinado = 4; p.rostro.ropa = "#b79acb"; }
@@ -211,7 +213,7 @@ function generarConductor(r, registro, dificultad = 1) {
   p.alcohol = r() < 0.13 ? 0.6 + r() * 1.8 : r() < 0.2 ? r() * 0.35 : 0;
   // Baúl con lo normal.
   p.baul = []; const n = 2 + Math.floor(r() * 3);
-  for (let i = 0; i < n; i++) { const [nom, col] = elegir(r, OBJETOS_BAUL); p.baul.push({ nombre: nom, color: col, ilegal: false }); }
+  for (let i = 0; i < n; i++) { const [id, col] = elegir(r, OBJETOS_BAUL); p.baul.push({ id, color: col, ilegal: false }); }
   // Sospechosos: algunos esconden algo, otros son nerviosos nomás (para que no sea obvio).
   p.sospechoso = r() < 0.3;
   if (p.sospechoso) {
@@ -219,20 +221,20 @@ function generarConductor(r, registro, dificultad = 1) {
     if (q < 0.33) identidadFalsa(p, r, registro);
     else if (q < 0.68) {
       const droga = r() < 0.7, cant = droga ? 2 + Math.floor(r() * 5) : 1;
-      for (let i = 0; i < cant; i++) p.baul.push({ nombre: droga ? "Paquete rectangular encintado" : "Arma de fuego", color: droga ? "#c9b27a" : "#1a1a1a", ilegal: droga ? "drogas" : "armas", escondido: r() < 0.65 });
-      if (r() < 0.4) p.carga = "Nada, nada. Ropa nomás.";
+      for (let i = 0; i < cant; i++) p.baul.push({ id: droga ? "paquete" : "arma", color: droga ? "#c9b27a" : "#1a1a1a", ilegal: droga ? "drogas" : "armas", escondido: r() < 0.65 });
+      if (r() < 0.4) p.carga = "carga.ropanomas";
     } else if (q < 0.8) p.captura = true;
     else if (q < 0.9) { p.robado = true; p.docs.cedula.patente = patenteAzar(r); }
   }
   p.estado = p.identidad ? "falso" : p.alcohol > 0.5 ? "borracho" : p.sospechoso ? "nervioso" : "normal";
-  registro.agregarPersona({ dni: p.dni, nombre: p.nombre, nacimiento: nac, rostro: p.rostro, captura: !!p.captura, motivo: p.captura ? elegir(r, ["Robo calificado — Juzgado de Garantías de Resistencia", "Abuso de armas — Fiscalía de Sáenz Peña", "Evasión — Juzgado Federal de Formosa", "Homicidio en grado de tentativa — Juzgado de Charata"]) : "", antecedentes: r() < 0.15 ? "Contravención de tránsito (2023)" : "Sin antecedentes" });
+  registro.agregarPersona({ dni: p.dni, nombre: p.nombre, nacimiento: nac, rostro: p.rostro, captura: !!p.captura, motivo: p.captura ? elegir(r, ["captura.robo", "captura.armas", "captura.evasion", "captura.homicidio"]) : "", antecedentes: r() < 0.15 ? "ant.transito" : "ant.sin" });
   registro.agregarVehiculo({ patente: p.patente, titular: p.docs.cedula.titular, modelo: modelo.nombre, color: colorNombre, robado: !!p.robado });
   return p;
 }
 // El DNI es de otra persona registrada (otro nombre en el sistema) y la foto se le parece, pero no es.
 function identidadFalsa(p, r, registro) {
   p.identidad = true;
-  const prestado = { dni: dniAzar(r, p.nacimiento.getFullYear() - 3 + Math.floor(r() * 6)), nombre: nombreAzar(r, p.mujer), nacimiento: sumarDias(p.nacimiento, Math.floor((r() - 0.5) * 1800)), rostro: rostroAzar(r, p.mujer, p.edad), captura: false, antecedentes: "Sin antecedentes", motivo: "" };
+  const prestado = { dni: dniAzar(r, p.nacimiento.getFullYear() - 3 + Math.floor(r() * 6)), nombre: nombreAzar(r, p.mujer), nacimiento: sumarDias(p.nacimiento, Math.floor((r() - 0.5) * 1800)), rostro: rostroAzar(r, p.mujer, p.edad), captura: false, antecedentes: "ant.sin", motivo: "" };
   registro.agregarPersona(prestado);
   let alias; do alias = nombreAzar(r, p.mujer); while (alias === prestado.nombre || alias === p.nombre);
   p.alias = alias;
@@ -277,29 +279,30 @@ function faltasReales(p) {
 }
 
 // ── lo que contesta (los sospechosos cambian la historia, al falso se le escapa el nombre) ──
-const PREGUNTAS = [["origen", "¿De dónde viene?"], ["destino", "¿A dónde va?"], ["baul", "¿Qué lleva en el baúl?"], ["alcohol", "¿Tomó alcohol?"], ["nombre", "¿Su nombre completo?"], ["motivo", "¿Motivo del viaje?"]];
+const PREGUNTAS = ["origen", "destino", "baul", "alcohol", "nombre", "motivo"];
+// Lo que contesta, en el idioma del juego (los sospechosos cambian la historia; al falso se le escapa el nombre).
 function responder(p, q, veces, r) {
   const miente = p.estado === "nervioso" || p.estado === "falso", otro = elegir(r, LUGARES.filter((l) => l !== p.origen)), llevaAlgo = p.baul.some((o) => o.ilegal);
-  let t;
+  let s;
   switch (q) {
-    case "origen": t = !miente ? `Vengo de ${p.origen}, oficial.` : veces === 0 ? `Eh... de ${p.origen}. Bueno, de ${otro} en realidad, pasé por ahí.` : `De ${otro}. Ya le dije, ¿no?`; break;
-    case "destino": t = !miente ? `Voy para ${p.destino}, a lo de un pariente.` : veces === 0 ? `A ${p.destino}... a hacer unos trámites. O a lo de mi primo, depende.` : `Para ${otro}, oficial. ¿Por qué pregunta tanto?`; break;
-    case "baul": t = llevaAlgo && veces > 0 ? "Nada, nada. ¿Tiene que revisar? Estoy apurado." : p.carga; break;
-    case "alcohol": t = p.alcohol > 0.5 ? "No, oficial... bueno, una cervecita en el almuerzo nomás." : miente ? "¿Alcohol? No, no... nada. ¿Me va a hacer soplar?" : "No, oficial. Nada."; break;
+    case "origen": s = !miente ? t("dice.origen", { o: p.origen }) : t(veces === 0 ? "dice.origenMiente1" : "dice.origenMiente2", { o: p.origen, x: otro }); break;
+    case "destino": s = !miente ? t("dice.destino", { d: p.destino }) : t(veces === 0 ? "dice.destinoMiente1" : "dice.destinoMiente2", { d: p.destino, x: otro }); break;
+    case "baul": s = llevaAlgo && veces > 0 ? t("dice.baulEvasivo") : t(p.carga); break;
+    case "alcohol": s = t(p.alcohol > 0.5 ? "dice.alcoholSi" : miente ? "dice.alcoholNervioso" : "dice.alcoholNo"); break;
     case "nombre":
-      if (p.identidad) { const real = p.nombre.split(",")[1].trim().split(" ")[0]; t = veces === 0 ? `${cap(real)}... digo, ${nombreLindo(p.alias)}.` : `${nombreLindo(p.alias)}. Está ahí en el documento.`; }
-      else t = `${nombreLindo(p.nombre)}, oficial.`;
+      if (p.identidad) { const real = cap(p.nombre.split(",")[1].trim().split(" ")[0]); s = t(veces === 0 ? "dice.nombreFalso1" : "dice.nombreFalso2", { real, alias: nombreLindo(p.alias) }); }
+      else s = t("dice.nombre", { n: nombreLindo(p.nombre) });
       break;
-    case "motivo": t = !miente ? elegir(r, ["Trabajo, llevo mercadería.", "Visita familiar.", "Voy al médico en la ciudad.", "Vuelvo del campo."]) : elegir(r, ["Trabajo... bueno, un favor para un amigo.", "Paseo. Nada más. ¿Hay algún problema?", "Tengo que entregar unas cosas... ropa."]); break;
-    case "abrir": t = llevaAlgo ? "¿El baúl? Está trabado, oficial... bueno, dele. Ábralo." : "Sí, cómo no. Ahí le abro."; break;
-    case "bajar": t = p.estado === "normal" ? "¿Pasó algo, oficial? Bueno, ahí bajo." : p.estado === "borracho" ? "Eshtá bien, eshtá bien..." : "¿Por qué? Yo no hice nada... Bueno."; break;
-    case "soplar": t = p.alcohol > 0.5 ? "Fuuuuu... ¿ya está?" : "Fuuuuuuuuu."; break;
-    case "multa": t = elegir(r, ["Uh... bueno, está bien. Buenas tardes.", "¿Otra multa? Bueno, qué le vamos a hacer.", "Disculpe, oficial, no se va a repetir."]); break;
-    case "pasar": t = elegir(r, ["Gracias, oficial. Buen turno.", "Gracias, que ande bien.", "Buenas tardes, gracias."]); break;
-    case "esposas": t = p.estado === "normal" ? "¡Pero oficial, yo no hice nada! ¡Esto es un error!" : p.estado === "borracho" ? "Eshto no puede sher..." : "..."; break;
-    default: t = "...";
+    case "motivo": s = tv(miente ? "dice.motivoMiente" : "dice.motivo", r); break;
+    case "abrir": s = t(llevaAlgo ? "dice.abrirAlgo" : "dice.abrir"); break;
+    case "bajar": s = t(p.estado === "normal" ? "dice.bajarNormal" : p.estado === "borracho" ? "dice.bajarBorracho" : "dice.bajarNervioso"); break;
+    case "soplar": s = t(p.alcohol > 0.5 ? "dice.soplarBorracho" : "dice.soplar"); break;
+    case "multa": s = tv("dice.multa", r); break;
+    case "pasar": s = tv("dice.pasar", r); break;
+    case "esposas": s = t(p.estado === "normal" ? "dice.esposasNormal" : p.estado === "borracho" ? "dice.esposasBorracho" : "dice.esposas"); break;
+    default: s = "...";
   }
-  return p.estado === "borracho" ? arrastrar(t, r) : t;
+  return p.estado === "borracho" ? arrastrar(s, r) : s;
 }
 function cap(s) { s = s.toLowerCase(); return s.charAt(0).toUpperCase() + s.slice(1); }
 // Voz borrosa: se le traban las eses, estira vocales y se le escapa un hipo.

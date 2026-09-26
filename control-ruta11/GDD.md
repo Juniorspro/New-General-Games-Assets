@@ -31,7 +31,10 @@ personas y los casos son inventados.
 | Resumen | Calificación (Agente en prueba → Comisario de Caminera), aciertos, recaudado y la tabla de cada vehículo con la decisión correcta y las faltas reales (y el nombre verdadero de los que mentían) | `ui.js` (Resumen) |
 | Controles PC | WASD, Shift corre, mouse para mirar (clic lo captura; si no se puede, se arrastra), E, F, R, Q, Esc/P | `juego.js` |
 | Controles celular | Palanca a la izquierda, arrastrar para mirar, botones de acción según dónde estés, linterna, patrullero, pausa | `ui.js` (Tactil) |
-| Sonido | Todo sintetizado: chicharras de tarde, grillos de noche, motor del vehículo más cercano, radio, sirena, bips del alcoholímetro, esposas, baúl, puerta, impresora del acta y voces (murmullo con entonación; el borracho, grave y lento) | `sonido.js` |
+| Celular vertical | Con el teléfono parado el juego se gira 90° solo (sin pantalla completa): `#raiz` rota con CSS y los toques se pasan a coordenadas del juego (`GIRO` en `base.js`) | `base.js`, `index.html` |
+| Idiomas | Español, inglés y portugués. Se elige en una pantalla antes de cada menú y se cambia en Opciones (`TEXTOS` y `t()`) | `textos.js` |
+| Menú | Pestañas Patrulla (turno con cielo de cada hora, legajo con rango), Carrera (estadísticas y escalafón), Novedades, Opciones, Cómo se juega y Créditos | `ui.js` |
+| Sonido | Grabaciones con licencia libre (CC0 y CC-BY, `sonidos/`, incrustadas en `js/sonidos.js` con `sonidos/incrustar.py`): los dos motores más cercanos (auto y camión grabados, la moto es el de auto más agudo) con paneo y filtro por distancia, sirena que se acerca, radio con estática, chicharras de tarde, grillos de noche, viento, tránsito lejano, puertas, baúl, esposas, impresora, levantavidrios, pasos en asfalto o tierra y bocinazos de los que esperan en la fila. Sintetizado: bips del alcoholímetro, avisos y voces (murmullo con entonación; el borracho, grave y lento). Los CC-BY salen en Créditos | `sonido.js`, `sonidos.js` |
 | Rendimiento | ~540 mil triángulos en calidad alta y ~400 mil en media (medido en la prueba). Solo dan sombra los árboles cercanos; la calidad baja saca los del fondo | `mundo.js` |
 
 ## 2. Diseño de la tablet policial
@@ -93,7 +96,8 @@ JPEG) y `herramientas/armar_datos.py` (van adentro de `js/datos.js`, 6,2 MB).
 | Conductor, conductora, policía (con caminar y quieto) | Rezona | 9.000 |
 | Portada de la pantalla de carga | Rezona (imagen) | — |
 | Caras de DNI, sistema y ventanilla | Dibujadas por código (`dibujarRostro`) | — |
-| Cielo, asfalto, carteles, conos, patentes, sonido | Por código | — |
+| Cielo, asfalto, carteles, conos, patentes | Por código | — |
+| Sonidos (motores, sirena, radio, ambiente, puertas, pasos…) | Grabaciones CC0 y CC-BY de OpenGameArt y Kenney (`sonidos/CREDITOS.md`); Rezona no tenía el audio disponible | — |
 
 Para la versión de Unity (referencia), el equivalente gratuito del Asset Store
 sería:
