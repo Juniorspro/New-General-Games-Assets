@@ -96,7 +96,9 @@ const MANO = () => {
     return { visibles: A.manos.manos.filter((m) => m.visible).length, capsulas: A.manos.geo.instanceCount, izq, dch, llamadas, manosPorOjo: llamadas / 2 - otras };
   });
   fs.writeFileSync(path.join(SAL, 'manos-vr.png'), Buffer.from((await pag.evaluate(() => window.__png())).split(',')[1], 'base64'));
-  prueba('las dos manos se ven en los dos ojos (48 cápsulas en 2 llamadas por ojo)', r1.visibles === 2 && r1.capsulas === 48 && r1.izq > 800 && r1.dch > 800 && r1.manosPorOjo === 2, JSON.stringify(r1));
+  /* (más de 3000 píxeles por ojo: con las cápsulas dadas vuelta se veía el lado de adentro, casi
+     transparente, y con 800 igual pasaba) */
+  prueba('las dos manos se ven en los dos ojos (48 cápsulas en 2 llamadas por ojo)', r1.visibles === 2 && r1.capsulas === 48 && r1.izq > 3000 && r1.dch > 3000 && r1.manosPorOjo === 2, JSON.stringify(r1));
 
   /* 2) el filtro: quieta con ruido, y moviéndose (fotos a 30 por segundo, se dibuja a 120) */
   const r2 = await pag.evaluate(() => {

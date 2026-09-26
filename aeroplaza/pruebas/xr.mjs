@@ -63,6 +63,18 @@ const r5 = await pag.evaluate(async () => {
 await pag.screenshot({ path: path.join(SAL, 'xr-manos.png') });
 prueba('con las manos del visor se ven las dos, cerca de la cabeza', r5.vis[0] && r5.vis[1] && r5.d.every((x) => x > 0.15 && x < 0.9) && r5.capsulas === 48 && r5.enEscena, JSON.stringify(r5));
 prueba('el pellizco del visor es el pellizco', JSON.stringify(r5.pell) === '[false,true,false]', JSON.stringify(r5.pell));
+/* 5b) sin manos (se agarran los controles): se apagan suave y vuelven. Con vr.tVer vieja (queda así si
+   antes se usó el VR del celu): con esa hora la mano del visor no se perdía nunca */
+const r5b = await pag.evaluate(async () => {
+  const A = window.__A, D = window.__xrdev, V = A.visor, espera = async (n) => { const c0 = V.cuadros; while (V.cuadros < c0 + n) await new Promise((ok) => setTimeout(ok, 20)); };
+  const alfas = () => A.manos.manos.map((m) => +m.alfa.toFixed(2));
+  A.vr.tVer = 1;
+  D.primaryInputMode = 'controller'; await espera(2); const recien = alfas();
+  await new Promise((ok) => setTimeout(ok, 500)); await espera(2); const despues = alfas(), vis = A.manos.manos.map((m) => m.visible);
+  D.primaryInputMode = 'hand'; await new Promise((ok) => setTimeout(ok, 200)); await espera(4); const vuelven = alfas();
+  return { recien, despues, vis, vuelven };
+});
+prueba('sin manos se apagan suave y vuelven (aunque la hora del giroscopio esté vieja)', r5b.despues.every((a) => a === 0) && !r5b.vis.some(Boolean) && r5b.vuelven.every((a) => a > 0.5), JSON.stringify(r5b));
 /* 6) salir */
 await pag.evaluate(() => window.__A.vr.salir());
 await pag.waitForFunction(() => !window.__A.visor.activo, null, { timeout: 20000 }).catch(() => {});

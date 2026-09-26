@@ -121,5 +121,25 @@ for (const dos of [false, true]) {
   const r30 = caso({ L: 30, limpio: true }), r150 = caso({ L: 150, limpio: true });
   prueba('sin errores de la red, el atraso no pasa de lo que tarda la foto', r30.err < 70 && r150.err < 125 && r30.tironMax < 25, `foto a los ${f(r30.lat, 0)} ms: ${f(r30.err, 0)} mm · a los ${f(r150.lat, 0)} ms: ${f(r150.err, 0)} mm · tirón máx ${f(Math.max(r30.tironMax, r150.tironMax))} mm`);
 }
+/* una foto por cuadro (el juego lento, a 30): la mano quieta se queda quieta. (El resorte arrancaba
+   con la velocidad de lo que se veía, que lo incluye a él: se pasaba de largo cuadro por medio y la
+   mano "viajaba", sin tocar ni apretar nada) */
+{
+  const manos = new Manos(); manos.activa = true; manos.fuente = 'camara';
+  const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3(), ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
+  const W = new Float32Array(63), img = new Float32Array(63);
+  ABIERTA.forEach(([x, y, z], i) => { W[i * 3] = 0.1 + x; W[i * 3 + 1] = -0.15 + y; W[i * 3 + 2] = -0.35 + z + 0.06; });
+  let viaja = 0, mov = 0, ant = null;
+  for (let k = 0; k < 60; k++) {
+    const T = 1000 + k * 33.3;
+    manos.registrarCabeza(T, q0, p0, 0);
+    manos.recibirCamara([{ derecha: true, puntos: W, confianza: 0.9, img }], T - 60, T);
+    manos.actualizar(1 / 30, T + 10, ctx);
+    const M = manos.manos[1];
+    if (k > 5) { if (M.viaja) viaja++; if (ant) mov = Math.max(mov, Math.hypot(M.p[0] - ant[0], M.p[1] - ant[1], M.p[2] - ant[2])); }
+    ant = [M.p[0], M.p[1], M.p[2]];
+  }
+  prueba('una foto por cuadro (el juego a 30): quieta se queda quieta', viaja === 0 && mov < 5e-4, `${viaja} cuadros "de viaje", se movió ${f(mov * 1000, 2)} mm`);
+}
 console.log(`${bien} bien, ${mal} mal`);
 process.exit(mal ? 1 : 0);

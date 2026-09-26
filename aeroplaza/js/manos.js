@@ -62,7 +62,7 @@ class Euro {
 }
 
 /* -------------------------------------------------- una mano */
-const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
 /* el centro de la palma (muñeca y los cuatro nudillos) de 21 puntos */
 const CENTRO = [0, 5, 9, 13, 17];
 function centroPalma(P, v = [0, 0, 0]) {
@@ -102,6 +102,8 @@ class Mano {
     this.nueva = false; this.seguida = false; this.vb = new Float32Array(63);
   }
   punto(i, v = new THREE.Vector3()) { return v.set(this.p[i * 3], this.p[i * 3 + 1], this.p[i * 3 + 2]); }
+  /* el punto sin el resorte (donde está de verdad, según las fotos) */
+  puntoBase(i, v = new THREE.Vector3()) { const B = this.conResorte ? this.pAnt : this.p; return v.set(B[i * 3], B[i * 3 + 1], B[i * 3 + 2]); }
   /* dónde tendría que estar el centro de la palma en el momento t (s) */
   predecirCentro(t, v = [0, 0, 0]) {
     const E = this.euro, k = Math.min(0.2, Math.max(0, t - this.t));
@@ -153,26 +155,29 @@ class Mano {
      reparte con un resorte crítico (ni la posición ni la velocidad pegan un salto: se ve como un
      movimiento, no como un tirón) */
   suavizar(dt) {
-    const p = this.p, off = this.off, oV = this.offV, pA = this.pAnt, vA = this.vAnt, h = Math.min(dt, 1 / 30);
+    const p = this.p, off = this.off, oV = this.offV, bA = this.pAnt, vbA = this.vAnt, vb = this.vb, h = Math.min(dt, 1 / 30);
     if (!this.seguida) { off.fill(0); oV.fill(0); }
     else if (this.nueva) {
-      /* lo que se vería ahora sin la foto nueva, y a qué velocidad: de ahí arranca el resorte */
-      for (let i = 0; i < 63; i++) { off[i] = pA[i] + vA[i] * dt - p[i]; oV[i] = vA[i] - this.vb[i]; }
+      /* el resorte se queda con lo que saltó lo de abajo (contra dónde iba a estar sin la foto nueva, y
+         a qué velocidad) y sigue con su propio movimiento. (No con la velocidad de lo que se veía: esa
+         incluye al resorte, y con una foto por cuadro se pasaba de largo cuadro por medio) */
+      for (let i = 0; i < 63; i++) { off[i] -= p[i] - (bA[i] + vbA[i] * h); oV[i] -= vb[i] - vbA[i]; }
       const c = centroPalma(off); if (Math.hypot(c[0], c[1], c[2]) > SNAP) { off.fill(0); oV.fill(0); }
     }
+    /* (después de un salto grande, la mano va de viaje hasta que llega: la yema no toca nada, así
+       no aprieta el menú de pasada. El rayo sí: apunta desde donde está de verdad) */
+    const oc = centroPalma(off), lejos = Math.hypot(oc[0], oc[1], oc[2]);
+    this.viaja = this.nueva && lejos > 0.08 ? true : this.viaja && lejos > 0.015;
     this.nueva = false;
-    /* (mientras el resorte está lejos, la mano va de viaje: no toca ni aprieta nada) */
-    const oc = centroPalma(off), viajaba = this.viaja; this.viaja = Math.hypot(oc[0], oc[1], oc[2]) > 0.03;
-    if (viajaba && !this.viaja) this.euroRayo.t = -1;   // (el rayo arranca de nuevo donde llegó)
     /* (la cuenta exacta del resorte crítico: estable con cualquier paso) */
     const w = 1 / TAU, e = Math.exp(-w * h);
     for (let i = 0; i < 63; i++) {
       const x0 = off[i], v0 = oV[i], a = v0 + w * x0;
       off[i] = (x0 + a * h) * e; oV[i] = (v0 - w * a * h) * e;
+      bA[i] = p[i]; vbA[i] = vb[i];
       p[i] += off[i];
-      vA[i] = this.seguida ? (p[i] - pA[i]) / Math.max(dt, 1e-3) : 0; pA[i] = p[i];
     }
-    this.seguida = true;
+    this.seguida = true; this.conResorte = true;
   }
 }
 
@@ -193,7 +198,9 @@ function geoCapsula(seg = 10, anillos = 4) {
   }
   for (let r = 0; r < filas.length - 1; r++) for (let s = 0; s < seg; s++) {
     const a = filas[r][s], b = filas[r][s + 1], c = filas[r + 1][s], d = filas[r + 1][s + 1];
-    idx.push(a, c, b, b, c, d);
+    /* (de afuera, en contra del reloj: la cara que se ve es la de afuera. Estuvo al revés hasta la
+       vuelta 14: se veía el lado de adentro de cada dedo, todo borde y blanco) */
+    idx.push(a, b, c, b, d, c);
   }
   const g = new THREE.InstancedBufferGeometry();
   g.setIndex(idx);
@@ -237,14 +244,14 @@ const FRAG_MANO = /* glsl */`
     /* una luz de arriba a la izquierda (en la vista) y el cielo: los dedos se separan por la sombra */
     float luz = max(0.0, dot(n, normalize(vec3(-0.35, 0.85, 0.4)))), cielo = 0.5 + 0.5 * n.y;
     float brillo = pow(max(0.0, dot(reflect(-v, n), normalize(vec3(-0.3, 0.8, 0.5)))), 28.0);
-    vec3 c = mix(vec3(0.27, 0.35, 0.46), uColor, 0.12 + 0.68 * luz + 0.2 * cielo);
+    vec3 c = mix(vec3(0.34, 0.43, 0.55), uColor, 0.18 + 0.62 * luz + 0.2 * cielo);
     /* el borde claro recorta cada dedo contra el fondo (como las manos de Quest) */
-    c = mix(c, uBorde, smoothstep(0.25, 0.9, f) * 0.85) + vec3(1.0) * brillo * 0.5;
+    c = mix(c, uBorde, smoothstep(0.22, 0.88, f) * 0.88) + vec3(1.0) * brillo * 0.5;
     /* el pellizco se enciende en las puntas */
     c = mix(c, vec3(0.5, 1.0, 1.0), vBr * (0.4 + 0.6 * f));
     /* el borde, suave en un píxel (si no, el contorno claro de cada dedo titila al moverse) */
     float ndv = max(0.0, dot(n, v)), aa = clamp(ndv / max(fwidth(ndv) * 1.5, 1e-4), 0.0, 1.0);
-    gl_FragColor = vec4(c, clamp((uOpacidad * (0.8 + 0.2 * f) + vBr * 0.25) * vAlfa * aa, 0.0, 1.0));
+    gl_FragColor = vec4(c, clamp((uOpacidad * (0.72 + 0.28 * f) + vBr * 0.25) * vAlfa * aa, 0.0, 1.0));
   }`;
 
 /* -------------------------------------------------- el menú de la muñeca */
@@ -445,7 +452,7 @@ export class Manos {
       M.alfa = M.visible ? Math.min(1, M.alfa + h / 0.08) : Math.max(0, M.alfa - h / 0.2);
       if (!M.visible) { M.pellizca = false; M.fuerza = 0; M.seguida = M.seguida && M.alfa > 0; continue; }
       M.adelantar(ts, this.adelanta && !xr);
-      if (!xr) M.suavizar(h); else M.seguida = true;
+      if (!xr) M.suavizar(h); else { M.seguida = true; M.conResorte = false; }
       /* el pellizco, con histéresis (se prende más cerrado de lo que se apaga) */
       const antes = M.pellizca;
       if (!M.pellizca && M.pell < 0.3) M.pellizca = true; else if (M.pellizca && M.pell > 0.46) M.pellizca = false;
@@ -463,7 +470,9 @@ export class Manos {
       const hombro = _c.set(cabP.x + Math.cos(yaw) * (M.derecha ? 0.17 : -0.17), cabP.y - 0.2, cabP.z - Math.sin(yaw) * (M.derecha ? 0.17 : -0.17));
       const mira = M.punto(2, _b).add(M.punto(5, _a)).multiplyScalar(0.5);
       M.rayoO.copy(mira);
-      if (ts > M.fijoHasta && !M.viaja) { const d = mira.clone().sub(hombro).normalize(); const f = M.euroRayo.filtrar([d.x, d.y, d.z], ts); M.rayoD.set(f[0], f[1], f[2]).normalize(); }
+      /* (la dirección, desde donde está la mano de verdad, sin el resorte: si no, al terminar de
+         deslizarse apuntaba unos grados corrido y el filtro del rayo tardaba en enderezarse) */
+      if (ts > M.fijoHasta) { const mv = M.puntoBase(2, _d).add(M.puntoBase(5, _e)).multiplyScalar(0.5), d = mv.sub(hombro).normalize(); const f = M.euroRayo.filtrar([d.x, d.y, d.z], ts); M.rayoD.set(f[0], f[1], f[2]).normalize(); }
       /* la yema del índice toca (burbujas, orbes) */
       if (!M.viaja) ctx.tocar?.(M.punto(8, _a), k);
     }
@@ -484,18 +493,19 @@ export class Manos {
     for (const [k, M] of this.manos.entries()) {
       const R = this.rayos[k], C = this.cursores[k];
       R.visible = C.visible = false;
-      if (!M.visible || M === palma || M.viaja) { if (M.solto) M.anulado = false; continue; }
+      if (!M.visible || M === palma) { if (M.solto) M.anulado = false; continue; }
       if (M.solto && M.anulado) { M.anulado = false; continue; }
       let fin = null;
       if (this.menu.abierto) {
         /* el dedo: se aprieta al cruzar el plano (de adelante hacia atrás) */
         const yema = M.punto(8, _a), pt = this.menu.enPunto(yema);
+        if (M.viaja) pt.i = -1;
         if (pt.i >= 0 && Math.abs(pt.prof) < 0.05) {
           if (this.menu.sobre !== pt.i) { this.menu.sobre = pt.i; this.menu.pintar(); }
           if (M.profAntes > 0.004 && pt.prof <= 0.004) this.apretar(pt.i, ev);
           M.profAntes = pt.prof; continue;
         }
-        M.profAntes = pt.prof;
+        M.profAntes = M.viaja ? undefined : pt.prof;
         const r = this.menu.enRayo(M.rayoO, M.rayoD);
         if (r) {
           fin = r.p;
