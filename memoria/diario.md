@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la mañana · `claude/fijate-iszyer`:**
+  - Pidió: "se estira demasiado y se dobla y deforma todo; tomate las horas que
+    sean para optimizar todo".
+  - Quedó ([aeroplaza-19](aeroplaza-19.md)): la mano como un cuerpo (palma con
+    centro y giro, dedos en la palma con su largo y bisagra). Se doblaban de
+    más 16° → 2,8°; el dedo que se cierra, 147 → 118 ms; tiembla menos.
+  - Falta: que diga si ahora se ve bien en su celu.
 - **27/09/2026, al amanecer · `claude/fijate-iszyer`:**
   - Pidió: "fluido, pero no sigue a la mano del todo bien; se estira, se
     deforma en vez de tener siempre la misma proporción".

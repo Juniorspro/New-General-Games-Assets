@@ -116,9 +116,11 @@ const E_CORTE = 1.2, E_BETA = 10, E_CORTED = 2.0;
 const C_CORTE = 2.7586, C_BETA = 33.0921, C_CORTED = 2.9938;
 const CH_CORTE = 2.0, CH_BETA = 20, CH_CORTED = 1.1853, CH_CRUCE = 0.3034;
 /* la forma de la mano (Mano.enderezar): la palma, un molde; los dedos, hueso por hueso */
-const PALMA6 = [0, 1, 5, 9, 13, 17];
+const PALMA6 = [0, 1, 5, 9, 13, 17], EN_PALMA = Array.from({ length: 21 }, (_, i) => PALMA6.includes(i));
 const DEDOS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
 const TRAMOS_DEDO = DEDOS.flatMap((d) => d.slice(1).map((b, k) => [d[k], b]));
+/* (las puntas que van como bisagra: cada una, con el nudillo de su dedo) */
+const BISAGRA = { 7: 5, 8: 5, 11: 9, 12: 9, 15: 13, 16: 13, 19: 17, 20: 17 };
 /* los ejes de la palma de 21 puntos: x de meñique a índice (por los nudillos), y de la muñeca al
    medio, z la normal; en e (9 números) */
 function ejesPalma(P, e) {
@@ -130,6 +132,179 @@ function ejesPalma(P, e) {
   e[0] = x0; e[1] = x1; e[2] = x2; e[3] = z1 * x2 - z2 * x1; e[4] = z2 * x0 - z0 * x2; e[5] = z0 * x1 - z1 * x0; e[6] = z0; e[7] = z1; e[8] = z2;
   return e;
 }
+/* el giro R que lleva el molde T (la palma en sus ejes, en el orden de PALMA6) a lo que se ve, v
+   (Kabsch: lo más parecido a Σ d·Tᵀ que es un giro; por el método iterativo de Müller y otros, 2016,
+   arrancando de q, los ejes de esa foto: tres o cuatro vueltas alcanzan) */
+const KABSCH = [0, 5, 9, 13, 17].map((i) => [PALMA6.indexOf(i), i]);
+function ajustarGiro(v, c, T, q) {
+  let a0 = 0, a1 = 0, a2 = 0, b0 = 0, b1 = 0, b2 = 0, c0 = 0, c1 = 0, c2 = 0;
+  for (const [k, i] of KABSCH) {
+    const d0 = v[i * 3] - c[0], d1 = v[i * 3 + 1] - c[1], d2 = v[i * 3 + 2] - c[2], t0 = T[k * 3], t1 = T[k * 3 + 1], t2 = T[k * 3 + 2];
+    a0 += d0 * t0; a1 += d1 * t0; a2 += d2 * t0; b0 += d0 * t1; b1 += d1 * t1; b2 += d2 * t1; c0 += d0 * t2; c1 += d1 * t2; c2 += d2 * t2;
+  }
+  for (let it = 0; it < 6; it++) {
+    const R = _mp.makeRotationFromQuaternion(q).elements;
+    const w0 = (R[1] * a2 - R[2] * a1) + (R[5] * b2 - R[6] * b1) + (R[9] * c2 - R[10] * c1);
+    const w1 = (R[2] * a0 - R[0] * a2) + (R[6] * b0 - R[4] * b2) + (R[10] * c0 - R[8] * c2);
+    const w2 = (R[0] * a1 - R[1] * a0) + (R[4] * b1 - R[5] * b0) + (R[8] * c1 - R[9] * c0);
+    const dn = Math.abs(R[0] * a0 + R[1] * a1 + R[2] * a2 + R[4] * b0 + R[5] * b1 + R[6] * b2 + R[8] * c0 + R[9] * c1 + R[10] * c2) + 1e-12;
+    _va.set(w0 / dn, w1 / dn, w2 / dn);
+    if (_va.lengthSq() < 1e-14) break;
+    q.premultiply(expQ(_va, _qb)).normalize();
+  }
+  return q;
+}
+/* los giros, como vectores (eje por ángulo) */
+const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion(), _va = new THREE.Vector3(), _vw = new THREE.Vector3(), _mp = new THREE.Matrix4();
+function logQ(q, out) {
+  let x = q.x, y = q.y, z = q.z, w = q.w; if (w < 0) { x = -x; y = -y; z = -z; w = -w; }
+  const s = Math.hypot(x, y, z), k = s > 1e-9 ? 2 * Math.atan2(s, w) / s : 2;
+  return out.set(x * k, y * k, z * k);
+}
+function expQ(v, out) {
+  const a = v.length(); if (a < 1e-9) return out.set(v.x / 2, v.y / 2, v.z / 2, 1).normalize();
+  const s = Math.sin(a / 2) / a; return out.set(v.x * s, v.y * s, v.z * s, Math.cos(a / 2));
+}
+/* -------------------------------------------------- la mano como un cuerpo, para la cámara (vuelta 19).
+   Filtrar y adelantar cada uno de los 21 puntos por su cuenta deformaba la mano: la velocidad de cada
+   punto tiene su ruido, y adelantada 0,1-0,2 s cada nudillo se iba unos milímetros para cualquier lado
+   (los dedos se doblaban 16° de más; con el doble de ruido, 32°). Acá la mano es:
+   - la PALMA, un cuerpo: su centro (con el filtro de costado y profundidad de siempre) y su giro (un
+     One Euro de cuaterniones, con su velocidad de giro);
+   - los DEDOS, en los ejes de la palma (EuroDedos), con la forma de quien juega (el largo de cada
+     hueso y el molde de la palma, Mano.aprenderForma). Lo que se mueven en la palma se adelanta solo
+     cuando el dedo entero se mueve de verdad.
+   Tiene lo mismo que EuroEjes (x y dx de los 21 puntos): el resto (adelantar, el resorte, las anclas)
+   anda igual, y la velocidad de cada punto es la de un cuerpo que se mueve y gira */
+/* los dedos en los ejes de la palma: un One Euro por coordenada, pero lo que lo abre es la velocidad
+   de todo el dedo (el promedio de sus tres puntos, sin el nudillo): el ruido de cada punto va por su
+   lado y se cancela; el dedo que se dobla los mueve a todos para el mismo lado */
+class EuroDedos {
+  constructor({ corte = 1.2, beta = 10, corteD = 1 } = {}) { this.x = new Float32Array(63); this.dx = new Float32Array(63); this.s = new Float32Array(21); this.t = -1; this.corte = corte; this.beta = beta; this.corteD = corteD; }
+  reiniciar(v, t) { this.x.set(v); this.dx.fill(0); this.t = t; }
+  filtrar(v, t) {
+    if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t); return this.x; }
+    const dt = Math.max(1e-3, t - this.t); this.t = t;
+    const ad = Euro.a(this.corteD, dt), x = this.x, dx = this.dx, s = this.s;
+    for (let i = 0; i < 63; i++) dx[i] += ad * ((v[i] - x[i]) / dt - dx[i]);
+    for (let p = 0; p < 21; p++) s[p] = Math.hypot(dx[p * 3], dx[p * 3 + 1], dx[p * 3 + 2]);
+    for (const d of DEDOS) {
+      let a = 0, b = 0, c = 0;
+      for (let k = 1; k < 4; k++) { const i = d[k] * 3; a += dx[i]; b += dx[i + 1]; c += dx[i + 2]; }
+      const sd = Math.hypot(a, b, c) / 3;
+      for (let k = 1; k < 4; k++) s[d[k]] = sd;
+    }
+    for (let p = 0; p < 21; p++) { const k = Euro.a(this.corte + this.beta * s[p], dt); for (let i = p * 3; i < p * 3 + 3; i++) x[i] += k * (v[i] - x[i]); }
+    return x;
+  }
+}
+class PoseMano {
+  constructor(lado, hondo, giro, dedos) {
+    this.x = new Float32Array(63); this.dx = new Float32Array(63); this.t = -1; this.r = [0, 0, -1];
+    this.centro = new EuroEjes(1, lado, hondo); this.giro = giro;
+    this.dedos = new EuroDedos(dedos); this.dedosAd = dedos.adelanto || 0; this.dedosV = [dedos.v0 || 0, dedos.v1 || 0];
+    this.q = new THREE.Quaternion(); this.qm = new THREE.Quaternion(); this.qAnt = new THREE.Quaternion(); this.w = new THREE.Vector3(); this.tm = -1;
+    this.Lm = new Float32Array(63); this.Lc = new Float32Array(63); this.c = [0, 0, 0]; this.e = new Float32Array(9); this.forma = null;
+  }
+  get Lf() { return this.dedos.x; }
+  /* de 21 puntos: el centro, el giro (qm) y la forma en los ejes de la palma (Lm) */
+  medir(v) {
+    const c = centroPalma(v, this.c), e = ejesPalma(v, this.e);
+    this.qm.setFromRotationMatrix(_mp.set(e[0], e[3], e[6], 0, e[1], e[4], e[7], 0, e[2], e[5], e[8], 0, 0, 0, 0, 1));
+    /* (con la forma aprendida, el giro que mejor lleva el molde de la palma a lo que se ve: con cinco
+       puntos y no con cuatro, tiembla menos. El nudillo del pulgar no: se mueve con el pulgar) */
+    if (this.forma && this.forma.n >= 20) {
+      ajustarGiro(v, c, this.forma.palma, this.qm);
+      const R = _mp.makeRotationFromQuaternion(this.qm).elements;
+      e[0] = R[0]; e[1] = R[1]; e[2] = R[2]; e[3] = R[4]; e[4] = R[5]; e[5] = R[6]; e[6] = R[8]; e[7] = R[9]; e[8] = R[10];
+    }
+    for (let i = 0; i < 21; i++) {
+      const d0 = v[i * 3] - c[0], d1 = v[i * 3 + 1] - c[1], d2 = v[i * 3 + 2] - c[2];
+      for (let q = 0; q < 3; q++) this.Lm[i * 3 + q] = d0 * e[q * 3] + d1 * e[q * 3 + 1] + d2 * e[q * 3 + 2];
+    }
+  }
+  reiniciar(v, t) {
+    this.medir(v); this.centro.reiniciar(this.c, t); this.q.copy(this.qm); this.qAnt.copy(this.qm); this.w.set(0, 0, 0);
+    this.dedos.reiniciar(this.Lm, t); this.t = this.tm = t; this.componer();
+  }
+  desde(x, t) { this.reiniciar(x, t); }
+  filtrar(v, t, r = this.r) {
+    this.r = r;
+    if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t); return this.x; }
+    const dt = Math.max(1e-3, t - this.t); this.t = t;
+    this.medir(v);
+    this.centro.filtrar(this.c, t, r);
+    /* el giro: la velocidad, de una foto a la otra (filtrada); lo filtrado va hacia lo medido, más
+       rápido cuanto más rápido gira */
+    const G = this.giro, qm = this.qm;
+    if (qm.dot(this.qAnt) < 0) qm.set(-qm.x, -qm.y, -qm.z, -qm.w);
+    const dtm = Math.max(1e-3, t - this.tm);
+    logQ(_qa.copy(qm).multiply(_qb.copy(this.qAnt).invert()), _va).multiplyScalar(1 / dtm);
+    this.w.lerp(_va, Euro.a(G.corteD, dt));
+    logQ(_qa.copy(qm).multiply(_qb.copy(this.q).invert()), _va);
+    _va.multiplyScalar(Euro.a(G.corte + G.beta * this.w.length(), dt));
+    this.q.premultiply(expQ(_va, _qa)).normalize();
+    this.qAnt.copy(qm); this.tm = t;
+    this.dedos.filtrar(this.Lm, t);
+    this.componer();
+    return this.x;
+  }
+  /* la forma de quien juega, en los ejes de la palma: la palma con su molde y cada dedo con el largo de
+     sus huesos (la dirección, la de lo filtrado) */
+  restringir() {
+    const F = this.forma, L = this.dedos.x, O = this.Lc; O.set(L);
+    if (!F || F.n < 5) return O;
+    PALMA6.forEach((i, k) => { O[i * 3] = F.palma[k * 3]; O[i * 3 + 1] = F.palma[k * 3 + 1]; O[i * 3 + 2] = F.palma[k * 3 + 2]; });
+    TRAMOS_DEDO.forEach(([a, b], k) => {
+      let d0 = L[b * 3] - L[a * 3], d1 = L[b * 3 + 1] - L[a * 3 + 1], d2 = L[b * 3 + 2] - L[a * 3 + 2];
+      /* (los dos huesos de la punta de los cuatro dedos se doblan solo hacia la palma, como una bisagra:
+         se les saca lo que se van de costado del primero. El ruido los torcía para los lados) */
+      const j = BISAGRA[b];
+      if (j !== undefined) {
+        const e0 = L[(j + 1) * 3] - L[j * 3], e1 = L[(j + 1) * 3 + 1] - L[j * 3 + 1];   // el primer hueso del dedo, en la palma (x, y)
+        const le = Math.hypot(e0, e1) || 1, ax = e1 / le, ay = -e0 / le, lat = d0 * ax + d1 * ay;   // el costado: el primer hueso por la normal de la palma
+        d0 -= ax * lat; d1 -= ay * lat;
+      }
+      const f = F.largo[k] / (Math.hypot(d0, d1, d2) || 1);
+      O[b * 3] = O[a * 3] + d0 * f; O[b * 3 + 1] = O[a * 3 + 1] + d1 * f; O[b * 3 + 2] = O[a * 3 + 2] + d2 * f;
+    });
+    return O;
+  }
+  /* los 21 puntos en el mundo, y su velocidad: la del centro más la del giro */
+  componer() {
+    const C = this.centro.x, V = this.centro.dx, R = _mp.makeRotationFromQuaternion(this.q).elements, L = this.restringir();
+    /* (la velocidad del giro entra de a poco entre w0 y w1 (rad/s): quieta, es ruido, y las puntas de
+       los dedos, lejos del centro, temblaban) */
+    const G = this.giro, w0 = G.w0 || 0, w1 = G.w1 || 0, wl = this.w.length(), u = w1 > w0 ? Math.min(1, Math.max(0, (wl - w0) / (w1 - w0))) : 1;
+    const w = _vw.copy(this.w).multiplyScalar(u * u * (3 - 2 * u));
+    for (let i = 0; i < 63; i += 3) {
+      const lx = L[i], ly = L[i + 1], lz = L[i + 2];
+      const r0 = R[0] * lx + R[4] * ly + R[8] * lz, r1 = R[1] * lx + R[5] * ly + R[9] * lz, r2 = R[2] * lx + R[6] * ly + R[10] * lz;
+      this.x[i] = C[0] + r0; this.x[i + 1] = C[1] + r1; this.x[i + 2] = C[2] + r2;
+      this.dx[i] = V[0] + w.y * r2 - w.z * r1; this.dx[i + 1] = V[1] + w.z * r0 - w.x * r2; this.dx[i + 2] = V[2] + w.x * r1 - w.y * r0;
+    }
+    /* (y lo que se mueven los dedos en la palma, solo si el dedo entero se mueve de verdad (entre v0 y
+       v1, m/s): quieto, esa velocidad es ruido, y adelantarla doblaba los dedos para cualquier lado.
+       La palma no: es su molde) */
+    const ad = this.dedosAd || 0, [v0, v1] = this.dedosV;
+    if (ad > 0) {
+      const D = this.dedos.dx, S = this.dedos.s;
+      for (let p = 0; p < 21; p++) {
+        if (EN_PALMA[p]) continue;
+        const u = v1 > v0 ? Math.min(1, Math.max(0, (S[p] - v0) / (v1 - v0))) : S[p] >= v0 ? 1 : 0, g = ad * u * u * (3 - 2 * u), i = p * 3;
+        if (!g) continue;
+        const a = D[i] * g, b = D[i + 1] * g, c = D[i + 2] * g;
+        this.dx[i] += R[0] * a + R[4] * b + R[8] * c; this.dx[i + 1] += R[1] * a + R[5] * b + R[9] * c; this.dx[i + 2] += R[2] * a + R[6] * b + R[10] * c;
+      }
+    }
+  }
+}
+/* el giro y los dedos (PoseMano): corte quieta (Hz), cuánto se abre por cada rad/s o m/s, el corte
+   de la velocidad (Hz) y entre qué velocidades entra su adelanto (w0-w1 rad/s, v0-v1 m/s); los dedos,
+   cuánto de lo que se mueven en la palma se adelanta (adelanto: 1, todo lo que tarda la cámara) */
+/* (de una búsqueda de 900 al azar y 240 alrededor de la mejor con herramientas/manos-lento.mjs, con las
+   semillas 1-5, el ruido de siempre y el doble; comprobado con las 6-10 y con dedos que fallan) */
+const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }, P_DEDOS = { corte: 0.707, beta: 2.534, corteD: 5.656, adelanto: 1.177, v0: 0.281, v1: 0.559 };
 /* lo que elige cada uno en el menú del VR ("Manos"): lo más que se adelanta por el atraso de la
    cámara (s), de costado y en profundidad, y las anclas (Mano.estabilizar): la zona (m), cuánto
    tiene que quedarse adentro para anclarse (tq), cuánto tiene que empujar el borde para soltarse (te)
@@ -148,7 +323,7 @@ class Mano {
   constructor(derecha) {
     this.derecha = derecha; this.visible = false; this.t = -1; this.conf = 0;
     this.euroIso = new Euro(63, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED });
-    this.euroEjes = new EuroEjes(21, { corte: C_CORTE, beta: C_BETA, corteD: C_CORTED }, { corte: CH_CORTE, beta: CH_BETA, corteD: CH_CORTED, cruce: CH_CRUCE });
+    this.euroEjes = new PoseMano({ corte: C_CORTE, beta: C_BETA, corteD: C_CORTED }, { corte: CH_CORTE, beta: CH_BETA, corteD: CH_CORTED, cruce: CH_CRUCE }, P_GIRO, P_DEDOS);
     this.euro = this.euroIso; this.rayo = null;   // (el de ejes, con la cámara: rayo es de los ojos a la mano)
     this.p = new Float32Array(63);        // lo que se dibuja (filtrado, adelantado y sin saltos)
     this.pellizca = false; this.fuerza = 0; this.tPellizco = -9; this.soltoEn = -9;
@@ -182,7 +357,7 @@ class Mano {
     this.faltas = 0;
     /* (el filtro según de dónde viene: con la cámara, el de ejes; si cambia, sigue desde donde estaba) */
     const F = ojo && !crudo ? this.euroEjes : this.euroIso;
-    if (F !== this.euro) { F.x.set(this.euro.x); F.dx.set(this.euro.dx); F.t = this.euro.t; this.euro = F; }
+    if (F !== this.euro) { if (F.desde) F.desde(this.euro.x, this.euro.t); else { F.x.set(this.euro.x); F.dx.set(this.euro.dx); F.t = this.euro.t; } this.euro = F; }
     if (ojo && !crudo) { const c = centroPalma(P), rx = c[0] - ojo.x, ry = c[1] - ojo.y, rz = c[2] - ojo.z, rl = Math.hypot(rx, ry, rz) || 1; this.rayo = [rx / rl, ry / rl, rz / rl]; }
     else this.rayo = null;
     if (crudo) { this.euro.reiniciar(P, t); }
@@ -205,7 +380,6 @@ class Mano {
         if (this.visible && salto < 0.25 && fueraPred && fueraMed) { this.rara++; return; }
       }
       this.rara = 0;
-      this.aprenderForma(P);
       if (!this.visible || salto > 0.25 || t - this.t > 0.5) {
         this.euro.reiniciar(P, t); this.euroRayo.t = -1; this.fijoHasta = 0;
         /* (si se estaba apagando cerca, llega deslizándose; si no, aparece donde está: se apaga la
@@ -213,6 +387,9 @@ class Mano {
         this.seguida = this.seguida && this.alfa > 0.3 && salto < SNAP;
         if (!this.seguida) { this.alfa = 0; this.gen++; this.seguidaAncla = false; }
       } else this.euro.filtrar(P, t, this.rayo);
+      /* (la forma, de los dedos filtrados en los ejes de la palma: con el ruido de cada foto, el largo
+         de los huesos salía más largo) */
+      if (this.euro === this.euroEjes) { this.aprenderForma(this.euroEjes.Lf); this.euroEjes.forma = this.forma; }
     }
     /* el atraso de la cámara, promediado (así el adelanto no cambia de foto en foto) */
     const lat = THREE.MathUtils.clamp(tLlego - t, 0, 0.4);
@@ -289,20 +466,17 @@ class Mano {
     const [a, b] = this.anclas;
     for (let i = 0; i < 63; i += 3) { p[i] += a.o[0] + b.o[0]; p[i + 1] += a.o[1] + b.o[1]; p[i + 2] += a.o[2] + b.o[2]; }
   }
-  /* la forma de la mano de quien juega, de las fotos (sin filtrar: la forma que da MediaPipe no depende
-     de lo lejos que esté): el largo de cada hueso de los dedos y la palma en sus propios ejes. Promedio
-     de las primeras 20 y después lento; una foto con un hueso mucho más largo o más corto no cuenta */
-  aprenderForma(P) {
-    const F = this.forma ||= { n: 0, largo: new Float32Array(TRAMOS_DEDO.length), palma: new Float32Array(18), e: new Float32Array(9) };
-    const a = F.n < 20 ? 1 / (F.n + 1) : 0.03;
-    const L = TRAMOS_DEDO.map(([i, j]) => Math.hypot(P[i * 3] - P[j * 3], P[i * 3 + 1] - P[j * 3 + 1], P[i * 3 + 2] - P[j * 3 + 2]));
-    if (F.n >= 20 && L.some((l, k) => l > F.largo[k] * 1.6 || l < F.largo[k] * 0.6)) return;
-    L.forEach((l, k) => { F.largo[k] += (l - F.largo[k]) * a; });
-    const e = ejesPalma(P, F.e), c = centroPalma(P);
-    PALMA6.forEach((i, k) => {
-      const d0 = P[i * 3] - c[0], d1 = P[i * 3 + 1] - c[1], d2 = P[i * 3 + 2] - c[2];
-      for (let q = 0; q < 3; q++) F.palma[k * 3 + q] += (d0 * e[q * 3] + d1 * e[q * 3 + 1] + d2 * e[q * 3 + 2] - F.palma[k * 3 + q]) * a;
-    });
+  /* la forma de la mano de quien juega, de los dedos filtrados en los ejes de la palma (L, 21 puntos con
+     el centro de la palma en 0): el largo de cada hueso de los dedos y el molde de la palma. Promedio de
+     las primeras 60 y después lento (1 %: con más rápido, el largo iba y venía con el ruido); una foto
+     con un hueso mucho más largo o más corto no cuenta */
+  aprenderForma(L) {
+    const F = this.forma ||= { n: 0, largo: new Float32Array(TRAMOS_DEDO.length), palma: new Float32Array(18) };
+    const a = F.n < 60 ? 1 / (F.n + 1) : 0.01;
+    const largos = TRAMOS_DEDO.map(([i, j]) => Math.hypot(L[i * 3] - L[j * 3], L[i * 3 + 1] - L[j * 3 + 1], L[i * 3 + 2] - L[j * 3 + 2]));
+    if (F.n >= 20 && largos.some((l, k) => l > F.largo[k] * 1.35 || l < F.largo[k] * 0.7)) return;
+    largos.forEach((l, k) => { F.largo[k] += (l - F.largo[k]) * a; });
+    PALMA6.forEach((i, k) => { for (let q = 0; q < 3; q++) F.palma[k * 3 + q] += (L[i * 3 + q] - F.palma[k * 3 + q]) * a; });
     F.n++;
   }
   /* que la mano dibujada tenga siempre la misma forma. Filtrar y adelantar cada punto por su cuenta la

@@ -314,7 +314,8 @@ En su propia nota: [aeroplaza-12](aeroplaza-12.md). Y después, el VR a 120, las
 [aeroplaza-15](aeroplaza-15.md). Las manos rápidas, medias o suaves y el rayo que baja:
 [aeroplaza-16](aeroplaza-16.md). Las manos con menos atraso (cupo, lector, GPU):
 [aeroplaza-17](aeroplaza-17.md). La mano que no se estira y el giro:
-[aeroplaza-18](aeroplaza-18.md).
+[aeroplaza-18](aeroplaza-18.md). La mano como un cuerpo, que no se dobla:
+[aeroplaza-19](aeroplaza-19.md).
 
 ## Trampas que ya se pagaron
 

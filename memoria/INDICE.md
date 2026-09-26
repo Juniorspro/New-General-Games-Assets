@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: la mano que no se estira, el giro, movimientos chicos).
+mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: la mano como un cuerpo, que no se dobla ni se deforma).
 
 ## Reglas que no se discuten
 
@@ -74,6 +74,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: la mano q
 | [aeroplaza-16](aeroplaza-16.md) | AEROPLAZA, decimoquinta vuelta: por qué las manos iban lentas, el filtro liviano con dos anclas (de costado y en profundidad), los tres niveles del menú (rápidas · medio · suaves), el rayo con la cámara desde los ojos (antes no bajaba), la segunda red que se apaga sola, `herramientas/manos-lento.mjs` y lo medido contra las vueltas 14 y 15 |
 | [aeroplaza-17](aeroplaza-17.md) | AEROPLAZA, decimosexta vuelta: dónde se iba el atraso de las manos (MediaPipe buscando dos manos busca palmas en cada foto: 74 contra 38 ms), el cupo por red, el worker lector (MediaStreamTrackProcessor) y su reloj, la carrera de la GPU, los niveles con su propio adelanto (búsqueda de 450), la cámara de mentira con manos (`manos-directo`) y lo que no sirvió (el modelo liviano) |
 | [aeroplaza-18](aeroplaza-18.md) | AEROPLAZA, decimoséptima vuelta: por qué la mano se estiraba (cada punto filtrado y adelantado por su cuenta) y cómo quedó siempre con la misma forma (`aprenderForma`, `enderezar`), el giro que se atrasaba por las anclas, rápidas sin pasear quieta, y las medidas nuevas de `manos-lento` (estira, giro, movimientos chicos) |
+| [aeroplaza-19](aeroplaza-19.md) | AEROPLAZA, decimoctava vuelta: por qué los dedos se doblaban (el adelanto de cada punto por el ruido de su velocidad) y la mano como un cuerpo (`PoseMano`: centro, giro con Kabsch, dedos en la palma con bisagra), los adelantos con compuerta (dedos y giro), `EuroDedos`, lo medido (dobla, el dedo que se cierra, MediaPipe de verdad) |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

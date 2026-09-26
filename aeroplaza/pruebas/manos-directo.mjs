@@ -21,15 +21,29 @@ const correr = async (cfg) => {
   const r = await pag.evaluate(async (cfg) => {
     window.AEROPLAZA_MANOS = cfg;
     const A = window.__A, ev = [];
-    const mc = new A.ManosCamara({ alLlegar: (lista, t, llego, cupo) => ev.push({ n: lista.length, t, llego, cupo, red: mc._red }) });
+    /* (la mano del juego, con lo que llega, dibujada a cada cuadro con la cabeza quieta: en el video la
+       mano es una foto que se mueve, su forma no cambia; lo que cambie la mano dibujada es error) */
+    const M = A.manos, q0 = new A.THREE.Quaternion(), p0 = new A.THREE.Vector3(), ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
+    M.activa = true; M.fuente = 'camara'; M.suavidad = 'media';
+    const HU = [[1, 2], [2, 3], [3, 4], [5, 6], [6, 7], [7, 8], [9, 10], [10, 11], [11, 12], [13, 14], [14, 15], [15, 16], [17, 18], [18, 19], [19, 20], [0, 5], [5, 9], [9, 13], [13, 17], [0, 17]];
+    const CA = [[0, 5, 6, 7, 8], [0, 9, 10, 11, 12], [0, 13, 14, 15, 16], [0, 17, 18, 19, 20]];
+    const medir = (P) => ({ l: HU.map(([i, j]) => Math.hypot(P[i * 3] - P[j * 3], P[i * 3 + 1] - P[j * 3 + 1], P[i * 3 + 2] - P[j * 3 + 2])), a: CA.flatMap((c) => c.slice(1, -1).map((b, k) => { const a = c[k], d = c[k + 2], u = [0, 1, 2].map((x) => P[b * 3 + x] - P[a * 3 + x]), v = [0, 1, 2].map((x) => P[d * 3 + x] - P[b * 3 + x]); return Math.acos(Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (Math.hypot(...u) * Math.hypot(...v) || 1)))) * 180 / Math.PI; })) });
+    const formas = { crudo: [], dibujo: [] };
+    let t0f = 0;
+    const cuadro = () => { const ahora = performance.now(); M.registrarCabeza(ahora, q0, p0, 0); M.actualizar(1 / 60, ahora, ctx); const v = M.manos.filter((m) => m.visible && m.alfa > 0.5); const rel = ahora - t0f; if (v.length === 1 && rel > 1500 && rel < 3800) formas.dibujo.push(medir(v[0].p)); if (window.__sigue) requestAnimationFrame(cuadro); };
+    window.__sigue = true; requestAnimationFrame(cuadro);
+    const mc = new A.ManosCamara({ alLlegar: (lista, t, llego, cupo) => { ev.push({ n: lista.length, t, llego, cupo, red: mc._red }); M.recibirCamara(lista, t, llego, cupo); const rel = llego - t0f; if (lista.length === 1 && rel > 1500 && rel < 3800) formas.crudo.push(medir(lista[0].puntos)); } });
     const rec = mc.recibir.bind(mc); window.__msgs = {}; mc.recibir = (d, red) => { mc._red = mc.redes.indexOf(red); mc._ms = d.ms; const k = mc._red + ':' + d.tipo + (d.error ? ':' + String(d.error).slice(0, 120) : ''); window.__msgs[k] = (window.__msgs[k] || 0) + 1; rec(d, red); };
     await mc.iniciarRed({ dos: true });
     const t1 = performance.now(); while ((mc.redes?.length || 0) < 2 && performance.now() - t1 < 30000) await new Promise((ok) => setTimeout(ok, 100));
     await mc.prender();
-    const t0 = performance.now();
+    const t0 = t0f = performance.now();
     await new Promise((ok) => setTimeout(ok, 13500));
     const out = { carrera: mc.carrera ? { fin: !!mc.carrera.fin, gpu: mc.carrera.gpu, porque: mc.carrera.porque, lista: !!mc.carrera.red, t0: mc.carrera.t0, med: mc.carrera.red ? JSON.stringify(mc.carrera.red.med) : null, cpu: JSON.stringify(mc.carrera.cpu?.med), cupo: mc.carrera.red?.cupo } : null, guardado: localStorage.getItem('aeroplaza.manosGPU'), msgs: window.__msgs, directo: mc.directo, reloj: mc.reloj, offMin: mc.stats.offMin, datos: mc.datos(), redes: mc.redes.map((x) => ({ cupo: x.cupo, apagada: !!x.apagada, ms1: x.med?.['1:1']?.ms, ms2: x.med?.['2:1']?.ms, n1: x.med?.['1:1']?.n || 0, n2: x.med?.['2:1']?.n || 0 })), apagada: mc.stats.segundaApagada, leidos: mc.stats.leidos, t0 };
-    mc.soltar();
+    mc.soltar(); window.__sigue = false;
+    /* cuánto cambia la forma: de cada hueso, el desvío de su largo (%); de cada nudillo, el de su ángulo (°) */
+    const desvio = (F, k, rel) => { const ns = F[0]?.[k].length || 0, r = []; for (let j = 0; j < ns; j++) { const xs = F.map((f) => f[k][j]), m = xs.reduce((a, b) => a + b, 0) / xs.length, sd = Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / xs.length); r.push(rel ? sd / m * 100 : sd); } return r.reduce((a, b) => a + b, 0) / Math.max(1, r.length); };
+    out.forma = { crudo: { huesos: desvio(formas.crudo, 'l', true), angulos: desvio(formas.crudo, 'a', false), n: formas.crudo.length }, dibujo: { huesos: desvio(formas.dibujo, 'l', true), angulos: desvio(formas.dibujo, 'a', false), n: formas.dibujo.length } };
     out.ev = ev.map((e) => ({ ...e, rel: e.llego - t0 }));
     return out;
   }, cfg);
@@ -68,6 +82,9 @@ prueba('con una mano, de la foto a la mano tarda mucho menos que antes', B.lat <
 const C = resumen(carrera);
 if (process.env.DETALLE) console.log('carrera', JSON.stringify(carrera.carrera).slice(0, 300), 'msgs', JSON.stringify(carrera.msgs), carrera.errores.slice(0, 3));
 prueba('la carrera de la GPU se corre y la pierde (acá la placa es por software); la mano sigue y queda guardado', carrera.carrera?.fin && carrera.carrera.gpu === false && !!carrera.guardado && C.una > 0.8, `${carrera.carrera?.porque} · la mano en el ${f(C.una * 100)} % de las fotos del tramo · ${carrera.datos}`);
+const Fo = ahora.forma;
+console.log(`forma (MediaPipe de verdad, la mano es una foto que se mueve): lo que llega, huesos ${f(Fo.crudo.huesos, 1)} % y nudillos ${f(Fo.crudo.angulos, 1)}° (${Fo.crudo.n} fotos) · lo dibujado, ${f(Fo.dibujo.huesos, 1)} % y ${f(Fo.dibujo.angulos, 1)}° (${Fo.dibujo.n} cuadros)`);
+prueba('la mano dibujada cambia de forma mucho menos que lo que da MediaPipe (huesos y nudillos)', Fo.dibujo.n > 30 && Fo.dibujo.huesos < Fo.crudo.huesos * 0.5 && Fo.dibujo.angulos < Fo.crudo.angulos * 0.7, `huesos ${f(Fo.crudo.huesos, 1)} → ${f(Fo.dibujo.huesos, 1)} % · nudillos ${f(Fo.crudo.angulos, 1)} → ${f(Fo.dibujo.angulos, 1)}°`);
 prueba('sin errores', ![...antes.errores, ...ahora.errores, ...carrera.errores].some((e) => !/ERR_FAILED|INFO: Created TensorFlow/.test(e)), [...antes.errores, ...ahora.errores, ...carrera.errores].filter((e) => !/ERR_FAILED|INFO: Created/.test(e)).slice(0, 2).join(' | '));
 await nav.close();
 console.log(`${bien} bien, ${mal} mal`);

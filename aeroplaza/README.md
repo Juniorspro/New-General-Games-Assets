@@ -138,9 +138,11 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
 - La primera vez, con la mano a la vista, se prueba MediaPipe en la GPU contra la
   CPU unos segundos y se queda con la que ande mejor en ese celu (se recuerda
   una semana).
-- La mano tiene siempre la misma forma: aprende de las fotos el largo de cada
-  hueso y la palma, y cada cuadro se arma con eso (no se estira al girar ni al
-  ir rápido).
+- La mano tiene siempre la misma forma y se mueve como un cuerpo: la palma con
+  su centro y su giro, y los dedos en la palma, cada hueso con su largo
+  aprendido. Las puntas de los dedos se doblan solo hacia la palma, y el
+  adelanto de los dedos y del giro entra solo cuando se mueven de verdad (no se
+  estira, no se dobla ni se deforma al girar o ir rápido).
 - **✋ Las manos: Rápidas · Medio · Suaves** (abajo de las llaves). Rápidas van
   pegadas a la mano y tiemblan un poco, como un Quest; Suaves, quietas no
   tiemblan y van un poco atrás. De entrada, Medio.
@@ -192,8 +194,9 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   (25/09: solo las canciones que manda quien pide).
 - `node herramientas/manos-lento.mjs [manos.js] [ms de la cámara]` mide las
   manos en movimientos lentos (el atraso, el temblor, cuánto se pasan al
-  frenar, cuánto se estiran, el giro y los movimientos chicos), para afinar las
-  constantes de `js/manos.js` (`SUAVE=`, `RED=`, `SEMILLAS=`, `CORTO=1`).
+  frenar, cuánto se estiran y se doblan los dedos, el giro, el dedo que se
+  cierra y los movimientos chicos), para afinar las constantes de
+  `js/manos.js` (`SUAVE=`, `RED=`, `SEMILLAS=`, `RUIDO=`, `CORTO=1`).
 - `pruebas/`:
   - `multijugador.mjs`: dos navegadores contra `broker.mjs`, un broker MQTT
     mínimo en Node puro;
@@ -218,7 +221,8 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   - `manos-directo.mjs`: de punta a punta, con una cámara de mentira que
     muestra manos de verdad (un video hecho con ffmpeg de las fotos de
     `pruebas/manos`) y MediaPipe de verdad: lo de antes contra lo de ahora, el
-    lector, el reloj y la carrera de la GPU;
+    lector, el reloj, la carrera de la GPU y cuánto cambia de forma la mano
+    dibujada contra la que llega;
   - `xr.mjs`: el Visor VR con IWER, el Quest 3 de mentira de Meta.
 
   MediaPipe e IWER se bajan con curl la primera vez y no se commitean.
