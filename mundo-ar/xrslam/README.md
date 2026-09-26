@@ -97,6 +97,48 @@ Trampas que aparecieron:
 - **La focal pesa:** con 3 % de error, 0,156 m; con 8 %, 0,41 m. Por eso se
   estima en vez de adivinarla por modelo de teléfono.
 
+## Piso, mesas y paredes (`web/planos.js`)
+
+Como los planos de ARCore, con geometría y sin entrenar nada. El mundo de
+XRSLAM tiene la gravedad bien puesta (z arriba), así que:
+
+1. Los puntos 3D del SLAM se **acumulan** en una grilla de 4 cm: XRSLAM sólo
+   da los de su ventana actual, unos 175.
+2. A cada punto se le calcula **la normal** con sus vecinos a menos de
+   35 cm. Sin eso, los puntos de una pared a una misma altura parecían
+   decenas de mesas.
+3. **Horizontales:** picos del histograma de alturas, separados en
+   superficies conectadas, con un ancho mínimo de 15 cm. **Piso:** el grande
+   más bajo por debajo de la cámara, y todo lo que está a su altura (±6 cm).
+4. **Paredes:** RANSAC de planos verticales, cortados donde hay huecos, y
+   los pedazos de la misma pared se juntan. La deriva del mapa desdobla una
+   pared en planos paralelos.
+
+Corre en su propio Worker (`planos-trabajador.js`), una vez cada 1,5 s. Se
+dibuja como grilla de puntitos: celeste el piso, blanco las mesas, violeta
+las paredes. Tocando el piso se pone la arena, y tocando una pared un cubo
+pegado a ella.
+
+Medido con EuRoC V1_01, llevando los planos al marco de la verdad
+(`planos-euroc.mjs` + `planos-verdad.py`):
+
+| | detectado | verdad |
+|---|---|---|
+| piso | 35 m² a **+0,023 m** y +0,074 m, inclinado 0,9° | 0 m (el origen Vicon está en el piso) |
+| pared principal | normal [−0,02, +1,00, −0,01], a 3,31 m, de 0,04 a 2,04 m de alto | pared de la sala, normal ±y |
+| pared perpendicular | normal [+1,00, −0,06, +0,01], a 3,45 m | pared de la sala, normal ±x |
+
+La detección tarda 50-350 ms (en su Worker; el dibujo sigue a 60).
+
+Para que esto anduviera hubo que arreglar XRSLAM (parche 5): **los puntos
+3D sólo salían con la inspección de depuración compilada**, así que sin
+ella nunca devolvía ninguno. Además pedía memoria en cada consulta y nunca
+la liberaba.
+
+Límite, el mismo que ARCore sin su API de profundidad: **una pared lisa, sin
+textura, no da puntos, y sin puntos no hay plano.** Para eso haría falta
+profundidad por red neuronal (ver abajo).
+
 ## Lo que se le cambió a XRSLAM (`parches/`)
 
 1. `base64.h` usa `uint32_t` sin `<cstdint>`: no compila con GCC nuevos.
@@ -107,6 +149,8 @@ Trampas que aparecieron:
    Antes arrancaba en la primera muestra posterior y el pedazo previo no se
    integraba. En EuRoC no se nota (cámara e IMU comparten reloj); con un
    navegador, donde no coinciden, sí.
+5. **Los puntos 3D del mapa salen siempre** (antes sólo con la inspección de
+   depuración) y sin pérdida de memoria.
 
 Y para la web, sin tocar XRSLAM:
 

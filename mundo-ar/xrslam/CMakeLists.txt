@@ -61,7 +61,7 @@ add_subdirectory(${XR}/xrslam-extra xrslam-extra)
 add_library(xrslam STATIC
   ${XR}/xrslam-interface/src/XRSLAMInternal.cpp
   ${XR}/xrslam-interface/src/XRSLAMManager.cpp)
-target_include_directories(xrslam PUBLIC ${XR}/xrslam-interface/include PRIVATE ${XR}/xrslam-interface/src)
+target_include_directories(xrslam PUBLIC ${XR}/xrslam-interface/include PRIVATE ${XR}/xrslam-interface/src ${XR}/xrslam/src)
 target_link_libraries(xrslam PUBLIC xrslam-extra-opencv-image xrslam-extra-yaml-config)
 
 if(EMSCRIPTEN)

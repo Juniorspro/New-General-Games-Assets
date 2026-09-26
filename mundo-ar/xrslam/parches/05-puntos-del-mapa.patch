@@ -1,0 +1,110 @@
+diff --git a/xrslam-interface/src/XRSLAMManager.cpp b/xrslam-interface/src/XRSLAMManager.cpp
+index 866cb8a..87ba798 100644
+--- a/xrslam-interface/src/XRSLAMManager.cpp
++++ b/xrslam-interface/src/XRSLAMManager.cpp
+@@ -1,4 +1,5 @@
+ #include "XRSLAMManager.h"
++#include <xrslam/core/sliding_window_tracker.h>
+ 
+ #define XRSLAM_VERSION "0.1.0"
+ 
+@@ -201,17 +202,20 @@ void XRSLAMManager::GetResultState(XRSLAMState *state) const {
+     }
+ }
+ void XRSLAMManager::GetResultLandmarks(XRSLAMLandmarks *landmarks) const {
+-    inspect_debug(sliding_window_landmarks, swlandmarks) {
+-        auto pts = std::any_cast<std::vector<xrslam::Landmark>>(swlandmarks);
+-        landmarks->num_landmarks = pts.size();
+-        landmarks->landmarks = new XRSLAMLandmark[pts.size()];
+-        for (int i = 0; i < pts.size(); i++) {
+-            xrslam::vector<3> cur_p = pts[i].p;
+-            landmarks->landmarks[i].x = cur_p(0);
+-            landmarks->landmarks[i].y = cur_p(1);
+-            landmarks->landmarks[i].z = cur_p(2);
+-        }
++    // Antes: sólo con la inspección de depuración compilada (si no, nunca
++    // devolvía nada) y con un new[] por llamada que nadie liberaba. Ahora el
++    // búfer es del manager y vale hasta la próxima llamada.
++    static std::vector<XRSLAMLandmark> bufer;
++    std::vector<xrslam::vector<3>> pts;
++    copiar_puntos_mapa(pts);
++    bufer.resize(pts.size());
++    for (size_t i = 0; i < pts.size(); i++) {
++        bufer[i].x = pts[i](0);
++        bufer[i].y = pts[i](1);
++        bufer[i].z = pts[i](2);
+     }
++    landmarks->num_landmarks = (int)bufer.size();
++    landmarks->landmarks = bufer.data();
+ }
+ 
+ void XRSLAMManager::GetResultFeatures(XRSLAMFeatures *features) const {}
+diff --git a/xrslam/src/xrslam/core/sliding_window_tracker.cpp b/xrslam/src/xrslam/core/sliding_window_tracker.cpp
+index 547fecf..c7d909a 100644
+--- a/xrslam/src/xrslam/core/sliding_window_tracker.cpp
++++ b/xrslam/src/xrslam/core/sliding_window_tracker.cpp
+@@ -1,3 +1,4 @@
++#include <mutex>
+ #include <xrslam/common.h>
+ #include <xrslam/core/detail.h>
+ #include <xrslam/core/feature_tracker.h>
+@@ -15,6 +16,21 @@
+ 
+ namespace xrslam {
+ 
++namespace {
++std::mutex g_puntos_mutex;
++std::vector<vector<3>> g_puntos_mapa;
++} // namespace
++
++void guardar_puntos_mapa(std::vector<vector<3>> puntos) {
++    std::lock_guard<std::mutex> lk(g_puntos_mutex);
++    g_puntos_mapa = std::move(puntos);
++}
++
++void copiar_puntos_mapa(std::vector<vector<3>> &salida) {
++    std::lock_guard<std::mutex> lk(g_puntos_mutex);
++    salida = g_puntos_mapa;
++}
++
+ SlidingWindowTracker::SlidingWindowTracker(std::unique_ptr<Map> keyframe_map,
+                                            std::shared_ptr<Config> config)
+     : map(std::move(keyframe_map)), config(config) {
+@@ -97,6 +113,22 @@ bool SlidingWindowTracker::track() {
+         refine_subwindow();
+     }
+ 
++    // Los puntos 3D del mapa, siempre (antes sólo salían con la inspección
++    // de depuración compilada): los usa quien quiera ver o analizar el mapa,
++    // por ejemplo para encontrar el piso y las paredes.
++    {
++        std::vector<vector<3>> puntos;
++        puntos.reserve(map->track_num());
++        for (size_t i = 0; i < map->track_num(); ++i) {
++            if (Track *track = map->get_track(i)) {
++                if (track->tag(TT_VALID) && track->tag(TT_TRIANGULATED)) {
++                    puntos.push_back(track->get_landmark_point());
++                }
++            }
++        }
++        guardar_puntos_mapa(std::move(puntos));
++    }
++
+     inspect_debug(sliding_window_landmarks, landmarks) {
+         std::vector<Landmark> points;
+         points.reserve(map->track_num());
+diff --git a/xrslam/src/xrslam/core/sliding_window_tracker.h b/xrslam/src/xrslam/core/sliding_window_tracker.h
+index 14bbf81..0fa8d95 100644
+--- a/xrslam/src/xrslam/core/sliding_window_tracker.h
++++ b/xrslam/src/xrslam/core/sliding_window_tracker.h
+@@ -6,6 +6,10 @@
+ 
+ namespace xrslam {
+ 
++// Los puntos 3D triangulados de la ventana actual (en el mundo de XRSLAM).
++void guardar_puntos_mapa(std::vector<vector<3>> puntos);
++void copiar_puntos_mapa(std::vector<vector<3>> &salida);
++
+ class Config;
+ class Frame;
+ class Map;

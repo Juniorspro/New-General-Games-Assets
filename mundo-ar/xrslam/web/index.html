@@ -106,6 +106,7 @@
   <div class="hud" id="hud"><b>0</b> puntos</div>
   <div class="botones">
     <button id="b-linterna" type="button">Linterna: no</button>
+    <button id="b-planos" type="button">Planos: sí</button>
     <button id="b-puntos" type="button">Mapa: no</button>
     <button id="b-recalibrar" type="button">Recalibrar</button>
     <button id="b-reiniciar" type="button">Reiniciar</button>
@@ -204,7 +205,13 @@ function ponerBlancoSuelto(pos) {
   const g = new THREE.Group(); g.position.copy(pos); mundo.add(g);
   nuevoBlanco(g, 0, 0.12, 0, 0.1, azar() < 0.5 ? DORADO : VIOLETA, { cx: 0, cz: 0, radio: 0.15, yMin: 0.08, yMax: 0.25 });
 }
-function reiniciarMundo() { mundo.clear(); blancos.length = 0; girando.length = 0; anillo = arena = null; puntos = combo = tocados = 0; mundo.add(nube); }
+function reiniciarMundo() {
+  mundo.clear(); blancos.length = 0; girando.length = 0; anillo = arena = null; puntos = combo = tocados = 0;
+  mundo.add(nube); mundo.add(grupoPlanos);
+  for (const m of mallasPlanos.values()) { m.geometry.dispose(); grupoPlanos.remove(m); }
+  mallasPlanos.clear(); pisoY = null;
+  if (typeof trabajadorPlanos !== "undefined") trabajadorPlanos.postMessage({ tipo: "borrar" });
+}
 function animar(t, dt) {
   for (const m of blancos) {
     const u = m.userData;
@@ -249,6 +256,55 @@ function tocarBlancos(t) {
 // Los puntos del mapa de XRSLAM, para ver qué está siguiendo.
 const nube = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0x5ce1ff, size: 3, sizeAttenuation: false }));
 nube.visible = false; mundo.add(nube);
+
+// ── los planos (piso, mesas, paredes), dibujados como los de ARCore: una
+// grilla de puntitos que se desvanece hacia el borde ──
+const grupoPlanos = new THREE.Group(); mundo.add(grupoPlanos);
+const mallasPlanos = new Map();   // id → malla
+const COLOR_PLANO = { piso: new THREE.Color("#5ce1ff"), horizontal: new THREE.Color("#ffffff"), pared: new THREE.Color("#b58cff") };
+const materialPlano = (color) => new THREE.ShaderMaterial({
+  uniforms: { uColor: { value: color } },
+  vertexShader: `attribute vec2 uvm; varying vec2 vUv; void main() { vUv = uvm; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform vec3 uColor; varying vec2 vUv;
+    void main() {
+      vec2 g = fract(vUv / 0.12) - 0.5;                       // un puntito cada 12 cm
+      float punto = smoothstep(0.16, 0.09, length(g));
+      gl_FragColor = vec4(uColor, 0.07 + 0.55 * punto);
+    }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+});
+function mallaDePlano(p) {
+  // Del mundo de XRSLAM (z arriba) a three (y arriba): (x, y, z) → (x, z, −y).
+  const v = p.poligono.map((q) => [q[0], q[2], -q[1]]);
+  const pos = [], uv = [];
+  const uvDe = (q) => p.tipo === "pared"
+    ? [(q[0] - v[0][0]) * -p.normal[1] + (q[2] - v[0][2]) * -p.normal[0], q[1]]   // a lo largo de la pared y altura
+    : [q[0], q[2]];
+  for (let i = 1; i + 1 < v.length; i++) for (const q of [v[0], v[i], v[i + 1]]) { pos.push(...q); uv.push(...uvDe(q)); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("uvm", new THREE.Float32BufferAttribute(uv, 2));
+  return g;
+}
+function actualizarPlanos(planos) {
+  const vivos = new Set();
+  for (const p of planos) {
+    vivos.add(p.id);
+    let m = mallasPlanos.get(p.id);
+    if (!m) { m = new THREE.Mesh(new THREE.BufferGeometry(), materialPlano(COLOR_PLANO[p.tipo])); m.renderOrder = -1; mallasPlanos.set(p.id, m); grupoPlanos.add(m); }
+    m.geometry.dispose(); m.geometry = mallaDePlano(p);
+    m.material.uniforms.uColor.value = COLOR_PLANO[p.tipo];
+    // La normal en three, para saber de qué lado pegar las cosas.
+    m.userData = { tipo: p.tipo, normal: new THREE.Vector3(p.normal[0], p.normal[2], -p.normal[1]) };
+  }
+  for (const [id, m] of mallasPlanos) if (!vivos.has(id)) { m.geometry.dispose(); grupoPlanos.remove(m); mallasPlanos.delete(id); }
+}
+function ponerCuadro(punto, normal) {
+  // Un blanco pegado a la pared, del lado de la cámara.
+  const n = normal.clone(); if (n.dot(camara.position.clone().sub(punto)) < 0) n.negate();
+  const g = new THREE.Group(); g.position.copy(punto.clone().addScaledVector(n, 0.07)); mundo.add(g);
+  nuevoBlanco(g, 0, 0, 0, 0.1, azar() < 0.5 ? DORADO : VIOLETA, { cx: 0, cz: 0, radio: 0.02, yMin: -0.02, yMax: 0.02 });
+}
 
 // ───────────────────── ejes: XRSLAM → three.js ─────────────────────
 // XRSLAM: mundo con z arriba (la gravedad va por −z); cámara con x derecha,
@@ -526,24 +582,33 @@ trabajador.onmessage = (e) => {
     }
   } else if (m.tipo === "puntos") {
     const d = m.p, pts = new Float32Array(d.length);
-    const alturas = [];
-    for (let i = 0; i < d.length; i += 3) { pts[i] = d[i]; pts[i + 1] = d[i + 2]; pts[i + 2] = -d[i + 1]; alturas.push(d[i + 2]); }
+    for (let i = 0; i < d.length; i += 3) { pts[i] = d[i]; pts[i + 1] = d[i + 2]; pts[i + 2] = -d[i + 1]; }
     nube.geometry.setAttribute("position", new THREE.BufferAttribute(pts, 3));
     nube.geometry.computeBoundingSphere();
-    // El piso: la altura (el mundo de XRSLAM tiene la gravedad bien puesta)
-    // con más puntos por debajo de la cámara, en tramos de 3 cm.
-    if (pose) {
-      const debajo = alturas.filter((z) => z < pose.p.y - 0.4 && z > pose.p.y - 2.2);
-      if (debajo.length > 25) {
-        const cajas = new Map();
-        for (const z of debajo) { const k = Math.round(z / 0.03); cajas.set(k, (cajas.get(k) || 0) + 1); }
-        let mk = 0, mv = 0;
-        for (const [k, v] of cajas) { const s = v + (cajas.get(k - 1) || 0) + (cajas.get(k + 1) || 0); if (s > mv) { mv = s; mk = k; } }
-        if (mv > 12) pisoY = mk * 0.03;
-      }
-    }
+    // Al detector de planos, en el marco de XRSLAM (el mapa se acumula allá).
+    trabajadorPlanos.postMessage({ tipo: "puntos", p: d, t: performance.now() / 1000 });
   }
 };
+
+// ── detección de planos: en su Worker, una vez por segundo y medio ──
+const trabajadorPlanos = new Worker(new URL("./planos-trabajador.js", import.meta.url), { type: "module" });
+trabajadorPlanos.addEventListener("error", (e) => window.__falla("El detector de planos no arrancó: " + (e.message || "sin detalle")));
+let planosInfo = { n: 0, paredes: 0, piso: false, ms: 0, tamano: 0 }, detectando = false;
+trabajadorPlanos.onmessage = (e) => {
+  const m = e.data;
+  if (m.tipo !== "planos") return;
+  detectando = false;
+  if (fase !== "slam") return;
+  actualizarPlanos(m.planos);
+  pisoY = m.alturaPiso;   // la z de XRSLAM es la y de three
+  planosInfo = { n: m.planos.length, paredes: m.planos.filter((p) => p.tipo === "pared").length, piso: m.alturaPiso !== null, ms: m.ms, tamano: m.tamano };
+  window.__XR.planos = m.planos;
+};
+setInterval(() => {
+  if (fase !== "slam" || !pose || detectando) return;
+  detectando = true;
+  trabajadorPlanos.postMessage({ tipo: "detectar", cam: [pose.p.x, -pose.p.z, pose.p.y] });
+}, 1500);
 
 // Entre dos poses del SLAM la cámara 3D se adelanta con el giróscopo, que
 // llega a 60-100 Hz: el mundo no se retrasa aunque el SLAM vaya a 10-15.
@@ -582,6 +647,15 @@ lienzo.addEventListener("pointerdown", (e) => {
   if (fase !== "slam" || !pose) return;
   rayo.setFromCamera(ndcDe(e.clientX, e.clientY), camara);
   if (tocarBlancos(reloj.elapsedTime)) return;
+  // Primero los planos detectados: piso o mesa → arena o cubo; pared → cubo pegado.
+  const golpe = grupoPlanos.visible ? rayo.intersectObjects([...mallasPlanos.values()], false)[0] : null;
+  if (golpe && golpe.distance < 8) {
+    const u = golpe.object.userData;
+    if (u.tipo === "pared") ponerCuadro(golpe.point, u.normal);
+    else if (u.tipo === "piso" && !arena) ponerArena(golpe.point);
+    else ponerBlancoSuelto(golpe.point);
+    return;
+  }
   const y = pisoY !== null ? pisoY : pose.p.y - 1.3;
   const p = rayo.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -y), new THREE.Vector3());
   if (p && p.distanceTo(pose.p) < 6) { if (!arena) ponerArena(p); else ponerBlancoSuelto(p); }
@@ -603,7 +677,9 @@ renderer.setAnimationLoop(() => {
   if (fase !== "inicio" && !PRUEBA && ahora - tArranque > 3000 && hzIMU === 0 && cuentaIMU === 0) {
     avisar("No llegan datos del giróscopo: este navegador no los da (o falta el permiso de movimiento). Sin IMU XRSLAM no puede andar.");
   } else if (fase === "slam") {
-    if (estadoSlam === 1) avisar(!arena ? "Tocá el piso para poner la arena · tocá los cubos" : "Tocá los cubos · caminá alrededor: tienen que quedarse quietos");
+    if (estadoSlam === 1) avisar(!planosInfo.piso ? "Apuntá al piso y caminá un poco: estoy buscando el piso y las paredes"
+      : !arena ? "Tocá el piso (la grilla celeste) para poner la arena · las paredes también se tocan"
+      : "Tocá los cubos · caminá alrededor: tienen que quedarse quietos");
     else if (estadoSlam === 2) avisar("Se perdió: volvé a apuntar a donde estabas");
     else avisar("Arrancando el SLAM: mové el teléfono de costado, despacio (hace falta movimiento)");
   }
@@ -620,6 +696,7 @@ function pintarHud() {
     (calib ? `desfase ${(calib.desfase * 1000).toFixed(0)} ms · focal ${calib.focal.toFixed(0)} px${calib.montaje ? " · montaje " + calib.montaje : ""}<br>` : "") +
     (fase === "calibrando" ? `cámara ${fpsCam}/s · flujos ${flujos.length}` + (ultimoIntento ? ` · r² ${ultimoIntento.r2.toFixed(2)} · corr ${ultimoIntento.correlacion.toFixed(2)} · giro ${ultimoIntento.exX.toFixed(2)}/${ultimoIntento.exY.toFixed(2)} · f ${ultimoIntento.focal.toFixed(0)} · d ${(ultimoIntento.desfase * 1000).toFixed(0)} ms` : "") + "<br>" : "") +
     (Object.keys(relojes).some((k) => relojes[k].raro) ? `relojes corregidos: ${Object.keys(relojes).filter((k) => relojes[k].raro).join(", ")}<br>` : "") +
+    (fase === "slam" ? `planos ${planosInfo.n}: piso ${planosInfo.piso ? "sí" : "—"} · paredes ${planosInfo.paredes} · mapa ${planosInfo.tamano} pts · ${planosInfo.ms.toFixed(0)} ms<br>` : "") +
     `pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)} m${pisoY !== null ? ` · piso ${(pisoY - p.y).toFixed(2)}` : ""}`;
 }
 
@@ -629,6 +706,7 @@ $("#b-linterna").addEventListener("click", async () => {
   try { await pista.applyConstraints({ advanced: [{ torch: !linterna }] }); linterna = !linterna; } catch (e) { /* no deja */ }
   $("#b-linterna").textContent = linterna ? "Linterna: sí" : "Linterna: no";
 });
+$("#b-planos").addEventListener("click", () => { grupoPlanos.visible = !grupoPlanos.visible; $("#b-planos").textContent = grupoPlanos.visible ? "Planos: sí" : "Planos: no"; });
 $("#b-puntos").addEventListener("click", () => { nube.visible = !nube.visible; $("#b-puntos").textContent = nube.visible ? "Mapa: sí" : "Mapa: no"; });
 $("#b-recalibrar").addEventListener("click", () => { trabajador.postMessage({ tipo: "destruir" }); calib = null; empezarCalibracion(); });
 $("#b-reiniciar").addEventListener("click", () => { if (fase === "slam") arrancarSlam(); });
@@ -756,6 +834,16 @@ async function arrancarPrueba() {
 // Para las pruebas automáticas.
 window.__XR = { estado: () => ({ fase, estadoSlam, fpsSlam, msSlam, fpsDib, ancho, alto, calib, pisoY, puntos, tocados, blancos: blancos.length,
   anillo: !!anillo, arena: !!arena, pos: pose ? pose.p.toArray() : null, t: pose ? pose.t : null, hzIMU, fuenteIMU }), camara, THREE };
+// Para las pruebas: dónde tocar en pantalla para dar con un plano de ese tipo.
+window.__XR.buscarEnPantalla = (tipo) => {
+  for (let fy = 0.95; fy > 0.05; fy -= 0.05) for (let fx = 0.1; fx < 0.9; fx += 0.05) {
+    const x = fx * innerWidth, y = fy * innerHeight;
+    rayo.setFromCamera(ndcDe(x, y), camara);
+    const g = rayo.intersectObjects([...mallasPlanos.values()], false)[0];
+    if (g && g.object.userData.tipo === tipo && g.distance < 8) return [x, y];
+  }
+  return null;
+};
 trabajador.addEventListener("message", (e) => { if (e.data.tipo === "pose" && e.data.camara && window.__XR.poses) window.__XR.poses.push([e.data.t, ...e.data.camara]); });
 </script>
 </body>

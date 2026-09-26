@@ -12,7 +12,7 @@
 //   {tipo: "pose", estado, t, camara: [x, y, z, qx, qy, qz, qw], ms}
 //        cada vez que aparece una pose nueva (una imagen se procesa recién
 //        cuando llega IMU posterior a ella: puede aparecer tras un "giro")
-//   {tipo: "puntos", p: Float64Array}          cada ~15 cuadros
+//   {tipo: "puntos", p: Float64Array}          cada 8 cuadros
 //   {tipo: "libre", ms}                        ya se procesó el último cuadro
 //        (XRSLAM lo procesa cuando el giróscopo Y el acelerómetro pasan su
 //        hora); ms = lo que costó, IMU incluida. Recién ahí conviene mandar otro.
@@ -78,7 +78,7 @@ function atender(m) {
     M._xr_imagen(m.t, pImg, m.ancho);
     tPendiente = m.t;
     avisarPose();
-    if (++cuadros % 15 === 0) {
+    if (++cuadros % 8 === 0) {
       const k = M._xr_puntos(pPts, MAX_PUNTOS);
       postMessage({ tipo: "puntos", p: M.HEAPF64.slice(pPts / 8, pPts / 8 + k * 3) });
     }

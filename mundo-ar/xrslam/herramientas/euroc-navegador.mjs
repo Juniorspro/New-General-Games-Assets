@@ -53,7 +53,7 @@ while (Date.now() - t0 < seg * 1000) {
   await new Promise((ok) => setTimeout(ok, 2000));
   const e = await p.evaluate(() => window.__XR.estado());
   muestras.push(e);
-  if ((Date.now() - t0) / 1000 > 12 + captura * 30 && captura < 4) await p.screenshot({ path: path.join(salida, `captura-${captura++}.png`) });
+  if ((Date.now() - t0) / 1000 > 30 + captura * 25 && captura < 4) await p.screenshot({ path: path.join(salida, `captura-${captura++}.png`) });
   if (await p.evaluate(() => window.__XR.fin && window.__XR.fin())) break;
 }
 const poses = await p.evaluate(() => window.__XR.poses);
@@ -62,6 +62,18 @@ const ult = muestras[muestras.length - 1];
 const med = (k) => { const v = muestras.filter((m) => m.fase === "slam").map((m) => m[k]).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : 0; };
 console.log(`poses ${poses.length} · SLAM ${med("fpsSlam")} cuadros/s (mediana) · ${med("msSlam").toFixed(0)} ms por cuadro · dibujo ${med("fpsDib")}/s · ${ult.ancho}×${ult.alto}`);
 if (ult.calib) console.log(`calibración: desfase ${(ult.calib.desfase * 1000).toFixed(1)} ms · focal ${ult.calib.focal.toFixed(1)} px · r² ${ult.calib.calidad.toFixed(3)}${ult.calib.qbc ? " · q_bc [" + ult.calib.qbc.map((v) => v.toFixed(3)).join(", ") + "]" : ""}`);
+if (process.env.TOCAR_PISO) {
+  // Toca donde la cámara ve un plano de piso (se busca proyectando sus vértices).
+  const xy = await p.evaluate(() => window.__XR.buscarEnPantalla("piso"));
+  const xyPared = await p.evaluate(() => window.__XR.buscarEnPantalla("pared"));
+  if (xyPared) { const antes = (await p.evaluate(() => window.__XR.estado())).blancos; await p.mouse.click(xyPared[0], xyPared[1]); await new Promise((ok) => setTimeout(ok, 300));
+    console.log("toque en una pared:", xyPared.map(Math.round), "→ blancos", antes, "→", (await p.evaluate(() => window.__XR.estado())).blancos); }
+  if (xy) { await p.mouse.click(xy[0], xy[1]); await new Promise((ok) => setTimeout(ok, 500)); }
+  console.log("toque en el piso:", xy ? xy.map(Math.round) : "no había piso a la vista", "→ arena", (await p.evaluate(() => window.__XR.estado())).arena);
+}
+const pl = await p.evaluate(() => (window.__XR.planos || []).map((q) => ({ tipo: q.tipo, puntos: q.puntos, area: q.area })));
+console.log(`planos: ${pl.length} · piso ${pl.filter((q) => q.tipo === "piso").length} · horizontales ${pl.filter((q) => q.tipo === "horizontal").length} · paredes ${pl.filter((q) => q.tipo === "pared").length}` +
+  ` · HUD: ${await p.evaluate(() => document.querySelector("#hud").innerText.split("\n").find((l) => l.startsWith("planos")) || "")}`);
 console.log("aviso al final:", await p.evaluate(() => document.querySelector("#aviso").firstChild.textContent));
 console.log(`anillo ${ult.anillo} · piso ${ult.pisoY === null ? "—" : ult.pisoY.toFixed(2)} · errores ${errores.length ? "\n  " + errores.slice(0, 8).join("\n  ") : 0}`);
 await nav.close(); serv.close();
