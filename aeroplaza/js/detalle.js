@@ -52,18 +52,22 @@ export class Detalle {
       o.getWorldPosition(V);
       this.piezas.push({ o, d: cortable(o), off: ESF.center.clone().sub(V), r: ESF.radius });
     }
-    g.traverse((o) => {
-      if (!o.isInstancedMesh || (o.count < 12 && !o.userData.copias) || o.userData.sinCorte || o.parent?.isArboleda) return;
-      const n = o.count, pos = new Float32Array(n * 3), mat = o.instanceMatrix.array.slice(0, n * 16), col = o.instanceColor ? o.instanceColor.array.slice(0, n * 3) : null;
-      o.updateMatrixWorld();
-      /* (la esfera para el recorte de cámara se calcula con todas: si no, después quedaría chica) */
-      o.computeBoundingSphere(); o.computeBoundingBox?.();
-      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-      for (let i = 0; i < n; i++) { M.fromArray(mat, i * 16); V.setFromMatrixPosition(M).applyMatrix4(o.matrixWorld); pos.set([V.x, V.y, V.z], i * 3); x0 = Math.min(x0, V.x); x1 = Math.max(x1, V.x); z0 = Math.min(z0, V.z); z1 = Math.max(z1, V.z); }
-      /* (si están todas juntas, conviene la pieza entera o nada) */
-      if (Math.max(x1 - x0, z1 - z0) < 40) return;
-      this.inst.push({ o, n, pos, mat, col, version: o.instanceMatrix.version, hay: n, alc: o.userData.alcance ?? Infinity });
-    });
+    g.traverse((o) => this.registrar(o));
+  }
+  /* las instancias que se agregan después (instanciar.js: las copias, a los dos segundos) */
+  sumar(lista) { if (this.inst && this.reino && !this.reino.primeraPersona && !this.reino.interior) for (const o of lista) this.registrar(o); this.t = 9; }
+  /* una instancia quieta: se guarda entera y se dibujan las de cerca */
+  registrar(o) {
+    if (!o.isInstancedMesh || (o.count < 12 && !o.userData.copias) || o.userData.sinCorte || o.parent?.isArboleda) return;
+    const n = o.count, pos = new Float32Array(n * 3), mat = o.instanceMatrix.array.slice(0, n * 16), col = o.instanceColor ? o.instanceColor.array.slice(0, n * 3) : null;
+    o.updateMatrixWorld();
+    /* (la esfera para el recorte de cámara se calcula con todas: si no, después quedaría chica) */
+    o.computeBoundingSphere(); o.computeBoundingBox?.();
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let i = 0; i < n; i++) { M.fromArray(mat, i * 16); V.setFromMatrixPosition(M).applyMatrix4(o.matrixWorld); pos.set([V.x, V.y, V.z], i * 3); x0 = Math.min(x0, V.x); x1 = Math.max(x1, V.x); z0 = Math.min(z0, V.z); z1 = Math.max(z1, V.z); }
+    /* (si están todas juntas, conviene la pieza entera o nada) */
+    if (Math.max(x1 - x0, z1 - z0) < 40) return;
+    this.inst.push({ o, n, pos, mat, col, version: o.instanceMatrix.version, hay: n, alc: o.userData.alcance ?? Infinity });
   }
   /* cada 0,35 s: lim es la distancia de la calidad (Infinity: todo) */
   actualizar(dt, cam, Q, bajoAgua = false) {

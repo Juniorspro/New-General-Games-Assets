@@ -52,7 +52,7 @@ import { VR } from './vr.js';
 import { ManosCamara } from './manos-camara.js';
 import { Manos } from './manos.js';
 import { VisorXR } from './vr-xr.js';
-import { instanciarCopias, revisarCopias } from './instanciar.js';
+import { candidatasCopias, instanciarCopias, revisarCopias } from './instanciar.js';
 import { Sonido } from '../../brillo/js/sonido.js';
 import '../../brillo/js/canciones.js';
 
@@ -350,8 +350,10 @@ async function iniciar() {
     limpiarArboledas();
     motor.aplicarPS1(reino.grupo);
     motor.simplificar(); motor.ajustarShaders();   // (toda la escena: también el muñeco propio y los de los demás)
-    /* las copias quietas de un mismo modelo, en una llamada por material (instanciar.js); una vez por lugar */
-    if (!reino.primeraPersona && !reino.interior && !reino._copias) reino._copias = Q.has('sinInstanciar') ? [] : instanciarCopias(reino.grupo);
+    /* las copias quietas de un mismo modelo, en una llamada por material (instanciar.js): se anotan
+       ahora y se instancian a los dos segundos las que no se movieron; una vez por lugar */
+    if (!reino.primeraPersona && !reino.interior && !reino._copias && !reino._cand && !Q.has('sinInstanciar')) reino._cand = candidatasCopias(reino.grupo);
+    J._tCand = 0;
     detalle.preparar(reino);
     cielo.ponerModo(reino.cielo || {});
     if (Q.has('hora') && reino.cielo?.hora == null) cielo.ponerModo({ ...(reino.cielo || {}), hora: +Q.get('hora') });
@@ -1014,6 +1016,7 @@ async function iniciar() {
     if (tuto) seguirTuto(dt, E);
     tHud += dt; if (tHud > 0.25) { tHud = 0; UI.actualizarHud(); }
     /* (y cada segundo, si alguna copia se movió o la cambiaron, vuelve a ser pieza suelta) */
+    if (reino._cand && (J._tCand = (J._tCand || 0) + dt) > 2) { reino._copias = instanciarCopias(reino._cand); reino._cand = null; detalle.sumar(reino._copias); }
     J._tCopias = (J._tCopias || 0) + dt; if (J._tCopias > 1 && reino._copias?.length) { J._tCopias = 0; revisarCopias(reino._copias); }
     /* el runner a veces congela un par de cuadros (no se dibuja: queda el anterior) y encima va delirio.js */
     const congela = reino.congela > 0;
