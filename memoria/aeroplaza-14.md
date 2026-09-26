@@ -39,20 +39,28 @@ llega al instante.
   - se adelanta un poco por el atraso de la cámara (`LMAX` 40 ms × 0,85).
 - **Sin saltos**: la diferencia de cada foto nueva se reparte con un resorte
   crítico (`TAU` 25 ms, la cuenta exacta).
-  - Arranca con la posición y la velocidad que se venían mostrando: no hay
-    salto de posición ni de velocidad.
+  - El resorte se queda con lo que saltó lo de abajo, en posición y en
+    velocidad, y sigue con su propio movimiento. Así no hay salto de
+    posición ni de velocidad.
   - Más de 40 cm (`SNAP`) no se reparte: la vieja se apaga de una y la nueva se
     prende.
 - **Fundido**: se prende en 80 ms y se apaga en 200 ms (`alfa`, en el alfa de
   cada cápsula). La pasada de profundidad no va con alfa < 0,6.
 - **La foto rara**: la que salta más de 8 cm solo EN PROFUNDIDAD se espera una
   vez. De costado no: eso es la mano que se movió rápido.
-- **Mientras viaja** (el resorte a más de 3 cm): no toca, no apunta, no aprieta.
-  Al llegar, el filtro del rayo arranca de cero.
+- **De viaje**: arranca con un salto de más de 8 cm y termina por debajo de
+  1,5 cm. Mientras dura, la yema no toca nada (ni el menú ni las burbujas).
+- **El rayo apunta desde la mano de verdad** (`puntoBase`, sin el resorte) y
+  sale de la dibujada.
 - **Histéresis**:
   - el botón de la palma aparece con 0,62 y se va con 0,5;
   - lo que ya se apuntaba tiene un 25 % de ventaja.
 - **Borde suave**: el alfa cae en el último píxel del contorno (`fwidth`).
+- **Las cápsulas, del derecho**: estaban dadas vuelta desde la vuelta 13. Colores
+  nuevos de vidrio:
+  - base `(0.34, 0.43, 0.55)`;
+  - borde `smoothstep(0.22, 0.88)`;
+  - opacidad `0,72 + 0,28·fresnel`.
 - **El reloj**: el resorte y el fundido van con la hora del dibujo (`tAnt`), no
   con el `dt` del juego.
 - **Filtro**: el corte de la velocidad pasó a 2 Hz (`E_CORTED`).
@@ -86,13 +94,16 @@ Una mano, antes → ahora:
 | 150 ms | 12,9 → 2,2 % | 105 → 4 | 2,3 → 0 % | 111 → 11 mm | 11,0 → 3,9 mm |
 | 210 ms | 78,7 → 3,0 % | 747 → 4 | 0 → 0 % | — → 12 mm | 11,5 → 3,4 mm |
 
-- **Con dos manos**: 90-630 → 6-10 titileos por minuto; tirón p99 100 → 10 mm;
-  máximo 184 → 22 mm.
+- **Con dos manos**: 90-630 → 8-13 titileos por minuto; tirón p99 100 → 10 mm;
+  máximo 184 → 21 mm.
+- **El peor tirón, con una mano**: 128-190 → 19-20 mm.
 - **El error contra la mano de verdad** es casi todo el atraso de la cámara.
   - Sin fallas de la red y yendo a 0,4 m/s de promedio: 43 mm con la foto a
     88 ms, 90 mm a 208 ms.
   - Antes daba menos error porque escondía la mano justo cuando iba atrasada.
-- **La prueba del navegador**: `manos` sigue 18/18.
+- **Las pruebas del navegador**:
+  - `manos`: 18/18, tres veces seguidas; las manos ocupan 7600 píxeles por ojo;
+  - `xr`: 10/10, con la de apagarse y volver.
   - Quieta: 0,25 mm contra 0,87.
   - A 1 m/s: 6,7 mm contra 44.
 
@@ -117,9 +128,24 @@ Una mano, antes → ahora:
   reloj del dibujo.
 - **El deslizamiento pasa la yema por el menú**: apretaba "Salir" sola. De ahí
   lo de "mientras viaja".
-- **La velocidad del resorte al llegar la foto** es la del filtro por el
-  adelanto (`vb`), no la resta de dos cuadros: esa resta incluye el salto y lo
-  hacía explotar.
+- **El resorte no puede arrancar con la velocidad de lo que se veía**:
+  - la resta de dos cuadros incluye el salto de la foto y lo hacía explotar;
+  - la velocidad mostrada incluye al propio resorte: con una foto por cuadro se
+    pasaba de largo cuadro por medio. En el celu no se notaba (hay 4 cuadros
+    entre foto y foto) y en la prueba del navegador sí;
+  - va: `off −= salto de abajo`, `offV −= salto de velocidad de abajo`.
+- **Las cápsulas dadas vuelta** (`a, c, b` en vez de `a, b, c`): se veía el lado
+  de adentro. Por eso en la vuelta 13 "eran muy blancas": todo borde. La prueba
+  pasaba igual con 800 píxeles (el rayo y el aro); ahora pide 3000.
+- **"De viaje" con 3 cm** tragaba los pellizcos de una mano que se mueve rápido
+  (cada foto corrige unos centímetros). Por eso ahora es 8 cm para empezar y
+  solo frena la yema.
+- **El rayo desde la mano dibujada**, al terminar de deslizarse, apuntaba unos
+  grados corrido (10 cm de palanca en la prueba), y su filtro (0,9 Hz) tardaba
+  en enderezarse.
+- **Rearmar con la tanda corriendo**: pasó una vez en esta vuelta. Las pruebas
+  de después de ese momento usaron el armado nuevo; se repitieron las de las
+  manos.
 - **Medir el tirón con la diferencia de posición** mezcla el atraso con el
   salto. Se mide con la aceleración (segunda diferencia) contra la de verdad.
 
