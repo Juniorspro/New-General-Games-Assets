@@ -1,0 +1,1133 @@
+{
+ "pid": 10252712,
+ "pedidos": {
+  "fuente-pickup": {
+   "type": "image",
+   "params": {
+    "prompt": "A single modern double-cab pickup truck, white paint, three-quarter front view, generic design, black plastic bumpers. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-6957c48c235d4ad38c8b",
+   "output_path": "assets/fuente-pickup-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-pickup-g1.png"
+  },
+  "fuente-sedan": {
+   "type": "image",
+   "params": {
+    "prompt": "A single old 1980s boxy four-door sedan car, white paint, chrome bumpers, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-10eae882d2574fc79349",
+   "output_path": "assets/fuente-sedan-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-sedan-g1.png"
+  },
+  "fuente-compacto": {
+   "type": "image",
+   "params": {
+    "prompt": "A single modern small four-door sedan car, white paint, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-adb0bd03d6ce4f16ad95",
+   "output_path": "assets/fuente-compacto-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-compacto-g1.png"
+  },
+  "fuente-hatch": {
+   "type": "image",
+   "params": {
+    "prompt": "A single small three-door hatchback car, white paint, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-1dba1c588a6f4256ba72",
+   "output_path": "assets/fuente-hatch-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-hatch-g1.png"
+  },
+  "fuente-camion": {
+   "type": "image",
+   "params": {
+    "prompt": "A single medium cargo truck with a white cab and a grey closed cargo box, three-quarter front view, generic design. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-349fb6ee65604a009061",
+   "output_path": "assets/fuente-camion-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-camion-g1.png"
+  },
+  "fuente-moto": {
+   "type": "image",
+   "params": {
+    "prompt": "A single small 110cc street motorcycle, underbone style, red and black, side three-quarter view, kickstand down. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-b6b02e588dd440e4bb53",
+   "output_path": "assets/fuente-moto-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-moto-g1.png"
+  },
+  "fuente-patrullero": {
+   "type": "image",
+   "params": {
+    "prompt": "A single police pickup truck, white body with bold blue stripes along the sides, a blue and red light bar on the roof, three-quarter front view, generic design, no words. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-454277ebf08d4a11b6dc",
+   "output_path": "assets/fuente-patrullero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-patrullero-g1.png"
+  },
+  "fuente-motopol": {
+   "type": "image",
+   "params": {
+    "prompt": "A single blue adventure touring motorcycle used by highway police, glossy royal blue fairing and fuel tank, tall clear windscreen, black top case on the back, side three-quarter view, kickstand down. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-29e21e6d0ab546bdb8f6",
+   "output_path": "assets/fuente-motopol-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-motopol-g1.png"
+  },
+  "fuente-garita": {
+   "type": "image",
+   "params": {
+    "prompt": "A small white corrugated metal guard booth made from a shipping container, with an open wooden door and a thin blue stripe along the top edge, three-quarter view. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-6656d68b6e1046038ce6",
+   "output_path": "assets/fuente-garita-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-garita-g1.png"
+  },
+  "fuente-algarrobo": {
+   "type": "image",
+   "params": {
+    "prompt": "A single gnarled algarrobo tree from the dry Chaco forest of Argentina, wide umbrella shaped crown of feathery olive green leaves, twisted dark brown trunk, full tree visible. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-025f91d63b22423daa8a",
+   "output_path": "assets/fuente-algarrobo-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-algarrobo-g1.png"
+  },
+  "fuente-quebracho": {
+   "type": "image",
+   "params": {
+    "prompt": "A single tall quebracho colorado tree from the Chaco forest, dense dark green rounded crown, straight reddish brown trunk, full tree visible. Clean semi-realistic low-poly game asset with simple bold shapes and clean materials, soft even studio lighting, isolated on a pure white seamless background, the whole object visible with margin, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-18b488515a954ea684ed",
+   "output_path": "assets/fuente-quebracho-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-quebracho-g1.png"
+  },
+  "fuente-conductor": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 40-year-old Argentine man, short dark hair, plain grey polo shirt, blue jeans, brown shoes. Clean semi-realistic low-poly game character with simple shapes, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-54230c5c1719410392da",
+   "output_path": "assets/fuente-conductor-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-conductor-g1.png"
+  },
+  "fuente-conductora": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 35-year-old Argentine woman, dark hair tied in a ponytail, plain white blouse, dark blue jeans, white sneakers. Clean semi-realistic low-poly game character with simple shapes, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-238056be084e47e08b98",
+   "output_path": "assets/fuente-conductora-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-conductora-g1.png"
+  },
+  "fuente-policia": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: an Argentine highway police officer, light blue short-sleeve uniform shirt with dark navy epaulettes, navy blue trousers, black duty belt, black boots, navy blue peaked cap, no badges, no words. Clean semi-realistic low-poly game character with simple shapes, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-269cde86b30f42459fbf",
+   "output_path": "assets/fuente-policia-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/fuente-policia-g1.png"
+  },
+  "arte-portada": {
+   "type": "image",
+   "params": {
+    "prompt": "Video game key art: a highway police checkpoint on a straight two-lane asphalt road through the green Chaco forest of northern Argentina at golden sunset, orange traffic cones across the lane, a white corrugated guard booth, blue police motorcycles parked on the grass, a car slowing down with its headlights on, power poles, warm dramatic sky, semi-realistic stylized low-poly 3D render, cinematic wide shot, no text, no logos, no people's faces.",
+    "size": "1536x1024",
+    "n": 1
+   },
+   "task_id": "gtask-135860213b184bd3a0c7",
+   "output_path": "assets/arte-portada-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/arte-portada-g1.png"
+  },
+  "viejo-modelo-pickup": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white double cab pickup truck",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-pickup-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-47e61af03a5647e4bfa7",
+   "output_path": "assets/modelo-pickup-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "viejo-modelo-sedan": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old boxy white 1980s sedan car",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-sedan-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-88cc6cd78fce44e3b7f3",
+   "output_path": "assets/modelo-sedan-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "viejo-modelo-compacto": {
+   "type": "model3d",
+   "params": {
+    "prompt": "modern small white sedan car",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-compacto-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-0456820cc8684c809e28",
+   "output_path": "assets/modelo-compacto-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "viejo-modelo-hatch": {
+   "type": "model3d",
+   "params": {
+    "prompt": "small white hatchback car",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-hatch-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-cf75342caddb487a9c33",
+   "output_path": "assets/modelo-hatch-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "viejo-modelo-patrullero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white police pickup truck with blue stripes and light bar",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-patrullero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-7055a067f36f43eb9df8",
+   "output_path": "assets/modelo-patrullero-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "viejo-modelo-motopol": {
+   "type": "model3d",
+   "params": {
+    "prompt": "blue police adventure touring motorcycle with top case",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-motopol-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-33f9c272b0514d54bf14",
+   "output_path": "assets/modelo-motopol-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "viejo-modelo-conductor": {
+   "type": "model3d",
+   "params": {
+    "prompt": "man in A-pose, grey polo shirt, jeans",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-conductor-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-084ff6d29f2e4041a4da",
+   "output_path": "assets/modelo-conductor-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "viejo-modelo-policia": {
+   "type": "model3d",
+   "params": {
+    "prompt": "police officer in A-pose, light blue shirt, navy trousers, cap",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/10252712/assets/fuente-policia-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-59258bf46b3e41cb8291",
+   "output_path": "assets/modelo-policia-g1.glb",
+   "nota": "source_url con id numérico (404): sale desde texto",
+   "error": "url"
+  },
+  "modelo-pickup": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white double cab pickup truck",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-pickup-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-477ce2d5e7504fee86b7",
+   "output_path": "assets/modelo-pickup-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-pickup-g1.glb"
+  },
+  "modelo-sedan": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old boxy white 1980s sedan car",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-sedan-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-57d195b3815f4dc9a827",
+   "output_path": "assets/modelo-sedan-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-sedan-g1.glb"
+  },
+  "modelo-compacto": {
+   "type": "model3d",
+   "params": {
+    "prompt": "modern small white sedan car",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-compacto-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-161c0e2bcd94492b844f",
+   "output_path": "assets/modelo-compacto-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-compacto-g1.glb"
+  },
+  "modelo-hatch": {
+   "type": "model3d",
+   "params": {
+    "prompt": "small white hatchback car",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-hatch-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-c9cd8e5f9d5343d48ec3",
+   "output_path": "assets/modelo-hatch-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-hatch-g1.glb"
+  },
+  "modelo-patrullero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white police pickup truck with blue stripes and light bar",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-patrullero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-137f3f98d6e34163b3a0",
+   "output_path": "assets/modelo-patrullero-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-patrullero-g1.glb"
+  },
+  "modelo-motopol": {
+   "type": "model3d",
+   "params": {
+    "prompt": "blue police adventure touring motorcycle with top case",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-motopol-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-acca8bfa7f984e6ab615",
+   "output_path": "assets/modelo-motopol-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-motopol-g1.glb"
+  },
+  "modelo-conductor": {
+   "type": "model3d",
+   "params": {
+    "prompt": "man in A-pose, grey polo shirt, jeans",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-conductor-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-b48d9bd1b5324edd81cb",
+   "output_path": "assets/modelo-conductor-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-conductor-g1.glb"
+  },
+  "modelo-policia": {
+   "type": "model3d",
+   "params": {
+    "prompt": "police officer in A-pose, light blue shirt, navy trousers, cap",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-policia-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-1916af1e66fa4d30beda",
+   "output_path": "assets/modelo-policia-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-policia-g1.glb"
+  },
+  "modelo-camion": {
+   "type": "model3d",
+   "params": {
+    "prompt": "medium cargo truck white cab grey box",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-camion-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-50b6c3e40e324af6ab2b",
+   "output_path": "assets/modelo-camion-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-camion-g1.glb"
+  },
+  "modelo-moto": {
+   "type": "model3d",
+   "params": {
+    "prompt": "small red 110cc street motorcycle",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-moto-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 10000
+   },
+   "task_id": "gtask-b92dc23ae31b46c8bbd0",
+   "output_path": "assets/modelo-moto-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-moto-g1.glb"
+  },
+  "modelo-garita": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white corrugated metal container guard booth",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-garita-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 6000
+   },
+   "task_id": "gtask-5d218e09281949ba885f",
+   "output_path": "assets/modelo-garita-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-garita-g1.glb"
+  },
+  "modelo-algarrobo": {
+   "type": "model3d",
+   "params": {
+    "prompt": "gnarled algarrobo tree umbrella crown",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-algarrobo-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 9000
+   },
+   "task_id": "gtask-551fd09ed3fd46c2ace5",
+   "output_path": "assets/modelo-algarrobo-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-algarrobo-g1.glb"
+  },
+  "modelo-quebracho": {
+   "type": "model3d",
+   "params": {
+    "prompt": "tall quebracho tree dense dark green crown",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-quebracho-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "standard",
+    "face_limit": 9000
+   },
+   "task_id": "gtask-645601bbb6c14412af46",
+   "output_path": "assets/modelo-quebracho-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-quebracho-g1.glb"
+  },
+  "modelo-conductora": {
+   "type": "model3d",
+   "params": {
+    "prompt": "woman in A-pose, white blouse, jeans",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/fuente-conductora-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-076c3edafa4d4f219fa0",
+   "output_path": "assets/modelo-conductora-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/modelo-conductora-g1.glb"
+  },
+  "rig-conductor-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-b48d9bd1b5324edd81cb",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-65cdfcfdd67c4c458a9c",
+   "output_path": "assets/rig-conductor-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/rig-conductor-walk-g1.glb"
+  },
+  "rig-conductor-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-b48d9bd1b5324edd81cb",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-89f17d7a2ef64da3893e",
+   "output_path": "assets/rig-conductor-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/rig-conductor-idle-g1.glb"
+  },
+  "rig-policia-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-1916af1e66fa4d30beda",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-f5234c0c929542a9b26c",
+   "output_path": "assets/rig-policia-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/rig-policia-walk-g1.glb"
+  },
+  "rig-policia-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-1916af1e66fa4d30beda",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-377e9e3cc99e41fdbe54",
+   "output_path": "assets/rig-policia-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/rig-policia-idle-g1.glb"
+  },
+  "rig-conductora-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-076c3edafa4d4f219fa0",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-305c971cf497492c95ef",
+   "output_path": "assets/rig-conductora-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/rig-conductora-walk-g1.glb"
+  },
+  "rig-conductora-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-076c3edafa4d4f219fa0",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-68842a4416ab4733a531",
+   "output_path": "assets/rig-conductora-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/crudos/rig-conductora-idle-g1.glb"
+  },
+  "v2-fuente-algarrobo": {
+   "type": "image",
+   "params": {
+    "prompt": "A single algarrobo tree (Prosopis alba) from the dry Chaco forest of northern Argentina, as a stylized low-poly game asset: a wide flat umbrella-shaped crown built from five or six large chunky faceted clusters of olive green foliage, a short twisted dark brown trunk that splits into three thick branches holding the crown, full tree visible with margin, three-quarter view from slightly above. Semi-realistic colors, clean solid shapes, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-db2f601ac81d4f789df2",
+   "output_path": "assets/v2-fuente-algarrobo-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-algarrobo-g1.png"
+  },
+  "v2-modelo-algarrobo": {
+   "type": "model3d",
+   "params": {
+    "prompt": "low poly algarrobo tree with umbrella crown",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-algarrobo-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 10000
+   },
+   "task_id": "gtask-f050bd4ba8ff448b913c",
+   "output_path": "assets/v2-modelo-algarrobo-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-algarrobo-g1.glb"
+  },
+  "v2-fuente-garita": {
+   "type": "image",
+   "params": {
+    "prompt": "A small roadside police guard booth built from a white 10-foot shipping container, as a clean semi-realistic game asset: straight rigid white corrugated steel walls with crisp vertical ribs, a closed grey metal door with a small window on the long side, one sliding window, a flat roof with a slight overhang, a thin dark blue stripe along the top edge, standing on four small concrete blocks. Three-quarter view from slightly above showing the front and one side, whole object visible with margin. Soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-ccfb047354e8407b87ed",
+   "output_path": "assets/v2-fuente-garita-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-garita-g1.png"
+  },
+  "v2-modelo-garita": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white shipping container guard booth with grey door and window",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-garita-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 12000
+   },
+   "task_id": "gtask-18f4804e79974d56a3fc",
+   "output_path": "assets/v2-modelo-garita-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-garita-g1.glb"
+  },
+  "v2-fuente-camion": {
+   "type": "image",
+   "params": {
+    "prompt": "A single medium-duty box truck typical of Argentine roads, generic 1990s design with a rounded white cab with a short hood and a light grey aluminium closed cargo box with vertical ribs and rear roll-up door, dual rear wheels, clean smooth panels with crisp edges, chrome front bumper, dark tinted windows. Clean semi-realistic game asset, three-quarter front view from slightly above, whole vehicle visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-13ab53652cbc46a988d4",
+   "output_path": "assets/v2-fuente-camion-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-camion-g1.png"
+  },
+  "v2-modelo-camion": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white box truck with grey cargo box",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-camion-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-567b5b09d46e4769affc",
+   "output_path": "assets/v2-modelo-camion-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-camion-g1.glb"
+  },
+  "v2-fuente-sedan": {
+   "type": "image",
+   "params": {
+    "prompt": "A single classic 1970s-1980s French four-door family sedan, generic design inspired by cars common in Argentina, white paint, sloping rear, rectangular headlights, chrome bumpers, black plastic grille, clean smooth body panels with crisp edges and no dents, dark tinted windows, steel wheels with hubcaps. Clean semi-realistic game asset, three-quarter front view from slightly above, whole car visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-06fc7ed20a2a4084af1e",
+   "output_path": "assets/v2-fuente-sedan-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-sedan-g1.png"
+  },
+  "v2-modelo-sedan": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white classic 1970s four door sedan",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-sedan-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-23207b6133314f0a8135",
+   "output_path": "assets/v2-modelo-sedan-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-sedan-g1.glb"
+  },
+  "v2-fuente-compacto": {
+   "type": "image",
+   "params": {
+    "prompt": "A single small 2000s four-door compact sedan common in South America, generic design, white paint, rounded smooth shapes, short trunk, body-colored bumpers, clean smooth body panels with crisp edges and no dents, dark tinted windows, simple steel wheels with plastic covers. Clean semi-realistic game asset, three-quarter front view from slightly above, whole car visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-6dba576b203e458b99f4",
+   "output_path": "assets/v2-fuente-compacto-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-compacto-g1.png"
+  },
+  "v2-modelo-compacto": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white small compact four door sedan",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-compacto-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-7b5742f8a04f463ca9a5",
+   "output_path": "assets/v2-modelo-compacto-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-compacto-g1.glb"
+  },
+  "v2-fuente-hatch": {
+   "type": "image",
+   "params": {
+    "prompt": "A single small 1990s-2000s three-door hatchback common in Argentina, generic design, white paint, boxy compact shape with a short hood and an upright rear hatch, black plastic bumpers and side trim, clean smooth body panels with crisp edges and no dents, dark tinted windows, steel wheels with plastic covers. Clean semi-realistic game asset, three-quarter front view from slightly above, whole car visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-cdd938247b1048c7b3bb",
+   "output_path": "assets/v2-fuente-hatch-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-hatch-g1.png"
+  },
+  "v2-modelo-hatch": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white small three door hatchback",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-hatch-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-b18b7c351c474c799a43",
+   "output_path": "assets/v2-modelo-hatch-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-hatch-g1.glb"
+  },
+  "v2-fuente-patrullero": {
+   "type": "image",
+   "params": {
+    "prompt": "A single modern double-cab pickup truck used as a highway police patrol vehicle, generic design, white body with a bold royal blue stripe along the sides and doors, a slim red and blue LED light bar on the roof, black bumpers and push bar, clean smooth body panels with crisp edges, dark tinted windows, no words, no emblems. Clean semi-realistic game asset, three-quarter front view from slightly above, whole vehicle visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-435b116fc9374535895d",
+   "output_path": "assets/v2-fuente-patrullero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-patrullero-g1.png"
+  },
+  "v2b-fuente-patrullero": {
+   "type": "image",
+   "params": {
+    "prompt": "A single mid-size double-cab pickup truck like those used by provincial highway police in northern Argentina (generic design similar to a 2015 Toyota Hilux), white body with a bold royal blue stripe along the sides and doors, a slim red and blue LED light bar on the roof, black bumpers and a small black push bar, clean smooth body panels with crisp edges, dark tinted windows, no words, no emblems, no badges on the grille. Clean semi-realistic game asset, three-quarter front view from slightly above, whole vehicle visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-48fd3cd2a7aa4662b25e",
+   "output_path": "assets/v2b-fuente-patrullero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2b-fuente-patrullero-g1.png"
+  },
+  "v2-modelo-patrullero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "white police double cab pickup with blue stripe and light bar",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2b-fuente-patrullero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 16000
+   },
+   "task_id": "gtask-2460ee3be59441d8aaf6",
+   "output_path": "assets/v2-modelo-patrullero-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-patrullero-g1.glb"
+  },
+  "v2-fuente-mayor": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 68-year-old man from rural northern Argentina, slightly heavy build, grey moustache, dark flat cap, light blue long-sleeve button shirt under a brown knitted wool vest, grey dress trousers, black leather shoes. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-651e2d0cd6a845b8b322",
+   "output_path": "assets/v2-fuente-mayor-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-mayor-g1.png"
+  },
+  "v2-modelo-mayor": {
+   "type": "model3d",
+   "params": {
+    "prompt": "old man in A-pose, flat cap, wool vest, grey trousers",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-mayor-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-3a07c853d1a84e12a1ef",
+   "output_path": "assets/v2-modelo-mayor-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-mayor-g1.glb"
+  },
+  "v2-rig-mayor-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-3a07c853d1a84e12a1ef",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-fdf99f97a8be4e31a667",
+   "output_path": "assets/v2-rig-mayor-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-mayor-walk-g1.glb"
+  },
+  "v2-rig-mayor-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-3a07c853d1a84e12a1ef",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-564f7ca4bab3479c963a",
+   "output_path": "assets/v2-rig-mayor-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-mayor-idle-g1.glb"
+  },
+  "v2-fuente-joven": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 22-year-old slim young man from northern Argentina, short black hair with faded sides, thin beard, dark green hoodie with no print, black track pants with a white side stripe, white sneakers. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-d88c8145dc594cce9c59",
+   "output_path": "assets/v2-fuente-joven-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-joven-g1.png"
+  },
+  "v2-modelo-joven": {
+   "type": "model3d",
+   "params": {
+    "prompt": "young man in A-pose, green hoodie, black track pants",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-joven-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-f25012a288d243bb8401",
+   "output_path": "assets/v2-modelo-joven-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-joven-g1.glb"
+  },
+  "v2-rig-joven-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-f25012a288d243bb8401",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-3743c1942f8048cb87ff",
+   "output_path": "assets/v2-rig-joven-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-joven-walk-g1.glb"
+  },
+  "v2-rig-joven-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-f25012a288d243bb8401",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-975910a65f484d5da87f",
+   "output_path": "assets/v2-rig-joven-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-joven-idle-g1.glb"
+  },
+  "v2-fuente-camionero": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 50-year-old heavyset Argentine truck driver with a round belly, short grey stubble beard, red baseball cap with no logo, short-sleeve navy blue work shirt with two chest pockets, khaki cargo work trousers, brown work boots. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-756b4e8db5314dc9913f",
+   "output_path": "assets/v2-fuente-camionero-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-camionero-g1.png"
+  },
+  "v2-modelo-camionero": {
+   "type": "model3d",
+   "params": {
+    "prompt": "heavyset man in A-pose, red cap, navy work shirt, khaki pants",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-camionero-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-e00f1cc8d3274d8f9908",
+   "output_path": "assets/v2-modelo-camionero-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-camionero-g1.glb"
+  },
+  "v2-rig-camionero-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-e00f1cc8d3274d8f9908",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-27d3cbee475046b7996e",
+   "output_path": "assets/v2-rig-camionero-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-camionero-walk-g1.glb"
+  },
+  "v2-rig-camionero-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-e00f1cc8d3274d8f9908",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-987f0c540f004c69a8c1",
+   "output_path": "assets/v2-rig-camionero-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-camionero-idle-g1.glb"
+  },
+  "v2-fuente-senora": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 62-year-old woman from northern Argentina, short wavy grey-brown hair, small reading glasses, lilac cardigan over a white blouse, knee-length dark grey skirt, flat black shoes. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-10a437abe3d4448eb934",
+   "output_path": "assets/v2-fuente-senora-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-senora-g1.png"
+  },
+  "v2-modelo-senora": {
+   "type": "model3d",
+   "params": {
+    "prompt": "older woman in A-pose, lilac cardigan, grey skirt, glasses",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-senora-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-a83a07bcb2434781902a",
+   "output_path": "assets/v2-modelo-senora-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-senora-g1.glb"
+  },
+  "v2-rig-senora-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-a83a07bcb2434781902a",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-99fbb8747b084ffc84b7",
+   "output_path": "assets/v2-rig-senora-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-senora-walk-g1.glb"
+  },
+  "v2-rig-senora-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-a83a07bcb2434781902a",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-f89b2d8ae0ed42a593b3",
+   "output_path": "assets/v2-rig-senora-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-senora-idle-g1.glb"
+  },
+  "v2-fuente-gaucho": {
+   "type": "image",
+   "params": {
+    "prompt": "Full-body 3D game character standing in a neutral A-pose (arms straight and angled down about 45 degrees away from the body, hands open, legs slightly apart), front view facing the camera, symmetrical: a 45-year-old Argentine gaucho from the Chaco countryside, tanned skin, thick black moustache, black wool beret (boina) worn flat, red neckerchief tied at the neck, light blue long-sleeve work shirt, wide beige bombacha de campo trousers gathered at the ankle, wide dark leather belt with silver coins (rastra), brown leather riding boots, no knife, no weapons. Clean semi-realistic game character with simple shapes and realistic proportions, soft even studio lighting, isolated on a pure white seamless background, full body visible with margin, no ground, no shadow, no text, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-c9133bac50804f509ce9",
+   "output_path": "assets/v2-fuente-gaucho-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-gaucho-g1.png"
+  },
+  "v2-modelo-gaucho": {
+   "type": "model3d",
+   "params": {
+    "prompt": "gaucho man in A-pose, black beret, red neckerchief, beige bombacha trousers, boots",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-gaucho-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-4d7bdf454f4149578e3e",
+   "output_path": "assets/v2-modelo-gaucho-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-gaucho-g1.glb"
+  },
+  "v2-rig-gaucho-walk": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-4d7bdf454f4149578e3e",
+    "rig_type": "biped",
+    "animations": [
+     "preset:walk"
+    ]
+   },
+   "task_id": "gtask-ff9e4396403e4765be5e",
+   "output_path": "assets/v2-rig-gaucho-walk-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-gaucho-walk-g1.glb"
+  },
+  "v2-rig-gaucho-idle": {
+   "type": "rig3d",
+   "params": {
+    "source_task_id": "gtask-4d7bdf454f4149578e3e",
+    "rig_type": "biped",
+    "animations": [
+     "preset:idle"
+    ]
+   },
+   "task_id": "gtask-b7fb11823c994184a7ea",
+   "output_path": "assets/v2-rig-gaucho-idle-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-rig-gaucho-idle-g1.glb"
+  },
+  "v2-fuente-cuatrigaucho": {
+   "type": "image",
+   "params": {
+    "prompt": "A single red utility farm ATV quad bike with front and rear black steel cargo racks, chunky off-road tyres, ridden by an Argentine gaucho sitting on it with both hands on the handlebars and feet on the footrests: black wool beret, thick moustache, red neckerchief, light blue shirt, beige bombacha trousers, brown leather boots, no helmet, no weapons. Clean semi-realistic game asset, three-quarter front view from slightly above, the whole quad and rider visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, nothing else.",
+    "size": "1024x1024",
+    "n": 1
+   },
+   "task_id": "gtask-58cfc294298c4b82b6d9",
+   "output_path": "assets/v2-fuente-cuatrigaucho-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-cuatrigaucho-g1.png"
+  },
+  "v2-modelo-cuatrigaucho": {
+   "type": "model3d",
+   "params": {
+    "prompt": "red farm ATV quad with a seated gaucho rider",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-cuatrigaucho-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 20000
+   },
+   "task_id": "gtask-2533b38038264f5c8467",
+   "output_path": "assets/v2-modelo-cuatrigaucho-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-cuatrigaucho-g1.glb"
+  },
+  "v2-fuente-cuatri": {
+   "type": "image",
+   "params": {
+    "prompt": "The same red utility farm ATV quad bike as in the reference image, but empty with nobody on it, parked: front and rear black steel cargo racks with a rolled wool poncho on the front rack and a coiled rope and a metal box on the rear rack, chunky off-road tyres. Clean semi-realistic game asset, three-quarter front view from slightly above, the whole quad visible with margin, soft even studio lighting, isolated on a pure white seamless background, no ground, no cast shadow, no text, no logos, no license plate, no people, nothing else.",
+    "size": "1024x1024",
+    "n": 1,
+    "ref_image_urls": [
+     "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-cuatrigaucho-g1.png"
+    ]
+   },
+   "task_id": "gtask-0812d58459b1463196d7",
+   "output_path": "assets/v2-fuente-cuatri-g1.png",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-fuente-cuatri-g1.png"
+  },
+  "v2-modelo-cuatri": {
+   "type": "model3d",
+   "params": {
+    "prompt": "empty red farm ATV quad with racks",
+    "source_url": "https://lab.rezona.ai/game/pgcserver/pv/RTkRyBVlZq/assets/v2-fuente-cuatri-g1.png",
+    "texture": true,
+    "pbr": true,
+    "texture_quality": "detailed",
+    "face_limit": 14000
+   },
+   "task_id": "gtask-efbfc3ccf5854b589093",
+   "output_path": "assets/v2-modelo-cuatri-g1.glb",
+   "estado": "ready",
+   "archivo": "/home/user/New-General-Games-Assets/control-ruta11/herramientas/rezona/../../crudos/uno/v2-modelo-cuatri-g1.glb"
+  }
+ },
+ "ref": "RTkRyBVlZq"
+}

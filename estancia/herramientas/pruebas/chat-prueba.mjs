@@ -1,0 +1,36 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PW);
+const b = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
+const errores = [];
+for (const [w, h, nom, tel] of [[960, 540, "pc", false], [844, 390, "tel", true]]) {
+  const p = await b.newPage({ viewport: { width: w, height: h }, hasTouch: tel, isMobile: tel });
+  p.on("pageerror", (e) => errores.push(nom + ": " + e.message));
+  await p.route("**/*", (r) => r.request().url().startsWith("file://") ? r.continue() : r.abort());
+  await p.goto("file://" + process.cwd() + "/estancia.html#fijo");
+  await p.waitForSelector("#menu:not([hidden])", { timeout: 180000 });
+  await p.evaluate(() => { __juego.empezar(); __juego.hora(10); });
+  await p.waitForTimeout(800);
+  if (tel) await p.tap("#chatBoton"); else await p.keyboard.press("Enter");
+  await p.waitForTimeout(300);
+  await p.keyboard.type("/sa", { delay: 30 });
+  await p.waitForTimeout(400);
+  await p.screenshot({ path: `tiras/ch-${nom}-0.png` });
+  const pos0 = await p.evaluate(() => [__juego.J().x, __juego.J().z]);
+  await p.keyboard.press("Tab");
+  await p.waitForTimeout(500);
+  await p.keyboard.press("Enter"); await p.waitForTimeout(200);
+  await p.keyboard.type("/perros j", { delay: 30 }); await p.waitForTimeout(200);
+  await p.keyboard.press("Backspace"); await p.keyboard.type("junten"); await p.keyboard.press("Enter");
+  await p.waitForTimeout(400);
+  await p.keyboard.press("Enter"); await p.keyboard.type("hola paisanos, wasd"); await p.keyboard.press("Enter");
+  await p.waitForTimeout(300);
+  await p.keyboard.press("Enter"); await p.keyboard.type("/razas"); await p.keyboard.press("Enter");
+  await p.waitForTimeout(500);
+  await p.screenshot({ path: `tiras/ch-${nom}-1.png` });
+  const r = await p.evaluate((pos0) => ({ log: [...document.querySelectorAll(".chat-linea")].map((d) => d.textContent), movio: Math.hypot(__juego.J().x - pos0[0], __juego.J().z - pos0[1]).toFixed(2), orden: E.perros.orden, pausa: !document.getElementById("pausa").hidden }), pos0);
+  console.log(nom, JSON.stringify(r, null, 1));
+  await p.close();
+}
+console.log(errores.join("\n") || "sin errores");
+await b.close();
