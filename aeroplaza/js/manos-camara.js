@@ -147,6 +147,12 @@ export function trasladar(img, mundo, tanX, tanY, o = 0, oW = 63) {
   return [det(col(0, R)) / D, det(col(1, R)) / D, det(col(2, R)) / D];
 }
 
+/* lo que salió de la carrera de la GPU en este celu (vale una semana) */
+const CLAVE_GPU = 'aeroplaza.manosGPU';
+function guardadoGPU() {
+  try { const g = JSON.parse(localStorage.getItem(CLAVE_GPU) || 'null'); return g && Date.now() - g.t < 7 * 864e5 ? g : null; } catch { return null; }
+}
+
 /* cuándo se sacó la foto: captureTime si lo da y tiene sentido (en algunos navegadores falta o viene
    en otro reloj); si no, cuándo se mostró; si no, ahora */
 function horaFoto(meta) {
@@ -175,8 +181,12 @@ export class ManosCamara {
      sola lee 14-20 por segundo (tarda más que lo que tarda la cámara en dar la próxima); dos, casi
      todas. Simulado (pruebas/manos-celu.mjs): el atraso baja un 18 %, tiembla menos y no titila. Sin
      manos a la vista trabaja una sola */
-  async iniciarRed({ delegado = 'CPU', tope = 60000, dos = null } = {}) {
+  async iniciarRed({ delegado = null, tope = 60000, dos = null } = {}) {
     if (this.listo) return this.listo;
+    /* (la GPU, si en este celu ya ganó la carrera: carreraGPU) */
+    const g = guardadoGPU();
+    delegado ??= this.cfg.gpu === 'si' || (this.cfg.gpu !== 'no' && g?.gpu) ? 'GPU' : 'CPU';
+    if (g || this.cfg.gpu === 'no' || delegado === 'GPU') this.carrera = { fin: true, gpu: delegado === 'GPU' };
     this.estado = 'cargando'; this.redes = [];
     this.url ||= URL.createObjectURL(new Blob([WORKER()], { type: 'text/javascript' }));
     this.listo = this.nuevaRed(delegado, tope).then((r) => {
@@ -194,7 +204,7 @@ export class ManosCamara {
       w.onerror = (e) => { clearTimeout(t); w.terminate(); mal(new Error(e.message || 'worker')); };
       w.onmessage = (e) => {
         const d = e.data;
-        if (d.tipo === 'listo') { clearTimeout(t); if (!this.redes) { w.terminate(); return; } red.cupo = 2; this.redes.push(red); w.onmessage = (e2) => this.recibir(e2.data, red); if (this.lector) this.conectar(red); ok({ w, delegado: d.delegado }); }
+        if (d.tipo === 'listo') { clearTimeout(t); if (!this.redes) { w.terminate(); return; } red.cupo = 2; red.delegado = d.delegado; this.redes.push(red); w.onmessage = (e2) => this.recibir(e2.data, red); if (this.lector) this.conectar(red); ok({ w, delegado: d.delegado, red }); }
         else if (d.tipo === 'error') { clearTimeout(t); w.terminate(); mal(new Error(d.error)); }
       };
       w.postMessage({ tipo: 'iniciar', base: this.cfg.base, modelo: this.cfg.modelo, delegado, cupo: 2 });
@@ -370,37 +380,99 @@ export class ManosCamara {
      Con dos a la vista, o con ninguna, todas buscan dos */
   elegirCupos(d, red, llego) {
     if (this.cfg.siempreDos) return;   // (como antes: para comparar en las pruebas)
-    const V = this.vistas, redes = (this.redes || []).filter((r) => !r.apagada);
+    const V = this.vistas, activas = (this.redes || []).filter((r) => !r.apagada);
     if (d.n >= 1) V.una = llego;
     if (d.n >= 2) V.dos = llego;
     const hay = llego - V.dos < 500 ? 2 : llego - V.una < 800 ? 1 : 0;
     if (hay !== this.hay) V.desde = llego;
     this.hay = hay;
+    /* los papeles: la principal sigue la mano; la de prueba (la GPU, en la carrera) también; la que
+       busca, la segunda mano (si hay una sola red, es la misma principal) */
+    const principal = activas.includes(this.redes?.[this.principal ?? 0]) ? this.redes[this.principal ?? 0] : activas[0];
+    const prueba = this.carrera?.red && !this.carrera.fin ? this.carrera.red : null;
+    const busca = activas.find((r) => r !== principal && r !== prueba) || principal, dos = busca !== principal;
     /* (recién aparecida una mano, un rato más buscando dos: la otra suele aparecer junto, y si en la
        primera foto no salió, sin esto quedaba esperando a que alguna red la buscara) */
-    const una = hay === 1 && llego - V.desde > 400, dos = redes.length > 1, busca = redes[dos ? 1 : 0];
-    const m1 = redes[0]?.med?.['1:1'], fps = this.fpsCamara || 30;
+    const una = hay === 1 && llego - V.desde > 400;
+    const m1 = principal?.med?.['1:1'], fps = this.fpsCamara || 30;
     const sobra = dos && !!m1 && m1.n >= 10 && m1.ms < 850 / fps;
-    if (!una) { for (const r of redes) r.probando = false; }
+    if (!una) { for (const r of activas) r.probando = false; }
     else if (busca) {
       if (busca.probando && red === busca && (sobra || d.cupo === 2)) { busca.probando = false; V.prueba = llego; }
       else if (!busca.probando && llego - V.prueba > (sobra ? 350 : dos ? 700 : 1200)) busca.probando = true;
     }
-    for (const r of redes) {
+    for (const r of activas) {
       const c = !una ? 2 : r !== busca ? 1 : sobra || r.probando ? 2 : 1;
       if (r.cupo !== c) { r.cupo = c; r.w.postMessage({ tipo: 'cupo', n: c }); }
     }
-    /* (la que busca, primera en recibir foto: si no, con la otra rápida no le llegaba ninguna) */
-    const primero = una && busca?.probando ? this.redes.indexOf(busca) : 0;
+    /* (la que busca, primera en recibir foto: si no, con la otra rápida no le llegaba ninguna; en la
+       carrera, la de prueba) */
+    const pri = una && busca?.probando ? busca : prueba || principal;
+    const primero = Math.max(0, this.redes.indexOf(pri));
     if (primero !== (this.primero || 0)) { this.primero = primero; this.avisarLector(); }
+  }
+  /* ¿MediaPipe en la GPU del celu? En unos es varias veces más rápida; en otros tarda más, o le saca
+     cuadros al dibujo (la placa está dibujando a 120). No se puede saber sin probar: con una mano a
+     la vista, una red en la GPU sigue la mano al lado de la de CPU (recibiendo las fotos primero)
+     hasta tener 25 fotos o 10 s. Gana si tarda menos de 3/4, ve la mano igual y el juego no baja de
+     cuadros por segundo más de un 10 %. Lo que sale se guarda (una semana) y la próxima vez arranca
+     directo con la ganadora */
+  carreraGPU(d, red, llego) {
+    const C = this.carrera;
+    const fps = this.fpsJuego?.() || 0;
+    if (!C) {
+      if (fps) this.fpsBase = this.fpsBase ? this.fpsBase + (fps - this.fpsBase) * 0.05 : fps;
+      const p = this.redes?.[this.principal ?? 0], m = p?.med?.['1:1'];
+      if (!this.directo || this.hay !== 1 || !m || m.n < 20 || typeof OffscreenCanvas !== 'function') return;
+      const K = this.carrera = { t0: llego, fpsAntes: this.fpsBase || 0, fps: [], cpu: p, vio: { cpu: [0, 0], gpu: [0, 0] } };
+      this.nuevaRed('GPU', 30000).then((r) => {
+        if (K.fin) { r.red.w.terminate(); r.red.apagada = true; return; }
+        if (r.delegado !== 'GPU') { this.terminarCarrera(false, 'sin GPU', r.red); return; }
+        K.red = r.red; K.t0 = K.tLista = performance.now();
+      }).catch(() => this.terminarCarrera(false, 'sin GPU'));
+      return;
+    }
+    if (C.fin) return;
+    if (!C.red) { if (llego - C.t0 > 20000) this.terminarCarrera(false, 'la GPU no arrancó'); return; }
+    if (fps) C.fps.push(fps);
+    const v = red === C.red ? C.vio.gpu : red === C.cpu ? C.vio.cpu : null;
+    if (v && this.hay >= 1) { v[0]++; if (d.n) v[1]++; }
+    /* (se comparan haciendo lo mismo: el trabajo del que más fotos tengan las dos) */
+    let g = null, c = null;
+    for (const [k, x] of Object.entries(C.red.med || {})) { const y = C.cpu.med?.[k]; if (y && y.n >= 5 && (!g || Math.min(x.n, y.n) > Math.min(g.n, c.n))) { g = x; c = y; } }
+    /* (si ya en las primeras fotos va más lenta, se corta: mientras dura, recibe las fotos primero, y
+       una placa lenta atrasaba la mano) */
+    if (g?.n >= 3 && c && g.ms > c.ms * 1.3) { this.terminarCarrera(false, `GPU ${Math.round(g.ms)} ms · CPU ${Math.round(c.ms)} ms (cortada)`); return; }
+    if (!(g?.n >= 3) && llego - C.tLista > 5000) { this.terminarCarrera(false, 'la GPU no da abasto (menos de 3 fotos en 5 s)'); return; }
+    if (!((g?.n >= 25) || llego - C.t0 > 10000)) return;
+    const fpsCon = C.fps.length ? C.fps.reduce((a, b) => a + b, 0) / C.fps.length : 0;
+    const ve = (x) => (x[0] ? x[1] / x[0] : 0);
+    const gana = !!g && !!c && g.n >= 10 && g.ms < c.ms * 0.75 && ve(C.vio.gpu) >= ve(C.vio.cpu) * 0.9 && (!C.fpsAntes || !fpsCon || fpsCon >= C.fpsAntes * 0.9);
+    this.terminarCarrera(gana, `GPU ${Math.round(g?.ms || 0)} ms · CPU ${Math.round(c?.ms || 0)} ms${C.fpsAntes ? ` · juego ${Math.round(C.fpsAntes)}→${Math.round(fpsCon)} fps` : ''}`);
+  }
+  terminarCarrera(gana, porque, suelta = null) {
+    const C = this.carrera || (this.carrera = {});
+    if (C.fin) return;
+    C.fin = true; C.gpu = gana; C.porque = porque;
+    const r = C.red || suelta;
+    if (gana && r) {
+      /* la GPU pasa a ser la principal; la de CPU queda buscando la segunda mano (y si había tres, la
+         tercera se apaga) */
+      this.principal = this.redes.indexOf(r);
+      const otras = this.redes.filter((x) => x !== r && !x.apagada);
+      for (const x of otras.slice(1)) { x.apagada = true; x.w.terminate(); }
+    } else if (r) { r.apagada = true; r.w.terminate(); }
+    this.avisarLector();
+    try { localStorage.setItem(CLAVE_GPU, JSON.stringify({ gpu: gana, porque, t: Date.now() })); } catch { /* sin guardar */ }
   }
   /* lo que se muestra con los cuadros por segundo: fotos por segundo y atraso de las manos */
   datos() {
     const S = this.stats, ahora = performance.now();
     if (!this._d || ahora - this._d.t > 1000) { const porSeg = this._d ? (S.cuadros - this._d.n) / ((ahora - this._d.t) / 1000) : 0; this._d = { t: ahora, n: S.cuadros, porSeg }; }
-    const redes = (this.redes || []).filter((r) => !r.apagada), r0 = redes[0], ms = r0?.ms1 && this.hay === 1 ? r0.ms1 : S.ms;
+    const redes = (this.redes || []).filter((r) => !r.apagada), r0 = this.redes?.[this.principal ?? 0], ms = r0?.ms1 && this.hay === 1 ? r0.ms1 : S.ms;
     const fps = this.stream?.getVideoTracks()[0]?.getSettings?.().frameRate;
-    return `✋ ${Math.round(this._d.porSeg)}/s · ${Math.round(S.latencia)} ms · ${Math.round(ms)} ms/red ×${redes.length}${fps ? ` · 📷${Math.round(fps)}` : ''}${this.directo ? '⚡' : ''}`;
+    const p = this.redes?.[this.principal ?? 0], dg = p?.delegado === 'GPU' ? ' GPU' : '', carrera = this.carrera && !this.carrera.fin && this.carrera.red ? ' 🏁' : '';
+    return `✋ ${Math.round(this._d.porSeg)}/s · ${Math.round(S.latencia)} ms · ${Math.round(ms)} ms/red${dg} ×${redes.length}${carrera}${fps ? ` · 📷${Math.round(fps)}` : ''}${this.directo ? '⚡' : ''}`;
   }
   /* para las pruebas (y para ver si anda sin cámara): una imagen suelta, a la primera red */
   probar(imagen, t = performance.now()) { if (this.redes?.[0]) this.redes[0].ocupado = false; return this.cuadro(t, imagen, true); }
@@ -416,7 +488,7 @@ export class ManosCamara {
     const llego = performance.now();
     const S = this.stats; S.cuadros++; if (!d.primera) S.ms += (d.ms - S.ms) * 0.1; S.latencia += (llego - d.t - S.latencia) * 0.1;
     if (d.n) this.tMano = llego;
-    if (this.activa) this.elegirCupos(d, red, llego);
+    if (this.activa) { this.elegirCupos(d, red, llego); if (this.cfg.gpu !== 'no') this.carreraGPU(d, red, llego); }
     const quieta = llego - this.tMano > 1000;
     if (quieta !== this.quieta) { this.quieta = quieta; this.avisarLector(); }
     /* el campo es el del lado largo del cuadro (con el juego girado, el video llega parado) */

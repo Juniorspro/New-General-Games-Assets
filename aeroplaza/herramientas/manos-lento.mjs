@@ -4,6 +4,8 @@
 //     SUAVE=rapida|media|suave  el nivel del menú (de entrada, media)
 //     SEMILLAS=1,2,3,4,5        con qué semillas (se promedia)
 //     CORTO=1                   una línea con lo principal (para comparar versiones)
+//     RED=vieja|nueva           lo que tarda la red: buscando siempre dos manos (hasta la vuelta 16) o una
+//                               (de entrada); ESCALA=0.7 el celu contra el contenedor (manos-celu.mjs)
 // Mide, contra la mano de verdad:
 // - quieta: lo que se va de su lugar (deriva, mm) y lo que se mueve de un cuadro al otro (tiembla, mm:
 //   lo que se ve como temblor);
@@ -55,17 +57,22 @@ function correr(semilla) {
   const manos = new Manos(); manos.activa = true; manos.fuente = 'camara'; if (process.env.SUAVE) manos.suavidad = process.env.SUAVE;
   const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3(), ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
   const DT = 1000 / 120, CAP = 1000 / 30;
-  let prox = azar() * CAP, ocupado = 0, res = [], lat = [];
+  let prox = azar() * CAP, res = [], lat = [];
+  /* las redes: cada una ocupada hasta 'libre'; buscando una mano (nueva) o dos (vieja) */
+  const vieja = process.env.RED === 'vieja', ESC = +(process.env.ESCALA || 0.7), R_ = Array.from({ length: REDES }, () => ({ libre: -1, antes: false }));
   const traza = [];   // [t, mostrado(3), real(3), alfa]
   for (let T = 0; T < FIN * 1000; T += DT) {
-    for (const r of res.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega); lat.push(r.llega - r.tc); ocupado--; }
+    for (const r of res.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega, vieja ? 2 : 1); lat.push(r.llega - r.tc); }
     res = res.filter((r) => r.llega > T);
     while (prox + LCAM <= T) {
       const tc = prox; prox += CAP * (0.95 + 0.1 * azar());
-      if (ocupado >= REDES) continue;
-      ocupado++;
+      const rd = R_.find((x) => x.libre <= T);
+      if (!rd) continue;
       const d = detectar(tc / 1000);
-      res.push({ lista: d ? [d] : [], tc, llega: T + 4 + 40 + 20 * azar() });
+      /* (busca palmas si busca dos, o si perdió la mano) */
+      const ms = ESC * ((vieja || !rd.antes ? 38 : 0) + (d ? 36 : 0)) * (0.9 + 0.2 * azar());
+      rd.antes = !!d; rd.libre = T + 4 + ms;
+      res.push({ lista: d ? [d] : [], tc, llega: T + 4 + ms });
     }
     const tVer = T + 25;
     manos.registrarCabeza(tVer, q0, p0, 0);

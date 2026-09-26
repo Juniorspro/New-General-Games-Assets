@@ -22,13 +22,13 @@ const correr = async (cfg) => {
     window.AEROPLAZA_MANOS = cfg;
     const A = window.__A, ev = [];
     const mc = new A.ManosCamara({ alLlegar: (lista, t, llego, cupo) => ev.push({ n: lista.length, t, llego, cupo, red: mc._red }) });
-    const rec = mc.recibir.bind(mc); mc.recibir = (d, red) => { mc._red = mc.redes.indexOf(red); mc._ms = d.ms; rec(d, red); };
-    await mc.iniciarRed({ delegado: 'CPU', dos: true });
+    const rec = mc.recibir.bind(mc); window.__msgs = {}; mc.recibir = (d, red) => { mc._red = mc.redes.indexOf(red); mc._ms = d.ms; const k = mc._red + ':' + d.tipo + (d.error ? ':' + String(d.error).slice(0, 120) : ''); window.__msgs[k] = (window.__msgs[k] || 0) + 1; rec(d, red); };
+    await mc.iniciarRed({ dos: true });
     const t1 = performance.now(); while ((mc.redes?.length || 0) < 2 && performance.now() - t1 < 30000) await new Promise((ok) => setTimeout(ok, 100));
     await mc.prender();
     const t0 = performance.now();
     await new Promise((ok) => setTimeout(ok, 13500));
-    const out = { directo: mc.directo, reloj: mc.reloj, offMin: mc.stats.offMin, datos: mc.datos(), redes: mc.redes.map((x) => ({ cupo: x.cupo, apagada: !!x.apagada, ms1: x.med?.['1:1']?.ms, ms2: x.med?.['2:1']?.ms, n1: x.med?.['1:1']?.n || 0, n2: x.med?.['2:1']?.n || 0 })), apagada: mc.stats.segundaApagada, leidos: mc.stats.leidos, t0 };
+    const out = { carrera: mc.carrera ? { fin: !!mc.carrera.fin, gpu: mc.carrera.gpu, porque: mc.carrera.porque, lista: !!mc.carrera.red, t0: mc.carrera.t0, med: mc.carrera.red ? JSON.stringify(mc.carrera.red.med) : null, cpu: JSON.stringify(mc.carrera.cpu?.med), cupo: mc.carrera.red?.cupo } : null, guardado: localStorage.getItem('aeroplaza.manosGPU'), msgs: window.__msgs, directo: mc.directo, reloj: mc.reloj, offMin: mc.stats.offMin, datos: mc.datos(), redes: mc.redes.map((x) => ({ cupo: x.cupo, apagada: !!x.apagada, ms1: x.med?.['1:1']?.ms, ms2: x.med?.['2:1']?.ms, n1: x.med?.['1:1']?.n || 0, n2: x.med?.['2:1']?.n || 0 })), apagada: mc.stats.segundaApagada, leidos: mc.stats.leidos, t0 };
     mc.soltar();
     out.ev = ev.map((e) => ({ ...e, rel: e.llego - t0 }));
     return out;
@@ -36,7 +36,9 @@ const correr = async (cfg) => {
   await ctx.close();
   return { ...r, errores };
 };
-const antes = await correr({ sinLector: true, siempreDos: true }), ahora = await correr({});
+const antes = await correr({ sinLector: true, siempreDos: true, gpu: 'no' }), ahora = await correr({ gpu: 'no' });
+/* la carrera de la GPU (acá la placa es por software: tiene que perder, y la mano seguir) */
+const carrera = await correr({});
 const med = (a) => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[b.length >> 1] : NaN; };
 const resumen = (r) => {
   const conMano = r.ev.filter((e) => e.n > 0 && e.rel > 500);
@@ -63,6 +65,9 @@ prueba('las dos redes siguen andando (la segunda no se apaga sin razón)', !ahor
 prueba('cuando aparece la segunda mano se ve enseguida, y las dos se siguen', B.dos > 0.6 && B.primeraDos < 1500, `las dos en el ${f(B.dos * 100)} % de las fotos del tramo; la segunda a los ${f(B.primeraDos)} ms (antes ${f(A.dos * 100)} %)`);
 prueba('sin manos a la vista no queda ninguna', B.ninguna === 0, `${B.ninguna} fotos con mano en el tramo vacío`);
 prueba('con una mano, de la foto a la mano tarda mucho menos que antes', B.lat < A.lat * 0.8, `${f(A.lat)} → ${f(B.lat)} ms`);
-prueba('sin errores', ![...antes.errores, ...ahora.errores].some((e) => !/ERR_FAILED|INFO: Created TensorFlow/.test(e)), [...antes.errores, ...ahora.errores].filter((e) => !/ERR_FAILED|INFO: Created/.test(e)).slice(0, 2).join(' | '));
+const C = resumen(carrera);
+if (process.env.DETALLE) console.log('carrera', JSON.stringify(carrera.carrera).slice(0, 300), 'msgs', JSON.stringify(carrera.msgs), carrera.errores.slice(0, 3));
+prueba('la carrera de la GPU se corre y la pierde (acá la placa es por software); la mano sigue y queda guardado', carrera.carrera?.fin && carrera.carrera.gpu === false && !!carrera.guardado && C.una > 0.8, `${carrera.carrera?.porque} · la mano en el ${f(C.una * 100)} % de las fotos del tramo · ${carrera.datos}`);
+prueba('sin errores', ![...antes.errores, ...ahora.errores, ...carrera.errores].some((e) => !/ERR_FAILED|INFO: Created TensorFlow/.test(e)), [...antes.errores, ...ahora.errores, ...carrera.errores].filter((e) => !/ERR_FAILED|INFO: Created/.test(e)).slice(0, 2).join(' | '));
 await nav.close();
 console.log(`${bien} bien, ${mal} mal`);

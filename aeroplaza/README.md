@@ -130,12 +130,21 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
   otro lado con `window.AEROPLAZA_MANOS = { base, modelo }`.
 - En celus de 6 núcleos o más van dos redes a la par (el doble de fotos por
   segundo). Si con las dos el celu se pone más lento, se apaga una sola.
+- Con una sola mano a la vista, la red busca una (la mitad de tiempo por foto);
+  cada tanto una red se fija si apareció la otra.
+- Las fotos van directo de la cámara a un worker lector
+  (`MediaStreamTrackProcessor`), sin pasar por el hilo del juego; donde no hay,
+  como antes.
+- La primera vez, con la mano a la vista, se prueba MediaPipe en la GPU contra la
+  CPU unos segundos y se queda con la que ande mejor en ese celu (se recuerda
+  una semana).
 - **✋ Las manos: Rápidas · Medio · Suaves** (abajo de las llaves). Rápidas van
   pegadas a la mano y tiemblan un poco, como un Quest; Suaves, quietas no
   tiemblan y van un poco atrás. De entrada, Medio.
 - Con ⏱ prendido, al lado de los cuadros se ve cómo van las manos: fotos por
-  segundo, atraso de la cámara y cuánto tarda la red (`✋ 27/s · 150 ms · 45
-  ms/red ×2`).
+  segundo, atraso de la cámara, cuánto tarda la red (y si es la GPU), cuántas
+  redes, los cuadros de la cámara y ⚡ si las fotos van directo al worker
+  (`✋ 27/s · 90 ms · 38 ms/red ×2 · 📷30⚡`).
 - **Flash:** sin visor, el botón ⚡ de arriba a la derecha prende la linterna
   de la cámara para ver las manos con poca luz (si el celu deja: en iOS no).
 - En el Visor VR son las manos del visor.
@@ -178,6 +187,10 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   (texturas, el cielo, las nubes y el delfín).
 - `python3 herramientas/musica.py` cosía los temas de Rezona; ya no se usa
   (25/09: solo las canciones que manda quien pide).
+- `node herramientas/manos-lento.mjs [manos.js] [ms de la cámara]` mide las
+  manos en movimientos lentos (el atraso, el temblor, cuánto se pasan al
+  frenar), para afinar las constantes de `js/manos.js` (`SUAVE=`, `RED=`,
+  `SEMILLAS=`, `CORTO=1`).
 - `pruebas/`:
   - `multijugador.mjs`: dos navegadores contra `broker.mjs`, un broker MQTT
     mínimo en Node puro;
@@ -198,7 +211,11 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   - `manos-celu.mjs`: las manos por la cámara con el atraso y las fallas de un
     celu, simuladas sin navegador, con dos redes y con una (que no titilen, no
     se dupliquen ni peguen tirones), los tres niveles, que el rayo baje al
-    piso y cuándo se apaga la segunda red;
+    piso, cuándo se apaga la segunda red y cuántas manos busca cada red;
+  - `manos-directo.mjs`: de punta a punta, con una cámara de mentira que
+    muestra manos de verdad (un video hecho con ffmpeg de las fotos de
+    `pruebas/manos`) y MediaPipe de verdad: lo de antes contra lo de ahora, el
+    lector, el reloj y la carrera de la GPU;
   - `xr.mjs`: el Visor VR con IWER, el Quest 3 de mentira de Meta.
 
   MediaPipe e IWER se bajan con curl la primera vez y no se commitean.

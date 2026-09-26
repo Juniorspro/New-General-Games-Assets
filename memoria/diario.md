@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la madrugada · `claude/fijate-iszyer`:**
+  - Pidió: "mejoralo un 700 %, que la mano replique los movimientos sin
+    retraso".
+  - Quedó ([aeroplaza-17](aeroplaza-17.md)): cada red busca una mano cuando
+    hay una (74 → 38 ms por foto), las fotos directo de la cámara al worker, la
+    carrera de la GPU y los niveles afinados. De la foto a la mano: 100 → 58 ms;
+    en lento, medio atrasa 27 ms de costado (antes 71).
+  - Falta: los números de ⏱ de su celu (si ganó la GPU, si va ⚡).
 - **27/09/2026, más tarde todavía · `claude/fijate-iszyer`:**
   - Pidió: la mano va "muy muy lenta" (la vuelta 14, que temblaba, parecía un
     Quest): un punto medio. Y el rayo para elegir no bajaba.

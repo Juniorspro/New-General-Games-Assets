@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: manos rápidas, medias o suaves y el rayo que baja).
+mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: las manos con 40 % menos atraso: una búsqueda por mano, fotos directo al worker, la carrera de la GPU).
 
 ## Reglas que no se discuten
 
@@ -72,6 +72,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: manos rá
 | [aeroplaza-14](aeroplaza-14.md) | AEROPLAZA, decimotercera vuelta: por qué titilaban las manos en el celu (se perdían por lo vieja de la foto, MediaPipe cambiaba de mano, escalones entre fotos) y cómo se arregló (perder por fotos faltantes, identidad por continuidad, resorte crítico, fundido, la cámara); las cápsulas estaban dadas vuelta; el simulador del celu `pruebas/manos-celu.mjs`, lo medido y lo que no sirvió |
 | [aeroplaza-15](aeroplaza-15.md) | AEROPLAZA, decimocuarta vuelta: el botón de flash del VR sin visor (la linterna de la cámara, `torch`), dos redes de MediaPipe a la par (28 fotos por segundo) y el filtro que trata aparte la profundidad (`EuroEjes`); lo medido y el piso del atraso de la cámara |
 | [aeroplaza-16](aeroplaza-16.md) | AEROPLAZA, decimoquinta vuelta: por qué las manos iban lentas, el filtro liviano con dos anclas (de costado y en profundidad), los tres niveles del menú (rápidas · medio · suaves), el rayo con la cámara desde los ojos (antes no bajaba), la segunda red que se apaga sola, `herramientas/manos-lento.mjs` y lo medido contra las vueltas 14 y 15 |
+| [aeroplaza-17](aeroplaza-17.md) | AEROPLAZA, decimosexta vuelta: dónde se iba el atraso de las manos (MediaPipe buscando dos manos busca palmas en cada foto: 74 contra 38 ms), el cupo por red, el worker lector (MediaStreamTrackProcessor) y su reloj, la carrera de la GPU, los niveles con su propio adelanto (búsqueda de 450), la cámara de mentira con manos (`manos-directo`) y lo que no sirvió (el modelo liviano) |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |
