@@ -54,7 +54,7 @@ class Ar implements GLSurfaceView.Renderer {
   volatile Boolean pedidoEspacio;
   /* (tu espacio: la cámara tiene que dar profundidad; se elige antes de arrancar, con la sesión pausada) */
   volatile boolean quiereProfundidad; boolean camaraDeProfundidad;   // (la segunda: ya se eligió la cámara para escanear)
-  volatile boolean corriendo, conManos, flashPedido;
+  volatile boolean corriendo, conManos, flashPedido, flashSucio;
   long tLuz = 0;
   boolean pedirInstalar = true, geometria;
   int textura = -1, orientacionSensor = 90;
@@ -94,8 +94,12 @@ class Ar implements GLSurfaceView.Renderer {
       /* (si ya corría, primero se pausa: la cámara solo se cambia con la sesión quieta) */
       if (quiereProfundidad != camaraDeProfundidad && corriendo) { if (gl != null) gl.onPause(); sesion.pause(); corriendo = false; }
       /* (se prueba una vez por pedido: si el celu no tiene ninguna con profundidad, no se pausa a cada rato) */
+      boolean cambio = quiereProfundidad != camaraDeProfundidad;
       if (quiereProfundidad && !camaraDeProfundidad) { elegirParaProfundidad(); camaraDeProfundidad = true; }
       else if (!quiereProfundidad && camaraDeProfundidad) { elegirCamara(); camaraDeProfundidad = false; geometria = false; }
+      /* (con otra cámara, el escaneo y la linterna se configuran de nuevo: lo que la cámara nueva no da, ARCore
+         lo apaga solo al reanudar) */
+      if (cambio) { if (espacio.escanea) pedidoEspacio = true; flashSucio = true; }
       if (conManos && manos == null) manos = new ManosNativas(act);
       if (gl == null) {
         gl = new GLSurfaceView(act);
@@ -196,12 +200,30 @@ class Ar implements GLSurfaceView.Renderer {
     if (sesion != null) { sesion.close(); sesion = null; }
   }
 
-  /* el flash (la linterna) con ARCore prendido: la cámara es de ARCore */
-  void flash(boolean si) {
-    flashPedido = si;
-    if (sesion == null) return;
-    try { Config c = sesion.getConfig(); c.setFlashMode(si ? Config.FlashMode.TORCH : Config.FlashMode.OFF); sesion.configure(c); }
-    catch (Throwable t) { act.enviar("__nativo&&__nativo.estado('sin-flash')"); }
+  /* el flash (la linterna) con ARCore prendido: la cámara es de ARCore. Se configura en el hilo de GL
+     (aplicarConfig), no acá */
+  void flash(boolean si) { flashPedido = si; flashSucio = true; }
+
+  /* (vuelta 38) TODA LA CONFIGURACIÓN DE LA SESIÓN VA ACÁ, en el hilo de GL antes de update, y de una sola vez.
+     Antes la linterna hacía su configure desde el hilo de la interfaz, con la config que leyó ANTES de que el
+     escaneo terminara el suyo: la linterna automática (que se prende al entrar a tu espacio si hay poca luz)
+     volvía a apagar los planos y la profundidad. Así se quedaba "esperando la profundidad" sin un plano. */
+  void aplicarConfig() {
+    Boolean pe = pedidoEspacio; boolean fl = flashSucio;
+    if (espacio.reconfigurar) { espacio.reconfigurar = false; if (pe == null) pe = espacio.escanea; }
+    if (pe == null && !fl) return;
+    pedidoEspacio = null; flashSucio = false;
+    Config c = sesion.getConfig();
+    if (pe != null) espacio.preparar(sesion, c, pe);
+    c.setFlashMode(flashPedido ? Config.FlashMode.TORCH : Config.FlashMode.OFF);
+    try { sesion.configure(c); }
+    catch (Throwable t) {
+      /* (si no se pudo con la linterna, sin ella: el escaneo no depende de la linterna) */
+      if (!flashPedido) { if (pe != null) espacio.fallo(t); return; }
+      try { c.setFlashMode(Config.FlashMode.OFF); sesion.configure(c); act.enviar("__nativo&&__nativo.estado('sin-flash')"); }
+      catch (Throwable t2) { if (pe != null) espacio.fallo(t2); return; }
+    }
+    if (pe != null) espacio.configurado(sesion, pe);
   }
 
   /* LA LUZ (vuelta 33, cada 0,4 s): la luz media de la foto (una grilla de 24 × 18 del brillo) y lo que tuvo
@@ -240,8 +262,8 @@ class Ar implements GLSurfaceView.Renderer {
         sesion.setDisplayGeometry(act.getWindowManager().getDefaultDisplay().getRotation(), m.widthPixels, m.heightPixels);
         geometria = true;
       }
-      /* (lo que pidió el juego para tu espacio: la sesión se configura acá, en su hilo) */
-      Boolean pe = pedidoEspacio; if (pe != null) { pedidoEspacio = null; espacio.configurar(sesion, pe); }
+      /* (lo que pidió el juego, el escaneo y la linterna: la sesión se configura acá, en su hilo) */
+      aplicarConfig();
       Frame fr = sesion.update();
       long ts = fr.getTimestamp();
       if (ts == ultimaFoto) return;

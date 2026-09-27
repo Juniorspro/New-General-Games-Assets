@@ -26,7 +26,7 @@ import { PanelLentes, accionLentes } from './lentes.js';
 sumar({
   es: { es_buscando: 'Buscando dónde estás…', es_buscando_d: 'Mové el celu despacio, con luz', es_titulo: 'Escaneá tu espacio', es_texto: 'Mirá alrededor despacio: el piso, las paredes y los muebles',
     es_piso: 'Piso', es_paredes: 'Paredes', es_mesa: 'Mesa', es_objetos: 'Objetos', es_alrededor: 'Mirá alrededor', es_listo: 'Listo', es_saltear: 'Saltear', es_salir: 'Salir', es_falta_piso: 'Falta el piso: apuntá para abajo',
-    es_m2: '{n} m²', es_cubitos: '{n} cubitos', es_listo_pct: '{n} % listo', es_prof_fotos: '📡 profundidad: {n} fotos · {ms} ms', es_prof_no: '📡 sin profundidad: la malla sale de los planos', es_prof_nada: '📡 esperando la profundidad…', es_prof_prende: '📡 prendiendo el escaneo…', es_prof_err: '⚠ escaneo: {e}', es_prof_sigue: '📡 ARCore no te sigue: mirá cosas con luz y movete despacio', es_planos_n: '{n} planos', es_sin_prof: 'Tu celu no mide profundidad: los objetos salen de a pocos puntos',
+    es_m2: '{n} m²', es_cubitos: '{n} cubitos', es_listo_pct: '{n} % listo', es_prof_fotos: '📡 profundidad: {n} fotos · {ms} ms', es_prof_no: '📡 sin profundidad: la malla sale de los planos', es_prof_nada: '📡 esperando la profundidad…', es_prof_prende: '📡 prendiendo el escaneo…', es_prof_err: '⚠ escaneo: {e}', es_prof_sigue: '📡 ARCore no te sigue: mirá cosas con luz y movete despacio', es_planos_n: '{n} planos', es_d_planos: 'planos {a}/{b}', es_d_prof: 'prof {a} (esperando {b})', es_d_suave: 'suavizada', es_d_cfg: 'sesión: planos {a} · prof {b}', es_d_sigue: 'no sigue: {e}', es_d_reconf: 'reconfigurada {n}×', es_prof_apagada: '⚠ la sesión apagó el escaneo: lo prendo de nuevo', es_sin_prof: 'Tu celu no mide profundidad: los objetos salen de a pocos puntos',
     es_manos_t: 'Apoyá las manos en la mesa', es_manos_d: 'Abiertas, palma para abajo y quietas un segundo', es_sin_mesa: 'No encontré una mesa: apoyalas en cualquier superficie o salteá',
     es_izq: 'Izquierda', es_der: 'Derecha', es_esperando: 'esperando…', es_quieta: 'quieta…', es_medida: 'mide {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Tus manos quedaron medidas (×{k})',
     es_ayuda: 'Tocá la pantalla para seguir · con las manos: tocá o pellizcá', es_piso_ok: 'Piso encontrado', es_pared_ok: 'Pared encontrada', es_mesa_ok: 'Mesa encontrada',
@@ -36,7 +36,7 @@ sumar({
     vr_ar_juego: '🎮 Sí, directo al juego', vr_ar_juego_d: 'AEROPLAZA en 6 ejes, sin escanear', vr_ar_no: '🧭 No, sin ARCore', vr_ar_no_d: 'Solo el giroscopio. Las ventanas de prueba se abren en el mundo del juego (menú de la palma)', vr_ar_atras: 'Volver' },
   en: { es_buscando: 'Finding where you are…', es_buscando_d: 'Move your phone slowly, with light', es_titulo: 'Scan your space', es_texto: 'Look around slowly: the floor, the walls and the furniture',
     es_piso: 'Floor', es_paredes: 'Walls', es_mesa: 'Table', es_objetos: 'Objects', es_alrededor: 'Look around', es_listo: 'Done', es_saltear: 'Skip', es_salir: 'Exit', es_falta_piso: 'Floor missing: point down',
-    es_m2: '{n} m²', es_cubitos: '{n} voxels', es_listo_pct: '{n} % done', es_prof_fotos: '📡 depth: {n} frames · {ms} ms', es_prof_no: '📡 no depth: the mesh comes from the planes', es_prof_nada: '📡 waiting for depth…', es_prof_prende: '📡 starting the scan…', es_prof_err: '⚠ scan: {e}', es_prof_sigue: '📡 ARCore isn’t tracking you: look at lit things and move slowly', es_planos_n: '{n} planes', es_sin_prof: 'Your phone can’t measure depth: objects come from a few points',
+    es_m2: '{n} m²', es_cubitos: '{n} voxels', es_listo_pct: '{n} % done', es_prof_fotos: '📡 depth: {n} frames · {ms} ms', es_prof_no: '📡 no depth: the mesh comes from the planes', es_prof_nada: '📡 waiting for depth…', es_prof_prende: '📡 starting the scan…', es_prof_err: '⚠ scan: {e}', es_prof_sigue: '📡 ARCore isn’t tracking you: look at lit things and move slowly', es_planos_n: '{n} planes', es_d_planos: 'planes {a}/{b}', es_d_prof: 'depth {a} (waiting {b})', es_d_suave: 'smoothed', es_d_cfg: 'session: planes {a} · depth {b}', es_d_sigue: 'not tracking: {e}', es_d_reconf: 'reconfigured {n}×', es_prof_apagada: '⚠ the session turned the scan off: turning it back on', es_sin_prof: 'Your phone can’t measure depth: objects come from a few points',
     es_manos_t: 'Rest your hands on the table', es_manos_d: 'Open, palms down and still for a second', es_sin_mesa: 'No table found: rest them on any surface or skip',
     es_izq: 'Left', es_der: 'Right', es_esperando: 'waiting…', es_quieta: 'hold still…', es_medida: 'is {n} cm', es_seguir: 'Continue', es_medidas: '✋ Your hands are measured (×{k})',
     es_ayuda: 'Tap the screen to continue · with your hands: touch or pinch', es_piso_ok: 'Floor found', es_pared_ok: 'Wall found', es_mesa_ok: 'Table found',
@@ -46,7 +46,7 @@ sumar({
     vr_ar_juego: '🎮 Yes, straight to the game', vr_ar_juego_d: 'AEROPLAZA in 6DoF, no scan', vr_ar_no: '🧭 No, without ARCore', vr_ar_no_d: 'Gyroscope only. Test windows open in the game world (palm menu)', vr_ar_atras: 'Back' },
   pt: { es_buscando: 'Procurando onde você está…', es_buscando_d: 'Mexa o celular devagar, com luz', es_titulo: 'Escaneie seu espaço', es_texto: 'Olhe em volta devagar: o chão, as paredes e os móveis',
     es_piso: 'Chão', es_paredes: 'Paredes', es_mesa: 'Mesa', es_objetos: 'Objetos', es_alrededor: 'Olhe em volta', es_listo: 'Pronto', es_saltear: 'Pular', es_salir: 'Sair', es_falta_piso: 'Falta o chão: aponte para baixo',
-    es_m2: '{n} m²', es_cubitos: '{n} cubinhos', es_listo_pct: '{n} % pronto', es_prof_fotos: '📡 profundidade: {n} fotos · {ms} ms', es_prof_no: '📡 sem profundidade: a malha sai dos planos', es_prof_nada: '📡 esperando a profundidade…', es_prof_prende: '📡 ligando o escaneamento…', es_prof_err: '⚠ escaneamento: {e}', es_prof_sigue: '📡 o ARCore não te segue: olhe coisas com luz e mova-se devagar', es_planos_n: '{n} planos', es_sin_prof: 'Seu celular não mede profundidade: os objetos saem de poucos pontos',
+    es_m2: '{n} m²', es_cubitos: '{n} cubinhos', es_listo_pct: '{n} % pronto', es_prof_fotos: '📡 profundidade: {n} fotos · {ms} ms', es_prof_no: '📡 sem profundidade: a malha sai dos planos', es_prof_nada: '📡 esperando a profundidade…', es_prof_prende: '📡 ligando o escaneamento…', es_prof_err: '⚠ escaneamento: {e}', es_prof_sigue: '📡 o ARCore não te segue: olhe coisas com luz e mova-se devagar', es_planos_n: '{n} planos', es_d_planos: 'planos {a}/{b}', es_d_prof: 'prof. {a} (esperando {b})', es_d_suave: 'suavizada', es_d_cfg: 'sessão: planos {a} · prof. {b}', es_d_sigue: 'não segue: {e}', es_d_reconf: 'reconfigurada {n}×', es_prof_apagada: '⚠ a sessão desligou o escaneamento: ligando de novo', es_sin_prof: 'Seu celular não mede profundidade: os objetos saem de poucos pontos',
     es_manos_t: 'Apoie as mãos na mesa', es_manos_d: 'Abertas, palma para baixo e paradas um segundo', es_sin_mesa: 'Não achei uma mesa: apoie em qualquer superfície ou pule',
     es_izq: 'Esquerda', es_der: 'Direita', es_esperando: 'esperando…', es_quieta: 'parada…', es_medida: 'mede {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Suas mãos foram medidas (×{k})',
     es_ayuda: 'Toque a tela para seguir · com as mãos: toque ou faça a pinça', es_piso_ok: 'Chão encontrado', es_pared_ok: 'Parede encontrada', es_mesa_ok: 'Mesa encontrada',
@@ -183,7 +183,11 @@ class Tarjeta extends Tablero {
       g.fillText(l, 34, y + n * 34);
     };
     /* (vuelta 36-37: cómo va el escaneo, arriba a la derecha, sin pisar el título: si no llega, se sabe) */
-    const diag = (desde) => { if (!D.diag) return; g.textAlign = 'right'; g.fillStyle = /⚠/.test(D.diag) ? '#ffd23f' : 'rgba(191,244,255,0.85)'; g.font = '700 20px system-ui, sans-serif'; g.fillText(D.diag, W - 30, 40, W - 30 - desde); g.textAlign = 'left'; };
+    const diag = (desde) => {
+      if (D.diag) { g.textAlign = 'right'; g.fillStyle = /⚠/.test(D.diag) ? '#ffd23f' : 'rgba(191,244,255,0.85)'; g.font = '700 20px system-ui, sans-serif'; g.fillText(D.diag, W - 30, 40, W - 30 - desde); g.textAlign = 'left'; }
+      /* (y los números de Java, chicos, abajo de todo: con una captura se sabe qué falta) */
+      if (D.diag2) { g.textAlign = 'center'; g.fillStyle = 'rgba(191,244,255,0.75)'; g.font = '600 15px system-ui, sans-serif'; g.fillText(D.diag2, W / 2, H - 20, W - 60); g.textAlign = 'left'; }
+    };
     if (this.fase === 'buscando') {
       diag(34);
       g.font = '800 46px system-ui, sans-serif'; g.fillText('📡 ' + t('es_buscando'), 34, 90);
@@ -486,17 +490,32 @@ export class Espacio {
   /* (vuelta 37) en qué paso está, para saber por qué no escanea: ARCore con error, la cámara, que no te sigue,
      el escaneo que todavía no prendió, sin profundidad, o las fotos de profundidad que entraron (y los planos) */
   textoMalla() {
-    const d = this.malla.diag, e = Nativo.espacio, c = Nativo.camaraEspacio, a = Nativo.estado;
+    const d = this.malla.diag, e = Nativo.espacio, c = Nativo.camaraEspacio, a = Nativo.estado, D = this.diagVivo();
     const planos = this.planos.size ? ' · ' + t('es_planos_n', { n: this.planos.size }) : '';
+    const fotos = Math.max(d?.fotos || 0, D?.fotos || 0);
     if (d?.error) return '⚠ malla: ' + d.error;
     if (/^error/.test(a) || a === 'sin-permiso' || a === 'no') return t('es_prof_err', { e: 'ARCore ' + a });
     if (/^error/.test(e)) return t('es_prof_err', { e: e });
     if (/^error/.test(c)) return t('es_prof_err', { e: 'cámara ' + c.slice(7) });
     if (!Nativo.arVivo) return t('es_prof_sigue') + planos;
     if (!e || e === 'apagado') return t('es_prof_prende');
+    if (D && (!D.cfgPl || (e === 'profundidad' && !D.cfgProf))) return t('es_prof_apagada');
     if (e === 'puntos') return t('es_prof_no') + planos;
-    if (!d || !d.fotos) return t('es_prof_nada') + planos;
-    return t('es_prof_fotos', { n: d.fotos, ms: Math.round(d.ms / 10) * 10 }) + planos;
+    if (!fotos) return (D?.err && !D.ok ? t('es_prof_err', { e: 'prof ' + D.err }) : t('es_prof_nada')) + planos;
+    return t('es_prof_fotos', { n: fotos, ms: Math.round((d?.ms || 0) / 10) * 10 }) + planos;
+  }
+  /* (vuelta 38) lo último que mandó Espacio.java › diag, si es de hace poco */
+  diagVivo() { const D = Nativo.diagEspacio; return D && performance.now() - D.t < 4000 ? D : null; }
+  /* el renglón chico de abajo, solo si algo falta (sin planos o sin fotos de profundidad): los números de Java, para
+     saber por qué no escanea con una captura */
+  textoDiag() {
+    const D = this.diagVivo(); if (!D || (D.pl > 0 && D.fotos > 0)) return '';
+    const si = (x) => (x ? '✓' : '✗'), l = [t('es_d_planos', { a: D.pl, b: D.plT }), t('es_d_prof', { a: D.ok, b: D.espera }) + (D.suave ? ' ' + t('es_d_suave') : '')];
+    if (D.err) l.push('⚠ ' + D.err);
+    l.push(t('es_d_cfg', { a: si(D.cfgPl), b: si(D.cfgProf) }), 'cam ' + D.cam);
+    if (D.sigue && D.sigue !== 'ok') l.push(t('es_d_sigue', { e: D.sigue }));
+    if (D.reconf) l.push(t('es_d_reconf', { n: D.reconf }));
+    return l.join(' · ');
   }
   /* lo que se muestra como "objetos": los cuadrados de la malla (o, sin profundidad, los cubitos) */
   get nObjetos() { return this.malla.cuadros || this.nVox; }
@@ -630,7 +649,7 @@ export class Espacio {
       T.malla.lookAt(this.cabezaP); T.malla.updateMatrixWorld();
       const vistos = Array.from(this.sectores).filter((x) => x >= 1).length;
       let pisoArea = 0, paredes = 0; for (const P of this.planos.values()) { if (P.clase === 'piso') pisoArea += P.area; if (P.clase === 'pared') paredes++; }
-      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nObjetos, listo: this.pctListo, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos', camara: this.textoCamara(), diag: this.textoMalla() };
+      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nObjetos, listo: this.pctListo, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos', camara: this.textoCamara(), diag: this.textoMalla(), diag2: this.textoDiag() };
       const firma = JSON.stringify(datos, (k, v) => (k === 'k' || k === 'antes' ? undefined : typeof v === 'number' ? Math.round(v * 20) / 20 : v));
       if (firma !== this._firma || this.fase === 'buscando') { this._firma = firma; T.poner(this.fase, datos); }
       for (const b of T.botones) if (b.id === 'listo') { const a = this.pisoY == null; if (a !== !!b.apagado) { b.apagado = a; T.sucio = true; } }

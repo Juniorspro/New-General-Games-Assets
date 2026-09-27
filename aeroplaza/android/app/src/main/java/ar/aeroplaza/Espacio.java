@@ -5,13 +5,16 @@ import android.media.Image;
 import android.os.SystemClock;
 
 import com.google.ar.core.Camera;
+import com.google.ar.core.CameraConfig;
 import com.google.ar.core.CameraIntrinsics;
+import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Plane;
 import com.google.ar.core.PointCloud;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.TrackingState;
+import com.google.ar.core.exceptions.NotYetAvailableException;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -40,7 +43,12 @@ import java.util.concurrent.Executors;
 class Espacio {
   final MainActivity act;
   volatile boolean escanea, pasante, olvidarPedido;
+  /* (reconfigurar: la sesión perdió los planos o la profundidad; Ar.aplicarConfig la configura de nuevo) */
+  volatile boolean reconfigurar;
   boolean conProfundidad;
+  /* (vuelta 38, para saber por qué no escanea: cada segundo va al juego, __nativo.diagEspacio) cuántas fotos de
+     profundidad salieron, cuántas "todavía no", el último error; si la cruda no sale, la suavizada */
+  int okProf, esperaProf, reconfigs; String errProf = ""; boolean profSuave; long tDiag, tVigila;
   static final float VOX = 0.05f;
   static final int FIRME = 3, TOPE = 90000, POR_MENSAJE = 4000;
   /* (cada cubito: cuántas veces se vio; los nuevos firmes esperan a salir en el próximo mensaje) */
@@ -77,21 +85,22 @@ class Espacio {
 
   Espacio(MainActivity a) { act = a; }
 
-  /* el pedido del juego (en el hilo de GL, antes de sesion.update: configurar la sesión desde otro hilo
-     mientras corre no es seguro) */
-  void configurar(Session s, boolean si) {
-    try {
-      com.google.ar.core.Config c = s.getConfig();
-      c.setPlaneFindingMode(si ? com.google.ar.core.Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL : com.google.ar.core.Config.PlaneFindingMode.DISABLED);
-      conProfundidad = si && s.isDepthModeSupported(com.google.ar.core.Config.DepthMode.AUTOMATIC);
-      c.setDepthMode(conProfundidad ? com.google.ar.core.Config.DepthMode.AUTOMATIC : com.google.ar.core.Config.DepthMode.DISABLED);
-      s.configure(c);
-      escanea = si;
-      act.enviar("__nativo&&__nativo.estado('espacio " + (si ? (conProfundidad ? "profundidad" : "puntos") : "apagado") + "')");
-    } catch (Throwable t) {
-      escanea = false;
-      act.enviar("__nativo&&__nativo.estado('espacio error: " + t.getClass().getSimpleName() + "')");
-    }
+  /* el pedido del juego, en la config que arma Ar.aplicarConfig (en el hilo de GL, antes de sesion.update:
+     configurar la sesión desde otro hilo mientras corre no es seguro) */
+  void preparar(Session s, Config c, boolean si) {
+    c.setPlaneFindingMode(si ? Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL : Config.PlaneFindingMode.DISABLED);
+    c.setDepthMode(si && s.isDepthModeSupported(Config.DepthMode.AUTOMATIC) ? Config.DepthMode.AUTOMATIC : Config.DepthMode.DISABLED);
+  }
+  /* ya configurada: lo que quedó de verdad (se lee de vuelta, no lo que se pidió), y se le avisa al juego */
+  void configurado(Session s, boolean si) {
+    Config r = s.getConfig();
+    conProfundidad = si && r.getDepthMode() == Config.DepthMode.AUTOMATIC;
+    escanea = si; tVigila = SystemClock.elapsedRealtime();
+    act.enviar("__nativo&&__nativo.estado('espacio " + (si ? (conProfundidad ? "profundidad" : "puntos") : "apagado") + "')");
+  }
+  void fallo(Throwable t) {
+    escanea = false;
+    act.enviar("__nativo&&__nativo.estado('espacio error: " + t.getClass().getSimpleName() + "')");
   }
 
   /* se empieza de cero (escanear de nuevo): lo pide el juego desde otro hilo; se hace en el de GL */
@@ -100,16 +109,38 @@ class Espacio {
   /* cada cuadro de ARCore (hilo de GL) */
   void cuadro(Session s, Frame fr, Camera cam) {
     if (olvidarPedido) { olvidarPedido = false; vistos.clear(); nNuevos = 0; firmes = 0; olvidarMalla = true; mallas.clear(); act.enviar("__nativo&&__nativo.olvidado()"); }
-    if (!escanea || cam.getTrackingState() != TrackingState.TRACKING) return;
+    if (!escanea) return;
     long ahora = SystemClock.elapsedRealtime();
+    if (ahora - tDiag > 1000) { tDiag = ahora; diag(s, cam); }
+    /* (cada 2 s, que la sesión siga con los planos y la profundidad: si algo se los apagó, de nuevo) */
+    if (ahora - tVigila > 2000) {
+      tVigila = ahora; Config r = s.getConfig();
+      if (r.getPlaneFindingMode() == Config.PlaneFindingMode.DISABLED || (conProfundidad && r.getDepthMode() != Config.DepthMode.AUTOMATIC)) { reconfigurar = true; reconfigs++; }
+    }
+    if (cam.getTrackingState() != TrackingState.TRACKING) return;
     if (ahora - tPlanos > 400) { tPlanos = ahora; planos(s); }
-    if (ahora - tProf > 150) { tProf = ahora; if (conProfundidad) profundidad(fr, cam); else nube(fr); }
+    /* (mientras la profundidad no llega, también los puntos: algo se ve) */
+    if (ahora - tProf > 150) { tProf = ahora; if (conProfundidad) { profundidad(fr, cam); if (fotosProf == 0) nube(fr); } else nube(fr); }
     /* (sin profundidad, la malla igual: con los planos, cada 2 s) */
     if (!conProfundidad && !ocupadoMalla && ahora - tSoloPlanos > 2000) {
       tSoloPlanos = ahora; ocupadoMalla = true;
       hiloMalla.execute(() -> { try { fundir(null, null, 0, 0, 0, 0, 0, 0, null); } catch (Throwable t) { errorMalla = t.getClass().getSimpleName(); } finally { ocupadoMalla = false; } });
     }
     if (nNuevos > 0 && ahora - tVox > 250) { tVox = ahora; mandarVoxeles(); }
+  }
+
+  /* (vuelta 38) cómo va, para la tarjeta: los planos (siguiendo / todos), la profundidad (salieron, "todavía no",
+     el último error, si es la suavizada), lo que tiene la sesión de verdad, la cámara y por qué no sigue */
+  void diag(Session s, Camera cam) {
+    try {
+      int pl = 0, plT = 0;
+      for (Plane p : s.getAllTrackables(Plane.class)) { plT++; if (p.getTrackingState() == TrackingState.TRACKING && p.getSubsumedBy() == null) pl++; }
+      Config r = s.getConfig(); CameraConfig cc = s.getCameraConfig();
+      act.enviar(String.format(Locale.US, "__nativo&&__nativo.diagEspacio&&__nativo.diagEspacio({\"pl\":%d,\"plT\":%d,\"ok\":%d,\"espera\":%d,\"err\":\"%s\",\"suave\":%b,\"cfgPl\":%b,\"cfgProf\":%b,\"cam\":\"%s %dx%d@%d\",\"sigue\":\"%s\",\"fotos\":%d,\"reconf\":%d})",
+          pl, plT, okProf, esperaProf, errProf, profSuave, r.getPlaneFindingMode() != Config.PlaneFindingMode.DISABLED, r.getDepthMode() != Config.DepthMode.DISABLED,
+          cc.getCameraId(), cc.getImageSize().getWidth(), cc.getImageSize().getHeight(), cc.getFpsRange().getUpper(),
+          cam.getTrackingState() == TrackingState.TRACKING ? "ok" : cam.getTrackingFailureReason().name(), fotosProf, reconfigs));
+    } catch (Throwable t) { /* (el diagnóstico no rompe nada) */ }
   }
 
   void planos(Session s) {
@@ -161,11 +192,14 @@ class Espacio {
   void profundidad(Frame fr, Camera cam) {
     Image d = null, c = null;
     try {
-      d = fr.acquireRawDepthImage16Bits(); c = fr.acquireRawDepthConfidenceImage();
+      /* (la cruda, con su confianza; si en este celu no sale, la suavizada con confianza pareja) */
+      if (profSuave) d = fr.acquireDepthImage16Bits();
+      else { d = fr.acquireRawDepthImage16Bits(); c = fr.acquireRawDepthConfidenceImage(); }
+      okProf++;
       int W = d.getWidth(), H = d.getHeight();
-      Image.Plane pd = d.getPlanes()[0], pc = c.getPlanes()[0];
-      ByteBuffer bd = pd.getBuffer().order(ByteOrder.LITTLE_ENDIAN), bc = pc.getBuffer();
-      int rd = pd.getRowStride(), sd = pd.getPixelStride(), rc = pc.getRowStride(), sc = pc.getPixelStride();
+      Image.Plane pd = d.getPlanes()[0], pc = c == null ? null : c.getPlanes()[0];
+      ByteBuffer bd = pd.getBuffer().order(ByteOrder.LITTLE_ENDIAN), bc = pc == null ? null : pc.getBuffer();
+      int rd = pd.getRowStride(), sd = pd.getPixelStride(), rc = pc == null ? 0 : pc.getRowStride(), sc = pc == null ? 0 : pc.getPixelStride();
       CameraIntrinsics ci = cam.getTextureIntrinsics();
       float[] f = ci.getFocalLength(), pp = ci.getPrincipalPoint(); int[] dim = ci.getImageDimensions();
       float fx = f[0] * W / dim[0], fy = f[1] * H / dim[1], cx = pp[0] * W / dim[0], cy = pp[1] * H / dim[1];
@@ -173,13 +207,17 @@ class Espacio {
       /* (la malla está ocupada con la anterior: esta foto no) */
       if (ocupadoMalla) return;
       if (mmCopia == null || mmCopia.length != W * H) { mmCopia = new short[W * H]; confCopia = new byte[W * H]; }
-      for (int v = 0; v < H; v++) for (int u = 0; u < W; u++) { mmCopia[v * W + u] = bd.getShort(v * rd + u * sd); confCopia[v * W + u] = bc.get(v * rc + u * sc); }
+      for (int v = 0; v < H; v++) for (int u = 0; u < W; u++) { mmCopia[v * W + u] = bd.getShort(v * rd + u * sd); confCopia[v * W + u] = bc == null ? (byte) 200 : bc.get(v * rc + u * sc); }
       final short[] mm = mmCopia; final byte[] cf = confCopia; final int w = W, h = H; final float ffx = fx, ffy = fy, ccx = cx, ccy = cy;
       ocupadoMalla = true;
-      hiloMalla.execute(() -> { try { fundir(mm, cf, w, h, ffx, ffy, ccx, ccy, m); } catch (Throwable t) { errorMalla = t.getClass().getSimpleName(); } finally { ocupadoMalla = false; } });
-    } catch (com.google.ar.core.exceptions.NotYetAvailableException t) { /* todavía no hay (las primeras fotos) */ }
-    /* (otra cosa: que la tarjeta lo diga, así se sabe por qué no escanea) */
-    catch (Throwable t) { if (errorMalla.isEmpty()) errorMalla = "prof " + t.getClass().getSimpleName(); }
+      try { hiloMalla.execute(() -> { try { fundir(mm, cf, w, h, ffx, ffy, ccx, ccy, m); } catch (Throwable t) { errorMalla = t.getClass().getSimpleName(); } finally { ocupadoMalla = false; } }); }
+      catch (Throwable t) { ocupadoMalla = false; throw t; }
+    } catch (NotYetAvailableException t) {
+      /* todavía no hay (las primeras fotos); si la cruda nunca sale (~9 s), la suavizada */
+      if (++esperaProf > 60 && okProf == 0 && !profSuave) profSuave = true;
+    }
+    /* (otra cosa: que la tarjeta lo diga; y si es la cruda, la suavizada) */
+    catch (Throwable t) { errProf = t.getClass().getSimpleName(); if (okProf == 0 && !profSuave) profSuave = true; }
     finally { if (d != null) d.close(); if (c != null) c.close(); }
   }
 

@@ -112,6 +112,20 @@ const r3c = await pag.evaluate(() => {
   return { orden: iP >= 0 && iI > iP, t, cam, esp };
 });
 prueba('antes de arrancar ARCore pide la cámara con profundidad', r3c.orden && r3c.cam === '30' && r3c.esp === 'profundidad', JSON.stringify({ orden: r3c.orden, cam: r3c.cam, esp: r3c.esp }));
+/* (vuelta 38) con los números de Java: la sesión que perdió los planos se dice, y sin planos ni fotos va el renglón chico */
+const r3d = await pag.evaluate(() => {
+  window.__manda(2); const { Nativo } = window.__A, E = window.__A.espacio, antes = E.malla.diag; E.malla.diag = { fotos: 0, ms: 0, error: '' };
+  const base = { pl: 0, plT: 0, ok: 0, espera: 57, err: '', suave: false, cfgPl: true, cfgProf: true, cam: '0 640x480@30', sigue: 'ok', fotos: 0, reconf: 0 };
+  window.__nativo.diagEspacio({ ...base, cfgPl: false, reconf: 1 }); const a = [E.textoMalla(), E.textoDiag()];
+  window.__nativo.diagEspacio({ ...base, err: 'IllegalStateException' }); const b = [E.textoMalla(), E.textoDiag()];
+  window.__nativo.diagEspacio({ ...base, pl: 3, plT: 4, ok: 40, fotos: 12 }); const c = [E.textoMalla(), E.textoDiag()];
+  Nativo.diagEspacio = null; E.malla.diag = antes;
+  return { a, b, c };
+});
+prueba('con los números de Java: la sesión que apagó el escaneo, el error de la profundidad, y el renglón chico solo si falta algo',
+  /apagó el escaneo/.test(r3d.a[0]) && /planos 0\/0 · prof 0 \(esperando 57\).*sesión: planos ✗ · prof ✓ · cam 0 640x480@30 · reconfigurada 1×/.test(r3d.a[1])
+  && /⚠ escaneo: prof IllegalStateException/.test(r3d.b[0]) && /⚠ IllegalStateException/.test(r3d.b[1])
+  && /12 fotos/.test(r3d.c[0]) && r3d.c[1] === '', JSON.stringify(r3d));
 prueba('la tarjeta dice en qué paso se traba (ARCore, la cámara, prendiendo, sin profundidad)', /⚠.*ARCore error: Unavailable/.test(r3c.t[0]) && /⚠.*cámara IllegalState/.test(r3c.t[1]) && /prendiendo/.test(r3c.t[2]) && /sin profundidad/.test(r3c.t[3]), r3c.t.join(' | '));
 /* al terminar se va; escanear de nuevo la borra */
 const r4 = await pag.evaluate(() => {

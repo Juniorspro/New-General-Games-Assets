@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de noche, cuarta vez · `claude/fijate-iszyer`:**
+  - Pidió: "no escanea" (captura: esperando la profundidad, 0 planos, la linterna prendida); y manos más estables
+    en el HTML también, con un link para probar el HTML en 3DoF.
+  - Quedó ([aeroplaza-37](aeroplaza-37.md)): la config de la sesión en un solo hilo (la linterna la pisaba), la
+    vigilancia, la profundidad suavizada y el diagnóstico en la tarjeta. `malla.mjs` 19/19.
+  - Falta: las manos (sigue en esta sesión) y la captura del renglón chico si todavía no escanea.
 - **27/09/2026, de noche, todavía más tarde · `claude/fijate-iszyer`:**
   - Pidió: "no, pues no escanea el entorno".
   - Quedó ([aeroplaza-36](aeroplaza-36.md)): la cámara con profundidad se elige antes de arrancar ARCore, los

@@ -35,6 +35,9 @@ export const Nativo = {
   espacio: '',
   /* (la cámara para escanear, Ar.java › elegirParaProfundidad: 'ok' · '30' · 'sin-profundidad' · 'error: …') */
   camaraEspacio: '',
+  /* (vuelta 38, cada segundo mientras escanea: Espacio.java › diag) planos (siguiendo, todos), la profundidad (ok,
+     "todavía no", err, suave), lo que tiene la sesión (cfgPl, cfgProf), la cámara, por qué no sigue, fotos fundidas */
+  diagEspacio: null,
   camara: null,
   /* las manos sin ARCore (CamaraManos.java): corre · abriendo · parada · sin-permiso · error: …; y sus fotos por segundo */
   camaraManos: 'parada', camaraFps: 0,
@@ -85,6 +88,7 @@ window.__nativo = {
   manos(d) { Nativo.alManos?.(d); },
   /* tu espacio: los planos (todos, cada 400 ms), los cubitos nuevos (índices de VOX m) y la foto */
   planos(l) { Nativo.alPlanos?.(l); },
+  diagEspacio(o) { Nativo.diagEspacio = { ...o, t: performance.now() }; },
   voxeles(v, vox) { Nativo.alVoxeles?.(v, vox); },
   foto(d) { Nativo.alFoto?.(d); },
   olvidado() { Nativo.alOlvidado?.(); },
