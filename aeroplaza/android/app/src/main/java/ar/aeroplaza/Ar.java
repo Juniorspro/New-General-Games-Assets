@@ -61,7 +61,9 @@ class Ar implements GLSurfaceView.Renderer {
   long ultimaFoto;
   String fps = "?";
 
-  Ar(MainActivity a) { act = a; espacio = new Espacio(a); }
+  /* (vuelta 39) la cabeza: el giroscopio del sistema, corregido con ARCore (Fusion) */
+  final Cabeza cabeza;
+  Ar(MainActivity a) { act = a; espacio = new Espacio(a); cabeza = new Cabeza(a); }
 
   static String estado(Context c) {
     try {
@@ -110,7 +112,7 @@ class Ar implements GLSurfaceView.Renderer {
         gl.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         act.raiz.addView(gl, 0, new FrameLayout.LayoutParams(1, 1));
       }
-      sesion.resume(); gl.onResume(); corriendo = true;
+      sesion.resume(); gl.onResume(); corriendo = true; cabeza.prender();
       return "corre";
     } catch (Throwable t) {
       corriendo = false;
@@ -193,16 +195,16 @@ class Ar implements GLSurfaceView.Renderer {
 
   String reanudar() {
     if (sesion == null || !corriendo) return corriendo ? "corre" : "parada";
-    try { sesion.resume(); if (gl != null) gl.onResume(); return "corre"; } catch (Throwable t) { return "error: " + t.getClass().getSimpleName(); }
+    try { sesion.resume(); if (gl != null) gl.onResume(); cabeza.prender(); return "corre"; } catch (Throwable t) { return "error: " + t.getClass().getSimpleName(); }
   }
-  void pausar() { if (gl != null) gl.onPause(); if (sesion != null) sesion.pause(); }
+  void pausar() { if (gl != null) gl.onPause(); if (sesion != null) sesion.pause(); cabeza.apagar(); }
   void parar() { corriendo = false; pausar(); act.enviar("__nativo&&__nativo.estado('parada')"); }
   void manos(boolean si) { conManos = si; if (si && manos == null) manos = new ManosNativas(act); }
   /* tu espacio: escanear (planos y profundidad) y la foto para ver a través */
   void escanear(boolean si) { pedidoEspacio = si; }
   void pasante(boolean si) { espacio.pasante = si; }
   void cerrar() {
-    corriendo = false;
+    corriendo = false; cabeza.apagar();
     if (manos != null) { manos.cerrar(); manos = null; }
     espacio.cerrar();
     if (sesion != null) { sesion.close(); sesion = null; }
@@ -285,6 +287,8 @@ class Ar implements GLSurfaceView.Renderer {
       Pose p = cam.getDisplayOrientedPose();
       act.enviar(String.format(Locale.US, "__nativo&&__nativo.pose(%.2f,%.5f,%.5f,%.5f,%.6f,%.6f,%.6f,%.6f,%d,'%s')", edad,
           p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw(), e == TrackingState.TRACKING ? 1 : e == TrackingState.PAUSED ? 0 : -1, fps));
+      /* (la pose de esta foto, a su hora, para la cabeza: el lugar y la corrección del rumbo del giroscopio) */
+      if (e == TrackingState.TRACKING) cabeza.f.foto(ts, p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw(), SystemClock.elapsedRealtimeNanos());
       espacio.cuadro(sesion, fr, cam);
       boolean paraManos = conManos && manos != null && manos.libre(), paraVer = espacio.quiereFoto() && e == TrackingState.TRACKING;
       long ahoraMs = SystemClock.elapsedRealtime();

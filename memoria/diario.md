@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de noche, quinta vez · `claude/fijate-iszyer`:**
+  - Pidió: "6DoF súper suave y goty, es muy impreciso" (con un TikTok de metanexusxr que no se pudo ver).
+  - Quedó ([aeroplaza-39](aeroplaza-39.md)): la cabeza nativa (el giroscopio del sistema corregido con ARCore),
+    que el juego lee al dibujar. `cabeza.mjs` 16/16.
+  - Falta: probarla en su celu.
 - **27/09/2026, de noche, cuarta vez · `claude/fijate-iszyer`:**
   - Pidió: "no escanea" (captura: esperando la profundidad, 0 planos, la linterna prendida); y manos más estables
     en el HTML también, con un link para probar el HTML en 3DoF.

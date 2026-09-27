@@ -212,6 +212,9 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void arPasante(final boolean si) { quierePasante = si; Ar a = ar; if (a != null) a.pasante(si); }
     /* (antes de arIniciar: si la cámara tiene que dar profundidad, para tu espacio) */
     @JavascriptInterface public void arProfundidad(final boolean si) { quiereProfundidad = si; }
+    /* (vuelta 39) la cabeza en este instante, adelantada a cuando se ve (ms): "qx,qy,qz,qw,x,y,z" o "" */
+    @JavascriptInterface public String cabeza(double adelanto) { Ar a = ar; return a == null || !a.corriendo ? "" : a.cabeza.leer(adelanto); }
+    @JavascriptInterface public String cabezaEstado() { Ar a = ar; return a == null ? "" : a.cabeza.estado(); }
     @JavascriptInterface public void arOlvidar() { Ar a = ar; if (a != null) a.espacio.olvidar(); }
     @JavascriptInterface public void manosDos(final boolean si) {
       Ar a = ar; if (a != null && a.manos != null) a.manos.quiereDos = si;

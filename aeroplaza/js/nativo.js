@@ -61,6 +61,18 @@ export const Nativo = {
   /* (antes de arIniciar: para tu espacio, la cámara que da profundidad; para jugar, la de 60) */
   arProfundidad(si) { try { N()?.arProfundidad?.(!!si); } catch { /* sin APK */ } },
   arOlvidar() { try { N()?.arOlvidar?.(); } catch { /* sin APK */ } },
+  /* (vuelta 39) LA CABEZA NATIVA (Cabeza.java / Fusion.java): el giroscopio del sistema a cientos de muestras
+     por segundo, corregido con ARCore; se lee en el momento de dibujar, adelantada a cuando se ve (ms). null si
+     no hay (la web, una APK vieja, o todavía sin los ejes) */
+  conCabeza: false,
+  leerCabeza(adelantoMs) {
+    try {
+      const s = N()?.cabeza?.(Math.max(0, adelantoMs)); if (!s) return null;
+      const v = s.split(','); if (v.length < 7) return null;
+      for (let i = 0; i < 7; i++) { CAB[i] = +v[i]; if (!Number.isFinite(CAB[i])) return null; }
+      return CAB;
+    } catch { return null; }
+  },
   flash(si) { try { N()?.flash(!!si); } catch { /* sin APK */ } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
   /* ARCore siguiendo, con una pose reciente */
@@ -113,8 +125,16 @@ function avisarEspera() { for (const e of Nativo.esperas.slice()) if (e.f(Nativo
    de ellos, y adelantar el del celu corría la cabeza. El lugar un poco menos que entero: el ruido de
    ARCore es de milímetros y adelantado se nota) */
 const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion(), _v = new THREE.Vector3(), _w = new THREE.Vector3();
-const VEL = new THREE.Vector3(), _o1 = new THREE.Vector3(), _o2 = new THREE.Vector3();
+const VEL = new THREE.Vector3(), _o1 = new THREE.Vector3(), _o2 = new THREE.Vector3(), CAB = new Float64Array(7);
 export function poseEn(tVer, q, ojo, ojos = 0.06) {
+  /* (vuelta 39) con la cabeza nativa: su giro (del giroscopio) y sus ojos (de ARCore, 6 cm detrás del celu) */
+  const c = Nativo.leerCabeza(tVer - performance.now());
+  if (c) {
+    q.set(c[0], c[1], c[2], c[3]); ojo.set(c[4], c[5], c[6]);
+    if (ojos !== 0.06) ojo.add(_v.set(0, 0, ojos - 0.06).applyQuaternion(q));
+    Nativo.conCabeza = true; return;
+  }
+  Nativo.conCabeza = false;
   const A = Nativo.pose, B = Nativo.poseAntes;
   q.copy(A.q); ojo.set(0, 0, ojos).applyQuaternion(A.q).add(A.p);
   if (!B || A.t - B.t < 4 || A.t - B.t > 120) return;
