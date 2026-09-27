@@ -15,9 +15,6 @@ echo
 echo "── las voces: que estén todas y duren lo que dura una frase ──"
 node pruebas/voces.mjs
 echo
-echo "── los tres idiomas: mismas claves, mismos huecos ────────────"
-node pruebas/idiomas.mjs
-echo
 echo "── el nivel: que se pueda terminar, jugado de verdad ─────────"
 node pruebas/nivel.mjs
 echo
@@ -30,6 +27,3 @@ echo
 echo "── el archivo único, desde file:// ───────────────────────────"
 python3 empaquetar.py
 node pruebas/un-archivo.mjs
-echo
-echo "── giro, idiomas, menú y grabaciones (archivo único, sin red) ─"
-node pruebas/giro-idioma.mjs

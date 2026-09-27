@@ -11,9 +11,8 @@ contesta con los reflejos.
 y te tirás por uno para salir por el otro. No hay reloj: la pregunta es
 *¿por dónde?* y hasta que no se te ocurre, no pasa nada.
 
-**Abrilo:** `dimension-n-en-un-archivo.html`, doble clic. 805 KB, sin servidor,
-sin internet, sin instalar nada. En castellano, inglés o portugués (lo pregunta
-en cada arranque) y con el teléfono parado o acostado.
+**Abrilo:** `dimension-n-en-un-archivo.html`, doble clic. 496 KB, sin servidor,
+sin internet, sin instalar nada.
 
 ## Lo que tiene adentro
 
@@ -45,11 +44,10 @@ vectorial y esa versión sigue entera: un brazo es una línea gruesa entre el co
 y la mano. Si una pieza no cargó, el muñeco sale con líneas y círculos en vez de
 desaparecer.
 
-**Los efectos son grabaciones y las voces están pegadas en un solo mp3.** Los
-golpes, las púas, el resorte, la chatarra, el reactor y el viento de la caída
-son grabaciones CC0 (ver *Sonidos*); los osciladores de antes quedan de
-respaldo mientras se decodifican. El zumbido del pozo sigue siendo dos
-osciladores desafinados que cambian de nota por capítulo. Las veintitrés líneas de diálogo van habladas en un único archivo con un índice de
+**Los efectos son osciladores y las voces están pegadas en un solo mp3.** Un
+golpe es ruido filtrado con una envolvente de sesenta milisegundos; el zumbido
+del pozo son dos osciladores desafinados que cambian de nota por capítulo. Las
+veintitrés líneas de diálogo van habladas en un único archivo con un índice de
 posiciones: un pedido, una decodificación, y reproducir una línea es
 `start(0, desde, largo)`. Las dos voces salen de una sola, separadas moviéndoles
 el tono con ffmpeg.
@@ -76,56 +74,6 @@ entre once puntos en vez de clavar la cabeza. Descuenta dos tercios del daño.
 Al final de cada capítulo hay un portal con su propio piso: es la única salida,
 es punto de guardado y te devuelve integridad.
 
-## El teléfono acostado: el juego no se acuesta
-
-El juego es vertical. Con el teléfono parado no se gira nada. Con el teléfono
-**acostado** (táctil, ancho mayor que alto y menos de 560 px de alto) el juego
-se gira −90° —o +90°, según para qué lado se acostó, leído de
-`screen.orientation.angle`— y queda "pegado" al teléfono como una app que sólo
-anda vertical: se juega de costado usando la pantalla entera (390×844 lógicos
-en vez de una franja de 251×390). Sin pantalla completa y sin
-`screen.orientation.lock`. En una tableta acostada (560 px de alto o más) el
-juego ya entra derecho y no se gira. Todo está en `js/giro.js`; el dedo se lee
-con `offsetX/offsetY`, que ya vienen en coordenadas del lienzo girado, y las
-media queries se cambiaron por las clases `bajo`/`medio` que calcula JS.
-
-## Idiomas y menú
-
-`js/idioma.js` tiene `TEXTOS = {es, en, pt}` y `t(clave, vars)`. Lo que dicen
-Rilo y Tito en castellano sale de `nivel.js` y `mapas.js` (la misma fuente que
-usa `generar_voces.py`); en inglés y portugués se traducen los subtítulos y
-las voces siguen en castellano (se pueden apagar en Opciones). La pantalla de
-idioma sale en cada arranque, con la elección anterior marcada y con foco.
-
-El menú tiene cinco pestañas: **Jugar** (elige entre el pozo y portales, cada
-uno con su progreso: tramos del pozo alcanzados, niveles resueltos, "Seguir"),
-**Récords** (mejor caída, chatarra, capítulo más hondo, bajadas, llegadas,
-desarmes, portales resueltos, tiros), **Opciones** (sonido, volumen de efectos
-y de música, voces, idioma, borrar con dos toques), **Cómo** y **Créditos**.
-
-## Sonidos
-
-Las grabaciones están en `sonidos/dimension-n/` (receta reproducible en
-`sonidos/dimension-n/procesar.py`, manifiesto con licencia, autor y nota de
-cada una) y entran al juego en `js/sonidos.js`, en base64, generado con
-`python3 sonidos/incrustar.py dimension-n dimension-n/js/sonidos.js`. Todas
-son **CC0**: Kenney (impact-sounds, sci-fi-sounds, music-jingles, ui-audio),
-rubberduck (100 CC0 SFX, el resorte) y SketchMan3 (el viento), de OpenGameArt.
-
-| evento | grabación | nota |
-|---|---|---|
-| golpe / golpe fuerte | impactPunch_medium / _heavy (Kenney) | golpe contra un cuerpo |
-| púas | impactMetal_medium (Kenney) | aproximación: metal que se clava |
-| resorte | spring_01 (rubberduck) | resorte real |
-| chatarra | impactTin_medium (Kenney) | lata golpeada |
-| placa de portales | impactMetal_heavy (Kenney) | aproximación |
-| portal / disparo / desarme | forceField, laserSmall, explosionCrunch (Kenney sci-fi) | diseñados, no grabados |
-| ganar | jingles_SAX07 (Kenney) | música |
-| menú | click2 (Kenney ui-audio) | |
-| reactor (loop) | thrusterFire_001 (Kenney sci-fi) | diseñado, sube con el empuje |
-| viento de la caída (loop) | wind woosh loop (SketchMan3) | sube con la velocidad |
-| zumbido del pozo | — | sigue sintetizado a propósito |
-
 ## El código
 
 ```
@@ -138,11 +86,8 @@ js/portales.js  el otro modo: grilla, disparos y el cruce
 js/mapas.js     los 15 niveles de portales (lo escribe una herramienta)
 js/juego.js     la partida: qué choca con qué y qué cuesta
 js/dibujo.js    pintar el mundo
-js/audio.js     las grabaciones, los osciladores de respaldo y el atlas de voces
-js/sonidos.js   las grabaciones en base64 (lo escribe sonidos/incrustar.py)
-js/giro.js      el giro con el teléfono acostado
-js/idioma.js    los textos en los tres idiomas
-js/main.js      bucle, entrada, menú y pantallas
+js/audio.js     los osciladores y el atlas de voces
+js/main.js      bucle, entrada, pantallas
 ```
 
 Las herramientas que hacen los assets:
@@ -165,7 +110,7 @@ entera en Node. Por eso las pruebas la miden de verdad en vez de mirar capturas.
 sh pruebas/correr.sh
 ```
 
-189 comprobaciones. Las que importan:
+74 comprobaciones. Las que importan:
 
 - **`fisica.mjs`** — 6000 cuadros de maltrato sin que ningún punto se vaya a
   infinito; ningún hueso se estira más del 15%; la soga no se estira nada; la
@@ -190,14 +135,6 @@ sh pruebas/correr.sh
   "Sí.") y que ningún tramo del atlas se pise con el siguiente.
 - **`un-archivo.mjs`** — abre el empaquetado desde `file://` y lo juega hasta el
   final.
-- **`idiomas.mjs`** — los tres idiomas con las mismas claves y los mismos
-  huecos `{var}`, y cada línea de diálogo y cada nivel traducidos.
-- **`giro-idioma.mjs`** — el archivo único con la red cortada, en compu
-  (1200×680), teléfono acostado (844×390, girado) y parado (390×844), en los
-  tres idiomas: pantalla de idioma, las cinco pestañas, que se decodifiquen
-  las 21 grabaciones, que un dedo puesto en un punto del juego llegue a ese
-  punto (reactor y disparo de portal, error menor a 1,5 px) y el final.
-  `node pruebas/giro-idioma.mjs carpeta` además saca las fotos.
 
 ## Los personajes
 
@@ -206,7 +143,6 @@ este juego**, con sus nombres, sus diálogos y su mundo propios. La idea —un
 abuelo científico insoportable, un nieto ansioso, portales y dimensiones— es un
 homenaje declarado.
 
-Las voces son **sintetizadas** diciendo las líneas de `js/nivel.js`. No se bajó
-ninguna voz de TikTok ni de ninguna otra parte, y no hay una sola grabación de
-una persona adentro de este repositorio: las grabaciones de los efectos (ver
-*Sonidos*) son golpes, resortes y viento, todas CC0.
+Las voces son **sintetizadas** diciendo las líneas de `js/nivel.js`. No hay
+audio sacado de ningún lado: no se bajó nada de TikTok ni de ninguna otra parte,
+y no hay una sola grabación de nadie adentro de este repositorio.

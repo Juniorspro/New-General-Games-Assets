@@ -58,45 +58,36 @@ const visibles = () => pg.evaluate(() =>
 
 await pg.goto(url);
 await pg.waitForFunction(() => !!window.ESPEJO, { timeout: 30000 });
-ch("pregunta el idioma antes del menú", (await visibles()).join() === "p-idioma");
-// Todavía no se sabe qué idioma lee el que abrió el juego: el título va en
-// los tres, y ninguno marcado la primera vez.
-const tit = await pg.$eval("#p-idioma h2", (e) => e.innerText);
-ch("el título de la pantalla de idioma va en los tres idiomas",
-   ["Elegí tu idioma", "Choose your language", "Escolha seu idioma"].every((x) => tit.includes(x)), tit.replace(/\n/g, " · "));
-ch("la primera vez no hay ninguno marcado", (await pg.$$(".idioma-btn.activo")).length === 0);
+ch("la primera vez pregunta el idioma antes del menú",
+   (await visibles()).join() === "p-idioma");
+ch("y arranca en inglés, no en el idioma del navegador",
+   (await pg.$eval("[data-t='idioma.titulo']", (e) => e.textContent)) === "Choose your language");
 
-// Las cinco pestañas y el final, en los tres idiomas, buscando claves crudas.
-const marca = /(?:^|\s)(?:doc|idioma|menu|niv|como|hud|fin|tab|tabs|rec|op|cre|err)\.[a-z0-9-]+(?:\s|$)/i;
-let anterior = null;
+// Las tres pantallas de texto, en los tres idiomas, buscando claves crudas.
+const marca = /(?:^|\s)(?:doc|idioma|menu|niv|como|hud|fin)\.[a-z0-9-]+(?:\s|$)/i;
 for (const cod of ["pt", "es", "en"]) {
   await pg.goto(url);
   await pg.waitForFunction(() => !!window.ESPEJO, { timeout: 30000 });
-  // SALE EN CADA ARRANQUE, con la elección anterior marcada y con el foco.
-  if (anterior) {
-    const m = await pg.evaluate(() => ({ marcado: [...document.querySelectorAll(".idioma-btn.activo")].map((b) => b.dataset.idioma).join(),
-                                         foco: document.activeElement?.dataset?.idioma }));
-    ch(`al volver a abrir pregunta otra vez, con ${anterior.toUpperCase()} marcado y con foco`,
-       (await visibles()).join() === "p-idioma" && m.marcado === anterior && m.foco === anterior, `${m.marcado} · foco ${m.foco}`);
-  }
-  await pg.click(`[data-idioma="${cod}"]`);
+  const eligiendo = (await visibles()).includes("p-idioma");
+  if (eligiendo) await pg.click(`[data-idioma="${cod}"]`);
+  else { while ((await pg.$eval("#m-idioma", (e) => e.textContent)) !== cod.toUpperCase()) await pg.click("#m-idioma"); }
   await pg.waitForTimeout(250);
-  anterior = cod;
 
   const textos = [];
-  for (const p of ["jugar", "records", "opciones", "como", "creditos"]) {
-    await pg.click(`[data-pestana="${p}"]`); await pg.waitForTimeout(120);
-    textos.push(await pg.$eval("#p-menu", (e) => e.innerText));
-  }
-  await pg.click('[data-pestana="jugar"]');
+  textos.push(await pg.$eval("#p-menu", (e) => e.innerText));
+  await pg.click("#m-como"); await pg.waitForTimeout(150);
+  textos.push(await pg.$eval("#p-como", (e) => e.innerText));
+  await pg.click("#p-como [data-volver]"); await pg.waitForTimeout(150);
+  await pg.click("#m-niveles"); await pg.waitForTimeout(200);
+  textos.push(await pg.$eval("#p-mapa", (e) => e.innerText));
   // El final: se gana el primer nivel siguiendo la pista, que es la solución.
   await pg.click(".celda-niv"); await pg.waitForTimeout(250);
   await pg.evaluate(() => {
     const p = window.ESPEJO.partida;
     for (let i = 0; i < 20 && !p.ganado; i++) { const e = p.pista(); if (!e) break; p.tocar(e.c, e.f); }
   });
-  // El final lo muestra el manejador del toque, no el bucle: acá se lo
-  // destapa a mano para leer sus textos.
+  // El final lo muestra el manejador del toque, no el bucle: se lo llama con un
+  // toque de verdad sobre un espejo cualquiera para que se entere.
   await pg.evaluate(() => {
     const p = window.ESPEJO.partida;
     if (p.ganado) document.querySelector("#p-fin").hidden = false;
@@ -110,18 +101,21 @@ for (const cod of ["pt", "es", "en"]) {
      (await pg.$eval("html", (e) => e.lang)).startsWith(cod));
 }
 
-// Borrar el progreso no puede devolverte al inglés ni al volumen de fábrica:
-// está guardado en el mismo bulto, y perderlo por resetear un puntaje es un
-// castigo que nadie pidió. Se cambia a castellano y se borra con dos toques.
+// LA ELECCION SE GUARDA Y NO SE VUELVE A PREGUNTAR. Es lo que separa un
+// selector de idioma de una molestia: si vuelve a aparecer en cada arranque,
+// el juego se abre siempre en una pantalla que no es el juego.
 await pg.goto(url);
 await pg.waitForFunction(() => !!window.ESPEJO, { timeout: 30000 });
-await pg.click('[data-idioma="es"]'); await pg.waitForTimeout(200);
-await pg.click('[data-pestana="opciones"]');
-await pg.click("#m-borrar"); await pg.click("#m-borrar"); await pg.waitForTimeout(300);
-const tras = await pg.evaluate(() => ({ luces: JSON.parse(localStorage.getItem("espejo.v1")).luces,
-  idioma: JSON.parse(localStorage.getItem("espejo.v1")).ajustes.idioma, cod: document.querySelector("#m-idioma-cod").textContent }));
-ch("borrar (con dos toques) borra las luces y no el idioma",
-   Object.keys(tras.luces).length === 0 && tras.idioma === "es" && tras.cod.startsWith("ES"), JSON.stringify(tras));
+ch("la segunda vez arranca directo en el menú", (await visibles()).join() === "p-menu");
+ch("y se acuerda del idioma elegido", (await pg.$eval("#m-idioma", (e) => e.textContent)) === "EN");
+
+// Borrar el récord no puede devolverte al inglés: está guardado en el mismo
+// bulto, y perder el idioma por resetear un puntaje es un castigo que nadie
+// pidió.
+await pg.click("#m-idioma"); await pg.waitForTimeout(150);     // EN → ES
+pg.once("dialog", (d) => d.accept());
+await pg.click("#m-borrar"); await pg.waitForTimeout(300);
+ch("borrar el progreso no borra el idioma", (await pg.$eval("#m-idioma", (e) => e.textContent)) === "ES");
 
 ch("sin errores de javascript", err.length === 0, err.slice(0, 2).join(" · "));
 await nav.close();

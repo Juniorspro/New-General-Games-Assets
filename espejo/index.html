@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es-AR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
@@ -11,91 +11,63 @@
 </head>
 <body>
 
-<!-- #raiz es lo que se gira con el teléfono acostado (js/giro.js). Todo lo que
-     se ve va adentro: un `position: fixed` dentro de un padre con `transform`
-     se ubica respecto de ese padre, así que las pantallas giran con él. -->
-<div id="raiz">
-
 <!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego quedaría
      después del HUD en el orden del documento, y como #p-juego crea su propio
      contexto de apilamiento, se pintaría ENCIMA del HUD. -->
 <canvas id="lienzo" width="360" height="640" aria-label="El tablero" data-t-attr="aria-label:doc.lienzo"></canvas>
 
-<!-- Lo único que se ve antes de que cargue el código, en los tres idiomas
-     porque todavía no se sabe cuál. -->
-<div id="cargando" class="cargando">Cargando… · Loading… · Carregando…</div>
-
 <!-- ───────────── idioma ─────────────
-     VA ANTES DEL MENU Y SALE EN CADA ARRANQUE: buscar dónde se cambia el
-     idioma en un idioma que no sabés leer es exactamente el problema. El
-     título va en los tres idiomas y la elección anterior sale marcada. -->
+     VA ANTES DEL MENU: buscar dónde se cambia el idioma en un idioma que no
+     sabés leer es exactamente el problema. Se pregunta una vez y se guarda. -->
 <main id="p-idioma" class="pantalla centrado" hidden>
   <div class="tapa">
     <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Espejo" width="420" height="150"></h1>
-    <h2 class="idioma-t"><span lang="es-AR">Elegí tu idioma</span><br><span lang="en">Choose your language</span><br><span lang="pt-BR">Escolha seu idioma</span></h2>
+    <h2 class="idioma-t" data-t="idioma.titulo">Elegí tu idioma</h2>
     <div class="botones" id="idiomas">
-      <button class="grande-op idioma-btn" data-idioma="es" lang="es-AR">
-        <svg class="bandera" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#74acdf"/><rect y="6.67" width="30" height="6.67" fill="#fff"/><circle cx="15" cy="10" r="2.3" fill="#f6b40e"/></svg>
-        <b>Español</b></button>
-      <button class="grande-op idioma-btn" data-idioma="en" lang="en">
-        <svg class="bandera" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="es-uk"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#es-uk)" stroke="#c8102e" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/></svg>
-        <b>English</b></button>
-      <button class="grande-op idioma-btn" data-idioma="pt" lang="pt-BR">
-        <svg class="bandera" viewBox="0 0 30 21" aria-hidden="true"><rect width="30" height="21" fill="#009c3b"/><path d="M15 2.5l12.5 8-12.5 8-12.5-8z" fill="#ffdf00"/><circle cx="15" cy="10.5" r="4.4" fill="#002776"/><path d="M10.8 9.7q4.3-1.2 8.5 1.8" stroke="#fff" stroke-width=".8" fill="none"/></svg>
-        <b>Português</b></button>
+      <button class="chico grande-op" data-idioma="en"><b>EN</b> English</button>
+      <button class="chico grande-op" data-idioma="es"><b>ES</b> Español</button>
+      <button class="chico grande-op" data-idioma="pt"><b>PT</b> Português</button>
     </div>
-    <p class="bajada">Se cambia después en Opciones · <span lang="en">You can change it in Options</span> · <span lang="pt-BR">Dá para trocar em Opções</span></p>
+    <p class="bajada" data-t="idioma.bajada">Se puede cambiar después desde el menú.</p>
   </div>
 </main>
 
-<!-- ───────────── menú ─────────────
-     Cinco pestañas. "Jugar" es la grilla de los cuarenta niveles con las luces
-     guardadas de cada uno: en un juego de niveles, el progreso ES el menú. -->
-<main id="p-menu" class="pantalla menu" hidden>
-  <header class="menu-cab">
+<!-- ───────────── menú ───────────── -->
+<main id="p-menu" class="pantalla centrado" hidden>
+  <div class="tapa">
     <h1 class="logo"><img src="assets/arte/ui_logo.webp" alt="Espejo" width="420" height="150"></h1>
-  </header>
-  <nav class="pestanas" role="tablist" data-t-attr="aria-label:tabs.aria">
-    <button role="tab" id="m-niveles" data-pestana="jugar" aria-controls="pn-jugar"><i aria-hidden="true">◈</i><span data-t="tab.jugar">Jugar</span></button>
-    <button role="tab" id="m-tab-records" data-pestana="records" aria-controls="pn-records"><i aria-hidden="true">★</i><span data-t="tab.records">Récords</span></button>
-    <button role="tab" id="m-tab-opciones" data-pestana="opciones" aria-controls="pn-opciones"><i aria-hidden="true">⚙</i><span data-t="tab.opciones">Opciones</span></button>
-    <button role="tab" id="m-como" data-pestana="como" aria-controls="pn-como"><i aria-hidden="true">?</i><span data-t="tab.como">Cómo</span></button>
-    <button role="tab" id="m-tab-creditos" data-pestana="creditos" aria-controls="pn-creditos"><i aria-hidden="true">♪</i><span data-t="tab.creditos">Créditos</span></button>
-  </nav>
-
-  <section id="pn-jugar" class="panel" role="tabpanel" data-panel="jugar">
     <p class="bajada" data-t-html="menu.bajada">Tocá un espejo y se da vuelta.</p>
+
     <button id="m-seguir" class="prisma" aria-label="Jugar" data-t-attr="aria-label:menu.jugar-aria">Nivel 1</button>
-    <div class="progreso">
-      <p class="record"><b id="m-luces">0</b></p>
-      <div class="barrita" aria-hidden="true"><i id="m-barra"></i></div>
-      <p class="sub" id="m-progreso">—</p>
-    </div>
-    <div id="mapa" class="mapa"></div>
-  </section>
+    <p class="record"><b id="m-luces">0</b></p>
 
-  <section id="pn-records" class="panel" role="tabpanel" data-panel="records" hidden>
-    <div class="placa">
-      <h2 data-t="rec.titulo">Lo que llevás</h2>
-      <ul class="lista" id="m-records"></ul>
+    <div class="botones fila chicos">
+      <button id="m-niveles" class="chico" data-t="menu.niveles">Niveles</button>
+      <button id="m-como" class="chico" data-t="menu.como">? Cómo se juega</button>
+      <label class="opcion chico-op"><input type="checkbox" id="aj-sonido">
+        <span data-t="menu.sonido">Sonido</span></label>
+      <label class="opcion chico-op"><input type="checkbox" id="aj-musica">
+        <span data-t="menu.musica">Música</span></label>
+      <button id="m-idioma" class="chico" aria-label="Idioma" data-t-attr="aria-label:menu.idioma">EN</button>
+      <button id="m-borrar" class="chico peligro" data-t="menu.borrar">Borrar</button>
     </div>
-  </section>
+  </div>
+</main>
 
-  <section id="pn-opciones" class="panel" role="tabpanel" data-panel="opciones" hidden>
-    <div class="placa">
-      <h2 data-t="op.titulo">Opciones</h2>
-      <label class="deslizador"><span data-t="op.efectos">Efectos</span>
-        <input type="range" id="aj-efectos" min="0" max="100" step="5"><output id="aj-efectos-v">80</output></label>
-      <label class="deslizador"><span data-t="op.musica">Música</span>
-        <input type="range" id="aj-musica" min="0" max="100" step="5"><output id="aj-musica-v">60</output></label>
-      <div class="fila-op"><span data-t="op.idioma">Idioma</span>
-        <button id="m-idioma" class="chico" aria-label="Idioma" data-t-attr="aria-label:menu.idioma"><b id="m-idioma-cod">EN</b> <span data-t="op.cambiar">Cambiar</span></button></div>
-      <button id="m-borrar" class="chico peligro" data-t="op.borrar">Borrar el progreso</button>
-    </div>
-  </section>
+<!-- ───────────── mapa de niveles ───────────── -->
+<main id="p-mapa" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico" data-t="como.atras">← Atrás</button>
+    <h2 data-t="niv.titulo">Niveles</h2></header>
+  <div id="mapa" class="mapa"></div>
+</main>
 
-  <section id="pn-como" class="panel texto" role="tabpanel" data-panel="como" hidden>
+<!-- ───────────── cómo se juega ───────────── -->
+<main id="p-como" class="pantalla" hidden>
+  <header class="barra"><button data-volver class="chico" data-t="como.atras">← Atrás</button>
+    <h2 data-t="como.titulo">Cómo se juega</h2></header>
+  <div class="texto">
     <p class="destacado" data-t-html="como.destacado">Cada emisor tira un rayo.</p>
+
     <h3 data-t="como.h-hay">Lo que hay</h3>
     <dl>
       <dt data-t="como.dt-emisor"></dt><dd data-t-html="como.dd-emisor"></dd>
@@ -103,22 +75,14 @@
       <dt data-t="como.dt-objetivo"></dt><dd data-t-html="como.dd-objetivo"></dd>
       <dt data-t="como.dt-muro"></dt><dd data-t-html="como.dd-muro"></dd>
     </dl>
+
     <h3 data-t="como.h-par">El par</h3>
     <p data-t-html="como.par"></p>
+
     <h3 data-t="como.h-hecho">De qué está hecho</h3>
     <p data-t-html="como.hecho1"></p>
     <p data-t-html="como.hecho2"></p>
-  </section>
-
-  <section id="pn-creditos" class="panel texto" role="tabpanel" data-panel="creditos" hidden>
-    <h3 data-t="cre.titulo">Créditos</h3>
-    <p data-t="cre.juego"></p>
-    <p data-t="cre.arte"></p>
-    <h3 data-t="cre.sonidos">Sonidos grabados</h3>
-    <p id="m-cre-cc0"></p>
-    <div id="m-cre-ccby"></div>
-    <p data-t="cre.sintesis"></p>
-  </section>
+  </div>
 </main>
 
 <!-- ───────────── juego ───────────── -->
@@ -154,13 +118,6 @@
   </div>
 </main>
 
-<div id="aviso" class="aviso" role="status" hidden></div>
-</div>
-
-<!-- Las grabaciones, en base64 (las genera sonidos/incrustar.py). Script
-     clásico y antes del juego: el juego las lee al crear el audio y, si este
-     archivo falta, suenan los osciladores de respaldo. -->
-<script src="js/sonidos.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

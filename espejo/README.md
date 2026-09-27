@@ -4,14 +4,14 @@ Cuarenta puzzles de espejos y rayos. Tocás un espejo y se da vuelta entre `/` y
 `\`; ganás cuando están prendidos todos los objetivos a la vez. Sin tiempo, sin
 reflejos, sin nada que se mueva por su cuenta.
 
-Vertical, un dedo, tres idiomas (inglés, español y portugués; pregunta cuál en
-cada arranque, con la elección anterior marcada). Todo el tablero es vectorial:
-el único arte generado es el vestido de los menús.
+Vertical, un dedo, tres idiomas (inglés, español y portugués; pregunta cuál la
+primera vez). Todo el tablero es vectorial: el único arte generado es el
+vestido de los menús.
 
     python3 -m http.server 8806      # y abrir http://127.0.0.1:8806
     node armar_niveles.mjs           # rehace los cuarenta niveles
-    sh pruebas/correr.sh             # 203 comprobaciones
-    python3 empaquetar.py            # espejo-en-un-archivo.html, 360 KB
+    sh pruebas/correr.sh             # 80 comprobaciones
+    python3 empaquetar.py            # espejo-en-un-archivo.html, 277 KB
 
 ## Ningún nivel se diseñó a ojo
 
@@ -59,29 +59,6 @@ tres juegos y hay una prueba que comprueba que **todos** los nombres que exporta
 cada módulo llegan al archivo único.
 
 
-## El teléfono acostado: el juego no se acuesta
-
-Con el teléfono parado no se gira nada. Con el teléfono **acostado** (táctil,
-ancho mayor que alto y menos de 560 px de alto) el juego se gira −90° —o +90°,
-según para qué lado se acostó (`screen.orientation.angle`)— y queda pegado al
-teléfono como una app que sólo anda vertical. Sin girar, en 844×390 el tablero
-quedaba en una franja de 251×390 con celdas de 33 a 46 px; girado usa la
-pantalla entera y las celdas miden de 51 a 72 px (medido sobre los cuarenta
-niveles). Sin pantalla completa ni `screen.orientation.lock`. En una tableta
-acostada no se gira: ya entra derecho. Está en `js/giro.js`; el toque se lee
-con `offsetX/offsetY`, que ya viene en coordenadas del lienzo girado, y las
-media queries se cambiaron por las clases `bajo`/`medio` que calcula JS.
-
-## El menú
-
-Cinco pestañas. **Jugar** es la grilla de los cuarenta niveles con las luces
-guardadas de cada uno (●●○), el siguiente sin resolver marcado, la barra de
-luces y el botón de seguir. **Récords**: luces, resueltos, resueltos en el par,
-victorias, niveles empezados, espejos dados vuelta y pistas. **Opciones**:
-volumen de efectos y de música (en cero se apaga), idioma, y borrar el
-progreso con dos toques (un `confirm()` del navegador no gira con el juego).
-**Cómo** y **Créditos**, con los de los sonidos.
-
 ## El sonido
 
 **Dos cosas distintas, y a propósito.** En el menú suena un tema grabado; en el
@@ -97,31 +74,13 @@ de ruido, con la densidad, el filtro y el bombo atados a **cómo venís jugando*
 La música no acompaña al juego, lo informa — igual que el viento. Y no pesa
 nada: cero archivos.
 
-**Los efectos son grabaciones CC0** (`sonidos/espejo/`, receta en
-`sonidos/dimension-n/procesar.py espejo`, incrustadas en `js/sonidos.js` con
-`sonidos/incrustar.py espejo espejo/js/sonidos.js`); los osciladores de antes
-quedan de respaldo mientras se decodifican:
-
-| evento | grabación | nota |
-|---|---|---|
-| dar vuelta un espejo | impactGlass_light (Kenney), más agudo para `/` y más grave para `\` | aproximación: vidrio golpeado |
-| objetivo prendido / último | bell_02 / bell_01 (rubberduck, OpenGameArt) | campanas de verdad |
-| objetivo apagado | impactGlass_medium (Kenney), más grave | |
-| empezar nivel | impactWood_light (Kenney) | el tablero sobre la mesa |
-| ganar | jingles_STEEL03 (Kenney) | música |
-| pista | question_001 (Kenney interface) | diseñado, no grabado |
-| menú | click2 (Kenney ui-audio) | |
-
-Ninguno es CC-BY. La música de las partidas sigue sintetizada y el tema del
-menú es el mismo de antes.
-
-**La música va aparte de los efectos**, porque son dos molestias
+**La música se apaga aparte de los efectos**, porque son dos molestias
 distintas: la música cansa a la décima partida y los efectos no, y un efecto es
 información mientras la música es decoración.
 
 ## Las pruebas
 
-203. Las que más valen:
+80. Las que más valen:
 
 - Los cuarenta se ganan, ninguno viene ganado, y **el par de cada uno es la
   distancia mínima de verdad** — recalculada con el mismo trazador de rayos que
@@ -140,9 +99,3 @@ información mientras la música es decoración.
   adentro sería empezar el puzzle medio resuelto).
 - Que no falte ninguna clave en ninguno de los tres idiomas y que no quede
   ningún nombre de clave a la vista en ninguna pantalla.
-- `giro-idioma.mjs`: el archivo único con la red cortada, en compu (1200×680),
-  teléfono acostado (844×390, girado) y parado (390×844), en los tres
-  idiomas: la pantalla de idioma con la elección anterior marcada, las cinco
-  pestañas, que se decodifiquen las diez grabaciones, que el toque en el
-  centro de la celda de la pista llegue a ese punto (error menor a 1,5 px) y
-  gane el nivel, y el final. Con una carpeta de argumento saca las fotos.

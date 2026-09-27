@@ -19,9 +19,6 @@ for (const [w, h, nom] of [[390, 844, "parado"], [360, 640, "chico"], [844, 390,
   await pg.waitForFunction(() => !!window.DN, { timeout: 30000 });
   await pg.evaluate(() => localStorage.clear());
   await pg.reload(); await pg.waitForFunction(() => !!window.DN, { timeout: 30000 });
-  // Antes del menú está la pantalla de idioma, en cada arranque.
-  await pg.locator(".idioma-btn").nth(0).click();
-  await pg.waitForSelector("#p-menu:not([hidden])");
 
   ch(`${nom} sin scroll horizontal`,
      (await pg.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)) <= 0);
@@ -29,7 +26,7 @@ for (const [w, h, nom] of [[390, 844, "parado"], [360, 640, "chico"], [844, 390,
     const t = await pg.evaluate((s) => {
       const e = document.querySelector(s), r = e.getBoundingClientRect();
       const en = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-      return { tocable: e === en || e.contains(en), alto: Math.round(Math.min(r.width, r.height)),
+      return { tocable: e === en || e.contains(en), alto: Math.round(r.height),
                tapa: en ? (en.id || en.className) : "-" };
     }, sel);
     ch(`${nom} ${sel} tocable y de 44 px`, t.tocable && t.alto >= 44,
@@ -52,18 +49,9 @@ for (const [w, h, nom] of [[390, 844, "parado"], [360, 640, "chico"], [844, 390,
 
   // EL ARRASTRE. Se apoya el dedo bien a la derecha del muñeco y se sostiene:
   // si el navegador se quedó el toque, no se mueve.
-  // El punto se pide en coordenadas DEL JUEGO (x = 330 de 360, bien a la
-  // derecha) y se pasa a la pantalla con la cuenta inversa del giro: acostado,
-  // el juego va girado y "a la derecha del juego" es otro lado de la pantalla.
   const antes = await pg.evaluate(() => window.DN.partida.rilo.p.pecho.x);
-  const [sx, sy] = await pg.evaluate(() => {
-    const { GIRO, esc, VISTA } = window.DN, l = document.querySelector("#lienzo");
-    const an = parseFloat(l.style.width), al = parseFloat(l.style.height);
-    const lx = (GIRO.ancho() - an) / 2 + 330 * esc, ly = (GIRO.alto() - al) / 2 + VISTA.alto * 0.55 * esc;
-    if (!GIRO.activo) return [lx, ly];
-    return GIRO.signo < 0 ? [ly, innerHeight - lx] : [innerWidth - ly, lx];
-  });
-  await pg.mouse.move(sx, sy);
+  const r = await pg.evaluate(() => document.querySelector("#lienzo").getBoundingClientRect());
+  await pg.mouse.move(r.x + r.width * 0.9, r.y + r.height * 0.55);
   await pg.mouse.down();
   await pg.waitForTimeout(450);
   const dur = await pg.evaluate(() => window.DN.partida.rilo.p.pecho.x);
