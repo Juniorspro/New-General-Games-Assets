@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Una cruceta y un botón sobre fondo oscuro: un control. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#07030F" android:pathData="M8,0h32a8,8 0,0 1,8 8v32a8,8 0,0 1,-8 8h-32a8,8 0,0 1,-8 -8v-32a8,8 0,0 1,8 -8z" />
+    <path android:fillColor="#107C10" android:pathData="M14,20h6v-6h4v6h6v4h-6v6h-4v-6h-6z" />
+    <path android:fillColor="#C8A020" android:pathData="M34,30m-5,0a5,5 0,1 0,10 0a5,5 0,1 0,-10 0" />
+</vector>

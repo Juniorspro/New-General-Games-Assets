@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mando 360 IR: control remoto de la Xbox 360 por infrarrojo (RC6). Usa el
+     emisor IR del teléfono, el mismo canal de menús y multimedia que el
+     control remoto oficial. No toca la seguridad de los joysticks. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.juniorspro.mando360"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
+
+    <!-- El emisor infrarrojo. required=false: la app abre igual y avisa si no hay. -->
+    <uses-feature android:name="android.hardware.consumerir" android:required="false" />
+    <uses-permission android:name="android.permission.TRANSMIT_IR" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:label="@string/nombre"
+        android:icon="@drawable/icono"
+        android:allowBackup="true"
+        android:theme="@android:style/Theme.Material.NoActionBar">
+        <activity
+            android:name=".Principal"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
