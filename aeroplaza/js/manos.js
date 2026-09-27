@@ -128,6 +128,7 @@ const GAN_PREVIO = 4e-4;   // (m²) lo que pesa, contra lo medido, empezar creye
    a los tirones: seguir derecho entre fotos era lo que pateaba, 400 veces por minuto en el video); desde
    GAN_SOLA[1], todo (la que va pareja, en manos-lento, da 0,55-0,85; el video, 0,27)) */
 const GAN_SOLA = [0.25, 0.55];
+const DEDOS_PALMA = [0.3, 0.6, 1, 0.15];   // Mano.medirDedos: con la palma hasta [0] de lo que se mueve (palma + [2] × (puntas - [3] m/s, el ruido de los dedos quietos)), no se adelanta; desde [1], todo
 const ESPERA = 3;      // la foto que sigue se espera hasta esto por lo que tardan en llegar (Mano.adelantar)
 const SALIDA = 0.25;   // y si no llega con la mano en el borde de la imagen, salió: sigue de largo y frena en esto (s)
 const GIRO_AD = 1;     // cuánto del giro se adelanta (del arcotangente de lo que giraría; Mano.adelantar)
@@ -556,7 +557,7 @@ class Mano {
     this.t = t; this.tLlego = tLlego; this.conf = conf; this.pell = pell; this.nueva = true;
     /* (por dónde pasó, con lo que midió la cámara: para reconocer los fantasmas de MediaPipe) */
     this.rastro.push({ t, c: centroPalma(P) }); while (this.rastro.length && t - this.rastro[0].t > 0.4) this.rastro.shift();
-    if (!crudo && this.rayo) this.medirAdelanto(t);
+    if (!crudo && this.rayo) { this.medirAdelanto(t); this.medirDedos(); }
     if (!this.visible) { this.visible = true; this.pellizca = false; this.anulado = false; this.profAntes = undefined; }
   }
   /* CUÁNTO CONVIENE ADELANTAR (vuelta 24): con cada foto, lo que el adelanto habría dicho hace lo que
@@ -587,6 +588,19 @@ class Mano {
       G.gh = THREE.MathUtils.clamp((G.numH + GAN_PREVIO) / (G.denH + GAN_PREVIO), GAN_MIN, 1);
     }
   }
+  /* (vuelta 26: moviendo los dedos con la mano quieta, MediaPipe mueve también la palma, al compás
+     (con un video de verdad: correlación 0,63). El adelanto tomaba ese vaivén como si la mano se fuera y
+     lo agrandaba (en la imagen, 4,0 % de la palma contra 2,6 de MediaPipe; sin adelanto, 2,6). Si las
+     puntas se mueven en la palma mucho más que la palma (DEDOS_PALMA), la palma casi no se adelanta:
+     pesoDedos) */
+  medirDedos() {
+    const E = this.euro, Dd = E.dedos?.dx, V = E.centro?.dx; if (!Dd || !V) { this.pesoDedos = 1; return; }
+    let af = 0; for (const i of PUNTA) af += Math.hypot(Dd[i * 3], Dd[i * 3 + 1], Dd[i * 3 + 2]) / 5;
+    const vp = Math.hypot(V[0], V[1], V[2]);
+    this.af = this.af === undefined ? af : this.af + (af - this.af) * 0.3; this.vp = this.vp === undefined ? vp : this.vp + (vp - this.vp) * 0.3;
+    const r = this.vp / (this.vp + DEDOS_PALMA[2] * Math.max(0, this.af - DEDOS_PALMA[3]) + 1e-4);
+    this.pesoDedos = THREE.MathUtils.smoothstep(r, DEDOS_PALMA[0], DEDOS_PALMA[1]);
+  }
   /* al cuadro que se dibuja: lo filtrado más la velocidad por lo que pasó desde que LLEGÓ la foto
      (así se sigue moviendo parejo entre foto y foto) y por lo que tarda la cámara (hasta LAT_TOPE) */
   adelantar(tDibujo, adelanta) {
@@ -595,7 +609,7 @@ class Mano {
     /* (pesoAd: con la cámara, 0 mientras la mano está anclada, quieta: ahí la velocidad del centro es
        ruido. Solo la del centro: girando en el lugar, o moviendo los dedos, el centro no se mueve y las
        anclas creían que estaba quieta; se apagaba todo el adelanto y el giro iba 20° atrás) */
-    const pa = this.pesoAd ?? 1;
+    const pa = (this.pesoAd ?? 1) * (this.rayo ? this.pesoDedos ?? 1 : 1);
     const la = Math.min(LAT_TOPE, this.lat), am = AMORT + AMORT_MAS * Math.min(1, Math.max(0, (la - LAT_REF) / 0.13));
     const gan = this.rayo && this.ganancia ? this.ganancia.g : 1, ganH = this.rayo && this.ganancia ? this.ganancia.gh : 1;
     const solo = (g) => THREE.MathUtils.clamp((g - GAN_SOLA[0]) / (GAN_SOLA[1] - GAN_SOLA[0]), 0, 1), gs = solo(gan), gsH = solo(ganH);
@@ -632,7 +646,7 @@ class Mano {
       const d0 = (a0 - ah * r[0]) * k + ah * r[0] * kh + c0 * ks, d1 = (a1 - ah * r[1]) * k + ah * r[1] * kh + c1 * ks, d2 = (a2 - ah * r[2]) * k + ah * r[2] * kh + c2 * ks;
       /* (cuánto: el arcotangente de lo que giraría, como hacía ir en línea recta, que nunca pasa de 90°;
          girar todo lo que da la velocidad, a 20 rad/s por 0,16 s, eran 3 rad de más) */
-      _ve.copy(E.wg).multiplyScalar(k); { const a = _ve.length(); if (a > 1e-6) _ve.multiplyScalar(Math.atan(a) * GIRO_AD / a); }
+      _ve.copy(E.wg).multiplyScalar(k * (this.pesoDedos ?? 1)); { const a = _ve.length(); if (a > 1e-6) _ve.multiplyScalar(Math.atan(a) * GIRO_AD / a); }
       const Q = expQ(_ve, _qg), W = E.wg;
       for (let i = 0; i < 63; i += 3) {
         const x0 = E.x[i] - C[0], x1 = E.x[i + 1] - C[1], x2 = E.x[i + 2] - C[2];

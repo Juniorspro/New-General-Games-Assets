@@ -4,6 +4,15 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de mañana · `claude/fijate-iszyer`:**
+  - Pidió: con un video a 60 fps, que mover un dedo no mueva la mano; la
+    cámara ajustada, con filtros para flash, oscuro y mucha luz, y a 60.
+  - Quedó ([aeroplaza-26](aeroplaza-26.md)): la palma no se adelanta si solo
+    se mueven los dedos (vaivén 3,9 → 2,9 %, MediaPipe 2,6); la cámara pide 60
+    y un mínimo, una tercera red con 8 núcleos; la luz de la mano se corrige
+    antes de la red (muy oscuro, error 5,0 → 2,1 %) y la exposición baja si
+    se quema.
+  - Falta: probar en el celu la cámara a 60, la exposición y la tercera red.
 - **27/09/2026, de madrugada, más tarde · `claude/fijate-iszyer`:**
   - Pidió: que baje todo más, sin demoras, y que no patee ni se laguee lejos
     o fuera de la cámara.

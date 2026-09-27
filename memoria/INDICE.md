@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: sin patadas, la mano lejos y la que sale de la cámara).
+mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: el dedo que movía la mano, la cámara a 60 y la luz).
 
 ## Reglas que no se discuten
 
@@ -81,6 +81,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: sin patad
 | [aeroplaza-23](aeroplaza-23.md) | AEROPLAZA, vigesimosegunda vuelta: la palma para abajo que se tomaba para arriba (la etiqueta dudosa de MediaPipe, `ETIQUETA`; la forma que se dobla como la mano que es, `quiralidad`, `QUIRAL`), medido con MediaPipe de verdad |
 | [aeroplaza-24](aeroplaza-24.md) | AEROPLAZA, vigesimotercera vuelta: la mano de un video de verdad (`herramientas/manos-video.mjs`; el tamaño fijo, `Mano.escalar`; los huesos por su rayo; la forma vota qué mano es; sin adelanto de los dedos; las puntas que no se doblan para atrás, `DORSO`); se corre 131 → 63 % de la palma |
 | [aeroplaza-25](aeroplaza-25.md) | AEROPLAZA, vigesimocuarta vuelta: las patadas eran el adelanto (la ganancia de costado y de profundidad por separado, `GAN_SOLA`), la mano que sale de la cámara sigue y frena (`saliendo`, `SALIDA`, `Manos.mover`), la red a 480 para la mano lejos, el adelanto de los dedos de vuelta; patadas 373 → 77 por minuto |
+| [aeroplaza-26](aeroplaza-26.md) | AEROPLAZA, vigesimoquinta vuelta: el dedo que movía la mano (MediaPipe mueve la palma con los dedos y el adelanto lo agrandaba: `pesoDedos`), la cámara a 60 (`a60`, mínimo de fps, la tercera red), la luz antes de la red (`LUZ_JS`: muy oscuro, error 5,0 → 2,1 %) y la exposición |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

@@ -219,7 +219,10 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   imagen (en % de la palma; `CRUDO=1`, la foto sin filtro), las patadas y lo
   que salta la profundidad (`PATADAS=1` dice cuándo; `CURVA=t0,t1`, cuadro por
   cuadro). `sacar` con `ANCHO=` (480, como el juego) y `LEJOS=k` (el video
-  achicado k veces, como si la mano estuviera más lejos).
+  achicado k veces, como si la mano estuviera más lejos), `FPS=`, `LUZ=oscuro|muy|claro`
+  (el video con poca o mucha luz) y `FILTRO=auto` (la luz del juego antes de la
+  red); `medir` con `REDES=n` (las fotos que la red no alcanza a leer),
+  `CADA=2` (una cámara a la mitad de fotos) y `QUIETO=t0,t1` (el vaivén).
 - `pruebas/`:
   - `todas.mjs [--manos] [--a-la-vez=3] [nombre…]`: la tanda entera, tres a la
     vez; la que falla acompañada se vuelve a correr sola y dice si fue la carga

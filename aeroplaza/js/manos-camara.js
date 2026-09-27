@@ -36,6 +36,48 @@ const ANCHO_RED = 480;
 /* (clásico y con import() adentro: un worker de módulo armado desde un blob no arranca si el juego
    se abre como archivo, porque el origen es "null"; y MediaPipe, en un worker clásico, carga su
    parte de WebAssembly con importScripts) */
+/* LA LUZ (vuelta 26), antes de la red: cuánta luz tiene la mano (el recuadro de la última foto, o la
+   foto entera si no hay mano), en una copia chiquita cada 4 fotos; si está oscura, la foto se aclara
+   (brightness de un canvas) hasta objetivo, sin pasar de gmax (con el video oscurecido, el error de
+   MediaPipe 5,0 → 2,1 % de la palma). Oscurecerla no (gmin 1): con mucha luz, MediaPipe dejaba de
+   encontrarla; eso lo hace la exposición de la cámara (ajustarExposicion). Lo que tarda: una copia de
+   48 de ancho y, solo si hace falta, un dibujo de la foto de la red. Va como texto: lo usan el lector
+   (worker), el hilo del juego sin lector y las pruebas (herramientas/manos-video.mjs, FILTRO=auto) */
+export const LUZ_JS = `
+class Luz {
+  constructor(op = {}) { this.op = { objetivo: 0.42, gmax: 6, gmin: 1, cada: 4, ...op }; this.g = 1; this.n = 0; this.media = -1; this.recorte = 0; this.cajaN = null; this.chico = null; this.lienzo = null; }
+  /* el recuadro de la mano (0-1) de la última foto: [{ x, y }] de MediaPipe o 63 números */
+  caja(L) {
+    if (!L) { this.cajaN = null; return; }
+    let x0 = 1, y0 = 1, x1 = 0, y1 = 0; const n = L.length === 63 ? 21 : L.length;
+    for (let i = 0; i < n; i++) { const x = L.length === 63 ? L[i * 3] : L[i].x, y = L.length === 63 ? L[i * 3 + 1] : L[i].y; x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const px = (x1 - x0) * 0.1, py = (y1 - y0) * 0.1;
+    this.cajaN = [Math.max(0, x0 - px), Math.max(0, y0 - py), Math.min(1, x1 + px), Math.min(1, y1 + py)];
+  }
+  medir(bm) {
+    const W = 48, H = Math.max(8, Math.round(48 * bm.height / bm.width));
+    const c = this.chico ||= new OffscreenCanvas(W, H), x = this.cx ||= c.getContext('2d', { willReadFrequently: true });
+    x.drawImage(bm, 0, 0, W, H);
+    const d = x.getImageData(0, 0, W, H).data, k = this.cajaN || [0, 0, 1, 1];
+    const a0 = Math.floor(k[0] * W), a1 = Math.max(a0 + 1, Math.ceil(k[2] * W)), b0 = Math.floor(k[1] * H), b1 = Math.max(b0 + 1, Math.ceil(k[3] * H));
+    let s = 0, n = 0, alto = 0;
+    for (let y = b0; y < b1; y++) for (let xx = a0; xx < a1; xx++) { const i = (y * W + xx) * 4, l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; s += l; n++; if (l > 245) alto++; }
+    this.media = n ? s / n / 255 : -1; this.recorte = n ? alto / n : 0;
+  }
+  /* la foto para la red: la misma, o una copia con más luz */
+  aplicar(bm) {
+    if (this.n++ % this.op.cada === 0) this.medir(bm);
+    if (this.media > 0) { const o = Math.min(this.op.gmax, Math.max(this.op.gmin, this.op.objetivo / this.media)); this.g += (o - this.g) * 0.3; }
+    if (Math.abs(this.g - 1) < 0.08) return bm;
+    /* (en memoria, no en la placa: la red, en la CPU, leía la foto de la placa y tardaba 40 ms más) */
+    const c = this.lienzo ||= new OffscreenCanvas(bm.width, bm.height), x = this.lx ||= c.getContext('2d', { willReadFrequently: true });
+    if (!('filter' in x)) return bm;
+    if (c.width !== bm.width || c.height !== bm.height) { c.width = bm.width; c.height = bm.height; }
+    x.filter = 'brightness(' + this.g.toFixed(2) + ')'; x.drawImage(bm, 0, 0); x.filter = 'none';
+    bm.close(); return c.transferToImageBitmap();
+  }
+  estado() { return { media: +this.media.toFixed(3), recorte: +this.recorte.toFixed(3), g: +this.g.toFixed(2) }; }
+}`;
 const WORKER = () => `
 let lm = null, ultimo = -1, cupo = 2, cambio = null, recien = false;
 /* d: el mensaje; via: el puerto del lector si vino de ahí (se le avisa cuando queda libre) */
@@ -95,14 +137,15 @@ self.onmessage = (e) => atender(e.data, null);`;
    - La hora de cada foto viene en otro reloj (el de la cámara): se pasa al del juego con lo que dice
      el juego (offset, calibrado con captureTime) o, mientras tanto, con cuándo llegó la más rápida.
    - Sin manos a la vista hace un segundo (quieta), una foto sí y una no, y solo a la primera red */
-const LECTOR = () => `
-let redes = [], offset = null, origen = 0, quieta = false, n = 0, offMin = Infinity, primero = 0;
+const LECTOR = () => `${LUZ_JS}
+let redes = [], offset = null, origen = 0, quieta = false, n = 0, offMin = Infinity, primero = 0, luz = typeof OffscreenCanvas === 'function' ? new Luz() : null;
 const ultimos = [], S = { leidos: 0, saltados: 0, ahorrados: 0 };
 self.onmessage = (e) => {
   const d = e.data;
   if (d.tipo === 'iniciar') { origen = d.origen; leer(d.readable.getReader(), d.ancho); }
   else if (d.tipo === 'red') { const r = { puerto: d.puerto, ocupado: false, apagada: false }; d.puerto.onmessage = (ev) => { if (ev.data.tipo === 'libre') r.ocupado = false; }; redes[d.i] = r; }
   else if (d.tipo === 'reloj') offset = d.offset;
+  else if (d.tipo === 'caja') luz?.caja(d.caja);
   else if (d.tipo === 'estado') { quieta = d.quieta; primero = d.primero || 0; (d.apagadas || []).forEach((a, i) => { if (redes[i]) redes[i].apagada = a; }); }
 };
 async function leer(rd, ancho) {
@@ -113,7 +156,7 @@ async function leer(rd, ancho) {
     S.leidos++; offMin = Math.min(offMin, llega - ts);
     ultimos.push(ts); if (ultimos.length > 12) ultimos.shift();
     const w = f.displayWidth, h = f.displayHeight;
-    if (S.leidos % 15 === 1) self.postMessage({ tipo: 'ts', ts: ultimos.slice(), offMin, leidos: S.leidos, saltados: S.saltados, ahorrados: S.ahorrados, ancho: w, alto: h });
+    if (S.leidos % 15 === 1) self.postMessage({ tipo: 'ts', ts: ultimos.slice(), offMin, leidos: S.leidos, saltados: S.saltados, ahorrados: S.ahorrados, ancho: w, alto: h, luz: luz?.estado() });
     if (quieta && (n++ & 1)) { S.ahorrados++; f.close(); continue; }
     /* (primero: la red que está buscando la segunda mano, si está libre; si no, la primera libre) */
     const puede = (x, k) => x && !x.ocupado && !x.apagada && (k === 0 || !quieta);
@@ -121,7 +164,8 @@ async function leer(rd, ancho) {
     if (i < 0) { S.saltados++; f.close(); continue; }
     const r = redes[i], t = ts + (offset ?? offMin); r.ocupado = true;
     try {
-      const imagen = await createImageBitmap(f, { resizeWidth: ancho, resizeHeight: Math.round(ancho * h / w), resizeQuality: 'low' });
+      let imagen = await createImageBitmap(f, { resizeWidth: ancho, resizeHeight: Math.round(ancho * h / w), resizeQuality: 'low' });
+      if (luz) try { imagen = luz.aplicar(imagen); } catch (err) { luz = null; }
       r.puerto.postMessage({ tipo: 'cuadro', imagen, ts: t, t, aspecto: w / h }, [imagen]);
     } catch (err) { r.ocupado = false; }
     f.close();
@@ -221,7 +265,7 @@ export class ManosCamara {
       w.onerror = (e) => { clearTimeout(t); w.terminate(); mal(new Error(e.message || 'worker')); };
       w.onmessage = (e) => {
         const d = e.data;
-        if (d.tipo === 'listo') { clearTimeout(t); if (!this.redes) { w.terminate(); return; } red.cupo = 2; red.delegado = d.delegado; this.redes.push(red); w.onmessage = (e2) => this.recibir(e2.data, red); if (this.lector) this.conectar(red); ok({ w, delegado: d.delegado, red }); }
+        if (d.tipo === 'listo') { clearTimeout(t); if (!this.redes) { w.terminate(); return; } red.cupo = 2; red.delegado = d.delegado; this.redes.push(red); this.terceraRed(); w.onmessage = (e2) => this.recibir(e2.data, red); if (this.lector) this.conectar(red); ok({ w, delegado: d.delegado, red }); }
         else if (d.tipo === 'error') { clearTimeout(t); w.terminate(); mal(new Error(d.error)); }
       };
       w.postMessage({ tipo: 'iniciar', base: this.cfg.base, modelo: this.cfg.modelo, delegado, cupo: 2 });
@@ -265,6 +309,7 @@ export class ManosCamara {
   delLector(d) {
     if (d.tipo === 'fin') { this.lector?.terminate(); this.lector = null; this.directo = false; return; }
     if (d.tipo !== 'ts') return;
+    if (d.luz) { this.stats.luz = d.luz; this.ajustarExposicion(d.luz); }
     this.aspecto = d.ancho / d.alto;
     Object.assign(this.stats, { leidos: d.leidos, saltadosLector: d.saltados, ahorradosLector: d.ahorrados });
     this.stats.offMin = d.offMin;   // (ya en el reloj del juego: el lector le resta el origen)
@@ -295,7 +340,11 @@ export class ManosCamara {
     if (this.stream) return this.stream;
     if (this._abriendo) return this._abriendo;
     this._abriendo = (async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60, max: 60 } } });
+      /* (vuelta 26: 60 fotos por segundo, y que no baje con poca luz: con el mínimo, la cámara no alarga
+         la exposición (queda más oscura, y eso lo arregla la luz de la red, LUZ_JS). Si el celu no
+         acepta el mínimo, como antes) */
+      const pedir = (fr) => navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: fr } });
+      const stream = await pedir({ ideal: 60, min: 30, max: 60 }).catch(() => pedir({ ideal: 60, max: 60 }));
       const v = this.video = document.createElement('video');
       v.playsInline = true; v.muted = true; v.srcObject = stream;
       /* en la página, chiquito y casi transparente: un video suelto (fuera del documento) en algunos
@@ -304,10 +353,50 @@ export class ManosCamara {
       Object.assign(v.style, { position: 'fixed', left: '0', top: '0', width: '2px', height: '2px', opacity: '0.01', pointerEvents: 'none', zIndex: '-1' });
       document.body.appendChild(v);
       await v.play();
-      this.stream = stream; this.fpsCamara = stream.getVideoTracks()[0]?.getSettings?.().frameRate || 30;
+      this.stream = stream;
+      await this.a60(stream.getVideoTracks()[0]);
+      this.fpsCamara = stream.getVideoTracks()[0]?.getSettings?.().frameRate || 30;
+      this.terceraRed();
       return stream;
     })();
     try { return await this._abriendo; } finally { this._abriendo = null; }
+  }
+  /* si la cámara dio menos de 55 y dice que puede 60: se prueba con otros tamaños (muchos celus dan 60
+     solo en 1280×720), con 50 de mínimo; si ninguno, queda como estaba. A la red va igual de 480 */
+  async a60(tr) {
+    if (!tr?.applyConstraints) return;
+    const caps = tr.getCapabilities?.() || {}, fps = () => tr.getSettings?.().frameRate || 0, antes = tr.getSettings?.() || {};
+    if (fps() >= 55 || !(caps.frameRate?.max >= 59)) return;
+    for (const [w, h] of [[640, 480], [1280, 720], [960, 540]]) {
+      try { await tr.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: 60, min: 50 } }); if (fps() >= 55) return; } catch { /* ese no */ }
+    }
+    try { await tr.applyConstraints({ width: { ideal: antes.width || 640 }, height: { ideal: antes.height || 480 }, frameRate: { ideal: 60, min: 30 } }); } catch { /* como vino */ }
+  }
+  /* con la cámara a 60 y 8 núcleos o más, una tercera red: dos leen ~40 fotos por segundo, tres las
+     60 (medido con herramientas/manos-video.mjs, REDES=). Se apaga sola si hace ir más lenta a la
+     primera (medirRedes) */
+  terceraRed() {
+    if (this.tercera || this.cfg.redes === 2 || !this.redes || this.redes.length !== 2 || (this.fpsCamara || 30) < 50 || (navigator.hardwareConcurrency || 4) < 8) return;
+    this.tercera = true; this.nuevaRed(this.delegado || 'CPU', 60000).catch(() => {});
+  }
+  /* LA EXPOSICIÓN (vuelta 26), con lo que mide LUZ_JS de la mano (antes de aclararla): quemada (el
+     flash de cerca, el sol: más del 12 % del recuadro blanco, o muy clara), un paso menos; oscura aunque
+     ya se aclara al máximo, un paso más; y de a poco de vuelta a 0. Un paso cada 0,6 s como mucho. Solo
+     donde la cámara deja (exposureCompensation: Chrome en Android) */
+  ajustarExposicion(L) {
+    const tr = this.stream?.getVideoTracks()[0]; if (!tr || !L || !(L.media >= 0)) return;
+    const ec = tr.getCapabilities?.().exposureCompensation; if (!ec || !(ec.max > ec.min)) return;
+    const ahora = performance.now(); if (ahora - (this.tExp || 0) < 600) return;
+    const act = tr.getSettings?.().exposureCompensation ?? 0, paso = Math.max(ec.step || 0, (ec.max - ec.min) / 12);
+    let nuevo = act;
+    if (L.recorte > 0.12 || L.media > 0.72) nuevo = act - paso;
+    else if (L.media < 0.2 && L.g > 5) nuevo = act + paso;
+    else if (act < 0 && L.media < 0.4 && L.recorte < 0.03) nuevo = Math.min(0, act + paso);
+    else if (act > 0 && L.media > 0.5) nuevo = Math.max(0, act - paso);
+    nuevo = Math.min(ec.max, Math.max(ec.min, nuevo));
+    if (Math.abs(nuevo - act) < 1e-6) return;
+    this.tExp = ahora; this.stats.exposicion = nuevo;
+    tr.applyConstraints({ advanced: [{ exposureCompensation: nuevo }] }).catch(() => { /* no deja */ });
   }
   cerrarCamara() {
     this.lector?.terminate(); this.lector = null; this.directo = false;
@@ -364,7 +453,9 @@ export class ManosCamara {
     const w = fuente.videoWidth || fuente.width, h = fuente.videoHeight || fuente.height; if (!w || !h) return;
     red.ocupado = true; this.aspecto = w / h;
     try {
-      const imagen = await createImageBitmap(fuente, { resizeWidth: ANCHO_RED, resizeHeight: Math.round(ANCHO_RED * h / w), resizeQuality: 'low' });
+      let imagen = await createImageBitmap(fuente, { resizeWidth: ANCHO_RED, resizeHeight: Math.round(ANCHO_RED * h / w), resizeQuality: 'low' });
+      if (this.luz === undefined) try { this.luz = typeof OffscreenCanvas === 'function' && !this.cfg.sinLuz ? new (new Function(LUZ_JS + '; return Luz')())() : null; } catch { this.luz = null; }
+      if (this.luz && !soloPrimera) try { imagen = this.luz.aplicar(imagen); if (this.luz.n % 15 === 1) { this.stats.luz = this.luz.estado(); this.ajustarExposicion(this.stats.luz); } } catch { this.luz = null; }
       red.w.postMessage({ tipo: 'cuadro', imagen, ts: t, t }, [imagen]);
     } catch { red.ocupado = false; }
   }
@@ -382,6 +473,10 @@ export class ManosCamara {
     red[cupo > 1 ? 'ms2' : 'ms1'] = x.ms;
     const [a, b] = this.redes || [];
     if (red === a && !b) { const so = (a.sola ||= {})[k] ||= { n: 0, ms: 0 }; so.n++; so.ms = so.n > 1 ? so.ms + (ms - so.ms) * 0.1 : ms; }
+    /* (la tercera: lo que tarda la primera con dos, contra lo que tarda con tres) */
+    const c = this.redes?.[2];
+    if (red === a && b && !b.apagada && (!c || c.apagada)) { const du = (a.dos ||= {})[k] ||= { n: 0, ms: 0 }; du.n++; du.ms = du.n > 1 ? du.ms + (ms - du.ms) * 0.1 : ms; }
+    if (c && !c.apagada) { const A3 = a.med?.[k], C = c.med?.[k], D2 = a.dos?.[k]; if (A3 && C && A3.n >= 15 && C.n >= 15 && ((D2 && D2.n >= 10 && A3.ms > D2.ms * 1.3) || C.ms > A3.ms * 1.5)) { c.apagada = true; this.stats.terceraApagada = k; this.avisarLector(); } }
     if (!a || !b || b.apagada) return;
     const A = a.med?.[k], B = b.med?.[k], S = a.sola?.[k];
     if (!A || !B || A.n < 15 || B.n < 15) return;
@@ -491,7 +586,9 @@ export class ManosCamara {
     const redes = (this.redes || []).filter((r) => !r.apagada), r0 = this.redes?.[this.principal ?? 0], ms = r0?.ms1 && this.hay === 1 ? r0.ms1 : S.ms;
     const fps = this.stream?.getVideoTracks()[0]?.getSettings?.().frameRate;
     const p = this.redes?.[this.principal ?? 0], dg = p?.delegado === 'GPU' ? ' GPU' : '', carrera = this.carrera && !this.carrera.fin && this.carrera.red ? ' 🏁' : '';
-    return `✋ ${Math.round(this._d.porSeg)}/s · ${Math.round(S.latencia)} ms · ${Math.round(ms)} ms/red${dg} ×${redes.length}${carrera}${fps ? ` · 📷${Math.round(fps)}` : ''}${this.directo ? '⚡' : ''}`;
+    /* (☀: cuánto aclara la luz de la red; EV: la exposición de la cámara, si se tocó) */
+    const L = S.luz, luz = L && L.g > 1.08 ? ` ☀×${L.g.toFixed(1)}` : '', ev = S.exposicion ? ` EV${S.exposicion > 0 ? '+' : ''}${S.exposicion.toFixed(1)}` : '';
+    return `✋ ${Math.round(this._d.porSeg)}/s · ${Math.round(S.latencia)} ms · ${Math.round(ms)} ms/red${dg} ×${redes.length}${carrera}${fps ? ` · 📷${Math.round(fps)}` : ''}${this.directo ? '⚡' : ''}${luz}${ev}`;
   }
   /* para las pruebas (y para ver si anda sin cámara): una imagen suelta, a la primera red */
   probar(imagen, t = performance.now()) { if (this.redes?.[0]) this.redes[0].ocupado = false; return this.cuadro(t, imagen, true); }
@@ -521,6 +618,10 @@ export class ManosCamara {
       const et = d.buf[o + 126];
       manos.push({ derecha: et < 0 ? null : et > 0.5, puntos: P, confianza: d.buf[o + 127], img: d.buf.slice(o, o + 63), forma: d.buf.slice(o + 63, o + 126) });
     }
+    /* (dónde está la mano, para medir su luz: la primera; sin mano, la foto entera) */
+    const caja = manos[0]?.img || null;
+    if (this.lector && !this.cfg.sinLuz) this.lector.postMessage({ tipo: 'caja', caja });
+    this.luz?.caja(caja);
     this.alLlegar?.(manos, d.t, llego, d.cupo ?? 2);
   }
 }
