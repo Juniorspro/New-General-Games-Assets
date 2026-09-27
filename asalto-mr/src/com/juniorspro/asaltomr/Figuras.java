@@ -254,6 +254,35 @@ final class Figuras {
         Matrix.scaleM(m, 0, l[3], l[3], l[3]);
         girarX(retroceso * 0.35f - recarga * 0.9f);
         girarY(0.05f);
+        cajasPistola(true);
+        terminarCajas();
+    }
+
+    /**
+     * La pistola EN LA MANO (hand tracking): en el mundo, con el caño hacia
+     * "adelante" y la corredera hacia "arriba"; pos es el centro del mango.
+     */
+    void dibujarPistolaEnMano(float[] vp, float[] pos, float[] adelante, float[] arriba, float retroceso) {
+        empezarCajas(vp);
+        // ejes locales: X derecha, Y arriba, Z atrás (el caño va hacia −Z)
+        float zx = -adelante[0], zy = -adelante[1], zz = -adelante[2];
+        float yx = arriba[0], yy = arriba[1], yz = arriba[2];
+        float xx = yy * zz - yz * zy, xy = yz * zx - yx * zz, xz = yx * zy - yy * zx;
+        Matrix.setIdentityM(m, 0);
+        m[0] = xx; m[1] = xy; m[2] = xz;
+        m[4] = yx; m[5] = yy; m[6] = yz;
+        m[8] = zx; m[9] = zy; m[10] = zz;
+        // pos es el centro del mango; el origen del modelo es la base de la corredera (arriba y adelante del mango)
+        m[12] = pos[0] + yx * Mano.BASE_ARRIBA + adelante[0] * Mano.BASE_ADELANTE;
+        m[13] = pos[1] + yy * Mano.BASE_ARRIBA + adelante[1] * Mano.BASE_ADELANTE;
+        m[14] = pos[2] + yz * Mano.BASE_ARRIBA + adelante[2] * Mano.BASE_ADELANTE;
+        girarX(retroceso * 0.35f);
+        cajasPistola(false);
+        terminarCajas();
+    }
+
+    /** Las cajas de la pistola, en el marco actual. conGuante: la mano virtual (en la mano real no hace falta). */
+    private void cajasPistola(boolean conGuante) {
         // corredera, armazón, cañón, empuñadura, guardamonte
         caja(0, 0.025f, -0.02f, 0.034f, 0.035f, 0.2f, 0.09f, 0.09f, 0.1f, 1);
         caja(0, 0.0f, 0.0f, 0.03f, 0.025f, 0.17f, 0.05f, 0.05f, 0.055f, 1);
@@ -265,8 +294,84 @@ final class Figuras {
         sacar();
         caja(0, -0.025f, -0.01f, 0.012f, 0.03f, 0.05f, 0.04f, 0.04f, 0.045f, 1);
         // la mano (un guante oscuro)
-        caja(0.008f, -0.06f, 0.07f, 0.05f, 0.08f, 0.07f, 0.12f, 0.1f, 0.09f, 1);
-        terminarCajas();
+        if (conGuante) caja(0.008f, -0.06f, 0.07f, 0.05f, 0.08f, 0.07f, 0.12f, 0.1f, 0.09f, 1);
+    }
+
+    // ── el láser de la mira y el esqueleto de la mano ──
+
+    /** El láser rojo del caño al punto donde pega, con un punto brillante ahí. */
+    void dibujarLaser(float[] vp, float[] a, float[] b, float escalaPx) {
+        lineas.position(0);
+        lineas.put(a[0]).put(a[1]).put(a[2]).put(1f).put(0.1f).put(0.1f).put(0.05f);
+        lineas.put(b[0]).put(b[1]).put(b[2]).put(1f).put(0.15f).put(0.1f).put(0.7f);
+        GLES20.glUseProgram(progLinea);
+        GLES20.glUniformMatrix4fv(lUVp, 1, false, vp, 0);
+        lineas.position(0);
+        GLES20.glVertexAttribPointer(lAPos, 3, GLES20.GL_FLOAT, false, 28, lineas);
+        lineas.position(3);
+        GLES20.glVertexAttribPointer(lACol, 4, GLES20.GL_FLOAT, false, 28, lineas);
+        GLES20.glEnableVertexAttribArray(lAPos);
+        GLES20.glEnableVertexAttribArray(lACol);
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE);
+        GLES20.glDepthMask(false);
+        GLES20.glLineWidth(2.5f);
+        GLES20.glDrawArrays(GLES20.GL_LINES, 0, 2);
+        GLES20.glDisableVertexAttribArray(lAPos);
+        GLES20.glDisableVertexAttribArray(lACol);
+        // el punto
+        puntos.position(0);
+        puntos.put(b[0]).put(b[1]).put(b[2]).put(0.025f).put(1f).put(0.2f).put(0.15f).put(1f);
+        GLES20.glUseProgram(progPunto);
+        GLES20.glUniformMatrix4fv(pUVp, 1, false, vp, 0);
+        GLES20.glUniform1f(pUEscala, escalaPx);
+        puntos.position(0);
+        GLES20.glVertexAttribPointer(pAPos, 3, GLES20.GL_FLOAT, false, 32, puntos);
+        puntos.position(3);
+        GLES20.glVertexAttribPointer(pATam, 1, GLES20.GL_FLOAT, false, 32, puntos);
+        puntos.position(4);
+        GLES20.glVertexAttribPointer(pACol, 4, GLES20.GL_FLOAT, false, 32, puntos);
+        GLES20.glEnableVertexAttribArray(pAPos);
+        GLES20.glEnableVertexAttribArray(pATam);
+        GLES20.glEnableVertexAttribArray(pACol);
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDrawArrays(GLES20.GL_POINTS, 0, 1);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDepthMask(true);
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glDisableVertexAttribArray(pAPos);
+        GLES20.glDisableVertexAttribArray(pATam);
+        GLES20.glDisableVertexAttribArray(pACol);
+    }
+
+    /** Los huesos de la mano (21 puntos de MediaPipe). */
+    private static final int[] HUESOS = {0, 1, 1, 2, 2, 3, 3, 4, 0, 5, 5, 6, 6, 7, 7, 8, 5, 9, 9, 10, 10, 11, 11, 12,
+            9, 13, 13, 14, 14, 15, 15, 16, 13, 17, 0, 17, 17, 18, 18, 19, 19, 20};
+
+    void dibujarEsqueleto(float[] vp, float[][] p, boolean empuna) {
+        lineas.position(0);
+        float r = empuna ? 1f : 0.3f, g = empuna ? 0.85f : 0.9f, b = empuna ? 0.2f : 1f;
+        for (int i = 0; i < HUESOS.length; i++) {
+            float[] q = p[HUESOS[i]];
+            lineas.put(q[0]).put(q[1]).put(q[2]).put(r).put(g).put(b).put(0.9f);
+        }
+        GLES20.glUseProgram(progLinea);
+        GLES20.glUniformMatrix4fv(lUVp, 1, false, vp, 0);
+        lineas.position(0);
+        GLES20.glVertexAttribPointer(lAPos, 3, GLES20.GL_FLOAT, false, 28, lineas);
+        lineas.position(3);
+        GLES20.glVertexAttribPointer(lACol, 4, GLES20.GL_FLOAT, false, 28, lineas);
+        GLES20.glEnableVertexAttribArray(lAPos);
+        GLES20.glEnableVertexAttribArray(lACol);
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        GLES20.glLineWidth(3f);
+        GLES20.glDrawArrays(GLES20.GL_LINES, 0, HUESOS.length);
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glDisableVertexAttribArray(lAPos);
+        GLES20.glDisableVertexAttribArray(lACol);
     }
 
     // ── partículas ──

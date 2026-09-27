@@ -202,6 +202,48 @@ public class Vista {
             System.arraycopy(so.ruta, 0, r, 3, so.ruta.length);
             arr(s, r, r.length);
         }
+        s.append("],\"manos\":[");
+        // la pistola en la mano, sobre fotos reales (con los puntos que dio MediaPipe)
+        java.util.List<String> lineas = java.nio.file.Files.readAllLines(java.nio.file.Paths.get("pruebas/manos.txt"));
+        boolean pm = true;
+        for (String foto : new String[]{"pointing_up", "fist"}) {
+            for (String l : lineas) {
+                if (!l.startsWith(foto + " ")) continue;
+                String[] t = l.trim().split(" ");
+                int fw = Integer.parseInt(t[1]), fh = Integer.parseInt(t[2]);
+                float[][] img = new float[21][3], mun = new float[21][3];
+                for (int i = 0; i < 21; i++) for (int k = 0; k < 3; k++) { img[i][k] = Float.parseFloat(t[3 + i * 3 + k]); mun[i][k] = Float.parseFloat(t[66 + i * 3 + k]); }
+                float f = 0.85f * Math.max(fw, fh);   // una cámara de teléfono (~60°)
+                float[] ident = new float[16];
+                android.opengl.Matrix.setIdentityM(ident, 0);
+                Mano m = new Mano();
+                float dist = m.aMundo(img, mun, fw, fh, f, f, fw / 2f, fh / 2f, Float.NaN, ident);
+                m.pistola(1f);
+                float fovy = (float) Math.toDegrees(2 * Math.atan(fh / 2f / f));
+                float[] vpM = perspectiva(fovy, fw / (float) fh, 0.02f, 50f);
+                GLES20.cajas.clear();
+                fig.dibujarPistolaEnMano(vpM, m.pos, m.adelante, m.arriba, 0);
+                if (!pm) s.append(',');
+                pm = false;
+                s.append("{\"foto\":\"").append(foto).append("\",\"w\":").append(fw).append(",\"h\":").append(fh).append(",\"vp\":");
+                arr(s, vpM, 16);
+                s.append(",\"cajas\":[");
+                for (int i = 0; i < GLES20.cajas.size(); i++) { if (i > 0) s.append(','); arr(s, GLES20.cajas.get(i), 36); }
+                s.append("],\"puntos\":[");
+                for (int i = 0; i < 21; i++) { if (i > 0) s.append(','); arr(s, m.mundo[i], 3); }
+                float[] b = new float[3];
+                m.boca(b);
+                s.append("],\"boca\":");
+                arr(s, b, 3);
+                float[] fin = {b[0] + m.adelante[0] * 3, b[1] + m.adelante[1] * 3, b[2] + m.adelante[2] * 3};
+                s.append(",\"fin\":");
+                arr(s, fin, 3);
+                String pose = Mano.NOMBRES[new Mano().clasificar(mun)];
+                s.append(",\"pose\":\"").append(pose).append("\",\"dist\":").append(String.format(Locale.ROOT, "%.2f", dist)).append('}');
+                System.out.printf(Locale.ROOT, "mano %s: %s, a %.2f m, caño (%.2f %.2f %.2f)%n", foto, pose, dist, m.adelante[0], m.adelante[1], m.adelante[2]);
+                break;
+            }
+        }
         s.append("],\"mapas\":{\"visto\":");
         grilla(s, gVisto);
         s.append(",\"ia\":");

@@ -32,6 +32,35 @@ if [ ! -f "$ARCORE/classes.jar" ]; then
   curl -sSL -o "$ARCORE/core.aar" "https://dl.google.com/android/maven2/com/google/ar/core/$ARCORE_V/core-$ARCORE_V.aar"
   (cd "$ARCORE" && unzip -q -o core.aar)
 fi
+# MediaPipe (hand tracking): las tareas de visión, su núcleo y sus dependencias, y el modelo de manos
+MP=$CACHE/mediapipe
+MP_V=1.0.0
+mkdir -p "$MP"
+bajar() { [ -s "$MP/$2" ] || { echo "· bajando $2…"; curl -sSL -o "$MP/$2" "$1"; }; }
+bajar "https://dl.google.com/android/maven2/com/google/mediapipe/tasks-vision/$MP_V/tasks-vision-$MP_V.aar" tasks-vision.aar
+bajar "https://dl.google.com/android/maven2/com/google/mediapipe/tasks-core/$MP_V/tasks-core-$MP_V.aar" tasks-core.aar
+M2=https://repo1.maven.org/maven2
+bajar "$M2/com/google/guava/guava/27.0.1-android/guava-27.0.1-android.jar" guava-27.0.1-android.jar
+bajar "$M2/com/google/guava/failureaccess/1.0.1/failureaccess-1.0.1.jar" failureaccess-1.0.1.jar
+bajar "$M2/com/google/protobuf/protobuf-javalite/4.26.1/protobuf-javalite-4.26.1.jar" protobuf-javalite-4.26.1.jar
+bajar "$M2/com/google/flogger/flogger/0.6/flogger-0.6.jar" flogger-0.6.jar
+bajar "$M2/com/google/flogger/flogger-system-backend/0.6/flogger-system-backend-0.6.jar" flogger-system-backend-0.6.jar
+bajar "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task" hand_landmarker.task
+for a in tasks-vision tasks-core; do [ -f "$MP/$a/classes.jar" ] || (mkdir -p "$MP/$a" && cd "$MP/$a" && unzip -q -o "../$a.aar"); done
+# el núcleo sin la telemetría: se sacan las 3 clases que mandan estadísticas (usan "datatransport");
+# mediapipe-parche/ trae una fábrica que da el logger vacío de la propia librería
+if [ ! -f "$MP/tasks-core-sin-telemetria.jar" ]; then
+  python3 - "$MP/tasks-core/classes.jar" "$MP/tasks-core-sin-telemetria.jar" <<'PY'
+import sys, zipfile
+fuera = {"com/google/mediapipe/tasks/core/logging/" + n + ".class" for n in ("TasksStatsLoggerFactory", "TasksStatsProtoLogger", "RemoteLoggingClient")}
+with zipfile.ZipFile(sys.argv[1]) as a, zipfile.ZipFile(sys.argv[2], "w", zipfile.ZIP_DEFLATED) as b:
+    for i in a.infolist():
+        if i.filename not in fuera: b.writestr(i, a.read(i.filename))
+PY
+fi
+MP_JARS="$MP/tasks-core-sin-telemetria.jar:$MP/tasks-vision/classes.jar"
+MP_DEPS="$MP/guava-27.0.1-android.jar $MP/failureaccess-1.0.1.jar $MP/protobuf-javalite-4.26.1.jar $MP/flogger-0.6.jar $MP/flogger-system-backend-0.6.jar"
+
 LLAVE=$CACHE/prueba.keystore
 if [ ! -f "$LLAVE" ]; then
   # Una llave de prueba, sólo para poder instalar. Nunca al repo (.gitignore: *.keystore).
@@ -54,8 +83,8 @@ echo "· compilando Java…"
 # OJO: si javac falla, NO seguir. (Antes se miraba sólo si existía Principal.class: javac
 # igual escribía las clases que sí compilaban, y salió un APK sin Hud que se cerraba al abrir.)
 if ! javac -nowarn -Xlint:-options -source 8 -target 8 -encoding UTF-8 \
-  -bootclasspath "$PLAT:$BT/core-lambda-stubs.jar" -classpath "$ARCORE/classes.jar" -d "$OBRA/clases" \
-  $(find src "$OBRA/gen" -name "*.java") 2> "$OBRA/javac.txt"; then
+  -bootclasspath "$PLAT:$BT/core-lambda-stubs.jar" -classpath "$ARCORE/classes.jar:$MP_JARS" -d "$OBRA/clases" \
+  $(find src mediapipe-parche "$OBRA/gen" -name "*.java") 2> "$OBRA/javac.txt"; then
   grep -v "^Picked up" "$OBRA/javac.txt"; echo "✗ no compiló"; exit 1
 fi
 # y cada .java tiene que haber dado su .class
@@ -66,9 +95,9 @@ done
 
 echo "· dex…"
 "$BT/d8" --release --min-api 24 --lib "$PLAT" --output "$OBRA/dex" \
-  $(find "$OBRA/clases" -name "*.class") "$ARCORE/classes.jar" > "$OBRA/d8.txt" 2>&1 || true
-# clases que faltan = se cierra al usarlas. Las de ARCore que faltan son sólo anotaciones (androidx.annotation).
-if grep -E "Missing class|was not found" "$OBRA/d8.txt" | grep -v "androidx.annotation\|androidx/annotation"; then
+  $(find "$OBRA/clases" -name "*.class") "$ARCORE/classes.jar" $(echo "$MP_JARS" | tr ':' ' ') $MP_DEPS > "$OBRA/d8.txt" 2>&1 || true
+# clases que faltan = se cierra al usarlas. Se toleran sólo las de anotaciones (no existen en ejecución).
+if grep -E "Missing class|was not found" "$OBRA/d8.txt" | grep -v -E "androidx[./]annotation|javax[./]annotation|org[./]checkerframework|com[./]google[./]errorprone[./]annotations|com[./]google[./]j2objc[./]annotations|org[./]codehaus[./]mojo[./]animal_sniffer|com[./]google[./]auto[./]value"; then
   echo "✗ d8: faltan clases"; exit 1
 fi
 [ -f "$OBRA/dex/classes.dex" ] || { echo "✗ no salió el dex"; exit 1; }
@@ -76,7 +105,7 @@ fi
 echo "· empaquetando…"
 python3 -c '
 import sys, zipfile, shutil, os
-obra, arcore = sys.argv[1], sys.argv[2]
+obra, arcore, mp = sys.argv[1], sys.argv[2], sys.argv[3]
 salida = os.path.join(obra, "sin-alinear.apk")
 shutil.copy(os.path.join(obra, "base.apk"), salida)
 with zipfile.ZipFile(salida, "a") as z:
@@ -85,7 +114,13 @@ with zipfile.ZipFile(salida, "a") as z:
     for abi in os.listdir(os.path.join(arcore, "jni")):
         for so in os.listdir(os.path.join(arcore, "jni", abi)):
             z.write(os.path.join(arcore, "jni", abi, so), f"lib/{abi}/{so}", compress_type=zipfile.ZIP_DEFLATED)
-' "$OBRA" "$ARCORE"
+    # MediaPipe: sólo ARM (los teléfonos); en x86 el hand tracking dice "no disponible" y el resto anda
+    for abi in ("arm64-v8a", "armeabi-v7a"):
+        so = os.path.join(mp, "tasks-core", "jni", abi, "libmediapipe_tasks_jni.so")
+        z.write(so, f"lib/{abi}/libmediapipe_tasks_jni.so", compress_type=zipfile.ZIP_DEFLATED)
+    # el modelo SIN comprimir: MediaPipe lo abre directo desde el APK
+    z.write(os.path.join(mp, "hand_landmarker.task"), "assets/hand_landmarker.task", compress_type=zipfile.ZIP_STORED)
+' "$OBRA" "$ARCORE" "$MP"
 "$BT/zipalign" -f -p 4 "$OBRA/sin-alinear.apk" "$OBRA/alineado.apk"
 "$BT/apksigner" sign --ks "$LLAVE" --ks-pass pass:mundoar --key-pass pass:mundoar \
   --out salida/asalto-mr.apk "$OBRA/alineado.apk" 2>&1 | grep -v "^Picked up" || true

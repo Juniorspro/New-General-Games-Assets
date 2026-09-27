@@ -10,7 +10,7 @@ import { extraerProgramas } from "./extraer.mjs";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT || "../../mundo-ar/node_modules/playwright");
 
-const [datosRuta, salida] = process.argv.slice(2);
+const [datosRuta, salida] = process.argv.slice(2);   // [3] = carpeta con las fotos de manos (opcional)
 const datos = JSON.parse(readFileSync(datosRuta, "utf8"));
 const P = extraerProgramas();
 const buscar = (archivo, f) => { const p = P.find((p) => p.archivo === archivo && f(p)); if (!p) throw new Error("no encuentro un programa de " + archivo); return p; };
@@ -297,9 +297,69 @@ async function fotoMapa() {
   console.log("✓ vista-mapa.png");
 }
 
+// la pistola en la mano, dibujada sobre fotos reales de manos (lo que ve la cámara)
+async function fotoMano(dirFotos) {
+  const partes = [];
+  for (const m of datos.manos) {
+    const archivo = `${dirFotos}/${m.foto}.jpg`;
+    const url = "data:image/jpeg;base64," + readFileSync(archivo).toString("base64");
+    const esc = 720 / Math.max(m.w, m.h), w = Math.round(m.w * esc), h = Math.round(m.h * esc);
+    await pag.setViewportSize({ width: w, height: h });
+    await pag.setContent(`<body style="margin:0;background:#000"><canvas id="c" width="${w}" height="${h}"></canvas></body>`);
+    await pag.evaluate(async ({ m, url, sh, w, h }) => {
+      const img = new Image(); img.src = url; await img.decode();
+      const gl = document.getElementById("c").getContext("webgl", { preserveDrawingBuffer: true, antialias: true });
+      const prog = (p) => { const mk = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
+        const pr = gl.createProgram(); gl.attachShader(pr, mk(gl.VERTEX_SHADER, p.vs)); gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, p.fs)); gl.linkProgram(pr); return pr; };
+      const U = (pr, n) => gl.getUniformLocation(pr, n), A = (pr, n) => gl.getAttribLocation(pr, n);
+      gl.viewport(0, 0, w, h);
+      // la foto de fondo (con el shader de lentes con k = 0: una copia)
+      const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      const L = prog(sh.lentes); gl.useProgram(L);
+      gl.uniform1i(U(L, "uTex"), 0); gl.uniform2f(U(L, "uTam"), w, h); gl.uniform2f(U(L, "uK"), 0, 0); gl.uniform2f(U(L, "uCentro"), w / 2, h / 2); gl.uniform1f(U(L, "uRadio"), w);
+      gl.uniform2f(U(L, "uMin"), 0, 0); gl.uniform2f(U(L, "uMax"), w, h);
+      const q = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, q); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      let a = A(L, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 8, 0); gl.enableVertexAttribArray(a);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      // el esqueleto de la mano (reproyectado desde 3D: si coincide con la foto, el 3D está bien)
+      const LIN = prog(sh.linea); gl.useProgram(LIN); gl.uniformMatrix4fv(U(LIN, "uVp"), false, m.vp);
+      const hue = [0,1,1,2,2,3,3,4,0,5,5,6,6,7,7,8,5,9,9,10,10,11,11,12,9,13,13,14,14,15,15,16,13,17,0,17,17,18,18,19,19,20];
+      const v = []; for (const i of hue) v.push(...m.puntos[i], 0.3, 0.9, 1, 0.9);
+      v.push(...m.boca, 1, 0.15, 0.1, 0.1, ...m.fin, 1, 0.15, 0.1, 0.9);   // el láser
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      a = A(LIN, "aPos"); const co = A(LIN, "aCol");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 28, 0); gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(co, 4, gl.FLOAT, false, 28, 12); gl.enableVertexAttribArray(co);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.lineWidth(3);
+      gl.drawArrays(gl.LINES, 0, v.length / 7); gl.disableVertexAttribArray(co); gl.disable(gl.BLEND);
+      // la pistola (las cajas que dibujó Figuras.dibujarPistolaEnMano)
+      const C = prog(sh.caja);
+      const cubo = []; const caras = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+      for (const n of caras) { const u = Math.abs(n[1]) > 0.5 ? [1,0,0] : [0,1,0]; const ww = [n[1]*u[2]-n[2]*u[1], n[2]*u[0]-n[0]*u[2], n[0]*u[1]-n[1]*u[0]];
+        const e = [[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,y]) => [0,1,2].map((k) => 0.5*(n[k]+x*u[k]+y*ww[k]))); for (const i of [0,1,2,0,2,3]) cubo.push(...e[i], ...n); }
+      const cb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, cb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubo), gl.STATIC_DRAW);
+      gl.useProgram(C); a = A(C, "aPos"); const nn = A(C, "aNor");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(nn, 3, gl.FLOAT, false, 24, 12); gl.enableVertexAttribArray(nn);
+      gl.uniform3f(U(C, "uLuz"), 0.37, 0.84, 0.4); gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
+      for (const k of m.cajas) { gl.uniformMatrix4fv(U(C, "uMvp"), false, k.slice(0, 16)); gl.uniformMatrix4fv(U(C, "uModelo"), false, k.slice(16, 32)); gl.uniform4f(U(C, "uColor"), k[32], k[33], k[34], k[35]); gl.drawArrays(gl.TRIANGLES, 0, 36); }
+    }, { m, url, sh, w, h });
+    const f = `${salida}/vista-mano-${m.foto}.png`;
+    await pag.screenshot({ path: f });
+    partes.push(f);
+    console.log(`✓ vista-mano-${m.foto}.png (${m.pose}, a ${m.dist} m)`);
+  }
+  await pag.setViewportSize({ width: W, height: H });
+  await pag.setContent(`<body style="margin:0;background:#000"><canvas id="c" width="${W}" height="${H}"></canvas></body>`);
+  return partes;
+}
+
 await foto("juego", "juego");
 await foto("ia", "ia");
 await foto("escaneo", "escaneo");
 await foto("sbs", "sbs");
 await fotoMapa();
+if (process.argv[4]) await fotoMano(process.argv[4]);
 await nav.close();

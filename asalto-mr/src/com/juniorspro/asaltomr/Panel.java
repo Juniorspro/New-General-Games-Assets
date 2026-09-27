@@ -84,6 +84,13 @@ final class Panel {
                 + "\"Ultra angular\" le pide a la cámara zoom < 1× (experimental: ARCore está calibrado para la "
                 + "principal, el seguimiento puede fallar). Se aplica al volver a abrir la cámara.");
 
+        seccion("La pistola en la mano");
+        opciones("mano", "Hand tracking", new String[]{"No", "Sí", "Sí + ver la mano"});
+        info("Empuñá como si tuvieras la pistola, con el índice estirado. Cerrar el índice (apretar el gatillo) "
+                + "dispara; la mano abierta recarga. Sin la mano a la vista, la pistola vuelve a la pantalla y se "
+                + "dispara tocando o con el volumen. Se aplica al volver a abrir la app.");
+        opciones("seguro", "Modo seguro", new String[]{"No", "Sí"});
+
         seccion("Juego");
         opciones("dificultad", "Dificultad", new String[]{"Fácil", "Normal", "Difícil"});
         opciones("sonido", "Sonido", new String[]{"No", "Sí"});

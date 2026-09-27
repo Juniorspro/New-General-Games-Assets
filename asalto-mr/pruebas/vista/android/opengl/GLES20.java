@@ -12,7 +12,7 @@ import java.util.HashMap;
 public final class GLES20 {
     public static final int GL_BLEND = 0x0BE2, GL_COMPILE_STATUS = 0x8B81, GL_FLOAT = 0x1406, GL_FRAGMENT_SHADER = 0x8B30,
             GL_LINES = 1, GL_LINK_STATUS = 0x8B82, GL_ONE = 1, GL_ONE_MINUS_SRC_ALPHA = 0x0303, GL_POINTS = 0,
-            GL_SRC_ALPHA = 0x0302, GL_TRIANGLES = 4, GL_VERTEX_SHADER = 0x8B31;
+            GL_SRC_ALPHA = 0x0302, GL_TRIANGLES = 4, GL_VERTEX_SHADER = 0x8B31, GL_DEPTH_TEST = 0x0B71;
 
     /** Una caja grabada: mvp (16), modelo (16), color (4). */
     public static final ArrayList<float[]> cajas = new ArrayList<>();

@@ -74,8 +74,12 @@ import javax.microedition.khronos.opengles.GL10;
  * - La cámara con más campo visual que dé ARCore, y un intento de ultra
  *   angular (ver Camara).
  *
- * Se dispara tocando la pantalla (o el botón del visor), con las teclas de
- * volumen, o con un control / disparador Bluetooth.
+ * LA PISTOLA EN LA MANO (hand tracking, ManoRastreo + Mano): la cámara ve tu
+ * mano, MediaPipe saca sus 21 puntos, y la pistola va en tu mano de verdad.
+ * Empuñando con el índice estirado y cerrando el índice (apretar el
+ * gatillo) dispara; la mano abierta recarga. Sin mano a la vista, la pistola
+ * vuelve a la vista y se dispara tocando la pantalla (o el botón del visor),
+ * con el volumen, o con un control / disparador Bluetooth.
  */
 public class Principal extends Activity implements GLSurfaceView.Renderer, Panel.Oyente, Camara.Aviso {
     private static final int PERMISO_CAMARA = 7;
@@ -104,6 +108,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private final Lentes lentes = new Lentes();
     private final ZonasGl zonasGl = new ZonasGl();
     private final Sonido sonido = new Sonido();
+    private ManoRastreo manos;
+    private long ultimaMano, abiertaDesde;
+    private final float[] manoPos = new float[3], manoAdel = new float[3], manoArriba = new float[3], manoBoca = new float[3], laserFin = new float[3];
+    private final float[][] manoPuntos = new float[21][3];
+    private final boolean[] armaActiva = new boolean[2];
+    private final float[][] armaPos = new float[2][3], armaAdel = new float[2][3], armaArriba = new float[2][3], armaFin = new float[2][3];
+    private final int[] armaPose = new int[2];
+    private final float[][][] armaPuntos = new float[2][21][3];
     private Escaneo escaneo;
     private Juego juego;
     private EntornoReal entorno;
@@ -191,6 +203,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         juego.dificultad = ajustes.dificultad;
         sonido.cargar(this);
         sonido.activo = ajustes.sonido == 1;
+        if (ajustes.mano > 0 && ajustes.seguro == 0) manos = new ManoRastreo(this);
 
         FrameLayout raiz = new FrameLayout(this);
         vista = new GLSurfaceView(this);
@@ -387,6 +400,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         if (!armada) return;
         pantallaCompleta();
         escaneo.arrancar();
+        if (manos != null) manos.arrancar();
         if (sesion == null && !crearSesion()) return;
         reanudar();
     }
@@ -525,6 +539,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         if (!armada) return;
         pausar();
         escaneo.parar();
+        if (manos != null) manos.parar();
     }
 
     @Override
@@ -697,6 +712,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             camara.getViewMatrix(vistaM, 0);
             Matrix.multiplyMM(vpCam, 0, proy, 0, vistaM, 0);
             if (hayProfundidad) darProfundidad(cuadro, camara);
+            if (manos != null && a.mano > 0 && ahora - ultimaMano > 40) darMano(cuadro, camara, ahora);
+            leerManos(ahora);
             pisoDeRespaldo(py, ahora);
             actualizarJuego(dt, px, py, pz, adelante, ojoPose, ahora);
         } else {
@@ -745,11 +762,25 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 if (a.malla == 2) mallaGl.dibujarSolida(vpOjo, 0.28f);
                 mallaGl.dibujarLineas(vpOjo, px, py, pz, radio, base);
             }
+            boolean enMano = armaActiva[0] || armaActiva[1];
+            for (int s2 = 0; s2 < 2; s2++) {
+                if (armaPose[s2] != Mano.NADA && (a.mano == 2 || juego.estado == Juego.ESPERA))
+                    figuras.dibujarEsqueleto(vpOjo, armaPuntos[s2], armaActiva[s2]);
+            }
             GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);   // la pistola va siempre adelante de todo
-            figuras.dibujarPistola(proyOjo, juego.retroceso, juego.recargando > 0 ? (float) Math.sin(Math.min(1, (1.3f - juego.recargando) / 1.3f) * Math.PI) : 0, t);
+            if (enMano) {
+                for (int s2 = 0; s2 < 2; s2++) {
+                    if (!armaActiva[s2]) continue;
+                    figuras.dibujarPistolaEnMano(vpOjo, armaPos[s2], armaAdel[s2], armaArriba[s2], juego.retroceso);
+                    Mano.boca(armaPos[s2], armaAdel[s2], armaArriba[s2], manoBoca);
+                    figuras.dibujarLaser(vpOjo, manoBoca, armaFin[s2], proy[5] * (sbs ? vistaOjos[o][3] : alto) / 2f);
+                }
+            } else {
+                figuras.dibujarPistola(proyOjo, juego.retroceso, juego.recargando > 0 ? (float) Math.sin(Math.min(1, (1.3f - juego.recargando) / 1.3f) * Math.PI) : 0, t);
+            }
             float aspecto = sbs ? vistaOjos[o][2] / (float) vistaOjos[o][3] : ancho / (float) alto;
             hud.dibujarGolpe(juego.golpe * 0.8f);
-            hud.dibujarMira(aspecto, juego.retroceso, apuntaASoldado(px, py, pz, adelante));
+            if (!enMano) hud.dibujarMira(aspecto, juego.retroceso, apuntaASoldado(px, py, pz, adelante));
             hud.dibujar(sbs ? 0.72f : 0.94f, aspecto);
         }
         if (sbs) GLES20.glDisable(GLES20.GL_SCISSOR_TEST);
@@ -856,11 +887,111 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             pedidos = 0;
         }
         juego.actualizar(dt, px, py, pz, adelante[0], adelante[2], entorno);
+        // los tiros del gesto (gatillo con el índice), de cada mano con pistola
+        boolean hayArma = false;
+        for (int s2 = 0; s2 < 2; s2++) {
+            int n = manos == null ? 0 : manos.tiros[s2].getAndSet(0);
+            if (!armaActiva[s2]) continue;
+            hayArma = true;
+            if (juego.estado == Juego.ESPERA && n > 0) { pedidos += n; n = 0; }   // el gesto también empieza el juego
+            for (int i = 0; i < Math.min(n, 3); i++) dispararDesdeMano(s2);
+        }
         for (int i = 0; i < Math.min(pedidos, 3); i++) {
+            if (hayArma) { dispararDesdeMano(armaActiva[0] ? 0 : 1); continue; }   // tocar / volumen: con la pistola de la mano
             float[] b = ojoPose.transformPoint(Figuras.bocaPistola(proy));
             juego.disparar(px, py, pz, adelante[0], adelante[1], adelante[2], b[0], b[1], b[2], entorno);
         }
         sonar(juego.tomarEventos(), px, pz, adelante);
+    }
+
+    private void dispararDesdeMano(int s) {
+        float[] f = armaAdel[s];
+        Mano.boca(armaPos[s], f, armaArriba[s], manoBoca);
+        juego.disparar(manoBoca[0], manoBoca[1], manoBoca[2], f[0], f[1], f[2], manoBoca[0], manoBoca[1], manoBoca[2], entorno);
+    }
+
+    /**
+     * Le pasa la imagen de la cámara (la CPU, 640×480) al rastreador de manos,
+     * con su pose, sus intrínsecos y la profundidad de ARCore.
+     */
+    private void darMano(Frame cuadro, Camera camara, long ahora) {
+        if (!manos.libre()) return;
+        Image img = null, prof = null;
+        try {
+            img = cuadro.acquireCameraImage();
+            CameraIntrinsics in = camara.getImageIntrinsics();
+            float[] f = in.getFocalLength(), c = in.getPrincipalPoint();
+            int[] dim = in.getImageDimensions();
+            // los intrínsecos son para dim; la imagen puede venir de otro tamaño
+            float kx = img.getWidth() / (float) dim[0], ky = img.getHeight() / (float) dim[1];
+            camara.getPose().toMatrix(poseMano, 0);
+            // de la imagen (normalizada) a la de profundidad (alineada con la textura)
+            short[] pd = null;
+            int pw = 0, ph = 0;
+            if (hayProfundidad) {
+                try {
+                    prof = cuadro.acquireDepthImage16Bits();
+                    pw = prof.getWidth(); ph = prof.getHeight();
+                    Image.Plane pl = prof.getPlanes()[0];
+                    java.nio.ShortBuffer sb = pl.getBuffer().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+                    int fila = pl.getRowStride() / 2;
+                    if (profMano.length != pw * ph) profMano = new short[pw * ph];
+                    for (int v = 0; v < ph; v++) { sb.position(v * fila); sb.get(profMano, v * pw, pw); }
+                    pd = profMano;
+                    float[] ent = {0, 0, 1, 0, 0, 1}, sal = new float[6];
+                    cuadro.transformCoordinates2d(com.google.ar.core.Coordinates2d.IMAGE_NORMALIZED, ent, com.google.ar.core.Coordinates2d.TEXTURE_NORMALIZED, sal);
+                    imagenAProf[0] = sal[0]; imagenAProf[1] = sal[2] - sal[0]; imagenAProf[2] = sal[4] - sal[0];
+                    imagenAProf[3] = sal[1]; imagenAProf[4] = sal[3] - sal[1]; imagenAProf[5] = sal[5] - sal[1];
+                } catch (Exception e) { pd = null; }
+            }
+            boolean girada = getWindowManager().getDefaultDisplay().getRotation() == android.view.Surface.ROTATION_270;
+            if (manos.dejar(img, f[0] * kx, f[1] * ky, c[0] * kx, c[1] * ky, poseMano, girada, ahora, pd, pw, ph, imagenAProf)) ultimaMano = ahora;
+        } catch (NotYetAvailableException e) {
+            // todavía no hay imagen
+        } catch (Exception e) {
+            // se saltea esta
+        } finally {
+            if (img != null) img.close();
+            if (prof != null) prof.close();
+        }
+    }
+
+    private final float[] poseMano = new float[16], imagenAProf = new float[6];
+    private short[] profMano = new short[0];
+
+    /** Copia lo último de cada mano (el hilo de las manos lo va cambiando) y decide qué pistolas se ven. */
+    private void leerManos(long ahora) {
+        armaActiva[0] = armaActiva[1] = false;
+        if (manos == null) return;
+        boolean alguienAbierta = false;
+        for (int s2 = 0; s2 < 2; s2++) {
+            Mano m = manos.manos[s2];
+            synchronized (m) {
+                boolean reciente = m.hay && ahora - m.ultimaVez < 400;
+                armaPose[s2] = m.pose;
+                if (reciente && (m.pose == Mano.EMPUNA || m.pose == Mano.APRIETA)) {
+                    armaActiva[s2] = true;
+                    System.arraycopy(m.pos, 0, armaPos[s2], 0, 3);
+                    System.arraycopy(m.adelante, 0, armaAdel[s2], 0, 3);
+                    System.arraycopy(m.arriba, 0, armaArriba[s2], 0, 3);
+                }
+                if (reciente) for (int i = 0; i < 21; i++) System.arraycopy(m.mundo[i], 0, armaPuntos[s2][i], 0, 3);
+                if (reciente && m.pose == Mano.ABIERTA) alguienAbierta = true;
+                if (!reciente) armaPose[s2] = Mano.NADA;
+            }
+        }
+        // la mano abierta medio segundo: recargar
+        if (alguienAbierta) { if (abiertaDesde == 0) abiertaDesde = ahora; else if (ahora - abiertaDesde > 500) { juego.recargar(); abiertaDesde = ahora + 100000; } }
+        else abiertaDesde = 0;
+        // el láser: hasta donde pega cada caño
+        for (int s2 = 0; s2 < 2; s2++) {
+            if (!armaActiva[s2]) continue;
+            float[] f = armaAdel[s2];
+            Mano.boca(armaPos[s2], f, armaArriba[s2], manoBoca);
+            float d = entorno.rayo(manoBoca[0], manoBoca[1], manoBoca[2], f[0], f[1], f[2], 25f);
+            if (d < 0) d = 25f;
+            armaFin[s2][0] = manoBoca[0] + f[0] * d; armaFin[s2][1] = manoBoca[1] + f[1] * d; armaFin[s2][2] = manoBoca[2] + f[2] * d;
+        }
     }
 
     private void sonar(int ev, float px, float pz, float[] adelante) {
@@ -903,21 +1034,30 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         String abajo = null;
         if (juego.estado == Juego.ESPERA || !sigue) {
             Mapa.Grilla g = juego.grilla;
-            arriba = String.format(Locale.ROOT, "ESCANEO COMPLETO · %d%% · %d polígonos\n%s%s · %d FPS",
+            arriba = String.format(Locale.ROOT, "ESCANEO COMPLETO · %d%% · %d polígonos\n%s%s · %d FPS%s",
                     g == null ? 0 : Math.round(g.cobertura * 100), mallaGl.triangulos,
                     hayProfundidad ? "malla por profundidad" : "sin Depth API: planos",
-                    haySemantica ? " + IA semántica" : "", fps);
+                    haySemantica ? " + IA semántica" : "", fps, textoMano());
             if (!sigue) abajo = motivo(camara);
             else if (listoDesde == 0) abajo = "Mirá el piso y alrededor,\nmoviéndote despacio";
-            else if (escaneoCompleto) abajo = sbs ? "Escaneo completo ✓\narranca…" : "Escaneo completo ✓\nTocá para empezar";
+            else if (escaneoCompleto) abajo = sbs ? "Escaneo completo ✓\narranca…" : "Escaneo completo ✓\nTocá (o apretá el gatillo) para empezar";
             else abajo = guia(g, camara) + (sbs ? "" : "\n(o tocá para empezar ya)");
         } else {
-            arriba = String.format(Locale.ROOT, "PUNTOS %d%s\nOLEADA %d · %d bajas · %d FPS", juego.puntos,
-                    juego.combo > 1 ? "  x" + juego.combo : "", juego.oleada, juego.bajas, fps);
+            arriba = String.format(Locale.ROOT, "PUNTOS %d%s\nOLEADA %d · %d bajas · %d FPS%s", juego.puntos,
+                    juego.combo > 1 ? "  x" + juego.combo : "", juego.oleada, juego.bajas, fps, textoMano());
             if (juego.estado == Juego.FIN)
                 abajo = "Te dieron. " + juego.puntos + " puntos\n" + (sbs ? "Tocá o volumen para seguir" : "Tocá para volver a empezar");
         }
         hud.poner(arriba, juego.vidaJugador, juego.balas, Juego.CARGADOR, juego.recargando > 0, abajo);
+    }
+
+    /** Qué ve el hand tracking (para el HUD). */
+    private String textoMano() {
+        if (manos == null) return "";
+        if (!manos.anda) return " · " + manos.estado;
+        String t = "";
+        for (int s2 = 0; s2 < 2; s2++) if (armaPose[s2] != Mano.NADA) t += (t.isEmpty() ? "" : "+") + Mano.NOMBRES[armaPose[s2]];
+        return " · mano: " + (t.isEmpty() ? "no se ve" : t);
     }
 
     /** Hacia dónde mirar para completar el escaneo, dicho en criollo. */

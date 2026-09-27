@@ -7,10 +7,11 @@ de espaldas sobre el piso real. Acá con un teléfono Android + ARCore, en
 pantalla o en un visor tipo Cardboard (SBS).
 
 ```
-./construir.sh          → salida/asalto-mr.apk  (~360 KB)
+./construir.sh          → salida/asalto-mr.apk  (~18 MB: incluye MediaPipe y el modelo de manos)
 ./pruebas/correr.sh     → pruebas del escaneo, del mapa de la IA y del juego (en la PC)
 node pruebas/shaders.mjs → compila los 13 shaders con WebGL
 ./pruebas/vista.sh      → capturas de la vista previa (salida/vista-*.png)
+python3 pruebas/manos-camara.py → cámara YUV → RGB → modelo de manos, con fotos reales (pide pip install mediapipe)
 ```
 
 | juego | escaneo | SBS (visor) |
@@ -20,6 +21,10 @@ node pruebas/shaders.mjs → compila los 13 shaders con WebGL
 | el mapa de la IA: lo visto y lo que completó | zonas y rutas en el piso |
 |---|---|
 | ![](capturas/mapa.jpg) | ![](capturas/ia.jpg) |
+
+| la pistola en la mano, sobre fotos reales (índice estirado = listo · puño = gatillo) |
+|---|
+| ![](capturas/mano.jpg) |
 
 Las capturas son de la **vista previa en la PC**: la malla es la que sale del
 escaneo de verdad (Tsdf + Mallador sobre una escena de prueba filmada con una
@@ -70,6 +75,71 @@ fuera), ninguno se mete en la mesa, el tronco o la pared, de un tiro caen para
 atrás y quedan de espaldas sobre el piso real, el tiro a la mesa pega en la cara
 correcta, la cabeza cuenta como cabeza, el cargador se recarga, las oleadas
 avanzan.
+
+## La pistola en la mano (hand tracking)
+
+La cámara ve tu mano, y la pistola va **en tu mano de verdad**, como en el
+video. Un mismo cuadro de la cámara que usa ARCore pasa por **MediaPipe Hand
+Landmarker** (el modelo de manos de Google, `hand_landmarker.task`, dentro
+del APK), en su propio hilo. De ahí salen 21 puntos por mano, hasta dos manos
+(una pistola en cada una).
+
+- **Empuñá** como si tuvieras la pistola: medio, anular y meñique cerrados,
+  el índice estirado.
+- **Disparar = apretar el gatillo**: cerrás el índice. También vale la
+  "pistolita": índice estirado y bajar el pulgar.
+- **Recargar**: la mano abierta medio segundo.
+- **Apuntar**: con la mano. Un láser rojo va del caño hasta donde pega en la
+  malla. Tocar la pantalla o el volumen también disparan, desde la pistola de
+  la mano.
+- **Sin mano a la vista**: la pistola vuelve a la vista, como antes.
+
+Cómo está hecho (`Mano.java`, sin Android, probado en la PC):
+
+- **La pose**: cuánto dobla cada dedo, con los puntos en metros. No depende
+  de cómo esté girada la mano.
+- **El gatillo**: se mide la distancia de la punta del índice a la muñeca, en
+  palmas. En fotos reales: estirado 1.82, cerrado 0.90–0.93. Es mucho más
+  estable que sumar ángulos de falanges de 2 cm. Va suavizado, con histéresis
+  (se aprieta por debajo de 1.25 y se suelta por encima de 1.55) y un mínimo
+  de 130 ms entre tiros. Solo dispara si venías empuñando con el índice
+  estirado: agarrar de golpe no cuenta.
+- **La pistola**: el caño apunta hacia donde van los nudillos, de la muñeca a
+  los nudillos, sin la componente de la línea de nudillos, que es el mango.
+  Al apretar el gatillo no se mueve. El mango va en el centro de la palma.
+- **En 3D**: se busca dónde tiene que estar la mano (con la forma en metros
+  del modelo) para que sus 21 puntos caigan justo sobre la foto (mínimos
+  cuadrados). Si ARCore midió profundidad ahí y coincide, pesa más esa.
+- **Pantalla al revés** (horizontal invertida): la imagen se gira 180° para
+  el modelo y los puntos se desgiran.
+
+Lo medido con **manos reales**: los puntos que da el modelo sobre fotos de
+prueba públicas de MediaPipe (en `pruebas/manos.txt`, que genera
+`pruebas/manos-extraer.py`).
+
+| | |
+|---|---|
+| puño y pulgar arriba | "aprieta" (índice 209–219°) |
+| índice apuntando, también girado | "empuña" (índice 43–47°) |
+| la V · manos abiertas | "otra" · "abierta" |
+| apuntar → puño, 3 veces con fotos reales | 3 tiros |
+| agarrar de golpe desde la mano abierta · la V | 0 tiros |
+| 10 veces apretar y soltar, con 3 mm de temblor | 10 tiros |
+| dedo quieto a medio gatillo, temblando 4 mm, 5 s | 0 tiros |
+| la pistola al apretar el gatillo | se mueve 0.00° |
+| posición 3D (tamaño del modelo ±10 %, 2 px, 3 mm) | 35 mm solo con la imagen, **18 mm** con la profundidad de ARCore |
+| cámara YUV → RGB (el código Java) → el modelo | colores a 1.5/255, la mano en el mismo lugar (≤ 0.5 px), girada igual (≈ 1 px) |
+
+Y la vista previa de arriba: el esqueleto reproyectado desde el 3D cae sobre
+los nudillos de la foto, y la pistola queda agarrada en el puño.
+
+MediaPipe se arma sin Gradle (lo baja `construir.sh`: tasks-vision y
+tasks-core 1.0.0, más guava, protobuf-javalite y flogger). Se le **saca la
+telemetría**: la librería original manda estadísticas de uso a Google por
+otra librería (datatransport). `mediapipe-parche/` la reemplaza por el logger
+vacío que trae la propia MediaPipe, y esas 3 clases no van en el APK. Las
+librerías nativas van solo para ARM (arm64, armv7). En x86, el hand tracking
+dice "no disponible" y el resto anda.
 
 ## Escaneo completo, lo que no se ve, y la IA de zonas
 
@@ -206,6 +276,22 @@ OpenGL para que salga en los dos ojos.
   mal. Si falla, vuelve solo a "Más ancha". Es un límite de ARCore, no algo
   que se arregle desde la app.
 
+## Si no abre
+
+La versión anterior **no abría**: `Hud.java` tenía un error de compilación,
+pero `construir.sh` solo miraba si existía `Principal.class`. `javac` igual
+escribió las demás clases, el APK salió sin el HUD y se cerraba al abrir.
+Ahora el armado se corta:
+- si `javac` falla;
+- si falta el `.class` de algún `.java`;
+- si d8 avisa que falta alguna clase (salvo anotaciones).
+
+Y si igual se cae en el teléfono, la app **guarda el error**. Al volver a
+abrirla lo muestra con "COPIAR EL ERROR" (para pegarlo en el chat) y "ABRIR
+EN MODO SEGURO": sin semántica, sin completar, con la cámara de ARCore y sin
+mano. Los errores del dibujo y de los hilos se atrapan y se muestran en vez
+de cerrar la app.
+
 ## Lo que NO se probó
 
 - **En un teléfono.** Esta máquina no tiene uno. Está probado: el escaneo y
@@ -216,6 +302,10 @@ OpenGL para que salga en los dos ojos.
   cámara), el rendimiento en el teléfono, ni el visor.
 - La Depth API la tienen muchos teléfonos con ARCore, pero no todos. Sin ella
   no hay malla: se juega sobre los planos del piso y no hay oclusión.
+- **El hand tracking en el teléfono**: el modelo y el gesto se probaron con
+  fotos reales en la PC, pero no con la cámara del teléfono en movimiento, ni
+  cuánto tarda el modelo ahí (en CPU, 320×240, una imagen cada ≥ 40 ms). Si
+  la pistola sale corrida o girada respecto de la mano, pasame una captura.
 - La imagen de la red semántica se lleva a la de profundidad escalando las
   coordenadas (se asume que cubren el mismo campo, como la profundidad).
   Si las etiquetas salen corridas en los bordes de las cosas, es eso.
@@ -241,6 +331,10 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Mallador.java` | surface nets: de voxeles a polígonos |
 | `src/.../Escaneo.java` | el hilo del escaneo (y el mapa cada 1.5 s) |
 | `src/.../Mapa.java` | la IA del entorno: zonas, completado, cubiertas, rutas A\*, cobertura |
+| `src/.../Mano.java` | la mano: pose, gatillo, la pistola en la mano, de la foto al 3D (sin Android) |
+| `src/.../ManoRastreo.java` | el hilo de MediaPipe: la imagen de la cámara → 21 puntos por mano |
+| `src/.../Fallo.java` | si se cae: guarda el error y lo muestra al volver a abrir |
+| `mediapipe-parche/` | MediaPipe sin telemetría |
 | `src/.../ZonasGl.java` | las zonas pintadas sobre el piso |
 | `src/.../Juego.java` | soldados, disparos, caídas, partículas, oleadas (sin Android) |
 | `src/.../Principal.java` | la actividad: ARCore, profundidad, entrada, dibujo por ojo |
@@ -250,6 +344,7 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Hud.java` · `Lentes.java` | el HUD en GL; la corrección de lentes |
 | `src/.../Ajustes.java` · `Panel.java` | la configuración y su panel |
 | `src/.../Sonido.java` | los sonidos, sintetizados al arrancar |
-| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` | las pruebas en la PC |
+| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` | las pruebas en la PC |
+| `pruebas/manos.txt` · `manos-extraer.py` · `manos-camara.py` · `herramientas/Yuv.java` | manos reales para las pruebas; la cámara de punta a punta |
 | `pruebas/shaders.mjs` · `vista.mjs` · `vista/` | shaders con WebGL; la vista previa |
 | `construir.sh` | arma el APK sin Gradle (caché compartida con mundo-ar) |
