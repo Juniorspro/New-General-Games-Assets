@@ -1067,7 +1067,7 @@ async function iniciar() {
       /* las ventanas de prueba en el mundo (sin 6DoF): las manos las tocan, las agarran y las mueven */
       if (ventanasMundo.hayAlgo) {
         const P = [];
-        for (const [k, M] of manos.manos.entries()) if (M.visible && M.alfa > 0.5) P.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
+        for (const [k, M] of manos.manos.entries()) if (M.visible && M.alfa > 0.5) P.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, new THREE.Vector3())).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
         ventanasMundo.actualizar(dt, motor.camara.position, motor.camara.quaternion, P);
       }
     }

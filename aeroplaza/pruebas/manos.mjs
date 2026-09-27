@@ -5,7 +5,8 @@
 //   la mano dibujada va donde está (se adelanta), no 3 cm atrás;
 // - el pellizco con histéresis; el rayo apunta lo que se usa (el cartel del mapa: abre la ventana);
 //   el arco al piso y soltar el pellizco salta ahí, con parpadeo; los dos pellizcos saltan;
-// - la palma a la cara y un pellizco abren el menú; se toca con la yema (girar) o con el rayo
+// - la palma a la cara (mirándola, abierta, 0,25 s) y un pellizco abren el menú; con la palma a la cara pero sin
+//   mirarla no aparece el botón (vuelta 34: se abría solo al cerrar la mano); se toca con la yema (girar) o con el rayo
 //   (cuadros por segundo) y "salir" sale del VR;
 // - la yema revienta una burbuja;
 // - y MediaPipe de verdad, en su worker, con las tres fotos de pruebas/manos (hechas con Rezona):
@@ -208,9 +209,13 @@ const MANO = () => {
     /* (se bajaron las manos: fuera de la cámara) */
     A.manos.perder(true); A.manos.perder(false);
     const act0 = A.manos.actualizar.bind(A.manos); window.__evs = []; A.manos.actualizar = (...x) => { const e = act0(...x); if (e.length) window.__evs.push(e.map((q) => q.tipo + (q.accion ? ':' + q.accion : '')).join(',') + '@' + A.yo.p.y.toFixed(2)); return e; };
-    const palma = (pose) => [false, window.__mano(false, pose, { mira: mI, palma: true, dir: new THREE.Vector3(0, 1, 0).addScaledVector(fr, 0.35) })];
-    for (let i = 0; i < 5; i++) window.__cuadro([palma('abierta')]);
-    const boton = A.manos.boton.visible; window.__dbg = { vr: A.vr.activo, act: A.manos.activa, vis: A.manos.manos[0].visible, cara: A.manos.manos[0].aLaCara, menu: A.manos.menu.abierto };
+    const palma = (pose, donde = mI) => [false, window.__mano(false, pose, { mira: donde, palma: true, dir: new THREE.Vector3(0, 1, 0).addScaledVector(fr, 0.35) })];
+    /* (la palma a la cara, pero 50° al costado de la mirada: no aparece el botón) */
+    const alCosta = p.clone().addScaledVector(fr, 0.22).addScaledVector(de, -0.27).add(new THREE.Vector3(0, -0.05, 0));
+    for (let i = 0; i < 12; i++) window.__cuadro([palma('abierta', alCosta)]);
+    const sinMirar = A.manos.boton.visible;
+    for (let i = 0; i < 12; i++) window.__cuadro([palma('abierta')]);
+    const boton = A.manos.boton.visible && !sinMirar; window.__dbg = { vr: A.vr.activo, act: A.manos.activa, vis: A.manos.manos[0].visible, cara: A.manos.manos[0].aLaCara, menu: A.manos.menu.abierto };
     for (let i = 0; i < 5; i++) window.__cuadro([palma('pellizco')]);
     for (let i = 0; i < 5; i++) window.__cuadro([palma('abierta')]);
     const abierto = A.manos.menu.abierto;

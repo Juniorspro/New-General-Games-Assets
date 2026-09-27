@@ -5,7 +5,9 @@
      volver a escanear…). Lo que hace cada botón lo decide quien la abre.
    - LAS VENTANAS DE PRUEBA: reloj, pizarra, burbujas y "dónde estoy" (la que
      muestra el 6DoF: cuánto te moviste y a cuánto está). Se agarran por la
-     barra con un pellizco y se dejan donde sea; cerca de una pared se pegan.
+     barra o por la manija de abajo, con el rayo y un pellizco o pellizcando
+     ahí mismo con la mano, y se dejan donde sea; cerca de una pared se pegan.
+     Se abren cada una en su lugar, en un arco alrededor (vuelta 34).
    - CÓMO SE TOCAN (como un Quest): con la yema del índice (se aprieta al
      cruzar el vidrio), con el rayo y un pellizco, o con la mirada (el punto
      del centro) y un toque en la pantalla o quedándose 1,4 s encima.
@@ -18,13 +20,13 @@ import { t, sumar, idioma } from './textos.js';
 sumar({
   es: { vt_pantalla: 'Tu espacio', vt_jugar: 'Jugar AEROPLAZA', vt_reloj: 'Reloj', vt_pizarra: 'Pizarra', vt_burbujas: 'Burbujas', vt_lugar: 'Dónde estoy', vt_escaneo: 'Ver el escaneo', vt_reescanear: 'Escanear de nuevo', vt_medir: 'Medir mis manos', vt_salir: 'Salir', vt_cerrar_todo: 'Cerrar ventanas', vt_volver: 'Volver al juego',
     vt_borrar: 'Borrar', vt_puntos: '{n} burbujas', vt_toca: 'Tocá las burbujas', vt_estas: 'Estás a {d} m', vt_moviste: 'Te moviste {d} m desde que la abriste', vt_alto: 'Está a {d} m del piso', vt_6dof: 'Caminá alrededor: la ventana se queda en su lugar',
-    vt_sin6dof: 'Sin 6DoF: la ventana está en el mundo del juego', vt_barra: 'Pellizcá la barra para moverla', vt_pegada: 'Pegada a la pared', vt_hola: 'Tocá con la yema del índice, o apuntá y pellizcá' },
+    vt_sin6dof: 'Sin 6DoF: la ventana está en el mundo del juego', vt_barra: 'Pellizcá la barra o la manija para moverla', vt_pegada: 'Pegada a la pared', vt_hola: 'Tocá con la yema del índice, o apuntá y pellizcá' },
   en: { vt_pantalla: 'Your space', vt_jugar: 'Play AEROPLAZA', vt_reloj: 'Clock', vt_pizarra: 'Whiteboard', vt_burbujas: 'Bubbles', vt_lugar: 'Where am I', vt_escaneo: 'Show the scan', vt_reescanear: 'Scan again', vt_medir: 'Measure my hands', vt_salir: 'Exit', vt_cerrar_todo: 'Close windows', vt_volver: 'Back to the game',
     vt_borrar: 'Clear', vt_puntos: '{n} bubbles', vt_toca: 'Touch the bubbles', vt_estas: 'You are {d} m away', vt_moviste: 'You moved {d} m since you opened it', vt_alto: 'It is {d} m above the floor', vt_6dof: 'Walk around: the window stays in place',
-    vt_sin6dof: 'No 6DoF: the window lives in the game world', vt_barra: 'Pinch the bar to move it', vt_pegada: 'Stuck to the wall', vt_hola: 'Touch with your index fingertip, or point and pinch' },
+    vt_sin6dof: 'No 6DoF: the window lives in the game world', vt_barra: 'Pinch the bar or the handle to move it', vt_pegada: 'Stuck to the wall', vt_hola: 'Touch with your index fingertip, or point and pinch' },
   pt: { vt_pantalla: 'Seu espaço', vt_jugar: 'Jogar AEROPLAZA', vt_reloj: 'Relógio', vt_pizarra: 'Lousa', vt_burbujas: 'Bolhas', vt_lugar: 'Onde estou', vt_escaneo: 'Ver o escaneamento', vt_reescanear: 'Escanear de novo', vt_medir: 'Medir minhas mãos', vt_salir: 'Sair', vt_cerrar_todo: 'Fechar janelas', vt_volver: 'Voltar ao jogo',
     vt_borrar: 'Apagar', vt_puntos: '{n} bolhas', vt_toca: 'Toque as bolhas', vt_estas: 'Você está a {d} m', vt_moviste: 'Você andou {d} m desde que a abriu', vt_alto: 'Está a {d} m do chão', vt_6dof: 'Ande em volta: a janela fica no lugar',
-    vt_sin6dof: 'Sem 6DoF: a janela está no mundo do jogo', vt_barra: 'Faça a pinça na barra para movê-la', vt_pegada: 'Grudada na parede', vt_hola: 'Toque com a ponta do indicador, ou aponte e faça a pinça' },
+    vt_sin6dof: 'Sem 6DoF: a janela está no mundo do jogo', vt_barra: 'Faça a pinça na barra ou na alça para movê-la', vt_pegada: 'Grudada na parede', vt_hola: 'Toque com a ponta do indicador, ou aponte e faça a pinça' },
 });
 
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _n = new THREE.Vector3(), _m = new THREE.Matrix4();
@@ -32,6 +34,18 @@ const APRIETA = 0.006;      // la yema aprieta al cruzar el vidrio (m, de adelan
 const CERCA = 0.035;        // hasta dónde de la yema al vidrio cuenta como tocar
 const QUIETA = 1.4;         // s mirando un botón para apretarlo con la mirada
 const PEGA = 0.22;          // m de una pared para pegarse
+/* (vuelta 34) las ventanas nuevas: en un arco a LEJOS m, cada una en su lugar (PASO rad de costado, dos filas);
+   la manija de abajo (como en un Quest): su tamaño y lo que se acepta alrededor para agarrarla (m); y el
+   pellizco con la mano: hasta MANO m del vidrio */
+const LEJOS = 0.85, PASO = 0.6, FILAS = [-0.05, 0.33];
+const MANIJA = { w: 0.15, h: 0.018, baja: 0.03, tolW: 0.13, tolH: 0.045 }, MANO = 0.07;
+let texManija = null;
+function laTexManija() {
+  if (texManija) return texManija;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 32; const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.beginPath(); g.roundRect(4, 4, 248, 24, 12); g.fill();
+  texManija = new THREE.CanvasTexture(c); texManija.colorSpace = THREE.SRGBColorSpace; return texManija;
+}
 const fmt = (x) => x.toLocaleString(idioma() === 'en' ? 'en' : idioma() === 'pt' ? 'pt-BR' : 'es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /* ------------------------------------------ lo que dibuja el vidrio Aero */
@@ -129,6 +143,10 @@ export class Ventana extends Tablero {
   constructor(tipo, { conSeis = true } = {}) {
     super(0.44, 0.32, 768);
     this.tipo = tipo; this.conSeis = conSeis; this.barra = 78; this.pegada = false;
+    /* la manija de abajo: se ilumina con la mano encima y mientras se la lleva */
+    this.manija = new THREE.Mesh(new THREE.PlaneGeometry(MANIJA.w, MANIJA.h), new THREE.MeshBasicMaterial({ map: laTexManija(), transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
+    this.manija.position.set(0, -this.alto / 2 - MANIJA.baja, 0.002); this.manija.renderOrder = 8; this.malla.add(this.manija);
+    this.luzManija = 0;
     this.cerrar = { x: this.W - 78, y: 12, w: 58, h: 54 };
     this.titulo = t('vt_' + tipo);
     this.t = 0; this.tPinta = 0; this.puntos = 0; this.origen = null; this.cabeza = new THREE.Vector3(); this.piso = null;
@@ -145,7 +163,19 @@ export class Ventana extends Tablero {
     }
   }
   burbujaNueva(al = false) { return { x: 60 + Math.random() * (this.W - 120), y: al ? this.barra + 40 + Math.random() * (this.H - this.barra - 60) : this.H + 40, r: 22 + Math.random() * 26, v: 40 + Math.random() * 50, fase: Math.random() * 6, pop: 0 }; }
-  enBarra(u, v) { return v >= 0 && v <= this.barra; }
+  /* (la barra, con un poco de más arriba y abajo: con el rayo de la cámara cuesta apuntar 4 cm) */
+  enBarra(u, v) { return v >= -30 && v <= this.barra + 24 && u >= -30 && u <= this.W + 30; }
+  /* un punto en coordenadas del vidrio (local) sobre la manija, con su tolerancia */
+  enManija(L) { const k = this.W / this.ancho, y0 = this.H + (MANIJA.baja - MANIJA.tolH) * k, y1 = this.H + (MANIJA.baja + MANIJA.tolH) * k; return L.v >= y0 && L.v <= y1 && Math.abs(L.u - this.W / 2) <= MANIJA.tolW * k; }
+  /* dónde toca un rayo el plano del vidrio (aunque sea afuera): para la manija y el borde de la barra */
+  enPlano(o, d) {
+    _n.set(0, 0, 1).applyQuaternion(this.malla.getWorldQuaternion(new THREE.Quaternion()));
+    const den = _n.dot(d); if (Math.abs(den) < 1e-4) return null;
+    const k = this.malla.getWorldPosition(_b).sub(o).dot(_n) / den; if (k < 0.05 || k > 8) return null;
+    const p = o.clone().addScaledVector(d, k); return { ...this.local(p), p, k, tab: this };
+  }
+  /* se agarra por ahí (la barra o la manija), no la X */
+  deAgarre(L) { return !this.enCerrar(L.u, L.v) && (this.enManija(L) || this.enBarra(L.u, L.v)); }
   enCerrar(u, v) { const c = this.cerrar; return u >= c.x && u <= c.x + c.w && v >= c.y && v <= c.y + c.h; }
   /* un toque en el contenido (u, v en píxeles); arrastra: sigue apretando (la pizarra dibuja) */
   tocar(u, v, arrastra = false) {
@@ -255,16 +285,31 @@ export class Ventanas {
     this.grupo.add(T.malla); this.alSonar('aviso');
     return T;
   }
-  /* una ventana nueva delante de la cara, un poco corrida de las anteriores */
+  /* una ventana nueva: en el primer lugar libre de un arco alrededor (vuelta 34: antes iban a 12 cm una de otra
+     y, de 44 cm de ancho, quedaban amontonadas). Primero adelante, después a los costados y arriba */
   abrir(tipo, cabezaP, cabezaQ) {
-    const V = new Ventana(tipo, { conSeis: this.conSeis }), k = this.nAbiertas++ % 5;
-    _a.set(0, 0, -1).applyQuaternion(cabezaQ); _a.y = 0; if (_a.lengthSq() < 1e-4) _a.set(0, 0, -1); _a.normalize();
-    _b.set(-_a.z, 0, _a.x);
-    V.malla.position.copy(cabezaP).addScaledVector(_a, 0.62 + k * 0.03).addScaledVector(_b, (k - 2) * 0.12); V.malla.position.y += -0.06 + (k % 2) * 0.1;
-    V.malla.lookAt(cabezaP); V.nace = 0; V.malla.scale.setScalar(0.01);
+    const V = new Ventana(tipo, { conSeis: this.conSeis });
+    V.malla.position.copy(this.lugarLibre(cabezaP, cabezaQ, V));
+    V.malla.lookAt(cabezaP); V.nace = 0; V.malla.scale.setScalar(0.01); this.nAbiertas++;
     if (this.piso) V.piso = this.piso();
     this.grupo.add(V.malla); this.lista.push(V); this.alSonar('sesion');
     return V;
+  }
+  lugarLibre(cabezaP, cabezaQ, V) {
+    _a.set(0, 0, -1).applyQuaternion(cabezaQ); _a.y = 0; if (_a.lengthSq() < 1e-4) _a.set(0, 0, -1); _a.normalize();
+    const rumbo = Math.atan2(-_a.x, -_a.z), lugares = [];
+    for (const [c, f] of [[0, 0], [1, 0], [-1, 0], [0, 1], [1, 1], [-1, 1], [2, 0], [-2, 0], [2, 1], [-2, 1], [3, 0], [-3, 0]]) {
+      const r = rumbo - c * PASO;
+      lugares.push(new THREE.Vector3(cabezaP.x - Math.sin(r) * LEJOS, cabezaP.y + FILAS[f], cabezaP.z - Math.cos(r) * LEJOS));
+    }
+    /* (libre: que no se tape con nada de lo abierto, visto desde la cabeza: el ángulo entre los centros contra
+       lo que abarca cada uno) */
+    const radio = (T, p) => Math.atan2(Math.hypot(T.ancho, T.alto) * 0.42, Math.max(0.2, p.distanceTo(cabezaP)));
+    const libre = (p) => this.tableros.every((T) => {
+      const q = T.malla.getWorldPosition(new THREE.Vector3()), u = _b.copy(p).sub(cabezaP).normalize(), w = _c.copy(q).sub(cabezaP).normalize();
+      return Math.acos(THREE.MathUtils.clamp(u.dot(w), -1, 1)) > radio(T, q) + radio(V, p);
+    });
+    return lugares.find(libre) || lugares[this.nAbiertas % lugares.length];
   }
   cerrar(V) { const i = this.lista.indexOf(V); if (i >= 0) this.lista.splice(i, 1); for (const [k, a] of this.agarres) if (a.V === V) this.agarres.delete(k); V.soltar(); this.alSonar('pop'); }
   cerrarTodas() { for (const V of this.lista.slice()) this.cerrar(V); }
@@ -299,10 +344,16 @@ export class Ventanas {
     const sobre = new Map();
     for (const p of punteros) {
       const k = p.id; this.apunta[k === 'mirada' ? 2 : k] = null;
-      /* 1) arrastrando una ventana (se agarró por la barra): sigue al rayo a la misma distancia */
+      /* 1) arrastrando una ventana (se agarró por la barra o la manija): con la mano, sigue a la pinza; con el
+         rayo, al rayo a la misma distancia */
       const A = this.agarres.get(k);
       if (A) {
         if (!p.pellizca || !this.lista.includes(A.V)) { this.agarres.delete(k); if (this.lista.includes(A.V)) this.dejar(A.V, cabezaP); continue; }
+        A.V.luzManija = 1;
+        if (A.mano && p.pinza) {
+          A.V.malla.position.lerp(_a.copy(p.pinza).add(A.off), Math.min(1, dt * 25)); A.V.malla.lookAt(cabezaP); if (A.V.pegada) { A.V.pegada = false; A.V.sucio = true; }
+          this.apunta[k] = p.pinza.clone(); continue;
+        }
         /* (apuntando a una pared mientras se la lleva, va a la pared, como en un Quest: con el rayo solo
            no se la puede llevar más lejos de donde se agarró) */
         const w = this.enPared(p.o, p.d);
@@ -310,6 +361,17 @@ export class Ventanas {
         const obj = p.o.clone().addScaledVector(p.d, A.k).sub(A.off);
         A.V.malla.position.lerp(obj, Math.min(1, dt * 18)); A.V.malla.lookAt(cabezaP); if (A.V.pegada) { A.V.pegada = false; A.V.sucio = true; }
         this.apunta[k] = p.o.clone().addScaledVector(p.d, A.k); continue;
+      }
+      /* 1b) el pellizco con la mano, ahí mismo sobre la barra o la manija (vuelta 34: con el rayo de la cámara
+         costaba acertarle; con la mano se agarra como en un Quest) */
+      if (p.pinza && k !== 'mirada') {
+        let mejor = null;
+        for (const V of this.lista) { const L = V.local(p.pinza); if (Math.abs(L.prof) < MANO && V.deAgarre(L) && (!mejor || Math.abs(L.prof) < Math.abs(mejor.L.prof))) mejor = { V, L }; }
+        if (mejor) {
+          mejor.V.luzManija = Math.max(mejor.V.luzManija, 0.8); this.apunta[k] = p.pinza.clone();
+          if (p.empezo) { this.agarres.set(k, { V: mejor.V, mano: true, off: mejor.V.malla.position.clone().sub(p.pinza) }); this.alSonar('elegir'); }
+          continue;
+        }
       }
       /* 2) la yema, si está sobre un vidrio */
       if (p.yema) {
@@ -328,6 +390,16 @@ export class Ventanas {
       /* 3) el rayo (o la mirada) */
       if (!p.o || !p.d) continue;
       const r = this.alRayo(p.o, p.d);
+      /* (la manija, o el borde de la barra justo afuera del vidrio: el rayo las agarra igual) */
+      if (k !== 'mirada' && (!r || (r.tab instanceof Ventana && r.tab.deAgarre(r)))) {
+        let m = null;
+        for (const V of this.lista) { const q = V.enPlano(p.o, p.d); if (q && V.deAgarre(q) && (!m || q.k < m.k) && (!r || q.k <= r.k + 0.01)) m = q; }
+        if (m) {
+          m.tab.luzManija = Math.max(m.tab.luzManija, 0.8); this.apunta[k] = m.p;
+          if (p.empezo) { this.agarres.set(k, { V: m.tab, k: m.k, off: m.p.clone().sub(m.tab.malla.position) }); this.alSonar('elegir'); }
+          continue;
+        }
+      }
       if (!r) { if (k === 'mirada') this.mirada = { b: null, tab: null, t: 0 }; continue; }
       const T = r.tab, esV = T instanceof Ventana, b = T.boton?.(r.u, r.v) || (esV && T.enCerrar(r.u, r.v) ? 'cerrar' : null);
       this.apunta[k === 'mirada' ? 2 : k] = r.p;
@@ -343,6 +415,8 @@ export class Ventanas {
       } else if (p.pellizca && esV && T.tipo === 'pizarra') { T.tocar(r.u, r.v, true); T._pinto = true; }
       if (b && !sobre.has(T)) sobre.set(T, { b, carga });
     }
+    /* la manija: más clara con una mano encima (y se apaga de a poco) */
+    for (const V of this.lista) { const m = V.manija.material; m.opacity += ((0.45 + 0.5 * V.luzManija) - m.opacity) * Math.min(1, dt * 12); V.manija.scale.setScalar(1 + 0.18 * V.luzManija); V.luzManija = 0; }
     /* lo que queda iluminado: lo que tiene algo encima (un botón, o la X de una ventana) */
     for (const T of this.tableros) {
       const s = sobre.get(T);

@@ -848,7 +848,7 @@ const VERT_MANO = /* glsl */`
 /* vidrio Aero: blanco celeste, el borde que brilla (fresnel), un reflejo arriba y el pellizco que se
    enciende. Sin luces de la escena: van por ojo y tienen que ser baratas */
 const FRAG_MANO = /* glsl */`
-  uniform vec3 uColor, uBorde; uniform float uOpacidad;
+  uniform vec3 uColor, uBorde; uniform float uOpacidad, uFantasma;
   varying vec3 vN, vV; varying float vBr, vAlfa, vLado;
   void main() {
     vec3 n = normalize(vN), v = normalize(vV);
@@ -863,10 +863,20 @@ const FRAG_MANO = /* glsl */`
     c = mix(c, vec3(0.5, 1.0, 1.0), vBr * (0.4 + 0.6 * f));
     /* el borde, suave en un píxel (si no, el contorno claro de cada dedo titila al moverse) */
     float ndv = max(0.0, dot(n, v)), aa = clamp(ndv / max(fwidth(ndv) * 1.5, 1e-4), 0.0, 1.0);
-    gl_FragColor = vec4(c, clamp((uOpacidad * (0.72 + 0.28 * f) + vBr * 0.25) * vAlfa * aa, 0.0, 1.0));
+    /* (fantasma, vuelta 34: como las manos de un Quest, casi solo el borde que brilla; en tu espacio, del todo,
+       porque la mano de verdad se ve en la cámara) */
+    float a = mix(uOpacidad * (0.72 + 0.28 * f), 0.05 + 0.7 * smoothstep(0.3, 0.95, f), uFantasma);
+    c = mix(c, uBorde, uFantasma * 0.55);
+    gl_FragColor = vec4(c, clamp((a + vBr * 0.25) * vAlfa * aa, 0.0, 1.0));
   }`;
 
 /* -------------------------------------------------- el menú de la muñeca */
+/* (vuelta 34) cuándo la palma abre el menú: cara, cuánto mira la palma a la cara (el coseno; sigue: ya mostrando
+   el botón); mira: el ángulo entre la mirada y la palma (rad); t: cuánto tiempo seguido (s); abierta: las puntas
+   de mayor, anular y meñique a más de tantas veces el largo de la palma de la muñeca (en un puño, ~1) */
+const MENU_PALMA = { cara: 0.72, sigue: 0.55, mira: 0.5, miraSigue: 0.65, t: 0.25, abierta: 1.55 };
+/* cuánto fantasma las manos en el juego (0: vidrio entero; 1: solo el borde) */
+const FANTASMA_JUEGO = 0.35;
 const BOTONES = ['mn_caminar', 'mn_izq', 'mn_der', 'mn_fps', 'mn_ventanas', 'mn_lentes', 'mn_salir'];
 class Menu {
   constructor() {
@@ -931,7 +941,9 @@ export class Manos {
     this.suavidad = 'media';   // con la cámara: 'rapida', 'media' o 'suave' (SUAVIDAD; lo elige el menú del VR)
     this.cabeza = [];   // la pose de la cabeza en cada cuadro (para poner en el mundo lo que vio la cámara)
     const g = this.geo = geoCapsula();
-    const U = { uColor: { value: new THREE.Vector3(0.8, 0.88, 0.96) }, uBorde: { value: new THREE.Vector3(0.72, 0.97, 1.0) }, uOpacidad: { value: 0.88 } };
+    const U = this.uManos = { uColor: { value: new THREE.Vector3(0.8, 0.88, 0.96) }, uBorde: { value: new THREE.Vector3(0.72, 0.97, 1.0) }, uOpacidad: { value: 0.88 }, uFantasma: { value: FANTASMA_JUEGO } };
+    /* (cuánto fantasma: en el juego un poco, en tu espacio del todo; espacio.js lo pone) */
+    this.fantasma = FANTASMA_JUEGO;
     /* primero solo la profundidad; después el vidrio encima, sin verse doble */
     this.prof = new THREE.Mesh(g, new THREE.ShaderMaterial({ uniforms: { uCorte: { value: 0.6 } }, vertexShader: VERT_MANO, fragmentShader: 'void main() { gl_FragColor = vec4(0.0); }', colorWrite: false }));
     U.uCorte = { value: -1 };
@@ -1214,9 +1226,26 @@ export class Manos {
        rato sigue "vista" 250 ms con su último pellizco, y con el pellizco de la palma parecía doble) */
     const fresca = (M) => M.visible && ts - M.t < 0.12;
     if (fresca(I) && fresca(D) && (I.empezo || D.empezo) && I.pellizca && D.pellizca && Math.abs(I.tPellizco - D.tPellizco) < 0.25) { ev.push({ tipo: 'saltar' }); this.salto = null; I.anulado = D.anulado = true; }
-    /* el menú: la palma a la cara y un pellizco de esa mano; o se toca con la yema de la otra */
+    /* el menú: la palma a la cara, mirándola, y un pellizco de esa mano; o se toca con la yema de la otra.
+       (vuelta 34) Antes bastaba la palma a la cara: al cerrar la mano, o al pellizcar la barra de una ventana
+       (MediaPipe a veces confunde cuál mano es, y la palma queda al revés), se abría solo y el pellizco no
+       agarraba. Ahora, MENU_PALMA.t s seguidos: la palma bien a la cara, la mano abierta (mayor, anular y
+       meñique estirados), la mirada en la palma y sin estar apuntando a una ventana */
     let palma = null;
-    for (const M of this.manos) if (M.visible && M.aLaCara > (M === this.palmaAntes ? 0.5 : 0.62)) palma = M;
+    _d.set(0, 0, -1).applyQuaternion(cabQ);
+    for (const [k, M] of this.manos.entries()) {
+      const ya = M === this.palmaAntes, P = MENU_PALMA;
+      let ok = M.visible && !M.viaja && M.aLaCara > (ya ? P.sigue : P.cara) && !(ctx.apuntar?.(M, k));
+      if (ok) {
+        const w = M.punto(0, _a), largo = w.distanceTo(M.punto(9, _b)) || 1;
+        let puntas = 0; for (const i of [12, 16, 20]) puntas += M.punto(i, _b).distanceTo(w) / 3;
+        const mira = _e.copy(M.palmaC).sub(cabP).normalize().dot(_d);
+        ok = puntas / largo > P.abierta && mira > Math.cos(ya ? P.miraSigue : P.mira);
+      }
+      if (!ok) { M.palmaDesde = -1; continue; }
+      if (!(M.palmaDesde >= 0)) M.palmaDesde = ts;
+      if (ya || ts - M.palmaDesde >= P.t) palma = M;
+    }
     this.palmaAntes = palma;
     this.boton.visible = !!palma && !this.menu.abierto;
     if (palma) { this.boton.position.copy(palma.palmaC).addScaledVector(palma.palmaN, 0.05); this.boton.scale.setScalar(1 + palma.fuerza * 0.8); }
@@ -1336,6 +1365,7 @@ export class Manos {
   }
   /* las cápsulas de las dos manos al buffer de instancias */
   dibujarManos() {
+    const uf = this.uManos.uFantasma; uf.value += (this.fantasma - uf.value) * 0.15;
     const g = this.geo, A = g.attributes.iA.array, B = g.attributes.iB.array, R = g.attributes.iR.array, Br = g.attributes.iBr.array;
     let n = 0;
     for (const M of this.manos) {
@@ -1357,6 +1387,8 @@ export class Manos {
   }
   /* por ojo, encima de la reproyección (vr-dibujo.js › encima) o en la escena del visor */
   dibujarOjo(r, ojo) { r.render(this.escena, ojo); }
+  /* las manos fantasma (tu espacio) o como en el juego */
+  ponerFantasma(si) { this.fantasma = si ? 1 : FANTASMA_JUEGO; }
   /* hay algo que dibujar (si no, ni se llama) */
   get algo() { return this.manos.some((m) => m.alfa > 0.01) || this.menu.abierto || !!this.extra?.hayAlgo; }
 }

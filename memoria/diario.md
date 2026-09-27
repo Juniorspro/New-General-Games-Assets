@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la noche, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: que las ventanas de tu espacio no se amontonen, que el escaneo desaparezca, manos menos visibles como
+    un Quest, poder agarrar las ventanas y que el menú de la palma no salga solo al cerrar la mano.
+  - Quedó ([aeroplaza-33](aeroplaza-33.md)): el menú de la palma pide mirarla, abierta, 0,25 s; manija y agarre con
+    la mano; lugares libres en arco; el escaneo se desvanece; manos fantasma. `espacio.mjs` 28/28, `manos.mjs` 20/20.
+  - Falta: que diga si en su celu ya agarra (la pinza a menos de 7 cm de la manija o la barra).
 - **27/09/2026, a la noche, tarde · `claude/fijate-iszyer`:**
   - Pidió: la linterna sola con poca luz en el VR, que la cámara de tu espacio no se vea "con ojo de pescado", y
     que el punto del centro se mueva al ajustar las lentes.

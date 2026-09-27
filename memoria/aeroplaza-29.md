@@ -28,6 +28,8 @@ si no querés el 6DoF, las ventanas en el mundo 3D del juego". Antes: [aeroplaza
 - Se tocan con la yema (aprieta al cruzar el vidrio, 6 mm), con el rayo y un pellizco, o con la mirada: un toque en
   la pantalla, o 1,4 s encima de un botón (con visor no se ve el dedo). Un toque sin mirar nada aprieta el botón
   principal de la tarjeta.
+- (Vuelta 34: también por una manija abajo y pellizcando con la mano, y cada una se abre en su lugar: ver
+  [aeroplaza-33](aeroplaza-33.md).)
 - Se agarran por la barra con un pellizco y siguen al rayo a la misma distancia; **apuntando a una pared mientras
   se lleva, va a la pared** (con el rayo solo no se la puede alejar). Al soltar a menos de 22 cm de una pared, se
   pega a 1,2 cm mirando para afuera.

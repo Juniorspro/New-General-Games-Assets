@@ -7,6 +7,9 @@
 // - con la mano sobre la mesa mide la escala (1/0,8 = 1,25) y la guarda;
 // - la pantalla aparece arriba de la mesa; con la mirada y un toque se abre una ventana;
 // - la ventana se agarra por la barra (pellizco), se mueve, se pega a la pared y se cierra con la yema;
+// - (vuelta 34) las ventanas nuevas no se tapan entre ellas ni con la pantalla; se agarran pellizcando la manija
+//   con la mano y la siguen; el escaneo se va al terminar (y "Ver el escaneo" lo vuelve a mostrar); las manos,
+//   fantasma en tu espacio;
 // - "Jugar" pasa al juego en VR con ARCore y las manos; sin ARCore, las ventanas van en el mundo del juego.
 //     node pruebas/espacio.mjs [SBS=1: con visor, la pantalla partida]
 import path from 'node:path';
@@ -191,11 +194,54 @@ await pag.evaluate(() => { window.__poner(0, 1.45, 0.4, 0, -0.3); window.__manda
 await avanzar(pag, 1, 1 / 60, true);
 await pag.screenshot({ path: path.join(SAL, `espacio-pantalla${FIN}.png`) });
 
+/* (vuelta 34) cuatro ventanas nuevas, cada una en su lugar: ninguna tapa a otra (ni a la pantalla) */
+const ra = await pag.evaluate(() => {
+  const A = window.__A, { THREE } = A, E = A.espacio, W = E.ventanas; W.cerrarTodas();
+  for (const tipo of ['reloj', 'pizarra', 'burbujas', 'lugar']) W.abrir(tipo, E.cabezaP, E.cabezaQ);
+  window.__manda(30);
+  const cab = E.cabezaP, T = W.tableros, pos = T.map((x) => x.malla.getWorldPosition(new THREE.Vector3()));
+  const radio = (x, p) => Math.atan2(Math.hypot(x.ancho, x.alto) * 0.42, p.distanceTo(cab));
+  let peor = Infinity;
+  for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) {
+    const a = pos[i].clone().sub(cab).normalize(), b = pos[j].clone().sub(cab).normalize();
+    peor = Math.min(peor, Math.acos(Math.min(1, a.dot(b))) - radio(T[i], pos[i]) - radio(T[j], pos[j]));
+  }
+  /* (dónde quedó cada una: el rumbo y la altura vistos desde la cabeza, en grados; la primera es la pantalla) */
+  const f = new THREE.Vector3(0, 0, -1).applyQuaternion(E.cabezaQ), r0 = Math.atan2(-f.x, -f.z);
+  const donde = pos.map((p) => { const v = p.clone().sub(cab); return [Math.round(((Math.atan2(-v.x, -v.z) - r0) * 180 / Math.PI + 540) % 360 - 180), Math.round(Math.atan2(v.y, Math.hypot(v.x, v.z)) * 180 / Math.PI)]; });
+  return { n: T.length, peor: +(peor * 180 / Math.PI).toFixed(1), donde, lejos: Math.max(...donde.slice(1).map((d) => Math.abs(d[0]))) };
+});
+prueba('cuatro ventanas nuevas no se tapan entre ellas ni con la pantalla, y quedan a la vista (a menos de 75° de costado)', ra.n === 5 && ra.peor > 0 && ra.lejos < 75, `${ra.n} tableros · el par más junto, ${ra.peor}° de sobra · ${ra.donde.map((d) => d.join('/')).join(' ')}`);
+/* agarrarla pellizcando la manija con la mano (sin el rayo) y moverla: la sigue */
+const rh = await pag.evaluate(() => {
+  const A = window.__A, { THREE } = A, E = A.espacio, W = E.ventanas, V = W.lista[0], cab = E.cabezaP.clone(), q = E.cabezaQ.clone();
+  const lejos = new THREE.Vector3(0, -1, 0);
+  const pinza = V.malla.localToWorld(new THREE.Vector3(0.02, -V.alto / 2 - 0.035, 0.02)), antes = V.malla.position.clone();
+  const P = (pz, extra) => [{ id: 0, o: cab, d: lejos, yema: null, pinza: pz, pellizca: true, empezo: false, solto: false, ...extra }];
+  W.actualizar(1 / 60, cab, q, P(pinza, { empezo: true }));
+  const agarrada = W.agarres.get(0)?.mano === true, luz = V.luzManija === 0 && V.manija.material.opacity > 0.5;
+  const mueve = new THREE.Vector3(0.18, 0.1, 0.05);
+  for (let i = 1; i <= 30; i++) W.actualizar(1 / 60, cab, q, P(pinza.clone().addScaledVector(mueve, Math.min(1, i / 15))));
+  W.actualizar(1 / 60, cab, q, [{ id: 0, o: cab, d: lejos, yema: null, pinza: pinza.clone().add(mueve), pellizca: false, empezo: false, solto: true }]);
+  return { agarrada, luz, err: +V.malla.position.clone().sub(antes).sub(mueve).length().toFixed(4), suelta: !W.agarres.has(0) };
+});
+prueba('pellizcando la manija con la mano, la ventana se agarra y sigue a la mano', rh.agarrada && rh.err < 0.01 && rh.suelta, JSON.stringify(rh));
+/* el escaneo: se fue al terminar; "Ver el escaneo" lo muestra y lo vuelve a esconder */
+const re = await pag.evaluate(() => {
+  const A = window.__A, E = A.espacio; E.ventanas.cerrarTodas();
+  const antes = { u: +E.uVer.value.toFixed(2), vox: E.vox.visible, planos: E.grupoPlanos.visible };
+  E.accion('escaneo'); window.__manda(30); const ver = { u: +E.uVer.value.toFixed(2), vox: E.vox.visible };
+  E.accion('escaneo'); window.__manda(60); const otra = { u: +E.uVer.value.toFixed(2), vox: E.vox.visible };
+  return { antes, ver, otra, fantasma: A.manos.fantasma };
+});
+prueba('el escaneo se va al terminar; "Ver el escaneo" lo vuelve a mostrar', !re.antes.vox && !re.antes.planos && re.ver.u === 1 && re.ver.vox && !re.otra.vox, JSON.stringify(re));
+prueba('en tu espacio las manos son fantasma (casi solo el borde)', re.fantasma === 1, String(re.fantasma));
+
 /* 5) jugar: al juego en VR, con ARCore y las manos; el escaneo y la cámara se apagan */
 await pag.evaluate(() => window.__A.espacio.ventanas.cerrarTodas());
 await mirarBoton('jugar');
-const rj = await pag.evaluate(() => { const A = window.__A; window.__manda(10); return { espacio: A.espacio.activo, vr: A.vr.activo, manos: A.manos.activa, ll: window.__llamadas.slice(-6).map((x) => x[0] + ':' + x[1]) }; });
-prueba('"Jugar" pasa al juego en VR (con las manos), y apaga el escaneo y la cámara', !rj.espacio && rj.vr && rj.manos && rj.ll.includes('arEscanear:false') && rj.ll.includes('arPasante:false'), rj.ll.join(' '));
+const rj = await pag.evaluate(() => { const A = window.__A; window.__manda(10); return { espacio: A.espacio.activo, vr: A.vr.activo, manos: A.manos.activa, fantasma: A.manos.fantasma, ll: window.__llamadas.slice(-6).map((x) => x[0] + ':' + x[1]) }; });
+prueba('"Jugar" pasa al juego en VR (con las manos, ya no fantasma), y apaga el escaneo y la cámara', !rj.espacio && rj.vr && rj.manos && rj.fantasma < 1 && rj.ll.includes('arEscanear:false') && rj.ll.includes('arPasante:false'), rj.ll.join(' '));
 await pag.evaluate(() => window.__A.J.salirVR());
 
 /* 6) sin ARCore: no se prende; las ventanas, en el mundo del juego (desde el menú de la palma) */

@@ -97,13 +97,13 @@ const VERT_PLANO = /* glsl */`
   varying vec2 vL; varying vec3 vW;
   void main() { vL = position.xz; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const FRAG_PLANO = /* glsl */`
-  uniform vec3 uColor, uCabeza; uniform float uT, uNace, uAlfa;
+  uniform vec3 uColor, uCabeza; uniform float uT, uNace, uAlfa, uVer;
   varying vec2 vL; varying vec3 vW;
   void main() {
     vec2 q = vL / 0.25, g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q), 1e-4);
     float linea = 1.0 - min(min(g.x, g.y), 1.0);
     float d = distance(vW, uCabeza), ola = exp(-pow((d - mod(uT * 1.4, 6.0)) * 4.0, 2.0));
-    float a = uAlfa * smoothstep(0.0, 0.7, uT - uNace) * (0.14 + 0.6 * linea + 0.3 * ola);
+    float a = uAlfa * uVer * smoothstep(0.0, 0.7, uT - uNace) * (0.14 + 0.6 * linea + 0.3 * ola);
     gl_FragColor = vec4(uColor * (0.9 + ola * 0.5), a);
   }`;
 /* los cubitos: puntos redondos que aparecen creciendo, con color por altura y la ola */
@@ -117,8 +117,8 @@ const VERT_VOX = /* glsl */`
     vC = mix(vec3(0.25, 0.75, 1.0), vec3(0.85, 1.0, 0.95), h) + ola * 0.4; vA = pop * (0.5 + 0.5 * ola);
   }`;
 const FRAG_VOX = /* glsl */`
-  varying vec3 vC; varying float vA;
-  void main() { vec2 c = gl_PointCoord * 2.0 - 1.0; float r = dot(c, c); if (r > 1.0) discard; gl_FragColor = vec4(vC, vA * (1.0 - r * 0.7)); }`;
+  uniform float uVer; varying vec3 vC; varying float vA;
+  void main() { vec2 c = gl_PointCoord * 2.0 - 1.0; float r = dot(c, c); if (r > 1.0) discard; gl_FragColor = vec4(vC, vA * uVer * (1.0 - r * 0.7)); }`;
 
 /* la tarjeta que va con la cabeza: qué falta y los botones */
 class Tarjeta extends Tablero {
@@ -184,7 +184,10 @@ export class Espacio {
     this.escena = new THREE.Scene();
     this.ojo = new THREE.PerspectiveCamera(70, 1, 0.03, 60);
     this.cabezaP = new THREE.Vector3(0, 1.5, 0); this.cabezaQ = new THREE.Quaternion();
-    this.pisoY = null; this.planos = new Map(); this.sectores = new Float32Array(SECTORES); this.verEscaneo = true;
+    this.pisoY = null; this.planos = new Map(); this.sectores = new Float32Array(SECTORES);
+    /* EL ESCANEO SE VA (vuelta 34, como en un Quest): se ve mientras se escanea y después se desvanece en 0,8 s
+       (uVer, en los planos y los cubitos). "Ver el escaneo", en la pantalla, lo vuelve a mostrar */
+    this.verEscaneo = false; this.uVer = { value: 1 };
     /* la foto de la cámara, donde se sacó */
     /* (con mipmaps: lo borroso de afuera de la foto sale de ahí) */
     const tex = this.texFoto = new THREE.Texture(); tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = false; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
@@ -200,7 +203,7 @@ export class Espacio {
     G.setAttribute('aNace', new THREE.BufferAttribute(new Float32Array(TOPE_VOX), 1).setUsage(THREE.DynamicDrawUsage));
     G.setDrawRange(0, 0); G.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
     this.nVox = 0;
-    this.uVox = { uT: { value: 0 }, uPx: { value: 600 }, uPiso: { value: 0 }, uCabeza: { value: this.cabezaP } };
+    this.uVox = { uT: { value: 0 }, uPx: { value: 600 }, uPiso: { value: 0 }, uCabeza: { value: this.cabezaP }, uVer: this.uVer };
     this.vox = new THREE.Points(G, new THREE.ShaderMaterial({ uniforms: this.uVox, vertexShader: VERT_VOX, fragmentShader: FRAG_VOX, transparent: true, depthWrite: false }));
     this.vox.frustumCulled = false; this.vox.renderOrder = 1; this.escena.add(this.vox);
     /* la mesa para las manos: el contorno de dos manos apoyadas */
@@ -231,6 +234,8 @@ export class Espacio {
     this.medida = { izq: null, der: null }; this.visto = { piso: false, pared: false, mesa: false };
     this.ponerFase('buscando');
     this.vr.decir?.(t('es_ayuda'), 6); this.vr.el?.classList.add('en-espacio');
+    /* (las manos casi solo el borde: la de verdad se ve en la cámara, como en un Quest) */
+    this.manos.ponerFantasma?.(true);
   }
   /* sale del espacio (al juego o afuera); el escaneo queda (volver no escanea de nuevo) */
   cerrar() {
@@ -238,6 +243,7 @@ export class Espacio {
     this.activo = false;
     Nativo.arEscanear(false); Nativo.arPasante(false);
     Nativo.alPlanos = Nativo.alVoxeles = Nativo.alFoto = Nativo.alOlvidado = null; this.vr.el?.classList.remove('en-espacio');
+    this.manos.ponerFantasma?.(false);
     this.ventanas.agarres.clear();
   }
   olvidar(pedir = true) {
@@ -317,7 +323,7 @@ export class Espacio {
     this.clasificar();
   }
   crearPlano(d) {
-    const u = { uColor: { value: COLOR.otro.clone() }, uCabeza: { value: this.cabezaP }, uT: this.uVox.uT, uNace: { value: this.t }, uAlfa: { value: 0.9 } };
+    const u = { uColor: { value: COLOR.otro.clone() }, uCabeza: { value: this.cabezaP }, uT: this.uVox.uT, uNace: { value: this.t }, uAlfa: { value: 0.9 }, uVer: this.uVer };
     const malla = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.ShaderMaterial({ uniforms: u, vertexShader: VERT_PLANO, fragmentShader: FRAG_PLANO, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     malla.renderOrder = 0;
     const borde = new THREE.LineLoop(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.7, toneMapped: false }));
@@ -509,7 +515,7 @@ export class Espacio {
       Ms.registrarCabeza(tVer, this.cabezaQ, this.cabezaP, 0);
       const ev = Ms.actualizar(dt, tVer, { cabezaP: this.cabezaP, cabezaQ: this.cabezaQ, interactivos: [], altura: () => -1e4, sePuede: () => false, sinArco: true, apuntar: (M, k) => this.ventanas.apunta[k] || this.apuntaTarjeta?.[k] || null });
       for (const e of ev) { if (e.tipo === 'sonido') this.sonar(e.s); else if (e.tipo === 'menu' && e.accion === 'lentes') this.abrirLentes(); else if (e.tipo === 'menu' && e.accion === 'salir') { this.cerrar(); this.alSalir(); return; } }
-      for (const [k, M] of Ms.manos.entries()) if (M.visible && M.alfa > 0.5) punteros.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
+      for (const [k, M] of Ms.manos.entries()) if (M.visible && M.alfa > 0.5) punteros.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, _c)).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
     }
     /* la mirada (el punto del centro) y el toque en la pantalla */
     const mirada = { id: 'mirada', o: this.cabezaP.clone(), d: _a.clone(), clic: false };
@@ -525,8 +531,9 @@ export class Espacio {
     this.punto.position.copy(pm || _b.copy(this.cabezaP).addScaledVector(_a, 1.2)); this.punto.lookAt(this.cabezaP);
     const dm = this.punto.position.distanceTo(this.cabezaP); this.punto.scale.setScalar(dm);
     /* lo que se ve del escaneo */
-    const verE = this.verEscaneo || this.fase === 'escaneo';
-    this.vox.visible = verE; this.grupoPlanos.visible = verE;
+    const verE = this.verEscaneo || this.fase === 'escaneo' || this.fase === 'buscando', U = this.uVer;
+    U.value = verE ? Math.min(1, U.value + dt / 0.3) : Math.max(0, U.value - dt / 0.8);
+    this.vox.visible = this.grupoPlanos.visible = U.value > 0.005;
     this.uVox.uCabeza.value = this.cabezaP;
     if (this.fase === 'manos') { if (!this.fantasma.visible && this.mesa()) this.ponerFantasma(); this.fantasma.material.opacity = 0.55 + 0.35 * Math.sin(this.t * 4); }
     if (dibujar) this.dibujar();
