@@ -753,7 +753,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             camara.getViewMatrix(vistaM, 0);
             Matrix.multiplyMM(vpCam, 0, proy, 0, vistaM, 0);
             if (hayProfundidad) darProfundidad(cuadro, camara);
-            if (manos != null && a.mano > 0 && ahora - ultimaMano > 40) darMano(cuadro, camara, ahora);
+            // cada vez que el hilo de las manos está libre (sin tope: como Aeroplaza, cuantas más imágenes, mejor sigue)
+            if (manos != null && a.mano > 0 && manos.libre()) darMano(cuadro, camara, ahora);
             leerManos(ahora);
             pisoDeRespaldo(py, ahora);
             actualizarJuego(dt, px, py, pz, adelante, ojoPose, ahora);
@@ -1200,15 +1201,21 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private final float[] poseMano = new float[16], imagenAProf = new float[6];
     private short[] profMano = new short[0];
 
+    private long ultimaLectura;
+
     /** Copia lo último de cada mano (el hilo de las manos lo va cambiando) y decide qué pistolas se ven. */
     private void leerManos(long ahora) {
         armaActiva[0] = armaActiva[1] = false;
         if (manos == null) return;
+        float dtLectura = ultimaLectura == 0 ? 1 / 60f : Math.min(0.1f, (ahora - ultimaLectura) / 1000f);
+        ultimaLectura = ahora;
         boolean alguienAbierta = false;
         for (int s2 = 0; s2 < 2; s2++) {
             Mano m = manos.manos[s2];
             synchronized (m) {
                 boolean reciente = m.hay && ahora - m.ultimaVez < 400;
+                // la mano para ESTE cuadro: adelantada lo que tardó la imagen, y anclada si está quieta
+                if (reciente) m.salida(ahora, dtLectura);
                 armaPose[s2] = m.pose;
                 armaAprieta[s2] = false;
                 if (reciente && (m.pose == Mano.EMPUNA || m.pose == Mano.APRIETA)) {
@@ -1313,9 +1320,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private String textoMano() {
         if (manos == null) return "";
         if (!manos.anda) return " · " + manos.estado;
+        String red = manos.delegado + (manos.ganancia > 1.08f ? String.format(Locale.ROOT, " ☀×%.1f", manos.ganancia) : "");
         String t = "";
         for (int s2 = 0; s2 < 2; s2++) if (armaPose[s2] != Mano.NADA) t += (t.isEmpty() ? "" : "+") + Mano.NOMBRES[armaPose[s2]];
-        return " · mano: " + (t.isEmpty() ? "no se ve" : t);
+        return " · mano (" + red + "): " + (t.isEmpty() ? "no se ve" : t);
     }
 
     /** Hacia dónde mirar para completar el escaneo, dicho en criollo. */

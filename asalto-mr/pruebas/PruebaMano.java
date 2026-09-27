@@ -169,10 +169,13 @@ public class PruebaMano {
             for (int i = 0; i < 20; i++) if (v.gesto(fotos.get("victory").mundo, i * 33)) t3++;
             ver(t3 == 0, "con la V no dispara");
             // de costado: el puño visto de lado da 1.36 palmas (el umbral fijo 1.25 no dispararía); adaptado, sí
+            // (apretando 165 ms = 5 imágenes: con el suavizado cruza el umbral en la cuarta; antes esta prueba
+            // pasaba por el tiro del pulgar, que ahora hay que levantar primero)
             Mano c = new Mano();
             int t4 = 0;
             ms = 0;
-            for (String s : new String[]{"pointing_up", "pointing_up", "pointing_up", "Hand_in_closed_fist_black_back", "Hand_in_closed_fist_black_back", "Hand_in_closed_fist_black_back"}) { if (c.gesto(fotos.get(s).mundo, ms)) t4++; ms += 33; }
+            for (String s : new String[]{"pointing_up", "pointing_up", "pointing_up", "Hand_in_closed_fist_black_back", "Hand_in_closed_fist_black_back",
+                    "Hand_in_closed_fist_black_back", "Hand_in_closed_fist_black_back", "Hand_in_closed_fist_black_back"}) { if (c.gesto(fotos.get(s).mundo, ms)) t4++; ms += 33; }
             ver(t4 == 1, "apretar el gatillo con la mano vista de costado también dispara (" + t4 + ")");
             // apuntando a la cámara (escorzo) → puño
             Mano pc = new Mano();

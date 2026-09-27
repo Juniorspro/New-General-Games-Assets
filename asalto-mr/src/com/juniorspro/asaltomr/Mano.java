@@ -65,7 +65,9 @@ public final class Mano {
     public long ultimaVez;
     /** Dónde estaba la muñeca en la imagen (para seguir a la misma mano entre imágenes). */
     public float u = -1, v = -1;
-    private boolean apretado, pulgarBajo, tieneSuave;
+    // pulgarBajo arranca en true: la "pistolita" se arma recién cuando se levanta el pulgar
+    // (hay manos que tienen el pulgar quieto a 0.46, pegado al umbral: el temblor disparaba solo)
+    private boolean apretado, pulgarBajo = true, tieneSuave;
     private long ultimoTiro = Long.MIN_VALUE / 2;
     private int cuadrosEmpunando, cuadrosListo;
 
@@ -139,7 +141,7 @@ public final class Mano {
         cuadrosEmpunando = empuna ? cuadrosEmpunando + 1 : 0;
         boolean tiro = false;
         // suavizado (lo que tiembla una imagen no cuenta)
-        alcanceSuave = alcanceSuave != alcanceSuave ? alcance : alcanceSuave + (alcance - alcanceSuave) * 0.5f;
+        alcanceSuave = alcanceSuave != alcanceSuave ? alcance : alcanceSuave + (alcance - alcanceSuave) * 0.65f;
         pulgarSuave = pulgarSuave != pulgarSuave ? pulgar : pulgarSuave + (pulgar - pulgarSuave) * 0.5f;
         // armado: empuñando con el índice estirado al menos 2 imágenes (agarrar de golpe no dispara)
         cuadrosListo = empuna && !apretado && alcanceSuave > Math.max(SUELTA_ALTO - 0.1f, 0.85f * referencia) ? cuadrosListo + 1 : (empuna ? cuadrosListo : 0);
@@ -165,6 +167,8 @@ public final class Mano {
 
     public void perdida() {
         hay = false;
+        filtro.perder();
+        pulgarBajo = true;
         alcanceSuave = Float.NaN;
         pulgarSuave = Float.NaN;
         apretado = false;
@@ -174,8 +178,105 @@ public final class Mano {
         tieneSuave = false;
     }
 
+    // ── la ruta nueva (como Aeroplaza): puntos sobre sus rayos → FiltroMano → salida adelantada ──
+
+    /** El filtro de palma rígida (centro, giro, dedos, forma aprendida, anclas). */
+    public final FiltroMano filtro = new FiltroMano();
+    private final float[] cam3 = new float[3], crudo = new float[63], ptsCam = new float[63], salidaP = new float[63];
     /**
-     * De la imagen al mundo. Deja los 21 puntos en mundo[][] (metros).
+     * El tamaño real de la mano respecto del que supone el modelo (1 = la mano
+     * "promedio"). Lo calibra la profundidad de ARCore, DESPACIO: con la
+     * mediana de muchas imágenes, y sólo con medidas que coinciden en tres
+     * puntos de la palma (en la mano, la profundidad de ARCore se mezcla con
+     * el fondo). Nunca se mezcla cuadro por cuadro: eso hacía saltar la pistola.
+     */
+    public float escalaReal = 1;
+    private final float[] ventana = new float[41];
+    private int nVentana, iVentana;
+    /** Cuántas medidas de ARCore se aceptaron para calibrar (para la prueba). */
+    public int calibradas;
+    private static long origen = Long.MIN_VALUE;
+
+    /** ms → s desde la primera imagen (en float, sin perder precisión). */
+    static synchronized float segundos(long ms) {
+        if (origen == Long.MIN_VALUE) origen = ms;
+        return (ms - origen) / 1000f;
+    }
+
+    /**
+     * Una imagen nueva (ruta nueva). img: 21 puntos normalizados de la foto;
+     * mp: 21 puntos en metros del modelo; prof3: la profundidad de ARCore (m,
+     * eje de la cámara) en la muñeca y los nudillos del índice y del meñique
+     * (NaN si no hay); pose: cámara → mundo. false si el filtro la descartó.
+     */
+    public boolean aMundo2(float[][] img, float[][] mp, int ancho, int alto, float fx, float fy, float cx, float cy,
+                           float[] prof3, float[] pose, long ms) {
+        if (!FiltroMano.aCamara(img, mp, ancho, alto, fx, fy, cx, cy, ptsCam)) return false;
+        calibrar(prof3);
+        for (int i = 0; i < 21; i++) {
+            float xc = ptsCam[i * 3] * escalaReal, yc = ptsCam[i * 3 + 1] * escalaReal, zc = ptsCam[i * 3 + 2] * escalaReal;
+            crudo[i * 3] = pose[0] * xc + pose[4] * yc + pose[8] * zc + pose[12];
+            crudo[i * 3 + 1] = pose[1] * xc + pose[5] * yc + pose[9] * zc + pose[13];
+            crudo[i * 3 + 2] = pose[2] * xc + pose[6] * yc + pose[10] * zc + pose[14];
+        }
+        cam3[0] = pose[12]; cam3[1] = pose[13]; cam3[2] = pose[14];
+        return filtro.recibir(crudo, segundos(ms), cam3);
+    }
+
+    private final float[][] local = new float[21][3];
+
+    /**
+     * El gesto (pose y gatillo) con la medida del filtro: los dedos en el
+     * marco de la palma, con el espejo ya corregido (un cuadro en espejo
+     * cambia las distancias y podía disparar solo). Llamar después de aMundo2.
+     */
+    public boolean gesto2(long ms) {
+        filtro.medidaLocal(local);
+        return gesto(local, ms);
+    }
+
+    private static final int[] PUNTOS_PROF = {0, 5, 17};
+
+    private void calibrar(float[] prof3) {
+        if (prof3 == null) return;
+        float[] r = new float[3];
+        int n = 0;
+        for (int k = 0; k < 3; k++) {
+            float d = prof3[k], zm = -ptsCam[PUNTOS_PROF[k] * 3 + 2];
+            if (d == d && d > 0.1f && zm > 0.05f) r[n++] = d / zm;
+        }
+        if (n < 2) return;
+        java.util.Arrays.sort(r, 0, n);
+        // lo que cae en el fondo sale siempre MÁS LEJOS: si el más lejano no coincide, se usan los otros dos
+        if (n == 3 && r[2] / r[0] > 1.12f) n = 2;
+        if (r[n - 1] / r[0] > 1.12f) return;   // no coinciden
+        float m = n == 3 ? r[1] : (r[0] + r[1]) / 2;
+        if (m < 0.6f || m > 1.7f) return;
+        ventana[iVentana] = m;
+        iVentana = (iVentana + 1) % ventana.length;
+        if (nVentana < ventana.length) nVentana++;
+        calibradas++;
+        if (nVentana < 15) return;
+        float[] o = java.util.Arrays.copyOf(ventana, nVentana);
+        java.util.Arrays.sort(o);
+        float med = o[nVentana / 2];
+        escalaReal += (med - escalaReal) * 0.1f;
+    }
+
+    /**
+     * Para dibujar a la hora ahoraMs: los 21 puntos (adelantados y anclados)
+     * en mundo[][] y la pistola (del marco de la palma, que es rígida).
+     * dt: segundos desde el cuadro anterior.
+     */
+    public void salida(long ahoraMs, float dt) {
+        if (!filtro.visible) return;
+        filtro.salida(segundos(ahoraMs), dt, salidaP);
+        for (int i = 0; i < 21; i++) { mundo[i][0] = salidaP[i * 3]; mundo[i][1] = salidaP[i * 3 + 1]; mundo[i][2] = salidaP[i * 3 + 2]; }
+        if (medirPistola(pos, adelante, arriba)) tieneSuave = true;
+    }
+
+    /**
+     * De la imagen al mundo (la ruta VIEJA, para comparar en las pruebas). Deja los 21 puntos en mundo[][] (metros).
      *
      * @param img  los 21 puntos normalizados de la imagen (x, y ∈ 0..1; z relativo)
      * @param w    los 21 puntos en metros (MediaPipe: x derecha, y abajo, z hacia adentro)
@@ -383,6 +484,54 @@ public final class Mano {
                 salida[dst] = 0xFF000000 | (r << 16) | (g << 8) | b;
             }
         }
+    }
+
+    /**
+     * YUV_420_888 → ARGB a resolución completa CON GANANCIA (como Aeroplaza):
+     * g256 = ganancia·256 (se aplica a Y y al color, así no se lava). Devuelve
+     * el brillo medio (0..1, SIN la ganancia) dentro de la caja de la mano
+     * (x0, y0, x1, y1 normalizados, en la orientación de la cámara; null =
+     * toda la imagen), mirando uno de cada 4×4 píxeles. Así una mano a
+     * contraluz o en la sombra se aclara para el modelo.
+     */
+    public static float yuvARgbConGanancia(byte[] y, int yFila, int yPaso, byte[] u, byte[] v, int uvFila, int uvPaso,
+                                           int iw, int ih, boolean girada, int g256, float[] caja, int[] salida) {
+        int cx0 = caja == null ? 0 : (int) (caja[0] * iw), cy0 = caja == null ? 0 : (int) (caja[1] * ih);
+        int cx1 = caja == null ? iw : (int) Math.ceil(caja[2] * iw), cy1 = caja == null ? ih : (int) Math.ceil(caja[3] * ih);
+        long suma = 0;
+        int cuenta = 0;
+        for (int j = 0; j < ih; j++) {
+            boolean filaCaja = j >= cy0 && j < cy1 && (j & 3) == 0;
+            int fy = j * yFila, fuv = (j >> 1) * uvFila;
+            for (int i = 0; i < iw; i++) {
+                int Y = y[fy + i * yPaso] & 0xFF;
+                if (filaCaja && (i & 3) == 0 && i >= cx0 && i < cx1) { suma += Y; cuenta++; }
+                int ci = fuv + (i >> 1) * uvPaso;
+                int U = (u[ci] & 0xFF) - 128, V = (v[ci] & 0xFF) - 128;
+                if (g256 != 256) { Y = (Y * g256) >> 8; U = (U * g256) >> 8; V = (V * g256) >> 8; }
+                int r = Y + ((91881 * V) >> 16), g = Y - ((22554 * U + 46802 * V) >> 16), b = Y + ((116130 * U) >> 16);
+                r = r < 0 ? 0 : r > 255 ? 255 : r; g = g < 0 ? 0 : g > 255 ? 255 : g; b = b < 0 ? 0 : b > 255 ? 255 : b;
+                int dst = girada ? (ih - 1 - j) * iw + (iw - 1 - i) : j * iw + i;
+                salida[dst] = 0xFF000000 | (r << 16) | (g << 8) | b;
+            }
+        }
+        return cuenta > 0 ? suma / (float) cuenta / 255f : -1;
+    }
+
+    /** La ganancia siguiente (como Aeroplaza): que la mano quede en 0.42 de brillo, entre ×1 y ×6, suave. */
+    public static float siguienteGanancia(float g, float media) {
+        if (media < 0) return g;
+        float obj = Math.max(1f, Math.min(6f, 0.42f / Math.max(0.01f, media)));
+        g += (obj - g) * 0.3f;
+        return Math.abs(g - 1) < 0.08f ? 1f : g;
+    }
+
+    /** La caja de la mano (normalizada) con 10 % de margen, para medir su brillo. */
+    public static float[] cajaDe(float[][] img) {
+        float x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+        for (float[] p : img) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+        float mx = (x1 - x0) * 0.1f, my = (y1 - y0) * 0.1f;
+        return new float[]{Math.max(0, x0 - mx), Math.max(0, y0 - my), Math.min(1, x1 + mx), Math.min(1, y1 + my)};
     }
 
     /** Si la imagen se giró 180° antes de MediaPipe, los puntos vuelven a la orientación de la cámara. */

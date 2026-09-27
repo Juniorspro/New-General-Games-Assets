@@ -258,8 +258,11 @@ public class Vista {
                 float[] ident = new float[16];
                 android.opengl.Matrix.setIdentityM(ident, 0);
                 Mano m = new Mano();
-                float dist = m.aMundo(img, mun, fw, fh, f, f, fw / 2f, fh / 2f, Float.NaN, ident);
-                m.pistola(1f);
+                // la ruta nueva: los puntos sobre sus rayos + FiltroMano (una sola imagen: sin historia)
+                m.aMundo2(img, mun, fw, fh, f, f, fw / 2f, fh / 2f, null, ident, 1000);
+                m.salida(1000, 1 / 60f);
+                float dist = 0;
+                for (int i : new int[]{0, 5, 9, 13, 17}) dist -= m.mundo[i][2] / 5;
                 float fovy = (float) Math.toDegrees(2 * Math.atan(fh / 2f / f));
                 float[] vpM = perspectiva(fovy, fw / (float) fh, 0.02f, 50f);
                 GLES20.cajas.clear();

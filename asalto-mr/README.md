@@ -104,7 +104,76 @@ del APK), en su propio hilo. De ahí salen 21 puntos por mano, hasta dos manos
   apretado.
 - **Sin mano a la vista**: el arma vuelve a la vista, como antes.
 
-Cómo está hecho (`Mano.java`, sin Android, probado en la PC):
+### Súper fija: el filtro de la mano (como Aeroplaza)
+
+La versión anterior temblaba y saltaba. Tres cosas la hacían andar mal:
+- mezclaba la profundidad de ARCore **en cada cuadro**, y en la mano esa
+  profundidad se mezcla con el fondo y salta decenas de centímetros;
+- achicaba la imagen a 320×240;
+- sacaba la distancia del tamaño de la mano en cada cuadro, que para el
+  modelo cambia ±10 %.
+
+Ahora hace lo mismo que el hand tracking de **Aeroplaza** (mismo modelo, mismo
+`hand_landmarker.task`: lo que cambia es cómo se usa). Lo saqué de su APK y
+lo porté a `FiltroMano.java`:
+
+- **La imagen entera** (640×480) y la **GPU** (si no anda, la CPU). Una red
+  para **una mano** mientras se ve una sola, y cada 1.2 s una pasada con la de
+  dos. Sin tope de imágenes por segundo.
+- **Ganancia**: se mide el brillo dentro de la caja de la mano y se aclara la
+  imagen hasta ×6 (a contraluz o en la sombra la mano se perdía).
+- **Cada punto sobre su rayo** de la foto (lo lateral lo mide bien la imagen)
+  a la profundidad de la forma del modelo.
+- **El tamaño se aprende**: cada cuadro se reescala a ese tamaño desde la
+  cámara, así la distancia no tiembla. La profundidad de ARCore sólo
+  **calibra el tamaño real de tu mano**, despacio: con la mediana de muchas
+  imágenes, y sólo cuando coincide en 3 puntos de la palma.
+- **La palma es rígida**: se filtran su centro y su giro, y no los 21 puntos
+  sueltos. El centro va separado por ejes: la profundidad, que es lo que
+  tiembla con una sola cámara, filtra más que lo lateral. Los **dedos**
+  van aparte, en el marco de la palma, con la forma de la palma y el largo de
+  los huesos aprendidos. **Cerrar el gatillo no mueve el arma.**
+- **Saltos**: un salto de profundidad de más de 8 cm (contra lo esperado y
+  contra la mediana) se descarta. Un salto de más de 25 cm sólo vale si lo
+  confirman 3 imágenes seguidas (Aeroplaza lo tomaba de una). Los cuadros "en
+  espejo" (adelante/atrás confundidos) se corrigen.
+- **Quieta es quieta**: el centro se ancla si no sale de 5 mm por un cuarto
+  de segundo. Y un **ancla de giro** que no está en Aeroplaza (ellos apuntan
+  con pellizcos; para un arma, medio grado a 5 m son 4 cm): si el caño no sale
+  de 1.5° por un cuarto de segundo, se fija, y se suelta en cuanto lo movés.
+- **Predicción**: la imagen llega tarde (lo que tarda la red). Se adelanta
+  con la velocidad filtrada hasta el cuadro que se dibuja, a lo sumo 6.5 cm.
+- El gesto sale de los dedos ya corregidos. Y el disparo con el pulgar ("la
+  pistolita") hay que armarlo levantando el pulgar primero: con una mano
+  real de pulgar quieto en 0.46, pegado al umbral, disparaba solo.
+
+Medido en `pruebas/PruebaFiltroMano.java`, antes contra ahora, con el mismo
+ruido. La mano es real: los puntos que dio MediaPipe con una foto. Se mueve
+delante de la cámara y se "mide" con un ruido parecido al del modelo:
+- 0.8 px en la foto;
+- el tamaño que cambia ±4 %;
+- 3 % de cuadros en espejo y 2 % con el tamaño 25 % mal;
+- la mano 8 % más grande de lo que supone el modelo;
+- la profundidad de ARCore mezclada con el fondo el 35 % de las veces;
+- 60 ms de demora.
+
+| | antes | ahora |
+|---|---|---|
+| quieta: temblor del arma | 10.5 mm | **1.0 mm** |
+| quieta: temblor del caño | 8.2° | **0.05°** |
+| quieta: el punto del láser a 5 m | 133 cm | **0.3 cm** |
+| distancia real (con la mano 8 % más grande) | 9 mm corrida | **5 mm** (ARCore calibró ×1.09; real ×1.08) |
+| moviéndose a 0.5 m/s | 48 mm de error | **20 mm** |
+| girando la muñeca ±35° | 13.1° | **4.7°** |
+| apuntando despacio (6°/s) | 6.7° | **1.8°** (el ancla no lo pega) |
+| apretar el gatillo 5 veces | el caño se va hasta 57° | **1.7°**; salen los 5 tiros |
+| mano oscura (brillo 0.17) | — | ganancia ×2.4 → 0.42 |
+
+Estos números son contra un ruido **simulado**: el de verdad del teléfono no
+lo pude medir, porque no tengo uno acá. En el HUD sale qué usa la red
+("mano (GPU ☀×1.8)"): si dice CPU o se ve lento, pasame eso.
+
+Cómo está hecho lo demás (`Mano.java`, sin Android, probado en la PC):
 
 - **La pose**: cuánto dobla cada dedo, con los puntos en metros. No depende
   de cómo esté girada la mano.
@@ -384,7 +453,7 @@ de cerrar la app.
   no hay malla: se juega sobre los planos del piso y no hay oclusión.
 - **El hand tracking en el teléfono**: el modelo y el gesto se probaron con
   fotos reales en la PC, pero no con la cámara del teléfono en movimiento, ni
-  cuánto tarda el modelo ahí (en CPU, 320×240, una imagen cada ≥ 40 ms). Si
+  cuánto tarda el modelo ahí (640×480, en la GPU si el teléfono la deja). Si
   la pistola sale corrida o girada respecto de la mano, pasame una captura.
   Con una pistola de verdad en la mano, MediaPipe no ve la mano (el arma la
   tapa: probado con una foto de Commons): el juego es con la mano vacía.
@@ -416,8 +485,9 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Mallador.java` | surface nets: de voxeles a polígonos |
 | `src/.../Escaneo.java` | el hilo del escaneo (y el mapa cada 1.5 s) |
 | `src/.../Mapa.java` | la IA del entorno: zonas, completado, cubiertas, rutas A\*, cobertura |
-| `src/.../Mano.java` | la mano: pose, gatillo, la pistola en la mano, de la foto al 3D (sin Android) |
-| `src/.../ManoRastreo.java` | el hilo de MediaPipe: la imagen de la cámara → 21 puntos por mano |
+| `src/.../Mano.java` | la mano: pose, gatillo, la pistola en la mano, de la foto al 3D, la ganancia (sin Android) |
+| `src/.../FiltroMano.java` | el filtro de la mano (como Aeroplaza): palma rígida, forma aprendida, saltos, espejo, anclas, predicción |
+| `src/.../ManoRastreo.java` | el hilo de MediaPipe: imagen entera, GPU, red de 1 y de 2 manos, ganancia → 21 puntos por mano |
 | `src/.../Fallo.java` | si se cae: guarda el error y lo muestra al volver a abrir |
 | `mediapipe-parche/` | MediaPipe sin telemetría |
 | `src/.../ZonasGl.java` | las zonas pintadas sobre el piso |
@@ -430,7 +500,7 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Hud.java` · `Lentes.java` | el HUD en GL; la corrección de lentes |
 | `src/.../Ajustes.java` · `Panel.java` | la configuración y su panel |
 | `src/.../Sonido.java` | los sonidos, sintetizados al arrancar |
-| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` | las pruebas en la PC |
+| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` · `PruebaFiltroMano.java` | las pruebas en la PC |
 | `pruebas/manos.txt` · `manos-commons.txt` · `manos-extraer.py` · `manos-camara.py` · `herramientas/Yuv.java` | manos reales para las pruebas; la cámara de punta a punta |
 | `pruebas/shaders.mjs` · `vista.mjs` · `vista/` | shaders con WebGL; la vista previa |
 | `construir.sh` | arma el APK sin Gradle (caché compartida con mundo-ar) |
