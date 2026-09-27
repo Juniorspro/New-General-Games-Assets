@@ -17,6 +17,9 @@
    - La reproyección escribe la profundidad de cada ojo: lo que va encima (las
      manos, el rayo, el menú) se dibuja por ojo, con su paralaje de verdad, y
      queda tapado por lo que tenga adelante.
+   - Con las lentes del visor (lentes.js, vuelta 30): cada ojo va a su lienzo
+     cuadrado, con el campo que pide la lente, y un pase lo lleva a la
+     pantalla curvado (el barril que deshace el almohadón de la lente).
    ========================================================================== */
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
@@ -113,14 +116,18 @@ export class DibujoVR {
     this.stats = { escenas: 0, ojos: 0, msEscena: 0 };
   }
   /* el tamaño del dibujo del medio: el de un ojo, un MARGEN más grande */
-  medir(sbs, fov) {
+  medir(sbs, fov, lentes = null) {
     const M = this.motor, W = M.ancho, H = M.alto, dpr = M.dpr;
     /* en alta, el medio se dibuja un 12 % más denso: al reproyectarlo no se ablanda (medido: sin eso
        quedaba un 7 % menos nítido que dibujar el ojo derecho) */
     const ew = sbs ? W / 2 : W, eh = H, k = 1 + MARGEN, den = M.nombreCalidad === 'alta' ? DENSO : 1;
-    const w = Math.max(16, Math.round(ew * dpr * k * den)), h = Math.max(16, Math.round(eh * dpr * k * den));
+    /* (con lentes: el ojo es el lienzo cuadrado de la lente, con su campo) */
+    const L = this.lentes = sbs && lentes?.activa ? lentes : null;
+    let pw = ew * dpr, ph = eh * dpr;
+    if (L) { L.medir(ew, eh, dpr, M.nombreCalidad === 'alta' || M.nombreCalidad === 'media'); pw = ph = L.lado; }
+    const w = Math.max(16, Math.round(pw * k * den)), h = Math.max(16, Math.round(ph * k * den));
     this.sbs = sbs; this.ew = ew; this.eh = eh; this.fovE = fov;
-    this.tanE = new THREE.Vector2(Math.tan(THREE.MathUtils.degToRad(fov) / 2) * ew / eh, Math.tan(THREE.MathUtils.degToRad(fov) / 2));
+    this.tanE = L ? new THREE.Vector2(L.T, L.T) : new THREE.Vector2(Math.tan(THREE.MathUtils.degToRad(fov) / 2) * ew / eh, Math.tan(THREE.MathUtils.degToRad(fov) / 2));
     this.tanR = this.tanE.clone().multiplyScalar(k);
     /* el brillo, a la cuarta parte del dibujo (como en la pantalla normal, motor.medir, que lo
        vuelve a poner si cambia la pantalla: por eso va siempre) */
@@ -179,7 +186,7 @@ export class DibujoVR {
      cabeza de ahora */
   cuadro(dt, camJuego, { partido = false, encima = null, fino = true } = {}) {
     const M = this.motor, r = M.r;
-    if (this.nEsc !== M.msaa) { this.w = 0; this.medir(this.sbs, this.fovE); }
+    if (this.nEsc !== M.msaa) { this.w = 0; this.medir(this.sbs, this.fovE, this.lentes); }
     const t0 = performance.now();
     /* las sombras, como en la pantalla (sombraCada: en el celu, un dibujo sí y uno no) */
     const sombras = () => !this.listo || ((this.nSombra = (this.nSombra || 0) + 1) % (M.Q.sombraCada || 1)) === 0;
@@ -197,9 +204,11 @@ export class DibujoVR {
     const qRi = _q.copy(L.q).invert();
     const auto = r.autoClear; r.autoClear = false;
     r.setScissorTest(true);
+    const Le = this.lentes;
     for (let e = 0; e < n; e++) {
       const x = e * W / n, lado = n === 1 ? 0 : e === 0 ? -1 : 1;
-      r.setViewport(x, 0, W / n, H); r.setScissor(x, 0, W / n, H);
+      if (Le) r.setRenderTarget(Le.rt[e]);
+      else { r.setViewport(x, 0, W / n, H); r.setScissor(x, 0, W / n, H); }
       /* el ojo: la cabeza de ahora, corrida medio ojo al costado */
       const ojo = this.camOjo;
       ojo.position.set(lado * OJOS / 2, 0, 0).applyQuaternion(camJuego.quaternion).add(camJuego.position);
@@ -215,6 +224,7 @@ export class DibujoVR {
         encima(ojo, e);
       }
     }
+    if (Le) Le.componer(r, W, H);
     r.setScissorTest(false); r.setViewport(0, 0, W, H); r.autoClear = auto;
     this.stats.ojos++;
   }

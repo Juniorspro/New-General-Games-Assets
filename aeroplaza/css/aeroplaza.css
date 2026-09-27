@@ -838,6 +838,25 @@ html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: non
 .vr-tres i.rapida { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 2h9M3 5h10M1 8h9' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
 .vr-tres i.media { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5c2-4 4 4 6 0s4-4 6 0' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
 .vr-tres i.suave { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5c3-2 5 2 12 0' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
+/* las lentes del visor (vuelta 30): el botón del menú del VR y su ventana */
+.vr-lentes-boton { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; width: 100%; margin-top: 8px; padding: 8px 12px; border-radius: 16px; border: 2px solid #6cc8ff; background: linear-gradient(180deg, #f3fbff, #d6f1ff); font: inherit; text-align: left; cursor: pointer; }
+.vr-lentes-boton b { font-size: 15px; } .vr-lentes-boton small { font-weight: 700; font-size: 12px; color: var(--tinta2); grid-column: 2; }
+.vr-lentes-dibujo { grid-row: span 2; display: flex; gap: 4px; }
+.vr-lentes-dibujo span { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #1f9be0; background: radial-gradient(circle at 35% 35%, #ffffff, #8fdcff 60%, #2a9fd8); }
+.menu-lentes p { margin: 0 0 10px; font-weight: 700; color: var(--tinta2); }
+.le-perfiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.le-perfil { display: flex; flex-direction: column; gap: 2px; padding: 8px 6px; border-radius: 16px; border: 3px solid var(--gris2); background: linear-gradient(180deg, #fff, #eef8ff); font: inherit; cursor: pointer; }
+.le-perfil b { font-size: 14px; } .le-perfil small { font-size: 10.5px; font-weight: 700; color: var(--tinta2); line-height: 1.2; }
+.le-perfil.si { border-color: #1f9be0; background: linear-gradient(180deg, #e9fbff, #aee6ff); box-shadow: 0 4px 12px rgba(30, 150, 230, 0.35); }
+.le-perfil:disabled { opacity: 0.45; cursor: default; }
+.le-cuerpo { display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px; margin-top: 10px; align-items: center; }
+.le-vista { width: 100%; height: auto; border-radius: 16px; border: 3px solid #fff; box-shadow: 0 6px 18px rgba(0, 40, 80, 0.3); background: #05080c; }
+.le-ajustes { display: grid; gap: 5px; }
+.le-ajuste { display: grid; grid-template-columns: 7.2em 1fr 3.4em; align-items: center; gap: 6px; font-size: 13px; }
+.le-ajuste input { width: 100%; accent-color: #1f9be0; } .le-ajuste output { font-weight: 800; color: var(--tinta2); text-align: right; font-variant-numeric: tabular-nums; }
+.le-abajo { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 10px; }
+.le-abajo .vr-llave { grid-template-columns: auto auto; }
+html.b460 .menu-lentes p { font-size: 12px; margin-bottom: 6px; } html.b460 .le-perfil small { display: none; } html.b460 .le-cuerpo { margin-top: 6px; } html.b460 .le-ajuste { font-size: 12px; }
 /* ¿con ARCore? (vuelta 29): tu espacio arriba, grande y brillante; las otras dos abajo */
 .vr-ar-ops { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .vr-ar-ops .vr-ar-si { grid-column: 1 / -1; background: linear-gradient(180deg, #f0fdff 0%, #bdf0ff 55%, #8fe0ff 100%); border-color: #3fc3f5; box-shadow: 0 6px 18px rgba(30, 160, 230, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.9); }

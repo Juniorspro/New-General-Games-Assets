@@ -12,6 +12,7 @@ import { tiendaJoyas, verAnuncio, anunciosQuedan } from './joyas.js';
 import { Caja } from './caja.js';
 import { Guardado } from './guardar.js';
 import { VisorXR } from './vr-xr.js';
+import { PERFILES, AJUSTES, ORDEN_PERFILES, curva, inversa } from './lentes.js';
 import { NPCS } from './misiones.js';
 import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
@@ -877,7 +878,8 @@ export const UI = {
       <button class="vr-op" data-sbs="1"><b>${t('vr_sbs')}</b><small>${t('vr_sbs_d')}</small><i class="vr-dibujo doble"><span></span><span></span></i></button>
       <button class="vr-op" data-sbs="0"><b>${t('vr_simple')}</b><small>${t('vr_simple_d')}</small><i class="vr-dibujo"><span></span></i></button></div>
       <div class="vr-llaves">${[['vrManos', 'vr_manos', 'vr_manos_d'], ['vrFps', 'vr_fps', 'vr_fps_d']].map(([k, n, d]) => `<button class="vr-llave${J.G.opciones[k] ? ' si' : ''}" data-o="${k}"><i></i><b>${t(n)}</b><small>${t(d)}</small></button>`).join('')}</div>
-      <div class="vr-suave${J.G.opciones.vrManos ? '' : ' apagada'}"><b>${t('vr_suave')}</b><div class="vr-tres">${['rapida', 'media', 'suave'].map((k) => `<button data-suave="${k}"><i class="${k}"></i>${t('vr_suave_' + k)}</button>`).join('')}</div><small></small></div></div>`);
+      <div class="vr-suave${J.G.opciones.vrManos ? '' : ' apagada'}"><b>${t('vr_suave')}</b><div class="vr-tres">${['rapida', 'media', 'suave'].map((k) => `<button data-suave="${k}"><i class="${k}"></i>${t('vr_suave_' + k)}</button>`).join('')}</div><small></small></div>
+      <button class="vr-lentes-boton"><i class="vr-lentes-dibujo" aria-hidden="true"><span></span><span></span></i><b>${t('le_titulo')}</b><small>${t('le_' + J.lentes.tipo)}</small></button></div>`);
     let elegido = false;
     const v = this.ventana('🥽 ' + t('vr_titulo'), c, { ancho: 560, alCerrar: () => { if (!elegido) alVolver && alVolver(); } });
     c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !J.G.opciones[k]; b.classList.toggle('si', J.G.opciones[k]); if (k === 'vrManos') $('.vr-suave', c).classList.toggle('apagada', !J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
@@ -885,6 +887,8 @@ export const UI = {
     const ponerSuave = (k) => { J.G.opciones.vrSuave = k; c.querySelectorAll('[data-suave]').forEach((b) => b.classList.toggle('si', b.dataset.suave === k)); $('.vr-suave small', c).textContent = t('vr_suave_' + k + '_d'); };
     ponerSuave(['rapida', 'media', 'suave'].includes(J.G.opciones.vrSuave) ? J.G.opciones.vrSuave : 'media');
     c.querySelectorAll('[data-suave]').forEach((b) => b.onclick = () => { ponerSuave(b.dataset.suave); Guardado.guardar(); J.sfx('elegir'); });
+    /* (las lentes del visor: se ajustan acá, con la vista previa, o adentro con el menú de la palma) */
+    c.querySelector('.vr-lentes-boton').onclick = () => { elegido = true; J.sfx('elegir'); v.cerrar(); this.menuLentes(() => this.menuVR(alVolver)); };
     c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => {
       const sbs = b.dataset.sbs === '1';
       /* (vuelta 29: en la APK, con ARCore disponible, se pregunta si se usa) */
@@ -898,6 +902,55 @@ export const UI = {
       c.querySelector('.vr-opciones').prepend(b); c.querySelector('.vr-opciones').classList.add('con-xr');
       b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarXR(); };
     });
+  },
+  /* LAS LENTES DEL VISOR (lentes.js): el perfil, los ajustes y cómo se ve cada ojo en la pantalla (la
+     grilla de la lente con su barril: a través de la lente se ve recta) */
+  menuLentes(alVolver) {
+    const J = this.J, L = J.lentes;
+    const c = el(`<div class="menu-lentes"><p>${t('le_texto')}</p>
+      <div class="le-perfiles">${ORDEN_PERFILES.map((k) => `<button class="le-perfil" data-p="${k}"><b>${t('le_' + k)}</b><small>${t('le_' + k + '_d')}</small></button>`).join('')}</div>
+      <div class="le-cuerpo"><canvas class="le-vista" width="640" height="300"></canvas>
+      <div class="le-ajustes">${Object.keys(AJUSTES).map((k) => `<label class="le-ajuste"><b>${t('le_' + k)}</b><input type="range" data-k="${k}" min="${AJUSTES[k][0]}" max="${AJUSTES[k][1]}" step="${AJUSTES[k][2] / 2}"><output></output></label>`).join('')}</div></div>
+      <div class="le-abajo"><button class="vr-llave le-grilla"><i></i><b>${t('le_grilla')}</b></button><button class="boton le-probar">${t('le_probar')}</button></div></div>`);
+    let fue = false;
+    const v = this.ventana('👓 ' + t('le_titulo'), c, { ancho: 720, alCerrar: () => { if (!fue) alVolver && alVolver(); } });
+    const lienzo = $('.le-vista', c);
+    const poner = () => {
+      c.querySelectorAll('.le-perfil').forEach((b) => { b.classList.toggle('si', b.dataset.p === L.tipo); b.disabled = b.dataset.p === 'propio' && !L.propio; });
+      c.querySelectorAll('[data-k]').forEach((i) => { const k = i.dataset.k; i.value = L.P[k]; i.disabled = L.tipo === 'plano'; i.nextElementSibling.textContent = L.P[k].toFixed(k === 'color' ? 3 : 2); });
+      $('.le-grilla', c).classList.toggle('si', L.grilla);
+      this.vistaLentes(lienzo, L);
+    };
+    c.querySelectorAll('.le-perfil').forEach((b) => b.onclick = () => { L.poner(b.dataset.p); J.sfx('elegir'); poner(); });
+    c.querySelectorAll('[data-k]').forEach((i) => i.oninput = () => { L.fijar(i.dataset.k, +i.value); poner(); });
+    $('.le-grilla', c).onclick = () => { L.grilla = !L.grilla; J.sfx('elegir'); poner(); };
+    /* (probar: al VR con visor y el panel de las lentes abierto, para seguir ajustando mirando por ellas) */
+    $('.le-probar', c).onclick = () => { fue = true; J.sfx('sesion'); v.cerrar(); J.entrarVR(true).then(() => setTimeout(() => J.abrirLentesVR(), 400)); };
+    poner();
+  },
+  /* la vista previa: las dos mitades de la pantalla, cada una con su lente (el borde) y la grilla
+     curvada como se dibuja (cada recta de la escena, llevada a la pantalla por la curva de la lente) */
+  vistaLentes(lienzo, L) {
+    const g = lienzo.getContext('2d'), W = lienzo.width, H = lienzo.height, P = L.P, ew = W / 2, R = H / 2;
+    g.fillStyle = '#05080c'; g.fillRect(0, 0, W, H);
+    for (let e = 0; e < 2; e++) {
+      const cx = ew * e + ew / 2 + (e === 0 ? -1 : 1) * P.separacion * R, cy = H / 2 - P.alto * R;
+      g.save(); g.beginPath(); g.rect(ew * e, 0, ew, H); g.clip();
+      /* el fondo de la lente */
+      const bo = Math.min(P.borde, 3) * R, fondo = g.createRadialGradient(cx, cy, 10, cx, cy, bo);
+      fondo.addColorStop(0, '#3a8fc8'); fondo.addColorStop(0.7, '#1b4f7a'); fondo.addColorStop(1, '#0c2740');
+      g.fillStyle = fondo; g.beginPath(); g.arc(cx, cy, bo, 0, 7); g.fill();
+      g.save(); g.beginPath(); g.arc(cx, cy, bo, 0, 7); g.clip();
+      const Tmax = curva(P, Math.min(P.borde, 2.2)), paso = 0.4;
+      /* (cada recta de tan constante, en puntitos llevados a la pantalla) */
+      const linea = (fx) => { g.beginPath(); for (let i = 0; i <= 60; i++) { const s = -Tmax * 1.2 + i / 60 * Tmax * 2.4, [X, Y] = fx(s), tau = Math.hypot(X, Y), r = tau > 1e-6 ? inversa(P, tau) : 0, px = cx + (tau > 1e-6 ? X / tau * r : 0) * R, py = cy - (tau > 1e-6 ? Y / tau * r : 0) * R; if (i) g.lineTo(px, py); else g.moveTo(px, py); } g.stroke(); };
+      g.lineWidth = 1.6;
+      for (let k = -8; k <= 8; k++) { g.strokeStyle = k === 0 ? '#ffd23f' : 'rgba(190,240,255,0.75)'; linea((s) => [k * paso, s]); linea((s) => [s, k * paso]); }
+      g.restore();
+      if (P.borde < 3) { g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, bo, 0, 7); g.stroke(); }
+      g.restore();
+    }
+    g.fillStyle = '#ffffff'; g.fillRect(W / 2 - 1, 0, 2, H);
   },
   /* ¿con ARCore? Tu espacio (el cuarto en 6 ejes: escanear, las manos en la mesa, la pantalla y las
      ventanas), directo al juego en 6 ejes, o sin ARCore (el giroscopio; las ventanas, en el mundo) */

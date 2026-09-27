@@ -27,9 +27,9 @@ import * as THREE from 'three';
 import { t, sumar } from './textos.js';
 
 sumar({
-  es: { mn_caminar: '🚶 Caminar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_salir: 'Salir del VR', mn_titulo: 'Menú', mn_manos_cargando: '✋ Cargando las manos…', mn_manos_listas: '✋ Manos listas: pellizcá para usar, la palma para el menú', mn_manos_error: 'No se pudieron prender las manos (cámara o red)', mn_saltar: 'Saltar', mn_ir: 'Ir', mn_ventanas: '🪟 Ventanas' },
-  en: { mn_caminar: '🚶 Walk', mn_parar: '✋ Stop', mn_izq: 'Turn ⟲', mn_der: 'Turn ⟳', mn_fps: 'FPS', mn_salir: 'Exit VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Loading hands…', mn_manos_listas: '✋ Hands ready: pinch to use, palm for the menu', mn_manos_error: 'Couldn’t start hand tracking (camera or network)', mn_saltar: 'Jump', mn_ir: 'Go', mn_ventanas: '🪟 Windows' },
-  pt: { mn_caminar: '🚶 Andar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_salir: 'Sair do VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Carregando as mãos…', mn_manos_listas: '✋ Mãos prontas: pinça para usar, a palma para o menu', mn_manos_error: 'Não foi possível ligar as mãos (câmera ou rede)', mn_saltar: 'Pular', mn_ir: 'Ir', mn_ventanas: '🪟 Janelas' },
+  es: { mn_caminar: '🚶 Caminar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_salir: 'Salir del VR', mn_titulo: 'Menú', mn_manos_cargando: '✋ Cargando las manos…', mn_manos_listas: '✋ Manos listas: pellizcá para usar, la palma para el menú', mn_manos_error: 'No se pudieron prender las manos (cámara o red)', mn_saltar: 'Saltar', mn_ir: 'Ir', mn_ventanas: '🪟 Ventanas', mn_lentes: '👓 Lentes' },
+  en: { mn_caminar: '🚶 Walk', mn_parar: '✋ Stop', mn_izq: 'Turn ⟲', mn_der: 'Turn ⟳', mn_fps: 'FPS', mn_salir: 'Exit VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Loading hands…', mn_manos_listas: '✋ Hands ready: pinch to use, palm for the menu', mn_manos_error: 'Couldn’t start hand tracking (camera or network)', mn_saltar: 'Jump', mn_ir: 'Go', mn_ventanas: '🪟 Windows', mn_lentes: '👓 Lenses' },
+  pt: { mn_caminar: '🚶 Andar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_salir: 'Sair do VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Carregando as mãos…', mn_manos_listas: '✋ Mãos prontas: pinça para usar, a palma para o menu', mn_manos_error: 'Não foi possível ligar as mãos (câmera ou rede)', mn_saltar: 'Pular', mn_ir: 'Ir', mn_ventanas: '🪟 Janelas', mn_lentes: '👓 Lentes' },
 });
 
 /* los huesos (pares de puntos de MediaPipe) y el grosor en cada punto, en metros */
@@ -867,7 +867,7 @@ const FRAG_MANO = /* glsl */`
   }`;
 
 /* -------------------------------------------------- el menú de la muñeca */
-const BOTONES = ['mn_caminar', 'mn_izq', 'mn_der', 'mn_fps', 'mn_ventanas', 'mn_salir'];
+const BOTONES = ['mn_caminar', 'mn_izq', 'mn_der', 'mn_fps', 'mn_ventanas', 'mn_lentes', 'mn_salir'];
 class Menu {
   constructor() {
     this.lienzo = document.createElement('canvas'); this.lienzo.width = 512; this.lienzo.height = 300;
@@ -876,8 +876,8 @@ class Menu {
     this.malla.visible = false; this.malla.renderOrder = 5;
     this.sobre = -1; this.apretado = -1; this.abierto = false; this.fps = false; this.camina = false;
     /* los botones en la textura (x, y, ancho, alto), en píxeles del lienzo */
-    /* (vuelta 29: con las ventanas de prueba, abajo son tres) */
-    this.cajas = [[20, 70, 230, 90], [262, 70, 110, 90], [382, 70, 110, 90], [20, 180, 110, 90], [142, 180, 190, 90], [344, 180, 148, 90]];
+    /* (vuelta 29: con las ventanas de prueba, abajo son tres; vuelta 30, con las lentes, cuatro) */
+    this.cajas = [[20, 70, 230, 90], [262, 70, 110, 90], [382, 70, 110, 90], [20, 180, 86, 90], [114, 180, 136, 90], [258, 180, 116, 90], [382, 180, 110, 90]];
     this.pintar();
   }
   pintar() {
@@ -893,7 +893,7 @@ class Menu {
       gb.addColorStop(0, a ? '#7fd8ff' : s ? '#ffffff' : '#e9f8ff'); gb.addColorStop(1, a ? '#2aa6e8' : s ? '#bfe9ff' : '#a9dcf7');
       c.fillStyle = gb; c.beginPath(); c.roundRect(x, y + (a ? 4 : 0), w, h - 4, 24); c.fill();
       c.strokeStyle = s ? '#2aa6e8' : 'rgba(255,255,255,0.9)'; c.lineWidth = s ? 6 : 3; c.stroke();
-      c.fillStyle = i === 5 ? '#b3261e' : '#0f3f63'; c.font = `800 ${i === 4 || i === 5 ? 24 : 28}px system-ui, sans-serif`; c.textAlign = 'center';
+      c.fillStyle = i === 6 ? '#b3261e' : '#0f3f63'; c.font = `800 ${i >= 3 ? 21 : 28}px system-ui, sans-serif`; c.textAlign = 'center';
       c.fillText(i === 0 && this.camina ? t('mn_parar') : t(BOTONES[i]) + (i === 3 && this.fps ? ' ✓' : ''), x + w / 2, y + h / 2 + 8 + (a ? 4 : 0));
     });
     this.tex.needsUpdate = true;
@@ -1310,10 +1310,10 @@ export class Manos {
   apretar(i, ev) {
     this.menu.apretado = i; this.menu.pintar(); clearTimeout(this._tApr);
     this._tApr = setTimeout(() => { this.menu.apretado = -1; this.menu.pintar(); }, 180);
-    const acc = ['caminar', 'izq', 'der', 'fps', 'ventanas', 'salir'][i];
+    const acc = ['caminar', 'izq', 'der', 'fps', 'ventanas', 'lentes', 'salir'][i];
     if (acc === 'fps') { this.menu.fps = !this.menu.fps; this.menu.pintar(); }
     ev.push({ tipo: 'menu', accion: acc, fps: this.menu.fps }, { tipo: 'sonido', s: 'elegir' });
-    if (acc === 'salir' || acc === 'caminar' || acc === 'ventanas') this.menu.cerrar();
+    if (acc === 'salir' || acc === 'caminar' || acc === 'ventanas' || acc === 'lentes') this.menu.cerrar();
   }
   /* la parábola del teletransporte: la mano tira una piedrita imaginaria */
   arco(M, ctx) {

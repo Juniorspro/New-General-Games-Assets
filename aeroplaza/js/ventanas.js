@@ -248,6 +248,13 @@ export class Ventanas {
     return P;
   }
   cerrarPantalla() { if (this.pantalla) { this.pantalla.soltar(); this.pantalla = null; } }
+  /* otro tablero en el lugar de la pantalla (el panel de las lentes: sus botones van a alAccion) */
+  abrirTablero(T, pos, mirar) {
+    if (this.pantalla) this.pantalla.soltar();
+    this.pantalla = T; T.malla.position.copy(pos); T.malla.lookAt(mirar); T.nace = 0; T.malla.scale.setScalar(0.01);
+    this.grupo.add(T.malla); this.alSonar('aviso');
+    return T;
+  }
   /* una ventana nueva delante de la cara, un poco corrida de las anteriores */
   abrir(tipo, cabezaP, cabezaQ) {
     const V = new Ventana(tipo, { conSeis: this.conSeis }), k = this.nAbiertas++ % 5;

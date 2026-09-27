@@ -26,6 +26,7 @@ import { t, sumar } from './textos.js';
 import { Pantalla } from './pantalla.js';
 import { DibujoVR } from './vr-dibujo.js';
 import { Nativo, poseEn } from './nativo.js';
+import { Lentes } from './lentes.js';
 
 sumar({
   es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo', vr_xr: '🥽 Visor VR', vr_xr_d: 'Quest y otros: hasta 120 Hz, con tus manos', vr_xr_error: 'El visor no pudo arrancar', vr_flash: 'Flash', vr_flash_no: 'Este celu no deja prender el flash desde el navegador', vr_flash_error: 'No se pudo prender el flash (¿permiso de la cámara?)', vr_suave: '✋ Las manos', vr_suave_rapida: 'Rápidas', vr_suave_media: 'Medio', vr_suave_suave: 'Suaves', vr_suave_rapida_d: 'Pegadas a tu mano, tiemblan un poco (como un Quest)', vr_suave_media_d: 'Rápidas y casi sin temblor', vr_suave_suave_d: 'Quietas no tiemblan nada; van un poquito atrás' },
@@ -58,6 +59,8 @@ export class VR {
     this.ritmo = { ms: new Float32Array(90), n: 0, i: 0, refresco: 1000 / 60, mediana: 1000 / 60, tMal: 0, tBien: 0, espera: 5, intentoEn: 0, desde: 0 };
     this.fps = { n: 0, t: 0, mundo: 0, esc0: 0, valor: 0, valorMundo: 0 };
     this.verFps = false;
+    /* las lentes del visor (lentes.js): con SBS, cada ojo pasa por la suya */
+    this.lentes = new Lentes();
     /* ARCore (la APK): el rumbo y el lugar de la primera pose, y cuánto se corrió la cabeza desde ahí */
     this.ar0 = null; this.desplazo = new THREE.Vector3(); this.conAR = false;
     /* cada lectura queda como la pose del celu (en sus ejes, qDev = euler·Q1) y cuándo llegó; la
@@ -308,7 +311,7 @@ export class VR {
     }
     if (!this.dib) this.dib = new DibujoVR(motor);
     this.motor = motor;
-    this.dib.medir(this.sbs, this.fov);
+    this.dib.medir(this.sbs, this.fov, this.lentes);
     this.medirRitmo(real, dt);
     const partido = this.forzar ? this.forzar === 'partido' : this.modo === 'partido';
     const Q = motor.nombreCalidad;

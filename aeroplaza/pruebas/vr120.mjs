@@ -58,7 +58,8 @@ const AYUDA = () => {
   /* la pantalla normal, antes de entrar (para ver que al salir queda igual) */
   const estado = () => { const M = window.__A.motor, c = M.camara; return JSON.stringify({ brillo: [M.pBloom.renderTargetBright.width, M.pBloom.renderTargetBright.height], paso: M.pBloom.highPassUniforms.uPaso.value.toArray().map((v) => +v.toFixed(6)), cadena: [M.cadena.readBuffer.width, M.cadena.readBuffer.height], aspecto: +c.aspect.toFixed(4), lienzo: [M.r.domElement.width, M.r.domElement.height], sombras: M.r.shadowMap.enabled }); };
   const normal0 = await pag.evaluate((f) => { const A = window.__A, c = A.motor.camara; window.__pose0 = { p: c.position.clone(), q: c.quaternion.clone(), fov: c.fov }; A.motor.dibujar(0); window.__normal0 = window.__leer(); return eval('(' + f + ')')(); }, estado.toString());
-  await pag.evaluate(() => window.__A.J.entrarVR(true)); await pag.waitForTimeout(300);
+  /* (sin lentes: acá se compara la reproyección contra el ojo dibujado derecho; las lentes tienen su prueba, lentes.mjs) */
+  await pag.evaluate(() => { window.__A.J.lentes.poner('plano'); window.__A.J.entrarVR(true); }); await pag.waitForTimeout(300);
   await giro(pag, 20, 0, -80);
   await avanzar(pag, 4);
   /* 1) la reproyección contra la referencia y contra como era antes */

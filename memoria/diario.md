@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la noche, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: un menú para ajustar las lentes del SBS ("son solo un cubo").
+  - Quedó ([aeroplaza-30](aeroplaza-30.md)): `js/lentes.js` (barril, colores, borde, centro de cada lente; perfiles),
+    el menú con vista previa y el panel adentro del VR (menú de la palma). `pruebas/lentes.mjs` 12/12.
+  - Falta: que diga qué visor tiene y cómo se ve (los números de los perfiles no se probaron en un visor).
 - **27/09/2026, a la noche · `claude/fijate-iszyer`:**
   - Pidió: al tocar VR, preguntar por ARCore; con ARCore escanear todo el cuarto (piso, paredes, objetos) como un
     Quest, medir las manos sobre la mesa y abrir una pantalla para tocar, jugar o abrir ventanas de prueba del

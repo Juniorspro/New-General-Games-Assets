@@ -21,6 +21,7 @@ import * as THREE from 'three';
 import { t, sumar, idioma } from './textos.js';
 import { Nativo, poseEn } from './nativo.js';
 import { Ventanas, Tablero } from './ventanas.js';
+import { PanelLentes, accionLentes } from './lentes.js';
 
 sumar({
   es: { es_buscando: 'Buscando dónde estás…', es_buscando_d: 'Mové el celu despacio, con luz', es_titulo: 'Escaneá tu espacio', es_texto: 'Mirá alrededor despacio: el piso, las paredes y los muebles',
@@ -231,12 +232,15 @@ export class Espacio {
     this.ventanas.abrirPantalla('🏠 ' + t('vt_pantalla'), [
       { id: 'jugar', texto: '▶ ' + t('vt_jugar'), principal: true }, { id: 'lugar', texto: '🧭 ' + t('vt_lugar') }, { id: 'reloj', texto: '🕒 ' + t('vt_reloj') },
       { id: 'pizarra', texto: '✍ ' + t('vt_pizarra') }, { id: 'burbujas', texto: '🫧 ' + t('vt_burbujas') }, { id: 'escaneo', texto: '🧱 ' + t('vt_escaneo') },
-      { id: 'reescanear', texto: '🔁 ' + t('vt_reescanear') }, { id: 'medir', texto: '✋ ' + t('vt_medir') }, { id: 'salir', texto: '✕ ' + t('vt_salir'), peligro: true },
+      { id: 'reescanear', texto: '🔁 ' + t('vt_reescanear') }, { id: 'medir', texto: '✋ ' + t('vt_medir') }, { id: 'lentes', texto: t('le_menu') }, { id: 'salir', texto: '✕ ' + t('vt_salir'), peligro: true },
     ], pos, this.cabezaP, t('es_pantalla_sub'));
     this.ventanas.pantalla.marcar('escaneo', this.verEscaneo);
   }
   /* los botones de la pantalla y de la tarjeta */
   accion(id) {
+    /* (el panel de las lentes; "listo" vuelve a la pantalla) */
+    if (accionLentes(this.vr.lentes, id, this.ventanas.pantalla)) { if (id === 'lente:listo') this.abrirPantalla(); return; }
+    if (id === 'lentes') { this.abrirLentes(); return; }
     if (id === 'jugar') { this.cerrar(); this.alJugar(); }
     else if (id === 'salir') { this.cerrar(); this.alSalir(); }
     else if (id === 'listo') { if (this.pisoY == null) { this.sonar('no'); return; } this.sonar('ola'); this.ponerFase('manos'); }
@@ -247,6 +251,12 @@ export class Espacio {
     else if (['lugar', 'reloj', 'pizarra', 'burbujas'].includes(id)) this.ventanas.abrir(id, this.cabezaP, this.cabezaQ);
   }
 
+  /* el panel de las lentes delante de la cara (con visor) */
+  abrirLentes() {
+    if (!this.sbs) { this.vr.decir?.(t('le_solo_sbs'), 3); return; }
+    _a.set(0, 0, -1).applyQuaternion(this.cabezaQ); _a.y = 0; _a.normalize();
+    this.ventanas.abrirTablero(new PanelLentes(this.vr.lentes), _b.copy(this.cabezaP).addScaledVector(_a, 0.55).setY(this.cabezaP.y - 0.05), this.cabezaP);
+  }
   /* ------------------------------------------ lo que manda Android */
   recibirPlanos(lista) {
     const vistos = new Set();
@@ -453,7 +463,7 @@ export class Espacio {
     if (Ms.activa) {
       Ms.registrarCabeza(tVer, this.cabezaQ, this.cabezaP, 0);
       const ev = Ms.actualizar(dt, tVer, { cabezaP: this.cabezaP, cabezaQ: this.cabezaQ, interactivos: [], altura: () => -1e4, sePuede: () => false, sinArco: true, apuntar: (M, k) => this.ventanas.apunta[k] || this.apuntaTarjeta?.[k] || null });
-      for (const e of ev) { if (e.tipo === 'sonido') this.sonar(e.s); else if (e.tipo === 'menu' && e.accion === 'salir') { this.cerrar(); this.alSalir(); return; } }
+      for (const e of ev) { if (e.tipo === 'sonido') this.sonar(e.s); else if (e.tipo === 'menu' && e.accion === 'lentes') this.abrirLentes(); else if (e.tipo === 'menu' && e.accion === 'salir') { this.cerrar(); this.alSalir(); return; } }
       for (const [k, M] of Ms.manos.entries()) if (M.visible && M.alfa > 0.5) punteros.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
     }
     /* la mirada (el punto del centro) y el toque en la pantalla */
@@ -507,23 +517,29 @@ export class Espacio {
      el del visor */
   campo() {
     const S = this.motor.r.getSize(_v2), asp = this.sbs ? S.x / 2 / S.y : S.x / S.y, F = this.fotoEn.ultima;
+    if (this.sbs && this.vr.lentes?.activa && this.vr.lentes.lado) return this.vr.lentes.fovOjo;
     return !this.sbs && F ? THREE.MathUtils.radToDeg(2 * Math.atan(Math.min(F.ty, F.tx / asp))) : this.vr.fov;
   }
   /* por ojo: la escena del espacio y encima las manos (con el paralaje de cada ojo) */
   dibujar() {
     const r = this.motor.r, S = r.getSize(_v2), W = S.x, H = S.y, ojos = this.sbs ? [-1, 1] : [0];
-    const fov = this.campo(), C = this.ojo;
+    /* (con visor y lentes: cada ojo a su lienzo, y la lente lo lleva a la pantalla) */
+    const Le = this.sbs && this.vr.lentes?.activa ? this.vr.lentes : null;
+    if (Le) Le.medir(W / 2, H, r.getPixelRatio(), true);
+    const fov = Le ? Le.fovOjo : this.campo(), C = this.ojo;
     const auto = r.autoClear; r.autoClear = false; r.setRenderTarget(null); r.setScissorTest(true);
     r.setClearColor('#081422', 1);
-    this.uVox.uPx.value = (H / 2) / Math.tan(THREE.MathUtils.degToRad(fov) / 2) * r.getPixelRatio();
+    this.uVox.uPx.value = Le ? Le.lado / 2 / Le.T : (H / 2) / Math.tan(THREE.MathUtils.degToRad(fov) / 2) * r.getPixelRatio();
     ojos.forEach((o, i) => {
       const x = this.sbs ? i * W / 2 : 0, w = this.sbs ? W / 2 : W;
-      r.setViewport(x, 0, w, H); r.setScissor(x, 0, w, H); r.clear();
-      C.fov = fov; C.aspect = w / H; C.updateProjectionMatrix();
+      if (Le) { r.setRenderTarget(Le.rt[i]); r.clear(); }
+      else { r.setViewport(x, 0, w, H); r.setScissor(x, 0, w, H); r.clear(); }
+      C.fov = fov; C.aspect = Le ? 1 : w / H; C.updateProjectionMatrix();
       C.quaternion.copy(this.cabezaQ); C.position.set(o * IPD / 2, 0, 0).applyQuaternion(this.cabezaQ).add(this.cabezaP); C.updateMatrixWorld();
       r.render(this.escena, C);
       if (this.manos.activa && this.manos.algo) { r.clearDepth(); this.manos.dibujarOjo(r, C); }
     });
+    if (Le) Le.componer(r, W, H);
     r.setScissorTest(false); r.setViewport(0, 0, W, H); r.autoClear = auto;
   }
   /* para las pruebas y el cartel de ⏱ */

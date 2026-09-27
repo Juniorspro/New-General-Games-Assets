@@ -54,6 +54,7 @@ import { Nativo, ManosNativas } from './nativo.js';
 import { Manos } from './manos.js';
 import { Espacio } from './espacio.js';
 import { Ventanas } from './ventanas.js';
+import { PanelLentes, accionLentes, curva, inversa } from './lentes.js';
 import { VisorXR } from './vr-xr.js';
 import { candidatasCopias, instanciarCopias, revisarCopias } from './instanciar.js';
 import { Sonido } from '../../brillo/js/sonido.js';
@@ -163,10 +164,20 @@ async function iniciar() {
   const ventanasMundo = new Ventanas({ conSeis: false, alSonar: (n) => J.sfx(n), alAccion: (id) => accionVentanas(id) });
   manos.escena.add(ventanasMundo.grupo); manos.extra = ventanasMundo;
   const accionVentanas = (id) => {
+    /* (el panel de las lentes: cada botón ajusta en el momento; "listo" lo cierra) */
+    if (accionLentes(vr.lentes, id, ventanasMundo.pantalla)) { if (id === 'lente:listo') ventanasMundo.cerrarPantalla(); return; }
     if (id === 'volver') ventanasMundo.cerrarPantalla();
     else if (id === 'cerrar_todo') ventanasMundo.cerrarTodas();
     else if (id === 'salir') vr.salir();
     else ventanasMundo.abrir(id, motor.camara.position, motor.camara.quaternion);
+  };
+  /* el panel de las lentes adelante de la cara (solo con visor: sin SBS no hay lentes) */
+  const abrirLentesVR = (V = ventanasMundo, c = motor.camara) => {
+    if (!vr.sbs) { vr.decir(t('le_solo_sbs'), 3); return; }
+    const f = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion); f.y = 0; f.normalize();
+    /* (cerca: con lentes cada ojo abarca mucho más y a 75 cm quedaba chico) */
+    const pos = c.position.clone().addScaledVector(f, 0.55); pos.y -= 0.05;
+    V.abrirTablero(new PanelLentes(vr.lentes), pos, c.position);
   };
   const abrirPantallaMundo = () => {
     const c = motor.camara, f = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion); f.y = 0; f.normalize();
@@ -304,6 +315,9 @@ async function iniciar() {
     get hayAR() { return Nativo.hay && Nativo.puedeAR; },
     /* la pantalla de las ventanas de prueba en el mundo (lo mismo que el menú de la palma) */
     abrirVentanasMundo() { abrirPantallaMundo(); },
+    /* el panel de las lentes adentro del VR (el menú de la palma, o después de "probar con el visor") */
+    abrirLentesVR() { if (espacio.activo) espacio.abrirLentes(); else abrirLentesVR(); },
+    get lentes() { return vr.lentes; },
     get enVR() { return vr.activo; },
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
@@ -1020,6 +1034,7 @@ async function iniciar() {
           else if (e.accion === 'caminar') vr.camina = !vr.camina;
           else if (e.accion === 'fps') { vr.ponerFps(e.fps); G.opciones.vrFps = e.fps; Guardado.guardar(); }
           else if (e.accion === 'ventanas') { if (ventanasMundo.pantalla) ventanasMundo.cerrarPantalla(); else abrirPantallaMundo(); }
+          else if (e.accion === 'lentes') abrirLentesVR();
           else if (e.accion === 'salir') vr.salir();
         }
       }
@@ -1110,7 +1125,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {
