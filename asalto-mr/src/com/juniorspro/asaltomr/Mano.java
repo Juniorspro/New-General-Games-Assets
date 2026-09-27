@@ -52,6 +52,14 @@ public final class Mano {
 
     // ── lo que se sabe de la mano (se actualiza en cada imagen) ──
     public int pose = NADA;
+    /**
+     * La pistola está en la mano: se agarra con 2 imágenes empuñando y se
+     * suelta sólo con la mano abierta (o la V) 5 imágenes seguidas, o al
+     * perderla. Una imagen "otra" no la suelta: de canto, de punta o girando,
+     * la red da los dedos cualquiera y el arma parpadeaba.
+     */
+    public boolean agarrada;
+    private int cuadrosSuelta;
     public float curlIndice, curlMedio, curlAnular, curlMenique, pulgar, alcance;
     private float alcanceSuave = Float.NaN, pulgarSuave = Float.NaN, referencia = 1.6f;
 
@@ -139,6 +147,8 @@ public final class Mano {
         ultimaVez = ms;
         boolean empuna = pose == EMPUNA || pose == APRIETA;
         cuadrosEmpunando = empuna ? cuadrosEmpunando + 1 : 0;
+        if (empuna) { cuadrosSuelta = 0; if (cuadrosEmpunando >= 2) agarrada = true; }
+        else if (pose == ABIERTA || pose == VE) { if (++cuadrosSuelta >= 5) agarrada = false; }
         boolean tiro = false;
         // suavizado (lo que tiembla una imagen no cuenta)
         alcanceSuave = alcanceSuave != alcanceSuave ? alcance : alcanceSuave + (alcance - alcanceSuave) * 0.65f;
@@ -173,6 +183,8 @@ public final class Mano {
         pulgarSuave = Float.NaN;
         apretado = false;
         pose = NADA;
+        agarrada = false;
+        cuadrosSuelta = 0;
         cuadrosEmpunando = 0;
         cuadrosListo = 0;
         tieneSuave = false;

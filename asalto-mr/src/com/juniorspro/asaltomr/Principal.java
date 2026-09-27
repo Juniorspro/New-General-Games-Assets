@@ -19,6 +19,7 @@ import android.os.Vibrator;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -224,6 +225,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         juego.dificultad = ajustes.dificultad;
         sonido.cargar(this);
         records = getSharedPreferences("records", MODE_PRIVATE);
+        control.cargar(getSharedPreferences("control", MODE_PRIVATE).getString("mapa", ""));
         sonido.activo = ajustes.sonido == 1;
         if (ajustes.mano > 0 && ajustes.seguro == 0) manos = new ManoRastreo(this);
 
@@ -376,51 +378,116 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             case "cerrar": abrirPanel(false); break;
             case "reescanear": pedirReescaneo = true; break;
             case "reiniciar": pedirReinicio = true; abrirPanel(false); break;
+            case "controlDefecto":
+                synchronized (control) { control.olvidar(); }
+                getSharedPreferences("control", MODE_PRIVATE).edit().remove("mapa").apply();
+                avisar("Control: los botones de fábrica");
+                break;
+            case "controlAprender":
+                abrirPanel(false);
+                synchronized (control) { control.empezarAprender(SystemClock.elapsedRealtime()); }
+                break;
             default: break;
         }
     }
 
-    // ── teclas: volumen, control Bluetooth, disparador de selfie ──
+    // ── el control Bluetooth (el del VR Box, un gamepad, un teclado), el volumen, el disparador de selfie ──
 
-    @Override
-    public boolean onKeyDown(int codigo, KeyEvent e) {
-        switch (codigo) {
-            case KeyEvent.KEYCODE_VOLUME_UP:
-            case KeyEvent.KEYCODE_VOLUME_DOWN:
-            case KeyEvent.KEYCODE_BUTTON_A:
-            case KeyEvent.KEYCODE_BUTTON_R1:
-            case KeyEvent.KEYCODE_BUTTON_R2:
-            case KeyEvent.KEYCODE_ENTER:
-            case KeyEvent.KEYCODE_DPAD_CENTER:
-            case KeyEvent.KEYCODE_SPACE:
-            case KeyEvent.KEYCODE_CAMERA:
-                if (e.getRepeatCount() == 0) tiros.incrementAndGet();
-                teclaApretada = true;
-                return true;
-            case KeyEvent.KEYCODE_BUTTON_X:
-            case KeyEvent.KEYCODE_BUTTON_B:
-                vista.queueEvent(() -> juego.recargar());
-                return true;
-            case KeyEvent.KEYCODE_BUTTON_Y:
-            case KeyEvent.KEYCODE_BUTTON_L1:
-            case KeyEvent.KEYCODE_TAB:
-                if (e.getRepeatCount() == 0) vista.queueEvent(() -> juego.siguienteArma());
-                return true;
-            case KeyEvent.KEYCODE_BUTTON_START:
-            case KeyEvent.KEYCODE_MENU:
-            case KeyEvent.KEYCODE_BUTTON_SELECT:
-                if (e.getRepeatCount() == 0) pedirMenu = true;
-                return true;
-            default:
-                return super.onKeyDown(codigo, e);
-        }
+    private final Control control = new Control();
+    /** El nombre del control que se usó (null: ninguno) y el último botón, para mostrarlos. */
+    private volatile String nombreControl, ultimoBoton;
+    private volatile long ultimoBotonEn, controlListoEn;
+
+    /** ¿Viene de un aparato conectado (el control), no del teléfono? */
+    private static boolean externo(InputDevice d) {
+        if (d == null || d.isVirtual()) return false;
+        if (android.os.Build.VERSION.SDK_INT >= 29) return d.isExternal();
+        return (d.getSources() & (InputDevice.SOURCE_GAMEPAD | InputDevice.SOURCE_JOYSTICK | InputDevice.SOURCE_MOUSE)) != 0;
     }
 
     @Override
-    public boolean onKeyUp(int codigo, KeyEvent e) {
-        teclaApretada = false;
-        if (codigo == KeyEvent.KEYCODE_VOLUME_UP || codigo == KeyEvent.KEYCODE_VOLUME_DOWN) return true;
-        return super.onKeyUp(codigo, e);
+    public boolean dispatchKeyEvent(KeyEvent e) {
+        if (panel.vista.getVisibility() == View.VISIBLE) return super.dispatchKeyEvent(e);
+        int codigo = e.getKeyCode(), a = e.getAction();
+        if (a != KeyEvent.ACTION_DOWN && a != KeyEvent.ACTION_UP) return super.dispatchKeyEvent(e);
+        if (codigo == KeyEvent.KEYCODE_HOME || codigo == KeyEvent.KEYCODE_POWER || codigo == KeyEvent.KEYCODE_APP_SWITCH) return super.dispatchKeyEvent(e);
+        boolean deControl = externo(e.getDevice());
+        // el Atrás del teléfono hace lo de siempre; el del control (o el clic derecho de su modo mouse), el menú
+        if (codigo == KeyEvent.KEYCODE_BACK && !deControl) return super.dispatchKeyEvent(e);
+        boolean aprendiendo;
+        int accion;
+        synchronized (control) { aprendiendo = control.aprendiendo(); accion = control.accion(codigo); }
+        if (!aprendiendo && accion == Control.NADA) return super.dispatchKeyEvent(e);
+        if (deControl && e.getDevice().getName() != null) nombreControl = e.getDevice().getName();
+        botonDelControl(codigo, a == KeyEvent.ACTION_DOWN, e.getRepeatCount() > 0, KeyEvent.keyCodeToString(codigo).replace("KEYCODE_", ""));
+        return true;
+    }
+
+    /** El joystick (analógico o cruz) y los gatillos analógicos del control. */
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent e) {
+        if ((e.getSource() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK && e.getAction() == MotionEvent.ACTION_MOVE
+                && panel.vista.getVisibility() != View.VISIBLE) {
+            float x = e.getAxisValue(MotionEvent.AXIS_X), y = e.getAxisValue(MotionEvent.AXIS_Y);
+            float hx = e.getAxisValue(MotionEvent.AXIS_HAT_X), hy = e.getAxisValue(MotionEvent.AXIS_HAT_Y);
+            if (Math.abs(hx) > Math.abs(x)) x = hx;
+            if (Math.abs(hy) > Math.abs(y)) y = hy;
+            float der = Math.max(e.getAxisValue(MotionEvent.AXIS_RTRIGGER), e.getAxisValue(MotionEvent.AXIS_GAS));
+            float izq = Math.max(e.getAxisValue(MotionEvent.AXIS_LTRIGGER), e.getAxisValue(MotionEvent.AXIS_BRAKE));
+            int[] cambios;
+            synchronized (control) { cambios = control.ejes(x, y, der, izq); }
+            if (e.getDevice() != null && e.getDevice().getName() != null) nombreControl = e.getDevice().getName();
+            for (int c : cambios) botonDelControl(Math.abs(c), c > 0, false, Control.nombre(Math.abs(c)));
+            return true;
+        }
+        return super.dispatchGenericMotionEvent(e);
+    }
+
+    private void botonDelControl(int codigo, boolean baja, boolean repite, String nombre) {
+        long ahora = SystemClock.elapsedRealtime();
+        boolean aprendia, termino;
+        int accion;
+        synchronized (control) {
+            aprendia = control.aprendiendo();
+            accion = control.evento(codigo, baja, repite, ahora);
+            termino = aprendia && !control.aprendiendo();
+            teclaApretada = control.sostenido();
+            if (baja && !repite) {
+                ultimoBoton = nombre + (aprendia ? "" : " → " + Control.ACCIONES[control.accion(codigo)]);
+                ultimoBotonEn = ahora;
+            }
+        }
+        if (termino) terminarAprender(ahora);
+        switch (accion) {
+            case Control.DISPARAR: tiros.incrementAndGet(); break;
+            case Control.RECARGAR: vista.queueEvent(() -> juego.recargar()); break;
+            case Control.SIGUIENTE: vista.queueEvent(() -> juego.siguienteArma()); break;
+            case Control.ANTERIOR: vista.queueEvent(() -> juego.anteriorArma()); break;
+            case Control.MENU: pedirMenu = true; break;
+            default: break;
+        }
+    }
+
+    /** Terminó de aprender los botones: se guardan. */
+    private void terminarAprender(long ahora) {
+        String m;
+        synchronized (control) { m = control.guardar(); }
+        getSharedPreferences("control", MODE_PRIVATE).edit().putString("mapa", m).apply();
+        controlListoEn = ahora;
+    }
+
+    /** Lo que se aprendió ("disparar: BUTTON_R1 · recargar: —"). */
+    private String resumenControl() {
+        StringBuilder b = new StringBuilder();
+        synchronized (control) {
+            for (int k = 0; k < Control.PASOS.length; k++) {
+                if (k > 0) b.append(k == 2 ? "\n" : " · ");
+                int c = control.aprendidos[k];
+                String n = c == 0 ? "(el de antes)" : Control.nombre(c) != null ? Control.nombre(c) : KeyEvent.keyCodeToString(c).replace("KEYCODE_", "");
+                b.append(Control.ACCIONES[Control.PASOS[k]]).append(": ").append(n);
+            }
+        }
+        return b.toString();
     }
 
     @Override
@@ -981,7 +1048,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (!listo) listoDesde = 0;
             // el menú principal sale solo con el escaneo completo (o a los 25 s en el visor); o tocando / con el gatillo
             boolean solo = !seguirEscaneando && (escaneoCompleto || (sbs && ahora - listoDesde > 25000));
-            if (listo && !menu.abierto && (solo || pedidos > 0 || gatillo > 0 || quiereMenu)) {
+            if (listo && !menu.abierto && !control.aprendiendo() && (solo || pedidos > 0 || gatillo > 0 || quiereMenu)) {
                 abrirPrincipal(px, py, pz, adelante);
                 pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; toque = false;
             }
@@ -1080,6 +1147,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         return "Tocá un botón (o mirálo 1 segundo)";
     }
 
+    /** Configurar el control Bluetooth (aprender sus botones). */
+    private void opcionControl() {
+        String n = nombreControl;
+        menu.opcion("control", n != null ? "Control: configurar botones" : "Control Bluetooth: configurar", n != null ? recortar(n, 18) : null);
+    }
+
+    private static String recortar(String s, int n) { return s.length() <= n ? s : s.substring(0, n - 1) + "…"; }
+
     private void opcionesComunes() {
         menu.opcion("arma", "Arma: " + Juego.ARMAS[juego.arma].nombre, "cambiar ▸");
         menu.opcion("dificultad", "Dificultad: " + DIFICULTADES[Math.max(0, Math.min(2, juego.dificultad))], "▸");
@@ -1099,6 +1174,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         menu.opcion("practica", "Práctica: blancos", record(Juego.PRACTICA) > 0 ? "récord " + record(Juego.PRACTICA) : null);
         opcionesComunes();
         menu.opcion("escanear", "Seguir escaneando", null);
+        opcionControl();
         if (vistos.sbs == 0) menu.opcion("ajustes", "Ajustes", null);
         menu.abrir(px, py, pz, f[0], f[2]);
         pausado = false;
@@ -1113,6 +1189,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         menu.opcion("reiniciar", "Empezar de nuevo", null);
         menu.opcion("principal", "Menú principal", null);
         menu.opcion("reescanear", "Reescanear el lugar", null);
+        opcionControl();
         menu.abrir(px, py, pz, f[0], f[2]);
         pausado = true;
     }
@@ -1157,6 +1234,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 menu.texto("dificultad", "Dificultad: " + DIFICULTADES[juego.dificultad], "▸");
                 break;
             case "escanear": menu.cerrar(); seguirEscaneando = true; break;
+            case "control":
+                menu.cerrar();
+                synchronized (control) { control.empezarAprender(SystemClock.elapsedRealtime()); }
+                break;
             case "sellar":
                 escaneo.sellarYa = true;
                 menu.texto("sellar", "Sellando…", null);
@@ -1265,7 +1346,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 manoBrillo[s2] += (br - manoBrillo[s2]) * Math.min(1, dtLectura * 18);
                 armaPose[s2] = m.pose;
                 armaAprieta[s2] = false;
-                if (reciente && (m.pose == Mano.EMPUNA || m.pose == Mano.APRIETA)) {
+                // (agarrada: con histéresis; girando, de canto o de punta, una imagen dudosa no la suelta)
+                if (reciente && m.agarrada) {
                     armaActiva[s2] = true;
                     armaAprieta[s2] = m.apretado();
                     System.arraycopy(m.pos, 0, armaPos[s2], 0, 3);
@@ -1364,6 +1446,24 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 arriba = String.format(Locale.ROOT, "PUNTOS %d%s\nOLEADA %d · %d bajas · %d FPS%s", juego.puntos,
                         juego.combo > 1 ? "  x" + juego.combo : "", juego.oleada, juego.bajas, fps, textoMano());
             if (pausado) arriba = "PAUSA\n" + arriba.substring(arriba.indexOf('\n') + 1);
+        }
+        // el control: aprendiendo sus botones, recién configurado, o qué llegó (para ver qué manda cada modo)
+        boolean termino;
+        int paso, pide;
+        long falta;
+        synchronized (control) {
+            termino = control.esperar(ahora);
+            paso = control.pasoActual(); pide = control.pidiendo(); falta = control.falta(ahora);
+        }
+        if (termino) terminarAprender(ahora);
+        if (pide != Control.NADA) {
+            String ult = ultimoBoton != null && ahora - ultimoBotonEn < 1500 ? "\n(llegó: " + ultimoBoton + ")" : "";
+            abajo = String.format(Locale.ROOT, "CONTROL %d/%d · apretá el botón para\n%s\n(en %d s se saltea: queda el de antes)%s", paso + 1, Control.PASOS.length,
+                    Control.ACCIONES[pide].toUpperCase(Locale.ROOT), falta / 1000 + 1, ult);
+        } else if (controlListoEn > 0 && ahora - controlListoEn < 4000) {
+            abajo = "Control listo ✓\n" + resumenControl();
+        } else if ((juego.estado == Juego.ESPERA || !sigue) && nombreControl != null) {
+            arriba += "\nControl: " + recortar(nombreControl, 22) + (ultimoBoton != null && ahora - ultimoBotonEn < 2500 ? " · " + ultimoBoton : "");
         }
         hud.poner(arriba, juego.vidaJugador, juego.balas, juego.cargador(), juego.recargando > 0, ARMA_CORTA[juego.arma], abajo);
     }

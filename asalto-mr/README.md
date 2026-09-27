@@ -150,6 +150,32 @@ suavizado de un píxel. En Ajustes → Hand tracking: "Sí (mano fantasma)" o
   escaneo. Antes quedaban manchas de mano en la malla. Esto no está en
   Aeroplaza.
 
+### El arma gira 360° sin soltarse ni darse vuelta
+
+Antes el arma se veía en la mano sólo en las imágenes en que la red decía
+"empuña". Girando la muñeca, apuntando al techo o de costado, la mano se ve
+de canto o de punta y la red da los dedos cualquiera: el arma **parpadeaba**
+(se iba a la pantalla y volvía). Ahora se **agarra** con 2 imágenes
+empuñando y se **suelta** sólo con la mano abierta (o la V) 5 imágenes
+seguidas, o si se deja de ver la mano. El giro ya se filtraba como un
+cuaternión (sin ángulos que se traben), así que da la vuelta entera.
+
+`PruebaGiro360` (la mano con el ruido de siempre y además 10 % de imágenes
+malas, hasta 45 % de canto: dedos cualquiera o una mano "abierta" falsa):
+
+| movimiento | caño (promedio · peor) | se dio vuelta | sin arma: antes → ahora |
+|---|---|---|---|
+| la muñeca 360° alrededor del caño | 5.1° · 44° | 0 cuadros | 2.3 % → **0 %** |
+| del piso al techo (±85°) | 1.9° · 14° | 0 | 5.7 % → **0 %** |
+| de costado a costado (±100°) | 1.9° · 17° | 0 | 4.1 % → **0 %** |
+| vos das una vuelta entera (180°/s) | 1.4° · 5° | 0 | 9.4 % → **0 %** |
+| todo junto | 3.4° · 31° | 0 | 4.9 % → **0 %** |
+
+(El "peor" es girando rápido: la foto llega 60 ms tarde.) Lo que sigue sin
+poderse: apuntar **atrás tuyo** con el brazo estirado, porque la cámara no
+ve la mano. Ahí vale el control Bluetooth (abajo): girás el cuerpo y tirás
+con la mira.
+
 ### Súper fija: el filtro de la mano (como Aeroplaza)
 
 La versión anterior temblaba y saltaba. Tres cosas la hacían andar mal:
@@ -431,13 +457,42 @@ escritos acá (votos, pasadas, A\*, rayos), no un modelo entrenado.
   escaneo completo aparece el **menú principal** flotando adelante tuyo (o
   tocá / apretá el gatillo antes, si ya querés jugar).
 - **Disparar**: con la mano (arriba), tocar la pantalla (o el botón del
-  visor), **volumen +/−**, un control Bluetooth (A, R1, R2) o un disparador de
+  visor), **volumen +/−**, el **control Bluetooth** (abajo) o un disparador de
   selfie. Sin mano se apunta con la mira del centro (con la cabeza, en el
-  visor). **Recargar**: la mano abierta, X o B del control, o sola al vaciar.
-- **Cambiar de arma**: la V con la mano, el botón ARMA, Y o L1 del control, o
-  en el menú.
+  visor). **Recargar**: la mano abierta, el control, o sola al vaciar.
+- **Cambiar de arma**: la V con la mano, el botón ARMA, el control, o en el menú.
 - **Pausa**: **mirá tus pies** 1.2 s (sirve en el visor, sin tocar nada), el
-  botón MENÚ, Atrás, o START del control.
+  botón MENÚ, Atrás, o el menú del control.
+
+### El control Bluetooth (el blanco del VR Box)
+
+Conectalo en los ajustes de Bluetooth del teléfono y listo. Ese control manda
+cosas distintas según el modo (@ + A, B, C o D, o la llave M/G), y los
+cuatro andan:
+
+| modo del control | lo que manda | disparar | recargar | arma | menú |
+|---|---|---|---|---|---|
+| música (@+A) | play/pausa, siguiente, volumen | gatillo | — | joystick ← → | — |
+| gamepad (@+B) | botones A/B/X/Y, R1…, joystick analógico | gatillo, A, R1/R2 | B, X, joystick ↓ | Y, L1, joystick ← → | start, select |
+| mouse (@+C) | un puntero y clics | clic | — | — | clic derecho |
+| teclas (@+D) | Enter y flechas | Enter | ↓ | ← → | — |
+
+- Con el **fusil**, mantené el gatillo: tira en automático.
+- Con **la mano en el arma**, el gatillo del control dispara **desde la
+  mano**: apuntás con la mano y tirás con el dedo en el control (más firme que
+  cerrar el índice).
+- El **Atrás del control** abre el menú (no te saca del visor).
+- En el menú se elige mirando el botón y apretando el gatillo.
+- **Si tu control manda otra cosa**: menú → "Control: configurar botones" (o
+  Ajustes → "Aprender los botones de mi control"). Te pide, uno por uno,
+  el botón para disparar, recargar, cambiar de arma y el menú; el que no
+  aprietes en 8 s queda como estaba. Se guarda. Mientras escaneás, el HUD
+  muestra el nombre del control y qué llegó con cada botón (para ver qué
+  manda tu modelo).
+
+`PruebaControl`: cada modo del VR Box, el joystick analógico con histéresis
+(no rebota), el disparo sostenido, aprender (el mismo botón no sirve para dos
+cosas, se saltea a los 8 s), guardar y cargar.
 - Si aguantás 4 s sin que te den, te vas curando. La dificultad cambia cuánto
   apuntan, cuánto pegan y lo rápido que corren.
 
@@ -573,6 +628,9 @@ de cerrar la app.
   la pistola sale corrida o girada respecto de la mano, pasame una captura.
   Con una pistola de verdad en la mano, MediaPipe no ve la mano (el arma la
   tapa: probado con una foto de Commons): el juego es con la mano vacía.
+- **El control del VR Box**: no tengo uno. El mapa sale de lo que mandan sus
+  modos (teclas de Android estándar) y está probado en la lógica; si el tuyo
+  manda otra cosa, "Configurar botones" lo aprende y el HUD muestra qué llega.
 - **Los menús** se probaron en la lógica (qué botón toca cada rayo, la
   elección, que te siga), no pintados: el panel se pinta con el Canvas de
   Android, que en la PC no está.
@@ -611,6 +669,7 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../AsociadorManos.java` | cuál mano es cuál (centro predicho, duplicadas, fantasmas, mismo rayo, lado) |
 | `src/.../ManosGl.java` | la mano "Meta": cápsulas con el borde que brilla y la pasada de profundidad |
 | `src/.../ManoRastreo.java` | el hilo de MediaPipe: imagen entera, GPU, red de 1 y de 2 manos, ganancia → 21 puntos por mano |
+| `src/.../Control.java` | el control Bluetooth: qué hace cada botón en cada modo, el joystick, aprender los botones (sin Android) |
 | `src/.../Fallo.java` | si se cae: guarda el error y lo muestra al volver a abrir |
 | `mediapipe-parche/` | MediaPipe sin telemetría |
 | `src/.../ZonasGl.java` | las zonas pintadas sobre el piso |
@@ -623,7 +682,7 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Hud.java` · `Lentes.java` | el HUD en GL; la corrección de lentes |
 | `src/.../Ajustes.java` · `Panel.java` | la configuración y su panel |
 | `src/.../Sonido.java` | los sonidos, sintetizados al arrancar |
-| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` · `PruebaFiltroMano.java` · `PruebaSellado.java` | las pruebas en la PC (`BancoEscaneo.java`: cuánto tarda el escaneo) |
+| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` · `PruebaFiltroMano.java` · `PruebaSellado.java` · `PruebaGiro360.java` · `PruebaControl.java` | las pruebas en la PC (`BancoEscaneo.java`: cuánto tarda el escaneo) |
 | `pruebas/manos.txt` · `manos-commons.txt` · `manos-extraer.py` · `manos-camara.py` · `herramientas/Yuv.java` | manos reales para las pruebas; la cámara de punta a punta |
 | `pruebas/shaders.mjs` · `vista.mjs` · `vista/` | shaders con WebGL; la vista previa |
 | `construir.sh` | arma el APK sin Gradle (caché compartida con mundo-ar) |

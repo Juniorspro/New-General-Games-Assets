@@ -95,6 +95,14 @@ final class Panel {
                 + "dispara tocando o con el volumen. Se aplica al volver a abrir la app.");
         opciones("seguro", "Modo seguro", new String[]{"No", "Sí"});
 
+        seccion("Control Bluetooth (el del VR Box)");
+        info("Conectalo en los ajustes de Bluetooth del teléfono. Anda en cualquier modo: música (@+A), "
+                + "gamepad (@+B), mouse (@+C) o teclas (@+D). De fábrica: el gatillo dispara (mantenelo con el fusil), "
+                + "B/X o joystick abajo recarga, joystick a los costados cambia de arma, start / Atrás del control = menú. "
+                + "Con la mano en el arma, el gatillo del control dispara desde la mano (apuntás con la mano, tirás con el dedo del control).");
+        boton("Aprender los botones de mi control", "controlAprender");
+        boton("Volver a los botones de fábrica", "controlDefecto");
+
         seccion("Juego");
         opciones("dificultad", "Dificultad", new String[]{"Fácil", "Normal", "Difícil"});
         opciones("sonido", "Sonido", new String[]{"No", "Sí"});

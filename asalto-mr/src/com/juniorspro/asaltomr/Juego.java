@@ -183,6 +183,8 @@ public final class Juego {
 
     public void siguienteArma() { cambiarArma((arma + 1) % ARMAS.length); }
 
+    public void anteriorArma() { cambiarArma((arma + ARMAS.length - 1) % ARMAS.length); }
+
     /** Precisión de la partida (0..1). */
     public float precision() { return disparos == 0 ? 0 : aciertos / (float) disparos; }
 
