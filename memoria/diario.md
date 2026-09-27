@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la noche · `claude/fijate-iszyer`:**
+  - Pidió: al tocar VR, preguntar por ARCore; con ARCore escanear todo el cuarto (piso, paredes, objetos) como un
+    Quest, medir las manos sobre la mesa y abrir una pantalla para tocar, jugar o abrir ventanas de prueba del
+    6DoF; sin ARCore, las ventanas en el mundo del juego.
+  - Quedó ([aeroplaza-29](aeroplaza-29.md)): `js/espacio.js`, `js/ventanas.js`, `Espacio.java`; la pregunta en el
+    menú del VR; "🪟 Ventanas" en el menú de la palma. `pruebas/espacio.mjs` 22/22 con un Android de mentira.
+  - Falta: probarlo en un celu con ARCore (la profundidad, la foto de la cámara, que los planos cierren bien).
 - **27/09/2026, a la tarde · `claude/fijate-iszyer`:**
   - Pidió: "seguí arreglando mi juego y sacando ese maldito retraso cada vez más en las manos" (AEROPLAZA).
   - Quedó ([aeroplaza-28](aeroplaza-28.md)): el resorte más corto moviéndose y a 60 fotos; más adelanto con la

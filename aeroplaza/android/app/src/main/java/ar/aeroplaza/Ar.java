@@ -40,19 +40,23 @@ import javax.microedition.khronos.opengles.GL10;
    - Cada cuadro nuevo: la pose (orientada a la pantalla: x a la derecha, y arriba, mira a -z, como la
      cámara de three) y hace cuánto se sacó la foto, a window.__nativo.pose.
    - Con las manos prendidas, la foto de la CPU va a MediaPipe de Android (ManosNativas).
+   - Con TU ESPACIO (Espacio.java): los planos, la profundidad en cubitos y la foto para ver a través.
+     La foto de la CPU se pide una vez por cuadro y la usan los dos.
    - A 60 fotos por segundo si la cámara puede (CameraConfigFilter). */
 class Ar implements GLSurfaceView.Renderer {
   final MainActivity act;
   Session sesion;
   GLSurfaceView gl;
   ManosNativas manos;
+  final Espacio espacio;
+  volatile Boolean pedidoEspacio;
   volatile boolean corriendo, conManos, flashPedido;
   boolean pedirInstalar = true, geometria;
   int textura = -1, orientacionSensor = 90;
   long ultimaFoto;
   String fps = "?";
 
-  Ar(MainActivity a) { act = a; }
+  Ar(MainActivity a) { act = a; espacio = new Espacio(a); }
 
   static String estado(Context c) {
     try {
@@ -122,9 +126,13 @@ class Ar implements GLSurfaceView.Renderer {
   void pausar() { if (gl != null) gl.onPause(); if (sesion != null) sesion.pause(); }
   void parar() { corriendo = false; pausar(); act.enviar("__nativo&&__nativo.estado('parada')"); }
   void manos(boolean si) { conManos = si; if (si && manos == null) manos = new ManosNativas(act); }
+  /* tu espacio: escanear (planos y profundidad) y la foto para ver a través */
+  void escanear(boolean si) { pedidoEspacio = si; }
+  void pasante(boolean si) { espacio.pasante = si; }
   void cerrar() {
     corriendo = false;
     if (manos != null) { manos.cerrar(); manos = null; }
+    espacio.cerrar();
     if (sesion != null) { sesion.close(); sesion = null; }
   }
 
@@ -163,6 +171,8 @@ class Ar implements GLSurfaceView.Renderer {
         sesion.setDisplayGeometry(act.getWindowManager().getDefaultDisplay().getRotation(), m.widthPixels, m.heightPixels);
         geometria = true;
       }
+      /* (lo que pidió el juego para tu espacio: la sesión se configura acá, en su hilo) */
+      Boolean pe = pedidoEspacio; if (pe != null) { pedidoEspacio = null; espacio.configurar(sesion, pe); }
       Frame fr = sesion.update();
       long ts = fr.getTimestamp();
       if (ts == ultimaFoto) return;
@@ -176,14 +186,17 @@ class Ar implements GLSurfaceView.Renderer {
       Pose p = cam.getDisplayOrientedPose();
       act.enviar(String.format(Locale.US, "__nativo&&__nativo.pose(%.2f,%.5f,%.5f,%.5f,%.6f,%.6f,%.6f,%.6f,%d,'%s')", edad,
           p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw(), e == TrackingState.TRACKING ? 1 : e == TrackingState.PAUSED ? 0 : -1, fps));
-      if (conManos && manos != null && manos.libre()) {
+      espacio.cuadro(sesion, fr, cam);
+      boolean paraManos = conManos && manos != null && manos.libre(), paraVer = espacio.quiereFoto() && e == TrackingState.TRACKING;
+      if (paraManos || paraVer) {
         Image im = null;
         try {
           im = fr.acquireCameraImage();
           CameraIntrinsics ci = cam.getImageIntrinsics();
           /* (lo que hay que girar la foto para que quede derecha en la pantalla) */
           int giro = (orientacionSensor - rotacionPantalla() + 360) % 360;
-          manos.procesar(im, ts, edad, ci.getFocalLength(), ci.getImageDimensions(), giro);
+          if (paraManos) manos.procesar(im, ts, edad, ci.getFocalLength(), ci.getImageDimensions(), giro);
+          if (paraVer) espacio.foto(im, p, edad, ci.getFocalLength(), giro);
         } catch (NotYetAvailableException x) { /* todavía no */ }
         finally { if (im != null) im.close(); }
       }

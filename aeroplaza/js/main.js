@@ -52,6 +52,8 @@ import { VR } from './vr.js';
 import { ManosCamara } from './manos-camara.js';
 import { Nativo, ManosNativas } from './nativo.js';
 import { Manos } from './manos.js';
+import { Espacio } from './espacio.js';
+import { Ventanas } from './ventanas.js';
 import { VisorXR } from './vr-xr.js';
 import { candidatasCopias, instanciarCopias, revisarCopias } from './instanciar.js';
 import { Sonido } from '../../brillo/js/sonido.js';
@@ -153,11 +155,34 @@ async function iniciar() {
   let tXR = 0;
   /* las manos del VR (manos.js), por la cámara del celu (manos-camara.js, MediaPipe en un worker) */
   const manos = new Manos();
+  /* tu espacio (con ARCore) y las ventanas de prueba en el mundo del juego (sin 6DoF) */
+  const espacio = new Espacio({ motor, manos, vr, sonar: (n) => J.sfx(n),
+    /* (del cuarto al juego: el VR sigue, con ARCore y las manos; la vista se alinea de nuevo) */
+    alJugar: () => { vr.ar0 = null; vr.qListo = false; vr.decir(t('mn_manos_listas'), 4); },
+    alSalir: () => vr.salir() });
+  const ventanasMundo = new Ventanas({ conSeis: false, alSonar: (n) => J.sfx(n), alAccion: (id) => accionVentanas(id) });
+  manos.escena.add(ventanasMundo.grupo); manos.extra = ventanasMundo;
+  const accionVentanas = (id) => {
+    if (id === 'volver') ventanasMundo.cerrarPantalla();
+    else if (id === 'cerrar_todo') ventanasMundo.cerrarTodas();
+    else if (id === 'salir') vr.salir();
+    else ventanasMundo.abrir(id, motor.camara.position, motor.camara.quaternion);
+  };
+  const abrirPantallaMundo = () => {
+    const c = motor.camara, f = new THREE.Vector3(0, 0, -1).applyQuaternion(c.quaternion); f.y = 0; f.normalize();
+    const pos = c.position.clone().addScaledVector(f, 0.85); pos.y -= 0.1;
+    ventanasMundo.abrirPantalla('🪟 ' + t('mn_ventanas').replace('🪟 ', ''), [
+      { id: 'lugar', texto: '🧭 ' + t('vt_lugar') }, { id: 'reloj', texto: '🕒 ' + t('vt_reloj') }, { id: 'pizarra', texto: '✍ ' + t('vt_pizarra') },
+      { id: 'burbujas', texto: '🫧 ' + t('vt_burbujas') }, { id: 'cerrar_todo', texto: '🧹 ' + t('vt_cerrar_todo') }, { id: 'volver', texto: '▶ ' + t('vt_volver'), principal: true },
+    ], pos, c.position, t('vt_sin6dof'));
+  };
   let camManos = null, camWeb = null, camNativa = null;
   const alLlegar = (lista, tt, llego, cupo) => { if (manos.activa) manos.recibirCamara(lista, tt, llego, cupo); };
   /* (en la APK con ARCore, las manos son las de Android: la cámara es de ARCore y la web no la puede
      abrir; si ARCore no anda, las de la web) */
-  const laCamara = () => (camManos = Nativo.hay && Nativo.puedeAR && !Nativo.estado.startsWith('error') && Nativo.estado !== 'sin-permiso'
+  /* (sinAR: se eligió el VR sin ARCore, vuelta 29: las manos van con la cámara de la web) */
+  let sinAR = false;
+  const laCamara = () => (camManos = !sinAR && Nativo.hay && Nativo.puedeAR && !Nativo.estado.startsWith('error') && Nativo.estado !== 'sin-permiso'
     ? (camNativa ||= new ManosNativas({ alLlegar, quiereDos: () => manos.prueba.length > 0 }))
     : (camWeb ||= Object.assign(new ManosCamara({ alLlegar }),
       /* (para la carrera de la GPU: si la red en la placa le saca cuadros al dibujo) */
@@ -246,12 +271,20 @@ async function iniciar() {
     probarPuestos(P) { estudio?.ponerApariencia({ ...G.A, ...P }); estudio?.probando(Object.keys(P).length > 0); },
     festejarProbador() { estudio?.festejar(); },
     /* el modo VR (vr.js): sin la interfaz ni los dedos, la cabeza mueve la cámara */
-    entrarVR(sbs, conManos = G.opciones.vrManos) {
+    /* conAR: con ARCore (la APK); false si se eligió sin (solo el giroscopio) */
+    entrarVR(sbs, conManos = G.opciones.vrManos, { conAR = true } = {}) {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
-      vr.verFps = !!G.opciones.vrFps;
-      const p = vr.entrar(sbs, { raiz: UI.raiz, cam, avisar: (x) => UI.avisar(x), alSalir: () => { apagarManos(); ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
+      vr.verFps = !!G.opciones.vrFps; sinAR = !conAR;
+      const p = vr.entrar(sbs, { raiz: UI.raiz, cam, conAR, avisar: (x) => UI.avisar(x), alSalir: () => { espacio.cerrar(); ventanasMundo.limpiar(); apagarManos(); sinAR = false; ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
       manos.menu.fps = vr.verFps; manos.suavidad = G.opciones.vrSuave || 'media';
       if (conManos) p.then(() => { if (vr.activo) prenderManos(); });
+      return p;
+    },
+    /* TU ESPACIO (espacio.js): con ARCore, el cuarto de verdad (escaneo, las manos en la mesa, la pantalla
+       y las ventanas). Va dentro del modo VR (la capa de toques, la pantalla completa); las manos siempre */
+    entrarEspacio(sbs) {
+      const p = J.entrarVR(sbs, false, { conAR: true });
+      p.then(() => { if (!vr.activo) return; espacio.entrar(sbs); prenderManos(); });
       return p;
     },
     /* con un visor de verdad: el bucle es el del visor (hasta 120 Hz) y las manos son las del visor */
@@ -267,6 +300,10 @@ async function iniciar() {
       return true;
     },
     salirVR() { vr.salir(); },
+    /* (la APK con ARCore: se puede elegir tu espacio) */
+    get hayAR() { return Nativo.hay && Nativo.puedeAR; },
+    /* la pantalla de las ventanas de prueba en el mundo (lo mismo que el menú de la palma) */
+    abrirVentanasMundo() { abrirPantallaMundo(); },
     get enVR() { return vr.activo; },
     cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
@@ -758,6 +795,8 @@ async function iniciar() {
     if (!enJuego || !reino) { return; }
     /* mirando por el telescopio: el juego queda quieto y se dibuja el cielo */
     if (estelario.abierto) { estelario.cuadro(dt, dibujar); return; }
+    /* en tu espacio (con ARCore): el juego queda quieto y se dibuja el cuarto (atrás o Escape, sale) */
+    if (espacio.activo) { const E0 = ent.leer(); if (E0.pausa || !vr.activo) { espacio.cerrar(); vr.salir(); return; } espacio.cuadro(dt, dibujar); return; }
     const E = ent.leer();
     /* (una ventana, una charla o el probador son de la interfaz plana: en el visor no se verían, así que se sale del VR) */
     if (vr.activo && (UI.ventanaAbierta || enDialogo || probador || estelario.abierto)) vr.salir();
@@ -964,6 +1003,7 @@ async function iniciar() {
          el VR del celu; con eso la mano del visor no se perdía nunca) */
       const ev = manos.actualizar(dt, visor.activo ? performance.now() : vr.tVer || performance.now(), {
         cabezaP: motor.camara.position, cabezaQ: motor.camara.quaternion, interactivos: apuntablesVR(),
+        apuntar: ventanasMundo.hayAlgo ? (M, k) => ventanasMundo.apunta[k] : null,
         altura: (x, z, y = 1e4) => reino.mundo.suelo(x, z, y, 0).y, sePuede: sePuedeVR,
         tocar: (p) => {
           if (reino.burbujas?.tocar(p)) { J.sfx('pop'); contar('burbuja'); }
@@ -979,8 +1019,15 @@ async function iniciar() {
           if (e.accion === 'izq' || e.accion === 'der') { vr.base += e.accion === 'izq' ? Math.PI / 4 : -Math.PI / 4; parpadeo = 0.16; }
           else if (e.accion === 'caminar') vr.camina = !vr.camina;
           else if (e.accion === 'fps') { vr.ponerFps(e.fps); G.opciones.vrFps = e.fps; Guardado.guardar(); }
+          else if (e.accion === 'ventanas') { if (ventanasMundo.pantalla) ventanasMundo.cerrarPantalla(); else abrirPantallaMundo(); }
           else if (e.accion === 'salir') vr.salir();
         }
+      }
+      /* las ventanas de prueba en el mundo (sin 6DoF): las manos las tocan, las agarran y las mueven */
+      if (ventanasMundo.hayAlgo) {
+        const P = [];
+        for (const [k, M] of manos.manos.entries()) if (M.visible && M.alfa > 0.5) P.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
+        ventanasMundo.actualizar(dt, motor.camara.position, motor.camara.quaternion, P);
       }
     }
     if (parpadeo > 0) { parpadeo = Math.max(0, parpadeo - dt); motor.pFinal.uniforms.uFundido.value = Math.sin(Math.min(1, parpadeo / 0.22) * Math.PI); motor.pFinal.uniforms.uColorFundido.value.set('#0b2a44'); }
@@ -1063,7 +1110,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { visor, VisorXR, ManosCamara, Nativo, manos, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

@@ -35,7 +35,7 @@ import java.util.List;
    window.AeroplazaNativo (JS → Java) y window.__nativo (Java → JS, js/nativo.js) */
 public class MainActivity extends Activity {
   /* (los assets por https: la web los ve como un sitio seguro, con cámara, workers y módulos) */
-  static final String BASE = "https://appassets.androidplatform.net/assets/";
+  static final String RAIZ_WEB = "https://appassets.androidplatform.net/", BASE = RAIZ_WEB + "assets/";
   static final int PERMISOS_WEB = 1, PERMISOS_AR = 2;
 
   WebView web;
@@ -63,7 +63,15 @@ public class MainActivity extends Activity {
         .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this)).build();
     web.setWebViewClient(new WebViewClientCompat() {
       @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
-        return cargador.shouldInterceptRequest(r.getUrl());
+        /* (la última foto de la cámara para ver a través, Espacio.java: se pide por número, sin guardarla) */
+        Uri u = r.getUrl();
+        if ("appassets.androidplatform.net".equals(u.getHost()) && u.getPath() != null && u.getPath().startsWith("/camara/")) {
+          Ar a = ar; byte[] j = a == null ? null : a.espacio.jpeg;
+          if (j == null) return new WebResourceResponse("image/jpeg", null, 404, "No", null, null);
+          java.util.Map<String, String> h = new java.util.HashMap<>(); h.put("Cache-Control", "no-store");
+          return new WebResourceResponse("image/jpeg", null, 200, "OK", h, new java.io.ByteArrayInputStream(j));
+        }
+        return cargador.shouldInterceptRequest(u);
       }
       /* (los links de afuera, en el navegador) */
       @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -164,6 +172,10 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void arParar() { runOnUiThread(() -> { if (ar != null) ar.parar(); }); }
     @JavascriptInterface public void arManos(final boolean si) { runOnUiThread(() -> { if (ar != null) ar.manos(si); }); }
     /* (el juego tiene una mano a prueba: buscar dos en cada foto, para verlas juntas) */
+    /* tu espacio: escanear el cuarto (planos y profundidad), la cámara para ver a través, y empezar de cero */
+    @JavascriptInterface public void arEscanear(final boolean si) { Ar a = ar; if (a != null) a.escanear(si); }
+    @JavascriptInterface public void arPasante(final boolean si) { Ar a = ar; if (a != null) a.pasante(si); }
+    @JavascriptInterface public void arOlvidar() { Ar a = ar; if (a != null) a.espacio.olvidar(); }
     @JavascriptInterface public void manosDos(final boolean si) { Ar a = ar; if (a != null && a.manos != null) a.manos.quiereDos = si; }
     @JavascriptInterface public void flash(final boolean si) { runOnUiThread(() -> { if (ar != null) ar.flash(si); }); }
     @JavascriptInterface public void vibrar(int ms) {

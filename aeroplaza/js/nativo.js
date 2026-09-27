@@ -8,7 +8,10 @@
    - LAS MANOS con MediaPipe de Android, en la GPU, sobre las fotos de ARCore
      (con ARCore la cámara es suya: la web no la puede abrir). Llegan como las
      de la web (manos-camara.js) y siguen por el mismo camino (manos.js).
-   Java → JS: window.__nativo.pose / .manos / .estado. JS → Java:
+   - TU ESPACIO (Espacio.java, js/espacio.js): los planos del cuarto, lo demás
+     en cubitos (la profundidad) y la foto de la cámara para ver a través.
+   Java → JS: window.__nativo.pose / .manos / .estado / .planos / .voxeles /
+   .foto / .olvidado. JS → Java:
    window.AeroplazaNativo (MainActivity.java › Puente). Sin la APK, nada de
    esto existe y el juego va como siempre.
    ========================================================================== */
@@ -27,6 +30,9 @@ export const Nativo = {
   fps: '?',
   alManos: null,
   esperas: [],
+  /* tu espacio: 'profundidad' (Depth API) · 'puntos' (sin profundidad: la nube de puntos) · '' */
+  espacio: '',
+  alPlanos: null, alVoxeles: null, alFoto: null, alOlvidado: null,
   /* 'si' · 'instalar' · 'espera' · 'no' */
   arEstado() { try { return N()?.arEstado() || 'no'; } catch { return 'no'; } },
   get puedeAR() { const e = this.arEstado(); return e === 'si' || e === 'instalar'; },
@@ -34,6 +40,9 @@ export const Nativo = {
   arParar() { try { N()?.arParar(); } catch { /* sin APK */ } this.pose = this.poseAntes = null; },
   arManos(si) { try { N()?.arManos(!!si); } catch { /* sin APK */ } },
   manosDos(si) { try { N()?.manosDos?.(!!si); } catch { /* sin APK */ } },
+  arEscanear(si) { try { N()?.arEscanear?.(!!si); } catch { /* sin APK */ } },
+  arPasante(si) { try { N()?.arPasante?.(!!si); } catch { /* sin APK */ } },
+  arOlvidar() { try { N()?.arOlvidar?.(); } catch { /* sin APK */ } },
   flash(si) { try { N()?.flash(!!si); } catch { /* sin APK */ } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
   /* ARCore siguiendo, con una pose reciente */
@@ -56,8 +65,14 @@ window.__nativo = {
     if (Nativo.estado !== 'corre') { Nativo.estado = 'corre'; avisarEspera(); }
   },
   manos(d) { Nativo.alManos?.(d); },
+  /* tu espacio: los planos (todos, cada 400 ms), los cubitos nuevos (índices de VOX m) y la foto */
+  planos(l) { Nativo.alPlanos?.(l); },
+  voxeles(v, vox) { Nativo.alVoxeles?.(v, vox); },
+  foto(d) { Nativo.alFoto?.(d); },
+  olvidado() { Nativo.alOlvidado?.(); },
   estado(e) {
     if (/^manos (GPU|CPU)$/.test(e)) Nativo.manosListas = e.slice(6);
+    else if (/^espacio /.test(e)) Nativo.espacio = e.slice(8);
     else Nativo.estado = e;
     avisarEspera();
   }

@@ -1,0 +1,201 @@
+// TU ESPACIO (js/espacio.js, android/…/Espacio.java), sin celu: Android de mentira que manda lo que
+// mandaría ARCore en un cuarto: la pose (caminando), los planos (piso, dos paredes, una mesa), los
+// cubitos de una caja (la profundidad), la foto de la cámara (passthrough) y una mano apoyada en la mesa
+// que MediaPipe ve un 20 % más chica de lo que es (una mano grande: la cree más cerca).
+// - el menú del VR pregunta por ARCore (tu espacio, directo al juego o sin);
+// - tu espacio prende el escaneo y la cámara, clasifica piso, paredes y mesa, junta los cubitos y pone la foto;
+// - con la mano sobre la mesa mide la escala (1/0,8 = 1,25) y la guarda;
+// - la pantalla aparece arriba de la mesa; con la mirada y un toque se abre una ventana;
+// - la ventana se agarra por la barra (pellizco), se mueve, se pega a la pared y se cierra con la yema;
+// - "Jugar" pasa al juego en VR con ARCore y las manos; sin ARCore, las ventanas van en el mundo del juego.
+//     node pruebas/espacio.mjs [SBS=1: con visor, la pantalla partida]
+import path from 'node:path';
+import { navegador, abrir, avanzar, SAL } from './comun.mjs';
+
+const SBS = process.env.SBS === '1', FIN = SBS ? '-sbs' : '';
+const nav = await navegador();
+let bien = 0, mal = 0;
+const prueba = (n, ok, extra = '') => { ok ? bien++ : mal++; console.log(`${ok ? '✓' : '✗'} ${n}${extra ? ' · ' + extra : ''}`); };
+const { pag, ctx, errores } = await abrir(nav, 'directo&pausa&calidad=baja', { ancho: 844, alto: 390, movil: true });
+await pag.addInitScript(() => {
+  window.__llamadas = [];
+  const anota = (n) => (...a) => { window.__llamadas.push([n, ...a]); };
+  window.AeroplazaNativo = {
+    version: () => '1', arEstado: () => 'si',
+    arIniciar: (m) => { window.__llamadas.push(['arIniciar', m]); setTimeout(() => window.__nativo?.estado('corre'), 30); },
+    arParar: anota('arParar'), arManos: anota('arManos'), manosDos: anota('manosDos'), flash: anota('flash'), vibrar: anota('vibrar'),
+    arEscanear: (si) => { window.__llamadas.push(['arEscanear', si]); if (si) setTimeout(() => window.__nativo?.estado('espacio profundidad'), 10); },
+    arPasante: anota('arPasante'), arOlvidar: anota('arOlvidar'),
+  };
+});
+/* la foto de la cámara: un JPEG hecho en la página (un cuarto dibujado), servido donde lo pide el juego */
+let jpeg = null;
+await ctx.route(/^https:\/\/appassets\.androidplatform\.net\/camara\//, (r) => r.fulfill({ body: jpeg, contentType: 'image/jpeg', headers: { 'access-control-allow-origin': '*' } }));
+await pag.reload();
+await pag.waitForFunction(() => window.__A && window.__A.reino && document.querySelector('.hud'), null, { timeout: 120000, polling: 250 });
+jpeg = Buffer.from((await pag.evaluate(() => { const c = document.createElement('canvas'); c.width = 320; c.height = 240; const g = c.getContext('2d');
+  const d = g.createLinearGradient(0, 0, 0, 240); d.addColorStop(0, '#d9cbb0'); d.addColorStop(0.55, '#c8b894'); d.addColorStop(0.56, '#7b5b3a'); d.addColorStop(1, '#5a4029'); g.fillStyle = d; g.fillRect(0, 0, 320, 240);
+  g.fillStyle = '#6d4a2c'; g.fillRect(90, 120, 150, 18); g.fillStyle = '#3c6e8f'; g.fillRect(20, 40, 60, 80); return c.toDataURL('image/jpeg', 0.8).split(',')[1]; })), 'base64');
+await avanzar(pag, 5, 1 / 30, false);
+
+/* 1) el menú del VR pregunta por ARCore */
+const pregunta = await pag.evaluate(async (sbs) => {
+  const { UI } = window.__A; UI.menuVR(); await new Promise((r) => setTimeout(r, 50));
+  document.querySelector(`.menu-vr [data-sbs="${sbs}"]`).click(); await new Promise((r) => setTimeout(r, 50));
+  return { ops: Array.from(document.querySelectorAll('.vr-ar [data-ar]')).map((b) => b.dataset.ar), texto: document.querySelector('.vr-ar p')?.textContent || '' };
+}, SBS ? '1' : '0');
+prueba('el VR pregunta si se usa ARCore (tu espacio, directo al juego o sin)', pregunta.ops.join() === 'espacio,juego,no', pregunta.ops.join());
+
+/* la pose de ARCore: la cámara del celu (x derecha, y arriba, mira a -z) con rumbo y cabeceo */
+await pag.evaluate(() => {
+  const { THREE } = window.__A;
+  window.__poner = (x, y, z, rumbo, cabeceo) => { const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(cabeceo, rumbo, 0, 'YXZ')); window.__pose = { p: [x, y, z], q: [q.x, q.y, q.z, q.w] }; };
+  window.__poner(0, 1.45, 0.4, 0, -0.35);
+  window.__manda = (n = 1, f = null) => { for (let i = 0; i < n; i++) { const P = window.__pose; window.__nativo.pose(18, ...P.p, ...P.q, 1, '60'); f?.(i); window.__A.paso(1 / 60, false); } };
+});
+await pag.evaluate(() => document.querySelector('.vr-ar [data-ar="espacio"]').click());
+await pag.waitForTimeout(150);
+await pag.evaluate(() => window.__manda(40));
+const e1 = await pag.evaluate(() => ({ activo: window.__A.espacio.activo, fase: window.__A.espacio.fase, vr: window.__A.vr.activo, ll: window.__llamadas.map((x) => x[0] + (x[1] === undefined ? '' : ':' + x[1])) }));
+prueba('tu espacio prende ARCore con las manos, el escaneo y la cámara', e1.activo && e1.vr && e1.ll.includes('arEscanear:true') && e1.ll.includes('arPasante:true') && e1.ll.some((x) => x.startsWith('arIniciar') || x.startsWith('arManos')), e1.ll.join(' '));
+prueba('con la pose de ARCore pasa a escanear', e1.fase === 'escaneo', e1.fase);
+
+/* 2) el cuarto: planos, cubitos y la foto */
+await pag.evaluate(() => {
+  const s = Math.SQRT1_2, poli = (a, b) => [-a, -b, a, -b, a, b, -a, b];
+  window.__planos = [
+    { i: 1, t: 0, p: [0, 0, -1, 0, 0, 0, 1], x: 3, z: 3, v: poli(1.5, 1.5) },                  // el piso
+    { i: 2, t: 2, p: [0, 1.2, -2.5, s, 0, 0, s], x: 3, z: 2.4, v: poli(1.5, 1.2) },            // pared de enfrente (normal +z)
+    { i: 3, t: 2, p: [-1.5, 1.2, -1, 0, 0, -s, s], x: 3, z: 2.4, v: poli(1.5, 1.2) },          // pared de la izquierda (normal +x)
+    { i: 4, t: 0, p: [0, 0.74, -0.6, 0, 0, 0, 1], x: 1.0, z: 0.8, v: poli(0.5, 0.4) },           // la mesa
+  ];
+  window.__nativo.planos(window.__planos);
+  /* una caja de 40 × 50 × 40 cm (la cáscara), en cubitos de 5 cm */
+  const v = [];
+  for (let x = -24; x < -16; x++) for (let y = 0; y < 10; y++) for (let z = -32; z < -24; z++) if (x === -24 || x === -17 || y === 9 || z === -32 || z === -25) v.push(x, y, z);
+  window.__nativo.voxeles(v, 0.05);
+  window.__nativo.foto({ n: 1, url: 'https://appassets.androidplatform.net/camara/1.jpg', e: 40, tx: 0.62, ty: 0.46, w: 320, h: 240, p: [...window.__pose.p, ...window.__pose.q] });
+});
+await pag.waitForTimeout(300);
+/* mirar alrededor: una vuelta entera */
+await pag.evaluate(() => window.__manda(360, (i) => { window.__poner(0, 1.45, 0.4, i / 360 * Math.PI * 2, -0.3); if (i % 20 === 0) window.__nativo.planos(window.__planos); }));
+await pag.evaluate(() => { window.__poner(0, 1.45, 0.4, 0, -0.35); window.__manda(10); });
+const e2 = await pag.evaluate(() => { const E = window.__A.espacio, c = {}; for (const P of E.planos.values()) c[P.clase] = (c[P.clase] || 0) + 1; return { ...E.datos, clases: c, vistos: Array.from(E.sectores).filter((x) => x >= 1).length, foto: E.foto.visible, sx: E.foto.scale.x.toFixed(2) }; });
+prueba('los planos quedan clasificados: piso, dos paredes y una mesa', e2.clases.piso === 1 && e2.clases.pared === 2 && e2.clases.mesa === 1 && Math.abs(e2.piso) < 0.01, JSON.stringify(e2.clases) + ` · piso a ${e2.piso}`);
+prueba('los cubitos de la caja se juntan', e2.vox > 200, `${e2.vox} cubitos`);
+prueba('la foto de la cámara llega y se pone en el mundo (a 9 m, del tamaño de lo que ve la cámara)', e2.fotos >= 1 && e2.foto && e2.sx === (2 * 9 * 0.62).toFixed(2), `${e2.fotos} fotos · ${e2.sx} m`);
+prueba('mirar alrededor llena la vuelta', e2.vistos >= 11, `${e2.vistos}/12`);
+await avanzar(pag, 1, 1 / 60, true);
+await pag.screenshot({ path: path.join(SAL, `espacio-escaneo${FIN}.png`) });
+
+/* 3) listo → las manos sobre la mesa. Un toque en la pantalla aprieta el botón principal */
+await pag.evaluate(() => { window.__A.vr.toque = true; window.__manda(3); });
+const f3 = await pag.evaluate(() => window.__A.espacio.fase);
+prueba('un toque en la pantalla aprieta "Listo" (con visor no se ve el dedo)', f3 === 'manos', f3);
+const rm = await pag.evaluate(async () => {
+  const A = window.__A, { THREE } = A;
+  /* el celu mirando la mesa (60° abajo); la mano apoyada, justo donde mira: la palma a 2 cm de la mesa */
+  window.__poner(0, 1.4, 0, 0, -Math.PI / 3); window.__manda(10);
+  const q = new THREE.Quaternion(...window.__pose.q), cam = new THREE.Vector3(...window.__pose.p), d = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+  const D = (0.76 - cam.y) / d.y;
+  const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0.06, 0.063, -0.02], [-0.07, 0.082, -0.025], [-0.022, 0.085, 0], [-0.025, 0.12, 0], [-0.026, 0.143, 0], [-0.027, 0.162, 0], [0, 0.088, 0], [0, 0.128, 0], [0, 0.153, 0], [0, 0.175, 0], [0.02, 0.083, 0], [0.022, 0.118, 0], [0.023, 0.14, 0], [0.024, 0.16, 0], [0.038, 0.075, 0], [0.042, 0.1, 0], [0.044, 0.118, 0], [0.045, 0.134, 0]];
+  const cen = [0, 5, 9, 13, 17].reduce((a, i) => a.map((v, k) => v + ABIERTA[i][k] / 5), [0, 0, 0]);
+  const TX = 0.62, TY = 0.46, ESCALA_MP = 0.8;
+  /* (en la cámara de three: la palma en (0, 0, -D); lo de MediaPipe es la forma 0,8 veces más chica) */
+  const mano = () => {
+    const I = [], W = [];
+    for (const p of ABIERTA) { const x = cen[0] - p[0], y = -cen[1] + p[1], z = -D + cen[2] - p[2]; I.push(0.5 + x / -z / (2 * TX), 0.5 - y / -z / (2 * TY), 0); W.push(ESCALA_MP * (x - 0), -ESCALA_MP * (y - 0), -ESCALA_MP * (z + D)); }
+    return { e: 25, tx: TX, ty: TY, ms: 12, w: 640, h: 480, g: 1, luz: 0.4, d: 'GPU', n: 1, m: [{ d: 1, c: 0.95, i: I, w: W }] };
+  };
+  const antes = A.manos.escalaMano;
+  for (let i = 0; i < 220 && !A.espacio.medida.der?.hecha; i++) { window.__manda(1); if (i % 2 === 0) window.__nativo.manos(mano()); await new Promise((r) => setTimeout(r, 4)); }
+  let guardada = null; try { guardada = +localStorage.getItem('aeroplaza.escalaMano'); } catch { /* nada */ }
+  return { antes, k: A.manos.escalaMano, hecha: !!A.espacio.medida.der?.hecha, cm: A.espacio.medida.der?.cm, guardada };
+});
+prueba('la mano sobre la mesa se mide: la escala sale 1/0,8 = 1,25 (±6 %)', rm.hecha && Math.abs(rm.k - 1.25) < 0.075, `${rm.antes} → ${rm.k?.toFixed(3)} · la mano mide ${rm.cm} cm`);
+prueba('la escala queda guardada', Math.abs(rm.guardada - rm.k) < 1e-6, String(rm.guardada));
+await avanzar(pag, 1, 1 / 60, true);
+await pag.screenshot({ path: path.join(SAL, `espacio-manos${FIN}.png`) });
+
+/* 4) seguir → la pantalla arriba de la mesa; con la mirada en un botón y un toque, una ventana */
+await pag.evaluate(() => { window.__poner(0, 1.45, 0.4, 0, -0.3); window.__A.vr.toque = true; window.__manda(3); });
+const rp = await pag.evaluate(() => {
+  const E = window.__A.espacio, P = E.ventanas.pantalla; if (!P) return { fase: E.fase };
+  const w = P.malla.getWorldPosition(new window.__A.THREE.Vector3());
+  return { fase: E.fase, pos: w.toArray().map((x) => +x.toFixed(2)), sobreMesa: w.y > 0.74 + 0.2 && Math.abs(w.z + 0.6) < 0.6 };
+});
+prueba('"Seguir" abre la pantalla, arriba de la mesa', rp.fase === 'pantalla' && rp.sobreMesa, JSON.stringify(rp));
+/* mirar el botón "Dónde estoy" y tocar */
+const mirarBoton = async (id) => pag.evaluate((id) => {
+  const A = window.__A, { THREE } = A, E = A.espacio, P = E.ventanas.pantalla, b = P.botones.find((x) => x.id === id);
+  window.__manda(30);   // (que termine de aparecer: crece con un rebote)
+  const loc = new THREE.Vector3(((b.x + b.w / 2) / P.W - 0.5) * P.ancho, (0.5 - (b.y + b.h / 2) / P.H) * P.alto, 0), w = P.malla.localToWorld(loc);
+  const ojo = new THREE.Vector3(0, 1.45, 0.4), d = w.clone().sub(ojo).normalize();
+  /* (la pose es la del celu: los ojos 6 cm detrás, así que el celu va 6 cm adelante por la mirada) */
+  const cel = ojo.clone().addScaledVector(d, 0.06);
+  window.__poner(cel.x, cel.y, cel.z, Math.atan2(-d.x, -d.z), Math.asin(d.y)); window.__manda(4);
+  A.vr.toque = true; window.__manda(3);
+  return E.ventanas.lista.length;
+}, id);
+const nV = await mirarBoton('lugar');
+prueba('con la mirada en "Dónde estoy" y un toque, se abre la ventana', nV === 1, `${nV} ventanas`);
+/* agarrarla por la barra con un pellizco (un puntero de mentira), llevarla cerca de la pared de la izquierda y soltar */
+const rv = await pag.evaluate(() => {
+  window.__manda(30);   // (que termine de aparecer)
+  const A = window.__A, { THREE } = A, E = A.espacio, V = E.ventanas.lista[0], cab = E.cabezaP.clone(), q = E.cabezaQ.clone();
+  const barra = V.malla.localToWorld(new THREE.Vector3(0, V.alto / 2 - 0.02, 0)), o = cab.clone().add(new THREE.Vector3(0.15, -0.3, 0));
+  const dir = (p) => p.clone().sub(o).normalize();
+  const P = (extra) => [{ id: 1, o, d: dir(barra), yema: null, pellizca: true, empezo: false, solto: false, ...extra }];
+  E.ventanas.actualizar(1 / 60, cab, q, P({ empezo: true }));
+  const agarrada = E.ventanas.agarres.has(1);
+  const destino = new THREE.Vector3(-1.38, 1.2, -0.9);
+  for (let i = 0; i < 60; i++) E.ventanas.actualizar(1 / 60, cab, q, [{ id: 1, o, d: dir(destino), yema: null, pellizca: true, empezo: false, solto: false }]);
+  E.ventanas.actualizar(1 / 60, cab, q, [{ id: 1, o, d: dir(destino), yema: null, pellizca: false, empezo: false, solto: true }]);
+  const p = V.malla.position, n = new THREE.Vector3(0, 0, 1).applyQuaternion(V.malla.quaternion);
+  return { agarrada, pegada: V.pegada, x: +p.x.toFixed(3), nx: +n.x.toFixed(2) };
+});
+prueba('la ventana se agarra por la barra con un pellizco y se mueve', rv.agarrada, JSON.stringify(rv));
+prueba('cerca de la pared se pega (a 1 cm, mirando para afuera)', rv.pegada && Math.abs(rv.x + 1.488) < 0.01 && rv.nx > 0.95, `x ${rv.x} · normal x ${rv.nx}`);
+/* cerrarla con la yema: la punta del dedo cruza el vidrio sobre la X */
+const rc = await pag.evaluate(() => {
+  const A = window.__A, { THREE } = A, E = A.espacio, V = E.ventanas.lista[0], cab = E.cabezaP.clone(), q = E.cabezaQ.clone();
+  const c = V.cerrar, x = ((c.x + c.w / 2) / V.W - 0.5) * V.ancho, y = (0.5 - (c.y + c.h / 2) / V.H) * V.alto;
+  for (const z of [0.03, 0.015, 0.008, 0.0]) E.ventanas.actualizar(1 / 60, cab, q, [{ id: 0, o: cab, d: new THREE.Vector3(0, 0, -1), yema: V.malla.localToWorld(new THREE.Vector3(x, y, z)), pellizca: false, empezo: false, solto: false }]);
+  return E.ventanas.lista.length;
+});
+prueba('con la yema sobre la X, la ventana se cierra', rc === 0, `${rc} ventanas`);
+/* abrir la pizarra y dibujar con la yema */
+await mirarBoton('pizarra');
+const rz = await pag.evaluate(() => {
+  const A = window.__A, { THREE } = A, E = A.espacio, V = E.ventanas.lista[0], cab = E.cabezaP.clone(), q = E.cabezaQ.clone();
+  for (let i = 0; i <= 20; i++) { const z = i === 0 ? 0.02 : -0.003; E.ventanas.actualizar(1 / 60, cab, q, [{ id: 0, o: cab, d: new THREE.Vector3(0, 0, -1), yema: V.malla.localToWorld(new THREE.Vector3(-0.12 + i * 0.012, -0.02 + Math.sin(i / 3) * 0.02, z)), pellizca: false, empezo: false, solto: false }]); }
+  const g = V.tinta.getContext('2d').getImageData(0, 0, V.tinta.width, V.tinta.height).data; let n = 0; for (let i = 3; i < g.length; i += 4) if (g[i] > 0) n++;
+  return { tipo: V.tipo, pintados: n };
+});
+prueba('en la pizarra se dibuja con la yema', rz.tipo === 'pizarra' && rz.pintados > 2000, `${rz.pintados} píxeles`);
+/* caminar: la ventana se queda en su lugar del cuarto */
+const rw = await pag.evaluate(() => { const E = window.__A.espacio, V = E.ventanas.lista[0], a = V.malla.position.clone(); window.__poner(0.8, 1.45, -0.2, 0.6, -0.2); window.__manda(30); return +V.malla.position.distanceTo(a).toFixed(4); });
+prueba('caminando, la ventana se queda en su lugar (6DoF)', rw < 1e-3, `se movió ${rw} m`);
+await pag.evaluate(() => { window.__poner(0, 1.45, 0.4, 0, -0.3); window.__manda(10); });
+await avanzar(pag, 1, 1 / 60, true);
+await pag.screenshot({ path: path.join(SAL, `espacio-pantalla${FIN}.png`) });
+
+/* 5) jugar: al juego en VR, con ARCore y las manos; el escaneo y la cámara se apagan */
+await pag.evaluate(() => window.__A.espacio.ventanas.cerrarTodas());
+await mirarBoton('jugar');
+const rj = await pag.evaluate(() => { const A = window.__A; window.__manda(10); return { espacio: A.espacio.activo, vr: A.vr.activo, manos: A.manos.activa, ll: window.__llamadas.slice(-6).map((x) => x[0] + ':' + x[1]) }; });
+prueba('"Jugar" pasa al juego en VR (con las manos), y apaga el escaneo y la cámara', !rj.espacio && rj.vr && rj.manos && rj.ll.includes('arEscanear:false') && rj.ll.includes('arPasante:false'), rj.ll.join(' '));
+await pag.evaluate(() => window.__A.J.salirVR());
+
+/* 6) sin ARCore: no se prende; las ventanas, en el mundo del juego (desde el menú de la palma) */
+await pag.evaluate(async () => { window.__llamadas.length = 0; const { UI } = window.__A; UI.menuVR(); await new Promise((r) => setTimeout(r, 50)); document.querySelector('.menu-vr [data-sbs="0"]').click(); await new Promise((r) => setTimeout(r, 50)); document.querySelector('.vr-ar [data-ar="no"]').click(); await new Promise((r) => setTimeout(r, 100)); });
+await avanzar(pag, 5, 1 / 30, false);
+const rn = await pag.evaluate(() => { const A = window.__A; A.J.abrirVentanasMundo(); const W = A.ventanasMundo; W.alAccion('reloj'); return { vr: A.vr.activo, ar: window.__llamadas.some((x) => x[0] === 'arIniciar'), pantalla: !!W.pantalla, ventanas: W.lista.length, enManos: W.grupo.parent === A.manos.escena, algo: A.manos.algo, seis: W.lista[0]?.conSeis }; });
+prueba('sin ARCore, el VR no lo prende', rn.vr && !rn.ar, JSON.stringify(rn));
+prueba('sin ARCore, la pantalla y las ventanas van en el mundo del juego (sin 6DoF)', rn.pantalla && rn.ventanas === 1 && rn.enManos && rn.algo && rn.seis === false);
+await pag.evaluate(() => window.__A.J.salirVR());
+prueba('al salir del VR se cierran las ventanas del mundo', await pag.evaluate(() => !window.__A.ventanasMundo.hayAlgo));
+prueba('sin errores en la página', !errores.some((e) => !/ERR_FAILED/.test(e)), errores.filter((e) => !/ERR_FAILED/.test(e)).slice(0, 3).join(' | '));
+await ctx.close(); await nav.close();
+console.log(`${bien} bien, ${mal} mal`);
+process.exit(mal ? 1 : 0);

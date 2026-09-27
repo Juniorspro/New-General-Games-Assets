@@ -76,7 +76,7 @@ export class VR {
     };
   }
   /* se llama desde el toque del botón (en iOS el permiso tiene que pedirse ahí) */
-  async entrar(sbs, { raiz, cam, alSalir, avisar, xr = null }) {
+  async entrar(sbs, { raiz, cam, alSalir, avisar, xr = null, conAR = true }) {
     if (this.activo) return true;   // (ya adentro: una segunda capa y el "antes" de la cámara quedaban mal)
     /* con un visor de verdad (vr-xr.js) la cabeza y el dibujo son del visor: sin sensores ni capa */
     if (xr) {
@@ -102,7 +102,8 @@ export class VR {
     this.capa(raiz);
     /* (en la APK, con ARCore: la cabeza en 6 ejes; el giroscopio queda por si ARCore se pierde) */
     this.ar0 = null; this.desplazo.set(0, 0, 0); this.qListo = false;
-    if (Nativo.hay && Nativo.puedeAR) Nativo.arIniciar(false);
+    /* (conAR: false si se eligió el VR sin ARCore, vuelta 29) */
+    if (conAR && Nativo.hay && Nativo.puedeAR) Nativo.arIniciar(false);
     return true;
   }
   salir() {

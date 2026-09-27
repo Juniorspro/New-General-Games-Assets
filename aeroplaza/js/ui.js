@@ -885,7 +885,12 @@ export const UI = {
     const ponerSuave = (k) => { J.G.opciones.vrSuave = k; c.querySelectorAll('[data-suave]').forEach((b) => b.classList.toggle('si', b.dataset.suave === k)); $('.vr-suave small', c).textContent = t('vr_suave_' + k + '_d'); };
     ponerSuave(['rapida', 'media', 'suave'].includes(J.G.opciones.vrSuave) ? J.G.opciones.vrSuave : 'media');
     c.querySelectorAll('[data-suave]').forEach((b) => b.onclick = () => { ponerSuave(b.dataset.suave); Guardado.guardar(); J.sfx('elegir'); });
-    c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarVR(b.dataset.sbs === '1'); });
+    c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => {
+      const sbs = b.dataset.sbs === '1';
+      /* (vuelta 29: en la APK, con ARCore disponible, se pregunta si se usa) */
+      if (J.hayAR) { J.sfx('elegir'); this.preguntarAR(c, sbs, (f) => { elegido = true; J.sfx('sesion'); v.cerrar(); f(); }, () => { elegido = true; v.cerrar(); this.menuVR(alVolver); }); return; }
+      elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarVR(sbs);
+    });
     /* con un visor de verdad (Quest, Pico, la compu con visor): una tercera opción, arriba de todo */
     VisorXR.soportado().then((si) => {
       if (!si || !c.isConnected) return;
@@ -893,6 +898,20 @@ export const UI = {
       c.querySelector('.vr-opciones').prepend(b); c.querySelector('.vr-opciones').classList.add('con-xr');
       b.onclick = () => { elegido = true; J.sfx('sesion'); v.cerrar(); J.entrarXR(); };
     });
+  },
+  /* ¿con ARCore? Tu espacio (el cuarto en 6 ejes: escanear, las manos en la mesa, la pantalla y las
+     ventanas), directo al juego en 6 ejes, o sin ARCore (el giroscopio; las ventanas, en el mundo) */
+  preguntarAR(c, sbs, ir, atras) {
+    const J = this.J;
+    c.innerHTML = `<div class="vr-ar"><p>${t('vr_ar_texto')}</p><div class="vr-ar-ops">
+      <button class="vr-op vr-ar-si" data-ar="espacio"><i class="vr-ar-cuarto" aria-hidden="true"><span></span><span></span><span></span></i><b>${t('vr_ar_espacio')}</b><small>${t('vr_ar_espacio_d')}</small></button>
+      <button class="vr-op" data-ar="juego"><b>${t('vr_ar_juego')}</b><small>${t('vr_ar_juego_d')}</small></button>
+      <button class="vr-op" data-ar="no"><b>${t('vr_ar_no')}</b><small>${t('vr_ar_no_d')}</small></button></div>
+      <button class="vr-ar-atras">← ${t('vr_ar_atras')}</button></div>`;
+    c.querySelector('[data-ar="espacio"]').onclick = () => ir(() => J.entrarEspacio(sbs));
+    c.querySelector('[data-ar="juego"]').onclick = () => ir(() => J.entrarVR(sbs));
+    c.querySelector('[data-ar="no"]').onclick = () => ir(() => J.entrarVR(sbs, undefined, { conAR: false }));
+    c.querySelector('.vr-ar-atras').onclick = () => { J.sfx('elegir'); atras(); };
   },
   /* después de un minijuego: ver un anuncio duplica los orbes ganados (si quedan anuncios hoy) */
   botonDuplicar(c, premio) {
