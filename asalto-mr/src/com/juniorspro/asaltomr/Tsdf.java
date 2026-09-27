@@ -1,7 +1,6 @@
 package com.juniorspro.asaltomr;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -57,9 +56,19 @@ public final class Tsdf {
         Bloque(int bx, int by, int bz) { this.bx = bx; this.by = by; this.bz = bz; }
     }
 
-    private final HashMap<Long, Bloque> bloques = new HashMap<>();
+    /**
+     * Los bloques, en una tabla hash propia de claves long (direccionamiento
+     * abierto): un HashMap<Long> crea un objeto por cada búsqueda, y se busca
+     * en cada paso de cada rayo.
+     */
+    private long[] claves = new long[4096];
+    private Bloque[] valores = new Bloque[4096];
+    private int cantidad;
+    private final ArrayList<Bloque> todos = new ArrayList<>();
     private final ArrayList<Bloque> sucios = new ArrayList<>();
     private Bloque ultimo;                          // caché de la última búsqueda (la mayoría cae en el mismo bloque)
+    /** Submuestreo adaptativo de los rayos (ver integrar). */
+    public boolean adaptivo = true;
     /** Tope de memoria: cada bloque pesa ~28 KB (1800 ≈ 50 MB). Lleno, se sigue afinando lo que ya hay. */
     public int maxBloques = 1800;
 
@@ -72,20 +81,55 @@ public final class Tsdf {
         return ((long) (bx & 0x1FFFFF) << 42) | ((long) (by & 0x1FFFFF) << 21) | (long) (bz & 0x1FFFFF);
     }
 
+    private static int dispersar(long k) {
+        k ^= k >>> 33; k *= 0xff51afd7ed558ccdL; k ^= k >>> 33;
+        return (int) k;
+    }
+
     private Bloque bloque(int bx, int by, int bz, boolean crear) {
         Bloque u = ultimo;
         if (u != null && u.bx == bx && u.by == by && u.bz == bz) return u;
-        Long k = clave(bx, by, bz);
-        Bloque b = bloques.get(k);
-        if (b == null && crear && bloques.size() < maxBloques) { b = new Bloque(bx, by, bz); bloques.put(k, b); }
-        if (b != null) ultimo = b;
+        long k = clave(bx, by, bz);
+        int m = claves.length - 1, i = dispersar(k) & m;
+        while (true) {
+            Bloque b = valores[i];
+            if (b == null) break;
+            if (claves[i] == k) { ultimo = b; return b; }
+            i = (i + 1) & m;
+        }
+        if (!crear || cantidad >= maxBloques) return null;
+        Bloque b = new Bloque(bx, by, bz);
+        claves[i] = k; valores[i] = b; cantidad++;
+        todos.add(b);
+        if (cantidad * 2 > claves.length) agrandar();
+        ultimo = b;
         return b;
     }
 
-    public synchronized int cantidadBloques() { return bloques.size(); }
+    private void agrandar() {
+        long[] ck = claves;
+        Bloque[] cv = valores;
+        claves = new long[ck.length * 2];
+        valores = new Bloque[ck.length * 2];
+        int m = claves.length - 1;
+        for (int j = 0; j < ck.length; j++) {
+            if (cv[j] == null) continue;
+            int i = dispersar(ck[j]) & m;
+            while (valores[i] != null) i = (i + 1) & m;
+            claves[i] = ck[j]; valores[i] = cv[j];
+        }
+    }
+
+    public synchronized int cantidadBloques() { return cantidad; }
+
+    /** Todos los bloques (copia). */
+    public synchronized List<Bloque> bloques() { return new ArrayList<>(todos); }
 
     public synchronized void vaciar() {
-        bloques.clear();
+        java.util.Arrays.fill(claves, 0);
+        java.util.Arrays.fill(valores, null);
+        cantidad = 0;
+        todos.clear();
         sucios.clear();
         ultimo = null;
     }
@@ -99,6 +143,9 @@ public final class Tsdf {
     }
 
     public synchronized Bloque bloqueEn(int bx, int by, int bz) { return bloque(bx, by, bz, false); }
+
+    /** El bloque (o null), sin candado: para quien ya lo tiene tomado. */
+    Bloque bloqueSinCandado(int bx, int by, int bz) { return bloque(bx, by, bz, false); }
 
     private static int piso(float v) { int i = (int) v; return v < i ? i - 1 : i; }
 
@@ -136,6 +183,12 @@ public final class Tsdf {
                         if (raw == 0) continue;
                         float prof = raw * 0.001f;
                         if (prof < 0.2f || prof > maxM) continue;
+                        // de cerca, muchos rayos caen en el mismo voxel (a 2 m, un píxel es 1.5 cm y el voxel 7):
+                        // alcanza con ~2×2 rayos por cara de voxel. De lejos se usan todos.
+                        if (adaptivo) {
+                            int k = (int) (vs * fx / (2f * prof * paso));
+                            if (k > 1) { if (k > 4) k = 4; if ((u / paso) % k != 0 || (v / paso) % k != 0) continue; }
+                        }
                         int c = conf == null ? 255 : (conf[i] & 0xFF);
                         if (c < confMin) continue;
                         // punto en la cámara (OpenGL) y al mundo
@@ -408,12 +461,19 @@ public final class Tsdf {
      * Pone un valor supuesto en un voxel que nadie midió (o que ya era
      * supuesto). Lo medido no se toca. Devuelve true si escribió.
      */
-    boolean inferirSinCandado(int gx, int gy, int gz, float d, int etiqueta) {
+    boolean inferirSinCandado(int gx, int gy, int gz, float d, int etiqueta) { return inferirSinCandado(gx, gy, gz, d, etiqueta, 1); }
+
+    /**
+     * Como inferir, pero también pisa lo medido que se vio menos de pesoMax
+     * veces (y no es aire): lo que la malla todavía no cree (el piso de
+     * refilón debajo de un objeto).
+     */
+    boolean inferirSinCandado(int gx, int gy, int gz, float d, int etiqueta, int pesoMax) {
         Bloque b = bloque(gx >> 4, gy >> 4, gz >> 4, true);
         if (b == null) return false;
         int i = idx(gx & 15, gy & 15, gz & 15);
         boolean eraInf = (b.info[i] & INFERIDO) != 0;
-        if (b.w[i] != 0 && !eraInf) return false;   // lo medido (también el aire medido) no se toca
+        if (b.w[i] != 0 && !eraInf && (b.w[i] >= pesoMax || (b.info[i] & AIRE) != 0)) return false;   // lo medido (también el aire medido) no se toca
         if (eraInf && Math.abs(b.d[i] - d) < 0.05f) return true;   // ya estaba así: no re-mallar por nada
         b.d[i] = d;
         b.w[i] = (byte) PESO_INFERIDO;
@@ -441,5 +501,5 @@ public final class Tsdf {
         marcar(b);
     }
 
-    static int pisoDe(float v) { return piso(v); }
+    public static int pisoDe(float v) { return piso(v); }
 }

@@ -4,14 +4,18 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * El hilo del escaneo. El hilo de dibujo le deja una imagen de profundidad
- * (con su pose y sus intrínsecos) cuando está libre; éste la mete al volumen,
- * vuelve a mallar los bloques que cambiaron y deja las mallas en una cola para
- * que el hilo de dibujo las suba a la GPU. Así la cámara nunca espera al
- * escaneo: si está ocupado, esa imagen se saltea.
+ * El escaneo, en DOS hilos (como Aeroplaza, que malla en su propio hilo):
  *
- * Cada ~1.5 s también arma el mapa de zonas (Mapa): la IA del entorno, y el
- * completado de lo que no se ve (que escribe en el volumen y se re-malla).
+ *  - "escaneo": el hilo de dibujo le deja una imagen de profundidad (con su
+ *    pose y sus intrínsecos) cuando está libre; éste SÓLO la mete al volumen
+ *    y enseguida queda libre para la próxima. Así se integran muchas más
+ *    imágenes (antes esperaba a que terminara de mallar).
+ *  - "malla": vuelve a mallar los bloques que cambiaron (de a tandas, cada
+ *    30 ms) y deja las mallas en una cola para que el hilo de dibujo las suba
+ *    a la GPU; y cada segundo arma el mapa de zonas (Mapa: la IA del entorno
+ *    y el completado) y busca los HUECOS para sellar (Sellador).
+ *
+ * La cámara nunca espera al escaneo: si está ocupado, esa imagen se saltea.
  */
 final class Escaneo implements Runnable {
     /** Una malla lista (o null en malla = borrar ese bloque). */
@@ -31,8 +35,14 @@ final class Escaneo implements Runnable {
     volatile int generacion;
     final ConcurrentLinkedQueue<Resultado> listos = new ConcurrentLinkedQueue<>();
     private final Mallador mallador = new Mallador();
-    private Thread hilo;
+    private Thread hilo, hiloMalla;
     private volatile boolean seguir;
+    /** Los huecos (lo que ve la vista de sellado) y si se sellan solos. */
+    final Sellador sellador = new Sellador();
+    volatile boolean sellar = true;
+    /** Buscar huecos (si no, ni se buscan) y sellar una vez los que haya (lo pide el menú). */
+    volatile boolean buscarHuecos = true, sellarYa;
+    volatile float msMalla;
 
     // el lugar donde se deja la imagen
     private short[] mm = new short[0];
@@ -54,19 +64,24 @@ final class Escaneo implements Runnable {
         hilo = new Thread(this, "escaneo");
         hilo.setPriority(Thread.NORM_PRIORITY - 1);
         hilo.start();
+        hiloMalla = new Thread(this::mallar, "malla");
+        hiloMalla.setPriority(Thread.NORM_PRIORITY - 1);
+        hiloMalla.start();
     }
 
     void parar() {
         seguir = false;
         synchronized (this) { notifyAll(); }
         if (hilo != null) { try { hilo.join(500); } catch (InterruptedException ignorada) { } }
-        hilo = null;
+        if (hiloMalla != null) { try { hiloMalla.join(500); } catch (InterruptedException ignorada) { } }
+        hilo = hiloMalla = null;
     }
 
     /** Empezar de cero (otro tamaño de voxel, o "reiniciar escaneo"). */
     synchronized void reiniciar(float voxel) {
         tsdf = new Tsdf(voxel);
         mapa.olvidar();
+        sellador.olvidar();
         generacion++;
         listos.clear();
         lleno = false;
@@ -140,35 +155,55 @@ final class Escaneo implements Runnable {
 
     private void correr() {
         while (seguir) {
-            boolean hayImagen;
             synchronized (this) {
-                if (seguir && !lleno) { try { wait(400); } catch (InterruptedException e) { return; } }
+                while (seguir && !lleno) { try { wait(400); } catch (InterruptedException e) { return; } }
                 if (!seguir) return;
-                hayImagen = lleno;
             }
             long t0 = System.nanoTime();
             Tsdf t = tsdf;
-            int gen = generacion;
             // la imagen se lee sin candado: el hilo de dibujo no la toca mientras lleno == true
-            if (hayImagen) t.integrar(mm, hayConf ? conf : null, w, h, fx, fy, cx, cy, pose, maxM, 90, paso, hayEtq ? etq : null);
-            long ahora = System.currentTimeMillis();
-            if (hayJugador && ahora - ultimoMapa > 1500) {
-                ultimoMapa = ahora;
-                mapa.actualizar(t, jx, jy, jz, jfx, jfz);
-            }
-            t.propagarBordes();
-            List<Tsdf.Bloque> sucios = t.tomarSucios();
-            for (Tsdf.Bloque b : sucios) {
-                if (!seguir || t != tsdf) break;
-                Resultado r = new Resultado();
-                r.clave = Tsdf.clave(b.bx, b.by, b.bz);
-                r.generacion = gen;
-                r.malla = mallador.mallar(t, b);
-                listos.add(r);
-            }
+            t.integrar(mm, hayConf ? conf : null, w, h, fx, fy, cx, cy, pose, maxM, 90, paso, hayEtq ? etq : null);
             msUltima = (System.nanoTime() - t0) / 1e6f;
-            if (hayImagen) imagenes++;
-            synchronized (this) { if (hayImagen) lleno = false; }
+            imagenes++;
+            synchronized (this) { lleno = false; }
+        }
+    }
+
+    /** El hilo de la malla (y del mapa y los huecos). */
+    private void mallar() {
+        try {
+            long ultimoSello = 0;
+            while (seguir) {
+                try { Thread.sleep(30); } catch (InterruptedException e) { return; }
+                long t0 = System.nanoTime();
+                Tsdf t = tsdf;
+                int gen = generacion;
+                long ahora = System.currentTimeMillis();
+                if (hayJugador && ahora - ultimoMapa > 1000) {
+                    ultimoMapa = ahora;
+                    mapa.actualizar(t, jx, jy, jz, jfx, jfz);
+                }
+                if (hayJugador && buscarHuecos && (ahora - ultimoSello > 1000 || sellarYa)) {
+                    ultimoSello = ahora;
+                    boolean ya = sellarYa;
+                    sellarYa = false;
+                    sellador.buscar(t, jx, jy, jz, sellar || ya);
+                } else if (!buscarHuecos && !sellador.huecos.isEmpty()) sellador.olvidar();
+                t.propagarBordes();
+                List<Tsdf.Bloque> sucios = t.tomarSucios();
+                for (Tsdf.Bloque b : sucios) {
+                    if (!seguir || t != tsdf) break;
+                    Resultado r = new Resultado();
+                    r.clave = Tsdf.clave(b.bx, b.by, b.bz);
+                    r.generacion = gen;
+                    r.malla = mallador.mallar(t, b);
+                    listos.add(r);
+                }
+                if (!sucios.isEmpty()) msMalla = (System.nanoTime() - t0) / 1e6f;
+            }
+        } catch (Throwable e) {
+            Fallo.guardar("hilo de la malla", e);
+            error = e;
         }
     }
 }

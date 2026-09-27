@@ -39,6 +39,7 @@ final class Hud {
     // lo que se dibuja en el minimapa
     private Mapa.Grilla grilla;
     private java.util.List<Juego.Soldado> soldados;
+    private java.util.List<Sellador.Hueco> huecos = java.util.Collections.emptyList();
     private float mpx, mpz, mfx, mfz = -1;
     private boolean escaneando;
     private long ultimoMapa;
@@ -63,6 +64,9 @@ final class Hud {
         if (l > 1e-3f) { mfx = fx / l; mfz = fz / l; }
         this.escaneando = escaneando;
     }
+
+    /** Los huecos del escaneo para el minimapa (vacío: no se muestran). */
+    void huecos(java.util.List<Sellador.Hueco> hs) { huecos = hs; }
 
     private void dibujarMapa() {
         Mapa.Grilla g = grilla;
@@ -89,6 +93,14 @@ final class Hud {
             if (Math.abs(sx - cx) > radio + lado || Math.abs(sy - cy) > radio + lado) continue;
             celda.setColor(color);
             canvas.drawRect(sx - lado / 2, sy - lado / 2, sx + lado / 2, sy + lado / 2, celda);
+        }
+        // los huecos: un punto del color de la vista de sellado, del tamaño del hueco
+        if (escaneando) for (Sellador.Hueco h : huecos) {
+            float dx = h.cx - mpx, dz = h.cz - mpz;
+            float sx = cx + (dx * rx + dz * rz) * esc, sy = cy - (dx * mfx + dz * mfz) * esc;
+            float[] c = SellosGl.COLORES[h.estado];
+            punto.setColor(Color.argb(h.estado == Sellador.ABERTURA ? 110 : 235, Math.round(c[0] * 255), Math.round(c[1] * 255), Math.round(c[2] * 255)));
+            canvas.drawCircle(sx, sy, 4 + (float) Math.sqrt(h.area) * esc * 0.6f, punto);
         }
         if (soldados != null) {
             for (Juego.Soldado s : soldados) {

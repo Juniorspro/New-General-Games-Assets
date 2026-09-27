@@ -73,6 +73,10 @@ final class Panel {
         opciones("rellenar", "Completar lo que no se ve (IA)", new String[]{"No", "Sí"});
         info("Supone el piso debajo y detrás de las cosas, la parte de atrás de los objetos y que todo "
                 + "llega hasta el suelo. Lo supuesto sale en ámbar punteado; si después lo ves, lo real lo reemplaza.");
+        opciones("sellar", "Sellar los huecos", new String[]{"No", "Solos", "Yo desde el menú"});
+        info("Busca los huecos de las paredes, el piso y las mesas (detrás del sillón, debajo de la mochila) y los "
+                + "cierra con su plano. Al escanear se ven: magenta = por sellar · celeste = sellado · naranja = "
+                + "falta escanear (muy grande: miralo) · gris = abertura (una ventana: no se sella).");
         opciones("zonas", "Ver las zonas de la IA", new String[]{"No", "Al escanear", "Siempre"});
         info("Verde: por donde pueden ir · amarillo: cubierta · azul: agua · rojo: obstáculo · "
                 + "magenta: falta escanear. \"Siempre\" también muestra las rutas de los soldados.");

@@ -23,6 +23,7 @@ const sh = {
   lentes: buscar("Lentes.java", () => true),
   mira: buscar("Hud.java", (p) => p.fs.includes("uColor")),
   zonas: buscar("ZonasGl.java", () => true),
+  sellos: buscar("SellosGl.java", () => true),
   linea: buscar("Figuras.java", (p) => p.vs.includes("aCol") && !p.vs.includes("aTam")),
   manoProf: buscar("ManosGl.java", (p) => p.fs.includes("vec4(0.0)")),
   manoVidrio: buscar("ManosGl.java", (p) => p.fs.includes("fwidth")),
@@ -144,6 +145,21 @@ async function foto(modo, nombre) {
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
       gl.drawArrays(gl.TRIANGLES, 0, v.length / 7);
       gl.depthMask(true); gl.disable(gl.BLEND); gl.disableVertexAttribArray(co);
+    };
+    // ── los huecos (SellosGl.armar de verdad, con su shader): lo visible y, más tenue, lo tapado ──
+    const sellos = (vp, v, t, dest) => {
+      if (!v.length) return;
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      const pr = P.sellos; gl.useProgram(pr); gl.uniformMatrix4fv(U(pr, "uVp"), false, vp);
+      gl.uniform1f(U(pr, "uT"), t); gl.uniform1f(U(pr, "uDest"), dest);
+      const a = A(pr, "aPos"), co = A(pr, "aCol"), ef = A(pr, "aEfecto");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 32, 0); gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(co, 4, gl.FLOAT, false, 32, 12); gl.enableVertexAttribArray(co);
+      gl.vertexAttribPointer(ef, 1, gl.FLOAT, false, 32, 28); gl.enableVertexAttribArray(ef);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+      gl.depthFunc(gl.LEQUAL); gl.uniform1f(U(pr, "uRayosX"), 1); gl.drawArrays(gl.TRIANGLES, 0, v.length / 8);
+      gl.depthFunc(gl.GREATER); gl.uniform1f(U(pr, "uRayosX"), 0.5); gl.drawArrays(gl.TRIANGLES, 0, v.length / 8);
+      gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND); gl.disableVertexAttribArray(co); gl.disableVertexAttribArray(ef);
     };
     const rutas = (vp) => {
       const v = [];
@@ -271,6 +287,13 @@ async function foto(modo, nombre) {
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
       gl.disable(gl.SCISSOR_TEST);
+    } else if (modo === "sellado-antes" || modo === "sellado") {
+      gl.viewport(0, 0, W, H); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      const v = datos.vistas.pantalla;
+      dibujarCamara(v.vp); profundidad(v.vp);
+      lineas(v.vp, 2.6, 0.3);
+      if (modo === "sellado-antes") sellos(v.vp, datos.sellos.antes, 0.1, 0);
+      else sellos(v.vp, datos.sellos.despues, 0, 0.6);
     } else if (modo === "armas") {
       // las cuatro armas, una por cuadro (cada cuadro con la misma proporción de la pantalla)
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -429,6 +452,8 @@ await foto("ia", "ia");
 await foto("escaneo", "escaneo");
 await foto("sbs", "sbs");
 await foto("armas", "armas");
+await foto("sellado-antes", "sellado-antes");
+await foto("sellado", "sellado");
 await fotoMapa();
 if (process.argv[4]) await fotoMano(process.argv[4]);
 await nav.close();

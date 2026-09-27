@@ -107,6 +107,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private final Hud hud = new Hud();
     private final Lentes lentes = new Lentes();
     private final ZonasGl zonasGl = new ZonasGl();
+    private final SellosGl sellosGl = new SellosGl();
     private final Sonido sonido = new Sonido();
     private final Menu menu = new Menu();
     private final MenuGl menuGl = new MenuGl();
@@ -647,6 +648,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         fondo.crear();
         mallaGl.crear();
         zonasGl.crear();
+        sellosGl.crear();
         figuras.crear();
         hud.crear();
         menuGl.crear();
@@ -754,6 +756,12 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         escaneo.mapa.rellenar = a.rellenar == 1;
         boolean verZonas = a.zonas == 2 || (a.zonas == 1 && juego.estado == Juego.ESPERA);
         if (verZonas) zonasGl.actualizar(grilla, juego.estado == Juego.ESPERA);
+        // los huecos: se buscan (y se sellan solos, o desde el menú) y se ven mientras se escanea
+        escaneo.buscarHuecos = a.sellar > 0;
+        escaneo.sellar = a.sellar == 1;
+        boolean verSellos = a.sellar > 0 && juego.estado == Juego.ESPERA;
+        if (verSellos) sellosGl.actualizar(escaneo.sellador, ahora);
+        hud.huecos(verSellos ? escaneo.sellador.huecos : java.util.Collections.<Sellador.Hueco>emptyList());
         if (sigue) {
             if (inicioSeguimiento == 0) inicioSeguimiento = ahora;
             escaneo.jx = px; escaneo.jy = py; escaneo.jz = pz; escaneo.jfx = adelante[0]; escaneo.jfz = adelante[2];
@@ -807,6 +815,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             figuras.dibujarBlancos(juego.blancos, vpOjo);
             figuras.dibujarGranadas(juego.granadas, vpOjo);
             if (verZonas) zonasGl.dibujar(vpOjo);
+            if (verSellos) sellosGl.dibujar(vpOjo, t, ahora);
             if (a.zonas == 2) figuras.dibujarRutas(juego.soldados, vpOjo);
             float escalaPx = proy[5] * (sbs ? vistaOjos[o][3] : alto) / 2f;
             figuras.dibujarTrazos(juego.trazos, vpOjo);
@@ -964,7 +973,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             Mapa.Grilla g = juego.grilla;
             float cob = g == null ? 0 : g.cobertura;
             boolean listo = pisoListo(px, py, pz) && (mallaGl.triangulos > 1500 || !hayProfundidad || ahora - inicioSeguimiento > 20000);
-            escaneoCompleto = listo && (cob >= 0.75f || !hayProfundidad);
+            // completo: bastante cubierto y sin huecos grandes sin ver (o ya se esperó bastante)
+            Sellador sel = escaneo.sellador;
+            boolean sinHuecos = vistos.sellar == 0 || sel.faltan == 0 || (listoDesde > 0 && ahora - listoDesde > 30000);
+            escaneoCompleto = listo && (cob >= 0.75f && sinHuecos || !hayProfundidad);
             if (listo && listoDesde == 0) listoDesde = ahora;
             if (!listo) listoDesde = 0;
             // el menú principal sale solo con el escaneo completo (o a los 25 s en el visor); o tocando / con el gatillo
@@ -1078,7 +1090,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         menu.limpiar("principal", "ASALTO MR");
         menu.linea(String.format(Locale.ROOT, "Escaneo %d%% · %d polígonos%s", g == null ? 0 : Math.round(g.cobertura * 100),
                 mallaGl.triangulos, haySemantica ? " · IA semántica" : ""));
+        Sellador sel = escaneo.sellador;
+        if (vistos.sellar > 0 && sel.huecos.size() > 0) menu.linea(textoHuecos(sel));
         menu.linea(comoElegir());
+        if (vistos.sellar == 2 && sel.porSellar > 0) menu.opcion("sellar", "Sellar " + sel.porSellar + (sel.porSellar == 1 ? " hueco" : " huecos") + " ahora", null);
         menu.opcion("oleadas", "Oleadas", record(Juego.OLEADAS) > 0 ? "récord " + record(Juego.OLEADAS) : null);
         menu.opcion("contra", "Contrarreloj 90 s", record(Juego.CONTRARRELOJ) > 0 ? "récord " + record(Juego.CONTRARRELOJ) : null);
         menu.opcion("practica", "Práctica: blancos", record(Juego.PRACTICA) > 0 ? "récord " + record(Juego.PRACTICA) : null);
@@ -1142,6 +1157,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 menu.texto("dificultad", "Dificultad: " + DIFICULTADES[juego.dificultad], "▸");
                 break;
             case "escanear": menu.cerrar(); seguirEscaneando = true; break;
+            case "sellar":
+                escaneo.sellarYa = true;
+                menu.texto("sellar", "Sellando…", null);
+                break;
             case "principal":
                 juego.estado = Juego.ESPERA; juego.soldados.clear(); juego.blancos.clear(); juego.granadas.clear();
                 pausado = false; finDesde = 0;
@@ -1322,11 +1341,16 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                     g == null ? 0 : Math.round(g.cobertura * 100), mallaGl.triangulos,
                     hayProfundidad ? "malla por profundidad" : "sin Depth API: planos",
                     haySemantica ? " + IA semántica" : "", fps, textoMano());
+            if (vistos.sellar > 0 && !escaneo.sellador.huecos.isEmpty()) arriba += "\n" + textoHuecos(escaneo.sellador);
             if (!sigue) abajo = motivo(camara);
             else if (menu.abierto) abajo = null;
             else if (listoDesde == 0) abajo = "Mirá el piso y alrededor,\nmoviéndote despacio";
             else if (escaneoCompleto) abajo = "Escaneo completo ✓\n" + (sbs ? "Mirá tus pies: menú" : "Tocá para el menú");
-            else abajo = guia(g, camara) + (sbs ? "\n(mirá tus pies: menú)" : "\n(o tocá para el menú)");
+            else {
+                // con el piso casi cubierto, lo que falta son los huecos grandes (naranja)
+                String h = g != null && g.cobertura >= 0.6f && vistos.sellar > 0 ? guiaHueco(escaneo.sellador, camara) : null;
+                abajo = (h != null ? h : guia(g, camara)) + (sbs ? "\n(mirá tus pies: menú)" : "\n(o tocá para el menú)");
+            }
         } else {
             int tr = (int) Math.ceil(juego.tiempoRestante);
             String reloj = String.format(Locale.ROOT, "%d:%02d", tr / 60, tr % 60);
@@ -1367,6 +1391,43 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         if (Math.abs(ang) < 35) return "Falta adelante: acercate ↑";
         if (Math.abs(ang) > 135) return "Falta atrás tuyo: date vuelta";
         return ang > 0 ? "Girá a la derecha →" : "Girá a la izquierda ←";
+    }
+
+    /** "Huecos: 3 sellados · 1 falta escanear · 1 abertura". */
+    private static String textoHuecos(Sellador s) {
+        StringBuilder b = new StringBuilder("Huecos: ");
+        int n = 0;
+        if (s.porSellar > 0) { b.append(s.porSellar).append(" por sellar"); n++; }
+        if (s.sellados > 0) { if (n++ > 0) b.append(" · "); b.append(s.sellados).append(s.sellados == 1 ? " sellado" : " sellados"); }
+        if (s.faltan > 0) { if (n++ > 0) b.append(" · "); b.append(s.faltan).append(" falta escanear"); }
+        if (s.aberturas > 0) { if (n++ > 0) b.append(" · "); b.append(s.aberturas).append(s.aberturas == 1 ? " abertura" : " aberturas"); }
+        return b.toString();
+    }
+
+    /** Hacia el hueco grande (falta escanear) más cercano, o null si no hay. */
+    private static String guiaHueco(Sellador s, Camera camara) {
+        float[] o = camara.getDisplayOrientedPose().getTranslation();
+        float[] f = camara.getDisplayOrientedPose().getTransformedAxis(2, -1f);
+        Sellador.Hueco mejor = null;
+        float md = Float.MAX_VALUE;
+        for (Sellador.Hueco h : s.huecos) {
+            if (h.estado != Sellador.FALTA) continue;
+            float dx = h.cx - o[0], dy = h.cy - o[1], dz = h.cz - o[2];
+            float d = dx * dx + dy * dy + dz * dz;
+            if (d < md) { md = d; mejor = h; }
+        }
+        if (mejor == null) return null;
+        float dx = mejor.cx - o[0], dy = mejor.cy - o[1], dz = mejor.cz - o[2];
+        float d = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        String donde = String.format(Locale.ROOT, "Mirá el hueco naranja (%.1f m", d);
+        float fl = (float) Math.hypot(f[0], f[2]);
+        if (fl < 1e-3f || d < 0.05f) return donde + ")";
+        float fx = f[0] / fl, fz = f[2] / fl;
+        double ang = Math.toDegrees(Math.atan2(dx * -fz + dz * fx, dx * fx + dz * fz));
+        double alto = Math.toDegrees(Math.atan2(dy, Math.hypot(dx, dz))) - Math.toDegrees(Math.atan2(f[1], fl));
+        String dir = Math.abs(ang) > 135 ? ", atrás tuyo" : ang > 35 ? ", a la derecha →" : ang < -35 ? ", a la izquierda ←"
+                : alto < -25 ? ", abajo ↓" : alto > 25 ? ", arriba ↑" : ", adelante";
+        return donde + dir + ")";
     }
 
     private static String motivo(Camera camara) {

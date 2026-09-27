@@ -51,7 +51,16 @@ de todo lo que hay, como la malla de escena del Quest:
 2. **Malla (surface nets)** — `Mallador.java`. Un vértice por celda donde la
    superficie cruza, un cuadrilátero por arista: polígonos parejos, cerrados,
    bloque por bloque y sin costuras.
-3. En un **hilo aparte** (`Escaneo.java`): la cámara nunca espera al escaneo.
+3. En **dos hilos aparte** (`Escaneo.java`): uno integra la profundidad y
+   otro arma la malla, el mapa y los huecos. La cámara nunca espera al
+   escaneo, y la malla ya no frena la integración.
+
+**Más rápido, igual de preciso**: los bloques se buscan en una tabla propia
+(sin cajas de Java ni `HashMap`), y lo lejano se integra con menos rayos (a
+3 m un voxel de 7 cm lo cubren muchos píxeles: se usa 1 de cada k, con k
+según la distancia; cerca, todos). En la PC, con la misma escena: armar la
+malla de 123 bloques **24.9 → 10.0 ms**, integrar una imagen **6.5 → 5.4 ms**;
+el error de la malla no cambió (tabla de abajo).
 
 La malla hace cuatro cosas:
 - **oclusión**: lo real tapa a lo virtual (un soldado detrás de un árbol o de
@@ -313,6 +322,60 @@ Lo supuesto se escribe en el volumen como **inferido**. Sale en la malla en
 y se choca contra lo supuesto), y **cualquier medición de verdad lo
 reemplaza**: si después lo ves, se corrige solo.
 
+### Los huecos: la vista de sellado
+
+![Antes y después del sellado](capturas/sellado.jpg)
+
+*Izquierda: lo que hay que sellar (magenta), el piso debajo de la mesa y
+detrás del tronco, visto a través de ellos. Derecha: ya sellado (celeste). Lo
+dibuja `SellosGl.java` con su shader, sobre la malla escaneada de verdad.*
+
+Un escaneo tiene agujeros: la pared detrás del sillón, el piso debajo de la
+mesa o de la mochila, el pedazo de pared que la cámara nunca miró de frente.
+`Sellador.java` los busca cada segundo (en el hilo de la malla) y los cierra:
+
+1. **Las superficies planas**: de los voxeles de superficie medidos (no los
+   supuestos) arma regiones con la misma normal (±20°) y a menos de 1.5
+   voxeles del plano: paredes, piso, mesas. Las esquinas (mezclan dos
+   normales) y las tiras no cuentan.
+2. **Una grilla sobre cada plano**, de un voxel por celda. Cada celda es
+   *vista*, *cerrada* (algo sólido justo delante: la esquina, la pata de la
+   mesa), *tapada* (más adelante hay una superficie que mira para el plano:
+   la tapa de la mesa sobre el piso, el frente del sillón delante de la pared),
+   *aire* (un rayo pasó por el plano: se ve a través) o *no se sabe*.
+3. **Hueco = lo que queda encerrado**: lo que no se alcanza desde el borde de
+   la grilla sin cruzar celdas vistas o cerradas. Lo que toca el borde no es
+   un hueco: es donde termina lo escaneado (eso lo guía el escaneo completo).
+4. Cada hueco:
+   - **abertura** (gris) si buena parte es aire medido: una ventana, una
+     puerta abierta. **No se sella**;
+   - **por sellar** (magenta, late) si es de hasta 1.5 m² (lo tapado, hasta
+     6 m²: nunca se va a ver);
+   - **falta escanear** (naranja, late) si es más grande: suponerlo sería
+     inventar; la guía dice "Mirá el hueco naranja (2.1 m, a la izquierda)";
+   - **sellado** (celeste, destella al cerrarse): se escribió el plano en el
+     volumen como **supuesto** (sólo donde nadie midió, o se midió tan poco
+     que la malla no lo cree). Si después lo mirás, lo medido lo reemplaza.
+
+Ajustes → "Sellar los huecos": **Solos** (se sellan apenas aparecen), **Yo
+desde el menú** (se ven y el menú dice "Sellar 3 huecos ahora") o No. Se ven
+mientras escaneás (también lo que está detrás de algo, más tenue), en el HUD
+("Huecos: 5 sellados · 1 falta escanear · 1 abertura") y como puntos en el
+minimapa. El escaneo completo ahora pide además que no quede ningún hueco
+naranja (o que pasen 30 s).
+
+`PruebaSellado` (en la PC, una pieza con ventana, sillón contra la pared y
+mochila en el piso, escaneada con el mismo ruido):
+
+| | |
+|---|---|
+| la pared detrás del sillón | encontrada (0.65 m²), sellada **en su lugar** (a 5.8 cm, real 7 cm) |
+| el piso debajo de la mochila | encontrado, sellado a 2 cm del real |
+| la ventana (se ve a través) | **abertura**: 0 voxeles supuestos adentro |
+| lo supuesto sobre superficies de verdad (o adentro de algo), no en el aire | **98 %** |
+| buscar otra vez | no re-escribe lo ya sellado |
+| buscar los huecos (PC) | ~30–100 ms, cada 1 s |
+
 ### La IA de zonas: por dónde pueden ir
 
 - **Qué es cada cosa** (red neuronal): la *Scene Semantics* de ARCore es una
@@ -360,7 +423,7 @@ escritos acá (votos, pasadas, A\*, rayos), no un modelo entrenado.
 | guía de escaneo | siguiéndola se ve 47 % del piso real; al revés, 29 % |
 | cobertura que dice / la de verdad | 20 % / 17 %, y 17 % / 13 % con menos escaneo |
 | IA táctica, 40 s en difícil | 3 soldados se cubren; agachados, de verdad no los ves (100 % del tiempo); nunca pisan el charco ni se meten en un obstáculo |
-| armar el mapa (PC) | ~65 ms, cada 1.5 s en el hilo del escaneo |
+| armar el mapa (PC) | ~65 ms, cada 1 s en el hilo de la malla |
 
 ## Cómo se juega
 
@@ -497,7 +560,7 @@ de cerrar la app.
 ## Lo que NO se probó
 
 - **En un teléfono.** Esta máquina no tiene uno. Está probado: el escaneo y
-  el juego y la IA del mapa (pruebas en la PC), que los 15 shaders compilan y enlazan, el dibujo
+  el juego y la IA del mapa (pruebas en la PC), que los 19 shaders compilan y enlazan, el dibujo
   de soldados/armas/blancos/granadas/malla/SBS/lentes (vista previa con el código real), y
   que el APK compila, firma y trae ARCore. **No** está probado: el camino con
   ARCore de verdad (la profundidad cruda, las poses, el modo compartido de la
@@ -516,6 +579,10 @@ de cerrar la app.
 - La imagen de la red semántica se lleva a la de profundidad escalando las
   coordenadas (se asume que cubren el mismo campo, como la profundidad).
   Si las etiquetas salen corridas en los bordes de las cosas, es eso.
+- **El sellado en una casa de verdad**: se probó con una pieza sintética. Las
+  paredes reales no son planos perfectos y el ruido de un teléfono es otro;
+  si sella de más (un plano donde no hay nada) o no encuentra huecos obvios,
+  pasame una captura con la vista de sellado.
 - El completado es una suposición razonable, no magia: acierta en la escena de
   prueba, pero una casa de verdad tiene cosas que no se pueden adivinar
   (debajo de una mesa hay aire, no una caja). Por eso se ve distinto y se
@@ -536,7 +603,8 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 |---|---|
 | `src/.../Tsdf.java` | el volumen de voxeles: integrar la profundidad, aire medido, etiquetas semánticas, lo inferido, suelo, rayos |
 | `src/.../Mallador.java` | surface nets: de voxeles a polígonos |
-| `src/.../Escaneo.java` | el hilo del escaneo (y el mapa cada 1.5 s) |
+| `src/.../Escaneo.java` | los hilos del escaneo: integrar; y malla, mapa y huecos cada 1 s |
+| `src/.../Sellador.java` · `SellosGl.java` | los huecos: buscarlos, clasificarlos y sellarlos (sin Android); la vista de sellado |
 | `src/.../Mapa.java` | la IA del entorno: zonas, completado, cubiertas, rutas A\*, cobertura |
 | `src/.../Mano.java` | la mano: pose, gatillo, la pistola en la mano, de la foto al 3D, la ganancia (sin Android) |
 | `src/.../FiltroMano.java` | el filtro de la mano (como Aeroplaza): palma rígida, forma aprendida, saltos, espejo, anclas, predicción con ganancia, resorte, enderezar, fundido |
@@ -555,7 +623,7 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Hud.java` · `Lentes.java` | el HUD en GL; la corrección de lentes |
 | `src/.../Ajustes.java` · `Panel.java` | la configuración y su panel |
 | `src/.../Sonido.java` | los sonidos, sintetizados al arrancar |
-| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` · `PruebaFiltroMano.java` | las pruebas en la PC |
+| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` · `PruebaFiltroMano.java` · `PruebaSellado.java` | las pruebas en la PC (`BancoEscaneo.java`: cuánto tarda el escaneo) |
 | `pruebas/manos.txt` · `manos-commons.txt` · `manos-extraer.py` · `manos-camara.py` · `herramientas/Yuv.java` | manos reales para las pruebas; la cámara de punta a punta |
 | `pruebas/shaders.mjs` · `vista.mjs` · `vista/` | shaders con WebGL; la vista previa |
 | `construir.sh` | arma el APK sin Gradle (caché compartida con mundo-ar) |

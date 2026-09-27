@@ -71,6 +71,16 @@ public class Vista {
         java.lang.reflect.Method esc = Class.forName("PruebaEscaneo").getDeclaredMethod("escanear", Tsdf.class, int.class, boolean.class);
         esc.setAccessible(true);
         esc.invoke(null, tsdf, 60, true);
+        // los huecos: primero sólo buscarlos (lo que hay que sellar) y después sellarlos
+        Sellador sel = new Sellador();
+        sel.buscar(tsdf, 0, 1.5f, 1.2f, false);
+        List<Sellador.Hueco> antes = sel.huecos;
+        String textoAntes = String.format(Locale.ROOT, "%d por sellar · %d falta escanear · %d aberturas", sel.porSellar, sel.faltan, sel.aberturas);
+        sel.buscar(tsdf, 0, 1.5f, 1.2f, true);
+        List<Sellador.Hueco> despues = sel.huecos;
+        String textoDespues = String.format(Locale.ROOT, "%d sellados · %d falta escanear · %d aberturas", sel.sellados, sel.faltan, sel.aberturas);
+        System.out.println("huecos: " + textoAntes + " → " + textoDespues);
+        for (Sellador.Hueco h : antes) if (h.area > 0.05f) System.out.printf(Locale.ROOT, "  %s %.2f m² en (%.2f, %.2f, %.2f)%n", Sellador.NOMBRES[h.estado], h.area, h.cx, h.cy, h.cz);
         // el mapa de la IA: primero sólo con lo visto, después completando lo que no se ve
         final float JX0 = 0, JY0 = 1.5f, JZ0 = 1.2f;
         Mapa sinRelleno = new Mapa();
@@ -302,7 +312,19 @@ public class Vista {
             int h = ManosGl.HUESOS[i][0], f = ManosGl.HUESOS[i][1];
             s.append(String.format(Locale.ROOT, "[%d,%d,%.4f,%.4f]", h, f, ManosGl.RADIO[h] * m, ManosGl.RADIO[f] * m));
         }
-        s.append("],\"mapas\":{\"visto\":");
+        s.append("],\"sellos\":{");
+        for (int k = 0; k < 2; k++) {
+            List<Sellador.Hueco> hs = k == 0 ? antes : despues;
+            java.nio.FloatBuffer fb = Gl.bufer(SellosGl.tamano(hs) + 8);
+            int n = SellosGl.armar(hs, fb);
+            float[] vs = new float[n];
+            fb.position(0);
+            fb.get(vs);
+            s.append(k == 0 ? "\"antes\":" : ",\"despues\":");
+            arr(s, vs, n);
+        }
+        s.append(",\"textoAntes\":\"").append(textoAntes).append("\",\"textoDespues\":\"").append(textoDespues).append("\"}");
+        s.append(",\"mapas\":{\"visto\":");
         grilla(s, gVisto);
         s.append(",\"ia\":");
         grilla(s, gIA);
