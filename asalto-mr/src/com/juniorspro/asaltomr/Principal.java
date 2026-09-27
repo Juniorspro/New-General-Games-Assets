@@ -226,6 +226,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         sonido.cargar(this);
         records = getSharedPreferences("records", MODE_PRIVATE);
         control.cargar(getSharedPreferences("control", MODE_PRIVATE).getString("mapa", ""));
+        // el punto de mira: con el teléfono en la mano, la cámara es "el ojo" (el arma, un poco más abajo);
+        // en el visor, el ojo está 5 cm detrás de la cámara. Lo calibrado, guardado.
+        punteriaMano.abajo = 0.10f; punteriaMano.atras = 0f;
+        punteriaVisor.abajo = 0.06f; punteriaVisor.atras = 0.05f;
+        punteriaMano.cargar(getSharedPreferences("punteria", MODE_PRIVATE).getString("mano", null));
+        punteriaVisor.cargar(getSharedPreferences("punteria", MODE_PRIVATE).getString("visor", null));
+        Juego.Blanco bc = new Juego.Blanco();
+        bc.t = 1; bc.radio = 0.12f;
+        blancoCal.add(bc);
         sonido.activo = ajustes.sonido == 1;
         if (ajustes.mano > 0 && ajustes.seguro == 0) manos = new ManoRastreo(this);
 
@@ -383,6 +392,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 getSharedPreferences("control", MODE_PRIVATE).edit().remove("mapa").apply();
                 avisar("Control: los botones de fábrica");
                 break;
+            case "punteria": abrirPanel(false); pedirCalibrar = true; break;
             case "controlAprender":
                 abrirPanel(false);
                 synchronized (control) { control.empezarAprender(SystemClock.elapsedRealtime()); }
@@ -394,6 +404,16 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     // ── el control Bluetooth (el del VR Box, un gamepad, un teclado), el volumen, el disparador de selfie ──
 
     private final Control control = new Control();
+
+    // la puntería del arma en la mano: el rayo del punto de mira (casi el ojo) por la mano, calibrado
+    private final Punteria punteriaMano = new Punteria(), punteriaVisor = new Punteria();
+    private final float[] origenMira = new float[3];
+    /** Calibrando la puntería: el blanco que toca (0..2), o −1. */
+    private volatile int calibrando = -1;
+    private volatile boolean pedirCalibrar, volverAPausa;
+    private final float[][] blancosCal = new float[3][3];
+    private final java.util.ArrayList<Juego.Blanco> blancoCal = new java.util.ArrayList<>();
+    private long calibradoEn;
     /** El nombre del control que se usó (null: ninguno) y el último botón, para mostrarlos. */
     private volatile String nombreControl, ultimoBoton;
     private volatile long ultimoBotonEn, controlListoEn;
@@ -839,7 +859,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (hayProfundidad) darProfundidad(cuadro, camara);
             // cada vez que el hilo de las manos está libre (sin tope: como Aeroplaza, cuantas más imágenes, mejor sigue)
             if (manos != null && a.mano > 0 && manos.libre()) darMano(cuadro, camara, ahora);
-            leerManos(ahora);
+            leerManos(ahora, px, py, pz, adelante);
             pisoDeRespaldo(py, ahora);
             actualizarJuego(dt, px, py, pz, adelante, ojoPose, ahora);
         } else {
@@ -880,6 +900,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (conMano) manosGl.profundidad(vistaOjo, proy, armaPuntos, manoAlfa, 2);
             figuras.dibujarSoldados(juego.soldados, vpOjo);
             figuras.dibujarBlancos(juego.blancos, vpOjo);
+            int cal = calibrando;
+            if (cal >= 0) {
+                // el blanco de la calibración, de frente a vos
+                Juego.Blanco b = blancoCal.get(0);
+                b.x = blancosCal[cal][0]; b.y = blancosCal[cal][1]; b.z = blancosCal[cal][2];
+                float bx = px - b.x, by = py - b.y, bz = pz - b.z, bl = (float) Math.sqrt(bx * bx + by * by + bz * bz);
+                b.nx = bx / bl; b.ny = by / bl; b.nz = bz / bl;
+                figuras.dibujarBlancos(blancoCal, vpOjo);
+            }
             figuras.dibujarGranadas(juego.granadas, vpOjo);
             if (verZonas) zonasGl.dibujar(vpOjo);
             if (verSellos) sellosGl.dibujar(vpOjo, t, ahora);
@@ -908,7 +937,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                     if (!armaActiva[s2]) continue;
                     figuras.dibujarArmaEnMano(vpOjo, juego.arma, armaPos[s2], armaAdel[s2], armaArriba[s2], juego.retroceso, saca);
                     Figuras.bocaEnMano(juego.arma, armaPos[s2], armaAdel[s2], armaArriba[s2], manoBoca);
-                    figuras.dibujarLaser(vpOjo, manoBoca, armaFin[s2], proy[5] * (sbs ? vistaOjos[o][3] : alto) / 2f);
+                    if (calibrando < 0) figuras.dibujarLaser(vpOjo, manoBoca, armaFin[s2], proy[5] * (sbs ? vistaOjos[o][3] : alto) / 2f);
                 }
             } else {
                 float rc = juego.armaActual().recarga;
@@ -1036,6 +1065,27 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         boolean quiereMenu = pedirMenu || (miraAbajoDesde > 0 && ahora - miraAbajoDesde > 1200);
         pedirMenu = false;
 
+        // ── calibrar la puntería: tres blancos, sin láser; se les dispara apuntando como uno apunta ──
+        if (pedirCalibrar) { pedirCalibrar = false; empezarCalibrar(px, py, pz, adelante); }
+        if (calibrando >= 0 && !menu.abierto) {
+            if (quiereMenu) calibrando = -1;
+            else if ((gatillo > 0 || pedidos > 0) && hayArma) {
+                Punteria pu = sbs ? punteriaVisor : punteriaMano;
+                if (pu.calibrar(px, py, pz, adelante[0], adelante[1], adelante[2], armaPos[conArma], blancosCal[calibrando])) {
+                    sonido.tocar(Sonido.BLANCO, 0.9f, 0);
+                    vibrar(20);
+                    if (++calibrando >= blancosCal.length) {
+                        calibrando = -1;
+                        calibradoEn = ahora;
+                        getSharedPreferences("punteria", MODE_PRIVATE).edit().putString(sbs ? "visor" : "mano", pu.guardar()).apply();
+                    }
+                }
+            }
+            if (calibrando < 0 && volverAPausa && juego.estado == Juego.JUEGA) { volverAPausa = false; abrirPausa(px, py, pz, adelante); }
+            pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; toque = false;
+            quiereMenu = false;
+        }
+
         if (juego.estado == Juego.ESPERA) {
             Mapa.Grilla g = juego.grilla;
             float cob = g == null ? 0 : g.cobertura;
@@ -1048,7 +1098,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (!listo) listoDesde = 0;
             // el menú principal sale solo con el escaneo completo (o a los 25 s en el visor); o tocando / con el gatillo
             boolean solo = !seguirEscaneando && (escaneoCompleto || (sbs && ahora - listoDesde > 25000));
-            if (listo && !menu.abierto && !control.aprendiendo() && (solo || pedidos > 0 || gatillo > 0 || quiereMenu)) {
+            if (listo && !menu.abierto && !control.aprendiendo() && calibrando < 0 && (solo || pedidos > 0 || gatillo > 0 || quiereMenu)) {
                 abrirPrincipal(px, py, pz, adelante);
                 pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; toque = false;
             }
@@ -1056,7 +1106,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (finDesde == 0) finDesde = ahora;
             if (!menu.abierto && ahora - finDesde > 1500) abrirFin(px, py, pz, adelante);
             if (!menu.abierto) { pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; }
-        } else if (quiereMenu && !menu.abierto) {
+        } else if (quiereMenu && !menu.abierto && calibrando < 0) {
             abrirPausa(px, py, pz, adelante);
             pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; toque = false;
         }
@@ -1147,8 +1197,23 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         return "Tocá un botón (o mirálo 1 segundo)";
     }
 
+    /** Pone los tres blancos de la calibración a 2 m, adelante (uno al centro, dos en las esquinas). */
+    private void empezarCalibrar(float px, float py, float pz, float[] f) {
+        float l = (float) Math.hypot(f[0], f[2]);
+        if (l < 1e-3f) return;
+        float fx = f[0] / l, fz = f[2] / l, rx = -fz, rz = fx;
+        float[][] d = {{0, -0.12f}, {-0.45f, 0.1f}, {0.45f, -0.32f}};
+        for (int k = 0; k < 3; k++) {
+            blancosCal[k][0] = px + fx * 2f + rx * d[k][0];
+            blancosCal[k][1] = py + d[k][1];
+            blancosCal[k][2] = pz + fz * 2f + rz * d[k][0];
+        }
+        calibrando = 0;
+    }
+
     /** Configurar el control Bluetooth (aprender sus botones). */
     private void opcionControl() {
+        if (vistos.mano > 0) menu.opcion("punteria", "Calibrar la puntería", (vistos.sbs == 1 ? punteriaVisor : punteriaMano).calibraciones > 0 ? "calibrada" : null);
         String n = nombreControl;
         menu.opcion("control", n != null ? "Control: configurar botones" : "Control Bluetooth: configurar", n != null ? recortar(n, 18) : null);
     }
@@ -1234,6 +1299,11 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 menu.texto("dificultad", "Dificultad: " + DIFICULTADES[juego.dificultad], "▸");
                 break;
             case "escanear": menu.cerrar(); seguirEscaneando = true; break;
+            case "punteria":
+                volverAPausa = juego.estado == Juego.JUEGA;
+                menu.cerrar();
+                empezarCalibrar(px, py, pz, f);
+                break;
             case "control":
                 menu.cerrar();
                 synchronized (control) { control.empezarAprender(SystemClock.elapsedRealtime()); }
@@ -1265,10 +1335,38 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         pausado = false; finDesde = 0; seguirEscaneando = false;
     }
 
+    private final float[] dirAyuda = new float[3];
+
     private void dispararDesdeMano(int s) {
         float[] f = armaAdel[s];
         Figuras.bocaEnMano(juego.arma, armaPos[s], f, armaArriba[s], manoBoca);
-        juego.disparar(manoBoca[0], manoBoca[1], manoBoca[2], f[0], f[1], f[2], manoBoca[0], manoBoca[1], manoBoca[2], entorno);
+        float[] d = ayudaApuntar(manoBoca, f) ? dirAyuda : f;
+        juego.disparar(manoBoca[0], manoBoca[1], manoBoca[2], d[0], d[1], d[2], manoBoca[0], manoBoca[1], manoBoca[2], entorno);
+    }
+
+    /** La ayuda para apuntar: hasta este ángulo del caño, el tiro va al soldado (si no hay nada en el medio). */
+    static final float AYUDA = (float) Math.cos(Math.toRadians(2.5));
+
+    /** Si hay un soldado (pecho o cabeza) casi en la línea del caño, deja en dirAyuda la dirección hacia él. */
+    private boolean ayudaApuntar(float[] o, float[] f) {
+        float mejor = AYUDA;
+        boolean hay = false;
+        for (Juego.Soldado so : juego.soldados) {
+            if (!Juego.enPie(so)) continue;
+            float alto = so.y + Juego.ALTO - so.agachado * Juego.BAJA_AGACHADO;
+            for (float y : new float[]{alto - 0.55f, alto - 0.13f}) {   // el pecho y la cabeza
+                float dx = so.x - o[0], dy = y - o[1], dz = so.z - o[2];
+                float l = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (l < 0.3f) continue;
+                float c = (dx * f[0] + dy * f[1] + dz * f[2]) / l;
+                if (c <= mejor) continue;
+                float r = entorno.rayo(o[0], o[1], o[2], dx / l, dy / l, dz / l, l);
+                if (r >= 0 && r < l - 0.35f) continue;   // algo real en el medio (una pared, la mesa)
+                mejor = c; hay = true;
+                dirAyuda[0] = dx / l; dirAyuda[1] = dy / l; dirAyuda[2] = dz / l;
+            }
+        }
+        return hay;
     }
 
     /**
@@ -1327,7 +1425,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private long ultimaLectura;
 
     /** Copia lo último de cada mano (el hilo de las manos lo va cambiando) y decide qué pistolas se ven. */
-    private void leerManos(long ahora) {
+    private void leerManos(long ahora, float px, float py, float pz, float[] adelante) {
+        // el punto de mira de este cuadro (del visor o del teléfono en la mano)
+        boolean conRayo = vistos.apuntar == 0;
+        if (conRayo) (vistos.sbs == 1 ? punteriaVisor : punteriaMano).origen(px, py, pz, adelante[0], adelante[1], adelante[2], origenMira);
         armaActiva[0] = armaActiva[1] = false;
         if (manos == null) return;
         float dtLectura = ultimaLectura == 0 ? 1 / 60f : Math.min(0.1f, (ahora - ultimaLectura) / 1000f);
@@ -1348,6 +1449,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 armaAprieta[s2] = false;
                 // (agarrada: con histéresis; girando, de canto o de punta, una imagen dudosa no la suelta)
                 if (reciente && m.agarrada) {
+                    // el caño: del punto de mira por la mano (firme); o, si se eligió, con la forma de la muñeca
+                    if (conRayo) m.apuntarDesde(origenMira);
                     armaActiva[s2] = true;
                     armaAprieta[s2] = m.apretado();
                     System.arraycopy(m.pos, 0, armaPos[s2], 0, 3);
@@ -1456,7 +1559,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             paso = control.pasoActual(); pide = control.pidiendo(); falta = control.falta(ahora);
         }
         if (termino) terminarAprender(ahora);
-        if (pide != Control.NADA) {
+        int cal = calibrando;
+        if (cal >= 0) {
+            abajo = String.format(Locale.ROOT, "PUNTERÍA %d/3\nApuntá con el arma al blanco como apuntás vos\n(sin láser: con la mano) y disparale%s", cal + 1,
+                    armaActiva[0] || armaActiva[1] ? "" : "\n→ levantá la mano empuñando");
+        } else if (calibradoEn > 0 && ahora - calibradoEn < 4000) {
+            Punteria pu = sbs ? punteriaVisor : punteriaMano;
+            abajo = String.format(Locale.ROOT, "Puntería calibrada ✓\nel arma: %.0f cm abajo de la vista, %.0f cm a la %s", pu.abajo * 100,
+                    Math.abs(pu.lado) * 100, pu.lado >= 0 ? "derecha" : "izquierda");
+        } else if (pide != Control.NADA) {
             String ult = ultimoBoton != null && ahora - ultimoBotonEn < 1500 ? "\n(llegó: " + ultimoBoton + ")" : "";
             abajo = String.format(Locale.ROOT, "CONTROL %d/%d · apretá el botón para\n%s\n(en %d s se saltea: queda el de antes)%s", paso + 1, Control.PASOS.length,
                     Control.ACCIONES[pide].toUpperCase(Locale.ROOT), falta / 1000 + 1, ult);

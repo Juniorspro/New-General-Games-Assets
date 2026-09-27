@@ -93,6 +93,11 @@ final class Panel {
         info("Empuñá como si tuvieras la pistola, con el índice estirado. Cerrar el índice (apretar el gatillo) "
                 + "dispara; la mano abierta recarga. Sin la mano a la vista, la pistola vuelve a la pantalla y se "
                 + "dispara tocando o con el volumen. Se aplica al volver a abrir la app.");
+        opciones("apuntar", "Apuntar con", new String[]{"El rayo ojo → mano (firme)", "La muñeca"});
+        info("\"El rayo\": el caño va de tu vista por la mano, como apunta la gente; la distancia de la mano "
+                + "(lo que peor mide una cámara) no lo mueve. \"La muñeca\": con la forma de la mano; apuntando al fondo "
+                + "se puede ir de costado.");
+        boton("Calibrar la puntería (3 blancos)", "punteria");
         opciones("seguro", "Modo seguro", new String[]{"No", "Sí"});
 
         seccion("Control Bluetooth (el del VR Box)");

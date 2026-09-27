@@ -150,6 +150,44 @@ suavizado de un píxel. En Ajustes → Hand tracking: "Sí (mano fantasma)" o
   escaneo. Antes quedaban manchas de mano en la malla. Esto no está en
   Aeroplaza.
 
+### Apuntar adelante: el rayo del ojo por la mano
+
+Con la cámara detrás de la mano, apuntar adelante es apuntar **a lo largo del
+rayo de la cámara**, justo lo que una sola cámara mide peor: la red estima la
+profundidad de cada punto de la mano con la forma de su modelo, la mano sale
+achatada y "de la muñeca a los nudillos" queda **de costado** (el arma
+apuntaba a la izquierda con la mano apuntando al fondo).
+
+Ahora el caño va **del punto de mira por la mano**, como apunta la gente: el
+ojo, la mano y el blanco en línea (el modelo "ojo–dedo", el que menos erra en
+los estudios de apuntar en el aire). Con el teléfono en la mano "el ojo" es la
+cámara (lo que ves en la pantalla); en el visor, 5 cm detrás. Lo que la red
+erra en la distancia de la mano la mueve **a lo largo de ese mismo rayo**: la
+puntería no se mueve. La corredera sigue el giro de tu muñeca (da la vuelta
+entera igual). Y la profundidad de ARCore ahora corrige la distancia de la
+mano rápido (la mediana de las últimas 9 medidas que coinciden, no de 41).
+
+- **Calibrar la puntería** (menú o Ajustes): aparecen 3 blancos, **sin
+  láser**; apuntale a cada uno con el arma como apuntás vos y disparale. Se
+  aprende cuánto más abajo y al costado de la vista tenés el arma (cada uno la
+  sostiene distinto) y se guarda, uno para el teléfono en la mano y otro para
+  el visor.
+- **Ayuda para apuntar**: si un soldado está a menos de 2.5° del caño y no hay
+  nada real en el medio, el tiro va a él.
+- Ajustes → "Apuntar con": el rayo (de fábrica) o la muñeca (como antes).
+
+`PruebaApuntar`: la mano apuntando a 9 lados (adelante, costados, arriba,
+abajo, a la vista de la cámara), con la red **achatando la mano a la mitad**,
+dos personas (el arma justo debajo de la vista; la mano baja y a la derecha
+como en la captura):
+
+| | con la muñeca (antes) | el rayo sin calibrar | el rayo calibrado |
+|---|---|---|---|
+| apuntar adelante | 6.8° | 3.8° | **0.7°** |
+| promedio / peor | 9.0° / 16° | hasta 15° (la mano baja) | **1.0° / 1.7°** |
+
+La calibración encuentra dónde tenés el arma a ±1 cm con 3 blancos.
+
 ### El arma gira 360° sin soltarse ni darse vuelta
 
 Antes el arma se veía en la mano sólo en las imágenes en que la red decía
@@ -669,6 +707,7 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../AsociadorManos.java` | cuál mano es cuál (centro predicho, duplicadas, fantasmas, mismo rayo, lado) |
 | `src/.../ManosGl.java` | la mano "Meta": cápsulas con el borde que brilla y la pasada de profundidad |
 | `src/.../ManoRastreo.java` | el hilo de MediaPipe: imagen entera, GPU, red de 1 y de 2 manos, ganancia → 21 puntos por mano |
+| `src/.../Punteria.java` | de dónde sale el rayo del arma en la mano (el punto de mira) y su calibración (sin Android) |
 | `src/.../Control.java` | el control Bluetooth: qué hace cada botón en cada modo, el joystick, aprender los botones (sin Android) |
 | `src/.../Fallo.java` | si se cae: guarda el error y lo muestra al volver a abrir |
 | `mediapipe-parche/` | MediaPipe sin telemetría |
@@ -682,7 +721,7 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Hud.java` · `Lentes.java` | el HUD en GL; la corrección de lentes |
 | `src/.../Ajustes.java` · `Panel.java` | la configuración y su panel |
 | `src/.../Sonido.java` | los sonidos, sintetizados al arrancar |
-| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` · `PruebaFiltroMano.java` · `PruebaSellado.java` · `PruebaGiro360.java` · `PruebaControl.java` | las pruebas en la PC (`BancoEscaneo.java`: cuánto tarda el escaneo) |
+| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` · `PruebaFiltroMano.java` · `PruebaSellado.java` · `PruebaGiro360.java` · `PruebaControl.java` · `PruebaApuntar.java` | las pruebas en la PC (`BancoEscaneo.java`: cuánto tarda el escaneo) |
 | `pruebas/manos.txt` · `manos-commons.txt` · `manos-extraer.py` · `manos-camara.py` · `herramientas/Yuv.java` | manos reales para las pruebas; la cámara de punta a punta |
 | `pruebas/shaders.mjs` · `vista.mjs` · `vista/` | shaders con WebGL; la vista previa |
 | `construir.sh` | arma el APK sin Gradle (caché compartida con mundo-ar) |

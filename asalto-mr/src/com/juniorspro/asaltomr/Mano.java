@@ -197,13 +197,22 @@ public final class Mano {
     private final float[] cam3 = new float[3], crudo = new float[63], ptsCam = new float[63], salidaP = new float[63];
     /**
      * El tamaño real de la mano respecto del que supone el modelo (1 = la mano
-     * "promedio"). Lo calibra la profundidad de ARCore, DESPACIO: con la
-     * mediana de muchas imágenes, y sólo con medidas que coinciden en tres
-     * puntos de la palma (en la mano, la profundidad de ARCore se mezcla con
-     * el fondo). Nunca se mezcla cuadro por cuadro: eso hacía saltar la pistola.
+     * "promedio"). Lo calibra la profundidad de ARCore: con la mediana de las
+     * últimas medidas, y sólo con las que coinciden en tres puntos de la palma
+     * (en la mano, la profundidad de ARCore se mezcla con el fondo). Nunca se
+     * mezcla una medida sola: eso hacía saltar la pistola.
      */
     public float escalaReal = 1;
-    private final float[] ventana = new float[41];
+    /**
+     * La mediana de las últimas VENTANA medidas que coinciden (con al menos
+     * VENTANA_MIN), y cuánto se le acerca cada vez. Rápido a propósito: lo que
+     * la red erra en la distancia cambia con cómo se ve la mano (de frente, de
+     * canto, apuntando al fondo), no es un número fijo; y del hombro por la
+     * mano, esa distancia es la puntería.
+     */
+    static final int VENTANA = 9, VENTANA_MIN = 5;
+    static final float GANANCIA_ESCALA = 0.35f;
+    private final float[] ventana = new float[VENTANA];
     private int nVentana, iVentana;
     /** Cuántas medidas de ARCore se aceptaron para calibrar (para la prueba). */
     public int calibradas;
@@ -310,11 +319,11 @@ public final class Mano {
         iVentana = (iVentana + 1) % ventana.length;
         if (nVentana < ventana.length) nVentana++;
         calibradas++;
-        if (nVentana < 15) return;
+        if (nVentana < VENTANA_MIN) return;
         float[] o = java.util.Arrays.copyOf(ventana, nVentana);
         java.util.Arrays.sort(o);
         float med = o[nVentana / 2];
-        escalaReal += (med - escalaReal) * 0.1f;
+        escalaReal += (med - escalaReal) * GANANCIA_ESCALA;
     }
 
     /**
@@ -329,6 +338,27 @@ public final class Mano {
         filtro.salida(ahora, dt, salidaP);
         for (int i = 0; i < 21; i++) { mundo[i][0] = salidaP[i * 3]; mundo[i][1] = salidaP[i * 3 + 1]; mundo[i][2] = salidaP[i * 3 + 2]; }
         if (medirPistola(pos, adelante, arriba)) tieneSuave = true;
+    }
+
+    /**
+     * El caño va de un punto de mira (el ojo, casi: ver Punteria) por la
+     * mano, no por la forma de la mano: con la cámara detrás de la mano,
+     * apuntar adelante es apuntar a lo largo del rayo de la cámara, justo lo
+     * que una sola cámara mide peor (la mano sale achatada y el caño de
+     * costado). Dónde está la mano en la foto se mide bien, y lo que erra en
+     * distancia cae a lo largo de este rayo: no lo mueve. El giro sobre el caño
+     * (la corredera) sigue siendo el de la mano: la muñeca da la vuelta igual.
+     */
+    public void apuntarDesde(float[] origen) {
+        float ax = pos[0] - origen[0], ay = pos[1] - origen[1], az = pos[2] - origen[2];
+        float al = (float) Math.sqrt(ax * ax + ay * ay + az * az);
+        if (al < 0.05f) return;   // la mano pegada al ojo: no hay rayo
+        adelante[0] = ax / al; adelante[1] = ay / al; adelante[2] = az / al;
+        // la corredera: la de la mano, perpendicular al caño nuevo (si quedó casi paralela, para arriba)
+        float q = arriba[0] * adelante[0] + arriba[1] * adelante[1] + arriba[2] * adelante[2];
+        if (Math.abs(q) > 0.95f) { arriba[0] = 0; arriba[1] = 1; arriba[2] = 0; q = adelante[1]; }
+        arriba[0] -= q * adelante[0]; arriba[1] -= q * adelante[1]; arriba[2] -= q * adelante[2];
+        normalizar(arriba);
     }
 
     /**

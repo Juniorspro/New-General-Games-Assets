@@ -21,6 +21,7 @@ final class Ajustes {
     int sellar = 1;            // los huecos del escaneo: 0 = no, 1 = se sellan solos (y se ven), 2 = se ven y se sellan desde el menú
     int zonas = 1;             // 0 = no, 1 = al escanear, 2 = siempre (con las rutas de los soldados)
     // mano
+    int apuntar = 0;           // el arma en la mano: 0 = el rayo del ojo por la mano (firme), 1 = la forma de la muñeca
     int mano = 1;              // la pistola en la mano (hand tracking con MediaPipe) y el gesto de disparo
     // cámara
     int camara = 1;            // 0 = la de ARCore, 1 = la configuración más ancha, 2 = ultra angular (experimental)
@@ -38,7 +39,7 @@ final class Ajustes {
     float voxel() { return detalle == 0 ? 0.05f : detalle == 2 ? 0.10f : 0.07f; }
 
     private static final String[] CLAVES = {"sbs", "ipdMm", "lentesMm", "tamano", "corregirLentes", "k1", "k2", "intercambiar",
-            "estereo", "malla", "detalle", "rellenar", "sellar", "zonas", "camara", "dificultad", "sonido", "vibrar", "seguro", "mano"};
+            "estereo", "malla", "detalle", "rellenar", "sellar", "zonas", "camara", "dificultad", "sonido", "vibrar", "seguro", "mano", "apuntar"};
 
     int valor(String c) {
         switch (c) {
@@ -61,6 +62,7 @@ final class Ajustes {
             case "sonido": return sonido;
             case "seguro": return seguro;
             case "mano": return mano;
+            case "apuntar": return apuntar;
             default: return vibrar;
         }
     }
@@ -86,6 +88,7 @@ final class Ajustes {
             case "sonido": sonido = v; break;
             case "seguro": seguro = v; break;
             case "mano": mano = v; break;
+            case "apuntar": apuntar = v; break;
             default: vibrar = v;
         }
     }
