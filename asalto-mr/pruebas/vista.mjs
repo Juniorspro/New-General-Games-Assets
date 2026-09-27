@@ -1,0 +1,230 @@
+// Vista previa sin teléfono: dibuja con WebGL (Chromium) lo que arma
+// pruebas/vista/Vista.java —la malla escaneada de verdad y las cajas que
+// dibuja Figuras.java de verdad— con LOS MISMOS shaders de la app (sacados de
+// los .java). La "cámara" es la escena de prueba dibujada por trazado de rayos.
+//
+//   ./pruebas/vista.sh      → salida/vista-*.png
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { extraerProgramas } from "./extraer.mjs";
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PLAYWRIGHT || "../../mundo-ar/node_modules/playwright");
+
+const [datosRuta, salida] = process.argv.slice(2);
+const datos = JSON.parse(readFileSync(datosRuta, "utf8"));
+const P = extraerProgramas();
+const buscar = (archivo, f) => { const p = P.find((p) => p.archivo === archivo && f(p)); if (!p) throw new Error("no encuentro un programa de " + archivo); return p; };
+const sh = {
+  prof: buscar("MallaGl.java", (p) => p.fs.includes("vec4(0.0)")),
+  lin: buscar("MallaGl.java", (p) => p.vs.includes("uCentro")),
+  rep: buscar("MallaGl.java", (p) => p.vs.includes("uVpCam")),
+  caja: buscar("Figuras.java", (p) => p.vs.includes("uModelo")),
+  punto: buscar("Figuras.java", (p) => p.vs.includes("aTam")),
+  lentes: buscar("Lentes.java", () => true),
+  mira: buscar("Hud.java", (p) => p.fs.includes("uColor")),
+};
+
+const W = 2340, H = 1080;
+const nav = await chromium.launch({ executablePath: process.env.CHROMIUM || "/opt/pw-browsers/chromium", args: ["--use-gl=swiftshader", "--enable-unsafe-swiftshader"] });
+const pag = await nav.newPage({ viewport: { width: W, height: H } });
+await pag.setContent(`<body style="margin:0;background:#000"><canvas id="c" width="${W}" height="${H}"></canvas></body>`);
+
+async function foto(modo, nombre) {
+  const err = await pag.evaluate(({ datos, sh, modo, W, H }) => {
+    const c = document.getElementById("c");
+    const gl = c.getContext("webgl", { preserveDrawingBuffer: true, antialias: true });
+    const prog = (p) => {
+      const mk = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+      const pr = gl.createProgram();
+      gl.attachShader(pr, mk(gl.VERTEX_SHADER, p.vs)); gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, p.fs)); gl.linkProgram(pr);
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
+      return pr;
+    };
+    const U = (pr, n) => gl.getUniformLocation(pr, n), A = (pr, n) => gl.getAttribLocation(pr, n);
+    // ── la "cámara": la escena de prueba (piso, pared, mesa, tronco) por trazado de rayos ──
+    const camara = prog({
+      vs: "attribute vec2 aPos; varying vec2 vP; void main(){ gl_Position=vec4(aPos,0.0,1.0); vP=aPos; }",
+      fs: `precision highp float; uniform mat4 uInv; varying vec2 vP;
+        float caja(vec3 p, vec3 a, vec3 b){ vec3 c=(a+b)*0.5, e=(b-a)*0.5; vec3 q=abs(p-c)-e; return length(max(q,0.0))+min(max(q.x,max(q.y,q.z)),0.0); }
+        float esc(vec3 p, out int id){ float d=p.y; id=0; float w=p.z+4.0; if(w<d){d=w;id=1;}
+          float m=caja(p,vec3(0.5,0.0,-2.5),vec3(1.5,0.8,-1.5)); if(m<d){d=m;id=2;}
+          float t=length(p.xz-vec2(-1.5,-2.0))-0.25; if(t<d){d=t;id=3;} return d; }
+        float ruido(vec2 p){ return fract(sin(dot(floor(p),vec2(12.9898,78.233)))*43758.5453); }
+        void main(){
+          vec4 a=uInv*vec4(vP,-1.0,1.0), b=uInv*vec4(vP,1.0,1.0); vec3 o=a.xyz/a.w, d=normalize(b.xyz/b.w-o);
+          float t=0.0; int id=-1; for(int i=0;i<160;i++){ int k; float h=esc(o+d*t,k); if(h<0.001){id=k;break;} t+=h; if(t>40.0)break; }
+          vec3 col = mix(vec3(0.62,0.78,0.95), vec3(0.32,0.55,0.9), clamp(d.y*2.0,0.0,1.0));
+          if(id>=0){ vec3 p=o+d*t; int k; vec2 e=vec2(0.002,0.0);
+            vec3 n=normalize(vec3(esc(p+e.xyy,k)-esc(p-e.xyy,k),esc(p+e.yxy,k)-esc(p-e.yxy,k),esc(p+e.yyx,k)-esc(p-e.yyx,k)));
+            float r=ruido(p.xz*18.0)*0.5+ruido(p.xz*5.0)*0.5;
+            vec3 base = id==0 ? mix(vec3(0.33,0.42,0.18),vec3(0.45,0.36,0.24),smoothstep(0.3,0.8,ruido(p.xz*1.3))) *(0.8+0.4*r)
+                      : id==1 ? vec3(0.82,0.79,0.72)*(0.92+0.08*ruido(p.xy*9.0))
+                      : id==2 ? vec3(0.45,0.3,0.18)*(0.85+0.15*ruido(p.xz*30.0))
+                      : vec3(0.3,0.24,0.18)*(0.7+0.5*ruido(vec2(atan(p.z+2.0,p.x+1.5)*20.0,p.y*30.0)));
+            float luz = 0.45+0.65*max(dot(n,normalize(vec3(0.4,0.9,0.35))),0.0);
+            col = mix(base*luz, col, smoothstep(12.0,40.0,t)); }
+          gl_FragColor=vec4(col,1.0); }`,
+    });
+    const quad = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const inv = (m) => { // inversa 4×4 por columnas
+      const r = new Float32Array(16), [a00,a01,a02,a03,a10,a11,a12,a13,a20,a21,a22,a23,a30,a31,a32,a33] = m;
+      const b00=a00*a11-a01*a10,b01=a00*a12-a02*a10,b02=a00*a13-a03*a10,b03=a01*a12-a02*a11,b04=a01*a13-a03*a11,b05=a02*a13-a03*a12,
+        b06=a20*a31-a21*a30,b07=a20*a32-a22*a30,b08=a20*a33-a23*a30,b09=a21*a32-a22*a31,b10=a21*a33-a23*a31,b11=a22*a33-a23*a32;
+      const det=1/(b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06);
+      r[0]=(a11*b11-a12*b10+a13*b09)*det; r[1]=(a02*b10-a01*b11-a03*b09)*det; r[2]=(a31*b05-a32*b04+a33*b03)*det; r[3]=(a22*b04-a21*b05-a23*b03)*det;
+      r[4]=(a12*b08-a10*b11-a13*b07)*det; r[5]=(a00*b11-a02*b08+a03*b07)*det; r[6]=(a32*b02-a30*b05-a33*b01)*det; r[7]=(a20*b05-a22*b02+a23*b01)*det;
+      r[8]=(a10*b10-a11*b08+a13*b06)*det; r[9]=(a01*b08-a00*b10-a03*b06)*det; r[10]=(a30*b04-a31*b02+a33*b00)*det; r[11]=(a21*b02-a20*b04-a23*b00)*det;
+      r[12]=(a11*b07-a10*b09-a12*b06)*det; r[13]=(a00*b09-a01*b07+a02*b06)*det; r[14]=(a31*b01-a30*b03-a32*b00)*det; r[15]=(a20*b03-a21*b01+a22*b00)*det;
+      return r;
+    };
+    const dibujarCamara = (vp) => {
+      gl.useProgram(camara); gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+      gl.uniformMatrix4fv(U(camara, "uInv"), false, inv(vp));
+      gl.bindBuffer(gl.ARRAY_BUFFER, quad); const a = A(camara, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0); gl.enableVertexAttribArray(a);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.depthMask(true); gl.enable(gl.DEPTH_TEST);
+    };
+    // ── la malla ──
+    const mv = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, mv); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(datos.malla.v), gl.STATIC_DRAW);
+    const mt = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mt); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(datos.malla.tri), gl.STATIC_DRAW);
+    const ml = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ml); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(datos.malla.lin), gl.STATIC_DRAW);
+    const P = Object.fromEntries(Object.entries(sh).map(([k, p]) => [k, prog(p)]));
+    const atrMalla = (pr, nor) => {
+      gl.bindBuffer(gl.ARRAY_BUFFER, mv);
+      const a = A(pr, "aPos"); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(a);
+      if (nor) { const n = A(pr, "aNor"); gl.vertexAttribPointer(n, 3, gl.FLOAT, false, 24, 12); gl.enableVertexAttribArray(n); }
+    };
+    const profundidad = (vp) => {
+      gl.useProgram(P.prof); gl.uniformMatrix4fv(U(P.prof, "uVp"), false, vp); atrMalla(P.prof, false);
+      gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 2);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mt); gl.drawElements(gl.TRIANGLES, datos.malla.tri.length, gl.UNSIGNED_SHORT, 0);
+      gl.disable(gl.POLYGON_OFFSET_FILL); gl.colorMask(true, true, true, true);
+    };
+    const reproyectada = (vp, vpCam, tex) => {
+      gl.useProgram(P.rep); gl.uniformMatrix4fv(U(P.rep, "uVp"), false, vp); gl.uniformMatrix4fv(U(P.rep, "uVpCam"), false, vpCam);
+      gl.uniform2f(U(P.rep, "uT0"), 0, 0); gl.uniform2f(U(P.rep, "uEjeX"), 1, 0); gl.uniform2f(U(P.rep, "uEjeY"), 0, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(U(P.rep, "uTex"), 0);
+      atrMalla(P.rep, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 2);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mt); gl.drawElements(gl.TRIANGLES, datos.malla.tri.length, gl.UNSIGNED_SHORT, 0);
+      gl.disable(gl.POLYGON_OFFSET_FILL);
+    };
+    const lineas = (vp, radio, alfa) => {
+      gl.useProgram(P.lin); gl.uniformMatrix4fv(U(P.lin, "uVp"), false, vp);
+      gl.uniform3fv(U(P.lin, "uCentro"), datos.jugador); gl.uniform1f(U(P.lin, "uRadio"), radio); gl.uniform1f(U(P.lin, "uAlfa"), alfa); gl.uniform1f(U(P.lin, "uAncho"), 0.45);
+      atrMalla(P.lin, true); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ml); gl.drawElements(gl.LINES, datos.malla.lin.length, gl.UNSIGNED_SHORT, 0);
+      gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
+      gl.disableVertexAttribArray(A(P.lin, "aNor"));
+    };
+    // ── cajas (lo que grabó Figuras.java) ──
+    const cubo = []; const caras = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    for (const n of caras) { const u = Math.abs(n[1]) > 0.5 ? [1,0,0] : [0,1,0]; const w = [n[1]*u[2]-n[2]*u[1], n[2]*u[0]-n[0]*u[2], n[0]*u[1]-n[1]*u[0]];
+      const s = [[-1,-1],[1,-1],[1,1],[-1,1]]; const e = s.map(([a,b]) => [0,1,2].map((k) => 0.5*(n[k]+a*u[k]+b*w[k])));
+      for (const i of [0,1,2,0,2,3]) cubo.push(...e[i], ...n); }
+    const cb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, cb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubo), gl.STATIC_DRAW);
+    const cajas = (lista) => {
+      gl.useProgram(P.caja); gl.bindBuffer(gl.ARRAY_BUFFER, cb);
+      const a = A(P.caja, "aPos"), n = A(P.caja, "aNor");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(n, 3, gl.FLOAT, false, 24, 12); gl.enableVertexAttribArray(n);
+      gl.uniform3f(U(P.caja, "uLuz"), 0.37, 0.84, 0.4);
+      for (const k of lista) {
+        gl.uniformMatrix4fv(U(P.caja, "uMvp"), false, k.slice(0, 16)); gl.uniformMatrix4fv(U(P.caja, "uModelo"), false, k.slice(16, 32));
+        gl.uniform4f(U(P.caja, "uColor"), k[32], k[33], k[34], k[35]); gl.drawArrays(gl.TRIANGLES, 0, 36);
+      }
+      gl.disableVertexAttribArray(n);
+    };
+    // ── partículas (con el shader de Figuras) ──
+    const colores = [[1,0.75,0.3],[0.55,0.47,0.36],[0.07,0.06,0.05],[0.75,0.75,0.72],[1,0.85,0.45]];
+    const pts = []; for (const [x,y,z,t,tipo,f] of datos.particulas) { const c = colores[tipo]; const a = tipo===0?f:tipo===1?0.55*f:tipo===2?Math.min(1,f*3):tipo===4?1:0.35*f; pts.push(x,y,z,t,...c,a); }
+    const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
+    const particulas = (vp, escala) => {
+      gl.useProgram(P.punto); gl.uniformMatrix4fv(U(P.punto, "uVp"), false, vp); gl.uniform1f(U(P.punto, "uEscala"), escala);
+      gl.bindBuffer(gl.ARRAY_BUFFER, pb);
+      const a = A(P.punto, "aPos"), t = A(P.punto, "aTam"), c = A(P.punto, "aCol");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 32, 0); gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(t, 1, gl.FLOAT, false, 32, 12); gl.enableVertexAttribArray(t);
+      gl.vertexAttribPointer(c, 4, gl.FLOAT, false, 32, 16); gl.enableVertexAttribArray(c);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+      gl.drawArrays(gl.POINTS, 0, datos.particulas.length);
+      gl.depthMask(true); gl.disable(gl.BLEND); gl.disableVertexAttribArray(t); gl.disableVertexAttribArray(c);
+    };
+    const mira = (asp) => {
+      const s = 0.018, g = 0.02, ax = 1 / asp;
+      const v = [-(g+s)*ax,0,-g*ax,0, (g+s)*ax,0,g*ax,0, 0,-(g+s),0,-g, 0,g+s,0,g, -0.002*ax,0,0.002*ax,0, 0,-0.002,0,0.002];
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      gl.useProgram(P.mira); gl.uniform4f(U(P.mira, "uColor"), 1, 0.3, 0.25, 1);
+      const a = A(P.mira, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 8, 0); gl.enableVertexAttribArray(a);
+      gl.disable(gl.DEPTH_TEST); gl.lineWidth(4); gl.drawArrays(gl.LINES, 0, 12); gl.enable(gl.DEPTH_TEST);
+    };
+    const escena = (v, vpFondo, fondoTex, alfaMalla, soldados, eyeH) => {
+      dibujarCamara(vpFondo);
+      if (fondoTex) reproyectada(v.vp, datos.vistas.camaraSbs, fondoTex); else profundidad(v.vp);
+      if (soldados) cajas(v.cajas.slice(0, v.nSoldados));
+      if (soldados) particulas(v.vp, (fondoTex ? 2.1445 : 3.2709) * eyeH / 2);
+      lineas(v.vp, soldados ? 3.2 : 2.6, alfaMalla);
+      if (soldados) { gl.clear(gl.DEPTH_BUFFER_BIT); cajas(v.cajas.slice(v.nSoldados)); }
+    };
+    gl.enable(gl.DEPTH_TEST);
+    if (modo === "sbs") {
+      // la imagen "de la cámara" (el ojo del medio) a una textura, como la da ARCore
+      const mkTex = (w, h) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+      const fbo = (tex, w, h) => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        const d = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, d); gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, d); return f; };
+      const camTex = mkTex(1076, 994); const camF = fbo(camTex, 1076, 994);
+      gl.viewport(0, 0, 1076, 994); dibujarCamara(datos.vistas.camaraSbs);
+      const todo = mkTex(W, H); const todoF = fbo(todo, W, H);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, todoF); gl.viewport(0, 0, W, H); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      const sep = 63 / 25.4 * 400, ew = 1076, eh = 994;
+      const ojos = [];
+      ["izq", "der"].forEach((n, o) => {
+        const cx = W / 2 + (o === 0 ? -sep / 2 : sep / 2), cy = H / 2;
+        gl.enable(gl.SCISSOR_TEST); gl.scissor(o === 0 ? 0 : W / 2, 0, W / 2, H);
+        gl.viewport(Math.round(cx - ew / 2), Math.round(cy - eh / 2), ew, eh); gl.clear(gl.DEPTH_BUFFER_BIT);
+        // fondo: la imagen de la cámara, igual en los dos ojos
+        gl.useProgram(P.lentes); // reusar un quad texturado: el de lentes con k = 0 hace de copia
+        gl.uniform1i(U(P.lentes, "uTex"), 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, camTex);
+        gl.uniform2f(U(P.lentes, "uTam"), ew, eh); gl.uniform2f(U(P.lentes, "uK"), 0, 0); gl.uniform2f(U(P.lentes, "uCentro"), ew / 2, eh / 2); gl.uniform1f(U(P.lentes, "uRadio"), ew);
+        gl.uniform2f(U(P.lentes, "uMin"), 0, 0); gl.uniform2f(U(P.lentes, "uMax"), ew, eh);
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad); const a = A(P.lentes, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 8, 0); gl.enableVertexAttribArray(a);
+        gl.disable(gl.DEPTH_TEST); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.enable(gl.DEPTH_TEST);
+        const v = datos.vistas[n];
+        reproyectada(v.vp, datos.vistas.camaraSbs, camTex);
+        cajas(v.cajas.slice(0, v.nSoldados));
+        particulas(v.vp, 2.1445 * eh / 2);
+        lineas(v.vp, 3.2, 0.1);
+        gl.clear(gl.DEPTH_BUFFER_BIT); cajas(v.cajas.slice(v.nSoldados));
+        mira(ew / eh);
+        ojos.push([o === 0 ? 0 : W / 2, 0, o === 0 ? W / 2 : W, H, cx, cy]);
+      });
+      gl.disable(gl.SCISSOR_TEST);
+      // los lentes (Lentes.java): cada mitad deformada en barril
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H); gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(P.lentes); gl.bindTexture(gl.TEXTURE_2D, todo); gl.uniform2f(U(P.lentes, "uTam"), W, H); gl.uniform2f(U(P.lentes, "uK"), 0.22, 0.12);
+      gl.enable(gl.SCISSOR_TEST); gl.disable(gl.DEPTH_TEST);
+      for (const o of ojos) {
+        gl.scissor(o[0], o[1], o[2] - o[0], o[3] - o[1]);
+        gl.uniform2f(U(P.lentes, "uCentro"), o[4], o[5]); gl.uniform1f(U(P.lentes, "uRadio"), Math.max(o[4] - o[0], o[2] - o[4]));
+        gl.uniform2f(U(P.lentes, "uMin"), o[0], o[1]); gl.uniform2f(U(P.lentes, "uMax"), o[2], o[3]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, quad); const a = A(P.lentes, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 8, 0); gl.enableVertexAttribArray(a);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+      gl.disable(gl.SCISSOR_TEST);
+    } else {
+      gl.viewport(0, 0, W, H); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      const v = datos.vistas.pantalla;
+      escena(v, v.vp, null, modo === "escaneo" ? 0.4 : 0.1, modo !== "escaneo", H);
+      if (modo !== "escaneo") mira(W / H);
+    }
+    return gl.getError();
+  }, { datos, sh, modo, W, H });
+  await pag.screenshot({ path: `${salida}/vista-${nombre}.png` });
+  console.log(`✓ vista-${nombre}.png (error GL ${err})`);
+}
+
+await foto("juego", "juego");
+await foto("escaneo", "escaneo");
+await foto("sbs", "sbs");
+await nav.close();

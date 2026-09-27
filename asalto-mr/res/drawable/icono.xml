@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Una mira sobre una malla de escaneo verde-agua, fondo oscuro. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#07030F" android:pathData="M8,0h32a8,8 0,0 1,8 8v32a8,8 0,0 1,-8 8h-32a8,8 0,0 1,-8 -8v-32a8,8 0,0 1,8 -8z" />
+    <path android:strokeColor="#33FFC7" android:strokeWidth="1" android:pathData="M4,36l10,-6l10,5l10,-7l10,6 M4,42l10,-6l10,5l10,-7l10,6 M14,30v12 M24,35v7 M34,28v12" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="2.5" android:pathData="M24,8v8 M24,24v-2 M16,18h-8 M40,18h-8" />
+    <path android:strokeColor="#FF4A3D" android:strokeWidth="2" android:fillColor="#00000000" android:pathData="M24,18m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+</vector>
