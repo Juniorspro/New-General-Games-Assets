@@ -121,6 +121,7 @@ const rm = await pag.evaluate(async () => {
     for (const p of ABIERTA) { const x = cen[0] - p[0], y = -cen[1] + p[1], z = -D + cen[2] - p[2]; I.push(0.5 + x / -z / (2 * TX), 0.5 - y / -z / (2 * TY), 0); W.push(ESCALA_MP * (x - 0), -ESCALA_MP * (y - 0), -ESCALA_MP * (z + D)); }
     return { e: 25, tx: TX, ty: TY, ms: 12, w: 640, h: 480, g: 1, luz: 0.4, d: 'GPU', n: 1, m: [{ d: 1, c: 0.95, i: I, w: W }] };
   };
+  window.__manoFalsa = mano;   // (vuelta 42: la usan las pruebas de la mira)
   const antes = A.manos.escalaMano;
   for (let i = 0; i < 220 && !A.espacio.medida.der?.hecha; i++) { window.__manda(1); if (i % 2 === 0) window.__nativo.manos(mano()); await new Promise((r) => setTimeout(r, 4)); }
   let guardada = null; try { guardada = +localStorage.getItem('aeroplaza.escalaMano'); } catch { /* nada */ }
@@ -135,10 +136,12 @@ await pag.screenshot({ path: path.join(SAL, `espacio-manos${FIN}.png`) });
 await pag.evaluate(() => { window.__poner(0, 1.45, 0.4, 0, -0.3); window.__A.vr.toque = true; window.__manda(3); });
 const rp = await pag.evaluate(() => {
   const E = window.__A.espacio, P = E.ventanas.pantalla; if (!P) return { fase: E.fase };
-  const w = P.malla.getWorldPosition(new window.__A.THREE.Vector3());
-  return { fase: E.fase, pos: w.toArray().map((x) => +x.toFixed(2)), sobreMesa: w.y > 0.74 + 0.2 && Math.abs(w.z + 0.6) < 0.6 };
+  window.__manda(30);   // (que termine de aparecer)
+  const w = P.malla.getWorldPosition(new window.__A.THREE.Vector3()), c = E.cabezaP;
+  /* (vuelta 42: adelante, a 1,9 m, un poco abajo de los ojos, y más grande: antes, arriba de la mesa a menos de 1 m) */
+  return { fase: E.fase, pos: w.toArray().map((x) => +x.toFixed(2)), lejos: +Math.hypot(w.x - c.x, w.z - c.z).toFixed(2), baja: +(c.y - w.y).toFixed(2), ancho: +(P.ancho * P.malla.scale.x).toFixed(2), adelante: w.z < c.z - 1 };
 });
-prueba('"Seguir" abre la pantalla, arriba de la mesa', rp.fase === 'pantalla' && rp.sobreMesa, JSON.stringify(rp));
+prueba('"Seguir" abre la pantalla adelante y lejos, como en un Quest (1,9 m, un poco abajo, más grande)', rp.fase === 'pantalla' && rp.adelante && Math.abs(rp.lejos - 1.9) < 0.05 && rp.baja > 0.1 && rp.baja < 0.3 && rp.ancho > 1.5, JSON.stringify(rp));
 /* mirar el botón "Dónde estoy" y tocar */
 const mirarBoton = async (id) => pag.evaluate((id) => {
   const A = window.__A, { THREE } = A, E = A.espacio, P = E.ventanas.pantalla, b = P.botones.find((x) => x.id === id);
@@ -200,7 +203,7 @@ const ra = await pag.evaluate(() => {
   for (const tipo of ['reloj', 'pizarra', 'burbujas', 'lugar']) W.abrir(tipo, E.cabezaP, E.cabezaQ);
   window.__manda(30);
   const cab = E.cabezaP, T = W.tableros, pos = T.map((x) => x.malla.getWorldPosition(new THREE.Vector3()));
-  const radio = (x, p) => Math.atan2(Math.hypot(x.ancho, x.alto) * 0.42, p.distanceTo(cab));
+  const radio = (x, p) => Math.atan2(Math.hypot(x.ancho, x.alto) * 0.42 * (x.escala || 1), p.distanceTo(cab));
   let peor = Infinity;
   for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) {
     const a = pos[i].clone().sub(cab).normalize(), b = pos[j].clone().sub(cab).normalize();
@@ -226,6 +229,45 @@ const rh = await pag.evaluate(() => {
   return { agarrada, luz, err: +V.malla.position.clone().sub(antes).sub(mueve).length().toFixed(4), suelta: !W.agarres.has(0) };
 });
 prueba('pellizcando la manija con la mano, la ventana se agarra y sigue a la mano', rh.agarrada && rh.err < 0.01 && rh.suelta, JSON.stringify(rh));
+/* (vuelta 42) COMO EN UN QUEST: las ventanas nacen lejos y más grandes, frenan antes de una pared, el rayo y el
+   pellizco las alcanzan, y la mira no aprieta nada */
+const rq = await pag.evaluate(() => {
+  const A = window.__A, { THREE } = A, E = A.espacio, W = E.ventanas; W.cerrarTodas();
+  window.__poner(0, 1.45, 0.4, 0, 0); window.__manda(5);
+  let cab = E.cabezaP.clone(), q = E.cabezaQ.clone();
+  const V = W.abrir('reloj', cab, q); window.__manda(30);
+  const lejos = +V.malla.getWorldPosition(new THREE.Vector3()).distanceTo(cab).toFixed(2), escala = +V.malla.scale.x.toFixed(2);
+  /* el rayo a la X de la ventana, lejos, y un pellizco: se cierra */
+  const X = V.malla.localToWorld(new THREE.Vector3(((V.cerrar.x + V.cerrar.w / 2) / V.W - 0.5) * V.ancho, (0.5 - (V.cerrar.y + V.cerrar.h / 2) / V.H) * V.alto, 0));
+  const o = cab.clone().add(new THREE.Vector3(0.2, -0.35, -0.1)), d = X.clone().sub(o).normalize();
+  W.actualizar(1 / 60, cab, q, [{ id: 0, o, d, yema: null, pinza: null, pellizca: true, empezo: true, solto: false }]);
+  const cerroConRayo = W.lista.length === 0;
+  /* mirando la pared de la izquierda (a 1,5 m): la ventana queda 15 cm antes, no adentro */
+  window.__poner(0, 1.45, 0.4, Math.PI / 2, 0); window.__manda(5); cab = E.cabezaP.clone(); q = E.cabezaQ.clone();
+  const V2 = W.abrir('reloj', cab, q); window.__manda(30);
+  const xPared = +V2.malla.getWorldPosition(new THREE.Vector3()).x.toFixed(2);
+  W.cerrarTodas();
+  return { lejos, escala, cerroConRayo, xPared };
+});
+prueba('las ventanas nacen lejos (1,45 m) y 1,7 veces más grandes; el rayo y el pellizco las alcanzan', Math.abs(rq.lejos - 1.45) < 0.03 && Math.abs(rq.escala - 1.7) < 0.01 && rq.cerroConRayo, JSON.stringify(rq));
+prueba('frente a una pared más cerca, la ventana queda 15 cm antes (no adentro)', Math.abs(rq.xPared - (-1.5 + 0.15)) < 0.03, `x ${rq.xPared} (la pared en -1,5)`);
+/* la mira: quedarse 3 s mirando un botón de la pantalla no aprieta nada; con una mano a la vista, el punto se va */
+const rmi = await pag.evaluate(() => {
+  const A = window.__A, { THREE } = A, E = A.espacio, W = E.ventanas; W.cerrarTodas();
+  window.__poner(0, 1.45, 0.4, 0, -0.3); window.__manda(5); E.abrirPantalla(); window.__manda(30);
+  const P = W.pantalla, b = P.botones.find((x) => x.id === 'reloj');
+  const w = P.malla.localToWorld(new THREE.Vector3(((b.x + b.w / 2) / P.W - 0.5) * P.ancho, (0.5 - (b.y + b.h / 2) / P.H) * P.alto, 0));
+  const ojo = E.cabezaP.clone(), d = w.clone().sub(ojo).normalize(), cel = ojo.clone().addScaledVector(d, 0.06);
+  window.__poner(cel.x, cel.y, cel.z, Math.atan2(-d.x, -d.z), Math.asin(d.y));
+  window.__manda(180);   // (3 s mirándolo)
+  const sinApretar = W.lista.length === 0, sobre = P.sobre?.id || null, carga = P.carga, puntoSolo = E.punto.visible;
+  /* una mano a la vista (de MediaPipe de mentira): el punto se apaga */
+  for (let i = 0; i < 90; i++) { if (i % 2 === 0) window.__nativo.manos(window.__manoFalsa()); window.__manda(1); }
+  const conMano = !!E.conMano, puntoConMano = E.punto.visible, op = +E.punto.material.opacity.toFixed(2);
+  return { sinApretar, sobre, carga, puntoSolo, conMano, puntoConMano, op };
+});
+prueba('mirar 3 s un botón no lo aprieta (ni se va llenando): la mira no aprieta', rmi.sinApretar && rmi.carga === 0 && rmi.sobre === 'reloj', JSON.stringify(rmi));
+prueba('con una mano a la vista la mira se apaga (apunta la mano, como en un Quest)', rmi.puntoSolo && rmi.conMano && !rmi.puntoConMano, JSON.stringify(rmi));
 /* el escaneo: se fue al terminar; "Ver el escaneo" lo muestra y lo vuelve a esconder */
 const re = await pag.evaluate(() => {
   const A = window.__A, E = A.espacio; E.ventanas.cerrarTodas();

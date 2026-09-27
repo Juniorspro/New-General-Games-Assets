@@ -66,6 +66,11 @@ const SECTORES = 12;         // mirar alrededor: la vuelta en 12 porciones
 const TOPE_VOX = 90000;
 const MESA = [0.35, 1.3];    // alto de una mesa sobre el piso (m)
 const MEDIR = { t: 1.2, n: 14, abierta: 1.5, horizontal: 0.7, cerca: 0.22, quieta: 0.012, palma: 0.02 };
+/* (vuelta 42, "las pantallas deben aparecer alejadas", como en un Quest) a cuánto va cada cosa (m) y cuánto más
+   grande (que se vea más o menos igual que antes, cerca). Lejos se enfoca mejor con el visor (las lentes enfocan
+   lejos: de cerca los dos ojos no juntan bien) y el temblor de la cabeza mueve menos lo que se ve. Se toca con el
+   rayo y el pellizco; si hay una pared antes, quedan 15 cm delante */
+const LEJOS_Q = { pantalla: 1.9, escalaPantalla: 1.45, ventanas: 1.45, escala: 1.7, tarjeta: [1.3, 2.2], escalaTarjeta: 2, lentes: 1.1, escalaLentes: 1.8 };
 const COLOR = { piso: new THREE.Color('#39d7ff'), pared: new THREE.Color('#b9f1ff'), mesa: new THREE.Color('#ffd23f'), techo: new THREE.Color('#c9b8ff'), otro: new THREE.Color('#7dfcc0') };
 const num = (x, d = 1) => x.toLocaleString(idioma() === 'en' ? 'en' : idioma() === 'pt' ? 'pt-BR' : 'es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _q = new THREE.Quaternion(), _v2 = new THREE.Vector2(), _up = new THREE.Vector3(0, 1, 0);
@@ -264,10 +269,12 @@ export class Espacio {
     this.fantasma.visible = false; this.fantasma.renderOrder = 3; this.escena.add(this.fantasma);
     /* la tarjeta y el punto de la mirada */
     this.tarjeta = new Tarjeta(); this.escena.add(this.tarjeta.malla); this.tarjeta.malla.renderOrder = 9;
+    this.tarjeta.escala = LEJOS_Q.escalaTarjeta; this.tarjeta.malla.scale.setScalar(LEJOS_Q.escalaTarjeta);
     this.punto = new THREE.Mesh(new THREE.RingGeometry(0.006, 0.011, 24), new THREE.MeshBasicMaterial({ color: '#ffffff', depthTest: false, transparent: true, opacity: 0.9, toneMapped: false }));
     this.punto.renderOrder = 20; this.escena.add(this.punto);
     /* la pantalla y las ventanas (6DoF: en el cuarto) */
-    this.ventanas = new Ventanas({ conSeis: true, paredes: () => this.paredes(), piso: () => this.pisoY, alSonar: (n) => this.sonar(n), alAccion: (id) => this.accion(id) });
+    /* (vuelta 42: quedarse mirando no aprieta nada; se aprieta con las manos, como en un Quest) */
+    this.ventanas = new Ventanas({ conSeis: true, quieta: 0, lejos: LEJOS_Q.ventanas, escala: LEJOS_Q.escala, paredes: () => this.paredes(), piso: () => this.pisoY, alSonar: (n) => this.sonar(n), alAccion: (id) => this.accion(id) });
     this.escena.add(this.ventanas.grupo);
     this.medida = { izq: null, der: null };
     /* LA CÁMARA CON AUMENTO (vuelta 31, apagada de entrada desde la 33): con visor, cada ojo con el campo de la
@@ -325,17 +332,16 @@ export class Espacio {
     this.tarjeta.sucio = true;
   }
   abrirPantalla() {
-    const M = this.mesa();
-    const pos = new THREE.Vector3();
-    if (M) {
-      /* arriba del borde de la mesa que da a la cabeza, un poco atrás */
-      pos.copy(this.bordeMesa(M, 0.3)); pos.y = M.centro.y + 0.48;
-    } else { _a.set(0, 0, -1).applyQuaternion(this.cabezaQ); _a.y = 0; _a.normalize(); pos.copy(this.cabezaP).addScaledVector(_a, 1.0); pos.y -= 0.12; }
+    /* (vuelta 42) adelante, a 1,9 m y un poco abajo de los ojos (antes, arriba del borde de la mesa: a menos de un
+       metro); más cerca si hay una pared antes */
+    /* (la dirección en un vector propio: contar las paredes usa los de trabajo, _a y los demás) */
+    const pos = new THREE.Vector3(), d = new THREE.Vector3(0, 0, -1).applyQuaternion(this.cabezaQ); d.y = 0; if (d.lengthSq() < 1e-4) d.set(0, 0, -1); d.normalize();
+    pos.copy(this.cabezaP).addScaledVector(d, this.ventanas.hasta(this.cabezaP, d, LEJOS_Q.pantalla)); pos.y -= 0.18;
     this.ventanas.abrirPantalla('🏠 ' + t('vt_pantalla'), [
       { id: 'jugar', texto: '▶ ' + t('vt_jugar'), principal: true }, { id: 'lugar', texto: '🧭 ' + t('vt_lugar') }, { id: 'reloj', texto: '🕒 ' + t('vt_reloj') },
       { id: 'pizarra', texto: '✍ ' + t('vt_pizarra') }, { id: 'burbujas', texto: '🫧 ' + t('vt_burbujas') }, { id: 'escaneo', texto: '🧱 ' + t('vt_escaneo') },
       { id: 'reescanear', texto: '🔁 ' + t('vt_reescanear') }, { id: 'medir', texto: '✋ ' + t('vt_medir') }, { id: 'lentes', texto: t('le_menu') }, { id: 'llenar', texto: t('es_llenar') }, { id: 'linterna', texto: t('es_linterna') }, { id: 'salir', texto: '✕ ' + t('vt_salir'), peligro: true },
-    ], pos, this.cabezaP, t('es_pantalla_sub') + (this.textoCamara() ? ' · ' + this.textoCamara() : ''));
+    ], pos, this.cabezaP, t('es_pantalla_sub') + (this.textoCamara() ? ' · ' + this.textoCamara() : ''), LEJOS_Q.escalaPantalla);
     this.ventanas.pantalla.marcar('escaneo', this.verEscaneo); this.ventanas.pantalla.marcar('llenar', this.llenar); this.ventanas.pantalla.marcar('linterna', !!this.vr.flash);
   }
   /* los botones de la pantalla y de la tarjeta */
@@ -366,7 +372,8 @@ export class Espacio {
   abrirLentes() {
     if (!this.sbs) { this.vr.decir?.(t('le_solo_sbs'), 3); return; }
     _a.set(0, 0, -1).applyQuaternion(this.cabezaQ); _a.y = 0; _a.normalize();
-    this.ventanas.abrirTablero(new PanelLentes(this.vr.lentes), _b.copy(this.cabezaP).addScaledVector(_a, 0.55).setY(this.cabezaP.y - 0.05), this.cabezaP);
+    const d = _a.clone(), k = this.ventanas.hasta(this.cabezaP, d, LEJOS_Q.lentes);
+    this.ventanas.abrirTablero(new PanelLentes(this.vr.lentes), this.cabezaP.clone().addScaledVector(d, k).setY(this.cabezaP.y - 0.08), this.cabezaP, LEJOS_Q.escalaLentes);
   }
   /* ------------------------------------------ lo que manda Android */
   recibirPlanos(lista) {
@@ -644,7 +651,7 @@ export class Espacio {
       _b.set(_a.x, 0, _a.z); if (_b.lengthSq() < 1e-4) _b.set(0, 0, -1); _b.normalize();
       /* (a la distancia en que ocupa algo más de la mitad de la vista: sin visor, con el campo angosto de la
          cámara, más lejos; con visor, más cerca) */
-      const dist = THREE.MathUtils.clamp(T.alto / ((this.sbs ? 0.4 : 0.55) * 2 * Math.tan(THREE.MathUtils.degToRad(this.campo()) / 2)), 0.7, 1.6);
+      const dist = THREE.MathUtils.clamp(T.alto * T.escala / ((this.sbs ? 0.4 : 0.55) * 2 * Math.tan(THREE.MathUtils.degToRad(this.campo()) / 2)), LEJOS_Q.tarjeta[0], LEJOS_Q.tarjeta[1]);
       const obj = _c.copy(this.cabezaP).addScaledVector(_b, dist); obj.y = this.cabezaP.y - dist * 0.26;
       if (this.tFase < 0.05) T.malla.position.copy(obj); else T.malla.position.lerp(obj, Math.min(1, dt * 1.8));
       T.malla.lookAt(this.cabezaP); T.malla.updateMatrixWorld();
@@ -664,19 +671,25 @@ export class Espacio {
       for (const e of ev) { if (e.tipo === 'sonido') this.sonar(e.s); else if (e.tipo === 'mando') V.decir?.(t('mn_mando_visto'), 4); else if (e.tipo === 'menu' && e.accion === 'mando') this.alMando?.(e.mando); else if (e.tipo === 'menu' && e.accion === 'lentes') this.abrirLentes(); else if (e.tipo === 'menu' && e.accion === 'salir') { this.cerrar(); this.alSalir(); return; } }
       for (const [k, M] of Ms.manos.entries()) if (M.visible && M.alfa > 0.5) punteros.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja || M.mando?.activo ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja || M.mando?.activo ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, _c)).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
     }
-    /* la mirada (el punto del centro) y el toque en la pantalla */
+    /* la mirada (el punto del centro) y el toque en la pantalla. (vuelta 42, como un Quest) con una mano a la vista
+       la mirada no cuenta ni se ve: apunta y aprieta la mano. Sin manos, el punto queda para el toque (el botón
+       del visor), nunca por quedarse mirando */
+    const conMano = punteros.length > 0;
     const mirada = { id: 'mirada', o: this.cabezaP.clone(), d: _a.clone(), clic: false };
     if (V.toque) { V.toque = false; mirada.clic = true; }
     V.salta = false;
-    punteros.push(mirada);
+    if (!conMano || mirada.clic) punteros.push(mirada);
+    this.conMano = conMano;
     if (this.fase === 'manos') this.medirManos(dt);
     /* la tarjeta también se toca (con sus botones): es un tablero más para los punteros */
     this.tocarTarjeta(dt, punteros);
     this.ventanas.actualizar(dt, this.cabezaP, this.cabezaQ, punteros.filter((p) => !p.usado));
     /* el punto de la mirada: donde toca algo, o a 1,2 m */
-    const pm = this.ventanas.apunta[2] || this.apuntaTarjeta?.mirada;
+    const pm = conMano ? null : this.ventanas.apunta[2] || this.apuntaTarjeta?.mirada;
     this.punto.position.copy(pm || _b.copy(this.cabezaP).addScaledVector(_a, 1.2)); this.punto.lookAt(this.cabezaP);
     const dm = this.punto.position.distanceTo(this.cabezaP); this.punto.scale.setScalar(dm);
+    /* (con manos se apaga en 0,25 s; sin manos vuelve) */
+    const pmat = this.punto.material; pmat.opacity = conMano ? Math.max(0, pmat.opacity - dt / 0.25) : Math.min(0.9, pmat.opacity + dt / 0.25); this.punto.visible = pmat.opacity > 0.01;
     /* lo que se ve del escaneo */
     const verE = this.verEscaneo || this.fase === 'escaneo' || this.fase === 'buscando', U = this.uVer;
     U.value = verE ? Math.min(1, U.value + dt / 0.3) : Math.max(0, U.value - dt / 0.8);

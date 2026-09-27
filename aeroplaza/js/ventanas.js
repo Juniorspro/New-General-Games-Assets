@@ -10,7 +10,9 @@
      Se abren cada una en su lugar, en un arco alrededor (vuelta 34).
    - CÓMO SE TOCAN (como un Quest): con la yema del índice (se aprieta al
      cruzar el vidrio), con el rayo y un pellizco, o con la mirada (el punto
-     del centro) y un toque en la pantalla o quedándose 1,4 s encima.
+     del centro) y un toque en la pantalla. Quedarse mirando no aprieta en tu
+     espacio (vuelta 42, "la mira no debería apretar, para algo las manos":
+     quieta = 0); en el mundo del juego, sin manos, sí (1,4 s).
    Sirve igual en tu cuarto (js/espacio.js, con ARCore: las ventanas quedan
    donde las dejaste mientras caminás) y en el mundo del juego (sin 6DoF).
    ========================================================================== */
@@ -90,6 +92,8 @@ export class Tablero {
     this.malla = new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false, toneMapped: false, side: THREE.DoubleSide }));
     this.malla.renderOrder = 8; this.malla.userData.tablero = this;
     this.botones = []; this.sobre = null; this.apretado = null; this.carga = 0; this.sucio = true; this.nace = 0;
+    /* (vuelta 42: más grande y más lejos, como en un Quest; las cuentas van en el vidrio, así que no cambian) */
+    this.escala = 1;
   }
   /* un punto del mundo, en píxeles del lienzo, y su distancia al vidrio (positiva adelante) */
   local(p) {
@@ -262,25 +266,27 @@ export class Ventana extends Tablero {
 export class Ventanas {
   /* conSeis: con 6DoF (tu cuarto); paredes(): los planos donde se pegan [{ p, n }] (n horizontal, hacia afuera);
      piso(): la altura del piso (o null); alSonar(nombre); alAccion(id) (los botones de la pantalla) */
-  constructor({ conSeis = true, paredes = null, piso = null, alSonar = () => {}, alAccion = () => {} } = {}) {
+  /* (vuelta 42) lejos: a cuánto van las ventanas nuevas (m), y escala: cuánto más grandes (que se vean igual) */
+  constructor({ conSeis = true, paredes = null, piso = null, alSonar = () => {}, alAccion = () => {}, quieta = QUIETA, lejos = LEJOS, escala = 1 } = {}) {
     this.grupo = new THREE.Group(); this.grupo.name = 'ventanas';
-    this.conSeis = conSeis; this.paredes = paredes; this.piso = piso; this.alSonar = alSonar; this.alAccion = alAccion;
+    this.conSeis = conSeis; this.paredes = paredes; this.piso = piso; this.alSonar = alSonar; this.alAccion = alAccion; this.quieta = quieta; this.lejos = lejos; this.escala = escala;
     this.pantalla = null; this.lista = []; this.agarres = new Map(); this.previo = new Map(); this.apunta = [null, null]; this.mirada = { b: null, tab: null, t: 0 };
     this.nAbiertas = 0;
   }
   get tableros() { return (this.pantalla && this.pantalla.malla.visible ? [this.pantalla] : []).concat(this.lista); }
   get hayAlgo() { return this.tableros.length > 0; }
-  abrirPantalla(titulo, opciones, pos, mirar, sub = '') {
+  abrirPantalla(titulo, opciones, pos, mirar, sub = '', escala = this.escala) {
     if (this.pantalla) this.pantalla.soltar();
-    const P = this.pantalla = new Pantalla(titulo, opciones, sub);
+    const P = this.pantalla = new Pantalla(titulo, opciones, sub); P.escala = escala;
     P.malla.position.copy(pos); P.malla.lookAt(mirar.x, pos.y + (mirar.y - pos.y) * 0.4, mirar.z); P.nace = 0; P.malla.scale.setScalar(0.01);
     this.grupo.add(P.malla); this.alSonar('aviso');
     return P;
   }
   cerrarPantalla() { if (this.pantalla) { this.pantalla.soltar(); this.pantalla = null; } }
   /* otro tablero en el lugar de la pantalla (el panel de las lentes: sus botones van a alAccion) */
-  abrirTablero(T, pos, mirar) {
+  abrirTablero(T, pos, mirar, escala = this.escala) {
     if (this.pantalla) this.pantalla.soltar();
+    T.escala = escala;
     this.pantalla = T; T.malla.position.copy(pos); T.malla.lookAt(mirar); T.nace = 0; T.malla.scale.setScalar(0.01);
     this.grupo.add(T.malla); this.alSonar('aviso');
     return T;
@@ -288,7 +294,7 @@ export class Ventanas {
   /* una ventana nueva: en el primer lugar libre de un arco alrededor (vuelta 34: antes iban a 12 cm una de otra
      y, de 44 cm de ancho, quedaban amontonadas). Primero adelante, después a los costados y arriba */
   abrir(tipo, cabezaP, cabezaQ) {
-    const V = new Ventana(tipo, { conSeis: this.conSeis });
+    const V = new Ventana(tipo, { conSeis: this.conSeis }); V.escala = this.escala;
     V.malla.position.copy(this.lugarLibre(cabezaP, cabezaQ, V));
     V.malla.lookAt(cabezaP); V.nace = 0; V.malla.scale.setScalar(0.01); this.nAbiertas++;
     if (this.piso) V.piso = this.piso();
@@ -297,14 +303,15 @@ export class Ventanas {
   }
   lugarLibre(cabezaP, cabezaQ, V) {
     _a.set(0, 0, -1).applyQuaternion(cabezaQ); _a.y = 0; if (_a.lengthSq() < 1e-4) _a.set(0, 0, -1); _a.normalize();
-    const rumbo = Math.atan2(-_a.x, -_a.z), lugares = [];
+    const rumbo = Math.atan2(-_a.x, -_a.z), lugares = [], k = this.lejos / LEJOS;
     for (const [c, f] of [[0, 0], [1, 0], [-1, 0], [0, 1], [1, 1], [-1, 1], [2, 0], [-2, 0], [2, 1], [-2, 1], [3, 0], [-3, 0]]) {
-      const r = rumbo - c * PASO;
-      lugares.push(new THREE.Vector3(cabezaP.x - Math.sin(r) * LEJOS, cabezaP.y + FILAS[f], cabezaP.z - Math.cos(r) * LEJOS));
+      const r = rumbo - c * PASO, d = new THREE.Vector3(-Math.sin(r), FILAS[f] * k / this.lejos, -Math.cos(r)).normalize();
+      /* (vuelta 42: más cerca si hay una pared antes, para no quedar adentro) */
+      lugares.push(cabezaP.clone().addScaledVector(d, this.hasta(cabezaP, d, this.lejos)));
     }
     /* (libre: que no se tape con nada de lo abierto, visto desde la cabeza: el ángulo entre los centros contra
        lo que abarca cada uno) */
-    const radio = (T, p) => Math.atan2(Math.hypot(T.ancho, T.alto) * 0.42, Math.max(0.2, p.distanceTo(cabezaP)));
+    const radio = (T, p) => Math.atan2(Math.hypot(T.ancho, T.alto) * 0.42 * (T.escala || 1), Math.max(0.2, p.distanceTo(cabezaP)));
     const libre = (p) => this.tableros.every((T) => {
       const q = T.malla.getWorldPosition(new THREE.Vector3()), u = _b.copy(p).sub(cabezaP).normalize(), w = _c.copy(q).sub(cabezaP).normalize();
       return Math.acos(THREE.MathUtils.clamp(u.dot(w), -1, 1)) > radio(T, q) + radio(V, p);
@@ -336,7 +343,7 @@ export class Ventanas {
   actualizar(dt, cabezaP, cabezaQ, punteros) {
     for (const T of this.tableros) {
       /* (aparecen creciendo, con un rebote) */
-      if (T.nace < 1) { T.nace = Math.min(1, T.nace + dt / 0.32); const x = T.nace, s = 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2); T.malla.scale.setScalar(Math.max(0.01, s)); }
+      if (T.nace < 1) { T.nace = Math.min(1, T.nace + dt / 0.32); const x = T.nace, s = 1 + 2.2 * Math.pow(x - 1, 3) + 1.2 * Math.pow(x - 1, 2); T.malla.scale.setScalar(Math.max(0.01, s) * (T.escala || 1)); }
       if (T instanceof Ventana) T.cuadro(dt, cabezaP);
     }
     /* (las cuentas con el vidrio usan su matriz del mundo: que sea la de este cuadro y no la del último dibujo) */
@@ -405,10 +412,11 @@ export class Ventanas {
       this.apunta[k === 'mirada' ? 2 : k] = r.p;
       let carga = 0;
       if (k === 'mirada') {
-        /* (la mirada: un toque en la pantalla, o quedarse encima de un botón QUIETA s) */
+        /* (la mirada: un toque en la pantalla, o quedarse encima de un botón quieta s; con quieta = 0, solo el toque) */
         if (this.mirada.b === b && this.mirada.tab === T && b) this.mirada.t += dt; else this.mirada = { b, tab: T, t: 0 };
-        carga = b ? Math.min(1, this.mirada.t / QUIETA) : 0;
-        if (p.clic || (b && this.mirada.t >= QUIETA)) { this.mirada.t = -1.2; if (esV && T.enBarra(r.u, r.v) && !T.enCerrar(r.u, r.v)) this.traerAdelante(T, cabezaP, cabezaQ); else this.pulsar(T, r.u, r.v, p); }
+        const q = this.quieta;
+        carga = b && q > 0 ? Math.min(1, this.mirada.t / q) : 0;
+        if (p.clic || (b && q > 0 && this.mirada.t >= q)) { this.mirada.t = -1.2; if (esV && T.enBarra(r.u, r.v) && !T.enCerrar(r.u, r.v)) this.traerAdelante(T, cabezaP, cabezaQ); else this.pulsar(T, r.u, r.v, p); }
       } else if (p.empezo) {
         if (esV && T.enBarra(r.u, r.v) && !T.enCerrar(r.u, r.v)) { this.agarres.set(k, { V: T, k: r.k, off: r.p.clone().sub(T.malla.position) }); this.alSonar('elegir'); }
         else this.pulsar(T, r.u, r.v, p);
@@ -426,6 +434,9 @@ export class Ventanas {
       T.refrescar();
     }
   }
+  /* (vuelta 42) hasta dónde se puede poner algo en la dirección d: lejos, o 15 cm antes de la pared (y no más
+     cerca de 0,9 m, que ya no se enfoca bien con el visor) */
+  hasta(o, d, lejos) { const w = this.enPared(o, d.clone()); return w ? THREE.MathUtils.clamp(w.k - 0.15, Math.min(0.9, lejos), lejos) : lejos; }
   /* dónde toca el rayo la pared más cercana (hasta 4 m, y a menos de 3 m del centro de la pared) */
   enPared(o, d) {
     let mejor = null;
@@ -451,6 +462,6 @@ export class Ventanas {
   }
   /* (con la mirada no se puede arrastrar: tocar la barra la trae delante de la cara) */
   traerAdelante(V, cabezaP, cabezaQ) {
-    _a.set(0, 0, -1).applyQuaternion(cabezaQ); V.malla.position.copy(cabezaP).addScaledVector(_a, 0.6); V.malla.lookAt(cabezaP); V.pegada = false; this.alSonar('elegir');
+    const d = new THREE.Vector3(0, 0, -1).applyQuaternion(cabezaQ); V.malla.position.copy(cabezaP).addScaledVector(d, this.hasta(cabezaP, d, this.lejos * 0.8)); V.malla.lookAt(cabezaP); V.pegada = false; this.alSonar('elegir');
   }
 }
