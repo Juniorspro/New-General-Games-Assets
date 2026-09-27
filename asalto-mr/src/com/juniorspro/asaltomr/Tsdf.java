@@ -60,8 +60,8 @@ public final class Tsdf {
     private final HashMap<Long, Bloque> bloques = new HashMap<>();
     private final ArrayList<Bloque> sucios = new ArrayList<>();
     private Bloque ultimo;                          // caché de la última búsqueda (la mayoría cae en el mismo bloque)
-    /** Tope de memoria: cada bloque pesa ~28 KB. Lleno, se sigue afinando lo que ya hay. */
-    public int maxBloques = 2500;
+    /** Tope de memoria: cada bloque pesa ~28 KB (1800 ≈ 50 MB). Lleno, se sigue afinando lo que ya hay. */
+    public int maxBloques = 1800;
 
     public Tsdf(float voxel) {
         this.voxel = voxel;

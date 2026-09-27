@@ -26,7 +26,8 @@ final class Lentes {
         fbo = 0;
         prog = Gl.programa(
                 "attribute vec2 aPos; varying vec2 vP; void main() { gl_Position = vec4(aPos, 0.0, 1.0); vP = aPos * 0.5 + 0.5; }",
-                "precision highp float; uniform sampler2D uTex; uniform vec2 uCentro; uniform float uRadio; uniform vec2 uK;\n"
+                "#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n"
+                        + "uniform sampler2D uTex; uniform vec2 uCentro; uniform float uRadio; uniform vec2 uK;\n"
                         + "uniform vec2 uTam; uniform vec2 uMin; uniform vec2 uMax; varying vec2 vP;\n"
                         + "void main() {\n"
                         + "  vec2 px = vP * uTam;\n"                               // en píxeles

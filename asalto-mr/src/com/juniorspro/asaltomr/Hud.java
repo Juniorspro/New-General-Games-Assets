@@ -190,13 +190,13 @@ final class Hud {
         if (abajo != null && !abajo.isEmpty()) {
             String[] a = abajo.split("\n");
             float y = 300;
-            float x0 = 300, ancho = W - 40 - x0;   // a la derecha del minimapa
-            canvas.drawRoundRect(new RectF(x0, 230, W - 40, 250 + a.length * 70), 28, 28, caja);
+            float ax0 = 300, ancho = W - 40 - ax0;   // a la derecha del minimapa
+            canvas.drawRoundRect(new RectF(ax0, 230, W - 40, 250 + a.length * 70), 28, 28, caja);
             for (String s : a) {
                 float w = grande.measureText(s);
                 Paint p = grande;
                 if (w > ancho - 40) { p = chico; w = chico.measureText(s); }
-                canvas.drawText(s, x0 + (ancho - w) / 2, y, p);
+                canvas.drawText(s, ax0 + (ancho - w) / 2, y, p);
                 y += 70;
             }
         }

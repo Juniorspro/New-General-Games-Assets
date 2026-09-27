@@ -119,6 +119,18 @@ final class Escaneo implements Runnable {
 
     @Override
     public void run() {
+        try {
+            correr();
+        } catch (Throwable e) {
+            // que un error del escaneo no cierre la app: se guarda y el escaneo para
+            Fallo.guardar("hilo del escaneo", e);
+            error = e;
+        }
+    }
+
+    volatile Throwable error;
+
+    private void correr() {
         while (seguir) {
             boolean hayImagen;
             synchronized (this) {

@@ -19,17 +19,25 @@ final class Ajustes {
     int detalle = 1;           // 0 = fino 5 cm, 1 = normal 7 cm, 2 = grueso 10 cm
     int rellenar = 1;          // la IA completa lo que no se ve (piso debajo y detrás de las cosas, el fondo de los objetos)
     int zonas = 1;             // 0 = no, 1 = al escanear, 2 = siempre (con las rutas de los soldados)
+    // mano
+    int mano = 1;              // la pistola en la mano (hand tracking con MediaPipe) y el gesto de disparo
     // cámara
     int camara = 1;            // 0 = la de ARCore, 1 = la configuración más ancha, 2 = ultra angular (experimental)
     // juego
     int dificultad = 1;
     int sonido = 1;
     int vibrar = 1;
+    int seguro = 0;            // modo seguro: sin semántica, sin completar, cámara de ARCore, sin mano
+
+    /** Lo mínimo para arrancar (después de un error). */
+    void ponerSeguro() {
+        seguro = 1; sbs = 0; camara = 0; rellenar = 0; zonas = 0; mano = 0;
+    }
 
     float voxel() { return detalle == 0 ? 0.05f : detalle == 2 ? 0.10f : 0.07f; }
 
     private static final String[] CLAVES = {"sbs", "ipdMm", "lentesMm", "tamano", "corregirLentes", "k1", "k2", "intercambiar",
-            "estereo", "malla", "detalle", "rellenar", "zonas", "camara", "dificultad", "sonido", "vibrar"};
+            "estereo", "malla", "detalle", "rellenar", "zonas", "camara", "dificultad", "sonido", "vibrar", "seguro", "mano"};
 
     int valor(String c) {
         switch (c) {
@@ -49,6 +57,8 @@ final class Ajustes {
             case "camara": return camara;
             case "dificultad": return dificultad;
             case "sonido": return sonido;
+            case "seguro": return seguro;
+            case "mano": return mano;
             default: return vibrar;
         }
     }
@@ -71,6 +81,8 @@ final class Ajustes {
             case "camara": camara = v; break;
             case "dificultad": dificultad = v; break;
             case "sonido": sonido = v; break;
+            case "seguro": seguro = v; break;
+            case "mano": mano = v; break;
             default: vibrar = v;
         }
     }

@@ -126,7 +126,61 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     protected void onCreate(Bundle guardado) {
         super.onCreate(guardado);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        Fallo.instalar(this);
         ajustes.cargar(this);
+        // si la vez anterior se cayó, primero mostrar por qué
+        String error = Fallo.leer(this);
+        if (error != null) { mostrarFallo(error); return; }
+        try {
+            armar();
+        } catch (Throwable e) {
+            Fallo.guardar("al abrir", e);
+            mostrarFallo(Fallo.leer(this));
+        }
+    }
+
+    /** La pantalla del error: el texto, copiarlo, y abrir (normal o en modo seguro). */
+    private void mostrarFallo(String error) {
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setBackgroundColor(0xFF07030F);
+        l.setPadding(dp(18), dp(14), dp(18), dp(14));
+        TextView t = new TextView(this);
+        t.setText("La vez anterior Asalto MR se cerró por un error. Copialo y pegalo en el chat para arreglarlo:");
+        t.setTextColor(Color.WHITE);
+        t.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        l.addView(t);
+        LinearLayout fila = new LinearLayout(this);
+        fila.setOrientation(LinearLayout.HORIZONTAL);
+        Button copiar = boton("COPIAR EL ERROR"), seguro = boton("ABRIR EN MODO SEGURO"), igual = boton("ABRIR IGUAL");
+        final String texto = error == null ? "(sin texto)" : error;
+        copiar.setOnClickListener(v -> {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Asalto MR", texto));
+            android.widget.Toast.makeText(this, "Copiado", android.widget.Toast.LENGTH_SHORT).show();
+        });
+        seguro.setOnClickListener(v -> { ajustes.ponerSeguro(); ajustes.guardar(this); Fallo.borrar(this); recreate(); });
+        igual.setOnClickListener(v -> { Fallo.borrar(this); recreate(); });
+        for (Button b : new Button[]{copiar, seguro, igual}) {
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1);
+            lp.setMargins(dp(4), dp(10), dp(4), dp(10));
+            fila.addView(b, lp);
+        }
+        l.addView(fila);
+        android.widget.ScrollView sv = new android.widget.ScrollView(this);
+        TextView e = new TextView(this);
+        e.setText(texto);
+        e.setTextColor(0xFFFFB0A0);
+        e.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        e.setTypeface(Typeface.MONOSPACE);
+        e.setTextIsSelectable(true);
+        sv.addView(e);
+        l.addView(sv, new LinearLayout.LayoutParams(-1, 0, 1));
+        setContentView(l);
+    }
+
+    /** Arma la app de verdad (la vista de GL, el HUD, los botones, el panel). */
+    private void armar() {
         vistos = ajustes.copia();
         DisplayMetrics dm = getResources().getDisplayMetrics();
         xdpi = dm.xdpi > 100 ? dm.xdpi : dm.densityDpi;
@@ -191,7 +245,11 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
 
         setContentView(raiz);
         aplicarVisibilidad();
+        armada = true;
     }
+
+    /** ¿Se armó la app? (si se mostró la pantalla del error, no) */
+    private boolean armada;
 
     private LinearLayout.LayoutParams margenArriba() {
         LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(-2, -2);
@@ -326,6 +384,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     @Override
     protected void onResume() {
         super.onResume();
+        if (!armada) return;
         pantallaCompleta();
         escaneo.arrancar();
         if (sesion == null && !crearSesion()) return;
@@ -342,10 +401,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMISO_CAMARA);
                 return false;
             }
-            boolean ultra = ajustes.camara == 2;
+            boolean ultra = ajustes.camara == 2 && ajustes.seguro == 0;
             sesion = ultra ? new Session(this, EnumSet.of(Session.Feature.SHARED_CAMERA)) : new Session(this);
             // la cámara: la de ARCore, o la de más campo visual
-            if (ajustes.camara >= 1) {
+            if (ajustes.camara >= 1 && ajustes.seguro == 0) {
                 CameraConfig c = Camara.masAncha(this, sesion);
                 if (c != null) sesion.setCameraConfig(c);
             }
@@ -358,7 +417,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             hayProfundidad = sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC);
             config.setDepthMode(hayProfundidad ? Config.DepthMode.AUTOMATIC : Config.DepthMode.DISABLED);
             // la red neuronal de ARCore que etiqueta cada píxel (anda sobre todo al aire libre)
-            try { haySemantica = sesion.isSemanticModeSupported(Config.SemanticMode.ENABLED); } catch (Exception e) { haySemantica = false; }
+            try { haySemantica = ajustes.seguro == 0 && sesion.isSemanticModeSupported(Config.SemanticMode.ENABLED); } catch (Exception e) { haySemantica = false; }
             config.setSemanticMode(haySemantica ? Config.SemanticMode.ENABLED : Config.SemanticMode.DISABLED);
             if (!ultra) config.setFlashMode(linterna ? Config.FlashMode.TORCH : Config.FlashMode.OFF);
             sesion.configure(config);
@@ -463,12 +522,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     @Override
     protected void onPause() {
         super.onPause();
+        if (!armada) return;
         pausar();
         escaneo.parar();
     }
 
     @Override
     protected void onDestroy() {
+        if (!armada) { super.onDestroy(); return; }
         cerrarSesion();
         sonido.liberar();
         super.onDestroy();
@@ -501,6 +562,24 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig c) {
+        try {
+            crearGl();
+        } catch (Throwable e) {
+            falloGl(e);
+        }
+    }
+
+    /** Si el dibujo falla: se guarda, se muestra, y se deja de dibujar (en vez de cerrar la app). */
+    private volatile Throwable errorGl;
+
+    private void falloGl(Throwable e) {
+        if (errorGl != null) return;
+        errorGl = e;
+        Fallo.guardar("dibujo (GL)", e);
+        avisar("Error dibujando. Cerrá y volvé a abrir para ver el error completo y copiarlo:\n" + e);
+    }
+
+    private void crearGl() {
         GLES20.glClearColor(0f, 0f, 0f, 1f);
         fondo.crear();
         mallaGl.crear();
@@ -540,6 +619,19 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
 
     @Override
     public void onDrawFrame(GL10 gl) {
+        if (errorGl != null) {
+            GLES20.glClearColor(0.1f, 0, 0, 1);
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+            return;
+        }
+        try {
+            dibujarCuadro();
+        } catch (Throwable e) {
+            falloGl(e);
+        }
+    }
+
+    private void dibujarCuadro() {
         GLES20.glViewport(0, 0, ancho, alto);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
         Ajustes a = vistos;

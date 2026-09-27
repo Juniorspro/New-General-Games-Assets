@@ -51,15 +51,26 @@ echo "· recursos (los de la app + los del aar de ARCore)…"
   -R "$OBRA/res-arcore.zip" -R "$OBRA/res.zip" -o "$OBRA/base.apk"
 
 echo "· compilando Java…"
-javac -nowarn -Xlint:-options -source 8 -target 8 -encoding UTF-8 \
+# OJO: si javac falla, NO seguir. (Antes se miraba sólo si existía Principal.class: javac
+# igual escribía las clases que sí compilaban, y salió un APK sin Hud que se cerraba al abrir.)
+if ! javac -nowarn -Xlint:-options -source 8 -target 8 -encoding UTF-8 \
   -bootclasspath "$PLAT:$BT/core-lambda-stubs.jar" -classpath "$ARCORE/classes.jar" -d "$OBRA/clases" \
-  $(find src "$OBRA/gen" -name "*.java") 2>&1 | grep -v "^Picked up" || true
-[ -f "$OBRA/clases/com/juniorspro/asaltomr/Principal.class" ] || { echo "✗ no compiló"; exit 1; }
+  $(find src "$OBRA/gen" -name "*.java") 2> "$OBRA/javac.txt"; then
+  grep -v "^Picked up" "$OBRA/javac.txt"; echo "✗ no compiló"; exit 1
+fi
+# y cada .java tiene que haber dado su .class
+for f in $(find src -name "*.java"); do
+  c=$(echo "$f" | sed 's|^src/||; s|\.java$|.class|')
+  [ -f "$OBRA/clases/$c" ] || { echo "✗ falta $c"; exit 1; }
+done
 
 echo "· dex…"
 "$BT/d8" --release --min-api 24 --lib "$PLAT" --output "$OBRA/dex" \
-  $(find "$OBRA/clases" -name "*.class") "$ARCORE/classes.jar" 2>&1 \
-  | grep -v -E "^Picked up|androidx/annotation|Type .* was not found|Warning in|Missing class" || true
+  $(find "$OBRA/clases" -name "*.class") "$ARCORE/classes.jar" > "$OBRA/d8.txt" 2>&1 || true
+# clases que faltan = se cierra al usarlas. Las de ARCore que faltan son sólo anotaciones (androidx.annotation).
+if grep -E "Missing class|was not found" "$OBRA/d8.txt" | grep -v "androidx.annotation\|androidx/annotation"; then
+  echo "✗ d8: faltan clases"; exit 1
+fi
 [ -f "$OBRA/dex/classes.dex" ] || { echo "✗ no salió el dex"; exit 1; }
 
 echo "· empaquetando…"
