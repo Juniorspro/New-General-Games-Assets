@@ -56,3 +56,17 @@ Cuando algo no sale, primero hay que saber **quién** lo frenó:
   banderas parece bloqueado, y esa es la nota vieja que quedó dando vueltas).
 - Verificado el 22/9: daemon 29.3.1, driver overlayfs.
 - Para una imagen grande, mirar el disco antes: la de Neko pesa ~1,3 GB.
+
+## Abrir páginas de internet con el Chromium de Playwright (27/9)
+
+- El proxy re-firma TLS y el Chromium de Playwright no toma el NSS de la
+  máquina: `ERR_CERT_AUTHORITY_INVALID`. Sin apagar la verificación: fijar
+  solo la clave de la CA del proxy.
+
+  ```sh
+  H=$(openssl x509 -in /root/.ccr/agent-proxy-ca.crt -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
+  # chromium.launch({ proxy: { server: process.env.HTTPS_PROXY },
+  #   args: ["--disable-quic", "--ignore-certificate-errors-spki-list=" + H] })
+  ```
+
+- Sin `--disable-quic` sale `ERR_TOO_MANY_RETRIES`.

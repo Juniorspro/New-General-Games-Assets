@@ -38,6 +38,13 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
   Se arma con `herramientas/descargable/empaquetar.py`: el archivo de un
   artifact solo no sirve, porque no trae `<!doctype>` ni `meta charset` (los
   acentos se rompen al abrirlo del disco) y carga las librerías de la CDN.
+- **Siempre quiere un link de githack para probar el juego** (lo pidió el 27/9,
+  "siempre"). Después del push, por juego:
+  `https://raw.githack.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/<carpeta>/index.html`
+  (la rama; para una versión fija, `rawcdn.githack.com/…/<sha>/…`). Desde 2026
+  githack muestra "One more step": hay que tocar **"Open the page"** una vez.
+  jsDelivr y statically sirven el HTML como texto (no sirven); gitcdn.link está
+  muerto. Cómo comprobarlo desde acá: [maquina](maquina.md).
 - Prefiere que se corrija lo que está mal antes que se agregue al lado.
 - Quiere el dato con su número, y que se diga cuando algo **no** se pudo probar.
 - Cuando algo se traba, quiere saber **cuál de los frenos** fue: el servicio
