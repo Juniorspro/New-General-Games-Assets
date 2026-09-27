@@ -71,6 +71,7 @@ Pidió: "se me cierra la app al entrar al ARCore". No hay logcat (no lo puede ma
   - el juego: el aviso sale entero, dentro de la pantalla (76 px), otro no lo saca, sigue a los 7,5 s, se pide 1 vez,
     y el título está en 3 idiomas.
 - nativo 18, cabeza 17, espacio 28, vr 19, malla 19, mando 18: todas bien a la primera.
+- La tanda común (22 pruebas, `avisos` incluida: se tocó `notificar`) 22/22 a la primera, en 7,7 min.
 - La APK `--canciones` compila (23,9 MB).
 - Ojo: una variable local `java` tapa el paquete `java.nio…` (javac: "cannot find symbol"). Se llama `deJava`.
 - `__A.textos = { t, ponerIdioma }`: la página de las pruebas es el IIFE armado, así que no se puede importar `js/textos.js`.
