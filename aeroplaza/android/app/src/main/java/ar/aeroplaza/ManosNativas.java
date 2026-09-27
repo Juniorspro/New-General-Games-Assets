@@ -27,13 +27,20 @@ import java.util.concurrent.Executors;
      girada para que quede derecha en la pantalla y con LA LUZ de la web (js/manos-camara.js › LUZ_JS):
      si la mano está oscura, se aclara hasta 0,42, hasta ×6. Se mide con lo de la foto anterior.
    - Lo que sale va a window.__nativo.manos como en la web: los 21 puntos en la imagen (0-1) y en
-     metros, qué mano es, y el campo de la cámara (de su calibración, no supuesto) */
+     metros, qué mano es, y el campo de la cámara (de su calibración, no supuesto)
+   - Con una sola mano a la vista se busca una (red1): buscando dos, MediaPipe busca palmas en CADA
+     foto aunque siga una, y tarda el doble (medido en la web: 74 contra 38 ms; aeroplaza-17). La otra
+     se busca con red (numHands 2) en una foto cada BUSCA_CADA ms, un rato recién aparecida la mano,
+     mientras se vean dos y cuando el juego tiene una mano a prueba (quiereDos, js/nativo.js) */
 class ManosNativas {
   final MainActivity act;
   final ExecutorService hilo = Executors.newSingleThreadExecutor();
-  HandLandmarker red;
+  HandLandmarker red, red1;
   String delegado = "?";
-  volatile boolean ocupado;
+  volatile boolean ocupado, quiereDos;
+  static final long BUSCA_CADA = 1200, CON_DOS = 500, RECIEN = 400;
+  long vioDos = -1000000, desdeUna = 0, buscoDos = 0;
+  int vistas = 0;           // las manos de la última foto (0, 1, 2)
   byte[] y, u, v;
   int[] px;
   Bitmap bm;
@@ -46,11 +53,9 @@ class ManosNativas {
     hilo.execute(() -> {
       for (Delegate d : new Delegate[] { Delegate.GPU, Delegate.CPU }) {
         try {
-          HandLandmarker.HandLandmarkerOptions o = HandLandmarker.HandLandmarkerOptions.builder()
-              .setBaseOptions(BaseOptions.builder().setModelAssetPath("mediapipe/hand_landmarker.task").setDelegate(d).build())
-              .setRunningMode(RunningMode.VIDEO).setNumHands(2)
-              .setMinHandDetectionConfidence(0.5f).setMinHandPresenceConfidence(0.4f).setMinTrackingConfidence(0.4f).build();
-          red = HandLandmarker.createFromOptions(act, o);
+          red = HandLandmarker.createFromOptions(act, opciones(d, 2));
+          /* (la de una mano; si no se puede, todo con la de dos, como antes) */
+          try { red1 = HandLandmarker.createFromOptions(act, opciones(d, 1)); } catch (Throwable t) { red1 = null; }
           delegado = d == Delegate.GPU ? "GPU" : "CPU";
           act.enviar("__nativo&&__nativo.estado('manos " + delegado + "')");
           return;
@@ -60,7 +65,20 @@ class ManosNativas {
     });
   }
 
+  static HandLandmarker.HandLandmarkerOptions opciones(Delegate d, int n) {
+    return HandLandmarker.HandLandmarkerOptions.builder()
+        .setBaseOptions(BaseOptions.builder().setModelAssetPath("mediapipe/hand_landmarker.task").setDelegate(d).build())
+        .setRunningMode(RunningMode.VIDEO).setNumHands(n)
+        .setMinHandDetectionConfidence(0.5f).setMinHandPresenceConfidence(0.4f).setMinTrackingConfidence(0.4f).build();
+  }
+
   boolean libre() { return red != null && !ocupado; }
+
+  /* cuántas manos se buscan en esta foto: una solo con una sola a la vista hace un rato */
+  int cupo(long ahora) {
+    if (red1 == null || quiereDos || vistas != 1 || ahora - vioDos < CON_DOS || ahora - desdeUna < RECIEN || ahora - buscoDos > BUSCA_CADA) return 2;
+    return 1;
+  }
 
   static byte[] copiar(ByteBuffer b, byte[] a) {
     b.rewind(); int n = b.remaining();
@@ -76,6 +94,8 @@ class ManosNativas {
     y = copiar(P[0].getBuffer(), y); u = copiar(P[1].getBuffer(), u); v = copiar(P[2].getBuffer(), v);
     ocupado = true;
     final long t0 = SystemClock.elapsedRealtime();
+    final int n = cupo(t0);
+    if (n == 2) buscoDos = t0;
     hilo.execute(() -> {
       try {
         boolean gira = giro == 90 || giro == 270;
@@ -85,11 +105,16 @@ class ManosNativas {
         bm.setPixels(px, 0, Wo, 0, 0, Wo, Ho);
         MPImage mp = new BitmapImageBuilder(bm).build();
         long tms = ts / 1000000L; if (tms <= ultimoTs) tms = ultimoTs + 1; ultimoTs = tms;
-        HandLandmarkerResult r = red.detectForVideo(mp, tms);
+        /* (las dos redes con la misma hora, que en modo VIDEO tiene que ir siempre para adelante) */
+        HandLandmarkerResult r = (n == 1 ? red1 : red).detectForVideo(mp, tms);
+        int vis = r.landmarks().size();
+        if (vis >= 2) vioDos = t0;
+        if (vis >= 1 && vistas == 0) desdeUna = t0;
+        vistas = Math.min(vis, 2);
         float fx = gira ? focal[1] : focal[0], fy = gira ? focal[0] : focal[1];
         double tanX = (Wo / 2.0) / fx, tanY = (Ho / 2.0) / fy;
         long ms = SystemClock.elapsedRealtime() - t0;
-        act.enviar("__nativo&&__nativo.manos(" + json(r, edad + ms, tanX, tanY, ms, Wo, Ho) + ")");
+        act.enviar("__nativo&&__nativo.manos(" + json(r, edad + ms, tanX, tanY, ms, Wo, Ho, n) + ")");
       } catch (Throwable t) {
         act.enviar("__nativo&&__nativo.estado('manos: " + t.getClass().getSimpleName() + "')");
       } finally { ocupado = false; }
@@ -123,9 +148,9 @@ class ManosNativas {
     }
   }
 
-  String json(HandLandmarkerResult r, double edad, double tanX, double tanY, long ms, int W, int H) {
+  String json(HandLandmarkerResult r, double edad, double tanX, double tanY, long ms, int W, int H, int n) {
     StringBuilder s = new StringBuilder(4096);
-    s.append(String.format(Locale.US, "{\"e\":%.1f,\"tx\":%.5f,\"ty\":%.5f,\"ms\":%d,\"w\":%d,\"h\":%d,\"g\":%.2f,\"luz\":%.3f,\"d\":\"%s\",\"m\":[", edad, tanX, tanY, ms, W, H, g, media, delegado));
+    s.append(String.format(Locale.US, "{\"e\":%.1f,\"tx\":%.5f,\"ty\":%.5f,\"ms\":%d,\"w\":%d,\"h\":%d,\"g\":%.2f,\"luz\":%.3f,\"d\":\"%s\",\"n\":%d,\"m\":[", edad, tanX, tanY, ms, W, H, g, media, delegado, n));
     List<List<NormalizedLandmark>> L = r.landmarks();
     float x0 = 1, y0 = 1, x1 = 0, y1 = 0;
     for (int h = 0; h < L.size(); h++) {
@@ -156,5 +181,5 @@ class ManosNativas {
     return s.toString();
   }
 
-  void cerrar() { hilo.execute(() -> { if (red != null) red.close(); red = null; }); hilo.shutdown(); }
+  void cerrar() { hilo.execute(() -> { if (red != null) red.close(); if (red1 != null) red1.close(); red = red1 = null; }); hilo.shutdown(); }
 }

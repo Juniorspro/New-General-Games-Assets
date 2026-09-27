@@ -323,7 +323,8 @@ para arriba: [aeroplaza-23](aeroplaza-23.md). La mano de un video de verdad:
 [aeroplaza-24](aeroplaza-24.md). Sin patadas, lejos y saliendo de la cámara:
 [aeroplaza-25](aeroplaza-25.md). El dedo que movía la mano, la cámara a 60 y
 la luz: [aeroplaza-26](aeroplaza-26.md). La APK con ARCore y las manos de Android:
-[aeroplaza-27](aeroplaza-27.md).
+[aeroplaza-27](aeroplaza-27.md). El retraso que ponía el resorte y la APK buscando dos
+manos: [aeroplaza-28](aeroplaza-28.md).
 
 ## Trampas que ya se pagaron
 

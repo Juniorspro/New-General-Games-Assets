@@ -158,7 +158,7 @@ async function iniciar() {
   /* (en la APK con ARCore, las manos son las de Android: la cámara es de ARCore y la web no la puede
      abrir; si ARCore no anda, las de la web) */
   const laCamara = () => (camManos = Nativo.hay && Nativo.puedeAR && !Nativo.estado.startsWith('error') && Nativo.estado !== 'sin-permiso'
-    ? (camNativa ||= new ManosNativas({ alLlegar }))
+    ? (camNativa ||= new ManosNativas({ alLlegar, quiereDos: () => manos.prueba.length > 0 }))
     : (camWeb ||= Object.assign(new ManosCamara({ alLlegar }),
       /* (para la carrera de la GPU: si la red en la placa le saca cuadros al dibujo) */
       { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0 })));

@@ -113,13 +113,22 @@ const AMORT = 0.8012;  // cuánto de la velocidad se usa para adelantar
 /* (vuelta 21: con la cámara lenta, lo que tarda de más se adelanta un poco más, hasta AMORT + AMORT_MAS
    con 0,26 s. Con la foto a 0,19 s, medio iba 97 ms atrás de costado; ahora 24. Hasta 0,13 s, igual que
    antes. LAT_TOPE: lo más que se cree que tarda) */
+/* (vuelta 28: LAT_REF 0,13 → 0,08 s. Con la foto a 0,15 s (manos-lento) se adelantaba el 84 % de lo que
+   tarda, ahora el 93 %: de costado a 10 cm/s, 102 → 78 ms atrás; para arriba, 71 → 43. Con los videos,
+   igual) */
 /* (ADEL_MAX, vuelta 22: 10 → 6,5 cm, en Medio y Suaves; Rápidas sigue con 10 (SUAVIDAD › adelMax). En un
    manotazo a 1,2 m/s que frena en seco, lo mostrado se pasaba 9 cm: mientras ninguna foto muestra que
    frenó, el adelanto sigue. Ahora 6,6 cm. Con 5,5, manos-celu quieta con la cámara lenta daba 6,0 mm) */
-const LAT_TOPE = 0.35, AMORT_MAS = 0.24, LAT_REF = 0.13, ADEL_MAX = 0.065;
+const LAT_TOPE = 0.35, AMORT_MAS = 0.24, LAT_REF = 0.08, ADEL_MAX = 0.065;
 const ASIENTA = 0.93;     // quieta, en cuánto se va el ancla hacia donde está la mano filtrada (s; 0: no se va) (Mano.estabilizar)
 const TAU = 0.0321;    // en cuánto se reparte el salto de cada foto nueva: un resorte (s)
 const RESORTE_V = 1;   // y cuánto del cambio de velocidad (Mano.suavizar)
+/* (vuelta 28: y moviéndose, más corto. Con los videos de quien juega, lo dibujado estaba más lejos de la
+   mano que lo que sale del filtro (33,1 contra 29,5 % de la palma a 30 fotos; 16,2 contra 13,4 a 60): lo
+   ponía el resorte. TAU_RAPIDA desde TAU_VEL[1] m/s del centro (TAU hasta TAU_VEL[0]), y todo escalado
+   por el intervalo de las fotos contra TAU_FOTO (s; más largo, igual). Con los dos videos: 57,8 → 56,5
+   y 36,0 → 34,0 %; a 60 fotos, menos patadas (39,9 → 34,6 por minuto). aeroplaza-28) */
+const TAU_RAPIDA = 0.02, TAU_VEL = [0.05, 0.3], TAU_FOTO = 0.0333;
 /* (RESORTE_V, C_BETAD y CH_BETAD, vuelta 22: la búsqueda con los manotazos las movía, pero con esas
    manos-celu temblaba el doble (2,4 mm por cuadro): quedan como estaban. aeroplaza-22 § Los manotazos) */
 const GAN_MEM = 0.95, GAN_MIN = 0.2, GAN_DESDE = 0;   // Mano.medirAdelanto: lo que queda de lo medido en cada foto (~0,7 s), lo menos que se adelanta y desde cuánto se mide (m)
@@ -431,11 +440,13 @@ const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }
    - Medio y suaves: de una búsqueda (vuelta 17, herramientas/manos-lento.mjs: 450 al azar, con las
      semillas 1-5; comprobado con las 6-10). Medio, otra vez en la vuelta 20 (300, contando cuánto
      tarda en arrancar y los movimientos chicos: "tarda en seguirme"), con vs: con el borde empujado y
-     el centro a más de vs (m/s), el ancla de costado se suelta sin esperar te */
+     el centro a más de vs (m/s), el ancla de costado se suelta sin esperar te. Suaves, con vs desde la
+     vuelta 28: sin eso, un paso de 6 mm quedaba justo en el borde de soltarse (en 1 de 5 semillas se
+     quedaba 5 mm atrás hasta el movimiento siguiente, 8 s) */
 export const SUAVIDAD = {
   rapida: { anclas: null, lmax: 0.35, lmaxH: 0.35, v0: 0.03, v1: 0.1, adelMax: 0.1 },
   media: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0048, rh: 0.0106, tq: 0.2645, tqH: 0.1799, te: 0.0426, teH: 0.0172, ts: 0.038, tsH: 0.0491, vs: 0.0568 } },
-  suave: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514 } },
+  suave: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514, vs: 0.05 } },
 };
 class Mano {
   constructor(derecha) {
@@ -767,7 +778,11 @@ class Mano {
     this.viaja = this.nueva && lejos > 0.08 ? true : this.viaja && lejos > 0.015;
     this.nueva = false;
     /* (la cuenta exacta del resorte crítico: estable con cualquier paso) */
-    const w = 1 / TAU, e = Math.exp(-w * h);
+    /* (vuelta 28: el resorte crítico atrasa lo que no se adelantó unas 2 TAU (64 ms). Con la mano que va
+       rápido, lo que salta de foto a foto es movimiento y no ruido: se reparte en TAU_RAPIDA. Y con la
+       cámara a 60, en la mitad: las fotos vienen a la mitad de distancia) */
+    const tau = (TAU + (TAU_RAPIDA - TAU) * THREE.MathUtils.smoothstep(this.velCentro(), TAU_VEL[0], TAU_VEL[1])) * Math.min(1, (this.dtFoto || TAU_FOTO) / TAU_FOTO);
+    const w = 1 / tau, e = Math.exp(-w * h);
     for (let i = 0; i < 63; i++) {
       const x0 = off[i], v0 = oV[i], a = v0 + w * x0;
       off[i] = (x0 + a * h) * e; oV[i] = (v0 - w * a * h) * e;

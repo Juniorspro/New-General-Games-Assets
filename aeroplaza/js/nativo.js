@@ -33,6 +33,7 @@ export const Nativo = {
   arIniciar(conManos = false) { try { N()?.arIniciar(!!conManos); } catch { /* sin APK */ } },
   arParar() { try { N()?.arParar(); } catch { /* sin APK */ } this.pose = this.poseAntes = null; },
   arManos(si) { try { N()?.arManos(!!si); } catch { /* sin APK */ } },
+  manosDos(si) { try { N()?.manosDos?.(!!si); } catch { /* sin APK */ } },
   flash(si) { try { N()?.flash(!!si); } catch { /* sin APK */ } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
   /* ARCore siguiendo, con una pose reciente */
@@ -85,13 +86,13 @@ export function poseEn(tVer, q, ojo, ojos = 0.06) {
 /* ------------------------------------------ las manos de Android, con la cara de ManosCamara
    (lo que usa main.js: prender, apagar, activa, linterna, datos) */
 export class ManosNativas {
-  constructor({ alLlegar }) {
-    this.alLlegar = alLlegar; this.activa = false; this.estadoRed = 'apagada'; this.nativa = true;
+  constructor({ alLlegar, quiereDos }) {
+    this.alLlegar = alLlegar; this.quiereDos = quiereDos; this.dos = false; this.activa = false; this.estadoRed = 'apagada'; this.nativa = true;
     this.stats = { cuadros: 0, ms: 0, latencia: 0, g: 1, delegado: '' }; this._d = null;
     Nativo.alManos = (d) => this.recibir(d);
   }
   async prender() {
-    this.activa = true;
+    this.activa = true; this.dos = false;
     if (Nativo.estado !== 'corre') {
       Nativo.arIniciar(true);
       const e = await Nativo.esperar((x) => x === 'corre' || x.startsWith('error') || x === 'sin-permiso' || x === 'no');
@@ -113,7 +114,10 @@ export class ManosNativas {
       const P = puntosMano(b, b, d.tx, d.ty, 0, 63); if (!P) continue;
       manos.push({ derecha: m.d < 0 ? null : m.d > 0.5, puntos: P, confianza: m.c, img: b.slice(0, 63), forma: b.slice(63, 126) });
     }
-    this.alLlegar?.(manos, t, ahora, 2);
+    /* (d.n: cuántas buscaba MediaPipe en esa foto, ManosNativas.java › cupo; con una buscada, la otra no
+       cuenta como perdida. Y si manos.js tiene una a prueba, que busque dos: si no, no se confirma nunca) */
+    this.alLlegar?.(manos, t, ahora, d.n || 2);
+    const dos = !!this.quiereDos?.(); if (dos !== this.dos) { this.dos = dos; Nativo.manosDos(dos); }
   }
   datos() {
     const S = this.stats, ahora = performance.now();

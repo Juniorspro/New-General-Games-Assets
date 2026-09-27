@@ -6,7 +6,8 @@
 //   van detrás del celu);
 // - si ARCore deja de mandar, sigue el giroscopio sin saltar de rumbo;
 // - con las manos, son las de Android (no se abre la cámara de la web): una mano a 35 cm de la cámara
-//   aparece donde tiene que estar en el mundo;
+//   aparece donde tiene que estar en el mundo; con Java buscando una sola (n: 1), sigue; y con una
+//   mano a prueba, se le pide a Java que busque dos (manosDos);
 // - el flash va a ARCore.
 //     node pruebas/nativo.mjs
 import { navegador, abrir, avanzar } from './comun.mjs';
@@ -21,7 +22,7 @@ await pag.addInitScript(() => {
   window.AeroplazaNativo = {
     version: () => '1', arEstado: () => 'si',
     arIniciar: (m) => { window.__llamadas.push(['arIniciar', m]); setTimeout(() => window.__nativo?.estado('corre'), 30); },
-    arParar: anota('arParar'), arManos: anota('arManos'), flash: anota('flash'), vibrar: anota('vibrar')
+    arParar: anota('arParar'), arManos: anota('arManos'), manosDos: anota('manosDos'), flash: anota('flash'), vibrar: anota('vibrar')
   };
 });
 await pag.reload();
@@ -95,14 +96,29 @@ const rm = await pag.evaluate(async () => {
     A.paso(1 / 60, false);
     await new Promise((r) => setTimeout(r, 16));
   }
+  /* (buscando una sola, como hace Java con una mano a la vista (ManosNativas.java › cupo): la mano
+     sigue; y si manos.js quiere ver dos, se le pide a Java) */
+  const conUna = () => Object.assign(mano(), { n: 1 });
+  for (let i = 0; i < 40; i++) {
+    window.__nativo.pose(20, 0.3, 1.5, -0.06, q.x, q.y, q.z, q.w, 1, '60');
+    if (i % 2 === 0) window.__nativo.manos(conUna());
+    A.paso(1 / 60, false);
+    await new Promise((r) => setTimeout(r, 16));
+  }
+  const sigueConUna = !!A.manos.manos.find((x) => x.visible);
+  const qd = A.camManos.quiereDos; A.camManos.quiereDos = () => true; window.__nativo.manos(conUna());
+  A.camManos.quiereDos = qd; window.__nativo.manos(conUna());
+  const dos = window.__llamadas.filter((x) => x[0] === 'manosDos').map((x) => x[1]);
   const c = A.motor.camara, H = A.manos.manos.find((x) => x.visible);
   /* dónde tiene que estar la muñeca: la cámara del celu (6 cm delante de los ojos) más el punto */
   const esperado = new A.THREE.Vector3(M[0], M[1], M[2] - 0.06).applyQuaternion(c.quaternion).add(c.position);
   const dib = H ? new A.THREE.Vector3(H.p[0], H.p[1], H.p[2]) : null;
-  return { nativa: A.camManos?.nativa ? 'ManosNativas' : A.camManos?.constructor?.name, visible: !!H, err: dib ? dib.distanceTo(esperado) : null, llamadas: window.__llamadas.map((x) => x[0]), datos: A.camManos?.datos?.() };
+  return { nativa: A.camManos?.nativa ? 'ManosNativas' : A.camManos?.constructor?.name, visible: !!H, err: dib ? dib.distanceTo(esperado) : null, llamadas: window.__llamadas.map((x) => x[0]), datos: A.camManos?.datos?.(), sigueConUna, dos };
 });
 prueba('con ARCore, las manos son las de Android (la web no abre la cámara)', rm.nativa === 'ManosNativas' && rm.llamadas.includes('arManos'), `${rm.nativa} · ${rm.datos}`);
 prueba('la mano de Android aparece donde está (a menos de 3 cm)', rm.visible && rm.err < 0.03, rm.err == null ? 'no se ve' : `${(rm.err * 100).toFixed(1)} cm`);
+prueba('con Java buscando una sola, la mano sigue', rm.sigueConUna);
+prueba('con una mano a prueba, se le pide a Java que busque dos (y después que no)', rm.dos.join() === 'true,false', rm.dos.join() || 'nada');
 
 await pag.evaluate(() => window.__A.vr.alFlash(true));
 prueba('el flash va a ARCore', await pag.evaluate(() => window.__llamadas.some((x) => x[0] === 'flash' && x[1] === true)));

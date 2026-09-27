@@ -163,6 +163,8 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void arIniciar(final boolean conManos) { runOnUiThread(() -> iniciarAr(conManos)); }
     @JavascriptInterface public void arParar() { runOnUiThread(() -> { if (ar != null) ar.parar(); }); }
     @JavascriptInterface public void arManos(final boolean si) { runOnUiThread(() -> { if (ar != null) ar.manos(si); }); }
+    /* (el juego tiene una mano a prueba: buscar dos en cada foto, para verlas juntas) */
+    @JavascriptInterface public void manosDos(final boolean si) { Ar a = ar; if (a != null && a.manos != null) a.manos.quiereDos = si; }
     @JavascriptInterface public void flash(final boolean si) { runOnUiThread(() -> { if (ar != null) ar.flash(si); }); }
     @JavascriptInterface public void vibrar(int ms) {
       Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);

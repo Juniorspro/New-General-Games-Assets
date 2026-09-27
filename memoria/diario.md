@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la tarde · `claude/fijate-iszyer`:**
+  - Pidió: "seguí arreglando mi juego y sacando ese maldito retraso cada vez más en las manos" (AEROPLAZA).
+  - Quedó ([aeroplaza-28](aeroplaza-28.md)): el resorte más corto moviéndose y a 60 fotos; más adelanto con la
+    cámara lenta; suaves que sueltan el ancla. De costado a 10 cm/s, 102 → 78 ms; con sus videos, `centro`
+    33,1 → 32,3 y 16,2 → 14,6. La APK busca una mano mientras ve una (antes, palmas en cada foto).
+  - Falta: medir en su celular cuánto baja el ms/red de la APK (el cartel de ⏱).
 - **27/09/2026, al mediodía · `claude/fijate-iszyer`:**
   - Pidió: preguntó si la APK corre sobre una WebView (sí: el Chrome del teléfono;
     el WebGL va a la placa igual) y CONTRAGOLPE (un HTML que mandó) en APK,
