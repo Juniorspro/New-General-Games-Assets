@@ -50,6 +50,7 @@ import { Estudio } from './probador.js';
 import { regaloDelDia } from './joyas.js';
 import { VR } from './vr.js';
 import { ManosCamara } from './manos-camara.js';
+import { Nativo, ManosNativas } from './nativo.js';
 import { Manos } from './manos.js';
 import { VisorXR } from './vr-xr.js';
 import { candidatasCopias, instanciarCopias, revisarCopias } from './instanciar.js';
@@ -152,10 +153,15 @@ async function iniciar() {
   let tXR = 0;
   /* las manos del VR (manos.js), por la cámara del celu (manos-camara.js, MediaPipe en un worker) */
   const manos = new Manos();
-  let camManos = null;
-  const laCamara = () => (camManos ||= Object.assign(new ManosCamara({ alLlegar: (lista, tt, llego, cupo) => { if (manos.activa) manos.recibirCamara(lista, tt, llego, cupo); } }),
-    /* (para la carrera de la GPU: si la red en la placa le saca cuadros al dibujo) */
-    { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0 }));
+  let camManos = null, camWeb = null, camNativa = null;
+  const alLlegar = (lista, tt, llego, cupo) => { if (manos.activa) manos.recibirCamara(lista, tt, llego, cupo); };
+  /* (en la APK con ARCore, las manos son las de Android: la cámara es de ARCore y la web no la puede
+     abrir; si ARCore no anda, las de la web) */
+  const laCamara = () => (camManos = Nativo.hay && Nativo.puedeAR && !Nativo.estado.startsWith('error') && Nativo.estado !== 'sin-permiso'
+    ? (camNativa ||= new ManosNativas({ alLlegar }))
+    : (camWeb ||= Object.assign(new ManosCamara({ alLlegar }),
+      /* (para la carrera de la GPU: si la red en la placa le saca cuadros al dibujo) */
+      { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0 })));
   /* el flash del VR sin visor (vr.js pone el botón): la linterna de la cámara de atrás */
   vr.alFlash = (prender) => laCamara().linterna(prender);
   /* (con los cuadros por segundo prendidos, también lo de las manos: fotos por segundo y atraso) */
@@ -170,7 +176,11 @@ async function iniciar() {
       if (!vr.activo || !manos.activa) { camManos.apagar(); return; }
       vr.decir(t('mn_manos_listas'), 5);
     }
-    catch (e) { console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos(); }
+    catch (e) {
+      /* (si las de Android no arrancan, las de la web) */
+      if (camManos === camNativa && camWeb !== camManos) { console.warn('manos nativas:', e); Nativo.estado = 'error'; Nativo.arParar(); camManos = null; return prenderManos(); }
+      console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos();
+    }
   };
   const apagarManos = () => { camManos?.apagar({ todo: !vr.activo }); manos.activa = false; manos.limpiar(); };
   /* lo que las manos pueden apuntar: lo interactivo del lugar a menos de 15 m, con su cartel */
@@ -1053,7 +1063,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { visor, VisorXR, ManosCamara, manos, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { visor, VisorXR, ManosCamara, Nativo, manos, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

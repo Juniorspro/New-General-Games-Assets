@@ -197,6 +197,28 @@ node aeroplaza/trailer/grabar.mjs audio      # necesita musica-ajena/ (no está 
 node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tiktok.mp4 y su portada
 ```
 
+## La APK (Android, con ARCore)
+
+`android/` es AEROPLAZA para Android: el mismo `aeroplaza.html` en una WebView a
+pantalla completa, sin internet para jugar solo (MediaPipe va adentro). Lo que
+suma Android:
+
+- **ARCore** (si el celu lo tiene): en el modo VR, la cabeza en 6 ejes (dónde
+  está el celu, no solo para dónde mira). El mundo queda quieto al asomarse,
+  agacharse o dar un paso (hasta 1,2 m de costado). Si ARCore se pierde, sigue
+  el giroscopio sin salto.
+- **Las manos con MediaPipe de Android** (en la GPU si se puede) sobre las fotos
+  de ARCore, a 60 si la cámara puede; con la luz corregida como en la web. Sin
+  ARCore, las de la web.
+- El flash con ARCore; la cámara y el micrófono (chat de voz) con los permisos
+  de Android; atrás es Escape (dos veces seguidas, sale).
+
+Se arma con `node herramientas/apk.mjs [--canciones]` (necesita el SDK de
+Android en `ANDROID_HOME`, Java 17+ y Gradle 8.13+) y sale en
+`pruebas/salida/aeroplaza.apk`, firmada con la llave de prueba. La de
+`--canciones` es solo para quien pide (no se sube). `js/nativo.js` es el puente
+del lado del juego y `pruebas/nativo.mjs` lo prueba con un Android de mentira.
+
 ## Para tocarlo
 
 - `node herramientas/armar.mjs [--dev]` arma `aeroplaza.html`. Si están los

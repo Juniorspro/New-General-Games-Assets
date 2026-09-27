@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de mañana, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: con un TikTok de la app Spatial del Quest ("mirá esa
+    estabilidad"), la próxima versión en APK, con ARCore.
+  - Quedó ([aeroplaza-27](aeroplaza-27.md)): `aeroplaza/android` (WebView +
+    ARCore + MediaPipe de Android), `herramientas/apk.mjs`; en el VR, la cabeza
+    en 6 ejes con ARCore y las manos de Android; `pruebas/nativo.mjs` 10/10.
+    La APK compila (35 MB).
+  - Falta: probarla en un celu (ARCore, la foto derecha, lo que tarda la GPU).
 - **27/09/2026, de mañana · `claude/fijate-iszyer`:**
   - Pidió: con un video a 60 fps, que mover un dedo no mueva la mano; la
     cámara ajustada, con filtros para flash, oscuro y mucha luz, y a 60.

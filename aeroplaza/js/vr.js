@@ -25,6 +25,7 @@ import * as THREE from 'three';
 import { t, sumar } from './textos.js';
 import { Pantalla } from './pantalla.js';
 import { DibujoVR } from './vr-dibujo.js';
+import { Nativo, poseEn } from './nativo.js';
 
 sumar({
   es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo', vr_xr: '🥽 Visor VR', vr_xr_d: 'Quest y otros: hasta 120 Hz, con tus manos', vr_xr_error: 'El visor no pudo arrancar', vr_flash: 'Flash', vr_flash_no: 'Este celu no deja prender el flash desde el navegador', vr_flash_error: 'No se pudo prender el flash (¿permiso de la cámara?)', vr_suave: '✋ Las manos', vr_suave_rapida: 'Rápidas', vr_suave_media: 'Medio', vr_suave_suave: 'Suaves', vr_suave_rapida_d: 'Pegadas a tu mano, tiemblan un poco (como un Quest)', vr_suave_media_d: 'Rápidas y casi sin temblor', vr_suave_suave_d: 'Quietas no tiemblan nada; van un poquito atrás' },
@@ -38,6 +39,11 @@ const SALIR_TRAS = 2;          // segundos mirando abajo
 const DOBLE = 0.3;             // segundos entre dos toques para que sea doble
 const FOV = { sbs: 80, simple: 70 };
 const REFRESCOS = [60, 72, 90, 120, 144];
+/* (con ARCore, en la APK: los ojos van esto detrás de la cámara del celu, como supone manos.js; y lo más
+   que se corre la vista de donde está el muñeco, de costado y para abajo/arriba (m)) */
+const OJOS = 0.06, CORRE = { lado: 1.2, abajo: 1.0, arriba: 0.6 };
+const _qAR = new THREE.Quaternion(), _ojo = new THREE.Vector3(), _qG = new THREE.Quaternion();
+const rumbo = (q) => { _w.set(0, 0, -1).applyQuaternion(q); return Math.atan2(-_w.x, -_w.z); };
 
 export class VR {
   constructor() {
@@ -52,6 +58,8 @@ export class VR {
     this.ritmo = { ms: new Float32Array(90), n: 0, i: 0, refresco: 1000 / 60, mediana: 1000 / 60, tMal: 0, tBien: 0, espera: 5, intentoEn: 0, desde: 0 };
     this.fps = { n: 0, t: 0, mundo: 0, esc0: 0, valor: 0, valorMundo: 0 };
     this.verFps = false;
+    /* ARCore (la APK): el rumbo y el lugar de la primera pose, y cuánto se corrió la cabeza desde ahí */
+    this.ar0 = null; this.desplazo = new THREE.Vector3(); this.conAR = false;
     /* cada lectura queda como la pose del celu (en sus ejes, qDev = euler·Q1) y cuándo llegó; la
        anterior sirve para sacar la velocidad si no hay giróscopo */
     this._orient = (e) => {
@@ -92,6 +100,9 @@ export class VR {
     const R = this.ritmo; R.n = 0; R.i = 0; R.tMal = 0; R.tBien = 0; R.espera = 5; R.intentoEn = 0; R.desde = performance.now() + 1000; R.enteroDesde = R.desde;
     this.modo = 'completo'; this.fps.t = 0; this.fps.n = 0;
     this.capa(raiz);
+    /* (en la APK, con ARCore: la cabeza en 6 ejes; el giroscopio queda por si ARCore se pierde) */
+    this.ar0 = null; this.desplazo.set(0, 0, 0); this.qListo = false;
+    if (Nativo.hay && Nativo.puedeAR) Nativo.arIniciar(false);
     return true;
   }
   salir() {
@@ -101,6 +112,8 @@ export class VR {
     if (this.xr) { const x = this.xr; this.xr = null; x.salir(); this.cam.fp = this.fpAntes; this.cam.enVR = false; this.alSalir?.(); return; }
     removeEventListener('deviceorientation', this._orient);
     removeEventListener('devicemotion', this._mov);
+    if (Nativo.hay) Nativo.arParar();
+    this.ar0 = null; this.desplazo.set(0, 0, 0); this.conAR = false;
     try { screen.orientation?.unlock?.(); if (document.fullscreenElement) document.exitFullscreen?.(); } catch { /* nada */ }
     this.cam.fp = this.fpAntes; this.cam.rollVR = 0; this.cam.enVR = false;
     this.el?.remove(); this.el = null;
@@ -137,19 +150,42 @@ export class VR {
   }
   /* el cuaternión de la cabeza, con el rumbo de entrada, adelantado al momento en que se va a ver (tVer) */
   orientacion(tVer = performance.now()) {
+    /* (el giroscopio crudo, sin el rumbo: sirve solo, y con ARCore para seguir sin salto si se pierde) */
+    let hayG = false;
     if (this.giro) {
       /* el giro de la pantalla: el del sistema, más el del CSS si el juego está girado */
       let ang = (screen.orientation?.angle ?? window.orientation ?? 0) * Math.PI / 180;
       if (Pantalla.girado) ang += Pantalla.invertido ? -Math.PI / 2 : Math.PI / 2;
       this.qDev.copy(this.giro.q);
       this.predecir(tVer);
-      this.q.copy(this.qDev).multiply(_q.setFromAxisAngle(Z, -ang));
+      _qG.copy(this.qDev).multiply(_q.setFromAxisAngle(Z, -ang)); hayG = true;
+    }
+    /* CON ARCORE (la APK): el giro y el lugar de la cámara del celu, adelantados a tVer. La primera pose
+       sigue para donde iba la vista, y desde ahí cuenta cuánto se corrió la cabeza (los ojos, OJOS
+       detrás del celu: girando en el lugar no se mueven) */
+    if (Nativo.arVivo) {
+      poseEn(tVer, _qAR, _ojo, OJOS);
+      if (!this.ar0) this.ar0 = { giro: (this.qListo ? rumbo(this.q) : this.base) - rumbo(_qAR), p: _ojo.clone() };
+      _q.setFromAxisAngle(Y, this.ar0.giro);
+      this.q.copy(_qAR).premultiply(_q);
+      const d = this.desplazo.subVectors(_ojo, this.ar0.p).applyQuaternion(_q), h = Math.hypot(d.x, d.z);
+      if (h > CORRE.lado) { d.x *= CORRE.lado / h; d.z *= CORRE.lado / h; }
+      d.y = THREE.MathUtils.clamp(d.y, -CORRE.abajo, CORRE.arriba);
+      /* (el giroscopio queda con el mismo rumbo: si ARCore se pierde un rato, la vista sigue sin saltar) */
+      if (hayG) this.q0 = this.base + rumbo(_qG) - rumbo(this.q);
+      this.conAR = true; this.qListo = true;
+      return this.q;
+    }
+    this.conAR = false;
+    if (hayG) {
+      this.q.copy(_qG);
       /* el primer cuadro fija para dónde es "adelante": se descuenta el rumbo del celu y se suma el del muñeco */
       if (this.q0 == null) { _v.set(0, 0, -1).applyQuaternion(this.q); this.q0 = Math.atan2(-_v.x, -_v.z); }   // (== null: un rumbo de 0 es válido)
       _q.setFromAxisAngle(Y, this.base - this.q0); this.q.premultiply(_q);
     } else {
       _e.set(this.arrastre.pitch, this.base + this.arrastre.yaw, 0, 'YXZ'); this.q.setFromEuler(_e);
     }
+    this.qListo = true;
     return this.q;
   }
   /* la pose del celu (qDev, en sus ejes) llevada de cuando se leyó a tVer: q·exp(ω·Δ). La velocidad
@@ -184,6 +220,8 @@ export class VR {
     /* se adelanta un cuadro y medio: lo que tarda en verse lo que se dibuja ahora */
     const q = this.orientacion(this.tVer = performance.now() + Math.min(30, this.ritmo.refresco * 1.5));
     camara.quaternion.copy(q);
+    /* (con ARCore, la cabeza también se corre: asomarse, agacharse, un paso) */
+    camara.position.add(this.desplazo);
     _v.set(0, 0, -1).applyQuaternion(q);
     cam.yaw = Math.atan2(-_v.x, -_v.z);
     cam.pitch = THREE.MathUtils.clamp(0.3 - Math.asin(THREE.MathUtils.clamp(_v.y, -1, 1)), -0.95, 1.55);

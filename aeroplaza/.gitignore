@@ -8,3 +8,9 @@ aeroplaza-con-canciones.html
 pruebas/mqtt.min.js
 pruebas/mediapipe/
 pruebas/iwer.min.js
+# la APK: lo que arma Gradle y lo que pone herramientas/apk.mjs (el juego y MediaPipe)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/
