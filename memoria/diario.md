@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de madrugada · `claude/fijate-iszyer`:**
+  - Pidió: que la cámara ocupe todo al escanear (para andar por la casa), el 0.5x, y actualizar el HTML.
+  - Quedó ([aeroplaza-29](aeroplaza-29.md) § La cámara llena la vista): "Llenar la vista" con visor, la foto
+    entera, la cámara más abierta que ARCore acepte y el aviso de si quedó el 0,5x.
+  - Falta: saber en qué celus ARCore deja el 0,5x (en casi todos, solo la principal).
 - **27/09/2026, a la noche, más tarde · `claude/fijate-iszyer`:**
   - Pidió: un menú para ajustar las lentes del SBS ("son solo un cubo").
   - Quedó ([aeroplaza-30](aeroplaza-30.md)): `js/lentes.js` (barril, colores, borde, centro de cada lente; perfiles),

@@ -32,6 +32,7 @@ export const Nativo = {
   esperas: [],
   /* tu espacio: 'profundidad' (Depth API) · 'puntos' (sin profundidad: la nube de puntos) · '' */
   espacio: '',
+  camara: null,
   alPlanos: null, alVoxeles: null, alFoto: null, alOlvidado: null,
   /* 'si' · 'instalar' · 'espera' · 'no' */
   arEstado() { try { return N()?.arEstado() || 'no'; } catch { return 'no'; } },
@@ -73,6 +74,8 @@ window.__nativo = {
   estado(e) {
     if (/^manos (GPU|CPU)$/.test(e)) Nativo.manosListas = e.slice(6);
     else if (/^espacio /.test(e)) Nativo.espacio = e.slice(8);
+    /* (la cámara que eligió ARCore: su campo y el más abierto del celu, en grados; Ar.java › elegirCamara) */
+    else if (/^camara \d/.test(e)) { const [, a, b] = e.split(' '); Nativo.camara = { campo: +a, celu: +b }; }
     else Nativo.estado = e;
     avisarEspera();
   }

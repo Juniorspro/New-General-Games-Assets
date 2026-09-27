@@ -30,6 +30,7 @@ sumar({
     es_manos_t: 'Apoyá las manos en la mesa', es_manos_d: 'Abiertas, palma para abajo y quietas un segundo', es_sin_mesa: 'No encontré una mesa: apoyalas en cualquier superficie o salteá',
     es_izq: 'Izquierda', es_der: 'Derecha', es_esperando: 'esperando…', es_quieta: 'quieta…', es_medida: 'mide {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Tus manos quedaron medidas (×{k})',
     es_ayuda: 'Tocá la pantalla para seguir · con las manos: tocá o pellizcá', es_piso_ok: 'Piso encontrado', es_pared_ok: 'Pared encontrada', es_mesa_ok: 'Mesa encontrada',
+    es_llenar: '🎥 Llenar la vista', es_cam_05: '🎥 Cámara 0,5x ({g}°)', es_cam_1: '🎥 Cámara {g}° · el 0,5x ({m}°) ARCore no lo deja usar', es_cam: '🎥 Cámara {g}°',
     es_pantalla_sub: 'Tocá con el dedo o pellizcá', es_escaneo_ok: 'Escaneo guardado', es_perdido: 'ARCore perdió dónde estás: mové el celu despacio',
     vr_ar_texto: '¿Querés usar ARCore? Con ARCore el celu sabe dónde está (6 ejes), como un Quest.', vr_ar_espacio: '📡 Sí: tu espacio', vr_ar_espacio_d: 'Escaneás el cuarto (piso, paredes, muebles), apoyás las manos en la mesa y se abre una pantalla para tocar y ventanas que quedan en su lugar',
     vr_ar_juego: '🎮 Sí, directo al juego', vr_ar_juego_d: 'AEROPLAZA en 6 ejes, sin escanear', vr_ar_no: '🧭 No, sin ARCore', vr_ar_no_d: 'Solo el giroscopio. Las ventanas de prueba se abren en el mundo del juego (menú de la palma)', vr_ar_atras: 'Volver' },
@@ -39,6 +40,7 @@ sumar({
     es_manos_t: 'Rest your hands on the table', es_manos_d: 'Open, palms down and still for a second', es_sin_mesa: 'No table found: rest them on any surface or skip',
     es_izq: 'Left', es_der: 'Right', es_esperando: 'waiting…', es_quieta: 'hold still…', es_medida: 'is {n} cm', es_seguir: 'Continue', es_medidas: '✋ Your hands are measured (×{k})',
     es_ayuda: 'Tap the screen to continue · with your hands: touch or pinch', es_piso_ok: 'Floor found', es_pared_ok: 'Wall found', es_mesa_ok: 'Table found',
+    es_llenar: '🎥 Fill the view', es_cam_05: '🎥 0.5x camera ({g}°)', es_cam_1: '🎥 Camera {g}° · ARCore won’t use the 0.5x ({m}°)', es_cam: '🎥 Camera {g}°',
     es_pantalla_sub: 'Touch with your finger or pinch', es_escaneo_ok: 'Scan saved', es_perdido: 'ARCore lost track: move your phone slowly',
     vr_ar_texto: 'Do you want to use ARCore? With ARCore the phone knows where it is (6DoF), like a Quest.', vr_ar_espacio: '📡 Yes: your space', vr_ar_espacio_d: 'Scan the room (floor, walls, furniture), rest your hands on the table, and a touch screen opens with windows that stay in place',
     vr_ar_juego: '🎮 Yes, straight to the game', vr_ar_juego_d: 'AEROPLAZA in 6DoF, no scan', vr_ar_no: '🧭 No, without ARCore', vr_ar_no_d: 'Gyroscope only. Test windows open in the game world (palm menu)', vr_ar_atras: 'Back' },
@@ -48,12 +50,14 @@ sumar({
     es_manos_t: 'Apoie as mãos na mesa', es_manos_d: 'Abertas, palma para baixo e paradas um segundo', es_sin_mesa: 'Não achei uma mesa: apoie em qualquer superfície ou pule',
     es_izq: 'Esquerda', es_der: 'Direita', es_esperando: 'esperando…', es_quieta: 'parada…', es_medida: 'mede {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Suas mãos foram medidas (×{k})',
     es_ayuda: 'Toque a tela para seguir · com as mãos: toque ou faça a pinça', es_piso_ok: 'Chão encontrado', es_pared_ok: 'Parede encontrada', es_mesa_ok: 'Mesa encontrada',
+    es_llenar: '🎥 Preencher a vista', es_cam_05: '🎥 Câmera 0,5x ({g}°)', es_cam_1: '🎥 Câmera {g}° · o ARCore não deixa usar a 0,5x ({m}°)', es_cam: '🎥 Câmera {g}°',
     es_pantalla_sub: 'Toque com o dedo ou faça a pinça', es_escaneo_ok: 'Escaneamento salvo', es_perdido: 'O ARCore perdeu onde você está: mexa o celular devagar',
     vr_ar_texto: 'Quer usar o ARCore? Com o ARCore o celular sabe onde está (6 eixos), como um Quest.', vr_ar_espacio: '📡 Sim: seu espaço', vr_ar_espacio_d: 'Você escaneia o quarto (chão, paredes, móveis), apoia as mãos na mesa e abre uma tela para tocar e janelas que ficam no lugar',
     vr_ar_juego: '🎮 Sim, direto ao jogo', vr_ar_juego_d: 'AEROPLAZA em 6 eixos, sem escanear', vr_ar_no: '🧭 Não, sem ARCore', vr_ar_no_d: 'Só o giroscópio. As janelas de teste abrem no mundo do jogo (menu da palma)', vr_ar_atras: 'Voltar' },
 });
 
 const OJOS = 0.06;           // los ojos, detrás del celu (como vr.js)
+const CLAVE_LLENAR = 'aeroplaza.camaraLlena';
 const IPD = 0.064;
 const LEJOS_FOTO = 9;        // a cuánto se pone la foto de la cámara (m: lejos, casi sin paralaje entre los ojos)
 const SECTORES = 12;         // mirar alrededor: la vuelta en 12 porciones
@@ -133,6 +137,7 @@ class Tarjeta extends Tablero {
       g.font = '700 20px system-ui, sans-serif'; g.fillStyle = '#bff4ff'; g.fillText(t('es_alrededor'), cx, cy + r + 34); g.textAlign = 'left';
       if (!D.piso) { g.fillStyle = '#ffd23f'; g.font = '700 26px system-ui, sans-serif'; g.fillText('⚠ ' + t('es_falta_piso'), 34, 404); }
       else if (D.sinProf) { g.fillStyle = 'rgba(255,255,255,0.6)'; g.font = '600 22px system-ui, sans-serif'; g.fillText(t('es_sin_prof'), 34, 404); }
+      else if (D.camara) { g.fillStyle = 'rgba(255,255,255,0.7)'; g.font = '600 22px system-ui, sans-serif'; g.fillText(D.camara, 34, 404); }
     } else if (this.fase === 'manos') {
       g.font = '800 46px system-ui, sans-serif'; g.fillText('✋ ' + t('es_manos_t'), 30, 66);
       parrafo(D.sinMesa ? t('es_sin_mesa') : t('es_manos_d'), 108, D.sinMesa ? '#ffd23f' : '#bff4ff');
@@ -182,6 +187,11 @@ export class Espacio {
     this.ventanas = new Ventanas({ conSeis: true, paredes: () => this.paredes(), piso: () => this.pisoY, alSonar: (n) => this.sonar(n), alAccion: (id) => this.accion(id) });
     this.escena.add(this.ventanas.grupo);
     this.medida = { izq: null, der: null };
+    /* LLENAR LA VISTA (vuelta 31): con visor, la cámara del celu abarca bastante menos que la lente (unos 60°
+       contra más de 100°) y se veía como una ventana en el medio. Llenando, cada ojo se dibuja con el campo de
+       la cámara y la lente lo abre a toda su vista: la cámara ocupa todo y lo dibujado sigue encima de lo
+       que se ve (todo con el mismo aumento). Sin llenar, el tamaño de verdad */
+    this.llenar = true; try { this.llenar = localStorage.getItem(CLAVE_LLENAR) !== '0'; } catch { /* sin guardar */ }
   }
 
   /* ------------------------------------------ entrar y salir */
@@ -194,14 +204,14 @@ export class Espacio {
     Nativo.arEscanear(true); Nativo.arPasante(true);
     this.medida = { izq: null, der: null }; this.visto = { piso: false, pared: false, mesa: false };
     this.ponerFase('buscando');
-    this.vr.decir?.(t('es_ayuda'), 6);
+    this.vr.decir?.(t('es_ayuda'), 6); this.vr.el?.classList.add('en-espacio');
   }
   /* sale del espacio (al juego o afuera); el escaneo queda (volver no escanea de nuevo) */
   cerrar() {
     if (!this.activo) return;
     this.activo = false;
     Nativo.arEscanear(false); Nativo.arPasante(false);
-    Nativo.alPlanos = Nativo.alVoxeles = Nativo.alFoto = Nativo.alOlvidado = null;
+    Nativo.alPlanos = Nativo.alVoxeles = Nativo.alFoto = Nativo.alOlvidado = null; this.vr.el?.classList.remove('en-espacio');
     this.ventanas.agarres.clear();
   }
   olvidar(pedir = true) {
@@ -232,15 +242,16 @@ export class Espacio {
     this.ventanas.abrirPantalla('🏠 ' + t('vt_pantalla'), [
       { id: 'jugar', texto: '▶ ' + t('vt_jugar'), principal: true }, { id: 'lugar', texto: '🧭 ' + t('vt_lugar') }, { id: 'reloj', texto: '🕒 ' + t('vt_reloj') },
       { id: 'pizarra', texto: '✍ ' + t('vt_pizarra') }, { id: 'burbujas', texto: '🫧 ' + t('vt_burbujas') }, { id: 'escaneo', texto: '🧱 ' + t('vt_escaneo') },
-      { id: 'reescanear', texto: '🔁 ' + t('vt_reescanear') }, { id: 'medir', texto: '✋ ' + t('vt_medir') }, { id: 'lentes', texto: t('le_menu') }, { id: 'salir', texto: '✕ ' + t('vt_salir'), peligro: true },
-    ], pos, this.cabezaP, t('es_pantalla_sub'));
-    this.ventanas.pantalla.marcar('escaneo', this.verEscaneo);
+      { id: 'reescanear', texto: '🔁 ' + t('vt_reescanear') }, { id: 'medir', texto: '✋ ' + t('vt_medir') }, { id: 'lentes', texto: t('le_menu') }, { id: 'llenar', texto: t('es_llenar') }, { id: 'salir', texto: '✕ ' + t('vt_salir'), peligro: true },
+    ], pos, this.cabezaP, t('es_pantalla_sub') + (this.textoCamara() ? ' · ' + this.textoCamara() : ''));
+    this.ventanas.pantalla.marcar('escaneo', this.verEscaneo); this.ventanas.pantalla.marcar('llenar', this.llenar);
   }
   /* los botones de la pantalla y de la tarjeta */
   accion(id) {
     /* (el panel de las lentes; "listo" vuelve a la pantalla) */
     if (accionLentes(this.vr.lentes, id, this.ventanas.pantalla)) { if (id === 'lente:listo') this.abrirPantalla(); return; }
     if (id === 'lentes') { this.abrirLentes(); return; }
+    if (id === 'llenar') { this.llenar = !this.llenar; try { localStorage.setItem(CLAVE_LLENAR, this.llenar ? '1' : '0'); } catch { /* sin guardar */ } this.ventanas.pantalla?.marcar('llenar', this.llenar); return; }
     if (id === 'jugar') { this.cerrar(); this.alJugar(); }
     else if (id === 'salir') { this.cerrar(); this.alSalir(); }
     else if (id === 'listo') { if (this.pisoY == null) { this.sonar('no'); return; } this.sonar('ola'); this.ponerFase('manos'); }
@@ -251,6 +262,12 @@ export class Espacio {
     else if (['lugar', 'reloj', 'pizarra', 'burbujas'].includes(id)) this.ventanas.abrir(id, this.cabezaP, this.cabezaQ);
   }
 
+  /* qué cámara quedó: el 0.5x si ARCore lo deja; si el celu tiene uno más abierto y no, se dice */
+  textoCamara() {
+    const C = Nativo.camara; if (!C || !C.campo) return '';
+    if (C.celu > C.campo + 15) return t('es_cam_1', { g: C.campo, m: C.celu });
+    return C.campo >= 95 ? t('es_cam_05', { g: C.campo }) : t('es_cam', { g: C.campo });
+  }
   /* el panel de las lentes delante de la cara (con visor) */
   abrirLentes() {
     if (!this.sbs) { this.vr.decir?.(t('le_solo_sbs'), 3); return; }
@@ -446,13 +463,13 @@ export class Espacio {
       _b.set(_a.x, 0, _a.z); if (_b.lengthSq() < 1e-4) _b.set(0, 0, -1); _b.normalize();
       /* (a la distancia en que ocupa algo más de la mitad de la vista: sin visor, con el campo angosto de la
          cámara, más lejos; con visor, más cerca) */
-      const dist = THREE.MathUtils.clamp(T.alto / (0.55 * 2 * Math.tan(THREE.MathUtils.degToRad(this.campo()) / 2)), 0.7, 1.5);
+      const dist = THREE.MathUtils.clamp(T.alto / ((this.sbs ? 0.4 : 0.55) * 2 * Math.tan(THREE.MathUtils.degToRad(this.campo()) / 2)), 0.7, 1.6);
       const obj = _c.copy(this.cabezaP).addScaledVector(_b, dist); obj.y = this.cabezaP.y - dist * 0.26;
       if (this.tFase < 0.05) T.malla.position.copy(obj); else T.malla.position.lerp(obj, Math.min(1, dt * 1.8));
       T.malla.lookAt(this.cabezaP); T.malla.updateMatrixWorld();
       const vistos = Array.from(this.sectores).filter((x) => x >= 1).length;
       let pisoArea = 0, paredes = 0; for (const P of this.planos.values()) { if (P.clase === 'piso') pisoArea += P.area; if (P.clase === 'pared') paredes++; }
-      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nVox, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos' };
+      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nVox, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos', camara: this.textoCamara() };
       const firma = JSON.stringify(datos, (k, v) => (k === 'k' || k === 'antes' ? undefined : typeof v === 'number' ? Math.round(v * 20) / 20 : v));
       if (firma !== this._firma || this.fase === 'buscando') { this._firma = firma; T.poner(this.fase, datos); }
       for (const b of T.botones) if (b.id === 'listo') { const a = this.pisoY == null; if (a !== !!b.apagado) { b.apagado = a; T.sucio = true; } }
@@ -516,9 +533,11 @@ export class Espacio {
      pantalla como una app de realidad aumentada, y lo dibujado cae justo encima de lo que se ve. Con visor,
      el del visor */
   campo() {
-    const S = this.motor.r.getSize(_v2), asp = this.sbs ? S.x / 2 / S.y : S.x / S.y, F = this.fotoEn.ultima;
-    if (this.sbs && this.vr.lentes?.activa && this.vr.lentes.lado) return this.vr.lentes.fovOjo;
-    return !this.sbs && F ? THREE.MathUtils.radToDeg(2 * Math.atan(Math.min(F.ty, F.tx / asp))) : this.vr.fov;
+    const S = this.motor.r.getSize(_v2), L = this.vr.lentes, conL = this.sbs && L?.activa && L.lado, F = this.fotoEn.ultima;
+    /* (el ojo con lentes es un lienzo cuadrado; sin lentes, su mitad de la pantalla) */
+    const asp = conL ? 1 : this.sbs ? S.x / 2 / S.y : S.x / S.y;
+    if (F && (!this.sbs || this.llenar)) return THREE.MathUtils.radToDeg(2 * Math.atan(Math.min(F.ty, F.tx / asp)));
+    return conL ? L.fovOjo : this.vr.fov;
   }
   /* por ojo: la escena del espacio y encima las manos (con el paralaje de cada ojo) */
   dibujar() {
@@ -526,10 +545,10 @@ export class Espacio {
     /* (con visor y lentes: cada ojo a su lienzo, y la lente lo lleva a la pantalla) */
     const Le = this.sbs && this.vr.lentes?.activa ? this.vr.lentes : null;
     if (Le) Le.medir(W / 2, H, r.getPixelRatio(), true);
-    const fov = Le ? Le.fovOjo : this.campo(), C = this.ojo;
+    const fov = this.campo(), C = this.ojo;
     const auto = r.autoClear; r.autoClear = false; r.setRenderTarget(null); r.setScissorTest(true);
     r.setClearColor('#081422', 1);
-    this.uVox.uPx.value = Le ? Le.lado / 2 / Le.T : (H / 2) / Math.tan(THREE.MathUtils.degToRad(fov) / 2) * r.getPixelRatio();
+    this.uVox.uPx.value = (Le ? Le.lado / 2 : H / 2 * r.getPixelRatio()) / Math.tan(THREE.MathUtils.degToRad(fov) / 2);
     ojos.forEach((o, i) => {
       const x = this.sbs ? i * W / 2 : 0, w = this.sbs ? W / 2 : W;
       if (Le) { r.setRenderTarget(Le.rt[i]); r.clear(); }

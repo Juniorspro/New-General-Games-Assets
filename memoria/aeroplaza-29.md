@@ -57,6 +57,24 @@ si no querés el 6DoF, las ventanas en el mundo 3D del juego". Antes: [aeroplaza
   manos-directo): 9/10; `manos.mjs` buscaba "Salir" en la caja 4 del menú, que ahora es "Ventanas". Apunta al
   último botón: 20/20.
 
+## La cámara llena la vista (vuelta 31, 27/09)
+
+- Pidió que la cámara ocupe todo al escanear ("la idea es que andes por tu casa") y el 0.5x.
+- **Con visor, la cámara del celu abarca ~60° y la lente más de 100°**: se veía una ventana en el medio. Con "Llenar
+  la vista" (de entrada, se cambia en la pantalla, `aeroplaza.camaraLlena`) cada ojo se dibuja con el campo de la
+  cámara (tan = el menor de los dos de la foto: el lienzo de la lente es cuadrado) y la lente lo abre a toda su
+  vista. La cámara ocupa todo y lo dibujado sigue encima de lo que se ve (todo con el mismo aumento; con la foto de
+  prueba, 49° en vez de 115°). Sin visor ya llenaba (`Espacio.campo`).
+- **La foto entera** (640 × 480, JPEG 70) en vez de la mitad; si pasarla tarda más de 28 ms (promedio, después de
+  10 fotos) queda a la mitad para siempre (`Espacio.java › aMitad`: si no, iba y venía).
+- **El 0.5x**: ARCore sigue dónde estás con la cámara que tiene calibrada, casi siempre la principal. `Ar.java ›
+  elegirCamara` elige la más abierta de las que ARCore acepta (el campo de su sensor y su lente) y le avisa al juego
+  `camara <la elegida> <la más abierta del celu>`. La tarjeta y la pantalla dicen si quedó el 0,5x o si ARCore no lo
+  deja (sin comprobar en un celu cuál deja).
+- Con lentes, el punto de la capa va al centro de cada lente (`vr.js › ponerCentroLentes`); en tu espacio no va (el
+  de la escena ya está). La tarjeta, con visor, ocupa el 40 % de la vista (con el aumento, al 55 % tapaba todo).
+- `espacio.mjs`: 24/24, con y sin visor.
+
 ## Trampas
 
 - **Sin visor, el campo de la vista es el de la cámara** (`Espacio.campo`, que llene la pantalla: con el celu

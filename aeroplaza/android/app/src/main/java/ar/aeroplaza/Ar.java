@@ -10,6 +10,7 @@ import android.opengl.GLSurfaceView;
 import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.util.Size;
+import android.util.SizeF;
 import android.view.Surface;
 import android.widget.FrameLayout;
 
@@ -103,19 +104,42 @@ class Ar implements GLSurfaceView.Renderer {
     }
   }
 
-  /* la cámara: la de 60 fotos por segundo si hay, con la foto de la CPU más cerca de 640 × 480 */
+  /* el campo del lado largo de una cámara (grados), de su sensor y su lente; mas: con la focal más corta
+     que tenga (una cámara lógica trae las de todas sus lentes: ahí está el 0.5x) */
+  static double campo(CameraManager cm, String id, boolean mas) {
+    try {
+      CameraCharacteristics c = cm.getCameraCharacteristics(id);
+      SizeF s = c.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE); float[] f = c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+      if (s == null || f == null || f.length == 0) return 0;
+      float fm = f[0]; if (mas) for (float x : f) fm = Math.min(fm, x);
+      return Math.toDegrees(2 * Math.atan(Math.max(s.getWidth(), s.getHeight()) / (2 * fm)));
+    } catch (Throwable t) { return 0; }
+  }
+
+  /* LA CÁMARA (vuelta 31): la más abierta de las que ARCore acepta (en los celus que lo dejan, el 0.5x: se
+     ve más del cuarto a través). Con esa, la de 60 fotos por segundo si hay, y la foto de la CPU más cerca de
+     640 × 480. Casi todos los celus solo dejan la principal: ARCore sigue dónde estás con la cámara que
+     tiene calibrada. Se le avisa al juego el campo que quedó y el más abierto que tiene el celu */
   void elegirCamara() {
     try {
-      CameraConfigFilter f = new CameraConfigFilter(sesion);
-      f.setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_60));
-      List<CameraConfig> l = sesion.getSupportedCameraConfigs(f);
-      if (l.isEmpty()) { f.setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30)); l = sesion.getSupportedCameraConfigs(f); }
-      CameraConfig mejor = null; long dm = Long.MAX_VALUE;
-      for (CameraConfig c : l) { Size s = c.getImageSize(); long d = Math.abs((long) s.getWidth() * s.getHeight() - 640L * 480L); if (d < dm) { dm = d; mejor = c; } }
-      if (mejor != null) { sesion.setCameraConfig(mejor); fps = mejor.getFpsRange().getUpper() + ""; }
       CameraManager cm = (CameraManager) act.getSystemService(Context.CAMERA_SERVICE);
-      Integer o = cm.getCameraCharacteristics(sesion.getCameraConfig().getCameraId()).get(CameraCharacteristics.SENSOR_ORIENTATION);
+      CameraConfigFilter f = new CameraConfigFilter(sesion);
+      f.setFacingDirection(CameraConfig.FacingDirection.BACK);
+      List<CameraConfig> todas = sesion.getSupportedCameraConfigs(f);
+      double ancho = 0; String idAncho = null;
+      for (CameraConfig c : todas) { double a = campo(cm, c.getCameraId(), false); if (a > ancho + 3) { ancho = a; idAncho = c.getCameraId(); } }
+      CameraConfig mejor = null; long dm = Long.MAX_VALUE; int fpsMejor = 0;
+      for (CameraConfig c : todas) {
+        if (idAncho != null && !idAncho.equals(c.getCameraId())) continue;
+        int cf = c.getFpsRange().getUpper(); Size s = c.getImageSize(); long d = Math.abs((long) s.getWidth() * s.getHeight() - 640L * 480L);
+        if (cf > fpsMejor || (cf == fpsMejor && d < dm)) { fpsMejor = cf; dm = d; mejor = c; }
+      }
+      if (mejor != null) { sesion.setCameraConfig(mejor); fps = mejor.getFpsRange().getUpper() + ""; }
+      String id = sesion.getCameraConfig().getCameraId();
+      Integer o = cm.getCameraCharacteristics(id).get(CameraCharacteristics.SENSOR_ORIENTATION);
       if (o != null) orientacionSensor = o;
+      double celu = 0; for (String x : cm.getCameraIdList()) { Integer lado = cm.getCameraCharacteristics(x).get(CameraCharacteristics.LENS_FACING); if (lado != null && lado == CameraCharacteristics.LENS_FACING_BACK) celu = Math.max(celu, campo(cm, x, true)); }
+      act.enviar(String.format(Locale.US, "__nativo&&__nativo.estado('camara %.0f %.0f')", campo(cm, id, false), Math.max(celu, campo(cm, id, false))));
     } catch (Throwable t) { /* la de siempre */ }
   }
 

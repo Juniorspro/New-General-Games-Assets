@@ -786,7 +786,8 @@ html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: non
 .vr-ojo { position: relative; flex: 1; }
 .vr-capa .vr-medio { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #000; }
 /* el punto del centro: un aro que se llena mirando abajo (salir); con ✋ si hay algo para usar */
-.vr-punto { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 2px rgba(20, 60, 110, 0.45); transition: transform 0.2s; }
+/* (con lentes, el centro de la vista es el de la lente de cada ojo: --lx y --ly, vr.js) */
+.vr-punto { position: absolute; left: calc(50% + var(--lx, 0px)); top: calc(50% + var(--ly, 0px)); width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 2px rgba(20, 60, 110, 0.45); transition: transform 0.2s; }
 .vr-punto b { position: absolute; inset: -9px; border-radius: 50%; background: conic-gradient(#ffb13d calc(var(--salir, 0) * 360deg), transparent 0); -webkit-mask: radial-gradient(circle, transparent 55%, #000 57%); mask: radial-gradient(circle, transparent 55%, #000 57%); opacity: 0; }
 .vr-capa.saliendo .vr-punto b { opacity: 1; }
 .vr-capa.camina .vr-punto { transform: scale(0.7); }
@@ -838,6 +839,8 @@ html.b460 .probador .cabeza h2, html.angosta .probador .cabeza h2 { display: non
 .vr-tres i.rapida { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 2h9M3 5h10M1 8h9' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
 .vr-tres i.media { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5c2-4 4 4 6 0s4-4 6 0' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
 .vr-tres i.suave { --m: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 10'%3E%3Cpath d='M1 5c3-2 5 2 12 0' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); }
+/* (en tu espacio el punto de la mirada es el de la escena: el de la capa no va) */
+.vr-capa.en-espacio .vr-punto { display: none; }
 /* las lentes del visor (vuelta 30): el botón del menú del VR y su ventana */
 .vr-lentes-boton { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; width: 100%; margin-top: 8px; padding: 8px 12px; border-radius: 16px; border: 2px solid #6cc8ff; background: linear-gradient(180deg, #f3fbff, #d6f1ff); font: inherit; text-align: left; cursor: pointer; }
 .vr-lentes-boton b { font-size: 15px; } .vr-lentes-boton small { font-weight: 700; font-size: 12px; color: var(--tinta2); grid-column: 2; }

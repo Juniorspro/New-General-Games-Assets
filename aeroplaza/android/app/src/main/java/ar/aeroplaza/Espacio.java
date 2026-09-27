@@ -30,8 +30,8 @@ import java.util.concurrent.Executors;
      cada ~150 ms, pasada al mundo y juntada en cubitos de VOX (5 cm). Un cubito cuenta cuando lo vieron
      FIRME veces (el ruido de una sola foto no arma nada). Si el celu no tiene profundidad, los puntos
      sueltos que sigue ARCore (la nube de puntos), que son menos.
-   - LA CÁMARA para ver a través (passthrough): la foto de la CPU a la mitad (320 × 240), derecha para la
-     pantalla y en JPEG; el juego la pide por https (MainActivity › /camara/) con la pose de ESA foto, y
+   - LA CÁMARA para ver a través (passthrough): la foto de la CPU entera (640 × 480; a la mitad si pasarla
+     tarda más de MITAD_SI ms, en los celus lentos), derecha para la pantalla y en JPEG; el juego la pide por https (MainActivity › /camara/) con la pose de ESA foto, y
      la pone en el mundo donde se sacó: al girar la cabeza entre foto y foto, la imagen queda en su lugar. */
 class Espacio {
   final MainActivity act;
@@ -55,6 +55,9 @@ class Espacio {
   Bitmap bm;
   final ByteArrayOutputStream salida = new ByteArrayOutputStream(64 * 1024);
   static final long FOTO_CADA = 33;   // ms (hasta 30 por segundo)
+  static final long MITAD_SI = 28;    // ms que puede tardar la foto entera (si no, a la mitad)
+  volatile long msFoto = 0;
+  volatile boolean aMitad;   // (una vez que la entera tardó de más, queda a la mitad: si no, iba y venía)
 
   Espacio(MainActivity a) { act = a; }
 
@@ -188,13 +191,14 @@ class Espacio {
     final float[] q = { pose.tx(), pose.ty(), pose.tz(), pose.qx(), pose.qy(), pose.qz(), pose.qw() };
     hilo.execute(() -> {
       try {
-        boolean gira = giro == 90 || giro == 270;
-        int w2 = W / 2, h2 = H / 2, Wo = gira ? h2 : w2, Ho = gira ? w2 : h2;
+        boolean gira = giro == 90 || giro == 270, mitad = aMitad;
+        final int k = mitad ? 1 : 0;
+        int w2 = W >> k, h2 = H >> k, Wo = gira ? h2 : w2, Ho = gira ? w2 : h2;
         if (px == null || px.length != Wo * Ho) { px = new int[Wo * Ho]; bm = Bitmap.createBitmap(Wo, Ho, Bitmap.Config.ARGB_8888); }
         for (int oy = 0; oy < Ho; oy++) for (int ox = 0; ox < Wo; ox++) {
           int sx, sy;
           if (giro == 90) { sx = oy; sy = h2 - 1 - ox; } else if (giro == 180) { sx = w2 - 1 - ox; sy = h2 - 1 - oy; } else if (giro == 270) { sx = w2 - 1 - oy; sy = ox; } else { sx = ox; sy = oy; }
-          sx <<= 1; sy <<= 1;
+          sx <<= k; sy <<= k;
           int Y = y[sy * rsY + sx] & 0xff, iu = (sy >> 1) * rsU + (sx >> 1) * psU, iv = (sy >> 1) * rsV + (sx >> 1) * psV;
           int U = (u[iu] & 0xff) - 128, V = (v[iv] & 0xff) - 128;
           int R = Y + ((359 * V) >> 8), G = Y - ((88 * U + 183 * V) >> 8), B = Y + ((454 * U) >> 8);
@@ -202,9 +206,11 @@ class Espacio {
           px[oy * Wo + ox] = 0xff000000 | (R << 16) | (G << 8) | B;
         }
         bm.setPixels(px, 0, Wo, 0, 0, Wo, Ho);
-        salida.reset(); bm.compress(Bitmap.CompressFormat.JPEG, 62, salida);
+        salida.reset(); bm.compress(Bitmap.CompressFormat.JPEG, 70, salida);
         jpeg = salida.toByteArray(); int n = ++nFoto;
-        float fx = (gira ? focal[1] : focal[0]) / 2f, fy = (gira ? focal[0] : focal[1]) / 2f;
+        long ms = SystemClock.elapsedRealtime() - t0; msFoto = msFoto == 0 ? ms : (msFoto * 3 + ms) / 4;
+        if (!mitad && nFoto > 10 && msFoto > MITAD_SI) aMitad = true;
+        float fx = (gira ? focal[1] : focal[0]) / (1 << k), fy = (gira ? focal[0] : focal[1]) / (1 << k);
         double tanX = (Wo / 2.0) / fx, tanY = (Ho / 2.0) / fy, e = edad + (SystemClock.elapsedRealtime() - t0);
         act.enviar(String.format(Locale.US, "__nativo&&__nativo.foto({\"n\":%d,\"url\":\"%scamara/%d.jpg\",\"e\":%.1f,\"tx\":%.5f,\"ty\":%.5f,\"w\":%d,\"h\":%d,\"p\":[%.4f,%.4f,%.4f,%.6f,%.6f,%.6f,%.6f]})",
             n, MainActivity.RAIZ_WEB, n, e, tanX, tanY, Wo, Ho, q[0], q[1], q[2], q[3], q[4], q[5], q[6]));

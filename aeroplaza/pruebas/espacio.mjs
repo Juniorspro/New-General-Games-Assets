@@ -87,6 +87,16 @@ prueba('la foto de la cámara llega y se pone en el mundo (a 9 m, del tamaño de
 prueba('mirar alrededor llena la vuelta', e2.vistos >= 11, `${e2.vistos}/12`);
 await avanzar(pag, 1, 1 / 60, true);
 await pag.screenshot({ path: path.join(SAL, `espacio-escaneo${FIN}.png`) });
+/* la cámara llena la vista: sin visor, como una app de realidad aumentada; con visor, cada ojo con el campo de la
+   cámara (llenar) o el de la lente (tamaño real). Y qué cámara quedó (el 0.5x si ARCore lo deja) */
+const rl = await pag.evaluate((sbs) => {
+  const E = window.__A.espacio, g = (x) => +x.toFixed(1), cam = g(2 * Math.atan(0.46) * 180 / Math.PI);
+  const lleno = g(E.campo()); E.accion('llenar'); const real = g(E.campo()); E.accion('llenar');
+  window.__nativo.estado('camara 67 112'); const t1 = E.textoCamara(); window.__nativo.estado('camara 108 110'); const t2 = E.textoCamara();
+  return { sbs, cam, lleno, real, t1, t2, llenar: E.llenar };
+}, SBS);
+prueba(SBS ? 'con visor la cámara llena el ojo; "Llenar la vista" apagado vuelve al campo de la lente' : 'sin visor la cámara llena la pantalla', SBS ? rl.lleno === rl.cam && rl.real > rl.cam + 20 && rl.llenar : rl.lleno < rl.cam && rl.lleno === rl.real, JSON.stringify(rl));
+prueba('dice qué cámara quedó (si ARCore no deja el 0,5x, lo dice)', /112/.test(rl.t1) && /0[,.]5x/.test(rl.t2), `${rl.t1} · ${rl.t2}`);
 
 /* 3) listo → las manos sobre la mesa. Un toque en la pantalla aprieta el botón principal */
 await pag.evaluate(() => { window.__A.vr.toque = true; window.__manda(3); });

@@ -272,6 +272,13 @@ export class VR {
     donde.appendChild(b);
     return b;
   }
+  /* el punto del centro, en el centro de cada lente (con la separación y la altura de las lentes) */
+  ponerCentroLentes() {
+    if (!this.el || !this.sbs) return;
+    const L = this.lentes, a = L?.activa ? L.P : null, h = this.el.clientHeight / 2, k = a ? `${a.separacion}:${a.alto}:${h}` : '';
+    if (k === this._kLente) return; this._kLente = k;
+    this.el.querySelectorAll('.vr-ojo').forEach((o, i) => { o.style.setProperty('--lx', a ? `${(i === 0 ? -1 : 1) * a.separacion * h}px` : '0px'); o.style.setProperty('--ly', a ? `${-a.alto * h}px` : '0px'); });
+  }
   ponerFps(si) { this.verFps = si; this.el?.classList.toggle('con-fps', si); }
   /* cada cuánto llegan los cuadros (real, en s): la pantalla (el refresco) y si se llega o no.
      Dibujando entero, si los cuadros tardan un 30 % más que la pantalla durante 0,6 s, se parte;
@@ -312,6 +319,7 @@ export class VR {
     if (!this.dib) this.dib = new DibujoVR(motor);
     this.motor = motor;
     this.dib.medir(this.sbs, this.fov, this.lentes);
+    this.ponerCentroLentes();
     this.medirRitmo(real, dt);
     const partido = this.forzar ? this.forzar === 'partido' : this.modo === 'partido';
     const Q = motor.nombreCalidad;
