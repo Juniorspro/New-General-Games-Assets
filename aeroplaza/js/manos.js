@@ -443,12 +443,29 @@ const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059, 
      el centro a más de vs (m/s), el ancla de costado se suelta sin esperar te. Suaves, con vs desde la
      vuelta 28: sin eso, un paso de 6 mm quedaba justo en el borde de soltarse (en 1 de 5 semillas se
      quedaba 5 mm atrás hasta el movimiento siguiente, 8 s) */
+/* - (vuelta 38, "más estabilidad") pose: el giro y los dedos de medio y suaves (rápidas, P_GIRO y P_DEDOS). El
+     giro, sin lo que se abre con la velocidad (beta 0): con el ruido de MediaPipe la velocidad del giro es casi
+     toda ruido y abría el filtro justo con la mano quieta; con el corte fijo y el adelanto (giroAd) sigue igual de
+     cerca. Los dedos, menos beta y menos adelanto. Medido con sus tres videos (herramientas/manos-video.mjs): el
+     bamboleo del giro con la mano quieta 4,97/6,65/3,08° → 2,47/3,64/2,01; el de los dedos 6,36/8,33/6,61 mm →
+     4,23/6,65/5,08; las patadas 117/181/35 → 102/161/29 por minuto. Cuesta: el giro 1,7° más atrás girando
+     (manos-lento) y el dedo que se dobla 26 ms */
 export const SUAVIDAD = {
   rapida: { anclas: null, lmax: 0.35, lmaxH: 0.35, v0: 0.03, v1: 0.1, adelMax: 0.1 },
-  media: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0048, rh: 0.0106, tq: 0.2645, tqH: 0.1799, te: 0.0426, teH: 0.0172, ts: 0.038, tsH: 0.0491, vs: 0.0568 } },
-  suave: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514, vs: 0.05 } },
+  media: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0048, rh: 0.0106, tq: 0.2645, tqH: 0.1799, te: 0.0426, teH: 0.0172, ts: 0.038, tsH: 0.0491, vs: 0.0568 },
+    pose: { giro: { beta: 0, corte: 3.5 }, giroAd: 1.2, dedos: { beta: 1.2, adelanto: 0.35 } } },
+  suave: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514, vs: 0.05 },
+    pose: { giro: { beta: 0, corte: 2.5 }, giroAd: 1.2, dedos: { beta: 1.2, adelanto: 0.25 } } },
 };
 class Mano {
+  /* (vuelta 38) el giro y los dedos del nivel del menú (SUAVIDAD › pose; sin pose, los de siempre) */
+  ponerPose(N) {
+    if (this.poseNivel === N) return; this.poseNivel = N;
+    const E = this.euroEjes, g = { ...P_GIRO, ...(N?.giro || {}) }, d = { ...P_DEDOS, ...(N?.dedos || {}) };
+    E.giro = g; E.dedos.corte = d.corte; E.dedos.beta = d.beta; E.dedos.corteD = d.corteD; E.dedos.piso = d.piso || 0;
+    E.dedosAd = d.adelanto || 0; E.dedosV = [d.v0 || 0, d.v1 || 0];
+    this.giroAd = N?.giroAd ?? GIRO_AD;
+  }
   constructor(derecha) {
     this.derecha = derecha; this.visible = false; this.t = -1; this.conf = 0; this.rastro = [];
     this.euroIso = new Euro(63, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED });
@@ -657,7 +674,7 @@ class Mano {
       const d0 = (a0 - ah * r[0]) * k + ah * r[0] * kh + c0 * ks, d1 = (a1 - ah * r[1]) * k + ah * r[1] * kh + c1 * ks, d2 = (a2 - ah * r[2]) * k + ah * r[2] * kh + c2 * ks;
       /* (cuánto: el arcotangente de lo que giraría, como hacía ir en línea recta, que nunca pasa de 90°;
          girar todo lo que da la velocidad, a 20 rad/s por 0,16 s, eran 3 rad de más) */
-      _ve.copy(E.wg).multiplyScalar(k * (this.pesoDedos ?? 1)); { const a = _ve.length(); if (a > 1e-6) _ve.multiplyScalar(Math.atan(a) * GIRO_AD / a); }
+      _ve.copy(E.wg).multiplyScalar(k * (this.pesoDedos ?? 1)); { const a = _ve.length(); if (a > 1e-6) _ve.multiplyScalar(Math.atan(a) * (this.giroAd ?? GIRO_AD) / a); }
       const Q = expQ(_ve, _qg), W = E.wg;
       for (let i = 0; i < 63; i += 3) {
         const x0 = E.x[i] - C[0], x1 = E.x[i + 1] - C[1], x2 = E.x[i + 2] - C[2];
@@ -1147,6 +1164,7 @@ export class Manos {
     /* (el nivel del menú, solo con la cámara: el visor y las pruebas van con lo de siempre) */
     const z = M.rayo ? SUAVIDAD[this.suavidad] || SUAVIDAD.media : null;
     M.lmax = z?.lmax; M.lmaxH = z?.lmaxH; M.adelMax = z?.adelMax;
+    if (z) M.ponerPose(z.pose || null);
     M.adelantar(ts, this.adelanta && !xr);
     if (xr) { M.seguida = true; M.conResorte = false; return; }
     M.suavizar(h);

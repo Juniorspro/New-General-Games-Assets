@@ -9,7 +9,9 @@ se resumen en una sola.
     en el HTML también, con un link para probar el HTML en 3DoF.
   - Quedó ([aeroplaza-37](aeroplaza-37.md)): la config de la sesión en un solo hilo (la linterna la pisaba), la
     vigilancia, la profundidad suavizada y el diagnóstico en la tarjeta. `malla.mjs` 19/19.
-  - Falta: las manos (sigue en esta sesión) y la captura del renglón chico si todavía no escanea.
+  - Después: la foto de ver a través que quedaba a la mitad ("zoomeada"), y las manos más estables
+    ([aeroplaza-38](aeroplaza-38.md)); el link del HTML: raw.githack de la rama.
+  - Falta: la captura del renglón chico si todavía no escanea, y qué le parecen las manos.
 - **27/09/2026, de noche, todavía más tarde · `claude/fijate-iszyer`:**
   - Pidió: "no, pues no escanea el entorno".
   - Quedó ([aeroplaza-36](aeroplaza-36.md)): la cámara con profundidad se elige antes de arrancar ARCore, los

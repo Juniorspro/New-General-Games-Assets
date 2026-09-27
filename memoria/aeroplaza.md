@@ -333,6 +333,7 @@ La malla del cuarto (TSDF de 3 cm, como Asalto MR pero más fina): [aeroplaza-34
 Que escanee (la profundidad con la cámara de 30) y los dos ojos iguales: [aeroplaza-35](aeroplaza-35.md).
 Que escanee de verdad (la cámara antes de arrancar ARCore y la tarjeta que dice el paso): [aeroplaza-36](aeroplaza-36.md).
 La linterna apagaba el escaneo (toda la config de la sesión en un hilo) y el diagnóstico de la tarjeta: [aeroplaza-37](aeroplaza-37.md).
+Manos más estables (el giro y los dedos por nivel) y el link del HTML para probarlo en el celu: [aeroplaza-38](aeroplaza-38.md).
 
 ## Trampas que ya se pagaron
 
