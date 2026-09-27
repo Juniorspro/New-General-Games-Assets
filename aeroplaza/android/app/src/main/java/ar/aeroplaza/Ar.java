@@ -112,12 +112,17 @@ class Ar implements GLSurfaceView.Renderer {
         gl.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         act.raiz.addView(gl, 0, new FrameLayout.LayoutParams(1, 1));
       }
-      sesion.resume(); gl.onResume(); corriendo = true; cabeza.prender();
-      return "corre";
+      sesion.resume(); gl.onResume(); corriendo = true;
     } catch (Throwable t) {
       corriendo = false;
+      /* (vuelta 41) si falló después de reanudar, se suelta la cámara: si no, quedaba tomada por una sesión que
+         nadie dibuja, y las manos sin ARCore (CamaraManos) la abrían encima */
+      try { if (gl != null) gl.onPause(); if (sesion != null) sesion.pause(); } catch (Throwable t2) { /* nada */ }
       return "error: " + t.getClass().getSimpleName();
     }
+    /* (la cabeza, aparte: si los sensores no se pueden, ARCore sigue con su pose, como antes) */
+    cabeza.prender(); act.arVivo(true);
+    return "corre";
   }
 
   /* el campo del lado largo de una cámara (grados), de su sensor y su lente; mas: con la focal más corta
@@ -195,19 +200,28 @@ class Ar implements GLSurfaceView.Renderer {
 
   String reanudar() {
     if (sesion == null || !corriendo) return corriendo ? "corre" : "parada";
-    try { sesion.resume(); if (gl != null) gl.onResume(); cabeza.prender(); return "corre"; } catch (Throwable t) { return "error: " + t.getClass().getSimpleName(); }
+    try { sesion.resume(); if (gl != null) gl.onResume(); } catch (Throwable t) { return "error: " + t.getClass().getSimpleName(); }
+    cabeza.prender(); act.arVivo(true);
+    return "corre";
   }
-  void pausar() { if (gl != null) gl.onPause(); if (sesion != null) sesion.pause(); cabeza.apagar(); }
+  /* (en onPause: si algo de esto tiraba, se cerraba la app al salir) */
+  void pausar() {
+    try { if (gl != null) gl.onPause(); } catch (Throwable t) { /* nada */ }
+    try { if (sesion != null) sesion.pause(); } catch (Throwable t) { /* nada */ }
+    cabeza.apagar(); act.arVivo(false);
+  }
   void parar() { corriendo = false; pausar(); act.enviar("__nativo&&__nativo.estado('parada')"); }
   void manos(boolean si) { conManos = si; if (si && manos == null) manos = new ManosNativas(act); }
   /* tu espacio: escanear (planos y profundidad) y la foto para ver a través */
   void escanear(boolean si) { pedidoEspacio = si; }
   void pasante(boolean si) { espacio.pasante = si; }
   void cerrar() {
-    corriendo = false; cabeza.apagar();
-    if (manos != null) { manos.cerrar(); manos = null; }
-    espacio.cerrar();
-    if (sesion != null) { sesion.close(); sesion = null; }
+    corriendo = false; cabeza.cerrar(); act.arVivo(false);
+    try { if (manos != null) manos.cerrar(); } catch (Throwable t) { /* nada */ }
+    manos = null;
+    try { espacio.cerrar(); } catch (Throwable t) { /* nada */ }
+    try { if (sesion != null) sesion.close(); } catch (Throwable t) { /* nada */ }
+    sesion = null;
   }
 
   /* el flash (la linterna) con ARCore prendido: la cámara es de ARCore. Se configura en el hilo de GL

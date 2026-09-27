@@ -336,6 +336,7 @@ La linterna apagaba el escaneo (toda la config de la sesión en un hilo) y el di
 Manos más estables (el giro y los dedos por nivel) y el link del HTML para probarlo en el celu: [aeroplaza-38](aeroplaza-38.md).
 La cabeza en 6 ejes suave (el giroscopio del sistema corregido con ARCore): [aeroplaza-39](aeroplaza-39.md).
 El objeto en la mano como control (el agarre, el eje, el gatillo y el control dibujado): [aeroplaza-40](aeroplaza-40.md).
+Que no se cierre al entrar al ARCore (los sensores, la WebView caída) y el aviso de por qué se cerró la vez pasada: [aeroplaza-41](aeroplaza-41.md).
 
 ## Trampas que ya se pagaron
 

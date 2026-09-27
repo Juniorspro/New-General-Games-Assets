@@ -22,9 +22,9 @@ import { miniaturaTiro, TIRO } from './reinos/tiro.js';
 import { miniaturaJuegos } from './reinos/juegos.js';
 
 sumar({
-  es: { op_anim: 'Animaciones', anim_suave: 'Suave', anim_lineal: 'Lineal', anim_chop: 'Chop', noti_zona: 'Nueva zona', noti_bien: '¡Listo!', noti_info: 'AEROPLAZA', noti_error: 'Ups', mis_titulo: 'Misiones', mis_ninguna: 'No tenés misiones. Hablá con la gente de la isla (💬) y te van a pedir cosas.', mis_volver: '✓ Listo: volvé a hablar con {n}.', mis_hechas: 'Hechas: {n}', boton_misiones: 'Misiones', boton_voz: 'Chat de voz' },
-  en: { op_anim: 'Animations', anim_suave: 'Smooth', anim_lineal: 'Linear', anim_chop: 'Chop', noti_zona: 'New area', noti_bien: 'Done!', noti_info: 'AEROPLAZA', noti_error: 'Oops', mis_titulo: 'Quests', mis_ninguna: 'No quests yet. Talk to the people on the island (💬) and they will ask you for things.', mis_volver: '✓ Done: go back and talk to {n}.', mis_hechas: 'Completed: {n}', boton_misiones: 'Quests', boton_voz: 'Voice chat' },
-  pt: { op_anim: 'Animações', anim_suave: 'Suave', anim_lineal: 'Linear', anim_chop: 'Chop', noti_zona: 'Nova área', noti_bien: 'Pronto!', noti_info: 'AEROPLAZA', noti_error: 'Opa', mis_titulo: 'Missões', mis_ninguna: 'Sem missões. Fale com o pessoal da ilha (💬) e eles vão pedir coisas.', mis_volver: '✓ Pronto: volte e fale com {n}.', mis_hechas: 'Feitas: {n}', boton_misiones: 'Missões', boton_voz: 'Chat de voz' },
+  es: { op_anim: 'Animaciones', anim_suave: 'Suave', anim_lineal: 'Lineal', anim_chop: 'Chop', noti_zona: 'Nueva zona', noti_bien: '¡Listo!', noti_info: 'AEROPLAZA', noti_error: 'Ups', noti_choque: 'La app se cerró la vez pasada. Sacale captura a esto y mandámela', mis_titulo: 'Misiones', mis_ninguna: 'No tenés misiones. Hablá con la gente de la isla (💬) y te van a pedir cosas.', mis_volver: '✓ Listo: volvé a hablar con {n}.', mis_hechas: 'Hechas: {n}', boton_misiones: 'Misiones', boton_voz: 'Chat de voz' },
+  en: { op_anim: 'Animations', anim_suave: 'Smooth', anim_lineal: 'Linear', anim_chop: 'Chop', noti_zona: 'New area', noti_bien: 'Done!', noti_info: 'AEROPLAZA', noti_error: 'Oops', noti_choque: 'The app closed last time. Take a screenshot of this and send it to me', mis_titulo: 'Quests', mis_ninguna: 'No quests yet. Talk to the people on the island (💬) and they will ask you for things.', mis_volver: '✓ Done: go back and talk to {n}.', mis_hechas: 'Completed: {n}', boton_misiones: 'Quests', boton_voz: 'Voice chat' },
+  pt: { op_anim: 'Animações', anim_suave: 'Suave', anim_lineal: 'Linear', anim_chop: 'Chop', noti_zona: 'Nova área', noti_bien: 'Pronto!', noti_info: 'AEROPLAZA', noti_error: 'Opa', noti_choque: 'O app fechou da última vez. Tire um print disto e me mande', mis_titulo: 'Missões', mis_ninguna: 'Sem missões. Fale com o pessoal da ilha (💬) e eles vão pedir coisas.', mis_volver: '✓ Pronto: volte e fale com {n}.', mis_hechas: 'Feitas: {n}', boton_misiones: 'Missões', boton_voz: 'Chat de voz' },
 });
 const $ = (sel, raiz = document) => raiz.querySelector(sel);
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
@@ -258,7 +258,7 @@ export const UI = {
      una zona a otra salían dos o tres): el nuevo reemplaza al que estaba, sin
      animación de salida. Si llega uno igual al que está, ese se renueva y suma
      ×2 en vez de repetirse. En el parkour no se muestran: no tapan la carrera. */
-  notificar({ titulo = '', texto = '', icono = 'ℹ️', tipo = 'info', sonido = true }) {
+  notificar({ titulo = '', texto = '', icono = 'ℹ️', tipo = 'info', sonido = true, dur = 0, fija = false }) {
     const c = this.hud && $('.notis', this.hud); if (!c) return null;
     if (this.hud.classList.contains('modo-parkour') && tipo !== 'error') return null;
     const clave = titulo + '|' + texto, igual = [...c.children].find((q) => q._clave === clave && !q.classList.contains('sale'));
@@ -266,13 +266,15 @@ export const UI = {
       igual._veces = (igual._veces || 1) + 1; $('.noti-n', igual).textContent = '×' + igual._veces;
       this.programarNoti(igual); return igual;
     }
-    const d = el(`<div class="noti ${tipo}" role="status"><div class="noti-ico"></div><div class="noti-txt">${titulo ? '<b></b>' : ''}<span></span></div><em class="noti-n"></em><button class="noti-x" aria-label="cerrar">✕</button><i class="noti-t"></i></div>`);
+    const d = el(`<div class="noti ${tipo}${fija ? ' larga' : ''}" role="status"><div class="noti-ico"></div><div class="noti-txt">${titulo ? '<b></b>' : ''}<span></span></div><em class="noti-n"></em><button class="noti-x" aria-label="cerrar">✕</button><i class="noti-t"></i></div>`);
     $('.noti-ico', d).textContent = icono; if (titulo) $('b', d).textContent = titulo; $('span', d).textContent = texto;
-    d._clave = clave;
+    d._clave = clave; d._dur = dur; d._fija = fija;
     this.ubicarNotis();
     $('.noti-x', d).onclick = (e) => { e.stopPropagation(); this.cerrarNoti(d); };
-    for (const q of [...c.children]) { clearTimeout(q._t); q.remove(); }
-    c.prepend(d);
+    /* (uno fijo, como por qué se cerró la app, no lo saca el que viene: el nuevo va abajo) */
+    for (const q of [...c.children]) { if (q._fija && !fija) continue; clearTimeout(q._t); q.remove(); }
+    const fijo = [...c.children].find((q) => q._fija);
+    if (fijo) fijo.after(d); else c.prepend(d);
     this.programarNoti(d);
     if (sonido) timbre(tipo);
     return d;
@@ -285,7 +287,8 @@ export const UI = {
     else { c.style.width = Math.min(320, W - 24) + 'px'; c.style.left = Math.round(W / 2) + 'px'; c.style.top = (Math.max(L.offsetTop + L.offsetHeight, R.offsetTop + R.offsetHeight) + 6) + 'px'; }
   },
   programarNoti(d) {
-    const dur = Math.min(6500, 3200 + d.textContent.length * 35);
+    /* (dur: los que hay que poder leer y sacarles captura, como por qué se cerró la app, duran más) */
+    const dur = d._dur || Math.min(6500, 3200 + d.textContent.length * 35);
     clearTimeout(d._t); d._t = setTimeout(() => this.cerrarNoti(d), dur);
     const barra = $('.noti-t', d); barra.style.animation = 'none'; void barra.offsetWidth; barra.style.animation = ''; barra.style.setProperty('--dur', dur + 'ms');
   },

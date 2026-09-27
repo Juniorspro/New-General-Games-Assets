@@ -2,6 +2,9 @@ package ar.aeroplaza;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ApplicationExitInfo;
+import android.content.SharedPreferences;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -16,6 +19,7 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -26,6 +30,7 @@ import android.widget.FrameLayout;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewClientCompat;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +44,7 @@ public class MainActivity extends Activity {
   static final String RAIZ_WEB = "https://appassets.androidplatform.net/", BASE = RAIZ_WEB + "assets/";
   static final int PERMISOS_WEB = 1, PERMISOS_AR = 2, PERMISOS_CAMARA = 3;
 
-  WebView web;
+  volatile WebView web;
   FrameLayout raiz;
   Ar ar;
   CamaraManos camara;
@@ -48,13 +53,26 @@ public class MainActivity extends Activity {
   /* (lo que pidió el juego para tu espacio, por si llega antes de que exista ARCore: se aplica al crearlo) */
   volatile Boolean quiereEscanear, quierePasante; volatile boolean quiereProfundidad;
   long ultimoAtras;
+  /* (vuelta 41) por qué se cerró la vez pasada (Choque.java): el juego lo lee una vez y lo muestra en un aviso */
+  SharedPreferences prefs;
+  volatile String choque = "";
+  boolean arVivoYa;
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
+    vigilarChoques();
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     raiz = new FrameLayout(this);
     raiz.setBackgroundColor(Color.BLACK);
-    web = new WebView(this);
+    setContentView(raiz);
+    pantallaCompleta();
+    crearWeb();
+  }
+
+  /* la WebView con el juego (también de nuevo si su proceso se cae: onRenderProcessGone) */
+  void crearWeb() {
+    final WebView web = new WebView(this);
+    this.web = web;
     WebSettings s = web.getSettings();
     s.setJavaScriptEnabled(true);
     s.setDomStorageEnabled(true);
@@ -92,6 +110,22 @@ public class MainActivity extends Activity {
         try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { /* nada */ }
         return true;
       }
+      /* (vuelta 41) SI SE CAE EL PROCESO DE LA WEBVIEW (sin memoria, o un error de Chrome o de la placa), Android
+         cierra la app entera si esto no lo atiende. Se anota, se sueltan ARCore y la cámara y se arma otra con el
+         juego (que muestra el aviso) */
+      @Override public boolean onRenderProcessGone(WebView v, RenderProcessGoneDetail d) {
+        String c = d.didCrash() ? "WEBVIEW_CRASH" : "WEBVIEW_KILLED";
+        if (prefs != null) try { prefs.edit().putString("choque", c).putLong("tChoque", System.currentTimeMillis()).commit(); } catch (Throwable t) { /* nada */ }
+        raiz.post(() -> {
+          boolean conAR = arVivoYa, era = MainActivity.this.web == v;
+          if (era) MainActivity.this.web = null;
+          try { if (ar != null && ar.corriendo) ar.parar(); } catch (Throwable t) { /* nada */ }
+          try { if (camara != null) camara.apagar(); } catch (Throwable t) { /* nada */ }
+          try { raiz.removeView(v); v.destroy(); } catch (Throwable t) { /* nada */ }
+          if (era) { choque = (conAR ? "[ARCore] " : "") + c; crearWeb(); }
+        });
+        return true;
+      }
     });
     /* la cámara y el micrófono de la web (las manos sin ARCore, el chat de voz): con el permiso de Android */
     web.setWebChromeClient(new WebChromeClient() {
@@ -105,9 +139,63 @@ public class MainActivity extends Activity {
     });
     web.addJavascriptInterface(new Puente(), "AeroplazaNativo");
     raiz.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-    setContentView(raiz);
-    pantallaCompleta();
     web.loadUrl(BASE + "aeroplaza.html");
+  }
+
+  /* (vuelta 41, "se me cierra la app al entrar al ARCore") sin logcat, la app dice sola por qué se cerró la vez
+     pasada: una excepción de Java se anota antes de morir; un choque nativo o un ANR, Android los guarda
+     (ApplicationExitInfo, Android 11+); y si ARCore estaba prendido (arVivo sin apagar), se dice */
+  void vigilarChoques() {
+    prefs = getSharedPreferences("aeroplaza", MODE_PRIVATE);
+    final Thread.UncaughtExceptionHandler antes = Thread.getDefaultUncaughtExceptionHandler();
+    Thread.setDefaultUncaughtExceptionHandler((th, e) -> {
+      try { prefs.edit().putString("choque", Choque.java(th.getName(), e)).putLong("tChoque", System.currentTimeMillis()).commit(); } catch (Throwable t) { /* nada */ }
+      if (antes != null) antes.uncaughtException(th, e); else System.exit(10);
+    });
+    try { choque = choqueAnterior(); } catch (Throwable t) { choque = ""; }
+  }
+  String choqueAnterior() {
+    long ahora = System.currentTimeMillis(), DOCE = 12 * 3600_000L;
+    String deJava = prefs.getString("choque", null); long tJava = prefs.getLong("tChoque", 0);
+    boolean conAR = prefs.getBoolean("arVivo", false);
+    SharedPreferences.Editor ed = prefs.edit().remove("choque").remove("tChoque").putBoolean("arVivo", false);
+    StringBuilder s = new StringBuilder();
+    if (Build.VERSION.SDK_INT >= 30) {
+      try {
+        ActivityManager am = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        long visto = prefs.getLong("salidaVista", 0);
+        List<ApplicationExitInfo> l = am.getHistoricalProcessExitReasons(null, 0, 6);
+        /* (de la más nueva a la más vieja: la primera que sea un cierre de verdad, de hace menos de 12 h) */
+        for (ApplicationExitInfo e : l) {
+          if (e.getTimestamp() <= visto || ahora - e.getTimestamp() > DOCE) break;
+          String r = Choque.razon(e.getReason());
+          if (r == null || !Choque.cuenta(e.getReason(), e.getImportance())) continue;
+          s.append(r).append(" · ").append(Choque.hace(ahora - e.getTimestamp()));
+          if (e.getDescription() != null && !e.getDescription().isEmpty()) s.append(" · ").append(Choque.corto(e.getDescription(), 80));
+          if (e.getPss() > 0) s.append(" · ").append(e.getPss() / 1024).append(" MB");
+          try (InputStream in = e.getTraceInputStream()) {
+            if (in != null) {
+              byte[] b = Choque.leer(in, 4 << 20);
+              String x = e.getReason() == ApplicationExitInfo.REASON_CRASH_NATIVE ? Choque.tombstone(b)
+                  : e.getReason() == ApplicationExitInfo.REASON_ANR ? Choque.anr(new String(b, java.nio.charset.StandardCharsets.UTF_8)) : "";
+              if (!x.isEmpty()) s.append(" · ").append(x);
+            }
+          } catch (Throwable t) { /* sin la traza */ }
+          break;
+        }
+        if (!l.isEmpty()) ed.putLong("salidaVista", l.get(0).getTimestamp());
+      } catch (Throwable t) { /* nada */ }
+    }
+    if (deJava != null && ahora - tJava < DOCE) s.append(s.length() > 0 ? " · " : "").append(deJava);
+    if (conAR) s.insert(0, s.length() > 0 ? "[ARCore] " : "[ARCore]");
+    ed.apply();
+    return s.toString();
+  }
+  /* (ARCore prendido: si la app muere así, sin pasar por onPause, la próxima vez se sabe) */
+  void arVivo(boolean si) {
+    if (si == arVivoYa || prefs == null) return;
+    arVivoYa = si;
+    try { prefs.edit().putBoolean("arVivo", si).commit(); } catch (Throwable t) { /* nada */ }
   }
 
   /* los permisos de Android que le faltan a lo que pide la web */
@@ -180,27 +268,33 @@ public class MainActivity extends Activity {
   }
 
   /* lo que va al juego (desde cualquier hilo) */
-  void enviar(final String js) { web.post(() -> web.evaluateJavascript(js, null)); }
+  void enviar(final String js) { final WebView w = web; if (w != null) w.post(() -> { try { w.evaluateJavascript(js, null); } catch (Throwable t) { /* ya no está */ } }); }
 
   @Override protected void onResume() {
-    super.onResume(); web.onResume();
+    super.onResume(); if (web != null) web.onResume();
     if (ar != null) { String e = ar.reanudar(); enviar("__nativo&&__nativo.estado('" + e + "')"); }
     if (camara != null) camara.reanudar();
   }
-  @Override protected void onPause() { if (ar != null) ar.pausar(); if (camara != null) camara.pausar(); web.onPause(); super.onPause(); }
-  @Override protected void onDestroy() { if (ar != null) ar.cerrar(); if (camara != null) camara.cerrar(); web.destroy(); super.onDestroy(); }
+  @Override protected void onPause() { if (ar != null) ar.pausar(); if (camara != null) camara.pausar(); if (web != null) web.onPause(); super.onPause(); }
+  @Override protected void onDestroy() { if (ar != null) ar.cerrar(); if (camara != null) camara.cerrar(); if (web != null) web.destroy(); super.onDestroy(); }
 
   /* atrás: al juego (como Escape: pausa o cierra lo que esté abierto); dos veces seguidas, sale */
   @Override public void onBackPressed() {
     long ahora = System.currentTimeMillis();
     if (ahora - ultimoAtras < 1200) { super.onBackPressed(); return; }
     ultimoAtras = ahora;
-    web.evaluateJavascript("dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}))", null);
+    enviar("dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}))");
   }
 
   /* window.AeroplazaNativo */
   class Puente {
     @JavascriptInterface public String version() { return "1"; }
+    /* (vuelta 41) por qué se cerró la vez pasada, una sola vez ("" si no se cerró mal) */
+    @JavascriptInterface public String choque() {
+      String c = choque; choque = "";
+      if (c != null && !c.isEmpty()) try { prefs.edit().remove("choque").remove("tChoque").apply(); } catch (Throwable t) { /* nada */ }
+      return c == null ? "" : c;
+    }
     /* 'si' · 'instalar' (el celu puede, falta la app de ARCore) · 'espera' · 'no' */
     @JavascriptInterface public String arEstado() { return Ar.estado(MainActivity.this); }
     @JavascriptInterface public void arIniciar(final boolean conManos) { runOnUiThread(() -> iniciarAr(conManos)); }

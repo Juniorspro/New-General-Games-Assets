@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (CONTRAGOLPE: la APK para teléfonos flojos).
+mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: que no se cierre al entrar al ARCore).
 
 ## Reglas que no se discuten
 
@@ -96,6 +96,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (CONTRAGOLPE: la APK 
 | [aeroplaza-38](aeroplaza-38.md) | AEROPLAZA, trigesimoséptima vuelta: manos más estables (el giro sin `beta`: la velocidad del giro era ruido y abría el filtro; los dedos con menos adelanto; `SUAVIDAD › pose`, bamboleo del giro −35/−50 %), las métricas `vib` de `manos-video`, `herramientas/barrer-manos.mjs`, y el link del HTML por raw.githack |
 | [aeroplaza-39](aeroplaza-39.md) | AEROPLAZA, trigesimoctava vuelta: la cabeza en 6 ejes suave (`Fusion.java`/`Cabeza.java`: el giro del giroscopio del sistema adelantado con el giróscopo, ARCore corrige el rumbo en la hora de cada foto y da el lugar; los ejes se eligen solos; `AeroplazaNativo.cabeza` desde `poseEn`), `pruebas/cabeza.mjs` con la cabeza de mentira; la cabeza a último momento (`vr.js › cabezaTarde`); ARCore for Jetpack XR investigado (en el celu es el mismo ARCore, sin manos: no conviene) |
 | [aeroplaza-40](aeroplaza-40.md) | AEROPLAZA, trigesimonovena vuelta: el objeto en la mano como control (`manos.js › medirAgarre`: cómo se cierran los dedos, el eje del objeto, el gatillo con el índice o el pulgar; el rayo de la punta; el control Aero dibujado; "🎮 Control" en el menú de la palma), `pruebas/mando.mjs` con manos inventadas |
+| [aeroplaza-41](aeroplaza-41.md) | AEROPLAZA, cuadragésima vuelta: la app se cerraba al entrar al ARCore (los sensores de la cabeza a 0 µs tiran `SecurityException` en la APK depurable; ahora 200 Hz en su hilo, fuera del arranque de ARCore; la WebView caída se rearma), y el informe del cierre anterior en un aviso fijo (`Choque.java`: excepción de Java, tombstone nativo, ANR, `[ARCore]`), `pruebas/choque.mjs` |
 | [contragolpe](contragolpe.md) | CONTRAGOLPE, el tirador táctico que llegó hecho: separado en fuente y assets, la APK (WebView afinada, texturas ETC2 con etcpak), lo que costaba de verdad (armas pieza por pieza, huesos en textura, muñecos sin índice, el revelado), las pérdidas de memoria del original y los mandos a gusto |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |

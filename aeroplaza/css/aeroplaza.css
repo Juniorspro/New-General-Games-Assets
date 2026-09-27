@@ -561,6 +561,7 @@ html.b460 .pk-est i { font-size: 40px; } html.b460 .pk-cifras b { font-size: 18p
 .noti-txt { position: relative; min-width: 0; flex: 1; }
 .noti-txt b { display: block; font-weight: 700; color: #1b5a99; font-size: 12.5px; }
 .noti-txt span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.noti.larga .noti-txt span { -webkit-line-clamp: 9; font-size: 10.5px; line-height: 1.25; overflow-wrap: anywhere; user-select: text; }
 .noti-n { position: absolute; right: 26px; top: 5px; font: 700 10px system-ui, sans-serif; color: #1b5a99; font-style: normal; }
 .noti-x { position: absolute; right: 5px; top: 5px; width: 19px; height: 16px; padding: 0; border-radius: 3px; border: 1px solid transparent; background: none; color: #4a5866; font: 700 9px system-ui, sans-serif; display: grid; place-items: center; cursor: pointer; }
 .noti-x:hover, .noti-x:active { color: #fff; border-color: #6f1a0c; background: linear-gradient(180deg, #f7ae96 0%, #e2583a 48%, #c62f14 52%, #e8795c 100%); box-shadow: 0 0 6px rgba(255, 90, 40, 0.6); }

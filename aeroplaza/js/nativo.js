@@ -50,6 +50,8 @@ export const Nativo = {
   alMalla: null,
   /* 'si' · 'instalar' · 'espera' · 'no' */
   arEstado() { try { return N()?.arEstado() || 'no'; } catch { return 'no'; } },
+  /* (vuelta 41) por qué se cerró la app la vez pasada (Choque.java), una sola vez: '' si no se cerró mal */
+  choque() { try { return String(N()?.choque?.() || ''); } catch { return ''; } },
   get puedeAR() { const e = this.arEstado(); return e === 'si' || e === 'instalar'; },
   arIniciar(conManos = false) { try { N()?.arIniciar(!!conManos); } catch { /* sin APK */ } },
   arParar() { try { N()?.arParar(); } catch { /* sin APK */ } this.pose = this.poseAntes = null; },

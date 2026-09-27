@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de noche, séptima vez · `claude/fijate-iszyer`:**
+  - Pidió: "se me cierra la app al entrar al ARCore" (sin logcat).
+  - Quedó ([aeroplaza-41](aeroplaza-41.md)): los sensores de la cabeza a 200 Hz en su hilo y fuera del arranque; el
+    arranque fallido suelta la cámara; la WebView caída se rearma; al abrir, un aviso fijo dice por qué se cerró la vez
+    pasada. `choque.mjs` 22/22.
+  - Falta: que lo abra en el celu; si se cierra de nuevo, la captura del aviso 💥.
 - **27/09/2026, de noche, sexta vez · `claude/fijate-iszyer`:**
   - Pidió: "más mejoras" y "detectar un objeto en la mano como un control".
   - Quedó ([aeroplaza-40](aeroplaza-40.md)): el agarre de un objeto lo hace un control (rayo de la punta, gatillo con

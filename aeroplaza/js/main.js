@@ -514,6 +514,9 @@ async function iniciar() {
       if (!Q.has('pausa')) { cam.actualizar(0, yo, reino.interior ? null : reino.mundo); await motor.precompilar(); }
       enJuego = true; pausado = false;
       UI.juego();
+      /* (vuelta 41) si la APK se cerró la vez pasada, por qué (Choque.java): largo, para sacarle captura */
+      const choque = Nativo.choque();
+      if (choque) UI.notificar({ titulo: t('noti_choque'), texto: choque, icono: '💥', tipo: 'error', dur: 30000, fija: true });
       regaloDelDia(J, UI);
       ent.mostrarDedos(true);
       if (o.probador) abrirProbador();
@@ -1159,7 +1162,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { textos: { t, ponerIdioma }, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {
