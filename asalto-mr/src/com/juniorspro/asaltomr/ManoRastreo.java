@@ -38,6 +38,7 @@ final class ManoRastreo implements Runnable {
     volatile String estado = "cargando el modelo de manos…";
     volatile boolean anda;
     volatile float msUltimo;
+    private final long[] vista = {-1000, -1000};
 
     private final Context ctx;
     private HandLandmarker detector;
@@ -170,11 +171,13 @@ final class ManoRastreo implements Runnable {
                     synchronized (m) {
                         m.aMundo(img, mundo, W, H, fx, fy, cx, cy, d, pose);
                         if (m.gesto(mundo, ts)) tiros[slot].incrementAndGet();
-                        m.pistola(0.55f);
+                        m.pistolaFiltrada(ts);
+                        vista[slot] = ts;
                         m.u = img[0][0]; m.v = img[0][1];
                     }
                 }
-                for (int s = 0; s < 2; s++) if (!usada[s]) synchronized (manos[s]) { manos[s].perdida(); }
+                // si el modelo la pierde un instante (movida, contraluz), la pistola se queda 250 ms donde estaba
+                for (int s = 0; s < 2; s++) if (!usada[s] && ts - vista[s] > 250) synchronized (manos[s]) { manos[s].perdida(); }
                 msUltimo = (System.nanoTime() - t0) / 1e6f;
                 synchronized (this) { lleno = false; }
             }

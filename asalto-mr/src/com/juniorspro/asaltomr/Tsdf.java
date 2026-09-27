@@ -333,6 +333,19 @@ public final class Tsdf {
         return Float.NaN;
     }
 
+    /** La normal de la superficie cerca de (x,y,z): el gradiente de la distancia firmada. false si no se sabe. */
+    public synchronized boolean normal(float x, float y, float z, float[] n) {
+        float h = voxel;
+        float gx = muestra(x + h, y, z) - muestra(x - h, y, z);
+        float gy = muestra(x, y + h, z) - muestra(x, y - h, z);
+        float gz = muestra(x, y, z + h) - muestra(x, y, z - h);
+        if (gx != gx || gy != gy || gz != gz) return false;
+        float l = (float) Math.sqrt(gx * gx + gy * gy + gz * gz);
+        if (l < 1e-5f) return false;
+        n[0] = gx / l; n[1] = gy / l; n[2] = gz / l;
+        return true;
+    }
+
     /** ¿Hay algo sólido en ese punto (con lo escaneado)? Lo desconocido cuenta como libre. */
     public synchronized boolean ocupado(float x, float y, float z) {
         float v = muestra(x, y, z);

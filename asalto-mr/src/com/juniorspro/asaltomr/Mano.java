@@ -52,7 +52,10 @@ public final class Mano {
     // ── lo que se sabe de la mano (se actualiza en cada imagen) ──
     public int pose = NADA;
     public float curlIndice, curlMedio, curlAnular, curlMenique, pulgar, alcance;
-    private float alcanceSuave = Float.NaN, pulgarSuave = Float.NaN;
+    private float alcanceSuave = Float.NaN, pulgarSuave = Float.NaN, referencia = 1.6f;
+
+    /** ¿El gatillo está apretado ahora? (el fusil tira mientras esté apretado) */
+    public boolean apretado() { return apretado; }
     public boolean hay;
     /** Los 21 puntos en el mundo (metros). */
     public final float[][] mundo = new float[21][3];
@@ -88,6 +91,20 @@ public final class Mano {
     }
 
     /** Clasifica la pose con los puntos en metros (cualquier sistema de ejes). */
+    /** Qué tan cerrado está un dedo (0 = estirado, 1 = puño) por la distancia de su punta a la muñeca, en palmas. */
+    static float cierre(float alcance) { return Math.max(0f, Math.min(1f, (1.75f - alcance) / 0.8f)); }
+
+    public float cierreMedio, cierreAnular, cierreMenique, cierreIndice;
+
+    /**
+     * Clasifica la pose con los puntos en metros (cualquier sistema de ejes: sólo usa distancias).
+     *
+     * Por distancias punta–muñeca y no por ángulos: con fotos reales, un índice
+     * que apunta a la cámara (escorzo) da ángulos de "puño" (230°) aunque esté
+     * estirado, y la distancia lo dice bien (1.55 palmas). Y un mango de
+     * verdad (grueso) no deja cerrar del todo los dedos (≈ 1.3 palmas contra
+     * 0.85 de un puño): se cuenta como empuñar igual.
+     */
     public int clasificar(float[][] w) {
         curlIndice = curl(w, 5);
         curlMedio = curl(w, 9);
@@ -96,11 +113,14 @@ public final class Mano {
         float palma = Math.max(1e-4f, dist(w[0], w[9]));
         pulgar = dist(w[4], w[5]) / palma;
         alcance = dist(w[8], w[0]) / palma;
-        int cerrados = (curlMedio > CERRADO ? 1 : 0) + (curlAnular > CERRADO ? 1 : 0) + (curlMenique > CERRADO ? 1 : 0);
-        boolean estirados = curlIndice < ABIERTO && curlMedio < ABIERTO && curlAnular < ABIERTO && curlMenique < ABIERTO;
-        if (estirados) return ABIERTA;
-        // empuñando: al menos dos de medio/anular/meñique cerrados y el medio no estirado
-        if (cerrados >= 2 && curlMedio > ESTIRADO) return curlIndice > GATILLO_ON ? APRIETA : EMPUNA;
+        cierreIndice = cierre(alcance);
+        cierreMedio = cierre(dist(w[12], w[0]) / palma);
+        cierreAnular = cierre(dist(w[16], w[0]) / palma);
+        cierreMenique = cierre(dist(w[20], w[0]) / palma);
+        float otros = (cierreMedio + cierreAnular + cierreMenique) / 3f;
+        if (cierreIndice < 0.4f && otros < 0.35f && cierreMedio < 0.3f) return ABIERTA;
+        // empuñando: medio, anular y meñique cerrados en promedio, y el medio no estirado (la V no cuenta)
+        if (otros > 0.45f && cierreMedio > 0.35f) return alcance < APRIETA_BAJO ? APRIETA : EMPUNA;
         return OTRA;
     }
 
@@ -119,13 +139,17 @@ public final class Mano {
         alcanceSuave = alcanceSuave != alcanceSuave ? alcance : alcanceSuave + (alcance - alcanceSuave) * 0.5f;
         pulgarSuave = pulgarSuave != pulgarSuave ? pulgar : pulgarSuave + (pulgar - pulgarSuave) * 0.5f;
         // armado: empuñando con el índice estirado al menos 2 imágenes (agarrar de golpe no dispara)
-        cuadrosListo = empuna && alcanceSuave > SUELTA_ALTO ? cuadrosListo + 1 : (empuna ? cuadrosListo : 0);
+        cuadrosListo = empuna && !apretado && alcanceSuave > Math.max(SUELTA_ALTO - 0.1f, 0.85f * referencia) ? cuadrosListo + 1 : (empuna ? cuadrosListo : 0);
         boolean armado = cuadrosListo >= 2;
-        // el gatillo (índice), con histéresis
-        if (!apretado && alcanceSuave < APRIETA_BAJO) {
+        // el gatillo (índice), con histéresis y adaptado a cada mano: se aprende cuánto estira el índice
+        // (visto de costado, un puño cerrado da 1.36 palmas y estirado ≈ 1.8: el umbral fijo 1.25 no alcanza)
+        if (alcanceSuave > referencia) referencia = Math.min(2.1f, alcanceSuave);
+        else referencia = Math.max(1.5f, referencia - (referencia - 1.6f) * 0.01f);
+        float umbralAprieta = Math.max(APRIETA_BAJO, 0.76f * referencia), umbralSuelta = Math.max(SUELTA_ALTO, 0.88f * referencia);
+        if (!apretado && alcanceSuave < umbralAprieta) {
             apretado = true;
             if (armado && empuna) tiro = true;
-        } else if (apretado && alcanceSuave > SUELTA_ALTO) apretado = false;
+        } else if (apretado && alcanceSuave > umbralSuelta) apretado = false;
         // la pistolita (pulgar), sólo con el índice estirado
         if (!pulgarBajo && pulgarSuave < PULGAR_ABAJO) {
             pulgarBajo = true;
@@ -140,6 +164,7 @@ public final class Mano {
         hay = false;
         alcanceSuave = Float.NaN;
         pulgarSuave = Float.NaN;
+        apretado = false;
         pose = NADA;
         cuadrosEmpunando = 0;
         cuadrosListo = 0;
@@ -216,6 +241,81 @@ public final class Mano {
             mundo[i][2] = pose[2] * xc + pose[6] * yc + pose[10] * zc + pose[14];
         }
         return z;
+    }
+
+    /**
+     * Filtro "One Euro" (Casiez 2012): suaviza mucho cuando la mano está
+     * quieta (sin temblor) y poco cuando se mueve rápido (sin retraso).
+     */
+    static final class UnEuro {
+        final float minCorte, beta, dCorte = 1f;
+        float x = Float.NaN, dx;
+
+        UnEuro(float minCorte, float beta) { this.minCorte = minCorte; this.beta = beta; }
+
+        static float alfa(float corte, float dt) { float tau = 1f / (2f * (float) Math.PI * corte); return 1f / (1f + tau / dt); }
+
+        float filtrar(float v, float dt) {
+            if (x != x || dt <= 0) { x = v; dx = 0; return v; }
+            float d = (v - x) / dt;
+            dx += (d - dx) * alfa(dCorte, dt);
+            float corte = minCorte + beta * Math.abs(dx);
+            x += (v - x) * alfa(corte, dt);
+            return x;
+        }
+
+        void olvidar() { x = Float.NaN; }
+    }
+
+    private final UnEuro[] filtros = new UnEuro[9];
+    private long ultimoFiltro = -1;
+
+    {
+        for (int i = 0; i < 3; i++) filtros[i] = new UnEuro(1.2f, 4f);        // posición (m)
+        for (int i = 3; i < 9; i++) filtros[i] = new UnEuro(1.5f, 0.8f);      // direcciones (unitarias)
+    }
+
+    /** La pistola con el filtro One Euro (ms = hora de la imagen). */
+    public void pistolaFiltrada(long ms) {
+        float[] p = new float[3], f = new float[3], u = new float[3];
+        if (!medirPistola(p, f, u)) return;
+        float dt = ultimoFiltro < 0 ? 0 : Math.max(0.001f, (ms - ultimoFiltro) / 1000f);
+        if (!tieneSuave || dt > 0.5f) { for (UnEuro e : filtros) e.olvidar(); dt = 0; }
+        ultimoFiltro = ms;
+        for (int i = 0; i < 3; i++) {
+            pos[i] = filtros[i].filtrar(p[i], dt);
+            adelante[i] = filtros[3 + i].filtrar(f[i], dt);
+            arriba[i] = filtros[6 + i].filtrar(u[i], dt);
+        }
+        ortonormalizar();
+        tieneSuave = true;
+    }
+
+    /** La pistola sin filtrar desde los puntos en el mundo: centro del mango, adelante, arriba. */
+    public boolean medirPistola(float[] p, float[] f, float[] u) {
+        float[] m0 = mundo[0], i5 = mundo[5], m9 = mundo[9], a13 = mundo[13], p17 = mundo[17];
+        float ux = (i5[0] + m9[0]) / 2 - m0[0], uy = (i5[1] + m9[1]) / 2 - m0[1], uz = (i5[2] + m9[2]) / 2 - m0[2];
+        float kx = i5[0] - p17[0], ky = i5[1] - p17[1], kz = i5[2] - p17[2];
+        float kl = (float) Math.sqrt(kx * kx + ky * ky + kz * kz);
+        if (kl < 1e-5f) return false;
+        kx /= kl; ky /= kl; kz /= kl;
+        float d = ux * kx + uy * ky + uz * kz;
+        float fx = ux - d * kx, fy = uy - d * ky, fz = uz - d * kz;
+        float fl = (float) Math.sqrt(fx * fx + fy * fy + fz * fz);
+        if (fl < 1e-5f) return false;
+        f[0] = fx / fl; f[1] = fy / fl; f[2] = fz / fl;
+        u[0] = kx; u[1] = ky; u[2] = kz;
+        p[0] = (m0[0] + i5[0] + m9[0] + a13[0] + p17[0]) / 5;
+        p[1] = (m0[1] + i5[1] + m9[1] + a13[1] + p17[1]) / 5;
+        p[2] = (m0[2] + i5[2] + m9[2] + a13[2] + p17[2]) / 5;
+        return true;
+    }
+
+    private void ortonormalizar() {
+        normalizar(adelante);
+        float q = arriba[0] * adelante[0] + arriba[1] * adelante[1] + arriba[2] * adelante[2];
+        arriba[0] -= q * adelante[0]; arriba[1] -= q * adelante[1]; arriba[2] -= q * adelante[2];
+        normalizar(arriba);
     }
 
     /**

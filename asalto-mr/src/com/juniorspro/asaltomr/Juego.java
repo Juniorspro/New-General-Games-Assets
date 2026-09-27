@@ -22,6 +22,12 @@ import java.util.Random;
  */
 public final class Juego {
 
+    /** Si el entorno también sabe la normal de la superficie (para pegar blancos en las paredes). */
+    public interface EntornoNormales {
+        /** La normal (hacia afuera) de la superficie cerca de (x,y,z) en n; false si no se sabe. */
+        boolean normal(float x, float y, float z, float[] n);
+    }
+
     /** Lo que el juego necesita saber del entorno real (lo da el escaneo). */
     public interface Entorno {
         /** Altura del suelo bajo (x, z) buscando entre yArriba y yAbajo, o NaN. */
@@ -36,11 +42,47 @@ public final class Juego {
 
     // ── estados y eventos ──
     public static final int ESPERA = 0, JUEGA = 1, FIN = 2;
+    /** Modos: oleadas (hasta que te maten), contrarreloj (90 s), práctica (blancos en las paredes reales). */
+    public static final int OLEADAS = 0, CONTRARRELOJ = 1, PRACTICA = 2;
+    public static final String[] MODOS = {"Oleadas", "Contrarreloj", "Práctica"};
+    public static final int NORMAL = 0, PESADO = 1, RAPIDO = 2;
     public static final int CORRE = 0, APUNTA = 1, CAE = 2, TIRADO = 3, CUBIERTA = 4;
     static final int DIRECTO = 0, A_CUBIERTA = 1, ASOMARSE = 2, FLANCO = 3;
     public static final int EV_DISPARO = 1, EV_IMPACTO = 2, EV_CARNE = 4, EV_MUERTE = 8, EV_ENEMIGO_DISPARA = 16,
-            EV_DANO = 32, EV_OLEADA = 64, EV_RECARGA = 128, EV_FIN = 256, EV_CABEZA = 512, EV_VACIO = 1024, EV_ZUMBIDO = 2048;
-    public static final int P_CHISPA = 0, P_POLVO = 1, P_TROZO = 2, P_HUMO = 3, P_FOGONAZO = 4;
+            EV_DANO = 32, EV_OLEADA = 64, EV_RECARGA = 128, EV_FIN = 256, EV_CABEZA = 512, EV_VACIO = 1024, EV_ZUMBIDO = 2048,
+            EV_EXPLOSION = 4096, EV_CAMBIO = 8192, EV_BLANCO = 16384, EV_HERIDO = 32768;
+    public static final int P_CHISPA = 0, P_POLVO = 1, P_TROZO = 2, P_HUMO = 3, P_FOGONAZO = 4, P_FUEGO = 5;
+
+    /** Un arma: cargador, cadencia, cuántos proyectiles, dispersión, daño, empuje. */
+    public static final class Arma {
+        public final String nombre;
+        public final int cargador, perdigones;
+        public final float cadencia, dispersion, dano, recarga, empuje;
+        public final boolean automatica, granada;
+
+        Arma(String n, int cargador, float cadencia, boolean auto, int perdigones, float disp, float dano, float recarga, float empuje, boolean granada) {
+            nombre = n; this.cargador = cargador; this.cadencia = cadencia; automatica = auto; this.perdigones = perdigones;
+            dispersion = disp; this.dano = dano; this.recarga = recarga; this.empuje = empuje; this.granada = granada;
+        }
+    }
+
+    public static final int PISTOLA = 0, FUSIL = 1, ESCOPETA = 2, LANZAGRANADAS = 3;
+    public static final Arma[] ARMAS = {
+            new Arma("Pistola", 12, 0.14f, false, 1, 0.004f, 1f, 1.3f, 4.2f, false),
+            new Arma("Fusil", 30, 0.095f, true, 1, 0.014f, 0.75f, 2.0f, 3.2f, false),
+            new Arma("Escopeta", 6, 0.8f, false, 9, 0.065f, 0.55f, 2.4f, 6.5f, false),
+            new Arma("Lanzagranadas", 4, 0.9f, false, 1, 0f, 5f, 2.8f, 7.5f, true)};
+
+    /** Una granada en vuelo: rebota en la malla real y explota. */
+    public static final class Granada {
+        public float x, y, z, vx, vy, vz, t, giro;
+        int rebotes;
+    }
+
+    /** Un blanco pegado a una superficie real (modo práctica). */
+    public static final class Blanco {
+        public float x, y, z, nx, ny, nz, t, radio = 0.2f, golpe = -1;
+    }
 
     public static final float ALTO = 1.75f, RADIO = 0.22f, CABEZA_Y = 1.62f, CABEZA_R = 0.13f;
     public static final int CARGADOR = 12;
@@ -56,7 +98,8 @@ public final class Juego {
         public float agachado;          // 0..1 (detrás de una cubierta)
         public float[] ruta;            // puntos (x, y, z) por donde va (del mapa), o null
         public int rutaI, tactica, celdaCubierta = -1;
-        public int id;
+        public int id, tipo = NORMAL;
+        public float vida = 1, herido;   // herido > 0: acaba de recibir un tiro (se frena)
         float vx, vy, vz, vCaida, t, proxTiro, objX, objZ, tiempoCorriendo, trabado, espera, cubX, cubY, cubZ;
         int tirosQuedan;
     }
@@ -73,7 +116,7 @@ public final class Juego {
     }
 
     public static final class Impacto {
-        public static final int NADA = 0, ENTORNO = 1, SOLDADO = 2, CABEZA = 3;
+        public static final int NADA = 0, ENTORNO = 1, SOLDADO = 2, CABEZA = 3, BLANCO = 4;
         public int tipo;
         public float x, y, z, distancia;
         public Soldado soldado;
@@ -85,6 +128,13 @@ public final class Juego {
     public final ArrayList<Trazo> trazos = new ArrayList<>();
     public int estado = ESPERA;
     public int puntos, combo = 1, oleada, bajas, balas = CARGADOR, dificultad = 1;
+    public int modo = OLEADAS, arma = PISTOLA;
+    public final int[] balasArma = {ARMAS[0].cargador, ARMAS[1].cargador, ARMAS[2].cargador, ARMAS[3].cargador};
+    /** Estadísticas de la partida. */
+    public int disparos, aciertos, cabezas, blancosPegados;
+    public float tiempoJuego, tiempoRestante, sumaReaccion;
+    public final ArrayList<Granada> granadas = new ArrayList<>();
+    public final ArrayList<Blanco> blancos = new ArrayList<>();
     public float vidaJugador = 100, golpe, retroceso, recargando;
     /** El mapa de zonas de la IA (lo arma el escaneo), o null. */
     public volatile Mapa.Grilla grilla;
@@ -100,12 +150,41 @@ public final class Juego {
     /** Los eventos desde la última llamada (para los sonidos). */
     public int tomarEventos() { int e = eventos; eventos = 0; return e; }
 
-    public void empezar() {
-        soldados.clear(); particulas.clear(); trazos.clear();
-        puntos = 0; combo = 1; bajas = 0; balas = CARGADOR; recargando = 0;
+    public void empezar() { empezar(modo); }
+
+    public void empezar(int modo) {
+        this.modo = modo;
+        soldados.clear(); particulas.clear(); trazos.clear(); granadas.clear(); blancos.clear();
+        puntos = 0; combo = 1; bajas = 0; recargando = 0;
+        for (int i = 0; i < ARMAS.length; i++) balasArma[i] = ARMAS[i].cargador;
+        balas = balasArma[arma];
+        disparos = aciertos = cabezas = blancosPegados = 0;
+        tiempoJuego = 0; sumaReaccion = 0;
+        tiempoRestante = modo == CONTRARRELOJ ? 90f : modo == PRACTICA ? 60f : 0;
         vidaJugador = 100; golpe = 0; oleada = 0; estado = JUEGA;
-        nuevaOleada();
+        if (modo == OLEADAS) nuevaOleada();
+        else { porSalir = modo == CONTRARRELOJ ? 9999 : 0; proxAparicion = 1f; eventos |= EV_OLEADA; }
     }
+
+    public Arma armaActual() { return ARMAS[arma]; }
+
+    public int cargador() { return ARMAS[arma].cargador; }
+
+    /** Cambiar de arma (cada una guarda sus balas). */
+    public void cambiarArma(int i) {
+        if (i < 0 || i >= ARMAS.length || i == arma) return;
+        balasArma[arma] = balas;
+        arma = i;
+        balas = balasArma[arma];
+        recargando = 0;
+        cadencia = 0.35f;   // lo que tarda en sacarla
+        eventos |= EV_CAMBIO;
+    }
+
+    public void siguienteArma() { cambiarArma((arma + 1) % ARMAS.length); }
+
+    /** Precisión de la partida (0..1). */
+    public float precision() { return disparos == 0 ? 0 : aciertos / (float) disparos; }
 
     private void nuevaOleada() {
         oleada++;
@@ -128,6 +207,10 @@ public final class Juego {
 
     private float velocidad() { return dificultad == 0 ? 1.5f : dificultad == 2 ? 2.8f : 2.1f; }
 
+    private float velocidad(Soldado s) { return velocidad() * (s.tipo == PESADO ? 0.7f : s.tipo == RAPIDO ? 1.35f : 1f); }
+
+    public static float radio(Soldado s) { return s.tipo == PESADO ? RADIO + 0.05f : RADIO; }
+
     // ── cada cuadro ──
 
     /**
@@ -143,33 +226,43 @@ public final class Juego {
         cadencia = Math.max(0, cadencia - dt);
         if (recargando > 0) {
             recargando -= dt;
-            if (recargando <= 0) { recargando = 0; balas = CARGADOR; }
+            if (recargando <= 0) { recargando = 0; balas = cargador(); }
         }
 
         if (estado == JUEGA) {
+            tiempoJuego += dt;
+            if (modo != OLEADAS) {
+                tiempoRestante -= dt;
+                if (tiempoRestante <= 0) { tiempoRestante = 0; estado = FIN; eventos |= EV_FIN; }
+            }
+            if (modo == PRACTICA) actualizarBlancos(dt, e);
             sinBaja += dt;
             // como en los shooters: si aguantás 4 s sin que te den, te vas curando
             sinDano += dt;
             if (sinDano > 4f && vidaJugador > 0) vidaJugador = Math.min(100, vidaJugador + dt * 5f);
             if (sinBaja > 4f) combo = 1;
-            int maxVivos = Math.min(7, 2 + oleada);
-            if (porSalir > 0) {
+            int maxVivos = modo == CONTRARRELOJ ? 5 + (int) (tiempoJuego / 30) : Math.min(7, 2 + oleada);
+            if (modo == PRACTICA) {
+                // sin enemigos
+            } else if (porSalir > 0) {
                 proxAparicion -= dt;
                 if (proxAparicion <= 0 && vivos() < maxVivos) {
                     if (aparecer(e)) { porSalir--; proxAparicion = 0.8f + azar.nextFloat() * 1.4f; }
                     else proxAparicion = 0.3f;   // no hubo lugar: probar en un rato
                 }
-            } else if (vivos() == 0) {
+            } else if (vivos() == 0 && modo == OLEADAS) {
                 pausaOleada += dt;
                 if (pausaOleada > 3.5f) { pausaOleada = 0; nuevaOleada(); }
             }
         }
+        actualizarGranadas(dt, e);
 
         for (int i = soldados.size() - 1; i >= 0; i--) {
             Soldado s = soldados.get(i);
             s.fogonazo = Math.max(0, s.fogonazo - dt);
             float quiereAgachado = s.estado == CUBIERTA ? 1 : 0;
             s.agachado += (quiereAgachado - s.agachado) * Math.min(1f, dt * 7f);
+            if (s.herido > 0) { s.herido -= dt; if (enPie(s)) continue; }   // el tiro lo frena un instante
             switch (s.estado) {
                 case CORRE: correr(s, dt, e); break;
                 case APUNTA: apuntar(s, dt, e); break;
@@ -186,9 +279,9 @@ public final class Juego {
             Particula p = particulas.get(i);
             p.vida -= dt;
             if (p.vida <= 0) { particulas.remove(i); continue; }
-            float g = p.tipo == P_HUMO || p.tipo == P_POLVO ? -0.6f : p.tipo == P_FOGONAZO ? 0 : 9.8f;
+            float g = p.tipo == P_HUMO || p.tipo == P_POLVO ? -0.6f : p.tipo == P_FUEGO ? -2.5f : p.tipo == P_FOGONAZO ? 0 : 9.8f;
             p.vy -= g * dt;
-            if (p.tipo == P_HUMO || p.tipo == P_POLVO) { p.vx *= 1 - dt * 2; p.vz *= 1 - dt * 2; p.vy *= 1 - dt; p.tam += dt * 0.25f; }
+            if (p.tipo == P_HUMO || p.tipo == P_POLVO || p.tipo == P_FUEGO) { p.vx *= 1 - dt * 2; p.vz *= 1 - dt * 2; p.vy *= 1 - dt; p.tam += dt * (p.tipo == P_FUEGO ? 0.6f : 0.25f); }
             p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
             if (p.y < p.piso && p.vy < 0) {        // rebota en el piso real
                 p.y = p.piso;
@@ -243,6 +336,11 @@ public final class Juego {
             Soldado s = new Soldado();
             s.id = siguienteId++;
             s.x = x; s.y = y; s.z = z;
+            // tipos: desde la oleada 2 aparecen rápidos; desde la 3, pesados con blindaje
+            float r = azar.nextFloat();
+            int nivel = modo == CONTRARRELOJ ? 1 + (int) (tiempoJuego / 20) : oleada;
+            if (nivel >= 3 && r < Math.min(0.3f, 0.06f * nivel)) { s.tipo = PESADO; s.vida = 4; }
+            else if (nivel >= 2 && r > 0.78f) { s.tipo = RAPIDO; s.vida = 1; }
             s.yaw = (float) Math.atan2(jx - x, jz - z);
             s.fase = azar.nextFloat() * 6.28f;
             elegirObjetivo(s);
@@ -352,12 +450,15 @@ public final class Juego {
         s.apunta = Math.max(0, s.apunta - dt * 3);
         s.tiempoCorriendo += dt;
         float dx, dz, d;
+        if (s.ruta != null && s.ruta.length < 3) { llego(s); return; }   // ruta vacía: ya llegó
         if (s.ruta != null) {
             // por la ruta del mapa, punto por punto
             while (true) {
                 dx = s.ruta[s.rutaI * 3] - s.x; dz = s.ruta[s.rutaI * 3 + 2] - s.z;
                 d = (float) Math.sqrt(dx * dx + dz * dz);
-                if (d > 0.25f) break;
+                // al último punto de una cubierta hay que llegar justo (detrás de un tronco, 25 cm es quedar a la vista)
+                boolean ultimo = (s.rutaI + 1) * 3 >= s.ruta.length;
+                if (d > (ultimo && (s.tactica == A_CUBIERTA || s.tactica == ASOMARSE) ? 0.07f : 0.25f)) break;
                 s.rutaI++;
                 if (s.rutaI * 3 >= s.ruta.length) { llego(s); return; }
             }
@@ -369,14 +470,15 @@ public final class Juego {
         }
         float quiere = (float) Math.atan2(dx, dz);
         // esquivar: probar derecho, después abriéndose de a 40°
-        float v = velocidad();
+        float v = velocidad(s);
         float paso = v * dt;
         float[] prueba = {0, 0.7f, -0.7f, 1.4f, -1.4f, 2.1f, -2.1f};
         for (float off : prueba) {
             float yaw = quiere + off;
             float sx = (float) Math.sin(yaw), sz = (float) Math.cos(yaw);
-            float mx = s.x + sx * 0.45f, mz = s.z + sz * 0.45f;   // medio metro adelante
-            if (e.ocupado(mx, s.y + 0.9f, mz) || e.ocupado(mx, s.y + 1.4f, mz)) continue;
+            // varios puntos adelante: el volumen sólo conoce la "cáscara" de las cosas (el centro de un
+            // tronco nunca se ve), así que un solo punto a medio metro puede caer justo en el centro
+            if (bloqueado(s, sx, sz, e)) continue;
             float nx = s.x + sx * paso, nz = s.z + sz * paso;
             float ny = e.suelo(nx, nz, s.y + 0.5f, s.y - 1.2f);
             if (ny != ny) ny = pisoRespaldo == pisoRespaldo && Math.abs(pisoRespaldo - s.y) < 0.5f ? pisoRespaldo : s.y;
@@ -391,6 +493,20 @@ public final class Juego {
         // encerrado: que se pare y tire, y después busque otro lado
         s.trabado += dt;
         if (s.trabado > 0.4f) { s.trabado = 0; if (s.ruta != null) elegirObjetivo(s); else pasarAApuntar(s); }
+    }
+
+    private static boolean bloqueado(Soldado s, float sx, float sz, Entorno e) {
+        for (float d = 0.15f; d <= 0.5f; d += 0.12f) {
+            float mx = s.x + sx * d, mz = s.z + sz * d;
+            if (e.ocupado(mx, s.y + 0.9f, mz) || e.ocupado(mx, s.y + 1.4f, mz)) return true;
+        }
+        // y los costados del cuerpo (que no roce un tronco al pasar)
+        float r = radio(s);
+        for (int lado = -1; lado <= 1; lado += 2) {
+            float mx = s.x + sx * 0.2f - sz * r * lado, mz = s.z + sz * 0.2f + sx * r * lado;
+            if (e.ocupado(mx, s.y + 0.9f, mz)) return true;
+        }
+        return false;
     }
 
     private void pasarAApuntar(Soldado s) {
@@ -498,10 +614,53 @@ public final class Juego {
         Impacto imp = new Impacto();
         if (!puedeDisparar()) return imp;
         if (balas <= 0) { recargar(); eventos |= EV_VACIO; return imp; }
+        Arma a = armaActual();
         balas--;
-        cadencia = 0.14f;
+        cadencia = a.cadencia;
         retroceso = 1;
         eventos |= EV_DISPARO;
+        disparos++;
+        fogonazoJugador(bx, by, bz);
+        if (a.granada) {
+            // sale del caño con 13 m/s, un poco hacia arriba (tiro parabólico)
+            Granada g = new Granada();
+            g.x = bx; g.y = by; g.z = bz;
+            g.vx = dx * 13f; g.vy = dy * 13f + 1.5f; g.vz = dz * 13f;
+            granadas.add(g);
+            if (balas == 0) recargar();
+            imp.tipo = Impacto.NADA;
+            return imp;
+        }
+        boolean acerto = false;
+        Impacto primero = null;
+        // perpendiculares al tiro, para la dispersión
+        float ux = -dz, uy = 0, uz = dx;
+        float ul = (float) Math.sqrt(ux * ux + uz * uz);
+        if (ul < 1e-4f) { ux = 1; uz = 0; ul = 1; }
+        ux /= ul; uz /= ul;
+        float wx = dy * uz - dz * uy, wy = dz * ux - dx * uz, wz = dx * uy - dy * ux;
+        for (int k = 0; k < a.perdigones; k++) {
+            float ddx = dx, ddy = dy, ddz = dz;
+            if (a.dispersion > 0) {
+                float ang = azar.nextFloat() * 6.2832f, rad = a.dispersion * (float) Math.sqrt(azar.nextFloat());
+                float cu = (float) Math.cos(ang) * rad, cw = (float) Math.sin(ang) * rad;
+                ddx += ux * cu + wx * cw; ddy += uy * cu + wy * cw; ddz += uz * cu + wz * cw;
+                float l = (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+                ddx /= l; ddy /= l; ddz /= l;
+            }
+            Impacto i = unTiro(ox, oy, oz, ddx, ddy, ddz, bx, by, bz, e, a, k % 2 == 0 || a.perdigones <= 3);
+            if (i.tipo == Impacto.SOLDADO || i.tipo == Impacto.CABEZA || i.tipo == Impacto.BLANCO) acerto = true;
+            if (primero == null || (i.tipo != Impacto.NADA && (primero.tipo == Impacto.NADA || i.distancia < primero.distancia))) primero = i;
+        }
+        if (acerto) aciertos++;
+        if (balas == 0) recargar();
+        return primero;
+    }
+
+    /** Un proyectil (una bala, o un perdigón de la escopeta). */
+    private Impacto unTiro(float ox, float oy, float oz, float dx, float dy, float dz,
+                           float bx, float by, float bz, Entorno e, Arma a, boolean conTrazo) {
+        Impacto imp = new Impacto();
         float maxD = 40f;
         float tEnt = e.rayo(ox, oy, oz, dx, dy, dz, maxD);
         float mejor = tEnt > 0 ? tEnt : maxD;
@@ -513,7 +672,7 @@ public final class Juego {
                 float baja = s.agachado * BAJA_AGACHADO;
                 float th = esfera(ox, oy, oz, dx, dy, dz, s.x, s.y + CABEZA_Y - baja, s.z, CABEZA_R + 0.03f);
                 if (th > 0 && th < mejor) { mejor = th; quien = s; cabeza = true; }
-                float tc = cilindro(ox, oy, oz, dx, dy, dz, s.x, s.z, RADIO + 0.04f, s.y + 0.1f, s.y + 1.5f - baja);
+                float tc = cilindro(ox, oy, oz, dx, dy, dz, s.x, s.z, radio(s) + 0.04f, s.y + 0.1f, s.y + 1.5f - baja);
                 if (tc > 0 && tc < mejor) { mejor = tc; quien = s; cabeza = false; }
             } else {
                 // el cuerpo que cae o está tirado también recibe
@@ -522,43 +681,62 @@ public final class Juego {
                 if (tb > 0 && tb < mejor) { mejor = tb; quien = s; cabeza = false; }
             }
         }
+        Blanco bl = null;
+        for (Blanco b : blancos) {
+            if (b.golpe >= 0) continue;
+            float tb = disco(ox, oy, oz, dx, dy, dz, b);
+            if (tb > 0 && tb < mejor) { mejor = tb; bl = b; quien = null; }
+        }
         imp.distancia = mejor;
         imp.x = ox + dx * mejor; imp.y = oy + dy * mejor; imp.z = oz + dz * mejor;
-        Trazo t = new Trazo();
-        t.x0 = bx; t.y0 = by; t.z0 = bz; t.x1 = imp.x; t.y1 = imp.y; t.z1 = imp.z;
-        t.vida = 0.06f;
-        trazos.add(t);
-        fogonazoJugador(bx, by, bz);
-        if (quien != null) {
+        if (conTrazo) {
+            Trazo t = new Trazo();
+            t.x0 = bx; t.y0 = by; t.z0 = bz; t.x1 = imp.x; t.y1 = imp.y; t.z1 = imp.z;
+            t.vida = 0.06f;
+            trazos.add(t);
+        }
+        if (bl != null) {
+            imp.tipo = Impacto.BLANCO;
+            pegarleABlanco(bl, imp);
+        } else if (quien != null) {
             imp.tipo = cabeza ? Impacto.CABEZA : Impacto.SOLDADO;
             imp.soldado = quien;
-            pegarleA(quien, dx, dz, cabeza, imp);
+            pegarleA(quien, dx, dz, cabeza, imp, a.dano, a.empuje);
         } else if (tEnt > 0) {
             imp.tipo = Impacto.ENTORNO;
             eventos |= EV_IMPACTO;
             chispas(imp.x, imp.y, imp.z, -dx, -dy, -dz);
         }
-        if (balas == 0) recargar();
         return imp;
     }
 
     public void recargar() {
-        if (recargando > 0 || balas == CARGADOR) return;
-        recargando = 1.3f;
+        if (recargando > 0 || balas == cargador()) return;
+        recargando = armaActual().recarga;
         eventos |= EV_RECARGA;
     }
 
-    private void pegarleA(Soldado s, float dx, float dz, boolean cabeza, Impacto imp) {
+    private void pegarleA(Soldado s, float dx, float dz, boolean cabeza, Impacto imp, float dano, float empuje) {
         eventos |= EV_CARNE;
         trozos(imp.x, imp.y, imp.z, dx, dz, cabeza ? 14 : 9, s.y);
         float h = (float) Math.sqrt(dx * dx + dz * dz);
         float hx = h > 1e-4f ? dx / h : 0, hz = h > 1e-4f ? dz / h : 0;
         if (enPie(s)) {
+            // la cabeza vale triple; el pesado tiene casco blindado (vale doble)
+            s.vida -= dano * (cabeza ? (s.tipo == PESADO ? 2f : 3f) : 1f);
+            if (cabeza) cabezas++;
+            if (s.vida > 0.001f) {
+                // herido: se frena, se lo empuja un poco, y sigue
+                s.herido = 0.35f;
+                s.x += hx * 0.08f * empuje / 4f; s.z += hz * 0.08f * empuje / 4f;
+                eventos |= EV_HERIDO;
+                return;
+            }
             // de un tiro: sale volando para atrás, como en el video
             s.estado = CAE;
             s.t = 0;
             s.yaw = (float) Math.atan2(-hx, -hz);          // de cara al tiro
-            float fuerza = cabeza ? 5.5f : 4.2f;
+            float fuerza = (cabeza ? 1.3f : 1f) * empuje;
             s.vx = hx * fuerza + (azar.nextFloat() - 0.5f) * 0.8f;
             s.vz = hz * fuerza + (azar.nextFloat() - 0.5f) * 0.8f;
             s.vy = 2.4f + azar.nextFloat() * 0.8f;
@@ -566,13 +744,184 @@ public final class Juego {
             s.apunta = 0;
             bajas++;
             sinBaja = 0;
-            puntos += 100 * combo + (cabeza ? 50 : 0);
+            puntos += (s.tipo == PESADO ? 250 : s.tipo == RAPIDO ? 150 : 100) * combo + (cabeza ? 50 : 0);
             combo = Math.min(5, combo + 1);
             eventos |= EV_MUERTE;
             if (cabeza) eventos |= EV_CABEZA;
         } else if (s.estado == CAE) {
             s.vx += hx * 1.5f; s.vz += hz * 1.5f; s.vy += 1.2f;
         }
+    }
+
+    // ── las granadas: física contra la malla real ──
+
+    private void actualizarGranadas(float dt, Entorno e) {
+        for (int i = granadas.size() - 1; i >= 0; i--) {
+            Granada g = granadas.get(i);
+            g.t += dt;
+            g.giro += dt * 12f;
+            boolean explota = g.t > 2.4f;
+            // en pasitos (a 13 m/s, un cuadro son 40 cm: se atravesaría una pared fina)
+            int pasos = 6;
+            float h = dt / pasos;
+            for (int k = 0; k < pasos && !explota; k++) {
+                g.vy -= 9.8f * h;
+                float nx = g.x + g.vx * h, ny = g.y + g.vy * h, nz = g.z + g.vz * h;
+                // contra un soldado: explota ahí
+                for (Soldado s : soldados) {
+                    if (!enPie(s)) continue;
+                    float ddx = nx - s.x, ddz = nz - s.z;
+                    if (ddx * ddx + ddz * ddz < 0.3f * 0.3f && ny > s.y && ny < s.y + ALTO) { explota = true; break; }
+                }
+                float piso = e.suelo(nx, nz, g.y + 0.2f, g.y - 2f);
+                boolean choca = e.ocupado(nx, ny, nz) || (piso == piso && ny < piso + 0.04f)
+                        || (piso != piso && pisoRespaldo == pisoRespaldo && ny < pisoRespaldo + 0.04f);
+                if (choca && !explota) {
+                    // rebotar: la normal sale de mirar alrededor dónde está libre
+                    float[] n = normalLibre(nx, ny, nz, e);
+                    if (piso == piso && ny < piso + 0.04f && n[1] < 0.5f) { n[0] = 0; n[1] = 1; n[2] = 0; }
+                    float vn = g.vx * n[0] + g.vy * n[1] + g.vz * n[2];
+                    if (vn < 0) {
+                        g.vx -= 1.55f * vn * n[0]; g.vy -= 1.55f * vn * n[1]; g.vz -= 1.55f * vn * n[2];   // rebota con 55 %
+                        g.vx *= 0.7f; g.vz *= 0.7f;                                                     // y roza
+                    }
+                    g.rebotes++;
+                    if (g.rebotes >= 4 && g.vx * g.vx + g.vy * g.vy + g.vz * g.vz < 1f) explota = true;
+                    continue;   // no avanza este pasito
+                }
+                g.x = nx; g.y = ny; g.z = nz;
+            }
+            if (explota) {
+                granadas.remove(i);
+                explotar(g.x, g.y, g.z, e);
+            }
+        }
+    }
+
+    /** La normal aproximada de una superficie: hacia donde está libre alrededor del punto. */
+    private static float[] normalLibre(float x, float y, float z, Entorno e) {
+        float d = 0.08f, nx = 0, ny = 0, nz = 0;
+        float[][] dirs = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+        for (float[] v : dirs) if (!e.ocupado(x + v[0] * d, y + v[1] * d, z + v[2] * d)) { nx += v[0]; ny += v[1]; nz += v[2]; }
+        float l = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (l < 1e-4f) return new float[]{0, 1, 0};
+        return new float[]{nx / l, ny / l, nz / l};
+    }
+
+    /** La explosión: daño en área (menos detrás de algo sólido), empuja, fuego, humo y tierra. */
+    public void explotar(float x, float y, float z, Entorno e) {
+        eventos |= EV_EXPLOSION;
+        final float R = 3.2f;
+        Arma a = ARMAS[LANZAGRANADAS];
+        boolean pego = false;
+        for (Soldado s : soldados) {
+            float cx = s.x - x, cy = s.y + 1f - y, cz = s.z - z;
+            float d = (float) Math.sqrt(cx * cx + cy * cy + cz * cz);
+            if (d > R) continue;
+            float f = 1f - d / R;
+            // ¿algo sólido en el medio? (la pared de verdad protege)
+            if (d > 0.3f && e.rayo(x, y + 0.1f, z, cx / d, cy / d, cz / d, d - 0.2f) > 0) f *= 0.25f;
+            Impacto imp = new Impacto();
+            imp.x = s.x; imp.y = s.y + 1f; imp.z = s.z;
+            if (enPie(s)) { pegarleA(s, cx, cz, false, imp, a.dano * f, a.empuje * (0.5f + f)); pego = true; }
+            else if (s.estado == CAE || s.estado == TIRADO) { s.estado = CAE; s.t = 0; s.vy += 4f * f; s.vx += cx / Math.max(d, 0.1f) * 4 * f; s.vz += cz / Math.max(d, 0.1f) * 4 * f; }
+        }
+        for (Blanco b : blancos) {
+            if (b.golpe >= 0) continue;
+            float d = (float) Math.sqrt((b.x - x) * (b.x - x) + (b.y - y) * (b.y - y) + (b.z - z) * (b.z - z));
+            if (d < 1.2f) { Impacto imp = new Impacto(); imp.x = b.x; imp.y = b.y; imp.z = b.z; pegarleABlanco(b, imp); pego = true; }
+        }
+        if (pego) aciertos++;
+        // el jugador también, si está cerca
+        float dj = (float) Math.sqrt((jx - x) * (jx - x) + (jy - 0.8f - y) * (jy - 0.8f - y) + (jz - z) * (jz - z));
+        if (dj < 2.5f && estado == JUEGA) { vidaJugador -= 30 * (1 - dj / 2.5f); golpe = 1; sinDano = 0; eventos |= EV_DANO; }
+        float piso = e.suelo(x, z, y + 0.3f, y - 2f);
+        if (piso != piso) piso = pisoRespaldo == pisoRespaldo ? pisoRespaldo : y - 1;
+        for (int i = 0; i < 14; i++) {
+            Particula p = particula(P_FUEGO, x, y, z, 0.35f + azar.nextFloat() * 0.35f, 0.18f + azar.nextFloat() * 0.15f, piso);
+            p.vx = (azar.nextFloat() - 0.5f) * 5; p.vy = azar.nextFloat() * 3; p.vz = (azar.nextFloat() - 0.5f) * 5;
+        }
+        for (int i = 0; i < 10; i++) {
+            Particula p = particula(P_HUMO, x, y + 0.2f, z, 1.5f + azar.nextFloat() * 1.5f, 0.3f + azar.nextFloat() * 0.2f, piso);
+            p.vx = (azar.nextFloat() - 0.5f) * 1.5f; p.vy = 0.5f + azar.nextFloat(); p.vz = (azar.nextFloat() - 0.5f) * 1.5f;
+        }
+        for (int i = 0; i < 18; i++) {
+            Particula p = particula(P_TROZO, x, y + 0.05f, z, 1.2f + azar.nextFloat(), 0.03f + azar.nextFloat() * 0.05f, piso);
+            p.vx = (azar.nextFloat() - 0.5f) * 7; p.vy = 2 + azar.nextFloat() * 5; p.vz = (azar.nextFloat() - 0.5f) * 7;
+        }
+    }
+
+    // ── práctica: blancos pegados a las superficies reales ──
+
+    private float proxBlanco;
+
+    private void actualizarBlancos(float dt, Entorno e) {
+        for (int i = blancos.size() - 1; i >= 0; i--) {
+            Blanco b = blancos.get(i);
+            b.t += dt;
+            if (b.golpe >= 0) { b.golpe += dt; if (b.golpe > 0.5f) blancos.remove(i); }
+            else if (b.t > 6f) blancos.remove(i);   // se fue: no dio tiempo
+        }
+        proxBlanco -= dt;
+        int activos = 0;
+        for (Blanco b : blancos) if (b.golpe < 0) activos++;
+        if (activos < 3 && proxBlanco <= 0) {
+            if (ponerBlanco(e)) proxBlanco = 0.6f + azar.nextFloat() * 0.8f;
+            else proxBlanco = 0.2f;
+        }
+    }
+
+    /** Busca una superficie real adelante (una pared, un árbol, el piso) y pega un blanco de cara al jugador. */
+    public boolean ponerBlanco(Entorno e) {
+        for (int intento = 0; intento < 12; intento++) {
+            float ang = (azar.nextFloat() - 0.5f) * 2.4f, elev = -0.35f + azar.nextFloat() * 0.6f;
+            float c = (float) Math.cos(ang), sn = (float) Math.sin(ang);
+            float hx = jfx * c - jfz * sn, hz = jfx * sn + jfz * c;
+            float ce = (float) Math.cos(elev);
+            float dx = hx * ce, dy = (float) Math.sin(elev), dz = hz * ce;
+            float d = e.rayo(jx, jy, jz, dx, dy, dz, 9f);
+            if (d < 1.5f) continue;
+            float x = jx + dx * d, y = jy + dy * d, z = jz + dz * d;
+            float[] n = {-dx, -dy, -dz};
+            if (e instanceof EntornoNormales) {
+                float[] m = new float[3];
+                if (((EntornoNormales) e).normal(x, y, z, m)) n = m;
+            }
+            // de frente a vos (si la superficie mira para otro lado, no sirve)
+            if (n[0] * -dx + n[1] * -dy + n[2] * -dz < 0.35f) continue;
+            Blanco b = new Blanco();
+            b.x = x + n[0] * 0.02f; b.y = y + n[1] * 0.02f; b.z = z + n[2] * 0.02f;
+            b.nx = n[0]; b.ny = n[1]; b.nz = n[2];
+            b.radio = 0.14f + 0.02f * d;   // más lejos, más grande (que se pueda)
+            blancos.add(b);
+            return true;
+        }
+        return false;
+    }
+
+    private void pegarleABlanco(Blanco b, Impacto imp) {
+        float dx = imp.x - b.x, dy = imp.y - b.y, dz = imp.z - b.z;
+        float r = (float) Math.sqrt(dx * dx + dy * dy + dz * dz) / b.radio;   // 0 = centro, 1 = borde
+        int p = r < 0.2f ? 100 : r < 0.5f ? 70 : 40;
+        puntos += p + Math.max(0, (int) ((3f - b.t) * 20));   // más rápido, más puntos
+        sumaReaccion += b.t;
+        blancosPegados++;
+        b.golpe = 0;
+        eventos |= EV_BLANCO;
+        chispas(imp.x, imp.y, imp.z, b.nx, b.ny, b.nz);
+    }
+
+    /** Tiempo medio de reacción en la práctica (s). */
+    public float reaccionMedia() { return blancosPegados == 0 ? 0 : sumaReaccion / blancosPegados; }
+
+    /** Rayo contra el disco de un blanco. */
+    static float disco(float ox, float oy, float oz, float dx, float dy, float dz, Blanco b) {
+        float den = dx * b.nx + dy * b.ny + dz * b.nz;
+        if (den > -1e-4f) return -1;   // de atrás o de costado
+        float t = ((b.x - ox) * b.nx + (b.y - oy) * b.ny + (b.z - oz) * b.nz) / den;
+        if (t < 0) return -1;
+        float px = ox + dx * t - b.x, py = oy + dy * t - b.y, pz = oz + dz * t - b.z;
+        return px * px + py * py + pz * pz <= b.radio * b.radio ? t : -1;
     }
 
     /** Centro del torso de un cuerpo que cae (sigue el giro de la caída). */

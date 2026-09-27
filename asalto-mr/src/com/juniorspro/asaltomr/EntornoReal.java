@@ -1,7 +1,7 @@
 package com.juniorspro.asaltomr;
 
 /** El entorno del juego = lo escaneado (el volumen actual del hilo de escaneo). */
-final class EntornoReal implements Juego.Entorno {
+final class EntornoReal implements Juego.Entorno, Juego.EntornoNormales {
     private final Escaneo escaneo;
 
     EntornoReal(Escaneo e) { escaneo = e; }
@@ -16,4 +16,7 @@ final class EntornoReal implements Juego.Entorno {
 
     @Override
     public boolean ocupado(float x, float y, float z) { return escaneo.tsdf.ocupado(x, y, z); }
+
+    @Override
+    public boolean normal(float x, float y, float z, float[] n) { return escaneo.tsdf.normal(x, y, z, n); }
 }

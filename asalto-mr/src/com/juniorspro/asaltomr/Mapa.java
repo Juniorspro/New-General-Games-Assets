@@ -119,6 +119,7 @@ public final class Mapa {
                 }
             }
             if (de[b] < 0 && a != b) return null;
+            if (a == b) return new float[]{x(b % N), piso[b], z(b / N)};   // ya está en la celda: ir derecho al centro
             ArrayList<Integer> cel = new ArrayList<>();
             for (int c = b; c != a && c >= 0; c = de[c]) cel.add(c);
             float[] r = new float[cel.size() * 3];

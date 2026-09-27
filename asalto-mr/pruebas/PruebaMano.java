@@ -31,7 +31,12 @@ public class PruebaMano {
     static HashMap<String, Integer> cuenta = new HashMap<>();
 
     static void cargar() throws Exception {
-        List<String> ls = Files.readAllLines(Paths.get("pruebas/manos.txt"));
+        cargar("pruebas/manos.txt");
+        cargar("pruebas/manos-commons.txt");
+    }
+
+    static void cargar(String archivo) throws Exception {
+        List<String> ls = Files.readAllLines(Paths.get(archivo));
         for (String l : ls) {
             if (l.startsWith("#") || l.trim().isEmpty()) continue;
             String[] t = l.trim().split(" ");
@@ -111,6 +116,40 @@ public class PruebaMano {
                     e[0], Mano.NOMBRES[p], m.curlIndice, m.curlMedio, m.curlAnular, m.curlMenique));
         }
 
+        // 1b) fotos libres de Wikimedia Commons: agarres reales, de costado, apuntando a la cámara
+        String[][] commons = {{"424TH_Air_Base_Squadron_on_ran", "empuña|aprieta", "una soldado apuntando una pistola real (mano chica, de costado)"},
+                {"Closed_fist", "aprieta", "puño cerrado"}, {"Open_fist", "aprieta", "puño"},
+                {"Hand_in_closed_fist_black_back", "empuña|aprieta", "puño visto de costado"},
+                {"Pedja_Pavlovic_Badza_pointing_", "empuña", "el índice apuntando A LA CÁMARA (escorzo)"},
+                {"Fresh_and_ripe_strawberry_rest", "abierta|otra", "la mano sosteniendo una frutilla (no es empuñar)"},
+                {"Open_Palm_of_the_Left_Hand_Fin", "abierta", "palma abierta"}, {"Right_Hand_Palm", "abierta", "palma abierta"}};
+        for (String[] c : commons) {
+            Foto f = fotos.get(c[0]);
+            if (f == null) { ver(false, "falta la foto " + c[0]); continue; }
+            Mano m = new Mano();
+            String p = Mano.NOMBRES[m.clasificar(f.mundo)];
+            ver(("|" + c[1] + "|").contains("|" + p + "|"), String.format("%-45s → %s", c[2], p));
+        }
+        // girar la mano a cualquier lado no cambia nada (sólo se usan distancias)
+        {
+            Random r = new Random(9);
+            int mal = 0, total = 0;
+            for (Foto f : fotos.values()) {
+                int clase = new Mano().clasificar(f.mundo);
+                for (int k = 0; k < 200; k++) {
+                    float[] e = {(float) r.nextGaussian(), (float) r.nextGaussian(), (float) r.nextGaussian()};
+                    float el = (float) Math.sqrt(e[0] * e[0] + e[1] * e[1] + e[2] * e[2]);
+                    for (int q = 0; q < 3; q++) e[q] /= el;
+                    float[][] g = copia(f.mundo);
+                    float ang = r.nextFloat() * 6.2832f;
+                    for (float[] pt : g) rotar(pt, new float[]{0, 0, 0}, e, ang);
+                    total++;
+                    if (new Mano().clasificar(g) != clase) mal++;
+                }
+            }
+            ver(mal == 0, "girando cada mano real 200 veces al azar, la pose es siempre la misma (" + mal + " de " + total + " distintas)");
+        }
+
         // 2) el gatillo con fotos reales: apuntar (índice estirado) → puño (índice cerrado) = un tiro
         {
             Mano m = new Mano();
@@ -129,6 +168,18 @@ public class PruebaMano {
             int t3 = 0;
             for (int i = 0; i < 20; i++) if (v.gesto(fotos.get("victory").mundo, i * 33)) t3++;
             ver(t3 == 0, "con la V no dispara");
+            // de costado: el puño visto de lado da 1.36 palmas (el umbral fijo 1.25 no dispararía); adaptado, sí
+            Mano c = new Mano();
+            int t4 = 0;
+            ms = 0;
+            for (String s : new String[]{"pointing_up", "pointing_up", "pointing_up", "Hand_in_closed_fist_black_back", "Hand_in_closed_fist_black_back", "Hand_in_closed_fist_black_back"}) { if (c.gesto(fotos.get(s).mundo, ms)) t4++; ms += 33; }
+            ver(t4 == 1, "apretar el gatillo con la mano vista de costado también dispara (" + t4 + ")");
+            // apuntando a la cámara (escorzo) → puño
+            Mano pc = new Mano();
+            int t5 = 0;
+            ms = 0;
+            for (String s : new String[]{"Pedja_Pavlovic_Badza_pointing_", "Pedja_Pavlovic_Badza_pointing_", "Pedja_Pavlovic_Badza_pointing_", "Closed_fist", "Closed_fist"}) { if (pc.gesto(fotos.get(s).mundo, ms)) t5++; ms += 33; }
+            ver(t5 == 1, "con el índice apuntando a la cámara, apretar dispara (" + t5 + ")");
         }
 
         // 3) gatillo sintético sobre una mano real: el índice se dobla de a poco, con temblor de 3 mm
@@ -172,6 +223,44 @@ public class PruebaMano {
             float il = (float) Math.sqrt(ix * ix + iy * iy + iz * iz);
             float ai = (float) Math.toDegrees(Math.acos((ix * p0.adelante[0] + iy * p0.adelante[1] + iz * p0.adelante[2]) / il));
             ver(ai < 30f, String.format("el caño apunta como el índice estirado (a %.0f°)", ai));
+        }
+
+        // 3b) el filtro One Euro: quieta no tiembla, moviéndose no se atrasa
+        {
+            Foto fo = fotos.get("pointing_up");
+            float[] ident = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+            Random r = new Random(4);
+            Mano m = new Mano();
+            double sumaCruda = 0, sumaFiltro = 0;
+            int n = 0;
+            float[] ref = null;
+            for (int f = 0; f < 90; f++) {
+                m.aMundo(fo.img, fo.mundo, fo.w, fo.h, 500, 500, fo.w / 2f, fo.h / 2f, Float.NaN, ident);
+                if (ref == null) { float[] p = new float[3]; m.medirPistola(p, new float[3], new float[3]); ref = p; }
+                for (float[] pt : m.mundo) for (int k = 0; k < 3; k++) pt[k] += (float) r.nextGaussian() * 0.005f;   // 5 mm de temblor
+                float[] cruda = new float[3];
+                m.medirPistola(cruda, new float[3], new float[3]);
+                m.pistolaFiltrada(f * 33L);
+                if (f > 20) {
+                    sumaCruda += dist(cruda, ref); sumaFiltro += dist(m.pos, ref); n++;
+                }
+            }
+            System.out.printf("One Euro quieta: temblor %.1f mm crudo → %.1f mm filtrado%n", sumaCruda / n * 1000, sumaFiltro / n * 1000);
+            ver(sumaFiltro < sumaCruda * 0.6, "quieta, el filtro saca más de 40 % del temblor");
+            // moviéndose a 1 m/s: el retraso
+            Mano mv = new Mano();
+            float atraso = 0;
+            for (int f = 0; f < 60; f++) {
+                mv.aMundo(fo.img, fo.mundo, fo.w, fo.h, 500, 500, fo.w / 2f, fo.h / 2f, Float.NaN, ident);
+                float dx = f * 0.033f;   // 1 m/s de costado
+                for (float[] pt : mv.mundo) pt[0] += dx;
+                float[] cruda = new float[3];
+                mv.medirPistola(cruda, new float[3], new float[3]);
+                mv.pistolaFiltrada(f * 33L);
+                if (f > 30) atraso = Math.max(atraso, Math.abs(cruda[0] - mv.pos[0]));
+            }
+            System.out.printf("One Euro a 1 m/s: atraso %.1f cm%n", atraso * 100);
+            ver(atraso < 0.03f, "moviéndola rápido, la pistola se atrasa menos de 3 cm");
         }
 
         // 4) de la foto al mundo: una mano real puesta en un lugar conocido delante de la cámara

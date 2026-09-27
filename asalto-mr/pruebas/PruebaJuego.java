@@ -45,7 +45,7 @@ public class PruebaJuego {
             for (Juego.Soldado s : j.soldados) {
                 ids.add(s.id);
                 pasos++;
-                if (tsdf.ocupado(s.x, s.y + 0.9f, s.z)) adentro++;
+                if (tsdf.ocupado(s.x, s.y + 0.9f, s.z)) { adentro++; if (System.getenv("DEPURAR") != null) System.out.printf("  adentro: (%.2f %.2f %.2f) estado %d ruta %b tactica %d%n", s.x, s.y, s.z, s.estado, s.ruta != null, s.tactica); }
                 float piso = tsdf.suelo(s.x, s.z, s.y + 0.5f, s.y - 1f);
                 if (piso == piso && Math.abs(piso - s.y) > 0.12f) fueraDelPiso++;
                 float[] p = antes.get(s.id);
