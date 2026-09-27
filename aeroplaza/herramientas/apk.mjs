@@ -1,10 +1,10 @@
-// node herramientas/apk.mjs [--canciones] [--release]
+// node herramientas/apk.mjs [--canciones] [--wasm] [--release]
 // Arma la APK de AEROPLAZA (android/): el juego de siempre en una WebView, con ARCore y las manos de
 // MediaPipe de Android. Pone en android/app/src/main/assets (no se guarda en el repo):
 // - aeroplaza.html (o aeroplaza-con-canciones.html con --canciones: esa APK es solo para quien pide,
 //   NO se sube), con el aviso de que corre en la APK y MediaPipe de la web servido desde adentro;
-// - MediaPipe (pruebas/comun.mjs › mediapipe: la web para cuando no hay ARCore, y el modelo, que usan
-//   las dos).
+// - el modelo de las manos (pruebas/comun.mjs › mediapipe), y con --wasm MediaPipe de la web (para
+//   cuando no hay ARCore; si no, se baja de internet).
 // El SDK de Android: ANDROID_HOME (o --sdk=…). Sale en pruebas/salida/aeroplaza[-con-canciones].apk,
 // firmada con la llave de prueba de Gradle (~/.android/debug.keystore, fuera del repo).
 import fs from 'node:fs';
@@ -13,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { mediapipe } from '../pruebas/comun.mjs';
 
 const AQUI = path.dirname(new URL(import.meta.url).pathname), RAIZ = path.dirname(AQUI), AND = path.join(RAIZ, 'android');
-const args = process.argv.slice(2), canciones = args.includes('--canciones'), release = args.includes('--release');
+const args = process.argv.slice(2), canciones = args.includes('--canciones'), release = args.includes('--release'), conWasm = args.includes('--wasm');
 const sdk = (args.find((a) => a.startsWith('--sdk=')) || '').slice(6) || process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
 if (!sdk || !fs.existsSync(sdk)) { console.log('falta el SDK de Android: ANDROID_HOME=/ruta o --sdk=/ruta'); process.exit(1); }
 fs.writeFileSync(path.join(AND, 'local.properties'), `sdk.dir=${sdk}\n`);
@@ -23,11 +23,14 @@ execFileSync('node', [path.join(AQUI, 'armar.mjs')], { stdio: 'inherit' });
 const html = path.join(RAIZ, canciones ? 'aeroplaza-con-canciones.html' : 'aeroplaza.html');
 const A = path.join(AND, 'app/src/main/assets');
 fs.rmSync(A, { recursive: true, force: true }); fs.mkdirSync(path.join(A, 'mediapipe/wasm'), { recursive: true });
+/* (el modelo de las manos va siempre: lo usan MediaPipe de Android y el de la web. MediaPipe de la web
+   (12 MB) solo con --wasm: sirve cuando el celu no tiene ARCore, y si no está adentro se baja de
+   internet; sin él la APK entra en los 30 MB que se pueden mandar) */
 const BASE = 'https://appassets.androidplatform.net/assets/mediapipe';
-const aviso = `<script>window.AEROPLAZA_APK=true;window.AEROPLAZA_MANOS=Object.assign({base:'${BASE}',modelo:'${BASE}/hand_landmarker.task'},window.AEROPLAZA_MANOS||{});</script>`;
+const aviso = `<script>window.AEROPLAZA_APK=true;window.AEROPLAZA_MANOS=Object.assign({${conWasm ? `base:'${BASE}',` : ''}modelo:'${BASE}/hand_landmarker.task'},window.AEROPLAZA_MANOS||{});</script>`;
 fs.writeFileSync(path.join(A, 'aeroplaza.html'), fs.readFileSync(html, 'utf8').replace('<head>', '<head>\n' + aviso));
 const mp = mediapipe();
-for (const f of ['vision_bundle.mjs', 'wasm/vision_wasm_internal.js', 'wasm/vision_wasm_internal.wasm', 'hand_landmarker.task']) fs.copyFileSync(path.join(mp, f), path.join(A, 'mediapipe', f));
+for (const f of ['hand_landmarker.task', ...(conWasm ? ['vision_bundle.mjs', 'wasm/vision_wasm_internal.js', 'wasm/vision_wasm_internal.wasm'] : [])]) fs.copyFileSync(path.join(mp, f), path.join(A, 'mediapipe', f));
 
 /* Gradle (el de /opt/gradle, o el que haya en el PATH) */
 const gradle = fs.existsSync('/opt/gradle/bin/gradle') ? '/opt/gradle/bin/gradle' : 'gradle';

@@ -35,9 +35,11 @@ Sigue de [aeroplaza-26](aeroplaza-26.md). Rama `claude/fijate-iszyer`.
   en otro hilo, girada derecha y con la luz de la web (hasta ×6); el campo sale
   de la calibración de ARCore (`getImageIntrinsics`), no supuesto.
 - **`herramientas/apk.mjs`**: arma el juego, pone el HTML (con
-  `AEROPLAZA_APK` y MediaPipe servido desde adentro) y MediaPipe en
-  `app/src/main/assets` (ignorado) y corre Gradle. 35 MB; con canciones, 41
-  (esa solo para quien pide). Solo `arm64-v8a`.
+  `AEROPLAZA_APK` y el modelo servido desde adentro) y `hand_landmarker.task`
+  en `app/src/main/assets` (ignorado) y corre Gradle. 17,0 MB; con canciones,
+  23,9 (esa solo para quien pide). Solo `arm64-v8a`. Con `--wasm` mete también
+  el MediaPipe de la web (`vision_bundle.mjs` y los wasm): +23 MB, y las manos
+  de la web (sin ARCore) andan sin internet.
 
 ## Del lado del juego
 
@@ -68,6 +70,9 @@ Sigue de [aeroplaza-26](aeroplaza-26.md). Rama `claude/fijate-iszyer`.
   rearmarlo: `commandlinetools-linux-16111833_latest.zip` de
   dl.google.com/android/repository, `sdkmanager --licenses`,
   `"platforms;android-36" "build-tools;36.0.0"`, y `ANDROID_HOME` apuntando ahí.
+- **SendUserFile no manda más de 30 MiB**: la primera APK (40,7) no salió. Se
+  achicó con el MediaPipe de la web afuera (por defecto lo baja del CDN) y las
+  `.so` comprimidas (`packaging.jniLibs.useLegacyPackaging`).
 - **Maven Central corta con 429** si Gradle le pide mucho junto: primero el
   espejo de Google (`maven-central.storage-download.googleapis.com/maven2`) y
   `--max-workers=2` (`settings.gradle`, `apk.mjs`).

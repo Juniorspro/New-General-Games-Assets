@@ -10,7 +10,8 @@ se resumen en una sola.
   - Quedó ([aeroplaza-27](aeroplaza-27.md)): `aeroplaza/android` (WebView +
     ARCore + MediaPipe de Android), `herramientas/apk.mjs`; en el VR, la cabeza
     en 6 ejes con ARCore y las manos de Android; `pruebas/nativo.mjs` 10/10.
-    La APK compila (35 MB).
+    La APK compila: 17 MB (con canciones 23,9); el MediaPipe de la web va
+    afuera salvo con `--wasm` (el tope para mandarla es 30 MiB).
   - Falta: probarla en un celu (ARCore, la foto derecha, lo que tarda la GPU).
 - **27/09/2026, de mañana · `claude/fijate-iszyer`:**
   - Pidió: con un video a 60 fps, que mover un dedo no mueva la mano; la

@@ -18,6 +18,8 @@ android {
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
   /* (el modelo de las manos va tal cual: comprimido, MediaPipe no lo puede leer de la APK) */
   androidResources { noCompress += ['task', 'wasm'] }
+  /* (las librerías de MediaPipe y ARCore comprimidas: se sacan al instalar; la APK pesa 5 MB menos) */
+  packaging { jniLibs { useLegacyPackaging = true } }
   buildTypes { release { minifyEnabled false } }
 }
 dependencies {
