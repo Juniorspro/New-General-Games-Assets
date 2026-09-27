@@ -27,9 +27,9 @@ import * as THREE from 'three';
 import { t, sumar } from './textos.js';
 
 sumar({
-  es: { mn_caminar: '🚶 Caminar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_salir: 'Salir del VR', mn_titulo: 'Menú', mn_manos_cargando: '✋ Cargando las manos…', mn_manos_listas: '✋ Manos listas: pellizcá para usar, la palma para el menú', mn_manos_error: 'No se pudieron prender las manos (cámara o red)', mn_saltar: 'Saltar', mn_ir: 'Ir', mn_ventanas: '🪟 Ventanas', mn_lentes: '👓 Lentes' },
-  en: { mn_caminar: '🚶 Walk', mn_parar: '✋ Stop', mn_izq: 'Turn ⟲', mn_der: 'Turn ⟳', mn_fps: 'FPS', mn_salir: 'Exit VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Loading hands…', mn_manos_listas: '✋ Hands ready: pinch to use, palm for the menu', mn_manos_error: 'Couldn’t start hand tracking (camera or network)', mn_saltar: 'Jump', mn_ir: 'Go', mn_ventanas: '🪟 Windows', mn_lentes: '👓 Lenses' },
-  pt: { mn_caminar: '🚶 Andar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_salir: 'Sair do VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Carregando as mãos…', mn_manos_listas: '✋ Mãos prontas: pinça para usar, a palma para o menu', mn_manos_error: 'Não foi possível ligar as mãos (câmera ou rede)', mn_saltar: 'Pular', mn_ir: 'Ir', mn_ventanas: '🪟 Janelas', mn_lentes: '👓 Lentes' },
+  es: { mn_caminar: '🚶 Caminar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_mando: '🎮 Control', mn_mando_visto: '🎮 Control en la mano: apuntá con el objeto y apretá con el índice o el pulgar', mn_salir: 'Salir del VR', mn_titulo: 'Menú', mn_manos_cargando: '✋ Cargando las manos…', mn_manos_listas: '✋ Manos listas: pellizcá para usar, la palma para el menú', mn_manos_error: 'No se pudieron prender las manos (cámara o red)', mn_saltar: 'Saltar', mn_ir: 'Ir', mn_ventanas: '🪟 Ventanas', mn_lentes: '👓 Lentes' },
+  en: { mn_caminar: '🚶 Walk', mn_parar: '✋ Stop', mn_izq: 'Turn ⟲', mn_der: 'Turn ⟳', mn_fps: 'FPS', mn_mando: '🎮 Controller', mn_mando_visto: '🎮 Controller in your hand: point with the object and squeeze with your index or thumb', mn_salir: 'Exit VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Loading hands…', mn_manos_listas: '✋ Hands ready: pinch to use, palm for the menu', mn_manos_error: 'Couldn’t start hand tracking (camera or network)', mn_saltar: 'Jump', mn_ir: 'Go', mn_ventanas: '🪟 Windows', mn_lentes: '👓 Lenses' },
+  pt: { mn_caminar: '🚶 Andar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_mando: '🎮 Controle', mn_mando_visto: '🎮 Controle na mão: aponte com o objeto e aperte com o indicador ou o polegar', mn_salir: 'Sair do VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Carregando as mãos…', mn_manos_listas: '✋ Mãos prontas: pinça para usar, a palma para o menu', mn_manos_error: 'Não foi possível ligar as mãos (câmera ou rede)', mn_saltar: 'Pular', mn_ir: 'Ir', mn_ventanas: '🪟 Janelas', mn_lentes: '👓 Lentes' },
 });
 
 /* los huesos (pares de puntos de MediaPipe) y el grosor en cada punto, en metros */
@@ -894,7 +894,7 @@ const FRAG_MANO = /* glsl */`
 const MENU_PALMA = { cara: 0.72, sigue: 0.55, mira: 0.5, miraSigue: 0.65, t: 0.25, abierta: 1.55 };
 /* cuánto fantasma las manos en el juego (0: vidrio entero; 1: solo el borde) */
 const FANTASMA_JUEGO = 0.35;
-const BOTONES = ['mn_caminar', 'mn_izq', 'mn_der', 'mn_fps', 'mn_ventanas', 'mn_lentes', 'mn_salir'];
+const BOTONES = ['mn_caminar', 'mn_izq', 'mn_der', 'mn_fps', 'mn_ventanas', 'mn_lentes', 'mn_salir', 'mn_mando'];
 class Menu {
   constructor() {
     this.lienzo = document.createElement('canvas'); this.lienzo.width = 512; this.lienzo.height = 300;
@@ -904,7 +904,9 @@ class Menu {
     this.sobre = -1; this.apretado = -1; this.abierto = false; this.fps = false; this.camina = false;
     /* los botones en la textura (x, y, ancho, alto), en píxeles del lienzo */
     /* (vuelta 29: con las ventanas de prueba, abajo son tres; vuelta 30, con las lentes, cuatro) */
-    this.cajas = [[20, 70, 230, 90], [262, 70, 110, 90], [382, 70, 110, 90], [20, 180, 86, 90], [114, 180, 136, 90], [258, 180, 116, 90], [382, 180, 110, 90]];
+    /* (vuelta 40: arriba a la derecha, el control en la mano, prendido o apagado) */
+    this.cajas = [[20, 70, 230, 90], [262, 70, 110, 90], [382, 70, 110, 90], [20, 180, 86, 90], [114, 180, 136, 90], [258, 180, 116, 90], [382, 180, 110, 90], [292, 12, 200, 50]];
+    this.mando = true;
     this.pintar();
   }
   pintar() {
@@ -921,7 +923,7 @@ class Menu {
       c.fillStyle = gb; c.beginPath(); c.roundRect(x, y + (a ? 4 : 0), w, h - 4, 24); c.fill();
       c.strokeStyle = s ? '#2aa6e8' : 'rgba(255,255,255,0.9)'; c.lineWidth = s ? 6 : 3; c.stroke();
       c.fillStyle = i === 6 ? '#b3261e' : '#0f3f63'; c.font = `800 ${i >= 3 ? 21 : 28}px system-ui, sans-serif`; c.textAlign = 'center';
-      c.fillText(i === 0 && this.camina ? t('mn_parar') : t(BOTONES[i]) + (i === 3 && this.fps ? ' ✓' : ''), x + w / 2, y + h / 2 + 8 + (a ? 4 : 0));
+      c.fillText(i === 0 && this.camina ? t('mn_parar') : t(BOTONES[i]) + ((i === 3 && this.fps) || (i === 7 && this.mando) ? ' ✓' : ''), x + w / 2, y + h / 2 + 8 + (a ? 4 : 0));
     });
     this.tex.needsUpdate = true;
   }
@@ -946,6 +948,79 @@ class Menu {
     const k = _d.copy(this.malla.position).sub(o).dot(n) / den; if (k < 0 || k > 3) return null;
     const p = o.clone().addScaledVector(d, k), r = this.enPunto(p); return r.i >= 0 ? { ...r, p, k } : { i: -1, p, k };
   }
+}
+
+/* -------------------------------------------------- el objeto en la mano (vuelta 40)
+   "Detectar un objeto en la mano como un control": un palo, una linterna, un control remoto, una botella. Sin ver el
+   objeto: por cómo se cierran los dedos alrededor.
+   - AGARRA: al menos MANDO.dedos de los cuatro dedos (índice a meñique) doblados más de MANDO.curva (lo que se doblan
+     el segundo y el tercer nudillo, rad) y con la punta a entre MANDO.hueco veces el largo de la palma del nudillo: un
+     puño apretado queda más cerca (en la cuenta, 0,30) y la mano abierta o en garra, más lejos o casi derecha.
+   - EL EJE del objeto: los dedos se doblan alrededor de él, así que es la normal del plano en que se dobla cada dedo;
+     mezclada con la línea de los nudillos (del meñique al índice, un poco hacia los dedos), que no tiembla porque la
+     palma es un molde. Va del lado del pulgar: se apunta como con una linterna.
+   - EL CENTRO: el promedio de los dedos que lo rodean.
+   - EL GATILLO (Manos.medirMando): el índice que se dobla más que su reposo (agarrado como una pistola: los otros tres
+     alrededor y el índice en el gatillo) o el pulgar que baja hacia el índice (como en una linterna) */
+export const MANDO = { curva: 1.9, hueco: [0.36, 0.82], dedos: 3, entra: 0.35, sale: 0.3, largo: 0.16, suave: 0.06, gatillo: [0.5, 0.3], pulgar: [0.22, 0.12], sube: 0.4 };
+const DEDOS4 = [[5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
+const _agarre = { n: 0, eje: [0, 0, 1], centro: [0, 0, 0], dobleIndice: 0, pulgar: 0 };
+export function medirAgarre(P, o = { n: 0, eje: [0, 0, 1], centro: [0, 0, 0], dobleIndice: 0, pulgar: 0 }) {
+  const v = (i, r = []) => { r[0] = P[i * 3]; r[1] = P[i * 3 + 1]; r[2] = P[i * 3 + 2]; return r; };
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], len = (a) => Math.hypot(a[0], a[1], a[2]) || 1e-9;
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2], cruz = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const ang = (a, b) => Math.acos(Math.max(-1, Math.min(1, dot(a, b) / (len(a) * len(b)))));
+  const w = v(0), L = len(sub(v(9), w)), lado = sub(v(5), v(17)), arriba = sub(v(9), w);
+  let n = 0; const nor = [0, 0, 0], cen = [0, 0, 0];
+  for (const [k, [a0, b0, c0, e0]] of DEDOS4.entries()) {
+    const a = v(a0), b = v(b0), c = v(c0), e = v(e0), s1 = sub(b, a), s2 = sub(c, b), s3 = sub(e, c);
+    const doble = ang(s1, s2) + ang(s2, s3), hueco = len(sub(e, a)) / L;
+    if (k === 0) o.dobleIndice = doble;
+    if (doble > MANDO.curva && hueco > MANDO.hueco[0] && hueco < MANDO.hueco[1]) {
+      n++;
+      const m = cruz(s1, s3), lm = len(m);
+      if (lm > 1e-6) { const sg = dot(m, lado) < 0 ? -1 : 1; for (let q = 0; q < 3; q++) nor[q] += sg * m[q] / lm; }
+      for (let q = 0; q < 3; q++) cen[q] += (a[q] + b[q] + c[q] + e[q]) / 4;
+    }
+  }
+  const ll = len(lado), la = len(arriba), palma = [lado[0] / ll + 0.1 * arriba[0] / la, lado[1] / ll + 0.1 * arriba[1] / la, lado[2] / ll + 0.1 * arriba[2] / la];
+  const lp = len(palma), ln = len(nor), e = [0, 0, 0];
+  for (let q = 0; q < 3; q++) e[q] = palma[q] / lp * 0.5 + (ln > 1e-6 ? nor[q] / ln * 0.5 : palma[q] / lp * 0.5);
+  const le = len(e); o.eje[0] = e[0] / le; o.eje[1] = e[1] / le; o.eje[2] = e[2] / le;
+  if (n) { o.centro[0] = cen[0] / n; o.centro[1] = cen[1] / n; o.centro[2] = cen[2] / n; }
+  else { const m9 = v(9); o.centro[0] = (w[0] + m9[0]) / 2; o.centro[1] = (w[1] + m9[1]) / 2; o.centro[2] = (w[2] + m9[2]) / 2; }
+  o.pulgar = len(sub(v(4), v(6))) / L;
+  o.n = n;
+  return o;
+}
+/* el control que se dibuja: una cápsula de vidrio celeste (como las manos: brillo arriba, borde claro) con la punta
+   que brilla, y más al apretar */
+const VERT_MANDO = /* glsl */`
+  varying vec3 vN, vV; varying float vY;
+  void main() { vY = position.y; vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = -mv.xyz; vN = normalMatrix * normal; gl_Position = projectionMatrix * mv; }`;
+const FRAG_MANDO = /* glsl */`
+  uniform float uAlfa, uGat, uT; uniform float uLargo;
+  varying vec3 vN, vV; varying float vY;
+  void main() {
+    vec3 n = normalize(vN), v = normalize(vV);
+    float f = 1.0 - max(dot(n, v), 0.0), y = vY / uLargo + 0.5;
+    /* (azul Aero: más hondo abajo, celeste arriba, una franja de brillo blanco a lo largo y el borde claro; la punta
+       verde lima que late, dorada al apretar, y un anillo más oscuro que la separa del cuerpo) */
+    vec3 c = mix(vec3(0.02, 0.36, 0.78), vec3(0.35, 0.82, 1.0), smoothstep(-0.2, 1.0, n.y * 0.5 + 0.5));
+    c += vec3(1.0) * pow(max(dot(reflect(-v, n), normalize(vec3(0.3, 0.8, 0.5))), 0.0), 32.0) * 1.1;
+    c += vec3(0.9, 0.98, 1.0) * smoothstep(0.55, 0.9, abs(n.x)) * 0.35;
+    c = mix(c, vec3(0.8, 0.97, 1.0), pow(f, 2.5) * 0.6);
+    float punta = smoothstep(0.84, 0.95, y), anillo = smoothstep(0.78, 0.8, y) - smoothstep(0.82, 0.84, y), ola = 0.5 + 0.5 * sin(uT * 6.0 - y * 18.0);
+    c = mix(c, vec3(0.03, 0.2, 0.42), anillo * 0.8);
+    c = mix(c, mix(vec3(0.55, 1.0, 0.35), vec3(1.0, 0.86, 0.3), uGat) * (1.15 + 0.35 * ola), punta);
+    c += vec3(0.5, 0.95, 1.0) * uGat * 0.3 * (1.0 - y);
+    gl_FragColor = vec4(c, uAlfa * (0.9 + 0.1 * f));
+  }`;
+function crearMando() {
+  const U = { uAlfa: { value: 0 }, uGat: { value: 0 }, uT: { value: 0 }, uLargo: { value: MANDO.largo } };
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.019, MANDO.largo - 0.038, 6, 18), new THREE.ShaderMaterial({ uniforms: U, vertexShader: VERT_MANDO, fragmentShader: FRAG_MANDO, transparent: true, depthWrite: true }));
+  m.renderOrder = 2; m.visible = false; m.frustumCulled = false; m.userData.U = U;
+  return m;
 }
 
 /* -------------------------------------------------- todo junto */
@@ -982,6 +1057,9 @@ export class Manos {
     this.boton = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 8), new THREE.MeshBasicMaterial({ color: '#9ff3ff', transparent: true, opacity: 0.9, toneMapped: false }));
     this.boton.visible = false; this.escena.add(this.boton);
     this.menu = new Menu(); this.escena.add(this.menu.malla);
+    /* (vuelta 40) el objeto en la mano como control: si se busca, y el control que se dibuja en cada mano */
+    this.conMando = true; this.mandoVisto = false;
+    this.mandos = this.manos.map(() => { const m = crearMando(); this.escena.add(m); return m; });
     /* el cartel de lo que se apunta */
     this.cartelL = document.createElement('canvas'); this.cartelL.width = 512; this.cartelL.height = 96;
     this.cartel = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(this.cartelL), depthTest: false, transparent: true, toneMapped: false }));
@@ -1203,10 +1281,13 @@ export class Manos {
       M.alfa = M.visible ? Math.min(1, M.alfa + h / 0.08) : Math.max(0, M.alfa - h / 0.2);
       if (!M.visible) { M.pellizca = false; M.fuerza = 0; M.seguida = M.seguida && M.alfa > 0; if (cam && M.seguida) this.mover(M, ts, h, false); continue; }
       this.mover(M, ts, h, xr);
+      /* (vuelta 40) si agarra algo, es un control: su gatillo es el pellizco */
+      const Mo = this.medirMando(M, h, ev);
+      const pv = Mo ? (M.mando.gat ? 0 : 1) : M.pell;
       /* el pellizco, con histéresis (se prende más cerrado de lo que se apaga) */
       const antes = M.pellizca;
-      if (!M.pellizca && M.pell < 0.3) M.pellizca = true; else if (M.pellizca && M.pell > 0.46) M.pellizca = false;
-      M.fuerza = THREE.MathUtils.clamp(1 - (M.pell - 0.2) / 0.45, 0, 1);
+      if (!M.pellizca && pv < 0.3) M.pellizca = true; else if (M.pellizca && pv > 0.46) M.pellizca = false;
+      M.fuerza = THREE.MathUtils.clamp(1 - (pv - 0.2) / 0.45, 0, 1);
       M.empezo = !antes && M.pellizca; M.solto = antes && !M.pellizca;
       if (M.empezo) { M.tPellizco = ts; M.fijoHasta = ts + 0.14; }
       if (M.solto) M.fijoHasta = 0;
@@ -1235,9 +1316,14 @@ export class Manos {
           const az = Math.atan2(mv.x, -mv.z) * RAYO_GANA[0], el = Math.atan2(mv.y, Math.hypot(mv.x, mv.z)) * RAYO_GANA[1];
           const a = THREE.MathUtils.clamp(az, -1.4, 1.4), b = THREE.MathUtils.clamp(el, -1.35, 1.0);
           d = mv.set(Math.sin(a) * Math.cos(b), Math.sin(b), -Math.cos(a) * Math.cos(b)).applyQuaternion(cabQ);
-        } else d = mv.sub(hombro).normalize(); const f = M.euroRayo.filtrar([d.x, d.y, d.z], ts); M.rayoD.set(f[0], f[1], f[2]).normalize(); }
-      /* la yema del índice toca (burbujas, orbes) */
-      if (!M.viaja) ctx.tocar?.(M.punto(8, _a), k);
+        } else d = mv.sub(hombro).normalize();
+        /* (con el control, el rayo sale de su punta y va a lo largo del objeto: se apunta con él, como con una
+           linterna, sin el agrandado de la cámara) */
+        if (Mo) d = mv.copy(M.mando.eje);
+        const f = M.euroRayo.filtrar([d.x, d.y, d.z], ts); M.rayoD.set(f[0], f[1], f[2]).normalize(); }
+      if (Mo) M.rayoO.copy(M.mando.punta);
+      /* la yema del índice toca (burbujas, orbes); con el control, su punta */
+      if (!M.viaja) ctx.tocar?.(Mo ? M.mando.punta : M.punto(8, _a), k);
     }
     const [I, D] = this.manos;
     /* los dos pellizcos a la vez: salto (las dos con lectura fresca: una mano que se perdió hace un
@@ -1350,16 +1436,57 @@ export class Manos {
     }
     this.cartel.visible = !!objetivo;
     if (objetivo) { this.cartel.position.copy(objetivo.pos).y += 0.55; const d = objetivo.pos.distanceTo(cabP); this.cartel.scale.set(0.32 * (0.6 + d * 0.12), 0.06 * (0.6 + d * 0.12), 1); }
+    this.ponerMandos(h);
     this.dibujarManos();
     this.stats.msActualizar = performance.now() - t0;
     return ev;
   }
+  /* (vuelta 40) EL OBJETO EN LA MANO: si esta mano agarra algo (MANDO.entra s seguidos), es un control. Devuelve si lo
+     es. El eje, suavizado; la punta, del lado del pulgar; el gatillo: el índice que se dobla más que su reposo, o el
+     pulgar que baja hacia el índice (el reposo sigue a la mano cuando no aprieta, y se queda quieto mientras aprieta:
+     sostener el gatillo sirve para arrastrar) */
+  medirMando(M, h, ev) {
+    const S = M.mando ||= { activo: false, s: 0, eje: new THREE.Vector3(), centro: new THREE.Vector3(), punta: new THREE.Vector3(), rI: 0, rP: 0, gat: false, alfa: 0 };
+    if (!this.conMando || M.viaja || !M.visible) { S.activo = false; S.s = 0; S.gat = false; return false; }
+    const A = medirAgarre(M.p, _agarre);
+    S.s = THREE.MathUtils.clamp(S.s + (A.n >= MANDO.dedos ? h / MANDO.entra : -h / MANDO.sale), 0, 1);
+    if (!S.activo && S.s >= 1) {
+      S.activo = true; S.gat = false; S.rI = A.dobleIndice; S.rP = A.pulgar; S.eje.fromArray(A.eje);
+      if (!this.mandoVisto) { this.mandoVisto = true; ev.push({ tipo: 'mando' }); }
+      ev.push({ tipo: 'sonido', s: 'elegir' });
+    } else if (S.activo && S.s <= 0) { S.activo = false; S.gat = false; }
+    if (!S.activo) return false;
+    _a.fromArray(A.eje); if (_a.dot(S.eje) < 0) _a.negate();
+    S.eje.lerp(_a, 1 - Math.exp(-h / MANDO.suave)).normalize();
+    S.centro.fromArray(A.centro);
+    S.punta.copy(S.centro).addScaledVector(S.eje, MANDO.largo * 0.5);
+    if (!S.gat) { S.rI = Math.min(A.dobleIndice, S.rI + h * MANDO.sube); S.rP = Math.max(A.pulgar, S.rP - h * MANDO.sube * 0.5); }
+    const dI = A.dobleIndice - S.rI, dP = S.rP - A.pulgar;
+    if (!S.gat && (dI > MANDO.gatillo[0] || dP > MANDO.pulgar[0])) S.gat = true;
+    else if (S.gat && dI < MANDO.gatillo[1] && dP < MANDO.pulgar[1]) S.gat = false;
+    return true;
+  }
+  /* el control dibujado en cada mano: aparece y se va suave, a lo largo del objeto; la punta brilla más al apretar */
+  ponerMandos(h) {
+    this.manos.forEach((M, k) => {
+      const S = M.mando, G = this.mandos[k];
+      const quiere = !!S?.activo && M.visible ? 1 : 0;
+      if (S) S.alfa += (quiere - S.alfa) * (1 - Math.exp(-h / 0.08));
+      const a = (S?.alfa || 0) * M.alfa;
+      G.visible = a > 0.01;
+      if (!G.visible) return;
+      G.position.copy(S.centro); G.quaternion.setFromUnitVectors(_c.set(0, 1, 0), S.eje);
+      G.scale.setScalar(0.6 + 0.4 * a);
+      const U = G.userData.U; U.uAlfa.value = a; U.uGat.value += ((S.gat ? 1 : 0) - U.uGat.value) * (1 - Math.exp(-h / 0.04)); U.uT.value += h;
+    });
+  }
   apretar(i, ev) {
     this.menu.apretado = i; this.menu.pintar(); clearTimeout(this._tApr);
     this._tApr = setTimeout(() => { this.menu.apretado = -1; this.menu.pintar(); }, 180);
-    const acc = ['caminar', 'izq', 'der', 'fps', 'ventanas', 'lentes', 'salir'][i];
+    const acc = ['caminar', 'izq', 'der', 'fps', 'ventanas', 'lentes', 'salir', 'mando'][i];
     if (acc === 'fps') { this.menu.fps = !this.menu.fps; this.menu.pintar(); }
-    ev.push({ tipo: 'menu', accion: acc, fps: this.menu.fps }, { tipo: 'sonido', s: 'elegir' });
+    if (acc === 'mando') { this.conMando = this.menu.mando = !this.conMando; this.menu.pintar(); }
+    ev.push({ tipo: 'menu', accion: acc, fps: this.menu.fps, mando: this.conMando }, { tipo: 'sonido', s: 'elegir' });
     if (acc === 'salir' || acc === 'caminar' || acc === 'ventanas' || acc === 'lentes') this.menu.cerrar();
   }
   /* la parábola del teletransporte: la mano tira una piedrita imaginaria */

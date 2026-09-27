@@ -161,6 +161,8 @@ async function iniciar() {
     /* (del cuarto al juego: el VR sigue, con ARCore y las manos; la vista se alinea de nuevo) */
     alJugar: () => { vr.ar0 = null; vr.qListo = false; vr.decir(t('mn_manos_listas'), 4); },
     alSalir: () => vr.salir() });
+  /* (vuelta 40: el control en la mano, prendido o apagado desde el menú de la palma en tu espacio) */
+  espacio.alMando = (si) => { G.opciones.vrMando = si; Guardado.guardar(); };
   const ventanasMundo = new Ventanas({ conSeis: false, alSonar: (n) => J.sfx(n), alAccion: (id) => accionVentanas(id) });
   manos.escena.add(ventanasMundo.grupo); manos.extra = ventanasMundo;
   const accionVentanas = (id) => {
@@ -316,6 +318,8 @@ async function iniciar() {
       if (conAR) Nativo.arProfundidad(escanear);
       const p = vr.entrar(sbs, { raiz: UI.raiz, cam, conAR, avisar: (x) => UI.avisar(x), alSalir: () => { espacio.cerrar(); ventanasMundo.limpiar(); apagarManos(); sinAR = false; ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
       manos.menu.fps = vr.verFps; manos.suavidad = G.opciones.vrSuave || 'media';
+      /* (vuelta 40: el objeto en la mano como control, prendido de entrada) */
+      manos.conMando = manos.menu.mando = G.opciones.vrMando ?? true;
       if (conManos) p.then(() => { if (vr.activo) prenderManos(); });
       return p;
     },
@@ -1057,10 +1061,12 @@ async function iniciar() {
         else if (e.tipo === 'ir') saltarA(e.p);
         else if (e.tipo === 'saltar') vr.salta = true;
         else if (e.tipo === 'sonido') J.sfx(e.s);
+        else if (e.tipo === 'mando') vr.decir?.(t('mn_mando_visto'), 4);
         else if (e.tipo === 'menu') {
           if (e.accion === 'izq' || e.accion === 'der') { vr.base += e.accion === 'izq' ? Math.PI / 4 : -Math.PI / 4; parpadeo = 0.16; }
           else if (e.accion === 'caminar') vr.camina = !vr.camina;
           else if (e.accion === 'fps') { vr.ponerFps(e.fps); G.opciones.vrFps = e.fps; Guardado.guardar(); }
+          else if (e.accion === 'mando') { G.opciones.vrMando = e.mando; Guardado.guardar(); }
           else if (e.accion === 'ventanas') { if (ventanasMundo.pantalla) ventanasMundo.cerrarPantalla(); else abrirPantallaMundo(); }
           else if (e.accion === 'lentes') abrirLentesVR();
           else if (e.accion === 'salir') vr.salir();
@@ -1069,7 +1075,7 @@ async function iniciar() {
       /* las ventanas de prueba en el mundo (sin 6DoF): las manos las tocan, las agarran y las mueven */
       if (ventanasMundo.hayAlgo) {
         const P = [];
-        for (const [k, M] of manos.manos.entries()) if (M.visible && M.alfa > 0.5) P.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, new THREE.Vector3())).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
+        for (const [k, M] of manos.manos.entries()) if (M.visible && M.alfa > 0.5) P.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja || M.mando?.activo ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja || M.mando?.activo ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, new THREE.Vector3())).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
         ventanasMundo.actualizar(dt, motor.camara.position, motor.camara.quaternion, P);
       }
     }

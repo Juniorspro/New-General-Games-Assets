@@ -661,8 +661,8 @@ export class Espacio {
     if (Ms.activa) {
       Ms.registrarCabeza(tVer, this.cabezaQ, this.cabezaP, 0);
       const ev = Ms.actualizar(dt, tVer, { cabezaP: this.cabezaP, cabezaQ: this.cabezaQ, interactivos: [], altura: () => -1e4, sePuede: () => false, sinArco: true, apuntar: (M, k) => this.ventanas.apunta[k] || this.apuntaTarjeta?.[k] || null });
-      for (const e of ev) { if (e.tipo === 'sonido') this.sonar(e.s); else if (e.tipo === 'menu' && e.accion === 'lentes') this.abrirLentes(); else if (e.tipo === 'menu' && e.accion === 'salir') { this.cerrar(); this.alSalir(); return; } }
-      for (const [k, M] of Ms.manos.entries()) if (M.visible && M.alfa > 0.5) punteros.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, _c)).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
+      for (const e of ev) { if (e.tipo === 'sonido') this.sonar(e.s); else if (e.tipo === 'mando') V.decir?.(t('mn_mando_visto'), 4); else if (e.tipo === 'menu' && e.accion === 'mando') this.alMando?.(e.mando); else if (e.tipo === 'menu' && e.accion === 'lentes') this.abrirLentes(); else if (e.tipo === 'menu' && e.accion === 'salir') { this.cerrar(); this.alSalir(); return; } }
+      for (const [k, M] of Ms.manos.entries()) if (M.visible && M.alfa > 0.5) punteros.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja || M.mando?.activo ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja || M.mando?.activo ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, _c)).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
     }
     /* la mirada (el punto del centro) y el toque en la pantalla */
     const mirada = { id: 'mirada', o: this.cabezaP.clone(), d: _a.clone(), clic: false };

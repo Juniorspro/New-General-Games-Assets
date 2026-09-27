@@ -244,8 +244,8 @@ const MANO = () => {
     const fps1 = A.vr.verFps, clase = A.vr.el?.classList.contains('con-fps');
     /* salir */
     Mn.abierto || Mn.abrir(p, q);
-    /* (salir es el último: desde la vuelta 29 está también el de las ventanas) */
-    const [sx, sy, sw, sh] = Mn.cajas[Mn.cajas.length - 1], bs = new THREE.Vector3((sx + sw / 2) / 512 * 0.34 - 0.17, 0.1 - (sy + sh / 2) / 300 * 0.2, 0).applyMatrix4(Mn.malla.matrixWorld);
+    /* (salir es el 7.º: desde la vuelta 29 está también el de las ventanas, y desde la 40 el del control, arriba) */
+    const [sx, sy, sw, sh] = Mn.cajas[6], bs = new THREE.Vector3((sx + sw / 2) / 512 * 0.34 - 0.17, 0.1 - (sy + sh / 2) / 300 * 0.2, 0).applyMatrix4(Mn.malla.matrixWorld);
     for (let i = 0; i < 5; i++) window.__cuadro([[true, window.__mano(true, 'abierta', window.__apuntar(true, bs, 0.1))]]);
     for (let i = 0; i < 5; i++) window.__cuadro([[true, window.__mano(true, 'pellizco', window.__apuntar(true, bs, 0.1))]]);
     return { boton, abierto, giro, sobre, fps: [fps0, fps1, clase], salio: !A.vr.activo, dbg: window.__dbg };
