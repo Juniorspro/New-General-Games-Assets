@@ -260,10 +260,11 @@ for (const dos of [false, true]) {
   prueba('con los fantasmas de MediaPipe (la misma mano dos veces) no aparece una segunda mano', r.every((x) => x.dobles === 0 && x.titila < 15) && r1.dobles === 0,
     [...r.map((x) => `foto a los ${f(x.lat, 0)} ms: ${f(x.dobles, 2)} % dobles, ${f(x.titila)} titileos/min`), `una red: ${f(r1.dobles, 2)} % dobles`].join(' · '));
 }
-/* LA PALMA PARA ABAJO (vuelta 23): la cámara ve el dorso; MediaPipe, dudando, dice que es la otra mano
-   y arma la forma espejada (esa otra, de palma: los dedos doblados para el lado de la cámara). Se
-   tomaba la etiqueta: a las 4 fotos la mano se daba vuelta y la palma "miraba a la cara" (el menú de la
-   palma). Mano derecha a la derecha, dedos doblados como en reposo */
+/* LA PALMA PARA ABAJO (vueltas 23 y 24): la cámara ve el dorso; MediaPipe dice que es la otra mano
+   (casi siempre dudando, a veces segura) y la forma, casi siempre bien (en un video de verdad de quien
+   pide: la etiqueta erró el 12 % de las fotos, 4 seguidas seguras; la forma, el 1,4 %). Se tomaba la
+   etiqueta: a las 4 fotos la mano se daba vuelta. Mano derecha a la derecha, dedos doblados como en
+   reposo */
 {
   const TAN = 0.65, CAM = [0, 0, -0.06];
   /* (la derecha abierta con los dedos un poco doblados hacia la palma, que es -z en ABIERTA) */
@@ -293,11 +294,12 @@ for (const dos of [false, true]) {
     }
     return { menu: 100 * menu / n, alReves: 100 * alReves / n, izq: 100 * izq / n };
   };
-  const a = caso('abajo', () => [false, 0.55, true]), b = caso('abajo', (k) => (k % 2 ? [false, 0.55, true] : [true, 0.6, false])), c = caso('abajo', () => [true, 0.95, false]), d = caso('cara', () => [true, 0.95, false]);
+  /* (a: la etiqueta al revés siempre, segura una de cada 3, y la forma espejada una de cada 20) */
+  const a = caso('abajo', (k) => [false, k % 3 ? 0.55 : 0.9, k % 20 === 7]), b = caso('abajo', (k) => (k % 2 ? [false, 0.55, k % 10 === 3] : [true, 0.6, false])), c = caso('abajo', () => [true, 0.95, false]), d = caso('cara', () => [true, 0.95, false]);
   const f = (x) => `menú ${x.menu.toFixed(0)} %, al revés ${x.alReves.toFixed(0)} %, como izquierda ${x.izq.toFixed(0)} %`;
-  prueba('con la palma para abajo la mano no se da vuelta aunque MediaPipe dude y la arme al revés (y con la palma a la cara, sí es la palma)',
+  prueba('con la palma para abajo la mano no se da vuelta aunque MediaPipe diga que es la otra (y con la palma a la cara, sí es la palma)',
     [a, b, c].every((x) => x.menu === 0 && x.alReves < 5 && x.izq === 0) && d.menu > 90 && d.alReves < 5,
-    `MediaPipe dudando y espejada: ${f(a)} · la mitad así: ${f(b)} · segura: ${f(c)} · la palma a la cara: ${f(d)}`);
+    `la etiqueta al revés: ${f(a)} · la mitad así: ${f(b)} · segura: ${f(c)} · la palma a la cara: ${f(d)}`);
 }
 /* la mano que se da vuelta (vuelta 20), con MediaPipe como es: la imagen precisa y la forma 3D aparte, y
    de canto a veces al revés en profundidad (herramientas/manos-lento.mjs con MP=1). Una sola foto así

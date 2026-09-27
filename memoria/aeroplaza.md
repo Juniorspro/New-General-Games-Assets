@@ -319,7 +319,8 @@ En su propia nota: [aeroplaza-12](aeroplaza-12.md). Y después, el VR a 120, las
 [aeroplaza-20](aeroplaza-20.md). La mano lenta con la cámara lenta de un celu:
 [aeroplaza-21](aeroplaza-21.md). La mano que no se duplica, los manotazos y la
 tanda corta: [aeroplaza-22](aeroplaza-22.md). La palma para abajo que se tomaba
-para arriba: [aeroplaza-23](aeroplaza-23.md).
+para arriba: [aeroplaza-23](aeroplaza-23.md). La mano de un video de verdad:
+[aeroplaza-24](aeroplaza-24.md).
 
 ## Trampas que ya se pagaron
 

@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de madrugada · `claude/fijate-iszyer`:**
+  - Pidió: con un video de su mano, que la siga "a la perfección", sin
+    estirarse ni deformarse.
+  - Quedó ([aeroplaza-24](aeroplaza-24.md)): `manos-video.mjs` mide contra el
+    video; tamaño fijo, la forma decide qué mano es, sin adelanto de los
+    dedos, puntas sin doblarse para atrás. Se corre 131 → 63 % de la palma,
+    al revés 11 → 1 %, dedos para atrás 13 → 3 %.
+  - Falta: probarlo en el celu; el dedo tarda más en cerrarse (285 ms).
 - **27/09/2026, más tarde a la noche · `claude/fijate-iszyer`:**
   - Pidió: "con la palma para abajo la detecta como arriba".
   - Quedó ([aeroplaza-23](aeroplaza-23.md)): la etiqueta de MediaPipe solo

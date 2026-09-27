@@ -96,6 +96,7 @@ class EuroEjes {
 
 /* -------------------------------------------------- una mano */
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
+const _ve = new THREE.Vector3(), _vr = new THREE.Vector3(), _qg = new THREE.Quaternion();
 /* el centro de la palma (muñeca y los cuatro nudillos) de 21 puntos */
 const CENTRO = [0, 5, 9, 13, 17];
 function centroPalma(P, v = [0, 0, 0]) {
@@ -121,6 +122,8 @@ const TAU = 0.0321;    // en cuánto se reparte el salto de cada foto nueva: un 
 const RESORTE_V = 1;   // y cuánto del cambio de velocidad (Mano.suavizar)
 /* (RESORTE_V, C_BETAD y CH_BETAD, vuelta 22: la búsqueda con los manotazos las movía, pero con esas
    manos-celu temblaba el doble (2,4 mm por cuadro): quedan como estaban. aeroplaza-22 § Los manotazos) */
+const GAN_MEM = 0.95, GAN_MIN = 0.2, GAN_DESDE = 0.01;   // Mano.medirAdelanto: lo que queda de lo medido en cada foto (~0,7 s), lo menos que se adelanta y desde cuánto se mide (m)
+const GIRO_AD = 1;     // cuánto del giro se adelanta (del arcotangente de lo que giraría; Mano.adelantar)
 const FANTASMA = 0.05;  // una mano nueva a menos de esto (de costado, m) del camino de otra es un fantasma de MediaPipe
 const SNAP = 0.4;      // un salto más grande que esto no se reparte: se va derecho (m), más 2 m/s por lo que estuvo sin fotos
 const RARA = 0.08;     // una foto que cae más lejos que esto de donde tenía que estar se espera (m)
@@ -138,6 +141,7 @@ const DEDOS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [1
 const TRAMOS_DEDO = DEDOS.flatMap((d) => d.slice(1).map((b, k) => [d[k], b]));
 /* (las puntas que van como bisagra: cada una, con el nudillo de su dedo) */
 const BISAGRA = { 7: 5, 8: 5, 11: 9, 12: 9, 15: 13, 16: 13, 19: 17, 20: 17 };
+const DORSO = 0.26;   // (rad: lo más que se doblan para atrás las puntas, ~15°)
 /* los ejes de la palma de 21 puntos: x de meñique a índice (por los nudillos), y de la muñeca al
    medio, z la normal; en e (9 números) */
 function ejesPalma(P, e) {
@@ -161,6 +165,8 @@ function quiralidad(P) {
   let q = 0; for (const i of [4, 8, 12, 16, 20]) q += (P[i * 3] - P[0]) * n0 + (P[i * 3 + 1] - P[1]) * n1 + (P[i * 3 + 2] - P[2]) * n2;
   return q;
 }
+const ALRAYO = [0.1, 0.5];   // Mano.alRayo: desde cuánto se arregla el largo de un hueso, y lo más que se corre en profundidad (del largo)
+const PALMA_TAM = [[0, 5], [0, 17], [5, 17], [0, 9], [9, 13], [13, 17]];   // el tamaño de la palma: lo que no se dobla (Mano.escalar)
 const QUIRAL = 0.1;    // con menos que esto (la mano plana), la forma no dice de qué mano es (m; con MediaPipe de verdad, 130-260 mm; de canto, 86)
 const ETIQUETA = 0.8;  // lo que dice MediaPipe de qué mano es cuenta con esta confianza o más (segura: 0,93-0,98; dudosa: 0,54-0,64)
 /* el giro R que lleva el molde T (la palma en sus ejes, en el orden de PALMA6) a lo que se ve, v
@@ -294,6 +300,7 @@ class PoseMano {
     if (ce < cm * 0.8) { this.qm.copy(this.qE); this.Lm.set(this.LE); this.espejos++; }
   }
   reiniciar(v, t, r = null, O = null, quiral = 0) {
+    this.quiral = quiral;
     this.medir(v);
     /* (al volver a encontrarla, sin giro con qué comparar: la que tiene los dedos como los tenía. Si
        no, una mano de dorso que MediaPipe da como la otra se armaba con el molde al revés. Y si se sabe
@@ -304,7 +311,7 @@ class PoseMano {
   }
   desde(x, t) { this.reiniciar(x, t); }
   filtrar(v, t, r = this.r, O = null, quiral = 0) {
-    this.r = r;
+    this.r = r; this.quiral = quiral;
     if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t, r, O, quiral); return this.x; }
     const dt = Math.max(1e-3, t - this.t); this.t = t;
     this.medir(v);
@@ -342,6 +349,15 @@ class PoseMano {
         const e0 = L[(j + 1) * 3] - L[j * 3], e1 = L[(j + 1) * 3 + 1] - L[j * 3 + 1];   // el primer hueso del dedo, en la palma (x, y)
         const le = Math.hypot(e0, e1) || 1, ax = e1 / le, ay = -e0 / le, lat = d0 * ax + d1 * ay;   // el costado: el primer hueso por la normal de la palma
         d0 -= ax * lat; d1 -= ay * lat;
+        /* (y no se doblan para el dorso más de DORSO contra el primer hueso: con el ruido, MediaPipe
+           las tiraba para atrás 25° o más en uno de cada diez cuadros, y ninguna mano llega. La palma
+           es +z en la derecha y -z en la izquierda) */
+        if (this.quiral) {
+          const f0 = e0 / le, f1 = e1 / le, s = this.quiral, ez = L[(j + 1) * 3 + 2] - L[j * 3 + 2];
+          const fw = d0 * f0 + d1 * f1, te = Math.atan2(ez, le);
+          let b = Math.atan2(d2, fw) - te; b -= Math.round(b / (2 * Math.PI)) * 2 * Math.PI;
+          if (s * b < -DORSO) { const a = te - s * DORSO, l = Math.hypot(fw, d2); d0 = f0 * l * Math.cos(a); d1 = f1 * l * Math.cos(a); d2 = l * Math.sin(a); }
+        }
       }
       const f = F.largo[k] / (Math.hypot(d0, d1, d2) || 1);
       O[b * 3] = O[a * 3] + d0 * f; O[b * 3 + 1] = O[a * 3 + 1] + d1 * f; O[b * 3 + 2] = O[a * 3 + 2] + d2 * f;
@@ -355,6 +371,7 @@ class PoseMano {
        los dedos, lejos del centro, temblaban) */
     const G = this.giro, w0 = G.w0 || 0, w1 = G.w1 || 0, wl = this.w.length(), u = w1 > w0 ? Math.min(1, Math.max(0, (wl - w0) / (w1 - w0))) : 1;
     const w = _vw.copy(this.w).multiplyScalar(u * u * (3 - 2 * u));
+    (this.wg ||= new THREE.Vector3()).copy(w);   // (el giro que se adelanta: Mano.adelantar)
     for (let i = 0; i < 63; i += 3) {
       const lx = L[i], ly = L[i + 1], lz = L[i + 2];
       const r0 = R[0] * lx + R[4] * ly + R[8] * lz, r1 = R[1] * lx + R[5] * ly + R[9] * lz, r2 = R[2] * lx + R[6] * ly + R[10] * lz;
@@ -382,7 +399,7 @@ class PoseMano {
    cuánto de lo que se mueven en la palma se adelanta (adelanto: 1, todo lo que tarda la cámara) */
 /* (de una búsqueda de 900 al azar y 240 alrededor de la mejor con herramientas/manos-lento.mjs, con las
    semillas 1-5, el ruido de siempre y el doble; comprobado con las 6-10 y con dedos que fallan) */
-const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }, P_DEDOS = { corte: 0.707, beta: 2.534, corteD: 5.656, adelanto: 1.177, v0: 0.281, v1: 0.559 };
+const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }, P_DEDOS = { corte: 0.707, beta: 2.534, corteD: 5.656, adelanto: 0, v0: 0.281, v1: 0.559 };
 /* lo que elige cada uno en el menú del VR ("Manos"): lo más que se adelanta por el atraso de la
    cámara (s), de costado y en profundidad, y las anclas (Mano.estabilizar): la zona (m), cuánto
    tiene que quedarse adentro para anclarse (tq), cuánto tiene que empujar el borde para soltarse (te)
@@ -433,6 +450,45 @@ class Mano {
     for (const i of CENTRO) for (let c = 0; c < 3; c++) v[c] += (E.x[i * 3 + c] + E.dx[i * 3 + c] * k) / 5;
     return v;
   }
+  /* LA MANO TIENE UN SOLO TAMAÑO (vuelta 24): el que MediaPipe le da a la palma cambia ±40 % de una foto a
+     la otra (con un video de verdad, de 3,8 a 9,4 cm), y como la profundidad sale de ahí, la mano iba y
+     venía hasta 12 cm en una foto (y se veía de otro tamaño que la de verdad). Se aprende el tamaño (el
+     promedio de lo que dice, sin las fotos muy raras) y cada foto se agranda o achica a ese tamaño desde
+     la cámara, O: cada punto sigue por el rayo de su lugar en la imagen, y la profundidad sale del
+     tamaño que se ve */
+  escalar(W, O) {
+    let m = 0; for (const [a, b] of PALMA_TAM) m += Math.hypot(W[a * 3] - W[b * 3], W[a * 3 + 1] - W[b * 3 + 1], W[a * 3 + 2] - W[b * 3 + 2]);
+    if (!(m > 1e-4)) return;
+    const E = this.tam ||= { n: 0, v: 0 };
+    if (E.n < 30 || Math.abs(Math.log(m / E.v)) < 0.5) { E.v = E.n < 30 ? (E.v * E.n + m) / (E.n + 1) : E.v + (m - E.v) * 0.02; E.n++; }
+    if (E.n < 10) return;
+    const f = THREE.MathUtils.clamp(E.v / m, 0.5, 2);
+    for (let i = 0; i < 63; i += 3) { W[i] = O[0] + (W[i] - O[0]) * f; W[i + 1] = O[1] + (W[i + 1] - O[1]) * f; W[i + 2] = O[2] + (W[i + 2] - O[2]) * f; }
+  }
+  /* LOS HUESOS SIN ESTIRARSE Y CADA PUNTO EN SU LUGAR DE LA IMAGEN (vuelta 24): lo que se deduce de
+     MediaPipe tiene huesos que cambian de largo hasta un 58 % de una foto a la otra (con un video de
+     verdad): la profundidad de cada punto es lo que peor adivina. Se arregla el largo de cada hueso, de la
+     palma a la punta, moviendo el punto de la punta POR SU RAYO (desde la cámara, O): queda en su lugar de
+     la imagen y a la distancia de siempre del anterior. De las dos profundidades que cumplen, la más cerca
+     de lo que dijo MediaPipe; si el rayo no llega (el hueso es más corto que la distancia al rayo), queda */
+  alRayo(W, O) {
+    const F = this.forma; if (!F || F.n < 20) return;
+    TRAMOS_DEDO.forEach(([a, b], k) => {
+      const L = F.largo[k], ux = W[b * 3] - O[0], uy = W[b * 3 + 1] - O[1], uz = W[b * 3 + 2] - O[2], tm = Math.hypot(ux, uy, uz);
+      if (!(tm > 1e-4) || !(L > 0)) return;
+      const u0 = ux / tm, u1 = uy / tm, u2 = uz / tm, a0 = W[a * 3] - O[0], a1 = W[a * 3 + 1] - O[1], a2 = W[a * 3 + 2] - O[2];
+      /* (prudente: si el hueso ya está a menos de ALRAYO[0] de su largo, queda; y el punto no se mueve
+         en profundidad más que ALRAYO[1] del largo del hueso: con más, al dar vuelta la mano una
+         profundidad elegida mal daba vuelta la forma, y el giro iba 60° atrás) */
+      const lx = W[b * 3] - W[a * 3], ly = W[b * 3 + 1] - W[a * 3 + 1], lz = W[b * 3 + 2] - W[a * 3 + 2];
+      if (Math.abs(Math.hypot(lx, ly, lz) / L - 1) < ALRAYO[0]) return;
+      const bb = u0 * a0 + u1 * a1 + u2 * a2, cc = a0 * a0 + a1 * a1 + a2 * a2 - L * L, disc = bb * bb - cc;
+      if (disc < 0) return;
+      const r = Math.sqrt(disc), t1 = bb - r, t2 = bb + r, t0 = Math.abs(t1 - tm) < Math.abs(t2 - tm) ? t1 : t2;
+      const t = tm + THREE.MathUtils.clamp(t0 - tm, -ALRAYO[1] * L, ALRAYO[1] * L);
+      if (t > 0.02) { W[b * 3] = O[0] + u0 * t; W[b * 3 + 1] = O[1] + u1 * t; W[b * 3 + 2] = O[2] + u2 * t; }
+    });
+  }
   /* una lectura nueva: puntos en el mundo; t: cuándo se sacó; tLlego: cuándo llegó; pell: cuánto se
      abre el pellizco (0 = tocándose; la escala es el largo de la palma); crudo: sin filtro (el visor) */
   recibir(P, t, tLlego, pell, conf = 1, crudo = false, ojo = null, camara = null) {
@@ -480,7 +536,25 @@ class Mano {
     this.t = t; this.tLlego = tLlego; this.conf = conf; this.pell = pell; this.nueva = true;
     /* (por dónde pasó, con lo que midió la cámara: para reconocer los fantasmas de MediaPipe) */
     this.rastro.push({ t, c: centroPalma(P) }); while (this.rastro.length && t - this.rastro[0].t > 0.4) this.rastro.shift();
+    if (!crudo && this.rayo) this.medirAdelanto(t);
     if (!this.visible) { this.visible = true; this.pellizca = false; this.anulado = false; this.profAntes = undefined; }
+  }
+  /* CUÁNTO CONVIENE ADELANTAR (vuelta 24): con cada foto, lo que el adelanto habría dicho hace lo que
+     tarda la foto (la velocidad de entonces por ese rato) contra lo que la mano se movió de verdad. La
+     ganancia que mejor lo acierta (mínimos cuadrados, con memoria de ~0,7 s) multiplica el adelanto:
+     con la mano que va pareja, 1; con la que va y viene rápido (un video de verdad: se pasaba en cada
+     vuelta y el adelanto empeoraba todo), menos. Quieta no se mide (no hay nada que adelantar) */
+  medirAdelanto(t) {
+    const E = this.euro, H = this.hist ||= [], C = E.centro?.x || centroPalma(E.x), V = E.centro?.dx || [0, 0, 0];
+    H.push({ t, c: [C[0], C[1], C[2]], v: [V[0], V[1], V[2]] }); while (H.length && t - H[0].t > 0.6) H.shift();
+    const hz = Math.min(LAT_TOPE, this.lat || 0.12);
+    let j = -1, mejor = 1e9; for (let i = 0; i < H.length - 1; i++) { const d = Math.abs(t - H[i].t - hz); if (d < mejor) { mejor = d; j = i; } }
+    if (j < 0 || mejor > 0.035) return;
+    const A = H[j], dt = t - A.t, p0 = A.v[0] * dt, p1 = A.v[1] * dt, p2 = A.v[2] * dt, pp = p0 * p0 + p1 * p1 + p2 * p2;
+    if (pp < GAN_DESDE * GAN_DESDE) return;   // (casi quieta, o lenta: lo que había que adelantar es del tamaño del ruido de la foto)
+    const a0 = C[0] - A.c[0], a1 = C[1] - A.c[1], a2 = C[2] - A.c[2], G = this.ganancia ||= { num: 0, den: 0, g: 1 };
+    G.num = G.num * GAN_MEM + (a0 * p0 + a1 * p1 + a2 * p2); G.den = G.den * GAN_MEM + pp;
+    G.g = THREE.MathUtils.clamp(G.num / Math.max(G.den, 4e-5), GAN_MIN, 1);
   }
   /* al cuadro que se dibuja: lo filtrado más la velocidad por lo que pasó desde que LLEGÓ la foto
      (así se sigue moviendo parejo entre foto y foto) y por lo que tarda la cámara (hasta LAT_TOPE) */
@@ -492,13 +566,14 @@ class Mano {
        anclas creían que estaba quieta; se apagaba todo el adelanto y el giro iba 20° atrás) */
     const pa = this.pesoAd ?? 1;
     const la = Math.min(LAT_TOPE, this.lat), am = AMORT + AMORT_MAS * Math.min(1, Math.max(0, (la - LAT_REF) / 0.13));
-    let k = adelanta ? (sola + Math.min(this.lmax ?? LMAX, la)) * am : 0;
+    const gan = this.rayo && this.ganancia ? this.ganancia.g : 1;
+    let k = adelanta ? (sola + Math.min(this.lmax ?? LMAX, la) * gan) * am : 0;
     /* (y a qué velocidad se mueve eso: la del filtro mientras sigue sola, frenando después) */
     const kv = adelanta ? AMORT * pa * (edad < HMAX ? 1 : Math.exp(-(edad - HMAX) / FRENO)) : 0;
     const r = this.rayo;
     if (!r) { for (let i = 0; i < 63; i++) { this.p[i] = E.x[i] + E.dx[i] * k * pa; this.vb[i] = E.dx[i] * kv; } return; }
     /* con la cámara: de costado y en profundidad, cada uno con su tope */
-    let kh = adelanta ? (sola + Math.min(this.lmaxH ?? LMAX_H, la)) * am : 0;
+    let kh = adelanta ? (sola + Math.min(this.lmaxH ?? LMAX_H, la) * gan) * am : 0;
     let c0 = 0, c1 = 0, c2 = 0; for (const i of CENTRO) { c0 += E.dx[i * 3] / 5; c1 += E.dx[i * 3 + 1] / 5; c2 += E.dx[i * 3 + 2] / 5; }
     const q = 1 - pa, vc = [c0 * q, c1 * q, c2 * q];
     /* (y lo que se corre el centro, con tope: con la foto a 0,19 s, en un manotazo a 1 m/s que va y
@@ -506,6 +581,27 @@ class Mano {
     { const a0 = c0 * pa, a1 = c1 * pa, a2 = c2 * pa, ah = a0 * r[0] + a1 * r[1] + a2 * r[2];
       const d = Math.hypot((a0 - ah * r[0]) * k + ah * r[0] * kh, (a1 - ah * r[1]) * k + ah * r[1] * kh, (a2 - ah * r[2]) * k + ah * r[2] * kh);
       const am2 = this.adelMax ?? ADEL_MAX; if (d > am2) { k *= am2 / d; kh *= am2 / d; } }
+    /* (vuelta 24: con la mano como cuerpo (PoseMano), el adelanto va sobre la pose: el centro se corre,
+       la mano GIRA lo que va a girar (y no cada punto en línea recta por su velocidad, que con un giro
+       rápido la estiraba y la doblaba: con un video de verdad, la forma al revés en el 11 % de los
+       cuadros) y los dedos, lo suyo en la palma) */
+    if (E.wg) {
+      const C = E.centro.x, a0 = c0 * pa, a1 = c1 * pa, a2 = c2 * pa, ah = a0 * r[0] + a1 * r[1] + a2 * r[2];
+      const d0 = (a0 - ah * r[0]) * k + ah * r[0] * kh, d1 = (a1 - ah * r[1]) * k + ah * r[1] * kh, d2 = (a2 - ah * r[2]) * k + ah * r[2] * kh;
+      /* (cuánto: el arcotangente de lo que giraría, como hacía ir en línea recta, que nunca pasa de 90°;
+         girar todo lo que da la velocidad, a 20 rad/s por 0,16 s, eran 3 rad de más) */
+      _ve.copy(E.wg).multiplyScalar(k); { const a = _ve.length(); if (a > 1e-6) _ve.multiplyScalar(Math.atan(a) * GIRO_AD / a); }
+      const Q = expQ(_ve, _qg), W = E.wg;
+      for (let i = 0; i < 63; i += 3) {
+        const x0 = E.x[i] - C[0], x1 = E.x[i + 1] - C[1], x2 = E.x[i + 2] - C[2];
+        /* (lo de los dedos en la palma: lo que queda de la velocidad sin el centro ni el giro) */
+        const l0 = E.dx[i] - c0 - (W.y * x2 - W.z * x1), l1 = E.dx[i + 1] - c1 - (W.z * x0 - W.x * x2), l2 = E.dx[i + 2] - c2 - (W.x * x1 - W.y * x0);
+        _vr.set(x0, x1, x2).applyQuaternion(Q);
+        this.p[i] = C[0] + d0 + _vr.x + l0 * k; this.p[i + 1] = C[1] + d1 + _vr.y + l1 * k; this.p[i + 2] = C[2] + d2 + _vr.z + l2 * k;
+        this.vb[i] = E.dx[i] * kv; this.vb[i + 1] = E.dx[i + 1] * kv; this.vb[i + 2] = E.dx[i + 2] * kv;
+      }
+      return;
+    }
     for (let i = 0; i < 63; i += 3) {
       const vx = E.dx[i] - vc[0], vy = E.dx[i + 1] - vc[1], vz = E.dx[i + 2] - vc[2], vh = vx * r[0] + vy * r[1] + vz * r[2];
       const w = [vx, vy, vz];
@@ -833,8 +929,9 @@ export class Manos {
       const p2 = Math.hypot(I[12] - I[24], I[13] - I[25]) / e2, p3 = Math.hypot(F[12] - F[24], F[13] - F[25], F[14] - F[26]) / e3;
       /* (qué mano es: lo que dice MediaPipe solo si está seguro; si duda, el lado de la foto donde está:
          de canto y de dorso da la otra con 0,54-0,64, y al votar se daba vuelta la mano) */
-      const segura = m.derecha != null && (m.confianza ?? 1) >= ETIQUETA;
-      return { m, W, c: centroPalma(W), pell: Math.max(p2, p3 * 0.62), der: segura ? m.derecha : m.puntos[0] > 0, segura, M: null };
+      const segura = m.derecha != null && (m.confianza ?? 1) >= ETIQUETA, qW = quiralidad(W);
+      /* (al aparecer: la forma si lo dice claro; si no, la etiqueta segura; si no, el lado de la foto) */
+      return { m, W, c: centroPalma(W), pell: Math.max(p2, p3 * 0.62), der: Math.abs(qW) > QUIRAL ? qW > 0 : segura ? m.derecha : m.puntos[0] > 0, segura, M: null };
     });
     const dist = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1], u[2] - v[2]);
     /* la misma mano dos veces (pasa de costado): queda la de más confianza */
@@ -918,8 +1015,12 @@ export class Manos {
     }
     for (const d of dets) {
       if (!d.M || (d.M.visible && ts <= d.M.t)) continue;   // (esa mano ya tiene algo más nuevo)
+      d.M.escalar(d.W, camO); d.M.alRayo(d.W, camO);
       d.M.recibir(d.W, ts, tl, d.pell, d.m.confianza, false, p, camO);
-      if (d.segura) d.M.votos = THREE.MathUtils.clamp(d.M.votos + (d.m.derecha === d.M.derecha ? 1 : -1), -6, 6);
+      /* (qué mano es, a votos: la forma si lo dice claro (con un video de verdad erró el 1,4 % de las
+         fotos); si la mano está plana, la etiqueta si es segura (erró el 4 %: de dorso, hasta 4 seguidas)) */
+      const qd = quiralidad(d.W), voto = Math.abs(qd) > QUIRAL ? qd > 0 : d.segura ? d.m.derecha : null;
+      if (voto !== null) d.M.votos = THREE.MathUtils.clamp(d.M.votos + (voto === d.M.derecha ? 1 : -1), -6, 6);
       this.stats.lecturas++;
     }
     /* (una que no vino es una falta solo si la red tenía lugar para traerla, y si la foto no es vieja) */
