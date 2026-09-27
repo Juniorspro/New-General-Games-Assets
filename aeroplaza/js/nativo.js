@@ -26,6 +26,9 @@ const VIEJA = 250;
 export const Nativo = {
   get hay() { return !!N(); },
   estado: 'parada',          // corre · instalando · parada · sin-permiso · error: … (lo que dice ARCore)
+  /* (vuelta 42) la ultra ancha en tu espacio (MainActivity › espacioAncho): '' · corre · espera · no-ar · apagada;
+     y la lente que eligió CamaraManos { via, id, zoom, campo, principal } */
+  ancho: '', lenteAncha: null,
   manosListas: '',           // 'GPU' · 'CPU' cuando MediaPipe de Android arrancó
   pose: null, poseAntes: null,
   fps: '?',
@@ -50,6 +53,9 @@ export const Nativo = {
   alMalla: null,
   /* 'si' · 'instalar' · 'espera' · 'no' */
   arEstado() { try { return N()?.arEstado() || 'no'; } catch { return 'no'; } },
+  /* (vuelta 42) si el celu tiene ultra ancha y cómo se llega (Ancha.java): { via: id|zoom|fisica|no, id, zoom, campo, principal } */
+  camaraAncha() { try { return leerAncha(String(N()?.camaraAncha?.() || '')); } catch { return null; } },
+  espacioAncho(si) { try { N()?.espacioAncho?.(!!si); } catch { /* sin APK */ } },
   /* (vuelta 41) por qué se cerró la app la vez pasada (Choque.java), una sola vez: '' si no se cerró mal */
   choque() { try { return String(N()?.choque?.() || ''); } catch { return ''; } },
   get puedeAR() { const e = this.arEstado(); return e === 'si' || e === 'instalar'; },
@@ -112,6 +118,7 @@ window.__nativo = {
     if (/^manos (GPU|CPU)$/.test(e)) Nativo.manosListas = e.slice(6);
     else if (/^manos-camara /.test(e)) { const x = e.slice(13); if (x.startsWith('corre')) { Nativo.camaraManos = 'corre'; Nativo.camaraFps = +x.split(' ')[1] || 30; } else Nativo.camaraManos = x; }
     else if (/^espacio camara /.test(e)) Nativo.camaraEspacio = e.slice(15);
+    else if (/^ancha /.test(e)) { const x = e.slice(6); if (x.startsWith('lente ')) Nativo.lenteAncha = leerAncha(x.slice(6)); else Nativo.ancho = x; }
     else if (/^espacio /.test(e)) Nativo.espacio = e.slice(8);
     /* (la cámara que eligió ARCore: su campo y el más abierto del celu, en grados; Ar.java › elegirCamara) */
     else if (/^camara \d/.test(e)) { const [, a, b] = e.split(' '); Nativo.camara = { campo: +a, celu: +b }; }
@@ -119,6 +126,12 @@ window.__nativo = {
     avisarEspera();
   }
 };
+/* "via id zoom campo principal" (Ancha.Eleccion.toString) */
+function leerAncha(s) {
+  const [via, id, zoom, campo, principal] = s.trim().split(' ');
+  if (!via) return null;
+  return { via, id: id === '-' ? null : id, zoom: +zoom || 1, campo: +campo || 0, principal: +principal || 0, hay: via === 'id' || via === 'zoom' };
+}
 function avisarEspera() { for (const e of Nativo.esperas.slice()) if (e.f(Nativo[e.campo])) { Nativo.esperas = Nativo.esperas.filter((x) => x !== e); e.ok(Nativo[e.campo]); } }
 
 /* ------------------------------------------ la pose, llevada a cuando se va a ver

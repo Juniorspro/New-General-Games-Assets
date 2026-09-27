@@ -337,6 +337,7 @@ Manos más estables (el giro y los dedos por nivel) y el link del HTML para prob
 La cabeza en 6 ejes suave (el giroscopio del sistema corregido con ARCore): [aeroplaza-39](aeroplaza-39.md).
 El objeto en la mano como control (el agarre, el eje, el gatillo y el control dibujado): [aeroplaza-40](aeroplaza-40.md).
 Que no se cierre al entrar al ARCore (los sensores, la WebView caída) y el aviso de por qué se cerró la vez pasada: [aeroplaza-41](aeroplaza-41.md).
+Tu espacio como un Quest (la mira no aprieta, las pantallas lejos) y la cámara 0,5x (AngleCam, `Ancha.java`, ARCore en pausa): [aeroplaza-42](aeroplaza-42.md).
 
 ## Trampas que ya se pagaron
 

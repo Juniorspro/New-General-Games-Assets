@@ -287,6 +287,10 @@ class Espacio {
   /* en el hilo de ARCore: copiar y soltar; pasar a RGB a la mitad, girar y comprimir, en el otro.
      pose: la de la cámara orientada a la pantalla en ESA foto; edad: hace cuánto se sacó (ms) */
   void foto(Image im, Pose pose, double edad, float[] focal, int giro) {
+    foto(im, new float[] { pose.tx(), pose.ty(), pose.tz(), pose.qx(), pose.qy(), pose.qz(), pose.qw() }, edad, focal, giro);
+  }
+  /* (vuelta 42) con la pose en números (x, y, z, qx, qy, qz, qw): la de la ultra ancha la da la cabeza (Fusion), no ARCore */
+  void foto(Image im, final float[] q, double edad, float[] focal, int giro) {
     tFoto = SystemClock.elapsedRealtime();
     Image.Plane[] P = im.getPlanes();
     final int W = im.getWidth(), H = im.getHeight();
@@ -294,7 +298,6 @@ class Espacio {
     y = copiar(P[0].getBuffer(), y); u = copiar(P[1].getBuffer(), u); v = copiar(P[2].getBuffer(), v);
     ocupadoFoto = true;
     final long t0 = tFoto;
-    final float[] q = { pose.tx(), pose.ty(), pose.tz(), pose.qx(), pose.qy(), pose.qz(), pose.qw() };
     hilo.execute(() -> {
       try {
         /* (vuelta 38) CON EL CELU ACOSTADO (en el visor, giro 0 o 180): la foto entera, derecha y en JPEG con el

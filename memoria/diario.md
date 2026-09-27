@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de noche, octava vez · `claude/fijate-iszyer`:**
+  - Pidió: tu espacio estilo Quest (la mira que no apriete, las pantallas lejos, la cámara 0,5x); mandó AngleCam.
+  - Quedó ([aeroplaza-42](aeroplaza-42.md)): la mira no aprieta y se apaga con manos; pantallas a 1,45-1,9 m; la
+    0,5x con ARCore en pausa (la cabeza del giroscopio alineado). `espacio.mjs` 32/32, `ancha.mjs` 17/17.
+  - Falta: probar la 0,5x en el celu (qué camino elige, si la foto cae derecha, si ARCore retoma al volver a 1x).
 - **27/09/2026, de noche, séptima vez · `claude/fijate-iszyer`:**
   - Pidió: "se me cierra la app al entrar al ARCore" (sin logcat).
   - Quedó ([aeroplaza-41](aeroplaza-41.md)): los sensores de la cabeza a 200 Hz en su hilo y fuera del arranque; el

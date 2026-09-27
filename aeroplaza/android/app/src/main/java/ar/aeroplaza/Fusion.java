@@ -114,6 +114,21 @@ final class Fusion {
     return true;
   }
 
+  /* (vuelta 42, la ultra ancha: ARCore queda en pausa porque la cámara es una sola) ya alineado con ARCore, el giro
+     sigue solo con el giroscopio y el lugar queda donde estaba: sin la velocidad, que si no lo seguía corriendo */
+  synchronized boolean listo() { return hayF && c >= 0 && alineado && nI > 0; }
+  synchronized void congelar() { vE[0] = vE[1] = vE[2] = 0; }
+  /* la pose de la cámara (no de los ojos) en el instante t, en el mundo de ARCore: x, y, z, qx, qy, qz, qw */
+  synchronized boolean camaraEn(long t, float[] out) {
+    if (!listo()) return false;
+    final float[] qi = new float[4];
+    if (!imuEn(t, qi)) { int i = ult * 4; qi[0] = qI[i]; qi[1] = qI[i + 1]; qi[2] = qI[i + 2]; qi[3] = qI[i + 3]; }
+    mul(qW, qi, b); mul(b, C[c], d); normalizar(d, 0);
+    rotar(d, 0, 0, OJOS, e4);
+    out[0] = eF[0] - e4[0]; out[1] = eF[1] - e4[1]; out[2] = eF[2] - e4[2]; out[3] = d[0]; out[4] = d[1]; out[5] = d[2]; out[6] = d[3];
+    return true;
+  }
+
   /* el giroscopio en el instante t (entre dos muestras; después de la última, adelantado con ω) */
   boolean imuEn(long t, float[] q) {
     if (nI == 0) return false;

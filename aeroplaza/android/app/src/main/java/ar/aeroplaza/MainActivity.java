@@ -7,6 +7,7 @@ import android.app.ApplicationExitInfo;
 import android.content.SharedPreferences;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.hardware.camera2.CameraManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
@@ -246,6 +247,7 @@ public class MainActivity extends Activity {
     }
     /* (la cámara es de uno solo: si la tenían las manos sin ARCore, se suelta antes) */
     if (camara != null && camara.prendida) camara.apagar();
+    if (camara != null) { camara.ancha = false; camara.pasante = false; }
     if (ar == null) {
       ar = new Ar(this);
       if (quiereEscanear != null) ar.escanear(quiereEscanear);
@@ -266,6 +268,30 @@ public class MainActivity extends Activity {
     if (camara == null) camara = new CamaraManos(this);
     camara.prender();
   }
+
+  /* (vuelta 42, "sobre todo la cámara debe usarse en 0.5x") LA ULTRA ANCHA EN TU ESPACIO. ARCore sigue dónde
+     estás con la cámara principal (la que tiene calibrada) y no presta la cámara: para ver por la 0.5x, ARCore
+     queda en pausa con su mundo, CamaraManos abre la ultra ancha (como AngleCam: su número o el zoom < 1) y
+     manda la foto con la pose del giroscopio, alineado con ARCore desde antes (Fusion). Girar la cabeza anda;
+     caminar no (sin ARCore no se sabe cuánto): para eso se vuelve a 1x. Avisa 'ancha corre' · 'espera' (la
+     cabeza todavía no está alineada) · 'no-ar' · 'apagada' · 'lente <via id zoom campo principal>' */
+  void espacioAncho(boolean si) {
+    if (si) {
+      if (ar == null || !ar.corriendo) { enviar("__nativo&&__nativo.estado('ancha no-ar')"); return; }
+      if (!ar.ancho) {
+        if (!ar.pasarAAncho()) { enviar("__nativo&&__nativo.estado('ancha espera')"); return; }
+        if (camara == null) camara = new CamaraManos(this);
+        camara.ancha = true; camara.pasante = true;
+        camara.prender();
+      }
+      enviar("__nativo&&__nativo.estado('ancha corre')");
+    } else {
+      apagarAncha();
+      if (ar != null) { String e = ar.volverDeAncho(); enviar("__nativo&&__nativo.estado('" + e + "')"); }
+      enviar("__nativo&&__nativo.estado('ancha apagada')");
+    }
+  }
+  void apagarAncha() { if (camara != null && camara.ancha) { camara.apagar(); camara.ancha = false; camara.pasante = false; } }
 
   /* lo que va al juego (desde cualquier hilo) */
   void enviar(final String js) { final WebView w = web; if (w != null) w.post(() -> { try { w.evaluateJavascript(js, null); } catch (Throwable t) { /* ya no está */ } }); }
@@ -308,6 +334,18 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void arProfundidad(final boolean si) { quiereProfundidad = si; }
     /* (vuelta 39) la cabeza en este instante, adelantada a cuando se ve (ms): "qx,qy,qz,qw,x,y,z" o "" */
     @JavascriptInterface public String cabeza(double adelanto) { Ar a = ar; return a == null || !a.corriendo ? "" : a.cabeza.leer(adelanto); }
+    /* (vuelta 42) si el celu tiene ultra ancha y cómo se llega: "via id zoom campo principal" (Ancha) o "no ..." */
+    @JavascriptInterface public String camaraAncha() {
+      try {
+        String p = null; Ar a = ar;
+        try { if (a != null && a.sesion != null) p = a.sesion.getCameraConfig().getCameraId(); } catch (Throwable t) { /* la de atrás */ }
+        CameraManager cm = (CameraManager) getSystemService(CAMERA_SERVICE);
+        java.util.List<Ancha.Cam> l = CamaraManos.describir(cm);
+        if (p == null) for (Ancha.Cam c : l) if (c.atras && c.abrible) { p = c.id; break; }
+        return Ancha.elegir(l, p == null ? "0" : p).toString();
+      } catch (Throwable t) { return "no"; }
+    }
+    @JavascriptInterface public void espacioAncho(final boolean si) { runOnUiThread(() -> espacioAncho(si)); }
     @JavascriptInterface public String cabezaEstado() { Ar a = ar; return a == null ? "" : a.cabeza.estado(); }
     @JavascriptInterface public void arOlvidar() { Ar a = ar; if (a != null) a.espacio.olvidar(); }
     @JavascriptInterface public void manosDos(final boolean si) {

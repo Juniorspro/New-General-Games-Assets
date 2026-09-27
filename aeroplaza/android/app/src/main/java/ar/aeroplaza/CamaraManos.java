@@ -24,7 +24,11 @@ import android.util.SizeF;
 import android.view.Surface;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +57,10 @@ class CamaraManos {
   final float[] focal = new float[2];
   final int[] dims = new int[2];
   int orientacion = 90, fpsMax = 30;
+  /* (vuelta 42) la ultra ancha para tu espacio: ancha elige la lente como AngleCam (Ancha: su número o el zoom
+     menor que 1); pasante manda también la foto para ver a través, con la pose de la cabeza (Fusion) */
+  volatile boolean ancha, pasante;
+  float zoom = 1; boolean conCorreccion; String via = "";
   /* (la luz, vuelta 33: la exposición y la sensibilidad de la última foto, y cuándo se mandó) */
   volatile long exposicion = 0; volatile int iso = 0; long tLuz = 0;
 
@@ -100,7 +108,17 @@ class CamaraManos {
         if (lado != null && lado == CameraCharacteristics.LENS_FACING_BACK) { id = x; break; }
       }
       if (id == null) { prendida = false; avisar("error: sin camara"); return; }
+      zoom = 1; via = "";
+      if (ancha) {
+        Ancha.Eleccion e = Ancha.elegir(describir(cm), id);
+        if ("id".equals(e.via)) { id = e.id; via = e.toString(); }
+        else if ("zoom".equals(e.via) && Build.VERSION.SDK_INT >= 30) { id = e.id; zoom = e.zoom; via = e.toString(); }
+        act.enviar("__nativo&&__nativo.estado('ancha lente " + e + "')");
+      }
       CameraCharacteristics c = cm.getCameraCharacteristics(id);
+      /* (la ultra ancha dobla las líneas en el borde: que la enderece la cámara, si sabe) */
+      conCorreccion = false;
+      if (Build.VERSION.SDK_INT >= 28) { int[] dm = c.get(CameraCharacteristics.DISTORTION_CORRECTION_AVAILABLE_MODES); if (dm != null) for (int x : dm) if (x == CameraMetadata.DISTORTION_CORRECTION_MODE_FAST) conCorreccion = true; }
       StreamConfigurationMap mapa = c.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
       Size t = tamano(mapa == null ? null : mapa.getOutputSizes(ImageFormat.YUV_420_888));
       Integer o = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
@@ -108,6 +126,8 @@ class CamaraManos {
       Integer fuente = c.get(CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE);
       tiempoReal = fuente != null && fuente == CameraMetadata.SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME;
       intrinsecos(c, t);
+      /* (con el zoom menor que 1 la foto abre 1/zoom más: la focal en píxeles, zoom veces) */
+      if (zoom < 0.999f) { focal[0] *= zoom; focal[1] *= zoom; }
       final Range<Integer> fps = elegirFps(c.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES));
       fpsMax = fps == null ? 30 : fps.getUpper();
       lector = ImageReader.newInstance(t.getWidth(), t.getHeight(), ImageFormat.YUV_420_888, 3);
@@ -138,6 +158,8 @@ class CamaraManos {
       pedido.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE, CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
       pedido.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF);
       pedido.set(CaptureRequest.FLASH_MODE, linterna ? CaptureRequest.FLASH_MODE_TORCH : CaptureRequest.FLASH_MODE_OFF);
+      if (zoom < 0.999f && Build.VERSION.SDK_INT >= 30) pedido.set(CaptureRequest.CONTROL_ZOOM_RATIO, zoom);
+      if (conCorreccion && Build.VERSION.SDK_INT >= 28) pedido.set(CaptureRequest.DISTORTION_CORRECTION_MODE, CaptureRequest.DISTORTION_CORRECTION_MODE_FAST);
       cam.createCaptureSession(Arrays.asList(s), new CameraCaptureSession.StateCallback() {
         @Override public void onConfigured(CameraCaptureSession x) {
           if (cam == null || !prendida) { x.close(); return; }
@@ -190,12 +212,18 @@ class CamaraManos {
         tLuz = ahoraMs;
         act.enviar(String.format(Locale.US, "__nativo&&__nativo.luz&&__nativo.luz(%.3f,%.2f,%d)", luzMedia(im), exposicion / 1e6, iso));
       }
-      ManosNativas m = manos;
-      if (m == null || !m.libre()) return;
       long ahora = SystemClock.elapsedRealtimeNanos(), ts = im.getTimestamp();
       double edad = tiempoReal ? (ahora - ts) / 1e6 : 25;
       if (!(edad >= 0 && edad < 500)) edad = 25;
       int giro = (orientacion - rotacionPantalla() + 360) % 360;
+      /* (vuelta 42) la foto para ver a través, con la pose de la cámara en su hora (el giroscopio, alineado con ARCore) */
+      Ar a = act.ar;
+      if (pasante && a != null && a.espacio.quiereFoto()) {
+        float[] q = new float[7];
+        if (a.cabeza.f.camaraEn(tiempoReal ? ts : ahora - (long) (edad * 1e6), q)) a.espacio.foto(im, q, edad, focal, giro);
+      }
+      ManosNativas m = manos;
+      if (m == null || !m.libre()) return;
       m.procesar(im, tiempoReal ? ts : ahora, edad, focal, dims, giro);
     } catch (Throwable t) { /* la próxima */ }
     finally { if (im != null) im.close(); }
@@ -204,6 +232,34 @@ class CamaraManos {
   int rotacionPantalla() {
     int r = act.getWindowManager().getDefaultDisplay().getRotation();
     return r == Surface.ROTATION_90 ? 90 : r == Surface.ROTATION_180 ? 180 : r == Surface.ROTATION_270 ? 270 : 0;
+  }
+
+  /* (vuelta 42) todas las cámaras, para Ancha: las de getCameraIdList y las lentes físicas de las lógicas (esas no
+     se abren solas). Como AngleCam: la focal y el tamaño del sensor de cada una, y el zoom más chico (Android 11+) */
+  static List<Ancha.Cam> describir(CameraManager cm) {
+    List<Ancha.Cam> l = new ArrayList<>(); Set<String> vistas = new HashSet<>();
+    try {
+      for (String id : cm.getCameraIdList()) { Ancha.Cam c = describir(cm, id, true); if (c != null) { l.add(c); vistas.add(id); } }
+      for (Ancha.Cam c : new ArrayList<>(l)) if (c.logica) for (String f : c.fisicas) if (vistas.add(f)) { Ancha.Cam x = describir(cm, f, false); if (x != null) l.add(x); }
+    } catch (Throwable t) { /* las que se pudieron */ }
+    return l;
+  }
+  static Ancha.Cam describir(CameraManager cm, String id, boolean abrible) {
+    try {
+      CameraCharacteristics k = cm.getCameraCharacteristics(id);
+      Integer lado = k.get(CameraCharacteristics.LENS_FACING);
+      float[] f = k.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS); SizeF s = k.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+      /* (la primera focal: la de siempre; una lógica trae las de todas sus lentes, y la más corta es la ancha, que va por el zoom) */
+      Ancha.Cam c = new Ancha.Cam(id, lado != null && lado == CameraCharacteristics.LENS_FACING_BACK, f != null && f.length > 0 ? f[0] : 0, s == null ? 0 : s.getWidth(), s == null ? 0 : s.getHeight());
+      c.abrible = abrible;
+      if (Build.VERSION.SDK_INT >= 30) { Range<Float> z = k.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE); if (z != null) c.zoomMin = z.getLower(); }
+      if (Build.VERSION.SDK_INT >= 28) {
+        int[] cap = k.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+        if (cap != null) for (int x : cap) if (x == CameraMetadata.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA) c.logica = true;
+        if (c.logica) c.fisicas.addAll(k.getPhysicalCameraIds());
+      }
+      return c;
+    } catch (Throwable t) { return null; }
   }
 
   /* el tamaño de la foto: lo más cerca de 640 × 480 y de 4:3, sin bajar de 360 del lado corto */

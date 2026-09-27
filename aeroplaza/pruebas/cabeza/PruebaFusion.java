@@ -116,6 +116,35 @@ public class PruebaFusion {
       { media(eGv), pct(eGv, 0.95), maxRapidoV, media(eLv), Math.sqrt(temb[1] / Math.max(1, nt)), Math.sqrt(temb[3] / Math.max(1, nt)) * 1000, -1 } };
   }
   static float[] prevV1, prevV2, lvA1, lvA2;
+  /* {error medio del giro sin ARCore (°), p95, cuánto se movió el lugar (m), error de la pose de la foto (°), lista} */
+  static double[] ancha(long semilla) {
+    Random r = new Random(semilla); Fusion f = new Fusion(); float[] C = f.C[1];
+    float[] Wbase = new float[4]; Fusion.mul(eje(0, 1, 0, 0.65), eje(1, 0, 0, -Math.PI / 2), Wbase);
+    float[] Wi = new float[4], Ci = new float[4]; Fusion.conj(Wbase, Wi); Fusion.conj(C, Ci);
+    java.util.ArrayList<Double> e = new java.util.ArrayList<>(); float[] out = new float[7], p0 = null; double mov = 0, eFoto = 0; boolean lista = false;
+    final double DT = 0.001, CORTE = 6, FIN = 12;
+    for (int k = 0; k * DT < FIN; k++) {
+      double t = k * DT; long tn = (long) (t * 1e9);
+      if (k % 5 == 0) {
+        float[] qA = qVerdad(t), a = new float[4], qi = new float[4]; Fusion.mul(Wi, qA, a); Fusion.mul(a, Ci, qi); qi = ruido(qi, r, RI);
+        f.rotacion(tn, qi[0], qi[1], qi[2], qi[3]);
+      }
+      if (t < CORTE && k % 33 == 0) {
+        float[] q = ruido(qVerdad(t), r, RA), ev = ojosVerdad(t), o = new float[3]; Fusion.rotar(q, 0, 0, Fusion.OJOS, o);
+        f.foto(tn, ev[0] - o[0], ev[1] - o[1], ev[2] - o[2], q[0], q[1], q[2], q[3], tn);
+      }
+      if (Math.abs(t - CORTE) < DT / 2) f.congelar();
+      if (t > CORTE + 0.1 && k % 16 == 0 && f.leer(tn, 0, out)) {
+        e.add(ang(new float[] { out[0], out[1], out[2], out[3] }, qVerdad(t)));
+        if (p0 == null) p0 = new float[] { out[4], out[5], out[6] };
+        mov = Math.max(mov, Math.sqrt(Math.pow(out[4] - p0[0], 2) + Math.pow(out[5] - p0[1], 2) + Math.pow(out[6] - p0[2], 2)));
+        /* la foto de hace 30 ms */
+        float[] cam = new float[7]; lista = f.camaraEn(tn - 30_000_000L, cam);
+        if (lista) eFoto = Math.max(eFoto, ang(new float[] { cam[3], cam[4], cam[5], cam[6] }, qVerdad(t - 0.03)));
+      }
+    }
+    return new double[] { media(e), pct(e, 0.95), mov, eFoto, lista ? 1 : 0 };
+  }
   static float[] qAnt2(float[] q) { return q; }
   /* (lo que cambia el cambio de giro de un cuadro al otro, en grados) */
   static double segunda(float[] a, float[] b, float[] c) { if (a == null || b == null) return 0; return ang(b, c) - ang(a, b); }
@@ -150,6 +179,12 @@ public class PruebaFusion {
     /* la cámara con otro reloj: se usa ahora − 30 ms */
     double[][] Rr = correr(4, 1, true, 0.5, 30);
     prueba("con la hora de la cámara en otro reloj, sigue andando (peor, pero mejor que antes)", Rr[0][6] == 1 && Rr[0][1] < 2.5 && Rr[0][0] < Rr[1][0], String.format("p95 %.2f°, medio %.2f° contra %.2f°", Rr[0][1], Rr[0][0], Rr[1][0]));
+    /* (vuelta 42) la ultra ancha: 6 s con ARCore, y después ARCore en pausa (congelar): el giro sigue con el
+       giroscopio, el lugar queda quieto, y la pose de la cámara para la foto sale en su hora */
+    double[] A = ancha(7);
+    prueba("sin ARCore (la 0,5x) el giro sigue pegado a la cabeza con el giroscopio solo", A[0] < 1.5 && A[1] < 3, String.format("medio %.2f°, p95 %.2f° (6 s sin ARCore)", A[0], A[1]));
+    prueba("y el lugar se queda donde estaba (no sigue corriendo con la última velocidad)", A[2] < 0.002, String.format("se movió %.2f mm", A[2] * 1000));
+    prueba("la pose de la cámara para la foto de la 0,5x, en la hora de la foto", A[3] < 1.5 && A[4] == 1, String.format("%.2f° · lista %s", A[3], A[4] == 1));
     /* lo que tarda leer */
     Fusion f = new Fusion(); for (int i = 0; i < 300; i++) f.rotacion(i * 5_000_000L, 0, 0, 0, 1);
     f.c = 1; f.alineado = true; f.hayF = true; f.tF = 1_000_000_000L; float[] o = new float[7];

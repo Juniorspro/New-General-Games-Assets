@@ -63,6 +63,9 @@ class Ar implements GLSurfaceView.Renderer {
 
   /* (vuelta 39) la cabeza: el giroscopio del sistema, corregido con ARCore (Fusion) */
   final Cabeza cabeza;
+  /* (vuelta 42) la ultra ancha en tu espacio: la cámara es una sola, así que ARCore queda en pausa (con su mundo)
+     y la cabeza sigue con el giroscopio, alineado; la foto la saca CamaraManos. corriendo sigue en true */
+  volatile boolean ancho;
   Ar(MainActivity a) { act = a; espacio = new Espacio(a); cabeza = new Cabeza(a); }
 
   static String estado(Context c) {
@@ -78,6 +81,8 @@ class Ar implements GLSurfaceView.Renderer {
   /* devuelve cómo quedó: 'corre' · 'instalando' · 'no' · 'error: …' */
   String iniciar(boolean conManos) {
     this.conManos = conManos;
+    /* (si venía de la ultra ancha, la sesión está en pausa: se reanuda abajo; la cámara ya la soltó MainActivity) */
+    if (ancho) { ancho = false; corriendo = false; }
     try {
       if (sesion == null) {
         ArCoreApk.InstallStatus st = ArCoreApk.getInstance().requestInstall(act, pedirInstalar);
@@ -200,6 +205,8 @@ class Ar implements GLSurfaceView.Renderer {
 
   String reanudar() {
     if (sesion == null || !corriendo) return corriendo ? "corre" : "parada";
+    /* (con la ultra ancha, ARCore sigue en pausa: la cámara la reabre CamaraManos) */
+    if (ancho) { cabeza.prender(); act.arVivo(true); return "corre"; }
     try { sesion.resume(); if (gl != null) gl.onResume(); } catch (Throwable t) { return "error: " + t.getClass().getSimpleName(); }
     cabeza.prender(); act.arVivo(true);
     return "corre";
@@ -210,13 +217,29 @@ class Ar implements GLSurfaceView.Renderer {
     try { if (sesion != null) sesion.pause(); } catch (Throwable t) { /* nada */ }
     cabeza.apagar(); act.arVivo(false);
   }
-  void parar() { corriendo = false; pausar(); act.enviar("__nativo&&__nativo.estado('parada')"); }
+  void parar() { corriendo = false; if (ancho) { ancho = false; act.apagarAncha(); } pausar(); act.enviar("__nativo&&__nativo.estado('parada')"); }
+  /* (vuelta 42) a la ultra ancha: ARCore en pausa, la cabeza sigue sola desde donde estaba (hace falta que ya esté
+     alineada con ARCore); y de vuelta: ARCore sigue en su mismo mundo */
+  boolean pasarAAncho() {
+    if (sesion == null || !corriendo || ancho || !cabeza.f.listo()) return false;
+    try { if (gl != null) gl.onPause(); } catch (Throwable t) { /* nada */ }
+    try { sesion.pause(); } catch (Throwable t) { /* nada */ }
+    cabeza.f.congelar(); cabeza.prender(); ancho = true;
+    return true;
+  }
+  String volverDeAncho() {
+    if (!ancho) return corriendo ? "corre" : "parada";
+    ancho = false;
+    if (sesion == null || !corriendo) return "parada";
+    try { geometria = false; sesion.resume(); if (gl != null) gl.onResume(); cabeza.prender(); return "corre"; }
+    catch (Throwable t) { corriendo = false; return "error: " + t.getClass().getSimpleName(); }
+  }
   void manos(boolean si) { conManos = si; if (si && manos == null) manos = new ManosNativas(act); }
   /* tu espacio: escanear (planos y profundidad) y la foto para ver a través */
   void escanear(boolean si) { pedidoEspacio = si; }
   void pasante(boolean si) { espacio.pasante = si; }
   void cerrar() {
-    corriendo = false; cabeza.cerrar(); act.arVivo(false);
+    corriendo = false; ancho = false; cabeza.cerrar(); act.arVivo(false);
     try { if (manos != null) manos.cerrar(); } catch (Throwable t) { /* nada */ }
     manos = null;
     try { espacio.cerrar(); } catch (Throwable t) { /* nada */ }
