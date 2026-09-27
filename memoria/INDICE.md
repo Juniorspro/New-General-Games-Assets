@@ -45,6 +45,12 @@ Esto es lo único que se lee al arrancar. El método está en `MEMORIA.md` (raí
   githack muestra "One more step": hay que tocar **"Open the page"** una vez.
   jsDelivr y statically sirven el HTML como texto (no sirven); gitcdn.link está
   muerto. Cómo comprobarlo desde acá: [maquina](maquina.md).
+- **Los juegos de otras sesiones no se tocan.** "Todos los juegos anteriores"
+  quiere decir los de la sesión en curso (el 27/9: Ruta 11, Estancia e Isla
+  Royale), no todo el repo (pique*, dimension-n, espejo, garfio, paraguas,
+  perro, telarana, pozo son de otras sesiones). Se tocaron por error y se
+  deshizo: revert `cd0d554` y el resto guardado en un `git stash` local. Ante la
+  duda sobre el alcance, preguntar antes de lanzar agentes.
 - Prefiere que se corrija lo que está mal antes que se agregue al lado.
 - Quiere el dato con su número, y que se diga cuando algo **no** se pudo probar.
 - Cuando algo se traba, quiere saber **cuál de los frenos** fue: el servicio
