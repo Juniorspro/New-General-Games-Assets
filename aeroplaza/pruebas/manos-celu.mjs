@@ -260,6 +260,45 @@ for (const dos of [false, true]) {
   prueba('con los fantasmas de MediaPipe (la misma mano dos veces) no aparece una segunda mano', r.every((x) => x.dobles === 0 && x.titila < 15) && r1.dobles === 0,
     [...r.map((x) => `foto a los ${f(x.lat, 0)} ms: ${f(x.dobles, 2)} % dobles, ${f(x.titila)} titileos/min`), `una red: ${f(r1.dobles, 2)} % dobles`].join(' · '));
 }
+/* LA PALMA PARA ABAJO (vuelta 23): la cámara ve el dorso; MediaPipe, dudando, dice que es la otra mano
+   y arma la forma espejada (esa otra, de palma: los dedos doblados para el lado de la cámara). Se
+   tomaba la etiqueta: a las 4 fotos la mano se daba vuelta y la palma "miraba a la cara" (el menú de la
+   palma). Mano derecha a la derecha, dedos doblados como en reposo */
+{
+  const TAN = 0.65, CAM = [0, 0, -0.06];
+  /* (la derecha abierta con los dedos un poco doblados hacia la palma, que es -z en ABIERTA) */
+  const DOBLADA = ABIERTA.map(([x, y, z], i) => { const k = i < 5 ? 0 : (i - 5) % 4; return [x, y - [0, 0.004, 0.01, 0.02][k], z - [0, 0.008, 0.018, 0.03][k]]; });
+  const mano = (pose, m) => DOBLADA.map(([x, y, z]) => pose === 'abajo' ? [m[0] + x, m[1] + z, m[2] - y] : [m[0] - x, m[1] + y, m[2] - z]);
+  const aFoto = (W, espejo) => {
+    const P = W.map(([x, y, z]) => [x - CAM[0], y - CAM[1], z - CAM[2]]);
+    const img = new Float32Array(63); P.forEach(([x, y, z], i) => { img[i * 3] = 0.5 + x / -z / (2 * TAN); img[i * 3 + 1] = 0.5 - y / -z / (2 * TAN); });
+    let Q = P;
+    if (espejo) { const c = [0, 5, 9, 13, 17].reduce((a, i) => a.map((v, k) => v + P[i][k] / 5), [0, 0, 0]), lc = Math.hypot(...c), r = c.map((v) => v / lc), dc = c[0] * r[0] + c[1] * r[1] + c[2] * r[2];
+      Q = P.map((p) => { const d = p[0] * r[0] + p[1] * r[1] + p[2] * r[2], f = (2 * dc - d) / d; return p.map((v) => v * f); }); }
+    return { puntos: Float32Array.from(Q.flat()), img };
+  };
+  const quir = (p) => { const s = (i, j) => [0, 1, 2].map((k) => p[i * 3 + k] - p[j * 3 + k]), a = s(5, 0), b = s(17, 0), n = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    return [4, 8, 12, 16, 20].reduce((q, i) => { const d = s(i, 0); return q + d[0] * n[0] + d[1] * n[1] + d[2] * n[2]; }, 0); };
+  /* etiqueta(k): lo que dice MediaPipe en la foto k: [derecha, confianza, espejada] */
+  const caso = (pose, etiqueta) => {
+    const manos = new Manos(); manos.activa = true; manos.fuente = 'camara';
+    const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3(), ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
+    const W = mano(pose, pose === 'abajo' ? [0.12, -0.12, -0.28] : [0.1, -0.2, -0.33]);
+    let menu = 0, alReves = 0, izq = 0, n = 0, k = 0;
+    for (let T = 0; T < 3000; T += 1000 / 120) {
+      if (T >= k * 33.3 + 120) { const [der, conf, esp] = etiqueta(k); manos.recibirCamara([{ derecha: der, confianza: conf, ...aFoto(W, esp) }], k * 33.3, T, 1); k++; }
+      manos.registrarCabeza(T + 25, q0, p0, 0); manos.actualizar(1 / 120, T + 25, ctx);
+      const M = manos.manos.find((x) => x.visible); if (!M || T < 500) continue;
+      n++; if (M.aLaCara > 0.62) menu++; if (Math.sign(quir(M.p)) !== 1) alReves++; if (!M.derecha) izq++;
+    }
+    return { menu: 100 * menu / n, alReves: 100 * alReves / n, izq: 100 * izq / n };
+  };
+  const a = caso('abajo', () => [false, 0.55, true]), b = caso('abajo', (k) => (k % 2 ? [false, 0.55, true] : [true, 0.6, false])), c = caso('abajo', () => [true, 0.95, false]), d = caso('cara', () => [true, 0.95, false]);
+  const f = (x) => `menú ${x.menu.toFixed(0)} %, al revés ${x.alReves.toFixed(0)} %, como izquierda ${x.izq.toFixed(0)} %`;
+  prueba('con la palma para abajo la mano no se da vuelta aunque MediaPipe dude y la arme al revés (y con la palma a la cara, sí es la palma)',
+    [a, b, c].every((x) => x.menu === 0 && x.alReves < 5 && x.izq === 0) && d.menu > 90 && d.alReves < 5,
+    `MediaPipe dudando y espejada: ${f(a)} · la mitad así: ${f(b)} · segura: ${f(c)} · la palma a la cara: ${f(d)}`);
+}
 /* la mano que se da vuelta (vuelta 20), con MediaPipe como es: la imagen precisa y la forma 3D aparte, y
    de canto a veces al revés en profundidad (herramientas/manos-lento.mjs con MP=1). Una sola foto así
    hacía girar la mano dibujada 90° y tardaba 300 ms en volver: los dedos, el 5 % peor, se doblaban 15°

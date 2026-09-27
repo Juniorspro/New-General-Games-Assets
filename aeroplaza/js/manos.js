@@ -149,6 +149,20 @@ function ejesPalma(P, e) {
   e[0] = x0; e[1] = x1; e[2] = x2; e[3] = z1 * x2 - z2 * x1; e[4] = z2 * x0 - z0 * x2; e[5] = z0 * x1 - z1 * x0; e[6] = z0; e[7] = z1; e[8] = z2;
   return e;
 }
+/* DE QUÉ MANO ES LA FORMA (vuelta 23): hacia dónde se doblan las puntas y el pulgar, contra la normal
+   cruda de la palma, cross(5 - 0, 17 - 0). En la derecha esa normal sale por la palma y los dedos se
+   doblan hacia ahí: positivo; en la izquierda, negativo. El espejo en profundidad lo da vuelta. Con
+   MediaPipe de verdad (fotos de pruebas/manos y sus espejos) da 20-70 mm por dedo, y cuando la
+   etiqueta es segura coinciden siempre; cuando duda (de canto, de dorso: 0,54-0,64), no (en m, la
+   suma de las cinco puntas) */
+function quiralidad(P) {
+  const a0 = P[15] - P[0], a1 = P[16] - P[1], a2 = P[17] - P[2], b0 = P[51] - P[0], b1 = P[52] - P[1], b2 = P[53] - P[2];
+  let n0 = a1 * b2 - a2 * b1, n1 = a2 * b0 - a0 * b2, n2 = a0 * b1 - a1 * b0; const ln = Math.hypot(n0, n1, n2) || 1; n0 /= ln; n1 /= ln; n2 /= ln;
+  let q = 0; for (const i of [4, 8, 12, 16, 20]) q += (P[i * 3] - P[0]) * n0 + (P[i * 3 + 1] - P[1]) * n1 + (P[i * 3 + 2] - P[2]) * n2;
+  return q;
+}
+const QUIRAL = 0.1;    // con menos que esto (la mano plana), la forma no dice de qué mano es (m; con MediaPipe de verdad, 130-260 mm; de canto, 86)
+const ETIQUETA = 0.8;  // lo que dice MediaPipe de qué mano es cuenta con esta confianza o más (segura: 0,93-0,98; dudosa: 0,54-0,64)
 /* el giro R que lleva el molde T (la palma en sus ejes, en el orden de PALMA6) a lo que se ve, v
    (Kabsch: lo más parecido a Σ d·Tᵀ que es un giro; por el método iterativo de Müller y otros, 2016,
    arrancando de q, los ejes de esa foto: tres o cuatro vueltas alcanzan) */
@@ -249,12 +263,23 @@ class PoseMano {
      tardaba 300 ms en volver. Se arma el espejo (cada punto por su rayo desde la cámara, O, a la
      profundidad del otro lado del centro) y queda la que sigue lo que venía: el giro, contra lo que
      se esperaba con su velocidad, y los dedos, contra los filtrados */
-  elegirEspejo(v, O, r, dtm, conGiro = true) {
+  elegirEspejo(v, O, r, dtm, conGiro = true, quiral = 0) {
     const c = this.c, E = this.vE, dc = (c[0] - O[0]) * r[0] + (c[1] - O[1]) * r[1] + (c[2] - O[2]) * r[2];
     for (let i = 0; i < 63; i += 3) {
       const ux = v[i] - O[0], uy = v[i + 1] - O[1], uz = v[i + 2] - O[2], d = ux * r[0] + uy * r[1] + uz * r[2];
       const f = d > 1e-3 ? Math.max(0.2, (2 * dc - d) / d) : 1;
       E[i] = O[0] + ux * f; E[i + 1] = O[1] + uy * f; E[i + 2] = O[2] + uz * f;
+    }
+    /* (vuelta 23: si se sabe qué mano es y la forma lo dice claro, queda la que se dobla como esa mano.
+       De dorso, MediaPipe a veces arma la otra mano de palma: la misma foto, con los dedos doblados
+       para el lado de la cámara. Con la palma para abajo, la mano se veía y se tomaba como de palma) */
+    if (quiral) {
+      const qv = quiralidad(v);
+      if (Math.abs(qv) > QUIRAL) {
+        if (Math.sign(qv) === quiral) return;
+        const qe = quiralidad(E);
+        if (Math.sign(qe) === quiral) { this.medir(E, this.qE, this.LE, this.cE); this.qm.copy(this.qE); this.Lm.set(this.LE); this.espejos++; this.quirales = (this.quirales || 0) + 1; return; }
+      }
     }
     this.medir(E, this.qE, this.LE, this.cE);
     _qa.copy(this.qAnt).premultiply(expQ(_va.copy(this.w).multiplyScalar(dtm), _qb));   // (lo que se esperaba)
@@ -268,21 +293,22 @@ class PoseMano {
     const cm = (conGiro ? ang(this.qm) ** 2 : 0) + 400 * a / 15, ce = (conGiro ? ang(this.qE) ** 2 : 0) + 400 * b / 15;
     if (ce < cm * 0.8) { this.qm.copy(this.qE); this.Lm.set(this.LE); this.espejos++; }
   }
-  reiniciar(v, t, r = null, O = null) {
+  reiniciar(v, t, r = null, O = null, quiral = 0) {
     this.medir(v);
     /* (al volver a encontrarla, sin giro con qué comparar: la que tiene los dedos como los tenía. Si
-       no, una mano de dorso que MediaPipe da como la otra se armaba con el molde al revés) */
-    if (O && r && this.forma && this.dedos.t >= 0) this.elegirEspejo(v, O, r, 0, false);
+       no, una mano de dorso que MediaPipe da como la otra se armaba con el molde al revés. Y si se sabe
+       qué mano es, la que se dobla como esa, aunque sea la primera foto) */
+    if (O && r && ((this.forma && this.dedos.t >= 0) || quiral)) this.elegirEspejo(v, O, r, 0, false, quiral);
     this.centro.reiniciar(this.c, t); this.q.copy(this.qm); this.qAnt.copy(this.qm); this.w.set(0, 0, 0);
     this.dedos.reiniciar(this.Lm, t); this.t = this.tm = t; this.componer();
   }
   desde(x, t) { this.reiniciar(x, t); }
-  filtrar(v, t, r = this.r, O = null) {
+  filtrar(v, t, r = this.r, O = null, quiral = 0) {
     this.r = r;
-    if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t); return this.x; }
+    if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t, r, O, quiral); return this.x; }
     const dt = Math.max(1e-3, t - this.t); this.t = t;
     this.medir(v);
-    if (O) this.elegirEspejo(v, O, r, Math.max(1e-3, t - this.tm));
+    if (O) this.elegirEspejo(v, O, r, Math.max(1e-3, t - this.tm), true, quiral);
     this.centro.filtrar(this.c, t, r);
     /* el giro: la velocidad, de una foto a la otra (filtrada); lo filtrado va hacia lo medido, más
        rápido cuanto más rápido gira */
@@ -437,12 +463,12 @@ class Mano {
       }
       this.rara = 0;
       if (!this.visible || salto > 0.25 || t - this.t > 0.5) {
-        this.euro.reiniciar(P, t, this.rayo, camara); this.euroRayo.t = -1; this.fijoHasta = 0;
+        this.euro.reiniciar(P, t, this.rayo, camara, this.derecha ? 1 : -1); this.euroRayo.t = -1; this.fijoHasta = 0;
         /* (si se estaba apagando cerca, llega deslizándose; si no, aparece donde está: se apaga la
            vieja de una y la nueva se prende suave) */
         this.seguida = this.seguida && this.alfa > 0.3 && salto < SNAP;
         if (!this.seguida) { this.alfa = 0; this.gen++; this.seguidaAncla = false; }
-      } else this.euro.filtrar(P, t, this.rayo, camara);
+      } else this.euro.filtrar(P, t, this.rayo, camara, this.derecha ? 1 : -1);
       /* (la forma, de los dedos filtrados en los ejes de la palma: con el ruido de cada foto, el largo
          de los huesos salía más largo) */
       if (this.euro === this.euroEjes) { this.aprenderForma(this.euroEjes.Lf); this.euroEjes.forma = this.forma; }
@@ -805,7 +831,10 @@ export class Manos {
          casi tocándose en la foto quedaban un poco más lejos) */
       const I = m.img, F = m.forma || m.puntos, e2 = Math.hypot(I[0] - I[27], I[1] - I[28]) || 1, e3 = Math.hypot(F[0] - F[27], F[1] - F[28], F[2] - F[29]) || 1;
       const p2 = Math.hypot(I[12] - I[24], I[13] - I[25]) / e2, p3 = Math.hypot(F[12] - F[24], F[13] - F[25], F[14] - F[26]) / e3;
-      return { m, W, c: centroPalma(W), pell: Math.max(p2, p3 * 0.62), der: m.derecha ?? (m.puntos[0] > 0), M: null };
+      /* (qué mano es: lo que dice MediaPipe solo si está seguro; si duda, el lado de la foto donde está:
+         de canto y de dorso da la otra con 0,54-0,64, y al votar se daba vuelta la mano) */
+      const segura = m.derecha != null && (m.confianza ?? 1) >= ETIQUETA;
+      return { m, W, c: centroPalma(W), pell: Math.max(p2, p3 * 0.62), der: segura ? m.derecha : m.puntos[0] > 0, segura, M: null };
     });
     const dist = (u, v) => Math.hypot(u[0] - v[0], u[1] - v[1], u[2] - v[2]);
     /* la misma mano dos veces (pasa de costado): queda la de más confianza */
@@ -890,7 +919,7 @@ export class Manos {
     for (const d of dets) {
       if (!d.M || (d.M.visible && ts <= d.M.t)) continue;   // (esa mano ya tiene algo más nuevo)
       d.M.recibir(d.W, ts, tl, d.pell, d.m.confianza, false, p, camO);
-      if (d.m.derecha != null) d.M.votos = THREE.MathUtils.clamp(d.M.votos + (d.m.derecha === d.M.derecha ? 1 : -1), -6, 6);
+      if (d.segura) d.M.votos = THREE.MathUtils.clamp(d.M.votos + (d.m.derecha === d.M.derecha ? 1 : -1), -6, 6);
       this.stats.lecturas++;
     }
     /* (una que no vino es una falta solo si la red tenía lugar para traerla, y si la foto no es vieja) */

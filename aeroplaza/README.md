@@ -151,6 +151,9 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
   lenta, un poco más), y el centro no se adelanta más de 6,5 cm (en Rápidas,
   10): en un manotazo que frena en seco se pasa menos. Quieta, el ancla de
   profundidad se asienta de a poco donde está la mano (tiembla un tercio menos).
+- Con la palma para abajo, MediaPipe (que ve el dorso) duda de qué mano es y a
+  veces la arma al revés: lo que dice cuenta solo si está seguro, y la forma
+  se dobla siempre como la mano que es (no se da vuelta la palma).
 - No se duplica: una mano que aparece sobre el camino que acaba de hacer otra
   es un fantasma de MediaPipe, y con una a la vista, la nueva queda a prueba
   hasta que se ven las dos a la vez.

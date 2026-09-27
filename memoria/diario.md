@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, más tarde a la noche · `claude/fijate-iszyer`:**
+  - Pidió: "con la palma para abajo la detecta como arriba".
+  - Quedó ([aeroplaza-23](aeroplaza-23.md)): la etiqueta de MediaPipe solo
+    cuenta si es segura, y la forma se dobla como la mano que es.
+  - Falta: probarlo en el celu.
 - **27/09/2026, a la noche · `claude/fijate-iszyer`:**
   - Pidió: que la tanda no dure tanto; que la mano siga movimientos rápidos,
     quede firme y no se duplique.
