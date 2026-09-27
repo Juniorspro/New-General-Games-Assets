@@ -3,6 +3,7 @@
 //    sistema corregido con ARCore, contra ARCore solo (lo de antes).
 // 2) El juego, con la cabeza nativa (AeroplazaNativo.cabeza, como Cabeza.java):
 //    - el VR la usa: gira y se corre con ella, aunque ARCore mande otra cosa; se le pide adelantada a cuando se ve;
+//    - y la vuelve a leer después de dibujar el mundo, para los ojos (el late latching de los visores);
 //    - tu espacio también (la cabeza es la de ARCore, con el giro del giroscopio);
 //    - si no hay (una APK vieja, o todavía sin los ejes: ""), sigue con la pose de ARCore como antes.
 //     node pruebas/cabeza.mjs   (sin javac, la parte 1 no corre)
@@ -74,6 +75,19 @@ prueba('y se corre con los ojos que da (20 cm de costado → 20 cm)', Math.abs(c
 const ad = await pag.evaluate(() => window.__adelantos.slice(-60));
 const adM = ad.reduce((s, x) => s + x, 0) / Math.max(1, ad.length);
 prueba('la pide adelantada a cuando se va a ver (de 0 a 40 ms)', ad.length > 0 && ad.every((x) => x >= 0 && x <= 40) && adM > 5, `${adM.toFixed(1)} ms en promedio`);
+/* (el late latching) la cabeza de mentira gira 1° por cada lectura: los ojos tienen que salir con la de después del mundo */
+const lt = await pag.evaluate(async () => {
+  const A = window.__A, T = A.THREE, orig = window.AeroplazaNativo.cabeza; let n = 0;
+  const yaw = (q) => { const v = new T.Vector3(0, 0, -1).applyQuaternion(q); return Math.atan2(-v.x, -v.z) * 180 / Math.PI; };
+  window.AeroplazaNativo.cabeza = () => { n++; const q = new T.Quaternion().setFromEuler(new T.Euler(0, (30 + n) * Math.PI / 180, 0, 'YXZ')); return [q.x, q.y, q.z, q.w, 0.2, 1.5, 0].join(','); };
+  window.__nativo.pose(20, 0, 1.5, -0.06, 0, 0, 0, 1, 1, '60');
+  n = 0; A.paso(1 / 60, true);
+  const r = { n, cam: yaw(A.motor.camara.quaternion), ojo: yaw(A.vr.dib.camOjo.quaternion) };
+  window.AeroplazaNativo.cabeza = orig;
+  return r;
+});
+const dl = ((lt.ojo - lt.cam + 540) % 360) - 180;
+prueba('a último momento: los ojos salen con la cabeza leída después de dibujar el mundo (late latching)', lt.n >= 2 && Math.abs(Math.abs(dl) - (lt.n - 1)) < 0.3, `${lt.n} lecturas · los ojos ${dl.toFixed(2)}° más allá`);
 /* sin la cabeza nativa (""): con ARCore, como antes */
 const d = await tramo({ seg: 0.4, g0: 30, g1: 30, x0: 0.2, x1: 0.2, sin: true });
 prueba('sin la cabeza nativa todavía, sigue con la pose de ARCore', !d.con && d.conAR, JSON.stringify({ con: d.con, conAR: d.conAR }));

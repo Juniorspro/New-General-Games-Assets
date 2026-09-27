@@ -628,7 +628,7 @@ export class Espacio {
   cuadro(dt, dibujar = true) {
     if (!this.activo) return;
     this.t += dt; this.tFase += dt; this.uVox.uT.value = this.t;
-    const V = this.vr, tVer = performance.now() + 20;
+    const V = this.vr, tVer = this.tVer = performance.now() + 20;
     /* la cabeza: la pose de ARCore tal cual (con el giroscopio si todavía no hay) */
     const vivo = Nativo.arVivo;
     if (vivo) { poseEn(tVer, this.cabezaQ, this.cabezaP, OJOS); this.tPerdido = 0; }
@@ -730,6 +730,8 @@ export class Espacio {
     const Le = this.sbs && this.vr.lentes?.activa ? this.vr.lentes : null;
     if (Le) Le.medir(W / 2, H, r.getPixelRatio(), true);
     const fov = this.campo(), C = this.ojo;
+    /* (vuelta 39: con la cabeza nativa, el giro a último momento, para el mismo instante: vr.js › cabezaTarde) */
+    if (Nativo.conCabeza && this.tVer) poseEn(this.tVer, this.cabezaQ, _c, OJOS);
     /* (la foto más clara con poca luz: lo que mide Java, la luz media de la foto, 0-1) */
     const L = Nativo.luz, gan = L && L.y > 0 ? THREE.MathUtils.clamp(Math.pow(0.4 / Math.max(L.y, 0.02), 2.2), 1, 3) : 1;
     this.uFoto.uGan.value += (gan - this.uFoto.uGan.value) * 0.1;

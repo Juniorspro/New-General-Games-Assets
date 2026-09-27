@@ -187,7 +187,7 @@ export class DibujoVR {
   /* un cuadro de pantalla. partido: el mundo se dibuja de a medias (arriba en un cuadro, abajo y
      los efectos en el siguiente); encima(ojo, i): lo que va por ojo (las manos); camJuego: la
      cabeza de ahora */
-  cuadro(dt, camJuego, { partido = false, encima = null, fino = true } = {}) {
+  cuadro(dt, camJuego, { partido = false, encima = null, fino = true, tarde = null } = {}) {
     const M = this.motor, r = M.r;
     if (this.nEsc !== M.msaa) { this.w = 0; this.medir(this.sbs, this.fovE, this.lentes); }
     const t0 = performance.now();
@@ -205,6 +205,8 @@ export class DibujoVR {
     U.tCuadro.value = L.rt.texture; U.uTanR.value.copy(L.tanR); U.uTanE.value.copy(this.tanE); U.uFino.value = fino ? 1 : 0;
     U.uCerca.value = 0.05; U.uLejos.value = camJuego.far;
     const qRi = _q.copy(L.q).invert();
+    /* (la cabeza a último momento, después de dibujar el mundo: vr.js › cabezaTarde; si no, la del cuadro) */
+    const qCab = tarde?.() || camJuego.quaternion;
     const auto = r.autoClear; r.autoClear = false;
     r.setScissorTest(true);
     const Le = this.lentes;
@@ -215,8 +217,8 @@ export class DibujoVR {
       else { r.setViewport(x, 0, W / n, H); r.setScissor(x, 0, W / n, H); }
       /* el ojo: la cabeza de ahora, corrida medio ojo al costado */
       const ojo = this.camOjo;
-      ojo.position.set(lado * OJOS / 2, 0, 0).applyQuaternion(camJuego.quaternion).add(camJuego.position);
-      ojo.quaternion.copy(camJuego.quaternion);
+      ojo.position.set(lado * OJOS / 2, 0, 0).applyQuaternion(qCab).add(camJuego.position);
+      ojo.quaternion.copy(qCab);
       /* uRot = (medio)^-1 · (ojo); uTras = (medio)^-1 · (ojo - medio) */
       _m4.makeRotationFromQuaternion(_q2.multiplyQuaternions(qRi, ojo.quaternion));
       U.uRot.value.setFromMatrix4(_m4);

@@ -36,7 +36,18 @@ Pidió, con un TikTok de metanexusxr (no se pudo ver: los links de TikTok no se 
 - **En `Ar`**: `cabeza.f.foto(...)` en cada foto que sigue. Se prende con `iniciar`/`reanudar` y se apaga con
   `pausar`/`cerrar`.
 
-## Medido (`pruebas/cabeza.mjs`, 16/16)
+## La cabeza a último momento (late latching)
+
+- **`vr.js › cabezaTarde`**: con la cabeza nativa, después de dibujar el mundo y antes de reproyectar los ojos
+  (`vr-dibujo.js › cuadro`, opción `tarde`), se lee de nuevo para el mismo `tVer`.
+  - El giroscopio siguió muestreando mientras se dibujaba el mundo (varios ms en un celu), así que el adelanto que
+    queda es más corto.
+  - Solo el giro. Se aplica como corrección (tarde · antes⁻¹) sobre la de la cámara, así queda lo demás que el
+    juego le hizo.
+- **Tu espacio** (`espacio.js › dibujar`) hace lo mismo con `cabezaQ`.
+- **En la web no sirve**: `deviceorientation` no llega en medio de un cuadro. Por eso es solo con la cabeza nativa.
+
+## Medido (`pruebas/cabeza.mjs`, 17/17)
 
 - **La parte de Java** (`pruebas/cabeza/PruebaFusion.java`):
   - la cabeza de mentira gira suave con giros de 70° en 0,35 s, y se corre ±10 cm;
@@ -61,12 +72,31 @@ Pidió, con un TikTok de metanexusxr (no se pudo ver: los links de TikTok no se 
   - el VR gira 30° y se corre 20 cm con la cabeza nativa aunque ARCore no se mueva;
   - la pide 25 ms adelantada;
   - sin ella, sigue con ARCore;
-  - tu espacio usa su giro y sus ojos.
+  - tu espacio usa su giro y sus ojos;
+  - con una cabeza que gira 1° por lectura, los ojos salen 1° más allá que la cámara del cuadro (la lectura
+    tardía).
 - **Barrido** (`PruebaFusion 0.03 0.15 0.5 GANA=…,GANA_W=…,TAU=…,AL=…,TL=…`):
   - `GANA` 0,06 → 0,12 bajó el medio de 0,74 a 0,46;
   - `GANA_W` 3, a 0,36;
   - adelantar todo el lugar: 14,8 → 10,5 mm;
   - `TAU` 10 ms temblaba más (6,95) y 20 ms atrasaba (12,5 mm).
+
+## ARCore for Jetpack XR (investigado el 27/09/2026)
+
+- **Qué es**: `androidx.xr.arcore`, la percepción del Jetpack XR SDK de Android XR: planos, anclas, profundidad,
+  hit test, manos de 26 articulaciones, cara, ojos, geoespacial y la pose del dispositivo (`ArDevice`).
+  - Versión 1.0.0-rc01 del 09/09/2026 (beta en agosto).
+  - Es para visores (Samsung Galaxy XR), anteojos XR con cable y anteojos con IA.
+- **En celus**: experimental ("developer preview"), con `androidx.xr.arcore:arcore-play-services` + `com.google.ar:core`.
+  - Usa el mismo Google Play Services for AR que ya usamos: el seguimiento es el mismo ARCore de siempre.
+  - Deja sacar el `Session` y el `Frame` de abajo.
+  - En el celu no hay anclas persistentes, cara ni ojos.
+  - Las manos son solo de visores y anteojos, no de celus.
+- **Para AEROPLAZA en el celu no conviene**: no da mejor cabeza ni manos, agrega una capa en Kotlin (`Session.create`
+  es suspend, incómodo desde nuestro Java) y es experimental.
+- **Sirve si se quiere un visor Android XR**: ahí las manos y la cabeza vienen del visor.
+  - Lo más corto sería el WebXR que ya tiene el juego (`vr-xr.js`, probado con Quest) en Chrome del visor.
+  - Lo nativo (Jetpack XR) iría después.
 
 ## Trampas
 

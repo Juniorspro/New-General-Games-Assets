@@ -49,7 +49,7 @@ const OJOS = 0.06, CORRE = { lado: 1.2, abajo: 1.0, arriba: 0.6 };
    agacharse, pararse, caminar); quieto, queda donde estaba. Lo que se corra más de BANDA m sin que el
    acelerómetro lo note (un celu sin ese dato) se sigue igual, desde el borde */
 const MOVIO = 700, ACELERA = 0.5, BANDA = 0.1;
-const _qAR = new THREE.Quaternion(), _ojo = new THREE.Vector3(), _qG = new THREE.Quaternion();
+const _qAR = new THREE.Quaternion(), _ojo = new THREE.Vector3(), _qG = new THREE.Quaternion(), _qT = new THREE.Quaternion(), _qT2 = new THREE.Quaternion(), _ojoT = new THREE.Vector3();
 const rumbo = (q) => { _w.set(0, 0, -1).applyQuaternion(q); return Math.atan2(-_w.x, -_w.z); };
 
 export class VR {
@@ -202,6 +202,19 @@ export class VR {
     }
     this.qListo = true;
     return this.q;
+  }
+  /* (vuelta 39) LA CABEZA A ÚLTIMO MOMENTO (el "late latching" de los visores): con la cabeza nativa, justo antes de
+     reproyectar los ojos se lee de nuevo, para el mismo momento en que se va a ver (tVer): mientras se dibujaba el
+     mundo el giroscopio siguió muestreando, y el adelanto que queda es más corto. Solo el giro (el lugar no cambia
+     en unos ms). Devuelve el de la cámara del juego corregido por lo que cambió (lo demás que le hizo el juego,
+     queda), o null sin la cabeza nativa */
+  cabezaTarde(camQ) {
+    if (!Nativo.conCabeza || !this.conAR || !this.ar0 || !this.tVer) return null;
+    poseEn(this.tVer, _qT, _ojoT, OJOS);
+    if (!Nativo.conCabeza) return null;
+    _qT.premultiply(_q.setFromAxisAngle(Y, this.ar0.giro));
+    /* (lo que cambió, en el mundo: tarde · antes⁻¹, sobre la de la cámara) */
+    return _qT2.copy(_qT).multiply(_q.copy(this.q).invert()).multiply(camQ);
   }
   /* la altura de la cabeza con ARCore, quieta si el celu no se mueve (ver MOVIO). La vista va a la altura de
      ARCore más un corrimiento: quieto, el corrimiento absorbe lo que ARCore se corre (hasta BANDA); moviéndose,
@@ -361,7 +374,7 @@ export class VR {
     this.medirRitmo(real, dt);
     const partido = this.forzar ? this.forzar === 'partido' : this.modo === 'partido';
     const Q = motor.nombreCalidad;
-    this.dib.cuadro(dt, motor.camara, { partido, encima, fino: Q === 'alta' || Q === 'media' });
+    this.dib.cuadro(dt, motor.camara, { partido, encima, fino: Q === 'alta' || Q === 'media', tarde: () => this.cabezaTarde(motor.camara.quaternion) });
     /* los cuadros por segundo (los de la cabeza y los del mundo) */
     const F = this.fps; F.n++; F.t += real;
     if (F.t >= 0.5) {
