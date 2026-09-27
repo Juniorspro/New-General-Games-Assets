@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title>CONTRAGOLPE</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b0c10;touch-action:none;user-select:none;-webkit-user-select:none;
+  font-family:'Bahnschrift','DIN Alternate','Roboto Condensed','Arial Narrow','Helvetica Neue',Arial,sans-serif;color:#f3f1ea}
+:root{--tinta:#0b0b0e;--amarillo:#ffd23f;--naranja:#ff9a1f;--ct:#6f9bff;--ctc:#b9d0ff;--t:#ffb13b;--tc:#ffe0a8;--rojo:#ff3b30;--verde:#7dff6a;
+  --panel:rgba(12,13,18,.78);--linea:rgba(255,255,255,.18)}
+#pantalla{position:fixed;inset:0;overflow:hidden;background:#0b0c10}
+@media (orientation: portrait){
+  #pantalla{inset:auto;top:0;left:0;width:100vh;height:100vw;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
+  @supports (width:100dvh){ #pantalla{width:100dvh;height:100dvw;transform:translateX(100dvw) rotate(90deg)} }
+}
+/* navegador en «versión de escritorio»: arma la página a 980 px y el teléfono la muestra achicada. La pantalla del juego se
+   arma al tamaño del teléfono y se agranda con la escala de la vista (--u); si no, el HUD y los mandos salen a un tercio */
+html.escala #pantalla{inset:auto;top:0;left:0;width:calc(100vw/var(--u));height:calc(100vh/var(--u));transform-origin:0 0;transform:scale(var(--u))}
+@media (orientation: portrait){
+  html.escala #pantalla{width:calc(100vh/var(--u));height:calc(100vw/var(--u));transform:translateX(100vw) rotate(90deg) scale(var(--u))}
+  @supports (width:100dvh){ html.escala #pantalla{width:calc(100dvh/var(--u));height:calc(100dvw/var(--u));transform:translateX(100dvw) rotate(90deg) scale(var(--u))} }
+}
+#lienzo3d,#hud{position:absolute;inset:0;width:100%;height:100%;display:block}
+#hud{pointer-events:none}
+/* ---------- mandos ---------- */
+#mandos{position:absolute;inset:0;pointer-events:none;display:none}
+#mandos.ver{display:block}
+#zonaMover{position:absolute;left:0;top:0;bottom:0;width:38%;pointer-events:auto}
+#zonaMirar{position:absolute;left:38%;right:0;top:0;bottom:0;pointer-events:auto}
+#stick{position:absolute;width:128px;height:128px;margin:-64px 0 0 -64px;border-radius:50%;border:2px solid rgba(255,255,255,.28);background:radial-gradient(circle,rgba(0,0,0,.06),rgba(0,0,0,.28));
+  left:108px;top:calc(100% - 104px);pointer-events:none;opacity:calc(.5*var(--alfa,1));transition:opacity .15s;transform:scale(var(--s,1))}
+#stick.activo{opacity:var(--alfa,1)}
+#stick i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(255,255,255,.9),rgba(210,210,210,.55) 62%,rgba(90,90,90,.5));
+  border:2px solid rgba(0,0,0,.55)}
+#stick.caminar{border-color:rgba(125,255,106,.55)}
+.bt{position:absolute;pointer-events:auto;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.30);border:2px solid rgba(255,255,255,.42);color:#fff;font-size:9px;letter-spacing:1.2px;font-weight:bold;text-shadow:0 1px 2px #000;
+  transform:translate(var(--tx,0),var(--ty,0)) scale(var(--s,1));opacity:var(--alfa,1)}
+.bt svg{width:48%;height:48%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px #000)}
+.bt.apretado{background:rgba(255,210,63,.35);border-color:var(--amarillo);transform:translate(var(--tx,0),var(--ty,0)) scale(calc(var(--s,1)*.93))}
+.bt small{font-size:8.5px;margin-top:1px}
+.bt.oculto{display:none}
+#bDisparo{right:26px;bottom:34px;width:96px;height:96px;border-color:rgba(255,120,90,.85);background:rgba(90,18,10,.32)}
+#bDisparoI{left:20px;top:150px;width:64px;height:64px;border-color:rgba(255,120,90,.7);background:rgba(90,18,10,.25)}
+#bSalto{right:134px;bottom:18px;width:62px;height:62px}
+#bAgachar{right:40px;bottom:142px;width:58px;height:58px}
+#bAgachar.fijo{background:rgba(255,210,63,.32);border-color:var(--amarillo)}
+#bRecargar{right:136px;bottom:96px;width:50px;height:50px}
+#bMira{right:112px;bottom:158px;width:56px;height:56px}
+#bUsar{right:200px;bottom:110px;width:70px;height:70px;border-color:var(--amarillo);background:rgba(90,70,0,.35);animation:late .9s infinite}
+#bGranada{right:196px;bottom:22px;width:48px;height:48px}
+#bCompra{left:14px;top:48px;width:auto;height:30px;border-radius:6px;padding:0 12px;font-size:11px;letter-spacing:2px;border-color:var(--verde);color:var(--verde)}
+#bMarcador{left:50%;margin-left:-19px;top:6px;width:38px;height:24px;border-radius:5px;opacity:.75}
+#bPausa{top:8px;right:10px;width:38px;height:34px;border-radius:7px;flex-direction:row;gap:5px}
+#bPausa i{display:block;width:4px;height:14px;background:#fff}
+#ranuras{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;gap:6px;pointer-events:none}
+#ranuras .rn{pointer-events:auto;width:64px;height:30px;border-radius:5px;background:rgba(0,0,0,.35);border:1.5px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center}
+#ranuras .rn.ya{border-color:var(--amarillo);background:rgba(60,50,10,.45)}
+#ranuras .rn canvas{width:56px;height:22px}
+@keyframes late{0%,100%{transform:translate(var(--tx,0),var(--ty,0)) scale(var(--s,1))}50%{transform:translate(var(--tx,0),var(--ty,0)) scale(calc(var(--s,1)*1.07))}}
+/* ---------- mandos a gusto (21b-mandos.js) ---------- */
+#mandos.zurdo #zonaMover{left:auto;right:0}
+#mandos.zurdo #zonaMirar{left:0;right:38%}
+#mandos.editando .bt.oculto{display:flex}
+#mandos.editando .bt, #mandos.editando #stick{animation:none;opacity:var(--alfa,1)}
+#mandos.editando .bt.sel, #mandos.editando #stick.sel{border-color:var(--amarillo);box-shadow:0 0 0 3px var(--tinta),0 0 0 6px var(--amarillo)}
+#editorMandos{position:absolute;inset:0;display:none;z-index:30;touch-action:none;
+  background:repeating-linear-gradient(45deg,rgba(255,210,63,.04) 0 12px,rgba(0,0,0,0) 12px 24px)}
+#editorMandos.ver{display:block}
+#editorMandos .edPanel{position:absolute;left:50%;top:8px;transform:translateX(-50%) skewX(-6deg);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;
+  max-width:min(96%,760px);padding:8px 12px;background:var(--panel);border:2.5px solid var(--tinta);box-shadow:5px 5px 0 var(--tinta),0 0 0 2px var(--amarillo) inset}
+#editorMandos.abajo .edPanel{top:auto;bottom:8px}
+#editorMandos .edPanel > *{transform:skewX(6deg)}
+#editorMandos .edTit{font-style:italic;font-weight:900;letter-spacing:3px;color:var(--amarillo);font-size:15px;margin-right:4px;text-shadow:2px 2px 0 var(--tinta)}
+#editorMandos .edTam{display:flex;align-items:center;gap:4px;font-weight:900;font-size:12px;letter-spacing:1px}
+#editorMandos .edTam .boton{min-width:34px;padding:4px 8px}
+#editorMandos .edAyuda{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font-size:10px;letter-spacing:2px;font-weight:900;color:#fff;opacity:.8;
+  text-shadow:0 1px 2px #000;white-space:nowrap;pointer-events:none}
+#editorMandos.abajo .edAyuda{bottom:auto;top:10px}
+/* ---------- capas (menús) ---------- */
+.capa{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;gap:10px;
+  padding:14px 22px;text-align:center;overflow-y:auto;touch-action:none;overscroll-behavior:contain;scrollbar-width:thin}
+.capa.ver{display:flex}
+.capa.ver > *{animation:sube .42s cubic-bezier(.2,.9,.25,1.15) both}
+.capa.ver > *:nth-child(2){animation-delay:.05s}.capa.ver > *:nth-child(3){animation-delay:.1s}.capa.ver > *:nth-child(4){animation-delay:.15s}.capa.ver > *:nth-child(5){animation-delay:.2s}.capa.ver > *:nth-child(6){animation-delay:.25s}
+.capa.velo{background:linear-gradient(100deg,rgba(8,8,12,.93),rgba(8,8,12,.78) 55%,rgba(8,8,12,.55))}
+.capa.velo::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.10;
+  background-image:radial-gradient(circle,#fff 1.1px,transparent 1.3px);background-size:7px 7px;mask-image:linear-gradient(115deg,#000,transparent 70%);-webkit-mask-image:linear-gradient(115deg,#000,transparent 70%)}
+@keyframes sube{from{opacity:0;transform:translateY(16px) rotate(-1.5deg) scale(.97)}to{opacity:1;transform:none}}
+@keyframes entraIzq{from{opacity:0;transform:translateX(-50px) skewX(-14deg)}to{opacity:1;transform:none}}
+@keyframes barre{0%{background-position:-220% 0}100%{background-position:220% 0}}
+@keyframes tiembla{0%,100%{transform:translate(0,0) rotate(-2deg)}25%{transform:translate(1px,-1px) rotate(-1.6deg)}50%{transform:translate(-1px,1px) rotate(-2.3deg)}75%{transform:translate(1px,1px) rotate(-1.8deg)}}
+@keyframes estalla{0%{transform:scale(.2) rotate(-30deg);opacity:0}60%{transform:scale(1.12) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes gira{to{transform:rotate(360deg)}}
+@keyframes pulso{0%{box-shadow:0 0 0 0 rgba(255,210,63,.6)}100%{box-shadow:0 0 0 14px rgba(255,210,63,0)}}
+/* título de historieta */
+.titulo{position:relative;display:inline-block;line-height:.85;margin:0 0 4px}
+.titulo .rafaga{position:absolute;left:50%;top:50%;width:150%;height:260%;transform:translate(-50%,-50%);z-index:0;pointer-events:none}
+.titulo .rafaga svg{width:100%;height:100%;animation:gira 60s linear infinite}
+.titulo b{position:relative;z-index:1;display:block;font-family:'Arial Black','Roboto','Bahnschrift',sans-serif;font-weight:900;font-style:italic;letter-spacing:-1px;
+  font-size:min(calc(12.5*var(--uw,1vw)),calc(19*var(--uh,1vh)),112px);color:#fff;-webkit-text-stroke:5px var(--tinta);paint-order:stroke fill;
+  text-shadow:6px 6px 0 var(--tinta),7px 7px 0 var(--tinta),10px 10px 0 rgba(0,0,0,.35);transform:rotate(-2deg);animation:tiembla 5s ease-in-out infinite}
+.titulo b span{display:inline-block;animation:estalla .6s cubic-bezier(.2,1.5,.4,1) both}
+.titulo i{position:relative;z-index:1;display:inline-block;font-style:normal;font-weight:900;font-size:13px;letter-spacing:9px;color:var(--tinta);background:var(--amarillo);
+  padding:4px 12px 3px 21px;margin-top:8px;transform:rotate(-2deg) skewX(-12deg);border:3px solid var(--tinta);box-shadow:4px 4px 0 var(--tinta)}
+.botones{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+.boton{font:inherit;font-weight:900;font-size:15px;letter-spacing:3px;padding:10px 22px;min-width:150px;color:#fff;cursor:pointer;text-transform:uppercase;position:relative;
+  background:#1a1b22;border:3px solid var(--tinta);box-shadow:4px 4px 0 var(--tinta),inset 0 -3px 0 rgba(0,0,0,.35),inset 0 2px 0 rgba(255,255,255,.12);
+  transform:skewX(-8deg);transition:transform .12s,background .12s,box-shadow .12s;overflow:hidden}
+.boton > *{display:inline-block;transform:skewX(8deg)}
+.boton::before{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,rgba(255,255,255,.22) 50%,transparent 65%);background-size:260% 100%;animation:barre 3.4s linear infinite;pointer-events:none}
+.boton::after{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--amarillo)}
+.boton:active{transform:skewX(-8deg) translate(3px,3px);box-shadow:1px 1px 0 var(--tinta)}
+.boton.amarillo{background:var(--amarillo);color:var(--tinta)}.boton.amarillo::after{background:#fff}
+.boton.ct::after{background:var(--ct)}.boton.t::after{background:var(--t)}.boton.gris::after{background:#8a8f9c}.boton.rojo::after{background:var(--rojo)}.boton.verde::after{background:var(--verde)}
+.boton.chico{min-width:0;font-size:11.5px;padding:6px 13px;letter-spacing:2px;box-shadow:3px 3px 0 var(--tinta)}
+.boton.ya{background:#3a3212;border-color:var(--amarillo)}
+h2{margin:0;font-family:'Arial Black','Roboto',sans-serif;font-size:28px;letter-spacing:3px;font-weight:900;font-style:italic;color:#fff;-webkit-text-stroke:2px var(--tinta);paint-order:stroke fill;text-shadow:3px 3px 0 var(--tinta)}
+h2 small{display:block;font-family:inherit;font-size:11px;letter-spacing:6px;color:var(--amarillo);font-weight:bold;font-style:normal;-webkit-text-stroke:0;text-shadow:none;margin-bottom:3px}
+.panel{background:var(--panel);border:3px solid var(--tinta);box-shadow:5px 5px 0 rgba(0,0,0,.6);padding:10px 14px;max-width:860px;width:100%;position:relative}
+/* portada */
+#capaTitulo{align-items:flex-start;text-align:left;padding-left:5.5%;background:linear-gradient(90deg,rgba(6,6,9,.82),rgba(6,6,9,.4) 48%,transparent 70%)}
+#capaTitulo > .botones{flex-direction:column;align-items:stretch;width:min(290px,38%);gap:8px}
+#capaTitulo > .botones .boton{text-align:left;animation:entraIzq .5s cubic-bezier(.2,.9,.25,1.12) both}
+#capaTitulo > .botones .boton:nth-child(1){animation-delay:.25s}#capaTitulo > .botones .boton:nth-child(2){animation-delay:.32s}
+#capaTitulo > .botones .boton:nth-child(3){animation-delay:.39s}#capaTitulo > .botones .boton:nth-child(4){animation-delay:.46s}#capaTitulo > .botones .boton:nth-child(5){animation-delay:.53s}
+#idiomas{flex-direction:row!important;gap:6px!important;margin-top:4px}#idiomas .boton{font-size:10px;padding:5px 9px;letter-spacing:1px;width:auto!important;min-width:0!important;opacity:.75}#idiomas .boton.ya{opacity:1}
+#perfil{position:absolute;right:14px;top:12px;text-align:right;font-size:11px;letter-spacing:2px;color:#cfd3dc;z-index:2}
+#perfil b{display:block;font-size:17px;color:#fff;letter-spacing:1px}
+/* jugar: tarjetas de modo y de mapa */
+.fila{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;width:100%}
+.tarjeta{position:relative;width:200px;height:112px;border:3px solid var(--tinta);box-shadow:4px 4px 0 var(--tinta);background:#20222a center/cover no-repeat;cursor:pointer;
+  transform:rotate(var(--r,0deg));transition:transform .15s;overflow:hidden;text-align:left}
+.tarjeta canvas{position:absolute;inset:0;width:100%;height:100%}
+.tarjeta b{position:absolute;left:8px;bottom:6px;right:8px;font-family:'Arial Black','Roboto',sans-serif;font-style:italic;font-size:17px;color:#fff;-webkit-text-stroke:1.5px var(--tinta);paint-order:stroke fill;text-shadow:2px 2px 0 var(--tinta)}
+.tarjeta small{position:absolute;left:8px;top:6px;font-size:9.5px;letter-spacing:2px;color:var(--tinta);background:var(--amarillo);padding:1px 6px;font-weight:bold}
+.tarjeta.ya{outline:3px solid var(--amarillo);outline-offset:2px;transform:rotate(var(--r,0deg)) scale(1.04)}
+.tarjeta:active{transform:rotate(var(--r,0deg)) scale(.97)}
+/* jugar en dos columnas: a la izquierda lo que se elige y EMPEZAR (siempre a la vista), a la derecha las tarjetas, que se achican */
+#capaJugar{flex-direction:row;align-items:center;justify-content:center;gap:18px}
+#capaJugar .jLado{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:10px;flex:0 1 auto;max-width:32%;min-width:170px;text-align:left}
+#capaJugar .jLado h2{text-align:left}
+#capaJugar .jLado .botones{justify-content:flex-start;flex-direction:column;align-items:stretch;width:100%;gap:7px}
+#capaJugar .jLado .boton{min-width:0}
+#capaJugar .jTarjetas{flex:1 1 0;min-width:0;max-width:640px;display:flex;flex-direction:column;justify-content:center;gap:12px}
+#capaJugar .fila{flex-wrap:nowrap;justify-content:flex-start;gap:9px}
+#capaJugar .tarjeta{flex:1 1 0;min-width:0;width:auto;height:auto;aspect-ratio:16/10;max-width:200px}
+#capaJugar .tarjeta b{font-size:clamp(11px,calc(4.4*var(--uh,1vh)),17px)}
+#elecciones{display:flex;flex-direction:column;gap:7px;align-items:flex-start}
+#elecciones .grupo{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-size:11px;letter-spacing:2px;color:#cfd3dc}
+#elecciones .grupo > span{width:100%;text-align:left}
+/* pantallas bajas (un teléfono de 360 de alto): todo más apretado para que entre sin deslizar */
+#pantalla.bajo .capa{gap:7px;padding:8px 18px}
+#pantalla.bajo .boton{padding:7px 18px;font-size:14px}
+#pantalla.bajo .boton.chico{padding:5px 11px;font-size:11px}
+#pantalla.bajo h2{font-size:23px}
+#pantalla.bajo #capaTitulo > .botones{gap:6px}
+#pantalla.bajo .titulo b{font-size:min(calc(11*var(--uw,1vw)),calc(15*var(--uh,1vh)),112px)}
+#pantalla.bajo #capaAjustes > .botones{display:grid;grid-template-columns:1fr 1fr;min-width:0!important;width:min(600px,100%);gap:7px}
+#pantalla.bajo #capaJugar .jLado{gap:8px}
+/* arsenal */
+#capaArsenal{justify-content:space-between;background:linear-gradient(180deg,rgba(6,6,9,.6),transparent 28%,transparent 64%,rgba(6,6,9,.88))}
+#arsenalLista{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:860px}
+#arsenalFicha{min-width:260px;max-width:420px;text-align:left}
+#arsenalFicha b{font-family:'Arial Black','Roboto',sans-serif;font-size:22px;font-style:italic;display:block}
+#arsenalFicha small{display:block;color:#b7bcc8;font-size:11px;margin:2px 0 6px}
+.barra{display:grid;grid-template-columns:86px 1fr 38px;gap:6px;align-items:center;font-size:10px;letter-spacing:1px;color:#c3c8d3;margin:3px 0}
+.barra i{display:block;height:7px;background:rgba(255,255,255,.1);position:relative;overflow:hidden;border:1px solid var(--tinta)}
+.barra i b{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,var(--naranja),var(--amarillo));transition:width .6s cubic-bezier(.2,.9,.25,1)}
+/* compra */
+#capaCompra{background:rgba(6,7,10,.72);justify-content:flex-start;padding-top:10px}
+#compraArriba{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:900px}
+#compraDinero{font-family:'Arial Black','Roboto',sans-serif;font-size:24px;color:var(--verde);text-shadow:2px 2px 0 var(--tinta)}
+#compraTiempo{font-size:12px;letter-spacing:3px;color:#cfd3dc}
+#compraGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;width:100%;max-width:900px}
+.cat{display:flex;flex-direction:column;gap:5px}
+.cat h3{margin:0 0 1px;font-size:10px;letter-spacing:3px;color:var(--amarillo);text-align:left}
+.item{position:relative;height:56px;border:2px solid var(--tinta);background:#1d1f27;box-shadow:2px 2px 0 var(--tinta);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 3px;cursor:pointer}
+.item canvas{width:92%;height:30px}
+.item b{font-size:9.5px;letter-spacing:1px;white-space:nowrap;overflow:hidden;max-width:100%}
+.item span{position:absolute;right:4px;top:2px;font-size:9.5px;color:var(--verde);font-weight:bold}
+.item.no{opacity:.35}.item.tengo{border-color:var(--amarillo);background:#2c2812}
+.item:active{transform:translate(2px,2px);box-shadow:none}
+/* fin de partida */
+#finTit{font-family:'Arial Black','Roboto',sans-serif;font-size:44px;font-style:italic;line-height:1;color:#fff;-webkit-text-stroke:3px var(--tinta);paint-order:stroke fill;text-shadow:5px 5px 0 var(--tinta);animation:estalla .6s cubic-bezier(.2,1.5,.4,1) .2s both}
+#finTabla{font-size:12.5px;letter-spacing:1px;border-collapse:collapse;min-width:420px}
+#finTabla td,#finTabla th{padding:3px 10px;border-bottom:1px solid rgba(255,255,255,.1);text-align:right}
+#finTabla td:first-child,#finTabla th:first-child{text-align:left}
+#finTabla tr.yo{background:rgba(255,210,63,.18)}
+#finTabla th{font-size:10px;letter-spacing:2px;color:#aab}
+/* avisos grandes del centro (ronda, bomba) */
+#aviso{position:absolute;left:0;right:0;top:20%;text-align:center;pointer-events:none;opacity:0;transition:opacity .25s;z-index:5}
+#aviso b{display:inline-block;font-family:'Arial Black','Roboto',sans-serif;font-style:italic;font-size:30px;letter-spacing:1px;color:#fff;-webkit-text-stroke:2.5px var(--tinta);paint-order:stroke fill;
+  text-shadow:4px 4px 0 var(--tinta);padding:4px 26px;transform:rotate(-2deg)}
+#aviso small{display:block;font-size:12px;letter-spacing:5px;color:#fff;font-weight:bold;margin-top:6px;text-shadow:0 1px 3px #000}
+#aviso.ver{opacity:1}#aviso.ver b{animation:estalla .45s cubic-bezier(.2,1.5,.4,1) both}
+#barrido{position:absolute;inset:-10% -30%;pointer-events:none;z-index:20;transform:translateX(-120%);
+  background:linear-gradient(100deg,transparent 0,transparent 32%,var(--tinta) 36%,var(--amarillo) 44%,var(--tinta) 52%,transparent 56%)}
+#barrido.va{animation:barrido .6s cubic-bezier(.6,0,.3,1)}
+@keyframes barrido{from{transform:translateX(-110%)}to{transform:translateX(110%)}}
+#carga{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:#0b0c10;z-index:30}
+#carga .txt{font-size:12px;letter-spacing:8px;color:#bfc3cc}
+#carga .barra2{width:min(calc(60*var(--umin,1vmin)),300px);height:6px;background:rgba(255,255,255,.08);border:2px solid var(--tinta);box-shadow:3px 3px 0 #000}
+#carga .barra2 i{display:block;height:100%;width:0;background:var(--amarillo);transition:width .2s}
+#carga .consejo{font-size:11px;letter-spacing:1px;color:#8d93a0;max-width:420px;text-align:center}
+.texto{font-size:12.5px;line-height:1.5;text-align:left;columns:2;column-gap:22px}
+.texto p{margin:0 0 7px;break-inside:avoid}.texto b{color:var(--amarillo)}
+.capa.desliza::after{content:'';position:sticky;bottom:-14px;display:block;flex:none;width:100%;height:22px;margin-top:-22px;pointer-events:none;background:linear-gradient(transparent,rgba(6,6,9,.75))}
+#marcador{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:none;z-index:6;pointer-events:none;min-width:520px}
+#marcador.ver{display:block}
+#marcador table{width:100%;border-collapse:collapse;font-size:12px}
+#marcador td,#marcador th{padding:3px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,.08)}
+#marcador td:first-child,#marcador th:first-child{text-align:left}
+#marcador tr.muerto{opacity:.45}#marcador tr.yo{background:rgba(255,210,63,.16)}
+#marcador .ct td:first-child{color:var(--ctc)}#marcador .t td:first-child{color:var(--tc)}
+</style></head><body>
+<div id="pantalla">
+  <canvas id="lienzo3d"></canvas>
+  <canvas id="hud"></canvas>
+  <div id="aviso"></div>
+  <div id="marcador" class="panel"></div>
+  <div id="mandos">
+    <div id="zonaMover"></div>
+    <div id="zonaMirar"></div>
+    <div id="stick"><i></i></div>
+    <div class="bt" id="bDisparo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/></svg></div>
+    <div class="bt" id="bDisparoI"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/></svg></div>
+    <div class="bt" id="bSalto"><svg viewBox="0 0 24 24"><path d="M6 14l6-6 6 6M6 19l6-6 6 6"/></svg><small>SALTO</small></div>
+    <div class="bt" id="bAgachar"><svg viewBox="0 0 24 24"><path d="M6 10l6 6 6-6M5 20h14"/></svg><small>AGACHAR</small></div>
+    <div class="bt" id="bRecargar"><svg viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.1-5M19 4v4h-4"/></svg></div>
+    <div class="bt oculto" id="bMira"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.5"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/></svg><small>MIRA</small></div>
+    <div class="bt oculto" id="bUsar"><svg viewBox="0 0 24 24"><path d="M8 11V6a1.6 1.6 0 0 1 3.2 0v5M11.2 10V4.8a1.6 1.6 0 0 1 3.2 0V10M14.4 10.5V6.5a1.6 1.6 0 0 1 3.2 0V14c0 4-2.5 7-6 7s-5.2-1.8-6.6-4.6L3.3 13a1.5 1.5 0 0 1 2.5-1.6L8 14"/></svg><small id="usarTxt">USAR</small></div>
+    <div class="bt" id="bGranada"><svg viewBox="0 0 24 24"><path d="M9 7h5l1 3M8.5 10h7a4 4 0 0 1 0 0l.5 1.5a6 6 0 1 1-8 0z"/><path d="M14 7l3-3"/></svg></div>
+    <div class="bt oculto" id="bCompra">COMPRAR</div>
+    <div class="bt" id="bMarcador"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div>
+    <div class="bt" id="bPausa"><i></i><i></i></div>
+    <div id="ranuras"></div>
+  </div>
+  <div id="editorMandos">
+    <div class="edPanel">
+      <b class="edTit" id="edTit">MANDOS</b>
+      <span class="edTam"><button class="boton chico" id="edMenos"><span>−</span></button><span id="edTam">100%</span><button class="boton chico" id="edMas"><span>+</span></button></span>
+      <button class="boton chico" id="edAlfa"><span>OPACIDAD: 100%</span></button>
+      <button class="boton chico" id="edZurdo"><span>ZURDO: NO</span></button>
+      <button class="boton chico" id="edPalanca"><span>PALANCA: FLOTANTE</span></button>
+      <button class="boton chico" id="edVibrar"><span>VIBRAR: SÍ</span></button>
+      <button class="boton chico gris" id="edRestablecer"><span>RESTABLECER</span></button>
+      <button class="boton chico amarillo" id="edListo"><span>LISTO</span></button>
+    </div>
+    <div class="edAyuda" id="edAyuda">ARRASTRÁ CADA BOTÓN ADONDE TE QUEDE CÓMODO · TOCALO PARA CAMBIARLE EL TAMAÑO</div>
+  </div>
+
+  <div class="capa" id="capaTitulo">
+    <div id="perfil"><b id="perfilNombre">JUGADOR</b><span id="perfilDato">NIVEL 1</span></div>
+    <div class="titulo"><div class="rafaga"><svg viewBox="-100 -100 200 200"><polygon fill="#ffd23f" stroke="#0b0b0e" stroke-width="3" points="0,-96 14,-40 58,-78 34,-24 92,-30 42,4 88,40 30,30 40,86 4,40 -20,94 -22,36 -70,72 -40,18 -96,20 -46,-8 -84,-54 -28,-28 -36,-90 -8,-42"/></svg></div>
+      <b id="logo">CONTRAGOLPE</b><i>OPERACIÓN TINTA</i></div>
+    <div class="botones" style="margin-top:12px">
+      <button class="boton amarillo" id="btJugar"><span>JUGAR</span></button>
+      <button class="boton" id="btArsenal"><span>ARSENAL</span></button>
+      <button class="boton gris" id="btComo"><span>CÓMO SE JUEGA</span></button>
+      <button class="boton gris" id="btAjustes"><span>AJUSTES</span></button>
+    </div>
+    <div id="idiomas" class="botones"><button class="boton chico" data-l="es"><span>ESPAÑOL</span></button><button class="boton chico" data-l="en"><span>ENGLISH</span></button><button class="boton chico" data-l="pt"><span>PORTUGUÊS</span></button></div>
+  </div>
+  <div class="capa velo" id="capaJugar">
+    <div class="jLado">
+      <h2><small>ELEGÍ CÓMO</small>MODO DE JUEGO</h2>
+      <div id="elecciones"></div>
+      <div class="botones"><button class="boton amarillo" id="btEmpezar"><span>EMPEZAR</span></button><button class="boton gris" id="btJugarVolver"><span>VOLVER</span></button></div>
+    </div>
+    <div class="jTarjetas">
+      <div class="fila" id="filaModos"></div>
+      <div class="fila" id="filaMapas"></div>
+    </div>
+  </div>
+  <div class="capa" id="capaArsenal">
+    <div style="width:100%;display:flex;justify-content:space-between;align-items:flex-start"><h2 style="text-align:left"><small>MIRALAS DE CERCA</small>ARSENAL</h2><div id="arsenalLista"></div></div>
+    <div style="width:100%;display:flex;justify-content:space-between;align-items:flex-end;gap:12px">
+      <div class="panel" id="arsenalFicha"></div>
+      <div class="botones" style="flex-direction:column"><button class="boton" id="btInspeccionar"><span>INSPECCIONAR</span></button><button class="boton" id="btRecargarA"><span>RECARGAR</span></button><button class="boton gris" id="btArsenalVolver"><span>VOLVER</span></button></div>
+    </div>
+  </div>
+  <div class="capa velo" id="capaComo">
+    <h2><small>ANTES DE ENTRAR</small>CÓMO SE JUEGA</h2>
+    <div class="panel texto" id="comoTxt"></div>
+    <button class="boton gris" id="btComoVolver"><span>VOLVER</span></button>
+  </div>
+  <div class="capa velo" id="capaAjustes">
+    <h2><small>CONFIGURACIÓN</small>AJUSTES</h2>
+    <div class="botones" style="flex-direction:column;min-width:320px">
+      <button class="boton" id="btSens"><span>SENSIBILIDAD: 5</span></button>
+      <button class="boton" id="btEstilo"><span>ESTILO: HISTORIETA</span></button>
+      <button class="boton" id="btGraf"><span>GRÁFICOS: AUTO</span></button>
+      <button class="boton" id="btSonido"><span>SONIDO: SÍ</span></button>
+      <button class="boton" id="btMiraCol"><span>MIRA: VERDE</span></button>
+      <button class="boton" id="btMandos"><span>MANDOS</span></button>
+    </div>
+    <button class="boton gris" id="btAjVolver"><span>VOLVER</span></button>
+  </div>
+  <div class="capa" id="capaCompra">
+    <div id="compraArriba"><h2 style="text-align:left"><small id="compraTiempo">TIEMPO DE COMPRA</small>COMPRAR</h2><div id="compraDinero">$ 800</div><button class="boton gris chico" id="btCompraCerrar"><span>CERRAR</span></button></div>
+    <div id="compraGrid"></div>
+  </div>
+  <div class="capa velo" id="capaPausa">
+    <h2><small>PARTIDA EN CURSO</small>PAUSA</h2>
+    <div class="botones"><button class="boton amarillo" id="btSeguir"><span>SEGUIR</span></button><button class="boton gris" id="btPausaAjustes"><span>AJUSTES</span></button><button class="boton rojo" id="btSalir"><span>ABANDONAR</span></button></div>
+  </div>
+  <div class="capa velo" id="capaFin">
+    <div id="finTit">VICTORIA</div>
+    <div id="finSub" style="font-size:12px;letter-spacing:5px;color:#cfd3dc"></div>
+    <div class="panel" style="max-width:680px"><table id="finTabla"></table></div>
+    <div class="botones"><button class="boton amarillo" id="btFinOtra"><span>OTRA PARTIDA</span></button><button class="boton gris" id="btFinMenu"><span>MENÚ</span></button></div>
+  </div>
+  <div id="barrido"></div>
+  <div id="carga"><div class="titulo"><b style="font-size:min(calc(9*var(--uw,1vw)),calc(15*var(--uh,1vh)),72px)">CONTRAGOLPE</b></div><div class="txt">CARGANDO…</div><div class="barra2"><i></i></div><div class="consejo" id="consejo"></div></div>
+</div>
+<!-- three.js r128 (MIT) adentro del archivo: el visor de la app no deja bajar nada del CDN -->
+<script src="js/three-r128.min.js"></script>
+<script src="assets"></script>
+<script src="js/01-nucleo.js"></script>
+<script src="js/02-assets.js"></script><script src="js/02b-etc2.js"></script>
+<script src="js/03-sonido.js"></script>
+<script src="js/04-render.js"></script>
+<script src="js/05-fisica.js"></script>
+<script src="js/06-texturas-respaldo.js"></script>
+<script src="js/07-kit-de-mapas.js"></script>
+<script src="js/08-utileria.js"></script>
+<script src="js/09-navegacion.js"></script>
+<script src="js/10-mapas.js"></script>
+<script src="js/11-modelado.js"></script>
+<script src="js/12-armas.js"></script>
+<script src="js/13-manos.js"></script>
+<script src="js/14-arma-vista.js"></script>
+<script src="js/15-animacion-arma.js"></script>
+<script src="js/16-personajes.js"></script>
+<script src="js/17-entrada.js"></script>
+<script src="js/18-combate.js"></script>
+<script src="js/19-bots.js"></script>
+<script src="js/20-reglas.js"></script>
+<script src="js/21-hud.js"></script><script src="js/21b-mandos.js"></script>
+<script src="js/22-menus.js"></script>
+<script src="js/23-bucle.js"></script>
+</body></html>

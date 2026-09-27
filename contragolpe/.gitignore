@@ -1,0 +1,10 @@
+contragolpe.html
+pruebas/salida/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/
+.herramientas/
+.cache/
+contragolpe-apk.html

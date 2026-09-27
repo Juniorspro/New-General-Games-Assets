@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, al mediodía · `claude/fijate-iszyer`:**
+  - Pidió: preguntó si la APK corre sobre una WebView (sí: el Chrome del teléfono;
+    el WebGL va a la placa igual) y CONTRAGOLPE (un HTML que mandó) en APK,
+    "optimizadísimo, que una batata corra el full gráficos".
+  - Quedó ([contragolpe](contragolpe.md)): `contragolpe/` separado; la APK (22 MB, texturas
+    ETC2: 104 → 23 MB en la placa); llamadas 191 → 127; mandar el dibujo 12 → 8 ms con
+    el procesador 6 veces más lento; cuatro pérdidas de memoria cerradas; mandos a gusto.
+  - Falta: probarla en un teléfono de verdad (ETC2, 60 Hz, cuánto va).
 - **27/09/2026, de mañana, más tarde · `claude/fijate-iszyer`:**
   - Pidió: con un TikTok de la app Spatial del Quest ("mirá esa
     estabilidad"), la próxima versión en APK, con ARCore.
