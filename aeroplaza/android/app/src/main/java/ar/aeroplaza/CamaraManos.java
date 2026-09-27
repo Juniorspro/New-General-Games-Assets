@@ -9,6 +9,8 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -21,7 +23,9 @@ import android.util.Size;
 import android.util.SizeF;
 import android.view.Surface;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -49,6 +53,8 @@ class CamaraManos {
   final float[] focal = new float[2];
   final int[] dims = new int[2];
   int orientacion = 90, fpsMax = 30;
+  /* (la luz, vuelta 33: la exposición y la sensibilidad de la última foto, y cuándo se mandó) */
+  volatile long exposicion = 0; volatile int iso = 0; long tLuz = 0;
 
   CamaraManos(MainActivity a) { act = a; }
 
@@ -143,8 +149,26 @@ class CamaraManos {
   }
 
   void repetir() {
-    try { if (ses != null && pedido != null) ses.setRepeatingRequest(pedido.build(), null, h); }
+    try { if (ses != null && pedido != null) ses.setRepeatingRequest(pedido.build(), alSacar, h); }
     catch (Throwable x) { avisar("error: " + x.getClass().getSimpleName()); }
+  }
+
+  final CameraCaptureSession.CaptureCallback alSacar = new CameraCaptureSession.CaptureCallback() {
+    @Override public void onCaptureCompleted(CameraCaptureSession x, CaptureRequest q, TotalCaptureResult r) {
+      Long e = r.get(CaptureResult.SENSOR_EXPOSURE_TIME); Integer s = r.get(CaptureResult.SENSOR_SENSITIVITY);
+      exposicion = e == null ? 0 : e; iso = s == null ? 0 : s;
+    }
+  };
+
+  /* la luz media de una foto YUV (0-1): el brillo en una grilla de 24 × 18 */
+  static double luzMedia(Image im) {
+    Image.Plane p = im.getPlanes()[0]; ByteBuffer b = p.getBuffer(); int rs = p.getRowStride(), W = im.getWidth(), H = im.getHeight(), lim = b.limit();
+    long suma = 0; int n = 0;
+    for (int j = 0; j < 18; j++) for (int i = 0; i < 24; i++) {
+      int k = ((j * 2 + 1) * H / 36) * rs + (i * 2 + 1) * W / 48;
+      if (k < lim) { suma += b.get(k) & 0xff; n++; }
+    }
+    return n == 0 ? -1 : suma / (double) n / 255.0;
   }
 
   void cerrarCamara() {
@@ -161,6 +185,11 @@ class CamaraManos {
     try {
       im = r.acquireLatestImage();
       if (im == null) return;
+      long ahoraMs = SystemClock.elapsedRealtime();
+      if (ahoraMs - tLuz > 400) {
+        tLuz = ahoraMs;
+        act.enviar(String.format(Locale.US, "__nativo&&__nativo.luz&&__nativo.luz(%.3f,%.2f,%d)", luzMedia(im), exposicion / 1e6, iso));
+      }
       ManosNativas m = manos;
       if (m == null || !m.libre()) return;
       long ahora = SystemClock.elapsedRealtimeNanos(), ts = im.getTimestamp();

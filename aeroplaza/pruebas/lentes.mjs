@@ -4,7 +4,8 @@
 //   con la vista previa; lo elegido queda guardado;
 // - con lentes, afuera del borde de la lente queda negro y el centro se ve; la curva es de barril (una recta
 //   de la escena, cerca del borde, cae más adentro que sin lentes);
-// - sin lentes ("plano") se dibuja como siempre, sin el pase de más;
+// - sin lentes ("plano") se dibuja como siempre, sin el pase de más, y con el mismo brillo en el centro (vuelta 33:
+//   el pase escribía el color lineal y con lentes todo salía oscuro);
 // - adentro del VR, el menú de la palma abre el panel: − y + ajustan en el momento, ◀ ▶ cambian de perfil;
 // - la curva y su inversa cierran (ida y vuelta, menos de 1e-5).
 //     node pruebas/lentes.mjs
@@ -49,6 +50,18 @@ const px = await pag.evaluate(() => {
 prueba('con visor y lentes, cada ojo pasa por la lente (su lienzo cuadrado y el campo que pide)', px.lentes && px.T > 1 && px.lado >= 64, JSON.stringify(px));
 prueba('afuera del borde de la lente queda negro; el centro de cada ojo se ve', px.esquina < 10 && px.centroI > 30 && px.centroD > 30, `esquina ${px.esquina} · centros ${px.centroI}, ${px.centroD}`);
 await pag.screenshot({ path: path.join(SAL, 'lentes-vr.png') });
+/* el punto del centro va al centro de cada lente y la sigue al cambiar la separación y la altura */
+const dp = await pag.evaluate(() => {
+  const A = window.__A, L = A.J.lentes, el = A.vr.el, h = el.clientHeight / 2;
+  const donde = () => Array.from(el.querySelectorAll('.vr-punto')).map((p) => { const r = p.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  A.paso(1 / 30, true); const a = donde();
+  for (let i = 0; i < 10; i++) { L.ajustar('separacion', 1); L.ajustar('alto', 1); }
+  A.paso(1 / 30, true); const b = donde();
+  for (let i = 0; i < 10; i++) { L.ajustar('separacion', -1); L.ajustar('alto', -1); }
+  A.paso(1 / 30, true);
+  return { h, dx: b.map((p, i) => +(p[0] - a[i][0]).toFixed(1)), dy: b.map((p, i) => +(p[1] - a[i][1]).toFixed(1)) };
+});
+prueba('el punto del centro sigue a cada lente (separación y altura +0,1)', Math.abs(dp.dx[0] + 0.1 * dp.h) < 1.5 && Math.abs(dp.dx[1] - 0.1 * dp.h) < 1.5 && dp.dy.every((y) => Math.abs(y + 0.1 * dp.h) < 1.5), `x ${dp.dx.join(', ')} · y ${dp.dy.join(', ')} (tenía que ∓${(0.1 * dp.h).toFixed(1)} y −${(0.1 * dp.h).toFixed(1)})`);
 /* la grilla de prueba se ve (amarilla) */
 await pag.evaluate(() => { window.__A.J.lentes.grilla = true; });
 await avanzar(pag, 2, 1 / 30, true);
@@ -76,8 +89,18 @@ prueba('◀ ▶ cambian de perfil y "Listo" cierra el panel', rp.t1 !== rp.t0 &&
 /* 5) sin lentes: el dibujo de siempre (sin el pase), la esquina con el mundo */
 await pag.evaluate(() => window.__A.J.lentes.poner('plano'));
 await avanzar(pag, 3, 1 / 30, true);
-const pp = await pag.evaluate(() => { const A = window.__A, gl = A.motor.r.getContext(), p = new Uint8Array(4); A.paso(1 / 30, true); gl.readPixels(3, 3, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); return { lentes: !!A.vr.dib.lentes, esquina: p[0] + p[1] + p[2] }; });
+const pp = await pag.evaluate(() => { const A = window.__A, gl = A.motor.r.getContext(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, p = new Uint8Array(4); A.paso(1 / 30, true); const leer = (x, y) => { gl.readPixels(Math.floor(x), Math.floor(y), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, p); return p[0] + p[1] + p[2]; }; return { lentes: !!A.vr.dib.lentes, esquina: leer(3, 3), centroI: leer(W / 4, H / 2), centroD: leer(W * 3 / 4, H / 2) }; });
 prueba('sin lentes se dibuja como siempre (sin el pase de la lente)', !pp.lentes && pp.esquina > 20, JSON.stringify(pp));
+/* (el mismo momento, con y sin lentes: dos cuadros de cada uno, seguidos) */
+const br = await pag.evaluate(() => {
+  const A = window.__A, L = A.J.lentes, gl = A.motor.r.getContext(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, d = new Uint8Array(4);
+  const centro = () => { let s = 0; for (const x of [W / 4, W * 3 / 4]) for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) { gl.readPixels(Math.floor(x) + i * 2, Math.floor(H / 2) + j * 2, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, d); s += d[0] + d[1] + d[2]; } return Math.round(s / 50); };
+  const r = {};
+  for (const tipo of ['cardboard2', 'plano', 'cardboard2']) { L.poner(tipo); A.paso(1 / 240, true); A.paso(1 / 240, true); r[tipo] = [...(r[tipo] || []), centro()]; }
+  L.poner('plano'); return r;
+});
+const con = (br.cardboard2[0] + br.cardboard2[1]) / 2;
+prueba('con y sin lentes, el centro de cada ojo tiene el mismo brillo (el mismo momento)', Math.abs(br.plano[0] - con) < Math.max(25, con * 0.12), `con ${br.cardboard2.join(', ')} · sin ${br.plano[0]}`);
 
 /* 6) la curva: barril (lo de afuera cae más adentro) y la inversa cierra */
 const rv = await pag.evaluate(() => {

@@ -327,6 +327,7 @@ la luz: [aeroplaza-26](aeroplaza-26.md). La APK con ARCore y las manos de Androi
 manos: [aeroplaza-28](aeroplaza-28.md). Tu espacio con ARCore (escaneo, manos en la mesa,
 pantalla y ventanas): [aeroplaza-29](aeroplaza-29.md). Las lentes del visor: [aeroplaza-30](aeroplaza-30.md).
 La altura quieta con ARCore y las manos de Android sin ARCore: [aeroplaza-31](aeroplaza-31.md).
+La cámara de tu espacio en tamaño real, la gamma con lentes y la linterna sola: [aeroplaza-32](aeroplaza-32.md).
 
 ## Trampas que ya se pagaron
 

@@ -36,7 +36,7 @@ const REPROYECTA = /* glsl */`
   uniform vec2 uTanR, uTanE, uTexel;
   uniform mat3 uRot;          // del ojo (ahora) al medio (cuando se dibujó)
   uniform vec3 uTras;         // dónde está el ojo, visto desde el medio dibujado
-  uniform float uCerca, uLejos, uFino;
+  uniform float uCerca, uLejos, uFino, uLineal;
   varying vec2 vUv;
   vec2 aUv(vec3 p) { return (p.xy / max(1e-4, -p.z)) / uTanR * 0.5 + 0.5; }
   /* Catmull-Rom con 5 lecturas (la receta de las TAA): el reproyectado no se ablanda */
@@ -67,6 +67,9 @@ const REPROYECTA = /* glsl */`
     /* el borde (si la cabeza giró más que el margen): se funde a oscuro en vez de estirar */
     vec2 fuera = max(vec2(0.0), abs(uv - 0.5) - 0.5);
     col *= 1.0 - smoothstep(0.0, 0.04, max(fuera.x, fuera.y));
+    /* (el mundo ya viene en sRGB, del final de la cadena; al lienzo de la lente va en lineal, como las manos
+       que se dibujan encima, y la lente lo pasa a sRGB: lentes.js) */
+    if (uLineal > 0.5) col = sRGBTransferEOTF(vec4(col, 1.0)).rgb;
     gl_FragColor = vec4(col, 1.0);
     /* la profundidad en el ojo, para lo que se dibuja encima */
     float z = 1.0 / max(w, 1e-4), l = (-z - uTras.z) / min(d.z, -1e-3);
@@ -108,7 +111,7 @@ export class DibujoVR {
     });
     this.qFinal = new FullScreenQuad(this.matFinal);
     this.matOjo = new THREE.ShaderMaterial({
-      uniforms: { tCuadro: { value: null }, uTanR: { value: new THREE.Vector2(1, 1) }, uTanE: { value: new THREE.Vector2(1, 1) }, uTexel: { value: new THREE.Vector2(1, 1) }, uRot: { value: new THREE.Matrix3() }, uTras: { value: new THREE.Vector3() }, uCerca: { value: 0.05 }, uLejos: { value: 2400 }, uFino: { value: 1 } },
+      uniforms: { tCuadro: { value: null }, uTanR: { value: new THREE.Vector2(1, 1) }, uTanE: { value: new THREE.Vector2(1, 1) }, uTexel: { value: new THREE.Vector2(1, 1) }, uRot: { value: new THREE.Matrix3() }, uTras: { value: new THREE.Vector3() }, uCerca: { value: 0.05 }, uLejos: { value: 2400 }, uFino: { value: 1 }, uLineal: { value: 0 } },
       vertexShader: VERT, fragmentShader: REPROYECTA,
       depthTest: true, depthFunc: THREE.AlwaysDepth, depthWrite: true,
     });
@@ -205,6 +208,7 @@ export class DibujoVR {
     const auto = r.autoClear; r.autoClear = false;
     r.setScissorTest(true);
     const Le = this.lentes;
+    U.uLineal.value = Le ? 1 : 0;
     for (let e = 0; e < n; e++) {
       const x = e * W / n, lado = n === 1 ? 0 : e === 0 ? -1 : 1;
       if (Le) r.setRenderTarget(Le.rt[e]);

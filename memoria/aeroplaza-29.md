@@ -74,6 +74,8 @@ si no querés el 6DoF, las ventanas en el mundo 3D del juego". Antes: [aeroplaza
 - Con lentes, el punto de la capa va al centro de cada lente (`vr.js › ponerCentroLentes`); en tu espacio no va (el
   de la escena ya está). La tarjeta, con visor, ocupa el 40 % de la vista (con el aumento, al 55 % tapaba todo).
 - `espacio.mjs`: 24/24, con y sin visor.
+- **Desde la vuelta 33 va apagado de entrada** ("Cámara con aumento"): el aumento se veía como ojo de pescado.
+  Ver [aeroplaza-32](aeroplaza-32.md).
 
 ## Trampas
 

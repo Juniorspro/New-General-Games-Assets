@@ -204,10 +204,23 @@ async function iniciar() {
     }
     return (camManos = camWeb ||= Object.assign(new ManosCamara({ alLlegar }),
       /* (para la carrera de la GPU: si la red en la placa le saca cuadros al dibujo) */
-      { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0 }));
+      { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0, alLuz: (L) => mirarLuz(L.media >= 0 && L.media < 0.13 && L.g >= 4) }));
   };
   /* el flash del VR sin visor (vr.js pone el botón): la linterna de la cámara de atrás */
   vr.alFlash = (prender) => laCamara().linterna(prender);
+  /* LA LINTERNA SOLA (vuelta 33): en el VR, con poca luz 1,2 s seguidos, se prende (vr.linternaSola). La luz,
+     de Java (ARCore o la cámara de las manos, cada 0,4 s: la luz media de la foto y, si la da, la exposición
+     y la sensibilidad) o de la cámara de la web (la de la mano, antes de aclararla) */
+  const luzVR = { desde: 0 };
+  const mirarLuz = (oscuro) => {
+    if (!vr.activo || vr.flash || vr.linternaAMano || !oscuro) { luzVR.desde = 0; return; }
+    const ahora = performance.now(); luzVR.desde ||= ahora;
+    if (ahora - luzVR.desde > 1200) { luzVR.desde = 0; vr.linternaSola(); }
+  };
+  /* (oscuro: la foto oscura, o la escena: la luz de la foto sobre lo que tuvo que abrir la cámara, en un
+     cuarto común ~6 y de noche con una lámpara lejos ~0,5) */
+  const oscuroNativo = (L) => L.y >= 0 && (L.y < 0.12 || (L.ms > 0 && L.iso > 0 && L.y / (L.ms / 1000 * L.iso / 100) < 0.8));
+  Nativo.alLuz = (L) => mirarLuz(oscuroNativo(L));
   /* (con los cuadros por segundo prendidos, también lo de las manos: fotos por segundo y atraso) */
   vr.datosManos = () => (camManos?.activa && manos.activa ? camManos.datos() : '');
   const prenderManos = async () => {

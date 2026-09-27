@@ -309,7 +309,7 @@ export class ManosCamara {
   delLector(d) {
     if (d.tipo === 'fin') { this.lector?.terminate(); this.lector = null; this.directo = false; return; }
     if (d.tipo !== 'ts') return;
-    if (d.luz) { this.stats.luz = d.luz; this.ajustarExposicion(d.luz); }
+    if (d.luz) { this.stats.luz = d.luz; this.ajustarExposicion(d.luz); this.alLuz?.(d.luz); }
     this.aspecto = d.ancho / d.alto;
     Object.assign(this.stats, { leidos: d.leidos, saltadosLector: d.saltados, ahorradosLector: d.ahorrados });
     this.stats.offMin = d.offMin;   // (ya en el reloj del juego: el lector le resta el origen)

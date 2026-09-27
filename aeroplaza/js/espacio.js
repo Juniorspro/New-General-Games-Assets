@@ -30,7 +30,7 @@ sumar({
     es_manos_t: 'Apoyá las manos en la mesa', es_manos_d: 'Abiertas, palma para abajo y quietas un segundo', es_sin_mesa: 'No encontré una mesa: apoyalas en cualquier superficie o salteá',
     es_izq: 'Izquierda', es_der: 'Derecha', es_esperando: 'esperando…', es_quieta: 'quieta…', es_medida: 'mide {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Tus manos quedaron medidas (×{k})',
     es_ayuda: 'Tocá la pantalla para seguir · con las manos: tocá o pellizcá', es_piso_ok: 'Piso encontrado', es_pared_ok: 'Pared encontrada', es_mesa_ok: 'Mesa encontrada',
-    es_llenar: '🎥 Llenar la vista', es_cam_05: '🎥 Cámara 0,5x ({g}°)', es_cam_1: '🎥 Cámara {g}° · el 0,5x ({m}°) ARCore no lo deja usar', es_cam: '🎥 Cámara {g}°',
+    es_llenar: '🔍 Cámara con aumento', es_linterna: '🔦 Linterna', es_cam_05: '🎥 Cámara 0,5x ({g}°)', es_cam_1: '🎥 Cámara {g}° · el 0,5x ({m}°) ARCore no lo deja usar', es_cam: '🎥 Cámara {g}°',
     es_pantalla_sub: 'Tocá con el dedo o pellizcá', es_escaneo_ok: 'Escaneo guardado', es_perdido: 'ARCore perdió dónde estás: mové el celu despacio',
     vr_ar_texto: '¿Querés usar ARCore? Con ARCore el celu sabe dónde está (6 ejes), como un Quest.', vr_ar_espacio: '📡 Sí: tu espacio', vr_ar_espacio_d: 'Escaneás el cuarto (piso, paredes, muebles), apoyás las manos en la mesa y se abre una pantalla para tocar y ventanas que quedan en su lugar',
     vr_ar_juego: '🎮 Sí, directo al juego', vr_ar_juego_d: 'AEROPLAZA en 6 ejes, sin escanear', vr_ar_no: '🧭 No, sin ARCore', vr_ar_no_d: 'Solo el giroscopio. Las ventanas de prueba se abren en el mundo del juego (menú de la palma)', vr_ar_atras: 'Volver' },
@@ -40,7 +40,7 @@ sumar({
     es_manos_t: 'Rest your hands on the table', es_manos_d: 'Open, palms down and still for a second', es_sin_mesa: 'No table found: rest them on any surface or skip',
     es_izq: 'Left', es_der: 'Right', es_esperando: 'waiting…', es_quieta: 'hold still…', es_medida: 'is {n} cm', es_seguir: 'Continue', es_medidas: '✋ Your hands are measured (×{k})',
     es_ayuda: 'Tap the screen to continue · with your hands: touch or pinch', es_piso_ok: 'Floor found', es_pared_ok: 'Wall found', es_mesa_ok: 'Table found',
-    es_llenar: '🎥 Fill the view', es_cam_05: '🎥 0.5x camera ({g}°)', es_cam_1: '🎥 Camera {g}° · ARCore won’t use the 0.5x ({m}°)', es_cam: '🎥 Camera {g}°',
+    es_llenar: '🔍 Zoomed camera', es_linterna: '🔦 Flashlight', es_cam_05: '🎥 0.5x camera ({g}°)', es_cam_1: '🎥 Camera {g}° · ARCore won’t use the 0.5x ({m}°)', es_cam: '🎥 Camera {g}°',
     es_pantalla_sub: 'Touch with your finger or pinch', es_escaneo_ok: 'Scan saved', es_perdido: 'ARCore lost track: move your phone slowly',
     vr_ar_texto: 'Do you want to use ARCore? With ARCore the phone knows where it is (6DoF), like a Quest.', vr_ar_espacio: '📡 Yes: your space', vr_ar_espacio_d: 'Scan the room (floor, walls, furniture), rest your hands on the table, and a touch screen opens with windows that stay in place',
     vr_ar_juego: '🎮 Yes, straight to the game', vr_ar_juego_d: 'AEROPLAZA in 6DoF, no scan', vr_ar_no: '🧭 No, without ARCore', vr_ar_no_d: 'Gyroscope only. Test windows open in the game world (palm menu)', vr_ar_atras: 'Back' },
@@ -50,16 +50,18 @@ sumar({
     es_manos_t: 'Apoie as mãos na mesa', es_manos_d: 'Abertas, palma para baixo e paradas um segundo', es_sin_mesa: 'Não achei uma mesa: apoie em qualquer superfície ou pule',
     es_izq: 'Esquerda', es_der: 'Direita', es_esperando: 'esperando…', es_quieta: 'parada…', es_medida: 'mede {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Suas mãos foram medidas (×{k})',
     es_ayuda: 'Toque a tela para seguir · com as mãos: toque ou faça a pinça', es_piso_ok: 'Chão encontrado', es_pared_ok: 'Parede encontrada', es_mesa_ok: 'Mesa encontrada',
-    es_llenar: '🎥 Preencher a vista', es_cam_05: '🎥 Câmera 0,5x ({g}°)', es_cam_1: '🎥 Câmera {g}° · o ARCore não deixa usar a 0,5x ({m}°)', es_cam: '🎥 Câmera {g}°',
+    es_llenar: '🔍 Câmera com zoom', es_linterna: '🔦 Lanterna', es_cam_05: '🎥 Câmera 0,5x ({g}°)', es_cam_1: '🎥 Câmera {g}° · o ARCore não deixa usar a 0,5x ({m}°)', es_cam: '🎥 Câmera {g}°',
     es_pantalla_sub: 'Toque com o dedo ou faça a pinça', es_escaneo_ok: 'Escaneamento salvo', es_perdido: 'O ARCore perdeu onde você está: mexa o celular devagar',
     vr_ar_texto: 'Quer usar o ARCore? Com o ARCore o celular sabe onde está (6 eixos), como um Quest.', vr_ar_espacio: '📡 Sim: seu espaço', vr_ar_espacio_d: 'Você escaneia o quarto (chão, paredes, móveis), apoia as mãos na mesa e abre uma tela para tocar e janelas que ficam no lugar',
     vr_ar_juego: '🎮 Sim, direto ao jogo', vr_ar_juego_d: 'AEROPLAZA em 6 eixos, sem escanear', vr_ar_no: '🧭 Não, sem ARCore', vr_ar_no_d: 'Só o giroscópio. As janelas de teste abrem no mundo do jogo (menu da palma)', vr_ar_atras: 'Voltar' },
 });
 
 const OJOS = 0.06;           // los ojos, detrás del celu (como vr.js)
-const CLAVE_LLENAR = 'aeroplaza.camaraLlena';
+/* (vuelta 33: la clave nueva, para que el aumento no quede prendido de antes; de entrada, tamaño real) */
+const CLAVE_LLENAR = 'aeroplaza.camaraAumento';
 const IPD = 0.064;
 const LEJOS_FOTO = 9;        // a cuánto se pone la foto de la cámara (m: lejos, casi sin paralaje entre los ojos)
+const EXT_FOTO = 7;          // el plano de la foto, tantas veces lo que ve la cámara: afuera sigue su borde, borroso
 const SECTORES = 12;         // mirar alrededor: la vuelta en 12 porciones
 const TOPE_VOX = 90000;
 const MESA = [0.35, 1.3];    // alto de una mesa sobre el piso (m)
@@ -67,6 +69,28 @@ const MEDIR = { t: 1.2, n: 14, abierta: 1.5, horizontal: 0.7, cerca: 0.22, quiet
 const COLOR = { piso: new THREE.Color('#39d7ff'), pared: new THREE.Color('#b9f1ff'), mesa: new THREE.Color('#ffd23f'), techo: new THREE.Color('#c9b8ff'), otro: new THREE.Color('#7dfcc0') };
 const num = (x, d = 1) => x.toLocaleString(idioma() === 'en' ? 'en' : idioma() === 'pt' ? 'pt-BR' : 'es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _q = new THREE.Quaternion(), _v2 = new THREE.Vector2(), _up = new THREE.Vector3(0, 1, 0);
+
+/* LA FOTO DE LA CÁMARA (vuelta 33), en tamaño real: la cámara ve ~67° y el visor más de 100°. Antes se
+   estiraba a toda la lente ("llenar", ×3,4 en el centro): se veía como ojo de pescado, borrosa, y el
+   cuarto se movía más rápido que la cabeza. Ahora cada grado de la foto es un grado de la vista; afuera de
+   la foto sigue su borde, cada vez más borroso y oscuro (la vista no termina en un marco). Adentro, un poco
+   más nítida (la foto es JPEG, chica) y, con poca luz, más clara (uGan, de lo que mide Java: nativo.js › luz) */
+const VERT_FOTO = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+const FRAG_FOTO = /* glsl */`
+  uniform sampler2D tFoto; uniform vec2 uTexel; uniform float uExt, uGan, uNitidez;
+  varying vec2 vUv;
+  void main() {
+    vec2 p = (vUv - 0.5) * uExt;
+    float d = max(abs(p.x), abs(p.y)) * 2.0;
+    vec2 uv = 0.5 + p / max(d, 1.0);
+    vec3 c = texture2D(tFoto, uv).rgb;
+    vec3 v = texture2D(tFoto, uv + vec2(uTexel.x, 0.0)).rgb + texture2D(tFoto, uv - vec2(uTexel.x, 0.0)).rgb + texture2D(tFoto, uv + vec2(0.0, uTexel.y)).rgb + texture2D(tFoto, uv - vec2(0.0, uTexel.y)).rgb;
+    vec3 fino = max(c + uNitidez * (c - v * 0.25), 0.0);
+    vec3 borroso = texture2D(tFoto, uv, clamp((d - 1.0) * 9.0, 0.0, 7.0)).rgb * (1.0 - 0.65 * smoothstep(1.0, 2.2, d));
+    c = (d <= 1.0 ? fino : borroso) * uGan;
+    gl_FragColor = vec4(c / (1.0 + c * 0.12) * 1.12, 1.0);
+    #include <colorspace_fragment>
+  }`;
 
 /* la grilla de los planos: líneas cada 25 cm, la ola del escaneo que sale de la cabeza y el fundido al aparecer */
 const VERT_PLANO = /* glsl */`
@@ -162,8 +186,11 @@ export class Espacio {
     this.cabezaP = new THREE.Vector3(0, 1.5, 0); this.cabezaQ = new THREE.Quaternion();
     this.pisoY = null; this.planos = new Map(); this.sectores = new Float32Array(SECTORES); this.verEscaneo = true;
     /* la foto de la cámara, donde se sacó */
-    const tex = this.texFoto = new THREE.Texture(); tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = false; tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter;
-    this.foto = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex, depthTest: false, depthWrite: false, toneMapped: false }));
+    /* (con mipmaps: lo borroso de afuera de la foto sale de ahí) */
+    const tex = this.texFoto = new THREE.Texture(); tex.colorSpace = THREE.SRGBColorSpace; tex.flipY = false; tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
+    this.uFoto = { tFoto: { value: tex }, uTexel: { value: new THREE.Vector2(1 / 640, 1 / 480) }, uExt: { value: EXT_FOTO }, uGan: { value: 1 }, uNitidez: { value: 0.35 } };
+    this.foto = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ uniforms: this.uFoto, vertexShader: VERT_FOTO, fragmentShader: FRAG_FOTO, depthTest: false, depthWrite: false }));
+    this.foto.frustumCulled = false;
     this.foto.renderOrder = -10; this.foto.visible = false; this.escena.add(this.foto);
     this.fotoEn = { cargando: false, pendiente: null, n: 0, bm: null, llegadas: 0 };
     /* los planos y los cubitos */
@@ -187,11 +214,10 @@ export class Espacio {
     this.ventanas = new Ventanas({ conSeis: true, paredes: () => this.paredes(), piso: () => this.pisoY, alSonar: (n) => this.sonar(n), alAccion: (id) => this.accion(id) });
     this.escena.add(this.ventanas.grupo);
     this.medida = { izq: null, der: null };
-    /* LLENAR LA VISTA (vuelta 31): con visor, la cámara del celu abarca bastante menos que la lente (unos 60°
-       contra más de 100°) y se veía como una ventana en el medio. Llenando, cada ojo se dibuja con el campo de
-       la cámara y la lente lo abre a toda su vista: la cámara ocupa todo y lo dibujado sigue encima de lo
-       que se ve (todo con el mismo aumento). Sin llenar, el tamaño de verdad */
-    this.llenar = true; try { this.llenar = localStorage.getItem(CLAVE_LLENAR) !== '0'; } catch { /* sin guardar */ }
+    /* LA CÁMARA CON AUMENTO (vuelta 31, apagada de entrada desde la 33): con visor, cada ojo con el campo de la
+       cámara y la lente lo abre a toda su vista (llena, pero ×3,4 en el centro: ojo de pescado). Sin aumento,
+       el tamaño de verdad, y afuera de la foto su borde borroso (FRAG_FOTO) */
+    this.llenar = false; try { this.llenar = localStorage.getItem(CLAVE_LLENAR) === '1'; } catch { /* sin guardar */ }
   }
 
   /* ------------------------------------------ entrar y salir */
@@ -242,9 +268,9 @@ export class Espacio {
     this.ventanas.abrirPantalla('🏠 ' + t('vt_pantalla'), [
       { id: 'jugar', texto: '▶ ' + t('vt_jugar'), principal: true }, { id: 'lugar', texto: '🧭 ' + t('vt_lugar') }, { id: 'reloj', texto: '🕒 ' + t('vt_reloj') },
       { id: 'pizarra', texto: '✍ ' + t('vt_pizarra') }, { id: 'burbujas', texto: '🫧 ' + t('vt_burbujas') }, { id: 'escaneo', texto: '🧱 ' + t('vt_escaneo') },
-      { id: 'reescanear', texto: '🔁 ' + t('vt_reescanear') }, { id: 'medir', texto: '✋ ' + t('vt_medir') }, { id: 'lentes', texto: t('le_menu') }, { id: 'llenar', texto: t('es_llenar') }, { id: 'salir', texto: '✕ ' + t('vt_salir'), peligro: true },
+      { id: 'reescanear', texto: '🔁 ' + t('vt_reescanear') }, { id: 'medir', texto: '✋ ' + t('vt_medir') }, { id: 'lentes', texto: t('le_menu') }, { id: 'llenar', texto: t('es_llenar') }, { id: 'linterna', texto: t('es_linterna') }, { id: 'salir', texto: '✕ ' + t('vt_salir'), peligro: true },
     ], pos, this.cabezaP, t('es_pantalla_sub') + (this.textoCamara() ? ' · ' + this.textoCamara() : ''));
-    this.ventanas.pantalla.marcar('escaneo', this.verEscaneo); this.ventanas.pantalla.marcar('llenar', this.llenar);
+    this.ventanas.pantalla.marcar('escaneo', this.verEscaneo); this.ventanas.pantalla.marcar('llenar', this.llenar); this.ventanas.pantalla.marcar('linterna', !!this.vr.flash);
   }
   /* los botones de la pantalla y de la tarjeta */
   accion(id) {
@@ -252,6 +278,8 @@ export class Espacio {
     if (accionLentes(this.vr.lentes, id, this.ventanas.pantalla)) { if (id === 'lente:listo') this.abrirPantalla(); return; }
     if (id === 'lentes') { this.abrirLentes(); return; }
     if (id === 'llenar') { this.llenar = !this.llenar; try { localStorage.setItem(CLAVE_LLENAR, this.llenar ? '1' : '0'); } catch { /* sin guardar */ } this.ventanas.pantalla?.marcar('llenar', this.llenar); return; }
+    /* (la linterna a mano: después no se prende sola, main.js › mirarLuz) */
+    if (id === 'linterna') { this.vr.linternaAMano = true; this.vr.cambiarLinterna?.(!this.vr.flash).then(() => this.ventanas.pantalla?.marcar('linterna', !!this.vr.flash)); return; }
     if (id === 'jugar') { this.cerrar(); this.alJugar(); }
     else if (id === 'salir') { this.cerrar(); this.alSalir(); }
     else if (id === 'listo') { if (this.pisoY == null) { this.sonar('no'); return; } this.sonar('ola'); this.ponerFase('manos'); }
@@ -366,11 +394,11 @@ export class Espacio {
         F.bm?.close?.(); F.bm = bm; F.n = d.n; F.llegadas++; F.ultima = { tx: d.tx, ty: d.ty };
         const T = this.texFoto;
         if (T.image && (T.image.width !== bm.width || T.image.height !== bm.height)) T.dispose();
-        T.image = bm; T.needsUpdate = true;
+        T.image = bm; T.needsUpdate = true; this.uFoto.uTexel.value.set(1 / bm.width, 1 / bm.height);
         const [x, y, z, qx, qy, qz, qw] = d.p, M = this.foto;
         M.quaternion.set(qx, qy, qz, qw);
         M.position.set(0, 0, -LEJOS_FOTO).applyQuaternion(M.quaternion).add(_a.set(x, y, z));
-        M.scale.set(2 * LEJOS_FOTO * d.tx, 2 * LEJOS_FOTO * d.ty, 1); M.visible = true;
+        M.scale.set(2 * LEJOS_FOTO * d.tx * EXT_FOTO, 2 * LEJOS_FOTO * d.ty * EXT_FOTO, 1); M.visible = true;
       })
       .catch(() => {})
       .finally(() => { F.cargando = false; if (F.pendiente) { const p = F.pendiente; F.pendiente = null; this.recibirFoto(p); } });
@@ -546,6 +574,11 @@ export class Espacio {
     const Le = this.sbs && this.vr.lentes?.activa ? this.vr.lentes : null;
     if (Le) Le.medir(W / 2, H, r.getPixelRatio(), true);
     const fov = this.campo(), C = this.ojo;
+    /* (la foto más clara con poca luz: lo que mide Java, la luz media de la foto, 0-1) */
+    const L = Nativo.luz, gan = L && L.y > 0 ? THREE.MathUtils.clamp(Math.pow(0.4 / Math.max(L.y, 0.02), 2.2), 1, 3) : 1;
+    this.uFoto.uGan.value += (gan - this.uFoto.uGan.value) * 0.1;
+    /* (con aumento, los ojos más juntos en la misma medida: si no, lo dibujado cerca se veía doble) */
+    const vista = Le ? Le.T : Math.tan(THREE.MathUtils.degToRad(this.vr.fov) / 2), aum = this.sbs ? Math.max(1, vista / Math.tan(THREE.MathUtils.degToRad(fov) / 2)) : 1;
     const auto = r.autoClear; r.autoClear = false; r.setRenderTarget(null); r.setScissorTest(true);
     r.setClearColor('#081422', 1);
     this.uVox.uPx.value = (Le ? Le.lado / 2 : H / 2 * r.getPixelRatio()) / Math.tan(THREE.MathUtils.degToRad(fov) / 2);
@@ -554,7 +587,7 @@ export class Espacio {
       if (Le) { r.setRenderTarget(Le.rt[i]); r.clear(); }
       else { r.setViewport(x, 0, w, H); r.setScissor(x, 0, w, H); r.clear(); }
       C.fov = fov; C.aspect = Le ? 1 : w / H; C.updateProjectionMatrix();
-      C.quaternion.copy(this.cabezaQ); C.position.set(o * IPD / 2, 0, 0).applyQuaternion(this.cabezaQ).add(this.cabezaP); C.updateMatrixWorld();
+      C.quaternion.copy(this.cabezaQ); C.position.set(o * IPD / 2 / aum, 0, 0).applyQuaternion(this.cabezaQ).add(this.cabezaP); C.updateMatrixWorld();
       r.render(this.escena, C);
       if (this.manos.activa && this.manos.algo) { r.clearDepth(); this.manos.dibujarOjo(r, C); }
     });

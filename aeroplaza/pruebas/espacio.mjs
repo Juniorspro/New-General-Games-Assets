@@ -83,19 +83,20 @@ await pag.evaluate(() => { window.__poner(0, 1.45, 0.4, 0, -0.35); window.__mand
 const e2 = await pag.evaluate(() => { const E = window.__A.espacio, c = {}; for (const P of E.planos.values()) c[P.clase] = (c[P.clase] || 0) + 1; return { ...E.datos, clases: c, vistos: Array.from(E.sectores).filter((x) => x >= 1).length, foto: E.foto.visible, sx: E.foto.scale.x.toFixed(2) }; });
 prueba('los planos quedan clasificados: piso, dos paredes y una mesa', e2.clases.piso === 1 && e2.clases.pared === 2 && e2.clases.mesa === 1 && Math.abs(e2.piso) < 0.01, JSON.stringify(e2.clases) + ` · piso a ${e2.piso}`);
 prueba('los cubitos de la caja se juntan', e2.vox > 200, `${e2.vox} cubitos`);
-prueba('la foto de la cámara llega y se pone en el mundo (a 9 m, del tamaño de lo que ve la cámara)', e2.fotos >= 1 && e2.foto && e2.sx === (2 * 9 * 0.62).toFixed(2), `${e2.fotos} fotos · ${e2.sx} m`);
+/* (el plano es 7 veces lo que ve la cámara: afuera de la foto sigue su borde, borroso; vuelta 33) */
+prueba('la foto de la cámara llega y se pone en el mundo (a 9 m, del tamaño de lo que ve la cámara, y su borde)', e2.fotos >= 1 && e2.foto && e2.sx === (2 * 9 * 0.62 * 7).toFixed(2), `${e2.fotos} fotos · ${e2.sx} m`);
 prueba('mirar alrededor llena la vuelta', e2.vistos >= 11, `${e2.vistos}/12`);
 await avanzar(pag, 1, 1 / 60, true);
 await pag.screenshot({ path: path.join(SAL, `espacio-escaneo${FIN}.png`) });
-/* la cámara llena la vista: sin visor, como una app de realidad aumentada; con visor, cada ojo con el campo de la
-   cámara (llenar) o el de la lente (tamaño real). Y qué cámara quedó (el 0.5x si ARCore lo deja) */
+/* la cámara llena la vista: sin visor, como una app de realidad aumentada; con visor, de entrada el tamaño real (el
+   campo de la lente) y con aumento, el de la cámara (vuelta 33). Y qué cámara quedó (el 0.5x si ARCore lo deja) */
 const rl = await pag.evaluate((sbs) => {
   const E = window.__A.espacio, g = (x) => +x.toFixed(1), cam = g(2 * Math.atan(0.46) * 180 / Math.PI);
-  const lleno = g(E.campo()); E.accion('llenar'); const real = g(E.campo()); E.accion('llenar');
+  const real = g(E.campo()); E.accion('llenar'); const lleno = g(E.campo()); E.accion('llenar');
   window.__nativo.estado('camara 67 112'); const t1 = E.textoCamara(); window.__nativo.estado('camara 108 110'); const t2 = E.textoCamara();
   return { sbs, cam, lleno, real, t1, t2, llenar: E.llenar };
 }, SBS);
-prueba(SBS ? 'con visor la cámara llena el ojo; "Llenar la vista" apagado vuelve al campo de la lente' : 'sin visor la cámara llena la pantalla', SBS ? rl.lleno === rl.cam && rl.real > rl.cam + 20 && rl.llenar : rl.lleno < rl.cam && rl.lleno === rl.real, JSON.stringify(rl));
+prueba(SBS ? 'con visor, de entrada tamaño real (el campo de la lente); con aumento, el de la cámara' : 'sin visor la cámara llena la pantalla', SBS ? rl.lleno === rl.cam && rl.real > rl.cam + 20 && !rl.llenar : rl.lleno < rl.cam && rl.lleno === rl.real, JSON.stringify(rl));
 prueba('dice qué cámara quedó (si ARCore no deja el 0,5x, lo dice)', /112/.test(rl.t1) && /0[,.]5x/.test(rl.t2), `${rl.t1} · ${rl.t2}`);
 
 /* 3) listo → las manos sobre la mesa. Un toque en la pantalla aprieta el botón principal */

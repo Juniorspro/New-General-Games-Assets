@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la noche, tarde · `claude/fijate-iszyer`:**
+  - Pidió: la linterna sola con poca luz en el VR, que la cámara de tu espacio no se vea "con ojo de pescado", y
+    que el punto del centro se mueva al ajustar las lentes.
+  - Quedó ([aeroplaza-32](aeroplaza-32.md)): la foto en tamaño real con el borde borroso afuera (el aumento, ahora
+    apagado de entrada, era el ojo de pescado); la gamma con lentes (salía oscuro); la linterna sola con lo que
+    mide Java. `pruebas/camara.mjs` 12/12.
+  - Falta: que lo mire con el visor y diga si todavía se ve curvo (sería el perfil de las lentes).
 - **27/09/2026, a la tarde, más tarde · `claude/fijate-iszyer`:**
   - Pidió: que en el VR con ARCore la vista no suba ni baje sola, y que las manos sin ARCore anden como con ARCore.
   - Quedó ([aeroplaza-31](aeroplaza-31.md)): la altura sigue a ARCore solo si el acelerómetro nota que te movés;

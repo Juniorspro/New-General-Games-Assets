@@ -75,11 +75,17 @@ const FRAG = /* glsl */`
     float r = length(p), borde = 1.0 - smoothstep(uBorde - 0.035, uBorde, r);
     vec2 uR = fuente(p, 1.0 - uColor), uG = fuente(p, 1.0), uB = fuente(p, 1.0 + uColor);
     vec3 c = vec3(texture2D(tOjo, uR).r * adentro(uR), texture2D(tOjo, uG).g * adentro(uG), texture2D(tOjo, uB).b * adentro(uB));
-    /* (la grilla de prueba: rectas cada 0,4 de tan; a través de la lente tienen que verse rectas) */
+    /* (lo de cada ojo está en lineal, como todo lo que three dibuja a un lienzo: acá pasa a sRGB para la
+       pantalla. Sin eso, con lentes todo salía oscuro y contrastado, vuelta 33) */
+    c = sRGBTransferOETF(vec4(max(c, 0.0), 1.0)).rgb;
+    /* (la grilla de prueba: rectas cada 0,4 de tan; a través de la lente tienen que verse rectas. Y el
+       centro de la lente, un anillo: sirve para ajustar la separación y la altura) */
     if (uGrilla > 0.5) {
       vec2 q = (uG - 0.5) * 2.0 * uT / 0.4, g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q), 1e-4);
       float l = 1.0 - min(min(g.x, g.y), 1.0);
       c = mix(c, vec3(1.0, 0.9, 0.25), l * 0.85);
+      float rc = length(q) * 0.4, a = fwidth(rc);
+      c = mix(c, vec3(1.0, 0.25, 0.3), smoothstep(0.045 + a, 0.045, rc) * smoothstep(0.02 - a, 0.02, rc));
     }
     gl_FragColor = vec4(c * borde, 1.0);
   }`;

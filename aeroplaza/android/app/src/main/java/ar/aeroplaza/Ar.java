@@ -21,6 +21,7 @@ import com.google.ar.core.CameraConfigFilter;
 import com.google.ar.core.CameraIntrinsics;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
+import com.google.ar.core.ImageMetadata;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.TrackingState;
@@ -52,6 +53,7 @@ class Ar implements GLSurfaceView.Renderer {
   final Espacio espacio;
   volatile Boolean pedidoEspacio;
   volatile boolean corriendo, conManos, flashPedido;
+  long tLuz = 0;
   boolean pedirInstalar = true, geometria;
   int textura = -1, orientacionSensor = 90;
   long ultimaFoto;
@@ -168,6 +170,15 @@ class Ar implements GLSurfaceView.Renderer {
     catch (Throwable t) { act.enviar("__nativo&&__nativo.estado('sin-flash')"); }
   }
 
+  /* LA LUZ (vuelta 33, cada 0,4 s): la luz media de la foto (una grilla de 24 × 18 del brillo) y lo que tuvo
+     que abrir la cámara para eso (la exposición y la sensibilidad de esa foto, si ARCore las da): con eso el
+     juego sabe si está oscuro y prende la linterna (main.js › mirarLuz) */
+  void luz(Image im, Frame fr) {
+    double y = CamaraManos.luzMedia(im), ms = 0; int iso = 0;
+    try { ImageMetadata md = fr.getImageMetadata(); ms = md.getLong(ImageMetadata.SENSOR_EXPOSURE_TIME) / 1e6; iso = md.getInt(ImageMetadata.SENSOR_SENSITIVITY); } catch (Throwable t) { /* sin datos */ }
+    act.enviar(String.format(Locale.US, "__nativo&&__nativo.luz&&__nativo.luz(%.3f,%.2f,%d)", y, ms, iso));
+  }
+
   int rotacionPantalla() {
     int r = act.getWindowManager().getDefaultDisplay().getRotation();
     return r == Surface.ROTATION_90 ? 90 : r == Surface.ROTATION_180 ? 180 : r == Surface.ROTATION_270 ? 270 : 0;
@@ -212,10 +223,13 @@ class Ar implements GLSurfaceView.Renderer {
           p.tx(), p.ty(), p.tz(), p.qx(), p.qy(), p.qz(), p.qw(), e == TrackingState.TRACKING ? 1 : e == TrackingState.PAUSED ? 0 : -1, fps));
       espacio.cuadro(sesion, fr, cam);
       boolean paraManos = conManos && manos != null && manos.libre(), paraVer = espacio.quiereFoto() && e == TrackingState.TRACKING;
-      if (paraManos || paraVer) {
+      long ahoraMs = SystemClock.elapsedRealtime();
+      boolean paraLuz = ahoraMs - tLuz > 400;
+      if (paraManos || paraVer || paraLuz) {
         Image im = null;
         try {
           im = fr.acquireCameraImage();
+          if (paraLuz) { tLuz = ahoraMs; luz(im, fr); }
           CameraIntrinsics ci = cam.getImageIntrinsics();
           /* (lo que hay que girar la foto para que quede derecha en la pantalla) */
           int giro = (orientacionSensor - rotacionPantalla() + 360) % 360;
