@@ -26,6 +26,10 @@ python3 pruebas/manos-camara.py → cámara YUV → RGB → modelo de manos, con
 |---|
 | ![](capturas/mano.jpg) |
 
+| las 4 armas: pistola (con los blancos de la práctica pegados a la pared escaneada) · fusil · escopeta · lanzagranadas (con una granada en vuelo) — y los soldados rápido (arena, boina roja) y pesado (blindado) |
+|---|
+| ![](capturas/armas.jpg) |
+
 Las capturas son de la **vista previa en la PC**: la malla es la que sale del
 escaneo de verdad (Tsdf + Mallador sobre una escena de prueba filmada con una
 cámara de profundidad simulada, con ruido), los soldados y la pistola son las
@@ -92,7 +96,13 @@ del APK), en su propio hilo. De ahí salen 21 puntos por mano, hasta dos manos
 - **Apuntar**: con la mano. Un láser rojo va del caño hasta donde pega en la
   malla. Tocar la pantalla o el volumen también disparan, desde la pistola de
   la mano.
-- **Sin mano a la vista**: la pistola vuelve a la vista, como antes.
+- **Cambiar de arma**: la **V** (índice y medio estirados, anular y meñique
+  cerrados) medio segundo. Pasa a la siguiente: pistola → fusil → escopeta →
+  lanzagranadas.
+- **El fusil es automático**: tira mientras tengas el gatillo apretado (el
+  índice cerrado), igual que con el dedo apoyado en la pantalla o el volumen
+  apretado.
+- **Sin mano a la vista**: el arma vuelve a la vista, como antes.
 
 Cómo está hecho (`Mano.java`, sin Android, probado en la PC):
 
@@ -121,7 +131,7 @@ prueba públicas de MediaPipe (en `pruebas/manos.txt`, que genera
 |---|---|
 | puño y pulgar arriba | "aprieta" (índice 209–219°) |
 | índice apuntando, también girado | "empuña" (índice 43–47°) |
-| la V · manos abiertas | "otra" · "abierta" |
+| la V · manos abiertas | "V" (cambiar de arma) · "abierta" |
 | apuntar → puño, 3 veces con fotos reales | 3 tiros |
 | agarrar de golpe desde la mano abierta · la V | 0 tiros |
 | 10 veces apretar y soltar, con 3 mm de temblor | 10 tiros |
@@ -232,15 +242,85 @@ escritos acá (votos, pasadas, A\*, rayos), no un modelo entrenado.
 
 ## Cómo se juega
 
-- **Escaneá** primero: mirá el piso y alrededor moviéndote despacio. Cuando
-  hay piso y malla suficiente dice "Listo": tocá para empezar (en el visor
-  arranca solo a los 3 s).
-- **Disparar**: tocar la pantalla (o el botón del visor, que toca la
-  pantalla), **volumen +/−**, un control Bluetooth (A, R1, R2) o un disparador
-  de selfie. Se apunta con la mira del centro (con la cabeza, en el visor).
-  **Recargar**: X o B del control (o sola, al vaciar el cargador).
+- **Escaneá** primero: mirá el piso y alrededor moviéndote despacio. Con el
+  escaneo completo aparece el **menú principal** flotando adelante tuyo (o
+  tocá / apretá el gatillo antes, si ya querés jugar).
+- **Disparar**: con la mano (arriba), tocar la pantalla (o el botón del
+  visor), **volumen +/−**, un control Bluetooth (A, R1, R2) o un disparador de
+  selfie. Sin mano se apunta con la mira del centro (con la cabeza, en el
+  visor). **Recargar**: la mano abierta, X o B del control, o sola al vaciar.
+- **Cambiar de arma**: la V con la mano, el botón ARMA, Y o L1 del control, o
+  en el menú.
+- **Pausa**: **mirá tus pies** 1.2 s (sirve en el visor, sin tocar nada), el
+  botón MENÚ, Atrás, o START del control.
 - Si aguantás 4 s sin que te den, te vas curando. La dificultad cambia cuánto
   apuntan, cuánto pegan y lo rápido que corren.
+
+### Los menús (en el mundo)
+
+Los menús son **paneles que flotan en el mundo**, a 1.35 m, de frente a vos
+(se ven en los dos ojos del SBS, como en los juegos del Quest). Si te das
+vuelta, a los 0.8 s el panel vuelve a ponerse adelante. Se elige:
+
+- con **el láser de la pistola en la mano**: apuntás al botón y apretás el
+  gatillo (apuntar solo no elige, para no disparar sin querer);
+- con **la mirada**: mirás un botón 1.3 s (se llena una barrita);
+- **tocando el botón** en la pantalla (sin visor), o tocando / volumen con la
+  mira encima.
+
+| menú | qué tiene |
+|---|---|
+| principal | Oleadas · Contrarreloj · Práctica (con su récord) · Arma · Dificultad · Seguir escaneando · Ajustes |
+| pausa | Seguir · Arma · Dificultad · Empezar de nuevo · Menú principal · Reescanear el lugar |
+| fin | puntos y récord (¡récord nuevo!), bajas, tiros a la cabeza, precisión, tiempo · Otra vez · Menú principal |
+
+Los récords se guardan en el teléfono, uno por modo.
+
+### Modos
+
+| modo | cómo es |
+|---|---|
+| **Oleadas** | como en el video: oleadas cada vez más grandes, hasta que te maten |
+| **Contrarreloj** | 90 s; siempre hay enemigos (5 a la vez, uno más cada 30 s) |
+| **Práctica** | 60 s de **blancos pegados a tus paredes de verdad** (y al árbol, al piso, a la mesa): se buscan superficies reales de frente a vos; más rápido y más al centro, más puntos. Al final, precisión y tiempo de reacción |
+
+Los blancos se apoyan en el plano de verdad: la normal sale de ocho rayos
+alrededor del punto (a la distancia del borde del disco) y, si esos puntos
+no están en un mismo plano (un borde, el canto de la mesa, una esquina), se
+busca otro lugar. Queda separado lo justo para estar delante de la malla.
+
+### Armas
+
+| arma | cargador | cómo es |
+|---|---|---|
+| **Pistola** | 12 | precisa, un tiro por gatillo |
+| **Fusil** | 30 | automático (≈ 10 tiros/s), algo de dispersión, recarga 2 s |
+| **Escopeta** | 6 | 9 perdigones que abren: de cerca voltea a cualquiera, a 10 m pega la mitad |
+| **Lanzagranadas** | 4 | tiro parabólico: la granada **rebota en la malla real** y explota a los 2.4 s (o al tocar a un soldado). Daña según la distancia, y **lo que hay en el medio tapa** (la mesa de verdad protege) |
+
+Cada arma guarda sus balas; sacarla tarda 0.35 s. Cada una tiene su modelo,
+su sonido, su retroceso y su vibración.
+
+**Soldados**: el normal (verde oliva), el **rápido** (arena, boina roja, 35 %
+más rápido) y el **pesado** (blindado gris azulado, visor; aguanta 4 tiros
+al cuerpo o 2 a la cabeza, y cada tiro lo frena). A la cabeza vale el triple.
+
+Lo medido (`pruebas/PruebaArmas.java`, contra la escena escaneada):
+
+| | |
+|---|---|
+| fusil, 3 s con el gatillo apretado | 30 tiros (vacía el cargador) |
+| escopeta a 10 m contra un blanco de 40 cm, 200 tiros | pega 105 (la pistola, siempre) |
+| pesado | cae con 4 al cuerpo o 2 a la cabeza |
+| granada | nunca atraviesa el piso real (lo más bajo: 0.000 m); voltea al de cerca, no al de lejos |
+| explosión del otro lado de la mesa real | vida 3.5 tapado contra 0.7 expuesto |
+| blancos | 54 de 60 intentos encuentran lugar; los 54 a < 6 cm de la superficie real, de frente, y con el borde entero delante de la malla |
+| contrarreloj | termina a los 90 s; siempre hay enemigos |
+
+Y el menú (`pruebas/PruebaMenu.java`): la mirada al centro de cada botón toca
+ese botón (5/5), el láser desde la mano a la cadera también (5/5), de atrás o
+entre botones no elige, mirar 1.3 s elige, con la mano sólo el gatillo elige,
+y si te das vuelta el panel te sigue.
 
 ## SBS (visor) y su configuración
 
@@ -295,8 +375,8 @@ de cerrar la app.
 ## Lo que NO se probó
 
 - **En un teléfono.** Esta máquina no tiene uno. Está probado: el escaneo y
-  el juego y la IA del mapa (pruebas en la PC), que los 13 shaders compilan y enlazan, el dibujo
-  de soldados/pistola/malla/SBS/lentes (vista previa con el código real), y
+  el juego y la IA del mapa (pruebas en la PC), que los 15 shaders compilan y enlazan, el dibujo
+  de soldados/armas/blancos/granadas/malla/SBS/lentes (vista previa con el código real), y
   que el APK compila, firma y trae ARCore. **No** está probado: el camino con
   ARCore de verdad (la profundidad cruda, las poses, el modo compartido de la
   cámara), el rendimiento en el teléfono, ni el visor.
@@ -306,6 +386,11 @@ de cerrar la app.
   fotos reales en la PC, pero no con la cámara del teléfono en movimiento, ni
   cuánto tarda el modelo ahí (en CPU, 320×240, una imagen cada ≥ 40 ms). Si
   la pistola sale corrida o girada respecto de la mano, pasame una captura.
+  Con una pistola de verdad en la mano, MediaPipe no ve la mano (el arma la
+  tapa: probado con una foto de Commons): el juego es con la mano vacía.
+- **Los menús** se probaron en la lógica (qué botón toca cada rayo, la
+  elección, que te siga), no pintados: el panel se pinta con el Canvas de
+  Android, que en la PC no está.
 - La imagen de la red semántica se lleva a la de profundidad escalando las
   coordenadas (se asume que cubren el mismo campo, como la profundidad).
   Si las etiquetas salen corridas en los bordes de las cosas, es eso.
@@ -336,15 +421,16 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Fallo.java` | si se cae: guarda el error y lo muestra al volver a abrir |
 | `mediapipe-parche/` | MediaPipe sin telemetría |
 | `src/.../ZonasGl.java` | las zonas pintadas sobre el piso |
-| `src/.../Juego.java` | soldados, disparos, caídas, partículas, oleadas (sin Android) |
+| `src/.../Juego.java` | soldados (3 tipos), armas, granadas, blancos, modos, partículas (sin Android) |
+| `src/.../Menu.java` · `MenuGl.java` | el menú en el mundo: geometría y elección (sin Android); su dibujo |
 | `src/.../Principal.java` | la actividad: ARCore, profundidad, entrada, dibujo por ojo |
 | `src/.../Camara.java` | elegir la cámara más ancha; el intento de ultra angular |
 | `src/.../MallaGl.java` | la malla en la GPU: oclusión, líneas, sólida, reproyectada |
-| `src/.../Figuras.java` | soldados, pistola, partículas, trazadoras |
+| `src/.../Figuras.java` | soldados, las 4 armas, granadas, blancos, partículas, trazadoras |
 | `src/.../Hud.java` · `Lentes.java` | el HUD en GL; la corrección de lentes |
 | `src/.../Ajustes.java` · `Panel.java` | la configuración y su panel |
 | `src/.../Sonido.java` | los sonidos, sintetizados al arrancar |
-| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` | las pruebas en la PC |
-| `pruebas/manos.txt` · `manos-extraer.py` · `manos-camara.py` · `herramientas/Yuv.java` | manos reales para las pruebas; la cámara de punta a punta |
+| `pruebas/PruebaEscaneo.java` · `PruebaJuego.java` · `PruebaMapa.java` · `PruebaMano.java` · `PruebaArmas.java` · `PruebaMenu.java` | las pruebas en la PC |
+| `pruebas/manos.txt` · `manos-commons.txt` · `manos-extraer.py` · `manos-camara.py` · `herramientas/Yuv.java` | manos reales para las pruebas; la cámara de punta a punta |
 | `pruebas/shaders.mjs` · `vista.mjs` · `vista/` | shaders con WebGL; la vista previa |
 | `construir.sh` | arma el APK sin Gradle (caché compartida con mundo-ar) |

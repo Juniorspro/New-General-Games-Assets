@@ -16,15 +16,18 @@ import java.util.Random;
  * caché y se cargan en un SoundPool (poca latencia).
  */
 final class Sonido {
-    static final int DISPARO = 0, IMPACTO = 1, CARNE = 2, ENEMIGO = 3, DANO = 4, RECARGA = 5, OLEADA = 6, VACIO = 7, ZUMBIDO = 8, FIN = 9;
+    static final int DISPARO = 0, IMPACTO = 1, CARNE = 2, ENEMIGO = 3, DANO = 4, RECARGA = 5, OLEADA = 6, VACIO = 7, ZUMBIDO = 8, FIN = 9,
+            FUSIL = 10, ESCOPETA = 11, LANZA = 12, EXPLOSION = 13, CAMBIO = 14, BLANCO = 15, MENU = 16, ELIGE = 17, RECORD = 18;
+    /** El sonido del disparo de cada arma (Juego.PISTOLA, FUSIL, ESCOPETA, LANZAGRANADAS). */
+    static final int[] DE_ARMA = {DISPARO, FUSIL, ESCOPETA, LANZA};
     private static final int TASA = 22050;
 
     private SoundPool pool;
-    private final int[] id = new int[10];
+    private final int[] id = new int[19];
     boolean activo = true;
 
     void cargar(Context c) {
-        pool = new SoundPool.Builder().setMaxStreams(10)
+        pool = new SoundPool.Builder().setMaxStreams(14)
                 .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME)
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()).build();
         Random r = new Random(11);
@@ -38,6 +41,15 @@ final class Sonido {
         id[VACIO] = guardar(c, "vacio", ruido(r, 0.02f, 0.5f, 0.9f));
         id[ZUMBIDO] = guardar(c, "zumbido", zumbido());
         id[FIN] = guardar(c, "fin", tonos(new float[]{392, 330, 262}, 0.22f));
+        id[FUSIL] = guardar(c, "fusil", disparo(r, 0.2f, 0.85f, 120));
+        id[ESCOPETA] = guardar(c, "escopeta", mezclar(disparo(r, 0.55f, 1f, 55), bombeo(r, 0.32f), 0.8f));
+        id[LANZA] = guardar(c, "lanza", tubo(r));
+        id[EXPLOSION] = guardar(c, "explosion", explosion(r));
+        id[CAMBIO] = guardar(c, "cambio", recarga(r));
+        id[BLANCO] = guardar(c, "blanco", campana(1320, 0.35f));
+        id[MENU] = guardar(c, "menu", campana(2400, 0.05f));
+        id[ELIGE] = guardar(c, "elige", tonos(new float[]{660, 990}, 0.07f));
+        id[RECORD] = guardar(c, "record", tonos(new float[]{523, 659, 784, 1046}, 0.12f));
     }
 
     void tocar(int cual, float volumen, float pan) {
@@ -101,6 +113,78 @@ final class Sonido {
                 s[i0 + i] += (short) ((r.nextFloat() * 2 - 1) * Math.exp(-t * 250) * 22000
                         + Math.sin(2 * Math.PI * 2200 * t) * Math.exp(-t * 300) * 8000);
             }
+        }
+        return s;
+    }
+
+    /** b sobre a desde t (s). */
+    private static short[] mezclar(short[] a, short[] b, float t) {
+        int i0 = (int) (t * TASA);
+        short[] s = new short[Math.max(a.length, i0 + b.length)];
+        for (int i = 0; i < s.length; i++) {
+            int v = (i < a.length ? a[i] : 0) + (i >= i0 && i - i0 < b.length ? b[i - i0] : 0);
+            s[i] = (short) Math.max(-32000, Math.min(32000, v));
+        }
+        return s;
+    }
+
+    /** La corredera de la escopeta: atrás y adelante. */
+    private static short[] bombeo(Random r, float entre) {
+        int n = (int) ((entre + 0.08f) * TASA);
+        short[] s = new short[n];
+        for (float c : new float[]{0, entre}) {
+            int i0 = (int) (c * TASA);
+            float lp = 0;
+            for (int i = 0; i < 1800 && i0 + i < n; i++) {
+                float t = i / (float) TASA;
+                lp += (r.nextFloat() * 2 - 1 - lp) * 0.5f;
+                s[i0 + i] += (short) (lp * Math.exp(-t * 60) * 20000 + Math.sin(2 * Math.PI * 900 * t) * Math.exp(-t * 90) * 7000);
+            }
+        }
+        return s;
+    }
+
+    /** El "tump" hueco del lanzagranadas. */
+    private static short[] tubo(Random r) {
+        int n = (int) (0.35f * TASA);
+        short[] s = new short[n];
+        float lp = 0;
+        for (int i = 0; i < n; i++) {
+            float t = i / (float) TASA;
+            lp += (r.nextFloat() * 2 - 1 - lp) * 0.12f;
+            float golpe = (float) Math.sin(2 * Math.PI * 70 * t * (1 - t)) * (float) Math.exp(-t * 11);
+            float aire = lp * (float) Math.exp(-t * 16) * 2.2f;
+            s[i] = (short) (Math.max(-1, Math.min(1, golpe * 0.9f + aire)) * 30000);
+        }
+        return s;
+    }
+
+    /** La explosión: un golpe grave y ruido que se oscurece, con un retumbe largo. */
+    private static short[] explosion(Random r) {
+        int n = (int) (1.6f * TASA);
+        short[] s = new short[n];
+        float lp = 0, lp2 = 0;
+        for (int i = 0; i < n; i++) {
+            float t = i / (float) TASA;
+            float corte = 0.5f * (float) Math.exp(-t * 5) + 0.03f;
+            lp += (r.nextFloat() * 2 - 1 - lp) * corte;
+            lp2 += (lp - lp2) * corte;
+            float env = t < 0.01f ? t / 0.01f : (float) Math.exp(-(t - 0.01f) * 2.6f);
+            float grave = (float) Math.sin(2 * Math.PI * 45 * t * (1 - t * 0.3f)) * (float) Math.exp(-t * 4);
+            s[i] = (short) (Math.max(-1, Math.min(1, lp2 * env * 3.2f + grave * 0.8f)) * 32000);
+        }
+        return s;
+    }
+
+    /** Un "ding" metálico (blanco pegado, clic del menú). */
+    private static short[] campana(float f, float dur) {
+        int n = (int) (dur * TASA);
+        short[] s = new short[n];
+        for (int i = 0; i < n; i++) {
+            float t = i / (float) TASA;
+            double v = Math.sin(2 * Math.PI * f * t) + 0.5 * Math.sin(2 * Math.PI * f * 2.76 * t) * Math.exp(-t * 20)
+                    + 0.3 * Math.sin(2 * Math.PI * f * 5.4 * t) * Math.exp(-t * 40);
+            s[i] = (short) (v * Math.exp(-t * 9 / dur * 0.35) * 9000);
         }
         return s;
     }

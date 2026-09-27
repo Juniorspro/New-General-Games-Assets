@@ -108,7 +108,7 @@ public class PruebaMano {
 
         // 1) la pose de cada foto
         String[][] esperado = {{"fist", "aprieta"}, {"thumb_up", "aprieta"}, {"pointing_up", "empuña"}, {"pointing_up_rotated", "empuña"},
-                {"victory", "otra"}, {"right_hands", "abierta"}, {"right_hands#2", "abierta"}, {"woman_hands", "abierta"}, {"woman_hands#2", "abierta"}};
+                {"victory", "V"}, {"right_hands", "abierta"}, {"right_hands#2", "abierta"}, {"woman_hands", "abierta"}, {"woman_hands#2", "abierta"}};
         for (String[] e : esperado) {
             Mano m = new Mano();
             int p = m.clasificar(fotos.get(e[0]).mundo);

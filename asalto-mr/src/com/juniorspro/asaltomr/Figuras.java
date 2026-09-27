@@ -132,14 +132,32 @@ final class Figuras {
         GLES20.glUniformMatrix4fv(cUMvp, 1, false, mvp, 0);
         // escala no uniforme: la normal se corrige en el shader con normalize (aproximado, alcanza)
         GLES20.glUniformMatrix4fv(cUModelo, 1, false, t, 0);
+        if (tinte > 0) { r += (1f - r) * tinte; g *= 1 - tinte; b *= 1 - tinte; }
         GLES20.glUniform4f(cUColor, r, g, b, a);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
     }
 
-    // colores del uniforme
-    private static final float UR = 0.16f, UG = 0.17f, UB = 0.12f;   // verde oliva muy oscuro
-    private static final float PR = 0.10f, PG = 0.10f, PB = 0.09f;   // pantalón / botas
-    private static final float CR = 0.07f, CG = 0.08f, CB = 0.06f;   // casco
+    /** 0..1: cuánto se pone rojo lo que se dibuja (el soldado al que le acaban de pegar). */
+    private float tinte;
+
+    // colores del uniforme, por tipo: normal (verde oliva muy oscuro), pesado (blindado gris azulado), rápido (arena)
+    private float UR, UG, UB, PR, PG, PB, CR, CG, CB, VR, VG, VB;
+
+    private void colores(int tipo) {
+        switch (tipo) {
+            case Juego.PESADO:
+                UR = 0.13f; UG = 0.15f; UB = 0.18f; PR = 0.08f; PG = 0.09f; PB = 0.1f;
+                CR = 0.1f; CG = 0.11f; CB = 0.13f; VR = 0.2f; VG = 0.22f; VB = 0.26f;
+                break;
+            case Juego.RAPIDO:
+                UR = 0.42f; UG = 0.36f; UB = 0.24f; PR = 0.25f; PG = 0.22f; PB = 0.16f;
+                CR = 0.55f; CG = 0.08f; CB = 0.06f; VR = 0.3f; VG = 0.26f; VB = 0.17f;
+                break;
+            default:
+                UR = 0.16f; UG = 0.17f; UB = 0.12f; PR = 0.10f; PG = 0.10f; PB = 0.09f;
+                CR = 0.07f; CG = 0.08f; CB = 0.06f; VR = 0.12f; VG = 0.13f; VB = 0.09f;
+        }
+    }
 
     void dibujarSoldados(List<Juego.Soldado> soldados, float[] vp) {
         empezarCajas(vp);
@@ -157,6 +175,11 @@ final class Figuras {
             girarY(s.yaw);
             girarX(s.caida);
             nivel = 0;
+            colores(s.tipo);
+            tinte = s.herido > 0 && Juego.enPie(s) ? Math.min(0.45f, s.herido * 4f) : 0;
+            // el pesado es más ancho (blindaje); el rápido, más flaco
+            if (s.tipo == Juego.PESADO) Matrix.scaleM(m, 0, 1.22f, 1f, 1.22f);
+            else if (s.tipo == Juego.RAPIDO) Matrix.scaleM(m, 0, 0.92f, 1f, 0.92f);
             float paso = (float) Math.sin(s.fase), corre = s.estado == Juego.CORRE ? 1f : s.estado == Juego.APUNTA ? 0.15f : 0f;
             float ag = s.agachado;                 // detrás de una cubierta
             float brazos = Math.max(s.apunta, 0.5f * ag);
@@ -180,13 +203,20 @@ final class Figuras {
             }
             // torso con chaleco
             caja(0, 1.18f, 0, 0.38f, 0.56f, 0.23f, UR, UG, UB, a);
-            caja(0, 1.2f, 0.02f, 0.4f, 0.4f, 0.24f, 0.12f, 0.13f, 0.09f, a);
+            if (s.tipo != Juego.RAPIDO) caja(0, 1.2f, 0.02f, 0.4f, 0.4f, 0.24f, VR, VG, VB, a);
+            if (s.tipo == Juego.PESADO) {   // hombreras y placa
+                caja(-0.24f, 1.4f, 0, 0.14f, 0.08f, 0.2f, VR, VG, VB, a);
+                caja(0.24f, 1.4f, 0, 0.14f, 0.08f, 0.2f, VR, VG, VB, a);
+                caja(0, 1.2f, 0.14f, 0.3f, 0.3f, 0.03f, 0.26f, 0.28f, 0.32f, a);
+            }
             // cabeza y casco
             empujar();
             mover(0, 1.5f, 0);
             girarX(cae ? 0.5f : 0);
             caja(0, 0.12f, 0, 0.19f, 0.22f, 0.21f, 0.18f, 0.14f, 0.11f, a);
-            caja(0, 0.2f, -0.01f, 0.25f, 0.13f, 0.27f, CR, CG, CB, a);
+            if (s.tipo == Juego.RAPIDO) caja(0, 0.24f, 0, 0.21f, 0.07f, 0.23f, CR, CG, CB, a);   // boina roja
+            else caja(0, 0.2f, -0.01f, 0.25f, 0.13f, 0.27f, CR, CG, CB, a);
+            if (s.tipo == Juego.PESADO) caja(0, 0.13f, 0.1f, 0.2f, 0.08f, 0.04f, 0.02f, 0.03f, 0.04f, a);   // visor
             sacar();
             // brazos (hombro a 1.42 m): corriendo se balancean, apuntando van al frente con el fusil
             for (int lado = -1; lado <= 1; lado += 2) {
@@ -211,6 +241,7 @@ final class Figuras {
             if (s.fogonazo > 0) caja(0, 0, 0.5f, 0.12f, 0.12f, 0.18f, 3f, 2.4f, 1.2f, 1f);
             sacar();
         }
+        tinte = 0;
         if (mezcla) GLES20.glDisable(GLES20.GL_BLEND);
         terminarCajas();
     }
@@ -225,50 +256,68 @@ final class Figuras {
     }
 
     /**
-     * Dónde va la pistola en la vista: abajo a la derecha, en proporción al
-     * campo visual (la cámara del teléfono es angosta: en metros fijos quedaría
-     * fuera de cuadro o gigante). Devuelve {x, y, z, escala}.
+     * Dónde está la boca de cada arma en su modelo (y arriba, z adelante negativo),
+     * con el origen en la base de la corredera (arriba y adelante del mango).
      */
-    static float[] lugarPistola(float[] proy) {
-        float z = -0.4f;
-        float s = 1.9f / proy[5];                   // como si la vista tuviera ~55° de alto
-        return new float[]{0.52f * -z / proy[0], -0.58f * -z / proy[5], z, s};
+    static final float[][] BOCA = {{0.028f, -0.14f}, {0.025f, -0.505f}, {0.04f, -0.565f}, {0.04f, -0.345f}};
+
+    /**
+     * Dónde va el arma en la vista: abajo a la derecha, en proporción al
+     * campo visual (la cámara del teléfono es angosta: en metros fijos quedaría
+     * fuera de cuadro o gigante). Las largas, más al centro y más abajo.
+     * Devuelve {x, y, z, escala}.
+     */
+    static float[] lugarArma(float[] proy, int tipo) {
+        boolean larga = tipo != Juego.PISTOLA;
+        float z = larga ? -0.5f : -0.4f;
+        float s = (larga ? 1.45f : 1.9f) / proy[5];   // como si la vista tuviera ~55° de alto
+        return new float[]{(larga ? 0.44f : 0.52f) * -z / proy[0], (larga ? -0.6f : -0.58f) * -z / proy[5], z, s};
     }
 
-    /** La boca de la pistola en el espacio de la vista (de ahí sale la trazadora y el fogonazo). */
-    static float[] bocaPistola(float[] proy) {
-        float[] l = lugarPistola(proy);
-        return new float[]{l[0], l[1] + 0.028f * l[3], l[2] - 0.14f * l[3]};
+    /** La boca del arma en el espacio de la vista (de ahí sale la trazadora y el fogonazo). */
+    static float[] bocaArma(float[] proy, int tipo) {
+        float[] l = lugarArma(proy, tipo);
+        return new float[]{l[0], l[1] + BOCA[tipo][0] * l[3], l[2] + BOCA[tipo][1] * l[3]};
+    }
+
+    /** La boca del arma en la mano (hand tracking): pos es el centro del mango. */
+    static void bocaEnMano(int tipo, float[] pos, float[] adelante, float[] arriba, float[] salida) {
+        float up = Mano.BASE_ARRIBA + BOCA[tipo][0], fw = Mano.BASE_ADELANTE - BOCA[tipo][1];
+        for (int i = 0; i < 3; i++) salida[i] = pos[i] + adelante[i] * fw + arriba[i] * up;
     }
 
     /**
-     * La pistola, en el espacio de la vista (pegada a la cámara/ojo).
-     * @param proy la proyección del ojo (con su corrimiento de IPD)
+     * El arma, en el espacio de la vista (pegada a la cámara/ojo).
+     * @param proy   la proyección del ojo (con su corrimiento de IPD)
+     * @param recarga 0..1..0 durante la recarga (baja y gira)
+     * @param saca   0..1 al cambiar de arma (1 = abajo, fuera de vista)
      */
-    void dibujarPistola(float[] proy, float retroceso, float recarga, float t) {
-        float[] l = lugarPistola(proy);
+    void dibujarArma(float[] proy, int tipo, float retroceso, float recarga, float saca, float tiempo) {
+        float[] l = lugarArma(proy, tipo);
         empezarCajas(proy);
         Matrix.setIdentityM(m, 0);
-        float bamboleo = (float) Math.sin(t * 1.7f) * 0.004f;
-        mover(l[0], l[1] + (bamboleo - recarga * 0.12f) * l[3], l[2] + retroceso * 0.05f * l[3]);
+        nivel = 0;
+        float bamboleo = (float) Math.sin(tiempo * 1.7f) * 0.004f;
+        mover(l[0], l[1] + (bamboleo - recarga * 0.12f - saca * 0.3f) * l[3], l[2] + retroceso * (tipo == Juego.PISTOLA ? 0.05f : 0.035f) * l[3]);
         Matrix.scaleM(m, 0, l[3], l[3], l[3]);
-        girarX(retroceso * 0.35f - recarga * 0.9f);
+        girarX(retroceso * (tipo == Juego.PISTOLA ? 0.35f : 0.12f) - recarga * 0.9f - saca * 0.8f);
         girarY(0.05f);
-        cajasPistola(true);
+        cajasArma(tipo, true, retroceso);
         terminarCajas();
     }
 
     /**
-     * La pistola EN LA MANO (hand tracking): en el mundo, con el caño hacia
+     * El arma EN LA MANO (hand tracking): en el mundo, con el caño hacia
      * "adelante" y la corredera hacia "arriba"; pos es el centro del mango.
      */
-    void dibujarPistolaEnMano(float[] vp, float[] pos, float[] adelante, float[] arriba, float retroceso) {
+    void dibujarArmaEnMano(float[] vp, int tipo, float[] pos, float[] adelante, float[] arriba, float retroceso, float saca) {
         empezarCajas(vp);
         // ejes locales: X derecha, Y arriba, Z atrás (el caño va hacia −Z)
         float zx = -adelante[0], zy = -adelante[1], zz = -adelante[2];
         float yx = arriba[0], yy = arriba[1], yz = arriba[2];
         float xx = yy * zz - yz * zy, xy = yz * zx - yx * zz, xz = yx * zy - yy * zx;
         Matrix.setIdentityM(m, 0);
+        nivel = 0;
         m[0] = xx; m[1] = xy; m[2] = xz;
         m[4] = yx; m[5] = yy; m[6] = yz;
         m[8] = zx; m[9] = zy; m[10] = zz;
@@ -276,25 +325,216 @@ final class Figuras {
         m[12] = pos[0] + yx * Mano.BASE_ARRIBA + adelante[0] * Mano.BASE_ADELANTE;
         m[13] = pos[1] + yy * Mano.BASE_ARRIBA + adelante[1] * Mano.BASE_ADELANTE;
         m[14] = pos[2] + yz * Mano.BASE_ARRIBA + adelante[2] * Mano.BASE_ADELANTE;
-        girarX(retroceso * 0.35f);
-        cajasPistola(false);
+        girarX(retroceso * (tipo == Juego.PISTOLA ? 0.35f : 0.15f));
+        if (saca > 0) { float e = 1 - saca * 0.9f; Matrix.scaleM(m, 0, e, e, e); }   // aparece al cambiar
+        cajasArma(tipo, false, retroceso);
         terminarCajas();
     }
 
-    /** Las cajas de la pistola, en el marco actual. conGuante: la mano virtual (en la mano real no hace falta). */
-    private void cajasPistola(boolean conGuante) {
-        // corredera, armazón, cañón, empuñadura, guardamonte
-        caja(0, 0.025f, -0.02f, 0.034f, 0.035f, 0.2f, 0.09f, 0.09f, 0.1f, 1);
-        caja(0, 0.0f, 0.0f, 0.03f, 0.025f, 0.17f, 0.05f, 0.05f, 0.055f, 1);
-        caja(0, 0.028f, -0.125f, 0.014f, 0.014f, 0.03f, 0.02f, 0.02f, 0.02f, 1);
+    /** Las cajas del arma, en el marco actual. conGuante: la mano virtual (en la mano real no hace falta). */
+    private void cajasArma(int tipo, boolean conGuante, float retroceso) {
+        switch (tipo) {
+            case Juego.FUSIL: cajasFusil(); break;
+            case Juego.ESCOPETA: cajasEscopeta(retroceso); break;
+            case Juego.LANZAGRANADAS: cajasLanzagranadas(retroceso); break;
+            default: cajasPistola();
+        }
+        // la mano (un guante oscuro)
+        if (conGuante) caja(0.008f, -0.06f, 0.07f, 0.05f, 0.08f, 0.07f, 0.12f, 0.1f, 0.09f, 1);
+    }
+
+    /** El mango, igual en todas (la mano real lo agarra en el mismo lugar). */
+    private void mango(float r, float g, float b) {
         empujar();
         mover(0, -0.05f, 0.055f);
         girarX(0.28f);
-        caja(0, -0.01f, 0, 0.03f, 0.1f, 0.045f, 0.04f, 0.035f, 0.035f, 1);
+        caja(0, -0.01f, 0, 0.03f, 0.1f, 0.045f, r, g, b, 1);
         sacar();
-        caja(0, -0.025f, -0.01f, 0.012f, 0.03f, 0.05f, 0.04f, 0.04f, 0.045f, 1);
-        // la mano (un guante oscuro)
-        if (conGuante) caja(0.008f, -0.06f, 0.07f, 0.05f, 0.08f, 0.07f, 0.12f, 0.1f, 0.09f, 1);
+        caja(0, -0.025f, -0.01f, 0.012f, 0.03f, 0.05f, 0.04f, 0.04f, 0.045f, 1);   // guardamonte
+    }
+
+    private void cajasPistola() {
+        // corredera, armazón, cañón
+        caja(0, 0.025f, -0.02f, 0.034f, 0.035f, 0.2f, 0.09f, 0.09f, 0.1f, 1);
+        caja(0, 0.0f, 0.0f, 0.03f, 0.025f, 0.17f, 0.05f, 0.05f, 0.055f, 1);
+        caja(0, 0.028f, -0.125f, 0.014f, 0.014f, 0.03f, 0.02f, 0.02f, 0.02f, 1);
+        mango(0.04f, 0.035f, 0.035f);
+    }
+
+    // fusil: negro con partes color arena
+    private void cajasFusil() {
+        final float nr = 0.06f, ng = 0.06f, nb = 0.065f, ar = 0.32f, ag = 0.27f, ab = 0.19f;
+        caja(0, 0.02f, -0.02f, 0.05f, 0.065f, 0.3f, nr, ng, nb, 1);          // cajón de mecanismos
+        caja(0, 0.022f, -0.26f, 0.056f, 0.06f, 0.2f, ar, ag, ab, 1);         // guardamanos
+        caja(0, 0.025f, -0.43f, 0.02f, 0.02f, 0.15f, 0.03f, 0.03f, 0.03f, 1); // cañón
+        caja(0, 0.025f, -0.495f, 0.032f, 0.032f, 0.03f, 0.02f, 0.02f, 0.02f, 1); // apagallamas
+        caja(0, 0.062f, -0.33f, 0.012f, 0.03f, 0.012f, nr, ng, nb, 1);       // mira delantera
+        // la mira telescópica, con los lentes que brillan un poco
+        caja(0, 0.088f, -0.04f, 0.04f, 0.042f, 0.17f, 0.03f, 0.03f, 0.035f, 1);
+        caja(0, 0.088f, -0.13f, 0.05f, 0.05f, 0.025f, 0.03f, 0.03f, 0.035f, 1);
+        caja(0, 0.088f, -0.144f, 0.036f, 0.036f, 0.004f, 0.25f, 0.5f, 0.9f, 1);
+        caja(0, 0.06f, -0.04f, 0.02f, 0.02f, 0.06f, nr, ng, nb, 1);          // montura
+        // el cargador curvo
+        empujar();
+        mover(0, -0.03f, -0.08f);
+        girarX(-0.22f);
+        caja(0, -0.07f, 0, 0.034f, 0.14f, 0.07f, ar, ag, ab, 1);
+        sacar();
+        mango(nr, ng, nb);
+        caja(0, 0.005f, 0.22f, 0.045f, 0.075f, 0.2f, ar, ag, ab, 1);        // culata
+        caja(0, -0.015f, 0.33f, 0.05f, 0.12f, 0.03f, 0.05f, 0.05f, 0.05f, 1); // cantonera
+    }
+
+    // escopeta de corredera: madera y metal pavonado; la corredera va y viene al tirar
+    private void cajasEscopeta(float bombeo) {
+        final float mr = 0.11f, mg = 0.11f, mb = 0.12f, wr = 0.38f, wg = 0.22f, wb = 0.11f;
+        caja(0, 0.02f, -0.02f, 0.05f, 0.07f, 0.22f, mr, mg, mb, 1);           // cajón
+        caja(0, 0.042f, -0.33f, 0.03f, 0.03f, 0.47f, 0.08f, 0.08f, 0.09f, 1); // cañón
+        caja(0, 0.062f, -0.55f, 0.01f, 0.012f, 0.01f, 0.9f, 0.85f, 0.7f, 1);  // mira de punto
+        caja(0, 0.006f, -0.27f, 0.026f, 0.026f, 0.34f, mr, mg, mb, 1);       // tubo del cargador
+        float b = (float) Math.sin(Math.min(1f, bombeo) * Math.PI) * 0.08f;
+        caja(0, 0.006f, -0.27f + b, 0.048f, 0.048f, 0.14f, wr, wg, wb, 1);   // la corredera (madera)
+        mango(wr * 0.8f, wg * 0.8f, wb * 0.8f);
+        caja(0, 0.0f, 0.2f, 0.045f, 0.08f, 0.22f, wr, wg, wb, 1);            // culata
+        caja(0, -0.02f, 0.31f, 0.048f, 0.13f, 0.03f, 0.06f, 0.05f, 0.05f, 1);
+    }
+
+    // lanzagranadas de tambor: verde oliva, caño gordo, el tambor gira al tirar
+    private void cajasLanzagranadas(float retroceso) {
+        final float or = 0.2f, og = 0.25f, ob = 0.14f;
+        caja(0, 0.04f, -0.19f, 0.085f, 0.085f, 0.3f, or, og, ob, 1);         // caño
+        caja(0, 0.04f, -0.335f, 0.098f, 0.098f, 0.025f, 0.05f, 0.05f, 0.05f, 1);
+        caja(0, 0.04f, -0.345f, 0.06f, 0.06f, 0.004f, 0.01f, 0.01f, 0.01f, 1); // la boca (negra)
+        caja(0, 0.1f, -0.12f, 0.02f, 0.05f, 0.02f, 0.05f, 0.05f, 0.05f, 1);   // mira
+        // el tambor: un prisma de 6 caras (3 cajas giradas)
+        empujar();
+        mover(0, 0.03f, 0.02f);
+        girarZ(retroceso * 1.05f);
+        for (int k = 0; k < 3; k++) {
+            empujar();
+            girarZ(k * (float) Math.PI / 3f);
+            caja(0, 0, 0, 0.14f, 0.08f, 0.1f, 0.12f, 0.14f, 0.09f, 1);
+            sacar();
+        }
+        sacar();
+        mango(0.05f, 0.05f, 0.05f);
+        caja(0, -0.005f, 0.15f, 0.03f, 0.05f, 0.14f, 0.05f, 0.05f, 0.05f, 1); // culata plegable
+        caja(0, -0.01f, 0.22f, 0.035f, 0.1f, 0.025f, 0.05f, 0.05f, 0.05f, 1);
+    }
+
+    // ── granadas en vuelo y blancos de práctica ──
+
+    void dibujarGranadas(List<Juego.Granada> gs, float[] vp) {
+        if (gs.isEmpty()) return;
+        empezarCajas(vp);
+        for (Juego.Granada g : gs) {
+            Matrix.setIdentityM(m, 0);
+            nivel = 0;
+            mover(g.x, g.y, g.z);
+            float vl = (float) Math.sqrt(g.vx * g.vx + g.vz * g.vz);
+            if (vl > 0.1f) girarY((float) Math.atan2(g.vx, g.vz));
+            girarX(g.giro);
+            caja(0, 0, 0, 0.045f, 0.045f, 0.07f, 0.2f, 0.25f, 0.14f, 1);
+            caja(0, 0, -0.03f, 0.05f, 0.05f, 0.012f, 0.55f, 0.45f, 0.2f, 1);   // la punta de bronce
+            boolean luz = ((int) (g.t * (g.t > 1.6f ? 16 : 7))) % 2 == 0;
+            if (luz) caja(0, 0.026f, 0.01f, 0.014f, 0.01f, 0.014f, 3f, 0.4f, 0.3f, 1);
+        }
+        terminarCajas();
+    }
+
+    private FloatBuffer disco;
+
+    /** Radios de los anillos del blanco (de afuera hacia adentro; el último es el centro). */
+    static final float[] ANILLOS = {1f, 0.78f, 0.56f, 0.34f, 0.14f};
+    static final int LADOS = 32;
+
+    /**
+     * El blanco en el plano XY mirando a +Z, radio 1: un centro (abanico) y
+     * coronas que NO se superponen (tiras entre dos radios), así no hay dos
+     * polígonos en el mismo lugar peleando por la profundidad (con 16 bits, a
+     * 5 m, se vería rayado). Primero el centro (34 vértices), después cada
+     * corona de afuera hacia adentro (2·(LADOS+1) vértices cada una).
+     */
+    static float[] disco() {
+        int nc = LADOS + 2, na = 2 * (LADOS + 1);
+        float[] v = new float[(nc + na * (ANILLOS.length - 1)) * 6];
+        int k = 0;
+        float rc = ANILLOS[ANILLOS.length - 1];
+        v[k++] = 0; v[k++] = 0; v[k++] = 0; v[k++] = 0; v[k++] = 0; v[k++] = 1;
+        for (int i = 0; i <= LADOS; i++) {
+            double a = 2 * Math.PI * i / LADOS;
+            v[k++] = rc * (float) Math.cos(a); v[k++] = rc * (float) Math.sin(a); v[k++] = 0;
+            v[k++] = 0; v[k++] = 0; v[k++] = 1;
+        }
+        for (int r = 0; r < ANILLOS.length - 1; r++) {
+            for (int i = 0; i <= LADOS; i++) {
+                double a = 2 * Math.PI * i / LADOS;
+                float c = (float) Math.cos(a), sn = (float) Math.sin(a);
+                v[k++] = ANILLOS[r] * c; v[k++] = ANILLOS[r] * sn; v[k++] = 0; v[k++] = 0; v[k++] = 0; v[k++] = 1;
+                v[k++] = ANILLOS[r + 1] * c; v[k++] = ANILLOS[r + 1] * sn; v[k++] = 0; v[k++] = 0; v[k++] = 0; v[k++] = 1;
+            }
+        }
+        return v;
+    }
+
+    /** Los blancos de la práctica: anillos rojos y blancos pegados a la pared; al pegarles se dan vuelta. */
+    void dibujarBlancos(List<Juego.Blanco> bs, float[] vp) {
+        if (bs.isEmpty()) return;
+        if (disco == null) disco = Gl.bufer(disco());
+        this.vp = vp;
+        GLES20.glUseProgram(progCaja);
+        disco.position(0);
+        GLES20.glVertexAttribPointer(cAPos, 3, GLES20.GL_FLOAT, false, 24, disco);
+        disco.position(3);
+        GLES20.glVertexAttribPointer(cANor, 3, GLES20.GL_FLOAT, false, 24, disco);
+        GLES20.glEnableVertexAttribArray(cAPos);
+        GLES20.glEnableVertexAttribArray(cANor);
+        GLES20.glUniform3f(cULuz, 0.37f, 0.84f, 0.4f);
+        GLES20.glDisable(GLES20.GL_CULL_FACE);
+        GLES20.glEnable(GLES20.GL_POLYGON_OFFSET_FILL);
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        GLES20.glPolygonOffset(-1f, -2f);   // un poquito adelante de la malla de la pared
+        for (Juego.Blanco b : bs) {
+            // marco: Z = la normal, X horizontal
+            float nx = b.nx, ny = b.ny, nz = b.nz;
+            float xx = nz, xy = 0, xz = -nx;   // arriba × normal
+            float xl = (float) Math.sqrt(xx * xx + xz * xz);
+            if (xl < 0.1f) { xx = 1; xz = 0; xl = 1; }
+            xx /= xl; xz /= xl;
+            float yx = ny * xz - nz * xy, yy = nz * xx - nx * xz, yz = nx * xy - ny * xx;
+            Matrix.setIdentityM(m, 0);
+            m[0] = xx; m[1] = xy; m[2] = xz;
+            m[4] = yx; m[5] = yy; m[6] = yz;
+            m[8] = nx; m[9] = ny; m[10] = nz;
+            m[12] = b.x; m[13] = b.y; m[14] = b.z;
+            float esc = b.radio, alfa = 1f;
+            if (b.golpe >= 0) {   // pegado: se da vuelta y se achica
+                girarX(b.golpe * 7f);
+                esc *= Math.max(0, 1 - b.golpe / 0.5f);
+            } else {
+                esc *= Math.min(1f, b.t / 0.2f);                  // aparece
+                if (b.t > 4.5f && ((int) (b.t * 8)) % 2 == 0) alfa = 0.35f;   // se va: titila
+            }
+            if (esc <= 0.001f) continue;
+            Matrix.scaleM(m, 0, esc, esc, esc);
+            Matrix.multiplyMM(mvp, 0, vp, 0, m, 0);
+            GLES20.glUniformMatrix4fv(cUMvp, 1, false, mvp, 0);
+            GLES20.glUniformMatrix4fv(cUModelo, 1, false, m, 0);
+            int nc = LADOS + 2, na = 2 * (LADOS + 1);
+            GLES20.glUniform4f(cUColor, 1.4f, 1.2f, 0.28f, alfa);   // el centro, amarillo
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, nc);
+            for (int r = 0; r < ANILLOS.length - 1; r++) {
+                boolean rojo = r % 2 == 0;
+                if (rojo) GLES20.glUniform4f(cUColor, 1.2f, 0.14f, 0.11f, alfa);
+                else GLES20.glUniform4f(cUColor, 1.33f, 1.33f, 1.29f, alfa);
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, nc + r * na, na);
+            }
+        }
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glDisable(GLES20.GL_POLYGON_OFFSET_FILL);
+        GLES20.glDisableVertexAttribArray(cAPos);
+        GLES20.glDisableVertexAttribArray(cANor);
     }
 
     // ── el láser de la mira y el esqueleto de la mano ──
@@ -389,6 +629,7 @@ final class Figuras {
                 case Juego.P_POLVO: r = 0.55f; g = 0.47f; b = 0.36f; a = 0.55f * f; break;
                 case Juego.P_TROZO: r = 0.07f; g = 0.06f; b = 0.05f; a = Math.min(1f, f * 3); break;
                 case Juego.P_FOGONAZO: r = 1f; g = 0.85f; b = 0.45f; a = 1f; break;
+                case Juego.P_FUEGO: r = 1f; g = 0.3f + 0.6f * f; b = 0.08f + 0.3f * f * f; a = Math.min(1f, 1.4f * f); break;
                 default: r = 0.75f; g = 0.75f; b = 0.72f; a = 0.35f * f;   // humo
             }
             puntos.put(p.x).put(p.y).put(p.z).put(p.tam).put(r).put(g).put(b).put(a);

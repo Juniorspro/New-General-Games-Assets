@@ -171,8 +171,25 @@ async function foto(modo, nombre) {
       }
       gl.disableVertexAttribArray(n);
     };
+    // ── discos (los blancos de práctica que grabó Figuras.dibujarBlancos) ──
+    const fb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, fb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(datos.vistas.disco || [0]), gl.STATIC_DRAW);
+    const discos = (lista) => {
+      if (!lista || !lista.length) return;
+      gl.useProgram(P.caja); gl.bindBuffer(gl.ARRAY_BUFFER, fb);
+      const a = A(P.caja, "aPos"), n = A(P.caja, "aNor");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(n, 3, gl.FLOAT, false, 24, 12); gl.enableVertexAttribArray(n);
+      gl.uniform3f(U(P.caja, "uLuz"), 0.37, 0.84, 0.4);
+      gl.enable(gl.POLYGON_OFFSET_FILL); gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      for (const k of lista) {
+        gl.polygonOffset(k[36], k[37]);
+        gl.uniformMatrix4fv(U(P.caja, "uMvp"), false, k.slice(0, 16)); gl.uniformMatrix4fv(U(P.caja, "uModelo"), false, k.slice(16, 32));
+        gl.uniform4f(U(P.caja, "uColor"), k[32], k[33], k[34], k[35]); gl.drawArrays(k[38], k[39], k[40]);
+      }
+      gl.disable(gl.BLEND); gl.disable(gl.POLYGON_OFFSET_FILL); gl.disableVertexAttribArray(n);
+    };
     // ── partículas (con el shader de Figuras) ──
-    const colores = [[1,0.75,0.3],[0.55,0.47,0.36],[0.07,0.06,0.05],[0.75,0.75,0.72],[1,0.85,0.45]];
+    const colores = [[1,0.75,0.3],[0.55,0.47,0.36],[0.07,0.06,0.05],[0.75,0.75,0.72],[1,0.85,0.45],[1,0.6,0.2]];
     const pts = []; for (const [x,y,z,t,tipo,f] of datos.particulas) { const c = colores[tipo]; const a = tipo===0?f:tipo===1?0.55*f:tipo===2?Math.min(1,f*3):tipo===4?1:0.35*f; pts.push(x,y,z,t,...c,a); }
     const pb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, pb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pts), gl.STATIC_DRAW);
     const particulas = (vp, escala) => {
@@ -248,6 +265,20 @@ async function foto(modo, nombre) {
         gl.bindBuffer(gl.ARRAY_BUFFER, quad); const a = A(P.lentes, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 8, 0); gl.enableVertexAttribArray(a);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
+      gl.disable(gl.SCISSOR_TEST);
+    } else if (modo === "armas") {
+      // las cuatro armas, una por cuadro (cada cuadro con la misma proporción de la pantalla)
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      datos.vistas.armas.forEach((v, k) => {
+        const x = (k % 2) * W / 2, y = (k < 2 ? 1 : 0) * H / 2;
+        gl.enable(gl.SCISSOR_TEST); gl.scissor(x, y, W / 2, H / 2); gl.viewport(x, y, W / 2, H / 2); gl.clear(gl.DEPTH_BUFFER_BIT);
+        dibujarCamara(v.vp); profundidad(v.vp);
+        cajas(v.cajas.slice(0, v.nSoldados));
+        discos(v.discos);
+        lineas(v.vp, 3.2, 0.1);
+        gl.clear(gl.DEPTH_BUFFER_BIT); cajas(v.cajas.slice(v.nSoldados));
+        mira(W / H);
+      });
       gl.disable(gl.SCISSOR_TEST);
     } else {
       gl.viewport(0, 0, W, H); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -360,6 +391,7 @@ await foto("juego", "juego");
 await foto("ia", "ia");
 await foto("escaneo", "escaneo");
 await foto("sbs", "sbs");
+await foto("armas", "armas");
 await fotoMapa();
 if (process.argv[4]) await fotoMano(process.argv[4]);
 await nav.close();

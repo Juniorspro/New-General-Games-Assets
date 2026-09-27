@@ -160,8 +160,8 @@ final class Hud {
     }
 
     /** Repinta el texto si cambió. arriba = estado; abajo = aviso grande (o null). */
-    void poner(String arriba, float vida, int balas, int cargador, boolean recargando, String abajo) {
-        String clave = arriba + "|" + (int) vida + "|" + balas + "|" + recargando + "|" + abajo;
+    void poner(String arriba, float vida, int balas, int cargador, boolean recargando, String arma, String abajo) {
+        String clave = arriba + "|" + (int) vida + "|" + balas + "|" + cargador + "|" + recargando + "|" + arma + "|" + abajo;
         long ahora = System.currentTimeMillis();
         boolean mapaViejo = grilla != null && ahora - ultimoMapa > 250;
         if (clave.equals(ultimo) && !mapaViejo) return;
@@ -172,21 +172,29 @@ final class Hud {
         // arriba: puntos · oleada
         canvas.drawRoundRect(new RectF(8, 8, W - 8, 150), 24, 24, caja);
         String[] l = arriba.split("\n");
-        canvas.drawText(l[0], 32, 72, grande);
-        if (l.length > 1) canvas.drawText(l[1], 32, 126, chico);
+        texto(l[0], 32, 72, grande, 560);
+        if (l.length > 1) texto(l[1], 32, 126, chico, 560);
         // vida
         float x0 = 620, x1 = W - 32;
         barra.setColor(0x66000000);
         canvas.drawRoundRect(new RectF(x0, 36, x1, 64), 12, 12, barra);
         barra.setColor(vida > 50 ? 0xFF3DDC84 : vida > 25 ? 0xFFFFC107 : 0xFFFF3B30);
         canvas.drawRoundRect(new RectF(x0, 36, x0 + (x1 - x0) * Math.max(0, vida) / 100f, 64), 12, 12, barra);
-        // balas: rayitas
-        for (int i = 0; i < cargador; i++) {
-            barra.setColor(i < balas ? 0xFFFFE0A0 : 0x44FFFFFF);
-            float bx = x1 - (cargador - i) * 30;
-            canvas.drawRoundRect(new RectF(bx, 84, bx + 18, 128), 5, 5, barra);
+        // balas: rayitas (entran en el mismo ancho sea el cargador que sea)
+        if (cargador > 0 && !recargando) {
+            float paso = Math.min(30, 250f / cargador), bw = Math.max(3, paso * 0.6f);
+            for (int i = 0; i < cargador; i++) {
+                barra.setColor(i < balas ? 0xFFFFE0A0 : 0x44FFFFFF);
+                float bx = x1 - (cargador - i) * paso;
+                canvas.drawRoundRect(new RectF(bx, 84, bx + bw, 128), 4, 4, barra);
+            }
         }
-        if (recargando) canvas.drawText("RECARGANDO", x0, 126, chico);
+        if (arma != null) {   // el arma, abajo a la derecha del recuadro
+            String t = recargando ? "RECARGANDO" : arma;
+            float w = chico.measureText(t);
+            canvas.drawRoundRect(new RectF(x1 - w - 24, 160, x1 + 12, 208), 16, 16, caja);
+            canvas.drawText(t, x1 - w - 6, 196, chico);
+        }
         if (abajo != null && !abajo.isEmpty()) {
             String[] a = abajo.split("\n");
             float y = 300;
@@ -202,6 +210,16 @@ final class Hud {
         }
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textura);
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, lienzo, 0);
+    }
+
+    /** Texto que se achica si no entra en el ancho. */
+    private void texto(String t, float x, float y, Paint p, float ancho) {
+        float w = p.measureText(t);
+        if (w <= ancho) { canvas.drawText(t, x, y, p); return; }
+        float tam = p.getTextSize();
+        p.setTextSize(tam * ancho / w);
+        canvas.drawText(t, x, y, p);
+        p.setTextSize(tam);
     }
 
     /**

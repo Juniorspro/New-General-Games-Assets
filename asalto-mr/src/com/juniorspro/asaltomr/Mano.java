@@ -11,7 +11,8 @@ package com.juniorspro.asaltomr;
  *   EMPUÑA     medio, anular y meñique cerrados, índice estirado (listo)
  *   APRIETA    medio, anular y meñique cerrados, índice cerrado (gatillo)
  *   ABIERTA    los cuatro estirados (recargar)
- *   OTRA       lo demás (la V, etc.)
+ *   VE         índice y medio estirados, anular y meñique cerrados (cambiar de arma)
+ *   OTRA       lo demás
  *
  * EL DISPARO: empuñando, cerrar el índice (apretar el gatillo) dispara. Se
  * mide con qué tan lejos queda la punta del índice de la muñeca (en palmas:
@@ -34,8 +35,8 @@ package com.juniorspro.asaltomr;
  * mismo modelo (pruebas/PruebaMano.java).
  */
 public final class Mano {
-    public static final int NADA = 0, EMPUNA = 1, APRIETA = 2, ABIERTA = 3, OTRA = 4;
-    public static final String[] NOMBRES = {"—", "empuña", "aprieta", "abierta", "otra"};
+    public static final int NADA = 0, EMPUNA = 1, APRIETA = 2, ABIERTA = 3, OTRA = 4, VE = 5;
+    public static final String[] NOMBRES = {"—", "empuña", "aprieta", "abierta", "otra", "V"};
 
     // umbrales (grados de flexión sumados en las 3 articulaciones de un dedo)
     // (medido con fotos reales: índice estirado empuñando 43–47°, apretando 209–219°, dedos del puño 220–260°)
@@ -121,6 +122,8 @@ public final class Mano {
         if (cierreIndice < 0.4f && otros < 0.35f && cierreMedio < 0.3f) return ABIERTA;
         // empuñando: medio, anular y meñique cerrados en promedio, y el medio no estirado (la V no cuenta)
         if (otros > 0.45f && cierreMedio > 0.35f) return alcance < APRIETA_BAJO ? APRIETA : EMPUNA;
+        // la V: índice y medio estirados, anular y meñique cerrados
+        if (cierreIndice < 0.35f && cierreMedio < 0.35f && (cierreAnular + cierreMenique) / 2f > 0.5f) return VE;
         return OTRA;
     }
 

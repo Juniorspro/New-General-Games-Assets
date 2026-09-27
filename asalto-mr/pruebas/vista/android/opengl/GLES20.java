@@ -12,10 +12,14 @@ import java.util.HashMap;
 public final class GLES20 {
     public static final int GL_BLEND = 0x0BE2, GL_COMPILE_STATUS = 0x8B81, GL_FLOAT = 0x1406, GL_FRAGMENT_SHADER = 0x8B30,
             GL_LINES = 1, GL_LINK_STATUS = 0x8B82, GL_ONE = 1, GL_ONE_MINUS_SRC_ALPHA = 0x0303, GL_POINTS = 0,
-            GL_SRC_ALPHA = 0x0302, GL_TRIANGLES = 4, GL_VERTEX_SHADER = 0x8B31, GL_DEPTH_TEST = 0x0B71;
+            GL_SRC_ALPHA = 0x0302, GL_TRIANGLES = 4, GL_VERTEX_SHADER = 0x8B31, GL_DEPTH_TEST = 0x0B71,
+            GL_TRIANGLE_FAN = 6, GL_TRIANGLE_STRIP = 5, GL_CULL_FACE = 0x0B44, GL_POLYGON_OFFSET_FILL = 0x8037;
 
     /** Una caja grabada: mvp (16), modelo (16), color (4). */
     public static final ArrayList<float[]> cajas = new ArrayList<>();
+    /** Un pedazo de disco grabado (los blancos): mvp (16), modelo (16), color (4), polygon offset (2), modo, primero, cantidad. */
+    public static final ArrayList<float[]> discos = new ArrayList<>();
+    private static float offF, offU;
     private static final HashMap<Integer, String> nombres = new HashMap<>();
     private static final HashMap<String, float[]> valores = new HashMap<>();
     private static int siguiente = 1;
@@ -51,8 +55,18 @@ public final class GLES20 {
     public static void glBlendFunc(int a, int b) { }
     public static void glDepthMask(boolean b) { }
     public static void glLineWidth(float w) { }
+    public static void glPolygonOffset(float f, float u) { offF = f; offU = u; }
 
     public static void glDrawArrays(int modo, int primero, int n) {
+        if (modo == GL_TRIANGLE_FAN || modo == GL_TRIANGLE_STRIP) {
+            float[] c = new float[41];
+            System.arraycopy(valores.get("uMvp"), 0, c, 0, 16);
+            System.arraycopy(valores.get("uModelo"), 0, c, 16, 16);
+            System.arraycopy(valores.get("uColor"), 0, c, 32, 4);
+            c[36] = offF; c[37] = offU; c[38] = modo; c[39] = primero; c[40] = n;
+            discos.add(c);
+            return;
+        }
         if (modo != GL_TRIANGLES || n != 36) return;
         float[] c = new float[36];
         System.arraycopy(valores.get("uMvp"), 0, c, 0, 16);

@@ -108,6 +108,8 @@ public class Vista {
         cae.x = 0.1f; cae.z = -1.0f; cae.yaw = (float) Math.atan2(JX - cae.x, JZ - cae.z); cae.fase = 3f;
         Juego.Soldado detras = new Juego.Soldado();   // medio tapado por el tronco
         detras.x = -1.75f; detras.z = -2.7f; detras.yaw = 0.3f; detras.fase = 0.4f;
+        corre.tipo = Juego.RAPIDO;     // los tipos: rápido (arena, boina) y pesado (blindado)
+        apunta.tipo = Juego.PESADO; apunta.vida = 4;
         j.soldados.add(corre); j.soldados.add(apunta); j.soldados.add(cae); j.soldados.add(detras);
         // la IA: uno agachado en la mejor cubierta, y otro yendo a otra por su ruta
         j.grilla = gIA;
@@ -133,11 +135,13 @@ public class Vista {
         }
         System.out.println("IA: cubierta " + cub + (agachado != null ? String.format(Locale.ROOT, " en (%.2f, %.2f)", agachado.x, agachado.z) : "")
                 + ", ruta " + (conRuta.ruta == null ? "ninguna" : (conRuta.ruta.length / 3) + " puntos"));
-        Juego.Entorno e = new Juego.Entorno() {
+        final class Ent implements Juego.Entorno, Juego.EntornoNormales {
             public float suelo(float x, float z, float y0, float y1) { return tsdf.suelo(x, z, y0, y1); }
             public float rayo(float ox, float oy, float oz, float dx, float dy, float dz, float m) { return tsdf.rayo(ox, oy, oz, dx, dy, dz, m); }
             public boolean ocupado(float x, float y, float z) { return tsdf.ocupado(x, y, z); }
-        };
+            public boolean normal(float x, float y, float z, float[] n) { return tsdf.normal(x, y, z, n); }
+        }
+        Juego.Entorno e = new Ent();
         float tx = cae.x - JX, ty = 1.1f - JY, tz = cae.z - JZ;
         float tl = (float) Math.sqrt(tx * tx + ty * ty + tz * tz);
         Juego.Impacto imp = j.disparar(JX, JY, JZ, tx / tl, ty / tl, tz / tl, JX + 0.13f, JY - 0.12f, JZ - 0.5f, e);
@@ -146,6 +150,7 @@ public class Vista {
         j.disparar(JX, JY, JZ, 0.35f, -0.05f, -0.94f, JX + 0.13f, JY - 0.12f, JZ - 0.5f, e);
         for (int i = 0; i < 2; i++) j.actualizar(0.05f, JX, JY, JZ, 0, -1, e);
         corre.estado = Juego.CORRE; apunta.estado = Juego.APUNTA; apunta.fogonazo = 0.05f;   // que no se muevan de la foto
+        apunta.herido = 0;
         System.out.println("impacto: tipo " + imp.tipo + ", cayendo: estado " + cae.estado + String.format(Locale.ROOT, " caida %.0f° y %.2f", Math.toDegrees(cae.caida), cae.y));
 
         // las vistas: pantalla (2340×1080) y los dos ojos de SBS
@@ -169,7 +174,7 @@ public class Vista {
             GLES20.cajas.clear();
             fig.dibujarSoldados(j.soldados, vp);
             int nSold = GLES20.cajas.size();
-            fig.dibujarPistola(pOjo, 0.6f, 0, 1.3f);
+            fig.dibujarArma(pOjo, Juego.PISTOLA, 0.6f, 0, 0, 1.3f);
             if (k > 0) s.append(',');
             s.append('"').append(nombres[k]).append("\":{\"vp\":");
             arr(s, vp, 16);
@@ -179,6 +184,42 @@ public class Vista {
             for (int i = 0; i < GLES20.cajas.size(); i++) { if (i > 0) s.append(','); arr(s, GLES20.cajas.get(i), 36); }
             s.append("]}");
         }
+        // las cuatro armas (una por cuadro), con blancos de práctica y una granada en vuelo
+        Juego jp = new Juego(9);
+        jp.empezar(Juego.PRACTICA);
+        jp.actualizar(1 / 30f, JX, JY, JZ, hacia[0] - JX, hacia[2] - JZ, e);
+        jp.blancos.clear();
+        for (int i = 0; i < 40 && jp.blancos.size() < 4; i++) jp.ponerBlanco(e);
+        for (Juego.Blanco b : jp.blancos) b.t = 1;
+        java.util.ArrayList<Juego.Granada> gs = new java.util.ArrayList<>();
+        Juego.Granada gr = new Juego.Granada();
+        gr.x = 0.35f; gr.y = 1.25f; gr.z = -0.6f; gr.vx = 0.5f; gr.vz = -4f; gr.t = 0.2f; gr.giro = 0.8f;
+        gs.add(gr);
+        s.append(",\"armas\":[");
+        for (int k = 0; k < 4; k++) {
+            float[] proy = perspectiva(34f, 2340f / 1080f, 0.05f, 80f);
+            float[] vp = new float[16];
+            android.opengl.Matrix.multiplyMM(vp, 0, proy, 0, vistaM, 0);
+            GLES20.cajas.clear();
+            GLES20.discos.clear();
+            if (k == 0) fig.dibujarBlancos(jp.blancos, vp);
+            else fig.dibujarSoldados(j.soldados, vp);
+            if (k == 3) fig.dibujarGranadas(gs, vp);
+            int nSold = GLES20.cajas.size();
+            fig.dibujarArma(proy, k, 0.25f, 0, 0, 1.3f);
+            if (k > 0) s.append(',');
+            s.append("{\"nombre\":\"").append(Juego.ARMAS[k].nombre).append("\",\"vp\":");
+            arr(s, vp, 16);
+            s.append(",\"nSoldados\":").append(nSold).append(",\"cajas\":[");
+            for (int i = 0; i < GLES20.cajas.size(); i++) { if (i > 0) s.append(','); arr(s, GLES20.cajas.get(i), 36); }
+            s.append("],\"discos\":[");
+            for (int i = 0; i < GLES20.discos.size(); i++) { if (i > 0) s.append(','); arr(s, GLES20.discos.get(i), 41); }
+            s.append("]}");
+        }
+        s.append("],\"disco\":");
+        float[] geo = Figuras.disco();
+        arr(s, geo, geo.length);
+        System.out.println("armas: " + jp.blancos.size() + " blancos en superficies reales");
         // la cámara del teléfono en SBS: el ojo del medio, con la proyección de un ojo
         float[] vpCam = new float[16];
         android.opengl.Matrix.multiplyMM(vpCam, 0, perspectiva(50f, 1076f / 994f, 0.05f, 80f), 0, vistaM, 0);
@@ -222,7 +263,7 @@ public class Vista {
                 float fovy = (float) Math.toDegrees(2 * Math.atan(fh / 2f / f));
                 float[] vpM = perspectiva(fovy, fw / (float) fh, 0.02f, 50f);
                 GLES20.cajas.clear();
-                fig.dibujarPistolaEnMano(vpM, m.pos, m.adelante, m.arriba, 0);
+                fig.dibujarArmaEnMano(vpM, Juego.PISTOLA, m.pos, m.adelante, m.arriba, 0, 0);
                 if (!pm) s.append(',');
                 pm = false;
                 s.append("{\"foto\":\"").append(foto).append("\",\"w\":").append(fw).append(",\"h\":").append(fh).append(",\"vp\":");

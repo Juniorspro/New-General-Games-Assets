@@ -197,12 +197,29 @@ public class PruebaArmas {
             j.empezar(Juego.PRACTICA);
             j.actualizar(1 / 30f, JX, JY, JZ, 0, -1, e);
             j.blancos.clear();
-            int bien = 0, total = 0, deFrente = 0;
+            int bien = 0, total = 0, deFrente = 0, enteros = 0;
             for (int k = 0; k < 60; k++) {
                 if (j.ponerBlanco(e)) {
                     Juego.Blanco b = j.blancos.get(j.blancos.size() - 1);
                     total++;
                     if (Math.abs(PruebaEscaneo.escena(b.x, b.y, b.z)) < 0.06f) bien++;
+                    // el borde entero del disco, afuera de la superficie (no se mete en la pared)
+                    float xx = b.nz, xz = -b.nx, xl = (float) Math.sqrt(xx * xx + xz * xz);
+                    if (xl < 0.1f) { xx = 1; xz = 0; xl = 1; }
+                    xx /= xl; xz /= xl;
+                    float yx = b.ny * xz, yy = b.nz * xx - b.nx * xz, yz = -b.ny * xx;
+                    boolean afuera = true;
+                    for (int k2 = 0; k2 < 12; k2++) {
+                        double t2 = Math.PI * 2 * k2 / 12;
+                        float cu = (float) Math.cos(t2) * b.radio, cv = (float) Math.sin(t2) * b.radio;
+                        float px = b.x + xx * cu + yx * cv, py = b.y + yy * cv, pz = b.z + xz * cu + yz * cv;
+                        // lo que tapa en el teléfono es la malla escaneada: el borde no puede quedar detrás de ella
+                        float vx = px - JX, vy = py - JY, vz = pz - JZ, vl = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
+                        float choca = t.rayo(JX, JY, JZ, vx / vl, vy / vl, vz / vl, vl + 0.5f);
+                        if (choca > 0 && choca < vl - 0.005f) afuera = false;
+                        if (PruebaEscaneo.escena(px, py, pz) < -0.02f) afuera = false;   // ni metido de verdad en la pared real
+                    }
+                    if (afuera) enteros++;
                     float vx = JX - b.x, vy = JY - b.y, vz = JZ - b.z, vl = (float) Math.sqrt(vx * vx + vy * vy + vz * vz);
                     if ((vx * b.nx + vy * b.ny + vz * b.nz) / vl > 0.3f) deFrente++;
                 }
@@ -210,6 +227,7 @@ public class PruebaArmas {
             ver(total >= 50, "encuentra lugar para blancos (" + total + " de 60)");
             ver(bien >= total * 0.9, "pegados a la superficie real (" + bien + " de " + total + " a menos de 6 cm)");
             ver(deFrente == total, "todos de cara al jugador (" + deFrente + " de " + total + ")");
+            ver(enteros == total, "el disco entero se ve: su borde no queda detrás de la malla escaneada (" + enteros + " de " + total + ")");
             // tirarle a uno
             Juego q = new Juego(9);
             q.empezar(Juego.PRACTICA);

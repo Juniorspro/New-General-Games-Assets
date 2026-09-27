@@ -108,6 +108,21 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private final Lentes lentes = new Lentes();
     private final ZonasGl zonasGl = new ZonasGl();
     private final Sonido sonido = new Sonido();
+    private final Menu menu = new Menu();
+    private final MenuGl menuGl = new MenuGl();
+    private android.content.SharedPreferences records;
+    /** El juego está en pausa (con el menú de pausa abierto). */
+    private boolean pausado, seguirEscaneando, recordNuevo;
+    private volatile boolean tocando, teclaApretada, hayToque, pedirMenu;
+    private volatile float toqueX, toqueY;
+    private long vDesde, miraAbajoDesde, cambioArmaEn = -10000, menuFinEn;
+    private boolean vUsada;
+    private int apuntadaAntes = -1;
+    private final boolean[] armaAprieta = new boolean[2];
+    private final float[] invVp = new float[16], rayo = new float[6];
+    /** El nombre corto de cada arma para el HUD. */
+    private static final String[] ARMA_CORTA = {"PISTOLA", "FUSIL", "ESCOPETA", "GRANADAS"};
+    private static final String[] DIFICULTADES = {"Fácil", "Normal", "Difícil"};
     private ManoRastreo manos;
     private long ultimaMano, abiertaDesde;
     private final float[] manoPos = new float[3], manoAdel = new float[3], manoArriba = new float[3], manoBoca = new float[3], laserFin = new float[3];
@@ -202,6 +217,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         juego = new Juego(SystemClock.elapsedRealtime());
         juego.dificultad = ajustes.dificultad;
         sonido.cargar(this);
+        records = getSharedPreferences("records", MODE_PRIVATE);
         sonido.activo = ajustes.sonido == 1;
         if (ajustes.mano > 0 && ajustes.seguro == 0) manos = new ManoRastreo(this);
 
@@ -214,7 +230,12 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         vista.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         vista.setOnTouchListener((v, e) -> {
             int a = e.getActionMasked();
-            if (a == MotionEvent.ACTION_DOWN || a == MotionEvent.ACTION_POINTER_DOWN) tiros.incrementAndGet();
+            if (a == MotionEvent.ACTION_DOWN || a == MotionEvent.ACTION_POINTER_DOWN) {
+                int i = e.getActionIndex();
+                toqueX = e.getX(i); toqueY = e.getY(i); hayToque = true;
+                tocando = true;
+                tiros.incrementAndGet();
+            } else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) tocando = false;
             return true;
         });
         raiz.addView(vista);
@@ -243,7 +264,13 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         bAjustes.setOnClickListener(v -> abrirPanel(true));
         Button bLinterna = boton("LINTERNA");
         bLinterna.setOnClickListener(v -> cambiarLinterna());
-        botones.addView(bSbs);
+        Button bMenu = boton("MENÚ");
+        bMenu.setOnClickListener(v -> pedirMenu = true);
+        Button bArma = boton("ARMA");
+        bArma.setOnClickListener(v -> vista.queueEvent(() -> juego.siguienteArma()));
+        botones.addView(bMenu);
+        botones.addView(bArma, margenArriba());
+        botones.addView(bSbs, margenArriba());
         botones.addView(bAjustes, margenArriba());
         botones.addView(bLinterna, margenArriba());
         FrameLayout.LayoutParams lb = new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.CENTER_VERTICAL);
@@ -362,10 +389,21 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             case KeyEvent.KEYCODE_SPACE:
             case KeyEvent.KEYCODE_CAMERA:
                 if (e.getRepeatCount() == 0) tiros.incrementAndGet();
+                teclaApretada = true;
                 return true;
             case KeyEvent.KEYCODE_BUTTON_X:
             case KeyEvent.KEYCODE_BUTTON_B:
                 vista.queueEvent(() -> juego.recargar());
+                return true;
+            case KeyEvent.KEYCODE_BUTTON_Y:
+            case KeyEvent.KEYCODE_BUTTON_L1:
+            case KeyEvent.KEYCODE_TAB:
+                if (e.getRepeatCount() == 0) vista.queueEvent(() -> juego.siguienteArma());
+                return true;
+            case KeyEvent.KEYCODE_BUTTON_START:
+            case KeyEvent.KEYCODE_MENU:
+            case KeyEvent.KEYCODE_BUTTON_SELECT:
+                if (e.getRepeatCount() == 0) pedirMenu = true;
                 return true;
             default:
                 return super.onKeyDown(codigo, e);
@@ -374,6 +412,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
 
     @Override
     public boolean onKeyUp(int codigo, KeyEvent e) {
+        teclaApretada = false;
         if (codigo == KeyEvent.KEYCODE_VOLUME_UP || codigo == KeyEvent.KEYCODE_VOLUME_DOWN) return true;
         return super.onKeyUp(codigo, e);
     }
@@ -383,6 +422,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     public void onBackPressed() {
         if (panel.vista.getVisibility() == View.VISIBLE) { abrirPanel(false); return; }
         if (ajustes.sbs == 1) { ajustes.sbs = 0; ajustes.guardar(this); cambio("sbs"); return; }
+        if (juego != null && juego.estado == Juego.JUEGA) { pedirMenu = true; return; }   // Atrás en el juego: pausa
         super.onBackPressed();
     }
 
@@ -601,6 +641,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         zonasGl.crear();
         figuras.crear();
         hud.crear();
+        menuGl.crear();
         lentes.crear();
         texturaPuesta = false;
         pedirReescaneo = true;   // las mallas viejas se perdieron con el contexto
@@ -661,7 +702,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             mallaGl.vaciar();
             listoDesde = 0;
         }
-        if (pedirReinicio) { pedirReinicio = false; juego.estado = Juego.ESPERA; juego.soldados.clear(); listoDesde = 0; }
+        if (pedirReinicio) { pedirReinicio = false; juego.estado = Juego.ESPERA; juego.soldados.clear(); listoDesde = 0; menu.cerrar(); pausado = false; }
         if (!corriendo || sesion == null) return;
         if (!texturaPuesta) { sesion.setCameraTextureName(fondo.textura()); texturaPuesta = true; }
 
@@ -750,6 +791,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (sbs && a.estereo == 1) mallaGl.dibujarReproyectada(vpOjo, vpCam, fondo);
             else mallaGl.dibujarProfundidad(vpOjo);
             figuras.dibujarSoldados(juego.soldados, vpOjo);
+            figuras.dibujarBlancos(juego.blancos, vpOjo);
+            figuras.dibujarGranadas(juego.granadas, vpOjo);
             if (verZonas) zonasGl.dibujar(vpOjo);
             if (a.zonas == 2) figuras.dibujarRutas(juego.soldados, vpOjo);
             float escalaPx = proy[5] * (sbs ? vistaOjos[o][3] : alto) / 2f;
@@ -767,16 +810,20 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 if (armaPose[s2] != Mano.NADA && (a.mano == 2 || juego.estado == Juego.ESPERA))
                     figuras.dibujarEsqueleto(vpOjo, armaPuntos[s2], armaActiva[s2]);
             }
-            GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);   // la pistola va siempre adelante de todo
+            menuGl.dibujar(menu, vpOjo);   // el menú flota en el mundo, adelante de todo
+            GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);   // el arma va siempre adelante de todo
+            float saca = Math.max(0, 1 - (ahora - cambioArmaEn) / 350f);
             if (enMano) {
                 for (int s2 = 0; s2 < 2; s2++) {
                     if (!armaActiva[s2]) continue;
-                    figuras.dibujarPistolaEnMano(vpOjo, armaPos[s2], armaAdel[s2], armaArriba[s2], juego.retroceso);
-                    Mano.boca(armaPos[s2], armaAdel[s2], armaArriba[s2], manoBoca);
+                    figuras.dibujarArmaEnMano(vpOjo, juego.arma, armaPos[s2], armaAdel[s2], armaArriba[s2], juego.retroceso, saca);
+                    Figuras.bocaEnMano(juego.arma, armaPos[s2], armaAdel[s2], armaArriba[s2], manoBoca);
                     figuras.dibujarLaser(vpOjo, manoBoca, armaFin[s2], proy[5] * (sbs ? vistaOjos[o][3] : alto) / 2f);
                 }
             } else {
-                figuras.dibujarPistola(proyOjo, juego.retroceso, juego.recargando > 0 ? (float) Math.sin(Math.min(1, (1.3f - juego.recargando) / 1.3f) * Math.PI) : 0, t);
+                float rc = juego.armaActual().recarga;
+                float anim = juego.recargando > 0 ? (float) Math.sin(Math.min(1, (rc - juego.recargando) / rc) * Math.PI) : 0;
+                figuras.dibujarArma(proyOjo, juego.arma, juego.retroceso, anim, saca, t);
             }
             float aspecto = sbs ? vistaOjos[o][2] / (float) vistaOjos[o][3] : ancho / (float) alto;
             hud.dibujarGolpe(juego.golpe * 0.8f);
@@ -871,6 +918,28 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
 
     private void actualizarJuego(float dt, float px, float py, float pz, float[] adelante, Pose ojoPose, long ahora) {
         int pedidos = tiros.getAndSet(0);
+        boolean toque = hayToque;
+        float tx = toqueX, ty = toqueY;
+        hayToque = false;
+        boolean sbs = vistos.sbs == 1;
+        // los gatillos de la mano (cada mano con pistola)
+        int gatillo = 0;
+        int[] gat = new int[2];
+        for (int s2 = 0; s2 < 2; s2++) {
+            gat[s2] = manos == null ? 0 : manos.tiros[s2].getAndSet(0);
+            if (!armaActiva[s2]) gat[s2] = 0;
+            gatillo += gat[s2];
+        }
+        boolean hayArma = armaActiva[0] || armaActiva[1];
+        int conArma = armaActiva[0] ? 0 : 1;
+
+        // ¿se pidió el menú? (botón, tecla, Atrás, o mirar tus pies 1.2 s)
+        boolean abajo = adelante[1] < -0.93f;   // ≈ 70° para abajo
+        if (abajo && !menu.abierto) { if (miraAbajoDesde == 0) miraAbajoDesde = ahora; }
+        else miraAbajoDesde = 0;
+        boolean quiereMenu = pedirMenu || (miraAbajoDesde > 0 && ahora - miraAbajoDesde > 1200);
+        pedirMenu = false;
+
         if (juego.estado == Juego.ESPERA) {
             Mapa.Grilla g = juego.grilla;
             float cob = g == null ? 0 : g.cobertura;
@@ -878,35 +947,207 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             escaneoCompleto = listo && (cob >= 0.75f || !hayProfundidad);
             if (listo && listoDesde == 0) listoDesde = ahora;
             if (!listo) listoDesde = 0;
-            // tocar para empezar; en el visor arranca solo a los 3 s
-            // tocar para empezar (cuando ya hay piso); en el visor arranca solo con el escaneo completo (o a los 25 s)
-            if (listo && (pedidos > 0 || (vistos.sbs == 1 && (escaneoCompleto || ahora - listoDesde > 25000)))) { juego.empezar(); pedidos = 0; }
+            // el menú principal sale solo con el escaneo completo (o a los 25 s en el visor); o tocando / con el gatillo
+            boolean solo = !seguirEscaneando && (escaneoCompleto || (sbs && ahora - listoDesde > 25000));
+            if (listo && !menu.abierto && (solo || pedidos > 0 || gatillo > 0 || quiereMenu)) {
+                abrirPrincipal(px, py, pz, adelante);
+                pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; toque = false;
+            }
         } else if (juego.estado == Juego.FIN) {
             if (finDesde == 0) finDesde = ahora;
-            if (pedidos > 0 && ahora - finDesde > 1500) { juego.empezar(); finDesde = 0; }
-            pedidos = 0;
+            if (!menu.abierto && ahora - finDesde > 1500) abrirFin(px, py, pz, adelante);
+            if (!menu.abierto) { pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; }
+        } else if (quiereMenu && !menu.abierto) {
+            abrirPausa(px, py, pz, adelante);
+            pedidos = 0; gatillo = 0; gat[0] = gat[1] = 0; toque = false;
         }
-        juego.actualizar(dt, px, py, pz, adelante[0], adelante[2], entorno);
-        // los tiros del gesto (gatillo con el índice), de cada mano con pistola
-        boolean hayArma = false;
-        for (int s2 = 0; s2 < 2; s2++) {
-            int n = manos == null ? 0 : manos.tiros[s2].getAndSet(0);
-            if (!armaActiva[s2]) continue;
-            hayArma = true;
-            if (juego.estado == Juego.ESPERA && n > 0) { pedidos += n; n = 0; }   // el gesto también empieza el juego
-            for (int i = 0; i < Math.min(n, 3); i++) dispararDesdeMano(s2);
+
+        // ── con el menú abierto, lo que apunta y lo que aprieta es para el menú ──
+        if (menu.abierto) {
+            boolean permanencia;
+            boolean clic;
+            if (toque && !sbs && rayoDeToque(tx, ty)) {
+                permanencia = false; clic = true;
+            } else if (hayArma) {
+                Figuras.bocaEnMano(juego.arma, armaPos[conArma], armaAdel[conArma], armaArriba[conArma], manoBoca);
+                rayo[0] = manoBoca[0]; rayo[1] = manoBoca[1]; rayo[2] = manoBoca[2];
+                rayo[3] = armaAdel[conArma][0]; rayo[4] = armaAdel[conArma][1]; rayo[5] = armaAdel[conArma][2];
+                permanencia = false; clic = gatillo > 0 || pedidos > 0;
+            } else {
+                rayo[0] = px; rayo[1] = py; rayo[2] = pz; rayo[3] = adelante[0]; rayo[4] = adelante[1]; rayo[5] = adelante[2];
+                permanencia = true; clic = pedidos > 0;
+            }
+            menu.seguir(dt, px, py, pz, adelante[0], adelante[2]);
+            String elegido = menu.actualizar(dt, rayo[0], rayo[1], rayo[2], rayo[3], rayo[4], rayo[5], permanencia, clic);
+            if (menu.apuntada != apuntadaAntes) {
+                if (menu.apuntada >= 0) { sonido.tocar(Sonido.MENU, 0.5f, 0); vibrar(6); }
+                apuntadaAntes = menu.apuntada;
+            }
+            // el láser de la mano termina en el panel
+            if (hayArma && menu.tocaPanel) System.arraycopy(menu.punto, 0, armaFin[conArma], 0, 3);
+            if (elegido != null) { sonido.tocar(Sonido.ELIGE, 0.8f, 0); elegir(elegido, px, py, pz, adelante); }
+            pedidos = 0; gat[0] = gat[1] = 0;
         }
-        for (int i = 0; i < Math.min(pedidos, 3); i++) {
-            if (hayArma) { dispararDesdeMano(armaActiva[0] ? 0 : 1); continue; }   // tocar / volumen: con la pistola de la mano
-            float[] b = ojoPose.transformPoint(Figuras.bocaPistola(proy));
-            juego.disparar(px, py, pz, adelante[0], adelante[1], adelante[2], b[0], b[1], b[2], entorno);
+
+        if (!pausado) juego.actualizar(dt, px, py, pz, adelante[0], adelante[2], entorno);
+
+        if (juego.estado == Juego.JUEGA && !pausado && !menu.abierto) {
+            // cambiar de arma: la V medio segundo (una vez por V)
+            boolean ve = false;
+            for (int s2 = 0; s2 < 2; s2++) if (armaPose[s2] == Mano.VE) ve = true;
+            if (ve) {
+                if (vDesde == 0) vDesde = ahora;
+                if (!vUsada && ahora - vDesde > 350) { juego.siguienteArma(); vUsada = true; }
+            } else { vDesde = 0; vUsada = false; }
+            // los tiros del gesto (gatillo con el índice), de cada mano con pistola
+            for (int s2 = 0; s2 < 2; s2++) for (int i = 0; i < Math.min(gat[s2], 3); i++) dispararDesdeMano(s2);
+            for (int i = 0; i < Math.min(pedidos, 3); i++) {
+                if (hayArma) { dispararDesdeMano(conArma); continue; }   // tocar / volumen: con el arma de la mano
+                dispararDesdeVista(px, py, pz, adelante, ojoPose);
+            }
+            // el fusil tira mientras el gatillo esté apretado (el índice cerrado, el dedo en la pantalla o la tecla)
+            if (juego.armaActual().automatica) {
+                for (int s2 = 0; s2 < 2; s2++) if (armaActiva[s2] && armaAprieta[s2]) dispararDesdeMano(s2);
+                if (tocando || teclaApretada) {
+                    if (hayArma) dispararDesdeMano(conArma);
+                    else dispararDesdeVista(px, py, pz, adelante, ojoPose);
+                }
+            }
         }
-        sonar(juego.tomarEventos(), px, pz, adelante);
+        sonar(juego.tomarEventos(), px, pz, adelante, ahora);
+    }
+
+    private void dispararDesdeVista(float px, float py, float pz, float[] adelante, Pose ojoPose) {
+        float[] b = ojoPose.transformPoint(Figuras.bocaArma(proy, juego.arma));
+        juego.disparar(px, py, pz, adelante[0], adelante[1], adelante[2], b[0], b[1], b[2], entorno);
+    }
+
+    /** El rayo del dedo en la pantalla (sin visor): de la cámara por ese píxel. */
+    private boolean rayoDeToque(float x, float y) {
+        if (!Matrix.invertM(invVp, 0, vpCam, 0)) return false;
+        float nx = 2 * x / ancho - 1, ny = 1 - 2 * y / alto;
+        float[] a = {nx, ny, -1, 1}, b = {nx, ny, 1, 1}, wa = new float[4], wb = new float[4];
+        Matrix.multiplyMV(wa, 0, invVp, 0, a, 0);
+        Matrix.multiplyMV(wb, 0, invVp, 0, b, 0);
+        if (Math.abs(wa[3]) < 1e-9f || Math.abs(wb[3]) < 1e-9f) return false;
+        for (int i = 0; i < 3; i++) { wa[i] /= wa[3]; wb[i] /= wb[3]; }
+        float dx = wb[0] - wa[0], dy = wb[1] - wa[1], dz = wb[2] - wa[2], l = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (l < 1e-6f) return false;
+        rayo[0] = wa[0]; rayo[1] = wa[1]; rayo[2] = wa[2]; rayo[3] = dx / l; rayo[4] = dy / l; rayo[5] = dz / l;
+        return true;
+    }
+
+    // ── los menús ──
+
+    private int record(int modo) { return records == null ? 0 : records.getInt("modo" + modo, 0); }
+
+    /** Cómo se elige (lo que se dice en el menú). */
+    private String comoElegir() {
+        if (armaActiva[0] || armaActiva[1]) return "Apuntá con el arma y apretá el gatillo";
+        if (vistos.sbs == 1) return "Mirá un botón 1 segundo (o apretá el botón)";
+        return "Tocá un botón (o mirálo 1 segundo)";
+    }
+
+    private void opcionesComunes() {
+        menu.opcion("arma", "Arma: " + Juego.ARMAS[juego.arma].nombre, "cambiar ▸");
+        menu.opcion("dificultad", "Dificultad: " + DIFICULTADES[Math.max(0, Math.min(2, juego.dificultad))], "▸");
+    }
+
+    private void abrirPrincipal(float px, float py, float pz, float[] f) {
+        Mapa.Grilla g = juego.grilla;
+        menu.limpiar("principal", "ASALTO MR");
+        menu.linea(String.format(Locale.ROOT, "Escaneo %d%% · %d polígonos%s", g == null ? 0 : Math.round(g.cobertura * 100),
+                mallaGl.triangulos, haySemantica ? " · IA semántica" : ""));
+        menu.linea(comoElegir());
+        menu.opcion("oleadas", "Oleadas", record(Juego.OLEADAS) > 0 ? "récord " + record(Juego.OLEADAS) : null);
+        menu.opcion("contra", "Contrarreloj 90 s", record(Juego.CONTRARRELOJ) > 0 ? "récord " + record(Juego.CONTRARRELOJ) : null);
+        menu.opcion("practica", "Práctica: blancos", record(Juego.PRACTICA) > 0 ? "récord " + record(Juego.PRACTICA) : null);
+        opcionesComunes();
+        menu.opcion("escanear", "Seguir escaneando", null);
+        if (vistos.sbs == 0) menu.opcion("ajustes", "Ajustes", null);
+        menu.abrir(px, py, pz, f[0], f[2]);
+        pausado = false;
+    }
+
+    private void abrirPausa(float px, float py, float pz, float[] f) {
+        menu.limpiar("pausa", "PAUSA");
+        menu.linea(String.format(Locale.ROOT, "%s · %d puntos · %d bajas", Juego.MODOS[juego.modo], juego.puntos, juego.bajas));
+        menu.linea("V con la mano = cambiar de arma · mano abierta = recargar");
+        menu.opcion("seguir", "Seguir", null);
+        opcionesComunes();
+        menu.opcion("reiniciar", "Empezar de nuevo", null);
+        menu.opcion("principal", "Menú principal", null);
+        menu.opcion("reescanear", "Reescanear el lugar", null);
+        menu.abrir(px, py, pz, f[0], f[2]);
+        pausado = true;
+    }
+
+    private void abrirFin(float px, float py, float pz, float[] f) {
+        int m = juego.modo, r = record(m);
+        recordNuevo = juego.puntos > r;
+        if (recordNuevo && records != null) records.edit().putInt("modo" + m, juego.puntos).apply();
+        menu.limpiar("fin", juego.vidaJugador <= 0 ? "TE DIERON" : "¡TIEMPO!");
+        menu.linea(recordNuevo ? "¡RÉCORD NUEVO! " + juego.puntos + " puntos" : juego.puntos + " puntos · récord " + r);
+        if (m == Juego.PRACTICA)
+            menu.linea(String.format(Locale.ROOT, "%d blancos · reacción %.2f s", juego.blancosPegados, juego.reaccionMedia()));
+        else
+            menu.linea(String.format(Locale.ROOT, "%s%d bajas · %d a la cabeza", m == Juego.OLEADAS ? "Oleada " + juego.oleada + " · " : "",
+                    juego.bajas, juego.cabezas));
+        menu.linea(String.format(Locale.ROOT, "Precisión %d %% (%d de %d) · %d:%02d", Math.round(juego.precision() * 100),
+                juego.aciertos, juego.disparos, (int) juego.tiempoJuego / 60, (int) juego.tiempoJuego % 60));
+        menu.opcion("otra", "Otra vez", null);
+        menu.opcion("principal", "Menú principal", null);
+        opcionesComunes();
+        menu.abrir(px, py, pz, f[0], f[2]);
+        if (recordNuevo) sonido.tocar(Sonido.RECORD, 0.9f, 0);
+    }
+
+    private void elegir(String id, float px, float py, float pz, float[] f) {
+        switch (id) {
+            case "oleadas": empezarModo(Juego.OLEADAS); break;
+            case "contra": empezarModo(Juego.CONTRARRELOJ); break;
+            case "practica": empezarModo(Juego.PRACTICA); break;
+            case "otra": empezarModo(juego.modo); break;
+            case "reiniciar": empezarModo(juego.modo); break;
+            case "seguir": menu.cerrar(); pausado = false; break;
+            case "arma":
+                juego.siguienteArma();
+                menu.texto("arma", "Arma: " + Juego.ARMAS[juego.arma].nombre, "cambiar ▸");
+                break;
+            case "dificultad":
+                ajustes.dificultad = (ajustes.dificultad + 1) % 3;
+                ajustes.guardar(this);
+                vistos = ajustes.copia();
+                juego.dificultad = ajustes.dificultad;
+                menu.texto("dificultad", "Dificultad: " + DIFICULTADES[juego.dificultad], "▸");
+                break;
+            case "escanear": menu.cerrar(); seguirEscaneando = true; break;
+            case "principal":
+                juego.estado = Juego.ESPERA; juego.soldados.clear(); juego.blancos.clear(); juego.granadas.clear();
+                pausado = false; finDesde = 0;
+                abrirPrincipal(px, py, pz, f);
+                break;
+            case "reescanear":
+                juego.estado = Juego.ESPERA; juego.soldados.clear(); juego.blancos.clear(); juego.granadas.clear();
+                pausado = false; seguirEscaneando = false; finDesde = 0;
+                menu.cerrar();
+                pedirReescaneo = true;
+                break;
+            case "ajustes": runOnUiThread(() -> abrirPanel(true)); break;
+            default: break;
+        }
+    }
+
+    private void empezarModo(int modo) {
+        juego.dificultad = ajustes.dificultad;
+        juego.empezar(modo);
+        menu.cerrar();
+        pausado = false; finDesde = 0; seguirEscaneando = false;
     }
 
     private void dispararDesdeMano(int s) {
         float[] f = armaAdel[s];
-        Mano.boca(armaPos[s], f, armaArriba[s], manoBoca);
+        Figuras.bocaEnMano(juego.arma, armaPos[s], f, armaArriba[s], manoBoca);
         juego.disparar(manoBoca[0], manoBoca[1], manoBoca[2], f[0], f[1], f[2], manoBoca[0], manoBoca[1], manoBoca[2], entorno);
     }
 
@@ -969,8 +1210,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             synchronized (m) {
                 boolean reciente = m.hay && ahora - m.ultimaVez < 400;
                 armaPose[s2] = m.pose;
+                armaAprieta[s2] = false;
                 if (reciente && (m.pose == Mano.EMPUNA || m.pose == Mano.APRIETA)) {
                     armaActiva[s2] = true;
+                    armaAprieta[s2] = m.apretado();
                     System.arraycopy(m.pos, 0, armaPos[s2], 0, 3);
                     System.arraycopy(m.adelante, 0, armaAdel[s2], 0, 3);
                     System.arraycopy(m.arriba, 0, armaArriba[s2], 0, 3);
@@ -981,22 +1224,28 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             }
         }
         // la mano abierta medio segundo: recargar
-        if (alguienAbierta) { if (abiertaDesde == 0) abiertaDesde = ahora; else if (ahora - abiertaDesde > 500) { juego.recargar(); abiertaDesde = ahora + 100000; } }
+        if (alguienAbierta && !menu.abierto) { if (abiertaDesde == 0) abiertaDesde = ahora; else if (ahora - abiertaDesde > 500) { juego.recargar(); abiertaDesde = ahora + 100000; } }
         else abiertaDesde = 0;
         // el láser: hasta donde pega cada caño
         for (int s2 = 0; s2 < 2; s2++) {
             if (!armaActiva[s2]) continue;
             float[] f = armaAdel[s2];
-            Mano.boca(armaPos[s2], f, armaArriba[s2], manoBoca);
+            Figuras.bocaEnMano(juego.arma, armaPos[s2], f, armaArriba[s2], manoBoca);
             float d = entorno.rayo(manoBoca[0], manoBoca[1], manoBoca[2], f[0], f[1], f[2], 25f);
             if (d < 0) d = 25f;
             armaFin[s2][0] = manoBoca[0] + f[0] * d; armaFin[s2][1] = manoBoca[1] + f[1] * d; armaFin[s2][2] = manoBoca[2] + f[2] * d;
         }
     }
 
-    private void sonar(int ev, float px, float pz, float[] adelante) {
+    private void sonar(int ev, float px, float pz, float[] adelante, long ahora) {
         if (ev == 0) return;
-        if ((ev & Juego.EV_DISPARO) != 0) { sonido.tocar(Sonido.DISPARO, 1f, 0); vibrar(14); }
+        if ((ev & Juego.EV_DISPARO) != 0) {
+            sonido.tocar(Sonido.DE_ARMA[juego.arma], 1f, 0);
+            vibrar(juego.arma == Juego.ESCOPETA ? 45 : juego.arma == Juego.LANZAGRANADAS ? 30 : juego.arma == Juego.FUSIL ? 9 : 14);
+        }
+        if ((ev & Juego.EV_EXPLOSION) != 0) { sonido.tocar(Sonido.EXPLOSION, 1f, 0); vibrar(90); }
+        if ((ev & Juego.EV_CAMBIO) != 0) { sonido.tocar(Sonido.CAMBIO, 0.7f, 0); cambioArmaEn = ahora; }
+        if ((ev & Juego.EV_BLANCO) != 0) sonido.tocar(Sonido.BLANCO, 0.9f, 0);
         if ((ev & Juego.EV_VACIO) != 0) sonido.tocar(Sonido.VACIO, 0.8f, 0);
         if ((ev & Juego.EV_IMPACTO) != 0) sonido.tocar(Sonido.IMPACTO, 0.5f, 0);
         if ((ev & Juego.EV_CARNE) != 0) sonido.tocar(Sonido.CARNE, 0.9f, 0);
@@ -1039,16 +1288,25 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                     hayProfundidad ? "malla por profundidad" : "sin Depth API: planos",
                     haySemantica ? " + IA semántica" : "", fps, textoMano());
             if (!sigue) abajo = motivo(camara);
+            else if (menu.abierto) abajo = null;
             else if (listoDesde == 0) abajo = "Mirá el piso y alrededor,\nmoviéndote despacio";
-            else if (escaneoCompleto) abajo = sbs ? "Escaneo completo ✓\narranca…" : "Escaneo completo ✓\nTocá (o apretá el gatillo) para empezar";
-            else abajo = guia(g, camara) + (sbs ? "" : "\n(o tocá para empezar ya)");
+            else if (escaneoCompleto) abajo = "Escaneo completo ✓\n" + (sbs ? "Mirá tus pies: menú" : "Tocá para el menú");
+            else abajo = guia(g, camara) + (sbs ? "\n(mirá tus pies: menú)" : "\n(o tocá para el menú)");
         } else {
-            arriba = String.format(Locale.ROOT, "PUNTOS %d%s\nOLEADA %d · %d bajas · %d FPS%s", juego.puntos,
-                    juego.combo > 1 ? "  x" + juego.combo : "", juego.oleada, juego.bajas, fps, textoMano());
-            if (juego.estado == Juego.FIN)
-                abajo = "Te dieron. " + juego.puntos + " puntos\n" + (sbs ? "Tocá o volumen para seguir" : "Tocá para volver a empezar");
+            int tr = (int) Math.ceil(juego.tiempoRestante);
+            String reloj = String.format(Locale.ROOT, "%d:%02d", tr / 60, tr % 60);
+            if (juego.modo == Juego.PRACTICA)
+                arriba = String.format(Locale.ROOT, "PUNTOS %d\nTIEMPO %s · %d blancos · %d%% · %d FPS%s", juego.puntos, reloj,
+                        juego.blancosPegados, Math.round(juego.precision() * 100), fps, textoMano());
+            else if (juego.modo == Juego.CONTRARRELOJ)
+                arriba = String.format(Locale.ROOT, "PUNTOS %d%s\nTIEMPO %s · %d bajas · %d FPS%s", juego.puntos,
+                        juego.combo > 1 ? "  x" + juego.combo : "", reloj, juego.bajas, fps, textoMano());
+            else
+                arriba = String.format(Locale.ROOT, "PUNTOS %d%s\nOLEADA %d · %d bajas · %d FPS%s", juego.puntos,
+                        juego.combo > 1 ? "  x" + juego.combo : "", juego.oleada, juego.bajas, fps, textoMano());
+            if (pausado) arriba = "PAUSA\n" + arriba.substring(arriba.indexOf('\n') + 1);
         }
-        hud.poner(arriba, juego.vidaJugador, juego.balas, Juego.CARGADOR, juego.recargando > 0, abajo);
+        hud.poner(arriba, juego.vidaJugador, juego.balas, juego.cargador(), juego.recargando > 0, ARMA_CORTA[juego.arma], abajo);
     }
 
     /** Qué ve el hand tracking (para el HUD). */

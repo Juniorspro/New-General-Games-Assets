@@ -871,9 +871,15 @@ public final class Juego {
         }
     }
 
-    /** Busca una superficie real adelante (una pared, un árbol, el piso) y pega un blanco de cara al jugador. */
+    /**
+     * Busca una superficie real adelante (una pared, un árbol, el piso) y pega
+     * un blanco de cara al jugador. La normal sale de rayos alrededor
+     * del punto (ocho, a la distancia del borde del disco): así el disco queda
+     * apoyado en el plano de verdad, y si esos puntos no están en un mismo
+     * plano (un borde, una esquina, el canto de la mesa) se busca otro lugar.
+     */
     public boolean ponerBlanco(Entorno e) {
-        for (int intento = 0; intento < 12; intento++) {
+        for (int intento = 0; intento < 16; intento++) {
             float ang = (azar.nextFloat() - 0.5f) * 2.4f, elev = -0.35f + azar.nextFloat() * 0.6f;
             float c = (float) Math.cos(ang), sn = (float) Math.sin(ang);
             float hx = jfx * c - jfz * sn, hz = jfx * sn + jfz * c;
@@ -882,17 +888,51 @@ public final class Juego {
             float d = e.rayo(jx, jy, jz, dx, dy, dz, 9f);
             if (d < 1.5f) continue;
             float x = jx + dx * d, y = jy + dy * d, z = jz + dz * d;
-            float[] n = {-dx, -dy, -dz};
-            if (e instanceof EntornoNormales) {
-                float[] m = new float[3];
-                if (((EntornoNormales) e).normal(x, y, z, m)) n = m;
+            float radio = 0.14f + 0.02f * d;   // más lejos, más grande (que se pueda)
+            // dos perpendiculares al rayo
+            float ux = -dz, uz = dx, ul = (float) Math.sqrt(ux * ux + uz * uz);
+            ux /= ul; uz /= ul;
+            float wx = dy * uz, wy = dz * ux - dx * uz, wz = -dy * ux;
+            float wl = (float) Math.sqrt(wx * wx + wy * wy + wz * wz);
+            wx /= wl; wy /= wl; wz /= wl;
+            float a = radio * 1.1f / d;
+            float[][] q = new float[8][3];
+            boolean ok = true;
+            for (int k = 0; k < 8 && ok; k++) {   // ocho rayos alrededor, a la distancia del borde del disco
+                float su = (float) Math.cos(k * Math.PI / 4), sw = (float) Math.sin(k * Math.PI / 4);
+                float rx = dx + (ux * su + wx * sw) * a, ry = dy + wy * sw * a, rz = dz + (uz * su + wz * sw) * a;
+                float rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
+                rx /= rl; ry /= rl; rz /= rl;
+                float dk = e.rayo(jx, jy, jz, rx, ry, rz, 9.5f);
+                if (dk < 0 || Math.abs(dk - d) > radio * 3f) ok = false;
+                else { q[k][0] = jx + rx * dk; q[k][1] = jy + ry * dk; q[k][2] = jz + rz * dk; }
             }
+            if (!ok) continue;
+            // la normal: promedio de los productos cruz de los dos pares de diámetros perpendiculares
+            float nx = 0, ny = 0, nz = 0;
+            for (int k = 0; k < 4; k++) {
+                float[] p0 = q[k], p1 = q[k + 4], p2 = q[(k + 2) % 8], p3 = q[(k + 6) % 8];
+                float ax = p0[0] - p1[0], ay = p0[1] - p1[1], az = p0[2] - p1[2];
+                float bx = p2[0] - p3[0], by = p2[1] - p3[1], bz = p2[2] - p3[2];
+                nx += ay * bz - az * by; ny += az * bx - ax * bz; nz += ax * by - ay * bx;
+            }
+            float nl = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+            if (nl < 1e-8f) continue;
+            nx /= nl; ny /= nl; nz /= nl;
+            if (nx * -dx + ny * -dy + nz * -dz < 0) { nx = -nx; ny = -ny; nz = -nz; }
+            // plano: los puntos de alrededor a menos de 2.5 cm del plano que pasa por el centro
+            boolean plano = true;
+            for (float[] p : q) if (Math.abs((p[0] - x) * nx + (p[1] - y) * ny + (p[2] - z) * nz) > 0.025f) plano = false;
+            if (!plano) continue;
             // de frente a vos (si la superficie mira para otro lado, no sirve)
-            if (n[0] * -dx + n[1] * -dy + n[2] * -dz < 0.35f) continue;
+            if (nx * -dx + ny * -dy + nz * -dz < 0.35f) continue;
+            // separado lo justo para quedar delante de todo lo medido alrededor (la malla tiene sus bultitos)
+            float sep = 0.03f;
+            for (float[] p : q) sep = Math.max(sep, (p[0] - x) * nx + (p[1] - y) * ny + (p[2] - z) * nz + 0.02f);
             Blanco b = new Blanco();
-            b.x = x + n[0] * 0.02f; b.y = y + n[1] * 0.02f; b.z = z + n[2] * 0.02f;
-            b.nx = n[0]; b.ny = n[1]; b.nz = n[2];
-            b.radio = 0.14f + 0.02f * d;   // más lejos, más grande (que se pueda)
+            b.x = x + nx * sep; b.y = y + ny * sep; b.z = z + nz * sep;
+            b.nx = nx; b.ny = ny; b.nz = nz;
+            b.radio = radio;
             blancos.add(b);
             return true;
         }
