@@ -12,7 +12,9 @@ const nav = await navegador();
 let bien = 0, mal = 0;
 const prueba = (n, ok, extra = '') => { ok ? bien++ : mal++; console.log(`${ok ? '✓' : '✗'} ${n}${extra ? ' · ' + extra : ''}`); };
 const esperar = (ms) => new Promise((ok) => setTimeout(ok, ms));
-async function juntos(pags, segundos) { for (let t = 0; t < segundos; t += 0.1) { await Promise.all(pags.map((p) => avanzar(p, 3, 1 / 30))); await esperar(40); } }
+/* (sin dibujar: acá no se mira la imagen, y con el dibujo por software cada cuadro tardaba; la prueba
+   duraba 3 min y con otras corriendo el audio llegaba cortado) */
+async function juntos(pags, segundos) { for (let t = 0; t < segundos; t += 0.1) { await Promise.all(pags.map((p) => avanzar(p, 3, 1 / 30, false))); await esperar(40); } }
 const q = (n) => `directo&pausa&calidad=baja&nombre=${n}&broker=${encodeURIComponent(B.url)}`;
 const A = await abrir(nav, q('Ana'), { red: 'local', ancho: 640, alto: 360 });
 const Bb = await abrir(nav, q('Beto'), { red: 'local', ancho: 640, alto: 360 });

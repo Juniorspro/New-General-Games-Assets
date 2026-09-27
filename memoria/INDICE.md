@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: la mano lenta con la cámara lenta de un celu).
+mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: la mano que no se duplica, los manotazos y la tanda corta).
 
 ## Reglas que no se discuten
 
@@ -77,6 +77,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: la mano l
 | [aeroplaza-19](aeroplaza-19.md) | AEROPLAZA, decimoctava vuelta: por qué los dedos se doblaban (el adelanto de cada punto por el ruido de su velocidad) y la mano como un cuerpo (`PoseMano`: centro, giro con Kabsch, dedos en la palma con bisagra), los adelantos con compuerta (dedos y giro), `EuroDedos`, lo medido (dobla, el dedo que se cierra, MediaPipe de verdad) |
 | [aeroplaza-20](aeroplaza-20.md) | AEROPLAZA, decimonovena vuelta: qué hace MediaPipe con el dorso y de canto (medido con fotos de Rezona: la forma 3D no cae sobre la imagen, duda de qué mano es, una sola cámara no sabe para qué lado está girada), los puntos por la imagen (`puntosMano`), el espejo que sigue lo que venía (`elegirEspejo`), el nivel medio más rápido al arrancar, lo del Recreo, `manos-lento` con `MP=1` y la mano que se da vuelta |
 | [aeroplaza-21](aeroplaza-21.md) | AEROPLAZA, vigésima vuelta: "lentoooo" con un video del celu (el juego a 40-50 cuadros; lo lento es el atraso), los topes del adelanto que frenaban con una cámara lenta, `AMORT_MAS`, `ADEL_MAX` (el manotazo que se pasaba 50 cm), el ancla de costado del medio |
+| [aeroplaza-22](aeroplaza-22.md) | AEROPLAZA, vigesimoprimera vuelta: la mano doble (el fantasma de MediaPipe, la mano a prueba, `quiereDos`), los manotazos que se pasaban 9 cm (`ADEL_MAX`, `ASIENTA`, la búsqueda que no sirvió), la tanda: dibujar es lo que cuesta, `pruebas/todas.mjs`, `avanzar(…, false)` |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

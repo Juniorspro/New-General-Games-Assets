@@ -17,6 +17,10 @@
 // - cuánto se doblan los dedos de más (dobla: los ángulos de los nudillos contra los de verdad, grados) y
 //   cuánto se atrasa un dedo que se dobla (dedo, ms). RUIDO=2: el doble de temblor en cada punto;
 //   GLITCH=0.05: en el 5 % de las fotos un dedo sale corrido (como cuando MediaPipe lo erra).
+// - manotazos (vuelta 22): 1,2 m/s de costado y 0,9 para arriba y abajo, 0,25 s, que frenan en seco: lo
+//   cuándo lo mostrado pasa la mitad contra la real (golpeMitad, ms: con la foto sola, sin filtro, sería lo
+//   que tarda la foto), lo que se pasa (golpePasa, mm), cuándo queda a
+//   menos de 1,5 cm de donde frenó (golpeQueda, ms) y lo que tiembla después (golpeTiembla, mm).
 // - MP=1: como MediaPipe de verdad (vuelta 20): la imagen precisa y la forma 3D aparte, un poco girada,
 //   y de canto a veces al revés en profundidad; se pasa por manos-camara.js › puntosMano. ver: cuánto se
 //   corre de costado la mano dibujada de la de verdad, visto desde los ojos (mm); verV, estiraV, doblaV:
@@ -54,9 +58,15 @@ const TRAMOS = [
   /* (y la mano que se da vuelta: media vuelta en 0,45 s, de la palma al dorso, y de vuelta) */
   { t: 23.0, d: 0.45, w: Math.PI / 0.37, n: 'voltea', voltea: true },
   { t: 24.5, d: 0.45, w: -Math.PI / 0.37, n: 'voltea de vuelta', voltea: true },
+  /* (vuelta 22: manotazos, rápidos y cortos, que frenan en seco: 1,2 m/s, 20 cm de costado; 0,9 m/s,
+     15 cm para arriba y para abajo. ¿Los sigue, se pasa, y queda firme?) */
+  { t: 26.0, d: 0.25, v: [1.2, 0, 0], n: 'manotazo', rapido: true },
+  { t: 27.4, d: 0.25, v: [-1.2, 0, 0], n: 'manotazo de vuelta', rapido: true },
+  { t: 28.8, d: 0.25, v: [0, 0.9, 0], n: 'manotazo arriba', rapido: true },
+  { t: 30.2, d: 0.25, v: [0, -0.9, 0], n: 'manotazo abajo', rapido: true },
 ];
 /* (lo de antes se mide hasta VIEJO: lo que se dio vuelta, aparte) */
-const FIN = 25.6, VIEJO = 22.8, SUAVE = 0.08;
+const FIN = 31.4, VIEJO = 22.8, SUAVE = 0.08;
 const perfil = (tr, t) => { const a = t - tr.t; if (a <= 0 || a >= tr.d) return 0; const s = (x) => x * x * (3 - 2 * x); return Math.min(1, s(Math.min(1, a / SUAVE)), s(Math.min(1, (tr.d - a) / SUAVE))); };
 const PASO = 0.0005, POS = [], ANG = [], CURVA = [];
 { let p = [0.08, -0.12, -0.37], a = 0, cu = 0; for (let t = 0; t <= FIN + 0.5; t += PASO) { POS.push(p.slice()); ANG.push(a); CURVA.push(cu); for (const tr of TRAMOS) { const k = perfil(tr, t); if (tr.v) for (let c = 0; c < 3; c++) p[c] += tr.v[c] * k * PASO; if (tr.w) a += tr.w * k * PASO; if (tr.dobla) cu += tr.dobla * k * PASO; } } }
@@ -215,6 +225,18 @@ function correr(semilla) {
     const fin = traza.filter(([t, m]) => m && t > tr.t + tr.d && t < tr.t + tr.d + 0.5), rf = muneca(tr.t + tr.d + 0.3), cf = centro(puntos(tr.t + tr.d + 0.3));
     const pasa = Math.max(0, ...fin.map(([, m]) => avanzo(m, cf))) * 1000;
     out[tr.n] = { atraso, arranque: tR && tM ? (tM - tR) * 1000 : NaN, pasa };
+    if (tr.rapido) {
+      /* (el manotazo: cuándo lo mostrado pasa la mitad, contra cuándo la pasa la real, ms (con la foto
+         sola, sin filtro ni adelanto, sería lo que tarda la foto); cuándo queda a menos de 1,5 cm de donde
+         frenó (en la dirección del movimiento), para siempre, ms después de que frenó la de verdad; y lo
+         que tiembla después) */
+      const total = avanzo(cf, r0), tRm = traza.slice(i0).find(([, , r]) => avanzo(r, r0) > total / 2)?.[0], tMm = m0 ? traza.slice(i0).find(([, m]) => m && avanzo(m, m0) > total / 2)?.[0] : null;
+      out[tr.n].mitad = tRm && tMm ? (tMm - tRm) * 1000 : NaN;
+      const tf = tr.t + tr.d, luego = traza.filter(([t, m]) => m && t > tf && t < tf + 1.0);
+      let k = luego.length; while (k > 0 && Math.abs(avanzo(luego[k - 1][1], cf)) < 0.015) k--;
+      out[tr.n].queda = k < luego.length ? (luego[k][0] - tf) * 1000 : 1000;   // (1000: no quedó en 1 s)
+      out[tr.n].tiembla = reposo(tf + 0.4, tf + 1.1).tiembla;
+    }
     if (tr.fino) {
       const total = sp * (tr.d - SUAVE), j = traza.findIndex(([t]) => t >= tr.t + tr.d + 0.3), fin2 = traza[j];
       const hecho = fin2?.[1] && m0 ? avanzo(fin2[1], m0) / total : NaN;
@@ -223,15 +245,18 @@ function correr(semilla) {
     }
   }
   /* tirón p99: la aceleración de lo mostrado contra la real */
-  const tir = []; for (let i = 2; i < traza.length; i++) { const [a, b, c] = [traza[i - 2], traza[i - 1], traza[i]]; if (!a[1] || !b[1] || !c[1]) continue; tir.push(Math.hypot(...[0, 1, 2].map((k) => (c[1][k] - 2 * b[1][k] + a[1][k]) - (c[2][k] - 2 * b[2][k] + a[2][k]))) * 1000); }
+  /* (hasta antes de los manotazos, así se compara con las vueltas de antes) */
+  const tir = []; for (let i = 2; i < traza.length; i++) { const [a, b, c] = [traza[i - 2], traza[i - 1], traza[i]]; if (c[0] > 25.6) break; if (!a[1] || !b[1] || !c[1]) continue; tir.push(Math.hypot(...[0, 1, 2].map((k) => (c[1][k] - 2 * b[1][k] + a[1][k]) - (c[2][k] - 2 * b[2][k] + a[2][k]))) * 1000); }
   tir.sort((x, y) => x - y); out.tironP99 = tir[Math.floor(tir.length * 0.99)];
   return out;
 }
 const rs = (process.env.SEMILLAS ? process.env.SEMILLAS.split(",").map(Number) : [1, 2, 3]).map(correr), m = (f) => rs.reduce((a, r) => a + f(r), 0) / rs.length;
 const res = { ver: +m((r) => r.ver).toFixed(1), verV: +m((r) => r.verV).toFixed(1), verVp95: +m((r) => r.verVp95).toFixed(1), estiraV: +m((r) => r.estiraV).toFixed(1), doblaV: +m((r) => r.doblaV).toFixed(1), doblaVp95: +m((r) => r.doblaVp95).toFixed(1), dobla: +m((r) => r.dobla).toFixed(1), doblaP95: +m((r) => r.doblaP95).toFixed(1), dedo: +m((r) => r.dedo).toFixed(0), giro: +m((r) => r.giro).toFixed(1), giroP95: +m((r) => r.giroP95).toFixed(1), lat: +m((r) => r.lat).toFixed(0), quieta: +m((r) => r.quieta).toFixed(2), quieta2: +m((r) => r.quieta2).toFixed(2), tiembla: +m((r) => r.tiembla).toFixed(3), tironP99: +m((r) => r.tironP99).toFixed(1), estira: +m((r) => r.estira).toFixed(1), forma: +m((r) => r.forma).toFixed(1), estiraGira: +m((r) => r.estiraGira).toFixed(1) };
-for (const tr of TRAMOS.filter((x) => x.v)) res[tr.n] = { atraso: +m((r) => r[tr.n].atraso).toFixed(0), arranque: +m((r) => r[tr.n].arranque).toFixed(0), pasa: +m((r) => r[tr.n].pasa).toFixed(1), ...(tr.fino ? { hecho: +m((r) => r[tr.n].hecho).toFixed(0), mitad: +m((r) => r[tr.n].mitad).toFixed(0) } : {}) };
+for (const tr of TRAMOS.filter((x) => x.v)) res[tr.n] = { atraso: +m((r) => r[tr.n].atraso).toFixed(0), arranque: +m((r) => r[tr.n].arranque).toFixed(0), pasa: +m((r) => r[tr.n].pasa).toFixed(1), ...(tr.fino ? { hecho: +m((r) => r[tr.n].hecho).toFixed(0), mitad: +m((r) => r[tr.n].mitad).toFixed(0) } : {}),
+  ...(tr.rapido ? { mitad: +m((r) => r[tr.n].mitad).toFixed(0), queda: +m((r) => r[tr.n].queda).toFixed(0), tiembla: +m((r) => r[tr.n].tiembla).toFixed(2) } : {}) };
 if (process.env.CORTO) {
   const lados = ['costado 5 cm/s', 'costado 10 cm/s', 'costado 20 cm/s', 'costado 40 cm/s', 'arriba 15 cm/s'], hon = ['lejos 10 cm/s', 'cerca 10 cm/s'], F1 = res['fino 1 cm/s'], F2 = res['paso 6 mm'];
-  const med = (ks, k) => ks.reduce((a, n) => a + res[n][k], 0) / ks.length;
-  console.log(JSON.stringify({ ver: res.ver, verV: res.verV, verVp95: res.verVp95, estiraV: res.estiraV, doblaV: res.doblaV, doblaVp95: res.doblaVp95, dobla: res.dobla, doblaP95: res.doblaP95, dedo: res.dedo, fino: F1.hecho, finoMitad: F1.mitad, paso: F2.hecho, pasoMitad: F2.mitad, giro: res.giro, giroP95: res.giroP95, estira: res.estira, forma: res.forma, estiraGira: res.estiraGira, lat: res.lat, quieta: res.quieta, q2: res.quieta2, tiembla: res.tiembla, p99: res.tironP99, atrasoLado: +med(lados, 'atraso').toFixed(0), atraso5: res['costado 5 cm/s'].atraso, atraso10: res['costado 10 cm/s'].atraso, arranqueLado: +med(lados, 'arranque').toFixed(0), pasaLado: +med(lados, 'pasa').toFixed(1), atrasoHondo: +med(hon, 'atraso').toFixed(0), arranqueHondo: +med(hon, 'arranque').toFixed(0) }));
+  const med = (ks, k) => ks.reduce((a, n) => a + res[n][k], 0) / ks.length, golpes = TRAMOS.filter((x) => x.rapido).map((x) => x.n);
+  console.log(JSON.stringify({ ver: res.ver, verV: res.verV, verVp95: res.verVp95, estiraV: res.estiraV, doblaV: res.doblaV, doblaVp95: res.doblaVp95, dobla: res.dobla, doblaP95: res.doblaP95, dedo: res.dedo, fino: F1.hecho, finoMitad: F1.mitad, paso: F2.hecho, pasoMitad: F2.mitad, giro: res.giro, giroP95: res.giroP95, estira: res.estira, forma: res.forma, estiraGira: res.estiraGira, lat: res.lat, quieta: res.quieta, q2: res.quieta2, tiembla: res.tiembla, p99: res.tironP99, atrasoLado: +med(lados, 'atraso').toFixed(0), atraso5: res['costado 5 cm/s'].atraso, atraso10: res['costado 10 cm/s'].atraso, arranqueLado: +med(lados, 'arranque').toFixed(0), pasaLado: +med(lados, 'pasa').toFixed(1), atrasoHondo: +med(hon, 'atraso').toFixed(0), arranqueHondo: +med(hon, 'arranque').toFixed(0),
+    golpeMitad: +med(golpes, 'mitad').toFixed(0), golpePasa: +med(golpes, 'pasa').toFixed(1), golpeQueda: +med(golpes, 'queda').toFixed(0), golpeTiembla: +med(golpes, 'tiembla').toFixed(2) }));
 } else console.log(JSON.stringify(res, null, 1));

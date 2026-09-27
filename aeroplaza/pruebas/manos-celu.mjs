@@ -38,7 +38,7 @@ const angulos = (P) => CADENAS.flatMap((c) => c.slice(1, -1).map((b, k) => {
   const a = c[k], d = c[k + 2], u = [0, 1, 2].map((q) => P[b * 3 + q] - P[a * 3 + q]), v = [0, 1, 2].map((q) => P[d * 3 + q] - P[b * 3 + q]);
   return Math.acos(Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (Math.hypot(...u) * Math.hypot(...v) || 1)))) * 180 / Math.PI;
 }));
-function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, suavidad = 'media', red = 'nueva', escala = 0.7, entra = 0 }) {
+function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, suavidad = 'media', red = 'nueva', escala = 0.7, entra = 0, fantasma = 0 }) {
   let s = semilla * 2654435761 >>> 0;
   const azar = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const gauss = () => Math.sqrt(-2 * Math.log(azar() + 1e-12)) * Math.cos(2 * Math.PI * azar());
@@ -78,7 +78,7 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
   /* las redes (con el cupo que les manda manos-camara.js) */
   const R_ = Array.from({ length: redes }, () => ({ libre: -1, cupo: 2, recien: false, siguiendo: 0 }));
   for (const r of R_) r.w = { postMessage: (m) => { if (m.tipo === 'cupo' && m.n !== r.cupo) { r.cupo = m.n; r.recien = true; } } };
-  const mc = new ManosCamara(); mc.redes = R_; mc.activa = true; mc.cfg.siempreDos = red === 'vieja';
+  const mc = new ManosCamara(); mc.redes = R_; mc.activa = true; mc.cfg.siempreDos = red === 'vieja'; mc.quiereDos = () => manos.prueba.length > 0;
   const R = { n: 0, cuadros: 0, sin: 0, dobles: 0, titila: 0, reaparece: 0, err: [], tiron: [], quieta: [], tiembla: [], lat: [], estira: [], dobla: [] };
   for (let T = 0; T < FIN; T += DT) {
     for (const r of resultados.filter((r) => r.llega <= T)) { manos.recibirCamara(r.lista, r.tc, r.llega, r.cupo); if (!r.primera) mc.medirRedes(r.red, r.ms, r.cupo, r.lista.length); mc.elegirCupos({ n: r.lista.length, cupo: r.cupo }, r.red, r.llega); R.lat.push(r.llega - r.tc); R.n++; }
@@ -92,6 +92,13 @@ function simular({ L = 90, semilla = 1, dos = false, limpio = false, redes = 2, 
       const dd = detectar(true, tc / 1000, perdida[1]); perdida[1] = !dd; if (dd) lista.push(dd);
       /* (entra: la izquierda aparece recién a esa hora) */
       if (dos && tc / 1000 >= entra) { const di = detectar(false, tc / 1000, perdida[0]); perdida[0] = !di; if (di) lista.push(di); }
+      /* (fantasma: buscando dos con una sola a la vista, MediaPipe a veces trae también la misma mano de
+         una foto atrasada, donde estaba, con otra profundidad y a veces con la etiqueta de la otra; más
+         cuanto más rápido va la mano) */
+      if (fantasma && rd.cupo === 2 && dd && !dos && azar() < fantasma * (0.25 + Math.min(1, velocidad(true, tc / 1000)))) {
+        const g = detectar(true, tc / 1000 - 0.06 - 0.1 * azar(), false);
+        if (g) { const dz = gauss() * 0.04; for (let i = 0; i < 21; i++) g.puntos[i * 3 + 2] += dz; if (azar() < 0.5) g.derecha = !g.derecha; g.confianza = 0.6 + 0.3 * azar(); lista.push(g); }
+      }
       /* con cupo 1 trae una sola (la que venía siguiendo) */
       if (rd.cupo === 1 && lista.length > 1) lista = [lista[rd.siguiendo % lista.length]];
       const palmas = rd.recien || lista.length < rd.cupo || (lista.length && !rd.antes);
@@ -245,6 +252,13 @@ for (const dos of [false, true]) {
   };
   const bien2 = probar(50, 55, 58), pelean = probar(50, 80, 80), lenta = probar(50, 52, 95);
   prueba('la segunda red se apaga sola si no conviene', bien2 && !pelean && !lenta, `las dos parejas: ${bien2 ? 'quedan dos' : 'se apagó'} · se pelean: ${pelean ? 'quedan dos' : 'queda una'} · la segunda lenta: ${lenta ? 'quedan dos' : 'queda una'}`);
+}
+/* la misma mano dos veces (vuelta 22): buscando dos manos, MediaPipe a veces trae un fantasma de la
+   que ya ve (de una foto atrasada, donde estaba); si se le creía, aparecía una segunda mano al lado */
+{
+  const r = [90, 150].map((L) => ({ L, ...caso({ L, fantasma: 0.3 }) })), r1 = caso({ L: 90, fantasma: 0.3, redes: 1 });
+  prueba('con los fantasmas de MediaPipe (la misma mano dos veces) no aparece una segunda mano', r.every((x) => x.dobles === 0 && x.titila < 15) && r1.dobles === 0,
+    [...r.map((x) => `foto a los ${f(x.lat, 0)} ms: ${f(x.dobles, 2)} % dobles, ${f(x.titila)} titileos/min`), `una red: ${f(r1.dobles, 2)} % dobles`].join(' · '));
 }
 /* la mano que se da vuelta (vuelta 20), con MediaPipe como es: la imagen precisa y la forma 3D aparte, y
    de canto a veces al revés en profundidad (herramientas/manos-lento.mjs con MP=1). Una sola foto así

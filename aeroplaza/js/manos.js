@@ -73,12 +73,17 @@ class EuroEjes {
     this.r = r;
     if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t); return this.x; }
     const dt = Math.max(1e-3, t - this.t); this.t = t;
-    const L = this.lado, H = this.hondo, aL = Euro.a(L.corteD, dt), aH = Euro.a(H.corteD, dt), [rx, ry, rz] = r, x = this.x, dx = this.dx;
+    const L = this.lado, H = this.hondo, [rx, ry, rz] = r, x = this.x, dx = this.dx;
     for (let j = 0; j < this.n; j++) {
       const i = j * 3, ex = v[i] - x[i], ey = v[i + 1] - x[i + 1], ez = v[i + 2] - x[i + 2];
       /* lo que se movió, partido: a lo largo del rayo (eh) y de costado (el) */
       const eh = ex * rx + ey * ry + ez * rz, elx = ex - eh * rx, ely = ey - eh * ry, elz = ez - eh * rz;
       let vh = dx[i] * rx + dx[i + 1] * ry + dx[i + 2] * rz, vx = dx[i] - vh * rx, vy = dx[i + 1] - vh * ry, vz = dx[i + 2] - vh * rz;
+      /* (la velocidad también se abre (betaD, Hz por m/s): con lo que cambió contra la que traía. Con el
+         corte fijo tardaba tres o cuatro fotos en creer que arrancó, y otras tantas en creer que frenó:
+         en un manotazo arrancaba tarde y se pasaba 10 cm. Quieta, lo que cambia es ruido y no la abre) */
+      const nL = Math.hypot(elx / dt - vx, ely / dt - vy, elz / dt - vz), nH = Math.abs(eh / dt - vh);
+      const aL = Euro.a(L.corteD + (L.betaD || 0) * nL, dt), aH = Euro.a(H.corteD + (H.betaD || 0) * nH, dt);
       vh += aH * (eh / dt - vh); vx += aL * (elx / dt - vx); vy += aL * (ely / dt - vy); vz += aL * (elz / dt - vz);
       const sl = Math.hypot(vx, vy, vz), sh = Math.abs(vh);
       const kL = Euro.a(L.corte + L.beta * sl, dt), kH = Euro.a(H.corte + H.beta * Math.max(sh, sl * H.cruce), dt);
@@ -107,8 +112,16 @@ const AMORT = 0.8012;  // cuánto de la velocidad se usa para adelantar
 /* (vuelta 21: con la cámara lenta, lo que tarda de más se adelanta un poco más, hasta AMORT + AMORT_MAS
    con 0,26 s. Con la foto a 0,19 s, medio iba 97 ms atrás de costado; ahora 24. Hasta 0,13 s, igual que
    antes. LAT_TOPE: lo más que se cree que tarda) */
-const LAT_TOPE = 0.35, AMORT_MAS = 0.24, LAT_REF = 0.13, ADEL_MAX = 0.1;
+/* (ADEL_MAX, vuelta 22: 10 → 6,5 cm, en Medio y Suaves; Rápidas sigue con 10 (SUAVIDAD › adelMax). En un
+   manotazo a 1,2 m/s que frena en seco, lo mostrado se pasaba 9 cm: mientras ninguna foto muestra que
+   frenó, el adelanto sigue. Ahora 6,6 cm. Con 5,5, manos-celu quieta con la cámara lenta daba 6,0 mm) */
+const LAT_TOPE = 0.35, AMORT_MAS = 0.24, LAT_REF = 0.13, ADEL_MAX = 0.065;
+const ASIENTA = 0.93;     // quieta, en cuánto se va el ancla hacia donde está la mano filtrada (s; 0: no se va) (Mano.estabilizar)
 const TAU = 0.0321;    // en cuánto se reparte el salto de cada foto nueva: un resorte (s)
+const RESORTE_V = 1;   // y cuánto del cambio de velocidad (Mano.suavizar)
+/* (RESORTE_V, C_BETAD y CH_BETAD, vuelta 22: la búsqueda con los manotazos las movía, pero con esas
+   manos-celu temblaba el doble (2,4 mm por cuadro): quedan como estaban. aeroplaza-22 § Los manotazos) */
+const FANTASMA = 0.05;  // una mano nueva a menos de esto (de costado, m) del camino de otra es un fantasma de MediaPipe
 const SNAP = 0.4;      // un salto más grande que esto no se reparte: se va derecho (m), más 2 m/s por lo que estuvo sin fotos
 const RARA = 0.08;     // una foto que cae más lejos que esto de donde tenía que estar se espera (m)
 const RAYO_GANA = [2.0, 2.6];   // con la cámara: cuánto se agranda el ángulo de la mano para el rayo (de costado, arriba/abajo)
@@ -117,8 +130,8 @@ const RAYO_GANA = [2.0, 2.6];   // con la cámara: cuánto se agranda el ángulo
 const E_CORTE = 1.2, E_BETA = 10, E_CORTED = 2.0;
 /* con la cámara (vuelta 16): liviano, casi no atrasa; lo quieto lo sostienen las anclas. De costado,
    y en profundidad (cruce: cuánto abre el de profundidad la velocidad de costado) */
-const C_CORTE = 2.7586, C_BETA = 33.0921, C_CORTED = 2.9938;
-const CH_CORTE = 2.0, CH_BETA = 20, CH_CORTED = 1.1853, CH_CRUCE = 0.3034;
+const C_CORTE = 2.7586, C_BETA = 33.0921, C_CORTED = 2.9938, C_BETAD = 0;
+const CH_CORTE = 2.0, CH_BETA = 20, CH_CORTED = 1.1853, CH_CRUCE = 0.3034, CH_BETAD = 0;
 /* la forma de la mano (Mano.enderezar): la palma, un molde; los dedos, hueso por hueso */
 const PALMA6 = [0, 1, 5, 9, 13, 17], EN_PALMA = Array.from({ length: 21 }, (_, i) => PALMA6.includes(i));
 const DEDOS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
@@ -358,15 +371,15 @@ const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }
      tarda en arrancar y los movimientos chicos: "tarda en seguirme"), con vs: con el borde empujado y
      el centro a más de vs (m/s), el ancla de costado se suelta sin esperar te */
 export const SUAVIDAD = {
-  rapida: { anclas: null, lmax: 0.35, lmaxH: 0.35, v0: 0.03, v1: 0.1 },
+  rapida: { anclas: null, lmax: 0.35, lmaxH: 0.35, v0: 0.03, v1: 0.1, adelMax: 0.1 },
   media: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0048, rh: 0.0106, tq: 0.2645, tqH: 0.1799, te: 0.0426, teH: 0.0172, ts: 0.038, tsH: 0.0491, vs: 0.0568 } },
   suave: { lmax: 0.35, lmaxH: 0.35, anclas: { rl: 0.0051, rh: 0.0139, tq: 0.2248, tqH: 0.1921, te: 0.0258, teH: 0.0368, ts: 0.0424, tsH: 0.0514 } },
 };
 class Mano {
   constructor(derecha) {
-    this.derecha = derecha; this.visible = false; this.t = -1; this.conf = 0;
+    this.derecha = derecha; this.visible = false; this.t = -1; this.conf = 0; this.rastro = [];
     this.euroIso = new Euro(63, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED });
-    this.euroEjes = new PoseMano({ corte: C_CORTE, beta: C_BETA, corteD: C_CORTED }, { corte: CH_CORTE, beta: CH_BETA, corteD: CH_CORTED, cruce: CH_CRUCE }, P_GIRO, P_DEDOS);
+    this.euroEjes = new PoseMano({ corte: C_CORTE, beta: C_BETA, corteD: C_CORTED, betaD: C_BETAD }, { corte: CH_CORTE, beta: CH_BETA, corteD: CH_CORTED, cruce: CH_CRUCE, betaD: CH_BETAD }, P_GIRO, P_DEDOS);
     this.euro = this.euroIso; this.rayo = null;   // (el de ejes, con la cámara: rayo es de los ojos a la mano)
     this.p = new Float32Array(63);        // lo que se dibuja (filtrado, adelantado y sin saltos)
     this.pellizca = false; this.fuerza = 0; this.tPellizco = -9; this.soltoEn = -9;
@@ -439,6 +452,8 @@ class Mano {
     this.lat = this.lat > 0 ? this.lat + (lat - this.lat) * 0.1 : lat;
     this.hueco = this.t > 0 ? Math.max(0, t - this.t) : 0;   // (lo que estuvo sin fotos: el tope del resorte crece con eso)
     this.t = t; this.tLlego = tLlego; this.conf = conf; this.pell = pell; this.nueva = true;
+    /* (por dónde pasó, con lo que midió la cámara: para reconocer los fantasmas de MediaPipe) */
+    this.rastro.push({ t, c: centroPalma(P) }); while (this.rastro.length && t - this.rastro[0].t > 0.4) this.rastro.shift();
     if (!this.visible) { this.visible = true; this.pellizca = false; this.anulado = false; this.profAntes = undefined; }
   }
   /* al cuadro que se dibuja: lo filtrado más la velocidad por lo que pasó desde que LLEGÓ la foto
@@ -464,7 +479,7 @@ class Mano {
        vuelve el adelanto la pasaba 50 cm y después saltaba de golpe) */
     { const a0 = c0 * pa, a1 = c1 * pa, a2 = c2 * pa, ah = a0 * r[0] + a1 * r[1] + a2 * r[2];
       const d = Math.hypot((a0 - ah * r[0]) * k + ah * r[0] * kh, (a1 - ah * r[1]) * k + ah * r[1] * kh, (a2 - ah * r[2]) * k + ah * r[2] * kh);
-      if (d > ADEL_MAX) { k *= ADEL_MAX / d; kh *= ADEL_MAX / d; } }
+      const am2 = this.adelMax ?? ADEL_MAX; if (d > am2) { k *= am2 / d; kh *= am2 / d; } }
     for (let i = 0; i < 63; i += 3) {
       const vx = E.dx[i] - vc[0], vy = E.dx[i + 1] - vc[1], vz = E.dx[i + 2] - vc[2], vh = vx * r[0] + vy * r[1] + vz * r[2];
       const w = [vx, vy, vz];
@@ -503,6 +518,10 @@ class Mano {
         const e = Math.exp(-dt / an.ts); o[0] *= e; o[1] *= e; o[2] *= e;
         if (an.tQ > an.tq) { an.quieta = true; an.empuje = 0; an.A = [c[0] + o[0], c[1] + o[1], c[2] + o[2]]; }
       } else {
+        /* (ASIENTA, vuelta 22: quieta, el ancla va de a poco hacia donde está la mano filtrada. Se
+           anclaba donde se mostraba en ese momento, con lo que quedaba del adelanto: después de un
+           manotazo quedaba corrida hasta el borde de la zona, 5 mm de costado y 11 en profundidad) */
+        if (ASIENTA && k === 1) { const g = 1 - Math.exp(-dt / ASIENTA), w = parte(cf, an.A); for (let j = 0; j < 3; j++) an.A[j] += w[j] * g; }
         const d = parte(an.A, c), L = largo(d);
         if (L > an.zona) {
           const f = an.zona / L; o[0] = d[0] * f; o[1] = d[1] * f; o[2] = d[2] * f;
@@ -557,7 +576,9 @@ class Mano {
       /* el resorte se queda con lo que saltó lo de abajo (contra dónde iba a estar sin la foto nueva, y
          a qué velocidad) y sigue con su propio movimiento. (No con la velocidad de lo que se veía: esa
          incluye al resorte, y con una foto por cuadro se pasaba de largo cuadro por medio) */
-      for (let i = 0; i < 63; i++) { off[i] -= p[i] - (bA[i] + vbA[i] * h); oV[i] -= vb[i] - vbA[i]; }
+      /* (RESORTE_V: cuánto del cambio de velocidad se queda el resorte. Todo: la velocidad nunca salta,
+         pero al frenar en seco la mano sigue de largo lo que tarda el resorte) */
+      for (let i = 0; i < 63; i++) { off[i] -= p[i] - (bA[i] + vbA[i] * h); oV[i] -= (vb[i] - vbA[i]) * RESORTE_V; }
       /* (moviéndose rápido, tras un rato sin que la red la vea, el salto puede ser grande y es la misma mano: el
          tope crece con el hueco; si no, se iba de golpe 40 cm) */
       const c = centroPalma(off); if (Math.hypot(c[0], c[1], c[2]) > SNAP + 2 * Math.min(0.3, this.hueco || 0)) { off.fill(0); oV.fill(0); }
@@ -741,7 +762,7 @@ export class Manos {
     this.cartelL = document.createElement('canvas'); this.cartelL.width = 512; this.cartelL.height = 96;
     this.cartel = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(this.cartelL), depthTest: false, transparent: true, toneMapped: false }));
     this.cartel.material.map.colorSpace = THREE.SRGBColorSpace; this.cartel.visible = false; this.cartel.renderOrder = 7; this.escena.add(this.cartel);
-    this.objetivo = null; this.salto = null; this.eventos = []; this.tAnt = -1; this.tCapUlt = -1e9;
+    this.objetivo = null; this.salto = null; this.eventos = []; this.tAnt = -1; this.tCapUlt = -1e9; this.prueba = [];
     this.stats = { lecturas: 0, dibujos: 0, msActualizar: 0 };
   }
   /* ------------------------------------------ la cabeza en cada cuadro (t en ms, como performance.now) */
@@ -799,12 +820,66 @@ export class Manos {
        la otra; si no, se cruzaban una que se iba y otra que llegaba en el mismo lugar) */
     for (const M of this.manos) if (M.visible || M.alfa > 0.05) {
       const pr = M.predecirCentro(ts), aca = M.predecirCentro(M.t, ya), tope = 0.2 + 0.8 * Math.min(0.5, Math.max(0, ts - M.t));
-      for (const d of dets) { const dd = Math.min(dist(pr, d.c), dist(aca, d.c)); if (dd < tope) pares.push([dd, M, d]); }
+      /* (con la foto de antes reciente, el orden va solo por donde tenía que estar: el fantasma de
+         MediaPipe trae donde estaba, y contra eso le ganaba a la de verdad) */
+      const reciente = ts - M.t < 0.12;
+      for (const d of dets) { const dp = dist(pr, d.c), da = dist(aca, d.c); if (Math.min(dp, da) < tope) pares.push([reciente ? dp : Math.min(dp, da), M, d]); }
     }
     pares.sort((x, y) => x[0] - y[0]);
     for (const [, M, d] of pares) if (!tomadas.has(M) && !d.M) { d.M = M; tomadas.add(M); }
     /* 2) las que aparecen: por lo que dice MediaPipe (y si vienen dos iguales, por el lado de la imagen) */
-    const nuevas = dets.filter((d) => !d.M);
+    /* (el fantasma, vuelta 22: buscando dos manos, MediaPipe a veces trae también la que ya ve, de una
+       foto atrasada: donde estaba hace un momento. Si se le creía, aparecía una segunda mano al lado, y
+       con dos a la vista las redes buscaban dos y traían más: en el simulador, dos manos en el 37 % de
+       los cuadros) */
+    /* (de costado, visto desde la cámara: con las direcciones, contra cada tramo del camino) */
+    const dir = (a) => { const x = a[0] - camO[0], y = a[1] - camO[1], z = a[2] - camO[2], l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l, l]; };
+    const deCostado = (P, A, B = A) => {
+      const d = B.map((b, i) => b - A[i]), dd = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+      const k = dd > 0 ? Math.min(1, Math.max(0, ((P[0] - A[0]) * d[0] + (P[1] - A[1]) * d[1] + (P[2] - A[2]) * d[2]) / dd)) : 0;
+      return Math.hypot(P[0] - A[0] - k * d[0], P[1] - A[1] - k * d[1], P[2] - A[2] - k * d[2]) * P[3];
+    };
+    const sobre = (P, R) => { for (let i = 0; i < R.length; i++) if (deCostado(P, R[i], R[i + 1] || R[i]) < FANTASMA) return true; return false; };
+    const camino = (O) => O.rastro.filter((r) => ts - r.t < 0.35).map((r) => dir(r.c));
+    const hayOtra = this.manos.some((O) => (O.visible && O.alfa > 0.3) || tomadas.has(O));
+    /* a) la que cae sobre otra de esta foto, o sobre el camino que hizo otra en los últimos 0,35 s, no
+       es una mano nueva (si vienen dos nuevas una sobre la otra, queda la de más confianza) */
+    const nuevas = [];
+    for (const d of dets.filter((x) => !x.M).sort((x, y) => y.m.confianza - x.m.confianza)) {
+      const P = dir(d.c);
+      if (dets.some((e) => (e.M || nuevas.includes(e)) && deCostado(P, dir(e.c)) < FANTASMA)) continue;
+      if (hayOtra && this.manos.some((O) => O.visible && sobre(P, camino(O)))) continue;
+      nuevas.push(d);
+    }
+    /* b) con otra a la vista, la nueva queda a prueba (no se dibuja): cuando la mano arranca de golpe,
+       el fantasma trae donde estaba y la de verdad aparece al lado, igual que otra mano que entra.
+       Se sabe después:
+       - si en otra foto la de a prueba viene y la que se ve no (o lo que viene para la que se ve cae
+         sobre el camino que acaba de hacer la de a prueba: es su fantasma), era la misma: la que se
+         ve la sigue;
+       - si en dos fotos más viene cada una por su lado (o la de a prueba sola, lejos de donde tenía
+         que estar la que se ve), es otra mano: aparece. Mientras hay una a prueba, las redes buscan
+         dos (manos-camara.js › quiereDos) */
+    if (hayOtra) for (const d of nuevas.splice(0)) {
+      let C = null, mc = 0.25;
+      for (const c of this.prueba) { const dd = dist(c.c, d.c); if (dd < mc && ts > c.t) { mc = dd; C = c; } }
+      if (!C) { C = { c: d.c, t: ts, n: -1, R: [] }; this.prueba.push(C); }
+      /* (hacia atrás de lo que hizo la de a prueba: por donde pasó, y su velocidad por 0,2 s) */
+      const P = dir(d.c), R = C.R.map((r) => r.P).concat([P]);
+      if (C.R.length) { const r0 = C.R[C.R.length - 1], k = 0.2 / Math.max(0.03, ts - r0.t); R.push(dir(d.c.map((x, i) => x - (x - r0.c[i]) * k))); }
+      C.R.push({ t: ts, c: d.c, P }); while (C.R.length > 6) C.R.shift();
+      C.c = d.c; C.t = ts; C.d = d;
+      /* (la que se ve, O: la más cerca) */
+      let O = null, mo = 1e9;
+      for (const M of this.manos) if (M.visible || tomadas.has(M)) { const dd = dist(M.predecirCentro(ts), d.c); if (dd < mo) { mo = dd; O = M; } }
+      const e = O && dets.find((x) => x.M === O);
+      const deO = !e || sobre(dir(e.c), R);
+      if (O && deO && (e || deCostado(P, dir(O.predecirCentro(ts))) < 0.15)) {
+        if (e) e.M = null;
+        d.M = O; tomadas.add(O); C.fin = true;
+      } else if (++C.n >= 1) { nuevas.push(d); C.fin = true; }
+    }
+    this.prueba = this.prueba.filter((c) => !c.fin && ts - c.t < 0.25);
     if (nuevas.length === 2 && nuevas[0].der === nuevas[1].der) { const [x, y] = nuevas; x.der = x.m.puntos[0] > y.m.puntos[0]; y.der = !x.der; }
     for (const d of nuevas) {
       let M = this.manos[d.der ? 1 : 0];
@@ -841,7 +916,7 @@ export class Manos {
   }
   perder(der) { const M = this.manos[der ? 1 : 0]; M.visible = false; M.seguida = false; }
   /* todo apagado de golpe (al salir del VR) */
-  limpiar() { for (const M of this.manos) { M.visible = false; M.alfa = 0; M.seguida = false; } this.menu.cerrar(); this.tCapUlt = -1e9; }
+  limpiar() { for (const M of this.manos) { M.visible = false; M.alfa = 0; M.seguida = false; } this.menu.cerrar(); this.tCapUlt = -1e9; this.prueba = []; }
   /* ------------------------------------------ cada cuadro. ctx: lo del juego que hace falta
      { cabezaP, cabezaQ, interactivos: [{ o, pos, texto }], altura(x, z), sePuede(x, y, z), tocar(p) }
      devuelve los eventos: usar, ir, saltar, menú */
@@ -863,7 +938,7 @@ export class Manos {
       if (!M.visible) { M.pellizca = false; M.fuerza = 0; M.seguida = M.seguida && M.alfa > 0; continue; }
       /* (el nivel del menú, solo con la cámara: el visor y las pruebas van con lo de siempre) */
       const z = M.rayo ? SUAVIDAD[this.suavidad] || SUAVIDAD.media : null;
-      M.lmax = z?.lmax; M.lmaxH = z?.lmaxH;
+      M.lmax = z?.lmax; M.lmaxH = z?.lmaxH; M.adelMax = z?.adelMax;
       M.adelantar(ts, this.adelanta && !xr);
       if (!xr) {
         M.suavizar(h);

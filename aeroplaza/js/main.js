@@ -155,7 +155,7 @@ async function iniciar() {
   let camManos = null;
   const laCamara = () => (camManos ||= Object.assign(new ManosCamara({ alLlegar: (lista, tt, llego, cupo) => { if (manos.activa) manos.recibirCamara(lista, tt, llego, cupo); } }),
     /* (para la carrera de la GPU: si la red en la placa le saca cuadros al dibujo) */
-    { fpsJuego: () => (vr.activo ? vr.fps.valor : 0) }));
+    { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0 }));
   /* el flash del VR sin visor (vr.js pone el botón): la linterna de la cámara de atrás */
   vr.alFlash = (prender) => laCamara().linterna(prender);
   /* (con los cuadros por segundo prendidos, también lo de las manos: fotos por segundo y atraso) */

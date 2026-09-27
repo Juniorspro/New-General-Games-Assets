@@ -4,7 +4,10 @@
 // Lo que ve cada dedo se comprueba con elementFromPoint: nada de la interfaz
 // puede estar tapando la capa de los dedos.
 //     node pruebas/dedos.mjs
-import { navegador, abrir, avanzar } from './comun.mjs';
+import { navegador, abrir, avanzar as avanzarDibujando } from './comun.mjs';
+/* (sin dibujar: acá se mira lo que toca cada dedo, no la imagen; con el dibujo por software cada
+   avanzar tardaba 2 s) */
+const avanzar = (pag, n, dt = 1 / 30) => avanzarDibujando(pag, n, dt, false);
 const nav = await navegador();
 const ok = [], mal = [];
 const prueba = (n, c, d = '') => { (c ? ok : mal).push(n); console.log((c ? '✓ ' : '✗ ') + n + (d ? ` · ${d}` : '')); };

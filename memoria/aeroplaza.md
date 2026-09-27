@@ -25,7 +25,7 @@ comentarios de cada `js/`. Ver también: [rezona](rezona.md), [brillo](brillo.md
   - se dibuja solo el último cuadro;
   - después un `readPixels` espera a SwiftShader. Si no, `screenshot` se
     cuelga 30 s esperando los cuadros encolados.
-- Tiempos: `reinos.mjs` ~15 s por reino, `multijugador.mjs` ~3 min, `flujo.mjs` ~4 min.
+- Tiempos: `reinos.mjs` ~15 s por reino, `multijugador.mjs` ~1 min, `flujo.mjs` ~1 min; la tanda, `pruebas/todas.mjs` ([aeroplaza-22](aeroplaza-22.md) § La tanda).
 
 ## La red (lo que pidió, punto por punto)
 
@@ -317,7 +317,8 @@ En su propia nota: [aeroplaza-12](aeroplaza-12.md). Y después, el VR a 120, las
 [aeroplaza-18](aeroplaza-18.md). La mano como un cuerpo, que no se dobla:
 [aeroplaza-19](aeroplaza-19.md). La mano que se da vuelta y la imagen que manda:
 [aeroplaza-20](aeroplaza-20.md). La mano lenta con la cámara lenta de un celu:
-[aeroplaza-21](aeroplaza-21.md).
+[aeroplaza-21](aeroplaza-21.md). La mano que no se duplica, los manotazos y la
+tanda corta: [aeroplaza-22](aeroplaza-22.md).
 
 ## Trampas que ya se pagaron
 

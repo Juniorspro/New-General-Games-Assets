@@ -14,12 +14,16 @@ const prueba = (nombre, cond, dato = '') => { (cond ? ok : mal).push(nombre + (d
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 /* los dos avanzan a la vez, de a poco, dejando que lleguen los mensajes */
 async function juntos(pags, segundos, cada = 0.1) {
-  for (let t = 0; t < segundos; t += cada) { await Promise.all(pags.map((p) => avanzar(p, Math.round(cada * 30), 1 / 30))); await esperar(20); }
+  /* (sin dibujar: se mira lo que llega, no la imagen; el dibujo por software era casi todo el tiempo) */
+  for (let t = 0; t < segundos; t += cada) { await Promise.all(pags.map((p) => avanzar(p, Math.round(cada * 30), 1 / 30, false))); await esperar(20); }
 }
 const q = (n) => `directo&pausa&calidad=baja&nombre=${n}&broker=${encodeURIComponent(B.url)}`;
 const A = await abrir(nav, q('Ana'), { red: 'local', ancho: 640, alto: 360 });
 const Bb = await abrir(nav, q('Beto'), { red: 'local', ancho: 640, alto: 360 });
 for (const x of [A, Bb]) await x.pag.waitForFunction(() => window.__A && window.__A.yo && window.__A.red.estado === 'en_linea', null, { timeout: 60000, polling: 200 });
+/* (un cuadro dibujado de entrada: el primero compila los shaders por software y tarda segundos; en
+   medio de la prueba, en ese rato el otro no mandaba nada y a los 5 s se lo olvidaba) */
+for (const x of [A, Bb]) await avanzar(x.pag, 1);
 prueba('los dos conectan al broker', B.clientes === 2, `${B.clientes} clientes`);
 const salas = await Promise.all([A, Bb].map((x) => x.pag.evaluate(() => window.__A.red.sala)));
 prueba('entran a la misma sala pública, sin código', salas[0] === salas[1], salas.join(' / '));
@@ -35,9 +39,9 @@ prueba('Beto ve a Ana (RemotePlayer en el Map)', !!vista, vista ? vista.n : 'no 
 prueba('y donde está (interpolado hacia targetX/targetZ)', vista && Math.abs(vista.x + 10) < 0.3 && Math.abs(vista.z - 2) < 0.3, vista ? `${vista.x.toFixed(2)}, ${vista.z.toFixed(2)}` : '');
 /* la interpolación: Ana salta 4 m y Beto la ve acercarse de a poco, no de golpe */
 await A.pag.evaluate(() => { window.__A.yo.p.x = -6; });
-await avanzar(A.pag, 4); await esperar(250);
+await avanzar(A.pag, 4, 1 / 30, false); await esperar(250);
 const pasos = [];
-for (let i = 0; i < 6; i++) { await avanzar(Bb.pag, 1); pasos.push(await Bb.pag.evaluate((id) => window.__A.remotos.get(id).x, ids[0])); }
+for (let i = 0; i < 6; i++) { await avanzar(Bb.pag, 1, 1 / 30, false); pasos.push(await Bb.pag.evaluate((id) => window.__A.remotos.get(id).x, ids[0])); }
 prueba('se mueve suave (lerp), en varios cuadros', pasos[0] > -10 && pasos[0] < -6.3 && pasos[5] > pasos[0], pasos.map((x) => x.toFixed(2)).join(' → '));
 /* la apariencia viaja */
 await A.pag.evaluate(() => { const { G, J } = window.__A; G.A.color = '#ff4f6e'; G.A.sombrero = 'conico'; J.aplicarApariencia(); });
@@ -56,7 +60,7 @@ await A.pag.evaluate(() => { const { yo } = window.__A; yo.p.set(-10, window.__A
 await Bb.pag.evaluate(() => { const { yo } = window.__A; yo.p.set(-10, window.__A.reino.mundo.altura(-10, 4), 4); yo.hp = 100; });
 await juntos([A.pag, Bb.pag], 1.5);
 await A.pag.evaluate(() => { const E = window.__A.J; window.__A.yo.rumbo = 0; });
-await A.pag.keyboard.down('KeyF'); await avanzar(A.pag, 1); await A.pag.keyboard.up('KeyF');
+await A.pag.keyboard.down('KeyF'); await avanzar(A.pag, 1, 1 / 30, false); await A.pag.keyboard.up('KeyF');
 await juntos([A.pag, Bb.pag], 1.5);
 const hp = await Bb.pag.evaluate(() => window.__A.yo.hp);
 prueba('hit_player: a Beto le baja la espuma', hp < 100, `hp ${Math.round(hp)}`);
@@ -64,6 +68,7 @@ const hpA = await A.pag.evaluate(() => window.__A.yo.hp);
 prueba('y a Ana no (se ignora lo propio)', hpA === 100, `hp ${hpA}`);
 const vioDisparo = await Bb.pag.evaluate(() => (window.__A.UI.historial || []).join(' | '));
 prueba('Beto ve el aviso de quién le tiró', vioDisparo.includes('Ana'), vioDisparo.slice(0, 60));
+await avanzar(Bb.pag, 1); await avanzar(A.pag, 1);
 await Bb.pag.screenshot({ path: path.join(SAL, 'multi-beto.png') });
 await A.pag.screenshot({ path: path.join(SAL, 'multi-ana.png') });
 /* el estado solo se manda si algo cambió: quieta, Ana manda poco (latido cada 1,5 s) */
@@ -74,7 +79,7 @@ prueba('quieta manda poco (no a ciegas cada cuadro)', estados <= Math.ceil(reale
 /* Beto se va: a los 5 s Ana lo borra */
 await Bb.ctx.close();
 const t0 = Date.now();
-while (Date.now() - t0 < 7000) { await avanzar(A.pag, 3); await esperar(200); }
+while (Date.now() - t0 < 7000) { await avanzar(A.pag, 3, 1 / 30, false); await esperar(200); }
 const sigue = await A.pag.evaluate((id) => !!window.__A.remotos.get(id), ids[1]);
 prueba('el que no manda nada en 5 s desaparece', !sigue);
 /* sin red: el juego anda igual */

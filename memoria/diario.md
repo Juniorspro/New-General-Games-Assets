@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la noche · `claude/fijate-iszyer`:**
+  - Pidió: que la tanda no dure tanto; que la mano siga movimientos rápidos,
+    quede firme y no se duplique.
+  - Quedó ([aeroplaza-22](aeroplaza-22.md)): la mano a prueba contra los
+    fantasmas de MediaPipe (dobles 37 % → 0 en el simulador); el manotazo que
+    se pasa 93 → 66 mm y quieta tiembla un 36 % menos; `pruebas/todas.mjs` y
+    cuatro pruebas sin dibujar (voz 180 → 47 s, multijugador 143 → 64).
+  - Falta: probarlo en el celu; la captura del cartel de ⏱ sigue pendiente.
 - **27/09/2026, a la tarde · `claude/fijate-iszyer`:**
   - Pidió: un video de su celu y "lentoooo".
   - Quedó ([aeroplaza-21](aeroplaza-21.md)): el adelanto sin el tope que lo

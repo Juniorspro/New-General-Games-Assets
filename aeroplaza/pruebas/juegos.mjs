@@ -3,7 +3,9 @@
 // hasta el final, y que anden la pelota (gol), el aro, los bolos, los
 // trampolines, las hamacas, el tobogán y la pista de baile. Sin errores.
 //     node pruebas/juegos.mjs
-import { navegador, abrir, avanzar } from './comun.mjs';
+import { navegador, abrir, avanzar as avanzarDibujando } from './comun.mjs';
+/* (sin dibujar: acá no se mira la imagen; el dibujo por software era casi todo el tiempo) */
+const avanzar = (pag, n, dt = 1 / 30) => avanzarDibujando(pag, n, dt, false);
 const nav = await navegador();
 let bien = 0, mal = 0;
 const prueba = (n, ok, extra = '') => { ok ? bien++ : mal++; console.log(`${ok ? '✓' : '✗'} ${n}${extra ? ' · ' + extra : ''}`); };

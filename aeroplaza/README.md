@@ -148,7 +148,12 @@ Pausa › 🥽 Modo VR: con visor de cartón (pantalla doble, SBS), sin visor, o
   sabe para qué lado está girada la mano: queda la versión que sigue lo que
   venía (la mano no se dispara ni se deforma).
 - El adelanto tapa lo que tarda la foto hasta 0,35 s (con un celu de cámara
-  lenta, un poco más), y el centro no se adelanta más de 10 cm.
+  lenta, un poco más), y el centro no se adelanta más de 6,5 cm (en Rápidas,
+  10): en un manotazo que frena en seco se pasa menos. Quieta, el ancla de
+  profundidad se asienta de a poco donde está la mano (tiembla un tercio menos).
+- No se duplica: una mano que aparece sobre el camino que acaba de hacer otra
+  es un fantasma de MediaPipe, y con una a la vista, la nueva queda a prueba
+  hasta que se ven las dos a la vez.
 - **✋ Las manos: Rápidas · Medio · Suaves** (abajo de las llaves). Rápidas van
   pegadas a la mano y tiemblan un poco, como un Quest; Suaves, quietas no
   tiemblan y van un poco atrás. De entrada, Medio.
@@ -205,6 +210,9 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   `js/manos.js` (`SUAVE=`, `RED=`, `SEMILLAS=`, `RUIDO=`, `MP=1` como
   MediaPipe de verdad y con la mano que se da vuelta, `CORTO=1`).
 - `pruebas/`:
+  - `todas.mjs [--manos] [--a-la-vez=3] [nombre…]`: la tanda entera, tres a la
+    vez; la que falla acompañada se vuelve a correr sola y dice si fue la carga
+    de la máquina;
   - `multijugador.mjs`: dos navegadores contra `broker.mjs`, un broker MQTT
     mínimo en Node puro;
   - `flujo.mjs [--movil]`: recorre las pantallas como una persona;

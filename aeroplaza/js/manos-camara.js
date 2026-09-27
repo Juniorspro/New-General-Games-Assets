@@ -397,7 +397,9 @@ export class ManosCamara {
     if (this.cfg.siempreDos) return;   // (como antes: para comparar en las pruebas)
     const V = this.vistas, activas = (this.redes || []).filter((r) => !r.apagada);
     if (d.n >= 1) V.una = llego;
-    if (d.n >= 2) V.dos = llego;
+    /* (quiereDos: manos.js tiene una mano nueva a prueba, al lado de la que se ve; para saber si es
+       otra hace falta verlas juntas: se buscan dos, como si se hubieran visto dos) */
+    if (d.n >= 2 || this.quiereDos?.()) V.dos = llego;
     const hay = llego - V.dos < 500 ? 2 : llego - V.una < 800 ? 1 : 0;
     if (hay !== this.hay) V.desde = llego;
     this.hay = hay;

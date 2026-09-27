@@ -83,7 +83,15 @@ export async function abrir(nav, params = '', { ancho = 960, alto = 540, red = '
   return { pag, ctx, errores };
 }
 /* avanza el juego a mano (sin requestAnimationFrame): cuadros de 1/30 s */
-export async function avanzar(pag, n = 30, dt = 1 / 30) {
-  /* solo se dibuja el último cuadro, y se espera a que la placa (por software) termine */
-  await pag.evaluate(([n, dt]) => { for (let i = 0; i < n; i++) window.__A.paso(dt, i === n - 1); const gl = window.__A.motor.r.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); }, [n, dt]);
+/* (PERFIL=1: al terminar, cuánto tiempo se fue en avanzar, dibujando y sin dibujar) */
+const PERFIL = process.env.PERFIL ? { dib: 0, sin: 0, nd: 0, ns: 0, t0: Date.now() } : null;
+if (PERFIL) process.on('exit', () => console.log(`⏱ avanzar: ${PERFIL.nd} dibujando ${(PERFIL.dib / 1000).toFixed(1)} s · ${PERFIL.ns} sin dibujar ${(PERFIL.sin / 1000).toFixed(1)} s · en total ${((Date.now() - PERFIL.t0) / 1000).toFixed(1)} s`));
+export async function avanzar(pag, n = 30, dt = 1 / 30, dibujar = true) {
+  if (PERFIL) { const t = Date.now(); await avanzar1(pag, n, dt, dibujar); if (dibujar) { PERFIL.dib += Date.now() - t; PERFIL.nd++; } else { PERFIL.sin += Date.now() - t; PERFIL.ns++; } return; }
+  return avanzar1(pag, n, dt, dibujar);
+}
+async function avanzar1(pag, n, dt, dibujar) {
+  /* solo se dibuja el último cuadro, y se espera a que la placa (por software) termine. dibujar =
+     false: ninguno (las pruebas que no miran la imagen: el dibujo por software es casi todo el tiempo) */
+  await pag.evaluate(([n, dt, dibujar]) => { for (let i = 0; i < n; i++) window.__A.paso(dt, dibujar && i === n - 1); if (!dibujar) return; const gl = window.__A.motor.r.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); }, [n, dt, dibujar]);
 }
