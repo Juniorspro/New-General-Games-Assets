@@ -9,6 +9,8 @@ Pidió: "quiero que logres aún más estabilidad en las manos; en HTML también;
   sirve `aeroplaza.html` de la rama como `text/html`, por https (la cámara y el giroscopio lo piden). Sigue a la
   rama (unos minutos de caché).
   - Comprobado: el sha256 que baja es el del último commit.
+  - Recién pusheado, el de la rama tarda (seguía el anterior a los ~5 min). Con el commit en vez de la rama
+    (`…/New-General-Games-Assets/<commit>/aeroplaza/aeroplaza.html`) sale al toque: dar los dos.
 - **jsDelivr no sirve**: da el HTML como `text/plain`.
 - **El artefacto no sirve para las manos**: no tiene cámara ni micrófono.
 - **Chromium del contenedor no abre el link** (`ERR_CERT_AUTHORITY_INVALID`: no confía en el proxy). Se comprueba
