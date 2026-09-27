@@ -22,7 +22,7 @@ python3 pruebas/manos-camara.py → cámara YUV → RGB → modelo de manos, con
 |---|---|
 | ![](capturas/mapa.jpg) | ![](capturas/ia.jpg) |
 
-| la pistola en la mano, sobre fotos reales (índice estirado = listo · puño = gatillo) |
+| la mano "Meta" sobre fotos reales: tu mano real ADELANTE del arma (los dedos tapan el mango) y encima el borde fantasma que brilla; apretando, se enciende la punta del índice · a la derecha, la versión "vidrio" (visor con el entorno en 3D) |
 |---|
 | ![](capturas/mano.jpg) |
 
@@ -104,6 +104,43 @@ del APK), en su propio hilo. De ahí salen 21 puntos por mano, hasta dos manos
   apretado.
 - **Sin mano a la vista**: el arma vuelve a la vista, como antes.
 
+### La mano "Meta": tu mano real, transparente (como Aeroplaza)
+
+La mano se dibuja como en un Meta Quest (igual que Aeroplaza, portado de su
+shader). Cada hueso es una **cápsula** con el radio de su articulación, y el
+fresnel deja casi sólo el **borde que brilla**: tu mano de verdad se sigue
+viendo en la cámara, con el contorno encima. Las puntas del pulgar y del
+índice se encienden al apretar el gatillo.
+
+Además, la mano escribe su **profundidad** antes de lo virtual:
+- lo que queda detrás de tu mano no se dibuja, así tu mano real queda
+  **adelante** de los soldados;
+- lo hace otra vez antes del arma, así **los dedos tapan el mango** y el arma
+  queda agarrada, no pegada encima.
+
+En el visor, con el entorno en 3D (la cámara proyectada sobre la malla), la
+mano de verdad no se ve bien, así que ahí la mano es más sólida ("vidrio").
+
+Aparece en 80 ms y se va en 200 ms, con las reglas de Aeroplaza para darla
+por perdida (4 imágenes sin verla, o 2 y un cuarto de segundo). Si el
+teléfono no tiene `GL_OES_standard_derivatives`, el borde va sin el
+suavizado de un píxel. En Ajustes → Hand tracking: "Sí (mano fantasma)" o
+"Sí + esqueleto".
+
+### ARCore como Aeroplaza
+
+- **La cámara**: la de más campo visual. De sus configuraciones, la de **más
+  fps** (60 si hay, así la mano se sigue el doble de seguido) y la imagen más
+  cerca de **640×480**. El juego necesita profundidad para la malla, así que
+  se queda con la primera, en ese orden, que la tenga (Ajustes → Cámara →
+  "Más ancha", por defecto).
+- `UpdateMode.LATEST_CAMERA_IMAGE`, foco `AUTO`, sin estimar la luz.
+- **La hora de la foto** es la de la cámara (`Frame.getTimestamp`), no la del
+  cuadro que se dibuja: así el adelanto compensa lo que de verdad tardó.
+- **Tu mano no se escanea**: donde está la mano, la profundidad no entra al
+  escaneo. Antes quedaban manchas de mano en la malla. Esto no está en
+  Aeroplaza.
+
 ### Súper fija: el filtro de la mano (como Aeroplaza)
 
 La versión anterior temblaba y saltaba. Tres cosas la hacían andar mal:
@@ -141,8 +178,22 @@ lo porté a `FiltroMano.java`:
   de segundo. Y un **ancla de giro** que no está en Aeroplaza (ellos apuntan
   con pellizcos; para un arma, medio grado a 5 m son 4 cm): si el caño no sale
   de 1.5° por un cuarto de segundo, se fija, y se suelta en cuanto lo movés.
-- **Predicción**: la imagen llega tarde (lo que tarda la red). Se adelanta
-  con la velocidad filtrada hasta el cuadro que se dibuja, a lo sumo 6.5 cm.
+- **Predicción** (la de Aeroplaza, entera): la imagen llega tarde (lo que
+  tarda la red). Se adelanta hasta el cuadro que se dibuja, a lo sumo 6.5 cm,
+  con una **ganancia aprendida**: compara lo que predijo con lo que pasó.
+  Lateral y profundidad van aparte. Adelanta menos si se mueven los dedos y
+  no la mano, y "sigue de largo" si la mano se va por el borde de la foto.
+- **El resorte**: cuando llega una imagen, la salida no salta. La diferencia
+  se apaga como un resorte (32 ms quieta, 20 ms moviéndose). Con fotos a 30 y
+  dibujo a 60, la mano se mueve pareja: **8 veces menos tirones** (a cambio de
+  unos milímetros de demora). Después se **endereza**: la palma y los huesos
+  vuelven a su forma aprendida.
+- **Cuál mano es cuál**: por dónde tendría que estar cada una ahora (el
+  centro predicho en 3D), con una zona que crece si hace rato que no se ve.
+  - Dos detecciones a menos de 4 cm son la misma mano.
+  - Una mano nueva, con otra ya a la vista, tiene que aparecer 2 veces
+    seguidas: los fantasmas de la red de un cuadro no cuentan.
+  - La misma mano vista dos veces en el mismo rayo tampoco cuenta.
 - El gesto sale de los dedos ya corregidos. Y el disparo con el pulgar ("la
   pistolita") hay que armarlo levantando el pulgar primero: con una mano
   real de pulgar quieto en 0.46, pegado al umbral, disparaba solo.
@@ -159,14 +210,16 @@ delante de la cámara y se "mide" con un ruido parecido al del modelo:
 
 | | antes | ahora |
 |---|---|---|
-| quieta: temblor del arma | 10.5 mm | **1.0 mm** |
-| quieta: temblor del caño | 8.2° | **0.05°** |
-| quieta: el punto del láser a 5 m | 133 cm | **0.3 cm** |
+| quieta: temblor del arma | 10.5 mm | **1.2 mm** |
+| quieta: temblor del caño | 8.2° | **0.13°** |
+| quieta: el punto del láser a 5 m | 133 cm | **3.5 cm** |
 | distancia real (con la mano 8 % más grande) | 9 mm corrida | **5 mm** (ARCore calibró ×1.09; real ×1.08) |
-| moviéndose a 0.5 m/s | 48 mm de error | **20 mm** |
-| girando la muñeca ±35° | 13.1° | **4.7°** |
-| apuntando despacio (6°/s) | 6.7° | **1.8°** (el ancla no lo pega) |
-| apretar el gatillo 5 veces | el caño se va hasta 57° | **1.7°**; salen los 5 tiros |
+| moviéndose a 0.5 m/s | 48 mm de error | **28 mm** |
+| tirones cuadro a cuadro (la mano real: 0.52) | 20.9 mm/cuadro² | **2.65** |
+| girando la muñeca ±35° | 13.1° | **6.4°** |
+| apuntando despacio (6°/s) | 6.7° | **2.0°** (el ancla no lo pega) |
+| apretar el gatillo 5 veces | el caño se va hasta 57° | **0.5°**; salen los 5 tiros |
+| dos manos 5 s, en cualquier orden | — | 0 cambios de mano, 0 fantasmas |
 | mano oscura (brillo 0.17) | — | ganancia ×2.4 → 0.42 |
 
 Estos números son contra un ruido **simulado**: el de verdad del teléfono no
@@ -486,7 +539,9 @@ real, jugá parado o caminando despacio, en un lugar despejado.
 | `src/.../Escaneo.java` | el hilo del escaneo (y el mapa cada 1.5 s) |
 | `src/.../Mapa.java` | la IA del entorno: zonas, completado, cubiertas, rutas A\*, cobertura |
 | `src/.../Mano.java` | la mano: pose, gatillo, la pistola en la mano, de la foto al 3D, la ganancia (sin Android) |
-| `src/.../FiltroMano.java` | el filtro de la mano (como Aeroplaza): palma rígida, forma aprendida, saltos, espejo, anclas, predicción |
+| `src/.../FiltroMano.java` | el filtro de la mano (como Aeroplaza): palma rígida, forma aprendida, saltos, espejo, anclas, predicción con ganancia, resorte, enderezar, fundido |
+| `src/.../AsociadorManos.java` | cuál mano es cuál (centro predicho, duplicadas, fantasmas, mismo rayo, lado) |
+| `src/.../ManosGl.java` | la mano "Meta": cápsulas con el borde que brilla y la pasada de profundidad |
 | `src/.../ManoRastreo.java` | el hilo de MediaPipe: imagen entera, GPU, red de 1 y de 2 manos, ganancia → 21 puntos por mano |
 | `src/.../Fallo.java` | si se cae: guarda el error y lo muestra al volver a abrir |
 | `mediapipe-parche/` | MediaPipe sin telemetría |

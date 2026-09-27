@@ -13,7 +13,7 @@ public final class GLES20 {
     public static final int GL_BLEND = 0x0BE2, GL_COMPILE_STATUS = 0x8B81, GL_FLOAT = 0x1406, GL_FRAGMENT_SHADER = 0x8B30,
             GL_LINES = 1, GL_LINK_STATUS = 0x8B82, GL_ONE = 1, GL_ONE_MINUS_SRC_ALPHA = 0x0303, GL_POINTS = 0,
             GL_SRC_ALPHA = 0x0302, GL_TRIANGLES = 4, GL_VERTEX_SHADER = 0x8B31, GL_DEPTH_TEST = 0x0B71,
-            GL_TRIANGLE_FAN = 6, GL_TRIANGLE_STRIP = 5, GL_CULL_FACE = 0x0B44, GL_POLYGON_OFFSET_FILL = 0x8037;
+            GL_TRIANGLE_FAN = 6, GL_TRIANGLE_STRIP = 5, GL_EXTENSIONS = 0x1F03, GL_LEQUAL = 0x0203, GL_LESS = 0x0201, GL_UNSIGNED_SHORT = 0x1403, GL_CULL_FACE = 0x0B44, GL_POLYGON_OFFSET_FILL = 0x8037;
 
     /** Una caja grabada: mvp (16), modelo (16), color (4). */
     public static final ArrayList<float[]> cajas = new ArrayList<>();
@@ -56,6 +56,11 @@ public final class GLES20 {
     public static void glDepthMask(boolean b) { }
     public static void glLineWidth(float w) { }
     public static void glPolygonOffset(float f, float u) { offF = f; offU = u; }
+    public static String glGetString(int n) { return ""; }
+    public static void glColorMask(boolean r, boolean g, boolean b, boolean a) { }
+    public static void glDepthFunc(int f) { }
+    public static void glUniform2f(int u, float a, float b) { valores.put(nombres.get(u), new float[]{a, b}); }
+    public static void glDrawElements(int modo, int n, int tipo, java.nio.Buffer b) { }
 
     public static void glDrawArrays(int modo, int primero, int n) {
         if (modo == GL_TRIANGLE_FAN || modo == GL_TRIANGLE_STRIP) {

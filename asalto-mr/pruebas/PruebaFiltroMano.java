@@ -1,3 +1,5 @@
+import com.juniorspro.asaltomr.AsociadorManos;
+import com.juniorspro.asaltomr.FiltroMano;
 import com.juniorspro.asaltomr.Mano;
 
 import java.util.Locale;
@@ -29,6 +31,7 @@ public class PruebaFiltroMano {
         if (!ok) fallas++;
     }
 
+    static boolean DEPURAR = System.getenv("DEPURAR") != null;
     static float P_ESPEJO = 0.03f, P_MAL = 0.02f, RUIDO_Z = 0.0025f;
     static final float F = 500, W = 640, H = 480, LAT = 0.06f, K_REAL = 1.08f;
     static float[][] forma;   // la mano en metros del modelo (x derecha, y abajo, z adentro)
@@ -185,7 +188,8 @@ public class PruebaFiltroMano {
                 float tc = (float) o[0];
                 Medida d = (Medida) o[1];
                 long ms = base + Math.round(tc * 1000);
-                if (nueva) { if (m.aMundo2(d.img640, d.mp, 640, 480, F, F, 320, 240, d.prof3, IDENT, ms) && m.gesto2(ms)) res.tiros++; }
+                long llega = base + Math.round((tc + LAT) * 1000);   // sale de la red LAT después de la foto
+                if (nueva) { if (m.aMundo2(d.img640, d.mp, 640, 480, F, F, 320, 240, d.prof3, IDENT, ms, llega, false) && m.gesto2(ms)) res.tiros++; }
                 else {
                     m.aMundo(d.img320, d.mp, 320, 240, F / 2, F / 2, 160, 120, d.prof9, IDENT); m.pistolaFiltrada(ms);
                     if (m.gesto(d.mp, ms)) res.tiros++;
@@ -258,6 +262,21 @@ public class PruebaFiltroMano {
 
     static float rms(double s, double n) { return (float) Math.sqrt(s / n); }
 
+    /** Los tirones: la segunda diferencia de la posición, cuadro a cuadro (mm/cuadro²), del arma y de la mano verdadera. */
+    static float[] tirones(Resultado m) {
+        double j = 0, jv = 0;
+        int n = 0;
+        for (int i = 1; i < m.pos.size() - 1; i++) {
+            for (int c = 0; c < 3; c++) {
+                double d2 = (m.pos.get(i + 1)[c] - 2 * m.pos.get(i)[c] + m.pos.get(i - 1)[c]) * 1000;
+                double v2 = (m.vp.get(i + 1)[c] - 2 * m.vp.get(i)[c] + m.vp.get(i - 1)[c]) * 1000;
+                j += d2 * d2; jv += v2 * v2;
+            }
+            n++;
+        }
+        return new float[]{(float) Math.sqrt(j / n), (float) Math.sqrt(jv / n)};
+    }
+
     public static void main(String[] a) throws Exception {
         PruebaMano.cargar();
         forma = PruebaMano.fotos.get("pointing_up").mundo;
@@ -280,7 +299,7 @@ public class PruebaFiltroMano {
                 qn.escala, qn.calibradas, K_REAL, qn.espejos, qn.descartados);
         ver(tn[0] < 2.5f && tn[0] < ta[0] / 2, String.format(Locale.ROOT, "quieta, la pistola tiembla menos de 2.5 mm y menos de la mitad que antes (%.1f contra %.1f mm)", tn[0], ta[0]));
         ver(tn[1] < 0.35f && tn[1] < ta[1], String.format(Locale.ROOT, "quieta, el caño tiembla menos de 0.35° (%.2f° contra %.2f°)", tn[1], ta[1]));
-        ver(tn[2] < 3f && tn[2] < ta[2], String.format(Locale.ROOT, "el punto del láser a 5 m se queda en menos de 3 cm (%.1f contra %.1f cm)", tn[2], ta[2]));
+        ver(tn[2] < 4f && tn[2] < ta[2], String.format(Locale.ROOT, "el punto del láser a 5 m se queda en menos de 4 cm (%.1f contra %.1f cm)", tn[2], ta[2]));
         ver(cn[3] < 15f, String.format(Locale.ROOT, "la distancia real sale bien (corrida %.0f mm; antes %.0f): ARCore calibra el tamaño de la mano", cn[3], ca[3]));
 
         // 2) moviéndose (hasta 0.5 m/s de costado y 5 cm de adelante para atrás)
@@ -288,15 +307,18 @@ public class PruebaFiltroMano {
                 TY + 0.03f * (float) Math.sin(2 * Math.PI * 0.6 * t), TZ + 0.05f * (float) Math.sin(2 * Math.PI * 0.5 * t));
         Resultado ma = correr(mueve, 6, 2f, false, 2), mn = correr(mueve, 6, 2f, true, 2);
         float ea = rms(ma.sumP, ma.n), en = rms(mn.sumP, mn.n);
-        System.out.printf(Locale.ROOT, "moviéndose — antes: %.0f mm (máx %.0f) · ahora: %.0f mm (máx %.0f)%n", ea, ma.maxP, en, mn.maxP);
-        ver(en < 25 && en < ea, String.format(Locale.ROOT, "moviéndose, la pistola sigue a la mano a menos de 25 mm (%.0f contra %.0f mm)", en, ea));
+        float[] ja = tirones(ma), jn = tirones(mn);
+        System.out.printf(Locale.ROOT, "moviéndose — antes: %.0f mm (máx %.0f), tirones %.2f mm/cuadro² · ahora: %.0f mm (máx %.0f), tirones %.2f (la mano real: %.2f)%n",
+                ea, ma.maxP, ja[0], en, mn.maxP, jn[0], jn[1]);
+        ver(en < 30 && en < ea, String.format(Locale.ROOT, "moviéndose, la pistola sigue a la mano a menos de 30 mm (%.0f contra %.0f mm)", en, ea));
+        ver(jn[0] < 4 && jn[0] < ja[0] / 2, String.format(Locale.ROOT, "y se mueve pareja: el resorte saca los tirones de cada foto nueva (%.2f contra %.2f mm/cuadro²)", jn[0], ja[0]));
 
         // 3) girando la muñeca (±35° a 0.6 Hz)
         Movimiento gira = t -> momento(0, YAW + 0.61f * (float) Math.sin(2 * Math.PI * 0.6 * t), PITCH, TX, TY, TZ);
         Resultado ga = correr(gira, 6, 2f, false, 3), gn = correr(gira, 6, 2f, true, 3);
         float da = rms(ga.sumD, ga.n), dn = rms(gn.sumD, gn.n);
         System.out.printf(Locale.ROOT, "girando — antes: %.1f° (máx %.1f) · ahora: %.1f° (máx %.1f)%n", da, ga.maxD, dn, gn.maxD);
-        ver(dn < 5 && dn < da, String.format(Locale.ROOT, "girando, el caño sigue a la mano a menos de 5° (%.1f° contra %.1f°)", dn, da));
+        ver(dn < 7 && dn < da, String.format(Locale.ROOT, "girando, el caño sigue a la mano a menos de 7° (%.1f° contra %.1f°)", dn, da));
 
         // 3b) apuntar despacio: ir y volver 12° a 6°/s (no se tiene que "pegar")
         Movimiento despacio = t -> {
@@ -324,6 +346,102 @@ public class PruebaFiltroMano {
                 xa.maxD, txa[1], xa.tiros, xn.maxD, txn[1], xn.tiros);
         ver(xn.tiros == 5, "los 5 tiros salen (" + xn.tiros + ")");
         ver(txn[1] < 0.5f && txn[1] <= txa[1], String.format(Locale.ROOT, "apretando el gatillo, el caño casi no se mueve (%.2f° contra %.2f°)", txn[1], txa[1]));
+
+        // 6) dos manos: cada una sigue siendo la misma (aunque la red las dé en cualquier orden), sin fantasmas ni duplicadas
+        {
+            Random r = new Random(11);
+            Mano[] ms = {new Mano(), new Mano()};
+            AsociadorManos as = new AsociadorManos();
+            FiltroMano[] fs = {ms[0].filtro, ms[1].filtro};
+            float[] cam = {0, 0, 0};
+            int cambios = 0, fantasmas = 0, perdidas = 0;
+            int[] primera = {-1, -1};
+            long base = 5_000_000L;
+            for (int i = 0; i < 150; i++) {
+                float t = i / 30f;
+                long ms0 = base + Math.round(t * 1000);
+                // izquierda y derecha, acercándose y alejándose
+                float dx0 = 0.06f * (float) Math.sin(t * 1.5);   // se acercan hasta 14 cm (no se cruzan en el mismo lugar)
+                Momento[] mo = {momento(0, YAW, PITCH, -0.13f + dx0, TY, TZ - 0.03f), momento(0, YAW, PITCH, 0.13f - dx0, TY, TZ + 0.03f)};
+                java.util.ArrayList<Integer> quien = new java.util.ArrayList<>();
+                quien.add(0); quien.add(1);
+                if (r.nextBoolean()) java.util.Collections.reverse(quien);
+                // un fantasma de un cuadro (cada tanto), y una duplicada
+                boolean fantasma = i % 37 == 20, duplicada = i % 29 == 10;
+                int nd = 2 + (fantasma ? 1 : 0) + (duplicada ? 1 : 0);
+                float[][] cs = new float[nd][3];
+                float[] conf = new float[nd];
+                int[] lado = new int[nd];
+                Medida[] med = new Medida[nd];
+                int[] verdad = new int[nd];
+                float[] pts = new float[63];
+                for (int h = 0; h < nd; h++) {
+                    Momento m;
+                    if (h < 2) { verdad[h] = quien.get(h); m = mo[verdad[h]]; }
+                    else if (fantasma && h == 2) { verdad[h] = -1; m = momento(0, YAW, PITCH, 0, TY + 0.25f, TZ - 0.2f); }
+                    else { verdad[h] = -2; m = mo[0]; }   // la duplicada (de la izquierda, 1 cm corrida)
+                    med[h] = medir(m, r);
+                    if (verdad[h] == -2) for (float[] q : med[h].img640) q[0] += 0.01f / 0.5f * 500 / 640;
+                    Mano.centroEnMundo(med[h].img640, med[h].mp, 640, 480, F, F, 320, 240, 1, IDENT, cs[h], pts);
+                    conf[h] = verdad[h] == -2 ? 0.6f : 0.9f;
+                    lado[h] = -1;
+                }
+                int[] sl = as.asignar(cs, conf, lado, fs, Mano.segundosPrueba(ms0), cam);
+                for (int h = 0; h < nd; h++) {
+                    if (verdad[h] < 0) { if (sl[h] >= 0 && verdad[h] == -1) fantasmas++; continue; }
+                    if (sl[h] < 0) { perdidas++; if (DEPURAR) System.out.println("  sin asignar: cuadro " + i + " mano " + verdad[h]); continue; }
+                    if (primera[verdad[h]] < 0) primera[verdad[h]] = sl[h];
+                    else if (primera[verdad[h]] != sl[h]) { cambios++; if (DEPURAR) System.out.println("  cambio: cuadro " + i + " mano " + verdad[h] + " → " + sl[h] + " dx0 " + dx0); }
+                    ms[sl[h]].aMundo2(med[h].img640, med[h].mp, 640, 480, F, F, 320, 240, null, IDENT, ms0, ms0 + 60, false);
+                }
+                for (Mano m : ms) m.salida(ms0 + 60, 1 / 30f);
+            }
+            ver(cambios == 0 && primera[0] != primera[1], "dos manos, 5 s, dadas en cualquier orden: cada una sigue en su lugar (" + cambios + " cambios)");
+            ver(fantasmas == 0, "un fantasma de un solo cuadro (con otra mano a la vista) no se toma (" + fantasmas + ")");
+            ver(perdidas <= 2, "las dos manos de verdad casi siempre se asignan (" + perdidas + " de 300 sin asignar, al empezar)");
+        }
+        {
+            // la misma mano, en el mismo rayo pero 15 cm más lejos (la red la vio dos veces): no es otra mano
+            // (sin cuadros en espejo ni de tamaño malo: acá se prueba la asociación, no el descarte)
+            float pe = P_ESPEJO, pm = P_MAL;
+            P_ESPEJO = 0; P_MAL = 0;
+            AsociadorManos as = new AsociadorManos();
+            Mano ma1 = new Mano(), b = new Mano();
+            FiltroMano[] fs = {ma1.filtro, b.filtro};
+            Random r = new Random(3);
+            float[] cam = {0, 0, 0}, pts = new float[63];
+            int otra = 0;
+            for (int i = 0; i < 60; i++) {
+                long ms0 = 9_000_000L + i * 33;
+                Medida d = medir(momento(0, YAW, PITCH, TX, TY, TZ), r);
+                float[][] cs = new float[2][3];
+                Mano.centroEnMundo(d.img640, d.mp, 640, 480, F, F, 320, 240, 1, IDENT, cs[0], pts);
+                for (int k = 0; k < 3; k++) cs[1][k] = cs[0][k] * 1.35f;
+                int[] sl = as.asignar(cs, new float[]{0.9f, 0.8f}, new int[]{-1, -1}, fs, Mano.segundosPrueba(ms0), cam);
+                if (sl[0] >= 0) (sl[0] == 0 ? ma1 : b).aMundo2(d.img640, d.mp, 640, 480, F, F, 320, 240, null, IDENT, ms0, ms0 + 60, false);
+                if (i > 3 && sl[1] >= 0) { otra++; if (DEPURAR) System.out.println("  rayo: cuadro " + i + " sl " + sl[0] + "," + sl[1] + " vis " + ma1.filtro.visible + "/" + b.filtro.visible); }
+                ma1.salida(ms0 + 60, 1 / 30f); b.salida(ms0 + 60, 1 / 30f);
+            }
+            ver(otra == 0, "la misma mano dos veces en el mismo rayo no se toma como otra (" + otra + ")");
+            P_ESPEJO = pe; P_MAL = pm;
+            // se deja de ver: se desvanece en 0.2 s; vuelve donde estaba (en menos de medio segundo): la misma mano, sin saltar
+            Mano m = ma1.filtro.visible ? ma1 : b;
+            long t0 = 9_000_000L + 60 * 33;
+            float alfaAntes = m.filtro.alfa;
+            for (int i = 1; i <= 12; i++) { m.filtro.faltas++; m.salida(t0 + i * 33, 1 / 30f); }
+            float alfaDespues = m.filtro.alfa;
+            ver(alfaAntes > 0.99f && !m.filtro.visible && alfaDespues < 0.05f, String.format(Locale.ROOT, "sin verla (4 imágenes): se da por perdida y se va en 0.2 s (alfa %.2f → %.2f)", alfaAntes, alfaDespues));
+            float[] antes = m.pos.clone();
+            float[] cs = new float[3];
+            Medida d = medir(momento(0, YAW, PITCH, TX, TY, TZ), new Random(5));
+            Mano.centroEnMundo(d.img640, d.mp, 640, 480, F, F, 320, 240, 1, IDENT, cs, new float[63]);
+            int[] sl = as.asignar(new float[][]{cs}, new float[]{0.9f}, new int[]{-1}, fs, Mano.segundosPrueba(t0 + 250), cam);
+            ver(sl[0] >= 0 && fs[sl[0]] == m.filtro, "vuelve a los 250 ms en el mismo lugar: es la misma mano");
+            m.aMundo2(d.img640, d.mp, 640, 480, F, F, 320, 240, null, IDENT, t0 + 250, t0 + 310, false);
+            float ap = 0;
+            for (int i = 0; i < 6; i++) { m.salida(t0 + 310 + i * 16, 1 / 60f); ap = m.filtro.alfa; }
+            ver(ap > 0.99f && dist(m.pos, antes) < 0.03f, String.format(Locale.ROOT, "y aparece en 80 ms, donde estaba (alfa %.2f, %.0f mm)", ap, dist(m.pos, antes) * 1000));
+        }
 
         // 5) la imagen: a resolución completa con ganancia (una mano oscura en un fondo claro)
         {

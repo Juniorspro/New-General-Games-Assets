@@ -288,6 +288,20 @@ public class Vista {
                 break;
             }
         }
+        // la mano fantasma: la cápsula y los huesos de ManosGl (los mismos que en el teléfono)
+        s.append("],\"capsula\":");
+        float[] cg = ManosGl.geometria();
+        arr(s, cg, cg.length);
+        s.append(",\"capsulaInd\":[");
+        short[] ci = ManosGl.indices();
+        for (int i = 0; i < ci.length; i++) { if (i > 0) s.append(','); s.append(ci[i]); }
+        s.append("],\"huesosMano\":[");
+        for (int i = 0; i < ManosGl.HUESOS.length; i++) {
+            if (i > 0) s.append(',');
+            float m = ManosGl.esTela(i) ? 1.35f : 1f;
+            int h = ManosGl.HUESOS[i][0], f = ManosGl.HUESOS[i][1];
+            s.append(String.format(Locale.ROOT, "[%d,%d,%.4f,%.4f]", h, f, ManosGl.RADIO[h] * m, ManosGl.RADIO[f] * m));
+        }
         s.append("],\"mapas\":{\"visto\":");
         grilla(s, gVisto);
         s.append(",\"ia\":");

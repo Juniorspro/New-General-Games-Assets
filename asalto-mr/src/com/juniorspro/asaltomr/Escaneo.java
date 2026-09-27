@@ -81,7 +81,7 @@ final class Escaneo implements Runnable {
      */
     synchronized boolean dejar(java.nio.ShortBuffer prof, int filaProf, java.nio.ByteBuffer c, int filaConf, int ancho, int alto,
                                float fx, float fy, float cx, float cy, float[] pose, float maxM, int paso,
-                               java.nio.ByteBuffer sem, int filaSem, int semW, int semH) {
+                               java.nio.ByteBuffer sem, int filaSem, int semW, int semH, float[] manos) {
         if (lleno || pausado) return false;
         int n = ancho * alto;
         if (mm.length != n) { mm = new short[n]; conf = new byte[n]; etq = new byte[n]; }
@@ -101,6 +101,14 @@ final class Escaneo implements Runnable {
         for (int v = 0; v < alto; v++) {
             prof.position(v * filaProf);
             prof.get(mm, v * ancho, ancho);
+        }
+        // las manos no se escanean: donde está una mano (cajas normalizadas de la imagen de profundidad), sin profundidad
+        if (manos != null) {
+            for (int k = 0; k + 3 < manos.length; k += 4) {
+                int u0 = Math.max(0, (int) (manos[k] * ancho)), v0 = Math.max(0, (int) (manos[k + 1] * alto));
+                int u1 = Math.min(ancho, (int) Math.ceil(manos[k + 2] * ancho)), v1 = Math.min(alto, (int) Math.ceil(manos[k + 3] * alto));
+                for (int v = v0; v < v1; v++) for (int u = u0; u < u1; u++) mm[v * ancho + u] = 0;
+            }
         }
         hayConf = c != null;
         if (hayConf) {

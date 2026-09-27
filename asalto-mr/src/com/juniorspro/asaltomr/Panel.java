@@ -85,7 +85,7 @@ final class Panel {
                 + "principal, el seguimiento puede fallar). Se aplica al volver a abrir la cámara.");
 
         seccion("La pistola en la mano");
-        opciones("mano", "Hand tracking", new String[]{"No", "Sí", "Sí + ver la mano"});
+        opciones("mano", "Hand tracking", new String[]{"No", "Sí (mano fantasma)", "Sí + esqueleto"});
         info("Empuñá como si tuvieras la pistola, con el índice estirado. Cerrar el índice (apretar el gatillo) "
                 + "dispara; la mano abierta recarga. Sin la mano a la vista, la pistola vuelve a la pantalla y se "
                 + "dispara tocando o con el volumen. Se aplica al volver a abrir la app.");

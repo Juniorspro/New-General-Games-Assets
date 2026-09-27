@@ -27,7 +27,13 @@ package com.juniorspro.asaltomr;
  *     profundidad) por un cuarto de segundo, se ancla; se suelta en cuanto
  *     se empuja fuera de la zona.
  *  6. PREDICCIÓN: la imagen llega tarde (la red tarda); se adelanta con la
- *     velocidad filtrada hasta el cuadro que se dibuja (a lo sumo 6.5 cm).
+ *     velocidad filtrada hasta el cuadro que se dibuja (a lo sumo 6.5 cm), con
+ *     una GANANCIA APRENDIDA (se compara lo que se predijo con lo que pasó) y
+ *     menos si se mueven los dedos y no la mano.
+ *  7. EL RESORTE: cuando llega una imagen, la salida no salta: la diferencia
+ *     se apaga como un resorte (32 ms). Con fotos a 30 y dibujo a 60, la mano
+ *     se mueve pareja (4 veces menos tirones; medido).
+ *  8. ENDEREZAR: lo que se dibuja vuelve a tener la palma y los huesos aprendidos.
  *
  * Coordenadas del mundo (metros); la cámara es de donde salen los rayos.
  * Sin Android: se prueba en la PC (pruebas/PruebaFiltroMano.java).
@@ -50,8 +56,6 @@ public final class FiltroMano {
      * cuarto de segundo, se fija; se suelta cuando sale de la zona.
      */
     static final float GZONA = (float) Math.toRadians(1.5), GTQ = 0.25f, GTS = 0.06f, GLENTO = 0.4f, GTE = 0.08f, GTE_G = 0.04f;
-    /** Adelanto máximo (s) y cuánto se mueve como mucho por la predicción (m). */
-    static final float ADELANTO_MAX = 0.1089f, ADELANTO_GAN = 0.8f, ADELANTO_TOPE = 0.065f;
 
     static final int[] CENTRO = {0, 5, 9, 13, 17};
     static final int[] PALMA = {0, 1, 5, 9, 13, 17};
@@ -471,7 +475,15 @@ public final class FiltroMano {
      * Una imagen nueva: los 21 puntos en el mundo (se modifican: tamaño y
      * huesos), su hora (s) y dónde estaba la cámara. false si se descartó.
      */
-    public boolean recibir(float[] e, float tt, float[] cam) {
+    public boolean recibir(float[] e, float tt, float[] cam) { return recibir(e, tt, tt, cam, false); }
+
+    /**
+     * Una imagen nueva, como en Aeroplaza: tt = cuándo se sacó la foto, tLlega
+     * = cuándo salió de la red (la diferencia es la demora que hay que
+     * adelantar), enBorde = la mano se está yendo por el borde de la foto.
+     */
+    public boolean recibir(float[] e, float tt, float tLlega, float[] cam, boolean enBorde) {
+        faltas = 0;
         escalar(e, cam);
         alRayo(e, cam);
         centro(e, cm);
@@ -505,11 +517,26 @@ public final class FiltroMano {
         nCand = 0;
         float rx = cm[0] - cam[0], ry = cm[1] - cam[1], rz = cm[2] - cam[2], rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
         if (rl > 1e-6f) { rayo[0] = rx / rl; rayo[1] = ry / rl; rayo[2] = rz / rl; }
-        if (!visible || f > SALTO || tt - t > 0.5f) reiniciarPalma(e, tt, cam);
-        else filtrarPalma(e, tt, cam);
+        if (!visible || f > SALTO || tt - t > 0.5f) {
+            reiniciarPalma(e, tt, cam);
+            // si vuelve cerca de donde se fue (y se veía), el resorte la lleva sin saltar; si no, de cero
+            seguida = seguida && alfa > 0.3f && f < SIGUE;
+            if (!seguida) alfa = 0;
+            histAd.clear();
+        } else filtrarPalma(e, tt, cam);
         aprenderForma();
+        // la demora (de la foto a que sale de la red) y cada cuánto llegan las fotos
+        float c = Math.max(0, Math.min(0.4f, tLlega - tt));
+        lat = lat > 0 ? lat + (c - lat) * 0.1f : c;
+        hueco = t > 0 ? Math.max(0, tt - t) : 0;
+        if (hueco > 0 && hueco < 0.15f) dtFoto = dtFoto > 0 ? dtFoto + (hueco - dtFoto) * 0.1f : hueco;
         t = tt;
+        tLlego = tLlega;
+        this.enBorde = enBorde;
+        nueva = true;
         visible = true;
+        medirAdelanto(tt);
+        medirDedos();
         return true;
     }
 
@@ -521,6 +548,8 @@ public final class FiltroMano {
     public void perder() {
         gQuieta = false; gLentoListo = false;
         visible = false;
+        seguida = false;
+        alfa = 0;
         histN = 0;
         for (Ancla a : anclas) a.quieta = false;
     }
@@ -557,22 +586,221 @@ public final class FiltroMano {
 
     private final float[] sc = new float[3], ic = new float[3], tmp = new float[3];
 
+    // ── la salida (como Aeroplaza: adelantar → resorte → anclas → enderezar) ──
+
+    // las constantes de Aeroplaza
+    static final float CR = 0.05f, TH = 0.08f, LMAX = 0.35f, YV = 0.8012f, GV = 0.35f, CH = 0.24f, HH = 0.08f, XH = 0.065f,
+            ZV = 0.0321f, LH = 0.02f, QV0 = 0.05f, QV1 = 0.3f, OV = 0.0333f, T1 = 0.95f, ZVG = 0.2f, I1 = 4e-4f,
+            LE0 = 0.25f, LE1 = 0.55f, N0 = 0.3f, N1 = 0.6f, N2 = 1f, N3 = 0.15f, BH = 3, CE = 0.25f, KH = 1, SIGUE = 0.4f;
+    static final int[] PUNTAS = {4, 8, 12, 16, 20};
+
+    /** Faltas: imágenes seguidas en las que no se la vio (la pone quien asocia). */
+    public int faltas;
+    /** 0..1: cuánto se ve (aparece en 80 ms, se va en 200 ms). */
+    public float alfa;
+    /** Se está yendo por el borde de la foto. */
+    public boolean enBorde;
+    /** Cuándo llegó la última imagen (s), la demora media (s), y cada cuánto llegan. */
+    public float tLlego = -1, lat, dtFoto;
+    private float hueco;
+    private boolean nueva, seguida, viaja;
+    /** ¿Está "viajando" (el resorte la está llevando lejos)? Mientras, no se usa para tocar. */
+    public boolean viajando() { return viaja; }
+    // la ganancia aprendida del adelanto (lateral y en profundidad)
+    private float gNum, gDen, gG = 1, gNumH, gDenH, gGH = 1;
+    private final java.util.ArrayDeque<float[]> histAd = new java.util.ArrayDeque<>();
+    private float af = -1, vp = -1, pesoDedos = 1;
+    private final float[] pO = new float[63], vb = new float[63], off = new float[63], offV = new float[63], pAnt = new float[63],
+            vAnt = new float[63], er = new float[63], ee = new float[9], ec = new float[3], hq = new float[4], hv = new float[3];
+
+    static float saturar(float i) { return i < CR ? i : CR + TH * (1 - (float) Math.exp(-(i - CR) / TH)); }
+
+    static float suave(float x, float a, float b) {
+        if (x <= a) return 0;
+        if (x >= b) return 1;
+        float t = (x - a) / (b - a);
+        return t * t * (3 - 2 * t);
+    }
+
+    /** La velocidad del centro (m/s). */
+    public float velCentro() {
+        float a = 0, b = 0, c = 0;
+        for (int k : CENTRO) { a += dx[k * 3] / 5; b += dx[k * 3 + 1] / 5; c += dx[k * 3 + 2] / 5; }
+        return (float) Math.sqrt(a * a + b * b + c * c);
+    }
+
     /**
-     * Los 21 puntos para dibujar a la hora tAhora (s): adelantados con la
-     * velocidad filtrada (la imagen tiene su demora) y anclados si la mano
-     * está quieta. dt: el tiempo desde el cuadro anterior que se dibujó.
+     * Cuánto adelantar de verdad: guarda por dónde iba el centro y, con la
+     * demora medida, compara lo que se predijo con lo que pasó. La ganancia
+     * (0.2..1) baja si la velocidad era ruido. Lateral y profundidad aparte.
+     */
+    private void medirAdelanto(float e) {
+        histAd.addLast(new float[]{e, cf[0], cf[1], cf[2], dcf[0], dcf[1], dcf[2]});
+        while (!histAd.isEmpty() && e - histAd.peekFirst()[0] > 0.6f) histAd.pollFirst();
+        float sL = Math.min(GV, lat > 0 ? lat : 0.12f);
+        float[] l = null;
+        float d = 1e9f;
+        int k = 0, n = histAd.size();
+        for (float[] h : histAd) {
+            if (k++ >= n - 1) break;
+            float dd = Math.abs(e - h[0] - sL);
+            if (dd < d) { d = dd; l = h; }
+        }
+        if (l == null || d > 0.035f) return;
+        float c = e - l[0];
+        float u = l[4] * c, h = l[5] * c, f = l[6] * c;
+        float g = cf[0] - l[1], M = cf[1] - l[2], p = cf[2] - l[3];
+        float[] b = rayo;
+        float E = u * b[0] + h * b[1] + f * b[2], T = g * b[0] + M * b[1] + p * b[2];
+        float v = u - E * b[0], D = h - E * b[1], U = f - E * b[2];
+        float y = v * v + D * D + U * U;
+        gNum = gNum * T1 + ((g - T * b[0]) * v + (M - T * b[1]) * D + (p - T * b[2]) * U);
+        gDen = gDen * T1 + y;
+        gG = Math.max(ZVG, Math.min(1, (gNum + I1) / (gDen + I1)));
+        gNumH = gNumH * T1 + T * E;
+        gDenH = gDenH * T1 + E * E;
+        gGH = Math.max(ZVG, Math.min(1, (gNumH + I1) / (gDenH + I1)));
+    }
+
+    /** Si se mueven los dedos mucho más que la mano, se adelanta menos (mover un dedo no es mover la mano). */
+    private void medirDedos() {
+        float i = 0;
+        for (int r : PUNTAS) i += (float) Math.sqrt(dL[r * 3] * dL[r * 3] + dL[r * 3 + 1] * dL[r * 3 + 1] + dL[r * 3 + 2] * dL[r * 3 + 2]) / 5;
+        float o = (float) Math.sqrt(dcf[0] * dcf[0] + dcf[1] * dcf[1] + dcf[2] * dcf[2]);
+        af = af < 0 ? i : af + (i - af) * 0.3f;
+        vp = vp < 0 ? o : vp + (o - vp) * 0.3f;
+        float sd = vp / (vp + N2 * Math.max(0, af - N3) + 1e-4f);
+        pesoDedos = suave(sd, N0, N1);
+    }
+
+    /** El adelanto (Aeroplaza: adelantar). Devuelve el horizonte del giro (s). */
+    private float adelantar(float ahora) {
+        float i = Math.max(0, ahora - tLlego);
+        float o = saturar(i);
+        float s = pesoAd * pesoDedos;
+        float r = Math.min(GV, lat);
+        float d = YV + CH * Math.max(0, Math.min(1, (r - HH) / 0.13f));
+        float l = gG, c = gGH;
+        float h = Math.max(0, Math.min(1, (l - LE0) / (LE1 - LE0))), f = Math.max(0, Math.min(1, (c - LE0) / (LE1 - LE0)));
+        float m = (dtFoto > 0 ? dtFoto : 0.034f) * BH;
+        boolean g = enBorde && i > m;
+        float base = g ? saturar(m) : o;
+        float pp = (base * h + Math.min(LMAX, r) * l) * d;
+        float b = g ? CE * (1 - (float) Math.exp(-(i - m) / CE)) * d : 0;
+        float E = g ? d * (float) Math.exp(-(i - m) / CE) : YV * s * h * (i < CR ? 1 : (float) Math.exp(-(i - CR) / TH));
+        float v = (base * f + Math.min(LMAX, r) * c) * d;
+        float[] T = rayo;
+        float D = 0, U = 0, y = 0;
+        for (int k : CENTRO) { D += dx[k * 3] / 5; U += dx[k * 3 + 1] / 5; y += dx[k * 3 + 2] / 5; }
+        // tope: el centro no se adelanta más de 6.5 cm
+        {
+            float C = D * s, k = U * s, F = y * s, A = C * T[0] + k * T[1] + F * T[2];
+            float ix = (C - A * T[0]) * pp + A * T[0] * v, iy = (k - A * T[1]) * pp + A * T[1] * v, iz = (F - A * T[2]) * pp + A * T[2] * v;
+            float I = (float) Math.sqrt(ix * ix + iy * iy + iz * iz);
+            if (I > XH) { pp *= XH / I; v *= XH / I; }
+        }
+        float k = D * s, F = U * s, A = y * s, I = k * T[0] + F * T[1] + A * T[2];
+        float X = (k - I * T[0]) * pp + I * T[0] * v + D * b, Lx = (F - I * T[1]) * pp + I * T[1] * v + U * b,
+                V = (A - I * T[2]) * pp + I * T[2] * v + y * b;
+        // el giro, adelantado (comprimido: atan)
+        float hor = pp * pesoDedos;
+        hv[0] = wg[0] * hor; hv[1] = wg[1] * hor; hv[2] = wg[2] * hor;
+        float G = (float) Math.sqrt(hv[0] * hv[0] + hv[1] * hv[1] + hv[2] * hv[2]);
+        if (G > 1e-6f) { float z = (float) Math.atan(G) * KH / G; hv[0] *= z; hv[1] *= z; hv[2] *= z; }
+        exp(hv, hq);
+        aMatriz(hq, ee);
+        for (int q0 = 0; q0 < 63; q0 += 3) {
+            float te = x[q0] - cf[0], Xr = x[q0 + 1] - cf[1], er0 = x[q0 + 2] - cf[2];
+            float fe = dx[q0] - D - (wg[1] * er0 - wg[2] * Xr), ue = dx[q0 + 1] - U - (wg[2] * te - wg[0] * er0),
+                    de = dx[q0 + 2] - y - (wg[0] * Xr - wg[1] * te);
+            float rx = ee[0] * te + ee[3] * Xr + ee[6] * er0, ry = ee[1] * te + ee[4] * Xr + ee[7] * er0, rz = ee[2] * te + ee[5] * Xr + ee[8] * er0;
+            pO[q0] = cf[0] + X + rx + fe * pp;
+            pO[q0 + 1] = cf[1] + Lx + ry + ue * pp;
+            pO[q0 + 2] = cf[2] + V + rz + de * pp;
+            vb[q0] = dx[q0] * E; vb[q0 + 1] = dx[q0 + 1] * E; vb[q0 + 2] = dx[q0 + 2] * E;
+        }
+        return hor;
+    }
+
+    /**
+     * El resorte (Aeroplaza: suavizar): cuando llega una imagen, la salida no
+     * salta a lo nuevo: la diferencia se guarda y se va apagando como un
+     * resorte crítico (32 ms quieta, 20 ms moviéndose). A 60 cuadros por
+     * segundo con fotos a 30, la mano se mueve pareja.
+     */
+    private void suavizar(float e) {
+        float d = Math.min(e, 1 / 30f);
+        if (!seguida) { java.util.Arrays.fill(off, 0); java.util.Arrays.fill(offV, 0); }
+        else if (nueva) {
+            for (int g = 0; g < 63; g++) {
+                off[g] -= pO[g] - (pAnt[g] + vAnt[g] * d);
+                offV[g] -= (vb[g] - vAnt[g]);
+            }
+            centro(off, ec);
+            if (largo(ec) > SIGUE + 2 * Math.min(0.3f, hueco)) { java.util.Arrays.fill(off, 0); java.util.Arrays.fill(offV, 0); }
+        }
+        centro(off, ec);
+        float cl = largo(ec);
+        viaja = nueva && cl > 0.08f || viaja && cl > 0.015f;
+        nueva = false;
+        float h = 1f / ((ZV + (LH - ZV) * suave(velCentro(), QV0, QV1)) * Math.min(1, (dtFoto > 0 ? dtFoto : OV) / OV));
+        float f = (float) Math.exp(-h * d);
+        for (int m = 0; m < 63; m++) {
+            float g = off[m], M = offV[m], pp = M + h * g;
+            off[m] = (g + pp * d) * f;
+            offV[m] = (M - h * pp * d) * f;
+            pAnt[m] = pO[m];
+            vAnt[m] = vb[m];
+            pO[m] += off[m];
+        }
+        seguida = true;
+    }
+
+    /** Endereza la salida (Aeroplaza: enderezar): la palma con su forma aprendida y cada hueso con su largo. */
+    private void enderezar(float[] t) {
+        if (formaN < 5) return;
+        System.arraycopy(t, 0, er, 0, 63);
+        ejes(t, ee);
+        centro(t, ec);
+        for (int r = 0; r < PALMA.length; r++) {
+            int sP = PALMA[r];
+            for (int d = 0; d < 3; d++)
+                t[sP * 3 + d] = ec[d] + palma[r * 3] * ee[d] + palma[r * 3 + 1] * ee[3 + d] + palma[r * 3 + 2] * ee[6 + d];
+        }
+        for (int k = 0; k < HUESOS.length; k++) {
+            int sI = HUESOS[k][0], r = HUESOS[k][1];
+            float l = er[r * 3] - er[sI * 3], c = er[r * 3 + 1] - er[sI * 3 + 1], u = er[r * 3 + 2] - er[sI * 3 + 2];
+            float h = (float) Math.sqrt(l * l + c * c + u * u);
+            float f = largo[k] / (h < 1e-9f ? 1 : h);
+            t[r * 3] = t[sI * 3] + l * f; t[r * 3 + 1] = t[sI * 3 + 1] + c * f; t[r * 3 + 2] = t[sI * 3 + 2] + u * f;
+        }
+    }
+
+    /** ¿Se la sigue viendo? (las reglas de Aeroplaza con la cámara: faltas y tiempo sin imágenes) y el fundido. */
+    public void actualizarVista(float ahora, float dt) {
+        float T = ahora - tLlego;
+        if (visible && (faltas >= 4 || (faltas >= 2 && T > 0.25f) || T > 0.6f)) {
+            visible = false;
+            histN = 0;
+        }
+        alfa = visible ? Math.min(1, alfa + dt / 0.08f) : Math.max(0, alfa - dt / 0.2f);
+        if (!visible && alfa <= 0) seguida = false;
+    }
+
+    /**
+     * Los 21 puntos para dibujar a la hora tAhora (s), como Aeroplaza:
+     * adelantados lo que tardó la imagen (con la ganancia aprendida), con el
+     * resorte entre imágenes, anclados si está quieta (posición y, para
+     * apuntar, giro) y enderezados. dt: desde el cuadro anterior.
      */
     public void salida(float tAhora, float dt, float[] p) {
-        float lat = Math.max(0, Math.min(0.35f, tAhora - t));
-        float ad = Math.min(ADELANTO_MAX, lat) * ADELANTO_GAN * pesoAd;
-        // el centro no se adelanta más de 6.5 cm
-        float vx = 0, vy = 0, vz = 0;
-        for (int k : CENTRO) { vx += dx[k * 3] / 5; vy += dx[k * 3 + 1] / 5; vz += dx[k * 3 + 2] / 5; }
-        float mv = (float) Math.sqrt(vx * vx + vy * vy + vz * vz) * ad;
-        if (mv > ADELANTO_TOPE) ad *= ADELANTO_TOPE / mv;
-        for (int k = 0; k < 63; k++) p[k] = x[k] + dx[k] * ad;
-        anclarGiro(Math.max(0.001f, dt), ad, p);
-        estabilizar(Math.max(0.001f, dt), p);
+        dt = Math.max(0.001f, dt);
+        float hor = adelantar(tAhora);
+        suavizar(dt);
+        anclarGiro(dt, hor, pO);
+        estabilizar(dt, pO);
+        enderezar(pO);
+        System.arraycopy(pO, 0, p, 0, 63);
     }
 
     // el ancla del giro
@@ -592,10 +820,10 @@ public final class FiltroMano {
             for (int i = 0; i < 4; i++) gLento[i] += (q[i] - gLento[i]) * a;
             normalizar(gLento);
         }
-        // el giro que se dibuja (con la predicción)
-        gv[0] = wg[0] * ad; gv[1] = wg[1] * ad; gv[2] = wg[2] * ad;
-        exp(gv, ga1);
-        mul(ga1, q, qo);
+        // el giro de lo que se dibuja (medido en la salida: con la predicción y el resorte)
+        ejes(p, gm);
+        deMatriz(gm, qo);
+        if (qo[0] * q[0] + qo[1] * q[1] + qo[2] * q[2] + qo[3] * q[3] < 0) for (int i = 0; i < 4; i++) qo[i] = -qo[i];
         if (angulo(gLento, gRef) > GZONA) { System.arraycopy(gLento, 0, gRef, 0, 4); gTQ = 0; }
         else gTQ += dt;
         if (gQuieta) {

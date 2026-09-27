@@ -110,6 +110,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private final Sonido sonido = new Sonido();
     private final Menu menu = new Menu();
     private final MenuGl menuGl = new MenuGl();
+    /** La mano fantasma (como Meta Quest / Aeroplaza) y su pasada de profundidad. */
+    private final ManosGl manosGl = new ManosGl();
+    private final float[] manoBrillo = new float[2];
     private android.content.SharedPreferences records;
     /** El juego está en pausa (con el menú de pausa abierto). */
     private boolean pausado, seguirEscaneando, recordNuevo;
@@ -130,6 +133,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private final boolean[] armaActiva = new boolean[2];
     private final float[][] armaPos = new float[2][3], armaAdel = new float[2][3], armaArriba = new float[2][3], armaFin = new float[2][3];
     private final int[] armaPose = new int[2];
+    /** 0..1: cuánto se ve cada mano (para la mano fantasma). */
+    private final float[] manoAlfa = new float[2];
     private final float[][][] armaPuntos = new float[2][21][3];
     private Escaneo escaneo;
     private Juego juego;
@@ -458,7 +463,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             boolean ultra = ajustes.camara == 2 && ajustes.seguro == 0;
             sesion = ultra ? new Session(this, EnumSet.of(Session.Feature.SHARED_CAMERA)) : new Session(this);
             // la cámara: la de ARCore, o la de más campo visual
-            if (ajustes.camara >= 1 && ajustes.seguro == 0) {
+            if (ajustes.camara == 1 && ajustes.seguro == 0) {
+                // como Aeroplaza: la más ancha, con más fps y la imagen cerca de 640×480 (con profundidad)
+                Camara.comoAeroplaza(this, sesion, true);
+            } else if (ajustes.camara == 2 && ajustes.seguro == 0) {
                 CameraConfig c = Camara.masAncha(this, sesion);
                 if (c != null) sesion.setCameraConfig(c);
             }
@@ -642,6 +650,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         figuras.crear();
         hud.crear();
         menuGl.crear();
+        manosGl.crear();
         lentes.crear();
         texturaPuesta = false;
         pedirReescaneo = true;   // las mallas viejas se perdieron con el contexto
@@ -791,6 +800,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (!sigue) continue;
             if (sbs && a.estereo == 1) mallaGl.dibujarReproyectada(vpOjo, vpCam, fondo);
             else mallaGl.dibujarProfundidad(vpOjo);
+            // tu mano de verdad va ADELANTE de lo virtual: su profundidad tapa lo que quede detrás
+            boolean conMano = manos != null && a.mano > 0;
+            if (conMano) manosGl.profundidad(vistaOjo, proy, armaPuntos, manoAlfa, 2);
             figuras.dibujarSoldados(juego.soldados, vpOjo);
             figuras.dibujarBlancos(juego.blancos, vpOjo);
             figuras.dibujarGranadas(juego.granadas, vpOjo);
@@ -807,13 +819,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 mallaGl.dibujarLineas(vpOjo, px, py, pz, radio, base);
             }
             boolean enMano = armaActiva[0] || armaActiva[1];
-            for (int s2 = 0; s2 < 2; s2++) {
-                if (armaPose[s2] != Mano.NADA && (a.mano == 2 || juego.estado == Juego.ESPERA))
-                    figuras.dibujarEsqueleto(vpOjo, armaPuntos[s2], armaActiva[s2]);
+            if (a.mano == 2) for (int s2 = 0; s2 < 2; s2++) {
+                if (armaPose[s2] != Mano.NADA) figuras.dibujarEsqueleto(vpOjo, armaPuntos[s2], armaActiva[s2]);
             }
             menuGl.dibujar(menu, vpOjo);   // el menú flota en el mundo, adelante de todo
             GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);   // el arma va siempre adelante de todo
             float saca = Math.max(0, 1 - (ahora - cambioArmaEn) / 350f);
+            // los dedos tapan el mango: el arma queda agarrada
+            if (conMano) manosGl.profundidad(vistaOjo, proy, armaPuntos, manoAlfa, 2);
             if (enMano) {
                 for (int s2 = 0; s2 < 2; s2++) {
                     if (!armaActiva[s2]) continue;
@@ -825,6 +838,12 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 float rc = juego.armaActual().recarga;
                 float anim = juego.recargando > 0 ? (float) Math.sin(Math.min(1, (rc - juego.recargando) / rc) * Math.PI) : 0;
                 figuras.dibujarArma(proyOjo, juego.arma, juego.retroceso, anim, saca, t);
+            }
+            // la mano fantasma, transparente, con el borde que brilla (en el visor con el entorno en 3D, más sólida:
+            // ahí la mano de verdad no se ve bien, porque la cámara se proyecta sobre la malla)
+            if (conMano) {
+                manosGl.fantasma = sbs && a.estereo == 1 ? 0.35f : 1f;
+                manosGl.vidrio(vistaOjo, proy, armaPuntos, manoAlfa, manoBrillo, 2);
             }
             float aspecto = sbs ? vistaOjos[o][2] / (float) vistaOjos[o][3] : ancho / (float) alto;
             hud.dibujarGolpe(juego.golpe * 0.8f);
@@ -884,7 +903,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             // de cerca y con detalle fino, todos los píxeles; si no, uno de cada dos alcanza
             int paso = w * h > 30000 ? 2 : 1;
             escaneo.dejar(sb, filaProf, cb, filaConf, w, h, f[0] * sx, f[1] * sy, c[0] * sx, c[1] * sy, poseM, 5.5f, paso,
-                    sb2, filaSem, semW, semH);
+                    sb2, filaSem, semW, semH, manos == null ? null : manos.cajasEnProfundidad(SystemClock.elapsedRealtime()));
         } catch (NotYetAvailableException e) {
             // todavía no hay profundidad para este cuadro
         } catch (Exception e) {
@@ -1187,7 +1206,11 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 } catch (Exception e) { pd = null; }
             }
             boolean girada = getWindowManager().getDefaultDisplay().getRotation() == android.view.Surface.ROTATION_270;
-            if (manos.dejar(img, f[0] * kx, f[1] * ky, c[0] * kx, c[1] * ky, poseMano, girada, ahora, pd, pw, ph, imagenAProf)) ultimaMano = ahora;
+            // la hora de la foto (como Aeroplaza): la de la cámara, no la del cuadro que se dibuja
+            // (así la predicción adelanta lo que de verdad tardó; si el reloj no cuadra, la del cuadro)
+            long tFoto = cuadro.getTimestamp() / 1_000_000L;
+            if (Math.abs(ahora - tFoto) > 500) tFoto = ahora;
+            if (manos.dejar(img, f[0] * kx, f[1] * ky, c[0] * kx, c[1] * ky, poseMano, girada, tFoto, pd, pw, ph, imagenAProf)) ultimaMano = ahora;
         } catch (NotYetAvailableException e) {
             // todavía no hay imagen
         } catch (Exception e) {
@@ -1213,9 +1236,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         for (int s2 = 0; s2 < 2; s2++) {
             Mano m = manos.manos[s2];
             synchronized (m) {
-                boolean reciente = m.hay && ahora - m.ultimaVez < 400;
-                // la mano para ESTE cuadro: adelantada lo que tardó la imagen, y anclada si está quieta
-                if (reciente) m.salida(ahora, dtLectura);
+                // la mano para ESTE cuadro (como Aeroplaza): adelantada lo que tardó la imagen, con el resorte,
+                // anclada si está quieta; y si se dejó de ver (sus reglas de faltas), se desvanece
+                m.salida(ahora, dtLectura);
+                boolean reciente = m.hay && m.filtro.visible;
+                manoAlfa[s2] = m.filtro.alfa;
+                // las puntas se encienden con el gatillo (suave)
+                float br = m.apretado() ? 1f : 0f;
+                manoBrillo[s2] += (br - manoBrillo[s2]) * Math.min(1, dtLectura * 18);
                 armaPose[s2] = m.pose;
                 armaAprieta[s2] = false;
                 if (reciente && (m.pose == Mano.EMPUNA || m.pose == Mano.APRIETA)) {
@@ -1225,7 +1253,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                     System.arraycopy(m.adelante, 0, armaAdel[s2], 0, 3);
                     System.arraycopy(m.arriba, 0, armaArriba[s2], 0, 3);
                 }
-                if (reciente) for (int i = 0; i < 21; i++) System.arraycopy(m.mundo[i], 0, armaPuntos[s2][i], 0, 3);
+                if (m.filtro.alfa > 0) for (int i = 0; i < 21; i++) System.arraycopy(m.mundo[i], 0, armaPuntos[s2][i], 0, 3);
                 if (reciente && m.pose == Mano.ABIERTA) alguienAbierta = true;
                 if (!reciente) armaPose[s2] = Mano.NADA;
             }

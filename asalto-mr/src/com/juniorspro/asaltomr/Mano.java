@@ -165,9 +165,9 @@ public final class Mano {
         return tiro;
     }
 
+    /** Se dejó de ver (el gesto vuelve a cero; el filtro se desvanece solo, con sus reglas). */
     public void perdida() {
         hay = false;
-        filtro.perder();
         pulgarBajo = true;
         alcanceSuave = Float.NaN;
         pulgarSuave = Float.NaN;
@@ -197,6 +197,9 @@ public final class Mano {
     public int calibradas;
     private static long origen = Long.MIN_VALUE;
 
+    /** Para las pruebas: la misma cuenta de segundos que usa el filtro. */
+    public static float segundosPrueba(long ms) { return segundos(ms); }
+
     /** ms → s desde la primera imagen (en float, sin perder precisión). */
     static synchronized float segundos(long ms) {
         if (origen == Long.MIN_VALUE) origen = ms;
@@ -211,6 +214,15 @@ public final class Mano {
      */
     public boolean aMundo2(float[][] img, float[][] mp, int ancho, int alto, float fx, float fy, float cx, float cy,
                            float[] prof3, float[] pose, long ms) {
+        return aMundo2(img, mp, ancho, alto, fx, fy, cx, cy, prof3, pose, ms, ms, false);
+    }
+
+    /**
+     * Igual, con la hora en que salió de la red (llegaMs: la demora que hay
+     * que adelantar es llegaMs − ms) y si la mano se está yendo por el borde.
+     */
+    public boolean aMundo2(float[][] img, float[][] mp, int ancho, int alto, float fx, float fy, float cx, float cy,
+                           float[] prof3, float[] pose, long ms, long llegaMs, boolean borde) {
         if (!FiltroMano.aCamara(img, mp, ancho, alto, fx, fy, cx, cy, ptsCam)) return false;
         calibrar(prof3);
         for (int i = 0; i < 21; i++) {
@@ -220,7 +232,37 @@ public final class Mano {
             crudo[i * 3 + 2] = pose[2] * xc + pose[6] * yc + pose[10] * zc + pose[14];
         }
         cam3[0] = pose[12]; cam3[1] = pose[13]; cam3[2] = pose[14];
-        return filtro.recibir(crudo, segundos(ms), cam3);
+        return filtro.recibir(crudo, segundos(ms), segundos(llegaMs), cam3, borde);
+    }
+
+    /** El centro de la palma en el mundo (para asociar; con el tamaño calibrado k). false si no se puede. */
+    public static boolean centroEnMundo(float[][] img, float[][] mp, int ancho, int alto, float fx, float fy, float cx, float cy,
+                                        float k, float[] pose, float[] o, float[] puntos) {
+        float[] pc = new float[63];
+        if (!FiltroMano.aCamara(img, mp, ancho, alto, fx, fy, cx, cy, pc)) return false;
+        for (int i = 0; i < 21; i++) {
+            float xc = pc[i * 3] * k, yc = pc[i * 3 + 1] * k, zc = pc[i * 3 + 2] * k;
+            puntos[i * 3] = pose[0] * xc + pose[4] * yc + pose[8] * zc + pose[12];
+            puntos[i * 3 + 1] = pose[1] * xc + pose[5] * yc + pose[9] * zc + pose[13];
+            puntos[i * 3 + 2] = pose[2] * xc + pose[6] * yc + pose[10] * zc + pose[14];
+        }
+        FiltroMano.centro(puntos, o);
+        return true;
+    }
+
+    /**
+     * ¿La mano se está yendo por el borde de la foto? (Aeroplaza: cerca del
+     * borde, o con algún punto afuera, y moviéndose hacia ese lado). ant: el
+     * centro en la foto de la imagen anterior (o null).
+     */
+    public static boolean enBorde(float[][] img, float[] ant) {
+        if (ant == null) return false;
+        float tx = 0, ty = 0;
+        for (int i : FiltroMano.CENTRO) { tx += img[i][0] / 5; ty += img[i][1] / 5; }
+        float a = tx - ant[0], b = ty - ant[1];
+        boolean o = tx < 0.1f, sd = tx > 0.9f, r = ty < 0.1f, d = ty > 0.9f;
+        for (float[] p : img) { o |= p[0] < 0; sd |= p[0] > 1; r |= p[1] < 0; d |= p[1] > 1; }
+        return (o && a < 0) || (sd && a > 0) || (r && b < 0) || (d && b > 0);
     }
 
     private final float[][] local = new float[21][3];
@@ -269,8 +311,10 @@ public final class Mano {
      * dt: segundos desde el cuadro anterior.
      */
     public void salida(long ahoraMs, float dt) {
-        if (!filtro.visible) return;
-        filtro.salida(segundos(ahoraMs), dt, salidaP);
+        float ahora = segundos(ahoraMs);
+        filtro.actualizarVista(ahora, dt);
+        if (!filtro.visible && filtro.alfa <= 0) return;
+        filtro.salida(ahora, dt, salidaP);
         for (int i = 0; i < 21; i++) { mundo[i][0] = salidaP[i * 3]; mundo[i][1] = salidaP[i * 3 + 1]; mundo[i][2] = salidaP[i * 3 + 2]; }
         if (medirPistola(pos, adelante, arriba)) tieneSuave = true;
     }

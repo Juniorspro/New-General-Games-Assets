@@ -24,6 +24,9 @@ const sh = {
   mira: buscar("Hud.java", (p) => p.fs.includes("uColor")),
   zonas: buscar("ZonasGl.java", () => true),
   linea: buscar("Figuras.java", (p) => p.vs.includes("aCol") && !p.vs.includes("aTam")),
+  manoProf: buscar("ManosGl.java", (p) => p.fs.includes("vec4(0.0)")),
+  manoVidrio: buscar("ManosGl.java", (p) => p.fs.includes("fwidth")),
+  manoVidrioSin: buscar("ManosGl.java", (p) => p.fs.includes("uFantasma") && !p.fs.includes("fwidth")),
 };
 
 const W = 2340, H = 1080;
@@ -91,7 +94,9 @@ async function foto(modo, nombre) {
     const mv = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, mv); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(datos.malla.v), gl.STATIC_DRAW);
     const mt = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mt); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(datos.malla.tri), gl.STATIC_DRAW);
     const ml = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ml); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(datos.malla.lin), gl.STATIC_DRAW);
-    const P = Object.fromEntries(Object.entries(sh).map(([k, p]) => [k, prog(p)]));
+    gl.getExtension("OES_standard_derivatives");
+    // (el vidrio con derivadas sólo si la extensión está: si no, queda afuera; la mano usa el de respaldo)
+    const P = Object.fromEntries(Object.entries(sh).map(([k, p]) => { try { return [k, prog(p)]; } catch (e) { if (k === "manoVidrio") return [k, null]; throw e; } }));
     const atrMalla = (pr, nor) => {
       gl.bindBuffer(gl.ARRAY_BUFFER, mv);
       const a = A(pr, "aPos"); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 28, 0); gl.enableVertexAttribArray(a);
@@ -331,15 +336,16 @@ async function fotoMapa() {
 // la pistola en la mano, dibujada sobre fotos reales de manos (lo que ve la cámara)
 async function fotoMano(dirFotos) {
   const partes = [];
-  for (const m of datos.manos) {
+  for (const m of datos.manos) for (const fantasma of [1, 0.35]) {
     const archivo = `${dirFotos}/${m.foto}.jpg`;
     const url = "data:image/jpeg;base64," + readFileSync(archivo).toString("base64");
     const esc = 720 / Math.max(m.w, m.h), w = Math.round(m.w * esc), h = Math.round(m.h * esc);
     await pag.setViewportSize({ width: w, height: h });
     await pag.setContent(`<body style="margin:0;background:#000"><canvas id="c" width="${w}" height="${h}"></canvas></body>`);
-    await pag.evaluate(async ({ m, url, sh, w, h }) => {
+    await pag.evaluate(async ({ m, url, sh, w, h, fantasma, capsula, capsulaInd, huesosMano }) => {
       const img = new Image(); img.src = url; await img.decode();
-      const gl = document.getElementById("c").getContext("webgl", { preserveDrawingBuffer: true, antialias: true });
+      const gl = document.getElementById("c").getContext("webgl", { preserveDrawingBuffer: true, antialias: true, depth: true });
+      const derivadas = gl.getExtension("OES_standard_derivatives");
       const prog = (p) => { const mk = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
         const pr = gl.createProgram(); gl.attachShader(pr, mk(gl.VERTEX_SHADER, p.vs)); gl.attachShader(pr, mk(gl.FRAGMENT_SHADER, p.fs)); gl.linkProgram(pr); return pr; };
       const U = (pr, n) => gl.getUniformLocation(pr, n), A = (pr, n) => gl.getAttribLocation(pr, n);
@@ -355,10 +361,33 @@ async function fotoMano(dirFotos) {
       const q = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, q); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
       let a = A(L, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 8, 0); gl.enableVertexAttribArray(a);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      // el esqueleto de la mano (reproyectado desde 3D: si coincide con la foto, el 3D está bien)
+      // la mano fantasma (ManosGl: los mismos shaders y la misma cápsula): primero su profundidad
+      const cv = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, cv); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(capsula), gl.STATIC_DRAW);
+      const cix = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cix); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(capsulaInd), gl.STATIC_DRAW);
+      const ident = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+      const mano = (P, brillo) => {
+        gl.useProgram(P);
+        gl.uniformMatrix4fv(U(P, "uVista"), false, ident); gl.uniformMatrix4fv(U(P, "uProy"), false, m.vp);
+        gl.bindBuffer(gl.ARRAY_BUFFER, cv); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cix);
+        const an = A(P, "aNrm"), al = A(P, "aLado");
+        gl.vertexAttribPointer(an, 3, gl.FLOAT, false, 16, 0); gl.enableVertexAttribArray(an);
+        gl.vertexAttribPointer(al, 1, gl.FLOAT, false, 16, 12); gl.enableVertexAttribArray(al);
+        for (const [hh, ff, ra, rb] of huesosMano) {
+          gl.uniform3fv(U(P, "uA"), m.puntos[hh]); gl.uniform3fv(U(P, "uB"), m.puntos[ff]); gl.uniform2f(U(P, "uR"), ra, rb);
+          const punta = ff === 3 || ff === 4 || ff === 7 || ff === 8;
+          gl.uniform2f(U(P, "uBr"), punta ? brillo : 0, 1);
+          gl.drawElements(gl.TRIANGLES, capsulaInd.length, gl.UNSIGNED_SHORT, 0);
+        }
+        gl.disableVertexAttribArray(an); gl.disableVertexAttribArray(al);
+      };
+      // (sin la extensión de derivadas, el vidrio de respaldo: el mismo que usa un teléfono que no la tiene)
+      const MP = prog(sh.manoProf), MV = prog(derivadas ? sh.manoVidrio : sh.manoVidrioSin);
+      gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.useProgram(MP); gl.uniform1f(U(MP, "uCorte"), 0.6);
+      gl.colorMask(false, false, false, false); mano(MP, 0); gl.colorMask(true, true, true, true);
+      // el láser (con el shader de líneas)
       const LIN = prog(sh.linea); gl.useProgram(LIN); gl.uniformMatrix4fv(U(LIN, "uVp"), false, m.vp);
-      const hue = [0,1,1,2,2,3,3,4,0,5,5,6,6,7,7,8,5,9,9,10,10,11,11,12,9,13,13,14,14,15,15,16,13,17,0,17,17,18,18,19,19,20];
-      const v = []; for (const i of hue) v.push(...m.puntos[i], 0.3, 0.9, 1, 0.9);
+      const v = [];
       v.push(...m.boca, 1, 0.15, 0.1, 0.1, ...m.fin, 1, 0.15, 0.1, 0.9);   // el láser
       const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
       a = A(LIN, "aPos"); const co = A(LIN, "aCol");
@@ -374,13 +403,21 @@ async function fotoMano(dirFotos) {
       const cb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, cb); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubo), gl.STATIC_DRAW);
       gl.useProgram(C); a = A(C, "aPos"); const nn = A(C, "aNor");
       gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(nn, 3, gl.FLOAT, false, 24, 12); gl.enableVertexAttribArray(nn);
-      gl.uniform3f(U(C, "uLuz"), 0.37, 0.84, 0.4); gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
+      gl.uniform3f(U(C, "uLuz"), 0.37, 0.84, 0.4); gl.enable(gl.DEPTH_TEST);
       for (const k of m.cajas) { gl.uniformMatrix4fv(U(C, "uMvp"), false, k.slice(0, 16)); gl.uniformMatrix4fv(U(C, "uModelo"), false, k.slice(16, 32)); gl.uniform4f(U(C, "uColor"), k[32], k[33], k[34], k[35]); gl.drawArrays(gl.TRIANGLES, 0, 36); }
-    }, { m, url, sh, w, h });
-    const f = `${salida}/vista-mano-${m.foto}.png`;
+      gl.disableVertexAttribArray(nn);
+      // y encima, el vidrio de la mano (el borde que brilla)
+      gl.useProgram(MV);
+      gl.uniform1f(U(MV, "uCorte"), -1); gl.uniform3f(U(MV, "uColor"), 0.8, 0.88, 0.96); gl.uniform3f(U(MV, "uBorde"), 0.72, 0.97, 1);
+      gl.uniform1f(U(MV, "uOpacidad"), 0.88); gl.uniform1f(U(MV, "uFantasma"), fantasma);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
+      mano(MV, m.pose === "aprieta" ? 1 : 0);
+      gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
+    }, { m, url, sh, w, h, fantasma, capsula: datos.capsula, capsulaInd: datos.capsulaInd, huesosMano: datos.huesosMano });
+    const f = `${salida}/vista-mano-${m.foto}${fantasma < 1 ? "-vidrio" : ""}.png`;
     await pag.screenshot({ path: f });
     partes.push(f);
-    console.log(`✓ vista-mano-${m.foto}.png (${m.pose}, a ${m.dist} m)`);
+    console.log(`✓ vista-mano-${m.foto}${fantasma < 1 ? "-vidrio" : ""}.png (${m.pose}, a ${m.dist} m, fantasma ${fantasma})`);
   }
   await pag.setViewportSize({ width: W, height: H });
   await pag.setContent(`<body style="margin:0;background:#000"><canvas id="c" width="${W}" height="${H}"></canvas></body>`);

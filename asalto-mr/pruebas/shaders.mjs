@@ -15,6 +15,7 @@ const nav = await chromium.launch({ executablePath: process.env.CHROMIUM || "/op
 const pag = await nav.newPage();
 const res = await pag.evaluate((programas) => {
   const gl = document.createElement("canvas").getContext("webgl");
+  gl.getExtension("OES_standard_derivatives");   // como la pide three.js (la mano fantasma usa fwidth)
   if (!gl) return [{ error: "sin WebGL" }];
   return programas.map((p) => {
     const sh = (tipo, s) => { const o = gl.createShader(tipo); gl.shaderSource(o, s); gl.compileShader(o); return [o, gl.getShaderParameter(o, gl.COMPILE_STATUS) ? "" : gl.getShaderInfoLog(o)]; };

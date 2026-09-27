@@ -77,8 +77,35 @@ final class ManoRastreo implements Runnable {
     private int vistas;
     private long vioDos = -100000, desdeUna = -100000, buscoDos = -100000;
     private float[] caja;
+    private final AsociadorManos asociador = new AsociadorManos();
+    private final float[][] centroImg = new float[2][];
 
     ManoRastreo(Context c) { ctx = c.getApplicationContext(); }
+
+    private volatile float[] cajaVista;
+    private volatile long cajaHora;
+    private final float[] aProfCaja = new float[6];
+
+    /**
+     * Dónde están las manos en la imagen de PROFUNDIDAD (x0, y0, x1, y1
+     * normalizados, con 15 % de margen), si se vieron en los últimos 300 ms:
+     * para que el escaneo no meta la mano en la malla. null si no hay.
+     */
+    float[] cajasEnProfundidad(long ahora) {
+        float[] c = cajaVista;
+        if (c == null || ahora - cajaHora > 300) return null;
+        float mx = (c[2] - c[0]) * 0.15f, my = (c[3] - c[1]) * 0.15f;
+        float x0 = c[0] - mx, y0 = c[1] - my, x1 = c[2] + mx, y1 = c[3] + my;
+        float[] a = aProfCaja;
+        // las cuatro esquinas llevadas a la imagen de profundidad (la transformación es afín)
+        float ux0 = Float.MAX_VALUE, uy0 = Float.MAX_VALUE, ux1 = -Float.MAX_VALUE, uy1 = -Float.MAX_VALUE;
+        for (int k = 0; k < 4; k++) {
+            float x = (k & 1) == 0 ? x0 : x1, y = (k & 2) == 0 ? y0 : y1;
+            float u = a[0] + a[1] * x + a[2] * y, v = a[3] + a[4] * x + a[5] * y;
+            ux0 = Math.min(ux0, u); uy0 = Math.min(uy0, v); ux1 = Math.max(ux1, u); uy1 = Math.max(uy1, v);
+        }
+        return new float[]{ux0, uy0, ux1, uy1};
+    }
 
     void arrancar() {
         if (hilo != null) return;
@@ -177,7 +204,6 @@ final class ManoRastreo implements Runnable {
             estado = "manos: no disponible (" + e.getClass().getSimpleName() + ")";
             return;
         }
-        float[][] img = new float[21][3], mundo = new float[21][3];
         float[] prof3 = new float[3];
         long ultimoTs = -1;
         float g = 1;
@@ -220,37 +246,68 @@ final class ManoRastreo implements Runnable {
                 if (vistasAhora >= 2) vioDos = ts;
                 if (vistasAhora >= 1 && vistas == 0) desdeUna = ts;
                 vistas = vistasAhora;
-                boolean[] usada = new boolean[2];
+                long llega = android.os.SystemClock.elapsedRealtime();   // cuándo salió de la red
+                int nd = Math.min(2, lms.size());
+                float[][][] imgs = new float[nd][21][3], mps = new float[nd][21][3];
+                float[][] centros = new float[nd][3];
+                float[] confs = new float[nd];
+                int[] lados = new int[nd];
+                float[] pts = new float[63];
                 float[] nuevaCaja = null;
-                for (int h = 0; h < lms.size() && h < 2; h++) {
+                float k = 0.5f * (manos[0].escalaReal + manos[1].escalaReal);
+                for (int h = 0; h < nd; h++) {
                     List<NormalizedLandmark> l = lms.get(h);
                     List<Landmark> wl = wls.get(h);
                     for (int i = 0; i < 21; i++) {
-                        img[i][0] = l.get(i).x(); img[i][1] = l.get(i).y(); img[i][2] = l.get(i).z();
-                        mundo[i][0] = wl.get(i).x(); mundo[i][1] = wl.get(i).y(); mundo[i][2] = wl.get(i).z();
+                        imgs[h][i][0] = l.get(i).x(); imgs[h][i][1] = l.get(i).y(); imgs[h][i][2] = l.get(i).z();
+                        mps[h][i][0] = wl.get(i).x(); mps[h][i][1] = wl.get(i).y(); mps[h][i][2] = wl.get(i).z();
                     }
-                    if (girada) Mano.desgirar(img, mundo);   // volver a la orientación de la cámara
-                    float[] cj = Mano.cajaDe(img);
+                    if (girada) Mano.desgirar(imgs[h], mps[h]);   // volver a la orientación de la cámara
+                    float[] cj = Mano.cajaDe(imgs[h]);
                     nuevaCaja = nuevaCaja == null ? cj : new float[]{Math.min(cj[0], nuevaCaja[0]), Math.min(cj[1], nuevaCaja[1]),
                             Math.max(cj[2], nuevaCaja[2]), Math.max(cj[3], nuevaCaja[3])};
-                    // a qué mano de antes corresponde (la más cercana en la imagen)
-                    int slot = elegirSlot(img, usada);
+                    if (!Mano.centroEnMundo(imgs[h], mps[h], iw, ih, fx, fy, cx, cy, k, pose, centros[h], pts)) centros[h] = new float[]{1e6f, 1e6f, 1e6f};
+                    lados[h] = AsociadorManos.lado(pts);
+                    try { confs[h] = r.handedness().get(h).get(0).score(); } catch (Throwable e) { confs[h] = 0.5f; }
+                }
+                // a qué mano de antes va cada una (por el centro predicho en 3D, como Aeroplaza)
+                FiltroMano[] fs = {manos[0].filtro, manos[1].filtro};
+                int[] slots;
+                synchronized (manos[0]) { synchronized (manos[1]) {
+                    slots = asociador.asignar(centros, confs, lados, fs, Mano.segundos(ts), new float[]{pose[12], pose[13], pose[14]});
+                } }
+                boolean[] usada = new boolean[2];
+                for (int h = 0; h < nd; h++) {
+                    int slot = slots[h];
+                    if (slot < 0) continue;
                     usada[slot] = true;
+                    float[][] img1 = imgs[h];
                     Mano m = manos[slot];
-                    prof3[0] = profundidadEn(img[0][0], img[0][1]);
-                    prof3[1] = profundidadEn(img[5][0], img[5][1]);
-                    prof3[2] = profundidadEn(img[17][0], img[17][1]);
+                    prof3[0] = profundidadEn(img1[0][0], img1[0][1]);
+                    prof3[1] = profundidadEn(img1[5][0], img1[5][1]);
+                    prof3[2] = profundidadEn(img1[17][0], img1[17][1]);
+                    boolean borde = Mano.enBorde(img1, centroImg[slot]);
+                    float[] ci = centroImg[slot] == null ? (centroImg[slot] = new float[2]) : centroImg[slot];
+                    ci[0] = ci[1] = 0;
+                    for (int i : FiltroMano.CENTRO) { ci[0] += img1[i][0] / 5; ci[1] += img1[i][1] / 5; }
                     synchronized (m) {
-                        if (m.aMundo2(img, mundo, iw, ih, fx, fy, cx, cy, prof3, pose, ts)) {
+                        if (m.aMundo2(img1, mps[h], iw, ih, fx, fy, cx, cy, prof3, pose, ts, llega, borde)) {
                             if (m.gesto2(ts)) tiros[slot].incrementAndGet();
                         }
                         vista[slot] = ts;
-                        m.u = img[0][0]; m.v = img[0][1];
+                        m.u = img1[0][0]; m.v = img1[0][1];
                     }
                 }
+                // las que no aparecieron: una falta (si la red vio menos manos de las que buscaba)
+                for (int s2 = 0; s2 < 2; s2++) if (!usada[s2] && nd < n) synchronized (manos[s2]) { manos[s2].filtro.faltas++; }
                 caja = nuevaCaja;
-                // si el modelo la pierde un instante (movida, contraluz), el arma se queda 250 ms donde estaba
-                for (int s = 0; s < 2; s++) if (!usada[s] && ts - vista[s] > 250) synchronized (manos[s]) { manos[s].perdida(); }
+                if (nuevaCaja != null && hayProf) {
+                    System.arraycopy(aProf, 0, aProfCaja, 0, 6);
+                    cajaVista = nuevaCaja;
+                    cajaHora = android.os.SystemClock.elapsedRealtime();
+                }
+                // el gesto vuelve a cero si no se la ve hace 600 ms (el filtro se desvanece solo, con sus reglas)
+                for (int s = 0; s < 2; s++) if (!usada[s] && ts - vista[s] > 600) synchronized (manos[s]) { manos[s].perdida(); centroImg[s] = null; }
                 msUltimo = (System.nanoTime() - t0) / 1e6f;
                 synchronized (this) { lleno = false; }
             }
@@ -261,18 +318,6 @@ final class ManoRastreo implements Runnable {
         } finally {
             cerrarRedes();
         }
-    }
-
-    private int elegirSlot(float[][] img, boolean[] usada) {
-        int mejor = usada[0] ? 1 : 0;
-        float mejorD = Float.MAX_VALUE;
-        for (int s = 0; s < 2; s++) {
-            if (usada[s]) continue;
-            Mano m = manos[s];
-            float d = m.hay ? (float) Math.hypot(m.u - img[0][0], m.v - img[0][1]) : 10f + s;
-            if (d < mejorD) { mejorD = d; mejor = s; }
-        }
-        return mejor;
     }
 
     /**
