@@ -6,12 +6,13 @@
 // dibujo corre pero el juego no "avanza" — y por eso dejar el teléfono abierto
 // una hora no cambia nada.
 
+import { GIRO, aplicarGiro, ALTO_MINIMO } from "./giro.js";
 import { Partida } from "./juego.js";
 import { dibujar, celdaDe, marcarToque, chispear, barrido, registrarArte, rutaArte, COLOR, VISTA } from "./dibujo.js";
 import { NIVELES } from "./niveles.js";
-import { despertar, efe, sonando, contexto, salida } from "./audio.js";
+import { despertar, efe, volumenEfectos, contexto, salida, decodificadas, creditosSonidos } from "./audio.js";
 import * as musica from "./musica.js";
-import { cargar, guardar, borrar, lucesDe, anotar, abiertos, totalLuces } from "./guardado.js";
+import { cargar, guardar, borrar, lucesDe, anotar, abiertos, totalLuces, resueltos, perfectos } from "./guardado.js";
 import { t, aplicar, ponerIdioma, idioma, IDIOMAS } from "./idioma.js";
 
 const $ = (s) => document.querySelector(s);
@@ -32,10 +33,15 @@ let gano = 0;                    // cuándo se ganó, para el barrido de luz
 // El tablero se dibuja siempre en 360 de ancho y se escala entero: así una
 // celda mide lo mismo en proporción en todos los aparatos y el dedo cae donde
 // tiene que caer sin cuentas distintas por pantalla.
+//
+// Las medidas son las LOGICAS (GIRO.ancho/alto): con el teléfono acostado el
+// juego va girado y su ancho es el alto de la ventana.
 let esc = 1;
 function redimensionar() {
-  esc = Math.min(innerWidth / VISTA.ancho, innerHeight / 560, 3);
-  VISTA.alto = Math.round(Math.min(innerHeight / esc, 1000));
+  aplicarGiro();
+  const w = GIRO.ancho(), h = GIRO.alto();
+  esc = Math.min(w / VISTA.ancho, h / ALTO_MINIMO, 3);
+  VISTA.alto = Math.round(Math.min(h / esc, 1000));
   const anCSS = VISTA.ancho * esc, alCSS = VISTA.alto * esc;
   const dpr = Math.min(devicePixelRatio || 1, 2.5);
   lienzo.width = Math.round(anCSS * dpr);
@@ -47,8 +53,11 @@ function redimensionar() {
   document.documentElement.style.setProperty("--al", `${alCSS}px`);
 }
 addEventListener("resize", redimensionar);
-addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
+// Hay teléfonos que avisan el giro antes de tener las medidas nuevas: se
+// recalcula al toque y otra vez a los 250 ms.
+addEventListener("orientationchange", () => { redimensionar(); setTimeout(redimensionar, 250); });
 redimensionar();
+setTimeout(redimensionar, 250);
 
 // --- entrada -------------------------------------------------------------
 // UN TOQUE, NADA MAS. Se usa `pointerup` y no `pointerdown` a propósito: con
@@ -56,15 +65,19 @@ redimensionar();
 // en un juego donde cada toque cuenta para el puntaje eso es robarle un toque
 // a alguien que ni siquiera quería jugar todavía.
 lienzo.addEventListener("pointerup", (ev) => {
+  // `offsetX/offsetY` y no `clientX - getBoundingClientRect()`: el offset ya
+  // viene en coordenadas del lienzo aunque el juego esté girado; el rectángulo
+  // de la ventana no (sale con el ancho y el alto cambiados).
+  const px = ev.offsetX / esc, py = ev.offsetY / esc;
+  ultimoToque = { x: px, y: py };
   if (!partida || partida.ganado) return;
   despertarTodo();
-  const r = lienzo.getBoundingClientRect();
-  const px = (ev.clientX - r.left) / esc, py = (ev.clientY - r.top) / esc;
   const cel = celdaDe(partida.nivel, px, py);
   if (!cel) return;
   const antes = new Set(partida.prendidos);
   if (!partida.tocar(cel.c, cel.f)) return;
   destello = { ...cel, t: performance.now() };
+  { const d = cargar(); d.stats.toques++; guardar(); }
   efe.espejo(partida.estado[partida.celda(cel.c, cel.f).i]);
   // LAS CHISPAS SALEN DEL OBJETIVO QUE CAMBIO, no del espejo que tocaste. El
   // espejo dice QUE hiciste algo —para eso está el destello— y el objetivo dice
@@ -92,6 +105,7 @@ lienzo.addEventListener("pointerup", (ev) => {
   if (partida.ganado) setTimeout(ganar, 420);
 });
 lienzo.addEventListener("pointerdown", (ev) => ev.preventDefault());
+let ultimoToque = null;
 
 // --- pantallas -----------------------------------------------------------
 function mostrar(id) {
@@ -100,27 +114,144 @@ function mostrar(id) {
   lienzo.style.visibility = id === "p-juego" ? "visible" : "hidden";
 }
 
-function alMenu() {
+let avisoT = 0;
+function avisar(txt) {
+  const a = $("#aviso");
+  a.textContent = txt; a.hidden = false;
+  clearTimeout(avisoT); avisoT = setTimeout(() => { a.hidden = true; }, 4000);
+}
+
+// --- idioma --------------------------------------------------------------
+// La pantalla sale en CADA arranque, con la elección anterior marcada y con el
+// foco puesto: al que ya eligió le alcanza con un Enter o un toque.
+function pantallaIdioma() {
+  const actual = cargar().ajustes.idioma;
+  let foco = null;
+  for (const b of document.querySelectorAll(".idioma-btn")) {
+    const si = b.dataset.idioma === actual;
+    b.classList.toggle("activo", si);
+    b.setAttribute("aria-pressed", String(si));
+    if (si) foco = b;
+  }
+  musica.pararTema();
+  mostrar("p-idioma");
+  (foco || document.querySelector(".idioma-btn")).focus({ preventScroll: true });
+}
+
+// Cambiar de idioma reescribe los `data-t` y ADEMAS vuelve a pintar lo que se
+// escribe desde JavaScript: el botón de seguir, el contador de luces y la
+// grilla no tienen marca en el HTML y quedarían en el idioma anterior.
+function elegir(cod, guardarlo = true) {
+  ponerIdioma(cod);
+  aplicar();
+  if (guardarlo) { const d = cargar(); d.ajustes.idioma = cod; guardar(); }
+}
+for (const b of document.querySelectorAll("[data-idioma]"))
+  b.addEventListener("click", () => { despertarTodo(); efe.menu(); elegir(b.dataset.idioma); alMenu(); });
+$("#m-idioma").addEventListener("click", () => { efe.menu(); pantallaIdioma(); });
+
+// --- menú ----------------------------------------------------------------
+let pestanaActual = "jugar";
+function pestana(nombre, foco = false) {
+  pestanaActual = nombre;
+  for (const b of document.querySelectorAll("[data-pestana]")) {
+    const si = b.dataset.pestana === nombre;
+    b.setAttribute("aria-selected", String(si));
+    b.tabIndex = si ? 0 : -1;
+    if (si && foco) b.focus();
+  }
+  for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== nombre;
+}
+for (const b of document.querySelectorAll("[data-pestana]"))
+  b.addEventListener("click", () => { despertarTodo(); efe.menu(); pestana(b.dataset.pestana); });
+// Las flechas mueven entre pestañas, como pide el patrón de tabs.
+$(".pestanas").addEventListener("keydown", (e) => {
+  const orden = [...document.querySelectorAll("[data-pestana]")].map((b) => b.dataset.pestana);
+  const i = orden.indexOf(pestanaActual);
+  if (e.key === "ArrowRight") { pestana(orden[(i + 1) % orden.length], true); e.preventDefault(); }
+  if (e.key === "ArrowLeft") { pestana(orden[(i + orden.length - 1) % orden.length], true); e.preventDefault(); }
+});
+
+function alMenu(nombre) {
   partida = null;
   musica.parar();
   musica.arrancarTema();
-  const abre = abiertos(NIVELES.length);
-  $("#m-seguir").textContent = t("menu.seguir", { n: Math.min(abre, NIVELES.length) });
-  $("#m-luces").textContent = t("menu.luces", { n: totalLuces(), t: NIVELES.length * 3 });
+  pintarMenu();
+  pestana(nombre || pestanaActual);
   mostrar("p-menu");
 }
 
-/** La grilla de niveles, con las luces de cada uno y los cerrados apagados. */
-function alMapa() {
+/** La grilla de niveles —con las luces de cada uno— vive en la pestaña Jugar. */
+function alMapa() { alMenu("jugar"); }
+
+function pintarMenu() {
   const abre = abiertos(NIVELES.length);
+  const total = NIVELES.length;
+  $("#m-seguir").textContent = t("menu.seguir", { n: Math.min(abre, total) });
+  $("#m-luces").textContent = t("menu.luces", { n: totalLuces(), t: total * 3 });
+  $("#m-barra").style.width = `${(totalLuces() / (total * 3)) * 100}%`;
+  $("#m-progreso").textContent = t("menu.progreso", { n: resueltos(), t: total, p: perfectos() });
+  pintarMapa(abre);
+
+  const d = cargar();
+  const filas = [
+    ["rec.luces", t("rec.de", { n: totalLuces(), t: total * 3 })],
+    ["rec.resueltos", t("rec.de", { n: resueltos(), t: total })],
+    ["rec.perfectos", String(perfectos())],
+    ["rec.ganados", String(d.stats.ganados)],
+    ["rec.empezados", String(d.stats.empezados)],
+    ["rec.toques", String(d.stats.toques)],
+    ["rec.pistas", String(d.stats.pistas)],
+  ];
+  const ul = $("#m-records");
+  ul.innerHTML = "";
+  for (const [k, v] of filas) {
+    const li = document.createElement("li"), a = document.createElement("span"), b = document.createElement("b");
+    a.textContent = t(k); b.textContent = v;
+    li.append(a, b); ul.append(li);
+  }
+
+  $("#aj-efectos").value = Math.round(d.ajustes.efectos * 100);
+  $("#aj-efectos-v").textContent = String(Math.round(d.ajustes.efectos * 100));
+  $("#aj-musica").value = Math.round(d.ajustes.volMusica * 100);
+  $("#aj-musica-v").textContent = String(Math.round(d.ajustes.volMusica * 100));
+  $("#m-idioma-cod").textContent = `${idioma().toUpperCase()} · ${IDIOMAS[idioma()]}`;
+  desarmarBorrar();
+
+  // Créditos: los CC0 se agradecen igual; los CC-BY, si hubiera, van con
+  // autor, licencia y enlace porque la licencia lo exige.
+  $("#m-cre-cc0").textContent = t("cre.cc0", { lista: CC0.join(", ") });
+  const ccby = creditosSonidos(), caja = $("#m-cre-ccby");
+  caja.innerHTML = "";
+  const p = document.createElement("p");
+  p.textContent = ccby.length ? t("cre.ccby") : t("cre.sinccby");
+  caja.append(p);
+  if (ccby.length) {
+    const ul2 = document.createElement("ul"); ul2.className = "creditos-lista";
+    for (const c of ccby) {
+      const li = document.createElement("li"), a = document.createElement("a");
+      a.href = c.fuente; a.target = "_blank"; a.rel = "noopener"; a.textContent = c.fuente;
+      li.append(`${c.id}: ${c.autor} (${c.licencia}) — `, a);
+      ul2.append(li);
+    }
+    caja.append(ul2);
+  }
+}
+// Los autores de las grabaciones CC0 (sonidos/espejo/manifiesto.json):
+// incrustar.py sólo exporta los que la licencia obliga a nombrar.
+const CC0 = ["Kenney (kenney.nl)", "rubberduck (OpenGameArt)"];
+
+/** Los cuarenta botones, con las luces de cada uno y los cerrados apagados. */
+function pintarMapa(abre) {
   const cont = $("#mapa");
   cont.innerHTML = "";
   for (let i = 0; i < NIVELES.length; i++) {
     const b = document.createElement("button");
     const l = lucesDe(i);
     const cerrado = i + 1 > abre;
-    b.className = "celda-niv" + (cerrado ? " cerrado" : "") + (l ? " hecho" : "");
+    b.className = "celda-niv" + (cerrado ? " cerrado" : "") + (l ? " hecho" : "") + (i + 1 === abre && !l ? " siguiente" : "");
     b.disabled = cerrado;
+    b.style.animationDelay = `${Math.min(i, 30) * 0.015}s`;
     // Las luces van como texto y no como imágenes: cuarenta botones con tres
     // iconos cada uno son ciento veinte nodos que se vuelven a armar cada vez
     // que se abre el mapa.
@@ -131,7 +262,6 @@ function alMapa() {
     else b.addEventListener("click", () => { efe.menu(); jugar(i); });
     cont.append(b);
   }
-  mostrar("p-mapa");
 }
 
 function jugar(i) {
@@ -142,6 +272,7 @@ function jugar(i) {
   partida = new Partida(NIVELES[i], i);
   destello = null;
   gano = 0;
+  { const d = cargar(); d.stats.empezados++; guardar(); }
   pintarHud();
   mostrar("p-juego");
 }
@@ -150,6 +281,7 @@ function ganar() {
   efe.gana();
   const p = partida;
   anotar(p.numero, p.luces);
+  { const d = cargar(); d.stats.ganados++; guardar(); }
   $("#f-toques").textContent = String(p.toques);
   $("#f-par").textContent = String(p.par);
   $("#f-perfecto").hidden = p.toques > p.par;
@@ -163,8 +295,6 @@ function ganar() {
 $("#m-seguir").addEventListener("click", () => {
   efe.menu(); jugar(Math.min(abiertos(NIVELES.length), NIVELES.length) - 1);
 });
-$("#m-niveles").addEventListener("click", () => { efe.menu(); alMapa(); });
-$("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); });
 $("#j-salir").addEventListener("click", () => { efe.menu(); alMapa(); });
 $("#j-reiniciar").addEventListener("click", () => {
   if (!partida) return;
@@ -180,53 +310,53 @@ $("#j-pista").addEventListener("click", () => {
   efe.pista();
   destello = { c: e.c, f: e.f, t: performance.now(), pista: true };
   partida.toques++;
+  { const d = cargar(); d.stats.pistas++; guardar(); }
   pintarHud();
 });
 $("#f-siguiente").addEventListener("click", () => { efe.menu(); jugar(partida.numero + 1); });
 $("#f-repetir").addEventListener("click", () => { efe.menu(); jugar(partida.numero); });
 $("#f-niveles").addEventListener("click", () => { efe.menu(); alMapa(); });
-for (const b of document.querySelectorAll("[data-volver]"))
-  b.addEventListener("click", () => { efe.menu(); alMenu(); });
-for (const b of document.querySelectorAll("[data-mapa]"))
-  b.addEventListener("click", () => { efe.menu(); alMapa(); });
-$("#aj-sonido").addEventListener("change", (e) => {
-  const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
+$("#aj-efectos").addEventListener("input", (e) => {
+  const v = Number(e.target.value) / 100;
+  const d = cargar(); d.ajustes.efectos = v; guardar();
+  $("#aj-efectos-v").textContent = String(Math.round(v * 100));
+  volumenEfectos(v);
 });
-// LA MUSICA SE APAGA APARTE DE LOS EFECTOS: son dos molestias distintas, y en un
+$("#aj-efectos").addEventListener("change", () => { despertarTodo(); efe.prende(); });
+// LA MUSICA VA APARTE DE LOS EFECTOS: son dos molestias distintas, y en un
 // juego de pensar la primera que estorba es la música.
-$("#aj-musica").addEventListener("change", (e) => {
-  const d = cargar(); d.ajustes.musica = e.target.checked; guardar();
-  musica.sonando(e.target.checked);
-  if (e.target.checked && !partida) musica.arrancarTema();
-});
-$("#m-borrar").addEventListener("click", () => {
-  if (!confirm(t("menu.borrar-confirmar"))) return;
-  // Borrar el progreso NO borra el idioma: está en el mismo bulto guardado,
-  // pero volver al inglés porque alguien reseteó sus niveles es un castigo que
-  // nadie pidió.
-  const cod = cargar().ajustes.idioma;
-  borrar();
-  const nuevo = cargar(); nuevo.ajustes.idioma = cod; guardar();
-  alMenu();
+$("#aj-musica").addEventListener("input", (e) => {
+  const v = Number(e.target.value) / 100;
+  const d = cargar(); d.ajustes.volMusica = v; guardar();
+  $("#aj-musica-v").textContent = String(Math.round(v * 100));
+  musica.volumen(v);
+  if (v > 0 && !partida) musica.arrancarTema();
 });
 
-// --- idiomas -------------------------------------------------------------
-// Cambiar de idioma reescribe los `data-t` y ADEMAS vuelve a pintar lo que se
-// escribe desde JavaScript: el botón de seguir, el contador de luces y el mapa
-// no tienen marca en el HTML y quedarían en el idioma anterior.
-function elegir(cod, guardarlo = true) {
-  ponerIdioma(cod);
-  aplicar();
-  $("#m-idioma").textContent = cod.toUpperCase();
-  if (guardarlo) { const d = cargar(); d.ajustes.idioma = cod; guardar(); }
+// BORRAR PIDE DOS TOQUES en vez de un confirm(): el cuadro del navegador no
+// gira con el juego (con el teléfono acostado sale de costado) y tapa todo. El
+// segundo toque tiene que llegar en 4 s.
+let borrarT = 0;
+function desarmarBorrar() {
+  clearTimeout(borrarT);
+  const b = $("#m-borrar");
+  b.classList.remove("armado"); b.textContent = t("op.borrar");
 }
-for (const b of document.querySelectorAll("[data-idioma]"))
-  b.addEventListener("click", () => { efe.menu(); elegir(b.dataset.idioma); alMenu(); });
-$("#m-idioma").addEventListener("click", () => {
-  const cods = Object.keys(IDIOMAS);
+$("#m-borrar").addEventListener("click", () => {
+  const b = $("#m-borrar");
   efe.menu();
-  elegir(cods[(cods.indexOf(idioma()) + 1) % cods.length]);
-  alMenu();
+  if (!b.classList.contains("armado")) {
+    b.classList.add("armado"); b.textContent = t("op.borrar-seguro");
+    clearTimeout(borrarT); borrarT = setTimeout(desarmarBorrar, 4000);
+    return;
+  }
+  // Borrar el progreso NO borra los ajustes: volver al inglés o al volumen de
+  // fábrica porque alguien reseteó sus niveles es un castigo que nadie pidió.
+  const aj = { ...cargar().ajustes };
+  borrar();
+  cargar().ajustes = aj; guardar();
+  pintarMenu();
+  avisar(t("op.borrado"));
 });
 
 // --- HUD -----------------------------------------------------------------
@@ -265,18 +395,19 @@ function bucle(ahora) {
     // pantalla quieta, sin forma de salir.
     console.error("Espejo se rompió:", e);
     partida = null; alMenu();
+    avisar(t("err.bucle"));
   }
 }
 
 // --- arranque ------------------------------------------------------------
 const d = cargar();
-$("#aj-sonido").checked = d.ajustes.sonido;
-sonando(d.ajustes.sonido);
-$("#aj-musica").checked = d.ajustes.musica;
-musica.sonando(d.ajustes.musica);
+volumenEfectos(d.ajustes.efectos);
+musica.volumen(d.ajustes.volMusica);
 elegir(d.ajustes.idioma || "en", false);
-if (d.ajustes.idioma) alMenu();
-else mostrar("p-idioma");
+$("#cargando").remove();
+pintarMenu();
+pestana("jugar");
+pantallaIdioma();
 requestAnimationFrame(bucle);
 
 // LA MESA SE CARGA DESPUES Y NO BLOQUEA NADA: hasta que llega, el tablero se
@@ -291,7 +422,8 @@ requestAnimationFrame(bucle);
 // Para las pruebas: poder mirar y manejar la partida desde afuera.
 globalThis.ESPEJO = {
   get partida() { return partida; },
-  NIVELES, Partida, jugar, alMenu, alMapa,
+  NIVELES, Partida, jugar, alMenu, alMapa, GIRO, pestana, decodificadas, idioma,
+  get esc() { return esc; }, get ultimoToque() { return ultimoToque; },
 };
 // La conversión de píxel a celda, expuesta aparte para que la prueba del
 // teléfono pueda recorrer las cuarenta celdas del tablero preguntando "¿este

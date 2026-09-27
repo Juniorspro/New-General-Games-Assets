@@ -1,12 +1,15 @@
-// Arranque, entrada y bucle.
+// Arranque, entrada, menú y bucle.
 
+import { GIRO, aplicarGiro, ALTO_MINIMO } from "./giro.js";
+import { t, aplicar, ponerIdioma, idioma, IDIOMAS } from "./idioma.js";
 import { construirNivel, CAPITULOS, FINAL } from "./nivel.js";
 import { Partida, VISTA } from "./juego.js";
 import { dibujar, dibujarEscenario, origenEscenario } from "./dibujo.js";
 import { Escenario } from "./portales.js";
 import { NIVELES_P } from "./mapas.js";
 import { escalarCuerpos } from "./cuerpo.js";
-import { despertar, efe, sonando, zumbido, cargarVoces, voz } from "./audio.js";
+import { rapidez, TOPE_CAIDA } from "./verlet.js";
+import { despertar, efe, sonando, zumbido, cargarVoces, voz, volumenes, aire, callar, decodificadas, creditosSonidos } from "./audio.js";
 import { registrarPiezas } from "./cuerpo.js";
 import { registrarTexturas } from "./dibujo.js";
 import { cargar, guardar, borrar } from "./guardado.js";
@@ -40,10 +43,14 @@ const ESCALA_P = 0.66;
 // mas o un poco menos de pozo no cambia la dificultad —se cae siempre a la
 // misma velocidad— y a cambio el juego llena el telefono en vez de dejar dos
 // franjas negras de setenta pixeles arriba y abajo.
+//
+// Las medidas son las LOGICAS (GIRO.ancho/alto): con el teléfono acostado el
+// juego va girado y su ancho es el alto de la ventana.
 let esc = 1;
 function redimensionar() {
-  const w = innerWidth, h = innerHeight;
-  esc = Math.min(w / VISTA.ancho, h / 560);   // nunca menos de 560 de alto util
+  aplicarGiro();
+  const w = GIRO.ancho(), h = GIRO.alto();
+  esc = Math.min(w / VISTA.ancho, h / ALTO_MINIMO);   // nunca menos de 560 de alto util
   let alto = h / esc;
   if (alto > 1000) { esc = h / 1000; alto = 1000; }   // ni mas de 1000
   VISTA.alto = Math.round(alto);
@@ -60,8 +67,11 @@ function redimensionar() {
   document.documentElement.style.setProperty("--al", `${alCSS}px`);
 }
 addEventListener("resize", redimensionar);
-addEventListener("orientationchange", () => setTimeout(redimensionar, 180));
+// Hay teléfonos que avisan el giro antes de tener las medidas nuevas: se
+// recalcula al toque y otra vez a los 250 ms.
+addEventListener("orientationchange", () => { redimensionar(); setTimeout(redimensionar, 250); });
 redimensionar();
+setTimeout(redimensionar, 250);
 
 // --- entrada -------------------------------------------------------------
 // UN DEDO ALCANZA. Se toca donde sea y el reactor empuja HACIA el dedo: no hay
@@ -71,9 +81,11 @@ redimensionar();
 const entrada = { mover: 0, bolita: false, dedoX: null };
 let dedoDir = null, dedoBol = null;
 
+// `offsetX/offsetY` y no `clientX - getBoundingClientRect()`: el offset ya
+// viene en coordenadas del lienzo aunque el juego esté girado, y el rectángulo
+// de la ventana no (sale con el ancho y el alto cambiados).
 function aMundo(ev) {
-  const r = lienzo.getBoundingClientRect();
-  return { x: (ev.clientX - r.left) / esc, y: (ev.clientY - r.top) / esc };
+  return { x: ev.offsetX / esc, y: ev.offsetY / esc };
 }
 
 // EN PORTALES, UN TOQUE CORTO DISPARA Y UN ARRASTRE EMPUJA, y se distinguen
@@ -109,7 +121,14 @@ const soltar = (ev) => {
     const rapido = performance.now() - tocado.t < 260;
     if (rapido && !tocado.arrastro && escena) {
       const o = origenEscenario();
-      escena.disparar(tocado.x - o.x, tocado.y - o.y);
+      // El tiro suena siempre que sale, se clave o rebote: el que tocó tiene
+      // que saber que el toque se entendió como disparo y no como empujón.
+      // Se mira ANTES de disparar porque `disparar` devuelve false tanto si no
+      // salió (enfriándose, o ganado) como si rebotó en lo negro.
+      const sale = escena.estado === "jugando" && !(escena.enfriar > 0);
+      const puso = escena.disparar(tocado.x - o.x, tocado.y - o.y);
+      if (sale) { efe.disparo(); const d = cargar(); d.stats.tiros++; guardar(); }
+      ultimoTiro = { x: tocado.x - o.x, y: tocado.y - o.y, gx: tocado.x, gy: tocado.y, puso, sale };
     }
     tocado = null;
   }
@@ -118,6 +137,7 @@ const soltar = (ev) => {
 };
 lienzo.addEventListener("pointerup", soltar);
 lienzo.addEventListener("pointercancel", soltar);
+let ultimoTiro = null;
 
 // El boton de bolita, por si se prefiere el pulgar en un lugar fijo.
 const btnBol = $("#btn-bolita");
@@ -133,7 +153,7 @@ btnBol.addEventListener("pointercancel", soltarBol);
 const teclas = {};
 addEventListener("keydown", (e) => {
   teclas[e.code] = true;
-  if (["Space", "ArrowLeft", "ArrowRight", "ArrowDown"].includes(e.code)) e.preventDefault();
+  if ((partida || escena) && ["Space", "ArrowLeft", "ArrowRight", "ArrowDown"].includes(e.code)) e.preventDefault();
   if (e.code === "Enter" && !$("#p-fin").hidden) alMenu();
 });
 addEventListener("keyup", (e) => { teclas[e.code] = false; });
@@ -181,9 +201,9 @@ async function cargarImagenes() {
       const im = await traer(ruta(`assets/partes/${quien}_${parte}.webp`));
       if (im) piezas[quien][parte] = im;
     })),
-    ...TEXTURAS.map(async (t) => {
-      const im = await traer(ruta(`assets/partes/${t}.webp`));
-      if (im) texturas[t] = im;
+    ...TEXTURAS.map(async (tx) => {
+      const im = await traer(ruta(`assets/partes/${tx}.webp`));
+      if (im) texturas[tx] = im;
     }),
   ]);
   // Se registran solo si están LAS DOS piezas que mandan. Un muñeco con torso
@@ -199,14 +219,152 @@ function mostrar(id) {
   $("#" + id).hidden = false;
 }
 
+let avisoT = 0;
+function avisar(txt) {
+  const a = $("#aviso");
+  a.textContent = txt; a.hidden = false;
+  clearTimeout(avisoT); avisoT = setTimeout(() => { a.hidden = true; }, 4000);
+}
+
+// --- idioma --------------------------------------------------------------
+// La pantalla sale en cada arranque, con la elección anterior marcada y con
+// el foco puesto: al que ya eligió le alcanza con un Enter o un toque.
+function pantallaIdioma() {
+  const actual = cargar().ajustes.idioma;
+  let foco = null;
+  for (const b of document.querySelectorAll(".idioma-btn")) {
+    const si = b.dataset.idioma === actual;
+    b.classList.toggle("activo", si);
+    b.setAttribute("aria-pressed", String(si));
+    if (si) foco = b;
+  }
+  mostrar("p-idioma");
+  (foco || document.querySelector(".idioma-btn")).focus({ preventScroll: true });
+}
+
+function elegirIdioma(cod) {
+  ponerIdioma(cod);
+  const d = cargar(); d.ajustes.idioma = cod; guardar();
+  aplicar();
+  alMenu();
+}
+for (const b of document.querySelectorAll(".idioma-btn"))
+  b.addEventListener("click", () => { despertar(); efe.menu(); elegirIdioma(b.dataset.idioma); });
+
+// --- menú ----------------------------------------------------------------
+let pestanaActual = "jugar";
+function pestana(nombre, foco = false) {
+  pestanaActual = nombre;
+  for (const b of document.querySelectorAll("[data-pestana]")) {
+    const si = b.dataset.pestana === nombre;
+    b.setAttribute("aria-selected", String(si));
+    b.tabIndex = si ? 0 : -1;
+    if (si && foco) b.focus();
+  }
+  for (const p of document.querySelectorAll("[data-panel]")) p.hidden = p.dataset.panel !== nombre;
+}
+for (const b of document.querySelectorAll("[data-pestana]"))
+  b.addEventListener("click", () => { despertar(); efe.menu(); pestana(b.dataset.pestana); });
+// Las flechas mueven entre pestañas, como pide el patrón de tabs: con Tab
+// habría que atravesar las cinco para llegar al contenido.
+$(".pestanas").addEventListener("keydown", (e) => {
+  const orden = [...document.querySelectorAll("[data-pestana]")].map((b) => b.dataset.pestana);
+  const i = orden.indexOf(pestanaActual);
+  if (e.key === "ArrowRight") { pestana(orden[(i + 1) % orden.length], true); e.preventDefault(); }
+  if (e.key === "ArrowLeft") { pestana(orden[(i + orden.length - 1) % orden.length], true); e.preventDefault(); }
+});
+
+const COLOR_CAP = CAPITULOS.map((c) => c.pared);
+
 function alMenu() {
   partida = null; escena = null;
-  const d = cargar();
-  $("#m-record").textContent = `${d.mejorProf} m · ${d.mejorChatarra} chatarras`;
-  $("#m-seguir").hidden = d.capitulo === 0;
-  $("#m-seguir-sub").textContent = CAPITULOS[Math.min(d.capitulo, CAPITULOS.length - 1)].nombre;
+  cortarFinal();
+  callar();
+  pintarMenu();
+  pestana(pestanaActual);
   mostrar("p-menu");
 }
+
+function pintarMenu() {
+  const d = cargar();
+  // El pozo: los siete tramos, prendidos hasta el más hondo al que se llegó.
+  const tope = Math.max(d.mejorCap || 0, d.capitulo || 0);
+  const tramos = $("#m-tramos");
+  tramos.innerHTML = "";
+  CAPITULOS.forEach((c, i) => {
+    const el = document.createElement("i");
+    if (i <= tope && (tope > 0 || d.stats.partidas > 0)) { el.className = "si"; el.style.setProperty("--c", COLOR_CAP[i]); }
+    tramos.append(el);
+  });
+  $("#m-pozo-prog").textContent = d.stats.partidas || tope
+    ? `${t("pozo.progreso", { cap: t("cap." + tope) })} · ${t("pozo.caps", { n: tope + 1, t: CAPITULOS.length })}`
+    : t("pozo.nada");
+  $("#m-seguir").hidden = d.capitulo === 0;
+  $("#m-seguir-txt").textContent = t("pozo.seguir", { cap: t("cap." + Math.min(d.capitulo, CAPITULOS.length - 1)) });
+
+  // Portales: cuántos, la barra y el primero sin resolver.
+  const hechos = NIVELES_P.filter((_, i) => d.portales.hechos[i]).length;
+  $("#m-portales-sub").textContent = t("portales.cuenta", { n: hechos, t: NIVELES_P.length });
+  $("#m-portales-barra").style.width = `${(hechos / NIVELES_P.length) * 100}%`;
+  const sig = NIVELES_P.findIndex((_, i) => !d.portales.hechos[i]);
+  $("#m-portal-seguir").disabled = sig < 0;
+  $("#m-portal-seguir-txt").textContent = sig < 0 ? t("portales.todos") : t("portales.seguir", { n: sig + 1 });
+
+  // Récords.
+  const chatP = (d.portales.chatarra || []).reduce((a, b) => a + (b || 0), 0);
+  const filas = [
+    ["rec.caida", t("rec.m", { n: d.mejorProf })],
+    ["rec.chatarra", t("rec.de", { n: d.mejorChatarra, t: nivel.chatarra.length })],
+    ["rec.cap", d.stats.partidas || tope ? t("cap." + tope) : t("rec.ninguno")],
+    ["rec.partidas", String(d.stats.partidas)],
+    ["rec.llegadas", String(d.stats.llegadas)],
+    ["rec.desarmes", String(d.stats.desarmes)],
+    ["rec.portales", t("rec.de", { n: hechos, t: NIVELES_P.length })],
+    ["rec.chatarraP", String(chatP)],
+    ["rec.tiros", String(d.stats.tiros)],
+  ];
+  const ul = $("#m-records");
+  ul.innerHTML = "";
+  for (const [k, v] of filas) {
+    const li = document.createElement("li");
+    const a = document.createElement("span"), b = document.createElement("b");
+    a.textContent = t(k); b.textContent = v;
+    li.append(a, b); ul.append(li);
+  }
+
+  // Opciones.
+  $("#aj-sonido").checked = d.ajustes.sonido;
+  $("#aj-efectos").value = Math.round(d.ajustes.efectos * 100);
+  $("#aj-efectos-v").textContent = String(Math.round(d.ajustes.efectos * 100));
+  $("#aj-musica").value = Math.round(d.ajustes.musica * 100);
+  $("#aj-musica-v").textContent = String(Math.round(d.ajustes.musica * 100));
+  $("#aj-voces").checked = d.ajustes.voces;
+  $("#m-idioma-cod").textContent = `${idioma().toUpperCase()} · ${IDIOMAS[idioma()]}`;
+  desarmarBorrar();
+
+  // Créditos: los CC0 se agradecen igual; los CC-BY, si hubiera, van con
+  // autor, licencia y enlace porque la licencia lo exige.
+  $("#m-cre-cc0").textContent = t("cre.cc0", { lista: CC0.join(", ") });
+  const ccby = creditosSonidos();
+  const caja = $("#m-cre-ccby");
+  caja.innerHTML = "";
+  const p = document.createElement("p");
+  p.textContent = ccby.length ? t("cre.ccby") : t("cre.sinccby");
+  caja.append(p);
+  if (ccby.length) {
+    const ul2 = document.createElement("ul"); ul2.className = "creditos-lista";
+    for (const c of ccby) {
+      const li = document.createElement("li"), a = document.createElement("a");
+      a.href = c.fuente; a.target = "_blank"; a.rel = "noopener"; a.textContent = c.fuente;
+      li.append(`${c.id}: ${c.autor} (${c.licencia}) — `, a);
+      ul2.append(li);
+    }
+    caja.append(ul2);
+  }
+}
+// Los autores de las grabaciones CC0 (sonidos/dimension-n/manifiesto.json).
+// incrustar.py sólo exporta los que la licencia obliga a nombrar.
+const CC0 = ["Kenney (kenney.nl)", "rubberduck (OpenGameArt)", "SketchMan3 (OpenGameArt)"];
 
 function jugar(cap) {
   escena = null;
@@ -215,6 +373,8 @@ function jugar(cap) {
   partida = new Partida(nivel);
   if (cap > 0) partida.reiniciarEn(cap);
   capSonando = -1;
+  const d = cargar(); d.stats.partidas++; guardar();
+  limpiarHud();
   $("#h-portal").hidden = true;
   mostrar("p-juego");
 }
@@ -235,21 +395,24 @@ function pintarNiveles() {
     const b = document.createElement("button");
     b.className = "niv" + (hecho ? " hecho" : "");
     b.disabled = !libre;
-    b.innerHTML = `<b>${i + 1}</b><small>${libre ? n.nombre : "🔒"}</small>` +
-                  (d.portales.chatarra[i] ? "<small>◆</small>" : "");
+    b.style.animationDelay = `${i * 0.025}s`;
+    const num = document.createElement("b"); num.textContent = String(i + 1);
+    const nom = document.createElement("small"); nom.textContent = libre ? t(`niv.${i}.nombre`) : "🔒";
+    b.append(num, nom);
+    if (d.portales.chatarra[i]) { const ch = document.createElement("small"); ch.textContent = "◆"; b.append(ch); }
+    if (!libre) b.setAttribute("aria-label", `${i + 1} — ${t("niv.cerrado")}`);
     b.addEventListener("click", () => { despertar(); efe.menu(); portal(i); });
     cont.append(b);
   });
   $("#pn-cuenta").textContent = `${hechos}/${NIVELES_P.length}`;
-  $("#m-portales-sub").textContent = `${hechos} de ${NIVELES_P.length} resueltos`;
 }
 
 function portal(n) {
   partida = null;
   escalarCuerpos(ESCALA_P);
   escena = new Escenario(n);
+  limpiarHud();
   $("#h-portal").hidden = false;
-  ultimo.pista = null; ultimo.bocha = null;
   mostrar("p-juego");
 }
 
@@ -257,15 +420,53 @@ $("#m-jugar").addEventListener("click", () => { despertar(); efe.menu(); jugar(0
 $("#m-portales").addEventListener("click", () => {
   despertar(); efe.menu(); pintarNiveles(); mostrar("p-niveles");
 });
+$("#m-portal-seguir").addEventListener("click", () => {
+  const sig = NIVELES_P.findIndex((_, i) => !cargar().portales.hechos[i]);
+  if (sig >= 0) { despertar(); efe.menu(); portal(sig); }
+});
 $("#h-reintentar").addEventListener("click", () => { efe.menu(); if (escena) escena.reiniciar(); });
 $("#m-seguir").addEventListener("click", () => { despertar(); efe.menu(); jugar(cargar().capitulo); });
-$("#m-como").addEventListener("click", () => { efe.menu(); mostrar("p-como"); });
+$("#m-idioma").addEventListener("click", () => { efe.menu(); pantallaIdioma(); });
+
+// BORRAR PIDE DOS TOQUES en vez de un confirm(): el cuadro del navegador no
+// gira con el juego (con el teléfono acostado sale de costado) y en un juego
+// de pantalla chica tapa todo. El segundo toque tiene que llegar en 4 s.
+let borrarT = 0;
+function desarmarBorrar() {
+  clearTimeout(borrarT);
+  const b = $("#m-borrar");
+  b.classList.remove("armado"); b.textContent = t("op.borrar");
+}
 $("#m-borrar").addEventListener("click", () => {
-  if (!confirm("¿Borrar el progreso y el récord?")) return;
-  borrar(); alMenu();
+  const b = $("#m-borrar");
+  efe.menu();
+  if (!b.classList.contains("armado")) {
+    b.classList.add("armado"); b.textContent = t("op.borrar-seguro");
+    clearTimeout(borrarT); borrarT = setTimeout(desarmarBorrar, 4000);
+    return;
+  }
+  // Borrar el progreso NO borra los ajustes: volver al volumen de fábrica y
+  // al idioma sin elegir porque alguien reseteó sus récords es un castigo
+  // que nadie pidió.
+  const aj = { ...cargar().ajustes };
+  borrar();
+  cargar().ajustes = aj; guardar();
+  pintarMenu();
+  avisar(t("op.borrado"));
 });
 $("#aj-sonido").addEventListener("change", (e) => {
   const d = cargar(); d.ajustes.sonido = e.target.checked; guardar(); sonando(e.target.checked);
+});
+for (const [id, clave] of [["#aj-efectos", "efectos"], ["#aj-musica", "musica"]])
+  $(id).addEventListener("input", (e) => {
+    const v = Number(e.target.value) / 100;
+    const d = cargar(); d.ajustes[clave] = v; guardar();
+    $(id + "-v").textContent = String(Math.round(v * 100));
+    volumenes({ [clave]: v });
+  });
+$("#aj-efectos").addEventListener("change", () => { despertar(); efe.chatarra(); });
+$("#aj-voces").addEventListener("change", (e) => {
+  const d = cargar(); d.ajustes.voces = e.target.checked; guardar(); volumenes({ voces: e.target.checked });
 });
 for (const b of document.querySelectorAll("[data-volver]"))
   b.addEventListener("click", () => { efe.menu(); alMenu(); });
@@ -273,6 +474,7 @@ $("#f-otra").addEventListener("click", () => { efe.menu(); cortarFinal(); jugar(
 $("#f-menu").addEventListener("click", () => { efe.menu(); cortarFinal(); alMenu(); });
 $("#j-salir").addEventListener("click", () => {
   efe.menu();
+  callar();
   // Del modo portales se vuelve a la lista de niveles, no al menú: en un juego
   // de puzzles se entra y se sale de un nivel veinte veces por sesión.
   if (escena) { escena = null; pintarNiveles(); mostrar("p-niveles"); }
@@ -285,11 +487,18 @@ $("#j-salir").addEventListener("click", () => {
 // en un telefono, para escribir los mismos numeros que ya estaban.
 const ultimo = {};
 let ultimaVoz = null;
+// Al cambiar de partida se olvida lo escrito: si no, el cartel de diálogo del
+// pozo quedaba prendido arriba de un nivel de portales (que no lo toca nunca).
+function limpiarHud() {
+  for (const k of Object.keys(ultimo)) delete ultimo[k];
+  $("#dialogo").hidden = true;
+  ultimaVoz = null;
+}
 function pintarHud(p) {
   const poner = (sel, v) => { if (ultimo[sel] === v) return; ultimo[sel] = v; $(sel).textContent = v; };
-  poner("#h-metros", `${p.metros} m`);
+  poner("#h-metros", t("hud.m", { n: p.metros }));
   poner("#h-chatarra", String(p.juntada));
-  poner("#h-cap", p.capitulo.nombre);
+  poner("#h-cap", t("cap." + p.capitulo.i));
   const i = Math.round(p.integridad);
   if (ultimo.integridad !== i) {
     ultimo.integridad = i;
@@ -299,9 +508,11 @@ function pintarHud(p) {
   const hay = !!p.dicho;
   if (ultimo.hayDicho !== hay) { ultimo.hayDicho = hay; $("#dialogo").hidden = !hay; }
   if (hay) {
-    const [quien, que] = p.dicho.lineas[p.dicho.i];
+    // El nombre sale de nivel.js (Rilo y Tito no se traducen); lo que dicen,
+    // de la tabla del idioma, con la misma clave que usa la voz.
+    const [quien] = p.dicho.lineas[p.dicho.i];
     poner("#d-quien", quien);
-    poner("#d-que", que);
+    poner("#d-que", t(`dlg.${p.dicho.clave}l${p.dicho.i}`));
     if (ultimo.dQuien !== quien) { ultimo.dQuien = quien;
       $("#dialogo").dataset.quien = quien.toLowerCase(); }
   }
@@ -309,16 +520,17 @@ function pintarHud(p) {
 
 function pintarHudPortal(e) {
   const poner = (sel, v) => { if (ultimo[sel] === v) return; ultimo[sel] = v; $(sel).textContent = v; };
-  poner("#h-metros", `${e.tiros} tiros`);
+  poner("#h-metros", e.tiros === 1 ? t("hud.tiros1") : t("hud.tiros", { n: e.tiros }));
   poner("#h-chatarra", String(e.juntada));
-  poner("#h-cap", `${e.n + 1}. ${e.nombre}`);
+  poner("#h-cap", t("hud.nivel", { n: e.n + 1, nombre: t(`niv.${e.n}.nombre`) }));
   const i = Math.round(e.integridad);
   if (ultimo.integridad !== i) {
     ultimo.integridad = i;
     $("#h-barra").style.width = `${i}%`;
     $("#h-barra").className = i < 30 ? "mal" : i < 60 ? "medio" : "";
   }
-  if (ultimo.pista !== e.pista) { ultimo.pista = e.pista; $("#h-pista").textContent = e.pista; }
+  const pista = t(`niv.${e.n}.pista`);
+  if (ultimo.pista !== pista) { ultimo.pista = pista; $("#h-pista").textContent = pista; }
   const b = e.proximo === 1 ? "bocha b" : "bocha";
   if (ultimo.bocha !== b) { ultimo.bocha = b; $("#h-bocha").className = b; }
 }
@@ -330,8 +542,8 @@ function sonarPortal(e) {
   if (v.pincho) efe.pincho();
   if (v.chatarra) efe.chatarra();
   if (v.portal) efe.portal();
-  if (v.boton) efe.resorte();
-  if (v.roto) efe.roto();
+  if (v.boton) efe.placa();
+  if (v.roto) { efe.roto(); const d = cargar(); d.stats.desarmes++; guardar(); }
   if (v.gano) {
     efe.gano();
     const d = cargar();
@@ -349,11 +561,13 @@ function sonar(p) {
   if (e.resorte) efe.resorte();
   if (e.chatarra) efe.chatarra();
   if (e.portal) efe.portal();
-  if (e.roto) efe.roto();
+  if (e.roto) { efe.roto(); const d = cargar(); d.stats.desarmes++; guardar(); }
   if (e.gano) efe.gano();
   if (e.capitulo != null) {
     const d = cargar();
-    if (e.capitulo > d.capitulo) { d.capitulo = e.capitulo; guardar(); }
+    if (e.capitulo > d.capitulo) d.capitulo = e.capitulo;
+    d.mejorCap = Math.max(d.mejorCap || 0, e.capitulo);
+    guardar();
   }
   // La voz de la línea que está puesta. Se dispara cuando CAMBIA la línea, no
   // cada cuadro: `dicho.i` avanza solo cada dos segundos y medio.
@@ -367,40 +581,63 @@ function sonar(p) {
   }
 }
 
+// El reactor suena mientras empuja y el viento según lo rápido que cae. Los
+// dos salen del mismo punto que usa la física (el pecho de Rilo), así que
+// suenan a lo que se ve.
+function sonarAire(cuerpo, tope) {
+  if (!cuerpo) { aire(0, 0); return; }
+  const empuje = Math.abs(entrada.mover);
+  const caida = Math.min(1, rapidez(cuerpo.p.pecho) / tope);
+  aire(empuje, caida);
+}
+
 // Los relojes del diálogo final. Se guardan para poder cancelarlos: si el
 // jugador toca "Otra vez" a los dos segundos, las voces que quedaban en cola
 // seguían sonando encima del nivel nuevo.
 let finTimers = [];
-function cortarFinal() { for (const t of finTimers) clearTimeout(t); finTimers = []; }
+function cortarFinal() { for (const tm of finTimers) clearTimeout(tm); finTimers = []; }
 
 function terminar(p) {
   cortarFinal();
+  callar();
   const d = cargar();
   d.mejorProf = Math.max(d.mejorProf, p.metros);
   d.mejorChatarra = Math.max(d.mejorChatarra, p.juntada);
+  d.mejorCap = CAPITULOS.length - 1;
+  d.stats.llegadas++;
   d.capitulo = 0;                    // terminarlo lo deja listo para empezar de cero
   guardar();
   $("#f-lista").innerHTML = "";
   const item = (k, v) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span>${k}</span><b>${v}</b>`;
+    const a = document.createElement("span"), b = document.createElement("b");
+    a.textContent = k; b.textContent = v;
+    li.append(a, b);
     $("#f-lista").append(li);
   };
-  item("Profundidad", `${p.metros} m`);
-  item("Chatarra", `${p.juntada} de ${nivel.chatarra.length}`);
-  item("Integridad final", `${Math.round(p.integridad)}%`);
+  item(t("fin.prof"), t("hud.m", { n: p.metros }));
+  item(t("fin.chatarra"), t("fin.de", { n: p.juntada, t: nivel.chatarra.length }));
+  item(t("fin.integridad"), `${Math.round(p.integridad)}%`);
   // Cada uno con su color, igual que en el juego: en un ida y vuelta de
   // cuatro lineas, saber quien habla sin leer el nombre es la mitad del chiste.
-  $("#f-dialogo").innerHTML = FINAL
-    .map(([q, t]) => `<p data-quien="${q.toLowerCase()}"><b>${q}</b> ${t}</p>`).join("");
+  const charla = $("#f-dialogo");
+  charla.innerHTML = "";
+  FINAL.forEach(([q], i) => {
+    const pp = document.createElement("p"), b = document.createElement("b");
+    pp.dataset.quien = q.toLowerCase();
+    pp.style.animationDelay = `${0.3 + i * 0.5}s`;
+    b.textContent = q;
+    pp.append(b, " " + t(`dlg.f${i}`));
+    charla.append(pp);
+  });
   // El ida y vuelta del final, dicho en voz alta y en orden. Los tiempos salen
   // del propio índice: cada línea espera a que termine la anterior más medio
   // segundo, así que si una voz se regenera más larga, el ritmo se acomoda solo.
   let cuando = 260;
   FINAL.forEach((_, i) => {
-    const t = VOCES[`f${i}`];
+    const tr = VOCES[`f${i}`];
     finTimers.push(setTimeout(() => voz(`f${i}`), cuando));
-    cuando += (t ? t[1] * 1000 : 1600) + 420;
+    cuando += (tr ? tr[1] * 1000 : 1600) + 420;
   });
   partida = null;
   mostrar("p-fin");
@@ -445,33 +682,42 @@ function bucle(ahora) {
       // segundo: la pantalla queda quieta y no se puede ni salir.
       if (fallas++ === 0) console.error("Dimensión Ñ se rompió:", e);
       partida = null; escena = null; alMenu();
+      avisar(t("err.bucle"));
     }
   }
   if (escena) {
     dibujarEscenario(ctx, escena);
     pintarHudPortal(escena);
+    sonarAire(escena.rilo, TOPE_CAIDA * 1.4);
   } else if (partida) {
     dibujar(ctx, partida);
     pintarHud(partida);
+    sonarAire(partida.rilo, TOPE_CAIDA);
   }
 }
 
 // --- arranque ------------------------------------------------------------
 {
   const d = cargar();
-  $("#aj-sonido").checked = d.ajustes.sonido;
   sonando(d.ajustes.sonido);
+  volumenes({ efectos: d.ajustes.efectos, musica: d.ajustes.musica, voces: d.ajustes.voces });
+  ponerIdioma(d.ajustes.idioma || "es");
+  aplicar();
   cargarImagenes();
   // Sin índice no se pide el mp3: no habría forma de saber qué parte suena.
   if (Object.keys(VOCES).length) cargarVoces(ruta("assets/voces.mp3"), VOCES);
-  alMenu();
+  $("#cargando").remove();
+  pintarMenu();
+  pantallaIdioma();
   requestAnimationFrame(bucle);
   // Para poder auditar el juego desde afuera: las pruebas corren la fisica de
   // verdad, no una copia.
   pintarNiveles();
   window.DN = {
     get partida() { return partida; }, get nivel() { return nivel; },
-    get escena() { return escena; },
+    get escena() { return escena; }, get esc() { return esc; },
+    get ultimoTiro() { return ultimoTiro; },
     jugar, portal, alMenu, entrada, VISTA, CAPITULOS, construirNivel, NIVELES_P,
+    GIRO, idioma, pestana, decodificadas, despertar,
   };
 }

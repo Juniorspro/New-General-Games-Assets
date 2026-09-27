@@ -1,8 +1,10 @@
 /* Espejo — hoja única.
    Vertical y nada más: el tablero se dibuja en 360 de ancho y se escala entero,
-   así que la interfaz vive dentro de ese rectángulo. Las medidas van en svh y
-   no en vh porque en un teléfono vh incluye la barra del navegador y el último
-   renglón queda siempre tapado. */
+   así que la interfaz vive dentro de ese rectángulo (--an × --al, que escribe
+   main.js). Nada mide la ventana directo: con el teléfono acostado el juego se
+   gira (js/giro.js) y la ventana y el juego dejan de medir lo mismo. Por eso
+   no hay media queries ni vw/vh: hay clases (`bajo`, `medio`) y variables
+   (--vw, --vh) que calcula JS con el tamaño lógico. */
 
 :root {
   --fondo: #080c18;
@@ -15,17 +17,20 @@
   --rosa: #ff7bd5;
   --ambar: #ffc24a;
   --mal: #ff8f8f;
+  --vw: 1vw; --vh: 1vh;
 }
 
 * { box-sizing: border-box; }
+/* `hidden` tiene que ganar siempre: un `display` de una clase le gana al
+   estilo del navegador y deja a la vista lo que se quiso esconder. */
+[hidden] { display: none !important; }
 html, body {
-  margin: 0; padding: 0; height: 100%;
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
   background: var(--fondo); color: var(--texto);
   font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-text-size-adjust: 100%; overscroll-behavior: none;
 }
 body {
-  min-height: 100svh; display: flex; align-items: center; justify-content: center;
   /* Un fondo que insinúa rayos cruzados. Cuesta una sola pintada y hace que las
      pantallas de texto no se sientan un documento. */
   background-image:
@@ -33,6 +38,14 @@ body {
     radial-gradient(100% 60% at 85% 100%, rgba(255,123,213,.06), transparent 60%);
 }
 button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* La raíz ocupa la ventana; girada, JS le pone el tamaño y el transform. */
+#raiz { position: fixed; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; }
+html.girado #raiz { transform-origin: 0 0; }
+.cargando {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 5;
+  color: var(--tenue); font-size: 14px; background: var(--fondo); text-align: center; padding: 16px;
+}
 
 /* `touch-action: none` es obligatorio: sin eso el navegador se queda el toque
    para desplazar la página y el dedo llega una vez de cada tres. */
@@ -43,13 +56,13 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
 
 .pantalla {
   position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: var(--an, min(360px, 100vw)); height: var(--al, min(640px, 100svh));
+  width: var(--an, min(360px, calc(var(--vw) * 100)));
+  height: var(--al, min(640px, calc(var(--vh) * 100)));
   display: flex; flex-direction: column; z-index: 2;
 }
 .pantalla[hidden] { display: none; }
 .centrado { align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
 #p-menu, #p-idioma, #p-fin { background: radial-gradient(130% 70% at 50% 0%, rgba(14,22,40,.5), rgba(4,6,14,.85)); }
-#p-mapa, #p-como { background: var(--fondo); }
 
 /* EL MARCO ES UNA IMAGEN CORTADA EN NUEVE (`border-image`), no un borde. Un
    dibujo de varillas con espejos no se puede estirar entero: las esquinas
@@ -61,12 +74,19 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
   width: 100%; text-align: center;
   padding: 12px 10px 10px;
   border: 28px solid transparent;
-  border-image: url(../assets/arte/ui_marco.webp) 30% / 28px / 0 round;
+  border-image-slice: 30%; border-image-width: 28px; border-image-outset: 0; border-image-repeat: round;
   background: radial-gradient(120% 90% at 50% 10%, rgba(16,24,44,.72), rgba(4,7,16,.9));
   background-clip: padding-box;
   filter: drop-shadow(0 12px 26px rgba(0,0,0,.6));
   max-height: 100%; overflow-y: auto;
+  animation: sube .4s ease-out both;
 }
+@keyframes sube { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes aparece { from { opacity: 0; transform: translateX(14px); } }
+
+/* El marco se nombra UNA vez para los dos que lo usan: en el archivo único
+   cada `url()` se vuelve 45 KB de base64, y escrito dos veces pesaba el doble. */
+.tapa, .placa { border-image-source: url(../assets/arte/ui_marco.webp); }
 
 /* El título es un dibujo, no texto con sombras. El `alt` lleva la palabra, así
    que el lector de pantalla sigue leyendo "Espejo". */
@@ -105,6 +125,9 @@ button {
 }
 button:active { transform: translateY(2px); }
 button:disabled { opacity: .45; cursor: default; }
+/* El foco se ve siempre que viene del teclado: sin él, recorrer cuarenta
+   niveles con Tab es adivinar dónde estás. */
+button:focus-visible, input:focus-visible { outline: 3px solid var(--ambar); outline-offset: 2px; }
 .chico { padding: 5px 10px; font-size: 13px; min-height: 36px; }
 /* Los botones del pie se ven chicos pero SE TOCAN GRANDE: por debajo de 44 px
    el dedo falla una de cada tres veces. El tamaño visual lo da el texto; el
@@ -112,31 +135,86 @@ button:disabled { opacity: .45; cursor: default; }
 .botones.chicos { gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
 .botones.chicos .chico { min-height: 44px; }
 .peligro { color: var(--mal); }
-#m-idioma { font-weight: 800; letter-spacing: 1px; min-width: 46px; }
-
-.opcion { display: flex; align-items: center; justify-content: center; gap: 7px;
-          color: var(--tenue); font-size: 12.5px; margin: 0; }
-.opcion input { width: 17px; height: 17px; accent-color: var(--cian); }
-.chico-op { min-height: 44px; }
+.peligro.armado { color: #fff; text-shadow: 0 0 10px var(--mal); }
+#m-idioma { min-height: 44px; }
+#m-idioma b { color: var(--cian-claro); letter-spacing: 1px; }
 
 /* ── la pantalla de idiomas ── */
-.idioma-t { margin: 8px 0 12px; font-size: 19px; color: var(--cian-claro); }
+.idioma-t { margin: 8px 0 12px; font-size: 17px; line-height: 1.35; color: var(--cian-claro); }
+.idioma-t span + br + span, .idioma-t br + span { color: var(--tenue); font-size: 15px; font-weight: 600; }
 #idiomas { gap: 9px; margin-bottom: 12px; }
-.grande-op { min-height: 52px; font-size: 15px; padding: 12px 14px; }
-.grande-op b { color: var(--cian-claro); margin-right: 8px; letter-spacing: 1px; }
+.grande-op { min-height: 56px; font-size: 17px; padding: 10px 14px; }
+.idioma-btn { display: flex; align-items: center; gap: 14px; text-align: left; animation: sube .4s ease-out both; }
+.idioma-btn:nth-child(2) { animation-delay: .07s; }
+.idioma-btn:nth-child(3) { animation-delay: .14s; }
+.idioma-btn b { color: #eaf9ff; }
+.idioma-btn .bandera { width: 40px; height: 27px; border-radius: 3px; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,.3); }
+.idioma-btn.activo { filter: drop-shadow(0 0 10px rgba(90,216,255,.7)); }
+.idioma-btn.activo::after { content: "✓"; margin-left: auto; color: var(--cian); font-weight: 900; }
+
+/* ── el menú con pestañas ── */
+.menu { padding: 0; }
+.menu-cab { flex: none; text-align: center; padding: 10px 12px 4px; }
+.menu-cab .logo img { width: min(62%, 210px); }
+.pestanas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; padding: 0 6px 6px; flex: none; }
+.pestanas button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 48px; padding: 2px 0; border-width: 9px; border-image-width: 9px;
+  font-size: 11px; line-height: 1.15; color: var(--tenue);
+}
+.pestanas button i { font-style: normal; font-size: 15px; color: var(--cian); }
+.pestanas button[aria-selected="true"] { color: #eaf9ff; filter: drop-shadow(0 0 8px rgba(90,216,255,.65)); }
+.pestanas button[aria-selected="true"] span { box-shadow: 0 2px 0 var(--cian); }
+.pestanas button[aria-selected="true"] i { color: var(--cian-claro); }
+.panel {
+  flex: 1; overflow-y: auto; padding: 4px 10px 14px; display: flex; flex-direction: column; gap: 8px;
+  text-align: center;
+  /* Cada vez que un panel pasa de oculto a visible la animación arranca sola. */
+  animation: aparece .28s ease-out both;
+}
+.panel.texto { display: block; text-align: left; background: rgba(8,12,24,.85); }
+.panel .prisma { flex: none; }
+.progreso { flex: none; }
+.progreso .sub { margin: 4px 0 0; color: var(--tenue); font-size: 12px; }
+.barrita { height: 8px; border-radius: 4px; background: rgba(35,44,70,.9); overflow: hidden; margin: 4px 0 0; }
+.barrita i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cian), var(--rosa), var(--ambar)); transition: width .6s ease-out; }
+.placa {
+  text-align: left; padding: 10px 12px 12px;
+  /* Sin el atajo `border`: el atajo también reinicia `border-image` y se
+     llevaba puesto el marco que pone la regla compartida de arriba. */
+  border-style: solid; border-width: 20px; border-color: transparent;
+  border-image-slice: 30%; border-image-width: 20px; border-image-outset: 0; border-image-repeat: round;
+  background: radial-gradient(120% 90% at 50% 10%, rgba(16,24,44,.72), rgba(4,7,16,.9)); background-clip: padding-box;
+  animation: sube .4s ease-out both;
+}
+.placa h2 { margin: 0 0 8px; font-size: 18px; color: var(--cian-claro); text-align: center; }
+.deslizador { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 10px; margin: 4px 0 8px; font-size: 14px; }
+.deslizador input { grid-column: 1 / -1; width: 100%; height: 32px; accent-color: var(--cian); }
+.deslizador output { color: var(--tenue); font-variant-numeric: tabular-nums; font-size: 13px; }
+.fila-op { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0 10px; font-size: 14px; }
+.placa .peligro { width: 100%; min-height: 44px; }
+.texto a { color: var(--cian); word-break: break-word; }
+.creditos-lista { margin: 0 0 10px; padding-left: 18px; color: var(--tenue); font-size: 13px; }
+.aviso {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9; max-width: 90%;
+  background: rgba(16,22,40,.95); border: 1px solid var(--borde); color: var(--cian-claro);
+  padding: 9px 14px; border-radius: 10px; font-size: 13px; animation: sube .3s ease-out both;
+}
 
 /* ── el mapa de niveles ──
    Cinco columnas: con cuatro los botones quedan enormes y con seis el número no
    se lee. Cada uno mide más de 44 px de lado por el `min-height`, que es lo que
    hace que el dedo acierte el nivel que quería. */
 .mapa {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
-  padding: 12px; overflow-y: auto; flex: 1; align-content: start;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+  padding: 2px 0 6px; align-content: start;
 }
 .celda-niv {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 2px; min-height: 58px; padding: 6px 2px; font-size: 15px; font-weight: 700;
+  animation: sube .35s ease-out both;
 }
+.celda-niv.siguiente { filter: drop-shadow(0 0 9px rgba(255,194,74,.8)); color: var(--ambar); }
 .celda-niv .luces { font-size: 9px; letter-spacing: 1px; color: var(--cian); line-height: 1; }
 .celda-niv.hecho { color: var(--cian-claro); }
 .celda-niv.cerrado { color: var(--tenue); }
@@ -146,8 +224,8 @@ button:disabled { opacity: .45; cursor: default; }
 .barra { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
          background: rgba(6,10,22,.95); border-bottom: 2px solid var(--borde); }
 .barra h2 { margin: 0; font-size: 17px; }
-.texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
-.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--cian); }
+.texto h3 { margin: 18px 0 6px; font-size: 15px; color: var(--cian); }
+.texto h3:first-child { margin-top: 4px; }
 .texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
 .texto p b { color: var(--texto); }
 .destacado { background: rgba(16,24,44,.9); border-left: 3px solid var(--cian);
@@ -186,41 +264,33 @@ button:disabled { opacity: .45; cursor: default; }
 .lista span { color: var(--tenue); }
 .lista b { font-variant-numeric: tabular-nums; }
 
-/* PANTALLA MEDIANA Y TELEFONO ACOSTADO. Con las medidas del 19,5:9 la tapa mide
-   más que la pantalla, se vuelve desplazable y la última fila de botones queda
-   abajo del corte — que es la forma silenciosa de esconderla. */
-@media (max-height: 700px) and (min-height: 471px) {
-  .logo img { width: min(68%, 200px); }
-  .bajada { font-size: 12.5px; margin-bottom: 8px; }
-  .prisma { min-height: 54px; font-size: 17px; }
-}
-@media (max-height: 470px) {
-  .tapa { border-width: 20px; border-image-width: 20px; padding: 4px 8px 6px; }
-  .logo { margin: 0; }
-  .logo img { width: min(42%, 120px); }
-  .idioma-t { font-size: 15px; margin: 4px 0 8px; }
-  .grande-op { min-height: 44px; font-size: 13.5px; padding: 8px 12px; }
-  #idiomas { gap: 6px; margin-bottom: 6px; }
-  .bajada { display: none; }
-  .prisma { min-height: 44px; font-size: 14px; margin: 0 auto; border-width: 10px;
-            border-image-width: 10px; max-width: 200px; }
-  .logo img { width: min(34%, 96px); }
-  .idioma-t { font-size: 14px; margin: 2px 0 6px; }
-  .grande-op { min-height: 44px; font-size: 12.5px; padding: 6px 10px; }
-  .record { margin: 2px 0 0; font-size: 11px; }
-  .botones.chicos { margin-top: 4px; gap: 4px; }
-  .botones.chicos .chico { font-size: 11.5px; padding: 3px 8px; }
-  .fin h2 { font-size: 22px; }
-  /* Acostado el panel mide 250 px de ancho —la escala sale del alto, no del
-     ancho—, así que los cinco botones del pie NO entran en una fila: van en
-     dos, y lo que se achica es todo lo demás hasta que la tapa entra sin
-     desplazar. Probé la fila única y los botones se salían del panel: quedaban
-     dibujados y no se podían tocar, que es peor que no verlos. */
-  .botones.chicos .chico { padding: 2px 7px; font-size: 10.5px; }
-  .opcion { font-size: 10.5px; gap: 4px; }
-  .tapa { padding: 2px 6px 4px; }
-  .logo img { width: min(28%, 80px); }
-  .luces-grandes { font-size: 20px; margin-bottom: 2px; }
-  .lista li { padding: 3px 2px; font-size: 12px; }
-  .perfecto, .ultimo { font-size: 11.5px; margin: 2px 0; }
-}
+/* PANTALLA MEDIANA (el teléfono de 19,5:9 parado): se achica lo que no se
+   toca —el logo, la bajada— antes que los botones. */
+html.medio .menu-cab .logo img { width: min(50%, 170px); }
+html.medio .bajada { font-size: 12.5px; margin-bottom: 4px; }
+html.medio .prisma { min-height: 54px; font-size: 17px; }
+html.medio .logo img { width: min(68%, 200px); }
+
+/* PANTALLA BAJA: una ventana de compu chata (en el teléfono acostado el juego
+   se gira y nunca llega acá). Se achica todo lo que no es un botón. */
+html.bajo .tapa { border-width: 20px; border-image-width: 20px; padding: 2px 6px 4px; }
+html.bajo .logo { margin: 0; }
+html.bajo .logo img { width: min(28%, 80px); }
+html.bajo .menu-cab { padding: 4px 8px 2px; }
+html.bajo .menu-cab .logo img { width: min(26%, 80px); }
+html.bajo .idioma-t { font-size: 13px; margin: 2px 0 6px; }
+html.bajo .idioma-t span { font-size: 12px; }
+html.bajo .grande-op { min-height: 44px; font-size: 13.5px; padding: 4px 10px; }
+html.bajo .idioma-btn .bandera { width: 30px; height: 20px; }
+html.bajo #idiomas { gap: 6px; margin-bottom: 6px; }
+html.bajo .bajada { display: none; }
+html.bajo .prisma { min-height: 44px; font-size: 14px; margin: 0 auto; border-width: 10px;
+                     border-image-width: 10px; max-width: 200px; }
+html.bajo .pestanas button { min-height: 44px; font-size: 10px; }
+html.bajo .record { margin: 2px 0 0; font-size: 11px; }
+html.bajo .botones.chicos { margin-top: 4px; gap: 4px; }
+html.bajo .botones.chicos .chico { padding: 2px 7px; font-size: 10.5px; }
+html.bajo .fin h2 { font-size: 22px; }
+html.bajo .luces-grandes { font-size: 20px; margin-bottom: 2px; }
+html.bajo .lista li { padding: 3px 2px; font-size: 12px; }
+html.bajo .perfecto, html.bajo .ultimo { font-size: 11.5px; margin: 2px 0; }

@@ -37,13 +37,19 @@ pg.on("pageerror", (e) => err.push(e.message));
 pg.on("console", (m) => { if (m.type() === "error") err.push("consola: " + m.text().slice(0, 140)); });
 
 await pg.addInitScript(() => {
-  window.__espia = { contextos: 0, osciladores: 0, audios: [], reproducciones: 0 };
+  window.__espia = { contextos: 0, osciladores: 0, fuentes: 0, decodificados: 0, audios: [], reproducciones: 0 };
   const AC = window.AudioContext;
   window.AudioContext = function (...a) {
     window.__espia.contextos++;
     const c = new AC(...a);
     const orig = c.createOscillator.bind(c);
     c.createOscillator = () => { window.__espia.osciladores++; return orig(); };
+    // Los efectos ahora son grabaciones: suenan por un AudioBufferSource, no
+    // por un oscilador. Se cuentan aparte, y también cuántas se decodificaron.
+    const fu = c.createBufferSource.bind(c);
+    c.createBufferSource = () => { window.__espia.fuentes++; return fu(); };
+    const de = c.decodeAudioData.bind(c);
+    c.decodeAudioData = (b, ok, mal) => de(b, (x) => { window.__espia.decodificados++; ok && ok(x); }, mal);
     return c;
   };
   const A = window.Audio;
@@ -58,8 +64,12 @@ await pg.addInitScript(() => {
 
 await pg.goto("file://" + path.resolve(ARCHIVO));
 await pg.waitForFunction((j) => !!window[j], JUEGO, { timeout: 30000 });
-const idi = await pg.$('#p-idioma:not([hidden]) [data-idioma="es"]');
-if (idi) { await idi.click(); await pg.waitForTimeout(400); }
+// La pantalla de idioma sale en cada arranque.
+const elegirIdioma = async () => {
+  const idi = await pg.$('#p-idioma:not([hidden]) [data-idioma="es"]');
+  if (idi) { await idi.click(); await pg.waitForTimeout(400); }
+};
+await elegirIdioma();
 
 // EL TEMA DEL MENU VA EMBEBIDO. Si el empaquetador no le cambió la ruta por el
 // data: URI, el pedido sale 404 contra file://, el navegador no tira ningún
@@ -74,6 +84,8 @@ ch("y va embebido como data:, no como archivo suelto",
 // apagaría sólo la mitad.
 await pg.click(JUGAR);
 await pg.waitForTimeout(900);
+ch("las grabaciones se decodifican", (await pg.evaluate(() => window.__espia.decodificados)) >= 10,
+   `${await pg.evaluate(() => window.__espia.decodificados)} buffers`);
 ch("hay un solo AudioContext en toda la página",
    (await pg.evaluate(() => window.__espia.contextos)) === 1,
    `${await pg.evaluate(() => window.__espia.contextos)}`);
@@ -91,10 +103,14 @@ ch("la música se toca sola mientras jugás", durante - antes >= MINIMO,
 // batería por nada y vuelve a sonar solo al cambiar de pantalla.
 await pg.click("#j-salir");
 await pg.waitForTimeout(250);
-await pg.click("[data-volver]");
-await pg.waitForTimeout(250);
-await pg.uncheck("#aj-musica");
+// La música es un deslizador en Opciones: en cero se apaga del todo.
+const musicaA = async (v) => pg.$eval("#aj-musica", (e, v) => {
+  e.value = String(v); e.dispatchEvent(new Event("input", { bubbles: true }));
+}, v);
+await pg.click('[data-pestana="opciones"]');
+await musicaA(0);
 await pg.waitForTimeout(300);
+await pg.click('[data-pestana="jugar"]');
 await pg.click(JUGAR);
 // SE ESPERA ANTES DE EMPEZAR A CONTAR. Entrar a una partida dispara efectos
 // —el toque del botón, el sonido de nivel nuevo— y esos son osciladores que no
@@ -115,20 +131,21 @@ ch("apagando la música, el secuenciador para de verdad", andando === false && q
 // abrís es un juego que hay que callar todas las veces.
 await pg.reload();
 await pg.waitForFunction((j) => !!window[j], JUEGO, { timeout: 30000 });
+await elegirIdioma();
 ch("y la decisión se guarda",
-   (await pg.$eval("#aj-musica", (e) => e.checked)) === false);
+   (await pg.$eval("#aj-musica", (e) => e.value)) === "0");
 
 // Los efectos siguen sonando con la música apagada: son dos interruptores
 // porque son dos cosas distintas — la música es decoración y los efectos son
 // información.
 await pg.click(JUGAR);
 await pg.waitForTimeout(400);
-const e0 = await pg.evaluate(() => window.__espia.osciladores);
+const suenan = () => pg.evaluate(() => window.__espia.osciladores + window.__espia.fuentes);
+const e0 = await suenan();
 await pg.evaluate(() => { window.__efe && window.__efe(); });
 await pg.waitForTimeout(200);
 ch("con la música apagada los efectos siguen sonando",
-   (await pg.evaluate(() => window.__espia.osciladores)) > e0,
-   "un efecto disparado a mano");
+   (await suenan()) > e0, "un efecto disparado a mano (grabación u oscilador)");
 
 ch("sin errores de javascript", err.length === 0, err.slice(0, 3).join(" · "));
 console.log(`\n${ok}/${ok + mal}`);

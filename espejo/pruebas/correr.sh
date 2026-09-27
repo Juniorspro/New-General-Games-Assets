@@ -24,3 +24,6 @@ node pruebas/idiomas.mjs
 echo
 echo "── la música y los sonidos ───────────────────────────────────"
 JUEGO=ESPEJO ARCHIVO=espejo-en-un-archivo.html JUGAR="#m-seguir" VENTANA=3200 MINIMO=3 node pruebas/sonido.mjs
+echo
+echo "── giro, idiomas, menú y grabaciones (archivo único, sin red) ─"
+node pruebas/giro-idioma.mjs

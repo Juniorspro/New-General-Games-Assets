@@ -5,107 +5,160 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b0e18">
 <title>Dimensión Ñ</title>
-<meta name="description" content="Un juego de caída con ragdoll de verdad: dos cuerpos articulados atados por una soga, física de Verlet y todo dibujado con vectores.">
+<meta name="description" content="Un juego de caída con ragdoll de verdad: dos cuerpos articulados atados por una soga, física de Verlet y un modo de portales.">
 <link rel="stylesheet" href="css/dn.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%230b0e18'/><ellipse cx='8' cy='9' rx='6' ry='2.6' fill='%23a8e063'/><circle cx='8' cy='5' r='2.6' fill='%238fe3f5'/></svg>">
 </head>
 <body>
 
+<!-- #raiz es lo que se gira con el teléfono acostado (js/giro.js). Todo lo que
+     se ve va adentro: un `position: fixed` dentro de un padre con `transform`
+     se ubica respecto de ese padre, así que las pantallas giran con él. -->
+<div id="raiz">
+
 <!-- El lienzo va primero y fuera de las pantallas: adentro de #p-juego queda
      despues del HUD en el orden del documento, y como #p-juego crea su propio
      contexto de apilamiento, el lienzo se pintaria ENCIMA del HUD. -->
-<canvas id="lienzo" width="360" height="640" aria-label="El pozo"></canvas>
+<canvas id="lienzo" width="360" height="640" aria-label="El pozo" data-t-attr="aria-label:doc.lienzo"></canvas>
 
-<!-- ───────────── menú ───────────── -->
-<main id="p-menu" class="pantalla centrado">
-  <div class="caja">
+<!-- Lo único que se ve antes de que cargue el código. Va en los tres idiomas
+     porque todavía no se sabe cuál. -->
+<div id="cargando" class="cargando">Cargando… · Loading… · Carregando…</div>
+
+<!-- ───────────── idioma ─────────────
+     VA ANTES DEL MENU Y SALE EN CADA ARRANQUE: buscar dónde se cambia el
+     idioma en un idioma que no sabés leer es exactamente el problema. El
+     título va en los tres idiomas; la elección anterior sale marcada. -->
+<main id="p-idioma" class="pantalla centrado" hidden>
+  <div class="caja idioma">
     <h1 class="logo">Dimensión<span>Ñ</span></h1>
-    <p class="bajada">Un viejo, su nieto, una soga y un pozo de 104&nbsp;metros.
-      Lo único que hacés es <b>empujar</b> — la física hace el resto.</p>
+    <h2 class="idioma-t">Elegí tu idioma<br><span lang="en">Choose your language</span><br><span lang="pt-BR">Escolha seu idioma</span></h2>
     <div class="botones">
-      <button id="m-seguir" class="grande" hidden>
-        <span>▼ Seguir cayendo</span><small id="m-seguir-sub">—</small>
-      </button>
-      <button id="m-jugar" class="grande primario">
-        <span>▼ El pozo</span><small>104 metros, sin frenos</small>
-      </button>
-      <button id="m-portales" class="grande modo-p">
-        <span>◉ Portales</span><small id="m-portales-sub">15 niveles</small>
-      </button>
-      <button id="m-como" class="grande"><span>? Cómo se juega</span></button>
+      <button class="idioma-btn" data-idioma="es" lang="es-AR">
+        <svg class="bandera" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#74acdf"/><rect y="6.67" width="30" height="6.67" fill="#fff"/><circle cx="15" cy="10" r="2.3" fill="#f6b40e"/></svg>
+        <b>Español</b></button>
+      <button class="idioma-btn" data-idioma="en" lang="en">
+        <svg class="bandera" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="dn-uk"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#dn-uk)" stroke="#c8102e" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#c8102e" stroke-width="6"/></svg>
+        <b>English</b></button>
+      <button class="idioma-btn" data-idioma="pt" lang="pt-BR">
+        <svg class="bandera" viewBox="0 0 30 21" aria-hidden="true"><rect width="30" height="21" fill="#009c3b"/><path d="M15 2.5l12.5 8-12.5 8-12.5-8z" fill="#ffdf00"/><circle cx="15" cy="10.5" r="4.4" fill="#002776"/><path d="M10.8 9.7q4.3-1.2 8.5 1.8" stroke="#fff" stroke-width=".8" fill="none"/></svg>
+        <b>Português</b></button>
     </div>
-    <p class="record">Mejor caída: <b id="m-record">0 m</b></p>
-    <label class="opcion"><input type="checkbox" id="aj-sonido"> <span>Sonido</span></label>
-    <button id="m-borrar" class="chico peligro">Borrar progreso</button>
+    <p class="bajada">Se cambia después en Opciones · <span lang="en">You can change it in Options</span> · <span lang="pt-BR">Dá para trocar em Opções</span></p>
   </div>
 </main>
 
-<!-- ───────────── cómo se juega ───────────── -->
-<main id="p-como" class="pantalla" hidden>
-  <header class="barra"><button data-volver class="chico">← Atrás</button><h2>Cómo se juega</h2></header>
-  <div class="texto">
-    <p class="destacado">Tocá la pantalla <b>donde sea</b>: el reactor de Rilo empuja hacia tu dedo.
-      Cuanto más lejos el dedo, más fuerte el empujón. Soltá y caés derecho.</p>
+<!-- ───────────── menú ─────────────
+     Cinco pestañas. "Jugar" deja elegir entre los dos juegos, cada uno con su
+     progreso guardado; lo demás son récords, opciones, la ayuda y los créditos. -->
+<main id="p-menu" class="pantalla menu" hidden>
+  <header class="menu-cab">
+    <h1 class="logo">Dimensión<span>Ñ</span></h1>
+    <p class="bajada" data-t-html="menu.bajada"></p>
+  </header>
+  <nav class="pestanas" role="tablist" data-t-attr="aria-label:tabs.aria">
+    <button role="tab" id="m-tab-jugar" data-pestana="jugar" aria-controls="pn-jugar"><i aria-hidden="true">▼</i><span data-t="tab.jugar">Jugar</span></button>
+    <button role="tab" id="m-tab-records" data-pestana="records" aria-controls="pn-records"><i aria-hidden="true">★</i><span data-t="tab.records">Récords</span></button>
+    <button role="tab" id="m-tab-opciones" data-pestana="opciones" aria-controls="pn-opciones"><i aria-hidden="true">⚙</i><span data-t="tab.opciones">Opciones</span></button>
+    <button role="tab" id="m-como" data-pestana="como" aria-controls="pn-como"><i aria-hidden="true">?</i><span data-t="tab.como">Cómo</span></button>
+    <button role="tab" id="m-tab-creditos" data-pestana="creditos" aria-controls="pn-creditos"><i aria-hidden="true">♪</i><span data-t="tab.creditos">Créditos</span></button>
+  </nav>
 
-    <h3>Los dos</h3>
+  <section id="pn-jugar" class="panel" role="tabpanel" data-panel="jugar">
+    <article class="tarjeta modo-pozo">
+      <h2 data-t="pozo.titulo">El pozo</h2>
+      <p class="sub" data-t="pozo.sub"></p>
+      <div class="tramos" id="m-tramos" aria-hidden="true"></div>
+      <p class="progreso" id="m-pozo-prog">—</p>
+      <div class="botones">
+        <button id="m-seguir" class="grande primario" hidden><span id="m-seguir-txt">▼</span></button>
+        <button id="m-jugar" class="grande"><span data-t="pozo.empezar">▼ Desde arriba</span></button>
+      </div>
+    </article>
+    <article class="tarjeta modo-p">
+      <h2 data-t="portales.titulo">Portales</h2>
+      <p class="sub" data-t="portales.sub"></p>
+      <div class="barrita" aria-hidden="true"><i id="m-portales-barra"></i></div>
+      <p class="progreso" id="m-portales-sub">—</p>
+      <div class="botones">
+        <button id="m-portal-seguir" class="grande azul"><span id="m-portal-seguir-txt">◉</span></button>
+        <button id="m-portales" class="grande"><span data-t="portales.elegir">◉ Elegir nivel</span></button>
+      </div>
+    </article>
+  </section>
+
+  <section id="pn-records" class="panel" role="tabpanel" data-panel="records" hidden>
+    <article class="tarjeta">
+      <h2 data-t="rec.titulo">Lo que llevás</h2>
+      <ul class="lista" id="m-records"></ul>
+    </article>
+  </section>
+
+  <section id="pn-opciones" class="panel" role="tabpanel" data-panel="opciones" hidden>
+    <article class="tarjeta">
+      <h2 data-t="op.titulo">Opciones</h2>
+      <label class="opcion"><input type="checkbox" id="aj-sonido"> <span data-t="op.sonido">Sonido</span></label>
+      <label class="deslizador"><span data-t="op.efectos">Efectos</span>
+        <input type="range" id="aj-efectos" min="0" max="100" step="5"><output id="aj-efectos-v">80</output></label>
+      <label class="deslizador"><span data-t="op.musica">Música</span>
+        <input type="range" id="aj-musica" min="0" max="100" step="5"><output id="aj-musica-v">60</output></label>
+      <label class="opcion"><input type="checkbox" id="aj-voces"> <span data-t="op.voces">Voces</span></label>
+      <p class="nota" id="aj-voces-nota" data-t="op.voces-nota"></p>
+      <div class="fila-op"><span data-t="op.idioma">Idioma</span>
+        <button id="m-idioma" class="chico"><b id="m-idioma-cod">ES</b> <span data-t="op.cambiar">Cambiar</span></button></div>
+      <button id="m-borrar" class="chico peligro" data-t="op.borrar">Borrar progreso y récords</button>
+    </article>
+  </section>
+
+  <section id="pn-como" class="panel texto" role="tabpanel" data-panel="como" hidden>
+    <h3 data-t="como.pozo">El pozo</h3>
+    <p class="destacado" data-t-html="como.destacado"></p>
+    <h3 data-t="como.h-dos">Los dos</h3>
     <dl>
-      <dt>Rilo</dt><dd>El abuelo. Es el que manejás. Si se desarma, se acabó.</dd>
-      <dt>Tito</dt><dd>El nieto. Cuelga de una soga de tu mano izquierda y <b>pesa</b>:
-        te arrastra en las curvas y se lleva puesto lo que vos esquivaste.</dd>
+      <dt data-t="como.dt-rilo"></dt><dd data-t-html="como.dd-rilo"></dd>
+      <dt data-t="como.dt-tito"></dt><dd data-t-html="como.dd-tito"></dd>
     </dl>
-
-    <h3>Lo que hay</h3>
+    <h3 data-t="como.h-hay">Lo que hay</h3>
     <dl>
-      <dt>Integridad</dt><dd>La barra de arriba. Cada golpe fuerte te come un pedazo.
-        Los golpes flojos no cuestan nada: se puede bajar entero.</dd>
-      <dt>Bolita</dt><dd>El botón de abajo a la derecha, un segundo dedo, o la barra
-        espaciadora. El cuerpo se hace un ovillo y el golpe se reparte entre once puntos
-        en vez de clavar la cabeza: <b>descuenta dos tercios del daño</b>.</dd>
-      <dt>Portales</dt><dd>Uno al final de cada capítulo. Es punto de guardado y te
-        devuelve 26 de integridad. Si te desarmás, volvés al último.</dd>
-      <dt>Púas</dt><dd>Duelen sin necesidad de que vengas rápido. Esquivalas.</dd>
-      <dt>Resortes</dt><dd>Te devuelven para arriba. A veces conviene.</dd>
-      <dt>Gelatina</dt><dd>Adentro se cae en cámara lenta. Es el único lugar donde
-        podés acomodarte.</dd>
-      <dt>Chatarra</dt><dd>27 pedazos escondidos en los siete capítulos. No sirven
-        para nada y por eso están.</dd>
+      <dt data-t="como.dt-int"></dt><dd data-t-html="como.dd-int"></dd>
+      <dt data-t="como.dt-bolita"></dt><dd data-t-html="como.dd-bolita"></dd>
+      <dt data-t="como.dt-portal"></dt><dd data-t-html="como.dd-portal"></dd>
+      <dt data-t="como.dt-puas"></dt><dd data-t-html="como.dd-puas"></dd>
+      <dt data-t="como.dt-resortes"></dt><dd data-t-html="como.dd-resortes"></dd>
+      <dt data-t="como.dt-gel"></dt><dd data-t-html="como.dd-gel"></dd>
+      <dt data-t="como.dt-chat"></dt><dd data-t-html="como.dd-chat"></dd>
     </dl>
-
-    <h3>El otro modo: portales</h3>
-    <p class="destacado">Quince niveles de pantalla fija. No hay reloj y no hay prisa:
-      todo lo que necesitás para resolverlo lo estás viendo.</p>
+    <h3 data-t="como.h-portales">El otro modo: portales</h3>
+    <p class="destacado" data-t-html="como.destacado2"></p>
     <dl>
-      <dt>Tocar</dt><dd>Un toque corto <b>dispara un portal</b> hacia donde tocaste.
-        El color del próximo está abajo a la izquierda, y va alternando: hacen falta
-        los dos para que sirvan.</dd>
-      <dt>Arrastrar</dt><dd>Mantener el dedo y moverlo es el reactor, igual que en el pozo.
-        Lo que distingue un disparo de un empujón es el gesto, no en qué mitad de la
-        pantalla lo hiciste.</dd>
-      <dt>Pared azul</dt><dd>Ahí se puede clavar un portal.</dd>
-      <dt>Pared negra</dt><dd>Ahí rebota el tiro. Buscá otra cara.</dd>
-      <dt>Techo y piso</dt><dd>Siempre se puede disparar. Es la salida cuando un tabique
-        te tapa todo lo demás: se tira arriba y se sale cayendo del otro lado.</dd>
-      <dt>Las placas</dt><dd>Se aprietan con <b>peso</b>, y vos tenés uno colgando de una
-        soga. Hay puertas que no se abren si no dejás a Tito parado encima mientras vos
-        vas a otro lado.</dd>
-      <dt>Caer rápido</dt><dd>Entrar a un portal cayendo de muy alto y salir por uno de
-        costado te dispara lejos. Es la mitad de los niveles.</dd>
+      <dt data-t="como.dt-tocar"></dt><dd data-t-html="como.dd-tocar"></dd>
+      <dt data-t="como.dt-arrastrar"></dt><dd data-t-html="como.dd-arrastrar"></dd>
+      <dt data-t="como.dt-azul"></dt><dd data-t-html="como.dd-azul"></dd>
+      <dt data-t="como.dt-negra"></dt><dd data-t-html="como.dd-negra"></dd>
+      <dt data-t="como.dt-techo"></dt><dd data-t-html="como.dd-techo"></dd>
+      <dt data-t="como.dt-placas"></dt><dd data-t-html="como.dd-placas"></dd>
+      <dt data-t="como.dt-rapido"></dt><dd data-t-html="como.dd-rapido"></dd>
     </dl>
+    <h3 data-t="como.h-hecho">De qué está hecho</h3>
+    <p data-t-html="como.hecho1"></p>
+    <p data-t-html="como.hecho2"></p>
+  </section>
 
-    <h3>De qué está hecho</h3>
-    <p>Los dos modos comparten la misma física. Los cuerpos son <b>ragdolls de verdad</b>: once puntos cada uno, unidos por
-      huesos que no se estiran, resueltos con integración de Verlet. No hay animaciones:
-      cada pose que ves es la física resolviéndose. El dibujo sale de las mismas
-      articulaciones, así que lo que se ve y lo que choca son siempre lo mismo.</p>
-    <p>No hay una sola imagen ni un solo archivo de audio: todo es vectores y
-      osciladores. Por eso el juego entero entra en un mail.</p>
-  </div>
+  <section id="pn-creditos" class="panel texto" role="tabpanel" data-panel="creditos" hidden>
+    <h3 data-t="cre.titulo">Créditos</h3>
+    <p data-t="cre.juego"></p>
+    <p data-t="cre.voces"></p>
+    <h3 data-t="cre.sonidos">Sonidos grabados</h3>
+    <p id="m-cre-cc0"></p>
+    <div id="m-cre-ccby"></div>
+    <p data-t="cre.sintesis"></p>
+  </section>
 </main>
 
 <!-- ───────────── elegir nivel de portales ───────────── -->
 <main id="p-niveles" class="pantalla" hidden>
   <header class="barra">
-    <button data-volver class="chico">← Atrás</button><h2>Portales</h2>
+    <button data-volver class="chico" data-t="atras">← Atrás</button><h2 data-t="niv.titulo">Portales</h2>
     <span class="marca" id="pn-cuenta">0/15</span>
   </header>
   <div id="pn-lista" class="niveles"></div>
@@ -114,7 +167,7 @@
 <!-- ───────────── juego ───────────── -->
 <main id="p-juego" class="pantalla juego" hidden>
   <div class="hud">
-    <button id="j-salir" class="hud-btn" aria-label="Volver al menú">✕</button>
+    <button id="j-salir" class="hud-btn" aria-label="Volver al menú" data-t-attr="aria-label:hud.salir">✕</button>
     <div class="barra-int"><i id="h-barra"></i></div>
     <div class="hud-dato"><b id="h-metros">0 m</b></div>
     <div class="hud-dato chat"><span>◆</span><b id="h-chatarra">0</b></div>
@@ -125,14 +178,14 @@
   <div id="h-portal" class="hud-portal" hidden>
     <span class="bocha" id="h-bocha"></span>
     <span id="h-pista" class="pista">—</span>
-    <button id="h-reintentar" class="chico">↺</button>
+    <button id="h-reintentar" class="chico" aria-label="Reintentar el nivel" data-t-attr="aria-label:hud.reintentar">↺</button>
   </div>
 
   <div id="dialogo" class="dialogo" hidden>
     <b id="d-quien">—</b><span id="d-que">—</span>
   </div>
 
-  <button id="btn-bolita" class="bolita" aria-label="Hacerse bolita">
+  <button id="btn-bolita" class="bolita" aria-label="Hacerse bolita" data-t-attr="aria-label:hud.bolita">
     <span aria-hidden="true">●</span>
   </button>
 </main>
@@ -140,16 +193,23 @@
 <!-- ───────────── final ───────────── -->
 <main id="p-fin" class="pantalla centrado" hidden>
   <div class="caja fin">
-    <h2>Llegaron</h2>
+    <h2 data-t="fin.titulo">Llegaron</h2>
     <div id="f-dialogo" class="charla"></div>
     <ul id="f-lista" class="lista"></ul>
     <div class="botones fila">
-      <button id="f-otra" class="primario">Otra vez</button>
-      <button id="f-menu">Al menú</button>
+      <button id="f-otra" class="primario" data-t="fin.otra">Otra vez</button>
+      <button id="f-menu" data-t="fin.menu">Al menú</button>
     </div>
   </div>
 </main>
 
+<div id="aviso" class="aviso" role="status" hidden></div>
+</div>
+
+<!-- Las grabaciones, en base64 (las genera sonidos/incrustar.py). Script
+     clásico y antes del juego: el juego las lee al crear el audio y, si este
+     archivo falta, suena lo sintetizado. -->
+<script src="js/sonidos.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

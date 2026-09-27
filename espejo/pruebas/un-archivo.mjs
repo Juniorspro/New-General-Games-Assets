@@ -24,7 +24,9 @@ const ch = (n, c, d = "") => { c ? (ok++, console.log(`  ✓ ${n}${d ? " — " +
   const html = readFileSync(new URL("../espejo-en-un-archivo.html", import.meta.url), "utf8");
   const faltan = [];
   for (const f of readdirSync(new URL("../js/", import.meta.url)).filter((f) => f.endsWith(".js"))) {
-    if (f === "main.js") continue;
+    // main.js no exporta nada y sonidos.js no es un módulo: es el script
+    // clásico con las grabaciones, que va en su propia etiqueta.
+    if (f === "main.js" || f === "sonidos.js") continue;
     const src = readFileSync(new URL(`../js/${f}`, import.meta.url), "utf8");
     const mod = f.replace(/\.js$/, "");
     // El cierre del módulo (`};\n})();`) es parte del patrón a propósito: sin

@@ -1,16 +1,34 @@
-// El sonido, sintetizado. No hay un solo archivo de audio en el juego.
+// El sonido: grabaciones para los efectos, osciladores de respaldo y el atlas
+// de voces.
 //
-// POR QUE. El juego entero pesa lo que pesa un mail justamente porque no
-// carga nada: el dibujo es vectorial y el sonido son osciladores. Un golpe no
-// es un .wav, es ruido filtrado con una envolvente de sesenta milisegundos, y
-// se puede afinar cambiando un numero en vez de volver a grabarlo.
+// LAS GRABACIONES VIENEN EN BASE64 ADENTRO DE js/sonidos.js (lo genera
+// sonidos/incrustar.py desde sonidos/dimension-n/): el archivo único se abre
+// desde file:// y ahí `fetch` no lee nada. Se decodifican una vez, cuando se
+// crea el contexto, y hasta que terminan —o si alguna falta— suena lo
+// sintetizado de siempre: un golpe es ruido filtrado con una envolvente de
+// sesenta milisegundos. El juego nunca queda mudo esperando un archivo.
 //
 // EL CONTEXTO NO SE CREA AL ARRANCAR. Los navegadores no dejan sonar nada
 // hasta que hubo un gesto del usuario, y un AudioContext creado antes queda
 // "suspended" para siempre aunque despues se toque la pantalla. Se crea en el
 // primer toque y recien ahi.
+//
+// TRES BUSES: efectos, música (el zumbido) y voces, cada uno con su volumen.
+// Son tres molestias distintas: la música cansa a la décima bajada, un golpe es
+// información y una voz en castellano puede sobrar a quien juega en inglés.
 
-let ac = null, maestro = null, prendido = true;
+let ac = null, maestro = null, busEf = null, busMus = null, busVoz = null;
+let prendido = true;
+const vol = { efectos: 0.8, musica: 0.6, voces: true };
+const buf = {}, grupos = {};
+
+// Las grabaciones, leídas del script clásico. Un `const` de un script clásico
+// no cuelga de window pero sí se ve por nombre desde un módulo; el `typeof`
+// evita el ReferenceError cuando no está (las pruebas en Node, o sin el archivo).
+const crudas = () => globalThis.SONIDOS_B64
+  || (typeof SONIDOS_B64 !== "undefined" ? SONIDOS_B64 : null);
+export const creditosSonidos = () => globalThis.SONIDOS_CREDITOS
+  || (typeof SONIDOS_CREDITOS !== "undefined" ? SONIDOS_CREDITOS : []);
 
 export function despertar() {
   if (ac) { if (ac.state === "suspended") ac.resume(); return ac; }
@@ -18,29 +36,93 @@ export function despertar() {
   if (!AC) return null;
   ac = new AC();
   maestro = ac.createGain();
-  maestro.gain.value = 0.5;
-  maestro.connect(ac.destination);
+  maestro.gain.value = prendido ? 0.5 : 0;
+  // Un compresor suave al final: once puntos del ragdoll pegando a la vez más
+  // el reactor más una voz saturaban la salida en el teléfono.
+  const comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 4;
+  maestro.connect(comp); comp.connect(ac.destination);
+  busEf = ac.createGain(); busEf.connect(maestro);
+  busMus = ac.createGain(); busMus.connect(maestro);
+  busVoz = ac.createGain(); busVoz.connect(maestro);
+  aplicarVolumenes();
+  decodificar();
   return ac;
 }
 
+function decodificar() {
+  const datos = crudas();
+  if (!datos) return;
+  for (const [id, b64] of Object.entries(datos)) {
+    let bytes;
+    try {
+      const bin = atob(b64);
+      bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } catch (e) { continue; }
+    const listo = (b) => {
+      if (!b) return;
+      buf[id] = b;
+      const g = id.replace(/_\d+$/, "");
+      (grupos[g] = grupos[g] || []).push(b);
+    };
+    try {
+      const p = ac.decodeAudioData(bytes.buffer, listo, () => {});
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) { /* una grabación rota no puede tirar abajo las otras */ }
+  }
+}
+
+/** Cuántas grabaciones ya están decodificadas (lo mira la prueba). */
+export const decodificadas = () => Object.keys(buf).length;
+
+function aplicarVolumenes() {
+  if (!ac) return;
+  const t = ac.currentTime;
+  busEf.gain.setTargetAtTime(vol.efectos, t, 0.03);
+  busMus.gain.setTargetAtTime(vol.musica, t, 0.03);
+  busVoz.gain.setTargetAtTime(vol.voces ? Math.max(0.35, vol.efectos) : 0, t, 0.03);
+}
+
+export function volumenes(v) { Object.assign(vol, v); aplicarVolumenes(); }
+
 export const sonando = (v) => { prendido = v; if (maestro) maestro.gain.value = v ? 0.5 : 0; };
 
-function env(nodo, a, d, pico) {
+/**
+ * Una grabación suelta. `id` puede ser un grupo ("golpe" → golpe_1..3): se elige
+ * una al azar y con la velocidad corrida un poco, porque el mismo golpe diez
+ * veces seguidas suena a máquina y no a un cuerpo que rebota.
+ * Devuelve false si no hay grabación, para que el que llama use el respaldo.
+ */
+export function muestra(id, { vol: v = 0.6, rate = 1, azar = 0.06 } = {}) {
+  if (!ac || !prendido) return false;
+  const b = buf[id] || (grupos[id] && grupos[id][Math.floor(Math.random() * grupos[id].length)]);
+  if (!b) return false;
+  const s = ac.createBufferSource(), g = ac.createGain();
+  s.buffer = b;
+  s.playbackRate.value = rate * (1 - azar + Math.random() * azar * 2);
+  g.gain.value = v;
+  s.connect(g); g.connect(busEf);
+  s.start();
+  return true;
+}
+
+function env(nodo, a, d, pico, bus = busEf) {
   const g = ac.createGain();
   const t = ac.currentTime;
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(pico, t + a);
   g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
-  nodo.connect(g); g.connect(maestro);
+  nodo.connect(g); g.connect(bus);
   return { g, t, fin: t + a + d };
 }
 
 function ruido(dur) {
   const n = Math.floor(ac.sampleRate * dur);
-  const buf = ac.createBuffer(1, n, ac.sampleRate);
-  const d = buf.getChannelData(0);
+  const b = ac.createBuffer(1, n, ac.sampleRate);
+  const d = b.getChannelData(0);
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
-  const s = ac.createBufferSource(); s.buffer = buf;
+  const s = ac.createBufferSource(); s.buffer = b;
   return s;
 }
 
@@ -64,6 +146,10 @@ export const efe = {
     const ahora = ac.currentTime;
     if (ahora - ultimoGolpe < 0.06) return;
     ultimoGolpe = ahora;
+    // Cuanto más fuerte, más grave y más alto: un cuerpo que viene rápido no
+    // hace el mismo "toc" que uno que se apoya.
+    const k = Math.min(1, fuerza / 22);
+    if (muestra(fuerza > 16 ? "golpe_fuerte" : "golpe", { vol: 0.25 + k * 0.55, rate: 1.1 - k * 0.25 })) return;
     const s = ruido(0.09);
     const f = ac.createBiquadFilter();
     f.type = "lowpass";
@@ -72,20 +158,55 @@ export const efe = {
     const e = env(f, 0.004, 0.08, Math.min(0.5, 0.1 + fuerza * 0.02));
     s.start(); s.stop(e.fin + 0.02);
   },
-  pincho() { tono("square", 620, 90, 0.005, 0.22, 0.22); },
-  resorte() { tono("triangle", 220, 760, 0.01, 0.16, 0.22); },
-  chatarra() { tono("square", 880, 1320, 0.005, 0.1, 0.13); },
+  pincho() { if (!muestra("pincho", { vol: 0.55 })) tono("square", 620, 90, 0.005, 0.22, 0.22); },
+  resorte() { if (!muestra("resorte", { vol: 0.5 })) tono("triangle", 220, 760, 0.01, 0.16, 0.22); },
+  placa() { if (!muestra("placa", { vol: 0.55 })) tono("triangle", 220, 760, 0.01, 0.16, 0.22); },
+  chatarra() { if (!muestra("chatarra", { vol: 0.5, rate: 1.15 })) tono("square", 880, 1320, 0.005, 0.1, 0.13); },
+  disparo() { muestra("disparo", { vol: 0.35 }); },
   portal() {
+    if (muestra("portal", { vol: 0.6 })) return;
     tono("sawtooth", 140, 900, 0.02, 0.5, 0.18);
     tono("sine", 320, 1400, 0.03, 0.55, 0.12);
   },
-  roto() { tono("sawtooth", 300, 45, 0.01, 0.8, 0.28); },
+  roto() { if (!muestra("roto", { vol: 0.6, azar: 0 })) tono("sawtooth", 300, 45, 0.01, 0.8, 0.28); },
   gano() {
+    if (muestra("gano", { vol: 0.6, azar: 0 })) return;
     [0, 0.12, 0.24, 0.42].forEach((d, i) => setTimeout(() =>
       tono("triangle", [392, 523, 659, 784][i], [392, 523, 659, 784][i], 0.01, 0.35, 0.2), d * 1000));
   },
-  menu() { tono("square", 520, 700, 0.005, 0.07, 0.1); },
+  menu() { if (!muestra("ui_clic", { vol: 0.45 })) tono("square", 520, 700, 0.005, 0.07, 0.1); },
 };
+
+// --- los dos loops del cuerpo en el aire ---------------------------------
+//
+// EL REACTOR Y EL VIENTO NO SON EFECTOS SUELTOS, SON ESTADOS: suenan mientras
+// dura lo que los provoca. Se arrancan una vez, en loop y en silencio, y cada
+// cuadro sólo se mueve su volumen; arrancar y parar una fuente por cuadro deja
+// un clic en cada corte. `AudioBufferSource.loop` empalma sin hueco (un
+// `<audio loop>` deja uno).
+let lazos = null;
+function armarLazos() {
+  if (lazos || !buf.reactor || !buf.viento) return lazos;
+  const uno = (b) => {
+    const s = ac.createBufferSource(), g = ac.createGain();
+    s.buffer = b; s.loop = true; g.gain.value = 0;
+    s.connect(g); g.connect(busEf);
+    s.start(0, Math.random() * b.duration);
+    return { s, g };
+  };
+  lazos = { reactor: uno(buf.reactor), viento: uno(buf.viento) };
+  return lazos;
+}
+
+/** `empuje` y `caida` van de 0 a 1. Se llama cada cuadro; con ceros, calla. */
+export function aire(empuje, caida) {
+  if (!ac || !armarLazos()) return;
+  const t = ac.currentTime, on = prendido ? 1 : 0;
+  lazos.reactor.g.gain.setTargetAtTime(on * empuje * 0.32, t, 0.05);
+  lazos.reactor.s.playbackRate.setTargetAtTime(0.85 + empuje * 0.3, t, 0.1);
+  lazos.viento.g.gain.setTargetAtTime(on * caida * caida * 0.5, t, 0.2);
+  lazos.viento.s.playbackRate.setTargetAtTime(0.8 + caida * 0.45, t, 0.3);
+}
 
 // --- las voces -----------------------------------------------------------
 //
@@ -113,7 +234,7 @@ export async function cargarVoces(url, indice) {
 }
 
 export function voz(clave) {
-  if (!ac || !prendido || !vozIndice || !vozBuf) return;
+  if (!ac || !prendido || !vol.voces || !vozIndice || !vozBuf) return;
   const tramo = vozIndice[clave];
   if (!tramo) return;
   const soltar = () => {
@@ -125,26 +246,26 @@ export function voz(clave) {
     s.buffer = vozBuf.buffer;
     const g = ac.createGain();
     g.gain.value = 1.35;          // la voz por encima de los golpes
-    s.connect(g); g.connect(maestro);
+    s.connect(g); g.connect(busVoz);
     s.start(0, tramo[0], tramo[1]);
     vozAhora = s;
   };
   if (vozBuf.buffer) return soltar();
   if (vozBuf.decodificando) return;
   vozBuf.decodificando = true;
-  ac.decodeAudioData(vozBuf.crudo.slice(0), (buf) => {
-    vozBuf.buffer = buf; soltar();
+  ac.decodeAudioData(vozBuf.crudo.slice(0), (b) => {
+    vozBuf.buffer = b; soltar();
   }, () => { vozIndice = null; });
 }
 
 // El zumbido del pozo: dos osciladores desafinados que cambian de nota al
-// cambiar de capitulo. Es todo lo que hay de musica y alcanza, porque el juego
-// suena a golpes.
+// cambiar de capitulo. Es la música del juego y se queda sintetizada a
+// propósito: sube y baja con el capítulo, y una grabación no sabe hacer eso.
 let drone = null;
 export function zumbido(nota) {
   if (!ac || !prendido) return;
   if (!drone) {
-    const g = ac.createGain(); g.gain.value = 0.045; g.connect(maestro);
+    const g = ac.createGain(); g.gain.value = 0.045; g.connect(busMus);
     const a = ac.createOscillator(), b = ac.createOscillator();
     a.type = b.type = "sawtooth";
     const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 320;
@@ -152,8 +273,9 @@ export function zumbido(nota) {
     a.start(); b.start();
     drone = { a, b, g };
   }
+  drone.g.gain.value = 0.045;
   drone.a.frequency.linearRampToValueAtTime(nota, ac.currentTime + 1.2);
   drone.b.frequency.linearRampToValueAtTime(nota * 1.01, ac.currentTime + 1.2);
 }
-export function callar() { if (drone) drone.g.gain.value = 0; }
+export function callar() { if (drone) drone.g.gain.value = 0; aire(0, 0); }
 export function volverASonar() { if (drone && prendido) drone.g.gain.value = 0.045; }

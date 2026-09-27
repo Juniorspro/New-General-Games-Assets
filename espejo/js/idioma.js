@@ -2,8 +2,10 @@
 // `data-t` y la tabla decide cuál se escribe: traducir copiando el index.html
 // tres veces se desincroniza a la primera corrección.
 //
-// EL IDIOMA POR DEFECTO ES INGLES y se pregunta antes del menú: buscar dónde se
-// cambia el idioma en un idioma que no sabés leer es exactamente el problema.
+// SE PREGUNTA EN CADA ARRANQUE, antes del menú, con la elección anterior
+// marcada: buscar dónde se cambia el idioma en un idioma que no sabés leer es
+// exactamente el problema, y al que ya eligió le cuesta un toque. Lo que falte
+// en una tabla cae al inglés.
 
 export const IDIOMAS = { en: "English", es: "Español", pt: "Português" };
 
@@ -12,8 +14,6 @@ const ES = {
   "doc.desc": "Cuarenta puzzles de espejos y rayos. Ninguno se diseñó a ojo: los cuarenta los resolvió una máquina antes de dejártelos jugar.",
   "doc.lienzo": "El tablero",
 
-  "idioma.titulo": "Elegí tu idioma",
-  "idioma.bajada": "Se puede cambiar después desde el menú.",
 
   "menu.bajada": "Tocá un espejo y se da vuelta. Prendé <b>todos</b> los objetivos con los rayos que salen de cada emisor.",
   "menu.jugar": "JUGAR",
@@ -22,11 +22,44 @@ const ES = {
   "menu.luces": "{n} de {t} luces",
   "menu.niveles": "Niveles",
   "menu.como": "? Cómo se juega",
-  "menu.sonido": "Sonido",
-  "menu.musica": "Música",
-  "menu.borrar": "Borrar",
-  "menu.borrar-confirmar": "¿Borrar todo el progreso?",
   "menu.idioma": "Idioma",
+
+  "tab.jugar": "Jugar",
+  "tab.records": "Récords",
+  "tab.opciones": "Opciones",
+  "tab.como": "Cómo",
+  "tab.creditos": "Créditos",
+  "tabs.aria": "Secciones del menú",
+  "menu.progreso": "{n} de {t} niveles resueltos · {p} en el par",
+
+  "rec.titulo": "Lo que llevás",
+  "rec.luces": "Luces",
+  "rec.resueltos": "Niveles resueltos",
+  "rec.perfectos": "Resueltos en el par (tres luces)",
+  "rec.ganados": "Victorias, contando repeticiones",
+  "rec.empezados": "Niveles empezados",
+  "rec.toques": "Espejos dados vuelta",
+  "rec.pistas": "Pistas pedidas",
+  "rec.de": "{n} de {t}",
+
+  "op.titulo": "Opciones",
+  "op.efectos": "Efectos",
+  "op.musica": "Música",
+  "op.idioma": "Idioma",
+  "op.cambiar": "Cambiar",
+  "op.borrar": "Borrar el progreso",
+  "op.borrar-seguro": "¿Seguro? Tocá otra vez para borrar",
+  "op.borrado": "Borrado. El idioma y el volumen quedan como estaban.",
+
+  "cre.titulo": "Créditos",
+  "cre.juego": "Juego, niveles y textos: hechos para este repositorio. Los cuarenta tableros los eligió un generador que los resuelve antes de dejarlos entrar.",
+  "cre.arte": "El vestido de los menús (el título, el marco, las placas y la mesa) son imágenes generadas para este juego; el tema del menú es música generada.",
+  "cre.sonidos": "Sonidos grabados",
+  "cre.cc0": "De dominio público (CC0), sin obligación de citar, y igual se agradece: {lista}.",
+  "cre.ccby": "Con licencia CC-BY, que pide nombrar al autor:",
+  "cre.sinccby": "Ninguno de los sonidos de este juego es CC-BY: todos son CC0.",
+  "cre.sintesis": "La música de las partidas se toca sola con osciladores, en el navegador.",
+  "err.bucle": "Algo se rompió adentro del juego y se volvió al menú.",
 
   "niv.titulo": "Niveles",
   "niv.cerrado": "cerrado",
@@ -73,8 +106,6 @@ const EN = {
   "doc.desc": "Forty mirror-and-beam puzzles. None of them was designed by eye: a machine solved all forty before letting you play them.",
   "doc.lienzo": "The board",
 
-  "idioma.titulo": "Choose your language",
-  "idioma.bajada": "You can change it later from the menu.",
 
   "menu.bajada": "Tap a mirror to flip it. Light up <b>every</b> target with the beams coming out of the emitters.",
   "menu.jugar": "PLAY",
@@ -83,11 +114,44 @@ const EN = {
   "menu.luces": "{n} of {t} lights",
   "menu.niveles": "Levels",
   "menu.como": "? How to play",
-  "menu.sonido": "Sound",
-  "menu.musica": "Music",
-  "menu.borrar": "Erase",
-  "menu.borrar-confirmar": "Erase all your progress?",
   "menu.idioma": "Language",
+
+  "tab.jugar": "Play",
+  "tab.records": "Records",
+  "tab.opciones": "Options",
+  "tab.como": "How to",
+  "tab.creditos": "Credits",
+  "tabs.aria": "Menu sections",
+  "menu.progreso": "{n} of {t} levels solved · {p} on par",
+
+  "rec.titulo": "Your progress",
+  "rec.luces": "Lights",
+  "rec.resueltos": "Levels solved",
+  "rec.perfectos": "Solved on par (three lights)",
+  "rec.ganados": "Wins, counting replays",
+  "rec.empezados": "Levels started",
+  "rec.toques": "Mirrors flipped",
+  "rec.pistas": "Hints used",
+  "rec.de": "{n} of {t}",
+
+  "op.titulo": "Options",
+  "op.efectos": "Effects",
+  "op.musica": "Music",
+  "op.idioma": "Language",
+  "op.cambiar": "Change",
+  "op.borrar": "Erase progress",
+  "op.borrar-seguro": "Sure? Tap again to erase",
+  "op.borrado": "Erased. Language and volume stay as they were.",
+
+  "cre.titulo": "Credits",
+  "cre.juego": "Game, levels and writing: made for this repository. The forty boards were picked by a generator that solves them before letting them in.",
+  "cre.arte": "The menu dressing (title, frame, plates and table) are images generated for this game; the menu theme is generated music.",
+  "cre.sonidos": "Recorded sounds",
+  "cre.cc0": "Public domain (CC0), no attribution required, thanks anyway: {lista}.",
+  "cre.ccby": "Licensed CC-BY, which asks to name the author:",
+  "cre.sinccby": "None of this game's sounds is CC-BY: they are all CC0.",
+  "cre.sintesis": "The in-game music plays itself with oscillators, in the browser.",
+  "err.bucle": "Something broke inside the game and you're back at the menu.",
 
   "niv.titulo": "Levels",
   "niv.cerrado": "locked",
@@ -134,8 +198,6 @@ const PT = {
   "doc.desc": "Quarenta quebra-cabeças de espelhos e raios. Nenhum foi desenhado no olho: uma máquina resolveu os quarenta antes de deixar você jogar.",
   "doc.lienzo": "O tabuleiro",
 
-  "idioma.titulo": "Escolha seu idioma",
-  "idioma.bajada": "Dá para mudar depois pelo menu.",
 
   "menu.bajada": "Toque num espelho para virá-lo. Acenda <b>todos</b> os alvos com os raios que saem dos emissores.",
   "menu.jugar": "JOGAR",
@@ -144,11 +206,44 @@ const PT = {
   "menu.luces": "{n} de {t} luzes",
   "menu.niveles": "Fases",
   "menu.como": "? Como se joga",
-  "menu.sonido": "Som",
-  "menu.musica": "Música",
-  "menu.borrar": "Apagar",
-  "menu.borrar-confirmar": "Apagar todo o progresso?",
   "menu.idioma": "Idioma",
+
+  "tab.jugar": "Jogar",
+  "tab.records": "Recordes",
+  "tab.opciones": "Opções",
+  "tab.como": "Como",
+  "tab.creditos": "Créditos",
+  "tabs.aria": "Seções do menu",
+  "menu.progreso": "{n} de {t} fases resolvidas · {p} no par",
+
+  "rec.titulo": "Seu progresso",
+  "rec.luces": "Luzes",
+  "rec.resueltos": "Fases resolvidas",
+  "rec.perfectos": "Resolvidas no par (três luzes)",
+  "rec.ganados": "Vitórias, contando repetições",
+  "rec.empezados": "Fases começadas",
+  "rec.toques": "Espelhos virados",
+  "rec.pistas": "Dicas pedidas",
+  "rec.de": "{n} de {t}",
+
+  "op.titulo": "Opções",
+  "op.efectos": "Efeitos",
+  "op.musica": "Música",
+  "op.idioma": "Idioma",
+  "op.cambiar": "Trocar",
+  "op.borrar": "Apagar o progresso",
+  "op.borrar-seguro": "Certeza? Toque de novo para apagar",
+  "op.borrado": "Apagado. O idioma e o volume continuam como estavam.",
+
+  "cre.titulo": "Créditos",
+  "cre.juego": "Jogo, fases e textos: feitos para este repositório. Os quarenta tabuleiros foram escolhidos por um gerador que os resolve antes de deixá-los entrar.",
+  "cre.arte": "A roupa dos menus (o título, a moldura, as placas e a mesa) são imagens geradas para este jogo; o tema do menu é música gerada.",
+  "cre.sonidos": "Sons gravados",
+  "cre.cc0": "Domínio público (CC0), sem obrigação de citar, e mesmo assim obrigado: {lista}.",
+  "cre.ccby": "Com licença CC-BY, que pede para nomear o autor:",
+  "cre.sinccby": "Nenhum som deste jogo é CC-BY: todos são CC0.",
+  "cre.sintesis": "A música das partidas toca sozinha com osciladores, no navegador.",
+  "err.bucle": "Algo quebrou dentro do jogo e você voltou ao menu.",
 
   "niv.titulo": "Fases",
   "niv.cerrado": "trancada",
@@ -190,13 +285,13 @@ const PT = {
   "fin.ultimo": "Você terminou as quarenta. Não sobrou nenhuma sem resolver.",
 };
 
-const TABLA = { es: ES, en: EN, pt: PT };
+export const TEXTOS = { es: ES, en: EN, pt: PT };
 let actual = "en";
 
 export const idioma = () => actual;
 
 export function ponerIdioma(cod) {
-  actual = TABLA[cod] ? cod : "en";
+  actual = TEXTOS[cod] ? cod : "en";
   document.documentElement.lang = { es: "es-AR", en: "en", pt: "pt-BR" }[actual];
   return actual;
 }
@@ -204,7 +299,7 @@ export function ponerIdioma(cod) {
 /** Lo que falte cae al inglés; lo que falte también ahí devuelve la clave, que
  *  en pantalla se ve mal a propósito y así se encuentra sin leer tres tablas. */
 export function t(clave, vars) {
-  let s = TABLA[actual][clave] ?? EN[clave] ?? clave;
+  let s = TEXTOS[actual][clave] ?? EN[clave] ?? clave;
   if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
   return s;
 }

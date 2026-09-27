@@ -22,7 +22,7 @@ imágenes son una mejora, no un requisito.
 import base64, mimetypes, pathlib, re, sys
 
 AQUI = pathlib.Path(__file__).parent
-ORDEN = ["assets", "haz", "niveles", "juego", "dibujo", "audio", "guardado", "idioma", "musica"]
+ORDEN = ["assets", "haz", "niveles", "juego", "dibujo", "audio", "guardado", "idioma", "musica", "giro"]
 ENTRADA = "main"
 
 # Multilínea y con comillas simples O dobles: juego.js abre el import de
@@ -169,6 +169,14 @@ def main():
     html = html.replace('<link rel="stylesheet" href="css/e.css">',
                         f"<style>\n{css}\n</style>")
     html = incrustar_rutas(html, vestido, [""])
+    # LAS GRABACIONES VAN EN SU PROPIO <script> CLASICO, antes del juego y fuera
+    # de la función que lo envuelve: js/sonidos.js define SONIDOS_B64 como
+    # global y audio.js la busca por nombre. Si el archivo no está, se saca la
+    # etiqueta y el juego suena con los osciladores de respaldo.
+    sonidos = AQUI / "js" / "sonidos.js"
+    html = html.replace('<script src="js/sonidos.js"></script>',
+                        "<script>\n" + sonidos.read_text(encoding="utf-8") + "\n</script>"
+                        if sonidos.exists() else "")
     # Sin `type="module"` no hay ámbito de módulo, así que todo va adentro de
     # una función: si no, cada `const` del juego queda colgado de window.
     html = html.replace('<script type="module" src="js/main.js"></script>',
@@ -177,7 +185,8 @@ def main():
     destino.write_text(html, encoding="utf-8")
     kb = len(html.encode()) / 1024
     print(f"{destino.name}: {kb:.0f} KB · {len(ORDEN) + 1} módulos + "
-          f"{len(mapa)} binarios + {len(vestido)} de vestido ({crudo // 1024} KB crudos)")
+          f"{len(mapa)} binarios + {len(vestido)} de vestido ({crudo // 1024} KB crudos) + "
+          f"sonidos.js ({sonidos.stat().st_size // 1024 if sonidos.exists() else 0} KB)")
 
 
 if __name__ == "__main__":

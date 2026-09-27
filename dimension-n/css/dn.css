@@ -1,8 +1,10 @@
 /* Dimensión Ñ — hoja única.
-   Vertical y nada más: el juego se dibuja en 360x640 y se escala entero, así
-   que la interfaz también vive dentro de ese rectángulo. Las medidas van en
-   svh y no en vh porque en un teléfono vh incluye la barra del navegador y el
-   último renglón queda siempre tapado. */
+   Vertical y nada más: el juego se dibuja en 360 de ancho y se escala entero,
+   así que la interfaz también vive dentro de ese rectángulo (--an × --al, que
+   escribe main.js). Nada mide la ventana directo: con el teléfono acostado el
+   juego se gira (js/giro.js) y la ventana y el juego dejan de medir lo mismo.
+   Por eso no hay media queries ni vw/vh: hay clases (`bajo`, `medio`) y
+   variables (--vw, --vh) que calcula JS con el tamaño lógico. */
 
 :root {
   --fondo: #0b0e18;
@@ -13,19 +15,28 @@
   --verde: #a8e063;
   --cian: #8fe3f5;
   --amarillo: #f5d341;
+  --naranja: #ff9b3a;
   --mal: #ff6b6b;
   --r: 14px;
+  --vw: 1vw; --vh: 1vh;
 }
 
 * { box-sizing: border-box; }
+/* `hidden` tiene que ganar siempre. Un `display: flex` de una clase le gana al
+   estilo del navegador, y así el botón de "Seguir" salía aunque no hubiera
+   nada que seguir (y los paneles de texto se veían todos a la vez). */
+[hidden] { display: none !important; }
 html, body {
-  margin: 0; padding: 0; height: 100%;
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
   background: var(--fondo); color: var(--texto);
   font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-text-size-adjust: 100%; overscroll-behavior: none;
 }
-body { min-height: 100svh; display: flex; align-items: center; justify-content: center; }
 button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* La raíz ocupa la ventana; girada, JS le pone el tamaño y el transform. */
+#raiz { position: fixed; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; }
+html.girado #raiz { transform-origin: 0 0; }
 
 /* El lienzo se centra y queda quieto. `touch-action: none` es obligatorio: sin
    eso el navegador se queda el arrastre para hacer scroll y el reactor recibe
@@ -33,7 +44,12 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
 #lienzo {
   position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
   touch-action: none; display: block; z-index: 0;
-  box-shadow: 0 0 0 100vmax var(--fondo);
+  box-shadow: 0 0 0 calc(var(--vw) * 200) var(--fondo);
+}
+
+.cargando {
+  position: fixed; inset: 0; display: grid; place-items: center; z-index: 5;
+  color: var(--tenue); font-size: 14px; background: var(--fondo); text-align: center; padding: 16px;
 }
 
 /* La pantalla ocupa el mismo rectángulo que el lienzo y no la ventana: en una
@@ -41,8 +57,8 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
    cosas distintas puestas una encima de la otra. */
 .pantalla {
   position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  /* --an y --al las escribe main.js: son el tamano exacto del lienzo. */
-  width: var(--an, min(360px, 100vw)); height: var(--al, min(640px, 100svh));
+  width: var(--an, min(360px, calc(var(--vw) * 100)));
+  height: var(--al, min(640px, calc(var(--vh) * 100)));
   display: flex; flex-direction: column; z-index: 2;
 }
 .pantalla[hidden] { display: none; }
@@ -51,13 +67,14 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
 /* El menu no puede ser negro liso: atras del lienzo no hay nada dibujado
    —el juego no corre— y sin esto la pantalla de inicio parece un error de
    carga. El degrade imita la boca del pozo. */
-#p-menu, #p-fin, #p-como { background: radial-gradient(130% 60% at 50% 0%, #1d2740 0%, var(--fondo) 72%); }
+#p-menu, #p-fin, #p-idioma, #p-niveles { background: radial-gradient(130% 60% at 50% 0%, #1d2740 0%, var(--fondo) 72%); }
 
 .caja {
   background: rgba(16,21,34,.94); border: 1px solid var(--borde);
   border-radius: var(--r); padding: 22px 20px; width: 100%;
   text-align: center; box-shadow: 0 16px 44px rgba(0,0,0,.55);
   max-height: 100%; overflow-y: auto;
+  animation: sube .35s ease-out both;
 }
 
 .logo {
@@ -68,11 +85,11 @@ button, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-cal
   display: inline-block; margin-left: 6px; padding: 0 10px;
   border-radius: 10px; background: linear-gradient(135deg, var(--verde), var(--cian));
   color: #10200c; transform: rotate(-4deg);
+  animation: bamboleo 3.6s ease-in-out infinite;
 }
-.bajada { color: var(--tenue); margin: 0 0 18px; font-size: 14px; }
+@keyframes bamboleo { 50% { transform: rotate(3deg) translateY(2px); } }
+.bajada { color: var(--tenue); margin: 0 0 12px; font-size: 13.5px; }
 .bajada b { color: var(--texto); }
-.record { color: var(--tenue); font-size: 13px; margin: 14px 0 6px; }
-.record b { color: var(--verde); }
 
 .botones { display: flex; flex-direction: column; gap: 9px; }
 .botones.fila { flex-direction: row; justify-content: center; }
@@ -83,20 +100,98 @@ button {
   box-shadow: 0 3px 0 rgba(0,0,0,.45);
 }
 button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45); }
-.grande { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 52px; font-size: 16px; }
+/* El foco se ve siempre que viene del teclado: sin él, navegar el menú con Tab
+   es adivinar dónde estás. */
+button:focus-visible, input:focus-visible { outline: 3px solid var(--amarillo); outline-offset: 2px; }
+button:disabled { opacity: .4; cursor: default; }
+.grande { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 50px; font-size: 16px; }
 .grande small { color: var(--tenue); font-size: 12px; }
 .primario {
   background: linear-gradient(135deg, var(--verde), #7ec850);
   border-color: var(--verde); color: #10200c; font-weight: 800;
 }
 .primario small { color: rgba(16,32,12,.65); }
-.chico { padding: 7px 12px; font-size: 13px; min-height: 36px; }
+.azul { background: linear-gradient(135deg, #2c5f8f, #3a7fb8); border-color: var(--cian); font-weight: 800; }
+.chico { padding: 7px 12px; font-size: 13px; min-height: 44px; }
 .peligro { border-color: #5e2b33; color: #ff9b9b; background: transparent; box-shadow: none; }
+.peligro.armado { background: #5e2b33; color: #fff; }
 .opcion {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  margin: 10px 0; color: var(--tenue); font-size: 14px;
+  display: flex; align-items: center; gap: 10px; min-height: 44px;
+  color: var(--texto); font-size: 14px; cursor: pointer;
 }
-.opcion input { width: 20px; height: 20px; accent-color: var(--verde); }
+.opcion input { width: 22px; height: 22px; accent-color: var(--verde); }
+
+/* ───────────── idioma ───────────── */
+.idioma-t { margin: 6px 0 14px; font-size: 17px; line-height: 1.35; color: var(--cian); }
+.idioma-t span { color: var(--tenue); font-weight: 600; font-size: 15px; }
+.idioma-btn {
+  display: flex; align-items: center; gap: 14px; min-height: 58px; font-size: 18px;
+  padding: 10px 16px; text-align: left;
+  animation: sube .4s ease-out both;
+}
+.idioma-btn:nth-child(2) { animation-delay: .07s; }
+.idioma-btn:nth-child(3) { animation-delay: .14s; }
+.idioma-btn .bandera { width: 42px; height: 28px; border-radius: 4px; flex: none; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
+.idioma-btn.activo { border-color: var(--verde); box-shadow: 0 0 0 2px var(--verde), 0 3px 0 rgba(0,0,0,.45); }
+.idioma-btn.activo::after { content: "✓"; margin-left: auto; color: var(--verde); font-weight: 900; }
+.idioma .bajada { margin: 14px 0 0; font-size: 12px; }
+
+/* ───────────── menú con pestañas ───────────── */
+.menu { padding: 0; }
+.menu-cab { padding: 14px 16px 6px; text-align: center; flex: none; }
+.menu-cab .logo { font-size: 36px; margin-bottom: 6px; }
+.pestanas {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px;
+  padding: 0 8px 8px; flex: none;
+}
+.pestanas button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  min-height: 48px; padding: 4px 2px; font-size: 11.5px; line-height: 1.2;
+  background: rgba(22,28,43,.8); border-radius: 10px; box-shadow: none; color: var(--tenue);
+}
+.pestanas button i { font-style: normal; font-size: 16px; color: var(--cian); }
+.pestanas button[aria-selected="true"] {
+  background: linear-gradient(180deg, #24304a, #1a2236); color: var(--texto);
+  border-color: var(--verde); box-shadow: inset 0 -3px 0 var(--verde);
+}
+.pestanas button[aria-selected="true"] i { color: var(--verde); }
+.panel {
+  flex: 1; overflow-y: auto; padding: 4px 12px 16px; display: flex; flex-direction: column; gap: 10px;
+  /* Cada vez que un panel pasa de oculto a visible la animación arranca sola:
+     no hace falta JS para las entradas. */
+  animation: aparece .28s ease-out both;
+}
+.panel[hidden], .panel.texto[hidden] { display: none; }
+@keyframes aparece { from { opacity: 0; transform: translateX(14px); } }
+@keyframes sube { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+
+.tarjeta {
+  background: rgba(16,21,34,.94); border: 1px solid var(--borde); border-radius: var(--r);
+  padding: 14px; box-shadow: 0 10px 28px rgba(0,0,0,.45);
+  animation: sube .4s ease-out both;
+}
+.tarjeta:nth-child(2) { animation-delay: .08s; }
+.tarjeta h2 { margin: 0 0 2px; font-size: 19px; color: var(--verde); }
+.tarjeta.modo-p { border-color: #3a5a8a; background: linear-gradient(160deg, rgba(29,44,70,.96), rgba(16,21,34,.96)); }
+.tarjeta.modo-p h2 { color: var(--cian); }
+.tarjeta .sub { margin: 0 0 10px; color: var(--tenue); font-size: 13px; }
+.tarjeta .progreso { margin: 6px 0 10px; font-size: 13px; color: var(--texto); }
+.tarjeta .botones { gap: 7px; }
+
+/* Los siete capítulos como siete tramos del pozo: los que ya se alcanzaron
+   van prendidos, con el color de cada capítulo. */
+.tramos { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; height: 10px; }
+.tramos i { border-radius: 3px; background: #232b3e; }
+.tramos i.si { background: var(--c, var(--verde)); box-shadow: 0 0 8px var(--c, var(--verde)); }
+.barrita { height: 10px; border-radius: 5px; background: #232b3e; overflow: hidden; }
+.barrita i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--cian), var(--naranja)); transition: width .5s ease-out; }
+
+.deslizador { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 10px; margin: 6px 0; font-size: 14px; }
+.deslizador input { grid-column: 1 / -1; width: 100%; height: 30px; accent-color: var(--verde); }
+.deslizador output { color: var(--tenue); font-variant-numeric: tabular-nums; font-size: 13px; }
+.fila-op { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 12px; font-size: 14px; }
+.nota { margin: 0 0 6px; color: var(--tenue); font-size: 12px; }
+.nota:empty { display: none; }
 
 /* --- texto largo --- */
 .barra {
@@ -104,10 +199,11 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
   background: rgba(10,14,24,.95); border-bottom: 2px solid var(--borde);
 }
 .barra h2 { margin: 0; font-size: 17px; }
-.texto { padding: 14px 14px 40px; overflow-y: auto; background: var(--fondo); flex: 1; }
-.texto h3 { margin: 22px 0 6px; font-size: 15px; color: var(--verde); }
-.texto p { margin: 0 0 10px; font-size: 14px; color: var(--tenue); }
+.texto h3 { margin: 16px 0 6px; font-size: 15px; color: var(--verde); }
+.texto h3:first-child { margin-top: 4px; }
+.texto p { margin: 0 0 8px; font-size: 14px; color: var(--tenue); }
 .texto p b { color: var(--texto); }
+.panel.texto { display: block; }
 .destacado {
   background: var(--panel); border-left: 3px solid var(--cian);
   padding: 11px 12px; border-radius: 0 8px 8px 0;
@@ -116,6 +212,8 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
 .texto dt { font-weight: 700; margin-top: 10px; font-size: 14px; }
 .texto dd { margin: 2px 0 0; color: var(--tenue); font-size: 13.5px; }
 .texto dd b { color: var(--texto); }
+.texto a { color: var(--cian); word-break: break-word; }
+.creditos-lista { margin: 0 0 10px; padding-left: 18px; color: var(--tenue); font-size: 13px; }
 
 /* --- HUD --- */
 .juego { pointer-events: none; }
@@ -125,8 +223,8 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
   padding: 10px 10px 0; font-size: 13px;
 }
 .hud-btn {
-  width: 34px; height: 34px; min-height: 34px; padding: 0; border-radius: 9px;
-  background: rgba(10,14,24,.7); font-size: 15px; line-height: 1;
+  width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px;
+  background: rgba(10,14,24,.7); font-size: 16px; line-height: 1;
 }
 .barra-int {
   flex: 1; height: 13px; border-radius: 7px; overflow: hidden;
@@ -159,6 +257,7 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
   box-shadow: 0 6px 20px rgba(0,0,0,.5);
   animation: entra .22s ease-out;
 }
+.dialogo[hidden] { display: none; }
 .dialogo[data-quien="tito"] { border-left-color: var(--amarillo); }
 .dialogo b { color: var(--cian); margin-right: 6px; }
 .dialogo[data-quien="tito"] b { color: var(--amarillo); }
@@ -176,7 +275,7 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
 /* --- final --- */
 .fin h2 { margin: 0 0 10px; font-size: 26px; color: var(--verde); }
 .charla { text-align: left; margin: 0 0 14px; }
-.charla p { margin: 0 0 6px; font-size: 13.5px; color: var(--tenue); }
+.charla p { margin: 0 0 6px; font-size: 13.5px; color: var(--tenue); animation: sube .4s ease-out both; }
 .charla b { color: var(--cian); margin-right: 5px; }
 .charla p[data-quien="tito"] b { color: var(--amarillo); }
 .lista { list-style: none; padding: 0; margin: 0 0 16px; text-align: left; }
@@ -185,40 +284,18 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
   padding: 7px 2px; border-bottom: 1px solid var(--borde); font-size: 14px;
 }
 .lista span { color: var(--tenue); }
-.lista b { font-variant-numeric: tabular-nums; }
+.lista b { font-variant-numeric: tabular-nums; text-align: right; }
+.tarjeta .lista { margin: 6px 0 0; }
 
-/* Pantalla baja: el teléfono acostado. El juego es vertical, pero si alguien
-   lo gira igual tiene que poder volver al menú. */
-/* Pantalla baja: el teléfono acostado.
- *
- * El menú creció al agregarse el segundo modo y el cuarto botón quedó abajo
- * del borde: la prueba de interfaz lo cazó como "tapado por -", que es lo que
- * devuelve elementFromPoint cuando el punto está fuera de la vista. Acá se
- * achica todo lo que no es un botón —el logo, la bajada, los márgenes— antes
- * que los botones, que son lo único que hay que poder tocar. */
-@media (max-height: 470px) {
-  .caja { padding: 10px 14px; }
-  .logo { font-size: 24px; margin-bottom: 4px; }
-  .bajada { display: none; }
-  .botones { gap: 5px; }
-  .grande { min-height: 44px; font-size: 13px; padding: 6px 10px; }
-  .grande small { font-size: 10.5px; }
-  .record { margin: 8px 0 2px; font-size: 11.5px; }
-  .opcion { margin: 5px 0; font-size: 12px; }
-  #m-borrar { min-height: 30px; padding: 4px 10px; font-size: 11.5px; }
-  .niveles { grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px; }
-  .niv { min-height: 58px; }
-  .bolita { width: 62px; height: 62px; min-height: 62px; bottom: 12px; }
-  .dialogo, .hud-portal { margin-bottom: 78px; }
+.aviso {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 9;
+  max-width: 90%; background: #2a1c24; border: 1px solid #5e2b33; color: #ffd0d0;
+  padding: 9px 14px; border-radius: 10px; font-size: 13px; animation: sube .3s ease-out both;
 }
+.aviso[hidden] { display: none; }
 
-
-/* ───────────── el modo portales ─────────────
-   La lista de niveles y lo que el pozo no tiene. */
-.modo-p { border-color: #3a5a8a; background: linear-gradient(135deg, #1d2c46, #22374f); }
-.modo-p span:first-child { color: var(--cian); }
+/* ───────────── el modo portales ───────────── */
 .marca { margin-left: auto; font-size: 13px; color: var(--tenue); font-variant-numeric: tabular-nums; }
-
 .niveles {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
   padding: 12px; overflow-y: auto; align-content: start;
@@ -226,13 +303,12 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
 .niv {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   min-height: 74px; padding: 8px 4px; font-size: 11.5px; line-height: 1.25;
-  text-align: center;
+  text-align: center; animation: sube .35s ease-out both;
 }
 .niv b { font-size: 17px; font-variant-numeric: tabular-nums; }
 .niv small { color: var(--tenue); font-size: 10.5px; }
 .niv.hecho { border-color: var(--verde); }
 .niv.hecho b { color: var(--verde); }
-.niv:disabled { opacity: .4; }
 
 /* La barra de abajo del juego: de qué color sale el próximo portal, la pista
    del nivel, y volver a empezar sin pasar por el menú — que en un puzzle se
@@ -247,6 +323,40 @@ button:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.45);
   width: 16px; height: 16px; border-radius: 50%; flex: none;
   background: var(--cian); box-shadow: 0 0 10px currentColor;
 }
-.bocha.b { background: #ff9b3a; }
+.bocha.b { background: var(--naranja); }
 .pista { flex: 1; font-size: 12px; color: var(--tenue); }
-#h-reintentar { min-height: 30px; padding: 2px 10px; font-size: 15px; }
+#h-reintentar { min-height: 44px; min-width: 44px; padding: 2px 10px; font-size: 16px; }
+
+/* Pantalla mediana: el teléfono de 19,5:9 parado. Se achica la cabecera, que
+   no se toca, antes que los botones, que son lo único que hay que poder tocar. */
+html.medio .menu-cab { padding-top: 10px; }
+html.medio .menu-cab .logo { font-size: 30px; }
+html.medio .menu-cab .bajada { font-size: 12.5px; margin-bottom: 6px; }
+
+/* Pantalla baja: una ventana de compu apaisada y chata (en el teléfono
+ * acostado el juego se gira y nunca llega acá).
+ *
+ * El menú creció al agregarse el segundo modo y el cuarto botón quedó abajo
+ * del borde: la prueba de interfaz lo cazó como "tapado por -", que es lo que
+ * devuelve elementFromPoint cuando el punto está fuera de la vista. Acá se
+ * achica todo lo que no es un botón —el logo, la bajada, los márgenes— antes
+ * que los botones. */
+html.bajo .caja { padding: 10px 14px; }
+html.bajo .logo { font-size: 24px; margin-bottom: 4px; }
+html.bajo .menu-cab { padding: 6px 10px 4px; }
+html.bajo .menu-cab .logo { font-size: 22px; margin: 0; }
+html.bajo .bajada { display: none; }
+html.bajo .pestanas button { min-height: 44px; font-size: 10px; }
+html.bajo .pestanas button i { font-size: 13px; }
+html.bajo .tarjeta { padding: 10px; }
+html.bajo .tarjeta .sub { display: none; }
+html.bajo .botones { gap: 5px; }
+html.bajo .grande { min-height: 44px; font-size: 13px; padding: 6px 10px; }
+html.bajo .idioma-t { font-size: 13px; margin: 2px 0 6px; }
+html.bajo .idioma-t span { font-size: 12px; }
+html.bajo .idioma-btn { min-height: 44px; font-size: 14px; padding: 4px 12px; }
+html.bajo .idioma-btn .bandera { width: 32px; height: 21px; }
+html.bajo .niveles { grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px; }
+html.bajo .niv { min-height: 58px; }
+html.bajo .bolita { width: 62px; height: 62px; min-height: 62px; bottom: 12px; }
+html.bajo .dialogo, html.bajo .hud-portal { margin-bottom: 78px; }

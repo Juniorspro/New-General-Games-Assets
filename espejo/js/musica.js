@@ -33,7 +33,7 @@ const PULSO = 0.34;                             // segundos por corchea (≈ 44 
 const nota = (semi) => TONICA * Math.pow(2, semi / 12);
 
 let ac = null, maestro = null, bus = null;
-let prendida = true, corriendo = false;
+let prendida = true, corriendo = false, vol = 0.6;
 let paso = 0, proximo = 0, reloj = null;
 let intensidad = 0, objetivo = 0;
 let tema = null, temaGan = null;
@@ -47,15 +47,18 @@ export function conectar(contexto, salidaMaestra) {
   // La música va MAS BAJA que los efectos, y bastante. Un efecto que no se
   // escucha por encima de la música es un efecto que no existe: el sonido del
   // paraguas cerrándose es información, y la música es decoración.
-  bus.gain.value = 0.3;
+  bus.gain.value = 0.3 * vol;
   bus.connect(maestro);
 }
 
-export function sonando(v) {
-  prendida = v;
-  if (bus) bus.gain.setTargetAtTime(v ? 0.3 : 0, ac.currentTime, 0.12);
-  if (tema) tema.volume = v ? 0.5 : 0;
-  if (!v) parar();
+/** El volumen de la música, de 0 a 1. En cero se apaga del todo (y se para el
+ *  secuenciador: no tiene sentido planificar notas que no suenan). */
+export function volumen(v) {
+  vol = Math.max(0, Math.min(1, v));
+  prendida = vol > 0;
+  if (bus) bus.gain.setTargetAtTime(0.3 * vol, ac.currentTime, 0.12);
+  if (tema) tema.volume = 0.5 * vol;
+  if (!prendida) { parar(); if (tema) tema.pause(); }
 }
 
 /** ¿Está corriendo el secuenciador? Lo usa la prueba de sonido.
@@ -89,9 +92,9 @@ export function arrancarTema() {
     let v = 0;
     clearInterval(temaGan);
     temaGan = setInterval(() => {
-      v = Math.min(0.5, v + 0.03);
+      v = Math.min(0.5 * vol, v + 0.03);
       tema.volume = prendida ? v : 0;
-      if (v >= 0.5) clearInterval(temaGan);
+      if (v >= 0.5 * vol) clearInterval(temaGan);
     }, 60);
   }).catch(() => {});
 }

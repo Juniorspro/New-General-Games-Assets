@@ -18,6 +18,8 @@ const ch = (n, c, d = "") => { c ? (ok++, console.log(`  ✓ ${n}${d ? " — " +
 await pg.goto("file://" + path.resolve("dimension-n-en-un-archivo.html"));
 await pg.waitForFunction(() => !!window.DN, { timeout: 30000 });
 ch("abre desde file:// y arranca", true);
+await pg.locator(".idioma-btn").nth(0).click();
+await pg.waitForSelector("#p-menu:not([hidden])");
 
 const sueltos = await pg.evaluate(() => [...document.querySelectorAll("link[href],script[src],img[src]")]
   .map((e) => e.getAttribute("href") || e.getAttribute("src")).filter((u) => u && !u.startsWith("data:")));
