@@ -119,13 +119,14 @@ const r3d = await pag.evaluate(() => {
   window.__nativo.diagEspacio({ ...base, cfgPl: false, reconf: 1 }); const a = [E.textoMalla(), E.textoDiag()];
   window.__nativo.diagEspacio({ ...base, err: 'IllegalStateException' }); const b = [E.textoMalla(), E.textoDiag()];
   window.__nativo.diagEspacio({ ...base, pl: 3, plT: 4, ok: 40, fotos: 12 }); const c = [E.textoMalla(), E.textoDiag()];
+  window.__nativo.diagEspacio({ ...base, pl: 3, plT: 4, ok: 40, fotos: 12, foto: '320x240 31ms', mitad: true }); c.push(E.textoDiag());
   Nativo.diagEspacio = null; E.malla.diag = antes;
   return { a, b, c };
 });
-prueba('con los números de Java: la sesión que apagó el escaneo, el error de la profundidad, y el renglón chico solo si falta algo',
+prueba('con los números de Java: la sesión que apagó el escaneo, el error de la profundidad, y el renglón chico solo si falta algo (o la foto va a la mitad)',
   /apagó el escaneo/.test(r3d.a[0]) && /planos 0\/0 · prof 0 \(esperando 57\).*sesión: planos ✗ · prof ✓ · cam 0 640x480@30 · reconfigurada 1×/.test(r3d.a[1])
   && /⚠ escaneo: prof IllegalStateException/.test(r3d.b[0]) && /⚠ IllegalStateException/.test(r3d.b[1])
-  && /12 fotos/.test(r3d.c[0]) && r3d.c[1] === '', JSON.stringify(r3d));
+  && /12 fotos/.test(r3d.c[0]) && r3d.c[1] === '' && /foto 320x240 31ms a la mitad/.test(r3d.c[2]), JSON.stringify(r3d));
 prueba('la tarjeta dice en qué paso se traba (ARCore, la cámara, prendiendo, sin profundidad)', /⚠.*ARCore error: Unavailable/.test(r3c.t[0]) && /⚠.*cámara IllegalState/.test(r3c.t[1]) && /prendiendo/.test(r3c.t[2]) && /sin profundidad/.test(r3c.t[3]), r3c.t.join(' | '));
 /* al terminar se va; escanear de nuevo la borra */
 const r4 = await pag.evaluate(() => {

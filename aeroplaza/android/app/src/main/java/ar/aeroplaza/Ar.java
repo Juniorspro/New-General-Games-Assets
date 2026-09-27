@@ -149,6 +149,14 @@ class Ar implements GLSurfaceView.Renderer {
         if (cf > fpsMejor || (cf == fpsMejor && d < dm)) { fpsMejor = cf; dm = d; mejor = c; }
       }
       if (mejor != null) { sesion.setCameraConfig(mejor); fps = mejor.getFpsRange().getUpper() + ""; }
+      avisarCampo();
+    } catch (Throwable t) { /* la de siempre */ }
+  }
+  /* (la orientación del sensor de la cámara que quedó, y al juego su campo y el más abierto del celu: también
+     después de pasar a la de profundidad, que puede ser otra lente) */
+  void avisarCampo() {
+    try {
+      CameraManager cm = (CameraManager) act.getSystemService(Context.CAMERA_SERVICE);
       String id = sesion.getCameraConfig().getCameraId();
       Integer o = cm.getCameraCharacteristics(id).get(CameraCharacteristics.SENSOR_ORIENTATION);
       if (o != null) orientacionSensor = o;
@@ -173,7 +181,7 @@ class Ar implements GLSurfaceView.Renderer {
       CameraConfig antes = sesion.getCameraConfig();
       for (CameraConfig c : l) {
         sesion.setCameraConfig(c);
-        if (sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) { fps = c.getFpsRange().getUpper() + ""; geometria = false; avisarCamara("espacio camara 30"); return true; }
+        if (sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) { fps = c.getFpsRange().getUpper() + ""; geometria = false; avisarCampo(); avisarCamara("espacio camara 30"); return true; }
       }
       sesion.setCameraConfig(antes);
       avisarCamara("espacio camara sin-profundidad");

@@ -1,6 +1,9 @@
 package ar.aeroplaza;
 
 import android.graphics.Bitmap;
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
 import android.media.Image;
 import android.os.SystemClock;
 
@@ -80,8 +83,10 @@ class Espacio {
   final ByteArrayOutputStream salida = new ByteArrayOutputStream(64 * 1024);
   static final long FOTO_CADA = 33;   // ms (hasta 30 por segundo)
   static final long MITAD_SI = 28;    // ms que puede tardar la foto entera (si no, a la mitad)
-  volatile long msFoto = 0;
-  volatile boolean aMitad;   // (una vez que la entera tardó de más, queda a la mitad: si no, iba y venía)
+  volatile long msFoto = 0; volatile int wFoto, hFoto;
+  volatile boolean aMitad;   // (con la entera que tarda de más, a la mitad; vuelve a la entera si sobra, con espera: si no, iba y venía)
+  long tMitad;
+  byte[] nv;   // (la foto en NV21, para el JPEG del sistema)
 
   Espacio(MainActivity a) { act = a; }
 
@@ -136,10 +141,10 @@ class Espacio {
       int pl = 0, plT = 0;
       for (Plane p : s.getAllTrackables(Plane.class)) { plT++; if (p.getTrackingState() == TrackingState.TRACKING && p.getSubsumedBy() == null) pl++; }
       Config r = s.getConfig(); CameraConfig cc = s.getCameraConfig();
-      act.enviar(String.format(Locale.US, "__nativo&&__nativo.diagEspacio&&__nativo.diagEspacio({\"pl\":%d,\"plT\":%d,\"ok\":%d,\"espera\":%d,\"err\":\"%s\",\"suave\":%b,\"cfgPl\":%b,\"cfgProf\":%b,\"cam\":\"%s %dx%d@%d\",\"sigue\":\"%s\",\"fotos\":%d,\"reconf\":%d})",
+      act.enviar(String.format(Locale.US, "__nativo&&__nativo.diagEspacio&&__nativo.diagEspacio({\"pl\":%d,\"plT\":%d,\"ok\":%d,\"espera\":%d,\"err\":\"%s\",\"suave\":%b,\"cfgPl\":%b,\"cfgProf\":%b,\"cam\":\"%s %dx%d@%d\",\"sigue\":\"%s\",\"fotos\":%d,\"reconf\":%d,\"foto\":\"%dx%d %dms\",\"mitad\":%b})",
           pl, plT, okProf, esperaProf, errProf, profSuave, r.getPlaneFindingMode() != Config.PlaneFindingMode.DISABLED, r.getDepthMode() != Config.DepthMode.DISABLED,
           cc.getCameraId(), cc.getImageSize().getWidth(), cc.getImageSize().getHeight(), cc.getFpsRange().getUpper(),
-          cam.getTrackingState() == TrackingState.TRACKING ? "ok" : cam.getTrackingFailureReason().name(), fotosProf, reconfigs));
+          cam.getTrackingState() == TrackingState.TRACKING ? "ok" : cam.getTrackingFailureReason().name(), fotosProf, reconfigs, wFoto, hFoto, msFoto, aMitad));
     } catch (Throwable t) { /* (el diagnóstico no rompe nada) */ }
   }
 
@@ -292,6 +297,29 @@ class Espacio {
     final float[] q = { pose.tx(), pose.ty(), pose.tz(), pose.qx(), pose.qy(), pose.qz(), pose.qw() };
     hilo.execute(() -> {
       try {
+        /* (vuelta 38) CON EL CELU ACOSTADO (en el visor, giro 0 o 180): la foto entera, derecha y en JPEG con el
+           del sistema (YuvImage, en C): tarda unos pocos ms. La de Java (cada píxel a RGB y girado) tardaba tanto
+           con el escaneo andando (la malla y la profundidad en otros hilos) que pasaba a la mitad para siempre:
+           320 × 240 estirada a 67°, "horrible, como zoomeada" */
+        if (giro == 0 || giro == 180) {
+          boolean da = giro == 180; int n2 = W * H + 2 * (W / 2) * (H / 2);
+          if (nv == null || nv.length != n2) nv = new byte[n2];
+          for (int r = 0; r < H; r++) {
+            if (!da) System.arraycopy(y, r * rsY, nv, r * W, W);
+            else { int d = (H - 1 - r) * W + W - 1, o = r * rsY; for (int c = 0; c < W; c++) nv[d - c] = y[o + c]; }
+          }
+          for (int r = 0, base = W * H, w2 = W / 2, h2 = H / 2; r < h2; r++) for (int c = 0; c < w2; c++) {
+            int o = da ? base + (h2 - 1 - r) * W + (w2 - 1 - c) * 2 : base + r * W + c * 2;
+            nv[o] = v[r * rsV + c * psV]; nv[o + 1] = u[r * rsU + c * psU];
+          }
+          salida.reset(); new YuvImage(nv, ImageFormat.NV21, W, H, null).compressToJpeg(new Rect(0, 0, W, H), 80, salida);
+          jpeg = salida.toByteArray(); int n = ++nFoto;
+          long ms = SystemClock.elapsedRealtime() - t0; msFoto = msFoto == 0 ? ms : (msFoto * 3 + ms) / 4; wFoto = W; hFoto = H;
+          double tanX = (W / 2.0) / focal[0], tanY = (H / 2.0) / focal[1], e = edad + (SystemClock.elapsedRealtime() - t0);
+          act.enviar(String.format(Locale.US, "__nativo&&__nativo.foto({\"n\":%d,\"url\":\"%scamara/%d.jpg\",\"e\":%.1f,\"tx\":%.5f,\"ty\":%.5f,\"w\":%d,\"h\":%d,\"p\":[%.4f,%.4f,%.4f,%.6f,%.6f,%.6f,%.6f]})",
+              n, MainActivity.RAIZ_WEB, n, e, tanX, tanY, W, H, q[0], q[1], q[2], q[3], q[4], q[5], q[6]));
+          return;
+        }
         boolean gira = giro == 90 || giro == 270, mitad = aMitad;
         final int k = mitad ? 1 : 0;
         int w2 = W >> k, h2 = H >> k, Wo = gira ? h2 : w2, Ho = gira ? w2 : h2;
@@ -309,8 +337,11 @@ class Espacio {
         bm.setPixels(px, 0, Wo, 0, 0, Wo, Ho);
         salida.reset(); bm.compress(Bitmap.CompressFormat.JPEG, 70, salida);
         jpeg = salida.toByteArray(); int n = ++nFoto;
-        long ms = SystemClock.elapsedRealtime() - t0; msFoto = msFoto == 0 ? ms : (msFoto * 3 + ms) / 4;
-        if (!mitad && nFoto > 10 && msFoto > MITAD_SI) aMitad = true;
+        long ms = SystemClock.elapsedRealtime() - t0; msFoto = msFoto == 0 ? ms : (msFoto * 3 + ms) / 4; wFoto = Wo; hFoto = Ho;
+        /* (a la mitad si la entera tarda de más; y de vuelta a la entera si a la mitad sobra mucho, cada 5 s a lo sumo) */
+        long ahora = SystemClock.elapsedRealtime();
+        if (!mitad && nFoto > 10 && msFoto > MITAD_SI) { aMitad = true; tMitad = ahora; }
+        else if (mitad && msFoto * 4 < MITAD_SI * 0.6 && ahora - tMitad > 5000) { aMitad = false; tMitad = ahora; msFoto = 0; }
         float fx = (gira ? focal[1] : focal[0]) / (1 << k), fy = (gira ? focal[0] : focal[1]) / (1 << k);
         double tanX = (Wo / 2.0) / fx, tanY = (Ho / 2.0) / fy, e = edad + (SystemClock.elapsedRealtime() - t0);
         act.enviar(String.format(Locale.US, "__nativo&&__nativo.foto({\"n\":%d,\"url\":\"%scamara/%d.jpg\",\"e\":%.1f,\"tx\":%.5f,\"ty\":%.5f,\"w\":%d,\"h\":%d,\"p\":[%.4f,%.4f,%.4f,%.6f,%.6f,%.6f,%.6f]})",

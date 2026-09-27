@@ -14,7 +14,10 @@
 // - alReves: los cuadros en que la forma dibujada se dobla claro como la otra mano (más de 5 cm, la suma de
 //   las cinco puntas); izq: dibujada como izquierda;
 // - dobles: cuadros con dos manos; sin: cuadros sin mano cuando MediaPipe la ve;
-// - tiembla: lo que se mueve de un cuadro al otro, quieta (mm).
+// - tiembla: lo que se mueve de un cuadro al otro, quieta (mm); tiemblaZ, en profundidad; tiemblaDedos, las
+//   puntas contra la palma (vuelta 38). vib, vibZ, vibDedos: lo que se aparta lo dibujado de su promedio de ±54 ms
+//   (mm; el temblor que se ve aunque la mano se mueva); vibDoblan, las puntas en los ejes de la palma (sin el giro);
+//   vibGiro, el giro de la palma (grados). …Q: lo mismo con la mano quieta (como tiembla).
 // - borde / adentro: ver, con la mano cortada por el borde de la imagen (algún punto afuera) y entera;
 // - patadas: por minuto, las veces que en 1/120 s lo dibujado salta en la imagen (más de 8 % de la palma
 //   y del triple de lo que se mueve la verdad); saltaZ: lo que salta la profundidad en 1/120 s (el 1 %
@@ -157,6 +160,18 @@ for (let T = 0; T < K * DT + 300; T += 1000 / 120) {
   if (M && process.env.ETAPA === 'filtro') M = { p: M.euro.x, derecha: M.derecha };
   if (!M) { R.sin++; antes = null; continue; }
   R.vistos++; if (M.ganancia) (R.gan ||= []).push(M.ganancia.g);
+  /* (vuelta 38, el temblor que se ve aunque la mano se mueva: la serie de lo dibujado, para compararla con ella
+     misma promediada en ±54 ms) */
+  { const c3 = [0, 5, 9, 13, 17].reduce((q, i) => [q[0] + M.p[i * 3] / 5, q[1] + M.p[i * 3 + 1] / 5, q[2] + M.p[i * 3 + 2] / 5], [0, 0, 0]);
+    const f = [c3[0], c3[1], c3[2]]; for (const i of [4, 8, 12, 16, 20]) f.push(M.p[i * 3] - c3[0], M.p[i * 3 + 1] - c3[1], M.p[i * 3 + 2] - c3[2]);
+    /* (y en los ejes de la palma: x del meñique al índice, y de la muñeca al medio; lo que queda es lo que se
+       doblan los dedos, sin el giro) */
+    const P = (i) => [M.p[i * 3], M.p[i * 3 + 1], M.p[i * 3 + 2]], sub = (u, v) => [u[0] - v[0], u[1] - v[1], u[2] - v[2]], nor = (u) => { const l = Math.hypot(...u) || 1; return u.map((x) => x / l); };
+    const ex = nor(sub(P(5), P(17))), y0 = sub(P(9), P(0)), d0 = y0[0] * ex[0] + y0[1] * ex[1] + y0[2] * ex[2], ey = nor([y0[0] - d0 * ex[0], y0[1] - d0 * ex[1], y0[2] - d0 * ex[2]]);
+    const ez = [ex[1] * ey[2] - ex[2] * ey[1], ex[2] * ey[0] - ex[0] * ey[2], ex[0] * ey[1] - ex[1] * ey[0]];
+    for (const i of [4, 8, 12, 16, 20]) { const v = sub(P(i), c3); f.push(v[0] * ex[0] + v[1] * ex[1] + v[2] * ex[2], v[0] * ey[0] + v[1] * ey[1] + v[2] * ey[2], v[0] * ez[0] + v[1] * ez[1] + v[2] * ez[2]); }
+    f.push(...ey, ...ez);
+    if (!R.serie || T - R.serie.T > 10) (R.series ||= []).push(R.serie = { T, f: [] }); R.serie.T = T; R.serie.f.push(f); }
   const [tx, ty] = tans(V.a), cam = [0, 0, -0.06];
   /* (la mano dibujada, vista desde la cámara, contra la imagen: en mm a la distancia de la mano) */
   /* (en la imagen, en % del largo de la palma en la imagen (de la muñeca al nudillo del medio): no depende
@@ -198,15 +213,33 @@ for (let T = 0; T < K * DT + 300; T += 1000 / 120) {
   const V1 = verdadEn(tVer - 100), V2 = verdadEn(tVer + 100);
   if (V1 && V2) { const c = (X) => [0, 5, 9, 13, 17].reduce((a, i) => [a[0] + X.I[i * 3] / 5, a[1] + X.I[i * 3 + 1] / 5], [0, 0]), c1 = c(V1), c2 = c(V2);
     const vel = Math.hypot((c2[0] - c1[0]) * 2 * tx, (c2[1] - c1[1]) * 2 * ty) * V.z / 0.2;
-    if (vel < 0.03) { R.quieta.push(s / 21); const cd = [0, 5, 9, 13, 17].reduce((a, i) => [a[0] + M.p[i * 3] / 5, a[1] + M.p[i * 3 + 1] / 5, a[2] + M.p[i * 3 + 2] / 5], [0, 0, 0]); if (antes) R.tiembla.push(Math.hypot(cd[0] - antes[0], cd[1] - antes[1]) * 1000); antes = cd; } else antes = null; }
+    if (vel < 0.03) { R.quieta.push(s / 21); if (R.serie) (R.serie.q ||= new Set()).add(R.serie.f.length - 1); const cd = [0, 5, 9, 13, 17].reduce((a, i) => [a[0] + M.p[i * 3] / 5, a[1] + M.p[i * 3 + 1] / 5, a[2] + M.p[i * 3 + 2] / 5], [0, 0, 0]);
+      /* (vuelta 38: también las puntas de los dedos contra la palma y la profundidad, de un cuadro al otro) */
+      const pu = [4, 8, 12, 16, 20].map((i) => [M.p[i * 3] - cd[0], M.p[i * 3 + 1] - cd[1], M.p[i * 3 + 2] - cd[2]]);
+      if (antes) { R.tiembla.push(Math.hypot(cd[0] - antes[0], cd[1] - antes[1]) * 1000); (R.tZ ||= []).push(Math.abs(cd[2] - antes[2]) * 1000);
+        if (antes.pu) (R.tDedos ||= []).push(Math.sqrt(pu.reduce((a, q, j) => a + (q[0] - antes.pu[j][0]) ** 2 + (q[1] - antes.pu[j][1]) ** 2 + (q[2] - antes.pu[j][2]) ** 2, 0) / 5) * 1000); }
+      antes = cd; antes.pu = pu; } else antes = null; }
 }
 const pct = (a, p) => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(p * b.length))] : NaN; };
 const media = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
+/* (vib: lo que se aparta lo dibujado de su promedio de ±54 ms, en mm; del centro de costado, en profundidad y las
+   puntas contra la palma. Lo que se mueve de verdad casi no se aparta: es el temblor) */
+const VIB = { l: [], z: [], d: [], Q: { l: [], z: [], e: [], g: [] } };
+for (const S of R.series || []) { const F = S.f, n = 6; for (let i = n; i < F.length - n; i++) { const m = F[i].map((_, j) => { let a = 0; for (let k = -n; k <= n; k++) a += F[i + k][j]; return a / (2 * n + 1); });
+  const Q = S.q?.has(i) ? VIB.Q : null;
+  VIB.l.push(Math.hypot(F[i][0] - m[0], F[i][1] - m[1]) * 1000); VIB.z.push(Math.abs(F[i][2] - m[2]) * 1000);
+  if (Q) { let e = 0; for (let j = 18; j < 33; j++) e += (F[i][j] - m[j]) ** 2;
+    Q.l.push(Math.hypot(F[i][0] - m[0], F[i][1] - m[1]) * 1000); Q.z.push(Math.abs(F[i][2] - m[2]) * 1000); Q.e.push(Math.sqrt(e / 5) * 1000);
+    Q.g.push(Math.max(Math.hypot(F[i][33] - m[33], F[i][34] - m[34], F[i][35] - m[35]), Math.hypot(F[i][36] - m[36], F[i][37] - m[37], F[i][38] - m[38])) * 180 / Math.PI); }
+  let d = 0; for (let j = 3; j < 18; j++) d += (F[i][j] - m[j]) ** 2; VIB.d.push(Math.sqrt(d / 5) * 1000);
+  let e = 0; for (let j = 18; j < 33; j++) e += (F[i][j] - m[j]) ** 2; (VIB.e ||= []).push(Math.sqrt(e / 5) * 1000);
+  (VIB.g ||= []).push(Math.max(Math.hypot(F[i][33] - m[33], F[i][34] - m[34], F[i][35] - m[35]), Math.hypot(F[i][36] - m[36], F[i][37] - m[37], F[i][38] - m[38])) * 180 / Math.PI); } }
+const rms = (a) => Math.sqrt(a.reduce((x, y) => x + y * y, 0) / Math.max(1, a.length));
 const estira = R.largos.map((L) => { const m = pct(L, 0.5); return L.map((l) => Math.abs(l / m - 1) * 100); }).flat();
 const r = (x, d = 1) => +x.toFixed(d);
 const out = { ver: r(media(R.ver)), verP95: r(pct(R.ver, 0.95)), centro: r(media(R.centro)), forma: r(media(R.forma)), formaP95: r(pct(R.forma, 0.95)), peorP95: r(pct(R.peor, 0.95)), verQuieta: r(media(R.quieta)), estiraP95: r(pct(estira, 0.95)), estiraMax: r(pct(estira, 0.999)),
   gan: r(media(R.gan || [1]), 2), borde: r(media(R.enBorde || [])), adentro: r(media(R.adentro || [])), patadas: r((R.patadas || 0) / (R.cuadros / 120 / 60)), saltaZ: r(pct(R.dz || [0], 0.99)), sacudeZ: r(Math.sqrt(media((R.ddz || [0]).map((x) => x * x))), 2),
-  alReves: r(100 * R.alReves / Math.max(1, R.vistos)), izq: r(100 * R.izq / Math.max(1, R.vistos)), atras: r(100 * R.atras / Math.max(1, R.vistos)), dobles: r(100 * R.dobles / R.cuadros), sin: r(100 * R.sin / R.cuadros), tiembla: r(Math.sqrt(media(R.tiembla.map((x) => x * x))), 2) };
+  alReves: r(100 * R.alReves / Math.max(1, R.vistos)), izq: r(100 * R.izq / Math.max(1, R.vistos)), atras: r(100 * R.atras / Math.max(1, R.vistos)), dobles: r(100 * R.dobles / R.cuadros), sin: r(100 * R.sin / R.cuadros), tiembla: r(Math.sqrt(media(R.tiembla.map((x) => x * x))), 2), tiemblaZ: r(Math.sqrt(media((R.tZ || [0]).map((x) => x * x))), 2), tiemblaDedos: r(Math.sqrt(media((R.tDedos || [0]).map((x) => x * x))), 2), vib: r(rms(VIB.l), 2), vibZ: r(rms(VIB.z), 2), vibDedos: r(rms(VIB.d), 2), vibDoblan: r(rms(VIB.e || []), 2), vibGiro: r(rms(VIB.g || []), 2), vibQ: r(rms(VIB.Q.l), 2), vibZQ: r(rms(VIB.Q.z), 2), vibDoblanQ: r(rms(VIB.Q.e), 2), vibGiroQ: r(rms(VIB.Q.g), 2) };
 /* (ESTIRA=1: en qué momentos y qué huesos se estiran más del 20 %) */
 if (process.env.ESTIRA) { const m = R.largos.map((L) => pct(L, 0.5)), v = [];
   R.cuando.forEach((t, i) => R.largos.forEach((L, h) => { const e = Math.abs(L[i] / m[h] - 1) * 100; if (e > 20) v.push(`${(t / 1000).toFixed(2)}s ${HUESOS[h].join('-')} ${e.toFixed(0)}%`); }));

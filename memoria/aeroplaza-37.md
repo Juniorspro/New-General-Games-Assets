@@ -35,9 +35,23 @@ seguía, pero no había ni un plano ni una foto de profundidad.
   - Si faltan planos o fotos, un renglón chico abajo de todo (`textoDiag`), por ejemplo: "planos 0/0 · prof 0
     (esperando 57) · sesión: planos ✗ · prof ✓ · cam 0 640x480@30 · reconfigurada 1×".
 
+## La foto de la cámara, "horrible, como zoomeada" al escanear
+
+- **Pasaba a la mitad para siempre**: `Espacio.foto` convertía cada píxel a RGB en Java. Con el escaneo andando (la
+  malla y la profundidad en otros hilos) tardaba más de `MITAD_SI` (28 ms) y quedaba en 320 × 240, estirada a los
+  67° de la cámara: se ve pixelada, como zoom digital.
+- **Ahora**, con el celu acostado (en el visor, giro 0 o 180): la foto entera en NV21 (girada 180° copiando, si
+  hace falta) y el JPEG del sistema (`YuvImage.compressToJpeg`, en C, calidad 80). Unos pocos ms.
+- **Parado (90/270)**: el camino de Java de antes. Si pasa a la mitad, vuelve a la entera cuando a la mitad sobra
+  (4 × lo que tarda < 60 % de `MITAD_SI`, cada 5 s a lo sumo).
+- **La cámara con profundidad puede ser otra lente**: `Ar.avisarCampo` manda su campo (y la orientación del sensor)
+  también después de `elegirParaProfundidad`.
+- **El diagnóstico** trae `foto` ("640x480 9ms") y `mitad`. El renglón chico sale también si la foto va a la mitad.
+
 ## Medido
 
-- `malla.mjs` 19/19 (la nueva: los tres casos del diagnóstico), `nativo` 18/18, `espacio` 28/28. La APK compila.
+- `malla.mjs` 19/19 (la nueva: los casos del diagnóstico y la foto a la mitad), `nativo` 18/18, `espacio` 28/28,
+  `camara` 13/13. La APK compila. El NV21 y el JPEG del sistema no se pueden probar sin Android.
 - **Falta en el celu**: si con esto escanea. Si no, el renglón chico dice cuál de las partes falta.
 
 ## Trampas

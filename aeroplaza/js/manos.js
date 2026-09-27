@@ -86,7 +86,7 @@ class EuroEjes {
       const aL = Euro.a(L.corteD + (L.betaD || 0) * nL, dt), aH = Euro.a(H.corteD + (H.betaD || 0) * nH, dt);
       vh += aH * (eh / dt - vh); vx += aL * (elx / dt - vx); vy += aL * (ely / dt - vy); vz += aL * (elz / dt - vz);
       const sl = Math.hypot(vx, vy, vz), sh = Math.abs(vh);
-      const kL = Euro.a(L.corte + L.beta * sl, dt), kH = Euro.a(H.corte + H.beta * Math.max(sh, sl * H.cruce), dt);
+      const kL = Euro.a(L.corte + L.beta * Math.max(0, sl - (L.piso || 0)), dt), kH = Euro.a(H.corte + H.beta * Math.max(0, Math.max(sh, sl * H.cruce) - (H.piso || 0)), dt);
       x[i] += kL * elx + kH * eh * rx; x[i + 1] += kL * ely + kH * eh * ry; x[i + 2] += kL * elz + kH * eh * rz;
       dx[i] = vx + vh * rx; dx[i + 1] = vy + vh * ry; dx[i + 2] = vz + vh * rz;
     }
@@ -150,8 +150,8 @@ const RAYO_GANA = [2.0, 2.6];   // con la cámara: cuánto se agranda el ángulo
 const E_CORTE = 1.2, E_BETA = 10, E_CORTED = 2.0;
 /* con la cámara (vuelta 16): liviano, casi no atrasa; lo quieto lo sostienen las anclas. De costado,
    y en profundidad (cruce: cuánto abre el de profundidad la velocidad de costado) */
-const C_CORTE = 2.7586, C_BETA = 33.0921, C_CORTED = 2.9938, C_BETAD = 0;
-const CH_CORTE = 2.0, CH_BETA = 20, CH_CORTED = 1.1853, CH_CRUCE = 0.3034, CH_BETAD = 0;
+const C_CORTE = 2.7586, C_BETA = 33.0921, C_CORTED = 2.9938, C_BETAD = 0, C_PISO = 0;
+const CH_CORTE = 2.0, CH_BETA = 20, CH_CORTED = 1.1853, CH_CRUCE = 0.3034, CH_BETAD = 0, CH_PISO = 0;
 /* la forma de la mano (Mano.enderezar): la palma, un molde; los dedos, hueso por hueso */
 const PALMA6 = [0, 1, 5, 9, 13, 17], EN_PALMA = Array.from({ length: 21 }, (_, i) => PALMA6.includes(i));
 const DEDOS = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
@@ -247,7 +247,7 @@ function expQ(v, out) {
    de todo el dedo (el promedio de sus tres puntos, sin el nudillo): el ruido de cada punto va por su
    lado y se cancela; el dedo que se dobla los mueve a todos para el mismo lado */
 class EuroDedos {
-  constructor({ corte = 1.2, beta = 10, corteD = 1 } = {}) { this.x = new Float32Array(63); this.dx = new Float32Array(63); this.s = new Float32Array(21); this.t = -1; this.corte = corte; this.beta = beta; this.corteD = corteD; }
+  constructor({ corte = 1.2, beta = 10, corteD = 1, piso = 0 } = {}) { this.x = new Float32Array(63); this.dx = new Float32Array(63); this.s = new Float32Array(21); this.t = -1; this.corte = corte; this.beta = beta; this.corteD = corteD; this.piso = piso; }
   reiniciar(v, t) { this.x.set(v); this.dx.fill(0); this.t = t; }
   filtrar(v, t) {
     if (this.t < 0 || t - this.t > 0.5) { this.reiniciar(v, t); return this.x; }
@@ -261,7 +261,7 @@ class EuroDedos {
       const sd = Math.hypot(a, b, c) / 3;
       for (let k = 1; k < 4; k++) s[d[k]] = sd;
     }
-    for (let p = 0; p < 21; p++) { const k = Euro.a(this.corte + this.beta * s[p], dt); for (let i = p * 3; i < p * 3 + 3; i++) x[i] += k * (v[i] - x[i]); }
+    for (let p = 0; p < 21; p++) { const k = Euro.a(this.corte + this.beta * Math.max(0, s[p] - this.piso), dt); for (let i = p * 3; i < p * 3 + 3; i++) x[i] += k * (v[i] - x[i]); }
     return x;
   }
 }
@@ -355,7 +355,7 @@ class PoseMano {
     if (_va.lengthSq() > W_MAX * W_MAX) _va.setLength(W_MAX);
     this.w.lerp(_va, Euro.a(G.corteD, dt));
     logQ(_qa.copy(qm).multiply(_qb.copy(this.q).invert()), _va);
-    _va.multiplyScalar(Euro.a(G.corte + G.beta * this.w.length(), dt));
+    _va.multiplyScalar(Euro.a(G.corte + G.beta * Math.max(0, this.w.length() - (G.piso || 0)), dt));
     this.q.premultiply(expQ(_va, _qa)).normalize();
     this.qAnt.copy(qm); this.tm = t;
     this.dedos.filtrar(this.Lm, t);
@@ -427,7 +427,7 @@ class PoseMano {
    cuánto de lo que se mueven en la palma se adelanta (adelanto: 1, todo lo que tarda la cámara) */
 /* (de una búsqueda de 900 al azar y 240 alrededor de la mejor con herramientas/manos-lento.mjs, con las
    semillas 1-5, el ruido de siempre y el doble; comprobado con las 6-10 y con dedos que fallan) */
-const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059 }, P_DEDOS = { corte: 0.707, beta: 2.534, corteD: 5.656, adelanto: 0.5, v0: 0.281, v1: 0.559 };
+const P_GIRO = { corte: 2.885, beta: 4.62, corteD: 2.893, w0: 1.006, w1: 3.059, piso: 0 }, P_DEDOS = { corte: 0.707, beta: 2.534, corteD: 5.656, adelanto: 0.5, v0: 0.281, v1: 0.559, piso: 0 };
 /* lo que elige cada uno en el menú del VR ("Manos"): lo más que se adelanta por el atraso de la
    cámara (s), de costado y en profundidad, y las anclas (Mano.estabilizar): la zona (m), cuánto
    tiene que quedarse adentro para anclarse (tq), cuánto tiene que empujar el borde para soltarse (te)
@@ -452,7 +452,7 @@ class Mano {
   constructor(derecha) {
     this.derecha = derecha; this.visible = false; this.t = -1; this.conf = 0; this.rastro = [];
     this.euroIso = new Euro(63, { corte: E_CORTE, beta: E_BETA, corteD: E_CORTED });
-    this.euroEjes = new PoseMano({ corte: C_CORTE, beta: C_BETA, corteD: C_CORTED, betaD: C_BETAD }, { corte: CH_CORTE, beta: CH_BETA, corteD: CH_CORTED, cruce: CH_CRUCE, betaD: CH_BETAD }, P_GIRO, P_DEDOS);
+    this.euroEjes = new PoseMano({ corte: C_CORTE, beta: C_BETA, corteD: C_CORTED, betaD: C_BETAD, piso: C_PISO }, { corte: CH_CORTE, beta: CH_BETA, corteD: CH_CORTED, cruce: CH_CRUCE, betaD: CH_BETAD, piso: CH_PISO }, P_GIRO, P_DEDOS);
     this.euro = this.euroIso; this.rayo = null;   // (el de ejes, con la cámara: rayo es de los ojos a la mano)
     this.p = new Float32Array(63);        // lo que se dibuja (filtrado, adelantado y sin saltos)
     this.pellizca = false; this.fuerza = 0; this.tPellizco = -9; this.soltoEn = -9;
