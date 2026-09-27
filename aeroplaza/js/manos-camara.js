@@ -6,9 +6,11 @@
      la primera vez que se prenden las manos (~20 MB, después queda en caché);
      de dónde, lo dice window.AEROPLAZA_MANOS = { base, modelo } si hace falta
      servirlo desde otro lado (TikTok).
-   - A la red va una imagen chica (320 de ancho: la mano, en primera persona,
-     ocupa un tercio del cuadro) y nunca más de un cuadro a la vez: si está
-     ocupada, el cuadro nuevo se saltea. Así no se acumula atraso.
+   - A la red va una imagen chica (480 de ancho) y nunca más de un cuadro a la
+     vez: si está ocupada, el cuadro nuevo se saltea. Así no se acumula atraso.
+     (Con 320, la mano lejos salía un 70 % menos precisa: 2,5 veces más lejos,
+     4,6 contra 2,7 % de la palma; a 640, igual que 480. Lo que tarda la red
+     casi no cambia: 43,0 contra 43,3 ms, lo que pesa es el modelo.)
    - Las fotos no pasan por el hilo del juego (que está dibujando a 120): un
      worker lector las toma directo de la cámara (MediaStreamTrackProcessor) y
      se las da a la red que esté libre. Donde no hay, como antes
@@ -28,7 +30,7 @@ import * as THREE from 'three';
 
 export const MANOS_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1';
 export const MANOS_MODELO = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-const ANCHO_RED = 320;
+const ANCHO_RED = 480;
 
 /* el worker: se arma como texto (el juego es un solo archivo) */
 /* (clásico y con import() adentro: un worker de módulo armado desde un blob no arranca si el juego

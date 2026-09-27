@@ -2,7 +2,7 @@
 
 Lo único que se lee al arrancar. Cada línea dice qué se sabe y dónde está;
 después se abre **solo** la nota que la tarea pide. Cómo se usa y cómo se
-mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: seguir la mano de un video de verdad).
+mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: sin patadas, la mano lejos y la que sale de la cámara).
 
 ## Reglas que no se discuten
 
@@ -80,6 +80,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 27/09/2026 (AEROPLAZA: seguir la
 | [aeroplaza-22](aeroplaza-22.md) | AEROPLAZA, vigesimoprimera vuelta: la mano doble (el fantasma de MediaPipe, la mano a prueba, `quiereDos`), los manotazos que se pasaban 9 cm (`ADEL_MAX`, `ASIENTA`, la búsqueda que no sirvió), la tanda: dibujar es lo que cuesta, `pruebas/todas.mjs`, `avanzar(…, false)` |
 | [aeroplaza-23](aeroplaza-23.md) | AEROPLAZA, vigesimosegunda vuelta: la palma para abajo que se tomaba para arriba (la etiqueta dudosa de MediaPipe, `ETIQUETA`; la forma que se dobla como la mano que es, `quiralidad`, `QUIRAL`), medido con MediaPipe de verdad |
 | [aeroplaza-24](aeroplaza-24.md) | AEROPLAZA, vigesimotercera vuelta: la mano de un video de verdad (`herramientas/manos-video.mjs`; el tamaño fijo, `Mano.escalar`; los huesos por su rayo; la forma vota qué mano es; sin adelanto de los dedos; las puntas que no se doblan para atrás, `DORSO`); se corre 131 → 63 % de la palma |
+| [aeroplaza-25](aeroplaza-25.md) | AEROPLAZA, vigesimocuarta vuelta: las patadas eran el adelanto (la ganancia de costado y de profundidad por separado, `GAN_SOLA`), la mano que sale de la cámara sigue y frena (`saliendo`, `SALIDA`, `Manos.mover`), la red a 480 para la mano lejos, el adelanto de los dedos de vuelta; patadas 373 → 77 por minuto |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |
 | [sitios](sitios.md) | Frutiger Aero, IBLO, Electro Silver y las páginas de `docs/` |
 | [diario](diario.md) | qué se hizo en las últimas sesiones y qué quedó |

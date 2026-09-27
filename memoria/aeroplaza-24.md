@@ -10,7 +10,7 @@ Sigue de [aeroplaza-23](aeroplaza-23.md). Rama `claude/fijate-iszyer`.
 
 ## Cómo se mide (`herramientas/manos-video.mjs`)
 
-- `sacar <video>`: ffmpeg a 30 fps y 320 de ancho, y MediaPipe de verdad en
+- `sacar <video>`: ffmpeg a 30 fps y 320 de ancho (480 desde [aeroplaza-25](aeroplaza-25.md)), y MediaPipe de verdad en
   Chromium (buscando una y dos manos, como el juego) → `pruebas/salida/manos-video.json`
   (ignorado por git, como todo lo sacado del video).
 - `medir <json> [manos.js] [ms de la cámara]`: pasa las fotos por `js/manos.js`

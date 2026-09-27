@@ -168,6 +168,7 @@ function correr(semilla) {
     manos.actualizar(DT / 1000, tVer, ctx);
     const M = manos.manos.find((m) => (m.alfa ?? (m.visible ? 1 : 0)) > 0.5), tS = tVer / 1000;
     traza.push([tS, M ? centro(M.p) : null, centro(puntos(tS))]);
+    if (process.env.GAN && M?.ganancia && Math.round(tS * 120) % 12 === 0) (globalThis.GANES ||= []).push([+tS.toFixed(1), +M.ganancia.g.toFixed(2)]);
     if (M && tS > 1 && tS < VIEJO && TRAMOS.some((tr) => tr.w && tS > tr.t && tS < tr.t + tr.d + 0.3)) {
       const eje = (P) => { const x = P[15] - P[51], z = P[17] - P[53]; return Math.atan2(-z, x); }, dif = Math.abs(((eje(M.p) - eje(puntos(tS)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
       giro.push(dif * 180 / Math.PI);
@@ -260,3 +261,4 @@ if (process.env.CORTO) {
   console.log(JSON.stringify({ ver: res.ver, verV: res.verV, verVp95: res.verVp95, estiraV: res.estiraV, doblaV: res.doblaV, doblaVp95: res.doblaVp95, dobla: res.dobla, doblaP95: res.doblaP95, dedo: res.dedo, fino: F1.hecho, finoMitad: F1.mitad, paso: F2.hecho, pasoMitad: F2.mitad, giro: res.giro, giroP95: res.giroP95, estira: res.estira, forma: res.forma, estiraGira: res.estiraGira, lat: res.lat, quieta: res.quieta, q2: res.quieta2, tiembla: res.tiembla, p99: res.tironP99, atrasoLado: +med(lados, 'atraso').toFixed(0), atraso5: res['costado 5 cm/s'].atraso, atraso10: res['costado 10 cm/s'].atraso, arranqueLado: +med(lados, 'arranque').toFixed(0), pasaLado: +med(lados, 'pasa').toFixed(1), atrasoHondo: +med(hon, 'atraso').toFixed(0), arranqueHondo: +med(hon, 'arranque').toFixed(0),
     golpeMitad: +med(golpes, 'mitad').toFixed(0), golpePasa: +med(golpes, 'pasa').toFixed(1), golpeQueda: +med(golpes, 'queda').toFixed(0), golpeTiembla: +med(golpes, 'tiembla').toFixed(2) }));
 } else console.log(JSON.stringify(res, null, 1));
+if (process.env.GAN) console.error('ganancia (t, g):', JSON.stringify(globalThis.GANES));

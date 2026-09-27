@@ -12,7 +12,8 @@
 //     node pruebas/manos-celu.mjs
 const lienzo = () => { const ctx = new Proxy({}, { get: (o, k) => (k in o ? o[k] : k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}), set: (o, k, v) => ((o[k] = v), true) }); return { width: 0, height: 0, getContext: () => ctx }; };
 globalThis.document = { createElement: lienzo, documentElement: {} };
-const { Manos } = await import('../js/manos.js');
+/* (MANOS=otro/manos.js: para comparar con otra versión) */
+const { Manos } = await import(process.env.MANOS ? new URL(process.env.MANOS, 'file://' + process.cwd() + '/').href : '../js/manos.js');
 const THREE = await import('three');
 globalThis.window ??= {};
 const { ManosCamara } = await import('../js/manos-camara.js');
@@ -300,6 +301,51 @@ for (const dos of [false, true]) {
   prueba('con la palma para abajo la mano no se da vuelta aunque MediaPipe diga que es la otra (y con la palma a la cara, sí es la palma)',
     [a, b, c].every((x) => x.menu === 0 && x.alReves < 5 && x.izq === 0) && d.menu > 90 && d.alReves < 5,
     `la etiqueta al revés: ${f(a)} · la mitad así: ${f(b)} · segura: ${f(c)} · la palma a la cara: ${f(d)}`);
+}
+/* LA MANO QUE SALE DE LA CÁMARA (vuelta 25): se va de costado a 40 cm/s por el borde de la imagen, se
+   queda afuera y vuelve. MediaPipe la ve mientras la palma está en la imagen. Antes, a los tirones, la
+   dibujada se clavaba en la última foto y se apagaba ahí; ahora sigue yendo y frena mientras se apaga */
+{
+  const TAN = 0.65, CAM = [0, 0, -0.06], Z = -0.35;
+  const W0 = ABIERTA.map(([x, y, z]) => [-x, y, -z]);
+  /* (la palma: de quieta en 0,05 m, a la derecha a 40 cm/s hasta 0,45 (sale por el borde a ~0,19), un rato
+     afuera y de vuelta) */
+  const xEn = (t) => t < 1 ? 0.05 : t < 2 ? 0.05 + 0.4 * (t - 1) : t < 2.6 ? 0.45 : t < 3.6 ? 0.45 - 0.4 * (t - 2.6) : 0.05;
+  const caso = (semilla) => {
+    let s = semilla * 2654435761 >>> 0;
+    const azar = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const gauss = () => Math.sqrt(-2 * Math.log(azar() + 1e-12)) * Math.cos(2 * Math.PI * azar());
+    const manos = new Manos(); manos.activa = true; manos.fuente = 'camara';
+    const q0 = new THREE.Quaternion(), p0 = new THREE.Vector3(), ctx = { cabezaP: p0, cabezaQ: q0, interactivos: [], altura: () => -10, sePuede: () => true };
+    const foto = (t) => {
+      const m = [xEn(t), -0.12, Z], dz = gauss() * 0.006, P = W0.map(([x, y, z]) => [m[0] + x - CAM[0] + gauss() * 0.0015, m[1] + y - CAM[1] + gauss() * 0.0015, m[2] + z - CAM[2] + dz]);
+      const img = new Float32Array(63); P.forEach(([x, y, z], i) => { img[i * 3] = 0.5 + x / -z / (2 * TAN); img[i * 3 + 1] = 0.5 - y / -z / (2 * TAN); });
+      const c = [0, 5, 9, 13, 17].reduce((a, i) => a + img[i * 3] / 5, 0);
+      return c > 0.97 || azar() < 0.05 ? null : { derecha: true, confianza: 0.9, puntos: Float32Array.from(P.flat()), img };
+    };
+    const cx = (M) => [0, 5, 9, 13, 17].reduce((a, i) => a + M.p[i * 3] / 5, 0);
+    const llegan = [], traza = [];
+    let k = 0, ult = -1, vuelve = -1;
+    for (let T = 0; T < 4200; T += 1000 / 120) {
+      while (k * 33.3 + 126 <= T) { const d = foto(k * 33.3 / 1000); llegan.push({ d, tc: k * 33.3, T }); k++; }
+      for (const r of llegan.splice(0)) { manos.recibirCamara(r.d ? [r.d] : [], r.tc, r.T, 1); if (r.d && r.tc < 2600) ult = r.T; if (r.d && r.tc >= 2600 && vuelve < 0) vuelve = r.T; }
+      const tv = T + 25; manos.registrarCabeza(tv, q0, p0, 0); manos.actualizar(1 / 120, tv, ctx);
+      const M = manos.manos.find((x) => x.alfa > 0.02); traza.push([T, M ? cx(M) : null, M ? M.alfa : 0, xEn(tv / 1000)]);
+    }
+    /* (saliendo: desde la última foto hasta que se apaga, ¿cuánto sigue en 0,15 s? ¿vuelve para atrás?) */
+    const tras = traza.filter(([T]) => T >= ult && T < 2600), x0 = tras[0][1];
+    let sigue = 0, atras = 0, apaga = -1;
+    for (const [T, x] of tras) { if (x === null) { if (apaga < 0) apaga = T - ult; continue; } atras = Math.max(atras, x0 - x); if (T - ult <= 150) sigue = x - x0; }
+    if (process.env.SALE && semilla === 1) console.log('sale', tras.filter((_, i) => i % 3 === 0).map(([T, x, a, v]) => `${(T - ult).toFixed(0)}:${x === null ? '-' : x.toFixed(3)}/${v.toFixed(3)}/${a.toFixed(2)}`).join(' '));
+    /* (volviendo: el salto más grande de un cuadro al otro, más de lo que se mueve, y lo que se corre) */
+    let salto = 0, prev = null; const errVuelta = [];
+    for (const [T, x, a, v] of traza) { if (T < vuelve || T >= vuelve + 600 || x === null) { prev = null; continue; } if (prev !== null && a > 0.5) salto = Math.max(salto, Math.abs(x - prev) - 0.4 / 120); prev = x; if (T > vuelve + 200) errVuelta.push(Math.abs(x - v)); }
+    return { sigue: sigue * 1000, atras: atras * 1000, apaga, salto: salto * 1000, err: errVuelta.reduce((a, b) => a + b, 0) / Math.max(1, errVuelta.length) * 1000 };
+  };
+  const r = [1, 2, 3, 4, 5].map(caso), m = (k) => r.reduce((a, x) => a + x[k], 0) / r.length, mx = (k) => Math.max(...r.map((x) => x[k]));
+  prueba('la mano que sale de la cámara sigue yendo mientras se apaga (no se clava ni vuelve para atrás) y al volver no salta',
+    m('sigue') > 40 && mx('atras') < 5 && mx('apaga') < 600 && mx('salto') < 15 && m('err') < 50,
+    `en 0,15 s después de la última foto sigue ${f(m('sigue'))} mm (la de verdad, 60) · para atrás, lo peor ${f(mx('atras'))} mm · se apaga a los ${f(m('apaga'), 0)} ms · al volver, salto ${f(mx('salto'))} mm y se corre ${f(m('err'))} mm`);
 }
 /* la mano que se da vuelta (vuelta 20), con MediaPipe como es: la imagen precisa y la forma 3D aparte, y
    de canto a veces al revés en profundidad (herramientas/manos-lento.mjs con MP=1). Una sola foto así

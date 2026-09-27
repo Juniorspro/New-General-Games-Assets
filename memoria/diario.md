@@ -4,6 +4,14 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de madrugada, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: que baje todo más, sin demoras, y que no patee ni se laguee lejos
+    o fuera de la cámara.
+  - Quedó ([aeroplaza-25](aeroplaza-25.md)): en su video, patadas 373 → 77 por
+    minuto y tiembla la mitad; al salir de la cámara sigue y frena (antes se
+    clavaba); la red a 480 (lejos, 70 % más precisa); de costado va la mitad
+    de atrás en lo parejo y el dedo se cierra en 160 ms (285).
+  - Falta: probarlo en el celu; quieta tiembla un poco más (0,17 → 0,19 mm).
 - **27/09/2026, de madrugada · `claude/fijate-iszyer`:**
   - Pidió: con un video de su mano, que la siga "a la perfección", sin
     estirarse ni deformarse.

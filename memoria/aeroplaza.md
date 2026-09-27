@@ -320,7 +320,8 @@ En su propia nota: [aeroplaza-12](aeroplaza-12.md). Y después, el VR a 120, las
 [aeroplaza-21](aeroplaza-21.md). La mano que no se duplica, los manotazos y la
 tanda corta: [aeroplaza-22](aeroplaza-22.md). La palma para abajo que se tomaba
 para arriba: [aeroplaza-23](aeroplaza-23.md). La mano de un video de verdad:
-[aeroplaza-24](aeroplaza-24.md).
+[aeroplaza-24](aeroplaza-24.md). Sin patadas, lejos y saliendo de la cámara:
+[aeroplaza-25](aeroplaza-25.md).
 
 ## Trampas que ya se pagaron
 

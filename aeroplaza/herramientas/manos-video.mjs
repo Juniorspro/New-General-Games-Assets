@@ -15,6 +15,10 @@
 //   las cinco puntas); izq: dibujada como izquierda;
 // - dobles: cuadros con dos manos; sin: cuadros sin mano cuando MediaPipe la ve;
 // - tiembla: lo que se mueve de un cuadro al otro, quieta (mm).
+// - borde / adentro: ver, con la mano cortada por el borde de la imagen (algún punto afuera) y entera;
+// - patadas: por minuto, las veces que en 1/120 s lo dibujado salta en la imagen (más de 8 % de la palma
+//   y del triple de lo que se mueve la verdad); saltaZ: lo que salta la profundidad en 1/120 s (el 1 %
+//   peor, mm); sacudeZ: su segunda diferencia (mm).
 // MP=1 (de entrada) usa lo que salió buscando una mano; DOS=1, buscando dos (ahí aparecen los fantasmas).
 // El video y lo que sale NO se guardan en el repo (es la mano de quien pide): pruebas/salida está ignorada.
 import fs from 'node:fs';
@@ -28,8 +32,12 @@ if (modo === 'sacar') {
   const { navegador, mediapipe } = await import('../pruebas/comun.mjs');
   const video = arg1, salida = arg2 || path.join(RAIZ, 'pruebas/salida/manos-video.json');
   const tmp = fs.mkdtempSync('/tmp/manos-video-');
-  /* (30 fotos por segundo y 320 de ancho, como las toma el juego: manos-camara.js › ANCHO_RED) */
-  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', video, '-vf', 'fps=30,scale=320:-2', '-q:v', '3', path.join(tmp, '%05d.jpg')]);
+  /* (30 fotos por segundo y 480 de ancho, como las toma el juego: manos-camara.js › ANCHO_RED. ANCHO=: otro
+     ancho; LEJOS=k: el video achicado k veces en el medio de un cuadro negro, como si la mano estuviera k
+     veces más lejos) */
+  const ANCHO = +(process.env.ANCHO || 480), K = +(process.env.LEJOS || 1);
+  const vf = K > 1 ? `fps=30,scale=trunc(iw/${K}/2)*2:-2,pad=trunc(iw*${K}/2)*2:trunc(ih*${K}/2)*2:(ow-iw)/2:(oh-ih)/2:black,scale=${ANCHO}:-2` : `fps=30,scale=${ANCHO}:-2`;
+  execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', video, '-vf', vf, '-q:v', '3', path.join(tmp, '%05d.jpg')]);
   const cuadros = fs.readdirSync(tmp).filter((f) => f.endsWith('.jpg')).sort();
   const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1', MODELO = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
   const d = mediapipe(), nav = await navegador(), ctx = await nav.newContext(), pag = await ctx.newPage();
@@ -47,20 +55,21 @@ if (modo === 'sacar') {
     const op = (n) => ({ baseOptions: { modelAssetPath: MODELO, delegate: 'CPU' }, runningMode: 'VIDEO', numHands: n, minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.4, minTrackingConfidence: 0.4 });
     window.__lm = [await HandLandmarker.createFromOptions(fs, op(1)), await HandLandmarker.createFromOptions(fs, op(2))];
   }, [MP, MODELO]);
-  const out = { video: path.basename(video), fps: 30, cuadros: [] }, t0 = Date.now();
+  const out = { video: path.basename(video), fps: 30, ancho: ANCHO, lejos: K, cuadros: [] }, t0 = Date.now();
   for (const [k, f] of cuadros.entries()) {
     const url = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(tmp, f)).toString('base64');
     out.cuadros.push(await pag.evaluate(async ([url, ts]) => {
       const im = new Image(); im.src = url; await im.decode(); const bm = await createImageBitmap(im);
-      const r = window.__lm.map((lm) => lm.detectForVideo(bm, ts)); bm.close();
+      const t0 = performance.now(), r0 = window.__lm[0].detectForVideo(bm, ts), ms = performance.now() - t0, r = [r0, window.__lm[1].detectForVideo(bm, ts)]; bm.close();
       const manos = (x) => x.landmarks.map((L, h) => ({ img: L.flatMap((p) => [p.x, p.y, p.z]), mundo: x.worldLandmarks[h].flatMap((p) => [p.x, p.y, p.z]), derecha: x.handedness[h]?.[0]?.categoryName === 'Right', conf: x.handedness[h]?.[0]?.score ?? 0 }));
-      return { t: ts, a: im.width / im.height, una: manos(r[0]), dos: manos(r[1]) };
+      return { t: ts, a: im.width / im.height, ms, una: manos(r[0]), dos: manos(r[1]) };
     }, [url, Math.round(k * 1000 / 30) + 1]));
     if (k % 60 === 0) console.log(`${k}/${cuadros.length} · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   }
   fs.mkdirSync(path.dirname(salida), { recursive: true }); fs.writeFileSync(salida, JSON.stringify(out));
   const vio = (m) => out.cuadros.filter((c) => c[m].length).length, dos = out.cuadros.filter((c) => c.dos.length > 1).length;
-  console.log(`${out.cuadros.length} fotos · con mano: ${vio('una')} (buscando una), ${vio('dos')} (buscando dos) · con dos manos: ${dos} → ${salida}`);
+  const ms = out.cuadros.map((c) => c.ms).sort((a, b) => a - b);
+  console.log(`${out.cuadros.length} fotos · con mano: ${vio('una')} (buscando una), ${vio('dos')} (buscando dos) · con dos manos: ${dos} · la red, ${ms[ms.length >> 1].toFixed(1)} ms por foto (mediana) → ${salida}`);
   await nav.close(); fs.rmSync(tmp, { recursive: true });
   process.exit(0);
 }
@@ -112,6 +121,10 @@ for (let T = 0; T < K * DT + 300; T += 1000 / 120) {
   }
   const tVer = T + 25;
   manos.registrarCabeza(tVer, q0, p0, 0); manos.actualizar(1 / 120, tVer, ctx);
+  /* (CURVA=t0,t1 en s: cada 1/120 s, dónde está lo dibujado en la imagen (0-1) y cuánto se ve) */
+  if (process.env.CURVA) { const [a, b] = process.env.CURVA.split(',').map(Number); if (tVer >= a * 1000 && tVer <= b * 1000) { const V0 = verdadEn(tVer), a0 = D.cuadros[0].a, [tx0, ty0] = tans(a0);
+    const im = (P) => { const c = [0, 5, 9, 13, 17].reduce((q, i) => [q[0] + P[i * 3] / 5, q[1] + P[i * 3 + 1] / 5, q[2] + P[i * 3 + 2] / 5], [0, 0, 0]), z = -(c[2] + 0.06); return [(c[0] / z / tx0 / 2 + 0.5).toFixed(3), (-c[1] / z / ty0 / 2 + 0.5).toFixed(3), z.toFixed(3)]; };
+    console.log((tVer / 1000).toFixed(3), manos.manos.map((m) => m.alfa > 0.001 ? `${m.derecha ? 'D' : 'I'} alfa ${m.alfa.toFixed(2)} ${m.visible ? 've' : '--'} ${im(m.p).join(' ')}` : '').join(' | '), '· verdad', V0 ? [0, 5, 9, 13, 17].reduce((q, i) => [q[0] + V0.I[i * 3] / 5, q[1] + V0.I[i * 3 + 1] / 5], [0, 0]).map((x) => x.toFixed(3)).join(' ') : '-'); } }
   const V = verdadEn(tVer); if (!V) { antes = null; continue; }
   R.cuadros++;
   const dib = manos.manos.filter((M) => M.alfa > 0.02); if (dib.length > 1) R.dobles++;
@@ -119,7 +132,7 @@ for (let T = 0; T < K * DT + 300; T += 1000 / 120) {
   /* (ETAPA=filtro: la mano que sale del filtro, antes del adelanto, el resorte y las anclas) */
   if (M && process.env.ETAPA === 'filtro') M = { p: M.euro.x, derecha: M.derecha };
   if (!M) { R.sin++; antes = null; continue; }
-  R.vistos++;
+  R.vistos++; if (M.ganancia) (R.gan ||= []).push(M.ganancia.g);
   const [tx, ty] = tans(V.a), cam = [0, 0, -0.06];
   /* (la mano dibujada, vista desde la cámara, contra la imagen: en mm a la distancia de la mano) */
   /* (en la imagen, en % del largo de la palma en la imagen (de la muñeca al nudillo del medio): no depende
@@ -136,6 +149,15 @@ for (let T = 0; T < K * DT + 300; T += 1000 / 120) {
     s += d; sf += f; mx = Math.max(mx, d);
   }
   R.ver.push(s / 21); R.peor.push(mx); (R.centro ||= []).push(Math.hypot(cA[0] - cB[0], cA[1] - cB[1]) / palma * 100); (R.forma ||= []).push(sf / 21);
+  /* (las patadas: en 1/120 s lo dibujado se mueve en la imagen más de 8 % de la palma y más del triple de
+     lo que se mueve la verdad; y la profundidad, lo que salta en 1/120 s y lo que se sacude (la segunda
+     diferencia), en mm. borde: la verdad con algún punto fuera de la imagen) */
+  { const zc = -[0, 5, 9, 13, 17].reduce((z, i) => z + M.p[i * 3 + 2] / 5, 0) + cam[2];
+    if (R.previo && T - R.previo.T < 10) { const dA = Math.hypot(cA[0] - R.previo.cA[0], cA[1] - R.previo.cA[1]) / palma * 100, dB = Math.hypot(cB[0] - R.previo.cB[0], cB[1] - R.previo.cB[1]) / palma * 100;
+      if (dA > 8 && dA > 3 * dB) { R.patadas = (R.patadas || 0) + 1; if (process.env.PATADAS) { const b = (Math.floor(tVer / 250) / 4).toFixed(2); (R.cuandoP ||= {})[b] = ((R.cuandoP[b] || 0) + 1); } }
+      const dz = (zc - R.previo.z) * 1000; (R.dz ||= []).push(Math.abs(dz)); if (process.env.PATADAS && Math.abs(dz) > 6) { const b = (Math.floor(tVer / 250) / 4).toFixed(2); (R.cuandoZ ||= {})[b] = ((R.cuandoZ[b] || 0) + 1); } if (R.previo.dz !== undefined) (R.ddz ||= []).push(Math.abs(dz - R.previo.dz)); R.previo = { T, cA, cB, z: zc, dz }; }
+    else R.previo = { T, cA, cB, z: zc }; }
+  { let fuera = false; for (let i = 0; i < 21; i++) { const x = V.I[i * 3], y = V.I[i * 3 + 1]; if (x < 0 || x > 1 || y < 0 || y > 1) fuera = true; } (fuera ? (R.enBorde ||= []) : (R.adentro ||= [])).push(s / 21); }
   if (process.env.PUNTOS && Math.abs(tVer - +process.env.PUNTOS) < 4.2) { console.log('t', tVer.toFixed(0), 'palma', palma.toFixed(3)); for (const i of [0, 5, 9, 13, 17, 1, 4, 8, 12, 16, 20]) console.log(String(i).padStart(3), 'dib', A[i].map((v) => v.toFixed(3)).join(','), 'verdad', B[i].map((v) => v.toFixed(3)).join(','), 'dif %', ((Math.hypot(A[i][0] - B[i][0], A[i][1] - B[i][1]) / palma) * 100).toFixed(0), 'z', (-(M.p[i * 3 + 2] + 0.06)).toFixed(3)); }
   if (process.env.SEG) { const sg = Math.floor(tVer / 500); ((R.seg ||= {})[sg] ||= []).push([R.centro.at(-1), R.forma.at(-1)]); }
   if (process.env.TRAZA && R.vistos % 30 === 1) console.log((tVer / 1000).toFixed(2), 'centro', R.centro.at(-1).toFixed(0), '% · forma', R.forma.at(-1).toFixed(0), '% · z dib', (-(M.p[2] - cam[2])).toFixed(3), 'z foto', V.z.toFixed(3));
@@ -153,10 +175,12 @@ const media = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
 const estira = R.largos.map((L) => { const m = pct(L, 0.5); return L.map((l) => Math.abs(l / m - 1) * 100); }).flat();
 const r = (x, d = 1) => +x.toFixed(d);
 const out = { ver: r(media(R.ver)), verP95: r(pct(R.ver, 0.95)), centro: r(media(R.centro)), forma: r(media(R.forma)), formaP95: r(pct(R.forma, 0.95)), peorP95: r(pct(R.peor, 0.95)), verQuieta: r(media(R.quieta)), estiraP95: r(pct(estira, 0.95)), estiraMax: r(pct(estira, 0.999)),
+  gan: r(media(R.gan || [1]), 2), borde: r(media(R.enBorde || [])), adentro: r(media(R.adentro || [])), patadas: r((R.patadas || 0) / (R.cuadros / 120 / 60)), saltaZ: r(pct(R.dz || [0], 0.99)), sacudeZ: r(Math.sqrt(media((R.ddz || [0]).map((x) => x * x))), 2),
   alReves: r(100 * R.alReves / Math.max(1, R.vistos)), izq: r(100 * R.izq / Math.max(1, R.vistos)), atras: r(100 * R.atras / Math.max(1, R.vistos)), dobles: r(100 * R.dobles / R.cuadros), sin: r(100 * R.sin / R.cuadros), tiembla: r(Math.sqrt(media(R.tiembla.map((x) => x * x))), 2) };
 /* (ESTIRA=1: en qué momentos y qué huesos se estiran más del 20 %) */
 if (process.env.ESTIRA) { const m = R.largos.map((L) => pct(L, 0.5)), v = [];
   R.cuando.forEach((t, i) => R.largos.forEach((L, h) => { const e = Math.abs(L[i] / m[h] - 1) * 100; if (e > 20) v.push(`${(t / 1000).toFixed(2)}s ${HUESOS[h].join('-')} ${e.toFixed(0)}%`); }));
   const T = {}; for (const x of v) { const k = x.split("s ")[0]; T[(+k).toFixed(1)] = (T[(+k).toFixed(1)] || 0) + 1; } console.log(v.length, "estirados, por décima de s:", JSON.stringify(T)); }
+if (process.env.PATADAS) console.log('patadas por cuarto de s:', JSON.stringify(R.cuandoP || {}), '· saltos de profundidad de más de 6 mm:', JSON.stringify(R.cuandoZ || {}));
 if (process.env.SEG) console.log(Object.entries(R.seg).map(([k, v]) => `${(k / 2).toFixed(1)}s ${media(v.map((x) => x[0])).toFixed(0)}/${media(v.map((x) => x[1])).toFixed(0)}`).join(' · '));
 console.log(JSON.stringify(out));

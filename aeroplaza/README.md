@@ -216,7 +216,10 @@ node aeroplaza/trailer/grabar.mjs video      # → trailer/salida/aeroplaza-tikt
   por MediaPipe (a `pruebas/salida/`, que no se sube), y `… medir
   pruebas/salida/manos-video.json [manos.js] [ms de la cámara]` mide cuánto se
   corre, se deforma, se estira y se da vuelta la mano dibujada contra la
-  imagen (en % de la palma; `CRUDO=1`, la foto sin filtro).
+  imagen (en % de la palma; `CRUDO=1`, la foto sin filtro), las patadas y lo
+  que salta la profundidad (`PATADAS=1` dice cuándo; `CURVA=t0,t1`, cuadro por
+  cuadro). `sacar` con `ANCHO=` (480, como el juego) y `LEJOS=k` (el video
+  achicado k veces, como si la mano estuviera más lejos).
 - `pruebas/`:
   - `todas.mjs [--manos] [--a-la-vez=3] [nombre…]`: la tanda entera, tres a la
     vez; la que falla acompañada se vuelve a correr sola y dice si fue la carga
