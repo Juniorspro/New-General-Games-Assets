@@ -326,6 +326,7 @@ la luz: [aeroplaza-26](aeroplaza-26.md). La APK con ARCore y las manos de Androi
 [aeroplaza-27](aeroplaza-27.md). El retraso que ponía el resorte y la APK buscando dos
 manos: [aeroplaza-28](aeroplaza-28.md). Tu espacio con ARCore (escaneo, manos en la mesa,
 pantalla y ventanas): [aeroplaza-29](aeroplaza-29.md). Las lentes del visor: [aeroplaza-30](aeroplaza-30.md).
+La altura quieta con ARCore y las manos de Android sin ARCore: [aeroplaza-31](aeroplaza-31.md).
 
 ## Trampas que ya se pagaron
 

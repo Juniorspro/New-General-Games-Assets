@@ -4,11 +4,16 @@
 // - la cabeza de ARCore mueve la vista: 30 cm de costado corren la cámara 30 cm (en la dirección de
 //   la derecha de la vista), girar 30° gira la vista 30°, y girar en el lugar no la corre (los ojos
 //   van detrás del celu);
+// - LA ALTURA QUIETA (vuelta 32): ARCore corriéndose 6 cm para arriba con el celu quieto (sin aceleración) no
+//   sube la vista más de 1 cm; agachándose (con aceleración), la vista sigue a ARCore;
 // - si ARCore deja de mandar, sigue el giroscopio sin saltar de rumbo;
 // - con las manos, son las de Android (no se abre la cámara de la web): una mano a 35 cm de la cámara
 //   aparece donde tiene que estar en el mundo; con Java buscando una sola (n: 1), sigue; y con una
 //   mano a prueba, se le pide a Java que busque dos (manosDos);
-// - el flash va a ARCore.
+// - el flash va a ARCore;
+// - SIN ARCORE (vuelta 32): las manos también son las de Android, con la cámara que abre la APK
+//   (manosCamara, CamaraManos.java): no se prende ARCore ni la cámara de la web, la mano aparece donde está,
+//   el flash va a esa cámara y al salir se apaga.
 //     node pruebas/nativo.mjs
 import { navegador, abrir, avanzar } from './comun.mjs';
 const nav = await navegador();
@@ -22,7 +27,8 @@ await pag.addInitScript(() => {
   window.AeroplazaNativo = {
     version: () => '1', arEstado: () => 'si',
     arIniciar: (m) => { window.__llamadas.push(['arIniciar', m]); setTimeout(() => window.__nativo?.estado('corre'), 30); },
-    arParar: anota('arParar'), arManos: anota('arManos'), manosDos: anota('manosDos'), flash: anota('flash'), vibrar: anota('vibrar')
+    arParar: anota('arParar'), arManos: anota('arManos'), manosDos: anota('manosDos'), flash: anota('flash'), vibrar: anota('vibrar'),
+    manosCamara: (si) => { window.__llamadas.push(['manosCamara', si]); setTimeout(() => window.__nativo?.estado(si ? 'manos-camara corre 60' : 'manos-camara parada'), 30); }
   };
 });
 await pag.reload();
@@ -64,6 +70,26 @@ const r2b = await mover({ seg: 0.3, x0: 0.3, x1: 0.3, g0: 30, g1: 30 });
 const dy = ((r2b.yaw - r1b.yaw + 540) % 360) - 180;
 prueba('girar 30° gira la vista 30° y no corre la cabeza (los ojos van detrás del celu)', Math.abs(Math.abs(dy) - 30) < 2 && corrio(r1b, r2) < 0.01 && corrio(r1b, r2b) < 0.005, `giró ${dy.toFixed(1)}° · se corrió ${(corrio(r1b, r2) * 100).toFixed(1)} cm girando, ${(corrio(r1b, r2b) * 100).toFixed(1)} al final`);
 
+/* la altura: ARCore se corre 6 cm para arriba en 2 s con el celu quieto (sin aceleración); después uno se
+   agacha 30 cm en 0,6 s (con aceleración) */
+const ra = await pag.evaluate(async () => {
+  const A = window.__A, q = new A.THREE.Quaternion();
+  const paso = async (y, mueve) => {
+    if (mueve) window.dispatchEvent(new DeviceMotionEvent('devicemotion', { acceleration: { x: 0, y: -2, z: 0 }, interval: 16 }));
+    window.__nativo.pose(20, 0.3, y, -0.06, q.x, q.y, q.z, q.w, 1, '60');
+    A.paso(1 / 60, false); await new Promise((r) => setTimeout(r, 16));
+    return A.vr.desplazo.y;
+  };
+  let y0 = 0; for (let i = 0; i < 50; i++) y0 = await paso(1.5, false);
+  let peor = 0; for (let i = 1; i <= 120; i++) peor = Math.max(peor, Math.abs(await paso(1.5 + 0.06 * i / 120, false) - y0));
+  for (let i = 1; i <= 36; i++) await paso(1.56 - 0.3 * i / 36, true);
+  let yf = 0; for (let i = 0; i < 45; i++) yf = await paso(1.26, i < 35);
+  /* (lo que da ARCore al final, contra la vista) */
+  return { peor, yf, y0, ar: 1.26 - 1.5 + y0 };
+});
+prueba('quieto, ARCore corriéndose 6 cm para arriba no sube la vista (menos de 1 cm)', ra.peor < 0.01, `${(ra.peor * 100).toFixed(2)} cm`);
+prueba('agachándose (el acelerómetro lo nota), la vista sigue a ARCore', Math.abs(ra.yf - ra.ar) < 0.02, `la vista en ${(ra.yf * 100).toFixed(1)} cm · ARCore en ${(ra.ar * 100).toFixed(1)} cm`);
+
 /* ARCore deja de mandar: el giroscopio (de mentira, el celu acostado mirando derecho) sigue sin saltar */
 const r3 = await pag.evaluate(async () => {
   const A = window.__A, v = new A.THREE.Vector3(), yaw = () => { v.set(0, 0, -1).applyQuaternion(A.motor.camara.quaternion); return Math.atan2(-v.x, -v.z) * 180 / Math.PI; };
@@ -80,8 +106,7 @@ prueba('si ARCore se calla, sigue el giroscopio sin saltar de rumbo', !r3.conAR 
 /* las manos: las de Android. Una mano abierta a 35 cm, frente a la cámara, algo abajo y a la derecha */
 await pag.evaluate(() => window.__A.prenderManos());
 await pag.waitForTimeout(100);
-const rm = await pag.evaluate(async () => {
-  const A = window.__A, q = new A.THREE.Quaternion();
+await pag.evaluate(() => {
   const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0.06, 0.063, -0.02], [-0.07, 0.082, -0.025], [-0.022, 0.085, 0], [-0.025, 0.12, 0], [-0.026, 0.143, 0], [-0.027, 0.162, 0], [0, 0.088, 0], [0, 0.128, 0], [0, 0.153, 0], [0, 0.173, 0], [0.02, 0.083, 0], [0.022, 0.118, 0], [0.023, 0.14, 0], [0.024, 0.158, 0], [0.037, 0.073, 0], [0.042, 0.1, 0], [0.045, 0.117, 0], [0.047, 0.132, 0]];
   const TX = 0.6, TY = 0.35, M = [0.05, -0.1, -0.35];   // (el campo de la cámara, y la muñeca en la cámara)
   const cen = [0, 5, 9, 13, 17].reduce((a, i) => a.map((v, k) => v + ABIERTA[i][k] / 5), [0, 0, 0]);
@@ -90,6 +115,10 @@ const rm = await pag.evaluate(async () => {
     for (const p of ABIERTA) { const x = M[0] - p[0], y = M[1] + p[1], z = M[2] - p[2]; I.push(0.5 + x / -z / (2 * TX), 0.5 - y / -z / (2 * TY), 0); W.push(-(p[0] - cen[0]), -(p[1] - cen[1]), p[2] - cen[2]); }
     return { e: 25, tx: TX, ty: TY, ms: 12, w: 640, h: 480, g: 1, luz: 0.4, d: 'GPU', m: [{ d: 1, c: 0.95, i: I, w: W }] };
   };
+  window.__mano = mano; window.__M = M;
+});
+const rm = await pag.evaluate(async () => {
+  const A = window.__A, q = new A.THREE.Quaternion(), mano = window.__mano, M = window.__M;
   for (let i = 0; i < 40; i++) {
     window.__nativo.pose(20, 0.3, 1.5, -0.06, q.x, q.y, q.z, q.w, 1, '60');
     if (i % 2 === 0) window.__nativo.manos(mano());
@@ -124,6 +153,25 @@ await pag.evaluate(() => window.__A.vr.alFlash(true));
 prueba('el flash va a ARCore', await pag.evaluate(() => window.__llamadas.some((x) => x[0] === 'flash' && x[1] === true)));
 await pag.evaluate(() => window.__A.J.salirVR());
 prueba('al salir del VR se apaga ARCore', await pag.evaluate(() => window.__llamadas.some((x) => x[0] === 'arParar') && !window.__A.vr.activo));
+
+/* sin ARCore: las manos de Android con la cámara de la APK */
+await pag.evaluate(async () => { window.__llamadas.length = 0; await window.__A.J.entrarVR(true, true, { conAR: false }); });
+await pag.waitForTimeout(200);
+const rs = await pag.evaluate(async () => {
+  const A = window.__A, mano = window.__mano, M = window.__M;
+  for (let i = 0; i < 60; i++) { if (i % 2 === 0) window.__nativo.manos(mano()); A.paso(1 / 60, false); await new Promise((r) => setTimeout(r, 16)); }
+  const c = A.motor.camara, H = A.manos.manos.find((x) => x.visible);
+  const esperado = new A.THREE.Vector3(M[0], M[1], M[2] - 0.06).applyQuaternion(c.quaternion).add(c.position);
+  const dib = H ? new A.THREE.Vector3(H.p[0], H.p[1], H.p[2]) : null;
+  A.vr.alFlash(true);
+  return { nativa: !!A.camManos?.nativa, sinAR: A.camManos?.sinAR, visible: !!H, err: dib ? dib.distanceTo(esperado) : null, llamadas: window.__llamadas.map((x) => x.join(':')), datos: A.camManos?.datos?.(), web: A.ManosCamara && A.camManos instanceof A.ManosCamara };
+});
+prueba('sin ARCore, las manos son las de Android con la cámara de la APK (ni ARCore ni la web)', rs.nativa && rs.sinAR && rs.llamadas.includes('manosCamara:true') && !rs.llamadas.some((x) => x.startsWith('arIniciar')) && !rs.web, `${rs.llamadas.join(',')} · ${rs.datos}`);
+prueba('sin ARCore, la mano aparece donde está (a menos de 3 cm)', rs.visible && rs.err < 0.03, rs.err == null ? 'no se ve' : `${(rs.err * 100).toFixed(1)} cm`);
+prueba('sin ARCore, el flash va a la cámara de la APK', rs.llamadas.includes('flash:true'));
+await pag.evaluate(() => window.__A.J.salirVR());
+await pag.waitForTimeout(100);
+prueba('al salir, la cámara de la APK se apaga', await pag.evaluate(() => window.__llamadas.some((x) => x[0] === 'manosCamara' && x[1] === false) && window.__A.Nativo.camaraManos === 'parada'));
 prueba('sin errores en la página', !errores.some((e) => !/ERR_FAILED/.test(e)), errores.filter((e) => !/ERR_FAILED/.test(e)).slice(0, 3).join(' | '));
 await ctx.close(); await nav.close();
 console.log(`${bien} bien, ${mal} mal`);

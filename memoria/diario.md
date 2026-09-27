@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, a la tarde, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: que en el VR con ARCore la vista no suba ni baje sola, y que las manos sin ARCore anden como con ARCore.
+  - Quedó ([aeroplaza-31](aeroplaza-31.md)): la altura sigue a ARCore solo si el acelerómetro nota que te movés;
+    sin ARCore la APK abre la cámara (Camera2) para las manos de Android. `pruebas/nativo.mjs` 18/18.
+  - Falta: probar en su celu los cuadros por segundo de esa cámara y que la vista quede quieta con el visor.
 - **27/09/2026, de madrugada · `claude/fijate-iszyer`:**
   - Pidió: que la cámara ocupe todo al escanear (para andar por la casa), el 0.5x, y actualizar el HTML.
   - Quedó ([aeroplaza-29](aeroplaza-29.md) § La cámara llena la vista): "Llenar la vista" con visor, la foto

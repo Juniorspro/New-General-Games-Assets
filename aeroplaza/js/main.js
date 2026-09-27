@@ -190,14 +190,22 @@ async function iniciar() {
   let camManos = null, camWeb = null, camNativa = null;
   const alLlegar = (lista, tt, llego, cupo) => { if (manos.activa) manos.recibirCamara(lista, tt, llego, cupo); };
   /* (en la APK con ARCore, las manos son las de Android: la cámara es de ARCore y la web no la puede
-     abrir; si ARCore no anda, las de la web) */
-  /* (sinAR: se eligió el VR sin ARCore, vuelta 29: las manos van con la cámara de la web) */
+     abrir. Sin ARCore (sinAR: se eligió el VR sin ARCore; o el celu no lo tiene), también las de
+     Android, con la cámara que abre la APK (vuelta 32: andan como con ARCore). Si nada de eso anda, las
+     de la web) */
   let sinAR = false;
-  const laCamara = () => (camManos = !sinAR && Nativo.hay && Nativo.puedeAR && !Nativo.estado.startsWith('error') && Nativo.estado !== 'sin-permiso'
-    ? (camNativa ||= new ManosNativas({ alLlegar, quiereDos: () => manos.prueba.length > 0 }))
-    : (camWeb ||= Object.assign(new ManosCamara({ alLlegar }),
+  const laCamara = () => {
+    const conAR = !sinAR && Nativo.hay && Nativo.puedeAR && !Nativo.estado.startsWith('error') && Nativo.estado !== 'sin-permiso';
+    const conCam = !conAR && Nativo.tieneCamaraManos && !Nativo.camaraManos.startsWith('error') && Nativo.camaraManos !== 'sin-permiso';
+    if (conAR || conCam) {
+      camNativa ||= new ManosNativas({ alLlegar, quiereDos: () => manos.prueba.length > 0 });
+      if (!camNativa.activa) camNativa.sinAR = !conAR;
+      return (camManos = camNativa);
+    }
+    return (camManos = camWeb ||= Object.assign(new ManosCamara({ alLlegar }),
       /* (para la carrera de la GPU: si la red en la placa le saca cuadros al dibujo) */
-      { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0 })));
+      { fpsJuego: () => (vr.activo ? vr.fps.valor : 0), quiereDos: () => manos.prueba.length > 0 }));
+  };
   /* el flash del VR sin visor (vr.js pone el botón): la linterna de la cámara de atrás */
   vr.alFlash = (prender) => laCamara().linterna(prender);
   /* (con los cuadros por segundo prendidos, también lo de las manos: fotos por segundo y atraso) */
@@ -213,8 +221,13 @@ async function iniciar() {
       vr.decir(t('mn_manos_listas'), 5);
     }
     catch (e) {
-      /* (si las de Android no arrancan, las de la web) */
-      if (camManos === camNativa && camWeb !== camManos) { console.warn('manos nativas:', e); Nativo.estado = 'error'; Nativo.arParar(); camManos = null; return prenderManos(); }
+      /* (si las de Android no arrancan: con ARCore, las de la cámara de la APK; y si no, las de la web) */
+      if (camManos === camNativa && camWeb !== camManos) {
+        console.warn('manos nativas:', e);
+        if (camNativa.sinAR) { if (!Nativo.camaraManos.startsWith('error') && Nativo.camaraManos !== 'sin-permiso') Nativo.camaraManos = 'error'; }
+        else { Nativo.estado = 'error'; Nativo.arParar(); }
+        camManos = null; return prenderManos();
+      }
       console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos();
     }
   };

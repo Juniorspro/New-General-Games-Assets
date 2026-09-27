@@ -43,6 +43,12 @@ const REFRESCOS = [60, 72, 90, 120, 144];
 /* (con ARCore, en la APK: los ojos van esto detrás de la cámara del celu, como supone manos.js; y lo más
    que se corre la vista de donde está el muñeco, de costado y para abajo/arriba (m)) */
 const OJOS = 0.06, CORRE = { lado: 1.2, abajo: 1.0, arriba: 0.6 };
+/* LA ALTURA QUIETA (vuelta 32): con la cámara que ve poco (tapada en parte por el visor, poca luz, una pared lisa)
+   ARCore se corre despacio en la altura y la vista subía y bajaba sola. La altura sigue a ARCore solo si el
+   celu se movió de verdad hace menos de MOVIO ms (el acelerómetro, sin la gravedad, pasa de ACELERA m/s²:
+   agacharse, pararse, caminar); quieto, queda donde estaba. Lo que se corra más de BANDA m sin que el
+   acelerómetro lo note (un celu sin ese dato) se sigue igual, desde el borde */
+const MOVIO = 700, ACELERA = 0.5, BANDA = 0.1;
 const _qAR = new THREE.Quaternion(), _ojo = new THREE.Vector3(), _qG = new THREE.Quaternion();
 const rumbo = (q) => { _w.set(0, 0, -1).applyQuaternion(q); return Math.atan2(-_w.x, -_w.z); };
 
@@ -62,7 +68,7 @@ export class VR {
     /* las lentes del visor (lentes.js): con SBS, cada ojo pasa por la suya */
     this.lentes = new Lentes();
     /* ARCore (la APK): el rumbo y el lugar de la primera pose, y cuánto se corrió la cabeza desde ahí */
-    this.ar0 = null; this.desplazo = new THREE.Vector3(); this.conAR = false;
+    this.ar0 = null; this.desplazo = new THREE.Vector3(); this.conAR = false; this.yAR = null; this.tMovio = -1e9; this.hayAcel = false;
     /* cada lectura queda como la pose del celu (en sus ejes, qDev = euler·Q1) y cuándo llegó; la
        anterior sirve para sacar la velocidad si no hay giróscopo */
     this._orient = (e) => {
@@ -73,6 +79,11 @@ export class VR {
     };
     /* el giróscopo crudo: alfa gira en z, beta en x y gama en y (ejes del celu), en grados por segundo */
     this._mov = (e) => {
+      /* (si el celu se está moviendo de verdad: la aceleración sin la gravedad; si no la da, lo que la
+         aceleración con la gravedad se aparta de 9,81) */
+      const a = e.acceleration, g = e.accelerationIncludingGravity;
+      const m = a && a.x != null ? Math.hypot(a.x, a.y || 0, a.z || 0) : g && g.x != null ? Math.abs(Math.hypot(g.x, g.y || 0, g.z || 0) - 9.81) : null;
+      if (m != null) { this.hayAcel = true; if (m > ACELERA) this.tMovio = performance.now(); }
       const r = e.rotationRate; if (!r || (r.alpha == null && r.beta == null)) return;
       const k = Math.PI / 180;
       this.omega = { x: (r.beta || 0) * k, y: (r.gamma || 0) * k, z: (r.alpha || 0) * k, t: e.timeStamp || performance.now() };
@@ -169,12 +180,12 @@ export class VR {
        detrás del celu: girando en el lugar no se mueven) */
     if (Nativo.arVivo) {
       poseEn(tVer, _qAR, _ojo, OJOS);
-      if (!this.ar0) this.ar0 = { giro: (this.qListo ? rumbo(this.q) : this.base) - rumbo(_qAR), p: _ojo.clone() };
+      if (!this.ar0) { this.ar0 = { giro: (this.qListo ? rumbo(this.q) : this.base) - rumbo(_qAR), p: _ojo.clone() }; this.yAR = null; }
       _q.setFromAxisAngle(Y, this.ar0.giro);
       this.q.copy(_qAR).premultiply(_q);
       const d = this.desplazo.subVectors(_ojo, this.ar0.p).applyQuaternion(_q), h = Math.hypot(d.x, d.z);
       if (h > CORRE.lado) { d.x *= CORRE.lado / h; d.z *= CORRE.lado / h; }
-      d.y = THREE.MathUtils.clamp(d.y, -CORRE.abajo, CORRE.arriba);
+      d.y = THREE.MathUtils.clamp(this.altura(d.y, tVer), -CORRE.abajo, CORRE.arriba);
       /* (el giroscopio queda con el mismo rumbo: si ARCore se pierde un rato, la vista sigue sin saltar) */
       if (hayG) this.q0 = this.base + rumbo(_qG) - rumbo(this.q);
       this.conAR = true; this.qListo = true;
@@ -191,6 +202,16 @@ export class VR {
     }
     this.qListo = true;
     return this.q;
+  }
+  /* la altura de la cabeza con ARCore, quieta si el celu no se mueve (ver MOVIO). La vista va a la altura de
+     ARCore más un corrimiento: quieto, el corrimiento absorbe lo que ARCore se corre (hasta BANDA); moviéndose,
+     la vista sigue a ARCore uno a uno (sin atraso) y el corrimiento se va en ~0,4 s, escondido en el movimiento */
+  altura(y, tVer) {
+    const dt = this._tAlt ? THREE.MathUtils.clamp((tVer - this._tAlt) / 1000, 0, 0.1) : 1 / 60; this._tAlt = tVer;
+    if (this.yAR == null) { this.yAR = y; this.offY = 0; return y; }
+    if (performance.now() - this.tMovio < MOVIO) this.offY *= Math.exp(-dt / 0.4);
+    else this.offY = THREE.MathUtils.clamp(this.yAR - y, -BANDA, BANDA);
+    return (this.yAR = y + this.offY);
   }
   /* la pose del celu (qDev, en sus ejes) llevada de cuando se leyó a tVer: q·exp(ω·Δ). La velocidad
      sale del giróscopo; si no llega (algunos navegadores), de las dos últimas lecturas */

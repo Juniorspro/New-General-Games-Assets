@@ -31,18 +31,20 @@ import java.util.List;
 
 /* AEROPLAZA en Android: el juego de siempre (aeroplaza.html, en los assets) en una WebView a pantalla
    completa. Lo nativo es lo que la web no puede: ARCore (dónde está el celu, en 6 ejes: Ar.java) y
-   MediaPipe de Android para las manos (ManosNativas.java). Se habla con el juego por
+   MediaPipe de Android para las manos (ManosNativas.java, con las fotos de ARCore o, sin ARCore, de la
+   cámara que abre la APK: CamaraManos.java). Se habla con el juego por
    window.AeroplazaNativo (JS → Java) y window.__nativo (Java → JS, js/nativo.js) */
 public class MainActivity extends Activity {
   /* (los assets por https: la web los ve como un sitio seguro, con cámara, workers y módulos) */
   static final String RAIZ_WEB = "https://appassets.androidplatform.net/", BASE = RAIZ_WEB + "assets/";
-  static final int PERMISOS_WEB = 1, PERMISOS_AR = 2;
+  static final int PERMISOS_WEB = 1, PERMISOS_AR = 2, PERMISOS_CAMARA = 3;
 
   WebView web;
   FrameLayout raiz;
   Ar ar;
+  CamaraManos camara;
   PermissionRequest pendiente;
-  boolean arPendiente, arConManos;
+  boolean arPendiente, arConManos, camaraPendiente;
   long ultimoAtras;
 
   @Override protected void onCreate(Bundle b) {
@@ -119,6 +121,10 @@ public class MainActivity extends Activity {
       if (ok && arPendiente) iniciarAr(arConManos);
       else enviar("__nativo&&__nativo.estado('sin-permiso')");
       arPendiente = false;
+    } else if (pedido == PERMISOS_CAMARA) {
+      if (ok && camaraPendiente) manosCamara(true);
+      else enviar("__nativo&&__nativo.estado('manos-camara sin-permiso')");
+      camaraPendiente = false;
     }
   }
 
@@ -140,9 +146,22 @@ public class MainActivity extends Activity {
     if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
       arPendiente = true; requestPermissions(new String[] { Manifest.permission.CAMERA }, PERMISOS_AR); return;
     }
+    /* (la cámara es de uno solo: si la tenían las manos sin ARCore, se suelta antes) */
+    if (camara != null && camara.prendida) camara.apagar();
     if (ar == null) ar = new Ar(this);
     String e = ar.iniciar(conManos);
     enviar("__nativo&&__nativo.estado('" + e + "')");
+  }
+
+  /* las manos sin ARCore: la APK abre la cámara (CamaraManos) y las fotos van a MediaPipe de Android */
+  void manosCamara(boolean si) {
+    if (!si) { camaraPendiente = false; if (camara != null) camara.apagar(); return; }
+    if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+      camaraPendiente = true; requestPermissions(new String[] { Manifest.permission.CAMERA }, PERMISOS_CAMARA); return;
+    }
+    if (ar != null && ar.corriendo) ar.parar();
+    if (camara == null) camara = new CamaraManos(this);
+    camara.prender();
   }
 
   /* lo que va al juego (desde cualquier hilo) */
@@ -151,9 +170,10 @@ public class MainActivity extends Activity {
   @Override protected void onResume() {
     super.onResume(); web.onResume();
     if (ar != null) { String e = ar.reanudar(); enviar("__nativo&&__nativo.estado('" + e + "')"); }
+    if (camara != null) camara.reanudar();
   }
-  @Override protected void onPause() { if (ar != null) ar.pausar(); web.onPause(); super.onPause(); }
-  @Override protected void onDestroy() { if (ar != null) ar.cerrar(); web.destroy(); super.onDestroy(); }
+  @Override protected void onPause() { if (ar != null) ar.pausar(); if (camara != null) camara.pausar(); web.onPause(); super.onPause(); }
+  @Override protected void onDestroy() { if (ar != null) ar.cerrar(); if (camara != null) camara.cerrar(); web.destroy(); super.onDestroy(); }
 
   /* atrás: al juego (como Escape: pausa o cierra lo que esté abierto); dos veces seguidas, sale */
   @Override public void onBackPressed() {
@@ -176,8 +196,14 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void arEscanear(final boolean si) { Ar a = ar; if (a != null) a.escanear(si); }
     @JavascriptInterface public void arPasante(final boolean si) { Ar a = ar; if (a != null) a.pasante(si); }
     @JavascriptInterface public void arOlvidar() { Ar a = ar; if (a != null) a.espacio.olvidar(); }
-    @JavascriptInterface public void manosDos(final boolean si) { Ar a = ar; if (a != null && a.manos != null) a.manos.quiereDos = si; }
-    @JavascriptInterface public void flash(final boolean si) { runOnUiThread(() -> { if (ar != null) ar.flash(si); }); }
+    @JavascriptInterface public void manosDos(final boolean si) {
+      Ar a = ar; if (a != null && a.manos != null) a.manos.quiereDos = si;
+      CamaraManos c = camara; if (c != null && c.manos != null) c.manos.quiereDos = si;
+    }
+    /* las manos sin ARCore, con la cámara que abre la APK */
+    @JavascriptInterface public void manosCamara(final boolean si) { runOnUiThread(() -> manosCamara(si)); }
+    /* (la linterna, de quien tenga la cámara) */
+    @JavascriptInterface public void flash(final boolean si) { runOnUiThread(() -> { if (camara != null && camara.prendida) camara.flash(si); else if (ar != null) ar.flash(si); }); }
     @JavascriptInterface public void vibrar(int ms) {
       Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);
       if (v != null) v.vibrate(VibrationEffect.createOneShot(Math.max(1, Math.min(ms, 400)), VibrationEffect.DEFAULT_AMPLITUDE));
