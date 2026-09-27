@@ -46,11 +46,38 @@ public class Vista {
         s.append(']');
     }
 
+    static void grilla(StringBuilder s, Mapa.Grilla g) {
+        s.append("{\"n\":").append(g.n).append(",\"i0\":").append(g.i0).append(",\"k0\":").append(g.k0)
+                .append(",\"celda\":").append(Mapa.CELDA).append(",\"pisoRef\":").append(String.format(Locale.ROOT, "%.3f", g.pisoRef))
+                .append(",\"cobertura\":").append(String.format(Locale.ROOT, "%.3f", g.cobertura)).append(",\"c\":\"");
+        // una letra por celda: ? suelo(S/s supuesto) obstáculo(O/o) agua(A/a) cubierta(C) frontera(F)
+        for (int c = 0; c < g.n * g.n; c++) {
+            char ch;
+            switch (g.clase[c]) {
+                case Mapa.SUELO: ch = g.cubierta[c] ? 'C' : g.inferida[c] ? 's' : 'S'; break;
+                case Mapa.OBSTACULO: ch = g.inferida[c] ? 'o' : 'O'; break;
+                case Mapa.AGUA: ch = g.inferida[c] ? 'a' : 'A'; break;
+                default: ch = g.frontera[c] ? 'F' : '?';
+            }
+            s.append(ch);
+        }
+        s.append("\",\"piso\":");
+        arr(s, g.piso, g.n * g.n);
+        s.append('}');
+    }
+
     public static void main(String[] a) throws Exception {
         Tsdf tsdf = new Tsdf(0.07f);
-        java.lang.reflect.Method esc = Class.forName("PruebaEscaneo").getDeclaredMethod("escanear", Tsdf.class, int.class);
+        java.lang.reflect.Method esc = Class.forName("PruebaEscaneo").getDeclaredMethod("escanear", Tsdf.class, int.class, boolean.class);
         esc.setAccessible(true);
-        esc.invoke(null, tsdf, 60);
+        esc.invoke(null, tsdf, 60, true);
+        // el mapa de la IA: primero sólo con lo visto, después completando lo que no se ve
+        final float JX0 = 0, JY0 = 1.5f, JZ0 = 1.2f;
+        Mapa sinRelleno = new Mapa();
+        sinRelleno.rellenar = false;
+        Mapa.Grilla gVisto = sinRelleno.actualizar(tsdf, JX0, JY0, JZ0, 0, -1);
+        Mapa conRelleno = new Mapa();
+        Mapa.Grilla gIA = conRelleno.actualizar(tsdf, JX0, JY0, JZ0, 0, -1);
         tsdf.propagarBordes();
         List<Tsdf.Bloque> bloques = tsdf.tomarSucios();
         Mallador mal = new Mallador();
@@ -60,7 +87,7 @@ public class Vista {
         for (Tsdf.Bloque b : bloques) {
             Mallador.Malla m = mal.mallar(tsdf, b);
             if (m == null) continue;
-            for (int i = 0; i < m.nVert * 6; i++) { if (!primero) v.append(','); primero = false; v.append(String.format(Locale.ROOT, "%.3f", m.vert[i])); }
+            for (int i = 0; i < m.nVert * Mallador.PASO; i++) { if (!primero) v.append(','); primero = false; v.append(String.format(Locale.ROOT, "%.3f", m.vert[i])); }
             for (int i = 0; i < m.nTri; i++) { if (!primeroT) tri.append(','); primeroT = false; tri.append(base + (m.tri[i] & 0xFFFF)); }
             for (int i = 0; i < m.nLin; i++) { if (!primeroL) lin.append(','); primeroL = false; lin.append(base + (m.lin[i] & 0xFFFF)); }
             base += m.nVert;
@@ -82,6 +109,30 @@ public class Vista {
         Juego.Soldado detras = new Juego.Soldado();   // medio tapado por el tronco
         detras.x = -1.75f; detras.z = -2.7f; detras.yaw = 0.3f; detras.fase = 0.4f;
         j.soldados.add(corre); j.soldados.add(apunta); j.soldados.add(cae); j.soldados.add(detras);
+        // la IA: uno agachado en la mejor cubierta, y otro yendo a otra por su ruta
+        j.grilla = gIA;
+        int cub = gIA.mejorCubierta(1.0f, -3.5f, JX, JZ, null);
+        Juego.Soldado agachado = null;
+        if (cub >= 0) {
+            agachado = new Juego.Soldado();
+            agachado.x = gIA.x(cub % gIA.n); agachado.z = gIA.z(cub / gIA.n); agachado.y = gIA.piso[cub];
+            agachado.yaw = (float) Math.atan2(JX - agachado.x, JZ - agachado.z);
+            agachado.estado = Juego.CUBIERTA; agachado.agachado = 1; agachado.apunta = 0.5f;
+            j.soldados.add(agachado);
+        }
+        Juego.Soldado conRuta = new Juego.Soldado();
+        conRuta.x = 2.6f; conRuta.z = -3.3f; conRuta.fase = 2f;
+        boolean[] tomada = new boolean[gIA.n * gIA.n];
+        if (cub >= 0) tomada[cub] = true;
+        int cub2 = gIA.mejorCubierta(conRuta.x, conRuta.z, JX, JZ, tomada);
+        conRuta.ruta = cub2 >= 0 ? gIA.camino(conRuta.x, conRuta.z, gIA.x(cub2 % gIA.n), gIA.z(cub2 / gIA.n)) : gIA.camino(conRuta.x, conRuta.z, -0.8f, -0.3f);
+        if (conRuta.ruta != null) {
+            conRuta.tactica = 1;
+            conRuta.yaw = (float) Math.atan2(conRuta.ruta[0] - conRuta.x, conRuta.ruta[2] - conRuta.z);
+            j.soldados.add(conRuta);
+        }
+        System.out.println("IA: cubierta " + cub + (agachado != null ? String.format(Locale.ROOT, " en (%.2f, %.2f)", agachado.x, agachado.z) : "")
+                + ", ruta " + (conRuta.ruta == null ? "ninguna" : (conRuta.ruta.length / 3) + " puntos"));
         Juego.Entorno e = new Juego.Entorno() {
             public float suelo(float x, float z, float y0, float y1) { return tsdf.suelo(x, z, y0, y1); }
             public float rayo(float ox, float oy, float oz, float dx, float dy, float dz, float m) { return tsdf.rayo(ox, oy, oz, dx, dy, dz, m); }
@@ -140,7 +191,22 @@ public class Vista {
             pp = false;
             s.append(String.format(Locale.ROOT, "[%.3f,%.3f,%.3f,%.3f,%d,%.2f]", p.x, p.y, p.z, p.tam, p.tipo, p.vida / p.vidaMax));
         }
-        s.append("],\"jugador\":");
+        s.append("],\"rutas\":[");
+        boolean pr = true;
+        for (Juego.Soldado so : j.soldados) {
+            if (so.ruta == null) continue;
+            if (!pr) s.append(',');
+            pr = false;
+            float[] r = new float[so.ruta.length + 3];
+            r[0] = so.x; r[1] = so.y; r[2] = so.z;
+            System.arraycopy(so.ruta, 0, r, 3, so.ruta.length);
+            arr(s, r, r.length);
+        }
+        s.append("],\"mapas\":{\"visto\":");
+        grilla(s, gVisto);
+        s.append(",\"ia\":");
+        grilla(s, gIA);
+        s.append("},\"jugador\":");
         arr(s, ojo, 3);
         s.append('}');
         try (FileWriter w = new FileWriter(a[0])) { w.write(s.toString()); }

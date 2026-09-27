@@ -22,6 +22,8 @@ const sh = {
   punto: buscar("Figuras.java", (p) => p.vs.includes("aTam")),
   lentes: buscar("Lentes.java", () => true),
   mira: buscar("Hud.java", (p) => p.fs.includes("uColor")),
+  zonas: buscar("ZonasGl.java", () => true),
+  linea: buscar("Figuras.java", (p) => p.vs.includes("aCol") && !p.vs.includes("aTam")),
 };
 
 const W = 2340, H = 1080;
@@ -92,9 +94,11 @@ async function foto(modo, nombre) {
     const P = Object.fromEntries(Object.entries(sh).map(([k, p]) => [k, prog(p)]));
     const atrMalla = (pr, nor) => {
       gl.bindBuffer(gl.ARRAY_BUFFER, mv);
-      const a = A(pr, "aPos"); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 24, 0); gl.enableVertexAttribArray(a);
-      if (nor) { const n = A(pr, "aNor"); gl.vertexAttribPointer(n, 3, gl.FLOAT, false, 24, 12); gl.enableVertexAttribArray(n); }
+      const a = A(pr, "aPos"); gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 28, 0); gl.enableVertexAttribArray(a);
+      if (nor) { const n = A(pr, "aNor"); gl.vertexAttribPointer(n, 3, gl.FLOAT, false, 28, 12); gl.enableVertexAttribArray(n); }
+      const inf = A(pr, "aInf"); if (inf >= 0) { gl.vertexAttribPointer(inf, 1, gl.FLOAT, false, 28, 24); gl.enableVertexAttribArray(inf); }
     };
+    const soltarMalla = (pr) => { for (const n of ["aNor", "aInf"]) { const x = A(pr, n); if (x >= 0) gl.disableVertexAttribArray(x); } };
     const profundidad = (vp) => {
       gl.useProgram(P.prof); gl.uniformMatrix4fv(U(P.prof, "uVp"), false, vp); atrMalla(P.prof, false);
       gl.colorMask(false, false, false, false); gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 2);
@@ -115,7 +119,39 @@ async function foto(modo, nombre) {
       atrMalla(P.lin, true); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); gl.depthFunc(gl.LEQUAL);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ml); gl.drawElements(gl.LINES, datos.malla.lin.length, gl.UNSIGNED_SHORT, 0);
       gl.depthFunc(gl.LESS); gl.depthMask(true); gl.disable(gl.BLEND);
-      gl.disableVertexAttribArray(A(P.lin, "aNor"));
+      soltarMalla(P.lin);
+    };
+    // ── las zonas de la IA (mismos colores que ZonasGl.java) ──
+    const colorZona = { S: [0.2, 0.95, 0.5, 0.16], s: [0.25, 0.8, 0.95, 0.12], C: [1, 0.85, 0.2, 0.45], A: [0.2, 0.5, 1, 0.4], a: [0.2, 0.5, 1, 0.4], O: [1, 0.25, 0.2, 0.25], o: [1, 0.25, 0.2, 0.15], F: [1, 0.2, 0.9, 0.35] };
+    const zonas = (vp, m) => {
+      const v = [], cel = m.celda, mg = cel * 0.08;
+      for (let c = 0; c < m.n * m.n; c++) {
+        const ch = m.c[c], col = colorZona[ch]; if (!col) continue;
+        const x0 = (m.i0 + (c % m.n)) * cel + mg, z0 = (m.k0 + Math.floor(c / m.n)) * cel + mg, x1 = x0 + cel - 2 * mg, z1 = z0 + cel - 2 * mg;
+        const y = (ch === "F" ? m.pisoRef : m.piso[c]) + 0.03;
+        for (const [x, z] of [[x0, z0], [x1, z0], [x1, z1], [x0, z0], [x1, z1], [x0, z1]]) v.push(x, y, z, ...col);
+      }
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      gl.useProgram(P.zonas); gl.uniformMatrix4fv(U(P.zonas, "uVp"), false, vp);
+      const a = A(P.zonas, "aPos"), co = A(P.zonas, "aCol");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 28, 0); gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(co, 4, gl.FLOAT, false, 28, 12); gl.enableVertexAttribArray(co);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+      gl.drawArrays(gl.TRIANGLES, 0, v.length / 7);
+      gl.depthMask(true); gl.disable(gl.BLEND); gl.disableVertexAttribArray(co);
+    };
+    const rutas = (vp) => {
+      const v = [];
+      for (const r of datos.rutas) for (let j = 0; j + 5 < r.length; j += 3) v.push(r[j], r[j + 1] + 0.06, r[j + 2], 1, 0.85, 0.2, 0.9, r[j + 3], r[j + 4] + 0.06, r[j + 5], 1, 0.85, 0.2, 0.9);
+      if (!v.length) return;
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(v), gl.STATIC_DRAW);
+      gl.useProgram(P.linea); gl.uniformMatrix4fv(U(P.linea, "uVp"), false, vp);
+      const a = A(P.linea, "aPos"), co = A(P.linea, "aCol");
+      gl.vertexAttribPointer(a, 3, gl.FLOAT, false, 28, 0); gl.enableVertexAttribArray(a);
+      gl.vertexAttribPointer(co, 4, gl.FLOAT, false, 28, 12); gl.enableVertexAttribArray(co);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.lineWidth(5);
+      gl.drawArrays(gl.LINES, 0, v.length / 7);
+      gl.depthMask(true); gl.disable(gl.BLEND); gl.disableVertexAttribArray(co);
     };
     // ── cajas (lo que grabó Figuras.java) ──
     const cubo = []; const caras = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
@@ -158,10 +194,11 @@ async function foto(modo, nombre) {
       const a = A(P.mira, "aPos"); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 8, 0); gl.enableVertexAttribArray(a);
       gl.disable(gl.DEPTH_TEST); gl.lineWidth(4); gl.drawArrays(gl.LINES, 0, 12); gl.enable(gl.DEPTH_TEST);
     };
-    const escena = (v, vpFondo, fondoTex, alfaMalla, soldados, eyeH) => {
+    const escena = (v, vpFondo, fondoTex, alfaMalla, soldados, eyeH, ia) => {
       dibujarCamara(vpFondo);
       if (fondoTex) reproyectada(v.vp, datos.vistas.camaraSbs, fondoTex); else profundidad(v.vp);
       if (soldados) cajas(v.cajas.slice(0, v.nSoldados));
+      if (ia) { zonas(v.vp, datos.mapas.ia); rutas(v.vp); }
       if (soldados) particulas(v.vp, (fondoTex ? 2.1445 : 3.2709) * eyeH / 2);
       lineas(v.vp, soldados ? 3.2 : 2.6, alfaMalla);
       if (soldados) { gl.clear(gl.DEPTH_BUFFER_BIT); cajas(v.cajas.slice(v.nSoldados)); }
@@ -215,7 +252,7 @@ async function foto(modo, nombre) {
     } else {
       gl.viewport(0, 0, W, H); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       const v = datos.vistas.pantalla;
-      escena(v, v.vp, null, modo === "escaneo" ? 0.4 : 0.1, modo !== "escaneo", H);
+      escena(v, v.vp, null, modo === "escaneo" ? 0.4 : modo === "ia" ? 0.22 : 0.1, modo !== "escaneo", H, modo === "ia");
       if (modo !== "escaneo") mira(W / H);
     }
     return gl.getError();
@@ -224,7 +261,45 @@ async function foto(modo, nombre) {
   console.log(`✓ vista-${nombre}.png (error GL ${err})`);
 }
 
+// el mapa de la IA visto desde arriba: lo que se vio, y lo que completó
+async function fotoMapa() {
+  await pag.evaluate(({ datos, W, H }) => {
+    let c2 = document.getElementById("c2");
+    if (!c2) { c2 = document.createElement("canvas"); c2.id = "c2"; c2.width = W; c2.height = H; c2.style.cssText = "position:absolute;left:0;top:0"; document.body.appendChild(c2); }
+    const g = c2.getContext("2d");
+    g.fillStyle = "#07030F"; g.fillRect(0, 0, W, H);
+    const colores = { S: "#33e680", s: "#40c8f0", C: "#ffd84a", A: "#3080ff", a: "#3080ff", O: "#ff4030", o: "#b0503f", F: "#ff40e0", "?": "#1a1428" };
+    const panel = (m, ox, titulo) => {
+      const esc = 42, cx = ox + 560, cz = 610;   // 42 px por metro
+      g.font = "bold 44px sans-serif"; g.fillStyle = "#fff"; g.fillText(titulo, ox + 60, 80);
+      for (let c = 0; c < m.n * m.n; c++) {
+        const x = (m.i0 + (c % m.n) + 0.5) * m.celda, z = (m.k0 + Math.floor(c / m.n) + 0.5) * m.celda;
+        const sx = cx + x * esc, sy = cz + (z - 1.2) * esc;   // arriba = adonde mira el jugador (−z)
+        if (sx < ox + 20 || sx > ox + 1120 || sy < 110 || sy > H - 20) continue;
+        g.fillStyle = colores[m.c[c]] || "#000";
+        const l = m.celda * esc - 1.5;
+        g.fillRect(sx - l / 2, sy - l / 2, l, l);
+        if (m.c[c] === "s" || m.c[c] === "o") { g.strokeStyle = "rgba(0,0,0,.35)"; g.beginPath(); g.moveTo(sx - l / 2, sy + l / 2); g.lineTo(sx + l / 2, sy - l / 2); g.stroke(); }
+      }
+      // el jugador
+      g.fillStyle = "#fff"; g.beginPath(); g.moveTo(cx, cz - 16); g.lineTo(cx - 11, cz + 11); g.lineTo(cx + 11, cz + 11); g.fill();
+      g.font = "30px sans-serif"; g.fillStyle = "#c9b0ff"; g.fillText("cobertura " + Math.round(m.cobertura * 100) + " %", ox + 60, H - 40);
+    };
+    panel(datos.mapas.visto, 0, "Lo que se vio");
+    panel(datos.mapas.ia, 1170, "+ lo que completó la IA");
+    // leyenda
+    const ley = [["S", "piso (visto)"], ["s", "piso (supuesto)"], ["C", "cubierta"], ["A", "agua"], ["O", "obstáculo"], ["o", "obstáculo supuesto"], ["F", "falta escanear"]];
+    g.font = "26px sans-serif";
+    ley.forEach(([k, t], i) => { const x = 1180 + (i % 4) * 280, y = H - 110 + Math.floor(i / 4) * 40; g.fillStyle = colores[k]; g.fillRect(x, y - 20, 26, 26); g.fillStyle = "#ddd"; g.fillText(t, x + 36, y + 2); });
+  }, { datos, W, H });
+  await pag.screenshot({ path: `${salida}/vista-mapa.png` });
+  await pag.evaluate(() => document.getElementById("c2").remove());
+  console.log("✓ vista-mapa.png");
+}
+
 await foto("juego", "juego");
+await foto("ia", "ia");
 await foto("escaneo", "escaneo");
 await foto("sbs", "sbs");
+await fotoMapa();
 await nav.close();

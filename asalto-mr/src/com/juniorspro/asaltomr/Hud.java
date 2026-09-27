@@ -16,6 +16,10 @@ import java.nio.FloatBuffer;
  * salga en los dos ojos: puntos, oleada, vida, balas, avisos, la mira y el
  * borde rojo cuando te pegan. El texto se pinta en un Bitmap con Canvas y se
  * sube como textura sólo cuando cambia.
+ *
+ * Y el MINIMAPA: las zonas de la IA vistas desde arriba, girado para que
+ * adelante quede arriba, con los soldados y (escaneando) la cobertura y una
+ * flecha hacia donde falta. Se repinta a lo sumo 4 veces por segundo.
  */
 final class Hud {
     private static final int W = 1024, H = 512;
@@ -30,6 +34,14 @@ final class Hud {
     private int progBorde, bAPos, bUAlfa;
     private final FloatBuffer quad = Gl.bufer(16);
     private final FloatBuffer mira = Gl.bufer(32);
+    private final Paint celda = new Paint(), punto = new Paint(Paint.ANTI_ALIAS_FLAG), flecha = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final android.graphics.Path camino = new android.graphics.Path();
+    // lo que se dibuja en el minimapa
+    private Mapa.Grilla grilla;
+    private java.util.List<Juego.Soldado> soldados;
+    private float mpx, mpz, mfx, mfz = -1;
+    private boolean escaneando;
+    private long ultimoMapa;
 
     Hud() {
         grande.setColor(Color.WHITE);
@@ -40,6 +52,80 @@ final class Hud {
         chico.setTextSize(34);
         caja.setColor(0x9907030F);
         barra.setStyle(Paint.Style.FILL);
+        punto.setStyle(Paint.Style.FILL);
+        flecha.setStyle(Paint.Style.FILL);
+    }
+
+    /** Lo que va en el minimapa (se llama en cada cuadro; se repinta cuando toca). */
+    void mapa(Mapa.Grilla g, float px, float pz, float fx, float fz, java.util.List<Juego.Soldado> ss, boolean escaneando) {
+        grilla = g; soldados = ss; mpx = px; mpz = pz;
+        float l = (float) Math.hypot(fx, fz);
+        if (l > 1e-3f) { mfx = fx / l; mfz = fz / l; }
+        this.escaneando = escaneando;
+    }
+
+    private void dibujarMapa() {
+        Mapa.Grilla g = grilla;
+        if (g == null) return;
+        final float cx = 150, cy = 330, radio = 130, esc = 12f;   // 12 px por metro: se ven 10 m alrededor
+        canvas.save();
+        camino.reset();
+        camino.addCircle(cx, cy, radio, android.graphics.Path.Direction.CW);
+        canvas.clipPath(camino);
+        canvas.drawColor(0xB307030F);
+        // derecha = adelante × arriba
+        float rx = -mfz, rz = mfx;
+        float lado = Mapa.CELDA * esc;
+        for (int c = 0; c < g.n * g.n; c++) {
+            int cl = g.clase[c];
+            int color;
+            if (cl == Mapa.SUELO) color = g.cubierta[c] ? 0xFFFFD84A : g.inferida[c] ? 0x7040C8F0 : 0xB030E080;
+            else if (cl == Mapa.AGUA) color = 0xFF3080FF;
+            else if (cl == Mapa.OBSTACULO) color = g.inferida[c] ? 0x90FF5040 : 0xFFFF4030;
+            else if (escaneando && g.frontera[c]) color = 0xFFFF40E0;
+            else continue;
+            float dx = g.x(c % g.n) - mpx, dz = g.z(c / g.n) - mpz;
+            float sx = cx + (dx * rx + dz * rz) * esc, sy = cy - (dx * mfx + dz * mfz) * esc;
+            if (Math.abs(sx - cx) > radio + lado || Math.abs(sy - cy) > radio + lado) continue;
+            celda.setColor(color);
+            canvas.drawRect(sx - lado / 2, sy - lado / 2, sx + lado / 2, sy + lado / 2, celda);
+        }
+        if (soldados != null) {
+            for (Juego.Soldado s : soldados) {
+                float dx = s.x - mpx, dz = s.z - mpz;
+                float sx = cx + (dx * rx + dz * rz) * esc, sy = cy - (dx * mfx + dz * mfz) * esc;
+                punto.setColor(Juego.enPie(s) ? (s.estado == Juego.CUBIERTA ? 0xFFFFA020 : 0xFFFF2020) : 0x80A0A0A0);
+                canvas.drawCircle(sx, sy, 7, punto);
+            }
+        }
+        // vos: un triángulo blanco mirando para arriba
+        camino.reset();
+        camino.moveTo(cx, cy - 12); camino.lineTo(cx - 8, cy + 8); camino.lineTo(cx + 8, cy + 8); camino.close();
+        punto.setColor(Color.WHITE);
+        canvas.drawPath(camino, punto);
+        canvas.restore();
+        punto.setStyle(Paint.Style.STROKE);
+        punto.setStrokeWidth(3);
+        punto.setColor(0xFFC9B0FF);
+        canvas.drawCircle(cx, cy, radio, punto);
+        punto.setStyle(Paint.Style.FILL);
+        if (escaneando) {
+            // la flecha hacia donde falta, en el borde del círculo
+            float fl = (float) Math.hypot(g.faltaX, g.faltaZ);
+            if (fl > 0.05f && g.cobertura < 0.85f) {
+                float ax = (g.faltaX * rx + g.faltaZ * rz) / fl, ay = -(g.faltaX * mfx + g.faltaZ * mfz) / fl;
+                float bx = cx + ax * (radio - 18), by = cy + ay * (radio - 18);
+                camino.reset();
+                camino.moveTo(bx + ax * 16, by + ay * 16);
+                camino.lineTo(bx - ay * 12, by + ax * 12);
+                camino.lineTo(bx + ay * 12, by - ax * 12);
+                camino.close();
+                flecha.setColor(0xFFFF40E0);
+                canvas.drawPath(camino, flecha);
+            }
+            String t = Math.round(g.cobertura * 100) + " %";
+            canvas.drawText(t, cx - chico.measureText(t) / 2, cy + radio + 36, chico);
+        }
     }
 
     void crear() {
@@ -76,9 +162,13 @@ final class Hud {
     /** Repinta el texto si cambió. arriba = estado; abajo = aviso grande (o null). */
     void poner(String arriba, float vida, int balas, int cargador, boolean recargando, String abajo) {
         String clave = arriba + "|" + (int) vida + "|" + balas + "|" + recargando + "|" + abajo;
-        if (clave.equals(ultimo)) return;
+        long ahora = System.currentTimeMillis();
+        boolean mapaViejo = grilla != null && ahora - ultimoMapa > 250;
+        if (clave.equals(ultimo) && !mapaViejo) return;
+        if (mapaViejo) ultimoMapa = ahora;
         ultimo = clave;
         lienzo.eraseColor(Color.TRANSPARENT);
+        dibujarMapa();
         // arriba: puntos · oleada
         canvas.drawRoundRect(new RectF(8, 8, W - 8, 150), 24, 24, caja);
         String[] l = arriba.split("\n");
@@ -100,12 +190,13 @@ final class Hud {
         if (abajo != null && !abajo.isEmpty()) {
             String[] a = abajo.split("\n");
             float y = 300;
-            canvas.drawRoundRect(new RectF(40, 230, W - 40, 250 + a.length * 70), 28, 28, caja);
+            float x0 = 300, ancho = W - 40 - x0;   // a la derecha del minimapa
+            canvas.drawRoundRect(new RectF(x0, 230, W - 40, 250 + a.length * 70), 28, 28, caja);
             for (String s : a) {
                 float w = grande.measureText(s);
                 Paint p = grande;
-                if (w > W - 100) { p = chico; w = chico.measureText(s); }
-                canvas.drawText(s, (W - w) / 2, y, p);
+                if (w > ancho - 40) { p = chico; w = chico.measureText(s); }
+                canvas.drawText(s, x0 + (ancho - w) / 2, y, p);
                 y += 70;
             }
         }

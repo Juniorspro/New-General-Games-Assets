@@ -18,7 +18,10 @@ public final class Mallador {
     private static final int C = N + 1;       // celdas de −1 a N−1
     private static final int V = N + 2;       // voxeles de −1 a N
 
-    /** Una malla lista para subir: vértices (x,y,z,nx,ny,nz), triángulos y líneas (índices). */
+    /** Floats por vértice: posición, normal y cuánto es inferido (0 = medido, 1 = supuesto). */
+    public static final int PASO = 7;
+
+    /** Una malla lista para subir: vértices (x,y,z,nx,ny,nz,inf), triángulos y líneas (índices). */
     public static final class Malla {
         public int bx, by, bz, version;
         public float[] vert;
@@ -30,8 +33,9 @@ public final class Mallador {
     public int pesoMin = 4;
 
     private final float[] vals = new float[V * V * V];
+    private final byte[] infs = new byte[V * V * V];
     private final int[] indice = new int[C * C * C];
-    private float[] vert = new float[4096 * 6];
+    private float[] vert = new float[4096 * PASO];
     private short[] tri = new short[8192 * 3];
     private short[] lin = new short[8192 * 4];
 
@@ -49,7 +53,7 @@ public final class Mallador {
     public Malla mallar(Tsdf tsdf, Tsdf.Bloque b) {
         final int g0x = b.bx * N - 1, g0y = b.by * N - 1, g0z = b.bz * N - 1;
         final int version = b.version;
-        tsdf.copiar(g0x, g0y, g0z, V, pesoMin, vals);   // lo único que toma el candado
+        tsdf.copiar(g0x, g0y, g0z, V, pesoMin, vals, infs);   // lo único que toma el candado
         final float vs = tsdf.voxel;
         int nv = 0;
         float[] esq = new float[8];
@@ -58,9 +62,12 @@ public final class Mallador {
         for (int z = -1; z < N; z++) for (int y = -1; y < N; y++) for (int x = -1; x < N; x++) {
             int mascara = 0;
             boolean falta = false;
+            int inferidas = 0;
             for (int k = 0; k < 8; k++) {
-                float v = vals[iv(x + (k & 1), y + ((k >> 1) & 1), z + ((k >> 2) & 1))];
+                int q = iv(x + (k & 1), y + ((k >> 1) & 1), z + ((k >> 2) & 1));
+                float v = vals[q];
                 if (v != v) { falta = true; break; }
+                inferidas += infs[q];
                 esq[k] = v;
                 if (v < 0) mascara |= 1 << k;
             }
@@ -78,21 +85,22 @@ public final class Mallador {
                 sz += ((ka >> 2) & 1) + t * (((kb >> 2) & 1) - ((ka >> 2) & 1));
                 cruces++;
             }
-            if (nv * 6 + 6 > vert.length) vert = java.util.Arrays.copyOf(vert, vert.length * 2);
+            if (nv * PASO + PASO > vert.length) vert = java.util.Arrays.copyOf(vert, vert.length * 2);
             if (nv >= 65535) { indice[ci] = -1; continue; }
             // el centro del voxel (i) está en (i + 0.5)·vs
-            vert[nv * 6] = (g0x + 1 + x + 0.5f + sx / cruces) * vs;
-            vert[nv * 6 + 1] = (g0y + 1 + y + 0.5f + sy / cruces) * vs;
-            vert[nv * 6 + 2] = (g0z + 1 + z + 0.5f + sz / cruces) * vs;
+            vert[nv * PASO] = (g0x + 1 + x + 0.5f + sx / cruces) * vs;
+            vert[nv * PASO + 1] = (g0y + 1 + y + 0.5f + sy / cruces) * vs;
+            vert[nv * PASO + 2] = (g0z + 1 + z + 0.5f + sz / cruces) * vs;
             // normal: el gradiente apunta a lo libre (+), o sea hacia afuera
             float nx = (esq[1] + esq[3] + esq[5] + esq[7]) - (esq[0] + esq[2] + esq[4] + esq[6]);
             float ny = (esq[2] + esq[3] + esq[6] + esq[7]) - (esq[0] + esq[1] + esq[4] + esq[5]);
             float nz = (esq[4] + esq[5] + esq[6] + esq[7]) - (esq[0] + esq[1] + esq[2] + esq[3]);
             float l = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
             if (l < 1e-6f) { nx = 0; ny = 1; nz = 0; l = 1; }
-            vert[nv * 6 + 3] = nx / l;
-            vert[nv * 6 + 4] = ny / l;
-            vert[nv * 6 + 5] = nz / l;
+            vert[nv * PASO + 3] = nx / l;
+            vert[nv * PASO + 4] = ny / l;
+            vert[nv * PASO + 5] = nz / l;
+            vert[nv * PASO + 6] = inferidas / 8f;
             indice[ci] = nv++;
         }
         if (nv == 0) return null;
@@ -138,14 +146,14 @@ public final class Mallador {
         Malla m = new Malla();
         m.bx = b.bx; m.by = b.by; m.bz = b.bz; m.version = version;
         m.nVert = nv; m.nTri = nt; m.nLin = nl;
-        m.vert = java.util.Arrays.copyOf(vert, nv * 6);
+        m.vert = java.util.Arrays.copyOf(vert, nv * PASO);
         m.tri = java.util.Arrays.copyOf(tri, nt);
         m.lin = java.util.Arrays.copyOf(lin, nl);
         return m;
     }
 
     private float dist2(int i, int j) {
-        float dx = vert[i * 6] - vert[j * 6], dy = vert[i * 6 + 1] - vert[j * 6 + 1], dz = vert[i * 6 + 2] - vert[j * 6 + 2];
+        float dx = vert[i * PASO] - vert[j * PASO], dy = vert[i * PASO + 1] - vert[j * PASO + 1], dz = vert[i * PASO + 2] - vert[j * PASO + 2];
         return dx * dx + dy * dy + dz * dz;
     }
 }

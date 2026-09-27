@@ -23,7 +23,7 @@ final class Figuras {
     private int progPunto, pAPos, pATam, pACol, pUVp, pUEscala;
     private int progLinea, lAPos, lACol, lUVp;
     private final FloatBuffer puntos = Gl.bufer(600 * 8);
-    private final FloatBuffer lineas = Gl.bufer(64 * 14);
+    private final FloatBuffer lineas = Gl.bufer(512 * 14);
 
     private final float[] m = new float[16], t = new float[16], mvp = new float[16], pila = new float[16 * 8];
     private int nivel;
@@ -158,21 +158,22 @@ final class Figuras {
             girarX(s.caida);
             nivel = 0;
             float paso = (float) Math.sin(s.fase), corre = s.estado == Juego.CORRE ? 1f : s.estado == Juego.APUNTA ? 0.15f : 0f;
-            float brazos = s.apunta;
+            float ag = s.agachado;                 // detrás de una cubierta
+            float brazos = Math.max(s.apunta, 0.5f * ag);
             boolean cae = s.estado == Juego.CAE || s.estado == Juego.TIRADO;
             float vaiven = cae ? 0.3f : 0;   // al caer, brazos y piernas abiertos
             float saltito = corre * Math.abs((float) Math.cos(s.fase)) * 0.05f;
-            mover(0, saltito, 0);
+            mover(0, saltito - 0.5f * ag, 0);   // agachado: la cadera baja 50 cm
 
             // piernas (cadera a 0.9 m)
             for (int lado = -1; lado <= 1; lado += 2) {
                 empujar();
                 mover(0.1f * lado, 0.9f, 0);
-                girarX(corre * 0.75f * paso * lado + (cae ? -0.3f : 0));
+                girarX(corre * 0.75f * paso * lado + (cae ? -0.3f : 0) - 1.3f * ag);   // muslo al frente
                 girarZ(vaiven * 0.4f * lado);
                 caja(0, -0.22f, 0, 0.14f, 0.46f, 0.16f, PR, PG, PB, a);
                 mover(0, -0.44f, 0);
-                girarX(corre * (0.6f + 0.5f * paso * lado) * 0.8f);   // rodilla
+                girarX(corre * (0.6f + 0.5f * paso * lado) * 0.8f + 2.2f * ag);   // rodilla (agachado: bien doblada)
                 caja(0, -0.21f, 0, 0.12f, 0.44f, 0.13f, PR, PG, PB, a);
                 caja(0, -0.44f, 0.05f, 0.12f, 0.07f, 0.26f, 0.05f, 0.05f, 0.04f, a);   // bota
                 sacar();
@@ -309,6 +310,44 @@ final class Figuras {
         GLES20.glDisableVertexAttribArray(pAPos);
         GLES20.glDisableVertexAttribArray(pATam);
         GLES20.glDisableVertexAttribArray(pACol);
+    }
+
+    // ── las rutas de la IA (para ver qué piensan) ──
+
+    void dibujarRutas(List<Juego.Soldado> ss, float[] vp) {
+        lineas.position(0);
+        int n = 0;
+        for (Juego.Soldado s : ss) {
+            if (s.ruta == null || !Juego.enPie(s)) continue;
+            float ax = s.x, ay = s.y + 0.06f, az = s.z;
+            boolean cubierta = s.tactica == 1;
+            for (int j = s.rutaI; j * 3 < s.ruta.length && n < 500; j++) {
+                float bx = s.ruta[j * 3], by = s.ruta[j * 3 + 1] + 0.06f, bz = s.ruta[j * 3 + 2];
+                float r = cubierta ? 1f : 1f, g = cubierta ? 0.85f : 0.4f, b = cubierta ? 0.2f : 0.3f;
+                lineas.put(ax).put(ay).put(az).put(r).put(g).put(b).put(0.9f);
+                lineas.put(bx).put(by).put(bz).put(r).put(g).put(b).put(0.9f);
+                ax = bx; ay = by; az = bz;
+                n++;
+            }
+        }
+        if (n == 0) return;
+        GLES20.glUseProgram(progLinea);
+        GLES20.glUniformMatrix4fv(lUVp, 1, false, vp, 0);
+        lineas.position(0);
+        GLES20.glVertexAttribPointer(lAPos, 3, GLES20.GL_FLOAT, false, 28, lineas);
+        lineas.position(3);
+        GLES20.glVertexAttribPointer(lACol, 4, GLES20.GL_FLOAT, false, 28, lineas);
+        GLES20.glEnableVertexAttribArray(lAPos);
+        GLES20.glEnableVertexAttribArray(lACol);
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        GLES20.glDepthMask(false);
+        GLES20.glLineWidth(4f);
+        GLES20.glDrawArrays(GLES20.GL_LINES, 0, n * 2);
+        GLES20.glDepthMask(true);
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glDisableVertexAttribArray(lAPos);
+        GLES20.glDisableVertexAttribArray(lACol);
     }
 
     // ── trazadoras ──

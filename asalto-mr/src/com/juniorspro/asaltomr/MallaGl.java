@@ -20,6 +20,9 @@ import java.util.Iterator;
  *  - sólida: caras semitransparentes sombreadas.
  *  - reproyectada: pintada con la imagen de la cámara. En SBS eso hace que el
  *    mundo real también tenga profundidad en cada ojo (no una foto plana).
+ *
+ * Lo INFERIDO (lo que completó la IA sin verlo) sale en ámbar, punteado y más
+ * tenue: se ve qué es real y qué es supuesto.
  */
 final class MallaGl {
     private static final class Pedazo {
@@ -28,8 +31,9 @@ final class MallaGl {
 
     private final HashMap<Long, Pedazo> pedazos = new HashMap<>();
     private int progProf, pAPos, pUVp;
-    private int progLin, lAPos, lANor, lUVp, lUCentro, lURadio, lUAlfa, lUAncho;
-    private int progSol, sAPos, sANor, sUVp, sUAlfa;
+    private int progLin, lAPos, lANor, lAInf, lUVp, lUCentro, lURadio, lUAlfa, lUAncho;
+    private int progSol, sAPos, sANor, sAInf, sUVp, sUAlfa;
+    private static final int PASO = Mallador.PASO * 4;   // bytes por vértice
     private int progRep, rAPos, rUVp, rUVpCam, rUT0, rUEjeX, rUEjeY, rUTex;
     int vertices, triangulos;
 
@@ -44,25 +48,29 @@ final class MallaGl {
         // Líneas: el color depende de la normal (piso verde-agua, paredes violeta),
         // y una onda que avanza desde el jugador las enciende al pasar.
         progLin = Gl.programa(
-                "uniform mat4 uVp; uniform vec3 uCentro; attribute vec3 aPos; attribute vec3 aNor;\n"
-                        + "varying vec3 vCol; varying float vDist;\n"
+                "uniform mat4 uVp; uniform vec3 uCentro; attribute vec3 aPos; attribute vec3 aNor; attribute float aInf;\n"
+                        + "varying vec3 vCol; varying float vDist; varying float vInf; varying vec3 vPos;\n"
                         + "void main() {\n"
                         + "  gl_Position = uVp * vec4(aPos, 1.0);\n"
                         + "  float arriba = abs(aNor.y);\n"
                         + "  vCol = mix(vec3(0.62, 0.36, 1.0), vec3(0.2, 1.0, 0.78), smoothstep(0.55, 0.9, arriba));\n"
+                        + "  vCol = mix(vCol, vec3(1.0, 0.62, 0.18), aInf);\n"   // lo supuesto: ámbar
                         + "  vDist = distance(aPos, uCentro);\n"
+                        + "  vInf = aInf; vPos = aPos;\n"
                         + "}",
                 "precision mediump float; uniform float uRadio; uniform float uAlfa; uniform float uAncho;\n"
-                        + "varying vec3 vCol; varying float vDist;\n"
+                        + "varying vec3 vCol; varying float vDist; varying float vInf; varying vec3 vPos;\n"
                         + "void main() {\n"
                         + "  float d = (vDist - uRadio) / uAncho;\n"
                         + "  float onda = exp(-d * d) * step(vDist, uRadio + uAncho * 2.0);\n"
                         + "  float lejos = 1.0 - smoothstep(4.0, 9.0, vDist);\n"
-                        + "  float a = (uAlfa + onda * 0.9) * lejos;\n"
+                        + "  float punteado = mix(1.0, step(0.45, fract((vPos.x + vPos.y + vPos.z) * 7.0)), step(0.5, vInf));\n"
+                        + "  float a = (uAlfa + onda * 0.9) * lejos * punteado * (1.0 - 0.35 * vInf);\n"
                         + "  gl_FragColor = vec4(vCol * (0.7 + onda * 1.3) * a, 1.0);\n"   // aditivo
                         + "}");
         lAPos = Gl.atributo(progLin, "aPos");
         lANor = Gl.atributo(progLin, "aNor");
+        lAInf = Gl.atributo(progLin, "aInf");
         lUVp = Gl.uniforme(progLin, "uVp");
         lUCentro = Gl.uniforme(progLin, "uCentro");
         lURadio = Gl.uniforme(progLin, "uRadio");
@@ -70,17 +78,19 @@ final class MallaGl {
         lUAncho = Gl.uniforme(progLin, "uAncho");
 
         progSol = Gl.programa(
-                "uniform mat4 uVp; attribute vec3 aPos; attribute vec3 aNor; varying vec3 vNor;\n"
-                        + "void main() { gl_Position = uVp * vec4(aPos, 1.0); vNor = aNor; }",
-                "precision mediump float; uniform float uAlfa; varying vec3 vNor;\n"
+                "uniform mat4 uVp; attribute vec3 aPos; attribute vec3 aNor; attribute float aInf; varying vec3 vNor; varying float vInf;\n"
+                        + "void main() { gl_Position = uVp * vec4(aPos, 1.0); vNor = aNor; vInf = aInf; }",
+                "precision mediump float; uniform float uAlfa; varying vec3 vNor; varying float vInf;\n"
                         + "void main() {\n"
                         + "  vec3 n = normalize(vNor);\n"
                         + "  float luz = 0.45 + 0.55 * max(dot(n, normalize(vec3(0.4, 1.0, 0.3))), 0.0);\n"
                         + "  vec3 c = mix(vec3(0.45, 0.3, 0.85), vec3(0.15, 0.75, 0.6), smoothstep(0.55, 0.9, abs(n.y)));\n"
-                        + "  gl_FragColor = vec4(c * luz, uAlfa);\n"
+                        + "  c = mix(c, vec3(0.95, 0.55, 0.15), vInf);\n"
+                        + "  gl_FragColor = vec4(c * luz, uAlfa * (1.0 - 0.3 * vInf));\n"
                         + "}");
         sAPos = Gl.atributo(progSol, "aPos");
         sANor = Gl.atributo(progSol, "aNor");
+        sAInf = Gl.atributo(progSol, "aInf");
         sUVp = Gl.uniforme(progSol, "uVp");
         sUAlfa = Gl.uniforme(progSol, "uAlfa");
 
@@ -123,10 +133,10 @@ final class MallaGl {
             p.vbo = b[0]; p.iboTri = b[1]; p.iboLin = b[2];
             pedazos.put(clave, p);
         }
-        FloatBuffer fv = ByteBuffer.allocateDirect(m.nVert * 6 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
-        fv.put(m.vert, 0, m.nVert * 6).position(0);
+        FloatBuffer fv = ByteBuffer.allocateDirect(m.nVert * PASO).order(ByteOrder.nativeOrder()).asFloatBuffer();
+        fv.put(m.vert, 0, m.nVert * Mallador.PASO).position(0);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, p.vbo);
-        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, m.nVert * 6 * 4, fv, GLES20.GL_STATIC_DRAW);
+        GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, m.nVert * PASO, fv, GLES20.GL_STATIC_DRAW);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, p.iboTri);
         GLES20.glBufferData(GLES20.GL_ELEMENT_ARRAY_BUFFER, m.nTri * 2, Gl.buferCortos(m.tri, m.nTri), GLES20.GL_STATIC_DRAW);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, p.iboLin);
@@ -154,19 +164,28 @@ final class MallaGl {
 
     int cantidad() { return pedazos.size(); }
 
-    private void atributos(int aPos, int aNor, Pedazo p) {
+    private void atributos(int aPos, int aNor, Pedazo p) { atributos(aPos, aNor, -1, p); }
+
+    private void atributos(int aPos, int aNor, int aInf, Pedazo p) {
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, p.vbo);
-        GLES20.glVertexAttribPointer(aPos, 3, GLES20.GL_FLOAT, false, 24, 0);
+        GLES20.glVertexAttribPointer(aPos, 3, GLES20.GL_FLOAT, false, PASO, 0);
         GLES20.glEnableVertexAttribArray(aPos);
         if (aNor >= 0) {
-            GLES20.glVertexAttribPointer(aNor, 3, GLES20.GL_FLOAT, false, 24, 12);
+            GLES20.glVertexAttribPointer(aNor, 3, GLES20.GL_FLOAT, false, PASO, 12);
             GLES20.glEnableVertexAttribArray(aNor);
+        }
+        if (aInf >= 0) {
+            GLES20.glVertexAttribPointer(aInf, 1, GLES20.GL_FLOAT, false, PASO, 24);
+            GLES20.glEnableVertexAttribArray(aInf);
         }
     }
 
-    private void soltar(int aPos, int aNor) {
+    private void soltar(int aPos, int aNor) { soltar(aPos, aNor, -1); }
+
+    private void soltar(int aPos, int aNor, int aInf) {
         GLES20.glDisableVertexAttribArray(aPos);
         if (aNor >= 0) GLES20.glDisableVertexAttribArray(aNor);
+        if (aInf >= 0) GLES20.glDisableVertexAttribArray(aInf);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
     }
@@ -226,11 +245,11 @@ final class MallaGl {
         GLES20.glDepthFunc(GLES20.GL_LEQUAL);
         GLES20.glLineWidth(1.5f);
         for (Pedazo p : pedazos.values()) {
-            atributos(lAPos, lANor, p);
+            atributos(lAPos, lANor, lAInf, p);
             GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, p.iboLin);
             GLES20.glDrawElements(GLES20.GL_LINES, p.nLin, GLES20.GL_UNSIGNED_SHORT, 0);
         }
-        soltar(lAPos, lANor);
+        soltar(lAPos, lANor, lAInf);
         GLES20.glDepthFunc(GLES20.GL_LESS);
         GLES20.glDepthMask(true);
         GLES20.glDisable(GLES20.GL_BLEND);
@@ -245,11 +264,11 @@ final class MallaGl {
         GLES20.glDepthMask(false);
         GLES20.glDepthFunc(GLES20.GL_LEQUAL);
         for (Pedazo p : pedazos.values()) {
-            atributos(sAPos, sANor, p);
+            atributos(sAPos, sANor, sAInf, p);
             GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, p.iboTri);
             GLES20.glDrawElements(GLES20.GL_TRIANGLES, p.nTri, GLES20.GL_UNSIGNED_SHORT, 0);
         }
-        soltar(sAPos, sANor);
+        soltar(sAPos, sANor, sAInf);
         GLES20.glDepthFunc(GLES20.GL_LESS);
         GLES20.glDepthMask(true);
         GLES20.glDisable(GLES20.GL_BLEND);

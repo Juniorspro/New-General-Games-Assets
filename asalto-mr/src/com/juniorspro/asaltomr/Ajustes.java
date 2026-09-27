@@ -17,6 +17,8 @@ final class Ajustes {
     // escaneo
     int malla = 1;             // 0 = oculta (sólo tapa), 1 = escaneo (líneas), 2 = sólida
     int detalle = 1;           // 0 = fino 5 cm, 1 = normal 7 cm, 2 = grueso 10 cm
+    int rellenar = 1;          // la IA completa lo que no se ve (piso debajo y detrás de las cosas, el fondo de los objetos)
+    int zonas = 1;             // 0 = no, 1 = al escanear, 2 = siempre (con las rutas de los soldados)
     // cámara
     int camara = 1;            // 0 = la de ARCore, 1 = la configuración más ancha, 2 = ultra angular (experimental)
     // juego
@@ -27,7 +29,7 @@ final class Ajustes {
     float voxel() { return detalle == 0 ? 0.05f : detalle == 2 ? 0.10f : 0.07f; }
 
     private static final String[] CLAVES = {"sbs", "ipdMm", "lentesMm", "tamano", "corregirLentes", "k1", "k2", "intercambiar",
-            "estereo", "malla", "detalle", "camara", "dificultad", "sonido", "vibrar"};
+            "estereo", "malla", "detalle", "rellenar", "zonas", "camara", "dificultad", "sonido", "vibrar"};
 
     int valor(String c) {
         switch (c) {
@@ -42,6 +44,8 @@ final class Ajustes {
             case "estereo": return estereo;
             case "malla": return malla;
             case "detalle": return detalle;
+            case "rellenar": return rellenar;
+            case "zonas": return zonas;
             case "camara": return camara;
             case "dificultad": return dificultad;
             case "sonido": return sonido;
@@ -62,6 +66,8 @@ final class Ajustes {
             case "estereo": estereo = v; break;
             case "malla": malla = v; break;
             case "detalle": detalle = v; break;
+            case "rellenar": rellenar = v; break;
+            case "zonas": zonas = v; break;
             case "camara": camara = v; break;
             case "dificultad": dificultad = v; break;
             case "sonido": sonido = v; break;

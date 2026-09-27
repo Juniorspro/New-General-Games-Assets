@@ -59,17 +59,72 @@ public class PruebaEscaneo {
         return m;
     }
 
-    /** Filma la escena con la cámara de profundidad simulada y la mete al volumen. Devuelve los rayos usados. */
-    static int escanear(Tsdf tsdf, int cuadros) {
+    /** Un charco en el piso (para la IA: ahí no se camina). */
+    static boolean charco(float x, float z) { return x > -1.0f && x < 0.0f && z > -1.3f && z < -0.5f; }
+
+    /**
+     * Lo que diría la red de Scene Semantics de ARCore de cada punto de la
+     * escena (con un 10 % de errores, como una red de verdad).
+     */
+    static int etiquetaDe(float x, float y, float z, Random azar) {
+        if (azar.nextFloat() < 0.1f) return 1 + azar.nextInt(11);
+        float piso = Math.abs(y), pared = Math.abs(z + 4f), mesa = Math.abs(caja(x, y, z, 0.5f, 0f, -2.5f, 1.5f, 0.8f, -1.5f)),
+                tronco = Math.abs((float) Math.hypot(x + 1.5f, z + 2f) - 0.25f);
+        float m = Math.min(Math.min(piso, pared), Math.min(mesa, tronco));
+        if (m == piso) return charco(x, z) ? Tsdf.AGUA : Tsdf.PASTO;
+        if (m == pared) return Tsdf.EDIFICIO;
+        if (m == mesa) return Tsdf.OBJETO;
+        return Tsdf.ARBOL;
+    }
+
+    /**
+     * Escanea parado en (px, py, pz), paneando alrededor de un rumbo (yaw)
+     * ±25° con el cabeceo dado: como alguien que sigue la flecha de la guía.
+     */
+    static void escanearDesde(Tsdf tsdf, float px, float py, float pz, float yaw, float pitch, int cuadros) {
+        final int W = 160, H = 120;
+        final float FX = 130, FY = 130, CX = 80, CY = 60;
+        Random azar = new Random(17);
+        short[] mm = new short[W * H];
+        for (int f = 0; f < cuadros; f++) {
+            float y = yaw + (float) Math.sin(f * 0.7f) * 0.45f, p = pitch + (float) Math.cos(f * 0.5f) * 0.15f;
+            float[] P = pose(px, py, pz, y, p);
+            for (int v = 0; v < H; v++) for (int u = 0; u < W; u++) {
+                float xc = (u + 0.5f - CX) / FX, yc = -(v + 0.5f - CY) / FY, zc = -1;
+                float dx = P[0] * xc + P[4] * yc + P[8] * zc, dy = P[1] * xc + P[5] * yc + P[9] * zc, dz = P[2] * xc + P[6] * yc + P[10] * zc;
+                float l = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                float t = trazar(P[12], P[13], P[14], dx / l, dy / l, dz / l);
+                int i = v * W + u;
+                if (t < 0 || azar.nextFloat() < 0.15f) { mm[i] = 0; continue; }
+                float prof = t / l;
+                prof *= 1 + (float) azar.nextGaussian() * 0.006f * prof;
+                mm[i] = (short) Math.min(65535, Math.round(prof * 1000));
+            }
+            tsdf.integrar(mm, null, W, H, FX, FY, CX, CY, P, 5.5f, 100, 1, null);
+        }
+    }
+
+    static int escanear(Tsdf tsdf, int cuadros) { return escanear(tsdf, cuadros, false, 1f); }
+
+    static int escanear(Tsdf tsdf, int cuadros, boolean conEtiquetas) { return escanear(tsdf, cuadros, conEtiquetas, 1f); }
+
+    /**
+     * Filma la escena con la cámara de profundidad simulada y la mete al
+     * volumen. conEtiquetas: también la "red semántica". fraccion: cuánto del
+     * recorrido se hace (1 = el arco entero).
+     */
+    static int escanear(Tsdf tsdf, int cuadros, boolean conEtiquetas, float fraccion) {
         final int W = 160, H = 120;
         final float FX = 130, FY = 130, CX = 80, CY = 60;
         Random azar = new Random(7);
         short[] mm = new short[W * H];
         byte[] conf = new byte[W * H];
+        byte[] etq = conEtiquetas ? new byte[W * H] : null;
+        Random azarEtq = new Random(3);
         int rayosTot = 0;
         // la cámara camina un arco de 3 m a 1.5 m de altura, mirando a la escena y un poco abajo
         for (int f = 0; f < cuadros; f++) {
-            float s = f / (cuadros - 1f);
+            float s = fraccion * f / (cuadros - 1f);
             float px = -1.5f + 3f * s, pz = 1.0f - 0.5f * (float) Math.sin(s * Math.PI);
             float yaw = (float) Math.atan2(-(0f - px), -(-2.2f - pz)) * 0.85f;   // más o menos hacia el centro
             float pitch = -0.35f - 0.15f * (float) Math.sin(s * 6);
@@ -85,8 +140,9 @@ public class PruebaEscaneo {
                 prof *= 1 + (float) azar.nextGaussian() * 0.006f * prof;          // ruido: σ = 0.6 % · prof² (2.4 cm a 2 m, 15 cm a 5 m)
                 mm[i] = (short) Math.min(65535, Math.round(prof * 1000));
                 conf[i] = (byte) (azar.nextFloat() < 0.1f ? 60 : 230);
+                if (etq != null) etq[i] = (byte) etiquetaDe(P[12] + dx / l * t, P[13] + dy / l * t, P[14] + dz / l * t, azarEtq);
             }
-            rayosTot += tsdf.integrar(mm, conf, W, H, FX, FY, CX, CY, P, 5.5f, 100, 1);
+            rayosTot += tsdf.integrar(mm, conf, W, H, FX, FY, CX, CY, P, 5.5f, 100, 1, etq);
         }
         return rayosTot;
     }
@@ -116,7 +172,7 @@ public class PruebaEscaneo {
             nv += m.nVert;
             ntri += m.nTri / 3;
             for (int i = 0; i < m.nVert; i++) {
-                float x = m.vert[i * 6], y = m.vert[i * 6 + 1], z = m.vert[i * 6 + 2];
+                float x = m.vert[i * Mallador.PASO], y = m.vert[i * Mallador.PASO + 1], z = m.vert[i * Mallador.PASO + 2];
                 double e = Math.abs(escena(x, y, z));
                 // a menos de 4 m del camino de la cámara (donde se juega)
                 if (Math.hypot(x, z - 0.7) < 4.0) { cerca++; if (e > 0.07) cercaMal++; }

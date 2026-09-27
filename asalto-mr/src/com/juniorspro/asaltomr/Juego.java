@@ -10,6 +10,11 @@ import java.util.Random;
  * volando para atrás y caen sobre el piso de verdad. Los tiros que no pegan en
  * un soldado pegan en la superficie real, con chispas y polvo.
  *
+ * Con el mapa de zonas (Mapa.Grilla) la IA es táctica: aparecen en lugares
+ * alcanzables, van por rutas (A*) que rodean árboles, mesas y agua, buscan
+ * CUBIERTA (algo alto entre ellos y vos), se agachan detrás, se asoman a
+ * tirar y vuelven a cubrirse o flanquean. Sin mapa, corren derecho esquivando.
+ *
  * Coordenadas del mundo de ARCore: metros, +Y arriba. El soldado mira hacia
  * su +Z local: adelante = (sen yaw, 0, cos yaw).
  *
@@ -31,7 +36,8 @@ public final class Juego {
 
     // ── estados y eventos ──
     public static final int ESPERA = 0, JUEGA = 1, FIN = 2;
-    public static final int CORRE = 0, APUNTA = 1, CAE = 2, TIRADO = 3;
+    public static final int CORRE = 0, APUNTA = 1, CAE = 2, TIRADO = 3, CUBIERTA = 4;
+    static final int DIRECTO = 0, A_CUBIERTA = 1, ASOMARSE = 2, FLANCO = 3;
     public static final int EV_DISPARO = 1, EV_IMPACTO = 2, EV_CARNE = 4, EV_MUERTE = 8, EV_ENEMIGO_DISPARA = 16,
             EV_DANO = 32, EV_OLEADA = 64, EV_RECARGA = 128, EV_FIN = 256, EV_CABEZA = 512, EV_VACIO = 1024, EV_ZUMBIDO = 2048;
     public static final int P_CHISPA = 0, P_POLVO = 1, P_TROZO = 2, P_HUMO = 3, P_FOGONAZO = 4;
@@ -47,8 +53,11 @@ public final class Juego {
         public float fogonazo;          // > 0: se ve el fogonazo del arma
         public float desvanecer;        // 0..1 al final
         public float apunta;            // 0..1 cuánto levanta el arma
+        public float agachado;          // 0..1 (detrás de una cubierta)
+        public float[] ruta;            // puntos (x, y, z) por donde va (del mapa), o null
+        public int rutaI, tactica, celdaCubierta = -1;
         public int id;
-        float vx, vy, vz, vCaida, t, proxTiro, objX, objZ, tiempoCorriendo, trabado;
+        float vx, vy, vz, vCaida, t, proxTiro, objX, objZ, tiempoCorriendo, trabado, espera, cubX, cubY, cubZ;
         int tirosQuedan;
     }
 
@@ -77,6 +86,8 @@ public final class Juego {
     public int estado = ESPERA;
     public int puntos, combo = 1, oleada, bajas, balas = CARGADOR, dificultad = 1;
     public float vidaJugador = 100, golpe, retroceso, recargando;
+    /** El mapa de zonas de la IA (lo arma el escaneo), o null. */
+    public volatile Mapa.Grilla grilla;
     /** Piso de respaldo (plano de ARCore o altura estimada), NaN si no hay. */
     public float pisoRespaldo = Float.NaN;
     private int eventos, porSalir, siguienteId;
@@ -105,9 +116,15 @@ public final class Juego {
 
     public int vivos() {
         int n = 0;
-        for (Soldado s : soldados) if (s.estado == CORRE || s.estado == APUNTA) n++;
+        for (Soldado s : soldados) if (enPie(s)) n++;
         return n;
     }
+
+    /** ¿Vivo y en pie (corriendo, apuntando o cubierto)? */
+    public static boolean enPie(Soldado s) { return s.estado == CORRE || s.estado == APUNTA || s.estado == CUBIERTA; }
+
+    /** Cuánto baja la cabeza agachado. */
+    public static final float BAJA_AGACHADO = 0.55f;
 
     private float velocidad() { return dificultad == 0 ? 1.5f : dificultad == 2 ? 2.8f : 2.1f; }
 
@@ -151,9 +168,12 @@ public final class Juego {
         for (int i = soldados.size() - 1; i >= 0; i--) {
             Soldado s = soldados.get(i);
             s.fogonazo = Math.max(0, s.fogonazo - dt);
+            float quiereAgachado = s.estado == CUBIERTA ? 1 : 0;
+            s.agachado += (quiereAgachado - s.agachado) * Math.min(1f, dt * 7f);
             switch (s.estado) {
                 case CORRE: correr(s, dt, e); break;
                 case APUNTA: apuntar(s, dt, e); break;
+                case CUBIERTA: cubrirse(s, dt, e); break;
                 case CAE: caer(s, dt, e); break;
                 default:
                     s.t += dt;
@@ -195,16 +215,24 @@ public final class Juego {
      * afuera); si no hay lugar, más cerca (2.5–5 m, adentro de una casa).
      */
     private boolean aparecer(Entorno e) {
+        Mapa.Grilla g = grilla;
         for (int intento = 0; intento < 16; intento++) {
-            float ang = (azar.nextFloat() - 0.5f) * 2f * 1.4f;   // ±80° de adonde mirás
-            float dist = intento < 8 ? 5f + azar.nextFloat() * 4f : 2.5f + azar.nextFloat() * 2.5f;
-            float c = (float) Math.cos(ang), sn = (float) Math.sin(ang);
-            float dx = jfx * c - jfz * sn, dz = jfx * sn + jfz * c;
-            float x = jx + dx * dist, z = jz + dz * dist;
-            float y = e.suelo(x, z, jy + 0.3f, jy - 3.5f);
-            if (y != y) {
-                if (pisoRespaldo != pisoRespaldo) continue;
-                y = pisoRespaldo;
+            float x, z, y;
+            float[] lugar = g == null ? null : g.lugarParaAparecer(azar, jx, jz, jfx, jfz, intento < 8 ? 5f : 2.5f, intento < 8 ? 9f : 5f);
+            if (lugar != null) {
+                // el mapa sabe qué es piso alcanzable
+                x = lugar[0]; y = lugar[1]; z = lugar[2];
+            } else {
+                float ang = (azar.nextFloat() - 0.5f) * 2f * 1.4f;   // ±80° de adonde mirás
+                float dist = intento < 8 ? 5f + azar.nextFloat() * 4f : 2.5f + azar.nextFloat() * 2.5f;
+                float c = (float) Math.cos(ang), sn = (float) Math.sin(ang);
+                float dx = jfx * c - jfz * sn, dz = jfx * sn + jfz * c;
+                x = jx + dx * dist; z = jz + dz * dist;
+                y = e.suelo(x, z, jy + 0.3f, jy - 3.5f);
+                if (y != y) {
+                    if (pisoRespaldo != pisoRespaldo) continue;
+                    y = pisoRespaldo;
+                }
             }
             if (jy - y < 0.6f) continue;                          // eso no es el piso: está a la altura de la cara
             if (e.ocupado(x, y + 0.9f, z) || e.ocupado(x, y + 1.5f, z)) continue;
@@ -224,8 +252,41 @@ public final class Juego {
         return false;
     }
 
-    /** A dónde corre: un punto a 2.5–5 m del jugador, corrido de costado. */
+    /**
+     * A dónde va. Con mapa: casi siempre a una cubierta libre (por una ruta),
+     * si no, a flanquear por el costado. Sin mapa: un punto a 2.5–5 m del
+     * jugador, corrido de costado.
+     */
     private void elegirObjetivo(Soldado s) {
+        s.tiempoCorriendo = 0;
+        s.ruta = null;
+        s.rutaI = 0;
+        s.celdaCubierta = -1;
+        s.tactica = DIRECTO;
+        Mapa.Grilla g = grilla;
+        if (g != null) {
+            float gusta = dificultad == 0 ? 0.45f : dificultad == 2 ? 0.85f : 0.7f;
+            if (azar.nextFloat() < gusta) {
+                boolean[] tomadas = new boolean[g.n * g.n];
+                for (Soldado o : soldados) if (o != s && o.celdaCubierta >= 0 && o.celdaCubierta < tomadas.length) tomadas[o.celdaCubierta] = true;
+                int c = g.mejorCubierta(s.x, s.z, jx, jz, tomadas);
+                if (c >= 0) {
+                    float cx = g.x(c % g.n), cz = g.z(c / g.n);
+                    float[] r = g.camino(s.x, s.z, cx, cz);
+                    if (r != null) {
+                        s.ruta = r; s.tactica = A_CUBIERTA; s.celdaCubierta = c;
+                        s.cubX = cx; s.cubY = g.piso[c]; s.cubZ = cz;
+                        return;
+                    }
+                }
+            }
+            // flanquear: un lugar alcanzable a 2.5–5 m del jugador, del lado donde ya está el soldado
+            float[] p = g.lugarParaAparecer(azar, jx, jz, s.x - jx, s.z - jz, 2.5f, 5f);
+            if (p != null) {
+                float[] r = g.camino(s.x, s.z, p[0], p[2]);
+                if (r != null) { s.ruta = r; s.tactica = FLANCO; return; }
+            }
+        }
         float ax = s.x - jx, az = s.z - jz;
         float l = (float) Math.max(0.01, Math.sqrt(ax * ax + az * az));
         ax /= l; az /= l;
@@ -234,15 +295,78 @@ public final class Juego {
         float c = (float) Math.cos(ang), sn = (float) Math.sin(ang);
         s.objX = jx + (ax * c - az * sn) * r;
         s.objZ = jz + (ax * sn + az * c) * r;
-        s.tiempoCorriendo = 0;
+    }
+
+    /** Llegó al final de la ruta: según a qué iba. */
+    private void llego(Soldado s) {
+        s.ruta = null;
+        if (s.tactica == A_CUBIERTA) {
+            s.estado = CUBIERTA;
+            s.espera = 0.8f + azar.nextFloat() * (dificultad == 2 ? 1f : 1.8f);
+        } else pasarAApuntar(s);
+    }
+
+    /**
+     * Detrás de la cubierta, agachado: espera y después se asoma (a un lugar
+     * al lado desde donde te ve) o, si no hay, se para y tira por encima.
+     */
+    private void cubrirse(Soldado s, float dt, Entorno e) {
+        s.apunta = Math.max(0, s.apunta - dt * 3);
+        s.fase *= 1 - Math.min(1, dt * 6);
+        s.yaw = girarHacia(s.yaw, (float) Math.atan2(jx - s.x, jz - s.z), dt * 6f);
+        s.espera -= dt;
+        if (s.espera > 0) return;
+        Mapa.Grilla g = grilla;
+        if (g != null) {
+            int c = g.indice(s.x, s.z);
+            float mejor = Float.MAX_VALUE;
+            float[] asomo = null;
+            if (c >= 0) {
+                int ci = c % g.n, ck = c / g.n;
+                for (int dk = -2; dk <= 2; dk++) for (int di = -2; di <= 2; di++) {
+                    int ni = ci + di, nk = ck + dk;
+                    if ((di == 0 && dk == 0) || ni < 0 || nk < 0 || ni >= g.n || nk >= g.n) continue;
+                    int v = nk * g.n + ni;
+                    if (!g.alcanzable[v]) continue;
+                    float x = g.x(ni), z = g.z(nk), y = g.piso[v] + 1.4f;
+                    if (!g.rectaLibre(s.x, s.z, x, z)) continue;
+                    float ax = jx - x, ay = jy - y, az = jz - z, l = (float) Math.sqrt(ax * ax + ay * ay + az * az);
+                    if (e.rayo(x, y, z, ax / l, ay / l, az / l, l - 0.3f) > 0) continue;   // desde ahí tampoco te ve
+                    float d = di * di + dk * dk;
+                    if (d < mejor) { mejor = d; asomo = new float[]{x, g.piso[v], z}; }
+                }
+            }
+            if (asomo != null) {
+                s.estado = CORRE;
+                s.tactica = ASOMARSE;
+                s.ruta = asomo;
+                s.rutaI = 0;
+                s.tiempoCorriendo = 0;
+                return;
+            }
+        }
+        pasarAApuntar(s);   // se para y tira por encima (una mesa tapa agachado, no parado)
     }
 
     private void correr(Soldado s, float dt, Entorno e) {
         s.apunta = Math.max(0, s.apunta - dt * 3);
         s.tiempoCorriendo += dt;
-        float dx = s.objX - s.x, dz = s.objZ - s.z;
-        float d = (float) Math.sqrt(dx * dx + dz * dz);
-        if (d < 0.35f || s.tiempoCorriendo > 3.5f + (s.id % 3)) { pasarAApuntar(s); return; }
+        float dx, dz, d;
+        if (s.ruta != null) {
+            // por la ruta del mapa, punto por punto
+            while (true) {
+                dx = s.ruta[s.rutaI * 3] - s.x; dz = s.ruta[s.rutaI * 3 + 2] - s.z;
+                d = (float) Math.sqrt(dx * dx + dz * dz);
+                if (d > 0.25f) break;
+                s.rutaI++;
+                if (s.rutaI * 3 >= s.ruta.length) { llego(s); return; }
+            }
+            if (s.tiempoCorriendo > 12f) { elegirObjetivo(s); return; }
+        } else {
+            dx = s.objX - s.x; dz = s.objZ - s.z;
+            d = (float) Math.sqrt(dx * dx + dz * dz);
+            if (d < 0.35f || s.tiempoCorriendo > 3.5f + (s.id % 3)) { pasarAApuntar(s); return; }
+        }
         float quiere = (float) Math.atan2(dx, dz);
         // esquivar: probar derecho, después abriéndose de a 40°
         float v = velocidad();
@@ -266,7 +390,7 @@ public final class Juego {
         }
         // encerrado: que se pare y tire, y después busque otro lado
         s.trabado += dt;
-        if (s.trabado > 0.4f) { pasarAApuntar(s); s.trabado = 0; }
+        if (s.trabado > 0.4f) { s.trabado = 0; if (s.ruta != null) elegirObjetivo(s); else pasarAApuntar(s); }
     }
 
     private void pasarAApuntar(Soldado s) {
@@ -288,7 +412,7 @@ public final class Juego {
         float dist = (float) Math.sqrt(ax * ax + ay * ay + az * az);
         ax /= dist; ay /= dist; az /= dist;
         float choca = e.rayo(mx, my, mz, ax, ay, az, dist - 0.3f);
-        if (choca > 0) { s.estado = CORRE; elegirObjetivo(s); return; }   // tapado: moverse
+        if (choca > 0) { volverOIrse(s); return; }   // tapado: moverse
         s.fogonazo = 0.07f;
         eventos |= EV_ENEMIGO_DISPARA;
         // la bala: pega o pasa zumbando cerca
@@ -310,7 +434,22 @@ public final class Juego {
         s.tirosQuedan--;
         s.t = 0;
         s.proxTiro = 0.3f + azar.nextFloat() * 0.3f;
-        if (s.tirosQuedan <= 0) { s.estado = CORRE; elegirObjetivo(s); }
+        if (s.tirosQuedan <= 0) volverOIrse(s);
+    }
+
+    /** Después de tirar: si tenía cubierta cerca, vuelve a ella; si no, busca otra cosa. */
+    private void volverOIrse(Soldado s) {
+        s.estado = CORRE;
+        Mapa.Grilla g = grilla;
+        if (g != null && s.celdaCubierta >= 0 && Math.hypot(s.cubX - s.x, s.cubZ - s.z) < 1.2f && azar.nextFloat() < 0.7f
+                && g.indice(s.cubX, s.cubZ) == s.celdaCubierta && g.cubierta[s.celdaCubierta]) {
+            s.ruta = new float[]{s.cubX, s.cubY, s.cubZ};
+            s.rutaI = 0;
+            s.tactica = A_CUBIERTA;
+            s.tiempoCorriendo = 0;
+            return;
+        }
+        elegirObjetivo(s);
     }
 
     private void caer(Soldado s, float dt, Entorno e) {
@@ -370,10 +509,11 @@ public final class Juego {
         boolean cabeza = false;
         for (Soldado s : soldados) {
             if (s.desvanecer > 0) continue;
-            if (s.estado == CORRE || s.estado == APUNTA) {
-                float th = esfera(ox, oy, oz, dx, dy, dz, s.x, s.y + CABEZA_Y, s.z, CABEZA_R + 0.03f);
+            if (enPie(s)) {
+                float baja = s.agachado * BAJA_AGACHADO;
+                float th = esfera(ox, oy, oz, dx, dy, dz, s.x, s.y + CABEZA_Y - baja, s.z, CABEZA_R + 0.03f);
                 if (th > 0 && th < mejor) { mejor = th; quien = s; cabeza = true; }
-                float tc = cilindro(ox, oy, oz, dx, dy, dz, s.x, s.z, RADIO + 0.04f, s.y + 0.1f, s.y + 1.5f);
+                float tc = cilindro(ox, oy, oz, dx, dy, dz, s.x, s.z, RADIO + 0.04f, s.y + 0.1f, s.y + 1.5f - baja);
                 if (tc > 0 && tc < mejor) { mejor = tc; quien = s; cabeza = false; }
             } else {
                 // el cuerpo que cae o está tirado también recibe
@@ -413,7 +553,7 @@ public final class Juego {
         trozos(imp.x, imp.y, imp.z, dx, dz, cabeza ? 14 : 9, s.y);
         float h = (float) Math.sqrt(dx * dx + dz * dz);
         float hx = h > 1e-4f ? dx / h : 0, hz = h > 1e-4f ? dz / h : 0;
-        if (s.estado == CORRE || s.estado == APUNTA) {
+        if (enPie(s)) {
             // de un tiro: sale volando para atrás, como en el video
             s.estado = CAE;
             s.t = 0;

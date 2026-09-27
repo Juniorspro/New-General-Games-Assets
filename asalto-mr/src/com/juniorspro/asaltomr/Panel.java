@@ -70,7 +70,13 @@ final class Panel {
         seccion("Escaneo del entorno");
         opciones("malla", "Malla", new String[]{"Oculta", "Escaneo", "Sólida"});
         opciones("detalle", "Detalle (voxel)", new String[]{"Fino 5 cm", "7 cm", "Grueso 10 cm"});
-        boton("Borrar el escaneo y empezar de nuevo", "reescanear");
+        opciones("rellenar", "Completar lo que no se ve (IA)", new String[]{"No", "Sí"});
+        info("Supone el piso debajo y detrás de las cosas, la parte de atrás de los objetos y que todo "
+                + "llega hasta el suelo. Lo supuesto sale en ámbar punteado; si después lo ves, lo real lo reemplaza.");
+        opciones("zonas", "Ver las zonas de la IA", new String[]{"No", "Al escanear", "Siempre"});
+        info("Verde: por donde pueden ir · amarillo: cubierta · azul: agua · rojo: obstáculo · "
+                + "magenta: falta escanear. \"Siempre\" también muestra las rutas de los soldados.");
+        boton("Escaneo completo (empezar de nuevo)", "reescanear");
 
         seccion("Cámara");
         opciones("camara", "Cámara", new String[]{"ARCore", "Más ancha", "Ultra angular"});

@@ -63,6 +63,11 @@ import javax.microedition.khronos.opengles.GL10;
  *   Mallador, en su propio hilo): no hay "mesas" ni "sillas", hay superficie.
  *   Esa malla tapa a lo virtual (oclusión), es el piso por donde caminan los
  *   soldados, lo que esquivan, y donde pegan las balas.
+ * - La IA del entorno (Mapa, en el hilo del escaneo): la red de Scene
+ *   Semantics de ARCore etiqueta cada superficie (pasto, vereda, calle, agua,
+ *   árbol, edificio…), el mapa decide por dónde se puede ir, dónde hay
+ *   cubierta y qué falta escanear, y COMPLETA lo que no se ve. Los soldados
+ *   lo usan para moverse (rutas, cubiertas, asomarse).
  * - Pantalla normal o SBS para un visor tipo Cardboard: dos ojos con su IPD,
  *   corrección de los lentes y, si se quiere, el entorno reproyectado con la
  *   malla para que lo real también tenga profundidad.
@@ -87,7 +92,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private Camara compartida;
     private HandlerThread hiloCamara;
     private Handler manejadorCamara;
-    private volatile boolean corriendo, hayProfundidad;
+    private volatile boolean corriendo, hayProfundidad, haySemantica;
     private boolean pidioInstalar, texturaPuesta;
     private volatile String textoCamara = "";
     private volatile boolean linterna;
@@ -97,6 +102,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private final Figuras figuras = new Figuras();
     private final Hud hud = new Hud();
     private final Lentes lentes = new Lentes();
+    private final ZonasGl zonasGl = new ZonasGl();
     private final Sonido sonido = new Sonido();
     private Escaneo escaneo;
     private Juego juego;
@@ -215,7 +221,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
 
     private void abrirPanel(boolean abrir) {
         panel.refrescar();
-        panel.info.setText(textoCamara + (hayProfundidad ? "\nDepth API: sí (escaneo de malla)" : "\nDepth API: no (sólo planos)"));
+        panel.info.setText(textoCamara + (hayProfundidad ? "\nDepth API: sí (escaneo de malla)" : "\nDepth API: no (sólo planos)")
+                + (haySemantica ? "\nScene Semantics: sí (la IA sabe qué es cada superficie)" : "\nScene Semantics: no (la IA usa sólo la forma)"));
         panel.vista.setVisibility(abrir ? View.VISIBLE : View.GONE);
         escaneo.pausado = false;
         aplicarVisibilidad();
@@ -350,6 +357,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             config.setLightEstimationMode(Config.LightEstimationMode.DISABLED);
             hayProfundidad = sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC);
             config.setDepthMode(hayProfundidad ? Config.DepthMode.AUTOMATIC : Config.DepthMode.DISABLED);
+            // la red neuronal de ARCore que etiqueta cada píxel (anda sobre todo al aire libre)
+            try { haySemantica = sesion.isSemanticModeSupported(Config.SemanticMode.ENABLED); } catch (Exception e) { haySemantica = false; }
+            config.setSemanticMode(haySemantica ? Config.SemanticMode.ENABLED : Config.SemanticMode.DISABLED);
             if (!ultra) config.setFlashMode(linterna ? Config.FlashMode.TORCH : Config.FlashMode.OFF);
             sesion.configure(config);
             texturaPuesta = false;
@@ -494,6 +504,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         GLES20.glClearColor(0f, 0f, 0f, 1f);
         fondo.crear();
         mallaGl.crear();
+        zonasGl.crear();
         figuras.crear();
         hud.crear();
         lentes.crear();
@@ -581,8 +592,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         Pose ojoPose = camara.getDisplayOrientedPose();
         float px = ojoPose.tx(), py = ojoPose.ty(), pz = ojoPose.tz();
         float[] adelante = ojoPose.getTransformedAxis(2, -1f);
+        Mapa.Grilla grilla = escaneo.mapa.actual;
+        juego.grilla = grilla;
+        escaneo.mapa.rellenar = a.rellenar == 1;
+        boolean verZonas = a.zonas == 2 || (a.zonas == 1 && juego.estado == Juego.ESPERA);
+        if (verZonas) zonasGl.actualizar(grilla, juego.estado == Juego.ESPERA);
         if (sigue) {
             if (inicioSeguimiento == 0) inicioSeguimiento = ahora;
+            escaneo.jx = px; escaneo.jy = py; escaneo.jz = pz; escaneo.jfx = adelante[0]; escaneo.jfz = adelante[2];
+            escaneo.hayJugador = true;
             camara.getProjectionMatrix(proy, 0, 0.05f, 80f);
             camara.getViewMatrix(vistaM, 0);
             Matrix.multiplyMM(vpCam, 0, proy, 0, vistaM, 0);
@@ -623,6 +641,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             if (sbs && a.estereo == 1) mallaGl.dibujarReproyectada(vpOjo, vpCam, fondo);
             else mallaGl.dibujarProfundidad(vpOjo);
             figuras.dibujarSoldados(juego.soldados, vpOjo);
+            if (verZonas) zonasGl.dibujar(vpOjo);
+            if (a.zonas == 2) figuras.dibujarRutas(juego.soldados, vpOjo);
             float escalaPx = proy[5] * (sbs ? vistaOjos[o][3] : alto) / 2f;
             figuras.dibujarTrazos(juego.trazos, vpOjo);
             figuras.dibujarParticulas(juego.particulas, vpOjo, escalaPx);
@@ -648,13 +668,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             fps = Math.round(cuadros * 1000f / Math.max(1, ahora - ultimoHud));
             cuadros = 0; ultimoHud = ahora;
         }
+        hud.mapa(grilla, px, pz, adelante[0], adelante[2], juego.soldados, juego.estado == Juego.ESPERA);
         ponerHud(camara, sigue, sbs, ahora);
     }
 
     /** Le pasa la profundidad cruda (y su confianza) al hilo del escaneo, si está libre. */
     private void darProfundidad(Frame cuadro, Camera camara) {
         if (!escaneo.libre()) return;
-        Image prof = null, conf = null;
+        Image prof = null, conf = null, sem = null;
         try {
             prof = cuadro.acquireRawDepthImage16Bits();
             if (prof.getTimestamp() == ultimaProf) return;
@@ -676,10 +697,23 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
             float[] f = in.getFocalLength(), c = in.getPrincipalPoint();
             int[] dim = in.getImageDimensions();
             float sx = w / (float) dim[0], sy = h / (float) dim[1];
+            // lo que dice la red semántica de cada píxel (si el teléfono la tiene)
+            java.nio.ByteBuffer sb2 = null;
+            int filaSem = 0, semW = 0, semH = 0;
+            if (haySemantica) {
+                try {
+                    sem = cuadro.acquireSemanticImage();
+                    Image.Plane ps = sem.getPlanes()[0];
+                    sb2 = ps.getBuffer();
+                    filaSem = ps.getRowStride();
+                    semW = sem.getWidth(); semH = sem.getHeight();
+                } catch (Exception e) { sb2 = null; }
+            }
             camara.getPose().toMatrix(poseM, 0);
             // de cerca y con detalle fino, todos los píxeles; si no, uno de cada dos alcanza
             int paso = w * h > 30000 ? 2 : 1;
-            escaneo.dejar(sb, filaProf, cb, filaConf, w, h, f[0] * sx, f[1] * sy, c[0] * sx, c[1] * sy, poseM, 5.5f, paso);
+            escaneo.dejar(sb, filaProf, cb, filaConf, w, h, f[0] * sx, f[1] * sy, c[0] * sx, c[1] * sy, poseM, 5.5f, paso,
+                    sb2, filaSem, semW, semH);
         } catch (NotYetAvailableException e) {
             // todavía no hay profundidad para este cuadro
         } catch (Exception e) {
@@ -687,6 +721,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         } finally {
             if (prof != null) prof.close();
             if (conf != null) conf.close();
+            if (sem != null) sem.close();
         }
     }
 
@@ -704,6 +739,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         else if (juego.pisoRespaldo != juego.pisoRespaldo && ahora - inicioSeguimiento > 6000) juego.pisoRespaldo = py - 1.45f;
     }
 
+    private volatile boolean escaneoCompleto;
+
     private boolean pisoListo(float px, float py, float pz) {
         float s = escaneo.tsdf.suelo(px, pz, py - 0.3f, py - 2.5f);
         return s == s || juego.pisoRespaldo == juego.pisoRespaldo;
@@ -712,11 +749,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
     private void actualizarJuego(float dt, float px, float py, float pz, float[] adelante, Pose ojoPose, long ahora) {
         int pedidos = tiros.getAndSet(0);
         if (juego.estado == Juego.ESPERA) {
+            Mapa.Grilla g = juego.grilla;
+            float cob = g == null ? 0 : g.cobertura;
             boolean listo = pisoListo(px, py, pz) && (mallaGl.triangulos > 1500 || !hayProfundidad || ahora - inicioSeguimiento > 20000);
+            escaneoCompleto = listo && (cob >= 0.75f || !hayProfundidad);
             if (listo && listoDesde == 0) listoDesde = ahora;
             if (!listo) listoDesde = 0;
             // tocar para empezar; en el visor arranca solo a los 3 s
-            if (listo && (pedidos > 0 || (vistos.sbs == 1 && ahora - listoDesde > 3000))) { juego.empezar(); pedidos = 0; }
+            // tocar para empezar (cuando ya hay piso); en el visor arranca solo con el escaneo completo (o a los 25 s)
+            if (listo && (pedidos > 0 || (vistos.sbs == 1 && (escaneoCompleto || ahora - listoDesde > 25000)))) { juego.empezar(); pedidos = 0; }
         } else if (juego.estado == Juego.FIN) {
             if (finDesde == 0) finDesde = ahora;
             if (pedidos > 0 && ahora - finDesde > 1500) { juego.empezar(); finDesde = 0; }
@@ -758,8 +799,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
 
     private boolean apuntaASoldado(float px, float py, float pz, float[] f) {
         for (Juego.Soldado s : juego.soldados) {
-            if (s.estado != Juego.CORRE && s.estado != Juego.APUNTA) continue;
-            if (Juego.cilindro(px, py, pz, f[0], f[1], f[2], s.x, s.z, Juego.RADIO + 0.04f, s.y + 0.1f, s.y + 1.75f) > 0) return true;
+            if (!Juego.enPie(s)) continue;
+            float top = s.y + 1.75f - s.agachado * Juego.BAJA_AGACHADO;
+            if (Juego.cilindro(px, py, pz, f[0], f[1], f[2], s.x, s.z, Juego.RADIO + 0.04f, s.y + 0.1f, top) > 0) return true;
         }
         return false;
     }
@@ -768,11 +810,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
         String arriba;
         String abajo = null;
         if (juego.estado == Juego.ESPERA || !sigue) {
-            arriba = String.format(Locale.ROOT, "ESCANEANDO · %d polígonos\n%s · %d FPS", mallaGl.triangulos,
-                    hayProfundidad ? "malla por profundidad" : "sin Depth API: planos", fps);
+            Mapa.Grilla g = juego.grilla;
+            arriba = String.format(Locale.ROOT, "ESCANEO COMPLETO · %d%% · %d polígonos\n%s%s · %d FPS",
+                    g == null ? 0 : Math.round(g.cobertura * 100), mallaGl.triangulos,
+                    hayProfundidad ? "malla por profundidad" : "sin Depth API: planos",
+                    haySemantica ? " + IA semántica" : "", fps);
             if (!sigue) abajo = motivo(camara);
             else if (listoDesde == 0) abajo = "Mirá el piso y alrededor,\nmoviéndote despacio";
-            else abajo = sbs ? "Listo: arranca solo…" : "Listo. Tocá para empezar";
+            else if (escaneoCompleto) abajo = sbs ? "Escaneo completo ✓\narranca…" : "Escaneo completo ✓\nTocá para empezar";
+            else abajo = guia(g, camara) + (sbs ? "" : "\n(o tocá para empezar ya)");
         } else {
             arriba = String.format(Locale.ROOT, "PUNTOS %d%s\nOLEADA %d · %d bajas · %d FPS", juego.puntos,
                     juego.combo > 1 ? "  x" + juego.combo : "", juego.oleada, juego.bajas, fps);
@@ -780,6 +826,21 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Panel
                 abajo = "Te dieron. " + juego.puntos + " puntos\n" + (sbs ? "Tocá o volumen para seguir" : "Tocá para volver a empezar");
         }
         hud.poner(arriba, juego.vidaJugador, juego.balas, Juego.CARGADOR, juego.recargando > 0, abajo);
+    }
+
+    /** Hacia dónde mirar para completar el escaneo, dicho en criollo. */
+    private static String guia(Mapa.Grilla g, Camera camara) {
+        if (g == null || Math.hypot(g.faltaX, g.faltaZ) < 0.05f) return "Mirá el piso y alrededor";
+        if (g.faltaCerca > 0.45f) return "Mirá el piso cerca tuyo ↓";
+        float[] f = camara.getDisplayOrientedPose().getTransformedAxis(2, -1f);
+        float fl = (float) Math.hypot(f[0], f[2]);
+        if (fl < 1e-3f) return "Mirá alrededor";
+        float fx = f[0] / fl, fz = f[2] / fl, rx = -fz, rz = fx;
+        float adelante = g.faltaX * fx + g.faltaZ * fz, derecha = g.faltaX * rx + g.faltaZ * rz;
+        double ang = Math.toDegrees(Math.atan2(derecha, adelante));
+        if (Math.abs(ang) < 35) return "Falta adelante: acercate ↑";
+        if (Math.abs(ang) > 135) return "Falta atrás tuyo: date vuelta";
+        return ang > 0 ? "Girá a la derecha →" : "Girá a la izquierda ←";
     }
 
     private static String motivo(Camera camara) {

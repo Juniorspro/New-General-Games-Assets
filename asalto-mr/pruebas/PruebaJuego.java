@@ -170,6 +170,65 @@ public class PruebaJuego {
             ver(oleadaMax >= 3, "limpiando las oleadas se pasa a la siguiente (llegó a la " + oleadaMax + ")");
         }
 
+        // 6) con el mapa de zonas: IA táctica (rutas, cubiertas, agacharse, asomarse)
+        {
+            final Tsdf t2 = new Tsdf(0.07f);
+            PruebaEscaneo.escanear(t2, 60, true);
+            Juego.Entorno e2 = new Juego.Entorno() {
+                public float suelo(float x, float z, float y0, float y1) { return t2.suelo(x, z, y0, y1); }
+                public float rayo(float ox, float oy, float oz, float dx, float dy, float dz, float m) { return t2.rayo(ox, oy, oz, dx, dy, dz, m); }
+                public boolean ocupado(float x, float y, float z) { return t2.ocupado(x, y, z); }
+            };
+            com.juniorspro.asaltomr.Mapa mapa = new com.juniorspro.asaltomr.Mapa();
+            Juego tj = new Juego(8);
+            tj.dificultad = 2;          // difícil: buscan cubierta más seguido
+            tj.pisoRespaldo = 0;
+            tj.grilla = mapa.actualizar(t2, JX, JY, JZ, 0, -1);
+            tj.empezar();
+            int enCubierta = 0, tapados = 0, pasosCharco = 0, adentro2 = 0, pasos2 = 0, conRuta = 0;
+            java.util.HashSet<Integer> cubiertos = new java.util.HashSet<>();
+            for (int k = 0; k < 30 * 40; k++) {
+                tj.actualizar(1 / 30f, JX, JY, JZ, 0, -1, e2);
+                tj.tomarEventos();
+                tj.vidaJugador = 100;
+                for (Juego.Soldado s : tj.soldados) {
+                    if (!Juego.enPie(s)) continue;
+                    pasos2++;
+                    if (s.ruta != null) conRuta++;
+                    if (PruebaEscaneo.charco(s.x, s.z)) pasosCharco++;
+                    if (PruebaMapa.verdad(s.x, s.z) == com.juniorspro.asaltomr.Mapa.OBSTACULO) adentro2++;
+                    if (s.estado == Juego.CUBIERTA && s.agachado > 0.9f) {
+                        enCubierta++;
+                        cubiertos.add(s.id);
+                        // ¿de verdad no lo ves? rayo de tu cara a su pecho agachado, contra la escena real
+                        float cy = s.y + 1.1f - Juego.BAJA_AGACHADO;
+                        float dx = s.x - JX, dy = cy - JY, dz = s.z - JZ, l = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+                        float tr = PruebaEscaneo.trazar(JX, JY, JZ, dx / l, dy / l, dz / l);
+                        if (tr > 0 && tr < l - 0.2f) tapados++;
+                    }
+                }
+            }
+            System.out.printf("IA táctica 40 s: %d soldados se cubrieron, %.0f %% del tiempo con ruta, cubiertos de verdad %d/%d%n",
+                    cubiertos.size(), 100.0 * conRuta / Math.max(1, pasos2), tapados, enCubierta);
+            ver(cubiertos.size() >= 2, "los soldados buscan cubierta (" + cubiertos.size() + ")");
+            ver(enCubierta > 0 && tapados >= enCubierta * 0.8, "agachados en la cubierta, de verdad no los ves (≥ 80 % del tiempo)");
+            ver(pasosCharco == 0, "nunca pisan el charco (" + pasosCharco + ")");
+            ver(adentro2 == 0, "nunca se meten en la mesa, el árbol o la pared (" + adentro2 + " de " + pasos2 + ")");
+            // agachado recibe menos: el tiro a la altura del pecho parado le pasa por arriba
+            Juego.Soldado ag = null;
+            for (Juego.Soldado s : tj.soldados) if (s.estado == Juego.CUBIERTA && s.agachado > 0.9f) ag = s;
+            if (ag != null) {
+                Juego tiro = new Juego(1);
+                tiro.soldados.add(ag);
+                tiro.empezar();
+                tiro.soldados.clear();
+                tiro.soldados.add(ag);
+                float hx = ag.x - JX, hy = ag.y + 1.45f - JY, hz = ag.z - JZ, hl = (float) Math.sqrt(hx * hx + hy * hy + hz * hz);
+                Juego.Impacto im = tiro.disparar(JX, JY, JZ, hx / hl, hy / hl, hz / hl, JX, JY, JZ, e2);
+                ver(im.tipo != Juego.Impacto.SOLDADO && im.tipo != Juego.Impacto.CABEZA, "agachado, el tiro a la altura del pecho parado no le pega");
+            }
+        }
+
         System.out.println(fallas == 0 ? "\n✓ todo bien" : "\n✗ " + fallas + " fallas");
         System.exit(fallas == 0 ? 0 : 1);
     }
