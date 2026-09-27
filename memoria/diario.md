@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de noche, más tarde · `claude/fijate-iszyer`:**
+  - Pidió: "no escanea" y "en un lente detecta mal: los dos deben ser iguales".
+  - Quedó ([aeroplaza-35](aeroplaza-35.md)): la cámara de 30 con profundidad al escanear, la malla de planos sin
+    profundidad, el diagnóstico en la tarjeta y los dos ojos desde la cámara. `camara.mjs` 13/13, `malla.mjs` 16/16.
+  - Falta: que mande una captura de la tarjeta (la línea 📡 dice si llega la profundidad).
 - **27/09/2026, de noche · `claude/fijate-iszyer`:**
   - Pidió: el escaneo de su `asalto-mr.apk` (una malla del cuarto), más preciso, que llene lo que no llega y que
     lo ya escaneado no se reescanee.

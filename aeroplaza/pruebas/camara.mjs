@@ -4,6 +4,7 @@
 // - con lentes, la foto se ve con su brillo (antes, sin pasar a sRGB, salía oscura: un gris 128 daba 55);
 // - afuera de la foto sigue su borde, borroso y más oscuro (no el fondo);
 // - el punto de la mirada va al centro de cada lente y sigue a la lente al cambiar la separación;
+// - (vuelta 36) los dos ojos ven lo mismo: todo desde la cámara (la foto es una sola);
 // - con poca luz (lo que mide Java: __nativo.luz) la linterna se prende sola y la foto se aclara; con luz, no;
 //   apagada a mano, no vuelve a prenderse sola.
 //     node pruebas/camara.mjs
@@ -68,7 +69,7 @@ const ver = (solo) => pag.evaluate((solo) => {
     return { centro: px(cx, cy), fuera: px(cx + (e === 0 ? -1 : 1) * r1 * h, cy), punto: n ? [sx / n - cx, sy / n - cy] : null, cx };
   });
   /* (dónde tiene que caer el punto en cada ojo: el paralaje de su distancia, con la curva de la lente) */
-  const dm = E.punto.position.distanceTo(E.cabezaP), par = L.activa ? A.lentesMod.inversa(L.P, 0.032 / dm) * h : 0;
+  const dm = E.punto.position.distanceTo(E.cabezaP), par = L.activa && !E.mono ? A.lentesMod.inversa(L.P, 0.032 / dm) * h : 0;
   return { W, H, h, ojos, par, campo: E.campo(), fovLente: L.activa ? L.fovOjo : A.vr.fov, llenar: E.llenar, gan: E.uFoto.uGan.value };
 }, solo);
 
@@ -98,6 +99,25 @@ const lejos = p0.ojos.map((o, i) => o.punto ? Math.hypot(o.punto[0] - (i === 0 ?
 prueba('el punto de la mirada cae en el centro de cada lente (con el paralaje de su distancia, a menos de 2 px)', lejos.every((x) => x < 2), `${lejos.map((x) => x.toFixed(1)).join(' · ')} · paralaje ${p0.par.toFixed(1)} px`);
 prueba('al separar las lentes 0,1, el punto se corre con ellas', sigue.every((x, i) => x != null && Math.abs(x - (i === 0 ? -1 : 1) * 0.1 * p0.h) < 2), `${sigue.map((x) => x?.toFixed(1)).join(' · ')} px (tenía que ${(0.1 * p0.h).toFixed(1)})`);
 await pag.evaluate(() => window.__A.J.lentes.poner('generico'));
+
+/* (vuelta 36) los dos ojos iguales: todo (la foto, la tarjeta, el punto) visto desde la cámara; cada ojo, medido
+   desde el centro de su lente */
+const ig = await pag.evaluate(() => {
+  const A = window.__A, E = A.espacio, L = A.J.lentes, gl = A.motor.r.getContext(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, d = new Uint8Array(W * H * 4);
+  const medir = () => {
+    window.__manda(1); E.dibujar(); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, d);
+    const h = H / 2, c0 = L.centro(0), c1 = L.centro(1); let dif = 0, n = 0;
+    for (let j = -8; j <= 8; j++) for (let i = -8; i <= 8; i++) {
+      const ox = i * 0.07 * h, oy = j * 0.07 * h;
+      const a = (Math.round(H / 2 + c0.y * h + oy) * W + Math.round(W / 4 + c0.x * h + ox)) * 4, b = (Math.round(H / 2 + c1.y * h + oy) * W + Math.round(W * 3 / 4 + c1.x * h + ox)) * 4;
+      dif += Math.abs(d[a] - d[b]) + Math.abs(d[a + 1] - d[b + 1]) + Math.abs(d[a + 2] - d[b + 2]); n++;
+    }
+    return +(dif / n / 3).toFixed(1);
+  };
+  const mono = medir(); E.mono = false; const estereo = medir(); E.mono = true;
+  return { mono, estereo };
+});
+prueba('los dos ojos ven lo mismo (desde la cámara: la foto, la tarjeta y el punto caen igual en los dos)', ig.mono < 2 && ig.estereo > ig.mono + 2, `diferencia ${ig.mono} (con los ojos corridos, como antes: ${ig.estereo})`);
 
 /* la luz: con luz, nada; con poca, la linterna sola y la foto más clara */
 const luz = (y, ms, iso, seg) => pag.evaluate(async ([y, ms, iso, seg]) => {

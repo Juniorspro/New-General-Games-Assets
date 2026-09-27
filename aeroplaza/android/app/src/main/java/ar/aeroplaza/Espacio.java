@@ -55,8 +55,10 @@ class Espacio {
   volatile boolean ocupadoMalla, olvidarMalla;
   volatile List<float[][]> planosMalla = new ArrayList<>();
   final ConcurrentHashMap<String, byte[]> mallas = new ConcurrentHashMap<>();
-  long tRelleno;
+  long tRelleno, tSoloPlanos;
   short[] mmCopia; byte[] confCopia;
+  /* (para el juego: cuántas fotos de profundidad entraron, cuánto tardó la última, y si algo falló) */
+  volatile int fotosProf; volatile long msMalla; volatile String errorMalla = "";
 
   /* la foto para ver a través */
   final ExecutorService hilo = Executors.newSingleThreadExecutor();
@@ -102,6 +104,11 @@ class Espacio {
     long ahora = SystemClock.elapsedRealtime();
     if (ahora - tPlanos > 400) { tPlanos = ahora; planos(s); }
     if (ahora - tProf > 150) { tProf = ahora; if (conProfundidad) profundidad(fr, cam); else nube(fr); }
+    /* (sin profundidad, la malla igual: con los planos, cada 2 s) */
+    if (!conProfundidad && !ocupadoMalla && ahora - tSoloPlanos > 2000) {
+      tSoloPlanos = ahora; ocupadoMalla = true;
+      hiloMalla.execute(() -> { try { fundir(null, null, 0, 0, 0, 0, 0, 0, null); } catch (Throwable t) { errorMalla = t.getClass().getSimpleName(); } finally { ocupadoMalla = false; } });
+    }
     if (nNuevos > 0 && ahora - tVox > 250) { tVox = ahora; mandarVoxeles(); }
   }
 
@@ -169,7 +176,7 @@ class Espacio {
       for (int v = 0; v < H; v++) for (int u = 0; u < W; u++) { mmCopia[v * W + u] = bd.getShort(v * rd + u * sd); confCopia[v * W + u] = bc.get(v * rc + u * sc); }
       final short[] mm = mmCopia; final byte[] cf = confCopia; final int w = W, h = H; final float ffx = fx, ffy = fy, ccx = cx, ccy = cy;
       ocupadoMalla = true;
-      hiloMalla.execute(() -> { try { fundir(mm, cf, w, h, ffx, ffy, ccx, ccy, m); } catch (Throwable t) { act.enviar("__nativo&&__nativo.estado('malla: " + t.getClass().getSimpleName() + "')"); } finally { ocupadoMalla = false; } });
+      hiloMalla.execute(() -> { try { fundir(mm, cf, w, h, ffx, ffy, ccx, ccy, m); } catch (Throwable t) { errorMalla = t.getClass().getSimpleName(); } finally { ocupadoMalla = false; } });
     } catch (Throwable t) { /* todavía no hay (las primeras fotos) */ }
     finally { if (d != null) d.close(); if (c != null) c.close(); }
   }
@@ -177,12 +184,14 @@ class Espacio {
   /* en el hilo de la malla: fundir la foto, llenar con los planos (cada 2 s), mallar lo cambiado (cada bloque a lo
      sumo cada 350 ms, 60 por vez) y avisar al juego qué bloques cambiaron */
   void fundir(short[] mm, byte[] cf, int W, int H, float fx, float fy, float cx, float cy, float[] m) {
-    if (olvidarMalla) { olvidarMalla = false; malla.vaciar(); }
-    malla.integrar(mm, cf, W, H, fx, fy, cx, cy, m, W * H > 20000 ? 2 : 1);
+    if (olvidarMalla) { olvidarMalla = false; malla.vaciar(); fotosProf = 0; }
+    long t0 = SystemClock.elapsedRealtime();
+    if (mm != null) { malla.integrar(mm, cf, W, H, fx, fy, cx, cy, m, W * H > 20000 ? 2 : 1); fotosProf++; }
     long ahora = SystemClock.elapsedRealtime();
-    if (ahora - tRelleno > 2000) { tRelleno = ahora; for (float[][] p : planosMalla) malla.rellenarPlano(p[0], p[1]); }
-    List<Malla.Bloque> l = malla.sucios(ahora, 350, 60);
-    if (l.isEmpty()) return;
+    if (mm == null || ahora - tRelleno > 2000) { tRelleno = ahora; for (float[][] p : planosMalla) malla.rellenarPlano(p[0], p[1]); }
+    List<Malla.Bloque> l = malla.sucios(ahora, mm == null ? 0 : 350, 60);
+    msMalla = SystemClock.elapsedRealtime() - t0;
+    if (l.isEmpty()) { avisarMalla(""); return; }
     StringBuilder b = new StringBuilder(64 * l.size() + 64); b.append("__nativo&&__nativo.malla&&__nativo.malla([");
     boolean primero = true;
     for (Malla.Bloque bq : l) {
@@ -193,8 +202,15 @@ class Espacio {
       b.append("[\"").append(k).append("\",").append(bq.bx).append(',').append(bq.by).append(',').append(bq.bz).append(',').append(bq.version).append(',').append(d == null ? 0 : d.length).append(',').append(bq.hecho ? 1 : 0).append(']');
     }
     int[] c = malla.cuenta();
-    b.append("],").append(c[0]).append(',').append(c[1]).append(')');
+    b.append("],").append(c[0]).append(',').append(c[1]).append(',').append(fotosProf).append(',').append(SystemClock.elapsedRealtime() - t0).append(",'").append(errorMalla).append("')");
     act.enviar(b.toString());
+  }
+  /* (sin bloques nuevos: igual, cada tanto, cómo va) */
+  long tAviso;
+  void avisarMalla(String x) {
+    long ahora = SystemClock.elapsedRealtime(); if (ahora - tAviso < 1000) return; tAviso = ahora;
+    int[] c = malla.cuenta();
+    act.enviar("__nativo&&__nativo.malla&&__nativo.malla([]," + c[0] + "," + c[1] + "," + fotosProf + "," + msMalla + ",'" + errorMalla + "')");
   }
 
   /* sin profundidad: los puntos que ARCore sigue (ya en el mundo), con su confianza */

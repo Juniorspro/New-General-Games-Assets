@@ -87,6 +87,15 @@ prueba('la malla se dibuja (el cuarto de mentira se ve), con sus bordes que bril
 /* la tarjeta: cuántos cuadrados y cuánto está listo */
 const r3 = await pag.evaluate(() => { window.__manda(3); const E = window.__A.espacio; return { vox: E.nObjetos, listo: E.pctListo }; });
 prueba('la tarjeta cuenta los cuadrados y dice cuánto está listo', r3.vox === r1.cuadros && r3.listo === Math.round(100 * IX.hechos / IX.total), JSON.stringify(r3));
+/* (vuelta 36) la tarjeta dice cómo va la profundidad: esperando, las fotos que entraron, o el error */
+const r3b = await pag.evaluate((IX) => {
+  const E = window.__A.espacio, a = E.textoMalla();
+  window.__nativo.malla([], IX.total, IX.hechos, 23, 41, ''); const b = E.textoMalla();
+  window.__nativo.malla([], IX.total, IX.hechos, 23, 41, 'OutOfMemoryError'); const c = E.textoMalla();
+  window.__nativo.malla([], IX.total, IX.hechos, 24, 38, '');
+  return [a, b, c];
+}, IX);
+prueba('la tarjeta dice cómo va la profundidad (esperando, las fotos que entraron, o qué falló)', /esperando/.test(r3b[0]) && /23 fotos · 40 ms/.test(r3b[1]) && /⚠ malla: OutOfMemoryError/.test(r3b[2]), r3b.join(' | '));
 /* al terminar se va; escanear de nuevo la borra */
 const r4 = await pag.evaluate(() => {
   const E = window.__A.espacio; E.ponerFase('manos'); window.__manda(80);

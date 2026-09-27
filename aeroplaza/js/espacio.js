@@ -26,7 +26,7 @@ import { PanelLentes, accionLentes } from './lentes.js';
 sumar({
   es: { es_buscando: 'Buscando dónde estás…', es_buscando_d: 'Mové el celu despacio, con luz', es_titulo: 'Escaneá tu espacio', es_texto: 'Mirá alrededor despacio: el piso, las paredes y los muebles',
     es_piso: 'Piso', es_paredes: 'Paredes', es_mesa: 'Mesa', es_objetos: 'Objetos', es_alrededor: 'Mirá alrededor', es_listo: 'Listo', es_saltear: 'Saltear', es_salir: 'Salir', es_falta_piso: 'Falta el piso: apuntá para abajo',
-    es_m2: '{n} m²', es_cubitos: '{n} cubitos', es_listo_pct: '{n} % listo', es_sin_prof: 'Tu celu no mide profundidad: los objetos salen de a pocos puntos',
+    es_m2: '{n} m²', es_cubitos: '{n} cubitos', es_listo_pct: '{n} % listo', es_prof_fotos: '📡 profundidad: {n} fotos · {ms} ms', es_prof_no: '📡 sin profundidad: la malla sale de los planos', es_prof_nada: '📡 esperando la profundidad…', es_sin_prof: 'Tu celu no mide profundidad: los objetos salen de a pocos puntos',
     es_manos_t: 'Apoyá las manos en la mesa', es_manos_d: 'Abiertas, palma para abajo y quietas un segundo', es_sin_mesa: 'No encontré una mesa: apoyalas en cualquier superficie o salteá',
     es_izq: 'Izquierda', es_der: 'Derecha', es_esperando: 'esperando…', es_quieta: 'quieta…', es_medida: 'mide {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Tus manos quedaron medidas (×{k})',
     es_ayuda: 'Tocá la pantalla para seguir · con las manos: tocá o pellizcá', es_piso_ok: 'Piso encontrado', es_pared_ok: 'Pared encontrada', es_mesa_ok: 'Mesa encontrada',
@@ -36,7 +36,7 @@ sumar({
     vr_ar_juego: '🎮 Sí, directo al juego', vr_ar_juego_d: 'AEROPLAZA en 6 ejes, sin escanear', vr_ar_no: '🧭 No, sin ARCore', vr_ar_no_d: 'Solo el giroscopio. Las ventanas de prueba se abren en el mundo del juego (menú de la palma)', vr_ar_atras: 'Volver' },
   en: { es_buscando: 'Finding where you are…', es_buscando_d: 'Move your phone slowly, with light', es_titulo: 'Scan your space', es_texto: 'Look around slowly: the floor, the walls and the furniture',
     es_piso: 'Floor', es_paredes: 'Walls', es_mesa: 'Table', es_objetos: 'Objects', es_alrededor: 'Look around', es_listo: 'Done', es_saltear: 'Skip', es_salir: 'Exit', es_falta_piso: 'Floor missing: point down',
-    es_m2: '{n} m²', es_cubitos: '{n} voxels', es_listo_pct: '{n} % done', es_sin_prof: 'Your phone can’t measure depth: objects come from a few points',
+    es_m2: '{n} m²', es_cubitos: '{n} voxels', es_listo_pct: '{n} % done', es_prof_fotos: '📡 depth: {n} frames · {ms} ms', es_prof_no: '📡 no depth: the mesh comes from the planes', es_prof_nada: '📡 waiting for depth…', es_sin_prof: 'Your phone can’t measure depth: objects come from a few points',
     es_manos_t: 'Rest your hands on the table', es_manos_d: 'Open, palms down and still for a second', es_sin_mesa: 'No table found: rest them on any surface or skip',
     es_izq: 'Left', es_der: 'Right', es_esperando: 'waiting…', es_quieta: 'hold still…', es_medida: 'is {n} cm', es_seguir: 'Continue', es_medidas: '✋ Your hands are measured (×{k})',
     es_ayuda: 'Tap the screen to continue · with your hands: touch or pinch', es_piso_ok: 'Floor found', es_pared_ok: 'Wall found', es_mesa_ok: 'Table found',
@@ -46,7 +46,7 @@ sumar({
     vr_ar_juego: '🎮 Yes, straight to the game', vr_ar_juego_d: 'AEROPLAZA in 6DoF, no scan', vr_ar_no: '🧭 No, without ARCore', vr_ar_no_d: 'Gyroscope only. Test windows open in the game world (palm menu)', vr_ar_atras: 'Back' },
   pt: { es_buscando: 'Procurando onde você está…', es_buscando_d: 'Mexa o celular devagar, com luz', es_titulo: 'Escaneie seu espaço', es_texto: 'Olhe em volta devagar: o chão, as paredes e os móveis',
     es_piso: 'Chão', es_paredes: 'Paredes', es_mesa: 'Mesa', es_objetos: 'Objetos', es_alrededor: 'Olhe em volta', es_listo: 'Pronto', es_saltear: 'Pular', es_salir: 'Sair', es_falta_piso: 'Falta o chão: aponte para baixo',
-    es_m2: '{n} m²', es_cubitos: '{n} cubinhos', es_listo_pct: '{n} % pronto', es_sin_prof: 'Seu celular não mede profundidade: os objetos saem de poucos pontos',
+    es_m2: '{n} m²', es_cubitos: '{n} cubinhos', es_listo_pct: '{n} % pronto', es_prof_fotos: '📡 profundidade: {n} fotos · {ms} ms', es_prof_no: '📡 sem profundidade: a malha sai dos planos', es_prof_nada: '📡 esperando a profundidade…', es_sin_prof: 'Seu celular não mede profundidade: os objetos saem de poucos pontos',
     es_manos_t: 'Apoie as mãos na mesa', es_manos_d: 'Abertas, palma para baixo e paradas um segundo', es_sin_mesa: 'Não achei uma mesa: apoie em qualquer superfície ou pule',
     es_izq: 'Esquerda', es_der: 'Direita', es_esperando: 'esperando…', es_quieta: 'parada…', es_medida: 'mede {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Suas mãos foram medidas (×{k})',
     es_ayuda: 'Toque a tela para seguir · com as mãos: toque ou faça a pinça', es_piso_ok: 'Chão encontrado', es_pared_ok: 'Parede encontrada', es_mesa_ok: 'Mesa encontrada',
@@ -193,6 +193,8 @@ class Tarjeta extends Tablero {
       renglon(262, D.paredes > 0, t('es_paredes'), String(D.paredes));
       renglon(310, D.mesa, t('es_mesa'), D.mesa ? '✓' : '—');
       renglon(358, D.vox > 400, t('es_objetos'), String(D.vox) + (D.listo != null ? ' · ' + t('es_listo_pct', { n: D.listo }) : ''));
+      /* (vuelta 36: cómo va la profundidad, arriba a la derecha: si no llega, se sabe) */
+      if (D.diag) { g.textAlign = 'right'; g.fillStyle = /⚠/.test(D.diag) ? '#ffd23f' : 'rgba(191,244,255,0.85)'; g.font = '700 20px system-ui, sans-serif'; g.fillText(D.diag, W - 30, 40); g.textAlign = 'left'; }
       /* (mirar alrededor: la vuelta en porciones que se van llenando) */
       const cx = W - 116, cy = 282, r = 62;
       for (let i = 0; i < SECTORES; i++) { const a0 = -Math.PI / 2 + i / SECTORES * Math.PI * 2; g.strokeStyle = D.sectores?.[i] ? '#7dfcc0' : 'rgba(255,255,255,0.25)'; g.lineWidth = 18; g.beginPath(); g.arc(cx, cy, r, a0 + 0.06, a0 + Math.PI * 2 / SECTORES - 0.06); g.stroke(); }
@@ -266,6 +268,10 @@ export class Espacio {
        cámara y la lente lo abre a toda su vista (llena, pero ×3,4 en el centro: ojo de pescado). Sin aumento,
        el tamaño de verdad, y afuera de la foto su borde borroso (FRAG_FOTO) */
     this.llenar = false; try { this.llenar = localStorage.getItem(CLAVE_LLENAR) === '1'; } catch { /* sin guardar */ }
+    /* LOS DOS OJOS IGUALES (vuelta 36): la cámara del celu es una sola, así que la foto es la misma para los dos
+       ojos. Lo dibujado con los ojos corridos (la mano fantasma, la malla) caía sobre lo de verdad en un ojo y
+       corrido en el otro ("en un lente detecta mal"). En tu espacio los dos ojos miran desde la cámara */
+    this.mono = true; this.camP = new THREE.Vector3();
   }
 
   /* ------------------------------------------ entrar y salir */
@@ -275,7 +281,7 @@ export class Espacio {
     Nativo.alVoxeles = (v, vox) => this.recibirVoxeles(v, vox);
     Nativo.alFoto = (d) => this.recibirFoto(d);
     Nativo.alOlvidado = () => this.olvidar(false);
-    Nativo.alMalla = (l, n, h) => this.recibirMalla(l, n, h);
+    Nativo.alMalla = (...a) => this.recibirMalla(...a);
     Nativo.arEscanear(true); Nativo.arPasante(true);
     this.medida = { izq: null, der: null }; this.visto = { piso: false, pared: false, mesa: false };
     this.ponerFase('buscando');
@@ -425,8 +431,8 @@ export class Espacio {
   }
   /* ------------------------------------------ la malla del cuarto */
   /* l: [[clave, bx, by, bz, versión, bytes, hecho], …] (bytes 0: el bloque quedó sin malla) */
-  recibirMalla(l, total = 0, hechos = 0) {
-    const Ma = this.malla; Ma.total = total; Ma.hechos = hechos;
+  recibirMalla(l, total = 0, hechos = 0, fotos = 0, ms = 0, error = '') {
+    const Ma = this.malla; Ma.total = total; Ma.hechos = hechos; Ma.diag = { fotos, ms, error };
     for (const [k, bx, by, bz, v, n, h] of l) {
       if (!n) { if (Ma.bloques.delete(k)) this.trozoSucio(bx, by, bz); Ma.pend.delete(k); continue; }
       Ma.pend.set(k, { k, bx, by, bz, v, h: !!h });
@@ -473,6 +479,14 @@ export class Espacio {
       cuadros += (T.n || 0) / 6;
     }
     Ma.cuadros = Math.round(cuadros);
+  }
+  /* cómo va la malla, para la tarjeta */
+  textoMalla() {
+    const d = this.malla.diag;
+    if (d?.error) return '⚠ malla: ' + d.error;
+    if (Nativo.espacio === 'puntos') return t('es_prof_no');
+    if (!d || !d.fotos) return t('es_prof_nada');
+    return t('es_prof_fotos', { n: d.fotos, ms: Math.round(d.ms / 10) * 10 });
   }
   /* lo que se muestra como "objetos": los cuadrados de la malla (o, sin profundidad, los cubitos) */
   get nObjetos() { return this.malla.cuadros || this.nVox; }
@@ -606,7 +620,7 @@ export class Espacio {
       T.malla.lookAt(this.cabezaP); T.malla.updateMatrixWorld();
       const vistos = Array.from(this.sectores).filter((x) => x >= 1).length;
       let pisoArea = 0, paredes = 0; for (const P of this.planos.values()) { if (P.clase === 'piso') pisoArea += P.area; if (P.clase === 'pared') paredes++; }
-      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nObjetos, listo: this.pctListo, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos', camara: this.textoCamara() };
+      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nObjetos, listo: this.pctListo, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos', camara: this.textoCamara(), diag: this.textoMalla() };
       const firma = JSON.stringify(datos, (k, v) => (k === 'k' || k === 'antes' ? undefined : typeof v === 'number' ? Math.round(v * 20) / 20 : v));
       if (firma !== this._firma || this.fase === 'buscando') { this._firma = firma; T.poner(this.fase, datos); }
       for (const b of T.botones) if (b.id === 'listo') { const a = this.pisoY == null; if (a !== !!b.apagado) { b.apagado = a; T.sucio = true; } }
@@ -699,7 +713,10 @@ export class Espacio {
       if (Le) { r.setRenderTarget(Le.rt[i]); r.clear(); }
       else { r.setViewport(x, 0, w, H); r.setScissor(x, 0, w, H); r.clear(); }
       C.fov = fov; C.aspect = Le ? 1 : w / H; C.updateProjectionMatrix();
-      C.quaternion.copy(this.cabezaQ); C.position.set(o * IPD / 2 / aum, 0, 0).applyQuaternion(this.cabezaQ).add(this.cabezaP); C.updateMatrixWorld();
+      C.quaternion.copy(this.cabezaQ);
+      if (this.mono) C.position.copy(this.camP.set(0, 0, -OJOS).applyQuaternion(this.cabezaQ).add(this.cabezaP));
+      else C.position.set(o * IPD / 2 / aum, 0, 0).applyQuaternion(this.cabezaQ).add(this.cabezaP);
+      C.updateMatrixWorld();
       r.render(this.escena, C);
       if (this.manos.activa && this.manos.algo) { r.clearDepth(); this.manos.dibujarOjo(r, C); }
     });

@@ -330,6 +330,7 @@ La altura quieta con ARCore y las manos de Android sin ARCore: [aeroplaza-31](ae
 La cámara de tu espacio en tamaño real, la gamma con lentes y la linterna sola: [aeroplaza-32](aeroplaza-32.md).
 Tu espacio más como un Quest (el menú de la palma, agarrar, las ventanas, el escaneo y las manos): [aeroplaza-33](aeroplaza-33.md).
 La malla del cuarto (TSDF de 3 cm, como Asalto MR pero más fina): [aeroplaza-34](aeroplaza-34.md).
+Que escanee (la profundidad con la cámara de 30) y los dos ojos iguales: [aeroplaza-35](aeroplaza-35.md).
 
 ## Trampas que ya se pagaron
 

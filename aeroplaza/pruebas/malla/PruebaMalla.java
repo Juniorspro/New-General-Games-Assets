@@ -171,6 +171,15 @@ public class PruebaMalla {
     /* 5) cuánto tarda */
     double msF = tInt / 1e6 / fotos, msM = tMal / 1e6 / Math.max(1, nMal);
     prueba("rápida: cada foto de 160 × 120 y cada malla de bloque (en la compu, con margen para la tanda en paralelo; en un celu ~4 veces más)", msF < 25 && msM < 3, String.format("%.1f ms por foto · %.2f ms por bloque · %d cuadrados", msF, msM, cuadros));
+    /* 6) sin profundidad (vuelta 36): la malla sale de los planos solos (el piso y una pared) */
+    { Malla P = new Malla();
+      P.rellenarPlano(new float[] { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, -0.5f, 1 }, new float[] { -2f, -2.5f, 2f, -2.5f, 2f, 2.5f, -2f, 2.5f });
+      P.rellenarPlano(new float[] { 0, 0, 1, 0, -1, 0, 0, 0, 0, 1, 0, 0, 2f, 1.3f, -0.5f, 1 }, new float[] { -2.5f, -1.3f, 2.5f, -1.3f, 2.5f, 1.3f, -2.5f, 1.3f });
+      HashMap<Long, ArrayList<float[]>> rp = new HashMap<>(); int nv = 0;
+      for (Malla.Bloque b : P.sucios(Long.MAX_VALUE, 0, 100000)) { byte[] d = P.mallar(b); if (d == null) continue; ByteBuffer o = ByteBuffer.wrap(d).order(ByteOrder.LITTLE_ENDIAN); for (int q = 0; q + 16 <= d.length; q += 16) { float[] v = { o.getFloat(q), o.getFloat(q + 4), o.getFloat(q + 8), 1 }; rp.computeIfAbsent(celda(v[0], v[1], v[2]), z -> new ArrayList<>()).add(v); nv++; } }
+      int en = 0, tot = 0; for (float x = -1.9f; x <= 1.9f; x += 0.1f) for (float z = -2.9f; z <= 1.9f; z += 0.1f) { tot++; if (cerca(rp, x, 0, z, 0.03f)) en++; }
+      int enP = 0, totP = 0; for (float y = 0.2f; y <= 2.4f; y += 0.1f) for (float z = -2.9f; z <= 1.9f; z += 0.1f) { totP++; if (cerca(rp, 2f, y, z, 0.03f)) enP++; }
+      prueba("sin profundidad, la malla sale de los planos (el piso y la pared enteros)", en > tot * 0.97 && enP > totP * 0.97, String.format("piso %d/%d · pared %d/%d · %d vértices", en, tot, enP, totP, nv)); }
     /* (con una carpeta: cada bloque como lo manda Espacio.java y su índice, para la prueba del juego) */
     if (a.length > 0) try {
       java.io.File dir = new java.io.File(a[0]); dir.mkdirs(); StringBuilder ix = new StringBuilder("{\"bloques\":[");

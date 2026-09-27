@@ -145,6 +145,29 @@ class Ar implements GLSurfaceView.Renderer {
     } catch (Throwable t) { /* la de siempre */ }
   }
 
+  /* (vuelta 36) PARA ESCANEAR HACE FALTA LA PROFUNDIDAD: la cámara de 60 fotos por segundo (elegirCamara) no la
+     da en ARCore, y sin profundidad no hay malla. Si con la de ahora no hay, otra de 30 de la misma cámara (o de
+     cualquiera), con la foto de la CPU más cerca de 640 × 480. La sesión se pausa para cambiarla (en el hilo de
+     GL, antes de update) */
+  void conProfundidad() {
+    try {
+      if (sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) return;
+      CameraConfigFilter f = new CameraConfigFilter(sesion);
+      f.setFacingDirection(CameraConfig.FacingDirection.BACK);
+      f.setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30));
+      String actual = sesion.getCameraConfig().getCameraId();
+      CameraConfig mejor = null; long dm = Long.MAX_VALUE;
+      for (CameraConfig c : sesion.getSupportedCameraConfigs(f)) {
+        Size s = c.getImageSize(); long d = Math.abs((long) s.getWidth() * s.getHeight() - 640L * 480L) + (actual.equals(c.getCameraId()) ? 0 : 100000000L);
+        if (d < dm) { dm = d; mejor = c; }
+      }
+      if (mejor == null) return;
+      sesion.pause(); sesion.setCameraConfig(mejor); sesion.resume();
+      fps = mejor.getFpsRange().getUpper() + ""; geometria = false;
+      act.enviar("__nativo&&__nativo.estado('espacio camara 30')");
+    } catch (Throwable t) { act.enviar("__nativo&&__nativo.estado('espacio sin-cambiar: " + t.getClass().getSimpleName() + "')"); }
+  }
+
   String reanudar() {
     if (sesion == null || !corriendo) return corriendo ? "corre" : "parada";
     try { sesion.resume(); if (gl != null) gl.onResume(); return "corre"; } catch (Throwable t) { return "error: " + t.getClass().getSimpleName(); }
@@ -207,7 +230,7 @@ class Ar implements GLSurfaceView.Renderer {
         geometria = true;
       }
       /* (lo que pidió el juego para tu espacio: la sesión se configura acá, en su hilo) */
-      Boolean pe = pedidoEspacio; if (pe != null) { pedidoEspacio = null; espacio.configurar(sesion, pe); }
+      Boolean pe = pedidoEspacio; if (pe != null) { pedidoEspacio = null; if (pe) conProfundidad(); espacio.configurar(sesion, pe); }
       Frame fr = sesion.update();
       long ts = fr.getTimestamp();
       if (ts == ultimaFoto) return;

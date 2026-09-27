@@ -84,7 +84,7 @@ window.__nativo = {
   voxeles(v, vox) { Nativo.alVoxeles?.(v, vox); },
   foto(d) { Nativo.alFoto?.(d); },
   olvidado() { Nativo.alOlvidado?.(); },
-  malla(l, bloques, hechos) { Nativo.alMalla?.(l, bloques, hechos); },
+  malla(l, bloques, hechos, fotos = 0, ms = 0, error = '') { Nativo.alMalla?.(l, bloques, hechos, fotos, ms, error); },
   luz(y, ms, iso) { Nativo.luz = { y, ms, iso, t: performance.now() }; Nativo.alLuz?.(Nativo.luz); },
   estado(e) {
     if (/^manos (GPU|CPU)$/.test(e)) Nativo.manosListas = e.slice(6);
