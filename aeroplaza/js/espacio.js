@@ -26,7 +26,7 @@ import { PanelLentes, accionLentes } from './lentes.js';
 sumar({
   es: { es_buscando: 'Buscando dónde estás…', es_buscando_d: 'Mové el celu despacio, con luz', es_titulo: 'Escaneá tu espacio', es_texto: 'Mirá alrededor despacio: el piso, las paredes y los muebles',
     es_piso: 'Piso', es_paredes: 'Paredes', es_mesa: 'Mesa', es_objetos: 'Objetos', es_alrededor: 'Mirá alrededor', es_listo: 'Listo', es_saltear: 'Saltear', es_salir: 'Salir', es_falta_piso: 'Falta el piso: apuntá para abajo',
-    es_m2: '{n} m²', es_cubitos: '{n} cubitos', es_sin_prof: 'Tu celu no mide profundidad: los objetos salen de a pocos puntos',
+    es_m2: '{n} m²', es_cubitos: '{n} cubitos', es_listo_pct: '{n} % listo', es_sin_prof: 'Tu celu no mide profundidad: los objetos salen de a pocos puntos',
     es_manos_t: 'Apoyá las manos en la mesa', es_manos_d: 'Abiertas, palma para abajo y quietas un segundo', es_sin_mesa: 'No encontré una mesa: apoyalas en cualquier superficie o salteá',
     es_izq: 'Izquierda', es_der: 'Derecha', es_esperando: 'esperando…', es_quieta: 'quieta…', es_medida: 'mide {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Tus manos quedaron medidas (×{k})',
     es_ayuda: 'Tocá la pantalla para seguir · con las manos: tocá o pellizcá', es_piso_ok: 'Piso encontrado', es_pared_ok: 'Pared encontrada', es_mesa_ok: 'Mesa encontrada',
@@ -36,7 +36,7 @@ sumar({
     vr_ar_juego: '🎮 Sí, directo al juego', vr_ar_juego_d: 'AEROPLAZA en 6 ejes, sin escanear', vr_ar_no: '🧭 No, sin ARCore', vr_ar_no_d: 'Solo el giroscopio. Las ventanas de prueba se abren en el mundo del juego (menú de la palma)', vr_ar_atras: 'Volver' },
   en: { es_buscando: 'Finding where you are…', es_buscando_d: 'Move your phone slowly, with light', es_titulo: 'Scan your space', es_texto: 'Look around slowly: the floor, the walls and the furniture',
     es_piso: 'Floor', es_paredes: 'Walls', es_mesa: 'Table', es_objetos: 'Objects', es_alrededor: 'Look around', es_listo: 'Done', es_saltear: 'Skip', es_salir: 'Exit', es_falta_piso: 'Floor missing: point down',
-    es_m2: '{n} m²', es_cubitos: '{n} voxels', es_sin_prof: 'Your phone can’t measure depth: objects come from a few points',
+    es_m2: '{n} m²', es_cubitos: '{n} voxels', es_listo_pct: '{n} % done', es_sin_prof: 'Your phone can’t measure depth: objects come from a few points',
     es_manos_t: 'Rest your hands on the table', es_manos_d: 'Open, palms down and still for a second', es_sin_mesa: 'No table found: rest them on any surface or skip',
     es_izq: 'Left', es_der: 'Right', es_esperando: 'waiting…', es_quieta: 'hold still…', es_medida: 'is {n} cm', es_seguir: 'Continue', es_medidas: '✋ Your hands are measured (×{k})',
     es_ayuda: 'Tap the screen to continue · with your hands: touch or pinch', es_piso_ok: 'Floor found', es_pared_ok: 'Wall found', es_mesa_ok: 'Table found',
@@ -46,7 +46,7 @@ sumar({
     vr_ar_juego: '🎮 Yes, straight to the game', vr_ar_juego_d: 'AEROPLAZA in 6DoF, no scan', vr_ar_no: '🧭 No, without ARCore', vr_ar_no_d: 'Gyroscope only. Test windows open in the game world (palm menu)', vr_ar_atras: 'Back' },
   pt: { es_buscando: 'Procurando onde você está…', es_buscando_d: 'Mexa o celular devagar, com luz', es_titulo: 'Escaneie seu espaço', es_texto: 'Olhe em volta devagar: o chão, as paredes e os móveis',
     es_piso: 'Chão', es_paredes: 'Paredes', es_mesa: 'Mesa', es_objetos: 'Objetos', es_alrededor: 'Olhe em volta', es_listo: 'Pronto', es_saltear: 'Pular', es_salir: 'Sair', es_falta_piso: 'Falta o chão: aponte para baixo',
-    es_m2: '{n} m²', es_cubitos: '{n} cubinhos', es_sin_prof: 'Seu celular não mede profundidade: os objetos saem de poucos pontos',
+    es_m2: '{n} m²', es_cubitos: '{n} cubinhos', es_listo_pct: '{n} % pronto', es_sin_prof: 'Seu celular não mede profundidade: os objetos saem de poucos pontos',
     es_manos_t: 'Apoie as mãos na mesa', es_manos_d: 'Abertas, palma para baixo e paradas um segundo', es_sin_mesa: 'Não achei uma mesa: apoie em qualquer superfície ou pule',
     es_izq: 'Esquerda', es_der: 'Direita', es_esperando: 'esperando…', es_quieta: 'parada…', es_medida: 'mede {n} cm', es_seguir: 'Seguir', es_medidas: '✋ Suas mãos foram medidas (×{k})',
     es_ayuda: 'Toque a tela para seguir · com as mãos: toque ou faça a pinça', es_piso_ok: 'Chão encontrado', es_pared_ok: 'Parede encontrada', es_mesa_ok: 'Mesa encontrada',
@@ -105,6 +105,7 @@ const FRAG_PLANO = /* glsl */`
     float d = distance(vW, uCabeza), ola = exp(-pow((d - mod(uT * 1.4, 6.0)) * 4.0, 2.0));
     float a = uAlfa * uVer * smoothstep(0.0, 0.7, uT - uNace) * (0.14 + 0.6 * linea + 0.3 * ola);
     gl_FragColor = vec4(uColor * (0.9 + ola * 0.5), a);
+    #include <colorspace_fragment>
   }`;
 /* los cubitos: puntos redondos que aparecen creciendo, con color por altura y la ola */
 const VERT_VOX = /* glsl */`
@@ -118,7 +119,45 @@ const VERT_VOX = /* glsl */`
   }`;
 const FRAG_VOX = /* glsl */`
   uniform float uVer; varying vec3 vC; varying float vA;
-  void main() { vec2 c = gl_PointCoord * 2.0 - 1.0; float r = dot(c, c); if (r > 1.0) discard; gl_FragColor = vec4(vC, vA * uVer * (1.0 - r * 0.7)); }`;
+  void main() { vec2 c = gl_PointCoord * 2.0 - 1.0; float r = dot(c, c); if (r > 1.0) discard; gl_FragColor = vec4(vC, vA * uVer * (1.0 - r * 0.7));
+    #include <colorspace_fragment>
+  }`;
+
+/* LA MALLA DEL CUARTO (vuelta 35, android/…/Malla.java): cuadrados sobre las superficies, con el borde que brilla
+   (como el escaneo de Asalto MR o el de un Quest), del color de lo que es (piso, pared, mesa, techo), la ola que
+   sale de la cabeza, lo hecho (que ya no se escanea) más quieto y verdoso, y lo que llenan los planos, más tenue.
+   Cada vértice: el lugar, la normal y las banderas (aNor.w: 1 relleno, 2 hecho, la esquina del cuadrado × 4) */
+const RAIZ = 'https://appassets.androidplatform.net/';
+const TROZO = 3;             // bloques por lado de cada trozo (una malla de three por trozo: menos dibujos)
+const VERT_MALLA = /* glsl */`
+  attribute vec4 aNor; varying vec3 vW, vN; varying vec2 vQ; varying float vRel, vHecho;
+  void main() {
+    vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = aNor.xyz;
+    float f = floor(aNor.w * 127.0 + 0.5), c = floor(f / 4.0);
+    vRel = mod(f, 2.0); vHecho = mod(floor(f / 2.0), 2.0);
+    vQ = c < 0.5 ? vec2(0.0) : c < 1.5 ? vec2(1.0, 0.0) : c < 2.5 ? vec2(1.0) : vec2(0.0, 1.0);
+    gl_Position = projectionMatrix * viewMatrix * w;
+  }`;
+const FRAG_MALLA = /* glsl */`
+  uniform vec3 uCabeza, uPisoC, uParedC, uMesaC, uTechoC, uListoC; uniform float uT, uVer, uPiso;
+  varying vec3 vW, vN; varying vec2 vQ; varying float vRel, vHecho;
+  void main() {
+    vec3 n = normalize(vN), an = abs(n); float h = vW.y - uPiso;
+    vec3 col = an.y > 0.72 ? (n.y > 0.0 ? (h > 0.3 ? uMesaC : uPisoC) : uTechoC) : uParedC;
+    /* (la grilla cada 12 cm sobre la superficie, del eje que más mira: con los cuadrados de 3 cm quedaba tupida) */
+    vec2 q = (an.y > an.x && an.y > an.z ? vW.xz : an.x > an.z ? vW.zy : vW.xy) / 0.12;
+    vec2 g = abs(fract(q - 0.5) - 0.5) / max(fwidth(q), 1e-4);
+    float linea = 1.0 - min(min(g.x, g.y), 1.0);
+    float luz = 0.62 + 0.38 * max(dot(n, normalize(vec3(0.3, 1.0, 0.2))), 0.0);
+    float d = distance(vW, uCabeza), ola = exp(-pow((d - mod(uT * 1.4, 6.0)) * 4.0, 2.0)), lejos = 1.0 - smoothstep(4.0, 8.0, d);
+    /* (lo hecho, más verde y los bordes un poco más quietos; lo que llenan los planos, más tenue) */
+    if (vHecho > 0.5) col = mix(col, uListoC, 0.35);
+    vec3 c = mix(col * luz, vec3(1.0), 0.35 * linea);
+    float a = 0.12 + (vHecho > 0.5 ? 0.45 : 0.6) * linea + 0.35 * ola;
+    if (vRel > 0.5) a *= 0.45;
+    gl_FragColor = vec4(c * (0.9 + ola * 0.5), a * uVer * lejos);
+    #include <colorspace_fragment>
+  }`;
 
 /* la tarjeta que va con la cabeza: qué falta y los botones */
 class Tarjeta extends Tablero {
@@ -153,7 +192,7 @@ class Tarjeta extends Tablero {
       renglon(214, D.piso > 0.3, t('es_piso'), D.piso > 0 ? t('es_m2', { n: num(D.piso) }) : '—');
       renglon(262, D.paredes > 0, t('es_paredes'), String(D.paredes));
       renglon(310, D.mesa, t('es_mesa'), D.mesa ? '✓' : '—');
-      renglon(358, D.vox > 400, t('es_objetos'), String(D.vox));
+      renglon(358, D.vox > 400, t('es_objetos'), String(D.vox) + (D.listo != null ? ' · ' + t('es_listo_pct', { n: D.listo }) : ''));
       /* (mirar alrededor: la vuelta en porciones que se van llenando) */
       const cx = W - 116, cy = 282, r = 62;
       for (let i = 0; i < SECTORES; i++) { const a0 = -Math.PI / 2 + i / SECTORES * Math.PI * 2; g.strokeStyle = D.sectores?.[i] ? '#7dfcc0' : 'rgba(255,255,255,0.25)'; g.lineWidth = 18; g.beginPath(); g.arc(cx, cy, r, a0 + 0.06, a0 + Math.PI * 2 / SECTORES - 0.06); g.stroke(); }
@@ -206,6 +245,12 @@ export class Espacio {
     this.uVox = { uT: { value: 0 }, uPx: { value: 600 }, uPiso: { value: 0 }, uCabeza: { value: this.cabezaP }, uVer: this.uVer };
     this.vox = new THREE.Points(G, new THREE.ShaderMaterial({ uniforms: this.uVox, vertexShader: VERT_VOX, fragmentShader: FRAG_VOX, transparent: true, depthWrite: false }));
     this.vox.frustumCulled = false; this.vox.renderOrder = 1; this.escena.add(this.vox);
+    /* la malla del cuarto: los bloques que llegan de Java (sus bytes), juntados en trozos de TROZO³ */
+    this.malla = { bloques: new Map(), trozos: new Map(), pend: new Map(), cargando: 0, total: 0, hechos: 0, cuadros: 0, llegadas: 0 };
+    const C = (x) => ({ value: new THREE.Color(x) });
+    this.uMalla = { uT: this.uVox.uT, uCabeza: { value: this.cabezaP }, uPiso: { value: 0 }, uVer: this.uVer, uPisoC: C('#39d7ff'), uParedC: C('#b39cff'), uMesaC: C('#ffd23f'), uTechoC: C('#c9b8ff'), uListoC: C('#7dfcc0') };
+    this.matMalla = new THREE.ShaderMaterial({ uniforms: this.uMalla, vertexShader: VERT_MALLA, fragmentShader: FRAG_MALLA, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    this.grupoMalla = new THREE.Group(); this.grupoMalla.renderOrder = 1; this.escena.add(this.grupoMalla);
     /* la mesa para las manos: el contorno de dos manos apoyadas */
     this.fantasma = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.26).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: this.dibujarFantasma(), transparent: true, depthWrite: false, toneMapped: false }));
     this.fantasma.visible = false; this.fantasma.renderOrder = 3; this.escena.add(this.fantasma);
@@ -230,6 +275,7 @@ export class Espacio {
     Nativo.alVoxeles = (v, vox) => this.recibirVoxeles(v, vox);
     Nativo.alFoto = (d) => this.recibirFoto(d);
     Nativo.alOlvidado = () => this.olvidar(false);
+    Nativo.alMalla = (l, n, h) => this.recibirMalla(l, n, h);
     Nativo.arEscanear(true); Nativo.arPasante(true);
     this.medida = { izq: null, der: null }; this.visto = { piso: false, pared: false, mesa: false };
     this.ponerFase('buscando');
@@ -242,13 +288,15 @@ export class Espacio {
     if (!this.activo) return;
     this.activo = false;
     Nativo.arEscanear(false); Nativo.arPasante(false);
-    Nativo.alPlanos = Nativo.alVoxeles = Nativo.alFoto = Nativo.alOlvidado = null; this.vr.el?.classList.remove('en-espacio');
+    Nativo.alPlanos = Nativo.alVoxeles = Nativo.alFoto = Nativo.alOlvidado = Nativo.alMalla = null; this.vr.el?.classList.remove('en-espacio');
     this.manos.ponerFantasma?.(false);
     this.ventanas.agarres.clear();
   }
   olvidar(pedir = true) {
     for (const P of this.planos.values()) this.soltarPlano(P);
     this.planos.clear(); this.nVox = 0; this.geoVox.setDrawRange(0, 0); this.pisoY = null; this.sectores.fill(0);
+    const Ma = this.malla; for (const T of Ma.trozos.values()) if (T.mesh) { T.mesh.geometry.dispose(); T.mesh.removeFromParent(); }
+    Ma.bloques.clear(); Ma.trozos.clear(); Ma.pend.clear(); Ma.total = Ma.hechos = Ma.cuadros = 0;
     this.visto = { piso: false, pared: false, mesa: false };
     if (pedir) Nativo.arOlvidar();
   }
@@ -375,6 +423,61 @@ export class Espacio {
     for (const P of this.planos.values()) if (P.clase === 'pared') { const n = P.n.clone(); n.y = 0; if (n.lengthSq() < 1e-3) continue; n.normalize(); if (_a.copy(this.cabezaP).sub(P.centro).dot(n) < 0) n.negate(); L.push({ p: P.centro, n }); }
     return L;
   }
+  /* ------------------------------------------ la malla del cuarto */
+  /* l: [[clave, bx, by, bz, versión, bytes, hecho], …] (bytes 0: el bloque quedó sin malla) */
+  recibirMalla(l, total = 0, hechos = 0) {
+    const Ma = this.malla; Ma.total = total; Ma.hechos = hechos;
+    for (const [k, bx, by, bz, v, n, h] of l) {
+      if (!n) { if (Ma.bloques.delete(k)) this.trozoSucio(bx, by, bz); Ma.pend.delete(k); continue; }
+      Ma.pend.set(k, { k, bx, by, bz, v, h: !!h });
+    }
+  }
+  trozoSucio(bx, by, bz) {
+    const tk = `${Math.floor(bx / TROZO)}_${Math.floor(by / TROZO)}_${Math.floor(bz / TROZO)}`, Ma = this.malla;
+    let T = Ma.trozos.get(tk); if (!T) Ma.trozos.set(tk, (T = { mesh: null, sucio: true, claves: new Set() }));
+    T.sucio = true; return T;
+  }
+  /* los bytes de los bloques pendientes, de a 4 a la vez (por https: MainActivity › /malla/) */
+  bombearMalla() {
+    const Ma = this.malla;
+    for (const [k, e] of Ma.pend) {
+      if (Ma.cargando >= 4) break;
+      Ma.pend.delete(k); Ma.cargando++;
+      fetch(`${RAIZ}malla/${k}.bin?v=${e.v}`).then((r) => (r.ok ? r.arrayBuffer() : null)).then((buf) => {
+        if (!buf || !this.activo) return;
+        const antes = Ma.bloques.get(k); if (antes && antes.v > e.v) return;
+        Ma.bloques.set(k, { ...e, buf }); Ma.llegadas++;
+        this.trozoSucio(e.bx, e.by, e.bz).claves.add(k);
+      }).catch(() => {}).finally(() => { Ma.cargando--; });
+    }
+  }
+  /* los trozos cambiados, de a max por cuadro: todos sus bloques en una malla (el lugar y la normal con banderas) */
+  rehacerTrozos(max = 2) {
+    const Ma = this.malla; let hechos = 0, cuadros = 0;
+    for (const T of Ma.trozos.values()) {
+      if (T.sucio && hechos < max) {
+        T.sucio = false; hechos++;
+        let n = 0; for (const k of T.claves) { const B = Ma.bloques.get(k); if (B) n += B.buf.byteLength / 16; else T.claves.delete(k); }
+        if (T.mesh) { T.mesh.geometry.dispose(); if (!n) { T.mesh.removeFromParent(); T.mesh = null; } }
+        if (n) {
+          const pos = new Float32Array(n * 3), nor = new Int8Array(n * 4); let j = 0;
+          for (const k of T.claves) {
+            const f = new Float32Array(Ma.bloques.get(k).buf), b = new Int8Array(Ma.bloques.get(k).buf), m = f.length / 4;
+            for (let v = 0; v < m; v++, j++) { pos[j * 3] = f[v * 4]; pos[j * 3 + 1] = f[v * 4 + 1]; pos[j * 3 + 2] = f[v * 4 + 2]; nor[j * 4] = b[v * 16 + 12]; nor[j * 4 + 1] = b[v * 16 + 13]; nor[j * 4 + 2] = b[v * 16 + 14]; nor[j * 4 + 3] = b[v * 16 + 15]; }
+          }
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aNor', new THREE.BufferAttribute(nor, 4, true)); g.computeBoundingSphere();
+          if (!T.mesh) { T.mesh = new THREE.Mesh(g, this.matMalla); T.mesh.renderOrder = 1; this.grupoMalla.add(T.mesh); } else T.mesh.geometry = g;
+          T.n = n;
+        } else T.n = 0;
+      }
+      cuadros += (T.n || 0) / 6;
+    }
+    Ma.cuadros = Math.round(cuadros);
+  }
+  /* lo que se muestra como "objetos": los cuadrados de la malla (o, sin profundidad, los cubitos) */
+  get nObjetos() { return this.malla.cuadros || this.nVox; }
+  get pctListo() { const Ma = this.malla; return Ma.total ? Math.round(100 * Ma.hechos / Ma.total) : null; }
+
   recibirVoxeles(v, vox = 0.05) {
     const pos = this.geoVox.attributes.position, nace = this.geoVox.attributes.aNace, n0 = this.nVox;
     for (let i = 0; i + 2 < v.length && this.nVox < TOPE_VOX; i += 3) {
@@ -503,7 +606,7 @@ export class Espacio {
       T.malla.lookAt(this.cabezaP); T.malla.updateMatrixWorld();
       const vistos = Array.from(this.sectores).filter((x) => x >= 1).length;
       let pisoArea = 0, paredes = 0; for (const P of this.planos.values()) { if (P.clase === 'piso') pisoArea += P.area; if (P.clase === 'pared') paredes++; }
-      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nVox, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos', camara: this.textoCamara() };
+      const datos = this.fase === 'manos' ? { sinMesa: !this.mesa(), izq: this.medida.izq, der: this.medida.der } : { piso: pisoArea, paredes, mesa: !!this.mesa(), vox: this.nObjetos, listo: this.pctListo, sectores: Array.from(this.sectores, (x) => x >= 1), vistos, sinProf: Nativo.espacio === 'puntos', camara: this.textoCamara() };
       const firma = JSON.stringify(datos, (k, v) => (k === 'k' || k === 'antes' ? undefined : typeof v === 'number' ? Math.round(v * 20) / 20 : v));
       if (firma !== this._firma || this.fase === 'buscando') { this._firma = firma; T.poner(this.fase, datos); }
       for (const b of T.botones) if (b.id === 'listo') { const a = this.pisoY == null; if (a !== !!b.apagado) { b.apagado = a; T.sucio = true; } }
@@ -533,7 +636,9 @@ export class Espacio {
     /* lo que se ve del escaneo */
     const verE = this.verEscaneo || this.fase === 'escaneo' || this.fase === 'buscando', U = this.uVer;
     U.value = verE ? Math.min(1, U.value + dt / 0.3) : Math.max(0, U.value - dt / 0.8);
-    this.vox.visible = this.grupoPlanos.visible = U.value > 0.005;
+    /* (con la malla, los planos no se dibujan: la malla ya los tiene, y encima se veían dos grillas) */
+    this.vox.visible = this.grupoMalla.visible = U.value > 0.005; this.grupoPlanos.visible = U.value > 0.005 && !this.malla.cuadros;
+    this.bombearMalla(); this.rehacerTrozos(2); this.uMalla.uPiso.value = this.pisoY ?? 0;
     this.uVox.uCabeza.value = this.cabezaP;
     if (this.fase === 'manos') { if (!this.fantasma.visible && this.mesa()) this.ponerFantasma(); this.fantasma.material.opacity = 0.55 + 0.35 * Math.sin(this.t * 4); }
     if (dibujar) this.dibujar();
@@ -602,5 +707,5 @@ export class Espacio {
     r.setScissorTest(false); r.setViewport(0, 0, W, H); r.autoClear = auto;
   }
   /* para las pruebas y el cartel de ⏱ */
-  get datos() { return { fase: this.fase, planos: this.planos.size, piso: this.pisoY, mesa: !!this.mesa(), vox: this.nVox, fotos: this.fotoEn.llegadas, ventanas: this.ventanas.lista.length, pantalla: !!this.ventanas.pantalla }; }
+  get datos() { return { fase: this.fase, planos: this.planos.size, piso: this.pisoY, mesa: !!this.mesa(), vox: this.nVox, malla: { bloques: this.malla.bloques.size, trozos: this.malla.trozos.size, cuadros: this.malla.cuadros, listo: this.pctListo }, fotos: this.fotoEn.llegadas, ventanas: this.ventanas.lista.length, pantalla: !!this.ventanas.pantalla }; }
 }

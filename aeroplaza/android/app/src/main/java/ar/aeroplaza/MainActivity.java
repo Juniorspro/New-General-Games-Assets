@@ -73,6 +73,14 @@ public class MainActivity extends Activity {
           java.util.Map<String, String> h = new java.util.HashMap<>(); h.put("Cache-Control", "no-store");
           return new WebResourceResponse("image/jpeg", null, 200, "OK", h, new java.io.ByteArrayInputStream(j));
         }
+        /* (la malla del cuarto, un bloque por pedido: Espacio.java › fundir) */
+        if ("appassets.androidplatform.net".equals(u.getHost()) && u.getPath() != null && u.getPath().startsWith("/malla/")) {
+          Ar a = ar; String k = u.getPath().substring(7).replace(".bin", "");
+          byte[] d = a == null ? null : a.espacio.mallas.get(k);
+          if (d == null) return new WebResourceResponse("application/octet-stream", null, 404, "No", null, null);
+          java.util.Map<String, String> h = new java.util.HashMap<>(); h.put("Cache-Control", "no-store");
+          return new WebResourceResponse("application/octet-stream", null, 200, "OK", h, new java.io.ByteArrayInputStream(d));
+        }
         return cargador.shouldInterceptRequest(u);
       }
       /* (los links de afuera, en el navegador) */

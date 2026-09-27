@@ -40,7 +40,8 @@ si no querés el 6DoF, las ventanas en el mundo 3D del juego". Antes: [aeroplaza
 
 - `arEscanear(true)` configura la sesión en el hilo de GL (planos horizontales y verticales, profundidad AUTOMATIC
   si el celu puede; si no, la nube de puntos) y avisa `espacio profundidad|puntos`.
-- Planos cada 400 ms (pose, extensión y contorno de hasta 48 vértices). Profundidad cruda con confianza ≥ 150 cada
+- Planos cada 400 ms (pose, extensión y contorno de hasta 48 vértices).
+- (Vuelta 35: con profundidad, en vez de los cubitos de 5 cm, la malla del cuarto: [aeroplaza-34](aeroplaza-34.md).) Profundidad cruda con confianza ≥ 150 cada
   150 ms, uno de cada 3 × 3 píxeles, al mundo con la receta del codelab (intrínsecos de la textura, pose del
   sensor) y en cubitos de 5 cm que cuentan después de 3 vistas; salen de a 4.000 cada 250 ms (tope 90.000).
 - La cámara para ver a través: la foto de la CPU a la mitad, derecha para la pantalla, JPEG 62, hasta 30 por

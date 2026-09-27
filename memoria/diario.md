@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de noche · `claude/fijate-iszyer`:**
+  - Pidió: el escaneo de su `asalto-mr.apk` (una malla del cuarto), más preciso, que llene lo que no llega y que
+    lo ya escaneado no se reescanee.
+  - Quedó ([aeroplaza-34](aeroplaza-34.md)): `Malla.java` (TSDF de 3 cm, surface nets, huecos, planos, bloques
+    hechos), servida por `/malla/` y dibujada en trozos. `pruebas/malla.mjs` 14/14 con un cuarto de mentira.
+  - Falta: verlo en su celu (el tiempo del hilo de la malla y lo limpia que sale con profundidad de verdad).
 - **27/09/2026, a la noche, más tarde · `claude/fijate-iszyer`:**
   - Pidió: que las ventanas de tu espacio no se amontonen, que el escaneo desaparezca, manos menos visibles como
     un Quest, poder agarrar las ventanas y que el menú de la palma no salga solo al cerrar la mano.

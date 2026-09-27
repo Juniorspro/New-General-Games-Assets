@@ -17,8 +17,11 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -26,10 +29,11 @@ import java.util.concurrent.Executors;
    dibuje encima de la cámara y deje ventanas en su lugar.
    - LOS PLANOS: piso, mesas, techo (horizontales) y paredes (verticales), cada 400 ms, con su pose y
      su contorno (js/espacio.js los pinta y los clasifica).
-   - LO DEMÁS (muebles, objetos): la profundidad de ARCore (Depth API, la "cruda" con su confianza),
-     cada ~150 ms, pasada al mundo y juntada en cubitos de VOX (5 cm). Un cubito cuenta cuando lo vieron
-     FIRME veces (el ruido de una sola foto no arma nada). Si el celu no tiene profundidad, los puntos
-     sueltos que sigue ARCore (la nube de puntos), que son menos.
+   - LO DEMÁS (muebles, objetos): LA MALLA DEL CUARTO (vuelta 35, Malla.java): la profundidad de ARCore (la
+     "cruda" con su confianza), cada ~150 ms, fundida en cubitos de 3 cm y hecha malla, en su hilo. Los planos
+     llenan lo que no llega. Cada bloque cambiado sale por https (MainActivity › /malla/) y se avisa con
+     __nativo.malla. Si el celu no tiene profundidad, los puntos sueltos que sigue ARCore (la nube de puntos),
+     en cubitos de VOX (5 cm) que cuentan cuando los vieron FIRME veces.
    - LA CÁMARA para ver a través (passthrough): la foto de la CPU entera (640 × 480; a la mitad si pasarla
      tarda más de MITAD_SI ms, en los celus lentos), derecha para la pantalla y en JPEG; el juego la pide por https (MainActivity › /camara/) con la pose de ESA foto, y
      la pone en el mundo donde se sacó: al girar la cabeza entre foto y foto, la imagen queda en su lugar. */
@@ -43,6 +47,16 @@ class Espacio {
   final HashMap<Long, Integer> vistos = new HashMap<>();
   int[] nuevos = new int[3 * 1024]; int nNuevos = 0, firmes = 0;
   long tPlanos, tProf, tVox;
+
+  /* la malla, en su hilo: la foto de profundidad que espera, los planos para llenar y lo que ya se malló
+     (clave "bx_by_bz" → los bytes; lo lee MainActivity) */
+  final Malla malla = new Malla();
+  final ExecutorService hiloMalla = Executors.newSingleThreadExecutor();
+  volatile boolean ocupadoMalla, olvidarMalla;
+  volatile List<float[][]> planosMalla = new ArrayList<>();
+  final ConcurrentHashMap<String, byte[]> mallas = new ConcurrentHashMap<>();
+  long tRelleno;
+  short[] mmCopia; byte[] confCopia;
 
   /* la foto para ver a través */
   final ExecutorService hilo = Executors.newSingleThreadExecutor();
@@ -83,7 +97,7 @@ class Espacio {
 
   /* cada cuadro de ARCore (hilo de GL) */
   void cuadro(Session s, Frame fr, Camera cam) {
-    if (olvidarPedido) { olvidarPedido = false; vistos.clear(); nNuevos = 0; firmes = 0; act.enviar("__nativo&&__nativo.olvidado()"); }
+    if (olvidarPedido) { olvidarPedido = false; vistos.clear(); nNuevos = 0; firmes = 0; olvidarMalla = true; mallas.clear(); act.enviar("__nativo&&__nativo.olvidado()"); }
     if (!escanea || cam.getTrackingState() != TrackingState.TRACKING) return;
     long ahora = SystemClock.elapsedRealtime();
     if (ahora - tPlanos > 400) { tPlanos = ahora; planos(s); }
@@ -109,6 +123,15 @@ class Espacio {
     }
     b.append(']');
     act.enviar("__nativo&&__nativo.planos(" + b + ")");
+    /* (para la malla: la pose y el contorno de cada plano) */
+    List<float[][]> l = new ArrayList<>();
+    for (Plane p : s.getAllTrackables(Plane.class)) {
+      if (p.getTrackingState() != TrackingState.TRACKING || p.getSubsumedBy() != null) continue;
+      float[] m = new float[16]; p.getCenterPose().toMatrix(m, 0);
+      FloatBuffer pol = p.getPolygon(); pol.rewind(); float[] v = new float[pol.remaining()]; pol.get(v);
+      l.add(new float[][] { m, v });
+    }
+    planosMalla = l;
   }
 
   /* un punto del mundo a su cubito */
@@ -139,17 +162,39 @@ class Espacio {
       CameraIntrinsics ci = cam.getTextureIntrinsics();
       float[] f = ci.getFocalLength(), pp = ci.getPrincipalPoint(); int[] dim = ci.getImageDimensions();
       float fx = f[0] * W / dim[0], fy = f[1] * H / dim[1], cx = pp[0] * W / dim[0], cy = pp[1] * H / dim[1];
-      float[] m = new float[16]; cam.getPose().toMatrix(m, 0);
-      /* (uno de cada 3 × 3: con 160 × 120 son ~2.100 puntos por foto) */
-      for (int v = 1; v < H; v += 3) for (int u = 1; u < W; u += 3) {
-        int mm = bd.getShort(v * rd + u * sd) & 0xFFFF;
-        if (mm < 150 || mm > 4500) continue;
-        if ((bc.get(v * rc + u * sc) & 0xFF) < 150) continue;
-        float z = mm / 1000f, x = z * (u - cx) / fx, yy = z * (cy - v) / fy, zc = -z;
-        sumar(m[0] * x + m[4] * yy + m[8] * zc + m[12], m[1] * x + m[5] * yy + m[9] * zc + m[13], m[2] * x + m[6] * yy + m[10] * zc + m[14]);
-      }
+      final float[] m = new float[16]; cam.getPose().toMatrix(m, 0);
+      /* (la malla está ocupada con la anterior: esta foto no) */
+      if (ocupadoMalla) return;
+      if (mmCopia == null || mmCopia.length != W * H) { mmCopia = new short[W * H]; confCopia = new byte[W * H]; }
+      for (int v = 0; v < H; v++) for (int u = 0; u < W; u++) { mmCopia[v * W + u] = bd.getShort(v * rd + u * sd); confCopia[v * W + u] = bc.get(v * rc + u * sc); }
+      final short[] mm = mmCopia; final byte[] cf = confCopia; final int w = W, h = H; final float ffx = fx, ffy = fy, ccx = cx, ccy = cy;
+      ocupadoMalla = true;
+      hiloMalla.execute(() -> { try { fundir(mm, cf, w, h, ffx, ffy, ccx, ccy, m); } catch (Throwable t) { act.enviar("__nativo&&__nativo.estado('malla: " + t.getClass().getSimpleName() + "')"); } finally { ocupadoMalla = false; } });
     } catch (Throwable t) { /* todavía no hay (las primeras fotos) */ }
     finally { if (d != null) d.close(); if (c != null) c.close(); }
+  }
+
+  /* en el hilo de la malla: fundir la foto, llenar con los planos (cada 2 s), mallar lo cambiado (cada bloque a lo
+     sumo cada 350 ms, 60 por vez) y avisar al juego qué bloques cambiaron */
+  void fundir(short[] mm, byte[] cf, int W, int H, float fx, float fy, float cx, float cy, float[] m) {
+    if (olvidarMalla) { olvidarMalla = false; malla.vaciar(); }
+    malla.integrar(mm, cf, W, H, fx, fy, cx, cy, m, W * H > 20000 ? 2 : 1);
+    long ahora = SystemClock.elapsedRealtime();
+    if (ahora - tRelleno > 2000) { tRelleno = ahora; for (float[][] p : planosMalla) malla.rellenarPlano(p[0], p[1]); }
+    List<Malla.Bloque> l = malla.sucios(ahora, 350, 60);
+    if (l.isEmpty()) return;
+    StringBuilder b = new StringBuilder(64 * l.size() + 64); b.append("__nativo&&__nativo.malla&&__nativo.malla([");
+    boolean primero = true;
+    for (Malla.Bloque bq : l) {
+      byte[] d = malla.mallar(bq); bq.tMalla = ahora;
+      String k = bq.bx + "_" + bq.by + "_" + bq.bz;
+      if (d == null) mallas.remove(k); else mallas.put(k, d);
+      if (!primero) b.append(','); primero = false;
+      b.append("[\"").append(k).append("\",").append(bq.bx).append(',').append(bq.by).append(',').append(bq.bz).append(',').append(bq.version).append(',').append(d == null ? 0 : d.length).append(',').append(bq.hecho ? 1 : 0).append(']');
+    }
+    int[] c = malla.cuenta();
+    b.append("],").append(c[0]).append(',').append(c[1]).append(')');
+    act.enviar(b.toString());
   }
 
   /* sin profundidad: los puntos que ARCore sigue (ya en el mundo), con su confianza */
@@ -220,5 +265,5 @@ class Espacio {
     });
   }
 
-  void cerrar() { hilo.shutdown(); }
+  void cerrar() { hilo.shutdown(); hiloMalla.shutdown(); }
 }

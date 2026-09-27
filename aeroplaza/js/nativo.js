@@ -12,7 +12,7 @@
    - TU ESPACIO (Espacio.java, js/espacio.js): los planos del cuarto, lo demás
      en cubitos (la profundidad) y la foto de la cámara para ver a través.
    Java → JS: window.__nativo.pose / .manos / .estado / .planos / .voxeles /
-   .foto / .olvidado / .luz. JS → Java:
+   .foto / .olvidado / .luz / .malla. JS → Java:
    window.AeroplazaNativo (MainActivity.java › Puente). Sin la APK, nada de
    esto existe y el juego va como siempre.
    ========================================================================== */
@@ -41,6 +41,8 @@ export const Nativo = {
   /* la luz de la cámara (vuelta 33, cada 0,4 s): y, la luz media de la foto (0-1); ms e iso, la exposición y
      la sensibilidad (0 si el celu no las da) */
   luz: null, alLuz: null,
+  /* la malla del cuarto (vuelta 35, Malla.java): los bloques que cambiaron, y cuántos hay y cuántos están hechos */
+  alMalla: null,
   /* 'si' · 'instalar' · 'espera' · 'no' */
   arEstado() { try { return N()?.arEstado() || 'no'; } catch { return 'no'; } },
   get puedeAR() { const e = this.arEstado(); return e === 'si' || e === 'instalar'; },
@@ -82,6 +84,7 @@ window.__nativo = {
   voxeles(v, vox) { Nativo.alVoxeles?.(v, vox); },
   foto(d) { Nativo.alFoto?.(d); },
   olvidado() { Nativo.alOlvidado?.(); },
+  malla(l, bloques, hechos) { Nativo.alMalla?.(l, bloques, hechos); },
   luz(y, ms, iso) { Nativo.luz = { y, ms, iso, t: performance.now() }; Nativo.alLuz?.(Nativo.luz); },
   estado(e) {
     if (/^manos (GPU|CPU)$/.test(e)) Nativo.manosListas = e.slice(6);
