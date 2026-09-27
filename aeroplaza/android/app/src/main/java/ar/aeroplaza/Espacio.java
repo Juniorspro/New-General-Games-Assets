@@ -177,7 +177,9 @@ class Espacio {
       final short[] mm = mmCopia; final byte[] cf = confCopia; final int w = W, h = H; final float ffx = fx, ffy = fy, ccx = cx, ccy = cy;
       ocupadoMalla = true;
       hiloMalla.execute(() -> { try { fundir(mm, cf, w, h, ffx, ffy, ccx, ccy, m); } catch (Throwable t) { errorMalla = t.getClass().getSimpleName(); } finally { ocupadoMalla = false; } });
-    } catch (Throwable t) { /* todavía no hay (las primeras fotos) */ }
+    } catch (com.google.ar.core.exceptions.NotYetAvailableException t) { /* todavía no hay (las primeras fotos) */ }
+    /* (otra cosa: que la tarjeta lo diga, así se sabe por qué no escanea) */
+    catch (Throwable t) { if (errorMalla.isEmpty()) errorMalla = "prof " + t.getClass().getSimpleName(); }
     finally { if (d != null) d.close(); if (c != null) c.close(); }
   }
 

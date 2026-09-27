@@ -52,6 +52,8 @@ class Ar implements GLSurfaceView.Renderer {
   ManosNativas manos;
   final Espacio espacio;
   volatile Boolean pedidoEspacio;
+  /* (tu espacio: la cámara tiene que dar profundidad; se elige antes de arrancar, con la sesión pausada) */
+  volatile boolean quiereProfundidad; boolean camaraDeProfundidad;   // (la segunda: ya se eligió la cámara para escanear)
   volatile boolean corriendo, conManos, flashPedido;
   long tLuz = 0;
   boolean pedirInstalar = true, geometria;
@@ -88,6 +90,12 @@ class Ar implements GLSurfaceView.Renderer {
         sesion.configure(cfg);
         elegirCamara();
       }
+      /* (la cámara según para qué: con profundidad para escanear, la de 60 para jugar; la sesión está pausada) */
+      /* (si ya corría, primero se pausa: la cámara solo se cambia con la sesión quieta) */
+      if (quiereProfundidad != camaraDeProfundidad && corriendo) { if (gl != null) gl.onPause(); sesion.pause(); corriendo = false; }
+      /* (se prueba una vez por pedido: si el celu no tiene ninguna con profundidad, no se pausa a cada rato) */
+      if (quiereProfundidad && !camaraDeProfundidad) { elegirParaProfundidad(); camaraDeProfundidad = true; }
+      else if (!quiereProfundidad && camaraDeProfundidad) { elegirCamara(); camaraDeProfundidad = false; geometria = false; }
       if (conManos && manos == null) manos = new ManosNativas(act);
       if (gl == null) {
         gl = new GLSurfaceView(act);
@@ -145,28 +153,31 @@ class Ar implements GLSurfaceView.Renderer {
     } catch (Throwable t) { /* la de siempre */ }
   }
 
-  /* (vuelta 36) PARA ESCANEAR HACE FALTA LA PROFUNDIDAD: la cámara de 60 fotos por segundo (elegirCamara) no la
-     da en ARCore, y sin profundidad no hay malla. Si con la de ahora no hay, otra de 30 de la misma cámara (o de
-     cualquiera), con la foto de la CPU más cerca de 640 × 480. La sesión se pausa para cambiarla (en el hilo de
-     GL, antes de update) */
-  void conProfundidad() {
+  /* (vuelta 36-37) PARA ESCANEAR HACE FALTA LA PROFUNDIDAD: la cámara de 60 fotos por segundo (elegirCamara) no
+     la da en ARCore, y sin profundidad no hay malla. Con la sesión PAUSADA (antes de resume: cambiarla en el hilo
+     de GL la podía dejar trabada), se prueban las de 30 (primero la misma cámara, con la foto de la CPU más cerca
+     de 640 × 480) hasta una con profundidad. Devuelve si quedó una con profundidad */
+  boolean elegirParaProfundidad() {
     try {
-      if (sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) return;
+      if (sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) { avisarCamara("espacio camara ok"); return true; }
       CameraConfigFilter f = new CameraConfigFilter(sesion);
       f.setFacingDirection(CameraConfig.FacingDirection.BACK);
       f.setTargetFps(EnumSet.of(CameraConfig.TargetFps.TARGET_FPS_30));
-      String actual = sesion.getCameraConfig().getCameraId();
-      CameraConfig mejor = null; long dm = Long.MAX_VALUE;
-      for (CameraConfig c : sesion.getSupportedCameraConfigs(f)) {
-        Size s = c.getImageSize(); long d = Math.abs((long) s.getWidth() * s.getHeight() - 640L * 480L) + (actual.equals(c.getCameraId()) ? 0 : 100000000L);
-        if (d < dm) { dm = d; mejor = c; }
+      final String actual = sesion.getCameraConfig().getCameraId();
+      List<CameraConfig> l = new java.util.ArrayList<>(sesion.getSupportedCameraConfigs(f));
+      l.sort((a, b) -> Long.compare(orden(a, actual), orden(b, actual)));
+      CameraConfig antes = sesion.getCameraConfig();
+      for (CameraConfig c : l) {
+        sesion.setCameraConfig(c);
+        if (sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) { fps = c.getFpsRange().getUpper() + ""; geometria = false; avisarCamara("espacio camara 30"); return true; }
       }
-      if (mejor == null) return;
-      sesion.pause(); sesion.setCameraConfig(mejor); sesion.resume();
-      fps = mejor.getFpsRange().getUpper() + ""; geometria = false;
-      act.enviar("__nativo&&__nativo.estado('espacio camara 30')");
-    } catch (Throwable t) { act.enviar("__nativo&&__nativo.estado('espacio sin-cambiar: " + t.getClass().getSimpleName() + "')"); }
+      sesion.setCameraConfig(antes);
+      avisarCamara("espacio camara sin-profundidad");
+    } catch (Throwable t) { avisarCamara("espacio camara error: " + t.getClass().getSimpleName()); }
+    return false;
   }
+  static long orden(CameraConfig c, String actual) { Size s = c.getImageSize(); return Math.abs((long) s.getWidth() * s.getHeight() - 640L * 480L) + (actual.equals(c.getCameraId()) ? 0 : 100000000L); }
+  void avisarCamara(String e) { act.enviar("__nativo&&__nativo.estado('" + e + "')"); }
 
   String reanudar() {
     if (sesion == null || !corriendo) return corriendo ? "corre" : "parada";
@@ -230,7 +241,7 @@ class Ar implements GLSurfaceView.Renderer {
         geometria = true;
       }
       /* (lo que pidió el juego para tu espacio: la sesión se configura acá, en su hilo) */
-      Boolean pe = pedidoEspacio; if (pe != null) { pedidoEspacio = null; if (pe) conProfundidad(); espacio.configurar(sesion, pe); }
+      Boolean pe = pedidoEspacio; if (pe != null) { pedidoEspacio = null; espacio.configurar(sesion, pe); }
       Frame fr = sesion.update();
       long ts = fr.getTimestamp();
       if (ts == ultimaFoto) return;

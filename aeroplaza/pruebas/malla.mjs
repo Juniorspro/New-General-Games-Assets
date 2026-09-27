@@ -40,7 +40,8 @@ await pag.addInitScript(() => {
   const anota = (n) => (...a) => { window.__llamadas.push([n, ...a]); };
   window.AeroplazaNativo = {
     version: () => '1', arEstado: () => 'si',
-    arIniciar: () => { setTimeout(() => window.__nativo?.estado('corre'), 30); },
+    arIniciar: (m) => { window.__llamadas.push(['arIniciar', m]); setTimeout(() => window.__nativo?.estado('corre'), 30); },
+    arProfundidad: anota('arProfundidad'),
     arParar: anota('arParar'), arManos: anota('arManos'), manosDos: anota('manosDos'), flash: anota('flash'), vibrar: anota('vibrar'),
     arEscanear: (si) => { if (si) setTimeout(() => window.__nativo?.estado('espacio profundidad'), 10); },
     arPasante: anota('arPasante'), arOlvidar: anota('arOlvidar'),
@@ -96,6 +97,22 @@ const r3b = await pag.evaluate((IX) => {
   return [a, b, c];
 }, IX);
 prueba('la tarjeta dice cómo va la profundidad (esperando, las fotos que entraron, o qué falló)', /esperando/.test(r3b[0]) && /23 fotos · 40 ms/.test(r3b[1]) && /⚠ malla: OutOfMemoryError/.test(r3b[2]), r3b.join(' | '));
+/* (vuelta 37) antes de arrancar ARCore, el juego pide la cámara con profundidad; y la tarjeta dice en qué paso se traba */
+const r3c = await pag.evaluate(() => {
+  window.__manda(2); const { Nativo } = window.__A, E = window.__A.espacio, L = window.__llamadas;
+  const iP = L.findIndex((x) => x[0] === 'arProfundidad' && x[1] === true), iI = L.findIndex((x) => x[0] === 'arIniciar');
+  const antes = { estado: Nativo.estado, espacio: Nativo.espacio, cam: Nativo.camaraEspacio }, t = [];
+  const con = (f) => { f(); t.push(E.textoMalla()); Object.assign(Nativo, { estado: antes.estado, espacio: antes.espacio, camaraEspacio: antes.cam }); };
+  con(() => window.__nativo.estado('error: UnavailableDeviceNotCompatibleException'));
+  con(() => window.__nativo.estado('espacio camara error: IllegalStateException'));
+  con(() => { Nativo.espacio = ''; });
+  con(() => window.__nativo.estado('espacio puntos'));
+  window.__nativo.estado('espacio camara 30');
+  const cam = Nativo.camaraEspacio, esp = Nativo.espacio;
+  return { orden: iP >= 0 && iI > iP, t, cam, esp };
+});
+prueba('antes de arrancar ARCore pide la cámara con profundidad', r3c.orden && r3c.cam === '30' && r3c.esp === 'profundidad', JSON.stringify({ orden: r3c.orden, cam: r3c.cam, esp: r3c.esp }));
+prueba('la tarjeta dice en qué paso se traba (ARCore, la cámara, prendiendo, sin profundidad)', /⚠.*ARCore error: Unavailable/.test(r3c.t[0]) && /⚠.*cámara IllegalState/.test(r3c.t[1]) && /prendiendo/.test(r3c.t[2]) && /sin profundidad/.test(r3c.t[3]), r3c.t.join(' | '));
 /* al terminar se va; escanear de nuevo la borra */
 const r4 = await pag.evaluate(() => {
   const E = window.__A.espacio; E.ponerFase('manos'); window.__manda(80);

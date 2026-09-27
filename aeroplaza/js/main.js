@@ -309,9 +309,11 @@ async function iniciar() {
     festejarProbador() { estudio?.festejar(); },
     /* el modo VR (vr.js): sin la interfaz ni los dedos, la cabeza mueve la cámara */
     /* conAR: con ARCore (la APK); false si se eligió sin (solo el giroscopio) */
-    entrarVR(sbs, conManos = G.opciones.vrManos, { conAR = true } = {}) {
+    /* escanear: para tu espacio (ARCore arranca con la cámara que da profundidad; si no, la de 60) */
+    entrarVR(sbs, conManos = G.opciones.vrManos, { conAR = true, escanear = false } = {}) {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
       vr.verFps = !!G.opciones.vrFps; sinAR = !conAR;
+      if (conAR) Nativo.arProfundidad(escanear);
       const p = vr.entrar(sbs, { raiz: UI.raiz, cam, conAR, avisar: (x) => UI.avisar(x), alSalir: () => { espacio.cerrar(); ventanasMundo.limpiar(); apagarManos(); sinAR = false; ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
       manos.menu.fps = vr.verFps; manos.suavidad = G.opciones.vrSuave || 'media';
       if (conManos) p.then(() => { if (vr.activo) prenderManos(); });
@@ -320,7 +322,7 @@ async function iniciar() {
     /* TU ESPACIO (espacio.js): con ARCore, el cuarto de verdad (escaneo, las manos en la mesa, la pantalla
        y las ventanas). Va dentro del modo VR (la capa de toques, la pantalla completa); las manos siempre */
     entrarEspacio(sbs) {
-      const p = J.entrarVR(sbs, false, { conAR: true });
+      const p = J.entrarVR(sbs, false, { conAR: true, escanear: true });
       p.then(() => { if (!vr.activo) return; espacio.entrar(sbs); prenderManos(); });
       return p;
     },

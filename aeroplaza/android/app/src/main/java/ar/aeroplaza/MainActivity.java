@@ -45,6 +45,8 @@ public class MainActivity extends Activity {
   CamaraManos camara;
   PermissionRequest pendiente;
   boolean arPendiente, arConManos, camaraPendiente;
+  /* (lo que pidió el juego para tu espacio, por si llega antes de que exista ARCore: se aplica al crearlo) */
+  volatile Boolean quiereEscanear, quierePasante; volatile boolean quiereProfundidad;
   long ultimoAtras;
 
   @Override protected void onCreate(Bundle b) {
@@ -156,7 +158,12 @@ public class MainActivity extends Activity {
     }
     /* (la cámara es de uno solo: si la tenían las manos sin ARCore, se suelta antes) */
     if (camara != null && camara.prendida) camara.apagar();
-    if (ar == null) ar = new Ar(this);
+    if (ar == null) {
+      ar = new Ar(this);
+      if (quiereEscanear != null) ar.escanear(quiereEscanear);
+      if (quierePasante != null) ar.pasante(quierePasante);
+    }
+    ar.quiereProfundidad = quiereProfundidad;
     String e = ar.iniciar(conManos);
     enviar("__nativo&&__nativo.estado('" + e + "')");
   }
@@ -201,8 +208,10 @@ public class MainActivity extends Activity {
     @JavascriptInterface public void arManos(final boolean si) { runOnUiThread(() -> { if (ar != null) ar.manos(si); }); }
     /* (el juego tiene una mano a prueba: buscar dos en cada foto, para verlas juntas) */
     /* tu espacio: escanear el cuarto (planos y profundidad), la cámara para ver a través, y empezar de cero */
-    @JavascriptInterface public void arEscanear(final boolean si) { Ar a = ar; if (a != null) a.escanear(si); }
-    @JavascriptInterface public void arPasante(final boolean si) { Ar a = ar; if (a != null) a.pasante(si); }
+    @JavascriptInterface public void arEscanear(final boolean si) { quiereEscanear = si; Ar a = ar; if (a != null) a.escanear(si); }
+    @JavascriptInterface public void arPasante(final boolean si) { quierePasante = si; Ar a = ar; if (a != null) a.pasante(si); }
+    /* (antes de arIniciar: si la cámara tiene que dar profundidad, para tu espacio) */
+    @JavascriptInterface public void arProfundidad(final boolean si) { quiereProfundidad = si; }
     @JavascriptInterface public void arOlvidar() { Ar a = ar; if (a != null) a.espacio.olvidar(); }
     @JavascriptInterface public void manosDos(final boolean si) {
       Ar a = ar; if (a != null && a.manos != null) a.manos.quiereDos = si;

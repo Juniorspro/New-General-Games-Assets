@@ -9,6 +9,7 @@ Pidió, con una captura de tu espacio con visor (sin piso, paredes ni objetos; l
 - Desde la vuelta 31, `Ar.java › elegirCamara` prefiere la configuración de 60 fotos por segundo, y ARCore no da la
   profundidad con esa. Sin profundidad, la malla no tiene de dónde salir.
 - Los "68 objetos" de su primera captura eran cubitos de la nube de puntos, no de la profundidad.
+- (Vuelta 36: esto se reemplazó por `elegirParaProfundidad`, antes de arrancar: [aeroplaza-36](aeroplaza-36.md).)
 - **Ahora** (`Ar.java › conProfundidad`, al pedir el escaneo, en el hilo de GL antes de `update`): si con la
   cámara de ahora no hay profundidad, pausa, pone una de 30 de la misma cámara (o de cualquiera), con la foto
   más cerca de 640 × 480, y sigue.

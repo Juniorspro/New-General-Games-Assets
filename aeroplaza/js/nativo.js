@@ -33,6 +33,8 @@ export const Nativo = {
   esperas: [],
   /* tu espacio: 'profundidad' (Depth API) · 'puntos' (sin profundidad: la nube de puntos) · '' */
   espacio: '',
+  /* (la cámara para escanear, Ar.java › elegirParaProfundidad: 'ok' · '30' · 'sin-profundidad' · 'error: …') */
+  camaraEspacio: '',
   camara: null,
   /* las manos sin ARCore (CamaraManos.java): corre · abriendo · parada · sin-permiso · error: …; y sus fotos por segundo */
   camaraManos: 'parada', camaraFps: 0,
@@ -53,6 +55,8 @@ export const Nativo = {
   manosDos(si) { try { N()?.manosDos?.(!!si); } catch { /* sin APK */ } },
   arEscanear(si) { try { N()?.arEscanear?.(!!si); } catch { /* sin APK */ } },
   arPasante(si) { try { N()?.arPasante?.(!!si); } catch { /* sin APK */ } },
+  /* (antes de arIniciar: para tu espacio, la cámara que da profundidad; para jugar, la de 60) */
+  arProfundidad(si) { try { N()?.arProfundidad?.(!!si); } catch { /* sin APK */ } },
   arOlvidar() { try { N()?.arOlvidar?.(); } catch { /* sin APK */ } },
   flash(si) { try { N()?.flash(!!si); } catch { /* sin APK */ } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
@@ -89,6 +93,7 @@ window.__nativo = {
   estado(e) {
     if (/^manos (GPU|CPU)$/.test(e)) Nativo.manosListas = e.slice(6);
     else if (/^manos-camara /.test(e)) { const x = e.slice(13); if (x.startsWith('corre')) { Nativo.camaraManos = 'corre'; Nativo.camaraFps = +x.split(' ')[1] || 30; } else Nativo.camaraManos = x; }
+    else if (/^espacio camara /.test(e)) Nativo.camaraEspacio = e.slice(15);
     else if (/^espacio /.test(e)) Nativo.espacio = e.slice(8);
     /* (la cámara que eligió ARCore: su campo y el más abierto del celu, en grados; Ar.java › elegirCamara) */
     else if (/^camara \d/.test(e)) { const [, a, b] = e.split(' '); Nativo.camara = { campo: +a, celu: +b }; }

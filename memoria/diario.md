@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **27/09/2026, de noche, todavía más tarde · `claude/fijate-iszyer`:**
+  - Pidió: "no, pues no escanea el entorno".
+  - Quedó ([aeroplaza-36](aeroplaza-36.md)): la cámara con profundidad se elige antes de arrancar ARCore, los
+    pedidos se guardan si ARCore no existe, y la tarjeta dice en qué paso se traba. `malla.mjs` 18/18.
+  - Falta: la captura de la línea 📡 de la tarjeta, para saber cuál era la causa.
 - **27/09/2026, de noche, más tarde · `claude/fijate-iszyer`:**
   - Pidió: "no escanea" y "en un lente detecta mal: los dos deben ser iguales".
   - Quedó ([aeroplaza-35](aeroplaza-35.md)): la cámara de 30 con profundidad al escanear, la malla de planos sin
