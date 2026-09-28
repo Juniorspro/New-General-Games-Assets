@@ -8,7 +8,9 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Dijo: "no le llegan las actualizaciones".
   - Quedó ([aeroplaza-47](aeroplaza-47.md)): la APK 45 solo buscaba al arrancar de cero. La 46 busca al volver y cada
     20 min, y usa lo bajado sin cerrar la app. Se mandó la APK 46 (misma firma: va encima). Publicada la n 3.
-  - Falta: que confirme que le llega (en Opciones › Datos se ve la versión).
+  - Volvió a decir que no le llega: la búsqueda anda desde acá (probada en Java contra GitHub). Se publicó la n 4 con
+    "versión N · app M" abajo del menú, para saber qué tiene su celu.
+  - Falta: que diga qué versión le figura abajo del menú.
 - **28/09/2026, de noche, decimotercera vez · `claude/fijate-iszyer`:**
   - Pidió: un celu en AEROPLAZA para que sea "algo así como Roblox", con amigos y solicitudes de amistad.
   - Quedó ([aeroplaza-46](aeroplaza-46.md)): el celu (apps, amigos, solicitudes, charlas cifradas, juegos, casas,

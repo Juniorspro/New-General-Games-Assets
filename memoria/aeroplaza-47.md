@@ -27,6 +27,18 @@ Dijo: "no le llegan las actualizaciones". Antes: [aeroplaza-45](aeroplaza-45.md)
 - En **Opciones › Datos**: "Versión del juego: 3 · APK 46 · al día" y "🔄 Buscar ahora" (`filaVersion`). Sirve para
   saber qué tiene el celu de quien pide, si vuelve a decir que no le llega.
 
+## Si vuelve a decir que no le llega
+
+- Primero, qué tiene el celu. Abajo del menú y en la barra de la pausa dice "versión N · app M" (desde la n 4,
+  `textoVersion`); en Opciones › Datos, además, cómo va la búsqueda.
+  - Si no dice nada: tiene una APK anterior a la 46, o no se instaló la 46 (una firma distinta:
+    "conflicto con un paquete existente").
+  - Si dice "app 46": "🔄 Buscar ahora" y el aviso de "Hay una versión nueva"; tocándolo, se usa.
+- Desde el contenedor se puede probar la búsqueda tal cual la hace la app. Se copia `Actualizacion.java` y se escribe un
+  `Simula.java` que hace lo de `buscarYa` con `HttpURLConnection`, sin Android: el 28/09 anduvo con la 45 y con la 46,
+  contra GitHub de verdad. `jxstudios.pages.dev` todavía no existe: esa fuente falla, y está bien.
+- El 28/09, después de la n 3 (la de la APK 46) se publicó la n 4 (la versión en el menú) para ver si le llega.
+
 ## La firma de las APK
 
 - Las APK de este contenedor se firman con `~/.android/debug.keystore` (creado el 27/09 a las 06:37). La huella del
