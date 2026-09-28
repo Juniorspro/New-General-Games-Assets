@@ -37,6 +37,7 @@ import com.google.ar.core.Frame;
 import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
+import com.google.ar.core.TrackingFailureReason;
 import com.google.ar.core.TrackingState;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 
@@ -86,6 +87,18 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     private SensorManager sensores;
     private final float[] rotSensor = new float[16];
     private volatile boolean hayRotSensor;
+
+    // Nexo Track: la capa entre ARCore y lo que se ve (el giroscopio, el ancla, las pérdidas, los ojos)
+    private final Seguimiento seg = new Seguimiento();
+    private final Cuello cuello = new Cuello();
+    private com.google.ar.core.Anchor anclaAr;
+    private final float[] wSensor = new float[16], wDisplay = new float[16], poseOjos = new float[16], anclaM = new float[16];
+    private long ultimaFoto, medidoCuello, perdidoEn, ultimoAvisoPerdida;
+    private String fallaSeguimiento;
+    private volatile float edadFotoMs;
+    private String textoCamara = "la de ARCore";
+    private final Diagnostico diag = new Diagnostico();
+    private final boolean[] pellizcaAhora = new boolean[2];
 
     // lo que se dibuja
     private final Fondo fondo = new Fondo();
@@ -161,6 +174,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         ajustes.cargar(this);
         vistos = ajustes.copia();
+        cuello.ojos[0] = ajustes.ojoX / 1000f; cuello.ojos[1] = ajustes.ojoY / 1000f; cuello.ojos[2] = ajustes.ojoZ / 1000f;
         entorno = ajustes.entorno;
         if (entorno != Entornos.PASSTHROUGH) ultimoVirtual = entorno;
         String error = Fallo.leer(this);
@@ -211,7 +225,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         pantallaCompleta();
         Sensor rv = sensores.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR);
         if (rv == null) rv = sensores.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-        if (rv != null) sensores.registerListener(this, rv, SensorManager.SENSOR_DELAY_GAME);
+        // cada 5 ms (200 por segundo): Nexo Track lleva la pose de ARCore hasta el momento en que se ve
+        if (rv != null) sensores.registerListener(this, rv, 5000);
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, PERMISO_CAMARA);
         } else if (sesion == null) crearSesion();
@@ -251,6 +266,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         try {
             if (ArCoreApk.getInstance().requestInstall(this, !pidioInstalar) == ArCoreApk.InstallStatus.INSTALL_REQUESTED) { pidioInstalar = true; return; }
             sesion = new Session(this);
+            // la cámara de más fps (60 si hay) y la imagen cerca de 640×480, como Asalto MR
+            try { CamaraArcore.elegir(this, sesion, false); textoCamara = CamaraArcore.describir(this, sesion.getCameraConfig()) + " · " + sesion.getCameraConfig().getFpsRange().getUpper() + " fps"; }
+            catch (Throwable e) { textoCamara = "la de ARCore"; }
             Config c = new Config(sesion);
             config = c;
             c.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE);
@@ -296,6 +314,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     // los sensores (sin ARCore: sólo girar)
     @Override
     public void onSensorChanged(SensorEvent e) {
+        float[] qw = new float[4];
+        SensorManager.getQuaternionFromVector(qw, e.values);   // (w, x, y, z)
+        seg.giro(aBoot(e.timestamp), qw[1], qw[2], qw[3], qw[0]);
         float[] m = new float[16], r = new float[16], v = new float[16];
         SensorManager.getRotationMatrixFromVector(m, e.values);
         // el teléfono acostado: los ejes de la pantalla (derecha, arriba) según para qué lado está
@@ -444,7 +465,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
 
     @Override public String estado() {
         StringBuilder b = new StringBuilder();
-        b.append(conArcore ? "Seguimiento: ARCore (6 DoF)" : "Seguimiento: sensores (sólo girar)");
+        if (conArcore) {
+            Ajustes a = vistos;
+            float[] o = ojosAhora(a);
+            b.append(seg.modo == Seguimiento.GIRO ? "Seguimiento: PERDIDO, sólo girando (" + fallaSeguimiento + ")" : "Seguimiento: Nexo Track sobre ARCore (6 DoF)");
+            b.append(String.format(Locale.ROOT, " · la foto llega %.0f ms tarde, se lleva %.0f ms con el giroscopio · el ancla corrigió %.1f cm · perdido %d veces · cámara: %s",
+                    edadFotoMs, seg.demoraMs, seg.correccionCm, seg.perdidas, textoCamara));
+            if (a.sbs == 1) b.append(String.format(Locale.ROOT, " · ojos %s (%.1f, %.1f, %.1f) cm%s", a.ojoAuto == 1 ? "medidos" : "a mano",
+                    o[0] * 100, o[1] * 100, o[2] * 100, a.ojoAuto == 1 ? " en " + cuello.medidas + " medidas" : ""));
+        } else b.append("Seguimiento: sensores (sólo girar)");
         ManoRastreo m = manos;
         b.append(" · Manos: ").append(m == null ? "apagadas" : m.anda ? "andando (" + m.delegado + ")" : m.estado);
         if (nombreControl != null) b.append(" · Control: ").append(nombreControl);
@@ -535,6 +564,76 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         dock.abiertas(abiertas);
     }
 
+    // ── Nexo Track ──
+
+    /** Las horas de los sensores y de las fotos a una sola base (la del arranque del teléfono). */
+    private static long aBoot(long ts) {
+        long boot = SystemClock.elapsedRealtimeNanos(), mono = System.nanoTime();
+        return Math.abs(mono - ts) < Math.abs(boot - ts) ? ts + (boot - mono) : ts;
+    }
+
+    /** Un ancla de ARCore donde está el escritorio (1.1 m adelante): con sus correcciones, todo queda en su lugar. */
+    private void anclar() {
+        if (sesion == null) return;
+        try {
+            float hl = (float) Math.hypot(wDisplay[8], wDisplay[10]);
+            float fx = hl > 1e-3f ? -wDisplay[8] / hl : 0, fz = hl > 1e-3f ? -wDisplay[10] / hl : -1;
+            com.google.ar.core.Anchor nueva = sesion.createAnchor(Pose.makeTranslation(wDisplay[12] + fx * 1.1f, wDisplay[13], wDisplay[14] + fz * 1.1f));
+            float[] m = new float[16];
+            nueva.getPose().toMatrix(m, 0);
+            seg.nuevaAncla(m);
+            if (anclaAr != null) anclaAr.detach();
+            anclaAr = nueva;
+        } catch (Throwable e) { /* sin ancla por ahora: se intenta el próximo cuadro */ }
+    }
+
+    /** Dónde están los ojos desde la cámara (marco de la pantalla): medidos solos o los de los ajustes. */
+    private float[] ojosAhora(Ajustes a) {
+        return a.ojoAuto == 1 ? cuello.ojos : new float[]{a.ojoX / 1000f, a.ojoY / 1000f, a.ojoZ / 1000f};
+    }
+
+    private void guardarOjos() {
+        int x = Math.round(cuello.ojos[0] * 1000), y = Math.round(cuello.ojos[1] * 1000), z = Math.round(cuello.ojos[2] * 1000);
+        Ajustes a = vistos;
+        if (Math.abs(x - a.ojoX) + Math.abs(y - a.ojoY) + Math.abs(z - a.ojoZ) < 3) return;
+        cambio("ojoX", x); cambio("ojoY", y); cambio("ojoZ", z);
+    }
+
+    private static String nombreFalla(TrackingFailureReason r) {
+        if (r == null) return "ARCore se está ubicando";
+        switch (r) {
+            case INSUFFICIENT_LIGHT: return "poca luz: prendé una luz o la linterna";
+            case EXCESSIVE_MOTION: return "te moviste muy rápido";
+            case INSUFFICIENT_FEATURES: return "la cámara ve poco: una pared lisa, o la tapa del visor le tapa la cámara";
+            case CAMERA_UNAVAILABLE: return "otra app está usando la cámara";
+            case BAD_STATE: return "ARCore se reinició";
+            default: return "ARCore se está ubicando";
+        }
+    }
+
+    /** Si se pierde más de 0.8 s, se avisa por qué (una vez cada 20 s como mucho). */
+    private void avisarPerdida(long ahora) {
+        if (seg.modo != Seguimiento.GIRO) { perdidoEn = 0; return; }
+        if (perdidoEn == 0) perdidoEn = ahora;
+        if (ahora - perdidoEn > 800 && ahora - ultimoAvisoPerdida > 20000) {
+            ultimoAvisoPerdida = ahora;
+            avisar("Se perdió el seguimiento (" + (fallaSeguimiento != null ? fallaSeguimiento : "?") + "). Mientras tanto sólo gira; al volver se acomoda solo.");
+        }
+    }
+
+    @Override public void grabarDiagnostico() {
+        tareas.add(() -> {
+            if (diag.grabando) return;
+            Ajustes a = vistos;
+            String cab = String.format(Locale.ROOT,
+                    "{\"nexo\":\"%s\",\"modelo\":\"%s %s\",\"android\":%d,\"camara\":\"%s\",\"arcore\":%b,\"sbs\":%d,\"fov\":%d,\"anticipo\":%d,\"ojoAuto\":%d,\"ojos\":[%.3f,%.3f,%.3f],\"cuello\":{\"medidas\":%d,\"errorCm\":%.2f},\"entorno\":%d,\"manos\":%d}",
+                    Actualizador.de(this).instaladaNombre, Build.MANUFACTURER, Build.MODEL, Build.VERSION.SDK_INT, textoCamara.replace('"', '\''), conArcore,
+                    a.sbs, a.fov, a.anticipo, a.ojoAuto, ojosAhora(a)[0], ojosAhora(a)[1], ojosAhora(a)[2], cuello.medidas, cuello.errorCm, entorno, a.manos);
+            diag.empezar(SystemClock.elapsedRealtime(), cab);
+            avisar("Grabando el diagnóstico 20 s: usá Nexo normal (girá la cabeza, quedate quieto un rato, mové las manos, pellizcá).");
+        });
+    }
+
     /** El primer cuadro con posición: se arma el escritorio delante tuyo. */
     private void armarEscritorio() {
         armado = true;
@@ -559,6 +658,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
 
     private void recentrarEnGl() {
         escritorio.recentrar(cabeza[0], cabeza[1], cabeza[2], yawDe(adelante));
+        if (seg.modo == Seguimiento.SEIS) anclar();
         if (escritorio.dock != null) escritorio.dock.visible = true;
         sonido.tocar(Sonido.ABRIR);
     }
@@ -645,16 +745,51 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 sigue = camara.getTrackingState() == TrackingState.TRACKING;
             } catch (Exception e) { cuadro = null; }
         }
-        if (sigue) {
-            Pose p = camara.getDisplayOrientedPose();
-            cabeza[0] = p.tx(); cabeza[1] = p.ty(); cabeza[2] = p.tz();
-            float[] f = p.getTransformedAxis(2, -1f);
-            adelante[0] = f[0]; adelante[1] = f[1]; adelante[2] = f[2];
-            camara.getViewMatrix(vistaM, 0);
-            camara.getProjectionMatrix(proyCam, 0, 0.05f, 200f);
-            p.toMatrix(poseCam, 0);
-            if (Float.isNaN(piso) || ((ahora / 500) % 4 == 0)) buscarPiso();
-        } else if (!conArcore && hayRotSensor) {
+        // Nexo Track: la pose de la foto → el escritorio (el ancla) → hasta cuando se ve (el giroscopio)
+        boolean rastrea = sigue, fotoNueva = false;
+        sigue = false;
+        if (cuadro != null) {
+            long tFoto = aBoot(cuadro.getTimestamp());
+            fotoNueva = tFoto != ultimaFoto;
+            edadFotoMs = (SystemClock.elapsedRealtimeNanos() - tFoto) / 1e6f;
+            ultimaFoto = tFoto;
+            if (rastrea) {
+                cuadro.getAndroidSensorPose().toMatrix(wSensor, 0);
+                camara.getDisplayOrientedPose().toMatrix(wDisplay, 0);
+            }
+            fallaSeguimiento = rastrea ? null : nombreFalla(camara.getTrackingFailureReason());
+            if (anclaAr != null) {
+                TrackingState ea = anclaAr.getTrackingState();
+                if (ea == TrackingState.TRACKING) { anclaAr.getPose().toMatrix(anclaM, 0); seg.ancla(anclaM, dt); }
+                else if (ea == TrackingState.STOPPED) anclaAr = null;
+            }
+            boolean sbs = a.sbs == 1;
+            // en el teléfono con la cámara, lo que se ve ES la foto: ahí no se predice
+            boolean predecir = (sbs || entorno != Entornos.PASSTHROUGH) && seg.hayGiro();
+            float[] o = ojosAhora(a);
+            if (sbs) { seg.pivote[0] = o[0]; seg.pivote[1] = o[1] - Cuello.OJO_Y; seg.pivote[2] = o[2] - Cuello.OJO_Z; }
+            else { seg.pivote[0] = 0; seg.pivote[1] = 0; seg.pivote[2] = 0; }
+            long tVer = predecir ? SystemClock.elapsedRealtimeNanos() + a.anticipo * 1_000_000L : tFoto;
+            sigue = seg.cuadro(tFoto, rastrea, wSensor, wDisplay, tVer);
+            if (sigue) {
+                if (sbs) Seguimiento.ojos(seg.pose, o[0], o[1], o[2], poseOjos);
+                else System.arraycopy(seg.pose, 0, poseOjos, 0, 16);
+                Seguimiento.invRigida(poseOjos, vistaM);
+                cabeza[0] = poseOjos[12]; cabeza[1] = poseOjos[13]; cabeza[2] = poseOjos[14];
+                adelante[0] = -poseOjos[8]; adelante[1] = -poseOjos[9]; adelante[2] = -poseOjos[10];
+                System.arraycopy(seg.poseFoto, 0, poseCam, 0, 16);
+                camara.getProjectionMatrix(proyCam, 0, 0.05f, 200f);
+                if (rastrea && (Float.isNaN(piso) || ((ahora / 500) % 4 == 0))) buscarPiso();
+                // los ojos, solos: con las poses de ARCore tal cual (las fotos), mientras girás la cabeza en el visor
+                if (sbs && rastrea && fotoNueva && a.ojoAuto == 1) {
+                    cuello.pose(tFoto / 1_000_000L, seg.poseFoto);
+                    if (ahora - medidoCuello > 1000) { medidoCuello = ahora; if (cuello.medir()) guardarOjos(); }
+                }
+            }
+            if (armado && rastrea && anclaAr == null) anclar();
+            avisarPerdida(ahora);
+        }
+        if (!sigue && !conArcore && hayRotSensor) {
             // sin ARCore: la cabeza quieta a 1.6 m, girando
             synchronized (rotSensor) { System.arraycopy(rotSensor, 0, vistaM, 0, 16); }
             Matrix.translateM(vistaM, 0, 0, -1.6f, 0);
@@ -671,6 +806,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         boolean conManos = manos != null && manos.anda && cuadro != null && a.manos == 1;
         if (conManos && manos.libre() && sigue) darMano(cuadro, camara, ahora);
         leerManos(ahora, dt, conManos, a);
+        if (diag.grabando) {
+            diag.cuadro(ahora, seg.modo, rastrea, fallaSeguimiento, seg.demoraMs, rastrea ? wDisplay : null, sigue ? poseOjos : null,
+                    seg.correccionCm, seg.correccionGrados, seg.velocidad(), fotoNueva, conManos ? manos.manos : null, pellizcaAhora);
+            if (diag.termino(ahora)) {
+                diag.grabando = false;
+                new Thread(() -> { String donde = diag.terminar(this); avisar(donde != null ? "Diagnóstico guardado en " + donde + ": mandámelo." : "No se pudo guardar el diagnóstico."); }, "diagnostico").start();
+            }
+        }
 
         // ── la mirada, la pantalla, el control ──
         Puntero.Fuente mir = puntero.fuentes[Puntero.MIRADA];
@@ -849,7 +992,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         float mejor = Float.NaN;
         for (Plane p : sesion.getAllTrackables(Plane.class)) {
             if (p.getTrackingState() != TrackingState.TRACKING || p.getType() != Plane.Type.HORIZONTAL_UPWARD_FACING) continue;
-            float y = p.getCenterPose().ty();
+            Pose c = p.getCenterPose();
+            float[] pt = {c.tx(), c.ty(), c.tz()};
+            seg.puntoAEscritorio(pt);
+            float y = pt[1];
             if (y < cabeza[1] - 0.6f && (mejor != mejor || y < mejor)) mejor = y;
         }
         if (mejor == mejor) piso = mejor;
@@ -889,7 +1035,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             float[] f = in.getFocalLength(), c = in.getPrincipalPoint();
             int[] dim = in.getImageDimensions();
             float kx = img.getWidth() / (float) dim[0], ky = img.getHeight() / (float) dim[1];
-            camara.getPose().toMatrix(poseMano, 0);
+            { float[] w = new float[16]; camara.getPose().toMatrix(w, 0); seg.aEscritorio(w, poseMano); }
             short[] pd = null;
             int pw = 0, ph = 0;
             try {
@@ -933,14 +1079,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 f.activa = ve && armado;
                 if (!ve) { gestos[s].soltar(); continue; }
                 boolean pellizca = gestos[s].paso(m.mundo);
+                pellizcaAhora[s] = pellizca;
                 brilloMano[s] += ((pellizca ? 1f : 0f) - brilloMano[s]) * Math.min(1, dt * 18);
                 // el rayo: del punto de mira (debajo de la vista) por los nudillos
                 float[] q = new float[3];
                 Gestos.puntoRayo(m.mundo, q);
-                float abajo = a.apuntarAbajo / 100f * (a.sbs == 1 ? 0.6f : 1f), atras = a.sbs == 1 ? 0.05f : 0;
-                float hl = (float) Math.hypot(adelante[0], adelante[2]);
-                float fx = hl > 1e-3f ? adelante[0] / hl : 0, fz = hl > 1e-3f ? adelante[2] / hl : -1;
-                float ox = cabeza[0] - fx * atras, oy = cabeza[1] - abajo, oz = cabeza[2] - fz * atras;
+                // (en el visor la cabeza ya es el punto entre los ojos: Nexo Track los corre desde la cámara)
+                float abajo = a.apuntarAbajo / 100f * (a.sbs == 1 ? 0.6f : 1f);
+                float ox = cabeza[0], oy = cabeza[1] - abajo, oz = cabeza[2];
                 float dx = q[0] - ox, dy = q[1] - oy, dz = q[2] - oz, dl = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
                 if (dl < 0.05f) { f.activa = false; continue; }
                 f.ox = q[0]; f.oy = q[1]; f.oz = q[2];   // el rayo sale de la mano (se ve salir de ahí)

@@ -16,9 +16,12 @@ final class Ajustes {
     int tutorial = 0;         // ya se vio la bienvenida
     int apuntarAbajo = 10;    // el punto de mira de las manos, cm debajo de la cámara
     int fov = 90;             // el campo visual del visor (grados, vertical, por ojo)
+    int anticipo = 30;        // Nexo Track: cuánto se predice el giro (ms: lo que tarda la imagen en llegar a los ojos)
+    int ojoAuto = 1;          // los ojos: medirlos solos (girando la cabeza) o a mano
+    int ojoX = 0, ojoY = 0, ojoZ = 70;   // los ojos desde la cámara, en el visor (mm: derecha, arriba, atrás)
 
     private static final String[] CLAVES = {"entorno", "sbs", "ipdMm", "k1", "k2", "tamano", "corregirLentes", "manos", "verManos", "dedo",
-            "mirada", "sonido", "tutorial", "apuntarAbajo", "fov"};
+            "mirada", "sonido", "tutorial", "apuntarAbajo", "fov", "anticipo", "ojoAuto", "ojoX", "ojoY", "ojoZ"};
 
     int valor(String c) {
         switch (c) {
@@ -36,6 +39,11 @@ final class Ajustes {
             case "sonido": return sonido;
             case "tutorial": return tutorial;
             case "fov": return fov;
+            case "anticipo": return anticipo;
+            case "ojoAuto": return ojoAuto;
+            case "ojoX": return ojoX;
+            case "ojoY": return ojoY;
+            case "ojoZ": return ojoZ;
             default: return apuntarAbajo;
         }
     }
@@ -56,6 +64,11 @@ final class Ajustes {
             case "sonido": sonido = v; break;
             case "tutorial": tutorial = v; break;
             case "fov": fov = v; break;
+            case "anticipo": anticipo = v; break;
+            case "ojoAuto": ojoAuto = v; break;
+            case "ojoX": ojoX = v; break;
+            case "ojoY": ojoY = v; break;
+            case "ojoZ": ojoZ = v; break;
             default: apuntarAbajo = v;
         }
     }

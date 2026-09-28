@@ -86,6 +86,19 @@ final class AjustesApp {
                 contenido.addView(deslizador(Iconos.VISOR, "Distorsión k2", "k2", 0, 80, a.k2, "0.%02d"));
                 contenido.addView(deslizador(Iconos.CINE, "Tamaño de la imagen", "tamano", 50, 100, a.tamano, "%d %%"));
                 contenido.addView(deslizador(Iconos.OJO, "Campo visual del visor", "fov", 60, 120, a.fov, "%d°"));
+                contenido.addView(ayuda("Para que el mundo no \"nade\": girá la cabeza de lado a lado mirando una ventana. Si la ventana se va CON vos, bajalo; si se va para el otro lado, subilo."));
+                contenido.addView(titulo2("Nexo Track (que el mundo no se mueva solo)"));
+                contenido.addView(deslizador(Iconos.RECENTRAR, "Predicción del giro", "anticipo", 0, 60, a.anticipo, "%d ms adelante"));
+                contenido.addView(ayuda("Lo que tarda la imagen en llegar a los ojos. Si al girar rápido el mundo se atrasa, subila; si se adelanta y rebota al frenar, bajala."));
+                contenido.addView(interruptor(Iconos.OJO, "Los ojos: medirlos solos", "En el visor, girá la cabeza unos segundos (sin caminar) y Nexo encuentra dónde están tus ojos desde la cámara",
+                        a.ojoAuto == 1, si -> { s.cambio("ojoAuto", si ? 1 : 0); ui.postDelayed(() -> mostrar(1), 150); }));
+                if (a.ojoAuto == 1)
+                    contenido.addView(ayuda(String.format(java.util.Locale.ROOT, "Ahora: %.1f cm al costado, %.1f cm arriba, %.1f cm detrás de la cámara.", a.ojoX / 10f, a.ojoY / 10f, a.ojoZ / 10f)));
+                else {
+                    contenido.addView(deslizador(Iconos.OJO, "Ojos: al costado de la cámara", "ojoX", -90, 90, a.ojoX, "%d mm (+ derecha)"));
+                    contenido.addView(deslizador(Iconos.OJO, "Ojos: arriba de la cámara", "ojoY", -50, 50, a.ojoY, "%d mm"));
+                    contenido.addView(deslizador(Iconos.OJO, "Ojos: detrás de la cámara", "ojoZ", 0, 140, a.ojoZ, "%d mm"));
+                }
                 contenido.addView(Estilo.renglon(c, Iconos.RECENTRAR, "Recentrar", "Todo delante de donde mirás (o pellizcá en la nada 1 s)",
                         Estilo.boton(c, -1, "Recentrar", true, v -> s.recentrar())));
                 break;
@@ -124,6 +137,11 @@ final class AjustesApp {
                 LinearLayout.LayoutParams le = new LinearLayout.LayoutParams(-1, -2);
                 le.topMargin = Estilo.dp(c, 16);
                 contenido.addView(estado, le);
+                LinearLayout.LayoutParams ld = new LinearLayout.LayoutParams(-1, -2);
+                ld.topMargin = Estilo.dp(c, 16);
+                contenido.addView(Estilo.renglon(c, Iconos.CAPTURA, "Grabar un diagnóstico",
+                        "20 s de cómo anda el seguimiento y las manos, a Descargas/Nexo: mandame el archivo y lo arreglo con datos de tu teléfono",
+                        Estilo.boton(c, -1, "Grabar", false, v -> { s.sonido(Sonido.CLIC); s.grabarDiagnostico(); })), ld);
                 refrescarEstado();
         }
     }
@@ -132,6 +150,18 @@ final class AjustesApp {
         if (estado == null) return;
         estado.setText(s.estado());
         ui.postDelayed(this::refrescarEstado, 1500);
+    }
+
+    private TextView ayuda(String t) {
+        TextView v = Estilo.texto(c, t, 13, Estilo.TEXTO2, false);
+        v.setPadding(Estilo.dp(c, 14), Estilo.dp(c, 2), Estilo.dp(c, 14), Estilo.dp(c, 10));
+        return v;
+    }
+
+    private TextView titulo2(String t) {
+        TextView v = Estilo.texto(c, t, 17, Estilo.TEXTO, true);
+        v.setPadding(0, Estilo.dp(c, 18), 0, Estilo.dp(c, 8));
+        return v;
     }
 
     private TextView titulo(String t) {

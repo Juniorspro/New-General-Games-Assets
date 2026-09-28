@@ -93,13 +93,47 @@ el tamaño. En el visor, el passthrough se pone **en el mundo**, a 8 m, del
 tamaño exacto de lo que ve la cámara: cada ojo lo ve con su propia proyección
 y en su escala justa (se ve como una ventana a la realidad, no estirado).
 
-## El seguimiento
+## El seguimiento: Nexo Track
 
 - **Con ARCore**: 6 grados de libertad (caminás y todo queda en su lugar), el
   passthrough, las manos (MediaPipe, con el filtro de Asalto MR) y el piso (el
-  plano más bajo que encuentra ARCore).
+  plano más bajo que encuentra ARCore). La cámara: la de más fps que ofrezca
+  ARCore (60 si hay) y la imagen cerca de 640×480.
 - **Sin ARCore** (o sin permiso de la cámara): los sensores del teléfono, sólo
   girar la cabeza; los entornos 3D, la mirada, la pantalla y el control.
+
+ARCore es cerrado: no se puede arreglar por dentro. **Nexo Track**
+(`Seguimiento.java`, `Cuello.java`) es la capa entre su pose y lo que se ve, y
+arregla lo que hacía que el mundo "se moviera solo":
+
+| el problema | qué pasaba | qué hace Nexo Track |
+|---|---|---|
+| **la demora** | la pose de ARCore es la de la foto (30–80 ms antes) y se ve un cuadro después: girando la cabeza, el mundo se arrastra con vos y vuelve | lleva la rotación hasta el momento en que se ve con el **giroscopio** (200/s) y predice un poco más (Ajustes → Visor → Predicción del giro); la posición gira alrededor del **cuello** |
+| **las correcciones** | cuando ARCore corrige su mapa, lo que no está anclado salta o se desliza | el escritorio cuelga de un **ancla** de ARCore: la corrección entera se aplica en el mismo cuadro, y la cabeza queda donde estaba |
+| **las pérdidas** | poca luz, la cámara tapada o moverse rápido: todo desaparecía | sigue girando con el giroscopio (posición quieta), avisa **por qué** se perdió, y al volver el salto se funde en medio segundo |
+| **los saltos** | ARCore a veces da un cuadro corrido | un salto imposible (> 12 cm de un cuadro al otro) se funde en vez de verse |
+| **los ojos** | en el visor se dibujaba desde la cámara, que está en una punta del teléfono (unos 6 cm al costado y 7 cm delante de los ojos): al girar, lo cercano se deslizaba | **mide sola** dónde están los ojos mirando cómo girás la cabeza (el punto quieto al girar es el cuello; los ojos están delante y arriba). También a mano en Ajustes → Visor |
+
+Con una cabeza simulada (`PruebaSeguimiento`: girando hasta 157°/s, fotos a
+30/s que llegan 60 ms tarde, giroscopio a 200/s, 25 ms hasta verse):
+
+| | sin la capa | con Nexo Track |
+|---|---|---|
+| atraso al girar | hasta **17.4°** y 5.2 cm | hasta **0.56°** y 0.17 cm |
+| se pierde 1.5 s caminando 20 cm | todo en negro | sigue girando (0.55°); al volver, el paso más grande 1.9 cm y en su lugar |
+| ARCore corrige el mapa 5 cm y 2° | el escritorio queda corrido 4.7 cm | 1.4 mm, sin saltar |
+| los ojos (6 cm al costado) | — | medidos con menos de 1 cm de error; caminando no se mide |
+
+Si igual algo anda mal: **Ajustes → Acerca de → Grabar un diagnóstico** (20 s
+de lo que pasa en cada cuadro, a Descargas/Nexo) y mandame el archivo:
+`python3 herramientas/diagnostico.py archivo.jsonl` dice cuánto se pierde y
+por qué, cuánto tiembla y se desliza quieto, los saltos, y cómo andan las
+manos (cuánto se ven, cuánto tiemblan, cuántas veces se cortan).
+
+Lo que no arregla ninguna capa: si la **tapa del visor le tapa la cámara**,
+con **poca luz** o mirando una **pared lisa**, ARCore no tiene qué seguir
+(Nexo te dice cuál es). Y las manos se ven con una sola cámara de ~70°: fuera
+de ese campo, no hay mano.
 
 ## El control Bluetooth
 
@@ -168,12 +202,14 @@ Principal ── ARCore / sensores ── la cabeza, la cámara, el piso
 | `Mano.java` · `FiltroMano.java` · `ManoRastreo.java` · `ManosGl.java` · `AsociadorManos.java` · `Lentes.java` · `Control.java` | de Asalto MR (manos, lentes, control) |
 | `Actualizador.java` · `Instalacion.java` · `ActualizarApp.java` | buscar, bajar, revisar e instalar la versión nueva; lo que contesta el instalador; la ventana |
 | `publicar.sh` · `actualizacion/` | publicar una versión (el APK y el `version.json` que mira la app) |
+| `Seguimiento.java` · `Cuello.java` | Nexo Track: giroscopio + predicción, ancla, pérdidas y saltos, los ojos (sin Android) |
+| `CamaraArcore.java` · `Diagnostico.java` · `herramientas/diagnostico.py` | la cámara de más fps; grabar y analizar un diagnóstico |
 | `herramientas/sin-parametros.py` | saca un atributo que el javac 21 escribe y con el que el d8 se cae |
 
 ## Pruebas (en la PC)
 
 ```sh
-./pruebas/correr.sh     # escritorio y puntero, gestos con manos reales
+./pruebas/correr.sh     # escritorio y puntero, gestos con manos reales, Nexo Track
 ./pruebas/vista.sh      # la vista previa (salida/vista-*.png)
 node pruebas/shaders.mjs
 ./construir.sh          # → salida/nexo-xr.apk
@@ -185,6 +221,8 @@ node pruebas/shaders.mjs
   de la ventana, mover de la barra (de frente a vos), cerrar, irse del botón
   antes de soltar no cuenta, cine y volver, **tocar con el dedo**, mirar fijo
   (carga, clic, no repite), pellizco en la nada corto y largo, recentrar.
+- `PruebaSeguimiento`: Nexo Track con una cabeza simulada (la tabla de arriba),
+  y que con la hora de las fotos en otra base no gira cualquier cosa.
 - `PruebaGestos`: **ninguna de 19 manos reales** (puños, palmas, apuntando,
   agarrando) es un pellizco; pellizcar con 12 manos reales, con temblor:
   aprieta una vez, sin rebotes, y suelta.

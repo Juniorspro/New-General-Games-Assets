@@ -27,5 +27,7 @@ interface Sistema {
     /** Cómo están las manos, el seguimiento, la batería (para mostrar). */
     String estado();
     void aprenderControl();
+    /** 20 s de lo que pasa (seguimiento, manos) a un archivo, para ver con datos qué falla. */
+    void grabarDiagnostico();
     void sonido(int cual);
 }
