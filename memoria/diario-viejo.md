@@ -3,6 +3,12 @@
 Las sesiones del 22/09 al 27/09/2026, como quedaron. No se lee al arrancar: lo que quedó de cada una está en su
 nota (ver el índice). La más nueva arriba.
 
+- **27/09/2026, de noche, quinta vez · `claude/fijate-iszyer`:**
+  - Pidió: "6DoF súper suave y goty, es muy impreciso" (con un TikTok de metanexusxr que no se pudo ver).
+  - Quedó ([aeroplaza-39](aeroplaza-39.md)): la cabeza nativa (el giroscopio del sistema corregido con ARCore),
+    que el juego lee al dibujar, y otra vez a último momento para los ojos. `cabeza.mjs` 17/17.
+  - Pidió también investigar ARCore for Jetpack XR: en el celu es el mismo ARCore y no tiene manos (anotado ahí).
+  - Falta: probarla en su celu.
 - **27/09/2026, de noche, cuarta vez · `claude/fijate-iszyer`:**
   - Pidió: "no escanea" (captura: esperando la profundidad, 0 planos, la linterna prendida); y manos más estables
     en el HTML también, con un link para probar el HTML en 3DoF.

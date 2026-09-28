@@ -12,6 +12,8 @@ const TECLAS = {
   salta: ['Space'], corre: ['ShiftLeft', 'ShiftRight'], accion: ['KeyE', 'Enter'], baja: ['KeyC', 'ControlLeft', 'KeyQ'],
   dispara: ['KeyF'], chat: ['KeyT'], camara: ['KeyV'],
   h1: ['Digit1'], h2: ['Digit2'], h3: ['Digit3'], h4: ['Digit4'], h5: ['Digit5'], pausa: ['Escape', 'KeyP'],
+  /* (vuelta 46) el celu: M de móvil, mobile y móvel */
+  celu: ['KeyM'],
 };
 /* los botones en pantalla, con su lugar por defecto (en % de la pantalla, desde abajo a la derecha) */
 export const BOTONES = {
@@ -182,7 +184,7 @@ export class Entrada {
   leer() {
     const k = (n) => TECLAS[n].some((c) => this.abajo.has(c));
     const r = (n) => TECLAS[n].some((c) => this.recien.has(c));
-    const E = { x: 0, z: 0, corre: false, salta: false, sostiene: false, accion: false, baja: false, dispara: false, camX: 0, camY: 0, zoom: 1, hot: 0, chat: false, pausa: false, foto: false };
+    const E = { x: 0, z: 0, corre: false, salta: false, sostiene: false, accion: false, baja: false, dispara: false, camX: 0, camY: 0, zoom: 1, hot: 0, chat: false, pausa: false, foto: false, celu: false };
     if (!this.bloqueado) {
       E.x = (k('der') ? 1 : 0) - (k('izq') ? 1 : 0);
       E.z = (k('atras') ? 1 : 0) - (k('adelante') ? 1 : 0);
@@ -195,7 +197,8 @@ export class Entrada {
       E.salta = E.salta || this.dedo.salta; E.sostiene = E.sostiene || this.dedo.sostiene;
       E.accion = E.accion || this.dedo.accion; E.dispara = E.dispara || this.dedo.dispara; E.baja = E.baja || this.dedo.baja;
     }
-    E.pausa = r('pausa');
+    /* (el celu también se cierra con la M: la entrada queda bloqueada mientras está abierto) */
+    E.pausa = r('pausa'); E.celu = r('celu');
     this.dedo.salta = false; this.dedo.accion = false; this.dedo.dispara = false;
     /* la cámara */
     E.camX = this.mouse.dx * 0.005 + this.dedosCam.dx * 0.008; E.camY = this.mouse.dy * 0.004 + this.dedosCam.dy * 0.006;
@@ -233,7 +236,7 @@ export class Entrada {
         E.corre = E.corre || bt(10) || bt(5) || (p.buttons[7]?.value > 0.4); E.baja = E.baja || bt(6) || bt(4); E.dispara = E.dispara || nuevo(3);
         if (nuevo(14)) E.hot = -1; if (nuevo(15)) E.hot = -2;
       }
-      E.pausa = E.pausa || nuevo(9);
+      E.pausa = E.pausa || nuevo(9); E.celu = E.celu || nuevo(8);
       this._pad = p.buttons.map((b) => b.pressed); p.recien?.clear();
       break;
     }

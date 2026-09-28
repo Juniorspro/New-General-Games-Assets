@@ -186,7 +186,7 @@ export const UI = {
       <div class="franja arriba"></div><div class="franja abajo"></div>
       <div class="arriba-izq"><div class="pildora"><i class="orbe-icono"></i><span class="orbes">0</span></div><button class="pildora joyas-p" data-a="joyas" title="${t('tienda_joyas')}"><i class="joya-icono"></i><span class="joyas">0</span></button><div class="espuma" title="${t('espuma')}"><i style="width:100%"></i></div></div>
       <div class="arriba-der"><div class="pildora estado-red"><span><span class="punto"></span> <span class="red-txt"></span><b class="red-n"></b></span><small class="sala-txt"></small></div>
-        <button class="redondo" data-a="voz" title="${t('boton_voz')}">🎤</button><button class="redondo" data-a="misiones" title="${t('boton_misiones')}">📜<i class="insignia"></i></button><button class="redondo" data-a="estilo" title="${t('estilo_titulo')}">👾</button><button class="redondo" data-a="chat" title="Chat">💬</button><button class="redondo siempre" data-a="pausa" title="${t('pausa')}">☰</button></div>
+        <button class="redondo" data-a="celu" title="${t('celu_tecla')}">📱<i class="insignia"></i></button><button class="redondo" data-a="voz" title="${t('boton_voz')}">🎤</button><button class="redondo" data-a="misiones" title="${t('boton_misiones')}">📜<i class="insignia"></i></button><button class="redondo" data-a="estilo" title="${t('estilo_titulo')}">👾</button><button class="redondo" data-a="chat" title="Chat">💬</button><button class="redondo siempre" data-a="pausa" title="${t('pausa')}">☰</button></div>
       <div class="notis"></div>
       <div class="chat"></div>
       <div class="hotbar">${HOT.map(([k, e], i) => `<button class="ranura" data-h="${i + 1}" title="${t('hot_' + k)}"><small>${i + 1}</small>${e}</button>`).join('')}</div>
@@ -196,9 +196,11 @@ export const UI = {
     $('[data-a=chat]', h).onclick = () => this.abrirChat();
     $('[data-a=misiones]', h).onclick = () => this.panelMisiones();
     $('[data-a=voz]', h).onclick = () => J.alternarVoz && J.alternarVoz();
+    /* (vuelta 46) el celu: amigos, mensajes, juegos (celu.js) */
+    $('[data-a=celu]', h).onclick = () => J.celu?.alternar();
     $('[data-a=estilo]', h).onclick = () => { J.pausar(true, true); this.estilo(() => J.pausar(false, true)); };
     h.querySelectorAll('[data-h]').forEach((b) => b.onclick = () => J.hotbar(+b.dataset.h));
-    this.actualizarHud(); this.actualizarMisiones(); this.actualizarRed();
+    this.actualizarHud(); this.actualizarMisiones(); this.actualizarRed(); J.celu?.insignia();
   },
   actualizarHud() {
     if (!this.hud) return;
@@ -565,7 +567,7 @@ export const UI = {
       <button class="boton" data-a="opciones">${t('canal_opciones')}</button><button class="boton" data-a="controles">${t('canal_controles')}</button>
       <button class="boton" data-a="estilo">👾 ${t('estilo_titulo')}</button><button class="boton" data-a="discos">${t('canal_discos')}</button>
       <button class="boton" data-a="vr">🥽 ${t('vr_titulo')}</button><button class="boton" data-a="joyas"><i class="joya-icono" style="width:16px;height:16px;vertical-align:-3px"></i> ${t('tienda_joyas')}</button>
-      <button class="boton" data-a="menu" style="grid-column:1/-1">${t('salir_menu')}</button></div>`);
+      <button class="boton" data-a="celu">📱 ${t('celu')}</button><button class="boton" data-a="menu" style="grid-column:1/-1">${t('salir_menu')}</button></div>`);
     const pie = `<div class="barra-pausa"><span class="p-nombre"></span><span><i class="orbe-icono" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></i> ${J.G.orbes}</span><span><i class="joya-icono" style="width:14px;height:14px;vertical-align:-2px"></i> ${J.G.joyas || 0}</span><span class="p-sala"></span></div>`;
     const v = this.ventana(t('pausa'), cuerpo, { alCerrar: () => J.pausar(false), pie });
     $('.p-nombre', v).textContent = J.G.nombre;
@@ -581,6 +583,8 @@ export const UI = {
     if (J.enVR) { cuerpo.querySelector('[data-a=vr]').textContent = '🥽 ' + t('mn_salir'); cuerpo.querySelector('[data-a=vr]').onclick = () => { this.cerrarVentana(); J.pausar(false, true); J.salirVR(); }; }
     else cuerpo.querySelector('[data-a=vr]').onclick = () => this.menuVR(() => this.pausa());
     cuerpo.querySelector('[data-a=joyas]').onclick = () => tiendaJoyas(J, this, { alCerrar: () => this.pausa() });
+    /* (vuelta 46: el celu también desde la pausa, que es lo que se abre en el VR con el mando) */
+    cuerpo.querySelector('[data-a=celu]').onclick = () => J.celu?.abrir('inicio');
     this.focoTeclado(v, '[data-a=seguir]');
   },
   segmentos(opciones, actual, alElegir) {

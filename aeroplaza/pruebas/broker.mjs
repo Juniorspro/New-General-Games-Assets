@@ -106,7 +106,7 @@ export async function broker(puerto = 0, { verboso = false } = {}) {
     else if (tipo === 14) { clientes.delete(c); c.sock.end(); } // DISCONNECT
   }
   await new Promise((r) => srv.listen(puerto, '127.0.0.1', r));
-  return { url: `ws://127.0.0.1:${srv.address().port}`, puerto: srv.address().port, get clientes() { return clientes.size; }, get mensajes() { return mensajes; }, porTema, cerrar: () => { for (const c of clientes) c.sock.destroy(); srv.close(); } };
+  return { url: `ws://127.0.0.1:${srv.address().port}`, puerto: srv.address().port, get clientes() { return clientes.size; }, get mensajes() { return mensajes; }, porTema, retenido: (tema) => retenidos.get(tema), get retenidos() { return retenidos; }, cerrar: () => { for (const c of clientes) c.sock.destroy(); srv.close(); } };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('broker.mjs')) {

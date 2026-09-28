@@ -42,6 +42,27 @@ No hay servidor propio: el relevo es un broker MQTT público,
 
 Detalle: `js/red.js` y `js/remotos.js`.
 
+## El celu y los amigos
+
+📱 arriba a la derecha, la M, Select en el mando o "📱 Celu" en la pausa (en el
+VR se ve en el espejo). El muñeco lo tiene en la mano mientras está abierto, y
+los demás lo ven.
+
+- **Amigos:** tu código de amigo (el id de la red), pedir por código o a los
+  que están cerca, aceptar o rechazar, dónde está cada uno y "▶ Unirse", que te
+  lleva a su misma sala. Quitar y bloquear, desde su perfil.
+- **Mensajes:** charlas de a dos, con "visto". Le llegan aunque esté
+  desconectado.
+- **Juegos** (cada lugar con su gente y tus amigos), **Casas** (las abiertas),
+  **Perfil**, y atajos a la cámara, el probador, la tienda, las misiones y los
+  ajustes.
+- Sin servidor y con un broker público, nada se cree porque sí: el id es la
+  huella de una llave ECDH de cada aparato, y las cartas de amigo a amigo van
+  cifradas (AES-GCM) y retenidas en `buzon/<para>/<de>`. Nadie puede leerlas
+  ni hacerse pasar por otro.
+
+Detalle: `js/amigos.js` y `js/celu.js`.
+
 ## Qué hay
 
 | reino | qué tiene |

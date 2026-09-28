@@ -42,6 +42,9 @@ export const Guardado = {
   borrar() { try { localStorage.removeItem(CLAVE); } catch { /* nada */ } this.d = INICIAL(); },
 };
 
+/* (vuelta 46) el id nuevo, el de la llave de los amigos (amigos.js): devuelve el de antes si era otro, para
+   borrar lo que quedó retenido con ese */
+export function cambiarId(id) { const v = leer('aeroplaza_id'); if (v !== id) escribir('aeroplaza_id', id); return v && v !== id ? v : null; }
 /* el id de la red: fijo por computadora, aparte del guardado (no se borra al reiniciar el juego) */
 export function miId() {
   let id = leer('aeroplaza_id');

@@ -374,6 +374,31 @@ function globo(texto) {
 /* ---------------------------------------------------------------- el muñeco */
 const suave = (a, b, k) => a + (b - a) * k;
 const _v = new THREE.Vector3();
+/* (vuelta 46) EL CELU EN LA MANO: con el celu abierto (celu.js), el muñeco lo sostiene adelante con la derecha y
+   lo mira; los demás lo ven (va en el estado de la red, 'cel'). Cuelga del brazo derecho del muñeco (el de -x, 'bl':
+   mirando a +z, su derecha es -x): en su articulación, el
+   brazo baja por -y hasta la mano (-0,45 m) y, levantado adelante, su +z queda para arriba y su +y mira a la cara.
+   Una geometría y dos materiales para todos: la pantalla es un dibujito con las apps */
+let PIEZAS_CELU = null;
+function piezasCelu() {
+  if (PIEZAS_CELU) return PIEZAS_CELU;
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128; const g = c.getContext('2d');
+  const f = g.createLinearGradient(0, 0, 0, 128); f.addColorStop(0, '#5fd3ff'); f.addColorStop(0.6, '#c8f3ff'); f.addColorStop(0.62, '#7fe07a'); f.addColorStop(1, '#2f9f3c');
+  g.fillStyle = f; g.fillRect(0, 0, 64, 128);
+  g.fillStyle = 'rgba(255,255,255,0.9)'; g.font = 'bold 15px sans-serif'; g.textAlign = 'center'; g.fillText('12:00', 32, 26);
+  ['#ff7aa8', '#ffd23f', '#1aa0d8', '#7b5cff', '#35b845', '#ff9f1a'].forEach((col, i) => { g.fillStyle = col; g.beginPath(); g.roundRect ? g.roundRect(8 + (i % 3) * 18, 42 + Math.floor(i / 3) * 20, 13, 13, 4) : g.rect(8 + (i % 3) * 18, 42 + Math.floor(i / 3) * 20, 13, 13); g.fill(); });
+  g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.moveTo(0, 0); g.lineTo(64, 0); g.lineTo(0, 70); g.fill();
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  PIEZAS_CELU = {
+    cuerpo: new THREE.BoxGeometry(0.11, 0.022, 0.21),
+    pantalla: new THREE.PlaneGeometry(0.094, 0.18).rotateX(-Math.PI / 2),
+    matCuerpo: new THREE.MeshPhysicalMaterial({ color: '#f5f9fc', roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }),
+    matPantalla: new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }),
+  };
+  return PIEZAS_CELU;
+}
+/* los estados en los que no se puede tener el celu en la mano (nadando, trepando, montado…) */
+const SIN_CELU = new Set(['nada', 'monta', 'hamaca', 'sentado', 'rueda', 'trepa', 'pared', 'desliza', 'corrPared', 'valla', 'subePared']);
 export class Meeple {
   static estiloAnim = 'suave';   // cómo pasan las poses: 'suave' | 'lineal' | 'chop' (Opciones › Imagen)
   constructor(apariencia = APARIENCIA_INICIAL(), nombre = '') {
@@ -396,6 +421,7 @@ export class Meeple {
     this.fase = 0; this.t = Math.random() * 10; this.estado = 'quieto'; this.gesto = null; this.tGesto = 0;
     this.rot = {};   // las rotaciones actuales (se acercan a las de la pose)
     this.particulas = null;
+    this.conCelu = false; this.celu = null;
     this.ponerApariencia(apariencia);
     if (nombre) this.ponerNombre(nombre);
   }
@@ -455,6 +481,17 @@ export class Meeple {
     this.raiz.add(this.globo);
   }
   /* un gesto de un rato: saludar, bailar1..3, festejar, sentarse (este queda hasta moverse) */
+  celuEnMano(si) {
+    this.conCelu = !!si;
+    if (si && !this.celu) {
+      const P = piezasCelu(), g = new THREE.Group(), cu = new THREE.Mesh(P.cuerpo, P.matCuerpo), pa = new THREE.Mesh(P.pantalla, P.matPantalla);
+      pa.position.y = 0.0115; cu.castShadow = true; g.add(cu, pa);
+      /* agarrado de abajo, asomando arriba del puño (la +z del brazo levantado: si no, de atrás lo tapa el brazo) y
+         con la pantalla un poco inclinada hacia la cara */
+      g.position.set(0, -0.45, 0.13); g.rotation.x = -0.3; g.visible = false;
+      this.brazos[0].add(g); this.celu = g;
+    }
+  }
   hacerGesto(g) { this.gesto = g; this.tGesto = g === 'sentarse' ? 999 : g.startsWith('bailar') ? 8 : g === 'voltereta' ? 1.1 : g === 'aplaudir' ? 3 : g === 'poder' ? 3.6 : 2.4; this.tG0 = this.tGesto; }
 
   /* estado: quieto | camina | corre | salta | cae | nada | flota | monta | sentado,
@@ -552,6 +589,11 @@ export class Meeple {
       else if (g === 'saltito') { const s2 = Math.abs(Math.sin(t * 9)); R.cy = s2 * 0.26; R.bl = [0, 0, -0.8 - s2 * 0.8]; R.br = [0, 0, 0.8 + s2 * 0.8]; R.pl = [-s2 * 0.4, 0, 0]; R.pr = [-s2 * 0.4, 0, 0]; R.sy = 1 + (1 - s2) * -0.06; }
       else if (g === 'bailar3') { const s = Math.sin(t * 10); R.cy = Math.max(0, s) * 0.22; R.bl = [-2.9, 0, -0.3]; R.br = [-2.9, 0, 0.3]; R.pl = [s * 0.6, 0, 0.2]; R.pr = [-s * 0.6, 0, -0.2]; R.hx = s * 0.15; }
     }
+    /* (vuelta 46) con el celu: un brazo adelante, a la altura de la cara y al costado de la cabeza (así se ve de
+       atrás también, con la pantalla prendida), y la cabeza mirándolo; caminando, también */
+    const conCelu = this.conCelu && !this.gesto && !SIN_CELU.has(estado);
+    if (conCelu) { R.bl = [-1.78 + Math.sin(t * 1.4) * 0.025, 0, -0.1]; R.hx = 0.16; R.hy = -0.32 + (R.hy || 0) * 0.15; if (estado === 'quieto') R.br = [0.05, 0, 0.14]; }
+    if (this.celu) this.celu.visible = conCelu && !this.enPrimera;
     /* acercar lo actual a la pose (transiciones suaves) */
     /* con poses clave casi no se suaviza (si no, se borran); en chop, nada */
     const k = chop ? 1 : 1 - Math.exp(-dt * (clip ? 26 : 14)), r = this.rot;

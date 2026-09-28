@@ -28,10 +28,12 @@ import { ORDEN_CALIDAD } from './motor.js';
 import { Jugador } from './jugador.js';
 import { Camara } from './camara.js';
 import { Entrada } from './entrada.js';
-import { Guardado, miId } from './guardar.js';
+import { Guardado, miId, cambiarId } from './guardar.js';
 import { t, ponerIdioma } from './textos.js';
 import { UI } from './ui.js';
-import { Red, BROKER } from './red.js';
+import { Red, BROKER, NS, MAX_SALA } from './red.js';
+import { Llave, Amigos, ID_RE } from './amigos.js';
+import { Celu, PUBLICOS } from './celu.js';
 import { Remotos, RemotePlayer } from './remotos.js';
 import { Efectos } from './efectos.js';
 import { Estelario } from './estelario.js';
@@ -54,7 +56,7 @@ import { Nativo, ManosNativas } from './nativo.js';
 import { Manos } from './manos.js';
 import { Espacio } from './espacio.js';
 import { Ventanas } from './ventanas.js';
-import { Espejo } from './espejo.js';
+import { Espejo, leerVentana } from './espejo.js';
 import { armarVR } from './pelotita.js';
 import { accionesBox } from './mando-box.js';
 import { avisosDeActualizacion } from './actualizar.js';
@@ -134,7 +136,10 @@ async function iniciar() {
   /* con el celu parado se acuesta el juego entero (sin pantalla completa): ?giro= para las pruebas */
   Pantalla.giro = Q.get('giro') || G.opciones.giro || 'auto'; if (Pantalla.giro === 'auto') Pantalla.sensor();
   Pantalla.actualizar();
-  const ID = miId();
+  /* (vuelta 46) la llave de los amigos: el id de la red pasa a ser su huella (amigos.js). Sin WebCrypto, el de antes */
+  const conLlave = await Llave.cargar();
+  const idViejo = conLlave ? cambiarId(Llave.id) : null;
+  const ID = conLlave ? Llave.id : miId();
   if (Q.has('nombre')) G.nombre = Q.get('nombre').slice(0, 16);
   if (G.idioma) ponerIdioma(G.idioma);
   Misiones.G = G;
@@ -163,6 +168,8 @@ async function iniciar() {
   if (G.controles) ent.ponerConfig(G.controles);
   const cam = new Camara(motor.camara);
   const red = new Red({ id: ID, nombre: G.nombre });
+  /* (lo que quedó retenido con el id de antes: la casa) */
+  if (idViejo) red.aBorrar.push(NS + 'casa/' + idViejo);
   const voz = new Voz(red); voz.volumen = G.opciones.volVoz ?? 1;
   const remotos = new Remotos(motor.escena);
   const efectos = new THREE.Group(); motor.escena.add(efectos);
@@ -319,7 +326,7 @@ async function iniciar() {
   /* ---------------------------------------------------------------- el J que usa la interfaz */
   const J = {
     G, id: ID, red, remotos, voz, ent, misiones: Misiones, slot: 1, musicaElegida: null, aparato, motor,
-    get yo() { return yo; }, get enJuego() { return enJuego; },
+    get yo() { return yo; }, get enJuego() { return enJuego; }, get reinoId() { return reino?.id; }, celuAbierto: false,
     /* el 'aviso' de siempre ahora es la campanita estilo Windows 7 (timbres.js) */
     sfx(n, o) { try { if (n === 'aviso' && Sonido.ctx?.state === 'running') { timbre('info'); return; } Sonido.sfx(n, o); } catch { /* sin audio */ } },
     musica(n) { J._pedida = n; try { J.sonando = cancionDe(n); Sonido.musica(J.sonando); } catch { /* nada */ } },
@@ -343,7 +350,7 @@ async function iniciar() {
     decir(txt) { const x = red.chat(txt) || String(txt).trim().slice(0, 120); if (!x) return; UI.lineaChat(G.nombre, x); yo.m.decir(x); },
     finDialogo() { enDialogo = false; cam.ponerCine(null); },
     abrirProbador() { abrirProbador(); },
-    aplicarApariencia() { cuerpoFP.ponerApariencia(G.A); yo.m.ponerApariencia(G.A); if (yo.m.enPrimera) yo.m.primeraPersona(true); estudio?.ponerApariencia(G.A); G.av = hash(G.A); red.accion({ type: 'apariencia', A: G.A, av: G.av }); Guardado.guardar(); },
+    aplicarApariencia() { cuerpoFP.ponerApariencia(G.A); yo.m.ponerApariencia(G.A); if (yo.m.enPrimera) yo.m.primeraPersona(true); estudio?.ponerApariencia(G.A); G.av = hash(G.A); red.accion({ type: 'apariencia', A: G.A, av: G.av }); Guardado.guardar(); J.amigos?.publicarPerfil(); },
     /* lo que se prueba en el probador solo se ve en el estudio (ni el muñeco del mundo ni la red se enteran) */
     probarPuestos(P) { estudio?.ponerApariencia({ ...G.A, ...P }); estudio?.probando(Object.keys(P).length > 0); },
     festejarProbador() { estudio?.festejar(); },
@@ -394,7 +401,7 @@ async function iniciar() {
     abrirLentesVR() { if (espacio.activo) espacio.abrirLentes(); else abrirLentesVR(); },
     get lentes() { return vr.lentes; },
     get enVR() { return vr.activo; },
-    cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); },
+    cambiarNombre() { red.nombre = G.nombre; yo.m.ponerNombre(G.nombre, true); Guardado.guardar(); J.amigos?.publicarPerfil(); },
     avisarPantalla(s) { UI.avisar(s, 'azul'); },
     gesto(g) {
       /* el poder: el TearDrop adelante del muñeco (con un rato de espera entre uno y otro) */
@@ -417,17 +424,42 @@ async function iniciar() {
   G.av = hash(G.A);
   UI.iniciar(J);
 
+  /* ---------------------------------------------------------------- (vuelta 46) los amigos y el celu */
+  const amigos = new Amigos({ red, G, guardar: () => Guardado.guardar(), alAviso: (...a) => celu.aviso(...a), alCambio: () => celu.refrescar() });
+  const celu = new Celu({ J, UI, amigos, unirseA: (id) => unirseA(id), viajar: (id, o) => viajar(id, o), abrirProbador: () => abrirProbador(), foto: () => usarHotbar(4) });
+  /* (con el celu abierto el muñeco lo tiene en la mano; los demás lo ven por el estado, 'cel') */
+  celu.alCambiar = (si) => yo?.m.celuEnMano(si);
+  J.celu = celu; J.amigos = amigos;
+  /* unirse a un amigo: a su misma sala. En una casa, a esa casa; en el parkour, a su nivel; adentro de un
+     edificio, a la plaza (los interiores se arman para cada uno) */
+  function unirseA(id) {
+    const v = amigos.donde(id), n = amigos.nombre(id);
+    if (!reino) return false;
+    if (!v || !v.sala) { UI.avisar(t('am_no_se_puede', { n }), 'azul'); return false; }
+    if (v.sala === red.sala) { UI.avisar(t('am_ya_estas', { n }), 'azul'); return false; }
+    const s = v.sala, r = v.reino;
+    if (r === 'casa') { const d = s.slice(5); if (!ID_RE.test(d)) return false; viajar('casa', d === ID ? {} : { casaDe: d, nombreCasa: amigos.nombre(d) }); return true; }
+    if (PUBLICOS.includes(r) && new RegExp('^' + r + '-\\d{1,2}$').test(s)) {
+      const llena = [...red.vestibulo.values()].filter((q) => q.sala === s).length >= MAX_SALA;
+      if (llena) UI.avisar(t('am_sala_llena', { n }), 'azul');
+      viajar(r, llena ? {} : { sala: s }); return true;
+    }
+    if (r === 'parkour') { irParkour(Math.max(0, Math.min(NIVELES.length - 1, +s.split('-')[1] || 0))); return true; }
+    if (r === 'tiro' || r === 'runner' || r === 'tienda') { viajar(r); return true; }
+    viajar('plaza'); return true;
+  }
+
   /* ---------------------------------------------------------------- la red */
-  red.alEstado = () => UI.actualizarRed();
-  red.alVestibulo = () => {};
+  red.alEstado = () => { UI.actualizarRed(); celu.refrescarPronto(); };
+  red.alVestibulo = () => { amigos.revisarEnLinea(); celu.refrescarPronto(); };
   red.alRemoto = (d) => {
     if (!enJuego) return;
     const r = remotos.recibir(d);
     if (r.av !== d.av && (!r.tPidio || performance.now() - r.tPidio > 3000)) { r.tPidio = performance.now(); red.accion({ type: 'pedir_ap', targetId: d.id }); }
     if (r.m.cartel) r.m.cartel.visible = G.opciones.nombres;
   };
-  remotos.alLlegar = (r) => { UI.lineaChat('', t('se_unio', { n: r.name }), true); J.sfx('sesion'); UI.actualizarRed(); };
-  remotos.alIrse = (r) => { UI.lineaChat('', t('se_fue', { n: r.name }), true); UI.actualizarRed(); };
+  remotos.alLlegar = (r) => { UI.lineaChat('', t('se_unio', { n: r.name }), true); J.sfx('sesion'); UI.actualizarRed(); celu.refrescarPronto(); };
+  remotos.alIrse = (r) => { UI.lineaChat('', t('se_fue', { n: r.name }), true); UI.actualizarRed(); celu.refrescarPronto(); };
   red.alChat = (c) => { if (!enJuego) return; UI.lineaChat(c.name, c.text); const r = remotos.get(c.id); if (r) r.m.decir(c.text); J.sfx('letra', { f: 1500 }); };
   red.alAccion = (a) => {
     if (!enJuego) return;
@@ -521,7 +553,8 @@ async function iniciar() {
     /* (y la cámara más lejos y más baja, para ver lo que viene; al salir vuelve a la de antes) */
     if (reino.runner) { J._distAntes ??= cam.distObj; cam.distObj = 7.2; cam.pitch = 0.2; } else if (J._distAntes != null) { cam.distObj = J._distAntes; J._distAntes = null; }
     /* la sala pública: la casa es de su dueño; el resto, la que tenga gente y lugar */
-    const sala = id === 'casa' ? 'casa-' + (o.casaDe || ID) : id === 'tienda' ? 'tienda-1' : id === 'parkour' ? 'parkour-' + reino.nivel : id === 'tiro' ? 'tiro-1' : id === 'runner' ? 'runner-1' : id === 'interior' ? 'interior-' + reino.tipo + reino.i : red.elegirSala(id);
+    /* (vuelta 46: o.sala, la de un amigo al unirse desde el celu) */
+    const sala = PUBLICOS.includes(id) && /^[a-z]+-\d{1,2}$/.test(o.sala || '') && o.sala.startsWith(id + '-') ? o.sala : id === 'casa' ? 'casa-' + (o.casaDe || ID) : id === 'tienda' ? 'tienda-1' : id === 'parkour' ? 'parkour-' + reino.nivel : id === 'tiro' ? 'tiro-1' : id === 'runner' ? 'runner-1' : id === 'interior' ? 'interior-' + reino.tipo + reino.i : red.elegirSala(id);
     UI.parkourHud(null); UI.tiroHud(null); UI.runnerHud(null);
     red.casaAbierta = id === 'casa' && !o.casaDe;
     red.entrar(sala, id);
@@ -934,6 +967,10 @@ async function iniciar() {
     if (vr.activo) vr.caminaMano = sinArcoVR() && !reino.tiro && manos.activa && manos.manos.some((M) => M.visible && M.alfa > 0.5 && M.pellizca && !M.anulado && !M.apunta);
     if (vr.activo) { vr.enTiro = !!reino.tiro; if (E.pausa) { vr.salir(); E.pausa = false; } else vr.entrada(E, dt, !!accionCerca); }
     if (E.pausa && !UI.ventanaAbierta && !probador && !enDialogo) { J.pausar(!pausado); }
+    /* (vuelta 46) el celu: la M o Select en el mando (si no hay otra ventana abierta) */
+    if (E.celu && enJuego && !probador && !enDialogo && !modoFoto && !vr.activo && (celu.abierto || (!UI.ventanaAbierta && !pausado))) celu.alternar();
+    /* (si otra cosa se llevó el celu sin cerrarlo, como limpiar la interfaz, igual se suelta la entrada) */
+    if (J.celuAbierto && !celu.abierto) celu.alCerrarse();
     const quieto = pausado || enDialogo;
     if (!quieto) {
       if (E.chat) UI.abrirChat();
@@ -1107,7 +1144,7 @@ async function iniciar() {
     red.publicarEstado({
       x: +yo.p.x.toFixed(2), y: +yo.p.y.toFixed(2), z: +yo.p.z.toFixed(2), hp: Math.round(yo.hp), facingAngle: +yo.rumbo.toFixed(2),
       isMoving: yo.estado === 'camina' || yo.estado === 'corre' || yo.estado === 'nada', estado: yo.estado, vel: +Math.hypot(yo.v.x, yo.v.z).toFixed(1),
-      gesto: J.gestoActual || null, esc: +yo.escala.toFixed(2), ef: yo.efecto, av: G.av, modo: yo.modo, voz: voz.marca, mesa: reino.mesas?.miAsiento() || null,
+      gesto: J.gestoActual || null, esc: +yo.escala.toFixed(2), ef: yo.efecto, av: G.av, modo: yo.modo, voz: voz.marca, mesa: reino.mesas?.miAsiento() || null, cel: J.celuAbierto ? 1 : 0,
     }, undefined,
     /* (vuelta 43) en el VR con la pelotita: la cabeza y las manos, para que los demás te vean como una bola con manos */
     vr.activo && !espacio.activo && G.opciones.vrPelotita !== false ? () => ({ vr: armarVR(motor.camara.position, motor.camara.quaternion, yo.p, manos.activa ? manos.manos : []) }) : null);
@@ -1251,7 +1288,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { textos: { t, ponerIdioma }, espejo, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { textos: { t, ponerIdioma }, amigos, celu, Llave, leerVentana, espejo, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   /* (vuelta 45) en la APK: las canciones sueltas y los avisos de las actualizaciones */
   cancionesDeLaApp(() => { if (J._pedida != null) { Sonido.actual = null; J.musica(J._pedida); } });
   avisosDeActualizacion(UI);

@@ -899,3 +899,180 @@ html.b460 .menu-vr p { font-size: 12px; line-height: 1.3; margin-bottom: 8px; } 
 html.b460 .vr-suave { grid-template-columns: auto auto minmax(0, 1fr); margin-top: 6px; padding: 5px 8px; }
 html.b460 .vr-suave > small { grid-column: auto; text-align: left; line-height: 1.25; }
 html.b460 .vr-tres button { min-height: 28px; }
+
+/* ============================================================================
+   (vuelta 46) EL CELU (js/celu.js): un teléfono Aero de vidrio blanco, con el
+   fondo de siempre del Frutiger Aero adentro (cielo, lomas, burbujas y el sol
+   de costado). El marco es el borde (border-box) y la pantalla, el relleno
+   (padding-box). Parado en pantallas altas; acostado en el celu con el juego
+   acostado (html.b460). No tapa el mundo: el muñeco se ve con el celu en la mano.
+   ========================================================================== */
+.velo.velo-celu { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; justify-content: flex-end; align-items: flex-end; padding: 0 max(calc(3 * var(--vw)), 14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) 0; box-sizing: border-box; animation: none; }
+html.b460 .velo.velo-celu { align-items: center; padding-bottom: 0; }
+.calidadBaja .velo.velo-celu { background: transparent; }
+.ventana.celu {
+  --pantalla: radial-gradient(70% 38% at 12% 0%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(circle at 82% 30%, rgba(255, 255, 255, 0.95) 0 1.6%, rgba(255, 255, 255, 0.35) 2.1% 4.4%, rgba(255, 255, 255, 0) 4.9%),
+    radial-gradient(circle at 70% 44%, rgba(255, 255, 255, 0.9) 0 1%, rgba(255, 255, 255, 0.3) 1.4% 2.8%, rgba(255, 255, 255, 0) 3.2%),
+    radial-gradient(circle at 24% 58%, rgba(255, 255, 255, 0.85) 0 1.2%, rgba(255, 255, 255, 0.28) 1.7% 3.4%, rgba(255, 255, 255, 0) 3.9%),
+    radial-gradient(140% 50% at 22% 116%, #7fe25a 0 58%, rgba(127, 226, 90, 0) 58.5%),
+    radial-gradient(120% 46% at 96% 118%, #3fbf4f 0 57%, rgba(63, 191, 79, 0) 57.5%),
+    linear-gradient(180deg, #25acef 0%, #6fd2ff 38%, #c9f2ff 68%, #eafbff 80%);
+  /* (abajo de la fila de botones de arriba del HUD, que siguen a la vista) */
+  position: relative; width: min(350px, calc(92 * var(--vw))); height: min(680px, calc(100 * var(--vh) - 86px)); max-height: none;
+  border: 11px solid transparent; border-radius: 46px; overflow: visible;
+  background: var(--pantalla) padding-box, linear-gradient(145deg, #ffffff 0%, #eef3f6 45%, #d9e1e7 100%) border-box;
+  box-shadow: 0 0 0 2px #c7d0d7, inset 0 0 0 1px rgba(255, 255, 255, 0.7), 0 22px 48px rgba(20, 70, 110, 0.32), 0 4px 10px rgba(20, 70, 110, 0.18);
+  animation: celuSube 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.12) both; transform-origin: 70% 100%;
+}
+@keyframes celuSube { from { opacity: 0; transform: translateY(55%) rotate(7deg) scale(0.92); } to { opacity: 1; transform: none; } }
+/* el parlante y la cámara, en el marco; el brillo del vidrio, encima de todo (no se toca) */
+.ventana.celu::before { content: ""; position: absolute; top: -7px; left: 50%; width: 52px; height: 4px; margin-left: -26px; border-radius: 3px; background: linear-gradient(#b7c1c9, #d6dde2); }
+.ventana.celu::after { content: ""; position: absolute; top: -8px; left: calc(50% + 38px); width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #7fdcff, #1a4d6b 70%); }
+.cel-brillo { position: absolute; inset: 0; border-radius: 35px; pointer-events: none; z-index: 4; background: linear-gradient(118deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.06) 26%, rgba(255, 255, 255, 0) 27%); }
+.cel-estado { display: flex; align-items: center; gap: 6px; padding: 7px 22px 2px; font: 900 12px/1 var(--letra); color: #fff; text-shadow: 0 1px 2px rgba(0, 50, 90, 0.45); flex-shrink: 0; }
+.cel-estado .cel-hora { margin-right: auto; }
+.cel-senal { display: flex; align-items: flex-end; gap: 2px; height: 11px; }
+.cel-senal i { width: 3px; border-radius: 1px; background: #fff; box-shadow: 0 1px 1px rgba(0, 50, 90, 0.35); }
+.cel-senal i:nth-child(1) { height: 4px; } .cel-senal i:nth-child(2) { height: 6px; } .cel-senal i:nth-child(3) { height: 8px; } .cel-senal i:nth-child(4) { height: 11px; }
+.cel-senal[data-r=conectando] i:nth-child(n+3) { opacity: 0.35; } .cel-senal[data-r=sin_red] i { opacity: 0.35; }
+.cel-bat { width: 20px; height: 10px; border: 1.5px solid #fff; border-radius: 3px; padding: 1px; box-sizing: border-box; position: relative; box-shadow: 0 1px 1px rgba(0, 50, 90, 0.35); }
+.cel-bat::after { content: ""; position: absolute; right: -4px; top: 2px; width: 2px; height: 4px; border-radius: 0 1px 1px 0; background: #fff; }
+.cel-bat i { display: block; height: 100%; width: 80%; border-radius: 1px; background: linear-gradient(#b8ffb0, #5fe06a); }
+.ventana.celu .cabeza { flex-shrink: 0; margin: 4px 10px 0; padding: 6px 6px 6px 12px; border: 0; border-radius: 16px; background: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72)); box-shadow: 0 2px 8px rgba(20, 90, 140, 0.16), inset 0 1px 0 #fff; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.ventana.celu .cabeza h2 { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ventana.celu .cabeza [data-a=x] { width: 30px !important; height: 30px !important; font-size: 13px !important; border-width: 2px; flex-shrink: 0; }
+.ventana.celu[data-app=inicio] .cabeza { display: none; }
+.ventana.celu .cuerpo { flex: 1; min-height: 0; position: relative; margin: 8px 10px 0; padding: 10px 10px 12px; border-radius: 18px; background: linear-gradient(rgba(255, 255, 255, 0.94), rgba(244, 249, 252, 0.94)); box-shadow: 0 2px 10px rgba(20, 90, 140, 0.14), inset 0 1px 0 #fff; font-size: 13.5px; }
+.ventana.celu[data-app=inicio] .cuerpo { background: transparent; box-shadow: none; padding: 4px 6px; margin-top: 0; overflow: hidden; }
+.cel-nav { flex-shrink: 0; display: flex; justify-content: space-around; align-items: center; height: 38px; margin: 6px 16px 4px; }
+.cel-nav-b { width: 58px; height: 30px; border: 0; border-radius: 15px; background: rgba(255, 255, 255, 0.5); color: #4d6b80; font-size: 14px; display: grid; place-items: center; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 3px rgba(20, 90, 140, 0.18); }
+.cel-nav-b i { font-style: normal; }
+.cel-nav-b.casita::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid #4d6b80; box-sizing: border-box; }
+.cel-nav-b:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.85); }
+/* el inicio: la hora grande, los amigos en línea y las apps */
+.cel-inicio { display: flex; flex-direction: column; height: 100%; gap: 10px; }
+.cel-widget { display: flex; flex-direction: column; align-items: center; padding: 14px 0 4px; color: #fff; text-shadow: 0 2px 6px rgba(0, 60, 110, 0.45); }
+.cel-reloj { font: 900 52px/1 var(--letra); letter-spacing: 0.02em; }
+.cel-fecha { display: block; font: 800 13px/1.4 var(--letra); margin-top: 4px; }
+.cel-fecha::first-letter { text-transform: uppercase; }
+.cel-widget .cel-nota { color: #fff; margin: 8px 0 0; text-shadow: 0 1px 3px rgba(0, 40, 80, 0.6); }
+.cel-linea { margin-top: 8px; padding: 4px 11px; border-radius: 999px; font: 800 12px/1.3 var(--letra); background: rgba(255, 255, 255, 0.32); border: 1px solid rgba(255, 255, 255, 0.7); text-shadow: 0 1px 2px rgba(0, 60, 110, 0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.cel-apps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 6px; margin-top: auto; padding-bottom: 6px; }
+.cel-app { display: flex; flex-direction: column; align-items: center; gap: 5px; border: 0; background: none; padding: 0; min-width: 0; }
+.cel-app span { font: 800 11px/1.15 var(--letra); color: #fff; text-shadow: 0 1px 3px rgba(0, 40, 80, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.cel-ico { position: relative; width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; font-style: normal; font-size: 27px; background: linear-gradient(160deg, var(--c1), var(--c2)); border: 1.5px solid rgba(255, 255, 255, 0.85); box-shadow: 0 4px 10px rgba(0, 50, 90, 0.28), inset 0 -3px 6px rgba(0, 0, 0, 0.12); transition: transform 0.15s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+.cel-ico::before { content: ""; position: absolute; left: 3px; right: 3px; top: 2px; height: 46%; border-radius: 13px 13px 40% 40% / 13px 13px 12px 12px; background: linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.12)); pointer-events: none; }
+.cel-app:hover .cel-ico, .cel-app:focus-visible .cel-ico { transform: translateY(-3px) scale(1.06); }
+.cel-app:active .cel-ico { transform: scale(0.9); }
+.cel-badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: linear-gradient(#ff8fa0, #ff4f6e); color: #fff; font: 900 11px/18px var(--letra); font-style: normal; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); border: 1.5px solid #fff; z-index: 1; }
+/* las filas: la cara, el nombre y sus botones */
+.cel-lista { display: flex; flex-direction: column; gap: 6px; }
+.cel-fila { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 7px; border-radius: 16px; background: #fff; border: 1.5px solid #e6ecf0; box-shadow: 0 1px 3px rgba(40, 80, 110, 0.08); }
+.cel-fila.nuevo { border-color: #9fe2ff; background: linear-gradient(#ffffff, #f0faff); }
+.cel-fila > .cel-badge { position: static; flex-shrink: 0; }
+.cel-quien { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; border: 0; background: none; padding: 0; text-align: left; }
+.cel-quien:disabled { cursor: default; opacity: 1; }
+.cel-quien.chico { gap: 7px; font: 800 12px var(--letra); color: var(--tinta2); }
+.cel-txt { display: flex; flex-direction: column; min-width: 0; }
+.cel-txt b { font: 900 14px/1.25 var(--letra); color: var(--tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cel-txt small { font: 700 11.5px/1.3 var(--letra); color: var(--tinta2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cel-cuando { font: 800 10.5px var(--letra); color: var(--tinta2); flex-shrink: 0; }
+.cel-av { position: relative; display: inline-block; flex-shrink: 0; border-radius: 50%; box-shadow: 0 1px 4px rgba(20, 70, 110, 0.25), 0 0 0 1.5px #fff; vertical-align: middle; }
+.cel-av svg { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.cel-punto { position: absolute; right: -1px; bottom: -1px; width: 30%; height: 30%; min-width: 9px; min-height: 9px; border-radius: 50%; background: #c3c9ce; border: 2px solid #fff; box-sizing: border-box; }
+.cel-punto.si { background: radial-gradient(circle at 35% 30%, #b8ffb0, #2fcf45); box-shadow: 0 0 6px rgba(47, 207, 69, 0.7); }
+.cel-b { position: relative; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 32px; padding: 5px 11px; border-radius: 999px; border: 2px solid var(--gris2); background: linear-gradient(#ffffff, #f0f3f5); font: 800 12.5px/1 var(--letra); color: var(--tinta); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06); }
+.cel-b i { font-style: normal; font-size: 13px; }
+.cel-b:hover, .cel-b:focus-visible { border-color: var(--azul); color: var(--azul2); }
+.cel-b:active { transform: scale(0.94); }
+.cel-b.primario { background: linear-gradient(#6fdaff, #1fb0ea); border-color: #1aa0d8; color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.15); }
+.cel-b.primario:hover { color: #fff; box-shadow: 0 0 0 3px rgba(52, 190, 240, 0.25); }
+.cel-b.peligro { border-color: #ffc2cc; color: #e0405e; background: #fff; }
+.cel-b.peligro.fuerte { background: linear-gradient(#ff8fa0, #ff4f6e); border-color: #ff4f6e; color: #fff; }
+.cel-b.redondito { width: 34px; height: 34px; padding: 0; }
+.cel-b.ancho { width: 100%; margin-top: 8px; min-height: 40px; font-size: 14px; }
+.cel-etq { flex-shrink: 0; padding: 4px 9px; border-radius: 999px; background: #eef3f6; font: 800 11.5px var(--letra); color: var(--tinta2); }
+.ventana.celu h3 { margin: 12px 4px 6px; font: 900 11.5px var(--letra); letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta2); }
+.cel-nota { margin: 10px 6px; text-align: center; font: 700 13px/1.45 var(--letra); color: var(--tinta2); }
+.cel-nota.chica { font-size: 11.5px; margin: 6px; }
+.ventana.celu[data-app=inicio] .cel-nota { color: #fff; text-shadow: 0 1px 3px rgba(0, 40, 80, 0.6); }
+.cel-tabs { display: flex; gap: 3px; padding: 3px; margin-bottom: 10px; border-radius: 13px; background: #e9eff3; }
+.cel-tab { position: relative; flex: 1; min-width: 0; padding: 7px 4px; border: 0; border-radius: 10px; background: none; font: 800 12px/1.1 var(--letra); color: var(--tinta2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cel-tab.si { background: #fff; color: var(--azul2); box-shadow: 0 1px 4px rgba(20, 70, 110, 0.18); }
+.cel-tab.alerta::after { content: ""; position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #ff4f6e; }
+.cel-codigo { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 10px; border-radius: 16px; background: linear-gradient(160deg, #e9f9ff, #ffffff); border: 2px solid #bde9fb; }
+.cel-codigo small { font: 800 11.5px var(--letra); color: var(--tinta2); }
+.cel-codigo b { font: 900 22px/1.2 var(--letra); letter-spacing: 0.06em; color: var(--azul2); user-select: text; -webkit-user-select: text; }
+.cel-fila-b { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+.cel-form, .cel-escribir { display: flex; gap: 6px; align-items: center; margin-top: 10px; }
+.cel-form input, .cel-escribir input { flex: 1; min-width: 0; padding: 8px 13px; border-radius: 999px; border: 2px solid var(--gris2); background: #fff; font: 700 14px var(--letra); color: var(--tinta); outline: none; user-select: text; -webkit-user-select: text; }
+.cel-form input:focus, .cel-escribir input:focus { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(52, 190, 240, 0.2); }
+.cel-res { min-height: 16px; margin: 6px 4px 0; font: 800 12px/1.35 var(--letra); color: var(--tinta2); display: flex; align-items: center; gap: 6px; }
+.cel-res.bien { color: #2e9f3a; } .cel-res.mal { color: #e0405e; }
+.cel-perfil { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 4px; text-align: center; }
+.cel-perfil > .cel-av { box-shadow: 0 4px 14px rgba(20, 70, 110, 0.3), 0 0 0 3px #fff, 0 0 0 5px #bde9fb; margin-bottom: 6px; }
+.cel-nombre { font: 900 20px/1.2 var(--letra); color: var(--tinta); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.cel-codigo-chico { font: 800 12px var(--letra); color: var(--azul2); letter-spacing: 0.04em; }
+.cel-perfil small { font: 700 11.5px var(--letra); color: var(--tinta2); }
+.cel-donde, .cel-cifras { margin-top: 4px; padding: 4px 11px; border-radius: 999px; background: #eef3f6; font: 800 12px var(--letra); color: var(--tinta2); }
+.cel-donde.si { background: #e3fbe6; color: #2e9f3a; }
+.cel-acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px 0 2px; }
+.cel-acciones.peligro { margin-top: 16px; padding-top: 12px; border-top: 1.5px dashed #e3e8ec; }
+.cel-op { display: flex; flex-direction: column; gap: 5px; margin: 10px 2px; }
+.cel-op > span { font: 800 12.5px var(--letra); color: var(--tinta); }
+.cel-seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: #e9eff3; }
+.cel-seg button { flex: 1; padding: 6px; border: 0; border-radius: 9px; background: none; font: 800 12px var(--letra); color: var(--tinta2); }
+.cel-seg button.si { background: #fff; color: var(--azul2); box-shadow: 0 1px 4px rgba(20, 70, 110, 0.18); }
+/* la charla: los globitos (los míos a la derecha, celestes) y el renglón para escribir, siempre abajo */
+.ventana.celu[data-app=chat] .cuerpo { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 8px; }
+.cel-charla-cab { flex-shrink: 0; display: flex; padding: 0 2px 6px; border-bottom: 1.5px solid #edf1f4; }
+.cel-msgs { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding: 8px 2px; touch-action: pan-y; }
+.cel-globo { max-width: 80%; padding: 7px 11px 5px; border-radius: 17px; font: 700 13.5px/1.35 var(--letra); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; animation: aparece 0.2s both; }
+.cel-globo small { display: block; margin-top: 2px; font: 800 9.5px var(--letra); opacity: 0.7; text-align: right; }
+.cel-globo.mio { align-self: flex-end; background: linear-gradient(#6fdaff, #1fb0ea); color: #fff; border-bottom-right-radius: 5px; box-shadow: 0 2px 6px rgba(26, 160, 216, 0.3); }
+.cel-globo.suyo { align-self: flex-start; background: #fff; color: var(--tinta); border: 1.5px solid #e3e8ec; border-bottom-left-radius: 5px; }
+.cel-dia { align-self: center; margin: 4px 0; padding: 2px 9px; border-radius: 999px; background: #eef3f6; font: 800 10.5px var(--letra); color: var(--tinta2); }
+.cel-visto { align-self: flex-end; font: 800 10.5px var(--letra); color: var(--azul2); margin-right: 4px; }
+.cel-escribir { flex-shrink: 0; margin-top: 6px; }
+/* los juegos: una tarjeta por lugar, con cuánta gente hay y las caras de tus amigos */
+.cel-juegos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cel-juego { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 92px; padding: 9px 10px; border-radius: 18px; border: 2px solid rgba(255, 255, 255, 0.95); box-shadow: 0 2px 8px rgba(20, 70, 110, 0.16); text-align: left; overflow: hidden; }
+.cel-juego::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 42%; background: linear-gradient(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)); pointer-events: none; }
+.cel-juego.aca { border-color: var(--azul); box-shadow: 0 0 0 3px rgba(52, 190, 240, 0.3); }
+.cel-juego-emo { font-style: normal; font-size: 26px; line-height: 1.1; }
+.cel-juego b { font: 900 13.5px/1.2 var(--letra); color: var(--tinta); }
+.cel-juego small { font: 800 11px var(--letra); color: var(--tinta2); }
+.cel-caras { position: absolute; right: 8px; bottom: 8px; display: flex; }
+.cel-caras .cel-av + .cel-av { margin-left: -7px; }
+.cel-juego:active { transform: scale(0.96); }
+/* el "¿seguro?", adentro de la pantalla */
+.cel-seguro { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 16px; border-radius: inherit; background: rgba(240, 246, 250, 0.75); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: aparece 0.2s both; }
+.cel-seguro > div { padding: 16px 14px; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px rgba(20, 70, 110, 0.25); text-align: center; }
+.cel-seguro p { margin: 0 0 12px; font: 800 14px/1.4 var(--letra); color: var(--tinta); }
+/* acostado (el celu del jugador con el juego acostado): más ancho que alto, las apps en dos filas al lado de la hora */
+html.b460 .ventana.celu { width: min(600px, calc(82 * var(--vw))); height: calc(92 * var(--vh)); border-width: 9px; border-radius: 36px; transform-origin: 50% 100%; }
+html.b460 .cel-brillo { border-radius: 27px; }
+html.b460 .ventana.celu::before { top: 50%; left: -6px; width: 3px; height: 40px; margin: -20px 0 0; }
+html.b460 .ventana.celu::after { top: calc(50% + 30px); left: -7px; }
+html.b460 .cel-estado { padding: 5px 18px 0; font-size: 11px; }
+html.b460 .ventana.celu .cabeza { padding: 3px 4px 3px 10px; margin-top: 3px; } html.b460 .ventana.celu .cabeza h2 { font-size: 14px; }
+html.b460 .ventana.celu .cabeza [data-a=x] { width: 26px !important; height: 26px !important; }
+html.b460 .ventana.celu .cuerpo { margin-top: 5px; padding: 8px 9px 9px; }
+html.b460 .cel-nav { height: 28px; margin: 4px 14px 3px; } html.b460 .cel-nav-b { height: 24px; }
+html.b460 .cel-inicio { flex-direction: row; align-items: center; gap: 8px; }
+html.b460 .cel-widget { width: 34%; padding: 0; flex-shrink: 0; }
+html.b460 .cel-reloj { font-size: 44px; }
+html.b460 .cel-apps { flex: 1; grid-template-columns: repeat(5, 1fr); margin: 0; gap: 10px 4px; padding: 0; }
+html.b460 .cel-ico { width: 46px; height: 46px; font-size: 23px; border-radius: 14px; }
+html.b460 .cel-juegos { grid-template-columns: repeat(3, 1fr); } html.b460 .cel-juego { min-height: 74px; }
+html.b460 .ventana.celu h3 { margin-top: 8px; }
+html.b460 .cel-perfil > .cel-av { width: 64px !important; height: 64px !important; }
+/* (el perfil en dos columnas: la cara y lo principal a la izquierda, lo demás a la derecha) */
+html.b460 .cel-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+html.b460 .cel-dos .cel-acciones.peligro { margin-top: 6px; border-top: 0; padding-top: 0; }
+html.b460 .cel-dos .cel-op:first-child { margin-top: 0; }
+/* parado y angosto (una ventana de compu finita): centrado */
+html.angosta .velo.velo-celu { justify-content: center; padding-right: 0; }
+/* la pausa con el botón del celu: en el celu acostado, "Salir al menú" comparte la última fila */
+html.b460 .pausa-menu [data-a=menu] { grid-column: span 2 !important; }

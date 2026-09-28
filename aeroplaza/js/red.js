@@ -13,6 +13,9 @@
    - Los mensajes propios que vuelven del broker se ignoran (data.id === MY_ID).
    - Si el cliente MQTT no carga (sin internet) o no conecta, el juego sigue
      solo: la red es una capa encima, nunca la condición para jugar.
+   - (vuelta 46) Los amigos (amigos.js) usan dos temas más, los dos retenidos:
+     perfil/<id> (la llave pública, el nombre y el muñeco) y buzon/<para>/<de>
+     (las cartas cifradas). Acá solo se suscribe, se publica y se reparte.
    ========================================================================== */
 export const NS = 'aeroplaza_v1_';
 export const BROKER = 'wss://broker.emqx.io:8084/mqtt';
@@ -24,6 +27,9 @@ export class Red {
     this.estado = 'conectando';      // conectando | en_linea | sin_red
     this.sala = null; this.cli = null;
     this.alEstado = () => {}; this.alRemoto = () => {}; this.alChat = () => {}; this.alAccion = () => {}; this.alVestibulo = () => {}; this.alCasa = () => {};
+    this.alBuzon = () => {}; this.alPerfil = () => {}; this.alConectar = () => {};
+    this.temas = new Set();          // los temas sueltos (de los amigos): se vuelven a pedir al reconectar
+    this.aBorrar = [];               // retenidos viejos que se borran al conectar (la casa del id de antes)
     this.ultimo = null; this.tUltimo = 0; this.tLatido = 0;
     this.vestibulo = new Map();      // id → { sala, reino, nombre, casa, t }
     this.tPresencia = 0; this.reino = null;
@@ -57,7 +63,10 @@ export class Red {
       c.subscribe(NS + 'vestibulo', { qos: 0 });
       if (this.sala) this.suscribir(this.sala);
       if (this.casaMirada) c.subscribe(NS + 'casa/' + this.casaMirada, { qos: 0 });
+      if (this.temas.size) c.subscribe([...this.temas], { qos: 0 });
+      for (const tema of this.aBorrar.splice(0)) try { c.publish(tema, '', { qos: 0, retain: true }); } catch { /* nada */ }
       this.presencia(true);
+      try { this.alConectar(); } catch (e) { console.warn('red: al conectar', e); }
     });
     c.on('reconnect', () => this.ponerEstado('conectando'));
     /* si nunca conectó y ya falló 4 veces (sin internet, o una página que no deja abrir WebSocket), se deja de insistir */
@@ -112,7 +121,7 @@ export class Red {
     if (ahora - this.tUltimo < 100) return;
     const u = this.ultimo;
     const cambio = !u || Math.abs(u.x - s.x) + Math.abs(u.y - s.y) + Math.abs(u.z - s.z) > 0.02 || Math.abs(u.facingAngle - s.facingAngle) > 0.05 ||
-      u.hp !== s.hp || u.estado !== s.estado || u.gesto !== s.gesto || u.av !== s.av || u.esc !== s.esc || u.ef !== s.ef || u.voz !== s.voz || !!extra;
+      u.hp !== s.hp || u.estado !== s.estado || u.gesto !== s.gesto || u.av !== s.av || u.esc !== s.esc || u.ef !== s.ef || u.voz !== s.voz || u.cel !== s.cel || !!extra;
     if (!cambio && ahora - this.tLatido < 1500) return;
     this.tUltimo = ahora; this.tLatido = ahora;
     this.ultimo = { ...s };
@@ -120,6 +129,10 @@ export class Red {
   }
   accion(o) { if (this.sala) this.publicar(NS + this.sala + '/action', { id: this.id, ...o }); }
   chat(texto) { const x = String(texto).trim().slice(0, 120); if (x && this.sala) this.publicar(NS + this.sala + '/chat', { id: this.id, name: this.nombre, text: x }); return x; }
+  /* lo retenido: el broker se lo da a quien se suscriba después (el perfil, las cartas de los amigos) */
+  publicarRetenido(tema, o) { if (!this.conectado) return false; try { this.cli.publish(tema, JSON.stringify(o), { qos: 0, retain: true }); return true; } catch (e) { console.warn('red: publicar', e); return false; } }
+  suscribirTema(tema) { if (this.temas.has(tema)) return; this.temas.add(tema); if (this.conectado) this.cli.subscribe(tema, { qos: 0 }); }
+  desuscribirTema(tema) { if (!this.temas.delete(tema)) return; if (this.conectado) this.cli.unsubscribe(tema); }
   /* la casa: el plano queda guardado en el broker (retenido), así se puede visitar */
   publicarCasa(plano) { if (!this.conectado) return; try { this.cli.publish(NS + 'casa/' + this.id, JSON.stringify({ id: this.id, name: this.nombre, plano }), { qos: 0, retain: true }); } catch { /* nada */ } }
   mirarCasa(id) {
@@ -144,6 +157,9 @@ export class Red {
       this.alVestibulo(); return;
     }
     if (tema.startsWith(NS + 'casa/')) { this.alCasa(d); return; }
+    /* (las cartas: buzon/<yo>/<de>; el de del tema tiene que ser el del sobre) */
+    if (tema.startsWith(NS + 'buzon/')) { const [para, de] = tema.slice(NS.length + 6).split('/'); if (para === this.id && de === d.id) this.alBuzon(de, d); return; }
+    if (tema.startsWith(NS + 'perfil/')) { if (tema.slice(NS.length + 7) === d.id) this.alPerfil(d); return; }
     if (!this.sala) return;
     const R = NS + this.sala;
     if (tema === R + '/state') this.alRemoto(d);
