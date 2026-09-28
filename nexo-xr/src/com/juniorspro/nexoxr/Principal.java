@@ -197,6 +197,11 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         setContentView(raiz);
         if (error != null) avisar("La vez anterior Nexo se cerró por un error (tocá para ocultar):\n" + error);
         if (ajustes.manos == 1) manos = new ManoRastreo(this);
+        // las actualizaciones: si hay una nueva, se abre su ventana (con "Actualizar")
+        Actualizador act = Actualizador.de(this);
+        act.alHaber = () -> { tareas.add(() -> abrirCuandoSePueda("actualizar")); sonido.tocar(Sonido.ABRIR); };
+        String nov = act.novedades();
+        if (nov != null && error == null) avisar(nov);
         pantallaCompleta();
     }
 
@@ -217,6 +222,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         if (linterna) linterna(true);
         if (manos != null && conArcore) manos.arrancar();
         vista.onResume();
+        Actualizador act = Actualizador.de(this);
+        // volviendo del permiso de instalar: seguir con la actualización
+        if (act.estado == Actualizador.PERMISO && (Build.VERSION.SDK_INT < 26 || getPackageManager().canRequestPackageInstalls())) act.actualizar();
+        else act.quizas();
     }
 
     @Override
@@ -471,6 +480,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         switch (app) {
             case "ajustes": return new int[]{1180, 800};
             case "bienvenida": return new int[]{1100, 800};
+            case "actualizar": return new int[]{1000, 680};
             default: return new int[]{1280, 800};
         }
     }
@@ -484,9 +494,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 cambio("tutorial", 1);
                 tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("bienvenida")) cerrarVentana(v); });
             });
+            case "actualizar": return c -> new ActualizarApp().crear(c, this,
+                    () -> tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("actualizar")) cerrarVentana(v); }));
             default: return c -> new Biblioteca().crear(c, this);
         }
     }
+
+    /** Antes de que esté el escritorio (el primer cuadro con posición), queda para después. */
+    private String pendiente;
+    private void abrirCuandoSePueda(String app) { if (armado) abrirEnGl(app); else pendiente = app; }
 
     private void abrirEnGl(String app) {
         HashSet<Ventana> antes = new HashSet<>(escritorio.ventanas);
@@ -532,6 +548,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         crearPanel(k, c -> teclado.crear(c, this));
         if (vistos.tutorial == 0) abrirEnGl("bienvenida");
         abrirEnGl("biblioteca");
+        if (pendiente != null) { abrirEnGl(pendiente); pendiente = null; }
     }
 
     private void crearPanel(Ventana v, PanelVirtual.Fabrica f) {

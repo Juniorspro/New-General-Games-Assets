@@ -61,10 +61,21 @@ fi
 MP_JARS="$MP/tasks-core-sin-telemetria.jar:$MP/tasks-vision/classes.jar"
 MP_DEPS="$MP/guava-27.0.1-android.jar $MP/failureaccess-1.0.1.jar $MP/protobuf-javalite-4.26.1.jar $MP/flogger-0.6.jar $MP/flogger-system-backend-0.6.jar"
 
+# LA LLAVE con que se firma. Las actualizaciones sólo se instalan encima si vienen con la
+# MISMA llave, así que tiene que ser siempre la misma:
+#   · NEXO_LLAVE (variable del entorno): la llave en base64 (la que ya firmó lo instalado);
+#     NEXO_LLAVE_CLAVE y NEXO_LLAVE_ALIAS si no son "mundoar" y "prueba".
+#   · si no, la de la caché ($CACHE/prueba.keystore), y si no hay, una nueva (¡otra llave!).
+# Nunca al repo (.gitignore: *.keystore).
+CLAVE=${NEXO_LLAVE_CLAVE:-mundoar}
+ALIAS=${NEXO_LLAVE_ALIAS:-prueba}
 LLAVE=$CACHE/prueba.keystore
-if [ ! -f "$LLAVE" ]; then
-  # Una llave de prueba, sólo para poder instalar. Nunca al repo (.gitignore: *.keystore).
-  keytool -genkeypair -keystore "$LLAVE" -storepass mundoar -keypass mundoar -alias prueba \
+if [ -n "$NEXO_LLAVE" ]; then
+  LLAVE=$CACHE/nexo-entorno.keystore
+  printf '%s' "$NEXO_LLAVE" | tr -d ' \n\r' | base64 -d > "$LLAVE" || { echo "✗ NEXO_LLAVE no es base64"; exit 1; }
+elif [ ! -f "$LLAVE" ]; then
+  echo "· ¡ojo! no hay llave: se hace una NUEVA (lo ya instalado no se va a poder actualizar encima)"
+  keytool -genkeypair -keystore "$LLAVE" -storepass "$CLAVE" -keypass "$CLAVE" -alias "$ALIAS" \
     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Nexo XR prueba" >/dev/null 2>&1
 fi
 
@@ -124,7 +135,7 @@ with zipfile.ZipFile(salida, "a") as z:
     z.write(os.path.join(mp, "hand_landmarker.task"), "assets/hand_landmarker.task", compress_type=zipfile.ZIP_STORED)
 ' "$OBRA" "$ARCORE" "$MP"
 "$BT/zipalign" -f -p 4 "$OBRA/sin-alinear.apk" "$OBRA/alineado.apk"
-"$BT/apksigner" sign --ks "$LLAVE" --ks-pass pass:mundoar --key-pass pass:mundoar \
+"$BT/apksigner" sign --ks "$LLAVE" --ks-key-alias "$ALIAS" --ks-pass "pass:$CLAVE" --key-pass "pass:$CLAVE" \
   --out salida/nexo-xr.apk "$OBRA/alineado.apk" 2>&1 | grep -v "^Picked up" || true
 "$BT/apksigner" verify salida/nexo-xr.apk >/dev/null 2>&1 || { echo "✗ la firma no verifica"; exit 1; }
 rm -rf "$OBRA"

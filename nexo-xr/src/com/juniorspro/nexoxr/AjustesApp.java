@@ -16,7 +16,7 @@ import android.widget.TextView;
 
 /**
  * LOS AJUSTES: a la izquierda las secciones, a la derecha lo de cada una.
- *   Entorno · Visor · Manos y control · Sonido · Acerca de
+ *   Entorno · Visor · Manos y control · Sonido · Acerca de (y las actualizaciones)
  */
 final class AjustesApp {
     private static final String[] SECCIONES = {"Entorno", "Visor", "Manos y control", "Sonido", "Acerca de"};
@@ -111,8 +111,15 @@ final class AjustesApp {
                 break;
             }
             default:
-                contenido.addView(Estilo.texto(c, "Nexo XR 1.0", 18, Estilo.TEXTO, true));
+                Actualizador act = Actualizador.de(c);
+                contenido.addView(Estilo.texto(c, "Nexo XR " + act.instaladaNombre, 18, Estilo.TEXTO, true));
                 contenido.addView(Estilo.texto(c, "Un sistema de realidad mixta para el teléfono y un visor: pantallas en el espacio, entornos 3D, passthrough y tus manos.", 14, Estilo.TEXTO2, false));
+                LinearLayout.LayoutParams lu = new LinearLayout.LayoutParams(-1, -2);
+                lu.topMargin = Estilo.dp(c, 16);
+                boolean hay = act.nuevaCodigo > act.instalada;
+                contenido.addView(Estilo.renglon(c, Iconos.ACTUALIZAR, hay ? "Hay una nueva: la " + act.nuevaNombre : "Actualizaciones",
+                        hay ? "Se baja e instala desde Nexo" : "Nexo se fija solo al abrir; también podés buscar ahora",
+                        Estilo.boton(c, -1, hay ? "Actualizar" : "Buscar", hay, v -> { s.sonido(Sonido.CLIC); s.abrir("actualizar"); })), lu);
                 estado = Estilo.texto(c, "", 13, Estilo.TEXTO2, false);
                 LinearLayout.LayoutParams le = new LinearLayout.LayoutParams(-1, -2);
                 le.topMargin = Estilo.dp(c, 16);

@@ -16,7 +16,7 @@ final class Iconos extends Drawable {
     static final int APPS = 0, WEB = 1, GALERIA = 2, AJUSTES = 3, RAPIDOS = 4, WIFI = 5, ATRAS = 6, ADELANTE = 7, RECARGAR = 8,
             CASA = 9, TECLADO = 10, CERRAR = 11, PLAY = 12, PAUSA = 13, CAPTURA = 14, RECENTRAR = 15, OJO = 16, MONTANA = 17,
             VISOR = 18, MANO = 19, SONIDO = 20, INFO = 21, BUSCAR = 22, ESTRELLA = 23, BORRAR = 24, ENTER = 25, MAYUS = 26,
-            CINE = 27, CONTROL = 28, TELEFONO = 29, BATERIA = 30, BRILLO = 31, VIDEO = 32, LINTERNA = 33;
+            CINE = 27, CONTROL = 28, TELEFONO = 29, BATERIA = 30, BRILLO = 31, VIDEO = 32, LINTERNA = 33, ACTUALIZAR = 34;
 
     private final int tipo;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -184,6 +184,12 @@ final class Iconos extends Drawable {
                 k.drawPath(c, p);
                 k.drawLine(7, 6, 17, 6, p);
                 p.setStyle(Paint.Style.FILL); k.drawCircle(12, 14, 1.2f, p);
+                break;
+            case ACTUALIZAR:
+                // la flecha que baja a la bandeja
+                k.drawLine(12, 3, 12, 15, p);
+                c.moveTo(7, 10); c.lineTo(12, 15); c.lineTo(17, 10); k.drawPath(c, p);
+                c.reset(); c.moveTo(4, 15); c.lineTo(4, 20); c.lineTo(20, 20); c.lineTo(20, 15); k.drawPath(c, p);
                 break;
             case VIDEO:
                 r.set(2.5f, 6, 16, 18); k.drawRoundRect(r, 2, 2, p);

@@ -1,0 +1,10 @@
+{
+  "versionCode": 2,
+  "versionName": "1.1",
+  "apk": "nexo-xr-2.apk",
+  "bytes": 18847174,
+  "sha256": "14efe05f85c6d2ce75faa4bcef2da0ab8ce9da93ce2073237e7454d88bf5329c",
+  "firma": "6766095216fa8a2d7b8963df407e08d146bfac5d723647bf3129e142ce1823ca",
+  "notas": "Nexo ahora se actualiza solo: cuando hay una versión nueva te aparece la ventana con Actualizar (también en Ajustes → Acerca de). Y la linterna en los ajustes rápidos.",
+  "fecha": "2026-09-28 01:40 UTC"
+}

@@ -58,6 +58,12 @@ con nombre, íconos y diseño propios.
 - **Captura**: lo que ves, a la galería (Pictures/Nexo).
 - **Sonidos** del sistema sintetizados (clic, abrir, cerrar, captura, arranque).
 
+- **Se actualiza sola.** Al abrir (y cada 6 h) Nexo se fija si hay una
+  versión nueva; si hay, se abre la ventana **"Nexo 1.x está lista"** con lo
+  que trae y el botón **Actualizar**: la baja, revisa que sea la publicada
+  (tamaño, SHA-256, que sea Nexo, más nueva y con la misma firma) y la
+  instala. También en Ajustes → Acerca de. Ver [Actualizaciones](#actualizaciones).
+
 ## Cómo se usa
 
 | | con las manos | sin manos |
@@ -103,6 +109,40 @@ cine, **start / menú / Atrás del control** la barra de abajo, el **joystick
 arriba / abajo** hace scroll. Ajustes → Manos y control → Configurar: aprende
 los tuyos.
 
+## Actualizaciones
+
+```
+publicar.sh ──► actualizacion/version.json + nexo-xr-N.apk ──► push de la rama
+                                                                  │
+Nexo (al abrir, cada 6 h) ◄── raw.githubusercontent.com ◄────────┘
+   └─ hay una más nueva → ventana "Actualizar" → baja → revisa → instala
+```
+
+- **Publicar** (desde acá): `./publicar.sh "qué trae"` sube el número de
+  versión (`versionCode` +1, `1.N`), arma el APK y deja en `actualizacion/`
+  el APK (con el número en el nombre: nunca llega uno viejo de una caché) y
+  `version.json` (versión, tamaño, SHA-256, huella de la firma, notas).
+  Después, commit y push. La app lo lee de la rama `claude/hola-80z86i` (el
+  repo es público); si falla, de raw.githack.com. Un campo `"feed"` en el
+  json muda la dirección para las próximas.
+- **En el teléfono**: la primera vez Android pide el permiso **"Instalar apps
+  desconocidas"** para Nexo (se abre solo; activalo y volvé: sigue sola), y
+  confirmar la instalación (si estás en el visor, sacalo un momento). Desde
+  Android 12, cuando Nexo ya se instaló a sí mismo una vez, las siguientes
+  pueden no preguntar nada. Al terminar, Nexo se vuelve a abrir (si el
+  teléfono lo deja; si no, tocá el ícono) y te dice qué trajo.
+- **La llave**: Android sólo instala una actualización encima si viene
+  firmada con **la misma llave**. `construir.sh` usa, en este orden, la
+  variable del entorno `NEXO_LLAVE` (el keystore en base64; `NEXO_LLAVE_CLAVE`
+  y `NEXO_LLAVE_ALIAS` si no son `mundoar` / `prueba`) o la de la caché
+  (`~/.cache/mundo-ar/prueba.keystore`). La caché se pierde cuando se recicla
+  el contenedor: por eso la llave va guardada en `NEXO_LLAVE`. **Nunca al
+  repo.** `publicar.sh` se niega a publicar un APK con otra firma que la
+  publicada (el teléfono no lo instalaría), y la app, si igual le llega uno
+  así, lo avisa antes de bajarlo.
+- La primera versión con esto (**1.1**) se instala a mano una vez; de ahí en
+  adelante, "Actualizar".
+
 ## Cómo está hecho
 
 ```
@@ -126,6 +166,8 @@ Principal ── ARCore / sensores ── la cabeza, la cámara, el piso
 | `Navegador.java` · `Galeria.java` · `AjustesApp.java` · `Biblioteca.java` · `Bienvenida.java` | las apps |
 | `Estilo.java` · `Iconos.java` · `Sonido.java` | el aspecto, los íconos (trazos), los sonidos |
 | `Mano.java` · `FiltroMano.java` · `ManoRastreo.java` · `ManosGl.java` · `AsociadorManos.java` · `Lentes.java` · `Control.java` | de Asalto MR (manos, lentes, control) |
+| `Actualizador.java` · `Instalacion.java` · `ActualizarApp.java` | buscar, bajar, revisar e instalar la versión nueva; lo que contesta el instalador; la ventana |
+| `publicar.sh` · `actualizacion/` | publicar una versión (el APK y el `version.json` que mira la app) |
 | `herramientas/sin-parametros.py` | saca un atributo que el javac 21 escribe y con el que el d8 se cae |
 
 ## Pruebas (en la PC)
@@ -152,12 +194,15 @@ node pruebas/shaders.mjs
 ## Lo que NO se probó
 
 - **En un teléfono.** Acá no hay uno ni emulador (no hay KVM). Está probada la
-  lógica (escritorio, puntero, gestos), los shaders y la vista previa, y que el
-  APK compila y firma. **No** está probado: las pantallas virtuales con las
+  lógica (escritorio, puntero, gestos), los shaders y la vista previa, que el
+  APK compila y firma, y que la publicación de las actualizaciones se baja
+  bien y coincide (tamaño, SHA-256, firma). **No** está probado: las pantallas virtuales con las
   vistas de Android (que se vean, los toques, el teclado), el WebView adentro,
   el video, ARCore, las manos en vivo, el rendimiento ni el visor. Si algo
   sale en negro, no responde o se cierra: la próxima vez que abrís, Nexo
   muestra el error arriba; pasame una captura.
+- La instalación de la actualización en el teléfono (el permiso, la
+  confirmación, volver a abrirse) no se pudo probar acá.
 - El teclado escribe en los campos de texto de las apps y de las páginas con
   teclas; alguna página rara puede no tomarlas.
 - Sin ARCore, girar la cabeza usa los sensores y la orientación del teléfono

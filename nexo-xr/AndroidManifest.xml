@@ -3,8 +3,8 @@
      pantallas en el espacio, entornos 3D, passthrough con ARCore y hand tracking. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.juniorspro.nexoxr"
-    android:versionCode="1"
-    android:versionName="1.0">
+    android:versionCode="2"
+    android:versionName="1.1">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
 
@@ -16,6 +16,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <!-- las actualizaciones: Nexo se baja e instala la versión nueva (Android 12+: sin preguntar, si él se instaló) -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <!-- ARCore es opcional: sin él, sólo se gira la cabeza (sensores), sin passthrough ni manos. -->
     <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -59,6 +62,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- lo que contesta el instalador, y volver a abrir Nexo después de actualizarse -->
+        <receiver android:name=".Instalacion" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <activity
             android:name="com.google.ar.core.InstallActivity"
