@@ -1076,3 +1076,7 @@ html.b460 .cel-dos .cel-op:first-child { margin-top: 0; }
 html.angosta .velo.velo-celu { justify-content: center; padding-right: 0; }
 /* la pausa con el botón del celu: en el celu acostado, "Salir al menú" comparte la última fila */
 html.b460 .pausa-menu [data-a=menu] { grid-column: span 2 !important; }
+
+/* (vuelta 47) la versión del juego y de la app, chiquita, abajo del menú (solo en la APK) */
+.barra-abajo .version-app { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); font: 800 10.5px var(--letra); color: #a3a9b0; white-space: nowrap; letter-spacing: 0.02em; }
+.barra-pausa .p-version:empty { display: none; }

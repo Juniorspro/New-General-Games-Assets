@@ -18,7 +18,7 @@ import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
 import { Teclado } from './teclado.js';
 import { ventanaMando, mandosVistos } from './mando-box.js';
-import { filaVersion } from './actualizar.js';
+import { filaVersion, textoVersion } from './actualizar.js';
 import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
 import { miniaturaTiro, TIRO } from './reinos/tiro.js';
 import { miniaturaJuegos } from './reinos/juegos.js';
@@ -137,7 +137,7 @@ export const UI = {
       <button class="boton primario jugar-grande" data-a="jugar">▶ ${t('jugar')}</button>
       <div class="canales" style="position:relative">${canales.map(([id, v]) => `<button class="canal" data-c="${id}">${v}<div class="nombre">${t('canal_' + id)}</div></button>`).join('')}${'<div class="canal vacio"></div>'.repeat(vacios)}</div>
       <div class="barra-abajo"><svg viewBox="0 0 1000 150" preserveAspectRatio="none"><path d="M0 40 Q 180 40 250 70 Q 320 100 500 100 Q 680 100 750 70 Q 820 40 1000 40 L1000 150 L0 150 Z" fill="#f4f6f8" stroke="#d9dde1" stroke-width="3"/></svg>
-        <div class="reloj">--:--</div><div class="fecha"></div>
+        <div class="reloj">--:--</div><div class="fecha"></div><small class="version-app"></small>
         <div class="izq"><button class="redondo" data-c="plaza" title="AEROPLAZA">A·P</button></div>
         <div class="der"><button class="redondo" data-c="salas"><span class="punto ${J.red.estado}"></span></button></div></div></div>`));
     p.querySelectorAll('[data-c]').forEach((b) => b.onclick = () => this.abrirCanal(b.dataset.c, b));
@@ -153,6 +153,7 @@ export const UI = {
       setTimeout(reloj, 1000);
     };
     reloj();
+    $('.version-app', p).textContent = textoVersion();
     this.focoTeclado(p, '[data-a=jugar]');
     J.musica('titulo');
   },
@@ -569,9 +570,9 @@ export const UI = {
       <button class="boton" data-a="estilo">👾 ${t('estilo_titulo')}</button><button class="boton" data-a="discos">${t('canal_discos')}</button>
       <button class="boton" data-a="vr">🥽 ${t('vr_titulo')}</button><button class="boton" data-a="joyas"><i class="joya-icono" style="width:16px;height:16px;vertical-align:-3px"></i> ${t('tienda_joyas')}</button>
       <button class="boton" data-a="celu">📱 ${t('celu')}</button><button class="boton" data-a="menu" style="grid-column:1/-1">${t('salir_menu')}</button></div>`);
-    const pie = `<div class="barra-pausa"><span class="p-nombre"></span><span><i class="orbe-icono" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></i> ${J.G.orbes}</span><span><i class="joya-icono" style="width:14px;height:14px;vertical-align:-2px"></i> ${J.G.joyas || 0}</span><span class="p-sala"></span></div>`;
+    const pie = `<div class="barra-pausa"><span class="p-nombre"></span><span><i class="orbe-icono" style="display:inline-block;width:14px;height:14px;vertical-align:-2px"></i> ${J.G.orbes}</span><span><i class="joya-icono" style="width:14px;height:14px;vertical-align:-2px"></i> ${J.G.joyas || 0}</span><span class="p-sala"></span><span class="p-version"></span></div>`;
     const v = this.ventana(t('pausa'), cuerpo, { alCerrar: () => J.pausar(false), pie });
-    $('.p-nombre', v).textContent = J.G.nombre;
+    $('.p-nombre', v).textContent = J.G.nombre; $('.p-version', v).textContent = textoVersion();
     $('.p-sala', v).textContent = J.red.estado === 'en_linea' && J.red.sala ? `${J.red.sala} · ${J.remotos.cuantos + 1}` : t('solo');
     cuerpo.querySelector('[data-a=seguir]').onclick = () => v.cerrar();
     cuerpo.querySelector('[data-a=probador]').onclick = () => { v.remove(); this.ventanaAbierta = null; J.pausar(false); J.abrirProbador(); };

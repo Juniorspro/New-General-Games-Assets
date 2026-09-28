@@ -91,6 +91,9 @@ await ctx2.route(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//, (r) => r.abort(
 const p2 = await ctx2.newPage(); p2.on('pageerror', (e) => errores.push(e.message));
 await p2.goto('http://localhost:8793/aeroplaza.html?calidad=baja');
 await p2.waitForFunction(() => window.__A && window.__A.UI && window.__A.UI.J, null, { timeout: 120000, polling: 250 });
+await p2.evaluate(() => { const { UI, G } = window.__A; if (!G.idioma) { G.idioma = 'es'; } UI.menu(); });
+const enElMenu = await p2.evaluate(() => document.querySelector('.menu .version-app')?.textContent || '');
+prueba('abajo del menú se ve qué versión tiene el celu ("versión 3 · app 46")', enElMenu === 'versión 3 · app 46', enElMenu);
 const enMenu = await p2.evaluate(() => { const en = window.__A.J.enJuego; window.__nativo.actualizacion('lista', 4, 'El celu'); return { en, aplicar: window.__aplicar }; });
 prueba('APK 46, en el menú: lo bajado se usa ya (sin cerrar la app)', enMenu.en === false && enMenu.aplicar === 1, JSON.stringify(enMenu));
 await p2.goto('http://localhost:8793/aeroplaza.html?directo&pausa&calidad=baja');
