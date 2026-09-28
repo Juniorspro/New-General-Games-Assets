@@ -141,6 +141,18 @@ final class Seguimiento {
     final float[] pose = new float[16], poseFoto = new float[16];
 
     /**
+     * TU MESA: si false, la posición NO sigue a ARCore: el cuello queda donde
+     * estaba y la cabeza sólo gira (con ARCore y el giroscopio). Lo pone el
+     * sistema cada cuadro: true si la cámara está viendo la mesa marcada (o no
+     * se usa la mesa). Así no hay nada que "adivinar": mirando la pared lisa o
+     * el techo, nada se desliza; al volver a ver la mesa, se acomoda suave.
+     */
+    volatile boolean puedeMoverse = true;
+    /** Si la posición está fija ahora (para mostrar), y dónde quedó el cuello. */
+    volatile boolean fijo;
+    final float[] cuelloFijo = new float[3];
+
+    /**
      * Cada cuadro.
      * @param tFoto     la hora de la foto de ARCore (ns, la base del giroscopio)
      * @param rastrea   ARCore dice TRACKING
@@ -172,12 +184,22 @@ final class Seguimiento {
         aEscritorio(w, crudo);
         demoraMs = (tVer - tFoto) / 1e6f;
 
-        // los saltos: al volver de una pérdida, o uno imposible, se funden
+        // la mesa: sin verla, el cuello se queda quieto (sólo se gira)
+        boolean estabaFijo = fijo;
+        boolean fijar = !puedeMoverse && haySalida;
+        if (fijar) {
+            float[] cu = aplicarPunto(crudo, pivote);
+            if (!estabaFijo) System.arraycopy(cu, 0, cuelloFijo, 0, 3);
+            crudo[12] += cuelloFijo[0] - cu[0]; crudo[13] += cuelloFijo[1] - cu[1]; crudo[14] += cuelloFijo[2] - cu[2];
+        }
+        fijo = fijar;
+
+        // los saltos: al volver de una pérdida, al volver a ver la mesa, o uno imposible, se funden
         float dt = tUltimo == 0 ? 0 : Math.min(0.2f, (tVer - tUltimo) / 1e9f);
         tUltimo = tVer;
         float[] rp = {crudo[12], crudo[13], crudo[14]}, rr = new float[4];
         aCuat(crudo, rr);
-        boolean salto = haySalida && ((antes == GIRO && modo == SEIS)
+        boolean salto = haySalida && ((antes == GIRO && modo == SEIS) || (estabaFijo && !fijar)
                 || (modo == SEIS && dist(rp, crudoPos) > 0.12f));
         if (salto) {
             for (int k = 0; k < 3; k++) bPos[k] = salPos[k] - rp[k];
@@ -253,6 +275,13 @@ final class Seguimiento {
         System.arraycopy(qc, 0, cRot, 0, 4);
         correccionCm = (float) Math.sqrt(cPos[0] * cPos[0] + cPos[1] * cPos[1] + cPos[2] * cPos[2]) * 100;
         correccionGrados = (float) Math.toDegrees(2 * Math.acos(Math.min(1, Math.abs(cRot[3]))));
+    }
+
+    /** La matriz del mundo de ARCore al escritorio (C⁻¹): para dibujar lo que ARCore da en el mundo (planos, puntos). */
+    void desdeMundo(float[] out) {
+        float[] c = new float[16];
+        deCuat(cRot, cPos, c);
+        invRigida(c, out);
     }
 
     /** Una pose del mundo de ARCore al escritorio. */

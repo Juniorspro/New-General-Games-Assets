@@ -29,5 +29,7 @@ interface Sistema {
     void aprenderControl();
     /** 20 s de lo que pasa (seguimiento, manos) a un archivo, para ver con datos qué falla. */
     void grabarDiagnostico();
+    /** Nexo Inicio otra vez: escanear la mesa (o el cuarto), las manos, la cabeza. */
+    void prepararEspacio();
     void sonido(int cual);
 }

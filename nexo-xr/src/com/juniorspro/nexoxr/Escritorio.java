@@ -32,6 +32,8 @@ public final class Escritorio {
     public Ventana dock, rapidos, teclado;
     /** La que tiene el foco (la última que tocaste). */
     public Ventana enfocada;
+    /** Tu mesa (Nexo Inicio): el punto delante tuyo donde se apoya la barra de abajo, o null. */
+    public float[] mesa;
 
     /** Pone el ancla (la primera vez, y al recentrar). ojo: la cabeza; yaw de la mirada (0 = −Z). */
     public void recentrar(float x, float y, float z, float yaw) {
@@ -65,6 +67,14 @@ public final class Escritorio {
     public void acomodar(Ventana v) {
         switch (v.tipo) {
             case Ventana.DOCK:
+                if (mesa != null) {
+                    // apoyada en tu mesa, delante tuyo: de frente a la cabeza, el borde de abajo a 1.5 cm de la mesa
+                    v.cx = mesa[0]; v.cy = mesa[1] + 0.05f; v.cz = mesa[2];
+                    v.mirarA(ax, ay, az);
+                    v.cy = mesa[1] + 0.015f + Math.abs(v.u[1]) * v.alto / 2;
+                    v.mirarA(ax, ay, az);
+                    return;
+                }
                 frente(0, tmp);
                 v.cx = ax + tmp[0] * 0.72f; v.cy = ay - 0.40f; v.cz = az + tmp[2] * 0.72f;
                 break;

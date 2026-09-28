@@ -19,9 +19,16 @@ final class Ajustes {
     int anticipo = 30;        // Nexo Track: cuánto se predice el giro (ms: lo que tarda la imagen en llegar a los ojos)
     int ojoAuto = 1;          // los ojos: medirlos solos (girando la cabeza) o a mano
     int ojoX = 0, ojoY = 0, ojoZ = 70;   // los ojos desde la cámara, en el visor (mm: derecha, arriba, atrás)
+    int prepararEspacio = 1;  // Nexo Inicio al empezar (escanear la mesa o el cuarto)
+    int modoEspacio = Inicio.MESA;   // el último elegido (MESA, CUARTO, GIRAR)
+    int verMesa = 1;          // la mesa marcada en el mundo
+    int barraEnMesa = 1;      // la barra de abajo apoyada en la mesa
+    int soloConMesa = 1;      // sólo moverse cuando se ve la mesa
+    int escalaMano = 1000;    // el tamaño de tus manos medido en la mesa (×1000)
 
     private static final String[] CLAVES = {"entorno", "sbs", "ipdMm", "k1", "k2", "tamano", "corregirLentes", "manos", "verManos", "dedo",
-            "mirada", "sonido", "tutorial", "apuntarAbajo", "fov", "anticipo", "ojoAuto", "ojoX", "ojoY", "ojoZ"};
+            "mirada", "sonido", "tutorial", "apuntarAbajo", "fov", "anticipo", "ojoAuto", "ojoX", "ojoY", "ojoZ",
+            "prepararEspacio", "modoEspacio", "verMesa", "barraEnMesa", "soloConMesa", "escalaMano"};
 
     int valor(String c) {
         switch (c) {
@@ -44,6 +51,12 @@ final class Ajustes {
             case "ojoX": return ojoX;
             case "ojoY": return ojoY;
             case "ojoZ": return ojoZ;
+            case "prepararEspacio": return prepararEspacio;
+            case "modoEspacio": return modoEspacio;
+            case "verMesa": return verMesa;
+            case "barraEnMesa": return barraEnMesa;
+            case "soloConMesa": return soloConMesa;
+            case "escalaMano": return escalaMano;
             default: return apuntarAbajo;
         }
     }
@@ -69,6 +82,12 @@ final class Ajustes {
             case "ojoX": ojoX = v; break;
             case "ojoY": ojoY = v; break;
             case "ojoZ": ojoZ = v; break;
+            case "prepararEspacio": prepararEspacio = v; break;
+            case "modoEspacio": modoEspacio = v; break;
+            case "verMesa": verMesa = v; break;
+            case "barraEnMesa": barraEnMesa = v; break;
+            case "soloConMesa": soloConMesa = v; break;
+            case "escalaMano": escalaMano = v; break;
             default: apuntarAbajo = v;
         }
     }

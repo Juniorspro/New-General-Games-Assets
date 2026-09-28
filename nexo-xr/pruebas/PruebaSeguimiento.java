@@ -196,6 +196,38 @@ public class PruebaSeguimiento {
             ver(fin[0] < 0.006f, String.format("y todo vuelve a su lugar (%.1f mm)", fin[0] * 1000));
         }
 
+        // 4c. TU MESA: sin verla, el cuello queda quieto aunque la cabeza se incline 15 cm o ARCore se deslice
+        {
+            Seguimiento s = nuevo();
+            Cuello3 inclina = t -> t < 2 ? quieto : t < 3.5 ? new float[]{(float) ((t - 2) / 1.5 * 0.15), 1.5f, 0} : new float[]{0.15f, 1.5f, 0};
+            correr(s, 0, 2.0, inclina, t -> true, t -> ident, false, 1, 2, null, null);
+            s.puedeMoverse = false;
+            float[] cuello0 = null;
+            float maxDesvio = 0, maxAng = 0;
+            // ARCore además se desliza 20 cm (mirando una pared lisa): con la mesa fuera de la vista no se nota
+            float[] deriva = new float[16];
+            Seguimiento.ident(deriva);
+            for (int k = 0; k < 45; k++) {
+                double t0 = 2.0 + k / 30.0;
+                deriva[12] = (float) (k / 45.0 * 0.2);
+                final float[] d = deriva.clone();
+                correr(s, t0, t0 + 1 / 30.0, inclina, t -> true, t -> d, false, 99, 99, null, null);
+                float[] cu = Seguimiento.aplicarPunto(s.pose, s.pivote);
+                if (cuello0 == null) cuello0 = cu;
+                maxDesvio = Math.max(maxDesvio, Seguimiento.dist(cu, cuello0));
+                float[] v = display(t0 + 1 / 30.0 - 1 / 60.0 + 0.025, inclina.en(t0));
+                maxAng = Math.max(maxAng, angulo(s.pose, v));
+            }
+            ver(s.fijo, "sin ver la mesa: la posición queda fija");
+            ver(maxDesvio < 0.003f, String.format("el cuello no se movió (%.1f mm) aunque ARCore se deslizó 20 cm y la cabeza se inclinó", maxDesvio * 1000));
+            ver(maxAng < 1.5f, String.format("y la cabeza sigue girando bien (máx %.2f°)", maxAng));
+            s.puedeMoverse = true;
+            float[] salto = new float[1], fin = new float[2];
+            correr(s, 3.5, 5.0, inclina, t -> true, t -> ident, false, 3.5, 5.0, salto, fin);
+            ver(!s.fijo && salto[0] < 0.035f, String.format("al volver a ver la mesa se acomoda sin saltar (paso máx %.1f cm)", salto[0] * 100));
+            ver(fin[0] < 0.006f, String.format("y queda donde tiene que estar (%.1f mm)", fin[0] * 1000));
+        }
+
         // 4b. la hora de las fotos en otra base (10 s corrida): no se usa el giroscopio, no gira cualquier cosa
         {
             Seguimiento s = nuevo();

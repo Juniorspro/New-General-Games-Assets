@@ -35,6 +35,7 @@ import com.google.ar.core.CameraIntrinsics;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.Plane;
+import com.google.ar.core.PointCloud;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.TrackingFailureReason;
@@ -44,6 +45,7 @@ import com.google.ar.core.exceptions.NotYetAvailableException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -99,6 +101,35 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     private String textoCamara = "la de ARCore";
     private final Diagnostico diag = new Diagnostico();
     private final boolean[] pellizcaAhora = new boolean[2];
+
+    // Nexo Inicio: el espacio (tu mesa o el cuarto) y los pasos para prepararlo
+    private volatile Inicio inicio;
+    /** Cómo quedó: 0 = sin preparar (se mueve como siempre); si no, Inicio.MESA / CUARTO / GIRAR. */
+    private volatile int modoEspacio;
+    private Plane planoMesa;
+    private final Mesa.Plano mesaNum = new Mesa.Plano(), planoTmp = new Mesa.Plano();
+    private volatile boolean hayMesa;
+    private boolean anclaEsMesa;
+    private final Mesa mesaVista = new Mesa();
+    private final ArrayList<Mesa.Plano> planosNum = new ArrayList<>();
+    private final HashMap<Integer, Plane> planosAr = new HashMap<>();
+    private final ArrayList<Plane> referencias = new ArrayList<>();
+    private final SuperficiesGl superficies = new SuperficiesGl();
+    private float[] nube = new float[4 * 1024];
+    private int nubeN, cuadroPlanos;
+    private final float[] desdeMundo = new float[16], vistaAr = new float[16], vpAr = new float[16];
+    private int etiquetaMesa;
+    private final float[] etqC = new float[3], etqR = new float[3], etqU = new float[3];
+    private final float[][][] guias = new float[2][21][3];
+    private boolean hayGuias;
+    private final boolean[] guiaSobre = new boolean[2];
+    private final long[] vistoMesa = new long[2];
+    private final float[] ondaMesa = new float[2];
+    private long ondaDesde = -1;
+    private final float[] cabezaAntes = new float[3];
+    private float velCabeza;
+    private Ventana reticula;
+    static final float[] GUIA = {1f, 0.83f, 0.45f}, GUIA_BORDE = {1f, 0.9f, 0.6f}, GUIA_OK = {0.45f, 1f, 0.7f};
 
     // lo que se dibuja
     private final Fondo fondo = new Fondo();
@@ -210,7 +241,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         raiz.addView(aviso, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
         setContentView(raiz);
         if (error != null) avisar("La vez anterior Nexo se cerró por un error (tocá para ocultar):\n" + error);
-        if (ajustes.manos == 1) manos = new ManoRastreo(this);
+        if (ajustes.manos == 1) { manos = new ManoRastreo(this); manos.escala(ajustes.escalaMano / 1000f); }
         // las actualizaciones: si hay una nueva, se abre su ventana (con "Actualizar")
         Actualizador act = Actualizador.de(this);
         act.alHaber = () -> { tareas.add(() -> abrirCuandoSePueda("actualizar")); sonido.tocar(Sonido.ABRIR); };
@@ -272,7 +303,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             Config c = new Config(sesion);
             config = c;
             c.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE);
-            c.setPlaneFindingMode(Config.PlaneFindingMode.HORIZONTAL);
+            c.setPlaneFindingMode(Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL);
             c.setFocusMode(Config.FocusMode.AUTO);
             c.setLightEstimationMode(Config.LightEstimationMode.DISABLED);
             boolean prof = sesion.isDepthModeSupported(Config.DepthMode.AUTOMATIC);
@@ -456,7 +487,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         synchronized (ajustes) { ajustes.poner(clave, valor); vistos = ajustes.copia(); ajustes.guardar(this); }
         if (clave.equals("sonido")) sonido.activo = valor == 1;
         if (clave.equals("manos")) runOnUiThread(() -> {
-            if (valor == 1 && manos == null) { manos = new ManoRastreo(this); if (conArcore) manos.arrancar(); }
+            if (valor == 1 && manos == null) { manos = new ManoRastreo(this); manos.escala(vistos.escalaMano / 1000f); if (conArcore) manos.arrancar(); }
             else if (valor == 0 && manos != null) { manos.parar(); manos = null; }
         });
     }
@@ -474,6 +505,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             if (a.sbs == 1) b.append(String.format(Locale.ROOT, " · ojos %s (%.1f, %.1f, %.1f) cm%s", a.ojoAuto == 1 ? "medidos" : "a mano",
                     o[0] * 100, o[1] * 100, o[2] * 100, a.ojoAuto == 1 ? " en " + cuello.medidas + " medidas" : ""));
         } else b.append("Seguimiento: sensores (sólo girar)");
+        switch (modoEspacio) {
+            case Inicio.MESA:
+                b.append(!hayMesa ? " · Mesa: perdida (prepará el espacio de nuevo en Ajustes → Espacio)"
+                        : mesaVista.vista ? " · Mesa: la veo (" + mesaVista.puntos + " puntos): te podés mover" : " · Mesa: no la veo: posición fija, sólo girás");
+                break;
+            case Inicio.CUARTO: b.append(mesaVista.vista ? " · Cuarto: lo reconozco" : " · Cuarto: no lo reconozco: posición fija"); break;
+            case Inicio.GIRAR: b.append(" · Sólo girar: la cabeza fija"); break;
+            default:
+        }
         ManoRastreo m = manos;
         b.append(" · Manos: ").append(m == null ? "apagadas" : m.anda ? "andando (" + m.delegado + ")" : m.estado);
         if (nombreControl != null) b.append(" · Control: ").append(nombreControl);
@@ -510,6 +550,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             case "ajustes": return new int[]{1180, 800};
             case "bienvenida": return new int[]{1100, 800};
             case "actualizar": return new int[]{1000, 680};
+            case "inicio": return new int[]{1100, 720};
             default: return new int[]{1280, 800};
         }
     }
@@ -523,6 +564,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 cambio("tutorial", 1);
                 tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("bienvenida")) cerrarVentana(v); });
             });
+            case "inicio": { Inicio in = inicio; return c -> new InicioApp().crear(c, this, in != null ? in : new Inicio()); }
             case "actualizar": return c -> new ActualizarApp().crear(c, this,
                     () -> tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("actualizar")) cerrarVentana(v); }));
             default: return c -> new Biblioteca().crear(c, this);
@@ -554,6 +596,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         PanelVirtual p = paneles.remove(v);
         if (p != null) { p.liberarGl(); p.cerrar(); }
         escritorio.cerrar(v);
+        Inicio in = inicio;
+        if (in != null && v.app.equals("inicio")) in.empezar();   // ✕: se sigue con lo que haya
         sonido.tocar(Sonido.CERRAR);
         actualizarDock();
     }
@@ -634,6 +678,369 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         });
     }
 
+
+    // ───────────────────────── Nexo Inicio: el espacio ─────────────────────────
+
+    /** Prepara el espacio (al empezar, o desde Ajustes → Espacio): la ventana del inicio y los pasos. */
+    private void empezarInicio() {
+        Inicio in = new Inicio();
+        int m = vistos.modoEspacio;
+        in.modo = m == Inicio.CUARTO || m == Inicio.GIRAR ? m : Inicio.MESA;
+        planoMesa = null;
+        hayMesa = false;
+        hayGuias = false;
+        referencias.clear();
+        planosNum.clear();
+        planosAr.clear();
+        ondaDesde = -1;
+        if (manos != null) manos.mesaCal = null;
+        for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("inicio")) cerrarVentana(v);
+        inicio = in;
+        escritorio.mesa = null;
+        if (escritorio.dock != null) { escritorio.dock.visible = false; escritorio.acomodar(escritorio.dock); }
+        abrirEnGl("inicio");
+    }
+
+    @Override public void prepararEspacio() {
+        if (!conArcore) { avisar("Para escanear tu mesa hace falta ARCore y la cámara."); return; }
+        tareas.add(this::empezarInicio);
+    }
+
+    /** Cada cuadro con ARCore: la nube, la mesa, los pasos del inicio y si Nexo se puede mover. */
+    private void espacio(Frame cuadro, Camera camara, boolean rastrea, long ahora, float dt, Ajustes a) {
+        seg.desdeMundo(desdeMundo);
+        float dl = Seguimiento.dist(cabeza, cabezaAntes);
+        System.arraycopy(cabeza, 0, cabezaAntes, 0, 3);
+        if (dt > 0) velCabeza += (Math.min(2, dl / dt) - velCabeza) * Math.min(1, dt * 6);
+        Inicio in = inicio;
+        nubeN = 0;
+        if (rastrea && (in != null || modoEspacio == Inicio.MESA || modoEspacio == Inicio.CUARTO)) leerNube(cuadro);
+        // la cámara en el mundo de ARCore
+        float[] cabW = {wDisplay[12], wDisplay[13], wDisplay[14]}, adeW = {-wDisplay[8], -wDisplay[9], -wDisplay[10]};
+        // la mesa: el plano de ARCore (si se juntó con otro, el que quedó)
+        if (planoMesa != null) {
+            while (planoMesa.getSubsumedBy() != null) planoMesa = planoMesa.getSubsumedBy();
+            TrackingState em = planoMesa.getTrackingState();
+            if (em == TrackingState.TRACKING) { llenar(mesaNum, planoMesa); hayMesa = true; }
+            else if (em == TrackingState.STOPPED) { planoMesa = null; hayMesa = false; }
+        } else if (modoEspacio == Inicio.MESA && mesaNum.lados() >= 3 && rastrea && ++cuadroPlanos % 30 == 0) buscarMesaPerdida();
+        if (in != null) pasoInicio(in, rastrea, ahora, cabW, adeW);
+        // ¿se puede mover? Sólo si ve lo que escaneaste (la mesa, o el cuarto)
+        if (inicio != null) { seg.puedeMoverse = true; return; }
+        switch (modoEspacio) {
+            case Inicio.MESA:
+                if (hayMesa) {
+                    camara.getViewMatrix(vistaAr, 0);
+                    Matrix.multiplyMM(vpAr, 0, proyCam, 0, vistaAr, 0);
+                    int pts = Mesa.puntosSobre(mesaNum, nube, nubeN, 0.25f);
+                    float vis = Mesa.fraccionVisible(mesaNum, vpAr, cabW);
+                    mesaVista.puntos = pts;
+                    mesaVista.paso(Mesa.detectada(rastrea, pts, vis), ahora);
+                } else mesaVista.paso(false, ahora);
+                seg.puedeMoverse = a.soloConMesa == 0 || mesaVista.vista;
+                break;
+            case Inicio.CUARTO: {
+                int pts = 0;
+                for (int i = 0; i < referencias.size(); i++) {
+                    Plane p = referencias.get(i);
+                    while (p.getSubsumedBy() != null) p = p.getSubsumedBy();
+                    referencias.set(i, p);
+                    if (p.getTrackingState() != TrackingState.TRACKING) continue;
+                    llenar(planoTmp, p);
+                    pts += Mesa.puntosSobre(planoTmp, nube, nubeN, 0.25f);
+                }
+                mesaVista.puntos = pts;
+                mesaVista.paso(rastrea && pts >= Mesa.PUNTOS_VE, ahora);
+                seg.puedeMoverse = a.soloConMesa == 0 || mesaVista.vista;
+                break;
+            }
+            case Inicio.GIRAR: seg.puedeMoverse = false; break;
+            default: seg.puedeMoverse = true;
+        }
+    }
+
+    /** La nube de puntos de ESTA foto (x, y, z, confianza), en el mundo de ARCore. */
+    private void leerNube(Frame cuadro) {
+        PointCloud pc = null;
+        try {
+            pc = cuadro.acquirePointCloud();
+            FloatBuffer b = pc.getPoints();
+            b.rewind();
+            int n = Math.min(b.remaining() / 4, 2048);
+            if (nube.length < n * 4) nube = new float[n * 4];
+            b.get(nube, 0, n * 4);
+            nubeN = n;
+        } catch (Throwable e) {
+            nubeN = 0;
+        } finally {
+            if (pc != null) pc.release();
+        }
+    }
+
+    /**
+     * Si ARCore dejó de seguir el plano de la mesa (se reinició, se perdió),
+     * la vuelve a encontrar sola: un plano horizontal a la misma altura (±5 cm)
+     * y cerca de donde estaba.
+     */
+    private void buscarMesaPerdida() {
+        float[] c = new float[2], w = new float[3], wv = new float[3];
+        mesaNum.centroLocal(c);
+        mesaNum.aMundo(c[0], c[1], w);
+        Plane mejor = null;
+        float md = 0.6f;
+        for (Plane p : sesion.getAllTrackables(Plane.class)) {
+            if (p.getTrackingState() != TrackingState.TRACKING || p.getSubsumedBy() != null || p.getType() != Plane.Type.HORIZONTAL_UPWARD_FACING) continue;
+            llenar(planoTmp, p);
+            if (Math.abs(planoTmp.pose[13] - mesaNum.pose[13]) > 0.05f || planoTmp.area() < Mesa.AREA_MIN) continue;
+            planoTmp.centroLocal(c);
+            planoTmp.aMundo(c[0], c[1], wv);
+            float d = (float) Math.hypot(wv[0] - w[0], wv[2] - w[2]);
+            if (d < md) { md = d; mejor = p; }
+        }
+        if (mejor != null) { planoMesa = mejor; llenar(mesaNum, mejor); hayMesa = true; }
+    }
+
+    /** Todos los planos que ARCore sigue (sin los que se juntaron con otro). */
+    private void leerPlanos() {
+        planosNum.clear();
+        planosAr.clear();
+        for (Plane p : sesion.getAllTrackables(Plane.class)) {
+            if (p.getTrackingState() != TrackingState.TRACKING || p.getSubsumedBy() != null) continue;
+            Mesa.Plano n = new Mesa.Plano();
+            llenar(n, p);
+            planosNum.add(n);
+            planosAr.put(n.id, p);
+        }
+    }
+
+    /** Un plano de ARCore en números. */
+    private static void llenar(Mesa.Plano o, Plane p) {
+        p.getCenterPose().toMatrix(o.pose, 0);
+        FloatBuffer b = p.getPolygon();
+        b.rewind();
+        int n = b.remaining();
+        if (o.poligono.length != n) o.poligono = new float[n];
+        b.get(o.poligono);
+        o.horizontal = p.getType() == Plane.Type.HORIZONTAL_UPWARD_FACING;
+        o.vertical = p.getType() == Plane.Type.VERTICAL;
+        o.id = System.identityHashCode(p);
+    }
+
+    /** Los pasos del inicio, con lo que ve ARCore. */
+    private void pasoInicio(Inicio in, boolean rastrea, long ahora, float[] cabW, float[] adeW) {
+        switch (in.paso) {
+            case Inicio.ESCANEAR:
+                if (!rastrea) break;
+                if (++cuadroPlanos % 3 == 0 || planosNum.isEmpty()) leerPlanos();
+                if (in.modo == Inicio.MESA) {
+                    int i = Mesa.elegir(planosNum, cabW, adeW, null);
+                    Mesa.Plano p = i >= 0 ? planosNum.get(i) : null;
+                    int antes = in.candidata;
+                    boolean ok = in.escanearMesa(p == null ? 0 : p.id, p == null ? 0 : p.area(), p == null ? null : p.medidas(), ahora);
+                    if (p != null && antes != p.id) sonido.tocar(Sonido.TIC);
+                    if (ok) confirmarMesa(p, cabW, adeW, ahora);
+                } else {
+                    float area = 0;
+                    boolean piso = false;
+                    for (Mesa.Plano p : planosNum) {
+                        float ar = p.area();
+                        area += ar;
+                        if (p.horizontal && cabW[1] - p.pose[13] > 1.1f && ar > 0.5f) piso = true;
+                    }
+                    if (in.escanearCuarto(area, planosNum.size(), piso, ahora)) {
+                        referencias.clear();
+                        for (Mesa.Plano p : planosNum) { Plane pl = planosAr.get(p.id); if (pl != null) referencias.add(pl); }
+                        sonido.tocar(Sonido.LOGRO);
+                        vibrar();
+                    }
+                }
+                break;
+            case Inicio.MANOS: manosEnMesa(in, ahora, cabW, adeW); break;
+            case Inicio.CABEZA:
+                if (in.cabeza(seg.velocidad(), velCabeza, cabeza, yawDe(adelante), ahora)) fijarCabeza(in);
+                break;
+            case Inicio.FUERA: terminarInicio(in); break;
+            default:
+        }
+    }
+
+    /** "¡Tu mesa!": el ancla del escritorio pasa a ser la mesa, la onda sale de donde mirabas, y la etiqueta. */
+    private void confirmarMesa(Mesa.Plano p, float[] cabW, float[] adeW, long ahora) {
+        Plane pl = planosAr.get(p.id);
+        if (pl == null) return;
+        planoMesa = pl;
+        llenar(mesaNum, pl);
+        hayMesa = true;
+        try {
+            com.google.ar.core.Anchor nueva = pl.createAnchor(pl.getCenterPose());
+            float[] m = new float[16];
+            nueva.getPose().toMatrix(m, 0);
+            seg.nuevaAncla(m);
+            if (anclaAr != null) anclaAr.detach();
+            anclaAr = nueva;
+            anclaEsMesa = true;
+        } catch (Throwable e) { /* queda el ancla de antes */ }
+        // la onda: donde la mirada corta la mesa (o el centro)
+        float[] l = new float[3];
+        if (adeW[1] < -0.05f) {
+            float tt = (mesaNum.pose[13] - cabW[1]) / adeW[1];
+            mesaNum.aLocal(cabW[0] + adeW[0] * tt, mesaNum.pose[13], cabW[2] + adeW[2] * tt, l);
+            ondaMesa[0] = l[0]; ondaMesa[1] = l[2];
+        } else { mesaNum.centroLocal(ondaMesa); }
+        ondaDesde = ahora;
+        // la etiqueta, apoyada cerca del borde de tu lado, de frente a vos
+        float[] q = new float[3];
+        Mesa.puntoAdelante(mesaNum, cabW, adeW, 0.6f, q);   // más allá de las manos y de la barra
+        float fl = (float) Math.hypot(adeW[0], adeW[2]);
+        float fx = fl > 1e-3f ? adeW[0] / fl : 0, fz = fl > 1e-3f ? adeW[2] / fl : -1;
+        float ancho = 0.2f, alto = ancho * Etiqueta.H / Etiqueta.W;
+        etqC[0] = q[0]; etqC[1] = q[1] + 0.004f; etqC[2] = q[2];
+        etqR[0] = -fz * ancho; etqR[1] = 0; etqR[2] = fx * ancho;
+        etqU[0] = fx * alto; etqU[1] = 0; etqU[2] = fz * alto;
+        sonido.tocar(Sonido.LOGRO);
+        vibrar();
+    }
+
+    /** MANOS: las guías sobre la mesa; cada mano que se apoya en la suya da muestras de su tamaño. */
+    private void manosEnMesa(Inicio in, long ahora, float[] cabW, float[] adeW) {
+        if (manos == null) { in.saltar(ahora); return; }   // sin hand tracking: este paso no va
+        if (!hayMesa || !manos.anda) { in.manos(false, false, Float.NaN, Float.NaN, ahora); return; }
+        if (!hayGuias) colocarGuias(cabW, adeW);
+        boolean[] sobre = new boolean[2];
+        float[] esc = {Float.NaN, Float.NaN};
+        synchronized (manos.enMesa) {
+            for (int s = 0; s < 2; s++) {
+                long h = manos.enMesaHora[s];
+                if (ahora - h > 250) continue;
+                float[] w = manos.enMesa[s];
+                float[] mu = {w[0], w[1], w[2]}, nu = {w[3], w[4], w[5]};
+                for (int g = 0; g < 2; g++) {
+                    if (Seguimiento.dist(mu, guias[g][0]) < 0.08f && Seguimiento.dist(nu, guias[g][9]) < 0.08f) {
+                        sobre[g] = true;
+                        // una muestra por imagen nueva de la red (no una por cuadro de dibujo)
+                        if (h != vistoMesa[s]) { esc[g] = manos.escalaMesa[s]; vistoMesa[s] = h; }
+                    }
+                }
+            }
+        }
+        if (sobre[0] && !guiaSobre[0] || sobre[1] && !guiaSobre[1]) sonido.tocar(Sonido.TIC);
+        guiaSobre[0] = sobre[0]; guiaSobre[1] = sobre[1];
+        in.manos(sobre[0], sobre[1], esc[0], esc[1], ahora);
+        if (in.paso != Inicio.MANOS) {
+            manos.mesaCal = null;
+            if (in.escala == in.escala) { manos.escala(in.escala); cambio("escalaMano", Math.round(in.escala * 1000)); }
+            sonido.tocar(Sonido.LOGRO);
+        }
+    }
+
+    /** Las manos de guía sobre la mesa, delante tuyo (en el escritorio), y la mesa para medir. */
+    private void colocarGuias(float[] cabW, float[] adeW) {
+        float[] q = new float[3];
+        Mesa.puntoAdelante(mesaNum, cabW, adeW, 0.34f, q);
+        seg.puntoAEscritorio(q);
+        float[] n = new float[3], nd = new float[4];
+        mesaNum.normal(n);
+        Matrix.multiplyMV(nd, 0, desdeMundo, 0, new float[]{n[0], n[1], n[2], 0}, 0);
+        float[] arriba = {nd[0], nd[1], nd[2]};
+        Mesa.manosGuia(q, adelante, arriba, guias);
+        hayGuias = true;
+        if (manos != null) manos.mesaCal = new float[]{q[0], q[1], q[2], arriba[0], arriba[1], arriba[2]};
+    }
+
+    /** CABEZA: las pantallas delante de donde quedó mirando; la barra, a la mesa. */
+    private void fijarCabeza(Inicio in) {
+        escritorio.recentrar(cabeza[0], cabeza[1], cabeza[2], yawDe(adelante));
+        if (seg.modo == Seguimiento.SEIS && !anclaEsMesa) anclar();
+        if (in.modo == Inicio.MESA && hayMesa) ponerBarraEnMesa();
+        sonido.tocar(Sonido.ABRIR);
+    }
+
+    /** Terminó el inicio ("Empezar"): cómo quedó, la barra, y las apps. */
+    private void terminarInicio(Inicio in) {
+        inicio = null;
+        int m = in.modo;
+        if (m == Inicio.MESA && !hayMesa) m = Inicio.GIRAR;
+        modoEspacio = m;
+        if (manos != null) manos.mesaCal = null;
+        for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("inicio")) cerrarVentana(v);
+        if (m == Inicio.MESA) ponerBarraEnMesa();
+        if (escritorio.dock != null) { escritorio.dock.visible = true; escritorio.acomodar(escritorio.dock); escritorio.dock.aparece = 0; }
+        if (vistos.tutorial == 0) abrirEnGl("bienvenida");
+        abrirEnGl("biblioteca");
+        mesaVista.vista = true;
+        avisar(m == Inicio.MESA ? "Listo: Nexo se mueve sólo cuando ve tu mesa. La barra de abajo está apoyada en la mesa."
+                : m == Inicio.CUARTO ? "Listo: Nexo se mueve cuando reconoce el cuarto." : "Listo: la cabeza queda fija, sólo girás.");
+    }
+
+    /** La barra de abajo apoyada en la mesa, delante tuyo (si está la opción). */
+    private void ponerBarraEnMesa() {
+        if (!hayMesa || vistos.barraEnMesa == 0) escritorio.mesa = null;
+        else {
+            float[] q = new float[3];
+            Mesa.puntoAdelante(mesaNum, new float[]{wDisplay[12], wDisplay[13], wDisplay[14]}, new float[]{-wDisplay[8], -wDisplay[9], -wDisplay[10]}, 0.36f, q);
+            seg.puntoAEscritorio(q);
+            escritorio.mesa = q;
+        }
+        if (escritorio.dock != null) escritorio.acomodar(escritorio.dock);
+    }
+
+    /** Lo que se escanea y tu mesa marcada (después del fondo, antes de las ventanas). */
+    private void dibujarEspacio(float[] vpO, float t, long ahora) {
+        Inicio in = inicio;
+        try {
+            if (in != null && in.paso == Inicio.ESCANEAR) {
+                for (Mesa.Plano p : planosNum) {
+                    int tipo = in.modo == Inicio.CUARTO ? SuperficiesGl.CUARTO : p.id == in.candidata ? SuperficiesGl.CANDIDATA : SuperficiesGl.OTRO;
+                    superficies.plano(p, tipo, vpO, desdeMundo, 1, t, null);
+                }
+                superficies.puntos(nube, nubeN, vpO, desdeMundo, 0.9f, t, alto / 150f);
+            }
+            boolean mesa = hayMesa && (in != null ? in.paso > Inicio.ESCANEAR && in.modo == Inicio.MESA : modoEspacio == Inicio.MESA && vistos.verMesa == 1);
+            if (mesa) {
+                float[] onda = null;
+                if (ondaDesde >= 0) {
+                    float r = (ahora - ondaDesde) / 1000f * 0.9f;
+                    if (r < 1.8f) onda = new float[]{ondaMesa[0], ondaMesa[1], r};
+                    else ondaDesde = -1;
+                }
+                float alfa = in != null ? 1 : mesaVista.vista ? 0.5f : 0.22f;
+                superficies.plano(mesaNum, SuperficiesGl.MESA, vpO, desdeMundo, alfa, t, onda);
+                if (etiquetaMesa == 0) etiquetaMesa = Etiqueta.crear("Tu mesa", "Nexo se mueve cuando la ve", 0xFFFFD27A);
+                superficies.etiqueta(etiquetaMesa, etqC, etqR, etqU, vpO, desdeMundo, in != null ? 1 : 0.6f * alfa + 0.2f);
+            }
+        } catch (Throwable e) {
+            Fallo.guardar("dibujar el espacio", e);
+        }
+    }
+
+    /** Las manos de guía (MANOS) y la retícula que se llena (CABEZA). */
+    private void dibujarGuias(float[] vista, float[] proy, float t) {
+        Inicio in = inicio;
+        if (in == null) return;
+        if (in.paso == Inicio.MANOS && hayGuias) {
+            float[] c0 = manosGl.color, b0 = manosGl.borde;
+            float pulso = 0.5f + 0.5f * (float) Math.sin(t * 3.5f);
+            for (int g = 0; g < 2; g++) {
+                manosGl.color = guiaSobre[g] ? GUIA_OK : GUIA;
+                manosGl.borde = guiaSobre[g] ? GUIA_OK : GUIA_BORDE;
+                manosGl.fantasma = 1f;
+                manosGl.vidrio(vista, proy, new float[][][]{guias[g]}, new float[]{0.55f + 0.35f * pulso}, new float[]{guiaSobre[g] ? 1 : pulso * 0.6f}, 1);
+            }
+            manosGl.color = c0; manosGl.borde = b0;
+        }
+        if (in.paso == Inicio.CABEZA) {
+            if (reticula == null) reticula = new Ventana(0, Ventana.AVISO, "reticula", 0.5f, 100, 100);
+            float d = 1.2f;
+            reticula.cx = ojoEste[0] + adelante[0] * d; reticula.cy = ojoEste[1] + adelante[1] * d; reticula.cz = ojoEste[2] + adelante[2] * d;
+            reticula.mirarA(ojoEste[0], ojoEste[1], ojoEste[2]);
+            GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+            vgl.empezar(vpOjo);
+            vgl.cursor(reticula, 0, 0, d / 0.022f * 0.07f, 1, Math.max(0.02f, in.progreso), false);
+            vgl.terminar();
+            GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        }
+    }
+
     /** El primer cuadro con posición: se arma el escritorio delante tuyo. */
     private void armarEscritorio() {
         armado = true;
@@ -645,8 +1052,12 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         crearPanel(r, c -> rapidos.crear(c, this));
         Ventana k = escritorio.ponerTeclado(1400, 460, 0.7f, ahora);
         crearPanel(k, c -> teclado.crear(c, this));
-        if (vistos.tutorial == 0) abrirEnGl("bienvenida");
-        abrirEnGl("biblioteca");
+        // con la cámara: primero preparar el espacio (Nexo Inicio); después, las apps
+        if (conArcore && vistos.prepararEspacio == 1) empezarInicio();
+        else {
+            if (vistos.tutorial == 0) abrirEnGl("bienvenida");
+            abrirEnGl("biblioteca");
+        }
         if (pendiente != null) { abrirEnGl(pendiente); pendiente = null; }
     }
 
@@ -658,8 +1069,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
 
     private void recentrarEnGl() {
         escritorio.recentrar(cabeza[0], cabeza[1], cabeza[2], yawDe(adelante));
-        if (seg.modo == Seguimiento.SEIS) anclar();
-        if (escritorio.dock != null) escritorio.dock.visible = true;
+        if (seg.modo == Seguimiento.SEIS && !anclaEsMesa) anclar();
+        if (modoEspacio == Inicio.MESA) ponerBarraEnMesa();
+        if (escritorio.dock != null && inicio == null) escritorio.dock.visible = true;
         sonido.tocar(Sonido.ABRIR);
     }
 
@@ -701,6 +1113,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             vgl.crear();
             lentes.crear();
             manosGl.crear();
+            superficies.crear();
         } catch (Throwable e) {
             errorGl = e;
             Fallo.guardar("OpenGL", e);
@@ -708,6 +1121,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             return;
         }
         texturaPuesta = false;
+        etiquetaMesa = 0;   // se perdió con el contexto
         for (PanelVirtual p : paneles.values()) p.crearGl();   // se perdió el contexto: todas las texturas de nuevo
         arrancoEn = SystemClock.elapsedRealtime();
     }
@@ -787,6 +1201,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 }
             }
             if (armado && rastrea && anclaAr == null) anclar();
+            if (sigue) espacio(cuadro, camara, rastrea, ahora, dt, a);
             avisarPerdida(ahora);
         }
         if (!sigue && !conArcore && hayRotSensor) {
@@ -876,11 +1291,13 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             ojoEste[0] = inv[12]; ojoEste[1] = inv[13]; ojoEste[2] = inv[14];
             if (!sigue) { dibujarArranque(t); continue; }
             dibujarMundo(vpOjo, t, sbs);
+            if (conArcore) dibujarEspacio(vpOjo, t, ahora);
             dibujarVentanas(vpOjo, t, ahora);
             if (a.verManos == 1 && conManos) {
                 manosGl.fantasma = 1f;
                 manosGl.vidrio(vistaOjo, proy, puntosMano, alfaMano, brilloMano, 2);
             }
+            dibujarGuias(vistaOjo, proy, t);
             if (ahora - arrancoEn < 2600) dibujarArranque(t);
         }
         if (sbs) GLES20.glDisable(GLES20.GL_SCISSOR_TEST);

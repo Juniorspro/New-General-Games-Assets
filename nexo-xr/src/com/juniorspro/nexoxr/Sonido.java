@@ -14,10 +14,10 @@ import java.io.IOException;
  * baja), la cámara de la captura y el arranque.
  */
 final class Sonido {
-    static final int CLIC = 0, TIC = 1, ABRIR = 2, CERRAR = 3, CAPTURA = 4, ARRANQUE = 5, TECLA = 6;
+    static final int CLIC = 0, TIC = 1, ABRIR = 2, CERRAR = 3, CAPTURA = 4, ARRANQUE = 5, TECLA = 6, LOGRO = 7;
     private static final int TASA = 22050;
     private SoundPool pool;
-    private final int[] id = new int[7];
+    private final int[] id = new int[8];
     boolean activo = true;
 
     void cargar(Context c) {
@@ -31,6 +31,7 @@ final class Sonido {
         id[CAPTURA] = guardar(c, "captura", obturador());
         id[ARRANQUE] = guardar(c, "arranque", acorde(new float[]{261.6f, 392f, 523.3f, 784f}, 1.6f));
         id[TECLA] = guardar(c, "tecla", tono(1800, 0.025f, 120, 0.3f));
+        id[LOGRO] = guardar(c, "logro", acorde(new float[]{659.3f, 987.8f, 1318.5f}, 0.9f));   // mi · si · mi: "¡listo!"
     }
 
     void tocar(int cual) {

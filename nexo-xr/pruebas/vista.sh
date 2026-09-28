@@ -6,9 +6,11 @@ cd "$(dirname "$0")/.."
 OBRA=$(mktemp -d)
 S=src/com/juniorspro/nexoxr
 javac -nowarn -encoding UTF-8 -d "$OBRA" pruebas/vista/android/opengl/*.java pruebas/vista/android/util/Log.java \
-  $S/Gl.java $S/Entornos.java $S/VentanasGl.java $S/Ventana.java $S/Escritorio.java pruebas/vista/com/juniorspro/nexoxr/Fallo.java pruebas/vista/com/juniorspro/nexoxr/Vista.java 2> "$OBRA/javac.txt" \
+  $S/Gl.java $S/Entornos.java $S/VentanasGl.java $S/Ventana.java $S/Escritorio.java $S/Mesa.java $S/Seguimiento.java $S/Cuello.java \
+  $S/SuperficiesGl.java $S/ManosGl.java pruebas/vista/com/juniorspro/nexoxr/Fallo.java pruebas/vista/com/juniorspro/nexoxr/Vista.java 2> "$OBRA/javac.txt" \
   || { grep -v "^Picked up" "$OBRA/javac.txt"; echo "✗ no compila"; exit 1; }
 mkdir -p salida
 java -cp "$OBRA" com.juniorspro.nexoxr.Vista "$OBRA/datos.json" 2>&1 | grep -v "^Picked up"
 node pruebas/vista.mjs "$OBRA/datos.json" salida
+node pruebas/vista-inicio.mjs "$OBRA/datos.json" salida
 rm -rf "$OBRA"

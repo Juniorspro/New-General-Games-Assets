@@ -35,6 +35,8 @@ final class ManosGl {
     static final float[] COLOR = {0.8f, 0.88f, 0.96f}, BORDE = {0.72f, 0.97f, 1f};
     static final float OPACIDAD = 0.88f;
     float fantasma = 1f;
+    /** El color y el borde que se usan (las guías del inicio van en otro color). */
+    float[] color = COLOR, borde = BORDE;
 
     private FloatBuffer vert;
     private ShortBuffer ind;
@@ -228,8 +230,8 @@ final class ManosGl {
         GLES20.glUniformMatrix4fv(vVista, 1, false, vista, 0);
         GLES20.glUniformMatrix4fv(vProy, 1, false, proy, 0);
         GLES20.glUniform1f(vCorte, -1f);
-        GLES20.glUniform3f(vColor, COLOR[0], COLOR[1], COLOR[2]);
-        GLES20.glUniform3f(vBorde, BORDE[0], BORDE[1], BORDE[2]);
+        GLES20.glUniform3f(vColor, color[0], color[1], color[2]);
+        GLES20.glUniform3f(vBorde, borde[0], borde[1], borde[2]);
         GLES20.glUniform1f(vOpacidad, OPACIDAD);
         GLES20.glUniform1f(vFantasma, fantasma);
         atributos(vNrm, vLado);

@@ -299,6 +299,83 @@ public final class Mano {
     }
 
     private static final int[] PUNTOS_PROF = {0, 5, 17};
+    /** La palma: la muñeca y los cuatro nudillos (lo que queda plano con la mano apoyada). */
+    private static final int[] PALMA = {0, 5, 9, 13, 17};
+
+    /**
+     * Con la mano APOYADA en un plano (p0: un punto del plano y n: su normal,
+     * en el mundo; alto: a qué altura del plano quedan la muñeca y los
+     * nudillos): la escala que la pone ahí, o NaN si la palma no coincide (la
+     * mano no está plana sobre el plano, o el plano no se ve desde la cámara).
+     * Con los puntos de la última imagen: llamar después de aMundo2.
+     *
+     * La cuenta: cada punto de la palma está sobre su rayo (el de la cámara por
+     * ese píxel); con la escala s correcta cae en el plano. Así que s es donde
+     * cada rayo corta el plano: la distancia a la mesa, que es lo que una sola
+     * cámara mide peor, sale de la mesa.
+     */
+    public float escalaSobrePlano(float[] pose, float[] p0, float[] n, float alto) {
+        return escalaSobrePlano(ptsCam, pose, p0, n, alto);
+    }
+
+    /** Más inclinada que esto respecto de la mesa, la palma no está apoyada. */
+    static final float COS_APOYADA = (float) Math.cos(Math.toRadians(18));
+
+    public static float escalaSobrePlano(float[] ptsCam, float[] pose, float[] p0, float[] n, float alto) {
+        // la palma tiene que estar paralela a la mesa: su normal (de la forma 3D de la red, que no depende de la escala)
+        float[] a = girar(pose, ptsCam, 5, 0), b = girar(pose, ptsCam, 17, 0);
+        float nx = a[1] * b[2] - a[2] * b[1], ny = a[2] * b[0] - a[0] * b[2], nz = a[0] * b[1] - a[1] * b[0];
+        float nl = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (nl < 1e-9f || Math.abs(nx * n[0] + ny * n[1] + nz * n[2]) / nl < COS_APOYADA) return Float.NaN;
+        float qx = p0[0] + n[0] * alto - pose[12], qy = p0[1] + n[1] * alto - pose[13], qz = p0[2] + n[2] * alto - pose[14];
+        float num = qx * n[0] + qy * n[1] + qz * n[2];
+        float[] t = new float[PALMA.length];
+        for (int k = 0; k < PALMA.length; k++) {
+            int i = PALMA[k];
+            float xc = ptsCam[i * 3], yc = ptsCam[i * 3 + 1], zc = ptsCam[i * 3 + 2];
+            float dx = pose[0] * xc + pose[4] * yc + pose[8] * zc;
+            float dy = pose[1] * xc + pose[5] * yc + pose[9] * zc;
+            float dz = pose[2] * xc + pose[6] * yc + pose[10] * zc;
+            float den = dx * n[0] + dy * n[1] + dz * n[2];
+            if (Math.abs(den) < 1e-6f) return Float.NaN;
+            float e = num / den;
+            if (!(e > 0)) return Float.NaN;
+            t[k] = e;
+        }
+        java.util.Arrays.sort(t);
+        // la palma plana: los cinco dentro del 12 %, y los tres del medio dentro del 5 %
+        if (t[4] / t[0] > 1.12f || t[3] / t[1] > 1.05f) return Float.NaN;
+        float m = t[2];
+        return m < 0.5f || m > 2f ? Float.NaN : m;
+    }
+
+    /** El vector del punto j al punto i de la mano, girado al mundo (sin la escala). */
+    private static float[] girar(float[] pose, float[] pc, int i, int j) {
+        float x = pc[i * 3] - pc[j * 3], y = pc[i * 3 + 1] - pc[j * 3 + 1], z = pc[i * 3 + 2] - pc[j * 3 + 2];
+        return new float[]{pose[0] * x + pose[4] * y + pose[8] * z, pose[1] * x + pose[5] * y + pose[9] * z, pose[2] * x + pose[6] * y + pose[10] * z};
+    }
+
+    /**
+     * Dónde corta el plano (p0, n, levantado "alto") el rayo del punto i de la
+     * última imagen, en o (mundo). No depende de la escala (que es justo lo que
+     * no se sabe antes de medir): sirve para ver si la mano está sobre su guía.
+     */
+    public boolean puntoEnPlano(int i, float[] pose, float[] p0, float[] n, float alto, float[] o) {
+        return puntoEnPlano(ptsCam, i, pose, p0, n, alto, o);
+    }
+
+    public static boolean puntoEnPlano(float[] ptsCam, int i, float[] pose, float[] p0, float[] n, float alto, float[] o) {
+        float xc = ptsCam[i * 3], yc = ptsCam[i * 3 + 1], zc = ptsCam[i * 3 + 2];
+        float dx = pose[0] * xc + pose[4] * yc + pose[8] * zc;
+        float dy = pose[1] * xc + pose[5] * yc + pose[9] * zc;
+        float dz = pose[2] * xc + pose[6] * yc + pose[10] * zc;
+        float den = dx * n[0] + dy * n[1] + dz * n[2];
+        if (Math.abs(den) < 1e-6f) return false;
+        float t = ((p0[0] + n[0] * alto - pose[12]) * n[0] + (p0[1] + n[1] * alto - pose[13]) * n[1] + (p0[2] + n[2] * alto - pose[14]) * n[2]) / den;
+        if (!(t > 0)) return false;
+        o[0] = pose[12] + dx * t; o[1] = pose[13] + dy * t; o[2] = pose[14] + dz * t;
+        return true;
+    }
 
     private void calibrar(float[] prof3) {
         if (prof3 == null) return;

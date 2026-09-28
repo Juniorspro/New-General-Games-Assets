@@ -82,6 +82,16 @@ final class ManoRastreo implements Runnable {
 
     ManoRastreo(Context c) { ctx = c.getApplicationContext(); }
 
+    /**
+     * La MESA para medir las manos (Nexo Inicio): un punto y la normal, en el
+     * mismo marco que la pose de la cámara (el escritorio). null: no se mide.
+     */
+    volatile float[] mesaCal;
+    /** Por lugar (0, 1): la muñeca y el nudillo del medio donde sus rayos cortan la mesa, la escala que la apoya (o NaN) y cuándo. */
+    final float[][] enMesa = new float[2][6];
+    final float[] escalaMesa = {Float.NaN, Float.NaN};
+    final long[] enMesaHora = {-1000, -1000};
+
     private volatile float[] cajaVista;
     private volatile long cajaHora;
     private final float[] aProfCaja = new float[6];
@@ -293,6 +303,8 @@ final class ManoRastreo implements Runnable {
                     synchronized (m) {
                         if (m.aMundo2(img1, mps[h], iw, ih, fx, fy, cx, cy, prof3, pose, ts, llega, borde)) {
                             if (m.gesto2(ts)) tiros[slot].incrementAndGet();
+                            float[] mc = mesaCal;
+                            if (mc != null) medirEnMesa(m, slot, mc, llega);
                         }
                         vista[slot] = ts;
                         m.u = img1[0][0]; m.v = img1[0][1];
@@ -318,6 +330,24 @@ final class ManoRastreo implements Runnable {
         } finally {
             cerrarRedes();
         }
+    }
+
+    /** Con la mesa: dónde caen la muñeca y el nudillo (sin depender de la escala) y la escala que la apoya. */
+    private void medirEnMesa(Mano m, int slot, float[] mc, long hora) {
+        float[] p0 = {mc[0], mc[1], mc[2]}, n = {mc[3], mc[4], mc[5]}, a = new float[3], b = new float[3];
+        boolean ok = m.puntoEnPlano(0, pose, p0, n, 0.018f, a) && m.puntoEnPlano(9, pose, p0, n, 0.022f, b);
+        float s = m.escalaSobrePlano(pose, p0, n, 0.02f);
+        synchronized (enMesa) {
+            if (ok) { System.arraycopy(a, 0, enMesa[slot], 0, 3); System.arraycopy(b, 0, enMesa[slot], 3, 3); }
+            escalaMesa[slot] = ok ? s : Float.NaN;
+            enMesaHora[slot] = ok ? hora : -1000;
+        }
+    }
+
+    /** Pone el tamaño de las manos (el medido en la mesa, o el guardado). */
+    void escala(float s) {
+        if (!(s > 0.4f && s < 2.5f)) return;
+        for (Mano m : manos) synchronized (m) { m.escalaReal = s; }
     }
 
     /**

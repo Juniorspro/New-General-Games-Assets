@@ -19,8 +19,8 @@ import android.widget.TextView;
  *   Entorno · Visor · Manos y control · Sonido · Acerca de (y las actualizaciones)
  */
 final class AjustesApp {
-    private static final String[] SECCIONES = {"Entorno", "Visor", "Manos y control", "Sonido", "Acerca de"};
-    private static final int[] ICONOS = {Iconos.MONTANA, Iconos.VISOR, Iconos.MANO, Iconos.SONIDO, Iconos.INFO};
+    private static final String[] SECCIONES = {"Entorno", "Espacio", "Visor", "Manos y control", "Sonido", "Acerca de"};
+    private static final int[] ICONOS = {Iconos.MONTANA, Iconos.MESA, Iconos.VISOR, Iconos.MANO, Iconos.SONIDO, Iconos.INFO};
     private final LinearLayout[] botones = new LinearLayout[SECCIONES.length];
     private LinearLayout contenido;
     private Sistema s;
@@ -78,7 +78,8 @@ final class AjustesApp {
         Ajustes a = s.ajustes();
         switch (k) {
             case 0: entornos(); break;
-            case 1:
+            case 1: espacio(a); break;
+            case 2:
                 contenido.addView(interruptor(Iconos.VISOR, "Modo visor (SBS)", "Las dos imágenes, una para cada ojo, para el visor", s.visor(), si -> s.visor(si)));
                 contenido.addView(deslizador(Iconos.OJO, "Distancia entre ojos", "ipdMm", 50, 75, a.ipdMm, "%d mm"));
                 contenido.addView(interruptor(Iconos.VISOR, "Corregir los lentes", "Deforma al revés para que el lente la enderece", a.corregirLentes == 1, si -> s.cambio("corregirLentes", si ? 1 : 0)));
@@ -91,7 +92,7 @@ final class AjustesApp {
                 contenido.addView(deslizador(Iconos.RECENTRAR, "Predicción del giro", "anticipo", 0, 60, a.anticipo, "%d ms adelante"));
                 contenido.addView(ayuda("Lo que tarda la imagen en llegar a los ojos. Si al girar rápido el mundo se atrasa, subila; si se adelanta y rebota al frenar, bajala."));
                 contenido.addView(interruptor(Iconos.OJO, "Los ojos: medirlos solos", "En el visor, girá la cabeza unos segundos (sin caminar) y Nexo encuentra dónde están tus ojos desde la cámara",
-                        a.ojoAuto == 1, si -> { s.cambio("ojoAuto", si ? 1 : 0); ui.postDelayed(() -> mostrar(1), 150); }));
+                        a.ojoAuto == 1, si -> { s.cambio("ojoAuto", si ? 1 : 0); ui.postDelayed(() -> mostrar(2), 150); }));
                 if (a.ojoAuto == 1)
                     contenido.addView(ayuda(String.format(java.util.Locale.ROOT, "Ahora: %.1f cm al costado, %.1f cm arriba, %.1f cm detrás de la cámara.", a.ojoX / 10f, a.ojoY / 10f, a.ojoZ / 10f)));
                 else {
@@ -102,7 +103,7 @@ final class AjustesApp {
                 contenido.addView(Estilo.renglon(c, Iconos.RECENTRAR, "Recentrar", "Todo delante de donde mirás (o pellizcá en la nada 1 s)",
                         Estilo.boton(c, -1, "Recentrar", true, v -> s.recentrar())));
                 break;
-            case 2:
+            case 3:
                 contenido.addView(interruptor(Iconos.MANO, "Hand tracking", "Tus manos con la cámara: pellizcar = clic", a.manos == 1, si -> s.cambio("manos", si ? 1 : 0)));
                 contenido.addView(interruptor(Iconos.MANO, "Ver mis manos", "Las manos transparentes, con el borde que brilla", a.verManos == 1, si -> s.cambio("verManos", si ? 1 : 0)));
                 contenido.addView(interruptor(Iconos.MANO, "Tocar con el dedo", "Las pantallas cercanas se tocan como un celular", a.dedo == 1, si -> s.cambio("dedo", si ? 1 : 0)));
@@ -111,7 +112,7 @@ final class AjustesApp {
                 contenido.addView(Estilo.renglon(c, Iconos.CONTROL, "Control Bluetooth", "El del VR Box, un gamepad o un teclado: aprender sus botones",
                         Estilo.boton(c, -1, "Configurar", false, v -> s.aprenderControl())));
                 break;
-            case 3: {
+            case 4: {
                 contenido.addView(interruptor(Iconos.SONIDO, "Sonidos del sistema", "Clics, abrir y cerrar ventanas", a.sonido == 1, si -> s.cambio("sonido", si ? 1 : 0)));
                 AudioManager am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
                 SeekBar vol = Estilo.deslizador(c, am.getStreamMaxVolume(AudioManager.STREAM_MUSIC), am.getStreamVolume(AudioManager.STREAM_MUSIC), new SeekBar.OnSeekBarChangeListener() {
@@ -144,6 +145,30 @@ final class AjustesApp {
                         Estilo.boton(c, -1, "Grabar", false, v -> { s.sonido(Sonido.CLIC); s.grabarDiagnostico(); })), ld);
                 refrescarEstado();
         }
+    }
+
+    /** ESPACIO: tu mesa (o el cuarto), cuándo se mueve Nexo, prepararlo de nuevo. */
+    private void espacio(Ajustes a) {
+        String[] modos = {"", "Mesa", "Cuarto", "Sólo girar"};
+        int m = a.modoEspacio >= 1 && a.modoEspacio <= 3 ? a.modoEspacio : 1;
+        contenido.addView(Estilo.renglon(c, Iconos.MESA, "Preparar el espacio ahora",
+                "Escanear tu mesa (o el cuarto), apoyar las manos y fijar la cabeza. Último modo: " + modos[m],
+                Estilo.boton(c, Iconos.RECENTRAR, "Preparar", true, v -> { s.sonido(Sonido.CLIC); s.prepararEspacio(); })));
+        contenido.addView(interruptor(Iconos.MESA, "Preparar el espacio al empezar", "Cada vez que abrís Nexo, antes de las apps",
+                a.prepararEspacio == 1, si -> s.cambio("prepararEspacio", si ? 1 : 0)));
+        contenido.addView(interruptor(Iconos.RECENTRAR, "Sólo moverse cuando veo tu mesa",
+                "Si la cámara no la ve (mirás el techo o una pared lisa), la posición queda fija y sólo girás: nada se desliza",
+                a.soloConMesa == 1, si -> s.cambio("soloConMesa", si ? 1 : 0)));
+        contenido.addView(interruptor(Iconos.MESA, "Ver la mesa marcada", "El borde que brilla y la etiqueta \"Tu mesa\" (también en los entornos)",
+                a.verMesa == 1, si -> s.cambio("verMesa", si ? 1 : 0)));
+        contenido.addView(interruptor(Iconos.APPS, "La barra de abajo sobre la mesa", "Apoyada delante tuyo: la tocás con el dedo y la mesa te frena",
+                a.barraEnMesa == 1, si -> { s.cambio("barraEnMesa", si ? 1 : 0); s.recentrar(); }));
+        contenido.addView(ayuda(String.format(java.util.Locale.ROOT, "El tamaño de tus manos (medido en la mesa): ×%.2f", a.escalaMano / 1000f)));
+        estado = Estilo.texto(c, "", 13, Estilo.TEXTO2, false);
+        LinearLayout.LayoutParams le = new LinearLayout.LayoutParams(-1, -2);
+        le.topMargin = Estilo.dp(c, 8);
+        contenido.addView(estado, le);
+        refrescarEstado();
     }
 
     private void refrescarEstado() {

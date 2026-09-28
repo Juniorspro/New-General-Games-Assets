@@ -16,7 +16,10 @@ final class Iconos extends Drawable {
     static final int APPS = 0, WEB = 1, GALERIA = 2, AJUSTES = 3, RAPIDOS = 4, WIFI = 5, ATRAS = 6, ADELANTE = 7, RECARGAR = 8,
             CASA = 9, TECLADO = 10, CERRAR = 11, PLAY = 12, PAUSA = 13, CAPTURA = 14, RECENTRAR = 15, OJO = 16, MONTANA = 17,
             VISOR = 18, MANO = 19, SONIDO = 20, INFO = 21, BUSCAR = 22, ESTRELLA = 23, BORRAR = 24, ENTER = 25, MAYUS = 26,
-            CINE = 27, CONTROL = 28, TELEFONO = 29, BATERIA = 30, BRILLO = 31, VIDEO = 32, LINTERNA = 33, ACTUALIZAR = 34;
+            CINE = 27, CONTROL = 28, TELEFONO = 29, BATERIA = 30, BRILLO = 31, VIDEO = 32, LINTERNA = 33, ACTUALIZAR = 34,
+            MESA = 35, CUARTO = 36, GIRAR = 37, LISTO = 38, MUSICA = 39, NOTAS = 40, CALCULADORA = 41, RELOJ = 42, CLIMA = 43,
+            ARCHIVOS = 44, PESTANAS = 45, MAS = 46, ESCRITORIO = 47, SIGUIENTE = 48, ANTERIOR = 49, MEZCLAR = 50, CRONOMETRO = 51,
+            CARPETA = 52, DOCUMENTO = 53, NUBE = 54, LLUVIA = 55, TORMENTA = 56, NIEVE = 57, NIEBLA = 58, LUNA = 59, SOL = 60, ESPACIO = 61;
 
     private final int tipo;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -190,6 +193,108 @@ final class Iconos extends Drawable {
                 k.drawLine(12, 3, 12, 15, p);
                 c.moveTo(7, 10); c.lineTo(12, 15); c.lineTo(17, 10); k.drawPath(c, p);
                 c.reset(); c.moveTo(4, 15); c.lineTo(4, 20); c.lineTo(20, 20); c.lineTo(20, 15); k.drawPath(c, p);
+                break;
+            case MESA:
+                // la tabla en perspectiva y las patas, con la marca que brilla
+                c.moveTo(3, 10); c.lineTo(21, 10); c.lineTo(18, 6.5f); c.lineTo(6, 6.5f); c.close(); k.drawPath(c, p);
+                k.drawLine(5, 10, 5, 19, p); k.drawLine(19, 10, 19, 19, p); k.drawLine(8, 10, 8, 15.5f, p); k.drawLine(16, 10, 16, 15.5f, p);
+                break;
+            case CUARTO:
+                // un cubo abierto: el piso y dos paredes
+                c.moveTo(12, 3.5f); c.lineTo(20.5f, 7.5f); c.lineTo(20.5f, 16.5f); c.lineTo(12, 20.5f); c.lineTo(3.5f, 16.5f); c.lineTo(3.5f, 7.5f); c.close(); k.drawPath(c, p);
+                c.reset(); c.moveTo(3.5f, 7.5f); c.lineTo(12, 11.5f); c.lineTo(20.5f, 7.5f); c.moveTo(12, 11.5f); c.lineTo(12, 20.5f); k.drawPath(c, p);
+                break;
+            case GIRAR:
+                // la cabeza y una flecha que la rodea
+                k.drawCircle(12, 11, 3.6f, p);
+                r.set(3, 5, 21, 20); k.drawArc(r, 200, 300, false, p);
+                c.moveTo(17.2f, 17.8f); c.lineTo(19.6f, 17.6f); c.lineTo(19.2f, 15.2f); k.drawPath(c, p);
+                break;
+            case LISTO:
+                c.moveTo(5, 12.5f); c.lineTo(10, 17.5f); c.lineTo(19.5f, 7); k.drawPath(c, p);
+                break;
+            case MUSICA:
+                c.moveTo(9, 17.5f); c.lineTo(9, 5.5f); c.lineTo(19, 3.5f); c.lineTo(19, 15.5f); k.drawPath(c, p);
+                k.drawLine(9, 9, 19, 7, p);
+                p.setStyle(Paint.Style.FILL); k.drawCircle(6.5f, 17.5f, 2.6f, p); k.drawCircle(16.5f, 15.5f, 2.6f, p);
+                break;
+            case NOTAS:
+                r.set(5, 3, 19, 21); k.drawRoundRect(r, 2, 2, p);
+                k.drawLine(8.5f, 8, 15.5f, 8, p); k.drawLine(8.5f, 12, 15.5f, 12, p); k.drawLine(8.5f, 16, 12.5f, 16, p);
+                break;
+            case CALCULADORA:
+                r.set(5, 2.5f, 19, 21.5f); k.drawRoundRect(r, 2, 2, p);
+                r.set(8, 5.5f, 16, 9); k.drawRoundRect(r, 0.8f, 0.8f, p);
+                p.setStyle(Paint.Style.FILL);
+                for (int i = 0; i < 3; i++) for (int j = 0; j < 3; j++) k.drawCircle(8.8f + i * 3.2f, 12.3f + j * 3.1f, 0.95f, p);
+                break;
+            case RELOJ:
+                k.drawCircle(12, 12, 9, p);
+                c.moveTo(12, 7); c.lineTo(12, 12); c.lineTo(15.5f, 14); k.drawPath(c, p);
+                break;
+            case CRONOMETRO:
+                k.drawCircle(12, 13.5f, 7.5f, p);
+                k.drawLine(10, 2.8f, 14, 2.8f, p); k.drawLine(12, 2.8f, 12, 6, p); k.drawLine(18, 6.5f, 19.5f, 5, p);
+                k.drawLine(12, 13.5f, 14.5f, 10.5f, p);
+                break;
+            case CLIMA: case SOL:
+                k.drawCircle(12, 12, 4.2f, p);
+                for (int i = 0; i < 8; i++) {
+                    double a = i * Math.PI / 4;
+                    k.drawLine(12 + (float) Math.cos(a) * 6.8f, 12 + (float) Math.sin(a) * 6.8f, 12 + (float) Math.cos(a) * 9.2f, 12 + (float) Math.sin(a) * 9.2f, p);
+                }
+                break;
+            case NUBE: case LLUVIA: case TORMENTA: case NIEVE: case NIEBLA: {
+                float y0 = tipo == NUBE ? 2 : 0;
+                c.moveTo(7, 15 + y0); c.quadTo(3, 15 + y0, 3.2f, 11.5f + y0); c.quadTo(3.6f, 8 + y0, 7.5f, 8.5f + y0); c.quadTo(9, 4 + y0, 13.5f, 4.5f + y0);
+                c.quadTo(17.5f, 5 + y0, 18, 9 + y0); c.quadTo(21.3f, 9.5f + y0, 21, 12.5f + y0); c.quadTo(20.7f, 15 + y0, 17.5f, 15 + y0); c.close();
+                k.drawPath(c, p);
+                if (tipo == LLUVIA) { k.drawLine(8, 18, 7, 21, p); k.drawLine(12, 18, 11, 21, p); k.drawLine(16, 18, 15, 21, p); }
+                else if (tipo == TORMENTA) { c.reset(); c.moveTo(13, 16.5f); c.lineTo(10.5f, 19.5f); c.lineTo(13.5f, 19.5f); c.lineTo(11, 22.5f); k.drawPath(c, p); }
+                else if (tipo == NIEVE) { p.setStyle(Paint.Style.FILL); k.drawCircle(8, 19, 1.1f, p); k.drawCircle(12, 20.5f, 1.1f, p); k.drawCircle(16, 19, 1.1f, p); }
+                else if (tipo == NIEBLA) { k.drawLine(5, 18.5f, 19, 18.5f, p); k.drawLine(7, 21.5f, 17, 21.5f, p); }
+                break;
+            }
+            case LUNA:
+                c.moveTo(15.5f, 3.5f); c.quadTo(8, 4.5f, 8, 12); c.quadTo(8.5f, 19.5f, 16.5f, 20.5f); c.quadTo(9, 23.5f, 4.5f, 17);
+                c.quadTo(1, 9.5f, 7, 5); c.quadTo(10.5f, 2.8f, 15.5f, 3.5f); c.close(); k.drawPath(c, p);
+                break;
+            case ARCHIVOS: case CARPETA:
+                c.moveTo(3, 7); c.lineTo(3, 18.5f); c.lineTo(21, 18.5f); c.lineTo(21, 8.5f); c.lineTo(11.5f, 8.5f); c.lineTo(9.5f, 5.5f); c.lineTo(3, 5.5f); c.close();
+                k.drawPath(c, p);
+                break;
+            case DOCUMENTO:
+                c.moveTo(6, 2.5f); c.lineTo(14, 2.5f); c.lineTo(19, 7.5f); c.lineTo(19, 21.5f); c.lineTo(6, 21.5f); c.close(); k.drawPath(c, p);
+                c.reset(); c.moveTo(14, 2.5f); c.lineTo(14, 7.5f); c.lineTo(19, 7.5f); k.drawPath(c, p);
+                k.drawLine(9, 12.5f, 16, 12.5f, p); k.drawLine(9, 16.5f, 16, 16.5f, p);
+                break;
+            case PESTANAS:
+                r.set(3, 8, 17, 20); k.drawRoundRect(r, 2, 2, p);
+                c.moveTo(7, 8); c.lineTo(7, 5); c.lineTo(21, 5); c.lineTo(21, 16); c.lineTo(17, 16); k.drawPath(c, p);
+                break;
+            case MAS: k.drawLine(12, 5, 12, 19, p); k.drawLine(5, 12, 19, 12, p); break;
+            case ESCRITORIO:
+                r.set(3, 4.5f, 21, 16); k.drawRoundRect(r, 1.5f, 1.5f, p);
+                k.drawLine(12, 16, 12, 19.5f, p); k.drawLine(8, 19.5f, 16, 19.5f, p);
+                break;
+            case SIGUIENTE:
+                p.setStyle(Paint.Style.FILL); c.moveTo(5, 5.5f); c.lineTo(14, 12); c.lineTo(5, 18.5f); c.close(); k.drawPath(c, p);
+                r.set(15.5f, 5.5f, 18.5f, 18.5f); k.drawRoundRect(r, 0.8f, 0.8f, p);
+                break;
+            case ANTERIOR:
+                p.setStyle(Paint.Style.FILL); c.moveTo(19, 5.5f); c.lineTo(10, 12); c.lineTo(19, 18.5f); c.close(); k.drawPath(c, p);
+                r.set(5.5f, 5.5f, 8.5f, 18.5f); k.drawRoundRect(r, 0.8f, 0.8f, p);
+                break;
+            case MEZCLAR:
+                c.moveTo(3, 7); c.lineTo(7, 7); c.cubicTo(12, 7, 12, 17, 17, 17); c.lineTo(21, 17);
+                c.moveTo(3, 17); c.lineTo(7, 17); c.cubicTo(12, 17, 12, 7, 17, 7); c.lineTo(21, 7);
+                c.moveTo(18.5f, 4.5f); c.lineTo(21, 7); c.lineTo(18.5f, 9.5f); c.moveTo(18.5f, 14.5f); c.lineTo(21, 17); c.lineTo(18.5f, 19.5f);
+                k.drawPath(c, p);
+                break;
+            case ESPACIO:
+                // un planeta con su anillo
+                k.drawCircle(12, 12, 5.5f, p);
+                r.set(2, 9, 22, 15); k.drawArc(r, 200, 140, false, p); k.drawArc(r, 20, 140, false, p);
                 break;
             case VIDEO:
                 r.set(2.5f, 6, 16, 18); k.drawRoundRect(r, 2, 2, p);
