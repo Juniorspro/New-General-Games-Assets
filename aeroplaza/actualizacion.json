@@ -1,15 +1,15 @@
 {
- "n": 3,
+ "n": 4,
  "fecha": "2026-09-28",
- "notas": "Las actualizaciones llegan sin cerrar la app. Con la app nueva (46), se buscan al volver a la app.",
+ "notas": "Ahora se ve la versión abajo del menú.",
  "apkMin": 1,
  "apk": {
   "codigo": 46
  },
  "html": {
-  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/caf944a1d6697a634ebdca0d49e651f6da3581e7/aeroplaza/aeroplaza.html",
-  "sha256": "fee0d556e302e581f2b146d775188571fe0dda9da643f7af4b038479801982e1",
-  "bytes": 3342686
+  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/b20fd2d672cf069a2ca71b694b63bd42525418d0/aeroplaza/aeroplaza.html",
+  "sha256": "c98ba57549fa3353a7c5b0556e519d1180b5a685e6313db16452f2c223d0b4e1",
+  "bytes": 3343390
  },
  "fuentes": [
   "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/refs/heads/claude/fijate-iszyer/aeroplaza/actualizacion.json"
