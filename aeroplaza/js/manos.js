@@ -27,9 +27,9 @@ import * as THREE from 'three';
 import { t, sumar } from './textos.js';
 
 sumar({
-  es: { mn_caminar: '🚶 Caminar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_mando: '🎮 Control', mn_mando_visto: '🎮 Control en la mano: apuntá con el objeto y apretá con el índice o el pulgar', mn_salir: 'Salir del VR', mn_titulo: 'Menú', mn_manos_cargando: '✋ Cargando las manos…', mn_manos_listas: '✋ Manos listas: pellizcá para usar, la palma para el menú', mn_manos_error: 'No se pudieron prender las manos (cámara o red)', mn_saltar: 'Saltar', mn_ir: 'Ir', mn_ventanas: '🪟 Ventanas', mn_lentes: '👓 Lentes' },
-  en: { mn_caminar: '🚶 Walk', mn_parar: '✋ Stop', mn_izq: 'Turn ⟲', mn_der: 'Turn ⟳', mn_fps: 'FPS', mn_mando: '🎮 Controller', mn_mando_visto: '🎮 Controller in your hand: point with the object and squeeze with your index or thumb', mn_salir: 'Exit VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Loading hands…', mn_manos_listas: '✋ Hands ready: pinch to use, palm for the menu', mn_manos_error: 'Couldn’t start hand tracking (camera or network)', mn_saltar: 'Jump', mn_ir: 'Go', mn_ventanas: '🪟 Windows', mn_lentes: '👓 Lenses' },
-  pt: { mn_caminar: '🚶 Andar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_mando: '🎮 Controle', mn_mando_visto: '🎮 Controle na mão: aponte com o objeto e aperte com o indicador ou o polegar', mn_salir: 'Sair do VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Carregando as mãos…', mn_manos_listas: '✋ Mãos prontas: pinça para usar, a palma para o menu', mn_manos_error: 'Não foi possível ligar as mãos (câmera ou rede)', mn_saltar: 'Pular', mn_ir: 'Ir', mn_ventanas: '🪟 Janelas', mn_lentes: '👓 Lentes' },
+  es: { mn_caminar: '🚶 Caminar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_mando: '🎮 Control', mn_mando_visto: '🎮 Control en la mano: apuntá con el objeto y apretá con el índice o el pulgar', mn_salir: 'Salir del VR', mn_titulo: 'Menú', mn_manos_cargando: '✋ Cargando las manos…', mn_manos_listas: '✋ Manos listas: pellizcá para usar, la palma para el menú', mn_manos_error: 'No se pudieron prender las manos (cámara o red)', mn_saltar: 'Saltar', mn_ir: 'Ir', mn_ventanas: '🪟 Ventanas', mn_lentes: '👓 Lentes', mn_3dof: '🧭 3DoF', mn_6dof: '🧍 6DoF', mn_pelotita: '🫧 Pelotita' },
+  en: { mn_caminar: '🚶 Walk', mn_parar: '✋ Stop', mn_izq: 'Turn ⟲', mn_der: 'Turn ⟳', mn_fps: 'FPS', mn_mando: '🎮 Controller', mn_mando_visto: '🎮 Controller in your hand: point with the object and squeeze with your index or thumb', mn_salir: 'Exit VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Loading hands…', mn_manos_listas: '✋ Hands ready: pinch to use, palm for the menu', mn_manos_error: 'Couldn’t start hand tracking (camera or network)', mn_saltar: 'Jump', mn_ir: 'Go', mn_ventanas: '🪟 Windows', mn_lentes: '👓 Lenses', mn_3dof: '🧭 3DoF', mn_6dof: '🧍 6DoF', mn_pelotita: '🫧 Bubble' },
+  pt: { mn_caminar: '🚶 Andar', mn_parar: '✋ Parar', mn_izq: 'Girar ⟲', mn_der: 'Girar ⟳', mn_fps: 'FPS', mn_mando: '🎮 Controle', mn_mando_visto: '🎮 Controle na mão: aponte com o objeto e aperte com o indicador ou o polegar', mn_salir: 'Sair do VR', mn_titulo: 'Menu', mn_manos_cargando: '✋ Carregando as mãos…', mn_manos_listas: '✋ Mãos prontas: pinça para usar, a palma para o menu', mn_manos_error: 'Não foi possível ligar as mãos (câmera ou rede)', mn_saltar: 'Pular', mn_ir: 'Ir', mn_ventanas: '🪟 Janelas', mn_lentes: '👓 Lentes', mn_3dof: '🧭 3DoF', mn_6dof: '🧍 6DoF', mn_pelotita: '🫧 Bolinha' },
 });
 
 /* los huesos (pares de puntos de MediaPipe) y el grosor en cada punto, en metros */
@@ -95,7 +95,7 @@ class EuroEjes {
 }
 
 /* -------------------------------------------------- una mano */
-const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
+const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _c = new THREE.Vector3(), _d = new THREE.Vector3(), _e = new THREE.Vector3(), _q = new THREE.Quaternion(), _qEx = new THREE.Quaternion(), _m = new THREE.Matrix4();
 const _ve = new THREE.Vector3(), _vr = new THREE.Vector3(), _qg = new THREE.Quaternion();
 /* el centro de la palma (muñeca y los cuatro nudillos) de 21 puntos */
 const CENTRO = [0, 5, 9, 13, 17];
@@ -894,23 +894,26 @@ const FRAG_MANO = /* glsl */`
 const MENU_PALMA = { cara: 0.72, sigue: 0.55, mira: 0.5, miraSigue: 0.65, t: 0.25, abierta: 1.55 };
 /* cuánto fantasma las manos en el juego (0: vidrio entero; 1: solo el borde) */
 const FANTASMA_JUEGO = 0.35;
-const BOTONES = ['mn_caminar', 'mn_izq', 'mn_der', 'mn_fps', 'mn_ventanas', 'mn_lentes', 'mn_salir', 'mn_mando'];
+const BOTONES = ['mn_caminar', 'mn_izq', 'mn_der', 'mn_fps', 'mn_ventanas', 'mn_lentes', 'mn_salir', 'mn_mando', 'mn_3dof', 'mn_pelotita'];
+/* (vuelta 43: una fila más abajo, 3DoF/6DoF y la pelotita: el lienzo y la placa, más altos) */
+const MENU_W = 0.34, MENU_H = 0.266, MENU_PX = [512, 400];
 class Menu {
   constructor() {
-    this.lienzo = document.createElement('canvas'); this.lienzo.width = 512; this.lienzo.height = 300;
+    this.lienzo = document.createElement('canvas'); this.lienzo.width = MENU_PX[0]; this.lienzo.height = MENU_PX[1];
     this.tex = new THREE.CanvasTexture(this.lienzo); this.tex.colorSpace = THREE.SRGBColorSpace;
-    this.malla = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.2), new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false, toneMapped: false }));
+    this.malla = new THREE.Mesh(new THREE.PlaneGeometry(MENU_W, MENU_H), new THREE.MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false, toneMapped: false }));
     this.malla.visible = false; this.malla.renderOrder = 5;
     this.sobre = -1; this.apretado = -1; this.abierto = false; this.fps = false; this.camina = false;
     /* los botones en la textura (x, y, ancho, alto), en píxeles del lienzo */
     /* (vuelta 29: con las ventanas de prueba, abajo son tres; vuelta 30, con las lentes, cuatro) */
     /* (vuelta 40: arriba a la derecha, el control en la mano, prendido o apagado) */
-    this.cajas = [[20, 70, 230, 90], [262, 70, 110, 90], [382, 70, 110, 90], [20, 180, 86, 90], [114, 180, 136, 90], [258, 180, 116, 90], [382, 180, 110, 90], [292, 12, 200, 50]];
-    this.mando = true;
+    this.cajas = [[20, 70, 230, 90], [262, 70, 110, 90], [382, 70, 110, 90], [20, 180, 86, 90], [114, 180, 136, 90], [258, 180, 116, 90], [382, 180, 110, 90], [292, 12, 200, 50], [20, 290, 230, 90], [262, 290, 230, 90]];
+    this.mando = true; this.seis = false; this.pelotita = true;
+    this.ancho = MENU_W; this.alto = MENU_H; this.px = MENU_PX;   // (para las pruebas)
     this.pintar();
   }
   pintar() {
-    const c = this.lienzo.getContext('2d'), W = 512, H = 300;
+    const c = this.lienzo.getContext('2d'), W = MENU_PX[0], H = MENU_PX[1];
     c.clearRect(0, 0, W, H);
     const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(235,250,255,0.92)'); g.addColorStop(1, 'rgba(160,220,255,0.88)');
     c.fillStyle = g; c.beginPath(); c.roundRect(4, 4, W - 8, H - 8, 34); c.fill();
@@ -923,7 +926,8 @@ class Menu {
       c.fillStyle = gb; c.beginPath(); c.roundRect(x, y + (a ? 4 : 0), w, h - 4, 24); c.fill();
       c.strokeStyle = s ? '#2aa6e8' : 'rgba(255,255,255,0.9)'; c.lineWidth = s ? 6 : 3; c.stroke();
       c.fillStyle = i === 6 ? '#b3261e' : '#0f3f63'; c.font = `800 ${i >= 3 ? 21 : 28}px system-ui, sans-serif`; c.textAlign = 'center';
-      c.fillText(i === 0 && this.camina ? t('mn_parar') : t(BOTONES[i]) + ((i === 3 && this.fps) || (i === 7 && this.mando) ? ' ✓' : ''), x + w / 2, y + h / 2 + 8 + (a ? 4 : 0));
+      const txt = i === 0 && this.camina ? t('mn_parar') : i === 8 ? t(this.seis ? 'mn_6dof' : 'mn_3dof') : t(BOTONES[i]) + ((i === 3 && this.fps) || (i === 7 && this.mando) || (i === 9 && this.pelotita) ? ' ✓' : '');
+      c.fillText(txt, x + w / 2, y + h / 2 + 8 + (a ? 4 : 0));
     });
     this.tex.needsUpdate = true;
   }
@@ -938,7 +942,7 @@ class Menu {
   /* un punto del mundo, al botón (o -1) y la distancia al plano (positiva adelante) */
   enPunto(p) {
     const inv = _m.copy(this.malla.matrixWorld).invert(); _b.copy(p).applyMatrix4(inv);
-    const u = (_b.x / 0.34 + 0.5) * 512, v = (0.5 - _b.y / 0.2) * 300;
+    const u = (_b.x / MENU_W + 0.5) * MENU_PX[0], v = (0.5 - _b.y / MENU_H) * MENU_PX[1];
     const i = this.cajas.findIndex(([x, y, w, h]) => u >= x && u <= x + w && v >= y && v <= y + h);
     return { i, prof: _b.z };
   }
@@ -1088,6 +1092,8 @@ export class Manos {
     let i = C.length - 1; while (i > 0 && C[i].t > t) i--;
     const a = C[i], b = C[Math.min(C.length - 1, i + 1)], k = b.t > a.t ? THREE.MathUtils.clamp((t - a.t) / (b.t - a.t), 0, 1) : 0;
     q.slerpQuaternions(a.q, b.q, k); p.lerpVectors(a.p, b.p, k);
+    /* (vuelta 43) con la APK, el giro exacto de la hora de la foto (el giroscopio guardado), no el que se dibujó */
+    if (this.giroExacto?.(t, _qEx)) q.copy(_qEx);
     if (a.giro) q.multiply(_q.setFromAxisAngle(_d.set(0, 0, 1), a.giro));
     return true;
   }
@@ -1397,6 +1403,9 @@ export class Manos {
         if (mejor) {
           fin = mejor.pos; objetivo = mejor;
           if (M.empezo && !M.anulado) ev.push({ tipo: 'usar', o: mejor.o });
+        } else if (ctx.disparo && M.empezo && !M.anulado) {
+          /* (vuelta 43, el tiro en el VR: el pellizco dispara por el rayo de la mano) */
+          ev.push({ tipo: 'dispara', o: M.rayoO.clone(), d: M.rayoD.clone() });
         } else if (!salto && !ctx.sinArco) {
           /* el arco: tiro de 6,5 m/s desde la mano hasta que toca el piso */
           const arco = this.arco(M, ctx);
@@ -1483,10 +1492,12 @@ export class Manos {
   apretar(i, ev) {
     this.menu.apretado = i; this.menu.pintar(); clearTimeout(this._tApr);
     this._tApr = setTimeout(() => { this.menu.apretado = -1; this.menu.pintar(); }, 180);
-    const acc = ['caminar', 'izq', 'der', 'fps', 'ventanas', 'lentes', 'salir', 'mando'][i];
+    const acc = ['caminar', 'izq', 'der', 'fps', 'ventanas', 'lentes', 'salir', 'mando', 'dof', 'pelotita'][i];
     if (acc === 'fps') { this.menu.fps = !this.menu.fps; this.menu.pintar(); }
     if (acc === 'mando') { this.conMando = this.menu.mando = !this.conMando; this.menu.pintar(); }
-    ev.push({ tipo: 'menu', accion: acc, fps: this.menu.fps, mando: this.conMando }, { tipo: 'sonido', s: 'elegir' });
+    if (acc === 'dof') { this.menu.seis = !this.menu.seis; this.menu.pintar(); }
+    if (acc === 'pelotita') { this.menu.pelotita = !this.menu.pelotita; this.menu.pintar(); }
+    ev.push({ tipo: 'menu', accion: acc, fps: this.menu.fps, mando: this.conMando, seis: this.menu.seis, pelotita: this.menu.pelotita }, { tipo: 'sonido', s: 'elegir' });
     if (acc === 'salir' || acc === 'caminar' || acc === 'ventanas' || acc === 'lentes') this.menu.cerrar();
   }
   /* la parábola del teletransporte: la mano tira una piedrita imaginaria */

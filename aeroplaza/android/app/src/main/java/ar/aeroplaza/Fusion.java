@@ -129,6 +129,17 @@ final class Fusion {
     return true;
   }
 
+  /* (vuelta 43) el giro de la cámara orientada a la pantalla en un instante que ya pasó (la hora de una foto de las
+     manos): el giroscopio guardado a 200 por segundo, sin adelantar ni el resorte. qx, qy, qz, qw */
+  synchronized boolean giroEn(long t, float[] out) {
+    if (!listo()) return false;
+    final float[] qi = new float[4];
+    if (!imuEn(t, qi)) return false;
+    mul(qW, qi, b); mul(b, C[c], d); normalizar(d, 0);
+    out[0] = d[0]; out[1] = d[1]; out[2] = d[2]; out[3] = d[3];
+    return true;
+  }
+
   /* el giroscopio en el instante t (entre dos muestras; después de la última, adelantado con ω) */
   boolean imuEn(long t, float[] q) {
     if (nI == 0) return false;

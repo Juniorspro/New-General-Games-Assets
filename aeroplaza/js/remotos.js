@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { Meeple, APARIENCIA_INICIAL } from './meeple.js';
 import { girarHacia } from './jugador.js';
+import { Pelotita, leerVR, VIDA_PELOTITA } from './pelotita.js';
 
 const OLVIDO = 5000;
 
@@ -21,6 +22,8 @@ export class RemotePlayer {
     this.hp = 100; this.estado = 'quieto'; this.vel = 0; this.esc = 1; this.av = -1;
     this.visto = performance.now();
     this.burbuja = null;
+    /* (vuelta 43) en el VR con la pelotita: la bola con sus manos (pelotita.js) en vez del muñeco */
+    this.escena = escena; this.pelotita = null; this.vrUlt = null; this.vrT = -1e9; this.A = null;
   }
   get x() { return this.m.raiz.position.x; } get y() { return this.m.raiz.position.y; } get z() { return this.m.raiz.position.z; }
   recibir(d) {
@@ -41,8 +44,11 @@ export class RemotePlayer {
     this.mesa = typeof d.mesa === 'string' ? d.mesa.slice(0, 8) : null;   // en qué silla de qué mesa (la Zona de Juegos)
     this.voz = d.voz === 1 || d.voz === 2 ? d.voz : 0;   // en el chat de voz: 1 con micrófono, 2 escuchando
     if (d.name && d.name !== this.name) { this.name = String(d.name).slice(0, 20); this.m.ponerNombre(this.name); }
+    const V = d.vr ? leerVR(d.vr) : null;
+    if (V) { this.vrUlt = V; this.vrT = performance.now(); }
   }
-  ponerApariencia(A, av) { this.m.ponerApariencia({ ...APARIENCIA_INICIAL(), ...A }); this.av = av; }
+  ponerApariencia(A, av) { this.A = { ...APARIENCIA_INICIAL(), ...A }; this.m.ponerApariencia(this.A); this.av = av; this.pelotita?.ponerColor(this.A.color, this.A.color2); }
+  get enVR() { return !!this.vrUlt && performance.now() - this.vrT < VIDA_PELOTITA; }
   actualizar(dt) {
     const p = this.m.raiz.position;
     /* INTERPOLAR: se acerca al blanco; si quedó muy lejos (viajó), salta */
@@ -54,8 +60,12 @@ export class RemotePlayer {
     const s = this.m.raiz.scale.x + (this.esc - this.m.raiz.scale.x) * Math.min(1, dt * 4); this.m.raiz.scale.setScalar(s);
     this.m.animar(dt, this.estado, this.velRed || Math.hypot(dx, dz) * 10);
     if (this.burbuja) this.burbuja.visible = this.modo === 'burbuja';
+    if (this.enVR) {
+      if (!this.pelotita) { const A = this.A || APARIENCIA_INICIAL(); this.pelotita = new Pelotita(this.escena, A.color, A.color2, this.name); }
+      this.pelotita.poner(this.vrUlt); this.pelotita.actualizar(dt, p); this.m.raiz.visible = false;
+    } else if (this.pelotita) { this.pelotita.quitar(); this.pelotita = null; this.m.raiz.visible = true; }
   }
-  quitar() { this.m.quitar(); }
+  quitar() { this.pelotita?.quitar(); this.pelotita = null; this.m.quitar(); }
 }
 
 /* el Map de remotos, con la limpieza por tiempo */

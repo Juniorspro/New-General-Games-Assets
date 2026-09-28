@@ -346,6 +346,8 @@ public class MainActivity extends Activity {
       } catch (Throwable t) { return "no"; }
     }
     @JavascriptInterface public void espacioAncho(final boolean si) { runOnUiThread(() -> espacioAncho(si)); }
+    /* (vuelta 43) el giro de la cabeza de hace msAtras ms, para ubicar las manos con la cabeza de la hora de su foto */
+    @JavascriptInterface public String cabezaAntes(double msAtras) { Ar a = ar; return a == null || !a.corriendo ? "" : a.cabeza.giroAntes(msAtras); }
     @JavascriptInterface public String cabezaEstado() { Ar a = ar; return a == null ? "" : a.cabeza.estado(); }
     @JavascriptInterface public void arOlvidar() { Ar a = ar; if (a != null) a.espacio.olvidar(); }
     @JavascriptInterface public void manosDos(final boolean si) {

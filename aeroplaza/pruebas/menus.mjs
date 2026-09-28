@@ -12,7 +12,7 @@ for (const [nombre, tam] of [['celu', { ancho: 844, alto: 390, movil: true }], [
   const VENTANAS = {
     pausa: 'U.pausa()', opciones: 'U.opciones()', 'opciones-imagen': "U.opciones(null, 'imagen')", 'opciones-juego': "U.opciones(null, 'juego')", 'opciones-datos': "U.opciones(null, 'datos')",
     controles: 'U.controles()', estilo: 'U.estilo()', 'estilo-ajuste': "U.estilo(null, 'ajuste')", discos: 'U.discos()', gestos: 'U.gestos()', viaje: "U.viaje('plaza', () => {})", mapa: 'U.mapa((c) => window.__A.J && null)',
-    probador: 'window.__A.J.abrirProbador()',
+    'menu-vr': 'U.menuVR()', probador: 'window.__A.J.abrirProbador()',
   };
   for (const [v, cod] of Object.entries(VENTANAS)) {
     const r = await pag.evaluate(async (cod) => {
@@ -34,3 +34,5 @@ for (const [nombre, tam] of [['celu', { ancho: 844, alto: 390, movil: true }], [
 }
 console.log(malos ? `${malos} ventanas se pasan` : 'todas entran');
 await nav.close();
+/* (vuelta 43: antes salía bien igual y la tanda no se enteraba) */
+process.exit(malos ? 1 : 0);

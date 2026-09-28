@@ -70,6 +70,17 @@ class Cabeza implements SensorEventListener {
       }
     } catch (Throwable t) { return ""; }
   }
+  /* (vuelta 43) el giro de hace msAtras ms (la hora de la foto de las manos): "qx,qy,qz,qw" o "" */
+  private final float[] g4 = new float[4];
+  String giroAntes(double msAtras) {
+    try {
+      long t = SystemClock.elapsedRealtimeNanos() - (long) (Math.max(0, Math.min(1500, msAtras)) * 1e6);
+      synchronized (g4) {
+        if (!f.giroEn(t, g4)) return "";
+        return String.format(Locale.US, "%.6f,%.6f,%.6f,%.6f", g4[0], g4[1], g4[2], g4[3]);
+      }
+    } catch (Throwable x) { return ""; }
+  }
   /* (para el diagnóstico: los ejes elegidos, las fotos y las muestras) */
   String estado() { synchronized (f) { return String.format(Locale.US, "%d %d %d %.2f %s", f.c, f.fotos, f.nI, f.c >= 0 ? f.err[f.c] : -1.0, falla.isEmpty() ? "-" : falla); } }
 }

@@ -45,7 +45,8 @@ await pag.addInitScript(() => {
 await pag.reload();
 await pag.waitForFunction(() => window.__A && window.__A.reino && document.querySelector('.hud'), null, { timeout: 120000, polling: 250 });
 await avanzar(pag, 5, 1 / 30, false);
-await pag.evaluate(() => window.__A.J.entrarVR(true, false));
+/* (vuelta 43: de entrada es 3DoF, con el cuello; lo de moverse con los ojos es el 6DoF) */
+await pag.evaluate(() => { window.__A.G.opciones.vr6dof = true; window.__A.J.entrarVR(true, false); });
 await avanzar(pag, 3, 1 / 30, false);
 
 /* ARCore manda siempre lo mismo (quieto, mirando adelante); la cabeza nativa gira y se corre */
@@ -91,6 +92,14 @@ prueba('a último momento: los ojos salen con la cabeza leída después de dibuj
 /* sin la cabeza nativa (""): con ARCore, como antes */
 const d = await tramo({ seg: 0.4, g0: 30, g1: 30, x0: 0.2, x1: 0.2, sin: true });
 prueba('sin la cabeza nativa todavía, sigue con la pose de ARCore', !d.con && d.conAR, JSON.stringify({ con: d.con, conAR: d.conAR }));
+/* (vuelta 43) en 3DoF los ojos que se corren no mueven la vista: solo el cuello (7,5 cm arriba, 8 adelante) */
+await pag.evaluate(() => window.__A.vr.ponerSeis(false));
+const e1 = await tramo({ seg: 0.3, g0: 30, g1: 30, x0: 0.2, x1: 0.2 });
+const e2 = await tramo({ seg: 0.8, g0: 30, g1: 30, x0: 0.2, x1: 0.4 });
+const e3 = await tramo({ seg: 0.3, g0: 30, g1: 60, x0: 0.4, x1: 0.4 });
+const cu = { quieto: Math.hypot(e2.d[0] - e1.d[0], e2.d[2] - e1.d[2]), largo: Math.hypot(...e3.d), giro: Math.hypot(e3.d[0] - e2.d[0], e3.d[2] - e2.d[2]) };
+/* (el cuello cuenta al inclinar la cabeza, vr-juego.mjs; girar mirando derecho no corre los ojos: el muñeco gira con ellos) */
+prueba('en 3DoF (de entrada) correr los ojos 20 cm no mueve la vista, ni girar 30° mirando derecho', cu.quieto < 0.002 && cu.largo < 0.002 && cu.giro < 0.002, `${(cu.quieto * 100).toFixed(2)} cm · cuello ${(cu.largo * 100).toFixed(2)} cm · al girar 30° ${(cu.giro * 100).toFixed(2)} cm`);
 await pag.evaluate(() => window.__A.J.salirVR());
 
 /* tu espacio: la cabeza de la escena es la nativa */

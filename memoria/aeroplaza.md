@@ -338,6 +338,7 @@ La cabeza en 6 ejes suave (el giroscopio del sistema corregido con ARCore): [aer
 El objeto en la mano como control (el agarre, el eje, el gatillo y el control dibujado): [aeroplaza-40](aeroplaza-40.md).
 Que no se cierre al entrar al ARCore (los sensores, la WebView caída) y el aviso de por qué se cerró la vez pasada: [aeroplaza-41](aeroplaza-41.md).
 Tu espacio como un Quest (la mira no aprieta, las pantallas lejos) y la cámara 0,5x (AngleCam, `Ancha.java`, ARCore en pausa): [aeroplaza-42](aeroplaza-42.md).
+Todo el juego en el VR (el espejo de las ventanas, viajar, edificios, minijuegos), 3DoF con cuello y la pelotita: [aeroplaza-43](aeroplaza-43.md).
 
 ## Trampas que ya se pagaron
 

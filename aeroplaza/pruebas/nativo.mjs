@@ -36,7 +36,8 @@ await pag.waitForFunction(() => window.__A && window.__A.reino && document.query
 await avanzar(pag, 5, 1 / 30, false);
 prueba('en la APK el juego ve el puente', await pag.evaluate(() => window.__A.Nativo.hay && window.__A.Nativo.puedeAR));
 
-await pag.evaluate(() => window.__A.J.entrarVR(true, false));
+/* (vuelta 43: de entrada es 3DoF; lo de seguir a ARCore en el lugar es el 6DoF, que se prende) */
+await pag.evaluate(() => { window.__A.G.opciones.vr6dof = true; window.__A.J.entrarVR(true, false); });
 await avanzar(pag, 3, 1 / 30, false);
 const llamo = await pag.evaluate(() => window.__llamadas.map((x) => x[0]));
 prueba('al entrar al VR se prende ARCore', llamo.includes('arIniciar'), llamo.join(','));

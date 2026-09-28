@@ -14,57 +14,10 @@
 //     node pruebas/manos.mjs
 import fs from 'node:fs';
 import path from 'node:path';
-import { navegador, abrir, avanzar, SAL } from './comun.mjs';
+import { navegador, abrir, avanzar, SAL, MANO } from './comun.mjs';
 const nav = await navegador();
 let bien = 0, mal = 0;
 const prueba = (n, ok, extra = '') => { ok ? bien++ : mal++; console.log(`${ok ? '✓' : '✗'} ${n}${extra ? ' · ' + extra : ''}`); };
-
-/* en la página: una mano de 21 puntos (metros). Derecha, de dorso a la cara, dedos para arriba:
-   x a la derecha, y arriba, z hacia la cara. La izquierda es el espejo */
-const MANO = () => {
-  const A = window.__A, THREE = A.THREE;
-  const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0.06, 0.063, -0.02], [-0.07, 0.082, -0.025],
-    [-0.022, 0.085, 0], [-0.025, 0.125, 0], [-0.027, 0.15, 0], [-0.028, 0.172, 0], [0, 0.088, 0], [0, 0.132, 0], [0, 0.16, 0], [0, 0.185, 0],
-    [0.02, 0.083, 0], [0.021, 0.122, 0], [0.022, 0.148, 0], [0.023, 0.17, 0], [0.038, 0.074, 0], [0.041, 0.1, 0], [0.043, 0.118, 0], [0.045, 0.135, 0]];
-  const PELLIZCO = ABIERTA.map((p) => p.slice());
-  Object.assign(PELLIZCO, { 3: [-0.058, 0.09, -0.04], 4: [-0.05, 0.118, -0.058], 6: [-0.03, 0.12, -0.02], 7: [-0.04, 0.135, -0.045], 8: [-0.05, 0.12, -0.06] });
-  const cab = () => ({ p: A.motor.camara.position.clone(), q: A.motor.camara.quaternion.clone() });
-  /* el hombro, como en manos.js */
-  const hombro = (der) => { const { p, q } = cab(), d = new THREE.Vector3(0, 0, -1).applyQuaternion(q), yaw = Math.atan2(-d.x, -d.z); return new THREE.Vector3(p.x + Math.cos(yaw) * (der ? 0.17 : -0.17), p.y - 0.2, p.z - Math.sin(yaw) * (der ? 0.17 : -0.17)); };
-  /* la mano armada: pose, lado, dónde (el punto entre pulgar e índice) y hacia dónde apuntan los dedos;
-     palma: la palma mira a la cara */
-  window.__mano = (der, pose = 'abierta', { mira = null, dir = null, palma = false, mover = [0, 0, 0], ruido = 0 } = {}) => {
-    const B = (pose === 'pellizco' ? PELLIZCO : ABIERTA).map(([x, y, z]) => new THREE.Vector3(der ? x : -x, y, z));
-    if (palma) for (const v of B) { v.x = -v.x; v.z = -v.z; }   // (media vuelta en y: la palma a la cara)
-    const { q } = cab();
-    /* los dedos para donde apunta dir (en el mundo); el dorso para la cara */
-    const d = (dir || new THREE.Vector3(0, 0, -1).applyQuaternion(q)).clone().normalize();
-    const arr = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-    const m = new THREE.Matrix4().lookAt(new THREE.Vector3(), d, arr);   // (-z local = d; con el giro de abajo, los dedos van por d y el dorso para arriba)
-    const rot = new THREE.Quaternion().setFromRotationMatrix(m).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2));
-    for (const v of B) v.applyQuaternion(rot);
-    /* que el punto entre pulgar e índice caiga en 'mira' */
-    const medio = B[2].clone().add(B[5]).multiplyScalar(0.5);
-    const off = mira.clone().sub(medio).add(new THREE.Vector3(...mover));
-    const W = new Float32Array(63);
-    B.forEach((v, i) => { v.add(off); W[i * 3] = v.x + (Math.random() - 0.5) * ruido; W[i * 3 + 1] = v.y + (Math.random() - 0.5) * ruido; W[i * 3 + 2] = v.z + (Math.random() - 0.5) * ruido; });
-    return W;
-  };
-  /* el punto que apunta a 'objetivo' desde el hombro, a 45 cm */
-  window.__apuntar = (der, objetivo, largo = 0.45) => { const h = hombro(der), d = objetivo.clone().sub(h).normalize(); return { mira: h.clone().addScaledVector(d, largo), dir: d }; };
-  window.__cab = cab;
-  /* un cuadro del juego con las manos que se le pasen (lista de [der, W]) llegando justo antes */
-  window.__cuadro = (lista, dibujar = false, dt = 1 / 60) => {
-    /* (a 30 por segundo de verdad, como la cámara: sin dibujar, un cuadro por software tarda 3 ms y
-       el filtro vería la mano moverse diez veces más rápido de lo que se movió) */
-    if (lista.length) { const hasta = (window.__ultCuadro || 0) + 30; while (performance.now() < hasta) { /* espera */ } window.__ultCuadro = performance.now(); }
-    /* (con la hora del cuadro que viene: vr.orientar la adelanta ~25 ms; un cuadro dibujado por
-       software tarda un segundo y la mano se daría por perdida) */
-    const t = (performance.now() + 25) / 1000;
-    for (const [der, W] of lista) A.manos.recibirMundo(der, W, t);
-    A.paso(dt, dibujar);
-  };
-};
 
 {
   const { pag, ctx, errores } = await abrir(nav, 'directo&pausa&hora=0.42&calidad=media', { ancho: 1100, alto: 520, movil: true });
@@ -154,7 +107,8 @@ const MANO = () => {
     for (let i = 0; i < 6; i++) { const a = window.__apuntar(true, obj); window.__cuadro([[true, window.__mano(true, 'pellizco', a)]]); }
     return { apunta, cartel, ventana: !!A.UI.ventanaAbierta, vrSalio: !A.vr.activo, era: A.manos.objetivo?.o.accion ?? null, vis: A.manos.manos[1].visible, vr: A.vr.activo };
   });
-  prueba('el rayo apunta lo que se puede usar (con su cartel) y el pellizco lo usa', r4.apunta && r4.cartel && r4.ventana, JSON.stringify(r4));
+  /* (vuelta 43: la ventana se ve adentro del VR, en el espejo: ya no saca) */
+  prueba('el rayo apunta lo que se puede usar (con su cartel) y el pellizco lo usa, sin salir del VR', r4.apunta && r4.cartel && r4.ventana && r4.vr, JSON.stringify(r4));
   await pag.evaluate(() => { window.__A.UI.cerrarVentana(); });
   await pag.evaluate(() => window.__A.J.entrarVR(true, false)); await pag.waitForTimeout(300);
   await pag.evaluate(() => { const A = window.__A; A.manos.activa = true; A.manos.fuente = 'prueba'; A.vr.forzar = 'completo'; });
@@ -221,7 +175,7 @@ const MANO = () => {
     const abierto = A.manos.menu.abierto;
     /* la yema del índice derecho: el centro del botón "Girar ⟳" (el tercero), de adelante para atrás */
     const Mn = A.manos.menu, [bx, by, bw, bh] = Mn.cajas[2];
-    const enMenu = (dz) => new THREE.Vector3((bx + bw / 2) / 512 * 0.34 - 0.17, 0.1 - (by + bh / 2) / 300 * 0.2, dz).applyMatrix4(Mn.malla.matrixWorld);
+    const enMenu = (dz) => new THREE.Vector3((bx + bw / 2) / Mn.px[0] * Mn.ancho - Mn.ancho / 2, Mn.alto / 2 - (by + bh / 2) / Mn.px[1] * Mn.alto, dz).applyMatrix4(Mn.malla.matrixWorld);
     const base0 = A.vr.base;
     for (const dz of [0.05, 0.04, 0.03, 0.02, 0.01, 0.0, -0.01, -0.02]) {
       await espera();
@@ -233,7 +187,7 @@ const MANO = () => {
     const giro = +((A.vr.base - base0) * 180 / Math.PI).toFixed(1);
     window.__dbg.toques = window.__toques;
     /* el rayo al botón FPS (el cuarto) y pellizco */
-    const [fx, fy, fw, fh] = Mn.cajas[3], blanco = new THREE.Vector3((fx + fw / 2) / 512 * 0.34 - 0.17, 0.1 - (fy + fh / 2) / 300 * 0.2, 0).applyMatrix4(Mn.malla.matrixWorld);
+    const [fx, fy, fw, fh] = Mn.cajas[3], blanco = new THREE.Vector3((fx + fw / 2) / Mn.px[0] * Mn.ancho - Mn.ancho / 2, Mn.alto / 2 - (fy + fh / 2) / Mn.px[1] * Mn.alto, 0).applyMatrix4(Mn.malla.matrixWorld);
     Mn.abierto || Mn.abrir(p, q);
     const fps0 = A.vr.verFps;
     /* (la mano cerca del cuerpo, a 20 cm del hombro: si no, la yema toca el menú y es un toque) */
@@ -245,7 +199,7 @@ const MANO = () => {
     /* salir */
     Mn.abierto || Mn.abrir(p, q);
     /* (salir es el 7.º: desde la vuelta 29 está también el de las ventanas, y desde la 40 el del control, arriba) */
-    const [sx, sy, sw, sh] = Mn.cajas[6], bs = new THREE.Vector3((sx + sw / 2) / 512 * 0.34 - 0.17, 0.1 - (sy + sh / 2) / 300 * 0.2, 0).applyMatrix4(Mn.malla.matrixWorld);
+    const [sx, sy, sw, sh] = Mn.cajas[6], bs = new THREE.Vector3((sx + sw / 2) / Mn.px[0] * Mn.ancho - Mn.ancho / 2, Mn.alto / 2 - (sy + sh / 2) / Mn.px[1] * Mn.alto, 0).applyMatrix4(Mn.malla.matrixWorld);
     for (let i = 0; i < 5; i++) window.__cuadro([[true, window.__mano(true, 'abierta', window.__apuntar(true, bs, 0.1))]]);
     for (let i = 0; i < 5; i++) window.__cuadro([[true, window.__mano(true, 'pellizco', window.__apuntar(true, bs, 0.1))]]);
     return { boton, abierto, giro, sobre, fps: [fps0, fps1, clase], salio: !A.vr.activo, dbg: window.__dbg };

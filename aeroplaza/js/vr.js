@@ -29,9 +29,9 @@ import { Nativo, poseEn } from './nativo.js';
 import { Lentes } from './lentes.js';
 
 sumar({
-  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo', vr_xr: '🥽 Visor VR', vr_xr_d: 'Quest y otros: hasta 120 Hz, con tus manos', vr_xr_error: 'El visor no pudo arrancar', vr_flash: 'Flash', vr_flash_no: 'Este celu no deja prender el flash desde el navegador', vr_flash_error: 'No se pudo prender el flash (¿permiso de la cámara?)', vr_suave: '✋ Las manos', vr_suave_rapida: 'Rápidas', vr_suave_media: 'Medio', vr_suave_suave: 'Suaves', vr_suave_rapida_d: 'Pegadas a tu mano, tiemblan un poco (como un Quest)', vr_suave_media_d: 'Rápidas y casi sin temblor', vr_suave_suave_d: 'Quietas no tiemblan nada; van un poquito atrás', vr_linterna_sola: '🔦 Poca luz: prendí la linterna' },
-  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world', vr_manos: '✋ Hands with the camera', vr_manos_d: 'Like Meta Quest: pinch to use', vr_fps: '⏱ Frames per second', vr_fps_d: 'Above each eye', vr_xr: '🥽 VR headset', vr_xr_d: 'Quest and others: up to 120 Hz, with your hands', vr_xr_error: 'The headset couldn’t start', vr_flash: 'Flash', vr_flash_no: 'This phone doesn’t let the browser turn on the flash', vr_flash_error: 'Couldn’t turn on the flash (camera permission?)', vr_suave: '✋ Hands', vr_suave_rapida: 'Fast', vr_suave_media: 'Balanced', vr_suave_suave: 'Smooth', vr_suave_rapida_d: 'Glued to your hand, a little shaky (like a Quest)', vr_suave_media_d: 'Fast and almost no shake', vr_suave_suave_d: 'Rock-steady when still; a tiny bit behind', vr_linterna_sola: '🔦 Low light: flashlight on' },
-  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo', vr_manos: '✋ Mãos com a câmera', vr_manos_d: 'Como no Meta Quest: pinça para usar', vr_fps: '⏱ Quadros por segundo', vr_fps_d: 'Em cima de cada olho', vr_xr: '🥽 Óculos VR', vr_xr_d: 'Quest e outros: até 120 Hz, com suas mãos', vr_xr_error: 'Os óculos não conseguiram iniciar', vr_flash: 'Flash', vr_flash_no: 'Este celular não deixa o navegador ligar o flash', vr_flash_error: 'Não foi possível ligar o flash (permissão da câmera?)', vr_suave: '✋ As mãos', vr_suave_rapida: 'Rápidas', vr_suave_media: 'No meio', vr_suave_suave: 'Suaves', vr_suave_rapida_d: 'Grudadas na sua mão, tremem um pouco (como um Quest)', vr_suave_media_d: 'Rápidas e quase sem tremor', vr_suave_suave_d: 'Paradas não tremem nada; vão um pouquinho atrás', vr_linterna_sola: '🔦 Pouca luz: liguei a lanterna' },
+  es: { vr_titulo: 'Modo VR', vr_texto: 'Primera persona y mirás moviendo el celu. Sin botones: un toque camina o frena (o usa lo que tengas cerca), dos toques saltan y mirar para abajo un rato sale.', vr_sbs: '👓 Con visor', vr_sbs_d: 'Pantalla doble (SBS)', vr_simple: '📱 Sin visor', vr_simple_d: 'Una sola vista', vr_ayuda: 'Tocá para caminar · mirá abajo para salir', vr_salir: 'Salir', vr_sin_giro: 'Sin giroscopio: arrastrá para mirar', vr_permiso: 'Hace falta el permiso del movimiento para mirar con el celu', vr_mundo: 'mundo', vr_manos: '✋ Manos con la cámara', vr_manos_d: 'Como en Meta Quest: pellizcá para usar', vr_fps: '⏱ Cuadros por segundo', vr_fps_d: 'Arriba de cada ojo', vr_xr: '🥽 Visor VR', vr_xr_d: 'Quest y otros: hasta 120 Hz, con tus manos', vr_xr_error: 'El visor no pudo arrancar', vr_flash: 'Flash', vr_flash_no: 'Este celu no deja prender el flash desde el navegador', vr_flash_error: 'No se pudo prender el flash (¿permiso de la cámara?)', vr_suave: '✋ Las manos', vr_suave_rapida: 'Rápidas', vr_suave_media: 'Medio', vr_suave_suave: 'Suaves', vr_suave_rapida_d: 'Pegadas a tu mano, tiemblan un poco (como un Quest)', vr_suave_media_d: 'Rápidas y casi sin temblor', vr_suave_suave_d: 'Quietas no tiemblan nada; van un poquito atrás', vr_linterna_sola: '🔦 Poca luz: prendí la linterna', vr_6dof: '🧍 6DoF', vr_6dof_d: 'Caminás de verdad. Apagado (3DoF): girás la cabeza y ARCore queda para las manos', vr_pelotita: '🫧 Pelotita', vr_pelotita_d: 'Los demás te ven como una pelotita con tus manos', vr_3dof_si: '🧭 3DoF: girá la cabeza; para moverte, las manos o un toque', vr_6dof_si: '🧍 6DoF: el celu sigue tus pasos', vr_pelotita_no: '🙂 Los demás te ven con tu muñeco' },
+  en: { vr_titulo: 'VR mode', vr_texto: 'First person, and you look around by moving your phone. No buttons: one tap walks or stops (or uses what’s nearby), two taps jump, and looking down for a while exits.', vr_sbs: '👓 With headset', vr_sbs_d: 'Split screen (SBS)', vr_simple: '📱 No headset', vr_simple_d: 'Single view', vr_ayuda: 'Tap to walk · look down to exit', vr_salir: 'Exit', vr_sin_giro: 'No gyroscope: drag to look', vr_permiso: 'Motion permission is needed to look with the phone', vr_mundo: 'world', vr_manos: '✋ Hands with the camera', vr_manos_d: 'Like Meta Quest: pinch to use', vr_fps: '⏱ Frames per second', vr_fps_d: 'Above each eye', vr_xr: '🥽 VR headset', vr_xr_d: 'Quest and others: up to 120 Hz, with your hands', vr_xr_error: 'The headset couldn’t start', vr_flash: 'Flash', vr_flash_no: 'This phone doesn’t let the browser turn on the flash', vr_flash_error: 'Couldn’t turn on the flash (camera permission?)', vr_suave: '✋ Hands', vr_suave_rapida: 'Fast', vr_suave_media: 'Balanced', vr_suave_suave: 'Smooth', vr_suave_rapida_d: 'Glued to your hand, a little shaky (like a Quest)', vr_suave_media_d: 'Fast and almost no shake', vr_suave_suave_d: 'Rock-steady when still; a tiny bit behind', vr_linterna_sola: '🔦 Low light: flashlight on', vr_6dof: '🧍 6DoF', vr_6dof_d: 'You really walk. Off (3DoF): you turn your head and ARCore is just for your hands', vr_pelotita: '🫧 Bubble', vr_pelotita_d: 'Others see you as a floating bubble with your hands', vr_3dof_si: '🧭 3DoF: turn your head; to move, your hands or a tap', vr_6dof_si: '🧍 6DoF: the phone follows your steps', vr_pelotita_no: '🙂 Others see your avatar' },
+  pt: { vr_titulo: 'Modo VR', vr_texto: 'Primeira pessoa, e você olha mexendo o celular. Sem botões: um toque anda ou para (ou usa o que estiver perto), dois toques pulam e olhar para baixo um tempo sai.', vr_sbs: '👓 Com óculos', vr_sbs_d: 'Tela dupla (SBS)', vr_simple: '📱 Sem óculos', vr_simple_d: 'Uma só vista', vr_ayuda: 'Toque para andar · olhe para baixo para sair', vr_salir: 'Sair', vr_sin_giro: 'Sem giroscópio: arraste para olhar', vr_permiso: 'Precisa da permissão de movimento para olhar com o celular', vr_mundo: 'mundo', vr_manos: '✋ Mãos com a câmera', vr_manos_d: 'Como no Meta Quest: pinça para usar', vr_fps: '⏱ Quadros por segundo', vr_fps_d: 'Em cima de cada olho', vr_xr: '🥽 Óculos VR', vr_xr_d: 'Quest e outros: até 120 Hz, com suas mãos', vr_xr_error: 'Os óculos não conseguiram iniciar', vr_flash: 'Flash', vr_flash_no: 'Este celular não deixa o navegador ligar o flash', vr_flash_error: 'Não foi possível ligar o flash (permissão da câmera?)', vr_suave: '✋ As mãos', vr_suave_rapida: 'Rápidas', vr_suave_media: 'No meio', vr_suave_suave: 'Suaves', vr_suave_rapida_d: 'Grudadas na sua mão, tremem um pouco (como um Quest)', vr_suave_media_d: 'Rápidas e quase sem tremor', vr_suave_suave_d: 'Paradas não tremem nada; vão um pouquinho atrás', vr_linterna_sola: '🔦 Pouca luz: liguei a lanterna', vr_6dof: '🧍 6DoF', vr_6dof_d: 'Você anda de verdade. Desligado (3DoF): você gira a cabeça e o ARCore fica para as mãos', vr_pelotita: '🫧 Bolinha', vr_pelotita_d: 'Os outros te veem como uma bolinha com suas mãos', vr_3dof_si: '🧭 3DoF: gire a cabeça; para se mover, as mãos ou um toque', vr_6dof_si: '🧍 6DoF: o celular segue seus passos', vr_pelotita_no: '🙂 Os outros veem seu boneco' },
 });
 
 const Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0), Q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
@@ -43,6 +43,12 @@ const REFRESCOS = [60, 72, 90, 120, 144];
 /* (con ARCore, en la APK: los ojos van esto detrás de la cámara del celu, como supone manos.js; y lo más
    que se corre la vista de donde está el muñeco, de costado y para abajo/arriba (m)) */
 const OJOS = 0.06, CORRE = { lado: 1.2, abajo: 1.0, arriba: 0.6 };
+/* (vuelta 43, "usemos el ARCore en 3DoF solamente por su buen seguimiento de manos") EL 3DOF, de entrada en el juego:
+   el giro sale igual (el giroscopio con ARCore, Fusion), pero el lugar no: caminar por el cuarto no mueve al muñeco
+   (se camina con las manos o un toque). Con el CUELLO de Cardboard: los ojos giran alrededor de un punto 7,5 cm abajo
+   y 8 cm atrás, así al mirar abajo o arriba (o ladear la cabeza) la vista se corre un poco, como de verdad. El rumbo
+   no cuenta: el muñeco ya gira con la mirada y los ojos van con él. 6DoF queda como opción */
+const CUELLO = new THREE.Vector3(0, 0.075, -0.08);
 /* LA ALTURA QUIETA (vuelta 32): con la cámara que ve poco (tapada en parte por el visor, poca luz, una pared lisa)
    ARCore se corre despacio en la altura y la vista subía y bajaba sola. La altura sigue a ARCore solo si el
    celu se movió de verdad hace menos de MOVIO ms (el acelerómetro, sin la gravedad, pasa de ACELERA m/s²:
@@ -69,6 +75,7 @@ export class VR {
     this.lentes = new Lentes();
     /* ARCore (la APK): el rumbo y el lugar de la primera pose, y cuánto se corrió la cabeza desde ahí */
     this.ar0 = null; this.desplazo = new THREE.Vector3(); this.conAR = false; this.yAR = null; this.tMovio = -1e9; this.hayAcel = false;
+    this.seis = false;           // (vuelta 43) 6DoF: el lugar de ARCore mueve la vista; si no, 3DoF con el cuello
     /* cada lectura queda como la pose del celu (en sus ejes, qDev = euler·Q1) y cuándo llegó; la
        anterior sirve para sacar la velocidad si no hay giróscopo */
     this._orient = (e) => {
@@ -90,9 +97,11 @@ export class VR {
     };
   }
   /* se llama desde el toque del botón (en iOS el permiso tiene que pedirse ahí) */
-  async entrar(sbs, { raiz, cam, alSalir, avisar, xr = null, conAR = true }) {
+  async entrar(sbs, { raiz, cam, alSalir, avisar, xr = null, conAR = true, seis = false }) {
     if (this.activo) return true;   // (ya adentro: una segunda capa y el "antes" de la cámara quedaban mal)
     /* con un visor de verdad (vr-xr.js) la cabeza y el dibujo son del visor: sin sensores ni capa */
+    /* (vuelta 43) la interfaz plana que queda abierta (una ventana, el viaje) no tapa la vista: se ve en el espejo (css) */
+    document.documentElement.classList.add('en-vr');
     if (xr) {
       this.xr = xr; this.activo = true; this.sbs = false; this.alSalir = alSalir; this.cam = cam;
       this.fpAntes = cam.fp; cam.fp = true; cam.enVR = true; this.base = cam.yaw; this.camina = false; this.tAbajo = 0;
@@ -115,7 +124,7 @@ export class VR {
     this.modo = 'completo'; this.fps.t = 0; this.fps.n = 0;
     this.capa(raiz);
     /* (en la APK, con ARCore: la cabeza en 6 ejes; el giroscopio queda por si ARCore se pierde) */
-    this.ar0 = null; this.desplazo.set(0, 0, 0); this.qListo = false;
+    this.ar0 = null; this.desplazo.set(0, 0, 0); this.qListo = false; this.seis = !!seis;
     /* (conAR: false si se eligió el VR sin ARCore, vuelta 29) */
     if (conAR && Nativo.hay && Nativo.puedeAR) Nativo.arIniciar(false);
     return true;
@@ -123,6 +132,7 @@ export class VR {
   salir() {
     if (!this.activo) return;
     this.activo = false; this.camina = false;
+    document.documentElement.classList.remove('en-vr');
     if (this.flash) { this.flash = false; this.alFlash?.(false)?.catch?.(() => {}); }
     if (this.xr) { const x = this.xr; this.xr = null; x.salir(); this.cam.fp = this.fpAntes; this.cam.enVR = false; this.alSalir?.(); return; }
     removeEventListener('deviceorientation', this._orient);
@@ -181,11 +191,14 @@ export class VR {
     if (Nativo.arVivo) {
       poseEn(tVer, _qAR, _ojo, OJOS);
       if (!this.ar0) { this.ar0 = { giro: (this.qListo ? rumbo(this.q) : this.base) - rumbo(_qAR), p: _ojo.clone() }; this.yAR = null; }
+      if (!this.ar0.p) this.ar0.p = _ojo.clone();
       _q.setFromAxisAngle(Y, this.ar0.giro);
       this.q.copy(_qAR).premultiply(_q);
-      const d = this.desplazo.subVectors(_ojo, this.ar0.p).applyQuaternion(_q), h = Math.hypot(d.x, d.z);
-      if (h > CORRE.lado) { d.x *= CORRE.lado / h; d.z *= CORRE.lado / h; }
-      d.y = THREE.MathUtils.clamp(this.altura(d.y, tVer), -CORRE.abajo, CORRE.arriba);
+      if (this.seis) {
+        const d = this.desplazo.subVectors(_ojo, this.ar0.p).applyQuaternion(_q), h = Math.hypot(d.x, d.z);
+        if (h > CORRE.lado) { d.x *= CORRE.lado / h; d.z *= CORRE.lado / h; }
+        d.y = THREE.MathUtils.clamp(this.altura(d.y, tVer), -CORRE.abajo, CORRE.arriba);
+      } else this.cuello(this.q);
       /* (el giroscopio queda con el mismo rumbo: si ARCore se pierde un rato, la vista sigue sin saltar) */
       if (hayG) this.q0 = this.base + rumbo(_qG) - rumbo(this.q);
       this.conAR = true; this.qListo = true;
@@ -197,12 +210,25 @@ export class VR {
       /* el primer cuadro fija para dónde es "adelante": se descuenta el rumbo del celu y se suma el del muñeco */
       if (this.q0 == null) { _v.set(0, 0, -1).applyQuaternion(this.q); this.q0 = Math.atan2(-_v.x, -_v.z); }   // (== null: un rumbo de 0 es válido)
       _q.setFromAxisAngle(Y, this.base - this.q0); this.q.premultiply(_q);
+      this.cuello(this.q);
     } else {
       _e.set(this.arrastre.pitch, this.base + this.arrastre.yaw, 0, 'YXZ'); this.q.setFromEuler(_e);
     }
     this.qListo = true;
     return this.q;
   }
+  /* (vuelta 43, las manos) el giro de la cabeza en un momento que ya pasó (la hora de la foto de las manos), en el mundo
+     del juego: el giroscopio de la APK a esa hora, con el rumbo de entrada. Mejor que la cabeza que se dibujó (esa
+     estaba adelantada y entre dos cuadros se interpola): girando rápido, la mano no se corre. null si no hay */
+  giroEn(t, q) {
+    if (!Nativo.conCabeza || !this.conAR || !this.ar0) return null;
+    const g = Nativo.leerGiroAntes(performance.now() - t); if (!g) return null;
+    return q.set(g[0], g[1], g[2], g[3]).premultiply(_q.setFromAxisAngle(Y, this.ar0.giro));
+  }
+  /* (vuelta 43) el corrimiento de los ojos por el cuello: R·v − Rrumbo·v (mirando derecho, para donde sea, 0) */
+  cuello(q) { _e.setFromQuaternion(q, 'YXZ'); this.desplazo.copy(CUELLO).applyQuaternion(q).sub(_v.copy(CUELLO).applyAxisAngle(Y, _e.y)); }
+  /* 3DoF ↔ 6DoF en el medio del VR: al pasar a 6DoF, el lugar de ARCore arranca de donde está la cabeza ahora */
+  ponerSeis(si) { this.seis = !!si; if (si && this.ar0) this.ar0.p = null; this.yAR = null; this.decir(t(si ? 'vr_6dof_si' : 'vr_3dof_si'), 3); }
   /* (vuelta 39) LA CABEZA A ÚLTIMO MOMENTO (el "late latching" de los visores): con la cabeza nativa, justo antes de
      reproyectar los ojos se lee de nuevo, para el mismo momento en que se va a ver (tVer): mientras se dibujaba el
      mundo el giroscopio siguió muestreando, y el adelanto que queda es más corto. Solo el giro (el lugar no cambia
@@ -247,10 +273,12 @@ export class VR {
   entrada(E, dt, hayAlgo) {
     E.camX = 0; E.camY = 0; E.zoom = 1;
     if (this.xr) this.xr.leerMandos(E, dt, (lado) => { this.base += lado * Math.PI / 4; });
-    if (this.toque) { this.toque = false; if (hayAlgo) { E.accion = true; this.camina = false; } else this.camina = !this.camina; }
+    /* (vuelta 43) en el tiro un toque dispara (sin manos); con las manos, el pellizco (main.js › disparoMano) */
+    if (this.toque) { this.toque = false; if (this.enTiro) E.dispara = true; else if (hayAlgo) { E.accion = true; this.camina = false; } else this.camina = !this.camina; }
+    if (this.dispara) { this.dispara = false; E.dispara = true; }
     if (this.salta) { this.salta = false; E.salta = true; E.sostiene = true; this._tSalto = 0.25; }
     if (this._tSalto > 0) { this._tSalto -= dt; E.sostiene = true; }
-    if (this.camina) { E.x = 0; E.z = -1; E.corre = false; }
+    if (this.camina || this.caminaMano) { E.x = 0; E.z = -1; E.corre = false; }
   }
   /* después de la cámara del juego: la vista es la de la cabeza. cam.yaw y cam.pitch se
      ponen de la vista (para caminar para donde se mira y para el cuerpo de primera persona) */

@@ -259,6 +259,8 @@ export const UI = {
      animación de salida. Si llega uno igual al que está, ese se renueva y suma
      ×2 en vez de repetirse. En el parkour no se muestran: no tapan la carrera. */
   notificar({ titulo = '', texto = '', icono = 'ℹ️', tipo = 'info', sonido = true, dur = 0, fija = false }) {
+    /* (vuelta 43: en el VR el HUD no se ve; el aviso va al cartelito de cada ojo) */
+    if (this.J?.enVR && !fija) this.J.decirVR?.((icono ? icono + ' ' : '') + (titulo && texto ? titulo + ': ' : titulo) + texto);
     const c = this.hud && $('.notis', this.hud); if (!c) return null;
     if (this.hud.classList.contains('modo-parkour') && tipo !== 'error') return null;
     const clave = titulo + '|' + texto, igual = [...c.children].find((q) => q._clave === clave && !q.classList.contains('sale'));
@@ -426,6 +428,8 @@ export const UI = {
     this._cuenta = txt;
     $('.pk-cuenta', this.hud)?.remove();
     const d = el(`<div class="pk-cuenta ${ya ? 'ya' : ''}"></div>`); d.textContent = txt; this.hud.appendChild(d);
+    /* (vuelta 43: en el VR la interfaz no se ve; la cuenta va en el cartelito de cada ojo) */
+    if (this.J?.enVR) this.J.decirVR?.(txt);
     if (!ya) this.J.sfx('letra', { f: 900 });
     setTimeout(() => { d.remove(); if (this._cuenta === txt) this._cuenta = null; }, ya ? 900 : 1000);
   },
@@ -877,15 +881,17 @@ export const UI = {
   },
   /* el modo VR: con visor (pantalla doble) o sin visor; la explicación de cómo se usa sin botones */
   menuVR(alVolver) {
+    /* (vuelta 43: la pelotita va prendida de entrada; lo demás, apagado) */
+    const llave = (k) => (k === 'vrPelotita' ? this.J.G.opciones[k] !== false : !!this.J.G.opciones[k]);
     const J = this.J, c = el(`<div class="menu-vr"><p>${t('vr_texto')}</p><div class="vr-opciones">
       <button class="vr-op" data-sbs="1"><b>${t('vr_sbs')}</b><small>${t('vr_sbs_d')}</small><i class="vr-dibujo doble"><span></span><span></span></i></button>
       <button class="vr-op" data-sbs="0"><b>${t('vr_simple')}</b><small>${t('vr_simple_d')}</small><i class="vr-dibujo"><span></span></i></button></div>
-      <div class="vr-llaves">${[['vrManos', 'vr_manos', 'vr_manos_d'], ['vrFps', 'vr_fps', 'vr_fps_d']].map(([k, n, d]) => `<button class="vr-llave${J.G.opciones[k] ? ' si' : ''}" data-o="${k}"><i></i><b>${t(n)}</b><small>${t(d)}</small></button>`).join('')}</div>
+      <div class="vr-llaves">${[['vrManos', 'vr_manos', 'vr_manos_d'], ['vrFps', 'vr_fps', 'vr_fps_d'], ['vr6dof', 'vr_6dof', 'vr_6dof_d'], ['vrPelotita', 'vr_pelotita', 'vr_pelotita_d']].map(([k, n, d]) => `<button class="vr-llave${llave(k) ? ' si' : ''}" data-o="${k}"><i></i><b>${t(n)}</b><small>${t(d)}</small></button>`).join('')}</div>
       <div class="vr-suave${J.G.opciones.vrManos ? '' : ' apagada'}"><b>${t('vr_suave')}</b><div class="vr-tres">${['rapida', 'media', 'suave'].map((k) => `<button data-suave="${k}"><i class="${k}"></i>${t('vr_suave_' + k)}</button>`).join('')}</div><small></small></div>
       <button class="vr-lentes-boton"><i class="vr-lentes-dibujo" aria-hidden="true"><span></span><span></span></i><b>${t('le_titulo')}</b><small>${t('le_' + J.lentes.tipo)}</small></button></div>`);
     let elegido = false;
     const v = this.ventana('🥽 ' + t('vr_titulo'), c, { ancho: 560, alCerrar: () => { if (!elegido) alVolver && alVolver(); } });
-    c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !J.G.opciones[k]; b.classList.toggle('si', J.G.opciones[k]); if (k === 'vrManos') $('.vr-suave', c).classList.toggle('apagada', !J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
+    c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !llave(k); b.classList.toggle('si', J.G.opciones[k]); if (k === 'vrManos') $('.vr-suave', c).classList.toggle('apagada', !J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
     /* cómo van las manos con la cámara (manos.js › SUAVIDAD): rápidas, en el medio o suaves */
     const ponerSuave = (k) => { J.G.opciones.vrSuave = k; c.querySelectorAll('[data-suave]').forEach((b) => b.classList.toggle('si', b.dataset.suave === k)); $('.vr-suave small', c).textContent = t('vr_suave_' + k + '_d'); };
     ponerSuave(['rapida', 'media', 'suave'].includes(J.G.opciones.vrSuave) ? J.G.opciones.vrSuave : 'media');

@@ -54,6 +54,8 @@ import { Nativo, ManosNativas } from './nativo.js';
 import { Manos } from './manos.js';
 import { Espacio } from './espacio.js';
 import { Ventanas } from './ventanas.js';
+import { Espejo } from './espejo.js';
+import { armarVR } from './pelotita.js';
 import { PanelLentes, accionLentes, curva, inversa } from './lentes.js';
 import { VisorXR } from './vr-xr.js';
 import { candidatasCopias, instanciarCopias, revisarCopias } from './instanciar.js';
@@ -165,7 +167,10 @@ async function iniciar() {
   espacio.alMando = (si) => { G.opciones.vrMando = si; Guardado.guardar(); };
   const ventanasMundo = new Ventanas({ conSeis: false, alSonar: (n) => J.sfx(n), alAccion: (id) => accionVentanas(id) });
   manos.escena.add(ventanasMundo.grupo); manos.extra = ventanasMundo;
+  /* (vuelta 43) EL ESPEJO: las ventanas y las charlas de la interfaz plana, en un panel adentro del VR (espejo.js) */
+  const espejo = new Espejo({ ventanas: ventanasMundo, fuente: () => (vr.activo && !espacio.activo && !probador ? UI.ventanaAbierta || (enDialogo ? UI.hud?.querySelector('.dialogo') : null) || null : null) });
   const accionVentanas = (id) => {
+    if (espejo.accion(id)) return;
     /* (el panel de las lentes: cada botón ajusta en el momento; "listo" lo cierra) */
     if (accionLentes(vr.lentes, id, ventanasMundo.pantalla)) { if (id === 'lente:listo') ventanasMundo.cerrarPantalla(); return; }
     if (id === 'volver') ventanasMundo.cerrarPantalla();
@@ -246,6 +251,8 @@ async function iniciar() {
       console.warn('manos:', e); if (vr.activo) vr.decir(t('mn_manos_error'), 5); apagarManos();
     }
   };
+  /* (vuelta 43) las manos con la cabeza de la hora de su foto (el giroscopio de la APK), vr.js › giroEn */
+  manos.giroExacto = (t, q) => (vr.activo && !espacio.activo ? vr.giroEn(t, q) : null);
   const apagarManos = () => { camManos?.apagar({ todo: !vr.activo }); manos.activa = false; manos.limpiar(); };
   /* lo que las manos pueden apuntar: lo interactivo del lugar a menos de 15 m, con su cartel */
   const cacheApuntables = new Map();
@@ -260,6 +267,15 @@ async function iniciar() {
       it.texto = o.textoFn ? o.textoFn() : o.accion === 'hablar' ? `${t('accion_hablar')} · ${t('npc_' + o.npc)}` : o.texto ? t(o.texto) : t('accion_' + o.accion);
       lista.push(it);
     }
+    /* (vuelta 43) adentro de los edificios, lo que se usa (interior.js › usar: la radio, la heladera, el ascensor…): el
+       centro de su caja, una vez (no se mueven) */
+    for (const a of reino.accionables || []) {
+      let it = cacheApuntables.get(a);
+      if (!it) { it = { o: { accion: 'accionar', a }, pos: new THREE.Box3().setFromObject(a.obj).getCenter(new THREE.Vector3()), radio: 0.35 }; cacheApuntables.set(a, it); }
+      if (Math.abs(it.pos.x - yo.p.x) > 15 || Math.abs(it.pos.z - yo.p.z) > 15) continue;
+      it.texto = typeof a.texto === 'function' ? a.texto() : String(a.texto || '');
+      lista.push(it);
+    }
     return lista;
   };
   /* ¿se puede caer parado ahí? (no adentro de algo, no en el agua honda) */
@@ -270,7 +286,7 @@ async function iniciar() {
     return true;
   };
   /* el parpadeo del teletransporte y de los giros (en VR marea ver deslizar el mundo) */
-  let parpadeo = 0;
+  let parpadeo = 0, tapaVR = false;
   const saltarA = (p) => { yo.p.set(p.x, p.y + 0.05, p.z); yo.v.set(0, 0, 0); parpadeo = 0.22; J.sfx('pop'); };
   let reino = null, yo = null, enJuego = false, pausado = false, enDialogo = false, probador = false, modoFoto = false, construyendo = null;
   let tHud = 0, tPresencia = 0, gestoN = 0, tDisparo = 0, tSinGolpe = 9, tMedir = 0, cuadros = 0, sumaDt = 0, midiendo = true;
@@ -316,10 +332,12 @@ async function iniciar() {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
       vr.verFps = !!G.opciones.vrFps; sinAR = !conAR;
       if (conAR) Nativo.arProfundidad(escanear);
-      const p = vr.entrar(sbs, { raiz: UI.raiz, cam, conAR, avisar: (x) => UI.avisar(x), alSalir: () => { espacio.cerrar(); ventanasMundo.limpiar(); apagarManos(); sinAR = false; ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
+      const p = vr.entrar(sbs, { raiz: UI.raiz, cam, conAR, seis: G.opciones.vr6dof === true, avisar: (x) => UI.avisar(x), alSalir: () => { espacio.cerrar(); ventanasMundo.limpiar(); apagarManos(); sinAR = false; ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
       manos.menu.fps = vr.verFps; manos.suavidad = G.opciones.vrSuave || 'media';
       /* (vuelta 40: el objeto en la mano como control, prendido de entrada) */
       manos.conMando = manos.menu.mando = G.opciones.vrMando ?? true;
+      /* (vuelta 43: 3DoF de entrada; la pelotita prendida de entrada) */
+      manos.menu.seis = G.opciones.vr6dof === true; manos.menu.pelotita = G.opciones.vrPelotita !== false; manos.menu.pintar();
       if (conManos) p.then(() => { if (vr.activo) prenderManos(); });
       return p;
     },
@@ -343,6 +361,8 @@ async function iniciar() {
       return true;
     },
     salirVR() { vr.salir(); },
+    /* (vuelta 43) los avisos de arriba, en el VR: el cartelito de cada ojo */
+    decirVR(x) { if (vr.activo) vr.decir(String(x), 3.5); },
     /* (la APK con ARCore: se puede elegir tu espacio) */
     get hayAR() { return Nativo.hay && Nativo.puedeAR; },
     /* la pantalla de las ventanas de prueba en el mundo (lo mismo que el menú de la palma) */
@@ -464,7 +484,8 @@ async function iniciar() {
     cam.detras(yo.rumbo); cam.inicial = true;
     /* adentro de los edificios, en primera persona: el muñeco propio no se ve y aparece el punto */
     const FP = !!reino.primeraPersona;
-    cam.fp = FP; cam.sentado = false; J.sentado = false; J._tZoom = 0; reino.apuntables = null;
+    /* (vuelta 43: en el VR se sigue en los ojos; al salir, lo que pida el lugar nuevo) */
+    cam.fp = FP || vr.activo; if (vr.activo) vr.fpAntes = FP; cam.sentado = false; J.sentado = false; J._tZoom = 0; reino.apuntables = null;
     if (FP) cam.pitch = 0.3;
     yo.m.raiz.visible = true; yo.m.primeraPersona(FP); cuerpoFP.ponerApariencia(G.A); cuerpoFP.mostrar(FP); cielo.tRefl = 99;
     UI.mira(FP && !!(reino.accionables || reino.tiro));
@@ -492,11 +513,14 @@ async function iniciar() {
     const nombre = o.nombre || (id === 'casa' && o.nombreCasa ? t('reino_casa_de', { n: o.nombreCasa }) : t('reino_' + id));
     const pant = UI.pantallaViaje(nombre);
     pausado = true; J.sfx('entra');
+    /* (vuelta 43: en el VR la pantalla del viaje no se ve; se funde a azul y se dice adónde) */
+    if (vr.activo) { tapaVR = true; vr.decir(t('viajando', { n: nombre }), 2); }
     await new Promise((r) => setTimeout(r, 380));
     entrarReino(id, o);
     /* (mientras está la pantalla del viaje se compilan los shaders nuevos, sin trabar) */
     await Promise.all([new Promise((r) => setTimeout(r, 900)), Q.has('pausa') ? null : motor.precompilar(6000)]);
     pausado = false; pant.cerrar();
+    if (tapaVR) { tapaVR = false; parpadeo = 0.22; }
   }
 
   /* ---------------------------------------------------------------- empezar y salir */
@@ -677,7 +701,8 @@ async function iniciar() {
   J.tiroReiniciar = () => { if (reino?.tiro) { reino.reiniciar(yo); UI.cerrarVentana(); J.sfx('entra'); } };
   J.tiroSalir = () => J.volverAJuegos('tiro');
   /* el telescopio de la azotea: el Estelario (el cielo de verdad, estelario.js) */
-  J.abrirEstelario = () => { pausado = true; ent.mostrarDedos(false); estelario.abrir({ alCerrar: () => { pausado = false; ent.mostrarDedos(true); J.sfx('pop'); } }); };
+  /* (en el VR: el telescopio es su propia pantalla, como el probador; se sale del VR, si no la vista quedaba trabada) */
+  J.abrirEstelario = () => { if (vr.activo) vr.salir(); pausado = true; ent.mostrarDedos(false); estelario.abrir({ alCerrar: () => { pausado = false; ent.mostrarDedos(true); J.sfx('pop'); } }); };
   function seguirTiro(dt) {
     const E = reino.tiro;
     if (E.fase === 'cuenta') UI.cuenta(String(Math.max(1, Math.ceil(E.cuenta - 0.4))));
@@ -839,6 +864,21 @@ async function iniciar() {
   /* ---------------------------------------------------------------- el cuadro */
   const antes = new THREE.Vector3(), oido = { pos: new THREE.Vector3(), adelante: new THREE.Vector3() };
   let accionCerca = null;
+  /* (vuelta 43) los punteros de las ventanas del VR: las manos a la vista; si no hay, la mirada (con el toque, y quedándose
+     1,4 s encima: sin manos es lo único que hay) */
+  const _vM = new THREE.Vector3();
+  let clicMirada = false, disparoMano = null;
+  /* (vuelta 43) EL VR EN LOS MINIJUEGOS: en el tiro, el parkour y el runner no hay arco para saltar de lugar (sería
+     trampa); ahí el pellizco sostenido camina, dos pellizcos saltan, y en el tiro el pellizco dispara por el rayo */
+  const sinArcoVR = () => !!(reino && (reino.tiro || reino.runner || reino.parkour));
+  const manosVisibles = () => manos.activa && manos.manos.some((M) => M.visible && M.alfa > 0.5);
+  function punterosVR() {
+    const P = [];
+    if (manos.activa) for (const [k, M] of manos.manos.entries()) if (M.visible && M.alfa > 0.5) P.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja || M.mando?.activo ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja || M.mando?.activo ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, new THREE.Vector3())).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
+    if (!P.length) P.push({ id: 'mirada', o: motor.camara.position.clone(), d: new THREE.Vector3(0, 0, -1).applyQuaternion(motor.camara.quaternion), clic: clicMirada });
+    clicMirada = false;
+    return P;
+  }
   function paso(dt, dibujar = true) {
     UNI.uT.value += dt;
     if (!enJuego || !reino) { return; }
@@ -847,9 +887,15 @@ async function iniciar() {
     /* en tu espacio (con ARCore): el juego queda quieto y se dibuja el cuarto (atrás o Escape, sale) */
     if (espacio.activo) { const E0 = ent.leer(); if (E0.pausa || !vr.activo) { espacio.cerrar(); vr.salir(); return; } espacio.cuadro(dt, dibujar); return; }
     const E = ent.leer();
-    /* (una ventana, una charla o el probador son de la interfaz plana: en el visor no se verían, así que se sale del VR) */
-    if (vr.activo && (UI.ventanaAbierta || enDialogo || probador || estelario.abierto)) vr.salir();
-    if (vr.activo) { if (E.pausa) { vr.salir(); E.pausa = false; } else vr.entrada(E, dt, !!accionCerca); }
+    /* (vuelta 43: las ventanas y las charlas se ven adentro del VR, en el espejo; el probador es su propia escena y saca) */
+    if (vr.activo && probador) vr.salir();
+    /* (sin manos a la vista, un toque mirando un tablero del VR lo aprieta, en vez de caminar) */
+    if (vr.activo && vr.toque && ventanasMundo.hayAlgo && !manosVisibles()) {
+      _vM.set(0, 0, -1).applyQuaternion(motor.camara.quaternion);
+      if (ventanasMundo.alRayo(motor.camara.position, _vM)) { vr.toque = false; clicMirada = true; }
+    }
+    if (vr.activo) vr.caminaMano = sinArcoVR() && !reino.tiro && manos.activa && manos.manos.some((M) => M.visible && M.alfa > 0.5 && M.pellizca && !M.anulado && !M.apunta);
+    if (vr.activo) { vr.enTiro = !!reino.tiro; if (E.pausa) { vr.salir(); E.pausa = false; } else vr.entrada(E, dt, !!accionCerca); }
     if (E.pausa && !UI.ventanaAbierta && !probador && !enDialogo) { J.pausar(!pausado); }
     const quieto = pausado || enDialogo;
     if (!quieto) {
@@ -903,7 +949,9 @@ async function iniciar() {
       if (reino.contarTiro) reino.contarTiro();
       tDisparo = reino.tiro ? 0.26 : 0.45;
       let dir, desde;
-      if (cam.fp) {
+      /* (vuelta 43) en el VR con las manos: sale de la mano, por su rayo */
+      if (disparoMano) { dir = disparoMano.d.clone().multiplyScalar(reino.tiro ? 24 : 18); desde = disparoMano.o.clone().addScaledVector(disparoMano.d, 0.12); disparoMano = null; }
+      else if (cam.fp) {
         /* en primera persona sale de la mano derecha hacia donde se mira */
         const c = motor.camara, f = new THREE.Vector3(); c.getWorldDirection(f);
         const der = new THREE.Vector3().crossVectors(f, c.up).normalize();
@@ -1023,7 +1071,9 @@ async function iniciar() {
       x: +yo.p.x.toFixed(2), y: +yo.p.y.toFixed(2), z: +yo.p.z.toFixed(2), hp: Math.round(yo.hp), facingAngle: +yo.rumbo.toFixed(2),
       isMoving: yo.estado === 'camina' || yo.estado === 'corre' || yo.estado === 'nada', estado: yo.estado, vel: +Math.hypot(yo.v.x, yo.v.z).toFixed(1),
       gesto: J.gestoActual || null, esc: +yo.escala.toFixed(2), ef: yo.efecto, av: G.av, modo: yo.modo, voz: voz.marca, mesa: reino.mesas?.miAsiento() || null,
-    });
+    }, undefined,
+    /* (vuelta 43) en el VR con la pelotita: la cabeza y las manos, para que los demás te vean como una bola con manos */
+    vr.activo && !espacio.activo && G.opciones.vrPelotita !== false ? () => ({ vr: armarVR(motor.camara.position, motor.camara.quaternion, yo.p, manos.activa ? manos.manos : []) }) : null);
     remotos.actualizar(dt);
     for (const r of remotos.m.values()) if (r.m?.detalle) r.m.detalle(Math.hypot(r.x - yo.p.x, r.z - yo.p.z) < 32);
     tPresencia += dt; if (tPresencia > 1) { tPresencia = 0; red.limpiar(); }
@@ -1053,7 +1103,7 @@ async function iniciar() {
       const ev = manos.actualizar(dt, visor.activo ? performance.now() : vr.tVer || performance.now(), {
         cabezaP: motor.camara.position, cabezaQ: motor.camara.quaternion, interactivos: apuntablesVR(),
         apuntar: ventanasMundo.hayAlgo ? (M, k) => ventanasMundo.apunta[k] : null,
-        altura: (x, z, y = 1e4) => reino.mundo.suelo(x, z, y, 0).y, sePuede: sePuedeVR,
+        altura: (x, z, y = 1e4) => reino.mundo.suelo(x, z, y, 0).y, sePuede: sePuedeVR, sinArco: sinArcoVR(), disparo: !!reino.tiro,
         tocar: (p) => {
           if (reino.burbujas?.tocar(p)) { J.sfx('pop'); contar('burbuja'); }
           if (reino.orbes) for (const i of reino.orbes.tocar(p)) { G.orbes++; J.sfx('gota', { k: (J._racha = ((J._racha || 0) + 1)) }); red.accion({ type: 'recoger', i }); Guardado.guardar(); }
@@ -1061,6 +1111,7 @@ async function iniciar() {
       });
       for (const e of ev) {
         if (e.tipo === 'usar') { J.sfx('elegir'); interactuar(e.o); }
+        else if (e.tipo === 'dispara') { disparoMano = e; vr.dispara = true; }
         else if (e.tipo === 'ir') saltarA(e.p);
         else if (e.tipo === 'saltar') vr.salta = true;
         else if (e.tipo === 'sonido') J.sfx(e.s);
@@ -1070,19 +1121,20 @@ async function iniciar() {
           else if (e.accion === 'caminar') vr.camina = !vr.camina;
           else if (e.accion === 'fps') { vr.ponerFps(e.fps); G.opciones.vrFps = e.fps; Guardado.guardar(); }
           else if (e.accion === 'mando') { G.opciones.vrMando = e.mando; Guardado.guardar(); }
+          else if (e.accion === 'dof') { G.opciones.vr6dof = e.seis; vr.ponerSeis(e.seis); Guardado.guardar(); }
+          else if (e.accion === 'pelotita') { G.opciones.vrPelotita = e.pelotita; Guardado.guardar(); vr.decir(t(e.pelotita ? 'vr_pelotita_d' : 'vr_pelotita_no'), 3); }
           else if (e.accion === 'ventanas') { if (ventanasMundo.pantalla) ventanasMundo.cerrarPantalla(); else abrirPantallaMundo(); }
           else if (e.accion === 'lentes') abrirLentesVR();
           else if (e.accion === 'salir') vr.salir();
         }
       }
-      /* las ventanas de prueba en el mundo (sin 6DoF): las manos las tocan, las agarran y las mueven */
-      if (ventanasMundo.hayAlgo) {
-        const P = [];
-        for (const [k, M] of manos.manos.entries()) if (M.visible && M.alfa > 0.5) P.push({ id: k, o: M.rayoO, d: M.rayoD, yema: M.viaja || M.mando?.activo ? null : M.punto(8, new THREE.Vector3()), pinza: M.viaja || M.mando?.activo ? null : M.punto(4, new THREE.Vector3()).add(M.punto(8, new THREE.Vector3())).multiplyScalar(0.5), pellizca: M.pellizca && !M.anulado, empezo: M.empezo && !M.anulado, solto: M.solto });
-        ventanasMundo.actualizar(dt, motor.camara.position, motor.camara.quaternion, P);
-      }
     }
-    if (parpadeo > 0) { parpadeo = Math.max(0, parpadeo - dt); motor.pFinal.uniforms.uFundido.value = Math.sin(Math.min(1, parpadeo / 0.22) * Math.PI); motor.pFinal.uniforms.uColorFundido.value.set('#0b2a44'); }
+    /* (vuelta 43) el espejo (las ventanas y charlas de la interfaz, adentro del VR) y las ventanas del mundo: con las
+       manos, o con la mirada si no hay manos */
+    if (vr.activo) espejo.cuadro(dt, motor.camara.position, motor.camara.quaternion);
+    if (vr.activo && ventanasMundo.hayAlgo) ventanasMundo.actualizar(dt, motor.camara.position, motor.camara.quaternion, punterosVR());
+    if (tapaVR && vr.activo) { motor.pFinal.uniforms.uFundido.value = 1; motor.pFinal.uniforms.uColorFundido.value.set('#0b2a44'); }
+    else if (parpadeo > 0) { parpadeo = Math.max(0, parpadeo - dt); motor.pFinal.uniforms.uFundido.value = Math.sin(Math.min(1, parpadeo / 0.22) * Math.PI); motor.pFinal.uniforms.uColorFundido.value.set('#0b2a44'); }
     else if (motor.pFinal.uniforms.uFundido.value > 0) motor.pFinal.uniforms.uFundido.value = 0;
     /* la voz: el oído va en la cabeza propia, mirando para donde mira la cámara */
     if (voz.activa) {
@@ -1142,7 +1194,7 @@ async function iniciar() {
        ese instante); real: lo que pasó de verdad desde el cuadro anterior (para ver si se llega) */
     /* el visor: su origen en los pies del muñeco, girado con el rumbo del VR */
     if (visor.activo) visor.ponerOrigen(yo.p, vr.base);
-    if (dibujar && !congela) { if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt, manos.activa && manos.algo ? (ojo) => manos.dibujarOjo(motor.r, ojo) : null); else motor.dibujar(dt); }
+    if (dibujar && !congela) { if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt, (manos.activa && manos.algo) || ventanasMundo.hayAlgo ? (ojo) => manos.dibujarOjo(motor.r, ojo) : null); else motor.dibujar(dt); }
     delirio.cuadro(dt, reino, motor.camara, dibujar, dibujar && !congela);
   }
 
@@ -1162,7 +1214,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { textos: { t, ponerIdioma }, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { textos: { t, ponerIdioma }, espejo, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

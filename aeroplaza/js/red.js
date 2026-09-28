@@ -105,17 +105,18 @@ export class Red {
   /* ---------------------------------------------------------- publicar */
   publicar(tema, o) { if (!this.conectado) return; try { this.cli.publish(tema, JSON.stringify(o), { qos: 0 }); } catch (e) { console.warn('red: publicar', e); } }
   /* s: { x, y, z, hp, facingAngle, isMoving, estado, gesto, esc, ... }. Se llama cada cuadro; decide acá si manda */
-  publicarEstado(s, ahora = performance.now()) {
+  /* extra: lo que se suma solo cuando de verdad se manda (la pelotita del VR: no se arma en cada cuadro) */
+  publicarEstado(s, ahora = performance.now(), extra = null) {
     this.presencia();
     if (!this.sala || !this.conectado) return;
     if (ahora - this.tUltimo < 100) return;
     const u = this.ultimo;
     const cambio = !u || Math.abs(u.x - s.x) + Math.abs(u.y - s.y) + Math.abs(u.z - s.z) > 0.02 || Math.abs(u.facingAngle - s.facingAngle) > 0.05 ||
-      u.hp !== s.hp || u.estado !== s.estado || u.gesto !== s.gesto || u.av !== s.av || u.esc !== s.esc || u.ef !== s.ef || u.voz !== s.voz;
+      u.hp !== s.hp || u.estado !== s.estado || u.gesto !== s.gesto || u.av !== s.av || u.esc !== s.esc || u.ef !== s.ef || u.voz !== s.voz || !!extra;
     if (!cambio && ahora - this.tLatido < 1500) return;
     this.tUltimo = ahora; this.tLatido = ahora;
     this.ultimo = { ...s };
-    this.publicar(NS + this.sala + '/state', { id: this.id, name: this.nombre, ...s });
+    this.publicar(NS + this.sala + '/state', { id: this.id, name: this.nombre, ...s, ...(extra ? extra() : null) });
   }
   accion(o) { if (this.sala) this.publicar(NS + this.sala + '/action', { id: this.id, ...o }); }
   chat(texto) { const x = String(texto).trim().slice(0, 120); if (x && this.sala) this.publicar(NS + this.sala + '/chat', { id: this.id, name: this.nombre, text: x }); return x; }

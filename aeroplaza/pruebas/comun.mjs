@@ -95,3 +95,49 @@ async function avanzar1(pag, n, dt, dibujar) {
      false: ninguno (las pruebas que no miran la imagen: el dibujo por software es casi todo el tiempo) */
   await pag.evaluate(([n, dt, dibujar]) => { for (let i = 0; i < n; i++) window.__A.paso(dt, dibujar && i === n - 1); if (!dibujar) return; const gl = window.__A.motor.r.getContext(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); }, [n, dt, dibujar]);
 }
+/* (lo usan manos.mjs y vr-juego.mjs) en la página: una mano de 21 puntos (metros). Derecha, de dorso a la cara, dedos para arriba:
+   x a la derecha, y arriba, z hacia la cara. La izquierda es el espejo */
+export const MANO = () => {
+  const A = window.__A, THREE = A.THREE;
+  const ABIERTA = [[0, 0, 0], [-0.025, 0.025, -0.01], [-0.045, 0.045, -0.015], [-0.06, 0.063, -0.02], [-0.07, 0.082, -0.025],
+    [-0.022, 0.085, 0], [-0.025, 0.125, 0], [-0.027, 0.15, 0], [-0.028, 0.172, 0], [0, 0.088, 0], [0, 0.132, 0], [0, 0.16, 0], [0, 0.185, 0],
+    [0.02, 0.083, 0], [0.021, 0.122, 0], [0.022, 0.148, 0], [0.023, 0.17, 0], [0.038, 0.074, 0], [0.041, 0.1, 0], [0.043, 0.118, 0], [0.045, 0.135, 0]];
+  const PELLIZCO = ABIERTA.map((p) => p.slice());
+  Object.assign(PELLIZCO, { 3: [-0.058, 0.09, -0.04], 4: [-0.05, 0.118, -0.058], 6: [-0.03, 0.12, -0.02], 7: [-0.04, 0.135, -0.045], 8: [-0.05, 0.12, -0.06] });
+  const cab = () => ({ p: A.motor.camara.position.clone(), q: A.motor.camara.quaternion.clone() });
+  /* el hombro, como en manos.js */
+  const hombro = (der) => { const { p, q } = cab(), d = new THREE.Vector3(0, 0, -1).applyQuaternion(q), yaw = Math.atan2(-d.x, -d.z); return new THREE.Vector3(p.x + Math.cos(yaw) * (der ? 0.17 : -0.17), p.y - 0.2, p.z - Math.sin(yaw) * (der ? 0.17 : -0.17)); };
+  /* la mano armada: pose, lado, dónde (el punto entre pulgar e índice) y hacia dónde apuntan los dedos;
+     palma: la palma mira a la cara */
+  window.__mano = (der, pose = 'abierta', { mira = null, dir = null, palma = false, mover = [0, 0, 0], ruido = 0 } = {}) => {
+    const B = (pose === 'pellizco' ? PELLIZCO : ABIERTA).map(([x, y, z]) => new THREE.Vector3(der ? x : -x, y, z));
+    if (palma) for (const v of B) { v.x = -v.x; v.z = -v.z; }   // (media vuelta en y: la palma a la cara)
+    const { q } = cab();
+    /* los dedos para donde apunta dir (en el mundo); el dorso para la cara */
+    const d = (dir || new THREE.Vector3(0, 0, -1).applyQuaternion(q)).clone().normalize();
+    const arr = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+    const m = new THREE.Matrix4().lookAt(new THREE.Vector3(), d, arr);   // (-z local = d; con el giro de abajo, los dedos van por d y el dorso para arriba)
+    const rot = new THREE.Quaternion().setFromRotationMatrix(m).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2));
+    for (const v of B) v.applyQuaternion(rot);
+    /* que el punto entre pulgar e índice caiga en 'mira' */
+    const medio = B[2].clone().add(B[5]).multiplyScalar(0.5);
+    const off = mira.clone().sub(medio).add(new THREE.Vector3(...mover));
+    const W = new Float32Array(63);
+    B.forEach((v, i) => { v.add(off); W[i * 3] = v.x + (Math.random() - 0.5) * ruido; W[i * 3 + 1] = v.y + (Math.random() - 0.5) * ruido; W[i * 3 + 2] = v.z + (Math.random() - 0.5) * ruido; });
+    return W;
+  };
+  /* el punto que apunta a 'objetivo' desde el hombro, a 45 cm */
+  window.__apuntar = (der, objetivo, largo = 0.45) => { const h = hombro(der), d = objetivo.clone().sub(h).normalize(); return { mira: h.clone().addScaledVector(d, largo), dir: d }; };
+  window.__cab = cab;
+  /* un cuadro del juego con las manos que se le pasen (lista de [der, W]) llegando justo antes */
+  window.__cuadro = (lista, dibujar = false, dt = 1 / 60) => {
+    /* (a 30 por segundo de verdad, como la cámara: sin dibujar, un cuadro por software tarda 3 ms y
+       el filtro vería la mano moverse diez veces más rápido de lo que se movió) */
+    if (lista.length) { const hasta = (window.__ultCuadro || 0) + 30; while (performance.now() < hasta) { /* espera */ } window.__ultCuadro = performance.now(); }
+    /* (con la hora del cuadro que viene: vr.orientar la adelanta ~25 ms; un cuadro dibujado por
+       software tarda un segundo y la mano se daría por perdida) */
+    const t = (performance.now() + 25) / 1000;
+    for (const [der, W] of lista) A.manos.recibirMundo(der, W, t);
+    A.paso(dt, dibujar);
+  };
+};

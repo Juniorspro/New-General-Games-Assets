@@ -61,7 +61,7 @@ const toque = (pag) => pag.evaluate(() => { const c = document.querySelector('.v
   await avanzar(pag, 30);
   const r4 = await pag.evaluate((p0) => { const A = window.__A, p = A.yo.p, dx = p.x - p0[0], dz = p.z - p0[2], yaw = A.cam.yaw; return { mov: +Math.hypot(dx, dz).toFixed(2), hacia: +((dx * -Math.sin(yaw) + dz * -Math.cos(yaw)) / (Math.hypot(dx, dz) || 1)).toFixed(2), camina: A.vr.camina }; }, p0);
   prueba('un toque camina para donde se mira', r4.camina && r4.mov > 2 && r4.hacia > 0.8, JSON.stringify(r4));
-  /* (y abrir una ventana sale del VR: se prueba al final) */
+  /* (y abrir una ventana no saca del VR: se prueba al final) */
   await toque(pag); await pag.waitForTimeout(380); await avanzar(pag, 20);
   const p5 = await pag.evaluate(() => window.__A.yo.p.toArray());
   await avanzar(pag, 20);
@@ -91,12 +91,12 @@ const toque = (pag) => pag.evaluate(() => { const c = document.querySelector('.v
   await avanzar(pag, 75);
   const r7 = await pag.evaluate(() => { const A = window.__A; return { activo: A.vr.activo, hud: A.UI.hud.style.display, capa: !!document.querySelector('.vr-capa') }; });
   prueba('mirar abajo 2 s sale y vuelve la interfaz', !r7.activo && r7.hud === '' && !r7.capa, JSON.stringify(r7));
-  /* una ventana (el mapa, una charla…) es de la interfaz plana: se sale del VR */
+  /* una ventana (el mapa, una charla…): desde la vuelta 43 se ve adentro del VR, en el espejo (vr-juego.mjs); no saca */
   await pag.evaluate(() => window.__A.J.entrarVR(true)); await pag.waitForTimeout(200); await avanzar(pag, 2);
   prueba('con visor no hay botón de flash (no se puede tocar la pantalla)', await pag.evaluate(() => window.__A.vr.sbs && !document.querySelector('.vr-capa .vr-flash')));
   await pag.evaluate(() => window.__A.UI.ventana('x', 'y')); await avanzar(pag, 2);
-  prueba('abrir una ventana sale del VR', await pag.evaluate(() => !window.__A.vr.activo && window.__A.UI.hud.style.display === ''));
-  await pag.evaluate(() => window.__A.UI.cerrarVentana());
+  prueba('abrir una ventana no sale del VR: se ve en el espejo, adentro', await pag.evaluate(() => { window.__A.paso(1 / 30, false); return window.__A.vr.activo && window.__A.espejo.abierto && window.__A.UI.hud.style.display === 'none'; }));
+  await pag.evaluate(() => { window.__A.UI.cerrarVentana(); window.__A.vr.salir(); });
   prueba('sin errores (VR con visor)', !errores.some((e) => !/ERR_FAILED/.test(e)), errores.filter((e) => !/ERR_FAILED/.test(e)).slice(0, 2).join(' | '));
   await ctx.close();
 }

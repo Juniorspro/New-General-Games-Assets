@@ -306,7 +306,7 @@ export class Espacio {
     Nativo.arEscanear(true); Nativo.arPasante(true);
     this.medida = { izq: null, der: null }; this.visto = { piso: false, pared: false, mesa: false };
     this.ponerFase('buscando');
-    this.vr.decir?.(t('es_ayuda'), 6); this.vr.el?.classList.add('en-espacio');
+    this.vr.decir?.(t('es_ayuda'), 6); this.vr.el?.classList.add('en-espacio'); document.documentElement.classList.add('con-espacio');
     /* (las manos casi solo el borde: la de verdad se ve en la cámara, como en un Quest) */
     this.manos.ponerFantasma?.(true);
   }
@@ -318,7 +318,7 @@ export class Espacio {
     if (this.quiereAncha || Nativo.ancho === 'corre' || Nativo.ancho === 'espera') Nativo.espacioAncho(false);
     this.quiereAncha = false;
     Nativo.arEscanear(false); Nativo.arPasante(false);
-    Nativo.alPlanos = Nativo.alVoxeles = Nativo.alFoto = Nativo.alOlvidado = Nativo.alMalla = null; this.vr.el?.classList.remove('en-espacio');
+    Nativo.alPlanos = Nativo.alVoxeles = Nativo.alFoto = Nativo.alOlvidado = Nativo.alMalla = null; this.vr.el?.classList.remove('en-espacio'); document.documentElement.classList.remove('con-espacio');
     this.manos.ponerFantasma?.(false);
     this.ventanas.agarres.clear();
   }

@@ -81,6 +81,16 @@ export const Nativo = {
       return CAB;
     } catch { return null; }
   },
+  /* (vuelta 43) el giro de la cabeza de hace msAtras ms (la hora de la foto de las manos), del giroscopio guardado a
+     200 por segundo: [qx, qy, qz, qw] o null (APK vieja, o la cabeza todavía sin alinear) */
+  leerGiroAntes(msAtras) {
+    try {
+      const s = N()?.cabezaAntes?.(Math.max(0, msAtras)); if (!s) return null;
+      const v = s.split(','); if (v.length < 4) return null;
+      for (let i = 0; i < 4; i++) { GIRO[i] = +v[i]; if (!Number.isFinite(GIRO[i])) return null; }
+      return GIRO;
+    } catch { return null; }
+  },
   flash(si) { try { N()?.flash(!!si); } catch { /* sin APK */ } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
   /* ARCore siguiendo, con una pose reciente */
@@ -140,7 +150,7 @@ function avisarEspera() { for (const e of Nativo.esperas.slice()) if (e.f(Nativo
    de ellos, y adelantar el del celu corría la cabeza. El lugar un poco menos que entero: el ruido de
    ARCore es de milímetros y adelantado se nota) */
 const _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion(), _v = new THREE.Vector3(), _w = new THREE.Vector3();
-const VEL = new THREE.Vector3(), _o1 = new THREE.Vector3(), _o2 = new THREE.Vector3(), CAB = new Float64Array(7);
+const VEL = new THREE.Vector3(), _o1 = new THREE.Vector3(), _o2 = new THREE.Vector3(), CAB = new Float64Array(7), GIRO = new Float64Array(4);
 export function poseEn(tVer, q, ojo, ojos = 0.06) {
   /* (vuelta 39) con la cabeza nativa: su giro (del giroscopio) y sus ojos (de ARCore, 6 cm detrás del celu) */
   const c = Nativo.leerCabeza(tVer - performance.now());
