@@ -1,0 +1,17 @@
+{
+ "n": 1,
+ "fecha": "2026-09-28",
+ "notas": "Primera versión con actualizaciones: el mando VR Box, todo el juego en el VR y la pelotita.",
+ "apkMin": 1,
+ "apk": {
+  "codigo": 45
+ },
+ "html": {
+  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/c0d54e8fed5b409f2cb4b800fafd91c4ebe3b5b3/aeroplaza/aeroplaza.html",
+  "sha256": "74380915b9d2f2268363259fcbdb141ab25c32190db4674c99cba93f03c59cf3",
+  "bytes": 3264927
+ },
+ "fuentes": [
+  "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/refs/heads/claude/fijate-iszyer/aeroplaza/actualizacion.json"
+ ]
+}

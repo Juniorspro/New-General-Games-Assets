@@ -24,6 +24,8 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - **Pide exactamente lo que quiere.** Si pide un `.md`, es el `.md` y nada más:
   ni página web ni artefacto. Si pide un juego en HTML, un solo archivo que
   abra con doble clic.
+- **AEROPLAZA: no mandar una APK por cada cambio** (28/09): se publica la actualización y la app la baja sola
+  ([aeroplaza-45](aeroplaza-45.md) › Cómo se publica). APK nueva solo si cambió lo de Java.
 - **No instalar nada aparte sin que lo pida.** El 22/09 se deshizo una red
   neuronal instalada para esta memoria: quería notas, no un programa.
 - **Cuida los tokens:** nada de leer `.md` del repo "por las dudas".
@@ -64,7 +66,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
 | [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA, lo general: el 3D social Frutiger Aero (multijugador MQTT, la isla y los reinos, parkour, interiores), cómo se arma y se prueba, las trampas de three |
-| [aeroplaza-vueltas](aeroplaza-vueltas.md) | AEROPLAZA vuelta por vuelta (de la 8.ª a la 43.ª: VR, manos, APK, ARCore, tu espacio, el mando VR Box): qué nota abrir para cada cosa |
+| [aeroplaza-vueltas](aeroplaza-vueltas.md) | AEROPLAZA vuelta por vuelta (de la 8.ª a la 44.ª: VR, manos, APK, ARCore, tu espacio, el mando VR Box, las actualizaciones): qué nota abrir para cada cosa |
 | [jxstudios](jxstudios.md) | la página de JXStudios (el estudio de quien pide): `jxstudios/`, en 3 idiomas, con los juegos, AEROPLAZA web y la APK; se sube a Cloudflare Pages con `jxstudios/desplegar.sh` y la llave del entorno (`CLOUDFLARE_API_TOKEN`) |
 | [contragolpe](contragolpe.md) | CONTRAGOLPE, el tirador táctico que llegó hecho: separado en fuente y assets, la APK (WebView afinada, texturas ETC2 con etcpak), lo que costaba de verdad (armas pieza por pieza, huesos en textura, muñecos sin índice, el revelado), las pérdidas de memoria del original y los mandos a gusto |
 | [nevada](nevada.md) | NEVADA: la cinemática three.js del auto y el tigre (TikTok de @m4jor3d): modelos de Tripo, ruedas, rig, audio y sus trampas |

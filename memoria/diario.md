@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **28/09/2026, de tarde, duodécima vez · `claude/fijate-iszyer`:**
+  - Pidió: que las actualizaciones lleguen a la app, sin mandarle tantos APK.
+  - Quedó ([aeroplaza-45](aeroplaza-45.md)): la APK busca `aeroplaza/actualizacion.json` y baja el juego nuevo sola;
+    `publicar.mjs`; publicada la n 1. Se mandó UNA APK (la 45) que ya se actualiza sola.
+  - Falta: probar en el celu que baje y use la n 2.
 - **28/09/2026, al mediodía, undécima vez · `claude/fijate-iszyer`:**
   - Pidió: limpiar el repo para gastar menos tokens, y el mando VR Box en el VR de AEROPLAZA.
   - Quedó: el índice de 22 a 9 KB (las vueltas de AEROPLAZA en [aeroplaza-vueltas](aeroplaza-vueltas.md)), el diario viejo
@@ -45,12 +50,4 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     que el juego lee al dibujar, y otra vez a último momento para los ojos. `cabeza.mjs` 17/17.
   - Pidió también investigar ARCore for Jetpack XR: en el celu es el mismo ARCore y no tiene manos (anotado ahí).
   - Falta: probarla en su celu.
-- **27/09/2026, de noche, cuarta vez · `claude/fijate-iszyer`:**
-  - Pidió: "no escanea" (captura: esperando la profundidad, 0 planos, la linterna prendida); y manos más estables
-    en el HTML también, con un link para probar el HTML en 3DoF.
-  - Quedó ([aeroplaza-37](aeroplaza-37.md)): la config de la sesión en un solo hilo (la linterna la pisaba), la
-    vigilancia, la profundidad suavizada y el diagnóstico en la tarjeta. `malla.mjs` 19/19.
-  - Después: la foto de ver a través que quedaba a la mitad ("zoomeada"), y las manos más estables
-    ([aeroplaza-38](aeroplaza-38.md)); el link del HTML: raw.githack de la rama.
-  - Falta: la captura del renglón chico si todavía no escanea, y qué le parecen las manos.
-- **Antes (22/09 a 27/09, 52 sesiones):** en [diario-viejo](diario-viejo.md).
+- **Antes (22/09 a 27/09, 53 sesiones):** en [diario-viejo](diario-viejo.md).
