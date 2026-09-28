@@ -23,7 +23,11 @@ import java.nio.charset.StandardCharsets;
      próxima vez). En las preferencias, su número y su sha256.
    - Si se instala una APK más nueva que lo bajado (assets/version.txt), gana la APK y lo bajado se borra.
    - Lo que es Java (el puente, la cámara, ARCore) sí necesita una APK nueva: el aviso lo dice (apk.codigo) y el juego
-     avisa. */
+     avisa.
+   - (vuelta 46) ANTES SOLO SE BUSCABA Y SE USABA AL ARRANCAR DE CERO, y Android casi nunca cierra la app: al abrirla
+     otra vez, sigue la que estaba. Una versión nueva tardaba días (dos arranques de cero). Ahora se busca también al
+     volver a la app y cada 20 min (buscarSiToca), y lo bajado se usa sin cerrar la app (MainActivity › usarLoBajado):
+     al volver después de 1 min afuera, en el menú, o cuando el jugador toca el aviso. */
 final class Actualizador {
   /* dónde se busca el aviso (el que traiga el número más alto gana). El aviso puede traer otras (fuentes): se guardan
      para la próxima vez, así el canal se puede mudar sin APK nueva */
@@ -36,7 +40,8 @@ final class Actualizador {
   final Context ctx; final SharedPreferences prefs; final int apkCodigo; final int nApk; final Aviso aviso;
   final File dir, usado, nuevo;
   volatile String estado = "nada";   // nada · buscando · al-dia · bajando · lista · error …
-  int nEnUso; String shaEnUso; boolean deBajada; byte[] servir;
+  volatile int nEnUso; String shaEnUso; volatile boolean deBajada; volatile byte[] servir;
+  volatile boolean buscandoAhora; volatile long tBusco;
 
   Actualizador(Context c, SharedPreferences p, int apkCodigo, Aviso a) {
     ctx = c; prefs = p; this.apkCodigo = apkCodigo; aviso = a;
@@ -46,7 +51,7 @@ final class Actualizador {
   }
 
   /* al abrir (antes de cargar el juego): lo bajado la vez pasada pasa a ser el que se usa; después, cuál se sirve */
-  void alAbrir(String avisoApk) {
+  synchronized void alAbrir(String avisoApk) {
     try {
       if (nuevo.exists()) {
         byte[] b = leer(nuevo); int n = prefs.getInt("otaNuevoN", 0); String sha = prefs.getString("otaNuevoSha", "");
@@ -70,12 +75,21 @@ final class Actualizador {
   }
 
   /* busca en otro hilo (unos segundos después de abrir: primero que cargue el juego) */
-  void buscar() {
+  void buscar() { buscarEn(4000, true); }
+  /* (al volver a la app y cada 20 min: como mucho cada 10 min, salvo que lo pida el jugador) */
+  void buscarSiToca(boolean ya) { if (ya || System.currentTimeMillis() - tBusco > 10 * 60000L) buscarEn(0, ya); }
+  private synchronized void buscarEn(final long espera, boolean ya) {
+    if (buscandoAhora) return;
+    buscandoAhora = true; tBusco = System.currentTimeMillis();
     new Thread(() -> {
-      try { Thread.sleep(4000); } catch (InterruptedException e) { return; }
-      try { buscarYa(); } catch (Throwable t) { estado = "error " + t.getClass().getSimpleName(); }
+      try { if (espera > 0) Thread.sleep(espera); buscarYa(); }
+      catch (InterruptedException e) { /* nada */ }
+      catch (Throwable t) { estado = "error " + t.getClass().getSimpleName(); }
+      finally { buscandoAhora = false; }
     }, "actualizar").start();
   }
+  /* ¿hay uno bajado, esperando, más nuevo que el que se usa? */
+  boolean hayListo() { return nuevo.exists() && prefs.getInt("otaNuevoN", 0) > nEnUso; }
   void buscarYa() throws Exception {
     estado = "buscando";
     /* (el sha del juego de la APK, sin lo que se le agrega al armarla: assets/sha.txt. Para no bajar el mismo) */
@@ -114,9 +128,12 @@ final class Actualizador {
     if (!dir.exists() && !dir.mkdirs()) { estado = "error: carpeta"; return; }
     File tmp = new File(dir, "bajando.html");
     try (FileOutputStream o = new FileOutputStream(tmp)) { o.write(b); o.getFD().sync(); }
-    if (nuevo.exists()) nuevo.delete();
-    if (!tmp.renameTo(nuevo)) { estado = "error: guardar"; return; }
-    prefs.edit().putInt("otaNuevoN", nMejor).putString("otaNuevoSha", sha).apply();
+    /* (con el mismo candado que alAbrir: que no se use a medio renombrar) */
+    synchronized (this) {
+      if (nuevo.exists()) nuevo.delete();
+      if (!tmp.renameTo(nuevo)) { estado = "error: guardar"; return; }
+      prefs.edit().putInt("otaNuevoN", nMejor).putString("otaNuevoSha", sha).commit();
+    }
     estado = "lista";
     aviso.lista(nMejor, notas);
   }

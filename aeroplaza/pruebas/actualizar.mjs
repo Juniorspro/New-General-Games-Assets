@@ -77,6 +77,37 @@ const v = await pag.evaluate(async () => {
   return { titulo, texto, enlaces: window.__enlaces, cerro: !window.__A.UI.ventanaAbierta };
 });
 prueba('si hace falta una APK nueva: la ventana, y "Bajar la app" abre el enlace', /app nueva/.test(v.titulo || '') && /Cambió la cámara/.test(v.texto || '') && v.enlaces.join() === 'https://jxstudios.pages.dev/app/aeroplaza.apk' && v.cerro, JSON.stringify(v));
+
+/* 4) (vuelta 46) con la APK 46, que puede usar ya lo bajado: en el menú se usa solo; en el juego, tocando el aviso; y en
+   Opciones › Datos, la versión y "Buscar ahora" */
+const ctx2 = await nav.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+await ctx2.addInitScript(() => {
+  window.__aplicar = 0; window.__buscar = 0;
+  window.AeroplazaNativo = { version: () => '1', arEstado: () => 'no', arParar() {}, flash() {}, vibrar() {}, mandos: () => '', mandoVR() {}, abrirEnlace() {},
+    juego: () => JSON.stringify({ n: 3, bajada: true, estado: 'al-dia', apk: 46, nApk: 3, listo: false, aplicar: true }),
+    aplicarActualizacion: () => { window.__aplicar++; return true; }, buscarActualizacion: () => { window.__buscar++; } };
+});
+await ctx2.route(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//, (r) => r.abort());
+const p2 = await ctx2.newPage(); p2.on('pageerror', (e) => errores.push(e.message));
+await p2.goto('http://localhost:8793/aeroplaza.html?calidad=baja');
+await p2.waitForFunction(() => window.__A && window.__A.UI && window.__A.UI.J, null, { timeout: 120000, polling: 250 });
+const enMenu = await p2.evaluate(() => { const en = window.__A.J.enJuego; window.__nativo.actualizacion('lista', 4, 'El celu'); return { en, aplicar: window.__aplicar }; });
+prueba('APK 46, en el menú: lo bajado se usa ya (sin cerrar la app)', enMenu.en === false && enMenu.aplicar === 1, JSON.stringify(enMenu));
+await p2.goto('http://localhost:8793/aeroplaza.html?directo&pausa&calidad=baja');
+await p2.waitForFunction(() => window.__A && window.__A.reino && document.querySelector('.hud'), null, { timeout: 120000, polling: 250 });
+await p2.evaluate(() => { window.__aplicar = 0; window.__nativo.actualizacion('lista', 4, 'El celu'); });
+await p2.waitForTimeout(6800);
+const toca = await p2.evaluate(() => { const n = [...document.querySelectorAll('.notis .noti')].find((q) => /versión nueva/.test(q.textContent)); const txt = n?.textContent || ''; n?.querySelector('.noti-txt')?.click(); return { txt, antes: 0, aplicar: window.__aplicar }; });
+prueba('en el juego: el aviso dice que se toca para usarla ya, y tocarlo la usa', /Tocá acá/.test(toca.txt) && toca.aplicar === 1, JSON.stringify(toca).slice(0, 200));
+const datos = await p2.evaluate(async () => {
+  const { UI } = window.__A; UI.opciones(() => {}, 'datos'); await new Promise((r) => setTimeout(r, 200));
+  const f = [...document.querySelectorAll('.ventana .op')].find((q) => /Versión del juego/.test(q.textContent));
+  const txt = f?.textContent.replace(/\s+/g, ' ').trim() || '';
+  const b = f && [...f.querySelectorAll('button')].find((q) => /Buscar ahora/.test(q.textContent)); b?.click();
+  return { txt, despues: f?.querySelector('small')?.textContent, buscar: window.__buscar };
+});
+prueba('Opciones › Datos: la versión que corre ("3 · APK 46 · al día") y "Buscar ahora"', /3 · APK 46 · al día/.test(datos.txt) && datos.buscar === 1 && /buscando/.test(datos.despues || ''), JSON.stringify(datos));
+await ctx2.close();
 const errs = errores.filter((e) => !/ERR_FAILED|ERR_CERT|net::/.test(e));
 prueba('sin errores en la página', !errs.length, errs.slice(0, 3).join(' | '));
 await nav.close(); srv.kill();

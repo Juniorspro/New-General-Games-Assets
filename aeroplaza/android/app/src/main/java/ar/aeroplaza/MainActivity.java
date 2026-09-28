@@ -12,6 +12,8 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.InputDevice;
@@ -66,6 +68,10 @@ public class MainActivity extends Activity {
   /* (vuelta 45) las actualizaciones del juego sin APK nueva */
   Actualizador actualizador;
   boolean arVivoYa;
+  /* (vuelta 46) las actualizaciones también al volver a la app y cada 20 min, no solo al arrancar de cero */
+  long tFuera;
+  final Handler reloj = new Handler(Looper.getMainLooper());
+  final Runnable cadaTanto = new Runnable() { @Override public void run() { Actualizador a = actualizador; if (a != null) a.buscarSiToca(false); reloj.postDelayed(this, 20 * 60000L); } };
 
   @Override protected void onCreate(Bundle b) {
     super.onCreate(b);
@@ -325,8 +331,31 @@ public class MainActivity extends Activity {
     super.onResume(); if (web != null) web.onResume();
     if (ar != null) { String e = ar.reanudar(); enviar("__nativo&&__nativo.estado('" + e + "')"); }
     if (camara != null) camara.reanudar();
+    /* (vuelta 46) al volver después de un rato afuera: si ya hay uno bajado, se usa (salvo en el VR); si no, se busca */
+    Actualizador a = actualizador;
+    if (a != null) {
+      long fuera = tFuera > 0 ? System.currentTimeMillis() - tFuera : 0;
+      if (!(fuera > 60000 && !teclasVR && a.hayListo() && usarLoBajado())) a.buscarSiToca(false);
+    }
+    reloj.removeCallbacks(cadaTanto); reloj.postDelayed(cadaTanto, 20 * 60000L);
   }
-  @Override protected void onPause() { if (ar != null) ar.pausar(); if (camara != null) camara.pausar(); if (web != null) web.onPause(); super.onPause(); }
+  @Override protected void onPause() { tFuera = System.currentTimeMillis(); reloj.removeCallbacks(cadaTanto); if (ar != null) ar.pausar(); if (camara != null) camara.pausar(); if (web != null) web.onPause(); super.onPause(); }
+  /* (vuelta 46) usar ya el juego bajado, sin cerrar la app: lo bajado pasa a ser el que se usa (alAbrir) y la WebView
+     vuelve a cargar la misma dirección (lo guardado sigue). ARCore y la cámara se sueltan: el juego nuevo los pide de
+     nuevo si hacen falta. En el hilo de la interfaz */
+  boolean usarLoBajado() {
+    Actualizador a = actualizador; WebView w = web;
+    if (a == null || w == null || !a.hayListo()) return false;
+    int antes = a.nEnUso;
+    byte[] av = a.leerAsset("aviso.txt");
+    a.alAbrir(av == null ? "" : new String(av, java.nio.charset.StandardCharsets.UTF_8));
+    if (!a.deBajada || a.nEnUso == antes) return false;
+    try { if (ar != null && ar.corriendo) ar.parar(); } catch (Throwable t) { /* nada */ }
+    try { if (camara != null) camara.apagar(); } catch (Throwable t) { /* nada */ }
+    teclasVR = false;
+    w.loadUrl(BASE + "aeroplaza.html");
+    return true;
+  }
   @Override protected void onDestroy() { if (ar != null) ar.cerrar(); if (camara != null) camara.cerrar(); if (web != null) web.destroy(); super.onDestroy(); }
 
   /* (vuelta 44) los mandos: sus botones y su palanca van al juego (MandoBox), antes que a la WebView, que no se los
@@ -376,8 +405,11 @@ public class MainActivity extends Activity {
        la búsqueda y el código de la APK */
     @JavascriptInterface public String juego() {
       Actualizador a = actualizador; if (a == null) return "{}";
-      try { return new org.json.JSONObject().put("n", a.nEnUso).put("bajada", a.deBajada).put("estado", a.estado).put("apk", codigoApk()).put("nApk", a.nApk).toString(); } catch (Throwable t) { return "{}"; }
+      try { return new org.json.JSONObject().put("n", a.nEnUso).put("bajada", a.deBajada).put("estado", a.estado).put("apk", codigoApk()).put("nApk", a.nApk).put("listo", a.hayListo()).put("aplicar", true).toString(); } catch (Throwable t) { return "{}"; }
     }
+    /* (vuelta 46) usar ya lo bajado (el juego lo pide en el menú, o si el jugador toca el aviso), y buscar ya */
+    @JavascriptInterface public boolean aplicarActualizacion() { Actualizador a = actualizador; if (a == null || !a.hayListo()) return false; runOnUiThread(MainActivity.this::usarLoBajado); return true; }
+    @JavascriptInterface public void buscarActualizacion() { Actualizador a = actualizador; if (a != null) a.buscarSiToca(true); }
     /* abrir la APK nueva para bajarla (solo de los lugares conocidos) */
     @JavascriptInterface public void abrirEnlace(String url) {
       if (!Actualizacion.urlPermitida(url)) return;

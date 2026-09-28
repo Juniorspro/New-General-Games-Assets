@@ -9,7 +9,7 @@ android {
     applicationId 'ar.aeroplaza'
     minSdk 26
     targetSdk 36
-    versionCode 45
+    versionCode 46
     versionName '1.0'
     /* (solo los celus de 64 bits: MediaPipe trae sus librerías para cada arquitectura y la APK se iba
        a más del doble) */

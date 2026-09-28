@@ -18,6 +18,7 @@ import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
 import { Teclado } from './teclado.js';
 import { ventanaMando, mandosVistos } from './mando-box.js';
+import { filaVersion } from './actualizar.js';
 import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
 import { miniaturaTiro, TIRO } from './reinos/tiro.js';
 import { miniaturaJuegos } from './reinos/juegos.js';
@@ -641,6 +642,8 @@ export const UI = {
         if (Pantalla.tactil) p.appendChild(this.fila(t('op_giro'), this.segmentos([['auto', t('giro_auto')], ['normal', t('giro_normal')], ['reves', t('giro_reves')], ['no', t('giro_no')]], O.giro || 'auto', (v) => { O.giro = v; J.guardar(); Pantalla.ponerGiro(v); })));
       }],
       ['datos', '💾', t('op_t_datos'), (p) => {
+        /* (vuelta 46) en la APK: qué versión del juego corre y buscar una nueva ya */
+        const fv = filaVersion(); if (fv) p.appendChild(this.fila(t('act_version'), fv));
         const res = el('<div class="resumen"></div>');
         for (const [emo, n] of [['🫧', J.G.orbes + ' ' + t('orbes')], ['💎', (J.G.joyas || 0) + ' ' + t('joyas')], ['💿', J.G.discos.length + '/' + TOTAL_DISCOS], ['✅', Object.values(J.G.misiones || {}).filter((m) => m.e === 'hecha').length + ' ' + t('op_misiones')], ['👕', (J.G.tengo || []).length + ' ' + t('op_cosas')]]) { const d = el('<div><i></i><b></b></div>'); d.firstElementChild.textContent = emo; d.lastElementChild.textContent = n; res.appendChild(d); }
         p.appendChild(res);

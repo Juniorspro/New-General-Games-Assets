@@ -109,6 +109,10 @@ export const Nativo = {
      la APK nueva para bajarla */
   juego() { try { const s = N()?.juego?.(); return s ? JSON.parse(s) : null; } catch { return null; } },
   abrirEnlace(url) { try { N()?.abrirEnlace?.(String(url)); } catch { /* sin APK */ } },
+  /* (vuelta 46) usar ya lo bajado (la WebView vuelve a cargar: true si había algo) y buscar ya. La APK 45 no los tiene */
+  get puedeAplicar() { return !!N()?.aplicarActualizacion; },
+  aplicarActualizacion() { try { return !!N()?.aplicarActualizacion?.(); } catch { return false; } },
+  buscarActualizacion() { try { N()?.buscarActualizacion?.(); } catch { /* sin APK o vieja */ } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
   /* ARCore siguiendo, con una pose reciente */
   get arVivo() { return !!this.pose && this.pose.estado === 1 && performance.now() - this.pose.llego < VIEJA; },
