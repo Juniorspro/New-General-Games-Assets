@@ -1,15 +1,15 @@
 {
- "n": 2,
+ "n": 3,
  "fecha": "2026-09-28",
- "notas": "El celu: amigos, solicitudes de amistad, mensajes, juegos y casas. Unite a la sala de un amigo.",
+ "notas": "Las actualizaciones llegan sin cerrar la app. Con la app nueva (46), se buscan al volver a la app.",
  "apkMin": 1,
  "apk": {
-  "codigo": 45
+  "codigo": 46
  },
  "html": {
-  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/c6c42facea6e4cea919bdde3bdf39a2be971285c/aeroplaza/aeroplaza.html",
-  "sha256": "2355cce00d063dea1dbe0f56763eb6d06219f36c2514af3d3632eb814fbac2f2",
-  "bytes": 3339872
+  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/caf944a1d6697a634ebdca0d49e651f6da3581e7/aeroplaza/aeroplaza.html",
+  "sha256": "fee0d556e302e581f2b146d775188571fe0dda9da643f7af4b038479801982e1",
+  "bytes": 3342686
  },
  "fuentes": [
   "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/refs/heads/claude/fijate-iszyer/aeroplaza/actualizacion.json"
