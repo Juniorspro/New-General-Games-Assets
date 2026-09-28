@@ -15,6 +15,9 @@ interface Sistema {
     void permisoFotos();
     void recentrar();
     void captura();
+    /** La linterna (el flash de la cámara prendido). */
+    void linterna(boolean si);
+    boolean linterna();
     void visor(boolean sbs);
     boolean visor();
     void mostrarRapidos(boolean si);

@@ -49,9 +49,9 @@ final class Rapidos {
         raiz.addView(cab);
         // las baldosas
         GridLayout g = new GridLayout(c);
-        g.setColumnCount(4);
-        String[] t = {"Passthrough", "Entorno", "Recentrar", "Captura", "Visor", "Manos", "Teclado", "Ajustes"};
-        int[] ic = {Iconos.OJO, Iconos.MONTANA, Iconos.RECENTRAR, Iconos.CAPTURA, Iconos.VISOR, Iconos.MANO, Iconos.TECLADO, Iconos.AJUSTES};
+        g.setColumnCount(5);
+        String[] t = {"Passthrough", "Entorno", "Recentrar", "Captura", "Linterna", "Visor", "Manos", "Teclado", "Ajustes"};
+        int[] ic = {Iconos.OJO, Iconos.MONTANA, Iconos.RECENTRAR, Iconos.CAPTURA, Iconos.LINTERNA, Iconos.VISOR, Iconos.MANO, Iconos.TECLADO, Iconos.AJUSTES};
         baldosas = new LinearLayout[t.length];
         for (int i = 0; i < t.length; i++) {
             final int k = i;
@@ -71,7 +71,7 @@ final class Rapidos {
             if (i == 1) entornoTxt = tt;
             b.setClickable(true);
             b.setOnClickListener(v -> { s.sonido(Sonido.CLIC); tocar(k); });
-            GridLayout.LayoutParams lp = new GridLayout.LayoutParams(GridLayout.spec(i / 4, 1f), GridLayout.spec(i % 4, 1f));
+            GridLayout.LayoutParams lp = new GridLayout.LayoutParams(GridLayout.spec(i / 5, 1f), GridLayout.spec(i % 5, 1f));
             lp.width = 0;
             lp.height = Estilo.dp(c, 86);
             lp.setMargins(Estilo.dp(c, 5), Estilo.dp(c, 5), Estilo.dp(c, 5), Estilo.dp(c, 5));
@@ -112,9 +112,10 @@ final class Rapidos {
             case 1: { int e = s.entorno() + 1; if (e >= Entornos.CANTIDAD) e = Entornos.ESPACIO; if (e == Entornos.PASSTHROUGH) e = Entornos.ESPACIO; s.entorno(e); break; }
             case 2: s.recentrar(); break;
             case 3: s.captura(); break;
-            case 4: s.visor(!s.visor()); break;
-            case 5: s.cambio("manos", s.ajustes().manos == 1 ? 0 : 1); break;
-            case 6: s.mostrarTeclado(true); break;
+            case 4: s.linterna(!s.linterna()); break;
+            case 5: s.visor(!s.visor()); break;
+            case 6: s.cambio("manos", s.ajustes().manos == 1 ? 0 : 1); break;
+            case 7: s.mostrarTeclado(true); break;
             default: s.mostrarRapidos(false); s.abrir("ajustes");
         }
         h.postDelayed(this::refrescar, 150);
@@ -123,11 +124,10 @@ final class Rapidos {
     private void refrescar() {
         Sistema s = sis;
         if (baldosas == null || s == null) return;
-        boolean[] on = {s.entorno() == Entornos.PASSTHROUGH, false, false, false, s.visor(), s.ajustes().manos == 1, false, false};
-        for (int i = 0; i < baldosas.length; i++) baldosas[i].setSelected(on[i]);
-        baldosas[0].setBackground(Estilo.apretable(on[0] ? Estilo.AZUL : Estilo.TARJETA, Estilo.TARJETA_ALTA, Estilo.dp(baldosas[0].getContext(), 18)));
-        baldosas[4].setBackground(Estilo.apretable(on[4] ? Estilo.AZUL : Estilo.TARJETA, Estilo.TARJETA_ALTA, Estilo.dp(baldosas[0].getContext(), 18)));
-        baldosas[5].setBackground(Estilo.apretable(on[5] ? Estilo.AZUL : Estilo.TARJETA, Estilo.TARJETA_ALTA, Estilo.dp(baldosas[0].getContext(), 18)));
+        boolean[] on = {s.entorno() == Entornos.PASSTHROUGH, false, false, false, s.linterna(), s.visor(), s.ajustes().manos == 1, false, false};
+        // las que se prenden y apagan: azules cuando están prendidas
+        for (int i : new int[]{0, 4, 5, 6})
+            baldosas[i].setBackground(Estilo.apretable(on[i] ? Estilo.AZUL : Estilo.TARJETA, Estilo.TARJETA_ALTA, Estilo.dp(baldosas[0].getContext(), 18)));
         int e = s.entorno();
         entornoTxt.setText(e == Entornos.PASSTHROUGH ? "Entorno" : Entornos.NOMBRES[e]);
     }

@@ -79,6 +79,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     // el seguimiento
     private Session sesion;
     private boolean pidioInstalar, texturaPuesta, conArcore;
+    private Config config;
+    /** La linterna: la que se quiere y la que quedó (si el teléfono no la deja con ARCore, se apaga). */
+    private volatile boolean linterna;
     private volatile boolean geometria = true;
     private SensorManager sensores;
     private final float[] rotSensor = new float[16];
@@ -210,6 +213,8 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         if (sesion != null) {
             try { sesion.resume(); conArcore = true; } catch (Exception e) { avisar("La cámara está ocupada por otra app."); sesion = null; conArcore = false; }
         }
+        // al volver, la linterna como estaba (ARCore la apaga al pausar)
+        if (linterna) linterna(true);
         if (manos != null && conArcore) manos.arrancar();
         vista.onResume();
     }
@@ -219,6 +224,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         super.onPause();
         sensores.unregisterListener(this);
         if (manos != null) manos.parar();
+        if (linterna && sesion == null) try { linterna(false); linterna = true; } catch (Throwable ignorada) { }   // se vuelve a prender al volver
         vista.onPause();
         if (sesion != null) sesion.pause();
         synchronized (ajustes) { ajustes.guardar(this); }
@@ -237,6 +243,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             if (ArCoreApk.getInstance().requestInstall(this, !pidioInstalar) == ArCoreApk.InstallStatus.INSTALL_REQUESTED) { pidioInstalar = true; return; }
             sesion = new Session(this);
             Config c = new Config(sesion);
+            config = c;
             c.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE);
             c.setPlaneFindingMode(Config.PlaneFindingMode.HORIZONTAL);
             c.setFocusMode(Config.FocusMode.AUTO);
@@ -365,6 +372,47 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     @Override public void recentrar() { tareas.add(this::recentrarEnGl); }
 
     @Override public void captura() { pedirCaptura = true; }
+
+    @Override public boolean linterna() { return linterna; }
+
+    /**
+     * Prende o apaga el flash de la cámara. Con ARCore, por su configuración
+     * (la cámara la tiene ARCore: así no se corta el seguimiento); sin ARCore,
+     * directo con la cámara del teléfono.
+     */
+    @Override public void linterna(boolean si) {
+        if (sesion != null && config != null) {
+            vista.queueEvent(() -> {
+                try {
+                    config.setFlashMode(si ? Config.FlashMode.TORCH : Config.FlashMode.OFF);
+                    sesion.configure(config);
+                    linterna = si;
+                } catch (Throwable e) {
+                    try { config.setFlashMode(Config.FlashMode.OFF); sesion.configure(config); } catch (Throwable ignorada) { /* queda como estaba */ }
+                    linterna = false;
+                    avisar("Este teléfono no deja prender la linterna mientras ARCore usa la cámara.");
+                }
+            });
+            return;
+        }
+        try {
+            android.hardware.camera2.CameraManager cm = (android.hardware.camera2.CameraManager) getSystemService(CAMERA_SERVICE);
+            for (String id : cm.getCameraIdList()) {
+                android.hardware.camera2.CameraCharacteristics cc = cm.getCameraCharacteristics(id);
+                Boolean hay = cc.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE);
+                Integer lado = cc.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING);
+                if (Boolean.TRUE.equals(hay) && lado != null && lado == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK) {
+                    cm.setTorchMode(id, si);
+                    linterna = si;
+                    return;
+                }
+            }
+            avisar("Este teléfono no tiene flash atrás.");
+        } catch (Throwable e) {
+            linterna = false;
+            avisar("No se pudo prender la linterna: " + e.getMessage());
+        }
+    }
 
     @Override public void visor(boolean sbs) { cambio("sbs", sbs ? 1 : 0); }
 

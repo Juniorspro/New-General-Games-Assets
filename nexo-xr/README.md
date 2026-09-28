@@ -40,8 +40,12 @@ con nombre, íconos y diseño propios.
   3.2 m, con el entorno a media luz).
 - **La barra de abajo**: Apps, Navegador, Galería, Ajustes (con un punto
   debajo de las abiertas), la hora, el wifi, la batería y los **ajustes
-  rápidos**: passthrough, entorno, recentrar, captura, visor, manos, teclado,
-  ajustes y el volumen.
+  rápidos**: passthrough, entorno, recentrar, captura, **linterna**, visor,
+  manos, teclado, ajustes y el volumen.
+- **Linterna**: prende el flash de atrás. Con ARCore se prende por su
+  configuración (la cámara la tiene ARCore: no se corta el seguimiento, y en la
+  oscuridad ayuda a que se vean las manos); sin ARCore, directo con la cámara
+  del teléfono. Si el teléfono no la deja mientras ARCore usa la cámara, avisa.
 - **El teclado del sistema**, en el espacio, debajo de la ventana enfocada
   (con ñ, números y símbolos, ".com"); sale solo cuando tocás un campo de
   texto. El de Android no se abre.
