@@ -122,6 +122,113 @@ public class PruebaSeguimiento {
         return new float[]{maxSin, maxCon, dSin, dCon, suma / Math.max(1, cuenta)};
     }
 
+    // ── 3DoF: sólo el giroscopio ──
+
+    /** Un teléfono acostado con esta rotación (columnas: los ejes del teléfono en el mundo de los sensores, x este, y norte, z arriba). */
+    static void darGiro(Seguimiento s, long ns, float[] telefonoEnu) {
+        float[] q = new float[4];
+        Seguimiento.aCuat(telefonoEnu, q);
+        s.giro(ns, q[0], q[1], q[2], q[3]);
+    }
+
+    static float[] cols(float[] x, float[] y, float[] z) {
+        return new float[]{x[0], x[1], x[2], 0, y[0], y[1], y[2], 0, z[0], z[1], z[2], 0, 0, 0, 0, 1};
+    }
+
+    /** El mundo del giroscopio de la simulación: el de ARCore (OpenGL) girado 25° (el norte no es el −Z de ARCore). */
+    static float[] giroDe(float[] telefonoGl) {
+        float[] ry = new float[16], a = new float[16], b = new float[16], glAEnu = new float[16];
+        rot(ry, 0, 1, 0, 25);
+        Seguimiento.invRigida(Seguimiento.ENU_A_GL, glAEnu);
+        Seguimiento.mul(glAEnu, ry, a);
+        Seguimiento.mul(a, telefonoGl, b);
+        return b;
+    }
+
+    static void tres() {
+        System.out.println("   3DoF (sólo el giroscopio):");
+        // 1. los ejes: acostado mirando al norte, derecho
+        for (int k = 0; k < 2; k++) {
+            boolean al270 = k == 1;
+            float[] tel = al270 ? cols(new float[]{0, 0, -1}, new float[]{1, 0, 0}, new float[]{0, -1, 0})   // la parte de arriba a la derecha
+                    : cols(new float[]{0, 0, 1}, new float[]{-1, 0, 0}, new float[]{0, -1, 0});                 // la parte de arriba a la izquierda
+            Seguimiento s = new Seguimiento();
+            for (int i = 0; i < 20; i++) darGiro(s, i * 5_000_000L, tel);
+            boolean ok = s.tres(90_000_000L, 90_000_000L, al270);
+            float[] m = s.pose;
+            boolean ejes = ok && Math.abs(m[0] - 1) < 1e-3f && Math.abs(m[5] - 1) < 1e-3f && Math.abs(m[10] - 1) < 1e-3f;
+            ver(ejes, (al270 ? "al revés (270°)" : "acostado (90°)") + String.format(java.util.Locale.ROOT,
+                    ": mira adelante (−Z), la derecha es +X y arriba +Y (adelante %.2f %.2f %.2f)", -m[8], -m[9], -m[10]));
+            // girar 30° a la izquierda (alrededor de arriba)
+            float[] rz = new float[16], t2 = new float[16];
+            rot(rz, 0, 0, 1, 30);
+            Seguimiento.mul(rz, tel, t2);
+            for (int i = 20; i < 40; i++) darGiro(s, i * 5_000_000L, t2);
+            s.tres(195_000_000L, 195_000_000L, al270);
+            float ex = (float) -Math.sin(Math.toRadians(30)), ez = (float) -Math.cos(Math.toRadians(30));
+            if (k == 0) ver(Math.abs(-s.pose[8] - ex) < 2e-3f && Math.abs(-s.pose[10] - ez) < 2e-3f && Math.abs(s.pose[9]) < 2e-3f,
+                    "girando 30° a la izquierda mira 30° a la izquierda (sin inclinarse)");
+        }
+        // 2. una cabeza de verdad: 6DoF con ARCore, pasa a 3DoF, sigue girando, vuelve a 6DoF
+        final double foto = 1 / 30.0, llega = 0.060, verse = 0.025, pantalla = 1 / 60.0, giro = 1 / 200.0;
+        float[] cuello = {0.1f, 1.5f, -0.2f};
+        float[] pan90inv = new float[16];
+        Seguimiento.invRigida(Seguimiento.PANTALLA_90, pan90inv);
+        Seguimiento s = nuevo();
+        double tg = 0;
+        float[] antes = null;
+        float saltoEntrar = 0, saltoEntrarAng = 0, saltoSalir = 0, saltoSalirAng = 0, errTres = 0, errFoto = 0, cuelloMov = 0;
+        float[] cuello0 = null, ry = null;
+        for (int paso = 0; paso * pantalla < 9; paso++) {
+            double tr = paso * pantalla;
+            boolean enTres = tr >= 3 && tr < 6;
+            for (; tg <= tr - 0.005; tg += giro) {
+                float[] tel = new float[16];
+                Seguimiento.mul(display(tg, cuello), pan90inv, tel);
+                darGiro(s, (long) (tg * 1e9), giroDe(tel));
+            }
+            double tf = Math.floor((tr - llega) / foto) * foto;
+            float[] dv = display(tf, cuello), sv = new float[16];
+            Seguimiento.mul(dv, pan90inv, sv);
+            if (enTres) s.tres((long) (tf * 1e9), (long) ((tr + verse) * 1e9), false);
+            else s.cuadro((long) (tf * 1e9), true, sv, dv, (long) ((tr + verse) * 1e9));
+            if (antes != null && Math.abs(tr - 3) < 1e-6) { saltoEntrar = distancia(antes, s.pose); saltoEntrarAng = angulo(antes, s.pose); }
+            if (antes != null && Math.abs(tr - 6) < 1e-6) { saltoSalir = distancia(antes, s.pose); saltoSalirAng = angulo(antes, s.pose); }
+            if (enTres && ry == null) {
+                // el marco del escritorio en 3DoF está girado (lo que se alineó al entrar): se mide una vez, con una foto
+                float[] f = display(tf, cuello);
+                float g = (float) Math.toDegrees(Math.atan2(s.poseFoto[8], s.poseFoto[10]) - Math.atan2(f[8], f[10]));
+                ry = new float[16];
+                rot(ry, 0, 1, 0, g);
+            }
+            if (enTres && tr > 3.5) {
+                // lo que se ve contra la cabeza de verdad (con la predicción: 25 ms adelante)
+                float[] vv = new float[16], ff = new float[16];
+                Seguimiento.mul(ry, display(tr + verse, cuello), vv);
+                errTres = Math.max(errTres, angulo(vv, s.pose));
+                Seguimiento.mul(ry, display(tf, cuello), ff);
+                errFoto = Math.max(errFoto, angulo(ff, s.poseFoto));
+                float[] c = Seguimiento.aplicarPunto(s.pose, s.pivote);
+                if (cuello0 == null) cuello0 = c;
+                cuelloMov = Math.max(cuelloMov, Seguimiento.dist(c, cuello0));
+            }
+            antes = s.pose.clone();
+        }
+        ver(saltoEntrar < 0.01f && saltoEntrarAng < 1.5f, String.format(java.util.Locale.ROOT,
+                "de 6DoF a 3DoF no salta (%.1f mm, %.2f°: lo que gira la cabeza en un cuadro)", saltoEntrar * 1000, saltoEntrarAng));
+        ver(errTres < 1f, String.format(java.util.Locale.ROOT, "en 3DoF la cabeza gira bien sin ARCore: error máx %.2f° con la predicción (girando hasta 157°/s)", errTres));
+        ver(cuelloMov < 1e-4f, String.format(java.util.Locale.ROOT, "y el cuello no se mueve nada (%.2f mm): nada se desliza", cuelloMov * 1000));
+        ver(errFoto < 0.05f, String.format(java.util.Locale.ROOT, "la cámara a la hora de cada foto (para las manos): error máx %.2f°", errFoto));
+        ver(saltoSalir < 0.03f && saltoSalirAng < 3f, String.format(java.util.Locale.ROOT,
+                "de 3DoF a 6DoF (sin ancla) tampoco salta (%.1f mm, %.2f°)", saltoSalir * 1000, saltoSalirAng));
+        // 3. arrancando sin que ARCore siga nunca (poca luz): igual hay imagen
+        Seguimiento n = new Seguimiento();
+        for (int i = 0; i < 10; i++) darGiro(n, i * 5_000_000L, cols(new float[]{0, 0, 1}, new float[]{-1, 0, 0}, new float[]{0, -1, 0}));
+        boolean sin6 = !n.cuadro(50_000_000L, false, new float[16], new float[16], 60_000_000L);
+        ver(sin6 && n.tres(50_000_000L, 60_000_000L, false) && n.modo == Seguimiento.TRES,
+                "sin que ARCore haya seguido nunca, 6DoF no tiene pose pero 3DoF sí (no queda en negro)");
+    }
+
     /** Con el cuello ya medido (ver 5): así se mide sólo lo de cada prueba. */
     static Seguimiento nuevo() { Seguimiento s = new Seguimiento(); System.arraycopy(PIVOTE, 0, s.pivote, 0, 3); return s; }
 
@@ -267,6 +374,8 @@ public class PruebaSeguimiento {
             }
             ver(w.medidas == 0, String.format("caminando no se mide (error %.1f cm): no se ensucia", w.errorCm));
         }
+
+        tres();
 
         System.out.println(fallas == 0 ? "\n✓ todo bien" : "\n✗ " + fallas + " fallas");
         System.exit(fallas == 0 ? 0 : 1);

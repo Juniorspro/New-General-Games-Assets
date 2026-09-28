@@ -150,8 +150,11 @@ final class AjustesApp {
 
     /** ESPACIO: tu mesa (o el cuarto), cuándo se mueve Nexo, prepararlo de nuevo. */
     private void espacio(Ajustes a) {
-        String[] modos = {"", "Mesa", "Cuarto", "Sólo girar"};
+        String[] modos = {"", "Mesa", "Cuarto", "3DoF (sólo girar)"};
         int m = a.modoEspacio >= 1 && a.modoEspacio <= 3 ? a.modoEspacio : 1;
+        contenido.addView(interruptor(Iconos.GIRAR, "Modo 3DoF: sólo girar, con las manos",
+                "La cabeza sale sólo del giroscopio: nunca se mueve sola ni se pierde, aunque ARCore no vea nada. Las manos y el passthrough siguen andando",
+                a.tresDof == 1 || a.modoEspacio == Inicio.GIRAR, si -> s.cambio("tresDof", si ? 1 : 0)));
         contenido.addView(Estilo.renglon(c, Iconos.MESA, "Preparar el espacio ahora",
                 "Escanear tu mesa (o el cuarto), apoyar las manos y fijar la cabeza. Último modo: " + modos[m],
                 Estilo.boton(c, Iconos.RECENTRAR, "Preparar", true, v -> { s.sonido(Sonido.CLIC); s.prepararEspacio(); })));

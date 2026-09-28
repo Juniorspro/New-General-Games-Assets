@@ -170,7 +170,7 @@ final class InicioApp {
                 true, 0xFF3D7BFF, 0xFF7A4DFF, Inicio.MESA), pesoTarjeta(true));
         fila.addView(tarjeta(Iconos.CUARTO, "Cuarto", "Parado o caminando. Escaneás el piso y las paredes.",
                 false, 0xFF1FA37A, 0xFF1D6FA8, Inicio.CUARTO), pesoTarjeta(false));
-        fila.addView(tarjeta(Iconos.GIRAR, "Sólo girar", "Sin escanear: la cabeza queda fija y sólo girás.",
+        fila.addView(tarjeta(Iconos.GIRAR, "3DoF: sólo girar", "Sin escanear: sólo girás, con las manos. Nunca se mueve solo.",
                 false, 0xFF5C6275, 0xFF3A3F4F, Inicio.GIRAR), pesoTarjeta(false));
         col.addView(fila, new LinearLayout.LayoutParams(-1, 0, 1));
         cuerpo.addView(col, new FrameLayout.LayoutParams(-1, -1));

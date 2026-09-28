@@ -1,0 +1,1718 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0d12">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Nexo Web</title>
+<!--
+  NEXO WEB: Nexo XR en el navegador, en 3DoF (sólo girar), con TUS MANOS.
+
+  - La cabeza sale del giroscopio del teléfono (RelativeOrientationSensor, o
+    deviceorientation si no hay): la gravedad la tiene el sensor, así que el
+    mundo nunca se inclina ni "se mueve solo". Se predice ~30 ms (lo que tarda
+    la imagen en llegar a los ojos), como Nexo Track en la app.
+  - Las manos: la cámara de atrás → MediaPipe HandLandmarker (el mismo modelo
+    que usa la app), EN UN WORKER (así el dibujo no se traba). Los 21 puntos en
+    metros se ubican en el espacio con la cuenta de la cámara (una traslación
+    por cuadrados mínimos con los 21 puntos) y la cabeza de cuando se sacó la
+    foto.
+  - El clic es el DOBLE PELLIZCO de Nexo 1.4 (el primero arma, el segundo
+    aprieta), con el mismo indicador: el anillo entre los dedos, el rayo y el
+    cursor (los shaders son los de VentanasGl.java, portados).
+  - Visor (VR Box): las dos imágenes con la corrección de las lentes de la app.
+  - Sin manos: mirar fijo 1 s, tocar la pantalla (o el botón del visor), un
+    control Bluetooth; en la PC, el mouse.
+
+  Hace falta https (sin eso el navegador no presta la cámara ni los sensores).
+  Pruebas en la PC: nexo-xr/pruebas/web.mjs.
+-->
+<style>
+  :root { --fondo:#0b0d12; --tarjeta:#171a22; --tarjeta2:#20242f; --borde:#2b3040; --texto:#eceef3; --texto2:#9aa0ae; --azul:#3b82f6; --celeste:#5cdbff; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--texto); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; touch-action: none; }
+  canvas#lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #inicio { position: fixed; inset: 0; overflow-y: auto; background: radial-gradient(1200px 600px at 20% -10%, #1b2a55 0%, transparent 60%), radial-gradient(900px 500px at 110% 110%, #3a1d4d 0%, transparent 55%), var(--fondo); display: flex; justify-content: center; padding: max(20px, env(safe-area-inset-top)) 16px 28px; z-index: 5; touch-action: pan-y; }
+  #inicio[hidden] { display: none; }
+  .caja { width: 100%; max-width: 760px; }
+  .marca { display: flex; align-items: center; gap: 14px; margin: 8px 0 4px; }
+  .logo { width: 46px; height: 46px; border-radius: 50%; border: 5px solid var(--celeste); box-shadow: 0 0 24px #5cdbff66, inset 0 0 12px #5cdbff55; position: relative; flex: none; }
+  .logo::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: #fff; }
+  h1 { font-size: 30px; margin: 0; letter-spacing: -0.5px; }
+  .sub { color: var(--texto2); margin: 2px 0 18px; }
+  .modos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modo { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 18px; padding: 16px; cursor: pointer; text-align: left; color: inherit; font: inherit; }
+  .modo[aria-pressed="true"] { border-color: var(--azul); background: linear-gradient(180deg, #1c2640, var(--tarjeta)); }
+  .modo b { display: block; font-size: 17px; margin: 8px 0 2px; }
+  .modo span { color: var(--texto2); font-size: 14px; }
+  .modo svg { width: 44px; height: 30px; }
+  .opciones { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 18px; margin-top: 14px; }
+  .fila { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-top: 1px solid var(--borde); }
+  .fila:first-child { border-top: 0; }
+  .fila div { flex: 1; }
+  .fila small { display: block; color: var(--texto2); font-size: 13px; }
+  .interruptor { appearance: none; width: 48px; height: 28px; border-radius: 14px; background: #3a3f4d; position: relative; cursor: pointer; flex: none; transition: background .15s; }
+  .interruptor::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .interruptor:checked { background: var(--azul); }
+  .interruptor:checked::after { left: 23px; }
+  button.secundario { background: var(--tarjeta2); color: var(--texto); border: 1px solid var(--borde); border-radius: 12px; padding: 9px 14px; font: inherit; cursor: pointer; }
+  #empezar { width: 100%; margin-top: 16px; padding: 17px; border: 0; border-radius: 16px; background: linear-gradient(90deg, #2f6ff0, #4f8cff); color: #fff; font: 600 19px system-ui, sans-serif; cursor: pointer; box-shadow: 0 8px 30px #2f6ff055; }
+  #empezar:disabled { opacity: .6; }
+  .nota { color: var(--texto2); font-size: 13px; margin-top: 14px; }
+  .nota b { color: var(--texto); }
+  #error { color: #ff8a8a; font-size: 14px; margin-top: 10px; white-space: pre-wrap; }
+  .gestos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .gesto { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 12px; font-size: 13px; color: var(--texto2); }
+  .gesto b { color: var(--texto); display: block; font-size: 14px; margin-bottom: 2px; }
+  #hud { position: fixed; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); z-index: 3; display: flex; gap: 8px; align-items: center; pointer-events: none; }
+  #hud[hidden] { display: none; }
+  #hud button { pointer-events: auto; width: 40px; height: 40px; border-radius: 12px; border: 1px solid #ffffff22; background: #0008; color: #fff; font-size: 18px; cursor: pointer; }
+  #hud span { background: #0008; padding: 6px 10px; border-radius: 10px; font-size: 12px; color: #cfd3dc; }
+  @media (max-width: 520px) { .modos { grid-template-columns: 1fr; } .gestos { grid-template-columns: 1fr; } }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+
+<div id="inicio">
+  <div class="caja">
+    <div class="marca"><div class="logo"></div><div><h1>Nexo Web</h1></div></div>
+    <p class="sub">Tus pantallas en el espacio, en 3DoF y con tus manos. Directo en el navegador.</p>
+    <div class="modos">
+      <button class="modo" id="modoVisor" aria-pressed="true">
+        <svg viewBox="0 0 44 30"><rect x="2" y="4" width="40" height="22" rx="7" fill="none" stroke="#5cdbff" stroke-width="3"/><circle cx="14" cy="15" r="5" fill="#5cdbff"/><circle cx="30" cy="15" r="5" fill="#5cdbff"/></svg>
+        <b>Visor (VR Box)</b><span>Las dos imágenes, con la corrección de las lentes.</span>
+      </button>
+      <button class="modo" id="modoPantalla" aria-pressed="false">
+        <svg viewBox="0 0 44 30"><rect x="3" y="5" width="38" height="20" rx="4" fill="none" stroke="#9aa0ae" stroke-width="3"/><circle cx="22" cy="15" r="3" fill="#9aa0ae"/></svg>
+        <b>Pantalla</b><span>Mirás por el teléfono como por una ventana. Tocás las pantallas.</span>
+      </button>
+    </div>
+    <div class="opciones">
+      <label class="fila"><div>Mis manos<small>La cámara de atrás ve tus manos: doble pellizco = clic</small></div><input type="checkbox" class="interruptor" id="optManos"></label>
+      <label class="fila"><div>Passthrough<small>Ver la habitación de fondo con la cámara</small></div><input type="checkbox" class="interruptor" id="optPass"></label>
+      <label class="fila"><div>Clic con doble pellizco<small>Apagado: un pellizco solo ya es un clic</small></div><input type="checkbox" class="interruptor" id="optDoble"></label>
+      <div class="fila"><div>Video para el Cine<small id="nombreVideo">Opcional: un video del teléfono, en pantalla grande</small></div><button class="secundario" id="elegirVideo">Elegir</button><input type="file" id="archivoVideo" accept="video/*" hidden></div>
+    </div>
+    <button id="empezar">Empezar</button>
+    <div id="error"></div>
+    <div class="gestos">
+      <div class="gesto"><b>Clic</b>Apuntá y juntá el pulgar con el índice dos veces rápido. Después del primero todo se pone celeste.</div>
+      <div class="gesto"><b>Arrastrar y scroll</b>En el segundo pellizco, sostené y mové la mano. La barra de abajo mueve la ventana.</div>
+      <div class="gesto"><b>Recentrar</b>Doble pellizco en la nada y sostené 1 s. Corto: muestra o esconde la barra de apps.</div>
+    </div>
+    <p class="nota">Poné el teléfono acostado. Sin manos: <b>mirá fijo</b> un botón 1 s, tocá la pantalla o usá un control Bluetooth. En la PC anda con el mouse (arrastrá el fondo para mirar). La primera vez se bajan ~10 MB (el modelo de las manos).</p>
+  </div>
+</div>
+
+<div id="hud" hidden><button id="btnSalir" title="Salir">✕</button><button id="btnCentro" title="Recentrar">◎</button><span id="estadoHud"></span></div>
+
+<script type="module">
+import * as THREE from "three";
+THREE.ColorManagement.enabled = false;   // los colores tal cual (como en la app: sin conversiones)
+
+const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const MODELO = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const PARAM = new URLSearchParams(location.search);
+
+// ═════════════════════════ los ajustes ═════════════════════════
+const AJ_DEF = { visor: true, manos: true, pass: false, entorno: "espacio", doble: true, mirada: true, sonido: true, verManos: true,
+  ipd: 63, fov: 90, k1: 0.22, k2: 0.12, sep: 0, campo: 66, escalaMano: 1, abajo: 10, latencia: 60, anticipo: 30 };
+let aj = { ...AJ_DEF };
+try { Object.assign(aj, JSON.parse(localStorage.getItem("nexo-web") || "{}")); } catch (e) { /* sin guardar */ }
+function guardar() { try { localStorage.setItem("nexo-web", JSON.stringify(aj)); } catch (e) { /* modo privado */ } }
+
+// ═════════════════════════ el núcleo (sin nada de la página: se prueba solo) ═════════════════════════
+const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/** Gestos.java: el pellizco medido en "palmas", con histéresis y dos imágenes seguidas para cambiar. */
+class Gestos {
+  static PELLIZCA = 0.20; static SUELTA = 0.32; static INDICE_FUERA = 1.05; static INDICE_ESTIRADO = 1.45;
+  constructor() { this.pellizcando = false; this.seguidas = 0; this.fuerza = 1; }
+  static palma(w) { return Math.max(1e-4, dist3(w[0], w[9])); }
+  static apertura(w) { return dist3(w[4], w[8]) / Gestos.palma(w); }
+  static indice(w) { return dist3(w[8], w[0]) / Gestos.palma(w); }
+  paso(w) {
+    const a = Gestos.apertura(w), i = Gestos.indice(w);
+    const cruza = this.pellizcando ? a > Gestos.SUELTA : a < Gestos.PELLIZCA && i > Gestos.INDICE_FUERA;
+    this.seguidas = cruza ? this.seguidas + 1 : 0;
+    if (this.seguidas >= 2) { this.pellizcando = !this.pellizcando; this.seguidas = 0; }
+    this.fuerza = clamp((a - Gestos.PELLIZCA) / (Gestos.SUELTA * 1.6 - Gestos.PELLIZCA), 0, 1);
+    return this.pellizcando;
+  }
+  soltar() { this.pellizcando = false; this.fuerza = 1; this.seguidas = 0; }
+}
+
+/** DoblePellizco.java: el primero (corto) arma, el segundo aprieta. */
+class DoblePellizco {
+  static PRIMERO_MAX = 450; static ESPERA = 550;
+  static QUIETO = 0; static PRIMERO = 1; static ARMADO = 2; static APRETANDO = 3; static SOSTENIDO = 4;
+  constructor() { this.doble = true; this.fase = 0; this.desde = 0; }
+  paso(p, ms) {
+    const D = DoblePellizco;
+    if (!this.doble) { this.fase = p ? D.APRETANDO : D.QUIETO; return p; }
+    switch (this.fase) {
+      case D.QUIETO: if (p) { this.fase = D.PRIMERO; this.desde = ms; } break;
+      case D.PRIMERO: if (!p) { this.fase = D.ARMADO; this.desde = ms; } else if (ms - this.desde > D.PRIMERO_MAX) this.fase = D.SOSTENIDO; break;
+      case D.ARMADO: if (p) { this.fase = D.APRETANDO; this.desde = ms; } else if (ms - this.desde > D.ESPERA) this.fase = D.QUIETO; break;
+      default: if (!p) this.fase = D.QUIETO;
+    }
+    return this.fase === D.APRETANDO;
+  }
+  armado(ms) {
+    if (this.fase === DoblePellizco.PRIMERO) return 1;
+    if (this.fase !== DoblePellizco.ARMADO) return 0;
+    return Math.max(0, 1 - (ms - this.desde) / DoblePellizco.ESPERA);
+  }
+  empezando(ms) { return this.fase === DoblePellizco.PRIMERO && this.desde === ms; }
+  soltar() { this.fase = 0; }
+}
+
+/** El filtro One Euro (Casiez 2012): quieto no tiembla, rápido no se atrasa. */
+class UnoEuro {
+  constructor(corte = 1.6, beta = 0.6, corteD = 1.0) { this.corte = corte; this.beta = beta; this.corteD = corteD; this.x = null; this.dx = 0; this.t = 0; }
+  static alfa(corte, dt) { const tau = 1 / (2 * Math.PI * corte); return 1 / (1 + tau / dt); }
+  filtrar(x, t) {
+    if (this.x === null || t <= this.t) { this.x = x; this.t = t; this.dx = 0; return x; }
+    const dt = Math.min(0.2, (t - this.t) / 1000); this.t = t;
+    const dx = (x - this.x) / dt;
+    this.dx += UnoEuro.alfa(this.corteD, dt) * (dx - this.dx);
+    this.x += UnoEuro.alfa(this.corte + this.beta * Math.abs(this.dx), dt) * (x - this.x);
+    return this.x;
+  }
+}
+
+/**
+ * Dónde está la mano: los 21 puntos en metros (centrados en la mano) más una traslación T, tal que se
+ * vean donde los vio la cámara. Es lineal en T (cuadrados mínimos, con los 21 puntos):
+ *   fx·Tx − (u−cx)·Tz = (u−cx)·Z − fx·X      fy·Ty − (v−cy)·Tz = (v−cy)·Z − fy·Y
+ * La cámara: x a la derecha, y abajo, z adelante (como MediaPipe). s: el tamaño de tus manos.
+ */
+function traslacion(img, mundo, s, fx, fy, cx, cy, W, H) {
+  const A = [0, 0, 0, 0, 0, 0, 0, 0, 0], b = [0, 0, 0];
+  const suma = (r, y) => { for (let i = 0; i < 3; i++) { b[i] += r[i] * y; for (let j = 0; j < 3; j++) A[i * 3 + j] += r[i] * r[j]; } };
+  for (let i = 0; i < 21; i++) {
+    const u = img[i][0] * W - cx, v = img[i][1] * H - cy, X = mundo[i][0] * s, Y = mundo[i][1] * s, Z = mundo[i][2] * s;
+    suma([fx, 0, -u], u * Z - fx * X);
+    suma([0, fy, -v], v * Z - fy * Y);
+  }
+  const det3 = (m) => m[0] * (m[4] * m[8] - m[5] * m[7]) - m[1] * (m[3] * m[8] - m[5] * m[6]) + m[2] * (m[3] * m[7] - m[4] * m[6]);
+  const d = det3(A);
+  if (Math.abs(d) < 1e-12) return null;
+  const T = [0, 0, 0];
+  for (let k = 0; k < 3; k++) { const m = A.slice(); for (let i = 0; i < 3; i++) m[i * 3 + k] = b[i]; T[k] = det3(m) / d; }
+  return T;
+}
+
+/** Las orientaciones (cuaterniones, con su hora en ms): interpolar, o estirar con la velocidad de giro de los últimos 20 ms. */
+class Orientacion {
+  constructor() { this.t = []; this.q = []; }
+  agregar(t, q) {
+    const n = this.t.length;
+    if (n && t <= this.t[n - 1]) return;
+    const c = q.clone();
+    if (n && this.q[n - 1].dot(c) < 0) c.set(-c.x, -c.y, -c.z, -c.w);   // el mismo hemisferio
+    this.t.push(t); this.q.push(c);
+    if (n > 200) { this.t.splice(0, 60); this.q.splice(0, 60); }
+  }
+  hay() { return this.t.length >= 1; }
+  en(t, out) {
+    const n = this.t.length;
+    if (!n) return false;
+    if (n === 1 || t <= this.t[0]) { out.copy(this.q[n === 1 ? 0 : 0]); return true; }
+    const u = n - 1;
+    if (t >= this.t[u]) {
+      let a = u;
+      for (let k = u - 1; k >= 0; k--) { a = k; if (this.t[u] - this.t[k] >= 20) break; }
+      const dtm = this.t[u] - this.t[a];
+      if (dtm <= 0) { out.copy(this.q[u]); return true; }
+      const d = this.q[a].clone().invert().multiply(this.q[u]);
+      const f = Math.min(t - this.t[u], 80) / dtm;
+      potQ(d, f);
+      out.copy(this.q[u]).multiply(d);
+      return true;
+    }
+    for (let k = u - 1; k >= 0; k--) {
+      if (this.t[k] <= t) { out.copy(this.q[k]).slerp(this.q[k + 1], (t - this.t[k]) / (this.t[k + 1] - this.t[k])); return true; }
+    }
+    out.copy(this.q[0]);
+    return true;
+  }
+}
+function potQ(q, f) {
+  const w = clamp(q.w, -1, 1), s = Math.sqrt(Math.max(0, 1 - w * w));
+  if (s < 1e-7) { q.set(0, 0, 0, 1); return q; }
+  const ang = 2 * Math.acos(w) * f, ns = Math.sin(ang / 2) / s;
+  return q.set(q.x * ns, q.y * ns, q.z * ns, Math.cos(ang / 2));
+}
+
+/** La calculadora: + − × ÷ ^ % y paréntesis, con precedencia (sin eval). */
+function calcular(txt) {
+  const t = txt.replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-").replace(/,/g, ".");
+  let i = 0;
+  const ver = () => t[i], come = () => t[i++];
+  const espacio = () => { while (t[i] === " ") i++; };
+  function numero() {
+    espacio();
+    if (ver() === "(") { come(); const v = suma(); espacio(); if (ver() === ")") come(); return v; }
+    if (ver() === "-") { come(); return -potencia(); }
+    if (ver() === "π") { come(); return Math.PI; }
+    let s = "";
+    while (i < t.length && /[0-9.]/.test(ver())) s += come();
+    if (!s || isNaN(+s)) throw new Error("mal escrito");
+    let v = +s;
+    espacio();
+    if (ver() === "%") { come(); v /= 100; }
+    return v;
+  }
+  function potencia() { const b = numero(); espacio(); if (ver() === "^") { come(); return Math.pow(b, potencia()); } return b; }
+  function producto() {
+    let v = potencia();
+    for (;;) { espacio(); const o = ver(); if (o !== "*" && o !== "/") return v; come(); const w = potencia(); if (o === "/" && w === 0) throw new Error("dividir por cero"); v = o === "*" ? v * w : v / w; }
+  }
+  function suma() {
+    let v = producto();
+    for (;;) { espacio(); const o = ver(); if (o !== "+" && o !== "-") return v; come(); const w = producto(); v = o === "+" ? v + w : v - w; }
+  }
+  const v = suma();
+  espacio();
+  if (i < t.length) throw new Error("mal escrito");
+  if (!isFinite(v)) throw new Error("muy grande");
+  return +v.toPrecision(12);
+}
+const formato = (v) => (Math.abs(v) >= 1e12 || (Math.abs(v) < 1e-9 && v !== 0)) ? v.toExponential(6).replace(".", ",")
+  : v.toLocaleString("es-AR", { maximumFractionDigits: 10 });
+
+const nucleo = { Gestos, DoblePellizco, UnoEuro, traslacion, Orientacion, calcular, formato };
+
+// ═════════════════════════ el sonido (cortito, sin archivos) ═════════════════════════
+let audio = null;
+function tono(f, dur = 0.05, vol = 0.07, tipo = "sine") {
+  if (!aj.sonido) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+    o.type = tipo; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.7, t + dur);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) { /* sin audio */ }
+}
+const SONIDO = { clic: () => tono(900, 0.04, 0.08), arma: () => tono(1500, 0.03, 0.04), abrir: () => { tono(520, 0.08, 0.06); setTimeout(() => tono(780, 0.1, 0.06), 70); },
+  cerrar: () => tono(420, 0.08, 0.06), alarma: () => { for (let k = 0; k < 6; k++) setTimeout(() => tono(k % 2 ? 1320 : 990, 0.18, 0.12, "triangle"), k * 220); } };
+
+// ═════════════════════════ la escena ═════════════════════════
+const lienzo = $("lienzo");
+const render = new THREE.WebGLRenderer({ canvas: lienzo, antialias: true, powerPreference: "high-performance" });
+render.outputColorSpace = THREE.LinearSRGBColorSpace;
+render.setClearColor(0x000000, 1);
+const escena = new THREE.Scene();
+const cabeza = new THREE.Object3D();          // los ojos (el punto del medio): gira con el giroscopio
+escena.add(cabeza);
+const camC = new THREE.PerspectiveCamera(62, 1, 0.03, 200);
+const camI = new THREE.PerspectiveCamera(90, 1, 0.03, 200), camD = new THREE.PerspectiveCamera(90, 1, 0.03, 200);
+cabeza.add(camC, camI, camD);
+const mundo = new THREE.Group();
+escena.add(mundo);
+const CENTRO = new THREE.Vector3(0, 0.075, 0);     // los ojos cuando mirás al frente (el cuello está en 0)
+const PIVOTE = new THREE.Vector3(0, -0.075, 0.08); // el cuello visto desde los ojos (marco de la cabeza)
+
+// ── los shaders de VentanasGl.java (la pantalla, la sombra, la barra, el botón, el cursor, el rayo) ──
+const VS = "varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }";
+const FS = `
+uniform sampler2D uTex; uniform float uModo; uniform vec2 uTam; uniform float uRadio; uniform vec4 uColor;
+uniform float uHover; uniform float uAlfa; uniform float uIcono; uniform float uFuerza; uniform float uCarga; uniform float uArmado; varying vec2 vUv;
+float caja(vec2 q, vec2 b, float r) { vec2 d = abs(q) - b + r; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r; }
+float segmento(vec2 q, vec2 a, vec2 b) { vec2 pa = q - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+void main() {
+  vec2 q = (vUv - 0.5) * uTam;
+  float aa = max(uTam.x, uTam.y) * 0.004 + 0.0006;
+  if (uModo < 0.5) {
+    float d = caja(q, uTam * 0.5, uRadio);
+    float a = 1.0 - smoothstep(-aa, 0.0, d);
+    vec3 c = texture2D(uTex, vUv).rgb;
+    float borde = (1.0 - smoothstep(0.0, 0.006, abs(d + 0.0025))) * uHover;
+    c = mix(c, vec3(0.62, 0.8, 1.0), borde * 0.7);
+    gl_FragColor = vec4(c, a * uAlfa);
+  } else if (uModo < 1.5) {
+    float d = caja(q, uTam * 0.5 - uRadio * 2.0, uRadio);
+    float a = 1.0 - smoothstep(0.0, uRadio * 2.0, d);
+    gl_FragColor = vec4(uColor.rgb, uColor.a * a * a * uAlfa);
+  } else if (uModo < 2.5) {
+    float d = caja(q, uTam * 0.5, uTam.y * 0.5);
+    float a = 1.0 - smoothstep(-aa, 0.0, d);
+    gl_FragColor = vec4(uColor.rgb, uColor.a * a * uAlfa);
+  } else if (uModo < 3.5) {
+    float r = uTam.x * 0.5;
+    float d = length(q) - r;
+    float a = 1.0 - smoothstep(-aa, 0.0, d);
+    float s = r * 0.42, ic;
+    if (uIcono < 0.5) ic = min(segmento(q, vec2(-s), vec2(s)), segmento(q, vec2(-s, s), vec2(s, -s)));
+    else { vec2 z = abs(q); ic = min(segmento(z, vec2(s * 0.35, s), vec2(s)), segmento(z, vec2(s, s * 0.35), vec2(s))); }
+    float linea = 1.0 - smoothstep(r * 0.07, r * 0.07 + aa, ic);
+    vec3 fondo = mix(vec3(0.16, 0.17, 0.2), vec3(0.3, 0.33, 0.4), uHover);
+    gl_FragColor = vec4(mix(fondo, vec3(1.0), linea), a * uAlfa * (0.75 + 0.25 * uHover));
+  } else if (uModo < 4.5) {
+    float r = length(q) / (uTam.x * 0.5);
+    float px = 1.0 / max(uTam.x * 0.5, 1e-4) * aa;
+    vec3 celeste = vec3(0.36, 0.86, 1.0);
+    float arm = step(0.001, uArmado);
+    vec3 col = mix(uColor.rgb, celeste, arm);
+    float ra = mix(0.30, 0.70, uFuerza);
+    float g = 0.075 + 0.03 * (1.0 - uFuerza);
+    float anillo = 1.0 - smoothstep(g, g + 0.05 + px, abs(r - ra));
+    float punto = 1.0 - smoothstep(0.17, 0.23 + px, r);
+    float lleno = (1.0 - smoothstep(ra, ra + 0.06, r)) * (1.0 - uFuerza) * 0.55;
+    float ang = atan(q.x, q.y) / 6.2831853 + 0.5;
+    float cuenta = arm * step(ang, uArmado) * (1.0 - smoothstep(0.045, 0.085 + px, abs(r - 0.9)));
+    float surco = arm * (1.0 - smoothstep(0.03, 0.06 + px, abs(r - 0.9))) * 0.3;
+    float carga = uCarga > 0.0 && ang < uCarga ? 1.0 - smoothstep(0.06, 0.12, abs(r - 0.9)) : 0.0;
+    float sombra = (1.0 - smoothstep(0.6, 1.0, r)) * 0.5;
+    float a = max(max(max(anillo, punto), max(carga, cuenta)), max(lleno, surco));
+    vec3 c = mix(vec3(0.0), col, a / max(a + sombra * (1.0 - a), 0.001));
+    gl_FragColor = vec4(c, max(a, sombra) * uAlfa * uColor.a);
+  } else {
+    float x = vUv.x, yy = abs(vUv.y - 0.5) * 2.0;
+    float w = mix(0.5, 0.16, x);
+    float nucleo = 1.0 - smoothstep(w * 0.4, w, yy);
+    float halo = (1.0 - yy) * (1.0 - yy) * 0.35;
+    float largo = smoothstep(0.0, 0.18, x) * (1.0 - 0.45 * smoothstep(0.85, 1.0, x));
+    float prende = 0.6 + 0.4 * (1.0 - uFuerza);
+    float arm = step(0.001, uArmado);
+    float pb = max(0.0, 1.0 - abs(fract(x * 1.6 - uCarga * 2.4) - 0.5) * 6.0);
+    float pulso = arm * pb * pb;
+    vec3 col = mix(uColor.rgb, vec3(0.36, 0.86, 1.0), arm);
+    float a = (nucleo + halo) * largo * prende + pulso * nucleo * 0.9 * largo;
+    gl_FragColor = vec4(mix(col, vec3(1.0), nucleo * 0.35), min(1.0, uColor.a * a) * uAlfa);
+  }
+}`;
+const MODO = { CONTENIDO: 0, SOMBRA: 1, PILDORA: 2, BOTON: 3, CURSOR: 4, RAYO: 6 };
+function material(modo, extra = {}) {
+  return new THREE.ShaderMaterial({
+    vertexShader: VS, fragmentShader: FS, transparent: true, depthWrite: modo === MODO.CONTENIDO, side: THREE.DoubleSide,
+    uniforms: { uTex: { value: null }, uModo: { value: modo }, uTam: { value: new THREE.Vector2(1, 1) }, uRadio: { value: 0.03 }, uColor: { value: new THREE.Vector4(1, 1, 1, 1) },
+      uHover: { value: 0 }, uAlfa: { value: 1 }, uIcono: { value: 0 }, uFuerza: { value: 1 }, uCarga: { value: 0 }, uArmado: { value: 0 }, ...extra },
+  });
+}
+const PLANO = new THREE.PlaneGeometry(1, 1);
+
+// ── el entorno: el espacio, el atardecer (o la cámara de fondo) ──
+const fondo = new THREE.Mesh(new THREE.SphereGeometry(60, 48, 24), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, uniforms: { uEntorno: { value: 0 }, uT: { value: 0 } },
+  vertexShader: "varying vec3 vDir; void main() { vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: `
+    varying vec3 vDir; uniform float uEntorno; uniform float uT;
+    float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+    float ruido(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x), mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+                 mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x), mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z); }
+    float fbm(vec3 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += a * ruido(p); p *= 2.03; a *= 0.5; } return s; }
+    vec3 cielo(vec3 d) {
+      float y = d.y;
+      vec3 c = mix(vec3(0.98, 0.52, 0.28), vec3(0.16, 0.2, 0.46), smoothstep(-0.02, 0.55, y));
+      c = mix(c, vec3(0.06, 0.07, 0.2), smoothstep(0.5, 1.0, y));
+      vec3 s = normalize(vec3(0.25, 0.07, -1.0));
+      float sd = max(dot(d, s), 0.0), sd2 = sd * sd, sd8 = sd2 * sd2 * sd2 * sd2;
+      c += vec3(1.0, 0.8, 0.5) * smoothstep(0.9975, 0.999, sd) + vec3(1.0, 0.45, 0.2) * sd8 * sd8 * 0.55;
+      float n = fbm(vec3(d.xz / max(y + 0.12, 0.05) * 1.2, uT * 0.01));
+      c = mix(c, vec3(1.0, 0.72, 0.62) * (0.55 + 0.6 * sd8), smoothstep(0.52, 0.8, n) * smoothstep(0.0, 0.08, y) * 0.75);
+      return c;
+    }
+    void main() {
+      vec3 d = normalize(vDir); vec3 c;
+      if (uEntorno < 0.5) {
+        c = vec3(0.008, 0.01, 0.028);
+        float n = fbm(d * 2.2 + vec3(0.0, 0.0, uT * 0.004)), n2 = fbm(d * 3.7 + 7.0);
+        c += vec3(0.28, 0.08, 0.38) * n * n * n * 1.7 + vec3(0.04, 0.16, 0.36) * n2 * n2 * n2 * 1.4;
+        vec3 g = d * 170.0; vec3 id = floor(g); float h = hash(id); vec3 f = fract(g) - 0.5;
+        c += vec3(step(0.986, h) * smoothstep(0.38, 0.0, length(f)) * (0.55 + 0.45 * sin(uT * 1.7 + h * 60.0)));
+        vec3 pc = normalize(vec3(-0.45, -0.55, -1.0));
+        float cp = dot(d, pc);
+        if (cp > 0.94) {
+          float k = (cp - 0.94) / 0.06;
+          vec3 luz = normalize(vec3(0.8, 0.5, 0.3));
+          vec3 nrm = normalize(d - pc * 0.93);
+          float dif = max(dot(nrm, luz), 0.0);
+          vec3 sup = mix(vec3(0.1, 0.22, 0.55), vec3(0.25, 0.5, 0.85), fbm(d * 18.0));
+          c = mix(c, sup * (0.12 + dif), smoothstep(0.0, 0.02, k));
+        }
+        c += vec3(0.25, 0.5, 1.0) * smoothstep(0.935, 0.94, cp) * (1.0 - smoothstep(0.94, 0.946, cp)) * 0.8;
+      } else {
+        if (d.y >= 0.0) c = cielo(d);
+        else {
+          float o = sin(d.x * 90.0 / (-d.y + 0.05) + uT * 1.4) * 0.012 + sin(d.z * 70.0 / (-d.y + 0.05) - uT) * 0.01;
+          vec3 r = normalize(vec3(d.x + o, -d.y, d.z));
+          c = mix(cielo(r) * 0.62, vec3(0.03, 0.05, 0.1), smoothstep(0.0, 0.6, -d.y));
+        }
+      }
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+}));
+fondo.renderOrder = -10;
+escena.add(fondo);
+
+// ── la cámara de fondo (passthrough): pegada a la cabeza, del tamaño del campo de la cámara ──
+const video = document.createElement("video");
+video.playsInline = true; video.muted = true; video.setAttribute("playsinline", "");
+const texVideo = new THREE.VideoTexture(video);
+const pasoCamara = new THREE.Mesh(PLANO, new THREE.MeshBasicMaterial({ map: texVideo, depthWrite: false, depthTest: false }));
+pasoCamara.renderOrder = -9; pasoCamara.visible = false;
+cabeza.add(pasoCamara);
+
+// ═════════════════════════ las ventanas ═════════════════════════
+const UI = { fondo: "#15161b", tarjeta: "#23252e", tarjeta2: "#2f323d", borde: "#3a3e4b", azul: "#3b82f6", celeste: "#5cdbff", texto: "#eceef3", texto2: "#9aa0ae", verde: "#35c28b", rojo: "#ff6b6b" };
+const FUENTE = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
+function redondo(g, x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+
+class Ventana {
+  constructor(app, px, py, ancho, tipo = "app") {
+    this.app = app; this.tipo = tipo; this.px = px; this.py = py; this.ancho = ancho; this.alto = ancho * py / px;
+    this.lienzo = document.createElement("canvas"); this.lienzo.width = px; this.lienzo.height = py;
+    this.g = this.lienzo.getContext("2d");
+    this.tex = new THREE.CanvasTexture(this.lienzo); this.tex.generateMipmaps = true; this.tex.minFilter = THREE.LinearMipmapLinearFilter; this.tex.anisotropy = 4;
+    this.grupo = new THREE.Group();
+    const r = tipo === "dock" ? Math.min(this.alto / 2, 0.05) : 0.03;
+    this.sombra = new THREE.Mesh(PLANO, material(MODO.SOMBRA, { uRadio: { value: 0.03 }, uColor: { value: new THREE.Vector4(0, 0, 0, 0.3) } }));
+    this.sombra.scale.set(this.ancho + 0.12, this.alto + 0.12, 1); this.sombra.position.z = -0.004; this.sombra.material.uniforms.uTam.value.set(this.ancho + 0.12, this.alto + 0.12);
+    this.pantalla = new THREE.Mesh(PLANO, material(MODO.CONTENIDO, { uRadio: { value: r } }));
+    this.pantalla.scale.set(this.ancho, this.alto, 1); this.pantalla.material.uniforms.uTam.value.set(this.ancho, this.alto); this.pantalla.material.uniforms.uTex.value = this.tex;
+    this.sombra.renderOrder = 0; this.pantalla.renderOrder = 1;
+    this.grupo.add(this.sombra, this.pantalla);
+    if (tipo === "app") {
+      this.barraY = -this.alto / 2 - 0.035; this.barraAncho = Math.min(0.26, this.ancho * 0.35);
+      this.barra = new THREE.Mesh(PLANO, material(MODO.PILDORA, { uColor: { value: new THREE.Vector4(0.85, 0.85, 0.85, 0.7) } }));
+      this.barra.position.set(0, this.barraY, 0.002); this.barra.renderOrder = 2;
+      this.cerrar = new THREE.Mesh(PLANO, material(MODO.BOTON)); this.cerrar.scale.set(0.038, 0.038, 1); this.cerrar.material.uniforms.uTam.value.set(0.038, 0.038);
+      this.cerrar.position.set(-this.barraAncho / 2 - 0.035, this.barraY, 0.002); this.cerrar.renderOrder = 2;
+      this.grupo.add(this.barra, this.cerrar);
+    }
+    this.yaw = 0; this.pitch = 0; this.dist = 1.1; this.aparece = 0; this.visible = true;
+    this.hover = { contenido: 0, barra: 0, cerrar: 0 };
+    mundo.add(this.grupo);
+    app.ventana = this;
+    this.dibujar(0);
+  }
+  colocar() {
+    const d = new THREE.Vector3(-Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), -Math.cos(this.yaw) * Math.cos(this.pitch));
+    this.grupo.position.copy(CENTRO).addScaledVector(d, this.dist);
+    this.grupo.lookAt(CENTRO);
+  }
+  /** Dónde le pega el rayo: {t, que, u, v, x, y} en su plano (o null). */
+  impacto(o, d) {
+    if (!this.visible || this.aparece < 0.3) return null;
+    this.grupo.updateMatrixWorld();
+    const inv = new THREE.Matrix4().copy(this.grupo.matrixWorld).invert();
+    const lo = o.clone().applyMatrix4(inv), ld = d.clone().transformDirection(inv);
+    if (Math.abs(ld.z) < 1e-6) return null;
+    const t = -lo.z / ld.z;
+    if (t < 0) return null;
+    const x = lo.x + ld.x * t, y = lo.y + ld.y * t;
+    const esc = this.escala();
+    const w = this.ancho * esc, h = this.alto * esc;
+    if (Math.abs(x) <= w / 2 && Math.abs(y) <= h / 2) return { t, que: "contenido", u: x / w + 0.5, v: 0.5 - y / h, x, y };
+    if (this.tipo === "app") {
+      if (Math.hypot(x - this.cerrar.position.x, y - this.barraY) < 0.026) return { t, que: "cerrar", x, y };
+      if (Math.abs(x) <= this.barraAncho / 2 + 0.02 && Math.abs(y - this.barraY) < 0.03) return { t, que: "barra", x, y };
+    }
+    return null;
+  }
+  /** El plano sin límites (para arrastrar aunque el rayo se salga). */
+  enPlano(o, d) {
+    this.grupo.updateMatrixWorld();
+    const inv = new THREE.Matrix4().copy(this.grupo.matrixWorld).invert();
+    const lo = o.clone().applyMatrix4(inv), ld = d.clone().transformDirection(inv);
+    if (Math.abs(ld.z) < 1e-6) return null;
+    const t = -lo.z / ld.z;
+    if (t < 0) return null;
+    const x = lo.x + ld.x * t, y = lo.y + ld.y * t, e = this.escala();
+    return { t, que: "contenido", u: x / (this.ancho * e) + 0.5, v: 0.5 - y / (this.alto * e), x, y };
+  }
+  escala() { return 0.94 + 0.06 * this.aparece; }
+  dibujar(t) {
+    const g = this.g;
+    g.save();
+    this.app.zonas = [];
+    g.fillStyle = UI.fondo; g.fillRect(0, 0, this.px, this.py);
+    this.app.dibujar(g, this.px, this.py, t);
+    g.restore();
+    this.tex.needsUpdate = true;
+    this.app.sucio = false;
+  }
+  paso(dt, t) {
+    this.aparece = Math.min(1, this.aparece + dt * 4);
+    const e = this.escala();
+    this.pantalla.scale.set(this.ancho * e, this.alto * e, 1); this.pantalla.material.uniforms.uTam.value.set(this.ancho * e, this.alto * e);
+    const alfa = this.aparece;
+    for (const m of [this.sombra, this.pantalla, this.barra, this.cerrar]) if (m) m.material.uniforms.uAlfa.value = alfa;
+    this.pantalla.material.uniforms.uHover.value = this.hover.contenido * (this.tipo === "app" ? 1 : 0.5);
+    const hv = this.hover.contenido > 0;
+    const u = this.sombra.material.uniforms.uColor.value;
+    u.set(hv ? 0.35 : 0, hv ? 0.55 : 0, hv ? 0.9 : 0, 0.28 + 0.2 * (hv ? 1 : 0));
+    if (this.barra) {
+      const cerca = Math.max(this.hover.contenido, this.hover.barra, this.hover.cerrar);
+      const gb = 0.72 + 0.28 * this.hover.barra;
+      this.barra.material.uniforms.uColor.value.set(gb, gb, gb, 0.55 + 0.4 * this.hover.barra);
+      this.barra.material.uniforms.uAlfa.value = alfa * (0.45 + 0.55 * cerca);
+      const bw = this.barraAncho * (1 + 0.08 * this.hover.barra), bh = 0.022 * (1 + 0.25 * this.hover.barra);
+      this.barra.scale.set(bw, bh, 1); this.barra.material.uniforms.uTam.value.set(bw, bh);
+      this.cerrar.visible = cerca > 0.05;
+      this.cerrar.material.uniforms.uHover.value = this.hover.cerrar;
+      this.cerrar.material.uniforms.uAlfa.value = alfa * cerca;
+    }
+    // se vuelve a dibujar si cambió lo que apuntás (el botón que se ilumina), si la app lo pidió o si se mueve sola
+    const p = this.app.puntero, z = p ? this.app.zonaEn(p.x, p.y) : null;
+    if (z !== this.zonaHover) { this.zonaHover = z; this.app.sucio = true; }
+    if (this.app.sucio || this.app.animada) this.dibujar(t);
+  }
+  quitar() { mundo.remove(this.grupo); this.tex.dispose(); for (const m of [this.sombra, this.pantalla, this.barra, this.cerrar]) if (m) m.material.dispose(); }
+}
+
+// ── las apps: cada una dibuja su lienzo y recibe toques (baja / mueve / sube, en píxeles) ──
+class App {
+  constructor(nombre, titulo, color) { this.nombre = nombre; this.titulo = titulo; this.color = color; this.zonas = []; this.puntero = null; this.apretado = null; this.sucio = true; this.animada = false; this.toques = []; }
+  zona(id, x, y, w, h) {
+    this.zonas.push({ id, x, y, w, h });
+    const p = this.puntero;
+    return { sobre: !!p && p.x >= x && p.x <= x + w && p.y >= y && p.y <= y + h, apretado: this.apretado === id };
+  }
+  boton(g, id, x, y, w, h, texto, o = {}) {
+    const z = this.zona(id, x, y, w, h);
+    const base = o.activo ? UI.azul : (o.color || UI.tarjeta);
+    g.fillStyle = base; redondo(g, x, y, w, h, o.r ?? 18); g.fill();
+    if (z.sobre || z.apretado) { g.fillStyle = z.apretado ? "#ffffff38" : "#ffffff1c"; redondo(g, x, y, w, h, o.r ?? 18); g.fill(); }
+    if (z.sobre) { g.strokeStyle = "#9cc8ff"; g.lineWidth = 3; redondo(g, x + 1.5, y + 1.5, w - 3, h - 3, o.r ?? 18); g.stroke(); }
+    g.fillStyle = o.colorTexto || UI.texto; g.font = `${o.negrita === false ? "" : "600 "}${o.tam || 30}px ${FUENTE}`; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(texto, x + w / 2, y + h / 2 + 1);
+    g.textAlign = "left"; g.textBaseline = "alphabetic";
+    return z;
+  }
+  titulo_(g, texto, sub) {
+    g.fillStyle = UI.texto; g.font = `700 40px ${FUENTE}`; g.fillText(texto, 36, 66);
+    if (sub) { g.fillStyle = UI.texto2; g.font = `24px ${FUENTE}`; g.fillText(sub, 38, 100); }
+  }
+  zonaEn(x, y) { for (let i = this.zonas.length - 1; i >= 0; i--) { const z = this.zonas[i]; if (x >= z.x && x <= z.x + z.w && y >= z.y && y <= z.y + z.h) return z.id; } return null; }
+  toqueBase(tipo, x, y) {
+    this.toques.push(tipo);
+    if (this.toques.length > 50) this.toques.shift();
+    if (tipo === "baja") this.apretado = this.zonaEn(x, y);
+    if (tipo === "sube" || tipo === "cancela") {
+      const z = this.zonaEn(x, y), ap = this.apretado;
+      this.apretado = null;
+      if (tipo === "sube" && ap !== null && z === ap) { SONIDO.clic(); this.accion(ap); }
+    }
+    this.toque?.(tipo, x, y);
+    this.sucio = true;
+  }
+  accion() { }
+  cerrada() { }
+}
+
+/** Un ícono dibujado (sin emojis, que cada teléfono dibuja distinto). */
+function icono(g, nombre, cx, cy, r, color) {
+  g.save();
+  g.fillStyle = color; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill();
+  g.strokeStyle = "#fff"; g.fillStyle = "#fff"; g.lineWidth = r * 0.12; g.lineCap = "round"; g.lineJoin = "round";
+  const s = r * 0.5;
+  g.beginPath();
+  switch (nombre) {
+    case "reloj": g.arc(cx, cy, s * 1.05, 0, 7); g.moveTo(cx, cy); g.lineTo(cx, cy - s * 0.7); g.moveTo(cx, cy); g.lineTo(cx + s * 0.5, cy + s * 0.2); g.stroke(); break;
+    case "calculadora": for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) { g.rect(cx - s + i * s * 0.75, cy - s * 0.6 + j * s * 0.62, s * 0.45, s * 0.38); } g.fill(); g.fillRect(cx - s, cy - s * 1.05, s * 1.95, s * 0.3); break;
+    case "notas": g.rect(cx - s * 0.8, cy - s, s * 1.6, s * 2); g.stroke(); g.beginPath(); for (let k = 0; k < 3; k++) { g.moveTo(cx - s * 0.45, cy - s * 0.45 + k * s * 0.45); g.lineTo(cx + s * 0.45, cy - s * 0.45 + k * s * 0.45); } g.stroke(); break;
+    case "clima": g.arc(cx - s * 0.25, cy - s * 0.2, s * 0.55, 0, 7); g.fill(); g.fillStyle = "#e9f1ff"; g.beginPath(); g.arc(cx + s * 0.2, cy + s * 0.3, s * 0.5, 0, 7); g.arc(cx - s * 0.35, cy + s * 0.45, s * 0.38, 0, 7); g.arc(cx + s * 0.7, cy + s * 0.5, s * 0.34, 0, 7); g.fill(); break;
+    case "pizarra": g.moveTo(cx - s, cy + s * 0.6); g.bezierCurveTo(cx - s * 0.4, cy - s * 1.2, cx + s * 0.2, cy + s * 1.2, cx + s, cy - s * 0.6); g.stroke(); break;
+    case "cine": g.moveTo(cx - s * 0.5, cy - s * 0.75); g.lineTo(cx + s * 0.8, cy); g.lineTo(cx - s * 0.5, cy + s * 0.75); g.closePath(); g.fill(); break;
+    case "ajustes": for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.moveTo(cx + Math.cos(a) * s * 0.6, cy + Math.sin(a) * s * 0.6); g.lineTo(cx + Math.cos(a) * s * 1.05, cy + Math.sin(a) * s * 1.05); } g.stroke(); g.beginPath(); g.arc(cx, cy, s * 0.6, 0, 7); g.stroke(); break;
+    case "ayuda": g.font = `700 ${r * 1.1}px ${FUENTE}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("?", cx, cy + r * 0.05); break;
+    case "globos": g.arc(cx - s * 0.3, cy - s * 0.2, s * 0.55, 0, 7); g.fill(); g.fillStyle = "#ffd6e0"; g.beginPath(); g.arc(cx + s * 0.4, cy - s * 0.05, s * 0.45, 0, 7); g.fill(); g.beginPath(); g.moveTo(cx - s * 0.3, cy + s * 0.35); g.lineTo(cx - s * 0.2, cy + s); g.stroke(); break;
+    default: g.arc(cx, cy, s * 0.6, 0, 7); g.fill();
+  }
+  g.restore();
+}
+
+// ─── Bienvenida ───
+class Bienvenida extends App {
+  constructor() { super("bienvenida", "Bienvenida", "#6b7cff"); }
+  dibujar(g, W, H) {
+    this.titulo_(g, "Nexo Web", "3DoF: sólo girás la cabeza. Nada se mueve solo.");
+    const tarjetas = [
+      ["Clic: doble pellizco", "Apuntá y juntá el pulgar con el índice dos veces rápido. Después del primero, el cursor se pone celeste."],
+      ["Arrastrar y scroll", "En el segundo pellizco, sostené y mové la mano. La barra de abajo de cada ventana la mueve."],
+      ["La barra de apps", "Doble pellizco en la nada: muestra o esconde la barra de abajo. Sostenido 1 s: todo vuelve adelante tuyo."],
+      ["Sin manos", "Mirá fijo un botón 1 segundo, tocá la pantalla (o el botón del visor) o usá un control."],
+    ];
+    tarjetas.forEach(([t, d], i) => {
+      const x = 36 + (i % 2) * 480, y = 130 + Math.floor(i / 2) * 200;
+      g.fillStyle = UI.tarjeta; redondo(g, x, y, 460, 180, 22); g.fill();
+      g.fillStyle = UI.celeste; g.font = `700 28px ${FUENTE}`; g.fillText(t, x + 24, y + 48);
+      g.fillStyle = UI.texto2; g.font = `23px ${FUENTE}`;
+      envolver(g, d, x + 24, y + 86, 412, 31);
+    });
+    this.boton(g, "listo", W / 2 - 150, H - 110, 300, 76, "Entendido", { activo: true });
+  }
+  accion(id) { if (id === "listo") cerrarApp(this); }
+}
+function envolver(g, texto, x, y, ancho, alto) {
+  let linea = "", yy = y;
+  for (const p of texto.split(" ")) {
+    const prueba = linea ? linea + " " + p : p;
+    if (g.measureText(prueba).width > ancho && linea) { g.fillText(linea, x, yy); linea = p; yy += alto; } else linea = prueba;
+  }
+  if (linea) g.fillText(linea, x, yy);
+  return yy;
+}
+
+// ─── Reloj (hora, cronómetro, temporizador) ───
+class Reloj extends App {
+  constructor() { super("reloj", "Reloj", "#ff8a4c"); this.animada = true; this.crono = 0; this.corre = false; this.desde = 0; this.temp = 0; this.tempHasta = 0; this.ultimo = ""; }
+  dibujar(g, W, H) {
+    const ahora = new Date();
+    g.fillStyle = UI.texto; g.font = `700 150px ${FUENTE}`; g.textAlign = "center";
+    g.fillText(ahora.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }), W / 2, 200);
+    g.fillStyle = UI.texto2; g.font = `30px ${FUENTE}`;
+    g.fillText(ahora.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }), W / 2, 250);
+    // el cronómetro
+    const c = this.corre ? this.crono + (performance.now() - this.desde) : this.crono;
+    const mm = Math.floor(c / 60000), ss = Math.floor(c / 1000) % 60, cc = Math.floor(c / 10) % 100;
+    g.fillStyle = UI.tarjeta; g.textAlign = "left"; redondo(g, 36, 290, 460, 310, 24); g.fill(); redondo(g, 528, 290, 460, 310, 24); g.fill();
+    g.fillStyle = UI.texto2; g.font = `600 24px ${FUENTE}`; g.fillText("CRONÓMETRO", 60, 330); g.fillText("TEMPORIZADOR", 552, 330);
+    g.fillStyle = UI.texto; g.font = `600 70px ${FUENTE}`; g.textAlign = "center";
+    g.fillText(`${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")},${String(cc).padStart(2, "0")}`, 266, 420);
+    this.boton(g, "crono", 60, 470, 200, 90, this.corre ? "Pausa" : "Empezar", { activo: !this.corre });
+    this.boton(g, "cero", 276, 470, 196, 90, "Cero");
+    const falta = this.temp ? Math.max(0, this.tempHasta - performance.now()) : 0;
+    g.fillStyle = this.temp && falta === 0 ? UI.rojo : UI.texto; g.font = `600 70px ${FUENTE}`; g.textAlign = "center";
+    const seg = Math.ceil(falta / 1000);
+    g.fillText(this.temp ? `${String(Math.floor(seg / 60)).padStart(2, "0")}:${String(seg % 60).padStart(2, "0")}` : "--:--", 758, 420);
+    [1, 3, 5, 10].forEach((m, i) => this.boton(g, "t" + m, 552 + i * 106, 470, 94, 90, m + "'", { tam: 34 }));
+    g.textAlign = "left";
+    if (this.temp && falta === 0 && !this.sono) { this.sono = true; SONIDO.alarma(); aviso("⏰ ¡Terminó el temporizador!"); }
+  }
+  accion(id) {
+    if (id === "crono") { if (this.corre) { this.crono += performance.now() - this.desde; this.corre = false; } else { this.desde = performance.now(); this.corre = true; } }
+    else if (id === "cero") { this.crono = 0; this.corre = false; this.temp = 0; }
+    else if (id[0] === "t") { this.temp = +id.slice(1); this.tempHasta = performance.now() + this.temp * 60000; this.sono = false; }
+  }
+}
+
+// ─── Calculadora ───
+class Calculadora extends App {
+  constructor() { super("calculadora", "Calculadora", "#8d93a5"); this.expr = ""; this.res = ""; }
+  dibujar(g, W, H) {
+    g.fillStyle = UI.tarjeta; redondo(g, 36, 30, W - 72, 150, 24); g.fill();
+    g.textAlign = "right"; g.fillStyle = UI.texto2; g.font = `34px ${FUENTE}`; g.fillText(this.expr || " ", W - 64, 84);
+    g.fillStyle = this.error ? UI.rojo : UI.texto; g.font = `600 64px ${FUENTE}`; g.fillText(this.res || (this.expr ? " " : "0"), W - 64, 156);
+    g.textAlign = "left";
+    const teclas = [["C", "(", ")", "÷", "⌫"], ["7", "8", "9", "×", "^"], ["4", "5", "6", "−", "%"], ["1", "2", "3", "+", "π"], ["0", ",", "=", "", ""]];
+    const tw = (W - 72 - 4 * 14) / 5, th = 76;
+    teclas.forEach((fila, j) => fila.forEach((k, i) => {
+      if (!k) return;
+      const ancho = k === "=" ? tw * 3 + 28 : tw;
+      const op = "÷×−+^%".includes(k), fn = k === "C" || k === "⌫";
+      this.boton(g, "k" + k, 36 + i * (tw + 14), 200 + j * (th + 10), ancho, th, k, { tam: 38, color: k === "=" ? UI.azul : op ? "#3a3f55" : fn ? "#4a2f36" : UI.tarjeta });
+    }));
+  }
+  accion(id) {
+    const k = id.slice(1);
+    this.error = false;
+    if (k === "C") { this.expr = ""; this.res = ""; }
+    else if (k === "⌫") this.expr = this.expr.slice(0, -1);
+    else if (k === "=") { try { this.res = "= " + formato(calcular(this.expr)); } catch (e) { this.res = e.message; this.error = true; } }
+    else { if (this.res && !this.error && "÷×−+^%".includes(k)) this.expr = this.res.slice(2).replace(/\./g, ""); this.res = ""; this.expr += k; }
+  }
+}
+
+// ─── Notas (con su teclado adentro: en el visor no hay otro) ───
+class Notas extends App {
+  constructor() { super("notas", "Notas", "#f1c14b"); this.may = false; try { this.texto = localStorage.getItem("nexo-web-notas") || ""; } catch (e) { this.texto = ""; } }
+  dibujar(g, W, H) {
+    g.fillStyle = "#fbf6e6"; redondo(g, 30, 24, W - 60, 250, 20); g.fill();
+    g.fillStyle = "#2a2a2a"; g.font = `30px ${FUENTE}`;
+    const lineas = [];
+    for (const par of (this.texto + "▏").split("\n")) {
+      let l = "";
+      for (const ch of par) { if (g.measureText(l + ch).width > W - 110) { lineas.push(l); l = ch; } else l += ch; }
+      lineas.push(l);
+    }
+    lineas.slice(-6).forEach((l, i) => g.fillText(l, 54, 70 + i * 38));
+    const filas = ["1234567890", "qwertyuiop", "asdfghjklñ", "zxcvbnm,.?"];
+    const tw = (W - 60 - 9 * 8) / 10, th = 62;
+    filas.forEach((f, j) => [...f].forEach((c, i) => {
+      const k = this.may ? c.toUpperCase() : c;
+      this.boton(g, "k" + k, 30 + i * (tw + 8), 290 + j * (th + 8), tw, th, k, { tam: 30, r: 12, negrita: false });
+    }));
+    const y = 290 + 4 * (th + 8);
+    this.boton(g, "may", 30, y, 150, th, "⇧", { r: 12, activo: this.may });
+    this.boton(g, "espacio", 190, y, W - 60 - 150 * 3 - 30, th, "espacio", { r: 12, tam: 26, negrita: false });
+    this.boton(g, "borrar", W - 30 - 300 - 10, y, 150, th, "⌫", { r: 12 });
+    this.boton(g, "enter", W - 30 - 150, y, 150, th, "↵", { r: 12 });
+  }
+  accion(id) {
+    if (id === "may") this.may = !this.may;
+    else if (id === "espacio") this.texto += " ";
+    else if (id === "borrar") this.texto = [...this.texto].slice(0, -1).join("");
+    else if (id === "enter") this.texto += "\n";
+    else if (id[0] === "k") { this.texto += id.slice(1); if (this.may) this.may = false; }
+    try { localStorage.setItem("nexo-web-notas", this.texto); } catch (e) { /* sin guardar */ }
+  }
+}
+
+// ─── Clima (Open-Meteo: sin clave) ───
+const CLIMA = { 0: ["Despejado", "sol"], 1: ["Casi despejado", "sol"], 2: ["Algo nublado", "nube-sol"], 3: ["Nublado", "nube"], 45: ["Niebla", "nube"], 48: ["Niebla", "nube"],
+  51: ["Llovizna", "lluvia"], 53: ["Llovizna", "lluvia"], 55: ["Llovizna", "lluvia"], 61: ["Lluvia", "lluvia"], 63: ["Lluvia", "lluvia"], 65: ["Lluvia fuerte", "lluvia"],
+  71: ["Nieve", "nieve"], 73: ["Nieve", "nieve"], 75: ["Nieve", "nieve"], 80: ["Chaparrones", "lluvia"], 81: ["Chaparrones", "lluvia"], 82: ["Chaparrones", "lluvia"],
+  95: ["Tormenta", "tormenta"], 96: ["Tormenta", "tormenta"], 99: ["Tormenta", "tormenta"] };
+class Clima extends App {
+  constructor() { super("clima", "Clima", "#3fa9f5"); this.estado = "Buscando dónde estás…"; this.datos = null; this.buscar(); }
+  async buscar() {
+    const pedir = async (lat, lon, lugar) => {
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
+        this.datos = await r.json(); this.lugar = lugar; this.estado = "";
+      } catch (e) { this.estado = "Sin conexión: no se pudo traer el clima."; }
+      this.sucio = true;
+    };
+    const cae = () => pedir(-34.61, -58.38, "Buenos Aires (no se pudo saber dónde estás)");
+    if (!navigator.geolocation) return cae();
+    navigator.geolocation.getCurrentPosition((p) => pedir(p.coords.latitude.toFixed(3), p.coords.longitude.toFixed(3), "Tu ubicación"), cae, { timeout: 6000, maximumAge: 3600e3 });
+  }
+  dibujo(g, tipo, cx, cy, r) {
+    g.save();
+    const sol = () => { g.fillStyle = "#ffcc3a"; g.beginPath(); g.arc(cx, cy, r * 0.55, 0, 7); g.fill(); g.strokeStyle = "#ffcc3a"; g.lineWidth = r * 0.08; for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.beginPath(); g.moveTo(cx + Math.cos(a) * r * 0.72, cy + Math.sin(a) * r * 0.72); g.lineTo(cx + Math.cos(a) * r * 0.95, cy + Math.sin(a) * r * 0.95); g.stroke(); } };
+    const nube = (dx, dy, k, c) => { g.fillStyle = c; g.beginPath(); g.arc(cx + dx, cy + dy, r * 0.42 * k, 0, 7); g.arc(cx + dx - r * 0.42 * k, cy + dy + r * 0.12 * k, r * 0.3 * k, 0, 7); g.arc(cx + dx + r * 0.42 * k, cy + dy + r * 0.14 * k, r * 0.28 * k, 0, 7); g.fill(); };
+    if (tipo === "sol") sol();
+    else if (tipo === "nube-sol") { g.translate(-r * 0.2, -r * 0.2); sol(); g.translate(r * 0.2, r * 0.2); nube(r * 0.15, r * 0.2, 1, "#e8eef8"); }
+    else nube(0, 0, 1.1, tipo === "tormenta" ? "#8e98ab" : "#dfe6f2");
+    if (tipo === "lluvia" || tipo === "tormenta") { g.strokeStyle = "#6cc4ff"; g.lineWidth = r * 0.07; for (let k = -1; k <= 1; k++) { g.beginPath(); g.moveTo(cx + k * r * 0.35, cy + r * 0.45); g.lineTo(cx + k * r * 0.35 - r * 0.1, cy + r * 0.75); g.stroke(); } }
+    if (tipo === "nieve") { g.fillStyle = "#fff"; for (let k = -1; k <= 1; k++) { g.beginPath(); g.arc(cx + k * r * 0.35, cy + r * 0.62, r * 0.07, 0, 7); g.fill(); } }
+    g.restore();
+  }
+  dibujar(g, W, H) {
+    this.titulo_(g, "Clima", this.lugar || this.estado);
+    const d = this.datos;
+    if (!d || !d.current) { g.fillStyle = UI.texto2; g.font = `28px ${FUENTE}`; g.fillText(this.estado || "…", 40, 200); this.boton(g, "otra", 36, H - 110, 260, 76, "Reintentar"); return; }
+    const [txt, ic] = CLIMA[d.current.weather_code] || ["—", "nube"];
+    this.dibujo(g, ic, 150, 230, 95);
+    g.fillStyle = UI.texto; g.font = `700 120px ${FUENTE}`; g.fillText(Math.round(d.current.temperature_2m) + "°", 280, 268);
+    g.font = `34px ${FUENTE}`; g.fillText(txt, 540, 210);
+    g.fillStyle = UI.texto2; g.font = `26px ${FUENTE}`;
+    g.fillText(`Sensación ${Math.round(d.current.apparent_temperature)}° · Humedad ${d.current.relative_humidity_2m}% · Viento ${Math.round(d.current.wind_speed_10m)} km/h`, 540, 256);
+    const dias = d.daily;
+    for (let i = 0; i < Math.min(5, dias.time.length); i++) {
+      const x = 36 + i * 192, y = 350;
+      g.fillStyle = UI.tarjeta; redondo(g, x, y, 176, 250, 20); g.fill();
+      const f = new Date(dias.time[i] + "T12:00");
+      g.fillStyle = UI.texto2; g.font = `600 24px ${FUENTE}`; g.textAlign = "center";
+      g.fillText(i === 0 ? "Hoy" : f.toLocaleDateString("es-AR", { weekday: "short" }), x + 88, y + 40);
+      this.dibujo(g, (CLIMA[dias.weather_code[i]] || ["", "nube"])[1], x + 88, y + 110, 46);
+      g.fillStyle = UI.texto; g.font = `600 34px ${FUENTE}`; g.fillText(Math.round(dias.temperature_2m_max[i]) + "°", x + 88, y + 196);
+      g.fillStyle = UI.texto2; g.font = `28px ${FUENTE}`; g.fillText(Math.round(dias.temperature_2m_min[i]) + "°", x + 88, y + 232);
+      g.textAlign = "left";
+    }
+  }
+  accion(id) { if (id === "otra") { this.estado = "Buscando…"; this.buscar(); } }
+}
+
+// ─── Pizarra (dibujar con el doble pellizco sostenido) ───
+class Pizarra extends App {
+  constructor() { super("pizarra", "Pizarra", "#b58cff"); this.trazos = []; this.color = "#ffffff"; this.actual = null; }
+  dibujar(g, W, H) {
+    g.fillStyle = "#101116"; redondo(g, 20, 20, W - 40, H - 130, 20); g.fill();
+    g.lineCap = "round"; g.lineJoin = "round";
+    for (const t of this.trazos.concat(this.actual ? [this.actual] : [])) {
+      g.strokeStyle = t.color; g.lineWidth = 9; g.beginPath();
+      t.p.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+      if (t.p.length === 1) g.lineTo(t.p[0][0] + 0.1, t.p[0][1]);
+      g.stroke();
+    }
+    ["#ffffff", "#5cdbff", "#ff6b6b", "#ffd24c", "#35c28b", "#b58cff"].forEach((c, i) => {
+      const z = this.zona("c" + c, 30 + i * 90, H - 96, 76, 76);
+      g.fillStyle = c; g.beginPath(); g.arc(68 + i * 90, H - 58, 30, 0, 7); g.fill();
+      if (this.color === c || z.sobre) { g.strokeStyle = "#fff"; g.lineWidth = 4; g.beginPath(); g.arc(68 + i * 90, H - 58, 36, 0, 7); g.stroke(); }
+    });
+    this.boton(g, "deshacer", W - 420, H - 96, 190, 76, "Deshacer", { tam: 26 });
+    this.boton(g, "limpiar", W - 220, H - 96, 190, 76, "Limpiar", { tam: 26 });
+  }
+  toque(tipo, x, y) {
+    const adentro = y < this.ventana.py - 130 && this.zonaEn(x, y) === null;
+    if (tipo === "baja" && adentro) this.actual = { color: this.color, p: [[x, y]] };
+    else if (tipo === "mueve" && this.actual) { const u = this.actual.p[this.actual.p.length - 1]; if (Math.hypot(x - u[0], y - u[1]) > 3) this.actual.p.push([x, y]); }
+    else if ((tipo === "sube" || tipo === "cancela") && this.actual) { this.trazos.push(this.actual); this.actual = null; }
+  }
+  accion(id) {
+    if (id[0] === "c") this.color = id.slice(1);
+    else if (id === "limpiar") this.trazos = [];
+    else if (id === "deshacer") this.trazos.pop();
+  }
+}
+
+// ─── Cine (un video del teléfono, en grande) ───
+const videoCine = document.createElement("video");
+videoCine.playsInline = true; videoCine.setAttribute("playsinline", ""); videoCine.loop = true;
+class Cine extends App {
+  constructor() { super("cine", "Cine", "#e0455f"); this.animada = true; }
+  dibujar(g, W, H) {
+    const v = videoCine;
+    if (!v.src) {
+      this.titulo_(g, "Cine", "Elegí un video en la pantalla de inicio (Video para el Cine).");
+      icono(g, "cine", W / 2, H / 2 + 20, 90, "#e0455f");
+      return;
+    }
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    if (v.videoWidth) {
+      const k = Math.min(W / v.videoWidth, (H - 90) / v.videoHeight), w = v.videoWidth * k, h = v.videoHeight * k;
+      g.drawImage(v, (W - w) / 2, (H - 90 - h) / 2, w, h);
+    }
+    g.fillStyle = "#000c"; g.fillRect(0, H - 90, W, 90);
+    this.boton(g, "play", 20, H - 78, 130, 66, v.paused ? "▶" : "❚❚", { tam: 30, r: 14 });
+    const x0 = 180, x1 = W - 200, f = v.duration ? v.currentTime / v.duration : 0;
+    this.zona("barra", x0, H - 78, x1 - x0, 66);
+    g.fillStyle = "#ffffff33"; redondo(g, x0, H - 50, x1 - x0, 10, 5); g.fill();
+    g.fillStyle = UI.celeste; redondo(g, x0, H - 50, (x1 - x0) * f, 10, 5); g.fill();
+    g.beginPath(); g.arc(x0 + (x1 - x0) * f, H - 45, 14, 0, 7); g.fill();
+    const s = (x) => `${Math.floor(x / 60)}:${String(Math.floor(x % 60)).padStart(2, "0")}`;
+    g.fillStyle = UI.texto; g.font = `24px ${FUENTE}`; g.fillText(`${s(v.currentTime || 0)} / ${s(v.duration || 0)}`, W - 180, H - 38);
+  }
+  toque(tipo, x, y) {
+    if ((tipo === "baja" || tipo === "mueve") && this.apretado === "barra" && videoCine.duration) {
+      const x0 = 180, x1 = this.ventana.px - 200;
+      videoCine.currentTime = clamp((x - x0) / (x1 - x0), 0, 1) * videoCine.duration;
+    }
+  }
+  accion(id) { if (id === "play") { if (videoCine.paused) videoCine.play().catch(() => {}); else videoCine.pause(); } }
+  cerrada() { videoCine.pause(); }
+}
+
+// ─── Globos (un juego chiquito: reventalos con el doble pellizco) ───
+class Globos extends App {
+  constructor() { super("globos", "Globos", "#ff5f8f"); this.animada = true; this.g = []; this.puntos = 0; this.ultimo = performance.now(); }
+  dibujar(g, W, H) {
+    const t = performance.now(), dt = Math.min(0.1, (t - this.ultimo) / 1000); this.ultimo = t;
+    const cielo = g.createLinearGradient(0, 0, 0, H); cielo.addColorStop(0, "#1d2b64"); cielo.addColorStop(1, "#f8cdda");
+    g.fillStyle = cielo; g.fillRect(0, 0, W, H);
+    if (this.g.length < 7 && Math.random() < dt * 2) this.g.push({ x: 80 + Math.random() * (W - 160), y: H + 60, r: 38 + Math.random() * 22, v: 60 + Math.random() * 70, c: `hsl(${Math.random() * 360},80%,62%)`, fase: Math.random() * 6 });
+    for (const b of this.g) {
+      b.y -= b.v * dt; b.fase += dt * 2;
+      const x = b.x + Math.sin(b.fase) * 12;
+      g.strokeStyle = "#fff8"; g.lineWidth = 2; g.beginPath(); g.moveTo(x, b.y + b.r); g.quadraticCurveTo(x + 10, b.y + b.r + 30, x - 4, b.y + b.r + 60); g.stroke();
+      g.fillStyle = b.c; g.beginPath(); g.ellipse(x, b.y, b.r * 0.86, b.r, 0, 0, 7); g.fill();
+      g.fillStyle = "#fff6"; g.beginPath(); g.ellipse(x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.18, b.r * 0.28, -0.5, 0, 7); g.fill();
+      b.xv = x;
+    }
+    this.g = this.g.filter((b) => b.y > -80 && !b.fuera);
+    g.fillStyle = "#fff"; g.font = `700 44px ${FUENTE}`; g.fillText(`${this.puntos}`, 30, 64);
+    g.font = `22px ${FUENTE}`; g.fillText("globos", 30 + g.measureText(String(this.puntos)).width * 2 + 16, 62);
+  }
+  toque(tipo, x, y) {
+    if (tipo !== "baja") return;
+    for (const b of this.g) if (Math.hypot(x - b.xv, y - b.y) < b.r * 1.15) { b.fuera = true; this.puntos++; tono(300 + Math.random() * 300, 0.12, 0.1, "square"); break; }
+  }
+}
+
+// ─── Ajustes ───
+class Ajustes extends App {
+  constructor() { super("ajustes", "Ajustes", "#8a8f9e"); }
+  dibujar(g, W, H) {
+    this.titulo_(g, "Ajustes");
+    const filas = [
+      ["visor", "Visor (VR Box)", aj.visor ? "Sí" : "No"], ["entorno", "Entorno", { espacio: "Espacio", atardecer: "Atardecer", pass: "Cámara" }[aj.pass ? "pass" : aj.entorno]],
+      ["doble", "Clic con doble pellizco", aj.doble ? "Sí" : "No"], ["mirada", "Clic mirando fijo", aj.mirada ? "Sí" : "No"],
+      ["verManos", "Ver mis manos", aj.verManos ? "Sí" : "No"], ["sonido", "Sonidos", aj.sonido ? "Sí" : "No"],
+      ["ipd", "Distancia entre ojos", aj.ipd + " mm"], ["fov", "Campo del visor", aj.fov + "°"], ["k1", "Corrección de lentes", aj.k1.toFixed(2)],
+      ["sep", "Separar imágenes", (aj.sep > 0 ? "+" : "") + aj.sep + " %"], ["campo", "Campo de la cámara", aj.campo + "°"], ["escalaMano", "Tamaño de mis manos", "×" + aj.escalaMano.toFixed(2)],
+      ["abajo", "Punto de mira de las manos", aj.abajo + " cm abajo"], ["anticipo", "Predicción del giro", aj.anticipo + " ms"],
+    ];
+    const conMasMenos = new Set(["ipd", "fov", "k1", "sep", "campo", "escalaMano", "abajo", "anticipo"]);
+    filas.forEach(([id, t, v], i) => {
+      const col = i % 2, fila = Math.floor(i / 2), x = 30 + col * 490, y = 96 + fila * 66;
+      g.fillStyle = UI.tarjeta; redondo(g, x, y, 474, 58, 14); g.fill();
+      g.fillStyle = UI.texto; g.font = `24px ${FUENTE}`; g.fillText(t, x + 18, y + 37);
+      if (conMasMenos.has(id)) {
+        g.fillStyle = UI.texto2; g.textAlign = "right"; g.fillText(v, x + 340, y + 37); g.textAlign = "left";
+        this.boton(g, "-" + id, x + 352, y + 6, 54, 46, "−", { r: 12, tam: 30, color: UI.tarjeta2 });
+        this.boton(g, "+" + id, x + 412, y + 6, 54, 46, "+", { r: 12, tam: 30, color: UI.tarjeta2 });
+      } else this.boton(g, "=" + id, x + 332, y + 6, 134, 46, v, { r: 12, tam: 24, activo: v === "Sí", color: UI.tarjeta2 });
+    });
+    this.boton(g, "centro", 30, H - 80, 300, 62, "Recentrar", { tam: 26 });
+    this.boton(g, "salir", W - 330, H - 80, 300, 62, "Salir de Nexo", { tam: 26, color: "#4a2f36" });
+  }
+  accion(id) {
+    const PASO = { ipd: [1, 50, 80], fov: [5, 60, 120], k1: [0.02, 0, 0.6], sep: [1, -15, 15], campo: [2, 40, 110], escalaMano: [0.02, 0.7, 1.4], abajo: [1, 0, 25], anticipo: [5, 0, 80] };
+    const c = id.slice(1);
+    if (id[0] === "+" || id[0] === "-") {
+      const [p, mn, mx] = PASO[c];
+      aj[c] = +clamp(aj[c] + (id[0] === "+" ? p : -p), mn, mx).toFixed(2);
+      if (c === "k1") aj.k2 = +(aj.k1 * 0.55).toFixed(3);
+    } else if (id[0] === "=") {
+      if (c === "entorno") {
+        const orden = ["espacio", "atardecer", "pass"], ahora = aj.pass ? "pass" : aj.entorno;
+        const sig = orden[(orden.indexOf(ahora) + 1) % orden.length];
+        if (sig === "pass") { aj.pass = true; asegurarCamara(); } else { aj.pass = false; aj.entorno = sig; }
+      } else aj[c] = !aj[c];
+      if (c === "visor") ajustarTamano();
+    } else if (id === "centro") recentrar();
+    else if (id === "salir") salir();
+    guardar();
+    aplicarAjustes();
+  }
+}
+
+// ─── la barra de abajo (el dock): las apps, la hora, cómo están las manos ───
+const APPS = { bienvenida: Bienvenida, reloj: Reloj, calculadora: Calculadora, notas: Notas, clima: Clima, pizarra: Pizarra, cine: Cine, globos: Globos, ajustes: Ajustes };
+const EN_DOCK = ["reloj", "calculadora", "notas", "clima", "pizarra", "cine", "globos", "ajustes", "bienvenida"];
+const ICONO = { reloj: "#ff8a4c", calculadora: "#8d93a5", notas: "#f1c14b", clima: "#3fa9f5", pizarra: "#b58cff", cine: "#e0455f", globos: "#ff5f8f", ajustes: "#6b7180", bienvenida: "#6b7cff" };
+class Dock extends App {
+  constructor() { super("dock", "Dock"); this.animada = true; this.ultimo = ""; }
+  dibujar(g, W, H) {
+    g.fillStyle = "#121318"; g.fillRect(0, 0, W, H);
+    EN_DOCK.forEach((n, i) => {
+      const cx = 80 + i * 112, cy = H / 2, z = this.zona("a" + n, cx - 50, 10, 100, H - 20);
+      const abierta = ventanas.some((v) => v.app.nombre === n);
+      icono(g, n === "bienvenida" ? "ayuda" : n, cx, cy - (z.sobre ? 4 : 0), z.sobre ? 44 : 40, ICONO[n]);
+      if (abierta) { g.fillStyle = "#fff"; g.beginPath(); g.arc(cx, H - 14, 5, 0, 7); g.fill(); }
+    });
+    const hora = new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+    g.fillStyle = UI.texto; g.font = `700 44px ${FUENTE}`; g.textAlign = "right"; g.fillText(hora, W - 30, H / 2 - 2);
+    g.fillStyle = UI.texto2; g.font = `22px ${FUENTE}`;
+    g.fillText(estadoManos(), W - 30, H / 2 + 34);
+    g.textAlign = "left";
+    this.ultimo = hora;
+  }
+  accion(id) { if (id[0] === "a") abrirApp(id.slice(1)); }
+}
+
+// ═════════════════════════ el escritorio ═════════════════════════
+const ventanas = [];
+let dock = null;
+const LUGARES = [0, 40, -40, 80, -80].map((g) => g * Math.PI / 180);
+function abrirApp(nombre) {
+  const ya = ventanas.find((v) => v.app.nombre === nombre);
+  if (ya) { ya.aparece = 0.3; aviso(ya.app.titulo); return ya; }
+  const app = new APPS[nombre]();
+  const grande = nombre === "cine";
+  const v = new Ventana(app, grande ? 1280 : 1024, grande ? 720 : 640, grande ? 1.5 : 0.92);
+  const libres = LUGARES.filter((y) => !ventanas.some((w) => Math.abs(w.yaw - (y + rumboEscritorio)) < 0.3));
+  v.yaw = (libres.length ? libres[0] : LUGARES[ventanas.length % LUGARES.length]) + rumboEscritorio;
+  v.pitch = grande ? 0.08 : 0; v.dist = grande ? 1.9 : 1.1;
+  if (ventanas.length >= 5) cerrarApp(ventanas[0].app);
+  ventanas.push(v);
+  v.colocar();
+  SONIDO.abrir();
+  return v;
+}
+function cerrarApp(app) {
+  const i = ventanas.findIndex((v) => v.app === app);
+  if (i < 0) return;
+  app.cerrada();
+  ventanas[i].quitar();
+  ventanas.splice(i, 1);
+  SONIDO.cerrar();
+}
+let rumboEscritorio = 0;
+function armarDock() {
+  dock = new Ventana(new Dock(), 1400, 170, 0.66, "dock");
+  dock.yaw = 0; dock.pitch = -0.45; dock.dist = 0.62;
+  dock.colocar();
+}
+
+// ── el aviso (pegado a la vista, abajo) ──
+const avisoLienzo = document.createElement("canvas"); avisoLienzo.width = 1024; avisoLienzo.height = 112;
+const avisoTex = new THREE.CanvasTexture(avisoLienzo);
+const avisoMalla = new THREE.Mesh(PLANO, material(MODO.CONTENIDO, { uRadio: { value: 0.03 } }));
+avisoMalla.material.uniforms.uTex.value = avisoTex; avisoMalla.scale.set(0.5, 0.0547, 1); avisoMalla.material.uniforms.uTam.value.set(0.5, 0.0547);
+avisoMalla.position.set(0, -0.3, -0.9); avisoMalla.renderOrder = 8; avisoMalla.material.depthTest = false; avisoMalla.visible = false;
+cabeza.add(avisoMalla);
+let avisoHasta = 0;
+function aviso(txt, ms = 2600) {
+  const g = avisoLienzo.getContext("2d");
+  g.clearRect(0, 0, 1024, 112); g.fillStyle = "#16181ff0"; redondo(g, 0, 0, 1024, 112, 40); g.fill();
+  g.fillStyle = "#fff"; g.font = `600 40px ${FUENTE}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(txt, 512, 58);
+  avisoTex.needsUpdate = true; avisoHasta = performance.now() + ms; avisoMalla.visible = true;
+  if (!enVR) $("estadoHud").textContent = txt;
+}
+
+// ═════════════════════════ la cabeza (3DoF) ═════════════════════════
+const ori = new Orientacion();
+let fuenteGiro = null, orientForzada = null;
+const Q_X_M90 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+const Z = new THREE.Vector3(0, 0, 1);
+function orientPantalla() {
+  if (orientForzada !== null) return orientForzada;
+  const a = screen.orientation ? screen.orientation.angle : (window.orientation || 0);
+  return (a || 0) * Math.PI / 180;
+}
+const eulerTmp = new THREE.Euler(), qTmp = new THREE.Quaternion(), qZ = new THREE.Quaternion();
+function deEventos(e) {
+  if (e.alpha === null && e.beta === null) return;
+  if (fuenteGiro === "sensor") return;
+  fuenteGiro = "eventos";
+  const D = Math.PI / 180;
+  eulerTmp.set((e.beta || 0) * D, (e.alpha || 0) * D, -(e.gamma || 0) * D, "YXZ");
+  qTmp.setFromEuler(eulerTmp).multiply(Q_X_M90).multiply(qZ.setFromAxisAngle(Z, -orientPantalla()));
+  ori.agregar(e.timeStamp || performance.now(), qTmp);
+}
+function empezarSensores() {
+  window.addEventListener("deviceorientation", deEventos);
+  if ("RelativeOrientationSensor" in window && PARAM.get("sensor") !== "eventos") {
+    try {
+      const s = new RelativeOrientationSensor({ frequency: 60, referenceFrame: "device" });
+      const q = new THREE.Quaternion();
+      s.addEventListener("reading", () => {
+        const [x, y, z, w] = s.quaternion;
+        fuenteGiro = "sensor";
+        q.set(x, y, z, w);
+        const r = Q_X_M90.clone().multiply(q).multiply(qZ.setFromAxisAngle(Z, -orientPantalla()));
+        ori.agregar(s.timestamp, r);
+      });
+      s.addEventListener("error", () => { if (fuenteGiro === "sensor") fuenteGiro = null; });
+      s.start();
+    } catch (e) { /* queda deviceorientation */ }
+  }
+}
+// sin sensores (la PC): mirar arrastrando el fondo o con las flechas
+let mirarYaw = 0, mirarPitch = 0;
+const qCabeza = new THREE.Quaternion(), qRumbo = new THREE.Quaternion();
+let rumbo = 0;
+function yawDe(q) { const f = new THREE.Vector3(0, 0, -1).applyQuaternion(q); return Math.atan2(-f.x, -f.z); }
+function orientacionAhora(t, out) {
+  if (fuenteGiro && ori.en(t, out)) return true;
+  out.setFromEuler(eulerTmp.set(mirarPitch, mirarYaw, 0, "YXZ"));
+  return false;
+}
+/** Recentrar: lo que tenés adelante pasa a ser el frente (las ventanas quedan delante tuyo). */
+function recentrar() {
+  const q = new THREE.Quaternion();
+  orientacionAhora(performance.now(), q);
+  rumbo = yawDe(q);
+  aviso("Recentrado");
+  SONIDO.abrir();
+}
+const cuello = new THREE.Vector3(0, 0, 0);
+function ponerCabeza(t) {
+  const q = new THREE.Quaternion();
+  orientacionAhora(t, q);
+  qRumbo.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -rumbo);
+  qCabeza.copy(qRumbo).multiply(q);
+  return qCabeza;
+}
+/** La cabeza en t (para las manos: la de cuando se sacó la foto). */
+function cabezaEn(t, pos, q) {
+  const qq = new THREE.Quaternion();
+  orientacionAhora(t, qq);
+  q.copy(qRumbo).multiply(qq);
+  pos.copy(cuello).sub(PIVOTE.clone().applyQuaternion(q));
+}
+
+// ═════════════════════════ las manos ═════════════════════════
+const HUESOS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
+const RADIO = [0.018, 0.013, 0.011, 0.0095, 0.0085, 0.011, 0.0095, 0.0085, 0.0075, 0.0115, 0.0098, 0.0088, 0.0078, 0.011, 0.0093, 0.0083, 0.0074, 0.0102, 0.0085, 0.0075, 0.0068];
+const matManos = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, uniforms: { uColor: { value: new THREE.Color(0.72, 0.84, 1.0) }, uAlfa: { value: 1 }, uBrillo: { value: 0 } },
+  vertexShader: `varying vec3 vN; varying vec3 vV;
+    void main() { vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix * instanceMatrix) * normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
+  fragmentShader: `uniform vec3 uColor; uniform float uAlfa; uniform float uBrillo; varying vec3 vN; varying vec3 vV;
+    void main() { float f = 1.0 - abs(dot(normalize(vN), normalize(vV))); float a = (0.1 + 0.8 * f * f) * uAlfa; gl_FragColor = vec4(mix(uColor, vec3(1.0), f * 0.45 + uBrillo * 0.35), a * (0.75 + 0.25 * uBrillo)); }`,
+});
+class Mano {
+  constructor(lado) {
+    this.lado = lado; this.w = Array.from({ length: 21 }, () => [0, 0, 0]); this.filtros = Array.from({ length: 63 }, () => new UnoEuro(1.4, 3.0, 1.0));
+    this.visto = 0; this.alfa = 0; this.visible = false; this.gestos = new Gestos(); this.doble = new DoblePellizco(); this.pellizca = false; this.aprieta = false;
+    this.articulaciones = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), matManos.clone(), 21);
+    this.huesos = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 10, 1, true), this.articulaciones.material, HUESOS.length);
+    for (const m of [this.articulaciones, this.huesos]) { m.frustumCulled = false; m.renderOrder = 4; m.visible = false; escena.add(m); }
+  }
+  /** Una foto nueva de esta mano (los puntos en el mundo). */
+  llega(pts, t) {
+    for (let i = 0; i < 21; i++) for (let k = 0; k < 3; k++) this.w[i][k] = this.filtros[i * 3 + k].filtrar(pts[i][k], t);
+    this.visto = performance.now();
+    // el pellizco con los puntos CRUDOS: el suavizado atrasa el cierre de los dedos y un pellizco rápido no
+    // llegaría al umbral (Gestos ya tiene su histéresis y pide dos fotos seguidas: el temblor no rebota)
+    this.pellizca = this.gestos.paso(pts);
+    const antes = this.doble.fase, antesAprieta = this.aprieta;
+    this.doble.doble = aj.doble;
+    this.aprieta = this.doble.paso(this.pellizca, t);
+    // un apretón que empieza queda anotado hasta que el puntero lo vea (si el teléfono dibuja lento, un
+    // pellizco corto puede empezar y terminar entre dos cuadros: igual es un clic)
+    if (this.aprieta && !antesAprieta) this.pendiente = true;
+    if (this.doble.fase === DoblePellizco.ARMADO && antes === DoblePellizco.PRIMERO) SONIDO.arma();
+    this.empezo = this.doble.empezando(t);
+  }
+  perder() { this.gestos.soltar(); this.doble.soltar(); this.pellizca = false; this.aprieta = false; this.pendiente = false; for (const f of this.filtros) f.x = null; }
+  paso(dt) {
+    const ahora = performance.now();
+    const hay = ahora - this.visto < 300;
+    this.alfa = clamp(this.alfa + (hay ? dt * 8 : -dt * 5), 0, 1);
+    if (!hay && this.visible) this.perder();
+    this.visible = hay;
+    const ver = this.alfa > 0.02 && aj.verManos;
+    this.articulaciones.visible = this.huesos.visible = ver;
+    if (!ver) return;
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
+    for (let i = 0; i < 21; i++) { const r = RADIO[i] * aj.escalaMano; m.compose(p.fromArray(this.w[i]), q.identity(), s.set(r, r, r)); this.articulaciones.setMatrixAt(i, m); }
+    HUESOS.forEach(([a, b], k) => {
+      const A = new THREE.Vector3().fromArray(this.w[a]), B = new THREE.Vector3().fromArray(this.w[b]), d = B.clone().sub(A), l = d.length();
+      const r = Math.min(RADIO[a], RADIO[b]) * aj.escalaMano * (k === 16 || k === 17 || k === 4 || k === 8 ? 0.8 : 1);
+      q.setFromUnitVectors(Y, d.normalize());
+      m.compose(A.add(B).multiplyScalar(0.5), q, s.set(r, l, r));
+      this.huesos.setMatrixAt(k, m);
+    });
+    this.articulaciones.instanceMatrix.needsUpdate = true; this.huesos.instanceMatrix.needsUpdate = true;
+    const u = this.articulaciones.material.uniforms;
+    u.uAlfa.value = this.alfa * 0.9; u.uBrillo.value += ((this.pellizca ? 1 : 0) - u.uBrillo.value) * Math.min(1, dt * 18);
+  }
+}
+const manos = [new Mano(0), new Mano(1)];
+const camaraHorizontal = () => aj.campo * Math.PI / 180;
+
+/** Lo que devolvió MediaPipe (en la foto de la hora ts) → las manos en el mundo. */
+function recibirManos(res, ts) {
+  const W = res.w, H = res.h;
+  if (!W || !H) return;
+  const fx = (W / 2) / Math.tan(camaraHorizontal() / 2), fy = fx, cx = W / 2, cy = H / 2;
+  const pos = new THREE.Vector3(), q = new THREE.Quaternion();
+  cabezaEn(ts - aj.latencia, pos, q);
+  // la cámara del teléfono: unos 7 cm delante de los ojos
+  const camPos = pos.clone().add(new THREE.Vector3(0, 0, -0.07).applyQuaternion(q));
+  const usados = [false, false];
+  const lista = res.manos.map((m) => {
+    const T = traslacion(m.img, m.mundo, aj.escalaMano, fx, fy, cx, cy, W, H);
+    // la cámara de atrás no está espejada: MediaPipe llama "Left" a tu mano derecha
+    return { m, T, lado: m.lado === "Left" ? 1 : m.lado === "Right" ? 0 : (m.img[0][0] > 0.5 ? 1 : 0) };
+  }).filter((x) => x.T && x.T[2] > 0.08 && x.T[2] < 1.4);
+  if (lista.length === 2 && lista[0].lado === lista[1].lado) { const a = lista[0].m.img[0][0] < lista[1].m.img[0][0] ? 0 : 1; lista[a].lado = 0; lista[1 - a].lado = 1; }
+  for (const { m, T, lado } of lista) {
+    if (usados[lado]) continue;
+    usados[lado] = true;
+    const pts = m.mundo.map((p) => {
+      // la cámara (x derecha, y abajo, z adelante) → la cabeza (x derecha, y arriba, −z adelante) → el mundo
+      const v = new THREE.Vector3(p[0] * aj.escalaMano + T[0], -(p[1] * aj.escalaMano + T[1]), -(p[2] * aj.escalaMano + T[2]));
+      return v.applyQuaternion(q).add(camPos).toArray();
+    });
+    manos[lado].llega(pts, ts);
+  }
+}
+function estadoManos() {
+  if (!aj.manos) return "Manos apagadas";
+  if (!trabajadorListo) return errorManos ? "Manos: " + errorManos : "Manos: cargando…";
+  const n = manos.filter((m) => m.visible).length;
+  return n ? `Manos: ${n} ${delegado === "GPU" ? "" : "(CPU)"}` : "Manos: mostralas a la cámara";
+}
+
+// ── la cámara y MediaPipe (en un worker) ──
+const TRABAJADOR = `
+let hl = null;
+onmessage = async (e) => {
+  const m = e.data;
+  if (m.tipo === "iniciar") {
+    try {
+      // jsDelivr manda el .cjs como application/node (importScripts no lo acepta): se trae y se evalúa
+      const txt = await (await fetch(m.base + "/vision_bundle.cjs")).text();
+      const mod = { exports: {} };
+      new Function("module", "exports", txt)(mod, mod.exports);
+      const { FilesetResolver, HandLandmarker } = mod.exports;
+      const fs = await FilesetResolver.forVisionTasks(m.base + "/wasm");
+      const opc = (d) => ({ baseOptions: { modelAssetPath: m.modelo, delegate: d }, runningMode: "VIDEO", numHands: 2,
+        minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+      let d = "GPU";
+      try { hl = await HandLandmarker.createFromOptions(fs, opc("GPU")); }
+      catch (err) { d = "CPU"; hl = await HandLandmarker.createFromOptions(fs, opc("CPU")); }
+      postMessage({ tipo: "listo", delegado: d });
+    } catch (err) { postMessage({ tipo: "error", msg: String((err && err.message) || err) }); }
+  } else if (m.tipo === "foto") {
+    const w = m.bmp.width, h = m.bmp.height, t0 = performance.now();
+    let r = null;
+    try { if (hl) r = hl.detectForVideo(m.bmp, m.ts); } catch (err) { r = null; }
+    m.bmp.close();
+    const manos = [];
+    if (r) for (let i = 0; i < r.landmarks.length; i++) {
+      const lado = (r.handedness && r.handedness[i] && r.handedness[i][0]) || (r.handednesses && r.handednesses[i] && r.handednesses[i][0]) || {};
+      manos.push({ img: r.landmarks[i].map((p) => [p.x, p.y, p.z]), mundo: r.worldLandmarks[i].map((p) => [p.x, p.y, p.z]), lado: lado.categoryName || "", puntaje: lado.score || 0 });
+    }
+    postMessage({ tipo: "manos", ts: m.ts, w, h, ms: performance.now() - t0, manos });
+  }
+};`;
+let trabajador = null, trabajadorListo = false, delegado = "", errorManos = "", ocupado = false, fotoNueva = true, msRed = 0, fpsManos = 0, cuentaManos = 0, desdeManos = performance.now();
+let camaraLista = false, pidiendoCamara = null;
+function asegurarCamara() {
+  if (camaraLista || pidiendoCamara) return pidiendoCamara;
+  if (!navigator.mediaDevices?.getUserMedia) { errorManos = "este navegador no presta la cámara"; return null; }
+  pidiendoCamara = navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } } })
+    .then(async (s) => {
+      video.srcObject = s; await video.play(); camaraLista = true;
+      if (video.requestVideoFrameCallback) { const cada = () => { fotoNueva = true; video.requestVideoFrameCallback(cada); }; video.requestVideoFrameCallback(cada); }
+      aplicarAjustes();
+    })
+    .catch((e) => { errorManos = "sin cámara (" + e.name + ")"; aviso("Sin cámara: " + (e.name === "NotAllowedError" ? "no diste el permiso" : e.name)); })
+    .finally(() => { pidiendoCamara = null; });
+  return pidiendoCamara;
+}
+function empezarManos() {
+  if (trabajador) return;
+  try {
+    trabajador = new Worker(URL.createObjectURL(new Blob([TRABAJADOR], { type: "text/javascript" })));
+    trabajador.onmessage = (e) => {
+      const m = e.data;
+      if (m.tipo === "listo") { trabajadorListo = true; delegado = m.delegado; aviso("Manos listas: doble pellizco = clic"); }
+      else if (m.tipo === "error") { errorManos = "no cargó el modelo"; aviso("Las manos no cargaron: " + m.msg.slice(0, 60)); }
+      else if (m.tipo === "manos") {
+        ocupado = false; msRed = m.ms; cuentaManos++;
+        recibirManos(m, m.ts);
+      }
+    };
+    trabajador.postMessage({ tipo: "iniciar", base: MP, modelo: MODELO });
+  } catch (e) { errorManos = "sin worker"; }
+}
+function pedirFoto() {
+  if (!trabajadorListo || ocupado || !camaraLista || !aj.manos || video.readyState < 2 || !video.videoWidth || !fotoNueva) return;
+  ocupado = true; fotoNueva = !video.requestVideoFrameCallback;
+  const ts = performance.now();
+  createImageBitmap(video).then((bmp) => trabajador.postMessage({ tipo: "foto", bmp, ts }, [bmp])).catch(() => { ocupado = false; });
+}
+
+// ═════════════════════════ el puntero (Puntero.java) ═════════════════════════
+const MANO_IZQ = 0, MANO_DER = 1, MIRADA = 2, PANTALLA = 3;
+const SLOP = Math.cos(1.2 * Math.PI / 180), FIJO = Math.cos(4 * Math.PI / 180), MIRADA_S = 1.1;
+class Fuente {
+  constructor(k) { this.k = k; this.activa = false; this.aprieta = false; this.o = new THREE.Vector3(); this.d = new THREE.Vector3(0, 0, -1); this.hist = [];
+    this.sobre = null; this.que = null; this.u = 0; this.v = 0; this.hit = new THREE.Vector3(); this.dist = 1; this.apretado = false; this.captura = null; this.queCaptura = null;
+    this.baja = { u: 0, v: 0, d: new THREE.Vector3() }; this.pasoSlop = false; this.nadaDesde = -1; this.nadaLarga = false; this.carga = 0; this.cargaEn = null; this.enfriar = 0;
+    this.fijo = null; this.arrastre = null; this.fuerza = 1; this.armado = 0; }
+  guardar(ms) { this.hist.push([ms, this.o.clone(), this.d.clone()]); if (this.hist.length > 16) this.hist.shift(); }
+  rayoDe(ms) { let mejor = null; for (let k = this.hist.length - 1; k >= 0; k--) { mejor = this.hist[k]; if (ms - mejor[0] >= 80) break; } return mejor ? [mejor[1], mejor[2]] : [this.o, this.d]; }
+}
+const fuentes = [new Fuente(0), new Fuente(1), new Fuente(2), new Fuente(3)];
+function objetivos() { return (dock && dock.visible ? [dock] : []).concat(ventanas); }
+function impacto(o, d) {
+  let mejor = null, mv = null;
+  for (const v of objetivos()) { const h = v.impacto(o, d); if (h && (!mejor || h.t < mejor.t)) { mejor = h; mv = v; } }
+  return mejor ? { ...mejor, v: mv, uu: mejor.u, vv: mejor.v } : null;
+}
+function toque(v, tipo, u, w) { v.app.toqueBase(tipo, clamp(u, -0.02, 1.02) * v.px, clamp(w, -0.02, 1.02) * v.py); }
+function pasoPuntero(dt, ms) {
+  for (const v of objetivos()) { v.hover.contenido = 0; v.hover.barra = 0; v.hover.cerrar = 0; v.app.puntero = null; }
+  const algunaMano = fuentes[0].activa || fuentes[1].activa;
+  for (const f of fuentes) {
+    if (!f.activa) { if (f.apretado) soltar(f, true); f.sobre = null; f.carga = 0; f.hist = []; continue; }
+    f.guardar(ms);
+    let h = null;
+    if (f.captura) {
+      h = f.captura.impacto(f.o, f.d);
+      // agarrada: se sigue su plano aunque el rayo se salga (salvo el botón de cerrar: ahí vale sólo si seguís encima)
+      if (f.queCaptura !== "cerrar" && (!h || (f.queCaptura === "contenido" && h.que !== "contenido"))) h = f.captura.enPlano(f.o, f.d);
+      if (h) h = { ...h, v: f.captura, uu: h.u, vv: h.v, que: h.que };
+    }
+    else { h = impacto(f.o, f.d); }
+    f.sobre = h ? h.v : null; f.que = h ? h.que : null;
+    if (h) {
+      f.dist = h.t; f.hit.copy(f.o).addScaledVector(f.d, h.t);
+      if (h.que === "contenido") { f.u = h.uu; f.v = h.vv; }
+      const hv = (f.captura || h.v).hover;
+      hv[f.captura ? f.queCaptura : h.que] = 1;
+      if (h.que === "contenido" || f.captura) (f.captura || h.v).app.puntero = { x: f.u * (f.captura || h.v).px, y: f.v * (f.captura || h.v).py };
+    }
+    if (f.aprieta && !f.apretado) {
+      f.apretado = true;
+      let hb = h;
+      if (f.k <= MANO_DER) {
+        // el clic con el rayo de antes (al pellizcar la mano se corre; con el doble pellizco, el de antes del primero)
+        let [o0, d0] = f.rayoDe(ms);
+        if (f.fijo && f.d.dot(f.fijo[1]) > FIJO) { o0 = f.fijo[0]; d0 = f.fijo[1]; }
+        const h0 = impacto(o0, d0);
+        if (h0) { hb = h0; f.u = h0.uu; f.v = h0.vv; }
+      }
+      bajar(f, hb);
+    } else if (f.aprieta && f.apretado) mover(f);
+    else if (!f.aprieta && f.apretado) soltar(f, false);
+    if (f.apretado && !f.captura && f.nadaDesde >= 0) {
+      f.nadaDesde += dt;
+      if (!f.nadaLarga && f.nadaDesde > 0.8) { f.nadaLarga = true; recentrar(); }
+    }
+    // mirar fijo hace clic sólo en el visor (con el teléfono en la mano, mirar a través no es elegir)
+    if (f.k === MIRADA) mirada(f, dt, aj.visor && aj.mirada && !algunaMano && !fuentes[PANTALLA].activa && !f.apretado);
+  }
+}
+function bajar(f, h) {
+  f.captura = null; f.queCaptura = null; f.nadaDesde = -1; f.nadaLarga = false; f.arrastre = null;
+  if (!h) { f.nadaDesde = 0; return; }
+  if (fuentes.some((g) => g !== f && g.captura === h.v && g.queCaptura === h.que)) return;
+  f.captura = h.v; f.queCaptura = h.que;
+  f.baja.d.copy(f.d); f.pasoSlop = false;
+  if (h.que === "contenido") { f.baja.u = h.uu; f.baja.v = h.vv; toque(h.v, "baja", h.uu, h.vv); }
+  else if (h.que === "barra") f.arrastre = { t: h.t };
+}
+function mover(f) {
+  const v = f.captura;
+  if (!v) return;
+  if (f.queCaptura === "barra" && f.arrastre) {
+    // la ventana sigue al rayo, a la misma distancia de tu cabeza, de frente a vos
+    const d = f.o.clone().addScaledVector(f.d, f.arrastre.t).sub(CENTRO).normalize();
+    v.yaw = Math.atan2(-d.x, -d.z); v.pitch = clamp(Math.asin(clamp(d.y, -1, 1)) + Math.atan2(-v.barraY, v.dist), -1.1, 1.1);
+    v.colocar();
+    return;
+  }
+  if (f.queCaptura !== "contenido") return;
+  if (!f.pasoSlop && f.d.dot(f.baja.d) < SLOP) f.pasoSlop = true;
+  toque(v, "mueve", f.pasoSlop ? f.u : f.baja.u, f.pasoSlop ? f.v : f.baja.v);
+}
+function soltar(f, cancelar) {
+  const v = f.captura;
+  if (v) {
+    if (f.queCaptura === "contenido") toque(v, cancelar ? "cancela" : "sube", f.pasoSlop ? f.u : f.baja.u, f.pasoSlop ? f.v : f.baja.v);
+    else if (f.queCaptura === "cerrar" && !cancelar && f.sobre === v && f.que === "cerrar") cerrarApp(v.app);
+  } else if (!cancelar && f.nadaDesde >= 0 && !f.nadaLarga && dock) {
+    dock.visible = !dock.visible; dock.grupo.visible = dock.visible; if (dock.visible) { dock.aparece = 0; acomodarDock(); } SONIDO.clic();
+  }
+  f.captura = null; f.queCaptura = null; f.nadaDesde = -1; f.apretado = false; f.arrastre = null;
+}
+function mirada(f, dt, habilitada) {
+  if (f.enfriar > 0) f.enfriar -= dt;
+  if (!habilitada || !f.sobre || f.enfriar > 0 || f.que === "barra") { f.carga = 0; f.cargaEn = null; return; }
+  const c = f.cargaEn;
+  const mismo = c && c.v === f.sobre && c.que === f.que && (f.que !== "contenido" || (Math.abs(f.u - c.u) * f.sobre.ancho + Math.abs(f.v - c.w) * f.sobre.alto < 0.035));
+  if (!mismo) { f.cargaEn = { v: f.sobre, que: f.que, u: f.u, w: f.v }; f.carga = 0; return; }
+  f.carga += dt / MIRADA_S;
+  if (f.carga < 1) return;
+  f.carga = 0; f.enfriar = 1.2;
+  if (f.que === "contenido") { toque(f.sobre, "baja", c.u, c.w); toque(f.sobre, "sube", c.u, c.w); }
+  else if (f.que === "cerrar") cerrarApp(f.sobre.app);
+}
+function acomodarDock() {
+  // la barra de abajo: debajo de donde mirás
+  const q = ponerCabeza(performance.now());
+  dock.yaw = yawDe(q); dock.pitch = -0.45; dock.dist = 0.62;
+  dock.colocar();
+}
+
+// ── el indicador: el anillo entre los dedos, el rayo y el cursor (VentanasGl) ──
+class Indicador {
+  constructor() {
+    this.cursor = new THREE.Mesh(PLANO, material(MODO.CURSOR)); this.cursor.renderOrder = 6; this.cursor.material.depthTest = false;
+    this.pinza = new THREE.Mesh(PLANO, material(MODO.CURSOR)); this.pinza.renderOrder = 7; this.pinza.material.depthTest = false;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(12), 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
+    geo.setIndex([0, 1, 2, 2, 1, 3]);
+    this.rayo = new THREE.Mesh(geo, material(MODO.RAYO)); this.rayo.frustumCulled = false; this.rayo.renderOrder = 5;
+    for (const m of [this.cursor, this.pinza, this.rayo]) { m.visible = false; escena.add(m); }
+  }
+  esconder() { this.cursor.visible = this.pinza.visible = this.rayo.visible = false; }
+  ponerCursor(f, fuerza, carga, armado, apretando) {
+    const v = f.sobre || f.captura;
+    if (!v || !f.que) { this.cursor.visible = false; return; }
+    const tam = Math.max(0.022, Math.max(0.3, f.dist) * 0.05);
+    v.grupo.updateMatrixWorld();
+    this.cursor.quaternion.copy(v.grupo.getWorldQuaternion(new THREE.Quaternion()));
+    const n = new THREE.Vector3(0, 0, 1).applyQuaternion(this.cursor.quaternion);
+    this.cursor.position.copy(f.hit).addScaledVector(n, 0.004);
+    this.cursor.scale.set(tam, tam, 1);
+    const u = this.cursor.material.uniforms;
+    u.uTam.value.set(tam, tam); u.uFuerza.value = fuerza; u.uCarga.value = carga; u.uArmado.value = armado;
+    u.uColor.value.set(apretando ? 0.45 : 1, apretando ? 0.72 : 1, 1, 1);
+    this.cursor.visible = true;
+  }
+  ponerRayo(a, b, ojo, fuerza, armado, apretando, alfa, t) {
+    const d = b.clone().sub(a), e = ojo.clone().sub(a.clone().add(b).multiplyScalar(0.5));
+    const s = d.clone().cross(e);
+    if (s.lengthSq() < 1e-12) { this.rayo.visible = false; return; }
+    s.setLength(0.011 / 2);
+    const p = this.rayo.geometry.attributes.position;
+    p.setXYZ(0, a.x - s.x, a.y - s.y, a.z - s.z); p.setXYZ(1, b.x - s.x, b.y - s.y, b.z - s.z);
+    p.setXYZ(2, a.x + s.x, a.y + s.y, a.z + s.z); p.setXYZ(3, b.x + s.x, b.y + s.y, b.z + s.z);
+    p.needsUpdate = true;
+    const u = this.rayo.material.uniforms;
+    u.uFuerza.value = fuerza; u.uArmado.value = armado; u.uCarga.value = t % 1000; u.uAlfa.value = alfa;
+    u.uColor.value.set(apretando ? 0.45 : 1, apretando ? 0.72 : 1, 1, apretando ? 0.95 : 0.8);
+    this.rayo.visible = true;
+  }
+  ponerPinza(a, b, ojo, fuerza, armado, apretando, alfa) {
+    const c = a.clone().add(b).multiplyScalar(0.5);
+    const tam = clamp(a.distanceTo(b) * 1.15 + 0.008, 0.016, 0.06);
+    this.pinza.position.copy(c);
+    this.pinza.lookAt(ojo);
+    this.pinza.scale.set(tam, tam, 1);
+    const u = this.pinza.material.uniforms;
+    u.uTam.value.set(tam, tam); u.uFuerza.value = fuerza; u.uArmado.value = armado; u.uAlfa.value = alfa;
+    u.uColor.value.set(apretando ? 0.45 : 1, apretando ? 0.72 : 1, 1, apretando ? 0.95 : 0.8);
+    this.pinza.visible = true;
+  }
+}
+const indicadores = [new Indicador(), new Indicador(), new Indicador(), new Indicador()];
+
+/** Cada cuadro, las manos → sus fuentes (el rayo: del punto de mira por los nudillos). */
+function manosAFuentes(ms, ojo) {
+  for (let k = 0; k < 2; k++) {
+    const m = manos[k], f = fuentes[k];
+    f.activa = m.visible && aj.manos;
+    if (!f.activa) { f.fijo = null; continue; }
+    const q = [(m.w[5][0] + m.w[9][0]) / 2, (m.w[5][1] + m.w[9][1]) / 2, (m.w[5][2] + m.w[9][2]) / 2];
+    const mira = ojo.clone(); mira.y -= aj.abajo / 100 * (enVR && aj.visor ? 0.6 : 1);
+    const d = new THREE.Vector3().fromArray(q).sub(mira);
+    if (d.length() < 0.05) { f.activa = false; continue; }
+    f.o.fromArray(q); f.d.copy(d.normalize());
+    if (m.empezo) { const [o0, d0] = f.rayoDe(ms); f.fijo = [o0.clone(), d0.clone()]; m.empezo = false; }
+    else if (m.doble.fase === DoblePellizco.QUIETO || m.doble.fase === DoblePellizco.SOSTENIDO) f.fijo = null;
+    f.aprieta = m.aprieta || m.pendiente;
+    f.fuerza = f.apretado ? 0 : m.gestos.fuerza;
+    f.armado = f.apretado ? 0 : m.doble.armado(ms);
+  }
+}
+function dibujarIndicadores(ojo, t, ms) {
+  fuentes.forEach((f, k) => {
+    const ind = indicadores[k];
+    if (!f.activa) { ind.esconder(); return; }
+    const mano = k <= MANO_DER;
+    if (k === MIRADA && (!aj.visor || fuentes[0].activa || fuentes[1].activa || fuentes[PANTALLA].activa) && !f.apretado && f.carga === 0) { ind.esconder(); return; }
+    if (k === PANTALLA) { ind.esconder(); return; }
+    const fuerza = mano ? f.fuerza : f.apretado ? 0.2 : 1;
+    ind.ponerCursor(f, fuerza, k === MIRADA ? f.carga : 0, mano ? f.armado : 0, f.apretado);
+    if (!mano) { ind.rayo.visible = ind.pinza.visible = false; return; }
+    const m = manos[k];
+    const a = new THREE.Vector3().fromArray(m.w[4]), b = new THREE.Vector3().fromArray(m.w[8]);
+    const c = a.clone().add(b).multiplyScalar(0.5);
+    ind.ponerPinza(a, b, ojo, fuerza, f.armado, f.apretado, m.alfa);
+    const fin = f.sobre || f.captura ? f.hit.clone() : f.o.clone().addScaledVector(f.d, 0.9);
+    const dir = fin.clone().sub(c);
+    if (dir.length() < 0.05) { ind.rayo.visible = false; return; }
+    ind.ponerRayo(c.clone().addScaledVector(dir.normalize(), 0.025), fin, ojo, fuerza, f.armado, f.apretado, f.sobre ? 1 : 0.6, t);
+  });
+}
+
+// ═════════════════════════ la pantalla, el mouse, el control ═════════════════════════
+const ray = new THREE.Raycaster();
+let tocando = false, mirando = null, ultimoToque = { x: 0, y: 0 };
+function rayoDePantalla(x, y) {
+  const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
+  camC.updateMatrixWorld();
+  ray.setFromCamera(ndc, camC);
+  fuentes[PANTALLA].o.copy(ray.ray.origin); fuentes[PANTALLA].d.copy(ray.ray.direction);
+}
+lienzo.addEventListener("pointerdown", (e) => {
+  if (!enVR) return;
+  audio?.resume?.();
+  if (aj.visor) { fuentes[MIRADA].aprieta = true; return; }   // el botón del visor toca la pantalla: clic donde mirás
+  rayoDePantalla(e.clientX, e.clientY);
+  const h = impacto(fuentes[PANTALLA].o, fuentes[PANTALLA].d);
+  if (!h && e.pointerType === "mouse") { mirando = { x: e.clientX, y: e.clientY, yaw: mirarYaw, pitch: mirarPitch }; return; }
+  if (!h && !fuenteGiro) { mirando = { x: e.clientX, y: e.clientY, yaw: mirarYaw, pitch: mirarPitch }; return; }
+  tocando = true; fuentes[PANTALLA].activa = true; fuentes[PANTALLA].aprieta = true;
+  lienzo.setPointerCapture(e.pointerId);
+});
+lienzo.addEventListener("pointermove", (e) => {
+  if (!enVR) return;
+  if (mirando) {
+    mirarYaw = mirando.yaw + (e.clientX - mirando.x) * 0.004; mirarPitch = clamp(mirando.pitch + (e.clientY - mirando.y) * 0.004, -1.4, 1.4);
+    return;
+  }
+  if (!aj.visor) { rayoDePantalla(e.clientX, e.clientY); if (e.pointerType === "mouse") fuentes[PANTALLA].activa = true; }
+});
+const soltarPantalla = (e) => {
+  mirando = null; fuentes[MIRADA].aprieta = gatillo;
+  // (un cuadro más activa, sin apretar: así el puntero ve que soltaste y no lo toma como cancelado)
+  if (tocando) { tocando = false; fuentes[PANTALLA].aprieta = false; if (e.pointerType !== "mouse") fuentes[PANTALLA].soltarLuego = true; }
+};
+lienzo.addEventListener("pointerup", soltarPantalla);
+lienzo.addEventListener("pointercancel", soltarPantalla);
+lienzo.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse" && !tocando) fuentes[PANTALLA].activa = false; });
+let gatillo = false;
+function leerControl() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let alguno = false;
+  for (const p of pads) if (p) for (const b of p.buttons) if (b.pressed) alguno = true;
+  if (alguno !== gatillo) { gatillo = alguno; fuentes[MIRADA].aprieta = gatillo; }
+}
+addEventListener("keydown", (e) => {
+  if (!enVR) return;
+  if (e.key === "r" || e.key === "R") recentrar();
+  if (e.key === "v" || e.key === "V") { aj.visor = !aj.visor; guardar(); ajustarTamano(); }
+  if (e.key === "ArrowLeft") mirarYaw += 0.08; if (e.key === "ArrowRight") mirarYaw -= 0.08;
+  if (e.key === "ArrowUp") mirarPitch = clamp(mirarPitch + 0.08, -1.4, 1.4); if (e.key === "ArrowDown") mirarPitch = clamp(mirarPitch - 0.08, -1.4, 1.4);
+  if (e.key === "Enter" || e.key === " ") fuentes[MIRADA].aprieta = true;
+});
+addEventListener("keyup", (e) => { if (e.key === "Enter" || e.key === " ") fuentes[MIRADA].aprieta = gatillo; });
+
+// ═════════════════════════ el dibujo: pantalla o visor (con las lentes) ═════════════════════════
+let rt = null;
+const lentes = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+  depthTest: false, depthWrite: false,
+  uniforms: { uTex: { value: null }, uTam: { value: new THREE.Vector2() }, uCentro0: { value: new THREE.Vector2() }, uCentro1: { value: new THREE.Vector2() },
+    uFuente0: { value: new THREE.Vector2() }, uFuente1: { value: new THREE.Vector2() }, uRadio: { value: 1 }, uK: { value: new THREE.Vector2() } },
+  vertexShader: "varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
+  fragmentShader: `precision highp float;
+    uniform sampler2D uTex; uniform vec2 uTam; uniform vec2 uCentro0; uniform vec2 uCentro1; uniform vec2 uFuente0; uniform vec2 uFuente1; uniform float uRadio; uniform vec2 uK; varying vec2 vUv;
+    void main() {
+      vec2 px = vUv * uTam;
+      bool izq = px.x < uTam.x * 0.5;
+      vec2 c = izq ? uCentro0 : uCentro1, s = izq ? uFuente0 : uFuente1;
+      vec2 d = (px - c) / uRadio;
+      float r2 = dot(d, d);
+      vec2 f = s + (px - c) * (1.0 + uK.x * r2 + uK.y * r2 * r2);
+      vec2 mn = izq ? vec2(0.0) : vec2(uTam.x * 0.5, 0.0), mx = izq ? vec2(uTam.x * 0.5, uTam.y) : uTam;
+      if (f.x < mn.x || f.y < mn.y || f.x > mx.x || f.y > mx.y) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+      gl_FragColor = texture2D(uTex, f / uTam);
+    }`,
+}));
+const escenaLentes = new THREE.Scene(); escenaLentes.add(lentes);
+const camLentes = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+function ajustarTamano() {
+  const pr = Math.min(devicePixelRatio || 1, aj.visor ? 1.6 : 2);
+  render.setPixelRatio(pr);
+  render.setSize(innerWidth, innerHeight, false);
+  const W = Math.round(innerWidth * pr), H = Math.round(innerHeight * pr);
+  camC.aspect = innerWidth / innerHeight; camC.updateProjectionMatrix();
+  for (const c of [camI, camD]) { c.aspect = (W / 2) / H; c.fov = aj.fov; c.updateProjectionMatrix(); }
+  if (aj.visor) {
+    if (!rt || rt.width !== W || rt.height !== H) { rt?.dispose(); rt = new THREE.WebGLRenderTarget(W, H, { depthBuffer: true, samples: 0 }); }
+  }
+  aplicarAjustes();
+}
+function aplicarAjustes() {
+  $("hud").hidden = aj.visor || !enVR;
+  camI.position.set(-aj.ipd / 2000, 0, 0); camD.position.set(aj.ipd / 2000, 0, 0);
+  for (const c of [camI, camD]) { c.fov = aj.fov; c.updateProjectionMatrix(); }
+  fondo.material.uniforms.uEntorno.value = aj.entorno === "atardecer" ? 1 : 0;
+  const pass = aj.pass && camaraLista;
+  fondo.visible = !pass;
+  pasoCamara.visible = pass;
+  if (pass && video.videoWidth) {
+    const hf = camaraHorizontal(), dz = 20, w = 2 * dz * Math.tan(hf / 2), h = w * video.videoHeight / video.videoWidth;
+    pasoCamara.position.set(0, 0, -dz - 0.07); pasoCamara.scale.set(w, h, 1);
+  }
+  if ((aj.manos || aj.pass) && enVR) asegurarCamara();
+  if (aj.manos && enVR) empezarManos();
+}
+function dibujar() {
+  if (!aj.visor) { render.setRenderTarget(null); render.render(escena, camC); return; }
+  const W = rt.width, H = rt.height;
+  rt.scissorTest = true;
+  render.setRenderTarget(rt);
+  for (let ojo = 0; ojo < 2; ojo++) {
+    rt.viewport.set(ojo * W / 2, 0, W / 2, H); rt.scissor.set(ojo * W / 2, 0, W / 2, H);
+    render.setRenderTarget(rt);
+    render.clear();
+    render.render(escena, ojo ? camD : camI);
+  }
+  render.setRenderTarget(null);
+  const u = lentes.material.uniforms, corre = aj.sep / 100 * W / 2;
+  u.uTex.value = rt.texture; u.uTam.value.set(W, H);
+  u.uFuente0.value.set(W / 4, H / 2); u.uFuente1.value.set(3 * W / 4, H / 2);
+  u.uCentro0.value.set(W / 4 - corre, H / 2); u.uCentro1.value.set(3 * W / 4 + corre, H / 2);
+  u.uRadio.value = W / 4; u.uK.value.set(aj.k1, aj.k2);
+  render.render(escenaLentes, camLentes);
+}
+
+// ═════════════════════════ el ciclo ═════════════════════════
+let enVR = false, ultimo = performance.now(), t0 = performance.now(), fps = 60, cuadros = 0, desdeFps = performance.now();
+function cuadro() {
+  if (!enVR) return;
+  requestAnimationFrame(cuadro);
+  const ahora = performance.now(), dt = Math.min(0.1, (ahora - ultimo) / 1000), t = (ahora - t0) / 1000;
+  ultimo = ahora;
+  cuadros++; if (ahora - desdeFps > 1000) { fps = cuadros * 1000 / (ahora - desdeFps); cuadros = 0; desdeFps = ahora; fpsManos = cuentaManos; cuentaManos = 0;
+    if (!aj.visor) $("estadoHud").textContent = `${Math.round(fps)} fps · ${estadoManos()}${trabajadorListo && aj.manos ? ` · red ${Math.round(msRed)} ms · ${fpsManos}/s` : ""}`; }
+  leerControl();
+  // la cabeza: el giroscopio llevado hasta que se vea
+  const q = ponerCabeza(ahora + aj.anticipo);
+  cabeza.quaternion.copy(q);
+  cabeza.position.copy(cuello).sub(PIVOTE.clone().applyQuaternion(q));
+  cabeza.updateMatrixWorld();
+  const ojo = cabeza.getWorldPosition(new THREE.Vector3());
+  fondo.position.copy(ojo);
+  fondo.material.uniforms.uT.value = t;
+  // las manos
+  pedirFoto();
+  for (const m of manos) m.paso(dt);
+  manosAFuentes(ahora, ojo);
+  // la mirada
+  const fm = fuentes[MIRADA];
+  fm.activa = true; fm.o.copy(ojo); fm.d.set(0, 0, -1).applyQuaternion(q);
+  pasoPuntero(dt, ahora);
+  for (let k = 0; k < 2; k++) if (fuentes[k].apretado || !fuentes[k].activa) manos[k].pendiente = false;
+  if (fuentes[PANTALLA].soltarLuego && !fuentes[PANTALLA].apretado) { fuentes[PANTALLA].soltarLuego = false; fuentes[PANTALLA].activa = false; }
+  for (const v of ventanas) v.paso(dt, t);
+  if (dock) { dock.grupo.visible = dock.visible; if (dock.visible) dock.paso(dt, t); }
+  dibujarIndicadores(ojo, t, ahora);
+  if (avisoMalla.visible) { const f = clamp((avisoHasta - ahora) / 400, 0, 1); avisoMalla.material.uniforms.uAlfa.value = f; if (f <= 0) avisoMalla.visible = false; }
+  dibujar();
+}
+
+// ═════════════════════════ empezar y salir ═════════════════════════
+let bloqueoPantalla = null;
+async function empezar(opc = {}) {
+  $("error").textContent = "";
+  guardar();
+  enVR = true;
+  $("inicio").hidden = true;
+  $("hud").hidden = aj.visor;
+  if (!opc.sinPantallaCompleta) {
+    try { await document.documentElement.requestFullscreen?.({ navigationUI: "hide" }); } catch (e) { /* sigue igual */ }
+    try { await screen.orientation?.lock?.("landscape"); } catch (e) { /* no todos dejan */ }
+    try { bloqueoPantalla = await navigator.wakeLock?.request("screen"); } catch (e) { /* sin wake lock */ }
+  }
+  // iOS: los sensores piden permiso con un toque
+  try { if (typeof DeviceOrientationEvent !== "undefined" && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) { /* sin permiso */ }
+  audio?.resume?.();
+  empezarSensores();
+  ajustarTamano();
+  if (!dock) {
+    armarDock();
+    try { if (!localStorage.getItem("nexo-web-visto")) { abrirApp("bienvenida"); localStorage.setItem("nexo-web-visto", "1"); } else abrirApp("reloj"); } catch (e) { abrirApp("bienvenida"); }
+  }
+  setTimeout(() => { recentrar(); }, 400);
+  ultimo = performance.now();
+  requestAnimationFrame(cuadro);
+}
+function salir() {
+  enVR = false;
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { /* ya salió */ }
+  try { bloqueoPantalla?.release(); } catch (e) { /* nada */ }
+  $("inicio").hidden = false; $("hud").hidden = true;
+  videoCine.pause();
+}
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && enVR && aj.visor && !PARAM.has("prueba")) salir(); });
+addEventListener("resize", () => { if (enVR) ajustarTamano(); });
+
+// ── la pantalla de inicio ──
+const marcar = () => { $("modoVisor").setAttribute("aria-pressed", aj.visor); $("modoPantalla").setAttribute("aria-pressed", !aj.visor); $("optManos").checked = aj.manos; $("optPass").checked = aj.pass; $("optDoble").checked = aj.doble; };
+$("modoVisor").onclick = () => { aj.visor = true; marcar(); };
+$("modoPantalla").onclick = () => { aj.visor = false; marcar(); };
+$("optManos").onchange = (e) => { aj.manos = e.target.checked; };
+$("optPass").onchange = (e) => { aj.pass = e.target.checked; };
+$("optDoble").onchange = (e) => { aj.doble = e.target.checked; };
+$("elegirVideo").onclick = () => $("archivoVideo").click();
+$("archivoVideo").onchange = (e) => { const f = e.target.files[0]; if (!f) return; videoCine.src = URL.createObjectURL(f); $("nombreVideo").textContent = f.name; };
+$("empezar").onclick = () => { if (!isSecureContext) { $("error").textContent = "Abrila por https: sin eso el navegador no presta la cámara ni los sensores."; } empezar(); };
+$("btnSalir").onclick = salir;
+$("btnCentro").onclick = recentrar;
+marcar();
+
+// ═════════════════════════ para las pruebas (pruebas/web.mjs) ═════════════════════════
+window.Nexo = {
+  nucleo, aj, manos, fuentes, ventanas,
+  empezar: (o) => empezar({ sinPantallaCompleta: true, ...o }),
+  app: (n) => ventanas.find((v) => v.app.nombre === n)?.app || (n === "dock" ? dock?.app : null),
+  abrir: abrirApp, recentrar, recibirManos, aplicarAjustes, ajustarTamano,
+  orientacion: (alpha, beta, gamma, angulo) => { orientForzada = angulo * Math.PI / 180; deEventos({ alpha, beta, gamma, timeStamp: performance.now() }); },
+  cabeza: () => { const q = ponerCabeza(performance.now()); const f = new THREE.Vector3(0, 0, -1).applyQuaternion(q), u = new THREE.Vector3(0, 1, 0).applyQuaternion(q); return { adelante: f.toArray(), arriba: u.toArray() }; },
+  /** Pone la ventana de una app justo donde apunta la fuente k (a 1 m), de frente a la cabeza. */
+  ventanaEnRayo(n, k) {
+    const v = ventanas.find((w) => w.app.nombre === n), f = fuentes[k];
+    const p = f.o.clone().addScaledVector(f.d, 0.9).sub(CENTRO), dd = p.length(), d = p.normalize();
+    v.yaw = Math.atan2(-d.x, -d.z); v.pitch = Math.asin(d.y); v.dist = dd; v.colocar(); v.aparece = 1;
+  },
+  listo: () => trabajadorListo,
+  depurar: () => ({ imp: (() => { const h = impacto(fuentes[1].o, fuentes[1].d); return h && { que: h.que, t: h.t, uu: h.uu, vv: h.vv, tipoV: typeof h.v, nombre: h.v && h.v.app && h.v.app.nombre }; })(), sobreTipo: typeof fuentes[1].sobre, o: fuentes[1].o.toArray(), d: fuentes[1].d.toArray(), mano: manos[1].w[9], ventanas: ventanas.map((v) => [v.app.nombre, v.grupo.position.toArray(), v.aparece, v.visible]) }),
+  /** Una foto directo a MediaPipe (el worker): lo que encuentra. */
+  detectar: (bmp) => new Promise((res) => {
+    const antes = trabajador.onmessage;
+    trabajador.onmessage = (e) => { if (e.data.tipo === "manos") { trabajador.onmessage = antes; ocupado = false; res(e.data); } else antes(e); };
+    trabajador.postMessage({ tipo: "foto", bmp, ts: performance.now() }, [bmp]);
+  }),
+  estado: () => ({ fps, fuente: fuenteGiro, manos: manos.map((m) => ({ visible: m.visible, pellizca: m.pellizca, aprieta: m.aprieta, fase: m.doble.fase })),
+    fuentes: fuentes.map((f) => ({ activa: f.activa, sobre: f.sobre?.app.nombre || null, que: f.que, apretado: f.apretado, u: f.u, v: f.v })), ventanas: ventanas.map((v) => v.app.nombre) }),
+};
+if (PARAM.has("prueba")) window.NexoListo = true;
+</script>
+</body>
+</html>

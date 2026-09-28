@@ -9,6 +9,10 @@ con nombre, íconos y diseño propios.
 
 ![En el visor: las dos imágenes](capturas/sbs.jpg)
 
+> **También en el navegador:** [Nexo Web](#nexo-web-el-html), un solo HTML en
+> 3DoF con tus manos (MediaPipe), el doble pellizco y el visor. Se abre en
+> `https://raw.githack.com/Juniorspro/New-General-Games-Assets/claude/hola-80z86i/nexo-xr/web/index.html`.
+
 | | |
 |---|---|
 | ![Espacio](capturas/espacio.jpg) | ![Lago al atardecer](capturas/lago.jpg) |
@@ -199,6 +203,17 @@ y en su escala justa (se ve como una ventana a la realidad, no estirado).
 
 ## El seguimiento: Nexo Track
 
+- **3DoF: sólo girar** (Ajustes → Espacio → *Modo 3DoF*, la baldosa **3DoF** de
+  los ajustes rápidos, o *3DoF: sólo girar* en Tu espacio): la cabeza sale
+  **sólo del giroscopio** (`GAME_ROTATION_VECTOR`, que tiene la gravedad: nunca
+  se inclina) y el cuello queda quieto. **No depende de que ARCore siga**:
+  nunca se mueve solo, nunca se pierde, anda con poca luz o mirando una pared
+  lisa. ARCore queda sólo para la cámara (el passthrough y **las manos**), y sin
+  buscar planos (más CPU para las manos). Las manos se ubican con la cabeza del
+  giroscopio **a la hora de cada foto**, así no se corren al girar.
+  Al pasar de 6DoF a 3DoF (y al volver) no salta nada.
+- **Arrancando**: hasta que ARCore engancha, Nexo ya se ve en 3DoF (antes era
+  negro); cuando engancha, pasa a 6DoF sin que se mueva nada.
 - **Con ARCore**: 6 grados de libertad (caminás y todo queda en su lugar), el
   passthrough, las manos (MediaPipe, con el filtro de Asalto MR) y el piso (el
   plano más bajo que encuentra ARCore). La cámara: la de más fps que ofrezca
@@ -227,6 +242,7 @@ Con una cabeza simulada (`PruebaSeguimiento`: girando hasta 157°/s, fotos a
 | se pierde 1.5 s caminando 20 cm | todo en negro | sigue girando (0.55°); al volver, el paso más grande 1.9 cm y en su lugar |
 | ARCore corrige el mapa 5 cm y 2° | el escritorio queda corrido 4.7 cm | 1.4 mm, sin saltar |
 | los ojos (6 cm al costado) | — | medidos con menos de 1 cm de error; caminando no se mide |
+| **3DoF** (sólo el giroscopio) | — | **0.55°** girando hasta 157°/s, el cuello quieto (0.00 mm), la cámara de cada foto exacta; de 6DoF a 3DoF 0.8 mm, de vuelta 0 mm |
 
 Si igual algo anda mal: **Ajustes → Acerca de → Grabar un diagnóstico** (20 s
 de lo que pasa en cada cuadro, a Descargas/Nexo) y mandame el archivo:
@@ -238,6 +254,51 @@ Lo que no arregla ninguna capa: si la **tapa del visor le tapa la cámara**,
 con **poca luz** o mirando una **pared lisa**, ARCore no tiene qué seguir
 (Nexo te dice cuál es). Y las manos se ven con una sola cámara de ~70°: fuera
 de ese campo, no hay mano.
+
+## Nexo Web (el HTML)
+
+`web/index.html`: **un solo archivo**, Nexo en el navegador, en 3DoF y con
+tus manos. Se abre (por https, que sin eso el navegador no presta la cámara
+ni los sensores) en:
+
+```
+https://raw.githack.com/Juniorspro/New-General-Games-Assets/claude/hola-80z86i/nexo-xr/web/index.html
+```
+
+(githack muestra un aviso la primera vez: *Open the page*.) Chrome de Android
+es lo mejor; en la PC anda con el mouse.
+
+| Pantalla | Con las manos | En el visor |
+|---|---|---|
+| ![Pantalla](capturas/web-pantalla.jpg) | ![La mano: doble pellizco sostenido dibuja en la Pizarra](capturas/web-manos.jpg) | ![Visor](capturas/web-visor.jpg) |
+
+- **La cabeza**: el giroscopio del teléfono (`RelativeOrientationSensor`, o
+  `deviceorientation` si no hay), con la predicción del giro de Nexo Track
+  (30 ms) y el cuello. En la PC: arrastrá el fondo o usá las flechas.
+- **Las manos**: la cámara de atrás → **MediaPipe HandLandmarker** (el mismo
+  modelo que la app), **en un worker** para que el dibujo no se trabe. Los
+  21 puntos en metros se ubican delante de la cámara con una cuenta lineal
+  (cuadrados mínimos con los 21 puntos: con 2 px de ruido, 0.6 cm de error a
+  42 cm) y con la cabeza de cuando se sacó la foto. El pellizco, el **doble
+  pellizco** (el mismo de la app) y el indicador (el anillo entre los dedos, el
+  rayo y el cursor: los shaders de `VentanasGl.java`, portados). Un pellizco
+  corto nunca se pierde aunque el teléfono dibuje lento (queda anotado hasta
+  que el puntero lo vea), y suena un *tic* cuando queda armado.
+- **Sin manos**: en el visor, mirá fijo 1 s o tocá la pantalla (el botón del
+  VR Box la toca: clic donde mirás); en la mano, tocá las pantallas; un
+  control Bluetooth (cualquier botón) o Enter.
+- **El visor**: las dos imágenes con la corrección de las lentes de la app
+  (Ajustes: distancia entre ojos, campo, lentes, separar las imágenes).
+- **Las apps** (dibujadas en el lienzo, cada una en su ventana, con la barra
+  para moverla y la X para cerrarla): Reloj (cronómetro y temporizador con
+  alarma), Calculadora, Notas (con su teclado adentro: en el visor no hay
+  otro), Clima (Open-Meteo, con tu ubicación), Pizarra, Cine (un video del
+  teléfono, en grande), Globos (un juego chiquito para practicar el doble
+  pellizco) y Ajustes. El entorno: el espacio, el atardecer o la cámara.
+- Los ajustes quedan guardados en el navegador.
+
+Lo que el navegador no deja: **mostrar otras páginas o apps adentro** (una
+página no puede dibujar a otra en 3D) y la linterna. Para eso está la app.
 
 ## El control Bluetooth
 
@@ -320,8 +381,20 @@ Principal ── ARCore / sensores ── la cabeza, la cámara, el piso
 ./pruebas/correr.sh     # escritorio y puntero, gestos con manos reales, Nexo Track, la mesa, las apps
 ./pruebas/vista.sh      # la vista previa (salida/vista-*.png y vista-inicio-*.png)
 node pruebas/shaders.mjs
+node pruebas/web.mjs    # Nexo Web en Chromium, con los CDN y MediaPipe de verdad (salida/web-*.png)
 ./construir.sh          # → salida/nexo-xr.apk
 ```
+
+- `web.mjs`: la página carga sin errores; con las **19 manos reales** ningún
+  pellizco falso, **doble pellizco = un clic en las 12 abiertas, uno solo =
+  ninguno**; la cuenta que ubica la mano (exacta sin ruido, 0.6 cm con 2 px;
+  con las fotos reales los puntos vuelven a caer donde los vio MediaPipe:
+  9 % de la palma); la calculadora; el teléfono acostado mira al horizonte y
+  girar 30° gira 30°; con la mano simulada (los puntos de una foto real) el
+  rayo le pega a la ventana, **un pellizco no toca, el doble baja y sube, y
+  doble sostenido dibuja una raya**; y **MediaPipe de verdad en el worker**
+  encuentra la mano de la foto de prueba de MediaPipe donde la encontró la app
+  (0.3 %).
 
 - `PruebaEscritorio`: dónde se abren, que miren a la cabeza, reemplazar la
   cuarta, el rayo le pega donde tiene que pegar, **el clic con el rayo de
@@ -342,6 +415,11 @@ node pruebas/shaders.mjs
   la mano inclinada 25° o más, o de canto, no cuenta; y los pasos del inicio
   (se confirma sola cuando no cambia, "Esta es mi mesa", saltar, el cuarto,
   sólo girar).
+- `PruebaSeguimiento`, 3DoF: acostado (90° y 270°) mira adelante y derecho,
+  girar 30° gira 30° sin inclinarse, 0.55° de error girando rápido sin ARCore,
+  el cuello quieto, la cámara de cada foto exacta (para las manos), y ni al
+  entrar ni al salir de 3DoF salta nada; sin que ARCore haya seguido nunca, hay
+  imagen igual.
 - `PruebaSeguimiento`, además: **sin ver la mesa, el cuello no se mueve (0.0
   mm) aunque ARCore se deslice 20 cm** y la cabeza se incline 15 cm, la
   cabeza sigue girando bien (0.65°), y al volver a verla se acomoda sin
@@ -384,5 +462,12 @@ node pruebas/shaders.mjs
   en un teléfono: están probadas sus cuentas y que compilan.
 - El teclado escribe en los campos de texto de las apps y de las páginas con
   teclas; alguna página rara puede no tomarlas.
-- Sin ARCore, girar la cabeza usa los sensores y la orientación del teléfono
-  acostado; si queda al revés, es lo primero a revisar.
+- Sin ARCore y en 3DoF, girar la cabeza usa el giroscopio y la orientación del
+  teléfono acostado (probada con la cuenta, no en un teléfono): si queda al
+  revés o de costado, es lo primero a revisar.
+- **Nexo Web** está probada en Chromium de la PC (sin GPU, a ~20 fps): no en un
+  teléfono. No se sabe todavía cuánto tarda MediaPipe en tu teléfono (en la
+  PC, sin GPU, ~1.5 s por foto: en un teléfono con GPU suele ser 20–40 ms), ni
+  si el campo de la cámara (66°, en Ajustes) coincide con el tuyo: si la mano
+  se ve más lejos o más cerca de lo que está, se corrige ahí o con *Tamaño de
+  mis manos*.

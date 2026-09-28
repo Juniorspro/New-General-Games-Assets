@@ -1,10 +1,10 @@
 {
-  "versionCode": 5,
-  "versionName": "1.4",
-  "apk": "nexo-xr-5.apk",
+  "versionCode": 6,
+  "versionName": "1.5",
+  "apk": "nexo-xr-6.apk",
   "bytes": 18933190,
-  "sha256": "90d1b563abebb5bf37bf8ddc34168d922f99aee946a8330798f7148fe0bb43ad",
+  "sha256": "e2b5132ce22e103d5936789824319788f498c365d0571609632c8fa2337b02db",
   "firma": "6766095216fa8a2d7b8963df407e08d146bfac5d723647bf3129e142ce1823ca",
-  "notas": "Clic con doble pellizco: un pellizco solo ya no aprieta nada (se puede volver a uno en Ajustes → Manos). Indicador nuevo en la mano: un anillo entre el pulgar y el índice que se cierra al pellizcar, el rayo sale de ahí y se prende, y el cursor muestra en celeste cuánto queda para el segundo pellizco. El clic cae donde apuntabas antes del primer pellizco.",
-  "fecha": "2026-09-28 13:19 UTC"
+  "notas": "Modo 3DoF (sólo girar) con tus manos: la cabeza sale sólo del giroscopio, nunca se mueve sola ni se pierde, aunque ARCore no vea nada; las manos siguen andando. Se prende en Ajustes → Espacio, en la baldosa 3DoF de los ajustes rápidos o eligiendo \"3DoF: sólo girar\" en Tu espacio. Además: al abrir, Nexo ya se ve aunque ARCore todavía no enganche. Y Nexo Web: la misma idea en el navegador (ver el README).",
+  "fecha": "2026-09-28 16:19 UTC"
 }

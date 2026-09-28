@@ -51,8 +51,8 @@ final class Rapidos {
         // las baldosas
         GridLayout g = new GridLayout(c);
         g.setColumnCount(5);
-        String[] t = {"Passthrough", "Entorno", "Recentrar", "Captura", "Linterna", "Visor", "Manos", "Teclado", "Ajustes", "Tu espacio"};
-        int[] ic = {Iconos.OJO, Iconos.MONTANA, Iconos.RECENTRAR, Iconos.CAPTURA, Iconos.LINTERNA, Iconos.VISOR, Iconos.MANO, Iconos.TECLADO, Iconos.AJUSTES, Iconos.MESA};
+        String[] t = {"Passthrough", "Entorno", "Recentrar", "Captura", "Linterna", "Visor", "Manos", "3DoF", "Ajustes", "Tu espacio"};
+        int[] ic = {Iconos.OJO, Iconos.MONTANA, Iconos.RECENTRAR, Iconos.CAPTURA, Iconos.LINTERNA, Iconos.VISOR, Iconos.MANO, Iconos.GIRAR, Iconos.AJUSTES, Iconos.MESA};
         baldosas = new LinearLayout[t.length];
         for (int i = 0; i < t.length; i++) {
             final int k = i;
@@ -116,7 +116,7 @@ final class Rapidos {
             case 4: s.linterna(!s.linterna()); break;
             case 5: s.visor(!s.visor()); break;
             case 6: s.cambio("manos", s.ajustes().manos == 1 ? 0 : 1); break;
-            case 7: s.mostrarTeclado(true); break;
+            case 7: s.cambio("tresDof", s.ajustes().tresDof == 1 ? 0 : 1); break;
             case 9: s.mostrarRapidos(false); s.prepararEspacio(); break;
             default: s.mostrarRapidos(false); s.abrir("ajustes");
         }
@@ -126,9 +126,9 @@ final class Rapidos {
     private void refrescar() {
         Sistema s = sis;
         if (baldosas == null || s == null) return;
-        boolean[] on = {s.entorno() == Entornos.PASSTHROUGH, false, false, false, s.linterna(), s.visor(), s.ajustes().manos == 1, false, false, false};
+        boolean[] on = {s.entorno() == Entornos.PASSTHROUGH, false, false, false, s.linterna(), s.visor(), s.ajustes().manos == 1, s.ajustes().tresDof == 1, false, false};
         // las que se prenden y apagan: azules cuando están prendidas
-        for (int i : new int[]{0, 4, 5, 6})
+        for (int i : new int[]{0, 4, 5, 6, 7})
             baldosas[i].setBackground(Estilo.apretable(on[i] ? Estilo.AZUL : Estilo.TARJETA, Estilo.TARJETA_ALTA, Estilo.dp(baldosas[0].getContext(), 18)));
         int e = s.entorno();
         entornoTxt.setText(e == Entornos.PASSTHROUGH ? "Entorno" : Entornos.NOMBRES[e]);

@@ -21,6 +21,11 @@ package com.juniorspro.nexoxr;
  *     giroscopio con la posición quieta; cuando vuelve, el salto se funde en
  *     medio segundo. Lo mismo con cualquier salto imposible (más de 12 cm de
  *     un cuadro al otro).
+ *  5. 3DoF (Sólo girar): {@link #tres} no usa ARCore para nada: la cabeza
+ *     sale sólo del giroscopio (GAME_ROTATION_VECTOR, con la gravedad: no se
+ *     inclina nunca) y el cuello queda quieto. Nunca "se mueve solo" ni se
+ *     pierde, y anda aunque ARCore no siga (poca luz, pared lisa). ARCore
+ *     queda sólo para la cámara (el passthrough y las manos).
  *  4. LOS OJOS. En el visor los ojos no están donde la cámara: están unos
  *     7 cm atrás y a un costado (la cámara está en una punta del teléfono).
  *     Dibujar desde la cámara hace que al girar la cabeza lo cercano se
@@ -33,7 +38,7 @@ package com.juniorspro.nexoxr;
  * (x a la derecha, y arriba, −z adelante).
  */
 final class Seguimiento {
-    static final int NADA = 0, SEIS = 1, GIRO = 2;   // sin pose / ARCore 6DoF / perdido: sólo girar
+    static final int NADA = 0, SEIS = 1, GIRO = 2, TRES = 3;   // sin pose / ARCore 6DoF / perdido: sólo girar / 3DoF (sólo el giroscopio)
 
     // ── el giroscopio: las orientaciones del teléfono (cuaterniones x, y, z, w; del teléfono al mundo) ──
     private static final int N = 512;
@@ -171,10 +176,21 @@ final class Seguimiento {
             tBase = tFoto;
             hayQBase = cubre(tFoto) && orientacion(tFoto, qBase);
             modo = SEIS;
-        } else if (modo != NADA) {
+            haySeis = true;
+        } else if (modo != NADA && haySeis) {
             if (modo == SEIS) { perdidas++; perdidoDesde = tVer; }
             modo = GIRO;
         } else return false;
+        // de 3DoF (o del arranque, antes de que ARCore siga) a 6DoF sin ancla todavía: el escritorio se
+        // pone justo donde lo estabas viendo (sin saltar ni girar: el rumbo del giroscopio no es el de ARCore)
+        if (antes == TRES && modo == SEIS && !hayAncla && haySalida) {
+            float[] w0 = new float[16], pi = new float[16], c = new float[16];
+            llevar(tVer, w0);
+            invRigida(pose, pi);
+            mul(w0, pi, c);
+            aCuat(c, cRot);
+            cPos[0] = c[12]; cPos[1] = c[13]; cPos[2] = c[14];
+        }
         // la foto y el momento de verse: la base llevada con el giroscopio
         float[] w = new float[16];
         llevar(tFoto, w);
@@ -199,7 +215,7 @@ final class Seguimiento {
         tUltimo = tVer;
         float[] rp = {crudo[12], crudo[13], crudo[14]}, rr = new float[4];
         aCuat(crudo, rr);
-        boolean salto = haySalida && ((antes == GIRO && modo == SEIS) || (estabaFijo && !fijar)
+        boolean salto = haySalida && ((antes == GIRO && modo == SEIS) || antes == TRES || (estabaFijo && !fijar)
                 || (modo == SEIS && dist(rp, crudoPos) > 0.12f));
         if (salto) {
             for (int k = 0; k < 3; k++) bPos[k] = salPos[k] - rp[k];
@@ -216,6 +232,72 @@ final class Seguimiento {
         deCuat(salRot, salPos, pose);
         haySalida = true;
         return true;
+    }
+
+    // ── 3DoF: sólo el giroscopio ──
+
+    /** Del mundo de los sensores (x este, y norte, z arriba) al de OpenGL (y arriba, −z norte), por columnas. */
+    static final float[] ENU_A_GL = {1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1};
+    /** La pantalla en el marco del teléfono, acostado (ROTATION_90: la parte de arriba del teléfono a la izquierda) o al revés (270). */
+    static final float[] PANTALLA_90 = {0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+    static final float[] PANTALLA_270 = {0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+    private boolean haySeis;
+    private float tresRumbo;
+    private final float[] tresCuello = new float[3];
+
+    /** La pantalla en el mundo de OpenGL según el giroscopio en t (sin rumbo ni posición). */
+    boolean pantallaGiro(long t, boolean al270, float[] out) {
+        float[] q = new float[4];
+        if (!orientacion(t, q)) return false;
+        float[] r = new float[16], a = new float[16];
+        deCuat(q, new float[3], r);
+        mul(ENU_A_GL, r, a);
+        mul(a, al270 ? PANTALLA_270 : PANTALLA_90, out);
+        return true;
+    }
+
+    /** Hacia dónde mira (el ángulo alrededor de Y; 0 = −Z, positivo a la izquierda). */
+    static float rumbo(float[] m) { return (float) Math.atan2(m[8], m[10]); }
+
+    /**
+     * 3DoF: la cabeza sólo gira (el giroscopio), el cuello quieto. Al entrar desde 6DoF queda mirando
+     * para el mismo lado y el cuello donde estaba (no salta); al volver a 6DoF el salto se funde.
+     * @param tFoto la hora de la foto de la cámara (para las manos), o = tVer si no hay cámara
+     * @return si hay pose (hace falta el giroscopio)
+     */
+    boolean tres(long tFoto, long tVer, boolean al270) {
+        float[] v = new float[16], f = new float[16];
+        if (!pantallaGiro(tVer, al270, v)) return false;
+        if (!pantallaGiro(tFoto, al270, f)) System.arraycopy(v, 0, f, 0, 16);
+        if (modo != TRES) {
+            tresRumbo = haySalida ? rumbo(pose) - rumbo(v) : 0;
+            float[] c = haySalida ? aplicarPunto(pose, pivote) : new float[3];
+            System.arraycopy(c, 0, tresCuello, 0, 3);
+            modo = TRES;
+        }
+        colocar(v, pose);
+        colocar(f, poseFoto);
+        demoraMs = (tVer - tFoto) / 1e6f;
+        // lo que sale, para que al volver a 6DoF se funda desde acá
+        salPos[0] = pose[12]; salPos[1] = pose[13]; salPos[2] = pose[14];
+        aCuat(pose, salRot);
+        System.arraycopy(salPos, 0, crudoPos, 0, 3);
+        bPos[0] = bPos[1] = bPos[2] = 0;
+        bRot[0] = bRot[1] = bRot[2] = 0; bRot[3] = 1;
+        haySalida = true;
+        tUltimo = tVer;
+        fijo = true;
+        System.arraycopy(tresCuello, 0, cuelloFijo, 0, 3);
+        return true;
+    }
+
+    private void colocar(float[] m, float[] out) {
+        float[] ry = new float[16];
+        float h = tresRumbo / 2;
+        deCuat(new float[]{0, (float) Math.sin(h), 0, (float) Math.cos(h)}, new float[3], ry);
+        mul(ry, m, out);
+        float[] p = aplicarPunto(out, pivote);
+        out[12] += tresCuello[0] - p[0]; out[13] += tresCuello[1] - p[1]; out[14] += tresCuello[2] - p[2];
     }
 
     /**
