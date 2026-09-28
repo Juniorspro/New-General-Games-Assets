@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
+  - Dijo: "no le llegan las actualizaciones".
+  - Quedó ([aeroplaza-47](aeroplaza-47.md)): la APK 45 solo buscaba al arrancar de cero. La 46 busca al volver y cada
+    20 min, y usa lo bajado sin cerrar la app. Se mandó la APK 46 (misma firma: va encima). Publicada la n 3.
+  - Falta: que confirme que le llega (en Opciones › Datos se ve la versión).
 - **28/09/2026, de noche, decimotercera vez · `claude/fijate-iszyer`:**
   - Pidió: un celu en AEROPLAZA para que sea "algo así como Roblox", con amigos y solicitudes de amistad.
   - Quedó ([aeroplaza-46](aeroplaza-46.md)): el celu (apps, amigos, solicitudes, charlas cifradas, juegos, casas,
@@ -45,9 +50,4 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     arranque fallido suelta la cámara; la WebView caída se rearma; al abrir, un aviso fijo dice por qué se cerró la vez
     pasada. `choque.mjs` 22/22.
   - Falta: que lo abra en el celu; si se cierra de nuevo, la captura del aviso 💥.
-- **27/09/2026, de noche, sexta vez · `claude/fijate-iszyer`:**
-  - Pidió: "más mejoras" y "detectar un objeto en la mano como un control".
-  - Quedó ([aeroplaza-40](aeroplaza-40.md)): el agarre de un objeto lo hace un control (rayo de la punta, gatillo con
-    el índice o el pulgar, un control Aero dibujado, "🎮 Control" en el menú). `mando.mjs` 18/18.
-  - Falta: probarlo con MediaPipe de verdad (con un objeto, los dedos tapados).
-- **Antes (22/09 a 27/09, 54 sesiones):** en [diario-viejo](diario-viejo.md).
+- **Antes (22/09 a 27/09, 55 sesiones):** en [diario-viejo](diario-viejo.md).

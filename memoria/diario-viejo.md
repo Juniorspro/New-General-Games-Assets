@@ -3,6 +3,11 @@
 Las sesiones del 22/09 al 27/09/2026, como quedaron. No se lee al arrancar: lo que quedó de cada una está en su
 nota (ver el índice). La más nueva arriba.
 
+- **27/09/2026, de noche, sexta vez · `claude/fijate-iszyer`:**
+  - Pidió: "más mejoras" y "detectar un objeto en la mano como un control".
+  - Quedó ([aeroplaza-40](aeroplaza-40.md)): el agarre de un objeto lo hace un control (rayo de la punta, gatillo con
+    el índice o el pulgar, un control Aero dibujado, "🎮 Control" en el menú). `mando.mjs` 18/18.
+  - Falta: probarlo con MediaPipe de verdad (con un objeto, los dedos tapados).
 - **27/09/2026, de noche, quinta vez · `claude/fijate-iszyer`:**
   - Pidió: "6DoF súper suave y goty, es muy impreciso" (con un TikTok de metanexusxr que no se pudo ver).
   - Quedó ([aeroplaza-39](aeroplaza-39.md)): la cabeza nativa (el giroscopio del sistema corregido con ARCore),
