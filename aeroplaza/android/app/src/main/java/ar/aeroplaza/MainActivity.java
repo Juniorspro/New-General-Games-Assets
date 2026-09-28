@@ -63,6 +63,8 @@ public class MainActivity extends Activity {
   /* (vuelta 44) el mando VR Box: teclasVR, el juego está en el VR (el volumen y los temas del modo música van al juego) */
   volatile boolean teclasVR;
   final MandoBox mando = new MandoBox();
+  /* (vuelta 45) las actualizaciones del juego sin APK nueva */
+  Actualizador actualizador;
   boolean arVivoYa;
 
   @Override protected void onCreate(Bundle b) {
@@ -94,6 +96,12 @@ public class MainActivity extends Activity {
       @Override public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
         /* (la última foto de la cámara para ver a través, Espacio.java: se pide por número, sin guardarla) */
         Uri u = r.getUrl();
+        /* (vuelta 45) el juego bajado, si hay uno más nuevo que el de la APK: en la misma dirección (lo guardado sigue) */
+        Actualizador act = actualizador; byte[] nuevoJuego = act == null ? null : act.servir;
+        if (nuevoJuego != null && "appassets.androidplatform.net".equals(u.getHost()) && "/assets/aeroplaza.html".equals(u.getPath())) {
+          java.util.Map<String, String> h = new java.util.HashMap<>(); h.put("Cache-Control", "no-store");
+          return new WebResourceResponse("text/html", "utf-8", 200, "OK", h, new java.io.ByteArrayInputStream(nuevoJuego));
+        }
         if ("appassets.androidplatform.net".equals(u.getHost()) && u.getPath() != null && u.getPath().startsWith("/camara/")) {
           Ar a = ar; byte[] j = a == null ? null : a.espacio.jpeg;
           if (j == null) return new WebResourceResponse("image/jpeg", null, 404, "No", null, null);
@@ -146,8 +154,19 @@ public class MainActivity extends Activity {
     });
     web.addJavascriptInterface(new Puente(), "AeroplazaNativo");
     raiz.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+    /* (vuelta 45) antes de cargar: si la vez pasada se bajó un juego nuevo, ahora es el que se usa; después se busca otro */
+    try {
+      actualizador = new Actualizador(this, prefs, codigoApk(), new Actualizador.Aviso() {
+        @Override public void lista(int n, String notas) { enviar("__nativo&&__nativo.actualizacion&&__nativo.actualizacion('lista'," + n + "," + org.json.JSONObject.quote(notas) + ")"); }
+        @Override public void apkNueva(int codigo, String url, String notas) { enviar("__nativo&&__nativo.actualizacion&&__nativo.actualizacion('apk'," + codigo + "," + org.json.JSONObject.quote(notas) + "," + org.json.JSONObject.quote(url) + ")"); }
+      });
+      byte[] av = actualizador.leerAsset("aviso.txt");
+      actualizador.alAbrir(av == null ? "" : new String(av, java.nio.charset.StandardCharsets.UTF_8));
+    } catch (Throwable t) { actualizador = null; }
     web.loadUrl(BASE + "aeroplaza.html");
+    if (actualizador != null) actualizador.buscar();
   }
+  @SuppressWarnings("deprecation") int codigoApk() { try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionCode; } catch (Throwable t) { return 1; } }
 
   /* (vuelta 41, "se me cierra la app al entrar al ARCore") sin logcat, la app dice sola por qué se cerró la vez
      pasada: una excepción de Java se anota antes de morir; un choque nativo o un ANR, Android los guarda
@@ -353,6 +372,17 @@ public class MainActivity extends Activity {
     @JavascriptInterface public String version() { return "1"; }
     /* (vuelta 44) el mando: en el VR se toman también el volumen y los temas (el modo música del VR Box) */
     @JavascriptInterface public void mandoVR(boolean si) { teclasVR = si; }
+    /* (vuelta 45) las actualizaciones: qué versión del juego corre (n, 0 = la de la APK sin número), si es bajada, cómo va
+       la búsqueda y el código de la APK */
+    @JavascriptInterface public String juego() {
+      Actualizador a = actualizador; if (a == null) return "{}";
+      try { return new org.json.JSONObject().put("n", a.nEnUso).put("bajada", a.deBajada).put("estado", a.estado).put("apk", codigoApk()).put("nApk", a.nApk).toString(); } catch (Throwable t) { return "{}"; }
+    }
+    /* abrir la APK nueva para bajarla (solo de los lugares conocidos) */
+    @JavascriptInterface public void abrirEnlace(String url) {
+      if (!Actualizacion.urlPermitida(url)) return;
+      runOnUiThread(() -> { try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Throwable t) { /* sin navegador */ } });
+    }
     /* los mandos conectados, por nombre ("VR BOX|…"; "" si no hay): los que dicen ser mando, y los que se llaman como
        uno (el VR Box en modo música se presenta como teclado) */
     @JavascriptInterface public String mandos() {

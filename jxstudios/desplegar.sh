@@ -33,6 +33,8 @@ if [ ! -f "$APK" ] || [ -n "$(find "$RAIZ/aeroplaza/js" "$RAIZ/aeroplaza/css" "$
 # AEROPLAZA en el navegador: la versión web (sin canciones), armada de la fuente
 ( cd "$RAIZ/aeroplaza" && node herramientas/armar.mjs >/dev/null )
 cp "$RAIZ/aeroplaza/dist/aeroplaza-web.html" "$DIST/aeroplaza/index.html"
+# (el aviso de las actualizaciones de la APK: Actualizador.java también lo busca acá)
+[ -f "$RAIZ/aeroplaza/actualizacion.json" ] && cp "$RAIZ/aeroplaza/actualizacion.json" "$DIST/aeroplaza/actualizacion.json"
 if [ -n "$VIEJA" ] && [ -n "${ANDROID_HOME:-}" ]; then ( cd "$RAIZ/aeroplaza" && node herramientas/apk.mjs | tail -1 ); VIEJA=""; fi
 if [ -z "$VIEJA" ]; then cp "$APK" "$DIST/app/aeroplaza.apk"
 elif curl -sSfL -o "$DIST/app/aeroplaza.apk" "https://$PROYECTO.pages.dev/app/aeroplaza.apk" && [ "$(head -c 2 "$DIST/app/aeroplaza.apk")" = "PK" ]; then

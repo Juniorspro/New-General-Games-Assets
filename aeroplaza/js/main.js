@@ -57,6 +57,7 @@ import { Ventanas } from './ventanas.js';
 import { Espejo } from './espejo.js';
 import { armarVR } from './pelotita.js';
 import { accionesBox } from './mando-box.js';
+import { avisosDeActualizacion } from './actualizar.js';
 import { PanelLentes, accionLentes, curva, inversa } from './lentes.js';
 import { VisorXR } from './vr-xr.js';
 import { candidatasCopias, instanciarCopias, revisarCopias } from './instanciar.js';
@@ -74,6 +75,24 @@ const MUSICA_DE = { plaza: 'colina', aqua: 'arrecife', aurora: 'aurora', jardin:
 const EN_VEZ = { juegos: 'titulo', aurora: 'arrecife', cielo: 'bosque', ciudad: 'colina', casa: 'titulo', playa: 'arrecife', bosque: 'colina', arrecife: 'colina', titulo: 'colina', colina: 'titulo' };
 Sonido.soloGrabadas = true;
 const cancionDe = (k) => { for (let i = 0; k && i < 4; i++, k = EN_VEZ[k]) if (Sonido.grabadas[k]) return k; return null; };
+/* (vuelta 45) EN LA APK, LAS CANCIONES VIENEN SUELTAS (herramientas/apk.mjs --canciones: canciones/canciones.json y los MP3):
+   el juego es el mismo del repo, sin canciones, para que las actualizaciones lo puedan reemplazar. Se piden a la APK
+   (WebViewAssetLoader, al lado del juego) y, cuando llegan, suena la que se había pedido */
+async function cancionesDeLaApp(alListas) {
+  if (!window.AEROPLAZA_APK || Object.keys(Sonido.grabadas).length) return 0;
+  try {
+    const r = await fetch('canciones/canciones.json'); if (!r.ok) return 0;
+    const L = await r.json(); let n = 0;
+    /* (todas a la vez: son locales; un nombre que no sea un MP3 de la carpeta no se pide) */
+    await Promise.all(Object.entries(L).map(async ([tema, c]) => {
+      if (!c || typeof c.archivo !== 'string' || !/^[\w-]+\.mp3$/.test(c.archivo)) return;
+      const b = await fetch('canciones/' + c.archivo); if (!b.ok) return;
+      Sonido.registrar(tema, { ...c, datos: new Uint8Array(await b.arrayBuffer()) }); n++;
+    }));
+    if (n) alListas?.();
+    return n;
+  } catch { return 0; }
+}
 
 async function cargarTexturas() {
   const L = new THREE.TextureLoader(), A = window.ARCHIVOS || {};
@@ -303,7 +322,7 @@ async function iniciar() {
     get yo() { return yo; }, get enJuego() { return enJuego; },
     /* el 'aviso' de siempre ahora es la campanita estilo Windows 7 (timbres.js) */
     sfx(n, o) { try { if (n === 'aviso' && Sonido.ctx?.state === 'running') { timbre('info'); return; } Sonido.sfx(n, o); } catch { /* sin audio */ } },
-    musica(n) { try { J.sonando = cancionDe(n); Sonido.musica(J.sonando); } catch { /* nada */ } },
+    musica(n) { J._pedida = n; try { J.sonando = cancionDe(n); Sonido.musica(J.sonando); } catch { /* nada */ } },
     /* callar la música, o volver a empezar una canción desde el principio (el runner) */
     callar() { try { Sonido.soltar(Sonido.actual, 0.3); Sonido.actual = null; J.sonando = null; } catch { /* nada */ } },
     musicaDeNuevo(n) { J.callar(); J.musica(n); },
@@ -1233,6 +1252,9 @@ async function iniciar() {
   }
 
   window.__A = { textos: { t, ponerIdioma }, espejo, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  /* (vuelta 45) en la APK: las canciones sueltas y los avisos de las actualizaciones */
+  cancionesDeLaApp(() => { if (J._pedida != null) { Sonido.actual = null; J.musica(J._pedida); } });
+  avisosDeActualizacion(UI);
   let ult = performance.now();
   /* el próximo cuadro se pide ANTES de dibujar este: si algo falla, el juego no se congela */
   const bucle = (tt) => {

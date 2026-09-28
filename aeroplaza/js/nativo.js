@@ -105,6 +105,10 @@ export const Nativo = {
   mandoVR(si) { try { N()?.mandoVR?.(!!si); } catch { /* sin APK o vieja */ } },
   /* los nombres de los mandos conectados, según Android ([] sin APK) */
   mandos() { try { return String(N()?.mandos?.() || '').split('|').filter(Boolean); } catch { return []; } },
+  /* (vuelta 45) las actualizaciones: qué versión corre ({ n, bajada, estado, apk, nApk } o null sin APK o vieja) y abrir
+     la APK nueva para bajarla */
+  juego() { try { const s = N()?.juego?.(); return s ? JSON.parse(s) : null; } catch { return null; } },
+  abrirEnlace(url) { try { N()?.abrirEnlace?.(String(url)); } catch { /* sin APK */ } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
   /* ARCore siguiendo, con una pose reciente */
   get arVivo() { return !!this.pose && this.pose.estado === 1 && performance.now() - this.pose.llego < VIEJA; },
@@ -129,6 +133,8 @@ window.__nativo = {
     if (Nativo.estado !== 'corre') { Nativo.estado = 'corre'; avisarEspera(); }
   },
   manos(d) { Nativo.alManos?.(d); },
+  /* (vuelta 45) la APK bajó un juego nuevo ('lista', n, notas) o hay una APK nueva ('apk', código, notas, url) */
+  actualizacion(tipo, n, notas = '', url = '') { Nativo.alActualizacion?.(tipo, n, notas, url); },
   /* (vuelta 44) el mando: un botón (i, abajo 1/0) y la palanca (−1 a 1; y para abajo) */
   mandoBoton(i, abajo) { const M = Nativo.mando; if (!(i >= 0 && i < M.b.length)) return; M.b[i] = !!abajo; if (abajo) M.recien.add(i); M.t = performance.now(); },
   mandoEje(x, y) { const M = Nativo.mando; M.x = Number.isFinite(x) ? x : 0; M.y = Number.isFinite(y) ? y : 0; M.t = performance.now(); },
