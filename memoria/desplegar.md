@@ -12,6 +12,7 @@ Fuente: `ARRANQUE.md § 3`, `§ 4`, `§ 5` y `§ 8`. Ver también:
 | `/root/.discord-frutiger-id` / `-secret` | Discord OAuth | no estaba |
 | `~/.rezona/credentials.json` | Rezona Lab (lo deja `npx rezona@latest login`) | estaba |
 | `frutiger-aero/.dev.vars` | secretos locales (gitignoreado) | — |
+| `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` (variables del entorno de claude.ai) | Cloudflare Pages para JXStudios (`jxstudios/desplegar.sh`) | **no estaban** el 28/09 |
 
 - Sin el token de Cloudflare no se despliega. Se carga desde la configuración
   del entorno (variables o script de arranque), nunca por el chat.

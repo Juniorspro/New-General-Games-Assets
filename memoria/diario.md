@@ -4,6 +4,13 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Cuando pase de ~30 entradas, las viejas
 se resumen en una sola.
 
+- **28/09/2026, de mañana, décima vez · `claude/fijate-iszyer`:**
+  - Pidió: una página sobre su estudio (JXStudios, mandó el logo), en Cloudflare, con su app, y una llave para que
+    otra sesión la pueda cambiar.
+  - Quedó ([jxstudios](jxstudios.md)): `jxstudios/` (la página en 3 idiomas, los 6 juegos, AEROPLAZA web y la APK sin
+    canciones) y `desplegar.sh`, que la sube con la llave del entorno.
+  - Falta: la llave (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`) en el entorno. Después, en una sesión nueva,
+    `jxstudios/desplegar.sh`.
 - **28/09/2026, de madrugada, novena vez · `claude/fijate-iszyer`:**
   - Pidió: todo el juego en el VR, ARCore en 3DoF (por las manos) con opción, la pelotita con manos que ven los demás,
     entrar a los edificios y jugar los minijuegos.

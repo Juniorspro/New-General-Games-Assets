@@ -19,3 +19,6 @@ __pycache__/
 
 # los zips de los juegos: se rehacen con herramientas/empaquetar_juegos.py
 entregas/
+
+# JXSTUDIOS: lo que desplegar.sh arma para subir (los juegos y la APK se copian ahí; la APK no va al repo)
+/jxstudios/dist/

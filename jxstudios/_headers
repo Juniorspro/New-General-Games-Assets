@@ -1,0 +1,13 @@
+# (Cloudflare Pages) cabeceras del sitio de JXStudios
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/img/*
+  Cache-Control: public, max-age=604800
+
+# la app: que se baje con su tipo (si no, algunos celus la abren como texto)
+/app/*
+  Content-Type: application/vnd.android.package-archive
+  Content-Disposition: attachment; filename="aeroplaza.apk"
+  Cache-Control: public, max-age=3600

@@ -52,6 +52,8 @@ gratuito.
   `herramientas/iblo/`.
 - Electro Silver está en electro-silver.pages.dev con `noindex`, porque los
   datos y las reseñas son de ejemplo. Detalle en `electro-silver/LEEME.md`.
+- **JXStudios**, la página del estudio de quien pide (sus juegos y su app): `jxstudios/`, para jxstudios.pages.dev.
+  Detalle en [jxstudios](jxstudios.md).
 - En `docs/paginas/` están Humo Lento, Gabinete y Kane, demostraciones con
   assets de Rezona (`estado.json › proyectos`).
 

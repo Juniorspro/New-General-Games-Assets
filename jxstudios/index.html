@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JXStudios — juegos</title>
+<meta name="description" content="JXStudios: juegos para el navegador y el celu, en español, inglés y portugués. AEROPLAZA para Android, con VR y tus manos.">
+<meta name="theme-color" content="#0a0b0d">
+<meta property="og:title" content="JXStudios">
+<meta property="og:description" content="Juegos para el navegador y el celu. AEROPLAZA para Android, con VR y tus manos.">
+<meta property="og:image" content="img/og.jpg">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="img/icono.png">
+<link rel="apple-touch-icon" href="img/icono.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!--
+  JXSTUDIOS — la página del estudio. Todo en un archivo: estilos, textos y lo poco que se mueve.
+  - Los textos están en TEXTOS (abajo, en el script), en es / en / pt: para cambiar algo, se cambia ahí en los tres.
+  - Las imágenes, en img/. Los juegos y la app no viven acá: jxstudios/desplegar.sh los copia al armar (dist/).
+  - Se sube con jxstudios/desplegar.sh (la llave de Cloudflare va en el entorno, nunca en el repo).
+-->
+<style>
+:root {
+  --fondo: #0a0b0d; --fondo2: #111316; --tinta: #eef1f5; --tinta2: #a7aeb8; --tinta3: #6f7782;
+  --acero: #d3d8df; --acero2: #9aa1ab; --acero3: #5d636c; --linea: rgba(255, 255, 255, 0.09);
+  --brillo: #bfe3ff; --radio: 18px;
+  --metal: linear-gradient(180deg, #f6f8fa 0%, #c5cad2 38%, #8b919b 52%, #d9dde3 70%, #a3a9b2 100%);
+  --cepillado: repeating-linear-gradient(90deg, rgba(255,255,255,0.045) 0 1px, rgba(0,0,0,0.04) 1px 2px, transparent 2px 4px);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--fondo); color: var(--tinta);
+  font: 400 16px/1.6 Montserrat, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--brillo); outline-offset: 3px; border-radius: 6px; }
+
+/* la fibra de carbono (como el centro de la moneda): solo gradientes, sin imágenes */
+.carbono {
+  background-color: #121315;
+  background-image:
+    linear-gradient(27deg, #0d0e10 5px, transparent 5px), linear-gradient(207deg, #0d0e10 5px, transparent 5px),
+    linear-gradient(27deg, #1b1d20 5px, transparent 5px), linear-gradient(207deg, #1b1d20 5px, transparent 5px),
+    linear-gradient(90deg, #151618 10px, transparent 10px),
+    linear-gradient(#17181b 25%, #141517 25%, #141517 50%, transparent 50%, transparent 75%, #1d1f22 75%, #1d1f22);
+  background-size: 20px 20px;
+  background-position: 0 5px, 10px 0, 0 10px, 10px 5px, 0 0, 0 0;
+}
+.envoltura { width: min(1140px, 100% - 32px); margin-inline: auto; }
+
+/* ---------------------------------------------------------------- la barra */
+.barra {
+  position: sticky; top: 0; z-index: 20; backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  background: rgba(10, 11, 13, 0.72); border-bottom: 1px solid var(--linea);
+}
+.barra .envoltura { display: flex; align-items: center; gap: 18px; height: 62px; }
+.marca { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; letter-spacing: 0.02em; }
+.marca img { height: 26px; width: auto; border-radius: 4px; }
+.marca span { background: var(--metal); -webkit-background-clip: text; background-clip: text; color: transparent; font-size: 18px; }
+.links { display: flex; gap: 4px; margin-left: auto; }
+.links a { text-decoration: none; color: var(--tinta2); font-weight: 600; font-size: 14px; padding: 8px 12px; border-radius: 999px; transition: color .2s, background .2s; }
+.links a:hover { color: var(--tinta); background: rgba(255,255,255,0.06); }
+.idiomas { display: flex; padding: 3px; border-radius: 999px; border: 1px solid var(--linea); background: #0d0e10; }
+.idiomas button {
+  font: 700 12px/1 Montserrat, system-ui, sans-serif; letter-spacing: .06em; color: var(--tinta3); background: none; border: 0;
+  padding: 8px 10px; border-radius: 999px; cursor: pointer; transition: color .2s, background .2s;
+}
+.idiomas button[aria-pressed="true"] { color: #0b0c0e; background: var(--metal); box-shadow: 0 1px 0 rgba(255,255,255,.5) inset; }
+@media (max-width: 720px) { .links { display: none; } .idiomas { margin-left: auto; } }
+
+/* ---------------------------------------------------------------- la portada */
+.portada { position: relative; overflow: hidden; border-bottom: 1px solid var(--linea); }
+.portada::before {
+  /* (el halo detrás de la moneda, como la luz de estudio de las imágenes) */
+  content: ""; position: absolute; inset: -20% -10% auto auto; width: 70vmax; height: 70vmax; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(210, 225, 240, 0.13), transparent 70%);
+}
+.portada .envoltura { position: relative; display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 40px; padding: 72px 0 84px; }
+.etiqueta { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--acero2); }
+.etiqueta::before { content: ""; width: 26px; height: 2px; background: var(--metal); border-radius: 2px; }
+h1 { margin: 16px 0 18px; font-size: clamp(38px, 6.2vw, 72px); line-height: 1.02; font-weight: 800; letter-spacing: -0.02em; }
+h1 .metal, h2 .metal { background: var(--metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.bajada { font-size: clamp(16px, 1.9vw, 19px); color: var(--tinta2); max-width: 34em; margin: 0 0 30px; }
+.botones { display: flex; flex-wrap: wrap; gap: 12px; }
+.boton {
+  position: relative; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 15px;
+  padding: 14px 22px; border-radius: 999px; border: 1px solid var(--linea); color: var(--tinta); background: #15171a; cursor: pointer;
+  transition: transform .15s, border-color .2s, box-shadow .2s;
+}
+.boton:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.22); }
+.boton.primario { color: #0c0d0f; border-color: transparent; background: var(--cepillado), var(--metal); box-shadow: 0 10px 30px rgba(180, 200, 220, 0.18), 0 1px 0 rgba(255,255,255,.7) inset, 0 -1px 0 rgba(0,0,0,.25) inset; }
+.boton.primario:hover { box-shadow: 0 14px 40px rgba(190, 215, 240, 0.28), 0 1px 0 rgba(255,255,255,.7) inset, 0 -1px 0 rgba(0,0,0,.25) inset; }
+.boton svg { width: 18px; height: 18px; flex: none; }
+.boton small { font-weight: 600; opacity: .7; }
+
+.moneda { position: relative; aspect-ratio: 1; width: min(460px, 100%); justify-self: center; perspective: 900px; }
+.moneda .cara { position: absolute; inset: 0; border-radius: 50%; transform-style: preserve-3d; transition: transform .25s ease-out; will-change: transform; }
+.moneda img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; box-shadow: 0 40px 80px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.06); }
+/* el reflejo que pasa por el metal, cada tanto */
+.moneda .cara::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.28) 48%, rgba(255,255,255,.05) 54%, transparent 62%);
+  background-size: 250% 250%; background-position: 120% 0; animation: reflejo 6.5s ease-in-out infinite;
+}
+@keyframes reflejo { 0%, 55% { background-position: 120% 0; } 85%, 100% { background-position: -40% 0; } }
+@media (max-width: 860px) {
+  .portada .envoltura { grid-template-columns: 1fr; padding: 40px 0 56px; gap: 28px; text-align: left; }
+  .moneda { width: min(300px, 78%); order: -1; }
+}
+
+/* ---------------------------------------------------------------- secciones */
+section { scroll-margin-top: 70px; }
+.seccion { padding: 88px 0; }
+h2 { margin: 12px 0 14px; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.08; font-weight: 800; letter-spacing: -0.015em; }
+.texto { color: var(--tinta2); font-size: 17px; max-width: 40em; }
+.texto p { margin: 0 0 14px; }
+
+.cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 36px; }
+.cifra { position: relative; padding: 20px 20px 18px; border-radius: var(--radio); border: 1px solid var(--linea); background: linear-gradient(180deg, #16181b, #0f1012); overflow: hidden; }
+.cifra::before { content: ""; position: absolute; inset: 0 0 auto; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); }
+.cifra b { display: block; font-size: clamp(28px, 7.5vw, 38px); white-space: nowrap; line-height: 1; font-weight: 800; background: var(--metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cifra span { display: block; margin-top: 8px; color: var(--tinta2); font-size: 14px; font-weight: 600; }
+@media (max-width: 860px) { .cifras { grid-template-columns: repeat(2, 1fr); } }
+
+/* la app: sobre el fondo del rombo */
+.app { position: relative; background: #08090a url(img/rombo.webp) center / cover no-repeat; border-block: 1px solid var(--linea); }
+/* (el logo del medio del rombo queda tapado: acá se ve solo la trama de metal de los costados) */
+.app::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 70% at 50% 50%, rgba(8,9,10,.94) 30%, rgba(8,9,10,.66) 75%), linear-gradient(180deg, rgba(8,9,10,.35), rgba(8,9,10,.7)); }
+.app .envoltura { position: relative; display: grid; grid-template-columns: 1.15fr 1fr; gap: 44px; align-items: center; }
+.marco {
+  /* (el marco de metal cepillado, con el borde como el de la moneda) */
+  padding: 10px; border-radius: 26px; background: var(--cepillado), var(--metal);
+  box-shadow: 0 30px 70px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.8) inset, 0 -2px 0 rgba(0,0,0,.35) inset;
+}
+.marco img { border-radius: 18px; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; background: #0c0d0f; }
+.lista { list-style: none; padding: 0; margin: 20px 0 28px; display: grid; gap: 10px; }
+.lista li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; color: var(--tinta); font-weight: 600; }
+.lista li::before { content: ""; width: 12px; height: 12px; margin-top: 7px; border-radius: 50%; background: var(--metal); box-shadow: 0 0 0 3px rgba(255,255,255,.07); }
+.nota { margin-top: 14px; color: var(--tinta3); font-size: 13px; }
+@media (max-width: 860px) { .app .envoltura { grid-template-columns: 1fr; gap: 28px; } }
+
+/* los juegos */
+.grilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 34px; }
+.juego {
+  display: flex; flex-direction: column; border-radius: var(--radio); overflow: hidden; border: 1px solid var(--linea);
+  background: linear-gradient(180deg, #15171a, #0e0f11); transition: transform .2s, border-color .2s, box-shadow .2s;
+}
+.juego:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.2); box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+.juego .foto { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: #0c0d0f; }
+.juego .foto img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.juego:hover .foto img { transform: scale(1.04); }
+.juego .genero {
+  position: absolute; left: 12px; top: 12px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: 6px 10px; border-radius: 999px; color: #0c0d0f; background: var(--metal);
+}
+.juego .cuerpo { display: flex; flex-direction: column; gap: 8px; padding: 18px 18px 20px; flex: 1; }
+.juego h3 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: .01em; }
+.juego p { margin: 0; color: var(--tinta2); font-size: 14.5px; flex: 1; }
+.juego .jugar { align-self: flex-start; margin-top: 8px; padding: 10px 16px; font-size: 14px; }
+@media (max-width: 980px) { .grilla { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .grilla { grid-template-columns: 1fr; } .seccion { padding: 64px 0; } }
+
+/* el pie */
+.pie { border-top: 1px solid var(--linea); padding: 34px 0 calc(34px + env(safe-area-inset-bottom)); color: var(--tinta3); font-size: 13px; }
+.pie .envoltura { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pie img { height: 22px; width: auto; border-radius: 4px; opacity: .85; }
+
+/* lo que aparece al bajar */
+.sube { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+.sube.visto { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .sube { opacity: 1; transform: none; transition: none; }
+  .moneda .cara::after { animation: none; }
+  .moneda .cara, .juego, .juego .foto img, .boton { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="barra">
+  <div class="envoltura">
+    <a class="marca" href="#inicio" aria-label="JXStudios"><img src="img/jxs.webp" alt="" width="55" height="26"><span>JXStudios</span></a>
+    <nav class="links" aria-label="Secciones">
+      <a href="#sobre" data-t="nav_sobre">Sobre mí</a>
+      <a href="#app" data-t="nav_app">La app</a>
+      <a href="#juegos" data-t="nav_juegos">Juegos</a>
+    </nav>
+    <div class="idiomas" role="group" aria-label="Idioma">
+      <button type="button" data-idioma="es" aria-pressed="true">ES</button>
+      <button type="button" data-idioma="en" aria-pressed="false">EN</button>
+      <button type="button" data-idioma="pt" aria-pressed="false">PT</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="portada carbono" id="inicio">
+    <div class="envoltura">
+      <div>
+        <span class="etiqueta" data-t="eti_portada">Estudio de juegos</span>
+        <h1><span class="metal">JXStudios</span><br><span data-t="titulo">Juegos que se sienten grandes.</span></h1>
+        <p class="bajada" data-t="bajada">Hago juegos para el navegador y el celu: física de verdad, arte propio y un estilo distinto en cada uno. Todos en español, inglés y portugués.</p>
+        <div class="botones">
+          <a class="boton primario" href="#app">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            <span data-t="boton_app">Bajar la app</span>
+          </a>
+          <a class="boton" href="#juegos"><span data-t="boton_juegos">Ver los juegos</span></a>
+        </div>
+      </div>
+      <div class="moneda" aria-hidden="true"><div class="cara"><img src="img/moneda.webp" alt="" width="720" height="720" fetchpriority="high"></div></div>
+    </div>
+  </section>
+
+  <section class="seccion" id="sobre">
+    <div class="envoltura sube">
+      <span class="etiqueta" data-t="eti_sobre">Sobre mí</span>
+      <h2 data-t="sobre_titulo">Hago los juegos que me gustaría jugar.</h2>
+      <div class="texto">
+        <p data-t="sobre_1">Soy JXStudios. Cada juego arranca de una idea chica y se lleva hasta que se ve y se juega como uno grande: plataformas de precisión, un diorama de papel, un auto con suspensión de verdad o una isla 3D para jugar con amigos.</p>
+        <p data-t="sobre_2">Muchos cuentan historias argentinas: el viento Zonda, la Luz Mala, el cóndor de la puna, la Ruta 40. Todos se abren con un toque, sin instalar nada, y se juegan con teclado o con el dedo.</p>
+      </div>
+      <div class="cifras">
+        <div class="cifra"><b>7</b><span data-t="cifra_juegos">juegos para jugar ya</span></div>
+        <div class="cifra"><b>3</b><span data-t="cifra_idiomas">idiomas en cada uno</span></div>
+        <div class="cifra"><b>1</b><span data-t="cifra_app">app para Android</span></div>
+        <div class="cifra"><b>120 Hz</b><span data-t="cifra_vr">en VR, con tus manos</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion app" id="app">
+    <div class="envoltura sube">
+      <div class="marco"><img src="img/aeroplaza.webp" alt="AEROPLAZA" width="800" height="500" loading="lazy"></div>
+      <div>
+        <span class="etiqueta" data-t="eti_app">Mi app</span>
+        <h2><span class="metal">AEROPLAZA</span></h2>
+        <p class="texto" data-t="app_texto">Un mundo 3D para jugar con otros: una isla llena de zonas, reinos para viajar y una casa propia para armar.</p>
+        <ul class="lista">
+          <li data-t="app_1">Multijugador en salas, con chat y voz de cerca</li>
+          <li data-t="app_2">VR con el celu en un visor, y tus manos para apuntar y agarrar</li>
+          <li data-t="app_3">Parkour, un runner, tiro y edificios para entrar</li>
+          <li data-t="app_4">En español, inglés y portugués</li>
+        </ul>
+        <div class="botones">
+          <a class="boton primario" href="app/aeroplaza.apk" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            <span data-t="app_bajar">Bajar para Android</span> <small>18,7 MB</small>
+          </a>
+          <a class="boton" href="aeroplaza/"><span data-t="app_web">Jugar en el navegador</span></a>
+        </div>
+        <p class="nota" data-t="app_nota">Android 8 o más nuevo. Como no viene de Play Store, al instalar el celu te pide permiso para instalar apps de otras fuentes.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="seccion carbono" id="juegos">
+    <div class="envoltura">
+      <div class="sube">
+        <span class="etiqueta" data-t="eti_juegos">Juegos</span>
+        <h2 data-t="juegos_titulo">Para jugar en el navegador</h2>
+        <p class="texto" data-t="juegos_texto">Cada uno con su estilo, sus menús y su música. Se abren acá mismo, en la compu o en el celu.</p>
+      </div>
+      <div class="grilla" id="grilla"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="pie">
+  <div class="envoltura"><img src="img/jxs.webp" alt="" width="46" height="22"><span>© <span id="anio">2026</span> JXStudios</span><span aria-hidden="true">·</span><span data-t="pie">Hecho a mano, un juego a la vez.</span></div>
+</footer>
+
+<script>
+/* ------------------------------------------------------------ los textos (es · en · pt) */
+const TEXTOS = {
+  es: {
+    nav_sobre: 'Sobre mí', nav_app: 'La app', nav_juegos: 'Juegos',
+    eti_portada: 'Estudio de juegos', titulo: 'Juegos que se sienten grandes.',
+    bajada: 'Hago juegos para el navegador y el celu: física de verdad, arte propio y un estilo distinto en cada uno. Todos en español, inglés y portugués.',
+    boton_app: 'Bajar la app', boton_juegos: 'Ver los juegos',
+    eti_sobre: 'Sobre mí', sobre_titulo: 'Hago los juegos que me gustaría jugar.',
+    sobre_1: 'Soy JXStudios. Cada juego arranca de una idea chica y se lleva hasta que se ve y se juega como uno grande: plataformas de precisión, un diorama de papel, un auto con suspensión de verdad o una isla 3D para jugar con amigos.',
+    sobre_2: 'Muchos cuentan historias argentinas: el viento Zonda, la Luz Mala, el cóndor de la puna, la Ruta 40. Todos se abren con un toque, sin instalar nada, y se juegan con teclado o con el dedo.',
+    cifra_juegos: 'juegos para jugar ya', cifra_idiomas: 'idiomas en cada uno', cifra_app: 'app para Android', cifra_vr: 'en VR, con tus manos',
+    eti_app: 'Mi app', app_texto: 'Un mundo 3D para jugar con otros: una isla llena de zonas, reinos para viajar y una casa propia para armar.',
+    app_1: 'Multijugador en salas, con chat y voz de cerca', app_2: 'VR con el celu en un visor, y tus manos para apuntar y agarrar',
+    app_3: 'Parkour, un runner, tiro y edificios para entrar', app_4: 'En español, inglés y portugués',
+    app_bajar: 'Bajar para Android', app_web: 'Jugar en el navegador',
+    app_nota: 'Android 8 o más nuevo. Como no viene de Play Store, al instalar el celu te pide permiso para instalar apps de otras fuentes.',
+    eti_juegos: 'Juegos', juegos_titulo: 'Para jugar en el navegador', juegos_texto: 'Cada uno con su estilo, sus menús y su música. Se abren acá mismo, en la compu o en el celu.',
+    jugar: 'Jugar', pie: 'Hecho a mano, un juego a la vez.',
+  },
+  en: {
+    nav_sobre: 'About me', nav_app: 'The app', nav_juegos: 'Games',
+    eti_portada: 'Game studio', titulo: 'Games that feel big.',
+    bajada: 'I make games for the browser and your phone: real physics, original art and a different style in each one. All of them in Spanish, English and Portuguese.',
+    boton_app: 'Get the app', boton_juegos: 'See the games',
+    eti_sobre: 'About me', sobre_titulo: 'I make the games I’d love to play.',
+    sobre_1: 'I’m JXStudios. Every game starts from a small idea and gets pushed until it looks and plays like a big one: precision platforming, a paper diorama, a car with real suspension or a 3D island to play with friends.',
+    sobre_2: 'Many of them tell Argentine stories: the Zonda wind, the Luz Mala, the condor of the Puna, Route 40. They all open with a tap, nothing to install, and play with a keyboard or your finger.',
+    cifra_juegos: 'games to play right now', cifra_idiomas: 'languages in each one', cifra_app: 'Android app', cifra_vr: 'in VR, with your hands',
+    eti_app: 'My app', app_texto: 'A 3D world to play with others: an island full of areas, realms to travel to and a home of your own to build.',
+    app_1: 'Multiplayer rooms, with chat and proximity voice', app_2: 'VR with your phone in a headset, and your hands to point and grab',
+    app_3: 'Parkour, a runner, shooting and buildings to walk into', app_4: 'In Spanish, English and Portuguese',
+    app_bajar: 'Download for Android', app_web: 'Play in the browser',
+    app_nota: 'Android 8 or newer. It doesn’t come from the Play Store, so your phone will ask for permission to install apps from other sources.',
+    eti_juegos: 'Games', juegos_titulo: 'Play in your browser', juegos_texto: 'Each one with its own style, menus and music. They open right here, on a computer or a phone.',
+    jugar: 'Play', pie: 'Handmade, one game at a time.',
+  },
+  pt: {
+    nav_sobre: 'Sobre mim', nav_app: 'O app', nav_juegos: 'Jogos',
+    eti_portada: 'Estúdio de jogos', titulo: 'Jogos que parecem grandes.',
+    bajada: 'Faço jogos para o navegador e o celular: física de verdade, arte própria e um estilo diferente em cada um. Todos em espanhol, inglês e português.',
+    boton_app: 'Baixar o app', boton_juegos: 'Ver os jogos',
+    eti_sobre: 'Sobre mim', sobre_titulo: 'Faço os jogos que eu gostaria de jogar.',
+    sobre_1: 'Sou a JXStudios. Cada jogo começa de uma ideia pequena e vai até parecer e jogar como um grande: plataformas de precisão, um diorama de papel, um carro com suspensão de verdade ou uma ilha 3D para jogar com os amigos.',
+    sobre_2: 'Muitos contam histórias argentinas: o vento Zonda, a Luz Mala, o condor da puna, a Rota 40. Todos abrem com um toque, sem instalar nada, e se jogam com teclado ou com o dedo.',
+    cifra_juegos: 'jogos para jogar agora', cifra_idiomas: 'idiomas em cada um', cifra_app: 'app para Android', cifra_vr: 'em VR, com suas mãos',
+    eti_app: 'Meu app', app_texto: 'Um mundo 3D para jogar com os outros: uma ilha cheia de áreas, reinos para viajar e uma casa própria para montar.',
+    app_1: 'Multijogador em salas, com chat e voz por proximidade', app_2: 'VR com o celular num óculos, e suas mãos para apontar e pegar',
+    app_3: 'Parkour, um runner, tiro e prédios para entrar', app_4: 'Em espanhol, inglês e português',
+    app_bajar: 'Baixar para Android', app_web: 'Jogar no navegador',
+    app_nota: 'Android 8 ou mais novo. Como não vem da Play Store, ao instalar o celular pede permissão para instalar apps de outras fontes.',
+    eti_juegos: 'Jogos', juegos_titulo: 'Para jogar no navegador', juegos_texto: 'Cada um com seu estilo, seus menus e sua música. Abrem aqui mesmo, no computador ou no celular.',
+    jugar: 'Jogar', pie: 'Feito à mão, um jogo de cada vez.',
+  },
+};
+/* los juegos: id (el archivo en juegos/ y la imagen en img/), nombre y, por idioma, el género y una línea */
+const JUEGOS = [
+  { id: 'brillo', nombre: 'BRILLO',
+    es: ['Plataformas', 'Seis mundos de agua, vidrio y burbujas, en el estilo Frutiger Aero, con su música en 16 bits.'],
+    en: ['Platformer', 'Six worlds of water, glass and bubbles in the Frutiger Aero style, with 16-bit music.'],
+    pt: ['Plataforma', 'Seis mundos de água, vidro e bolhas no estilo Frutiger Aero, com música em 16 bits.'] },
+  { id: 'kuntur', nombre: 'KUNTUR',
+    es: ['Aventura', 'Una nena, un pichón de cóndor y la montaña que lo espera: un diorama de papel en cinco capítulos.'],
+    en: ['Adventure', 'A girl, a condor chick and the mountain waiting for it: a paper diorama in five chapters.'],
+    pt: ['Aventura', 'Uma menina, um filhote de condor e a montanha que o espera: um diorama de papel em cinco capítulos.'] },
+  { id: 'zonda', nombre: 'ZONDA',
+    es: ['Precisión', 'Una chica, un cerro y el viento: plataformas de precisión en pixel art, de la quebrada a la cumbre.'],
+    en: ['Precision', 'A girl, a mountain and the wind: precision platforming in pixel art, from the ravine to the summit.'],
+    pt: ['Precisão', 'Uma garota, um morro e o vento: plataformas de precisão em pixel art, do vale ao cume.'] },
+  { id: 'luz-mala', nombre: 'LUZ MALA',
+    es: ['Acción', 'Una luciérnaga, un quebracho y la luz que se apagó: exploración y jefes en pixel art.'],
+    en: ['Action', 'A firefly, a quebracho tree and the light that went out: exploration and bosses in pixel art.'],
+    pt: ['Ação', 'Um vaga-lume, um quebracho e a luz que se apagou: exploração e chefes em pixel art.'] },
+  { id: 'ruta40', nombre: 'RUTA 40',
+    es: ['Carreras', 'Un auto con física de verdad por los paisajes de la Ruta 40, con garage y mejoras.'],
+    en: ['Racing', 'A car with real physics across the landscapes of Route 40, with a garage and upgrades.'],
+    pt: ['Corrida', 'Um carro com física de verdade pelas paisagens da Rota 40, com garagem e melhorias.'] },
+  { id: 'bosque', nombre: 'BOSQUE',
+    es: ['Exploración', 'Cinco cintas perdidas y un atardecer que no termina, en 3D y con filtro de VHS.'],
+    en: ['Exploration', 'Five lost tapes and a sunset that never ends, in 3D with a VHS filter.'],
+    pt: ['Exploração', 'Cinco fitas perdidas e um pôr do sol que não acaba, em 3D e com filtro de VHS.'] },
+];
+
+const $ = (s, r = document) => r.querySelector(s);
+const leer = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento: no pasa nada */ } };
+function idiomaInicial() {
+  const q = new URLSearchParams(location.search).get('idioma') || leer('jx-idioma');
+  if (TEXTOS[q]) return q;
+  const n = (navigator.language || 'es').slice(0, 2);
+  return TEXTOS[n] ? n : 'en';
+}
+function pintarJuegos(l) {
+  const g = $('#grilla'); g.textContent = '';
+  for (const J of JUEGOS) {
+    const [genero, linea] = J[l];
+    const a = document.createElement('article'); a.className = 'juego sube';
+    a.innerHTML = `<div class="foto"><img alt="" width="800" height="500" loading="lazy"><span class="genero"></span></div>
+      <div class="cuerpo"><h3></h3><p></p><a class="boton jugar" target="_blank" rel="noopener"></a></div>`;
+    a.querySelector('img').src = `img/${J.id}.webp`; a.querySelector('img').alt = J.nombre;
+    a.querySelector('.genero').textContent = genero; a.querySelector('h3').textContent = J.nombre; a.querySelector('p').textContent = linea;
+    const b = a.querySelector('.jugar'); b.href = `juegos/${J.id}.html`; b.textContent = `▶ ${TEXTOS[l].jugar}`; b.setAttribute('aria-label', `${TEXTOS[l].jugar}: ${J.nombre}`);
+    g.appendChild(a);
+  }
+  mirar();
+}
+function ponerIdioma(l) {
+  document.documentElement.lang = l;
+  for (const el of document.querySelectorAll('[data-t]')) { const t = TEXTOS[l][el.dataset.t]; if (t) el.textContent = t; }
+  for (const b of document.querySelectorAll('[data-idioma]')) b.setAttribute('aria-pressed', String(b.dataset.idioma === l));
+  pintarJuegos(l);
+  guardar('jx-idioma', l);
+}
+document.querySelectorAll('[data-idioma]').forEach((b) => b.addEventListener('click', () => ponerIdioma(b.dataset.idioma)));
+
+/* lo que sube al aparecer (sin IntersectionObserver, se ve todo de una) */
+const obs = 'IntersectionObserver' in window ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { e.target.classList.add('visto'); obs.unobserve(e.target); } }, { rootMargin: '0px 0px -8% 0px' }) : null;
+function mirar() { for (const el of document.querySelectorAll('.sube:not(.visto)')) obs ? obs.observe(el) : el.classList.add('visto'); }
+
+/* la moneda se inclina un poco con el mouse (en compu; en celu queda quieta) */
+const cara = $('.moneda .cara');
+if (matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').matches) {
+  const moneda = $('.moneda');
+  addEventListener('pointermove', (e) => {
+    const r = moneda.getBoundingClientRect(), x = (e.clientX - (r.left + r.width / 2)) / innerWidth, y = (e.clientY - (r.top + r.height / 2)) / innerHeight;
+    cara.style.transform = `rotateY(${(x * 16).toFixed(2)}deg) rotateX(${(-y * 16).toFixed(2)}deg)`;
+  }, { passive: true });
+}
+$('#anio').textContent = new Date().getFullYear();
+ponerIdioma(idiomaInicial());
+</script>
+</body>
+</html>
