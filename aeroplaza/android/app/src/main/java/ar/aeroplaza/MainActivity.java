@@ -14,6 +14,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.view.InputDevice;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -57,6 +60,9 @@ public class MainActivity extends Activity {
   /* (vuelta 41) por qué se cerró la vez pasada (Choque.java): el juego lo lee una vez y lo muestra en un aviso */
   SharedPreferences prefs;
   volatile String choque = "";
+  /* (vuelta 44) el mando VR Box: teclasVR, el juego está en el VR (el volumen y los temas del modo música van al juego) */
+  volatile boolean teclasVR;
+  final MandoBox mando = new MandoBox();
   boolean arVivoYa;
 
   @Override protected void onCreate(Bundle b) {
@@ -304,6 +310,36 @@ public class MainActivity extends Activity {
   @Override protected void onPause() { if (ar != null) ar.pausar(); if (camara != null) camara.pausar(); if (web != null) web.onPause(); super.onPause(); }
   @Override protected void onDestroy() { if (ar != null) ar.cerrar(); if (camara != null) camara.cerrar(); if (web != null) web.destroy(); super.onDestroy(); }
 
+  /* (vuelta 44) los mandos: sus botones y su palanca van al juego (MandoBox), antes que a la WebView, que no se los
+     pasaría a la página. Un mando raro no puede cerrar la app: si algo falla, sigue como siempre */
+  static boolean deMando(int fuente, int tecla) {
+    return (fuente & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD || (fuente & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK || KeyEvent.isGamepadButton(tecla);
+  }
+  @Override public boolean dispatchKeyEvent(KeyEvent e) {
+    try {
+      int a = e.getAction(), k = e.getKeyCode();
+      if (a == KeyEvent.ACTION_DOWN || a == KeyEvent.ACTION_UP) {
+        boolean m = deMando(e.getSource(), k);
+        if (MandoBox.boton(k, m, teclasVR) >= 0) {
+          String js = MandoBox.tecla(k, a == KeyEvent.ACTION_DOWN, e.getRepeatCount(), m, teclasVR);
+          if (js != null) enviar(js);
+          return true;
+        }
+      }
+    } catch (Throwable t) { /* sigue como siempre */ }
+    return super.dispatchKeyEvent(e);
+  }
+  @Override public boolean dispatchGenericMotionEvent(MotionEvent e) {
+    try {
+      if ((e.getSource() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK && e.getAction() == MotionEvent.ACTION_MOVE) {
+        String js = mando.eje(e.getAxisValue(MotionEvent.AXIS_X), e.getAxisValue(MotionEvent.AXIS_Y), e.getAxisValue(MotionEvent.AXIS_HAT_X), e.getAxisValue(MotionEvent.AXIS_HAT_Y));
+        if (js != null) enviar(js);
+        return true;
+      }
+    } catch (Throwable t) { /* sigue como siempre */ }
+    return super.dispatchGenericMotionEvent(e);
+  }
+
   /* atrás: al juego (como Escape: pausa o cierra lo que esté abierto); dos veces seguidas, sale */
   @Override public void onBackPressed() {
     long ahora = System.currentTimeMillis();
@@ -315,6 +351,22 @@ public class MainActivity extends Activity {
   /* window.AeroplazaNativo */
   class Puente {
     @JavascriptInterface public String version() { return "1"; }
+    /* (vuelta 44) el mando: en el VR se toman también el volumen y los temas (el modo música del VR Box) */
+    @JavascriptInterface public void mandoVR(boolean si) { teclasVR = si; }
+    /* los mandos conectados, por nombre ("VR BOX|…"; "" si no hay): los que dicen ser mando, y los que se llaman como
+       uno (el VR Box en modo música se presenta como teclado) */
+    @JavascriptInterface public String mandos() {
+      StringBuilder s = new StringBuilder();
+      try {
+        for (int id : InputDevice.getDeviceIds()) {
+          InputDevice d = InputDevice.getDevice(id); if (d == null || d.isVirtual()) continue;
+          int f = d.getSources(); String n = String.valueOf(d.getName());
+          boolean es = (f & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD || (f & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK || n.matches("(?i).*(vr|box|park|shinecon|remote|gamepad|controller).*");
+          if (!es) continue; if (s.length() > 0) s.append('|'); s.append(n.replace('|', ' '));
+        }
+      } catch (Throwable t) { /* nada */ }
+      return s.toString();
+    }
     /* (vuelta 41) por qué se cerró la vez pasada, una sola vez ("" si no se cerró mal) */
     @JavascriptInterface public String choque() {
       String c = choque; choque = "";

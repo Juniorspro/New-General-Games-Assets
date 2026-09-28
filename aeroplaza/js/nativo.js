@@ -92,6 +92,19 @@ export const Nativo = {
     } catch { return null; }
   },
   flash(si) { try { N()?.flash(!!si); } catch { /* sin APK */ } },
+  /* (vuelta 44) EL MANDO de la APK (MandoBox.java): lo que llega (mandoBoton, mandoEje) queda acá, y padMando() lo da
+     con la forma de un mando de la Gamepad API para entrada.js. 26 botones: los 17 estándar y los de más del VR Box
+     (20 vol+, 21 vol−, 22 tema anterior, 23 siguiente, 24 play/pausa, 25 OK) */
+  mando: { b: new Array(26).fill(false), recien: new Set(), x: 0, y: 0, t: -1e9 },
+  padMando() {
+    const M = this.mando;
+    if (performance.now() - M.t > 120000 && !M.b.some(Boolean)) return null;
+    return { connected: true, id: 'APK', axes: [M.x, M.y, 0, 0], buttons: M.b.map((pressed) => ({ pressed, value: pressed ? 1 : 0 })), recien: M.recien };
+  },
+  /* en el VR, la APK toma también el volumen y los temas (el modo música del VR Box); afuera, el volumen es el volumen */
+  mandoVR(si) { try { N()?.mandoVR?.(!!si); } catch { /* sin APK o vieja */ } },
+  /* los nombres de los mandos conectados, según Android ([] sin APK) */
+  mandos() { try { return String(N()?.mandos?.() || '').split('|').filter(Boolean); } catch { return []; } },
   vibrar(ms) { try { N()?.vibrar(ms | 0); } catch { /* sin APK */ } },
   /* ARCore siguiendo, con una pose reciente */
   get arVivo() { return !!this.pose && this.pose.estado === 1 && performance.now() - this.pose.llego < VIEJA; },
@@ -116,6 +129,9 @@ window.__nativo = {
     if (Nativo.estado !== 'corre') { Nativo.estado = 'corre'; avisarEspera(); }
   },
   manos(d) { Nativo.alManos?.(d); },
+  /* (vuelta 44) el mando: un botón (i, abajo 1/0) y la palanca (−1 a 1; y para abajo) */
+  mandoBoton(i, abajo) { const M = Nativo.mando; if (!(i >= 0 && i < M.b.length)) return; M.b[i] = !!abajo; if (abajo) M.recien.add(i); M.t = performance.now(); },
+  mandoEje(x, y) { const M = Nativo.mando; M.x = Number.isFinite(x) ? x : 0; M.y = Number.isFinite(y) ? y : 0; M.t = performance.now(); },
   /* tu espacio: los planos (todos, cada 400 ms), los cubitos nuevos (índices de VOX m) y la foto */
   planos(l) { Nativo.alPlanos?.(l); },
   diagEspacio(o) { Nativo.diagEspacio = { ...o, t: performance.now() }; },

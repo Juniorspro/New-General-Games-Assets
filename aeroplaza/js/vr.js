@@ -190,9 +190,10 @@ export class VR {
        detrás del celu: girando en el lugar no se mueven) */
     if (Nativo.arVivo) {
       poseEn(tVer, _qAR, _ojo, OJOS);
-      if (!this.ar0) { this.ar0 = { giro: (this.qListo ? rumbo(this.q) : this.base) - rumbo(_qAR), p: _ojo.clone() }; this.yAR = null; }
+      /* (base: el rumbo que había al fijar el giro; los giros de 45° lo mueven después, giroAR) */
+      if (!this.ar0) { this.ar0 = { giro: (this.qListo ? rumbo(this.q) : this.base) - rumbo(_qAR), base: this.base, p: _ojo.clone() }; this.yAR = null; }
       if (!this.ar0.p) this.ar0.p = _ojo.clone();
-      _q.setFromAxisAngle(Y, this.ar0.giro);
+      _q.setFromAxisAngle(Y, this.giroAR());
       this.q.copy(_qAR).premultiply(_q);
       if (this.seis) {
         const d = this.desplazo.subVectors(_ojo, this.ar0.p).applyQuaternion(_q), h = Math.hypot(d.x, d.z);
@@ -223,8 +224,11 @@ export class VR {
   giroEn(t, q) {
     if (!Nativo.conCabeza || !this.conAR || !this.ar0) return null;
     const g = Nativo.leerGiroAntes(performance.now() - t); if (!g) return null;
-    return q.set(g[0], g[1], g[2], g[3]).premultiply(_q.setFromAxisAngle(Y, this.ar0.giro));
+    return q.set(g[0], g[1], g[2], g[3]).premultiply(_q.setFromAxisAngle(Y, this.giroAR()));
   }
+  /* (vuelta 44) el giro de ARCore al mundo del juego, con los giros de 45° que se hicieron después (antes con ARCore
+     el "Girar ⟳" del menú de la palma no giraba: el giro se fijaba una vez al entrar) */
+  giroAR() { return this.ar0.giro + (this.base - (this.ar0.base ?? this.base)); }
   /* (vuelta 43) el corrimiento de los ojos por el cuello: R·v − Rrumbo·v (mirando derecho, para donde sea, 0) */
   cuello(q) { _e.setFromQuaternion(q, 'YXZ'); this.desplazo.copy(CUELLO).applyQuaternion(q).sub(_v.copy(CUELLO).applyAxisAngle(Y, _e.y)); }
   /* 3DoF ↔ 6DoF en el medio del VR: al pasar a 6DoF, el lugar de ARCore arranca de donde está la cabeza ahora */
@@ -238,7 +242,7 @@ export class VR {
     if (!Nativo.conCabeza || !this.conAR || !this.ar0 || !this.tVer) return null;
     poseEn(this.tVer, _qT, _ojoT, OJOS);
     if (!Nativo.conCabeza) return null;
-    _qT.premultiply(_q.setFromAxisAngle(Y, this.ar0.giro));
+    _qT.premultiply(_q.setFromAxisAngle(Y, this.giroAR()));
     /* (lo que cambió, en el mundo: tarde · antes⁻¹, sobre la de la cámara) */
     return _qT2.copy(_qT).multiply(_q.copy(this.q).invert()).multiply(camQ);
   }
@@ -274,7 +278,8 @@ export class VR {
     E.camX = 0; E.camY = 0; E.zoom = 1;
     if (this.xr) this.xr.leerMandos(E, dt, (lado) => { this.base += lado * Math.PI / 4; });
     /* (vuelta 43) en el tiro un toque dispara (sin manos); con las manos, el pellizco (main.js › disparoMano) */
-    if (this.toque) { this.toque = false; if (this.enTiro) E.dispara = true; else if (hayAlgo) { E.accion = true; this.camina = false; } else this.camina = !this.camina; }
+    /* (vuelta 44: el gatillo de un mando con palanca no prende ni apaga el caminar: camina la palanca) */
+    if (this.toque) { this.toque = false; if (this.enTiro) E.dispara = true; else if (hayAlgo) { E.accion = true; this.camina = false; } else if (!this.sinCaminar) this.camina = !this.camina; this.sinCaminar = false; }
     if (this.dispara) { this.dispara = false; E.dispara = true; }
     if (this.salta) { this.salta = false; E.salta = true; E.sostiene = true; this._tSalto = 0.25; }
     if (this._tSalto > 0) { this._tSalto -= dt; E.sostiene = true; }

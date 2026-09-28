@@ -4,6 +4,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **28/09/2026, al mediodía, undécima vez · `claude/fijate-iszyer`:**
+  - Pidió: limpiar el repo para gastar menos tokens, y el mando VR Box en el VR de AEROPLAZA.
+  - Quedó: el índice de 22 a 9 KB (las vueltas de AEROPLAZA en [aeroplaza-vueltas](aeroplaza-vueltas.md)), el diario viejo
+    aparte; el mando VR Box ([aeroplaza-44](aeroplaza-44.md)), `vrbox.mjs` 27/27.
+  - Falta: probar con un VR Box de verdad (qué botón es el gatillo en cada modo).
 - **28/09/2026, de mañana, décima vez · `claude/fijate-iszyer`:**
   - Pidió: una página sobre su estudio (JXStudios, mandó el logo), en Cloudflare, con su app, y una llave para que
     otra sesión la pueda cambiar.
@@ -48,9 +53,4 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Después: la foto de ver a través que quedaba a la mitad ("zoomeada"), y las manos más estables
     ([aeroplaza-38](aeroplaza-38.md)); el link del HTML: raw.githack de la rama.
   - Falta: la captura del renglón chico si todavía no escanea, y qué le parecen las manos.
-- **27/09/2026, de noche, todavía más tarde · `claude/fijate-iszyer`:**
-  - Pidió: "no, pues no escanea el entorno".
-  - Quedó ([aeroplaza-36](aeroplaza-36.md)): la cámara con profundidad se elige antes de arrancar ARCore, los
-    pedidos se guardan si ARCore no existe, y la tarjeta dice en qué paso se traba. `malla.mjs` 18/18.
-  - Falta: la captura de la línea 📡 de la tarjeta, para saber cuál era la causa.
-- **Antes (22/09 a 27/09, 51 sesiones):** en [diario-viejo](diario-viejo.md).
+- **Antes (22/09 a 27/09, 52 sesiones):** en [diario-viejo](diario-viejo.md).

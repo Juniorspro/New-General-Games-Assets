@@ -100,6 +100,12 @@ const e3 = await tramo({ seg: 0.3, g0: 30, g1: 60, x0: 0.4, x1: 0.4 });
 const cu = { quieto: Math.hypot(e2.d[0] - e1.d[0], e2.d[2] - e1.d[2]), largo: Math.hypot(...e3.d), giro: Math.hypot(e3.d[0] - e2.d[0], e3.d[2] - e2.d[2]) };
 /* (el cuello cuenta al inclinar la cabeza, vr-juego.mjs; girar mirando derecho no corre los ojos: el muñeco gira con ellos) */
 prueba('en 3DoF (de entrada) correr los ojos 20 cm no mueve la vista, ni girar 30° mirando derecho', cu.quieto < 0.002 && cu.largo < 0.002 && cu.giro < 0.002, `${(cu.quieto * 100).toFixed(2)} cm · cuello ${(cu.largo * 100).toFixed(2)} cm · al girar 30° ${(cu.giro * 100).toFixed(2)} cm`);
+/* (vuelta 44) con ARCore, girar 45° (el menú de la palma, el mando) gira la vista: antes el giro de ARCore se fijaba al entrar */
+const g0 = await tramo({ seg: 0.2, g0: 60, g1: 60, x0: 0.4, x1: 0.4 });
+await pag.evaluate(() => { window.__A.vr.base += Math.PI / 4; });
+const g1 = await tramo({ seg: 0.2, g0: 60, g1: 60, x0: 0.4, x1: 0.4 });
+const dg = ((g1.yaw - g0.yaw + 540) % 360) - 180;
+prueba('con ARCore, girar 45° desde el menú de la palma o el mando gira la vista 45°', g1.conAR && Math.abs(dg - 45) < 1.5, `${dg.toFixed(1)}°`);
 await pag.evaluate(() => window.__A.J.salirVR());
 
 /* tu espacio: la cabeza de la escena es la nativa */

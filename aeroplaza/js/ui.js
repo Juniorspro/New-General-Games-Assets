@@ -17,6 +17,7 @@ import { NPCS } from './misiones.js';
 import { ESTILOS, ALTOS_PIXEL } from './motor.js';
 import { Pantalla } from './pantalla.js';
 import { Teclado } from './teclado.js';
+import { ventanaMando, mandosVistos } from './mando-box.js';
 import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
 import { miniaturaTiro, TIRO } from './reinos/tiro.js';
 import { miniaturaJuegos } from './reinos/juegos.js';
@@ -576,7 +577,9 @@ export const UI = {
     cuerpo.querySelector('[data-a=discos]').onclick = () => this.discos(() => this.pausa());
     cuerpo.querySelector('[data-a=estilo]').onclick = () => this.estilo(() => this.pausa());
     cuerpo.querySelector('[data-a=menu]').onclick = () => { v.remove(); this.ventanaAbierta = null; J.salirAlMenu(); };
-    cuerpo.querySelector('[data-a=vr]').onclick = () => this.menuVR(() => this.pausa());
+    /* (vuelta 44: desde adentro del VR, la pausa se ve en el espejo y este botón sale del VR) */
+    if (J.enVR) { cuerpo.querySelector('[data-a=vr]').textContent = '🥽 ' + t('mn_salir'); cuerpo.querySelector('[data-a=vr]').onclick = () => { this.cerrarVentana(); J.pausar(false, true); J.salirVR(); }; }
+    else cuerpo.querySelector('[data-a=vr]').onclick = () => this.menuVR(() => this.pausa());
     cuerpo.querySelector('[data-a=joyas]').onclick = () => tiendaJoyas(J, this, { alCerrar: () => this.pausa() });
     this.focoTeclado(v, '[data-a=seguir]');
   },
@@ -888,7 +891,8 @@ export const UI = {
       <button class="vr-op" data-sbs="0"><b>${t('vr_simple')}</b><small>${t('vr_simple_d')}</small><i class="vr-dibujo"><span></span></i></button></div>
       <div class="vr-llaves">${[['vrManos', 'vr_manos', 'vr_manos_d'], ['vrFps', 'vr_fps', 'vr_fps_d'], ['vr6dof', 'vr_6dof', 'vr_6dof_d'], ['vrPelotita', 'vr_pelotita', 'vr_pelotita_d']].map(([k, n, d]) => `<button class="vr-llave${llave(k) ? ' si' : ''}" data-o="${k}"><i></i><b>${t(n)}</b><small>${t(d)}</small></button>`).join('')}</div>
       <div class="vr-suave${J.G.opciones.vrManos ? '' : ' apagada'}"><b>${t('vr_suave')}</b><div class="vr-tres">${['rapida', 'media', 'suave'].map((k) => `<button data-suave="${k}"><i class="${k}"></i>${t('vr_suave_' + k)}</button>`).join('')}</div><small></small></div>
-      <button class="vr-lentes-boton"><i class="vr-lentes-dibujo" aria-hidden="true"><span></span><span></span></i><b>${t('le_titulo')}</b><small>${t('le_' + J.lentes.tipo)}</small></button></div>`);
+      <div class="vr-fila2"><button class="vr-lentes-boton"><i class="vr-lentes-dibujo" aria-hidden="true"><span></span><span></span></i><b>${t('le_titulo')}</b><small>${t('le_' + J.lentes.tipo)}</small></button>
+      <button class="vr-lentes-boton vr-mando-boton"><i class="vr-mando-dibujo" aria-hidden="true">🎮</i><b>${t('box_boton')}</b><small></small></button></div></div>`);
     let elegido = false;
     const v = this.ventana('🥽 ' + t('vr_titulo'), c, { ancho: 560, alCerrar: () => { if (!elegido) alVolver && alVolver(); } });
     c.querySelectorAll('[data-o]').forEach((b) => b.onclick = () => { const k = b.dataset.o; J.G.opciones[k] = !llave(k); b.classList.toggle('si', J.G.opciones[k]); if (k === 'vrManos') $('.vr-suave', c).classList.toggle('apagada', !J.G.opciones[k]); Guardado.guardar(); J.sfx('elegir'); });
@@ -897,7 +901,10 @@ export const UI = {
     ponerSuave(['rapida', 'media', 'suave'].includes(J.G.opciones.vrSuave) ? J.G.opciones.vrSuave : 'media');
     c.querySelectorAll('[data-suave]').forEach((b) => b.onclick = () => { ponerSuave(b.dataset.suave); Guardado.guardar(); J.sfx('elegir'); });
     /* (las lentes del visor: se ajustan acá, con la vista previa, o adentro con el menú de la palma) */
-    c.querySelector('.vr-lentes-boton').onclick = () => { elegido = true; J.sfx('elegir'); v.cerrar(); this.menuLentes(() => this.menuVR(alVolver)); };
+    c.querySelector('.vr-lentes-boton:not(.vr-mando-boton)').onclick = () => { elegido = true; J.sfx('elegir'); v.cerrar(); this.menuLentes(() => this.menuVR(alVolver)); };
+    /* (vuelta 44) el mando VR Box: qué hace cada botón en el VR */
+    { const n = mandosVistos(); $('.vr-mando-boton small', c).textContent = n.length ? n[0] : t('box_ninguno'); }
+    c.querySelector('.vr-mando-boton').onclick = () => { elegido = true; J.sfx('elegir'); v.cerrar(); ventanaMando(this, J, () => this.menuVR(alVolver)); };
     c.querySelectorAll('[data-sbs]').forEach((b) => b.onclick = () => {
       const sbs = b.dataset.sbs === '1';
       /* (vuelta 29: en la APK, con ARCore disponible, se pregunta si se usa) */

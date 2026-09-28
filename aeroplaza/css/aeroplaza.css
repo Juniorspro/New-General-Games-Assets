@@ -849,6 +849,19 @@ html.en-vr:not(.con-espacio) .velo, html.en-vr:not(.con-espacio) .viaje { opacit
 /* las lentes del visor (vuelta 30): el botón del menú del VR y su ventana */
 .vr-lentes-boton { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; width: 100%; margin-top: 8px; padding: 8px 12px; border-radius: 16px; border: 2px solid #6cc8ff; background: linear-gradient(180deg, #f3fbff, #d6f1ff); font: inherit; text-align: left; cursor: pointer; }
 .vr-lentes-boton b { font-size: 15px; } .vr-lentes-boton small { font-weight: 700; font-size: 12px; color: var(--tinta2); grid-column: 2; }
+/* (vuelta 44) las lentes y el mando, uno al lado del otro */
+.vr-fila2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vr-fila2 .vr-lentes-boton { min-width: 0; } .vr-fila2 .vr-lentes-boton small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vr-mando-dibujo { font-style: normal; font-size: 26px; line-height: 1; grid-row: span 2; }
+/* la ventana del mando VR Box */
+.mando-box .mb-texto { margin: 0 0 10px; font-weight: 700; color: var(--tinta2); font-size: 14px; }
+.mb-estado { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; padding: 8px 12px; border-radius: 14px; background: linear-gradient(180deg, #f3fbff, #e2f4ff); border: 2px solid #b9e2fb; margin-bottom: 10px; }
+.mb-estado b { font-size: 14px; } .mb-vivo { font-size: 12px; font-weight: 700; color: var(--tinta2); font-variant-numeric: tabular-nums; }
+.mb-lista { display: grid; gap: 6px; }
+.mb-fila { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border-radius: 14px; border: 2px solid var(--gris2); background: linear-gradient(180deg, #ffffff, #f2faff); }
+.mb-fila.espera { border-color: #2aa6e8; box-shadow: 0 0 0 3px rgba(42, 166, 232, 0.2); }
+.mb-que { font-weight: 800; font-size: 14px; } .mb-cual { font-weight: 800; font-size: 13px; color: #1b6fa8; font-variant-numeric: tabular-nums; }
+.mb-abajo { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
 .vr-lentes-dibujo { grid-row: span 2; display: flex; gap: 4px; }
 .vr-lentes-dibujo span { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #1f9be0; background: radial-gradient(circle at 35% 35%, #ffffff, #8fdcff 60%, #2a9fd8); }
 .menu-lentes p { margin: 0 0 10px; font-weight: 700; color: var(--tinta2); }

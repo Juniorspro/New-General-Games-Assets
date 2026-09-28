@@ -35,6 +35,10 @@ export class Entrada {
     this.tactil = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     this.bloqueado = false;       // mientras se escribe en el chat o hay un menú
     this.usaMando = false;
+    /* (vuelta 44, el mando VR Box) mandoExtra(): el mando que llega de la APK (nativo.js › padMando), como uno más;
+       enVR: los botones son del VR (main.js › botonesVR) y acá solo se anotan en padVR; alBoton(i): configurando el
+       mando, el próximo botón apretado va ahí y no hace nada más; padInfo: lo último que hizo (para la ventana del mando) */
+    this.mandoExtra = null; this.enVR = false; this.padVR = null; this.alBoton = null; this.padInfo = { x: 0, y: 0, ultimo: -1, t: -1e9, tPalanca: -1e9 };
     addEventListener('keydown', (e) => {
       if (this.escribiendo(e)) return;
       if (!this.abajo.has(e.code)) this.recien.add(e.code);
@@ -197,23 +201,40 @@ export class Entrada {
     E.camX = this.mouse.dx * 0.005 + this.dedosCam.dx * 0.008; E.camY = this.mouse.dy * 0.004 + this.dedosCam.dy * 0.006;
     this.mouse.dx = this.mouse.dy = 0; this.dedosCam.dx = this.dedosCam.dy = 0;
     E.zoom = Math.pow(1.12, this.mouse.rueda) * this.pinza; this.mouse.rueda = 0; this.pinza = 1;
-    /* el mando */
-    const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    /* el mando (el del navegador, o el de la APK: la WebView no le pasa los mandos a la página) */
+    let pads = navigator.getGamepads ? [...navigator.getGamepads()] : [];
+    const extra = this.mandoExtra?.(); if (extra) pads = [...pads.filter((p) => p && p.connected), extra];
+    this.padVR = null;
     for (const p of pads) {
       if (!p || !p.connected) continue;
       const ax = (i) => (Math.abs(p.axes[i] || 0) > 0.16 ? p.axes[i] : 0);
       const bt = (i) => !!(p.buttons[i] && p.buttons[i].pressed);
       const antes = this._pad || [];
-      const nuevo = (i) => bt(i) && !antes[i];
+      /* (los de la APK traen también los que se apretaron y soltaron entre dos cuadros) */
+      const nuevo = (i) => (bt(i) && !antes[i]) || !!p.recien?.has(i);
+      const nuevos = []; for (let i = 0; i < p.buttons.length; i++) if (nuevo(i)) nuevos.push(i);
+      const I = this.padInfo, ahora = performance.now();
+      if (nuevos.length) { I.ultimo = nuevos[nuevos.length - 1]; I.t = ahora; }
+      I.x = ax(0); I.y = ax(1); if (I.x || I.y) I.tPalanca = ahora;
+      if (this.alBoton && nuevos.length) { const f = this.alBoton; this.alBoton = null; f(nuevos[0]); this._pad = p.buttons.map((b) => b.pressed); p.recien?.clear(); break; }
+      /* la cruz y (en el VR) el volumen del modo música del VR Box, también caminan */
+      const cx = (bt(15) ? 1 : 0) - (bt(14) ? 1 : 0), cz = (bt(13) || bt(21) ? 1 : 0) - (bt(12) || bt(20) ? 1 : 0);
       if (ax(0) || ax(1)) { E.x = ax(0); E.z = ax(1); this.usaMando = true; }
+      else if (this.enVR && (cx || cz)) { E.x = cx; E.z = cz; this.usaMando = true; }
       E.camX += ax(2) * 0.05; E.camY += ax(3) * 0.035;
+      if (this.enVR) {
+        /* (en el VR: los botones los reparte main.js, según lo que se eligió en la ventana del mando) */
+        this.padVR = { nuevos, palanca: ahora - I.tPalanca < 30000 };
+        this._pad = p.buttons.map((b) => b.pressed); p.recien?.clear();
+        break;
+      }
       if (!this.bloqueado) {
         E.salta = E.salta || nuevo(0); E.sostiene = E.sostiene || bt(0); E.accion = E.accion || nuevo(2) || nuevo(1);
         E.corre = E.corre || bt(10) || bt(5) || (p.buttons[7]?.value > 0.4); E.baja = E.baja || bt(6) || bt(4); E.dispara = E.dispara || nuevo(3);
         if (nuevo(14)) E.hot = -1; if (nuevo(15)) E.hot = -2;
       }
       E.pausa = E.pausa || nuevo(9);
-      this._pad = p.buttons.map((b) => b.pressed);
+      this._pad = p.buttons.map((b) => b.pressed); p.recien?.clear();
       break;
     }
     this.recien.clear();

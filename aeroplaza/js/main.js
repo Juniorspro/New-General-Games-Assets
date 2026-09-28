@@ -56,6 +56,7 @@ import { Espacio } from './espacio.js';
 import { Ventanas } from './ventanas.js';
 import { Espejo } from './espejo.js';
 import { armarVR } from './pelotita.js';
+import { accionesBox } from './mando-box.js';
 import { PanelLentes, accionLentes, curva, inversa } from './lentes.js';
 import { VisorXR } from './vr-xr.js';
 import { candidatasCopias, instanciarCopias, revisarCopias } from './instanciar.js';
@@ -137,6 +138,8 @@ async function iniciar() {
   const aparato = detectarAparato(motor.r);
   const cielo = new Cielo(motor, TEX.cielo || null);
   const ent = new Entrada(motor.lienzo, document.getElementById('dedos'));
+  /* (vuelta 44) el mando de la APK (el VR Box por Bluetooth: la WebView no se lo pasa a la página) entra como uno más */
+  ent.mandoExtra = () => Nativo.padMando();
   Pantalla.alCambiar.push(() => ent.ubicarDedos());
   if (G.controles) ent.ponerConfig(G.controles);
   const cam = new Camara(motor.camara);
@@ -286,7 +289,7 @@ async function iniciar() {
     return true;
   };
   /* el parpadeo del teletransporte y de los giros (en VR marea ver deslizar el mundo) */
-  let parpadeo = 0, tapaVR = false;
+  let parpadeo = 0, tapaVR = false, avisoBox = false;
   const saltarA = (p) => { yo.p.set(p.x, p.y + 0.05, p.z); yo.v.set(0, 0, 0); parpadeo = 0.22; J.sfx('pop'); };
   let reino = null, yo = null, enJuego = false, pausado = false, enDialogo = false, probador = false, modoFoto = false, construyendo = null;
   let tHud = 0, tPresencia = 0, gestoN = 0, tDisparo = 0, tSinGolpe = 9, tMedir = 0, cuadros = 0, sumaDt = 0, midiendo = true;
@@ -332,7 +335,8 @@ async function iniciar() {
       UI.cerrarVentana(); J.pausar(false); ent.mostrarDedos(false); if (UI.hud) UI.hud.style.display = 'none';
       vr.verFps = !!G.opciones.vrFps; sinAR = !conAR;
       if (conAR) Nativo.arProfundidad(escanear);
-      const p = vr.entrar(sbs, { raiz: UI.raiz, cam, conAR, seis: G.opciones.vr6dof === true, avisar: (x) => UI.avisar(x), alSalir: () => { espacio.cerrar(); ventanasMundo.limpiar(); apagarManos(); sinAR = false; ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
+      Nativo.mandoVR(true); avisoBox = false;
+      const p = vr.entrar(sbs, { raiz: UI.raiz, cam, conAR, seis: G.opciones.vr6dof === true, avisar: (x) => UI.avisar(x), alSalir: () => { Nativo.mandoVR(false); espacio.cerrar(); ventanasMundo.limpiar(); apagarManos(); sinAR = false; ent.mostrarDedos(true); if (UI.hud) UI.hud.style.display = ''; cuerpoFP.mostrar(!!reino?.primeraPersona || cam.fp); yo?.m.primeraPersona(!!reino?.primeraPersona); } });
       manos.menu.fps = vr.verFps; manos.suavidad = G.opciones.vrSuave || 'media';
       /* (vuelta 40: el objeto en la mano como control, prendido de entrada) */
       manos.conMando = manos.menu.mando = G.opciones.vrMando ?? true;
@@ -879,6 +883,18 @@ async function iniciar() {
     clicMirada = false;
     return P;
   }
+  /* (vuelta 44) LOS BOTONES DEL MANDO EN EL VR (mando-box.js): usar es lo mismo que un toque (aprieta el tablero que se
+     mira, dispara en el tiro, usa lo que está cerca; con la palanca no se pone a caminar), saltar, girar 45° y el menú
+     (la pausa, que se ve en el espejo; si ya hay una ventana, la cierra) */
+  function botonesVR(P) {
+    if (!P.nuevos.length) return;
+    const A = accionesBox(G, P.nuevos);
+    if (!avisoBox) { avisoBox = true; vr.decir(t('box_hola'), 5); }
+    if (A.has('usar')) { vr.toque = true; vr.sinCaminar = P.palanca; }
+    if (A.has('saltar')) vr.salta = true;
+    if (A.has('izq') !== A.has('der')) { vr.base += A.has('izq') ? Math.PI / 4 : -Math.PI / 4; parpadeo = 0.16; J.sfx('pop'); }
+    if (A.has('menu')) { if (UI.ventanaAbierta) UI.cerrarVentana(); else if (!enDialogo) J.pausar(true); }
+  }
   function paso(dt, dibujar = true) {
     UNI.uT.value += dt;
     if (!enJuego || !reino) { return; }
@@ -886,7 +902,9 @@ async function iniciar() {
     if (estelario.abierto) { estelario.cuadro(dt, dibujar); return; }
     /* en tu espacio (con ARCore): el juego queda quieto y se dibuja el cuarto (atrás o Escape, sale) */
     if (espacio.activo) { const E0 = ent.leer(); if (E0.pausa || !vr.activo) { espacio.cerrar(); vr.salir(); return; } espacio.cuadro(dt, dibujar); return; }
+    ent.enVR = vr.activo;
     const E = ent.leer();
+    if (vr.activo && ent.padVR) botonesVR(ent.padVR);
     /* (vuelta 43: las ventanas y las charlas se ven adentro del VR, en el espejo; el probador es su propia escena y saca) */
     if (vr.activo && probador) vr.salir();
     /* (sin manos a la vista, un toque mirando un tablero del VR lo aprieta, en vez de caminar) */
