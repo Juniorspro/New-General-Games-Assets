@@ -22,16 +22,37 @@ con nombre, íconos y diseño propios.
   las esquinas redondeadas, una sombra suave y un borde que se enciende cuando
   la apuntás. Los toques del puntero se vuelven toques de Android: un clic es
   un clic, pellizcar y mover es scroll.
-- **Las apps**
-  - **Navegador**: la web entera, con atrás / adelante / recargar, la
-    dirección, un inicio con accesos directos, y el video a pantalla completa
-    adentro de la ventana.
-  - **Galería**: tus fotos y videos del teléfono; se ven grandes, con anterior
-    y siguiente, y los videos con play, pausa y la barra para adelantar.
-  - **Ajustes**: entorno, visor (SBS, distancia entre ojos, lentes, campo
-    visual), manos y control, sonido, acerca de.
-  - **Apps**: las del sistema en baldosas grandes, y las del teléfono (se
-    abren en el teléfono).
+- **Tu espacio (Nexo Inicio).** Antes de empezar escaneás tu mesa, apoyás las
+  manos y fijás la cabeza; después Nexo **sólo se mueve cuando ve tu mesa**
+  (ver [Tu espacio](#tu-espacio-nexo-inicio)).
+- **Las apps de Nexo** (cada una en su ventana, en el espacio)
+  - **Navegador**: la web entera, con **pestañas**, atrás / adelante /
+    recargar, la dirección, el **modo escritorio** (la versión de
+    computadora), **★ Agregar a Apps** (la página queda como una app), las
+    descargas a Descargas, y el video a pantalla completa adentro de la ventana.
+  - **Apps web**: YouTube, WhatsApp (en modo escritorio), Mapas, Gmail, YT
+    Música, Twitch, Wikipedia, Noticias, Drive, Traductor, Instagram, X, y las
+    que agregues vos: **cada una en su propia ventana**, con tu sesión
+    guardada. Sin logos: una baldosa de color con la inicial.
+  - **Galería** y **Cine**: tus fotos y videos (el Cine: sólo los videos, en
+    grande, con su duración); con anterior y siguiente, play, pausa y la barra.
+  - **Música**: tus canciones del teléfono, con la tapa, la barra, anterior,
+    siguiente y mezclar. **Sigue sonando con la ventana cerrada.**
+  - **Notas**: la lista y el editor; se guardan solas mientras escribís con el
+    teclado de Nexo.
+  - **Calculadora**: teclas grandes, el resultado mientras escribís, √, ^, π,
+    paréntesis, el porcentaje "de celular" (200 + 10 % = 220) y el historial.
+  - **Reloj**: la esfera que se mueve suave, la hora de otras ciudades, un
+    **temporizador** (suena aunque cierres la ventana) y un **cronómetro** con
+    vueltas.
+  - **Clima**: buscás tu ciudad y ves ahora, las próximas 18 horas y 7 días,
+    con el cielo de fondo (datos de Open-Meteo, libre y sin cuenta).
+  - **Archivos**: una carpeta del teléfono (la elegís una vez) con sus
+    carpetas; abre fotos, videos, música, textos y **PDF** página por página.
+  - **Ajustes**: entorno, **espacio**, visor (SBS, distancia entre ojos,
+    lentes, campo visual, Nexo Track), manos y control, sonido, acerca de.
+  - **Apps**: todo lo de arriba en baldosas, y las del teléfono (esas se
+    abren en la pantalla del teléfono, fuera del visor).
   - **Cómo se usa**: la bienvenida con los gestos (sale la primera vez).
 - **El escritorio.** Hasta 3 apps en un arco delante tuyo (centro, izquierda,
   derecha, a 1.1 m); la cuarta reemplaza a la más vieja. Debajo de cada
@@ -41,7 +62,7 @@ con nombre, íconos y diseño propios.
 - **La barra de abajo**: Apps, Navegador, Galería, Ajustes (con un punto
   debajo de las abiertas), la hora, el wifi, la batería y los **ajustes
   rápidos**: passthrough, entorno, recentrar, captura, **linterna**, visor,
-  manos, teclado, ajustes y el volumen.
+  manos, teclado, ajustes, **tu espacio** y el volumen.
 - **Linterna**: prende el flash de atrás. Con ARCore se prende por su
   configuración (la cámara la tiene ARCore: no se corta el seguimiento, y en la
   oscuridad ayuda a que se vean las manos); sin ARCore, directo con la cámara
@@ -84,6 +105,60 @@ Tres cosas para que el clic caiga donde apuntás (como en los visores):
 El rayo de la mano sale del **punto de mira** (un poco debajo de la vista) por
 los **nudillos** (que no se mueven al pellizcar), como aprendimos con Asalto
 MR: la distancia de la mano, lo que peor mide una cámara, no lo mueve.
+
+## Tu espacio (Nexo Inicio)
+
+| | |
+|---|---|
+| ![Elegir cómo usarlo](capturas/inicio-elegir.jpg) | ![Escaneando la mesa](capturas/inicio-escanear.jpg) |
+| ![Las manos sobre las guías](capturas/inicio-manos.jpg) | ![La barra apoyada en la mesa](capturas/inicio-escritorio.jpg) |
+
+*Vista previa en la PC: la pieza y la mesa las dibuja la prueba (como si fueran
+la cámara); lo demás son los shaders de la app y las cuentas de verdad (el
+polígono de la mesa y su malla, las guías, dónde va cada ventana).*
+
+Al abrir Nexo (con ARCore) sale **"Prepará tu espacio"**:
+
+1. **Elegir**: **Mesa** (sentado, recomendado), **Cuarto** (parado o
+   caminando) o **Sólo girar** (sin escanear: la cabeza fija, nada se desliza
+   nunca).
+2. **Escanear tu mesa**: mirás la mesa y movés un poco la cabeza. ARCore
+   encuentra las superficies (se ven como una grilla, y los puntos que sigue,
+   titilando); Nexo elige la que es **tu mesa**: horizontal, entre 15 cm y
+   1.05 m debajo de los ojos (el piso queda afuera), de al menos 30 × 25 cm,
+   cerca y adelante. Cuando es grande y no cambia 1.2 s se confirma sola (o
+   "Esta es mi mesa"): queda **marcada** (puntitos cada 5 cm, un borde dorado
+   que late, una luz que la recorre, una onda que sale de donde mirabas y la
+   etiqueta **"Tu mesa"**), y el ancla del escritorio pasa a ser la mesa.
+3. **Apoyar las manos** sobre las dos manos de guía (doradas; se ponen verdes
+   cuando la tuya está encima). Con la mesa se sabe **a qué distancia están de
+   verdad** tus manos (lo que una sola cámara mide peor): cada punto de la
+   palma está sobre su rayo, y donde ese rayo corta la mesa es su lugar. De
+   ahí sale el tamaño de tus manos (se guarda). Sólo se mide con la palma
+   **plana y apoyada** (la normal de la palma contra la de la mesa: inclinada
+   25° o más, no cuenta).
+4. **Fijar la cabeza**: mirás al frente, quieto 1.2 s (un anillo se llena):
+   ahí quedan tus pantallas.
+5. **¡Listo!** y la **barra de abajo apoyada en la mesa**, delante tuyo: la
+   tocás con el dedo y la mesa te frena.
+
+**Sólo se mueve cuando ve tu mesa.** En vez de "adivinar" dónde estás todo el
+tiempo, la posición sólo sigue a ARCore cuando la cámara **está viendo la
+mesa**: los puntos que ARCore sigue en esa foto caen sobre ella (a menos de
+3 cm del plano y adentro del polígono), o está bien a la vista. Si no la ve
+(mirás el techo, una pared lisa, las ventanas de arriba), **el cuello queda
+quieto y la cabeza sólo gira**: nada se desliza. Cuando la vuelve a ver, se
+acomoda suave. Sin parpadear: se prende con 2 fotos seguidas y se apaga a los
+450 ms sin verla. Si ARCore pierde el plano de la mesa, Nexo la vuelve a
+encontrar solo (a la misma altura, cerca de donde estaba).
+
+En **Cuarto**, lo mismo con todo lo que escaneaste (el piso, las paredes, las
+mesas): se mueve cuando lo reconoce.
+
+Ajustes → **Espacio**: preparar el espacio ahora, al empezar sí o no, sólo
+moverse cuando ve la mesa, ver la mesa marcada, la barra sobre la mesa, y el
+tamaño de tus manos medido. También está en los ajustes rápidos (**Tu
+espacio**) y en Apps.
 
 ## El visor (VR Box)
 
@@ -204,13 +279,17 @@ Principal ── ARCore / sensores ── la cabeza, la cámara, el piso
 | `publicar.sh` · `actualizacion/` | publicar una versión (el APK y el `version.json` que mira la app) |
 | `Seguimiento.java` · `Cuello.java` | Nexo Track: giroscopio + predicción, ancla, pérdidas y saltos, los ojos (sin Android) |
 | `CamaraArcore.java` · `Diagnostico.java` · `herramientas/diagnostico.py` | la cámara de más fps; grabar y analizar un diagnóstico |
+| `Mesa.java` · `Inicio.java` | tu mesa: elegirla, si se ve, dónde van las cosas, las manos de guía; los pasos del inicio (sin Android) |
+| `SuperficiesGl.java` · `Etiqueta.java` · `InicioApp.java` | el dibujo de los planos, la nube y la mesa marcada; la etiqueta; la ventana del inicio |
+| `AppsWeb.java` · `Calculo.java` · `Tiempos.java` · `Clima.java` · `TiposIcono.java` | las apps web, las cuentas, el cronómetro y el temporizador, el clima, los tipos de ícono (sin Android) |
+| `MusicaApp.java` · `Reproductor.java` · `NotasApp.java` · `CalculadoraApp.java` · `RelojApp.java` · `ClimaApp.java` · `ArchivosApp.java` | las mini-apps |
 | `herramientas/sin-parametros.py` | saca un atributo que el javac 21 escribe y con el que el d8 se cae |
 
 ## Pruebas (en la PC)
 
 ```sh
-./pruebas/correr.sh     # escritorio y puntero, gestos con manos reales, Nexo Track
-./pruebas/vista.sh      # la vista previa (salida/vista-*.png)
+./pruebas/correr.sh     # escritorio y puntero, gestos con manos reales, Nexo Track, la mesa, las apps
+./pruebas/vista.sh      # la vista previa (salida/vista-*.png y vista-inicio-*.png)
 node pruebas/shaders.mjs
 ./construir.sh          # → salida/nexo-xr.apk
 ```
@@ -223,11 +302,33 @@ node pruebas/shaders.mjs
   (carga, clic, no repite), pellizco en la nada corto y largo, recentrar.
 - `PruebaSeguimiento`: Nexo Track con una cabeza simulada (la tabla de arriba),
   y que con la hora de las fotos en otra base no gira cualquier cosa.
+- `PruebaMesa`: elige la mesa de adelante (no el piso, ni una repisa, ni la
+  de atrás, ni una pared), también parado; de 240 puntos cuenta **exactamente
+  los 120 que están sobre la mesa** (no los del piso, la pared ni la taza);
+  cuánto de la mesa entra en la vista; la histéresis (no parpadea con un
+  hueco de 250 ms, se apaga a los 450); las guías (la derecha a la derecha,
+  los dedos adelante, apoyadas a 1–2 cm); **la escala de la mano apoyada:
+  1.153 medida contra 1.150 de verdad** (y con temblor, error máximo 1.8 %);
+  la mano inclinada 25° o más, o de canto, no cuenta; y los pasos del inicio
+  (se confirma sola cuando no cambia, "Esta es mi mesa", saltar, el cuarto,
+  sólo girar).
+- `PruebaSeguimiento`, además: **sin ver la mesa, el cuello no se mueve (0.0
+  mm) aunque ARCore se deslice 20 cm** y la cabeza se incline 15 cm, la
+  cabeza sigue girando bien (0.65°), y al volver a verla se acomoda sin
+  saltar (paso máximo 1.4 cm) y queda donde tiene que estar (1.1 mm).
+- `PruebaApps`: la calculadora (precedencia, potencias de derecha a
+  izquierda, paréntesis que faltan, 2π, porcentaje de celular, errores,
+  0,1 + 0,2 = 0,3, miles y decimales), el cronómetro (pausas, vueltas), el
+  temporizador (pausa, suena una sola vez, sumar andando), el clima (códigos,
+  íconos, la ciudad con tildes, el día de la semana de cada fecha contra el
+  calendario) y las apps web (guardar y leer, sin repetir, WhatsApp en modo
+  escritorio).
 - `PruebaGestos`: **ninguna de 19 manos reales** (puños, palmas, apuntando,
   agarrando) es un pellizco; pellizcar con 12 manos reales, con temblor:
   aprieta una vez, sin rebotes, y suelta.
-- Los 8 programas de la app compilan y enlazan (WebGL), y los 3 entornos se
-  dibujan en la vista previa.
+- Los 8 programas de la app compilan y enlazan (WebGL), los 3 entornos se
+  dibujan en la vista previa, y los de las superficies y las manos se dibujan
+  en la vista del inicio (sin errores de WebGL).
 
 ## Lo que NO se probó
 
@@ -241,6 +342,10 @@ node pruebas/shaders.mjs
   muestra el error arriba; pasame una captura.
 - La instalación de la actualización en el teléfono (el permiso, la
   confirmación, volver a abrirse) no se pudo probar acá.
+- Nexo Inicio con una mesa de verdad (que ARCore encuentre la tuya, que la
+  nube de puntos alcance para "verla", las manos sobre las guías), y las
+  mini-apps (la música, los archivos, el clima con internet) no se probaron
+  en un teléfono: están probadas sus cuentas y que compilan.
 - El teclado escribe en los campos de texto de las apps y de las páginas con
   teclas; alguna página rara puede no tomarlas.
 - Sin ARCore, girar la cabeza usa los sensores y la orientación del teléfono

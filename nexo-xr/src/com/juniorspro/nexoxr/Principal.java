@@ -72,7 +72,7 @@ import javax.microedition.khronos.opengles.GL10;
  *    los lentes.
  */
 public class Principal extends Activity implements GLSurfaceView.Renderer, Sistema, Teclado.Destino, Puntero.Oyente, SensorEventListener {
-    static final int DPI = 300, PERMISO_CAMARA = 1, PERMISO_FOTOS = 2;
+    static final int DPI = 300, PERMISO_CAMARA = 1, PERMISO_FOTOS = 2, PERMISO_MUSICA = 3, PEDIR_CARPETA = 4;
 
     private final Ajustes ajustes = new Ajustes();
     private volatile Ajustes vistos;
@@ -115,6 +115,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     private final HashMap<Integer, Plane> planosAr = new HashMap<>();
     private final ArrayList<Plane> referencias = new ArrayList<>();
     private final SuperficiesGl superficies = new SuperficiesGl();
+    private volatile boolean superficiesOk;
     private float[] nube = new float[4 * 1024];
     private int nubeN, cuadroPlanos;
     private final float[] desdeMundo = new float[16], vistaAr = new float[16], vpAr = new float[16];
@@ -149,7 +150,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     private final Dock dock = new Dock();
     private final Rapidos rapidos = new Rapidos();
     private final Teclado teclado = new Teclado();
-    private Navegador navegador;
+    private volatile Navegador navegador;
     private volatile PanelVirtual panelFoco;
     private boolean armado, escribiaAntes;
     private long dejoDeEscribir;
@@ -291,6 +292,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         for (PanelVirtual p : paneles.values()) p.cerrar();
         if (sesion != null) sesion.close();
         sonido.liberar();
+        Reproductor.UNO.soltar();
     }
 
     private void crearSesion() {
@@ -322,7 +324,10 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             if (r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) { crearSesion(); if (sesion != null) try { sesion.resume(); conArcore = true; if (manos != null) manos.arrancar(); } catch (Exception e) { sesion = null; } }
             else avisar("Sin la cámara no hay passthrough ni manos: se usa la mirada, la pantalla y el control.");
         } else if (cod == PERMISO_FOTOS) {
-            tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("galeria")) { cerrarVentana(v); abrirEnGl("galeria"); } });
+            reabrir("galeria");
+            reabrir("cine");
+        } else if (cod == PERMISO_MUSICA) {
+            reabrir("musica");
         }
     }
 
@@ -334,7 +339,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     @Override
     public void onWindowFocusChanged(boolean f) { super.onWindowFocusChanged(f); if (f) pantallaCompleta(); }
 
-    private void avisar(String s) {
+    @Override public void avisar(String s) {
         runOnUiThread(() -> { aviso.setText(s); aviso.setVisibility(View.VISIBLE); aviso.postDelayed(() -> aviso.setVisibility(View.GONE), 9000); });
     }
 
@@ -418,7 +423,17 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
 
     @Override public void abrir(String app) { tareas.add(() -> abrirEnGl(app)); }
 
-    @Override public void abrirUrl(String url) { tareas.add(() -> { abrirEnGl("navegador"); if (navegador != null) runOnUiThread(() -> navegador.ir(url)); }); }
+    @Override public void abrirUrl(String url) {
+        tareas.add(() -> {
+            // si el navegador está abierto va a su pestaña; si no, se abre con esa dirección
+            urlPendiente = url;
+            abrirEnGl("navegador");
+            runOnUiThread(() -> { Navegador n = navegador; String u = urlPendiente; if (n != null && u != null) { urlPendiente = null; n.ir(u); } });
+        });
+    }
+
+    /** La dirección que espera a que se abra el navegador. */
+    private volatile String urlPendiente;
 
     @Override public void entorno(int cual) {
         entorno = cual;
@@ -527,6 +542,39 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
 
     @Override public void sonido(int cual) { sonido.tocar(cual); }
 
+    /** Vuelve a abrir una app (con permiso nuevo, o una carpeta nueva). */
+    private void reabrir(String app) {
+        tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals(app)) { cerrarVentana(v); abrirEnGl(app); } });
+    }
+
+    @Override public void permisoMusica() {
+        runOnUiThread(() -> requestPermissions(Build.VERSION.SDK_INT >= 33
+                ? new String[]{Manifest.permission.READ_MEDIA_AUDIO}
+                : new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISO_MUSICA));
+    }
+
+    @Override public void elegirCarpeta() {
+        runOnUiThread(() -> {
+            try {
+                startActivityForResult(new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT_TREE)
+                        .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION | android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION), PEDIR_CARPETA);
+                avisar("Elegí la carpeta en la pantalla del teléfono");
+            } catch (Exception e) { avisar("Este teléfono no deja elegir carpetas: " + e.getMessage()); }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int cod, int res, android.content.Intent datos) {
+        super.onActivityResult(cod, res, datos);
+        if (cod != PEDIR_CARPETA || res != RESULT_OK || datos == null || datos.getData() == null) return;
+        Uri u = datos.getData();
+        try {
+            getContentResolver().takePersistableUriPermission(u, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getSharedPreferences(ArchivosApp.PREFS, MODE_PRIVATE).edit().putString(ArchivosApp.ARBOL, u.toString()).apply();
+            reabrir("archivos");
+        } catch (Exception e) { avisar("No se pudo usar esa carpeta: " + e.getMessage()); }
+    }
+
     @Override public void permisoFotos() {
         runOnUiThread(() -> requestPermissions(Build.VERSION.SDK_INT >= 33
                 ? new String[]{Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO}
@@ -551,13 +599,20 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             case "bienvenida": return new int[]{1100, 800};
             case "actualizar": return new int[]{1000, 680};
             case "inicio": return new int[]{1100, 720};
+            case "musica": return new int[]{1180, 760};
+            case "notas": return new int[]{1180, 760};
+            case "calculadora": return new int[]{1100, 760};
+            case "reloj": return new int[]{1180, 700};
+            case "clima": return new int[]{1100, 800};
+            case "archivos": return new int[]{1180, 800};
             default: return new int[]{1280, 800};
         }
     }
 
     private PanelVirtual.Fabrica fabrica(String app) {
+        if (app.startsWith("web:")) return c -> new Navegador().crearApp(c, this, AppsWeb.deId(app, Navegador.tuyas(c)));
         switch (app) {
-            case "navegador": return c -> { navegador = new Navegador(); return navegador.crear(c, this, null); };
+            case "navegador": return c -> { navegador = new Navegador(); String u = urlPendiente; urlPendiente = null; return navegador.crear(c, this, u); };
             case "galeria": return c -> new Galeria().crear(c, this);
             case "ajustes": return c -> new AjustesApp().crear(c, this);
             case "bienvenida": return c -> new Bienvenida().crear(c, this, () -> {
@@ -565,6 +620,13 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("bienvenida")) cerrarVentana(v); });
             });
             case "inicio": { Inicio in = inicio; return c -> new InicioApp().crear(c, this, in != null ? in : new Inicio()); }
+            case "musica": return c -> new MusicaApp().crear(c, this);
+            case "cine": return c -> new Galeria().crearCine(c, this);
+            case "notas": return c -> new NotasApp().crear(c, this);
+            case "calculadora": return c -> new CalculadoraApp().crear(c, this);
+            case "reloj": return c -> new RelojApp().crear(c, this);
+            case "clima": return c -> new ClimaApp().crear(c, this);
+            case "archivos": return c -> new ArchivosApp().crear(c, this);
             case "actualizar": return c -> new ActualizarApp().crear(c, this,
                     () -> tareas.add(() -> { for (Ventana v : new ArrayList<>(escritorio.ventanas)) if (v.app.equals("actualizar")) cerrarVentana(v); }));
             default: return c -> new Biblioteca().crear(c, this);
@@ -598,6 +660,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         escritorio.cerrar(v);
         Inicio in = inicio;
         if (in != null && v.app.equals("inicio")) in.empezar();   // ✕: se sigue con lo que haya
+        if (v.app.equals("navegador")) navegador = null;   // sus páginas se soltaron
         sonido.tocar(Sonido.CERRAR);
         actualizarDock();
     }
@@ -653,6 +716,14 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             case BAD_STATE: return "ARCore se reinició";
             default: return "ARCore se está ubicando";
         }
+    }
+
+    /** El temporizador del reloj llegó a cero: tres campanadas y el aviso. */
+    private void alarma() {
+        avisar("⏰ ¡Terminó el temporizador!");
+        vibrar();
+        android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        for (int i = 0; i < 3; i++) h.postDelayed(() -> sonido.tocar(Sonido.LOGRO), i * 900L);
     }
 
     /** Si se pierde más de 0.8 s, se avisa por qué (una vez cada 20 s como mucho). */
@@ -986,6 +1057,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
 
     /** Lo que se escanea y tu mesa marcada (después del fondo, antes de las ventanas). */
     private void dibujarEspacio(float[] vpO, float t, long ahora) {
+        if (!superficiesOk) return;
         Inicio in = inicio;
         try {
             if (in != null && in.paso == Inicio.ESCANEAR) {
@@ -1113,13 +1185,15 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
             vgl.crear();
             lentes.crear();
             manosGl.crear();
-            superficies.crear();
         } catch (Throwable e) {
             errorGl = e;
             Fallo.guardar("OpenGL", e);
             avisar("Tu teléfono no pudo preparar los gráficos: " + e.getMessage());
             return;
         }
+        // el dibujo de la mesa aparte: si en algún teléfono no anda, se apaga sólo eso
+        try { superficies.crear(); superficiesOk = true; }
+        catch (Throwable e) { superficiesOk = false; Fallo.guardar("OpenGL (superficies)", e); }
         texturaPuesta = false;
         etiquetaMesa = 0;   // se perdió con el contexto
         for (PanelVirtual p : paneles.values()) p.crearGl();   // se perdió el contexto: todas las texturas de nuevo
@@ -1144,6 +1218,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
         ultimoCuadro = ahora;
         Ajustes a = vistos;
         for (Runnable r; (r = tareas.poll()) != null; ) r.run();
+        if (RelojApp.TEMPO.termino(ahora)) alarma();
 
         // ── el seguimiento: ARCore (la cabeza + la cámara) o los sensores ──
         boolean sigue = false;

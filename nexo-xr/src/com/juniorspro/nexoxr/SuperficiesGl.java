@@ -54,9 +54,11 @@ final class SuperficiesGl {
                     + "  float punto = 1.0 - smoothstep(0.0025, 0.0055, length(g));\n"
                     + "  float borde = 1.0 - smoothstep(0.0, 0.025, d);\n"
                     + "  float pulso = 0.72 + 0.28 * sin(uT * 3.2);\n"
-                    + "  float barre = exp(-pow((p.x + p.y) * 2.4 - mod(uT * 1.5, 9.0) + 4.5, 2.0) * 5.0);\n"
+                    // (x·x y no pow(x, 2.0): pow con base negativa no está definido en GLSL, y en algunas GPU da NaN)
+                    + "  float xb = (p.x + p.y) * 2.4 - mod(uT * 1.5, 9.0) + 4.5;\n"
+                    + "  float barre = exp(-xb * xb * 5.0);\n"
                     + "  float onda = 0.0;\n"
-                    + "  if (uOnda.z > 0.0) { float r = length(p - uOnda.xy); onda = exp(-pow((r - uOnda.z) * 12.0, 2.0)) * (1.0 - clamp(uOnda.z / 1.8, 0.0, 1.0)); }\n"
+                    + "  if (uOnda.z > 0.0) { float r = (length(p - uOnda.xy) - uOnda.z) * 12.0; onda = exp(-r * r) * (1.0 - clamp(uOnda.z / 1.8, 0.0, 1.0)); }\n"
                     + "  vec3 c = mix(uColor2, uColor, smoothstep(0.0, 0.35, d));\n"
                     + "  float a;\n"
                     + "  if (d < 0.0) {\n"

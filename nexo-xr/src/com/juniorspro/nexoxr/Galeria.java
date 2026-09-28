@@ -35,6 +35,9 @@ import java.util.concurrent.Executors;
  * LA GALERÍA: tus fotos y videos del teléfono en una grilla; al tocar uno se
  * ve grande (las fotos con anterior / siguiente, los videos con play, pausa y
  * la barra para adelantar).
+ *
+ * EL CINE es la misma, sólo con los videos, en baldosas grandes con su
+ * duración (para verlos en grande: ⤢, el modo cine).
  */
 final class Galeria {
     static final class Medio { Uri uri; boolean video; long dur; }
@@ -50,11 +53,24 @@ final class Galeria {
     private int actual = -1;
     private BaseAdapter adaptador;
     private Context ctx;
+    /** Sólo los videos (la app Cine). */
+    private boolean cine;
+
+    View crearCine(Context c, Sistema s) {
+        cine = true;
+        return crear(c, s);
+    }
 
     static boolean tienePermiso(Context c) {
         if (Build.VERSION.SDK_INT >= 33)
             return c.checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) == PackageManager.PERMISSION_GRANTED;
         return c.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    static boolean tienePermisoVideos(Context c) {
+        if (Build.VERSION.SDK_INT >= 33)
+            return c.checkSelfPermission(Manifest.permission.READ_MEDIA_VIDEO) == PackageManager.PERMISSION_GRANTED;
+        return tienePermiso(c);
     }
 
     View crear(Context c, Sistema s) {
@@ -67,11 +83,11 @@ final class Galeria {
         col.setPadding(m, m, m, 0);
         LinearLayout cab = new LinearLayout(c);
         cab.setGravity(Gravity.CENTER_VERTICAL);
-        cab.addView(Estilo.texto(c, "Galería", 26, Estilo.TEXTO, true), new LinearLayout.LayoutParams(0, -2, 1));
+        cab.addView(Estilo.texto(c, cine ? "Cine" : "Galería", 26, Estilo.TEXTO, true), new LinearLayout.LayoutParams(0, -2, 1));
         TextView cuantos = Estilo.texto(c, "", 14, Estilo.TEXTO2, false);
         cab.addView(cuantos);
         col.addView(cab);
-        if (!tienePermiso(c)) {
+        if (!(cine ? tienePermisoVideos(c) : tienePermiso(c))) {
             LinearLayout pide = new LinearLayout(c);
             pide.setOrientation(LinearLayout.VERTICAL);
             pide.setGravity(Gravity.CENTER);
@@ -87,7 +103,7 @@ final class Galeria {
             return raiz;
         }
         GridView g = new GridView(c);
-        g.setNumColumns(5);
+        g.setNumColumns(cine ? 3 : 5);
         g.setHorizontalSpacing(Estilo.dp(c, 8));
         g.setVerticalSpacing(Estilo.dp(c, 8));
         g.setSelector(new android.graphics.drawable.ColorDrawable(0));
@@ -109,10 +125,19 @@ final class Galeria {
                     ic.setImageDrawable(new Iconos(Iconos.PLAY, 0xFFFFFFFF));
                     FrameLayout.LayoutParams li = new FrameLayout.LayoutParams(Estilo.dp(c, 30), Estilo.dp(c, 30), Gravity.CENTER);
                     f.addView(ic, li);
-                    f.setLayoutParams(new GridView.LayoutParams(-1, Estilo.dp(c, 100)));
+                    TextView dur = Estilo.texto(c, "", 12, 0xFFFFFFFF, true);
+                    dur.setBackground(Estilo.forma(0xAA000000, Estilo.dp(c, 6)));
+                    dur.setPadding(Estilo.dp(c, 6), Estilo.dp(c, 2), Estilo.dp(c, 6), Estilo.dp(c, 2));
+                    FrameLayout.LayoutParams ld = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
+                    ld.setMargins(0, 0, Estilo.dp(c, 6), Estilo.dp(c, 6));
+                    f.addView(dur, ld);
+                    f.setLayoutParams(new GridView.LayoutParams(-1, Estilo.dp(c, cine ? 150 : 100)));
                 } else im = (ImageView) f.getChildAt(0);
                 Medio md = medios.get(i);
                 f.getChildAt(1).setVisibility(md.video ? View.VISIBLE : View.GONE);
+                TextView dur = (TextView) f.getChildAt(2);
+                dur.setVisibility(md.video && md.dur > 0 ? View.VISIBLE : View.GONE);
+                dur.setText(MusicaApp.hora(md.dur));
                 im.setTag(md.uri);
                 Bitmap b = miniaturas.get(md.uri);
                 im.setImageBitmap(b);
@@ -127,17 +152,18 @@ final class Galeria {
         col.addView(g, lg);
         raiz.addView(col);
         hilos.execute(() -> {
-            ArrayList<Medio> l = buscar(c);
+            ArrayList<Medio> l = buscar(c, cine);
             ui.post(() -> { medios.clear(); medios.addAll(l); adaptador.notifyDataSetChanged(); cuantos.setText(l.size() + (l.size() == 1 ? " elemento" : " elementos")); });
         });
         return raiz;
     }
 
-    private static ArrayList<Medio> buscar(Context c) {
+    private static ArrayList<Medio> buscar(Context c, boolean soloVideos) {
         ArrayList<Medio> l = new ArrayList<>();
         Uri base = MediaStore.Files.getContentUri("external");
         String[] cols = {MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.MEDIA_TYPE, MediaStore.Video.VideoColumns.DURATION};
-        String donde = MediaStore.Files.FileColumns.MEDIA_TYPE + "=" + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE + " OR "
+        String donde = soloVideos ? MediaStore.Files.FileColumns.MEDIA_TYPE + "=" + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO
+                : MediaStore.Files.FileColumns.MEDIA_TYPE + "=" + MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE + " OR "
                 + MediaStore.Files.FileColumns.MEDIA_TYPE + "=" + MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
         try (Cursor k = c.getContentResolver().query(base, cols, donde, null, MediaStore.Files.FileColumns.DATE_ADDED + " DESC")) {
             if (k == null) return l;

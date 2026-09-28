@@ -31,5 +31,11 @@ interface Sistema {
     void grabarDiagnostico();
     /** Nexo Inicio otra vez: escanear la mesa (o el cuarto), las manos, la cabeza. */
     void prepararEspacio();
+    /** Un aviso arriba de la vista (unos segundos). */
+    void avisar(String texto);
+    /** Pide el permiso de la música (lo pregunta el teléfono). */
+    void permisoMusica();
+    /** Elegir una carpeta del teléfono para Archivos (se elige en la pantalla del teléfono). */
+    void elegirCarpeta();
     void sonido(int cual);
 }

@@ -19,7 +19,8 @@ import java.util.Locale;
 /**
  * LOS AJUSTES RÁPIDOS (arriba del dock): la hora y la fecha, y botones grandes
  * para lo de todos los días: passthrough, el entorno, recentrar, captura,
- * el visor, las manos, el teclado y los ajustes; y el volumen.
+ * la linterna, el visor, las manos, el teclado, los ajustes y preparar tu
+ * espacio (la mesa); y el volumen.
  */
 final class Rapidos {
     private TextView hora, fecha, estado;
@@ -50,8 +51,8 @@ final class Rapidos {
         // las baldosas
         GridLayout g = new GridLayout(c);
         g.setColumnCount(5);
-        String[] t = {"Passthrough", "Entorno", "Recentrar", "Captura", "Linterna", "Visor", "Manos", "Teclado", "Ajustes"};
-        int[] ic = {Iconos.OJO, Iconos.MONTANA, Iconos.RECENTRAR, Iconos.CAPTURA, Iconos.LINTERNA, Iconos.VISOR, Iconos.MANO, Iconos.TECLADO, Iconos.AJUSTES};
+        String[] t = {"Passthrough", "Entorno", "Recentrar", "Captura", "Linterna", "Visor", "Manos", "Teclado", "Ajustes", "Tu espacio"};
+        int[] ic = {Iconos.OJO, Iconos.MONTANA, Iconos.RECENTRAR, Iconos.CAPTURA, Iconos.LINTERNA, Iconos.VISOR, Iconos.MANO, Iconos.TECLADO, Iconos.AJUSTES, Iconos.MESA};
         baldosas = new LinearLayout[t.length];
         for (int i = 0; i < t.length; i++) {
             final int k = i;
@@ -116,6 +117,7 @@ final class Rapidos {
             case 5: s.visor(!s.visor()); break;
             case 6: s.cambio("manos", s.ajustes().manos == 1 ? 0 : 1); break;
             case 7: s.mostrarTeclado(true); break;
+            case 9: s.mostrarRapidos(false); s.prepararEspacio(); break;
             default: s.mostrarRapidos(false); s.abrir("ajustes");
         }
         h.postDelayed(this::refrescar, 150);
@@ -124,7 +126,7 @@ final class Rapidos {
     private void refrescar() {
         Sistema s = sis;
         if (baldosas == null || s == null) return;
-        boolean[] on = {s.entorno() == Entornos.PASSTHROUGH, false, false, false, s.linterna(), s.visor(), s.ajustes().manos == 1, false, false};
+        boolean[] on = {s.entorno() == Entornos.PASSTHROUGH, false, false, false, s.linterna(), s.visor(), s.ajustes().manos == 1, false, false, false};
         // las que se prenden y apagan: azules cuando están prendidas
         for (int i : new int[]{0, 4, 5, 6})
             baldosas[i].setBackground(Estilo.apretable(on[i] ? Estilo.AZUL : Estilo.TARJETA, Estilo.TARJETA_ALTA, Estilo.dp(baldosas[0].getContext(), 18)));
