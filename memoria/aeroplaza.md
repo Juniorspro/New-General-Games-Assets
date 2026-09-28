@@ -308,37 +308,8 @@ En su propia nota: [aeroplaza-11](aeroplaza-11.md).
 
 ## Undécima vuelta: probador, joyas, anuncios, choques, VR y alta (26/09)
 
-En su propia nota: [aeroplaza-12](aeroplaza-12.md). Y después, el VR a 120, las manos y el visor:
-[aeroplaza-13](aeroplaza-13.md). Las manos que titilaban en el celu:
-[aeroplaza-14](aeroplaza-14.md). El flash, las dos redes y la profundidad aparte:
-[aeroplaza-15](aeroplaza-15.md). Las manos rápidas, medias o suaves y el rayo que baja:
-[aeroplaza-16](aeroplaza-16.md). Las manos con menos atraso (cupo, lector, GPU):
-[aeroplaza-17](aeroplaza-17.md). La mano que no se estira y el giro:
-[aeroplaza-18](aeroplaza-18.md). La mano como un cuerpo, que no se dobla:
-[aeroplaza-19](aeroplaza-19.md). La mano que se da vuelta y la imagen que manda:
-[aeroplaza-20](aeroplaza-20.md). La mano lenta con la cámara lenta de un celu:
-[aeroplaza-21](aeroplaza-21.md). La mano que no se duplica, los manotazos y la
-tanda corta: [aeroplaza-22](aeroplaza-22.md). La palma para abajo que se tomaba
-para arriba: [aeroplaza-23](aeroplaza-23.md). La mano de un video de verdad:
-[aeroplaza-24](aeroplaza-24.md). Sin patadas, lejos y saliendo de la cámara:
-[aeroplaza-25](aeroplaza-25.md). El dedo que movía la mano, la cámara a 60 y
-la luz: [aeroplaza-26](aeroplaza-26.md). La APK con ARCore y las manos de Android:
-[aeroplaza-27](aeroplaza-27.md). El retraso que ponía el resorte y la APK buscando dos
-manos: [aeroplaza-28](aeroplaza-28.md). Tu espacio con ARCore (escaneo, manos en la mesa,
-pantalla y ventanas): [aeroplaza-29](aeroplaza-29.md). Las lentes del visor: [aeroplaza-30](aeroplaza-30.md).
-La altura quieta con ARCore y las manos de Android sin ARCore: [aeroplaza-31](aeroplaza-31.md).
-La cámara de tu espacio en tamaño real, la gamma con lentes y la linterna sola: [aeroplaza-32](aeroplaza-32.md).
-Tu espacio más como un Quest (el menú de la palma, agarrar, las ventanas, el escaneo y las manos): [aeroplaza-33](aeroplaza-33.md).
-La malla del cuarto (TSDF de 3 cm, como Asalto MR pero más fina): [aeroplaza-34](aeroplaza-34.md).
-Que escanee (la profundidad con la cámara de 30) y los dos ojos iguales: [aeroplaza-35](aeroplaza-35.md).
-Que escanee de verdad (la cámara antes de arrancar ARCore y la tarjeta que dice el paso): [aeroplaza-36](aeroplaza-36.md).
-La linterna apagaba el escaneo (toda la config de la sesión en un hilo) y el diagnóstico de la tarjeta: [aeroplaza-37](aeroplaza-37.md).
-Manos más estables (el giro y los dedos por nivel) y el link del HTML para probarlo en el celu: [aeroplaza-38](aeroplaza-38.md).
-La cabeza en 6 ejes suave (el giroscopio del sistema corregido con ARCore): [aeroplaza-39](aeroplaza-39.md).
-El objeto en la mano como control (el agarre, el eje, el gatillo y el control dibujado): [aeroplaza-40](aeroplaza-40.md).
-Que no se cierre al entrar al ARCore (los sensores, la WebView caída) y el aviso de por qué se cerró la vez pasada: [aeroplaza-41](aeroplaza-41.md).
-Tu espacio como un Quest (la mira no aprieta, las pantallas lejos) y la cámara 0,5x (AngleCam, `Ancha.java`, ARCore en pausa): [aeroplaza-42](aeroplaza-42.md).
-Todo el juego en el VR (el espejo de las ventanas, viajar, edificios, minijuegos), 3DoF con cuello y la pelotita: [aeroplaza-43](aeroplaza-43.md).
+En su propia nota: [aeroplaza-12](aeroplaza-12.md). De ahí en adelante (el VR, las manos, la APK, ARCore, tu espacio),
+vuelta por vuelta: [aeroplaza-vueltas](aeroplaza-vueltas.md).
 
 ## Trampas que ya se pagaron
 

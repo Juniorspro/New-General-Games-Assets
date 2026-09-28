@@ -50,8 +50,10 @@ CLAUDE.md       tres líneas que Claude Code carga solo en cada sesión
    número, la fecha o la fuente.
 2. Lo que resultó falso o viejo se corrige o se borra. No se agrega una
    contradicción al lado.
-3. Una entrada en `diario.md`: fecha, rama, qué quedó y qué falta.
-4. Si cambió qué hay y dónde, se actualiza `INDICE.md`.
+3. Una entrada en `diario.md`: fecha, rama, qué quedó y qué falta. Quedan las ~8 más nuevas; las viejas se
+   pasan a `diario-viejo.md`.
+4. Si cambió qué hay y dónde, se actualiza `INDICE.md`. Una vuelta nueva de AEROPLAZA suma su fila en
+   `memoria/aeroplaza-vueltas.md`, no en el índice (así el índice queda corto: se lee en cada sesión).
 5. Commit junto con el trabajo (o uno aparte, "Memoria: …") y push. Lo que no
    se commitea se pierde con el contenedor.
 
