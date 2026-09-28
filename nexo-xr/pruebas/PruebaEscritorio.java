@@ -107,6 +107,29 @@ public class PruebaEscritorio {
                 String.format(Locale.ROOT, "el clic cae donde apuntabas antes de pellizcar (%.3f, %.3f), no donde se corrió la mano", baja.u, baja.w));
         ver(sube.u == baja.u && sube.w == baja.w, "y sube en el mismo lugar: un clic no se vuelve un arrastre");
 
+        // el doble pellizco: la mano se corre en los dos pellizcos (más que 80 ms); el clic va al rayo de antes del primero
+        for (int caso = 0; caso < 2; caso++) {
+            float corre = caso == 0 ? 0.03f : 0.25f;   // 1.5° (sin querer) o 13° (te moviste a propósito)
+            float[] lejos = {punto[0] + corre, punto[1], punto[2]};
+            apuntar(p, Puntero.MANO_DER, punto, false);
+            pasos(e, p, 4);
+            f.fox = f.ox; f.foy = f.oy; f.foz = f.oz; f.fdx = f.dx; f.fdy = f.dy; f.fdz = f.dz;
+            f.fijoVale = true;
+            apuntar(p, Puntero.MANO_DER, lejos, false);
+            pasos(e, p, 20);
+            toques.clear();
+            apuntar(p, Puntero.MANO_DER, lejos, true);
+            pasos(e, p, 3);
+            apuntar(p, Puntero.MANO_DER, lejos, false);
+            pasos(e, p, 1);
+            f.fijoVale = false;
+            Toque b = toques.get(0);
+            if (caso == 0) ver(Math.abs(b.u - 0.6f) < 0.01f && Math.abs(b.w - 0.3f) < 0.01f,
+                    String.format(Locale.ROOT, "doble pellizco: el clic cae donde apuntabas antes del primero (%.3f, %.3f) aunque la mano se corrió 1.5°", b.u, b.w));
+            else ver(b.u > 0.7f, String.format(Locale.ROOT, "pero si moviste la mano 13° a propósito, va a donde apuntás ahora (u = %.3f)", b.u));
+        }
+        toques.clear();
+
         // scroll: pellizcar y mover 10 cm para arriba
         toques.clear();
         float[] desde = new float[3], hasta = new float[3];

@@ -100,11 +100,12 @@ final class AjustesApp {
                     contenido.addView(deslizador(Iconos.OJO, "Ojos: arriba de la cámara", "ojoY", -50, 50, a.ojoY, "%d mm"));
                     contenido.addView(deslizador(Iconos.OJO, "Ojos: detrás de la cámara", "ojoZ", 0, 140, a.ojoZ, "%d mm"));
                 }
-                contenido.addView(Estilo.renglon(c, Iconos.RECENTRAR, "Recentrar", "Todo delante de donde mirás (o pellizcá en la nada 1 s)",
+                contenido.addView(Estilo.renglon(c, Iconos.RECENTRAR, "Recentrar", "Todo delante de donde mirás (o doble pellizco en la nada, sostenido 1 s)",
                         Estilo.boton(c, -1, "Recentrar", true, v -> s.recentrar())));
                 break;
             case 3:
-                contenido.addView(interruptor(Iconos.MANO, "Hand tracking", "Tus manos con la cámara: pellizcar = clic", a.manos == 1, si -> s.cambio("manos", si ? 1 : 0)));
+                contenido.addView(interruptor(Iconos.MANO, "Hand tracking", "Tus manos con la cámara: doble pellizco = clic", a.manos == 1, si -> s.cambio("manos", si ? 1 : 0)));
+                contenido.addView(interruptor(Iconos.MANO, "Clic con doble pellizco", "Dos pellizcos rápidos para hacer clic: la mano que se cierra sin querer no aprieta nada", a.doblePellizco == 1, si -> s.cambio("doblePellizco", si ? 1 : 0)));
                 contenido.addView(interruptor(Iconos.MANO, "Ver mis manos", "Las manos transparentes, con el borde que brilla", a.verManos == 1, si -> s.cambio("verManos", si ? 1 : 0)));
                 contenido.addView(interruptor(Iconos.MANO, "Tocar con el dedo", "Las pantallas cercanas se tocan como un celular", a.dedo == 1, si -> s.cambio("dedo", si ? 1 : 0)));
                 contenido.addView(interruptor(Iconos.OJO, "Clic mirando", "Sin manos: mirá fijo un botón 1 segundo", a.mirada == 1, si -> s.cambio("mirada", si ? 1 : 0)));

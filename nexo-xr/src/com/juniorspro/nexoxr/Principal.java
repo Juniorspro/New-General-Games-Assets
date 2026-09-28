@@ -146,6 +146,9 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
     private final Escritorio escritorio = new Escritorio();
     private final Puntero puntero = new Puntero();
     private final Gestos[] gestos = {new Gestos(), new Gestos()};
+    /** El clic con la mano: dos pellizcos (DoblePellizco). */
+    private final DoblePellizco[] dobles = {new DoblePellizco(), new DoblePellizco()};
+    private final float[] rayoFijo = new float[6];
     private final HashMap<Ventana, PanelVirtual> paneles = new HashMap<>();
     private final Dock dock = new Dock();
     private final Rapidos rapidos = new Rapidos();
@@ -1445,14 +1448,44 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 float[] uv = new float[2];
                 f.sobre.distancia(f.hx, f.hy, f.hz, uv);
                 float x = (uv[0] - 0.5f) * f.sobre.ancho, y = (0.5f - uv[1]) * f.sobre.alto;
-                float fuerza = mano ? gestos[k].fuerza : f.apretado ? 0.2f : 1f;
-                vgl.cursor(f.sobre, x, y, Math.max(0.3f, f.dist), f.tocando ? 0.2f : fuerza, k == Puntero.MIRADA ? f.carga : 0, f.dedoCerca || f.tocando);
-                if (mano && !f.dedoCerca && !f.tocando) vgl.rayo(f.ox + f.dx * 0.08f, f.oy + f.dy * 0.08f, f.oz + f.dz * 0.08f, f.hx, f.hy, f.hz, ojoEste, 1, f.apretado);
+                float fuerza = mano ? (f.apretado ? 0 : gestos[k].fuerza) : f.apretado ? 0.2f : 1f;
+                float armado = mano && !f.apretado ? dobles[k].armado(ahora) : 0;
+                vgl.cursor(f.sobre, x, y, Math.max(0.3f, f.dist), f.tocando ? 0.2f : fuerza, k == Puntero.MIRADA ? f.carga : 0, f.dedoCerca || f.tocando, armado, f.apretado || f.tocando);
+                if (mano && !f.dedoCerca && !f.tocando) rayoMano(k, f, f.hx, f.hy, f.hz, 1, t, ahora);
             } else if (mano && !f.dedoCerca) {
-                vgl.rayo(f.ox + f.dx * 0.08f, f.oy + f.dy * 0.08f, f.oz + f.dz * 0.08f, f.ox + f.dx * 0.9f, f.oy + f.dy * 0.9f, f.oz + f.dz * 0.9f, ojoEste, 0.6f, f.apretado);
+                rayoMano(k, f, f.ox + f.dx * 0.9f, f.oy + f.dy * 0.9f, f.oz + f.dz * 0.9f, 0.6f, t, ahora);
             }
         }
         vgl.terminar();
+    }
+
+    private final float[] pinzaA = new float[3], pinzaB = new float[3];
+
+    /**
+     * El indicador que sale de la mano: el anillo entre el pulgar y el índice y el rayo desde ahí
+     * hasta (bx, by, bz). Los dos muestran cuánto falta para pellizcar y si ya está armado el doble pellizco.
+     */
+    private void rayoMano(int k, Puntero.Fuente f, float bx, float by, float bz, float alfa, float t, long ahora) {
+        float fuerza = f.apretado ? 0 : gestos[k].fuerza;
+        float armado = f.apretado ? 0 : dobles[k].armado(ahora);
+        float[][] w = puntosMano[k];
+        System.arraycopy(w[4], 0, pinzaA, 0, 3);
+        System.arraycopy(w[8], 0, pinzaB, 0, 3);
+        float mx = (pinzaA[0] + pinzaB[0]) / 2, my = (pinzaA[1] + pinzaB[1]) / 2, mz = (pinzaA[2] + pinzaB[2]) / 2;
+        // (si los puntos de los dedos no están cerca del rayo, que salga de los nudillos como antes)
+        float ex = mx - f.ox, ey = my - f.oy, ez = mz - f.oz;
+        boolean dedos = alfaMano[k] > 0.05f && ex * ex + ey * ey + ez * ez < 0.15f * 0.15f;
+        float ax, ay, az;
+        if (dedos) {
+            vgl.pinza(pinzaA, pinzaB, ojoEste, fuerza, armado, f.apretado, Math.min(1, alfaMano[k]) * alfa);
+            // el rayo arranca justo delante del anillo, hacia donde pega
+            float rx = bx - mx, ry = by - my, rz = bz - mz, rl = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
+            if (rl < 0.05f) return;
+            ax = mx + rx / rl * 0.025f; ay = my + ry / rl * 0.025f; az = mz + rz / rl * 0.025f;
+        } else {
+            ax = f.ox + f.dx * 0.08f; ay = f.oy + f.dy * 0.08f; az = f.oz + f.dz * 0.08f;
+        }
+        vgl.rayo(ax, ay, az, bx, by, bz, ojoEste, alfa, fuerza, armado, f.apretado, t);
     }
 
     private float dist2(Ventana v) {
@@ -1569,7 +1602,7 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 boolean ve = m.hay && m.filtro.visible;
                 if (m.filtro.alfa > 0) for (int i = 0; i < 21; i++) System.arraycopy(m.mundo[i], 0, puntosMano[s][i], 0, 3);
                 f.activa = ve && armado;
-                if (!ve) { gestos[s].soltar(); continue; }
+                if (!ve) { gestos[s].soltar(); dobles[s].soltar(); f.fijoVale = false; continue; }
                 boolean pellizca = gestos[s].paso(m.mundo);
                 pellizcaAhora[s] = pellizca;
                 brilloMano[s] += ((pellizca ? 1f : 0f) - brilloMano[s]) * Math.min(1, dt * 18);
@@ -1583,7 +1616,17 @@ public class Principal extends Activity implements GLSurfaceView.Renderer, Siste
                 if (dl < 0.05f) { f.activa = false; continue; }
                 f.ox = q[0]; f.oy = q[1]; f.oz = q[2];   // el rayo sale de la mano (se ve salir de ahí)
                 f.dx = dx / dl; f.dy = dy / dl; f.dz = dz / dl;
-                f.aprieta = pellizca;
+                // el clic: dos pellizcos (el primero arma, el segundo aprieta)
+                DoblePellizco dp = dobles[s];
+                dp.doble = a.doblePellizco == 1;
+                f.aprieta = dp.paso(pellizca, ahora);
+                if (dp.empezando(ahora)) {
+                    // dónde apuntabas antes de cerrar los dedos: el clic cae ahí si no te moviste
+                    f.rayoDe(ahora, rayoFijo);
+                    f.fox = rayoFijo[0]; f.foy = rayoFijo[1]; f.foz = rayoFijo[2];
+                    f.fdx = rayoFijo[3]; f.fdy = rayoFijo[4]; f.fdz = rayoFijo[5];
+                    f.fijoVale = true;
+                } else if (dp.fase == DoblePellizco.QUIETO || dp.fase == DoblePellizco.SOSTENIDO) f.fijoVale = false;
                 f.conDedo = Gestos.indiceEstirado(m.mundo) && !pellizca;
                 f.tx = m.mundo[8][0]; f.ty = m.mundo[8][1]; f.tz = m.mundo[8][2];
             }

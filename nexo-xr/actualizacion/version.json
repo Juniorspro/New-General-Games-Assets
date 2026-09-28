@@ -1,10 +1,10 @@
 {
-  "versionCode": 4,
-  "versionName": "1.3",
-  "apk": "nexo-xr-4.apk",
-  "bytes": 18929094,
-  "sha256": "b0b517522b2974fd498cef0458c341e83bd9e4c2e7186f41f5efea92b2ddc25f",
+  "versionCode": 5,
+  "versionName": "1.4",
+  "apk": "nexo-xr-5.apk",
+  "bytes": 18933190,
+  "sha256": "90d1b563abebb5bf37bf8ddc34168d922f99aee946a8330798f7148fe0bb43ad",
   "firma": "6766095216fa8a2d7b8963df407e08d146bfac5d723647bf3129e142ce1823ca",
-  "notas": "Nexo 1.3: Prepará tu espacio. Al empezar escaneás tu mesa (queda marcada), apoyás las manos (se mide su tamaño de verdad) y fijás la cabeza: después Nexo sólo se mueve cuando ve tu mesa, así nada se desliza. La barra de abajo va apoyada en la mesa. Navegador con pestañas, modo escritorio y ★ Agregar a Apps; apps web (YouTube, WhatsApp, Gmail…) cada una en su ventana. Apps nuevas: Música, Cine, Notas, Calculadora, Reloj (temporizador y cronómetro), Clima y Archivos (con PDF).",
-  "fecha": "2026-09-28 12:40 UTC"
+  "notas": "Clic con doble pellizco: un pellizco solo ya no aprieta nada (se puede volver a uno en Ajustes → Manos). Indicador nuevo en la mano: un anillo entre el pulgar y el índice que se cierra al pellizcar, el rayo sale de ahí y se prende, y el cursor muestra en celeste cuánto queda para el segundo pellizco. El clic cae donde apuntabas antes del primer pellizco.",
+  "fecha": "2026-09-28 13:19 UTC"
 }

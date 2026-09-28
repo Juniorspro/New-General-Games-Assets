@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")/.."
 OBRA=$(mktemp -d)
 S=src/com/juniorspro/nexoxr
-if ! javac -nowarn -encoding UTF-8 -d "$OBRA" $S/Ventana.java $S/Escritorio.java $S/Puntero.java $S/Gestos.java $S/Mano.java $S/FiltroMano.java \
+if ! javac -nowarn -encoding UTF-8 -d "$OBRA" $S/Ventana.java $S/Escritorio.java $S/Puntero.java $S/Gestos.java $S/DoblePellizco.java $S/Mano.java $S/FiltroMano.java \
     $S/AsociadorManos.java $S/Control.java $S/Punteria.java $S/Seguimiento.java $S/Cuello.java $S/Mesa.java $S/Inicio.java $S/Calculo.java $S/Tiempos.java $S/Clima.java $S/AppsWeb.java $S/TiposIcono.java pruebas/Prueba*.java 2> "$OBRA/errores"; then
   grep -v "^Picked up" "$OBRA/errores"; echo "✗ no compila"; rm -rf "$OBRA"; exit 1
 fi

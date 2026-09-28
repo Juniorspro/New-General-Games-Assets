@@ -19,10 +19,10 @@ final class Bienvenida {
         sub.setPadding(0, Estilo.dp(c, 4), 0, Estilo.dp(c, 16));
         raiz.addView(sub);
         String[][] pasos = {
-                {"Pellizcá para hacer clic", "Juntá el pulgar con el índice apuntando a algo. Pellizcá y mové para hacer scroll o arrastrar."},
+                {"Doble pellizco para hacer clic", "Apuntá a algo y juntá el pulgar con el índice dos veces rápido (el cursor se pone celeste después del primero). En el segundo, sostené y mové para hacer scroll o arrastrar."},
                 {"Tocá con el dedo", "Las pantallas cercanas se tocan como un celular, con la punta del índice."},
                 {"Mové las ventanas", "Agarrá la barra de abajo de cada ventana. ✕ la cierra; ⤢ la agranda (modo cine)."},
-                {"La barra y recentrar", "Un pellizco en la nada muestra o esconde la barra de abajo. Sostenido 1 s: todo vuelve adelante tuyo."},
+                {"La barra y recentrar", "Un doble pellizco en la nada muestra o esconde la barra de abajo. Sostenido 1 s: todo vuelve adelante tuyo."},
                 {"Sin manos", "Mirá fijo un botón 1 segundo, tocá la pantalla del teléfono, o usá el control Bluetooth (el gatillo es clic)."}};
         int[] ic = {Iconos.MANO, Iconos.MANO, Iconos.CINE, Iconos.RECENTRAR, Iconos.CONTROL};
         for (int i = 0; i < pasos.length; i++) {

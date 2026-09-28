@@ -15,7 +15,9 @@ package com.juniorspro.nexoxr;
  *  - PANTALLA: el dedo en el teléfono (sin visor), como un mouse.
  *
  * Tres cosas para que el clic caiga donde apuntabas (como en los visores):
- *  1. al pellizcar la mano se mueve: el clic usa el rayo de hace 80 ms;
+ *  1. al pellizcar la mano se mueve: el clic usa el rayo de hace 80 ms (o,
+ *     con el doble pellizco, el de antes del PRIMER pellizco si desde ahí el
+ *     rayo no se fue más de 4°: los dos pellizcos corren la mano dos veces);
  *  2. hasta que el rayo se mueve más de 1.2° (o el dedo 1.2 cm) se sigue
  *     informando el punto donde se bajó: un clic no se vuelve un arrastre;
  *  3. lo que se agarró queda agarrado hasta soltar (aunque el rayo se salga).
@@ -27,6 +29,7 @@ public final class Puntero {
     public static final int BAJA = 0, MUEVE = 1, SUBE = 2, CANCELA = 3;
     static final float SLOP = (float) Math.toRadians(1.2), SLOP_DEDO = 0.012f;
     static final long ATRAS_MS = 80;
+    static final float FIJO = (float) Math.cos(Math.toRadians(4));
     /** El dedo: toca a menos de TOCA del plano; suelta a más de SUELTA; lo "sobrevuela" hasta CERCA. */
     static final float TOCA = 0.012f, SUELTA = 0.03f, CERCA = 0.07f, DETRAS = -0.06f;
     public static final float MIRADA_S = 1.1f;
@@ -46,6 +49,9 @@ public final class Puntero {
         public float ox, oy, oz, dx, dy, dz;
         /** La punta del índice (para tocar con el dedo). */
         public float tx, ty, tz;
+        /** El rayo de antes del primer pellizco (doble pellizco): el clic va ahí si no te moviste. */
+        public boolean fijoVale;
+        public float fox, foy, foz, fdx, fdy, fdz;
 
         // lo que sale (para dibujar el cursor)
         public Ventana sobre;
@@ -132,6 +138,9 @@ public final class Puntero {
                 Ventana vb = v;
                 if (k == MANO_IZQ || k == MANO_DER) {
                     f.rayoDe(ms, r0);
+                    if (f.fijoVale && f.dx * f.fdx + f.dy * f.fdy + f.dz * f.fdz > FIJO) {
+                        r0[0] = f.fox; r0[1] = f.foy; r0[2] = f.foz; r0[3] = f.fdx; r0[4] = f.fdy; r0[5] = f.fdz;
+                    }
                     Ventana vv = e.impacto(r0[0], r0[1], r0[2], r0[3], r0[4], r0[5], s);
                     if (vv != null) { vb = vv; f.que = (int) s[0]; f.u = s[1]; f.v = s[2]; }
                 }

@@ -13,4 +13,5 @@ mkdir -p salida
 java -cp "$OBRA" com.juniorspro.nexoxr.Vista "$OBRA/datos.json" 2>&1 | grep -v "^Picked up"
 node pruebas/vista.mjs "$OBRA/datos.json" salida
 node pruebas/vista-inicio.mjs "$OBRA/datos.json" salida
+node pruebas/vista-puntero.mjs "$OBRA/datos.json" salida
 rm -rf "$OBRA"

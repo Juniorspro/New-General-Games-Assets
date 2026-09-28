@@ -11,6 +11,7 @@ final class Ajustes {
     int manos = 1;            // hand tracking
     int verManos = 1;         // las manos fantasma
     int dedo = 1;             // tocar las pantallas con el dedo
+    int doblePellizco = 1;    // el clic con la mano: dos pellizcos (0 = uno solo, como antes)
     int mirada = 1;           // clic mirando fijo
     int sonido = 1;
     int tutorial = 0;         // ya se vio la bienvenida
@@ -28,7 +29,7 @@ final class Ajustes {
 
     private static final String[] CLAVES = {"entorno", "sbs", "ipdMm", "k1", "k2", "tamano", "corregirLentes", "manos", "verManos", "dedo",
             "mirada", "sonido", "tutorial", "apuntarAbajo", "fov", "anticipo", "ojoAuto", "ojoX", "ojoY", "ojoZ",
-            "prepararEspacio", "modoEspacio", "verMesa", "barraEnMesa", "soloConMesa", "escalaMano"};
+            "prepararEspacio", "modoEspacio", "verMesa", "barraEnMesa", "soloConMesa", "escalaMano", "doblePellizco"};
 
     int valor(String c) {
         switch (c) {
@@ -57,6 +58,7 @@ final class Ajustes {
             case "barraEnMesa": return barraEnMesa;
             case "soloConMesa": return soloConMesa;
             case "escalaMano": return escalaMano;
+            case "doblePellizco": return doblePellizco;
             default: return apuntarAbajo;
         }
     }
@@ -88,6 +90,7 @@ final class Ajustes {
             case "barraEnMesa": barraEnMesa = v; break;
             case "soloConMesa": soloConMesa = v; break;
             case "escalaMano": escalaMano = v; break;
+            case "doblePellizco": doblePellizco = v; break;
             default: apuntarAbajo = v;
         }
     }

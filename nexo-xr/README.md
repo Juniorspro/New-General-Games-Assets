@@ -22,6 +22,9 @@ con nombre, íconos y diseño propios.
   las esquinas redondeadas, una sombra suave y un borde que se enciende cuando
   la apuntás. Los toques del puntero se vuelven toques de Android: un clic es
   un clic, pellizcar y mover es scroll.
+- **Clic con doble pellizco.** Un pellizco solo no hace nada (la mano que se
+  cierra sin querer no aprieta botones): el primero arma, el segundo aprieta.
+  El indicador de la mano muestra todo (ver [El indicador](#el-indicador-de-la-mano)).
 - **Tu espacio (Nexo Inicio).** Antes de empezar escaneás tu mesa, apoyás las
   manos y fijás la cabeza; después Nexo **sólo se mueve cuando ve tu mesa**
   (ver [Tu espacio](#tu-espacio-nexo-inicio)).
@@ -89,15 +92,24 @@ con nombre, íconos y diseño propios.
 
 | | con las manos | sin manos |
 |---|---|---|
-| **clic** | pellizcá (pulgar con índice) apuntando | mirá fijo 1 s (en el visor) · tocá la pantalla del teléfono · el gatillo del control |
-| **scroll / arrastrar** | pellizcá y mové | el joystick del control (arriba / abajo) |
+| **clic** | **doble pellizco** (pulgar con índice, dos veces rápido) apuntando | mirá fijo 1 s (en el visor) · tocá la pantalla del teléfono · el gatillo del control |
+| **scroll / arrastrar** | doble pellizco, sostené el segundo y mové | el joystick del control (arriba / abajo) |
 | **tocar** | con la punta del índice, en las pantallas cercanas | — |
-| **mover una ventana** | pellizcá su barra y llevala | lo mismo con la mirada + gatillo |
-| **la barra de abajo** | un pellizco en la nada la muestra / esconde | el botón de menú del control · Atrás |
-| **recentrar** | pellizco sostenido 1 s en la nada | el botón "B" del control · ajustes rápidos |
+| **mover una ventana** | doble pellizco en su barra, sostené y llevala | lo mismo con la mirada + gatillo |
+| **la barra de abajo** | un doble pellizco en la nada la muestra / esconde | el botón de menú del control · Atrás |
+| **recentrar** | doble pellizco sostenido 1 s en la nada | el botón "B" del control · ajustes rápidos |
+
+**El doble pellizco** (`DoblePellizco.java`): el primero tiene que ser corto
+(soltarlo antes de 0.45 s: si lo sostenés es agarrar algo, no un clic) y el
+segundo tiene que llegar antes de 0.55 s de soltar el primero. El segundo es
+el que aprieta: soltarlo es el clic, sostenerlo es arrastrar. Un tercero
+seguido no es otro clic. En Ajustes → Manos → *Clic con doble pellizco* se
+puede volver a un pellizco solo.
 
 Tres cosas para que el clic caiga donde apuntás (como en los visores):
-1. al pellizcar la mano se mueve: el clic usa **el rayo de 80 ms antes**;
+1. al pellizcar la mano se mueve: el clic usa **el rayo de 80 ms antes**; con
+   el doble pellizco (la mano se mueve dos veces), **el de antes del primer
+   pellizco**, si desde ahí no moviste el rayo más de 4°;
 2. hasta que el rayo se mueve más de 1.2° (o el dedo 1.2 cm) se informa **el
    mismo punto** donde se bajó: un clic no se vuelve un arrastre;
 3. lo que se agarró **queda agarrado** hasta soltar, aunque el rayo se salga.
@@ -105,6 +117,23 @@ Tres cosas para que el clic caiga donde apuntás (como en los visores):
 El rayo de la mano sale del **punto de mira** (un poco debajo de la vista) por
 los **nudillos** (que no se mueven al pellizcar), como aprendimos con Asalto
 MR: la distancia de la mano, lo que peor mide una cámara, no lo mueve.
+
+### El indicador de la mano
+
+![El doble pellizco: suelto, cerrando, armado, apretando](capturas/puntero.jpg)
+
+Tres piezas que dicen lo mismo:
+- **el anillo entre el pulgar y el índice**: va de la punta de un dedo a la
+  del otro, se achica al juntarlos y se llena cuando el pellizco cuenta (ves
+  cuánto te falta antes de que pase);
+- **el rayo sale de ahí**: grueso en la mano y fino en la punta, con un halo;
+  se prende a medida que cerrás los dedos;
+- **el cursor** donde pega: un punto con un anillo que se cierra sobre él al
+  pellizcar, con un borde oscuro para verse sobre páginas blancas.
+
+Después del primer pellizco los tres se ponen **celestes**: el cursor y el
+anillo de la mano muestran un arco que se acaba (lo que queda para el
+segundo) y por el rayo corre un pulso hacia el cursor. Apretando: azul lleno.
 
 ## Tu espacio (Nexo Inicio)
 
@@ -268,7 +297,7 @@ Principal ── ARCore / sensores ── la cabeza, la cámara, el piso
 |---|---|
 | `Principal.java` | el sistema: seguimiento, dibujo por ojo, manos, entrada, lo que piden las apps |
 | `Escritorio.java` · `Ventana.java` | dónde va cada pantalla, arrastrar, cerrar, cine, recentrar (sin Android) |
-| `Puntero.java` · `Gestos.java` | de manos / mirada / pantalla / control a toques; el pellizco (sin Android) |
+| `Puntero.java` · `Gestos.java` · `DoblePellizco.java` | de manos / mirada / pantalla / control a toques; el pellizco y el doble pellizco (sin Android) |
 | `PanelVirtual.java` | una vista de Android en una pantalla virtual → textura; los toques y las teclas |
 | `VentanasGl.java` · `Entornos.java` · `Fondo.java` | el dibujo de las ventanas, los entornos, el passthrough |
 | `Dock.java` · `Rapidos.java` · `Teclado.java` | la barra de abajo, los ajustes rápidos, el teclado |
@@ -296,7 +325,8 @@ node pruebas/shaders.mjs
 
 - `PruebaEscritorio`: dónde se abren, que miren a la cabeza, reemplazar la
   cuarta, el rayo le pega donde tiene que pegar, **el clic con el rayo de
-  antes del pellizco**, subir en el mismo lugar, scroll, arrastre que se sale
+  antes del pellizco** (y con el doble pellizco, **el de antes del primero**
+  si la mano se corrió 1.5°, pero no si la moviste 13°), subir en el mismo lugar, scroll, arrastre que se sale
   de la ventana, mover de la barra (de frente a vos), cerrar, irse del botón
   antes de soltar no cuenta, cine y volver, **tocar con el dedo**, mirar fijo
   (carga, clic, no repite), pellizco en la nada corto y largo, recentrar.
@@ -325,10 +355,16 @@ node pruebas/shaders.mjs
   escritorio).
 - `PruebaGestos`: **ninguna de 19 manos reales** (puños, palmas, apuntando,
   agarrando) es un pellizco; pellizcar con 12 manos reales, con temblor:
-  aprieta una vez, sin rebotes, y suelta.
+  aprieta una vez, sin rebotes, y suelta. **El doble pellizco**: uno solo no
+  aprieta, dos rápidos sí (una vez, mientras dura el segundo), lentos no, el
+  primero sostenido no arma, doble y sostener aprieta todo ese rato, tres
+  seguidos son un solo clic, la cuenta del cursor; y con las 12 manos reales
+  (a 30 imágenes por segundo, con temblor): **doble pellizco = un clic en las
+  12, un pellizco solo = ningún clic en las 12**.
 - Los 8 programas de la app compilan y enlazan (WebGL), los 3 entornos se
   dibujan en la vista previa, y los de las superficies y las manos se dibujan
-  en la vista del inicio (sin errores de WebGL).
+  en la vista del inicio (sin errores de WebGL); el indicador de la mano en
+  sus cuatro momentos, en `pruebas/vista-puntero.mjs`.
 
 ## Lo que NO se probó
 
