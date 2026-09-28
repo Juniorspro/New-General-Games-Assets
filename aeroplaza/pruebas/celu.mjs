@@ -42,6 +42,8 @@ const C = await abrir(nav, q('Carla'), { red: 'local', ancho: 640, alto: 360 });
 for (const x of [A, Bt, C]) await listo(x.pag);
 for (const x of [A, Bt, C]) await avanzar(x.pag, 1);
 let pags = [A.pag, Bt.pag, C.pag];
+/* (los avisos de Ana, todos: duran unos segundos y en la pantalla se reemplazan) */
+await A.pag.evaluate(() => { const U = window.__A.UI, f = U.notificar.bind(U); window.__notis = []; U.notificar = (o) => { window.__notis.push((o.titulo || '') + ' · ' + (o.texto || '')); return f(o); }; });
 await juntos(pags, 1.5);
 
 /* ------------------------------------------------ 1) la llave */
@@ -132,13 +134,17 @@ const salas = await Promise.all([A.pag, Bt.pag].map((p) => p.evaluate(() => ({ s
 prueba('"Unirse" lleva a Ana a la misma sala que Beto', salas[0].sala === salas[1].sala && salas[0].reino === 'aqua', JSON.stringify(salas));
 await Bt.pag.close();
 pags = [A.pag, C.pag];
-await juntos(pags, 0.5);
+/* (13 s afuera: el vestíbulo borra al que no avisa en 12 s; volver antes es como recargar, no "conectarse") */
+await esperar(12600); await juntos(pags, 1.5);   // (el vestíbulo cuenta con el reloj de verdad, no con el del juego)
+const fuera = await A.pag.evaluate((id) => !window.__A.amigos.donde(id), yb.id);
 await A.pag.evaluate((id) => window.__A.amigos.escribir(id, '¿estás?'), yb.id);
 await juntos(pags, 0.6);
 Bt.pag = await reabrir(Bt, 'Beto');
 pags = [A.pag, Bt.pag, C.pag];
 await juntos(pags, 2);
 const offline = await Bt.pag.evaluate((id) => ({ id: window.__A.J.id, e: window.__A.amigos.estado(id), msgs: (window.__A.G.amigos[id]?.charla || []).map((m) => m.x) }), ya.id);
+const vuelve = await A.pag.evaluate(() => window.__notis.filter((x) => /se conectó/.test(x)).join(' | '));
+prueba('Beto se va (a los 12 s ya no está) y al volver a Ana le avisa "se conectó" (una vez: al hacerse amigos no, ya estaba)', fuera && vuelve === 'Beto se conectó · Tu amigo está en línea', JSON.stringify({ fuera, vuelve }));
 prueba('Beto vuelve (la misma llave, el mismo id) y le llega el mensaje de cuando no estaba', offline.id === yb.id && offline.e === 'amigo' && offline.msgs.includes('¿estás?'), JSON.stringify(offline));
 
 /* ------------------------------------------------ 5) Carla trata de hacerse pasar por Ana */
@@ -215,6 +221,8 @@ for (const i of ['en', 'pt', 'es']) {
   await A.pag.evaluate((i) => { const { J, textos } = window.__A; textos.ponerIdioma(i); for (const p of ['inicio', 'amigos', 'mensajes', 'juegos', 'casas', 'perfil']) { J.celu.pila = ['inicio', p]; J.celu.pintar(); } J.celu.tab = 'sol'; J.celu.ir('amigos'); J.celu.pintar(); J.celu.tab = 'agregar'; J.celu.pintar(); }, i);
 }
 prueba('y no falta ninguno al recorrer las pantallas', !avisos.length, avisos.slice(0, 3).join(' | '));
+const hora = await A.pag.evaluate(() => { const { J } = window.__A; J.celu.pila = ['inicio']; J.celu.pintar(); J.celu.refrescar(); return document.querySelector('.cel-reloj')?.textContent || ''; });
+prueba('el inicio vuelto a pintar (llegó algo) sigue con la hora', /^\d{1,2}:\d{2}/.test(hora), hora);
 const fotos = [];
 await A.pag.evaluate(() => { const { J } = window.__A; J.celu.pila = ['inicio']; J.celu.pintar(); });
 await A.pag.waitForTimeout(600); await avanzar(A.pag, 1); await A.pag.screenshot({ path: path.join(SAL, 'celu-inicio.png') }); fotos.push('celu-inicio.png');

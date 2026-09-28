@@ -361,12 +361,13 @@ export class Amigos {
   /* (lo llama main.js cuando cambia el vestíbulo; los primeros 10 s después de conectar no avisa: ahí llegan todos) */
   revisarEnLinea() {
     if (!this.listo) return;
-    const ahora = new Set();
-    for (const q of this.lista('amigo')) if (this.donde(q.id)) { ahora.add(q.id); q.a.visto = Date.now(); }
+    const ahora = new Set(), amigos = new Set();
+    for (const q of this.lista('amigo')) { amigos.add(q.id); if (this.donde(q.id)) { ahora.add(q.id); q.a.visto = Date.now(); } }
     const callado = performance.now() - this.tConecto < 10000;
     let cambio = ahora.size !== this.enLineaAntes.size;
-    for (const id of ahora) if (!this.enLineaAntes.has(id)) { cambio = true; if (!callado && this.G.amigosOp.avisos) this.alAviso('conecto', this.A[id], id); }
-    this.enLineaAntes = ahora;
+    /* (solo el que ya era amigo en el repaso anterior: el que se hizo amigo recién ya estaba conectado) */
+    for (const id of ahora) if (!this.enLineaAntes.has(id)) { cambio = true; if (!callado && this.eranAmigos?.has(id) && this.G.amigosOp.avisos) this.alAviso('conecto', this.A[id], id); }
+    this.enLineaAntes = ahora; this.eranAmigos = amigos;
     if (cambio) this.alCambio();
   }
   /* buscar a alguien por su código (para ver quién es antes de pedirle): su perfil retenido */

@@ -8,7 +8,7 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Pidió: un celu en AEROPLAZA para que sea "algo así como Roblox", con amigos y solicitudes de amistad.
   - Quedó ([aeroplaza-46](aeroplaza-46.md)): el celu (apps, amigos, solicitudes, charlas cifradas, juegos, casas,
     perfil, unirse a la sala de un amigo), el muñeco con el celu en la mano, el id = la huella de la llave.
-    `celu.mjs` 31/31. Publicado como actualización (sin APK nueva: no cambió lo de Java).
+    `celu.mjs` 33/33, la tanda 41/41. Publicado como actualización (sin APK nueva: no cambió lo de Java).
   - Falta: probarlo con dos celulares de verdad contra el broker público.
 - **28/09/2026, de tarde, duodécima vez · `claude/fijate-iszyer`:**
   - Pidió: que las actualizaciones lleguen a la app, sin mandarle tantos APK.

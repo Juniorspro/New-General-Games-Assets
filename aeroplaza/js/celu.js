@@ -224,6 +224,7 @@ export class Celu {
     if (n && valor != null) { n.value = valor; if (foco) n.focus(); }
     this.caja.scrollTop = scroll;
     this.v.querySelector('.cabeza h2').textContent = this.titulo();
+    this.relojito();
   }
   /* (lo que cambia seguido, cuánta gente hay en cada lugar: como mucho cada 1,5 s y solo donde se ve) */
   refrescarPronto() {

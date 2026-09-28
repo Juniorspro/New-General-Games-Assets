@@ -43,7 +43,9 @@ El broker es público: cualquiera publica cualquier cosa. Por eso:
   el otro (`suya = null`): para volver a ser amigos, el otro tiene que aceptar de nuevo. Un pedido nuevo después de un
   rechazo vuelve a aparecer (`pideSuya !== rechazo`); el mismo repetido, no.
 - **Quién está en línea y dónde**: del vestíbulo de `red.js`, la presencia de cada 4 s, que ya tenía el id.
-  `revisarEnLinea` avisa "se conectó" (los primeros 10 s después de conectar no avisa).
+  `revisarEnLinea` avisa "se conectó" solo por el que ya era amigo en el repaso anterior (el que se hace amigo recién
+  ya estaba conectado; ese aviso tapaba el del primer mensaje) y no en los primeros 10 s después de conectar. Volver
+  antes de 12 s (recargar) no cuenta: el vestíbulo todavía lo tenía.
 - Límites: 100 amigos, 40 pedidos, 200 letras por mensaje, 80 mensajes guardados por charla, 400 registros (los
   tachados más viejos se van). Opciones: "me pueden mandar solicitudes: todos / nadie" y avisar al conectarse.
 
@@ -61,18 +63,23 @@ El broker es público: cualquiera publica cualquier cosa. Por eso:
   "¿seguro?" no puede ser `UI.confirmar`, que es otra ventana y no se ve en el VR.
 - `UI.limpiar` saca el celu sin cerrarlo: `main.js` suelta la entrada si `J.celuAbierto` quedó y el celu ya no está.
 - Nombres sin caracteres invisibles ni de dar vuelta el texto (`limpiarNombre`): con eso alguien se disfraza de otro.
+- `refrescar` (llegó algo) vuelve a armar la pantalla: tiene que volver a poner la hora (`relojito`), si no, el inicio
+  queda sin la hora grande.
+- En las pruebas, el vestíbulo cuenta con el reloj de verdad (`performance.now`), no con el del juego: para "se fue"
+  hay que esperar 12 s de verdad. Y los avisos duran unos segundos: la prueba los anota (`window.__notis`) en vez de
+  mirar la pantalla.
 - El brazo derecho del muñeco es `bl` (`brazos[0]`, el de -x: mirando a +z, su derecha es -x).
 - El celu en la mano, agarrado desde abajo y asomando arriba del puño; si no, de atrás lo tapa el brazo.
 
 ## Pruebas
 
-- `pruebas/celu.mjs` (31, ~70 s; está en la tanda): tres jugadores contra `broker.mjs`, que ahora da `retenido(tema)`.
+- `pruebas/celu.mjs` (33, ~85 s; está en la tanda): tres jugadores contra `broker.mjs`, que ahora da `retenido(tema)`.
   - la llave y el perfil retenido;
   - el celu, la M y el celu en la mano visto por el otro;
   - pedir por código (con puntos y en mayúscula), el aviso y el globito, aceptar;
   - la lista con dónde está;
   - los mensajes: el broker solo ve `id, pub, iv, c`, se ven como texto y vuelve el visto;
-  - unirse en otro reino, y el mensaje de cuando estaba desconectado;
+  - unirse en otro reino; se va, vuelve ("se conectó") y le llega el mensaje de cuando estaba desconectado;
   - las trampas de Carla (otra llave; la llave de Ana sin su privada; la carta vieja);
   - quitar, rechazar, el pedido nuevo, bloquear y "nadie";
   - el espejo, los tres idiomas y que acostado entre en la pantalla.
