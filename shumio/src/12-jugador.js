@@ -128,7 +128,7 @@ function herirJugador(j, medios, causa, dibujo) {
   alHerir(j);
   if (vidaTotal(j) <= 0) {
     if (j.vidasExtra > 0) { revivir(j); return true; }
-    j.muerto = true; j.tMuerte = 0; J.causa = causa || "?"; J.causaSpr = dibujo || null; SFX.muere(); Musica.poner("silencio");
+    j.muerto = true; j.tMuerte = 0; J.causa = causa || "?"; J.causaSpr = dibujo || null; SFX.muere(); Musica.poner("muerte");
   }
   return true;
 }

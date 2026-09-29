@@ -64,6 +64,8 @@ function entrarSala(sala, desde) {
   } else J.puertasAbiertas = true;
   J.cierre = J.puertasAbiertas ? 0 : 1;
   if (sala.tipo === "pacto") Musica.poner("pacto");
+  else if (sala.tipo === "tienda" || sala.tipo === "secreta") Musica.poner(sala.tipo);
+  else if (sala.tipo === "jefe" && sala.limpia) Musica.poner("calma");
   else if (sala.tipo !== "jefe" || sala.limpia) Musica.poner(PISOS[J.piso.n].musica);
 }
 
@@ -114,6 +116,8 @@ function pasoJuego() {
   }
   // ¿limpió la sala?
   if (!J.sala.limpia && J.enemigos.length === 0) salaLimpia();
+  // la capa pesada de la música: con muchos enemigos (o un jefe) en la sala, como en el original
+  if (J.t % 20 === 0) { const vivos = J.enemigos.filter((e) => !e.muerto && !e.oculto).length, fuerte = vivos >= 4 || J.enemigos.some((e) => e.jefe && !e.muerto) ? 1 : 0; if (fuerte !== Musica.intensidad) Musica.pesar(fuerte); }
   if (J.jefeMuerto && J.jefes.every((e) => e.muerto) && !J.sala.premiada) jefeDerrotado();
   // ¿sale por una puerta?
   if (!j.muerto) {
@@ -138,7 +142,7 @@ function jefeDerrotado() {
   J.sala.limpia = true; J.puertasAbiertas = true;
   registro.jefes = (registro.jefes || 0) + 1; guardarRegistro();
   cargarActivo(1);
-  Musica.poner("silencio");
+  Musica.poner("calma");   // como "The Calm" del original, después de cada jefe
   if (n === ULTIMO_PISO) {
     const c = recogible("cofreFinal", cx(6), cy(4)); c.quieto = true; s.cosas.push(c);
     rotulo("¡MICELIA CAYÓ!", "Abrí el cofre");

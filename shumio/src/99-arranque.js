@@ -76,6 +76,22 @@ Object.assign(window.__SH, {
   tactil: (v) => { IN.usaTactil = v; },
   vs: () => { if (J.vsPendiente) empezarVs(); },
   paso: () => paso(), dibujar: () => dibujar(),
+  /** Graba una muestra de audio sin parlantes (OfflineAudioContext) y la devuelve como WAV en base64.
+   *  tipo "musica": n compases de una pista (con o sin la capa pesada); "sfx": una lista de efectos. */
+  audioMuestra: async (tipo, que, segs = 12, pesada = true) => {
+    const sr = 44100, ctx = new OfflineAudioContext(2, sr * segs, sr), antes = [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO];
+    armarAudio(ctx); MUS.gain.value = 0.55; EFX.gain.value = 0.8;
+    if (tipo === "musica") { const t = TEMAS[que]; let n = 0; for (let x = 0.05; x < segs - 1; x += 4 * 60 / t.bpm) { if (t.unaVez && n >= t.unaVez) break; t.compas(x, n++, { calma: MUS, pesada: MUS, pesadaActiva: pesada }); } }
+    else que.forEach((k, i) => { _desfase = 0.1 + i * 1.0; SFX[k](); _desfase = 0; });
+    const b = await ctx.startRendering();
+    [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO] = antes; _cuerdas.clear();
+    const L = b.getChannelData(0), R = b.getChannelData(1), n = L.length, buf = new ArrayBuffer(44 + n * 4), v = new DataView(buf);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n * 4, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 4, true);
+    for (let i = 0; i < n; i++) { v.setInt16(44 + i * 4, lim(L[i], -1, 1) * 32767, true); v.setInt16(46 + i * 4, lim(R[i], -1, 1) * 32767, true); }
+    let bin = ""; const u8 = new Uint8Array(buf); for (let i = 0; i < u8.length; i += 32768) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+    return btoa(bin);
+  },
   matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
   /** Le da objetos a Shumio de una (para probar combinaciones): dar("rayo", "tercerOjo"). */
   dar: (...ids) => { const j = J.jug; for (const id of ids) { if (BARATIJAS[id]) { j.baratija = id; continue; } const d = OBJETOS[id]; if (!d) continue; if (d.activo) j.activo = { id, carga: d.activo, max: d.activo }; else { j.objetos.push(id); if (d.alTomar) d.alTomar(j); } j.vistos.add(id); } recalcular(j); revisarTransformaciones(j); recalcular(j); armarFamiliares(); return { arma: j.arma, n: j.n, fr: j.fr, dano: danoDe(j), f: j.f }; },
