@@ -20,6 +20,7 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `docs/biblioteca/` | la galería / biblioteca | — |
 | `electro-silver/` | sitio de Electro Silver (Presidencia Roca, Chaco) | electro-silver.pages.dev |
 | `telarana/` | juego de un botón: colgarse de un hilo y recorrer una ciudad | — |
+| `isla/` | **La Isla** — supervivencia en una isla pixelada en 3D (talar, minar, pescar, construir, la mina), con menú que se mece y vuela a carteles; en un solo HTML y en es/en/pt | `isla/isla-en-un-archivo.html` |
 | `edificio/` | una torre de oficinas armada por script en Blender + visor three.js | — |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |
 | `iblo-eventos/` | material de IBLO: imágenes, publicaciones, investigación | — |

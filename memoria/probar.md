@@ -16,6 +16,8 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 - Si el juego se puede pausar y expone su paso, avanzarlo a mano: aeroplaza con `?pausa` y `window.__A.paso(1/60)` N veces. Así se midieron caminar 3,34 m/s y correr 6,89 m/s.
 - Si no, contar cuadros reales envolviendo `requestAnimationFrame` con `addInitScript` y esperar a que avancen.
 - Un parámetro para entrar directo a la escena ahorra los menús (aeroplaza: `?directo&idioma=es&reino=plaza`).
+- Un paso que corra la lógica SIN dibujar (`paso(dt, false)`, la isla): cientos de cuadros en milisegundos, y se dibuja solo el de la captura. Dibujando, la isla tardaba ~4 s por cuadro en SwiftShader (29/09/2026). → `isla/js/main.js › paso`
+- Si igual se dibujan muchos cuadros seguidos, `gl.finish()` cada 4: sin eso quedan encolados en el proceso de la placa y `page.screenshot` vence a los 30 s (70 cuadros de la isla, 29/09/2026).
 
 ## Tocar como un dedo
 - Toques reales por CDP (`Input.dispatchTouchEvent` con varios `touchPoints`); los eventos sintéticos no traen `changedTouches`. → 2D § 12
@@ -25,6 +27,7 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 
 ## Mirar
 - Muchas capturas se miran juntas en una hoja de contacto (Pillow) y una sola vez.
+- Encuadres (la toma de un menú, la pose de la mano): capturar 6 u 8 variantes chicas en una hoja y elegir mirando; la isla eligió así su toma del menú y la pose de cada herramienta (29/09/2026).
 - En animaciones, capturar el cuadro pico. → 2D § 3.4
 - Un resultado raro suele ser la prueba y no el código; una sonda que escribe lo que mide aprueba cualquier cosa. → 3D § 9, 2D § 12
 - Rendimiento: 200 cuadros de calentamiento + 300 de medición, contra el commit anterior en el mismo banco (`git show HEAD:archivo`). → 2D § 11

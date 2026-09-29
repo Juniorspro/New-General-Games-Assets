@@ -11,6 +11,7 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 ## Cómo está armado un juego en este repo (visto en `enjambre/`, 29/09/2026)
 - Carpeta propia con `index.html` + `js/` (módulos ES) + `css/` + `README.md` + `pruebas/`.
 - `empaquetar.py` arma `<juego>-en-un-archivo.html`: un módulo ES desde `file://` lo bloquea CORS, y diez archivos sueltos no se mandan por mensaje. El orden de la lista de módulos importa. → `enjambre/empaquetar.py` (docstring)
+- Mejor sacar ese orden de los `import` (orden topológico) que escribirlo a mano. → `isla/empaquetar.py` (29/09/2026)
 - Los binarios son opcionales: si hay imágenes en `assets/` entran en base64; si no, el juego se dibuja con formas. → `enjambre/empaquetar.py`
 - El README abre con una tabla "Lo medido" (pruebas, cuadros, ms por cuadro, peso del archivo). → `enjambre/README.md`, `ritmo/README.md`
 
@@ -34,6 +35,7 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 | `ritmo/` | la melodía ES la carta: sin mp3, sin desfase, validada en Node | `ritmo/README.md § La carta no se deduce de la música` |
 | `ritmo/` | escala menor y 4 progresiones fijas: "una progresión al azar suena a nada" | `ritmo/js/compositor.js` (comentarios de arriba) |
 | `perro/` | esqueleto propio por regiones de vértices cuando el rig generado no trae los clips | `guias/GUIA-JUEGOS.md § 4.3` |
+| `isla/` | pixel art en 3D por texel de mundo; menú que se mece y vuela a carteles en el mundo (el que pidió para los juegos nuevos) | [isla](isla.md) |
 | `pique2d/` | sprites generados y el bug de los lugares inaccesibles | `pique2d/LEEME.md` (sin leer) |
 | `dimension-n/` | caída vertical con ragdolls de Verlet | `dimension-n/README.md` (sin leer) |
 | `espejo/` | 40 puzzles de luz resueltos por una máquina | `espejo/README.md` (sin leer) |

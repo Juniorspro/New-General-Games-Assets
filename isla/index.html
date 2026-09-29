@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a78ec">
+<title>La Isla</title>
+<meta name="description" content="Supervivencia en una isla tropical pixelada: minar, talar, pescar, construir y juntar gemas.">
+<link rel="stylesheet" href="css/i.css">
+</head>
+<body>
+<!-- lo primero que se ve, sin JavaScript -->
+<div id="precarga"><b>LA ISLA</b><span>Cargando la isla…</span><small id="precargaAyuda">¿Sigue acá? Abrilo con Chrome, Safari, Edge o Firefox (no desde una vista previa).</small></div>
+<noscript><div class="sinjs">La Isla necesita JavaScript · The Island needs JavaScript · A Ilha precisa de JavaScript</div></noscript>
+<script>
+// antes de que cargue el juego: la carga ya en el idioma de la persona
+try { var l = JSON.parse(localStorage.getItem('isla_ajustes') || '{}').idioma || (navigator.language || 'es').slice(0, 2),
+  T = { en: ['THE ISLAND', 'Loading the island…', 'Still here? Open it with Chrome, Safari, Edge or Firefox (not from a preview).'],
+        pt: ['A ILHA', 'Carregando a ilha…', 'Ainda aqui? Abra no Chrome, Safari, Edge ou Firefox (não por uma pré-visualização).'] }[l];
+  if (T) { var p = document.getElementById('precarga').children; for (var i = 0; i < 3; i++) p[i].textContent = T[i]; } } catch (e) {}
+setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.style.opacity=1;},7000);
+</script>
+
+<canvas id="lienzo"></canvas>
+<div id="velo"></div>
+
+<!-- el juego -->
+<div id="hud" class="oculto">
+  <div id="mira"></div>
+  <div id="aviso"></div>
+  <div id="accion"></div>
+  <div id="vitales"><div id="vida"><i></i></div><div id="hambre"><i></i></div></div>
+  <div id="arriba"><span id="plata">$0</span><span id="hora">08:00</span><button id="bPausa" aria-label="Pausa">II</button></div>
+  <div id="pinceles"></div>
+  <div id="barra"></div>
+  <div id="notis"></div>
+  <div id="objetivo" class="oculto"></div>
+  <div id="bajoAgua"></div>
+</div>
+
+<!-- inventario, cofre, mesa de trabajo, colección -->
+<div id="ventana" class="oculto">
+  <div id="vCaja">
+    <div id="vPestanas"></div>
+    <div id="vCuerpo"></div>
+    <button id="vCerrar" aria-label="Cerrar">✕</button>
+  </div>
+</div>
+<div id="tip" class="oculto"></div>
+<div id="arrastre" class="oculto"></div>
+
+<!-- el menú: texto encima de la escena 3D -->
+<div id="menu" class="oculto">
+  <h1 id="titulo"><span>LA</span> <span>ISLA</span></h1>
+  <div id="opciones"></div>
+  <div id="menuPie"></div>
+  <div id="tableroDom" class="oculto"></div>
+</div>
+
+<!-- dedos -->
+<div id="dedos" class="oculto">
+  <div id="joy"><div id="joyP"></div></div>
+  <button class="bt" id="tSalto" aria-label="Saltar">▲</button>
+  <button class="bt" id="tUsar" aria-label="Usar">⚒</button>
+  <button class="bt" id="tPoner" aria-label="Poner">▣</button>
+  <button class="bt" id="tE" aria-label="Interactuar">E</button>
+  <button class="bt" id="tInv" aria-label="Inventario">☰</button>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
