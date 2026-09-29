@@ -1,9 +1,10 @@
 // Guardar y cargar la isla en localStorage. La isla sale de la semilla, así
 // que se guarda solo lo que cambió: la diferencia del terreno contra lo
-// generado, qué palmeras y matas ya no están, cuántos pedazos le quedan a cada
-// roca, los bloques (con lo que hay en los cofres), lo tirado en el piso, el
-// inventario y el jugador. Todo lo que viene de afuera se valida: una partida
-// rota no puede romper el juego.
+// generado, qué palmeras y matas ya no están (y las que plantaste), cuántos
+// pedazos le quedan a cada roca, los bloques (con lo que hay en los cofres), lo
+// tirado en el piso, el inventario, la plata, el peto, cómo va la historia y el
+// jugador. Todo lo que viene de afuera se valida: una partida rota no puede
+// romper el juego.
 import { ITEMS } from './items.js';
 import * as THREE from '../vendor/three.module.min.js';
 
@@ -25,7 +26,7 @@ export function borrarPartida() { try { localStorage.removeItem(CLAVE); } catch 
 export function guardarPartida(J) {
   const M = J.mundo, jp = J.jugador;
   const cocos = {};
-  for (const p of M.veg.palmeras) if (p.viva && p.cocosQuedan !== undefined && p.cocosQuedan < p.cocos) cocos[p.id] = p.cocosQuedan;
+  for (const p of M.veg.palmeras) if (p.viva && !p.reserva && p.cocosQuedan !== undefined && p.cocosQuedan < p.cocos) cocos[p.id] = p.cocosQuedan;
   const d = {
     v: 1,
     semilla: M.semilla,
@@ -38,7 +39,8 @@ export function guardarPartida(J) {
     terreno: M.terreno.diferencias(),
     rocas: M.rocas.estado(),
     rocasMina: J.mina.rocas.estado(),
-    palmeras: M.veg.palmeras.filter((p) => !p.viva).map((p) => p.id),
+    palmeras: M.veg.palmeras.filter((p) => !p.viva && !p.reserva).map((p) => p.id),
+    plantadas: M.veg.plantadas(),
     cocos,
     arbustos: M.veg.arbustos.filter((a) => !a.viva).map((a) => a.i),
     bloques: J.bloques.serializar(),
@@ -46,6 +48,12 @@ export function guardarPartida(J) {
     descubiertos: [...J.descubiertos],
     stats: J.stats,
     objetivo: J.objetivoI,
+    plata: Math.round(J.plata),
+    armadura: J.armadura,
+    historia: J.historia.serializar(),
+    enemigos: J.enemigos.serializar(),
+    mercader: J.mercader.serializar(),
+    mapa: J.mapa.serializar(),
   };
   return escribir(CLAVE, d);
 }
@@ -67,6 +75,11 @@ export function aplicarPartida(J, d) {
     V.cocos.instanceMatrix.needsUpdate = true;
   }
   if (Array.isArray(d.arbustos)) for (const i of d.arbustos) { const a = V.arbustos[i]; if (a && a.viva) V.quitarArbusto(a); }
+  // las plantadas, después del terreno: se paran a la altura que quedó
+  if (Array.isArray(d.plantadas)) for (const q of d.plantadas) {
+    if (!Array.isArray(q) || !q.slice(0, 3).every(Number.isFinite) || Math.abs(q[0]) > 128 || Math.abs(q[1]) > 128) continue;
+    V.plantar(q[0], M.terreno.altura(q[0], q[1]), q[1], q[2]);
+  }
   J.bloques.cargar(d.bloques);
   J.objetos.cargar(d.objetos);
   J.inv.cargar(d.inv);
@@ -82,7 +95,14 @@ export function aplicarPartida(J, d) {
   J.dia = Math.max(1, Math.floor(num(d.dia, 1)));
   if (Array.isArray(d.descubiertos)) for (const id of d.descubiertos) if (ITEMS[id]) J.descubiertos.add(id);
   if (d.stats && typeof d.stats === 'object') for (const [k, v] of Object.entries(d.stats)) if (Number.isFinite(v)) J.stats[k] = v;
-  J.objetivoI = Number.isInteger(d.objetivo) ? d.objetivo : 0;
+  // una partida de antes de la historia: los objetivos se revisan desde el principio
+  J.objetivoI = d.historia && Number.isInteger(d.objetivo) ? Math.max(0, d.objetivo) : 0;
+  J.plata = Math.max(0, num(d.plata));
+  J.armadura = typeof d.armadura === 'string' && ITEMS[d.armadura] && ITEMS[d.armadura].defensa ? d.armadura : null;
+  J.historia.cargar(d.historia);
+  J.enemigos.cargar(d.enemigos);
+  J.mercader.cargar(d.mercader);
+  J.mapa.cargar(d.mapa);
   M.pasto.todo();
   return true;
 }

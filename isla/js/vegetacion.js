@@ -8,6 +8,10 @@ import { mulberry, rango } from './azar.js';
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 const ARRIBA = new THREE.Vector3(0, 1, 0);
 const CERO = new THREE.Matrix4().makeScale(0, 0, 0);
+// Lugares guardados en las instancias para las palmeras que se plantan con un
+// coco: una InstancedMesh no crece, así que se reserva de entrada.
+const RESERVA = 24;
+const CRECER = 8 * 60;   // segundos hasta que el brote es palmera (un tercio de día)
 
 function geoSegmento() {
   const g = new THREE.CylinderGeometry(0.2, 0.24, 0.62, 7, 1, true);
@@ -97,14 +101,25 @@ export class Vegetacion {
       nSeg += segs; nHoja += hojas; nCoco += cocos;
       return plan;
     });
+    // con su propio azar: así las palmeras de la isla quedan idénticas
+    const rr = mulberry(9151);
+    for (let k = 0; k < RESERVA; k++) {
+      planes.push({ x: 0, y: -99, z: 0, id: planes.length, segs: 11, hojas: 14, cocos: 3, s0: nSeg, h0: nHoja, c0: nCoco, ang: rr() * Math.PI * 2, incl: 0.05 + rr() * 0.15, curva: 0.012 + rr() * 0.015, largo: rango(rr, 3.3, 4.0), reserva: true });
+      nSeg += 11; nHoja += 14; nCoco += 3;
+    }
     this.troncos = new THREE.InstancedMesh(geoSegmento(), matPixel('uv', { mapa: tex.corteza, tam: [16, 32], clave: 'corteza' }), nSeg);
     const matHoja = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 24], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.18, vientoUv: true, clave: 'hojaPalmera' });
     this.hojas = new THREE.InstancedMesh(geoHoja(), matHoja, nHoja);
     this.hojas.customDepthMaterial = profundidad(tex.hojaPalmera);
     this.cocos = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 6, 4), matPixel('liso', { color: 0x6b4423, clave: 'coco' }), Math.max(1, nCoco));
     for (const m of [this.troncos, this.hojas, this.cocos]) { m.castShadow = true; m.receiveShadow = true; this.grupo.add(m); }
-    for (const p of planes) this.armarPalmera(p, r);
-    this.palmeras = planes.map((p) => ({ ...p, vida: 5, viva: true, sacudida: 0 }));
+    for (const p of planes) {
+      if (!p.reserva) { this.armarPalmera(p, r); continue; }
+      for (let i = 0; i < p.segs; i++) this.troncos.setMatrixAt(p.s0 + i, CERO);
+      for (let i = 0; i < p.hojas; i++) this.hojas.setMatrixAt(p.h0 + i, CERO);
+      for (let i = 0; i < p.cocos; i++) this.cocos.setMatrixAt(p.c0 + i, CERO);
+    }
+    this.palmeras = planes.map((p) => ({ ...p, vida: 5, viva: !p.reserva, sacudida: 0 }));
     this.troncos.instanceMatrix.needsUpdate = this.hojas.instanceMatrix.needsUpdate = this.cocos.instanceMatrix.needsUpdate = true;
     for (const m of [this.troncos, this.hojas, this.cocos]) { m.computeBoundingSphere(); }
 
@@ -141,18 +156,19 @@ export class Vegetacion {
     this.grupo.add(this.helechos);
   }
 
-  armarPalmera(p, r) {
+  // tam: el tamaño (1 = adulta; un brote recién plantado arranca chiquito)
+  armarPalmera(p, r, tam = 1) {
     const dir = new THREE.Vector3(Math.cos(p.ang), 0, Math.sin(p.ang));
-    let pos = new THREE.Vector3(p.x, p.y - 0.25, p.z);
+    let pos = new THREE.Vector3(p.x, p.y - 0.25 * tam, p.z);
     let tang = new THREE.Vector3(0, 1, 0).addScaledVector(dir, p.incl).normalize();
     for (let i = 0; i < p.segs; i++) {
       const u = i / p.segs;
-      const esc = 1.12 - 0.4 * u;
-      const centro = pos.clone().addScaledVector(tang, 0.31);
+      const esc = (1.12 - 0.4 * u) * tam;
+      const centro = pos.clone().addScaledVector(tang, 0.31 * tam);
       _q.setFromUnitVectors(ARRIBA, tang);
-      _m.compose(centro, _q, _s.set(esc, 1, esc));
+      _m.compose(centro, _q, _s.set(esc, tam, esc));
       this.troncos.setMatrixAt(p.s0 + i, _m);
-      pos.addScaledVector(tang, 0.6);
+      pos.addScaledVector(tang, 0.6 * tam);
       tang.addScaledVector(dir, p.curva * (1 + u)).normalize();
     }
     p.copa = pos.clone();
@@ -161,13 +177,13 @@ export class Vegetacion {
       const nueva = k >= p.hojas - 4;
       const a = (k / p.hojas) * Math.PI * 2 * (nueva ? 2.7 : 1) + r() * 0.3;
       const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a, nueva ? rango(r, 0.45, 0.8) : rango(r, -0.35, 0.2), 'YXZ'));
-      const L = p.largo * (nueva ? rango(r, 0.6, 0.75) : rango(r, 0.85, 1.1));
+      const L = p.largo * (nueva ? rango(r, 0.6, 0.75) : rango(r, 0.85, 1.1)) * tam;
       _m.compose(pos, q, _s.set(L, L, L));
       this.hojas.setMatrixAt(p.h0 + k, _m);
     }
     for (let k = 0; k < p.cocos; k++) {
       const a = (k / Math.max(1, p.cocos)) * 6.28 + r();
-      _m.compose(_p.set(pos.x + Math.cos(a) * 0.22, pos.y - 0.25, pos.z + Math.sin(a) * 0.22), _q.identity(), _s.set(1, 1, 1));
+      _m.compose(_p.set(pos.x + Math.cos(a) * 0.22 * tam, pos.y - 0.25 * tam, pos.z + Math.sin(a) * 0.22 * tam), _q.identity(), _s.set(tam, tam, tam));
       this.cocos.setMatrixAt(p.c0 + k, _m);
     }
   }
@@ -179,6 +195,40 @@ export class Vegetacion {
     for (let i = 0; i < p.cocos; i++) this.cocos.setMatrixAt(p.c0 + i, CERO);
     this.troncos.instanceMatrix.needsUpdate = this.hojas.instanceMatrix.needsUpdate = this.cocos.instanceMatrix.needsUpdate = true;
   }
+
+  // ── plantar un coco ──────────────────────────────────────────────────
+  hayLugar() { return this.palmeras.some((q) => q.reserva && !q.viva); }
+
+  plantar(x, y, z, crece = 0) {
+    const p = this.palmeras.find((q) => q.reserva && !q.viva);
+    if (!p) return null;
+    Object.assign(p, { x, y, z, viva: true, crece: Math.max(0, Math.min(1, crece)), sacudida: 0 });
+    this.rearmar(p);
+    return p;
+  }
+
+  rearmar(p) {
+    // mismo azar cada vez: al crecer, la palmera no cambia de forma
+    this.armarPalmera(p, mulberry(7001 + p.id), 0.2 + 0.8 * p.crece);
+    p.vida = 1 + 4 * p.crece;
+    // los cocos, recién de grande
+    if (p.crece < 1) { for (let k = 0; k < p.cocos; k++) this.cocos.setMatrixAt(p.c0 + k, CERO); p.cocosQuedan = 0; }
+    else p.cocosQuedan = p.cocos;
+    this.troncos.instanceMatrix.needsUpdate = this.hojas.instanceMatrix.needsUpdate = this.cocos.instanceMatrix.needsUpdate = true;
+    for (const m of [this.troncos, this.hojas, this.cocos]) m.computeBoundingSphere();
+  }
+
+  // Crecen de a décimos: rearmar las instancias en cada cuadro no hace falta.
+  crecer(dt) {
+    for (const p of this.palmeras) {
+      if (!p.reserva || !p.viva || p.crece >= 1) continue;
+      const antes = Math.floor(p.crece * 10);
+      p.crece = Math.min(1, p.crece + dt / CRECER);
+      if (Math.floor(p.crece * 10) !== antes) this.rearmar(p);
+    }
+  }
+
+  plantadas() { return this.palmeras.filter((p) => p.reserva && p.viva).map((p) => [+p.x.toFixed(2), +p.z.toFixed(2), +p.crece.toFixed(3)]); }
 
   quitarArbusto(a) {
     a.viva = false;

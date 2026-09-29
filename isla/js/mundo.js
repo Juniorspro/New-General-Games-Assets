@@ -150,6 +150,7 @@ export class Mundo {
     this.pisos = [...Ch.pisos, ...Mu.pisos];
     this.obstFijos = [...Ch.obst];
     this.bloques = null;   // lo enchufa construir.js
+    this.sinPasto = [];    // lugares despejados (el faro, el naufragio)
   }
 
   // El agua necesita los uniforms del cielo: se arma después de él.
@@ -157,9 +158,18 @@ export class Mundo {
     this.agua = crearAgua(this.terreno, cielo);
     this.escena.add(this.agua);
     // sin pasto adentro de la choza, del muelle ni de los bloques puestos
-    this.pasto.bloqueos = (x, z) => this.dentroDePiso(x, z, 0.3) || !!(this.bloques && this.bloques.columnas.has(`${Math.floor(x)},${Math.floor(z)}`));
+    this.pasto.bloqueos = (x, z) => this.dentroDePiso(x, z, 0.3) || !!(this.bloques && this.bloques.columnas.has(`${Math.floor(x)},${Math.floor(z)}`)) || this.sinPasto.some((q) => Math.hypot(q.x - x, q.z - z) < q.r);
     this.pasto.todo();
     this.escena.add(this.pasto.grupo);
+  }
+
+  // Despeja un lugar (el faro, el naufragio): sin palmeras, matas ni pasto.
+  quitarVegetacionEn(x, z, r) {
+    for (const p of this.veg.palmeras) if (p.viva && Math.hypot(p.x - x, p.z - z) < r) this.veg.quitarPalmera(p);
+    for (const a of this.veg.arbustos) if (a.viva && Math.hypot(a.x - x, a.z - z) < r) this.veg.quitarArbusto(a);
+    for (const m of this.rocas.minables) if (m.vivo && Math.hypot(m.x - x, m.z - z) < r + m.r) while (this.rocas.sacarPedazo(m, new THREE.Vector3(m.x, m.y + 9, m.z)));
+    this.sinPasto.push({ x, z, r });
+    this.pasto.tocar(x, z, r + 1);
   }
 
   dentroDePiso(x, z, margen = 0) {

@@ -6,7 +6,8 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { matPixel } from './material.js';
 import { mulberry, rango } from './azar.js';
-import { Rocas, mergeSimple } from './rocas.js';
+import { Rocas, mergeSimple, geoCristales } from './rocas.js';
+import { matGema } from './gemas.js';
 
 export const MINA_Y = -60;
 const CELDA = 6, NC = 9, ALTO = 3.6;
@@ -63,6 +64,12 @@ export class Mina {
       const z0 = Math.min(az, bz) * CELDA + CELDA / 2, z1 = Math.max(az, bz) * CELDA + CELDA / 2;
       abrir(x0 - ancho / 2, z0 - ancho / 2, x1 + ancho / 2, z1 + ancho / 2);
     }
+    // La sala del Guardián: la celda más lejos de la escalera, agrandada a 14 m.
+    // Ahí espera el gólem con el corazón de cristal del faro.
+    const lejos = centros.filter((c) => !(c.cx === 4 && c.cz === NC - 1)).sort((a, b) => b.prof - a.prof || r() - 0.5)[0];
+    const sx = lejos.cx * CELDA + CELDA / 2, sz = lejos.cz * CELDA + CELDA / 2;
+    abrir(Math.max(1, sx - 7), Math.max(1, sz - 7), Math.min(NT - 1, sx + 7), Math.min(NT - 1, sz + 7));
+    this.salaJefe = { x: sx + T0, z: sz + T0, cx: lejos.cx, cz: lejos.cz };
     this.abierto = abierto;
 
     // ── geometría: paredes donde un tile cerrado toca uno abierto ──
@@ -115,6 +122,16 @@ export class Mina {
       this.lamparas.push(new THREE.Vector3(c.x, y, c.z));
     }
     this.grupo.add(new THREE.Mesh(mergeSimple(lamparas), matPixel('liso', { color: 0xffd36a, emisivo: 0xffb040, clave: 'lamparaMina' })));
+    // cristales gigantes en la sala del Guardián: se ven venir desde el pasillo
+    const S = this.salaJefe, gigantes = [];
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 7) * Math.PI * 2 + r() * 0.4, d = rango(r, 4.5, 6.2);
+      gigantes.push(geoCristales(400 + k, 3).scale(2.2, 2.6, 2.2).rotateY(r() * 6).translate(S.x + Math.cos(a) * d, MINA_Y, S.z + Math.sin(a) * d));
+    }
+    const mCrist = new THREE.Mesh(mergeSimple(gigantes), matGema(0x5ff6ff, 'cristal', { emision: 0.45 }));
+    mCrist.castShadow = true;
+    this.grupo.add(mCrist);
+    this.lucesJefe = [new THREE.Vector3(S.x - 3, MINA_Y + 2.4, S.z), new THREE.Vector3(S.x + 3, MINA_Y + 2.4, S.z)];
     this.grupo.add(new THREE.Mesh(mergeSimple(sogas), matPixel('liso', { color: 0x3a3d45, clave: 'metalOscuro' })));
 
     // la escalera de salida, en la celda de entrada
@@ -137,6 +154,7 @@ export class Mina {
     for (let i = 0; i < 600 && minables.length < 42; i++) {
       const [x, z] = libres[Math.floor(r() * libres.length)];
       if (Math.hypot(x - this.salida.x, z - this.salida.z) < 5) continue;
+      if (Math.hypot(x - this.salaJefe.x, z - this.salaJefe.z) < 8) continue;   // la sala queda libre para pelear
       if (minables.some((m) => Math.hypot(m.x - x, m.z - z) < 3.2)) continue;
       const prof = Math.hypot(x - this.salida.x, z - this.salida.z);
       const u = r();

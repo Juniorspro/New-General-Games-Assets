@@ -1,7 +1,8 @@
 // Lo que hace el jugador con lo que tiene en la mano: talar palmeras, minar
 // rocas pedazo a pedazo, cavar con la pala, cortar pasto con la guadaña,
-// pescar, construir y romper bloques, comer y tirar cosas. Y la tecla E:
-// juntar, abrir la mesa o un cofre, bajar a la mina, descansar en la choza.
+// pescar, pelear, construir y romper bloques, comer, cocinar, plantar cocos y
+// tirar cosas. Y la tecla E: juntar, abrir la mesa o un cofre, bajar a la
+// mina, descansar en la choza, arreglar el faro, comerciar, subir al barco.
 // También las estrellas que caen de noche.
 //
 // El golpe se decide en el IMPACTO de la animación (a los 0,42 del gesto), no
@@ -133,6 +134,11 @@ export class Acciones {
       if (Math.hypot(dx, dz) < 2.6 && -(d.x * B.frente.x + d.z * B.frente.z) > 0.2) ap = { tipo: 'mina', d: 1, sub: ap };
       const S = this.sillon();
       if (S && Math.hypot(S.x - pj.x, S.z - pj.z) < 2 && J.noche > 0.5 && (!ap || ap.tipo === 'piso' || ap.tipo === 'terreno')) ap = { tipo: 'sillon', d: 1, sub: ap };
+      // el faro, el mercader y el barco: alcanza con estar al lado
+      const H = J.historia;
+      if (H && H.cercaDelFaro(pj)) ap = { tipo: 'faro', d: 1, sub: ap };
+      if (J.mercader && J.mercader.cerca(pj)) ap = { tipo: 'mercader', d: 1, sub: ap };
+      if (H && H.cercaDelBarco(pj)) ap = { tipo: 'barco', d: 1, sub: ap };
     } else if (Math.hypot(J.mina.salida.x - pj.x, J.mina.salida.z - pj.z) < 2.2) ap = { tipo: 'escalera', d: 1, sub: ap };
     return ap;
   }
@@ -153,8 +159,9 @@ export class Acciones {
     J.mano.poner(r ? r.id : null);
     const herr = it ? it.herr : null;
     if (J.pesca.activa() && herr !== 'cana') J.pesca.recoger();
+    if (herr !== 'arco' && J.combate.tensando) J.combate.soltarArco();
 
-    const o = _o.copy(J.camara.position), d = J.jugador.direccionMirada(_dir);
+    const o = _o.copy(J.ojos), d = J.jugador.direccionMirada(_dir);
     const ap = (this.ap = this.apuntar(o, d));
     const base = ap && ap.sub !== undefined ? ap.sub : ap;
 
@@ -165,23 +172,32 @@ export class Acciones {
     if (e.comer) this.comer();
     if (e.soltar) this.tirar(e.todo);
 
-    // click derecho: abrir, poner o comer
+    // click derecho: abrir, poner, ponerse, leer, cocinar, plantar o comer
     if (e.poner) {
       if (base && base.tipo === 'bloque' && (base.b.tipo === 'mesa' || base.b.tipo === 'cofre')) this.interactuar(base);
       else if (it && it.tipo === 'bloque') this.colocar(this.celda, it);
-      else if (it && it.comida) this.comer();
+      else if (it && it.defensa) this.ponerse();
+      else if (it && it.id === 'botella') this.leer();
+      else if (it && it.cocina && this.fogataCerca()) this.cocinar();
+      else if (it && it.id === 'coco' && this.lugarPlantar(base)) this.plantar(base.punto);
+      else if (it && (it.comida || it.cura)) this.comer();
     }
 
     // holograma de construcción
     if (it && it.tipo === 'bloque' && this.celda) J.bloques.mostrarHolo(this.celda, it.bloque, this.celdaValida(this.celda, it.bloque));
     else J.bloques.mostrarHolo(null);
 
-    // click izquierdo
+    // click izquierdo. Un enemigo al alcance gana: con uno encima no se rompen bloques.
+    const enemigo = J.enemigos.apuntado(o, d, (it && it.alcance ? it.alcance : 2.4) + 0.3, 0.7);
     if (herr === 'pala') this.usarPala(dt, e, base);
-    else {
+    else if (herr === 'arco') {
+      this.anillo.visible = false;
+      this.romper = null;
+      J.combate.arco(dt, e.usar, it);
+    } else {
       this.anillo.visible = false;
       this.palaAltura = null;
-      if (base && base.tipo === 'bloque' && e.usar && herr !== 'cana') this.romperBloque(dt, base.b, it);
+      if (base && base.tipo === 'bloque' && e.usar && herr !== 'cana' && !enemigo) this.romperBloque(dt, base.b, it);
       else {
         this.romper = null;
         if (herr === 'cana') { if (e.usarRecien) J.mano.golpear(0.5); }
@@ -195,17 +211,21 @@ export class Acciones {
       this.luzMano.pos.copy(o).addScaledVector(d, 0.4).add(_v.set(0, -0.25, 0));
     } else if (this.luzMano) { J.luces.quitar(this.luzMano); this.luzMano = null; }
 
-    const impacto = J.mano.actualizar(dt, J.camara, J.jugador);
+    const impacto = J.mano.actualizar(dt, J.camaraOjos, J.jugador);
     if (impacto) this.alImpacto(it);
 
     this.tBarra -= dt;
-    if (this.tBarra <= 0 && !this.romper) J.hud.progreso(null);
+    if (this.tBarra <= 0 && !this.romper && !J.combate.tensando) J.hud.progreso(null);
     this.estrellas(dt);
   }
 
   textoAviso(ap, it) {
     const E = this.J.entrada;
     if (!E.tactil && !E.capturado) return t('a.clic');
+    return this.textoMira(ap, it) || this.textoItem(ap, it);
+  }
+
+  textoMira(ap, it) {
     if (!ap) return '';
     const N = (id) => ITEMS[id].nombre;
     switch (ap.tipo) {
@@ -213,6 +233,9 @@ export class Acciones {
       case 'mina': return '<kbd>E</kbd>' + t('a.mina');
       case 'escalera': return '<kbd>E</kbd>' + t('a.subir');
       case 'sillon': return '<kbd>E</kbd>' + t('a.descansar');
+      case 'faro': return '<kbd>E</kbd>' + t('a.faro');
+      case 'mercader': return '<kbd>E</kbd>' + t('a.mercader');
+      case 'barco': return '<kbd>E</kbd>' + t('a.barco');
       case 'bloque':
         if (ap.b.tipo === 'mesa') return '<kbd>E</kbd>' + t('a.mesa');
         if (ap.b.tipo === 'cofre') return '<kbd>E</kbd>' + t('a.cofre');
@@ -222,6 +245,19 @@ export class Acciones {
         return '';
       default: return '';
     }
+  }
+
+  // Lo que se puede hacer con lo que tenés en la mano, si la mira no dice nada.
+  textoItem(ap, it) {
+    if (!it) return '';
+    const base = ap && ap.sub !== undefined ? ap.sub : ap;
+    if (it.id === 'botella') return t('a.leer');
+    if (it.defensa) return t('a.ponerse');
+    if (it.cocina && this.fogataCerca()) return t('a.cocinar');
+    if (it.id === 'coco' && this.lugarPlantar(base)) return t('a.plantar');
+    const M = this.J.mapa;
+    if (it.herr === 'pala' && M && M.tesoro && !M.tesoro.encontrado && this.J.inv.contar('mapaTesoro') && Math.hypot(M.tesoro.x - this.J.jugador.p.x, M.tesoro.z - this.J.jugador.p.z) < 4) return t('a.tesoro');
+    return '';
   }
 
   // ── E ─────────────────────────────────────────────────────────────────────
@@ -236,9 +272,13 @@ export class Acciones {
       const k = `${ap.b.x},${ap.b.y},${ap.b.z}`;
       J.son.sfx('cofre');
       J.hud.abrir('cofre', J.bloques.cofres.get(k));
-    } else if (ap.tipo === 'mina') this.bajarMina();
+    } else if (ap.tipo === 'bloque' && ap.b.tipo === 'fogata') { if (this.item() && this.item().cocina) this.cocinar(); }
+    else if (ap.tipo === 'mina') this.bajarMina();
     else if (ap.tipo === 'escalera') this.subirMina();
     else if (ap.tipo === 'sillon') this.descansar();
+    else if (ap.tipo === 'faro') { J.son.sfx('uiSi'); J.hud.abrir('faro'); }
+    else if (ap.tipo === 'mercader') { J.son.sfx('moneda'); J.hud.abrir('tienda'); }
+    else if (ap.tipo === 'barco') J.final();
   }
 
   bajarMina() {
@@ -280,15 +320,81 @@ export class Acciones {
     const J = this.J, r = this.ranura();
     if (!r) return;
     const it = ITEMS[r.id];
-    if (!it.comida) return;
-    if (J.jugador.hambre >= 99.5) { J.hud.noti(t('n.sinHambre'), null, 'lleno'); return; }
-    J.jugador.hambre = Math.min(100, J.jugador.hambre + it.comida);
-    J.jugador.vida = Math.min(100, J.jugador.vida + it.comida * 0.3);
+    if (!it.comida && !it.cura) return;
+    const cura = it.cura || 0;
+    // lo que cura se toma aunque no haya hambre, si falta vida
+    if (J.jugador.hambre >= 99.5 && !(cura && J.jugador.vida < 99.5)) { J.hud.noti(t('n.sinHambre'), null, 'lleno'); return; }
+    J.jugador.hambre = Math.min(100, J.jugador.hambre + (it.comida || 0));
+    J.jugador.vida = Math.min(100, J.jugador.vida + (it.comida || 0) * 0.3 + cura);
     J.inv.quitarDe(this.sel, 1);
     J.son.sfx('comer');
-    const boca = _v.copy(J.camara.position).addScaledVector(J.jugador.direccionMirada(_dir), 0.45).add({ x: 0, y: -0.2, z: 0 });
+    const boca = _v.copy(J.ojos).addScaledVector(J.jugador.direccionMirada(_dir), 0.45).add({ x: 0, y: -0.2, z: 0 });
     J.part.rafaga(boca, 8, [it.color || 0xf0e0c0, 0xffffff], { vel: 1.2, arriba: 1.5, tam: 0.04, vida: 0.5 });
     J.stats.comidas = (J.stats.comidas || 0) + 1;
+  }
+
+  // ── la fogata: cocinar ───────────────────────────────────────────────────
+  fogataCerca(r = 3.5) {
+    const p = this.J.jugador.p;
+    return this.J.bloques.fogatas.find((f) => Math.hypot(f.x + 0.5 - p.x, f.z + 0.5 - p.z) < r && Math.abs(f.y - p.y) < 2) || null;
+  }
+
+  cocinar() {
+    const J = this.J, r = this.ranura(), it = r && ITEMS[r.id];
+    const f = this.fogataCerca();
+    if (!it || !it.cocina || !f) return;
+    J.inv.quitarDe(this.sel, 1);
+    const resto = J.inv.agregar(it.cocina, 1);
+    const fuego = _v.set(f.x + 0.5, f.y + 0.5, f.z + 0.5);
+    if (resto) J.objetos.soltar(it.cocina, resto, fuego.clone().add({ x: 0, y: 0.4, z: 0 }));
+    J.son.sfx('fuego');
+    J.part.rafaga(fuego, 16, [0xff8a10, 0xffe27a, 0xfff1b0, 0x4a4a4a], { vel: 1.4, arriba: 3.5, g: -1, vida: 0.9, tam: 0.06 });
+    J.mano.golpear(0.3);
+    J.stats.cocinados = (J.stats.cocinados || 0) + 1;
+    if (!J.descubrir(it.cocina)) J.hud.noti(t('n.cocinado', { nombre: ITEMS[it.cocina].nombre }), it.cocina, 'cocina');
+  }
+
+  // ── el peto: clic derecho para ponértelo (el de antes vuelve a la mochila) ──
+  ponerse() {
+    const J = this.J, r = this.ranura();
+    if (!r || !ITEMS[r.id].defensa) return;
+    const id = r.id, antes = J.armadura;
+    J.inv.quitarDe(this.sel, 1);
+    J.armadura = id;
+    if (antes) { const resto = J.inv.agregar(antes, 1); if (resto) this.lanzar(antes, resto); }
+    J.son.sfx('metal');
+    J.hud.noti(t('n.ponerse', { nombre: ITEMS[id].nombre }), id, 'peto');
+  }
+
+  // ── la botella: el mensaje se lee y la botella vacía se tira ─────────────
+  leer() {
+    const J = this.J, r = this.ranura();
+    if (!r || r.id !== 'botella') return;
+    J.inv.quitarDe(this.sel, 1);
+    J.historia.leerCarta();
+  }
+
+  // ── plantar un coco: en arena o pasto, lejos de otras palmeras ──────────
+  lugarPlantar(base) {
+    const J = this.J;
+    if (J.bajo || !base || base.tipo !== 'terreno' || base.d > 4.5) return false;
+    const x = base.punto.x, z = base.punto.z, h = J.mundo.terreno.altura(x, z);
+    if (h < 0.35 || J.mundo.dentroDePiso(x, z, 1) || J.bloques.cerca(x, z, 1.5).length) return false;
+    for (const p of J.mundo.veg.palmeras) if (p.viva && Math.abs(p.x - x) < 2.2 && Math.abs(p.z - z) < 2.2) return false;
+    return J.mundo.veg.hayLugar();
+  }
+
+  plantar(punto) {
+    const J = this.J, T = J.mundo.terreno;
+    const x = punto.x, z = punto.z;
+    if (!J.mundo.veg.plantar(x, T.altura(x, z), z)) return;
+    J.inv.quitarDe(this.sel, 1);
+    J.son.sfx('pala');
+    J.part.rafaga(_v.set(x, T.altura(x, z) + 0.1, z), 10, T.pasto(x, z) > 0.5 ? COL.pasto : COL.arena, { vel: 1.4, arriba: 2, tam: 0.05, vida: 0.6 });
+    J.mundo.pasto.tocar(x, z, 1.5);
+    J.mano.golpear(0.3);
+    J.stats.plantadas = (J.stats.plantadas || 0) + 1;
+    J.hud.noti(t('n.plantado'), 'coco', 'plantar');
   }
 
   tirar(todo = false) {
@@ -301,7 +407,7 @@ export class Acciones {
   lanzar(id, n) {
     const J = this.J;
     const d = J.jugador.direccionMirada(_dir);
-    const desde = _v.copy(J.camara.position).addScaledVector(d, 0.6).add({ x: 0, y: -0.25, z: 0 });
+    const desde = _v.copy(J.ojos).addScaledVector(d, 0.6).add({ x: 0, y: -0.25, z: 0 });
     const o = J.objetos.soltar(id, n, desde, d.clone().multiplyScalar(5).add(new THREE.Vector3(0, 2, 0)));
     if (o) o.t = -0.6;
     J.son.sfx('lanzar');
@@ -379,13 +485,16 @@ export class Acciones {
   alImpacto(it) {
     const J = this.J;
     const herr = it ? it.herr : null;
-    const o = _o.copy(J.camara.position), d = J.jugador.direccionMirada(_dir);
+    const o = _o.copy(J.ojos), d = J.jugador.direccionMirada(_dir);
     if (herr === 'cana') {
       const res = J.pesca.tocar(o, d, J.bajo ? -1e9 : J.nivelAgua);
       if (res) this.pescado(res);
       return;
     }
+    if (herr === 'arco') return;
     if (herr === 'guadana') { this.guadanazo(); }
+    // pegarle a un enemigo gana a todo lo demás
+    if (J.combate.golpe(it)) return;
     const ap = this.apuntar(o, d);
     const t = ap && ap.sub !== undefined ? ap.sub : ap;
     if (!t) return;
@@ -426,7 +535,8 @@ export class Acciones {
     if (p.cocosQuedan === undefined) p.cocosQuedan = p.cocos;
     while (p.cocosQuedan > 0) this.caerCoco(p);
     V.quitarPalmera(p);
-    const n = 3 + Math.floor(p.segs / 4);
+    // un brote da poca madera
+    const n = p.reserva && p.crece < 1 ? 1 + Math.floor(p.crece * 3) : 3 + Math.floor(p.segs / 4);
     for (let i = 0; i < n; i++) {
       const u = (i + 0.5) / n;
       const q = new THREE.Vector3(p.x, p.y + 0.4, p.z).lerp(p.copa, u * 0.8);
@@ -586,6 +696,7 @@ export class Acciones {
       J.part.rafaga(_v.set(punto.x, T.altura(punto.x, punto.z) + 0.1, punto.z), 6, tw > 0.5 ? COL.tierra : pw > 0.5 ? COL.pasto : COL.arena, { vel: 1.6, arriba: 2.5, tam: 0.05, vida: 0.7, esparcir: 1.2 });
       J.mundo.pasto.tocar(punto.x, punto.z, RADIO_PALA + 1);
       J.stats.pala = (J.stats.pala || 0) + Math.abs(vol);
+      if (tipo === 'bajar' && J.mapa) J.mapa.cavado(punto.x, punto.z);
     }
   }
 

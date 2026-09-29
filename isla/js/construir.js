@@ -13,6 +13,7 @@ const TIPOS = {
   mesa: { alto: 0.95, item: 'mesa', modelo: true },
   cofre: { alto: 0.75, item: 'cofre', modelo: true },
   farolPie: { alto: 1.9, item: 'farolPie', modelo: true, flaco: true },
+  fogata: { alto: 0.35, item: 'fogata', modelo: true },
 };
 const clave = (x, y, z) => `${x},${y},${z}`;
 const _m = new THREE.Matrix4();
@@ -51,7 +52,12 @@ export class Bloques {
       oscuro: matPixel('liso', { color: 0x3a3d45, clave: 'metalOscuro' }),
       luz: matPixel('liso', { color: 0xffd36a, emisivo: 0xffb040, clave: 'luzFarol' }),
       tela: matPixel('mundo', { mapa: tex.madera, tam: [32, 32], color: 0x9b6a36, clave: 'cofreMadera' }),
+      piedraFogata: matPixel('mundo', { mapa: tex.roca, tam: [32, 32], color: 0xa0a4ab, clave: 'piedraFogata' }),
+      // el fuego no se ilumina: brilla y se suma a lo de atrás
+      fuego: new THREE.MeshBasicMaterial({ color: 0xff7a18, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false }),
+      fuego2: new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }),
     };
+    this.fogatas = [];   // para animarlas, cocinar y que los esqueletos no se acerquen
     this.geo = { madera: new THREE.BoxGeometry(1, 1, 1).translate(0.5, 0.5, 0.5), tablon: new THREE.BoxGeometry(1, 0.25, 1).translate(0.5, 0.125, 0.5) };
     this.geo.piedra = this.geo.madera;
     this.instancias = {};
@@ -96,14 +102,30 @@ export class Bloques {
     } else if (b.tipo === 'cofre') {
       g.add(new THREE.Mesh(caja(0.86, 0.72, 0.64, 0.5, 0.36, 0.5), M.tela));
       g.add(new THREE.Mesh(mergeSimple([caja(0.88, 0.06, 0.66, 0.5, 0.46, 0.5), caja(0.12, 0.18, 0.04, 0.5, 0.4, 0.83)]), M.oscuro));
+    } else if (b.tipo === 'fogata') {
+      // leños cruzados en un círculo de piedras, y tres llamas que se animan
+      g.add(new THREE.Mesh(mergeSimple([0, 1, 2, 3].map((k) => caja(0.9, 0.12, 0.14, 0.5, 0.1 + (k % 2) * 0.06, 0.5).translate(-0.5, 0, -0.5).rotateY(k * Math.PI / 4).translate(0.5, 0, 0.5))), M.madera));
+      g.add(new THREE.Mesh(mergeSimple([0, 1, 2, 3, 4, 5, 6, 7].map((k) => caja(0.16, 0.12, 0.16, 0.5 + Math.cos(k * 0.785) * 0.42, 0.06, 0.5 + Math.sin(k * 0.785) * 0.42))), M.piedraFogata));
+      // cada llama: un cono naranja y adentro uno amarillo, más chico
+      const llamas = [];
+      for (const [x, z, h] of [[0.5, 0.5, 0.62], [0.4, 0.57, 0.4], [0.6, 0.42, 0.44]]) {
+        const l = new THREE.Group();
+        l.add(new THREE.Mesh(new THREE.ConeGeometry(0.15, h, 6).translate(0, h / 2, 0), M.fuego));
+        l.add(new THREE.Mesh(new THREE.ConeGeometry(0.075, h * 0.6, 6).translate(0, h * 0.3, 0), M.fuego2));
+        l.position.set(x, 0.14, z);
+        l.userData.fuego = true;
+        g.add(l); llamas.push(l);
+      }
+      g.userData.llamas = llamas;
     } else if (b.tipo === 'farolPie') {
       g.add(new THREE.Mesh(mergeSimple([caja(0.12, 1.5, 0.12, 0.5, 0.75, 0.5), caja(0.5, 0.08, 0.5, 0.5, 0.04, 0.5)]), M.madera));
       g.add(new THREE.Mesh(mergeSimple([caja(0.36, 0.05, 0.36, 0.5, 1.5, 0.5), caja(0.36, 0.05, 0.36, 0.5, 1.86, 0.5)]), M.oscuro));
       g.add(new THREE.Mesh(caja(0.28, 0.32, 0.28, 0.5, 1.68, 0.5), M.luz));
     }
-    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = !o.parent.userData.fuego; o.receiveShadow = true; } });
     g.position.set(b.x, b.y, b.z);
-    if (b.rot) { g.children.forEach((h) => { h.geometry = h.geometry.clone().translate(-0.5, 0, -0.5).rotateY(b.rot * Math.PI / 2).translate(0.5, 0, 0.5); }); }
+    // girar la geometría alrededor del centro de la celda (las llamas son redondas: se quedan)
+    if (b.rot) { g.children.forEach((h) => { if (h.geometry) h.geometry = h.geometry.clone().translate(-0.5, 0, -0.5).rotateY(b.rot * Math.PI / 2).translate(0.5, 0, 0.5); }); }
     return g;
   }
 
@@ -128,6 +150,7 @@ export class Bloques {
     const b = { tipo, x, y, z, rot };
     if (TIPOS[tipo].modelo) { b.malla = this.modelo(b); this.escena.add(b.malla); }
     if (tipo === 'farolPie') b.luz = this.luces.agregar(new THREE.Vector3(x + 0.5, y + 1.7, z + 0.5), [1.0, 0.78, 0.45, 11]);
+    if (tipo === 'fogata') { b.luz = this.luces.agregar(new THREE.Vector3(x + 0.5, y + 0.7, z + 0.5), [1.0, 0.55, 0.22, 12], 2.2); this.fogatas.push(b); }
     if (tipo === 'cofre' && !this.cofres.has(k)) this.cofres.set(k, new Inventario(27));
     this.mapa.set(k, b);
     this.colAgregar(b);
@@ -143,6 +166,7 @@ export class Bloques {
     this.colQuitar(b);
     if (b.malla) this.escena.remove(b.malla);
     if (b.luz) this.luces.quitar(b.luz);
+    if (b.tipo === 'fogata') this.fogatas.splice(this.fogatas.indexOf(b), 1);
     let contenido = null;
     if (b.tipo === 'cofre') { contenido = this.cofres.get(k); this.cofres.delete(k); }
     if (!TIPOS[b.tipo].modelo) this.rehacerInstancias();
@@ -253,6 +277,7 @@ export class Bloques {
       const obj = { tipo, x: b[1], y: b[2], z: b[3], rot: b[4] | 0 };
       if (TIPOS[tipo].modelo) { obj.malla = this.modelo(obj); this.escena.add(obj.malla); }
       if (tipo === 'farolPie') obj.luz = this.luces.agregar(new THREE.Vector3(obj.x + 0.5, obj.y + 1.7, obj.z + 0.5), [1.0, 0.78, 0.45, 11]);
+      if (tipo === 'fogata') { obj.luz = this.luces.agregar(new THREE.Vector3(obj.x + 0.5, obj.y + 0.7, obj.z + 0.5), [1.0, 0.55, 0.22, 12], 2.2); this.fogatas.push(obj); }
       this.mapa.set(k, obj);
       this.colAgregar(obj);
       if (tipo === 'cofre') { const inv = new Inventario(27); inv.cargar(d.cofres && d.cofres[k]); this.cofres.set(k, inv); }

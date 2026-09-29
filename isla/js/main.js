@@ -1,6 +1,7 @@
 // La Isla — el arranque y el bucle. Arma la isla desde la semilla, carga lo
 // guardado, conecta cada parte y reparte cada cuadro entre el menú, el juego,
-// la ventana de inventario y la pausa.
+// la ventana de inventario y la pausa. También el final: el barco que viene a
+// buscarte cuando el faro vuelve a alumbrar.
 import * as THREE from '../vendor/three.module.min.js';
 import { LUZ } from './material.js';
 import { texturas } from './texturas.js';
@@ -10,7 +11,7 @@ import { Mina, MINA_Y } from './mina.js';
 import { Reflejo } from './agua.js';
 import { medirPantalla, pedirAcostado } from './pantalla.js';
 import { enlazarCielo } from './gemas.js';
-import { ITEMS, estrellasTexto } from './items.js';
+import { ITEMS, estrellasTexto, precioTexto } from './items.js';
 import { Inventario } from './inventario.js';
 import { Entrada } from './entrada.js';
 import { Jugador } from './jugador.js';
@@ -24,6 +25,13 @@ import { Pesca } from './pesca.js';
 import { Acciones } from './acciones.js';
 import { Hud } from './hud.js';
 import { Menu } from './menu.js';
+import { Enemigos } from './enemigos.js';
+import { Combate } from './combate.js';
+import { Historia } from './historia.js';
+import { Mercader } from './mercader.js';
+import { Mapa } from './mapa.js';
+import { Personaje, camaraTercera } from './personaje.js';
+import { Paisaje } from './paisaje.js';
 import { leerPartida, guardarPartida, aplicarPartida, borrarPartida, hayPartida, leerAjustes, guardarAjustes } from './guardado.js';
 import { mulberry } from './azar.js';
 import { t, ponerIdioma, detectarIdioma, locale } from './idioma.js';
@@ -104,9 +112,16 @@ mundo.bloques = bloques;
 // objetos y la boya deciden por SU altura, no por dónde está el jugador: lo
 // que quedó tirado en la playa no se cae a la mina cuando bajás.
 const J = {
-  THREE, renderer, escena, escenaMano, camara, cielo, mundo, mina, luces, part, bloques, entrada,
+  THREE, renderer, escena, escenaMano, camara, cielo, mundo, mina, luces, part, bloques, entrada, LUZ, tex, t,
   ajustes, estado: 'carga', bajo: false, noche: 0, nivelAgua: 0, dia: 1, stats: {}, descubiertos: new Set(), objetivoI: 0,
+  tiempo: 0, plata: 0, armadura: null, terceraPersona: false, pausaGolpe: 0,
+  // de dónde sale todo lo que hace el jugador (golpes, flechas, la mano): los
+  // ojos, no la cámara, que en tercera persona está atrás
+  ojos: new THREE.Vector3(),
 };
+J.camaraOjos = { position: J.ojos, quaternion: camara.quaternion };
+// la luz cian de la sala del guardián
+for (const p of mina.lucesJefe) luces.agregar(p, [0.35, 0.9, 1.0, 13], 2.4);
 const fisica = {
   suelo: (x, z, y, e = 0.55) => (y < -30 ? Math.max(MINA_Y, bloques.suelo(x, z, y, e)) : mundo.suelo(x, z, y, e)),
   techo: (x, z, y) => (y < -30 ? Math.min(mina.techo(), bloques.techo(x, z, y)) : mundo.techo(x, z, y)),
@@ -122,9 +137,23 @@ const inv = new Inventario(36);
 objetos.cabe = (id) => inv.cabe(id, 1);
 Object.assign(J, { objetos, son, mano, pesca, jugador, inv, fisica });
 
+// El propósito y lo que se mueve: el faro y el naufragio (tocan el terreno,
+// así que van antes de cargar la partida), los enemigos, el mercader, el mapa
+// con el tesoro, el náufrago de la tercera persona y los bichos del paisaje.
+const historia = new Historia(J);
+const enemigos = new Enemigos(J);
+const combate = new Combate(J);
+const mercader = new Mercader(J);
+const mapa = new Mapa(J);
+const personaje = new Personaje(escena);
+const paisaje = new Paisaje(J);
+Object.assign(J, { historia, enemigos, combate, mercader, mapa, personaje, paisaje });
+
 // lo que se ve arriba y no abajo
-const superficie = [mundo.terreno.grupo, mundo.agua, mundo.veg.grupo, mundo.rocas.grupo, mundo.pasto.grupo, mundo.choza.grupo, mundo.muelle.grupo, mundo.mina.grupo];
+const superficie = [mundo.terreno.grupo, mundo.agua, mundo.veg.grupo, mundo.rocas.grupo, mundo.pasto.grupo, mundo.choza.grupo, mundo.muelle.grupo, mundo.mina.grupo, historia.faro.grupo, historia.naufragio];
 function ponerBajo(v) {
+  // los enemigos comunes no cruzan de piso: se borran y aparecen otros
+  if (v !== J.bajo) enemigos.limpiar(true);
   J.bajo = v;
   for (const o of superficie) o.visible = !v;
   if (J.menu) { J.menu.ajustes.grupo.visible = !v; J.menu.creditos.grupo.visible = !v; }
@@ -145,7 +174,7 @@ J.ponerBajo = ponerBajo;
 J.hayPartida = hayPartida;
 J.estadoMenu = () => J.estado === 'menu' || J.estado === 'pausa';
 J.patrimonio = () => {
-  let v = inv.valor();
+  let v = inv.valor() + J.plata;
   for (const c of bloques.cofres.values()) v += c.valor();
   return v;
 };
@@ -181,6 +210,16 @@ function alJuntar(o) {
   if (resto) J.hud.noti(t('n.llena'), null, 'lleno');
   return resto;
 }
+J.descubrir = descubrir;
+J.alComprar = (o) => {
+  J.stats.comprado = (J.stats.comprado || 0) + o.precio;
+  if (!descubrir(o.id)) J.hud.noti(t('n.compraste', { nombre: ITEMS[o.id].nombre }), o.id, 'c:' + o.id);
+};
+J.alVencerJefe = () => {
+  son.sfx('victoria');
+  J.sacudir(0.6);
+  J.hud.noti(t('n.jefeVencido'), 'corazonCristal', 'jefe', 0, true);
+};
 J.alFabricar = (rec) => {
   J.stats.fabricados = (J.stats.fabricados || 0) + 1;
   if (!descubrir(rec.id)) J.hud.noti(t('n.hiciste', { nombre: ITEMS[rec.id].nombre }), rec.id, 'f:' + rec.id);
@@ -219,27 +258,8 @@ J.aplicarAjustes = (guardar = true) => {
   if (guardar) guardarAjustes(a);
 };
 
-// ── objetivos: la primera partida se guía sola ─────────────────────────────
-const tiene = (id) => inv.contar(id) > 0 || J.descubiertos.has(id);
-const OBJETIVOS = [
-  () => (inv.contar('rama') >= 2 && inv.contar('piedra') >= 1) || tiene('hachaPiedra'),
-  () => tiene('hachaPiedra'),
-  () => (J.stats.palmeras || 0) >= 1,
-  () => [...bloques.mapa.values()].some((b) => b.tipo === 'mesa'),
-  () => tiene('picoPiedra') || tiene('picoHierro'),
-  () => tiene('hierro'),
-  () => tiene('farol'),
-  () => (J.stats.mina || 0) >= 1,
-  () => tiene('picoHierro'),
-  () => false,
-];
-function revisarObjetivo() {
-  while (J.objetivoI < OBJETIVOS.length && OBJETIVOS[J.objetivoI]()) {
-    J.hud.noti('✓ ' + t('o.' + (J.objetivoI + 1)), null, 'obj' + J.objetivoI);
-    J.objetivoI++;
-  }
-  J.hud.objetivo(t('o.' + Math.min(J.objetivoI + 1, OBJETIVOS.length)));
-}
+// ── objetivos: la historia los lleva en capítulos (historia.js) ────────────
+const revisarObjetivo = () => historia.revisar();
 
 // ── partida nueva: la isla con cosas tiradas para empezar ──────────────────
 function sembrar() {
@@ -258,12 +278,19 @@ function sembrar() {
     const a = r() * Math.PI * 2, d = 3 + r() * 9;
     if (poner(n < 5 ? 'rama' : 'piedra', s.x + Math.cos(a) * d, s.z + Math.sin(a) * d)) n++;
   }
-  for (const p of mundo.veg.palmeras) if (r() < 0.22) { const a = r() * 6.28, d = 0.9 + r() * 1.8; poner('rama', p.x + Math.cos(a) * d, p.z + Math.sin(a) * d); }
+  for (const p of mundo.veg.palmeras) if (!p.reserva && r() < 0.22) { const a = r() * 6.28, d = 0.9 + r() * 1.8; poner('rama', p.x + Math.cos(a) * d, p.z + Math.sin(a) * d); }
   for (let i = 0, k = 0; i < 800 && k < 30; i++) {
     const x = (r() * 2 - 1) * 95, z = (r() * 2 - 1) * 95;
     const h = T.altura(x, z);
     if (h < 0.5 || h > 8) continue;
     if (poner('piedra', x, z)) k++;
+  }
+  // la botella de la primera carta, en la arena al lado del barco roto
+  const b = historia.posNaufragio;
+  for (let i = 0; i < 60; i++) {
+    const a = r() * Math.PI * 2, d = 3.2 + r() * 2.5;
+    const x = b.x + Math.cos(a) * d, z = b.z + Math.sin(a) * d, h = T.altura(x, z);
+    if (h > 0.3 && h < 1.6 && poner('botella', x, z)) break;
   }
 }
 
@@ -290,6 +317,9 @@ function arrancarJuego() {
   if (J.stats.partidas === undefined) J.stats.partidas = 0;
   J.stats.partidas++;
   revisarObjetivo();
+  // cada vez que se entra, el cartel del capítulo: para qué estás acá
+  const n = historia.capitulo;
+  J.hud.cartel(t('cap.titulo', { n, nombre: t('cap.' + n) }), t('cap.bajada.' + n));
 }
 
 const _eul = new THREE.Euler(0, 0, 0, 'YXZ'), _v = new THREE.Vector3(), _punta = new THREE.Vector3(), _tam = new THREE.Vector2();
@@ -351,6 +381,40 @@ document.addEventListener('pointerlockchange', () => {
   soltandoAPropósito = false;
 });
 document.getElementById('bPausa').addEventListener('click', () => J.pausar());
+document.getElementById('bMapa').addEventListener('click', () => { if (J.estado === 'jugando' || J.hud.capa === 'mapa') mapa.abrir(); });
+document.getElementById('bVista').addEventListener('click', () => J.alternarVista());
+J.alternarVista = () => {
+  if (J.estado !== 'jugando') return;
+  J.terceraPersona = !J.terceraPersona;
+  son.sfx('ui');
+};
+
+// ── el final: subir al barco ────────────────────────────────────────────────
+const elFinal = document.getElementById('final');
+J.final = () => {
+  if (J.estado !== 'jugando') return;
+  const primera = !historia.rescatado;
+  historia.rescatado = true;
+  J.alAbrirVentana();
+  son.sfx('victoria');
+  const s = J.stats;
+  document.getElementById('finalTitulo').textContent = t('fin.titulo');
+  document.getElementById('finalTexto').textContent = t(J.dia === 1 ? 'fin.texto1' : 'fin.texto', { d: J.dia });
+  document.getElementById('finalStats').textContent = t('fin.stats', { a: s.enemigos || 0, b: s.palmeras || 0, c: s.rocas || 0, e: s.peces || 0, p: precioTexto(J.patrimonio()) });
+  document.getElementById('finalPie').textContent = t('menu.pie');
+  const b = document.getElementById('finalSeguir');
+  b.textContent = t('fin.seguir');
+  elFinal.classList.remove('oculto');
+  J.hud.mostrar(false);
+  if (primera) guardarPartida(J);
+  setTimeout(() => b.focus(), 50);
+};
+document.getElementById('finalSeguir').addEventListener('click', () => {
+  elFinal.classList.add('oculto');
+  J.hud.mostrar(true);
+  J.alCerrarVentana();
+  revisarObjetivo();
+});
 // el audio arranca con el primer gesto: antes, el navegador no deja
 const despertar = () => son.iniciar();
 addEventListener('pointerdown', despertar);
@@ -362,9 +426,10 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) guard
 addEventListener('pagehide', guardarSiJuega);
 
 // ── cada cuadro ────────────────────────────────────────────────────────────
-const NEUTRO = { x: 0, z: 0, correr: false, salto: false, saltoRecien: false, usar: false, usarRecien: false, poner: false, e: false, inv: false, pausa: false, soltar: false, comer: false, pincel: false, todo: false, num: -1, rueda: 0, mdx: 0, mdy: 0 };
+const NEUTRO = { x: 0, z: 0, correr: false, salto: false, saltoRecien: false, usar: false, usarRecien: false, poner: false, e: false, inv: false, pausa: false, soltar: false, comer: false, pincel: false, mapa: false, vista: false, todo: false, num: -1, rueda: 0, mdx: 0, mdy: 0 };
 const bajoAgua = document.getElementById('bajoAgua');
-let tGuardar = 40, tObjetivo = 0, horaAntes = 0, sacudida = 0, tAvisoHambre = 0;
+let tGuardar = 40, tObjetivo = 0, horaAntes = 0, sacudida = 0, tAvisoHambre = 0, nocheAvisada = false;
+J.sacudir = (k) => { sacudida = Math.max(sacudida, k); };
 
 function superficiePaso() {
   if (J.bajo) return 'piedra';
@@ -397,8 +462,10 @@ function eventosJugador() {
   }
 }
 
+const _dirVista = new THREE.Vector3();
 function camaraDelJugador(dt, e) {
-  camara.position.copy(jugador.ojos(_v));
+  jugador.ojos(J.ojos);
+  camara.position.copy(J.ojos);
   _eul.set(jugador.pitch, jugador.yaw, 0, 'YXZ');
   if (sacudida > 0) {
     sacudida = Math.max(0, sacudida - dt);
@@ -406,13 +473,31 @@ function camaraDelJugador(dt, e) {
     _eul.y += (Math.random() - 0.5) * sacudida * 0.08;
   }
   camara.quaternion.setFromEuler(_eul);
+  // tercera persona: la cámara atrás y arriba, mirando para el mismo lado
+  if (J.terceraPersona) camaraTercera(J, J.ojos, jugador.direccionMirada(_dirVista), camara.position);
   // correr abre un poco el campo de visión
   const rapido = e.correr && Math.hypot(jugador.v.x, jugador.v.z) > 5.5;
   const fov = fovBase + (rapido ? 6 : 0);
   if (Math.abs(camara.fov - fov) > 0.05) { camara.fov += (fov - camara.fov) * Math.min(1, dt * 6); camara.updateProjectionMatrix(); }
 }
 
+// Las fogatas: llamas que se estiran, la luz que tiembla y chispas que suben.
+function fogatas(dt) {
+  const k = LUZ.uT.value;
+  for (const f of bloques.fogatas) {
+    const ll = f.malla && f.malla.userData.llamas;
+    if (ll) ll.forEach((l, i) => {
+      const s = 0.86 + Math.sin(k * (9 + i * 3) + f.x) * 0.12 + Math.sin(k * 23 + i * 2) * 0.06;
+      l.scale.set(1.1 - s * 0.25, s, 1.1 - s * 0.25);
+      l.rotation.y = k * (1.2 + i * 0.7);
+    });
+    if (f.luz) f.luz.intensidad = 2.1 + Math.sin(k * 11 + f.z) * 0.25 + Math.sin(k * 27 + f.x) * 0.12;
+    if ((f.y < -30) === J.bajo && Math.random() < dt * 6) part.rafaga(_v.set(f.x + 0.5, f.y + 0.55, f.z + 0.5), 1, [0xff8a10, 0xffe27a, 0xffb040], { vel: 0.25, arriba: 1.2, g: -1.2, vida: 1.3, tam: 0.035, esparcir: 0.25 });
+  }
+}
+
 function mundoComun(dt, centro) {
+  J.tiempo = LUZ.uT.value;
   const c = cielo.actualizar(dt, camara, centro);
   if (cielo.hora < horaAntes - 0.5) J.dia++;
   horaAntes = cielo.hora;
@@ -425,6 +510,12 @@ function mundoComun(dt, centro) {
   part.actualizar(dt, (x, z) => fisica.suelo(x, z, camara.position.y + 1), renderer.getDrawingBufferSize(_tam).y, camara.fov);
   if (mundo.terreno.actualizar()) ocultarFondo();
   mundo.pasto.actualizar(camara.position);
+  mundo.veg.crecer(dt);
+  fogatas(dt);
+  historia.actualizar(dt);
+  mercader.actualizar(dt);
+  mapa.actualizarTesoro();
+  paisaje.actualizar(dt, renderer.getDrawingBufferSize(_tam).y, camara.fov, centro);
   const h = mundo.terreno.altura(camara.position.x, camara.position.z);
   son.actualizarAmbiente(dt, Math.max(0, Math.min(1, 1 - (h - 0.4) / 5)), J.noche, J.bajo);
 }
@@ -450,15 +541,27 @@ function paso(dt, dibujar = true) {
     const jugando = J.estado === 'jugando';
     if (jugando && e.pausa) J.pausar();
     else if (jugando && e.inv) J.hud.abrir('mochila');
+    else if (jugando && e.mapa) mapa.abrir();
+    else if (jugando && e.vista) J.alternarVista();
     const ee = J.estado === 'jugando' ? e : NEUTRO;
+    // La parada de golpe: cuando el arma toca, el arma y los enemigos se
+    // congelan unos 50 ms. El jugador no (moverse no se tiene que trabar).
+    const dg = J.pausaGolpe > 0 ? 0 : dt;
+    J.pausaGolpe = Math.max(0, J.pausaGolpe - dt);
     jugador.actualizar(dt, ee, J.bajo ? -1e9 : J.nivelAgua);
     eventosJugador();
     camaraDelJugador(dt, ee);
-    if (J.estado === 'jugando') J.acciones.actualizar(dt, ee);
-    else mano.actualizar(dt, camara, jugador);
-    objetos.actualizar(dt, jugador, J.nivelAgua, alJuntar);
+    if (J.estado === 'jugando') J.acciones.actualizar(dg, ee);
+    else mano.actualizar(dt, J.camaraOjos, jugador);
+    combate.actualizar(dg);
+    enemigos.actualizar(dg);
     const it = J.acciones.item();
+    const r = inv.ranuras[J.acciones.sel];
+    personaje.poner(r ? r.id : null);
+    personaje.actualizar(dt, jugador, mano.golpe, J.terceraPersona);
+    objetos.actualizar(dt, jugador, J.nivelAgua, alJuntar);
     pesca.actualizar(dt, mano.puntaMundo(_punta), jugador, it && it.herr === 'cana' ? it.poder : 1, J.noche);
+    if (J.bajo) mapa.explorar();
     mundoComun(dt, jugador.p);
     J.hud.actualizar(dt);
     tObjetivo -= dt;
@@ -468,6 +571,12 @@ function paso(dt, dibujar = true) {
     // hambre y desmayo
     tAvisoHambre -= dt;
     if (jugador.hambre < 18 && tAvisoHambre <= 0) { tAvisoHambre = 60; J.hud.noti(t('n.hambre'), 'coco', 'hambre'); }
+    // al lado del fuego te recuperás de a poco
+    if (jugador.vida > 0 && jugador.vida < 100 && J.acciones.fogataCerca()) jugador.vida = Math.min(100, jugador.vida + dt * 1.5);
+    // el aviso de la noche (los esqueletos) y del mercader, la primera vez
+    if (!J.bajo && J.noche > 0.62 && !nocheAvisada) { nocheAvisada = true; J.hud.noti(t('n.noche'), null, 'noche'); }
+    if (J.noche < 0.3) nocheAvisada = false;
+    if (!J.bajo && !J.stats.mercaderVisto && mercader.grupo.visible && mercader.pos.distanceTo(jugador.p) < 60) { J.stats.mercaderVisto = 1; J.hud.noti(t('n.mercader'), 'moneda', 'mercader', 0, true); }
     if (jugador.vida <= 0 && !J.desmayo) {
       J.desmayo = true;
       son.sfx('dolor');
@@ -490,7 +599,7 @@ function paso(dt, dibujar = true) {
     else mundo.agua.material.uniforms.uHayReflejo.value = 0;
     renderer.clear();
     renderer.render(escena, camara);
-    if (J.estado === 'jugando' || J.estado === 'ventana' || J.estado === 'pausa') {
+    if ((J.estado === 'jugando' || J.estado === 'ventana' || J.estado === 'pausa') && !J.terceraPersona) {
       renderer.clearDepth();
       renderer.render(escenaMano, camara);
     }
@@ -499,7 +608,7 @@ function paso(dt, dibujar = true) {
 }
 
 // ── idioma: todo lo escrito se vuelve a escribir ────────────────────────────
-const ETIQUETAS = { bPausa: 'b.pausa', vCerrar: 'b.cerrar', tSalto: 'b.saltar', tUsar: 'b.usar', tPoner: 'b.poner', tE: 'b.e', tInv: 'b.inv' };
+const ETIQUETAS = { bPausa: 'b.pausa', bMapa: 'b.mapa', bVista: 'b.vista', vCerrar: 'b.cerrar', tSalto: 'b.saltar', tUsar: 'b.usar', tPoner: 'b.poner', tE: 'b.e', tInv: 'b.inv' };
 function etiquetar() {
   document.title = t('doc.titulo');
   for (const [id, clave] of Object.entries(ETIQUETAS)) { const el = document.getElementById(id); if (el) el.setAttribute('aria-label', t(clave)); }

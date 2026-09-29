@@ -32,13 +32,23 @@ setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.styl
   <div id="aviso"></div>
   <div id="accion"></div>
   <div id="vitales"><div id="vida"><i></i></div><div id="hambre"><i></i></div></div>
-  <div id="arriba"><span id="plata">$0</span><span id="hora">08:00</span><button id="bPausa" aria-label="Pausa">II</button></div>
+  <div id="arriba"><span id="armadura" class="oculto">0%</span><span id="plata">$0</span><span id="hora">08:00</span><button id="bMapa" aria-label="Mapa">▦</button><button id="bVista" aria-label="Vista">◉</button><button id="bPausa" aria-label="Pausa">II</button></div>
   <div id="pinceles"></div>
   <div id="barra"></div>
   <div id="notis"></div>
   <div id="objetivo" class="oculto"></div>
   <div id="bajoAgua"></div>
+  <!-- la pelea: el rojo de los golpes, los números que saltan, la vida del jefe -->
+  <div id="dano"></div>
+  <div id="numeros"></div>
+  <div id="jefe" class="oculto"><b id="jefeNombre"></b><div><i id="jefeVida"></i></div></div>
+  <div id="cartel"></div>
 </div>
+
+<!-- la carta de una botella, el mapa y el final -->
+<div id="carta" class="oculto"><p></p><small id="cartaCerrar"></small></div>
+<div id="mapa" class="oculto"><canvas></canvas><small id="mapaAyuda"></small></div>
+<div id="final" class="oculto"><div id="finalCaja"><h2 id="finalTitulo"></h2><p id="finalTexto"></p><p id="finalStats"></p><small id="finalPie"></small><button id="finalSeguir"></button></div></div>
 
 <!-- inventario, cofre, mesa de trabajo, colección -->
 <div id="ventana" class="oculto">

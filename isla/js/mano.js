@@ -15,6 +15,9 @@ const suave = (t) => t * t * (3 - 2 * t);
 const POSE = {
   mano: { base: [0.38, -0.34, -0.52], rot: [0.1, 0.25, 0], esc: 1 },
   herramienta: { base: [0.5, -0.5, -0.62], rot: [-0.25, 0.35, 0.43], esc: 0.8 },
+  espada: { base: [0.46, -0.46, -0.6], rot: [-0.35, 0.25, 0.32], esc: 0.85 },
+  lanza: { base: [0.42, -0.42, -0.5], rot: [-1.35, 0.1, 0.1], esc: 0.8, pos: [0, -0.35, 0.1] },
+  arco: { base: [0.28, -0.3, -0.62], rot: [0, 1.45, 0.15], esc: 0.95, pos: [0, -0.45, 0] },
   cana: { base: [0.44, -0.46, -0.58], rot: [-0.6, 0.15, 0.4], esc: 1 },
   farol: { base: [0.36, -0.42, -0.62], rot: [0, 0.5, 0], esc: 0.68, pos: [0, -0.08, 0] },
   bloque: { base: [0.38, -0.38, -0.64], rot: [0.35, 0.7, 0], esc: 0.78, pos: [0, -0.08, 0] },
@@ -57,7 +60,7 @@ export class Mano {
       m = modeloItem(id);
       this.tipo = it.herr || (it.tipo === 'bloque' ? 'bloque' : 'item');
     }
-    const pose = POSE[!it ? 'mano' : it.herr === 'cana' ? 'cana' : it.herr === 'farol' ? 'farol' : it.tipo === 'herramienta' ? 'herramienta' : it.tipo === 'bloque' ? 'bloque' : 'item'];
+    const pose = POSE[!it ? 'mano' : ['cana', 'farol', 'espada', 'lanza', 'arco'].includes(it.herr) ? it.herr : it.tipo === 'herramienta' ? 'herramienta' : it.tipo === 'bloque' ? 'bloque' : 'item'];
     this.pose = pose;
     m.rotation.set(...pose.rot);
     m.scale.setScalar(pose.esc);
@@ -97,6 +100,22 @@ export class Mano {
         // barrido horizontal
         const a = t < 0.3 ? -suave(t / 0.3) * 0.9 : -0.9 + suave(Math.min(1, (t - 0.3) / 0.35)) * 2.2 - (t > 0.65 ? suave((t - 0.65) / 0.35) * 1.3 : 0);
         ry = a; px += Math.sin(a) * -0.12;
+      } else if (this.tipo === 'espada') {
+        // tajo en diagonal: de arriba a la derecha hacia abajo a la izquierda
+        const sube = t < 0.25 ? suave(t / 0.25) : 1;
+        const baja = t < 0.25 ? 0 : t < 0.5 ? suave((t - 0.25) / 0.25) : 1;
+        const vuelve = t < 0.6 ? 0 : suave((t - 0.6) / 0.4);
+        rx = sube * 0.6 - baja * 1.7 + vuelve * 1.1;
+        ry = sube * 0.3 + baja * 0.9 - vuelve * 1.2;
+        rz = baja * 0.5 * (1 - vuelve);
+        px -= baja * 0.22 * (1 - vuelve);
+      } else if (this.tipo === 'lanza') {
+        // estocada: atrás y adelante, derecho a la mira
+        const a = t < 0.3 ? -suave(t / 0.3) * 0.12 : t < 0.5 ? -0.12 + suave((t - 0.3) / 0.2) * 0.55 : 0.43 * (1 - suave((t - 0.5) / 0.5));
+        pz -= a; px -= a * 0.35;
+      } else if (this.tipo === 'arco') {
+        const a = Math.sin(Math.PI * t);
+        pz += a * 0.05;
       } else if (this.tipo === 'pala') {
         const a = Math.sin(Math.PI * t);
         pz -= a * 0.18; py -= a * 0.1; rx = -a * 0.5;
@@ -124,6 +143,8 @@ export class Mano {
     py += -Math.abs(Math.cos(jugador.bobFase)) * 0.014 * k + Math.sin(this.tiempo * 1.7) * 0.004;
     py -= (1 - this.cambio) * 0.45;
     if (this.tipo === 'cana' && this.carga > 0) rx += this.carga * 0.5;
+    // el arco tensado: se acerca a la cara y tiembla un poco a fondo
+    if (this.tipo === 'arco' && this.carga > 0) { px -= this.carga * 0.2; pz += this.carga * 0.12; if (this.carga > 0.95) { px += Math.sin(this.tiempo * 40) * 0.003; } }
     this.pivote.position.set(px, py, pz);
     this.pivote.quaternion.setFromEuler(_e.set(rx, ry, rz));
     return impacto;

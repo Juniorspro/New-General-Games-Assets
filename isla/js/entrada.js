@@ -8,7 +8,7 @@ import { aApp } from './pantalla.js';
 const TECLAS = {
   adelante: ['KeyW', 'ArrowUp'], atras: ['KeyS', 'ArrowDown'], izq: ['KeyA', 'ArrowLeft'], der: ['KeyD', 'ArrowRight'],
   salto: ['Space'], correr: ['ShiftLeft', 'ShiftRight'], e: ['KeyE'], inv: ['Tab', 'KeyI'], pausa: ['Escape', 'KeyP'],
-  soltar: ['KeyQ'], comer: ['KeyF'], pincel: ['KeyR'],
+  soltar: ['KeyQ'], comer: ['KeyF'], pincel: ['KeyR'], mapa: ['KeyM'], vista: ['KeyV'],
 };
 
 export class Entrada {
@@ -148,6 +148,7 @@ export class Entrada {
       poner: this.botonesRecien.der,
       e: this.teclaRecien('e'), inv: this.teclaRecien('inv'), pausa: this.teclaRecien('pausa'),
       soltar: this.teclaRecien('soltar'), comer: this.teclaRecien('comer'), pincel: this.teclaRecien('pincel'),
+      mapa: this.teclaRecien('mapa'), vista: this.teclaRecien('vista'),
       todo: this.tecla('correr'),   // Shift+Q tira la pila entera
       num: this.num, rueda: this.rueda,
       mdx: this.mira.dx, mdy: this.mira.dy,

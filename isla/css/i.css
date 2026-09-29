@@ -76,6 +76,44 @@ html.girada #app { transform-origin: 0 0; transform: rotate(90deg) translateY(-1
 #objetivo::before { content: attr(data-t); display: block; font: 900 10px var(--letra); letter-spacing: .12em; color: #ffe27a; }
 #bajoAgua { position: absolute; inset: 0; background: rgba(20, 110, 170, .28); opacity: 0; transition: opacity .2s; }
 #bajoAgua.on { opacity: 1; }
+#objetivo::before { text-transform: uppercase; }
+#bMapa, #bVista { width: 34px; height: 34px; border-radius: 6px; background: var(--panel); border: 2px solid var(--borde); font: 900 15px var(--letra); }
+#armadura { color: #cfe3ff; }
+#armadura::before { content: '⛨ '; }
+
+/* ── la pelea ── */
+#dano { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, rgba(200, 20, 30, 0) 42%, rgba(200, 20, 30, .6) 100%); }
+#dano.on { animation: dano .5s ease-out; }
+@keyframes dano { from { opacity: 1; } to { opacity: 0; } }
+#numeros { position: absolute; inset: 0; overflow: hidden; }
+.numero { position: absolute; left: 0; top: 0; font: 900 20px var(--gorda); color: #fff; will-change: transform;
+  text-shadow: 0 2px 0 #1d222b, 2px 0 0 #1d222b, -2px 0 0 #1d222b, 0 -2px 0 #1d222b; }
+.numero.critico { color: #ffd040; font-size: 26px; }
+#jefe { position: absolute; left: 50%; top: calc(max(10px, env(safe-area-inset-top)) + 46px); transform: translateX(-50%); width: min(calc(56 * var(--vw)), 520px); text-align: center; }
+#jefe b { display: block; margin-bottom: 4px; font: 900 13px var(--letra); letter-spacing: .16em; color: #9ffcff; text-shadow: 0 2px 0 rgba(0,0,0,.55); }
+#jefe div { height: 12px; border-radius: 6px; background: rgba(0,0,0,.5); border: 2px solid var(--borde); overflow: hidden; }
+#jefe i { display: block; height: 100%; width: 100%; background: linear-gradient(#9ffcff, #2cc3dc); transition: width .15s; }
+/* el cartel del capítulo: entra, se queda y se va solo */
+#cartel { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); text-align: center; opacity: 0; width: min(calc(86 * var(--vw)), 640px); }
+#cartel b { display: block; font: 900 italic clamp(24px, calc(4.4 * var(--vw)), 44px)/1 var(--gorda); color: #ffe27a; letter-spacing: .02em; text-shadow: 0 4px 0 #b86b12, 0 8px 18px rgba(0,0,0,.35); }
+#cartel span { display: block; margin-top: 8px; font: 700 16px var(--letra); text-shadow: 0 2px 0 rgba(0,0,0,.55); }
+#cartel.on { animation: cartel 4.5s ease forwards; }
+@keyframes cartel { 0% { opacity: 0; transform: translate(-50%, 14px); } 9% { opacity: 1; transform: translate(-50%, 0); } 84% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── la carta de la botella, el mapa, el final ── */
+#carta, #mapa { position: fixed; inset: 0; z-index: 12; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(10, 20, 30, .45); }
+#carta p { margin: 0; max-width: min(calc(84 * var(--vw)), 500px); max-height: calc(78 * var(--vh)); overflow: auto; padding: 22px 26px; border-radius: 3px; background: #f4e6c1; color: #4a3520;
+  font: 600 16px/1.5 Georgia, "Times New Roman", serif; white-space: pre-line; transform: rotate(-1.2deg); box-shadow: 0 8px 0 rgba(0,0,0,.25), inset 0 0 40px rgba(160, 110, 50, .35); }
+#carta small, #mapa small { font: 700 12px var(--letra); opacity: .85; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+#mapa canvas { width: min(calc(80 * var(--vh)), calc(86 * var(--vw)), 640px); height: auto; aspect-ratio: 1; image-rendering: pixelated; border: 4px solid #e8d3a0; border-radius: 6px; box-shadow: 0 8px 0 rgba(0,0,0,.3); background: #0a4ea6; }
+#final { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: linear-gradient(rgba(42, 120, 236, .88), rgba(159, 216, 255, .82) 70%, rgba(243, 226, 187, .9) 70.5%); }
+#finalCaja { max-width: min(calc(88 * var(--vw)), 640px); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#finalTitulo { margin: 0; font: 900 italic clamp(40px, calc(8 * var(--vw)), 86px)/1 var(--gorda); color: #ffe27a; text-shadow: 0 5px 0 #b86b12, 0 10px 22px rgba(80, 40, 0, .4); animation: entra .6s cubic-bezier(.2,1.3,.4,1) both; }
+#finalTexto { margin: 0; font: 700 17px/1.45 var(--letra); text-shadow: 0 2px 0 rgba(20, 60, 120, .7); }
+#finalStats { margin: 0; font: 800 13px/1.5 var(--letra); color: #10366e; }
+#finalPie { font: 700 12px var(--letra); color: #10366e; opacity: .8; }
+#finalSeguir { margin-top: 6px; font: 900 italic clamp(20px, calc(3.2 * var(--vw)), 32px) var(--gorda); color: #fff; text-shadow: 0 3px 0 rgba(20, 60, 120, .85); transition: transform .18s cubic-bezier(.3,1.6,.5,1), color .15s; }
+#finalSeguir:hover, #finalSeguir:focus-visible { color: #ffe27a; transform: scale(1.08); outline: none; }
 
 /* ── ventana: inventario, cofre, mesa, colección ── */
 #ventana { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(10, 20, 30, .25); }
@@ -99,6 +137,8 @@ html.girada #app { transform-origin: 0 0; transform: rotate(90deg) translateY(-1
 .recetas .receta { margin: 0; }
 .receta button { padding: 5px 10px; border-radius: 5px; border: 2px solid var(--borde); background: #3fae4a; font: 800 12px var(--letra); }
 .receta button:disabled { background: #5d6470; opacity: .7; cursor: default; }
+.receta.hecha { opacity: .62; }
+.receta.hecha button:disabled { background: #3fae4a; opacity: 1; }
 .coleccion { display: grid; grid-template-columns: repeat(8, 56px); gap: 4px; }
 .coleccion div { width: 56px; height: 56px; border-radius: 5px; background: var(--panelClaro); border: 2px solid var(--borde); display: flex; align-items: center; justify-content: center; }
 .coleccion canvas { width: 40px; height: 40px; image-rendering: pixelated; }

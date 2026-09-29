@@ -256,7 +256,7 @@ export class Menu {
     // entrando al mar. Se prueban tomas en orden de preferencia (elegidas
     // mirando capturas) y gana la primera con aire adelante: una roca o una
     // palmera a dos metros de la cámara tapa medio menú.
-    const obst = [...W.rocas.decor, ...W.rocas.minables, ...W.veg.palmeras.map((p) => ({ x: p.x, z: p.z, r: 0.7 }))];
+    const obst = [...W.rocas.decor, ...W.rocas.minables, ...W.veg.palmeras.filter((p) => p.viva).map((p) => ({ x: p.x, z: p.z, r: 0.7 }))];
     const aireDe = (cp, mira) => {
       const f = new THREE.Vector3(mira.x - cp.x, 0, mira.z - cp.z).normalize();
       let aire = 12;

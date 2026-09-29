@@ -10,6 +10,11 @@ import { ITEMS, RECETAS, COLOR_ESTRELLAS, icono, nodoIcono, estrellasTexto, prec
 import { PINCELES } from './acciones.js';
 import { t } from './idioma.js';
 import { aApp, pantalla } from './pantalla.js';
+import { ETAPAS_FARO } from './historia.js';
+import { OFERTAS } from './mercader.js';
+import * as THREE from '../vendor/three.module.min.js';
+
+const _p = new THREE.Vector3();
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -84,11 +89,58 @@ export class Hud {
     this.notis = [];
     this.tPlata = 0;
     this.mostrado = false;
+    // la pelea: destello rojo, números que saltan, la barra del jefe
+    this.elDano = $('dano'); this.elJefe = $('jefe'); this.elJefeVida = $('jefeVida');
+    this.elNumeros = $('numeros'); this.numeros = [];
+    this.elArmadura = $('armadura');
+    // el cartel de capítulo y la carta de la botella
+    this.elCartel = $('cartel'); this.tCartel = 0;
+    this.elCarta = $('carta');
+    // la carta y el mapa son capas: sueltan el puntero como la ventana (con el
+    // puntero capturado un clic nunca llega a la carta) y se cierran con un
+    // toque o una tecla
+    this.capa = null;
+    for (const id of ['carta', 'mapa']) $(id).addEventListener('pointerdown', (ev) => { ev.preventDefault(); this.cerrarCapa(); });
+    addEventListener('keydown', (ev) => {
+      if (!this.capa || ev.repeat) return;
+      if (['KeyE', 'Escape', 'KeyM', 'Space', 'Enter', 'Tab', 'KeyI'].includes(ev.code)) { ev.preventDefault(); this.cerrarCapa(); }
+    });
+    this.elJefeNombre = $('jefeNombre');
+    this.textos();
+  }
+
+  // lo que está escrito en el HTML de las capas
+  textos() {
+    $('cartaCerrar').textContent = t('carta.cerrar');
+    $('mapaAyuda').textContent = t('mapa.ayuda');
+    this.elJefeNombre.textContent = t('jefe.nombre');
+  }
+
+  abrirCapa(nombre) {
+    if (this.abierta || this.capa) return false;
+    this.capa = nombre;
+    $(nombre).classList.remove('oculto');
+    $('mira').classList.add('oculto');
+    this.J.alAbrirVentana();
+    return true;
+  }
+
+  cerrarCapa() {
+    if (!this.capa) return;
+    const J = this.J;
+    if (this.capa === 'mapa') J.mapa.cerrar();
+    $(this.capa).classList.add('oculto');
+    this.capa = null;
+    $('mira').classList.remove('oculto');
+    J.entrada.recien.clear();
+    J.son.sfx('ui');
+    J.alCerrarVentana();
   }
 
   // Al cambiar de idioma: lo que ya está escrito se vuelve a escribir.
   refrescar() {
     this.botPincel.forEach((b, i) => { b.title = t('pincel.titulo', { nombre: PINCELES[i].nombre }); });
+    this.textos();
     this.tPlata = 0;
     this.textoAviso = null;
     if (this.abierta) this.render();
@@ -134,7 +186,10 @@ export class Hud {
     this.tPlata -= dt;
     if (this.tPlata <= 0) {
       this.tPlata = 0.5;
-      this.elPlata.textContent = precioTexto(J.patrimonio());
+      this.elPlata.textContent = precioTexto(J.plata);
+      const peto = J.armadura && ITEMS[J.armadura];
+      this.elArmadura.classList.toggle('oculto', !peto);
+      if (peto) this.elArmadura.textContent = `${Math.round(peto.defensa * 100)}%`;
       this.elHora.textContent = t('hud.dia', { n: J.dia, hora: J.cielo.horaTexto() });
     }
     const it = J.acciones.item();
@@ -148,6 +203,8 @@ export class Hud {
       if (q.vida <= 0 && !q.saliendo) { q.saliendo = true; q.el.classList.add('sale'); }
       if (q.vida <= -0.35) { q.el.remove(); this.notis.splice(i, 1); }
     }
+    this.actualizarPelea(dt);
+    if (this.tCartel > 0) { this.tCartel -= dt; if (this.tCartel <= 0) this.elCartel.classList.remove('on'); }
     // la ventana abierta sigue al inventario (algo que juntaste mientras miraba)
     if (this.abierta) {
       const v = `${J.inv.version}|${this.cofre ? this.cofre.version : ''}`;
@@ -167,11 +224,64 @@ export class Hud {
     this.barraAccion.style.width = `${Math.round(Math.max(0, Math.min(1, f)) * 100)}%`;
   }
 
-  objetivo(texto) {
+  objetivo(texto, cabecera = null) {
     if (!this.elObjetivo) return;
     this.elObjetivo.textContent = texto || '';
-    this.elObjetivo.dataset.t = t('hud.objetivo');
+    this.elObjetivo.dataset.t = cabecera || t('hud.objetivo');
     this.elObjetivo.classList.toggle('oculto', !texto);
+  }
+
+  // ── la pelea ───────────────────────────────────────────────────────────
+  dano() {
+    this.elDano.classList.remove('on'); void this.elDano.offsetWidth; this.elDano.classList.add('on');
+  }
+
+  // un número que salta desde un punto del mundo y se apaga
+  numero(pos, texto, clase = '') {
+    let q = this.numeros.find((n) => n.vida <= 0);
+    if (!q) {
+      if (this.numeros.length >= 14) q = this.numeros[0];
+      else { const el = document.createElement('div'); el.className = 'numero'; this.elNumeros.appendChild(el); q = { el }; this.numeros.push(q); }
+    }
+    q.p = pos.clone().add({ x: (Math.random() - 0.5) * 0.3, y: 0.2, z: (Math.random() - 0.5) * 0.3 });
+    q.vida = 0.85;
+    q.el.textContent = texto;
+    q.el.className = 'numero ' + clase;
+  }
+
+  actualizarPelea(dt) {
+    const J = this.J, cam = J.camara;
+    for (const q of this.numeros) {
+      if (q.vida <= 0) { q.el.style.display = 'none'; continue; }
+      q.vida -= dt;
+      q.p.y += dt * 1.2;
+      _p.copy(q.p).project(cam);
+      if (_p.z > 1) { q.el.style.display = 'none'; continue; }
+      q.el.style.display = '';
+      q.el.style.transform = `translate(${((_p.x + 1) / 2) * pantalla.w}px, ${((1 - _p.y) / 2) * pantalla.h}px) translate(-50%, -50%) scale(${1 + Math.max(0, q.vida - 0.65) * 2})`;
+      q.el.style.opacity = Math.min(1, q.vida * 3);
+    }
+    // la barra del jefe, mientras pelea con vos
+    const e = J.enemigos && J.enemigos.jefe;
+    const peleando = e && e.estado !== 'paseo' && e.estado !== 'muerto' && e.p.distanceTo(J.jugador.p) < 24;
+    this.elJefe.classList.toggle('oculto', !peleando);
+    if (peleando) this.elJefeVida.style.width = `${Math.max(0, (e.vida / e.T.vida) * 100)}%`;
+  }
+
+  // el cartel grande del capítulo
+  cartel(titulo, bajada = '') {
+    this.elCartel.innerHTML = '';
+    const b = document.createElement('b'); b.textContent = titulo;
+    const s = document.createElement('span'); s.textContent = bajada;
+    this.elCartel.append(b, s);
+    this.elCartel.classList.remove('on'); void this.elCartel.offsetWidth; this.elCartel.classList.add('on');
+    this.tCartel = 4.5;
+  }
+
+  // la carta de una botella: se cierra tocándola (o con E)
+  carta(texto) {
+    this.elCarta.firstElementChild.textContent = texto;
+    this.abrirCapa('carta');
   }
 
   // texto con {n}: si llega otra con la misma clave, se suman
@@ -198,6 +308,7 @@ export class Hud {
   // ── la ventana ───────────────────────────────────────────────────────────
   abrir(pestana = 'mochila', cofre = null) {
     const J = this.J;
+    if (this.capa) return;
     this.abierta = pestana;
     this.cofre = cofre || (pestana === 'cofre' ? this.cofre : null);
     if (pestana === 'mesa') this.mesaCerca = true;
@@ -229,7 +340,9 @@ export class Hud {
 
   render() {
     const J = this.J;
-    const tabs = [['mochila', t('v.mochila')], ['mesa', t('v.mesa')], ...(this.cofre ? [['cofre', t('v.cofre')]] : []), ['coleccion', t('v.coleccion')]];
+    const especial = this.abierta === 'faro' || this.abierta === 'tienda';
+    const tabs = especial ? [[this.abierta, t('v.' + this.abierta)], ['mochila', t('v.mochila')]]
+      : [['mochila', t('v.mochila')], ['mesa', t('v.mesa')], ...(this.cofre ? [['cofre', t('v.cofre')]] : []), ['coleccion', t('v.coleccion')]];
     this.elPestanas.innerHTML = '';
     for (const [id, nombre] of tabs) {
       const b = document.createElement('button');
@@ -265,6 +378,10 @@ export class Hud {
       C.appendChild(this.grilla(J.inv, 9, 36));
       C.appendChild(this.separa());
       C.appendChild(this.grilla(J.inv, 0, 9));
+    } else if (this.abierta === 'faro') {
+      C.appendChild(this.faro());
+    } else if (this.abierta === 'tienda') {
+      C.appendChild(this.tienda());
     } else {
       this.abierta = 'coleccion';
       C.appendChild(this.coleccion());
@@ -276,20 +393,101 @@ export class Hud {
   repintar() {
     for (const v of this.vistas) this.pintarRanura(v.el, v.inv.ranuras[v.i]);
     for (const r of this.elCuerpo.querySelectorAll('.receta')) this.pintarReceta(r);
+    if (this.abierta === 'faro' || this.abierta === 'tienda') this.render();
+  }
+
+  // ── el faro: las cuatro etapas y lo que pide cada una ──────────────────
+  faro() {
+    const J = this.J, H = J.historia, cont = document.createElement('div');
+    cont.appendChild(this.titulo(t('f.titulo')));
+    const bajada = document.createElement('div');
+    bajada.className = 'resumen';
+    bajada.textContent = t('f.bajada');
+    cont.appendChild(bajada);
+    ETAPAS_FARO.forEach((E, i) => {
+      const d = document.createElement('div');
+      d.className = 'receta' + (i < H.faro.etapa ? ' hecha' : '');
+      const nom = document.createElement('div');
+      nom.className = 'nom';
+      nom.textContent = `${i + 1}. ${t('f.' + E.id)}`;
+      d.appendChild(nom);
+      const ing = document.createElement('div');
+      ing.className = 'ing';
+      for (const [id, n] of Object.entries(E.pide)) {
+        const sp = document.createElement('span');
+        sp.appendChild(nodoIcono(id, 16));
+        const k = document.createElement('i');
+        k.textContent = `${Math.min(J.inv.contar(id), 999)}/${n}`;
+        sp.appendChild(k);
+        sp.title = ITEMS[id].nombre;
+        if (J.inv.contar(id) < n && i >= H.faro.etapa) sp.classList.add('falta');
+        ing.appendChild(sp);
+      }
+      d.appendChild(ing);
+      const b = document.createElement('button');
+      if (i < H.faro.etapa) { b.textContent = '✓'; b.disabled = true; }
+      else {
+        b.textContent = t(E.deNoche && J.noche < 0.6 ? 'f.deNoche' : 'f.reparar');
+        b.disabled = i !== H.faro.etapa || !H.puedeHacer(i);
+        b.addEventListener('click', () => { if (H.reparar()) this.render(); });
+      }
+      d.appendChild(b);
+      cont.appendChild(d);
+    });
+    return cont;
+  }
+
+  // ── la tienda del mercader: vender a la izquierda, comprar a la derecha ──
+  tienda() {
+    const J = this.J, Me = J.mercader, cont = document.createElement('div');
+    const plata = document.createElement('div');
+    plata.className = 'titulo';
+    plata.textContent = t('m.plata', { p: precioTexto(J.plata) });
+    cont.appendChild(plata);
+    cont.appendChild(this.titulo(t('m.vender')));
+    const g = this.grilla(J.inv, 0, 36, true);
+    cont.appendChild(g);
+    cont.appendChild(this.titulo(t('m.comprar')));
+    const lista = document.createElement('div');
+    lista.className = 'recetas';
+    for (const o of OFERTAS) {
+      if (o.unico && Me.vendidos.has(o.id)) continue;
+      const d = document.createElement('div');
+      d.className = 'receta';
+      d.appendChild(nodoIcono(o.id, 16));
+      const nom = document.createElement('div');
+      nom.className = 'nom';
+      nom.textContent = ITEMS[o.id].nombre + (o.n > 1 ? ` ×${o.n}` : '');
+      d.appendChild(nom);
+      const b = document.createElement('button');
+      b.textContent = precioTexto(o.precio);
+      b.disabled = J.plata < o.precio;
+      b.addEventListener('click', () => { if (Me.comprar(o)) this.render(); });
+      d.appendChild(b);
+      d.addEventListener('pointerenter', () => this.tipDe({ id: o.id, n: o.n }));
+      d.addEventListener('pointerleave', () => this.elTip.classList.add('oculto'));
+      lista.appendChild(d);
+    }
+    cont.appendChild(lista);
+    return cont;
   }
 
   titulo(t) { const d = document.createElement('div'); d.className = 'titulo'; d.textContent = t; return d; }
   separa() { const d = document.createElement('div'); d.className = 'separa'; return d; }
 
-  grilla(inv, a, b) {
+  grilla(inv, a, b, venta = false) {
     const g = document.createElement('div');
     g.className = 'grilla';
     for (let i = a; i < b; i++) {
       const d = this.crearRanura();
       this.pintarRanura(d, inv.ranuras[i]);
       if (inv === this.J.inv && i === this.J.acciones.sel) d.classList.add('sel');
-      d.addEventListener('pointerdown', (ev) => { ev.preventDefault(); this.clicRanura(inv, i, ev); this.tipDe(inv.ranuras[i]); });
-      d.addEventListener('pointerenter', () => this.tipDe(inv.ranuras[i]));
+      d.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        if (venta) { if (this.J.mercader.vender(inv, i, ev.shiftKey || ev.button === 2)) this.render(); return; }
+        this.clicRanura(inv, i, ev); this.tipDe(inv.ranuras[i]);
+      });
+      d.addEventListener('pointerenter', () => this.tipDe(inv.ranuras[i], false, venta));
       d.addEventListener('pointerleave', () => this.elTip.classList.add('oculto'));
       this.vistas.push({ inv, i, el: d });
       g.appendChild(d);
@@ -354,16 +552,17 @@ export class Hud {
   }
   moverCursor() { this.elArrastre.style.left = `${this.mx}px`; this.elArrastre.style.top = `${this.my}px`; }
 
-  tipDe(r, desconocido = false) {
+  tipDe(r, desconocido = false, venta = false) {
     const T = this.elTip;
     if (!r) { T.classList.add('oculto'); return; }
     const it = ITEMS[r.id];
     if (desconocido) T.innerHTML = `<div class="n">???</div><div class="d">${esc(t('tip.desconocido'))}</div>`;
     else {
       const col = COLOR_ESTRELLAS[Math.min(5, it.estrellas)];
-      const precio = r.n > 1 ? t('tip.cu', { p: precioTexto(it.valor), t: precioTexto(it.valor * r.n) }) : precioTexto(it.valor);
+      const unidad = venta ? this.J.mercader.precioVenta(r.id) : it.valor;
+      const precio = (venta ? t('m.teDa') + ' ' : '') + (r.n > 1 ? t('tip.cu', { p: precioTexto(unidad), t: precioTexto(unidad * r.n) }) : precioTexto(unidad));
       T.innerHTML = `<div class="n">${esc(it.nombre)}</div><div class="e" style="color:${col}">${estrellasTexto(it.estrellas)}</div>`
-        + `<span class="p">${precio}</span>${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}${it.comida ? `<div class="d">${esc(t('tip.comida', { n: it.comida }))}</div>` : ''}`;
+        + `<span class="p">${precio}</span>${it.desc ? `<div class="d">${esc(it.desc)}</div>` : ''}${it.comida ? `<div class="d">${esc(t('tip.comida', { n: it.comida }))}</div>` : ''}${it.cura ? `<div class="d">${esc(t('tip.cura', { n: it.cura }))}</div>` : ''}${it.dano ? `<div class="d">${esc(t('tip.dano', { n: it.dano }))}</div>` : ''}${it.defensa ? `<div class="d">${esc(t('tip.defensa', { n: Math.round(it.defensa * 100) }))}</div>` : ''}${it.cocina ? `<div class="d">${esc(t('tip.cocina'))}</div>` : ''}${venta ? `<div class="d">${esc(t('m.ayudaVenta'))}</div>` : ''}`;
     }
     T.classList.remove('oculto');
     this.moverTip();
@@ -452,7 +651,7 @@ export class Hud {
     const r = document.createElement('div');
     r.className = 'resumen';
     r.innerHTML = t('v.patrimonio', { p: precioTexto(J.patrimonio()), d: J.dia }) + '<br>'
-      + esc(t('v.stats', { a: s.palmeras || 0, b: s.rocas || 0, c: s.peces || 0, d: s.bloques || 0 }));
+      + esc(t('v.stats', { a: s.palmeras || 0, b: s.rocas || 0, c: s.peces || 0, d: s.bloques || 0, e: s.enemigos || 0 }));
     cont.appendChild(r);
     return cont;
   }

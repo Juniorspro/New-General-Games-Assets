@@ -117,6 +117,23 @@ export class Sonido {
       case 'comer': for (let i = 0; i < 3; i++) this.soplo(v(1500), 2, 0.07, 0.25, i * 0.11); break;
       case 'dolor': this.tono(300, 140, 0.2, 0.3, 'sawtooth'); break;
       case 'mina': this.soplo(200, 0.7, 1.5, 0.3, 0, 90); this.tono(70, 50, 1.2, 0.2, 'sine'); break;
+      // ── pelea ──
+      case 'espada': this.soplo(v(2600), 1.4, 0.16, 0.32, 0, 900); this.soplo(v(5200), 3, 0.06, 0.12, 0.03); break;
+      case 'golpeCarne': this.tono(v(160), 70, 0.12, 0.5, 'sine'); this.soplo(v(700), 1, 0.1, 0.4, 0, 250); break;
+      case 'hueso': for (let i = 0; i < 3; i++) this.tono(v(900 + i * 260), 500, 0.04, 0.22, 'square', i * 0.035, 0.1); break;
+      case 'cangrejo': for (let i = 0; i < 2; i++) this.soplo(v(3500), 6, 0.03, 0.25, i * 0.07); break;
+      case 'esqueleto': for (let i = 0; i < 5; i++) this.tono(v(700 + Math.random() * 500), 400, 0.03, 0.12, 'square', i * 0.05, 0); break;
+      case 'murcielago': this.tono(v(3200), 2400, 0.08, 0.1, 'sine', 0, 0.2); this.tono(v(3600), 2800, 0.06, 0.07, 'sine', 0.09, 0.2); break;
+      case 'golem': this.tono(55, 38, 1.1, 0.5, 'sawtooth', 0, 0.4); this.soplo(160, 0.6, 1.0, 0.4, 0, 70); break;
+      case 'golemGolpe': this.tono(80, 30, 0.7, 0.8, 'sine'); this.soplo(420, 0.6, 0.8, 0.8, 0, 90); for (let i = 0; i < 6; i++) this.soplo(v(2000), 3, 0.05, 0.25, 0.05 + i * 0.07); break;
+      case 'arco': this.tono(v(180), 120, 0.12, 0.35, 'triangle'); this.tono(v(360), 240, 0.08, 0.15, 'sine'); break;
+      case 'flecha': this.soplo(v(3000), 2, 0.2, 0.18, 0, 1200); break;
+      case 'clavar': this.tono(v(400), 150, 0.06, 0.3, 'triangle'); this.soplo(1800, 3, 0.04, 0.2); break;
+      case 'moneda': this.vidrio(1760, 0.1); this.vidrio(2349, 0.08, 0.06, 0.5); break;
+      case 'fuego': this.soplo(v(1600), 0.7, 0.14, 0.12, 0, 900); break;
+      case 'barco': this.tono(110, 108, 1.6, 0.35, 'sawtooth', 0, 0.5); this.tono(165, 163, 1.6, 0.25, 'sawtooth', 0, 0.5); break;
+      case 'victoria': [523, 659, 784, 1047, 784, 1047].forEach((f, i) => this.tono(f, f, 0.22, 0.2, 'square', i * 0.14, 0.2)); break;
+      case 'faro': for (let i = 0; i < 4; i++) this.vidrio(784 + i * 196, 0.12, i * 0.18, 1.2); break;
       default: break;
     }
   }

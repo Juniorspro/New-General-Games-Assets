@@ -38,10 +38,10 @@ export const ITEMS = {
   gravinita: T('Gravinita', 'raro', 5, 11600, { color: 0x6a4cff, desc: 'Deja ver el espacio-tiempo alrededor.' }),
   antimateria: T('Antimateria', 'raro', 5, 12000, { mat: 'antimateria', desc: 'Mirar adentro es mirar el universo.' }),
   quarks: T('Cúmulo de quarks', 'raro', 5, 12200, { desc: 'Partículas que aparecen y desaparecen.' }),
-  atun: T('Atún', 'pez', 1, 100, { comida: 30, color: 0x7f9bb5 }),
-  payaso: T('Pez payaso', 'pez', 2, 150, { comida: 15, color: 0xff7a1a }),
-  calamar: T('Calamar', 'pez', 2, 220, { comida: 20, color: 0xff9a6a }),
-  abisal: T('Pez abisal', 'pez', 3, 900, { comida: 25, color: 0x2a3050, desc: 'No debería estar tan cerca de la orilla. Es un juego.' }),
+  atun: T('Atún', 'pez', 1, 100, { comida: 30, color: 0x7f9bb5, cocina: 'pescadoAsado' }),
+  payaso: T('Pez payaso', 'pez', 2, 150, { comida: 15, color: 0xff7a1a, cocina: 'pescadoAsado' }),
+  calamar: T('Calamar', 'pez', 2, 220, { comida: 20, color: 0xff9a6a, cocina: 'pescadoAsado' }),
+  abisal: T('Pez abisal', 'pez', 3, 900, { comida: 25, color: 0x2a3050, cocina: 'pescadoAsado', desc: 'No debería estar tan cerca de la orilla. Es un juego.' }),
   botella: T('Botella con mensaje', 'raro', 2, 300, { color: 0x9fe8d0 }),
   moneda: T('Moneda antigua', 'raro', 3, 1200, { color: 0xffcf40 }),
   hachaPiedra: T('Hacha de piedra', 'herramienta', 1, 30, { pila: 1, herr: 'hacha', poder: 1, ritmo: 0.5 }),
@@ -60,6 +60,27 @@ export const ITEMS = {
   tablon: T('Tablón', 'bloque', 1, 3, { bloque: 'tablon' }),
   bloquePiedra: T('Bloque de piedra', 'bloque', 1, 6, { bloque: 'piedra' }),
   farolPie: T('Farol de pie', 'bloque', 2, 180, { pila: 8, bloque: 'farolPie', luz: [1.0, 0.78, 0.45, 11] }),
+  // ── armas: daño, alcance y ritmo del golpe ──
+  espadaMadera: T('Espada de madera', 'herramienta', 1, 20, { pila: 1, herr: 'espada', poder: 1, dano: 4, alcance: 2.5, ritmo: 0.42 }),
+  espadaPiedra: T('Espada de piedra', 'herramienta', 1, 45, { pila: 1, herr: 'espada', poder: 1, dano: 6, alcance: 2.6, ritmo: 0.42 }),
+  espadaHierro: T('Espada de hierro', 'herramienta', 2, 600, { pila: 1, herr: 'espada', poder: 2, dano: 10, alcance: 2.7, ritmo: 0.38 }),
+  espadaAmatista: T('Espada de amatista', 'herramienta', 4, 8000, { pila: 1, herr: 'espada', poder: 3, dano: 16, alcance: 2.9, ritmo: 0.32, desc: 'Corta dejando un rastro violeta.' }),
+  lanza: T('Lanza', 'herramienta', 1, 60, { pila: 1, herr: 'lanza', poder: 1, dano: 7, alcance: 3.7, ritmo: 0.55, desc: 'Llega más lejos que una espada.' }),
+  arco: T('Arco', 'herramienta', 2, 300, { pila: 1, herr: 'arco', poder: 1, dano: 9, ritmo: 0.3, desc: 'Mantené apretado para tensar. Usa flechas.' }),
+  flecha: T('Flecha', 'material', 1, 6),
+  // ── defensa: se pone con clic derecho ──
+  petoCaparazon: T('Peto de caparazón', 'armadura', 2, 250, { pila: 1, defensa: 0.25, color: 0xe0643a }),
+  petoHierro: T('Peto de hierro', 'armadura', 3, 900, { pila: 1, defensa: 0.45, color: 0xc9cfd8 }),
+  // ── de los enemigos y de la cocina ──
+  carneCangrejo: T('Carne de cangrejo', 'comida', 1, 20, { comida: 10, cocina: 'cangrejoAsado', color: 0xff8f6a }),
+  cangrejoAsado: T('Cangrejo asado', 'comida', 2, 60, { comida: 32, cura: 10, color: 0xd9542a }),
+  pescadoAsado: T('Pescado asado', 'comida', 2, 140, { comida: 40, cura: 12, color: 0xc98a45 }),
+  caparazon: T('Caparazón', 'material', 1, 25, { color: 0xe0643a }),
+  hueso: T('Hueso', 'material', 1, 15, { color: 0xf1ead8 }),
+  pocion: T('Poción de vida', 'comida', 2, 300, { comida: 0, cura: 60, color: 0xff3a6a, desc: 'Del mercader. Cura casi todo.' }),
+  mapaTesoro: T('Mapa del tesoro', 'raro', 3, 1500, { color: 0xe8d3a0, desc: 'Una X en una playa lejana. Hay que cavar con la pala.' }),
+  corazonCristal: T('Corazón de cristal', 'raro', 5, 25000, { color: 0x5ff6ff, luz: [0.4, 0.9, 1.0, 8], desc: 'El cristal del faro. Lo tenía el guardián de la mina.' }),
+  fogata: T('Fogata', 'bloque', 1, 30, { pila: 8, bloque: 'fogata', desc: 'Cocina y espanta a los esqueletos.' }),
 };
 // El nombre y la descripción se leen en el idioma elegido: el castellano de
 // arriba es el original, las traducciones están en idioma.js ('it.' y 'd.').
@@ -87,6 +108,16 @@ export const RECETAS = [
   { id: 'hachaHierro', da: 1, pide: { madera: 2, hierro: 3 }, mesa: true },
   { id: 'canaBuena', da: 1, pide: { madera: 3, fibra: 3, oro: 1 }, mesa: true },
   { id: 'picoAmatista', da: 1, pide: { madera: 2, amatista: 3, hierro: 2 }, mesa: true },
+  { id: 'espadaMadera', da: 1, pide: { madera: 2, rama: 1 } },
+  { id: 'espadaPiedra', da: 1, pide: { piedra: 2, rama: 1 } },
+  { id: 'lanza', da: 1, pide: { rama: 3, piedra: 1, fibra: 1 } },
+  { id: 'fogata', da: 1, pide: { madera: 3, piedra: 3 } },
+  { id: 'flecha', da: 4, pide: { rama: 1, piedra: 1, fibra: 1 } },
+  { id: 'arco', da: 1, pide: { rama: 3, fibra: 3 }, mesa: true },
+  { id: 'espadaHierro', da: 1, pide: { hierro: 2, madera: 1 }, mesa: true },
+  { id: 'espadaAmatista', da: 1, pide: { amatista: 3, hierro: 1, madera: 1 }, mesa: true },
+  { id: 'petoCaparazon', da: 1, pide: { caparazon: 5, fibra: 2 }, mesa: true },
+  { id: 'petoHierro', da: 1, pide: { hierro: 5, fibra: 2 }, mesa: true },
 ];
 
 export const COLOR_ESTRELLAS = ['#8a8f98', '#5fe06a', '#5ab8ff', '#4f6bff', '#c36bff', '#ffb52e'];
@@ -155,6 +186,14 @@ function icPez(p, cuerpo, aleta, rayas) {
   if (rayas) { p.rect(6, 5, 1, 6, rayas); p.rect(9, 5, 1, 6, rayas); }
   p.px(4, 7, '#ffffff'); p.px(4, 7, '#101010');
 }
+function icEspada(p, hoja, filo) {
+  p.linea(4, 12, 13, 3, hoja, 2); p.linea(5, 12, 13, 4, filo);
+  p.linea(2, 10, 6, 14, '#5b3413', 2); p.linea(1, 15, 3, 13, '#8a5a2b', 2);
+}
+function icPeto(p, c, luz) {
+  p.poli([[3, 3], [6, 2], [8, 4], [10, 2], [13, 3], [13, 13], [3, 13]], c);
+  p.rect(5, 5, 2, 6, luz); p.rect(3, 13, 10, 1, '#3a3d45');
+}
 function icMango(p, x0 = 3, y0 = 14, x1 = 11, y1 = 5) { p.linea(x0, y0, x1, y1, '#8a5a2b', 2); p.linea(x0, y0, x1 - 1, y1 + 1, '#b37a3f'); }
 function icCubo(p, arriba, lado, frente) {
   p.poli([[2, 5], [8, 2], [14, 5], [8, 8]], arriba);
@@ -212,6 +251,24 @@ const DIBUJOS = {
   tablon: (p) => { p.poli([[2, 8], [8, 5], [14, 8], [8, 11]], '#c98a45'); p.poli([[2, 8], [8, 11], [8, 13], [2, 10]], '#8a5526'); p.poli([[8, 11], [14, 8], [14, 10], [8, 13]], '#a86b33'); },
   bloquePiedra: (p) => icCubo(p, '#9aa0ab', '#5d616b', '#7d8290'),
   farolPie: (p) => { p.rect(7, 7, 2, 8, '#5b3413'); p.rect(5, 2, 6, 6, '#3a3d45'); p.rect(6, 3, 4, 4, '#ffd36a'); p.rect(4, 14, 8, 1, '#5b3413'); },
+  espadaMadera: (p) => icEspada(p, '#b37a3f', '#d9a262'),
+  espadaPiedra: (p) => icEspada(p, '#8a8f9a', '#c0c5ce'),
+  espadaHierro: (p) => icEspada(p, '#d4d9e2', '#ffffff'),
+  espadaAmatista: (p) => icEspada(p, '#b46cff', '#f0d8ff'),
+  lanza: (p) => { p.linea(2, 14, 11, 5, '#8a5a2b', 2); p.poli([[10, 6], [14, 1], [12, 7]], '#c0c5ce'); p.px(13, 2, '#ffffff'); p.rect(9, 6, 2, 2, '#6fcf3f'); },
+  arco: (p) => { for (let y = 1; y < 15; y++) { const x = 4 + Math.round(Math.sin((y / 14) * Math.PI) * 6); p.px(x, y, '#9b6a36'); p.px(x + 1, y, '#7a4f25'); } p.linea(4, 1, 4, 14, '#f4f6fa'); },
+  flecha: (p) => { p.linea(2, 14, 12, 4, '#9b6a36'); p.poli([[11, 3], [14, 2], [13, 5]], '#c0c5ce'); p.rect(2, 12, 3, 1, '#ffffff'); p.rect(3, 13, 1, 2, '#ffffff'); },
+  petoCaparazon: (p) => icPeto(p, '#e0643a', '#ff9a6a'),
+  petoHierro: (p) => icPeto(p, '#b9c1cc', '#eef1f5'),
+  carneCangrejo: (p) => { p.circulo(8, 9, 5, '#ff8f6a'); p.circulo(8, 9, 3, '#ffc2a8'); p.rect(3, 12, 10, 2, '#e0643a'); },
+  cangrejoAsado: (p) => { p.poli([[3, 11], [5, 6], [11, 6], [13, 11], [8, 13]], '#d9542a'); p.rect(5, 7, 6, 2, '#ff8a4a'); p.px(6, 7, '#101010'); p.px(10, 7, '#101010'); p.linea(2, 8, 4, 6, '#d9542a'); p.linea(14, 8, 12, 6, '#d9542a'); },
+  pescadoAsado: (p) => { icPez(p, '#c98a45', '#a86b33'); p.rect(5, 6, 1, 4, '#7a4f25'); p.rect(8, 6, 1, 4, '#7a4f25'); },
+  caparazon: (p) => { p.poli([[2, 12], [4, 5], [8, 3], [12, 5], [14, 12]], '#e0643a'); p.linea(4, 11, 7, 5, '#ff9a6a'); p.linea(9, 5, 12, 11, '#b8472a'); },
+  hueso: (p) => { p.linea(4, 12, 12, 4, '#f1ead8', 2); p.circulo(3.5, 12.5, 1.8, '#f1ead8'); p.circulo(5, 13.5, 1.5, '#f1ead8'); p.circulo(12.5, 3.5, 1.8, '#f1ead8'); p.circulo(11, 2.5, 1.5, '#f1ead8'); },
+  pocion: (p) => { p.rect(6, 1, 4, 3, '#8a5a2b'); p.circulo(8, 10, 5, '#ff3a6a'); p.rect(7, 4, 2, 2, '#e8eef9'); p.px(6, 8, '#ffffff'); },
+  mapaTesoro: (p) => { p.rect(2, 3, 12, 10, '#e8d3a0'); p.rect(2, 3, 12, 1, '#c9a458'); p.linea(4, 10, 8, 6, '#8a5a2b'); p.linea(10, 8, 12, 10, '#d9542a'); p.linea(12, 8, 10, 10, '#d9542a'); },
+  corazonCristal: (p) => { p.poli([[8, 14], [2, 7], [4, 3], [8, 5], [12, 3], [14, 7]], '#5ff6ff'); p.poli([[8, 14], [8, 5], [12, 3], [14, 7]], '#2cc3dc'); p.px(5, 5, '#ffffff'); p.px(4, 6, '#ffffff'); },
+  fogata: (p) => { p.linea(2, 14, 13, 11, '#7a4f25', 2); p.linea(3, 11, 14, 14, '#8a5a2b', 2); p.poli([[5, 11], [8, 2], [11, 11]], '#ff8a10'); p.poli([[7, 11], [8, 6], [9, 11]], '#ffe27a'); },
 };
 
 const cacheIconos = new Map();
@@ -255,6 +312,28 @@ function modeloHerramienta(id, it) {
   } else if (it.herr === 'cana') {
     mango.scale.set(0.7, 2.2, 0.7);
     g.add(new THREE.Mesh(geo('reel', () => caja(0.07, 0.07, 0.07, 0.03, 0.25, 0)), liso(0x50535c)));
+  } else if (it.herr === 'espada') {
+    // hoja larga, guarda y empuñadura: la hoja de amatista es gema de verdad
+    g.clear();
+    const colHoja = id === 'espadaMadera' ? 0xb37a3f : id === 'espadaPiedra' ? 0x9aa0ab : 0xd4d9e2;
+    const matHoja = id === 'espadaAmatista' ? matGema(0xb46cff, 'cristal', { emision: 0.35 }) : liso(colHoja, { brillo: id === 'espadaMadera' ? 0 : 0.9 });
+    g.add(new THREE.Mesh(geo('espHoja', () => mergeSimple([caja(0.07, 0.62, 0.02, 0, 0.5, 0), caja(0.045, 0.08, 0.02, 0, 0.84, 0)])), matHoja));
+    g.add(new THREE.Mesh(geo('espGuarda', () => caja(0.22, 0.04, 0.05, 0, 0.18, 0)), liso(0x5b3413)));
+    g.add(new THREE.Mesh(geo('espMango', () => caja(0.04, 0.18, 0.04, 0, 0.08, 0)), liso(0x8a5a2b)));
+  } else if (it.herr === 'lanza') {
+    mango.scale.set(0.85, 1.9, 0.85);
+    g.add(new THREE.Mesh(geo('lanzaPunta', () => new THREE.ConeGeometry(0.05, 0.22, 4).translate(0, 1.28, 0)), liso(0xc0c5ce, { brillo: 0.8 })));
+    g.add(new THREE.Mesh(geo('lanzaAtado', () => caja(0.07, 0.06, 0.07, 0, 1.15, 0)), liso(0x6fcf3f)));
+  } else if (it.herr === 'arco') {
+    g.clear();
+    // la vara: siete tramos sobre un arco de radio 0,42 m; la cuerda une las puntas
+    const partes = [];
+    for (let k = 0; k < 7; k++) {
+      const a = (k / 6 - 0.5) * 2;
+      partes.push(caja(0.035, 0.13, 0.035).rotateZ(a).translate(-0.3 + Math.cos(a) * 0.42, 0.45 + Math.sin(a) * 0.42, 0));
+    }
+    g.add(new THREE.Mesh(geo('arcoMadera', () => mergeSimple(partes)), liso(0x9b6a36)));
+    g.add(new THREE.Mesh(geo('arcoCuerda', () => caja(0.01, 0.71, 0.01, -0.073, 0.45, 0)), liso(0xf4f6fa)));
   } else if (it.herr === 'farol') {
     g.clear();
     g.add(new THREE.Mesh(geo('farolMarco', () => mergeSimple([caja(0.2, 0.03, 0.2, 0, 0.02, 0), caja(0.2, 0.03, 0.2, 0, 0.3, 0), caja(0.03, 0.3, 0.03, 0.09, 0.16, 0.09), caja(0.03, 0.3, 0.03, -0.09, 0.16, 0.09), caja(0.03, 0.3, 0.03, 0.09, 0.16, -0.09), caja(0.03, 0.3, 0.03, -0.09, 0.16, -0.09), caja(0.06, 0.08, 0.06, 0, 0.36, 0)])), liso(0x3a3d45)));
@@ -311,6 +390,12 @@ function modeloRaro(id, it) {
     g.add(new THREE.Mesh(geo('corcho', () => caja(0.06, 0.04, 0.04, 0.13, 0.07, 0)), liso(0x8a5a2b)));
   } else if (id === 'moneda') {
     g.add(new THREE.Mesh(geo('moneda', () => new THREE.CylinderGeometry(0.1, 0.1, 0.025, 10).translate(0, 0.02, 0)), matGema(0xffcf40, 'metal')));
+  } else if (id === 'corazonCristal') {
+    g.add(new THREE.Mesh(geo('corazon', () => new THREE.OctahedronGeometry(0.16, 0).scale(1, 1.3, 0.7).translate(0, 0.2, 0)), matGema(0x5ff6ff, 'cristal', { emision: 0.6 })));
+    g.userData.animar = 'gravinita';
+  } else if (id === 'mapaTesoro') {
+    g.add(new THREE.Mesh(geo('mapa', () => caja(0.3, 0.02, 0.22, 0, 0.01, 0)), liso(0xe8d3a0)));
+    g.add(new THREE.Mesh(geo('mapaX', () => mergeSimple([caja(0.07, 0.022, 0.015, 0.06, 0.012, 0.03).rotateY(0.7), caja(0.07, 0.022, 0.015, 0.06, 0.012, 0.03).rotateY(-0.7)])), liso(0xd9542a)));
   }
   return g;
 }
@@ -334,9 +419,26 @@ export function modeloItem(id) {
   else if (it.tipo === 'pez') g = modeloPez(it, id);
   else if (it.tipo === 'bloque') g = modeloBloque(it);
   else if (it.tipo === 'raro' || id === 'botella' || id === 'moneda') g = modeloRaro(id, it);
+  else if (it.tipo === 'armadura') {
+    g = new THREE.Group();
+    g.add(new THREE.Mesh(geo('peto', () => mergeSimple([caja(0.32, 0.3, 0.12, 0, 0.16, 0), caja(0.1, 0.08, 0.12, 0.13, 0.33, 0), caja(0.1, 0.08, 0.12, -0.13, 0.33, 0)])), liso(it.color, { brillo: 0.5 })));
+  } else if (id === 'hueso') {
+    g = new THREE.Group();
+    g.add(new THREE.Mesh(geo('hueso', () => mergeSimple([caja(0.3, 0.05, 0.05, 0, 0.03, 0), caja(0.06, 0.06, 0.1, 0.16, 0.03, 0), caja(0.06, 0.06, 0.1, -0.16, 0.03, 0)])), liso(it.color)));
+  } else if (id === 'flecha') {
+    g = new THREE.Group();
+    g.add(new THREE.Mesh(geo('flechaIt', () => mergeSimple([caja(0.42, 0.02, 0.02, 0, 0.02, 0), caja(0.06, 0.04, 0.04, 0.23, 0.02, 0), caja(0.07, 0.05, 0.01, -0.2, 0.02, 0)])), liso(0x9b6a36)));
+  } else if (it.tipo === 'comida' && it.color) {
+    g = new THREE.Group();
+    if (id === 'pocion') g.add(new THREE.Mesh(geo('pocion', () => new THREE.SphereGeometry(0.1, 7, 5).translate(0, 0.1, 0)), liso(it.color, { emisivo: 0x40081a, brillo: 1 })));
+    else g.add(new THREE.Mesh(geo('bocado', () => new THREE.SphereGeometry(0.12, 6, 4).scale(1.3, 0.6, 1).translate(0, 0.07, 0)), liso(it.color)));
+  } else if (id === 'caparazon') {
+    g = new THREE.Group();
+    g.add(new THREE.Mesh(geo('caparazonIt', () => new THREE.SphereGeometry(0.16, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.5, 0.8)), liso(it.color)));
+  }
   else if (it.tipo === 'gema') {
     g = new THREE.Group();
-    const base = new THREE.Mesh(geo('baseGema', () => geoRoca(31, 0.6).scale(0.13, 0.1, 0.13).translate(0, 0.05, 0)), matPixel('mundo', { mapa: null, color: 0x6b6f7a, bari: true, borde: 0.6, texeles: 32, clave: 'baseGema' }));
+    const base = new THREE.Mesh(geo('baseGema', () => geoRoca(31, 0.6).scale(0.13, 0.1, 0.13).translate(0, 0.05, 0)), matPixel('liso', { color: 0x6b6f7a, bari: true, borde: 0.6, texeles: 32, clave: 'baseGema' }));
     const crist = new THREE.Mesh(geo('cristGema', () => geoCristales(7, 4).scale(0.5, 0.5, 0.5).translate(0, 0.06, 0)), matGema(it.color, it.mat || 'cristal', { emision: 0.15 }));
     g.add(base, crist);
   } else if (it.tipo === 'metal') {
