@@ -56,6 +56,10 @@ los demás lo ven.
 - **Juegos** (cada lugar con su gente y tus amigos), **Casas** (las abiertas),
   **Perfil**, y atajos a la cámara, el probador, la tienda, las misiones y los
   ajustes.
+- **Los botones guardados:** voz, misiones, estilo, gestos, música, mapa y la
+  barra 1-5 se usan desde el celu. En la pantalla quedan 📱, 💬 y ☰, y en
+  **📱 › Ajustes** se elige qué más queda afuera.
+- El celu va siempre parado, como uno de verdad, también con el juego acostado.
 - Sin servidor y con un broker público, nada se cree porque sí: el id es la
   huella de una llave ECDH de cada aparato, y las cartas de amigo a amigo van
   cifradas (AES-GCM) y retenidas en `buzon/<para>/<de>`. Nadie puede leerlas
@@ -72,7 +76,7 @@ Detalle: `js/amigos.js` y `js/celu.js`.
 | Aurora | noche con aurora, cristales, lago de hielo, delfines que vuelan por aros dorados, estrellas que caen, el cristal del sueño colectivo |
 | Jardín de géiseres | nenúfares que se pisan, lotos, flores de agua gigantes, géiseres que soplan, flores que rebotan |
 | Aero·Mart | la tienda por dentro: vitrinas, percheros, sombrerero, estantes, globos, neón, maniquíes y Menta |
-| Mi casa | una isla entre las nubes, con la casa y 16 muebles para poner |
+| Mi casa | una isla entre las nubes con un patio para construir (🔨 en el celu o el atril): paredes, ventanas, puertas, pisos, plataformas, tarima con escalera y techos, 54 piezas en total (muebles y deco animadas: reloj con la hora, burbujero, orbe, estrella…), cada una del color que se quiera. Se pone tocando el piso, desde arriba; se mueve, se pinta, se quita y se deshace. Hasta 200 cosas |
 | Zona de Juegos | un mapa propio: una plaza con 11 puertas que te llevan (con su efecto) a cada juego o lugar, y más de 10 cosas para hacer: 6 mesas para sentarse a jugar de a dos (damas, ta-te-ti, cuatro en línea, memotest y piedra, papel o tijera; contra otra persona de la sala o contra la compu), la canchita de fútbol con arcos y marcador, básquet, bolos, siete trampolines, hamacas, tobogán y una pista de baile con bola de espejos |
 | Runner · Aero.exe | un solo nivel largo: se corre solo y rápido saltando plataformas grandes y separadas, deslizándose por debajo de compuertas, saltando vallas y esquivando paredes y cubos que se mueven al ritmo. Hay que llegar al portal antes de que termine la canción (el breakcore suena solo acá), y todo arranca Frutiger y se va rompiendo en glitches con la música. Y se pone extremo con la canción: tres sustos (se apagan en Opciones), DESPIERTA / WAKE UP gigantes en los golpes, cajas de rastreo, siluetas negras que se deshacen al acercarte, la cámara que pega y cuadros congelados |
 | Parkour Aero | el primer minijuego, en la Zona de Juegos: 6 mapas (Nubes, Acuario, Jardín, Ciudad, Órbita y Azoteas) con plataformas que se mueven, barras que giran, rebotes, cintas, géiseres, tubos y muros, controles, estrellas por tiempo y récords. Se corre, se salta, se desliza, se rueda, se trepan bordes y se rebota en paredes (C, Q o ⤓ para bajar), y se puede jugar en primera persona (👁) |
