@@ -17,13 +17,17 @@ export class Camara {
     this.sacudida = 0; this.kSprint = 0; this.fasePaso = 0; this.ladeo = 0;
     this.inicial = true;
     this.fp = false; this.sentado = false; this.bajaFP = 0; this.fase = 0;
+    /* (vuelta 48) EL PLANO, para construir la casa: desde arriba y en diagonal, mirando un punto (centro) que se mueve
+       con la palanca; se gira arrastrando y se acerca con la rueda o los dos dedos. null: la cámara de siempre */
+    this.plano = null;
   }
-  girar(dx, dy) { this.yaw -= dx; this.pitch = THREE.MathUtils.clamp(this.pitch + dy, this.fp ? -0.95 : -0.45, this.fp ? 1.55 : 1.25); }
-  acercar(f) { if (this.fp) return; this.distObj = THREE.MathUtils.clamp(this.distObj * f, 2.4, 14); }
+  girar(dx, dy) { this.yaw -= dx; this.pitch = THREE.MathUtils.clamp(this.pitch + dy, this.fp ? -0.95 : this.plano ? 0.35 : -0.45, this.fp ? 1.55 : this.plano ? 1.5 : 1.25); }
+  acercar(f) { if (this.plano) { this.plano.dist = THREE.MathUtils.clamp(this.plano.dist * f, 5, 30); return; } if (this.fp) return; this.distObj = THREE.MathUtils.clamp(this.distObj * f, 2.4, 14); }
   /* modo cine: a (el jugador) y b (quien habla) */
   ponerCine(a, b) { this.cine = a ? { a: a.clone(), b: b.clone() } : null; }
   detras(rumbo) { this.yaw = rumbo + Math.PI; }
   actualizar(dt, jugador, mundo) {
+    if (this.plano) { this.actualizarPlano(dt); return; }
     if (this.fp) { this.actualizarFP(dt, jugador); return; }
     const k = jugador.escala;
     const alto = 1.25 * k + (jugador.modo === 'burbuja' ? 0.3 : 0);
@@ -82,6 +86,15 @@ export class Camara {
     this.cam.lookAt(this.mira);
     if (Math.abs(this.ladeo) > 0.001) this.cam.rotateZ(this.ladeo);
     if (this.rollExtra) this.cam.rotateZ(this.rollExtra);
+  }
+  actualizarPlano(dt) {
+    const P = this.plano, cp = Math.cos(this.pitch);
+    const desde = new THREE.Vector3(P.centro.x + Math.sin(this.yaw) * cp * P.dist, P.centro.y + Math.sin(this.pitch) * P.dist, P.centro.z + Math.cos(this.yaw) * cp * P.dist);
+    /* (se llega suave desde donde estaba la cámara, y después sigue rápido a la palanca) */
+    const s = 1 - Math.exp(-dt * 7);
+    this.pos.lerp(desde, s); this.mira.lerp(P.centro, s);
+    this.cam.position.copy(this.pos); this.cam.lookAt(this.mira);
+    this.inicial = true;   // (al salir, la de siempre arranca en su lugar, sin barrer la isla)
   }
   /* primera persona: pitch 0,3 es mirar derecho (igual que la de atrás en reposo) */
   actualizarFP(dt, j) {

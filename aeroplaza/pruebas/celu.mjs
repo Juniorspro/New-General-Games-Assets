@@ -61,7 +61,7 @@ prueba('el perfil de Ana queda retenido en el broker (su llave y su nombre)', pe
 await A.pag.click('.hud [data-a=celu]');
 await avanzar(A.pag, 2, 1 / 30, false);
 const inicio = await A.pag.evaluate(() => { const v = document.querySelector('.velo-celu .ventana.celu'); return v ? { apps: v.querySelectorAll('.cel-app').length, abierto: window.__A.J.celu.abierto, bloq: window.__A.J.ent.bloqueado } : null; });
-prueba('📱 abre el celu con sus 10 apps (y la entrada del juego queda quieta)', inicio && inicio.apps === 10 && inicio.abierto && inicio.bloq, JSON.stringify(inicio));
+prueba('📱 abre el celu con sus 16 apps (y la entrada del juego queda quieta)', inicio && inicio.apps === 16 && inicio.abierto && inicio.bloq, JSON.stringify(inicio));
 await juntos(pags, 0.8);
 const enMano = await Bt.pag.evaluate((id) => { const r = window.__A.remotos.get(id); return r ? { con: r.m.conCelu, ve: !!r.m.celu?.visible } : null; }, ya.id);
 prueba('Beto ve a Ana con el celu en la mano', enMano && enMano.con && enMano.ve, JSON.stringify(enMano));

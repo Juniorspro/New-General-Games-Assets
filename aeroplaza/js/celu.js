@@ -23,10 +23,11 @@ import { t, sumar, idioma } from './textos.js';
 import { Teclado } from './teclado.js';
 import { codigoLindo, leerCodigo, ID_RE, MAX_AMIGOS, MAX_TXT } from './amigos.js';
 import { tiendaJoyas } from './joyas.js';
-import { REINOS } from './ui.js';
+import { REINOS, HUD_INICIAL } from './ui.js';
 
 sumar({
   es: {
+    app_construir: 'Construir', app_gestos: 'Gestos', app_musica: 'Música', app_mapa: 'Mapa', app_voz: 'Voz', app_estilo: 'Estilo', ap_prendida: 'prendida', app_ajustes_juego: 'Opciones del juego', aj_botones: 'Botones en la pantalla', aj_botones_d: 'Los que están apagados quedan guardados acá en el celu: se usan desde sus apps.', aj_chat: 'Chat', aj_voz: 'Voz', aj_misiones: 'Misiones', aj_estilo: 'Estilo', aj_barra: 'Barra 1-5', aj_en_pantalla: 'en pantalla', aj_en_celu: 'en el celu', aj_juego: 'El juego',
     celu: 'Celu', celu_tecla: 'Celu (M)', celu_inicio: 'Inicio', celu_atras: 'Volver',
     app_amigos: 'Amigos', app_mensajes: 'Mensajes', app_juegos: 'Juegos', app_casas: 'Casas', app_perfil: 'Perfil', app_camara: 'Cámara', app_probador: 'Probador', app_tienda: 'Tienda', app_misiones: 'Misiones', app_ajustes: 'Ajustes',
     am_n_linea: '{n} amigos en línea', am_1_linea: '1 amigo en línea', am_0_linea: 'Ningún amigo en línea',
@@ -54,6 +55,7 @@ sumar({
     cel_ahora: 'recién', cel_min: 'hace {n} min', cel_h: 'hace {n} h', cel_d: 'hace {n} d', seguro_si: 'Sí', seguro_no: 'No',
   },
   en: {
+    app_construir: 'Build', app_gestos: 'Emotes', app_musica: 'Music', app_mapa: 'Map', app_voz: 'Voice', app_estilo: 'Style', ap_prendida: 'on', app_ajustes_juego: 'Game options', aj_botones: 'Buttons on screen', aj_botones_d: 'The ones turned off stay stored here in the phone: use them from their apps.', aj_chat: 'Chat', aj_voz: 'Voice', aj_misiones: 'Quests', aj_estilo: 'Style', aj_barra: 'Hotbar 1-5', aj_en_pantalla: 'on screen', aj_en_celu: 'in the phone', aj_juego: 'The game',
     celu: 'Phone', celu_tecla: 'Phone (M)', celu_inicio: 'Home', celu_atras: 'Back',
     app_amigos: 'Friends', app_mensajes: 'Messages', app_juegos: 'Games', app_casas: 'Houses', app_perfil: 'Profile', app_camara: 'Camera', app_probador: 'Wardrobe', app_tienda: 'Shop', app_misiones: 'Quests', app_ajustes: 'Settings',
     am_n_linea: '{n} friends online', am_1_linea: '1 friend online', am_0_linea: 'No friends online',
@@ -81,6 +83,7 @@ sumar({
     cel_ahora: 'just now', cel_min: '{n} min ago', cel_h: '{n} h ago', cel_d: '{n} d ago', seguro_si: 'Yes', seguro_no: 'No',
   },
   pt: {
+    app_construir: 'Construir', app_gestos: 'Gestos', app_musica: 'Música', app_mapa: 'Mapa', app_voz: 'Voz', app_estilo: 'Estilo', ap_prendida: 'ligada', app_ajustes_juego: 'Opções do jogo', aj_botones: 'Botões na tela', aj_botones_d: 'Os desligados ficam guardados aqui no celular: use pelos apps.', aj_chat: 'Chat', aj_voz: 'Voz', aj_misiones: 'Missões', aj_estilo: 'Estilo', aj_barra: 'Barra 1-5', aj_en_pantalla: 'na tela', aj_en_celu: 'no celular', aj_juego: 'O jogo',
     celu: 'Celular', celu_tecla: 'Celular (M)', celu_inicio: 'Início', celu_atras: 'Voltar',
     app_amigos: 'Amigos', app_mensajes: 'Mensagens', app_juegos: 'Jogos', app_casas: 'Casas', app_perfil: 'Perfil', app_camara: 'Câmera', app_probador: 'Provador', app_tienda: 'Loja', app_misiones: 'Missões', app_ajustes: 'Ajustes',
     am_n_linea: '{n} amigos online', am_1_linea: '1 amigo online', am_0_linea: 'Nenhum amigo online',
@@ -111,9 +114,13 @@ sumar({
 
 /* los lugares públicos (se puede ir a la misma sala de un amigo) */
 export const PUBLICOS = ['plaza', 'aqua', 'aurora', 'jardin', 'juegos'];
+/* (vuelta 48: también los botones que antes estaban siempre en la pantalla: voz, misiones, estilo, gestos, música,
+   mapa; y construir la casa) */
 const APPS = [
-  ['amigos', '👥', '#8fe6ff', '#1aa0d8'], ['mensajes', '💬', '#a8f59a', '#35b845'], ['juegos', '🎮', '#ffe08a', '#ff9f1a'], ['casas', '🏠', '#ffc2da', '#ff5f9a'], ['perfil', '🙂', '#d6c8ff', '#7b5cff'],
-  ['camara', '📷', '#eef2f5', '#8a9aa8'], ['probador', '👕', '#ffd0bf', '#ff7a59'], ['tienda', '💎', '#b8f6ff', '#15b8cc'], ['misiones', '📜', '#fff0b8', '#e0a526'], ['ajustes', '⚙️', '#e6ebef', '#98a4ae'],
+  ['amigos', '👥', '#8fe6ff', '#1aa0d8'], ['mensajes', '💬', '#a8f59a', '#35b845'], ['juegos', '🎮', '#ffe08a', '#ff9f1a'], ['casas', '🏠', '#ffc2da', '#ff5f9a'],
+  ['construir', '🔨', '#ffdcb0', '#ff8a2d'], ['perfil', '🙂', '#d6c8ff', '#7b5cff'], ['camara', '📷', '#eef2f5', '#8a9aa8'], ['gestos', '👋', '#fff0c2', '#f0ae00'],
+  ['musica', '💿', '#e6dcff', '#8f6bff'], ['mapa', '🗺️', '#c9f7e0', '#1fae78'], ['voz', '🎤', '#ffd3de', '#ff4f7a'], ['misiones', '📜', '#fff0b8', '#e0a526'],
+  ['probador', '👕', '#ffd0bf', '#ff7a59'], ['tienda', '💎', '#b8f6ff', '#15b8cc'], ['estilo', '👾', '#d6efff', '#3b8fe0'], ['ajustes', '⚙️', '#e6ebef', '#98a4ae'],
 ];
 function el(html) { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; }
 /* un botón con su texto y lo que lee el espejo del VR (aria-label) puestos a mano: nunca con innerHTML */
@@ -138,8 +145,8 @@ export function avatar(A, tam = 40, enLinea = null) {
 
 export class Celu {
   /* J, UI (ui.js) y amigos (amigos.js); main.js le pasa unirseA(id) y viajar(id, o) */
-  constructor({ J, UI, amigos, unirseA, viajar, abrirProbador, foto }) {
-    this.J = J; this.UI = UI; this.am = amigos; this.unirseA = unirseA; this.viajar = viajar; this.abrirProbador = abrirProbador; this.foto = foto;
+  constructor({ J, UI, amigos, unirseA, viajar, abrirProbador, foto, construir }) {
+    this.J = J; this.UI = UI; this.am = amigos; this.unirseA = unirseA; this.viajar = viajar; this.abrirProbador = abrirProbador; this.foto = foto; this.construir = construir;
     this.v = null; this.pila = ['inicio']; this.tab = 'lista'; this.seguro = null; this.resultado = null; this.codigo = '';
     this.alCambiar = () => {};
     setInterval(() => { if (this.abierto) this.relojito(); }, 15000);
@@ -206,6 +213,7 @@ export class Celu {
     else if (app === 'juegos') this.juegos(c);
     else if (app === 'casas') this.casas(c);
     else if (app === 'perfil') this.perfil(c);
+    else if (app === 'ajustes') this.ajustes(c);
     if (this.seguro) this.pintarSeguro(c);
     this.relojito();
     c.animate([{ opacity: 0, transform: 'translateY(8px) scale(.985)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
@@ -219,7 +227,7 @@ export class Celu {
     const inp = this.caja.querySelector('input'), valor = inp?.value, foco = document.activeElement === inp, scroll = this.caja.scrollTop;
     if (Teclado.abierto) return;   // (con el teclado propio abierto, se espera: si no, se cerraría)
     this.caja.innerHTML = '';
-    ({ inicio: () => this.inicio(this.caja), amigos: () => this.amigos(this.caja), mensajes: () => this.mensajes(this.caja), ver: () => this.perfilDe(this.caja, id), juegos: () => this.juegos(this.caja), casas: () => this.casas(this.caja), perfil: () => this.perfil(this.caja) })[app]?.();
+    ({ inicio: () => this.inicio(this.caja), amigos: () => this.amigos(this.caja), mensajes: () => this.mensajes(this.caja), ver: () => this.perfilDe(this.caja, id), juegos: () => this.juegos(this.caja), casas: () => this.casas(this.caja), perfil: () => this.perfil(this.caja), ajustes: () => this.ajustes(this.caja) })[app]?.();
     const n = this.caja.querySelector('input');
     if (n && valor != null) { n.value = valor; if (foco) n.focus(); }
     this.caja.scrollTop = scroll;
@@ -240,7 +248,9 @@ export class Celu {
   }
   /* el globito rojo del 📱 del HUD y de las apps: solicitudes y mensajes sin leer */
   insignia() {
-    const n = this.am.listo ? this.am.recibidas + this.am.sinLeer : 0, b = this.UI.hud?.querySelector('[data-a=celu]');
+    /* (con el 📜 guardado en el celu, las misiones listas también suman acá) */
+    const H = { ...HUD_INICIAL, ...(this.J.G.opciones.hud || {}) }, listas = H.misiones ? 0 : this.J.misiones.activas().filter((m) => m.e === 'lista').length;
+    const n = (this.am.listo ? this.am.recibidas + this.am.sinLeer : 0) + listas, b = this.UI.hud?.querySelector('[data-a=celu]');
     if (b) { const i = b.querySelector('.insignia'); i.textContent = n > 99 ? '99+' : n || ''; b.classList.toggle('con', n > 0); }
   }
 
@@ -250,14 +260,17 @@ export class Celu {
     const w = el('<div class="cel-widget"><b class="cel-reloj"></b><small class="cel-fecha"></small><span class="cel-linea"></span></div>');
     w.querySelector('.cel-fecha').textContent = new Date().toLocaleDateString(idioma(), { weekday: 'long', day: 'numeric', month: 'long' });
     const n = this.am.listo ? this.am.lista('amigo').filter((q) => this.am.donde(q.id)).length : 0;
-    w.querySelector('.cel-linea').textContent = (n ? '🟢 ' : '⚪ ') + (n === 1 ? t('am_1_linea') : n ? t('am_n_linea', { n }) : t('am_0_linea'));
+    const sinRed = this.J.red.estado !== 'en_linea';
+    w.querySelector('.cel-linea').textContent = sinRed ? '⚪ ' + t('sin_red') : (n ? '🟢 ' : '⚪ ') + (n === 1 ? t('am_1_linea') : n ? t('am_n_linea', { n }) : t('am_0_linea'));
     f.appendChild(w);
     const g = document.createElement('div'); g.className = 'cel-apps';
     for (const [id, ico, c1, c2] of APPS) {
       const b = boton('cel-app', '', t('app_' + id), { app: id }, ico + ' ' + t('app_' + id));
       const i = document.createElement('i'); i.className = 'cel-ico'; i.style.setProperty('--c1', c1); i.style.setProperty('--c2', c2); i.textContent = ico;
       const nb = id === 'amigos' ? this.am.recibidas : id === 'mensajes' ? this.am.sinLeer : id === 'misiones' ? this.J.misiones.activas().filter((m) => m.e === 'lista').length : 0;
-      if (nb && this.am.listo) i.appendChild(txt('em', 'cel-badge', nb > 99 ? '99+' : String(nb)));
+      if (nb && (this.am.listo || id === 'misiones')) i.appendChild(txt('em', 'cel-badge', nb > 99 ? '99+' : String(nb)));
+      /* (la voz prendida: un puntito rojo, como un micrófono que graba) */
+      if (id === 'voz' && this.J.voz?.activa) { i.appendChild(txt('em', 'cel-badge vivo', '●')); b.setAttribute('aria-label', ico + ' ' + t('app_voz') + ' · ' + t('ap_prendida')); }
       b.prepend(i); g.appendChild(b);
     }
     f.appendChild(g);
@@ -293,8 +306,11 @@ export class Celu {
   amigos(c) {
     const am = this.am, rec = am.recibidas;
     const tabs = document.createElement('div'); tabs.className = 'cel-tabs';
-    for (const [k, n] of [['lista', t('am_t_lista') + ' ' + am.cuantos], ['sol', t('am_t_sol') + (rec ? ' ' + rec : '')], ['agregar', '+ ' + t('am_t_agregar')]]) {
-      const b = boton('cel-tab' + (this.tab === k ? ' si' : '') + (k === 'sol' && rec ? ' alerta' : ''), '', n, { tab: k }); tabs.appendChild(b);
+    /* (en el celu angosto queda el ícono con el número: el nombre sigue en el aria-label) */
+    for (const [k, ico, n, cuenta] of [['lista', '👥', t('am_t_lista'), am.cuantos], ['sol', '📨', t('am_t_sol'), rec], ['agregar', '➕', t('am_t_agregar'), null]]) {
+      const b = boton('cel-tab' + (this.tab === k ? ' si' : '') + (k === 'sol' && rec ? ' alerta' : ''), ico, n, { tab: k }, n + (cuenta ? ' ' + cuenta : ''));
+      if (cuenta != null && (cuenta || k === 'lista')) b.appendChild(txt('b', 'cel-tab-n', String(cuenta)));
+      tabs.appendChild(b);
     }
     c.appendChild(tabs);
     const L = document.createElement('div'); L.className = 'cel-lista'; c.appendChild(L);
@@ -490,6 +506,23 @@ export class Celu {
       c.appendChild(this.fila(id, am.A[id] || { nombre: n }, t('pf_codigo', { n: codigoLindo(id) }), [boton('cel-b', '', t('pf_desbloquear'), { desbloquear: id }, t('pf_desbloquear_a', { n }))], { ver: false }));
     }
   }
+  /* (vuelta 48) los ajustes del celu: qué botones quedan en la pantalla (los demás, acá) y las opciones del juego */
+  ajustes(c) {
+    const G = this.J.G, H = { ...HUD_INICIAL, ...(G.opciones.hud || {}) };
+    c.appendChild(txt('h3', '', t('aj_botones')));
+    c.appendChild(txt('p', 'cel-nota chica izq', t('aj_botones_d')));
+    const L = document.createElement('div'); L.className = 'cel-botones';
+    for (const [k, ico] of [['chat', '💬'], ['voz', '🎤'], ['misiones', '📜'], ['estilo', '👾'], ['barra', '🎒']]) {
+      const b = boton('cel-chip' + (H[k] ? ' si' : ''), ico, t('aj_' + k), { hud: k }, ico + ' ' + t('aj_' + k) + ': ' + (H[k] ? t('aj_en_pantalla') : t('aj_en_celu')));
+      b.appendChild(txt('small', '', H[k] ? t('aj_en_pantalla') : t('aj_en_celu')));
+      L.appendChild(b);
+    }
+    c.appendChild(L);
+    c.appendChild(txt('h3', '', t('aj_juego')));
+    const acc = el('<div class="cel-acciones"></div>');
+    acc.append(boton('cel-b primario', '⚙️', t('app_ajustes_juego'), { app: 'opciones' }), boton('cel-b', '🎮', t('canal_controles'), { app: 'controles' }));
+    c.appendChild(acc);
+  }
   /* el "¿seguro?" adentro del celu (una ventana aparte no se vería en el VR) */
   pintarSeguro(c) {
     const s = el('<div class="cel-seguro"><div><p></p><div class="cel-fila-b"></div></div></div>');
@@ -526,18 +559,27 @@ export class Celu {
     if (d.bloquear) { const id = d.bloquear; this.seguro = { texto: t('pf_bloquear_seguro', { n: am.nombre(id) }), si: () => { am.bloquear(id); this.pila = ['inicio', 'amigos']; } }; return this.pintar(); }
     if (d.pedidos) { J.G.amigosOp.pedidos = d.pedidos; J.guardar(); return this.pintar(); }
     if (d.avisos) { J.G.amigosOp.avisos = d.avisos === 'si'; J.guardar(); return this.pintar(); }
+    if (d.hud) { const H = J.G.opciones.hud = { ...HUD_INICIAL, ...(J.G.opciones.hud || {}) }; H[d.hud] = !H[d.hud]; J.guardar(); this.UI.aplicarHud(); this.insignia(); return this.refrescar(); }
   }
   /* las apps que son lo de antes: se cierra el celu, se abre eso y al terminar se vuelve al celu */
   abrirApp(app) {
     /* (al volver, solo si no se abrió otra ventana en el medio: las opciones se rearman al cambiar el idioma) */
     const J = this.J, UI = this.UI, volver = () => setTimeout(() => { if (UI.ventanaAbierta) return; J.pausar(false, true); if (J.enJuego) this.abrir('inicio'); }, 0);
-    if (['amigos', 'mensajes', 'juegos', 'casas', 'perfil'].includes(app)) { if (app === 'amigos' && this.aca === 'inicio') this.tab = this.am.recibidas ? 'sol' : 'lista'; return this.ir(app); }
+    if (['amigos', 'mensajes', 'juegos', 'casas', 'perfil', 'ajustes'].includes(app)) { if (app === 'amigos' && this.aca === 'inicio') this.tab = this.am.recibidas ? 'sol' : 'lista'; return this.ir(app); }
+    /* (la voz se prende y se apaga sin cerrar el celu) */
+    if (app === 'voz') { J.alternarVoz?.(); setTimeout(() => this.refrescar(), 400); return; }
     this.cerrar();
     if (app === 'camara') this.foto();
     else if (app === 'probador') this.abrirProbador();
     else if (app === 'tienda') { J.pausar(true, true); tiendaJoyas(J, UI, { alCerrar: volver }); }
-    else if (app === 'misiones') UI.panelMisiones();
-    else if (app === 'ajustes') { J.pausar(true, true); UI.opciones(volver); }
+    else if (app === 'misiones') { if (!UI.hud?.querySelector('.panel-misiones')) UI.panelMisiones(); }
+    else if (app === 'gestos') J.hotbar(2);
+    else if (app === 'musica') J.hotbar(3);
+    else if (app === 'mapa') J.hotbar(5);
+    else if (app === 'construir') this.construir();
+    else if (app === 'estilo') { J.pausar(true, true); UI.estilo(volver); }
+    else if (app === 'opciones') { J.pausar(true, true); UI.opciones(volver); }
+    else if (app === 'controles') { J.pausar(true, true); UI.controles(volver); }
   }
   enviarForm(f) {
     const i = f.querySelector('input'); if (!i) return;

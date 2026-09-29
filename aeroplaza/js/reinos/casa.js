@@ -4,6 +4,9 @@
    una grilla de medio metro (modo construir). El plano se guarda en la
    computadora y además queda retenido en el broker, así quien viaja en tren
    puede visitarla aunque su dueño no esté.
+   (vuelta 48) El sistema de construcción: cada cosa del plano es { k, x, z, r, c?, y? } (c: su color; y: sobre
+   qué altura quedó, arriba de una plataforma o una tarima). Las piezas nuevas están en casa-piezas.js. Lo quieto se
+   funde por material (una llamada de dibujo por color, aunque haya 200 cosas); lo que se mueve queda aparte.
    ========================================================================== */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -11,6 +14,8 @@ import { Mundo, ruido2, suaveEntre } from '../mundo.js';
 import { terreno, pasto, flores, arboles, brilloso, materialVidrio, materialBurbuja } from '../naturaleza.js';
 import { pecera, puntoSuave } from '../objetos.js';
 import { modelo } from '../modelos.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { PIEZAS, mat as matCompartido } from './casa-piezas.js';
 
 const R1 = ruido2(90);
 export function alturaCasa(x, z) {
@@ -19,7 +24,8 @@ export function alturaCasa(x, z) {
   const h = 1 + R1(x * 0.08, z * 0.08) * 0.4;
   return h + (-30 - h) * suaveEntre(20, 26, r);
 }
-const mat = (c, o) => brilloso(c, o);
+/* (vuelta 48: un material por color, compartido; si no, cada mueble traía los suyos y no se podían fundir) */
+const mat = (c, o) => matCompartido(c, o);
 /* cada mueble: una función que arma su grupo, con su "caja" de choque [ancho, fondo, alto] */
 export const FABRICA = {
   mesa: () => { const g = new THREE.Group(); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.08, 32), materialVidrio('#bff4ff', 0.5)); t.position.y = 0.75; g.add(t); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.35, 0.75, 16), mat('#ffffff')); p.position.y = 0.37; g.add(p); return [g, [1.6, 1.6, 0.8]]; },
@@ -34,6 +40,59 @@ export const FABRICA = {
   fuente: () => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.9, 0.4, 28), mat('#ffffff')); b.position.y = 0.2; g.add(b); const a = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.05, 28), new THREE.MeshPhysicalMaterial({ color: '#3fe0ff', emissive: '#1ab8e0', emissiveIntensity: 0.5, roughness: 0.02 })); a.position.y = 0.4; g.add(a); const c = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 12), materialVidrio('#dffaff', 0.5)); c.position.y = 0.75; g.add(c); return [g, [1.8, 1.8, 0.5]]; },
   globo: () => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.6, 24, 16), materialBurbuja()); b.position.y = 1.6; g.add(b); const h = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 1.1, 4), new THREE.MeshBasicMaterial({ color: '#ffffff' })); h.position.y = 0.55; g.add(h); return [g, [0, 0, 0]]; },
 };
+
+/* (vuelta 48) las piezas nuevas (obra, muebles y deco), con su color */
+for (const [k, P] of Object.entries(PIEZAS)) FABRICA[k] = (c) => P.f(c || P.color);
+export const RADIO_OBRA = 9.8, MAX_COSAS = 200;
+/* lo que ocupa una cosa en el piso (medio ancho y medio fondo, girado) y si está adentro */
+function adentro(m, w, d, x, z, margen = 0) {
+  const dx = x - m.x, dz = z - m.z, c = Math.cos(m.r || 0), s = Math.sin(m.r || 0);
+  const lx = dx * c - dz * s, lz = dx * s + dz * c;
+  return Math.abs(lx) <= w / 2 + margen && Math.abs(lz) <= d / 2 + margen;
+}
+const MEDIDAS = new Map();
+function medidas(k) { let M = MEDIDAS.get(k); if (!M && FABRICA[k]) { const [, wdh] = FABRICA[k](); M = wdh; MEDIDAS.set(k, M); } return M || [1, 1, 1]; }
+/* la altura del piso en (x, z): la del patio o la de lo que se pisa (plataforma, tarima, piso) */
+export function alturaEn(plano, x, z, sin = null) {
+  let y = 0;
+  for (const m of plano) {
+    const P = PIEZAS[m.k]; if (!P?.piso || m === sin) continue;
+    const [w, d] = medidas(m.k);
+    if (adentro(m, w, d, x, z, -0.05)) y = Math.max(y, (m.y || 0) + P.piso);
+  }
+  return y;
+}
+/* la cosa que está en (x, z) o más cerca (hasta 1,2 m): primero la de arriba de todo */
+export function cosaEn(plano, x, z) {
+  let mejor = null, md = 1.2;
+  for (const m of plano) {
+    const [w, d] = medidas(m.k), W = Math.max(0.6, w), D = Math.max(0.6, d);
+    const dx = x - m.x, dz = z - m.z, c = Math.cos(m.r || 0), s = Math.sin(m.r || 0);
+    const lx = Math.max(0, Math.abs(dx * c - dz * s) - W / 2), lz = Math.max(0, Math.abs(dx * s + dz * c) - D / 2);
+    const dist = Math.hypot(lx, lz) - (m.y || 0) * 0.01 - (PIEZAS[m.k]?.piso ? -0.05 : 0.05);
+    if (dist < md) { md = dist; mejor = m; }
+  }
+  return mejor;
+}
+/* fundir lo quieto por material: las mallas con los atributos de siempre (las de construcciones.js traen otros) */
+function fundir(grupo) {
+  grupo.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(grupo.matrixWorld).invert(), porMat = new Map(), sacar = [];
+  for (const o of grupo.children) {
+    if (o.userData.actualizar || o.userData.pantalla || o.userData.techo) continue;
+    o.traverse((q) => {
+      if (!q.isMesh || Array.isArray(q.material) || q.material.transparent) return;
+      const a = Object.keys(q.geometry.attributes).sort().join();
+      if (a !== 'normal,position,uv') return;
+      const gg = (q.geometry.index ? q.geometry.toNonIndexed() : q.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, q.matrixWorld));
+      (porMat.get(q.material) || porMat.set(q.material, []).get(q.material)).push(gg); sacar.push(q);
+    });
+  }
+  for (const q of sacar) q.removeFromParent();
+  const fundidos = new THREE.Group(); fundidos.name = 'fundidos';
+  for (const [m, gs] of porMat) { const f = new THREE.Mesh(gs.length > 1 ? mergeGeometries(gs) : gs[0], m); f.castShadow = true; f.receiveShadow = true; fundidos.add(f); for (const g of gs) if (gs.length > 1) g.dispose(); }
+  grupo.add(fundidos);
+}
 
 /* los muebles armados en construcciones.js (copiando las referencias de
    Rezona): se miden por su ancho o su alto y la caja de choque sale del mueble.
@@ -70,24 +129,37 @@ export function crearCasa(ctx, { plano = [], dueño = null } = {}) {
   /* la isla por abajo: una roca que se afina, y nubes alrededor */
   const roca = new THREE.Mesh(new THREE.ConeGeometry(24, 30, 20, 4), brilloso('#b89a7a', { roughness: 0.7 })); roca.rotation.x = Math.PI; roca.position.y = -16; g.add(roca);
   const muebles = new THREE.Group(); g.add(muebles);
-  const solidos = [];
-  const armar = (lista) => {
-    muebles.clear(); for (const s of solidos) mundo.quitar(s); solidos.length = 0;
+  const solidos = [], techos = [];
+  let verTechos = true;
+  const BASE = 1.4;
+  /* (rapido: construyendo, sin fundir, así cada toque es al instante; al terminar se funde) */
+  const armar = (lista, rapido = false) => {
+    for (const o of muebles.children) o.traverse((q) => { if (q.isMesh && q.parent?.name === 'fundidos') q.geometry.dispose(); });
+    muebles.clear(); for (const s of solidos) mundo.quitar(s); solidos.length = 0; techos.length = 0;
     for (const m of lista) {
       const f = FABRICA[m.k]; if (!f) continue;
-      const [o, [w, d, h]] = f(); o.position.set(m.x, 1.4, m.z); o.rotation.y = m.r || 0; o.traverse((q) => { if (q.isMesh) { q.castShadow = true; } });
+      const [o, [w, d, h], cajas] = f(m.c); const y0 = BASE + (m.y || 0);
+      o.position.set(m.x, y0, m.z); o.rotation.y = m.r || 0; o.traverse((q) => { if (q.isMesh) { q.castShadow = true; } });
       o.userData.m = m; muebles.add(o);
-      if (h > 0) { const s = mundo.caja(m.x, m.z, w / 2, d / 2, 1.4, 1.4 + h, m.r || 0, { mueble: m }); solidos.push(s); }
+      if (PIEZAS[m.k]?.techo) { o.userData.techo = true; o.visible = verTechos; techos.push(o); }
+      const c = Math.cos(m.r || 0), s = Math.sin(m.r || 0);
+      /* (los choques propios de la pieza, en su lugar girado: la puerta se atraviesa por el medio; la escalera, de a escalones) */
+      if (cajas) for (const [bx, bz, bw, bd, b0, b1] of cajas) solidos.push(mundo.caja(m.x + bx * c + bz * s, m.z - bx * s + bz * c, bw / 2, bd / 2, y0 + b0, y0 + b1, m.r || 0, { mueble: m }));
+      else if (h > 0) solidos.push(mundo.caja(m.x, m.z, w / 2, d / 2, y0, y0 + h, m.r || 0, { mueble: m }));
     }
+    if (!rapido) fundir(muebles);
+    ctx.alArmar?.(muebles);
   };
   armar(plano);
-  /* el fantasma del mueble que se está por poner */
+  /* el fantasma de lo que se está por poner (con su color), y el anillo que marca qué se va a mover, pintar o quitar */
   let fantasma = null;
-  const ponerFantasma = (k) => {
-    if (fantasma) g.remove(fantasma); fantasma = null; if (!k) return;
-    const [o] = FABRICA[k](); o.traverse((q) => { if (q.isMesh) { q.material = q.material.clone(); q.material.transparent = true; q.material.opacity = 0.5; q.material.depthWrite = false; } });
-    fantasma = o; g.add(o);
+  const ponerFantasma = (k, c) => {
+    if (fantasma) g.remove(fantasma); fantasma = null; if (!k || !FABRICA[k]) return;
+    const [o] = FABRICA[k](c); o.traverse((q) => { if (q.isMesh) { q.material = q.material.clone(); q.material.transparent = true; q.material.opacity = 0.55; q.material.depthWrite = false; } });
+    o.visible = false; fantasma = o; g.add(o);
   };
+  const marca = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 6, 40), new THREE.MeshBasicMaterial({ color: '#ffe14a', transparent: true, opacity: 0.9, depthTest: false, toneMapped: false }));
+  marca.rotation.x = Math.PI / 2; marca.renderOrder = 10; marca.visible = false; g.add(marca);
   mundo.interactivo({ id: 'tren', pos: new THREE.Vector3(0, 1.4, 8.5), radio: 2.4, accion: 'viajar', icono: '🚆' });
   /* el atril de construir, al lado de la entrada (solo en la casa propia) */
   if (!dueño) {
@@ -103,18 +175,35 @@ export function crearCasa(ctx, { plano = [], dueño = null } = {}) {
   return {
     id: 'casa', mundo, grupo: g, inicio: new THREE.Vector3(0, 1.45, 7), rumboInicio: Math.PI, musica: 'casa', cielo: { aurora: 0 },
     discos: [], orbes: null, npcs: [], dueño, plano,
-    rehacer(lista) { this.plano = lista; armar(lista); },
+    rehacer(lista, rapido = false) { this.plano = lista; armar(lista, rapido); },
     ponerFantasma,
-    /* dónde caería el mueble: medio metro adelante del jugador, en la grilla */
-    moverFantasma(jp, rumbo, giro) {
-      if (!fantasma) return null;
-      const x = Math.round((jp.x + Math.sin(rumbo) * 2) * 2) / 2, z = Math.round((jp.z + Math.cos(rumbo) * 2) * 2) / 2;
-      const dentro = Math.hypot(x, z) < 9.8;
-      fantasma.position.set(x, 1.4, z); fantasma.rotation.y = giro; fantasma.visible = true;
-      fantasma.traverse((q) => { if (q.isMesh) q.material.opacity = dentro ? 0.55 : 0.2; });
-      return dentro ? { x, z } : null;
+    /* dónde caería lo que se pone, cerca de (x, z): la obra en la grilla de 1 m; lo demás, en la de medio metro. Un
+       cuadro o un reloj se pegan a la pared más cercana. Arriba de lo que se pisa, queda arriba */
+    lugarPara(k, x, z, giro) {
+      const P = PIEZAS[k];
+      let r = giro, px, pz;
+      if (P?.pared) { const w = this.plano.filter((m) => ['pared', 'ventana', 'puerta', 'media'].includes(m.k)).map((m) => [m, Math.hypot(m.x - x, m.z - z)]).sort((a, b) => a[1] - b[1])[0]; if (w && w[1] < 1.3) { px = w[0].x; pz = w[0].z; r = (w[0].r || 0) + (Math.round((giro - (w[0].r || 0)) / Math.PI) % 2 ? Math.PI : 0); return { x: px, z: pz, r, y: w[0].y || 0, dentro: true }; } }
+      const paso = P?.cat === 'obra' ? 1 : 0.5;
+      px = Math.round(x / paso) * paso; pz = Math.round(z / paso) * paso;
+      const dentro = Math.hypot(px, pz) < RADIO_OBRA;
+      return { x: px, z: pz, r, y: alturaEn(this.plano, px, pz), dentro };
     },
-    cercano(jp) { let m = null, md = 2.2; for (const o of muebles.children) { const d = Math.hypot(o.position.x - jp.x, o.position.z - jp.z); if (d < md) { md = d; m = o.userData.m; } } return m; },
-    actualizar(dt) { t += dt; for (const o of muebles.children) { if (o.userData.pantalla) o.userData.pantalla.material.color.setHSL((t * 0.05) % 1, 0.7, 0.7); if (o.userData.actualizar) o.userData.actualizar(t); } },
+    moverFantasmaA(l) {
+      if (!fantasma) return;
+      if (!l) { fantasma.visible = false; return; }
+      fantasma.position.set(l.x, BASE + l.y, l.z); fantasma.rotation.y = l.r; fantasma.visible = true;
+      fantasma.traverse((q) => { if (q.isMesh) q.material.opacity = l.dentro ? 0.55 : 0.18; });
+    },
+    marcar(m) {
+      if (!m) { marca.visible = false; return; }
+      const [w, d] = medidas(m.k); marca.scale.setScalar(Math.max(0.5, Math.hypot(w, d) / 2 + 0.2));
+      marca.position.set(m.x, BASE + (m.y || 0) + 0.06, m.z); marca.visible = true;
+    },
+    cosaEn(x, z) { return cosaEn(this.plano, x, z); },
+    alturaEn(x, z) { return alturaEn(this.plano, x, z); },
+    verTechos(si) { verTechos = si; for (const o of techos) o.visible = si; },
+    get techosVisibles() { return verTechos; },
+    cercano(jp) { return cosaEn(this.plano, jp.x, jp.z); },
+    actualizar(dt) { t += dt; marca.material.opacity = 0.6 + Math.sin(t * 6) * 0.3; for (const o of muebles.children) { if (o.userData.pantalla) o.userData.pantalla.material.color.setHSL((t * 0.05) % 1, 0.7, 0.7); if (o.userData.actualizar) o.userData.actualizar(t); } },
   };
 }

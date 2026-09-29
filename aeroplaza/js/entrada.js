@@ -36,6 +36,9 @@ export class Entrada {
     this.config = CONTROLES_INICIALES();
     this.tactil = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     this.bloqueado = false;       // mientras se escribe en el chat o hay un menú
+    /* (vuelta 48) construyendo la casa: toda la pantalla es de la cámara (sin palanca ni botones). Un dedo la gira,
+       dos la mueven (panObra) y la acercan, y un toque corto sin mover es alTocar(x, y) (en coordenadas del juego) */
+    this.modoObra = false; this.alTocar = null; this.panObra = { dx: 0, dy: 0 };
     this.usaMando = false;
     /* (vuelta 44, el mando VR Box) mandoExtra(): el mando que llega de la APK (nativo.js › padMando), como uno más;
        enVR: los botones son del VR (main.js › botonesVR) y acá solo se anotan en padVR; alBoton(i): configurando el
@@ -89,6 +92,7 @@ export class Entrada {
       const b = e.target.closest('[data-b]');
       if (this.editando) { if (b) this.empezarArrastre(e, b); return; }
       e.preventDefault();
+      if (this.modoObra) { const q = aJ(e); toques.set(e.pointerId, { tipo: 'camara', x: q.x, y: q.y, x0: q.x, y0: q.y, t0: performance.now(), lejos: 0, dos: toques.size > 0 }); for (const o of toques.values()) o.dos = toques.size > 1 || o.dos; return; }
       if (b && b.dataset.b !== 'palanca') {
         const n = b.dataset.b; toques.set(e.pointerId, { tipo: 'boton', n }); b.classList.add('apretado'); this.vibrar();
         if (n === 'salta') { this.dedo.salta = true; this.dedo.sostiene = true; }
@@ -116,9 +120,14 @@ export class Entrada {
       if (t.tipo === 'palanca') this.moverPalanca(q.x, q.y, t);
       else if (t.tipo === 'camara') {
         const k = this.config.sensibilidad;
-        this.dedosCam.dx += (q.x - t.x) * k; this.dedosCam.dy += (q.y - t.y) * k; t.x = q.x; t.y = q.y;
+        const cams0 = [...toques.values()].filter((q) => q.tipo === 'camara');
+        if (t.x0 != null) t.lejos = Math.max(t.lejos, Math.hypot(q.x - t.x0, q.y - t.y0));
+        /* (construyendo, con dos dedos: se mueve la cámara con lo que se corre el medio, sin girarla) */
+        if (this.modoObra && cams0.length === 2) { this.panObra.dx += (q.x - t.x) / 2; this.panObra.dy += (q.y - t.y) / 2; }
+        else { this.dedosCam.dx += (q.x - t.x) * k; this.dedosCam.dy += (q.y - t.y) * k; }
+        t.x = q.x; t.y = q.y;
         /* dos dedos en la cámara: pellizco para acercar */
-        const cams = [...toques.values()].filter((q) => q.tipo === 'camara');
+        const cams = cams0;
         if (cams.length === 2) { const d = Math.hypot(cams[0].x - cams[1].x, cams[0].y - cams[1].y); if (this._d0) this.pinza *= this._d0 / Math.max(20, d); this._d0 = d; } else this._d0 = 0;
       }
     });
@@ -130,6 +139,7 @@ export class Entrada {
       /* (bajar se mantiene: si no se suelta acá queda apretado para siempre y ya no desliza nunca más) */
       if (t.tipo === 'boton') { this.el[t.n].classList.remove('apretado'); if (t.n === 'salta') this.dedo.sostiene = false; if (t.n === 'baja') this.dedo.baja = false; }
       if (t.tipo === 'camara') this._d0 = 0;
+      if (t.tipo === 'camara' && this.modoObra && t.x0 != null && !t.dos && t.lejos < 12 && performance.now() - t.t0 < 500) this.alTocar?.(t.x0, t.y0);
     };
     zona.addEventListener('pointerup', fin); zona.addEventListener('pointercancel', fin);
     this.ubicarDedos();

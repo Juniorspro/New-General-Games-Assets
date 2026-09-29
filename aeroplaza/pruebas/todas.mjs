@@ -16,7 +16,7 @@ import path from 'node:path';
 
 const AQUI = path.dirname(new URL(import.meta.url).pathname);
 /* (de la más larga a la más corta, medido en el contenedor de 4 núcleos, en segundos) */
-const TANDA = [['celu', 150], ['mundo', 113], ['interiores', 83], ['reinos', 72], ['parkour', 70], ['avisos', 68], ['menus', 66], ['multijugador', 64], ['flujo', 60], ['primera', 54],
+const TANDA = [['celu', 150], ['casa', 90], ['botones', 40], ['mundo', 113], ['interiores', 83], ['reinos', 72], ['parkour', 70], ['avisos', 68], ['menus', 66], ['multijugador', 64], ['flujo', 60], ['primera', 54],
   ['canciones', 50], ['voz', 47], ['teclado', 36], ['dedos', 35], ['estilos', 32], ['runner', 31], ['resiste', 22], ['muneco', 19], ['juegos', 14], ['delfin', 12], ['movimientos', 9], ['construcciones', 9], ['caminos', 5]];
 const MANOS = [['vr120', 74], ['xr', 57], ['vr', 47], ['manos', 43], ['espacio', 40], ['lentes', 30], ['nativo', 30], ['camara', 30], ['malla', 45], ['cabeza', 30], ['mando', 5], ['choque', 20], ['ancha', 25], ['vr-juego', 55], ['vrbox', 30], ['actualizar', 30], ['manos-celu', 15]];
 const SOLAS = ['manos-directo'];

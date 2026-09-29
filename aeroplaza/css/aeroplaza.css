@@ -1050,28 +1050,46 @@ html.b460 .velo.velo-celu { align-items: center; padding-bottom: 0; }
 .cel-seguro { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; padding: 16px; border-radius: inherit; background: rgba(240, 246, 250, 0.75); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: aparece 0.2s both; }
 .cel-seguro > div { padding: 16px 14px; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px rgba(20, 70, 110, 0.25); text-align: center; }
 .cel-seguro p { margin: 0 0 12px; font: 800 14px/1.4 var(--letra); color: var(--tinta); }
-/* acostado (el celu del jugador con el juego acostado): más ancho que alto, las apps en dos filas al lado de la hora */
-html.b460 .ventana.celu { width: min(600px, calc(82 * var(--vw))); height: calc(92 * var(--vh)); border-width: 9px; border-radius: 36px; transform-origin: 50% 100%; }
-html.b460 .cel-brillo { border-radius: 27px; }
-html.b460 .ventana.celu::before { top: 50%; left: -6px; width: 3px; height: 40px; margin: -20px 0 0; }
-html.b460 .ventana.celu::after { top: calc(50% + 30px); left: -7px; }
-html.b460 .cel-estado { padding: 5px 18px 0; font-size: 11px; }
-html.b460 .ventana.celu .cabeza { padding: 3px 4px 3px 10px; margin-top: 3px; } html.b460 .ventana.celu .cabeza h2 { font-size: 14px; }
-html.b460 .ventana.celu .cabeza [data-a=x] { width: 26px !important; height: 26px !important; }
-html.b460 .ventana.celu .cuerpo { margin-top: 5px; padding: 8px 9px 9px; }
-html.b460 .cel-nav { height: 28px; margin: 4px 14px 3px; } html.b460 .cel-nav-b { height: 24px; }
-html.b460 .cel-inicio { flex-direction: row; align-items: center; gap: 8px; }
-html.b460 .cel-widget { width: 34%; padding: 0; flex-shrink: 0; }
-html.b460 .cel-reloj { font-size: 44px; }
-html.b460 .cel-apps { flex: 1; grid-template-columns: repeat(5, 1fr); margin: 0; gap: 10px 4px; padding: 0; }
-html.b460 .cel-ico { width: 46px; height: 46px; font-size: 23px; border-radius: 14px; }
-html.b460 .cel-juegos { grid-template-columns: repeat(3, 1fr); } html.b460 .cel-juego { min-height: 74px; }
-html.b460 .ventana.celu h3 { margin-top: 8px; }
-html.b460 .cel-perfil > .cel-av { width: 64px !important; height: 64px !important; }
-/* (el perfil en dos columnas: la cara y lo principal a la izquierda, lo demás a la derecha) */
-html.b460 .cel-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
-html.b460 .cel-dos .cel-acciones.peligro { margin-top: 6px; border-top: 0; padding-top: 0; }
-html.b460 .cel-dos .cel-op:first-child { margin-top: 0; }
+/* (vuelta 48: "el celular debe estar en vertical") en el celu con el juego acostado (html.b460) también va parado,
+   como un teléfono de verdad en la mano: alto casi toda la pantalla y angosto, con todo más chico */
+html.b460 .ventana.celu { width: min(236px, calc(59 * var(--vh))); height: calc(94 * var(--vh)); border-width: 8px; border-radius: 30px; }
+html.b460 .cel-brillo { border-radius: 22px; }
+html.b460 .ventana.celu::before { top: -6px; width: 40px; margin-left: -20px; height: 3px; }
+html.b460 .ventana.celu::after { top: -7px; left: calc(50% + 28px); width: 5px; height: 5px; }
+html.b460 .cel-estado { padding: 4px 14px 0; font-size: 10px; }
+html.b460 .cel-senal { height: 9px; } html.b460 .cel-senal i:nth-child(4) { height: 9px; } html.b460 .cel-bat { width: 17px; height: 9px; }
+html.b460 .ventana.celu .cabeza { padding: 3px 3px 3px 9px; margin: 3px 6px 0; border-radius: 12px; } html.b460 .ventana.celu .cabeza h2 { font-size: 13px; }
+html.b460 .ventana.celu .cabeza [data-a=x] { width: 24px !important; height: 24px !important; font-size: 11px !important; }
+html.b460 .ventana.celu .cuerpo { margin: 5px 6px 0; padding: 7px 7px 8px; border-radius: 14px; font-size: 12px; }
+html.b460 .ventana.celu[data-app=inicio] .cuerpo { overflow-y: auto; padding: 2px 3px; }
+html.b460 .cel-nav { height: 26px; margin: 4px 10px 3px; } html.b460 .cel-nav-b { width: 46px; height: 22px; font-size: 12px; }
+html.b460 .cel-inicio { gap: 6px; height: auto; min-height: 100%; }
+html.b460 .cel-widget { padding: 4px 0 0; }
+html.b460 .cel-reloj { font-size: 32px; } html.b460 .cel-fecha { font-size: 10.5px; margin-top: 2px; }
+html.b460 .cel-linea { margin-top: 4px; padding: 2px 8px; font-size: 10px; }
+html.b460 .cel-apps { gap: 7px 2px; padding-bottom: 4px; }
+html.b460 .cel-ico { width: 38px; height: 38px; font-size: 19px; border-radius: 11px; }
+html.b460 .cel-ico::before { border-radius: 9px 9px 40% 40% / 9px 9px 8px 8px; }
+html.b460 .cel-app span { font-size: 9px; }
+html.b460 .cel-badge { min-width: 15px; height: 15px; font-size: 9.5px; line-height: 15px; top: -5px; right: -5px; padding: 0 3px; }
+html.b460 .cel-tabs { margin-bottom: 7px; } html.b460 .cel-tab { padding: 6px 2px; font-size: 10.5px; }
+html.b460 .cel-fila { padding: 5px; gap: 4px; border-radius: 12px; }
+html.b460 .cel-fila .cel-av { width: 30px !important; height: 30px !important; }
+html.b460 .cel-quien { gap: 6px; } html.b460 .cel-txt b { font-size: 12px; } html.b460 .cel-txt small { font-size: 10px; }
+/* (en las filas, los botones con ícono quedan solo con el ícono: el texto sigue en su aria-label, que lee el VR) */
+html.b460 .cel-fila .cel-b i + span { display: none; }
+html.b460 .cel-b { min-height: 28px; padding: 4px 9px; font-size: 11px; } html.b460 .cel-b.redondito { width: 28px; height: 28px; }
+html.b460 .cel-fila .cel-b:has(i) { width: 28px; padding: 0; }
+html.b460 .cel-codigo { padding: 8px 6px; } html.b460 .cel-codigo b { font-size: 16px; }
+html.b460 .cel-form input, html.b460 .cel-escribir input { padding: 6px 10px; font-size: 12px; }
+html.b460 .cel-juegos { gap: 6px; } html.b460 .cel-juego { min-height: 62px; padding: 7px 8px; border-radius: 14px; }
+html.b460 .cel-juego-emo { font-size: 20px; } html.b460 .cel-juego b { font-size: 12px; } html.b460 .cel-juego small { font-size: 10px; }
+html.b460 .ventana.celu h3 { margin: 8px 2px 5px; font-size: 10px; }
+html.b460 .cel-perfil > .cel-av { width: 60px !important; height: 60px !important; }
+html.b460 .cel-nombre { font-size: 16px; } html.b460 .cel-cifras, html.b460 .cel-donde { font-size: 10.5px; }
+html.b460 .cel-globo { font-size: 12px; padding: 6px 9px 4px; }
+html.b460 .cel-op > span { font-size: 11px; } html.b460 .cel-seg button { font-size: 11px; padding: 5px 3px; }
+html.b460 .cel-nota { font-size: 11.5px; margin: 8px 2px; }
 /* parado y angosto (una ventana de compu finita): centrado */
 html.angosta .velo.velo-celu { justify-content: center; padding-right: 0; }
 /* la pausa con el botón del celu: en el celu acostado, "Salir al menú" comparte la última fila */
@@ -1080,3 +1098,64 @@ html.b460 .pausa-menu [data-a=menu] { grid-column: span 2 !important; }
 /* (vuelta 47) la versión del juego y de la app, chiquita, abajo del menú (solo en la APK) */
 .barra-abajo .version-app { position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%); font: 800 10.5px var(--letra); color: #a3a9b0; white-space: nowrap; letter-spacing: 0.02em; }
 .barra-pausa .p-version:empty { display: none; }
+
+/* (vuelta 48) los botones guardados en el celu */
+.hud .guardado { display: none !important; }
+.cel-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.cel-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 7px 9px; border-radius: 13px; border: 2px solid var(--gris2); background: #fff; text-align: left; font: 800 12.5px/1.2 var(--letra); color: var(--tinta); }
+.cel-chip i { font-style: normal; font-size: 16px; }
+.cel-chip small { font: 800 10px var(--letra); color: var(--tinta2); }
+.cel-chip.si { border-color: #1aa0d8; background: linear-gradient(#f0fbff, #d9f4ff); }
+.cel-chip.si small { color: var(--azul2); }
+.cel-badge.vivo { background: radial-gradient(circle at 35% 30%, #ff9aa8, #e0243f); font-size: 8px; animation: vivoLatido 1.2s ease-in-out infinite; }
+@keyframes vivoLatido { 50% { transform: scale(1.18); } }
+.cel-nota.izq { text-align: left; margin: 0 2px 8px; }
+html.b460 .cel-chip { padding: 5px 7px; font-size: 11px; } html.b460 .cel-chip i { font-size: 14px; }
+
+/* ============================================================================
+   (vuelta 48) CONSTRUIR LA CASA (ui.js › obra): abajo, un panel de vidrio con
+   las pestañas (obra, muebles, deco), las piezas en una tira que se desliza,
+   los colores y las herramientas; arriba, qué hacer ahora. La cámara va desde
+   arriba (camara.js › plano) y los dedos del juego se esconden.
+   ========================================================================== */
+.obra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; pointer-events: none !important; }
+.obra-ayuda { margin-bottom: 6px; padding: 5px 13px; border-radius: 999px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--sombra); font: 800 12px/1.3 var(--letra); color: var(--tinta); max-width: calc(92 * var(--vw)); text-align: center; }
+.obra-panel { pointer-events: auto; width: min(920px, calc(100 * var(--vw))); box-sizing: border-box; display: flex; flex-direction: column; gap: 5px; padding: 7px 10px max(8px, env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; border: 3px solid var(--gris2); border-bottom: 0; background: linear-gradient(rgba(255, 255, 255, 0.96), rgba(238, 245, 249, 0.96)); box-shadow: 0 -6px 22px rgba(40, 60, 80, 0.16); animation: entraAbajoObra 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+@keyframes entraAbajoObra { from { transform: translateY(100%); } to { transform: none; } }
+.obra-arriba { display: flex; align-items: center; gap: 8px; }
+.obra-tabs { display: flex; gap: 4px; flex-shrink: 0; }
+.obra-arriba .obra-colores { flex: 1; min-width: 0; }
+.obra-tabs button { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 12px; border: 2px solid transparent; background: #eef3f6; font: 800 13px var(--letra); color: var(--tinta2); }
+.obra-tabs button.si { background: #fff; border-color: var(--azul); color: var(--azul2); box-shadow: 0 1px 4px rgba(20, 70, 110, 0.15); }
+.obra-tabs i, .obra-h i { font-style: normal; }
+.obra-cuenta { font: 900 12px var(--letra); color: var(--tinta2); padding: 3px 9px; border-radius: 999px; background: #eef3f6; }
+.obra-items { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 4px; touch-action: pan-x; scrollbar-width: thin; }
+.obra-item { position: relative; flex: 0 0 auto; width: 64px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 2px; border-radius: 14px; border: 2px solid var(--gris2); background: linear-gradient(#ffffff, #f4f7f9); }
+.obra-item i { font-style: normal; font-size: 24px; line-height: 1; }
+.obra-item small { font: 800 9.5px/1.1 var(--letra); color: var(--tinta2); max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.obra-item.si { border-color: var(--azul); background: linear-gradient(#f0fbff, #d6f3ff); box-shadow: 0 0 0 3px rgba(52, 190, 240, 0.25); }
+.obra-item:active { transform: scale(0.93); }
+.obra-colores { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 3px; }
+.obra-color { flex: 0 0 auto; width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px var(--gris2); }
+.obra-color.si { box-shadow: 0 0 0 3px var(--azul); transform: scale(1.12); }
+.obra-color.orig { background: conic-gradient(#ff6fb0, #ffe14a, #56e05a, #39d6ff, #9b7bff, #ff6fb0); color: #fff; font: 900 12px/20px var(--letra); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+.obra-herr { display: flex; gap: 5px; align-items: center; overflow-x: auto; padding-bottom: 1px; }
+.obra-h { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; padding: 6px 11px; border-radius: 999px; border: 2px solid var(--gris2); background: linear-gradient(#ffffff, #f0f3f5); font: 800 12.5px var(--letra); color: var(--tinta); }
+.obra-h.si { border-color: var(--azul); color: var(--azul2); background: linear-gradient(#f0fbff, #d6f3ff); }
+.obra-h.apagado { opacity: 0.5; } .obra-h:disabled { opacity: 0.35; } .obra-h[hidden] { display: none; }
+.obra-sep { flex: 0 0 auto; width: 2px; height: 22px; border-radius: 2px; background: var(--gris2); }
+.obra-listo { margin-left: auto; flex: 0 0 auto; }
+.hud.construyendo .hotbar, .hud.construyendo .chat, .hud.construyendo .aviso-accion, .hud.construyendo .panel-misiones, .hud.construyendo .tuto { display: none !important; }
+#dedos.en-obra .dedo-boton, #dedos.en-obra .dedo-palanca { display: none !important; }
+html.b460 .obra-panel { gap: 3px; padding-top: 5px; border-radius: 18px 18px 0 0; }
+html.b460 .obra-ayuda { font-size: 10.5px; padding: 3px 10px; margin-bottom: 4px; }
+html.b460 .obra-tabs button { padding: 3px 9px; font-size: 11.5px; }
+html.b460 .obra-item { width: 52px; height: 46px; border-radius: 11px; } html.b460 .obra-item i { font-size: 19px; } html.b460 .obra-item small { font-size: 8.5px; max-width: 48px; }
+html.b460 .obra-color { width: 19px; height: 19px; } html.b460 .obra-color.orig { line-height: 15px; font-size: 10px; }
+html.b460 .obra-h { padding: 4px 9px; font-size: 11px; } html.b460 .obra-h[data-a] span { display: none; }
+.cel-tab { display: flex; align-items: center; justify-content: center; gap: 3px; }
+.cel-tab i { font-style: normal; font-size: 12px; }
+.cel-tab-n { font: 900 11px var(--letra); }
+html.b460 .cel-tab span { display: none; } html.b460 .cel-tab i { font-size: 13px; }
+html.b460 .cel-widget .cel-nota { display: none; }
+html.b460 .cel-reloj { font-size: 28px; }

@@ -19,6 +19,7 @@ import { Pantalla } from './pantalla.js';
 import { Teclado } from './teclado.js';
 import { ventanaMando, mandosVistos } from './mando-box.js';
 import { filaVersion, textoVersion } from './actualizar.js';
+import { CATALOGO as CATALOGO_OBRA, PIEZAS, EMOJI_VIEJAS } from './reinos/casa-piezas.js';
 import { NIVELES, miniaturaParkour, formatoTiempo } from './reinos/parkour.js';
 import { miniaturaTiro, TIRO } from './reinos/tiro.js';
 import { miniaturaJuegos } from './reinos/juegos.js';
@@ -67,6 +68,12 @@ function muestraEstilo(n) {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const REINOS = [['plaza', '🏝️', 'linear-gradient(160deg,#dfffe6,#d6f2ff)'], ['aqua', '🐬', 'linear-gradient(160deg,#d6f6ff,#b8e8ff)'], ['aurora', '🌌', 'linear-gradient(160deg,#e6dcff,#cfe8ff)'], ['jardin', '🪷', 'linear-gradient(160deg,#ffe6f4,#e0ffe9)'], ['juegos', '🎮', 'linear-gradient(160deg,#e6ffe0,#fff2d6)'], ['casa', '🏡', 'linear-gradient(160deg,#fff6d6,#e6f6ff)']];
 const HOT = [['burbujero', '🫧'], ['gestos', '👋'], ['discos', '💿'], ['foto', '📷'], ['mapa', '🗺️']];
+/* (vuelta 48, "hay muchos botones que podés guardar y se usan en el celu") los botones del HUD que quedan en la
+   pantalla; los demás se usan desde el celu (📱 › Ajustes los prende y apaga). La voz se ve mientras está prendida */
+/* (vuelta 48) los íconos de las piezas de construir y los colores para pintarlas */
+const ICONOS_OBRA = { ...EMOJI_VIEJAS, ...Object.fromEntries(Object.entries(PIEZAS).map(([k, P]) => [k, P.ico])) };
+const PALETA_OBRA = ['#ffffff', '#f4f8ff', '#dff4ff', '#7fd6ff', '#39d6ff', '#2f9bff', '#9b7bff', '#e46fff', '#ff6fb0', '#ff4f6e', '#ff9a3d', '#ffe14a', '#b6f03a', '#56e05a', '#1fae78', '#c79a6a', '#56606b', '#22262b'];
+export const HUD_INICIAL = { voz: false, misiones: false, estilo: false, chat: true, barra: false };
 const GESTOS = ['saludar', 'festejar', 'aplaudir', 'saltito', 'voltereta', 'pensar', 'sentarse', 'bailar1', 'bailar2', 'bailar3', 'poder'];
 /* todos los discos escondidos en los reinos (6 en la isla y uno en cada otro reino) */
 const TOTAL_DISCOS = 11;
@@ -202,7 +209,17 @@ export const UI = {
     $('[data-a=celu]', h).onclick = () => J.celu?.alternar();
     $('[data-a=estilo]', h).onclick = () => { J.pausar(true, true); this.estilo(() => J.pausar(false, true)); };
     h.querySelectorAll('[data-h]').forEach((b) => b.onclick = () => J.hotbar(+b.dataset.h));
-    this.actualizarHud(); this.actualizarMisiones(); this.actualizarRed(); J.celu?.insignia();
+    this.actualizarHud(); this.actualizarMisiones(); this.actualizarRed(); this.aplicarHud(); J.celu?.insignia();
+  },
+  aplicarHud() {
+    const h = this.hud; if (!h) return;
+    const B = { ...HUD_INICIAL, ...(this.J.G.opciones.hud || {}) };
+    for (const k of ['voz', 'misiones', 'estilo', 'chat']) {
+      const b = $(`[data-a=${k}]`, h); if (!b) continue;
+      b.classList.toggle('guardado', !B[k] && !(k === 'voz' && b.dataset.voz && b.dataset.voz !== 'apagada'));
+    }
+    $('.hotbar', h)?.classList.toggle('guardado', !B.barra);
+    this.ubicarNotis();
   },
   actualizarHud() {
     if (!this.hud) return;
@@ -244,7 +261,9 @@ export const UI = {
   /* el botón del micrófono: apagado, prendido, hablando, sin permiso */
   estadoVoz(estado, nivel = 0) {
     const b = this.hud && $('[data-a=voz]', this.hud); if (!b) return;
+    const cambio = b.dataset.voz !== estado;
     b.dataset.voz = estado; b.style.setProperty('--nivel', Math.min(1, nivel).toFixed(2));
+    if (cambio) { this.aplicarHud(); this.J.celu?.refrescar(); }
   },
   actualizarRed() {
     if (!this.hud) return;
@@ -1024,14 +1043,41 @@ export const UI = {
     const vuelta = () => { if (!v.isConnected) return; dibujar(cv); requestAnimationFrame(vuelta); };
     vuelta();
   },
-  construir(alElegir, alGirar, alQuitar, alListo) {
-    const J = this.J;
-    const p = this.poner(el(`<div class="construir"><div class="catalogo">${MUEBLES.map(([k, e]) => `<button data-k="${k}" title="${k}">${e}</button>`).join('')}</div>
-      <div class="fila"><button class="boton chico" data-a="girar">↻ ${t('casa_girar')}</button><button class="boton chico" data-a="quitar">🗑 ${t('casa_quitar')}</button><button class="boton chico primario" data-a="listo">${t('casa_listo')}</button></div></div>`));
-    p.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { p.querySelectorAll('[data-k]').forEach((q) => q.classList.toggle('si', q === b)); alElegir(b.dataset.k); });
-    $('[data-a=girar]', p).onclick = alGirar; $('[data-a=quitar]', p).onclick = alQuitar;
-    $('[data-a=listo]', p).onclick = () => { p.remove(); alListo(); };
-    return p;
+  /* (vuelta 48) EL PANEL DE CONSTRUIR la casa: las tres pestañas (obra, muebles, deco) con sus piezas, los colores y
+     las herramientas (poner, mover, pintar, quitar; girar, deshacer, techos, listo). o: { alElegir(k), alColor(c),
+     alHerr(h), alGirar(), alDeshacer(), alTechos(), alPonerAca(), alListo() }. Devuelve con qué pintarlo de nuevo */
+  obra(o) {
+    const p = this.poner(el(`<div class="obra"><div class="obra-ayuda"></div><div class="obra-panel">
+      <div class="obra-arriba"><div class="obra-tabs"></div><div class="obra-colores"></div><b class="obra-cuenta"></b></div>
+      <div class="obra-items"></div><div class="obra-herr"></div></div></div>`));
+    let cat = 'obra', k = null, herr = 'poner', color = null;
+    const tabs = $('.obra-tabs', p), items = $('.obra-items', p), cols = $('.obra-colores', p), herrs = $('.obra-herr', p);
+    for (const [c, ico] of [['obra', '🧱'], ['muebles', '🛋️'], ['deco', '🪴']]) { const b = el(`<button data-cat="${c}"><i>${ico}</i><span></span></button>`); b.lastChild.textContent = t('ob_' + c); b.onclick = () => { cat = c; pintarItems(); }; tabs.appendChild(b); }
+    const pintarItems = () => {
+      tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('si', b.dataset.cat === cat));
+      items.innerHTML = '';
+      for (const q of CATALOGO_OBRA[cat]) { const b = el(`<button class="obra-item" data-k="${q}"><i></i><small></small></button>`); b.firstChild.textContent = ICONOS_OBRA[q] || '▫️'; b.lastChild.textContent = t('pz_' + q); b.setAttribute('aria-label', t('pz_' + q)); b.classList.toggle('si', q === k && herr === 'poner'); b.onclick = () => { k = q; herr = 'poner'; o.alElegir(q); pintar(); }; items.appendChild(b); }
+    };
+    const b0 = el(`<button class="obra-color orig" data-c="" aria-label=""></button>`); b0.setAttribute('aria-label', t('ob_color_orig')); b0.textContent = '✦'; cols.appendChild(b0);
+    for (const c of PALETA_OBRA) { const b = el(`<button class="obra-color" data-c="${c}" style="background:${c}"></button>`); b.setAttribute('aria-label', c); cols.appendChild(b); }
+    cols.querySelectorAll('button').forEach((b) => b.onclick = () => { color = b.dataset.c || null; o.alColor(color); pintar(); });
+    for (const [h, ico] of [['poner', '✋'], ['mover', '✥'], ['pintar', '🎨'], ['quitar', '🗑']]) { const b = el(`<button class="obra-h" data-h="${h}"><i>${ico}</i><span></span></button>`); b.lastChild.textContent = t('ob_' + h); b.onclick = () => { herr = h; o.alHerr(h); pintar(); }; herrs.appendChild(b); }
+    herrs.appendChild(el('<i class="obra-sep"></i>'));
+    for (const [a, ico, f] of [['aca', '📍', o.alPonerAca], ['girar', '↻', o.alGirar], ['deshacer', '↶', o.alDeshacer], ['techos', '🏠', o.alTechos]]) { const b = el(`<button class="obra-h" data-a="${a}"><i>${ico}</i><span></span></button>`); b.lastChild.textContent = t('ob_' + a); b.onclick = () => f(); herrs.appendChild(b); }
+    const listo = el(`<button class="boton chico primario obra-listo" data-a="listo"></button>`); listo.textContent = '✓ ' + t('casa_listo'); listo.onclick = () => o.alListo(); herrs.appendChild(listo);
+    const pintar = (estado = {}) => {
+      if (estado.k !== undefined) k = estado.k; if (estado.herr) herr = estado.herr;
+      pintarItems();
+      cols.querySelectorAll('button').forEach((b) => b.classList.toggle('si', (b.dataset.c || null) === color));
+      herrs.querySelectorAll('[data-h]').forEach((b) => b.classList.toggle('si', b.dataset.h === herr));
+      $('[data-a=techos]', herrs).classList.toggle('apagado', estado.techos === false);
+      $('[data-a=deshacer]', herrs).disabled = estado.deshacer === 0;
+      $('[data-a=aca]', herrs).hidden = herr !== 'poner' && herr !== 'mover';
+      if (estado.n != null) $('.obra-cuenta', p).textContent = `${estado.n}/${estado.max}`;
+      $('.obra-ayuda', p).textContent = estado.ayuda || t(herr === 'poner' ? (k ? 'ob_ayuda_poner' : 'ob_ayuda_elegi') : 'ob_ayuda_' + herr) + ' · ' + t(this.J.ent.tactil ? 'ob_ayuda_dedo' : 'ob_ayuda_mouse');
+    };
+    pintarItems(); pintar();
+    return { raiz: p, pintar, get herr() { return herr; }, get color() { return color; }, get k() { return k; }, cerrar: () => p.remove() };
   },
   /* ------------------------------------------------------------ estilo retro */
   estilo(volver, pest = 'estilos') {
