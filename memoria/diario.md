@@ -8,7 +8,7 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Pidió: el HTML; construir en la casa y mejores decoraciones; arreglar minijuegos y menús; el celu parado; guardar
     botones en el celu.
   - Quedó ([aeroplaza-48](aeroplaza-48.md)): el modo construir (54 piezas), el celu parado, los botones en el celu y
-    los arreglos del recorrido (`arreglos.mjs` 19/19). Publicada la n 5; se mandó el HTML con canciones.
+    los arreglos del recorrido (`arreglos.mjs` 19/19). Publicada la n 5 y la página (v48); el HTML no se pudo mandar (el envío de archivos dio 500).
   - Falta: que diga si en su celu la construcción con los dedos va cómoda.
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".
