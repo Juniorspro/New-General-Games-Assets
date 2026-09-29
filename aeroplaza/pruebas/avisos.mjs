@@ -18,6 +18,8 @@ const PISA = `(a, b) => !(a.right <= b.left || b.right <= a.left || a.bottom <= 
 for (const [ancho, alto, movil, nombre] of [[960, 540, false, 'compu'], [844, 390, true, 'celu'], [390, 844, true, 'celu parado']]) {
   const { pag, ctx, errores } = await abrir(nav, 'directo&pausa&calidad=baja&hora=0.3', { ancho, alto, movil });
   await pag.waitForFunction(() => window.__A && window.__A.reino && window.__A.yo && window.__A.UI.hud, null, { timeout: 120000, polling: 250 });
+  /* todos los botones en la pantalla (de entrada la voz, las misiones, el estilo y la barra van al celu): así se ve qué esconde el parkour */
+  await pag.evaluate(() => { const A = window.__A; A.G.opciones.hud = { voz: true, misiones: true, estilo: true, chat: true, barra: true }; A.UI.aplicarHud(); });
   await avanzar(pag, 5);
   /* tres avisos de golpe: la zona, uno bueno y uno común */
   let r = await pag.evaluate((PISA) => {

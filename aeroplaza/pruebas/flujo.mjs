@@ -35,13 +35,16 @@ await pag.waitForSelector('.hud', { timeout: 60000 });
 await avanzar(pag, 30);
 await foto('5-juego');
 prueba('el tutorial dice cómo moverse', /palanca|WASD/.test(await pag.locator('.tuto').textContent().catch(() => '')));
-/* la ventana de estilos retro, desde el botón 👾 del HUD */
-await tocar('[data-a=estilo]'); await esperar(900);
+/* la ventana de estilos retro: el 👾 se guarda en el celu (vuelta 48), así que 📱 › Estilo */
+await tocar('.hud [data-a=celu]'); await esperar(400);
+await tocar('.ventana.celu [data-app=estilo]'); await esperar(900);
 await foto('5b-estilos');
 prueba('la ventana de estilos tiene 7 estilos', (await pag.locator('.estilo-carta').count()) === 7);
 await tocar('.estilo-carta[data-e=pixel]'); await avanzar(pag, 3);
 prueba('el estilo Pixel dibuja a 270 líneas', await pag.evaluate(() => window.__A.motor.r.domElement.height) === 270);
-await pag.evaluate(() => window.__A.UI.cerrarVentana()); await avanzar(pag, 2);
+await pag.evaluate(() => window.__A.UI.cerrarVentana()); await esperar(100);   // vuelve al celu, como toda app
+prueba('al cerrar el estilo se vuelve al celu', await pag.evaluate(() => window.__A.J.celu.abierto));
+await pag.evaluate(() => window.__A.J.celu.cerrar()); await avanzar(pag, 2);
 await foto('5c-pixel');
 await pag.evaluate(() => window.__A.J.ponerEstilo('normal'));
 prueba('HUD con hotbar de 5', (await pag.locator('.ranura').count()) === 5);
