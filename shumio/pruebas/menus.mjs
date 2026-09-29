@@ -8,7 +8,7 @@ const pre = tactil ? "t" : "m";
 const foto = async (n) => { await pag.screenshot({ path: salida(pre + n) }); console.log("·", pre + n); };
 await esperar(900); await foto("1-titulo.png");
 await tecla("Enter"); await esperar(500); await foto("2-principal.png");
-await tecla("ArrowDown", 5); await tecla("Enter"); await esperar(500); await foto("3-ayuda.png");
+await tecla("ArrowDown", 6); await tecla("Enter"); await esperar(500); await foto("3-ayuda.png");
 await tecla("Enter"); await esperar(400); await tecla("Enter"); await esperar(1000);
 await foto("4-juego.png");
 await pag.evaluate(() => __SH.irA("tesoro")); await esperar(400);

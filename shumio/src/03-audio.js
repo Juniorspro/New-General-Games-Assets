@@ -13,6 +13,11 @@
 // El AudioContext nace con el primer toque (los navegadores no dejan sonar antes).
 // ─────────────────────────────────────────────────────────────────────────────
 
+let MEDIDOR = null, SALIDA_EL = null, SALIDA_DEST = null;
+// La salida: "directa" (a los parlantes) o "reproductor" (por un elemento <audio>, el mismo camino que
+// usa un video; en algunos teléfonos es lo único que suena). Se elige en el menú y se recuerda.
+let modoSalida = "directa";
+try { modoSalida = localStorage.getItem("shumio-salida") || "directa"; } catch (e) { /* sin guardar */ }
 let AC = null, SAL = null, MUS = null, EFX = null, RUIDO = null, ECO = null, ECO_LARGO = null;
 let volMusica = 0.55, volEfectos = 0.8;
 try { const g = JSON.parse(localStorage.getItem("shumio-audio") || "{}"); if (g.m != null) volMusica = g.m; if (g.e != null) volEfectos = g.e; } catch (e) { /* sin guardar */ }
@@ -71,11 +76,39 @@ function desbloquearElemento() {
     const p = el.play(); if (p && p.then) p.then(() => { _elementoListo = true; }).catch(() => {});
   } catch (e) { /* no importa: es una ayuda extra */ }
 }
+function conectarSalida() {
+  if (!AC || !SAL) return;
+  try { SAL.disconnect(); } catch (e) { /* nada */ }
+  SAL.connect(MEDIDOR);
+  if (modoSalida === "reproductor" && AC.createMediaStreamDestination) {
+    SALIDA_DEST ||= AC.createMediaStreamDestination();
+    SAL.connect(SALIDA_DEST);
+    if (!SALIDA_EL) { SALIDA_EL = new Audio(); SALIDA_EL.autoplay = true; }
+    SALIDA_EL.srcObject = SALIDA_DEST.stream;
+    const p = SALIDA_EL.play(); if (p && p.catch) p.catch((e) => { AUDIO.error = "reproductor: " + (e && e.message || e); });
+  } else {
+    if (SALIDA_EL) SALIDA_EL.pause();
+    SAL.connect(AC.destination);
+  }
+}
+function cambiarSalida() {
+  modoSalida = modoSalida === "directa" ? "reproductor" : "directa";
+  try { localStorage.setItem("shumio-salida", modoSalida); } catch (e) { /* nada */ }
+  conectarSalida(); probarSonido();
+}
+/** El pico de lo que sale, en dB (−∞ si nada). */
+const _medida = new Float32Array(1024);
+function nivelAudio() {
+  if (!MEDIDOR) return -Infinity;
+  MEDIDOR.getFloatTimeDomainData(_medida);
+  let m = 0; for (let i = 0; i < _medida.length; i++) m = Math.max(m, Math.abs(_medida[i]));
+  return m > 0 ? 20 * Math.log10(m) : -Infinity;
+}
 /** Cómo está el sonido, en palabras (lo muestra el menú). */
 function estadoAudio() {
   if (AUDIO.error && !AC) return "ERROR: " + AUDIO.error.slice(0, 40).toUpperCase();
   if (!AC) return AUDIO.gestos ? "NO ARRANCÓ" : "TOCÁ PARA ACTIVAR";
-  if (AC.state === "running") return "ANDANDO";
+  if (AC.state === "running") { const n = nivelAudio(); return "ANDANDO, SALE " + (n > -90 ? Math.round(n) + " DB" : "SILENCIO"); }
   return AC.state === "suspended" ? "BLOQUEADO: TOCÁ OTRA VEZ" : AC.state.toUpperCase();
 }
 function probarSonido() { audioDespertar(); if (AC) { SFX.objeto(); _tono({ f: 440, dur: 0.5, tipo: "sine", vol: 0.3, salida: EFX }); } }
@@ -87,7 +120,11 @@ function armarAudio(ctx) {
   {
     AC = ctx;
     // el máster: una saturación suave (cinta) y un compresor que lo pega todo
-    SAL = AC.createDynamicsCompressor(); SAL.threshold.value = -16; SAL.ratio.value = 3.5; SAL.attack.value = 0.006; SAL.release.value = 0.2; SAL.connect(AC.destination);
+    SAL = AC.createDynamicsCompressor(); SAL.threshold.value = -16; SAL.ratio.value = 3.5; SAL.attack.value = 0.006; SAL.release.value = 0.2;
+    // el medidor: cuánta señal sale de verdad (si marca nivel y no se oye, el problema está afuera
+    // del juego: el volumen del teléfono o los permisos de sonido del navegador)
+    MEDIDOR = AC.createAnalyser(); MEDIDOR.fftSize = 1024; SAL.connect(MEDIDOR);
+    conectarSalida();
     const cinta = AC.createWaveShaper(); cinta.curve = curvaSat(1.4); cinta.oversample = "2x"; cinta.connect(SAL);
     MUS = AC.createGain(); MUS.gain.value = volMusica; MUS.connect(cinta);
     EFX = AC.createGain(); EFX.gain.value = volEfectos; EFX.connect(cinta);

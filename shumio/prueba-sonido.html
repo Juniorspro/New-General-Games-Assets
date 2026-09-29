@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prueba de sonido</title>
+<style>
+  /* Una página mínima para saber POR QUÉ no suena el juego en un teléfono: prueba tres caminos
+     distintos de sacar sonido y muestra todo lo que dice el navegador. */
+  body { margin: 0; background: #16110f; color: #f1e8d6; font: 17px/1.4 system-ui, sans-serif; padding: 16px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { margin: 6px 0 14px; color: #cbbfa8; }
+  button { display: block; width: 100%; margin: 10px 0; padding: 18px 12px; font-size: 19px; border: 0; border-radius: 12px; background: #7a1f1a; color: #fff; }
+  button:active { background: #a8302a; }
+  .res { margin: -4px 0 12px; font-size: 15px; color: #ffd98a; min-height: 1.2em; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #0b0807; padding: 12px; border-radius: 10px; font-size: 13px; color: #b9e0c0; }
+</style>
+</head>
+<body>
+<h1>Prueba de sonido de Shumio's Depths</h1>
+<p>Tocá cada botón y fijate si escuchás una melodía corta. Después mandame una captura de toda la página.</p>
+
+<button id="b1">1) Sonido directo (Web Audio)</button><div class="res" id="r1"></div>
+<button id="b2">2) Sonido por reproductor (Web Audio → &lt;audio&gt;)</button><div class="res" id="r2"></div>
+<button id="b3">3) Archivo de audio común (WAV)</button><div class="res" id="r3"></div>
+
+<pre id="info">cargando…</pre>
+
+<script>
+"use strict";
+let AC = null, analizador = null, el2 = null;
+const errores = [];
+addEventListener("error", (e) => errores.push("error: " + e.message));
+const $ = (id) => document.getElementById(id);
+
+function contexto() {
+  if (!AC) {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) throw new Error("este navegador no tiene Web Audio");
+    AC = new C();
+    analizador = AC.createAnalyser(); analizador.fftSize = 1024;
+  }
+  if (AC.state !== "running") AC.resume().catch((e) => errores.push("resume: " + e.message));
+  return AC;
+}
+/** Una melodía de tres notas (bien audible, sin saturar) a la salida que se pida. */
+function melodia(salida) {
+  const t = AC.currentTime + 0.05;
+  [523, 659, 784].forEach((f, i) => {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = "triangle"; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t + i * 0.25); g.gain.exponentialRampToValueAtTime(0.5, t + i * 0.25 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.25 + 0.4);
+    o.connect(g); g.connect(salida); g.connect(analizador);
+    o.start(t + i * 0.25); o.stop(t + i * 0.25 + 0.45);
+  });
+}
+function medir(res, texto) {
+  const d = new Float32Array(1024); let pico = 0, n = 0;
+  const id = setInterval(() => {
+    analizador.getFloatTimeDomainData(d);
+    for (const v of d) pico = Math.max(pico, Math.abs(v));
+    if (++n > 12) { clearInterval(id); res.textContent = texto + " · el navegador dice que sonó a " + (pico > 0 ? Math.round(20 * Math.log10(pico)) + " dB" : "SILENCIO") + " · estado: " + AC.state; }
+  }, 100);
+}
+$("b1").onclick = () => {
+  try { contexto(); melodia(AC.destination); medir($("r1"), "Directo"); } catch (e) { $("r1").textContent = "ERROR: " + e.message; }
+};
+$("b2").onclick = () => {
+  try {
+    contexto();
+    if (!AC.createMediaStreamDestination) throw new Error("no hay MediaStreamDestination");
+    const dest = AC.createMediaStreamDestination();
+    if (!el2) el2 = new Audio();
+    el2.srcObject = dest.stream;
+    el2.play().then(() => {}).catch((e) => { $("r2").textContent = "ERROR al reproducir: " + e.message; });
+    melodia(dest); medir($("r2"), "Por reproductor");
+  } catch (e) { $("r2").textContent = "ERROR: " + e.message; }
+};
+$("b3").onclick = () => {
+  // un WAV armado a mano (tres notas), tocado con un <audio> común: el camino de un video o una canción
+  try {
+    const sr = 22050, dur = 1.0, n = Math.floor(sr * dur), b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) { const t = i / sr, k = Math.min(2, Math.floor(t / 0.25)), f = [523, 659, 784][k], u = t - k * 0.25, a = Math.exp(-u * 6) * Math.min(1, u * 50); v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * f * t) * a * 16000, true); }
+    const el = new Audio(URL.createObjectURL(new Blob([b], { type: "audio/wav" })));
+    el.volume = 1;
+    el.play().then(() => { $("r3").textContent = "Archivo WAV: el navegador lo está reproduciendo (¿se escuchó?)"; }).catch((e) => { $("r3").textContent = "ERROR al reproducir: " + e.name + " " + e.message; });
+  } catch (e) { $("r3").textContent = "ERROR: " + e.message; }
+};
+
+function info() {
+  const u = navigator.userActivation;
+  const lineas = [
+    "Navegador: " + navigator.userAgent,
+    "Dirección: " + location.protocol + "//" + (location.host || "") + location.pathname.slice(0, 40),
+    "Web Audio: " + (window.AudioContext || window.webkitAudioContext ? "sí" : "NO"),
+    "Estado del audio: " + (AC ? AC.state : "sin crear (tocá un botón)"),
+    AC ? "Muestras por segundo: " + AC.sampleRate + " · reloj: " + AC.currentTime.toFixed(2) + " s · latencia: " + ((AC.baseLatency || 0) * 1000).toFixed(0) + " ms" : "",
+    "Gesto del usuario: " + (u ? (u.hasBeenActive ? "ya tocó" : "todavía no") + (u.isActive ? " (activo)" : "") : "sin datos"),
+    "Página visible: " + document.visibilityState,
+    "Errores: " + (errores.length ? errores.join(" | ") : "ninguno"),
+  ];
+  $("info").textContent = lineas.filter(Boolean).join("\n");
+}
+setInterval(info, 300); info();
+</script>
+</body>
+</html>
