@@ -24,6 +24,9 @@ for (const combo of COMBOS) {
     const S = window.__SH;
     S.nueva(7); S.sala("normal");
     const J = S.juego(), info = S.dar(...combo);
+    // el feto tira bombas que se deslizan ~3 baldosas: los enemigos quietos a esa distancia (si no, el bot
+    // le erra según cómo se muevan las moscas, y la prueba sale distinta cada vez)
+    if (info.arma === "feto") J.enemigos.forEach((e, k) => { e.dormido = 1e9; e.x = J.jug.x + 70; e.y = J.jug.y + (k ? 8 : -8); });
     const vida0 = J.enemigos.reduce((s, e) => s + e.vida, 0), n0 = J.enemigos.length;
     J.jug.inv = 99999;
     // mira hacia el enemigo más cercano y llora un rato (con cortes, para las armas que se cargan)

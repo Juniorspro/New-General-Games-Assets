@@ -180,7 +180,7 @@ function actualizarJugador(j) {
   if (j.muerto) { j.tMuerte++; return; }
   if (j.inv > 0) j.inv--;
   if (j.tGesto > 0 && --j.tGesto === 0) j.gesto = 0;
-  if (j.tSostiene > 0) j.tSostiene--;
+  if (j.tSostiene > 0 && --j.tSostiene === 0 && j.reaccion) { j.gesto = j.reaccion; j.tGesto = 36; j.reaccion = 0; }
   // parpadeo de vez en cuando (el ojo cerrado dos cuadros de dibujo)
   if (--j.tParpadeo <= 0) { if (!j.gesto) { j.gesto = 2; j.tGesto = 7; } j.tParpadeo = V.ent(140, 320); }
 
@@ -264,6 +264,19 @@ function dibujarJugador(g, j) {
   if (j.escudo > 0) { g.globalAlpha = 0.35 + 0.15 * Math.sin(J.t * 0.3); g.drawImage(aro(15, "rgba(20,10,30,0.5)", "rgba(200,170,255,0.8)"), Math.round(j.x) - 15, Math.round(j.y) - 26); g.globalAlpha = 1; }
   const z = Math.round(j.vuela ? 5 + Math.sin(J.t * 0.08) * 1.5 : 0);
   g.drawImage(sombra(7, 3), X - 7, Y + 2);
+  if (j.vuela) { const a = alitaSpr((J.t >> 2) & 1); g.drawImage(a, X - 15, Y - 22 - z); g.drawImage(espejado(a), X + 3, Y - 22 - z); }
+  // levantando algo: de frente, brazos arriba y el objeto sobre las manos (0,8 s, como el original).
+  // Los primeros cuadros se estira hacia arriba y vuelve (el "¡ta-daa!").
+  if (j.tSostiene > 0 && j.sostiene) {
+    const e = LEVANTA - j.tSostiene, k = 1 + 0.16 * Math.max(0, 1 - e / 7) - 0.05 * Math.max(0, Math.min(1, (e - 7) / 3)) * Math.max(0, 1 - (e - 10) / 4);
+    g.save(); g.translate(X, Y + 3 - z); g.scale(2 - k, k); g.translate(-X, -(Y + 3));
+    g.drawImage(s.levanta, X - 7, Y - 8);
+    g.drawImage(s.cab.frente[j.gesto === 3 ? 3 : 0], X - 11, Y - 24);
+    g.drawImage(s.brazos, X - 15, Y - 30);
+    g.drawImage(j.sostiene, X - Math.round(j.sostiene.width / 2), Y - 28 - j.sostiene.height + 2);
+    g.restore();
+    return;
+  }
   const mov = Math.hypot(j.vx, j.vy) > 0.3;
   const kPaso = mov ? Math.floor(j.paso / 7) % 4 : 0;
   const vc = j.mirarCue === ARRIBA ? "espalda" : j.mirarCue === ABAJO ? "frente" : j.mirarCue === DERECHA ? "lado" : "ladoI";
@@ -271,12 +284,13 @@ function dibujarJugador(g, j) {
   // la cabeza baja un píxel al soltar la lágrima (el "puchero")
   const cab = s.cab[VISTA_CAB[j.mirar]][j.gesto], baja = j.gesto === 1 ? 1 : 0;
   const bob = mov && (kPaso === 1 || kPaso === 3) ? 1 : 0;
-  // volando: dos alitas de polilla que aletean detrás (el "disfraz" de vuelo del original)
-  if (j.vuela) { const a = alitaSpr((J.t >> 2) & 1); g.drawImage(a, X - 15, Y - 22 - z); g.drawImage(espejado(a), X + 3, Y - 22 - z); }
   g.drawImage(cue, X - 7, Y - 8 - z);
   g.drawImage(cab, X - 11, Y - 24 - z + baja + bob);
-  if (j.tSostiene > 0 && j.sostiene) g.drawImage(j.sostiene, X - 9, Y - 44 - z);
 }
+/** Cuánto dura levantar un objeto: 0,8 s (medido en el video, 12 cuadros a 15 por segundo). */
+const LEVANTA = 48;
+/** Shumio levanta algo sobre la cabeza (un objeto, una cápsula, una baratija). */
+function levantar(j, spr, dura = LEVANTA) { j.sostiene = spr; j.tSostiene = dura; j.mirar = ABAJO; j.gesto = 0; }
 
 /** Los pedestales son un bloque firme (caja) y los cofres se empujan (como en el original): Shumio
  *  choca contra ellos y, al tocarlos, los usa. */

@@ -39,12 +39,16 @@ function pintarCabeza(vista, gesto, pielR = PAL.piel, gorroR = PAL.hongo) {
     // los ojos: la MISMA forma los dos (simétricos), y el brillo arriba a la izquierda en los dos (la luz)
     const ojo = gesto === 1 || gesto === 2 ? ["....", "eeee", ".tt."]
       : gesto === 3 ? ["e..e", ".ee.", "e..e"]
+      : gesto === 4 ? ["....", ".ee.", "e..e"]                       // contento: los ojos cerrados en arco
+      : gesto === 5 ? ["....", "eeee", "eWee", "eeee", ".ee."]        // triste: los párpados caídos
       : [".ee.", "eWee", "eeee", "eeeh", ".ee."];
     p.sello(5, 13, ojo, pal); p.sello(13, 13, ojo, pal);        // 5..8 y 13..16: centro 10.5
     p.p(4, 18, "#d99a90"); p.p(17, 18, "#d99a90");               // los cachetes (4 y 17)
     // la boca, de 2 px (10 y 11), centrada
     if (gesto === 1) p.sello(9, 18, [".kk.", "kmmk", ".kk."], { k: K, m: "#6a2c30" });
     else if (gesto === 3) p.sello(9, 18, [".kk.", "kmmk"], { k: K, m: "#6a2c30" });
+    else if (gesto === 4) p.sello(8, 18, ["k....k", ".kmmk.", "..kk.."], { k: K, m: "#b04a50" });
+    else if (gesto === 5) p.sello(9, 19, [".kk.", "k..k"], { k: K });
     else p.sello(10, 19, ["kk"], { k: "#5a3034" });
     // las esporas que le caen de los ojos (6 y 15: debajo del segundo píxel de cada ojo, espejados)
     if (gesto !== 3) { p.p(6, 18, PAL.espora[3]); p.p(15, 18, PAL.espora[3]); if (gesto === 1) { p.p(6, 19, PAL.espora[2]); p.p(15, 19, PAL.espora[2]); } }
@@ -94,14 +98,43 @@ function pintarCuerpo(vista, paso, tunicaR = PAL.musgo, pielR = PAL.piel) {
   return p;
 }
 
+/** La pose de levantar un objeto (medida en el original: de frente, los dos brazos estirados
+ *  arriba, a los costados de la cabeza, y el objeto sobre las manos): el cuerpo sin los bracitos
+ *  y los brazos aparte, que se dibujan encima de la cabeza. */
+function pintarCuerpoLevanta(tunicaR = PAL.musgo, pielR = PAL.piel) {
+  const p = new Pix(CUE_W, CUE_H);
+  p.caja(4, 7, 2, 4, [pielR[1], pielR[2], pielR[3]]); p.caja(8, 7, 2, 4, [pielR[1], pielR[2], pielR[3]]);
+  p.p(4, 10, pielR[0]); p.p(5, 10, pielR[0]); p.p(8, 10, pielR[0]); p.p(9, 10, pielR[0]);
+  p.bola(7, 4.6, 4.7, 4.0, tunicaR, { bajar: 0.12 });
+  for (let x = 3; x < 12; x++) if (p.g(x, 6)) p.p(x, 6, PAL.tierra[2]);
+  p.p(7, 3, tunicaR[4]); p.p(6, 2, tunicaR[3]); p.p(7, 6, PAL.oro[3]);
+  p.contorno(AUTO);
+  return p;
+}
+function pintarBrazosArriba(pielR = PAL.piel) {
+  // 30 × 26: bracitos gorditos que salen del hombro (y 23), abren el codo hacia afuera y terminan
+  // con la mano redonda arriba, sobre el ala del sombrero (y 4)
+  const p = new Pix(30, 26), R = [pielR[1], pielR[2], pielR[3], pielR[4]];
+  for (const lado of [-1, 1]) {
+    const x0 = 15 + lado * 6, y0 = 23, xc = 15 + lado * 14, yc = 15, x1 = 15 + lado * 11, y1 = 5;
+    for (let t = 0; t <= 1; t += 0.04) {
+      const x = (1 - t) * (1 - t) * x0 + 2 * t * (1 - t) * xc + t * t * x1, y = (1 - t) * (1 - t) * y0 + 2 * t * (1 - t) * yc + t * t * y1;
+      p.bola(x, y, 1.7, 1.7, R, { luz: [-0.5 * lado, -0.6, 0.6] });
+    }
+    p.bola(x1, y1 - 1, 2.6, 2.4, R, {});   // la mano
+  }
+  p.contorno(AUTO);
+  return p;
+}
 /** Los sprites de Shumio, horneados: cabezas por vista y gesto, cuerpos por vista y paso. */
 function spritesShumio(pielR = PAL.piel, gorroR = PAL.hongo, tunicaR = PAL.musgo, clave = "shumio") {
   return hornear(clave, () => {
     const s = { cab: {}, cue: {} };
     for (const v of ["frente", "espalda", "lado"]) {
-      s.cab[v] = [0, 1, 2, 3].map((g) => pintarCabeza(v, g, pielR, gorroR).canvas());
-      s.cab[v + "I"] = [0, 1, 2, 3].map((g) => pintarCabeza(v, g, pielR, gorroR).espejo().canvas());
+      s.cab[v] = [0, 1, 2, 3, 4, 5].map((g) => pintarCabeza(v, v === "frente" || g < 4 ? g : 0, pielR, gorroR).canvas());
+      s.cab[v + "I"] = [0, 1, 2, 3, 4, 5].map((g) => pintarCabeza(v, v === "frente" || g < 4 ? g : 0, pielR, gorroR).espejo().canvas());
       s.cue[v] = [0, 1, 2, 3].map((k) => pintarCuerpo(v, k, tunicaR, pielR).canvas());
+      if (v === "frente") { s.levanta = pintarCuerpoLevanta(tunicaR, pielR).canvas(); s.brazos = pintarBrazosArriba(pielR).canvas(); }
       s.cue[v + "I"] = [0, 1, 2, 3].map((k) => pintarCuerpo(v, k, tunicaR, pielR).espejo().canvas());
     }
     return s;

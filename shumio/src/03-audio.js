@@ -39,13 +39,48 @@ function curvaSat(k) {
   return (_curvas[k] = c);
 }
 
+// Lo que pasó con el audio, para mostrarlo en el menú (si en un teléfono no suena, que se vea por qué).
+const AUDIO = { error: null, gestos: 0, desde: 0 };
 function audioDespertar() {
-  if (AC) { if (AC.state !== "running" && AC.state !== "closed") AC.resume().catch(() => {}); return; }
+  AUDIO.gestos++;
+  if (AC) {
+    if (AC.state !== "running" && AC.state !== "closed") AC.resume().catch((e) => { AUDIO.error = "resume: " + (e && e.message || e); });
+    desbloquearElemento();
+    return;
+  }
   try {
-    armarAudio(new (window.AudioContext || window.webkitAudioContext)());
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) { AUDIO.error = "este navegador no tiene Web Audio"; return; }
+    armarAudio(new C({ latencyHint: "interactive" }));
+    AUDIO.desde = performance.now();
+    if (AC.state !== "running") AC.resume().catch((e) => { AUDIO.error = "resume: " + (e && e.message || e); });
     Musica.arrancar();
-  } catch (e) { AC = null; }
+    desbloquearElemento();
+  } catch (e) { AUDIO.error = (e && e.message) || String(e); AC = null; }
 }
+/** Algunos Android (y los WebView de los visores de archivos) no dejan sonar nada hasta que un
+ *  elemento <audio> suena dentro de un gesto: se toca un silencio cortito, una vez. */
+let _elementoListo = false;
+function desbloquearElemento() {
+  if (_elementoListo) return;
+  try {
+    const sr = 8000, n = 800, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+    const el = new Audio(URL.createObjectURL(new Blob([b], { type: "audio/wav" })));
+    el.volume = 0.01;
+    const p = el.play(); if (p && p.then) p.then(() => { _elementoListo = true; }).catch(() => {});
+  } catch (e) { /* no importa: es una ayuda extra */ }
+}
+/** Cómo está el sonido, en palabras (lo muestra el menú). */
+function estadoAudio() {
+  if (AUDIO.error && !AC) return "ERROR: " + AUDIO.error.slice(0, 40).toUpperCase();
+  if (!AC) return AUDIO.gestos ? "NO ARRANCÓ" : "TOCÁ PARA ACTIVAR";
+  if (AC.state === "running") return "ANDANDO";
+  return AC.state === "suspended" ? "BLOQUEADO: TOCÁ OTRA VEZ" : AC.state.toUpperCase();
+}
+function probarSonido() { audioDespertar(); if (AC) { SFX.objeto(); _tono({ f: 440, dur: 0.5, tipo: "sine", vol: 0.3, salida: EFX }); } }
+document.addEventListener("visibilitychange", () => { if (!document.hidden && AC && AC.state !== "running") AC.resume().catch(() => {}); });
+
 /** Arma el grafo (también sirve con un OfflineAudioContext, para grabar muestras en las pruebas). */
 let _desfase = 0;
 function armarAudio(ctx) {

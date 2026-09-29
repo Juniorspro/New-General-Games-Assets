@@ -13,7 +13,7 @@ await pag.waitForFunction(() => window.__SH && window.__SH.listo);
 const antes = await pag.evaluate(() => (typeof AC !== "undefined" && AC ? AC.state : "sin audio"));
 await pag.touchscreen.tap(400, 180);
 await pag.waitForTimeout(600);
-const despues = await pag.evaluate(() => ({ estado: AC ? AC.state : "sin audio", tema: Musica.tema, t: AC ? +AC.currentTime.toFixed(2) : 0 }));
+const despues = await pag.evaluate(() => ({ estado: AC ? AC.state : "sin audio", tema: Musica.tema, t: AC ? +AC.currentTime.toFixed(2) : 0, menu: estadoAudio(), error: AUDIO.error }));
 await pag.touchscreen.tap(400, 180); await pag.waitForTimeout(800);
 const luego = await pag.evaluate(() => ({ estado: AC.state, tema: Musica.tema, t: +AC.currentTime.toFixed(2) }));
 console.log("antes del toque:", antes, "| después del primer toque:", despues, "| después del segundo:", luego);

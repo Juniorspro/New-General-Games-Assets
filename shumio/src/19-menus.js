@@ -21,6 +21,8 @@ function abrirMenu(tipo) {
   const vol = () => [
     { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
     { texto: () => "EFECTOS " + pct(volEfectos), cambiar: (d) => { volEfectos = lim(Math.round((volEfectos + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); SFX.moneda(); } },
+    // el diagnóstico del sonido: dice cómo está y, al tocarlo, suena una prueba
+    { texto: () => "SONIDO: " + estadoAudio(), hacer: () => probarSonido() },
   ];
   if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
   if (tipo === "principal") Musica.poner("menu");

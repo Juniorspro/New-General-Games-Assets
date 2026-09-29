@@ -115,6 +115,12 @@ function dibujarHud(g) {
     const cal = calaveraJefeSpr(); g.drawImage(cal, bx - 13, by - 7);
   }
   dibujarRotulos(g);
+  // si el sonido no arrancó después de tocar, que se vea (y qué pasa), en vez de quedarse mudo sin avisar
+  if (AUDIO.gestos > 0 && (!AC || AC.state !== "running") && (J.t >> 5) & 1) {
+    const s = etiquetaSpr("SIN SONIDO: " + estadoAudio(), "#ffd0c0");
+    g.fillStyle = "rgba(0,0,0,0.6)"; g.fillRect(Math.round(W / 2 - s.width / 2) - 4, H - 22, s.width + 8, s.height + 4);
+    g.drawImage(s, Math.round(W / 2 - s.width / 2), H - 20);
+  }
   if (IN.usaTactil) dibujarControles(g);
 }
 

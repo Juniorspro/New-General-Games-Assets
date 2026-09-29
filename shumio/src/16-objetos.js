@@ -253,7 +253,7 @@ function tomarObjeto(c) {
   if (def.fam || j.f.cuchilloAtras || j.f.aranaFam) armarFamiliares();
   rotulo(def.nombre, def.lema);
   SFX.objeto();
-  j.sostiene = iconoSpr(id); j.tSostiene = 50;
+  levantar(j, iconoSpr(id));
   // en la tienda y en el pacto, lo comprado se va con pedestal y todo
   return (c.precio || c.pacto) && !c.id ? true : false;
 }
@@ -292,6 +292,8 @@ function tomarCapsula(j) {
   anotarCambios(antes);
   rotulo(J.capsulaBien ? "¡SALUD TOTAL!" : e.n, "");
   SFX[e.bueno || J.capsulaBien ? "capsula" : "malo"]();
+  // la cápsula también se levanta, y después la cara dice si fue buena o mala
+  levantar(j, capsulaSpr(i), 34); j.reaccion = e.bueno || J.capsulaBien ? 4 : 5;
 }
 
 // lo que cambió en las cuentas (el HUD lo muestra en verde o rojo al lado, como el original)

@@ -60,8 +60,38 @@ function actualizarCosas() {
     const alcance = RADIO_SOLIDO[c.t] ? RADIO_SOLIDO[c.t] + j.r + 1.5 : 9;
     if (c.espera > 0) { c.espera--; continue; }       // lo que recién saltó de un cofre no se agarra al toque
     if (dist(j.x, j.y, c.x, c.y) > alcance) { c.tocando = false; c.avisado = false; continue; }
-    if (tomar(c)) C.splice(i, 1);
+    if (tomar(c)) { brilloRecoger(c); C.splice(i, 1); }
+    else if (EMPUJABLES.has(c.t) && !c.precio) empujarCosa(c, j);
   }
+}
+/** Lo que no se puede agarrar (corazón con la vida llena, llave o moneda al tope…) no se atraviesa:
+ *  Shumio lo empuja al caminar contra eso, como en el original. */
+const EMPUJABLES = new Set(["corazon", "moneda", "bomba", "llave", "capsula", "baratija"]);
+function empujarCosa(c, j) {
+  const dx = c.x - j.x, dy = c.y - j.y, d = Math.hypot(dx, dy) || 0.01, m = j.r + 5;
+  if (d >= m) return;
+  const nx = dx / d, ny = dy / d, falta = m - d;
+  // se lleva casi toda la velocidad de Shumio en esa dirección, y rueda un poco
+  const v = Math.max(0.6, (j.vx * nx + j.vy * ny) * 1.1);
+  c.vx = nx * v; c.vy = ny * v;
+  const antes = [c.x, c.y];
+  moverEnSala(J.sala, c, nx * falta, ny * falta, false);
+  const movido = Math.hypot(c.x - antes[0], c.y - antes[1]), resto = Math.max(0, falta - movido);
+  j.x -= nx * resto; j.y -= ny * resto;   // contra la pared ya no se corre: frena a Shumio
+}
+/** El brillito de lo que se agarra (monedas, llaves, corazones, bombas). */
+function brilloRecoger(c) {
+  if (c.t === "objeto" || c.t === "trampilla") return;
+  const col = c.t === "moneda" ? PAL.oro[4] : c.t === "corazon" ? (c.sub === "negro" ? "#cecece" : c.sub && c.sub.startsWith("espora") ? PAL.azul[4] : PAL.sangre[4]) : c.t === "llave" ? PAL.hueso[4] : "#ffffff";
+  J.fx.push({ anim: [0, 1, 2, 3, 4].map((k) => brilloSpr(k, col)), x: c.x, y: c.y - 6 - c.z, t: 0, cada: 3, centro: true });
+}
+function brilloSpr(k, col) {
+  return hornear(`brillo${k}${col}`, () => {
+    const p = new Pix(15, 15), r = 2 + k * 1.4;
+    for (let a = 0; a < 4; a++) { const an = a * Math.PI / 2 + k * 0.2; for (let d = r - 2; d <= r; d++) p.p(7 + Math.cos(an) * d, 7 + Math.sin(an) * d, k < 3 ? col : mezclar(col, "#000000", 0.4)); }
+    if (k < 2) p.bola(7, 7, 1.6 - k * 0.5, 1.6 - k * 0.5, [col, "#ffffff"], {});
+    return p.canvas();
+  });
 }
 
 /** Shumio toca algo: ¿se lo lleva? (devuelve true si desaparece del piso) */
@@ -78,9 +108,10 @@ function tomar(c) {
       else if (!curar(j, c.sub === "rojo" ? 2 : 1)) return false;
       SFX.corazon(); return true;
     }
-    case "moneda": j.monedas = Math.min(99, j.monedas + (c.sub | 0)); SFX.moneda(); return true;
-    case "bomba": j.bombas = Math.min(99, j.bombas + 1); SFX.recoger(); return true;
-    case "llave": j.llaves = Math.min(99, j.llaves + 1); SFX.llave(); return true;
+    // al tope (99) ya no se agarran: se empujan
+    case "moneda": if (j.monedas >= 99) return false; j.monedas = Math.min(99, j.monedas + (c.sub | 0)); SFX.moneda(); return true;
+    case "bomba": if (j.bombas >= 99) return false; j.bombas++; SFX.recoger(); return true;
+    case "llave": if (j.llaves >= 99) return false; j.llaves++; SFX.llave(); return true;
     case "capsula": {
       if (j.capsula != null) { const v = recogible("capsula", j.x, j.y + 10, j.capsula); v.vz = 2; v.vy = 1; J.sala.cosas.push(v); }
       j.capsula = c.sub; SFX.recoger(); return true;   // el nombre queda abajo a la derecha, como la píldora del original
@@ -100,7 +131,7 @@ function tomar(c) {
       if (j.baratija) { const v = recogible("baratija", j.x, j.y + 10, j.baratija); v.vz = 2; v.vy = 1; v.espera = 40; J.sala.cosas.push(v); }
       const antes = fotoCuentas(j);
       j.baratija = c.sub; recalcular(j); anotarCambios(antes);
-      rotulo(BARATIJAS[c.sub].nombre, BARATIJAS[c.sub].lema); SFX.recoger(); return true;
+      rotulo(BARATIJAS[c.sub].nombre, BARATIJAS[c.sub].lema); SFX.recoger(); levantar(j, baratijaSpr(c.sub), 34); return true;
     }
     case "cofreFinal": if (!c.abierto) { c.abierto = true; ganar(); } return false;
     case "objeto": return tomarObjeto(c);

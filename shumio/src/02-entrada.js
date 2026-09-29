@@ -55,8 +55,8 @@ function alGesto(e) {
 for (const ev of ["pointerup", "touchend", "click"]) addEventListener(ev, alGesto, { passive: true });
 lienzo.addEventListener("pointerdown", (e) => {
   e.preventDefault();
-  audioDespertar();   // por si el navegador ya lo deja (con mouse sí cuenta)
-  if (e.pointerType !== "mouse") IN.usaTactil = true;
+  // con el mouse el pointerdown sí cuenta como gesto; con el dedo, el audio se arma al levantarlo
+  if (e.pointerType === "mouse") audioDespertar(); else IN.usaTactil = true;
   const p = aMundo(e.clientX, e.clientY);
   const d = { id: e.pointerId, x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), que: null };
   const b = enJuego() ? botonEn(p.x, p.y) : null;
