@@ -60,6 +60,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [rezona](rezona.md) | generar assets con Rezona: ciclo, trampas, lo que anduvo, caídas |
 | [higgsfield](higgsfield.md) | generar con Higgsfield: modelos, costos, lo que anduvo |
 | [juegos](juegos.md) | tocar un juego del repo o hacer uno nuevo |
+| [roblox](roblox.md) | hacer juegos en Roblox Studio: el MCP en su PC con Remote Control (`TRASPASO-ROBLOX.md`), lo que no anduvo en la nube |
 | [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el resolvedor y sus trampas |
 | [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas, las canciones grabadas y sus trampas |
 | [brillo-rendimiento](brillo-rendimiento.md) | BRILLO: qué lo hacía lento, la cámara más cerca, las cinemáticas de charla y la calidad automática |

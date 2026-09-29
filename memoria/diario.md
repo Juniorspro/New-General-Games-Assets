@@ -11,7 +11,10 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
     los arreglos del recorrido (`arreglos.mjs` 19/19). La n 5, la página v48 y el HTML (el envío dio 500 un rato).
   - Después pidió "arreglá la construcción, como Sims Mobile, que sea cómoda". Quedó ([aeroplaza-49](aeroplaza-49.md)):
     `obra.js` (tocar, arrastrar, la barrita, cuartos, miniaturas 3D, paredes cortadas); `casa.mjs` 35/35. La n 6.
-  - Falta: que diga cómo le queda en su celu.
+  - Después: hacer juegos en Roblox Studio. En la nube no se puede entrar a Studio (el inicio rápido exige la
+    misma red); se instaló Claude Code en su PC con el MCP de Studio ([roblox](roblox.md)). `TRASPASO-ROBLOX.md`
+    para la sesión de la PC.
+  - Falta: que diga cómo le queda la construcción en su celu; el primer juego de Roblox (desde la sesión de su PC).
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".
   - Quedó ([aeroplaza-47](aeroplaza-47.md)): la APK 45 solo buscaba al arrancar de cero. La 46 busca al volver y cada
