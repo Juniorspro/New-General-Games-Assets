@@ -119,7 +119,120 @@ después usalo de consulta.
   - **Pelea:** hitbox en el servidor, tiempo de espera por golpe, combos y barra de vida.
 - **Normas de Roblox:** contenido apto para todas las edades, sin links afuera y sin pedir datos personales.
 
-## 7. Lo que hay en su repo (por si pregunta)
+## 7. Llevar a Roblox lo que ya hicimos en HTML
+
+La sección 9 cuenta cada juego web. Acá va cómo se consigue lo mismo en Roblox. Donde no hay equivalente, dice cómo
+se imita.
+
+### La luz y el aire (el 80 % del "se ve goty")
+
+- **`Lighting.Technology = Future`**: luces con sombra de verdad y reflejos. **`EnvironmentDiffuseScale` y
+  `EnvironmentSpecularScale` en 1**, para que el cielo ilumine y se refleje en lo brilloso.
+- **`Atmosphere`:** el aire con color.
+  - Frutiger Aero: `Density` 0,25-0,35, `Haze` 1-2, `Color` celeste claro y `Decay` celeste.
+  - Bosque VHS: más denso y naranja.
+  - Nieve: blanco azulado.
+- **`Sky`** con su skybox, o el de la hora. `ClockTime` y `GeographicLatitude` eligen la luz del sol.
+- **Efectos de cámara** (en `Lighting`):
+  - `BloomEffect`: `Intensity` 0,4-1, `Size` 24-40, `Threshold` 0,85-0,95. Es el brillo Aero.
+  - `ColorCorrectionEffect`:
+    - saturación +0,1 a +0,2 para Aero;
+    - −0,4 con `TintColor` cálido para VHS;
+    - contraste +0,05.
+  - `SunRaysEffect` (rayos entre las nubes), `DepthOfFieldEffect` (cinemáticas) y `BlurEffect` (menús atrás).
+- **Neblina sin `Atmosphere`:** `Lighting.FogStart`, `FogEnd` y `FogColor`.
+
+### Materiales y brillos
+
+- **Lo brilloso Frutiger Aero** (gelatina, vidrio y burbujas):
+  - `Material = Glass` o `SmoothPlastic`, `Reflectance` 0,2-0,5 y `Transparency` 0,2-0,6;
+  - para lo que brilla solo, `Neon` con un color claro.
+- **Las burbujas:** esferas con `ForceField` o `Glass`, transparentes, que suben con `TweenService` y un
+  `ParticleEmitter` de burbujitas.
+- **PBR de verdad:** `MeshPart` + `SurfaceAppearance`, con los mapas de color, normal, rugosidad y metal. Los
+  mapas se pueden generar con Rezona.
+- **El borde de color (contorno):** `Highlight` con `OutlineColor`. Sirve para lo elegido, lo que se puede
+  agarrar y los enemigos.
+- **Lo que titila y lo que deja estela:** `ParticleEmitter` (chispas, polvo, nieve, pétalos), `Trail` (estelas al
+  correr o deslizar) y `Beam` (rayos, tirolesas, luces).
+- **Pixel art en 3D:** texturas chicas con `ResampleMode = Pixelated`, en `Decal`/`Texture` o en un
+  `ImageLabel`.
+
+### La cámara
+
+- **La de siempre, suavizada:** en un `LocalScript` con `RunService:BindToRenderStep`, la cámara va hacia su lugar
+  con `lerp` (`1 - math.exp(-dt * 8)`). Como en AEROPLAZA, un poco más lejos al correr y un poco de sacudida al
+  aterrizar.
+- **2D de costado** (plataformas tipo ZONDA/BRILLO): `CameraType = Scriptable` y `FieldOfView` 15-25 desde lejos,
+  así casi no hay perspectiva. El jugador queda fijo en Z con un `AlignPosition` o forzando la Z cada cuadro.
+- **2.5D de papel** (KUNTUR): cámara de costado un poco arriba; los personajes y el decorado son planos con
+  `Decal`/`SurfaceGui`. El "dar vuelta el papel" es un tween del ancho a 0 y de vuelta.
+- **Primera persona** (CONTRAGOLPE): `Players.LocalPlayer.CameraMode = LockFirstPerson`, con un viewmodel (los
+  brazos y el arma) pegado a la cámara en un `Model` local.
+- **Cinemáticas** (NEVADA): tweens de `Camera.CFrame` por tramos, con `DepthOfField` y `SunRays`. Las tomas se
+  arman con `Part` invisibles como puntos de cámara.
+
+### El movimiento que se siente bien
+
+- **Salto con perdón** (ZONDA/BRILLO): `coyote time` de 0,1 s (salta aunque ya se cayó del borde) y `jump buffer`
+  de 0,12 s (si apretó justo antes de tocar el piso, salta).
+  - Se hace escuchando `Humanoid.StateChanged` y `UserInputService.JumpRequest`, y llamando a
+    `Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)`.
+  - Salto variable: al soltar, se corta la subida bajando la velocidad Y.
+- **Parkour** (AEROPLAZA): correr, saltar, deslizar y rodar.
+  - Rayos (`workspace:Raycast`) para las paredes y los bordes; `LinearVelocity`/`VectorForce` para el empuje.
+  - Animaciones propias con `Animator:LoadAnimation`. Hay que publicarlas en su cuenta; si no, se animan a mano
+    con `Motor6D.Transform`.
+- **Personajes blanditos** (los muñecos de gelatina): se estiran al saltar y se aplastan al caer, con tweens de
+  escala de un `Model` o de los `Motor6D`.
+- **Autos** (RUTA 40):
+  - Suspensión por rayos: cuatro rayos para abajo y un `VectorForce` de resorte por rueda.
+  - Si no, `VehicleSeat` con `HingeConstraint` (motor) y `SpringConstraint`.
+  - Las vueltas en el aire con torque, como en Hill Climb.
+- **Disparos** (CONTRAGOLPE): el servidor tira el rayo y decide el daño; el cliente solo muestra (fogonazo,
+  casquillo, marca de bala, `Highlight` rojo al pegar).
+- **Físicas raras** (DIMENSIÓN Ñ, TELARAÑA, GARFIO): cuerdas con `RopeConstraint`/`SpringConstraint`, ganchos con
+  `AlignPosition`, y muñecos de trapo con `BallSocketConstraint` en las articulaciones.
+
+### La interfaz (cada juego con la suya)
+
+- **Formas:** `UICorner` (redondeado de 12-22 px en Aero), `UIStroke` (borde de 2-3 px), `UIGradient` (blanco a
+  gris claro, el brillo de arriba) y `UIPadding` / `UIListLayout` / `UIGridLayout`.
+- **Letras:** `Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold)` o GothamSSm.
+  Pixel art: una fuente de píxeles propia con `ImageLabel`, o `Arcade`.
+- **Transiciones con rebote:** `TweenService` con `Enum.EasingStyle.Back` (el `cubic-bezier(0.2, 0.9, 0.3, 1.15)`
+  de AEROPLAZA), o `Quint`/`Exponential` para lo seco. Entran desde abajo o se agrandan de 0,85 a 1.
+- **Avisos tipo Windows 7** (AEROPLAZA): tarjetas arriba al medio, de a una, que se juntan (×2) y se van solas.
+- **Menú de idioma primero**, con tres banderas o botones grandes (es, en, pt). Después el menú propio de cada
+  juego.
+- **Controles de dedo personalizables:**
+  - los botones son `ImageButton` propios en un `ScreenGui`;
+  - un modo "editar" deja arrastrarlos y agrandarlos, con transparencia, zurdo y vibración
+    (`HapticService`, donde exista);
+  - se guarda por jugador (DataStore; en el cliente, atributos).
+  - Se puede sacar la palanca de Roblox (`GuiService.TouchControlsEnabled = false`, en un `LocalScript`) y poner una
+    propia.
+
+### El sonido
+
+- **`SoundService` con `SoundGroup`** (música, efectos, interfaz) y un volumen para cada uno en las opciones.
+- **Campanitas suaves en la interfaz** (AEROPLAZA), un golpe al aterrizar y el viento al correr rápido.
+- **Música:** solo la que pasa quien pide o de la biblioteca de Roblox con licencia; nada ajeno.
+- **Sonido 3D:** `Sound` adentro de una `Part`, con `RollOffMaxDistance`.
+
+### Lo que no hay en Roblox y cómo se imita
+
+- **Shaders propios** (el PS1, el CRT, la aberración de color): no hay. Se imita con:
+  - una capa de interfaz encima (`ImageLabel` a pantalla completa con líneas de barrido y ruido, `ImageTransparency`
+    0,85-0,95);
+  - `ColorCorrection` y un `Blur` leve;
+  - para el PS1, texturas chicas pixeladas y poca luz.
+- **Pixelar toda la pantalla:** no se puede. Se usa un `ViewportFrame` chico estirado, solo para escenas cortas
+  (es caro), o se diseña el arte ya pixelado.
+- **Multijugador:** Roblox ya lo trae. Lo que en AEROPLAZA era MQTT, acá son `RemoteEvent`, el servidor y
+  `MessagingService` para varias salas.
+
+## 8. Lo que hay en su repo (por si pregunta)
 
 - `Juniorspro/New-General-Games-Assets` (público): sus juegos web (AEROPLAZA, BRILLO, KUNTUR, RUTA 40 y más) y la
   memoria de las sesiones en `memoria/`. Se arranca por `memoria/INDICE.md`.
@@ -127,8 +240,10 @@ después usalo de consulta.
   un celu con amigos. En la vuelta 49 se rehízo "construir la casa" al estilo Sims Mobile.
 - Tiene Rezona y Higgsfield para generar imágenes, audio y modelos. Prefiere Rezona. En la PC no están
   conectados salvo que los agregue.
+- `herramientas/neko/` (`neko.py`, con su `LEEME.md`): maneja una PC virtual Neko remota. La pantalla llega por
+  REST y los clics y las teclas van por WebSocket. Las credenciales van solo por variables de entorno.
 
-## 8. Lo próximo
+## 10. Lo próximo
 
 - Preguntale **qué juego** hacemos (obby, tycoon, simulador, pelea u otro) y arrancá: primero el mapa y el menú de
   idioma, después la jugabilidad y los controles de dedo, al final pulir y probar en el emulador del celu.
