@@ -1,7 +1,8 @@
 # Roblox Studio
 
 Quiere hacer juegos en Roblox Studio (29/09/2026). El traspaso completo para la sesión de su PC está en
-`TRASPASO-ROBLOX.md` (en la raíz).
+`TRASPASO-ROBLOX.md` (en la raíz). Trae también el estilo, los números y lo rechazado de cada juego HTML (§9) y cómo se
+hace cada cosa en Roblox (§7): si hay que resumir los juegos para otra sesión, está ahí.
 
 - **Studio va en su PC** (Windows 11), con Claude Code instalado ahí y manejado desde el celu con
   `/remote-control`. El MCP de Studio es local (stdio): `cmd.exe /c "cd /d %LOCALAPPDATA%\Roblox && .\mcp.bat"`,
