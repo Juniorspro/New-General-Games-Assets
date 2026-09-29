@@ -25,7 +25,7 @@ export function geoHoja(caida = 0.75) {
     for (let j = 0; j < A; j++) {
       const w = (j / (A - 1) - 0.5);
       const y = 0.28 * u - caida * u * u - Math.abs(w) * 0.1;
-      pos.push(u, y, w * 0.32);
+      pos.push(u, y, w * 0.46);
       uv.push(u, j / (A - 1));
     }
   }
@@ -45,24 +45,28 @@ export function geoHoja(caida = 0.75) {
   return g;
 }
 
-function geoCruz(ancho, alto, planos = 3) {
-  const partes = [];
-  for (let i = 0; i < planos; i++) {
-    const p = new THREE.PlaneGeometry(ancho, alto);
-    p.translate(0, alto / 2, 0);
-    p.rotateY((i / planos) * Math.PI);
-    partes.push(p);
-  }
+// Una mata redonda como las del original: hojas en cuadraditos repartidas
+// sobre una esfera, cada una mirando para afuera. La normal es la de la
+// esfera, así la mata se ilumina como una bola y no como papelitos sueltos.
+function geoBola(radio = 0.62, n = 22) {
   const pos = [], uv = [], nor = [], idx = [];
-  let base = 0;
-  for (const p of partes) {
-    const P = p.attributes.position, U = p.attributes.uv;
-    for (let i = 0; i < P.count; i++) {
-      pos.push(P.getX(i), P.getY(i), P.getZ(i)); uv.push(U.getX(i), U.getY(i)); nor.push(0, 1, 0);
+  const oro = Math.PI * (3 - Math.sqrt(5));
+  const _d = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3();
+  for (let k = 0; k < n; k++) {
+    const y = 1 - (k / (n - 1)) * 1.25;          // casi toda la esfera, menos el fondo
+    const rr = Math.sqrt(Math.max(0, 1 - y * y));
+    const ang = k * oro;
+    _d.set(Math.cos(ang) * rr, y, Math.sin(ang) * rr).normalize();
+    _a.set(0, 1, 0).cross(_d); if (_a.lengthSq() < 1e-4) _a.set(1, 0, 0); _a.normalize();
+    _b.copy(_d).cross(_a).normalize();
+    const lado = 0.72 + ((k * 37) % 10) / 30;
+    const c = _d.clone().multiplyScalar(radio).add(new THREE.Vector3(0, radio * 0.95, 0));
+    const base = pos.length / 3;
+    for (const [sa, sb, uu, vv] of [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]]) {
+      pos.push(c.x + (_a.x * sa + _b.x * sb) * lado / 2, c.y + (_a.y * sa + _b.y * sb) * lado / 2, c.z + (_a.z * sa + _b.z * sb) * lado / 2);
+      uv.push(uu, vv); nor.push(_d.x, _d.y, _d.z);
     }
-    const I = p.index.array;
-    for (let i = 0; i < I.length; i++) idx.push(I[i] + base);
-    base += P.count;
+    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -86,15 +90,15 @@ export class Vegetacion {
     // ── palmeras ──
     let nSeg = 0, nHoja = 0, nCoco = 0;
     const planes = palmeras.map((p, id) => {
-      const segs = 8 + Math.floor(r() * 5);
-      const hojas = 8 + Math.floor(r() * 3);
+      const segs = 9 + Math.floor(r() * 6);
+      const hojas = 13 + Math.floor(r() * 4);
       const cocos = r() < 0.6 ? 2 + Math.floor(r() * 3) : 0;
-      const plan = { ...p, id, segs, hojas, cocos, s0: nSeg, h0: nHoja, c0: nCoco, ang: r() * Math.PI * 2, incl: 0.08 + r() * 0.22, curva: 0.012 + r() * 0.02, largo: rango(r, 2.5, 3.3) };
+      const plan = { ...p, id, segs, hojas, cocos, s0: nSeg, h0: nHoja, c0: nCoco, ang: r() * Math.PI * 2, incl: 0.08 + r() * 0.22, curva: 0.012 + r() * 0.02, largo: rango(r, 3.3, 4.3) };
       nSeg += segs; nHoja += hojas; nCoco += cocos;
       return plan;
     });
     this.troncos = new THREE.InstancedMesh(geoSegmento(), matPixel('uv', { mapa: tex.corteza, tam: [16, 32], clave: 'corteza' }), nSeg);
-    const matHoja = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 20], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.18, vientoUv: true, clave: 'hojaPalmera' });
+    const matHoja = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 24], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.18, vientoUv: true, clave: 'hojaPalmera' });
     this.hojas = new THREE.InstancedMesh(geoHoja(), matHoja, nHoja);
     this.hojas.customDepthMaterial = profundidad(tex.hojaPalmera);
     this.cocos = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 6, 4), matPixel('liso', { color: 0x6b4423, clave: 'coco' }), Math.max(1, nCoco));
@@ -106,7 +110,7 @@ export class Vegetacion {
 
     // ── arbustos y helechos ──
     const matArb = matPixel('uv', { mapa: tex.hojasArbusto, tam: [32, 32], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.07, altoViento: 1.1, clave: 'arbusto' });
-    this.matasArb = new THREE.InstancedMesh(geoCruz(1.5, 1.15), matArb, Math.max(1, arbustos.length));
+    this.matasArb = new THREE.InstancedMesh(geoBola(), matArb, Math.max(1, arbustos.length));
     this.matasArb.customDepthMaterial = profundidad(tex.hojasArbusto);
     const col = new THREE.Color();
     arbustos.forEach((a, i) => {
@@ -119,7 +123,7 @@ export class Vegetacion {
     this.matasArb.castShadow = true; this.matasArb.receiveShadow = true;
     this.grupo.add(this.matasArb);
 
-    const matHel = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 20], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.12, vientoUv: true, clave: 'helecho' });
+    const matHel = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 24], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.12, vientoUv: true, clave: 'helecho' });
     const porHelecho = 6;
     this.helechos = new THREE.InstancedMesh(geoHoja(0.95), matHel, Math.max(1, helechos.length * porHelecho));
     this.helechos.customDepthMaterial = profundidad(tex.hojaPalmera);
@@ -153,9 +157,11 @@ export class Vegetacion {
     }
     p.copa = pos.clone();
     for (let k = 0; k < p.hojas; k++) {
-      const a = (k / p.hojas) * Math.PI * 2 + r() * 0.3;
-      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a, rango(r, -0.25, 0.12), 'YXZ'));
-      const L = p.largo * rango(r, 0.85, 1.1);
+      // dos coronas: las de abajo caen, las nuevas de arriba apuntan al cielo
+      const nueva = k >= p.hojas - 4;
+      const a = (k / p.hojas) * Math.PI * 2 * (nueva ? 2.7 : 1) + r() * 0.3;
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a, nueva ? rango(r, 0.45, 0.8) : rango(r, -0.35, 0.2), 'YXZ'));
+      const L = p.largo * (nueva ? rango(r, 0.6, 0.75) : rango(r, 0.85, 1.1));
       _m.compose(pos, q, _s.set(L, L, L));
       this.hojas.setMatrixAt(p.h0 + k, _m);
     }

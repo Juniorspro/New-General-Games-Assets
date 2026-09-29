@@ -1,6 +1,11 @@
 // El mar: turquesa donde es bajo, azul donde es hondo, transparente para ver
 // la arena y las cáusticas del fondo, con espuma en la orilla. Pixelado en el
 // mundo como todo lo demás: el agua también tiene texels.
+//
+// Refleja de verdad, como en el original (las nubes y la luna en el mar de
+// noche): una cámara espejada bajo el nivel del agua dibuja lo que está en la
+// capa 1 (cielo, nubes, palmeras, choza, muelle) en una textura chica, y el
+// agua la lee proyectando su punto con esa cámara, corrido por las ondas.
 import * as THREE from '../vendor/three.module.min.js';
 import { LUZ, LUZ_GLSL } from './material.js';
 import { MITAD, TAM } from './terreno.js';
@@ -24,6 +29,9 @@ uniform vec3 uMedio;
 uniform vec3 uHondo;
 uniform vec3 uCenit;
 uniform float uNoche;
+uniform sampler2D uReflejo;
+uniform mat4 uMatReflejo;
+uniform float uHayReflejo;
 varying vec3 vMundo;
 ${LUZ_GLSL}
 void main() {
@@ -48,7 +56,15 @@ void main() {
   col *= luz;
   vec3 R = reflect(-V, n);
   vec3 cielo = mix(uNieblaColor, uCenit, clamp(R.y * 1.6, 0.0, 1.0));
-  col = mix(col, cielo, fres * 0.65);
+  if (uHayReflejo > 0.5) {
+    // el punto del agua, corrido por la onda, visto desde la cámara espejada:
+    // de cerca las ondas lo rompen en rayas, de lejos queda casi espejo
+    vec4 pr = uMatReflejo * vec4(pc.x + n.x * 1.6, uNivelAgua, pc.z + n.z * 1.6, 1.0);
+    cielo = texture2DProj(uReflejo, pr).rgb;
+  }
+  // lo hondo refleja más que lo bajo, donde se ve la arena
+  float kr = mix(fres * 0.65, 0.32 + fres * 0.6, smoothstep(0.8, 5.0, prof));
+  col = mix(col, cielo, kr);
   col += uSolColor * pow(max(dot(R, uSolDir), 0.0), 350.0) * 2.5;
   // destellos sueltos en los texels, como sol sobre el agua
   float dest = h12(c + floor(uT * 2.5) * 7.13);
@@ -59,7 +75,7 @@ void main() {
   float espuma2 = step(ola + 0.07, prof) * (1.0 - step(ola + 0.12, prof)) * step(0.5, h12(c * 0.5 + 3.0));
   vec3 blanco = vec3(0.96, 0.99, 1.0) * (luz * 0.7 + 0.25);
   col = mix(col, blanco, max(espuma, espuma2 * 0.8));
-  float alfa = mix(0.32, 0.94, smoothstep(0.0, 4.5, prof));
+  float alfa = mix(0.42, 0.95, smoothstep(0.0, 4.0, prof));
   alfa = max(alfa, fres * 0.75);
   alfa = max(alfa, max(espuma, espuma2 * 0.8));
   gl_FragColor = vec4(terminar(col, pc), alfa);
@@ -73,11 +89,14 @@ export function crearAgua(terreno, cielo) {
       ...LUZ,
       uAlturas: { value: terreno.texAltura },
       uRect: { value: new THREE.Vector4(-MITAD, -MITAD, 1 / TAM, 1 / TAM) },
-      uPoco: { value: new THREE.Color(0x8ff3e8) },
-      uMedio: { value: new THREE.Color(0x2cc3dc) },
-      uHondo: { value: new THREE.Color(0x0b66b5) },
+      uPoco: { value: new THREE.Color(0x66e6da) },
+      uMedio: { value: new THREE.Color(0x18b4d4) },
+      uHondo: { value: new THREE.Color(0x0a4ea6) },
       uCenit: cielo.uni.uCenit,
       uNoche: cielo.uni.uNoche,
+      uReflejo: { value: null },
+      uMatReflejo: { value: new THREE.Matrix4() },
+      uHayReflejo: { value: 0 },
     },
     vertexShader: VERT, fragmentShader: FRAG,
     transparent: true, depthWrite: false,
@@ -87,4 +106,49 @@ export function crearAgua(terreno, cielo) {
   agua.frustumCulled = false;
   agua.userData.agua = true;
   return agua;
+}
+
+// La cámara espejada y su textura. La imagen es un cuarto de la pantalla: el
+// reflejo se rompe en ondas y más detalle no se nota.
+const _v = new THREE.Vector3(), _u = new THREE.Vector3();
+export class Reflejo {
+  constructor(agua) {
+    this.agua = agua;
+    this.rt = new THREE.WebGLRenderTarget(256, 144, { depthBuffer: true });
+    this.cam = new THREE.PerspectiveCamera();
+    this.cam.layers.set(1);
+    this.activo = true;
+    const U = agua.material.uniforms;
+    U.uReflejo.value = this.rt.texture;
+    this.mat = U.uMatReflejo.value;
+  }
+
+  tamano(w, h) { this.rt.setSize(Math.max(64, Math.round(w / 4)), Math.max(36, Math.round(h / 4))); }
+
+  dibujar(renderer, escena, camara, domo, nivel = 0) {
+    const U = this.agua.material.uniforms;
+    U.uHayReflejo.value = this.activo ? 1 : 0;
+    if (!this.activo) return;
+    const c = this.cam;
+    const fwd = camara.getWorldDirection(_v);
+    c.position.set(camara.position.x, 2 * nivel - camara.position.y, camara.position.z);
+    _u.set(0, 1, 0).applyQuaternion(camara.quaternion);
+    c.up.set(_u.x, -_u.y, _u.z);
+    c.lookAt(camara.position.x + fwd.x, 2 * nivel - (camara.position.y + fwd.y), camara.position.z + fwd.z);
+    c.projectionMatrix.copy(camara.projectionMatrix);
+    c.projectionMatrixInverse.copy(camara.projectionMatrixInverse);
+    c.updateMatrixWorld();
+    this.mat.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1).multiply(c.projectionMatrix).multiply(c.matrixWorldInverse);
+    // el cielo sigue a la cámara que mira: se centra en la espejada mientras tanto
+    const antes = domo.position.clone();
+    domo.position.copy(c.position); domo.updateMatrixWorld();
+    const auto = renderer.shadowMap.autoUpdate;
+    renderer.shadowMap.autoUpdate = false;   // la sombra ya está: no se vuelve a dibujar
+    renderer.setRenderTarget(this.rt);
+    renderer.clear();
+    renderer.render(escena, c);
+    renderer.setRenderTarget(null);
+    renderer.shadowMap.autoUpdate = auto;
+    domo.position.copy(antes); domo.updateMatrixWorld();
+  }
 }

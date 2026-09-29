@@ -9,6 +9,7 @@
 import { ITEMS, RECETAS, COLOR_ESTRELLAS, icono, nodoIcono, estrellasTexto, precioTexto } from './items.js';
 import { PINCELES } from './acciones.js';
 import { t } from './idioma.js';
+import { aApp, pantalla } from './pantalla.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -75,7 +76,7 @@ export class Hud {
       if (['Tab', 'KeyE', 'Escape', 'KeyI'].includes(ev.code)) { ev.preventDefault(); this.cerrar(); }
     });
     addEventListener('pointermove', (ev) => {
-      this.mx = ev.clientX; this.my = ev.clientY;
+      [this.mx, this.my] = aApp(ev.clientX, ev.clientY);
       if (this.cursor) this.moverCursor();
       if (!this.elTip.classList.contains('oculto')) this.moverTip();
     });
@@ -371,8 +372,8 @@ export class Hud {
     const T = this.elTip;
     const w = T.offsetWidth, h = T.offsetHeight;
     let x = this.mx + 16, y = this.my + 14;
-    if (x + w > innerWidth - 6) x = this.mx - w - 12;
-    if (y + h > innerHeight - 6) y = innerHeight - h - 6;
+    if (x + w > pantalla.w - 6) x = this.mx - w - 12;
+    if (y + h > pantalla.h - 6) y = pantalla.h - h - 6;
     T.style.left = `${x}px`; T.style.top = `${y}px`;
   }
 

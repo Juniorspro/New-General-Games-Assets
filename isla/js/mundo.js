@@ -80,7 +80,7 @@ export class Mundo {
     };
     this.libre = libre;
     const palmeras = [], arbustos = [], helechos = [];
-    for (let i = 0; i < 9000 && palmeras.length < 170; i++) {
+    for (let i = 0; i < 12000 && palmeras.length < 230; i++) {
       const x = rango(r, -115, 115), z = rango(r, -115, 115);
       const h = T.altura(x, z);
       if (h < 0.45 || h > 9) continue;
@@ -89,10 +89,10 @@ export class Mundo {
       const prob = playa ? 0.5 : 0.08 + 0.25 * fbm2(x * 0.03, z * 0.03, 71, 2);
       if (r() > prob) continue;
       if (!libre(x, z, 1.5)) continue;
-      if (palmeras.some((p) => Math.hypot(p.x - x, p.z - z) < 3.4)) continue;
+      if (palmeras.some((p) => Math.hypot(p.x - x, p.z - z) < 3.0)) continue;
       palmeras.push({ x, z, y: h });
     }
-    for (let i = 0; i < 12000 && arbustos.length < 260; i++) {
+    for (let i = 0; i < 16000 && arbustos.length < 420; i++) {
       const x = rango(r, -110, 110), z = rango(r, -110, 110);
       const h = T.altura(x, z);
       if (h < 1.2 || T.pasto(x, z) < 0.6) continue;

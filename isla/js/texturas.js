@@ -103,23 +103,25 @@ function paja() {
   });
 }
 
-// Hoja de palmera: nervio al medio y foliolos en diagonal, fondo transparente.
+// Hoja de palmera como las del original: una pluma verde lima con foliolos en
+// diagonal hacia la punta y huecos entre medio, más amarilla en la punta y
+// más oscura del lado de abajo. Fondo transparente.
 function hojaPalmera() {
-  const W = 64, H = 20;
+  const W = 64, H = 24;
   return pintar(W, H, (x, y) => {
-    const u = x / W;
-    const medio = H / 2;
-    const ancho = (0.15 + 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.05))) * (H / 2 - 1);
-    const dy = y - medio;
-    if (Math.abs(dy) < 1 && u < 0.98) return '#3d7f22';
-    if (Math.abs(dy) > ancho) return null;
-    // foliolos: bandas diagonales con huecos entre medio
-    const fase = (x + Math.abs(dy) * 1.3) % 5;
-    if (fase < 1) return Math.abs(dy) > 2 ? null : '#3d7f22';
+    const u = x / (W - 1);
+    const dy = y - (H - 1) / 2, ady = Math.abs(dy);
+    const ancho = (0.22 + 0.78 * Math.sin(Math.PI * Math.min(1, u * 1.08))) * (H / 2 - 0.5);
+    if (ady < 0.9 && u < 0.97) return u > 0.6 ? '#8fb83a' : '#6f9e2a';
+    if (ady > ancho) return null;
+    const fase = (((x - ady * 1.6) % 4) + 4) % 4;
+    if (fase < 0.9 && ady > 1.5) return null;
+    if (ady > ancho - 1.2) return '#3f8f1e';
     const h = hash2(x, y, 81);
-    if (Math.abs(dy) > ancho - 1.2) return '#3f9a27';
-    if (h > 0.9) return '#8ee25a';
-    return fase < 2.5 ? '#5cc436' : '#4fb22e';
+    if (h > 0.94) return '#d2f779';
+    if (fase < 1.9) return u > 0.68 ? '#b8ee52' : '#9ee23f';
+    if (dy < 0) return u > 0.6 ? '#8ad83a' : '#74c830';
+    return '#5aae27';
   }, false);
 }
 
@@ -151,36 +153,13 @@ function matasPasto() {
       const cx = h.x + h.inc * desdeAbajo;
       const ancho = 1.4 * (1 - u) + 0.35;
       if (Math.abs(x - cx) < ancho) {
-        if (u > 0.78) return '#a6f26a';
-        if (u > 0.45) return '#74dc42';
-        if (u > 0.2) return '#56c232';
-        return '#3c9c24';
+        if (u > 0.78) return '#b6fb74';
+        if (u > 0.45) return '#84ea48';
+        if (u > 0.2) return '#60cf37';
+        return '#40a827';
       }
     }
     return null;
-  }, false);
-}
-
-function nube(semilla) {
-  const W = 96, H = 48;
-  const bolas = [];
-  const n = 7 + Math.floor(hash2(semilla, 1, 111) * 5);
-  for (let i = 0; i < n; i++) {
-    const u = (i + 0.5) / n;
-    const r = 8 + hash2(i, semilla, 112) * 12 * Math.sin(Math.PI * u) + 4;
-    bolas.push({ x: 8 + u * 80, y: 34 - r * 0.55 - hash2(i, semilla, 113) * 6, r });
-  }
-  return pintar(W, H, (x, y) => {
-    let dentro = false, alto = 99;
-    for (const b of bolas) {
-      const d = Math.hypot(x - b.x, (y - b.y) * 1.05);
-      if (d < b.r) { dentro = true; alto = Math.min(alto, (y - (b.y - b.r)) / (2 * b.r)); }
-    }
-    if (!dentro || y > 40) return null;
-    if (y > 37) return '#b9cde8';
-    if (alto > 0.62) return '#cddcf0';
-    if (alto > 0.42) return '#e6eef9';
-    return '#ffffff';
   }, false);
 }
 
@@ -200,7 +179,6 @@ export function texturas() {
     arena: arena(), pastoSuelo: pastoSuelo(), tierra: tierra(), roca: roca(),
     madera: madera(), corteza: corteza(), paja: paja(), metal: metal(),
     hojaPalmera: hojaPalmera(), hojasArbusto: hojasArbusto(), matasPasto: matasPasto(),
-    nubes: [0, 1, 2, 3, 4].map(nube),
   };
   return TEX;
 }

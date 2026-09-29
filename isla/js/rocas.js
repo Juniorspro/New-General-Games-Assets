@@ -79,7 +79,8 @@ export class Rocas {
   constructor(tex, decorativas, minables) {
     this.grupo = new THREE.Group();
     const r = mulberry(909);
-    const mat = matPixel('mundo', { mapa: tex.roca, tam: [32, 32], bari: true, borde: 0.85, clave: 'roca' });
+    // casi negras con las aristas claras, como las del original
+    const mat = matPixel('mundo', { mapa: tex.roca, tam: [32, 32], color: 0x6f737b, bari: true, borde: 2.3, clave: 'roca' });
     this.matRoca = mat;
 
     // decorativas: 4 formas instanciadas

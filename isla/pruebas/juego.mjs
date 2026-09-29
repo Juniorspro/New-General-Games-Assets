@@ -101,10 +101,14 @@ r = await correr(pg, `
 ch('el pico saca la roca de a pedazos', r.quedan < r.total && r.quedan > 0, `quedan ${r.quedan} de ${r.total} tras 3 s`);
 ch('cada pedazo suelta piedra', r.piedras >= r.total - r.quedan, r.nuevos.join(' '));
 r = await correr(pg, `
+  // en la arena abierta del comienzo: al lado de una roca las celdas cambian con cada isla
+  const s = J.mundo.spawn, t = J.mundo.muelle.punta;
+  J.jugador.ponerEn(s, Math.atan2(-(t.x - s.x), -(t.z - s.z))); pasos(2);
   tener('bloqueMadera', 10); tener('mesa'); elegir('bloqueMadera'); J.jugador.pitch = -0.8; pasos(10);
   const n0 = J.bloques.mapa.size;
   for (let k = 0; k < 4; k++) { J.jugador.yaw += 0.4; pasos(1); J.entrada.botonesRecien.der = true; pasos(2); }
-  elegir('mesa'); J.jugador.yaw += 0.5; pasos(8); J.entrada.botonesRecien.der = true; pasos(2);
+  // un poco más lejos: la celda pegada a los pies no vale (no se construye adentro de uno)
+  elegir('mesa'); J.jugador.yaw += 0.5; J.jugador.pitch = -0.55; pasos(8); J.entrada.botonesRecien.der = true; pasos(2);
   const mesa = [...J.bloques.mapa.values()].find((b) => b.tipo === 'mesa');
   let rompe = null;
   if (mesa) { mirar(mesa.x + 0.5, mesa.y + 0.9, mesa.z + 0.5); pasos(2); J.entrada.botones.izq = true; let t = 0; while (J.bloques.hay(mesa.x, mesa.y, mesa.z) && t < 90) { pasos(1); t++; } J.entrada.botones.izq = false; rompe = t / 30; }
@@ -127,7 +131,9 @@ ch('la caña tira la boya al agua', r.tiro === 'esperando', r.tiro);
 ch('pica y sale algo', r.pico && !!r.sale, r.sale || 'nada');
 ch('lo pescado vuela a la mochila', r.tengo >= 1);
 r = await correr(pg, `
-  J.jugador.ponerEn(J.mundo.spawn, 0); J.jugador.pitch = -0.6; pasos(3);
+  // lejos de los bloques recién puestos: seis metros playa abajo
+  const P = J.menu.P, sp = J.mundo.spawn;
+  J.jugador.ponerEn(V(sp.x - P.x * 6, 0, sp.z - P.z * 6), Math.atan2(P.x, P.z)); J.jugador.pitch = -0.6; pasos(3);
   tener('pala'); tener('piedra', 30); elegir('pala'); pasos(10);
   const T = J.mundo.terreno, ap = J.acciones.ap;
   if (!ap || ap.tipo !== 'terreno') return { tipo: ap && ap.tipo };

@@ -7,6 +7,8 @@ import { texturas } from './texturas.js';
 import { Cielo } from './cielo.js';
 import { Mundo } from './mundo.js';
 import { Mina, MINA_Y } from './mina.js';
+import { Reflejo } from './agua.js';
+import { medirPantalla, pedirAcostado } from './pantalla.js';
 import { enlazarCielo } from './gemas.js';
 import { ITEMS, estrellasTexto } from './items.js';
 import { Inventario } from './inventario.js';
@@ -57,14 +59,16 @@ document.title = t('doc.titulo');
 // Escala de píxel ENTERA: la pantalla se dibuja chica y se estira con
 // image-rendering: pixelated. Con escalas no enteras los píxeles salen de
 // tamaños distintos y todo tiembla al moverse.
-let escala = 1, fovBase = 70;
+let escala = 1, fovBase = 70, reflejo = null;
 function medir() {
-  const w = innerWidth, h = innerHeight;
+  // acostado siempre: con el teléfono parado la app se gira 90° (pantalla.js)
+  const { w, h } = medirPantalla(entrada.tactil);
   escala = Math.max(1, Math.round(Math.max(w, h) / 760)) + CALIDADES[ajustes.calidad].pixelExtra;
   if (ajustes.pixel) escala = ajustes.pixel;
   if (url.has('escala')) escala = Math.max(1, +url.get('escala'));
   renderer.setPixelRatio(1 / escala);
   renderer.setSize(w, h, false);
+  if (reflejo) { const t = renderer.getDrawingBufferSize(new THREE.Vector2()); reflejo.tamano(t.x, t.y); }
   camara.aspect = w / h;
   // Con el teléfono parado, 70° verticales dejan ver casi nada de costado:
   // se abre hasta tener unos 58° horizontales (con tope, si no se deforma).
@@ -80,10 +84,15 @@ const nueva = url.has('nueva');
 const partida = nueva ? null : leerPartida();
 const semilla = +(url.get('semilla') || (partida && partida.semilla) || 20260929);
 const tex = texturas();
-const cielo = new Cielo(escena, tex.nubes);
+const cielo = new Cielo(escena);
 enlazarCielo(cielo);   // antes de cualquier gema: sus materiales leen el cielo
 const mundo = new Mundo(escena, tex, semilla, { pasto: CALIDADES[ajustes.calidad].pasto });
 mundo.armarAgua(cielo);
+// lo que se refleja en el agua (capa 1): con calidad alta, también el terreno
+reflejo = new Reflejo(mundo.agua);
+medir();
+const enReflejo = (o, si = true) => o.traverse((h) => { if (si) h.layers.enable(1); else h.layers.disable(1); });
+for (const o of [mundo.veg.troncos, mundo.veg.hojas, mundo.veg.cocos, mundo.choza.grupo, mundo.muelle.grupo, mundo.mina.grupo]) enReflejo(o);
 const mina = new Mina(escena, tex, semilla);
 const luces = new Luces();
 for (const l of mina.lamparas) luces.agregar(l, [1.0, 0.72, 0.4, 7.5], 1.5);
@@ -199,6 +208,8 @@ J.aplicarAjustes = (guardar = true) => {
   son.volumen('musica', a.musica); son.volumen('efectos', a.efectos); son.volumen('ambiente', a.ambiente);
   entrada.sens = a.sens;
   const q = CALIDADES[a.calidad] || CALIDADES[1];
+  reflejo.activo = a.calidad > 0;
+  for (const c of mundo.terreno.chunks) enReflejo(c, a.calidad === 2);
   if (J.calidad !== a.calidad) {
     cielo.ponerCalidadSombra(q.sombra, q.caja);
     if (J.calidad !== undefined) { mundo.pasto.densidad = q.pasto; mundo.pasto.todo(); }
@@ -291,6 +302,7 @@ J.empezar = (nuevaIsla) => {
     return;
   }
   entrada.pedirCaptura();   // dentro del clic: si no, el navegador no deja
+  if (entrada.tactil) pedirAcostado();
   if (jugador.p.y < -30) {
     J.menu.cerrar();
     J.fundido(() => { ponerBajo(true); arrancarJuego(); });
@@ -428,7 +440,10 @@ function paso(dt, dibujar = true) {
     if (f.t >= f.espera) { fundidos.splice(i, 1); f.fn(); if (!fundidos.length) velo.classList.remove('on'); }
   }
 
-  if (J.estado === 'menu' || J.estado === 'carga') {
+  if (J.estado === 'libre') {
+    // cámara fija de las pruebas (?cam=x,y,z&mira=x,y,z): el mundo corre igual
+    mundoComun(dt, camara.position);
+  } else if (J.estado === 'menu' || J.estado === 'carga') {
     J.menu.actualizar(dt);
     mundoComun(dt, camara.position);
   } else if (J.estado === 'jugando' || J.estado === 'ventana') {
@@ -470,6 +485,9 @@ function paso(dt, dibujar = true) {
   }
 
   if (dibujar) {
+    // el reflejo del agua primero (si la cámara está bajo el agua, no hace falta)
+    if (!J.bajo && camara.position.y > J.nivelAgua + 0.05) reflejo.dibujar(renderer, escena, camara, cielo.domo, J.nivelAgua);
+    else mundo.agua.material.uniforms.uHayReflejo.value = 0;
     renderer.clear();
     renderer.render(escena, camara);
     if (J.estado === 'jugando' || J.estado === 'ventana' || J.estado === 'pausa') {
@@ -501,6 +519,7 @@ etiquetar();
 J.acciones = new Acciones(J);
 J.hud = new Hud(J);
 J.menu = new Menu(J);
+enReflejo(J.menu.ajustes.grupo); enReflejo(J.menu.creditos.grupo);
 // al girar el teléfono la toma del menú se vuelve a elegir (parado mira más a la choza)
 addEventListener('resize', () => {
   J.menu.ubicar();
@@ -525,6 +544,13 @@ J.menu.abrir(idiomaElegido || directo ? 'principal' : 'idioma');
 if (directo) J.empezar(false);
 
 if (url.has('hora')) cielo.hora = +url.get('hora');
+if (url.has('cam')) {
+  const v = (k) => url.get(k).split(',').map(Number);
+  J.menu.cerrar();
+  J.estado = 'libre';
+  camara.position.set(...v('cam'));
+  if (url.has('mira')) camara.lookAt(...v('mira'));
+}
 document.getElementById('precarga').remove();
 
 let ultimo = performance.now();

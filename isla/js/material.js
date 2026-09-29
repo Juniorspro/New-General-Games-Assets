@@ -30,7 +30,7 @@ export const LUZ = {
   uLucesPos: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, -999, 0, 1)) },
   uLucesColor: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) },
   uTexeles: { value: 16 },
-  uSatur: { value: 1.12 },
+  uSatur: { value: 1.2 },
   uNivelAgua: { value: 0 },
 };
 

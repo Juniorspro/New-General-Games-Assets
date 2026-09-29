@@ -12,6 +12,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import { matPixel } from './material.js';
 import { mergeSimple } from './rocas.js';
 import { t, IDIOMAS, idioma } from './idioma.js';
+import { aApp, pantalla } from './pantalla.js';
 
 const MAX_TILT = 18, INTENSIDAD = 1.5, VELOCIDAD = 3;
 const g2r = THREE.MathUtils.degToRad;
@@ -200,7 +201,8 @@ export class Menu {
     J.escena.add(this.ajustes.grupo, this.creditos.grupo);
 
     addEventListener('pointermove', (ev) => {
-      this.mouse.set((ev.clientX / innerWidth) * 2 - 1, (ev.clientY / innerHeight) * 2 - 1);
+      const [x, y] = aApp(ev.clientX, ev.clientY);
+      this.mouse.set((x / pantalla.w) * 2 - 1, (y / pantalla.h) * 2 - 1);
       const c = this.cartelActivo();
       if (c && !this.vuelo) J.renderer.domElement.style.cursor = this.tocarCartel(c, ev, false) ? 'pointer' : '';
     });
@@ -214,17 +216,17 @@ export class Menu {
     this.volverDom.textContent = t('menu.volver');
     this.volverDom.addEventListener('click', () => { J.son.sfx('uiSi'); this.abrir('pausa'); });
     this.elDom.appendChild(this.volverDom);
+    // offsetX/Y ya vienen en el sistema del lienzo aunque la app esté girada
     this.elDom.addEventListener('pointerdown', (ev) => {
       if (ev.target !== this.ajustes.canvas) return;
       const cv = this.ajustes.canvas;
-      const r = cv.getBoundingClientRect();
-      this.ajustes.clic(((ev.clientX - r.left) / r.width) * cv.width, ((ev.clientY - r.top) / r.height) * cv.height);
+      this.ajustes.clic((ev.offsetX / cv.clientWidth) * cv.width, (ev.offsetY / cv.clientHeight) * cv.height);
       ev.preventDefault();
     });
     this.elDom.addEventListener('pointermove', (ev) => {
+      if (ev.target !== this.ajustes.canvas) return;
       const cv = this.ajustes.canvas;
-      const r = cv.getBoundingClientRect();
-      this.elDom.style.cursor = this.ajustes.sobre(((ev.clientX - r.left) / r.width) * cv.width, ((ev.clientY - r.top) / r.height) * cv.height) ? 'pointer' : '';
+      this.elDom.style.cursor = this.ajustes.sobre((ev.offsetX / cv.clientWidth) * cv.width, (ev.offsetY / cv.clientHeight) * cv.height) ? 'pointer' : '';
     });
     addEventListener('keydown', (ev) => this.tecla(ev));
   }
@@ -266,7 +268,7 @@ export class Menu {
       return aire;
     };
     // con el teléfono parado la pantalla es angosta: se mira más a la choza
-    const parado = innerWidth < innerHeight;
+    const parado = pantalla.w < pantalla.h;
     const tomas = parado
       ? [[-13, -3, 3.4, 2.5, -0.5], [-11, -5, 4.5, 2, 0], [-15, 0, 3, 3, -1]]
       : [[-12, -2, 3.0, 6, -2], [-10, -4, 4.5, 5, -1], [-14, 1, 2.6, 8, -4], [-9, 3, 2.4, 10, -3], [-16, -3, 3.4, 6, -3]];
@@ -295,7 +297,8 @@ export class Menu {
   }
 
   tocarCartel(c, ev, clic) {
-    const ndc = new THREE.Vector2((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
+    const [x0, y0] = aApp(ev.clientX, ev.clientY);
+    const ndc = new THREE.Vector2((x0 / pantalla.w) * 2 - 1, -(y0 / pantalla.h) * 2 + 1);
     this.ray.setFromCamera(ndc, this.J.camara);
     const hit = this.ray.intersectObject(c.cara, false)[0];
     if (!hit || !hit.uv) { if (!clic) c.sobre(-1, -1); return false; }

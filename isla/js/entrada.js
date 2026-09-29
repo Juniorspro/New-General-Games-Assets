@@ -3,6 +3,8 @@
 //
 // Los flancos ("recién apretado") se limpian al FINAL del cuadro, después de
 // que el juego los leyó: si se limpian al principio, nunca dan verdadero.
+import { aApp } from './pantalla.js';
+
 const TECLAS = {
   adelante: ['KeyW', 'ArrowUp'], atras: ['KeyS', 'ArrowDown'], izq: ['KeyA', 'ArrowLeft'], der: ['KeyD', 'ArrowRight'],
   salto: ['Space'], correr: ['ShiftLeft', 'ShiftRight'], e: ['KeyE'], inv: ['Tab', 'KeyI'], pausa: ['Escape', 'KeyP'],
@@ -70,16 +72,19 @@ export class Entrada {
       e.preventDefault();
       const t = e.changedTouches[0];
       const r = joy.getBoundingClientRect();
-      this.joy.id = t.identifier; this.joy.cx = r.left + r.width / 2; this.joy.cy = r.top + r.height / 2;
-      this.moverJoy(t.clientX, t.clientY, perilla, radio);
+      // todo en coordenadas de la app: con la pantalla girada, "arriba" es otro lado
+      const [cx, cy] = aApp(r.left + r.width / 2, r.top + r.height / 2);
+      this.joy.id = t.identifier; this.joy.cx = cx; this.joy.cy = cy;
+      this.moverJoy(...aApp(t.clientX, t.clientY), perilla, radio);
     }, { passive: false });
     addEventListener('touchmove', (e) => {
       for (const t of e.changedTouches) {
-        if (t.identifier === this.joy.id) this.moverJoy(t.clientX, t.clientY, perilla, radio);
+        const [x, y] = aApp(t.clientX, t.clientY);
+        if (t.identifier === this.joy.id) this.moverJoy(x, y, perilla, radio);
         else if (this.dedoMira && t.identifier === this.dedoMira.id) {
-          this.mira.dx += (t.clientX - this.dedoMira.x) * 2.2 * this.sens;
-          this.mira.dy += (t.clientY - this.dedoMira.y) * 2.2 * this.sens;
-          this.dedoMira.x = t.clientX; this.dedoMira.y = t.clientY;
+          this.mira.dx += (x - this.dedoMira.x) * 2.2 * this.sens;
+          this.mira.dy += (y - this.dedoMira.y) * 2.2 * this.sens;
+          this.dedoMira.x = x; this.dedoMira.y = y;
         }
       }
     }, { passive: false });
@@ -95,7 +100,8 @@ export class Entrada {
       if (!this.activo) return;
       e.preventDefault();
       const t = e.changedTouches[0];
-      if (!this.dedoMira) this.dedoMira = { id: t.identifier, x: t.clientX, y: t.clientY };
+      const [x, y] = aApp(t.clientX, t.clientY);
+      if (!this.dedoMira) this.dedoMira = { id: t.identifier, x, y };
     }, { passive: false });
     const boton = (id, alApretar, alSoltar) => {
       const b = document.getElementById(id);

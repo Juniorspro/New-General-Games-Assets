@@ -21,6 +21,8 @@ try { var l = JSON.parse(localStorage.getItem('isla_ajustes') || '{}').idioma ||
 setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.style.opacity=1;},7000);
 </script>
 
+<!-- todo lo del juego va adentro de #app: si el teléfono está parado, se gira entero (js/pantalla.js) -->
+<div id="app">
 <canvas id="lienzo"></canvas>
 <div id="velo"></div>
 
@@ -65,6 +67,8 @@ setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.styl
   <button class="bt" id="tPoner" aria-label="Poner">▣</button>
   <button class="bt" id="tE" aria-label="Interactuar">E</button>
   <button class="bt" id="tInv" aria-label="Inventario">☰</button>
+</div>
+
 </div>
 
 <script type="module" src="js/main.js"></script>

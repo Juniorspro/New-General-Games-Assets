@@ -11,6 +11,7 @@
    inventario de los videos; tooltip oscuro con nombre, estrellas y precio en
    una pastilla verde; menú en blanco itálico gordo, inclinado con la cámara. */
 :root {
+  --vw: 1vw; --vh: 1vh;   /* js/pantalla.js las pone según la app (girada o no) */
   --ranura: 44px;
   --tinta: #f4f6fa;
   --borde: #1d222b;
@@ -25,6 +26,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2a78ec; tou
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
   font-family: var(--letra); color: var(--tinta); }
 button { font-family: inherit; color: inherit; cursor: pointer; appearance: none; border: 0; background: none; }
+#app { position: fixed; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; }
+html.girada #app { transform-origin: 0 0; transform: rotate(90deg) translateY(-100%); }
 #lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .oculto { display: none !important; }
 
@@ -77,7 +80,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 .noti.nueva { border-color: #ffd23a; background: rgba(90, 70, 20, .8); }
 .noti.late { animation: notiLate .25s ease-out; }
 @keyframes notiLate { 50% { transform: scale(1.06); } }
-#objetivo { position: absolute; left: max(14px, env(safe-area-inset-left)); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); max-width: min(46vw, 360px);
+#objetivo { position: absolute; left: max(14px, env(safe-area-inset-left)); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); max-width: min(calc(46 * var(--vw)), 360px);
   padding: 5px 10px; border-radius: 6px; background: rgba(20, 60, 110, .55); border: 2px solid var(--borde); font: 700 12px var(--letra); line-height: 1.3; }
 #objetivo::before { content: attr(data-t); display: block; font: 900 10px var(--letra); letter-spacing: .12em; color: #ffe27a; }
 #bajoAgua { position: absolute; inset: 0; background: rgba(20, 110, 170, .28); opacity: 0; transition: opacity .2s; }
@@ -85,7 +88,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 
 /* ── ventana: inventario, cofre, mesa, colección ── */
 #ventana { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(10, 20, 30, .25); }
-#vCaja { position: relative; padding: 12px; border-radius: 8px; background: var(--panel); border: 2px solid var(--borde); max-width: 96vw; max-height: 94vh; overflow: auto; backdrop-filter: blur(3px); }
+#vCaja { position: relative; padding: 12px; border-radius: 8px; background: var(--panel); border: 2px solid var(--borde); max-width: calc(96 * var(--vw)); max-height: calc(94 * var(--vh)); overflow: auto; backdrop-filter: blur(3px); }
 #vPestanas { display: flex; gap: 4px; margin-bottom: 8px; }
 #vPestanas button { padding: 5px 12px; border-radius: 5px; border: 2px solid var(--borde); background: var(--panelClaro); font: 800 13px var(--letra); }
 #vPestanas button.sel { background: #e8b42f; color: #2a1d05; }
@@ -122,23 +125,23 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 
 /* ── menú 3D: el texto se inclina con la cámara ── */
 #menu { position: fixed; inset: 0; z-index: 8; pointer-events: none; perspective: 700px; }
-#titulo { position: absolute; left: 7vw; top: 9vh; margin: 0; font: 900 italic clamp(40px, 9vw, 96px)/0.9 var(--gorda); letter-spacing: .02em; color: #fff;
+#titulo { position: absolute; left: calc(7 * var(--vw)); top: calc(9 * var(--vh)); margin: 0; font: 900 italic clamp(40px, calc(9 * var(--vw)), 96px)/0.9 var(--gorda); letter-spacing: .02em; color: #fff;
   text-shadow: 0 5px 0 #1f5fb8, 0 9px 18px rgba(10, 40, 90, .45); transform-origin: left center; }
 #titulo span:last-child { color: #ffe27a; text-shadow: 0 5px 0 #b86b12, 0 9px 18px rgba(80, 40, 0, .4); }
-#opciones { position: absolute; left: 7vw; top: 38vh; display: flex; flex-direction: column; gap: 6px; transform-origin: left center; pointer-events: auto; }
-#opciones button { text-align: left; font: 900 italic clamp(24px, 4.2vw, 46px) var(--gorda); color: #fff; letter-spacing: .03em;
+#opciones { position: absolute; left: calc(7 * var(--vw)); top: calc(38 * var(--vh)); display: flex; flex-direction: column; gap: 6px; transform-origin: left center; pointer-events: auto; }
+#opciones button { text-align: left; font: 900 italic clamp(24px, calc(4.2 * var(--vw)), 46px) var(--gorda); color: #fff; letter-spacing: .03em;
   text-shadow: 0 3px 0 rgba(20, 60, 120, .85), 0 6px 14px rgba(0, 0, 0, .35); transition: transform .18s cubic-bezier(.3,1.6,.5,1), color .15s; padding: 2px 0; }
 #opciones button:hover, #opciones button:focus-visible, #opciones button.foco { color: #ffe27a; transform: translateX(14px) scale(1.06); outline: none; }
-#opciones button.chico { font-size: clamp(16px, 2.6vw, 26px); opacity: .9; }
+#opciones button.chico { font-size: clamp(16px, calc(2.6 * var(--vw)), 26px); opacity: .9; }
 #opciones button { animation: entra .45s cubic-bezier(.2,1.3,.4,1) both; }
 #opciones button:nth-child(2) { animation-delay: .06s; } #opciones button:nth-child(3) { animation-delay: .12s; } #opciones button:nth-child(4) { animation-delay: .18s; }
 @keyframes entra { from { opacity: 0; transform: translateX(-40px); } }
 #menu.pausa { background: rgba(10, 30, 60, .35); pointer-events: auto; }
 #tableroDom { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-#tableroDom canvas { display: block; width: min(92vw, 118vh, 720px); image-rendering: pixelated; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
-#tableroDom .volver { font: 900 italic clamp(16px, 2.6vw, 24px) var(--gorda); color: #fff; text-shadow: 0 3px 0 rgba(20, 60, 120, .85); padding: 0; }
+#tableroDom canvas { display: block; width: min(calc(92 * var(--vw)), calc(118 * var(--vh)), 720px); image-rendering: pixelated; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+#tableroDom .volver { font: 900 italic clamp(16px, calc(2.6 * var(--vw)), 24px) var(--gorda); color: #fff; text-shadow: 0 3px 0 rgba(20, 60, 120, .85); padding: 0; }
 #tableroDom .volver:hover { color: #ffe27a; }
-#menuPie { position: absolute; left: 7vw; bottom: max(14px, env(safe-area-inset-bottom)); font: 700 12px var(--letra); opacity: .85; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+#menuPie { position: absolute; left: calc(7 * var(--vw)); bottom: max(14px, env(safe-area-inset-bottom)); font: 700 12px var(--letra); opacity: .85; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
 
 /* ── dedos ── */
 #dedos { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
@@ -154,21 +157,22 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 
 /* en táctil los dedos ocupan las esquinas de abajo: el objetivo y los
    pinceles suben */
-body.tactil #objetivo { top: calc(max(10px, env(safe-area-inset-top)) + 44px); bottom: auto; max-width: min(56vw, 330px); }
+body.tactil #objetivo { top: calc(max(10px, env(safe-area-inset-top)) + 44px); bottom: auto; max-width: min(calc(56 * var(--vw)), 330px); }
 body.tactil #notis { top: calc(max(10px, env(safe-area-inset-top)) + 116px); }
 body.tactil #pinceles { left: auto; right: max(12px, env(safe-area-inset-right)); top: calc(max(10px, env(safe-area-inset-top)) + 44px); bottom: auto; transform: none; flex-direction: column; }
-@media (max-width: 460px) {
-  :root { --ranura: 36px; }
-  .ranura canvas { width: 28px; height: 28px; }
-  #vCaja { padding: 8px; }
-  .receta { min-width: 0; }
-  .recetas { grid-template-columns: 1fr; }
-}
-@media (max-height: 460px) {
-  :root { --ranura: 36px; }
-  .ranura canvas { width: 28px; height: 28px; }
-  #joy { width: 104px; height: 104px; bottom: 64px; }
-}
+/* la app angosta y la app chata (medidas de la app, no de la pantalla: girada no coinciden) */
+html.angosta { --ranura: 36px; }
+html.angosta .ranura canvas { width: 28px; height: 28px; }
+html.angosta #vCaja { padding: 8px; }
+html.angosta .receta { min-width: 0; }
+html.angosta .recetas { grid-template-columns: 1fr; }
+html.chata { --ranura: 36px; }
+html.chata .ranura canvas { width: 28px; height: 28px; }
+html.chata #joy { width: 104px; height: 104px; bottom: 64px; left: max(56px, env(safe-area-inset-left)); }
+/* acostado y chato, la columna de pinceles caería sobre los botones: en fila arriba al medio */
+html.chata body.tactil #objetivo { max-width: min(calc(34 * var(--vw)), 290px); }
+html.chata body.tactil #pinceles { left: 50%; right: auto; top: calc(max(10px, env(safe-area-inset-top)) + 44px); transform: translateX(-50%); flex-direction: row; }
+
 @media (prefers-reduced-motion: reduce) { #opciones button { animation: none; } }
 
 </style>
@@ -186,6 +190,8 @@ try { var l = JSON.parse(localStorage.getItem('isla_ajustes') || '{}').idioma ||
 setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.style.opacity=1;},7000);
 </script>
 
+<!-- todo lo del juego va adentro de #app: si el teléfono está parado, se gira entero (js/pantalla.js) -->
+<div id="app">
 <canvas id="lienzo"></canvas>
 <div id="velo"></div>
 
@@ -230,6 +236,8 @@ setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.styl
   <button class="bt" id="tPoner" aria-label="Poner">▣</button>
   <button class="bt" id="tE" aria-label="Interactuar">E</button>
   <button class="bt" id="tInv" aria-label="Inventario">☰</button>
+</div>
+
 </div>
 
 <script>
@@ -277,7 +285,7 @@ const LUZ = {
   uLucesPos: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, -999, 0, 1)) },
   uLucesColor: { value: [0, 1, 2, 3].map(() => new THREE.Vector4(0, 0, 0, 0)) },
   uTexeles: { value: 16 },
-  uSatur: { value: 1.12 },
+  uSatur: { value: 1.2 },
   uNivelAgua: { value: 0 },
 };
 
@@ -1074,7 +1082,8 @@ class Rocas {
   constructor(tex, decorativas, minables) {
     this.grupo = new THREE.Group();
     const r = mulberry(909);
-    const mat = matPixel('mundo', { mapa: tex.roca, tam: [32, 32], bari: true, borde: 0.85, clave: 'roca' });
+    // casi negras con las aristas claras, como las del original
+    const mat = matPixel('mundo', { mapa: tex.roca, tam: [32, 32], color: 0x6f737b, bari: true, borde: 2.3, clave: 'roca' });
     this.matRoca = mat;
 
     // decorativas: 4 formas instanciadas
@@ -3290,6 +3299,11 @@ const M_agua = (() => {
 // El mar: turquesa donde es bajo, azul donde es hondo, transparente para ver
 // la arena y las cáusticas del fondo, con espuma en la orilla. Pixelado en el
 // mundo como todo lo demás: el agua también tiene texels.
+//
+// Refleja de verdad, como en el original (las nubes y la luna en el mar de
+// noche): una cámara espejada bajo el nivel del agua dibuja lo que está en la
+// capa 1 (cielo, nubes, palmeras, choza, muelle) en una textura chica, y el
+// agua la lee proyectando su punto con esa cámara, corrido por las ondas.
 const THREE = M_three;
 const { LUZ, LUZ_GLSL } = M_material;
 const { MITAD, TAM } = M_terreno;
@@ -3312,6 +3326,9 @@ uniform vec3 uMedio;
 uniform vec3 uHondo;
 uniform vec3 uCenit;
 uniform float uNoche;
+uniform sampler2D uReflejo;
+uniform mat4 uMatReflejo;
+uniform float uHayReflejo;
 varying vec3 vMundo;
 ${LUZ_GLSL}
 void main() {
@@ -3336,7 +3353,15 @@ void main() {
   col *= luz;
   vec3 R = reflect(-V, n);
   vec3 cielo = mix(uNieblaColor, uCenit, clamp(R.y * 1.6, 0.0, 1.0));
-  col = mix(col, cielo, fres * 0.65);
+  if (uHayReflejo > 0.5) {
+    // el punto del agua, corrido por la onda, visto desde la cámara espejada:
+    // de cerca las ondas lo rompen en rayas, de lejos queda casi espejo
+    vec4 pr = uMatReflejo * vec4(pc.x + n.x * 1.6, uNivelAgua, pc.z + n.z * 1.6, 1.0);
+    cielo = texture2DProj(uReflejo, pr).rgb;
+  }
+  // lo hondo refleja más que lo bajo, donde se ve la arena
+  float kr = mix(fres * 0.65, 0.32 + fres * 0.6, smoothstep(0.8, 5.0, prof));
+  col = mix(col, cielo, kr);
   col += uSolColor * pow(max(dot(R, uSolDir), 0.0), 350.0) * 2.5;
   // destellos sueltos en los texels, como sol sobre el agua
   float dest = h12(c + floor(uT * 2.5) * 7.13);
@@ -3347,7 +3372,7 @@ void main() {
   float espuma2 = step(ola + 0.07, prof) * (1.0 - step(ola + 0.12, prof)) * step(0.5, h12(c * 0.5 + 3.0));
   vec3 blanco = vec3(0.96, 0.99, 1.0) * (luz * 0.7 + 0.25);
   col = mix(col, blanco, max(espuma, espuma2 * 0.8));
-  float alfa = mix(0.32, 0.94, smoothstep(0.0, 4.5, prof));
+  float alfa = mix(0.42, 0.95, smoothstep(0.0, 4.0, prof));
   alfa = max(alfa, fres * 0.75);
   alfa = max(alfa, max(espuma, espuma2 * 0.8));
   gl_FragColor = vec4(terminar(col, pc), alfa);
@@ -3361,11 +3386,14 @@ function crearAgua(terreno, cielo) {
       ...LUZ,
       uAlturas: { value: terreno.texAltura },
       uRect: { value: new THREE.Vector4(-MITAD, -MITAD, 1 / TAM, 1 / TAM) },
-      uPoco: { value: new THREE.Color(0x8ff3e8) },
-      uMedio: { value: new THREE.Color(0x2cc3dc) },
-      uHondo: { value: new THREE.Color(0x0b66b5) },
+      uPoco: { value: new THREE.Color(0x66e6da) },
+      uMedio: { value: new THREE.Color(0x18b4d4) },
+      uHondo: { value: new THREE.Color(0x0a4ea6) },
       uCenit: cielo.uni.uCenit,
       uNoche: cielo.uni.uNoche,
+      uReflejo: { value: null },
+      uMatReflejo: { value: new THREE.Matrix4() },
+      uHayReflejo: { value: 0 },
     },
     vertexShader: VERT, fragmentShader: FRAG,
     transparent: true, depthWrite: false,
@@ -3376,7 +3404,218 @@ function crearAgua(terreno, cielo) {
   agua.userData.agua = true;
   return agua;
 }
-return { crearAgua };
+
+// La cámara espejada y su textura. La imagen es un cuarto de la pantalla: el
+// reflejo se rompe en ondas y más detalle no se nota.
+const _v = new THREE.Vector3(), _u = new THREE.Vector3();
+class Reflejo {
+  constructor(agua) {
+    this.agua = agua;
+    this.rt = new THREE.WebGLRenderTarget(256, 144, { depthBuffer: true });
+    this.cam = new THREE.PerspectiveCamera();
+    this.cam.layers.set(1);
+    this.activo = true;
+    const U = agua.material.uniforms;
+    U.uReflejo.value = this.rt.texture;
+    this.mat = U.uMatReflejo.value;
+  }
+
+  tamano(w, h) { this.rt.setSize(Math.max(64, Math.round(w / 4)), Math.max(36, Math.round(h / 4))); }
+
+  dibujar(renderer, escena, camara, domo, nivel = 0) {
+    const U = this.agua.material.uniforms;
+    U.uHayReflejo.value = this.activo ? 1 : 0;
+    if (!this.activo) return;
+    const c = this.cam;
+    const fwd = camara.getWorldDirection(_v);
+    c.position.set(camara.position.x, 2 * nivel - camara.position.y, camara.position.z);
+    _u.set(0, 1, 0).applyQuaternion(camara.quaternion);
+    c.up.set(_u.x, -_u.y, _u.z);
+    c.lookAt(camara.position.x + fwd.x, 2 * nivel - (camara.position.y + fwd.y), camara.position.z + fwd.z);
+    c.projectionMatrix.copy(camara.projectionMatrix);
+    c.projectionMatrixInverse.copy(camara.projectionMatrixInverse);
+    c.updateMatrixWorld();
+    this.mat.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1).multiply(c.projectionMatrix).multiply(c.matrixWorldInverse);
+    // el cielo sigue a la cámara que mira: se centra en la espejada mientras tanto
+    const antes = domo.position.clone();
+    domo.position.copy(c.position); domo.updateMatrixWorld();
+    const auto = renderer.shadowMap.autoUpdate;
+    renderer.shadowMap.autoUpdate = false;   // la sombra ya está: no se vuelve a dibujar
+    renderer.setRenderTarget(this.rt);
+    renderer.clear();
+    renderer.render(escena, c);
+    renderer.setRenderTarget(null);
+    renderer.shadowMap.autoUpdate = auto;
+    domo.position.copy(antes); domo.updateMatrixWorld();
+  }
+}
+return { crearAgua, Reflejo };
+})();
+
+/* ── nubes ── */
+const M_nubes = (() => {
+// Nubes de verdad, como las del juego original: cúmulos en 3D armados con
+// esferas, con luz de dibujo animado en tres tonos (blanco al sol, celeste,
+// gris azulado a la sombra) y el borde entre tonos comido por ruido en
+// bloques, que al pixelarse queda escalonado como en los videos. De noche las
+// alumbra la luna y se ponen azules.
+//
+// Todas las nubes son UNA malla: una sola llamada de dibujo. Siguen a la
+// cámara de costado (están "en el infinito", como el cielo) y giran despacio.
+const THREE = M_three;
+const { mulberry, rango } = M_azar;
+const VERT = /* glsl */ `
+attribute float aTono;
+varying vec3 vN;
+varying vec3 vP;
+varying float vTono;
+void main() {
+  vN = normalize(mat3(modelMatrix) * normal);
+  vec4 m = modelMatrix * vec4(position, 1.0);
+  vP = m.xyz;
+  vTono = aTono;
+  gl_Position = projectionMatrix * viewMatrix * m;
+}`;
+
+const FRAG = /* glsl */ `
+uniform vec3 uLuz;
+uniform vec3 uColLuz;
+uniform vec3 uColMedio;
+uniform vec3 uColSombra;
+uniform vec3 uHorizonte;
+uniform float uBrillo;
+varying vec3 vN;
+varying vec3 vP;
+varying float vTono;
+float h13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
+void main() {
+  vec3 n = normalize(vN);
+  float k = dot(n, uLuz) * 0.5 + 0.5;
+  k = k * 0.85 + 0.08;
+  // el borde de cada tono se come en bloques de 3 m: escalones, no una línea
+  k += (h13(floor(vP / 3.0)) - 0.5) * 0.16 + vTono;
+  // la panza de la nube siempre más oscura
+  k -= smoothstep(0.2, -0.9, n.y) * 0.18;
+  vec3 col = k > 0.64 ? uColLuz : (k > 0.47 ? uColMedio : uColSombra);
+  // perspectiva aérea: lo lejano se funde con el horizonte
+  float d = length(vP - cameraPosition);
+  col = mix(col, uHorizonte, smoothstep(350.0, 1250.0, d) * 0.55);
+  gl_FragColor = vec4(col * uBrillo, 1.0);
+  #include <colorspace_fragment>
+}`;
+
+// Una nube: esferas que se apilan sobre una base plana.
+function geoNube(r, torre) {
+  const partes = [];
+  const n = torre ? 8 + Math.floor(r() * 6) : 10 + Math.floor(r() * 9);
+  const largo = torre ? rango(r, 60, 110) : rango(r, 130, 260);
+  const ancho = torre ? rango(r, 40, 70) : rango(r, 50, 100);
+  for (let i = 0; i < n; i++) {
+    const u = n === 1 ? 0.5 : i / (n - 1);
+    const perfil = Math.sin(Math.PI * (0.1 + 0.8 * u));
+    const rad = (torre ? rango(r, 24, 42) : rango(r, 18, 36)) * (0.6 + 0.5 * perfil);
+    const x = (u - 0.5) * largo + rango(r, -8, 8);
+    const z = rango(r, -0.5, 0.5) * ancho;
+    const y = rad * 0.35 + perfil * (torre ? rango(r, 16, 44) : rango(r, 2, 16));
+    partes.push({ x, y, z, rad });
+    // las torres crecen para arriba: bolas más chicas encima
+    if (torre && perfil > 0.6) {
+      let yy = y + rad * 0.9, rr = rad * 0.8;
+      for (let k = 0; k < 4 && r() < 0.85; k++) {
+        partes.push({ x: x + rango(r, -6, 6), y: yy, z: z + rango(r, -6, 6), rad: rr });
+        yy += rr * 0.85; rr *= 0.72;
+      }
+    }
+  }
+  const pos = [], nor = [], tono = [];
+  for (const p of partes) {
+    const g = new THREE.IcosahedronGeometry(p.rad, 1);   // ya viene sin índice
+    const P = g.attributes.position;
+    const t = (r() - 0.5) * 0.08;
+    for (let i = 0; i < P.count; i++) {
+      let x = P.getX(i), y = P.getY(i), z = P.getZ(i);
+      let nx = x / p.rad, ny = y / p.rad, nz = z / p.rad;
+      // base plana: lo que cae debajo del piso de la nube se aplasta
+      if (p.y + y < 0) { y = -p.y; ny = -1; nx *= 0.2; nz *= 0.2; }
+      pos.push(p.x + x, p.y + y, p.z + z);
+      nor.push(nx, ny, nz);
+      tono.push(t);
+    }
+  }
+  return { pos, nor, tono };
+}
+
+class Nubes {
+  constructor(escena) {
+    const r = mulberry(4242);
+    const pos = [], nor = [], tono = [];
+    this.lista = [];
+    // Las torres salen del horizonte y los bancos van más arriba, como en
+    // los cuadros del original: el cielo casi nunca está vacío.
+    const N = 34;
+    for (let i = 0; i < N; i++) {
+      const torre = r() < 0.5;
+      const ang = (i / N) * Math.PI * 2 + rango(r, -0.08, 0.08);
+      const dist = torre ? rango(r, 330, 680) : rango(r, 280, 720);
+      const alto = torre ? rango(r, 8, 45) : rango(r, 95, 210);
+      const g = geoNube(r, torre);
+      // girar la nube sobre sí misma y ponerla en su lugar
+      const giro = r() * Math.PI * 2, c = Math.cos(giro), s = Math.sin(giro);
+      const cx = Math.cos(ang) * dist, cz = Math.sin(ang) * dist;
+      for (let k = 0; k < g.pos.length; k += 3) {
+        const x = g.pos[k], y = g.pos[k + 1], z = g.pos[k + 2];
+        pos.push(cx + x * c - z * s, alto + y, cz + x * s + z * c);
+        const nx = g.nor[k], ny = g.nor[k + 1], nz = g.nor[k + 2];
+        nor.push(nx * c - nz * s, ny, nx * s + nz * c);
+      }
+      tono.push(...g.tono);
+      this.lista.push({ ang, dist, alto, torre });
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('aTono', new THREE.Float32BufferAttribute(tono, 1));
+    this.uni = {
+      uLuz: { value: new THREE.Vector3(0.4, 0.8, 0.3) },
+      uColLuz: { value: new THREE.Color(0xffffff) },
+      uColMedio: { value: new THREE.Color(0xdde8f8) },
+      uColSombra: { value: new THREE.Color(0x86a3d4) },
+      uHorizonte: { value: new THREE.Color(0xc9e8ff) },
+      uBrillo: { value: 1 },
+    };
+    this.malla = new THREE.Mesh(geo, new THREE.ShaderMaterial({ uniforms: this.uni, vertexShader: VERT, fragmentShader: FRAG, fog: false }));
+    this.malla.frustumCulled = false;
+    this.malla.renderOrder = -5;
+    this.malla.layers.enable(1);   // también en el reflejo del agua
+    this.triangulos = pos.length / 9;
+    escena.add(this.malla);
+    this.giro = 0;
+  }
+
+  // luz: la dirección del sol (o de la luna); colores según la hora
+  actualizar(dt, camara, luz, dia, tarde, noche, horizonte) {
+    this.giro += dt * 0.0012;
+    this.malla.position.set(camara.position.x, 0, camara.position.z);
+    this.malla.rotation.y = this.giro;
+    this.uni.uLuz.value.copy(luz);
+    // los tonos, medidos en los cuadros del original (en sRGB: Color los pasa a lineal)
+    const U = this.uni, T = TONOS;
+    U.uColLuz.value.copy(T.luz[0]).lerp(T.luz[1], tarde * 0.8).lerp(T.luz[2], noche);
+    U.uColMedio.value.copy(T.medio[0]).lerp(T.medio[1], tarde * 0.8).lerp(T.medio[2], noche);
+    U.uColSombra.value.copy(T.sombra[0]).lerp(T.sombra[1], tarde * 0.8).lerp(T.sombra[2], noche);
+    U.uHorizonte.value.copy(horizonte);
+    U.uBrillo.value = 1;
+  }
+}
+const _c = new THREE.Color();
+const K = (h) => new THREE.Color(h);
+// día · atardecer · noche
+const TONOS = {
+  luz: [K(0xffffff), K(0xffd9b8), K(0xb7c6ff)],
+  medio: [K(0xd9e5f5), K(0xf2a98c), K(0x6d82d6)],
+  sombra: [K(0x7a9ccf), K(0x8a72a8), K(0x2e3d85)],
+};
+return { Nubes };
 })();
 
 /* ── cielo ── */
@@ -3387,15 +3626,17 @@ const M_cielo = (() => {
 // nunca se ve como la línea donde termina el mundo.
 const THREE = M_three;
 const { LUZ } = M_material;
-const { mulberry, suavizado, lim } = M_azar;
+const { suavizado, lim } = M_azar;
+const { Nubes } = M_nubes;
 const C = (h) => new THREE.Color(h);
 const PALETA = {
-  cenitDia: C(0x2a78ec), horizonteDia: C(0xc9e8ff),
-  cenitTarde: C(0x3b5fb8), horizonteTarde: C(0xffb07a),
-  cenitNoche: C(0x070d24), horizonteNoche: C(0x1a2a55),
-  solDia: new THREE.Color(1.28, 1.2, 1.06), solTarde: new THREE.Color(1.25, 0.72, 0.42), luna: new THREE.Color(0.32, 0.42, 0.72),
-  cieloDia: new THREE.Color(0.52, 0.66, 0.9), sueloDia: new THREE.Color(0.66, 0.58, 0.42),
-  cieloNoche: new THREE.Color(0.09, 0.13, 0.27), sueloNoche: new THREE.Color(0.05, 0.06, 0.1),
+  // el azul profundo del original arriba y celeste claro abajo (medido en sus cuadros)
+  cenitDia: C(0x1c46d4), horizonteDia: C(0xa6d0ff),
+  cenitTarde: C(0x33489e), horizonteTarde: C(0xffab74),
+  cenitNoche: C(0x040817), horizonteNoche: C(0x16204d),
+  solDia: new THREE.Color(1.28, 1.2, 1.06), solTarde: new THREE.Color(1.25, 0.72, 0.42), luna: new THREE.Color(0.1, 0.14, 0.32),
+  cieloDia: new THREE.Color(0.5, 0.64, 0.92), sueloDia: new THREE.Color(0.66, 0.58, 0.42),
+  cieloNoche: new THREE.Color(0.045, 0.065, 0.15), sueloNoche: new THREE.Color(0.02, 0.025, 0.05),
 };
 
 const VERT_CIELO = /* glsl */ `
@@ -3418,15 +3659,17 @@ float h13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fr
 void main() {
   vec3 d = normalize(vDir);
   float y = max(d.y, 0.0);
-  vec3 col = mix(uHorizonte, uCenit, pow(y, 0.5));
+  vec3 col = mix(uHorizonte, uCenit, pow(y, 0.62));
   if (d.y < 0.0) col = uHorizonte;
   // el sol: disco duro + halo (el bloom no existe acá: el halo lo pinta el cielo)
   float s = max(dot(d, uSol), 0.0);
   col += uSolColor * (smoothstep(0.9975, 0.9985, s) * 1.6 + pow(s, 90.0) * 0.45 + pow(s, 8.0) * 0.12) * (1.0 - uNoche * 0.8);
   // la luna, del lado opuesto
   float l = max(dot(d, -uSol), 0.0);
-  col += vec3(0.85, 0.9, 1.0) * smoothstep(0.9988, 0.9993, l) * uNoche;
-  col += vec3(0.25, 0.32, 0.55) * pow(l, 40.0) * uNoche * 0.5;
+  float disco = smoothstep(0.99905, 0.99935, l);
+  float manchas = h13(floor(d * 1400.0)) * 0.18 + h13(floor(d * 520.0)) * 0.22;
+  col = mix(col, vec3(0.93, 0.95, 1.0) * (0.9 - manchas), disco * uNoche);
+  col += vec3(0.4, 0.5, 0.95) * (pow(l, 70.0) * 0.55 + pow(l, 9.0) * 0.16) * uNoche;
   // estrellas: una grilla en la esfera, en píxeles
   if (uNoche > 0.01 && d.y > 0.0) {
     vec3 q = floor(d * 190.0);
@@ -3441,7 +3684,7 @@ void main() {
 }`;
 
 class Cielo {
-  constructor(escena, texNubes) {
+  constructor(escena) {
     this.escena = escena;
     this.hora = 0.34;          // 0 medianoche · 0.25 amanecer · 0.5 mediodía
     this.duracionDia = 20 * 60; // segundos por día
@@ -3457,23 +3700,9 @@ class Cielo {
     this.domo.frustumCulled = false;
     escena.add(this.domo);
 
-    // Nubes: carteles pixelados alrededor de la isla, lejos, siempre de frente.
-    this.nubes = [];
-    const r = mulberry(77);
-    for (let i = 0; i < 22; i++) {
-      const tex = texNubes[i % texNubes.length];
-      const mat = new THREE.SpriteMaterial({ map: tex, fog: false, depthWrite: false, transparent: true });
-      const sp = new THREE.Sprite(mat);
-      const ang = (i / 22) * Math.PI * 2 + r() * 0.3;
-      const dist = 380 + r() * 220;
-      const alto = 45 + r() * 110;
-      const ancho = 90 + r() * 90;
-      sp.scale.set(ancho, ancho / 2, 1);
-      sp.userData = { ang, dist, alto, vel: 0.002 + r() * 0.003 };
-      sp.renderOrder = -5;
-      escena.add(sp);
-      this.nubes.push(sp);
-    }
+    // Nubes en 3D, como las del original (antes eran carteles chatos)
+    this.nubes3d = new Nubes(escena);
+    this.domo.layers.enable(1);   // el cielo también se refleja en el agua
 
     // La luz direccional existe SOLO para dibujar el mapa de sombras: los
     // materiales de la isla hacen su propia cuenta con LUZ.
@@ -3536,14 +3765,8 @@ class Cielo {
     // el domo y las nubes siguen a la cámara
     this.domo.position.copy(camara.position);
     this.domo.visible = bajo < 0.5;
-    const tinte = new THREE.Color(1, 1, 1).lerp(new THREE.Color(1.0, 0.8, 0.7), tarde * 0.6).lerp(new THREE.Color(0.32, 0.4, 0.68), noche * 0.85);
-    for (const n of this.nubes) {
-      const u = n.userData;
-      u.ang += u.vel * dt * 0.05;
-      n.position.set(camara.position.x + Math.cos(u.ang) * u.dist, u.alto, camara.position.z + Math.sin(u.ang) * u.dist);
-      n.material.color.copy(tinte);
-      n.visible = bajo < 0.5;
-    }
+    this.nubes3d.actualizar(dt, camara, luzDir, dia, tarde, noche, horiz);
+    this.nubes3d.malla.visible = bajo < 0.5;
 
     // sombra: la caja sigue al jugador de a un texel (si no, los bordes titilan)
     const s = this.sol;
@@ -3581,6 +3804,50 @@ class Cielo {
 return { Cielo, lim };
 })();
 
+/* ── pantalla ── */
+const M_pantalla = (() => {
+// El juego se juega ACOSTADO. Con el teléfono parado (o con la rotación
+// trabada, que es como lo tiene mucha gente) todo se dibuja girado 90° dentro
+// de #app, y los toques se pasan al sistema girado. Con el teléfono acostado,
+// o en una compu, no se gira nada.
+//
+// El giro es rotate(90deg) translateY(-100%) con origen arriba a la izquierda:
+// el punto (x, y) de la app cae en la pantalla en (anchoPantalla − y, x). La
+// vuelta: x = clientY, y = anchoPantalla − clientX.
+const pantalla = { girada: false, w: innerWidth, h: innerHeight };
+
+function medirPantalla(tactil) {
+  const P = pantalla;
+  P.girada = !!tactil && innerHeight > innerWidth;
+  P.w = P.girada ? innerHeight : innerWidth;
+  P.h = P.girada ? innerWidth : innerHeight;
+  const raiz = document.documentElement;
+  raiz.classList.toggle('girada', P.girada);
+  // unidades propias: vw y vh del CSS miden la pantalla, no la app girada
+  raiz.style.setProperty('--vw', `${P.w / 100}px`);
+  raiz.style.setProperty('--vh', `${P.h / 100}px`);
+  raiz.classList.toggle('angosta', P.w <= 460);
+  raiz.classList.toggle('chata', P.h <= 460);
+  const app = document.getElementById('app');
+  if (app) { app.style.width = `${P.w}px`; app.style.height = `${P.h}px`; }
+  return P;
+}
+
+// De coordenadas de la pantalla (clientX/Y) a las de la app.
+function aApp(x, y) { return pantalla.girada ? [y, innerWidth - x] : [x, y]; }
+
+// Pantalla completa y orientación trabada acostada, si el navegador deja (en
+// Android sí, dentro del mismo toque; en iPhone no existe y queda el giro).
+function pedirAcostado() {
+  const d = document.documentElement;
+  try {
+    const p = d.requestFullscreen ? d.requestFullscreen({ navigationUI: 'hide' }) : null;
+    if (p && p.then) p.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape')).catch(() => {});
+  } catch { /* sin pantalla completa: queda el giro por CSS */ }
+}
+return { pantalla, medirPantalla, aApp, pedirAcostado };
+})();
+
 /* ── entrada ── */
 const M_entrada = (() => {
 // Teclado + mouse (con el puntero capturado) y dedos (palanca, mirar y
@@ -3588,6 +3855,7 @@ const M_entrada = (() => {
 //
 // Los flancos ("recién apretado") se limpian al FINAL del cuadro, después de
 // que el juego los leyó: si se limpian al principio, nunca dan verdadero.
+const { aApp } = M_pantalla;
 const TECLAS = {
   adelante: ['KeyW', 'ArrowUp'], atras: ['KeyS', 'ArrowDown'], izq: ['KeyA', 'ArrowLeft'], der: ['KeyD', 'ArrowRight'],
   salto: ['Space'], correr: ['ShiftLeft', 'ShiftRight'], e: ['KeyE'], inv: ['Tab', 'KeyI'], pausa: ['Escape', 'KeyP'],
@@ -3655,16 +3923,19 @@ class Entrada {
       e.preventDefault();
       const t = e.changedTouches[0];
       const r = joy.getBoundingClientRect();
-      this.joy.id = t.identifier; this.joy.cx = r.left + r.width / 2; this.joy.cy = r.top + r.height / 2;
-      this.moverJoy(t.clientX, t.clientY, perilla, radio);
+      // todo en coordenadas de la app: con la pantalla girada, "arriba" es otro lado
+      const [cx, cy] = aApp(r.left + r.width / 2, r.top + r.height / 2);
+      this.joy.id = t.identifier; this.joy.cx = cx; this.joy.cy = cy;
+      this.moverJoy(...aApp(t.clientX, t.clientY), perilla, radio);
     }, { passive: false });
     addEventListener('touchmove', (e) => {
       for (const t of e.changedTouches) {
-        if (t.identifier === this.joy.id) this.moverJoy(t.clientX, t.clientY, perilla, radio);
+        const [x, y] = aApp(t.clientX, t.clientY);
+        if (t.identifier === this.joy.id) this.moverJoy(x, y, perilla, radio);
         else if (this.dedoMira && t.identifier === this.dedoMira.id) {
-          this.mira.dx += (t.clientX - this.dedoMira.x) * 2.2 * this.sens;
-          this.mira.dy += (t.clientY - this.dedoMira.y) * 2.2 * this.sens;
-          this.dedoMira.x = t.clientX; this.dedoMira.y = t.clientY;
+          this.mira.dx += (x - this.dedoMira.x) * 2.2 * this.sens;
+          this.mira.dy += (y - this.dedoMira.y) * 2.2 * this.sens;
+          this.dedoMira.x = x; this.dedoMira.y = y;
         }
       }
     }, { passive: false });
@@ -3680,7 +3951,8 @@ class Entrada {
       if (!this.activo) return;
       e.preventDefault();
       const t = e.changedTouches[0];
-      if (!this.dedoMira) this.dedoMira = { id: t.identifier, x: t.clientX, y: t.clientY };
+      const [x, y] = aApp(t.clientX, t.clientY);
+      if (!this.dedoMira) this.dedoMira = { id: t.identifier, x, y };
     }, { passive: false });
     const boton = (id, alApretar, alSoltar) => {
       const b = document.getElementById(id);
@@ -3979,6 +4251,7 @@ const M_hud = (() => {
 const { ITEMS, RECETAS, COLOR_ESTRELLAS, icono, nodoIcono, estrellasTexto, precioTexto } = M_items;
 const { PINCELES } = M_acciones;
 const { t } = M_idioma;
+const { aApp, pantalla } = M_pantalla;
 const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -4044,7 +4317,7 @@ class Hud {
       if (['Tab', 'KeyE', 'Escape', 'KeyI'].includes(ev.code)) { ev.preventDefault(); this.cerrar(); }
     });
     addEventListener('pointermove', (ev) => {
-      this.mx = ev.clientX; this.my = ev.clientY;
+      [this.mx, this.my] = aApp(ev.clientX, ev.clientY);
       if (this.cursor) this.moverCursor();
       if (!this.elTip.classList.contains('oculto')) this.moverTip();
     });
@@ -4340,8 +4613,8 @@ class Hud {
     const T = this.elTip;
     const w = T.offsetWidth, h = T.offsetHeight;
     let x = this.mx + 16, y = this.my + 14;
-    if (x + w > innerWidth - 6) x = this.mx - w - 12;
-    if (y + h > innerHeight - 6) y = innerHeight - h - 6;
+    if (x + w > pantalla.w - 6) x = this.mx - w - 12;
+    if (y + h > pantalla.h - 6) y = pantalla.h - h - 6;
     T.style.left = `${x}px`; T.style.top = `${y}px`;
   }
 
@@ -4622,6 +4895,7 @@ const THREE = M_three;
 const { matPixel } = M_material;
 const { mergeSimple } = M_rocas;
 const { t, IDIOMAS, idioma } = M_idioma;
+const { aApp, pantalla } = M_pantalla;
 const MAX_TILT = 18, INTENSIDAD = 1.5, VELOCIDAD = 3;
 const g2r = THREE.MathUtils.degToRad;
 const _e = new THREE.Euler(0, 0, 0, 'YXZ'), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
@@ -4809,7 +5083,8 @@ class Menu {
     J.escena.add(this.ajustes.grupo, this.creditos.grupo);
 
     addEventListener('pointermove', (ev) => {
-      this.mouse.set((ev.clientX / innerWidth) * 2 - 1, (ev.clientY / innerHeight) * 2 - 1);
+      const [x, y] = aApp(ev.clientX, ev.clientY);
+      this.mouse.set((x / pantalla.w) * 2 - 1, (y / pantalla.h) * 2 - 1);
       const c = this.cartelActivo();
       if (c && !this.vuelo) J.renderer.domElement.style.cursor = this.tocarCartel(c, ev, false) ? 'pointer' : '';
     });
@@ -4823,17 +5098,17 @@ class Menu {
     this.volverDom.textContent = t('menu.volver');
     this.volverDom.addEventListener('click', () => { J.son.sfx('uiSi'); this.abrir('pausa'); });
     this.elDom.appendChild(this.volverDom);
+    // offsetX/Y ya vienen en el sistema del lienzo aunque la app esté girada
     this.elDom.addEventListener('pointerdown', (ev) => {
       if (ev.target !== this.ajustes.canvas) return;
       const cv = this.ajustes.canvas;
-      const r = cv.getBoundingClientRect();
-      this.ajustes.clic(((ev.clientX - r.left) / r.width) * cv.width, ((ev.clientY - r.top) / r.height) * cv.height);
+      this.ajustes.clic((ev.offsetX / cv.clientWidth) * cv.width, (ev.offsetY / cv.clientHeight) * cv.height);
       ev.preventDefault();
     });
     this.elDom.addEventListener('pointermove', (ev) => {
+      if (ev.target !== this.ajustes.canvas) return;
       const cv = this.ajustes.canvas;
-      const r = cv.getBoundingClientRect();
-      this.elDom.style.cursor = this.ajustes.sobre(((ev.clientX - r.left) / r.width) * cv.width, ((ev.clientY - r.top) / r.height) * cv.height) ? 'pointer' : '';
+      this.elDom.style.cursor = this.ajustes.sobre((ev.offsetX / cv.clientWidth) * cv.width, (ev.offsetY / cv.clientHeight) * cv.height) ? 'pointer' : '';
     });
     addEventListener('keydown', (ev) => this.tecla(ev));
   }
@@ -4875,7 +5150,7 @@ class Menu {
       return aire;
     };
     // con el teléfono parado la pantalla es angosta: se mira más a la choza
-    const parado = innerWidth < innerHeight;
+    const parado = pantalla.w < pantalla.h;
     const tomas = parado
       ? [[-13, -3, 3.4, 2.5, -0.5], [-11, -5, 4.5, 2, 0], [-15, 0, 3, 3, -1]]
       : [[-12, -2, 3.0, 6, -2], [-10, -4, 4.5, 5, -1], [-14, 1, 2.6, 8, -4], [-9, 3, 2.4, 10, -3], [-16, -3, 3.4, 6, -3]];
@@ -4904,7 +5179,8 @@ class Menu {
   }
 
   tocarCartel(c, ev, clic) {
-    const ndc = new THREE.Vector2((ev.clientX / innerWidth) * 2 - 1, -(ev.clientY / innerHeight) * 2 + 1);
+    const [x0, y0] = aApp(ev.clientX, ev.clientY);
+    const ndc = new THREE.Vector2((x0 / pantalla.w) * 2 - 1, -(y0 / pantalla.h) * 2 + 1);
     this.ray.setFromCamera(ndc, this.J.camara);
     const hit = this.ray.intersectObject(c.cara, false)[0];
     if (!hit || !hit.uv) { if (!clic) c.sobre(-1, -1); return false; }
@@ -5236,7 +5512,7 @@ function geoHoja(caida = 0.75) {
     for (let j = 0; j < A; j++) {
       const w = (j / (A - 1) - 0.5);
       const y = 0.28 * u - caida * u * u - Math.abs(w) * 0.1;
-      pos.push(u, y, w * 0.32);
+      pos.push(u, y, w * 0.46);
       uv.push(u, j / (A - 1));
     }
   }
@@ -5256,24 +5532,28 @@ function geoHoja(caida = 0.75) {
   return g;
 }
 
-function geoCruz(ancho, alto, planos = 3) {
-  const partes = [];
-  for (let i = 0; i < planos; i++) {
-    const p = new THREE.PlaneGeometry(ancho, alto);
-    p.translate(0, alto / 2, 0);
-    p.rotateY((i / planos) * Math.PI);
-    partes.push(p);
-  }
+// Una mata redonda como las del original: hojas en cuadraditos repartidas
+// sobre una esfera, cada una mirando para afuera. La normal es la de la
+// esfera, así la mata se ilumina como una bola y no como papelitos sueltos.
+function geoBola(radio = 0.62, n = 22) {
   const pos = [], uv = [], nor = [], idx = [];
-  let base = 0;
-  for (const p of partes) {
-    const P = p.attributes.position, U = p.attributes.uv;
-    for (let i = 0; i < P.count; i++) {
-      pos.push(P.getX(i), P.getY(i), P.getZ(i)); uv.push(U.getX(i), U.getY(i)); nor.push(0, 1, 0);
+  const oro = Math.PI * (3 - Math.sqrt(5));
+  const _d = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3();
+  for (let k = 0; k < n; k++) {
+    const y = 1 - (k / (n - 1)) * 1.25;          // casi toda la esfera, menos el fondo
+    const rr = Math.sqrt(Math.max(0, 1 - y * y));
+    const ang = k * oro;
+    _d.set(Math.cos(ang) * rr, y, Math.sin(ang) * rr).normalize();
+    _a.set(0, 1, 0).cross(_d); if (_a.lengthSq() < 1e-4) _a.set(1, 0, 0); _a.normalize();
+    _b.copy(_d).cross(_a).normalize();
+    const lado = 0.72 + ((k * 37) % 10) / 30;
+    const c = _d.clone().multiplyScalar(radio).add(new THREE.Vector3(0, radio * 0.95, 0));
+    const base = pos.length / 3;
+    for (const [sa, sb, uu, vv] of [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]]) {
+      pos.push(c.x + (_a.x * sa + _b.x * sb) * lado / 2, c.y + (_a.y * sa + _b.y * sb) * lado / 2, c.z + (_a.z * sa + _b.z * sb) * lado / 2);
+      uv.push(uu, vv); nor.push(_d.x, _d.y, _d.z);
     }
-    const I = p.index.array;
-    for (let i = 0; i < I.length; i++) idx.push(I[i] + base);
-    base += P.count;
+    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -5297,15 +5577,15 @@ class Vegetacion {
     // ── palmeras ──
     let nSeg = 0, nHoja = 0, nCoco = 0;
     const planes = palmeras.map((p, id) => {
-      const segs = 8 + Math.floor(r() * 5);
-      const hojas = 8 + Math.floor(r() * 3);
+      const segs = 9 + Math.floor(r() * 6);
+      const hojas = 13 + Math.floor(r() * 4);
       const cocos = r() < 0.6 ? 2 + Math.floor(r() * 3) : 0;
-      const plan = { ...p, id, segs, hojas, cocos, s0: nSeg, h0: nHoja, c0: nCoco, ang: r() * Math.PI * 2, incl: 0.08 + r() * 0.22, curva: 0.012 + r() * 0.02, largo: rango(r, 2.5, 3.3) };
+      const plan = { ...p, id, segs, hojas, cocos, s0: nSeg, h0: nHoja, c0: nCoco, ang: r() * Math.PI * 2, incl: 0.08 + r() * 0.22, curva: 0.012 + r() * 0.02, largo: rango(r, 3.3, 4.3) };
       nSeg += segs; nHoja += hojas; nCoco += cocos;
       return plan;
     });
     this.troncos = new THREE.InstancedMesh(geoSegmento(), matPixel('uv', { mapa: tex.corteza, tam: [16, 32], clave: 'corteza' }), nSeg);
-    const matHoja = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 20], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.18, vientoUv: true, clave: 'hojaPalmera' });
+    const matHoja = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 24], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.18, vientoUv: true, clave: 'hojaPalmera' });
     this.hojas = new THREE.InstancedMesh(geoHoja(), matHoja, nHoja);
     this.hojas.customDepthMaterial = profundidad(tex.hojaPalmera);
     this.cocos = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 6, 4), matPixel('liso', { color: 0x6b4423, clave: 'coco' }), Math.max(1, nCoco));
@@ -5317,7 +5597,7 @@ class Vegetacion {
 
     // ── arbustos y helechos ──
     const matArb = matPixel('uv', { mapa: tex.hojasArbusto, tam: [32, 32], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.07, altoViento: 1.1, clave: 'arbusto' });
-    this.matasArb = new THREE.InstancedMesh(geoCruz(1.5, 1.15), matArb, Math.max(1, arbustos.length));
+    this.matasArb = new THREE.InstancedMesh(geoBola(), matArb, Math.max(1, arbustos.length));
     this.matasArb.customDepthMaterial = profundidad(tex.hojasArbusto);
     const col = new THREE.Color();
     arbustos.forEach((a, i) => {
@@ -5330,7 +5610,7 @@ class Vegetacion {
     this.matasArb.castShadow = true; this.matasArb.receiveShadow = true;
     this.grupo.add(this.matasArb);
 
-    const matHel = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 20], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.12, vientoUv: true, clave: 'helecho' });
+    const matHel = matPixel('uv', { mapa: tex.hojaPalmera, tam: [64, 24], alfa: 0.5, lados: THREE.DoubleSide, viento: 0.12, vientoUv: true, clave: 'helecho' });
     const porHelecho = 6;
     this.helechos = new THREE.InstancedMesh(geoHoja(0.95), matHel, Math.max(1, helechos.length * porHelecho));
     this.helechos.customDepthMaterial = profundidad(tex.hojaPalmera);
@@ -5364,9 +5644,11 @@ class Vegetacion {
     }
     p.copa = pos.clone();
     for (let k = 0; k < p.hojas; k++) {
-      const a = (k / p.hojas) * Math.PI * 2 + r() * 0.3;
-      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a, rango(r, -0.25, 0.12), 'YXZ'));
-      const L = p.largo * rango(r, 0.85, 1.1);
+      // dos coronas: las de abajo caen, las nuevas de arriba apuntan al cielo
+      const nueva = k >= p.hojas - 4;
+      const a = (k / p.hojas) * Math.PI * 2 * (nueva ? 2.7 : 1) + r() * 0.3;
+      const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, a, nueva ? rango(r, 0.45, 0.8) : rango(r, -0.35, 0.2), 'YXZ'));
+      const L = p.largo * (nueva ? rango(r, 0.6, 0.75) : rango(r, 0.85, 1.1));
       _m.compose(pos, q, _s.set(L, L, L));
       this.hojas.setMatrixAt(p.h0 + k, _m);
     }
@@ -5512,7 +5794,7 @@ class Mundo {
     };
     this.libre = libre;
     const palmeras = [], arbustos = [], helechos = [];
-    for (let i = 0; i < 9000 && palmeras.length < 170; i++) {
+    for (let i = 0; i < 12000 && palmeras.length < 230; i++) {
       const x = rango(r, -115, 115), z = rango(r, -115, 115);
       const h = T.altura(x, z);
       if (h < 0.45 || h > 9) continue;
@@ -5521,10 +5803,10 @@ class Mundo {
       const prob = playa ? 0.5 : 0.08 + 0.25 * fbm2(x * 0.03, z * 0.03, 71, 2);
       if (r() > prob) continue;
       if (!libre(x, z, 1.5)) continue;
-      if (palmeras.some((p) => Math.hypot(p.x - x, p.z - z) < 3.4)) continue;
+      if (palmeras.some((p) => Math.hypot(p.x - x, p.z - z) < 3.0)) continue;
       palmeras.push({ x, z, y: h });
     }
-    for (let i = 0; i < 12000 && arbustos.length < 260; i++) {
+    for (let i = 0; i < 16000 && arbustos.length < 420; i++) {
       const x = rango(r, -110, 110), z = rango(r, -110, 110);
       const h = T.altura(x, z);
       if (h < 1.2 || T.pasto(x, z) < 0.6) continue;
@@ -6336,23 +6618,25 @@ function paja() {
   });
 }
 
-// Hoja de palmera: nervio al medio y foliolos en diagonal, fondo transparente.
+// Hoja de palmera como las del original: una pluma verde lima con foliolos en
+// diagonal hacia la punta y huecos entre medio, más amarilla en la punta y
+// más oscura del lado de abajo. Fondo transparente.
 function hojaPalmera() {
-  const W = 64, H = 20;
+  const W = 64, H = 24;
   return pintar(W, H, (x, y) => {
-    const u = x / W;
-    const medio = H / 2;
-    const ancho = (0.15 + 0.85 * Math.sin(Math.PI * Math.min(1, u * 1.05))) * (H / 2 - 1);
-    const dy = y - medio;
-    if (Math.abs(dy) < 1 && u < 0.98) return '#3d7f22';
-    if (Math.abs(dy) > ancho) return null;
-    // foliolos: bandas diagonales con huecos entre medio
-    const fase = (x + Math.abs(dy) * 1.3) % 5;
-    if (fase < 1) return Math.abs(dy) > 2 ? null : '#3d7f22';
+    const u = x / (W - 1);
+    const dy = y - (H - 1) / 2, ady = Math.abs(dy);
+    const ancho = (0.22 + 0.78 * Math.sin(Math.PI * Math.min(1, u * 1.08))) * (H / 2 - 0.5);
+    if (ady < 0.9 && u < 0.97) return u > 0.6 ? '#8fb83a' : '#6f9e2a';
+    if (ady > ancho) return null;
+    const fase = (((x - ady * 1.6) % 4) + 4) % 4;
+    if (fase < 0.9 && ady > 1.5) return null;
+    if (ady > ancho - 1.2) return '#3f8f1e';
     const h = hash2(x, y, 81);
-    if (Math.abs(dy) > ancho - 1.2) return '#3f9a27';
-    if (h > 0.9) return '#8ee25a';
-    return fase < 2.5 ? '#5cc436' : '#4fb22e';
+    if (h > 0.94) return '#d2f779';
+    if (fase < 1.9) return u > 0.68 ? '#b8ee52' : '#9ee23f';
+    if (dy < 0) return u > 0.6 ? '#8ad83a' : '#74c830';
+    return '#5aae27';
   }, false);
 }
 
@@ -6384,36 +6668,13 @@ function matasPasto() {
       const cx = h.x + h.inc * desdeAbajo;
       const ancho = 1.4 * (1 - u) + 0.35;
       if (Math.abs(x - cx) < ancho) {
-        if (u > 0.78) return '#a6f26a';
-        if (u > 0.45) return '#74dc42';
-        if (u > 0.2) return '#56c232';
-        return '#3c9c24';
+        if (u > 0.78) return '#b6fb74';
+        if (u > 0.45) return '#84ea48';
+        if (u > 0.2) return '#60cf37';
+        return '#40a827';
       }
     }
     return null;
-  }, false);
-}
-
-function nube(semilla) {
-  const W = 96, H = 48;
-  const bolas = [];
-  const n = 7 + Math.floor(hash2(semilla, 1, 111) * 5);
-  for (let i = 0; i < n; i++) {
-    const u = (i + 0.5) / n;
-    const r = 8 + hash2(i, semilla, 112) * 12 * Math.sin(Math.PI * u) + 4;
-    bolas.push({ x: 8 + u * 80, y: 34 - r * 0.55 - hash2(i, semilla, 113) * 6, r });
-  }
-  return pintar(W, H, (x, y) => {
-    let dentro = false, alto = 99;
-    for (const b of bolas) {
-      const d = Math.hypot(x - b.x, (y - b.y) * 1.05);
-      if (d < b.r) { dentro = true; alto = Math.min(alto, (y - (b.y - b.r)) / (2 * b.r)); }
-    }
-    if (!dentro || y > 40) return null;
-    if (y > 37) return '#b9cde8';
-    if (alto > 0.62) return '#cddcf0';
-    if (alto > 0.42) return '#e6eef9';
-    return '#ffffff';
   }, false);
 }
 
@@ -6433,7 +6694,6 @@ function texturas() {
     arena: arena(), pastoSuelo: pastoSuelo(), tierra: tierra(), roca: roca(),
     madera: madera(), corteza: corteza(), paja: paja(), metal: metal(),
     hojaPalmera: hojaPalmera(), hojasArbusto: hojasArbusto(), matasPasto: matasPasto(),
-    nubes: [0, 1, 2, 3, 4].map(nube),
   };
   return TEX;
 }
@@ -6451,6 +6711,8 @@ const { texturas } = M_texturas;
 const { Cielo } = M_cielo;
 const { Mundo } = M_mundo;
 const { Mina, MINA_Y } = M_mina;
+const { Reflejo } = M_agua;
+const { medirPantalla, pedirAcostado } = M_pantalla;
 const { enlazarCielo } = M_gemas;
 const { ITEMS, estrellasTexto } = M_items;
 const { Inventario } = M_inventario;
@@ -6500,14 +6762,16 @@ document.title = t('doc.titulo');
 // Escala de píxel ENTERA: la pantalla se dibuja chica y se estira con
 // image-rendering: pixelated. Con escalas no enteras los píxeles salen de
 // tamaños distintos y todo tiembla al moverse.
-let escala = 1, fovBase = 70;
+let escala = 1, fovBase = 70, reflejo = null;
 function medir() {
-  const w = innerWidth, h = innerHeight;
+  // acostado siempre: con el teléfono parado la app se gira 90° (pantalla.js)
+  const { w, h } = medirPantalla(entrada.tactil);
   escala = Math.max(1, Math.round(Math.max(w, h) / 760)) + CALIDADES[ajustes.calidad].pixelExtra;
   if (ajustes.pixel) escala = ajustes.pixel;
   if (url.has('escala')) escala = Math.max(1, +url.get('escala'));
   renderer.setPixelRatio(1 / escala);
   renderer.setSize(w, h, false);
+  if (reflejo) { const t = renderer.getDrawingBufferSize(new THREE.Vector2()); reflejo.tamano(t.x, t.y); }
   camara.aspect = w / h;
   // Con el teléfono parado, 70° verticales dejan ver casi nada de costado:
   // se abre hasta tener unos 58° horizontales (con tope, si no se deforma).
@@ -6523,10 +6787,15 @@ const nueva = url.has('nueva');
 const partida = nueva ? null : leerPartida();
 const semilla = +(url.get('semilla') || (partida && partida.semilla) || 20260929);
 const tex = texturas();
-const cielo = new Cielo(escena, tex.nubes);
+const cielo = new Cielo(escena);
 enlazarCielo(cielo);   // antes de cualquier gema: sus materiales leen el cielo
 const mundo = new Mundo(escena, tex, semilla, { pasto: CALIDADES[ajustes.calidad].pasto });
 mundo.armarAgua(cielo);
+// lo que se refleja en el agua (capa 1): con calidad alta, también el terreno
+reflejo = new Reflejo(mundo.agua);
+medir();
+const enReflejo = (o, si = true) => o.traverse((h) => { if (si) h.layers.enable(1); else h.layers.disable(1); });
+for (const o of [mundo.veg.troncos, mundo.veg.hojas, mundo.veg.cocos, mundo.choza.grupo, mundo.muelle.grupo, mundo.mina.grupo]) enReflejo(o);
 const mina = new Mina(escena, tex, semilla);
 const luces = new Luces();
 for (const l of mina.lamparas) luces.agregar(l, [1.0, 0.72, 0.4, 7.5], 1.5);
@@ -6642,6 +6911,8 @@ J.aplicarAjustes = (guardar = true) => {
   son.volumen('musica', a.musica); son.volumen('efectos', a.efectos); son.volumen('ambiente', a.ambiente);
   entrada.sens = a.sens;
   const q = CALIDADES[a.calidad] || CALIDADES[1];
+  reflejo.activo = a.calidad > 0;
+  for (const c of mundo.terreno.chunks) enReflejo(c, a.calidad === 2);
   if (J.calidad !== a.calidad) {
     cielo.ponerCalidadSombra(q.sombra, q.caja);
     if (J.calidad !== undefined) { mundo.pasto.densidad = q.pasto; mundo.pasto.todo(); }
@@ -6734,6 +7005,7 @@ J.empezar = (nuevaIsla) => {
     return;
   }
   entrada.pedirCaptura();   // dentro del clic: si no, el navegador no deja
+  if (entrada.tactil) pedirAcostado();
   if (jugador.p.y < -30) {
     J.menu.cerrar();
     J.fundido(() => { ponerBajo(true); arrancarJuego(); });
@@ -6871,7 +7143,10 @@ function paso(dt, dibujar = true) {
     if (f.t >= f.espera) { fundidos.splice(i, 1); f.fn(); if (!fundidos.length) velo.classList.remove('on'); }
   }
 
-  if (J.estado === 'menu' || J.estado === 'carga') {
+  if (J.estado === 'libre') {
+    // cámara fija de las pruebas (?cam=x,y,z&mira=x,y,z): el mundo corre igual
+    mundoComun(dt, camara.position);
+  } else if (J.estado === 'menu' || J.estado === 'carga') {
     J.menu.actualizar(dt);
     mundoComun(dt, camara.position);
   } else if (J.estado === 'jugando' || J.estado === 'ventana') {
@@ -6913,6 +7188,9 @@ function paso(dt, dibujar = true) {
   }
 
   if (dibujar) {
+    // el reflejo del agua primero (si la cámara está bajo el agua, no hace falta)
+    if (!J.bajo && camara.position.y > J.nivelAgua + 0.05) reflejo.dibujar(renderer, escena, camara, cielo.domo, J.nivelAgua);
+    else mundo.agua.material.uniforms.uHayReflejo.value = 0;
     renderer.clear();
     renderer.render(escena, camara);
     if (J.estado === 'jugando' || J.estado === 'ventana' || J.estado === 'pausa') {
@@ -6944,6 +7222,7 @@ etiquetar();
 J.acciones = new Acciones(J);
 J.hud = new Hud(J);
 J.menu = new Menu(J);
+enReflejo(J.menu.ajustes.grupo); enReflejo(J.menu.creditos.grupo);
 // al girar el teléfono la toma del menú se vuelve a elegir (parado mira más a la choza)
 addEventListener('resize', () => {
   J.menu.ubicar();
@@ -6968,6 +7247,13 @@ J.menu.abrir(idiomaElegido || directo ? 'principal' : 'idioma');
 if (directo) J.empezar(false);
 
 if (url.has('hora')) cielo.hora = +url.get('hora');
+if (url.has('cam')) {
+  const v = (k) => url.get(k).split(',').map(Number);
+  J.menu.cerrar();
+  J.estado = 'libre';
+  camara.position.set(...v('cam'));
+  if (url.has('mira')) camara.lookAt(...v('mira'));
+}
 document.getElementById('precarga').remove();
 
 let ultimo = performance.now();

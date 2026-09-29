@@ -4,16 +4,18 @@
 // nunca se ve como la línea donde termina el mundo.
 import * as THREE from '../vendor/three.module.min.js';
 import { LUZ } from './material.js';
-import { mulberry, suavizado, lim } from './azar.js';
+import { suavizado, lim } from './azar.js';
+import { Nubes } from './nubes.js';
 
 const C = (h) => new THREE.Color(h);
 const PALETA = {
-  cenitDia: C(0x2a78ec), horizonteDia: C(0xc9e8ff),
-  cenitTarde: C(0x3b5fb8), horizonteTarde: C(0xffb07a),
-  cenitNoche: C(0x070d24), horizonteNoche: C(0x1a2a55),
-  solDia: new THREE.Color(1.28, 1.2, 1.06), solTarde: new THREE.Color(1.25, 0.72, 0.42), luna: new THREE.Color(0.32, 0.42, 0.72),
-  cieloDia: new THREE.Color(0.52, 0.66, 0.9), sueloDia: new THREE.Color(0.66, 0.58, 0.42),
-  cieloNoche: new THREE.Color(0.09, 0.13, 0.27), sueloNoche: new THREE.Color(0.05, 0.06, 0.1),
+  // el azul profundo del original arriba y celeste claro abajo (medido en sus cuadros)
+  cenitDia: C(0x1c46d4), horizonteDia: C(0xa6d0ff),
+  cenitTarde: C(0x33489e), horizonteTarde: C(0xffab74),
+  cenitNoche: C(0x040817), horizonteNoche: C(0x16204d),
+  solDia: new THREE.Color(1.28, 1.2, 1.06), solTarde: new THREE.Color(1.25, 0.72, 0.42), luna: new THREE.Color(0.1, 0.14, 0.32),
+  cieloDia: new THREE.Color(0.5, 0.64, 0.92), sueloDia: new THREE.Color(0.66, 0.58, 0.42),
+  cieloNoche: new THREE.Color(0.045, 0.065, 0.15), sueloNoche: new THREE.Color(0.02, 0.025, 0.05),
 };
 
 const VERT_CIELO = /* glsl */ `
@@ -36,15 +38,17 @@ float h13(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fr
 void main() {
   vec3 d = normalize(vDir);
   float y = max(d.y, 0.0);
-  vec3 col = mix(uHorizonte, uCenit, pow(y, 0.5));
+  vec3 col = mix(uHorizonte, uCenit, pow(y, 0.62));
   if (d.y < 0.0) col = uHorizonte;
   // el sol: disco duro + halo (el bloom no existe acá: el halo lo pinta el cielo)
   float s = max(dot(d, uSol), 0.0);
   col += uSolColor * (smoothstep(0.9975, 0.9985, s) * 1.6 + pow(s, 90.0) * 0.45 + pow(s, 8.0) * 0.12) * (1.0 - uNoche * 0.8);
   // la luna, del lado opuesto
   float l = max(dot(d, -uSol), 0.0);
-  col += vec3(0.85, 0.9, 1.0) * smoothstep(0.9988, 0.9993, l) * uNoche;
-  col += vec3(0.25, 0.32, 0.55) * pow(l, 40.0) * uNoche * 0.5;
+  float disco = smoothstep(0.99905, 0.99935, l);
+  float manchas = h13(floor(d * 1400.0)) * 0.18 + h13(floor(d * 520.0)) * 0.22;
+  col = mix(col, vec3(0.93, 0.95, 1.0) * (0.9 - manchas), disco * uNoche);
+  col += vec3(0.4, 0.5, 0.95) * (pow(l, 70.0) * 0.55 + pow(l, 9.0) * 0.16) * uNoche;
   // estrellas: una grilla en la esfera, en píxeles
   if (uNoche > 0.01 && d.y > 0.0) {
     vec3 q = floor(d * 190.0);
@@ -59,7 +63,7 @@ void main() {
 }`;
 
 export class Cielo {
-  constructor(escena, texNubes) {
+  constructor(escena) {
     this.escena = escena;
     this.hora = 0.34;          // 0 medianoche · 0.25 amanecer · 0.5 mediodía
     this.duracionDia = 20 * 60; // segundos por día
@@ -75,23 +79,9 @@ export class Cielo {
     this.domo.frustumCulled = false;
     escena.add(this.domo);
 
-    // Nubes: carteles pixelados alrededor de la isla, lejos, siempre de frente.
-    this.nubes = [];
-    const r = mulberry(77);
-    for (let i = 0; i < 22; i++) {
-      const tex = texNubes[i % texNubes.length];
-      const mat = new THREE.SpriteMaterial({ map: tex, fog: false, depthWrite: false, transparent: true });
-      const sp = new THREE.Sprite(mat);
-      const ang = (i / 22) * Math.PI * 2 + r() * 0.3;
-      const dist = 380 + r() * 220;
-      const alto = 45 + r() * 110;
-      const ancho = 90 + r() * 90;
-      sp.scale.set(ancho, ancho / 2, 1);
-      sp.userData = { ang, dist, alto, vel: 0.002 + r() * 0.003 };
-      sp.renderOrder = -5;
-      escena.add(sp);
-      this.nubes.push(sp);
-    }
+    // Nubes en 3D, como las del original (antes eran carteles chatos)
+    this.nubes3d = new Nubes(escena);
+    this.domo.layers.enable(1);   // el cielo también se refleja en el agua
 
     // La luz direccional existe SOLO para dibujar el mapa de sombras: los
     // materiales de la isla hacen su propia cuenta con LUZ.
@@ -154,14 +144,8 @@ export class Cielo {
     // el domo y las nubes siguen a la cámara
     this.domo.position.copy(camara.position);
     this.domo.visible = bajo < 0.5;
-    const tinte = new THREE.Color(1, 1, 1).lerp(new THREE.Color(1.0, 0.8, 0.7), tarde * 0.6).lerp(new THREE.Color(0.32, 0.4, 0.68), noche * 0.85);
-    for (const n of this.nubes) {
-      const u = n.userData;
-      u.ang += u.vel * dt * 0.05;
-      n.position.set(camara.position.x + Math.cos(u.ang) * u.dist, u.alto, camara.position.z + Math.sin(u.ang) * u.dist);
-      n.material.color.copy(tinte);
-      n.visible = bajo < 0.5;
-    }
+    this.nubes3d.actualizar(dt, camara, luzDir, dia, tarde, noche, horiz);
+    this.nubes3d.malla.visible = bajo < 0.5;
 
     // sombra: la caja sigue al jugador de a un texel (si no, los bordes titilan)
     const s = this.sol;

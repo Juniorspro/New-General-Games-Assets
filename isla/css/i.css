@@ -2,6 +2,7 @@
    inventario de los videos; tooltip oscuro con nombre, estrellas y precio en
    una pastilla verde; menú en blanco itálico gordo, inclinado con la cámara. */
 :root {
+  --vw: 1vw; --vh: 1vh;   /* js/pantalla.js las pone según la app (girada o no) */
   --ranura: 44px;
   --tinta: #f4f6fa;
   --borde: #1d222b;
@@ -16,6 +17,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #2a78ec; tou
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
   font-family: var(--letra); color: var(--tinta); }
 button { font-family: inherit; color: inherit; cursor: pointer; appearance: none; border: 0; background: none; }
+#app { position: fixed; left: 0; top: 0; width: 100%; height: 100%; overflow: hidden; }
+html.girada #app { transform-origin: 0 0; transform: rotate(90deg) translateY(-100%); }
 #lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .oculto { display: none !important; }
 
@@ -68,7 +71,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 .noti.nueva { border-color: #ffd23a; background: rgba(90, 70, 20, .8); }
 .noti.late { animation: notiLate .25s ease-out; }
 @keyframes notiLate { 50% { transform: scale(1.06); } }
-#objetivo { position: absolute; left: max(14px, env(safe-area-inset-left)); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); max-width: min(46vw, 360px);
+#objetivo { position: absolute; left: max(14px, env(safe-area-inset-left)); bottom: calc(max(14px, env(safe-area-inset-bottom)) + 76px); max-width: min(calc(46 * var(--vw)), 360px);
   padding: 5px 10px; border-radius: 6px; background: rgba(20, 60, 110, .55); border: 2px solid var(--borde); font: 700 12px var(--letra); line-height: 1.3; }
 #objetivo::before { content: attr(data-t); display: block; font: 900 10px var(--letra); letter-spacing: .12em; color: #ffe27a; }
 #bajoAgua { position: absolute; inset: 0; background: rgba(20, 110, 170, .28); opacity: 0; transition: opacity .2s; }
@@ -76,7 +79,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 
 /* ── ventana: inventario, cofre, mesa, colección ── */
 #ventana { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(10, 20, 30, .25); }
-#vCaja { position: relative; padding: 12px; border-radius: 8px; background: var(--panel); border: 2px solid var(--borde); max-width: 96vw; max-height: 94vh; overflow: auto; backdrop-filter: blur(3px); }
+#vCaja { position: relative; padding: 12px; border-radius: 8px; background: var(--panel); border: 2px solid var(--borde); max-width: calc(96 * var(--vw)); max-height: calc(94 * var(--vh)); overflow: auto; backdrop-filter: blur(3px); }
 #vPestanas { display: flex; gap: 4px; margin-bottom: 8px; }
 #vPestanas button { padding: 5px 12px; border-radius: 5px; border: 2px solid var(--borde); background: var(--panelClaro); font: 800 13px var(--letra); }
 #vPestanas button.sel { background: #e8b42f; color: #2a1d05; }
@@ -113,23 +116,23 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 
 /* ── menú 3D: el texto se inclina con la cámara ── */
 #menu { position: fixed; inset: 0; z-index: 8; pointer-events: none; perspective: 700px; }
-#titulo { position: absolute; left: 7vw; top: 9vh; margin: 0; font: 900 italic clamp(40px, 9vw, 96px)/0.9 var(--gorda); letter-spacing: .02em; color: #fff;
+#titulo { position: absolute; left: calc(7 * var(--vw)); top: calc(9 * var(--vh)); margin: 0; font: 900 italic clamp(40px, calc(9 * var(--vw)), 96px)/0.9 var(--gorda); letter-spacing: .02em; color: #fff;
   text-shadow: 0 5px 0 #1f5fb8, 0 9px 18px rgba(10, 40, 90, .45); transform-origin: left center; }
 #titulo span:last-child { color: #ffe27a; text-shadow: 0 5px 0 #b86b12, 0 9px 18px rgba(80, 40, 0, .4); }
-#opciones { position: absolute; left: 7vw; top: 38vh; display: flex; flex-direction: column; gap: 6px; transform-origin: left center; pointer-events: auto; }
-#opciones button { text-align: left; font: 900 italic clamp(24px, 4.2vw, 46px) var(--gorda); color: #fff; letter-spacing: .03em;
+#opciones { position: absolute; left: calc(7 * var(--vw)); top: calc(38 * var(--vh)); display: flex; flex-direction: column; gap: 6px; transform-origin: left center; pointer-events: auto; }
+#opciones button { text-align: left; font: 900 italic clamp(24px, calc(4.2 * var(--vw)), 46px) var(--gorda); color: #fff; letter-spacing: .03em;
   text-shadow: 0 3px 0 rgba(20, 60, 120, .85), 0 6px 14px rgba(0, 0, 0, .35); transition: transform .18s cubic-bezier(.3,1.6,.5,1), color .15s; padding: 2px 0; }
 #opciones button:hover, #opciones button:focus-visible, #opciones button.foco { color: #ffe27a; transform: translateX(14px) scale(1.06); outline: none; }
-#opciones button.chico { font-size: clamp(16px, 2.6vw, 26px); opacity: .9; }
+#opciones button.chico { font-size: clamp(16px, calc(2.6 * var(--vw)), 26px); opacity: .9; }
 #opciones button { animation: entra .45s cubic-bezier(.2,1.3,.4,1) both; }
 #opciones button:nth-child(2) { animation-delay: .06s; } #opciones button:nth-child(3) { animation-delay: .12s; } #opciones button:nth-child(4) { animation-delay: .18s; }
 @keyframes entra { from { opacity: 0; transform: translateX(-40px); } }
 #menu.pausa { background: rgba(10, 30, 60, .35); pointer-events: auto; }
 #tableroDom { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-#tableroDom canvas { display: block; width: min(92vw, 118vh, 720px); image-rendering: pixelated; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
-#tableroDom .volver { font: 900 italic clamp(16px, 2.6vw, 24px) var(--gorda); color: #fff; text-shadow: 0 3px 0 rgba(20, 60, 120, .85); padding: 0; }
+#tableroDom canvas { display: block; width: min(calc(92 * var(--vw)), calc(118 * var(--vh)), 720px); image-rendering: pixelated; border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+#tableroDom .volver { font: 900 italic clamp(16px, calc(2.6 * var(--vw)), 24px) var(--gorda); color: #fff; text-shadow: 0 3px 0 rgba(20, 60, 120, .85); padding: 0; }
 #tableroDom .volver:hover { color: #ffe27a; }
-#menuPie { position: absolute; left: 7vw; bottom: max(14px, env(safe-area-inset-bottom)); font: 700 12px var(--letra); opacity: .85; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+#menuPie { position: absolute; left: calc(7 * var(--vw)); bottom: max(14px, env(safe-area-inset-bottom)); font: 700 12px var(--letra); opacity: .85; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
 
 /* ── dedos ── */
 #dedos { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
@@ -145,19 +148,20 @@ button { font-family: inherit; color: inherit; cursor: pointer; appearance: none
 
 /* en táctil los dedos ocupan las esquinas de abajo: el objetivo y los
    pinceles suben */
-body.tactil #objetivo { top: calc(max(10px, env(safe-area-inset-top)) + 44px); bottom: auto; max-width: min(56vw, 330px); }
+body.tactil #objetivo { top: calc(max(10px, env(safe-area-inset-top)) + 44px); bottom: auto; max-width: min(calc(56 * var(--vw)), 330px); }
 body.tactil #notis { top: calc(max(10px, env(safe-area-inset-top)) + 116px); }
 body.tactil #pinceles { left: auto; right: max(12px, env(safe-area-inset-right)); top: calc(max(10px, env(safe-area-inset-top)) + 44px); bottom: auto; transform: none; flex-direction: column; }
-@media (max-width: 460px) {
-  :root { --ranura: 36px; }
-  .ranura canvas { width: 28px; height: 28px; }
-  #vCaja { padding: 8px; }
-  .receta { min-width: 0; }
-  .recetas { grid-template-columns: 1fr; }
-}
-@media (max-height: 460px) {
-  :root { --ranura: 36px; }
-  .ranura canvas { width: 28px; height: 28px; }
-  #joy { width: 104px; height: 104px; bottom: 64px; }
-}
+/* la app angosta y la app chata (medidas de la app, no de la pantalla: girada no coinciden) */
+html.angosta { --ranura: 36px; }
+html.angosta .ranura canvas { width: 28px; height: 28px; }
+html.angosta #vCaja { padding: 8px; }
+html.angosta .receta { min-width: 0; }
+html.angosta .recetas { grid-template-columns: 1fr; }
+html.chata { --ranura: 36px; }
+html.chata .ranura canvas { width: 28px; height: 28px; }
+html.chata #joy { width: 104px; height: 104px; bottom: 64px; left: max(56px, env(safe-area-inset-left)); }
+/* acostado y chato, la columna de pinceles caería sobre los botones: en fila arriba al medio */
+html.chata body.tactil #objetivo { max-width: min(calc(34 * var(--vw)), 290px); }
+html.chata body.tactil #pinceles { left: 50%; right: auto; top: calc(max(10px, env(safe-area-inset-top)) + 44px); transform: translateX(-50%); flex-direction: row; }
+
 @media (prefers-reduced-motion: reduce) { #opciones button { animation: none; } }
