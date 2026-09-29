@@ -14,7 +14,7 @@ const antes = await pag.evaluate(() => (typeof AC !== "undefined" && AC ? AC.sta
 await pag.touchscreen.tap(400, 180);
 await pag.waitForTimeout(600);
 const despues = await pag.evaluate(() => ({ estado: AC ? AC.state : "sin audio", tema: Musica.tema, t: AC ? +AC.currentTime.toFixed(2) : 0, menu: estadoAudio(), error: AUDIO.error }));
-await pag.touchscreen.tap(400, 180); await pag.waitForTimeout(1500);
+await pag.touchscreen.tap(400, 180); await pag.waitForTimeout(4000);   // el tiempo de hornear los efectos y la música del menú
 // que salga señal DE VERDAD (en vivo, no grabada): el medidor a la salida, varias veces
 const niveles = []; for (let i = 0; i < 12; i++) { niveles.push(await pag.evaluate(() => Math.round(nivelAudio()))); await pag.waitForTimeout(150); }
 const luego = await pag.evaluate(() => ({ estado: AC.state, tema: Musica.tema, t: +AC.currentTime.toFixed(2), menu: estadoAudio() }));

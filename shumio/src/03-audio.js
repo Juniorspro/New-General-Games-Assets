@@ -56,9 +56,12 @@ function audioDespertar() {
   try {
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) { AUDIO.error = "este navegador no tiene Web Audio"; return; }
-    armarAudio(new C({ latencyHint: "interactive" }));
+    let ctx;
+    try { ctx = new C({ latencyHint: "interactive", sampleRate: SR_MUSICA }); } catch (e) { ctx = new C({ latencyHint: "interactive" }); }
+    armarAudio(ctx);
     AUDIO.desde = performance.now();
     if (AC.state !== "running") AC.resume().catch((e) => { AUDIO.error = "resume: " + (e && e.message || e); });
+    prepararEfectos();
     Musica.arrancar();
     desbloquearElemento();
   } catch (e) { AUDIO.error = (e && e.message) || String(e); AC = null; }
@@ -108,10 +111,17 @@ function nivelAudio() {
 function estadoAudio() {
   if (AUDIO.error && !AC) return "ERROR: " + AUDIO.error.slice(0, 40).toUpperCase();
   if (!AC) return AUDIO.gestos ? "NO ARRANCÓ" : "TOCÁ PARA ACTIVAR";
-  if (AC.state === "running") { const n = nivelAudio(); return "ANDANDO, SALE " + (n > -90 ? Math.round(n) + " DB" : "SILENCIO"); }
+  if (AC.state === "running") { const n = nivelAudio(), p = pendientesBanco(); return (p ? "PREPARANDO " + p + ", " : "ANDANDO, ") + "SALE " + (n > -90 ? Math.round(n) + " DB" : "SILENCIO"); }
   return AC.state === "suspended" ? "BLOQUEADO: TOCÁ OTRA VEZ" : AC.state.toUpperCase();
 }
-function probarSonido() { audioDespertar(); if (AC) { SFX.objeto(); _tono({ f: 440, dur: 0.5, tipo: "sine", vol: 0.3, salida: EFX }); } }
+function probarSonido() {
+  audioDespertar();
+  if (!AC) return;
+  SFX.objeto();
+  const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
+  o.frequency.value = 440; g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  o.connect(g); g.connect(EFX); o.start(t); o.stop(t + 0.55);
+}
 document.addEventListener("visibilitychange", () => { if (!document.hidden && AC && AC.state !== "running") AC.resume().catch(() => {}); });
 
 /** Arma el grafo (también sirve con un OfflineAudioContext, para grabar muestras en las pruebas). */
@@ -125,7 +135,7 @@ function armarAudio(ctx) {
     // del juego: el volumen del teléfono o los permisos de sonido del navegador)
     MEDIDOR = AC.createAnalyser(); MEDIDOR.fftSize = 1024; SAL.connect(MEDIDOR);
     conectarSalida();
-    const cinta = AC.createWaveShaper(); cinta.curve = curvaSat(1.4); cinta.oversample = "2x"; cinta.connect(SAL);
+    const cinta = AC.createWaveShaper(); cinta.curve = curvaSat(1.4); cinta.connect(SAL);
     MUS = AC.createGain(); MUS.gain.value = volMusica; MUS.connect(cinta);
     EFX = AC.createGain(); EFX.gain.value = volEfectos; EFX.connect(cinta);
     // dos salas: la del sótano (corta, de piedra) y una grande para el coro y los colchones
@@ -135,9 +145,140 @@ function armarAudio(ctx) {
     const e2 = AC.createGain(); e2.gain.value = 0.3; ECO_LARGO.connect(e2); e2.connect(cinta);
     RUIDO = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate);
     const r = RUIDO.getChannelData(0); for (let i = 0; i < r.length; i++) r[i] = Math.random() * 2 - 1;
-    _cuerdas.clear();
   }
 }
+
+
+// ── EL BANCO DE SONIDOS ─────────────────────────────────────────────────────────────────────
+// Sintetizar cada nota en vivo (7 osciladores por nota de piano, 3 filtros por voz, dos salas de
+// reverberación calculándose todo el tiempo) no entra en tiempo real en un teléfono común: medido,
+// la pista del jefe se calculaba apenas 4 veces más rápido que el tiempo real en un Xeon de
+// servidor, y en el teléfono se cortaba (Android corta la salida cuando el audio no llega a tiempo).
+// Así que cada nota y cada efecto se HORNEA una sola vez, en segundo plano (OfflineAudioContext),
+// con su sala ya incluida, y después se toca como una grabación: dos nodos por nota. Suena igual.
+let _grabando = false;          // true mientras se hornea: las primitivas suenan "de verdad"
+let _soloJuntar = null;         // un Set: en vez de tocar, junta las claves que va a necesitar una pista
+const BANCO = new Map();        // clave → { buf, pendiente, usado }
+const COLA_YA = [], COLA = [];  // lo urgente (efectos, la pista que suena) y lo demás
+let _horneando = false, BANCO_BYTES = 0;
+// 24 kHz para todo (y el contexto en vivo también, así nada se convierte al tocar): alcanza para
+// esta música oscura y en un parlante de teléfono no se nota; pesa la mitad que 48 kHz
+const SR_MUSICA = 24000, SR_EFECTOS = 24000;
+const PRIMITIVAS = {
+  tono: { real: (o) => _tonoReal(o), vol: 0.2, dur: 0.12, eco: 0, ecoLargo: 0 },
+  ruido: { real: (o) => _ruidoReal(o), vol: 0.25, dur: 0.15, eco: 0, ecoLargo: 0 },
+  metal: { real: (o) => _metalReal(o), vol: 0.12, dur: 0.5, eco: 0.2, ecoLargo: 0 },
+  voz: { real: (o) => _vozReal(o), vol: 0.15, dur: 0.4, eco: 0.2, ecoLargo: 0 },
+  cuerda: { real: (o) => _cuerdaReal(o), vol: 0.2, dur: 1.2, eco: 0.25, ecoLargo: 0 },
+  piano: { real: (o) => _pianoReal(o), vol: 0.12, dur: 2.5, eco: 0.3, ecoLargo: 0.15 },
+  colchon: { real: (o) => _colchonReal(o), vol: 0.05, dur: 4, eco: 0, ecoLargo: 0.5 },
+};
+/** Las frecuencias se redondean a cuarto de semitono (si no, cada gota "al azar" sería una muestra nueva). */
+const _cuarto = (f) => 440 * Math.pow(2, Math.round(48 * Math.log2(f / 440)) / 48);
+function claveDe(tipo, o) {
+  const q = {};
+  for (const k of Object.keys(o).sort()) {
+    if (k === "cuando" || k === "salida" || k === "vol") continue;
+    let v = o[k];
+    if ((k === "f" || k === "f2") && typeof v === "number" && v > 0) v = _cuarto(v);
+    else if (typeof v === "number") v = Math.round(v * 100) / 100;
+    q[k] = v;
+  }
+  return { clave: tipo + JSON.stringify(q), limpio: q };
+}
+function _tono(o = {}) { return _grabando ? _tonoReal(o) : banco("tono", o); }
+function _ruido(o = {}) { return _grabando ? _ruidoReal(o) : banco("ruido", o); }
+function _metal(o = {}) { return _grabando ? _metalReal(o) : banco("metal", o); }
+function _voz(o = {}) { return _grabando ? _vozReal(o) : banco("voz", o); }
+function _cuerda(o = {}) { return _grabando ? _cuerdaReal(o) : banco("cuerda", o); }
+function _piano(o = {}) { return _grabando ? _pianoReal(o) : banco("piano", o); }
+function _colchon(o = {}) { return _grabando ? _colchonReal(o) : banco("colchon", o); }
+function banco(tipo, o) {
+  if (!AC) return;
+  const P = PRIMITIVAS[tipo], { clave, limpio } = claveDe(tipo, o);
+  let e = BANCO.get(clave);
+  if (!e) {
+    e = { pendiente: true, usado: 0 };
+    BANCO.set(clave, e);
+    const dur = (limpio.dur ?? P.dur) + (limpio.cola || 0);
+    const eco = limpio.eco ?? P.eco, largo = limpio.ecoLargo ?? P.ecoLargo;
+    const segs = dur + (largo ? 2.9 : eco ? 1.4 : 0.1) + 0.05;
+    const trabajo = { e, segs, sr: SR_MUSICA, hacer: () => P.real({ ...limpio, cuando: 0, vol: 1, salida: MUS }) };
+    (_soloJuntar || o.salida === EFX ? COLA_YA : COLA).push(trabajo);
+    hornearCola();
+  }
+  if (_soloJuntar) { _soloJuntar.add(e); return; }
+  if (e.buf) tocarBuf(e, o.cuando || 0, o.vol ?? P.vol, o.salida || MUS, 1);
+}
+/** Toca una muestra horneada (a su hora; si ya se pasó, ya mismo). */
+function tocarBuf(e, cuando, vol, salida, velocidad) {
+  const t = Math.max(AC.currentTime, AC.currentTime + cuando + _desfase), s = AC.createBufferSource(), g = AC.createGain();
+  s.buffer = e.buf; s.playbackRate.value = velocidad; g.gain.value = vol;
+  s.connect(g); g.connect(salida || MUS); s.start(t);
+  e.usado = AC.currentTime;
+}
+/** El grafo mínimo para hornear: sin compresor ni cinta (eso va en vivo), con las dos salas. */
+const _salasPorSR = {}, _ruidoPorSR = {};
+function armarBanco(ctx) {
+  AC = ctx;
+  MUS = EFX = ctx.createGain(); MUS.connect(ctx.destination);
+  const sr = ctx.sampleRate;
+  if (!_salasPorSR[sr]) { _salasPorSR[sr] = [salaImpulso(1.3, 3.4, 0.35), salaImpulso(2.8, 2.6, 0.2)]; }
+  if (!_ruidoPorSR[sr]) { const r = ctx.createBuffer(1, sr * 2, sr), d = r.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; _ruidoPorSR[sr] = r; }
+  ECO = ctx.createConvolver(); ECO.buffer = _salasPorSR[sr][0];
+  ECO_LARGO = ctx.createConvolver(); ECO_LARGO.buffer = _salasPorSR[sr][1];
+  const e1 = ctx.createGain(); e1.gain.value = 0.32; ECO.connect(e1); e1.connect(ctx.destination);
+  const e2 = ctx.createGain(); e2.gain.value = 0.3; ECO_LARGO.connect(e2); e2.connect(ctx.destination);
+  RUIDO = _ruidoPorSR[sr];
+}
+/** Hornea lo que haya en la cola POR TANDAS: muchas muestras una detrás de otra en un solo render
+ *  (preparar las salas de reverberación es lo caro: así se prepara una vez por tanda, no por nota),
+ *  y después se corta cada una. Lo urgente (efectos, la pista que suena) va primero. */
+async function hornearCola() {
+  if (_horneando || typeof OfflineAudioContext === "undefined") return;
+  _horneando = true;
+  try {
+    while (COLA_YA.length || COLA.length) {
+      const cola = COLA_YA.length ? COLA_YA : COLA, sr = cola[0].sr, tanda = [];
+      let total = 0;
+      while (cola.length && cola[0].sr === sr && total < 24 && tanda.length < 48) { const tr = cola.shift(); tr.desde = total; total += tr.segs + 0.05; tanda.push(tr); }
+      const ctx = new OfflineAudioContext(2, Math.ceil(sr * total), sr);
+      const antes = [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO, MEDIDOR], desf = _desfase;
+      try { armarBanco(ctx); _grabando = true; for (const tr of tanda) { _desfase = tr.desde; tr.hacer(); } }
+      catch (err) { AUDIO.error = "horno: " + (err && err.message || err); }
+      finally { _grabando = false; _desfase = desf; [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO, MEDIDOR] = antes; }
+      const todo = await ctx.startRendering();
+      for (const tr of tanda) {
+        const i0 = Math.floor(tr.desde * sr), n = Math.min(todo.length - i0, Math.ceil(tr.segs * sr));
+        // en mono (el parlante del teléfono lo es): la mitad de memoria y de trabajo al tocar
+        const L = todo.getChannelData(0), R = todo.getChannelData(1), m = new Float32Array(Math.max(1, n));
+        for (let i = 0; i < n; i++) m[i] = (L[i0 + i] + R[i0 + i]) * 0.5;
+        let buf = new AudioBuffer({ length: m.length, numberOfChannels: 1, sampleRate: sr });
+        buf.copyToChannel(m, 0);
+        buf = recortarSilencio(buf);
+        tr.e.buf = buf; tr.e.pendiente = false;
+        BANCO_BYTES += buf.length * 4;
+      }
+      if (BANCO_BYTES > 40e6) olvidarViejas();
+    }
+  } finally { _horneando = false; }
+}
+/** Saca la cola de silencio del final (la sala se apaga antes de lo que se reservó). */
+function recortarSilencio(b) {
+  let fin = 0;
+  for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c); for (let i = d.length - 1; i > fin; i--) if (Math.abs(d[i]) > 1e-3) { fin = i; break; } }   // −60 dB: ya no se oye
+  const n = Math.max(1, fin + 1);
+  if (n >= b.length - 64) return b;
+  const r = new AudioBuffer({ length: n, numberOfChannels: b.numberOfChannels, sampleRate: b.sampleRate });
+  for (let c = 0; c < b.numberOfChannels; c++) r.copyToChannel(b.getChannelData(c).subarray(0, n), c);
+  return r;
+}
+/** Si el banco pesa demasiado (teléfonos con poca memoria), se olvidan las muestras que hace más no suenan. */
+function olvidarViejas() {
+  const listas = [...BANCO.entries()].filter(([, e]) => e.buf).sort((a, b) => a[1].usado - b[1].usado);
+  for (const [k, e] of listas) { if (BANCO_BYTES < 28e6) break; if (AC && AC.currentTime - e.usado < 30) continue; BANCO_BYTES -= e.buf.length * e.buf.numberOfChannels * 4; BANCO.delete(k); }
+}
+const pendientesBanco = () => COLA_YA.length + COLA.length + (_horneando ? 1 : 0);
 
 // ── piezas chicas ──
 /** Una envolvente: sube en `ataque`, se sostiene y cae exponencial en `dur`. */
@@ -153,7 +294,7 @@ function _salida(n, salida, eco, ecoLargo) {
   if (eco) { const g = AC.createGain(); g.gain.value = eco; n.connect(g); g.connect(ECO); }
   if (ecoLargo) { const g = AC.createGain(); g.gain.value = ecoLargo; n.connect(g); g.connect(ECO_LARGO); }
 }
-function _tono({ f = 440, f2 = null, dur = 0.12, tipo = "sine", vol = 0.2, ataque = 0.004, salida = EFX, eco = 0, ecoLargo = 0, cuando = 0, filtro = 0, q = 1, vib = 0 }) {
+function _tonoReal({ f = 440, f2 = null, dur = 0.12, tipo = "sine", vol = 0.2, ataque = 0.004, salida = EFX, eco = 0, ecoLargo = 0, cuando = 0, filtro = 0, q = 1, vib = 0 }) {
   if (!AC || f > AC.sampleRate * 0.45) return;   // lo que no se oye no se toca
   const t = AC.currentTime + cuando + _desfase, o = AC.createOscillator(), g = AC.createGain();
   o.type = tipo; o.frequency.setValueAtTime(f, t);
@@ -165,7 +306,7 @@ function _tono({ f = 440, f2 = null, dur = 0.12, tipo = "sine", vol = 0.2, ataqu
   n.connect(g); _salida(g, salida, eco, ecoLargo);
   o.start(t); o.stop(t + dur + 0.05);
 }
-function _ruido({ dur = 0.15, vol = 0.25, f = 1200, f2 = null, tipo = "lowpass", q = 1, salida = EFX, eco = 0, ecoLargo = 0, cuando = 0, ataque = 0.002 }) {
+function _ruidoReal({ dur = 0.15, vol = 0.25, f = 1200, f2 = null, tipo = "lowpass", q = 1, salida = EFX, eco = 0, ecoLargo = 0, cuando = 0, ataque = 0.002 }) {
   if (!AC) return;
   const t = AC.currentTime + cuando + _desfase, s = AC.createBufferSource(), fl = AC.createBiquadFilter(), g = AC.createGain();
   s.buffer = RUIDO; s.playbackRate.value = 0.7 + Math.random() * 0.6;
@@ -178,13 +319,13 @@ const va = (x, p = 0.1) => x * (1 - p + Math.random() * p * 2);   // variar ±10
 const midiF = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
 /** Una campana o un metal: parciales inarmónicos que se apagan a distinto ritmo. */
-function _metal({ f = 1800, dur = 0.5, vol = 0.12, cuando = 0, salida = EFX, eco = 0.2, parciales = [1, 2.76, 5.4, 8.93], ecoLargo = 0 }) {
+function _metalReal({ f = 1800, dur = 0.5, vol = 0.12, cuando = 0, salida = EFX, eco = 0.2, parciales = [1, 2.76, 5.4, 8.93], ecoLargo = 0 }) {
   parciales.forEach((p, i) => _tono({ f: f * p, dur: dur / (1 + i * 0.7), tipo: "sine", vol: vol / (1 + i * 0.9), ataque: 0.001, cuando, salida, eco, ecoLargo }));
 }
 
 /** Una voz: una glotis (diente de sierra con vibrato y respiración) por los formantes de la vocal. */
 const VOCALES = { a: [[800, 1], [1150, 0.5], [2900, 0.25]], o: [[450, 1], [800, 0.45], [2830, 0.15]], u: [[325, 1], [700, 0.3], [2530, 0.1]], e: [[400, 1], [1600, 0.5], [2700, 0.25]] };
-function _voz({ f = 220, f2 = null, dur = 0.4, vol = 0.15, vocal = "a", cuando = 0, salida = EFX, eco = 0.2, ecoLargo = 0, ataque = 0.02, vib = 0.012, aire = 0.15, raspa = 0, cola = 0 }) {
+function _vozReal({ f = 220, f2 = null, dur = 0.4, vol = 0.15, vocal = "a", cuando = 0, salida = EFX, eco = 0.2, ecoLargo = 0, ataque = 0.02, vib = 0.012, aire = 0.15, raspa = 0, cola = 0 }) {
   if (!AC) return;
   const t = AC.currentTime + cuando + _desfase, o = AC.createOscillator(), mezcla = AC.createGain(), g = AC.createGain();
   o.type = "sawtooth"; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -201,7 +342,7 @@ function _voz({ f = 220, f2 = null, dur = 0.4, vol = 0.15, vocal = "a", cuando =
 // ── la cuerda pulsada (Karplus-Strong): se calcula una vez por nota y se guarda ──
 const _cuerdas = new Map();
 function cuerdaBuf(midi, brillo = 0.5, seg = 2.2) {
-  const k = `${midi}|${brillo}`;
+  const k = `${midi}|${brillo}|${AC.sampleRate}`;
   if (_cuerdas.has(k)) return _cuerdas.get(k);
   const sr = AC.sampleRate, n = Math.floor(sr * seg), b = AC.createBuffer(1, n, sr), d = b.getChannelData(0);
   const f = midiF(midi), P = Math.max(2, Math.round(sr / f)), linea = new Float32Array(P);
@@ -214,7 +355,7 @@ function cuerdaBuf(midi, brillo = 0.5, seg = 2.2) {
   return b;
 }
 /** Una nota de cuerda. dist: 0 limpia; >0 guitarra saturada por un "amplificador". */
-function _cuerda({ midi, cuando = 0, dur = 1.2, vol = 0.2, salida = MUS, eco = 0.25, ecoLargo = 0, brillo = 0.5, dist = 0, filtro = 5000, pan = 0 }) {
+function _cuerdaReal({ midi, cuando = 0, dur = 1.2, vol = 0.2, salida = MUS, eco = 0.25, ecoLargo = 0, brillo = 0.5, dist = 0, filtro = 5000, pan = 0 }) {
   if (!AC) return;
   const t = AC.currentTime + cuando + _desfase, s = AC.createBufferSource(), g = AC.createGain();
   s.buffer = cuerdaBuf(midi, brillo);
@@ -230,13 +371,13 @@ function _cuerda({ midi, cuando = 0, dur = 1.2, vol = 0.2, salida = MUS, eco = 0
 }
 
 /** Un piano: cada parcial un poquito más agudo de lo justo (la cuerda rígida) y el golpe del martillo. */
-function _piano({ midi, cuando = 0, dur = 2.5, vol = 0.12, salida = MUS, eco = 0.3, ecoLargo = 0.15 }) {
+function _pianoReal({ midi, cuando = 0, dur = 2.5, vol = 0.12, salida = MUS, eco = 0.3, ecoLargo = 0.15 }) {
   const f = midiF(midi);
   for (let k = 1; k <= 6; k++) _tono({ f: f * k * (1 + 0.0004 * k * k), dur: dur / (0.6 + k * 0.5), tipo: "sine", vol: vol / (k * k * 0.6 + 0.4), ataque: 0.003, cuando, salida, eco, ecoLargo });
   _ruido({ dur: 0.03, vol: vol * 0.25, f: 2500, tipo: "bandpass", q: 1, cuando, salida });
 }
 /** Un colchón: tres sierras desafinadas por nota, con filtro que respira (cuerdas / órgano viejo). */
-function _colchon({ notas, cuando = 0, dur = 4, vol = 0.05, salida = MUS, filtro = 900, ecoLargo = 0.5, ataque = 0.8 }) {
+function _colchonReal({ notas, cuando = 0, dur = 4, vol = 0.05, salida = MUS, filtro = 900, ecoLargo = 0.5, ataque = 0.8 }) {
   if (!AC) return;
   const t = AC.currentTime + cuando + _desfase, fl = AC.createBiquadFilter(), g = AC.createGain();
   fl.type = "lowpass"; fl.frequency.setValueAtTime(filtro * 0.5, t); fl.frequency.linearRampToValueAtTime(filtro, t + dur * 0.5); fl.frequency.linearRampToValueAtTime(filtro * 0.6, t + dur); fl.Q.value = 0.8;
@@ -298,6 +439,31 @@ const SFX = {
   negro: () => { BAT.bombo(0, 0.5, EFX); [0, 1, 6].forEach((s, i) => _voz({ f: midiF(38 + s), dur: 1.2, vol: 0.12, vocal: "o", cuando: i * 0.03, ataque: 0.02, ecoLargo: 0.6, raspa: 0.8 })); _ruido({ dur: 0.8, vol: 0.2, f: 900, f2: 120, tipo: "lowpass", ecoLargo: 0.4 }); },
   santa: () => { _voz({ f: midiF(76), dur: 0.7, vol: 0.06, vocal: "a", ecoLargo: 0.6, ataque: 0.03 }); _metal({ f: 1568, dur: 0.9, vol: 0.05, ecoLargo: 0.4 }); },
 };
+
+// Los efectos también se hornean enteros (cada uno con sus capas y su sala), y los que suenan todo
+// el tiempo tienen dos o tres versiones (cada una con su azar), así no suenan siempre idénticos.
+const SFX_REAL = { ...SFX };
+const SFX_LARGO = { explosion: 2.6, jefe: 3.2, pacto: 3.4, pozo: 2.4, objeto: 2.8, secreto: 2.6, negro: 2.6, malo: 2.0, rayo: 2.0, muere: 1.6, mecha: 1.4, activo: 2.0, corazon: 1.4, santa: 2.2, cargado: 1.6 };
+const SFX_VARIAS = { lagrima: 3, chapoteo: 3, golpe: 3, moho: 2, escupe: 2, roca: 2, zumbido: 2, moneda: 2, dolor: 2 };
+const BANCO_SFX = {};
+function sfxBanco(k) {
+  if (_grabando) return SFX_REAL[k]();
+  if (!AC) return;
+  let v = BANCO_SFX[k];
+  if (!v) { sfxBancoSolo(k); v = BANCO_SFX[k]; }
+  const listas = v.filter((e) => e.buf);
+  if (listas.length) tocarBuf(listas[Math.floor(Math.random() * listas.length)], 0, 1, EFX, 0.96 + Math.random() * 0.08);
+}
+for (const k of Object.keys(SFX_REAL)) SFX[k] = () => sfxBanco(k);
+/** Deja horneados todos los efectos de entrada (se piden al arrancar el audio, antes que la música). */
+function prepararEfectos() { for (const k of Object.keys(SFX_REAL)) sfxBancoSolo(k); }
+function sfxBancoSolo(k) {
+  if (BANCO_SFX[k]) return;
+  const v = BANCO_SFX[k] = [];
+  // la primera versión, ya; las otras (para que no suenen idénticos), cuando haya tiempo
+  for (let i = 0; i < (SFX_VARIAS[k] || 1); i++) { const e = { pendiente: true, usado: 0 }; v.push(e); (i ? COLA : COLA_YA).push({ e, segs: SFX_LARGO[k] || 1.2, sr: SR_EFECTOS, hacer: () => SFX_REAL[k]() }); }
+  hornearCola();
+}
 
 // ── la música: por compases, con el reloj del audio. Cada pista tiene su capa tranquila y su
 //    capa PESADA (como en el original): la pesada sube cuando hay muchos enemigos en la sala. ──
@@ -396,6 +562,8 @@ const Musica = {
     if (this.deseado !== this.tema) this.cambiar();
     const t = TEMAS[this.tema];
     if (!t || !this.capas) return;
+    // antes de sonar, la pista se hornea (hasta 8 s de espera; lo que falte, se hornea sonando)
+    if (this.juntadas && performance.now() - this.desdeCambio < 8000 && [...this.juntadas].some((e) => e.pendiente)) { this.prox = AC.currentTime + 0.1; return; }
     const largo = 4 * 60 / t.bpm;
     while (this.prox < AC.currentTime + 0.4) {
       if (t.unaVez && this.n >= t.unaVez) return;
@@ -405,10 +573,24 @@ const Musica = {
       this.prox += largo;
     }
   },
+  /** Junta (sin tocar) todas las notas que usa una pista en sus primeros compases, y las manda a hornear. */
+  juntar(nombre, urgente) {
+    const t = TEMAS[nombre];
+    if (!t || !AC) return new Set();
+    const set = new Set(), antes = _soloJuntar, desde = COLA_YA.length;
+    _soloJuntar = set;
+    const c = { calma: MUS, pesada: MUS, pesadaActiva: true };
+    try { for (let n = 0; n < (t.unaVez || 8); n++) t.compas(0, n, c); } finally { _soloJuntar = antes; }
+    if (!urgente) for (const tr of COLA_YA.splice(desde)) COLA.push(tr);   // lo de esta pista, al fondo
+    return set;
+  },
   cambiar() {
     // la pista vieja se apaga en un segundo (sus notas ya programadas se van con su capa)
     if (this.capas) { const v = this.capas; v.calma.gain.setTargetAtTime(0.0001, AC.currentTime, 0.35); v.pesada.gain.setTargetAtTime(0.0001, AC.currentTime, 0.35); setTimeout(() => { v.calma.disconnect(); v.pesada.disconnect(); }, 3000); }
     this.tema = this.deseado; this.n = 0; this.prox = AC.currentTime + 0.08;
+    this.juntadas = this.juntar(this.tema, true); this.desdeCambio = performance.now();
+    // y de paso, las que probablemente vengan después (el jefe y la calma), sin apuro
+    if (this.tema === "sotano" || this.tema === "raices") { this.juntar("jefe", false); this.juntar("calma", false); }
     const calma = AC.createGain(), pesada = AC.createGain();
     calma.gain.value = 1; pesada.gain.value = 0.0001 + this.intensidad;
     calma.connect(MUS); pesada.connect(MUS);

@@ -9,6 +9,12 @@ for (const [p, s, pes] of pistas) {
   const b64 = await pag.evaluate(([p, s, pes]) => window.__SH.audioMuestra("musica", p, s, pes), [p, s, pes]);
   writeFileSync(salida(`audio/musica-${p}${pes ? "-pesada" : ""}.wav`), Buffer.from(b64, "base64"));
 }
+// lo que suena DE VERDAD en el juego: tocado desde el banco de muestras horneadas (necesita un toque)
+await pag.evaluate(() => audioDespertar());
+for (const [p, s, pes] of [["sotano", 14, true], ["jefe", 12, true], ["menu", 14, false]]) {
+  const b64 = await pag.evaluate(([p, s, pes]) => window.__SH.audioBanco(p, s, pes), [p, s, pes]);
+  writeFileSync(salida(`audio/banco-${p}${pes ? "-pesada" : ""}.wav`), Buffer.from(b64, "base64"));
+}
 const efectos = ["lagrima", "chapoteo", "golpe", "dolor", "muere", "puertaAbre", "puertaCierra", "objeto", "malo", "moneda", "corazon", "llave", "recoger", "mecha", "explosion", "roca", "jefe", "secreto", "escupe", "capsula", "cargado", "activo", "pacto", "pozo", "rayo", "laser", "santa", "zumbido"];
 const b64 = await pag.evaluate((e) => window.__SH.audioMuestra("sfx", e, e.length + 2), efectos);
 writeFileSync(salida("audio/efectos.wav"), Buffer.from(b64, "base64"));

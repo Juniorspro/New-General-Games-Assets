@@ -98,13 +98,31 @@ Object.assign(window.__SH, {
   },
   /** Graba una muestra de audio sin parlantes (OfflineAudioContext) y la devuelve como WAV en base64.
    *  tipo "musica": n compases de una pista (con o sin la capa pesada); "sfx": una lista de efectos. */
-  audioMuestra: async (tipo, que, segs = 12, pesada = true) => {
-    const sr = 44100, ctx = new OfflineAudioContext(2, sr * segs, sr), antes = [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO];
+  /** Lo mismo pero tocando desde el BANCO (lo que suena de verdad en el juego): hornea y graba. */
+  audioBanco: async (que, segs = 12, pesada = true) => {
+    const set = Musica.juntar(que, true);
+    while ([...set].some((e) => e.pendiente) || pendientesBanco()) await new Promise((r) => setTimeout(r, 50));
+    const sr = 24000, ctx = new OfflineAudioContext(2, sr * segs, sr), antes = [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO, MEDIDOR];
     armarAudio(ctx); MUS.gain.value = 0.55; EFX.gain.value = 0.8;
+    const t = TEMAS[que]; let n = 0;
+    for (let x = 0.05; x < segs - 1; x += 4 * 60 / t.bpm) { if (t.unaVez && n >= t.unaVez) break; t.compas(x, n++, { calma: MUS, pesada: MUS, pesadaActiva: pesada }); }
+    [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO, MEDIDOR] = antes;
+    const b = await ctx.startRendering(), L = b.getChannelData(0), N = L.length, buf = new ArrayBuffer(44 + N * 2), v = new DataView(buf);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); v.setUint32(4, 36 + N * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, N * 2, true);
+    for (let i = 0; i < N; i++) v.setInt16(44 + i * 2, lim(L[i], -1, 1) * 32767, true);
+    let bin = ""; const u8 = new Uint8Array(buf); for (let i = 0; i < u8.length; i += 32768) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 32768));
+    return btoa(bin);
+  },
+  audioMuestra: async (tipo, que, segs = 12, pesada = true) => {
+    const sr = 44100, ctx = new OfflineAudioContext(2, sr * segs, sr), antes = [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO, MEDIDOR];
+    armarAudio(ctx); MUS.gain.value = 0.55; EFX.gain.value = 0.8; _grabando = true;   // acá se graba todo "en vivo", sin hornear
     if (tipo === "musica") { const t = TEMAS[que]; let n = 0; for (let x = 0.05; x < segs - 1; x += 4 * 60 / t.bpm) { if (t.unaVez && n >= t.unaVez) break; t.compas(x, n++, { calma: MUS, pesada: MUS, pesadaActiva: pesada }); } }
     else que.forEach((k, i) => { _desfase = 0.1 + i * 1.0; SFX[k](); _desfase = 0; });
+    // se devuelve todo al contexto de verdad ANTES de esperar el render (mientras tanto el juego sigue sonando)
+    _grabando = false;
+    [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO, MEDIDOR] = antes;
     const b = await ctx.startRendering();
-    [AC, SAL, MUS, EFX, RUIDO, ECO, ECO_LARGO] = antes; _cuerdas.clear();
     const L = b.getChannelData(0), R = b.getChannelData(1), n = L.length, buf = new ArrayBuffer(44 + n * 4), v = new DataView(buf);
     const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
     w(0, "RIFF"); v.setUint32(4, 36 + n * 4, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 4, true);
