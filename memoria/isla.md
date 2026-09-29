@@ -22,10 +22,11 @@ Qué quedó en `isla/`, cómo se hizo y lo que se pagó. Ver también: [juegos](
 - El color inline de un botón pisa la clase `.sel`: resaltar con borde y sombra.
 - Llamar a una función que lee un `const` antes de declararlo revienta (zona muerta), aunque sea con `J && …`.
 - Las rocas grandes de la orilla salían en todas las tomas del menú: se sacaron en 18 m alrededor de la choza. → `isla/js/mundo.js`
+- Lo que depende del azar y hace falta para avanzar se garantiza: la semilla de siempre no daba ninguna roca con veta arriba (5 cerca del cerro al 45 %); ahora hay al menos 6. → `isla/js/mundo.js`
 - Herramientas en primera persona: con el pivote en el ojo, el mango se ve como una tabla gigante. El pivote va en el puño, fuera de cuadro abajo a la derecha. → `isla/js/mano.js › POSE`
 
 ## Lo medido (29/09/2026, SwiftShader, 960×540)
-- 32/32 (`isla/pruebas/juego.mjs`) + 6/6 (`un-archivo.mjs`); lógica 0,23 ms por cuadro; playa 349.846 triángulos y 124 llamadas; mina 64.588 y 17.
+- 32/32 (`isla/pruebas/juego.mjs`) + 6/6 (`un-archivo.mjs`); lógica 0,23-0,28 ms por cuadro; playa 349.846 triángulos y 124 llamadas; mina 64.588 y 17.
 - Archivo único de 982 KB; carga en 427-453 ms desde `file://`. Otras 5 semillas sin errores (sin mirarlas en pantalla).
 
 ## Pendiente

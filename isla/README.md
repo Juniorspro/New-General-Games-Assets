@@ -26,7 +26,7 @@ una imagen ni un audio de archivo. En español, inglés y portugués.
 |---|---|
 | comprobaciones | **32/32** en `pruebas/juego.mjs` y **6/6** en `pruebas/un-archivo.mjs` |
 | carga hasta la sonda | 514-693 ms (módulos) · 427-453 ms (archivo único, desde `file://`) |
-| lógica de un cuadro, sin dibujar | **0,23 ms** (el presupuesto de 60 cuadros es 16,7 ms) |
+| lógica de un cuadro, sin dibujar | **0,23-0,28 ms** en dos corridas (el presupuesto de 60 cuadros es 16,7 ms) |
 | en la playa | 349.846 triángulos, 124 llamadas de dibujo |
 | en la mina | 64.588 triángulos, 17 llamadas |
 | partida guardada | 3,0 KB en `localStorage` (solo lo que cambió contra la semilla) |

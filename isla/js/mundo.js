@@ -132,6 +132,13 @@ export class Mundo {
       const veta = cercaCerro && r() < 0.45 ? vetas[Math.floor(r() * vetas.length)] : null;
       minables.push({ x, z, y: h, r: rango(r, 0.9, 1.5), veta, colorVeta: veta ? COLORES_VETA[veta] : 0 });
     }
+    // Al menos seis rocas con veta, las más cercanas al cerro: con la semilla
+    // de siempre el azar no daba ninguna, y arriba no aparecía nunca una gema.
+    const conVeta = minables.filter((m) => m.veta).length;
+    if (conVeta < 6) {
+      const orden = minables.filter((m) => !m.veta).sort((a, b) => Math.hypot(a.x - C.x, a.z - C.z) - Math.hypot(b.x - C.x, b.z - C.z));
+      for (const m of orden.slice(0, 6 - conVeta)) { m.veta = vetas[Math.floor(r() * vetas.length)]; m.colorVeta = COLORES_VETA[m.veta]; }
+    }
     this.rocas = new Rocas(tex, decor, minables);
     escena.add(this.rocas.grupo);
 
