@@ -10,7 +10,7 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Quedó ([aeroplaza-48](aeroplaza-48.md)): el modo construir (54 piezas), el celu parado, los botones en el celu y
     los arreglos del recorrido (`arreglos.mjs` 19/19). La n 5, la página v48 y el HTML (el envío dio 500 un rato).
   - Después pidió "arreglá la construcción, como Sims Mobile, que sea cómoda". Quedó ([aeroplaza-49](aeroplaza-49.md)):
-    `obra.js` (tocar, arrastrar, la barrita, cuartos, miniaturas 3D, paredes cortadas); `casa.mjs` 35/35.
+    `obra.js` (tocar, arrastrar, la barrita, cuartos, miniaturas 3D, paredes cortadas); `casa.mjs` 35/35. La n 6.
   - Falta: que diga cómo le queda en su celu.
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".

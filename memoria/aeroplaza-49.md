@@ -73,3 +73,5 @@ Pidió: "intentá arreglar la construcción, hacela bien, Sims Mobile, que sea c
   - Fotos: `casa-construir-celu.png`, `casa-cuarto.png`, `casa-terminada.png` y `casa-construir-compu.png`.
 - Para ubicar toques: `construyendo.aPantalla(x, y, z)`. Para dejar la vista quieta: `cam.plano.centro`, `dist`,
   `cam.yaw` y `C.yawObj`. Un cuadro dibujado (`avanzar(P, 1)`) antes de la foto; si no, sale el último que se dibujó.
+- La tanda entera (26 + las 18 de VR y manos): 42 de 44 a la primera; celu y actualizar, bien solas (la carga de la
+  máquina, como en la 48). Publicada la n 6 (commit 00c0b374, APK 46: no hizo falta una nueva).

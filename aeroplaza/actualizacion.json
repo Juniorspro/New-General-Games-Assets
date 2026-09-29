@@ -1,15 +1,15 @@
 {
- "n": 5,
+ "n": 6,
  "fecha": "2026-09-29",
- "notas": "Construí tu casa (📱 › Construir): paredes, pisos, escaleras y 54 piezas. El celu va parado y guarda los botones que no usás. Arreglos en menús y minijuegos.",
+ "notas": "Construir como en Sims Mobile: tocá algo para elegirlo y arrastralo, dibujá paredes y cuartos arrastrando, catálogo con miniaturas y paredes que se bajan solas.",
  "apkMin": 1,
  "apk": {
   "codigo": 46
  },
  "html": {
-  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/c41403c3cf1f924c96382cd27891c1a499cbbff3/aeroplaza/aeroplaza.html",
-  "sha256": "5f918e18f0de0f6f9eb879c61da8178715c43483cf97e286d42713595c4fa4e8",
-  "bytes": 3394724
+  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/00c0b374072dea9e0e541bccffbd9b637738ef23/aeroplaza/aeroplaza.html",
+  "sha256": "f0e984c194b1a2a518e525fbf42e6bf939e1df76ca12edae327480fce1aeb785",
+  "bytes": 3422015
  },
  "fuentes": [
   "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/refs/heads/claude/fijate-iszyer/aeroplaza/actualizacion.json"
