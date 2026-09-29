@@ -32,7 +32,7 @@ function iniciarPiso(n) {
   J.estado = "juego";
   entrarSala(J.piso.inicio, null);
   J.fundido = 45;
-  rotulo(J.piso.nombre, n === ULTIMO_PISO ? "EL FONDO" : "", "oro");
+  rotulo(J.piso.nombre, "");
   Musica.poner(PISOS[n].musica);
 }
 

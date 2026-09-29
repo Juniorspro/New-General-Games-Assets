@@ -13,7 +13,7 @@
 - Prefiere un solo HTML que abra en el teléfono, o un APK que se actualice solo (nunca pasarle un APK a mano).
 - Usa un visor VR Box con el teléfono; tiene ARCore.
 - Se queja corto ("va para el culo"): pedirle una captura de un diagnóstico dentro de la app.
-- 29/09/2026: arranca un JUEGO NUEVO y pasó tres guías (`guias/`). Todavía no dijo cuál.
+- 29/09/2026: el juego nuevo es **Shumio's Depths** (`shumio/`): réplica de Isaac Repentance con arte propio, para celular (TCL 20 SE) y PC. Quiere fidelidad verificada con capturas, no de memoria. → [juegos](juegos.md)
 
 ## Las notas
 | nota | abrila cuando… |

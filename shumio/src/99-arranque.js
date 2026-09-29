@@ -64,6 +64,11 @@ Object.assign(window.__SH, {
   juego: () => J, menu: () => MENU, perf: () => PERF, pant: () => PANT,
   nueva: (s) => { MENU.activo = null; nuevaPartida(s); },
   irA: (tipo) => { const s = [...J.piso.salas.values()].find((x) => x.tipo === tipo); if (s) { entrarSala(s, null); J.estado = "juego"; } return !!s; },
+  rotuloPrueba: (tit, sub, ancho = 330) => {
+    const s1 = rotuloSpr(tit), s2 = sub ? subtituloSpr(sub) : null, banda = bandaSpr(ancho), c = lienzoNuevo(ancho, 40), g = c.getContext("2d");
+    g.fillStyle = "#2a211d"; g.fillRect(0, 0, ancho, 40); g.drawImage(banda, 0, 2); g.drawImage(s1, Math.round(ancho / 2 - s1.width / 2), 2 + Math.round(12 - s1.height / 2) + 1); if (s2) g.drawImage(s2, Math.round(ancho / 2 - s2.width / 2), 22);
+    const z = 4, o = lienzoNuevo(ancho * z, 40 * z), go = o.getContext("2d"); go.imageSmoothingEnabled = false; go.drawImage(c, 0, 0, ancho * z, 40 * z); return o.toDataURL();
+  },
   vs: () => { if (J.vsPendiente) empezarVs(); },
   matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
 });

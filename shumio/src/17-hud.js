@@ -176,18 +176,16 @@ function dibujarRotulos(g) {
   const r = J.rotulos[J.rotulos.length - 1];
   if (!r) return;
   // la franja entra de un costado, la letra de bloque aparece encima; al final, todo se va
-  const t = r.t, entra = Math.min(1, t / 10), sale = t > 150 ? (t - 150) / 20 : 0;
-  const s1 = rotuloSpr(r.titulo, { grad: r.grad === "oro" ? "blanco" : r.grad }), s2 = r.sub ? bloqueSpr(r.sub) : null;
-  const bw = Math.min(W - 4, Math.max(s1.width + 110, 230)), banda = bandaSpr(bw);
-  const y = PANT.salaY + 30, bx = Math.round(W / 2 - bw / 2);
-  g.globalAlpha = 1 - sale;
-  const corte = Math.round(bw * entra);   // la pincelada se "pinta" de izquierda a derecha
-  g.drawImage(banda, 0, 0, corte, banda.height, bx, y, corte, banda.height);
-  if (t > 6) {
-    const dy = t < 12 ? 12 - t : 0;
-    g.drawImage(s1, Math.round(W / 2 - s1.width / 2), y + Math.round(34 / 2 - s1.height / 2) + 1 - dy);
-    if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2), y + 36);
-  }
+  const t = r.t, entra = 1 - Math.pow(1 - Math.min(1, t / 9), 3), sale = t > 150 ? Math.pow((t - 150) / 20, 2) : 0;
+  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null;
+  const bw = Math.min(W, Math.max(s1.width + 150, Math.round(W * 0.72))), banda = bandaSpr(bw);
+  const y = PANT.salaY + 30;
+  // entra desde la izquierda y se va por la derecha (rápido), el texto viaja con la franja
+  const dx = Math.round((1 - entra) * -W + sale * W);
+  const bx = Math.round(W / 2 - bw / 2) + dx;
+  g.drawImage(banda, bx, y);
+  g.drawImage(s1, Math.round(W / 2 - s1.width / 2) + dx, y + Math.round(12 - s1.height / 2) + 1);
+  if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2) + dx, y + 20);
   g.globalAlpha = 1;
 }
 

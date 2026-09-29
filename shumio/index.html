@@ -1488,52 +1488,175 @@ function cifrasSpr(str, color = "blanco") {
   });
 }
 
-// ── la letra de los rótulos (nombre del piso, del objeto): el bloque al doble, pesado y mordido ──
-/** Como el "DARK ROOM" del original: letras de 16 px con trazos de 4, las esquinas y los bordes
- *  comidos (siempre igual para el mismo texto), blanca con la panza gris, contorno negro doble. */
-function rotuloSpr(str, o = {}) {
+// ── LA LETRA DE LOS RÓTULOS, medida sobre el original ──
+// En la captura oficial ("MUTANT SPIDER" a 960×540 = 2× la resolución del juego) las letras miden
+// 10 px de alto y 10–12 de ancho: casi cuadradas, trazos verticales de 3, barras de 2, huecos
+// chicos, esquinas redondeadas de un píxel y la I tan ancha como las demás (con remates). Blancas,
+// limpias. Acá, con 240 px de alto en vez de 270: letras de 9×9.
+const TITULO = {
+  A: [".#######.", "#########", "###...###", "###...###", "#########", "#########", "###...###", "###...###", "###...###"],
+  B: ["########.", "#########", "###...###", "########.", "########.", "###...###", "###...###", "#########", "########."],
+  C: [".########", "#########", "###......", "###......", "###......", "###......", "###......", "#########", ".########"],
+  D: ["########.", "#########", "###...###", "###...###", "###...###", "###...###", "###...###", "#########", "########."],
+  E: ["########", "########", "###.....", "#######.", "#######.", "###.....", "###.....", "########", "########"],
+  F: ["########", "########", "###.....", "#######.", "#######.", "###.....", "###.....", "###.....", "###....."],
+  G: [".########", "#########", "###......", "###.#####", "###.#####", "###...###", "###...###", "#########", ".#######."],
+  H: ["###...###", "###...###", "###...###", "#########", "#########", "###...###", "###...###", "###...###", "###...###"],
+  I: ["#######", "#######", "..###..", "..###..", "..###..", "..###..", "..###..", "#######", "#######"],
+  J: ["......###", "......###", "......###", "......###", "......###", "###...###", "###...###", "#########", ".#######."],
+  K: ["###...###", "###..###.", "###.###..", "######...", "#####....", "######...", "###.###..", "###..###.", "###...###"],
+  L: ["###.....", "###.....", "###.....", "###.....", "###.....", "###.....", "###.....", "########", "########"],
+  M: ["###.....###", "####...####", "#####.#####", "###.###.###", "###..#..###", "###.....###", "###.....###", "###.....###", "###.....###"],
+  N: ["###...###", "####..###", "#####.###", "###.#####", "###..####", "###...###", "###...###", "###...###", "###...###"],
+  O: [".#######.", "#########", "###...###", "###...###", "###...###", "###...###", "###...###", "#########", ".#######."],
+  P: ["########.", "#########", "###...###", "###...###", "#########", "########.", "###......", "###......", "###......"],
+  Q: [".#######.", "#########", "###...###", "###...###", "###...###", "###.#####", "###..####", "#########", ".########"],
+  R: ["########.", "#########", "###...###", "###...###", "########.", "########.", "###.###..", "###..###.", "###...###"],
+  S: [".########", "#########", "###......", "########.", ".########", "......###", "......###", "#########", "########."],
+  T: ["#########", "#########", "...###...", "...###...", "...###...", "...###...", "...###...", "...###...", "...###..."],
+  U: ["###...###", "###...###", "###...###", "###...###", "###...###", "###...###", "###...###", "#########", ".#######."],
+  V: ["###...###", "###...###", "###...###", "###...###", "###...###", ".###.###.", "..#####..", "...###...", "....#...."],
+  W: ["###.....###", "###.....###", "###.....###", "###.....###", "###..#..###", "###.###.###", "#####.#####", "####...####", "###.....###"],
+  X: ["###...###", "###...###", ".###.###.", "..#####..", "...###...", "..#####..", ".###.###.", "###...###", "###...###"],
+  Y: ["###...###", "###...###", "###...###", ".###.###.", "..#####..", "...###...", "...###...", "...###...", "...###..."],
+  Z: ["#########", "#########", ".....###.", "....###..", "...###...", "..###....", ".###.....", "#########", "#########"],
+  0: [".#######.", "#########", "###...###", "###...###", "###...###", "###...###", "###...###", "#########", ".#######."],
+  1: ["..###..", ".####..", "#####..", "..###..", "..###..", "..###..", "..###..", "#######", "#######"],
+  2: [".#######.", "#########", "......###", ".#######.", "########.", "###......", "###......", "#########", "#########"],
+  3: ["########.", "#########", "......###", "..######.", "..######.", "......###", "......###", "#########", "########."],
+  4: ["###...###", "###...###", "###...###", "#########", "#########", "......###", "......###", "......###", "......###"],
+  5: ["#########", "#########", "###......", "########.", "#########", "......###", "......###", "#########", "########."],
+  6: [".########", "#########", "###......", "########.", "#########", "###...###", "###...###", "#########", ".#######."],
+  7: ["#########", "#########", "......###", ".....###.", "....###..", "...###...", "...###...", "...###...", "...###..."],
+  8: [".#######.", "#########", "###...###", ".#######.", ".#######.", "###...###", "###...###", "#########", ".#######."],
+  9: [".#######.", "#########", "###...###", "###...###", "#########", ".########", "......###", "#########", "########."],
+  " ": ["....", "....", "....", "....", "....", "....", "....", "....", "...."],
+  ".": ["...", "...", "...", "...", "...", "...", "...", "###", "###"], ",": ["...", "...", "...", "...", "...", "...", "###", "###", ".#."],
+  "'": ["###", "###", ".#.", "...", "...", "...", "...", "...", "..."], ":": ["...", "###", "###", "...", "...", "...", "###", "###", "..."],
+  "!": ["###", "###", "###", "###", "###", "###", "...", "###", "###"], "¡": ["###", "###", "...", "###", "###", "###", "###", "###", "###"],
+  "?": [".#######.", "#########", "......###", "...######", "...#####.", "...###...", ".........", "...###...", "...###..."],
+  "¿": ["...###...", "...###...", ".........", "...###...", ".#####...", "######...", "###......", "#########", ".#######."],
+  "-": ["......", "......", "......", "######", "######", "......", "......", "......", "......"],
+  "+": [".......", "..###..", "..###..", "#######", "#######", "..###..", "..###..", ".......", "......."],
+  "/": ["....###", "....###", "...###.", "...###.", "..###..", ".###...", ".###...", "###....", "###...."],
+};
+// las tildes, encima (en las 3 filas de aire)
+const TILDE_TIT = { "´": ["..###", ".###.", "###.."], "~": [".##...#", "#######", "#...##."], "¨": ["###.###", "###.###", "......."] };
+
+/** El título de un rótulo: blanco limpio, con un borde negro (que sobre la franja no se ve, pero
+ *  lo separa si la franja se afina) y la sombra dura. */
+function rotuloSpr(str) {
   str = String(str).toUpperCase();
-  return hornear(`rot|${str}|${o.grad || "blanco"}`, () => {
-    const E = 2, esp = 2, arriba = 6, r = mulberry(hashTexto("rot" + str));
-    const W = _medir(str, (ch) => glifoBloque(MARCAS[ch] ? MARCAS[ch][0] : ch).w * E, esp);
-    const H = ALTO_BLOQUE * E + arriba + 6, p = new Pix(W + 8, H + 2);
-    const mask = new Uint8Array(p.w * p.h), en = (x, y) => x >= 0 && y >= 0 && x < p.w && y < p.h && mask[y * p.w + x];
-    const marcar = (x, y) => { if (x >= 0 && y >= 0 && x < p.w && y < p.h) mask[y * p.w + x] = 1; };
-    let x = 4;
+  return hornear(`rot2|${str}`, () => {
+    const esp = 2, arriba = 4, H = 9;
+    let W = 0; for (const ch of str) W += ((TITULO[MARCAS[ch] ? MARCAS[ch][0] : ch] || TITULO["?"])[0].length) + esp;
+    W -= esp;
+    const p = new Pix(W + 4, H + arriba + 4);
+    let x = 2;
     for (const ch of str) {
-      const m = MARCAS[ch], gl = glifoBloque(m ? m[0] : ch);
-      gl.filas.forEach((f, y) => { for (let i = 0; i < f.length; i++) if (f[i] !== ".") for (let a = 0; a < E; a++) for (let b = 0; b < E; b++) marcar(x + i * E + a, arriba + 1 + y * E + b); });
-      if (m) {   // las tildes, al doble también
-        const c0 = x + Math.floor(gl.w * E / 2) - 2, y0 = arriba - 3;
-        const dib = m[1] === "´" ? [[2, 0], [3, 0], [1, 1], [2, 1], [0, 2], [1, 2]] : m[1] === "~" ? [[-2, 1], [-1, 0], [0, 0], [1, 1], [2, 1], [3, 0], [4, 0], [-2, 2], [1, 2], [2, 2], [5, 1]] : [[-2, 1], [-1, 1], [-2, 2], [-1, 2], [4, 1], [5, 1], [4, 2], [5, 2]];
-        for (const [dx, dy] of dib) { marcar(c0 + dx, y0 + dy); marcar(c0 + dx + 1, y0 + dy); }
-      }
-      x += gl.w * E + esp;
+      const m = MARCAS[ch], f = TITULO[m ? m[0] : ch] || TITULO["?"], w = f[0].length;
+      f.forEach((fila, y) => { for (let i = 0; i < w; i++) if (fila[i] === "#") p.p(x + i, arriba + 1 + y, y >= H - 1 ? "#e9e6e2" : "#ffffff"); });
+      if (m) { const t = TILDE_TIT[m[1]], tx = x + Math.floor((w - t[0].length) / 2) + (m[1] === "´" ? 1 : 0); t.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(tx + i, y, "#ffffff"); }); }
+      x += w + esp;
     }
-    // los mordiscos: esquinas de afuera y muescas sueltas en los bordes
-    const quitar = [];
-    for (let y = 0; y < p.h; y++) for (let X = 0; X < p.w; X++) {
-      if (!en(X, y)) continue;
-      const vacios = [!en(X - 1, y), !en(X + 1, y), !en(X, y - 1), !en(X, y + 1)];
-      const esquina = (vacios[0] || vacios[1]) && (vacios[2] || vacios[3]);
-      if (esquina && r() < 0.45) quitar.push([X, y]);
-      else if ((vacios[0] || vacios[1] || vacios[2] || vacios[3]) && r() < 0.06) quitar.push([X, y]);
-    }
-    for (const [X, y] of quitar) mask[y * p.w + X] = 0;
-    const R = o.grad === "rojo" ? ["#ffd6c8", "#ff8f74", "#e0402f", "#9c1c19"] : o.grad === "oro" ? ["#fff6d0", "#ffe08a", "#e8ac3a", "#a86a14"] : ["#ffffff", "#f3efe8", "#dcd5c9", "#b8af9f"];
-    for (let y = 0; y < p.h; y++) for (let X = 0; X < p.w; X++) {
-      if (!en(X, y)) continue;
-      const t = (y - arriba) / (ALTO_BLOQUE * E);
-      let k = t < 0.45 ? 0 : t < 0.62 ? ((X + y) & 1 ? 0 : 1) : t < 0.8 ? 1 : (X + y) & 1 ? 1 : 2;   // bandas con damero, como el original
-      if (!en(X, y + 1)) k = Math.max(k, 2);                                                            // el pie, más gris
-      if (r() < 0.035) k = 3;                                                                          // lo gastado
-      p.p(X, y, R[k]);
-    }
-    p.contorno(PAL.tinta, true); p.contorno(PAL.tinta, false);
-    const c = p.canvas(), s = lienzoNuevo(c.width + 2, c.height + 2), g = s.getContext("2d");
-    g.globalAlpha = 0.6; g.drawImage(tinte(c, "#000000"), 2, 2); g.globalAlpha = 1; g.drawImage(c, 0, 0);
-    return s;
+    p.contorno(PAL.tinta, true);
+    const c = p.canvas(), s2 = lienzoNuevo(c.width + 1, c.height + 1), g = s2.getContext("2d");
+    g.drawImage(tinte(c, "#000000"), 1, 1); g.drawImage(c, 0, 0);
+    return s2;
   });
+}
+
+// ── la letra del subtítulo ("Quad shot"): negrita, con minúsculas, blanca con contorno negro ──
+// Medida: 8 px con ascendentes, minúsculas de 5–6, trazos de 2, un píxel entre letras.
+// Grilla de 9 filas: 0-1 ascendentes, 2-6 el cuerpo, 7-8 descendentes. Las mayúsculas usan 0-6.
+const SUBT = {
+  a: [".....", ".....", ".###.", "...##", ".####", "##.##", ".####", ".....", "....."],
+  b: ["##...", "##...", "####.", "##.##", "##.##", "##.##", "####.", ".....", "....."],
+  c: [".....", ".....", ".####", "##...", "##...", "##...", ".####", ".....", "....."],
+  d: ["...##", "...##", ".####", "##.##", "##.##", "##.##", ".####", ".....", "....."],
+  e: [".....", ".....", ".###.", "##.##", "#####", "##...", ".####", ".....", "....."],
+  f: ["..###", ".##..", "####.", ".##..", ".##..", ".##..", ".##..", ".....", "....."],
+  g: [".....", ".....", ".####", "##.##", "##.##", "##.##", ".####", "...##", "####."],
+  h: ["##...", "##...", "####.", "##.##", "##.##", "##.##", "##.##", ".....", "....."],
+  i: ["##", "..", "##", "##", "##", "##", "##", "..", ".."],
+  j: [".##", "...", ".##", ".##", ".##", ".##", ".##", ".##", "##."],
+  k: ["##...", "##...", "##.##", "####.", "###..", "####.", "##.##", ".....", "....."],
+  l: ["##", "##", "##", "##", "##", "##", "##", "..", ".."],
+  m: ["........", "........", "#######.", "##.##.##", "##.##.##", "##.##.##", "##.##.##", "........", "........"],
+  n: [".....", ".....", "####.", "##.##", "##.##", "##.##", "##.##", ".....", "....."],
+  o: [".....", ".....", ".###.", "##.##", "##.##", "##.##", ".###.", ".....", "....."],
+  p: [".....", ".....", "####.", "##.##", "##.##", "##.##", "####.", "##...", "##..."],
+  q: [".....", ".....", ".####", "##.##", "##.##", "##.##", ".####", "...##", "...##"],
+  r: ["....", "....", "##.#", "####", "##..", "##..", "##..", "....", "...."],
+  s: [".....", ".....", ".####", "##...", ".###.", "...##", "####.", ".....", "....."],
+  t: [".##.", ".##.", "####", ".##.", ".##.", ".##.", "..##", "....", "...."],
+  u: [".....", ".....", "##.##", "##.##", "##.##", "##.##", ".####", ".....", "....."],
+  v: [".....", ".....", "##.##", "##.##", "##.##", ".###.", "..#..", ".....", "....."],
+  w: ["........", "........", "##.##.##", "##.##.##", "##.##.##", "##.##.##", ".######.", "........", "........"],
+  x: [".....", ".....", "##.##", ".###.", "..#..", ".###.", "##.##", ".....", "....."],
+  y: [".....", ".....", "##.##", "##.##", "##.##", "##.##", ".####", "...##", "####."],
+  z: [".....", ".....", "#####", "...##", "..##.", ".##..", "#####", ".....", "....."],
+  "á": ["..##.", ".##..", ".###.", "...##", ".####", "##.##", ".####", ".....", "....."],
+  "é": ["..##.", ".##..", ".###.", "##.##", "#####", "##...", ".####", ".....", "....."],
+  "í": [".##", "##.", "##.", "##.", "##.", "##.", "##.", "...", "..."],
+  "ó": ["..##.", ".##..", ".###.", "##.##", "##.##", "##.##", ".###.", ".....", "....."],
+  "ú": ["..##.", ".##..", "##.##", "##.##", "##.##", "##.##", ".####", ".....", "....."],
+  "ñ": [".##.#", "#.##.", "####.", "##.##", "##.##", "##.##", "##.##", ".....", "....."],
+  "ü": ["##.##", ".....", "##.##", "##.##", "##.##", "##.##", ".####", ".....", "....."],
+  A: [".####.", "##..##", "##..##", "######", "##..##", "##..##", "##..##"], B: ["#####.", "##..##", "#####.", "##..##", "##..##", "##..##", "#####."],
+  C: [".#####", "##....", "##....", "##....", "##....", "##....", ".#####"], D: ["#####.", "##..##", "##..##", "##..##", "##..##", "##..##", "#####."],
+  E: ["######", "##....", "##....", "#####.", "##....", "##....", "######"], F: ["######", "##....", "##....", "#####.", "##....", "##....", "##...."],
+  G: [".#####", "##....", "##....", "##.###", "##..##", "##..##", ".#####"], H: ["##..##", "##..##", "##..##", "######", "##..##", "##..##", "##..##"],
+  I: ["####", ".##.", ".##.", ".##.", ".##.", ".##.", "####"], J: ["....##", "....##", "....##", "....##", "##..##", "##..##", ".####."],
+  K: ["##..##", "##.##.", "####..", "###...", "####..", "##.##.", "##..##"], L: ["##....", "##....", "##....", "##....", "##....", "##....", "######"],
+  M: ["##...##", "###.###", "#######", "##.#.##", "##...##", "##...##", "##...##"], N: ["##..##", "###.##", "######", "##.###", "##..##", "##..##", "##..##"],
+  O: [".####.", "##..##", "##..##", "##..##", "##..##", "##..##", ".####."], P: ["#####.", "##..##", "##..##", "#####.", "##....", "##....", "##...."],
+  Q: [".####.", "##..##", "##..##", "##..##", "##..##", ".####.", "...##.", "....##"], R: ["#####.", "##..##", "##..##", "#####.", "####..", "##.##.", "##..##"],
+  S: [".#####", "##....", "##....", ".####.", "....##", "....##", "#####."], T: ["######", "..##..", "..##..", "..##..", "..##..", "..##..", "..##.."],
+  U: ["##..##", "##..##", "##..##", "##..##", "##..##", "##..##", ".####."], V: ["##..##", "##..##", "##..##", "##..##", ".####.", ".####.", "..##.."],
+  W: ["##...##", "##...##", "##...##", "##.#.##", "#######", "###.###", "##...##"], X: ["##..##", "##..##", ".####.", "..##..", ".####.", "##..##", "##..##"],
+  Y: ["##..##", "##..##", ".####.", "..##..", "..##..", "..##..", "..##.."], Z: ["######", "....##", "...##.", "..##..", ".##...", "##....", "######"],
+  0: [".###.", "##.##", "##.##", "##.##", "##.##", "##.##", ".###."], 1: [".##.", "###.", ".##.", ".##.", ".##.", ".##.", "####"],
+  2: [".###.", "##.##", "...##", "..##.", ".##..", "##...", "#####"], 3: ["####.", "...##", "...##", ".###.", "...##", "...##", "####."],
+  4: ["...##", "..###", ".####", "##.##", "#####", "...##", "...##"], 5: ["#####", "##...", "####.", "...##", "...##", "##.##", ".###."],
+  6: [".###.", "##...", "####.", "##.##", "##.##", "##.##", ".###."], 7: ["#####", "...##", "..##.", "..##.", ".##..", ".##..", ".##.."],
+  8: [".###.", "##.##", "##.##", ".###.", "##.##", "##.##", ".###."], 9: [".###.", "##.##", "##.##", ".####", "...##", "...##", ".###."],
+  " ": ["...", "...", "...", "...", "...", "...", "..."], ".": ["..", "..", "..", "..", "..", "##", "##"], ",": ["..", "..", "..", "..", "..", "##", "##", "#."],
+  "!": ["##", "##", "##", "##", "##", "..", "##"], "¡": ["##", "..", "##", "##", "##", "##", "##", "##"], "'": ["##", "##", "#."],
+  "?": [".###.", "##.##", "...##", "..##.", ".##..", ".....", ".##.."], "¿": ["..##.", ".....", "..##.", ".##..", "##...", "##.##", ".###."],
+  ":": ["..", "..", "##", "##", "..", "##", "##"], "-": ["....", "....", "....", "####", "....", "....", "...."], "+": ["....", "....", ".##.", "####", ".##.", "....", "...."],
+  "×": [".....", ".....", "##.##", ".###.", ".###.", "##.##", "....."], "%": ["##..#", "##.##", "..##.", ".##..", "##.##", "#..##", "....."],
+};
+// las mayúsculas con tilde: la marca encima (una fila de aire)
+const TILDE_SUB = { "Á": "A", "É": "E", "Í": "I", "Ó": "O", "Ú": "U", "Ñ": "N" };
+/** El subtítulo, tal cual se escribe (con minúsculas). */
+function subtituloSpr(str) {
+  str = String(str);
+  return hornear(`sub|${str}`, () => {
+    const arriba = 2, H = 9, esp = 1;
+    const glifoDe = (ch) => SUBT[ch] || SUBT[TILDE_SUB[ch]] || SUBT[ch.toLowerCase()] || SUBT["?"];
+    let W = 0; for (const ch of str) W += glifoDe(ch)[0].length + esp;
+    const p = new Pix(W + 3, H + arriba + 3);
+    let x = 1;
+    for (const ch of str) {
+      const f = glifoDe(ch), w = f[0].length;
+      // los signos y las mayúsculas se apoyan en la línea de base (fila 6)
+      const y0 = /[a-zñáéíóúü]/.test(ch) ? 0 : 0;
+      f.forEach((fila, y) => { for (let i = 0; i < w; i++) if (fila[i] === "#") p.p(x + i, arriba + 1 + y0 + y, y >= 5 && y <= 6 ? "#e6e2dc" : "#ffffff"); });
+      if (TILDE_SUB[ch]) { const cx0 = x + Math.floor(w / 2); if (ch === "Ñ") { p.p(cx0 - 2, arriba - 1, "#fff"); p.p(cx0 - 1, arriba - 2, "#fff"); p.p(cx0, arriba - 1, "#fff"); p.p(cx0 + 1, arriba - 2, "#fff"); } else { p.p(cx0, arriba - 1, "#fff"); p.p(cx0 + 1, arriba - 1, "#fff"); p.p(cx0 + 1, arriba - 2, "#fff"); } }
+      x += w + esp;
+    }
+    p.contorno(PAL.tinta, true);
+    const c = p.canvas(), s2 = lienzoNuevo(c.width + 1, c.height + 1), g = s2.getContext("2d");
+    g.drawImage(tinte(c, "#000000"), 1, 1); g.drawImage(c, 0, 0);
+    return s2;
+  });
+}
+/** "DAÑO ARRIBA" → "Daño arriba" (el subtítulo del original va así). */
+function comoFrase(s) {
+  s = String(s).toLowerCase();
+  const i = s.search(/[a-zñáéíóúü]/);
+  return i < 0 ? s : s.slice(0, i) + s[i].toUpperCase() + s.slice(i + 1);
 }
 
 // ══════════ 07c-papel.js ══════════
@@ -1661,27 +1784,22 @@ function fondoMenuSpr(W, H) {
   });
 }
 
-/** La franja de los rótulos: una pincelada de sangre seca, casi negra, con los bordes deshilachados
- *  y gotas que cuelgan (como la de los nombres de piso del original). */
-function bandaSpr(w, h = 34) {
-  return hornear(`banda${w}x${h}`, () => {
-    const p = new Pix(w, h + 10), r = mulberry(w * 7 + h), arr = ruido1(r), aba = ruido1(r);
-    const fondo = (x, y) => (bayer(x, y) > 0.3 ? "rgba(34,6,9,0.9)" : "rgba(14,3,5,0.9)");
+/** La franja de los rótulos, como la del original: negra, casi opaca, con los bordes rasgados en
+ *  bultos (como papel negro arrancado), más angosta y deshilachada hacia las puntas. Sin color. */
+function bandaSpr(w, h = 21) {
+  return hornear(`banda4|${w}x${h}`, () => {
+    const p = new Pix(w, h + 6), r = mulberry(w * 7 + h), arr = ruido1(r), aba = ruido1(r);
+    // bultos: un ruido lento más "mordidas" redondas en los bordes
+    const bultos = [];
+    for (let i = 0; i < w / 9; i++) bultos.push([r() * w, r() < 0.5 ? 0 : 1, 1.5 + r() * 2.5, r() < 0.5 ? -1 : 1]);
     for (let x = 0; x < w; x++) {
-      const u = x / (w - 1), punta = Math.min(u, 1 - u) * 2, f = 1 - Math.min(1, punta * 2.6);
-      const t = 3 + arr(x * 0.5) * 1.6 + f * 8, b = h - 3 + aba(x * 0.5) * 1.6 - f * 8;
-      for (let y = Math.max(0, Math.floor(t)); y < Math.min(h, Math.ceil(b)); y++) {
-        if (punta < 0.3 && ((y * 5 + (x >> 1)) % 4 === 0) && r() < 0.85) continue;     // las cerdas en las puntas
-        const borde = y < t + 1.2 || y > b - 1.8;
-        p.p(x, y, borde ? "rgba(78,12,16,0.85)" : fondo(x, y));
-      }
-      // gotas que chorrean de la pincelada
-      if (punta > 0.35 && r() < 0.035) {
-        const L = 2 + Math.floor(r() * 8), y0 = Math.ceil(b) - 1;
-        for (let y = 0; y < L; y++) { p.p(x, y0 + y, fondo(x, y0 + y)); if (y < L - 2) p.p(x + 1, y0 + y, fondo(x + 1, y0 + y)); }
-        p.p(x, y0 + L, "rgba(78,12,16,0.85)");
-      }
+      const u = x / (w - 1), punta = Math.min(u, 1 - u) * 2, f = 1 - Math.min(1, punta * 5);   // las puntas se afinan en el último décimo, en bultos
+      let t = 3 + arr(x * 0.35) * 1.3 + f * f * 8 + f * 2 * r(), b = h + aba(x * 0.35) * 1.3 - f * f * 8 - f * 2 * r();
+      for (const [bx, lado, br, sg] of bultos) { const d = Math.abs(x - bx); if (d < br) { const e = Math.sqrt(br * br - d * d) * 0.8 * sg; if (lado === 0) t -= e; else b += e; } }
+      for (let y = Math.max(0, Math.floor(t)); y < Math.min(h + 6, Math.ceil(b)); y++) p.p(x, y, "rgba(8,3,3,0.9)");
     }
+    // islitas sueltas cerca de los bordes (los pedacitos que quedan al rasgar)
+    for (let i = 0; i < w / 14; i++) { const x = Math.floor(r() * w), y = r() < 0.5 ? 1 + Math.floor(r() * 2) : h + 2 + Math.floor(r() * 2); p.p(x, y, "rgba(8,3,3,0.9)"); if (r() < 0.5) p.p(x + 1, y, "rgba(8,3,3,0.9)"); }
     return p.canvas();
   });
 }
@@ -3980,18 +4098,16 @@ function dibujarRotulos(g) {
   const r = J.rotulos[J.rotulos.length - 1];
   if (!r) return;
   // la franja entra de un costado, la letra de bloque aparece encima; al final, todo se va
-  const t = r.t, entra = Math.min(1, t / 10), sale = t > 150 ? (t - 150) / 20 : 0;
-  const s1 = rotuloSpr(r.titulo, { grad: r.grad === "oro" ? "blanco" : r.grad }), s2 = r.sub ? bloqueSpr(r.sub) : null;
-  const bw = Math.min(W - 4, Math.max(s1.width + 110, 230)), banda = bandaSpr(bw);
-  const y = PANT.salaY + 30, bx = Math.round(W / 2 - bw / 2);
-  g.globalAlpha = 1 - sale;
-  const corte = Math.round(bw * entra);   // la pincelada se "pinta" de izquierda a derecha
-  g.drawImage(banda, 0, 0, corte, banda.height, bx, y, corte, banda.height);
-  if (t > 6) {
-    const dy = t < 12 ? 12 - t : 0;
-    g.drawImage(s1, Math.round(W / 2 - s1.width / 2), y + Math.round(34 / 2 - s1.height / 2) + 1 - dy);
-    if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2), y + 36);
-  }
+  const t = r.t, entra = 1 - Math.pow(1 - Math.min(1, t / 9), 3), sale = t > 150 ? Math.pow((t - 150) / 20, 2) : 0;
+  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null;
+  const bw = Math.min(W, Math.max(s1.width + 150, Math.round(W * 0.72))), banda = bandaSpr(bw);
+  const y = PANT.salaY + 30;
+  // entra desde la izquierda y se va por la derecha (rápido), el texto viaja con la franja
+  const dx = Math.round((1 - entra) * -W + sale * W);
+  const bx = Math.round(W / 2 - bw / 2) + dx;
+  g.drawImage(banda, bx, y);
+  g.drawImage(s1, Math.round(W / 2 - s1.width / 2) + dx, y + Math.round(12 - s1.height / 2) + 1);
+  if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2) + dx, y + 20);
   g.globalAlpha = 1;
 }
 
@@ -4069,7 +4185,7 @@ function iniciarPiso(n) {
   J.estado = "juego";
   entrarSala(J.piso.inicio, null);
   J.fundido = 45;
-  rotulo(J.piso.nombre, n === ULTIMO_PISO ? "EL FONDO" : "", "oro");
+  rotulo(J.piso.nombre, "");
   Musica.poner(PISOS[n].musica);
 }
 
@@ -4654,6 +4770,11 @@ Object.assign(window.__SH, {
   juego: () => J, menu: () => MENU, perf: () => PERF, pant: () => PANT,
   nueva: (s) => { MENU.activo = null; nuevaPartida(s); },
   irA: (tipo) => { const s = [...J.piso.salas.values()].find((x) => x.tipo === tipo); if (s) { entrarSala(s, null); J.estado = "juego"; } return !!s; },
+  rotuloPrueba: (tit, sub, ancho = 330) => {
+    const s1 = rotuloSpr(tit), s2 = sub ? subtituloSpr(sub) : null, banda = bandaSpr(ancho), c = lienzoNuevo(ancho, 40), g = c.getContext("2d");
+    g.fillStyle = "#2a211d"; g.fillRect(0, 0, ancho, 40); g.drawImage(banda, 0, 2); g.drawImage(s1, Math.round(ancho / 2 - s1.width / 2), 2 + Math.round(12 - s1.height / 2) + 1); if (s2) g.drawImage(s2, Math.round(ancho / 2 - s2.width / 2), 22);
+    const z = 4, o = lienzoNuevo(ancho * z, 40 * z), go = o.getContext("2d"); go.imageSmoothingEnabled = false; go.drawImage(c, 0, 0, ancho * z, 40 * z); return o.toDataURL();
+  },
   vs: () => { if (J.vsPendiente) empezarVs(); },
   matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
 });

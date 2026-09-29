@@ -122,27 +122,22 @@ function fondoMenuSpr(W, H) {
   });
 }
 
-/** La franja de los rótulos: una pincelada de sangre seca, casi negra, con los bordes deshilachados
- *  y gotas que cuelgan (como la de los nombres de piso del original). */
-function bandaSpr(w, h = 34) {
-  return hornear(`banda${w}x${h}`, () => {
-    const p = new Pix(w, h + 10), r = mulberry(w * 7 + h), arr = ruido1(r), aba = ruido1(r);
-    const fondo = (x, y) => (bayer(x, y) > 0.3 ? "rgba(34,6,9,0.9)" : "rgba(14,3,5,0.9)");
+/** La franja de los rótulos, como la del original: negra, casi opaca, con los bordes rasgados en
+ *  bultos (como papel negro arrancado), más angosta y deshilachada hacia las puntas. Sin color. */
+function bandaSpr(w, h = 21) {
+  return hornear(`banda4|${w}x${h}`, () => {
+    const p = new Pix(w, h + 6), r = mulberry(w * 7 + h), arr = ruido1(r), aba = ruido1(r);
+    // bultos: un ruido lento más "mordidas" redondas en los bordes
+    const bultos = [];
+    for (let i = 0; i < w / 9; i++) bultos.push([r() * w, r() < 0.5 ? 0 : 1, 1.5 + r() * 2.5, r() < 0.5 ? -1 : 1]);
     for (let x = 0; x < w; x++) {
-      const u = x / (w - 1), punta = Math.min(u, 1 - u) * 2, f = 1 - Math.min(1, punta * 2.6);
-      const t = 3 + arr(x * 0.5) * 1.6 + f * 8, b = h - 3 + aba(x * 0.5) * 1.6 - f * 8;
-      for (let y = Math.max(0, Math.floor(t)); y < Math.min(h, Math.ceil(b)); y++) {
-        if (punta < 0.3 && ((y * 5 + (x >> 1)) % 4 === 0) && r() < 0.85) continue;     // las cerdas en las puntas
-        const borde = y < t + 1.2 || y > b - 1.8;
-        p.p(x, y, borde ? "rgba(78,12,16,0.85)" : fondo(x, y));
-      }
-      // gotas que chorrean de la pincelada
-      if (punta > 0.35 && r() < 0.035) {
-        const L = 2 + Math.floor(r() * 8), y0 = Math.ceil(b) - 1;
-        for (let y = 0; y < L; y++) { p.p(x, y0 + y, fondo(x, y0 + y)); if (y < L - 2) p.p(x + 1, y0 + y, fondo(x + 1, y0 + y)); }
-        p.p(x, y0 + L, "rgba(78,12,16,0.85)");
-      }
+      const u = x / (w - 1), punta = Math.min(u, 1 - u) * 2, f = 1 - Math.min(1, punta * 5);   // las puntas se afinan en el último décimo, en bultos
+      let t = 3 + arr(x * 0.35) * 1.3 + f * f * 8 + f * 2 * r(), b = h + aba(x * 0.35) * 1.3 - f * f * 8 - f * 2 * r();
+      for (const [bx, lado, br, sg] of bultos) { const d = Math.abs(x - bx); if (d < br) { const e = Math.sqrt(br * br - d * d) * 0.8 * sg; if (lado === 0) t -= e; else b += e; } }
+      for (let y = Math.max(0, Math.floor(t)); y < Math.min(h + 6, Math.ceil(b)); y++) p.p(x, y, "rgba(8,3,3,0.9)");
     }
+    // islitas sueltas cerca de los bordes (los pedacitos que quedan al rasgar)
+    for (let i = 0; i < w / 14; i++) { const x = Math.floor(r() * w), y = r() < 0.5 ? 1 + Math.floor(r() * 2) : h + 2 + Math.floor(r() * 2); p.p(x, y, "rgba(8,3,3,0.9)"); if (r() < 0.5) p.p(x + 1, y, "rgba(8,3,3,0.9)"); }
     return p.canvas();
   });
 }
