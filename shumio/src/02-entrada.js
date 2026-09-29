@@ -24,6 +24,7 @@ const TECLAS = {
 addEventListener("keydown", (e) => {
   if (e.repeat) return;
   IN.usaTactil = false;
+  FLANCO["k" + e.code] = true;          // cualquier tecla, para los menús
   const k = TECLAS[e.code];
   if (k) { IN.teclas.add(k); e.preventDefault(); }
   if (e.code === "KeyE" || e.code === "ShiftLeft") FLANCO.bomba = true;
@@ -49,7 +50,7 @@ lienzo.addEventListener("pointerdown", (e) => {
   const d = { id: e.pointerId, x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), que: null };
   const b = enJuego() ? botonEn(p.x, p.y) : null;
   if (b) { d.que = "boton"; FLANCO[b.id] = true; b.apretado = 8; }
-  else if (enJuego()) {
+  else if (enJuego() && e.pointerType !== "mouse") {   // con mouse (PC) no hay joysticks: se juega con el teclado
     if (p.x < PANT.W / 2 && !STICKS.mover) { d.que = "mover"; STICKS.mover = d; }
     else if (p.x >= PANT.W / 2 && !STICKS.tirar) { d.que = "tirar"; STICKS.tirar = d; }
   }
@@ -57,6 +58,7 @@ lienzo.addEventListener("pointerdown", (e) => {
   try { lienzo.setPointerCapture(e.pointerId); } catch (err) { /* ya se fue */ }
 }, { passive: false });
 lienzo.addEventListener("pointermove", (e) => {
+  if (e.pointerType === "mouse") { const q = aMundo(e.clientX, e.clientY); IN.px = q.x; IN.py = q.y; IN.movio = true; }
   const d = dedos.get(e.pointerId);
   if (!d) return;
   const p = aMundo(e.clientX, e.clientY);

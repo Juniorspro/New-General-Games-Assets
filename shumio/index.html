@@ -165,6 +165,7 @@ const TECLAS = {
 addEventListener("keydown", (e) => {
   if (e.repeat) return;
   IN.usaTactil = false;
+  FLANCO["k" + e.code] = true;          // cualquier tecla, para los menús
   const k = TECLAS[e.code];
   if (k) { IN.teclas.add(k); e.preventDefault(); }
   if (e.code === "KeyE" || e.code === "ShiftLeft") FLANCO.bomba = true;
@@ -190,7 +191,7 @@ lienzo.addEventListener("pointerdown", (e) => {
   const d = { id: e.pointerId, x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), que: null };
   const b = enJuego() ? botonEn(p.x, p.y) : null;
   if (b) { d.que = "boton"; FLANCO[b.id] = true; b.apretado = 8; }
-  else if (enJuego()) {
+  else if (enJuego() && e.pointerType !== "mouse") {   // con mouse (PC) no hay joysticks: se juega con el teclado
     if (p.x < PANT.W / 2 && !STICKS.mover) { d.que = "mover"; STICKS.mover = d; }
     else if (p.x >= PANT.W / 2 && !STICKS.tirar) { d.que = "tirar"; STICKS.tirar = d; }
   }
@@ -198,6 +199,7 @@ lienzo.addEventListener("pointerdown", (e) => {
   try { lienzo.setPointerCapture(e.pointerId); } catch (err) { /* ya se fue */ }
 }, { passive: false });
 lienzo.addEventListener("pointermove", (e) => {
+  if (e.pointerType === "mouse") { const q = aMundo(e.clientX, e.clientY); IN.px = q.x; IN.py = q.y; IN.movio = true; }
   const d = dedos.get(e.pointerId);
   if (!d) return;
   const p = aMundo(e.clientX, e.clientY);
@@ -1225,7 +1227,7 @@ function textoSpr(str, o = {}) {
 }
 // los números chicos (3×5), para el HUD
 const CHICOS = { 0: "###|#.#|#.#|#.#|###", 1: ".#.|##.|.#.|.#.|###", 2: "###|..#|###|#..|###", 3: "###|..#|.##|..#|###", 4: "#.#|#.#|###|..#|..#",
-  5: "###|#..|###|..#|###", 6: "###|#..|###|#.#|###", 7: "###|..#|..#|.#.|.#.", 8: "###|#.#|###|#.#|###", 9: "###|#.#|###|..#|###", x: "...|#.#|.#.|#.#|..." };
+  5: "###|#..|###|..#|###", 6: "###|#..|###|#.#|###", 7: "###|..#|..#|.#.|.#.", 8: "###|#.#|###|#.#|###", 9: "###|#.#|###|..#|###", x: "...|#.#|.#.|#.#|...", ".": "...|...|...|...|.#.", "-": "...|...|###|...|...", ":": "...|.#.|...|.#.|...", "/": "..#|..#|.#.|#..|#.." };
 function numeroSpr(str, color = "#f4f1ea") {
   str = String(str);
   return hornear(`num|${str}|${color}`, () => {
@@ -1241,6 +1243,558 @@ function texto(g, str, x, y, o = {}) {
   const X = o.izq ? x : o.der ? x - s.width : x - Math.floor(s.width / 2);
   g.drawImage(s, Math.round(X), Math.round(y));
   return s;
+}
+
+// ══════════ 07b-letras.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LAS LETRAS CON CARÁCTER (la estética textual del original, con dibujo propio):
+//  · BLOQUE: gruesa (trazos de 2 px), un poco gastada, blanca con contorno negro. Es la de
+//    los rótulos del juego (nombre del piso, del objeto) y la base del logo.
+//  · MANO: la de marcador sobre papel de los menús: sale del esqueleto 5×7 trazado con un
+//    pincel de 2 px, con el renglón, la inclinación y el tamaño de cada letra un poco
+//    distintos (como la escribe un chico), y el borde que se chupa el papel.
+//  · CIFRAS: los números gordos del HUD (monedas, bombas, llaves, cuentas).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BLOQUE = {
+  A: [".####.", "##..##", "##..##", "##..##", "######", "##..##", "##..##", "##..##"],
+  B: ["#####.", "##..##", "##..##", "#####.", "##..##", "##..##", "##..##", "#####."],
+  C: [".####.", "##..##", "##....", "##....", "##....", "##....", "##..##", ".####."],
+  D: ["#####.", "##..##", "##..##", "##..##", "##..##", "##..##", "##..##", "#####."],
+  E: ["######", "##....", "##....", "#####.", "##....", "##....", "##....", "######"],
+  F: ["######", "##....", "##....", "#####.", "##....", "##....", "##....", "##...."],
+  G: [".####.", "##..##", "##....", "##....", "##.###", "##..##", "##..##", ".#####"],
+  H: ["##..##", "##..##", "##..##", "######", "##..##", "##..##", "##..##", "##..##"],
+  I: ["##", "##", "##", "##", "##", "##", "##", "##"],
+  J: ["....##", "....##", "....##", "....##", "....##", "##..##", "##..##", ".####."],
+  K: ["##..##", "##.##.", "####..", "###...", "####..", "##.##.", "##..##", "##..##"],
+  L: ["##....", "##....", "##....", "##....", "##....", "##....", "##....", "######"],
+  M: ["##...##", "###.###", "#######", "##.#.##", "##...##", "##...##", "##...##", "##...##"],
+  N: ["##..##", "###.##", "######", "##.###", "##..##", "##..##", "##..##", "##..##"],
+  O: [".####.", "##..##", "##..##", "##..##", "##..##", "##..##", "##..##", ".####."],
+  P: ["#####.", "##..##", "##..##", "##..##", "#####.", "##....", "##....", "##...."],
+  Q: [".####..", "##..##.", "##..##.", "##..##.", "##..##.", "##.###.", "##..##.", ".###.##"],
+  R: ["#####.", "##..##", "##..##", "##..##", "#####.", "##.##.", "##..##", "##..##"],
+  S: [".####.", "##..##", "##....", ".####.", "....##", "....##", "##..##", ".####."],
+  T: ["######", "..##..", "..##..", "..##..", "..##..", "..##..", "..##..", "..##.."],
+  U: ["##..##", "##..##", "##..##", "##..##", "##..##", "##..##", "##..##", ".####."],
+  V: ["##..##", "##..##", "##..##", "##..##", "##..##", ".####.", ".####.", "..##.."],
+  W: ["##...##", "##...##", "##...##", "##.#.##", "##.#.##", "#######", "###.###", "##...##"],
+  X: ["##..##", "##..##", ".####.", "..##..", "..##..", ".####.", "##..##", "##..##"],
+  Y: ["##..##", "##..##", "##..##", ".####.", "..##..", "..##..", "..##..", "..##.."],
+  Z: ["######", "....##", "...##.", "..##..", ".##...", "##....", "##....", "######"],
+  0: [".####.", "##..##", "##..##", "##..##", "##..##", "##..##", "##..##", ".####."],
+  1: [".##.", "###.", ".##.", ".##.", ".##.", ".##.", ".##.", "####"],
+  2: [".####.", "##..##", "....##", "...##.", "..##..", ".##...", "##....", "######"],
+  3: ["#####.", "....##", "....##", ".####.", "....##", "....##", "....##", "#####."],
+  4: ["...###", "..####", ".##.##", "##..##", "######", "....##", "....##", "....##"],
+  5: ["######", "##....", "##....", "#####.", "....##", "....##", "##..##", ".####."],
+  6: [".####.", "##....", "##....", "#####.", "##..##", "##..##", "##..##", ".####."],
+  7: ["######", "....##", "....##", "...##.", "..##..", "..##..", "..##..", "..##.."],
+  8: [".####.", "##..##", "##..##", ".####.", "##..##", "##..##", "##..##", ".####."],
+  9: [".####.", "##..##", "##..##", "##..##", ".#####", "....##", "....##", ".####."],
+  " ": ["...", "...", "...", "...", "...", "...", "...", "..."],
+  ".": ["..", "..", "..", "..", "..", "..", "##", "##"], ",": ["..", "..", "..", "..", "..", "##", "##", "#."],
+  "'": ["##", "##", ".#", "..", "..", "..", "..", ".."], ":": ["..", "##", "##", "..", "..", "##", "##", ".."],
+  "!": ["##", "##", "##", "##", "##", "..", "##", "##"], "¡": ["##", "##", "..", "##", "##", "##", "##", "##"],
+  "?": [".####.", "##..##", "....##", "...##.", "..##..", "......", "..##..", "..##.."],
+  "¿": ["..##..", "..##..", "......", "..##..", ".##...", "##....", "##..##", ".####."],
+  "-": ["....", "....", "....", "####", "####", "....", "....", "...."],
+  "+": ["......", "..##..", "..##..", "######", "######", "..##..", "..##..", "......"],
+  "/": ["....##", "....##", "...##.", "..##..", "..##..", ".##...", "##....", "##...."],
+  "%": ["##...#", "##..##", "...##.", "..##..", "..##..", ".##...", "##..##", "#...##"],
+  "(": [".##", "##.", "##.", "##.", "##.", "##.", "##.", ".##"], ")": ["##.", ".##", ".##", ".##", ".##", ".##", ".##", "##."],
+  "·": ["..", "..", "..", "##", "##", "..", "..", ".."], "×": ["......", "......", "##..##", ".####.", "..##..", ".####.", "##..##", "......"],
+  ">": ["##....", ".##...", "..##..", "...##.", "..##..", ".##...", "##....", "......"],
+};
+const ALTO_BLOQUE = 8;
+
+/** ¿Dónde se gasta cada letra? Un par de mordiscos por glifo, siempre los mismos (semilla por letra). */
+function gastar(filas, ch) {
+  const r = mulberry(hashTexto("gasta" + ch)), m = filas.map((f) => [...f]);
+  const h = m.length, w = m[0].length, lleno = (x, y) => x >= 0 && y >= 0 && x < w && y < h && m[y][x] === "#";
+  const esquinas = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!lleno(x, y)) continue;
+    // esquina de afuera: vacío arriba o abajo, y vacío a un costado, pero con el trazo sano al lado
+    const vert = !lleno(x, y - 1) || !lleno(x, y + 1), hor = !lleno(x - 1, y) || !lleno(x + 1, y);
+    if (vert && hor && (lleno(x + 1, y) || lleno(x - 1, y)) && (lleno(x, y + 1) || lleno(x, y - 1))) esquinas.push([x, y]);
+  }
+  const n = w > 3 ? (r() < 0.55 ? 1 : 0) + (r() < 0.2 ? 1 : 0) : 0;
+  for (let i = 0; i < n && esquinas.length; i++) { const [x, y] = esquinas.splice(Math.floor(r() * esquinas.length), 1)[0]; m[y][x] = "g"; }   // "g" = gastado (gris, no hueco)
+  return m.map((f) => f.join(""));
+}
+const _glifosB = {};
+function glifoBloque(ch) {
+  if (_glifosB[ch]) return _glifosB[ch];
+  const base = BLOQUE[ch] || BLOQUE["?"];
+  return (_glifosB[ch] = { w: base[0].length, filas: gastar(base, ch) });
+}
+
+// ── dibujar texto en las tres letras ──
+function _medir(str, ancho, esp) { let w = 0; for (const ch of str) w += ancho(ch) + esp; return Math.max(1, w - esp); }
+
+/** Letra de bloque: blanca (o con degradé), gastada, contorno negro y sombra. o: {grad, sombra, escala} */
+function bloqueSpr(str, o = {}) {
+  str = String(str).toUpperCase();
+  const clave = `blq|${str}|${o.grad || "hueso"}|${o.sombra ?? 1}`;
+  return hornear(clave, () => {
+    const esp = 1, arriba = 3, W = _medir(str, (ch) => glifoBloque(MARCAS[ch] ? MARCAS[ch][0] : ch).w, esp);
+    const p = new Pix(W + 4, ALTO_BLOQUE + arriba + 4);
+    const R = o.grad === "rojo" ? ["#ffd6c8", "#ff8f74", "#f0553d", "#c8302a", "#8e1a19"] : o.grad === "oro" ? ["#fff4c4", "#ffe08a", "#f5c24a", "#d8962a", "#9c6014"] : o.grad === "espora" ? ["#f2fffb", "#c9f5e8", "#8fe0cc", "#56b3a3", "#2c716a"] : ["#ffffff", "#f6f2ea", "#ece6da", "#d6cfc1", "#b3aa99"];
+    let x = 2;
+    for (const ch of str) {
+      const m = MARCAS[ch], gl = glifoBloque(m ? m[0] : ch);
+      gl.filas.forEach((f, y) => {
+        for (let i = 0; i < f.length; i++) {
+          if (f[i] === ".") continue;
+          // degradé por fila, y lo gastado un tono más apagado
+          const t = y / (ALTO_BLOQUE - 1), k = f[i] === "g" ? 4 : lim(Math.floor(t * 3.2 + bayer(x + i, y) * 0.8), 0, 3);
+          p.p(x + i, arriba + 2 + y, R[k]);
+        }
+      });
+      if (m) {
+        const c0 = x + Math.floor(gl.w / 2) - 1, y0 = arriba;
+        if (m[1] === "´") { p.p(c0 + 1, y0, R[0]); p.p(c0 + 2, y0, R[0]); p.p(c0 + 2, y0 - 1, R[0]); p.p(c0 + 3, y0 - 1, R[0]); }
+        if (m[1] === "~") for (const [dx, dy] of [[-1, 0], [0, -1], [1, -1], [2, 0], [3, 0], [4, -1]]) p.p(c0 + dx, y0 + dy, R[0]);
+        if (m[1] === "¨") { p.p(c0, y0, R[0]); p.p(c0 - 1, y0, R[0]); p.p(c0 + 3, y0, R[0]); p.p(c0 + 4, y0, R[0]); }
+      }
+      x += gl.w + esp;
+    }
+    p.contorno(PAL.tinta, true);
+    let c = p.canvas();
+    if (o.sombra ?? 1) {   // la sombra dura, un píxel abajo a la derecha (como el original)
+      const s = lienzoNuevo(c.width + 1, c.height + 1), g = s.getContext("2d");
+      g.drawImage(tinte(c, PAL.tinta), 1, 1); g.drawImage(c, 0, 0);
+      c = s;
+    }
+    return c;
+  });
+}
+
+// ── la letra a mano: marcador de 2 px, dibujada letra por letra (redonda, torcida, viva) ──
+const MANO = {
+  A: ["..##...", ".####..", ".##.##.", ".##.##.", "##...##", "#######", "##...##", "##...##", "##...##", "#....##"],
+  B: ["#####..", "##..##.", "##..##.", "##.##..", "#####..", "##..##.", "##...##", "##...##", "##..##.", "#####.."],
+  C: ["..####.", ".##..##", "##.....", "##.....", "##.....", "##.....", "##.....", "##...##", ".##.##.", "..###.."],
+  D: ["####...", "##.##..", "##..##.", "##...##", "##...##", "##...##", "##...##", "##..##.", "##.##..", "####..."],
+  E: ["######.", "##.....", "##.....", "##.....", "#####..", "##.....", "##.....", "##.....", "##.....", "#######"],
+  F: ["#######", "##.....", "##.....", "##.....", "#####..", "##.....", "##.....", "##.....", "##.....", "##....."],
+  G: ["..####.", ".##..##", "##.....", "##.....", "##.....", "##.####", "##...##", "##...##", ".##..##", "..####."],
+  H: ["##...##", "##...##", "##...##", "##...##", "#######", "##...##", "##...##", "##...##", "##...##", "##...##"],
+  I: ["##", "##", "##", "##", "##", "##", "##", "##", "##", "##"],
+  J: ["....##", "....##", "....##", "....##", "....##", "....##", "....##", "##..##", "##.##.", ".###.."],
+  K: ["##...##", "##..##.", "##.##..", "####...", "###....", "####...", "##.##..", "##..##.", "##...##", "##...##"],
+  L: ["##....", "##....", "##....", "##....", "##....", "##....", "##....", "##....", "##....", "######"],
+  M: ["##....##", "###..###", "########", "##.##.##", "##.##.##", "##....##", "##....##", "##....##", "##....##", "##....##"],
+  N: ["##...##", "###..##", "####.##", "##.####", "##..###", "##...##", "##...##", "##...##", "##...##", "##...##"],
+  O: ["..###..", ".##.##.", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", ".##.##.", "..###.."],
+  P: ["#####..", "##..##.", "##...##", "##...##", "##..##.", "#####..", "##.....", "##.....", "##.....", "##....."],
+  Q: ["..###..", ".##.##.", "##...##", "##...##", "##...##", "##...##", "##.#.##", "##.####", ".##.##.", "..##.##"],
+  R: ["#####..", "##..##.", "##...##", "##...##", "##..##.", "#####..", "##.##..", "##..##.", "##...##", "##...##"],
+  S: ["..####.", ".##..##", "##.....", ".##....", "..###..", "....##.", ".....##", ".....##", "##..##.", ".####.."],
+  T: ["########", "...##...", "...##...", "...##...", "...##...", "...##...", "...##...", "...##...", "...##...", "...##..."],
+  U: ["##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", "##...##", ".##.##.", "..###.."],
+  V: ["##...##", "##...##", "##...##", "##...##", ".##.##.", ".##.##.", ".##.##.", "..###..", "..###..", "...#..."],
+  W: ["##....##", "##....##", "##....##", "##....##", "##.##.##", "##.##.##", "########", "###..###", "##....##", "#......#"],
+  X: ["##...##", "##...##", ".##.##.", ".##.##.", "..###..", "..###..", ".##.##.", ".##.##.", "##...##", "##...##"],
+  Y: ["##...##", "##...##", ".##.##.", ".##.##.", "..###..", "...##..", "...##..", "...##..", "...##..", "...##.."],
+  Z: ["#######", ".....##", "....##.", "....##.", "...##..", "..##...", ".##....", ".##....", "##.....", "#######"],
+  0: ["..###..", ".##.##.", "##...##", "##..###", "##.#.##", "##.#.##", "###..##", "##...##", ".##.##.", "..###.."],
+  1: ["..##.", ".###.", "####.", "..##.", "..##.", "..##.", "..##.", "..##.", "..##.", ".####"],
+  2: [".####..", "##..##.", "....##.", "....##.", "...##..", "..##...", ".##....", "##.....", "##.....", "######."],
+  3: ["#####..", "....##.", "....##.", "...##..", ".###...", "...##..", "....##.", "....##.", "##..##.", ".####.."],
+  4: ["....##.", "...###.", "..####.", ".##.##.", "##..##.", "#######", "....##.", "....##.", "....##.", "....##."],
+  5: ["######.", "##.....", "##.....", "#####..", "....##.", ".....##", ".....##", ".....##", "##..##.", ".####.."],
+  6: ["..###..", ".##....", "##.....", "##.....", "#####..", "##..##.", "##...##", "##...##", ".##.##.", "..###.."],
+  7: ["#######", ".....##", "....##.", "....##.", "...##..", "...##..", "..##...", "..##...", "..##...", "..##..."],
+  8: [".####..", "##..##.", "##..##.", ".####..", ".####..", "##..##.", "##...##", "##...##", ".##.##.", "..###.."],
+  9: ["..###..", ".##.##.", "##...##", "##...##", ".##.###", "..#####", ".....##", ".....##", "....##.", "..###.."],
+  ".": ["..", "..", "..", "..", "..", "..", "..", "..", "##", "##"], ",": ["..", "..", "..", "..", "..", "..", "..", "##", "##", "#."],
+  ":": ["..", "..", "##", "##", "..", "..", "..", "##", "##", ".."], "!": ["##", "##", "##", "##", "##", "##", "##", "..", "##", "##"],
+  "¡": ["##", "##", "..", "##", "##", "##", "##", "##", "##", "##"], "'": ["##", "##", ".#", "..", "..", "..", "..", "..", "..", ".."],
+  "?": [".####.", "##..##", "....##", "...##.", "..##..", "..##..", "......", "..##..", "..##..", "......"],
+  "¿": ["..##..", "..##..", "......", "..##..", "..##..", ".##...", "##....", "##..##", ".####.", "......"],
+  "-": [".....", ".....", ".....", ".....", "#####", "#####", ".....", ".....", ".....", "....."], "·": ["..", "..", "..", "..", "##", "##", "..", "..", "..", ".."],
+  "+": ["......", "......", "..##..", "..##..", "######", "######", "..##..", "..##..", "......", "......"],
+  "/": [".....##", ".....##", "....##.", "....##.", "...##..", "..##...", ".##....", ".##....", "##.....", "##....."],
+  "%": ["##...##", "##..##.", "....##.", "...##..", "..##...", ".##....", ".##....", "##..##.", "#...##.", "......."],
+  "(": [".##", "##.", "##.", "##.", "##.", "##.", "##.", "##.", "##.", ".##"], ")": ["##.", ".##", ".##", ".##", ".##", ".##", ".##", ".##", ".##", "##."],
+};
+const _glifosM = {};
+/** Una letra a mano: el dibujo de MANO, con su baile propio (renglón, inclinación) según la variante. */
+function glifoMano(ch, variante) {
+  const k = ch + variante;
+  if (_glifosM[k]) return _glifosM[k];
+  const m = MARCAS[ch], base = m ? m[0] : ch, filas = MANO[base] || MANO["?"], r = mulberry(hashTexto("mano" + k));
+  // el baile: la letra sube o baja un píxel, y a veces se inclina (la mitad de arriba corrida)
+  const angosta = filas[0].length <= 2;
+  const baja = r() < 0.3 ? 1 : r() < 0.2 ? -1 : 0, inclina = !angosta && r() < 0.35 ? (r() < 0.5 ? -1 : 1) : 0;
+  // la inclinación corre la mitad de arriba; la letra se hace un píxel más ancha para no pisar a la vecina
+  const corre = inclina < 0 ? 1 : 0, px = [];
+  filas.forEach((f, y) => { const dx = inclina && y < 4 ? inclina : 0; for (let x = 0; x < f.length; x++) if (f[x] === "#") px.push([x + dx + corre + 1, y]); });
+  const w = filas[0].length + 2 + (inclina ? 1 : 0);
+  return (_glifosM[k] = { w, px, baja, marca: m ? m[1] : null, ancho: filas[0].length + 1 + (inclina ? 1 : 0) });
+}
+/** Texto a mano (marcador oscuro sobre papel). o: {tinta, borde} */
+function manoSpr(str, o = {}) {
+  str = String(str).toUpperCase();
+  const tinta = o.tinta || "#2b2326";
+  return hornear(`mano|${str}|${tinta}`, () => {
+    const letras = [...str].map((ch, i) => (ch === " " ? null : glifoMano(ch, i % 3)));
+    let W = 0; letras.forEach((l) => { W += l ? l.ancho + 1 : 5; });
+    const arriba = 4, H = 12 + arriba, p = new Pix(W + 4, H);
+    let x = 2;
+    letras.forEach((l) => {
+      if (!l) { x += 5; return; }
+      for (const [px, py] of l.px) p.p(x + px, arriba + py + l.baja, tinta);
+      if (l.marca === "´") { const cx0 = x + Math.round(l.w / 2); p.p(cx0, arriba - 1, tinta); p.p(cx0 + 1, arriba - 1, tinta); p.p(cx0 + 1, arriba - 2, tinta); p.p(cx0 + 2, arriba - 2, tinta); }
+      if (l.marca === "~") { const cx0 = x + Math.round(l.w / 2) - 2; for (const [dx, dy] of [[0, 0], [1, -1], [2, -1], [3, 0], [4, 0], [5, -1]]) p.p(cx0 + dx, arriba - 1 + dy, tinta); }
+      if (l.marca === "¨") { const cx0 = x + Math.round(l.w / 2); p.p(cx0 - 2, arriba - 1, tinta); p.p(cx0 + 2, arriba - 1, tinta); }
+      x += l.ancho + 1;
+    });
+    // el papel se chupa un poco la tinta: un borde gris muy suave alrededor del trazo
+    if (o.borde ?? true) p.contorno("rgba(60,48,50,0.28)", false);
+    return p.canvas();
+  });
+}
+
+// ── las cifras gordas del HUD ──
+const CIFRAS = {
+  0: [".###.", "##.##", "##.##", "##.##", "##.##", "##.##", ".###."], 1: [".##.", "###.", ".##.", ".##.", ".##.", ".##.", "####"],
+  2: [".###.", "##.##", "...##", "..##.", ".##..", "##...", "#####"], 3: ["####.", "...##", "...##", ".###.", "...##", "...##", "####."],
+  4: ["...##", "..###", ".####", "##.##", "#####", "...##", "...##"], 5: ["#####", "##...", "####.", "...##", "...##", "##.##", ".###."],
+  6: [".###.", "##...", "####.", "##.##", "##.##", "##.##", ".###."], 7: ["#####", "...##", "..##.", "..##.", ".##..", ".##..", ".##.."],
+  8: [".###.", "##.##", "##.##", ".###.", "##.##", "##.##", ".###."], 9: [".###.", "##.##", "##.##", ".####", "...##", "...##", ".###."],
+  ".": ["..", "..", "..", "..", "..", "##", "##"], "-": ["....", "....", "....", "####", "....", "....", "...."],
+  "+": ["....", "....", ".##.", "####", ".##.", "....", "...."], "%": ["##..#", "##.##", "..##.", ".##..", "##.##", "#..##", "....."],
+  x: ["....", "....", "#..#", ".##.", ".##.", "#..#", "...."], ":": ["..", "##", "##", "..", "##", "##", ".."], "/": ["...##", "...##", "..##.", ".##..", "##...", "##...", "....."],
+};
+/** Los números del HUD: blancos (o del color pedido), gordos, con el contorno negro y la panza gris. */
+function cifrasSpr(str, color = "blanco") {
+  str = String(str);
+  return hornear(`cif|${str}|${color}`, () => {
+    const R = color === "verde" ? ["#c8ffb0", "#7fe05a", "#4aa832"] : color === "rojo" ? ["#ffc0b0", "#f0553d", "#a82620"] : color === "oro" ? ["#fff4c4", "#f5c24a", "#b07a18"] : ["#ffffff", "#ece6da", "#b9b1a2"];
+    let W = 0; for (const ch of str) W += (CIFRAS[ch] || CIFRAS[0])[0].length + 1;
+    const p = new Pix(W + 2, 9);
+    let x = 1;
+    for (const ch of str) {
+      const f = CIFRAS[ch] || CIFRAS[0];
+      f.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, 1 + y, R[y < 4 ? 0 : y < 6 ? 1 : 2]); });
+      x += f[0].length + 1;
+    }
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
+}
+
+// ── la letra de los rótulos (nombre del piso, del objeto): el bloque al doble, pesado y mordido ──
+/** Como el "DARK ROOM" del original: letras de 16 px con trazos de 4, las esquinas y los bordes
+ *  comidos (siempre igual para el mismo texto), blanca con la panza gris, contorno negro doble. */
+function rotuloSpr(str, o = {}) {
+  str = String(str).toUpperCase();
+  return hornear(`rot|${str}|${o.grad || "blanco"}`, () => {
+    const E = 2, esp = 2, arriba = 6, r = mulberry(hashTexto("rot" + str));
+    const W = _medir(str, (ch) => glifoBloque(MARCAS[ch] ? MARCAS[ch][0] : ch).w * E, esp);
+    const H = ALTO_BLOQUE * E + arriba + 6, p = new Pix(W + 8, H + 2);
+    const mask = new Uint8Array(p.w * p.h), en = (x, y) => x >= 0 && y >= 0 && x < p.w && y < p.h && mask[y * p.w + x];
+    const marcar = (x, y) => { if (x >= 0 && y >= 0 && x < p.w && y < p.h) mask[y * p.w + x] = 1; };
+    let x = 4;
+    for (const ch of str) {
+      const m = MARCAS[ch], gl = glifoBloque(m ? m[0] : ch);
+      gl.filas.forEach((f, y) => { for (let i = 0; i < f.length; i++) if (f[i] !== ".") for (let a = 0; a < E; a++) for (let b = 0; b < E; b++) marcar(x + i * E + a, arriba + 1 + y * E + b); });
+      if (m) {   // las tildes, al doble también
+        const c0 = x + Math.floor(gl.w * E / 2) - 2, y0 = arriba - 3;
+        const dib = m[1] === "´" ? [[2, 0], [3, 0], [1, 1], [2, 1], [0, 2], [1, 2]] : m[1] === "~" ? [[-2, 1], [-1, 0], [0, 0], [1, 1], [2, 1], [3, 0], [4, 0], [-2, 2], [1, 2], [2, 2], [5, 1]] : [[-2, 1], [-1, 1], [-2, 2], [-1, 2], [4, 1], [5, 1], [4, 2], [5, 2]];
+        for (const [dx, dy] of dib) { marcar(c0 + dx, y0 + dy); marcar(c0 + dx + 1, y0 + dy); }
+      }
+      x += gl.w * E + esp;
+    }
+    // los mordiscos: esquinas de afuera y muescas sueltas en los bordes
+    const quitar = [];
+    for (let y = 0; y < p.h; y++) for (let X = 0; X < p.w; X++) {
+      if (!en(X, y)) continue;
+      const vacios = [!en(X - 1, y), !en(X + 1, y), !en(X, y - 1), !en(X, y + 1)];
+      const esquina = (vacios[0] || vacios[1]) && (vacios[2] || vacios[3]);
+      if (esquina && r() < 0.45) quitar.push([X, y]);
+      else if ((vacios[0] || vacios[1] || vacios[2] || vacios[3]) && r() < 0.06) quitar.push([X, y]);
+    }
+    for (const [X, y] of quitar) mask[y * p.w + X] = 0;
+    const R = o.grad === "rojo" ? ["#ffd6c8", "#ff8f74", "#e0402f", "#9c1c19"] : o.grad === "oro" ? ["#fff6d0", "#ffe08a", "#e8ac3a", "#a86a14"] : ["#ffffff", "#f3efe8", "#dcd5c9", "#b8af9f"];
+    for (let y = 0; y < p.h; y++) for (let X = 0; X < p.w; X++) {
+      if (!en(X, y)) continue;
+      const t = (y - arriba) / (ALTO_BLOQUE * E);
+      let k = t < 0.45 ? 0 : t < 0.62 ? ((X + y) & 1 ? 0 : 1) : t < 0.8 ? 1 : (X + y) & 1 ? 1 : 2;   // bandas con damero, como el original
+      if (!en(X, y + 1)) k = Math.max(k, 2);                                                            // el pie, más gris
+      if (r() < 0.035) k = 3;                                                                          // lo gastado
+      p.p(X, y, R[k]);
+    }
+    p.contorno(PAL.tinta, true); p.contorno(PAL.tinta, false);
+    const c = p.canvas(), s = lienzoNuevo(c.width + 2, c.height + 2), g = s.getContext("2d");
+    g.globalAlpha = 0.6; g.drawImage(tinte(c, "#000000"), 2, 2); g.globalAlpha = 1; g.drawImage(c, 0, 0);
+    return s;
+  });
+}
+
+// ══════════ 07c-papel.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL PAPEL Y LA TINTA: las hojas rasgadas de los menús (con chinches y sombra), la pared de
+// papel gris con garabatos desvaídos (dibujos "de chico" sacados de los mismos sprites), la
+// franja de tinta de los rótulos, y el logo: letras de bloque enormes con degradé tramado,
+// relieve oscuro y las pintitas del sombrero de Shumio, que gotean esporas.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Un ruido suave de una dimensión (suma de senos con fase por semilla): para los bordes rasgados. */
+function ruido1(r) {
+  const f = [0.07 + r() * 0.05, 0.19 + r() * 0.1, 0.43 + r() * 0.2], a = [1.3, 0.8, 0.45], ph = f.map(() => r() * TAU);
+  return (x) => f.reduce((s, fr, i) => s + Math.sin(x * fr + ph[i]) * a[i], 0);
+}
+
+const TONOS_PAPEL = {
+  blanco: ["#f4f0ea", "#e9e4dc", "#dcd6cc", "#c9c2b6", "#8f877c"],
+  crema: ["#f3e7d2", "#e8d8bd", "#d9c5a4", "#c4ad89", "#8a7457"],
+  gris: ["#dcd8d2", "#cfcac2", "#c0bab1", "#aca59b", "#77716a"],
+};
+/** Una hoja rasgada de w×h (más la sombra). tono: blanco, crema, gris. */
+function papelSpr(w, h, semilla = 1, tono = "blanco") {
+  return hornear(`papel${w}x${h}|${semilla}|${tono}`, () => {
+    const r = mulberry(semilla * 977 + w * 13 + h), R = TONOS_PAPEL[tono];
+    const arr = ruido1(r), aba = ruido1(r), izq = ruido1(r), der = ruido1(r);
+    const p = new Pix(w + 8, h + 8), o = 3;
+    const dentro = (x, y) => {
+      const t = arr(x) * 1.1, b = aba(x) * 1.2, l = izq(y) * 1.1, d = der(y) * 1.2;
+      return y >= o + 1 + t && y <= o + h - 2 + b && x >= o + 1 + l && x <= o + w - 2 + d;
+    };
+    // un par de muescas (el papel arrancado de un cuaderno)
+    const muescas = [];
+    for (let i = 0; i < 2; i++) muescas.push([o + 4 + r() * (w - 8), r() < 0.5 ? o + 1 : o + h - 2, 2 + r() * 2.5]);
+    const enMuesca = (x, y) => muescas.some(([mx, my, mr]) => Math.hypot(x - mx, (y - my) * 1.4) < mr);
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) {
+      if (!dentro(x, y) || enMuesca(x, y)) continue;
+      // luz de arriba a la izquierda, tramada, y alguna fibra del papel
+      const l = 1 - (y - o) / h * 0.55 - (x - o) / w * 0.25 + bayer(x, y) * 0.25;
+      let c = R[l > 0.72 ? 0 : l > 0.45 ? 1 : 2];
+      if (r() < 0.012) c = R[2];
+      p.p(x, y, c);
+    }
+    // rayones de lápiz, suaves (como la hoja del menú original)
+    for (let i = 0; i < 3; i++) {
+      const x0 = o + 4 + r() * (w - 14), y0 = o + 4 + r() * (h - 12), L = 4 + r() * 8, an = -0.7 + r() * 0.3;
+      trazo(x0, y0, x0 + Math.cos(an) * L, y0 + Math.sin(an) * L, (x, y) => { if (p.g(x, y)) p.p(x, y, R[2]); });
+    }
+    p.bordeInterior({ [R[0]]: R[3], [R[1]]: R[3], [R[2]]: R[3] });
+    p.contorno(R[4]);
+    const c = p.canvas(), s = lienzoNuevo(c.width + 3, c.height + 3), g = s.getContext("2d");
+    g.globalAlpha = 0.3; g.drawImage(tinte(c, "#0a0608"), 3, 3); g.globalAlpha = 1; g.drawImage(c, 0, 0);
+    return s;
+  });
+}
+/** La chinche que sostiene la hoja. */
+function chincheSpr() {
+  return hornear("chinche", () => {
+    const p = new Pix(9, 9);
+    p.bola(4.5, 4.5, 3.6, 3.4, ["#3a3c40", "#6a6e74", "#9ca0a6", "#d2d6da"], { luz: [-0.6, -0.7, 0.4], trama: 0.5 });
+    p.p(3, 3, "#ffffff");
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
+}
+
+/** Un garabato hecho "a mano" desde un sprite: su contorno y sus partes oscuras, en tinta. */
+function garabato(c, tinta = "#2b2326", escala = 2, relleno = null) {
+  return hornear(`garabato|${tinta}|${escala}|${relleno}|` + (c.__id ||= Math.random().toString(36).slice(2)), () => {
+    const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+    const a = (x, y) => x >= 0 && y >= 0 && x < W && y < H && d[(y * W + x) * 4 + 3] > 100;
+    const lum0 = (x, y) => { const i = (y * W + x) * 4; return (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255; };
+    // la luz promediada en 3×3 (así el tramado no cuenta como borde: sólo los cambios de verdad)
+    const L = new Float32Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let s = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (a(x + dx, y + dy)) { s += lum0(x + dx, y + dy); n++; }
+      L[y * W + x] = n ? s / n : 0;
+    }
+    const lum = (x, y) => L[y * W + x];
+    const p = new Pix(W, H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!a(x, y)) continue;
+      const borde = !a(x + 1, y) || !a(x - 1, y) || !a(x, y + 1) || !a(x, y - 1);
+      // además del contorno, los bordes de adentro (donde el color cambia mucho): como un dibujo para colorear
+      const salto = (a(x + 1, y) && Math.abs(lum(x, y) - lum(x + 1, y)) > 0.17) || (a(x, y + 1) && Math.abs(lum(x, y) - lum(x, y + 1)) > 0.17);
+      if (borde || lum0(x, y) < 0.12 || salto) p.p(x, y, tinta);
+      else if (relleno) p.p(x, y, relleno);
+    }
+    const q = p.canvas(), out = lienzoNuevo(W * escala, H * escala), go = out.getContext("2d");
+    go.imageSmoothingEnabled = false; go.drawImage(q, 0, 0, W * escala, H * escala);
+    return out;
+  });
+}
+
+/** La pared de papel gris con dibujos desvaídos (el fondo de todos los menús). */
+function fondoMenuSpr(W, H) {
+  return hornear(`fondoMenu${W}x${H}`, () => {
+    const c = lienzoNuevo(W, H), g = c.getContext("2d"), r = mulberry(31337);
+    const p = new Pix(W, H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const nx = (x - W * 0.55) / (W * 0.62), ny = (y - H * 0.42) / (H * 0.8), e = nx * nx + ny * ny;
+      const k = e + bayer(x, y) * 0.22;
+      p.p(x, y, k < 0.35 ? "#c9c4bc" : k < 0.62 ? "#bdb7ae" : k < 0.95 ? "#aca69c" : "#958f86");
+    }
+    g.drawImage(p.canvas(), 0, 0);
+    // los dibujos del chico en la pared: Shumio, hongos, un mosquín, un cofre, un corazón, una gota
+    const tinta = "rgba(92,84,80,0.22)";
+    const dibujos = [spritesShumio().cab.frente[0], matasSpr(3), mosquinSpr(0), cofreSpr(false, false), corazonSpr("rojo"), lagrimaSpr(6), hongonSpr(0), iconoSpr("brujula"), bombaSpr(1), aranaSpr(0)];
+    const lugares = [[0.08, 0.12], [0.86, 0.1], [0.06, 0.62], [0.9, 0.66], [0.2, 0.86], [0.74, 0.88], [0.93, 0.36], [0.03, 0.36], [0.62, 0.05], [0.36, 0.93]];
+    dibujos.forEach((s, i) => {
+      const gb = garabato(s, tinta, 2), [u, v] = lugares[i];
+      g.save(); g.translate(Math.round(u * W), Math.round(v * H)); g.rotate((r() - 0.5) * 0.5);
+      g.drawImage(gb, -gb.width / 2, -gb.height / 2); g.restore();
+    });
+    // rayas, estrellitas y círculos sueltos
+    g.fillStyle = tinta;
+    for (let i = 0; i < 16; i++) {
+      const x = r() * W, y = r() * H, t = r();
+      if (t < 0.4) { const L = 4 + r() * 8, an = r() * TAU; trazo(x, y, x + Math.cos(an) * L, y + Math.sin(an) * L, (a, b) => g.fillRect(a, b, 2, 2)); }
+      else if (t < 0.7) { g.fillRect(x - 3, y, 7, 2); g.fillRect(x, y - 3, 2, 7); }
+      else { const rr = 3 + r() * 5; for (let k = 0; k < 24; k++) { const an = k / 24 * TAU; g.fillRect(Math.round(x + Math.cos(an) * rr), Math.round(y + Math.sin(an) * rr * 0.8), 1, 1); } }
+    }
+    return c;
+  });
+}
+
+/** La franja de los rótulos: una pincelada de sangre seca, casi negra, con los bordes deshilachados
+ *  y gotas que cuelgan (como la de los nombres de piso del original). */
+function bandaSpr(w, h = 34) {
+  return hornear(`banda${w}x${h}`, () => {
+    const p = new Pix(w, h + 10), r = mulberry(w * 7 + h), arr = ruido1(r), aba = ruido1(r);
+    const fondo = (x, y) => (bayer(x, y) > 0.3 ? "rgba(34,6,9,0.9)" : "rgba(14,3,5,0.9)");
+    for (let x = 0; x < w; x++) {
+      const u = x / (w - 1), punta = Math.min(u, 1 - u) * 2, f = 1 - Math.min(1, punta * 2.6);
+      const t = 3 + arr(x * 0.5) * 1.6 + f * 8, b = h - 3 + aba(x * 0.5) * 1.6 - f * 8;
+      for (let y = Math.max(0, Math.floor(t)); y < Math.min(h, Math.ceil(b)); y++) {
+        if (punta < 0.3 && ((y * 5 + (x >> 1)) % 4 === 0) && r() < 0.85) continue;     // las cerdas en las puntas
+        const borde = y < t + 1.2 || y > b - 1.8;
+        p.p(x, y, borde ? "rgba(78,12,16,0.85)" : fondo(x, y));
+      }
+      // gotas que chorrean de la pincelada
+      if (punta > 0.35 && r() < 0.035) {
+        const L = 2 + Math.floor(r() * 8), y0 = Math.ceil(b) - 1;
+        for (let y = 0; y < L; y++) { p.p(x, y0 + y, fondo(x, y0 + y)); if (y < L - 2) p.p(x + 1, y0 + y, fondo(x + 1, y0 + y)); }
+        p.p(x, y0 + L, "rgba(78,12,16,0.85)");
+      }
+    }
+    return p.canvas();
+  });
+}
+
+/** El logo, con la construcción del original: "SHUMIO'S" enorme en bloque (×3), con bandas de rojo
+ *  en damero, el filo de arriba con luz y un relieve hondo abajo a la derecha; "DEPTHS" en rojo claro,
+ *  abajo a la derecha (como el subtítulo); una salpicadura que chorrea, y las pintitas del sombrero. */
+function logoSpr() {
+  return hornear("logo4", () => {
+    const grande = "SHUMIO'S", chico = "DEPTHS", E1 = 4, E2 = 3, HONDO = 6;
+    const ancho = (s) => _medir(s, (ch) => glifoBloque(ch).w, 1);
+    const w1 = ancho(grande) * E1, w2 = ancho(chico) * E2, h1 = ALTO_BLOQUE * E1, h2 = ALTO_BLOQUE * E2;
+    const W = w1 + 40, H = h1 + h2 + 46;
+    const p = new Pix(W, H), x1 = 26, y1 = 6, x2 = x1 + w1 - w2 + 4, y2 = y1 + h1 + HONDO - 1;
+    const masc = new Uint8Array(W * H), capa = new Uint8Array(W * H);
+    const poner = (s, x0, y0, E, id) => {
+      let x = x0;
+      for (const ch of s) {
+        const gl = glifoBloque(ch);
+        gl.filas.forEach((f, y) => { for (let i = 0; i < f.length; i++) if (f[i] !== ".") for (let a = 0; a < E; a++) for (let b = 0; b < E; b++) { const X = x + i * E + a, Y = y0 + y * E + b; if (X < W && Y < H) { masc[Y * W + X] = 1; capa[Y * W + X] = id; } } });
+        x += (gl.w + 1) * E;
+      }
+    };
+    poner(grande, x1, y1, E1, 1); poner(chico, x2, y2, E2, 2);
+    const lleno = (x, y) => x >= 0 && y >= 0 && x < W && y < H && masc[y * W + x];
+    const r = mulberry(4040);
+    // 0) la salpicadura, detrás de la primera letra: una mancha con gotas y chorros
+    const sx = x1 - 6, sy = y1 + h1 + 4, SANG = ["#4a0508", "#7e0c10", "#b3161a", "#d8261f"];
+    const disco = (cx0, cy0, rr, c) => { for (let y = Math.floor(cy0 - rr); y <= cy0 + rr; y++) for (let x = Math.floor(cx0 - rr); x <= cx0 + rr; x++) if (Math.hypot(x + 0.5 - cx0, (y + 0.5 - cy0) * 1.15) <= rr) p.p(x, y, c); };
+    disco(sx, sy, 9, SANG[2]); disco(sx - 6, sy + 3, 6, SANG[2]); disco(sx + 4, sy - 5, 5, SANG[3]);
+    for (let i = 0; i < 16; i++) {   // gotas que saltaron, más chicas cuanto más lejos
+      const a = Math.PI * (0.35 + r() * 1.25), d = 12 + r() * 16, rr = Math.max(0.7, 2.6 - d / 12);
+      disco(sx + Math.cos(a) * d, sy + Math.sin(a) * d * 0.8, rr, SANG[2]);
+    }
+    for (let i = 0; i < 4; i++) {    // chorros que caen
+      const x = sx - 10 + i * 5 + Math.floor(r() * 3), L = 8 + Math.floor(r() * 16), y0 = sy + 5;
+      for (let y = 0; y < L; y++) { p.p(x, y0 + y, SANG[2]); p.p(x + 1, y0 + y, SANG[1]); }
+      disco(x + 1, y0 + L, 1.6, SANG[2]);
+    }
+    // 1) el relieve hondo (dos tonos)
+    for (let k = HONDO; k >= 1; k--) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (lleno(x - k, y - k) && !lleno(x, y)) {
+      const id = capa[(y - k) * W + x - k];
+      p.p(x, y, id === 1 ? (k > 2 ? "#300709" : "#560d10") : (k > 1 ? "#3a0a0c" : "#5c1216"));
+    }
+    // 2) la cara: bandas de rojo con transición en damero; el filo de arriba y el de la izquierda con luz
+    const ROJO = ["#ff8a70", "#ec4a38", "#c8281f", "#9a1a16"], CLARO = ["#ffc2ae", "#ff8a70", "#f06a52", "#c8402f"];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!lleno(x, y)) continue;
+      const id = capa[y * W + x], y0 = id === 1 ? y1 : y2, hh = id === 1 ? h1 : h2, R = id === 1 ? ROJO : CLARO;
+      const t = (y - y0) / hh, dam = (x + y) & 1;
+      let k = t < 0.28 ? 1 : t < 0.36 ? (dam ? 1 : 2) : t < 0.62 ? 2 : t < 0.7 ? (dam ? 2 : 3) : 3;
+      if (!lleno(x, y - 1) || !lleno(x, y - 2)) k = 0;               // el filo de arriba (2 px con luz)
+      else if (!lleno(x - 1, y) && k > 1) k--;
+      p.p(x, y, R[k]);
+    }
+    // 3) las pintitas del sombrero de Shumio, en la banda de arriba de las letras grandes
+    for (let i = 0; i < 40; i++) {
+      const x = x1 + Math.floor(r() * w1), y = y1 + 4 + Math.floor(r() * (h1 * 0.4));
+      const ok = [[-1, -1], [0, -1], [1, -1], [2, -1], [3, -1], [-1, 0], [3, 0], [-1, 1], [3, 1], [-1, 2], [0, 2], [1, 2], [2, 2], [3, 2]].every(([dx, dy]) => lleno(x + dx, y + dy) && capa[(y + dy) * W + x + dx] === 1);
+      if (!ok) continue;
+      p.sello(x, y, [".cc", "ccC"], { c: "#fff2dc", C: "#e2c8a6" });
+    }
+    // 4) el contorno grueso, en dos pasadas
+    p.contorno(PAL.tinta, true); p.contorno(PAL.tinta, false);
+    return p.canvas();
+  });
+}
+
+/** Shumio dibujado a mano para la hoja del título: trazos limpios de marcador (se pinta a 1 px y se
+ *  agranda ×2, así cada línea queda de 2). llora: las lágrimas de esporas cayendo. */
+function dibujoShumio(llora = 0) {
+  return hornear(`dibujoShumio${llora}`, () => {
+    const p = new Pix(36, 40), T = TINTA_MANO;
+    const aro = (cx0, cy0, rx, ry, desde, hasta) => {   // un arco de elipse, continuo (ángulos en radianes)
+      let ant = null;
+      for (let i = 0; i <= 90; i++) {
+        const a = desde + (hasta - desde) * i / 90, x = Math.round(cx0 + Math.cos(a) * rx), y = Math.round(cy0 + Math.sin(a) * ry);
+        if (ant) trazo(ant[0], ant[1], x, y, (X, Y) => p.p(X, Y, T)); ant = [x, y];
+      }
+    };
+    const lin = (a, b, c, d) => trazo(a, b, c, d, (X, Y) => p.p(X, Y, T));
+    // el sombrero: media elipse y el ala, apenas curvada
+    aro(18, 14, 15, 11, Math.PI, TAU);
+    for (let x = 3; x <= 33; x++) p.p(x, Math.round(14 + Math.pow((x - 18) / 15, 2) * 1.6), T);
+    // las pintitas del sombrero
+    for (const [x, y, r] of [[11, 8, 2.2], [20, 5.5, 2.4], [26.5, 10, 1.9]]) aro(x, y, r, r, 0, TAU);
+    // la cara: los costados y la barbilla redonda
+    lin(6, 15, 6, 20); lin(30, 15, 30, 20);
+    aro(18, 20, 12, 7, 0, Math.PI);
+    // los ojos, grandes y rellenos, con el brillo
+    for (const ex of [13, 23]) { for (let y = 16; y <= 21; y++) for (let x = ex - 2; x <= ex + 1; x++) if (Math.hypot(x + 0.5 - ex, (y + 0.5 - 18.5) * 0.8) <= 2.1) p.p(x, y, T); p.borrar(ex - 1, 17); }
+    lin(17, 24, 18, 24);                                    // la boquita
+    // el cuerpo, los bracitos y los pies
+    lin(13, 27, 12, 34); lin(23, 27, 24, 34); lin(12, 34, 24, 34);
+    lin(12, 29, 8, 32); lin(24, 29, 28, 32);
+    aro(15, 36, 2, 1.4, 0, Math.PI); aro(21, 36, 2, 1.4, 0, Math.PI);
+    // las lágrimas: gotitas que caen de los ojos
+    if (llora) for (const ex of [11, 25]) { lin(ex, 23, ex, 25); p.p(ex - 1, 26, T); p.p(ex + 1, 26, T); p.p(ex, 27, T); }
+    const c = p.canvas(), out = lienzoNuevo(72, 80), g = out.getContext("2d");
+    g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, 72, 80);
+    return out;
+  });
+}
+
+/** Una gotita dibujada a mano (las lágrimas que caen en la hoja del título). */
+function gotitaDibujo() {
+  return hornear("gotitaDibujo", () => {
+    const p = new Pix(5, 6);
+    p.sello(0, 0, ["..#..", ".#.#.", "#...#", "#...#", "#...#", ".###."], { "#": TINTA_MANO });
+    const c = p.canvas(), out = lienzoNuevo(10, 12), g = out.getContext("2d");
+    g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, 10, 12);
+    return out;
+  });
 }
 
 // ══════════ 08-arte-enemigos.js ══════════
@@ -1688,7 +2242,7 @@ const DISENOS = [
   ["r..........rr", ".r.....e...r.", "..r.......r..", ".............", "..r.......r..", ".r...e.....r.", "rr..........r"],
   [".............", ".HHH.....HHH.", ".H..e...e..H.", ".............", ".H..e...e..H.", ".HHH.....HHH.", "............."],
   ["..r..r.r..r..", ".............", "r..e.....e..r", ".............", "r..e.....e..r", ".............", "..r..r.r..r.."],
-  [".............", ".....mmm.....", "..e..m.m..e..", "..............".slice(0, 13), "..e..m.m..e..", ".....mmm.....", "............."],
+  [".............", ".....mmm.....", "..e..m.m..e..", ".............", "..e..m.m..e..", ".....mmm.....", "............."],
   [".............", "..oo.....oo..", "..oo..v..oo..", ".............", "..oo..v..oo..", "..oo.....oo..", "............."],
   ["b...........b", ".............", "...e.....e...", ".............", "...e.....e...", ".............", "b...........b"],
   [".............", "...rr...rr...", "...r..E..r...", ".............", "...r.....r...", "...rr...rr...", "............."],
@@ -1764,11 +2318,11 @@ function esSolida(o, vuela) {
   if (!o) return false;
   if (o.t === "pozo") return !vuela;
   if (o.t === "matas") return o.vida > 0 && !vuela;
-  if (o.t === "brasero") return !vuela;
+  if (o.t === "brasero") return o.prendido && !vuela;   // apagado queda la ceniza, que se pisa
   return SOLIDOS.has(o.t) && !vuela;
 }
 /** ¿Frena una lágrima? (los pozos no; las rocas sí, salvo las espectrales) */
-function frenaLagrima(o) { return !!o && o.t !== "pozo" && o.t !== "pinchos" && !(o.t === "matas" && o.vida <= 0) && !(o.t === "brasero" && !o.prendido && o.vida <= 0); }
+function frenaLagrima(o) { return !!o && o.t !== "pozo" && o.t !== "pinchos" && !(o.t === "matas" && o.vida <= 0) && !(o.t === "brasero" && !o.prendido); }
 
 /** Mueve un círculo por la sala chocando con la grilla y los muros. lim: {x0,y0,x1,y1} (los bordes que se pueden pasar). */
 function moverEnSala(sala, e, dx, dy, vuela, bordes) {
@@ -1818,6 +2372,2219 @@ function pasoCampo(sala, dist, e, objX, objY) {
   if (!mejor) { const d = Math.hypot(objX - e.x, objY - e.y) || 1; return [(objX - e.x) / d, (objY - e.y) / d]; }
   const tx = cx(mejor[0]), ty = cy(mejor[1]), d = Math.hypot(tx - e.x, ty - e.y) || 1;
   return [(tx - e.x) / d, (ty - e.y) / d];
+}
+
+// ══════════ 11-piso.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL PISO: el mapa de salas, generado como en el original. Una grilla de 9×8; desde la sala
+// de inicio (4,3) se expande a lo ancho: cada vecino se agrega salvo que ya esté lleno, que ya
+// tenga 2 vecinos llenos (así no se forman bloques y quedan pasillos y puntas), que se haya
+// llegado a la cuota, o que salga cara en una moneda (50 %). Salas = azar(0..1) + 5 + piso × 2,6.
+// El jefe va en la punta más lejana; el tesoro y la tienda en otras puntas; la secreta en un
+// hueco rodeado por 3 salas o más (que se abre con una bomba). Si no alcanzan las puntas, se
+// vuelve a tirar.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MAPA_W = 9, MAPA_H = 8, MAPA_INICIO = [4, 3];
+const PISOS = [
+  null,
+  { cap: "sotano", nombre: "SÓTANO HÚMEDO I", musica: "sotano" },
+  { cap: "sotano", nombre: "SÓTANO HÚMEDO II", musica: "sotano" },
+  { cap: "raices", nombre: "LAS RAÍCES I", musica: "raices" },
+  { cap: "raices", nombre: "LAS RAÍCES II", musica: "raices" },
+];
+const ULTIMO_PISO = 4;
+
+function generarPiso(n) {
+  for (let i = 0; i < 400; i++) { const p = intentarPiso(n); if (p) return p; }
+  throw new Error("no se pudo generar el piso " + n);
+}
+
+function intentarPiso(n) {
+  const meta = Math.min(19, A.ent(0, 1) + 5 + Math.floor(n * 2.6));
+  const K = (c, f) => c + f * MAPA_W, dentro = (c, f) => c >= 0 && f >= 0 && c < MAPA_W && f < MAPA_H;
+  const lleno = new Uint8Array(MAPA_W * MAPA_H);
+  const vecinos = (c, f) => { let s = 0; for (const [dx, dy] of DIRS) if (dentro(c + dx, f + dy) && lleno[K(c + dx, f + dy)]) s++; return s; };
+  const [c0, f0] = MAPA_INICIO;
+  lleno[K(c0, f0)] = 1;
+  let cuenta = 1;
+  const cola = [[c0, f0]], orden = [[c0, f0]];
+  while (cola.length) {
+    const [c, f] = cola.shift();
+    for (const [dx, dy] of DIRS) {
+      const C = c + dx, F = f + dy;
+      if (!dentro(C, F) || lleno[K(C, F)] || vecinos(C, F) > 1 || cuenta >= meta || A.si(0.5)) continue;
+      lleno[K(C, F)] = 1; cuenta++; cola.push([C, F]); orden.push([C, F]);
+    }
+  }
+  if (cuenta < meta) return null;
+
+  // distancias desde el inicio (en salas)
+  const dist = new Int16Array(MAPA_W * MAPA_H).fill(-1), q = [[c0, f0]];
+  dist[K(c0, f0)] = 0;
+  while (q.length) { const [c, f] = q.shift(); for (const [dx, dy] of DIRS) { const C = c + dx, F = f + dy; if (dentro(C, F) && lleno[K(C, F)] && dist[K(C, F)] < 0) { dist[K(C, F)] = dist[K(c, f)] + 1; q.push([C, F]); } } }
+
+  const puntas = orden.filter(([c, f]) => !(c === c0 && f === f0) && vecinos(c, f) === 1);
+  if (puntas.length < 3) return null;
+  puntas.sort((a, b) => dist[K(b[0], b[1])] - dist[K(a[0], a[1])]);
+  const jefe = puntas[0];
+  if (dist[K(jefe[0], jefe[1])] < 3) return null;
+  const resto = A.mezclar(puntas.slice(1));
+  const tesoro = resto[0], tienda = resto[1];
+
+  // la secreta: el hueco con más salas alrededor (3 o más; si no hay, 2), lejos del jefe
+  let secreta = null, mejor = 0;
+  for (let f = 0; f < MAPA_H; f++) for (let c = 0; c < MAPA_W; c++) {
+    if (lleno[K(c, f)]) continue;
+    const v = vecinos(c, f);
+    if (v < 2) continue;
+    if (Math.abs(c - jefe[0]) + Math.abs(f - jefe[1]) === 1) continue;
+    const nota = v * 10 + A.f();
+    if (nota > mejor) { mejor = nota; secreta = [c, f]; }
+  }
+
+  const piso = { n, cap: PISOS[n].cap, nombre: PISOS[n].nombre, salas: new Map(), inicio: null, jefe: null };
+  const nueva = (c, f, tipo) => {
+    const sala = { c, f, tipo, clave: K(c, f), semilla: A.ent(1, 2e9), espejo: A.ent(0, 3), visitada: false, vista: false,
+      limpia: tipo !== "normal" && tipo !== "jefe", cosas: [], decal: null, celdas: null, huecos: [], puertas: [null, null, null, null] };
+    let d = DISENO_INICIO;
+    if (tipo === "normal") d = A.uno(DISENOS_OK);
+    else if (tipo === "jefe") d = n === ULTIMO_PISO ? DISENO_JEFE_FINAL : DISENO_JEFE;
+    else if (tipo === "tesoro") d = DISENO_TESORO;
+    else if (tipo === "tienda") d = DISENO_TIENDA;
+    else if (tipo === "secreta") d = DISENO_SECRETA;
+    else if (tipo === "pacto") d = DISENO_PACTO;
+    if (tipo !== "normal") sala.espejo = 0;
+    sala.huecos = armarGrilla(sala, d);
+    piso.salas.set(sala.clave, sala);
+    return sala;
+  };
+  for (const [c, f] of orden) {
+    let tipo = "normal";
+    if (c === c0 && f === f0) tipo = "inicio";
+    else if (c === jefe[0] && f === jefe[1]) tipo = "jefe";
+    else if (c === tesoro[0] && f === tesoro[1]) tipo = "tesoro";
+    else if (c === tienda[0] && f === tienda[1]) tipo = "tienda";
+    nueva(c, f, tipo);
+  }
+  if (secreta) nueva(secreta[0], secreta[1], "secreta");
+  piso.inicio = piso.salas.get(K(c0, f0));
+  piso.jefe = piso.salas.get(K(jefe[0], jefe[1]));
+
+  // las puertas (de los dos lados)
+  for (const s of piso.salas.values()) for (let d = 0; d < 4; d++) {
+    const C = s.c + DIRS[d][0], F = s.f + DIRS[d][1];
+    if (!dentro(C, F)) continue;
+    const o = piso.salas.get(K(C, F));
+    if (!o) continue;
+    const esp = (x) => x.tipo === "secreta";
+    s.puertas[d] = {
+      destino: o,
+      tipo: tipoPuerta(s, o),
+      llave: n >= 2 && (o.tipo === "tesoro" || o.tipo === "tienda" || s.tipo === "tesoro" || s.tipo === "tienda") && !esp(s) && !esp(o),
+      secreta: esp(s) || esp(o),
+      revelada: false,
+    };
+  }
+  // la puerta con llave es UNA (se abre de un lado y queda abierta de los dos)
+  for (const s of piso.salas.values()) for (let d = 0; d < 4; d++) { const p = s.puertas[d]; if (p && !p.par) { const o = p.destino.puertas[opuesta(d)]; p.par = o; o.par = p; } }
+  llenarSalasEspeciales(piso);
+  return piso;
+}
+
+function tipoPuerta(a, b) {
+  for (const t of ["secreta", "jefe", "pacto", "tesoro", "tienda"]) if (a.tipo === t || b.tipo === t) return t === "secreta" ? "secreta" : t;
+  return "normal";
+}
+
+/** Lo que hay en el tesoro, la tienda y la secreta (lo demás aparece al limpiar). */
+function llenarSalasEspeciales(piso) {
+  for (const s of piso.salas.values()) {
+    if (s.tipo === "tesoro") s.cosas.push(pedestal(cx(6), cy(3), sacarObjeto("tesoro")));
+    if (s.tipo === "tienda") {
+      const ofertas = [
+        { t: "objeto", id: sacarObjeto("tienda"), precio: 15 },
+        { t: "corazon", sub: "rojo", precio: 3 },
+        A.si(0.5) ? { t: "bomba", precio: 5 } : { t: "capsula", sub: A.ent(0, COLORES_CAPSULA.length - 1), precio: 4 },
+        { t: "llave", precio: 5 },
+        A.si(0.45) ? { t: "corazon", sub: "espora", precio: 5 } : { t: "objeto", id: sacarObjeto("tienda"), precio: 15 },
+      ];
+      ofertas.forEach((o, i) => {
+        const x = cx(2 + i * 2), y = cy(3);
+        if (o.t === "objeto") s.cosas.push(Object.assign(pedestal(x, y, o.id), { precio: o.precio }));
+        else s.cosas.push(Object.assign(recogible(o.t, x, y, o.sub), { precio: o.precio, quieto: true }));
+      });
+      s.tendero = true;
+    }
+    if (s.tipo === "secreta") {
+      if (A.si(0.3)) s.cosas.push(pedestal(cx(6), cy(3), sacarObjeto("secreta")));
+      else {
+        const n = A.ent(3, 5);
+        for (let i = 0; i < n; i++) s.cosas.push(recogible(A.pesos([["moneda", 5], ["bomba", 2], ["llave", 1], ["corazon", 2]]), cx(4 + (i % 5)), cy(2 + ((i / 5) | 0) * 2 + (i % 2)), "espora"));
+      }
+    }
+  }
+}
+
+/** La sala del pacto (no está en el mapa: se abre desde la del jefe si hubo suerte). */
+function crearSalaPacto(piso, desde, dir) {
+  const s = { c: -1, f: -1, tipo: "pacto", clave: -1, semilla: A.ent(1, 2e9), espejo: 0, visitada: false, vista: false, limpia: true, cosas: [], decal: null, celdas: null, huecos: [], puertas: [null, null, null, null] };
+  s.huecos = armarGrilla(s, DISENO_PACTO);
+  const ofertas = A.si(0.5) ? 2 : 1;
+  for (let i = 0; i < ofertas; i++) {
+    const id = sacarObjeto("pacto");
+    s.cosas.push(Object.assign(pedestal(ofertas === 1 ? cx(6) : cx(4 + i * 4), cy(3), id), { pacto: OBJETOS[id] && OBJETOS[id].calidad >= 3 ? 2 : 1 }));
+  }
+  const p = { destino: desde, tipo: "pacto", llave: false, secreta: false, revelada: true };
+  s.puertas[opuesta(dir)] = p;
+  const q = { destino: s, tipo: "pacto", llave: false, secreta: false, revelada: true, par: p };
+  p.par = q;
+  desde.puertas[dir] = q;
+  return s;
+}
+
+/** ¿La puerta se ve? (las secretas, sólo después de volarlas) */
+function puertaVisible(p) { return p && (!p.secreta || p.revelada); }
+
+// ══════════ 12-jugador.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// SHUMIO: moverse con inercia corta, llorar esporas en 4 direcciones y las cuentas del
+// original. Retardo entre lágrimas = 16 − 6·√(1,3·L + 1) (en cuadros de 30 Hz), daño =
+// 3,5·√(1 + 1,2·D) + plano, alcance 6,5 baldosas, velocidad 1 (tope 2). La cabeza mira hacia
+// donde llora y cierra los ojos al soltar la lágrima; el cuerpo, hacia donde camina.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function nuevoJugador() {
+  return {
+    x: cx(6), y: cy(3), r: 5, vx: 0, vy: 0, z: 0,
+    cont: 6, vida: 6, esporas: 0,               // en medios corazones
+    monedas: 0, bombas: 1, llaves: 0,
+    danoUps: 0, danoPlano: 0, danoMult: 1, lagUps: 0, alcance: 6.5, velLag: 1, vel: 1, suerte: 0, tamLag: 1,
+    triple: false, veneno: false, hielo: false, rebote: false, espectral: false, atraviesa: false, buscadora: false, fuego: false,
+    vuela: false, iman: false, bombaGorda: false, colorLag: "espora",
+    objetos: [], activo: null, capsula: null,
+    inv: 0, enfriar: 0, mirar: ABAJO, mirarCue: ABAJO, gesto: 0, tGesto: 0, paso: 0, ojo: 0, tParpadeo: 120,
+    danoSala: 0, sostiene: null, tSostiene: 0, muerto: false, tMuerte: 0, golpesPiso: 0, golpesJefe: 0,
+  };
+}
+
+// ── las cuentas (las del original, pasadas a 60 Hz) ──
+function danoDe(j) { return (3.5 * Math.sqrt(1 + 1.2 * Math.max(0, j.danoUps)) + j.danoPlano + j.danoSala) * j.danoMult; }
+function retardoDe(j) {
+  const L = j.lagUps;
+  let d = L >= 0 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : L >= -0.77 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : 16 - 6 * L;
+  d = Math.max(5, d);
+  if (j.triple) d = d * 2.1 + 3;
+  return d;
+}
+const cuadrosEntreLagrimas = (j) => (retardoDe(j) + 1) * 2;
+const lagrimasPorSeg = (j) => 30 / (retardoDe(j) + 1);
+const velDe = (j) => lim(j.vel, 0.4, 2);
+const alcancePx = (j) => Math.max(2, j.alcance) * T;
+const radioLagrima = (j) => lim(Math.round((2 + Math.sqrt(danoDe(j)) * 1.1) * j.tamLag), 2, 9);
+
+function vidaTotal(j) { return j.vida + j.esporas; }
+function curar(j, medios) { const antes = j.vida; j.vida = Math.min(j.cont, j.vida + medios); return j.vida > antes; }
+function darEsporas(j, medios) { const tope = 24 - j.cont; if (j.esporas >= tope) return false; j.esporas = Math.min(tope, j.esporas + medios); return true; }
+function sumarContenedor(j, n) { j.cont = lim(j.cont + n * 2, 0, 24); j.esporas = Math.min(j.esporas, 24 - j.cont); j.vida = Math.min(j.vida, j.cont); }
+
+function herirJugador(j, medios, causa, dibujo) {
+  if (j.inv > 0 || j.muerto || J.estado !== "juego") return false;
+  if (J.sala.tipo === "jefe") j.golpesJefe++;
+  j.golpesPiso++;
+  let resto = medios;
+  if (j.esporas > 0) { const q = Math.min(j.esporas, resto); j.esporas -= q; resto -= q; }
+  if (resto > 0) j.vida = Math.max(0, j.vida - resto);
+  j.inv = 60; j.gesto = 3; j.tGesto = 22;
+  temblar(6);
+  SFX.dolor();
+  sangrar(j.x, j.y - 8, 6, PAL.sangre);
+  if (vidaTotal(j) <= 0) { j.muerto = true; j.tMuerte = 0; J.causa = causa || "?"; J.causaSpr = dibujo || null; SFX.muere(); Musica.poner("silencio"); }
+  return true;
+}
+
+function actualizarJugador(j) {
+  if (j.muerto) { j.tMuerte++; return; }
+  if (j.inv > 0) j.inv--;
+  if (j.tGesto > 0 && --j.tGesto === 0) j.gesto = 0;
+  if (j.tSostiene > 0) j.tSostiene--;
+  // parpadeo de vez en cuando (el ojo cerrado dos cuadros de dibujo)
+  if (--j.tParpadeo <= 0) { if (!j.gesto) { j.gesto = 2; j.tGesto = 7; } j.tParpadeo = V.ent(140, 320); }
+
+  // moverse: inercia corta (se siente pesado y rápido a la vez, como el original)
+  const vmax = 2.2 * velDe(j);
+  const quieto = J.congelado > 0;
+  const ax = quieto ? 0 : IN.mx * vmax, ay = quieto ? 0 : IN.my * vmax;
+  const k = ax || ay ? 0.24 : 0.2;
+  j.vx += (ax - j.vx) * k; j.vy += (ay - j.vy) * k;
+  if (Math.abs(j.vx) < 0.02) j.vx = 0; if (Math.abs(j.vy) < 0.02) j.vy = 0;
+  moverEnSala(J.sala, j, j.vx, j.vy, j.vuela, bordesJugador());
+  const v = Math.hypot(j.vx, j.vy);
+  j.paso += v;
+  if (v > 0.3) j.mirarCue = Math.abs(j.vx) > Math.abs(j.vy) * 1.1 ? (j.vx > 0 ? DERECHA : IZQUIERDA) : (j.vy > 0 ? ABAJO : ARRIBA);
+
+  // llorar
+  if (j.enfriar > 0) j.enfriar--;
+  const dx = quieto ? 0 : IN.dx, dy = quieto ? 0 : IN.dy;
+  if (dx || dy) {
+    j.mirar = dx > 0 ? DERECHA : dx < 0 ? IZQUIERDA : dy > 0 ? ABAJO : ARRIBA;
+    if (j.enfriar <= 0) { dispararJugador(j, dx, dy); j.enfriar = cuadrosEntreLagrimas(j); }
+  } else if (v > 0.3) j.mirar = j.mirarCue;
+  else if (j.enfriar <= 0) j.mirar = j.mirarCue;
+
+  // pinchos, brasas, baba
+  if (!j.vuela) {
+    const o = celda(J.sala, celdaX(j.x), celdaY(j.y));
+    if (o && o.t === "pinchos") herirJugador(j, J.piso.n >= 3 ? 2 : 1, "UNOS PINCHOS", pinchosSpr(true));
+    for (const b of J.babas) if (b.danina && dist(b.x, b.y, j.x, j.y) < b.r) { herirJugador(j, 1, "LA BABA", manchaSpr("baba", 0)); break; }
+  }
+  for (const o of alrededor(J.sala, j.x, j.y)) if (o.t === "brasero" && o.prendido && dist(o.px, o.py, j.x, j.y) < 14) herirJugador(j, J.piso.n >= 3 ? 2 : 1, "EL FUEGO", braseroSpr(0, true));
+}
+
+/** Las celdas que tocan un punto (para mirar braseros cerca). */
+function alrededor(sala, x, y) {
+  const out = [], c0 = celdaX(x), f0 = celdaY(y);
+  for (let f = f0 - 1; f <= f0 + 1; f++) for (let c = c0 - 1; c <= c0 + 1; c++) { const o = celda(sala, c, f); if (o) { o.px = cx(c); o.py = cy(f); out.push(o); } }
+  return out;
+}
+
+/** Los bordes por donde puede andar: el piso, y el hueco de una puerta abierta. */
+function bordesJugador() {
+  const b = { x0: IX0, y0: IY0, x1: IX1, y1: IY1 }, j = J.jug;
+  if (!J.puertasAbiertas) return b;
+  const P = J.sala.puertas, mitadX = SALA_W / 2, mitadY = IY0 + FILAS * T / 2;
+  if (puertaPasable(P[ARRIBA]) && Math.abs(j.x - mitadX) < 8) b.y0 = IY0 - 18;
+  if (puertaPasable(P[ABAJO]) && Math.abs(j.x - mitadX) < 8) b.y1 = IY1 + 18;
+  if (puertaPasable(P[IZQUIERDA]) && Math.abs(j.y - mitadY) < 8) b.x0 = IX0 - 18;
+  if (puertaPasable(P[DERECHA]) && Math.abs(j.y - mitadY) < 8) b.x1 = IX1 + 18;
+  return b;
+}
+function puertaPasable(p) { return p && puertaVisible(p) && !p.llave; }
+
+function dispararJugador(j, dx, dy) {
+  const d = danoDe(j), r = radioLagrima(j), vel = 3.3 * j.velLag;
+  const lado = (j.ojo = 1 - j.ojo) ? 1 : -1;
+  const n = j.triple ? 3 : 1;
+  for (let i = 0; i < n; i++) {
+    const abre = n === 1 ? 0 : (i - 1) * 0.16;
+    const ang = Math.atan2(dy, dx) + abre;
+    let vx = Math.cos(ang) * vel, vy = Math.sin(ang) * vel;
+    // hereda un poco del paso (sólo de costado: así las lágrimas "se tuercen" como en el original)
+    if (dx) vy += j.vy * 0.45; else vx += j.vx * 0.45;
+    if (dx) vx += j.vx * 0.25; else vy += j.vy * 0.25;
+    const ox = dy ? lado * 3 : dx * 5, oy = dx ? lado * 1 : dy * 3;
+    const vida = alcancePx(j) / vel;
+    J.lagrimas.push({
+      x: j.x + ox, y: j.y + oy + (dy < 0 ? -2 : 0), z: 14, vx, vy, vida, vidaMax: vida, r, dano: d,
+      color: j.colorLag, atraviesa: j.atraviesa, espectral: j.espectral, rebote: j.rebote, buscadora: j.buscadora,
+      veneno: j.veneno && A.si(0.25 + j.suerte * 0.06), hielo: j.hielo && A.si(0.3 + j.suerte * 0.06), fuego: j.fuego && A.si(0.2 + j.suerte * 0.05),
+      tocados: null,
+    });
+  }
+  if (!j.gesto || j.gesto === 1) { j.gesto = 1; j.tGesto = 6; }
+  SFX.lagrima();
+}
+
+function tirarBomba(j) {
+  if (j.bombas <= 0 || j.muerto) return;
+  j.bombas--;
+  J.bombas.push({ x: j.x, y: j.y + 2, t: 90, gorda: j.bombaGorda, vx: j.vx * 0.3, vy: j.vy * 0.3, r: 5 });
+  SFX.mecha();
+}
+
+// ── el dibujo ──
+const VISTA_CAB = ["espalda", "lado", "frente", "ladoI"];
+function dibujarJugador(g, j) {
+  const s = spritesShumio();
+  const X = Math.round(j.x), Y = Math.round(j.y);
+  if (j.muerto) {
+    // cae de costado y se deshace en esporas
+    const t = Math.min(j.tMuerte, 30);
+    g.drawImage(sombra(7, 3), X - 7, Y + 2);
+    g.save(); g.translate(X, Y + 2); g.rotate(-Math.PI / 2 * Math.min(1, t / 14));
+    g.drawImage(s.cue.frente[0], -7, -10); g.drawImage(s.cab.frente[3], -11, -26);
+    g.restore();
+    return;
+  }
+  if (j.inv > 0 && ((j.inv >> 2) & 1)) return;   // parpadea mientras es invencible
+  const z = Math.round(j.vuela ? 5 + Math.sin(J.t * 0.08) * 1.5 : 0);
+  g.drawImage(sombra(7, 3), X - 7, Y + 2);
+  const mov = Math.hypot(j.vx, j.vy) > 0.3;
+  const kPaso = mov ? Math.floor(j.paso / 7) % 4 : 0;
+  const vc = j.mirarCue === ARRIBA ? "espalda" : j.mirarCue === ABAJO ? "frente" : j.mirarCue === DERECHA ? "lado" : "ladoI";
+  const cue = s.cue[vc][kPaso];
+  // la cabeza baja un píxel al soltar la lágrima (el "puchero")
+  const cab = s.cab[VISTA_CAB[j.mirar]][j.gesto], baja = j.gesto === 1 ? 1 : 0;
+  const bob = mov && (kPaso === 1 || kPaso === 3) ? 1 : 0;
+  g.drawImage(cue, X - 7, Y - 8 - z);
+  g.drawImage(cab, X - 11, Y - 24 - z + baja + bob);
+  if (j.tSostiene > 0 && j.sostiene) g.drawImage(j.sostiene, X - 9, Y - 44 - z);
+}
+
+// ══════════ 13-efectos.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LO QUE VUELA Y LO QUE QUEDA: las lágrimas de Shumio (con su caída al final del alcance),
+// las balas de los enemigos, las bombas y sus explosiones (rompen rocas, abren secretas),
+// las partículas (tripas, esporas, cascotes), las manchas que quedan en el piso y la baba.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function temblar(n) { J.temblor = Math.max(J.temblor, n); }
+
+/** Un sprite tintado (veneno, hielo, fuego, campeones), cacheado por canvas y color. */
+const _tintes = new Map();
+function tinte(c, color) {
+  let m = _tintes.get(color);
+  if (!m) { m = new WeakMap(); _tintes.set(color, m); }
+  let t = m.get(c);
+  if (t) return t;
+  t = lienzoNuevo(c.width, c.height);
+  const g = t.getContext("2d"); g.drawImage(c, 0, 0); g.globalCompositeOperation = "source-atop"; g.fillStyle = color; g.fillRect(0, 0, t.width, t.height);
+  m.set(c, t);
+  return t;
+}
+const _espejos = new WeakMap();
+function espejado(c) {
+  let e = _espejos.get(c);
+  if (e) return e;
+  e = lienzoNuevo(c.width, c.height);
+  const g = e.getContext("2d"); g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(c, 0, 0);
+  _espejos.set(c, e);
+  return e;
+}
+
+// ── las lágrimas de Shumio ──
+function actualizarLagrimas() {
+  const L = J.lagrimas;
+  for (let i = L.length - 1; i >= 0; i--) {
+    const l = L[i];
+    if (l.buscadora) {
+      let obj = null, md = 90;
+      for (const e of J.enemigos) { if (!blanco_(e)) continue; const d = dist(e.x, e.y, l.x, l.y); if (d < md) { md = d; obj = e; } }
+      if (obj) {
+        const v = Math.hypot(l.vx, l.vy), a0 = Math.atan2(l.vy, l.vx), a1 = Math.atan2(obj.y - l.y, obj.x - l.x);
+        let da = a1 - a0; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
+        const a = a0 + lim(da, -0.09, 0.09); l.vx = Math.cos(a) * v; l.vy = Math.sin(a) * v;
+      }
+    }
+    l.x += l.vx; l.y += l.vy; l.vida--;
+    // al final del alcance, la lágrima cae (el arco del original)
+    const caida = l.vidaMax * 0.28;
+    if (l.vida < caida) l.z = Math.max(0, 14 * (l.vida / caida));
+    let rompe = l.vida <= 0 || l.z <= 0;
+    // muros
+    if (l.x < IX0 + 2 || l.x > IX1 - 2 || l.y < IY0 + 1 || l.y > IY1 - 2) {
+      if (l.rebote && !l.reboto) { if (l.x < IX0 + 2 || l.x > IX1 - 2) l.vx = -l.vx; else l.vy = -l.vy; l.reboto = true; l.x = lim(l.x, IX0 + 2, IX1 - 2); l.y = lim(l.y, IY0 + 1, IY1 - 2); }
+      else rompe = true;
+    }
+    // obstáculos
+    if (!rompe && !l.espectral) {
+      const c = celdaX(l.x), f = celdaY(l.y), o = celda(J.sala, c, f);
+      if (frenaLagrima(o)) {
+        golpearObstaculo(o, c, f, l.dano);
+        if (l.rebote && !l.reboto) { l.vx = -l.vx; l.vy = -l.vy; l.reboto = true; l.x += l.vx * 2; l.y += l.vy * 2; }
+        else rompe = true;
+      }
+    }
+    // enemigos
+    if (!rompe) for (const e of J.enemigos) {
+      if (!blanco_(e) || (l.tocados && l.tocados.has(e))) continue;
+      if (e.segmentos ? !tocaSegmento(e, l.x, l.y, l.r + 1) : dist(e.x, e.y - (e.alturaGolpe || 0), l.x, l.y) > e.r + l.r) continue;
+      danarEnemigo(e, l.dano, l.vx * 0.35, l.vy * 0.35, l);
+      if (l.atraviesa) { (l.tocados ||= new Set()).add(e); } else { rompe = true; break; }
+    }
+    if (rompe) { chapoteo(l.x, l.y - l.z, l.color, l.r); L.splice(i, 1); }
+  }
+}
+function blanco_(e) { return !e.muerto && !e.oculto && !e.intangible; }
+
+/** Una lágrima que pega en una roca, una mata, un brasero o un barril. */
+function golpearObstaculo(o, c, f, dano) {
+  if (o.t === "matas" && o.vida > 0) {
+    o.vida--; SFX.moho();
+    particulas(cx(c), cy(f), 4, ["#7a5636", "#a8835a", "#4d3421"], 1.2);
+    if (o.vida <= 0) { if (A.si(o.dorada ? 1 : 0.18)) soltarPremio(cx(c), cy(f), o.dorada ? "moneda" : null); J.cambioGrilla = true; }
+  } else if (o.t === "brasero" && o.prendido) {
+    o.vida--; particulas(cx(c), cy(f) - 10, 3, PAL.fuego.slice(2), 1);
+    if (o.vida <= 0) { o.prendido = false; SFX.moho(); humo(cx(c), cy(f) - 6); if (A.si(0.2)) soltarPremio(cx(c), cy(f)); J.cambioGrilla = true; }
+  } else if (o.t === "barril") {
+    o.vida -= dano >= 6 ? 2 : 1;
+    if (o.vida <= 0) { J.sala.celdas[f * COLS + c] = null; explotar(cx(c), cy(f), false); J.cambioGrilla = true; }
+  }
+}
+
+function chapoteo(x, y, color, r) {
+  const col = COLOR_LAGRIMA[color] ? color : "espora";
+  J.fx.push({ anim: [0, 1, 2, 3, 4].map((k) => chapoteoSpr(col, k)), x, y, t: 0, cada: 3, centro: true, escala: r > 5 ? 1 : 1 });
+  if (V.f() < 0.5) SFX.chapoteo();
+}
+
+// ── las balas de los enemigos ──
+function bala(x, y, ang, vel, o = {}) {
+  J.balas.push({ x, y, z: o.z ?? 8, vx: Math.cos(ang) * vel, vy: Math.sin(ang) * vel, r: o.r || 3, vida: o.vida || 240, color: o.color || "enemigo", curva: o.curva || 0, acel: o.acel || 0, espectral: !!o.espectral, de: J.quien ? J.quien.def.nombre : null, deSpr: J.quien ? J.quien.def.spr(J.quien) : null });
+}
+function anilloBalas(x, y, n, vel, desfase = 0, o) { for (let i = 0; i < n; i++) bala(x, y, desfase + i * TAU / n, vel, o); }
+function actualizarBalas() {
+  const B = J.balas, j = J.jug;
+  for (let i = B.length - 1; i >= 0; i--) {
+    const b = B[i];
+    if (b.curva) { const a = Math.atan2(b.vy, b.vx) + b.curva, v = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * v; b.vy = Math.sin(a) * v; }
+    if (b.acel) { b.vx *= 1 + b.acel; b.vy *= 1 + b.acel; }
+    b.x += b.vx; b.y += b.vy; b.vida--;
+    if (b.vida < 20) b.z = Math.max(0, b.z - 0.5);
+    let rompe = b.vida <= 0 || b.x < IX0 || b.x > IX1 || b.y < IY0 - 2 || b.y > IY1;
+    if (!rompe && !b.espectral) { const o = celda(J.sala, celdaX(b.x), celdaY(b.y)); if (frenaLagrima(o)) rompe = true; }
+    if (!rompe) for (const m of J.familiares) if (m.bloquea && dist(m.x, m.y, b.x, b.y) < 7) { rompe = true; break; }
+    if (!rompe && !j.muerto && dist(j.x, j.y - 5, b.x, b.y) < b.r + 4) { herirJugador(j, J.piso.n >= 3 ? 2 : 1, b.de || "UNA LÁGRIMA MALA", b.deSpr || lagrimaSpr(5, "enemigo")); rompe = true; }
+    if (rompe) { chapoteo(b.x, b.y - b.z, b.color, b.r); B.splice(i, 1); }
+  }
+}
+
+// ── las bombas ──
+function actualizarBombas() {
+  for (let i = J.bombas.length - 1; i >= 0; i--) {
+    const b = J.bombas[i];
+    b.t--;
+    b.vx *= 0.85; b.vy *= 0.85;
+    moverEnSala(J.sala, b, b.vx, b.vy, false);
+    // Shumio las empuja al caminar contra ellas
+    const j = J.jug, d = dist(j.x, j.y, b.x, b.y);
+    if (d < 9 && d > 0.01 && b.t < 80) { b.vx += (b.x - j.x) / d * 0.5; b.vy += (b.y - j.y) / d * 0.5; }
+    if (b.t <= 0) { J.bombas.splice(i, 1); explotar(b.x, b.y, true, b.gorda); }
+  }
+}
+
+/** La explosión: daña (a Shumio también), rompe obstáculos y abre las puertas secretas. */
+function explotar(x, y, dePlayer, gorda = false) {
+  const R = gorda ? 52 : 42, dano = gorda ? 75 : 60;
+  SFX.explosion(); temblar(gorda ? 14 : 10);
+  J.fx.push({ anim: [0, 1, 2, 3, 4, 5].map(explosionSpr), x, y: y + 6, t: 0, cada: 4, centro: false });
+  J.destello = 3;
+  mancha("quemado", x, y, 1.4);
+  particulas(x, y, 14, ["#3a2c28", "#5a4640", "#f59a26", "#ffe07a"], 3);
+  for (const e of J.enemigos) if (!e.muerto && !e.oculto && dist(e.x, e.y, x, y) < R + e.r) { const d = dist(e.x, e.y, x, y) || 1; danarEnemigo(e, dano, (e.x - x) / d * 5, (e.y - y) / d * 5); }
+  const j = J.jug;
+  if (dist(j.x, j.y, x, y) < R + 2) { herirJugador(j, 2, "UNA BOMBA", bombaSpr(1)); const d = dist(j.x, j.y, x, y) || 1; j.vx += (j.x - x) / d * 5; j.vy += (j.y - y) / d * 5; }
+  for (const b of J.bombas) { const d = dist(b.x, b.y, x, y) || 1; if (d < R) { b.vx += (b.x - x) / d * 4; b.vy += (b.y - y) / d * 4; } }
+  for (const c of J.sala.cosas) if (!c.quieto && c.t !== "objeto" && c.t !== "trampilla") { const d = dist(c.x, c.y, x, y) || 1; if (d < R) { c.vx += (c.x - x) / d * 4; c.vy += (c.y - y) / d * 4; c.vz = 2; } }
+  // los obstáculos
+  for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) {
+    const o = celda(J.sala, c, f);
+    if (!o || dist(cx(c), cy(f), x, y) > R + 10) continue;
+    if (o.t === "roca") {
+      J.sala.celdas[f * COLS + c] = null; SFX.roca();
+      particulas(cx(c), cy(f), 8, PAL.piedra.slice(2), 2.4);
+      mancha("quemado", cx(c), cy(f), 0.8);
+      if (o.marcada) { SFX.secreto(); soltarPremio(cx(c), cy(f), A.pesos([["espora", 5], ["bomba", 3], ["llave", 2]])); }
+      else if (A.si(0.04)) soltarPremio(cx(c), cy(f));
+      J.cambioGrilla = true;
+    } else if (o.t === "matas" && o.vida > 0) { o.vida = 0; J.cambioGrilla = true; particulas(cx(c), cy(f), 6, ["#7a5636", "#a8835a"], 2); }
+    else if (o.t === "brasero") { J.sala.celdas[f * COLS + c] = null; J.cambioGrilla = true; humo(cx(c), cy(f)); }
+    else if (o.t === "barril") { J.sala.celdas[f * COLS + c] = null; J.cambioGrilla = true; J.pendientes.push(() => explotar(cx(c), cy(f), false)); }
+  }
+  // las puertas secretas
+  for (let d = 0; d < 4; d++) {
+    const p = J.sala.puertas[d];
+    if (!p || !p.secreta || p.revelada) continue;
+    const q = PUERTA[d];
+    if (dist(q.x, q.y, x, y) < R + 16) { p.revelada = true; if (p.par) p.par.revelada = true; SFX.secreto(); particulas(q.x, q.y, 10, PAL.piedra.slice(2), 2.5); }
+  }
+  // las puertas con llave no se vuelan (como en el original), pero tiemblan
+}
+
+// ── partículas: pedacitos con altura (z) que caen y rebotan en el piso ──
+function particulas(x, y, n, colores, fuerza = 2, z = 6) {
+  for (let i = 0; i < n; i++) {
+    const a = V.f() * TAU, v = (0.4 + V.f()) * fuerza * 0.6;
+    J.part.push({ x, y, z, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7, vz: 1 + V.f() * fuerza, c: V.uno(colores), t: 60 + V.ent(0, 60), s: V.f() < 0.3 ? 2 : 1 });
+  }
+}
+function sangrar(x, y, n, rampa) { particulas(x, y, n, [rampa[1], rampa[2], rampa[3]], 2, 8); }
+function actualizarParticulas() {
+  const P = J.part;
+  for (let i = P.length - 1; i >= 0; i--) {
+    const p = P[i];
+    p.x += p.vx; p.y += p.vy; p.z += p.vz; p.vz -= 0.22;
+    if (p.z <= 0) { p.z = 0; p.vz *= -0.35; p.vx *= 0.6; p.vy *= 0.6; if (Math.abs(p.vz) < 0.3) p.vz = 0; }
+    if (--p.t <= 0) P.splice(i, 1);
+  }
+  if (P.length > 260) P.splice(0, P.length - 260);
+}
+function humo(x, y) { J.fx.push({ anim: [0, 1, 2, 3].map(humoSpr), x, y, t: 0, cada: 5, centro: true }); }
+
+// ── las manchas: se pintan UNA vez en el piso de la sala y se quedan ──
+function mancha(tipo, x, y, escala = 1) {
+  const s = J.sala;
+  if (!s.decal) s.decal = lienzoNuevo(SALA_W, SALA_H);
+  const g = s.decal.getContext("2d"), m = manchaSpr(tipo, V.ent(0, 5));
+  g.save(); g.globalAlpha = tipo === "quemado" ? 0.8 : 0.72; g.beginPath(); g.rect(IX0, IY0, COLS * T, FILAS * T); g.clip();
+  const w = Math.round(m.width * escala), h = Math.round(m.height * escala);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(m, Math.round(x - w / 2), Math.round(y - h / 2), w, h);
+  g.restore();
+}
+
+// ── la baba (el rastro de las babosas, y el de algunos jefes): daña si la pisás ──
+function dejarBaba(x, y, r = 9, dura = 240, danina = true) {
+  if (J.babas.length > 90) J.babas.shift();
+  J.babas.push({ x, y, r, t: dura, max: dura, danina, v: V.ent(0, 5) });
+}
+function actualizarBabas() { for (let i = J.babas.length - 1; i >= 0; i--) if (--J.babas[i].t <= 0) J.babas.splice(i, 1); }
+function dibujarBabas(g) {
+  for (const b of J.babas) {
+    const s = manchaSpr("baba", b.v), k = b.r / 9;
+    g.globalAlpha = Math.min(1, b.t / 40) * 0.8;
+    g.drawImage(s, Math.round(b.x - s.width * k / 2), Math.round(b.y - s.height * k / 2), Math.round(s.width * k), Math.round(s.height * k));
+  }
+  g.globalAlpha = 1;
+}
+
+// ── dibujar lo que vuela ──
+function dibujarLagrima(g, l) {
+  const s = lagrimaSpr(l.r, l.veneno ? "veneno" : l.hielo ? "hielo" : l.fuego ? "fuego" : l.color);
+  const x = Math.round(l.x - s.width / 2), y = Math.round(l.y - l.z - s.height / 2);
+  const sh = sombra(Math.max(2, l.r - 1), Math.max(1, Math.round(l.r / 2)));
+  g.drawImage(sh, Math.round(l.x - sh.width / 2), Math.round(l.y - sh.height / 2 + 2));
+  g.drawImage(s, x, y);
+}
+function dibujarBala(g, b) {
+  const s = lagrimaSpr(b.r + 1, b.color);
+  g.drawImage(sombra(b.r, 1), Math.round(b.x - b.r), Math.round(b.y + 1));
+  g.drawImage(s, Math.round(b.x - s.width / 2), Math.round(b.y - b.z - s.height / 2));
+}
+function dibujarBomba(g, b) {
+  const s = bombaSpr(b.gorda ? 1.25 : 1, true, (J.t >> 2) & 1);
+  const late = b.t < 30 ? ((b.t >> 1) & 1) : ((b.t >> 3) & 1);
+  const e = b.t < 30 ? 1 + (1 - b.t / 30) * 0.2 : 1;
+  g.drawImage(sombra(6, 2), Math.round(b.x - 6), Math.round(b.y + 1));
+  const w = Math.round(s.width * e), h = Math.round(s.height * e);
+  g.drawImage(late && b.t < 60 ? tinte(s, "rgba(255,70,40,0.55)") : s, Math.round(b.x - w / 2), Math.round(b.y + 4 - h), w, h);
+}
+function dibujarParticulas(g) {
+  for (const p of J.part) {
+    g.fillStyle = p.c;
+    g.fillRect(Math.round(p.x), Math.round(p.y - p.z), p.s, p.s);
+  }
+}
+function actualizarFx() { for (let i = J.fx.length - 1; i >= 0; i--) { const f = J.fx[i]; if (++f.t >= f.anim.length * f.cada) J.fx.splice(i, 1); } }
+function dibujarFx(g) {
+  for (const f of J.fx) {
+    const s = f.anim[Math.min(f.anim.length - 1, Math.floor(f.t / f.cada))];
+    g.drawImage(s, Math.round(f.x - s.width / 2), Math.round(f.centro ? f.y - s.height / 2 : f.y - s.height));
+  }
+}
+
+// ══════════ 14-enemigos.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS ENEMIGOS: cada uno con su cabeza (una máquina de estados chica) y sus números, en la
+// escala del original (una mosca aguanta 5, un "gaper" 10, un "clotty" 25, contra lágrimas de
+// 3,5). Los que caminan rodean las rocas con un campo de distancias; los que vuelan, no.
+// Los campeones (desde el piso 2) salen rojizos, con el doble de vida y un premio seguro.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ENEMIGOS = {
+  mosquin: {
+    nombre: "UN MOSQUÍN", vida: 5, r: 4, vuela: true, oy: -7, rastro: "sangre", peso: 0.6,
+    crear(e) { e.a = V.f() * TAU; },
+    pensar(e) {
+      const j = J.jug, a = Math.atan2(j.y - e.y, j.x - e.x);
+      e.a += difAng(a, e.a) * 0.025 + (V.f() - 0.5) * 0.6;
+      const v = 0.5 * e.lento;
+      e.vx = Math.cos(e.a) * v; e.vy = Math.sin(e.a) * v;
+      if (V.f() < 0.004) SFX.zumbido();
+    },
+    spr: (e) => mosquinSpr((e.t >> 2) & 1),
+  },
+  mosquinRojo: {
+    nombre: "UN MOSQUÍN ROJO", vida: 5, r: 4, vuela: true, oy: -7, rastro: "sangre", peso: 0.6,
+    crear(e) { e.a = V.f() * TAU; },
+    pensar(e) {
+      const j = J.jug, a = Math.atan2(j.y - e.y, j.x - e.x);
+      e.a += difAng(a, e.a) * 0.09 + Math.sin(e.t * 0.2) * 0.08;
+      const v = 1.15 * e.lento;
+      e.vx = Math.cos(e.a) * v; e.vy = Math.sin(e.a) * v;
+      if (V.f() < 0.006) SFX.zumbido();
+    },
+    spr: (e) => mosquinSpr((e.t >> 1) & 1, true),
+  },
+  hongon: {
+    nombre: "UN HONGÓN", vida: 10, r: 7, oy: 5, rastro: "sangre", voltea: true,
+    pensar(e) {
+      if (!e.sinGorro && e.vida <= e.max / 2) { e.sinGorro = true; particulas(e.x, e.y - 18, 8, ["#86643f", "#5e442c", "#a88558"], 2, 16); SFX.moho(); }
+      const v = (e.sinGorro ? 1.05 : 0.72) * e.lento;
+      const [dx, dy] = pasoCampo(J.sala, J.campo, e, J.jug.x, J.jug.y);
+      e.vx += (dx * v - e.vx) * 0.2; e.vy += (dy * v - e.vy) * 0.2;
+      if (Math.abs(e.vx) > 0.1) e.mira = sig(e.vx);
+    },
+    spr: (e) => hongonSpr(Math.floor(e.t / 8) % 4, e.sinGorro),
+  },
+  babosa: {
+    nombre: "UNA BABOSA", vida: 14, r: 8, oy: 5, rastro: "baba", voltea: true,
+    crear(e) { e.dir = V.ent(0, 3); e.tE = V.ent(60, 140); },
+    pensar(e) {
+      if (--e.tE <= 0 || e.choco) {
+        const j = J.jug;
+        e.dir = V.f() < 0.5 ? (Math.abs(j.x - e.x) > Math.abs(j.y - e.y) ? (j.x > e.x ? DERECHA : IZQUIERDA) : (j.y > e.y ? ABAJO : ARRIBA)) : V.ent(0, 3);
+        e.tE = V.ent(70, 150);
+      }
+      const v = 0.36 * e.lento;
+      e.vx = DIRS[e.dir][0] * v; e.vy = DIRS[e.dir][1] * v;
+      if (e.vx) e.mira = sig(e.vx);
+      if (e.t % 9 === 0) dejarBaba(e.x, e.y + 2, 8, 300);
+    },
+    spr: (e) => babosaSpr((e.t >> 4) & 1),
+  },
+  escupidor: {
+    nombre: "UN ESCUPIDOR", vida: 10, r: 7, oy: 6, rastro: "sangre", peso: 3,
+    crear(e) { e.tE = V.ent(60, 130); e.k = 0; },
+    pensar(e) {
+      e.vx *= 0.8; e.vy *= 0.8;
+      e.tE--;
+      e.k = e.tE < 26 ? 1 : 0;
+      if (e.tE <= 0) {
+        const j = J.jug, a = Math.atan2(j.y - e.y, j.x - e.x);
+        if (J.piso.n >= 3) for (const d of [-0.22, 0, 0.22]) bala(e.x, e.y - 6, a + d, 2.1); else bala(e.x, e.y - 6, a, 2.2);
+        SFX.escupe(); e.tE = V.ent(100, 140); e.tEsc = 10;
+      }
+      if (e.tEsc > 0) { e.tEsc--; e.k = 2; }
+    },
+    spr: (e) => escupidorSpr(e.k),
+  },
+  saltarin: {
+    nombre: "UN SALTARÍN", vida: 10, r: 6, oy: 4, rastro: "sangre",
+    crear(e) { e.est = "suelo"; e.tE = V.ent(30, 70); },
+    pensar(e) {
+      if (e.est === "suelo") {
+        e.vx *= 0.7; e.vy *= 0.7;
+        if (--e.tE <= 0) {
+          const j = J.jug, lugar = lugarLibreCerca(j.x + V.ent(-40, 40), j.y + V.ent(-30, 30));
+          e.est = "aire"; e.tE = 34; e.x0 = e.x; e.y0 = e.y; e.x1 = lugar[0]; e.y1 = lugar[1]; SFX.salto();
+        }
+      } else {
+        const u = 1 - e.tE / 34;
+        e.vx = e.vy = 0;
+        e.x = lerp(e.x0, e.x1, u); e.y = lerp(e.y0, e.y1, u); e.z = Math.sin(u * Math.PI) * 18; e.alturaGolpe = e.z;
+        if (--e.tE <= 0) { e.est = "suelo"; e.z = 0; e.alturaGolpe = 0; e.tE = V.ent(24, 50); particulas(e.x, e.y, 3, ["#634537", "#3c2a22"], 1, 1); }
+      }
+      e.vueloPropio = e.est === "aire";
+    },
+    spr: (e) => saltarinSpr(e.est === "aire" ? 1 : 0),
+  },
+  gusano: {
+    nombre: "UN GUSANO", vida: 14, r: 7, oy: 6, rastro: "sangre", peso: 9,
+    crear(e) { e.est = "bajo"; e.tE = V.ent(20, 60); e.oculto = true; },
+    pensar(e) {
+      e.vx = e.vy = 0;
+      if (--e.tE > 0) {
+        if (e.est === "bajo" && e.tE < 22 && e.tE % 4 === 0) particulas(e.x, e.y, 2, PAL.tierra.slice(2, 5), 1, 1);
+        if (e.est === "afuera" && e.tE === 34) {
+          const j = J.jug, a = Math.atan2(j.y - e.y, j.x - e.x);
+          for (const d of [-0.3, 0, 0.3]) bala(e.x, e.y - 10, a + d, 2.2);
+          SFX.escupe();
+        }
+        return;
+      }
+      if (e.est === "bajo") { e.est = "sube"; e.tE = 16; e.oculto = false; }
+      else if (e.est === "sube") { e.est = "afuera"; e.tE = 56; }
+      else if (e.est === "afuera") { e.est = "baja"; e.tE = 16; }
+      else {
+        e.est = "bajo"; e.tE = V.ent(50, 90); e.oculto = true;
+        // sale en otro lado, no pegado a Shumio
+        for (let i = 0; i < 30; i++) {
+          const c = V.ent(0, COLS - 1), f = V.ent(0, FILAS - 1);
+          if (celda(J.sala, c, f) || dist(cx(c), cy(f), J.jug.x, J.jug.y) < 56) continue;
+          e.x = cx(c); e.y = cy(f); break;
+        }
+      }
+    },
+    spr(e) {
+      const u = e.tE / 16;
+      const k = e.est === "sube" ? lim(Math.floor((1 - u) * 4), 0, 3) : e.est === "baja" ? lim(Math.floor(u * 4), 0, 3) : 3;
+      return gusanoSpr(k);
+    },
+  },
+  bulbo: {
+    nombre: "UN BULBO", vida: 18, r: 7, vuela: true, oy: -5, rastro: "espora", peso: 0.8,
+    crear(e) { e.dx = V.f() < 0.5 ? -1 : 1; e.dy = V.f() < 0.5 ? -1 : 1; },
+    pensar(e) { const v = 0.75 * e.lento; e.vx = e.dx * v; e.vy = e.dy * v; e.rebotaSolo = true; },
+    morir(e) { anilloBalas(e.x, e.y - 6, 8, 2, 0, { color: "moho" }); SFX.escupe(); },
+    spr: (e) => bulboSpr((e.t >> 3) & 1),
+  },
+  arana: {
+    nombre: "UNA ARAÑITA", vida: 6, r: 5, oy: 3, rastro: "sangre", voltea: true,
+    crear(e) { e.est = "quieta"; e.tE = V.ent(15, 50); },
+    pensar(e) {
+      if (e.est === "quieta") { e.vx *= 0.6; e.vy *= 0.6; if (--e.tE <= 0) { const j = J.jug, a = Math.atan2(j.y + V.ent(-24, 24) - e.y, j.x + V.ent(-24, 24) - e.x); e.est = "corre"; e.tE = V.ent(16, 26); e.vx = Math.cos(a) * 2.4 * e.lento; e.vy = Math.sin(a) * 2.4 * e.lento; } }
+      else if (--e.tE <= 0) { e.est = "quieta"; e.tE = V.ent(20, 55); }
+      if (Math.abs(e.vx) > 0.1) e.mira = sig(e.vx);
+    },
+    spr: (e) => aranaSpr(e.est === "corre" ? (e.t >> 1) & 1 : 0),
+  },
+  grumo: {
+    nombre: "UN GRUMO", vida: 22, r: 7, oy: 5, rastro: "sangre",
+    crear(e) { e.tE = V.ent(30, 60); e.tTiro = V.ent(60, 110); e.salto = 0; },
+    pensar(e) {
+      if (e.salto > 0) { e.salto--; } else { e.vx *= 0.75; e.vy *= 0.75; }
+      if (--e.tE <= 0) { const a = V.f() * TAU; e.vx = Math.cos(a) * 1.3 * e.lento; e.vy = Math.sin(a) * 1.3 * e.lento; e.salto = 14; e.tE = V.ent(40, 70); }
+      if (--e.tTiro <= 0) {
+        const cruz = (e.tiros = (e.tiros || 0) + 1) % 2;
+        for (let i = 0; i < 4; i++) bala(e.x, e.y - 6, i * TAU / 4 + (cruz ? 0 : TAU / 8), 1.9);
+        SFX.escupe(); e.tTiro = V.ent(90, 130);
+      }
+      dejarBaba(e.x, e.y + 2, 6, 120, false);
+    },
+    spr: (e) => grumoSpr(e.salto > 0 ? 1 : 0),
+  },
+};
+
+// quién sale en cada capítulo (e = común, E = fuerte)
+const TANDAS = {
+  sotano: { e: [["mosquin", 3], ["mosquinRojo", 2], ["hongon", 4], ["escupidor", 2], ["saltarin", 2], ["arana", 1]], E: [["grumo", 3], ["bulbo", 2], ["babosa", 2], ["gusano", 1]] },
+  raices: { e: [["mosquinRojo", 3], ["hongon", 3], ["escupidor", 2], ["saltarin", 2], ["arana", 3], ["gusano", 2], ["babosa", 1]], E: [["grumo", 3], ["bulbo", 3], ["babosa", 2], ["gusano", 3]] },
+};
+
+function difAng(a, b) { let d = a - b; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return d; }
+function lugarLibreCerca(x, y) {
+  let c = lim(celdaX(x), 0, COLS - 1), f = lim(celdaY(y), 0, FILAS - 1);
+  if (!esSolida(celda(J.sala, c, f))) return [lim(x, IX0 + 8, IX1 - 8), lim(y, IY0 + 8, IY1 - 8)];
+  for (let r = 1; r < 6; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const C = c + dx, F = f + dy;
+    if (C >= 0 && F >= 0 && C < COLS && F < FILAS && !esSolida(celda(J.sala, C, F))) return [cx(C), cy(F)];
+  }
+  return [x, y];
+}
+
+function crearEnemigo(tipo, x, y, o = {}) {
+  const d = ENEMIGOS[tipo];
+  const escala = 1 + (J.piso.n - 1) * 0.2;
+  const e = {
+    tipo, def: d, x, y, r: d.r, vx: 0, vy: 0, z: 0, t: V.ent(0, 60), vuela: !!d.vuela, oy: d.oy ?? 4,
+    vida: d.vida * escala, max: d.vida * escala, golpe: 0, kx: 0, ky: 0, mira: 1, lento: 1, frio: 0, veneno: null, quema: null,
+    dormido: o.dormido ?? 34, jefe: !!d.jefe, campeon: false,
+  };
+  if (!e.jefe && J.piso.n >= 2 && !o.sinCampeon && A.si(0.06)) { e.campeon = true; e.vida = e.max = e.max * 2; }
+  if (d.crear) d.crear(e);
+  J.enemigos.push(e);
+  return e;
+}
+
+function danarEnemigo(e, d, kx = 0, ky = 0, lag = null) {
+  if (e.muerto || e.oculto || e.intangible) return;
+  if (e.cabeza) e = e.cabeza;           // los anillos del gusano jefe comparten la vida
+  e.vida -= d; e.golpe = 5;
+  if (!e.jefe) { const p = e.def.peso ?? 1; e.kx += kx / p; e.ky += ky / p; }
+  if (lag) {
+    if (lag.veneno) e.veneno = { t: 80, dano: 2 };
+    if (lag.hielo) e.frio = 100;
+    if (lag.fuego) e.quema = { t: 60, dano: 1.5 };
+  }
+  if (e.vida <= 0) matarEnemigo(e);
+}
+
+function matarEnemigo(e) {
+  if (e.muerto) return;
+  e.muerto = true;
+  const d = e.def;
+  if (d.morir) d.morir(e);
+  const r = d.rastro === "baba" ? PAL.baba : d.rastro === "espora" ? PAL.espora : PAL.sangre;
+  sangrar(e.x, e.y - 6, e.jefe ? 30 : 9, r);
+  mancha(d.rastro === "baba" ? "baba" : d.rastro === "espora" ? "espora" : "sangre", e.x, e.y, e.jefe ? 2 : e.r > 6 ? 1 : 0.7);
+  SFX.muere();
+  J.muertes++;
+  if (e.campeon) soltarPremio(e.x, e.y);
+  if (e.segmentos) for (const s of e.segmentos) { sangrar(s.x, s.y - 6, 6, PAL.sangre); mancha("sangre", s.x, s.y, 1); }
+  if (e.jefe && d.alMorir) d.alMorir(e);
+}
+
+function actualizarEnemigos() {
+  const j = J.jug;
+  // el campo hacia Shumio, cada tanto
+  if (!J.campo || J.t % 12 === 0 || J.cambioGrilla) { J.campo = campoHacia(J.sala, j.x, j.y); J.cambioGrilla = false; }
+  for (const e of J.enemigos) {
+    if (e.muerto) continue;
+    e.t++;
+    if (e.golpe > 0) e.golpe--;
+    if (e.dormido > 0) { e.dormido--; continue; }
+    e.lento = e.frio > 0 ? 0.5 : 1;
+    if (e.frio > 0) e.frio--;
+    for (const k of ["veneno", "quema"]) {
+      const s = e[k];
+      if (!s) continue;
+      if (--s.t <= 0) e[k] = null; else if (s.t % 20 === 0) { e.vida -= s.dano; e.golpe = 2; if (e.vida <= 0) matarEnemigo(e); }
+    }
+    if (e.muerto) continue;
+    J.quien = e;
+    e.def.pensar(e);
+    J.quien = null;
+    if (e.muerto) continue;
+    const vuela = e.vuela || e.vueloPropio;
+    if (e.rebotaSolo) {
+      moverEnSala(J.sala, e, e.vx + e.kx, 0, vuela); if (e.choco) e.dx = -e.dx;
+      moverEnSala(J.sala, e, 0, e.vy + e.ky, vuela); if (e.choco) e.dy = -e.dy;
+    } else if (!e.fijo) moverEnSala(J.sala, e, e.vx + e.kx, e.vy + e.ky, vuela);
+    e.kx *= 0.78; e.ky *= 0.78;
+    // el golpe a Shumio al tocarlo
+    if (!e.oculto && !e.intangible && !j.muerto && (e.z || 0) < 10) {
+      const toca = e.segmentos ? tocaSegmento(e, j.x, j.y, 4) : dist(e.x, e.y, j.x, j.y) < e.r + 4;
+      if (toca) herirJugador(j, e.jefe || J.piso.n >= 3 ? 2 : 1, e.def.nombre, e.def.spr(e));
+    }
+  }
+  // que no se amontonen (los que caminan se empujan entre sí)
+  const E = J.enemigos;
+  for (let a = 0; a < E.length; a++) for (let b = a + 1; b < E.length; b++) {
+    const p = E[a], q = E[b];
+    if (p.muerto || q.muerto || p.oculto || q.oculto || p.jefe || q.jefe) continue;
+    const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy), m = p.r + q.r - 2;
+    if (d < m && d > 0.01) { const f = (m - d) / d * 0.25; p.x -= dx * f; p.y -= dy * f; q.x += dx * f; q.y += dy * f; }
+  }
+  for (let i = E.length - 1; i >= 0; i--) if (E[i].muerto) E.splice(i, 1);
+}
+
+function tocaSegmento(e, x, y, r) {
+  if (dist(e.x, e.y, x, y) < e.r + r) return true;
+  for (const s of e.segmentos) if (dist(s.x, s.y, x, y) < s.r + r) return true;
+  return false;
+}
+
+function dibujarEnemigo(g, e) {
+  if (e.oculto) return;
+  const d = e.def;
+  let s = d.spr(e);
+  if (e.mira < 0 && d.voltea) s = espejado(s);
+  if (e.campeon) s = tinte(s, "rgba(230,40,30,0.38)");
+  if (e.veneno) s = tinte(s, "rgba(90,220,60,0.4)");
+  else if (e.frio > 0) s = tinte(s, "rgba(120,200,255,0.45)");
+  else if (e.quema) s = tinte(s, "rgba(255,140,40,0.4)");
+  if (e.golpe > 0 && (e.golpe & 2)) s = blanco(s);
+  const rx = Math.max(3, Math.round(e.r * (e.jefe ? 1.05 : 0.95))), ry = Math.max(2, Math.round(rx * 0.38));
+  const X = Math.round(e.x), Y = Math.round(e.y);
+  if (!(e.est === "bajo")) g.drawImage(sombra(rx, ry), X - rx, Y - ry + 2);
+  const z = Math.round(e.z || 0) + (d.vuela ? Math.round(Math.sin(e.t * 0.15) * 1.2) : 0);
+  if (e.dormido > 0 && (e.dormido & 2)) g.globalAlpha = 0.6;
+  g.drawImage(s, X - Math.floor(s.width / 2), Y + e.oy - s.height - z);
+  g.globalAlpha = 1;
+}
+
+/** Los enemigos de una sala al entrar (según su diseño y el capítulo). */
+function poblarSala(sala) {
+  const tanda = TANDAS[J.piso.cap];
+  for (const h of sala.huecos) {
+    const x = cx(h.c), y = cy(h.f);
+    if (h.tipo === "e") crearEnemigo(A.pesos(tanda.e), x, y);
+    else if (h.tipo === "E") crearEnemigo(A.pesos(tanda.E), x, y);
+    else if (h.tipo === "v") crearEnemigo(J.piso.n >= 2 ? "mosquinRojo" : "mosquin", x, y);
+    else if (h.tipo === "j") crearJefe(sala, x, y);
+    J.fx.push({ anim: [0, 1, 2, 3, 4].map(aparicionSpr), x, y: y - 4, t: 0, cada: 4, centro: true });
+  }
+}
+
+// ══════════ 15-jefes.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS JEFES: la Madre Babosa (saltitos, el salto grande que cae con un anillo de baba, el
+// escupitajo en abanico), el Rey Mosquín (se infla y revienta en lágrimas, llama a su corte),
+// el Gusano Anillado (una serpiente de anillos que comparten la vida) y Micelia, la Madre
+// Hongo del fondo, con tres fases. Al morir: un objeto, corazones y la trampilla (o el cofre).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NOMBRE_JEFE = { madreBabosa: "MADRE BABOSA", reyMosquin: "REY MOSQUÍN", gusanoAnillado: "GUSANO ANILLADO", micelia: "MICELIA" };
+
+/** Qué jefe le toca a cada piso (sin repetir hasta el tercero). */
+function elegirJefe(n, yaVistos) {
+  if (n === ULTIMO_PISO) return "micelia";
+  const todos = ["madreBabosa", "reyMosquin", "gusanoAnillado"];
+  const pool = n === 1 ? ["madreBabosa", "reyMosquin"] : todos.filter((t) => !yaVistos.includes(t));
+  return A.uno(pool.length ? pool : todos);
+}
+
+function crearJefe(sala, x, y) {
+  const tipo = J.jefeTipo, e = crearEnemigo(tipo, x, y, { dormido: 20, sinCampeon: true });
+  const escala = 1 + (J.piso.n - 1) * 0.25;
+  e.vida = e.max = ENEMIGOS[tipo].vida * (tipo === "micelia" ? 1 : escala);
+  J.jefes.push(e);
+  return e;
+}
+
+function alMorirJefe(e) {
+  temblar(16); SFX.explosion();
+  for (let i = 0; i < 5; i++) J.pendientes.push(() => { particulas(e.x + V.ent(-16, 16), e.y - 10 + V.ent(-12, 12), 10, [PAL.sangre[2], PAL.sangre[3], PAL.hueso[3]], 3, 10); });
+  J.jefeMuerto = true;
+}
+
+const DEF_JEFE = { jefe: true, peso: 99, alMorir: alMorirJefe };
+
+ENEMIGOS.madreBabosa = Object.assign({}, DEF_JEFE, {
+  nombre: "LA MADRE BABOSA", vida: 250, r: 20, oy: 8, rastro: "baba",
+  crear(e) { e.est = "espera"; e.tE = 50; e.k = 0; },
+  pensar(e) {
+    const j = J.jug;
+    e.vx = e.vy = 0;
+    switch (e.est) {
+      case "espera": e.k = 0; if (--e.tE <= 0) {
+        const q = A.pesos([["saltitos", 4], ["grande", 3], ["escupir", 3]]);
+        if (q === "saltitos") { e.saltos = A.ent(2, 3); e.est = "agacha"; e.tE = 12; e.sig = "salto"; }
+        else if (q === "grande") { e.est = "agacha"; e.tE = 18; e.sig = "subir"; }
+        else { e.est = "escupir"; e.tE = 34; }
+      } break;
+      case "agacha": e.k = 1; if (--e.tE <= 0) {
+        if (e.sig === "salto") { e.est = "salto"; e.tE = 30; e.x0 = e.x; e.y0 = e.y; const a = Math.atan2(j.y - e.y, j.x - e.x), d = Math.min(60, dist(j.x, j.y, e.x, e.y)); e.x1 = lim(e.x + Math.cos(a) * d, IX0 + 26, IX1 - 26); e.y1 = lim(e.y + Math.sin(a) * d, IY0 + 26, IY1 - 20); SFX.salto(); }
+        else { e.est = "subir"; e.tE = 34; e.intangible = true; SFX.salto(); }
+      } break;
+      case "salto": { e.k = 2; const u = 1 - e.tE / 30; e.x = lerp(e.x0, e.x1, u); e.y = lerp(e.y0, e.y1, u); e.z = Math.sin(u * Math.PI) * 22; e.alturaGolpe = e.z * 0.5;
+        if (--e.tE <= 0) { e.z = 0; aterrizaMadre(e, false); e.saltos--; if (e.saltos > 0) { e.est = "agacha"; e.tE = 10; e.sig = "salto"; } else { e.est = "espera"; e.tE = V.ent(40, 70); } } } break;
+      case "subir": e.k = 2; e.z += 9; if (--e.tE <= 0) { e.est = "sombra"; e.tE = 60; } break;
+      case "sombra": { e.k = 2; const d = dist(j.x, j.y, e.x, e.y) || 1, v = Math.min(d, 2.2); e.x = lim(e.x + (j.x - e.x) / d * v, IX0 + 26, IX1 - 26); e.y = lim(e.y + (j.y - e.y) / d * v, IY0 + 26, IY1 - 20);
+        if (--e.tE <= 0) { e.est = "cae"; e.tE = 30; } } break;
+      case "cae": e.k = 2; e.z = Math.max(0, e.z - 14); if (e.z <= 0) { e.intangible = false; aterrizaMadre(e, true); e.est = "espera"; e.tE = V.ent(50, 80); } break;
+      case "escupir": e.k = 3; if (e.tE === 16) {
+        const a = Math.atan2(j.y - e.y, j.x - e.x), n = J.piso.n >= 2 ? 14 : 11;
+        for (let i = 0; i < n; i++) bala(e.x, e.y - 18, a + (A.f() - 0.5) * 0.9, 1.3 + A.f() * 1.7, { r: A.ent(2, 4), color: "moho", z: 16 + A.ent(0, 10) });
+        SFX.escupe(); temblar(3);
+      } if (--e.tE <= 0) { e.est = "espera"; e.tE = V.ent(40, 70); } break;
+    }
+    e.intangible = e.est === "subir" || e.est === "sombra" || (e.est === "cae" && e.z > 30);
+  },
+  spr: (e) => madreBabosaSpr(e.k),
+});
+function aterrizaMadre(e, grande) {
+  temblar(grande ? 10 : 4); SFX.cae();
+  dejarBaba(e.x, e.y, grande ? 20 : 12, 360);
+  if (grande) anilloBalas(e.x, e.y - 6, J.piso.n >= 2 ? 14 : 10, 1.8, A.f() * TAU, { color: "moho", r: 3 });
+  particulas(e.x, e.y, grande ? 12 : 5, PAL.baba.slice(1, 4), 2, 2);
+}
+
+ENEMIGOS.reyMosquin = Object.assign({}, DEF_JEFE, {
+  nombre: "EL REY MOSQUÍN", vida: 220, r: 17, vuela: true, oy: -2, rastro: "sangre",
+  crear(e) { e.tInf = 110; e.tInv = 200; e.k = 0; e.ang = 0; },
+  pensar(e) {
+    const j = J.jug;
+    e.ang += 0.012;
+    const ox = cx(6) + Math.cos(e.ang) * 70, oy = cy(3) + Math.sin(e.ang * 2) * 26;
+    const tx = lerp(ox, j.x, 0.3), ty = lerp(oy, j.y, 0.3), d = dist(tx, ty, e.x, e.y) || 1, v = e.est === "inflar" ? 0.1 : 0.5;
+    e.vx = (tx - e.x) / d * Math.min(v, d); e.vy = (ty - e.y) / d * Math.min(v, d);
+    if (e.est === "inflar") {
+      e.k = 1;
+      if (--e.tE <= 0) {
+        e.est = null; e.k = 0; temblar(5); SFX.escupe();
+        anilloBalas(e.x, e.y - 12, J.piso.n >= 2 ? 12 : 10, 1.9, A.f() * TAU, { r: 3 });
+        if (moscasVivas() < 6) for (let i = 0; i < 2; i++) crearEnemigo("mosquin", e.x + V.ent(-12, 12), e.y + V.ent(-8, 8), { dormido: 8, sinCampeon: true });
+      }
+    } else if (--e.tInf <= 0) { e.est = "inflar"; e.tE = 38; e.tInf = V.ent(130, 170); }
+    if (--e.tInv <= 0) {
+      e.tInv = V.ent(240, 300);
+      if (moscasVivas() < 6) for (let i = 0; i < 3; i++) { const a = i * TAU / 3; crearEnemigo("mosquinRojo", e.x + Math.cos(a) * 20, e.y + Math.sin(a) * 14, { dormido: 16, sinCampeon: true }); }
+      SFX.zumbido();
+    }
+    if (V.f() < 0.02) SFX.zumbido();
+  },
+  spr: (e) => reyMosquinSpr(e.k),
+});
+function moscasVivas() { return J.enemigos.filter((x) => !x.muerto && (x.tipo === "mosquin" || x.tipo === "mosquinRojo")).length; }
+
+ENEMIGOS.gusanoAnillado = Object.assign({}, DEF_JEFE, {
+  nombre: "EL GUSANO ANILLADO", vida: 300, r: 10, oy: 6, rastro: "sangre",
+  crear(e) {
+    e.dir = ABAJO; e.tGiro = 50; e.tTiro = 120; e.hist = [];
+    e.segmentos = [];
+    for (let i = 0; i < 8; i++) e.segmentos.push({ x: e.x, y: e.y, r: i === 7 ? 6 : 8, dir: ABAJO, cabeza: e });
+    for (let i = 0; i < 120; i++) e.hist.push([e.x, e.y]);
+  },
+  pensar(e) {
+    const j = J.jug, v = (e.vida < e.max / 2 ? 1.5 : 1.15) * e.lento;
+    if (--e.tGiro <= 0 || e.choco) {
+      // gira hacia Shumio si puede (nunca se da vuelta en el lugar)
+      const quiere = Math.abs(j.x - e.x) > Math.abs(j.y - e.y) ? (j.x > e.x ? DERECHA : IZQUIERDA) : (j.y > e.y ? ABAJO : ARRIBA);
+      const opciones = [0, 1, 2, 3].filter((d) => d !== opuesta(e.dir) && (!e.choco || d !== e.dir));
+      e.dir = opciones.includes(quiere) && A.si(0.7) ? quiere : A.uno(opciones);
+      e.tGiro = V.ent(36, 80);
+    }
+    e.vx = DIRS[e.dir][0] * v; e.vy = DIRS[e.dir][1] * v;
+    e.hist.unshift([e.x, e.y]);
+    if (e.hist.length > 160) e.hist.length = 160;
+    const paso = Math.round(12 / v);
+    e.segmentos.forEach((s, i) => {
+      const h = e.hist[Math.min(e.hist.length - 1, (i + 1) * paso)], h2 = e.hist[Math.min(e.hist.length - 1, (i + 1) * paso - 2)];
+      s.x = h[0]; s.y = h[1];
+      const dx = h2[0] - h[0], dy = h2[1] - h[1];
+      if (Math.abs(dx) + Math.abs(dy) > 0.1) s.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? DERECHA : IZQUIERDA) : (dy > 0 ? ABAJO : ARRIBA);
+    });
+    e.k = e.tTiro < 16 ? 1 : 0;
+    if (--e.tTiro <= 0) {
+      const a = Math.atan2(j.y - e.y, j.x - e.x);
+      for (const d of [-0.28, 0, 0.28]) bala(e.x, e.y - 8, a + d, 2.2);
+      SFX.escupe(); e.tTiro = V.ent(90, 130);
+    }
+  },
+  spr: (e) => gusanoAnilladoSpr("cabeza", (e.dir + 2) % 4, e.k),
+  dibujar(g, e) {
+    const flash = (s) => (e.golpe > 0 && (e.golpe & 2) ? blanco(s) : s);
+    for (let i = e.segmentos.length - 1; i >= 0; i--) {
+      const s = e.segmentos[i], sp = flash(gusanoAnilladoSpr(i === e.segmentos.length - 1 ? "cola" : "cuerpo", (s.dir + 2) % 4, 0));
+      g.drawImage(sombra(s.r, 3), Math.round(s.x - s.r), Math.round(s.y) - 1);
+      g.drawImage(sp, Math.round(s.x - 13), Math.round(s.y + 4 - 26));
+    }
+    const c = flash(gusanoAnilladoSpr("cabeza", (e.dir + 2) % 4, e.k));
+    g.drawImage(sombra(10, 3), Math.round(e.x - 10), Math.round(e.y) - 1);
+    g.drawImage(c, Math.round(e.x - 13), Math.round(e.y + 5 - 26));
+  },
+});
+
+ENEMIGOS.micelia = Object.assign({}, DEF_JEFE, {
+  nombre: "MICELIA", vida: 760, r: 26, oy: 12, rastro: "espora", fijo: true,
+  crear(e) { e.x0 = e.x; e.y = e.y0 = cy(2) + 4; e.fase = 1; e.tA = 70; e.tB = 200; e.tS = 0; e.ang = 0; e.k = 0; e.grito = 0; },
+  pensar(e) {
+    const j = J.jug, f = e.vida > e.max * 0.66 ? 1 : e.vida > e.max * 0.33 ? 2 : 3;
+    e.x = e.x0 + Math.sin(e.t * 0.011) * (f === 3 ? 70 : 46);
+    e.y = e.y0 + Math.sin(e.t * 0.023) * 6;
+    if (f !== e.fase) {   // el grito del cambio de fase: limpia las balas y llama a su prole
+      e.fase = f; e.grito = 50; SFX.jefe(); temblar(12);
+      J.balas.length = 0;
+      for (let i = 0; i < 2; i++) crearEnemigo(f === 2 ? "hongon" : "arana", cx(i ? 10 : 2), cy(5), { dormido: 20, sinCampeon: true });
+    }
+    e.k = f === 3 ? 3 : e.golpe > 3 ? 2 : 0;
+    if (e.grito > 0) { e.grito--; e.k = 1; return; }
+    const boca = (n) => { e.tBoca = n; };
+    if (e.tBoca > 0) { e.tBoca--; if (f < 3) e.k = 1; }
+    const bx = e.x, by = e.y - 30;
+    if (f === 1) {
+      if (--e.tA <= 0) { anilloBalas(bx, by, 12, 1.7, (e.alterna = !e.alterna) ? 0 : TAU / 24, { color: "violeta", r: 3, z: 20 }); SFX.escupe(); boca(20); e.tA = 80; }
+      if (--e.tB <= 0) { if (J.enemigos.length < 5) for (let i = 0; i < 2; i++) crearEnemigo("hongon", cx(i ? 10 : 2), cy(5), { dormido: 20, sinCampeon: true }); e.tB = 280; }
+    } else if (f === 2) {
+      e.tS++;
+      if (e.tS % 170 < 100) { if (e.tS % 6 === 0) { e.ang += 0.26; for (let k = 0; k < 2; k++) bala(bx, by, e.ang + k * Math.PI, 1.8, { color: "violeta", r: 3, z: 20 }); boca(8); } }
+      else if (e.tS % 170 === 130) { const a = Math.atan2(j.y - by, j.x - bx); for (let i = -2; i <= 2; i++) bala(bx, by, a + i * 0.2, 2.3, { color: "violeta", r: 3, z: 20 }); SFX.escupe(); boca(20); }
+      if (--e.tB <= 0) { if (J.enemigos.length < 5) for (let i = 0; i < 2; i++) crearEnemigo("mosquinRojo", bx + (i ? 30 : -30), by, { dormido: 12, sinCampeon: true }); e.tB = 320; }
+    } else {
+      e.tS++;
+      if (e.tS % 5 === 0) { e.ang += 0.21; for (let k = 0; k < 3; k++) bala(bx, by, e.ang + k * TAU / 3, 1.9, { color: "violeta", r: 3, z: 20, curva: 0.004 }); }
+      if (--e.tA <= 0) { anilloBalas(bx, by, 16, 1.5, A.f() * TAU, { color: "sangre", r: 4, z: 20 }); SFX.escupe(); temblar(4); e.tA = 150; }
+      if (--e.tB <= 0) { if (J.enemigos.length < 5) for (let i = 0; i < 2; i++) crearEnemigo("saltarin", cx(i ? 10 : 2), cy(5), { dormido: 20, sinCampeon: true }); e.tB = 300; }
+    }
+  },
+  spr: (e) => miceliaSpr(e.k),
+});
+
+// ══════════ 16-objetos.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS OBJETOS Y LO QUE SE RECOGE: 33 pasivos y 6 activos (cada uno con su efecto real sobre
+// las cuentas o las lágrimas), repartidos en las tandas del original (tesoro, jefe, tienda,
+// pacto, secreta) sin repetirse en la partida. Los recogibles: corazones rojos y de espora,
+// monedas de 1 y de 5, bombas, llaves, cápsulas (el efecto de cada color se sortea por partida
+// y se descubre al tomarla), cofres, y los pedestales. La tienda cobra; el pacto cobra vida.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const OBJETOS = {
+  sombreroRojo: { nombre: "SOMBRERO ROJO", lema: "DAÑO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoUps += 1; } },
+  setaPicante: { nombre: "SETA PICANTE", lema: "DAÑO ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoUps += 0.5; j.danoPlano += 0.5; } },
+  cafeRaiz: { nombre: "CAFÉ DE RAÍZ", lema: "LÁGRIMAS ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.lagUps += 0.7; } },
+  zapatillas: { nombre: "ZAPATILLAS", lema: "VELOCIDAD ARRIBA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], aplicar: (j) => { j.vel += 0.3; } },
+  lupa: { nombre: "LUPA", lema: "LÁGRIMAS GRANDES", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { j.tamLag *= 1.3; j.danoPlano += 0.6; } },
+  trebol: { nombre: "TRÉBOL", lema: "SUERTE ARRIBA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], aplicar: (j) => { j.suerte += 2; } },
+  corazonPiedra: { nombre: "CORAZÓN DE PIEDRA", lema: "VIDA ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
+  ojoVidrio: { nombre: "OJO DE VIDRIO", lema: "ALCANCE ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { j.alcance += 1.5; j.velLag += 0.2; } },
+  tercerOjo: { nombre: "TERCER OJO", lema: "TRES LÁGRIMAS", calidad: 3, pools: ["tesoro", "pacto"], aplicar: (j) => { j.triple = true; } },
+  iman: { nombre: "IMÁN", lema: "TODO VIENE A VOS", calidad: 1, pools: ["tesoro", "tienda"], aplicar: (j) => { j.iman = true; } },
+  esporasToxicas: { nombre: "ESPORAS TÓXICAS", lema: "LÁGRIMAS VENENOSAS", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.veneno = true; } },
+  escarcha: { nombre: "ESCARCHA", lema: "LÁGRIMAS HELADAS", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.hielo = true; } },
+  gomaElastica: { nombre: "GOMA ELÁSTICA", lema: "LÁGRIMAS QUE REBOTAN", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.rebote = true; j.alcance += 0.5; } },
+  velo: { nombre: "VELO", lema: "LÁGRIMAS FANTASMA", calidad: 2, pools: ["tesoro", "secreta"], aplicar: (j) => { j.espectral = true; j.colorLag = "tinta"; } },
+  aguja: { nombre: "AGUJA", lema: "ATRAVIESA TODO", calidad: 3, pools: ["tesoro", "secreta"], aplicar: (j) => { j.atraviesa = true; } },
+  brujula: { nombre: "BRÚJULA", lema: "EL MAPA SE REVELA", calidad: 1, pools: ["tesoro", "tienda"], aplicar: (j) => { j.mapa = true; revelarMapa(); } },
+  ojoCazador: { nombre: "OJO CAZADOR", lema: "LÁGRIMAS QUE BUSCAN", calidad: 3, pools: ["tesoro", "pacto"], aplicar: (j) => { j.buscadora = true; j.colorLag = "violeta"; } },
+  cuerno: { nombre: "CUERNO", lema: "DAÑO MUCHO ARRIBA", calidad: 3, pools: ["pacto"], aplicar: (j) => { j.danoUps += 2; } },
+  moscaAmiga: { nombre: "MOSCA AMIGA", lema: "TE CUIDA LAS ESPALDAS", calidad: 2, pools: ["tesoro", "tienda"], aplicar: () => {} },
+  hermanito: { nombre: "HERMANITO", lema: "UN AMIGUITO QUE LLORA", calidad: 2, pools: ["tesoro"], aplicar: () => {} },
+  casco: { nombre: "CASCO DE ESPORAS", lema: "DOS CORAZONES DE ESPORA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], aplicar: (j) => { darEsporas(j, 4); } },
+  bombaGorda: { nombre: "BOMBA GORDA", lema: "CINCO BOMBAS GRANDES", calidad: 2, pools: ["tesoro", "tienda"], aplicar: (j) => { j.bombas = Math.min(99, j.bombas + 5); j.bombaGorda = true; } },
+  bolsaMonedas: { nombre: "BOLSA DE MONEDAS", lema: "VEINTICINCO MONEDAS", calidad: 1, pools: ["tesoro", "secreta"], aplicar: (j) => { j.monedas = Math.min(99, j.monedas + 25); } },
+  llavero: { nombre: "LLAVERO", lema: "CUATRO LLAVES", calidad: 1, pools: ["tesoro", "tienda"], aplicar: (j) => { j.llaves = Math.min(99, j.llaves + 4); } },
+  plomo: { nombre: "LÁGRIMA DE PLOMO", lema: "PESADA Y DOLOROSA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoPlano += 1.6; j.lagUps -= 0.35; j.velLag -= 0.15; j.tamLag *= 1.15; } },
+  lenteSangre: { nombre: "LENTE DE SANGRE", lema: "DAÑO Y ALCANCE", calidad: 2, pools: ["tesoro", "jefe", "pacto"], aplicar: (j) => { j.danoUps += 1; j.alcance += 1; j.colorLag = "sangre"; } },
+  chispa: { nombre: "CHISPA", lema: "LÁGRIMAS QUE QUEMAN", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.fuego = true; j.danoUps += 0.3; } },
+  alasPolilla: { nombre: "ALAS DE POLILLA", lema: "¡A VOLAR!", calidad: 3, pools: ["tesoro", "pacto"], aplicar: (j) => { j.vuela = true; j.vel += 0.1; } },
+  caparazon: { nombre: "CAPARAZÓN", lema: "TODO UN POCO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoUps += 0.3; j.lagUps += 0.2; j.vel += 0.1; j.alcance += 0.5; j.suerte += 1; j.velLag += 0.1; } },
+  hongoGigante: { nombre: "HONGO GIGANTE", lema: "¡TODO ARRIBA!", calidad: 4, pools: ["pacto", "secreta"], aplicar: (j) => { sumarContenedor(j, 1); j.vida = j.cont; j.danoUps += 0.3; j.danoMult *= 1.5; j.vel += 0.3; j.alcance += 1.5; j.tamLag *= 1.2; } },
+  mediaLuna: { nombre: "MEDIA LUNA", lema: "LÁGRIMAS Y SUERTE", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.lagUps += 0.5; j.suerte += 1; } },
+  raizVieja: { nombre: "RAÍZ VIEJA", lema: "VIDA ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { sumarContenedor(j, 1); j.vida = j.cont; } },
+  pactoSangre: { nombre: "PACTO DE SANGRE", lema: "DAÑO POR UNO Y MEDIO", calidad: 4, pools: ["pacto"], aplicar: (j) => { j.danoMult *= 1.5; j.colorLag = "sangre"; } },
+  // los activos: se cargan limpiando salas
+  libroSetas: { nombre: "LIBRO DE SETAS", lema: "PODER PARA LA SALA", calidad: 2, pools: ["tesoro", "pacto"], activo: 3, usar: (j) => { j.danoSala += 2; SFX.pacto(); J.destello = 4; } },
+  dadoViejo: { nombre: "DADO VIEJO", lema: "REHACE EL DESTINO", calidad: 3, pools: ["tesoro", "tienda"], activo: 6, usar: () => rehacerPedestales() },
+  frascoMosquines: { nombre: "FRASCO DE MOSQUINES", lema: "MOSCAS DE TU LADO", calidad: 2, pools: ["tesoro", "tienda"], activo: 3, usar: (j) => { for (let i = 0; i < 4; i++) J.familiares.push({ tipo: "moscaAzul", x: j.x + V.ent(-6, 6), y: j.y + V.ent(-6, 6), t: 900, a: V.f() * TAU }); SFX.zumbido(); } },
+  linterna: { nombre: "LINTERNA", lema: "UNA LUZ QUE QUEMA", calidad: 2, pools: ["tesoro", "tienda"], activo: 4, usar: () => { J.destello = 8; temblar(6); for (const e of J.enemigos.slice()) danarEnemigo(e, 40); } },
+  mechaEterna: { nombre: "MECHA ETERNA", lema: "UNA BOMBA GRATIS", calidad: 1, pools: ["tesoro", "tienda"], activo: 1, usar: (j) => { J.bombas.push({ x: j.x, y: j.y + 2, t: 90, gorda: j.bombaGorda, vx: 0, vy: 0, r: 5 }); SFX.mecha(); } },
+  gotaRocio: { nombre: "GOTA DE ROCÍO", lema: "CURA UN CORAZÓN", calidad: 1, pools: ["tesoro", "tienda"], activo: 4, usar: (j) => { curar(j, 2); SFX.corazon(); } },
+};
+
+function armarTandas() {
+  J.tandas = {};
+  for (const [id, o] of Object.entries(OBJETOS)) for (const p of o.pools) (J.tandas[p] ||= []).push(id);
+  J.tandas.secreta = Object.keys(OBJETOS).filter((id) => !OBJETOS[id].pools.includes("pacto") || id === "hongoGigante");
+  J.tomados = new Set();
+}
+function sacarObjeto(pool) {
+  const lista = (J.tandas[pool] || []).filter((id) => !J.tomados.has(id) && !J.enPedestal.has(id));
+  let id = lista.length ? A.uno(lista) : null;
+  if (!id) { const resto = Object.keys(OBJETOS).filter((x) => !J.tomados.has(x) && !J.enPedestal.has(x)); id = resto.length ? A.uno(resto) : "caparazon"; }
+  J.enPedestal.add(id);
+  return id;
+}
+function revelarMapa() { if (!J.piso) return; for (const s of J.piso.salas.values()) if (s.tipo !== "secreta") s.vista = true; }
+
+// ── los recogibles ──
+function recogible(t, x, y, sub) {
+  if (t === "corazon" && !sub) sub = A.pesos([["rojo", 6], ["medio", 3], ["espora", 1]]);
+  if (t === "moneda" && !sub) sub = A.si(0.1) ? 5 : 1;
+  if (t === "capsula" && sub == null) sub = A.ent(0, COLORES_CAPSULA.length - 1);
+  if (t === "cofre" && !sub) sub = A.si(J.piso && J.piso.n >= 2 ? 0.3 : 0.18) ? "dorado" : "normal";
+  return { t, sub, x, y, vx: 0, vy: 0, z: 0, vz: 0, r: 5, k: V.ent(0, 40) };
+}
+function pedestal(x, y, id) { return { t: "objeto", id, x, y, vx: 0, vy: 0, z: 0, vz: 0, r: 8, quieto: true, k: V.ent(0, 90) }; }
+
+/** Tira algo al piso con un saltito. tipo: null (al azar), "espora" (corazón de espora), o un tipo. */
+function soltarPremio(x, y, tipo) {
+  let sub;
+  if (tipo === "espora") { tipo = "corazon"; sub = "espora"; }
+  if (!tipo) tipo = A.pesos([["moneda", 45], ["corazon", 25], ["bomba", 12], ["llave", 12], ["capsula", 6]]);
+  const c = recogible(tipo, x, y, sub);
+  const a = V.f() * TAU; c.vx = Math.cos(a) * 1.4; c.vy = Math.sin(a) * 1.1; c.vz = 2.4; c.z = 2;
+  J.sala.cosas.push(c);
+  return c;
+}
+
+/** El premio de limpiar una sala (como en el original: la suerte ayuda). */
+function premioSala() {
+  const j = J.jug, n = A.f() + j.suerte * 0.03;
+  if (n < 0.36) return;
+  const tipo = A.pesos([["moneda", 30], ["corazon", 18], ["llave", 14], ["bomba", 14], ["cofre", 8], ["capsula", 8]]);
+  const [x, y] = lugarLibreCerca(cx(6), cy(3));
+  const c = recogible(tipo, x, y);
+  c.vz = 2; J.sala.cosas.push(c);
+  if (tipo === "moneda" && A.si(0.25)) soltarPremio(x, y, "moneda");
+}
+
+function actualizarCosas() {
+  const j = J.jug, C = J.sala.cosas;
+  for (let i = C.length - 1; i >= 0; i--) {
+    const c = C[i];
+    c.k++;
+    if (!c.quieto) {
+      c.z += c.vz; c.vz -= 0.25;
+      if (c.z <= 0) { c.z = 0; c.vz = Math.abs(c.vz) > 0.8 ? -c.vz * 0.35 : 0; }
+      if (j.iman && !c.precio && ["moneda", "corazon", "bomba", "llave"].includes(c.t)) { const d = dist(j.x, j.y, c.x, c.y) || 1; if (d < 90) { c.vx += (j.x - c.x) / d * 0.18; c.vy += (j.y - c.y) / d * 0.18; } }
+      c.vx *= 0.9; c.vy *= 0.9;
+      moverEnSala(J.sala, c, c.vx, c.vy, false);
+    }
+    if (c.t === "trampilla") { if (!c.abierta && dist(j.x, j.y, c.x, c.y) > 20) c.abierta = true; if (c.abierta && dist(j.x, j.y, c.x, c.y) < 8 && !j.muerto && J.estado === "juego") bajarPiso(); continue; }
+    if (j.muerto || c.z > 6) continue;
+    const alcance = c.t === "objeto" ? 12 : c.t === "cofre" || c.t === "cofreFinal" ? 12 : 9;
+    if (dist(j.x, j.y, c.x, c.y) > alcance) { c.tocando = false; continue; }
+    if (tomar(c)) C.splice(i, 1);
+  }
+}
+
+/** Shumio toca algo: ¿se lo lleva? (devuelve true si desaparece del piso) */
+function tomar(c) {
+  const j = J.jug;
+  if (c.precio && c.t !== "objeto") {
+    if (j.monedas < c.precio || !puedeUsar(c)) return false;
+    j.monedas -= c.precio; SFX.moneda();
+  }
+  switch (c.t) {
+    case "corazon": {
+      if (c.sub === "espora" || c.sub === "esporaMedio") { if (!darEsporas(j, c.sub === "espora" ? 2 : 1)) return false; }
+      else if (!curar(j, c.sub === "rojo" ? 2 : 1)) return false;
+      SFX.corazon(); return true;
+    }
+    case "moneda": j.monedas = Math.min(99, j.monedas + (c.sub | 0)); SFX.moneda(); return true;
+    case "bomba": j.bombas = Math.min(99, j.bombas + 1); SFX.recoger(); return true;
+    case "llave": j.llaves = Math.min(99, j.llaves + 1); SFX.llave(); return true;
+    case "capsula": {
+      if (j.capsula != null) { const v = recogible("capsula", j.x, j.y + 10, j.capsula); v.vz = 2; v.vy = 1; J.sala.cosas.push(v); }
+      j.capsula = c.sub; SFX.recoger(); rotulo(nombreCapsula(c.sub), ""); return true;
+    }
+    case "cofre": {
+      if (c.abierto) return false;
+      if (c.sub === "dorado") { if (j.llaves <= 0) return false; j.llaves--; }
+      c.abierto = true; c.quieto = true; SFX.llave();
+      if (c.sub === "dorado" && A.si(0.14)) { J.sala.cosas.push(pedestal(c.x, c.y - 18, sacarObjeto("tesoro"))); }
+      else { const n = A.ent(2, c.sub === "dorado" ? 4 : 3); for (let i = 0; i < n; i++) soltarPremio(c.x, c.y); }
+      return false;
+    }
+    case "cofreFinal": if (!c.abierto) { c.abierto = true; ganar(); } return false;
+    case "objeto": return tomarObjeto(c);
+  }
+  return false;
+}
+function puedeUsar(c) {
+  const j = J.jug;
+  if (c.t === "corazon") return c.sub.startsWith("espora") ? j.esporas < 24 - j.cont : j.vida < j.cont;
+  return true;
+}
+
+function tomarObjeto(c) {
+  const j = J.jug;
+  if (!c.id || c.tocando) return false;
+  c.tocando = true;
+  const def = OBJETOS[c.id];
+  if (c.pacto) {
+    const costo = c.pacto * 2;
+    if (j.cont >= costo && vidaTotal(j) - costo > 0) sumarContenedor(j, -c.pacto);
+    else if (j.cont === 0 && j.esporas > 6) j.esporas -= 6;
+    else return false;
+    SFX.pacto();
+  } else if (c.precio) {
+    if (j.monedas < c.precio) return false;
+    j.monedas -= c.precio; SFX.moneda();
+  }
+  const id = c.id;
+  J.tomados.add(id);
+  if (def.activo) {
+    if (j.activo) { c.id = j.activo.id; c.tocando = true; c.precio = 0; c.pacto = 0; } else c.id = null;
+    j.activo = { id, carga: def.activo, max: def.activo };
+  } else {
+    c.id = null;
+    const antes = fotoCuentas(j);
+    def.aplicar(j);
+    anotarCambios(antes);
+    j.objetos.push(id);
+    if (id === "moscaAmiga" || id === "hermanito") armarFamiliares();
+  }
+  rotulo(def.nombre, def.lema);
+  SFX.objeto();
+  j.sostiene = iconoSpr(id); j.tSostiene = 50;
+  // en la tienda y en el pacto, lo comprado se va con pedestal y todo
+  return (c.precio || c.pacto) && !c.id ? true : false;
+}
+
+function rehacerPedestales() {
+  let alguno = false;
+  for (const c of J.sala.cosas) if (c.t === "objeto" && c.id) {
+    J.enPedestal.delete(c.id);
+    c.id = sacarObjeto(J.sala.tipo === "tienda" ? "tienda" : J.sala.tipo === "pacto" ? "pacto" : J.sala.tipo === "jefe" ? "jefe" : "tesoro");
+    humo(c.x, c.y - 16); alguno = true;
+  }
+  SFX[alguno ? "secreto" : "malo"]();
+}
+
+// ── las cápsulas: el color de cada efecto se sortea por partida ──
+const EFECTOS_CAPSULA = [
+  { n: "¡LÁGRIMAS ARRIBA!", f: (j) => { j.lagUps += 0.35; }, bueno: true }, { n: "LÁGRIMAS ABAJO", f: (j) => { j.lagUps -= 0.28; } },
+  { n: "¡VELOCIDAD ARRIBA!", f: (j) => { j.vel += 0.15; }, bueno: true }, { n: "VELOCIDAD ABAJO", f: (j) => { j.vel -= 0.1; } },
+  { n: "¡ALCANCE ARRIBA!", f: (j) => { j.alcance += 0.75; }, bueno: true }, { n: "ALCANCE ABAJO", f: (j) => { j.alcance -= 0.5; } },
+  { n: "¡SALUD TOTAL!", f: (j) => { j.vida = j.cont; }, bueno: true },
+  { n: "MAL VIAJE", f: (j) => { if (vidaTotal(j) <= 2) { j.vida = j.cont; J.capsulaBien = true; } else { j.inv = 0; herirJugador(j, 1, "UNA CÁPSULA"); } } },
+  { n: "¡SUERTE ARRIBA!", f: (j) => { j.suerte += 1; }, bueno: true }, { n: "SUERTE ABAJO", f: (j) => { j.suerte -= 1; } },
+  { n: "BOMBAS POR LLAVES", f: (j) => { [j.bombas, j.llaves] = [j.llaves, j.bombas]; }, bueno: true },
+  { n: "¡ESPORAS DE VIDA!", f: (j) => { darEsporas(j, 2); }, bueno: true },
+  { n: "¡DAÑO ARRIBA!", f: (j) => { j.danoPlano += 0.4; }, bueno: true },
+];
+function sortearCapsulas() { J.capsulas = A.mezclar(EFECTOS_CAPSULA.slice()).slice(0, COLORES_CAPSULA.length); J.capsulasVistas = new Set(); }
+function nombreCapsula(i) { return J.capsulasVistas.has(i) ? J.capsulas[i].n : "UNA CÁPSULA"; }
+function tomarCapsula(j) {
+  if (j.capsula == null) return;
+  const i = j.capsula, e = J.capsulas[i];
+  j.capsula = null; J.capsulasVistas.add(i); J.capsulaBien = false;
+  const antes = fotoCuentas(j);
+  e.f(j);
+  anotarCambios(antes);
+  rotulo(J.capsulaBien ? "¡SALUD TOTAL!" : e.n, "");
+  SFX[e.bueno || J.capsulaBien ? "capsula" : "malo"]();
+}
+
+// lo que cambió en las cuentas (el HUD lo muestra en verde o rojo al lado, como el original)
+function fotoCuentas(j) { return { vel: velDe(j), lag: lagrimasPorSeg(j), dano: danoDe(j), alc: j.alcance, tiro: j.velLag, suerte: j.suerte }; }
+function anotarCambios(antes) {
+  const d = fotoCuentas(J.jug);
+  J.cambios ||= {};
+  for (const k in d) if (Math.abs(d[k] - antes[k]) > 0.005) J.cambios[k] = { d: d[k] - antes[k], t: 200 };
+}
+
+function usarActivo(j) {
+  const a = j.activo;
+  if (!a || j.muerto) return;
+  if (a.carga < a.max) { SFX.clic(); return; }
+  a.carga = 0;
+  OBJETOS[a.id].usar(j);
+  SFX.activo();
+}
+function cargarActivo(n = 1) {
+  const a = J.jug.activo;
+  if (!a || a.carga >= a.max) return;
+  a.carga = Math.min(a.max, a.carga + n);
+  if (a.carga >= a.max) SFX.cargado();
+}
+
+// ── los familiares ──
+function armarFamiliares() {
+  const j = J.jug, viejos = J.familiares.filter((f) => f.tipo === "moscaAzul");
+  J.familiares = viejos;
+  if (j.objetos.includes("moscaAmiga")) J.familiares.push({ tipo: "mosca", x: j.x, y: j.y, a: 0, bloquea: true, t: 0 });
+  if (j.objetos.includes("hermanito")) J.familiares.push({ tipo: "hermanito", x: j.x, y: j.y + 10, enfriar: 0, mirar: ABAJO, t: 0 });
+}
+function actualizarFamiliares() {
+  const j = J.jug;
+  for (let i = J.familiares.length - 1; i >= 0; i--) {
+    const f = J.familiares[i];
+    f.t++;
+    if (f.tipo === "mosca") {
+      f.a += 0.055; f.x = j.x + Math.cos(f.a) * 20; f.y = j.y - 4 + Math.sin(f.a) * 15;
+      if (f.t % 8 === 0) for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y, f.x, f.y) < e.r + 5) danarEnemigo(e, 2.5);
+    } else if (f.tipo === "hermanito") {
+      const tx = j.x - DIRS[j.mirar][0] * 18, ty = j.y - DIRS[j.mirar][1] * 16 + 2;
+      f.x += (tx - f.x) * 0.08; f.y += (ty - f.y) * 0.08;
+      if (f.enfriar > 0) f.enfriar--;
+      if ((IN.dx || IN.dy) && f.enfriar <= 0 && J.congelado <= 0) {
+        f.mirar = j.mirar; f.enfriar = 34;
+        J.lagrimas.push({ x: f.x, y: f.y, z: 12, vx: IN.dx * 3.1, vy: IN.dy * 3.1, vida: 48, vidaMax: 48, r: 3, dano: 3.5, color: "violeta", tocados: null });
+      } else if (!(IN.dx || IN.dy)) f.mirar = ABAJO;
+    } else if (f.tipo === "moscaAzul") {
+      let obj = null, md = 1e9;
+      for (const e of J.enemigos) { if (!blanco_(e)) continue; const d = dist(e.x, e.y, f.x, f.y); if (d < md) { md = d; obj = e; } }
+      const tx = obj ? obj.x : j.x + Math.cos(f.t * 0.05 + i) * 16, ty = obj ? obj.y - 4 : j.y - 6 + Math.sin(f.t * 0.05 + i) * 12;
+      const d = dist(tx, ty, f.x, f.y) || 1, v = obj ? 1.8 : 1.2;
+      f.x += (tx - f.x) / d * Math.min(v, d); f.y += (ty - f.y) / d * Math.min(v, d);
+      if (obj && md < obj.r + 4) { danarEnemigo(obj, 8); sangrar(f.x, f.y, 3, PAL.azul); J.familiares.splice(i, 1); continue; }
+      if (--f.t <= 0 && !obj) J.familiares.splice(i, 1);
+    }
+  }
+}
+function dibujarFamiliar(g, f) {
+  if (f.tipo === "mosca" || f.tipo === "moscaAzul") {
+    const s = tinte(mosquinSpr((f.t >> 1) & 1), "rgba(110,170,255,0.55)");
+    g.drawImage(sombra(3, 1), Math.round(f.x - 3), Math.round(f.y + 6));
+    g.drawImage(s, Math.round(f.x - s.width / 2), Math.round(f.y - s.height / 2 - 4));
+  } else if (f.tipo === "hermanito") {
+    const s = spritesShumio(PAL.piel, PAL.violeta, PAL.azul, "hermanito");
+    const cab = s.cab[VISTA_CAB[f.mirar]][f.enfriar > 28 ? 1 : 0];
+    g.drawImage(sombra(5, 2), Math.round(f.x - 5), Math.round(f.y + 2));
+    g.drawImage(cab, Math.round(f.x - 11), Math.round(f.y - 18 + Math.sin(f.t * 0.1)));
+  }
+}
+
+// ── dibujar lo que está en el piso ──
+function dibujarCosa(g, c) {
+  const X = Math.round(c.x), Y = Math.round(c.y), z = Math.round(c.z);
+  let s = null;
+  switch (c.t) {
+    case "corazon": s = corazonSpr(c.sub); break;
+    case "moneda": s = monedaSpr(Math.floor(c.k / 6) % 4, c.sub); break;
+    case "bomba": s = bombaSpr(0.8); break;
+    case "llave": s = llaveSpr(); break;
+    case "capsula": s = capsulaSpr(c.sub); break;
+    case "cofre": s = cofreSpr(c.sub === "dorado", !!c.abierto); break;
+    case "cofreFinal": { s = cofreSpr(true, !!c.abierto); const w = s.width * 2, h = s.height * 2; g.drawImage(sombra(16, 4), X - 16, Y - 2); g.drawImage(s, X - w / 2, Y + 2 - h, w, h); return; }
+    case "trampilla": s = trampillaSpr(!!c.abierta); g.drawImage(s, X - 14, Y - 14); return;
+    case "objeto": {
+      g.drawImage(pedestalSpr(), X - 11, Y - 8);
+      if (c.id) {
+        const bob = Math.round(Math.sin(c.k * 0.07) * 2), ic = iconoSpr(c.id);
+        g.drawImage(sombra(5, 2), X - 5, Y - 12);
+        g.drawImage(ic, X - 9, Y - 30 + bob);
+      }
+      dibujarPrecio(g, c, X, Y + 12);
+      return;
+    }
+  }
+  if (!s) return;
+  g.drawImage(sombra(Math.max(3, (s.width >> 1) - 1), 2), X - Math.max(3, (s.width >> 1) - 1), Y);
+  g.drawImage(s, X - Math.floor(s.width / 2), Y + 2 - s.height - z);
+  if (c.precio) dibujarPrecio(g, c, X, Y + 6);
+}
+function dibujarPrecio(g, c, x, y) {
+  if (c.precio && c.id !== null) {
+    const n = cifrasSpr(c.precio), m = monedaChica();
+    const w = n.width + m.width;
+    g.drawImage(n, Math.round(x - w / 2), y); g.drawImage(m, Math.round(x - w / 2 + n.width), y);
+  }
+  if (c.pacto && c.id) {
+    const h = corazonSpr("rojo", true), w = h.width * c.pacto;
+    for (let i = 0; i < c.pacto; i++) g.drawImage(h, Math.round(x - w / 2 + i * h.width), y);
+  }
+}
+
+// ══════════ 17-hud.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL HUD: arriba a la izquierda el objeto activo (con su carga) y los corazones; abajo, las
+// monedas, bombas y llaves, la cápsula y las cuentas (como en Repentance); arriba a la derecha
+// el minimapa; la barra del jefe abajo; los rótulos de objeto y de piso; y, en el teléfono,
+// los joysticks flotantes y los botones (bomba, activo, cápsula, pausa).
+// En el TCL 20 SE todo cae en los costados que sobran; en pantallas más angostas, sobre el muro.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// íconos chicos del HUD (7×7), pintados con la misma luz que el resto
+function iconoHud(que) {
+  return hornear(`hud${que}`, () => {
+    const p = new Pix(9, 9);
+    const S = {
+      moneda: [[".ooo.", "oOOoo", "oOooo", "ooooo", ".ooo."], { o: PAL.oro[3], O: PAL.oro[4] }],
+      bomba: [["..f..", ".kkk.", "kkKkk", "kkkkk", ".kkk."], { k: "#2e2d3a", K: "#7f7ea0", f: PAL.fuego[3] }],
+      llave: [[".hh..", "h..h.", ".hh..", ".h...", ".hh..", ".h..."], { h: PAL.hueso[3] }],
+      vel: [["..bb.", "..bb.", ".bbb.", "bbbbb"], { b: PAL.tierra[4] }],
+      lag: [["..e..", ".eee.", "eeEee", "eeeee", ".eee."], { e: PAL.espora[2], E: PAL.espora[4] }],
+      dano: [["..s..", ".sss.", "sssSs", "sssss", ".sss."], { s: PAL.sangre[3], S: PAL.sangre[4] }],
+      alc: [["...a.", "aaaaa", "...a."], { a: PAL.hueso[3] }],
+      tiro: [["a....", ".a.a.", "..aa.", ".aaa."], { a: PAL.hielo[3] }],
+      suerte: [["g.g..", "ggg..", ".gg..", "..g.."], { g: PAL.musgo[4] }],
+      calavera: [[".hhh.", "hkhkh", "hhhhh", ".h.h."], { h: PAL.hueso[4], k: PAL.tinta }],
+      corona: [["o.o.o", "ooooo", "ooooo"], { o: PAL.oro[3] }],
+      tienda: [[".ooo.", "o.o.o", ".ooo.", "o.o.o", ".ooo."], { o: PAL.oro[4] }],
+      secreta: [[".ss.", "s..s", "..s.", ".s..", "....", ".s.."], { s: "#b8b0c8" }],
+      pacto: [["r...r", ".rrr.", "rrrrr", ".r.r."], { r: PAL.sangre[3] }],
+      inicio: [[".", "."], {}],
+    }[que];
+    const [f, pal] = S, x0 = Math.floor((9 - f[0].length) / 2), y0 = Math.floor((9 - f.length) / 2);
+    p.sello(x0, y0, f, pal);
+    p.contorno(PAL.tinta);
+    return p.canvas();
+  });
+}
+function monedaChica() { return iconoHud("moneda"); }
+const dos = (n) => String(Math.max(0, Math.min(99, n | 0))).padStart(2, "0");
+
+/** Un aro de píxeles (la base de los joysticks y los botones). */
+function aro(r, relleno, borde) {
+  return hornear(`aro${r}${relleno}${borde}`, () => {
+    const s = r * 2 + 3, p = new Pix(s, s), c = s / 2;
+    for (let y = 0; y < s; y++) for (let x = 0; x < s; x++) {
+      const d = Math.hypot(x + 0.5 - c, y + 0.5 - c);
+      if (d <= r + 0.5 && d > r - 1) p.p(x, y, borde); else if (d <= r - 1 && relleno) p.p(x, y, relleno);
+    }
+    return p.canvas();
+  });
+}
+
+function dibujarHud(g) {
+  const j = J.jug, W = PANT.W, H = PANT.H;
+  // ── el activo y los corazones ──
+  let hx = 4;
+  if (j.activo) {
+    const a = j.activo, ic = iconoSpr(a.id), lleno = a.carga >= a.max;
+    g.drawImage(aro(11, "rgba(8,6,10,0.55)", "rgba(200,190,170,0.35)"), 2, 2);
+    g.drawImage(lleno && (J.t >> 4) & 1 ? blanco(ic) : ic, 5, 5);
+    // la barra de carga, con una rayita por carga
+    const bh = 20, bx = 28, by = 4;
+    g.fillStyle = PAL.tinta; g.fillRect(bx, by, 5, bh + 2);
+    const alto = Math.round(bh * a.carga / a.max);
+    g.fillStyle = lleno ? "#f2d64a" : "#c9a23a"; g.fillRect(bx + 1, by + 1 + bh - alto, 3, alto);
+    g.fillStyle = PAL.tinta; for (let i = 1; i < a.max; i++) g.fillRect(bx + 1, by + 1 + Math.round(bh * i / a.max), 3, 1);
+    hx = 36;
+  }
+  const lista = [];
+  for (let i = 0; i < j.cont; i += 2) lista.push(j.vida >= i + 2 ? "rojo" : j.vida === i + 1 ? "medio" : "vacio");
+  for (let i = 0; i < j.esporas; i += 2) lista.push(j.esporas >= i + 2 ? "espora" : "esporaMedio");
+  const late = vidaTotal(j) <= 2 && !j.muerto && ((J.t >> 4) & 1);
+  lista.forEach((t, i) => {
+    const s = corazonSpr(t);
+    g.drawImage(late && i === 0 ? blanco(s) : s, hx + (i % 6) * 10, 3 + Math.floor(i / 6) * 9);
+  });
+  // ── los contadores: el ícono y las cifras gordas ──
+  let y = j.activo || lista.length > 6 ? 27 : 21;
+  for (const [ic, n] of [["moneda", j.monedas], ["bomba", j.bombas], ["llave", j.llaves]]) {
+    g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(dos(n)), 11, y);
+    y += 10;
+  }
+  // ── las cuentas (como en Repentance: ícono y número; sólo si hay lugar al costado) ──
+  if (PANT.salaX >= 56) {
+    y += 5;
+    const cuentas = [["vel", velDe(j)], ["lag", lagrimasPorSeg(j)], ["dano", danoDe(j)], ["alc", j.alcance], ["tiro", j.velLag], ["suerte", j.suerte]];
+    for (const [ic, v] of cuentas) {
+      g.globalAlpha = 0.9;
+      g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(v.toFixed(2)), 11, y);
+      // el cambio reciente, en verde o en rojo, que se apaga solo
+      const c = J.cambios && J.cambios[ic];
+      if (c && c.t > 0) { g.globalAlpha = Math.min(1, c.t / 30); g.drawImage(cifrasSpr((c.d > 0 ? "+" : "") + c.d.toFixed(2), c.d > 0 ? "verde" : "rojo"), 44, y); c.t--; }
+      g.globalAlpha = 1;
+      y += 10;
+    }
+  }
+  // ── la cápsula: abajo a la derecha, con su nombre (como la carta/píldora del original) ──
+  if (j.capsula != null && !IN.usaTactil) {
+    const s = capsulaSpr(j.capsula), n = textoSpr(nombreCapsula(j.capsula), { grad: "blanco" });
+    g.drawImage(s, W - s.width - 4, H - s.height - 5);
+    g.drawImage(n, W - s.width - 8 - n.width, H - n.height - 2);
+  }
+  dibujarMinimapa(g);
+  // ── la barra del jefe: marco oscuro redondeado, rojo con brillo arriba, la calavera a la izquierda ──
+  const vivos = J.jefes.filter((e) => !e.muerto);
+  if (vivos.length && J.estado !== "vs") {
+    const tot = vivos.reduce((s, e) => s + Math.max(0, e.vida), 0), max = J.jefes.reduce((s, e) => s + e.max, 0);
+    const bw = 104, bx = Math.round(W / 2 - bw / 2) + 6, by = PANT.salaY + SALA_H - 14;
+    g.drawImage(barraJefeSpr(bw), bx - 3, by - 3);
+    const w = Math.round((bw - 2) * tot / max);
+    g.fillStyle = "#8e1a19"; g.fillRect(bx + 1, by + 1, w, 5);
+    g.fillStyle = "#d8352b"; g.fillRect(bx + 1, by + 1, w, 3);
+    g.fillStyle = "#ff7a5e"; g.fillRect(bx + 1, by + 1, w, 1);
+    g.drawImage(iconoHud("calavera"), bx - 14, by - 2);
+  }
+  dibujarRotulos(g);
+  if (IN.usaTactil) dibujarControles(g);
+}
+
+function dibujarMinimapa(g) {
+  const W = PANT.W, cw = 9, ch = 8;
+  let c0 = 99, c1 = -1, f0 = 99, f1 = -1;
+  const salas = [...J.piso.salas.values()].filter((s) => s.vista && (s.tipo !== "secreta" || s.visitada || algunaRevelada(s)));
+  for (const s of salas) { c0 = Math.min(c0, s.c); c1 = Math.max(c1, s.c); f0 = Math.min(f0, s.f); f1 = Math.max(f1, s.f); }
+  if (c1 < 0) return;
+  const w = (c1 - c0 + 1) * cw + 1, h = (f1 - f0 + 1) * ch + 1, x0 = W - w - 6, y0 = 24;
+  g.drawImage(marcoMapaSpr(w + 8, h + 8), x0 - 4, y0 - 4);
+  for (const s of salas) {
+    const x = x0 + (s.c - c0) * cw, y = y0 + (s.f - f0) * ch, actual = s === J.sala || (J.sala.tipo === "pacto" && s === J.piso.jefe);
+    g.drawImage(celdaMapaSpr(actual ? 2 : s.visitada ? 1 : 0), x, y);
+    const ic = { jefe: "calavera", tesoro: "corona", tienda: "tienda", secreta: "secreta" }[s.tipo];
+    if (ic && (s.visitada || s.tipo !== "secreta")) g.drawImage(iconoHud(ic), x, y - 1);
+  }
+}
+/** La celda del minimapa: un cuadradito redondeado (0 vista, 1 visitada, 2 donde estás). */
+function celdaMapaSpr(k) {
+  return hornear(`celdaMapa${k}`, () => {
+    const p = new Pix(10, 9), c = [["#3c3a3a", "#2a2828"], ["#a19b92", "#7d776f"], ["#ffffff", "#d8d2c8"]][k];
+    p.rect(1, 1, 8, 7, c[0]); p.rect(1, 6, 8, 1, c[1]);
+    p.borrar(1, 1); p.borrar(8, 1); p.borrar(1, 7); p.borrar(8, 7);
+    p.contorno(PAL.tinta);
+    return p.canvas();
+  });
+}
+function marcoMapaSpr(w, h) {
+  return hornear(`marcoMapa${w}x${h}`, () => {
+    const p = new Pix(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const bx = Math.min(x, w - 1 - x), by = Math.min(y, h - 1 - y);
+      if (bx + by < 3) continue;          // las esquinas, redondeadas
+      p.p(x, y, bx < 1 || by < 1 ? "rgba(0,0,0,0.75)" : "rgba(8,6,10,0.5)");
+    }
+    return p.canvas();
+  });
+}
+function barraJefeSpr(bw) {
+  return hornear(`barraJefe${bw}`, () => {
+    const p = new Pix(bw + 6, 13);
+    for (let y = 0; y < 13; y++) for (let x = 0; x < bw + 6; x++) {
+      const bx = Math.min(x, bw + 5 - x), by = Math.min(y, 12 - y);
+      if (bx + by < 2) continue;
+      p.p(x, y, bx < 2 || by < 2 ? "#0c0708" : "#2a0b0e");
+    }
+    return p.canvas();
+  });
+}
+function algunaRevelada(s) { return s.puertas.some((p) => p && p.revelada); }
+
+// ── los rótulos: el nombre del objeto (y su lema) o del piso, que entra, se queda y se va ──
+function rotulo(titulo, sub, grad = "blanco") {
+  J.rotulos = J.rotulos.filter((r) => r.titulo !== titulo);
+  J.rotulos.push({ titulo, sub, grad, t: 0 });
+  if (J.rotulos.length > 2) J.rotulos.shift();
+}
+function dibujarRotulos(g) {
+  const W = PANT.W;
+  for (let i = J.rotulos.length - 1; i >= 0; i--) { if (++J.rotulos[i].t > 170) J.rotulos.splice(i, 1); }
+  const r = J.rotulos[J.rotulos.length - 1];
+  if (!r) return;
+  // la franja entra de un costado, la letra de bloque aparece encima; al final, todo se va
+  const t = r.t, entra = Math.min(1, t / 10), sale = t > 150 ? (t - 150) / 20 : 0;
+  const s1 = rotuloSpr(r.titulo, { grad: r.grad === "oro" ? "blanco" : r.grad }), s2 = r.sub ? bloqueSpr(r.sub) : null;
+  const bw = Math.min(W - 4, Math.max(s1.width + 110, 230)), banda = bandaSpr(bw);
+  const y = PANT.salaY + 30, bx = Math.round(W / 2 - bw / 2);
+  g.globalAlpha = 1 - sale;
+  const corte = Math.round(bw * entra);   // la pincelada se "pinta" de izquierda a derecha
+  g.drawImage(banda, 0, 0, corte, banda.height, bx, y, corte, banda.height);
+  if (t > 6) {
+    const dy = t < 12 ? 12 - t : 0;
+    g.drawImage(s1, Math.round(W / 2 - s1.width / 2), y + Math.round(34 / 2 - s1.height / 2) + 1 - dy);
+    if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2), y + 36);
+  }
+  g.globalAlpha = 1;
+}
+
+// ── los controles táctiles ──
+function ubicarBotones() {
+  const W = PANT.W, H = PANT.H, j = J && J.jug;
+  const b = [{ id: "pausa", x: W - 11, y: 11, r: 8 }];
+  if (enJuego()) {
+    b.push({ id: "bomba", x: W - 24, y: H - 24, r: 14 });
+    if (j && j.activo) b.push({ id: "activo", x: W - 24, y: H - 60, r: 12 });
+    if (j && j.capsula != null) b.push({ id: "capsula", x: W - 58, y: H - 20, r: 10 });
+  }
+  for (const n of b) { const v = BOTONES.find((o) => o.id === n.id); if (v) n.apretado = v.apretado; }
+  BOTONES = b;
+}
+function dibujarControles(g) {
+  const j = J.jug;
+  for (const b of BOTONES) {
+    const ap = b.apretado > 0;
+    if (ap) b.apretado--;
+    if (b.id === "pausa") {
+      g.drawImage(aro(b.r, "rgba(8,6,10,0.5)", "rgba(220,210,190,0.5)"), b.x - b.r - 1, b.y - b.r - 1);
+      g.fillStyle = "rgba(230,222,205,0.85)"; g.fillRect(b.x - 3, b.y - 3, 2, 7); g.fillRect(b.x + 1, b.y - 3, 2, 7);
+      continue;
+    }
+    g.drawImage(aro(b.r, ap ? "rgba(60,50,40,0.6)" : "rgba(8,6,10,0.45)", "rgba(220,210,190,0.45)"), b.x - b.r - 1, b.y - b.r - 1);
+    let s = null, n = null;
+    if (b.id === "bomba") { s = bombaSpr(1); n = j.bombas; }
+    if (b.id === "activo" && j.activo) s = iconoSpr(j.activo.id);
+    if (b.id === "capsula" && j.capsula != null) s = capsulaSpr(j.capsula);
+    if (s) { g.globalAlpha = b.id === "bomba" && !j.bombas ? 0.35 : b.id === "activo" && j.activo.carga < j.activo.max ? 0.55 : 0.95; g.drawImage(s, Math.round(b.x - s.width / 2), Math.round(b.y - s.height / 2) + (ap ? 1 : 0)); g.globalAlpha = 1; }
+    if (n != null) g.drawImage(cifrasSpr(dos(n)), b.x + 3, b.y + 5);
+  }
+  for (const [st, col] of [[STICKS.mover, "rgba(220,210,190,0.35)"], [STICKS.tirar, "rgba(160,230,215,0.4)"]]) {
+    if (!st) continue;
+    g.drawImage(aro(RADIO_STICK, "rgba(8,6,10,0.25)", col), Math.round(st.x0 - RADIO_STICK - 1), Math.round(st.y0 - RADIO_STICK - 1));
+    const vx = st.x - st.x0, vy = st.y - st.y0, l = Math.hypot(vx, vy), m = Math.min(l, RADIO_STICK);
+    const kx = st.x0 + (l ? vx / l * m : 0), ky = st.y0 + (l ? vy / l * m : 0);
+    g.drawImage(aro(9, "rgba(230,222,205,0.35)", "rgba(240,235,225,0.6)"), Math.round(kx - 10), Math.round(ky - 10));
+  }
+}
+
+// ══════════ 18-juego.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL JUEGO: la partida (semilla, pisos, salas), el paso fijo de 60 Hz, las puertas (se cierran
+// al entrar con enemigos, se abren al limpiar, con llave, secretas), el deslizamiento entre
+// salas, la presentación del jefe, la caída por la trampilla, y el orden de dibujo (piso,
+// manchas, puertas, todo lo que está parado ordenado por su pie, lo que vuela, la viñeta).
+// ─────────────────────────────────────────────────────────────────────────────
+
+let J = null;
+function enJuego() { return !!J && J.estado === "juego"; }
+const cvSala = lienzoNuevo(SALA_W, SALA_H), gSala = cvSala.getContext("2d");
+const cvViejo = lienzoNuevo(SALA_W, SALA_H), gViejo = cvViejo.getContext("2d");
+
+function nuevaPartida(semilla) {
+  semilla = semilla ?? ((Math.random() * 4294967296) >>> 0);
+  rnd = mulberry(semilla);
+  J = {
+    semilla, estado: "juego", t: 0, tiempo: 0, piso: null, sala: null, jug: nuevoJugador(),
+    lagrimas: [], balas: [], bombas: [], fx: [], part: [], babas: [], enemigos: [], jefes: [], familiares: [], pendientes: [],
+    temblor: 0, destello: 0, congelado: 0, puertasAbiertas: true, cierre: 0, rotulos: [], muertes: 0, causa: null,
+    jefesVistos: [], enPedestal: new Set(), trans: null, vs: null, fundido: 0, tEstado: 0, campo: null, cambioGrilla: true,
+  };
+  armarTandas(); sortearCapsulas();
+  iniciarPiso(1);
+  registro.partidas++; guardarRegistro();
+}
+
+function iniciarPiso(n) {
+  J.jefeTipo = elegirJefe(n, J.jefesVistos); J.jefesVistos.push(J.jefeTipo);
+  J.piso = generarPiso(n);
+  if (J.jug.mapa) revelarMapa();
+  J.jug.golpesPiso = 0;
+  J.estado = "juego";
+  entrarSala(J.piso.inicio, null);
+  J.fundido = 45;
+  rotulo(J.piso.nombre, n === ULTIMO_PISO ? "EL FONDO" : "", "oro");
+  Musica.poner(PISOS[n].musica);
+}
+
+function entrarSala(sala, desde) {
+  const j = J.jug;
+  J.sala = sala;
+  for (const k of ["lagrimas", "balas", "bombas", "fx", "part", "babas", "enemigos", "jefes"]) J[k].length = 0;
+  J.campo = null; J.cambioGrilla = true; J.jefeMuerto = false;
+  j.danoSala = 0;
+  sala.visitada = sala.vista = true;
+  for (const p of sala.puertas) if (p && puertaVisible(p) && p.destino.tipo !== "secreta") p.destino.vista = true;
+  if (!sala.fondo) sala.fondo = hornearFondo(J.piso.cap, sala.semilla);
+  if (desde == null) { j.x = cx(6); j.y = cy(3) + 6; }
+  else {
+    const d = opuesta(desde), mY = IY0 + FILAS * T / 2;
+    [j.x, j.y] = [[SALA_W / 2, IY0 + 9], [IX1 - 9, mY], [SALA_W / 2, IY1 - 7], [IX0 + 9, mY]][d];
+    j.vx *= 0.3; j.vy *= 0.3;
+  }
+  armarFamiliares();
+  for (const f of J.familiares) { f.x = j.x; f.y = j.y; }
+  if (!sala.limpia) {
+    poblarSala(sala);
+    J.puertasAbiertas = false; SFX.puertaCierra();
+    if (sala.tipo === "jefe") { J.vsPendiente = true; Musica.poner("jefe"); }
+  } else J.puertasAbiertas = true;
+  J.cierre = J.puertasAbiertas ? 0 : 1;
+  if (sala.tipo === "pacto") Musica.poner("pacto");
+  else if (sala.tipo !== "jefe" || sala.limpia) Musica.poner(PISOS[J.piso.n].musica);
+}
+
+// ── el paso de la lógica (60 veces por segundo) ──
+function pasoJuego() {
+  J.t++;
+  if (J.fundido > 0) J.fundido--;
+  if (J.temblor > 0) J.temblor *= 0.86, J.temblor < 0.4 && (J.temblor = 0);
+  if (J.destello > 0) J.destello--;
+  if (J.estado === "transicion") { if (++J.trans.t >= J.trans.dur) { J.trans = null; J.estado = "juego"; if (J.vsPendiente) empezarVs(); } return; }
+  if (J.estado === "vs") { J.vs.t++; if (J.vs.t > 150 || (J.vs.t > 30 && (recien("toque") || recien("aceptar")))) J.estado = "juego"; return; }
+  if (J.estado === "cayendo") { if (++J.tEstado > 60) { J.jug.x = cx(6); J.jug.y = cy(3); iniciarPiso(J.piso.n + 1); } return; }
+  if (J.estado === "ganando") { if (++J.tEstado > 90) { J.estado = "victoria"; J.tEstado = 0; abrirMenu("victoria"); } return; }
+  if (J.estado !== "juego") return;
+  J.tiempo++;
+  const j = J.jug;
+  if (recien("pausa")) { abrirMenu("pausa"); return; }
+  if (J.congelado > 0) J.congelado--;
+  if (!j.muerto) {
+    if (recien("bomba")) tirarBomba(j);
+    if (recien("activo")) usarActivo(j);
+    if (recien("capsula")) tomarCapsula(j);
+  }
+  actualizarJugador(j);
+  actualizarFamiliares();
+  actualizarEnemigos();
+  actualizarLagrimas();
+  actualizarBalas();
+  actualizarBombas();
+  actualizarCosas();
+  actualizarBabas();
+  actualizarParticulas();
+  actualizarFx();
+  const pend = J.pendientes; J.pendientes = [];
+  for (const f of pend) f();
+  // las puertas: animación y llaves
+  const meta = J.puertasAbiertas ? 0 : 4;
+  J.cierre += lim(meta - J.cierre, -0.34, 0.34);
+  for (let d = 0; d < 4; d++) {
+    const p = J.sala.puertas[d];
+    if (p && p.llave && puertaVisible(p) && dist(j.x, j.y, PUERTA[d].x, PUERTA[d].y) < 20 && j.llaves > 0 && J.puertasAbiertas) {
+      j.llaves--; p.llave = false; if (p.par) p.par.llave = false; SFX.llave(); SFX.puertaAbre();
+    }
+  }
+  // ¿limpió la sala?
+  if (!J.sala.limpia && J.enemigos.length === 0) salaLimpia();
+  if (J.jefeMuerto && J.jefes.every((e) => e.muerto) && !J.sala.premiada) jefeDerrotado();
+  // ¿sale por una puerta?
+  if (!j.muerto) {
+    let d = -1;
+    if (j.y < IY0 - 5) d = ARRIBA; else if (j.y > IY1 + 5) d = ABAJO; else if (j.x < IX0 - 5) d = IZQUIERDA; else if (j.x > IX1 + 5) d = DERECHA;
+    if (d >= 0) pasarPuerta(d);
+  }
+  if (j.muerto && j.tMuerte > 80 && J.estado === "juego") { J.estado = "muerte"; J.tEstado = 0; registro.muertes++; guardarRegistro(); abrirMenu("muerte"); }
+}
+
+function salaLimpia() {
+  const s = J.sala;
+  s.limpia = true;
+  J.puertasAbiertas = true; SFX.puertaAbre();
+  cargarActivo(1);
+  if (s.tipo === "normal") premioSala();
+}
+
+function jefeDerrotado() {
+  const s = J.sala, n = J.piso.n;
+  s.premiada = true;
+  J.sala.limpia = true; J.puertasAbiertas = true;
+  registro.jefes = (registro.jefes || 0) + 1; guardarRegistro();
+  cargarActivo(1);
+  Musica.poner("silencio");
+  if (n === ULTIMO_PISO) {
+    const c = recogible("cofreFinal", cx(6), cy(4)); c.quieto = true; s.cosas.push(c);
+    rotulo("¡MICELIA CAYÓ!", "ABRÍ EL COFRE", "oro");
+    return;
+  }
+  s.cosas.push(pedestal(cx(6), cy(4) + 4, sacarObjeto("jefe")));
+  for (let i = 0; i < A.ent(1, 2); i++) soltarPremio(cx(6) + V.ent(-20, 20), cy(3), "corazon");
+  const tr = recogible("trampilla", cx(6), cy(1)); tr.quieto = true; s.cosas.push(tr);
+  // la puerta del pacto: más probable si no te tocaron en la pelea
+  if (n >= 2 && A.si(J.jug.golpesJefe === 0 ? 0.7 : 0.33)) {
+    const libres = [0, 1, 2, 3].filter((d) => !s.puertas[d]);
+    if (libres.length) { crearSalaPacto(J.piso, s, A.uno(libres)); J.pendientes.push(() => SFX.pacto()); }
+  }
+  J.jug.golpesJefe = 0;
+}
+
+function pasarPuerta(d) {
+  const p = J.sala.puertas[d];
+  if (!p) return;
+  // una foto de la sala que se va (para el deslizamiento)
+  gViejo.drawImage(cvSala, 0, 0);
+  J.trans = { dir: d, t: 0, dur: 20 };
+  J.estado = "transicion";
+  const j = J.jug;
+  entrarSala(p.destino, d);
+  j.inv = Math.max(j.inv, 0);
+  J.congelado = 8;
+}
+
+function empezarVs() { J.vsPendiente = false; J.estado = "vs"; J.vs = { t: 0, tipo: J.jefeTipo }; SFX.jefe(); }
+
+function bajarPiso() {
+  if (J.piso.n >= ULTIMO_PISO) return;
+  J.estado = "cayendo"; J.tEstado = 0; SFX.pozo();
+  registro.mejorPiso = Math.max(registro.mejorPiso || 1, J.piso.n + 1); guardarRegistro();
+}
+function ganar() {
+  J.estado = "ganando"; J.tEstado = 0; SFX.objeto(); SFX.secreto();
+  registro.victorias++; guardarRegistro();
+}
+
+// ── el dibujo ──
+const _orden = [];
+function dibujarSala(g) {
+  const s = J.sala;
+  g.drawImage(s.fondo, 0, 0);
+  if (s.decal) g.drawImage(s.decal, 0, 0);
+  // lo que está a ras del piso
+  for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) {
+    const o = s.celdas[f * COLS + c];
+    if (!o) continue;
+    const x = IX0 + c * T, y = IY0 + f * T;
+    if (o.t === "pozo") { const es = (C, F) => { const q = celda(s, C, F); return !!q && q.t === "pozo"; }; g.drawImage(pozoSpr(es(c, f - 1), es(c - 1, f), es(c + 1, f), es(c, f + 1)), x, y); }
+    else if (o.t === "pinchos") g.drawImage(pinchosSpr(true), x, y);
+  }
+  dibujarBabas(g);
+  for (const c of s.cosas) if (c.t === "trampilla") dibujarCosa(g, c);
+  // las puertas
+  for (let d = 0; d < 4; d++) {
+    const p = s.puertas[d];
+    if (!p || !puertaVisible(p)) continue;
+    const tipo = p.secreta ? "secreta" : p.tipo, est = p.llave ? 5 : Math.round(J.cierre);
+    const [x, y] = lugarPuerta(d);
+    g.drawImage(puertaRotada(tipo, tipo === "secreta" ? 0 : est, d), Math.round(x), Math.round(y));
+  }
+  // todo lo que está parado, ordenado por su pie
+  _orden.length = 0;
+  for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) {
+    const o = s.celdas[f * COLS + c];
+    if (o && o.t !== "pozo" && o.t !== "pinchos" && !(o.t === "matas" && o.vida <= 0)) _orden.push([cy(f) + T / 2 - 2, 0, o, c, f]);
+  }
+  for (const c of s.cosas) if (c.t !== "trampilla") _orden.push([c.y, 1, c]);
+  for (const e of J.enemigos) _orden.push([e.y + (e.jefe && e.z > 40 ? 999 : 0), 2, e]);
+  for (const f of J.familiares) _orden.push([f.y, 3, f]);
+  for (const b of J.bombas) _orden.push([b.y, 4, b]);
+  _orden.push([J.jug.y, 5, J.jug]);
+  for (const l of J.lagrimas) _orden.push([l.y, 6, l]);
+  for (const b of J.balas) _orden.push([b.y, 7, b]);
+  _orden.sort((a, b) => a[0] - b[0]);
+  for (const it of _orden) {
+    const o = it[2];
+    switch (it[1]) {
+      case 0: dibujarObstaculo(g, o, it[3], it[4]); break;
+      case 1: dibujarCosa(g, o); break;
+      case 2: if (o.def.dibujar) o.def.dibujar(g, o); else dibujarEnemigo(g, o); break;
+      case 3: dibujarFamiliar(g, o); break;
+      case 4: dibujarBomba(g, o); break;
+      case 5: if (J.estado !== "cayendo") dibujarJugador(g, o); break;
+      case 6: dibujarLagrima(g, o); break;
+      case 7: dibujarBala(g, o); break;
+    }
+  }
+  dibujarFx(g);
+  dibujarParticulas(g);
+  if (J.estado === "cayendo") {
+    const u = Math.min(1, J.tEstado / 30), sp = spritesShumio(), j = J.jug;
+    const e = 1 - u;
+    if (e > 0.05) { g.save(); g.translate(Math.round(j.x), Math.round(j.y)); g.scale(e, e); g.drawImage(sp.cue.frente[0], -7, -8); g.drawImage(sp.cab.frente[3], -11, -24); g.restore(); }
+  }
+  g.drawImage(vineta(), -20, -20);
+}
+function dibujarObstaculo(g, o, c, f) {
+  const x = cx(c), yb = cy(f) + T / 2 + 1;
+  let s;
+  switch (o.t) {
+    case "roca": s = rocaSpr(o.v, o.marcada); break;
+    case "matas": s = matasSpr(o.vida, o.dorada ? 1 : 0); break;
+    case "brasero": s = braseroSpr((J.t >> 3) & 3, o.prendido); break;
+    case "barril": s = barrilSpr(); break;
+    case "bloque": s = bloqueSpr(); break;
+    default: return;
+  }
+  g.drawImage(s, Math.round(x - s.width / 2), yb - s.height);
+}
+
+function dibujarJuego(g) {
+  const W = PANT.W, H = PANT.H;
+  g.fillStyle = "#07060a"; g.fillRect(0, 0, W, H);
+  dibujarSala(gSala);
+  let ox = PANT.salaX, oy = PANT.salaY;
+  if (J.temblor > 0) { ox += Math.round((V.f() - 0.5) * J.temblor); oy += Math.round((V.f() - 0.5) * J.temblor); }
+  if (J.trans) {
+    const u = J.trans.t / J.trans.dur, e = u * u * (3 - 2 * u), [dx, dy] = DIRS[J.trans.dir];
+    const sx = Math.round(-dx * SALA_W * e), sy = Math.round(-dy * SALA_H * e);
+    g.drawImage(cvViejo, ox + sx, oy + sy);
+    g.drawImage(cvSala, ox + sx + dx * SALA_W, oy + sy + dy * SALA_H);
+  } else g.drawImage(cvSala, ox, oy);
+  if (J.destello > 0) { g.fillStyle = `rgba(255,248,235,${J.destello * 0.08})`; g.fillRect(0, 0, W, H); }
+  if (J.estado !== "vs") dibujarHud(g);
+  if (J.estado === "vs") dibujarVs(g);
+  if (J.fundido > 0) { g.fillStyle = `rgba(0,0,0,${J.fundido / 45})`; g.fillRect(0, 0, W, H); }
+  if (J.estado === "cayendo" && J.tEstado > 30) { g.fillStyle = `rgba(0,0,0,${Math.min(1, (J.tEstado - 30) / 25)})`; g.fillRect(0, 0, W, H); }
+  if (J.estado === "ganando") { g.fillStyle = `rgba(255,250,240,${Math.min(1, J.tEstado / 80)})`; g.fillRect(0, 0, W, H); }
+}
+
+// ── el bucle: paso fijo de 60 Hz, dibujo cuando hubo paso ──
+let _acum = 0, _ultimo = 0;
+const PERF = { cuadros: 0, pasos: 0, msDibujo: 0 };
+function cuadro(ahora) {
+  requestAnimationFrame(cuadro);
+  if (!_ultimo) _ultimo = ahora;
+  _acum += Math.min(100, ahora - _ultimo); _ultimo = ahora;
+  let n = 0;
+  while (_acum >= CUADRO && n < 4) { paso(); _acum -= CUADRO; n++; }
+  if (n >= 4) _acum = 0;
+  if (n > 0) { const t0 = performance.now(); dibujar(); PERF.msDibujo = PERF.msDibujo * 0.95 + (performance.now() - t0) * 0.05; PERF.cuadros++; }
+}
+function paso() {
+  PERF.pasos++;
+  leerEntrada();
+  ubicarBotones();
+  if (PANT.vertical) { if (enJuego()) abrirMenu("pausa"); finEntrada(); return; }
+  if (MENU.activo) pasoMenu();
+  else if (J) pasoJuego();
+  finEntrada();
+}
+function dibujar() {
+  const g = cxM;
+  g.imageSmoothingEnabled = false;
+  if (J && (!MENU.activo || MENU.activo.sobreJuego)) dibujarJuego(g);
+  if (MENU.activo) dibujarMenu(g);
+  if (PANT.vertical) dibujarGirar(g);
+  presentar();
+}
+function alMedir() { if (typeof ubicarBotones === "function") ubicarBotones(); }
+function arrancar() { medir(); abrirMenu("titulo"); requestAnimationFrame(cuadro); }
+
+// ══════════ 19-menus.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS MENÚS, EN PAPEL (la estética del original, con dibujo propio): hojas rasgadas clavadas
+// con chinches sobre una pared de papel gris llena de garabatos desvaídos, todo escrito a mano
+// con marcador. El título (el logo y una hoja con Shumio dibujado), el menú, cómo se juega, la
+// pausa (opciones y la hoja de cuentas), "mi última voluntad" al morir y la carta del final.
+// Se manejan con el dedo o con el teclado. También el aviso de "girá el teléfono".
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MENU = { activo: null };
+let registro = { partidas: 0, victorias: 0, muertes: 0, mejorPiso: 1, jefes: 0 };
+try { Object.assign(registro, JSON.parse(localStorage.getItem("shumio-registro") || "{}")); } catch (e) { /* sin guardar */ }
+function guardarRegistro() { try { localStorage.setItem("shumio-registro", JSON.stringify(registro)); } catch (e) { /* nada */ } }
+
+const pct = (v) => Math.round(v * 100) + "%";
+function reloj(cuadros) { const s = Math.floor(cuadros / 60); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+const TINTA_MANO = "#2b2326";
+
+function abrirMenu(tipo) {
+  const m = { tipo, sel: 0, t: 0, sobreJuego: tipo === "pausa" || tipo === "muerte", items: [], rects: [] };
+  const vol = () => [
+    { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
+    { texto: () => "EFECTOS " + pct(volEfectos), cambiar: (d) => { volEfectos = lim(Math.round((volEfectos + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); SFX.moneda(); } },
+  ];
+  if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
+  if (tipo === "principal") Musica.poner("menu");
+  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
+  if (tipo === "ayuda") m.items = [{ texto: () => "VOLVER", hacer: () => abrirMenu("principal") }];
+  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
+  if (tipo === "muerte" || tipo === "victoria") m.items = [{ texto: () => "OTRA VEZ", hacer: () => { MENU.activo = null; nuevaPartida(); } }, { texto: () => "AL MENÚ", hacer: () => { J = null; abrirMenu("principal"); } }];
+  if (tipo === "victoria") Musica.poner("menu");
+  MENU.activo = m;
+}
+
+function pasoMenu() {
+  const m = MENU.activo;
+  m.t++;
+  const n = m.items.length, it = () => m.items[m.sel];
+  if (m.t < 12) return;   // que un toque de antes no active nada
+  if (recien("kArrowUp") || recien("kKeyW")) { m.sel = (m.sel + n - 1) % n; SFX.clic(); }
+  if (recien("kArrowDown") || recien("kKeyS")) { m.sel = (m.sel + 1) % n; SFX.clic(); }
+  if ((recien("kArrowLeft") || recien("kKeyA")) && it().cambiar) it().cambiar(-1);
+  if ((recien("kArrowRight") || recien("kKeyD")) && it().cambiar) it().cambiar(1);
+  if (recien("aceptar")) activar(it());
+  if (m.tipo === "pausa" && recien("pausa")) { MENU.activo = null; return; }
+  if (m.tipo === "ayuda" && recien("pausa")) { abrirMenu("principal"); return; }
+  // PC: el mouse elige lo que tiene abajo
+  if (IN.movio) { IN.movio = false; m.rects.forEach((r, i) => { if (IN.px >= r.x - 12 && IN.px <= r.x + r.w + 6 && IN.py >= r.y - 2 && IN.py <= r.y + r.h + 2 && m.sel !== i) { m.sel = i; SFX.clic(); } }); }
+  const tq = FLANCO.toque;
+  if (tq) {
+    if (m.tipo === "titulo") { activar(m.items[0]); return; }
+    m.rects.forEach((r, i) => { if (tq.x >= r.x - 6 && tq.x <= r.x + r.w + 6 && tq.y >= r.y - 3 && tq.y <= r.y + r.h + 3) { m.sel = i; activar(m.items[i], true); } });
+  }
+}
+function activar(it, tactil) {
+  SFX.clic();
+  if (it.hacer) it.hacer();
+  else if (it.cambiar) it.cambiar(tactil ? (it.texto().includes("100%") ? -10 : 2) : 1);
+}
+
+// ── piezas de papel ──
+/** Una hoja clavada: el papel (que se mece apenas) y sus dos chinches. Devuelve dónde quedó. */
+function hoja(g, x, y, w, h, semilla, tono = "blanco", mece = 0, chinches = 2) {
+  const p = papelSpr(w, h, semilla, tono), dy = Math.round(Math.sin(mece) * 0.8);
+  g.drawImage(p, Math.round(x - 3), Math.round(y - 3 + dy));
+  const ch = chincheSpr();
+  if (chinches >= 1) g.drawImage(ch, Math.round(x + w * 0.2 - 4), Math.round(y - 2 + dy));
+  if (chinches >= 2) g.drawImage(ch, Math.round(x + w * 0.78 - 4), Math.round(y - 3 + dy));
+  return dy;
+}
+/** Escribe a mano; alinear: "izq" | "centro". Devuelve el rectángulo (para tocarlo). */
+function escribir(g, str, x, y, alinear = "izq", tinta = TINTA_MANO) {
+  const s = manoSpr(str, { tinta });
+  const X = alinear === "centro" ? Math.round(x - s.width / 2) : Math.round(x);
+  g.drawImage(s, X, Math.round(y));
+  return { x: X, y: Math.round(y), w: s.width, h: s.height };
+}
+/** El triangulito de tinta que marca la opción elegida. */
+function flechita(g, x, y, t) {
+  g.fillStyle = TINTA_MANO;
+  const b = (t >> 4) & 1;
+  for (let i = 0; i < 4; i++) g.fillRect(x + b, y + i, 1 + i * 1.4 | 0, 1), g.fillRect(x + b, y + 7 - i, 1 + i * 1.4 | 0, 1);
+  g.fillRect(x + b, y + 4, 6, 1);
+}
+/** La lista de opciones sobre una hoja, con la flechita en la elegida. */
+function opciones(g, m, x, y, paso = 17) {
+  m.rects = m.items.map((it, i) => {
+    const r = escribir(g, it.texto(), x + 10, y + i * paso);
+    if (i === m.sel) flechita(g, x, y + i * paso + 5, m.t);
+    return r;
+  });
+}
+
+function dibujarMenu(g) {
+  const m = MENU.activo, W = PANT.W, H = PANT.H;
+  const fondoPared = () => g.drawImage(fondoMenuSpr(W, H), 0, 0);
+  const mece = m.t * 0.05;
+  if (m.tipo === "titulo") {
+    fondoPared();
+    // la hoja con Shumio dibujado cuelga debajo del logo, que la pisa (como en el original)
+    const logo = logoSpr(), lx = Math.round(W / 2 - logo.width / 2), ly = 2;
+    const hw = 156, hx = Math.round(W / 2 - hw / 2 + 6), hy = ly + logo.height - 44, hh = Math.min(H - hy - 6, 136);
+    const dy = hoja(g, hx, hy, hw, hh, 7, "blanco", mece, 0);
+    const llora = m.t % 80 < 10;
+    const cx0 = Math.round(W / 2 + 6), base = hy + hh - 34 + dy, dib = dibujoShumio(llora ? 1 : 0);
+    g.drawImage(dib, cx0 - 36, base - 78);
+    // el piso y el charquito de lágrimas, trazados a mano
+    g.fillStyle = TINTA_MANO;
+    for (let x = -58; x <= 58; x++) { const y = Math.round(Math.sin(x * 0.11) * 0.8); if (Math.abs(x) > 26) g.fillRect(cx0 + x, base + 1 + y, 1, 2); }
+    for (let k = 0; k < 40; k++) { const an = k / 40 * TAU, x = Math.round(cx0 + Math.cos(an) * 30), y = Math.round(base + 1 + Math.sin(an) * 4); if (Math.sin(an) > -0.35) g.fillRect(x, y, 2, 1); }
+    for (let i = 0; i < 2; i++) { const k = (m.t + i * 40) % 80, ty = base - 30 + k * 0.5; if (k < 50) g.drawImage(gotitaDibujo(), cx0 + (i ? 5 : -15), Math.round(ty)); }
+    escribir(g, m.items[0].texto(), cx0, base + 8, "centro");
+    g.drawImage(logo, lx, ly);
+    notaRegistro(g, W, H, mece);
+    return;
+  }
+  if (m.tipo === "principal") {
+    fondoPared();
+    const logo = logoSpr(), lw = Math.round(logo.width * 0.5);
+    g.drawImage(logo, 8, 6, lw, Math.round(logo.height * 0.5));
+    const hw = 168, hh = m.items.length * 18 + 24, hx = Math.round(W / 2 - hw / 2 - 20), hy = Math.round(H / 2 - hh / 2) + 8;
+    const dy = hoja(g, hx, hy, hw, hh, 3, "blanco", mece);
+    opciones(g, m, hx + 16, hy + 14 + dy);
+    notaRegistro(g, W, H, mece);
+    return;
+  }
+  if (m.tipo === "ayuda") {
+    fondoPared();
+    const hw = Math.min(W - 40, 330), hh = H - 36, hx = Math.round(W / 2 - hw / 2), hy = 16;
+    const dy = hoja(g, hx, hy, hw, hh, 11, "crema", mece);
+    const lineas = IN.usaTactil
+      ? ["PULGAR IZQUIERDO: CAMINAR", "PULGAR DERECHO: LLORAR (4 LADOS)", "BOTÓN GRANDE: BOMBA", "ARRIBA: OBJETO ACTIVO", "AL LADO: CÁPSULA"]
+      : ["WASD: CAMINAR", "FLECHAS: LLORAR", "E: BOMBA   Q: CÁPSULA", "ESPACIO: OBJETO ACTIVO", "ESC: PAUSA"];
+    lineas.forEach((l, i) => escribir(g, l, hx + 16, hy + 12 + i * 18 + dy));
+    escribir(g, "LIMPIÁ LAS SALAS, BAJÁ 4 PISOS Y", hx + 16, hy + 12 + 5 * 18 + 6 + dy, "izq", "#6a1c1c");
+    escribir(g, "HACÉ QUE MICELIA DEJE DE LLORAR.", hx + 16, hy + 12 + 6 * 18 + 6 + dy, "izq", "#6a1c1c");
+    opciones(g, m, hx + hw - 90, hy + hh - 24 + dy);
+    return;
+  }
+  if (m.tipo === "pausa") {
+    g.fillStyle = "rgba(4,2,6,0.62)"; g.fillRect(0, 0, W, H);
+    const j = J.jug;
+    // la hoja de las opciones
+    const hw = 150, hh = m.items.length * 18 + 40, hx = Math.round(W * 0.5 - hw - 10), hy = Math.round(H / 2 - hh / 2);
+    let dy = hoja(g, hx, hy, hw, hh, 5, "blanco", mece);
+    escribir(g, "PAUSA", hx + hw / 2, hy + 6 + dy, "centro", "#6a1c1c");
+    opciones(g, m, hx + 14, hy + 26 + dy);
+    // la hoja de las cuentas, con los objetos abajo
+    const cw = 160, ch = Math.min(H - 20, 186), cx0 = Math.round(W * 0.5 + 6), cy0 = Math.round(H / 2 - ch / 2);
+    dy = hoja(g, cx0, cy0, cw, ch, 9, "crema", mece + 1, 1);
+    escribir(g, J.piso.nombre, cx0 + cw / 2, cy0 + 6 + dy, "centro");
+    const cuentas = [["vel", velDe(j)], ["lag", lagrimasPorSeg(j)], ["dano", danoDe(j)], ["alc", j.alcance], ["tiro", j.velLag], ["suerte", j.suerte]];
+    cuentas.forEach(([ic, v], i) => {
+      const x = cx0 + 12 + (i % 2) * 74, y = cy0 + 26 + Math.floor(i / 2) * 17 + dy;
+      g.drawImage(iconoHud(ic), x, y + 3); escribir(g, v.toFixed(2), x + 11, y);
+    });
+    escribir(g, "TIEMPO " + reloj(J.tiempo), cx0 + 12, cy0 + 80 + dy);
+    const cols = 7;
+    [...j.objetos, ...(j.activo ? [j.activo.id] : [])].slice(0, 21).forEach((id, i) => g.drawImage(iconoSpr(id), cx0 + 10 + (i % cols) * 20, cy0 + 100 + Math.floor(i / cols) * 20 + dy));
+    return;
+  }
+  if (m.tipo === "muerte") {
+    g.fillStyle = `rgba(20,2,4,${Math.min(0.82, m.t / 40)})`; g.fillRect(0, 0, W, H);
+    ultimaVoluntad(g, m, mece);
+    return;
+  }
+  if (m.tipo === "victoria") { fondoPared(); cartaFinal(g, m, mece); }
+}
+
+function notaRegistro(g, W, H, mece) {
+  const r = registro, nw = 104, nh = 50, nx = W - nw - 10, ny = H - nh - 12;
+  const dy = hoja(g, nx, ny, nw, nh, 13, "crema", mece + 2, 1);
+  escribir(g, "PARTIDAS " + r.partidas, nx + 8, ny + 6 + dy);
+  escribir(g, "GANADAS " + r.victorias, nx + 8, ny + 20 + dy);
+  escribir(g, "PISO " + r.mejorPiso, nx + 8, ny + 34 + dy);
+}
+
+/** "Mi última voluntad": quién te mató (dibujado), dónde, y a quién le dejás tus cosas. */
+function ultimaVoluntad(g, m, mece) {
+  const W = PANT.W, H = PANT.H, j = J.jug;
+  const hw = Math.min(W - 30, 300), hh = H - 22, hx = Math.round(W / 2 - hw / 2), hy = 10;
+  const baja = Math.round(Math.max(0, 1 - m.t / 24) * -H);   // la hoja cae desde arriba
+  const dy = hoja(g, hx, hy + baja, hw, hh, 17, "crema", mece) + baja;
+  escribir(g, "MI ÚLTIMA VOLUNTAD", hx + hw / 2, hy + 6 + dy, "centro", "#6a1c1c");
+  escribir(g, "ME MORÍ EN " + J.piso.nombre, hx + 14, hy + 26 + dy);
+  escribir(g, "POR CULPA DE:", hx + 14, hy + 44 + dy);
+  const quien = J.causaSpr ? garabato(J.causaSpr, TINTA_MANO, J.causaSpr.width > 40 ? 1 : J.causaSpr.width > 18 ? 2 : 3) : null;
+  if (quien) g.drawImage(quien, Math.round(hx + hw * 0.72 - quien.width / 2), Math.round(hy + 60 - quien.height / 2 + dy));
+  escribir(g, J.causa || "LA HUMEDAD", hx + 22, hy + 60 + dy);
+  escribir(g, "Y LE DEJO MIS COSAS A MI HONGO:", hx + 14, hy + 82 + dy);
+  const objs = [...j.objetos, ...(j.activo ? [j.activo.id] : [])];
+  objs.slice(0, 12).forEach((id, i) => g.drawImage(garabato(iconoSpr(id), TINTA_MANO, 1, "#ecdfc8"), hx + 16 + i * 20, hy + 100 + dy));
+  if (!objs.length) escribir(g, "(NO TENÍA NADA)", hx + 22, hy + 100 + dy, "izq", "#6e625a");
+  escribir(g, reloj(J.tiempo) + "  ·  " + J.muertes + " BICHOS", hx + 14, hy + 124 + dy, "izq", "#6e625a");
+  opciones(g, m, hx + 14, hy + hh - 40 + dy, 17);
+}
+
+function cartaFinal(g, m, mece) {
+  const W = PANT.W, H = PANT.H, j = J.jug;
+  const hw = Math.min(W - 30, 300), hh = H - 22, hx = Math.round(W / 2 - hw / 2), hy = 10;
+  const dy = hoja(g, hx, hy, hw, hh, 19, "blanco", mece);
+  escribir(g, "¡LO LOGRASTE!", hx + hw / 2, hy + 6 + dy, "centro", "#6a1c1c");
+  escribir(g, "MICELIA YA NO LLORA.", hx + 14, hy + 26 + dy);
+  escribir(g, "SHUMIO TAMPOCO.", hx + 14, hy + 42 + dy);
+  const sp = spritesShumio(), cab = garabato(sp.cab.frente[0], TINTA_MANO, 2);
+  g.drawImage(cab, Math.round(hx + hw - 64), hy + 22 + dy);
+  escribir(g, reloj(J.tiempo) + "  ·  " + J.muertes + " BICHOS", hx + 14, hy + 64 + dy, "izq", "#6e625a");
+  const objs = [...j.objetos, ...(j.activo ? [j.activo.id] : [])];
+  objs.slice(0, 12).forEach((id, i) => g.drawImage(garabato(iconoSpr(id), TINTA_MANO, 1, "#f0ebe2"), hx + 16 + i * 20, hy + 86 + dy));
+  opciones(g, m, hx + 14, hy + hh - 40 + dy, 17);
+}
+
+/** La presentación del jefe: Shumio y el jefe, con sus nombres escritos en tiras de papel. */
+function dibujarVs(g) {
+  const W = PANT.W, H = PANT.H, t = J.vs.t, u = Math.min(1, t / 14), e = 1 - Math.pow(1 - u, 3);
+  const C = CAPITULOS[J.piso.cap];
+  g.fillStyle = C.oscuro; g.fillRect(0, 0, W, H);
+  // un foco de luz sucia detrás de cada uno, tramado
+  const cy0 = Math.round(H / 2);
+  g.fillStyle = C.piso[2];
+  for (let y = 0; y < H; y += 2) for (let x = (y >> 1) & 1; x < W; x += 2) { const d = Math.min(Math.hypot(x - W * 0.25, y - cy0), Math.hypot(x - W * 0.73, y - cy0)); if (d < 70 + bayer(x, y) * 20) g.fillRect(x, y, 2, 2); }
+  const sp = spritesShumio(), cab = sp.cab.frente[t % 40 < 6 ? 1 : 0];
+  const ex = Math.round(lerp(-80, W * 0.25, e));
+  g.drawImage(sombra(24, 6), ex - 24, cy0 + 28);
+  g.drawImage(cab, ex - 33, cy0 - 40, 66, 66);
+  const jefe = ENEMIGOS[J.vs.tipo].spr(J.jefes[0] || { k: 0, t: 0, dir: ABAJO });
+  const esc = jefe.width > 70 ? 1 : 2, jx = Math.round(lerp(W + 80, W * 0.73, e));
+  g.drawImage(sombra(30, 7), jx - 30, cy0 + 26);
+  g.drawImage(jefe, Math.round(jx - jefe.width * esc / 2), cy0 + 32 - jefe.height * esc, jefe.width * esc, jefe.height * esc);
+  const vs = bloqueSpr("VS", { grad: "rojo" });
+  g.drawImage(vs, Math.round(W / 2 - vs.width), cy0 - 18, vs.width * 2, vs.height * 2);
+  if (t > 12) {
+    for (const [nombre, x, s] of [["SHUMIO", W * 0.25, 21], [NOMBRE_JEFE[J.vs.tipo], W * 0.73, 23]]) {
+      const txt = manoSpr(nombre), pw = txt.width + 16;
+      hoja(g, Math.round(x - pw / 2), H - 44, pw, 24, s, "blanco", t * 0.05, 0);
+      g.drawImage(txt, Math.round(x - txt.width / 2), H - 40);
+    }
+  }
+}
+
+function dibujarGirar(g) {
+  const W = PANT.W, H = PANT.H;
+  g.drawImage(fondoMenuSpr(W, H), 0, 0);
+  const t = performance.now() / 1000, a = (Math.sin(t * 2) * 0.5 + 0.5) * Math.PI / 2;
+  const hw = Math.min(W - 16, 170), hx = Math.round(W / 2 - hw / 2), hy = Math.round(H / 2 - 44);
+  hoja(g, hx, hy, hw, 88, 29, "blanco", t);
+  g.save(); g.translate(Math.round(W / 2), hy + 34); g.rotate(a);
+  g.fillStyle = TINTA_MANO; g.fillRect(-10, -16, 20, 32); g.fillStyle = "#e9e4dc"; g.fillRect(-8, -13, 16, 24);
+  g.restore();
+  escribir(g, "GIRÁ EL TELÉFONO", W / 2, hy + 62, "centro");
 }
 
 // ══════════ 99-arranque.js ══════════
@@ -1882,6 +4649,14 @@ window.__SH.hojaDe = (grupo) => {
   }
   return null;
 };
+// sondas para las pruebas: el estado de la partida y atajos para llegar rápido a cada cosa
+Object.assign(window.__SH, {
+  juego: () => J, menu: () => MENU, perf: () => PERF, pant: () => PANT,
+  nueva: (s) => { MENU.activo = null; nuevaPartida(s); },
+  irA: (tipo) => { const s = [...J.piso.salas.values()].find((x) => x.tipo === tipo); if (s) { entrarSala(s, null); J.estado = "juego"; } return !!s; },
+  vs: () => { if (J.vsPendiente) empezarVs(); },
+  matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
+});
 
 </script>
 </body>

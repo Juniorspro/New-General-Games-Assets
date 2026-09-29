@@ -59,3 +59,11 @@ window.__SH.hojaDe = (grupo) => {
   }
   return null;
 };
+// sondas para las pruebas: el estado de la partida y atajos para llegar rápido a cada cosa
+Object.assign(window.__SH, {
+  juego: () => J, menu: () => MENU, perf: () => PERF, pant: () => PANT,
+  nueva: (s) => { MENU.activo = null; nuevaPartida(s); },
+  irA: (tipo) => { const s = [...J.piso.salas.values()].find((x) => x.tipo === tipo); if (s) { entrarSala(s, null); J.estado = "juego"; } return !!s; },
+  vs: () => { if (J.vsPendiente) empezarVs(); },
+  matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
+});

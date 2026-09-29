@@ -1,0 +1,22 @@
+// Capturas de los menús en papel y del HUD nuevo. node pruebas/menus.mjs [tactil]
+import { abrir, salida } from "./comun.mjs";
+const tactil = process.argv[2] === "tactil";
+const { nav, pag, errores } = await abrir({ tactil });
+const esperar = (ms) => pag.waitForTimeout(ms);
+const tecla = async (k, n = 1) => { for (let i = 0; i < n; i++) { await pag.keyboard.press(k); await esperar(120); } };
+const pre = tactil ? "t" : "m";
+const foto = async (n) => { await pag.screenshot({ path: salida(pre + n) }); console.log("·", pre + n); };
+await esperar(900); await foto("1-titulo.png");
+await tecla("Enter"); await esperar(500); await foto("2-principal.png");
+await tecla("ArrowDown", 3); await tecla("Enter"); await esperar(500); await foto("3-ayuda.png");
+await tecla("Enter"); await esperar(400); await tecla("Enter"); await esperar(1000);
+await foto("4-juego.png");
+await pag.evaluate(() => __SH.irA("tesoro")); await esperar(400);
+await pag.evaluate(() => { const J = __SH.juego(); J.jug.x = J.sala.cosas[0].x; J.jug.y = J.sala.cosas[0].y + 4; }); await esperar(900); await foto("5-objeto.png");
+await tecla("Escape"); await esperar(500); await foto("6-pausa.png");
+await tecla("Escape"); await esperar(300);
+await pag.evaluate(() => { __SH.irA("jefe"); __SH.vs(); }); await esperar(1500); await foto("7-vs.png");
+await esperar(2500); await foto("7b-jefe.png");
+await pag.evaluate(() => { const J = __SH.juego(); J.jug.inv = 0; J.jug.vida = 1; J.jug.esporas = 0; }); await esperar(3500); await foto("8-muerte.png");
+console.log(errores.length ? errores.filter((e) => !e.includes("willReadFrequently")).slice(0, 10) : "sin errores");
+await nav.close();

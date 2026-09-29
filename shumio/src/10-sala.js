@@ -16,7 +16,7 @@ const DISENOS = [
   ["r..........rr", ".r.....e...r.", "..r.......r..", ".............", "..r.......r..", ".r...e.....r.", "rr..........r"],
   [".............", ".HHH.....HHH.", ".H..e...e..H.", ".............", ".H..e...e..H.", ".HHH.....HHH.", "............."],
   ["..r..r.r..r..", ".............", "r..e.....e..r", ".............", "r..e.....e..r", ".............", "..r..r.r..r.."],
-  [".............", ".....mmm.....", "..e..m.m..e..", "..............".slice(0, 13), "..e..m.m..e..", ".....mmm.....", "............."],
+  [".............", ".....mmm.....", "..e..m.m..e..", ".............", "..e..m.m..e..", ".....mmm.....", "............."],
   [".............", "..oo.....oo..", "..oo..v..oo..", ".............", "..oo..v..oo..", "..oo.....oo..", "............."],
   ["b...........b", ".............", "...e.....e...", ".............", "...e.....e...", ".............", "b...........b"],
   [".............", "...rr...rr...", "...r..E..r...", ".............", "...r.....r...", "...rr...rr...", "............."],
@@ -92,11 +92,11 @@ function esSolida(o, vuela) {
   if (!o) return false;
   if (o.t === "pozo") return !vuela;
   if (o.t === "matas") return o.vida > 0 && !vuela;
-  if (o.t === "brasero") return !vuela;
+  if (o.t === "brasero") return o.prendido && !vuela;   // apagado queda la ceniza, que se pisa
   return SOLIDOS.has(o.t) && !vuela;
 }
 /** ¿Frena una lágrima? (los pozos no; las rocas sí, salvo las espectrales) */
-function frenaLagrima(o) { return !!o && o.t !== "pozo" && o.t !== "pinchos" && !(o.t === "matas" && o.vida <= 0) && !(o.t === "brasero" && !o.prendido && o.vida <= 0); }
+function frenaLagrima(o) { return !!o && o.t !== "pozo" && o.t !== "pinchos" && !(o.t === "matas" && o.vida <= 0) && !(o.t === "brasero" && !o.prendido); }
 
 /** Mueve un círculo por la sala chocando con la grilla y los muros. lim: {x0,y0,x1,y1} (los bordes que se pueden pasar). */
 function moverEnSala(sala, e, dx, dy, vuela, bordes) {
