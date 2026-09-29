@@ -403,14 +403,21 @@ function llaveSpr() {
     return p.canvas();
   });
 }
-function cofreSpr(dorado, abierto) {
-  return hornear(`cofre${dorado}${abierto}`, () => {
-    const p = new Pix(20, 17), madera = dorado ? PAL.oro.slice(1) : PAL.tierra.slice(2), herraje = dorado ? PAL.hueso.slice(2) : PAL.hierro.slice(2);
-    p.caja(1, 7, 18, 9, madera, { vertical: 0.6 });
-    if (abierto) { p.caja(1, 1, 18, 5, madera.map((c) => mezclar(c, "#000000", 0.35)), { vertical: 0.6 }); p.rect(2, 7, 16, 2, "#0b0608"); }
-    else { p.bola(10, 7, 9, 4.5, madera, { filtro: (x, y) => y <= 7, luz: [-0.4, -0.9, 0.3] }); }
-    for (const x of [4, 15]) p.caja(x, abierto ? 7 : 3, 2, abierto ? 9 : 13, herraje);
-    if (!abierto) p.sello(8, 7, ["kkkk", "kOOk", "kOOk"], { k: PAL.tinta, O: dorado ? PAL.hueso[4] : PAL.oro[3] });
+/** Los cofres del original: común (madera), dorado (con candado), de piedra (se abre con una
+ *  explosión), con pinchos (lastima al abrirlo) y rojo (el del pacto). */
+function cofreSpr(sub, abierto) {
+  if (sub === true) sub = "dorado"; else if (!sub) sub = "normal";
+  return hornear(`cofre${sub}${abierto}`, () => {
+    const MAD = { normal: PAL.tierra.slice(2), dorado: PAL.oro.slice(1), piedra: PAL.piedra.slice(1, 6), pinchos: PAL.tierra.slice(1, 5), rojo: PAL.sangre.slice(1) };
+    const p = new Pix(22, 19), madera = MAD[sub] || MAD.normal, herraje = sub === "dorado" ? PAL.hueso.slice(2) : sub === "piedra" ? PAL.piedra.slice(0, 3) : PAL.hierro.slice(2);
+    const X = 2, Y = 2;
+    p.caja(X + 1, Y + 7, 18, 9, madera, { vertical: 0.6 });
+    if (abierto) { p.caja(X + 1, Y + 1, 18, 5, madera.map((c) => mezclar(c, "#000000", 0.35)), { vertical: 0.6 }); p.rect(X + 2, Y + 7, 16, 2, "#0b0608"); }
+    else { p.bola(X + 10, Y + 7, 9, 4.5, madera, { filtro: (x, y) => y <= Y + 7, luz: [-0.4, -0.9, 0.3] }); }
+    if (sub !== "piedra") for (const x of [4, 15]) p.caja(X + x, Y + (abierto ? 7 : 3), 2, abierto ? 9 : 13, herraje);
+    else for (const [x, y] of [[6, 10], [12, 12], [9, 8], [15, 10]]) p.p(X + x, Y + y, PAL.piedra[0]);   // las grietas de la piedra
+    if (!abierto && (sub === "dorado" || sub === "normal" || sub === "rojo")) p.sello(X + 8, Y + 7, ["kkkk", "kOOk", "kOOk"], { k: PAL.tinta, O: sub === "dorado" ? PAL.hueso[4] : PAL.oro[3] });
+    if (sub === "pinchos") for (const [x, y, dx, dy] of [[0, 9, -1, 0], [0, 13, -1, 0], [21, 9, 1, 0], [21, 13, 1, 0], [6, 1, 0, -1], [14, 1, 0, -1], [10, 0, 0, -1]]) { p.p(x, y + (abierto ? 3 : 0), PAL.hueso[3]); p.p(x - dx, y - dy + (abierto ? 3 : 0), PAL.hueso[2]); }
     p.contorno(AUTO);
     return p.canvas();
   });

@@ -3,6 +3,7 @@
 // contorno que el resto, para que un objeto se reconozca por su silueta sobre el pedestal.
 // ─────────────────────────────────────────────────────────────────────────────
 
+const _lecturas = new WeakMap();
 const ICONOS = {
   sombreroRojo(p) { p.bola(9, 8, 7.5, 5, PAL.hongo, { filtro: (x, y) => y <= 10 }); p.rect(3, 10, 12, 1, PAL.hongo[1]); p.caja(6, 11, 6, 5, PAL.crema); p.sello(5, 4, ["cc...c", "c....."], { c: PAL.crema[3] }); p.p(11, 7, PAL.crema[3]); },
   setaPicante(p) { p.caja(7, 9, 4, 7, PAL.crema); p.bola(9, 7, 6, 4.5, PAL.sangre, { filtro: (x, y) => y <= 9 }); for (const [x, y] of [[6, 5], [10, 4], [12, 7]]) p.p(x, y, PAL.fuego[4]); p.sello(12, 1, [".f", "ff", ".F"], { f: PAL.fuego[3], F: PAL.fuego[2] }); },
@@ -45,7 +46,8 @@ const ICONOS = {
   mechaEterna(p) { ICONOS._copiar(p, bombaSpr(1, true, 0), 1, 0); p.sello(12, 1, ["i.i", ".i.", "i.i"], { i: PAL.oro[4] }); },
   gotaRocio(p) { p.bola(9, 11, 5.5, 5.5, PAL.hielo, {}); for (let i = 0; i < 5; i++) { p.p(9, 3 + i, PAL.hielo[3]); if (i > 1) { p.p(8, 3 + i, PAL.hielo[2]); p.p(10, 3 + i, PAL.hielo[3]); } } p.p(7, 9, "#fff"); },
   _copiar(p, c, x0, y0, escala = 1) {
-    const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height).data;
+    // se lee una sola vez por dibujo (leer muchas veces el mismo canvas es lento en la GPU)
+    let d = _lecturas.get(c); if (!d) { d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; _lecturas.set(c, d); }
     for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4; if (d[i + 3] > 128) p.p(x0 + x * escala, y0 + y * escala, hex(d[i], d[i + 1], d[i + 2])); }
   },
 };

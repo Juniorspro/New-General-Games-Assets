@@ -16,6 +16,7 @@ function nuevaPartida(semilla) {
   J = {
     semilla, estado: "juego", t: 0, tiempo: 0, piso: null, sala: null, jug: nuevoJugador(),
     lagrimas: [], balas: [], bombas: [], fx: [], part: [], babas: [], enemigos: [], jefes: [], familiares: [], pendientes: [],
+    laseres: [], anillos: [], misiles: [], chispas: [], luces: [], pegadas: [], ludo: null, cuchillo: null, mira: null, rastro: [],
     temblor: 0, destello: 0, congelado: 0, puertasAbiertas: true, cierre: 0, rotulos: [], muertes: 0, causa: null,
     jefesVistos: [], enPedestal: new Set(), trans: null, vs: null, fundido: 0, tEstado: 0, campo: null, cambioGrilla: true,
   };
@@ -40,9 +41,10 @@ function iniciarPiso(n) {
 function entrarSala(sala, desde) {
   const j = J.jug;
   J.sala = sala;
-  for (const k of ["lagrimas", "balas", "bombas", "fx", "part", "babas", "enemigos", "jefes"]) J[k].length = 0;
-  J.campo = null; J.cambioGrilla = true; J.jefeMuerto = false;
-  j.danoSala = 0;
+  for (const k of ["lagrimas", "balas", "bombas", "fx", "part", "babas", "enemigos", "jefes", "laseres", "anillos", "misiles", "chispas", "luces", "pegadas"]) J[k].length = 0;
+  J.campo = null; J.cambioGrilla = true; J.jefeMuerto = false; J.ludo = null; J.cuchillo = null; J.mira = null; J.rastro = [];
+  j.danoSala = 0; j.salaF.length = 0; j.cargando = false; j.carga = 0; recalcular(j);
+  J.familiares = J.familiares.filter((f) => f.tipo !== "pajaro");   // el pájaro muerto dura una sala
   sala.visitada = sala.vista = true;
   for (const p of sala.puertas) if (p && puertaVisible(p) && p.destino.tipo !== "secreta") p.destino.vista = true;
   if (!sala.fondo) sala.fondo = hornearFondo(J.piso.cap, sala.semilla);
@@ -56,6 +58,7 @@ function entrarSala(sala, desde) {
   for (const f of J.familiares) { f.x = j.x; f.y = j.y; }
   if (!sala.limpia) {
     poblarSala(sala);
+    if (j.f.garrapata) for (const e of J.enemigos) if (e.jefe) { e.vida *= 0.85; e.max *= 0.85; }   // la garrapata: −15 % a los jefes
     J.puertasAbiertas = false; SFX.puertaCierra();
     if (sala.tipo === "jefe") { J.vsPendiente = true; Musica.poner("jefe"); }
   } else J.puertasAbiertas = true;
@@ -88,6 +91,10 @@ function pasoJuego() {
   actualizarFamiliares();
   actualizarEnemigos();
   actualizarLagrimas();
+  actualizarLaseres();
+  actualizarAnillos();
+  actualizarMisiles();
+  actualizarPegadas();
   actualizarBalas();
   actualizarBombas();
   actualizarCosas();
@@ -209,6 +216,7 @@ function dibujarSala(g) {
   for (const f of J.familiares) _orden.push([f.y, 3, f]);
   for (const b of J.bombas) _orden.push([b.y, 4, b]);
   _orden.push([J.jug.y, 5, J.jug]);
+  if (J.cuchillo) _orden.push([J.cuchillo.y + 6, 8, J.cuchillo]);
   for (const l of J.lagrimas) _orden.push([l.y, 6, l]);
   for (const b of J.balas) _orden.push([b.y, 7, b]);
   _orden.sort((a, b) => a[0] - b[0]);
@@ -223,8 +231,11 @@ function dibujarSala(g) {
       case 5: if (J.estado !== "cayendo") dibujarJugador(g, o); break;
       case 6: dibujarLagrima(g, o); break;
       case 7: dibujarBala(g, o); break;
+      case 8: dibujarCuchillo(g); break;
     }
   }
+  dibujarArmas(g);
+  dibujarCarga(g, J.jug);
   dibujarFx(g);
   dibujarParticulas(g);
   if (J.estado === "cayendo") {
@@ -307,7 +318,9 @@ function arrancar() { medir(); abrirMenu("titulo"); requestAnimationFrame(cuadro
 /** La chance de que se abra el pacto al matar al jefe de este piso (se muestra en el HUD). */
 function probPacto() {
   if (!J || !J.piso || J.piso.n < 2 || J.piso.n >= ULTIMO_PISO) return 0;
-  return J.jug.golpesJefe === 0 ? 0.7 : 0.33;
+  // el pentagrama suma un 10 % (15 % con dos o más, como en la wiki)
+  const penta = J.jug.f.pentagrama ? (J.jug.f.pentagrama >= 2 ? 0.15 : 0.1) : 0;
+  return Math.min(1, (J.jug.golpesJefe === 0 ? 0.7 : 0.33) + penta);
 }
 
 const CAIDA = { sale: 96, negro: 18, entra: 72 };

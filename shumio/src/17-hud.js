@@ -101,6 +101,8 @@ function dibujarHud(g) {
     g.drawImage(s, W - s.width - 4, H - s.height - 5);
     g.drawImage(n, W - s.width - 8 - n.width, H - n.height - 2);
   }
+  // ── la baratija: abajo a la izquierda (como en Repentance) ──
+  if (j.baratija) { const b = baratijaSpr(j.baratija); g.drawImage(b, 4, H - b.height - 4); }
   if (J.maldicion !== "extraviado") dibujarMinimapa(g);
   // ── la barra del jefe (medida: 121×8 en el original, acá 108×7): roja plana, marco oscuro
   //    redondeado y la calavera grande pisando la punta izquierda ──

@@ -80,6 +80,10 @@ const SFX = {
   cargado: () => { _tono({ f: 880, dur: 0.08, tipo: "triangle", vol: 0.1 }); _tono({ f: 1320, dur: 0.15, tipo: "triangle", vol: 0.1, cuando: 0.07 }); },
   activo: () => { _tono({ f: 200, f2: 900, dur: 0.3, tipo: "sawtooth", vol: 0.08, filtro: 2000, eco: 0.4 }); },
   pacto: () => { [0, 1, 6].forEach((s, i) => _tono({ f: 110 * Math.pow(2, s / 12), dur: 1.2, tipo: "sawtooth", vol: 0.07, filtro: 600, cuando: i * 0.05, eco: 0.6 })); },
+  // el rayo: un rugido grave que se abre (ruido filtrado que baja) + un zumbido que tiembla
+  rayo: () => { _ruido({ dur: 0.7, vol: 0.32, f: 2400, f2: 300, q: 1.2, eco: 0.4 }); _tono({ f: 110, f2: 70, dur: 0.6, tipo: "sawtooth", vol: 0.12, filtro: 800, q: 4 }); },
+  laser: () => { _tono({ f: 1400, f2: 500, dur: 0.12, tipo: "sawtooth", vol: 0.06, filtro: 3000 }); _ruido({ dur: 0.08, vol: 0.05, f: 4000, tipo: "highpass" }); },
+  santa: () => { [0, 7, 12].forEach((s, i) => _tono({ f: 880 * Math.pow(2, s / 12), dur: 0.4, tipo: "sine", vol: 0.07, cuando: i * 0.03, eco: 0.5 })); },
   pozo: () => { _tono({ f: 400, f2: 60, dur: 0.8, tipo: "sine", vol: 0.2, eco: 0.5 }); },
 };
 

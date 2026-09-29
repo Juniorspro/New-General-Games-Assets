@@ -286,6 +286,8 @@ function leerEntrada() {
     const vx = s.x - s.x0, vy = s.y - s.y0;
     if (Math.hypot(vx, vy) > RADIO_STICK * 0.3) { if (Math.abs(vx) > Math.abs(vy)) { dx = sig(vx); dy = 0; } else { dx = 0; dy = sig(vy); } }
   }
+  // (sonda de pruebas: un tiro forzado durante n cuadros)
+  if (IN.forzarTiro) { [dx, dy] = IN.forzarTiro; if (--IN.forzarTiro[2] <= 0) IN.forzarTiro = null; }
   IN.mx = mx; IN.my = my; IN.dx = dx; IN.dy = dy;
 }
 
@@ -372,6 +374,10 @@ const SFX = {
   cargado: () => { _tono({ f: 880, dur: 0.08, tipo: "triangle", vol: 0.1 }); _tono({ f: 1320, dur: 0.15, tipo: "triangle", vol: 0.1, cuando: 0.07 }); },
   activo: () => { _tono({ f: 200, f2: 900, dur: 0.3, tipo: "sawtooth", vol: 0.08, filtro: 2000, eco: 0.4 }); },
   pacto: () => { [0, 1, 6].forEach((s, i) => _tono({ f: 110 * Math.pow(2, s / 12), dur: 1.2, tipo: "sawtooth", vol: 0.07, filtro: 600, cuando: i * 0.05, eco: 0.6 })); },
+  // el rayo: un rugido grave que se abre (ruido filtrado que baja) + un zumbido que tiembla
+  rayo: () => { _ruido({ dur: 0.7, vol: 0.32, f: 2400, f2: 300, q: 1.2, eco: 0.4 }); _tono({ f: 110, f2: 70, dur: 0.6, tipo: "sawtooth", vol: 0.12, filtro: 800, q: 4 }); },
+  laser: () => { _tono({ f: 1400, f2: 500, dur: 0.12, tipo: "sawtooth", vol: 0.06, filtro: 3000 }); _ruido({ dur: 0.08, vol: 0.05, f: 4000, tipo: "highpass" }); },
+  santa: () => { [0, 7, 12].forEach((s, i) => _tono({ f: 880 * Math.pow(2, s / 12), dur: 0.4, tipo: "sine", vol: 0.07, cuando: i * 0.03, eco: 0.5 })); },
   pozo: () => { _tono({ f: 400, f2: 60, dur: 0.8, tipo: "sine", vol: 0.2, eco: 0.5 }); },
 };
 
@@ -1161,14 +1167,21 @@ function llaveSpr() {
     return p.canvas();
   });
 }
-function cofreSpr(dorado, abierto) {
-  return hornear(`cofre${dorado}${abierto}`, () => {
-    const p = new Pix(20, 17), madera = dorado ? PAL.oro.slice(1) : PAL.tierra.slice(2), herraje = dorado ? PAL.hueso.slice(2) : PAL.hierro.slice(2);
-    p.caja(1, 7, 18, 9, madera, { vertical: 0.6 });
-    if (abierto) { p.caja(1, 1, 18, 5, madera.map((c) => mezclar(c, "#000000", 0.35)), { vertical: 0.6 }); p.rect(2, 7, 16, 2, "#0b0608"); }
-    else { p.bola(10, 7, 9, 4.5, madera, { filtro: (x, y) => y <= 7, luz: [-0.4, -0.9, 0.3] }); }
-    for (const x of [4, 15]) p.caja(x, abierto ? 7 : 3, 2, abierto ? 9 : 13, herraje);
-    if (!abierto) p.sello(8, 7, ["kkkk", "kOOk", "kOOk"], { k: PAL.tinta, O: dorado ? PAL.hueso[4] : PAL.oro[3] });
+/** Los cofres del original: común (madera), dorado (con candado), de piedra (se abre con una
+ *  explosión), con pinchos (lastima al abrirlo) y rojo (el del pacto). */
+function cofreSpr(sub, abierto) {
+  if (sub === true) sub = "dorado"; else if (!sub) sub = "normal";
+  return hornear(`cofre${sub}${abierto}`, () => {
+    const MAD = { normal: PAL.tierra.slice(2), dorado: PAL.oro.slice(1), piedra: PAL.piedra.slice(1, 6), pinchos: PAL.tierra.slice(1, 5), rojo: PAL.sangre.slice(1) };
+    const p = new Pix(22, 19), madera = MAD[sub] || MAD.normal, herraje = sub === "dorado" ? PAL.hueso.slice(2) : sub === "piedra" ? PAL.piedra.slice(0, 3) : PAL.hierro.slice(2);
+    const X = 2, Y = 2;
+    p.caja(X + 1, Y + 7, 18, 9, madera, { vertical: 0.6 });
+    if (abierto) { p.caja(X + 1, Y + 1, 18, 5, madera.map((c) => mezclar(c, "#000000", 0.35)), { vertical: 0.6 }); p.rect(X + 2, Y + 7, 16, 2, "#0b0608"); }
+    else { p.bola(X + 10, Y + 7, 9, 4.5, madera, { filtro: (x, y) => y <= Y + 7, luz: [-0.4, -0.9, 0.3] }); }
+    if (sub !== "piedra") for (const x of [4, 15]) p.caja(X + x, Y + (abierto ? 7 : 3), 2, abierto ? 9 : 13, herraje);
+    else for (const [x, y] of [[6, 10], [12, 12], [9, 8], [15, 10]]) p.p(X + x, Y + y, PAL.piedra[0]);   // las grietas de la piedra
+    if (!abierto && (sub === "dorado" || sub === "normal" || sub === "rojo")) p.sello(X + 8, Y + 7, ["kkkk", "kOOk", "kOOk"], { k: PAL.tinta, O: sub === "dorado" ? PAL.hueso[4] : PAL.oro[3] });
+    if (sub === "pinchos") for (const [x, y, dx, dy] of [[0, 9, -1, 0], [0, 13, -1, 0], [21, 9, 1, 0], [21, 13, 1, 0], [6, 1, 0, -1], [14, 1, 0, -1], [10, 0, 0, -1]]) { p.p(x, y + (abierto ? 3 : 0), PAL.hueso[3]); p.p(x - dx, y - dy + (abierto ? 3 : 0), PAL.hueso[2]); }
     p.contorno(AUTO);
     return p.canvas();
   });
@@ -2067,7 +2080,8 @@ function chincheSpr() {
 /** Un garabato hecho "a mano" desde un sprite: su contorno y sus partes oscuras, en tinta. */
 function garabato(c, tinta = "#2b2326", escala = 2, relleno = null) {
   return hornear(`garabato|${tinta}|${escala}|${relleno}|` + (c.__id ||= Math.random().toString(36).slice(2)), () => {
-    const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+    let d = _lecturas.get(c); if (!d) { d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; _lecturas.set(c, d); }
+    const W = c.width, H = c.height;
     const a = (x, y) => x >= 0 && y >= 0 && x < W && y < H && d[(y * W + x) * 4 + 3] > 100;
     const lum0 = (x, y) => { const i = (y * W + x) * 4; return (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255; };
     // la luz promediada en 3×3 (así el tramado no cuenta como borde: sólo los cambios de verdad)
@@ -2701,6 +2715,7 @@ function aparicionSpr(k) {
 // contorno que el resto, para que un objeto se reconozca por su silueta sobre el pedestal.
 // ─────────────────────────────────────────────────────────────────────────────
 
+const _lecturas = new WeakMap();
 const ICONOS = {
   sombreroRojo(p) { p.bola(9, 8, 7.5, 5, PAL.hongo, { filtro: (x, y) => y <= 10 }); p.rect(3, 10, 12, 1, PAL.hongo[1]); p.caja(6, 11, 6, 5, PAL.crema); p.sello(5, 4, ["cc...c", "c....."], { c: PAL.crema[3] }); p.p(11, 7, PAL.crema[3]); },
   setaPicante(p) { p.caja(7, 9, 4, 7, PAL.crema); p.bola(9, 7, 6, 4.5, PAL.sangre, { filtro: (x, y) => y <= 9 }); for (const [x, y] of [[6, 5], [10, 4], [12, 7]]) p.p(x, y, PAL.fuego[4]); p.sello(12, 1, [".f", "ff", ".F"], { f: PAL.fuego[3], F: PAL.fuego[2] }); },
@@ -2743,7 +2758,8 @@ const ICONOS = {
   mechaEterna(p) { ICONOS._copiar(p, bombaSpr(1, true, 0), 1, 0); p.sello(12, 1, ["i.i", ".i.", "i.i"], { i: PAL.oro[4] }); },
   gotaRocio(p) { p.bola(9, 11, 5.5, 5.5, PAL.hielo, {}); for (let i = 0; i < 5; i++) { p.p(9, 3 + i, PAL.hielo[3]); if (i > 1) { p.p(8, 3 + i, PAL.hielo[2]); p.p(10, 3 + i, PAL.hielo[3]); } } p.p(7, 9, "#fff"); },
   _copiar(p, c, x0, y0, escala = 1) {
-    const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height).data;
+    // se lee una sola vez por dibujo (leer muchas veces el mismo canvas es lento en la GPU)
+    let d = _lecturas.get(c); if (!d) { d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; _lecturas.set(c, d); }
     for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) { const i = (y * c.width + x) * 4; if (d[i + 3] > 128) p.p(x0 + x * escala, y0 + y * escala, hex(d[i], d[i + 1], d[i + 2])); }
   },
 };
@@ -2753,6 +2769,232 @@ function iconoSpr(id) {
     (ICONOS[id] || ICONOS.dadoViejo)(p);
     p.contorno(AUTO);
     return p.canvas();
+  });
+}
+
+// ══════════ 09b-iconos.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS ÍCONOS NUEVOS (armas, modificadores, familiares, activos, baratijas) y los sprites de las
+// armas (cuchillo, misil, diente, aguja, hueso), con el mismo pintor y la misma luz que el resto:
+// cada objeto se tiene que reconocer por la silueta sobre el pedestal, como en el original.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const R_ = {
+  blanco: ["#6e6a66", "#a8a39c", "#d6d2ca", "#f4f1ea", "#ffffff"], rosa: ["#5a1a30", "#9a3a5c", "#d86a8e", "#f2a0bc", "#ffd6e4"],
+  negro: ["#050406", "#141018", "#26202c", "#3c3444", "#5a5064"], verde: ["#0f200c", "#255a1c", "#44922c", "#86d04a", "#d8ff9a"],
+  choco: ["#1a0c06", "#3a1c0c", "#5e3218", "#8a5230", "#b87e52"], rojoV: ["#3a0408", "#7a0a10", "#c01a1a", "#f03a2a", "#ff9a7a"],
+  cian: ["#062a30", "#0e5a66", "#1e9aa8", "#5ad6de", "#c8fbff"],
+};
+/** Pie de cosas chicas que se repiten: caritas, frascos, libros, leches, gusanos. */
+const DIB = {
+  carita(p, x, y, r, piel, o = {}) {
+    p.bola(x, y, r, r * 0.95, piel, {});
+    const e = o.ojos || PAL.tinta;
+    p.p(x - r * 0.4, y - 0.5, e); p.p(x + r * 0.35, y - 0.5, e);
+    if (o.boca) p.p(x, y + r * 0.45, o.boca);
+    if (o.cuernos) { p.p(x - r * 0.7, y - r - 0.5, o.cuernos); p.p(x + r * 0.6, y - r - 0.5, o.cuernos); p.p(x - r * 0.8, y - r + 0.5, o.cuernos); p.p(x + r * 0.7, y - r + 0.5, o.cuernos); }
+  },
+  frasco(p, liquido, o = {}) {
+    p.bola(9, 11, 5.5, 5.5, ["#3a4a52", "#6e8894", "#a8c4d0", "#e0f0f6"], {});
+    p.bola(9, 12, 4.6, 4, liquido, { filtro: (x, y) => y >= 10 });
+    p.caja(7, 3, 4, 4, PAL.hierro.slice(1));
+    p.rect(6, 2, 6, 1, PAL.tierra[3]);
+    p.p(7, 9, "#ffffff");
+    if (o.cruz) { p.rect(8, 11, 3, 1, o.cruz); p.rect(9, 10, 1, 3, o.cruz); }
+  },
+  libro(p, tapa, simbolo) {
+    p.caja(3, 3, 12, 13, tapa, { vertical: 0.5 });
+    p.rect(3, 3, 2, 13, tapa[0]);
+    p.rect(14, 4, 1, 11, "#e8dcc0"); p.rect(4, 15, 10, 1, "#e8dcc0");
+    if (simbolo) simbolo(p);
+  },
+  leche(p, liquido, tapa, marca) {
+    p.caja(5, 5, 8, 11, ["#9a968e", "#d6d2ca", "#f4f1ea", "#ffffff"], { vertical: 0.2 });
+    p.sello(5, 2, ["..xxxx..", ".xxxxxx.", "xxxxxxxx"], { x: tapa });
+    p.rect(6, 9, 6, 4, liquido[2]); p.rect(6, 9, 6, 1, liquido[3]);
+    if (marca) p.p(8.5, 11, marca);
+  },
+  gusano(p, rampa, forma) {
+    const pts = forma;
+    pts.forEach(([x, y], i) => p.bola(x, y, 2.1 - i * 0.08, 2.1 - i * 0.08, rampa, {}));
+    const [hx, hy] = pts[0]; p.p(hx - 1, hy - 1, PAL.tinta); p.p(hx + 1, hy - 1, PAL.tinta);
+  },
+  ojo(p, iris, o = {}) {
+    p.bola(9, 9, o.rx || 7, o.ry || 5.5, R_.blanco, {});
+    p.bola(9, 9, o.ri || 3, o.ri || 3, iris, {});
+    p.bola(9, 9, 1.4, 1.4, [PAL.tinta, "#2a1a20"], {});
+    p.p(8, 8, "#ffffff");
+    if (o.venas) for (const [x0, y0, x1, y1] of [[3, 8, 5, 9], [14, 10, 12, 9], [5, 12, 6, 11]]) p.linea(x0, y0, x1, y1, "#c02a2a");
+  },
+  moscaRoja(p, x, y) { p.bola(x, y, 3, 2.6, PAL.sangre, {}); p.bola(x - 2, y - 3, 2, 1.5, ["#8a9aa8", "#c8d6e0", "#f0f6fa"], {}); p.bola(x + 2, y - 3, 2, 1.5, ["#8a9aa8", "#c8d6e0", "#f0f6fa"], {}); p.p(x - 1, y, PAL.tinta); p.p(x + 1, y, PAL.tinta); },
+};
+
+Object.assign(ICONOS, {
+  // ── cuentas ──
+  cebolla(p) { p.bola(9, 11, 6, 5.5, ["#5a3a1a", "#9a6a2a", "#d6a24a", "#f0d08a", "#fff0c8"], {}); p.linea(9, 5, 9, 2, "#6a8a3a"); p.linea(10, 5, 12, 1, "#86a84a"); p.p(6, 11, "#3a78c0"); p.p(6, 12, "#5a98e0"); p.p(11, 11, "#3a78c0"); p.p(11, 12, "#5a98e0"); p.p(8, 14, PAL.tinta); p.p(9, 14, PAL.tinta); },
+  hongoAzul(p) { p.bola(9, 8, 8, 6, PAL.azul, { filtro: (x, y) => y <= 9 }); p.caja(6, 10, 6, 6, PAL.crema); for (const [x, y] of [[5, 5], [9, 3], [13, 6], [8, 7]]) p.p(x, y, "#dfe8ff"); },
+  hongoChico(p) { p.bola(9, 10, 5, 4, PAL.hongo, { filtro: (x, y) => y <= 11 }); p.caja(7, 12, 4, 4, PAL.crema); p.p(7, 8, PAL.crema[3]); p.p(10, 7, PAL.crema[3]); },
+  hongoRaro(p) { p.bola(9, 6, 4, 4, PAL.violeta, { filtro: (x, y) => y <= 7 }); p.caja(8, 7, 2, 9, PAL.crema); p.bola(9, 6, 1, 1, ["#ffe07a", "#fff"], {}); p.p(6, 5, PAL.violeta[4]); },
+  unaVidaMas(p) { p.bola(9, 8, 8, 6, PAL.musgo.slice(1).concat("#a8d890"), { filtro: (x, y) => y <= 9 }); p.caja(6, 10, 6, 6, PAL.crema); for (const [x, y] of [[4, 6], [9, 3], [14, 6]]) { p.bola(x, y, 1.6, 1.6, R_.blanco.slice(2), {}); } p.p(7, 12, PAL.tinta); p.p(10, 12, PAL.tinta); },
+  hormonas(p) { p.caja(4, 6, 10, 6, ["#6e8894", "#a8c4d0", "#e0f0f6"], { vertical: 0.3 }); p.rect(5, 7, 6, 4, "#e05a2a"); p.rect(14, 8, 3, 2, PAL.hierro[3]); p.rect(1, 8, 3, 2, PAL.hierro[4]); p.linea(0, 9, -2, 9, PAL.hierro[4]); p.rect(2, 5, 1, 8, PAL.hierro[2]); },
+  bolaVeloz(p) { p.bola(10, 9, 5.5, 5.5, ["#1a3a6a", "#2a5aa8", "#4a86e0", "#8ab8ff", "#e0eeff"], {}); for (const y of [6, 9, 12]) p.linea(1, y, 4, y, "#8ab8ff"); p.linea(7, 5, 13, 13, "#e0eeff"); },
+  cabezaGrillo(p) { p.bola(9, 9, 6.5, 6, ["#3a0a0a", "#6a1a14", "#9a2a1e", "#c84a2e", "#f07a4a"], {}); p.linea(6, 3, 3, 0, "#3a0a0a"); p.linea(12, 3, 15, 0, "#3a0a0a"); p.bola(6.5, 9, 1.6, 2, ["#ffe07a", "#fff8c8"], {}); p.bola(11.5, 9, 1.6, 2, ["#ffe07a", "#fff8c8"], {}); p.linea(7, 13, 11, 13, PAL.tinta); },
+  pentagrama(p) { const pts = [0, 1, 2, 3, 4].map((k) => [9 + Math.cos(-Math.PI / 2 + k * TAU / 5) * 7, 9.5 + Math.sin(-Math.PI / 2 + k * TAU / 5) * 7]); for (let k = 0; k < 5; k++) { const a = pts[k], b = pts[(k + 2) % 5]; p.linea(a[0], a[1], b[0], b[1], "#d0201c"); } for (let a = 0; a < 24; a++) p.p(9 + Math.cos(a / 24 * TAU) * 8, 9.5 + Math.sin(a / 24 * TAU) * 8, "#7a0a10"); },
+  marca(p) { p.bola(9, 9, 7, 7, ["#3a0408", "#7a0a10", "#a8141a"], {}); p.sello(5, 4, ["..#..#..", "..#..#..", "########", "..#..#..", "..#..#..", "########", "..#..#..", "..#..#.."], { "#": "#ff6a5a" }); },
+  elPacto(p) { p.caja(3, 2, 12, 15, ["#8a7a60", "#c8b89a", "#ecdfc8", "#f8f0e0"], { vertical: 0.3 }); for (let y = 4; y < 12; y += 2) p.linea(5, y, 12, y, "#8a7a60"); p.linea(5, 14, 10, 13, "#a8141a"); p.bola(12, 13, 1.8, 1.8, PAL.sangre.slice(1), {}); },
+  sangreMartir(p) { p.bola(9, 11, 5.5, 5, PAL.sangre, {}); for (let i = 0; i < 5; i++) p.p(9, 3 + i, PAL.sangre[3 - (i > 2 ? 1 : 0)]); p.bola(9, 5, 5, 1.5, PAL.oro.slice(2), { filtro: (x, y) => Math.abs(y - 5) >= 1 }); p.p(7, 9, "#ffd0c0"); },
+  aureola(p) { for (let a = 0; a < 40; a++) { const an = a / 40 * TAU, x = 9 + Math.cos(an) * 7, y = 9 + Math.sin(an) * 3.2; p.p(x, y, an < Math.PI ? PAL.oro[3] : PAL.oro[4]); p.p(x, y + 1, PAL.oro[2]); } },
+  rosario(p) { for (let a = 0; a < 14; a++) { const an = a / 14 * TAU; p.bola(9 + Math.cos(an) * 5.5, 7 + Math.sin(an) * 5, 1.2, 1.2, ["#5a3a1a", "#9a6a3a", "#d6a26a"], {}); } p.rect(8, 12, 2, 6, PAL.oro[3]); p.rect(6, 14, 6, 2, PAL.oro[3]); },
+  corazonSagrado(p) { ICONOS._copiar(p, corazonSpr("rojo"), 4, 5); p.bola(9, 3, 3, 1.2, PAL.oro.slice(2), {}); for (const [x, y] of [[2, 5], [16, 5], [1, 10], [17, 10]]) p.p(x, y, PAL.oro[4]); },
+  // ── armas ──
+  rayo(p) { p.bola(9, 6, 6, 5, ["#2a0406", "#5a0a0e", "#8a1418", "#b82a2a", "#e05a4a"], {}); p.p(6, 6, "#fff0e0"); p.p(11, 6, "#fff0e0"); p.rect(7, 10, 4, 7, "#c8141a"); p.rect(8, 10, 2, 7, "#ff8a6a"); p.p(4, 1, "#3a0408"); p.p(13, 1, "#3a0408"); p.p(5, 2, "#3a0408"); p.p(12, 2, "#3a0408"); },
+  laser(p) { DIB.ojo(p, R_.rojoV, { rx: 6, ry: 4.5, ri: 2.6 }); p.rect(3, 13, 12, 2, PAL.hierro[3]); p.rect(3, 3, 12, 2, PAL.hierro[3]); p.rect(3, 3, 1, 12, PAL.hierro[2]); p.rect(14, 3, 1, 12, PAL.hierro[2]); for (const x of [5, 9, 13]) p.p(x, 14, "#ff4a5a"); },
+  anillo(p) { for (let a = 0; a < 40; a++) { const an = a / 40 * TAU; p.p(9 + Math.cos(an) * 7, 9 + Math.sin(an) * 6, "#ff3a4a"); p.p(9 + Math.cos(an) * 6, 9 + Math.sin(an) * 5, "#ffc0c8"); } p.bola(9, 9, 2, 2, ["#6a0a10", "#c01a2a", "#ff6a7a"], {}); },
+  feto(p) { p.bola(9, 9, 7, 7, ["#3a4a52", "#6e8894", "#a8c4d0", "#e0f0f6"], {}); p.bola(9, 10, 4.5, 4, PAL.piel, {}); p.bola(11, 8, 2.5, 2.5, PAL.piel, {}); p.p(12, 8, PAL.tinta); ICONOS._copiar(p, bombaSpr(0.5), 2, 7); p.p(6, 5, "#ffffff"); },
+  epico(p) { p.caja(7, 2, 4, 11, PAL.hierro.slice(1), { vertical: 0.2 }); p.bola(9, 2.5, 2, 2, ["#6a0a10", "#c01a1a", "#f05a4a"], {}); p.sello(5, 11, ["#......#", "##....##", "###..###"], { "#": PAL.sangre[3] }); p.rect(8, 14, 2, 3, PAL.fuego[3]); p.p(8, 17, PAL.fuego[4]); p.p(9, 16, PAL.fuego[4]); },
+  ludovico(p) { p.bola(9, 9, 6.5, 6.5, PAL.espora, {}); for (let a = 0; a < 28; a++) { const an = a / 28 * TAU; p.p(9 + Math.cos(an) * 8, 9 + Math.sin(an) * 8, (a & 1) ? PAL.espora[3] : null); } p.p(7, 6, "#ffffff"); p.p(6, 7, "#ffffff"); },
+  cuchillo(p) {   // la hoja en diagonal (clara arriba, gris abajo), la guarda y el mango de madera
+    for (let i = 0; i < 10; i++) { p.p(7 + i, 10 - i, "#f4f6f8"); p.p(7 + i, 11 - i, "#c8ced4"); p.p(8 + i, 11 - i, "#8a929a"); }
+    p.linea(4, 9, 8, 13, PAL.hierro[3]);
+    for (let i = 0; i < 5; i++) { p.p(2 + i, 15 - i, PAL.tierra[3]); p.p(3 + i, 15 - i, PAL.tierra[4]); p.p(2 + i, 16 - i, PAL.tierra[2]); }
+  },
+  // ── lágrimas ──
+  cuadruple(p) { p.bola(9, 9, 4, 3.5, R_.negro.slice(1), {}); for (const s of [-1, 1]) for (const k of [0, 1, 2, 3]) { const y = 6 + k * 2; p.linea(9 + s * 3, y, 9 + s * 7, y - 2 + k, R_.negro[2]); } for (const [x, y] of [[7, 8], [11, 8], [8, 10], [10, 10]]) p.p(x, y, "#ff3a2a"); },
+  veinte(p) { for (const x of [5, 13]) { p.bola(x, 9, 3.6, 3.6, ["#9fd6ee", "#cfefff", "#ffffff"], {}); for (let a = 0; a < 20; a++) p.p(x + Math.cos(a / 20 * TAU) * 4, 9 + Math.sin(a / 20 * TAU) * 4, PAL.tierra[2]); } p.linea(8, 8, 10, 8, PAL.tierra[2]); p.linea(1, 8, 0, 6, PAL.tierra[2]); p.linea(17, 8, 18, 6, PAL.tierra[2]); p.rect(3, 9, 5, 1, "#5a8aa8"); p.rect(11, 9, 5, 1, "#5a8aa8"); },
+  polifemo(p) { DIB.ojo(p, PAL.hongo, { rx: 8, ry: 7, ri: 4.2, venas: true }); },
+  soja(p) { DIB.leche(p, ["#b8b4a8", "#d8d4c8", "#f0ece0", "#fffff4"], "#5a8a3a", "#5a8a3a"); p.bola(9, 12, 1.3, 1, ["#6a8a3a", "#9ac05a"], {}); },
+  almendra(p) { DIB.leche(p, ["#c8b090", "#e0cca8", "#f4e6cc", "#fff8ea"], "#8a5a2a", "#8a5a2a"); p.bola(9, 11, 1.6, 1.1, ["#6a4020", "#9a6a3a", "#c89a6a"], {}); },
+  choco(p) { DIB.leche(p, R_.choco, "#5e3218", "#fff"); p.caja(6, 9, 6, 4, R_.choco.slice(1)); p.p(7, 10, R_.choco[4]); },
+  pulmon(p) { for (const s of [-1, 1]) p.bola(9 + s * 3.5, 10, 3.6, 6, ["#5a0a1a", "#9a2a3a", "#d85a6a", "#f8a0a8"], {}); p.rect(8, 1, 2, 6, "#e8c8c0"); p.linea(9, 6, 6, 8, "#e8c8c0"); p.linea(9, 6, 12, 8, "#e8c8c0"); },
+  ipecac(p) { DIB.frasco(p, R_.verde); p.sello(7, 11, ["x.x", ".x.", "x.x"], { x: PAL.tinta }); },
+  hemo(p) { p.bola(9, 10, 6.5, 6.5, ["#2a0406", "#5c0c12", "#8a1418", "#b82a2a"], {}); for (const [x, y] of [[2, 3], [15, 4], [1, 14], [16, 15], [9, 1]]) p.bola(x, y, 1.3, 1.3, PAL.sangre.slice(2), {}); p.p(7, 8, "#f08a7a"); },
+  proptosis(p) { for (const [x, y] of [[5, 7], [13, 7]]) { p.bola(x, y, 4, 4, R_.blanco, {}); p.bola(x, y + 0.5, 2, 2, PAL.hongo, {}); p.p(x, y + 0.5, PAL.tinta); } p.linea(5, 11, 7, 16, "#c02a2a"); p.linea(13, 11, 11, 16, "#c02a2a"); },
+  carbon(p) { p.bola(9, 10, 6.5, 5.5, R_.negro, { luz: [-0.4, -0.8, 0.4] }); for (const [x, y] of [[6, 8], [11, 7], [9, 12]]) p.p(x, y, "#6a6474"); p.p(5, 7, "#8a8494"); },
+  ojoMuerto(p) { DIB.ojo(p, ["#3a3a3a", "#6a6a6a", "#9a9a9a"], { rx: 7, ry: 5.5, ri: 3 }); p.linea(3, 3, 15, 15, PAL.sangre[3]); p.linea(15, 3, 3, 15, PAL.sangre[3]); },
+  planeta(p) { p.bola(9, 9, 5, 5, ["#1a2a5a", "#2a4a9a", "#4a7ad0", "#8ab4f0"], {}); for (let a = 0; a < 36; a++) { const an = a / 36 * TAU, x = 9 + Math.cos(an) * 8.5, y = 9 + Math.sin(an) * 2.5; if (!(an > Math.PI && Math.abs(x - 9) < 5)) p.p(x, y, "#d6c69a"); } p.p(7, 6, "#e0eeff"); },
+  espejo(p) { p.bola(9, 8, 6, 7, ["#5a4a1a", "#9a7a2a", "#d0a83a"], {}); p.bola(9, 8, 4.6, 5.6, ["#6a8aa0", "#a8c8dc", "#dff0fa"], {}); p.rect(8, 15, 2, 3, PAL.oro[2]); p.linea(7, 5, 10, 11, "#ffffff"); },
+  bucle(p) { for (let a = 0; a < 60; a++) { const t = a / 60 * TAU, x = 9 + 7 * Math.sin(t), y = 9 + 4.5 * Math.sin(t) * Math.cos(t) * 1.6; p.p(x, y, "#8a5cc0"); p.p(x, y + 1, "#c19ae8"); } },
+  antigrav(p) { for (const [x, y] of [[5, 5], [12, 4], [8, 10], [14, 11]]) p.bola(x, y, 2.4, 2.4, PAL.espora.slice(1), {}); for (const x of [3, 8, 13]) p.linea(x, 14, x, 17, "#8ab4f0"); p.linea(2, 15, 3, 14, "#8ab4f0"); p.linea(4, 15, 3, 14, "#8ab4f0"); },
+  grillo(p) { p.bola(9, 11, 5, 4.5, ["#3a0a0a", "#6a1a14", "#9a2a1e", "#c84a2e"], {}); p.bola(9, 5.5, 3, 2.6, ["#3a0a0a", "#6a1a14", "#9a2a1e", "#c84a2e"], {}); for (const s of [-1, 1]) { p.linea(9 + s * 4, 11, 9 + s * 8, 7, "#3a0a0a"); p.linea(9 + s * 3, 14, 9 + s * 7, 17, "#3a0a0a"); } },
+  parasito(p) { DIB.gusano(p, R_.rosa.slice(1), [[5, 5], [7, 7], [9, 9], [11, 11], [13, 13]]); p.bola(13, 5, 2, 2, PAL.espora.slice(2), {}); p.bola(5, 13, 2, 2, PAL.espora.slice(2), {}); },
+  fractura(p) { p.linea(3, 14, 12, 5, R_.blanco[3]); p.linea(4, 14, 13, 5, R_.blanco[2]); p.bola(3, 15, 2, 2, R_.blanco.slice(2), {}); p.bola(13, 4, 2, 2, R_.blanco.slice(2), {}); p.linea(9, 6, 11, 10, PAL.sangre[3]); p.p(14, 8, R_.blanco[3]); p.p(15, 10, R_.blanco[3]); },
+  pegajosa(p) { p.bola(9, 10, 6, 5.5, R_.verde.slice(1), {}); ICONOS._copiar(p, bombaSpr(0.55), 3, 1); for (const [x, y] of [[4, 15], [13, 15]]) p.linea(x, y - 1, x, y + 1, R_.verde[3]); },
+  raizElectrica(p) { p.linea(9, 1, 6, 7, "#ffe07a"); p.linea(6, 7, 11, 9, "#ffe07a"); p.linea(11, 9, 7, 16, "#ffe07a"); p.linea(10, 1, 7, 7, "#fff8c8"); p.linea(7, 7, 12, 9, "#fff8c8"); for (const [x, y] of [[3, 12], [14, 4], [15, 12]]) p.p(x, y, "#c8e8ff"); },
+  luzSanta(p) { p.bola(9, 9, 5, 5, ["#6a8aa0", "#a8d4ee", "#e0f6ff", "#ffffff"], {}); for (let a = 0; a < 8; a++) { const an = a * TAU / 8; p.linea(9 + Math.cos(an) * 6, 9 + Math.sin(an) * 6, 9 + Math.cos(an) * 8.5, 9 + Math.sin(an) * 8.5, "#bfe6ff"); } },
+  amorDuro(p) { p.sello(4, 2, [".######.", "########", "########", "########", "#######.", "##..###.", "##...##.", ".#....#.", ".#....#."], { "#": "x" }); for (let y = 0; y < 18; y++) for (let x = 0; x < 18; x++) if (p.g(x, y)) p.p(x, y, x < 7 && y < 6 ? "#ffffff" : y > 7 ? "#c8bca8" : "#ece4d4"); },
+  eutanasia(p) { p.linea(2, 16, 12, 6, PAL.hierro[4]); p.caja(10, 3, 5, 5, ["#6e8894", "#a8c4d0", "#e0f0f6"]); p.rect(11, 4, 3, 3, "#9a2a2a"); p.linea(14, 2, 16, 0, PAL.hierro[3]); p.p(1, 17, "#ffffff"); },
+  picadura(p) { p.bola(9, 10, 4, 3.5, R_.negro.slice(1), {}); for (const s of [-1, 1]) for (const k of [0, 1, 2]) p.linea(9 + s * 3, 8 + k * 2, 9 + s * 7, 6 + k * 3, R_.negro[2]); p.linea(8, 13, 8, 16, "#e8e8e8"); p.linea(10, 13, 10, 16, "#e8e8e8"); p.p(8, 9, "#ff3a2a"); p.p(10, 9, "#ff3a2a"); },
+  materiaOscura(p) { p.bola(9, 9, 7, 7, R_.negro, {}); for (let a = 0; a < 12; a++) { const an = a / 12 * TAU + 0.3; p.p(9 + Math.cos(an) * (3 + a % 3), 9 + Math.sin(an) * (3 + a % 3), a % 2 ? "#5a3a8a" : "#8a5cc0"); } p.p(9, 9, "#c19ae8"); },
+  lentesAbuela(p) { for (const x of [5, 13]) { p.bola(x, 9, 3.5, 3, ["#8ad0c0", "#c8f0e8", "#f0fffa"], {}); for (let a = 0; a < 20; a++) p.p(x + Math.cos(a / 20 * TAU) * 4, 9 + Math.sin(a / 20 * TAU) * 3.5, "#d86a8e"); } p.linea(8, 8, 10, 8, "#d86a8e"); },
+  perfumeAbuela(p) { p.bola(9, 12, 5, 4.5, R_.rosa, {}); p.caja(8, 5, 2, 3, PAL.oro.slice(2)); p.bola(9, 3.5, 2, 1.6, PAL.oro.slice(2), {}); p.bola(14, 3, 2, 1.6, R_.rosa.slice(2), {}); p.linea(11, 4, 13, 3, "#8a4a5a"); p.p(7, 10, "#fff"); },
+  labialAbuela(p) { p.caja(6, 9, 6, 8, PAL.oro.slice(1)); p.caja(7, 4, 4, 5, PAL.sangre.slice(1)); p.sello(7, 2, ["..##", ".###", "####"], { "#": PAL.sangre[3] }); p.p(8, 5, PAL.sangre[4]); },
+  tacosAbuela(p) { p.sello(1, 5, ["......####", ".....#####", "....######", "###.######", "##########", "#########.", "#.......#.", "#.......#."], { "#": "x" }); for (let y = 0; y < 18; y++) for (let x = 0; x < 18; x++) if (p.g(x, y)) p.p(x, y, y < 9 ? "#d0201c" : y < 11 ? "#8a0a10" : "#3a0408"); },
+  liquido(p) { DIB.frasco(p, ["#0a2a10", "#1a5a2a", "#3a9a4a", "#7ad08a"]); p.p(8, 12, "#c8ffd0"); p.p(10, 13, "#c8ffd0"); },
+  cabezaTendero(p) { DIB.carita(p, 9, 10, 6.5, ["#3a3a3a", "#6a6a6a", "#9a9a9a", "#c8c8c8"], { ojos: "#fff", boca: "#1a1a1a" }); ICONOS._copiar(p, monedaSpr(0), 4, 0); p.linea(5, 14, 13, 14, PAL.tinta); for (const x of [6, 8, 10, 12]) p.p(x, 15, PAL.tinta); },
+  atractor(p) { p.bola(9, 9, 6, 6, ["#1a1a3a", "#2a2a6a", "#4a4aa8"], {}); for (let a = 0; a < 3; a++) for (let r = 2; r < 8; r += 0.5) p.p(9 + Math.cos(a * TAU / 3 + r * 0.6) * r, 9 + Math.sin(a * TAU / 3 + r * 0.6) * r, "#c8c8ff"); },
+  piscis(p) { p.bola(8, 9, 6, 4, ["#1a3a5a", "#2a6a9a", "#4a9ad0", "#9ad0f0"], {}); p.sello(13, 5, ["#..", "##.", "###", "##.", "#.."], { "#": "#4a9ad0" }); p.sello(13, 9, ["###", "##.", "#.."], { "#": "#2a6a9a" }); p.p(4, 8, PAL.tinta); p.p(3, 7, "#fff"); },
+  ojoBelial(p) { DIB.ojo(p, PAL.sangre, { rx: 7.5, ry: 4.5, ri: 2.6 }); for (const x of [3, 6, 9, 12, 15]) p.linea(x, 5, x + (x - 9) * 0.2, 2, R_.negro[2]); },
+  cabezaDivina(p) { p.bola(9, 10, 6, 6, ["#8a7a60", "#c8b89a", "#ecdfc8", "#fff8ea"], {}); for (let a = 0; a < 30; a++) { const an = a / 30 * TAU; p.p(9 + Math.cos(an) * 8, 3.5 + Math.sin(an) * 2, PAL.oro[3]); } p.p(7, 10, PAL.tinta); p.p(11, 10, PAL.tinta); p.bola(9, 3.5, 1.5, 1, PAL.oro.slice(3), {}); },
+  virus(p) { p.bola(9, 9, 5, 5, R_.verde.slice(1), {}); for (let a = 0; a < 8; a++) { const an = a * TAU / 8; p.linea(9 + Math.cos(an) * 5, 9 + Math.sin(an) * 5, 9 + Math.cos(an) * 8, 9 + Math.sin(an) * 8, R_.verde[2]); p.p(9 + Math.cos(an) * 8, 9 + Math.sin(an) * 8, R_.verde[4]); } p.p(8, 8, R_.verde[4]); },
+  // ── vuelo y más ──
+  palomaMuerta(p) { p.bola(9, 10, 6, 4, R_.blanco, {}); p.bola(13, 7, 2.8, 2.6, R_.blanco, {}); p.sello(15, 7, ["#"], { "#": PAL.oro[3] }); p.sello(12, 6, ["x"], { x: PAL.tinta }); p.bola(6, 6, 4, 2.5, R_.blanco.slice(1), {}); p.linea(3, 13, 5, 16, R_.blanco[1]); },
+  espirituNoche(p) { p.bola(9, 8, 6, 6, R_.negro.slice(1), { filtro: (x, y) => y < 11 }); p.rect(3, 10, 12, 4, R_.negro[2]); for (const x of [3, 7, 11]) { p.p(x, 14, R_.negro[2]); p.p(x + 1, 15, R_.negro[2]); } p.sello(6, 7, ["e..e"], { e: "#ff3a2a" }); for (const s of [-1, 1]) p.bola(9 + s * 7, 7, 2.5, 4, R_.negro.slice(1), {}); },
+  maldicionPodrida(p) { ICONOS._copiar(p, bombaSpr(1), 1, 0); p.sello(4, 8, ["..v.", ".vvv", "..v."], { v: R_.verde[3] }); p.bola(13, 14, 2, 2, R_.verde.slice(1), {}); },
+  colaGato(p) { for (let i = 0; i < 14; i++) { const x = 3 + i, y = 15 - Math.sin(i / 14 * Math.PI * 1.3) * 11; p.bola(x, y, 1.8, 1.8, ["#3a2a1a", "#6a4a2a", "#9a7a4a", "#c8a87a"], {}); } p.bola(16, 4, 2, 2, ["#9a7a4a", "#f0e0c0"], {}); },
+  gatoMuerto(p) { DIB.carita(p, 9, 10, 6, ["#1a1a1a", "#3a3a3a", "#5a5a5a", "#7a7a7a"], { ojos: "#fff" }); p.sello(3, 2, ["#.......#.", "##.....##.", "###...###."], { "#": "#3a3a3a" }); p.sello(5, 8, ["x.x...x.x", ".x.....x.", "x.x...x.x"], { x: "#ffffff" }); for (const s of [-1, 1]) { p.linea(9 + s * 4, 12, 9 + s * 8, 11, "#9a9a9a"); p.linea(9 + s * 4, 13, 9 + s * 8, 14, "#9a9a9a"); } },
+  pajaroMuerto(p) { p.bola(9, 11, 6, 4, R_.negro.slice(1), {}); p.bola(13, 8, 3, 2.8, R_.negro.slice(1), {}); p.sello(16, 8, ["#"], { "#": PAL.oro[3] }); p.sello(12, 7, ["x.", ".x"], { x: "#ffffff" }); p.linea(6, 15, 5, 17, PAL.oro[2]); p.linea(9, 15, 9, 17, PAL.oro[2]); },
+  bebeArana(p) { DIB.carita(p, 9, 10, 5.5, R_.negro.slice(1), { ojos: "#ff3a2a" }); for (const s of [-1, 1]) for (const k of [0, 1, 2]) p.linea(9 + s * 5, 8 + k * 2.5, 9 + s * 8.5, 5 + k * 4, R_.negro[2]); },
+  // ── familiares ──
+  admiradora(p) { DIB.moscaRoja(p, 9, 10); for (let a = 0; a < 30; a++) { const an = a / 30 * TAU; if (a % 3) p.p(9 + Math.cos(an) * 8, 9 + Math.sin(an) * 7, "#c8a8a8"); } },
+  coronaMoscas(p) { for (let a = 0; a < 5; a++) { const an = a / 5 * TAU; ICONOS._copiar(p, tinte(mosquinSpr(0), "rgba(110,170,255,0.55)"), 5 + Math.cos(an) * 5, 5 + Math.sin(an) * 4, 0.55); } },
+  angelGuardian(p) { DIB.carita(p, 9, 10, 5, PAL.piel, { boca: "#c06a6a" }); for (const s of [-1, 1]) p.bola(9 + s * 6.5, 9, 2.5, 4.5, R_.blanco.slice(1), {}); for (let a = 0; a < 20; a++) p.p(9 + Math.cos(a / 20 * TAU) * 4, 3.5 + Math.sin(a / 20 * TAU) * 1.3, PAL.oro[3]); },
+  bolaPelos(p) { p.bola(9, 10, 6.5, 6, ["#3a2a1a", "#6a4a2a", "#9a7a4a", "#c8a87a"], {}); for (let a = 0; a < 16; a++) { const an = a / 16 * TAU; p.p(9 + Math.cos(an) * 7.5, 10 + Math.sin(an) * 7, "#6a4a2a"); } p.linea(9, 4, 12, 0, "#6a4a2a"); },
+  hermanita(p) { DIB.carita(p, 9, 10, 6, PAL.piel, { boca: "#8a3a3a" }); p.bola(9, 5, 6, 3, PAL.sangre.slice(1), { filtro: (x, y) => y <= 6 }); p.bola(3, 8, 2, 3, PAL.sangre.slice(1), {}); p.bola(15, 8, 2, 3, PAL.sangre.slice(1), {}); },
+  bebeDemonio(p) { DIB.carita(p, 9, 10, 6, ["#1a0a0a", "#3a1414", "#5a2222", "#7a3434", "#a05050"], { ojos: "#ff3a2a", cuernos: "#c8c8c8" }); p.linea(7, 13, 11, 13, "#fff"); },
+  roboBebe(p) { p.caja(3, 4, 12, 11, PAL.hierro.slice(1)); p.rect(5, 7, 3, 3, "#ff3a3a"); p.rect(10, 7, 3, 3, "#ff3a3a"); p.rect(6, 12, 6, 1, PAL.tinta); p.linea(9, 4, 9, 1, PAL.hierro[3]); p.p(9, 0, "#ff3a3a"); },
+  incubo(p) { DIB.carita(p, 9, 10, 6, ["#140a1a", "#2a1434", "#46225a", "#643480", "#8a52a8"], { ojos: "#fff", cuernos: "#c19ae8" }); for (const s of [-1, 1]) p.bola(9 + s * 7, 9, 2, 4, ["#140a1a", "#46225a"], {}); },
+  gordito(p) { p.bola(9, 10, 7, 6, ["#5a3a3a", "#8a5a5a", "#c08a8a", "#e8b8b0"], {}); p.rect(4, 11, 10, 3, "#2a0a0a"); for (const x of [5, 7, 9, 11]) p.p(x, 11, "#fff"); p.p(6, 7, PAL.tinta); p.p(12, 7, PAL.tinta); },
+  cerebroPodrido(p) { p.bola(9, 9, 7, 6, ["#3a2a1a", "#6a5a2a", "#9a8a4a", "#c8b87a"], {}); p.linea(9, 3, 9, 15, "#3a2a1a"); for (const [x0, y0, x1, y1] of [[4, 7, 7, 9], [11, 6, 14, 8], [5, 11, 8, 12], [11, 11, 14, 12]]) p.linea(x0, y0, x1, y1, "#6a5a2a"); p.bola(13, 14, 1.6, 1.6, R_.verde.slice(2), {}); },
+  sanguijuela(p) { DIB.gusano(p, ["#1a0a0a", "#3a1414", "#6a2a2a", "#9a4a4a"], [[14, 5], [12, 7], [10, 9], [8, 11], [6, 12], [4, 13]]); p.bola(14, 4, 1, 1, PAL.sangre.slice(3), {}); },
+  bolsaCentavos(p) { p.bola(9, 11, 6, 5, ["#5a4a2a", "#8a7a4a", "#b8a87a", "#e0d0a8"], {}); p.rect(7, 5, 4, 2, "#8a7a4a"); p.sello(6, 3, ["o...o", ".o.o."], { o: "#b8a87a" }); ICONOS._copiar(p, monedaSpr(0), 5, 8, 0.7); },
+  // ── activos ──
+  necronomicon(p) { DIB.libro(p, ["#1a0a06", "#3a1a0e", "#5c2c18", "#7e4026"], (q) => { DIB.carita(q, 9, 9, 3.5, ["#6a6a5a", "#a8a898", "#d8d8c8"], { ojos: PAL.tinta }); }); },
+  libroRevelacion(p) { DIB.libro(p, ["#2a2a2a", "#4a4a4a", "#6a6a6a", "#8a8a8a"], (q) => { q.rect(8, 5, 2, 8, "#e8e8e8"); q.rect(6, 7, 6, 2, "#e8e8e8"); }); },
+  libroSombras(p) { DIB.libro(p, ["#0a0a14", "#1a1a2e", "#2a2a4a", "#3a3a66"], (q) => { for (let a = 0; a < 20; a++) q.p(9 + Math.cos(a / 20 * TAU) * 3.5, 9 + Math.sin(a / 20 * TAU) * 3.5, "#c19ae8"); }); },
+  libroSanto(p) { DIB.libro(p, ["#3a2a0a", "#6a4a1a", "#9a7a2a", "#c8a84a"], (q) => { q.rect(8, 5, 2, 8, PAL.oro[4]); q.rect(6, 7, 6, 2, PAL.oro[4]); }); },
+  telepatia(p) { DIB.libro(p, ["#1a2a4a", "#2a4a7a", "#4a7ab0", "#7aa8d8"], (q) => { q.bola(9, 9, 3, 3, R_.rosa.slice(1), {}); q.linea(9, 6, 9, 12, R_.rosa[1]); }); },
+  anarquista(p) { DIB.libro(p, ["#1a1a1a", "#3a3a3a", "#5a5a5a", "#7a7a7a"], (q) => { q.sello(6, 5, ["#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#####"], { "#": "#d0201c" }); }); },
+  shoop(p) { DIB.carita(p, 9, 8, 6.5, ["#6a4a1a", "#9a7a2a", "#d0b04a", "#f0d880"], {}); p.bola(9, 12, 3.5, 3, ["#1a0406", "#5a0a0e"], {}); p.rect(8, 14, 2, 4, "#d0201c"); p.sello(4, 5, ["##...##"], { "#": PAL.tinta }); },
+  remoto(p) { p.caja(5, 4, 8, 13, PAL.hierro.slice(1)); p.rect(7, 6, 4, 3, "#1a3a1a"); p.p(8, 7, "#5aff5a"); p.bola(9, 13, 1.8, 1.8, ["#6a0a10", "#c01a1a", "#ff6a5a"], {}); p.linea(11, 4, 14, 0, PAL.hierro[3]); },
+  kamikaze(p) { ICONOS._copiar(p, bombaSpr(1, true, 0), 1, 0); p.bola(9, 11, 3, 2, ["#fff", "#fff"], { filtro: (x, y) => y === 10 }); p.rect(5, 10, 8, 1, "#ffffff"); p.bola(9, 10, 1, 1, ["#d0201c", "#d0201c"], {}); },
+  relojArena(p) { p.rect(4, 2, 10, 2, PAL.tierra[3]); p.rect(4, 15, 10, 2, PAL.tierra[3]); p.sello(5, 4, ["########", ".######.", "..####..", "...##...", "...##...", "..####..", ".######.", "########", "########", "########", "########"].map((f) => f), { "#": "#cfefff" }); p.sello(6, 5, ["######", ".####.", "..##.."], { "#": PAL.oro[3] }); p.sello(5, 12, ["...##...", ".######."], { "#": PAL.oro[3] }); },
+  unicornio(p) { p.bola(9, 11, 6, 5, R_.blanco, {}); p.bola(12, 7, 3.2, 3, R_.blanco, {}); p.linea(13, 4, 16, 0, PAL.oro[3]); p.linea(8, 7, 7, 3, "#d86a8e"); p.linea(9, 7, 8, 4, "#8a5cc0"); p.p(12, 7, PAL.tinta); },
+  tammy(p) { DIB.carita(p, 9, 10, 6.5, ["#3a2a1a", "#6a4a2a", "#9a7a4a", "#c8a87a"], { ojos: PAL.tinta, boca: "#5a2a1a" }); for (let a = 0; a < 10; a++) { const an = a / 10 * TAU; p.p(9 + Math.cos(an) * 8.5, 10 + Math.sin(an) * 8, PAL.espora[3]); } },
+  cabezaGato(p) { DIB.carita(p, 9, 10, 6, ["#1a1a1a", "#3a3a3a", "#5a5a5a", "#7a7a7a"], { ojos: "#ffe07a" }); p.sello(3, 2, ["#.......#.", "##.....##.", "###...###."], { "#": "#3a3a3a" }); p.bola(9, 13, 1, 1, ["#d86a8e", "#d86a8e"], {}); },
+  patitaGato(p) { p.bola(9, 11, 5, 4.5, ["#1a1a1a", "#3a3a3a", "#5a5a5a"], {}); for (const [x, y] of [[4, 6], [7, 4], [11, 4], [14, 6]]) p.bola(x, y, 1.8, 1.8, ["#3a3a3a", "#5a5a5a"], {}); p.bola(9, 12, 2.4, 2, R_.rosa.slice(1), {}); },
+  cabezaPodrida(p) { DIB.carita(p, 9, 10, 6.5, ["#2a3a1a", "#4a5a2a", "#6a7a3a", "#8a9a4a"], { ojos: "#1a1a0a" }); p.rect(6, 13, 6, 2, "#1a1a0a"); for (const x of [7, 10]) p.p(x, 13, "#c8c8a0"); p.linea(9, 3, 11, 0, PAL.crema[2]); p.p(12, 0, PAL.fuego[4]); },
+  cajaAranas(p) { p.caja(3, 7, 12, 9, PAL.tierra.slice(2), { vertical: 0.6 }); p.rect(3, 7, 12, 2, PAL.tierra[5]); ICONOS._copiar(p, aranaSpr(0), 5, 1, 0.7); },
+  // ── baratijas ──
+  gusanoOnda(p) { DIB.gusano(p, R_.rosa.slice(1), [[3, 9], [5, 7], [7, 7], [9, 9], [11, 11], [13, 11], [15, 9]]); },
+  gusanoAnillo(p) { const pts = []; for (let i = 0; i < 9; i++) { const a = i / 9 * TAU * 0.9; pts.push([9 + Math.cos(a) * 5.5, 9 + Math.sin(a) * 5.5]); } DIB.gusano(p, ["#3a1a4a", "#6a3a8a", "#9a5ac0", "#c89ae8"], pts); },
+  gusanoGancho(p) { DIB.gusano(p, ["#3a2a0a", "#7a5a1a", "#b08a2a", "#e0c05a"], [[4, 4], [4, 7], [4, 10], [7, 10], [10, 10], [10, 13], [13, 13]]); },
+  gusanoPulso(p) { DIB.gusano(p, ["#0a2a3a", "#1a5a7a", "#3a8ab0", "#8ac8e8"], [[4, 9], [6, 9], [8, 9], [10, 9], [12, 9], [14, 9]]); p.bola(9, 9, 3, 3, ["#1a5a7a", "#3a8ab0", "#8ac8e8"], {}); },
+  gusanoChato(p) { for (let i = 0; i < 6; i++) p.bola(4 + i * 2, 9, 1.6, 3.2, ["#3a2a1a", "#7a5a3a", "#b08a5a", "#e0c090"], {}); p.p(3, 8, PAL.tinta); p.p(3, 10, PAL.tinta); },
+  ojitoRosa(p) { DIB.ojo(p, R_.rosa, { rx: 6.5, ry: 5, ri: 2.8, venas: true }); },
+  clip(p) { for (const [x0, y0, x1, y1] of [[6, 3, 6, 14], [6, 14, 12, 14], [12, 14, 12, 5], [12, 5, 9, 5], [9, 5, 9, 12]]) { p.linea(x0, y0, x1, y1, PAL.hierro[4]); p.linea(x0 + 1, y0, x1 + 1, y1, PAL.hierro[3]); } },
+  dedoSuerte(p) { p.bola(9, 11, 3, 5.5, PAL.piel, {}); p.bola(9, 6, 2.6, 2, ["#f0e0e0", "#ffffff"], {}); p.linea(6, 15, 12, 15, PAL.piel[1]); p.p(14, 4, PAL.oro[4]); p.p(4, 5, PAL.oro[4]); },
+  tenedor(p) { p.rect(8, 8, 2, 9, PAL.hierro[4]); p.rect(5, 6, 8, 2, PAL.hierro[3]); for (const x of [5, 7, 10, 12]) p.rect(x, 1, 1, 6, PAL.hierro[4]); },
+  garrapata(p) { p.bola(9, 10, 5.5, 5, ["#3a1a0a", "#6a2a14", "#9a4a24", "#c86a3a"], {}); p.bola(9, 4.5, 2, 1.6, ["#1a0a04", "#3a1a0a"], {}); for (const s of [-1, 1]) for (const k of [0, 1, 2, 3]) p.linea(9 + s * 4, 7 + k * 2, 9 + s * 7.5, 6 + k * 2.6, "#1a0a04"); },
+  paginaPerdida(p) { p.sello(3, 2, ["##########.", "###########", "###########", "###########", "###########", "##########.", "###########", "##########.", "###########", "#########..", "##########.", "########...", "#######...."], { "#": "x" }); for (let y = 0; y < 18; y++) for (let x = 0; x < 18; x++) if (p.g(x, y)) p.p(x, y, (y - 2) % 2 && x > 4 && x < 12 ? "#8a7a60" : "#ecdfc8"); p.bola(10, 9, 2.4, 2.4, PAL.sangre.slice(1), {}); },
+  monedaTragada(p) { p.bola(9, 10, 6.5, 6, PAL.piel, {}); ICONOS._copiar(p, monedaSpr(0), 4, 5); p.linea(4, 5, 14, 5, PAL.piel[1]); },
+});
+
+// ── los sprites de las armas ──
+function cuchilloSpr() {
+  return hornear("cuchilloArma", () => {
+    const p = new Pix(22, 7);
+    p.caja(0, 2, 7, 3, PAL.tierra.slice(2), { vertical: 0.7 });
+    p.rect(7, 1, 2, 5, PAL.hierro[2]);
+    for (let x = 9; x < 22; x++) { const h = x > 18 ? 22 - x : 2; for (let y = 0; y < h; y++) p.p(x, 3 - (y ? 1 : 0) + (y > 1 ? -1 : 0) + 0, y ? "#dfe4e8" : "#9aa2aa"); p.p(x, 4, "#6a7278"); if (x < 20) p.p(x, 2, "#f6f8fa"); }
+    p.contorno(AUTO);
+    return p.canvas();
+  });
+}
+function misilSpr() {
+  return hornear("misil", () => {
+    const p = new Pix(10, 20);
+    p.caja(3, 2, 4, 13, PAL.hierro.slice(1), { vertical: 0.2 });
+    p.bola(5, 15, 2, 3, R_.rojoV, {});
+    p.sello(1, 0, ["#......#", "##....##", ".#....#."], { "#": PAL.sangre[3] });
+    p.contorno(AUTO);
+    return p.canvas();
+  });
+}
+function proyectilSpr(tipo) {
+  return hornear(`proy${tipo}`, () => {
+    const p = new Pix(10, 7);
+    if (tipo === "aguja") { p.linea(0, 3, 7, 3, PAL.hierro[4]); p.rect(6, 2, 3, 3, "#a8c4d0"); p.p(7, 3, "#9a2a2a"); }
+    else if (tipo === "hueso") { p.rect(2, 2, 6, 2, R_.blanco[3]); p.bola(2, 2, 1.5, 1.5, R_.blanco.slice(2), {}); p.bola(2, 4, 1.5, 1.5, R_.blanco.slice(2), {}); p.bola(8, 2, 1.5, 1.5, R_.blanco.slice(2), {}); p.bola(8, 4, 1.5, 1.5, R_.blanco.slice(2), {}); }
+    else { p.sello(2, 0, [".####.", "######", "######", "##.###", "#...##", "#....#"], { "#": "#ece4d4" }); p.p(3, 1, "#ffffff"); }
+    p.contorno(AUTO);
+    return p.canvas();
+  });
+}
+function baratijaSpr(id) {
+  return hornear(`baratija${id}`, () => {
+    const s = iconoSpr(id), c = lienzoNuevo(14, 14), g = c.getContext("2d");
+    g.imageSmoothingEnabled = true; g.drawImage(s, 0, 0, 14, 14);
+    return c;
+  });
+}
+/** Los familiares sin cara de bebé (ángel, pelos, gordito, cerebro, sanguijuela, bolsa, araña). */
+function familiarSpr(tipo, k) {
+  const id = { angel: "angelGuardian", pelos: "bolaPelos", gordito: "gordito", cerebro: "cerebroPodrido", sanguijuela: "sanguijuela", bolsa: "bolsaCentavos", aranaFam: "bebeArana" }[tipo];
+  if (!id) return null;
+  return hornear(`fam${tipo}${k}`, () => {
+    const s = iconoSpr(id), c = lienzoNuevo(15, 15 + k), g = c.getContext("2d");
+    g.imageSmoothingEnabled = true; g.drawImage(s, 0, k, 15, 15);
+    return c;
   });
 }
 
@@ -3101,33 +3343,107 @@ function sortearMaldicion(n) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function nuevoJugador() {
-  return {
+  const j = {
     x: cx(6), y: cy(3), r: 5, vx: 0, vy: 0, z: 0,
     cont: 6, vida: 6, esporas: 0,               // en medios corazones
     monedas: 0, bombas: 1, llaves: 0,
-    danoUps: 0, danoPlano: 0, danoMult: 1, lagUps: 0, alcance: 6.5, velLag: 1, vel: 1, suerte: 0, tamLag: 1,
-    triple: false, veneno: false, hielo: false, rebote: false, espectral: false, atraviesa: false, buscadora: false, fuego: false,
-    vuela: false, iman: false, bombaGorda: false, colorLag: "espora",
-    objetos: [], activo: null, capsula: null,
+    // lo que suman las cápsulas y los pactos (lo de los objetos se recalcula siempre desde la lista)
+    extra: { dano: 0, plano: 0, lag: 0, fr: 0, vel: 0, alc: 0, velLag: 0, suerte: 0 },
+    objetos: [], vistos: new Set(), transf: [], activo: null, capsula: null, baratija: null, vidasExtra: 0,
     inv: 0, enfriar: 0, mirar: ABAJO, mirarCue: ABAJO, gesto: 0, tGesto: 0, paso: 0, ojo: 0, tParpadeo: 120,
-    danoSala: 0, sostiene: null, tSostiene: 0, muerto: false, tMuerte: 0, golpesPiso: 0, golpesJefe: 0,
+    danoSala: 0, salaF: [], escudo: 0, sostiene: null, tSostiene: 0, muerto: false, tMuerte: 0, golpesPiso: 0, golpesJefe: 0,
+    carga: 0, cargando: false, ojoMuerto: 0, fallos: 0, disparos: 0,
   };
+  recalcular(j);
+  return j;
 }
 
-// ── las cuentas (las del original, pasadas a 60 Hz) ──
-function danoDe(j) { return (3.5 * Math.sqrt(1 + 1.2 * Math.max(0, j.danoUps)) + j.danoPlano + j.danoSala) * j.danoMult; }
-function retardoDe(j) {
-  const L = j.lagUps;
-  let d = L >= 0 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : L >= -0.77 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : 16 - 6 * L;
-  d = Math.max(5, d);
-  if (j.triple) d = d * 2.1 + 3;
-  return d;
+// ── las cuentas (las del original, pasadas a 60 Hz). No se tocan a mano: cada objeto DECLARA lo
+//    que suma (st), lo que multiplica y qué banderas trae (f), y recalcular() rearma todo desde la
+//    lista. Así los objetos se combinan solos, como en el original, y sacar uno (el dado) no deja
+//    restos. Las fórmulas y el orden de los multiplicadores son los de la wiki (Repentance). ──
+const MULTIPLICA = new Set(["mult", "frMult", "alcMult", "velLagMult", "tam"]);
+/** El arma principal: gana la de más prioridad; las demás se vuelven "sabores" de esa. */
+const PRIORIDAD_ARMA = ["epico", "cuchillo", "feto", "anillo", "ludovico", "rayo", "laser"];
+function fuentesDe(j) {
+  const out = [];
+  for (const id of j.objetos) if (OBJETOS[id]) out.push(OBJETOS[id]);
+  if (j.activo && OBJETOS[j.activo.id] && OBJETOS[j.activo.id].f) out.push({ f: OBJETOS[j.activo.id].f });
+  if (j.baratija && BARATIJAS[j.baratija]) out.push(BARATIJAS[j.baratija]);
+  for (const t of j.transf) if (TRANSFORMACIONES[t]) out.push(TRANSFORMACIONES[t]);
+  if (j.salaF.length) out.push({ f: j.salaF });   // lo que dan los activos sólo por esta sala (libro santo, telepatía…)
+  return out;
 }
-const cuadrosEntreLagrimas = (j) => (retardoDe(j) + 1) * 2;
-const lagrimasPorSeg = (j) => 30 / (retardoDe(j) + 1);
-const velDe = (j) => lim(j.vel, 0.4, 2);
-const alcancePx = (j) => Math.max(2, j.alcance) * T;
-const radioLagrima = (j) => lim(Math.round((2 + Math.sqrt(danoDe(j)) * 1.1) * j.tamLag), 2, 9);
+function recalcular(j) {
+  const s = { dano: 0, plano: 0, mult: 1, lag: 0, fr: 0, frMult: 1, alc: 0, alcMult: 1, velLag: 1, velLagMult: 1, vel: 1, suerte: 0, tam: 1 };
+  const f = {};
+  for (const d of fuentesDe(j)) {
+    if (d.st) for (const k in d.st) { if (MULTIPLICA.has(k)) s[k] *= d.st[k]; else s[k] += d.st[k]; }
+    if (d.f) for (const x of d.f) f[x] = (f[x] || 0) + 1;
+  }
+  for (const k in j.extra) s[k] += j.extra[k];
+  j.f = f;
+  j.arma = PRIORIDAD_ARMA.find((a) => f[a]) || "lagrima";
+
+  // cuántas lágrimas por disparo: el tercer ojo da 3, la araña 4, juntos 5; los lentes suman una
+  let n = 1;
+  if (f.cuadruple) n = 4 + (f.cuadruple - 1);
+  if (f.triple) n = n > 1 ? n + 1 : 3 + (f.triple - 1);
+  if (f.veinte) n += 1;
+  j.n = Math.min(16, n);
+
+  // ── la cadencia: FR = (30 / (retardo + 1) + S) · P ──
+  const L = s.lag;
+  let d = L >= 0 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : L > -0.77 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) - 6 * L : 16 - 6 * L;
+  d = Math.max(5, d);
+  let P = s.frMult;
+  // las bajas de las armas pesadas no se apilan: van por prioridad (feto > rayo; el pulmón y el jarabe sí se apilan entre ellos)
+  if (f.feto && f.pulmon) P /= 4.3; else if (f.feto) P *= 0.4; else if (f.rayo) P /= 3; else { if (f.pulmon) P /= 4.3; if (f.ipecac) P /= 3; }
+  // el tercer ojo, la araña y el cíclope tampoco se apilan (vale la peor), y los lentes las anulan
+  if (!f.veinte) { if (f.cuadruple || f.polifemo) P *= 0.42; else if (f.triple) P *= 0.51; }
+  let fr = (30 / (d + 1) + s.fr) * Math.min(1, P);
+  // el coágulo rehace el retardo (×2 + 11) antes de los multiplicadores que suben
+  if (f.hemo) fr = 30 / ((30 / fr - 1) * 2 + 11 + 1);
+  if (P > 1) fr *= P;
+  if (f.almendra) fr *= 4; else if (f.soja) fr *= 5.5;
+  j.fr = lim(fr, 0.2, 60);
+
+  // ── el daño: (3,5 · √(1 + 1,2 · D) + plano) · multiplicadores ──
+  let D = 3.5 * Math.sqrt(1 + 1.2 * Math.max(0, s.dano)) + s.plano;
+  D *= s.mult;
+  if (f.x15) D *= 1.5;                          // el hongo gigante y la cabeza de grillo: el ×1,5 no se apila
+  if (f.x23) D *= 2.3;
+  if (f.polifemo) D = j.n > 1 ? D + 5 : (D + 4) * 2;
+  if (f.veinte) D *= 0.8;
+  if (f.almendra) D *= 0.3; else if (f.soja) D *= 0.2;
+  if (f.hemo) D = (D + 1) * 1.5;
+  if (f.ipecac) D += 40;                         // el jarabe suma 40 que no multiplica nada
+  j.danoBase = Math.max(0.5, D);
+
+  let alc = (6.5 + s.alc) * s.alcMult, vl = s.velLag * s.velLagMult;
+  if (f.ipecac) { alc *= 0.8; vl *= 0.8; }
+  if (f.hemo) alc *= 0.8;
+  j.alcance = Math.max(1, alc); j.velLag = lim(vl, 0.6, 2.2); j.vel = lim(s.vel, 0.4, 2); j.suerte = s.suerte;
+  j.tam = s.tam * (f.ipecac ? 0.6 : 1) * (f.polifemo ? 1.6 : 1) * (f.proptosis ? 2 : 1) * (f.soja && !f.almendra ? 0.7 : 1);
+  j.vuela = !!f.vuela;
+}
+const danoDe = (j) => (j.danoBase + j.danoSala) * (j.f.ojoMuerto ? 1 + 0.25 * Math.min(4, j.ojoMuerto) : 1);
+const lagrimasPorSeg = (j) => j.fr;
+const cuadrosEntreLagrimas = (j) => 60 / j.fr;
+const velDe = (j) => j.vel;
+const alcancePx = (j) => j.alcance * T;
+const radioLagrima = (j) => lim(Math.round((2 + Math.sqrt(Math.min(danoDe(j), 60)) * 0.9) * j.tam), 2, 12);
+/** Probabilidad de los efectos por suerte (fórmulas de la wiki). */
+const chance = {
+  veneno: (L) => 1 / Math.max(1, 4 - Math.floor(L * 0.25)),
+  lento: (L) => 1 / Math.max(1, 4 - Math.floor(L / 5)),
+  miedo: (L) => 1 / Math.max(1, 3 - Math.floor(L * 0.1)),
+  piedra: (L) => Math.min(0.5, 1 / Math.max(1, 5 - Math.floor(L * 0.15))),
+  diente: (L) => 1 / Math.max(1, 10 - Math.floor(L)),
+  aguja: (L) => Math.min(0.25, 1 / Math.max(1, 30 - Math.floor(L * 2))),
+  santa: (L) => Math.min(0.5, 1 / Math.max(1, 10 - Math.floor(L * 0.9))),
+  estalla: (L) => 1 / Math.max(1, 10 - Math.floor(L * 0.7)),
+};
 
 function vidaTotal(j) { return j.vida + j.esporas; }
 function curar(j, medios) { const antes = j.vida; j.vida = Math.min(j.cont, j.vida + medios); return j.vida > antes; }
@@ -3136,6 +3452,7 @@ function sumarContenedor(j, n) { j.cont = lim(j.cont + n * 2, 0, 24); j.esporas 
 
 function herirJugador(j, medios, causa, dibujo) {
   if (j.inv > 0 || j.muerto || J.estado !== "juego") return false;
+  if (j.escudo > 0) return false;
   if (J.sala.tipo === "jefe") j.golpesJefe++;
   j.golpesPiso++;
   let resto = medios;
@@ -3145,8 +3462,27 @@ function herirJugador(j, medios, causa, dibujo) {
   temblar(6);
   SFX.dolor();
   sangrar(j.x, j.y - 8, 6, PAL.sangre);
-  if (vidaTotal(j) <= 0) { j.muerto = true; j.tMuerte = 0; J.causa = causa || "?"; J.causaSpr = dibujo || null; SFX.muere(); Musica.poner("silencio"); }
+  alHerir(j);
+  if (vidaTotal(j) <= 0) {
+    if (j.vidasExtra > 0) { revivir(j); return true; }
+    j.muerto = true; j.tMuerte = 0; J.causa = causa || "?"; J.causaSpr = dibujo || null; SFX.muere(); Musica.poner("silencio");
+  }
   return true;
+}
+/** Lo que pasa cuando a Shumio le pegan (baratijas, bebé araña, la página perdida…). */
+function alHerir(j) {
+  const f = j.f;
+  if (f.monedaTragada) soltarPremio(j.x, j.y, "moneda");
+  if (f.pagina) { J.destello = 4; for (const e of J.enemigos.slice()) danarEnemigo(e, 80); }
+  if (f.aranaHerido) for (let i = 0; i < A.ent(3, 5); i++) J.familiares.push(moscaAzul(j.x, j.y, "arana"));
+  if (f.pajaro && !J.familiares.some((m) => m.tipo === "pajaro")) J.familiares.push({ tipo: "pajaro", x: j.x, y: j.y - 20, t: 0 });
+}
+/** Una vida de más (el gato muerto, el hongo 1UP): vuelve con un corazón. */
+function revivir(j) {
+  j.vidasExtra--;
+  j.cont = Math.max(2, Math.min(j.cont, 2)); j.vida = 2; j.inv = 120;
+  rotulo("¡OTRA VIDA!", j.vidasExtra ? `Te quedan ${j.vidasExtra}` : "");
+  SFX.objeto(); J.destello = 6;
 }
 
 function actualizarJugador(j) {
@@ -3170,14 +3506,14 @@ function actualizarJugador(j) {
   j.paso += v;
   if (v > 0.3) j.mirarCue = Math.abs(j.vx) > Math.abs(j.vy) * 1.1 ? (j.vx > 0 ? DERECHA : IZQUIERDA) : (j.vy > 0 ? ABAJO : ARRIBA);
 
-  // llorar
-  if (j.enfriar > 0) j.enfriar--;
-  const dx = quieto ? 0 : IN.dx, dy = quieto ? 0 : IN.dy;
-  if (dx || dy) {
-    j.mirar = dx > 0 ? DERECHA : dx < 0 ? IZQUIERDA : dy > 0 ? ABAJO : ARRIBA;
-    if (j.enfriar <= 0) { dispararJugador(j, dx, dy); j.enfriar = cuadrosEntreLagrimas(j); }
-  } else if (v > 0.3) j.mirar = j.mirarCue;
-  else if (j.enfriar <= 0) j.mirar = j.mirarCue;
+  // llorar: cada arma se dispara a su manera (12b-armas)
+  actualizarArma(j, quieto);
+  if (j.f.bob && v > 0.3 && J.t % 5 === 0) dejarBaba(j.x, j.y + 2, 7, 150, false, "amiga");
+  if (j.f.virus || j.f.tacos) for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y, j.x, j.y) < e.r + 7) {
+    if (J.t % 5 === 0) danarEnemigo(e, j.f.tacos ? 12 : 0.5);
+    if (j.f.virus) e.veneno = { t: 80, dano: 2 };
+  }
+  if (j.escudo > 0) j.escudo--;
 
   // pinchos, brasas, baba
   if (!j.vuela) {
@@ -3208,35 +3544,15 @@ function bordesJugador() {
 }
 function puertaPasable(p) { return p && puertaVisible(p) && !p.llave; }
 
-function dispararJugador(j, dx, dy) {
-  const d = danoDe(j), r = radioLagrima(j), vel = 3.3 * j.velLag;
-  const lado = (j.ojo = 1 - j.ojo) ? 1 : -1;
-  const n = j.triple ? 3 : 1;
-  for (let i = 0; i < n; i++) {
-    const abre = n === 1 ? 0 : (i - 1) * 0.16;
-    const ang = Math.atan2(dy, dx) + abre;
-    let vx = Math.cos(ang) * vel, vy = Math.sin(ang) * vel;
-    // hereda un poco del paso (sólo de costado: así las lágrimas "se tuercen" como en el original)
-    if (dx) vy += j.vy * 0.45; else vx += j.vx * 0.45;
-    if (dx) vx += j.vx * 0.25; else vy += j.vy * 0.25;
-    const ox = dy ? lado * 3 : dx * 5, oy = dx ? lado * 1 : dy * 3;
-    const vida = alcancePx(j) / vel;
-    J.lagrimas.push({
-      x: j.x + ox, y: j.y + oy + (dy < 0 ? -2 : 0), z: 14, vx, vy, vida, vidaMax: vida, r, dano: d,
-      color: j.colorLag, atraviesa: j.atraviesa, espectral: j.espectral, rebote: j.rebote, buscadora: j.buscadora,
-      veneno: j.veneno && A.si(0.25 + j.suerte * 0.06), hielo: j.hielo && A.si(0.3 + j.suerte * 0.06), fuego: j.fuego && A.si(0.2 + j.suerte * 0.05),
-      tocados: null,
-    });
-  }
-  if (!j.gesto || j.gesto === 1) { j.gesto = 1; j.tGesto = 6; }
-  SFX.lagrima();
-}
-
 function tirarBomba(j) {
   if (j.bombas <= 0 || j.muerto) return;
   j.bombas--;
-  J.bombas.push({ x: j.x, y: j.y + 2, t: 90, gorda: j.bombaGorda, vx: j.vx * 0.3, vy: j.vy * 0.3, r: 5 });
+  J.bombas.push(nuevaBomba(j, j.x, j.y + 2, j.vx * 0.3, j.vy * 0.3, 90));
   SFX.mecha();
+}
+/** Una bomba con lo que le agregan los objetos (gorda, podrida, la del feto…). */
+function nuevaBomba(j, x, y, vx, vy, t, o = {}) {
+  return { x, y, t, vx, vy, r: 5, gorda: !!j.f.bombaGorda, veneno: !!j.f.bombaPodrida, dano: o.dano, feto: !!o.feto, contacto: !!o.contacto, danoJug: o.danoJug ?? 2, rayos: o.rayos, lasers: o.lasers, segunda: o.segunda };
 }
 
 // ── el dibujo ──
@@ -3254,6 +3570,7 @@ function dibujarJugador(g, j) {
     return;
   }
   if (j.inv > 0 && ((j.inv >> 2) & 1)) return;   // parpadea mientras es invencible
+  if (j.escudo > 0) { g.globalAlpha = 0.35 + 0.15 * Math.sin(J.t * 0.3); g.drawImage(aro(15, "rgba(20,10,30,0.5)", "rgba(200,170,255,0.8)"), Math.round(j.x) - 15, Math.round(j.y) - 26); g.globalAlpha = 1; }
   const z = Math.round(j.vuela ? 5 + Math.sin(J.t * 0.08) * 1.5 : 0);
   g.drawImage(sombra(7, 3), X - 7, Y + 2);
   const mov = Math.hypot(j.vx, j.vy) > 0.3;
@@ -3263,6 +3580,8 @@ function dibujarJugador(g, j) {
   // la cabeza baja un píxel al soltar la lágrima (el "puchero")
   const cab = s.cab[VISTA_CAB[j.mirar]][j.gesto], baja = j.gesto === 1 ? 1 : 0;
   const bob = mov && (kPaso === 1 || kPaso === 3) ? 1 : 0;
+  // volando: dos alitas de polilla que aletean detrás (el "disfraz" de vuelo del original)
+  if (j.vuela) { const a = alitaSpr((J.t >> 2) & 1); g.drawImage(a, X - 15, Y - 22 - z); g.drawImage(espejado(a), X + 3, Y - 22 - z); }
   g.drawImage(cue, X - 7, Y - 8 - z);
   g.drawImage(cab, X - 11, Y - 24 - z + baja + bob);
   if (j.tSostiene > 0 && j.sostiene) g.drawImage(j.sostiene, X - 9, Y - 44 - z);
@@ -3298,6 +3617,404 @@ function chocarConCosas(e) {
   }
 }
 
+function alitaSpr(k) {
+  return hornear(`alita${k}`, () => {
+    const p = new Pix(12, 12);
+    p.bola(6, k ? 6 : 5, 5, k ? 4 : 5, ["#3a3226", "#6e6048", "#a8966e", "#d6c69a"], { luz: [-0.2, -0.8, 0.5] });
+    p.bola(5, 5, 1.4, 1.4, ["#1a1410", "#3a3226"], {});
+    for (let y = 0; y < 12; y++) for (let x = 9; x < 12; x++) p.borrar(x, y);
+    p.contorno(AUTO);
+    return p.canvas();
+  });
+}
+
+// ══════════ 12b-armas.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LAS ARMAS: como en el original, hay UNA arma principal (la de más prioridad: feto del cielo >
+// cuchillo > feto > aro > lágrima mansa > rayo > láser > lágrima) y todo lo demás la modifica.
+// El tercer ojo multiplica cualquier arma, el jarabe hace explotar lo que toque, la leche
+// chocolatada deja cargar lo que sea, el pulmón lo vuelve ráfaga… Las sinergias famosas que no
+// salen solas de esa regla están escritas a mano abajo (rayo+láser, rayo+jarabe, feto+rayo…).
+// Números medidos en la wiki: el rayo pega 9 veces en 40 cuadros, el aro 15 veces por segundo,
+// el feto hace ×10 (o ×5+30), el misil ×20, el cuchillo ×2 en la mano y ×6 tirado.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** ¿Esta arma se carga manteniendo el disparo? */
+function armaCarga(j) {
+  const a = j.arma, f = j.f;
+  if (a === "rayo") return !(f.soja || f.almendra || j.fr >= 15);   // con leche o cadencia altísima, el rayo sale continuo
+  if (a === "anillo" || a === "cuchillo") return true;
+  if (a === "lagrima" || a === "laser" || a === "feto") return !!(f.choco || f.pulmon);
+  return false;
+}
+/** Cuadros que tarda la carga completa (fórmulas de la wiki pasadas a 60 Hz). */
+function cuadrosCarga(j) {
+  const a = j.arma, f = j.f;
+  if (a === "anillo" || a === "cuchillo") return 180 / j.fr;      // ≈ 3 / cadencia
+  if (f.choco && a !== "rayo") return 150 / j.fr;                 // la chocolatada: ≈ 2,5 / cadencia
+  return 60 / j.fr;                                               // rayo, pulmón: ≈ 1 / cadencia
+}
+const dirDe = (dx, dy) => (dx > 0 ? DERECHA : dx < 0 ? IZQUIERDA : dy > 0 ? ABAJO : ARRIBA);
+
+function actualizarArma(j, quieto) {
+  if (j.enfriar > 0) j.enfriar--;
+  const dx = quieto ? 0 : IN.dx, dy = quieto ? 0 : IN.dy, tira = !!(dx || dy), v = Math.hypot(j.vx, j.vy);
+  if (tira) { j.mirar = dirDe(dx, dy); j.dirTiro = [dx, dy]; }
+  else if (v > 0.3 || j.enfriar <= 0) j.mirar = j.mirarCue;
+  const a = j.arma;
+  const manso = a === "ludovico" || (a === "anillo" && j.f.ludovico);   // aro + lágrima mansa: un aro que se maneja
+  if (!manso) J.ludo = null;
+  if (a !== "cuchillo") J.cuchillo = null;
+  if (a !== "epico") J.mira = null;
+  if (manso) return ludovico(j, dx, dy);
+  if (a === "cuchillo") return cuchillo(j, dx, dy, tira);
+  if (a === "epico") return feteEpico(j, dx, dy, tira);
+  if (a === "rayo" && !armaCarga(j)) return rayoContinuo(j, dx, dy, tira);
+  if (armaCarga(j)) {
+    if (tira && j.enfriar <= 0) {
+      j.cargando = true; j.carga = Math.min(1, j.carga + 1 / cuadrosCarga(j));
+      if (j.carga >= 1 && !j.avisoCarga) { j.avisoCarga = true; SFX.cargado(); }
+      // con la leche, el aro y el pulmón salen solos al llenarse (como en el original con Almendra)
+      return;
+    }
+    if (!tira && j.cargando) {
+      const c = j.carga, [ddx, ddy] = j.dirTiro || [0, 1];
+      j.cargando = false; j.carga = 0; j.avisoCarga = false;
+      // el rayo y el pulmón sólo salen con la carga llena (salvo con la chocolatada)
+      if ((a === "rayo" || (j.f.pulmon && !j.f.choco)) && c < 1) return;
+      disparar(j, ddx, ddy, { carga: c, rafaga: !!j.f.pulmon && a !== "anillo" });
+      j.enfriar = 6;
+    }
+    return;
+  }
+  if (tira && j.enfriar <= 0) { disparar(j, dx, dy, {}); j.enfriar = cuadrosEntreLagrimas(j); }
+}
+
+/** Un disparo del arma que toque, con todas sus copias (tercer ojo, siamés, ratón de biblioteca…). */
+function disparar(j, dx, dy, o, desde) {
+  const f = j.f, base = Math.atan2(dy, dx), n = j.n;
+  const angulos = [];
+  if (o.rafaga) {
+    // el pulmón: 14 lágrimas (2,4 más por cada una extra del multidisparo), abiertas al azar
+    const cuantas = Math.min(50, Math.round(14 + 2.4 * (n - 1)));
+    for (let i = 0; i < cuantas; i++) angulos.push([base + (A.f() - 0.5) * 0.7, 0, 0.7 + A.f() * 0.5, 0.9 + A.f() * 0.43]);
+  } else if (n === 2) angulos.push([base, -4, 1, 1], [base, 4, 1, 1]);     // los lentes: dos paralelas, una por ojo
+  else for (let i = 0; i < n; i++) angulos.push([base + (i - (n - 1) / 2) * (n > 3 ? 0.13 : 0.16), 0, 1, 1]);
+  if (f.siames) angulos.push([base - Math.PI / 4, 0, 1, 1], [base + Math.PI / 4, 0, 1, 1]);
+  if (f.ratonLibro && A.si(0.25)) for (const q of angulos.slice()) q[1] -= 3, angulos.push([q[0], q[1] + 6, q[2], q[3]]);
+  const escala = o.carga != null && f.choco && j.arma !== "rayo" && j.arma !== "anillo" ? 0.1 + 3.9 * o.carga : 1;
+  const org = desde || j;
+  const lado = (j.ojo = 1 - j.ojo) ? 1 : -1;
+  const ox = dy ? lado * 3 : dx * 5, oy = (dx ? lado : dy * 3) + (dy < 0 ? -2 : 0);
+  const X = org.x + ox, Y = org.y + oy;
+  const fam = desde ? desde.escala ?? 1 : 1;
+  switch (j.arma) {
+    case "rayo": {
+      const esc = o.carga != null && f.choco ? 0.25 + 2.25 * o.carga : 1;
+      const rayos = f.pulmon ? A.ent(4, 6) : 0;
+      for (const [a, desv] of angulos.slice(0, rayos ? 0 : 16)) rayo(j, org, a, desv, esc * fam, 40);
+      for (let i = 0; i < rayos; i++) rayo(j, org, base + (A.f() - 0.5) * 0.8, 0, esc * fam, 40);
+      SFX.rayo(); break;
+    }
+    case "anillo": {
+      const c = o.carga ?? 1;
+      for (const [a] of angulos.slice(0, 8)) anilloLuz(j, X, Y, a, c, fam);
+      SFX.laser(); break;
+    }
+    case "laser":
+      if (f.hemo) { for (const [a, desv, kv] of angulos) lagrima(j, X + Math.cos(a + 1.57) * desv, Y + Math.sin(a + 1.57) * desv, a, kv, { escala: escala * fam, burstLaser: true }); SFX.lagrima(); break; }
+      for (const [a, desv] of angulos.slice(0, o.rafaga ? 7 : 16)) laser(j, X + Math.cos(a + 1.57) * desv, Y - 8 + Math.sin(a + 1.57) * desv, a, { dano: danoDe(j) * escala * fam });
+      SFX.laser(); break;
+    case "feto":
+      for (const [a, desv, kv] of angulos.slice(0, o.rafaga ? 8 : 16)) {
+        const v = 5.5 * j.velLag * kv;
+        let d = danoDe(j) * 10 * escala * fam; if (d > 60) d = danoDe(j) * 5 * escala * fam + 30;
+        J.bombas.push(nuevaBomba(j, X + Math.cos(a + 1.57) * desv, Y + 2, Math.cos(a) * v + j.vx * 0.4, Math.sin(a) * v + j.vy * 0.4, 60, { dano: d, feto: true, contacto: !!f.ipecac, danoJug: d >= 85 ? 2 : 1, rayos: f.rayo ? 4 : 0, lasers: f.laser ? 8 : 0, segunda: !!f.polifemo }));
+      }
+      SFX.escupe(); break;
+    default:
+      for (const [a, desv, kv, kt] of angulos) lagrima(j, X + Math.cos(a + 1.57) * desv, Y + Math.sin(a + 1.57) * desv, a, kv, { escala: escala * fam, tam: kt * (desde ? 0.7 : 1) });
+      SFX.lagrima();
+  }
+  if (!desde && (!j.gesto || j.gesto === 1)) { j.gesto = 1; j.tGesto = 6; }
+}
+
+// ── el rayo (el llanto de azufre): 9 golpes en 40 cuadros, sale de la cara y la sigue ──
+const TICKS_RAYO = new Set([0, 11, 15, 19, 23, 27, 31, 35, 39]);
+function rayo(j, org, ang, desv, esc, dur) {
+  const coil = !!j.f.laser;                          // rayo + láser: el láser se enrosca y el daño ×1,5
+  J.laseres.push({ tipo: "rayo", org, ang, desv, t: 0, dur, dano: danoDe(j) * esc * (coil ? 1.5 : 1), ancho: lim(9 + Math.sqrt(danoDe(j)) * 1.5 * Math.sqrt(esc), 8, 22), coil, ipecac: !!j.f.ipecac, tocados: null, x0: org.x, y0: org.y - 10 });
+}
+/** Hasta dónde llega una línea desde (x, y) con ángulo a: hasta la pared (pasa por encima de todo lo demás). */
+function finDeRayo(x, y, a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  let t = 999;
+  if (c > 0.001) t = Math.min(t, (IX1 - 1 - x) / c); else if (c < -0.001) t = Math.min(t, (IX0 + 1 - x) / c);
+  if (s > 0.001) t = Math.min(t, (IY1 - 1 - y) / s); else if (s < -0.001) t = Math.min(t, (IY0 - 6 - y) / s);
+  t = Math.max(0, t);
+  return [x + c * t, y + s * t, t];
+}
+function distSegmento(px, py, x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0, L = dx * dx + dy * dy || 1;
+  const u = lim(((px - x0) * dx + (py - y0) * dy) / L, 0, 1);
+  return Math.hypot(px - (x0 + dx * u), py - (y0 + dy * u));
+}
+/** A todos los que toca la línea, un golpe (con los efectos de lágrima de Shumio). */
+function golpearLinea(x0, y0, x1, y1, ancho, dano, efectos) {
+  let alguno = false;
+  for (const e of J.enemigos) {
+    if (!blanco_(e)) continue;
+    const d = e.segmentos ? Math.min(distSegmento(e.x, e.y, x0, y0, x1, y1), ...e.segmentos.map((s) => distSegmento(s.x, s.y, x0, y0, x1, y1))) : distSegmento(e.x, e.y - (e.alturaGolpe || 4), x0, y0, x1, y1);
+    if (d > e.r + ancho / 2) continue;
+    const a = Math.atan2(y1 - y0, x1 - x0);
+    danarEnemigo(e, dano, Math.cos(a) * 0.6, Math.sin(a) * 0.6, efectos ? efectosDeGolpe(J.jug) : null);
+    alguno = true;
+  }
+  // también rompe matas y apaga braseros (como el rayo del original)
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 12);
+  for (let i = 0; i <= n; i++) {
+    const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n, c = celdaX(x), f = celdaY(y), o = celda(J.sala, c, f);
+    if (o && (o.t === "matas" || o.t === "brasero" || o.t === "barril")) golpearObstaculo(o, c, f, dano);
+  }
+  return alguno;
+}
+/** Los efectos al azar (veneno, lentitud, miedo…) para un golpe que no es una lágrima. */
+function efectosDeGolpe(j) {
+  const f = j.f, L = j.suerte;
+  return { veneno: f.veneno && A.si(chance.veneno(L)), hielo: f.lento && A.si(chance.lento(L)), fuego: !!f.fuego, miedo: f.miedo && A.si(chance.miedo(L)), piedra: f.piedra && A.si(chance.piedra(L)) };
+}
+
+// ── el láser (el ojo mecánico): instantáneo, atraviesa todo y llega a la pared ──
+function laser(j, x, y, ang, o = {}) {
+  const [x1, y1] = finDeRayo(x, y, ang);
+  golpearLinea(x, y, x1, y1, 5, o.dano ?? danoDe(j), true);
+  J.laseres.push({ tipo: "laser", x0: x, y0: y, x1, y1, t: 0, dur: 9, ancho: o.ancho || 3, color: o.color });
+}
+
+// ── el aro de luz: se carga, sale girando y quema a lo que queda en su borde ──
+function anilloLuz(j, x, y, ang, carga, esc = 1) {
+  const v = 3.2 * j.velLag, R = 7 + 21 * carga, rayoAro = !!j.f.rayo;
+  J.anillos.push({ x, y: y - 6, vx: Math.cos(ang) * v + j.vx * 0.5, vy: Math.sin(ang) * v + j.vy * 0.5, R, vida: alcancePx(j) * 1.3 / v, t: 0, dano: danoDe(j) * (0.25 + 0.75 * carga) * esc * (rayoAro ? 1.5 : 1), rojo: rayoAro, pared: 0 });
+}
+function actualizarAnillos() {
+  for (let i = J.anillos.length - 1; i >= 0; i--) {
+    const a = J.anillos[i];
+    a.t++;
+    if (a.control) { a.x = J.ludo ? J.ludo.x : a.x; a.y = J.ludo ? J.ludo.y : a.y; }
+    else if (a.pared > 0) { if (--a.pared <= 0) { J.anillos.splice(i, 1); continue; } }
+    else {
+      a.x += a.vx; a.y += a.vy;
+      if (a.x < IX0 || a.x > IX1 || a.y < IY0 - 4 || a.y > IY1 || --a.vida <= 0) { a.pared = 12; a.x = lim(a.x, IX0, IX1); a.y = lim(a.y, IY0 - 4, IY1); }   // se queda un ratito en la pared
+    }
+    if (a.t % 4 === 0) for (const e of J.enemigos) {
+      if (!blanco_(e)) continue;
+      const d = dist(e.x, e.y - 4, a.x, a.y);
+      if (Math.abs(d - a.R) < e.r + (a.rojo ? 5 : 3)) danarEnemigo(e, a.dano, 0, 0, efectosDeGolpe(J.jug));
+    }
+  }
+}
+
+// ── el rayo continuo (rayo + leche, o cadencia ≥ 15): dura mientras se mantiene el disparo ──
+function rayoContinuo(j, dx, dy, tira) {
+  let r = J.laseres.find((l) => l.continuo);
+  if (!tira) { if (r) r.dur = Math.min(r.dur, r.t + 6); return; }
+  const ang = Math.atan2(dy, dx);
+  if (!r) {
+    rayo(j, j, ang, 0, 1, 99999); r = J.laseres[J.laseres.length - 1]; r.continuo = true; r.ancho *= 0.7;
+    SFX.rayo();
+  }
+  r.ang = ang; r.dur = r.t + 30;
+}
+
+function actualizarLaseres() {
+  const j = J.jug;
+  for (let i = J.laseres.length - 1; i >= 0; i--) {
+    const l = J.laseres[i];
+    if (l.tipo === "rayo") {
+      // sale de la cara de quien lo tira y lo sigue mientras camina
+      l.x0 = l.org.x + Math.cos(l.ang + 1.57) * l.desv; l.y0 = l.org.y - 10 + Math.sin(l.ang + 1.57) * l.desv;
+      [l.x1, l.y1] = finDeRayo(l.x0, l.y0, l.ang);
+      const golpea = l.continuo ? l.t % 4 === 0 : TICKS_RAYO.has(l.t);
+      if (golpea) {
+        golpearLinea(l.x0, l.y0, l.x1, l.y1, l.ancho, l.dano, true);
+        if (l.t % 8 === 0) temblar(2);
+        // rayo + jarabe: explota a lo largo del rayo (una vez por disparo)
+        if (l.ipecac && l.t === 0) { const L = Math.hypot(l.x1 - l.x0, l.y1 - l.y0); for (let d = 36; d < L; d += 44) { const x = l.x0 + Math.cos(l.ang) * d, y = l.y0 + Math.sin(l.ang) * d + 10; J.pendientes.push(() => explotar(x, y, true, false, { dano: l.dano, radio: 30, danoJug: 1, veneno: true })); } }
+      }
+    }
+    if (++l.t >= l.dur) J.laseres.splice(i, 1);
+  }
+}
+
+// ── la lágrima mansa (ludovico): una sola lágrima grande que se maneja con el disparo ──
+function ludovico(j, dx, dy) {
+  let L = J.ludo;
+  if (!L) L = J.ludo = { x: j.x, y: j.y - 16, vx: 0, vy: 0, t: 0 };
+  L.t++;
+  const v = 2.4 * j.velLag;
+  if (dx || dy) { L.vx += (dx * v - L.vx) * 0.12; L.vy += (dy * v - L.vy) * 0.12; }
+  else { L.vx *= 0.92; L.vy *= 0.92; }
+  L.x = lim(L.x + L.vx, IX0 + 4, IX1 - 4); L.y = lim(L.y + L.vy, IY0 + 2, IY1 - 4);
+  L.r = lim(radioLagrima(j) * 1.5, 5, 14);
+  const f = j.f;
+  L.aro = f.rayo ? "rojo" : f.laser || f.anillo ? "laser" : null;
+  const cada = L.aro ? 4 : Math.max(2, Math.round(60 / Math.min(30, j.fr)));
+  if (L.t % cada === 0) for (const e of J.enemigos) {
+    if (!blanco_(e)) continue;
+    const d = dist(e.x, e.y - 4, L.x, L.y);
+    const toca = L.aro ? Math.abs(d - 18) < e.r + (L.aro === "rojo" ? 6 : 3) : d < e.r + L.r;
+    if (toca) { danarEnemigo(e, danoDe(j) * (L.aro === "rojo" ? 1.2 : 1), L.vx * 0.3, L.vy * 0.3, efectosDeGolpe(j)); if (f.jacob) chispa(e, danoDe(j) * 0.5); }
+  }
+}
+
+// ── el cuchillo de la abuela: pega en la mano, se carga y se tira; vuelve solo ──
+function cuchillo(j, dx, dy, tira) {
+  let K = J.cuchillo;
+  if (!K) K = J.cuchillo = { est: "mano", d: 10, ang: Math.PI / 2, carga: 0, t: 0, golpes: new Map() };
+  K.t++;
+  if (K.est === "mano") {
+    if (tira) {
+      K.ang = Math.atan2(dy, dx);
+      j.cargando = true; K.carga = j.carga = Math.min(1, K.carga + 1 / cuadrosCarga(j));
+      if (j.carga >= 1 && !j.avisoCarga) { j.avisoCarga = true; SFX.cargado(); }
+    } else if (K.carga > 0.05) {
+      // se tira: más carga, más lejos y más daño (×6 desde un tercio de carga)
+      K.est = "vuela"; K.dmax = 26 + K.carga * Math.max(90, alcancePx(j) * 1.1); K.danoVuelo = 2 + 4 * Math.min(1, K.carga * 3);
+      const extra = (j.n - 1) + (j.f.rayo ? 2 + Math.floor(K.carga * 6) : 0);
+      for (let i = 0; i < extra; i++) {
+        const a = K.ang + (i % 2 ? 1 : -1) * (0.16 + Math.floor(i / 2) * 0.14);
+        lagrima(j, j.x, j.y - 6, a, 1.8, { tipo: "cuchillo", atraviesa: true, espectral: true, danoFijo: danoDe(j) * 2 });
+      }
+      j.cargando = false; j.carga = 0; j.avisoCarga = false; K.carga = 0; SFX.escupe();
+    } else { K.carga = 0; j.cargando = false; j.carga = 0; }
+    K.d = 10 - K.carga * 4;
+  } else if (K.est === "vuela") { K.d += 7; if (K.d >= K.dmax) K.est = "vuelve"; }
+  else { K.d -= 6; if (K.d <= 10) { K.est = "mano"; K.d = 10; } }
+  K.x = j.x + Math.cos(K.ang) * K.d; K.y = j.y - 6 + Math.sin(K.ang) * K.d;
+  // el filo: pega 20 veces por segundo (cada 3 cuadros) a lo que toca
+  const mult = K.est === "vuela" ? K.danoVuelo : 2;
+  for (const e of J.enemigos) {
+    if (!blanco_(e)) continue;
+    if (dist(e.x, e.y - 4, K.x, K.y) > e.r + 6) continue;
+    const u = K.golpes.get(e) || 0;
+    if (K.t - u < 3) continue;
+    K.golpes.set(e, K.t);
+    danarEnemigo(e, danoDe(j) * mult, Math.cos(K.ang) * 1.2, Math.sin(K.ang) * 1.2, efectosDeGolpe(j));
+  }
+}
+
+// ── el feto del cielo: una mira que se mueve y, 1,5 s después, cae un misil (×20) ──
+function feteEpico(j, dx, dy, tira) {
+  let M = J.mira;
+  if (!M && tira && j.enfriar <= 0) M = J.mira = { x: lim(j.x + dx * 30, IX0 + 8, IX1 - 8), y: lim(j.y + dy * 30, IY0 + 8, IY1 - 8), t: 0 };
+  if (!M) return;
+  M.t++;
+  if (tira) { M.x = lim(M.x + dx * 3.2, IX0 + 6, IX1 - 6); M.y = lim(M.y + dy * 3.2, IY0 + 6, IY1 - 6); }
+  if (M.t >= 90) {
+    const n = Math.min(16, j.n + (j.f.siames ? 2 : 0));
+    for (let i = 0; i < n; i++) J.misiles.push({ x: M.x + (i ? (A.f() - 0.5) * 26 : 0), y: M.y + (i ? (A.f() - 0.5) * 20 : 0), t: -i * 6, dur: 24, dano: danoDe(j) * 20 });
+    J.mira = null; j.enfriar = cuadrosEntreLagrimas(j);
+  }
+}
+function actualizarMisiles() {
+  const j = J.jug;
+  for (let i = J.misiles.length - 1; i >= 0; i--) {
+    const m = J.misiles[i];
+    if (++m.t < m.dur) continue;
+    J.misiles.splice(i, 1);
+    explotar(m.x, m.y, true, true, { dano: m.dano, radio: 50, danoJug: m.dano >= 85 ? 2 : 1, rayos: j.f.rayo ? A.ent(4, 6) : 0, lasers: j.f.laser ? 8 : 0, veneno: !!j.f.bombaPodrida });
+  }
+}
+
+/** Una chispa eléctrica (la raíz eléctrica): salta al enemigo más cerca y encadena hasta 4. */
+function chispa(e0, dano) {
+  let de = e0; const vistos = new Set([e0]);
+  for (let k = 0; k < 4; k++) {
+    let prox = null, md = 60;
+    for (const e of J.enemigos) { if (!blanco_(e) || vistos.has(e)) continue; const d = dist(e.x, e.y, de.x, de.y); if (d < md) { md = d; prox = e; } }
+    if (!prox) { if (k === 0) { const a = V.f() * TAU; J.chispas.push({ x0: de.x, y0: de.y - 6, x1: de.x + Math.cos(a) * 26, y1: de.y - 6 + Math.sin(a) * 26, t: 8 }); } break; }
+    J.chispas.push({ x0: de.x, y0: de.y - 6, x1: prox.x, y1: prox.y - 6, t: 8 });
+    danarEnemigo(prox, dano); vistos.add(prox); de = prox;
+  }
+}
+
+// ── el dibujo de las armas (pintado liso, con brillo, como el resto) ──
+function dibujarArmas(g) {
+  const j = J.jug;
+  // la mira del feto del cielo y los misiles que caen
+  if (J.mira) { const M = J.mira, p = 0.6 + 0.4 * Math.sin(M.t * 0.3); g.save(); g.globalAlpha = 0.9; g.strokeStyle = `rgba(230,30,30,${p})`; g.lineWidth = 1.5; g.beginPath(); g.ellipse(M.x, M.y, 9, 6, 0, 0, TAU); g.moveTo(M.x - 13, M.y); g.lineTo(M.x + 13, M.y); g.moveTo(M.x, M.y - 10); g.lineTo(M.x, M.y + 10); g.stroke(); g.restore(); }
+  for (const m of J.misiles) {
+    if (m.t < 0) continue;
+    const u = m.t / m.dur, s = misilSpr();
+    g.drawImage(sombra(Math.round(3 + u * 7), Math.round(1 + u * 3)), Math.round(m.x - 3 - u * 7), Math.round(m.y - 1 - u * 3));
+    g.drawImage(s, Math.round(m.x - s.width / 2), Math.round(m.y - s.height - (1 - u) * 200));
+  }
+  // la lágrima mansa
+  if (J.ludo) {
+    const L = J.ludo;
+    if (L.aro) dibujarAro(g, L.x, L.y, 18, L.aro === "rojo", L.t);
+    else { const s = lagrimaSpr(Math.round(L.r), colorLagrima(j)); g.drawImage(sombra(Math.round(L.r), Math.round(L.r / 2)), Math.round(L.x - L.r), Math.round(L.y + 12)); g.drawImage(s, Math.round(L.x - s.width / 2), Math.round(L.y - s.height / 2)); }
+    for (let i = 1; i < j.n; i++) { const a = L.t * 0.08 + i * TAU / (j.n - 1), s = lagrimaSpr(3, colorLagrima(j)); g.drawImage(s, Math.round(L.x + Math.cos(a) * 16 - s.width / 2), Math.round(L.y + Math.sin(a) * 12 - s.height / 2)); }
+  }
+  for (const a of J.anillos) dibujarAro(g, a.x, a.y, a.R, a.rojo, a.t, a.pared ? a.pared / 12 : 1);
+  for (const l of J.laseres) dibujarLaser(g, l);
+  for (const c of J.chispas) { g.strokeStyle = `rgba(190,230,255,${c.t / 8})`; g.lineWidth = 1; g.beginPath(); g.moveTo(c.x0, c.y0); const n = 5; for (let k = 1; k < n; k++) g.lineTo(c.x0 + (c.x1 - c.x0) * k / n + (V.f() - 0.5) * 6, c.y0 + (c.y1 - c.y0) * k / n + (V.f() - 0.5) * 6); g.lineTo(c.x1, c.y1); g.stroke(); c.t--; }
+  J.chispas = J.chispas.filter((c) => c.t > 0);
+  for (const h of J.luces) { const u = h.t / 20; g.fillStyle = `rgba(200,235,255,${0.55 * u})`; g.fillRect(Math.round(h.x - 7), 0, 14, Math.round(h.y)); g.fillStyle = `rgba(255,255,255,${0.7 * u})`; g.fillRect(Math.round(h.x - 3), 0, 6, Math.round(h.y)); g.beginPath(); g.ellipse(h.x, h.y, 14, 6, 0, 0, TAU); g.fill(); h.t--; }
+  J.luces = J.luces.filter((h) => h.t > 0);
+}
+/** El cuchillo, en la mano o volando (se dibuja con el orden de profundidad del jugador). */
+function dibujarCuchillo(g) {
+  const K = J.cuchillo;
+  if (!K || K.x == null) return;
+  const s = cuchilloSpr();
+  g.save(); g.translate(Math.round(K.x), Math.round(K.y)); g.rotate(K.ang + (K.est === "vuelve" ? Math.PI : 0) * 0); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore();
+}
+function dibujarAro(g, x, y, R, rojo, t, alfa = 1) {
+  g.save(); g.globalAlpha = alfa;
+  const w = rojo ? 5 : 2.5;
+  g.strokeStyle = rojo ? "rgba(90,0,0,0.55)" : "rgba(160,20,40,0.45)"; g.lineWidth = w + 3; g.beginPath(); g.ellipse(x, y, R, R * 0.8, 0, 0, TAU); g.stroke();
+  g.strokeStyle = rojo ? "#c8141a" : "#ff4a5a"; g.lineWidth = w; g.stroke();
+  g.strokeStyle = rojo ? "#ff9a7a" : "#ffe0e4"; g.lineWidth = Math.max(1, w * 0.35); g.setLineDash([6, 4]); g.lineDashOffset = -t * 0.8; g.stroke();
+  g.restore();
+}
+function dibujarLaser(g, l) {
+  const u = l.t / l.dur;
+  g.save(); g.lineCap = "round";
+  if (l.tipo === "rayo") {
+    const aparece = Math.min(1, l.t / 3), va = l.continuo ? 1 : Math.min(1, (l.dur - l.t) / 8);
+    const w = l.ancho * aparece * va * (1 + Math.sin(l.t * 0.9) * 0.08);
+    g.globalAlpha = 0.5; g.strokeStyle = "#5a0006"; g.lineWidth = w + 5; linea(g, l);
+    g.globalAlpha = 1; g.strokeStyle = "#b80c12"; g.lineWidth = w; linea(g, l);
+    g.strokeStyle = "#ff3a2a"; g.lineWidth = w * 0.55; linea(g, l);
+    g.strokeStyle = "#ffd0b0"; g.lineWidth = Math.max(1, w * 0.2); linea(g, l);
+    if (l.coil) {   // el láser enroscado alrededor del rayo
+      g.strokeStyle = "rgba(255,120,150,0.9)"; g.lineWidth = 1.2; g.beginPath();
+      const L = Math.hypot(l.x1 - l.x0, l.y1 - l.y0), c = Math.cos(l.ang), s = Math.sin(l.ang);
+      for (let d = 0; d < L; d += 3) { const o = Math.sin(d * 0.25 - l.t * 0.6) * w * 0.6; const x = l.x0 + c * d - s * o, y = l.y0 + s * d + c * o; d ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+    }
+    // el fogonazo en la cara y la salpicadura en la pared
+    g.fillStyle = "rgba(255,80,60,0.7)"; g.beginPath(); g.arc(l.x0, l.y0, w * 0.7, 0, TAU); g.fill();
+    g.fillStyle = "rgba(255,60,40,0.55)"; g.beginPath(); g.ellipse(l.x1, l.y1, w * 0.9, w * 0.6, 0, 0, TAU); g.fill();
+  } else {
+    const a = 1 - u;
+    g.globalAlpha = a * 0.6; g.strokeStyle = l.color || "#c01030"; g.lineWidth = l.ancho + 3; linea(g, l);
+    g.globalAlpha = a; g.strokeStyle = "#ff5a70"; g.lineWidth = l.ancho; linea(g, l);
+    g.strokeStyle = "#fff0f2"; g.lineWidth = 1; linea(g, l);
+  }
+  g.restore();
+}
+function linea(g, l) { g.beginPath(); g.moveTo(l.x0, l.y0); g.lineTo(l.x1, l.y1); g.stroke(); }
+/** La barrita de carga al lado de la cabeza (la del original, roja y que titila al llenarse). */
+function dibujarCarga(g, j) {
+  if (!j.cargando || j.carga <= 0 || j.muerto) return;
+  const x = Math.round(j.x + 10), y = Math.round(j.y - 30), h = 14, lleno = j.carga >= 1;
+  g.fillStyle = "rgba(10,6,8,0.8)"; g.fillRect(x, y, 4, h + 2);
+  g.fillStyle = lleno && (J.t >> 2) & 1 ? "#ffffff" : "#e02a2a";
+  const a = Math.round(h * j.carga); g.fillRect(x + 1, y + 1 + h - a, 2, a);
+}
+
 // ══════════ 13-efectos.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
 // LO QUE VUELA Y LO QUE QUEDA: las lágrimas de Shumio (con su caída al final del alcance),
@@ -3329,47 +4046,187 @@ function espejado(c) {
   return e;
 }
 
-// ── las lágrimas de Shumio ──
+// ── las lágrimas de Shumio: cada objeto les agrega una bandera y todas se combinan ──
+const COLOR_POR_BANDERA = [["ipecac", "veneno"], ["hemo", "sangre"], ["fuego", "fuego"], ["espectral", "tinta"], ["buscadora", "violeta"], ["divino", "oro"], ["sangre", "sangre"]];
+function colorLagrima(j) { for (const [k, c] of COLOR_POR_BANDERA) if (j.f[k]) return c; return "espora"; }
+/** Crea una lágrima de Shumio (o de un familiar que copia sus lágrimas) con todas sus banderas. */
+function lagrima(j, x, y, ang, kv = 1, o = {}) {
+  const f = j.f, L = j.suerte, vel = 3.3 * j.velLag * kv;
+  let vx = Math.cos(ang) * vel, vy = Math.sin(ang) * vel;
+  // hereda un poco del paso (sólo de costado: así se "tuercen" como en el original)
+  if (Math.abs(vx) > Math.abs(vy)) { vy += j.vy * 0.45; vx += j.vx * 0.25; } else { vx += j.vx * 0.45; vy += j.vy * 0.25; }
+  const vida = (o.vida ?? alcancePx(j) / vel) * (f.orbita ? 2.2 : 1);
+  let dano = o.danoFijo ?? danoDe(j) * (o.escala ?? 1), tipo = o.tipo || "lagrima";
+  // lo que sale al azar (con la suerte, fórmulas de la wiki): un diente, una aguja, una luz santa
+  if (tipo === "lagrima") {
+    if (f.diente && A.si(chance.diente(L))) { tipo = "diente"; dano *= 3.2; }
+    else if (f.aguja && A.si(chance.aguja(L))) { tipo = "aguja"; dano *= 3; }
+    else if (f.santa && A.si(chance.santa(L))) tipo = "santa";
+    else if (f.fractura) tipo = "hueso";
+    else if (f.tendero) tipo = "moneda";
+  }
+  const r = lim(Math.round(radioLagrima(j) * (o.tam ?? 1) * (o.escala && o.escala > 1 ? Math.sqrt(o.escala) * 0.8 : 1) * (f.hemo ? 1.3 : 1)), 2, 12);
+  const l = {
+    x, y, cx: x, cy: y, z: 14, vx, vy, t: 0, vida, vidaMax: vida, r, r0: r, dano, dano0: dano, color: o.color || colorLagrima(j), tipo,
+    espectral: o.espectral ?? !!(f.espectral || f.orbita || f.continuo || f.gusanoOnda || f.gusanoAnillo || f.gusanoGancho),
+    atraviesa: o.atraviesa ?? !!(f.atraviesa || f.belial || tipo === "aguja"), rebote: !!f.rebote, buscadora: !!(f.buscadora || f.divino || f.corazonSagrado),
+    onda: !!f.gusanoOnda, espiral: !!f.gusanoAnillo, gancho: !!f.gusanoGancho, pulso: !!f.gusanoPulso, chato: !!f.gusanoChato,
+    orbita: !!f.orbita, boomerang: !!f.boomerang, continuo: !!f.continuo, flota: !!f.antigrav, arco: !!(f.ipecac || f.hemo) && !o.hija,
+    ipecac: !!f.ipecac && !o.hija, hemo: !!f.hemo && !o.hija, grillo: !!f.grillo && !o.hija, parasito: f.parasito && (o.gen ?? 0) < 2, fractura: tipo === "hueso" && !o.hija, burstLaser: !!o.burstLaser,
+    carbon: !!f.carbon, proptosis: !!f.proptosis, divino: !!f.divino, atractor: !!f.atractor, belial: !!f.belial, jacob: !!f.jacob, liquido: !!f.liquido, pegajosa: f.pegajosa && A.si(0.25),
+    veneno: (f.veneno && A.si(chance.veneno(L))) || !!f.ipecac, hielo: f.lento && A.si(chance.lento(L)), fuego: !!f.fuego, miedo: f.miedo && A.si(chance.miedo(L)), piedra: f.piedra && A.si(chance.piedra(L)),
+    urano: !!f.urano, empuje: (f.piscis ? 2.2 : 1) * (f.gusanoChato ? 1.5 : 1), gen: o.gen ?? 0, hija: !!o.hija, golpeo: false, tocados: null, dist: 0,
+  };
+  // la leche de almendra: cada lágrima sale con un gusano (o goma, o espejo) al azar
+  if (f.almendra && !o.hija) { const k = A.uno(["onda", "espiral", "gancho", "pulso", "chato", "rebote", "boomerang"]); l[k] = true; if (k === "onda" || k === "espiral" || k === "gancho") l.espectral = true; }
+  if (l.orbita) { l.ang = Math.atan2(y - j.y, x - j.x) + (A.f() - 0.5) * 0.3; l.R = 8; l.dirOrb = ang; }
+  J.lagrimas.push(l);
+  return l;
+}
+/** Una lágrima hija (el grillo, el parásito, el coágulo, la fractura): hereda casi todo. */
+function hija(l, ang, factorDano, factorVida, o = {}) {
+  const j = J.jug, vel = Math.hypot(l.vx, l.vy) || 3;
+  const h = lagrima(j, l.x, l.y, ang, (o.kv ?? 1) * vel / (3.3 * j.velLag), { danoFijo: l.dano * factorDano, vida: Math.max(8, (l.vidaMax - l.t) * factorVida), hija: true, gen: (l.gen || 0) + 1, tipo: o.tipo || "lagrima", tam: o.tam ?? 0.65, color: l.color });
+  h.parasito = !!o.parasito; h.z = Math.max(8, l.z); h.tocados = l.tocados ? new Set(l.tocados) : null;
+  return h;
+}
+
 function actualizarLagrimas() {
-  const L = J.lagrimas;
+  const L = J.lagrimas, j = J.jug, tira = !!(IN.dx || IN.dy);
   for (let i = L.length - 1; i >= 0; i--) {
     const l = L[i];
+    // la antigravedad: flotan quietas mientras se mantenga el disparo (hasta 2 s)
+    if (l.flota) { if (tira && l.t < 120) { l.t++; continue; } l.flota = false; l.t = 0; }
+    l.t++;
     if (l.buscadora) {
-      let obj = null, md = 90;
-      for (const e of J.enemigos) { if (!blanco_(e)) continue; const d = dist(e.x, e.y, l.x, l.y); if (d < md) { md = d; obj = e; } }
+      let obj = null, md = 110;
+      for (const e of J.enemigos) { if (!blanco_(e)) continue; const d = dist(e.x, e.y, l.cx, l.cy); if (d < md) { md = d; obj = e; } }
       if (obj) {
-        const v = Math.hypot(l.vx, l.vy), a0 = Math.atan2(l.vy, l.vx), a1 = Math.atan2(obj.y - l.y, obj.x - l.x);
+        const v = Math.hypot(l.vx, l.vy), a0 = Math.atan2(l.vy, l.vx), a1 = Math.atan2(obj.y - 4 - l.cy, obj.x - l.cx);
         let da = a1 - a0; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
         const a = a0 + lim(da, -0.09, 0.09); l.vx = Math.cos(a) * v; l.vy = Math.sin(a) * v;
       }
     }
-    l.x += l.vx; l.y += l.vy; l.vida--;
-    // al final del alcance, la lágrima cae (el arco del original)
-    const caida = l.vidaMax * 0.28;
-    if (l.vida < caida) l.z = Math.max(0, 14 * (l.vida / caida));
-    let rompe = l.vida <= 0 || l.z <= 0;
-    // muros
-    if (l.x < IX0 + 2 || l.x > IX1 - 2 || l.y < IY0 + 1 || l.y > IY1 - 2) {
-      if (l.rebote && !l.reboto) { if (l.x < IX0 + 2 || l.x > IX1 - 2) l.vx = -l.vx; else l.vy = -l.vy; l.reboto = true; l.x = lim(l.x, IX0 + 2, IX1 - 2); l.y = lim(l.y, IY0 + 1, IY1 - 2); }
-      else rompe = true;
+    // el espejo: a mitad de camino se da vuelta y vuelve a Shumio
+    if (l.boomerang && l.t > l.vidaMax * 0.45) {
+      const d = dist(j.x, j.y - 6, l.cx, l.cy) || 1, v = Math.hypot(l.vx, l.vy);
+      l.vx += ((j.x - l.cx) / d * v - l.vx) * 0.12; l.vy += ((j.y - 6 - l.cy) / d * v - l.vy) * 0.12;
+      if (d < 7 && l.t > l.vidaMax * 0.6) { L.splice(i, 1); continue; }
     }
-    // obstáculos
-    if (!rompe && !l.espectral) {
+    // el planetita: da vueltas alrededor de Shumio, corrido hacia donde llora
+    if (l.orbita) {
+      l.R = Math.min(34, l.R + 1.2); l.ang += 0.11 * Math.hypot(l.vx, l.vy) / 3.3;
+      const [ddx, ddy] = j.dirTiro || [0, 1];
+      l.cx = j.x + ddx * 8 + Math.cos(l.ang) * l.R; l.cy = j.y - 6 + ddy * 8 + Math.sin(l.ang) * l.R * 0.8;
+    } else { l.cx += l.vx; l.cy += l.vy; }
+    l.dist += Math.hypot(l.vx, l.vy);
+    // los gusanos: la lágrima se corre de costado sobre su camino
+    const v0 = Math.hypot(l.vx, l.vy) || 1, px = -l.vy / v0, py = l.vx / v0;
+    let off = 0, adel = 0;
+    if (l.onda) off += Math.sin(l.t * 0.17) * 8;
+    if (l.gancho) { const k = Math.floor(l.t / 9) % 4; off += (k === 1 || k === 2 ? 7 : -7) * Math.min(1, (l.t % 9) / 3 + (k === 0 || k === 2 ? 0 : 1)); }
+    if (l.espiral) { off += Math.sin(l.t * 0.42) * 7; adel = Math.cos(l.t * 0.42) * 7; }
+    l.x = l.cx + px * off + (l.vx / v0) * adel; l.y = l.cy + py * off + (l.vy / v0) * adel;
+    if (l.pulso) l.r = Math.round(l.r0 * (1.3 + 0.3 * Math.sin(l.t * 0.2)));
+    // el bucle: sale por una pared y entra por la de enfrente
+    if (l.continuo) {
+      if (l.cx < IX0) l.cx += IX1 - IX0; else if (l.cx > IX1) l.cx -= IX1 - IX0;
+      if (l.cy < IY0 - 4) l.cy += IY1 - IY0; else if (l.cy > IY1) l.cy -= IY1 - IY0;
+    }
+    // el daño según la distancia: los ojos saltones pierden, el carbón gana
+    if (l.proptosis) { l.dano = l.dano0 * 3 * Math.max(0, 1 - l.t / 48); l.r = Math.max(2, Math.round(l.r0 * (1.2 - l.t / 60))); }
+    if (l.carbon) l.dano = l.dano0 + l.dist / T * 0.55;
+    // la aureola de la cabeza divina: 2 de daño 30 veces por segundo a lo que tenga cerca
+    if (l.divino && l.t % 2 === 0) for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y - 4, l.x, l.y) < e.r + l.r + 8) danarEnemigo(e, 2);
+    // el atractor: tira de los enemigos (y de lo que hay en el piso) hacia la lágrima
+    if (l.atractor) for (const e of J.enemigos) { if (!blanco_(e) || e.jefe) continue; const d = dist(e.x, e.y, l.x, l.y); if (d < 70 && d > 2) { e.kx += (l.x - e.x) / d * 0.35; e.ky += (l.y - e.y) / d * 0.35; } }
+    l.vida--;
+    // la altura: las de arco suben y bajan (el jarabe, el coágulo); las otras caen al final
+    if (l.arco) l.z = 6 + Math.sin(Math.PI * Math.min(1, l.t / l.vidaMax)) * 34;
+    else { const caida = l.vidaMax * 0.28; if (l.vida < caida) l.z = Math.max(0, 14 * (l.vida / caida)); }
+    let rompe = l.vida <= 0 || (!l.arco && l.z <= 0) || (l.proptosis && l.t >= 48), pego = null;
+    // muros
+    if (!l.continuo && (l.x < IX0 + 2 || l.x > IX1 - 2 || l.y < IY0 + 1 || l.y > IY1 - 2)) {
+      if (l.rebote && !l.orbita) { if (l.x < IX0 + 2 || l.x > IX1 - 2) l.vx = -l.vx; else l.vy = -l.vy; l.cx = lim(l.cx, IX0 + 3, IX1 - 3); l.cy = lim(l.cy, IY0 + 2, IY1 - 3); }
+      else if (!l.orbita) rompe = true;
+    }
+    // obstáculos (las de arco pasan por encima mientras van altas)
+    if (!rompe && !l.espectral && !(l.arco && l.z > 16)) {
       const c = celdaX(l.x), f = celdaY(l.y), o = celda(J.sala, c, f);
       if (frenaLagrima(o)) {
         golpearObstaculo(o, c, f, l.dano);
-        if (l.rebote && !l.reboto) { l.vx = -l.vx; l.vy = -l.vy; l.reboto = true; l.x += l.vx * 2; l.y += l.vy * 2; }
-        else rompe = true;
+        if (l.rebote) { l.vx = -l.vx; l.vy = -l.vy; l.cx += l.vx * 2; l.cy += l.vy * 2; }
+        else { rompe = true; pego = "obstaculo"; }
       }
     }
     // enemigos
     if (!rompe) for (const e of J.enemigos) {
       if (!blanco_(e) || (l.tocados && l.tocados.has(e))) continue;
-      if (e.segmentos ? !tocaSegmento(e, l.x, l.y, l.r + 1) : dist(e.x, e.y - (e.alturaGolpe || 0), l.x, l.y) > e.r + l.r) continue;
-      danarEnemigo(e, l.dano, l.vx * 0.35, l.vy * 0.35, l);
-      if (l.atraviesa) { (l.tocados ||= new Set()).add(e); } else { rompe = true; break; }
+      if (e.segmentos ? !tocaSegmento(e, l.x, l.y - (l.arco ? 0 : 0), l.r + 1) : dist(e.x, e.y - (e.alturaGolpe || 0), l.x, l.y) > e.r + l.r) continue;
+      if (golpeLagrima(l, e)) { rompe = true; pego = e; break; }
     }
-    if (rompe) { chapoteo(l.x, l.y - l.z, l.color, l.r); L.splice(i, 1); }
+    if (rompe) { romperLagrima(l, pego); L.splice(i, 1); }
+  }
+}
+
+/** La lágrima le pega a un enemigo. Devuelve true si la lágrima se rompe. */
+function golpeLagrima(l, e) {
+  const j = J.jug, vida0 = e.vida;
+  l.golpeo = true;
+  if (j.f.ojoMuerto) j.ojoMuerto = Math.min(4, j.ojoMuerto + 1), j.fallos = 0;
+  if (l.ipecac) return true;                               // el jarabe explota al tocar (en romperLagrima)
+  if (l.pegajosa) { J.pegadas.push({ e, t: 90, dano: 60 + l.dano, dx: l.x - e.x, dy: l.y - e.y }); }
+  danarEnemigo(e, l.dano, l.vx * 0.35 * l.empuje, l.vy * 0.35 * l.empuje, l);
+  if (l.tipo === "santa") { J.luces.push({ x: e.x, y: e.y, t: 20 }); for (const q of J.enemigos) if (blanco_(q) && dist(q.x, q.y, e.x, e.y) < q.r + 14) danarEnemigo(q, l.dano * 3); SFX.santa(); }
+  if (l.jacob) chispa(e, l.dano * 0.5);
+  if (l.tipo === "moneda" && A.si(0.05)) soltarPremio(e.x, e.y, "moneda");
+  if (j.f.guppy && A.si(0.66) && J.familiares.filter((m) => m.tipo === "moscaAzul").length < 16) J.familiares.push(moscaAzul(e.x, e.y));
+  if (l.urano && e.muerto) congelado(e);
+  if (l.liquido) dejarBaba(l.x, l.y, 8, 90, false, "amiga");
+  // el ojo de Belial: después del primero que atraviesa, pega el doble y busca
+  if (l.belial && !l.tocados) { l.dano *= 2; l.buscadora = true; l.r = Math.round(l.r * 1.3); l.color = "sangre"; }
+  // el cíclope: si lo mató, sigue con el daño que le sobró
+  if (j.f.polifemo && e.muerto && l.dano > vida0) { l.dano -= Math.max(0, vida0); (l.tocados ||= new Set()).add(e); return false; }
+  if (l.rebote && !l.atraviesa) { const d = dist(e.x, e.y, l.x, l.y) || 1; const v = Math.hypot(l.vx, l.vy); l.vx = (l.x - e.x) / d * v; l.vy = (l.y - e.y) / d * v; (l.tocados ||= new Set()).add(e); return false; }
+  if (l.atraviesa) { (l.tocados ||= new Set()).add(e); return false; }
+  return true;
+}
+
+/** La lágrima se rompe: acá salen las explosiones, las ráfagas y las divisiones. */
+function romperLagrima(l, pego) {
+  const j = J.jug;
+  chapoteo(l.x, l.y - l.z, l.color, l.r);
+  if (!l.golpeo && j.f.ojoMuerto && j.ojoMuerto > 0) { j.fallos++; if (A.si([0.2, 0.33, 0.5][Math.min(2, j.fallos - 1)])) j.ojoMuerto = 0; }
+  if (l.ipecac) explotar(l.x, l.y, true, false, { dano: l.dano, radio: 30, danoJug: l.dano >= 85 ? 2 : 1, veneno: true });
+  if (l.hemo) {                                            // el coágulo: revienta en 6–11 lágrimas (50–83 % del daño)
+    if (l.burstLaser) for (let k = 0; k < 8; k++) laser(j, l.x, l.y - 4, k * TAU / 8, { dano: l.dano * 0.66 });
+    else { const n = A.ent(6, 11); for (let k = 0; k < n; k++) hija(l, A.f() * TAU, 0.5 + A.f() * 0.33, 0, { kv: 0.6 + A.f() * 0.5 }).vida = 20 + A.ent(0, 18); }
+  }
+  if (l.grillo) for (let k = 0; k < 4; k++) hija(l, Math.atan2(l.vy, l.vx) + Math.PI / 4 + k * Math.PI / 2, 0.5, 0.4);
+  if (l.parasito && pego && l.dano > 1) { const a = Math.atan2(l.vy, l.vx); for (const s of [-1, 1]) hija(l, a + Math.PI + s * 0.9, 0.5, 0.5, { parasito: true }); }
+  if (l.fractura && pego) { const n = A.ent(1, 3), a = Math.atan2(l.vy, l.vx); for (let k = 0; k < n; k++) hija(l, a + Math.PI + (A.f() - 0.5) * 2.4, 0.5, 0.35, { tipo: "hueso", tam: 0.5 }); }
+  if (l.liquido && !pego) dejarBaba(l.x, l.y, 8, 90, false, "amiga");
+  if (l.jacob && pego === "obstaculo") { const a = V.f() * TAU; J.chispas.push({ x0: l.x, y0: l.y, x1: l.x + Math.cos(a) * 24, y1: l.y + Math.sin(a) * 24, t: 8 }); }
+  if (j.f.estalla && pego && pego !== "obstaculo" && A.si(chance.estalla(j.suerte))) J.pendientes.push(() => explotar(l.x, l.y, true, false, { dano: l.dano, radio: 22, danoJug: 1, fuego: true }));
+}
+
+/** Urano: el que muere helado queda como estatua y revienta en 8 carámbanos. */
+function congelado(e) {
+  const j = J.jug;
+  particulas(e.x, e.y, 10, PAL.hielo.slice(2), 2);
+  for (let k = 0; k < 8; k++) {
+    const a = k * TAU / 8, l = lagrima(j, e.x, e.y - 4, a, 0.9, { danoFijo: danoDe(j), hija: true, color: "hielo", tam: 0.7, vida: 40 });
+    l.urano = false;
+  }
+}
+
+/** Las lágrimas pegajosas: quedan en el enemigo y explotan a los 1,5 s (60 + el daño). */
+function actualizarPegadas() {
+  for (let i = J.pegadas.length - 1; i >= 0; i--) {
+    const p = J.pegadas[i];
+    if (--p.t > 0 && !p.e.muerto) continue;
+    J.pegadas.splice(i, 1);
+    explotar(p.e.x + p.dx, p.e.y + p.dy, true, false, { dano: p.dano, radio: 34, danoJug: 1 });
   }
 }
 function blanco_(e) { return !e.muerto && !e.oculto && !e.intangible; }
@@ -3416,47 +4273,66 @@ function actualizarBalas() {
   }
 }
 
-// ── las bombas ──
+// ── las bombas (las de Shumio y las del feto) ──
 function actualizarBombas() {
   for (let i = J.bombas.length - 1; i >= 0; i--) {
     const b = J.bombas[i];
     b.t--;
-    b.vx *= 0.85; b.vy *= 0.85;
+    const roce = b.feto ? 0.93 : 0.85;
+    b.vx *= roce; b.vy *= roce;
     moverEnSala(J.sala, b, b.vx, b.vy, false);
     // Shumio las empuja al caminar contra ellas
     const j = J.jug, d = dist(j.x, j.y, b.x, b.y);
-    if (d < 9 && d > 0.01 && b.t < 80) { b.vx += (b.x - j.x) / d * 0.5; b.vy += (b.y - j.y) / d * 0.5; }
-    if (b.t <= 0) { J.bombas.splice(i, 1); explotar(b.x, b.y, true, b.gorda); }
+    if (!b.feto && d < 9 && d > 0.01 && b.t < 80) { b.vx += (b.x - j.x) / d * 0.5; b.vy += (b.y - j.y) / d * 0.5; }
+    // feto + jarabe: explotan al tocar
+    if (b.contacto && J.enemigos.some((e) => blanco_(e) && dist(e.x, e.y, b.x, b.y) < e.r + 5)) b.t = 0;
+    if (b.t <= 0) {
+      J.bombas.splice(i, 1);
+      explotar(b.x, b.y, true, b.gorda, { dano: b.dano, danoJug: b.danoJug, veneno: b.veneno, rayos: b.rayos, lasers: b.lasers });
+      // feto + cíclope: aparece otra bomba donde explotó, con la mitad del daño
+      if (b.segunda && b.dano) J.bombas.push({ ...b, t: 40, vx: 0, vy: 0, dano: b.dano / 2, segunda: false });
+    }
   }
 }
 
-/** La explosión: daña (a Shumio también), rompe obstáculos y abre las puertas secretas. */
-function explotar(x, y, dePlayer, gorda = false) {
-  const R = gorda ? 52 : 42, dano = gorda ? 75 : 60;
-  SFX.explosion(); temblar(gorda ? 14 : 10);
-  J.fx.push({ anim: [0, 1, 2, 3, 4, 5].map(explosionSpr), x, y: y + 6, t: 0, cada: 4, centro: false });
-  J.destello = 3;
-  mancha("quemado", x, y, 1.4);
-  particulas(x, y, 14, ["#3a2c28", "#5a4640", "#f59a26", "#ffe07a"], 3);
-  for (const e of J.enemigos) if (!e.muerto && !e.oculto && dist(e.x, e.y, x, y) < R + e.r) { const d = dist(e.x, e.y, x, y) || 1; danarEnemigo(e, dano, (e.x - x) / d * 5, (e.y - y) / d * 5); }
+/** La explosión: daña (a Shumio también), rompe obstáculos y abre las puertas secretas.
+ *  o: { dano, radio, danoJug, veneno, rayos (rayos que salen), lasers, fuego } */
+function explotar(x, y, dePlayer, gorda = false, o = {}) {
   const j = J.jug;
-  if (dist(j.x, j.y, x, y) < R + 2) { herirJugador(j, 2, "UNA BOMBA", bombaSpr(1)); const d = dist(j.x, j.y, x, y) || 1; j.vx += (j.x - x) / d * 5; j.vy += (j.y - y) / d * 5; }
+  const R = o.radio ?? (gorda ? 52 : 42), dano = (o.dano ?? 60) * (gorda && o.dano ? 1.85 : 1) + (gorda && !o.dano ? 15 : 0);
+  SFX.explosion(); temblar(gorda || R > 44 ? 14 : R < 32 ? 5 : 10);
+  const escala = R / 42;
+  J.fx.push({ anim: [0, 1, 2, 3, 4, 5].map(explosionSpr), x, y: y + 6 * escala, t: 0, cada: 4, centro: false, escala });
+  J.destello = Math.max(J.destello, R > 32 ? 3 : 1);
+  mancha("quemado", x, y, 1.4 * escala);
+  particulas(x, y, Math.round(14 * escala), o.veneno ? ["#255a1c", "#44922c", "#86d04a"] : ["#3a2c28", "#5a4640", "#f59a26", "#ffe07a"], 3 * escala);
+  for (const e of J.enemigos) if (!e.muerto && !e.oculto && dist(e.x, e.y, x, y) < R + e.r) {
+    const d = dist(e.x, e.y, x, y) || 1;
+    danarEnemigo(e, dano, (e.x - x) / d * 5, (e.y - y) / d * 5, o.veneno || o.fuego ? { veneno: o.veneno, fuego: o.fuego } : null);
+  }
+  if (dist(j.x, j.y, x, y) < R + 2 && !j.f.inmuneExplosion) { herirJugador(j, o.danoJug ?? 2, "TU PROPIA EXPLOSIÓN", bombaSpr(1)); const d = dist(j.x, j.y, x, y) || 1; j.vx += (j.x - x) / d * 5; j.vy += (j.y - y) / d * 5; }
   for (const b of J.bombas) { const d = dist(b.x, b.y, x, y) || 1; if (d < R) { b.vx += (b.x - x) / d * 4; b.vy += (b.y - y) / d * 4; } }
-  for (const c of J.sala.cosas) if (!c.quieto && c.t !== "objeto" && c.t !== "trampilla") { const d = dist(c.x, c.y, x, y) || 1; if (d < R) { c.vx += (c.x - x) / d * 4; c.vy += (c.y - y) / d * 4; c.vz = 2; } }
+  for (const c of J.sala.cosas) {
+    if (c.t === "cofre" && c.sub === "piedra" && !c.abierto && dist(c.x, c.y, x, y) < R + 8) abrirCofre(c);
+    if (!c.quieto && c.t !== "objeto" && c.t !== "trampilla") { const d = dist(c.x, c.y, x, y) || 1; if (d < R) { c.vx += (c.x - x) / d * 4; c.vy += (c.y - y) / d * 4; c.vz = 2; } }
+  }
+  // feto + rayo / feto + láser: la explosión suelta rayos o láseres
+  if (o.rayos) for (let k = 0; k < o.rayos; k++) { const a = o.rayos === 4 ? k * Math.PI / 2 : A.f() * TAU; rayo(j, { x, y: y + 10 }, a, 0, 1, 40); }
+  if (o.lasers) for (let k = 0; k < o.lasers; k++) laser(j, x, y - 4, k * TAU / o.lasers + 0.2);
   // los obstáculos
   for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) {
-    const o = celda(J.sala, c, f);
-    if (!o || dist(cx(c), cy(f), x, y) > R + 10) continue;
-    if (o.t === "roca") {
+    const q = celda(J.sala, c, f);
+    if (!q || dist(cx(c), cy(f), x, y) > R + 10) continue;
+    if (q.t === "roca") {
       J.sala.celdas[f * COLS + c] = null; SFX.roca();
       particulas(cx(c), cy(f), 8, PAL.piedra.slice(2), 2.4);
       mancha("quemado", cx(c), cy(f), 0.8);
-      if (o.marcada) { SFX.secreto(); soltarPremio(cx(c), cy(f), A.pesos([["espora", 5], ["bomba", 3], ["llave", 2]])); }
+      if (q.marcada) { SFX.secreto(); soltarPremio(cx(c), cy(f), A.pesos([["espora", 5], ["bomba", 3], ["llave", 2]])); }
       else if (A.si(0.04)) soltarPremio(cx(c), cy(f));
       J.cambioGrilla = true;
-    } else if (o.t === "matas" && o.vida > 0) { o.vida = 0; J.cambioGrilla = true; particulas(cx(c), cy(f), 6, ["#7a5636", "#a8835a"], 2); }
-    else if (o.t === "brasero") { J.sala.celdas[f * COLS + c] = null; J.cambioGrilla = true; humo(cx(c), cy(f)); }
-    else if (o.t === "barril") { J.sala.celdas[f * COLS + c] = null; J.cambioGrilla = true; J.pendientes.push(() => explotar(cx(c), cy(f), false)); }
+    } else if (q.t === "matas" && q.vida > 0) { q.vida = 0; J.cambioGrilla = true; particulas(cx(c), cy(f), 6, ["#7a5636", "#a8835a"], 2); }
+    else if (q.t === "brasero") { J.sala.celdas[f * COLS + c] = null; J.cambioGrilla = true; humo(cx(c), cy(f)); }
+    else if (q.t === "barril") { J.sala.celdas[f * COLS + c] = null; J.cambioGrilla = true; J.pendientes.push(() => explotar(cx(c), cy(f), false)); }
   }
   // las puertas secretas
   for (let d = 0; d < 4; d++) {
@@ -3465,7 +4341,7 @@ function explotar(x, y, dePlayer, gorda = false) {
     const q = PUERTA[d];
     if (dist(q.x, q.y, x, y) < R + 16) { p.revelada = true; if (p.par) p.par.revelada = true; SFX.secreto(); particulas(q.x, q.y, 10, PAL.piedra.slice(2), 2.5); }
   }
-  // las puertas con llave no se vuelan (como en el original), pero tiemblan
+  // las puertas con llave no se vuelan (como en el original)
 }
 
 // ── partículas: pedacitos con altura (z) que caen y rebotan en el piso ──
@@ -3501,14 +4377,21 @@ function mancha(tipo, x, y, escala = 1) {
 }
 
 // ── la baba (el rastro de las babosas, y el de algunos jefes): daña si la pisás ──
-function dejarBaba(x, y, r = 9, dura = 240, danina = true) {
+function dejarBaba(x, y, r = 9, dura = 240, danina = true, tipo = "baba") {
   if (J.babas.length > 90) J.babas.shift();
-  J.babas.push({ x, y, r, t: dura, max: dura, danina, v: V.ent(0, 5) });
+  J.babas.push({ x, y, r, t: dura, max: dura, danina, tipo, v: V.ent(0, 5) });
 }
-function actualizarBabas() { for (let i = J.babas.length - 1; i >= 0; i--) if (--J.babas[i].t <= 0) J.babas.splice(i, 1); }
+/** La baba amiga (la de Bob, el líquido misterioso): 20 de daño por segundo a lo que la pisa. */
+function actualizarBabas() {
+  for (let i = J.babas.length - 1; i >= 0; i--) {
+    const b = J.babas[i];
+    if (b.tipo === "amiga" && J.t % 3 === 0) for (const e of J.enemigos) if (blanco_(e) && !e.vuela && dist(e.x, e.y, b.x, b.y) < b.r + e.r * 0.5) danarEnemigo(e, 1);
+    if (--b.t <= 0) J.babas.splice(i, 1);
+  }
+}
 function dibujarBabas(g) {
   for (const b of J.babas) {
-    const s = manchaSpr("baba", b.v), k = b.r / 9;
+    const s = b.tipo === "amiga" ? tinte(manchaSpr("baba", b.v), "rgba(70,200,40,0.55)") : manchaSpr("baba", b.v), k = b.r / 9;
     g.globalAlpha = Math.min(1, b.t / 40) * 0.8;
     g.drawImage(s, Math.round(b.x - s.width * k / 2), Math.round(b.y - s.height * k / 2), Math.round(s.width * k), Math.round(s.height * k));
   }
@@ -3517,11 +4400,19 @@ function dibujarBabas(g) {
 
 // ── dibujar lo que vuela ──
 function dibujarLagrima(g, l) {
-  const s = lagrimaSpr(l.r, l.veneno ? "veneno" : l.hielo ? "hielo" : l.fuego ? "fuego" : l.color);
-  const x = Math.round(l.x - s.width / 2), y = Math.round(l.y - l.z - s.height / 2);
   const sh = sombra(Math.max(2, l.r - 1), Math.max(1, Math.round(l.r / 2)));
   g.drawImage(sh, Math.round(l.x - sh.width / 2), Math.round(l.y - sh.height / 2 + 2));
-  g.drawImage(s, x, y);
+  const X = l.x, Y = l.y - l.z;
+  if (l.tipo === "cuchillo" || l.tipo === "aguja" || l.tipo === "hueso" || l.tipo === "diente") {
+    const s = l.tipo === "cuchillo" ? cuchilloSpr() : proyectilSpr(l.tipo);
+    g.save(); g.translate(Math.round(X), Math.round(Y)); g.rotate(Math.atan2(l.vy, l.vx) + (l.tipo === "hueso" ? l.t * 0.3 : 0)); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore();
+    return;
+  }
+  if (l.tipo === "moneda") { const s = monedaSpr(Math.floor(l.t / 4) % 4); g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2)); return; }
+  let s = lagrimaSpr(l.r, l.veneno ? "veneno" : l.hielo ? "hielo" : l.fuego ? "fuego" : l.piedra ? "hueso" : l.miedo ? "tinta" : l.tipo === "santa" ? "hielo" : l.color);
+  if (l.chato) { const w = Math.round(s.width * 1.5); g.drawImage(s, Math.round(X - w / 2), Math.round(Y - s.height / 2), w, s.height); }
+  else g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2));
+  if (l.tipo === "santa" || l.divino) { g.globalAlpha = 0.35; g.drawImage(aro(l.r + 4, "rgba(255,250,210,0.35)", "rgba(255,240,170,0.7)"), Math.round(X - l.r - 4), Math.round(Y - l.r - 4)); g.globalAlpha = 1; }
 }
 function dibujarBala(g, b) {
   const s = lagrimaSpr(b.r + 1, b.color);
@@ -3545,8 +4436,9 @@ function dibujarParticulas(g) {
 function actualizarFx() { for (let i = J.fx.length - 1; i >= 0; i--) { const f = J.fx[i]; if (++f.t >= f.anim.length * f.cada) J.fx.splice(i, 1); } }
 function dibujarFx(g) {
   for (const f of J.fx) {
-    const s = f.anim[Math.min(f.anim.length - 1, Math.floor(f.t / f.cada))];
-    g.drawImage(s, Math.round(f.x - s.width / 2), Math.round(f.centro ? f.y - s.height / 2 : f.y - s.height));
+    const s = f.anim[Math.min(f.anim.length - 1, Math.floor(f.t / f.cada))], k = f.escala || 1;
+    const w = Math.round(s.width * k), h = Math.round(s.height * k);
+    g.drawImage(s, Math.round(f.x - w / 2), Math.round(f.centro ? f.y - h / 2 : f.y - h), w, h);
   }
 }
 
@@ -3750,9 +4642,13 @@ function danarEnemigo(e, d, kx = 0, ky = 0, lag = null) {
   e.vida -= d; e.golpe = 5;
   if (!e.jefe) { const p = e.def.peso ?? 1; e.kx += kx / p; e.ky += ky / p; }
   if (lag) {
-    if (lag.veneno) e.veneno = { t: 80, dano: 2 };
+    // veneno y quemadura: como en el original, dos a cuatro golpes del daño de Shumio
+    const dj = J.jug ? Math.min(danoDe(J.jug), 40) : 3.5;
+    if (lag.veneno) e.veneno = { t: 80, dano: Math.max(2, dj * 0.5) };
     if (lag.hielo) e.frio = 100;
-    if (lag.fuego) e.quema = { t: 60, dano: 1.5 };
+    if (lag.fuego) e.quema = { t: 80, dano: Math.max(1.5, dj * 0.4) };
+    if (lag.miedo) e.miedo = e.jefe ? 60 : 150;
+    if (lag.piedra) e.piedra = e.jefe ? 40 : 100;
   }
   if (e.vida <= 0) matarEnemigo(e);
 }
@@ -3789,9 +4685,13 @@ function actualizarEnemigos() {
       if (--s.t <= 0) e[k] = null; else if (s.t % 20 === 0) { e.vida -= s.dano; e.golpe = 2; if (e.vida <= 0) matarEnemigo(e); }
     }
     if (e.muerto) continue;
+    // petrificado: no piensa ni se mueve (sólo lo empujan los golpes)
+    if (e.piedra > 0) { e.piedra--; e.vx = e.vy = 0; moverEnSala(J.sala, e, e.kx, e.ky, e.vuela); e.kx *= 0.78; e.ky *= 0.78; continue; }
     J.quien = e;
     e.def.pensar(e);
     J.quien = null;
+    // con miedo: hace lo suyo pero para el otro lado (se aleja de Shumio)
+    if (e.miedo > 0) { e.miedo--; const v = Math.hypot(e.vx, e.vy) || 0.6, d = dist(e.x, e.y, j.x, j.y) || 1; e.vx = (e.x - j.x) / d * v; e.vy = (e.y - j.y) / d * v; }
     if (e.muerto) continue;
     const vuela = e.vuela || e.vueloPropio;
     if (e.rebotaSolo) {
@@ -3828,7 +4728,9 @@ function dibujarEnemigo(g, e) {
   let s = d.spr(e);
   if (e.mira < 0 && d.voltea) s = espejado(s);
   if (e.campeon) s = tinte(s, "rgba(230,40,30,0.38)");
-  if (e.veneno) s = tinte(s, "rgba(90,220,60,0.4)");
+  if (e.piedra > 0) s = tinte(s, "rgba(120,116,110,0.7)");
+  else if (e.miedo > 0 && (e.t >> 3) & 1) s = tinte(s, "rgba(60,20,90,0.45)");
+  else if (e.veneno) s = tinte(s, "rgba(90,220,60,0.4)");
   else if (e.frio > 0) s = tinte(s, "rgba(120,200,255,0.45)");
   else if (e.quema) s = tinte(s, "rgba(255,140,40,0.4)");
   if (e.golpe > 0 && (e.golpe & 2)) s = blanco(s);
@@ -3848,7 +4750,7 @@ function poblarSala(sala) {
     const x = cx(h.c), y = cy(h.f);
     if (h.tipo === "e") crearEnemigo(A.pesos(tanda.e), x, y);
     else if (h.tipo === "E") crearEnemigo(A.pesos(tanda.E), x, y);
-    else if (h.tipo === "v") crearEnemigo(J.piso.n >= 2 ? "mosquinRojo" : "mosquin", x, y);
+    else if (h.tipo === "v") { if (J.jug.f.belcebu) J.familiares.push(moscaAzul(x, y)); else crearEnemigo(J.piso.n >= 2 ? "mosquinRojo" : "mosquin", x, y); }
     else if (h.tipo === "j") crearJefe(sala, x, y);
     J.fx.push({ anim: [0, 1, 2, 3, 4].map(aparicionSpr), x, y: y - 4, t: 0, cada: 4, centro: true });
   }
@@ -4041,77 +4943,342 @@ ENEMIGOS.micelia = Object.assign({}, DEF_JEFE, {
 
 // ══════════ 16-objetos.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
-// LOS OBJETOS Y LO QUE SE RECOGE: 33 pasivos y 6 activos (cada uno con su efecto real sobre
-// las cuentas o las lágrimas), repartidos en las tandas del original (tesoro, jefe, tienda,
-// pacto, secreta) sin repetirse en la partida. Los recogibles: corazones rojos y de espora,
-// monedas de 1 y de 5, bombas, llaves, cápsulas (el efecto de cada color se sortea por partida
-// y se descubre al tomarla), cofres, y los pedestales. La tienda cobra; el pacto cobra vida.
+// LOS OBJETOS: más de cien, cada uno con su efecto real, pensados como los del original: cada
+// uno DECLARA lo que suma (st), las banderas que trae (f) y sus etiquetas (tags) para las
+// transformaciones; recalcular() (12-jugador) los combina solos. Así un rayo con tercer ojo son
+// tres rayos, el jarabe con el feto hace bombas que explotan al tocar, el planetita con el
+// cuchillo… Repartidos en las tandas del original (tesoro, jefe, tienda, pacto, secreta,
+// cofre dorado, cofre rojo), sin repetirse, y los de calidad alta salen menos.
 // ─────────────────────────────────────────────────────────────────────────────
 
+const T_ = { tesoro: "tesoro", jefe: "jefe", tienda: "tienda", pacto: "pacto", secreta: "secreta", cofre: "cofre", rojo: "rojo" };
 const OBJETOS = {
-  sombreroRojo: { nombre: "SOMBRERO ROJO", lema: "DAÑO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoUps += 1; } },
-  setaPicante: { nombre: "SETA PICANTE", lema: "DAÑO ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoUps += 0.5; j.danoPlano += 0.5; } },
-  cafeRaiz: { nombre: "CAFÉ DE RAÍZ", lema: "LÁGRIMAS ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.lagUps += 0.7; } },
-  zapatillas: { nombre: "ZAPATILLAS", lema: "VELOCIDAD ARRIBA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], aplicar: (j) => { j.vel += 0.3; } },
-  lupa: { nombre: "LUPA", lema: "LÁGRIMAS GRANDES", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { j.tamLag *= 1.3; j.danoPlano += 0.6; } },
-  trebol: { nombre: "TRÉBOL", lema: "SUERTE ARRIBA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], aplicar: (j) => { j.suerte += 2; } },
-  corazonPiedra: { nombre: "CORAZÓN DE PIEDRA", lema: "VIDA ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
-  ojoVidrio: { nombre: "OJO DE VIDRIO", lema: "ALCANCE ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { j.alcance += 1.5; j.velLag += 0.2; } },
-  tercerOjo: { nombre: "TERCER OJO", lema: "TRES LÁGRIMAS", calidad: 3, pools: ["tesoro", "pacto"], aplicar: (j) => { j.triple = true; } },
-  iman: { nombre: "IMÁN", lema: "TODO VIENE A VOS", calidad: 1, pools: ["tesoro", "tienda"], aplicar: (j) => { j.iman = true; } },
-  esporasToxicas: { nombre: "ESPORAS TÓXICAS", lema: "LÁGRIMAS VENENOSAS", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.veneno = true; } },
-  escarcha: { nombre: "ESCARCHA", lema: "LÁGRIMAS HELADAS", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.hielo = true; } },
-  gomaElastica: { nombre: "GOMA ELÁSTICA", lema: "LÁGRIMAS QUE REBOTAN", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.rebote = true; j.alcance += 0.5; } },
-  velo: { nombre: "VELO", lema: "LÁGRIMAS FANTASMA", calidad: 2, pools: ["tesoro", "secreta"], aplicar: (j) => { j.espectral = true; j.colorLag = "tinta"; } },
-  aguja: { nombre: "AGUJA", lema: "ATRAVIESA TODO", calidad: 3, pools: ["tesoro", "secreta"], aplicar: (j) => { j.atraviesa = true; } },
-  brujula: { nombre: "BRÚJULA", lema: "EL MAPA SE REVELA", calidad: 1, pools: ["tesoro", "tienda"], aplicar: (j) => { j.mapa = true; revelarMapa(); } },
-  ojoCazador: { nombre: "OJO CAZADOR", lema: "LÁGRIMAS QUE BUSCAN", calidad: 3, pools: ["tesoro", "pacto"], aplicar: (j) => { j.buscadora = true; j.colorLag = "violeta"; } },
-  cuerno: { nombre: "CUERNO", lema: "DAÑO MUCHO ARRIBA", calidad: 3, pools: ["pacto"], aplicar: (j) => { j.danoUps += 2; } },
-  moscaAmiga: { nombre: "MOSCA AMIGA", lema: "TE CUIDA LAS ESPALDAS", calidad: 2, pools: ["tesoro", "tienda"], aplicar: () => {} },
-  hermanito: { nombre: "HERMANITO", lema: "UN AMIGUITO QUE LLORA", calidad: 2, pools: ["tesoro"], aplicar: () => {} },
-  casco: { nombre: "CASCO DE ESPORAS", lema: "DOS CORAZONES DE ESPORA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], aplicar: (j) => { darEsporas(j, 4); } },
-  bombaGorda: { nombre: "BOMBA GORDA", lema: "CINCO BOMBAS GRANDES", calidad: 2, pools: ["tesoro", "tienda"], aplicar: (j) => { j.bombas = Math.min(99, j.bombas + 5); j.bombaGorda = true; } },
-  bolsaMonedas: { nombre: "BOLSA DE MONEDAS", lema: "VEINTICINCO MONEDAS", calidad: 1, pools: ["tesoro", "secreta"], aplicar: (j) => { j.monedas = Math.min(99, j.monedas + 25); } },
-  llavero: { nombre: "LLAVERO", lema: "CUATRO LLAVES", calidad: 1, pools: ["tesoro", "tienda"], aplicar: (j) => { j.llaves = Math.min(99, j.llaves + 4); } },
-  plomo: { nombre: "LÁGRIMA DE PLOMO", lema: "PESADA Y DOLOROSA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoPlano += 1.6; j.lagUps -= 0.35; j.velLag -= 0.15; j.tamLag *= 1.15; } },
-  lenteSangre: { nombre: "LENTE DE SANGRE", lema: "DAÑO Y ALCANCE", calidad: 2, pools: ["tesoro", "jefe", "pacto"], aplicar: (j) => { j.danoUps += 1; j.alcance += 1; j.colorLag = "sangre"; } },
-  chispa: { nombre: "CHISPA", lema: "LÁGRIMAS QUE QUEMAN", calidad: 2, pools: ["tesoro"], aplicar: (j) => { j.fuego = true; j.danoUps += 0.3; } },
-  alasPolilla: { nombre: "ALAS DE POLILLA", lema: "¡A VOLAR!", calidad: 3, pools: ["tesoro", "pacto"], aplicar: (j) => { j.vuela = true; j.vel += 0.1; } },
-  caparazon: { nombre: "CAPARAZÓN", lema: "TODO UN POCO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.danoUps += 0.3; j.lagUps += 0.2; j.vel += 0.1; j.alcance += 0.5; j.suerte += 1; j.velLag += 0.1; } },
-  hongoGigante: { nombre: "HONGO GIGANTE", lema: "¡TODO ARRIBA!", calidad: 4, pools: ["pacto", "secreta"], aplicar: (j) => { sumarContenedor(j, 1); j.vida = j.cont; j.danoUps += 0.3; j.danoMult *= 1.5; j.vel += 0.3; j.alcance += 1.5; j.tamLag *= 1.2; } },
-  mediaLuna: { nombre: "MEDIA LUNA", lema: "LÁGRIMAS Y SUERTE", calidad: 2, pools: ["tesoro", "jefe"], aplicar: (j) => { j.lagUps += 0.5; j.suerte += 1; } },
-  raizVieja: { nombre: "RAÍZ VIEJA", lema: "VIDA ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], aplicar: (j) => { sumarContenedor(j, 1); j.vida = j.cont; } },
-  pactoSangre: { nombre: "PACTO DE SANGRE", lema: "DAÑO POR UNO Y MEDIO", calidad: 4, pools: ["pacto"], aplicar: (j) => { j.danoMult *= 1.5; j.colorLag = "sangre"; } },
-  // los activos: se cargan limpiando salas
-  libroSetas: { nombre: "LIBRO DE SETAS", lema: "PODER PARA LA SALA", calidad: 2, pools: ["tesoro", "pacto"], activo: 3, usar: (j) => { j.danoSala += 2; SFX.pacto(); J.destello = 4; } },
+  // ── las cuentas ──
+  sombreroRojo: { nombre: "SOMBRERO ROJO", lema: "DAÑO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], tags: ["hongo"], st: { dano: 1 } },
+  setaPicante: { nombre: "SETA PICANTE", lema: "DAÑO ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], tags: ["hongo"], st: { dano: 0.5, plano: 0.5 } },
+  cafeRaiz: { nombre: "CAFÉ DE RAÍZ", lema: "LÁGRIMAS ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], st: { lag: 0.7 } },
+  cebolla: { nombre: "CEBOLLA TRISTE", lema: "LÁGRIMAS ARRIBA", calidad: 2, pools: ["tesoro"], st: { lag: 0.7 } },
+  zapatillas: { nombre: "ZAPATILLAS", lema: "VELOCIDAD ARRIBA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], st: { vel: 0.3 } },
+  lupa: { nombre: "LUPA", lema: "LÁGRIMAS GRANDES", calidad: 1, pools: ["tesoro", "jefe"], st: { tam: 1.3, plano: 0.6 } },
+  trebol: { nombre: "TRÉBOL", lema: "SUERTE ARRIBA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], st: { suerte: 2 } },
+  corazonPiedra: { nombre: "CORAZÓN DE PIEDRA", lema: "VIDA ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], alTomar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
+  raizVieja: { nombre: "RAÍZ VIEJA", lema: "VIDA ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], alTomar: (j) => { sumarContenedor(j, 1); j.vida = j.cont; } },
+  ojoVidrio: { nombre: "OJO DE VIDRIO", lema: "ALCANCE ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], st: { alc: 1.5, velLag: 0.2 } },
+  plomo: { nombre: "LÁGRIMA DE PLOMO", lema: "PESADA Y DOLOROSA", calidad: 2, pools: ["tesoro", "jefe"], st: { plano: 1.6, lag: -0.35, velLag: -0.15, tam: 1.15 } },
+  lenteSangre: { nombre: "LENTE DE SANGRE", lema: "DAÑO Y ALCANCE", calidad: 2, pools: ["tesoro", "jefe", "pacto"], st: { dano: 1, alc: 1 }, f: ["sangre"] },
+  caparazon: { nombre: "CAPARAZÓN", lema: "TODO UN POCO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], st: { dano: 0.3, lag: 0.2, vel: 0.1, alc: 0.5, suerte: 1, velLag: 0.1 } },
+  mediaLuna: { nombre: "MEDIA LUNA", lema: "LÁGRIMAS Y SUERTE", calidad: 2, pools: ["tesoro", "jefe"], st: { lag: 0.5, suerte: 1 } },
+  hongoGigante: { nombre: "HONGO GIGANTE", lema: "¡TODO ARRIBA!", calidad: 4, pools: ["tesoro", "secreta"], tags: ["hongo"], st: { dano: 0.3, alc: 2.5, vel: 0.3 }, f: ["x15"], alTomar: (j) => { sumarContenedor(j, 1); j.vida = j.cont; } },
+  hongoAzul: { nombre: "HONGO AZUL", lema: "VIDA Y LÁGRIMAS", calidad: 2, pools: ["tesoro", "secreta"], tags: ["hongo"], st: { lag: 0.5, velLag: -0.16 }, alTomar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
+  hongoChico: { nombre: "HONGUITO", lema: "CHIQUITO Y VELOZ", calidad: 1, pools: ["tesoro", "secreta"], tags: ["hongo"], st: { vel: 0.3, alc: -0.5, tam: 0.85 } },
+  hongoRaro: { nombre: "HONGO RARO", lema: "LÁGRIMAS ARRIBA, DAÑO ABAJO", calidad: 1, pools: ["tesoro", "secreta"], tags: ["hongo"], st: { mult: 0.9, lag: 0.8, vel: 0.2 } },
+  unaVidaMas: { nombre: "HONGO DE LA VIDA", lema: "UNA VIDA MÁS", calidad: 3, pools: ["tesoro", "secreta"], tags: ["hongo"], alTomar: (j) => { j.vidasExtra++; } },
+  hormonas: { nombre: "HORMONAS", lema: "DAÑO Y VELOCIDAD", calidad: 2, pools: ["tesoro", "jefe"], tags: ["jeringa"], st: { dano: 1, vel: 0.2 } },
+  bolaVeloz: { nombre: "BOLA VELOZ", lema: "VELOCIDAD ARRIBA", calidad: 1, pools: ["tesoro", "jefe"], tags: ["jeringa"], st: { vel: 0.3, velLag: 0.2 } },
+  cabezaGrillo: { nombre: "CABEZA DE GRILLO", lema: "DAÑO POR UNO Y MEDIO", calidad: 4, pools: ["tesoro"], st: { dano: 0.5 }, f: ["x15"] },
+  pactoSangre: { nombre: "PACTO DE SANGRE", lema: "DAÑO POR UNO Y MEDIO", calidad: 4, pools: ["pacto"], tags: ["demonio"], st: { mult: 1.5 }, f: ["sangre"] },
+  cuerno: { nombre: "CUERNO", lema: "DAÑO MUCHO ARRIBA", calidad: 3, pools: ["pacto"], tags: ["demonio"], st: { dano: 2 } },
+  pentagrama: { nombre: "PENTAGRAMA", lema: "DAÑO ARRIBA", calidad: 3, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 1 }, f: ["pentagrama"] },
+  marca: { nombre: "LA MARCA", lema: "DAÑO Y VELOCIDAD", calidad: 2, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 1, vel: 0.2 }, alTomar: (j) => darEsporas(j, 2) },
+  elPacto: { nombre: "EL PACTO", lema: "DAÑO Y LÁGRIMAS", calidad: 3, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 0.5, lag: 0.7 }, alTomar: (j) => darEsporas(j, 4) },
+  sangreMartir: { nombre: "SANGRE DEL MÁRTIR", lema: "DAÑO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], st: { dano: 1 } },
+  aureola: { nombre: "LA AUREOLA", lema: "TODO ARRIBA", calidad: 3, pools: ["tesoro", "secreta"], tags: ["angel"], st: { dano: 0.3, lag: 0.2, vel: 0.3, alc: 0.25 }, alTomar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
+  rosario: { nombre: "ROSARIO", lema: "FE Y LÁGRIMAS", calidad: 2, pools: ["tesoro", "tienda"], tags: ["angel"], st: { lag: 0.5 }, alTomar: (j) => darEsporas(j, 6) },
+  corazonSagrado: { nombre: "CORAZÓN SAGRADO", lema: "LÁGRIMAS BENDITAS QUE BUSCAN", calidad: 4, pools: ["secreta", "cofre"], tags: ["angel"], st: { plano: 1, lag: -0.4, velLag: -0.25 }, f: ["x23", "buscadora"], alTomar: (j) => { sumarContenedor(j, 1); j.vida = j.cont; } },
+  // ── las armas (la de más prioridad manda) ──
+  rayo: { nombre: "LLANTO DE AZUFRE", lema: "¡RAYO DE SANGRE!", calidad: 4, pools: ["pacto"], tags: ["demonio"], f: ["rayo"] },
+  laser: { nombre: "OJO MECÁNICO", lema: "LÁGRIMAS LÁSER", calidad: 3, pools: ["tesoro", "tienda"], f: ["laser"] },
+  anillo: { nombre: "ARO DE LUZ", lema: "ANILLOS LÁSER QUE SE CARGAN", calidad: 3, pools: ["tesoro"], f: ["anillo"] },
+  feto: { nombre: "EMBRIÓN DE PÓLVORA", lema: "¡LLORÁS BOMBAS!", calidad: 3, pools: ["tesoro", "pacto"], f: ["feto"] },
+  epico: { nombre: "FETO DEL CIELO", lema: "BOMBARDEO A DEMANDA", calidad: 4, pools: ["secreta"], f: ["epico"] },
+  ludovico: { nombre: "LÁGRIMA MANSA", lema: "UNA LÁGRIMA QUE OBEDECE", calidad: 2, pools: ["tesoro"], f: ["ludovico"] },
+  cuchillo: { nombre: "CUCHILLO DE LA ABUELA", lema: "FILOSO Y FIEL", calidad: 4, pools: ["pacto"], tags: ["madre"], f: ["cuchillo"] },
+  // ── lo que cambia las lágrimas ──
+  tercerOjo: { nombre: "TERCER OJO", lema: "TRES LÁGRIMAS", calidad: 2, pools: ["tesoro"], f: ["triple"] },
+  cuadruple: { nombre: "ARAÑA MUTANTE", lema: "CUATRO LÁGRIMAS", calidad: 3, pools: ["tesoro"], tags: ["arana"], f: ["cuadruple"] },
+  veinte: { nombre: "LENTES BIFOCALES", lema: "LLANTO DOBLE", calidad: 3, pools: ["tesoro"], f: ["veinte"] },
+  polifemo: { nombre: "OJO DE CÍCLOPE", lema: "UNA LÁGRIMA ENORME", calidad: 3, pools: ["tesoro"], f: ["polifemo"] },
+  soja: { nombre: "LECHE DE SOJA", lema: "LLANTO SIN FIN", calidad: 2, pools: ["tesoro"], f: ["soja"] },
+  almendra: { nombre: "LECHE DE ALMENDRA", lema: "LLANTO SIN FIN, CON GUSANOS", calidad: 2, pools: ["tesoro", "secreta"], f: ["almendra"] },
+  choco: { nombre: "LECHE CHOCOLATADA", lema: "LÁGRIMAS QUE SE CARGAN", calidad: 3, pools: ["tesoro"], f: ["choco"] },
+  pulmon: { nombre: "PULMÓN DE BABOSA", lema: "RÁFAGA CARGADA", calidad: 2, pools: ["tesoro"], f: ["pulmon"] },
+  ipecac: { nombre: "JARABE AMARGO", lema: "LÁGRIMAS QUE EXPLOTAN", calidad: 2, pools: ["tesoro"], tags: ["podrido"], f: ["ipecac"] },
+  hemo: { nombre: "COÁGULO", lema: "REVIENTA EN PEDAZOS", calidad: 3, pools: ["tesoro", "pacto"], f: ["hemo"] },
+  proptosis: { nombre: "OJOS SALTONES", lema: "DE CERCA DUELE MÁS", calidad: 3, pools: ["tesoro"], st: { plano: 0.5 }, f: ["proptosis"] },
+  carbon: { nombre: "TROZO DE CARBÓN", lema: "DE LEJOS DUELE MÁS", calidad: 2, pools: ["tesoro", "secreta"], f: ["carbon"] },
+  ojoMuerto: { nombre: "OJO MUERTO", lema: "CADA ACIERTO SUMA", calidad: 2, pools: ["tesoro"], f: ["ojoMuerto"] },
+  ojoCazador: { nombre: "OJO CAZADOR", lema: "LÁGRIMAS QUE BUSCAN", calidad: 3, pools: ["tesoro", "pacto"], f: ["buscadora"] },
+  velo: { nombre: "VELO", lema: "LÁGRIMAS FANTASMA", calidad: 2, pools: ["tesoro", "secreta"], f: ["espectral"] },
+  aguja: { nombre: "FLECHA DE AMOR", lema: "ATRAVIESA TODO", calidad: 3, pools: ["tesoro", "secreta"], f: ["atraviesa"] },
+  gomaElastica: { nombre: "GOMA ELÁSTICA", lema: "LÁGRIMAS QUE REBOTAN", calidad: 2, pools: ["tesoro"], st: { alc: 0.5 }, f: ["rebote"] },
+  planeta: { nombre: "PLANETITA", lema: "LÁGRIMAS EN ÓRBITA", calidad: 1, pools: ["tesoro"], st: { alc: 6.5 }, f: ["orbita"] },
+  espejo: { nombre: "MI REFLEJO", lema: "LÁGRIMAS QUE VUELVEN", calidad: 2, pools: ["tesoro"], st: { alc: 0.75, alcMult: 2, plano: 1.5, suerte: -1, velLagMult: 1.6 }, f: ["boomerang"] },
+  bucle: { nombre: "BUCLE", lema: "LÁGRIMAS QUE DAN LA VUELTA", calidad: 2, pools: ["tesoro", "secreta"], st: { alc: 3 }, f: ["continuo"] },
+  antigrav: { nombre: "ANTIGRAVEDAD", lema: "LÁGRIMAS QUE ESPERAN", calidad: 2, pools: ["tesoro"], st: { fr: 1 }, f: ["antigrav"] },
+  grillo: { nombre: "CUERPO DE GRILLO", lema: "LÁGRIMAS QUE SE PARTEN", calidad: 3, pools: ["tesoro"], st: { fr: 0.5, tam: 1.1 }, f: ["grillo"] },
+  parasito: { nombre: "PARÁSITO", lema: "LÁGRIMAS QUE SE DIVIDEN", calidad: 2, pools: ["tesoro"], f: ["parasito"] },
+  fractura: { nombre: "FRACTURA EXPUESTA", lema: "LÁGRIMAS DE HUESO", calidad: 2, pools: ["tesoro"], st: { alc: 1.5 }, f: ["fractura"] },
+  pegajosa: { nombre: "ESPORA PEGAJOSA", lema: "SE PEGA Y EXPLOTA", calidad: 2, pools: ["tesoro"], f: ["pegajosa"] },
+  raizElectrica: { nombre: "RAÍZ ELÉCTRICA", lema: "LÁGRIMAS CON CHISPA", calidad: 3, pools: ["tesoro"], f: ["jacob"] },
+  luzSanta: { nombre: "LUZ SANTA", lema: "RAYOS DEL CIELO", calidad: 3, pools: ["tesoro", "secreta"], tags: ["angel"], f: ["santa"] },
+  amorDuro: { nombre: "AMOR DURO", lema: "LÁGRIMAS CON DIENTES", calidad: 3, pools: ["tesoro"], f: ["diente"] },
+  eutanasia: { nombre: "EUTANASIA", lema: "AGUJAS MORTALES", calidad: 3, pools: ["pacto", "tesoro"], tags: ["jeringa"], f: ["aguja"] },
+  esporasToxicas: { nombre: "ESPORAS TÓXICAS", lema: "LÁGRIMAS VENENOSAS", calidad: 2, pools: ["tesoro"], f: ["veneno"] },
+  picadura: { nombre: "PICADURA DE ARAÑA", lema: "LÁGRIMAS QUE FRENAN", calidad: 1, pools: ["tesoro"], tags: ["arana"], f: ["lento"] },
+  escarcha: { nombre: "ESCARCHA", lema: "LÁGRIMAS DE HIELO", calidad: 3, pools: ["tesoro", "secreta"], f: ["urano", "piedra"] },
+  chispa: { nombre: "CHISPA", lema: "LÁGRIMAS QUE QUEMAN", calidad: 2, pools: ["tesoro"], f: ["fuego", "estalla"] },
+  materiaOscura: { nombre: "MATERIA OSCURA", lema: "DAÑO Y MIEDO", calidad: 2, pools: ["pacto", "tesoro"], st: { dano: 1 }, f: ["miedo"] },
+  lentesAbuela: { nombre: "LENTES DE LA ABUELA", lema: "MIRADA DE PIEDRA", calidad: 1, pools: ["tesoro"], tags: ["madre"], st: { alc: 1.5 }, f: ["piedra"] },
+  perfumeAbuela: { nombre: "PERFUME DE LA ABUELA", lema: "LÁGRIMAS Y MIEDO", calidad: 1, pools: ["tesoro"], tags: ["madre"], st: { lag: 0.5 }, f: ["miedo"] },
+  labialAbuela: { nombre: "LABIAL DE LA ABUELA", lema: "ALCANCE Y AMOR", calidad: 1, pools: ["tesoro"], tags: ["madre"], st: { alc: 2 }, alTomar: (j) => soltarPremio(j.x, j.y + 12, "corazon") },
+  tacosAbuela: { nombre: "TACOS DE LA ABUELA", lema: "PISOTONES", calidad: 1, pools: ["tesoro"], tags: ["madre"], f: ["tacos"] },
+  liquido: { nombre: "LÍQUIDO MISTERIOSO", lema: "LÁGRIMAS QUE DEJAN BABA", calidad: 2, pools: ["tesoro"], f: ["liquido"] },
+  cabezaTendero: { nombre: "CABEZA DEL TENDERO", lema: "LÁGRIMAS DE PLATA", calidad: 1, pools: ["tienda", "tesoro"], f: ["tendero"] },
+  atractor: { nombre: "ATRACTOR EXTRAÑO", lema: "TODO VA A TUS LÁGRIMAS", calidad: 1, pools: ["tesoro"], f: ["atractor"] },
+  piscis: { nombre: "PISCIS", lema: "LÁGRIMAS QUE EMPUJAN", calidad: 1, pools: ["tesoro"], st: { fr: 0.5, tam: 1.12 }, f: ["piscis"] },
+  ojoBelial: { nombre: "OJO DE BELIAL", lema: "ATRAVIESA Y SE ENOJA", calidad: 3, pools: ["pacto", "tesoro"], st: { alc: 1.5 }, f: ["belial"] },
+  cabezaDivina: { nombre: "CABEZA DIVINA", lema: "LÁGRIMAS DIVINAS", calidad: 4, pools: ["secreta", "cofre"], st: { plano: 0.5, lag: -0.3, velLag: -0.3 }, f: ["divino"] },
+  virus: { nombre: "EL VIRUS", lema: "TOCAR ES ENVENENAR", calidad: 2, pools: ["pacto", "tesoro"], tags: ["jeringa"], st: { vel: 0.2 }, f: ["virus"] },
+  // ── vuelo, bombas, llaves ──
+  alasPolilla: { nombre: "ALAS DE POLILLA", lema: "¡A VOLAR!", calidad: 3, pools: ["tesoro", "pacto"], st: { vel: 0.1 }, f: ["vuela"] },
+  palomaMuerta: { nombre: "PALOMA MUERTA", lema: "VUELO Y LÁGRIMAS FANTASMA", calidad: 3, pools: ["secreta", "cofre"], tags: ["angel"], f: ["vuela", "espectral"] },
+  espirituNoche: { nombre: "ESPÍRITU NOCTURNO", lema: "VUELO Y LÁGRIMAS FANTASMA", calidad: 3, pools: ["pacto"], tags: ["demonio"], f: ["vuela", "espectral"] },
+  iman: { nombre: "IMÁN", lema: "TODO VIENE A VOS", calidad: 1, pools: ["tesoro", "tienda"], f: ["iman"] },
+  brujula: { nombre: "BRÚJULA", lema: "EL MAPA SE REVELA", calidad: 1, pools: ["tesoro", "tienda"], alTomar: (j) => { j.mapa = true; revelarMapa(); } },
+  casco: { nombre: "CASCO DE ESPORAS", lema: "DOS CORAZONES DE ESPORA", calidad: 1, pools: ["tesoro", "jefe", "tienda"], alTomar: (j) => darEsporas(j, 4) },
+  bombaGorda: { nombre: "BOMBA GORDA", lema: "CINCO BOMBAS GRANDES", calidad: 2, pools: ["tesoro", "tienda"], f: ["bombaGorda"], alTomar: (j) => { j.bombas = Math.min(99, j.bombas + 5); } },
+  maldicionPodrida: { nombre: "MALDICIÓN PODRIDA", lema: "BOMBAS VENENOSAS", calidad: 2, pools: ["tesoro"], tags: ["podrido"], f: ["bombaPodrida"], alTomar: (j) => { j.bombas = Math.min(99, j.bombas + 5); } },
+  bolsaMonedas: { nombre: "BOLSA DE MONEDAS", lema: "VEINTICINCO MONEDAS", calidad: 1, pools: ["tesoro", "secreta"], alTomar: (j) => { j.monedas = Math.min(99, j.monedas + 25); } },
+  llavero: { nombre: "LLAVERO", lema: "CUATRO LLAVES", calidad: 1, pools: ["tesoro", "tienda"], alTomar: (j) => { j.llaves = Math.min(99, j.llaves + 4); } },
+  colaGato: { nombre: "COLA DE GATO", lema: "MÁS COFRES", calidad: 2, pools: ["tesoro", "pacto"], tags: ["gato"], f: ["colaGato"] },
+  gatoMuerto: { nombre: "GATO MUERTO", lema: "NUEVE VIDAS", calidad: 3, pools: ["pacto", "secreta"], tags: ["gato"], alTomar: (j) => { j.vidasExtra += 9; j.cont = 2; j.vida = 2; } },
+  pajaroMuerto: { nombre: "PÁJARO MUERTO", lema: "VENGANZA ALADA", calidad: 1, pools: ["tesoro"], f: ["pajaro"] },
+  bebeArana: { nombre: "BEBÉ ARAÑA", lema: "LA VENGANZA DE LAS ARAÑAS", calidad: 2, pools: ["tesoro"], tags: ["arana"], f: ["aranaHerido"] },
+  // ── los familiares ──
+  moscaAmiga: { nombre: "MOSCA AMIGA", lema: "TE CUIDA LAS ESPALDAS", calidad: 2, pools: ["tesoro", "tienda"], tags: ["mosca"], fam: "mosca" },
+  admiradora: { nombre: "ADMIRADORA", lema: "UNA MOSCA QUE MUERDE", calidad: 2, pools: ["tesoro"], tags: ["mosca"], fam: "admiradora" },
+  coronaMoscas: { nombre: "CORONA DE MOSCAS", lema: "ESCUDO ZUMBADOR", calidad: 2, pools: ["tesoro"], tags: ["mosca"], fam: "corona" },
+  angelGuardian: { nombre: "ÁNGEL GUARDIÁN", lema: "TE PROTEGE", calidad: 3, pools: ["tesoro", "secreta"], tags: ["angel"], fam: "angel" },
+  bolaPelos: { nombre: "BOLA DE PELOS", lema: "GIRA Y PEGA", calidad: 2, pools: ["tesoro"], tags: ["gato"], fam: "pelos" },
+  hermanito: { nombre: "HERMANITO", lema: "UN AMIGUITO QUE LLORA", calidad: 2, pools: ["tesoro"], tags: ["bebe"], fam: "hermanito" },
+  hermanita: { nombre: "HERMANITA", lema: "LLORA MÁS FUERTE", calidad: 2, pools: ["tesoro"], tags: ["bebe"], fam: "hermanita" },
+  bebeDemonio: { nombre: "BEBÉ DEMONIO", lema: "DISPARA SOLO", calidad: 2, pools: ["pacto", "tesoro"], tags: ["bebe"], fam: "demonio" },
+  roboBebe: { nombre: "ROBO-BEBÉ", lema: "UN AMIGUITO CON LÁSER", calidad: 2, pools: ["tesoro"], tags: ["bebe"], fam: "robo" },
+  incubo: { nombre: "ÍNCUBO", lema: "COPIA TUS LÁGRIMAS", calidad: 4, pools: ["pacto"], tags: ["bebe"], fam: "incubo" },
+  gordito: { nombre: "GORDITO", lema: "SE LANZA DE PANZA", calidad: 2, pools: ["tesoro"], tags: ["bebe"], fam: "gordito" },
+  cerebroPodrido: { nombre: "CEREBRO PODRIDO", lema: "IDEAS EXPLOSIVAS", calidad: 1, pools: ["tesoro"], tags: ["podrido"], fam: "cerebro" },
+  sanguijuela: { nombre: "SANGUIJUELA", lema: "CHUPA Y CURA", calidad: 2, pools: ["tesoro", "pacto"], fam: "sanguijuela" },
+  bolsaCentavos: { nombre: "BOLSA DE CENTAVOS", lema: "MONEDAS DE REGALO", calidad: 1, pools: ["tesoro", "tienda"], fam: "bolsa" },
+  // ── los activos: se cargan limpiando salas ──
+  libroSetas: { nombre: "LIBRO DE SETAS", lema: "PODER PARA LA SALA", calidad: 2, pools: ["tesoro", "pacto"], tags: ["demonio", "libro"], activo: 3, usar: (j) => { j.danoSala += 2; if (j.objetos.includes("sangreMartir")) j.salaF.push("x15"); SFX.pacto(); J.destello = 4; } },
   dadoViejo: { nombre: "DADO VIEJO", lema: "REHACE EL DESTINO", calidad: 3, pools: ["tesoro", "tienda"], activo: 6, usar: () => rehacerPedestales() },
-  frascoMosquines: { nombre: "FRASCO DE MOSQUINES", lema: "MOSCAS DE TU LADO", calidad: 2, pools: ["tesoro", "tienda"], activo: 3, usar: (j) => { for (let i = 0; i < 4; i++) J.familiares.push({ tipo: "moscaAzul", x: j.x + V.ent(-6, 6), y: j.y + V.ent(-6, 6), t: 900, a: V.f() * TAU }); SFX.zumbido(); } },
+  frascoMosquines: { nombre: "FRASCO DE MOSQUINES", lema: "MOSCAS DE TU LADO", calidad: 2, pools: ["tesoro", "tienda"], tags: ["mosca"], activo: 3, usar: (j) => { for (let i = 0; i < 4; i++) J.familiares.push(moscaAzul(j.x, j.y)); SFX.zumbido(); } },
   linterna: { nombre: "LINTERNA", lema: "UNA LUZ QUE QUEMA", calidad: 2, pools: ["tesoro", "tienda"], activo: 4, usar: () => { J.destello = 8; temblar(6); for (const e of J.enemigos.slice()) danarEnemigo(e, 40); } },
-  mechaEterna: { nombre: "MECHA ETERNA", lema: "UNA BOMBA GRATIS", calidad: 1, pools: ["tesoro", "tienda"], activo: 1, usar: (j) => { J.bombas.push({ x: j.x, y: j.y + 2, t: 90, gorda: j.bombaGorda, vx: 0, vy: 0, r: 5 }); SFX.mecha(); } },
+  mechaEterna: { nombre: "MECHA ETERNA", lema: "UNA BOMBA GRATIS", calidad: 1, pools: ["tesoro", "tienda"], activo: 1, usar: (j) => { J.bombas.push(nuevaBomba(j, j.x, j.y + 2, 0, 0, 90)); SFX.mecha(); } },
   gotaRocio: { nombre: "GOTA DE ROCÍO", lema: "CURA UN CORAZÓN", calidad: 1, pools: ["tesoro", "tienda"], activo: 4, usar: (j) => { curar(j, 2); SFX.corazon(); } },
+  necronomicon: { nombre: "NECRONOMICÓN", lema: "LA MUERTE PARA TODOS", calidad: 3, pools: ["tesoro", "pacto"], tags: ["libro"], activo: 3, usar: () => { J.destello = 8; temblar(10); for (const e of J.enemigos.slice()) danarEnemigo(e, 40); } },
+  libroRevelacion: { nombre: "LIBRO DE LA REVELACIÓN", lema: "PROTECCIÓN REVELADA", calidad: 2, pools: ["tesoro"], tags: ["libro"], activo: 4, usar: (j) => { darEsporas(j, 2); SFX.corazon(); } },
+  libroSombras: { nombre: "LIBRO DE LAS SOMBRAS", lema: "ESCUDO TEMPORAL", calidad: 3, pools: ["tesoro"], tags: ["libro"], activo: 3, usar: (j) => { j.escudo = 600; } },
+  libroSanto: { nombre: "LIBRO SANTO", lema: "VUELO POR UN RATO", calidad: 2, pools: ["tesoro", "tienda"], tags: ["angel", "libro"], activo: 4, usar: (j) => { j.salaF.push("vuela"); } },
+  telepatia: { nombre: "TELEPATÍA PARA TONTOS", lema: "LÁGRIMAS QUE PIENSAN", calidad: 1, pools: ["tesoro", "tienda"], tags: ["libro"], activo: 2, usar: (j) => { j.salaF.push("buscadora"); } },
+  anarquista: { nombre: "MANUAL DEL ANARQUISTA", lema: "BOMBAS PARA TODOS", calidad: 1, pools: ["tesoro"], tags: ["libro"], activo: 3, usar: (j) => { for (let i = 0; i < 6; i++) { const [x, y] = lugarLibreCerca(cx(A.ent(1, 11)), cy(A.ent(0, 6))); J.bombas.push(nuevaBomba(j, x, y, 0, 0, 60 + i * 6)); } SFX.mecha(); } },
+  shoop: { nombre: "¡AAAAAH!", lema: "GRITO DE AZUFRE", calidad: 2, pools: ["tesoro", "pacto"], activo: 2, usar: (j) => { rayo(j, j, Math.atan2(DIRS[j.mirar][1], DIRS[j.mirar][0]), 0, 2, 40); SFX.rayo(); } },
+  remoto: { nombre: "CONTROL REMOTO", lema: "UN MISIL A PEDIDO", calidad: 2, pools: ["tesoro"], activo: 2, usar: (j) => { const e = J.enemigos.filter(blanco_).sort((a, b) => dist(a.x, a.y, j.x, j.y) - dist(b.x, b.y, j.x, j.y))[0]; J.misiles.push({ x: e ? e.x : j.x + DIRS[j.mirar][0] * 40, y: e ? e.y : j.y + DIRS[j.mirar][1] * 40, t: -12, dur: 24, dano: danoDe(j) * 20 }); } },
+  kamikaze: { nombre: "¡KAMIKAZE!", lema: "BOOM (A VOS NO)", calidad: 1, pools: ["tesoro"], activo: 1, usar: (j) => explotar(j.x, j.y, true, false, { danoJug: 0, dano: 40 }) },
+  relojArena: { nombre: "RELOJ DE ARENA", lema: "EL TIEMPO SE FRENA", calidad: 1, pools: ["tesoro", "tienda"], activo: 2, usar: () => { for (const e of J.enemigos) e.frio = 480; SFX.secreto(); } },
+  unicornio: { nombre: "UNICORNIO CHIQUITO", lema: "¡INVENCIBLE!", calidad: 2, pools: ["tesoro"], activo: 6, usar: (j) => { j.escudo = 360; j.salaF.push("tacos"); } },
+  tammy: { nombre: "CABEZA DE TAMMY", lema: "LLANTO EN REDONDO", calidad: 2, pools: ["tesoro"], activo: 1, usar: (j) => { if (j.arma === "rayo") { for (let k = 0; k < 8; k++) rayo(j, j, k * TAU / 8, 0, 1, 40); SFX.rayo(); } else { for (let k = 0; k < 10; k++) lagrima(j, j.x, j.y - 6, k * TAU / 10, 1, { danoFijo: danoDe(j) + 25 }); SFX.lagrima(); } } },
+  cabezaGato: { nombre: "CABEZA DE GATO", lema: "MOSCAS AMIGAS", calidad: 2, pools: ["tesoro", "pacto"], tags: ["gato"], activo: 1, usar: (j) => { for (let i = 0; i < A.ent(2, 4); i++) J.familiares.push(moscaAzul(j.x, j.y)); SFX.zumbido(); } },
+  patitaGato: { nombre: "PATITA DE GATO", lema: "CARNE POR ALMA", calidad: 2, pools: ["tesoro", "pacto"], tags: ["gato"], activo: 1, usar: (j) => { if (j.cont >= 2) { sumarContenedor(j, -1); darEsporas(j, 6); SFX.pacto(); } else SFX.malo(); } },
+  cabezaPodrida: { nombre: "CABEZA PODRIDA", lema: "TIRALA", calidad: 1, pools: ["tesoro"], tags: ["podrido"], activo: 3, usar: (j) => { const [dx, dy] = DIRS[j.mirar]; J.bombas.push(Object.assign(nuevaBomba(j, j.x, j.y, dx * 5, dy * 5, 70, { contacto: true, danoJug: 1 }), { veneno: true, feto: true })); } },
+  cajaAranas: { nombre: "CAJA DE ARAÑAS", lema: "ARAÑITAS AMIGAS", calidad: 1, pools: ["tesoro"], tags: ["arana"], activo: 3, usar: (j) => { for (let i = 0; i < A.ent(1, 4); i++) J.familiares.push(moscaAzul(j.x, j.y, "arana")); } },
 };
 
+/** Las baratijas: se llevan de a una (la nueva deja la vieja en el piso). */
+const BARATIJAS = {
+  gusanoOnda: { nombre: "GUSANO ONDULADO", lema: "LÁGRIMAS EN ONDA", st: { lag: 0.4 }, f: ["gusanoOnda"] },
+  gusanoAnillo: { nombre: "GUSANO ANILLADO", lema: "LÁGRIMAS EN ESPIRAL", st: { lag: 0.4 }, f: ["gusanoAnillo"] },
+  gusanoGancho: { nombre: "GUSANO GANCHO", lema: "LÁGRIMAS EN ZIGZAG", st: { lag: 0.4, alc: 1.5 }, f: ["gusanoGancho"] },
+  gusanoPulso: { nombre: "GUSANO PULSO", lema: "LÁGRIMAS QUE LATEN", f: ["gusanoPulso"] },
+  gusanoChato: { nombre: "GUSANO CHATO", lema: "LÁGRIMAS ANCHAS", f: ["gusanoChato"] },
+  ojitoRosa: { nombre: "OJITO ROSA", lema: "LÁGRIMAS VENENOSAS", f: ["veneno"] },
+  clip: { nombre: "CLIP", lema: "ABRE COFRES DORADOS", f: ["clip"] },
+  dedoSuerte: { nombre: "DEDO DE LA SUERTE", lema: "MÁS PREMIOS", st: { suerte: 1 }, f: ["dedoSuerte"] },
+  tenedor: { nombre: "TENEDOR", lema: "COMÉ ALGO", f: ["tenedor"] },
+  garrapata: { nombre: "GARRAPATA", lema: "LOS JEFES, MÁS DÉBILES", f: ["garrapata"] },
+  paginaPerdida: { nombre: "PÁGINA PERDIDA", lema: "EL DOLOR SE CONTAGIA", f: ["pagina"] },
+  monedaTragada: { nombre: "MONEDA TRAGADA", lema: "DOLOR QUE PAGA", f: ["monedaTragada"] },
+};
+
+/** Las transformaciones: tres objetos con la misma etiqueta y Shumio cambia (como en el original). */
+const TRANSFORMACIONES = {
+  hongo: { nombre: "¡HONGAZO!", lema: "Más hongo que nunca", alTransformar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
+  angel: { nombre: "¡SERAFÍN!", lema: "Alas y fe", f: ["vuela"], alTransformar: (j) => darEsporas(j, 6) },
+  demonio: { nombre: "¡LEVIATÁN!", lema: "Alas oscuras", f: ["vuela"], alTransformar: (j) => darEsporas(j, 4) },
+  gato: { nombre: "¡MISHI!", lema: "Nueve vidas de moscas", f: ["vuela", "guppy"] },
+  mosca: { nombre: "¡BELCEBÚ!", lema: "El señor de las moscas", f: ["vuela", "belcebu"] },
+  podrido: { nombre: "¡PODRIDO!", lema: "Dejás baba venenosa", f: ["bob", "inmuneVeneno"] },
+  jeringa: { nombre: "¡PINCHADO!", lema: "Daño y velocidad", st: { dano: 2, vel: 0.15 }, alTransformar: (j) => soltarPremio(j.x, j.y + 10, "capsula") },
+  madre: { nombre: "¿SÍ, ABUELA?", lema: "Un cuchillo te sigue", f: ["cuchilloAtras"] },
+  bebe: { nombre: "¡SIAMÉS!", lema: "Lágrimas en diagonal", st: { dano: -0.3, lag: -0.3 }, f: ["siames"] },
+  libro: { nombre: "¡RATÓN DE BIBLIOTECA!", lema: "A veces, doble", f: ["ratonLibro"] },
+  arana: { nombre: "¡BEBÉ ARAÑA!", lema: "Una araña amiga", f: ["aranaFam"] },
+};
+function revisarTransformaciones(j) {
+  const cuenta = {};
+  for (const id of j.vistos) for (const t of (OBJETOS[id] && OBJETOS[id].tags) || []) cuenta[t] = (cuenta[t] || 0) + 1;
+  for (const t in TRANSFORMACIONES) {
+    if ((cuenta[t] || 0) < 3 || j.transf.includes(t)) continue;
+    j.transf.push(t);
+    const tr = TRANSFORMACIONES[t];
+    if (tr.alTransformar) tr.alTransformar(j);
+    J.pendientes.push(() => { rotulo(tr.nombre, tr.lema); SFX.secreto(); J.destello = 6; });
+  }
+}
+
+// ── las tandas: sin repetirse en la partida; la calidad alta sale menos ──
+const PESO_CALIDAD = [1, 1, 1, 0.65, 0.3];
 function armarTandas() {
   J.tandas = {};
   for (const [id, o] of Object.entries(OBJETOS)) for (const p of o.pools) (J.tandas[p] ||= []).push(id);
-  J.tandas.secreta = Object.keys(OBJETOS).filter((id) => !OBJETOS[id].pools.includes("pacto") || id === "hongoGigante");
+  J.tandas.cofre = [...new Set([...(J.tandas.cofre || []), ...J.tandas.tesoro.filter((id) => OBJETOS[id].calidad <= 2)])];
+  J.tandas.rojo = [...new Set([...(J.tandas.rojo || []), ...J.tandas.pacto])];
+  J.tandas.secreta = [...new Set([...(J.tandas.secreta || []), ...Object.keys(OBJETOS).filter((id) => OBJETOS[id].calidad >= 2 && !OBJETOS[id].pools.includes("pacto"))])];
   J.tomados = new Set();
 }
 function sacarObjeto(pool) {
-  const lista = (J.tandas[pool] || []).filter((id) => !J.tomados.has(id) && !J.enPedestal.has(id));
-  let id = lista.length ? A.uno(lista) : null;
-  if (!id) { const resto = Object.keys(OBJETOS).filter((x) => !J.tomados.has(x) && !J.enPedestal.has(x)); id = resto.length ? A.uno(resto) : "caparazon"; }
+  const libre = (id) => !J.tomados.has(id) && !J.enPedestal.has(id);
+  let lista = (J.tandas[pool] || []).filter(libre);
+  if (!lista.length) lista = Object.keys(OBJETOS).filter(libre);
+  const id = lista.length ? A.pesos(lista.map((x) => [x, PESO_CALIDAD[OBJETOS[x].calidad] ?? 1])) : "caparazon";
   J.enPedestal.add(id);
   return id;
 }
+function sacarBaratija() {
+  const ids = Object.keys(BARATIJAS).filter((id) => id !== (J.jug && J.jug.baratija) && !(J.baratijasVistas || new Set()).has(id));
+  const id = ids.length ? A.uno(ids) : A.uno(Object.keys(BARATIJAS));
+  (J.baratijasVistas ||= new Set()).add(id);
+  return id;
+}
 function revelarMapa() { if (!J.piso) return; for (const s of J.piso.salas.values()) if (s.tipo !== "secreta") s.vista = true; }
+
+function tomarObjeto(c) {
+  const j = J.jug;
+  if (!c.id || c.tocando) return false;
+  c.tocando = true;
+  const def = OBJETOS[c.id];
+  if (c.pacto) {
+    // el pacto: 1 o 2 contenedores; si no tenés, 3 corazones de espora (como en el original)
+    const costo = c.pacto * 2;
+    if (j.cont >= costo && vidaTotal(j) - costo > 0) sumarContenedor(j, -c.pacto);
+    else if (j.cont === 0 && j.esporas > 6) j.esporas -= 6;
+    else return false;
+    SFX.pacto();
+  } else if (c.precio) {
+    if (j.monedas < c.precio) return false;
+    j.monedas -= c.precio; SFX.moneda();
+  }
+  const id = c.id;
+  J.tomados.add(id);
+  const antes = fotoCuentas(j);
+  if (def.activo) {
+    if (j.activo) { c.id = j.activo.id; c.tocando = true; c.precio = 0; c.pacto = 0; } else c.id = null;
+    j.activo = { id, carga: def.activo, max: def.activo };
+  } else {
+    c.id = null;
+    j.objetos.push(id);
+    if (def.alTomar) def.alTomar(j);
+  }
+  j.vistos.add(id);
+  recalcular(j);
+  revisarTransformaciones(j);
+  recalcular(j);
+  anotarCambios(antes);
+  if (def.fam || j.f.cuchilloAtras || j.f.aranaFam) armarFamiliares();
+  rotulo(def.nombre, def.lema);
+  SFX.objeto();
+  j.sostiene = iconoSpr(id); j.tSostiene = 50;
+  // en la tienda y en el pacto, lo comprado se va con pedestal y todo
+  return (c.precio || c.pacto) && !c.id ? true : false;
+}
+
+function rehacerPedestales() {
+  let alguno = false;
+  for (const c of J.sala.cosas) if (c.t === "objeto" && c.id) {
+    J.enPedestal.delete(c.id);
+    c.id = sacarObjeto(J.sala.tipo === "tienda" ? "tienda" : J.sala.tipo === "pacto" ? "pacto" : J.sala.tipo === "jefe" ? "jefe" : "tesoro");
+    humo(c.x, c.y - 16); alguno = true;
+  }
+  SFX[alguno ? "secreto" : "malo"]();
+}
+
+// ── las cápsulas: el color de cada efecto se sortea por partida ──
+const EFECTOS_CAPSULA = [
+  { n: "¡LÁGRIMAS ARRIBA!", f: (j) => { j.extra.lag += 0.35; }, bueno: true }, { n: "LÁGRIMAS ABAJO", f: (j) => { j.extra.lag -= 0.28; } },
+  { n: "¡VELOCIDAD ARRIBA!", f: (j) => { j.extra.vel += 0.15; }, bueno: true }, { n: "VELOCIDAD ABAJO", f: (j) => { j.extra.vel -= 0.1; } },
+  { n: "¡ALCANCE ARRIBA!", f: (j) => { j.extra.alc += 0.75; }, bueno: true }, { n: "ALCANCE ABAJO", f: (j) => { j.extra.alc -= 0.5; } },
+  { n: "¡SALUD TOTAL!", f: (j) => { j.vida = j.cont; }, bueno: true },
+  { n: "MAL VIAJE", f: (j) => { if (vidaTotal(j) <= 2) { j.vida = j.cont; J.capsulaBien = true; } else { j.inv = 0; herirJugador(j, 1, "UNA CÁPSULA"); } } },
+  { n: "¡SUERTE ARRIBA!", f: (j) => { j.extra.suerte += 1; }, bueno: true }, { n: "SUERTE ABAJO", f: (j) => { j.extra.suerte -= 1; } },
+  { n: "BOMBAS POR LLAVES", f: (j) => { [j.bombas, j.llaves] = [j.llaves, j.bombas]; }, bueno: true },
+  { n: "¡ESPORAS DE VIDA!", f: (j) => { darEsporas(j, 2); }, bueno: true },
+  { n: "¡DAÑO ARRIBA!", f: (j) => { j.extra.plano += 0.4; }, bueno: true },
+];
+function sortearCapsulas() { J.capsulas = A.mezclar(EFECTOS_CAPSULA.slice()).slice(0, COLORES_CAPSULA.length); J.capsulasVistas = new Set(); }
+function nombreCapsula(i) { return J.capsulasVistas.has(i) ? J.capsulas[i].n : "UNA CÁPSULA"; }
+function tomarCapsula(j) {
+  if (j.capsula == null) return;
+  const i = j.capsula, e = J.capsulas[i];
+  j.capsula = null; J.capsulasVistas.add(i); J.capsulaBien = false;
+  const antes = fotoCuentas(j);
+  e.f(j);
+  recalcular(j);
+  anotarCambios(antes);
+  rotulo(J.capsulaBien ? "¡SALUD TOTAL!" : e.n, "");
+  SFX[e.bueno || J.capsulaBien ? "capsula" : "malo"]();
+}
+
+// lo que cambió en las cuentas (el HUD lo muestra en verde o rojo al lado, como el original)
+function fotoCuentas(j) { return { vel: velDe(j), lag: lagrimasPorSeg(j), dano: danoDe(j), alc: j.alcance, tiro: j.velLag, suerte: j.suerte }; }
+function anotarCambios(antes) {
+  const d = fotoCuentas(J.jug);
+  J.cambios ||= {};
+  for (const k in d) if (Math.abs(d[k] - antes[k]) > 0.005) J.cambios[k] = { d: d[k] - antes[k], t: 200 };
+}
+
+function usarActivo(j) {
+  const a = j.activo;
+  if (!a || j.muerto) return;
+  if (a.carga < a.max) { SFX.clic(); return; }
+  a.carga = 0;
+  OBJETOS[a.id].usar(j);
+  recalcular(j);
+  SFX.activo();
+}
+function cargarActivo(n = 1) {
+  const a = J.jug.activo;
+  if (!a || a.carga >= a.max) return;
+  a.carga = Math.min(a.max, a.carga + n);
+  if (a.carga >= a.max) SFX.cargado();
+}
+
+// ══════════ 16b-recoger.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LO QUE SE RECOGE: corazones rojos y de espora, monedas de 1 y de 5, bombas, llaves, cápsulas
+// (el efecto de cada color se sortea por partida), baratijas, los pedestales y los cofres del
+// original con sus tablas (wiki, Repentance): el común (78 % premios, 10 % baratija, 10 %
+// cápsula…), el dorado (con llave, 20 % objeto), el de piedra (se abre con una explosión y da lo
+// del dorado), el de pinchos (lastima medio corazón al abrirlo) y el rojo (del pacto: un objeto
+// del diablo, arañas, bombas trampa, moscas azules, corazones de espora o cápsulas).
+// ─────────────────────────────────────────────────────────────────────────────
 
 // ── los recogibles ──
 function recogible(t, x, y, sub) {
   if (t === "corazon" && !sub) sub = A.pesos([["rojo", 6], ["medio", 3], ["espora", 1]]);
   if (t === "moneda" && !sub) sub = A.si(0.1) ? 5 : 1;
   if (t === "capsula" && sub == null) sub = A.ent(0, COLORES_CAPSULA.length - 1);
-  if (t === "cofre" && !sub) sub = A.si(J.piso && J.piso.n >= 2 ? 0.3 : 0.18) ? "dorado" : "normal";
+  if (t === "cofre" && !sub) { const n = J.piso ? J.piso.n : 1; sub = A.pesos([["normal", 62], ["dorado", n >= 2 ? 22 : 14], ["piedra", 7], ["pinchos", 7], ["rojo", n >= 2 ? 5 : 2]]); }
+  if (t === "baratija" && !sub) sub = sacarBaratija();
   return { t, sub, x, y, vx: 0, vy: 0, z: 0, vz: 0, r: 5, k: V.ent(0, 40) };
 }
 function pedestal(x, y, id) { return { t: "objeto", id, x, y, vx: 0, vy: 0, z: 0, vz: 0, r: 8, quieto: true, k: V.ent(0, 90) }; }
@@ -4120,7 +5287,7 @@ function pedestal(x, y, id) { return { t: "objeto", id, x, y, vx: 0, vy: 0, z: 0
 function soltarPremio(x, y, tipo) {
   let sub;
   if (tipo === "espora") { tipo = "corazon"; sub = "espora"; }
-  if (!tipo) tipo = A.pesos([["moneda", 45], ["corazon", 25], ["bomba", 12], ["llave", 12], ["capsula", 6]]);
+  if (!tipo) tipo = A.pesos([["moneda", 45], ["corazon", 25], ["bomba", 12], ["llave", 12], ["capsula", 6], ["baratija", 1]]);
   const c = recogible(tipo, x, y, sub);
   const a = V.f() * TAU; c.vx = Math.cos(a) * 1.4; c.vy = Math.sin(a) * 1.1; c.vz = 2.4; c.z = 2;
   J.sala.cosas.push(c);
@@ -4129,9 +5296,11 @@ function soltarPremio(x, y, tipo) {
 
 /** El premio de limpiar una sala (como en el original: la suerte ayuda). */
 function premioSala() {
-  const j = J.jug, n = A.f() + j.suerte * 0.03;
+  const j = J.jug, n = A.f() + j.suerte * 0.03 + (j.f.dedoSuerte ? 0.1 : 0);
+  if (j.f.tenedor && A.si(0.1 + j.suerte * 0.02)) { curar(j, 1); SFX.corazon(); }
+  if (J.familiares.some((m) => m.tipo === "bolsa") && (J.salasLimpias = (J.salasLimpias || 0) + 1) % 2 === 0) { const m = J.familiares.find((q) => q.tipo === "bolsa"); soltarPremio(m.x, m.y, "moneda"); }
   if (n < 0.36) return;
-  const tipo = A.pesos([["moneda", 30], ["corazon", 18], ["llave", 14], ["bomba", 14], ["cofre", 8], ["capsula", 8]]);
+  const tipo = A.pesos([["moneda", 30], ["corazon", 18], ["llave", 14], ["bomba", 14], ["cofre", j.f.colaGato ? 16 : 8], ["capsula", 8], ["baratija", 2]]);
   const [x, y] = lugarLibreCerca(cx(6), cy(3));
   const c = recogible(tipo, x, y);
   c.vz = 2; J.sala.cosas.push(c);
@@ -4181,173 +5350,59 @@ function tomar(c) {
     }
     case "cofre": {
       if (c.abierto) return false;
-      if (c.sub === "dorado" && j.llaves <= 0) {       // trabado: suena el candado y tiembla (una vez por toque)
+      if (c.sub === "piedra") { if (!c.avisado) { SFX.roca(); c.sacudida = 6; c.avisado = true; } return false; }   // sólo con una explosión
+      if (c.sub === "dorado" && j.llaves <= 0 && !j.f.clip) {   // trabado: suena el candado y tiembla (una vez por toque)
         if (!c.avisado) { SFX.clic(); c.sacudida = 10; c.avisado = true; }
         return false;
       }
-      if (c.sub === "dorado") j.llaves--;
-      c.abierto = true; c.quieto = true; SFX.llave(); SFX.recoger();
-      // lo de adentro salta hacia afuera, lejos de Shumio, y tarda un momento en poder agarrarse
-      const ang0 = Math.atan2(c.y - j.y, c.x - j.x);
-      if (c.sub === "dorado" && A.si(0.14)) { J.sala.cosas.push(pedestal(c.x, c.y - 18, sacarObjeto("tesoro"))); }
-      else {
-        const n = A.ent(2, c.sub === "dorado" ? 4 : 3);
-        for (let i = 0; i < n; i++) {
-          const p = soltarPremio(c.x, c.y - 4), a = ang0 + (i - (n - 1) / 2) * 0.55 + (A.f() - 0.5) * 0.3, v = 1.6 + A.f() * 0.8;
-          p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v * 0.8; p.vz = 3 + A.f(); p.espera = 26;
-        }
-      }
+      if (c.sub === "dorado" && !j.f.clip) j.llaves--;
+      abrirCofre(c);
       return false;
+    }
+    case "baratija": {
+      if (j.baratija) { const v = recogible("baratija", j.x, j.y + 10, j.baratija); v.vz = 2; v.vy = 1; v.espera = 40; J.sala.cosas.push(v); }
+      const antes = fotoCuentas(j);
+      j.baratija = c.sub; recalcular(j); anotarCambios(antes);
+      rotulo(BARATIJAS[c.sub].nombre, BARATIJAS[c.sub].lema); SFX.recoger(); return true;
     }
     case "cofreFinal": if (!c.abierto) { c.abierto = true; ganar(); } return false;
     case "objeto": return tomarObjeto(c);
   }
   return false;
 }
+/** Abre un cofre y tira lo de adentro hacia afuera, lejos de Shumio (tablas de la wiki). */
+function abrirCofre(c) {
+  const j = J.jug;
+  c.abierto = true; c.quieto = true; SFX.llave(); SFX.recoger();
+  if (c.sub === "pinchos") herirJugador(j, 1, "UN COFRE CON PINCHOS", cofreSpr("pinchos", false));
+  const ang0 = Math.atan2(c.y - j.y, c.x - j.x);
+  const tirar = (tipos) => tipos.forEach((t, i) => {
+    const p = soltarPremio(c.x, c.y - 4, t), n = tipos.length, a = ang0 + (i - (n - 1) / 2) * 0.55 + (A.f() - 0.5) * 0.3, v = 1.6 + A.f() * 0.8;
+    p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v * 0.8; p.vz = 3 + A.f(); p.espera = 26;
+  });
+  const tandas = () => { const out = []; const n = A.ent(2, 3) + (j.f.dedoSuerte && A.si(0.33) ? 1 : 0); for (let i = 0; i < n; i++) { const b = A.pesos([["moneda", 3], ["bomba", 1], ["llave", 1], ["corazon", 1]]); if (b === "moneda") for (let k = A.ent(1, 3); k > 0; k--) out.push("moneda"); else out.push(b); } return out; };
+  if (c.sub === "rojo") {
+    const r = A.pesos([["objeto", 10], ["aranas", 13], ["megaTrampa", 13], ["moscas", 7], ["aranitas", 7], ["espora1", 7.5], ["espora2", 7.5], ["trampas", 15], ["capsulas", 15], ["objeto2", 5]]);
+    if (r === "objeto" || r === "objeto2") J.sala.cosas.push(pedestal(c.x, c.y - 18, sacarObjeto("rojo")));
+    else if (r === "aranas") for (let i = 0; i < 2; i++) crearEnemigo("arana", c.x + (i ? 10 : -10), c.y);
+    else if (r === "megaTrampa") J.bombas.push(Object.assign(nuevaBomba(j, c.x, c.y + 4, 0, 0, 60), { gorda: true, danoJug: 2 }));
+    else if (r === "trampas") for (let i = 0; i < 2; i++) J.bombas.push(nuevaBomba(j, c.x + (i ? 10 : -10), c.y + 4, (i ? 1 : -1), 0.5, 60));
+    else if (r === "moscas") for (let i = 0; i < 3; i++) J.familiares.push(moscaAzul(c.x, c.y));
+    else if (r === "aranitas") for (let i = 0; i < 3; i++) J.familiares.push(moscaAzul(c.x, c.y, "arana"));
+    else if (r === "espora1" || r === "espora2") tirar(r === "espora1" ? ["espora"] : ["espora", "espora"]);
+    else tirar(["capsula", "capsula"]);
+    return;
+  }
+  if ((c.sub === "dorado" || c.sub === "piedra") && A.si(0.2)) { J.sala.cosas.push(pedestal(c.x, c.y - 18, sacarObjeto("cofre"))); return; }
+  const r = A.pesos([["premios", 78], ["baratija", 10], ["capsula", 10], ["cofre", 2]]);
+  if (r === "premios") tirar(tandas());
+  else if (r === "cofre") { const q = recogible("cofre", c.x, c.y + 14, A.si(0.5) ? "normal" : "dorado"); q.vz = 3; J.sala.cosas.push(q); }
+  else tirar([r]);
+}
 function puedeUsar(c) {
   const j = J.jug;
   if (c.t === "corazon") return c.sub.startsWith("espora") ? j.esporas < 24 - j.cont : j.vida < j.cont;
   return true;
-}
-
-function tomarObjeto(c) {
-  const j = J.jug;
-  if (!c.id || c.tocando) return false;
-  c.tocando = true;
-  const def = OBJETOS[c.id];
-  if (c.pacto) {
-    const costo = c.pacto * 2;
-    if (j.cont >= costo && vidaTotal(j) - costo > 0) sumarContenedor(j, -c.pacto);
-    else if (j.cont === 0 && j.esporas > 6) j.esporas -= 6;
-    else return false;
-    SFX.pacto();
-  } else if (c.precio) {
-    if (j.monedas < c.precio) return false;
-    j.monedas -= c.precio; SFX.moneda();
-  }
-  const id = c.id;
-  J.tomados.add(id);
-  if (def.activo) {
-    if (j.activo) { c.id = j.activo.id; c.tocando = true; c.precio = 0; c.pacto = 0; } else c.id = null;
-    j.activo = { id, carga: def.activo, max: def.activo };
-  } else {
-    c.id = null;
-    const antes = fotoCuentas(j);
-    def.aplicar(j);
-    anotarCambios(antes);
-    j.objetos.push(id);
-    if (id === "moscaAmiga" || id === "hermanito") armarFamiliares();
-  }
-  rotulo(def.nombre, def.lema);
-  SFX.objeto();
-  j.sostiene = iconoSpr(id); j.tSostiene = 50;
-  // en la tienda y en el pacto, lo comprado se va con pedestal y todo
-  return (c.precio || c.pacto) && !c.id ? true : false;
-}
-
-function rehacerPedestales() {
-  let alguno = false;
-  for (const c of J.sala.cosas) if (c.t === "objeto" && c.id) {
-    J.enPedestal.delete(c.id);
-    c.id = sacarObjeto(J.sala.tipo === "tienda" ? "tienda" : J.sala.tipo === "pacto" ? "pacto" : J.sala.tipo === "jefe" ? "jefe" : "tesoro");
-    humo(c.x, c.y - 16); alguno = true;
-  }
-  SFX[alguno ? "secreto" : "malo"]();
-}
-
-// ── las cápsulas: el color de cada efecto se sortea por partida ──
-const EFECTOS_CAPSULA = [
-  { n: "¡LÁGRIMAS ARRIBA!", f: (j) => { j.lagUps += 0.35; }, bueno: true }, { n: "LÁGRIMAS ABAJO", f: (j) => { j.lagUps -= 0.28; } },
-  { n: "¡VELOCIDAD ARRIBA!", f: (j) => { j.vel += 0.15; }, bueno: true }, { n: "VELOCIDAD ABAJO", f: (j) => { j.vel -= 0.1; } },
-  { n: "¡ALCANCE ARRIBA!", f: (j) => { j.alcance += 0.75; }, bueno: true }, { n: "ALCANCE ABAJO", f: (j) => { j.alcance -= 0.5; } },
-  { n: "¡SALUD TOTAL!", f: (j) => { j.vida = j.cont; }, bueno: true },
-  { n: "MAL VIAJE", f: (j) => { if (vidaTotal(j) <= 2) { j.vida = j.cont; J.capsulaBien = true; } else { j.inv = 0; herirJugador(j, 1, "UNA CÁPSULA"); } } },
-  { n: "¡SUERTE ARRIBA!", f: (j) => { j.suerte += 1; }, bueno: true }, { n: "SUERTE ABAJO", f: (j) => { j.suerte -= 1; } },
-  { n: "BOMBAS POR LLAVES", f: (j) => { [j.bombas, j.llaves] = [j.llaves, j.bombas]; }, bueno: true },
-  { n: "¡ESPORAS DE VIDA!", f: (j) => { darEsporas(j, 2); }, bueno: true },
-  { n: "¡DAÑO ARRIBA!", f: (j) => { j.danoPlano += 0.4; }, bueno: true },
-];
-function sortearCapsulas() { J.capsulas = A.mezclar(EFECTOS_CAPSULA.slice()).slice(0, COLORES_CAPSULA.length); J.capsulasVistas = new Set(); }
-function nombreCapsula(i) { return J.capsulasVistas.has(i) ? J.capsulas[i].n : "UNA CÁPSULA"; }
-function tomarCapsula(j) {
-  if (j.capsula == null) return;
-  const i = j.capsula, e = J.capsulas[i];
-  j.capsula = null; J.capsulasVistas.add(i); J.capsulaBien = false;
-  const antes = fotoCuentas(j);
-  e.f(j);
-  anotarCambios(antes);
-  rotulo(J.capsulaBien ? "¡SALUD TOTAL!" : e.n, "");
-  SFX[e.bueno || J.capsulaBien ? "capsula" : "malo"]();
-}
-
-// lo que cambió en las cuentas (el HUD lo muestra en verde o rojo al lado, como el original)
-function fotoCuentas(j) { return { vel: velDe(j), lag: lagrimasPorSeg(j), dano: danoDe(j), alc: j.alcance, tiro: j.velLag, suerte: j.suerte }; }
-function anotarCambios(antes) {
-  const d = fotoCuentas(J.jug);
-  J.cambios ||= {};
-  for (const k in d) if (Math.abs(d[k] - antes[k]) > 0.005) J.cambios[k] = { d: d[k] - antes[k], t: 200 };
-}
-
-function usarActivo(j) {
-  const a = j.activo;
-  if (!a || j.muerto) return;
-  if (a.carga < a.max) { SFX.clic(); return; }
-  a.carga = 0;
-  OBJETOS[a.id].usar(j);
-  SFX.activo();
-}
-function cargarActivo(n = 1) {
-  const a = J.jug.activo;
-  if (!a || a.carga >= a.max) return;
-  a.carga = Math.min(a.max, a.carga + n);
-  if (a.carga >= a.max) SFX.cargado();
-}
-
-// ── los familiares ──
-function armarFamiliares() {
-  const j = J.jug, viejos = J.familiares.filter((f) => f.tipo === "moscaAzul");
-  J.familiares = viejos;
-  if (j.objetos.includes("moscaAmiga")) J.familiares.push({ tipo: "mosca", x: j.x, y: j.y, a: 0, bloquea: true, t: 0 });
-  if (j.objetos.includes("hermanito")) J.familiares.push({ tipo: "hermanito", x: j.x, y: j.y + 10, enfriar: 0, mirar: ABAJO, t: 0 });
-}
-function actualizarFamiliares() {
-  const j = J.jug;
-  for (let i = J.familiares.length - 1; i >= 0; i--) {
-    const f = J.familiares[i];
-    f.t++;
-    if (f.tipo === "mosca") {
-      f.a += 0.055; f.x = j.x + Math.cos(f.a) * 20; f.y = j.y - 4 + Math.sin(f.a) * 15;
-      if (f.t % 8 === 0) for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y, f.x, f.y) < e.r + 5) danarEnemigo(e, 2.5);
-    } else if (f.tipo === "hermanito") {
-      const tx = j.x - DIRS[j.mirar][0] * 18, ty = j.y - DIRS[j.mirar][1] * 16 + 2;
-      f.x += (tx - f.x) * 0.08; f.y += (ty - f.y) * 0.08;
-      if (f.enfriar > 0) f.enfriar--;
-      if ((IN.dx || IN.dy) && f.enfriar <= 0 && J.congelado <= 0) {
-        f.mirar = j.mirar; f.enfriar = 34;
-        J.lagrimas.push({ x: f.x, y: f.y, z: 12, vx: IN.dx * 3.1, vy: IN.dy * 3.1, vida: 48, vidaMax: 48, r: 3, dano: 3.5, color: "violeta", tocados: null });
-      } else if (!(IN.dx || IN.dy)) f.mirar = ABAJO;
-    } else if (f.tipo === "moscaAzul") {
-      let obj = null, md = 1e9;
-      for (const e of J.enemigos) { if (!blanco_(e)) continue; const d = dist(e.x, e.y, f.x, f.y); if (d < md) { md = d; obj = e; } }
-      const tx = obj ? obj.x : j.x + Math.cos(f.t * 0.05 + i) * 16, ty = obj ? obj.y - 4 : j.y - 6 + Math.sin(f.t * 0.05 + i) * 12;
-      const d = dist(tx, ty, f.x, f.y) || 1, v = obj ? 1.8 : 1.2;
-      f.x += (tx - f.x) / d * Math.min(v, d); f.y += (ty - f.y) / d * Math.min(v, d);
-      if (obj && md < obj.r + 4) { danarEnemigo(obj, 8); sangrar(f.x, f.y, 3, PAL.azul); J.familiares.splice(i, 1); continue; }
-      if (--f.t <= 0 && !obj) J.familiares.splice(i, 1);
-    }
-  }
-}
-function dibujarFamiliar(g, f) {
-  if (f.tipo === "mosca" || f.tipo === "moscaAzul") {
-    const s = tinte(mosquinSpr((f.t >> 1) & 1), "rgba(110,170,255,0.55)");
-    g.drawImage(sombra(3, 1), Math.round(f.x - 3), Math.round(f.y + 6));
-    g.drawImage(s, Math.round(f.x - s.width / 2), Math.round(f.y - s.height / 2 - 4));
-  } else if (f.tipo === "hermanito") {
-    const s = spritesShumio(PAL.piel, PAL.violeta, PAL.azul, "hermanito");
-    const cab = s.cab[VISTA_CAB[f.mirar]][f.enfriar > 28 ? 1 : 0];
-    g.drawImage(sombra(5, 2), Math.round(f.x - 5), Math.round(f.y + 2));
-    g.drawImage(cab, Math.round(f.x - 11), Math.round(f.y - 18 + Math.sin(f.t * 0.1)));
-  }
 }
 
 // ── dibujar lo que está en el piso ──
@@ -4360,8 +5415,9 @@ function dibujarCosa(g, c) {
     case "bomba": s = bombaSpr(0.8); break;
     case "llave": s = llaveSpr(); break;
     case "capsula": s = capsulaSpr(c.sub); break;
-    case "cofre": s = cofreSpr(c.sub === "dorado", !!c.abierto); if (c.sacudida > 0) { c.sacudida--; g.save(); g.translate(Math.round(Math.sin(c.sacudida * 2.2) * 1.5), 0); g.drawImage(sombra(8, 2), X - 8, Y); g.drawImage(s, X - Math.floor(s.width / 2), Y + 2 - s.height); g.restore(); return; } break;
-    case "cofreFinal": { s = cofreSpr(true, !!c.abierto); const w = s.width * 2, h = s.height * 2; g.drawImage(sombra(16, 4), X - 16, Y - 2); g.drawImage(s, X - w / 2, Y + 2 - h, w, h); return; }
+    case "baratija": s = baratijaSpr(c.sub); break;
+    case "cofre": s = cofreSpr(c.sub, !!c.abierto); if (c.sacudida > 0) { c.sacudida--; g.save(); g.translate(Math.round(Math.sin(c.sacudida * 2.2) * 1.5), 0); g.drawImage(sombra(8, 2), X - 8, Y); g.drawImage(s, X - Math.floor(s.width / 2), Y + 2 - s.height); g.restore(); return; } break;
+    case "cofreFinal": { s = cofreSpr("dorado", !!c.abierto); const w = s.width * 2, h = s.height * 2; g.drawImage(sombra(16, 4), X - 16, Y - 2); g.drawImage(s, X - w / 2, Y + 2 - h, w, h); return; }
     case "trampilla": s = trampillaSpr(!!c.abierta); g.drawImage(s, X - 14, Y - 14); return;
     case "objeto": {
       g.drawImage(pedestalSpr(), X - 11, Y - 8);
@@ -4401,6 +5457,171 @@ function preguntaSpr() {
     p.contorno(PAL.tinta, true);
     return p.canvas();
   });
+}
+
+// ══════════ 16c-familiares.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS FAMILIARES, como en el original: los que orbitan (tapan balas y pegan al tocar), los que
+// siguen en fila detrás de Shumio y lloran hacia donde llora él (el íncubo copia su arma), los
+// que se lanzan (el gordito, el cerebro), los que cazan (la sanguijuela, el pájaro, la araña) y
+// las moscas y arañitas azules que se tiran solas contra el enemigo más cercano.
+// Números de la wiki (Repentance): hermanito 1,88 lágr./s de 3,5; hermanita 1,36/s de 6; bebé
+// demonio 3/s de 3,5; ángel guardián 7 por golpe; admiradora 5; gordito 3,5 por golpe.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Una mosca (o arañita) azul: busca al enemigo más cercano, le pega y se muere. */
+function moscaAzul(x, y, tipo = "mosca") { return { tipo: "moscaAzul", sub: tipo, x: x + V.ent(-6, 6), y: y + V.ent(-6, 6), t: 900, a: V.f() * TAU }; }
+
+const ORBITALES = { mosca: { r: 20, v: 0.055, dano: 2.5, cada: 8 }, admiradora: { r: 30, v: 0.04, dano: 5, cada: 4 }, angel: { r: 22, v: 0.09, dano: 7, cada: 8 }, corona: { r: 16, v: 0.07, dano: 0, cada: 99 }, pelos: { r: 25, v: 0.05, dano: 5, cada: 8 } };
+const SEGUIDORES = { hermanito: { cada: 32, dano: 3.5, color: "violeta" }, hermanita: { cada: 44, dano: 6, color: "sangre" }, demonio: { cada: 20, dano: 3.5, color: "sangre" }, robo: { cada: 60, dano: 3.5 }, incubo: {}, gordito: {}, cerebro: {}, sanguijuela: {}, bolsa: {}, aranaFam: {} };
+
+function armarFamiliares() {
+  const j = J.jug, viejos = J.familiares.filter((f) => f.tipo === "moscaAzul" || f.tipo === "pajaro");
+  J.familiares = viejos;
+  const lista = [];
+  for (const id of j.objetos) { const d = OBJETOS[id]; if (d && d.fam) lista.push(d.fam); }
+  if (j.f.cuchilloAtras) lista.push("cuchilloAtras");
+  if (j.f.aranaFam) lista.push("aranaFam");
+  let orb = 0, fila = 0;
+  for (const tipo of lista) {
+    const f = { tipo, x: j.x, y: j.y, t: 0, enfriar: 0, mirar: ABAJO };
+    if (ORBITALES[tipo]) { f.orbital = true; f.k = orb++; f.bloquea = true; if (tipo === "corona") { J.familiares.push(f); f.k = orb++; J.familiares.push({ ...f, k: orb - 1 }); continue; } }
+    else f.fila = fila++;
+    J.familiares.push(f);
+  }
+  const n = J.familiares.filter((f) => f.orbital).length;
+  for (const f of J.familiares) if (f.orbital) f.n = n;
+}
+
+/** El rastro de Shumio: los que lo siguen van en fila por donde él pasó. */
+function rastroEn(k) { const R = J.rastro || []; return R[Math.min(R.length - 1, k)] || [J.jug.x, J.jug.y]; }
+
+function actualizarFamiliares() {
+  const j = J.jug, tira = !!(IN.dx || IN.dy) && J.congelado <= 0 && !j.muerto;
+  J.rastro ||= [];
+  if (Math.hypot(j.vx, j.vy) > 0.2 || !J.rastro.length) { J.rastro.unshift([j.x, j.y]); if (J.rastro.length > 120) J.rastro.pop(); }
+  for (let i = J.familiares.length - 1; i >= 0; i--) {
+    const f = J.familiares[i];
+    f.t++;
+    if (f.orbital) {
+      const o = ORBITALES[f.tipo];
+      f.a = J.t * o.v + (f.k / Math.max(1, f.n)) * TAU;
+      f.x = j.x + Math.cos(f.a) * o.r; f.y = j.y - 4 + Math.sin(f.a) * o.r * 0.75;
+      if (o.dano && f.t % o.cada === 0) for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y - 4, f.x, f.y) < e.r + 5) danarEnemigo(e, o.dano);
+      continue;
+    }
+    if (f.fila != null && !f.lanzado) {
+      const [tx, ty] = rastroEn(8 + f.fila * 9);
+      f.x += (tx - f.x) * 0.2; f.y += (ty + 2 - f.y) * 0.2;
+    }
+    if (f.enfriar > 0) f.enfriar--;
+    switch (f.tipo) {
+      case "hermanito": case "hermanita": {
+        const s = SEGUIDORES[f.tipo];
+        if (tira && f.enfriar <= 0) { f.mirar = j.mirar; f.enfriar = s.cada; lagrimaFamiliar(f, IN.dx, IN.dy, s.dano, s.color); }
+        else if (!tira) f.mirar = ABAJO;
+        break;
+      }
+      case "demonio": {   // dispara solo al más cercano que tenga a tiro
+        const e = masCercano(f.x, f.y, 90);
+        if (e && f.enfriar <= 0) { const a = Math.atan2(e.y - 4 - f.y, e.x - f.x); f.enfriar = 20; lagrimaFamiliar(f, Math.cos(a), Math.sin(a), 3.5, "sangre"); }
+        break;
+      }
+      case "robo":
+        if (tira && f.enfriar <= 0) { f.enfriar = 60; laser(j, f.x, f.y - 8, Math.atan2(IN.dy, IN.dx), { dano: 3.5, ancho: 2 }); SFX.laser(); }
+        break;
+      case "incubo":   // copia el arma de Shumio, a su misma cadencia
+        if (tira && f.enfriar <= 0 && (j.arma === "lagrima" || j.arma === "laser" || j.arma === "feto" || j.arma === "rayo")) {
+          f.enfriar = j.arma === "rayo" ? 60 / j.fr + 40 : cuadrosEntreLagrimas(j);
+          disparar(j, IN.dx, IN.dy, { carga: 1 }, f);
+        } else if (tira && f.enfriar <= 0) { f.enfriar = cuadrosEntreLagrimas(j); lagrimaFamiliar(f, IN.dx, IN.dy, danoDe(j), colorLagrima(j)); }
+        break;
+      case "gordito": case "cerebro": {   // se lanza hacia donde llorás, pega en el camino hasta la pared
+        if (!f.lanzado && tira && f.enfriar <= 0) { f.lanzado = true; f.vx = IN.dx * 4; f.vy = IN.dy * 4; }
+        if (f.lanzado) {
+          f.x += f.vx; f.y += f.vy;
+          for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y - 4, f.x, f.y) < e.r + 6) {
+            if (f.tipo === "cerebro") { explotar(f.x, f.y, true, false, { dano: 100, veneno: true, danoJug: 2 }); J.familiares.splice(i, 1); f.muerto = true; break; }
+            if (f.t % 2 === 0) danarEnemigo(e, 3.5, f.vx * 0.5, f.vy * 0.5);
+          }
+          if (f.muerto) break;
+          if (f.x < IX0 + 6 || f.x > IX1 - 6 || f.y < IY0 + 4 || f.y > IY1 - 4) { f.lanzado = false; f.enfriar = 60; f.x = lim(f.x, IX0 + 6, IX1 - 6); f.y = lim(f.y, IY0 + 4, IY1 - 4); }
+        }
+        break;
+      }
+      case "sanguijuela": case "aranaFam": {
+        const e = masCercano(f.x, f.y, 80);
+        if (e) {
+          const d = dist(e.x, e.y, f.x, f.y) || 1; f.x += (e.x - f.x) / d * 1.1; f.y += (e.y - f.y) / d * 1.1;
+          if (d < e.r + 5 && f.enfriar <= 0) {
+            f.enfriar = f.tipo === "sanguijuela" ? 28 : 30;
+            if (f.tipo === "sanguijuela") { danarEnemigo(e, 1.5); if (e.muerto) { curar(j, 1); SFX.corazon(); } }
+            else { danarEnemigo(e, 1, 0, 0, A.uno([{ veneno: true }, { hielo: true }, { miedo: true }, { piedra: true }, { fuego: true }])); }
+          }
+        }
+        break;
+      }
+      case "cuchilloAtras": {   // ¿sí, abuela?: el cuchillo que queda atrás, pega el doble
+        const [tx, ty] = rastroEn(10); f.x += (tx - f.x) * 0.3; f.y += (ty - 6 - f.y) * 0.3;
+        if (f.t % 3 === 0) for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y - 4, f.x, f.y) < e.r + 5) danarEnemigo(e, danoDe(j) * 2);
+        break;
+      }
+      case "pajaro": {
+        const e = masCercano(f.x, f.y, 999);
+        const tx = e ? e.x : j.x + Math.cos(f.t * 0.05) * 20, ty = e ? e.y - 6 : j.y - 18;
+        const d = dist(tx, ty, f.x, f.y) || 1; f.x += (tx - f.x) / d * Math.min(1.6, d); f.y += (ty - f.y) / d * Math.min(1.6, d);
+        if (e && d < e.r + 5 && f.t % 28 === 0) danarEnemigo(e, 2);
+        break;
+      }
+      case "moscaAzul": {
+        const e = masCercano(f.x, f.y, 1e9);
+        const tx = e ? e.x : j.x + Math.cos(f.t * 0.05 + i) * 16, ty = e ? e.y - 4 : j.y - 6 + Math.sin(f.t * 0.05 + i) * 12;
+        const d = dist(tx, ty, f.x, f.y) || 1, v = e ? (f.sub === "arana" ? 1.4 : 1.8) : 1.2;
+        f.x += (tx - f.x) / d * Math.min(v, d); f.y += (ty - f.y) / d * Math.min(v, d);
+        // la mosca azul pega el doble del daño de Shumio (mínimo 8, como en el original a daño base)
+        if (e && d < e.r + 4) { danarEnemigo(e, Math.max(8, danoDe(j) * 2)); sangrar(f.x, f.y, 3, PAL.azul); J.familiares.splice(i, 1); continue; }
+        if (--f.t <= 0 && !e) J.familiares.splice(i, 1);
+        break;
+      }
+    }
+  }
+}
+function masCercano(x, y, max) {
+  let obj = null, md = max;
+  for (const e of J.enemigos) { if (!blanco_(e)) continue; const d = dist(e.x, e.y, x, y); if (d < md) { md = d; obj = e; } }
+  return obj;
+}
+function lagrimaFamiliar(f, dx, dy, dano, color) {
+  const v = 3.1, a = Math.atan2(dy, dx);
+  J.lagrimas.push({ x: f.x, y: f.y, cx: f.x, cy: f.y, z: 12, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, vida: 52, vidaMax: 52, r: dano > 5 ? 4 : 3, r0: 3, dano, dano0: dano, color, tipo: "lagrima", empuje: 1, tocados: null, dist: 0 });
+}
+
+function dibujarFamiliar(g, f) {
+  const X = Math.round(f.x), Y = Math.round(f.y);
+  let s;
+  switch (f.tipo) {
+    case "mosca": case "moscaAzul": case "corona":
+      if (f.sub === "arana") { s = tinte(aranaSpr((f.t >> 2) & 1), "rgba(110,170,255,0.55)"); g.drawImage(sombra(3, 1), X - 3, Y + 2); g.drawImage(s, X - Math.floor(s.width / 2), Y + 3 - s.height); return; }
+      s = tinte(mosquinSpr((f.t >> 1) & 1), "rgba(110,170,255,0.55)"); break;
+    case "admiradora": s = tinte(mosquinSpr((f.t >> 1) & 1), "rgba(230,40,40,0.5)"); break;
+    case "pajaro": s = tinte(mosquinSpr((f.t >> 2) & 1), "rgba(240,240,240,0.7)"); break;
+    case "hermanito": case "hermanita": case "demonio": case "incubo": case "robo": {
+      const pal = { hermanito: [PAL.piel, PAL.violeta, PAL.azul], hermanita: [PAL.piel, PAL.sangre, PAL.hongo], demonio: [["#1a0a0a", "#3a1414", "#5a2222", "#7a3434", "#a05050"], PAL.sangre, PAL.sangre], incubo: [["#140a1a", "#2a1434", "#46225a", "#643480", "#8a52a8"], PAL.violeta, PAL.sangre], robo: [PAL.hierro, PAL.hierro, PAL.azul] }[f.tipo];
+      const sp = spritesShumio(pal[0], pal[1], pal[2], f.tipo);
+      const cab = sp.cab[VISTA_CAB[f.mirar]][f.enfriar > (SEGUIDORES[f.tipo].cada || 30) - 6 ? 1 : 0];
+      g.drawImage(sombra(5, 2), X - 5, Y + 2);
+      if (f.tipo === "incubo") { g.globalAlpha = 0.85; g.drawImage(sp.cue.frente[0], X - 7, Y - 8); }
+      g.drawImage(cab, X - 11, Y - 18 + Math.round(Math.sin(f.t * 0.1)));
+      g.globalAlpha = 1;
+      return;
+    }
+    default: s = familiarSpr(f.tipo, (f.t >> 3) & 1);
+  }
+  if (!s) return;
+  if (f.tipo === "angel" || f.tipo === "pelos") s = familiarSpr(f.tipo, (f.t >> 3) & 1);
+  if (f.tipo === "cuchilloAtras") { const c = cuchilloSpr(); g.save(); g.translate(X, Y); g.rotate(Math.atan2(J.jug.y - f.y, J.jug.x - f.x) + Math.PI); g.drawImage(c, -c.width / 2, -c.height / 2); g.restore(); return; }
+  g.drawImage(sombra(3, 1), X - 3, Y + 6);
+  g.drawImage(s, X - Math.floor(s.width / 2), Y - Math.floor(s.height / 2) - 4);
 }
 
 // ══════════ 17-hud.js ══════════
@@ -4507,6 +5728,8 @@ function dibujarHud(g) {
     g.drawImage(s, W - s.width - 4, H - s.height - 5);
     g.drawImage(n, W - s.width - 8 - n.width, H - n.height - 2);
   }
+  // ── la baratija: abajo a la izquierda (como en Repentance) ──
+  if (j.baratija) { const b = baratijaSpr(j.baratija); g.drawImage(b, 4, H - b.height - 4); }
   if (J.maldicion !== "extraviado") dibujarMinimapa(g);
   // ── la barra del jefe (medida: 121×8 en el original, acá 108×7): roja plana, marco oscuro
   //    redondeado y la calavera grande pisando la punta izquierda ──
@@ -4671,6 +5894,7 @@ function nuevaPartida(semilla) {
   J = {
     semilla, estado: "juego", t: 0, tiempo: 0, piso: null, sala: null, jug: nuevoJugador(),
     lagrimas: [], balas: [], bombas: [], fx: [], part: [], babas: [], enemigos: [], jefes: [], familiares: [], pendientes: [],
+    laseres: [], anillos: [], misiles: [], chispas: [], luces: [], pegadas: [], ludo: null, cuchillo: null, mira: null, rastro: [],
     temblor: 0, destello: 0, congelado: 0, puertasAbiertas: true, cierre: 0, rotulos: [], muertes: 0, causa: null,
     jefesVistos: [], enPedestal: new Set(), trans: null, vs: null, fundido: 0, tEstado: 0, campo: null, cambioGrilla: true,
   };
@@ -4695,9 +5919,10 @@ function iniciarPiso(n) {
 function entrarSala(sala, desde) {
   const j = J.jug;
   J.sala = sala;
-  for (const k of ["lagrimas", "balas", "bombas", "fx", "part", "babas", "enemigos", "jefes"]) J[k].length = 0;
-  J.campo = null; J.cambioGrilla = true; J.jefeMuerto = false;
-  j.danoSala = 0;
+  for (const k of ["lagrimas", "balas", "bombas", "fx", "part", "babas", "enemigos", "jefes", "laseres", "anillos", "misiles", "chispas", "luces", "pegadas"]) J[k].length = 0;
+  J.campo = null; J.cambioGrilla = true; J.jefeMuerto = false; J.ludo = null; J.cuchillo = null; J.mira = null; J.rastro = [];
+  j.danoSala = 0; j.salaF.length = 0; j.cargando = false; j.carga = 0; recalcular(j);
+  J.familiares = J.familiares.filter((f) => f.tipo !== "pajaro");   // el pájaro muerto dura una sala
   sala.visitada = sala.vista = true;
   for (const p of sala.puertas) if (p && puertaVisible(p) && p.destino.tipo !== "secreta") p.destino.vista = true;
   if (!sala.fondo) sala.fondo = hornearFondo(J.piso.cap, sala.semilla);
@@ -4711,6 +5936,7 @@ function entrarSala(sala, desde) {
   for (const f of J.familiares) { f.x = j.x; f.y = j.y; }
   if (!sala.limpia) {
     poblarSala(sala);
+    if (j.f.garrapata) for (const e of J.enemigos) if (e.jefe) { e.vida *= 0.85; e.max *= 0.85; }   // la garrapata: −15 % a los jefes
     J.puertasAbiertas = false; SFX.puertaCierra();
     if (sala.tipo === "jefe") { J.vsPendiente = true; Musica.poner("jefe"); }
   } else J.puertasAbiertas = true;
@@ -4743,6 +5969,10 @@ function pasoJuego() {
   actualizarFamiliares();
   actualizarEnemigos();
   actualizarLagrimas();
+  actualizarLaseres();
+  actualizarAnillos();
+  actualizarMisiles();
+  actualizarPegadas();
   actualizarBalas();
   actualizarBombas();
   actualizarCosas();
@@ -4864,6 +6094,7 @@ function dibujarSala(g) {
   for (const f of J.familiares) _orden.push([f.y, 3, f]);
   for (const b of J.bombas) _orden.push([b.y, 4, b]);
   _orden.push([J.jug.y, 5, J.jug]);
+  if (J.cuchillo) _orden.push([J.cuchillo.y + 6, 8, J.cuchillo]);
   for (const l of J.lagrimas) _orden.push([l.y, 6, l]);
   for (const b of J.balas) _orden.push([b.y, 7, b]);
   _orden.sort((a, b) => a[0] - b[0]);
@@ -4878,8 +6109,11 @@ function dibujarSala(g) {
       case 5: if (J.estado !== "cayendo") dibujarJugador(g, o); break;
       case 6: dibujarLagrima(g, o); break;
       case 7: dibujarBala(g, o); break;
+      case 8: dibujarCuchillo(g); break;
     }
   }
+  dibujarArmas(g);
+  dibujarCarga(g, J.jug);
   dibujarFx(g);
   dibujarParticulas(g);
   if (J.estado === "cayendo") {
@@ -4962,7 +6196,9 @@ function arrancar() { medir(); abrirMenu("titulo"); requestAnimationFrame(cuadro
 /** La chance de que se abra el pacto al matar al jefe de este piso (se muestra en el HUD). */
 function probPacto() {
   if (!J || !J.piso || J.piso.n < 2 || J.piso.n >= ULTIMO_PISO) return 0;
-  return J.jug.golpesJefe === 0 ? 0.7 : 0.33;
+  // el pentagrama suma un 10 % (15 % con dos o más, como en la wiki)
+  const penta = J.jug.f.pentagrama ? (J.jug.f.pentagrama >= 2 ? 0.15 : 0.1) : 0;
+  return Math.min(1, (J.jug.golpesJefe === 0 ? 0.7 : 0.33) + penta);
 }
 
 const CAIDA = { sale: 96, negro: 18, entra: 72 };
@@ -5333,6 +6569,8 @@ window.__SH.hojaDe = (grupo) => {
     const l = [0, 1, 2, 3].map(madreBabosaSpr).concat([reyMosquinSpr(0), reyMosquinSpr(1), gusanoAnilladoSpr("cabeza"), gusanoAnilladoSpr("cuerpo"), gusanoAnilladoSpr("cola")], [0, 1, 2, 3].map(miceliaSpr));
     return window.__SH.hoja(l, 3);
   }
+  if (grupo === "objetos") return window.__SH.hoja([...Object.keys(OBJETOS), ...Object.keys(BARATIJAS)].map(iconoSpr), 4);
+  if (grupo === "armas") return window.__SH.hoja([cuchilloSpr(), misilSpr(), proyectilSpr("aguja"), proyectilSpr("hueso"), proyectilSpr("diente"), ...["normal", "dorado", "piedra", "pinchos", "rojo"].flatMap((k) => [cofreSpr(k, false), cofreSpr(k, true)])], 6);
   if (grupo === "sala" || grupo === "raices") {
     const cap = grupo === "sala" ? "sotano" : "raices";
     const c = lienzoNuevo(SALA_W, SALA_H), g = c.getContext("2d");
@@ -5370,7 +6608,13 @@ Object.assign(window.__SH, {
   cuadroRotulo: (t) => { for (const r of J.rotulos) r.t = t - 1; J.rotulos.forEach(() => {}); MENU.activo = null; dibujar(); },
   tactil: (v) => { IN.usaTactil = v; },
   vs: () => { if (J.vsPendiente) empezarVs(); },
+  paso: () => paso(), dibujar: () => dibujar(),
   matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
+  /** Le da objetos a Shumio de una (para probar combinaciones): dar("rayo", "tercerOjo"). */
+  dar: (...ids) => { const j = J.jug; for (const id of ids) { if (BARATIJAS[id]) { j.baratija = id; continue; } const d = OBJETOS[id]; if (!d) continue; if (d.activo) j.activo = { id, carga: d.activo, max: d.activo }; else { j.objetos.push(id); if (d.alTomar) d.alTomar(j); } j.vistos.add(id); } recalcular(j); revisarTransformaciones(j); recalcular(j); armarFamiliares(); return { arma: j.arma, n: j.n, fr: j.fr, dano: danoDe(j), f: j.f }; },
+  sala: (tipo) => { const s = [...J.piso.salas.values()].find((x) => x.tipo === tipo && !x.limpia); if (s) { entrarSala(s, null); J.estado = "juego"; } return !!s; },
+  tirar: (dx, dy, cuadros) => { IN.forzarTiro = [dx, dy, cuadros]; },
+  cuenta: () => ({ objetos: Object.keys(OBJETOS).length, activos: Object.values(OBJETOS).filter((o) => o.activo).length, baratijas: Object.keys(BARATIJAS).length, transformaciones: Object.keys(TRANSFORMACIONES).length }),
 });
 
 </script>

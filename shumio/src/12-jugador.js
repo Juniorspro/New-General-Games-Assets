@@ -6,33 +6,107 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 function nuevoJugador() {
-  return {
+  const j = {
     x: cx(6), y: cy(3), r: 5, vx: 0, vy: 0, z: 0,
     cont: 6, vida: 6, esporas: 0,               // en medios corazones
     monedas: 0, bombas: 1, llaves: 0,
-    danoUps: 0, danoPlano: 0, danoMult: 1, lagUps: 0, alcance: 6.5, velLag: 1, vel: 1, suerte: 0, tamLag: 1,
-    triple: false, veneno: false, hielo: false, rebote: false, espectral: false, atraviesa: false, buscadora: false, fuego: false,
-    vuela: false, iman: false, bombaGorda: false, colorLag: "espora",
-    objetos: [], activo: null, capsula: null,
+    // lo que suman las cápsulas y los pactos (lo de los objetos se recalcula siempre desde la lista)
+    extra: { dano: 0, plano: 0, lag: 0, fr: 0, vel: 0, alc: 0, velLag: 0, suerte: 0 },
+    objetos: [], vistos: new Set(), transf: [], activo: null, capsula: null, baratija: null, vidasExtra: 0,
     inv: 0, enfriar: 0, mirar: ABAJO, mirarCue: ABAJO, gesto: 0, tGesto: 0, paso: 0, ojo: 0, tParpadeo: 120,
-    danoSala: 0, sostiene: null, tSostiene: 0, muerto: false, tMuerte: 0, golpesPiso: 0, golpesJefe: 0,
+    danoSala: 0, salaF: [], escudo: 0, sostiene: null, tSostiene: 0, muerto: false, tMuerte: 0, golpesPiso: 0, golpesJefe: 0,
+    carga: 0, cargando: false, ojoMuerto: 0, fallos: 0, disparos: 0,
   };
+  recalcular(j);
+  return j;
 }
 
-// ── las cuentas (las del original, pasadas a 60 Hz) ──
-function danoDe(j) { return (3.5 * Math.sqrt(1 + 1.2 * Math.max(0, j.danoUps)) + j.danoPlano + j.danoSala) * j.danoMult; }
-function retardoDe(j) {
-  const L = j.lagUps;
-  let d = L >= 0 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : L >= -0.77 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : 16 - 6 * L;
-  d = Math.max(5, d);
-  if (j.triple) d = d * 2.1 + 3;
-  return d;
+// ── las cuentas (las del original, pasadas a 60 Hz). No se tocan a mano: cada objeto DECLARA lo
+//    que suma (st), lo que multiplica y qué banderas trae (f), y recalcular() rearma todo desde la
+//    lista. Así los objetos se combinan solos, como en el original, y sacar uno (el dado) no deja
+//    restos. Las fórmulas y el orden de los multiplicadores son los de la wiki (Repentance). ──
+const MULTIPLICA = new Set(["mult", "frMult", "alcMult", "velLagMult", "tam"]);
+/** El arma principal: gana la de más prioridad; las demás se vuelven "sabores" de esa. */
+const PRIORIDAD_ARMA = ["epico", "cuchillo", "feto", "anillo", "ludovico", "rayo", "laser"];
+function fuentesDe(j) {
+  const out = [];
+  for (const id of j.objetos) if (OBJETOS[id]) out.push(OBJETOS[id]);
+  if (j.activo && OBJETOS[j.activo.id] && OBJETOS[j.activo.id].f) out.push({ f: OBJETOS[j.activo.id].f });
+  if (j.baratija && BARATIJAS[j.baratija]) out.push(BARATIJAS[j.baratija]);
+  for (const t of j.transf) if (TRANSFORMACIONES[t]) out.push(TRANSFORMACIONES[t]);
+  if (j.salaF.length) out.push({ f: j.salaF });   // lo que dan los activos sólo por esta sala (libro santo, telepatía…)
+  return out;
 }
-const cuadrosEntreLagrimas = (j) => (retardoDe(j) + 1) * 2;
-const lagrimasPorSeg = (j) => 30 / (retardoDe(j) + 1);
-const velDe = (j) => lim(j.vel, 0.4, 2);
-const alcancePx = (j) => Math.max(2, j.alcance) * T;
-const radioLagrima = (j) => lim(Math.round((2 + Math.sqrt(danoDe(j)) * 1.1) * j.tamLag), 2, 9);
+function recalcular(j) {
+  const s = { dano: 0, plano: 0, mult: 1, lag: 0, fr: 0, frMult: 1, alc: 0, alcMult: 1, velLag: 1, velLagMult: 1, vel: 1, suerte: 0, tam: 1 };
+  const f = {};
+  for (const d of fuentesDe(j)) {
+    if (d.st) for (const k in d.st) { if (MULTIPLICA.has(k)) s[k] *= d.st[k]; else s[k] += d.st[k]; }
+    if (d.f) for (const x of d.f) f[x] = (f[x] || 0) + 1;
+  }
+  for (const k in j.extra) s[k] += j.extra[k];
+  j.f = f;
+  j.arma = PRIORIDAD_ARMA.find((a) => f[a]) || "lagrima";
+
+  // cuántas lágrimas por disparo: el tercer ojo da 3, la araña 4, juntos 5; los lentes suman una
+  let n = 1;
+  if (f.cuadruple) n = 4 + (f.cuadruple - 1);
+  if (f.triple) n = n > 1 ? n + 1 : 3 + (f.triple - 1);
+  if (f.veinte) n += 1;
+  j.n = Math.min(16, n);
+
+  // ── la cadencia: FR = (30 / (retardo + 1) + S) · P ──
+  const L = s.lag;
+  let d = L >= 0 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) : L > -0.77 ? 16 - 6 * Math.sqrt(L * 1.3 + 1) - 6 * L : 16 - 6 * L;
+  d = Math.max(5, d);
+  let P = s.frMult;
+  // las bajas de las armas pesadas no se apilan: van por prioridad (feto > rayo; el pulmón y el jarabe sí se apilan entre ellos)
+  if (f.feto && f.pulmon) P /= 4.3; else if (f.feto) P *= 0.4; else if (f.rayo) P /= 3; else { if (f.pulmon) P /= 4.3; if (f.ipecac) P /= 3; }
+  // el tercer ojo, la araña y el cíclope tampoco se apilan (vale la peor), y los lentes las anulan
+  if (!f.veinte) { if (f.cuadruple || f.polifemo) P *= 0.42; else if (f.triple) P *= 0.51; }
+  let fr = (30 / (d + 1) + s.fr) * Math.min(1, P);
+  // el coágulo rehace el retardo (×2 + 11) antes de los multiplicadores que suben
+  if (f.hemo) fr = 30 / ((30 / fr - 1) * 2 + 11 + 1);
+  if (P > 1) fr *= P;
+  if (f.almendra) fr *= 4; else if (f.soja) fr *= 5.5;
+  j.fr = lim(fr, 0.2, 60);
+
+  // ── el daño: (3,5 · √(1 + 1,2 · D) + plano) · multiplicadores ──
+  let D = 3.5 * Math.sqrt(1 + 1.2 * Math.max(0, s.dano)) + s.plano;
+  D *= s.mult;
+  if (f.x15) D *= 1.5;                          // el hongo gigante y la cabeza de grillo: el ×1,5 no se apila
+  if (f.x23) D *= 2.3;
+  if (f.polifemo) D = j.n > 1 ? D + 5 : (D + 4) * 2;
+  if (f.veinte) D *= 0.8;
+  if (f.almendra) D *= 0.3; else if (f.soja) D *= 0.2;
+  if (f.hemo) D = (D + 1) * 1.5;
+  if (f.ipecac) D += 40;                         // el jarabe suma 40 que no multiplica nada
+  j.danoBase = Math.max(0.5, D);
+
+  let alc = (6.5 + s.alc) * s.alcMult, vl = s.velLag * s.velLagMult;
+  if (f.ipecac) { alc *= 0.8; vl *= 0.8; }
+  if (f.hemo) alc *= 0.8;
+  j.alcance = Math.max(1, alc); j.velLag = lim(vl, 0.6, 2.2); j.vel = lim(s.vel, 0.4, 2); j.suerte = s.suerte;
+  j.tam = s.tam * (f.ipecac ? 0.6 : 1) * (f.polifemo ? 1.6 : 1) * (f.proptosis ? 2 : 1) * (f.soja && !f.almendra ? 0.7 : 1);
+  j.vuela = !!f.vuela;
+}
+const danoDe = (j) => (j.danoBase + j.danoSala) * (j.f.ojoMuerto ? 1 + 0.25 * Math.min(4, j.ojoMuerto) : 1);
+const lagrimasPorSeg = (j) => j.fr;
+const cuadrosEntreLagrimas = (j) => 60 / j.fr;
+const velDe = (j) => j.vel;
+const alcancePx = (j) => j.alcance * T;
+const radioLagrima = (j) => lim(Math.round((2 + Math.sqrt(Math.min(danoDe(j), 60)) * 0.9) * j.tam), 2, 12);
+/** Probabilidad de los efectos por suerte (fórmulas de la wiki). */
+const chance = {
+  veneno: (L) => 1 / Math.max(1, 4 - Math.floor(L * 0.25)),
+  lento: (L) => 1 / Math.max(1, 4 - Math.floor(L / 5)),
+  miedo: (L) => 1 / Math.max(1, 3 - Math.floor(L * 0.1)),
+  piedra: (L) => Math.min(0.5, 1 / Math.max(1, 5 - Math.floor(L * 0.15))),
+  diente: (L) => 1 / Math.max(1, 10 - Math.floor(L)),
+  aguja: (L) => Math.min(0.25, 1 / Math.max(1, 30 - Math.floor(L * 2))),
+  santa: (L) => Math.min(0.5, 1 / Math.max(1, 10 - Math.floor(L * 0.9))),
+  estalla: (L) => 1 / Math.max(1, 10 - Math.floor(L * 0.7)),
+};
 
 function vidaTotal(j) { return j.vida + j.esporas; }
 function curar(j, medios) { const antes = j.vida; j.vida = Math.min(j.cont, j.vida + medios); return j.vida > antes; }
@@ -41,6 +115,7 @@ function sumarContenedor(j, n) { j.cont = lim(j.cont + n * 2, 0, 24); j.esporas 
 
 function herirJugador(j, medios, causa, dibujo) {
   if (j.inv > 0 || j.muerto || J.estado !== "juego") return false;
+  if (j.escudo > 0) return false;
   if (J.sala.tipo === "jefe") j.golpesJefe++;
   j.golpesPiso++;
   let resto = medios;
@@ -50,8 +125,27 @@ function herirJugador(j, medios, causa, dibujo) {
   temblar(6);
   SFX.dolor();
   sangrar(j.x, j.y - 8, 6, PAL.sangre);
-  if (vidaTotal(j) <= 0) { j.muerto = true; j.tMuerte = 0; J.causa = causa || "?"; J.causaSpr = dibujo || null; SFX.muere(); Musica.poner("silencio"); }
+  alHerir(j);
+  if (vidaTotal(j) <= 0) {
+    if (j.vidasExtra > 0) { revivir(j); return true; }
+    j.muerto = true; j.tMuerte = 0; J.causa = causa || "?"; J.causaSpr = dibujo || null; SFX.muere(); Musica.poner("silencio");
+  }
   return true;
+}
+/** Lo que pasa cuando a Shumio le pegan (baratijas, bebé araña, la página perdida…). */
+function alHerir(j) {
+  const f = j.f;
+  if (f.monedaTragada) soltarPremio(j.x, j.y, "moneda");
+  if (f.pagina) { J.destello = 4; for (const e of J.enemigos.slice()) danarEnemigo(e, 80); }
+  if (f.aranaHerido) for (let i = 0; i < A.ent(3, 5); i++) J.familiares.push(moscaAzul(j.x, j.y, "arana"));
+  if (f.pajaro && !J.familiares.some((m) => m.tipo === "pajaro")) J.familiares.push({ tipo: "pajaro", x: j.x, y: j.y - 20, t: 0 });
+}
+/** Una vida de más (el gato muerto, el hongo 1UP): vuelve con un corazón. */
+function revivir(j) {
+  j.vidasExtra--;
+  j.cont = Math.max(2, Math.min(j.cont, 2)); j.vida = 2; j.inv = 120;
+  rotulo("¡OTRA VIDA!", j.vidasExtra ? `Te quedan ${j.vidasExtra}` : "");
+  SFX.objeto(); J.destello = 6;
 }
 
 function actualizarJugador(j) {
@@ -75,14 +169,14 @@ function actualizarJugador(j) {
   j.paso += v;
   if (v > 0.3) j.mirarCue = Math.abs(j.vx) > Math.abs(j.vy) * 1.1 ? (j.vx > 0 ? DERECHA : IZQUIERDA) : (j.vy > 0 ? ABAJO : ARRIBA);
 
-  // llorar
-  if (j.enfriar > 0) j.enfriar--;
-  const dx = quieto ? 0 : IN.dx, dy = quieto ? 0 : IN.dy;
-  if (dx || dy) {
-    j.mirar = dx > 0 ? DERECHA : dx < 0 ? IZQUIERDA : dy > 0 ? ABAJO : ARRIBA;
-    if (j.enfriar <= 0) { dispararJugador(j, dx, dy); j.enfriar = cuadrosEntreLagrimas(j); }
-  } else if (v > 0.3) j.mirar = j.mirarCue;
-  else if (j.enfriar <= 0) j.mirar = j.mirarCue;
+  // llorar: cada arma se dispara a su manera (12b-armas)
+  actualizarArma(j, quieto);
+  if (j.f.bob && v > 0.3 && J.t % 5 === 0) dejarBaba(j.x, j.y + 2, 7, 150, false, "amiga");
+  if (j.f.virus || j.f.tacos) for (const e of J.enemigos) if (blanco_(e) && dist(e.x, e.y, j.x, j.y) < e.r + 7) {
+    if (J.t % 5 === 0) danarEnemigo(e, j.f.tacos ? 12 : 0.5);
+    if (j.f.virus) e.veneno = { t: 80, dano: 2 };
+  }
+  if (j.escudo > 0) j.escudo--;
 
   // pinchos, brasas, baba
   if (!j.vuela) {
@@ -113,35 +207,15 @@ function bordesJugador() {
 }
 function puertaPasable(p) { return p && puertaVisible(p) && !p.llave; }
 
-function dispararJugador(j, dx, dy) {
-  const d = danoDe(j), r = radioLagrima(j), vel = 3.3 * j.velLag;
-  const lado = (j.ojo = 1 - j.ojo) ? 1 : -1;
-  const n = j.triple ? 3 : 1;
-  for (let i = 0; i < n; i++) {
-    const abre = n === 1 ? 0 : (i - 1) * 0.16;
-    const ang = Math.atan2(dy, dx) + abre;
-    let vx = Math.cos(ang) * vel, vy = Math.sin(ang) * vel;
-    // hereda un poco del paso (sólo de costado: así las lágrimas "se tuercen" como en el original)
-    if (dx) vy += j.vy * 0.45; else vx += j.vx * 0.45;
-    if (dx) vx += j.vx * 0.25; else vy += j.vy * 0.25;
-    const ox = dy ? lado * 3 : dx * 5, oy = dx ? lado * 1 : dy * 3;
-    const vida = alcancePx(j) / vel;
-    J.lagrimas.push({
-      x: j.x + ox, y: j.y + oy + (dy < 0 ? -2 : 0), z: 14, vx, vy, vida, vidaMax: vida, r, dano: d,
-      color: j.colorLag, atraviesa: j.atraviesa, espectral: j.espectral, rebote: j.rebote, buscadora: j.buscadora,
-      veneno: j.veneno && A.si(0.25 + j.suerte * 0.06), hielo: j.hielo && A.si(0.3 + j.suerte * 0.06), fuego: j.fuego && A.si(0.2 + j.suerte * 0.05),
-      tocados: null,
-    });
-  }
-  if (!j.gesto || j.gesto === 1) { j.gesto = 1; j.tGesto = 6; }
-  SFX.lagrima();
-}
-
 function tirarBomba(j) {
   if (j.bombas <= 0 || j.muerto) return;
   j.bombas--;
-  J.bombas.push({ x: j.x, y: j.y + 2, t: 90, gorda: j.bombaGorda, vx: j.vx * 0.3, vy: j.vy * 0.3, r: 5 });
+  J.bombas.push(nuevaBomba(j, j.x, j.y + 2, j.vx * 0.3, j.vy * 0.3, 90));
   SFX.mecha();
+}
+/** Una bomba con lo que le agregan los objetos (gorda, podrida, la del feto…). */
+function nuevaBomba(j, x, y, vx, vy, t, o = {}) {
+  return { x, y, t, vx, vy, r: 5, gorda: !!j.f.bombaGorda, veneno: !!j.f.bombaPodrida, dano: o.dano, feto: !!o.feto, contacto: !!o.contacto, danoJug: o.danoJug ?? 2, rayos: o.rayos, lasers: o.lasers, segunda: o.segunda };
 }
 
 // ── el dibujo ──
@@ -159,6 +233,7 @@ function dibujarJugador(g, j) {
     return;
   }
   if (j.inv > 0 && ((j.inv >> 2) & 1)) return;   // parpadea mientras es invencible
+  if (j.escudo > 0) { g.globalAlpha = 0.35 + 0.15 * Math.sin(J.t * 0.3); g.drawImage(aro(15, "rgba(20,10,30,0.5)", "rgba(200,170,255,0.8)"), Math.round(j.x) - 15, Math.round(j.y) - 26); g.globalAlpha = 1; }
   const z = Math.round(j.vuela ? 5 + Math.sin(J.t * 0.08) * 1.5 : 0);
   g.drawImage(sombra(7, 3), X - 7, Y + 2);
   const mov = Math.hypot(j.vx, j.vy) > 0.3;
@@ -168,6 +243,8 @@ function dibujarJugador(g, j) {
   // la cabeza baja un píxel al soltar la lágrima (el "puchero")
   const cab = s.cab[VISTA_CAB[j.mirar]][j.gesto], baja = j.gesto === 1 ? 1 : 0;
   const bob = mov && (kPaso === 1 || kPaso === 3) ? 1 : 0;
+  // volando: dos alitas de polilla que aletean detrás (el "disfraz" de vuelo del original)
+  if (j.vuela) { const a = alitaSpr((J.t >> 2) & 1); g.drawImage(a, X - 15, Y - 22 - z); g.drawImage(espejado(a), X + 3, Y - 22 - z); }
   g.drawImage(cue, X - 7, Y - 8 - z);
   g.drawImage(cab, X - 11, Y - 24 - z + baja + bob);
   if (j.tSostiene > 0 && j.sostiene) g.drawImage(j.sostiene, X - 9, Y - 44 - z);
@@ -201,4 +278,15 @@ function chocarConCosas(e) {
       c.tocado = true;
     }
   }
+}
+
+function alitaSpr(k) {
+  return hornear(`alita${k}`, () => {
+    const p = new Pix(12, 12);
+    p.bola(6, k ? 6 : 5, 5, k ? 4 : 5, ["#3a3226", "#6e6048", "#a8966e", "#d6c69a"], { luz: [-0.2, -0.8, 0.5] });
+    p.bola(5, 5, 1.4, 1.4, ["#1a1410", "#3a3226"], {});
+    for (let y = 0; y < 12; y++) for (let x = 9; x < 12; x++) p.borrar(x, y);
+    p.contorno(AUTO);
+    return p.canvas();
+  });
 }

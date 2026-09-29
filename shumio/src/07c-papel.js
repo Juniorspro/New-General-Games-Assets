@@ -64,7 +64,8 @@ function chincheSpr() {
 /** Un garabato hecho "a mano" desde un sprite: su contorno y sus partes oscuras, en tinta. */
 function garabato(c, tinta = "#2b2326", escala = 2, relleno = null) {
   return hornear(`garabato|${tinta}|${escala}|${relleno}|` + (c.__id ||= Math.random().toString(36).slice(2)), () => {
-    const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+    let d = _lecturas.get(c); if (!d) { d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data; _lecturas.set(c, d); }
+    const W = c.width, H = c.height;
     const a = (x, y) => x >= 0 && y >= 0 && x < W && y < H && d[(y * W + x) * 4 + 3] > 100;
     const lum0 = (x, y) => { const i = (y * W + x) * 4; return (d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255; };
     // la luz promediada en 3×3 (así el tramado no cuenta como borde: sólo los cambios de verdad)

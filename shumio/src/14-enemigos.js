@@ -197,9 +197,13 @@ function danarEnemigo(e, d, kx = 0, ky = 0, lag = null) {
   e.vida -= d; e.golpe = 5;
   if (!e.jefe) { const p = e.def.peso ?? 1; e.kx += kx / p; e.ky += ky / p; }
   if (lag) {
-    if (lag.veneno) e.veneno = { t: 80, dano: 2 };
+    // veneno y quemadura: como en el original, dos a cuatro golpes del daño de Shumio
+    const dj = J.jug ? Math.min(danoDe(J.jug), 40) : 3.5;
+    if (lag.veneno) e.veneno = { t: 80, dano: Math.max(2, dj * 0.5) };
     if (lag.hielo) e.frio = 100;
-    if (lag.fuego) e.quema = { t: 60, dano: 1.5 };
+    if (lag.fuego) e.quema = { t: 80, dano: Math.max(1.5, dj * 0.4) };
+    if (lag.miedo) e.miedo = e.jefe ? 60 : 150;
+    if (lag.piedra) e.piedra = e.jefe ? 40 : 100;
   }
   if (e.vida <= 0) matarEnemigo(e);
 }
@@ -236,9 +240,13 @@ function actualizarEnemigos() {
       if (--s.t <= 0) e[k] = null; else if (s.t % 20 === 0) { e.vida -= s.dano; e.golpe = 2; if (e.vida <= 0) matarEnemigo(e); }
     }
     if (e.muerto) continue;
+    // petrificado: no piensa ni se mueve (sólo lo empujan los golpes)
+    if (e.piedra > 0) { e.piedra--; e.vx = e.vy = 0; moverEnSala(J.sala, e, e.kx, e.ky, e.vuela); e.kx *= 0.78; e.ky *= 0.78; continue; }
     J.quien = e;
     e.def.pensar(e);
     J.quien = null;
+    // con miedo: hace lo suyo pero para el otro lado (se aleja de Shumio)
+    if (e.miedo > 0) { e.miedo--; const v = Math.hypot(e.vx, e.vy) || 0.6, d = dist(e.x, e.y, j.x, j.y) || 1; e.vx = (e.x - j.x) / d * v; e.vy = (e.y - j.y) / d * v; }
     if (e.muerto) continue;
     const vuela = e.vuela || e.vueloPropio;
     if (e.rebotaSolo) {
@@ -275,7 +283,9 @@ function dibujarEnemigo(g, e) {
   let s = d.spr(e);
   if (e.mira < 0 && d.voltea) s = espejado(s);
   if (e.campeon) s = tinte(s, "rgba(230,40,30,0.38)");
-  if (e.veneno) s = tinte(s, "rgba(90,220,60,0.4)");
+  if (e.piedra > 0) s = tinte(s, "rgba(120,116,110,0.7)");
+  else if (e.miedo > 0 && (e.t >> 3) & 1) s = tinte(s, "rgba(60,20,90,0.45)");
+  else if (e.veneno) s = tinte(s, "rgba(90,220,60,0.4)");
   else if (e.frio > 0) s = tinte(s, "rgba(120,200,255,0.45)");
   else if (e.quema) s = tinte(s, "rgba(255,140,40,0.4)");
   if (e.golpe > 0 && (e.golpe & 2)) s = blanco(s);
@@ -295,7 +305,7 @@ function poblarSala(sala) {
     const x = cx(h.c), y = cy(h.f);
     if (h.tipo === "e") crearEnemigo(A.pesos(tanda.e), x, y);
     else if (h.tipo === "E") crearEnemigo(A.pesos(tanda.E), x, y);
-    else if (h.tipo === "v") crearEnemigo(J.piso.n >= 2 ? "mosquinRojo" : "mosquin", x, y);
+    else if (h.tipo === "v") { if (J.jug.f.belcebu) J.familiares.push(moscaAzul(x, y)); else crearEnemigo(J.piso.n >= 2 ? "mosquinRojo" : "mosquin", x, y); }
     else if (h.tipo === "j") crearJefe(sala, x, y);
     J.fx.push({ anim: [0, 1, 2, 3, 4].map(aparicionSpr), x, y: y - 4, t: 0, cada: 4, centro: true });
   }

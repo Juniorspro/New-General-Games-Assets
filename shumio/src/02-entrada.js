@@ -107,5 +107,7 @@ function leerEntrada() {
     const vx = s.x - s.x0, vy = s.y - s.y0;
     if (Math.hypot(vx, vy) > RADIO_STICK * 0.3) { if (Math.abs(vx) > Math.abs(vy)) { dx = sig(vx); dy = 0; } else { dx = 0; dy = sig(vy); } }
   }
+  // (sonda de pruebas: un tiro forzado durante n cuadros)
+  if (IN.forzarTiro) { [dx, dy] = IN.forzarTiro; if (--IN.forzarTiro[2] <= 0) IN.forzarTiro = null; }
   IN.mx = mx; IN.my = my; IN.dx = dx; IN.dy = dy;
 }

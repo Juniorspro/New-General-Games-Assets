@@ -36,6 +36,8 @@ window.__SH.hojaDe = (grupo) => {
     const l = [0, 1, 2, 3].map(madreBabosaSpr).concat([reyMosquinSpr(0), reyMosquinSpr(1), gusanoAnilladoSpr("cabeza"), gusanoAnilladoSpr("cuerpo"), gusanoAnilladoSpr("cola")], [0, 1, 2, 3].map(miceliaSpr));
     return window.__SH.hoja(l, 3);
   }
+  if (grupo === "objetos") return window.__SH.hoja([...Object.keys(OBJETOS), ...Object.keys(BARATIJAS)].map(iconoSpr), 4);
+  if (grupo === "armas") return window.__SH.hoja([cuchilloSpr(), misilSpr(), proyectilSpr("aguja"), proyectilSpr("hueso"), proyectilSpr("diente"), ...["normal", "dorado", "piedra", "pinchos", "rojo"].flatMap((k) => [cofreSpr(k, false), cofreSpr(k, true)])], 6);
   if (grupo === "sala" || grupo === "raices") {
     const cap = grupo === "sala" ? "sotano" : "raices";
     const c = lienzoNuevo(SALA_W, SALA_H), g = c.getContext("2d");
@@ -73,5 +75,11 @@ Object.assign(window.__SH, {
   cuadroRotulo: (t) => { for (const r of J.rotulos) r.t = t - 1; J.rotulos.forEach(() => {}); MENU.activo = null; dibujar(); },
   tactil: (v) => { IN.usaTactil = v; },
   vs: () => { if (J.vsPendiente) empezarVs(); },
+  paso: () => paso(), dibujar: () => dibujar(),
   matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
+  /** Le da objetos a Shumio de una (para probar combinaciones): dar("rayo", "tercerOjo"). */
+  dar: (...ids) => { const j = J.jug; for (const id of ids) { if (BARATIJAS[id]) { j.baratija = id; continue; } const d = OBJETOS[id]; if (!d) continue; if (d.activo) j.activo = { id, carga: d.activo, max: d.activo }; else { j.objetos.push(id); if (d.alTomar) d.alTomar(j); } j.vistos.add(id); } recalcular(j); revisarTransformaciones(j); recalcular(j); armarFamiliares(); return { arma: j.arma, n: j.n, fr: j.fr, dano: danoDe(j), f: j.f }; },
+  sala: (tipo) => { const s = [...J.piso.salas.values()].find((x) => x.tipo === tipo && !x.limpia); if (s) { entrarSala(s, null); J.estado = "juego"; } return !!s; },
+  tirar: (dx, dy, cuadros) => { IN.forzarTiro = [dx, dy, cuadros]; },
+  cuenta: () => ({ objetos: Object.keys(OBJETOS).length, activos: Object.values(OBJETOS).filter((o) => o.activo).length, baratijas: Object.keys(BARATIJAS).length, transformaciones: Object.keys(TRANSFORMACIONES).length }),
 });
