@@ -8,12 +8,12 @@
 <title>Shumio's Depths</title>
 <!--
   SHUMIO'S DEPTHS — un roguelike de salas con lágrimas, en pixel art dibujado a mano por código.
-  Un solo archivo, sin red. Se juega con el teléfono acostado (pensado para un TCL 20 SE: 1600×720).
+  Un solo archivo, sin red. Siempre en horizontal (con el teléfono parado, se dibuja de costado); pensado para un TCL 20 SE: 1600×720.
   El código vive en shumio/src/*.js; este archivo lo arma `node construir.mjs`.
 -->
 <style>
   html, body { margin: 0; height: 100%; background: #07060a; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  canvas { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 </style>
 </head>
 <body>

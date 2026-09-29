@@ -290,7 +290,6 @@ function paso() {
   PERF.pasos++;
   leerEntrada();
   ubicarBotones();
-  if (PANT.vertical) { if (enJuego()) abrirMenu("pausa"); finEntrada(); return; }
   if (MENU.activo) pasoMenu();
   else if (J) pasoJuego();
   finEntrada();
@@ -300,7 +299,6 @@ function dibujar() {
   g.imageSmoothingEnabled = false;
   if (J && (!MENU.activo || MENU.activo.sobreJuego)) dibujarJuego(g);
   if (MENU.activo) dibujarMenu(g);
-  if (PANT.vertical) dibujarGirar(g);
   presentar();
 }
 function alMedir() { if (typeof ubicarBotones === "function") ubicarBotones(); }

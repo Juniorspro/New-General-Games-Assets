@@ -70,6 +70,7 @@ function actualizarJugador(j) {
   j.vx += (ax - j.vx) * k; j.vy += (ay - j.vy) * k;
   if (Math.abs(j.vx) < 0.02) j.vx = 0; if (Math.abs(j.vy) < 0.02) j.vy = 0;
   moverEnSala(J.sala, j, j.vx, j.vy, j.vuela, bordesJugador());
+  chocarConCosas(j);
   const v = Math.hypot(j.vx, j.vy);
   j.paso += v;
   if (v > 0.3) j.mirarCue = Math.abs(j.vx) > Math.abs(j.vy) * 1.1 ? (j.vx > 0 ? DERECHA : IZQUIERDA) : (j.vy > 0 ? ABAJO : ARRIBA);
@@ -170,4 +171,34 @@ function dibujarJugador(g, j) {
   g.drawImage(cue, X - 7, Y - 8 - z);
   g.drawImage(cab, X - 11, Y - 24 - z + baja + bob);
   if (j.tSostiene > 0 && j.sostiene) g.drawImage(j.sostiene, X - 9, Y - 44 - z);
+}
+
+/** Los pedestales son un bloque firme (caja) y los cofres se empujan (como en el original): Shumio
+ *  choca contra ellos y, al tocarlos, los usa. */
+const RADIO_SOLIDO = { objeto: 10, cofre: 8, cofreFinal: 14 };
+function chocarConCosas(e) {
+  for (const c of J.sala.cosas) {
+    if (c.t === "objeto") {
+      // la caja del pedestal: 20×12, apoyada en su base
+      const x0 = c.x - 10, x1 = c.x + 10, y0 = c.y - 8, y1 = c.y + 4;
+      const px = lim(e.x, x0, x1), py = lim(e.y, y0, y1), dx = e.x - px, dy = e.y - py, d = Math.hypot(dx, dy);
+      if (d < e.r) {
+        if (d > 0.001) { e.x = px + dx / d * e.r; e.y = py + dy / d * e.r; }
+        else { const izq = e.x - x0, der = x1 - e.x, arr = e.y - y0, aba = y1 - e.y, m = Math.min(izq, der, arr, aba); if (m === izq) e.x = x0 - e.r; else if (m === der) e.x = x1 + e.r; else if (m === arr) e.y = y0 - e.r; else e.y = y1 + e.r; }
+        c.tocado = true;
+      }
+    } else if (c.t === "cofre" || c.t === "cofreFinal") {
+      const R = RADIO_SOLIDO[c.t], dx = c.x - e.x, dy = c.y - e.y, d = Math.hypot(dx, dy) || 0.001, m = R + e.r;
+      if (d >= m) continue;
+      const falta = m - d, nx = dx / d, ny = dy / d;
+      if (c.t === "cofre") {            // se empuja: el cofre se corre y choca con las paredes
+        const antes = [c.x, c.y];
+        c.r = R; moverEnSala(J.sala, c, nx * falta * 0.8, ny * falta * 0.8, false);
+        const movido = Math.hypot(c.x - antes[0], c.y - antes[1]);
+        const resto = Math.max(0, falta - movido);
+        e.x -= nx * resto; e.y -= ny * resto;
+      } else { e.x -= nx * falta; e.y -= ny * falta; }
+      c.tocado = true;
+    }
+  }
 }

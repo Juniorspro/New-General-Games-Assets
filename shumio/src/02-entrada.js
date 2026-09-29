@@ -33,6 +33,7 @@ addEventListener("keydown", (e) => {
   if (e.code === "Escape" || e.code === "KeyP") FLANCO.pausa = true;
   if (e.code === "Enter" || e.code === "Space") FLANCO.aceptar = true;
   if (e.code === "KeyM") FLANCO.mapa = true;
+  if (e.code === "KeyF") pantallaCompleta(!enPantallaCompleta());
   audioDespertar();
 });
 addEventListener("keyup", (e) => { const k = TECLAS[e.code]; if (k) IN.teclas.delete(k); });
@@ -42,10 +43,15 @@ function botonEn(x, y) {
   for (const b of BOTONES) if (Math.hypot(x - b.x, y - b.y) <= b.r + 4) return b;
   return null;
 }
+let _primerToque = true;
 lienzo.addEventListener("pointerdown", (e) => {
   e.preventDefault();
   audioDespertar();
-  if (e.pointerType !== "mouse") IN.usaTactil = true;
+  if (e.pointerType !== "mouse") {
+    IN.usaTactil = true;
+    // en el teléfono, el primer toque pone la pantalla completa (y traba la horizontal si se puede)
+    if (_primerToque) { _primerToque = false; pantallaCompleta(true); }
+  }
   const p = aMundo(e.clientX, e.clientY);
   const d = { id: e.pointerId, x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), que: null };
   const b = enJuego() ? botonEn(p.x, p.y) : null;

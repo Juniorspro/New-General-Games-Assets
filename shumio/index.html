@@ -8,12 +8,12 @@
 <title>Shumio's Depths</title>
 <!--
   SHUMIO'S DEPTHS — un roguelike de salas con lágrimas, en pixel art dibujado a mano por código.
-  Un solo archivo, sin red. Se juega con el teléfono acostado (pensado para un TCL 20 SE: 1600×720).
+  Un solo archivo, sin red. Siempre en horizontal (con el teléfono parado, se dibuja de costado); pensado para un TCL 20 SE: 1600×720.
   El código vive en shumio/src/*.js; este archivo lo arma `node construir.mjs`.
 -->
 <style>
   html, body { margin: 0; height: 100%; background: #07060a; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+  canvas { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 </style>
 </head>
 <body>
@@ -104,16 +104,26 @@ const lienzo = document.getElementById("lienzo");
 const cxP = lienzo.getContext("2d", { alpha: false });
 const cvM = document.createElement("canvas");
 const cxM = cvM.getContext("2d", { alpha: false });
-const PANT = { W: 534, H: 240, PX: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0 };
+const PANT = { W: 534, H: 240, PX: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0, girado: false, cssW: 0 };
 const ALTO_MIN = 236;   // la sala (224) y un margen
 
 function medir() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  const cw = lienzo.clientWidth || innerWidth, ch = lienzo.clientHeight || innerHeight;
+  const vw = innerWidth, vh = innerHeight;
+  // el juego es SIEMPRE horizontal: con el teléfono parado, el lienzo se gira 90° (se juega de costado
+  // aunque el navegador no deje trabar la orientación)
+  const girar = vh > vw * 1.05;
+  if (girar !== PANT.girado || PANT.cssW !== (girar ? vh : vw)) {
+    PANT.girado = girar;
+    const st = lienzo.style;
+    if (girar) { st.width = vh + "px"; st.height = vw + "px"; st.transformOrigin = "0 0"; st.transform = `translateX(${vw}px) rotate(90deg)`; }
+    else { st.width = "100%"; st.height = "100%"; st.transform = ""; }
+  }
+  const cw = girar ? vh : vw, ch = girar ? vw : vh;
+  PANT.cssW = cw;
   const dw = Math.round(cw * dpr), dh = Math.round(ch * dpr);
-  PANT.vertical = ch > cw * 1.05;
-  // el lado que manda es el alto (acostado); parado, el ancho (para mostrar "girá el teléfono")
-  const PX = Math.max(1, Math.floor((PANT.vertical ? dw * 0.62 : dh) / ALTO_MIN));
+  PANT.vertical = false;
+  const PX = Math.max(1, Math.floor(dh / ALTO_MIN));
   if (dw === PANT.dw && dh === PANT.dh && PX === PANT.PX && lienzo.width === dw) return;
   PANT.dw = dw; PANT.dh = dh; PANT.PX = PX;
   lienzo.width = dw; lienzo.height = dh;
@@ -125,14 +135,31 @@ function medir() {
   PANT.salaY = Math.floor((PANT.H - SALA_H) / 2);
   if (typeof alMedir === "function") alMedir();
 }
-new ResizeObserver(() => medir()).observe(lienzo);
+new ResizeObserver(() => medir()).observe(document.documentElement);
+addEventListener("resize", () => medir());
 addEventListener("orientationchange", () => setTimeout(medir, 200));
 
-/** Del punto de la pantalla (CSS) al mundo (píxeles de juego). */
+/** Del punto de la pantalla (CSS) al mundo (píxeles de juego), también con el lienzo girado. */
 function aMundo(clientX, clientY) {
-  const dpr = PANT.dw / (lienzo.clientWidth || innerWidth);
-  return { x: (clientX * dpr - PANT.ox) / PANT.PX, y: (clientY * dpr - PANT.oy) / PANT.PX };
+  let u = clientX, v = clientY;
+  if (PANT.girado) { u = clientY; v = innerWidth - clientX; }
+  const dpr = PANT.dw / PANT.cssW;
+  return { x: (u * dpr - PANT.ox) / PANT.PX, y: (v * dpr - PANT.oy) / PANT.PX };
 }
+
+// ── pantalla completa (y, si el navegador deja, la orientación trabada en horizontal) ──
+function enPantallaCompleta() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function pantallaCompleta(activar = true) {
+  try {
+    if (activar && !enPantallaCompleta()) {
+      const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen;
+      const p = f && f.call(el, { navigationUI: "hide" });
+      const trabar = () => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape").catch(() => {}); } catch (e) { /* no se puede */ } };
+      if (p && p.then) p.then(trabar).catch(() => {}); else trabar();
+    } else if (!activar && enPantallaCompleta()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } catch (e) { /* el navegador no deja */ }
+}
+document.addEventListener("fullscreenchange", () => setTimeout(medir, 100));
 
 function presentar() {
   cxP.drawImage(cvM, 0, 0, PANT.W, PANT.H, PANT.ox, PANT.oy, PANT.W * PANT.PX, PANT.H * PANT.PX);
@@ -174,6 +201,7 @@ addEventListener("keydown", (e) => {
   if (e.code === "Escape" || e.code === "KeyP") FLANCO.pausa = true;
   if (e.code === "Enter" || e.code === "Space") FLANCO.aceptar = true;
   if (e.code === "KeyM") FLANCO.mapa = true;
+  if (e.code === "KeyF") pantallaCompleta(!enPantallaCompleta());
   audioDespertar();
 });
 addEventListener("keyup", (e) => { const k = TECLAS[e.code]; if (k) IN.teclas.delete(k); });
@@ -183,10 +211,15 @@ function botonEn(x, y) {
   for (const b of BOTONES) if (Math.hypot(x - b.x, y - b.y) <= b.r + 4) return b;
   return null;
 }
+let _primerToque = true;
 lienzo.addEventListener("pointerdown", (e) => {
   e.preventDefault();
   audioDespertar();
-  if (e.pointerType !== "mouse") IN.usaTactil = true;
+  if (e.pointerType !== "mouse") {
+    IN.usaTactil = true;
+    // en el teléfono, el primer toque pone la pantalla completa (y traba la horizontal si se puede)
+    if (_primerToque) { _primerToque = false; pantallaCompleta(true); }
+  }
   const p = aMundo(e.clientX, e.clientY);
   const d = { id: e.pointerId, x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), que: null };
   const b = enJuego() ? botonEn(p.x, p.y) : null;
@@ -2967,6 +3000,7 @@ function actualizarJugador(j) {
   j.vx += (ax - j.vx) * k; j.vy += (ay - j.vy) * k;
   if (Math.abs(j.vx) < 0.02) j.vx = 0; if (Math.abs(j.vy) < 0.02) j.vy = 0;
   moverEnSala(J.sala, j, j.vx, j.vy, j.vuela, bordesJugador());
+  chocarConCosas(j);
   const v = Math.hypot(j.vx, j.vy);
   j.paso += v;
   if (v > 0.3) j.mirarCue = Math.abs(j.vx) > Math.abs(j.vy) * 1.1 ? (j.vx > 0 ? DERECHA : IZQUIERDA) : (j.vy > 0 ? ABAJO : ARRIBA);
@@ -3067,6 +3101,36 @@ function dibujarJugador(g, j) {
   g.drawImage(cue, X - 7, Y - 8 - z);
   g.drawImage(cab, X - 11, Y - 24 - z + baja + bob);
   if (j.tSostiene > 0 && j.sostiene) g.drawImage(j.sostiene, X - 9, Y - 44 - z);
+}
+
+/** Los pedestales son un bloque firme (caja) y los cofres se empujan (como en el original): Shumio
+ *  choca contra ellos y, al tocarlos, los usa. */
+const RADIO_SOLIDO = { objeto: 10, cofre: 8, cofreFinal: 14 };
+function chocarConCosas(e) {
+  for (const c of J.sala.cosas) {
+    if (c.t === "objeto") {
+      // la caja del pedestal: 20×12, apoyada en su base
+      const x0 = c.x - 10, x1 = c.x + 10, y0 = c.y - 8, y1 = c.y + 4;
+      const px = lim(e.x, x0, x1), py = lim(e.y, y0, y1), dx = e.x - px, dy = e.y - py, d = Math.hypot(dx, dy);
+      if (d < e.r) {
+        if (d > 0.001) { e.x = px + dx / d * e.r; e.y = py + dy / d * e.r; }
+        else { const izq = e.x - x0, der = x1 - e.x, arr = e.y - y0, aba = y1 - e.y, m = Math.min(izq, der, arr, aba); if (m === izq) e.x = x0 - e.r; else if (m === der) e.x = x1 + e.r; else if (m === arr) e.y = y0 - e.r; else e.y = y1 + e.r; }
+        c.tocado = true;
+      }
+    } else if (c.t === "cofre" || c.t === "cofreFinal") {
+      const R = RADIO_SOLIDO[c.t], dx = c.x - e.x, dy = c.y - e.y, d = Math.hypot(dx, dy) || 0.001, m = R + e.r;
+      if (d >= m) continue;
+      const falta = m - d, nx = dx / d, ny = dy / d;
+      if (c.t === "cofre") {            // se empuja: el cofre se corre y choca con las paredes
+        const antes = [c.x, c.y];
+        c.r = R; moverEnSala(J.sala, c, nx * falta * 0.8, ny * falta * 0.8, false);
+        const movido = Math.hypot(c.x - antes[0], c.y - antes[1]);
+        const resto = Math.max(0, falta - movido);
+        e.x -= nx * resto; e.y -= ny * resto;
+      } else { e.x -= nx * falta; e.y -= ny * falta; }
+      c.tocado = true;
+    }
+  }
 }
 
 // ══════════ 13-efectos.js ══════════
@@ -3923,8 +3987,9 @@ function actualizarCosas() {
     }
     if (c.t === "trampilla") { if (!c.abierta && dist(j.x, j.y, c.x, c.y) > 20) c.abierta = true; if (c.abierta && dist(j.x, j.y, c.x, c.y) < 8 && !j.muerto && J.estado === "juego") bajarPiso(); continue; }
     if (j.muerto || c.z > 6) continue;
-    const alcance = c.t === "objeto" ? 12 : c.t === "cofre" || c.t === "cofreFinal" ? 12 : 9;
-    if (dist(j.x, j.y, c.x, c.y) > alcance) { c.tocando = false; continue; }
+    const alcance = RADIO_SOLIDO[c.t] ? RADIO_SOLIDO[c.t] + j.r + 1.5 : 9;
+    if (c.espera > 0) { c.espera--; continue; }       // lo que recién saltó de un cofre no se agarra al toque
+    if (dist(j.x, j.y, c.x, c.y) > alcance) { c.tocando = false; c.avisado = false; continue; }
     if (tomar(c)) C.splice(i, 1);
   }
 }
@@ -3951,10 +4016,22 @@ function tomar(c) {
     }
     case "cofre": {
       if (c.abierto) return false;
-      if (c.sub === "dorado") { if (j.llaves <= 0) return false; j.llaves--; }
-      c.abierto = true; c.quieto = true; SFX.llave();
+      if (c.sub === "dorado" && j.llaves <= 0) {       // trabado: suena el candado y tiembla (una vez por toque)
+        if (!c.avisado) { SFX.clic(); c.sacudida = 10; c.avisado = true; }
+        return false;
+      }
+      if (c.sub === "dorado") j.llaves--;
+      c.abierto = true; c.quieto = true; SFX.llave(); SFX.recoger();
+      // lo de adentro salta hacia afuera, lejos de Shumio, y tarda un momento en poder agarrarse
+      const ang0 = Math.atan2(c.y - j.y, c.x - j.x);
       if (c.sub === "dorado" && A.si(0.14)) { J.sala.cosas.push(pedestal(c.x, c.y - 18, sacarObjeto("tesoro"))); }
-      else { const n = A.ent(2, c.sub === "dorado" ? 4 : 3); for (let i = 0; i < n; i++) soltarPremio(c.x, c.y); }
+      else {
+        const n = A.ent(2, c.sub === "dorado" ? 4 : 3);
+        for (let i = 0; i < n; i++) {
+          const p = soltarPremio(c.x, c.y - 4), a = ang0 + (i - (n - 1) / 2) * 0.55 + (A.f() - 0.5) * 0.3, v = 1.6 + A.f() * 0.8;
+          p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v * 0.8; p.vz = 3 + A.f(); p.espera = 26;
+        }
+      }
       return false;
     }
     case "cofreFinal": if (!c.abierto) { c.abierto = true; ganar(); } return false;
@@ -4118,7 +4195,7 @@ function dibujarCosa(g, c) {
     case "bomba": s = bombaSpr(0.8); break;
     case "llave": s = llaveSpr(); break;
     case "capsula": s = capsulaSpr(c.sub); break;
-    case "cofre": s = cofreSpr(c.sub === "dorado", !!c.abierto); break;
+    case "cofre": s = cofreSpr(c.sub === "dorado", !!c.abierto); if (c.sacudida > 0) { c.sacudida--; g.save(); g.translate(Math.round(Math.sin(c.sacudida * 2.2) * 1.5), 0); g.drawImage(sombra(8, 2), X - 8, Y); g.drawImage(s, X - Math.floor(s.width / 2), Y + 2 - s.height); g.restore(); return; } break;
     case "cofreFinal": { s = cofreSpr(true, !!c.abierto); const w = s.width * 2, h = s.height * 2; g.drawImage(sombra(16, 4), X - 16, Y - 2); g.drawImage(s, X - w / 2, Y + 2 - h, w, h); return; }
     case "trampilla": s = trampillaSpr(!!c.abierta); g.drawImage(s, X - 14, Y - 14); return;
     case "objeto": {
@@ -4703,7 +4780,6 @@ function paso() {
   PERF.pasos++;
   leerEntrada();
   ubicarBotones();
-  if (PANT.vertical) { if (enJuego()) abrirMenu("pausa"); finEntrada(); return; }
   if (MENU.activo) pasoMenu();
   else if (J) pasoJuego();
   finEntrada();
@@ -4713,7 +4789,6 @@ function dibujar() {
   g.imageSmoothingEnabled = false;
   if (J && (!MENU.activo || MENU.activo.sobreJuego)) dibujarJuego(g);
   if (MENU.activo) dibujarMenu(g);
-  if (PANT.vertical) dibujarGirar(g);
   presentar();
 }
 function alMedir() { if (typeof ubicarBotones === "function") ubicarBotones(); }
@@ -4819,15 +4894,16 @@ const TINTA_MANO = "#2b2326";
 
 function abrirMenu(tipo) {
   const m = { tipo, sel: 0, t: 0, sobreJuego: tipo === "pausa" || tipo === "muerte", items: [], rects: [] };
+  const completa = { texto: () => enPantallaCompleta() ? "SALIR DE PANTALLA COMPLETA" : "PANTALLA COMPLETA", hacer: () => pantallaCompleta(!enPantallaCompleta()) };
   const vol = () => [
     { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
     { texto: () => "EFECTOS " + pct(volEfectos), cambiar: (d) => { volEfectos = lim(Math.round((volEfectos + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); SFX.moneda(); } },
   ];
   if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
   if (tipo === "principal") Musica.poner("menu");
-  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
+  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), completa, { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
   if (tipo === "ayuda") m.items = [{ texto: () => "VOLVER", hacer: () => abrirMenu("principal") }];
-  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
+  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), completa, { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "muerte" || tipo === "victoria") m.items = [{ texto: () => "OTRA VEZ", hacer: () => { MENU.activo = null; nuevaPartida(); } }, { texto: () => "AL MENÚ", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "victoria") Musica.poner("menu");
   MENU.activo = m;
@@ -4859,6 +4935,8 @@ function activar(it, tactil) {
   else if (it.cambiar) it.cambiar(tactil ? (it.texto().includes("100%") ? -10 : 2) : 1);
 }
 
+/** La hoja tiene que entrar la opción más larga (con la flechita y el margen). */
+function anchoOpciones(m, minimo) { return Math.max(minimo, ...m.items.map((it) => manoSpr(it.texto()).width + 34)); }
 // ── piezas de papel ──
 /** Una hoja clavada: el papel (que se mece apenas) y sus dos chinches. Devuelve dónde quedó. */
 function hoja(g, x, y, w, h, semilla, tono = "blanco", mece = 0, chinches = 2) {
@@ -4919,7 +4997,7 @@ function dibujarMenu(g) {
     fondoPared();
     const logo = logoSpr(), lw = Math.round(logo.width * 0.5);
     g.drawImage(logo, 8, 6, lw, Math.round(logo.height * 0.5));
-    const hw = 168, hh = m.items.length * 18 + 24, hx = Math.round(W / 2 - hw / 2 - 20), hy = Math.round(H / 2 - hh / 2) + 8;
+    const hw = anchoOpciones(m, 168), hh = m.items.length * 18 + 24, hx = Math.round(W / 2 - hw / 2 - 20), hy = Math.round(H / 2 - hh / 2) + 8;
     const dy = hoja(g, hx, hy, hw, hh, 3, "blanco", mece);
     opciones(g, m, hx + 16, hy + 14 + dy);
     notaRegistro(g, W, H, mece);
@@ -4942,7 +5020,7 @@ function dibujarMenu(g) {
     g.fillStyle = "rgba(4,2,6,0.62)"; g.fillRect(0, 0, W, H);
     const j = J.jug;
     // la hoja de las opciones
-    const hw = 150, hh = m.items.length * 18 + 40, hx = Math.round(W * 0.5 - hw - 10), hy = Math.round(H / 2 - hh / 2);
+    const hw = anchoOpciones(m, 150), hh = m.items.length * 18 + 40, hx = Math.round(Math.max(8, W * 0.5 - hw - 10)), hy = Math.round(H / 2 - hh / 2);
     let dy = hoja(g, hx, hy, hw, hh, 5, "blanco", mece);
     escribir(g, "PAUSA", hx + hw / 2, hy + 6 + dy, "centro", "#6a1c1c");
     opciones(g, m, hx + 14, hy + 26 + dy);

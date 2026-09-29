@@ -110,8 +110,9 @@ function actualizarCosas() {
     }
     if (c.t === "trampilla") { if (!c.abierta && dist(j.x, j.y, c.x, c.y) > 20) c.abierta = true; if (c.abierta && dist(j.x, j.y, c.x, c.y) < 8 && !j.muerto && J.estado === "juego") bajarPiso(); continue; }
     if (j.muerto || c.z > 6) continue;
-    const alcance = c.t === "objeto" ? 12 : c.t === "cofre" || c.t === "cofreFinal" ? 12 : 9;
-    if (dist(j.x, j.y, c.x, c.y) > alcance) { c.tocando = false; continue; }
+    const alcance = RADIO_SOLIDO[c.t] ? RADIO_SOLIDO[c.t] + j.r + 1.5 : 9;
+    if (c.espera > 0) { c.espera--; continue; }       // lo que recién saltó de un cofre no se agarra al toque
+    if (dist(j.x, j.y, c.x, c.y) > alcance) { c.tocando = false; c.avisado = false; continue; }
     if (tomar(c)) C.splice(i, 1);
   }
 }
@@ -138,10 +139,22 @@ function tomar(c) {
     }
     case "cofre": {
       if (c.abierto) return false;
-      if (c.sub === "dorado") { if (j.llaves <= 0) return false; j.llaves--; }
-      c.abierto = true; c.quieto = true; SFX.llave();
+      if (c.sub === "dorado" && j.llaves <= 0) {       // trabado: suena el candado y tiembla (una vez por toque)
+        if (!c.avisado) { SFX.clic(); c.sacudida = 10; c.avisado = true; }
+        return false;
+      }
+      if (c.sub === "dorado") j.llaves--;
+      c.abierto = true; c.quieto = true; SFX.llave(); SFX.recoger();
+      // lo de adentro salta hacia afuera, lejos de Shumio, y tarda un momento en poder agarrarse
+      const ang0 = Math.atan2(c.y - j.y, c.x - j.x);
       if (c.sub === "dorado" && A.si(0.14)) { J.sala.cosas.push(pedestal(c.x, c.y - 18, sacarObjeto("tesoro"))); }
-      else { const n = A.ent(2, c.sub === "dorado" ? 4 : 3); for (let i = 0; i < n; i++) soltarPremio(c.x, c.y); }
+      else {
+        const n = A.ent(2, c.sub === "dorado" ? 4 : 3);
+        for (let i = 0; i < n; i++) {
+          const p = soltarPremio(c.x, c.y - 4), a = ang0 + (i - (n - 1) / 2) * 0.55 + (A.f() - 0.5) * 0.3, v = 1.6 + A.f() * 0.8;
+          p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v * 0.8; p.vz = 3 + A.f(); p.espera = 26;
+        }
+      }
       return false;
     }
     case "cofreFinal": if (!c.abierto) { c.abierto = true; ganar(); } return false;
@@ -305,7 +318,7 @@ function dibujarCosa(g, c) {
     case "bomba": s = bombaSpr(0.8); break;
     case "llave": s = llaveSpr(); break;
     case "capsula": s = capsulaSpr(c.sub); break;
-    case "cofre": s = cofreSpr(c.sub === "dorado", !!c.abierto); break;
+    case "cofre": s = cofreSpr(c.sub === "dorado", !!c.abierto); if (c.sacudida > 0) { c.sacudida--; g.save(); g.translate(Math.round(Math.sin(c.sacudida * 2.2) * 1.5), 0); g.drawImage(sombra(8, 2), X - 8, Y); g.drawImage(s, X - Math.floor(s.width / 2), Y + 2 - s.height); g.restore(); return; } break;
     case "cofreFinal": { s = cofreSpr(true, !!c.abierto); const w = s.width * 2, h = s.height * 2; g.drawImage(sombra(16, 4), X - 16, Y - 2); g.drawImage(s, X - w / 2, Y + 2 - h, w, h); return; }
     case "trampilla": s = trampillaSpr(!!c.abierta); g.drawImage(s, X - 14, Y - 14); return;
     case "objeto": {

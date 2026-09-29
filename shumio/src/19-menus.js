@@ -17,15 +17,16 @@ const TINTA_MANO = "#2b2326";
 
 function abrirMenu(tipo) {
   const m = { tipo, sel: 0, t: 0, sobreJuego: tipo === "pausa" || tipo === "muerte", items: [], rects: [] };
+  const completa = { texto: () => enPantallaCompleta() ? "SALIR DE PANTALLA COMPLETA" : "PANTALLA COMPLETA", hacer: () => pantallaCompleta(!enPantallaCompleta()) };
   const vol = () => [
     { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
     { texto: () => "EFECTOS " + pct(volEfectos), cambiar: (d) => { volEfectos = lim(Math.round((volEfectos + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); SFX.moneda(); } },
   ];
   if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
   if (tipo === "principal") Musica.poner("menu");
-  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
+  if (tipo === "principal") m.items = [{ texto: () => "NUEVA PARTIDA", hacer: () => { MENU.activo = null; nuevaPartida(); } }, ...vol(), completa, { texto: () => "CÓMO SE JUEGA", hacer: () => abrirMenu("ayuda") }];
   if (tipo === "ayuda") m.items = [{ texto: () => "VOLVER", hacer: () => abrirMenu("principal") }];
-  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
+  if (tipo === "pausa") m.items = [{ texto: () => "SEGUIR", hacer: () => { MENU.activo = null; } }, ...vol(), completa, { texto: () => "SALIR", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "muerte" || tipo === "victoria") m.items = [{ texto: () => "OTRA VEZ", hacer: () => { MENU.activo = null; nuevaPartida(); } }, { texto: () => "AL MENÚ", hacer: () => { J = null; abrirMenu("principal"); } }];
   if (tipo === "victoria") Musica.poner("menu");
   MENU.activo = m;
@@ -57,6 +58,8 @@ function activar(it, tactil) {
   else if (it.cambiar) it.cambiar(tactil ? (it.texto().includes("100%") ? -10 : 2) : 1);
 }
 
+/** La hoja tiene que entrar la opción más larga (con la flechita y el margen). */
+function anchoOpciones(m, minimo) { return Math.max(minimo, ...m.items.map((it) => manoSpr(it.texto()).width + 34)); }
 // ── piezas de papel ──
 /** Una hoja clavada: el papel (que se mece apenas) y sus dos chinches. Devuelve dónde quedó. */
 function hoja(g, x, y, w, h, semilla, tono = "blanco", mece = 0, chinches = 2) {
@@ -117,7 +120,7 @@ function dibujarMenu(g) {
     fondoPared();
     const logo = logoSpr(), lw = Math.round(logo.width * 0.5);
     g.drawImage(logo, 8, 6, lw, Math.round(logo.height * 0.5));
-    const hw = 168, hh = m.items.length * 18 + 24, hx = Math.round(W / 2 - hw / 2 - 20), hy = Math.round(H / 2 - hh / 2) + 8;
+    const hw = anchoOpciones(m, 168), hh = m.items.length * 18 + 24, hx = Math.round(W / 2 - hw / 2 - 20), hy = Math.round(H / 2 - hh / 2) + 8;
     const dy = hoja(g, hx, hy, hw, hh, 3, "blanco", mece);
     opciones(g, m, hx + 16, hy + 14 + dy);
     notaRegistro(g, W, H, mece);
@@ -140,7 +143,7 @@ function dibujarMenu(g) {
     g.fillStyle = "rgba(4,2,6,0.62)"; g.fillRect(0, 0, W, H);
     const j = J.jug;
     // la hoja de las opciones
-    const hw = 150, hh = m.items.length * 18 + 40, hx = Math.round(W * 0.5 - hw - 10), hy = Math.round(H / 2 - hh / 2);
+    const hw = anchoOpciones(m, 150), hh = m.items.length * 18 + 40, hx = Math.round(Math.max(8, W * 0.5 - hw - 10)), hy = Math.round(H / 2 - hh / 2);
     let dy = hoja(g, hx, hy, hw, hh, 5, "blanco", mece);
     escribir(g, "PAUSA", hx + hw / 2, hy + 6 + dy, "centro", "#6a1c1c");
     opciones(g, m, hx + 14, hy + 26 + dy);
