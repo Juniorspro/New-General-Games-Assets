@@ -85,5 +85,5 @@ Archivos: `js/reinos/casa-piezas.js` (nuevo), `casa.js`, `ui.js › obra` y `mai
 - Con los botones guardados cambiaron dos viejas: `avisos.mjs` pone todos en la pantalla antes de medir qué esconde el
   parkour, y `flujo.mjs` llega al estilo por 📱 › Estilo. Ojo: cerrar la ventana de una app vuelve al celu (`volver`),
   así que la prueba tiene que cerrar el celu para seguir jugando (si no, la E no habla).
-- Tanda entera: 44/44 (avisos y flujo, arreglados después). Publicada la n 5 (commit c41403c, APK 46: no hizo falta
+- La tanda: 42 de 44 bien (celu y actualizar, solas); avisos y flujo, arreglados después y bien solas. Publicada la n 5 (commit c41403c, APK 46: no hizo falta
   una nueva).
