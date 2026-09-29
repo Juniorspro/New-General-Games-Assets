@@ -450,3 +450,35 @@ function trampillaSpr(abierta) {
     return p.canvas();
   });
 }
+
+/** El corazón del HUD, medido en el video: 13×12 con contorno, rojo vivo, la base más oscura y el
+ *  brillo arriba a la izquierda. tipo: rojo, medio, espora, esporaMedio, vacio. */
+function corazonHudSpr(tipo) {
+  return hornear(`corHud${tipo}`, () => {
+    const forma = [".####.####.", "###########", "###########", "###########", ".#########.", "..#######..", "...#####...", "....###....", ".....#....."];
+    const p = new Pix(13, 11), esp = tipo.startsWith("espora"), medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
+    const R = esp ? ["#1c3a8c", "#2c5ad8", "#4a86ff", "#bcd6ff"] : ["#8a0a10", "#d01018", "#f02a30", "#ffb0b0"];
+    forma.forEach((f, y) => { for (let x = 0; x < 11; x++) {
+      if (f[x] !== "#") continue;
+      let c = vacio ? "#2a1418" : y >= 6 ? R[0] : y >= 4 ? R[1] : R[2];
+      if (!vacio && medio && x >= 5.5) c = "#2a1418";
+      p.p(x + 1, y + 1, c);
+    } });
+    if (!vacio) { p.p(2, 2, "#ffffff"); p.p(3, 2, R[3]); p.p(2, 3, R[3]); }
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
+}
+/** La calavera de la barra del jefe (medida: 16×17 px, gris clara con los ojos negros). */
+function calaveraJefeSpr() {
+  return hornear("calaveraJefe", () => {
+    const p = new Pix(16, 16);
+    p.bola(8, 6.5, 6.6, 5.8, ["#6e6660", "#a09892", "#c8c0ba", "#e6e0da"], { luz: [-0.4, -0.7, 0.5], trama: 0.5 });
+    p.rect(4, 10, 8, 3, "#b0a8a2"); p.rect(4, 12, 8, 1, "#8a827c");
+    for (const x of [6, 9]) p.rect(x, 11, 1, 3, "#3a3432");
+    for (const x of [4, 9]) { p.rect(x, 5, 3, 3, PAL.tinta); p.p(x, 5, "#3a3432"); }
+    p.p(7, 9, PAL.tinta); p.p(8, 9, PAL.tinta);
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
+}

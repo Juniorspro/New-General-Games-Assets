@@ -4,7 +4,7 @@ const { nav, pag, errores } = await abrir({ tactil: false });
 const esperar = (ms) => pag.waitForTimeout(ms);
 const foto = async (n) => { await pag.screenshot({ path: salida(n) }); console.log("·", n); };
 await esperar(600); await foto("1-titulo.png");
-await pag.keyboard.press("Enter"); await esperar(1500);
+await pag.keyboard.press("Enter"); await esperar(400); await pag.keyboard.press("Enter"); await esperar(1500);
 console.log("estado", await pag.evaluate(() => { const J = __SH.juego(); return J && { estado: J.estado, piso: J.piso.n, salas: J.piso.salas.size, tipos: [...J.piso.salas.values()].map((s) => s.tipo).join(",") }; }));
 await foto("2-inicio.png");
 await pag.keyboard.down("KeyD"); await pag.keyboard.down("ArrowUp"); await esperar(700); await pag.keyboard.up("KeyD"); await pag.keyboard.up("ArrowUp");

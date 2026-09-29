@@ -1146,6 +1146,38 @@ function trampillaSpr(abierta) {
   });
 }
 
+/** El corazón del HUD, medido en el video: 13×12 con contorno, rojo vivo, la base más oscura y el
+ *  brillo arriba a la izquierda. tipo: rojo, medio, espora, esporaMedio, vacio. */
+function corazonHudSpr(tipo) {
+  return hornear(`corHud${tipo}`, () => {
+    const forma = [".####.####.", "###########", "###########", "###########", ".#########.", "..#######..", "...#####...", "....###....", ".....#....."];
+    const p = new Pix(13, 11), esp = tipo.startsWith("espora"), medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
+    const R = esp ? ["#1c3a8c", "#2c5ad8", "#4a86ff", "#bcd6ff"] : ["#8a0a10", "#d01018", "#f02a30", "#ffb0b0"];
+    forma.forEach((f, y) => { for (let x = 0; x < 11; x++) {
+      if (f[x] !== "#") continue;
+      let c = vacio ? "#2a1418" : y >= 6 ? R[0] : y >= 4 ? R[1] : R[2];
+      if (!vacio && medio && x >= 5.5) c = "#2a1418";
+      p.p(x + 1, y + 1, c);
+    } });
+    if (!vacio) { p.p(2, 2, "#ffffff"); p.p(3, 2, R[3]); p.p(2, 3, R[3]); }
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
+}
+/** La calavera de la barra del jefe (medida: 16×17 px, gris clara con los ojos negros). */
+function calaveraJefeSpr() {
+  return hornear("calaveraJefe", () => {
+    const p = new Pix(16, 16);
+    p.bola(8, 6.5, 6.6, 5.8, ["#6e6660", "#a09892", "#c8c0ba", "#e6e0da"], { luz: [-0.4, -0.7, 0.5], trama: 0.5 });
+    p.rect(4, 10, 8, 3, "#b0a8a2"); p.rect(4, 12, 8, 1, "#8a827c");
+    for (const x of [6, 9]) p.rect(x, 11, 1, 3, "#3a3432");
+    for (const x of [4, 9]) { p.rect(x, 5, 3, 3, PAL.tinta); p.p(x, 5, "#3a3432"); }
+    p.p(7, 9, PAL.tinta); p.p(8, 9, PAL.tinta);
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
+}
+
 // ══════════ 07-fuente.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
 // LA FUENTE: letras de 5×7 dibujadas a mano (mayúsculas, números, signos, tildes y Ñ), con
@@ -1470,17 +1502,20 @@ const CIFRAS = {
   "+": ["....", "....", ".##.", "####", ".##.", "....", "...."], "%": ["##..#", "##.##", "..##.", ".##..", "##.##", "#..##", "....."],
   x: ["....", "....", "#..#", ".##.", ".##.", "#..#", "...."], ":": ["..", "##", "##", "..", "##", "##", ".."], "/": ["...##", "...##", "..##.", ".##..", "##...", "##...", "....."],
 };
+// medido en el video: los contadores (monedas, bombas, llaves) tienen 9 px de alto (acá 8): se
+// repite la fila del medio de cada cifra
+for (const k of Object.keys(CIFRAS)) if (CIFRAS[k].length === 7) CIFRAS[k] = [...CIFRAS[k].slice(0, 4), CIFRAS[k][3], ...CIFRAS[k].slice(4)];
 /** Los números del HUD: blancos (o del color pedido), gordos, con el contorno negro y la panza gris. */
 function cifrasSpr(str, color = "blanco") {
   str = String(str);
-  return hornear(`cif|${str}|${color}`, () => {
+  return hornear(`cif2|${str}|${color}`, () => {
     const R = color === "verde" ? ["#c8ffb0", "#7fe05a", "#4aa832"] : color === "rojo" ? ["#ffc0b0", "#f0553d", "#a82620"] : color === "oro" ? ["#fff4c4", "#f5c24a", "#b07a18"] : ["#ffffff", "#ece6da", "#b9b1a2"];
     let W = 0; for (const ch of str) W += (CIFRAS[ch] || CIFRAS[0])[0].length + 1;
-    const p = new Pix(W + 2, 9);
+    const p = new Pix(W + 2, 10);
     let x = 1;
     for (const ch of str) {
       const f = CIFRAS[ch] || CIFRAS[0];
-      f.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, 1 + y, R[y < 4 ? 0 : y < 6 ? 1 : 2]); });
+      f.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, 1 + y, R[y < 4 ? 0 : y < 7 ? 1 : 2]); });
       x += f[0].length + 1;
     }
     p.contorno(PAL.tinta, true);
@@ -1540,6 +1575,18 @@ const TITULO = {
   "+": [".......", "..###..", "..###..", "#######", "#######", "..###..", "..###..", ".......", "......."],
   "/": ["....###", "....###", "...###.", "...###.", "..###..", ".###...", ".###...", "###....", "###...."],
 };
+// En el video de Repentance (1080p = 4× de 480×270) las letras miden 12×11 px con trazos de 4 y
+// una separación de 1,5: más anchas que altas. Acá (×0,89): 11×10. Se sacan de la grilla de 9×9
+// repitiendo la fila 2 (el hueco de arriba: la E queda con barras y huecos parejos) y las
+// columnas 1 y ancho−2 (engordan los palos de 3 a 4).
+for (const k of Object.keys(TITULO)) {
+  let f = TITULO[k];
+  if (f.length === 9) f = [...f.slice(0, 3), f[2], ...f.slice(3)];
+  const w = f[0].length;
+  if (w >= 7) f = f.map((r) => r.slice(0, 2) + r[1] + r.slice(2, w - 2) + r[w - 2] + r.slice(w - 2));
+  if (k === " ") f = f.map(() => "......");
+  TITULO[k] = f;
+}
 // las tildes, encima (en las 3 filas de aire)
 const TILDE_TIT = { "´": ["..###", ".###.", "###.."], "~": [".##...#", "#######", "#...##."], "¨": ["###.###", "###.###", "......."] };
 
@@ -1547,8 +1594,8 @@ const TILDE_TIT = { "´": ["..###", ".###.", "###.."], "~": [".##...#", "#######
  *  lo separa si la franja se afina) y la sombra dura. */
 function rotuloSpr(str) {
   str = String(str).toUpperCase();
-  return hornear(`rot2|${str}`, () => {
-    const esp = 2, arriba = 4, H = 9;
+  return hornear(`rot3|${str}`, () => {
+    const esp = 1, arriba = 4, H = 10;
     let W = 0; for (const ch of str) W += ((TITULO[MARCAS[ch] ? MARCAS[ch][0] : ch] || TITULO["?"])[0].length) + esp;
     W -= esp;
     const p = new Pix(W + 4, H + arriba + 4);
@@ -1657,6 +1704,102 @@ function comoFrase(s) {
   s = String(s).toLowerCase();
   const i = s.search(/[a-zñáéíóúü]/);
   return i < 0 ? s : s.slice(0, i) + s[i].toUpperCase() + s.slice(i + 1);
+}
+
+// ── la letra a mano chica (para la etiqueta de la maldición, "Curse of the Blind!") ──
+// En el video las mayúsculas miden 10 px y las demás 7, mezcladas. Las chicas salen de MANO
+// quedándose con 7 de sus 10 filas y sacando una columna del medio (así el trazo sigue de 2).
+const _manoChica = {};
+function glifoManoChico(ch) {
+  if (_manoChica[ch]) return _manoChica[ch];
+  const m = MARCAS[ch], base = m ? m[0] : ch, f = MANO[base] || MANO["?"];
+  const PROPIAS = { G: [".####.", "##....", "##....", "##.###", "##..##", "##..##", ".####."], S: [".####.", "##....", "###...", ".####.", "...###", "....##", "#####."] };
+  let filas = PROPIAS[base] || [0, 2, 4, 5, 6, 8, 9].map((i) => f[i]);
+  const w = filas[0].length;
+  if (w >= 6 && !PROPIAS[base]) { const c = (w >> 1) - 1; filas = filas.map((r) => r.slice(0, c) + r.slice(c + 1)); }
+  return (_manoChica[ch] = { filas, marca: m ? m[1] : null });
+}
+/** La letra de la etiqueta de la maldición: versalitas en bloque, como en el video (mayúsculas de
+ *  8 px y las demás de 6, trazo de 2). Las chicas son las mismas de BLOQUE sin las filas 2 y 5. */
+function glifoEtiqueta(ch, grande) {
+  const base = MARCAS[ch] ? MARCAS[ch][0] : ch, f = BLOQUE[base] || BLOQUE["?"];
+  return grande || f.length !== 8 ? f : [0, 1, 3, 4, 6, 7].map((i) => f[i]);
+}
+/** El texto de la etiqueta: la primera de cada palabra (y los signos) de 8, las demás de 6. */
+function etiquetaSpr(str, tinta = "#0c0604") {
+  str = String(str).toUpperCase();
+  return hornear(`etiqueta2|${str}|${tinta}`, () => {
+    const letras = [];
+    let inicio = true;
+    for (const ch of str) {
+      if (ch === " ") { letras.push(null); inicio = true; continue; }
+      const grande = inicio || !/[A-ZÁÉÍÓÚÑÜ0-9]/.test(ch);
+      inicio = false;
+      const filas = glifoEtiqueta(ch, grande);
+      letras.push({ filas, alto: filas.length, marca: MARCAS[ch] ? MARCAS[ch][1] : null });
+    }
+    let W = 0; letras.forEach((l) => { W += l ? l.filas[0].length + 1 : 4; });
+    const arriba = 3, p = new Pix(W + 2, 8 + arriba + 1);
+    let x = 1;
+    letras.forEach((l) => {
+      if (!l) { x += 4; return; }
+      const y0 = arriba + 8 - l.alto;            // todas apoyadas en el mismo renglón
+      l.filas.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, y0 + y, tinta); });
+      if (l.marca === "´") { const c = x + Math.floor(l.filas[0].length / 2); p.p(c, y0 - 2, tinta); p.p(c + 1, y0 - 2, tinta); p.p(c + 1, y0 - 3, tinta); p.p(c + 2, y0 - 3, tinta); }
+      if (l.marca === "~") { const c = x + Math.floor(l.filas[0].length / 2) - 2; for (const [dx, dy] of [[0, -2], [1, -3], [2, -3], [3, -2], [4, -2], [5, -3]]) p.p(c + dx, y0 + dy, tinta); }
+      x += l.filas[0].length + 1;
+    });
+    return p.canvas();
+  });
+}
+/** Texto a mano con mayúsculas grandes al principio de cada palabra y el resto chico. */
+function manoMixtaSpr(str, tinta = "#140606") {
+  str = String(str).toUpperCase();
+  return hornear(`manoMixta3|${str}|${tinta}`, () => {
+    const r = mulberry(hashTexto(str)), letras = [];
+    let inicio = true;
+    for (const ch of str) {
+      if (ch === " ") { letras.push(null); inicio = true; continue; }
+      const grande = inicio || r() < 0.12 || !/[A-ZÁÉÍÓÚÑÜ0-9]/.test(ch);   // los signos, siempre grandes
+      inicio = !/[A-ZÁÉÍÓÚÑÜ0-9]/.test(ch) && ch !== "'";
+      if (grande) { const g = MANO[MARCAS[ch] ? MARCAS[ch][0] : ch] || MANO["?"]; letras.push({ filas: g, marca: MARCAS[ch] ? MARCAS[ch][1] : null, alto: 10 }); }
+      else { const g = glifoManoChico(ch); letras.push({ filas: g.filas, marca: g.marca, alto: 7 }); }
+    }
+    let W = 0; letras.forEach((l) => { W += l ? l.filas[0].length + 2 : 4; });
+    const arriba = 3, p = new Pix(W + 2, 10 + arriba + 2);
+    let x = 1;
+    letras.forEach((l) => {
+      if (!l) { x += 4; return; }
+      const y0 = arriba + 10 - l.alto;          // todas apoyadas en el mismo renglón
+      l.filas.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, y0 + y, tinta); });
+      if (l.marca === "´") { const c = x + Math.floor(l.filas[0].length / 2); p.p(c, y0 - 2, tinta); p.p(c + 1, y0 - 2, tinta); p.p(c + 1, y0 - 3, tinta); }
+      if (l.marca === "~") { const c = x + Math.floor(l.filas[0].length / 2) - 2; for (const [dx, dy] of [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]]) p.p(c + dx, y0 + dy, tinta); }
+      x += l.filas[0].length + 2;
+    });
+    return p.canvas();
+  });
+}
+
+// ── las cifras finas de las cuentas (medido: 6 px de alto, trazo de 1, blancas al 60 %) ──
+const FINAS = {
+  0: [".##.", "#..#", "#..#", "#..#", "#..#", ".##."], 1: [".#.", "##.", ".#.", ".#.", ".#.", "###"],
+  2: [".##.", "#..#", "...#", "..#.", ".#..", "####"], 3: ["###.", "...#", ".##.", "...#", "...#", "###."],
+  4: ["#..#", "#..#", "####", "...#", "...#", "...#"], 5: ["####", "#...", "###.", "...#", "#..#", ".##."],
+  6: [".##.", "#...", "###.", "#..#", "#..#", ".##."], 7: ["####", "...#", "..#.", ".#..", ".#..", ".#.."],
+  8: [".##.", "#..#", ".##.", "#..#", "#..#", ".##."], 9: [".##.", "#..#", "#..#", ".###", "...#", ".##."],
+  ".": [".", ".", ".", ".", ".", "#"], "%": ["#..#", "...#", "..#.", ".#..", "#...", "#..#"],
+  "-": ["...", "...", "###", "...", "...", "..."], "+": ["...", ".#.", "###", ".#.", "...", "..."],
+};
+function finasSpr(str, color = "#ffffff") {
+  str = String(str);
+  return hornear(`finas|${str}|${color}`, () => {
+    let W = 0; for (const ch of str) W += (FINAS[ch] || FINAS[0])[0].length + 1;
+    const p = new Pix(W + 2, 8);
+    let x = 1;
+    for (const ch of str) { const f = FINAS[ch] || FINAS[0]; f.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, 1 + y, color); }); x += f[0].length + 1; }
+    p.contorno("rgba(0,0,0,0.7)", true);
+    return p.canvas();
+  });
 }
 
 // ══════════ 07c-papel.js ══════════
@@ -1784,23 +1927,88 @@ function fondoMenuSpr(W, H) {
   });
 }
 
-/** La franja de los rótulos, como la del original: negra, casi opaca, con los bordes rasgados en
- *  bultos (como papel negro arrancado), más angosta y deshilachada hacia las puntas. Sin color. */
+/** La franja de los rótulos, calcada de la silueta del video: una pincelada casi negra con tinte
+ *  rojo (#0a0000) de 23 px de cuerpo en el original (acá 21); arranca a la izquierda como una cola
+ *  fina con manchas sueltas, engorda hacia el medio y termina más cortada a la derecha. */
 function bandaSpr(w, h = 21) {
-  return hornear(`banda4|${w}x${h}`, () => {
-    const p = new Pix(w, h + 6), r = mulberry(w * 7 + h), arr = ruido1(r), aba = ruido1(r);
-    // bultos: un ruido lento más "mordidas" redondas en los bordes
-    const bultos = [];
-    for (let i = 0; i < w / 9; i++) bultos.push([r() * w, r() < 0.5 ? 0 : 1, 1.5 + r() * 2.5, r() < 0.5 ? -1 : 1]);
+  return hornear(`banda8|${w}x${h}`, () => {
+    const m = 8, p = new Pix(w + m * 2, h + m * 2), r = mulberry(w * 13 + h), arr = ruido1(r), aba = ruido1(r);
+    const C = "rgba(10,0,0,0.94)", disco = (cx0, cy0, rr) => { for (let y = Math.floor(cy0 - rr); y <= cy0 + rr; y++) for (let x = Math.floor(cx0 - rr); x <= cx0 + rr; x++) if (Math.hypot(x + 0.5 - cx0, y + 0.5 - cy0) <= rr) p.p(x, y, C); };
+    const suave = (u) => u * u * (3 - 2 * u);
     for (let x = 0; x < w; x++) {
-      const u = x / (w - 1), punta = Math.min(u, 1 - u) * 2, f = 1 - Math.min(1, punta * 5);   // las puntas se afinan en el último décimo, en bultos
-      let t = 3 + arr(x * 0.35) * 1.3 + f * f * 8 + f * 2 * r(), b = h + aba(x * 0.35) * 1.3 - f * f * 8 - f * 2 * r();
-      for (const [bx, lado, br, sg] of bultos) { const d = Math.abs(x - bx); if (d < br) { const e = Math.sqrt(br * br - d * d) * 0.8 * sg; if (lado === 0) t -= e; else b += e; } }
-      for (let y = Math.max(0, Math.floor(t)); y < Math.min(h + 6, Math.ceil(b)); y++) p.p(x, y, "rgba(8,3,3,0.9)");
+      const u = x / (w - 1);
+      // el grosor: cola a la izquierda (el primer 14 %), lleno en el medio, corte a la derecha
+      const g = u < 0.14 ? 0.15 + 0.85 * suave(u / 0.14) : u > 0.95 ? 1 - 0.35 * ((u - 0.95) / 0.05) : 1;
+      const med = m + h / 2 + (u < 0.14 ? (1 - u / 0.14) * 3 : 0), mitad = (h / 2) * g;
+      const t = med - mitad + arr(x * 0.22) * 1.3, b = med + mitad + aba(x * 0.18) * 1.5;
+      for (let y = Math.floor(t); y < Math.ceil(b); y++) p.p(x + m, y, C);
     }
-    // islitas sueltas cerca de los bordes (los pedacitos que quedan al rasgar)
-    for (let i = 0; i < w / 14; i++) { const x = Math.floor(r() * w), y = r() < 0.5 ? 1 + Math.floor(r() * 2) : h + 2 + Math.floor(r() * 2); p.p(x, y, "rgba(8,3,3,0.9)"); if (r() < 0.5) p.p(x + 1, y, "rgba(8,3,3,0.9)"); }
+    // bultos pegados a los bordes (la pintura que se corrió) y manchas sueltas alrededor
+    for (let i = 0; i < w / 7; i++) { const x = m + r() * w, arriba = r() < 0.5; disco(x, arriba ? m + 1.5 + r() : m + h - 1.5 - r(), 1.2 + r() * 2.2); }
+    for (let i = 0; i < 16; i++) { const x = m + r() * w * 0.2, y = m + h / 2 + (r() - 0.35) * h * 1.4; disco(x, y, 0.8 + r() * 2.2); }
+    for (let i = 0; i < 16; i++) { const x = m + r() * w, arriba = r() < 0.5, y = arriba ? m - 1 - r() * 6 : m + h + 1 + r() * 6; disco(x, y, 0.6 + r() * 1.5); }
+    for (let i = 0; i < 5; i++) disco(m + w * (0.95 + r() * 0.06), m + r() * h, 0.8 + r() * 1.8);
+    // el borde, un rojo apenas más claro (como la sangre que se seca)
+    const lleno = (x, y) => { const c = p.g(x, y); return !!c; };
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) if (lleno(x, y) && !lleno(x, y - 1)) p.p(x, y, "rgba(40,4,6,0.94)");
     return p.canvas();
+  });
+}
+/** La etiqueta de la maldición, dibujada sobre la del video: una cinta de papel apenas inclinada
+ *  (la punta derecha 5 px más arriba) que ondula en escalones de un píxel; las dos puntas rotas en
+ *  dos lóbulos con una grieta en el medio; papel #D2BEAA con borrones grises arriba y la panza más
+ *  oscura; contorno #0C0604 y una sombra de dos píxeles abajo. */
+function pergaminoSpr(texto) {
+  return hornear(`pergamino8|${texto}`, () => {
+    const txt = etiquetaSpr(texto, "#0c0604"), w = Math.max(70, txt.width + 30), H = 34;
+    const p = new Pix(w + 8, H), r = mulberry(hashTexto(texto)), base = H / 2;
+    const PAPEL = "#d2beaa", LUZ = "#ddcbb8", PANZA = "#c1ab95", MANCHA = "#bcac98", T = "#0c0604";
+    const arriba = [], abajo = [];
+    for (let x = 0; x < w; x++) {
+      const u = x / (w - 1);
+      // la parte del medio (donde va el texto) queda pareja; lo irregular está hacia las puntas,
+      // que se levantan o bajan un poco (así las letras no parecen torcidas)
+      const e = Math.pow(Math.abs(u - 0.5) * 2, 3);
+      const c = base + (u < 0.5 ? 1 : -1) * e * 2 + (r() < 0.04 ? 0 : 0);
+      const hh = 7.8 + 1.2 * e;
+      arriba.push(Math.round(c - hh)); abajo.push(Math.round(c + hh));
+    }
+    // los bordes desparejos: escalones de un píxel en tramos largos, cada borde por su lado (como en
+    // el original); mueven el papel, no el texto
+    for (const borde of [arriba, abajo]) {
+      let x = 0, d = 0;
+      while (x < w) { const L = 14 + Math.floor(r() * 26); d = lim(d + (r() < 0.5 ? -1 : 1), -1, 1); for (let k = x; k < Math.min(w, x + L); k++) borde[k] += d; x += L; }
+    }
+    // las puntas rotas: la silueta (cuánto se mete desde el borde) según la altura, t = 0 arriba … 1 abajo
+    const tramo = (pts, t) => { for (let i = 1; i < pts.length; i++) if (t <= pts[i][1]) { const [x0, t0] = pts[i - 1], [x1, t1] = pts[i]; return Math.round(x0 + (x1 - x0) * (t - t0) / (t1 - t0)); } return pts[pts.length - 1][0]; };
+    const IZQ = [[5, 0], [1, 0.22], [0, 0.4], [2, 0.52], [4, 0.56], [3, 0.62], [2, 0.8], [5, 1]];
+    const DER = [[2, 0], [0, 0.25], [1, 0.46], [3, 0.52], [1, 0.58], [0, 0.75], [2, 1]];
+    const x0 = 3;
+    for (let x = 0; x < w; x++) for (let y = arriba[x]; y <= abajo[x]; y++) {
+      const t = (y - arriba[x]) / (abajo[x] - arriba[x]);
+      if (x < tramo(IZQ, t) || w - 1 - x < tramo(DER, t)) continue;
+      p.p(x + x0, y, y === arriba[x] ? LUZ : y >= abajo[x] - 1 ? PANZA : PAPEL);
+    }
+    // las grietas: rayitas negras que entran desde cada punta
+    const tg = 0.54;
+    { const x = 0, y = Math.round(arriba[x] + (abajo[x] - arriba[x]) * tg); for (let k = 2; k < 8; k++) p.p(x0 + k, y + (k > 5 ? 1 : 0), T); }
+    { const x = w - 1, y = Math.round(arriba[x] + (abajo[x] - arriba[x]) * tg); for (let k = 2; k < 7; k++) p.p(x0 + x - k, y, T); }
+    // borrones grises suaves cerca del borde de arriba (como papel manchado)
+    for (let i = 0; i < 3; i++) {
+      const cx0 = w * (0.22 + r() * 0.56), cy0 = arriba[Math.round(cx0)] + 3 + r() * 2, rx = 5 + r() * 9, ry = 1.4 + r();
+      for (let y = Math.floor(cy0 - ry); y <= cy0 + ry; y++) for (let x = Math.floor(cx0 - rx); x <= cx0 + rx; x++) {
+        const d = ((x - cx0) / rx) ** 2 + ((y - cy0) / ry) ** 2;
+        if (d <= 1 && p.g(x + x0, y) === PAPEL) p.p(x + x0, y, MANCHA);
+      }
+    }
+    p.contorno(T);
+    const q = p.canvas(), out = lienzoNuevo(q.width, q.height + 2), g = out.getContext("2d");
+    // la sombra de abajo: dos píxeles (el borde de abajo queda más grueso, como en el original)
+    g.globalAlpha = 0.55; g.drawImage(tinte(q, "#2a1410"), 0, 2); g.globalAlpha = 0.85; g.drawImage(tinte(q, "#1a0a08"), 0, 1); g.globalAlpha = 1; g.drawImage(q, 0, 0);
+    // el texto, siguiendo la inclinación de la cinta (se apoya en el medio)
+    const mid = Math.round((arriba[Math.round(w / 2)] + abajo[Math.round(w / 2)]) / 2);
+    g.drawImage(txt, Math.round(out.width / 2 - txt.width / 2), mid - Math.round(txt.height / 2) + 1);
+    return out;
   });
 }
 
@@ -1912,6 +2120,15 @@ function gotitaDibujo() {
     const c = p.canvas(), out = lienzoNuevo(10, 12), g = out.getContext("2d");
     g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, 10, 12);
     return out;
+  });
+}
+
+/** Shumio a un píxel de trazo (los dibujitos del piso de la primera sala). */
+function dibujoShumioChico() {
+  return hornear("dibujoShumioChico", () => {
+    const grande = dibujoShumio(0), c = lienzoNuevo(36, 40), g = c.getContext("2d");
+    g.imageSmoothingEnabled = false; g.drawImage(grande, 0, 0, 72, 80, 0, 0, 36, 40);
+    return c;
   });
 }
 
@@ -2663,6 +2880,19 @@ function crearSalaPacto(piso, desde, dir) {
 
 /** ¿La puerta se ve? (las secretas, sólo después de volarlas) */
 function puertaVisible(p) { return p && (!p.secreta || p.revelada); }
+
+// ── las maldiciones: el piso puede venir maldito (se anuncia en la etiqueta de pergamino) ──
+const MALDICIONES = {
+  ciego: { texto: "¡Maldición del ciego!" },            // los objetos se ven como un ? rojo hasta tomarlos
+  oscuridad: { texto: "¡Maldición de la oscuridad!" },   // sólo se ve alrededor de Shumio
+  extraviado: { texto: "¡Maldición del extraviado!" },   // no hay minimapa
+  desconocido: { texto: "¡Maldición de lo desconocido!" }, // no se ve cuánta vida queda
+};
+/** Una por piso como mucho; en el primero, rara (la probabilidad es de balance propio). */
+function sortearMaldicion(n) {
+  if (!A.si(n === 1 ? 0.12 : 0.28)) return null;
+  return A.uno(Object.keys(MALDICIONES));
+}
 
 // ══════════ 12-jugador.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3717,7 +3947,7 @@ function tomar(c) {
     case "llave": j.llaves = Math.min(99, j.llaves + 1); SFX.llave(); return true;
     case "capsula": {
       if (j.capsula != null) { const v = recogible("capsula", j.x, j.y + 10, j.capsula); v.vz = 2; v.vy = 1; J.sala.cosas.push(v); }
-      j.capsula = c.sub; SFX.recoger(); rotulo(nombreCapsula(c.sub), ""); return true;
+      j.capsula = c.sub; SFX.recoger(); return true;   // el nombre queda abajo a la derecha, como la píldora del original
     }
     case "cofre": {
       if (c.abierto) return false;
@@ -3894,7 +4124,7 @@ function dibujarCosa(g, c) {
     case "objeto": {
       g.drawImage(pedestalSpr(), X - 11, Y - 8);
       if (c.id) {
-        const bob = Math.round(Math.sin(c.k * 0.07) * 2), ic = iconoSpr(c.id);
+        const bob = Math.round(Math.sin(c.k * 0.07) * 2), ic = J.maldicion === "ciego" ? preguntaSpr() : iconoSpr(c.id);
         g.drawImage(sombra(5, 2), X - 5, Y - 12);
         g.drawImage(ic, X - 9, Y - 30 + bob);
       }
@@ -3917,6 +4147,18 @@ function dibujarPrecio(g, c, x, y) {
     const h = corazonSpr("rojo", true), w = h.width * c.pacto;
     for (let i = 0; i < c.pacto; i++) g.drawImage(h, Math.round(x - w / 2 + i * h.width), y);
   }
+}
+
+/** El signo de pregunta rojo que tapa los objetos con la maldición del ciego (como en el video). */
+function preguntaSpr() {
+  return hornear("preguntaRoja", () => {
+    const p = new Pix(18, 18), R = ["#5a0408", "#a8101a", "#e02632", "#ff6a70"];
+    p.sello(4, 1, [".######.", "########", "###..###", "###..###", "....####", "...####.", "..####..", "..###...", "..###...", "........", "..###...", "..###..."].map((f) => f), { "#": R[2] });
+    // el volumen: luz arriba a la izquierda, sombra abajo
+    for (let y = 0; y < 18; y++) for (let x = 0; x < 18; x++) { const c = p.g(x, y); if (!c) continue; if (!p.g(x - 1, y) || !p.g(x, y - 1)) p.p(x, y, R[3]); else if (!p.g(x + 1, y) || !p.g(x, y + 1)) p.p(x, y, R[1]); }
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
 }
 
 // ══════════ 17-hud.js ══════════
@@ -3990,28 +4232,31 @@ function dibujarHud(g) {
   for (let i = 0; i < j.cont; i += 2) lista.push(j.vida >= i + 2 ? "rojo" : j.vida === i + 1 ? "medio" : "vacio");
   for (let i = 0; i < j.esporas; i += 2) lista.push(j.esporas >= i + 2 ? "espora" : "esporaMedio");
   const late = vidaTotal(j) <= 2 && !j.muerto && ((J.t >> 4) & 1);
-  lista.forEach((t, i) => {
-    const s = corazonSpr(t);
-    g.drawImage(late && i === 0 ? blanco(s) : s, hx + (i % 6) * 10, 3 + Math.floor(i / 6) * 9);
+  if (J.maldicion === "desconocido") {   // no se ve la vida: un corazón vacío con un signo
+    g.drawImage(corazonHudSpr("vacio"), hx, 3); g.drawImage(subtituloSpr("?"), hx + 14, 3);
+  } else lista.forEach((t, i) => {
+    const s = corazonHudSpr(t);
+    g.drawImage(late && i === 0 ? blanco(s) : s, hx + (i % 6) * 12, 3 + Math.floor(i / 6) * 11);
   });
-  // ── los contadores: el ícono y las cifras gordas ──
-  let y = j.activo || lista.length > 6 ? 27 : 21;
+  // ── los contadores: el ícono y las cifras gordas (medido: 9 px de alto, filas cada 14) ──
+  let y = j.activo || lista.length > 6 ? 29 : 22;
   for (const [ic, n] of [["moneda", j.monedas], ["bomba", j.bombas], ["llave", j.llaves]]) {
-    g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(dos(n)), 11, y);
-    y += 10;
+    g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(dos(n)), 11, y - 1);
+    y += 12;
   }
-  // ── las cuentas (como en Repentance: ícono y número; sólo si hay lugar al costado) ──
+  // ── las cuentas: ícono y cifras finas al 60 %, una fila cada 12 (medido: 13,4 en el original);
+  //    la última, la chance de que aparezca el pacto (como la del diablo en Repentance) ──
   if (PANT.salaX >= 56) {
-    y += 5;
-    const cuentas = [["vel", velDe(j)], ["lag", lagrimasPorSeg(j)], ["dano", danoDe(j)], ["alc", j.alcance], ["tiro", j.velLag], ["suerte", j.suerte]];
+    y += 6;
+    const cuentas = [["vel", velDe(j).toFixed(2)], ["lag", lagrimasPorSeg(j).toFixed(2)], ["dano", danoDe(j).toFixed(2)], ["alc", j.alcance.toFixed(2)], ["tiro", j.velLag.toFixed(2)], ["suerte", j.suerte.toFixed(2)], ["pacto", (probPacto() * 100).toFixed(1) + "%"]];
     for (const [ic, v] of cuentas) {
-      g.globalAlpha = 0.9;
-      g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(v.toFixed(2)), 11, y);
+      g.globalAlpha = 0.6;
+      g.drawImage(iconoHud(ic), 2, y - 2); g.drawImage(finasSpr(v), 12, y - 1);
       // el cambio reciente, en verde o en rojo, que se apaga solo
       const c = J.cambios && J.cambios[ic];
-      if (c && c.t > 0) { g.globalAlpha = Math.min(1, c.t / 30); g.drawImage(cifrasSpr((c.d > 0 ? "+" : "") + c.d.toFixed(2), c.d > 0 ? "verde" : "rojo"), 44, y); c.t--; }
+      if (c && c.t > 0) { g.globalAlpha = Math.min(1, c.t / 30); g.drawImage(finasSpr((c.d > 0 ? "+" : "") + c.d.toFixed(2), c.d > 0 ? "#7fe05a" : "#f0553d"), 38, y - 1); c.t--; }
       g.globalAlpha = 1;
-      y += 10;
+      y += 12;
     }
   }
   // ── la cápsula: abajo a la derecha, con su nombre (como la carta/píldora del original) ──
@@ -4020,18 +4265,16 @@ function dibujarHud(g) {
     g.drawImage(s, W - s.width - 4, H - s.height - 5);
     g.drawImage(n, W - s.width - 8 - n.width, H - n.height - 2);
   }
-  dibujarMinimapa(g);
-  // ── la barra del jefe: marco oscuro redondeado, rojo con brillo arriba, la calavera a la izquierda ──
+  if (J.maldicion !== "extraviado") dibujarMinimapa(g);
+  // ── la barra del jefe (medida: 121×8 en el original, acá 108×7): roja plana, marco oscuro
+  //    redondeado y la calavera grande pisando la punta izquierda ──
   const vivos = J.jefes.filter((e) => !e.muerto);
   if (vivos.length && J.estado !== "vs") {
     const tot = vivos.reduce((s, e) => s + Math.max(0, e.vida), 0), max = J.jefes.reduce((s, e) => s + e.max, 0);
-    const bw = 104, bx = Math.round(W / 2 - bw / 2) + 6, by = PANT.salaY + SALA_H - 14;
-    g.drawImage(barraJefeSpr(bw), bx - 3, by - 3);
-    const w = Math.round((bw - 2) * tot / max);
-    g.fillStyle = "#8e1a19"; g.fillRect(bx + 1, by + 1, w, 5);
-    g.fillStyle = "#d8352b"; g.fillRect(bx + 1, by + 1, w, 3);
-    g.fillStyle = "#ff7a5e"; g.fillRect(bx + 1, by + 1, w, 1);
-    g.drawImage(iconoHud("calavera"), bx - 14, by - 2);
+    const bw = 108, bx = Math.round(W / 2 - bw / 2) + 6, by = PANT.salaY + SALA_H - 13;
+    g.drawImage(barraJefeSpr(bw), bx - 2, by - 2);
+    g.fillStyle = "#d40000"; g.fillRect(bx - 1, by - 1, Math.round((bw + 2) * tot / max), 5);
+    const cal = calaveraJefeSpr(); g.drawImage(cal, bx - 13, by - 7);
   }
   dibujarRotulos(g);
   if (IN.usaTactil) dibujarControles(g);
@@ -4074,41 +4317,58 @@ function marcoMapaSpr(w, h) {
   });
 }
 function barraJefeSpr(bw) {
-  return hornear(`barraJefe${bw}`, () => {
-    const p = new Pix(bw + 6, 13);
-    for (let y = 0; y < 13; y++) for (let x = 0; x < bw + 6; x++) {
-      const bx = Math.min(x, bw + 5 - x), by = Math.min(y, 12 - y);
-      if (bx + by < 2) continue;
-      p.p(x, y, bx < 2 || by < 2 ? "#0c0708" : "#2a0b0e");
+  return hornear(`barraJefe2|${bw}`, () => {
+    const p = new Pix(bw + 4, 7);
+    for (let y = 0; y < 7; y++) for (let x = 0; x < bw + 4; x++) {
+      const bx = Math.min(x, bw + 3 - x), by = Math.min(y, 6 - y);
+      if (bx + by < 2) continue;                              // las puntas redondeadas
+      p.p(x, y, bx < 1 || by < 1 ? "#140404" : "#3a0606");    // el marco y el fondo vacío
     }
     return p.canvas();
   });
 }
-function algunaRevelada(s) { return s.puertas.some((p) => p && p.revelada); }
-
 // ── los rótulos: el nombre del objeto (y su lema) o del piso, que entra, se queda y se va ──
-function rotulo(titulo, sub, grad = "blanco") {
+function rotulo(titulo, sub, maldicion = null) {
   J.rotulos = J.rotulos.filter((r) => r.titulo !== titulo);
-  J.rotulos.push({ titulo, sub, grad, t: 0 });
+  J.rotulos.push({ titulo, sub, maldicion, t: 0 });
   if (J.rotulos.length > 2) J.rotulos.shift();
+}
+// Los tiempos del rótulo, medidos en el video (a 30 fps; acá, al doble): la franja crece desde la
+// izquierda en 6 cuadros; el texto entra volando, se pasa 11 px y vuelve en otros 6; queda quieto
+// 1,76 s; toma envión 19 px a la izquierda en 8 cuadros y sale disparado a la derecha en 3; la
+// franja se encoge hacia la derecha.
+const ROT = { crece: 6, llega: 8, asienta: 14, quieto: 120, envion: 128, fuga: 131, fin: 140 };
+function posRotulo(t, W) {
+  const ease = (u) => 1 - Math.pow(1 - lim(u, 0, 1), 3);
+  if (t < 3) return -W;
+  if (t < ROT.llega) return lerp(-W * 0.55, 11, ease((t - 3) / (ROT.llega - 3)));
+  if (t < ROT.asienta) return lerp(11, 0, ease((t - ROT.llega) / (ROT.asienta - ROT.llega)));
+  if (t < ROT.quieto) return 0;
+  if (t < ROT.envion) { const u = (t - ROT.quieto) / (ROT.envion - ROT.quieto); return -19 * (u * u * (3 - 2 * u)); }
+  if (t < ROT.fuga) return lerp(-19, W, Math.pow((t - ROT.envion) / (ROT.fuga - ROT.envion), 2));
+  return W;
 }
 function dibujarRotulos(g) {
   const W = PANT.W;
-  for (let i = J.rotulos.length - 1; i >= 0; i--) { if (++J.rotulos[i].t > 170) J.rotulos.splice(i, 1); }
+  for (let i = J.rotulos.length - 1; i >= 0; i--) { if (++J.rotulos[i].t > ROT.fin) J.rotulos.splice(i, 1); }
   const r = J.rotulos[J.rotulos.length - 1];
   if (!r) return;
-  // la franja entra de un costado, la letra de bloque aparece encima; al final, todo se va
-  const t = r.t, entra = 1 - Math.pow(1 - Math.min(1, t / 9), 3), sale = t > 150 ? Math.pow((t - 150) / 20, 2) : 0;
-  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null;
-  const bw = Math.min(W, Math.max(s1.width + 150, Math.round(W * 0.72))), banda = bandaSpr(bw);
-  const y = PANT.salaY + 30;
-  // entra desde la izquierda y se va por la derecha (rápido), el texto viaja con la franja
-  const dx = Math.round((1 - entra) * -W + sale * W);
-  const bx = Math.round(W / 2 - bw / 2) + dx;
-  g.drawImage(banda, bx, y);
-  g.drawImage(s1, Math.round(W / 2 - s1.width / 2) + dx, y + Math.round(12 - s1.height / 2) + 1);
-  if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2) + dx, y + 20);
-  g.globalAlpha = 1;
+  const t = r.t;
+  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null, per = r.maldicion ? pergaminoSpr(r.maldicion) : null;
+  const bw = Math.round(Math.min(W - 100, Math.max(s1.width + 120, 330))), banda = bandaSpr(bw), m = 8;   // 83 % en el original
+  const y = PANT.salaY + 22, bx = Math.round(W / 2 - bw / 2);
+  // la franja: crece desde la izquierda y, al irse, se come desde la izquierda hacia la derecha
+  const u0 = t >= ROT.envion + 2 ? lim((t - ROT.envion - 2) / (ROT.fin - ROT.envion - 2), 0, 1) : 0;
+  const u1 = lim(t / ROT.crece, 0, 1);
+  const x0 = Math.round(banda.width * u0 * u0), x1 = Math.round(banda.width * (1 - Math.pow(1 - u1, 2)));
+  if (x1 > x0) g.drawImage(banda, x0, 0, x1 - x0, banda.height, bx - m + x0, y - m, x1 - x0, banda.height);
+  const dx = Math.round(posRotulo(t, W));
+  // el texto va en la parte de abajo de la franja (medido: 15 px arriba, 6 abajo)
+  // medido: el título casi centrado en la mancha (8 px arriba, 5–7 abajo; acá 7 y 4), el subtítulo
+  // 7 px más abajo que el título (acá 6–7) y la etiqueta de la maldición 11 px más abajo (acá 10)
+  g.drawImage(s1, Math.round(W / 2 - s1.width / 2) + dx, y + 2);
+  if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2) + dx, y + 21);
+  if (per) g.drawImage(per, Math.round(W / 2 - per.width / 2) + dx, y + 24);
 }
 
 // ── los controles táctiles ──
@@ -4180,12 +4440,13 @@ function nuevaPartida(semilla) {
 function iniciarPiso(n) {
   J.jefeTipo = elegirJefe(n, J.jefesVistos); J.jefesVistos.push(J.jefeTipo);
   J.piso = generarPiso(n);
+  J.maldicion = sortearMaldicion(n);
   if (J.jug.mapa) revelarMapa();
   J.jug.golpesPiso = 0;
   J.estado = "juego";
   entrarSala(J.piso.inicio, null);
-  J.fundido = 45;
-  rotulo(J.piso.nombre, "");
+  J.fundido = J.armando ? 0 : 45;
+  rotulo(J.piso.nombre, "", J.maldicion ? MALDICIONES[J.maldicion].texto : null);
   Musica.poner(PISOS[n].musica);
 }
 
@@ -4224,7 +4485,7 @@ function pasoJuego() {
   if (J.destello > 0) J.destello--;
   if (J.estado === "transicion") { if (++J.trans.t >= J.trans.dur) { J.trans = null; J.estado = "juego"; if (J.vsPendiente) empezarVs(); } return; }
   if (J.estado === "vs") { J.vs.t++; if (J.vs.t > 150 || (J.vs.t > 30 && (recien("toque") || recien("aceptar")))) J.estado = "juego"; return; }
-  if (J.estado === "cayendo") { if (++J.tEstado > 60) { J.jug.x = cx(6); J.jug.y = cy(3); iniciarPiso(J.piso.n + 1); } return; }
+  if (J.estado === "cayendo") { if (++J.tEstado > CAIDA.sale + CAIDA.negro) { J.jug.x = cx(6); J.jug.y = cy(3); iniciarPiso(J.piso.n + 1); J.armando = CAIDA.entra; for (const r of J.rotulos) r.t = -CAIDA.entra + 4; /* el nombre sale cuando la imagen ya se armó */ } return; }
   if (J.estado === "ganando") { if (++J.tEstado > 90) { J.estado = "victoria"; J.tEstado = 0; abrirMenu("victoria"); } return; }
   if (J.estado !== "juego") return;
   J.tiempo++;
@@ -4286,14 +4547,14 @@ function jefeDerrotado() {
   Musica.poner("silencio");
   if (n === ULTIMO_PISO) {
     const c = recogible("cofreFinal", cx(6), cy(4)); c.quieto = true; s.cosas.push(c);
-    rotulo("¡MICELIA CAYÓ!", "ABRÍ EL COFRE", "oro");
+    rotulo("¡MICELIA CAYÓ!", "Abrí el cofre");
     return;
   }
   s.cosas.push(pedestal(cx(6), cy(4) + 4, sacarObjeto("jefe")));
   for (let i = 0; i < A.ent(1, 2); i++) soltarPremio(cx(6) + V.ent(-20, 20), cy(3), "corazon");
   const tr = recogible("trampilla", cx(6), cy(1)); tr.quieto = true; s.cosas.push(tr);
   // la puerta del pacto: más probable si no te tocaron en la pelea
-  if (n >= 2 && A.si(J.jug.golpesJefe === 0 ? 0.7 : 0.33)) {
+  if (A.si(probPacto())) {
     const libres = [0, 1, 2, 3].filter((d) => !s.puertas[d]);
     if (libres.length) { crearSalaPacto(J.piso, s, A.uno(libres)); J.pendientes.push(() => SFX.pacto()); }
   }
@@ -4305,7 +4566,7 @@ function pasarPuerta(d) {
   if (!p) return;
   // una foto de la sala que se va (para el deslizamiento)
   gViejo.drawImage(cvSala, 0, 0);
-  J.trans = { dir: d, t: 0, dur: 20 };
+  J.trans = { dir: d, t: 0, dur: 8 };   // medido en el video: ~4 cuadros a 30 fps
   J.estado = "transicion";
   const j = J.jug;
   entrarSala(p.destino, d);
@@ -4331,6 +4592,7 @@ function dibujarSala(g) {
   const s = J.sala;
   g.drawImage(s.fondo, 0, 0);
   if (s.decal) g.drawImage(s.decal, 0, 0);
+  dibujarTutorial(g);
   // lo que está a ras del piso
   for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) {
     const o = s.celdas[f * COLS + c];
@@ -4382,8 +4644,10 @@ function dibujarSala(g) {
     const u = Math.min(1, J.tEstado / 30), sp = spritesShumio(), j = J.jug;
     const e = 1 - u;
     if (e > 0.05) { g.save(); g.translate(Math.round(j.x), Math.round(j.y)); g.scale(e, e); g.drawImage(sp.cue.frente[0], -7, -8); g.drawImage(sp.cab.frente[3], -11, -24); g.restore(); }
+
   }
   g.drawImage(vineta(), -20, -20);
+  if (J.maldicion === "oscuridad") { const o = oscuridadSpr(); g.drawImage(o, Math.round(J.jug.x - o.width / 2), Math.round(J.jug.y - 8 - o.height / 2)); }
 }
 function dibujarObstaculo(g, o, c, f) {
   const x = cx(c), yb = cy(f) + T / 2 + 1;
@@ -4410,12 +4674,16 @@ function dibujarJuego(g) {
     const sx = Math.round(-dx * SALA_W * e), sy = Math.round(-dy * SALA_H * e);
     g.drawImage(cvViejo, ox + sx, oy + sy);
     g.drawImage(cvSala, ox + sx + dx * SALA_W, oy + sy + dy * SALA_H);
+    // en el medio del deslizamiento, todo se oscurece un poco (como en el original)
+    g.fillStyle = `rgba(0,0,0,${(Math.sin(u * Math.PI) * 0.38).toFixed(3)})`; g.fillRect(0, 0, W, H);
   } else g.drawImage(cvSala, ox, oy);
   if (J.destello > 0) { g.fillStyle = `rgba(255,248,235,${J.destello * 0.08})`; g.fillRect(0, 0, W, H); }
   if (J.estado !== "vs") dibujarHud(g);
   if (J.estado === "vs") dibujarVs(g);
   if (J.fundido > 0) { g.fillStyle = `rgba(0,0,0,${J.fundido / 45})`; g.fillRect(0, 0, W, H); }
-  if (J.estado === "cayendo" && J.tEstado > 30) { g.fillStyle = `rgba(0,0,0,${Math.min(1, (J.tEstado - 30) / 25)})`; g.fillRect(0, 0, W, H); }
+  // el mosaico del cambio de piso: cuadrados cada vez más grandes mientras se apaga, y al revés
+  if (J.estado === "cayendo") mosaico(g, Math.min(1, J.tEstado / CAIDA.sale));
+  else if (J.armando > 0) { mosaico(g, J.armando / CAIDA.entra); J.armando--; }
   if (J.estado === "ganando") { g.fillStyle = `rgba(255,250,240,${Math.min(1, J.tEstado / 80)})`; g.fillRect(0, 0, W, H); }
 }
 
@@ -4450,6 +4718,86 @@ function dibujar() {
 }
 function alMedir() { if (typeof ubicarBotones === "function") ubicarBotones(); }
 function arrancar() { medir(); abrirMenu("titulo"); requestAnimationFrame(cuadro); }
+
+/** La chance de que se abra el pacto al matar al jefe de este piso (se muestra en el HUD). */
+function probPacto() {
+  if (!J || !J.piso || J.piso.n < 2 || J.piso.n >= ULTIMO_PISO) return 0;
+  return J.jug.golpesJefe === 0 ? 0.7 : 0.33;
+}
+
+const CAIDA = { sale: 96, negro: 18, entra: 72 };
+const cvMosaico = lienzoNuevo(8, 8), gMosaico = cvMosaico.getContext("2d");
+/** El mundo en cuadrados de b píxeles (el color de cada uno, promediado) y oscurecido. u: 0 → 1. */
+function mosaico(g, u) {
+  const W = PANT.W, H = PANT.H, b = Math.max(1, Math.round(1 + Math.pow(u, 1.4) * 27));
+  if (b > 1) {
+    const w = Math.ceil(W / b), h = Math.ceil(H / b);
+    if (cvMosaico.width !== w || cvMosaico.height !== h) { cvMosaico.width = w; cvMosaico.height = h; }
+    gMosaico.imageSmoothingEnabled = true; gMosaico.imageSmoothingQuality = "low";
+    gMosaico.drawImage(g.canvas, 0, 0, W, H, 0, 0, w, h);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(cvMosaico, 0, 0, w, h, 0, 0, w * b, h * b);
+  }
+  g.fillStyle = `rgba(0,0,0,${Math.min(1, Math.pow(u, 1.2)).toFixed(3)})`; g.fillRect(0, 0, W, H);
+}
+
+// ── la maldición de la oscuridad: sólo se ve alrededor de Shumio (una luz tramada) ──
+function oscuridadSpr() {
+  return hornear("oscuridad", () => {
+    const W = SALA_W * 2, H = SALA_H * 2, p = new Pix(W, H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const d = Math.hypot(x - W / 2, (y - H / 2) * 1.15) / 78 + bayer(x, y) * 0.18;
+      if (d > 1.15) p.p(x, y, "rgba(0,0,0,0.9)"); else if (d > 0.9) p.p(x, y, "rgba(0,0,0,0.62)"); else if (d > 0.7) p.p(x, y, "rgba(0,0,0,0.3)");
+    }
+    return p.canvas();
+  });
+}
+
+// ── los controles dibujados en el piso de la primera sala (como el MOVE / ATTACK / BOMB / ITEM) ──
+function dibujarTutorial(g) {
+  if (!(J.piso.n === 1 && J.sala === J.piso.inicio)) return;
+  const tinta = "#050403", cols = [0.13, 0.38, 0.63, 0.88].map((u) => Math.round(IX0 + COLS * T * u)), yT = IY0 + 10;
+  g.save(); g.globalAlpha = 0.62;
+  const tactil = IN.usaTactil;
+  const titulos = ["MOVERSE", "LLORAR", "BOMBA", "OBJETO"];
+  titulos.forEach((t, i) => { const s = etiquetaSpr(t, tinta); g.drawImage(s, cols[i] - Math.round(s.width / 2), yT); });
+  // los dibujitos: Shumio (a un píxel de trazo) con lo que hace
+  // el trazo, engrosado un píxel a la derecha (como marcador), en la misma tinta que las letras
+  const fig = tinte(dibujoShumioChico(), tinta);
+  cols.forEach((x) => { g.drawImage(fig, x - 18, yT + 18); g.drawImage(fig, x - 17, yT + 18); });
+  const P = (x, y, w, h) => { g.fillStyle = tinta; g.fillRect(x, y, w, h); };
+  const flecha = (x, y, d) => { for (let k = 0; k < 4; k++) { if (d === 0) P(x - k, y + k, 2 * k + 1, 1); if (d === 2) P(x - k, y - k, 2 * k + 1, 1); if (d === 1) P(x - k, y - k, 1, 2 * k + 1); if (d === 3) P(x + k, y - k, 1, 2 * k + 1); } };
+  const x0 = cols[0], yc = yT + 38;
+  flecha(x0, yc - 26, 0); flecha(x0, yc + 26, 2); flecha(x0 - 26, yc, 3); flecha(x0 + 26, yc, 1);
+  // llorar: lágrimas en las cuatro direcciones, con la línea de puntos
+  const x1 = cols[1];
+  for (const [dx, dy] of DIRS) { for (let k = 12; k < 22; k += 3) P(x1 + dx * k, yc + dy * k, 1, 1); const cxl = x1 + dx * 26, cyl = yc + dy * 26; for (let a = 0; a < 12; a++) P(Math.round(cxl + Math.cos(a / 12 * TAU) * 3), Math.round(cyl + Math.sin(a / 12 * TAU) * 3), 1, 1); }
+  // bomba: la bomba al lado, con chispas
+  const x2 = cols[2] + 16;
+  for (let a = 0; a < 20; a++) P(Math.round(x2 + Math.cos(a / 20 * TAU) * 5), Math.round(yc + 8 + Math.sin(a / 20 * TAU) * 5), 1, 1);
+  P(x2 + 2, yc + 1, 1, 3); for (const [a, b] of [[4, -1], [6, 0], [5, -3]]) P(x2 + a, yc + b, 1, 1);
+  // objeto: algo levantado sobre la cabeza
+  const x3 = cols[3];
+  for (let a = 0; a < 16; a++) P(Math.round(x3 + Math.cos(a / 16 * TAU) * 4), Math.round(yT + 12 + Math.sin(a / 16 * TAU) * 4), 1, 1);
+  for (const [a, b] of [[-9, 10], [-8, 14], [8, 10], [7, 14]]) P(x3 + a, yT + b, 3, 1);
+  // las teclas (PC) o los controles del teléfono
+  const yK = yc + 34;
+  const tecla = (x, y, t, w = 11) => { g.strokeStyle = tinta; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w, 11); const s = etiquetaSpr(t, tinta); g.drawImage(s, Math.round(x + w / 2 - s.width / 2 + 1), y - 2); };
+  if (!tactil) {
+    ["W", "A", "S", "D"].forEach((k, i) => tecla(x0 - 26 + i * 13, yK, k));
+    ["↑", "←", "↓", "→"].forEach((k, i) => { const x = x1 - 26 + i * 13; g.strokeStyle = tinta; g.strokeRect(x + 0.5, yK + 0.5, 11, 11); flecha(x + 6, yK + 6, [0, 3, 2, 1][i]); });
+    tecla(cols[2] - 6, yK, "E");
+    tecla(x3 - 20, yK, "ESPACIO", 40);
+  } else {
+    const aroT = (x, y, r) => { for (let a = 0; a < 28; a++) P(Math.round(x + Math.cos(a / 28 * TAU) * r), Math.round(y + Math.sin(a / 28 * TAU) * r), 1, 1); };
+    aroT(x0, yK + 6, 8); aroT(x0 + 3, yK + 4, 3);
+    aroT(x1, yK + 6, 8); aroT(x1 - 3, yK + 6, 3);
+    aroT(cols[2], yK + 6, 7); aroT(x3, yK + 6, 6);
+    const s = etiquetaSpr("IZQUIERDA", tinta), s2 = etiquetaSpr("DERECHA", tinta);
+    g.drawImage(s, x0 - Math.round(s.width / 2), yK + 16); g.drawImage(s2, x1 - Math.round(s2.width / 2), yK + 16);
+  }
+  g.restore();
+}
 
 // ══════════ 19-menus.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4775,6 +5123,9 @@ Object.assign(window.__SH, {
     g.fillStyle = "#2a211d"; g.fillRect(0, 0, ancho, 40); g.drawImage(banda, 0, 2); g.drawImage(s1, Math.round(ancho / 2 - s1.width / 2), 2 + Math.round(12 - s1.height / 2) + 1); if (s2) g.drawImage(s2, Math.round(ancho / 2 - s2.width / 2), 22);
     const z = 4, o = lienzoNuevo(ancho * z, 40 * z), go = o.getContext("2d"); go.imageSmoothingEnabled = false; go.drawImage(c, 0, 0, ancho * z, 40 * z); return o.toDataURL();
   },
+  maldecir: (k) => { J.maldicion = k; J.rotulos = []; rotulo(J.piso.nombre, "", k ? MALDICIONES[k].texto : null); },
+  cuadroRotulo: (t) => { for (const r of J.rotulos) r.t = t - 1; J.rotulos.forEach(() => {}); MENU.activo = null; dibujar(); },
+  tactil: (v) => { IN.usaTactil = v; },
   vs: () => { if (J.vsPendiente) empezarVs(); },
   matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
 });

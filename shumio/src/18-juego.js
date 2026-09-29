@@ -27,12 +27,13 @@ function nuevaPartida(semilla) {
 function iniciarPiso(n) {
   J.jefeTipo = elegirJefe(n, J.jefesVistos); J.jefesVistos.push(J.jefeTipo);
   J.piso = generarPiso(n);
+  J.maldicion = sortearMaldicion(n);
   if (J.jug.mapa) revelarMapa();
   J.jug.golpesPiso = 0;
   J.estado = "juego";
   entrarSala(J.piso.inicio, null);
-  J.fundido = 45;
-  rotulo(J.piso.nombre, "");
+  J.fundido = J.armando ? 0 : 45;
+  rotulo(J.piso.nombre, "", J.maldicion ? MALDICIONES[J.maldicion].texto : null);
   Musica.poner(PISOS[n].musica);
 }
 
@@ -71,7 +72,7 @@ function pasoJuego() {
   if (J.destello > 0) J.destello--;
   if (J.estado === "transicion") { if (++J.trans.t >= J.trans.dur) { J.trans = null; J.estado = "juego"; if (J.vsPendiente) empezarVs(); } return; }
   if (J.estado === "vs") { J.vs.t++; if (J.vs.t > 150 || (J.vs.t > 30 && (recien("toque") || recien("aceptar")))) J.estado = "juego"; return; }
-  if (J.estado === "cayendo") { if (++J.tEstado > 60) { J.jug.x = cx(6); J.jug.y = cy(3); iniciarPiso(J.piso.n + 1); } return; }
+  if (J.estado === "cayendo") { if (++J.tEstado > CAIDA.sale + CAIDA.negro) { J.jug.x = cx(6); J.jug.y = cy(3); iniciarPiso(J.piso.n + 1); J.armando = CAIDA.entra; for (const r of J.rotulos) r.t = -CAIDA.entra + 4; /* el nombre sale cuando la imagen ya se armó */ } return; }
   if (J.estado === "ganando") { if (++J.tEstado > 90) { J.estado = "victoria"; J.tEstado = 0; abrirMenu("victoria"); } return; }
   if (J.estado !== "juego") return;
   J.tiempo++;
@@ -133,14 +134,14 @@ function jefeDerrotado() {
   Musica.poner("silencio");
   if (n === ULTIMO_PISO) {
     const c = recogible("cofreFinal", cx(6), cy(4)); c.quieto = true; s.cosas.push(c);
-    rotulo("¡MICELIA CAYÓ!", "ABRÍ EL COFRE", "oro");
+    rotulo("¡MICELIA CAYÓ!", "Abrí el cofre");
     return;
   }
   s.cosas.push(pedestal(cx(6), cy(4) + 4, sacarObjeto("jefe")));
   for (let i = 0; i < A.ent(1, 2); i++) soltarPremio(cx(6) + V.ent(-20, 20), cy(3), "corazon");
   const tr = recogible("trampilla", cx(6), cy(1)); tr.quieto = true; s.cosas.push(tr);
   // la puerta del pacto: más probable si no te tocaron en la pelea
-  if (n >= 2 && A.si(J.jug.golpesJefe === 0 ? 0.7 : 0.33)) {
+  if (A.si(probPacto())) {
     const libres = [0, 1, 2, 3].filter((d) => !s.puertas[d]);
     if (libres.length) { crearSalaPacto(J.piso, s, A.uno(libres)); J.pendientes.push(() => SFX.pacto()); }
   }
@@ -152,7 +153,7 @@ function pasarPuerta(d) {
   if (!p) return;
   // una foto de la sala que se va (para el deslizamiento)
   gViejo.drawImage(cvSala, 0, 0);
-  J.trans = { dir: d, t: 0, dur: 20 };
+  J.trans = { dir: d, t: 0, dur: 8 };   // medido en el video: ~4 cuadros a 30 fps
   J.estado = "transicion";
   const j = J.jug;
   entrarSala(p.destino, d);
@@ -178,6 +179,7 @@ function dibujarSala(g) {
   const s = J.sala;
   g.drawImage(s.fondo, 0, 0);
   if (s.decal) g.drawImage(s.decal, 0, 0);
+  dibujarTutorial(g);
   // lo que está a ras del piso
   for (let f = 0; f < FILAS; f++) for (let c = 0; c < COLS; c++) {
     const o = s.celdas[f * COLS + c];
@@ -229,8 +231,10 @@ function dibujarSala(g) {
     const u = Math.min(1, J.tEstado / 30), sp = spritesShumio(), j = J.jug;
     const e = 1 - u;
     if (e > 0.05) { g.save(); g.translate(Math.round(j.x), Math.round(j.y)); g.scale(e, e); g.drawImage(sp.cue.frente[0], -7, -8); g.drawImage(sp.cab.frente[3], -11, -24); g.restore(); }
+
   }
   g.drawImage(vineta(), -20, -20);
+  if (J.maldicion === "oscuridad") { const o = oscuridadSpr(); g.drawImage(o, Math.round(J.jug.x - o.width / 2), Math.round(J.jug.y - 8 - o.height / 2)); }
 }
 function dibujarObstaculo(g, o, c, f) {
   const x = cx(c), yb = cy(f) + T / 2 + 1;
@@ -257,12 +261,16 @@ function dibujarJuego(g) {
     const sx = Math.round(-dx * SALA_W * e), sy = Math.round(-dy * SALA_H * e);
     g.drawImage(cvViejo, ox + sx, oy + sy);
     g.drawImage(cvSala, ox + sx + dx * SALA_W, oy + sy + dy * SALA_H);
+    // en el medio del deslizamiento, todo se oscurece un poco (como en el original)
+    g.fillStyle = `rgba(0,0,0,${(Math.sin(u * Math.PI) * 0.38).toFixed(3)})`; g.fillRect(0, 0, W, H);
   } else g.drawImage(cvSala, ox, oy);
   if (J.destello > 0) { g.fillStyle = `rgba(255,248,235,${J.destello * 0.08})`; g.fillRect(0, 0, W, H); }
   if (J.estado !== "vs") dibujarHud(g);
   if (J.estado === "vs") dibujarVs(g);
   if (J.fundido > 0) { g.fillStyle = `rgba(0,0,0,${J.fundido / 45})`; g.fillRect(0, 0, W, H); }
-  if (J.estado === "cayendo" && J.tEstado > 30) { g.fillStyle = `rgba(0,0,0,${Math.min(1, (J.tEstado - 30) / 25)})`; g.fillRect(0, 0, W, H); }
+  // el mosaico del cambio de piso: cuadrados cada vez más grandes mientras se apaga, y al revés
+  if (J.estado === "cayendo") mosaico(g, Math.min(1, J.tEstado / CAIDA.sale));
+  else if (J.armando > 0) { mosaico(g, J.armando / CAIDA.entra); J.armando--; }
   if (J.estado === "ganando") { g.fillStyle = `rgba(255,250,240,${Math.min(1, J.tEstado / 80)})`; g.fillRect(0, 0, W, H); }
 }
 
@@ -297,3 +305,83 @@ function dibujar() {
 }
 function alMedir() { if (typeof ubicarBotones === "function") ubicarBotones(); }
 function arrancar() { medir(); abrirMenu("titulo"); requestAnimationFrame(cuadro); }
+
+/** La chance de que se abra el pacto al matar al jefe de este piso (se muestra en el HUD). */
+function probPacto() {
+  if (!J || !J.piso || J.piso.n < 2 || J.piso.n >= ULTIMO_PISO) return 0;
+  return J.jug.golpesJefe === 0 ? 0.7 : 0.33;
+}
+
+const CAIDA = { sale: 96, negro: 18, entra: 72 };
+const cvMosaico = lienzoNuevo(8, 8), gMosaico = cvMosaico.getContext("2d");
+/** El mundo en cuadrados de b píxeles (el color de cada uno, promediado) y oscurecido. u: 0 → 1. */
+function mosaico(g, u) {
+  const W = PANT.W, H = PANT.H, b = Math.max(1, Math.round(1 + Math.pow(u, 1.4) * 27));
+  if (b > 1) {
+    const w = Math.ceil(W / b), h = Math.ceil(H / b);
+    if (cvMosaico.width !== w || cvMosaico.height !== h) { cvMosaico.width = w; cvMosaico.height = h; }
+    gMosaico.imageSmoothingEnabled = true; gMosaico.imageSmoothingQuality = "low";
+    gMosaico.drawImage(g.canvas, 0, 0, W, H, 0, 0, w, h);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(cvMosaico, 0, 0, w, h, 0, 0, w * b, h * b);
+  }
+  g.fillStyle = `rgba(0,0,0,${Math.min(1, Math.pow(u, 1.2)).toFixed(3)})`; g.fillRect(0, 0, W, H);
+}
+
+// ── la maldición de la oscuridad: sólo se ve alrededor de Shumio (una luz tramada) ──
+function oscuridadSpr() {
+  return hornear("oscuridad", () => {
+    const W = SALA_W * 2, H = SALA_H * 2, p = new Pix(W, H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const d = Math.hypot(x - W / 2, (y - H / 2) * 1.15) / 78 + bayer(x, y) * 0.18;
+      if (d > 1.15) p.p(x, y, "rgba(0,0,0,0.9)"); else if (d > 0.9) p.p(x, y, "rgba(0,0,0,0.62)"); else if (d > 0.7) p.p(x, y, "rgba(0,0,0,0.3)");
+    }
+    return p.canvas();
+  });
+}
+
+// ── los controles dibujados en el piso de la primera sala (como el MOVE / ATTACK / BOMB / ITEM) ──
+function dibujarTutorial(g) {
+  if (!(J.piso.n === 1 && J.sala === J.piso.inicio)) return;
+  const tinta = "#050403", cols = [0.13, 0.38, 0.63, 0.88].map((u) => Math.round(IX0 + COLS * T * u)), yT = IY0 + 10;
+  g.save(); g.globalAlpha = 0.62;
+  const tactil = IN.usaTactil;
+  const titulos = ["MOVERSE", "LLORAR", "BOMBA", "OBJETO"];
+  titulos.forEach((t, i) => { const s = etiquetaSpr(t, tinta); g.drawImage(s, cols[i] - Math.round(s.width / 2), yT); });
+  // los dibujitos: Shumio (a un píxel de trazo) con lo que hace
+  // el trazo, engrosado un píxel a la derecha (como marcador), en la misma tinta que las letras
+  const fig = tinte(dibujoShumioChico(), tinta);
+  cols.forEach((x) => { g.drawImage(fig, x - 18, yT + 18); g.drawImage(fig, x - 17, yT + 18); });
+  const P = (x, y, w, h) => { g.fillStyle = tinta; g.fillRect(x, y, w, h); };
+  const flecha = (x, y, d) => { for (let k = 0; k < 4; k++) { if (d === 0) P(x - k, y + k, 2 * k + 1, 1); if (d === 2) P(x - k, y - k, 2 * k + 1, 1); if (d === 1) P(x - k, y - k, 1, 2 * k + 1); if (d === 3) P(x + k, y - k, 1, 2 * k + 1); } };
+  const x0 = cols[0], yc = yT + 38;
+  flecha(x0, yc - 26, 0); flecha(x0, yc + 26, 2); flecha(x0 - 26, yc, 3); flecha(x0 + 26, yc, 1);
+  // llorar: lágrimas en las cuatro direcciones, con la línea de puntos
+  const x1 = cols[1];
+  for (const [dx, dy] of DIRS) { for (let k = 12; k < 22; k += 3) P(x1 + dx * k, yc + dy * k, 1, 1); const cxl = x1 + dx * 26, cyl = yc + dy * 26; for (let a = 0; a < 12; a++) P(Math.round(cxl + Math.cos(a / 12 * TAU) * 3), Math.round(cyl + Math.sin(a / 12 * TAU) * 3), 1, 1); }
+  // bomba: la bomba al lado, con chispas
+  const x2 = cols[2] + 16;
+  for (let a = 0; a < 20; a++) P(Math.round(x2 + Math.cos(a / 20 * TAU) * 5), Math.round(yc + 8 + Math.sin(a / 20 * TAU) * 5), 1, 1);
+  P(x2 + 2, yc + 1, 1, 3); for (const [a, b] of [[4, -1], [6, 0], [5, -3]]) P(x2 + a, yc + b, 1, 1);
+  // objeto: algo levantado sobre la cabeza
+  const x3 = cols[3];
+  for (let a = 0; a < 16; a++) P(Math.round(x3 + Math.cos(a / 16 * TAU) * 4), Math.round(yT + 12 + Math.sin(a / 16 * TAU) * 4), 1, 1);
+  for (const [a, b] of [[-9, 10], [-8, 14], [8, 10], [7, 14]]) P(x3 + a, yT + b, 3, 1);
+  // las teclas (PC) o los controles del teléfono
+  const yK = yc + 34;
+  const tecla = (x, y, t, w = 11) => { g.strokeStyle = tinta; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w, 11); const s = etiquetaSpr(t, tinta); g.drawImage(s, Math.round(x + w / 2 - s.width / 2 + 1), y - 2); };
+  if (!tactil) {
+    ["W", "A", "S", "D"].forEach((k, i) => tecla(x0 - 26 + i * 13, yK, k));
+    ["↑", "←", "↓", "→"].forEach((k, i) => { const x = x1 - 26 + i * 13; g.strokeStyle = tinta; g.strokeRect(x + 0.5, yK + 0.5, 11, 11); flecha(x + 6, yK + 6, [0, 3, 2, 1][i]); });
+    tecla(cols[2] - 6, yK, "E");
+    tecla(x3 - 20, yK, "ESPACIO", 40);
+  } else {
+    const aroT = (x, y, r) => { for (let a = 0; a < 28; a++) P(Math.round(x + Math.cos(a / 28 * TAU) * r), Math.round(y + Math.sin(a / 28 * TAU) * r), 1, 1); };
+    aroT(x0, yK + 6, 8); aroT(x0 + 3, yK + 4, 3);
+    aroT(x1, yK + 6, 8); aroT(x1 - 3, yK + 6, 3);
+    aroT(cols[2], yK + 6, 7); aroT(x3, yK + 6, 6);
+    const s = etiquetaSpr("IZQUIERDA", tinta), s2 = etiquetaSpr("DERECHA", tinta);
+    g.drawImage(s, x0 - Math.round(s.width / 2), yK + 16); g.drawImage(s2, x1 - Math.round(s2.width / 2), yK + 16);
+  }
+  g.restore();
+}

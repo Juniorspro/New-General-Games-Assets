@@ -68,28 +68,31 @@ function dibujarHud(g) {
   for (let i = 0; i < j.cont; i += 2) lista.push(j.vida >= i + 2 ? "rojo" : j.vida === i + 1 ? "medio" : "vacio");
   for (let i = 0; i < j.esporas; i += 2) lista.push(j.esporas >= i + 2 ? "espora" : "esporaMedio");
   const late = vidaTotal(j) <= 2 && !j.muerto && ((J.t >> 4) & 1);
-  lista.forEach((t, i) => {
-    const s = corazonSpr(t);
-    g.drawImage(late && i === 0 ? blanco(s) : s, hx + (i % 6) * 10, 3 + Math.floor(i / 6) * 9);
+  if (J.maldicion === "desconocido") {   // no se ve la vida: un corazón vacío con un signo
+    g.drawImage(corazonHudSpr("vacio"), hx, 3); g.drawImage(subtituloSpr("?"), hx + 14, 3);
+  } else lista.forEach((t, i) => {
+    const s = corazonHudSpr(t);
+    g.drawImage(late && i === 0 ? blanco(s) : s, hx + (i % 6) * 12, 3 + Math.floor(i / 6) * 11);
   });
-  // ── los contadores: el ícono y las cifras gordas ──
-  let y = j.activo || lista.length > 6 ? 27 : 21;
+  // ── los contadores: el ícono y las cifras gordas (medido: 9 px de alto, filas cada 14) ──
+  let y = j.activo || lista.length > 6 ? 29 : 22;
   for (const [ic, n] of [["moneda", j.monedas], ["bomba", j.bombas], ["llave", j.llaves]]) {
-    g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(dos(n)), 11, y);
-    y += 10;
+    g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(dos(n)), 11, y - 1);
+    y += 12;
   }
-  // ── las cuentas (como en Repentance: ícono y número; sólo si hay lugar al costado) ──
+  // ── las cuentas: ícono y cifras finas al 60 %, una fila cada 12 (medido: 13,4 en el original);
+  //    la última, la chance de que aparezca el pacto (como la del diablo en Repentance) ──
   if (PANT.salaX >= 56) {
-    y += 5;
-    const cuentas = [["vel", velDe(j)], ["lag", lagrimasPorSeg(j)], ["dano", danoDe(j)], ["alc", j.alcance], ["tiro", j.velLag], ["suerte", j.suerte]];
+    y += 6;
+    const cuentas = [["vel", velDe(j).toFixed(2)], ["lag", lagrimasPorSeg(j).toFixed(2)], ["dano", danoDe(j).toFixed(2)], ["alc", j.alcance.toFixed(2)], ["tiro", j.velLag.toFixed(2)], ["suerte", j.suerte.toFixed(2)], ["pacto", (probPacto() * 100).toFixed(1) + "%"]];
     for (const [ic, v] of cuentas) {
-      g.globalAlpha = 0.9;
-      g.drawImage(iconoHud(ic), 2, y); g.drawImage(cifrasSpr(v.toFixed(2)), 11, y);
+      g.globalAlpha = 0.6;
+      g.drawImage(iconoHud(ic), 2, y - 2); g.drawImage(finasSpr(v), 12, y - 1);
       // el cambio reciente, en verde o en rojo, que se apaga solo
       const c = J.cambios && J.cambios[ic];
-      if (c && c.t > 0) { g.globalAlpha = Math.min(1, c.t / 30); g.drawImage(cifrasSpr((c.d > 0 ? "+" : "") + c.d.toFixed(2), c.d > 0 ? "verde" : "rojo"), 44, y); c.t--; }
+      if (c && c.t > 0) { g.globalAlpha = Math.min(1, c.t / 30); g.drawImage(finasSpr((c.d > 0 ? "+" : "") + c.d.toFixed(2), c.d > 0 ? "#7fe05a" : "#f0553d"), 38, y - 1); c.t--; }
       g.globalAlpha = 1;
-      y += 10;
+      y += 12;
     }
   }
   // ── la cápsula: abajo a la derecha, con su nombre (como la carta/píldora del original) ──
@@ -98,18 +101,16 @@ function dibujarHud(g) {
     g.drawImage(s, W - s.width - 4, H - s.height - 5);
     g.drawImage(n, W - s.width - 8 - n.width, H - n.height - 2);
   }
-  dibujarMinimapa(g);
-  // ── la barra del jefe: marco oscuro redondeado, rojo con brillo arriba, la calavera a la izquierda ──
+  if (J.maldicion !== "extraviado") dibujarMinimapa(g);
+  // ── la barra del jefe (medida: 121×8 en el original, acá 108×7): roja plana, marco oscuro
+  //    redondeado y la calavera grande pisando la punta izquierda ──
   const vivos = J.jefes.filter((e) => !e.muerto);
   if (vivos.length && J.estado !== "vs") {
     const tot = vivos.reduce((s, e) => s + Math.max(0, e.vida), 0), max = J.jefes.reduce((s, e) => s + e.max, 0);
-    const bw = 104, bx = Math.round(W / 2 - bw / 2) + 6, by = PANT.salaY + SALA_H - 14;
-    g.drawImage(barraJefeSpr(bw), bx - 3, by - 3);
-    const w = Math.round((bw - 2) * tot / max);
-    g.fillStyle = "#8e1a19"; g.fillRect(bx + 1, by + 1, w, 5);
-    g.fillStyle = "#d8352b"; g.fillRect(bx + 1, by + 1, w, 3);
-    g.fillStyle = "#ff7a5e"; g.fillRect(bx + 1, by + 1, w, 1);
-    g.drawImage(iconoHud("calavera"), bx - 14, by - 2);
+    const bw = 108, bx = Math.round(W / 2 - bw / 2) + 6, by = PANT.salaY + SALA_H - 13;
+    g.drawImage(barraJefeSpr(bw), bx - 2, by - 2);
+    g.fillStyle = "#d40000"; g.fillRect(bx - 1, by - 1, Math.round((bw + 2) * tot / max), 5);
+    const cal = calaveraJefeSpr(); g.drawImage(cal, bx - 13, by - 7);
   }
   dibujarRotulos(g);
   if (IN.usaTactil) dibujarControles(g);
@@ -152,41 +153,58 @@ function marcoMapaSpr(w, h) {
   });
 }
 function barraJefeSpr(bw) {
-  return hornear(`barraJefe${bw}`, () => {
-    const p = new Pix(bw + 6, 13);
-    for (let y = 0; y < 13; y++) for (let x = 0; x < bw + 6; x++) {
-      const bx = Math.min(x, bw + 5 - x), by = Math.min(y, 12 - y);
-      if (bx + by < 2) continue;
-      p.p(x, y, bx < 2 || by < 2 ? "#0c0708" : "#2a0b0e");
+  return hornear(`barraJefe2|${bw}`, () => {
+    const p = new Pix(bw + 4, 7);
+    for (let y = 0; y < 7; y++) for (let x = 0; x < bw + 4; x++) {
+      const bx = Math.min(x, bw + 3 - x), by = Math.min(y, 6 - y);
+      if (bx + by < 2) continue;                              // las puntas redondeadas
+      p.p(x, y, bx < 1 || by < 1 ? "#140404" : "#3a0606");    // el marco y el fondo vacío
     }
     return p.canvas();
   });
 }
-function algunaRevelada(s) { return s.puertas.some((p) => p && p.revelada); }
-
 // ── los rótulos: el nombre del objeto (y su lema) o del piso, que entra, se queda y se va ──
-function rotulo(titulo, sub, grad = "blanco") {
+function rotulo(titulo, sub, maldicion = null) {
   J.rotulos = J.rotulos.filter((r) => r.titulo !== titulo);
-  J.rotulos.push({ titulo, sub, grad, t: 0 });
+  J.rotulos.push({ titulo, sub, maldicion, t: 0 });
   if (J.rotulos.length > 2) J.rotulos.shift();
+}
+// Los tiempos del rótulo, medidos en el video (a 30 fps; acá, al doble): la franja crece desde la
+// izquierda en 6 cuadros; el texto entra volando, se pasa 11 px y vuelve en otros 6; queda quieto
+// 1,76 s; toma envión 19 px a la izquierda en 8 cuadros y sale disparado a la derecha en 3; la
+// franja se encoge hacia la derecha.
+const ROT = { crece: 6, llega: 8, asienta: 14, quieto: 120, envion: 128, fuga: 131, fin: 140 };
+function posRotulo(t, W) {
+  const ease = (u) => 1 - Math.pow(1 - lim(u, 0, 1), 3);
+  if (t < 3) return -W;
+  if (t < ROT.llega) return lerp(-W * 0.55, 11, ease((t - 3) / (ROT.llega - 3)));
+  if (t < ROT.asienta) return lerp(11, 0, ease((t - ROT.llega) / (ROT.asienta - ROT.llega)));
+  if (t < ROT.quieto) return 0;
+  if (t < ROT.envion) { const u = (t - ROT.quieto) / (ROT.envion - ROT.quieto); return -19 * (u * u * (3 - 2 * u)); }
+  if (t < ROT.fuga) return lerp(-19, W, Math.pow((t - ROT.envion) / (ROT.fuga - ROT.envion), 2));
+  return W;
 }
 function dibujarRotulos(g) {
   const W = PANT.W;
-  for (let i = J.rotulos.length - 1; i >= 0; i--) { if (++J.rotulos[i].t > 170) J.rotulos.splice(i, 1); }
+  for (let i = J.rotulos.length - 1; i >= 0; i--) { if (++J.rotulos[i].t > ROT.fin) J.rotulos.splice(i, 1); }
   const r = J.rotulos[J.rotulos.length - 1];
   if (!r) return;
-  // la franja entra de un costado, la letra de bloque aparece encima; al final, todo se va
-  const t = r.t, entra = 1 - Math.pow(1 - Math.min(1, t / 9), 3), sale = t > 150 ? Math.pow((t - 150) / 20, 2) : 0;
-  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null;
-  const bw = Math.min(W, Math.max(s1.width + 150, Math.round(W * 0.72))), banda = bandaSpr(bw);
-  const y = PANT.salaY + 30;
-  // entra desde la izquierda y se va por la derecha (rápido), el texto viaja con la franja
-  const dx = Math.round((1 - entra) * -W + sale * W);
-  const bx = Math.round(W / 2 - bw / 2) + dx;
-  g.drawImage(banda, bx, y);
-  g.drawImage(s1, Math.round(W / 2 - s1.width / 2) + dx, y + Math.round(12 - s1.height / 2) + 1);
-  if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2) + dx, y + 20);
-  g.globalAlpha = 1;
+  const t = r.t;
+  const s1 = rotuloSpr(r.titulo), s2 = r.sub ? subtituloSpr(comoFrase(r.sub)) : null, per = r.maldicion ? pergaminoSpr(r.maldicion) : null;
+  const bw = Math.round(Math.min(W - 100, Math.max(s1.width + 120, 330))), banda = bandaSpr(bw), m = 8;   // 83 % en el original
+  const y = PANT.salaY + 22, bx = Math.round(W / 2 - bw / 2);
+  // la franja: crece desde la izquierda y, al irse, se come desde la izquierda hacia la derecha
+  const u0 = t >= ROT.envion + 2 ? lim((t - ROT.envion - 2) / (ROT.fin - ROT.envion - 2), 0, 1) : 0;
+  const u1 = lim(t / ROT.crece, 0, 1);
+  const x0 = Math.round(banda.width * u0 * u0), x1 = Math.round(banda.width * (1 - Math.pow(1 - u1, 2)));
+  if (x1 > x0) g.drawImage(banda, x0, 0, x1 - x0, banda.height, bx - m + x0, y - m, x1 - x0, banda.height);
+  const dx = Math.round(posRotulo(t, W));
+  // el texto va en la parte de abajo de la franja (medido: 15 px arriba, 6 abajo)
+  // medido: el título casi centrado en la mancha (8 px arriba, 5–7 abajo; acá 7 y 4), el subtítulo
+  // 7 px más abajo que el título (acá 6–7) y la etiqueta de la maldición 11 px más abajo (acá 10)
+  g.drawImage(s1, Math.round(W / 2 - s1.width / 2) + dx, y + 2);
+  if (s2) g.drawImage(s2, Math.round(W / 2 - s2.width / 2) + dx, y + 21);
+  if (per) g.drawImage(per, Math.round(W / 2 - per.width / 2) + dx, y + 24);
 }
 
 // ── los controles táctiles ──

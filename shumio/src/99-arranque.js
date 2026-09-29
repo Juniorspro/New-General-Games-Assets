@@ -69,6 +69,9 @@ Object.assign(window.__SH, {
     g.fillStyle = "#2a211d"; g.fillRect(0, 0, ancho, 40); g.drawImage(banda, 0, 2); g.drawImage(s1, Math.round(ancho / 2 - s1.width / 2), 2 + Math.round(12 - s1.height / 2) + 1); if (s2) g.drawImage(s2, Math.round(ancho / 2 - s2.width / 2), 22);
     const z = 4, o = lienzoNuevo(ancho * z, 40 * z), go = o.getContext("2d"); go.imageSmoothingEnabled = false; go.drawImage(c, 0, 0, ancho * z, 40 * z); return o.toDataURL();
   },
+  maldecir: (k) => { J.maldicion = k; J.rotulos = []; rotulo(J.piso.nombre, "", k ? MALDICIONES[k].texto : null); },
+  cuadroRotulo: (t) => { for (const r of J.rotulos) r.t = t - 1; J.rotulos.forEach(() => {}); MENU.activo = null; dibujar(); },
+  tactil: (v) => { IN.usaTactil = v; },
   vs: () => { if (J.vsPendiente) empezarVs(); },
   matarTodo: () => { for (const e of J.enemigos.slice()) matarEnemigo(e); },
 });

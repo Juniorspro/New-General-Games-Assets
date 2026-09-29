@@ -134,7 +134,7 @@ function tomar(c) {
     case "llave": j.llaves = Math.min(99, j.llaves + 1); SFX.llave(); return true;
     case "capsula": {
       if (j.capsula != null) { const v = recogible("capsula", j.x, j.y + 10, j.capsula); v.vz = 2; v.vy = 1; J.sala.cosas.push(v); }
-      j.capsula = c.sub; SFX.recoger(); rotulo(nombreCapsula(c.sub), ""); return true;
+      j.capsula = c.sub; SFX.recoger(); return true;   // el nombre queda abajo a la derecha, como la píldora del original
     }
     case "cofre": {
       if (c.abierto) return false;
@@ -311,7 +311,7 @@ function dibujarCosa(g, c) {
     case "objeto": {
       g.drawImage(pedestalSpr(), X - 11, Y - 8);
       if (c.id) {
-        const bob = Math.round(Math.sin(c.k * 0.07) * 2), ic = iconoSpr(c.id);
+        const bob = Math.round(Math.sin(c.k * 0.07) * 2), ic = J.maldicion === "ciego" ? preguntaSpr() : iconoSpr(c.id);
         g.drawImage(sombra(5, 2), X - 5, Y - 12);
         g.drawImage(ic, X - 9, Y - 30 + bob);
       }
@@ -334,4 +334,16 @@ function dibujarPrecio(g, c, x, y) {
     const h = corazonSpr("rojo", true), w = h.width * c.pacto;
     for (let i = 0; i < c.pacto; i++) g.drawImage(h, Math.round(x - w / 2 + i * h.width), y);
   }
+}
+
+/** El signo de pregunta rojo que tapa los objetos con la maldición del ciego (como en el video). */
+function preguntaSpr() {
+  return hornear("preguntaRoja", () => {
+    const p = new Pix(18, 18), R = ["#5a0408", "#a8101a", "#e02632", "#ff6a70"];
+    p.sello(4, 1, [".######.", "########", "###..###", "###..###", "....####", "...####.", "..####..", "..###...", "..###...", "........", "..###...", "..###..."].map((f) => f), { "#": R[2] });
+    // el volumen: luz arriba a la izquierda, sombra abajo
+    for (let y = 0; y < 18; y++) for (let x = 0; x < 18; x++) { const c = p.g(x, y); if (!c) continue; if (!p.g(x - 1, y) || !p.g(x, y - 1)) p.p(x, y, R[3]); else if (!p.g(x + 1, y) || !p.g(x, y + 1)) p.p(x, y, R[1]); }
+    p.contorno(PAL.tinta, true);
+    return p.canvas();
+  });
 }

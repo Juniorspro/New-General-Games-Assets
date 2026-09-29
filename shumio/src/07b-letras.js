@@ -222,17 +222,20 @@ const CIFRAS = {
   "+": ["....", "....", ".##.", "####", ".##.", "....", "...."], "%": ["##..#", "##.##", "..##.", ".##..", "##.##", "#..##", "....."],
   x: ["....", "....", "#..#", ".##.", ".##.", "#..#", "...."], ":": ["..", "##", "##", "..", "##", "##", ".."], "/": ["...##", "...##", "..##.", ".##..", "##...", "##...", "....."],
 };
+// medido en el video: los contadores (monedas, bombas, llaves) tienen 9 px de alto (acá 8): se
+// repite la fila del medio de cada cifra
+for (const k of Object.keys(CIFRAS)) if (CIFRAS[k].length === 7) CIFRAS[k] = [...CIFRAS[k].slice(0, 4), CIFRAS[k][3], ...CIFRAS[k].slice(4)];
 /** Los números del HUD: blancos (o del color pedido), gordos, con el contorno negro y la panza gris. */
 function cifrasSpr(str, color = "blanco") {
   str = String(str);
-  return hornear(`cif|${str}|${color}`, () => {
+  return hornear(`cif2|${str}|${color}`, () => {
     const R = color === "verde" ? ["#c8ffb0", "#7fe05a", "#4aa832"] : color === "rojo" ? ["#ffc0b0", "#f0553d", "#a82620"] : color === "oro" ? ["#fff4c4", "#f5c24a", "#b07a18"] : ["#ffffff", "#ece6da", "#b9b1a2"];
     let W = 0; for (const ch of str) W += (CIFRAS[ch] || CIFRAS[0])[0].length + 1;
-    const p = new Pix(W + 2, 9);
+    const p = new Pix(W + 2, 10);
     let x = 1;
     for (const ch of str) {
       const f = CIFRAS[ch] || CIFRAS[0];
-      f.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, 1 + y, R[y < 4 ? 0 : y < 6 ? 1 : 2]); });
+      f.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, 1 + y, R[y < 4 ? 0 : y < 7 ? 1 : 2]); });
       x += f[0].length + 1;
     }
     p.contorno(PAL.tinta, true);
@@ -292,6 +295,18 @@ const TITULO = {
   "+": [".......", "..###..", "..###..", "#######", "#######", "..###..", "..###..", ".......", "......."],
   "/": ["....###", "....###", "...###.", "...###.", "..###..", ".###...", ".###...", "###....", "###...."],
 };
+// En el video de Repentance (1080p = 4× de 480×270) las letras miden 12×11 px con trazos de 4 y
+// una separación de 1,5: más anchas que altas. Acá (×0,89): 11×10. Se sacan de la grilla de 9×9
+// repitiendo la fila 2 (el hueco de arriba: la E queda con barras y huecos parejos) y las
+// columnas 1 y ancho−2 (engordan los palos de 3 a 4).
+for (const k of Object.keys(TITULO)) {
+  let f = TITULO[k];
+  if (f.length === 9) f = [...f.slice(0, 3), f[2], ...f.slice(3)];
+  const w = f[0].length;
+  if (w >= 7) f = f.map((r) => r.slice(0, 2) + r[1] + r.slice(2, w - 2) + r[w - 2] + r.slice(w - 2));
+  if (k === " ") f = f.map(() => "......");
+  TITULO[k] = f;
+}
 // las tildes, encima (en las 3 filas de aire)
 const TILDE_TIT = { "´": ["..###", ".###.", "###.."], "~": [".##...#", "#######", "#...##."], "¨": ["###.###", "###.###", "......."] };
 
@@ -299,8 +314,8 @@ const TILDE_TIT = { "´": ["..###", ".###.", "###.."], "~": [".##...#", "#######
  *  lo separa si la franja se afina) y la sombra dura. */
 function rotuloSpr(str) {
   str = String(str).toUpperCase();
-  return hornear(`rot2|${str}`, () => {
-    const esp = 2, arriba = 4, H = 9;
+  return hornear(`rot3|${str}`, () => {
+    const esp = 1, arriba = 4, H = 10;
     let W = 0; for (const ch of str) W += ((TITULO[MARCAS[ch] ? MARCAS[ch][0] : ch] || TITULO["?"])[0].length) + esp;
     W -= esp;
     const p = new Pix(W + 4, H + arriba + 4);
@@ -409,4 +424,100 @@ function comoFrase(s) {
   s = String(s).toLowerCase();
   const i = s.search(/[a-zñáéíóúü]/);
   return i < 0 ? s : s.slice(0, i) + s[i].toUpperCase() + s.slice(i + 1);
+}
+
+// ── la letra a mano chica (para la etiqueta de la maldición, "Curse of the Blind!") ──
+// En el video las mayúsculas miden 10 px y las demás 7, mezcladas. Las chicas salen de MANO
+// quedándose con 7 de sus 10 filas y sacando una columna del medio (así el trazo sigue de 2).
+const _manoChica = {};
+function glifoManoChico(ch) {
+  if (_manoChica[ch]) return _manoChica[ch];
+  const m = MARCAS[ch], base = m ? m[0] : ch, f = MANO[base] || MANO["?"];
+  const PROPIAS = { G: [".####.", "##....", "##....", "##.###", "##..##", "##..##", ".####."], S: [".####.", "##....", "###...", ".####.", "...###", "....##", "#####."] };
+  let filas = PROPIAS[base] || [0, 2, 4, 5, 6, 8, 9].map((i) => f[i]);
+  const w = filas[0].length;
+  if (w >= 6 && !PROPIAS[base]) { const c = (w >> 1) - 1; filas = filas.map((r) => r.slice(0, c) + r.slice(c + 1)); }
+  return (_manoChica[ch] = { filas, marca: m ? m[1] : null });
+}
+/** La letra de la etiqueta de la maldición: versalitas en bloque, como en el video (mayúsculas de
+ *  8 px y las demás de 6, trazo de 2). Las chicas son las mismas de BLOQUE sin las filas 2 y 5. */
+function glifoEtiqueta(ch, grande) {
+  const base = MARCAS[ch] ? MARCAS[ch][0] : ch, f = BLOQUE[base] || BLOQUE["?"];
+  return grande || f.length !== 8 ? f : [0, 1, 3, 4, 6, 7].map((i) => f[i]);
+}
+/** El texto de la etiqueta: la primera de cada palabra (y los signos) de 8, las demás de 6. */
+function etiquetaSpr(str, tinta = "#0c0604") {
+  str = String(str).toUpperCase();
+  return hornear(`etiqueta2|${str}|${tinta}`, () => {
+    const letras = [];
+    let inicio = true;
+    for (const ch of str) {
+      if (ch === " ") { letras.push(null); inicio = true; continue; }
+      const grande = inicio || !/[A-ZÁÉÍÓÚÑÜ0-9]/.test(ch);
+      inicio = false;
+      const filas = glifoEtiqueta(ch, grande);
+      letras.push({ filas, alto: filas.length, marca: MARCAS[ch] ? MARCAS[ch][1] : null });
+    }
+    let W = 0; letras.forEach((l) => { W += l ? l.filas[0].length + 1 : 4; });
+    const arriba = 3, p = new Pix(W + 2, 8 + arriba + 1);
+    let x = 1;
+    letras.forEach((l) => {
+      if (!l) { x += 4; return; }
+      const y0 = arriba + 8 - l.alto;            // todas apoyadas en el mismo renglón
+      l.filas.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, y0 + y, tinta); });
+      if (l.marca === "´") { const c = x + Math.floor(l.filas[0].length / 2); p.p(c, y0 - 2, tinta); p.p(c + 1, y0 - 2, tinta); p.p(c + 1, y0 - 3, tinta); p.p(c + 2, y0 - 3, tinta); }
+      if (l.marca === "~") { const c = x + Math.floor(l.filas[0].length / 2) - 2; for (const [dx, dy] of [[0, -2], [1, -3], [2, -3], [3, -2], [4, -2], [5, -3]]) p.p(c + dx, y0 + dy, tinta); }
+      x += l.filas[0].length + 1;
+    });
+    return p.canvas();
+  });
+}
+/** Texto a mano con mayúsculas grandes al principio de cada palabra y el resto chico. */
+function manoMixtaSpr(str, tinta = "#140606") {
+  str = String(str).toUpperCase();
+  return hornear(`manoMixta3|${str}|${tinta}`, () => {
+    const r = mulberry(hashTexto(str)), letras = [];
+    let inicio = true;
+    for (const ch of str) {
+      if (ch === " ") { letras.push(null); inicio = true; continue; }
+      const grande = inicio || r() < 0.12 || !/[A-ZÁÉÍÓÚÑÜ0-9]/.test(ch);   // los signos, siempre grandes
+      inicio = !/[A-ZÁÉÍÓÚÑÜ0-9]/.test(ch) && ch !== "'";
+      if (grande) { const g = MANO[MARCAS[ch] ? MARCAS[ch][0] : ch] || MANO["?"]; letras.push({ filas: g, marca: MARCAS[ch] ? MARCAS[ch][1] : null, alto: 10 }); }
+      else { const g = glifoManoChico(ch); letras.push({ filas: g.filas, marca: g.marca, alto: 7 }); }
+    }
+    let W = 0; letras.forEach((l) => { W += l ? l.filas[0].length + 2 : 4; });
+    const arriba = 3, p = new Pix(W + 2, 10 + arriba + 2);
+    let x = 1;
+    letras.forEach((l) => {
+      if (!l) { x += 4; return; }
+      const y0 = arriba + 10 - l.alto;          // todas apoyadas en el mismo renglón
+      l.filas.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, y0 + y, tinta); });
+      if (l.marca === "´") { const c = x + Math.floor(l.filas[0].length / 2); p.p(c, y0 - 2, tinta); p.p(c + 1, y0 - 2, tinta); p.p(c + 1, y0 - 3, tinta); }
+      if (l.marca === "~") { const c = x + Math.floor(l.filas[0].length / 2) - 2; for (const [dx, dy] of [[0, -2], [1, -3], [2, -3], [3, -2], [4, -3]]) p.p(c + dx, y0 + dy, tinta); }
+      x += l.filas[0].length + 2;
+    });
+    return p.canvas();
+  });
+}
+
+// ── las cifras finas de las cuentas (medido: 6 px de alto, trazo de 1, blancas al 60 %) ──
+const FINAS = {
+  0: [".##.", "#..#", "#..#", "#..#", "#..#", ".##."], 1: [".#.", "##.", ".#.", ".#.", ".#.", "###"],
+  2: [".##.", "#..#", "...#", "..#.", ".#..", "####"], 3: ["###.", "...#", ".##.", "...#", "...#", "###."],
+  4: ["#..#", "#..#", "####", "...#", "...#", "...#"], 5: ["####", "#...", "###.", "...#", "#..#", ".##."],
+  6: [".##.", "#...", "###.", "#..#", "#..#", ".##."], 7: ["####", "...#", "..#.", ".#..", ".#..", ".#.."],
+  8: [".##.", "#..#", ".##.", "#..#", "#..#", ".##."], 9: [".##.", "#..#", "#..#", ".###", "...#", ".##."],
+  ".": [".", ".", ".", ".", ".", "#"], "%": ["#..#", "...#", "..#.", ".#..", "#...", "#..#"],
+  "-": ["...", "...", "###", "...", "...", "..."], "+": ["...", ".#.", "###", ".#.", "...", "..."],
+};
+function finasSpr(str, color = "#ffffff") {
+  str = String(str);
+  return hornear(`finas|${str}|${color}`, () => {
+    let W = 0; for (const ch of str) W += (FINAS[ch] || FINAS[0])[0].length + 1;
+    const p = new Pix(W + 2, 8);
+    let x = 1;
+    for (const ch of str) { const f = FINAS[ch] || FINAS[0]; f.forEach((fila, y) => { for (let i = 0; i < fila.length; i++) if (fila[i] === "#") p.p(x + i, 1 + y, color); }); x += f[0].length + 1; }
+    p.contorno("rgba(0,0,0,0.7)", true);
+    return p.canvas();
+  });
 }

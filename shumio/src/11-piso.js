@@ -168,3 +168,16 @@ function crearSalaPacto(piso, desde, dir) {
 
 /** ¿La puerta se ve? (las secretas, sólo después de volarlas) */
 function puertaVisible(p) { return p && (!p.secreta || p.revelada); }
+
+// ── las maldiciones: el piso puede venir maldito (se anuncia en la etiqueta de pergamino) ──
+const MALDICIONES = {
+  ciego: { texto: "¡Maldición del ciego!" },            // los objetos se ven como un ? rojo hasta tomarlos
+  oscuridad: { texto: "¡Maldición de la oscuridad!" },   // sólo se ve alrededor de Shumio
+  extraviado: { texto: "¡Maldición del extraviado!" },   // no hay minimapa
+  desconocido: { texto: "¡Maldición de lo desconocido!" }, // no se ve cuánta vida queda
+};
+/** Una por piso como mucho; en el primero, rara (la probabilidad es de balance propio). */
+function sortearMaldicion(n) {
+  if (!A.si(n === 1 ? 0.12 : 0.28)) return null;
+  return A.uno(Object.keys(MALDICIONES));
+}

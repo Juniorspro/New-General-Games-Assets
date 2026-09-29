@@ -122,23 +122,88 @@ function fondoMenuSpr(W, H) {
   });
 }
 
-/** La franja de los rótulos, como la del original: negra, casi opaca, con los bordes rasgados en
- *  bultos (como papel negro arrancado), más angosta y deshilachada hacia las puntas. Sin color. */
+/** La franja de los rótulos, calcada de la silueta del video: una pincelada casi negra con tinte
+ *  rojo (#0a0000) de 23 px de cuerpo en el original (acá 21); arranca a la izquierda como una cola
+ *  fina con manchas sueltas, engorda hacia el medio y termina más cortada a la derecha. */
 function bandaSpr(w, h = 21) {
-  return hornear(`banda4|${w}x${h}`, () => {
-    const p = new Pix(w, h + 6), r = mulberry(w * 7 + h), arr = ruido1(r), aba = ruido1(r);
-    // bultos: un ruido lento más "mordidas" redondas en los bordes
-    const bultos = [];
-    for (let i = 0; i < w / 9; i++) bultos.push([r() * w, r() < 0.5 ? 0 : 1, 1.5 + r() * 2.5, r() < 0.5 ? -1 : 1]);
+  return hornear(`banda8|${w}x${h}`, () => {
+    const m = 8, p = new Pix(w + m * 2, h + m * 2), r = mulberry(w * 13 + h), arr = ruido1(r), aba = ruido1(r);
+    const C = "rgba(10,0,0,0.94)", disco = (cx0, cy0, rr) => { for (let y = Math.floor(cy0 - rr); y <= cy0 + rr; y++) for (let x = Math.floor(cx0 - rr); x <= cx0 + rr; x++) if (Math.hypot(x + 0.5 - cx0, y + 0.5 - cy0) <= rr) p.p(x, y, C); };
+    const suave = (u) => u * u * (3 - 2 * u);
     for (let x = 0; x < w; x++) {
-      const u = x / (w - 1), punta = Math.min(u, 1 - u) * 2, f = 1 - Math.min(1, punta * 5);   // las puntas se afinan en el último décimo, en bultos
-      let t = 3 + arr(x * 0.35) * 1.3 + f * f * 8 + f * 2 * r(), b = h + aba(x * 0.35) * 1.3 - f * f * 8 - f * 2 * r();
-      for (const [bx, lado, br, sg] of bultos) { const d = Math.abs(x - bx); if (d < br) { const e = Math.sqrt(br * br - d * d) * 0.8 * sg; if (lado === 0) t -= e; else b += e; } }
-      for (let y = Math.max(0, Math.floor(t)); y < Math.min(h + 6, Math.ceil(b)); y++) p.p(x, y, "rgba(8,3,3,0.9)");
+      const u = x / (w - 1);
+      // el grosor: cola a la izquierda (el primer 14 %), lleno en el medio, corte a la derecha
+      const g = u < 0.14 ? 0.15 + 0.85 * suave(u / 0.14) : u > 0.95 ? 1 - 0.35 * ((u - 0.95) / 0.05) : 1;
+      const med = m + h / 2 + (u < 0.14 ? (1 - u / 0.14) * 3 : 0), mitad = (h / 2) * g;
+      const t = med - mitad + arr(x * 0.22) * 1.3, b = med + mitad + aba(x * 0.18) * 1.5;
+      for (let y = Math.floor(t); y < Math.ceil(b); y++) p.p(x + m, y, C);
     }
-    // islitas sueltas cerca de los bordes (los pedacitos que quedan al rasgar)
-    for (let i = 0; i < w / 14; i++) { const x = Math.floor(r() * w), y = r() < 0.5 ? 1 + Math.floor(r() * 2) : h + 2 + Math.floor(r() * 2); p.p(x, y, "rgba(8,3,3,0.9)"); if (r() < 0.5) p.p(x + 1, y, "rgba(8,3,3,0.9)"); }
+    // bultos pegados a los bordes (la pintura que se corrió) y manchas sueltas alrededor
+    for (let i = 0; i < w / 7; i++) { const x = m + r() * w, arriba = r() < 0.5; disco(x, arriba ? m + 1.5 + r() : m + h - 1.5 - r(), 1.2 + r() * 2.2); }
+    for (let i = 0; i < 16; i++) { const x = m + r() * w * 0.2, y = m + h / 2 + (r() - 0.35) * h * 1.4; disco(x, y, 0.8 + r() * 2.2); }
+    for (let i = 0; i < 16; i++) { const x = m + r() * w, arriba = r() < 0.5, y = arriba ? m - 1 - r() * 6 : m + h + 1 + r() * 6; disco(x, y, 0.6 + r() * 1.5); }
+    for (let i = 0; i < 5; i++) disco(m + w * (0.95 + r() * 0.06), m + r() * h, 0.8 + r() * 1.8);
+    // el borde, un rojo apenas más claro (como la sangre que se seca)
+    const lleno = (x, y) => { const c = p.g(x, y); return !!c; };
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) if (lleno(x, y) && !lleno(x, y - 1)) p.p(x, y, "rgba(40,4,6,0.94)");
     return p.canvas();
+  });
+}
+/** La etiqueta de la maldición, dibujada sobre la del video: una cinta de papel apenas inclinada
+ *  (la punta derecha 5 px más arriba) que ondula en escalones de un píxel; las dos puntas rotas en
+ *  dos lóbulos con una grieta en el medio; papel #D2BEAA con borrones grises arriba y la panza más
+ *  oscura; contorno #0C0604 y una sombra de dos píxeles abajo. */
+function pergaminoSpr(texto) {
+  return hornear(`pergamino8|${texto}`, () => {
+    const txt = etiquetaSpr(texto, "#0c0604"), w = Math.max(70, txt.width + 30), H = 34;
+    const p = new Pix(w + 8, H), r = mulberry(hashTexto(texto)), base = H / 2;
+    const PAPEL = "#d2beaa", LUZ = "#ddcbb8", PANZA = "#c1ab95", MANCHA = "#bcac98", T = "#0c0604";
+    const arriba = [], abajo = [];
+    for (let x = 0; x < w; x++) {
+      const u = x / (w - 1);
+      // la parte del medio (donde va el texto) queda pareja; lo irregular está hacia las puntas,
+      // que se levantan o bajan un poco (así las letras no parecen torcidas)
+      const e = Math.pow(Math.abs(u - 0.5) * 2, 3);
+      const c = base + (u < 0.5 ? 1 : -1) * e * 2 + (r() < 0.04 ? 0 : 0);
+      const hh = 7.8 + 1.2 * e;
+      arriba.push(Math.round(c - hh)); abajo.push(Math.round(c + hh));
+    }
+    // los bordes desparejos: escalones de un píxel en tramos largos, cada borde por su lado (como en
+    // el original); mueven el papel, no el texto
+    for (const borde of [arriba, abajo]) {
+      let x = 0, d = 0;
+      while (x < w) { const L = 14 + Math.floor(r() * 26); d = lim(d + (r() < 0.5 ? -1 : 1), -1, 1); for (let k = x; k < Math.min(w, x + L); k++) borde[k] += d; x += L; }
+    }
+    // las puntas rotas: la silueta (cuánto se mete desde el borde) según la altura, t = 0 arriba … 1 abajo
+    const tramo = (pts, t) => { for (let i = 1; i < pts.length; i++) if (t <= pts[i][1]) { const [x0, t0] = pts[i - 1], [x1, t1] = pts[i]; return Math.round(x0 + (x1 - x0) * (t - t0) / (t1 - t0)); } return pts[pts.length - 1][0]; };
+    const IZQ = [[5, 0], [1, 0.22], [0, 0.4], [2, 0.52], [4, 0.56], [3, 0.62], [2, 0.8], [5, 1]];
+    const DER = [[2, 0], [0, 0.25], [1, 0.46], [3, 0.52], [1, 0.58], [0, 0.75], [2, 1]];
+    const x0 = 3;
+    for (let x = 0; x < w; x++) for (let y = arriba[x]; y <= abajo[x]; y++) {
+      const t = (y - arriba[x]) / (abajo[x] - arriba[x]);
+      if (x < tramo(IZQ, t) || w - 1 - x < tramo(DER, t)) continue;
+      p.p(x + x0, y, y === arriba[x] ? LUZ : y >= abajo[x] - 1 ? PANZA : PAPEL);
+    }
+    // las grietas: rayitas negras que entran desde cada punta
+    const tg = 0.54;
+    { const x = 0, y = Math.round(arriba[x] + (abajo[x] - arriba[x]) * tg); for (let k = 2; k < 8; k++) p.p(x0 + k, y + (k > 5 ? 1 : 0), T); }
+    { const x = w - 1, y = Math.round(arriba[x] + (abajo[x] - arriba[x]) * tg); for (let k = 2; k < 7; k++) p.p(x0 + x - k, y, T); }
+    // borrones grises suaves cerca del borde de arriba (como papel manchado)
+    for (let i = 0; i < 3; i++) {
+      const cx0 = w * (0.22 + r() * 0.56), cy0 = arriba[Math.round(cx0)] + 3 + r() * 2, rx = 5 + r() * 9, ry = 1.4 + r();
+      for (let y = Math.floor(cy0 - ry); y <= cy0 + ry; y++) for (let x = Math.floor(cx0 - rx); x <= cx0 + rx; x++) {
+        const d = ((x - cx0) / rx) ** 2 + ((y - cy0) / ry) ** 2;
+        if (d <= 1 && p.g(x + x0, y) === PAPEL) p.p(x + x0, y, MANCHA);
+      }
+    }
+    p.contorno(T);
+    const q = p.canvas(), out = lienzoNuevo(q.width, q.height + 2), g = out.getContext("2d");
+    // la sombra de abajo: dos píxeles (el borde de abajo queda más grueso, como en el original)
+    g.globalAlpha = 0.55; g.drawImage(tinte(q, "#2a1410"), 0, 2); g.globalAlpha = 0.85; g.drawImage(tinte(q, "#1a0a08"), 0, 1); g.globalAlpha = 1; g.drawImage(q, 0, 0);
+    // el texto, siguiendo la inclinación de la cinta (se apoya en el medio)
+    const mid = Math.round((arriba[Math.round(w / 2)] + abajo[Math.round(w / 2)]) / 2);
+    g.drawImage(txt, Math.round(out.width / 2 - txt.width / 2), mid - Math.round(txt.height / 2) + 1);
+    return out;
   });
 }
 
@@ -250,5 +315,14 @@ function gotitaDibujo() {
     const c = p.canvas(), out = lienzoNuevo(10, 12), g = out.getContext("2d");
     g.imageSmoothingEnabled = false; g.drawImage(c, 0, 0, 10, 12);
     return out;
+  });
+}
+
+/** Shumio a un píxel de trazo (los dibujitos del piso de la primera sala). */
+function dibujoShumioChico() {
+  return hornear("dibujoShumioChico", () => {
+    const grande = dibujoShumio(0), c = lienzoNuevo(36, 40), g = c.getContext("2d");
+    g.imageSmoothingEnabled = false; g.drawImage(grande, 0, 0, 72, 80, 0, 0, 36, 40);
+    return c;
   });
 }
