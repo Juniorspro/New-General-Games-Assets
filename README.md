@@ -6,7 +6,10 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 > **Empezá por acá:** [`ARRANQUE.md`](ARRANQUE.md) dice **cómo se trabaja**
 > (la máquina, las trampas ya pagadas, cómo se despliega). [`ESTADO.md`](ESTADO.md)
 > dice **qué hay construido** (cada página, cada endpoint, cada tabla).
-> Una sesión nueva debería leer los dos, en ese orden.
+> Una persona nueva debería leer los dos, en ese orden. Una sesión de Claude
+> Code arranca por [`memoria/INDICE.md`](memoria/INDICE.md) (lo dice
+> [`CLAUDE.md`](CLAUDE.md)), que apunta a la sección justa de cada documento;
+> cómo se mantiene esa memoria está en [`MEMORIA.md`](MEMORIA.md).
 
 ## Qué hay
 
@@ -23,6 +26,8 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `modelos-cdn/` | modelos GLB de IBLO, con el hash en el nombre | — |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, IBLO | — |
 | `Prompts/` | colecciones de prompts (finanzas, diseño web, skills de UI) | — |
+| `guias/` | cómo hacer juegos que se vean bien: 3D con Rezona, 2D pixel art y la receta de AEROPLAZA | — |
+| `memoria/` | lo que ya se sabe, en notas cortas para que cada sesión no relea el repo | — |
 
 ## Desplegar
 
