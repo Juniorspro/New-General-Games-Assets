@@ -21,9 +21,6 @@ function abrirMenu(tipo) {
   const vol = () => [
     { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
     { texto: () => "EFECTOS " + pct(volEfectos), cambiar: (d) => { volEfectos = lim(Math.round((volEfectos + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); SFX.moneda(); } },
-    // el diagnóstico del sonido: dice cómo está y, al tocarlo, suena una prueba
-    { texto: () => "SONIDO: " + estadoAudio(), hacer: () => probarSonido() },
-    { texto: () => "SALIDA: " + (modoSalida === "directa" ? "DIRECTA" : "POR REPRODUCTOR"), hacer: () => cambiarSalida() },
   ];
   if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
   if (tipo === "principal") Musica.poner("menu");
@@ -117,8 +114,6 @@ function dibujarMenu(g) {
     escribir(g, m.items[0].texto(), cx0, base + 8, "centro");
     g.drawImage(logo, lx, ly);
     notaRegistro(g, W, H, mece);
-    // cómo está el sonido, siempre a la vista en la portada (así una captura ya dice qué pasa)
-    { const s = etiquetaSpr("SONIDO: " + estadoAudio(), "#e8dcc0"); g.globalAlpha = 0.8; g.drawImage(s, 4, H - s.height - 3); g.globalAlpha = 1; }
     return;
   }
   if (m.tipo === "principal") {

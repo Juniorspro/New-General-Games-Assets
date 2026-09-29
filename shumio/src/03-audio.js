@@ -17,7 +17,6 @@ let MEDIDOR = null, SALIDA_EL = null, SALIDA_DEST = null;
 // La salida: "directa" (a los parlantes) o "reproductor" (por un elemento <audio>, el mismo camino que
 // usa un video; en algunos teléfonos es lo único que suena). Se elige en el menú y se recuerda.
 let modoSalida = "directa";
-try { modoSalida = localStorage.getItem("shumio-salida") || "directa"; } catch (e) { /* sin guardar */ }
 let AC = null, SAL = null, MUS = null, EFX = null, RUIDO = null, ECO = null, ECO_LARGO = null;
 let volMusica = 0.55, volEfectos = 0.8;
 try { const g = JSON.parse(localStorage.getItem("shumio-audio") || "{}"); if (g.m != null) volMusica = g.m; if (g.e != null) volEfectos = g.e; } catch (e) { /* sin guardar */ }

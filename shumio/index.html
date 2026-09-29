@@ -327,7 +327,6 @@ let MEDIDOR = null, SALIDA_EL = null, SALIDA_DEST = null;
 // La salida: "directa" (a los parlantes) o "reproductor" (por un elemento <audio>, el mismo camino que
 // usa un video; en algunos teléfonos es lo único que suena). Se elige en el menú y se recuerda.
 let modoSalida = "directa";
-try { modoSalida = localStorage.getItem("shumio-salida") || "directa"; } catch (e) { /* sin guardar */ }
 let AC = null, SAL = null, MUS = null, EFX = null, RUIDO = null, ECO = null, ECO_LARGO = null;
 let volMusica = 0.55, volEfectos = 0.8;
 try { const g = JSON.parse(localStorage.getItem("shumio-audio") || "{}"); if (g.m != null) volMusica = g.m; if (g.e != null) volEfectos = g.e; } catch (e) { /* sin guardar */ }
@@ -6406,12 +6405,6 @@ function dibujarHud(g) {
     const cal = calaveraJefeSpr(); g.drawImage(cal, bx - 13, by - 7);
   }
   dibujarRotulos(g);
-  // si el sonido no arrancó después de tocar, que se vea (y qué pasa), en vez de quedarse mudo sin avisar
-  if (AUDIO.gestos > 0 && (!AC || AC.state !== "running") && (J.t >> 5) & 1) {
-    const s = etiquetaSpr("SIN SONIDO: " + estadoAudio(), "#ffd0c0");
-    g.fillStyle = "rgba(0,0,0,0.6)"; g.fillRect(Math.round(W / 2 - s.width / 2) - 4, H - 22, s.width + 8, s.height + 4);
-    g.drawImage(s, Math.round(W / 2 - s.width / 2), H - 20);
-  }
   if (IN.usaTactil) dibujarControles(g);
 }
 
@@ -6973,9 +6966,6 @@ function abrirMenu(tipo) {
   const vol = () => [
     { texto: () => "MÚSICA " + pct(volMusica), cambiar: (d) => { volMusica = lim(Math.round((volMusica + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); } },
     { texto: () => "EFECTOS " + pct(volEfectos), cambiar: (d) => { volEfectos = lim(Math.round((volEfectos + d * 0.1) * 10) / 10, 0, 1); guardarVolumen(); SFX.moneda(); } },
-    // el diagnóstico del sonido: dice cómo está y, al tocarlo, suena una prueba
-    { texto: () => "SONIDO: " + estadoAudio(), hacer: () => probarSonido() },
-    { texto: () => "SALIDA: " + (modoSalida === "directa" ? "DIRECTA" : "POR REPRODUCTOR"), hacer: () => cambiarSalida() },
   ];
   if (tipo === "titulo") { m.items = [{ texto: () => IN.usaTactil ? "TOCÁ PARA EMPEZAR" : "ENTER O CLIC", hacer: () => abrirMenu("principal") }]; Musica.poner("menu"); }
   if (tipo === "principal") Musica.poner("menu");
@@ -7069,8 +7059,6 @@ function dibujarMenu(g) {
     escribir(g, m.items[0].texto(), cx0, base + 8, "centro");
     g.drawImage(logo, lx, ly);
     notaRegistro(g, W, H, mece);
-    // cómo está el sonido, siempre a la vista en la portada (así una captura ya dice qué pasa)
-    { const s = etiquetaSpr("SONIDO: " + estadoAudio(), "#e8dcc0"); g.globalAlpha = 0.8; g.drawImage(s, 4, H - s.height - 3); g.globalAlpha = 1; }
     return;
   }
   if (m.tipo === "principal") {
