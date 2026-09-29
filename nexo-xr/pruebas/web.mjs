@@ -47,20 +47,27 @@ const r = await pag.evaluate((manos) => {
   const { Gestos, DoblePellizco, traslacion, calcular, formato } = Nexo.nucleo;
   const out = {};
   // ningún pellizco falso con manos reales
-  out.falsos = manos.filter((m) => { const g = new Gestos(); let p = false; for (let i = 0; i < 5; i++) p = g.paso(m.mundo) || p; return p; }).map((m) => m.nombre);
+  out.falsos = manos.filter((m) => { const g = new Gestos(); let p = false; for (let i = 0; i < 5; i++) p = g.paso(m.mundo, m.img, m.w, m.h) || p; return p; }).map((m) => m.nombre);
+  // con sólo el 3D (como antes) y el umbral nuevo, más alto, ¿cuántas darían pellizco falso? (para ver que la foto ayuda)
+  out.falsos3 = manos.filter((m) => { const g = new Gestos(0.28, 0.4); let p = false; for (let i = 0; i < 5; i++) p = g.paso(m.mundo) || p; return p; }).length;
+  out.falsosCon = manos.filter((m) => { const g = new Gestos(0.28, 0.4); let p = false; for (let i = 0; i < 5; i++) p = g.paso(m.mundo, m.img, m.w, m.h) || p; return p; }).length;
   // pellizcar con las manos abiertas: doble = un clic, uno solo = ninguno (30 imágenes por segundo, 3 mm de temblor)
   let semilla = 7;
   const azar = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647 - 0.5; };
-  const pellizcos = (w0, veces) => {
-    const g = new Gestos(), d = new DoblePellizco(), medio = [0, 1, 2].map((k) => (w0[4][k] + w0[8][k]) / 2), s = [0, 0, 0, 0, 0];
+  const pellizcos = (m0, veces) => {
+    const w0 = m0.mundo, i0 = m0.img;
+    const g = new Gestos(), d = new DoblePellizco(), medio = [0, 1, 2].map((k) => (w0[4][k] + w0[8][k]) / 2), medioI = [0, 1].map((k) => (i0[4][k] + i0[8][k]) / 2), s = [0, 0, 0, 0, 0];
     for (let v = 0; v < veces; v++) { for (let i = 1; i <= 4; i++) s.push(i / 4); s.push(1, 1); for (let i = 3; i >= 0; i--) s.push(i / 4); s.push(0, 0, 0); }
     for (let i = 0; i < 30; i++) s.push(0);
     let ms = 1000, n = 0, antes = false;
     for (const x of s) {
-      const w = w0.map((p) => p.slice());
-      for (const j of [4, 8]) for (let k = 0; k < 3; k++) w[j][k] = w0[j][k] + (medio[k] - w0[j][k]) * x * 0.97 + azar() * 0.006;
+      const w = w0.map((p) => p.slice()), im = i0.map((p) => p.slice());
+      for (const j of [4, 8]) {
+        for (let k = 0; k < 3; k++) w[j][k] = w0[j][k] + (medio[k] - w0[j][k]) * x * 0.97 + azar() * 0.006;
+        for (let k = 0; k < 2; k++) im[j][k] = i0[j][k] + (medioI[k] - i0[j][k]) * x * 0.97 + azar() * 3 / m0.w;   // 1.5 px de temblor
+      }
       ms += 33;
-      const ap = d.paso(g.paso(w), ms);
+      const ap = d.paso(g.paso(w, im, m0.w, m0.h), ms);
       if (ap && !antes) n++;
       antes = ap;
     }
@@ -68,8 +75,8 @@ const r = await pag.evaluate((manos) => {
   };
   const abiertas = manos.filter((m) => Gestos.indice(m.mundo) >= 1.3 && Gestos.apertura(m.mundo) >= 0.45);
   out.abiertas = abiertas.length;
-  out.doble = abiertas.filter((m) => pellizcos(m.mundo, 2) === 1).length;
-  out.uno = abiertas.filter((m) => pellizcos(m.mundo, 1) === 0).length;
+  out.doble = abiertas.filter((m) => pellizcos(m, 2) === 1).length;
+  out.uno = abiertas.filter((m) => pellizcos(m, 1) === 0).length;
   // la mano delante de la cámara: con T conocido se recupera; con ruido de 2 px, cerca
   const m0 = manos.find((m) => m.nombre === "pointing_up") || manos[0];
   const W = 640, H = 480, fx = (W / 2) / Math.tan(33 * Math.PI / 180), T0 = [0.06, 0.1, 0.42];
@@ -94,7 +101,8 @@ const r = await pag.evaluate((manos) => {
   out.formato = formato(1234.5);
   return out;
 }, manos);
-ver(r.falsos.length === 0, `ninguna de las ${manos.length} manos reales es un pellizco${r.falsos.length ? " (" + r.falsos.join(", ") + ")" : ""}`);
+ver(r.falsos.length === 0, `ninguna de las ${manos.length} manos reales es un pellizco, mirando el 3D y la foto${r.falsos.length ? " (" + r.falsos.join(", ") + ")" : ""}`);
+ver(r.falsosCon < r.falsos3, `la foto ayuda: con un umbral más alto (más fácil de pellizcar), sólo el 3D da ${r.falsos3} falsos y con la foto ${r.falsosCon}`);
 ver(r.doble === r.abiertas, `doble pellizco con ${r.abiertas} manos reales: un clic (${r.doble} bien)`);
 ver(r.uno === r.abiertas, `un pellizco solo con las mismas manos: ningún clic (${r.uno} bien)`);
 ver(r.errExacto < 1e-4, `la mano delante de la cámara: la posición se recupera exacta (${(r.errExacto * 1000).toFixed(3)} mm)`);
@@ -163,6 +171,56 @@ const sec = await pag.evaluate(async (m) => {
   Nexo.ventanaEnRayo("pizarra", 1);
   await correr(abierta(10));
   const sobre = Nexo.estado().fuentes[1];
+  // el temblor: la misma mano quieta con el ruido de una cámara de verdad (1.5 px en la foto, la distancia ±3 cm)
+  const temblor = await (async () => {
+    let semilla = 11;
+    const azar = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647 - 0.5; };
+    const angs = [], crudos = [];
+    for (let i = 0; i < 45; i++) {
+      const esc = 1 + azar() * 0.15;   // la escala mal medida = la distancia que salta
+      const img = m.img.map((p) => [p[0] + azar() * 3 / m.w, p[1] + azar() * 3 / m.h, p[2]]);
+      const mundo = m.mundo.map((p) => [p[0] * esc, p[1] * esc, p[2] * esc]);
+      Nexo.recibirManos({ w: m.w, h: m.h, manos: [{ img, mundo, lado: "Left" }] }, reloj += 33);
+      await esperar(33);
+      const d = Nexo.fuentes[1].d; angs.push([d.x, d.y, d.z]);
+      crudos.push(Nexo.rayoCrudo(img, mundo, m.w, m.h));
+    }
+    const desvio = (v) => { const u = v.slice(10); const c = [0, 1, 2].map((k) => u.reduce((s, x) => s + x[k], 0) / u.length); return Math.sqrt(u.reduce((s, x) => s + (Math.acos(Math.min(1, (x[0] * c[0] + x[1] * c[1] + x[2] * c[2]) / Math.hypot(...c)))) ** 2, 0) / u.length) * 180 / Math.PI; };
+    return { ahora: desvio(angs), antes: desvio(crudos) };
+  })();
+  // el atraso: la mano moviéndose de costado a ~25 cm/s (4 px por foto): cuánto se queda atrás el rayo
+  const atraso = await (async () => {
+    // a qué foto (de las que llegaron) apunta el rayo: 0 = la última; −2 = dos fotos atrás (atrasado); +1 = adelantado
+    const crudos = [], desfases = [];
+    for (let i = 0; i < 40; i++) {
+      const img = m.img.map((p) => [p[0] + i * 0.006, p[1], p[2]]);
+      crudos.push(Nexo.rayoCrudo(img, m.mundo, m.w, m.h));
+      Nexo.recibirManos({ w: m.w, h: m.h, manos: [{ img, mundo: m.mundo, lado: "Left" }] }, reloj += 33);
+      await esperar(33);
+      if (i < 15) continue;
+      const d = Nexo.fuentes[1].d;
+      // (el rayo de la foto i+1 también, extrapolado, para ver si se adelanta)
+      const sig = Nexo.rayoCrudo(m.img.map((p) => [p[0] + (i + 1) * 0.006, p[1], p[2]]), m.mundo, m.w, m.h);
+      const cand = [...crudos.slice(i - 8, i + 1), sig];
+      let mejor = 0, ang = 9;
+      cand.forEach((c, j) => { const a = Math.acos(Math.min(1, d.x * c[0] + d.y * c[1] + d.z * c[2])); if (a < ang) { ang = a; mejor = j - (cand.length - 2); } });
+      desfases.push(mejor);
+    }
+    for (let i = 0; i < 10; i++) { Nexo.recibirManos({ w: m.w, h: m.h, manos: [{ img: m.img, mundo: m.mundo, lado: "Left" }] }, reloj += 33); await esperar(33); }
+    return desfases.reduce((a, b) => a + b, 0) / desfases.length;
+  })();
+  // los lados: la misma mano, con la etiqueta dada vuelta en cada foto
+  const lados = await (async () => {
+    let cambios = 0, antes = null;
+    for (let i = 0; i < 20; i++) {
+      Nexo.recibirManos({ w: m.w, h: m.h, manos: [{ img: m.img, mundo: m.mundo, lado: i % 2 ? "Left" : "Right" }] }, reloj += 33);
+      await esperar(33);
+      const lado = Nexo.manos[0].visto > Nexo.manos[1].visto ? 0 : 1;
+      if (antes !== null && lado !== antes) cambios++;
+      antes = lado;
+    }
+    return { cambios };
+  })();
   sobre.depurar = Nexo.depurar();
   pizarra.toques.length = 0;
   await correr(pellizco); await correr(abierta(30));
@@ -177,9 +235,12 @@ const sec = await pag.evaluate(async (m) => {
   await correr([0.25, 0.5, 0.75, 1, 1, 0.75, 0.5, 0.25, 0, 0, 0]);
   await correr([0.25, 0.5, 0.75, ...Array(25).fill(1), 0.5, 0, 0], (i) => i < 3 ? 0 : Math.min(22, i - 3) * 0.004);
   await correr(abierta(10));
-  return { traza: traza.join(" "), est0, sobre, uno, dos, trazos: pizarra.trazos.length - trazos0, estado: Nexo.estado() };
+  return { atraso, temblor, lados, traza: traza.join(" "), est0, sobre, uno, dos, trazos: pizarra.trazos.length - trazos0, estado: Nexo.estado() };
 }, mano);
 console.log(`   (la página dibuja a ${Math.round(sec.estado.fps)} fps en esta PC, sin GPU)`);
+ver(sec.temblor.antes > 0 && sec.temblor.ahora < sec.temblor.antes / 3, `con el ruido de una cámara de verdad (1.5 px, la distancia ±3 cm), el rayo tiembla ${sec.temblor.ahora.toFixed(2)}° (sin los filtros nuevos: ${sec.temblor.antes.toFixed(2)}°)`);
+ver(sec.atraso > -1.5 && sec.atraso < 1.2, `moviendo la mano de costado (~25 cm/s) el rayo va ${Math.abs(sec.atraso).toFixed(1)} fotos ${sec.atraso < 0 ? "atrás" : "adelante"} de la última: el suavizado casi no lo atrasa (se adelanta lo que tarda la foto)`);
+ver(sec.lados.cambios === 0, `aunque MediaPipe dé vuelta "izquierda / derecha" en cada foto, cada mano sigue en su lugar (${sec.lados.cambios} cambios)`);
 ver(sec.est0.manos[1].visible && sec.est0.fuentes[1].activa, `la mano (los puntos reales de "${mano.nombre}") aparece y tiene su rayo`);
 ver(sec.sobre.sobre === "pizarra", `el rayo le pega a la ventana que tiene adelante (${sec.sobre.sobre}, ${sec.sobre.que})`);
 if (sec.sobre.sobre !== "pizarra") console.log(JSON.stringify(sec.sobre.depurar));
@@ -234,6 +295,18 @@ if (mp.listo) {
   const h = mp.res.manos[0];
   const err = h ? Math.max(...[0, 5, 8, 9].map((i) => Math.hypot(h.img[i][0] - ref.img[i][0], h.img[i][1] - ref.img[i][1]))) : 1;
   ver(mp.res.manos.length === 1 && err < 0.03, `encuentra la mano de la foto de MediaPipe (${mp.res.manos.length} mano, ${Math.round(mp.res.ms)} ms; la muñeca y los nudillos a ${(err * 100).toFixed(1)} % de donde los encontró la app)`);
+}
+// la app Cámara (el diagnóstico): lo que vio MediaPipe, a qué lado fue cada mano, el medidor del pellizco
+if (mp.listo && mp.res.manos.length) {
+  await pag.evaluate(async (res) => {
+    Nexo.aj.manos = true;
+    for (const v of Nexo.ventanas.slice()) v.app.accion?.("listo");
+    const c = Nexo.abrir("camara"); c.yaw = 0; c.pitch = 0; c.dist = 1.0; c.colocar();
+    window.sigueMano = setInterval(() => Nexo.recibirManos(res, performance.now()), 30);
+  }, mp.res);
+  await pag.waitForTimeout(1500);
+  await pag.screenshot({ path: salida("web-camara.png") });
+  await pag.evaluate(() => clearInterval(window.sigueMano));
 }
 ver(errores.length === 0, `sin errores de JavaScript${errores.length ? ": " + errores.slice(0, 3).join(" | ") : ""}`);
 await nav.close();

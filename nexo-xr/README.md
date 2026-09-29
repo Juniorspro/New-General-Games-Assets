@@ -284,6 +284,36 @@ es lo mejor; en la PC anda con el mouse.
   rayo y el cursor: los shaders de `VentanasGl.java`, portados). Un pellizco
   corto nunca se pierde aunque el teléfono dibuje lento (queda anotado hasta
   que el puntero lo vea), y suena un *tic* cuando queda armado.
+- **Para que las manos anden mejor** (lo que se hizo, con números de `pruebas/web.mjs`):
+  - **El pellizco mira el 3D y la foto**: MediaPipe adivina la profundidad de
+    las puntas (un puño de espaldas le daba "casi pellizco": 0.27, y en la foto
+    los dedos estaban lejos: 0.92); la foto sola se engaña cuando un dedo tapa
+    al otro. Se usa la mayor de las dos: con un umbral más fácil de alcanzar
+    siguen sin haber falsos.
+  - **Calibrar** (la app, o Ajustes → Calibrar manos): 2 s con la mano abierta
+    y 2 s pellizcando, y los umbrales quedan hechos para tu mano y tu cámara.
+  - **La distancia se suaviza aparte y fuerte** (es lo que peor mide una sola
+    cámara) y lo de costado sale de la foto: con el ruido de una cámara de
+    verdad el rayo **tiembla 0.15° en vez de 0.55°**, y el cursor se
+    **adelanta** lo que tarda la foto (moviendo la mano va una foto adelante,
+    no atrás).
+  - **El cursor queda quieto durante el doble pellizco** (el primero y la
+    espera del segundo): no baila con los dedos y el clic cae donde lo ves.
+  - **Cada mano en su lugar**: se sigue por dónde estaba en la foto anterior,
+    no por la "izquierda / derecha" de MediaPipe, que con la cámara de atrás se
+    da vuelta (el puntero se cortaba): 0 cambios dándola vuelta en cada foto.
+  - **La hora de cada foto** (la que da la cámara) para ubicar la mano con la
+    cabeza de ese momento; la foto siguiente se pide apenas llega la anterior;
+    60 fotos por segundo si la cámara da; enfoque continuo; el seguimiento se
+    corta menos (confianza 0.4 para seguir, 0.5 para una mano nueva).
+  - **Linterna** y **resolución de la cámara** (640 / 960 / 1280) en Ajustes:
+    con poca luz la mano sale movida y se pierde.
+  - **La app Cámara**: lo que ve MediaPipe, el esqueleto encima, a qué lado fue
+    cada mano, cuántas fotos por segundo procesa (verde 20+, rojo menos de 12),
+    cuánto tarda la red, GPU o CPU, y el medidor del pellizco con los umbrales.
+    Si algo anda mal, una captura de esto dice por qué.
+
+  ![La app Cámara: lo que ve MediaPipe](capturas/web-camara.jpg)
 - **Sin manos**: en el visor, mirá fijo 1 s o tocá la pantalla (el botón del
   VR Box la toca: clic donde mirás); en la mano, tocá las pantallas; un
   control Bluetooth (cualquier botón) o Enter.
@@ -386,7 +416,10 @@ node pruebas/web.mjs    # Nexo Web en Chromium, con los CDN y MediaPipe de verda
 ```
 
 - `web.mjs`: la página carga sin errores; con las **19 manos reales** ningún
-  pellizco falso, **doble pellizco = un clic en las 12 abiertas, uno solo =
+  pellizco falso (mirando el 3D y la foto; con un umbral más alto, sólo el 3D da
+  2 falsos y con la foto 1); el rayo con ruido de cámara tiembla 0.15° (antes
+  0.55°) y moviendo la mano no se atrasa; las manos no cambian de lado aunque
+  MediaPipe dé vuelta la etiqueta; **doble pellizco = un clic en las 12 abiertas, uno solo =
   ninguno**; la cuenta que ubica la mano (exacta sin ruido, 0.6 cm con 2 px;
   con las fotos reales los puntos vuelven a caer donde los vio MediaPipe:
   9 % de la palma); la calculadora; el teléfono acostado mira al horizonte y

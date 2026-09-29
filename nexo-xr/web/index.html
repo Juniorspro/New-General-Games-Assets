@@ -121,7 +121,8 @@ const PARAM = new URLSearchParams(location.search);
 
 // ═════════════════════════ los ajustes ═════════════════════════
 const AJ_DEF = { visor: true, manos: true, pass: false, entorno: "espacio", doble: true, mirada: true, sonido: true, verManos: true,
-  ipd: 63, fov: 90, k1: 0.22, k2: 0.12, sep: 0, campo: 66, escalaMano: 1, abajo: 10, latencia: 60, anticipo: 30 };
+  ipd: 63, fov: 90, k1: 0.22, k2: 0.12, sep: 0, campo: 66, escalaMano: 1, abajo: 10, latencia: 60, anticipo: 30,
+  pellizca: 0.22, suelta: 0.34, resCam: 640, linterna: false };
 let aj = { ...AJ_DEF };
 try { Object.assign(aj, JSON.parse(localStorage.getItem("nexo-web") || "{}")); } catch (e) { /* sin guardar */ }
 function guardar() { try { localStorage.setItem("nexo-web", JSON.stringify(aj)); } catch (e) { /* modo privado */ } }
@@ -129,27 +130,43 @@ function guardar() { try { localStorage.setItem("nexo-web", JSON.stringify(aj));
 // ═════════════════════════ el núcleo (sin nada de la página: se prueba solo) ═════════════════════════
 const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
-/** Gestos.java: el pellizco medido en "palmas", con histéresis y dos imágenes seguidas para cambiar. */
+/**
+ * El pellizco, medido en "palmas" (de la muñeca al nudillo del medio), con histéresis y dos fotos seguidas
+ * para cambiar (Gestos.java), y CON DOS MIRADAS a la vez:
+ *   · en 3D (los puntos en metros de MediaPipe): no depende de desde dónde se vea, pero la profundidad de
+ *     las puntas la adivina (con la mano de canto o tapada puede decir "juntos" y no estarlo);
+ *   · en 2D (en la foto): lo que la cámara vio de verdad, pero dos dedos que se tapan parecen juntos.
+ * Se usa la MAYOR de las dos (el 2D en su escala: ×0.8): para ser pellizco las dos tienen que decir "cerca".
+ * Con las 19 manos reales de las pruebas: ninguna da menos de 0.24 (con sólo el 3D, un puño daba 0.27 y la
+ * foto decía 0.92). Los umbrales se pueden medir con TU mano (la app Calibrar).
+ */
 class Gestos {
-  static PELLIZCA = 0.20; static SUELTA = 0.32; static INDICE_FUERA = 1.05; static INDICE_ESTIRADO = 1.45;
-  constructor() { this.pellizcando = false; this.seguidas = 0; this.fuerza = 1; }
+  static PELLIZCA = 0.22; static SUELTA = 0.34; static INDICE_FUERA = 1.05; static INDICE_ESTIRADO = 1.45; static ESCALA_2D = 0.8;
+  constructor(pellizca = Gestos.PELLIZCA, suelta = Gestos.SUELTA) { this.umbral = pellizca; this.suelta = suelta; this.pellizcando = false; this.seguidas = 0; this.fuerza = 1; this.apertura = 1; }
   static palma(w) { return Math.max(1e-4, dist3(w[0], w[9])); }
   static apertura(w) { return dist3(w[4], w[8]) / Gestos.palma(w); }
   static indice(w) { return dist3(w[8], w[0]) / Gestos.palma(w); }
-  paso(w) {
-    const a = Gestos.apertura(w), i = Gestos.indice(w);
-    const cruza = this.pellizcando ? a > Gestos.SUELTA : a < Gestos.PELLIZCA && i > Gestos.INDICE_FUERA;
+  /** En la foto (en píxeles: img normalizada × ancho, alto). */
+  static apertura2(img, W = 1, H = 1) {
+    const d = (a, b) => Math.hypot((img[a][0] - img[b][0]) * W, (img[a][1] - img[b][1]) * H);
+    return d(4, 8) / Math.max(1e-6, d(0, 9));
+  }
+  static combinada(w, img, W, H) { return img ? Math.max(Gestos.apertura(w), Gestos.apertura2(img, W, H) * Gestos.ESCALA_2D) : Gestos.apertura(w); }
+  paso(w, img = null, W = 1, H = 1) {
+    const a = Gestos.combinada(w, img, W, H), i = Gestos.indice(w);
+    this.apertura = a;
+    const cruza = this.pellizcando ? a > this.suelta : a < this.umbral && i > Gestos.INDICE_FUERA;
     this.seguidas = cruza ? this.seguidas + 1 : 0;
     if (this.seguidas >= 2) { this.pellizcando = !this.pellizcando; this.seguidas = 0; }
-    this.fuerza = clamp((a - Gestos.PELLIZCA) / (Gestos.SUELTA * 1.6 - Gestos.PELLIZCA), 0, 1);
+    this.fuerza = clamp((a - this.umbral) / (this.suelta * 1.6 - this.umbral), 0, 1);
     return this.pellizcando;
   }
   soltar() { this.pellizcando = false; this.fuerza = 1; this.seguidas = 0; }
 }
 
-/** DoblePellizco.java: el primero (corto) arma, el segundo aprieta. */
+/** DoblePellizco.java: el primero (corto) arma, el segundo aprieta. (En la web con un poco más de tiempo: las fotos llegan más espaciadas.) */
 class DoblePellizco {
-  static PRIMERO_MAX = 450; static ESPERA = 550;
+  static PRIMERO_MAX = 500; static ESPERA = 650;
   static QUIETO = 0; static PRIMERO = 1; static ARMADO = 2; static APRETANDO = 3; static SOSTENIDO = 4;
   constructor() { this.doble = true; this.fase = 0; this.desde = 0; }
   paso(p, ms) {
@@ -625,6 +642,7 @@ function icono(g, nombre, cx, cy, r, color) {
     case "pizarra": g.moveTo(cx - s, cy + s * 0.6); g.bezierCurveTo(cx - s * 0.4, cy - s * 1.2, cx + s * 0.2, cy + s * 1.2, cx + s, cy - s * 0.6); g.stroke(); break;
     case "cine": g.moveTo(cx - s * 0.5, cy - s * 0.75); g.lineTo(cx + s * 0.8, cy); g.lineTo(cx - s * 0.5, cy + s * 0.75); g.closePath(); g.fill(); break;
     case "ajustes": for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.moveTo(cx + Math.cos(a) * s * 0.6, cy + Math.sin(a) * s * 0.6); g.lineTo(cx + Math.cos(a) * s * 1.05, cy + Math.sin(a) * s * 1.05); } g.stroke(); g.beginPath(); g.arc(cx, cy, s * 0.6, 0, 7); g.stroke(); break;
+    case "camara": g.rect(cx - s, cy - s * 0.6, s * 2, s * 1.35); g.fill(); g.fillStyle = color; g.beginPath(); g.arc(cx, cy + s * 0.08, s * 0.45, 0, 7); g.fill(); g.fillStyle = "#fff"; g.beginPath(); g.arc(cx, cy + s * 0.08, s * 0.22, 0, 7); g.fill(); g.fillRect(cx - s * 0.4, cy - s * 0.85, s * 0.8, s * 0.3); break;
     case "ayuda": g.font = `700 ${r * 1.1}px ${FUENTE}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("?", cx, cy + r * 0.05); break;
     case "globos": g.arc(cx - s * 0.3, cy - s * 0.2, s * 0.55, 0, 7); g.fill(); g.fillStyle = "#ffd6e0"; g.beginPath(); g.arc(cx + s * 0.4, cy - s * 0.05, s * 0.45, 0, 7); g.fill(); g.beginPath(); g.moveTo(cx - s * 0.3, cy + s * 0.35); g.lineTo(cx - s * 0.2, cy + s); g.stroke(); break;
     default: g.arc(cx, cy, s * 0.6, 0, 7); g.fill();
@@ -911,6 +929,101 @@ class Globos extends App {
   }
 }
 
+// ─── Cámara: lo que ve MediaPipe (para saber por qué no anda) ───
+const HUESOS_2D = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
+function medidorPellizco(g, x, y, w, h, a, pellizcando) {
+  // la apertura (0 = dedos juntos … 1 palma), con los dos umbrales
+  const escala = (v) => x + clamp(v / 1.0, 0, 1) * w;
+  g.fillStyle = "#ffffff18"; redondo(g, x, y, w, h, h / 2); g.fill();
+  g.fillStyle = pellizcando ? UI.celeste : "#ffffffcc"; redondo(g, x, y, Math.max(h, escala(a) - x), h, h / 2); g.fill();
+  for (const [v, c] of [[aj.pellizca, UI.celeste], [aj.suelta, "#ffb347"]]) { g.fillStyle = c; g.fillRect(escala(v) - 2, y - 6, 4, h + 12); }
+}
+class Camara extends App {
+  constructor() { super("camara", "Cámara", "#3a3f4d"); this.animada = true; }
+  dibujar(g, W, H) {
+    g.fillStyle = "#000"; g.fillRect(0, 0, W, H);
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const k = vw ? Math.min(W / vw, (H - 120) / vh) : 1, dw = vw * k, dh = vh * k, dx = (W - dw) / 2, dy = 0;
+    if (camaraLista && vw) g.drawImage(video, dx, dy, dw, dh);
+    else { g.fillStyle = UI.texto2; g.font = `28px ${FUENTE}`; g.fillText(aj.manos ? "Esperando la cámara…" : "Las manos están apagadas (Ajustes).", 40, 80); }
+    // lo que encontró MediaPipe en la última foto (y a qué lado fue cada mano)
+    manos.forEach((m, n) => {
+      if (!m.img || performance.now() - m.visto > 400) return;
+      const P = (i) => [dx + m.img[i][0] * dw, dy + m.img[i][1] * dh];
+      g.strokeStyle = n ? "#5cdbff" : "#ffb347"; g.lineWidth = 4; g.lineCap = "round";
+      for (const [a, b] of HUESOS_2D) { const A = P(a), B = P(b); g.beginPath(); g.moveTo(A[0], A[1]); g.lineTo(B[0], B[1]); g.stroke(); }
+      g.fillStyle = "#fff"; for (let i = 0; i < 21; i++) { const [x, y] = P(i); g.beginPath(); g.arc(x, y, i === 4 || i === 8 ? 7 : 4, 0, 7); g.fill(); }
+      const [x, y] = P(0); g.fillStyle = n ? "#5cdbff" : "#ffb347"; g.font = `600 26px ${FUENTE}`; g.fillText(n ? "derecha" : "izquierda", x + 10, y + 30);
+    });
+    // los números
+    g.fillStyle = "#101116"; g.fillRect(0, H - 120, W, 120);
+    const bien = fpsManos >= 20, mal = fpsManos < 12;
+    g.fillStyle = bien ? UI.verde : mal ? UI.rojo : "#ffd24c"; g.font = `700 30px ${FUENTE}`;
+    g.fillText(`${fpsManos} fotos/s`, 24, H - 76);
+    g.fillStyle = UI.texto2; g.font = `24px ${FUENTE}`;
+    g.fillText(`${Math.round(msRed)} ms la red · ${delegado || "—"} · ${vw}×${vh}`, 200, H - 78);
+    manos.forEach((m, n) => {
+      const x = 24 + n * (W / 2), y = H - 44;
+      g.fillStyle = UI.texto2; g.font = `22px ${FUENTE}`; g.fillText(n ? "Der." : "Izq.", x, y + 12);
+      if (m.visible) medidorPellizco(g, x + 60, y - 4, W / 2 - 140, 18, m.gestos.apertura, m.pellizca);
+      else { g.fillStyle = "#ffffff55"; g.fillText("no se ve", x + 60, y + 12); }
+    });
+    this.boton(g, "calibrar", W - 230, H - 116, 210, 56, "Calibrar", { tam: 24, r: 14 });
+  }
+  accion(id) { if (id === "calibrar") abrirApp("calibrar"); }
+}
+
+// ─── Calibrar: tu mano abierta y tu pellizco → los umbrales ───
+class Calibrar extends App {
+  constructor() { super("calibrar", "Calibrar", "#35c28b"); this.animada = true; this.paso = 0; this.muestras = []; this.desde = 0; this.abierta = 0; }
+  medir() {
+    const m = manos.find((x) => x.visible && x.img);
+    if (!m) return null;
+    return { a: m.gestos.apertura };
+  }
+  dibujar(g, W, H) {
+    this.titulo_(g, "Calibrar el pellizco", "Con la mano que usás para apuntar, delante de la cámara.");
+    const m = manos.find((x) => x.visible);
+    const textos = ["Tocá Empezar. Primero la mano abierta, apuntando, 2 segundos.",
+      "Mano ABIERTA, apuntando… quieta",
+      "Ahora JUNTÁ el pulgar con el índice y sostené…",
+      "¡Listo! Probá: el medidor se pone celeste cuando cuenta el pellizco."];
+    g.fillStyle = UI.texto; g.font = `600 34px ${FUENTE}`; envolver(g, textos[this.paso], 40, 170, W - 80, 44);
+    if (this.paso === 1 || this.paso === 2) {
+      const f = clamp((performance.now() - this.desde) / 2200, 0, 1);
+      g.fillStyle = "#ffffff18"; redondo(g, 40, 250, W - 80, 16, 8); g.fill();
+      g.fillStyle = UI.verde; redondo(g, 40, 250, (W - 80) * f, 16, 8); g.fill();
+      const x = this.medir();
+      if (x && performance.now() - this.desde > 500) this.muestras.push(x.a);
+      if (f >= 1) this.siguiente();
+    }
+    if (m) medidorPellizco(g, 40, 330, W - 80, 30, m.gestos.apertura, m.pellizca);
+    else { g.fillStyle = UI.rojo; g.font = `28px ${FUENTE}`; g.fillText("No veo tu mano: ponela delante de la cámara.", 40, 355); }
+    g.fillStyle = UI.texto2; g.font = `24px ${FUENTE}`;
+    g.fillText(`Ahora: aprieta con menos de ${aj.pellizca.toFixed(2)}, suelta con más de ${aj.suelta.toFixed(2)}`, 40, 420);
+    if (this.paso === 0 || this.paso === 3) this.boton(g, "empezar", 40, H - 110, 300, 76, this.paso === 3 ? "Otra vez" : "Empezar", { activo: true });
+    this.boton(g, "fabrica", W - 340, H - 110, 300, 76, "Lo de fábrica", { tam: 26 });
+  }
+  siguiente() {
+    const med = (v, q) => { const w = v.slice().sort((a, b) => a - b); return w.length ? w[Math.min(w.length - 1, Math.floor(w.length * q))] : NaN; };
+    if (this.paso === 1) { this.abierta = med(this.muestras, 0.5); this.muestras = []; this.paso = 2; this.desde = performance.now(); SONIDO.arma(); return; }
+    if (this.paso === 2) {
+      // lo más cerrado que llegaste (el 30 % más bajo: al principio todavía estabas cerrando)
+      const cerrada = med(this.muestras, 0.3);
+      if (!(this.abierta > 0) || !(cerrada > 0) || this.abierta - cerrada < 0.12) { aviso("No se notó el pellizco: probá otra vez, más cerca de la cámara"); this.paso = 0; return; }
+      const rango = this.abierta - cerrada;
+      aj.pellizca = +clamp(cerrada + rango * 0.35, 0.12, 0.4).toFixed(3);
+      aj.suelta = +clamp(aj.pellizca + Math.max(0.08, rango * 0.25), aj.pellizca + 0.06, 0.7).toFixed(3);
+      guardar(); this.paso = 3; SONIDO.abrir();
+      aviso(`Listo: aprieta con ${aj.pellizca.toFixed(2)}, suelta con ${aj.suelta.toFixed(2)}`);
+    }
+  }
+  accion(id) {
+    if (id === "empezar") { this.paso = 1; this.muestras = []; this.desde = performance.now(); }
+    else if (id === "fabrica") { aj.pellizca = Gestos.PELLIZCA; aj.suelta = Gestos.SUELTA; guardar(); this.paso = 0; aviso("Umbrales de fábrica"); }
+  }
+}
+
 // ─── Ajustes ───
 class Ajustes extends App {
   constructor() { super("ajustes", "Ajustes", "#8a8f9e"); }
@@ -923,28 +1036,32 @@ class Ajustes extends App {
       ["ipd", "Distancia entre ojos", aj.ipd + " mm"], ["fov", "Campo del visor", aj.fov + "°"], ["k1", "Corrección de lentes", aj.k1.toFixed(2)],
       ["sep", "Separar imágenes", (aj.sep > 0 ? "+" : "") + aj.sep + " %"], ["campo", "Campo de la cámara", aj.campo + "°"], ["escalaMano", "Tamaño de mis manos", "×" + aj.escalaMano.toFixed(2)],
       ["abajo", "Punto de mira de las manos", aj.abajo + " cm abajo"], ["anticipo", "Predicción del giro", aj.anticipo + " ms"],
+      ["resCam", "Resolución de la cámara", aj.resCam + " px"], ["linterna", "Linterna (poca luz)", aj.linterna ? "Sí" : "No"],
     ];
-    const conMasMenos = new Set(["ipd", "fov", "k1", "sep", "campo", "escalaMano", "abajo", "anticipo"]);
+    const conMasMenos = new Set(["ipd", "fov", "k1", "sep", "campo", "escalaMano", "abajo", "anticipo", "resCam"]);
     filas.forEach(([id, t, v], i) => {
-      const col = i % 2, fila = Math.floor(i / 2), x = 30 + col * 490, y = 96 + fila * 66;
-      g.fillStyle = UI.tarjeta; redondo(g, x, y, 474, 58, 14); g.fill();
-      g.fillStyle = UI.texto; g.font = `24px ${FUENTE}`; g.fillText(t, x + 18, y + 37);
+      const col = i % 2, fila = Math.floor(i / 2), x = 30 + col * 490, y = 84 + fila * 58;
+      g.fillStyle = UI.tarjeta; redondo(g, x, y, 474, 52, 14); g.fill();
+      g.fillStyle = UI.texto; g.font = `22px ${FUENTE}`; g.fillText(t, x + 16, y + 34);
       if (conMasMenos.has(id)) {
-        g.fillStyle = UI.texto2; g.textAlign = "right"; g.fillText(v, x + 340, y + 37); g.textAlign = "left";
-        this.boton(g, "-" + id, x + 352, y + 6, 54, 46, "−", { r: 12, tam: 30, color: UI.tarjeta2 });
-        this.boton(g, "+" + id, x + 412, y + 6, 54, 46, "+", { r: 12, tam: 30, color: UI.tarjeta2 });
-      } else this.boton(g, "=" + id, x + 332, y + 6, 134, 46, v, { r: 12, tam: 24, activo: v === "Sí", color: UI.tarjeta2 });
+        g.fillStyle = UI.texto2; g.textAlign = "right"; g.fillText(v, x + 340, y + 34); g.textAlign = "left";
+        this.boton(g, "-" + id, x + 352, y + 5, 54, 42, "−", { r: 12, tam: 28, color: UI.tarjeta2 });
+        this.boton(g, "+" + id, x + 412, y + 5, 54, 42, "+", { r: 12, tam: 28, color: UI.tarjeta2 });
+      } else this.boton(g, "=" + id, x + 332, y + 5, 134, 42, v, { r: 12, tam: 22, activo: v === "Sí", color: UI.tarjeta2 });
     });
-    this.boton(g, "centro", 30, H - 80, 300, 62, "Recentrar", { tam: 26 });
-    this.boton(g, "salir", W - 330, H - 80, 300, 62, "Salir de Nexo", { tam: 26, color: "#4a2f36" });
+    this.boton(g, "centro", 30, H - 70, 225, 56, "Recentrar", { tam: 24 });
+    this.boton(g, "calibrar", 268, H - 70, 225, 56, "Calibrar manos", { tam: 24 });
+    this.boton(g, "camara", 506, H - 70, 225, 56, "Ver la cámara", { tam: 24 });
+    this.boton(g, "salir", W - 255, H - 70, 225, 56, "Salir", { tam: 24, color: "#4a2f36" });
   }
   accion(id) {
-    const PASO = { ipd: [1, 50, 80], fov: [5, 60, 120], k1: [0.02, 0, 0.6], sep: [1, -15, 15], campo: [2, 40, 110], escalaMano: [0.02, 0.7, 1.4], abajo: [1, 0, 25], anticipo: [5, 0, 80] };
+    const PASO = { ipd: [1, 50, 80], fov: [5, 60, 120], k1: [0.02, 0, 0.6], sep: [1, -15, 15], campo: [2, 40, 110], escalaMano: [0.02, 0.7, 1.4], abajo: [1, 0, 25], anticipo: [5, 0, 80], resCam: [320, 640, 1280] };
     const c = id.slice(1);
     if (id[0] === "+" || id[0] === "-") {
       const [p, mn, mx] = PASO[c];
       aj[c] = +clamp(aj[c] + (id[0] === "+" ? p : -p), mn, mx).toFixed(2);
       if (c === "k1") aj.k2 = +(aj.k1 * 0.55).toFixed(3);
+      if (c === "resCam") reiniciarCamara();
     } else if (id[0] === "=") {
       if (c === "entorno") {
         const orden = ["espacio", "atardecer", "pass"], ahora = aj.pass ? "pass" : aj.entorno;
@@ -952,7 +1069,10 @@ class Ajustes extends App {
         if (sig === "pass") { aj.pass = true; asegurarCamara(); } else { aj.pass = false; aj.entorno = sig; }
       } else aj[c] = !aj[c];
       if (c === "visor") ajustarTamano();
+      if (c === "linterna") ponerLinterna();
     } else if (id === "centro") recentrar();
+    else if (id === "calibrar") abrirApp("calibrar");
+    else if (id === "camara") abrirApp("camara");
     else if (id === "salir") salir();
     guardar();
     aplicarAjustes();
@@ -960,15 +1080,15 @@ class Ajustes extends App {
 }
 
 // ─── la barra de abajo (el dock): las apps, la hora, cómo están las manos ───
-const APPS = { bienvenida: Bienvenida, reloj: Reloj, calculadora: Calculadora, notas: Notas, clima: Clima, pizarra: Pizarra, cine: Cine, globos: Globos, ajustes: Ajustes };
-const EN_DOCK = ["reloj", "calculadora", "notas", "clima", "pizarra", "cine", "globos", "ajustes", "bienvenida"];
-const ICONO = { reloj: "#ff8a4c", calculadora: "#8d93a5", notas: "#f1c14b", clima: "#3fa9f5", pizarra: "#b58cff", cine: "#e0455f", globos: "#ff5f8f", ajustes: "#6b7180", bienvenida: "#6b7cff" };
+const APPS = { camara: Camara, calibrar: Calibrar, bienvenida: Bienvenida, reloj: Reloj, calculadora: Calculadora, notas: Notas, clima: Clima, pizarra: Pizarra, cine: Cine, globos: Globos, ajustes: Ajustes };
+const EN_DOCK = ["reloj", "calculadora", "notas", "clima", "pizarra", "cine", "globos", "camara", "ajustes", "bienvenida"];
+const ICONO = { camara: "#2f9e6e", reloj: "#ff8a4c", calculadora: "#8d93a5", notas: "#f1c14b", clima: "#3fa9f5", pizarra: "#b58cff", cine: "#e0455f", globos: "#ff5f8f", ajustes: "#6b7180", bienvenida: "#6b7cff" };
 class Dock extends App {
   constructor() { super("dock", "Dock"); this.animada = true; this.ultimo = ""; }
   dibujar(g, W, H) {
     g.fillStyle = "#121318"; g.fillRect(0, 0, W, H);
     EN_DOCK.forEach((n, i) => {
-      const cx = 80 + i * 112, cy = H / 2, z = this.zona("a" + n, cx - 50, 10, 100, H - 20);
+      const cx = 72 + i * 104, cy = H / 2, z = this.zona("a" + n, cx - 50, 10, 100, H - 20);
       const abierta = ventanas.some((v) => v.app.nombre === n);
       icono(g, n === "bienvenida" ? "ayuda" : n, cx, cy - (z.sobre ? 4 : 0), z.sobre ? 44 : 40, ICONO[n]);
       if (abierta) { g.fillStyle = "#fff"; g.beginPath(); g.arc(cx, H - 14, 5, 0, 7); g.fill(); }
@@ -1115,44 +1235,79 @@ const matManos = new THREE.ShaderMaterial({
   fragmentShader: `uniform vec3 uColor; uniform float uAlfa; uniform float uBrillo; varying vec3 vN; varying vec3 vV;
     void main() { float f = 1.0 - abs(dot(normalize(vN), normalize(vV))); float a = (0.1 + 0.8 * f * f) * uAlfa; gl_FragColor = vec4(mix(uColor, vec3(1.0), f * 0.45 + uBrillo * 0.35), a * (0.75 + 0.25 * uBrillo)); }`,
 });
+/**
+ * Una mano. Lo que sale de MediaPipe se arregla en tres partes, cada una con su suavizado (One Euro):
+ *   · LA DISTANCIA a la cámara (el largo de T): lo que peor mide una sola cámara, tiembla varios cm → muy
+ *     suavizada. La dirección (dónde está en la foto) va casi cruda: eso la cámara lo ve bien.
+ *   · LA FORMA de la mano (los 21 puntos en metros, relativos): poco suavizado (los dedos se ven mover).
+ *   · EL PUNTO DE MIRA (entre los nudillos del índice y del medio, que no se mueven al pellizcar): en el
+ *     mundo, con su velocidad, para adelantarlo lo que tardó la foto en llegar (sin eso, el cursor se atrasa).
+ * El pellizco se mide con los puntos crudos (ver Gestos) y la foto.
+ */
 class Mano {
   constructor(lado) {
-    this.lado = lado; this.w = Array.from({ length: 21 }, () => [0, 0, 0]); this.filtros = Array.from({ length: 63 }, () => new UnoEuro(1.4, 3.0, 1.0));
-    this.visto = 0; this.alfa = 0; this.visible = false; this.gestos = new Gestos(); this.doble = new DoblePellizco(); this.pellizca = false; this.aprieta = false;
+    this.lado = lado; this.w = Array.from({ length: 21 }, () => [0, 0, 0]); this.dibujo = this.w.map((p) => p.slice());
+    this.fForma = Array.from({ length: 63 }, () => new UnoEuro(2.2, 6.0, 1.0));
+    this.fDist = new UnoEuro(0.5, 1.0, 1.0);
+    this.fMira = [0, 1, 2].map(() => new UnoEuro(1.2, 3.0, 1.0));
+    this.mira = [0, 0, 0]; this.vMira = [0, 0, 0]; this.tMira = 0;
+    this.img = null; this.W = 1; this.H = 1; this.muneca = null;
+    this.visto = 0; this.alfa = 0; this.visible = false; this.doble = new DoblePellizco(); this.pellizca = false; this.aprieta = false;
+    this.gestos = new Gestos();
     this.articulaciones = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), matManos.clone(), 21);
     this.huesos = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 10, 1, true), this.articulaciones.material, HUESOS.length);
     for (const m of [this.articulaciones, this.huesos]) { m.frustumCulled = false; m.renderOrder = 4; m.visible = false; escena.add(m); }
   }
-  /** Una foto nueva de esta mano (los puntos en el mundo). */
-  llega(pts, t) {
-    for (let i = 0; i < 21; i++) for (let k = 0; k < 3; k++) this.w[i][k] = this.filtros[i * 3 + k].filtrar(pts[i][k], t);
+  /** Una foto nueva de esta mano. c: la cámara de esa foto {q, camPos, W, H, ts (para los gestos), tCap (la hora de la foto)}. */
+  llega(m, T, c) {
+    const s = aj.escalaMano, ts = c.ts;
+    // la distancia, suavizada; la dirección, la de la foto
+    const largo = Math.hypot(T[0], T[1], T[2]), k = this.fDist.filtrar(largo, ts) / largo;
+    const T2 = T.map((x) => x * k);
+    const forma = m.mundo.map((p, i) => [0, 1, 2].map((j) => this.fForma[i * 3 + j].filtrar(p[j] * s, ts)));
+    const aMundo = (p) => new THREE.Vector3(p[0] + T2[0], -(p[1] + T2[1]), -(p[2] + T2[2])).applyQuaternion(c.q).add(c.camPos);
+    this.w = forma.map((p) => aMundo(p).toArray());
+    const nud = aMundo([0, 1, 2].map((j) => (forma[5][j] + forma[9][j]) / 2));
+    for (let j = 0; j < 3; j++) { this.mira[j] = this.fMira[j].filtrar(nud.getComponent(j), c.tCap); this.vMira[j] = this.fMira[j].dx; }
+    this.tMira = c.tCap;
+    this.img = m.img; this.W = c.W; this.H = c.H; this.muneca = [m.img[0][0], m.img[0][1]];
     this.visto = performance.now();
-    // el pellizco con los puntos CRUDOS: el suavizado atrasa el cierre de los dedos y un pellizco rápido no
-    // llegaría al umbral (Gestos ya tiene su histéresis y pide dos fotos seguidas: el temblor no rebota)
-    this.pellizca = this.gestos.paso(pts);
+    // el pellizco con los puntos CRUDOS (el suavizado atrasa el cierre de los dedos) y lo que vio la foto
+    this.gestos.umbral = aj.pellizca; this.gestos.suelta = aj.suelta;
+    this.pellizca = this.gestos.paso(m.mundo, m.img, c.W, c.H);
     const antes = this.doble.fase, antesAprieta = this.aprieta;
     this.doble.doble = aj.doble;
-    this.aprieta = this.doble.paso(this.pellizca, t);
+    this.aprieta = this.doble.paso(this.pellizca, ts);
     // un apretón que empieza queda anotado hasta que el puntero lo vea (si el teléfono dibuja lento, un
     // pellizco corto puede empezar y terminar entre dos cuadros: igual es un clic)
     if (this.aprieta && !antesAprieta) this.pendiente = true;
     if (this.doble.fase === DoblePellizco.ARMADO && antes === DoblePellizco.PRIMERO) SONIDO.arma();
-    this.empezo = this.doble.empezando(t);
+    if (this.doble.empezando(ts)) this.empezo = true;
   }
-  perder() { this.gestos.soltar(); this.doble.soltar(); this.pellizca = false; this.aprieta = false; this.pendiente = false; for (const f of this.filtros) f.x = null; }
+  /** Lo que se adelanta ahora (s): la mitad de lo que tardó la foto, hasta 60 ms (entero se pasa y tiembla). */
+  adelanto(ms) { return clamp(0.5 * (ms - this.tMira) / 1000, 0, 0.06); }
+  miraAhora(ms, out) { const a = this.adelanto(ms); return out.set(this.mira[0] + this.vMira[0] * a, this.mira[1] + this.vMira[1] * a, this.mira[2] + this.vMira[2] * a); }
+  perder() {
+    this.gestos.soltar(); this.doble.soltar(); this.pellizca = false; this.aprieta = false; this.pendiente = false; this.empezo = false;
+    for (const f of [...this.fForma, this.fDist, ...this.fMira]) f.x = null;
+  }
   paso(dt) {
     const ahora = performance.now();
     const hay = ahora - this.visto < 300;
     this.alfa = clamp(this.alfa + (hay ? dt * 8 : -dt * 5), 0, 1);
     if (!hay && this.visible) this.perder();
     this.visible = hay;
+    // lo que se dibuja: la mano corrida lo mismo que se adelanta el punto de mira
+    const a = this.adelanto(ahora);
+    for (let i = 0; i < 21; i++) for (let j = 0; j < 3; j++) this.dibujo[i][j] = this.w[i][j] + this.vMira[j] * a;
     const ver = this.alfa > 0.02 && aj.verManos;
     this.articulaciones.visible = this.huesos.visible = ver;
     if (!ver) return;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
-    for (let i = 0; i < 21; i++) { const r = RADIO[i] * aj.escalaMano; m.compose(p.fromArray(this.w[i]), q.identity(), s.set(r, r, r)); this.articulaciones.setMatrixAt(i, m); }
+    const w = this.dibujo;
+    for (let i = 0; i < 21; i++) { const r = RADIO[i] * aj.escalaMano; m.compose(p.fromArray(w[i]), q.identity(), s.set(r, r, r)); this.articulaciones.setMatrixAt(i, m); }
     HUESOS.forEach(([a, b], k) => {
-      const A = new THREE.Vector3().fromArray(this.w[a]), B = new THREE.Vector3().fromArray(this.w[b]), d = B.clone().sub(A), l = d.length();
+      const A = new THREE.Vector3().fromArray(w[a]), B = new THREE.Vector3().fromArray(w[b]), d = B.clone().sub(A), l = d.length();
       const r = Math.min(RADIO[a], RADIO[b]) * aj.escalaMano * (k === 16 || k === 17 || k === 4 || k === 8 ? 0.8 : 1);
       q.setFromUnitVectors(Y, d.normalize());
       m.compose(A.add(B).multiplyScalar(0.5), q, s.set(r, l, r));
@@ -1166,33 +1321,43 @@ class Mano {
 const manos = [new Mano(0), new Mano(1)];
 const camaraHorizontal = () => aj.campo * Math.PI / 180;
 
-/** Lo que devolvió MediaPipe (en la foto de la hora ts) → las manos en el mundo. */
+/**
+ * Lo que devolvió MediaPipe → las manos en el mundo. Cada mano va a SU lugar (izquierda / derecha) por dónde
+ * estaba en la foto anterior, no por lo que dice MediaPipe (con la cámara de atrás y la mano de espaldas, su
+ * "izquierda / derecha" a veces se da vuelta de una foto a la otra: el puntero se cortaba).
+ */
 function recibirManos(res, ts) {
   const W = res.w, H = res.h;
   if (!W || !H) return;
+  const tCap = res.tCap ?? ts - aj.latencia;
   const fx = (W / 2) / Math.tan(camaraHorizontal() / 2), fy = fx, cx = W / 2, cy = H / 2;
   const pos = new THREE.Vector3(), q = new THREE.Quaternion();
-  cabezaEn(ts - aj.latencia, pos, q);
+  cabezaEn(tCap, pos, q);
   // la cámara del teléfono: unos 7 cm delante de los ojos
   const camPos = pos.clone().add(new THREE.Vector3(0, 0, -0.07).applyQuaternion(q));
-  const usados = [false, false];
   const lista = res.manos.map((m) => {
     const T = traslacion(m.img, m.mundo, aj.escalaMano, fx, fy, cx, cy, W, H);
-    // la cámara de atrás no está espejada: MediaPipe llama "Left" a tu mano derecha
-    return { m, T, lado: m.lado === "Left" ? 1 : m.lado === "Right" ? 0 : (m.img[0][0] > 0.5 ? 1 : 0) };
-  }).filter((x) => x.T && x.T[2] > 0.08 && x.T[2] < 1.4);
-  if (lista.length === 2 && lista[0].lado === lista[1].lado) { const a = lista[0].m.img[0][0] < lista[1].m.img[0][0] ? 0 : 1; lista[a].lado = 0; lista[1 - a].lado = 1; }
-  for (const { m, T, lado } of lista) {
-    if (usados[lado]) continue;
-    usados[lado] = true;
-    const pts = m.mundo.map((p) => {
-      // la cámara (x derecha, y abajo, z adelante) → la cabeza (x derecha, y arriba, −z adelante) → el mundo
-      const v = new THREE.Vector3(p[0] * aj.escalaMano + T[0], -(p[1] * aj.escalaMano + T[1]), -(p[2] * aj.escalaMano + T[2]));
-      return v.applyQuaternion(q).add(camPos).toArray();
-    });
-    manos[lado].llega(pts, ts);
+    // (la cámara de atrás no está espejada: MediaPipe llama "Left" a tu mano derecha)
+    const etiqueta = m.lado === "Left" ? 1 : m.lado === "Right" ? 0 : (m.img[0][0] > 0.5 ? 1 : 0);
+    return { m, T, etiqueta };
+  }).filter((x) => x.T && x.T[2] > 0.08 && x.T[2] < 1.3);
+  const ahora = performance.now();
+  const costo = (x, k) => {
+    const mk = manos[k];
+    if (mk.muneca && ahora - mk.visto < 500) return Math.hypot(x.m.img[0][0] - mk.muneca[0], x.m.img[0][1] - mk.muneca[1]) + (x.etiqueta === k ? 0 : 0.05);
+    return x.etiqueta === k ? 0.3 : 0.6;
+  };
+  let asignar = [];
+  if (lista.length === 1) asignar = [[lista[0], costo(lista[0], 0) <= costo(lista[0], 1) ? 0 : 1]];
+  else if (lista.length >= 2) {
+    const [a, b] = lista;
+    asignar = costo(a, 0) + costo(b, 1) <= costo(a, 1) + costo(b, 0) ? [[a, 0], [b, 1]] : [[a, 1], [b, 0]];
   }
+  const cam = { q, camPos, W, H, ts, tCap };
+  for (const [x, k] of asignar) manos[k].llega(x.m, x.T, cam);
+  ultimaFoto = { w: W, h: H, manos: res.manos, ts: ahora };
 }
+let ultimaFoto = null;
 function estadoManos() {
   if (!aj.manos) return "Manos apagadas";
   if (!trabajadorListo) return errorManos ? "Manos: " + errorManos : "Manos: cargando…";
@@ -1214,7 +1379,9 @@ onmessage = async (e) => {
       const { FilesetResolver, HandLandmarker } = mod.exports;
       const fs = await FilesetResolver.forVisionTasks(m.base + "/wasm");
       const opc = (d) => ({ baseOptions: { modelAssetPath: m.modelo, delegate: d }, runningMode: "VIDEO", numHands: 2,
-        minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+        // (la presencia y el seguimiento un poco más bajos: con la mano de espaldas y poca luz la confianza baja
+        // enseguida y se cortaba; la detección de una mano nueva queda en 0.5 para no inventar manos)
+        minHandDetectionConfidence: 0.5, minHandPresenceConfidence: 0.4, minTrackingConfidence: 0.4 });
       let d = "GPU";
       try { hl = await HandLandmarker.createFromOptions(fs, opc("GPU")); }
       catch (err) { d = "CPU"; hl = await HandLandmarker.createFromOptions(fs, opc("CPU")); }
@@ -1230,23 +1397,49 @@ onmessage = async (e) => {
       const lado = (r.handedness && r.handedness[i] && r.handedness[i][0]) || (r.handednesses && r.handednesses[i] && r.handednesses[i][0]) || {};
       manos.push({ img: r.landmarks[i].map((p) => [p.x, p.y, p.z]), mundo: r.worldLandmarks[i].map((p) => [p.x, p.y, p.z]), lado: lado.categoryName || "", puntaje: lado.score || 0 });
     }
-    postMessage({ tipo: "manos", ts: m.ts, w, h, ms: performance.now() - t0, manos });
+    postMessage({ tipo: "manos", ts: m.ts, tCap: m.tCap, w, h, ms: performance.now() - t0, manos });
   }
 };`;
 let trabajador = null, trabajadorListo = false, delegado = "", errorManos = "", ocupado = false, fotoNueva = true, msRed = 0, fpsManos = 0, cuentaManos = 0, desdeManos = performance.now();
-let camaraLista = false, pidiendoCamara = null;
+let camaraLista = false, pidiendoCamara = null, capturaFoto = 0, pista = null;
+/**
+ * La cámara de atrás. 60 fotos por segundo si da (menos tiempo de exposición: la mano sale menos movida), el
+ * enfoque continuo, y la hora de cada foto (requestVideoFrameCallback → captureTime) para ubicar la mano
+ * con la cabeza de ESE momento.
+ */
 function asegurarCamara() {
   if (camaraLista || pidiendoCamara) return pidiendoCamara;
   if (!navigator.mediaDevices?.getUserMedia) { errorManos = "este navegador no presta la cámara"; return null; }
-  pidiendoCamara = navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 60 } } })
+  const ancho = aj.resCam, alto = Math.round(ancho * 3 / 4);
+  pidiendoCamara = navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: ancho }, height: { ideal: alto }, frameRate: { ideal: 60 } } })
     .then(async (s) => {
       video.srcObject = s; await video.play(); camaraLista = true;
-      if (video.requestVideoFrameCallback) { const cada = () => { fotoNueva = true; video.requestVideoFrameCallback(cada); }; video.requestVideoFrameCallback(cada); }
+      pista = s.getVideoTracks()[0];
+      try { const cap = pista.getCapabilities?.() || {}; if (cap.focusMode?.includes("continuous")) await pista.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch (e) { /* no deja */ }
+      ponerLinterna();
+      if (video.requestVideoFrameCallback) {
+        const cada = (ahora, meta) => { fotoNueva = true; capturaFoto = meta && meta.captureTime ? meta.captureTime : 0; video.requestVideoFrameCallback(cada); };
+        video.requestVideoFrameCallback(cada);
+      }
       aplicarAjustes();
     })
     .catch((e) => { errorManos = "sin cámara (" + e.name + ")"; aviso("Sin cámara: " + (e.name === "NotAllowedError" ? "no diste el permiso" : e.name)); })
     .finally(() => { pidiendoCamara = null; });
   return pidiendoCamara;
+}
+function reiniciarCamara() {
+  if (video.srcObject) for (const t of video.srcObject.getTracks()) t.stop();
+  video.srcObject = null; camaraLista = false; pista = null;
+  if (enVR && (aj.manos || aj.pass)) asegurarCamara();
+}
+/** La linterna de la cámara (con poca luz la mano se ve movida y se pierde). */
+async function ponerLinterna() {
+  if (!pista) return;
+  try {
+    const cap = pista.getCapabilities?.() || {};
+    if (!cap.torch) { if (aj.linterna) aviso("Esta cámara no tiene linterna desde el navegador"); return; }
+    await pista.applyConstraints({ advanced: [{ torch: !!aj.linterna }] });
+  } catch (e) { /* no deja */ }
 }
 function empezarManos() {
   if (trabajador) return;
@@ -1259,6 +1452,7 @@ function empezarManos() {
       else if (m.tipo === "manos") {
         ocupado = false; msRed = m.ms; cuentaManos++;
         recibirManos(m, m.ts);
+        pedirFoto();   // la próxima enseguida, sin esperar al próximo cuadro de dibujo
       }
     };
     trabajador.postMessage({ tipo: "iniciar", base: MP, modelo: MODELO });
@@ -1268,7 +1462,9 @@ function pedirFoto() {
   if (!trabajadorListo || ocupado || !camaraLista || !aj.manos || video.readyState < 2 || !video.videoWidth || !fotoNueva) return;
   ocupado = true; fotoNueva = !video.requestVideoFrameCallback;
   const ts = performance.now();
-  createImageBitmap(video).then((bmp) => trabajador.postMessage({ tipo: "foto", bmp, ts }, [bmp])).catch(() => { ocupado = false; });
+  // la hora de la foto: la que da la cámara (si es creíble), o "ahora menos lo que suele tardar"
+  const tCap = capturaFoto && ts - capturaFoto > 0 && ts - capturaFoto < 400 ? capturaFoto : ts - aj.latencia;
+  createImageBitmap(video).then((bmp) => trabajador.postMessage({ tipo: "foto", bmp, ts, tCap }, [bmp])).catch(() => { ocupado = false; });
 }
 
 // ═════════════════════════ el puntero (Puntero.java) ═════════════════════════
@@ -1440,19 +1636,27 @@ class Indicador {
 }
 const indicadores = [new Indicador(), new Indicador(), new Indicador(), new Indicador()];
 
-/** Cada cuadro, las manos → sus fuentes (el rayo: del punto de mira por los nudillos). */
+/**
+ * Cada cuadro, las manos → sus fuentes. El rayo: del punto de mira (un poco debajo de los ojos) por los
+ * nudillos, adelantado lo que tardó la foto. Mientras hacés el doble pellizco (el primero, y la espera del
+ * segundo), el rayo QUEDA QUIETO donde apuntabas antes de cerrar los dedos (si no lo moviste más de 4°): el
+ * cursor no baila con los pellizcos y el clic cae donde lo ves.
+ */
+const miraTmp = new THREE.Vector3();
 function manosAFuentes(ms, ojo) {
   for (let k = 0; k < 2; k++) {
     const m = manos[k], f = fuentes[k];
     f.activa = m.visible && aj.manos;
     if (!f.activa) { f.fijo = null; continue; }
-    const q = [(m.w[5][0] + m.w[9][0]) / 2, (m.w[5][1] + m.w[9][1]) / 2, (m.w[5][2] + m.w[9][2]) / 2];
-    const mira = ojo.clone(); mira.y -= aj.abajo / 100 * (enVR && aj.visor ? 0.6 : 1);
-    const d = new THREE.Vector3().fromArray(q).sub(mira);
+    const q = m.miraAhora(ms, miraTmp);
+    const origen = ojo.clone(); origen.y -= aj.abajo / 100 * (enVR && aj.visor ? 0.6 : 1);
+    const d = q.clone().sub(origen);
     if (d.length() < 0.05) { f.activa = false; continue; }
-    f.o.fromArray(q); f.d.copy(d.normalize());
+    f.o.copy(q); f.d.copy(d.normalize());
     if (m.empezo) { const [o0, d0] = f.rayoDe(ms); f.fijo = [o0.clone(), d0.clone()]; m.empezo = false; }
     else if (m.doble.fase === DoblePellizco.QUIETO || m.doble.fase === DoblePellizco.SOSTENIDO) f.fijo = null;
+    const quieto = (m.doble.fase === DoblePellizco.PRIMERO || m.doble.fase === DoblePellizco.ARMADO) && f.fijo && f.d.dot(f.fijo[1]) > FIJO;
+    if (quieto) { f.o.copy(f.fijo[0]); f.d.copy(f.fijo[1]); }
     f.aprieta = m.aprieta || m.pendiente;
     f.fuerza = f.apretado ? 0 : m.gestos.fuerza;
     f.armado = f.apretado ? 0 : m.doble.armado(ms);
@@ -1469,7 +1673,7 @@ function dibujarIndicadores(ojo, t, ms) {
     ind.ponerCursor(f, fuerza, k === MIRADA ? f.carga : 0, mano ? f.armado : 0, f.apretado);
     if (!mano) { ind.rayo.visible = ind.pinza.visible = false; return; }
     const m = manos[k];
-    const a = new THREE.Vector3().fromArray(m.w[4]), b = new THREE.Vector3().fromArray(m.w[8]);
+    const a = new THREE.Vector3().fromArray(m.dibujo[4]), b = new THREE.Vector3().fromArray(m.dibujo[8]);
     const c = a.clone().add(b).multiplyScalar(0.5);
     ind.ponerPinza(a, b, ojo, fuerza, f.armado, f.apretado, m.alfa);
     const fin = f.sobre || f.captura ? f.hit.clone() : f.o.clone().addScaledVector(f.d, 0.9);
@@ -1700,6 +1904,17 @@ window.Nexo = {
     const v = ventanas.find((w) => w.app.nombre === n), f = fuentes[k];
     const p = f.o.clone().addScaledVector(f.d, 0.9).sub(CENTRO), dd = p.length(), d = p.normalize();
     v.yaw = Math.atan2(-d.x, -d.z); v.pitch = Math.asin(d.y); v.dist = dd; v.colocar(); v.aparece = 1;
+  },
+  /** El rayo como era antes (sin los filtros ni la distancia suavizada): para compararlo en las pruebas. */
+  rayoCrudo(img, mundo, W, H) {
+    const fx = (W / 2) / Math.tan(camaraHorizontal() / 2), T = traslacion(img, mundo, aj.escalaMano, fx, fx, W / 2, H / 2, W, H);
+    const pos = new THREE.Vector3(), q = new THREE.Quaternion();
+    cabezaEn(performance.now(), pos, q);
+    const camPos = pos.clone().add(new THREE.Vector3(0, 0, -0.07).applyQuaternion(q));
+    const p = [0, 1, 2].map((j) => (mundo[5][j] + mundo[9][j]) / 2 * aj.escalaMano + T[j]);
+    const nud = new THREE.Vector3(p[0], -p[1], -p[2]).applyQuaternion(q).add(camPos);
+    const origen = cabeza.getWorldPosition(new THREE.Vector3()); origen.y -= aj.abajo / 100 * (aj.visor ? 0.6 : 1);
+    return nud.sub(origen).normalize().toArray();
   },
   listo: () => trabajadorListo,
   depurar: () => ({ imp: (() => { const h = impacto(fuentes[1].o, fuentes[1].d); return h && { que: h.que, t: h.t, uu: h.uu, vv: h.vv, tipoV: typeof h.v, nombre: h.v && h.v.app && h.v.app.nombre }; })(), sobreTipo: typeof fuentes[1].sobre, o: fuentes[1].o.toArray(), d: fuentes[1].d.toArray(), mano: manos[1].w[9], ventanas: ventanas.map((v) => [v.app.nombre, v.grupo.position.toArray(), v.aparece, v.visible]) }),
