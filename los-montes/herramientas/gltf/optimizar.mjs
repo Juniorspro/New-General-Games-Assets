@@ -26,12 +26,13 @@ const tris = (doc) => doc.getRoot().listMeshes().reduce((s, m) => s + m.listPrim
 // Personajes: todos con idle, walk y run (un rig por animación, memoria/rezona.md).
 export const PERSONAJES = ["prota", "medica", "explorador", "mecanico", "sobreviviente1", "sobreviviente2", "mont_cazador", "mont_rapido", "mont_vigia", "mont_bruto", "mont_trampero", "mont_lider"];
 // Estáticos: triángulos buscados (pedido: vehículos y cabañas 8–10 mil, pinos 1.500–3.000,
-// rocas 1.500, objetos chicos 1.000–2.000) y error máximo del simplificador (fracción del
+// rocas 1.500, objetos chicos 1.000–2.000). Las rocas quedaron en ~450: se instancian
+// de a cientos y a 1.500 eran 630 mil triángulos solo de piedras. y error máximo del simplificador (fracción del
 // tamaño del modelo). `fuente` cuando el bueno no es mod-<clave> (se rehízo la imagen).
 export const ESTATICOS = {
   camioneta_grua: { tris: 9000 }, grua: { tris: 5000 }, camioneta_vieja: { tris: 8000 }, camion_maderero: { tris: 10000 },
   cabana: { tris: 10000 }, cabana_ruina: { tris: 9000 }, puente: { tris: 6000 }, mina_entrada: { tris: 6000 }, vagoneta: { tris: 2500 },
-  pino1: { tris: 2500 }, pino2: { tris: 2500 }, roca1: { tris: 1500 }, roca2: { tris: 1500 }, tronco: { tris: 1500 },
+  pino1: { tris: 2500 }, pino2: { tris: 2500 }, roca1: { tris: 420, error: 0.05 }, roca2: { tris: 520, error: 0.05 }, tronco: { tris: 1500 },
   aserradero: { tris: 10000 }, tienda: { tris: 4000 }, cruces: { tris: 2500 }, jaula: { tris: 4000 }, trampa_oso: { tris: 2000 },
   farol: { tris: 1500 }, torre_agua: { tris: 6000 },
   pistola: { tris: 2000 }, escopeta: { tris: 2000 }, rifle: { tris: 2000 }, hacha: { tris: 1500 }, linterna: { tris: 1500 },

@@ -15,6 +15,7 @@ const Vehiculos = (() => {
     for (const k of Lugares.camionetas) { k.vel = 0; k.dir = 0; k.farosPrendidos = false; }
     kGrua.faltan = [...PIEZAS]; kGrua.combustible = 0; kGrua.reparada = false;
     Object.assign(kGrua.grua, { giro: 0, alza: 0.35, largo: 3, colgado: null });
+    for (const k of Lugares.camionetas) k.ganchoPuesto = false;
     for (const o of Lugares.obstaculos) { o.suelto = false; o.colgado = false; o.col.activo = true; o.o.position.set(o.x, o.y, o.z); o.o.rotation.set(0, o.rumbo, 0); Colision.mover(o.col, o.x, o.z); }
     const k = kGrua; if (k.g0) { k.g.position.copy(k.g0.p); k.rumbo = k.g0.r; k.g.rotation.set(0, k.rumbo, 0); Colision.mover(k.col, k.g0.p.x, k.g0.p.z, k.rumbo); } else k.g0 = { p: k.g.position.clone(), r: k.rumbo };
     Juego.est.manejando = false; Juego.est.grua = false;
@@ -70,6 +71,7 @@ const Vehiculos = (() => {
   // ════ Manejo ════
   const pp = new V(), n = new V(), up = new V(0, 1, 0);
   function actualizar(dt, yo, entrada) {
+    for (const k of Lugares.camionetas) if (k.grua && !(enGrua && k === manejada) && (k === manejada || !k.ganchoPuesto)) { colgarGancho(k.grua, k); k.ganchoPuesto = true; }
     // La del motor caliente prende los faros sola, de noche, cuando no la mirás.
     const dC = Math.hypot(yo.x - kCaliente.g.position.x, yo.z - kCaliente.g.position.z);
     if (farosCaliente > 0) farosCaliente -= dt;
@@ -120,7 +122,14 @@ const Vehiculos = (() => {
     const cable = (t.KeyQ || entrada.cableBaja ? 1 : 0) - (t.KeyR || entrada.cableSube ? 1 : 0);
     G.giro += gx * dt * 0.7; G.alza = clamp(G.alza + gy * dt * 0.4, -0.05, 1.1); G.largo = clamp(G.largo + cable * dt * 2.2, 0.5, 9);
     if (gx || gy || cable) Sonido.gruaMueve(true); else Sonido.gruaMueve(false);
-    G.base.rotation.y = G.giro; G.pluma.rotation.x = -G.alza;
+    colgarGancho(G, k);
+    if (t.KeyE && !G.teclaE || entrada.enganchar) { G.teclaE = true; entrada.enganchar = false; engancharSoltar(G); }
+    if (!t.KeyE) G.teclaE = false;
+  }
+  // Pluma, gancho y cable según el estado de la grúa (también las que nadie maneja: si no,
+  // el gancho quedaba en el origen del mapa, flotando en el valle).
+  function colgarGancho(G, k) {
+    G.base.rotation.y = Math.PI + G.giro; G.pluma.rotation.x = -G.alza;
     k.g.updateMatrixWorld(true); G.punta.getWorldPosition(punta);
     const piso = Terreno.altura(punta.x, punta.z);
     const gy2 = Math.max(piso + 0.3, punta.y - G.largo);
@@ -130,8 +139,6 @@ const Vehiculos = (() => {
       const o = G.colgado; o.o.position.set(punta.x, gy2 - 0.6, punta.z);
       if (o.jaula) { o.jaula.g.position.set(o.jaula.x, gy2 - 2.2, o.jaula.z); }
     }
-    if (t.KeyE && !G.teclaE || entrada.enganchar) { G.teclaE = true; entrada.enganchar = false; engancharSoltar(G); }
-    if (!t.KeyE) G.teclaE = false;
   }
   function engancharSoltar(G) {
     const h = G.gancho.position;
@@ -154,7 +161,7 @@ const Vehiculos = (() => {
   function camara(cam, dt, yo) {
     const k = manejada; if (!k) return;
     const p = k.g.position;
-    if (enGrua) { const G = k.grua; cObj.set(p.x + Math.sin(k.rumbo + G.giro + 1.9) * 9, p.y + 6, p.z + Math.cos(k.rumbo + G.giro + 1.9) * 9); cMira.copy(G.gancho.position); }
+    if (enGrua) { const G = k.grua; cObj.set(p.x + Math.sin(k.rumbo + Math.PI + G.giro + 1.9) * 9, p.y + 6, p.z + Math.cos(k.rumbo + Math.PI + G.giro + 1.9) * 9); cMira.copy(G.gancho.position); }
     else { cObj.set(p.x - Math.sin(k.rumbo) * 8.5, p.y + 3.6, p.z - Math.cos(k.rumbo) * 8.5); cObj.y = Math.max(cObj.y, Terreno.altura(cObj.x, cObj.z) + 1.2); cMira.set(p.x + Math.sin(k.rumbo) * 6, p.y + 1.4, p.z + Math.cos(k.rumbo) * 6); }
     cam.position.lerp(cObj, 1 - Math.exp(-dt * 5)); cam.lookAt(cMira);
     if (cam.fov !== 62) { cam.fov = 62; cam.updateProjectionMatrix(); }

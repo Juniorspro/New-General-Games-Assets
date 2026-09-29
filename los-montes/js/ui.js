@@ -70,7 +70,7 @@ function Menu({ opciones, setOpciones, alIdioma }) {
   const est = useJuego();
   const tabs = [["jugar", "▶"], ["coop", "⚑"], ["personaje", "◆"], ["diario", "✎"], ["records", "★"], ["opciones", "⚙"], ["ayuda", "?"], ["creditos", "i"]];
   const S = leer("stats", STATS_BASE), D = leer("diario", DIARIO_BASE), hayPartida = Juego.hayGuardada();
-  const empezar = (continuar) => { Sonido.iniciar(); Sonido.confirmar(); const o = { ...opciones, saltarIntro: continuar ? true : !opciones.verIntro }; continuar ? Juego.continuar(o) : Juego.empezar(o); };
+  const empezar = (continuar) => { Sonido.iniciar(); Sonido.confirmar(); const o = { ...opciones, saltarIntro: continuar ? true : opciones.verIntro === false }; continuar ? Juego.continuar(o) : Juego.empezar(o); };
   return h("div", { className: "menu" },
     h("header", { className: "menu-barra" }, h(Logo, { chico: true }),
       h("nav", { className: "menu-tabs", role: "tablist" }, tabs.map(([k, ic]) => h("button", { key: k, role: "tab", "aria-selected": tab === k, className: tab === k ? "activa" : "", onClick: () => { Sonido.iniciar(); Sonido.clic(); setTab(k); } }, h("span", { "aria-hidden": true }, ic), h("em", null, T("menu." + k))))),

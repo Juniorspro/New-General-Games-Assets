@@ -42,14 +42,14 @@ const Juego = (() => {
     lienzo = canvas; opc = { ...OPCIONES_BASE, ...opciones }; calidad = opc.calidad;
     R = new THREE.WebGLRenderer({ canvas, antialias: calidad === "alta", powerPreference: "high-performance" });
     R.setPixelRatio(Math.min(devicePixelRatio, { alta: 1.5, media: 1, baja: 0.75 }[calidad]));
-    R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.15 * opc.brillo;
+    R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.3 * opc.brillo;
     R.shadowMap.enabled = calidad !== "baja"; R.shadowMap.type = THREE.PCFSoftShadowMap;
     escena = new THREE.Scene();
     cam = new THREE.PerspectiveCamera(62, 1, 0.1, 5000);
-    const info = Mundo.montar(escena, calidad);
+    const info = Mundo.montar(escena, calidad, R);
     datos = Lugares.montar(escena, calidad);
     // Linterna del protagonista, fogonazo y dos faros de camioneta: siempre existen (la cantidad de luces no cambia).
-    linterna = new THREE.SpotLight("#fff4dc", 0, 42, 0.42, 0.55, 1.35); linterna.castShadow = calidad === "alta"; linterna.shadow.mapSize.set(512, 512); linterna.shadow.bias = -0.0008;
+    linterna = new THREE.SpotLight("#fff4dc", 0, 50, 0.45, 0.45, 1.3); linterna.castShadow = calidad === "alta"; linterna.shadow.mapSize.set(512, 512); linterna.shadow.bias = -0.0008;
     escena.add(linterna, linterna.target);
     fogonazo = new THREE.PointLight("#ffc27a", 0, 14, 2); escena.add(fogonazo);
     for (let i = 0; i < 2; i++) { const L = new THREE.SpotLight("#fff1c8", 0, 50, 0.5, 0.5, 1.4); escena.add(L, L.target); farosPool.push(L); }
@@ -155,9 +155,9 @@ const Juego = (() => {
   }
 
   // ════ Acciones del jugador ════
-  function alternarLinterna() { if (est.bateria <= 0 && !est.linterna) { aviso(T("av.sinBateria"), "mal"); return; } est.linterna = !est.linterna; Sonido.golpe("linterna"); avisar(true); }
+  function alternarLinterna() { if (est.bateria <= 0 && !est.linterna) { aviso(T("av.sinBateria"), "mal"); return; } est.linterna = !est.linterna; Sonido.golpe(est.linterna ? "linterna" : "linterna_off"); avisar(true); }
   function cambiarArma(a) { if (a === est.arma || yo.recargando > 0) return; est.arma = a; Sonido.golpe("arma"); ponerArmaVisible(); avisar(true); }
-  function ponerArmaVisible() { const m = est.arma === "mano" ? null : (Modelos.clonar(est.arma) || null); Personajes.ponerArma(prota, m); }
+  function ponerArmaVisible() { const m = est.arma === "mano" ? null : (Modelos.clonar(est.arma) || null); Personajes.ponerArma(prota, m, est.arma); }
   function recargar() {
     const a = ARMAS[est.arma]; if (!a || a.cuerpo || yo.recargando > 0) return;
     const clave = "municion_" + est.arma; if (!est.inv[clave] || yo.cargadores[est.arma] >= a.cargador) { if (!est.inv[clave]) aviso(T("av.sinMunicion"), "mal"); return; }
@@ -177,7 +177,7 @@ const Juego = (() => {
     est.vida = Math.min(100, est.vida + (k === "botiquin" ? 60 : 25) * extra); Sonido.golpe("cura"); aviso(T("av.curado"), "bien", 2.5); avisar(true);
   }
   function comer() { if (!est.inv.lata) return; est.inv.lata--; est.estamina = 100; est.vida = Math.min(100, est.vida + 10); Sonido.golpe("comer"); aviso(T("av.comiste"), "bien", 2.5); avisar(true); }
-  function usarBateria() { if (!est.inv.bateria) return; est.inv.bateria--; est.bateria = 100; Sonido.golpe("linterna"); aviso(T("av.bateria"), "bien", 2.5); avisar(true); }
+  function usarBateria() { if (!est.inv.bateria) return; est.inv.bateria--; est.bateria = 100; Sonido.golpe("linterna_bateria"); aviso(T("av.bateria"), "bien", 2.5); avisar(true); }
 
   // Disparo: rayo desde la cámara por el centro de la mira.
   const ray = new THREE.Raycaster(), dir = new V(), org = new V();
@@ -371,7 +371,7 @@ const Juego = (() => {
   function abrirPanel(p) { est.panel = p; if (p && document.pointerLockElement) document.exitPointerLock(); if (!p) pedirPuntero(); Sonido.golpe(p ? "inventario" : "atras"); avisar(true); }
   function cerrarPanel() { abrirPanel(null); }
   function pausar(v) { if (est.modo !== "jugando") return; est.pausado = v; if (v && document.pointerLockElement) document.exitPointerLock(); if (!v) pedirPuntero(); Sonido.pausa(v); avisar(true); }
-  function aplicarOpciones(o) { Object.assign(opc, o); if (R) R.toneMappingExposure = 1.15 * opc.brillo; Sonido.volumen(opc.volumen, opc.musica); }
+  function aplicarOpciones(o) { Object.assign(opc, o); if (R) R.toneMappingExposure = 1.3 * opc.brillo; Sonido.volumen(opc.volumen, opc.musica); }
 
   // ════ Bucle ════
   function bucle(ahora) {
@@ -395,7 +395,7 @@ const Juego = (() => {
     Vehiculos.faros(farosPool);
     const oscuro = yo.zona !== "ext";
     escena.fog.density = oscuro ? 0.035 : { alta: 0.0085, media: 0.0098, baja: 0.0125 }[calidad];
-    Mundo.hemi.intensity = oscuro ? 0.06 : 0.42; Mundo.luna.intensity = oscuro ? 0 : 0.55;
+    Mundo.hemi.intensity = oscuro ? 0.08 : Mundo.LUZ.hemi; Mundo.luna.intensity = oscuro ? 0 : Mundo.LUZ.luna;
     if (dibujar) R.render(escena, cam);
     if (est.dano > 0) est.dano = Math.max(0, est.dano - dt * 1.6);
     if (est.fundido > 0) est.fundido = Math.max(0, est.fundido - dt * 2.2);
@@ -486,17 +486,20 @@ const Juego = (() => {
   function luzLinterna(dt) {
     const on = est.linterna && est.modo === "jugando" && yo.vivo;
     const titila = est.bateria < 15 ? (Math.random() < 0.08 ? 0.2 : 1) : 1;
-    linterna.intensity = on ? 95 * titila * (0.55 + 0.45 * Math.min(1, est.bateria / 30)) : 0;
+    linterna.intensity = on ? 150 * titila * (0.55 + 0.45 * Math.min(1, est.bateria / 30)) : 0;
     if (est.manejando) { linterna.intensity = 0; return; }
     cam.getWorldDirection(dir);
-    linterna.position.set(yo.x, yo.y + 1.35 - (prota.agachado || 0) * 0.4, yo.z).addScaledVector(dir, 0.3);
+    // Sale 0,8 m adelante del pecho: desde adentro del cuerpo, la sombra del propio
+    // protagonista tapaba todo el haz (la luz proyecta sombras).
+    const fx = -Math.sin(yo.yaw), fz = -Math.cos(yo.yaw);
+    linterna.position.set(yo.x + fx * 0.8, yo.y + 1.35 - (prota.agachado || 0) * 0.4, yo.z + fz * 0.8);
     linterna.target.position.copy(linterna.position).addScaledVector(dir, 12);
   }
   // ── Cámara al hombro ──
   function camaraJuego(dt) {
     if (est.manejando || est.grua) { Vehiculos.camara(cam, dt, yo); return; }
     const ag = (prota.agachado || 0);
-    const lejos = yo.apunta ? (est.arma === "rifle" ? 0.9 : 1.35) : 2.9, lado = yo.apunta ? 0.55 : 0.62, alto = (yo.apunta ? 1.55 : 1.7) - ag * 0.45;
+    const lejos = yo.apunta ? (est.arma === "rifle" ? 0.9 : 1.45) : 3.5, lado = yo.apunta ? 0.55 : 0.72, alto = (yo.apunta ? 1.58 : 1.8) - ag * 0.45;
     const s = Math.sin(yo.yaw), c = Math.cos(yo.yaw), cp = Math.cos(yo.pitch), sp = Math.sin(yo.pitch);
     // Detrás del hombro derecho.
     let dist = lejos;

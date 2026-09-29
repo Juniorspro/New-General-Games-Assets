@@ -52,13 +52,17 @@ const Director = (() => {
     },
     acecho(yo) { return !!Enemigos.acechador(yo); },
     puerta(yo) { let mejor = null, dm = 1e9; for (const p of Lugares.puertas) { if (p.bajo) continue; const d = Math.hypot(p.x - yo.x, p.z - yo.z); if (d < dm && d > 10) { dm = d; mejor = p; } } if (!mejor || dm > 60) return false; Sonido.en("puerta_golpe", mejor.x, 1, mejor.z, 1); return true; },
+    // Alguien silba lejos, entre los árboles: no es un pájaro.
+    silbido(yo) { const a = yo.yaw + Math.PI + (Math.random() - 0.5) * 2, d = 45 + Math.random() * 40; Sonido.en("silbido", yo.x - Math.sin(a) * d, yo.y + 2, yo.z - Math.cos(a) * d, 0.8); },
+    risa(yo) { if (Juego.est.linterna && Math.random() < 0.5) return false; const a = Math.random() * 6.28, d = 18 + Math.random() * 14; Sonido.en("risa", yo.x + Math.sin(a) * d, yo.y + 1.5, yo.z + Math.cos(a) * d, 0.7); },
+    lobo(yo) { const a = Math.random() * 6.28; Sonido.en("lobo", yo.x + Math.sin(a) * 200, yo.y + 30, yo.z + Math.cos(a) * 200, 0.8); },
     campana(yo) { if (eventos < 6) return false; Sonido.en("campana", MAPA.lugares.campamento.x, 20, MAPA.lugares.campamento.z, 0.5); return true; },
   };
   // Qué conviene según dónde estás.
   function elegir(yo) {
     const J = Juego.est, bosque = yo.zona === "ext" && Colision.espesura(yo.x, yo.z, 14) > 6, dentro = yo.zona !== "ext";
-    const pesos = dentro ? { rama: 0, figura: 0, luz: 0, grito: 1, pasos: 2, susurro: 2, huellas: 0, acecho: 0, puerta: 0, campana: 1 }
-      : { rama: 3, figura: bosque ? 3 : 1.5, luz: 1.5, grito: 1.5, pasos: bosque ? 2 : 0.5, susurro: 1, huellas: bosque ? 0.5 : 1.5, acecho: eventos > 2 ? 1.2 : 0, puerta: 1, campana: 0.5 };
+    const pesos = dentro ? { rama: 0, figura: 0, luz: 0, grito: 1, pasos: 2, susurro: 2, huellas: 0, acecho: 0, puerta: 0, campana: 1, silbido: 0, risa: 1, lobo: 0 }
+      : { rama: 3, figura: bosque ? 3 : 1.5, luz: 1.5, grito: 1.5, pasos: bosque ? 2 : 0.5, susurro: 1, huellas: bosque ? 0.5 : 1.5, acecho: eventos > 2 ? 1.2 : 0, puerta: 1, campana: 0.5, silbido: 1, risa: eventos > 1 ? 1 : 0, lobo: 0.6 };
     pesos[ultimoEvento] = 0;
     const tot = Object.values(pesos).reduce((a, b) => a + b, 0); let r = Math.random() * tot;
     for (const k in pesos) { r -= pesos[k]; if (r <= 0) return k; }

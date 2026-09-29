@@ -12,17 +12,17 @@ const Sonido = (() => {
   const CANDIDATOS = {
     viento: ["viento_montana", "viento_pinos", "viento", "viento_campo"], pinos: ["viento_pinos", "ramas_viento"], bosque: ["bosque_noche", "grillos", "noche"], cascada: ["cascada"], rio: ["rio", "rio_rapidos", "agua"],
     lluvia: ["lluvia"], fogata: ["fogata", "fogon"], goteo: ["mina_goteo", "goteo", "cueva_goteo"], eco: ["mina_eco", "eco_mina", "cueva"], generador: ["generador"], interior: ["interior_cabana", "cabana_crujido", "madera_cruje"],
-    latido: ["latido", "corazon"], respiracion: ["respiracion", "respiracion_agitada"], drone1: ["drone_1", "drone1", "horror_drone_1", "drone"], drone2: ["drone_2", "drone2", "horror_drone_2"], drone3: ["drone_3", "drone3", "horror_drone_3"], menu: ["tema_menu", "menu_tema", "musica_menu"],
-    stinger: ["stinger", "susto", "golpe_susto"], grito_lejano: ["grito_lejano", "grito"], susurro: ["susurro", "susurros"], grito_montanes: ["montanes_grito", "grito_montanes", "gruñido", "grunido", "criatura"], gruñido_bruto: ["bruto_gruñido", "gruñido_bruto", "grunido_bruto", "gruñido", "grunido"],
-    dolor_montanes: ["montanes_dolor", "dolor", "gruñido", "grunido"], grito_lider: ["lider_grito", "grito_lider", "montanes_grito"], risa: ["risa_montanes", "risa"],
-    rama: ["rama", "rama_quiebra"], arbusto: ["arbusto", "hojas"], buho: ["buho"], lobo: ["lobo"], trueno: ["trueno"],
-    paso_tierra: ["pasos_tierra", "pasos_barro", "pasos_pasto"], paso_madera: ["pasos_madera"], paso_piedra: ["pasos_piedra"], paso_nieve: ["pasos_nieve"], paso_agua: ["pasos_agua", "agua_chapoteo"], corriendo: ["pasos_corriendo", "corriendo"],
-    aterrizaje: ["aterrizaje"], mochila: ["mochila", "ropa"], linterna: ["linterna_clic", "linterna"], tomar: ["recoger", "tomar"], inventario: ["inventario", "mochila"], papel: ["papel", "nota"], cura: ["curar", "vendaje", "jeringa"], comer: ["comer", "lata_abrir"],
+    latido: ["latido"], latido2: ["latido_rapido", "latido"], respiracion: ["respiracion", "respiracion_agitada"], drone1: ["dron_1", "drone_1"], drone2: ["dron_2", "drone_2"], drone3: ["dron_3", "drone_3"], menu: ["tema_menu", "menu_tema", "musica_menu"],
+    stinger: ["stinger", "susto", "golpe_susto"], grito_lejano: ["grito_lejano", "grito"], susurro: ["susurro", "susurros"], grito_montanes: ["montanes_grunido", "montanes_grito"], gruñido_bruto: ["montanes_grunido"],
+    dolor_montanes: ["montanes_grunido"], grito_lider: ["montanes_grunido"], risa: ["montanes_risa"], silbido: ["silbido_lejano"],
+    rama: ["rama", "rama_quiebra"], arbusto: ["arbusto", "hojas"], buho: ["buho"], lobo: ["lobo_lejano", "lobo"], trueno: ["trueno"],
+    paso_tierra: ["pasos_tierra", "pasos_barro", "pasos_pasto"], paso_madera: ["pasos_madera"], paso_piedra: ["pasos_piedra"], paso_nieve: ["pasos_nieve"], paso_agua: ["pasos_agua", "agua_chapoteo"], corriendo: ["corriendo_pinos", "pasos_corriendo"],
+    aterrizaje: ["aterrizaje"], mochila: ["mochila", "ropa"], linterna: ["linterna_prender", "linterna_clic"], linterna_off: ["linterna_apagar", "linterna_prender"], linterna_bateria: ["linterna_bateria"], tomar: ["recoger", "tomar"], inventario: ["inventario", "mochila"], papel: ["nota_papel", "papel"], cura: ["curarse", "curar"], comer: ["comer_lata", "comer"],
     disparo_pistola: ["disparo_pistola"], disparo_escopeta: ["disparo_escopeta"], disparo_rifle: ["disparo_rifle", "disparo_franco"], recarga_pistola: ["recarga_pistola", "recarga"], recarga_escopeta: ["recarga_escopeta", "recarga"], recarga_rifle: ["recarga_rifle", "recarga"], vacia: ["arma_vacia", "vacia"],
     swing: ["hacha_aire", "swing", "golpe_aire"], hachazo_carne: ["impacto_carne", "golpe_carne", "golpe_dano"], golpe_carne: ["impacto_carne", "golpe_carne", "golpe_dano"], hachazo_madera: ["impacto_madera", "golpe_madera"], puno: ["golpe_carne", "impacto_carne", "golpe_dano"], dano: ["golpe_recibido", "golpe_dano", "dano"], caida_cuerpo: ["caida_cuerpo", "cuerpo_cae", "muerte"], muerte: ["muerte", "caida_cuerpo"],
-    puerta: ["puerta_cruje", "puerta_abrir", "puerta"], puerta_golpe: ["portazo", "puerta_golpe", "puerta_cierra"], puerta_forzar: ["puerta_golpe", "portazo"], ventana: ["ventana_golpe"], trampa: ["trampa_oso", "trampa"], latas: ["latas", "trampa_latas"], cadena: ["cadenas", "cadena"],
+    puerta: ["puerta_crujido", "puerta_cruje"], puerta_golpe: ["portazo", "puerta_golpe", "puerta_cierra"], puerta_forzar: ["puerta_golpe", "portazo"], ventana: ["ventana_golpe"], trampa: ["trampa_oso", "trampa"], latas: ["latas", "trampa_latas"], cadena: ["cadenas", "cadena"],
     motor_falla: ["motor_no_arranca", "motor_falla"], motor_arranca: ["motor_arranca", "motor_arranque"], motor: ["motor_marcha", "motor_camion", "motor"], puerta_auto: ["puerta_camioneta", "puerta_auto"], bocina: ["bocina_vieja", "bocina"],
-    grua: ["grua_bomba", "grua_motor", "hidraulica"], grua_chirrido: ["grua_chirrido", "chirrido"], vagoneta: ["vagoneta"], jaula: ["jaula_abre", "jaula", "reja"], campana: ["campana", "sirena_alarma", "alarma"],
+    grua: ["grua_bomba", "grua_motor", "hidraulica"], grua_chirrido: ["grua_chirrido", "chirrido"], vagoneta: ["vagoneta"], jaula: ["jaula_abre", "jaula", "reja"], campana: ["campana_alarma", "campana"],
     clic: ["ui_clic", "clic"], confirmar: ["ui_confirmar", "confirmar"], atras: ["ui_atras", "atras", "ui_clic"], titulo: ["titulo", "ui_titulo"], herramienta: ["herramientas", "herramienta", "impacto_metal"], bidon: ["bidon", "liquido"], choque: ["choque", "impacto_metal"],
   };
   const elegido = {};
@@ -104,10 +104,12 @@ const Sonido = (() => {
     motor_arranca: (o) => { soplo(300, 150, 1.4, 0.5, "lowpass", o); }, bocina: (o) => { tono(360, 0.6, { tipo: "square", v: 0.06 }); tono(440, 0.6, { tipo: "square", v: 0.05 }); }, puerta_auto: () => soplo(700, 90, 0.25, 0.7, "lowpass"), choque: () => soplo(900, 60, 0.6, 1, "lowpass"), bidon: () => soplo(800, 300, 0.8, 0.2, "bandpass"),
     stinger: () => { tono(90, 1.5, { tipo: "sawtooth", v: 0.2, hasta: 60 }); soplo(8000, 500, 1, 0.3, "highpass"); }, arma: () => tono(1100, 0.04, { tipo: "square", v: 0.04 }), cama: () => soplo(400, 200, 0.6, 0.2),
   };
+  // La misma grabación sirve para varios: el bruto y el líder gruñen más grave.
+  const TONO = { "gruñido_bruto": 0.7, grito_lider: 0.82, dolor_montanes: 1.12, grito_montanes: 0.95 };
   function sonar(ev, o = {}) {
     if (!ctx) return;
     const bb = b(ev);
-    if (bb) tocar(bb, { v: o.v ?? 0.8, rate: (o.rate ?? 1) * (0.95 + Math.random() * 0.1), x: o.x, y: o.y, z: o.z });
+    if (bb) tocar(bb, { v: o.v ?? 0.8, rate: (o.rate ?? 1) * (TONO[ev] || 1) * (0.95 + Math.random() * 0.1), x: o.x, y: o.y, z: o.z });
     else if (RESPALDO[ev]) RESPALDO[ev](o.x !== undefined ? { x: o.x, y: o.y, z: o.z } : {});
   }
   // ── Loops de ambiente: viento, bosque, río y cascadas según dónde estás ──
@@ -119,7 +121,7 @@ const Sonido = (() => {
   }
   function armarLoops() {
     if (!ctx) return;
-    for (const k of ["viento", "pinos", "bosque", "rio", "cascada", "fogata", "goteo", "eco", "interior", "latido", "respiracion"]) if (!loops[k]) loops[k] = loop(k, ["latido", "respiracion"].includes(k) ? efectos : ambienteG);
+    for (const k of ["viento", "pinos", "bosque", "rio", "cascada", "fogata", "goteo", "eco", "interior", "latido", "latido2", "respiracion"]) if (!loops[k]) loops[k] = loop(k, ["latido", "latido2", "respiracion"].includes(k) ? efectos : ambienteG);
     for (const k of ["drone1", "drone2", "drone3", "menu"]) if (!loops[k]) loops[k] = loop(k, musicaG);
     // Sin grabaciones: un viento sintetizado.
     if (!loops.viento) { const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = ruido; s.loop = true; f.type = "lowpass"; f.frequency.value = 420; g.gain.value = 0; s.connect(f).connect(g).connect(ambienteG); s.start(); loops.viento = { s, g }; }
@@ -151,7 +153,8 @@ const Sonido = (() => {
   }
   function tension(t, a) {
     tens = t; alerta = a; if (!ctx || !listos) return;
-    objetivo("latido", clamp((a - 0.3) * 1.2 + (t - 0.7) * 0.8, 0, 0.8), 0.6);
+    objetivo("latido", a >= 0.99 ? 0 : clamp((a - 0.3) * 1.2 + (t - 0.7) * 0.8, 0, 0.7), 0.6);
+    objetivo("latido2", a >= 0.99 ? 0.75 : 0, 0.5);
     objetivo("respiracion", clamp(a - 0.6, 0, 0.5) + (Juego.est.estamina < 25 ? 0.5 : 0), 0.6);
     if (estadoMusica === "tension") objetivo("drone2", clamp(t - 0.5, 0, 0.5) * 0.8, 3);
   }

@@ -58,10 +58,13 @@ def mandar(p, pr):
         if r.get("success"): return r["data"]
         if r.get("code") not in TRANSITORIOS:
             print(f"  ✗ {p['clave']}: {r.get('code')} {r.get('message')}", flush=True); return None
+        # Con el cupo de generaciones en vuelo lleno no sirve esperar acá: se vuelve a la
+        # cola y sale cuando termine otra (antes, a los 3 minutos se perdía el pedido).
+        if r.get("code") == "GENERATION_TOO_MANY_IN_FLIGHT": return "luego"
         print(f"  … {p['clave']}: {r.get('code')}, reintento", flush=True)
-    return None
+    return "luego"
 
-def correr(pedidos, carpeta, esperar_max=1500):
+def correr(pedidos, carpeta, esperar_max=int(os.environ.get("ESPERA_MAX", 1500))):
     os.makedirs(carpeta, exist_ok=True)
     saldo0 = api("GET", "/api/credits/pat-balance")["data"]["balance"]
     vivos, pendientes = {}, list(pedidos)
@@ -78,11 +81,14 @@ def correr(pedidos, carpeta, esperar_max=1500):
             if pr is None: continue  # espera a su dependencia
             pendientes.remove(p)
             d = mandar(p, pr)
+            if d == "luego": pendientes.append(p); break
             if d:
                 TOCADAS.add(p["clave"]); E["pedidos"][p["clave"]] = {"type": p["type"], "params": pr, "task_id": d["task_id"], "output_path": d.get("output_path")}
                 vivos[d["task_id"]] = p; guardar()
                 print(f"  → {p['clave']}: {d['task_id']}", flush=True)
         if not vivos:
+            # Si quedan pedidos listos para salir, es que el cupo lo llenaron otras tandas: se espera.
+            if any(resolver(p) is not None for p in pendientes): time.sleep(20); continue
             if pendientes: print("  dependencias sin resolver:", [p["clave"] for p in pendientes], flush=True)
             break
         time.sleep(10)

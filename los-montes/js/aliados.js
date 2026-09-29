@@ -28,7 +28,7 @@ const Aliados = (() => {
     for (let k = 0; k < (opc.companeros || 0); k++) {
       const rol = roles[k], p = Personajes.crear(MODELO_ROL[rol]); escena.add(p.grupo);
       const c = { rol, pj: p, x: -48 + (k + 1) * 1.6, z: 265 + k, zona: "ext", y: 0, vel: 0, rumbo: Math.PI, cd: 0, municion: rol === "combatiente" ? 40 : 18, lado: k % 2 ? -1 : 1, nombre: T("rol." + rol) };
-      if (rol !== "medico" && rol !== "superviviente") Personajes.ponerArma(p, Modelos.clonar("pistola"));
+      if (rol !== "medico" && rol !== "superviviente") Personajes.ponerArma(p, Modelos.clonar("pistola"), "pistola");
       comp.push(c);
     }
     Juego.est.aliados = comp.map((c) => ({ rol: c.rol, nombre: c.nombre }));
@@ -88,7 +88,7 @@ const Aliados = (() => {
     // ── Secuestrados ──
     for (const s of sobrev) {
       if (s.estado === "aBordo") { s.pj.grupo.visible = false; continue; }
-      s.pj.grupo.visible = s.zona === yo.zona && Math.hypot(s.x - yo.x, s.z - yo.z) < 150;
+      const dS = Math.hypot(s.x - yo.x, s.z - yo.z); s.pj.grupo.visible = s.zona === yo.zona && dS < 150; Personajes.sombra(s.pj, dS < 45);
       let agacha = false, vel = 0;
       if (s.estado === "preso" || s.estado === "atado") {
         const j = s.jaula; if (j) { s.x = j.x; s.z = j.z; }

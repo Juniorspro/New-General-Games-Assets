@@ -67,7 +67,8 @@ const Personajes = (() => {
   // Huesos del rig de Rezona (mismos nombres en todos: ver control-ruta11).
   function huesosRig(o) {
     const b = (n) => o.getObjectByName(n);
-    return { cadera: b("Hip"), torso: b("Spine01") || b("Spine"), cuello: b("Neck"), cabeza: b("Head"), brazoL: b("L_Upperarm"), brazoR: b("R_Upperarm"), antebrazoL: b("L_Forearm"), antebrazoR: b("R_Forearm"), manoL: b("L_Hand"), manoR: b("R_Hand"), musloL: b("L_Thigh"), musloR: b("R_Thigh"), rodillaL: b("L_Calf"), rodillaR: b("R_Calf") };
+    // Los de Tripo no tienen "Neck": tienen NeckTwist01/02 (medido en el GLB del prota).
+    return { cadera: b("Hip"), torso: b("Spine01") || b("Spine"), cuello: b("Neck") || b("NeckTwist01"), cabeza: b("Head"), brazoL: b("L_Upperarm"), brazoR: b("R_Upperarm"), antebrazoL: b("L_Forearm"), antebrazoR: b("R_Forearm"), manoL: b("L_Hand"), manoR: b("R_Hand"), musloL: b("L_Thigh"), musloR: b("R_Thigh"), rodillaL: b("L_Calf"), rodillaR: b("R_Calf") };
   }
 
   function crear(tipo) {
@@ -84,20 +85,27 @@ const Personajes = (() => {
       const c = cuerpoRepuesto(tipo); cuerpo.add(c.raiz); pj.H = c.H; pj.velCaminar = 1.35; pj.velCorrer = 3.8;
     }
     pj.alto = (Modelos.AJUSTES[tipo] || {}).alto || 1.8;
+    pj.mallas = []; cuerpo.traverse((m) => { if (m.isMesh) pj.mallas.push(m); });
     return pj;
   }
   // Girar un hueso sobre un eje del mundo (así da igual cómo trae los ejes cada rig).
   const qP = new Q(), qE = new Q(), eje = new V(), der = new V(), arr = new V(0, 1, 0), fr = new V();
   function girar(b, e, a) { if (!b || !a) return; b.parent.getWorldQuaternion(qP); qE.setFromAxisAngle(e, a); b.quaternion.premultiply(qP.clone().invert().multiply(qE).multiply(qP)); }
-  // Arma en la mano derecha.
-  function ponerArma(pj, malla) {
+  // Sombra solo de cerca: 20 montañeses de 9 mil triángulos eran otros 180 mil en la pasada de sombras.
+  function sombra(pj, on) { if (pj.sombraOn === on) return; pj.sombraOn = on; for (const m of pj.mallas) m.castShadow = on; }
+  // Arma en la mano derecha. No se cuelga del hueso (cada rig trae los ejes de la mano
+  // para otro lado y el arma salía torcida): va en el grupo del personaje, en el lugar de
+  // la mano, apuntando adonde mira (o para abajo, si no apunta). AGARRE: el punto del
+  // modelo que va en la mano (los modelos tienen el origen en el centro de la base).
+  const AGARRE = { pistola: [0, 0.1, -0.03], escopeta: [0, 0.1, -0.22], rifle: [0, 0.1, -0.25], hacha: [0, 0.03, -0.3] };
+  function ponerArma(pj, malla, tipo) {
     if (pj.arma) pj.arma.parent && pj.arma.parent.remove(pj.arma);
-    pj.arma = malla || null; if (!malla) return;
-    const mano = pj.H.manoR; if (!mano) return;
-    // En el rig, la mano está escalada por el modelo: se compensa.
-    const s = new V(); mano.getWorldScale(s); malla.scale.setScalar(1 / Math.max(1e-3, s.x) * (pj.cuerpo.children[0].scale ? 1 : 1));
-    mano.add(malla);
+    pj.arma = null; pj.tipoArma = tipo || null; if (!malla) return;
+    const g = new THREE.Group(), a = AGARRE[tipo] || [0, 0, 0]; malla.position.set(-a[0], -a[1], -a[2]); g.add(malla);
+    malla.traverse((m) => { if (m.isMesh) m.castShadow = true; });
+    pj.arma = g; pj.grupo.add(g);
   }
+  const vMano = new V();
   // e: { vel (m/s), agacha, apunta, arma ("pistola"|"escopeta"|"rifle"|"hacha"|null), golpe (0..1 o -1), herido (0..1), muerto, mira (pitch) }
   function animar(pj, dt, e) {
     const v = e.muerto ? 0 : e.vel;
@@ -149,6 +157,14 @@ const Personajes = (() => {
     pj.caida = lerp(pj.caida, e.muerto ? 1 : 0, Math.min(1, dt * 3));
     pj.cuerpo.rotation.x = -pj.caida * 1.5; pj.cuerpo.position.y -= pj.caida * 0.1;
     if (e.miraCabeza && H.cabeza) girar(H.cabeza, arr, e.miraCabeza);
+    if (pj.arma) {
+      const mano = H.manoR || H.antebrazoR;
+      if (mano) { pj.grupo.updateMatrixWorld(true); mano.getWorldPosition(vMano); pj.grupo.worldToLocal(vMano); pj.arma.position.copy(vMano); }
+      // Apuntando, el caño sigue la mira; si no, para abajo y adelante (la pistola más baja).
+      const abajo = { pistola: 1.1, hacha: 1.35 }[pj.tipoArma] ?? 0.6;
+      pj.arma.rotation.set(e.apunta ? -(e.mira || 0) : abajo, 0, 0);
+      pj.arma.visible = !e.muerto;
+    }
   }
-  return { crear, animar, ponerArma, PERFIL };
+  return { crear, animar, ponerArma, sombra, PERFIL };
 })();

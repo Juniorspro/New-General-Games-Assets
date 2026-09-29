@@ -96,12 +96,24 @@ const Lugares = (() => {
   function cabana(i, x, z, rumbo, extra = {}) {
     const y = suelo(x, z), r = azar(100 + i);
     const c = { i, x, z, y, rumbo, habitada: !!extra.habitada, secreto: !!extra.secreto, ruina: !!extra.ruina, nombre: extra.nombre || "cabana" };
-    const ext = modeloO(extra.ruina ? "cabana_ruina" : "cabana", () => cabanaRepuesto(extra.ruina));
+    const nMod = extra.ruina ? "cabana_ruina" : "cabana", modelo = Modelos.listos[nMod];
+    const ext = modeloO(nMod, () => cabanaRepuesto(extra.ruina));
     ext.position.set(x, y, z); ext.rotation.y = rumbo; escena.add(ext); c.ext = ext;
     c.ventanas = []; ext.traverse((o) => { if (o.userData && o.userData.ventana) c.ventanas.push(o); });
+    c.matsVentana = [];
+    if (modelo && !extra.ruina) {
+      // Las ventanas del modelo están pintadas en la textura: brillan con una máscara de lo
+      // cálido y claro de esa textura. Material propio por cabaña, para apagar una sola.
+      const mascara = Modelos.mascaraVentanas(nMod);
+      ext.traverse((o) => { if (!o.isMesh) return; o.material = o.material.clone(); o.material.emissive = new THREE.Color("#ffa24e"); o.material.emissiveMap = mascara; o.material.emissiveIntensity = c.habitada ? 2.6 : 0; c.matsVentana.push(o.material); });
+    }
     // Luz de ventana desde afuera (cálida) si está habitada.
     if (c.habitada) { const f = { g: null, base: 7, prendido: true, zona: "ext", parpadeo: i, color: 0xff9f4a, alcance: 14, pos: new V(x + Math.sin(rumbo) * 3.6, y + 1.6, z + Math.cos(rumbo) * 3.6), brillo: 1, cab: c }; faroles.push(f); c.luzVentana = f; }
-    Colision.caja(x, z, 8.6, 6.8, rumbo, { tipo: "cabana", dueno: c });
+    // Con el modelo: la cabaña de Tripo tiene 7,7 × 9,5 con el porche adelante (1,5 m que se
+    // pisan); la ruina, 8,5 × 6,5 y la puerta en el lado largo. La de código, 8 × 6,2.
+    if (modelo && !extra.ruina) { const t = modelo.tam; Colision.caja(x - Math.sin(rumbo) * 0.8, z - Math.cos(rumbo) * 0.8, t.x - 0.3, t.z - 1.8, rumbo, { tipo: "cabana", dueno: c }); }
+    else if (modelo) { const t = modelo.tam; Colision.caja(x, z, t.x - 0.3, t.z - 0.3, rumbo, { tipo: "cabana", dueno: c }); }
+    else Colision.caja(x, z, 8.6, 6.8, rumbo, { tipo: "cabana", dueno: c });
     c.int = interior(c, r);
     // La puerta, en el porche.
     const px = x + Math.sin(rumbo) * 3.9, pz = z + Math.cos(rumbo) * 3.9;
@@ -120,12 +132,17 @@ const Lugares = (() => {
     for (const x of [-0.6, 0.6]) { const f = caja(0.25, 0.18, 0.05, new THREE.MeshStandardMaterial({ color: "#222", emissive: "#000" }), x, 1.25, 3.05, g); f.userData.faro = true; }
     return g;
   }
+  // La grúa es la de código (la de Tripo vino plegada y de una pieza, no sube la pluma):
+  // torre giratoria, pluma de dos tramos, pistón y gancho, con pintura amarilla gastada.
   function gruaRepuesto() {
-    const g = new THREE.Group(), amar = new THREE.MeshStandardMaterial({ color: "#8a7630", roughness: 0.6, metalness: 0.4 });
-    const base = new THREE.Group(); g.add(base); cil(0.45, 0.55, 0.6, amar, 0, 0.3, 0, base, 10);
-    const pluma = new THREE.Group(); pluma.position.y = 0.7; base.add(pluma);
-    caja(0.35, 0.35, 4.2, amar, 0, 0, 2.0, pluma); caja(0.2, 0.2, 2.5, M.chapa, 0, 0.3, 1.2, pluma);
-    const punta = new THREE.Group(); punta.position.set(0, 0, 4.1); pluma.add(punta);
+    const g = new THREE.Group(), amar = new THREE.MeshStandardMaterial({ color: "#b8962e", map: Texturas.pintura(), roughness: 0.62, metalness: 0.35 }), acero = new THREE.MeshStandardMaterial({ color: "#8d918f", roughness: 0.3, metalness: 0.85 });
+    const base = new THREE.Group(); g.add(base);
+    caja(1.3, 0.18, 1.3, M.chapa, 0, 0.09, 0, base); cil(0.32, 0.4, 0.9, amar, 0, 0.6, 0, base, 12); caja(0.5, 0.35, 0.7, amar, 0, 1.05, -0.1, base);
+    const pluma = new THREE.Group(); pluma.position.set(0, 1.12, 0); base.add(pluma);
+    caja(0.3, 0.34, 3.0, amar, 0, 0.1, 1.35, pluma); caja(0.22, 0.25, 2.2, amar, 0, 0.1, 3.3, pluma); caja(0.34, 0.1, 0.3, M.chapa, 0, 0.3, 0.4, pluma);
+    // Pistón: del pie de la torre a la mitad de la pluma.
+    const piston = cil(0.07, 0.07, 1.25, acero, 0, -0.35, 0.75, pluma, 8); piston.rotation.x = 1.0; const camisa = cil(0.11, 0.11, 0.7, amar, 0, -0.55, 0.45, pluma, 8); camisa.rotation.x = 1.0;
+    const punta = new THREE.Group(); punta.position.set(0, 0.05, 4.35); pluma.add(punta); caja(0.26, 0.3, 0.26, M.chapa, 0, -0.05, 0, punta);
     g.userData.base = base; g.userData.pluma = pluma; g.userData.punta = punta; return g;
   }
   function camioneta(i, x, z, rumbo, tipo, extra = {}) {
@@ -133,11 +150,9 @@ const Lugares = (() => {
     const cuerpo = modeloO(tipo, () => camionetaRepuesto(tipo === "camioneta_vieja")); g.add(cuerpo);
     const k = { i, tipo, g, x, z, y, rumbo, vel: 0, dir: 0, rota: extra.rota ?? true, faltan: extra.faltan || [], caliente: !!extra.caliente, combustible: extra.combustible ?? 0, grua: null, faros: [] };
     if (tipo === "camioneta_grua") {
-      const gr = Modelos.clonar("grua");
-      let base, pluma, punta;
-      if (gr) { base = new THREE.Group(); base.add(gr); pluma = gr; punta = new THREE.Group(); punta.position.set(0, 1.8, 3.2); gr.add(punta); }
-      else { const r = gruaRepuesto(); base = r.userData.base; pluma = r.userData.pluma; punta = r.userData.punta; base.parent.remove(base); }
-      base.position.set(0, 1.35, -1.6); g.add(base);
+      const r = gruaRepuesto(), base = r.userData.base, pluma = r.userData.pluma, punta = r.userData.punta; base.parent.remove(base);
+      // En la caja de la camioneta de Tripo (el piso de la caja está a ~1,05 m), mirando atrás.
+      base.position.set(0, Modelos.listos[tipo] ? 1.02 : 1.35, -1.55); base.rotation.y = Math.PI; g.add(base);
       // Gancho y cable (el cable se estira cada cuadro).
       const gancho = new THREE.Group(); caja(0.14, 0.3, 0.14, M.chapa, 0, -0.15, 0, gancho); escena.add(gancho);
       const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1, 4), M.alambre); escena.add(cable);
@@ -458,6 +473,7 @@ const Lugares = (() => {
   function apagarCabana(c) {
     c.apagada = true;
     for (const v of c.ventanas) v.material = M.ventanaApagada;
+    for (const m of c.matsVentana || []) m.emissiveIntensity = 0;
     for (const f of faroles) if (f.zona === c.int.zona || f.cab === c) f.prendido = false;
   }
   return { montar, actualizar, apagarCabana, restringir, objeto, farol, cabanas, camionetas, objetos, pistas, jaulas, obstaculos, faroles, puertas, zonas, MINA, CUEVA, M };

@@ -231,6 +231,7 @@ const Enemigos = (() => {
       const visible = !lejos && e.zona === yo.zona;
       e.pj.grupo.visible = visible;
       if (visible) {
+        Personajes.sombra(e.pj, d < 45);
         e.pj.grupo.position.set(e.x, e.y, e.z); // los grupos de la mina y la cueva están en el origen
         e.pj.grupo.rotation.y = e.rumbo;
         const golpe = e.estado === "atacar" ? clamp(e.preparo, 0, 1) * 0.42 + (e.preparo > 1 ? 0.42 + (e.preparo - 1) * 0.9 : 0) : -1;

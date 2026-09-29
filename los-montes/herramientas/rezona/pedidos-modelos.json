@@ -1,0 +1,402 @@
+[
+ {
+  "clave": "mod-cabana",
+  "type": "model3d",
+  "output_path": "assets/mod-cabana.glb",
+  "params": {
+   "prompt": "old weathered log cabin with shingle roof, porch and stone chimney",
+   "source_url": "@img-cabana",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "mod-cabana_ruina",
+  "type": "model3d",
+  "output_path": "assets/mod-cabana_ruina.glb",
+  "params": {
+   "prompt": "abandoned half collapsed log cabin, caved in roof",
+   "source_url": "@img-cabana_ruina",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "mod-aserradero",
+  "type": "model3d",
+  "output_path": "assets/mod-aserradero.glb",
+  "params": {
+   "prompt": "old abandoned wooden sawmill shed with rusty tin roof and log piles",
+   "source_url": "@img-aserradero",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 20000
+  }
+ },
+ {
+  "clave": "mod-mina_entrada",
+  "type": "model3d",
+  "output_path": "assets/mod-mina_entrada.glb",
+  "params": {
+   "prompt": "old mine entrance with timber frame in a rock face and rails",
+   "source_url": "@img-mina_entrada",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 15000
+  }
+ },
+ {
+  "clave": "mod-torre_agua",
+  "type": "model3d",
+  "output_path": "assets/mod-torre_agua.glb",
+  "params": {
+   "prompt": "old wooden water tower on timber legs with ladder",
+   "source_url": "@img-torre_agua",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 15000
+  }
+ },
+ {
+  "clave": "mod-tienda",
+  "type": "model3d",
+  "output_path": "assets/mod-tienda.glb",
+  "params": {
+   "prompt": "crude hide and canvas tent on wooden poles",
+   "source_url": "@img-tienda",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 12000
+  }
+ },
+ {
+  "clave": "mod-jaula",
+  "type": "model3d",
+  "output_path": "assets/mod-jaula.glb",
+  "params": {
+   "prompt": "crude wooden cage made of branches tied with wire",
+   "source_url": "@img-jaula",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 15000
+  }
+ },
+ {
+  "clave": "mod-cruces",
+  "type": "model3d",
+  "output_path": "assets/mod-cruces.glb",
+  "params": {
+   "prompt": "group of crude wooden grave crosses on dirt mounds",
+   "source_url": "@img-cruces",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 10000
+  }
+ },
+ {
+  "clave": "mod-vagoneta",
+  "type": "model3d",
+  "output_path": "assets/mod-vagoneta.glb",
+  "params": {
+   "prompt": "rusty old mine cart on wheels",
+   "source_url": "@img-vagoneta",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 10000
+  }
+ },
+ {
+  "clave": "mod-tronco",
+  "type": "model3d",
+  "output_path": "assets/mod-tronco.glb",
+  "params": {
+   "prompt": "fallen mossy tree log with broken branches",
+   "source_url": "@img-tronco",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 10000
+  }
+ },
+ {
+  "clave": "mod-roca1",
+  "type": "model3d",
+  "output_path": "assets/mod-roca1.glb",
+  "params": {
+   "prompt": "mossy round granite boulder",
+   "source_url": "@img-roca1",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-roca2",
+  "type": "model3d",
+  "output_path": "assets/mod-roca2.glb",
+  "params": {
+   "prompt": "flat dark rock with moss",
+   "source_url": "@img-roca2",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-pino1",
+  "type": "model3d",
+  "output_path": "assets/mod-pino1.glb",
+  "params": {
+   "prompt": "low poly dark fir tree with chunky needle clusters",
+   "source_url": "@img-pino1",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-pino2",
+  "type": "model3d",
+  "output_path": "assets/mod-pino2.glb",
+  "params": {
+   "prompt": "tall mountain pine tree",
+   "source_url": "@img-pino2",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 10000
+  }
+ },
+ {
+  "clave": "mod-farol",
+  "type": "model3d",
+  "output_path": "assets/mod-farol.glb",
+  "params": {
+   "prompt": "rusty kerosene hurricane lantern",
+   "source_url": "@img-farol",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-trampa_oso",
+  "type": "model3d",
+  "output_path": "assets/mod-trampa_oso.glb",
+  "params": {
+   "prompt": "rusty steel bear trap with chain and stake",
+   "source_url": "@img-trampa_oso",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-pistola",
+  "type": "model3d",
+  "output_path": "assets/mod-pistola.glb",
+  "params": {
+   "prompt": "old steel semi automatic pistol",
+   "source_url": "@img-pistola",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-escopeta",
+  "type": "model3d",
+  "output_path": "assets/mod-escopeta.glb",
+  "params": {
+   "prompt": "old pump action shotgun with wooden stock",
+   "source_url": "@img-escopeta",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-rifle",
+  "type": "model3d",
+  "output_path": "assets/mod-rifle.glb",
+  "params": {
+   "prompt": "old bolt action hunting rifle with scope",
+   "source_url": "@img-rifle",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-hacha",
+  "type": "model3d",
+  "output_path": "assets/mod-hacha.glb",
+  "params": {
+   "prompt": "old wood axe",
+   "source_url": "@img-hacha",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 6000
+  }
+ },
+ {
+  "clave": "mod-linterna",
+  "type": "model3d",
+  "output_path": "assets/mod-linterna.glb",
+  "params": {
+   "prompt": "black tactical flashlight",
+   "source_url": "@img-linterna",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 6000
+  }
+ },
+ {
+  "clave": "mod-botiquin",
+  "type": "model3d",
+  "output_path": "assets/mod-botiquin.glb",
+  "params": {
+   "prompt": "red metal first aid kit box",
+   "source_url": "@img-botiquin",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 6000
+  }
+ },
+ {
+  "clave": "mod-bateria",
+  "type": "model3d",
+  "output_path": "assets/mod-bateria.glb",
+  "params": {
+   "prompt": "two worn D size batteries",
+   "source_url": "@img-bateria",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 5000
+  }
+ },
+ {
+  "clave": "mod-bidon",
+  "type": "model3d",
+  "output_path": "assets/mod-bidon.glb",
+  "params": {
+   "prompt": "red metal jerry can",
+   "source_url": "@img-bidon",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 6000
+  }
+ },
+ {
+  "clave": "mod-municion",
+  "type": "model3d",
+  "output_path": "assets/mod-municion.glb",
+  "params": {
+   "prompt": "open cardboard box with brass cartridges",
+   "source_url": "@img-municion",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 6000
+  }
+ },
+ {
+  "clave": "mod-lata",
+  "type": "model3d",
+  "output_path": "assets/mod-lata.glb",
+  "params": {
+   "prompt": "dented tin food can",
+   "source_url": "@img-lata",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 4000
+  }
+ },
+ {
+  "clave": "mod-herramientas",
+  "type": "model3d",
+  "output_path": "assets/mod-herramientas.glb",
+  "params": {
+   "prompt": "open red metal toolbox with tools",
+   "source_url": "@img-herramientas",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 8000
+  }
+ },
+ {
+  "clave": "mod-repuesto",
+  "type": "model3d",
+  "output_path": "assets/mod-repuesto.glb",
+  "params": {
+   "prompt": "old car battery with strap",
+   "source_url": "@img-repuesto",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 6000
+  }
+ },
+ {
+  "clave": "img-portada2",
+  "type": "image",
+  "output_path": "assets/img-portada2.png",
+  "params": {
+   "prompt": "Cinematic night landscape key art, no text, no letters: a remote mountain valley with huge jagged snowy peaks under a full moon and heavy clouds, a dark dense pine forest, tall waterfalls falling into a misty river and a lake, two isolated log cabins with warm orange light in the windows, a small wooden bridge over the river, an abandoned rusty pickup truck with a yellow hydraulic crane parked on a dirt road in the foreground, and a lone mountain rescuer in an olive jacket holding a flashlight, seen from behind, looking at the forest. Far away between the pines, a few pale silhouettes stand still. Cold blue moonlight, volumetric fog, ominous and silent atmosphere, realistic, highly detailed, wide composition.",
+   "size": "1024x1024",
+   "n": 1,
+   "ref_image_urls": [
+    "https://raw.githubusercontent.com/juniorspro/new-general-games-assets/claude/papa-del-patron-3cpe64/los-montes/referencias/escenario-1.jpg"
+   ]
+  }
+ },
+ {
+  "clave": "img-camion_maderero",
+  "type": "image",
+  "output_path": "assets/img-camion_maderero.png",
+  "params": {
+   "prompt": "A single abandoned old 1970s logging truck of no particular brand: a long flatbed with rusty steel log stakes and a few old logs chained on it, a boxy cab with broken windows, flat tyres, completely rusted brown and faded red paint, moss and weeds on the cab roof and the bed, plain grille with no emblem, no badges. Realistic weathered game asset, dirty, worn and rusty, three-quarter view from slightly above, the whole object visible with margin, soft even studio lighting, isolated on a plain light grey seamless background, no ground, no cast shadow, no text, no logos, no letters, nothing else.",
+   "size": "1024x1024",
+   "n": 1
+  }
+ },
+ {
+  "clave": "mod-camion_maderero",
+  "type": "model3d",
+  "output_path": "assets/mod-camion_maderero.glb",
+  "params": {
+   "prompt": "abandoned rusty logging truck with logs on flatbed",
+   "source_url": "@img-camion_maderero",
+   "texture": true,
+   "pbr": true,
+   "texture_quality": "detailed",
+   "face_limit": 16000
+  }
+ }
+]
