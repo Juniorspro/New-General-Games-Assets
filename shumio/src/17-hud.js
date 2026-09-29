@@ -82,7 +82,7 @@ function dibujarHud(g) {
   }
   // ── las cuentas: ícono y cifras finas al 60 %, una fila cada 12 (medido: 13,4 en el original);
   //    la última, la chance de que aparezca el pacto (como la del diablo en Repentance) ──
-  if (PANT.salaX >= 56) {
+  {   // como en Repentance: encima de la pared de la izquierda, semitransparentes
     y += 6;
     const cuentas = [["vel", velDe(j).toFixed(2)], ["lag", lagrimasPorSeg(j).toFixed(2)], ["dano", danoDe(j).toFixed(2)], ["alc", j.alcance.toFixed(2)], ["tiro", j.velLag.toFixed(2)], ["suerte", j.suerte.toFixed(2)], ["pacto", (probPacto() * 100).toFixed(1) + "%"]];
     for (const [ic, v] of cuentas) {

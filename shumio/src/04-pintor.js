@@ -8,6 +8,12 @@
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.47);
 const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
+// El original se ve "dibujado", no retro: tonos planos con bordes limpios, sin tramado. El tramado
+// queda apagado en los volúmenes (bola, caja); sólo lo usan, a propósito, algunas texturas.
+const SIN_TRAMA = 0;
+// El contorno de los dibujos: no es negro, es el mismo color del objeto bien oscuro (como el gris
+// oscuro de las vasijas del original). Se pide con AUTO; las letras siguen con negro.
+const AUTO = "auto";
 
 // La paleta: pocos colores, apagados, que conversan entre sí (lo que da unidad).
 const PAL = {
@@ -40,15 +46,17 @@ class Pix {
   borrar(x, y) { if (this.dentro(x, y)) this.d[y * this.w + x] = null; }
   /** Un volumen elíptico sombreado. rampa: de oscuro a claro. filtro(x, y) → false para no pintar ese píxel. */
   bola(cx, cy, rx, ry, rampa, o = {}) {
-    const L = o.luz || [-0.52, -0.62, 0.58], n = rampa.length, bajar = o.bajar ?? 0.18, trama = o.trama ?? 0.9;
+    const L = o.luz || [-0.52, -0.62, 0.58], n = rampa.length, bajar = o.bajar ?? 0.18, trama = SIN_TRAMA * (o.trama ?? 0.9);
     for (let y = Math.floor(cy - ry - 1); y <= cy + ry + 1; y++) for (let x = Math.floor(cx - rx - 1); x <= cx + rx + 1; x++) {
       const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry, r2 = nx * nx + ny * ny;
       if (r2 > 1 || (o.filtro && !o.filtro(x, y))) continue;
       const nz = Math.sqrt(1 - r2);
       let l = -nx * L[0] - ny * L[1] + nz * L[2];          // lambert
       l = l * 0.5 + 0.5 - bajar * r2 * r2;                  // el borde, más oscuro (como el original)
-      let i = Math.floor(l * n + bayer(x, y) * trama);
-      this.p(x, y, rampa[lim(i + (o.corrimiento || 0), 0, n - 1)]);
+      // degradé continuo entre los tonos de la rampa (se ve pintado, no escalonado); o.plano: a tonos
+      if (o.plano) { const i = Math.floor(l * n + bayer(x, y) * trama); this.p(x, y, rampa[lim(i + (o.corrimiento || 0), 0, n - 1)]); continue; }
+      const f = lim(l * n - 0.5 + (o.corrimiento || 0), 0, n - 1), i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      this.p(x, y, i0 === i1 ? rampa[i0] : mezclarCache(rampa[i0], rampa[i1], Math.round((f - i0) * 6) / 6));
     }
     return this;
   }
@@ -58,7 +66,9 @@ class Pix {
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
       const t = 1 - (y - y0 + 0.5) / h, u = 1 - (x - x0 + 0.5) / w;
       const l = (o.vertical ?? 0.75) * t + (1 - (o.vertical ?? 0.75)) * u;
-      this.p(x, y, rampa[lim(Math.floor(l * n + bayer(x, y) * (o.trama ?? 0.8)), 0, n - 1)]);
+      if (o.plano) { this.p(x, y, rampa[lim(Math.floor(l * n), 0, n - 1)]); continue; }
+      const f = lim(l * n - 0.5, 0, n - 1), i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      this.p(x, y, i0 === i1 ? rampa[i0] : mezclarCache(rampa[i0], rampa[i1], Math.round((f - i0) * 6) / 6));
     }
     return this;
   }
@@ -75,11 +85,18 @@ class Pix {
   }
   /** Contorno por fuera de lo pintado (4 vecinos; con esquinas = 8). */
   contorno(c = PAL.tinta, esquinas = false) {
-    const lleno = this.d.map((v) => v !== null), w = this.w;
+    const lleno = this.d.map((v) => v !== null), w = this.w, orig = this.d.slice();
     for (let y = 0; y < this.h; y++) for (let x = 0; x < w; x++) {
       if (lleno[y * w + x]) continue;
       const v = (dx, dy) => { const X = x + dx, Y = y + dy; return X >= 0 && Y >= 0 && X < w && Y < this.h && lleno[Y * w + X]; };
-      if (v(1, 0) || v(-1, 0) || v(0, 1) || v(0, -1) || (esquinas && (v(1, 1) || v(-1, 1) || v(1, -1) || v(-1, -1)))) this.d[y * w + x] = c;
+      const toca = v(1, 0) || v(-1, 0) || v(0, 1) || v(0, -1) || (esquinas && (v(1, 1) || v(-1, 1) || v(1, -1) || v(-1, -1)));
+      if (!toca) continue;
+      if (c !== AUTO) { this.d[y * w + x] = c; continue; }
+      // AUTO: el promedio de los vecinos pintados, llevado casi a negro (con su tinte)
+      let r = 0, g = 0, b = 0, n = 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (v(dx, dy)) { const q = rgba(orig[(y + dy) * w + x + dx]); r += q[0]; g += q[1]; b += q[2]; n++; }
+      if (!n) { r = 40; g = 30; b = 34; n = 1; }
+      this.d[y * w + x] = hex(r / n * 0.3 + 10, g / n * 0.26 + 6, b / n * 0.28 + 8);
     }
     return this;
   }
@@ -124,6 +141,8 @@ function rgba(col) {
   return v;
 }
 function hex(r, g, b) { return "#" + [r, g, b].map((x) => lim(Math.round(x), 0, 255).toString(16).padStart(2, "0")).join(""); }
+const _mezclas = new Map();
+function mezclarCache(a, b, t) { const k = a + b + t; let v = _mezclas.get(k); if (!v) { v = mezclar(a, b, t); _mezclas.set(k, v); } return v; }
 function mezclar(a, b, t) { const A = rgba(a), B = rgba(b); return hex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 /** Una rampa nueva desde un color base (para campeones y ítems). */
 function rampaDe(base, n = 5) { const out = []; for (let i = 0; i < n; i++) { const t = i / (n - 1); out.push(t < 0.5 ? mezclar("#0b0709", base, 0.25 + t * 1.5) : mezclar(base, "#fff6ea", (t - 0.5) * 0.9)); } return out; }

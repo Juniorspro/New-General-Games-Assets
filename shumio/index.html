@@ -104,8 +104,10 @@ const lienzo = document.getElementById("lienzo");
 const cxP = lienzo.getContext("2d", { alpha: false });
 const cvM = document.createElement("canvas");
 const cxM = cvM.getContext("2d", { alpha: false });
-const PANT = { W: 534, H: 240, PX: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0, girado: false, cssW: 0 };
-const ALTO_MIN = 236;   // la sala (224) y un margen
+const PANT = { W: 444, H: 200, PX: 3.6, k: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0, girado: false, cssW: 0 };
+const VISTA_H = 200;    // lo que se ve de alto (el original: la sala llena la pantalla, muros cortados)
+const ANCHO_MIN = 330;  // y de ancho, como mínimo (en pantallas angostas manda el ancho)
+const cvK = document.createElement("canvas"), cxK = cvK.getContext("2d", { alpha: false });
 
 function medir() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -123,14 +125,20 @@ function medir() {
   PANT.cssW = cw;
   const dw = Math.round(cw * dpr), dh = Math.round(ch * dpr);
   PANT.vertical = false;
-  const PX = Math.max(1, Math.floor(dh / ALTO_MIN));
-  if (dw === PANT.dw && dh === PANT.dh && PX === PANT.PX && lienzo.width === dw) return;
+  // la cámara, como en el original: la sala llena el alto de la pantalla (se ven ~200 px de juego;
+  // los muros de arriba y abajo quedan un poco cortados) y el HUD va encima de la pared
+  let PX = dh / VISTA_H;
+  if (dw / PX < ANCHO_MIN) PX = dw / ANCHO_MIN;
+  if (dw === PANT.dw && dh === PANT.dh && Math.abs(PX - PANT.PX) < 1e-6 && lienzo.width === dw) return;
   PANT.dw = dw; PANT.dh = dh; PANT.PX = PX;
   lienzo.width = dw; lienzo.height = dh;
   PANT.W = Math.ceil(dw / PX); PANT.H = Math.ceil(dh / PX);
   PANT.ox = Math.floor((dw - PANT.W * PX) / 2); PANT.oy = Math.floor((dh - PANT.H * PX) / 2);
   cvM.width = PANT.W; cvM.height = PANT.H;
-  cxM.imageSmoothingEnabled = false; cxP.imageSmoothingEnabled = false;
+  // el agrandado en dos pasos: primero por un entero (píxeles duros), después el resto suavizado
+  PANT.k = Math.max(1, Math.floor(PX));
+  cvK.width = PANT.W * PANT.k; cvK.height = PANT.H * PANT.k;
+  cxM.imageSmoothingEnabled = false; cxK.imageSmoothingEnabled = false;
   PANT.salaX = Math.floor((PANT.W - SALA_W) / 2);
   PANT.salaY = Math.floor((PANT.H - SALA_H) / 2);
   if (typeof alMedir === "function") alMedir();
@@ -162,7 +170,10 @@ function pantallaCompleta(activar = true) {
 document.addEventListener("fullscreenchange", () => setTimeout(medir, 100));
 
 function presentar() {
-  cxP.drawImage(cvM, 0, 0, PANT.W, PANT.H, PANT.ox, PANT.oy, PANT.W * PANT.PX, PANT.H * PANT.PX);
+  if (PANT.k === PANT.PX) { cxP.imageSmoothingEnabled = false; cxP.drawImage(cvM, 0, 0, PANT.W, PANT.H, PANT.ox, PANT.oy, PANT.W * PANT.PX, PANT.H * PANT.PX); return; }
+  cxK.drawImage(cvM, 0, 0, PANT.W, PANT.H, 0, 0, cvK.width, cvK.height);
+  cxP.imageSmoothingEnabled = true; cxP.imageSmoothingQuality = "medium";
+  cxP.drawImage(cvK, 0, 0, cvK.width, cvK.height, PANT.ox, PANT.oy, Math.round(PANT.W * PANT.PX), Math.round(PANT.H * PANT.PX));
 }
 
 // ══════════ 02-entrada.js ══════════
@@ -426,6 +437,12 @@ function guardarVolumen() { try { localStorage.setItem("shumio-audio", JSON.stri
 
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.47);
 const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
+// El original se ve "dibujado", no retro: tonos planos con bordes limpios, sin tramado. El tramado
+// queda apagado en los volúmenes (bola, caja); sólo lo usan, a propósito, algunas texturas.
+const SIN_TRAMA = 0;
+// El contorno de los dibujos: no es negro, es el mismo color del objeto bien oscuro (como el gris
+// oscuro de las vasijas del original). Se pide con AUTO; las letras siguen con negro.
+const AUTO = "auto";
 
 // La paleta: pocos colores, apagados, que conversan entre sí (lo que da unidad).
 const PAL = {
@@ -458,15 +475,17 @@ class Pix {
   borrar(x, y) { if (this.dentro(x, y)) this.d[y * this.w + x] = null; }
   /** Un volumen elíptico sombreado. rampa: de oscuro a claro. filtro(x, y) → false para no pintar ese píxel. */
   bola(cx, cy, rx, ry, rampa, o = {}) {
-    const L = o.luz || [-0.52, -0.62, 0.58], n = rampa.length, bajar = o.bajar ?? 0.18, trama = o.trama ?? 0.9;
+    const L = o.luz || [-0.52, -0.62, 0.58], n = rampa.length, bajar = o.bajar ?? 0.18, trama = SIN_TRAMA * (o.trama ?? 0.9);
     for (let y = Math.floor(cy - ry - 1); y <= cy + ry + 1; y++) for (let x = Math.floor(cx - rx - 1); x <= cx + rx + 1; x++) {
       const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry, r2 = nx * nx + ny * ny;
       if (r2 > 1 || (o.filtro && !o.filtro(x, y))) continue;
       const nz = Math.sqrt(1 - r2);
       let l = -nx * L[0] - ny * L[1] + nz * L[2];          // lambert
       l = l * 0.5 + 0.5 - bajar * r2 * r2;                  // el borde, más oscuro (como el original)
-      let i = Math.floor(l * n + bayer(x, y) * trama);
-      this.p(x, y, rampa[lim(i + (o.corrimiento || 0), 0, n - 1)]);
+      // degradé continuo entre los tonos de la rampa (se ve pintado, no escalonado); o.plano: a tonos
+      if (o.plano) { const i = Math.floor(l * n + bayer(x, y) * trama); this.p(x, y, rampa[lim(i + (o.corrimiento || 0), 0, n - 1)]); continue; }
+      const f = lim(l * n - 0.5 + (o.corrimiento || 0), 0, n - 1), i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      this.p(x, y, i0 === i1 ? rampa[i0] : mezclarCache(rampa[i0], rampa[i1], Math.round((f - i0) * 6) / 6));
     }
     return this;
   }
@@ -476,7 +495,9 @@ class Pix {
     for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
       const t = 1 - (y - y0 + 0.5) / h, u = 1 - (x - x0 + 0.5) / w;
       const l = (o.vertical ?? 0.75) * t + (1 - (o.vertical ?? 0.75)) * u;
-      this.p(x, y, rampa[lim(Math.floor(l * n + bayer(x, y) * (o.trama ?? 0.8)), 0, n - 1)]);
+      if (o.plano) { this.p(x, y, rampa[lim(Math.floor(l * n), 0, n - 1)]); continue; }
+      const f = lim(l * n - 0.5, 0, n - 1), i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      this.p(x, y, i0 === i1 ? rampa[i0] : mezclarCache(rampa[i0], rampa[i1], Math.round((f - i0) * 6) / 6));
     }
     return this;
   }
@@ -493,11 +514,18 @@ class Pix {
   }
   /** Contorno por fuera de lo pintado (4 vecinos; con esquinas = 8). */
   contorno(c = PAL.tinta, esquinas = false) {
-    const lleno = this.d.map((v) => v !== null), w = this.w;
+    const lleno = this.d.map((v) => v !== null), w = this.w, orig = this.d.slice();
     for (let y = 0; y < this.h; y++) for (let x = 0; x < w; x++) {
       if (lleno[y * w + x]) continue;
       const v = (dx, dy) => { const X = x + dx, Y = y + dy; return X >= 0 && Y >= 0 && X < w && Y < this.h && lleno[Y * w + X]; };
-      if (v(1, 0) || v(-1, 0) || v(0, 1) || v(0, -1) || (esquinas && (v(1, 1) || v(-1, 1) || v(1, -1) || v(-1, -1)))) this.d[y * w + x] = c;
+      const toca = v(1, 0) || v(-1, 0) || v(0, 1) || v(0, -1) || (esquinas && (v(1, 1) || v(-1, 1) || v(1, -1) || v(-1, -1)));
+      if (!toca) continue;
+      if (c !== AUTO) { this.d[y * w + x] = c; continue; }
+      // AUTO: el promedio de los vecinos pintados, llevado casi a negro (con su tinte)
+      let r = 0, g = 0, b = 0, n = 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (v(dx, dy)) { const q = rgba(orig[(y + dy) * w + x + dx]); r += q[0]; g += q[1]; b += q[2]; n++; }
+      if (!n) { r = 40; g = 30; b = 34; n = 1; }
+      this.d[y * w + x] = hex(r / n * 0.3 + 10, g / n * 0.26 + 6, b / n * 0.28 + 8);
     }
     return this;
   }
@@ -542,6 +570,8 @@ function rgba(col) {
   return v;
 }
 function hex(r, g, b) { return "#" + [r, g, b].map((x) => lim(Math.round(x), 0, 255).toString(16).padStart(2, "0")).join(""); }
+const _mezclas = new Map();
+function mezclarCache(a, b, t) { const k = a + b + t; let v = _mezclas.get(k); if (!v) { v = mezclar(a, b, t); _mezclas.set(k, v); } return v; }
 function mezclar(a, b, t) { const A = rgba(a), B = rgba(b); return hex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
 /** Una rampa nueva desde un color base (para campeones y ítems). */
 function rampaDe(base, n = 5) { const out = []; for (let i = 0; i < n; i++) { const t = i / (n - 1); out.push(t < 0.5 ? mezclar("#0b0709", base, 0.25 + t * 1.5) : mezclar(base, "#fff6ea", (t - 0.5) * 0.9)); } return out; }
@@ -674,7 +704,7 @@ function pintarCuerpo(vista, paso, tunicaR = PAL.musgo, pielR = PAL.piel) {
     if (vista === "frente") { p.p(7, 3, tunicaR[4]); p.p(6, 2, tunicaR[3]); p.p(7, 6, PAL.oro[3]); }   // la hebilla
     else { for (let y = 1; y < 6; y++) if (p.g(7, y)) p.p(7, y, tunicaR[1]); }                          // la costura de atrás
   }
-  p.contorno(TINTA);
+  p.contorno(AUTO);
   return p;
 }
 
@@ -764,7 +794,7 @@ function grieta(r, x, y, largo, pintar, iluminar) {
 }
 
 /** El fondo entero de una sala (muros + piso), horneado con su semilla. */
-function hornearFondo(capituloId, semilla) {
+function hornearFondoPixel(capituloId, semilla) {
   const C = CAPITULOS[capituloId], r = mulberry(semilla), W = SALA_W, H = SALA_H;
   const cv = lienzoNuevo(W, H), g = cv.getContext("2d"), im = g.createImageData(W, H), d = im.data;
   const px = (x, y, col) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const [R, G, B] = rgba(col), i = (y * W + x) * 4; d[i] = R; d[i + 1] = G; d[i + 2] = B; d[i + 3] = 255; };
@@ -878,7 +908,7 @@ function hornearFondo(capituloId, semilla) {
 }
 
 /** La viñeta de la sala: oscuridad tramada (Bayer) que se come los bordes, como luz de vela. */
-function vineta() {
+function vinetaPixel() {
   return hornear("vineta", () => {
     const W = SALA_W + 40, H = SALA_H + 40, p = new Pix(W, H);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -913,7 +943,7 @@ function puertaSpr(tipo, estado, prof = MURO_A) {
       }
       // cascotes alrededor del boquete
       for (const [x, y] of [[6, 14], [8, 10], [27, 13], [25, 9], [5, 22], [28, 21]]) { P(x, y, PAL.piedra[3]); P(x + 1, y, PAL.piedra[2]); P(x, y + 1, PAL.piedra[1]); }
-      p.contorno(PAL.tinta);
+      p.contorno(AUTO);
       return p.canvas();
     }
     // el hueco oscuro, con un poco de luz que entra desde el otro lado
@@ -952,7 +982,7 @@ function puertaSpr(tipo, estado, prof = MURO_A) {
     if (tipo === "tesoro") { const q = [".ff.", "fggf", ".ff."]; q.forEach((f, y) => [...f].forEach((c, x) => { if (c !== ".") P(15 + x, y, c === "f" ? PAL.oro[4] : PAL.oro[2]); })); }
     if (tipo === "tienda") { [".kkkk.", "kmmmmk", "kmkkmk", ".kkkk."].forEach((f, y) => [...f].forEach((c, x) => { if (c !== ".") P(14 + x, 1 + y, c === "k" ? PAL.tinta : PAL.oro[3]); })); }
     if (estado === 5) { [".kkk.", "k...k", "kkkkk", "kOOOk", "kOkOk", "kOOOk", "kkkkk"].forEach((f, y) => [...f].forEach((c, x) => { if (c !== ".") P(15 + x, 15 + y, c === "k" ? PAL.tinta : PAL.oro[3]); })); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -997,7 +1027,7 @@ function rocaSpr(v, marcada = false) {
       }
     }
     if (marcada) { p.sello(10, 11, ["o...o", ".o.o.", "..o..", ".o.o.", "o...o"], { o: "#cfe0ff" }); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1014,7 +1044,7 @@ function matasSpr(vida, tipo = 0) {
       for (let X = Math.floor(x - rx); X <= x + rx; X++) if (p.g(X, Math.floor(y + 1))) p.p(X, Math.floor(y + 1), cap[1]);
     }
     if (vida <= 1) { p.caja(9, 18, 8, 4, PAL.tierra.slice(1, 5)); p.sello(10, 17, ["c.c..c", "cccccc"], { c: tallo[2] }); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1033,7 +1063,7 @@ function braseroSpr(k, prendido) {
     p.rect(5, 19, 15, 1, PAL.hierro[4]);
     p.caja(7, 22, 2, 6, PAL.hierro.slice(0, 3)); p.caja(15, 22, 2, 6, PAL.hierro.slice(0, 3)); p.caja(11, 22, 2, 7, PAL.hierro.slice(1, 4));
     if (prendido) for (let x = 6; x < 19; x++) if (bayer(x, 18) > 0) p.p(x, 18, PAL.fuego[2]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1056,7 +1086,7 @@ function barrilSpr() {
     for (const y of [5, 12, 20]) for (let x = 2; x < 21; x++) if (p.g(x, y)) { p.p(x, y, PAL.hierro[2]); if (p.g(x, y + 1)) p.p(x, y + 1, PAL.hierro[1]); }
     p.bola(11, 4, 6.5, 2.2, PAL.tierra.slice(2), { luz: [-0.3, -0.9, 0.3] });
     p.sello(7, 12, [".ggg.", "g.g.g", ".ggg."], { g: PAL.baba[4] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1066,7 +1096,7 @@ function bloqueSpr() {
     p.caja(1, 5, 22, 20, PAL.hierro, { vertical: 0.6 }); p.caja(1, 1, 22, 5, PAL.hierro.slice(2), { vertical: 0.9 });
     for (const [x, y] of [[3, 8], [19, 8], [3, 21], [19, 21]]) { p.p(x, y, PAL.hierro[4]); p.p(x + 1, y + 1, PAL.hierro[0]); }
     p.rect(1, 5, 22, 1, PAL.hierro[4]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1097,7 +1127,7 @@ function corazonSpr(tipo /* rojo, medio, espora, esporaMedio, vacio */, chico = 
       p.p(x + 1, y + 1, c);
     } });
     if (!vacio) { p.p(2, 2, "#fff0ec"); if (!chico) p.p(3, 2, R[4]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1106,7 +1136,7 @@ function monedaSpr(k, valor = 1) {
     const R = valor === 5 ? PAL.hueso : PAL.oro, p = new Pix(11, 11), w = [4, 3, 1.4, 3][k];
     p.bola(5.5, 5.5, w, 4.4, R.slice(1), { trama: 0.5 });
     if (w > 2) { p.rect(5, 3, 1, 5, R[1]); p.p(4, 3, R[4]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1118,7 +1148,7 @@ function bombaSpr(tamano = 1, prendida = false, k = 0) {
     p.linea(8, 3, 10, 1, PAL.crema[2]);
     if (prendida) { p.p(10 + (k % 2), 0, PAL.fuego[4]); p.p(11, 1, PAL.fuego[3]); p.p(9, 0, k % 2 ? PAL.fuego[2] : null); }
     p.p(5, 8, "#bfbfe0");
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1127,7 +1157,7 @@ function llaveSpr() {
     const p = new Pix(8, 14);
     p.sello(0, 0, [".hhh.", "h...h", "h...h", ".hhh.", "..h..", "..h..", "..hh.", "..h..", "..hh.", "..h.."], { h: PAL.hueso[3] });
     p.p(1, 1, PAL.hueso[4]); p.p(2, 4, PAL.hueso[2]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1139,7 +1169,7 @@ function cofreSpr(dorado, abierto) {
     else { p.bola(10, 7, 9, 4.5, madera, { filtro: (x, y) => y <= 7, luz: [-0.4, -0.9, 0.3] }); }
     for (const x of [4, 15]) p.caja(x, abierto ? 7 : 3, 2, abierto ? 9 : 13, herraje);
     if (!abierto) p.sello(8, 7, ["kkkk", "kOOk", "kOOk"], { k: PAL.tinta, O: dorado ? PAL.hueso[4] : PAL.oro[3] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1153,7 +1183,7 @@ function capsulaSpr(i) {
       p.p(x + 1, y + 1, sh > 0 ? mezclar(c, "#ffffff", sh) : sh < 0 ? mezclar(c, "#000000", -sh) : c);
     }
     p.p(3, 2, "#ffffff");
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1164,7 +1194,7 @@ function pedestalSpr() {
     p.bola(11, 4, 9, 3, PAL.piedra.slice(2), { luz: [-0.3, -0.9, 0.3] });
     p.rect(2, 15, 18, 2, PAL.piedra[1]);
     for (let y = 6; y < 15; y += 3) p.p(5 + (y % 2), y, PAL.piedra[1]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1174,7 +1204,7 @@ function trampillaSpr(abierta) {
     p.bola(14, 14, 12, 11, ["#010101", "#050404", "#0b0908"], { trama: 0.4 });
     for (let a = 0; a < 16; a++) { const an = a / 16 * TAU, x = 14 + Math.cos(an) * 12, y = 14 + Math.sin(an) * 11; p.p(x, y, PAL.tierra[a % 2 ? 2 : 3]); }
     if (!abierta) { p.caja(4, 6, 20, 16, PAL.tierra.slice(1, 5), { vertical: 0.4 }); for (let y = 8; y < 22; y += 4) p.linea(4, y, 23, y, PAL.tierra[1]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -1193,7 +1223,7 @@ function corazonHudSpr(tipo) {
       p.p(x + 1, y + 1, c);
     } });
     if (!vacio) { p.p(2, 2, "#ffffff"); p.p(3, 2, R[3]); p.p(2, 3, R[3]); }
-    p.contorno(PAL.tinta, true);
+    p.contorno(AUTO, true);
     return p.canvas();
   });
 }
@@ -1206,8 +1236,143 @@ function calaveraJefeSpr() {
     for (const x of [6, 9]) p.rect(x, 11, 1, 3, "#3a3432");
     for (const x of [4, 9]) { p.rect(x, 5, 3, 3, PAL.tinta); p.p(x, 5, "#3a3432"); }
     p.p(7, 9, PAL.tinta); p.p(8, 9, PAL.tinta);
-    p.contorno(PAL.tinta, true);
+    p.contorno(AUTO, true);
     return p.canvas();
+  });
+}
+
+// ══════════ 06b-fondo.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL FONDO PINTADO (como en el original, que se ve dibujado y no "retro"): nada de tramado ni de
+// motas sueltas. El piso son losas grandes y desparejas que no siguen la grilla de choques, cada
+// una con su degradé suave y juntas oscuras blandas; los muros, ladrillos grandes con volumen y la
+// profundidad que se oscurece hacia afuera; y encima, la luz: un centro más claro, sombra suave
+// contra las paredes y rayos que bajan desde arriba (como en las salas del video).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Ruido de valor suave (interpolado), en [0,1]: manchas grandes sin granito. */
+function ruidoValor(semilla, celda) {
+  const r = mulberry(semilla), gw = Math.ceil(SALA_W / celda) + 2, gh = Math.ceil(SALA_H / celda) + 2, v = new Float32Array(gw * gh);
+  for (let i = 0; i < v.length; i++) v[i] = r();
+  const s = (t) => t * t * (3 - 2 * t);
+  return (x, y) => {
+    const fx = x / celda, fy = y / celda, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = s(fx - x0), ty = s(fy - y0);
+    const a = v[y0 * gw + x0], b = v[y0 * gw + x0 + 1], c = v[(y0 + 1) * gw + x0], d = v[(y0 + 1) * gw + x0 + 1];
+    return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+  };
+}
+/** Un color a lo largo de una rampa (0 = oscuro, 1 = claro), interpolado. */
+function enRampa(rampa, t) {
+  const f = lim(t, 0, 1) * (rampa.length - 1), i = Math.floor(f), j = Math.min(rampa.length - 1, i + 1), u = f - i;
+  const A = rgba(rampa[i]), B = rgba(rampa[j]);
+  return [A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, A[2] + (B[2] - A[2]) * u];
+}
+
+function hornearFondo(capituloId, semilla) {
+  const C = CAPITULOS[capituloId], r = mulberry(semilla), W = SALA_W, H = SALA_H;
+  const cv = lienzoNuevo(W, H), g = cv.getContext("2d"), im = g.createImageData(W, H), d = im.data;
+  const n1 = ruidoValor(semilla + 1, 46), n2 = ruidoValor(semilla + 2, 15), n3 = ruidoValor(semilla + 3, 6);
+  const PISO = C.piso, MURO = C.ladrillo;
+
+  // ── las losas: filas de alto variable, cada fila partida en losas de ancho variable (corridas) ──
+  const filas = [];
+  for (let y = IY0; y < IY1;) { const h = Math.min(IY1 - y, 26 + Math.floor(r() * 14)); filas.push({ y0: y, y1: y + h, cortes: [], tonos: [] }); y += h; }
+  if (filas.length > 1 && filas[filas.length - 1].y1 - filas[filas.length - 1].y0 < 16) { const u = filas.pop(); filas[filas.length - 1].y1 = u.y1; }
+  for (const f of filas) {
+    let x = IX0 - Math.floor(r() * 30);
+    while (x < IX1) { const w = 34 + Math.floor(r() * 36); f.cortes.push(x); f.tonos.push((r() - 0.5) * 0.14); x += w; }
+    f.cortes.push(IX1 + 60);
+  }
+  const losa = (x, y) => {
+    let fi = 0; while (fi < filas.length - 1 && y >= filas[fi].y1) fi++;
+    const f = filas[fi]; let k = 0; while (k < f.cortes.length - 2 && x >= f.cortes[k + 1]) k++;
+    return { f, k, dx0: x - Math.max(IX0, f.cortes[k]), dx1: Math.min(IX1, f.cortes[k + 1]) - 1 - x, dy0: y - f.y0, dy1: f.y1 - 1 - y };
+  };
+
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let col;
+    if (x >= IX0 && x < IX1 && y >= IY0 && y < IY1) {
+      // el piso
+      const L = losa(x, y), borde = Math.min(L.dx0, L.dx1, L.dy0, L.dy1);
+      let t = 0.5 + (n1(x, y) - 0.5) * 0.34 + (n2(x, y) - 0.5) * 0.14 + (n3(x, y) - 0.5) * 0.05 + L.f.tonos[L.k];
+      if (borde === 0) t = 0.1;                                              // la junta
+      else if (borde === 1) t -= 0.12;
+      else if (L.dy0 === 1 || L.dx0 === 1) t += 0.08;                        // el filo de arriba/izq, con luz
+      else if (L.dy1 === 2 || L.dx1 === 2) t -= 0.05;
+      col = enRampa(PISO, t);
+    } else {
+      // los muros: en qué pared cae (la esquina es la diagonal) y qué tan hondo
+      const ax = x < IX0 ? IX0 - x : x >= IX1 ? x - IX1 + 1 : 0, ay = y < IY0 ? IY0 - y : y >= IY1 ? y - IY1 + 1 : 0;
+      const lado = ay * MURO_L > ax * MURO_A ? (y < IY0 ? 0 : 2) : (x < IX0 ? 3 : 1);
+      const hondo = lado === 0 ? ay / MURO_A : lado === 2 ? ay / MURO_B : ax / MURO_L;       // 0 junto al piso → 1 afuera
+      // coordenadas a lo largo del muro (u) y hacia adentro (v), para los ladrillos
+      const u = lado % 2 === 0 ? x : y, v = hondo * 3;
+      const fila = Math.floor(v), corrido = (fila % 2) * 11, bx = (u + corrido) % 22, by = v - fila;
+      let t = 0.72 - hondo * 0.62 + (n2(x, y) - 0.5) * 0.16 + (n1(x * 0.7, y) - 0.5) * 0.12;
+      if (by < 0.1 || bx < 1) t = 0.08;                                       // el mortero
+      else if (by < 0.22 || bx < 2) t += 0.08;                                // el filo del ladrillo
+      else if (by > 0.85 || bx > 20) t -= 0.08;
+      if (lado === 0) t -= 0.04; if (lado === 2) t += 0.04;                  // el de arriba, más en sombra
+      // la costura de la esquina (la diagonal), oscura
+      if (Math.abs(ay * MURO_L - ax * MURO_A) < 18 && ax > 0 && ay > 0) t -= 0.12;
+      col = enRampa(MURO, t);
+    }
+    const i = (y * W + x) * 4; d[i] = col[0]; d[i + 1] = col[1]; d[i + 2] = col[2]; d[i + 3] = 255;
+  }
+  g.putImageData(im, 0, 0);
+
+  // ── manchas de humedad y de musgo: borrones blandos ──
+  const borron = (x, y, rx, ry, color, a) => {
+    const gr = g.createRadialGradient(x, y, 0, x, y, rx); gr.addColorStop(0, rgbaTxt(color, a)); gr.addColorStop(0.7, rgbaTxt(color, a * 0.6)); gr.addColorStop(1, rgbaTxt(color, 0));
+    g.save(); g.translate(x, y); g.scale(1, ry / rx); g.translate(-x, -y); g.fillStyle = gr; g.beginPath(); g.arc(x, y, rx, 0, TAU); g.fill(); g.restore();
+  };
+  g.save(); g.beginPath(); g.rect(IX0, IY0, IX1 - IX0, IY1 - IY0); g.clip();
+  for (let i = 0; i < 5; i++) borron(IX0 + r() * (IX1 - IX0), IY0 + r() * (IY1 - IY0), 18 + r() * 30, 10 + r() * 16, C.oscuro, 0.35);
+  for (let i = 0; i < 6; i++) { const lado = r() < 0.5; const x = lado ? (r() < 0.5 ? IX0 + 4 : IX1 - 4) : IX0 + r() * (IX1 - IX0), y = lado ? IY0 + r() * (IY1 - IY0) : (r() < 0.5 ? IY0 + 3 : IY1 - 3); borron(x, y, 10 + r() * 14, 6 + r() * 6, C.musgo[2], 0.45); }
+  // la sombra contra las paredes (el piso se oscurece al llegar al muro)
+  const sombraMuro = (x0, y0, x1, y1, ancho) => { const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, "rgba(0,0,0,0.5)"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; return gr; };
+  sombraMuro(0, IY0, 0, IY0 + 18); g.fillRect(IX0, IY0, IX1 - IX0, 18);
+  sombraMuro(IX0, 0, IX0 + 16, 0); g.fillRect(IX0, IY0, 16, IY1 - IY0);
+  sombraMuro(IX1, 0, IX1 - 16, 0); g.fillRect(IX1 - 16, IY0, 16, IY1 - IY0);
+  sombraMuro(0, IY1, 0, IY1 - 10); g.fillRect(IX0, IY1 - 10, IX1 - IX0, 10);
+  g.restore();
+
+  // ── la luz: rayos que bajan desde arriba y un centro más claro ──
+  g.save(); g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 3; i++) {
+    const x = IX0 + (IX1 - IX0) * (0.2 + i * 0.3 + (r() - 0.5) * 0.12), ancho = 16 + r() * 16, caida = 60 + r() * 50;
+    const gr = g.createLinearGradient(0, 0, 0, IY0 + caida); gr.addColorStop(0, "rgba(255,244,220,0.09)"); gr.addColorStop(1, "rgba(255,244,220,0)");
+    g.fillStyle = gr; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + ancho, 0); g.lineTo(x + ancho * 1.6 + 26, IY0 + caida); g.lineTo(x + 26, IY0 + caida); g.closePath(); g.fill();
+  }
+  const cxl = W / 2, cyl = IY0 + (IY1 - IY0) * 0.45, gr = g.createRadialGradient(cxl, cyl, 0, cxl, cyl, 150);
+  gr.addColorStop(0, `rgba(${C.tinte.map((v) => v * 2 + 30).join(",")},0.16)`); gr.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.restore();
+  // detalles del capítulo (raíces en el muro, telarañas en las esquinas), con trazo fino y translúcido
+  g.save(); g.strokeStyle = "rgba(210,210,200,0.22)"; g.lineWidth = 1;
+  for (const [x, y, sx, sy] of [[IX0, IY0, 1, 1], [IX1, IY0, -1, 1]]) {
+    for (let k = 0; k < 4; k++) { const a = k / 3 * Math.PI / 2; g.beginPath(); g.moveTo(x + 0.5, y + 0.5); g.lineTo(x + sx * Math.cos(a) * 16 + 0.5, y + sy * Math.sin(a) * 16 + 0.5); g.stroke(); }
+    for (const rr of [6, 11]) { g.beginPath(); g.arc(x, y, rr, sx > 0 ? 0 : Math.PI / 2, sx > 0 ? Math.PI / 2 : Math.PI); g.stroke(); }
+  }
+  g.restore();
+  if (capituloId === "raices") {
+    g.save(); g.strokeStyle = "rgba(40,24,14,0.85)";
+    for (let i = 0; i < 6; i++) { let x = IX0 + r() * (IX1 - IX0), y = 2; g.lineWidth = 2 + r() * 2; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += (r() - 0.5) * 10; y += 5 + r() * 5; g.lineTo(x, y); } g.stroke(); }
+    g.restore();
+  }
+  return cv;
+}
+function rgbaTxt(col, a) { const [R, G, B] = rgba(col); return `rgba(${R},${G},${B},${a})`; }
+
+/** La viñeta de la sala: un degradé suave (sin tramado), como la luz de una vela. */
+function vineta() {
+  return hornear("vineta2", () => {
+    const W = SALA_W + 40, H = SALA_H + 40, c = lienzoNuevo(W, H), g = c.getContext("2d");
+    g.save(); g.translate(W / 2, H / 2); g.scale(1, H / W);
+    const gr = g.createRadialGradient(0, 0, W * 0.2, 0, 0, W * 0.6);
+    gr.addColorStop(0, "rgba(3,2,5,0)"); gr.addColorStop(0.55, "rgba(3,2,5,0.18)"); gr.addColorStop(0.8, "rgba(3,2,5,0.5)"); gr.addColorStop(1, "rgba(3,2,5,0.8)");
+    g.fillStyle = gr; g.fillRect(-W, -W, W * 2, W * 2); g.restore();
+    return c;
   });
 }
 
@@ -2218,7 +2383,7 @@ function mosquinSpr(k, rabioso = false) {
     // las rayas del abdomen (espejadas: 6 y 8) y los ojos
     p.p(6, 10, cuerpo[0]); p.p(8, 10, cuerpo[0]);
     parDeOjos(p, 7.5, 0.5, 6, ["We", "ee"], { e: rabioso ? "#ff4a3a" : "#c9392f", W: rabioso ? "#ffd0a0" : "#ff9a86" });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2246,7 +2411,7 @@ function hongonSpr(k, sinGorro = false) {
     parDeOjos(p, 10.5, 1.5, 9, ["ee.", "eee"], { e: PAL.tinta });
     selloC(p, 10.5, 12, [".kkk.", "kmmmk", "kmmmk", ".kkk."], { k: PAL.tinta, m: "#4a0d14" });
     p.p(10, 16, PAL.baba[3]); if (k % 2) p.p(10, 17, PAL.baba[2]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2266,7 +2431,7 @@ function babosaSpr(k) {
     p.p(ax + 1, 10, PAL.tinta); p.p(ax, 11, PAL.tinta);
     // el brillo mojado
     p.p(9, 7, R[4]); p.p(10, 7, R[4]); p.p(14, 7, R[4]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2283,7 +2448,7 @@ function escupidorSpr(k /* 0 cerrado, 1 inflado, 2 escupiendo */) {
     else selloC(p, 11, 4, [".kk.", "kmmk"], { k: PAL.tinta, m: "#1e120c" });
     // la base con raicitas
     p.sello(4, 19, ["r.r..r..r.r..", ".rrrrrrrrrrr."], { r: PAL.tierra[2] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2301,7 +2466,7 @@ function saltarinSpr(k) {
     // ojos saltones amarillos con la pupila negra (la pupila, igual en los dos: miran para el mismo lado)
     parDeOjos(p, 10, 2, Math.round(oy), [".ee.", "eeWe", ".ee."], { e: "#f2d64a", W: PAL.tinta });
     selloC(p, 10, Math.round(oy + 4), ["kkkkkk"], { k: PAL.tinta });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2322,7 +2487,7 @@ function gusanoSpr(k) {
     selloC(p, 8, yb - 1, ["ttkktt", "kmmmmk"], { t: PAL.hueso[4], k: PAL.tinta, m: "#1a0406" });
     // el pozo de tierra
     p.sello(1, 21, ["..dddddddddddd", ".dDDDDDDDDDDDDd", "dDDDDDDDDDDDDDd"].map((f) => f.slice(0, 15)), { d: PAL.tierra[1], D: PAL.tierra[0] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2337,7 +2502,7 @@ function bulboSpr(k) {
     for (const [x0, y0, x1, y1] of [[4, 9, 5, 14], [16, 9, 15, 14], [8, 17, 12, 17]]) trazo(x0, y0, x1, y1, (x, y) => { if (p.g(x, y)) p.p(x, y, R[1]); });
     p.bola(10, 5.5, 2.6, 2, ["#6b2a14", "#a8471f", "#d97a3a", "#f5b070"], {});
     parDeOjos(p, 10, 1, 11, ["We", "ee"], { e: PAL.tinta, W: "#fff5c0" });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2365,7 +2530,7 @@ function grumoSpr(k) {
     parDeOjos(p, 9, 1, Math.round(15 - a * 1.4), ["We", "ee"], { e: PAL.tinta, W: "#ffd0c4" });
     if (k) selloC(p, 9, Math.round(15 - a * 0.7), ["kk"], { k: PAL.tinta });
     p.p(5, Math.round(15 - a * 1.9), R[4]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2392,7 +2557,7 @@ function madreBabosaSpr(k) {
     if (k === 3) for (const x of [22, 25, 28, 31]) for (const X of [x, 63 - x]) { p.p(X, Math.round(cy0 + 2), PAL.hueso[4]); p.p(X, Math.round(cy0 + 3), PAL.hueso[3]); }
     // brillos mojados
     for (const [x, y] of [[20, 20], [21, 20], [23, 18], [40, 16]]) { const X = 32 + (x - 32) * ax, Y = 54 - (54 - y) * ay; if (p.g(X, Y)) p.p(X, Y, R[5]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2420,7 +2585,7 @@ function reyMosquinSpr(k /* 0 normal, 1 inflado */) {
     selloC(p, 28, 32, [".kkkkkkkk.", "kmmmmmmmmk", "kmmtmmtmmk", ".kmmmmmmk.", "..kkkkkk.."], { k: PAL.tinta, m: "#3a0a10", t: PAL.hueso[3] });
     // la corona de pelos duros
     for (let i = 0; i < 9; i++) { const x = 16 + i * 3; p.linea(x, 12 + Math.abs(4 - i), x + (i - 4) * 0.4, 7 + Math.abs(4 - i), R[0]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2445,7 +2610,7 @@ function gusanoAnilladoSpr(parte /* cabeza, cuerpo, cola */, dir = 0, k = 0) {
       parDeOjos(p, 13, 2, 9, ["Wee", "eee", ".e."], { e: PAL.tinta, W: "#ffe0d0" });
       selloC(p, 13, 17, ["kkkkkk", "kmmmmk"], { k: PAL.tinta, m: "#2a0408" });
     }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     let c = p.canvas();
     if (dir) {   // girar hacia donde va (0 abajo, 1 izquierda, 2 arriba, 3 derecha)
       const r = lienzoNuevo(26, 26), g = r.getContext("2d"); g.translate(13, 13); g.rotate(dir * Math.PI / 2); g.drawImage(c, -13, -13); c = r;
@@ -2483,7 +2648,7 @@ function miceliaSpr(k /* 0 quieta, 1 boca abierta, 2 herida, 3 furiosa (fase 3) 
     if (k !== 2) for (const x of [41, 95 - 41]) for (let y = 59; y < 68; y += 2) p.p(x, y, PAL.espora[(y / 2) % 2 ? 3 : 2]);
     const bocaAb = k === 1 || k === 3 ? 6 : 2;
     for (let y = 0; y < bocaAb; y++) { const a = 5 + (y > 0 && y < bocaAb - 1 ? 1 : 0); for (let x = 48 - a; x < 48 + a; x++) p.p(x, 66 + y, y === 0 || y === bocaAb - 1 ? PAL.tinta : "#2a0814"); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -2586,7 +2751,7 @@ function iconoSpr(id) {
   return hornear(`icono${id}`, () => {
     const p = new Pix(18, 18);
     (ICONOS[id] || ICONOS.dadoViejo)(p);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -4323,7 +4488,7 @@ function dibujarHud(g) {
   }
   // ── las cuentas: ícono y cifras finas al 60 %, una fila cada 12 (medido: 13,4 en el original);
   //    la última, la chance de que aparezca el pacto (como la del diablo en Repentance) ──
-  if (PANT.salaX >= 56) {
+  {   // como en Repentance: encima de la pared de la izquierda, semitransparentes
     y += 6;
     const cuentas = [["vel", velDe(j).toFixed(2)], ["lag", lagrimasPorSeg(j).toFixed(2)], ["dano", danoDe(j).toFixed(2)], ["alc", j.alcance.toFixed(2)], ["tiro", j.velLag.toFixed(2)], ["suerte", j.suerte.toFixed(2)], ["pacto", (probPacto() * 100).toFixed(1) + "%"]];
     for (const [ic, v] of cuentas) {

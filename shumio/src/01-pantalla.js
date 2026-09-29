@@ -10,8 +10,10 @@ const lienzo = document.getElementById("lienzo");
 const cxP = lienzo.getContext("2d", { alpha: false });
 const cvM = document.createElement("canvas");
 const cxM = cvM.getContext("2d", { alpha: false });
-const PANT = { W: 534, H: 240, PX: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0, girado: false, cssW: 0 };
-const ALTO_MIN = 236;   // la sala (224) y un margen
+const PANT = { W: 444, H: 200, PX: 3.6, k: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0, girado: false, cssW: 0 };
+const VISTA_H = 200;    // lo que se ve de alto (el original: la sala llena la pantalla, muros cortados)
+const ANCHO_MIN = 330;  // y de ancho, como mínimo (en pantallas angostas manda el ancho)
+const cvK = document.createElement("canvas"), cxK = cvK.getContext("2d", { alpha: false });
 
 function medir() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
@@ -29,14 +31,20 @@ function medir() {
   PANT.cssW = cw;
   const dw = Math.round(cw * dpr), dh = Math.round(ch * dpr);
   PANT.vertical = false;
-  const PX = Math.max(1, Math.floor(dh / ALTO_MIN));
-  if (dw === PANT.dw && dh === PANT.dh && PX === PANT.PX && lienzo.width === dw) return;
+  // la cámara, como en el original: la sala llena el alto de la pantalla (se ven ~200 px de juego;
+  // los muros de arriba y abajo quedan un poco cortados) y el HUD va encima de la pared
+  let PX = dh / VISTA_H;
+  if (dw / PX < ANCHO_MIN) PX = dw / ANCHO_MIN;
+  if (dw === PANT.dw && dh === PANT.dh && Math.abs(PX - PANT.PX) < 1e-6 && lienzo.width === dw) return;
   PANT.dw = dw; PANT.dh = dh; PANT.PX = PX;
   lienzo.width = dw; lienzo.height = dh;
   PANT.W = Math.ceil(dw / PX); PANT.H = Math.ceil(dh / PX);
   PANT.ox = Math.floor((dw - PANT.W * PX) / 2); PANT.oy = Math.floor((dh - PANT.H * PX) / 2);
   cvM.width = PANT.W; cvM.height = PANT.H;
-  cxM.imageSmoothingEnabled = false; cxP.imageSmoothingEnabled = false;
+  // el agrandado en dos pasos: primero por un entero (píxeles duros), después el resto suavizado
+  PANT.k = Math.max(1, Math.floor(PX));
+  cvK.width = PANT.W * PANT.k; cvK.height = PANT.H * PANT.k;
+  cxM.imageSmoothingEnabled = false; cxK.imageSmoothingEnabled = false;
   PANT.salaX = Math.floor((PANT.W - SALA_W) / 2);
   PANT.salaY = Math.floor((PANT.H - SALA_H) / 2);
   if (typeof alMedir === "function") alMedir();
@@ -68,5 +76,8 @@ function pantallaCompleta(activar = true) {
 document.addEventListener("fullscreenchange", () => setTimeout(medir, 100));
 
 function presentar() {
-  cxP.drawImage(cvM, 0, 0, PANT.W, PANT.H, PANT.ox, PANT.oy, PANT.W * PANT.PX, PANT.H * PANT.PX);
+  if (PANT.k === PANT.PX) { cxP.imageSmoothingEnabled = false; cxP.drawImage(cvM, 0, 0, PANT.W, PANT.H, PANT.ox, PANT.oy, PANT.W * PANT.PX, PANT.H * PANT.PX); return; }
+  cxK.drawImage(cvM, 0, 0, PANT.W, PANT.H, 0, 0, cvK.width, cvK.height);
+  cxP.imageSmoothingEnabled = true; cxP.imageSmoothingQuality = "medium";
+  cxP.drawImage(cvK, 0, 0, cvK.width, cvK.height, PANT.ox, PANT.oy, Math.round(PANT.W * PANT.PX), Math.round(PANT.H * PANT.PX));
 }

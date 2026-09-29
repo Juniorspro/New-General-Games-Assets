@@ -90,7 +90,7 @@ function pintarCuerpo(vista, paso, tunicaR = PAL.musgo, pielR = PAL.piel) {
     if (vista === "frente") { p.p(7, 3, tunicaR[4]); p.p(6, 2, tunicaR[3]); p.p(7, 6, PAL.oro[3]); }   // la hebilla
     else { for (let y = 1; y < 6; y++) if (p.g(7, y)) p.p(7, y, tunicaR[1]); }                          // la costura de atrás
   }
-  p.contorno(TINTA);
+  p.contorno(AUTO);
   return p;
 }
 

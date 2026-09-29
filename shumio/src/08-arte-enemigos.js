@@ -50,7 +50,7 @@ function mosquinSpr(k, rabioso = false) {
     // las rayas del abdomen (espejadas: 6 y 8) y los ojos
     p.p(6, 10, cuerpo[0]); p.p(8, 10, cuerpo[0]);
     parDeOjos(p, 7.5, 0.5, 6, ["We", "ee"], { e: rabioso ? "#ff4a3a" : "#c9392f", W: rabioso ? "#ffd0a0" : "#ff9a86" });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -78,7 +78,7 @@ function hongonSpr(k, sinGorro = false) {
     parDeOjos(p, 10.5, 1.5, 9, ["ee.", "eee"], { e: PAL.tinta });
     selloC(p, 10.5, 12, [".kkk.", "kmmmk", "kmmmk", ".kkk."], { k: PAL.tinta, m: "#4a0d14" });
     p.p(10, 16, PAL.baba[3]); if (k % 2) p.p(10, 17, PAL.baba[2]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -98,7 +98,7 @@ function babosaSpr(k) {
     p.p(ax + 1, 10, PAL.tinta); p.p(ax, 11, PAL.tinta);
     // el brillo mojado
     p.p(9, 7, R[4]); p.p(10, 7, R[4]); p.p(14, 7, R[4]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -115,7 +115,7 @@ function escupidorSpr(k /* 0 cerrado, 1 inflado, 2 escupiendo */) {
     else selloC(p, 11, 4, [".kk.", "kmmk"], { k: PAL.tinta, m: "#1e120c" });
     // la base con raicitas
     p.sello(4, 19, ["r.r..r..r.r..", ".rrrrrrrrrrr."], { r: PAL.tierra[2] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -133,7 +133,7 @@ function saltarinSpr(k) {
     // ojos saltones amarillos con la pupila negra (la pupila, igual en los dos: miran para el mismo lado)
     parDeOjos(p, 10, 2, Math.round(oy), [".ee.", "eeWe", ".ee."], { e: "#f2d64a", W: PAL.tinta });
     selloC(p, 10, Math.round(oy + 4), ["kkkkkk"], { k: PAL.tinta });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -154,7 +154,7 @@ function gusanoSpr(k) {
     selloC(p, 8, yb - 1, ["ttkktt", "kmmmmk"], { t: PAL.hueso[4], k: PAL.tinta, m: "#1a0406" });
     // el pozo de tierra
     p.sello(1, 21, ["..dddddddddddd", ".dDDDDDDDDDDDDd", "dDDDDDDDDDDDDDd"].map((f) => f.slice(0, 15)), { d: PAL.tierra[1], D: PAL.tierra[0] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -169,7 +169,7 @@ function bulboSpr(k) {
     for (const [x0, y0, x1, y1] of [[4, 9, 5, 14], [16, 9, 15, 14], [8, 17, 12, 17]]) trazo(x0, y0, x1, y1, (x, y) => { if (p.g(x, y)) p.p(x, y, R[1]); });
     p.bola(10, 5.5, 2.6, 2, ["#6b2a14", "#a8471f", "#d97a3a", "#f5b070"], {});
     parDeOjos(p, 10, 1, 11, ["We", "ee"], { e: PAL.tinta, W: "#fff5c0" });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -197,7 +197,7 @@ function grumoSpr(k) {
     parDeOjos(p, 9, 1, Math.round(15 - a * 1.4), ["We", "ee"], { e: PAL.tinta, W: "#ffd0c4" });
     if (k) selloC(p, 9, Math.round(15 - a * 0.7), ["kk"], { k: PAL.tinta });
     p.p(5, Math.round(15 - a * 1.9), R[4]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -224,7 +224,7 @@ function madreBabosaSpr(k) {
     if (k === 3) for (const x of [22, 25, 28, 31]) for (const X of [x, 63 - x]) { p.p(X, Math.round(cy0 + 2), PAL.hueso[4]); p.p(X, Math.round(cy0 + 3), PAL.hueso[3]); }
     // brillos mojados
     for (const [x, y] of [[20, 20], [21, 20], [23, 18], [40, 16]]) { const X = 32 + (x - 32) * ax, Y = 54 - (54 - y) * ay; if (p.g(X, Y)) p.p(X, Y, R[5]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -252,7 +252,7 @@ function reyMosquinSpr(k /* 0 normal, 1 inflado */) {
     selloC(p, 28, 32, [".kkkkkkkk.", "kmmmmmmmmk", "kmmtmmtmmk", ".kmmmmmmk.", "..kkkkkk.."], { k: PAL.tinta, m: "#3a0a10", t: PAL.hueso[3] });
     // la corona de pelos duros
     for (let i = 0; i < 9; i++) { const x = 16 + i * 3; p.linea(x, 12 + Math.abs(4 - i), x + (i - 4) * 0.4, 7 + Math.abs(4 - i), R[0]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -277,7 +277,7 @@ function gusanoAnilladoSpr(parte /* cabeza, cuerpo, cola */, dir = 0, k = 0) {
       parDeOjos(p, 13, 2, 9, ["Wee", "eee", ".e."], { e: PAL.tinta, W: "#ffe0d0" });
       selloC(p, 13, 17, ["kkkkkk", "kmmmmk"], { k: PAL.tinta, m: "#2a0408" });
     }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     let c = p.canvas();
     if (dir) {   // girar hacia donde va (0 abajo, 1 izquierda, 2 arriba, 3 derecha)
       const r = lienzoNuevo(26, 26), g = r.getContext("2d"); g.translate(13, 13); g.rotate(dir * Math.PI / 2); g.drawImage(c, -13, -13); c = r;
@@ -315,7 +315,7 @@ function miceliaSpr(k /* 0 quieta, 1 boca abierta, 2 herida, 3 furiosa (fase 3) 
     if (k !== 2) for (const x of [41, 95 - 41]) for (let y = 59; y < 68; y += 2) p.p(x, y, PAL.espora[(y / 2) % 2 ? 3 : 2]);
     const bocaAb = k === 1 || k === 3 ? 6 : 2;
     for (let y = 0; y < bocaAb; y++) { const a = 5 + (y > 0 && y < bocaAb - 1 ? 1 : 0); for (let x = 48 - a; x < 48 + a; x++) p.p(x, 66 + y, y === 0 || y === bocaAb - 1 ? PAL.tinta : "#2a0814"); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }

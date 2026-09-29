@@ -36,7 +36,7 @@ function grieta(r, x, y, largo, pintar, iluminar) {
 }
 
 /** El fondo entero de una sala (muros + piso), horneado con su semilla. */
-function hornearFondo(capituloId, semilla) {
+function hornearFondoPixel(capituloId, semilla) {
   const C = CAPITULOS[capituloId], r = mulberry(semilla), W = SALA_W, H = SALA_H;
   const cv = lienzoNuevo(W, H), g = cv.getContext("2d"), im = g.createImageData(W, H), d = im.data;
   const px = (x, y, col) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const [R, G, B] = rgba(col), i = (y * W + x) * 4; d[i] = R; d[i + 1] = G; d[i + 2] = B; d[i + 3] = 255; };
@@ -150,7 +150,7 @@ function hornearFondo(capituloId, semilla) {
 }
 
 /** La viñeta de la sala: oscuridad tramada (Bayer) que se come los bordes, como luz de vela. */
-function vineta() {
+function vinetaPixel() {
   return hornear("vineta", () => {
     const W = SALA_W + 40, H = SALA_H + 40, p = new Pix(W, H);
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -185,7 +185,7 @@ function puertaSpr(tipo, estado, prof = MURO_A) {
       }
       // cascotes alrededor del boquete
       for (const [x, y] of [[6, 14], [8, 10], [27, 13], [25, 9], [5, 22], [28, 21]]) { P(x, y, PAL.piedra[3]); P(x + 1, y, PAL.piedra[2]); P(x, y + 1, PAL.piedra[1]); }
-      p.contorno(PAL.tinta);
+      p.contorno(AUTO);
       return p.canvas();
     }
     // el hueco oscuro, con un poco de luz que entra desde el otro lado
@@ -224,7 +224,7 @@ function puertaSpr(tipo, estado, prof = MURO_A) {
     if (tipo === "tesoro") { const q = [".ff.", "fggf", ".ff."]; q.forEach((f, y) => [...f].forEach((c, x) => { if (c !== ".") P(15 + x, y, c === "f" ? PAL.oro[4] : PAL.oro[2]); })); }
     if (tipo === "tienda") { [".kkkk.", "kmmmmk", "kmkkmk", ".kkkk."].forEach((f, y) => [...f].forEach((c, x) => { if (c !== ".") P(14 + x, 1 + y, c === "k" ? PAL.tinta : PAL.oro[3]); })); }
     if (estado === 5) { [".kkk.", "k...k", "kkkkk", "kOOOk", "kOkOk", "kOOOk", "kkkkk"].forEach((f, y) => [...f].forEach((c, x) => { if (c !== ".") P(15 + x, 15 + y, c === "k" ? PAL.tinta : PAL.oro[3]); })); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -269,7 +269,7 @@ function rocaSpr(v, marcada = false) {
       }
     }
     if (marcada) { p.sello(10, 11, ["o...o", ".o.o.", "..o..", ".o.o.", "o...o"], { o: "#cfe0ff" }); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -286,7 +286,7 @@ function matasSpr(vida, tipo = 0) {
       for (let X = Math.floor(x - rx); X <= x + rx; X++) if (p.g(X, Math.floor(y + 1))) p.p(X, Math.floor(y + 1), cap[1]);
     }
     if (vida <= 1) { p.caja(9, 18, 8, 4, PAL.tierra.slice(1, 5)); p.sello(10, 17, ["c.c..c", "cccccc"], { c: tallo[2] }); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -305,7 +305,7 @@ function braseroSpr(k, prendido) {
     p.rect(5, 19, 15, 1, PAL.hierro[4]);
     p.caja(7, 22, 2, 6, PAL.hierro.slice(0, 3)); p.caja(15, 22, 2, 6, PAL.hierro.slice(0, 3)); p.caja(11, 22, 2, 7, PAL.hierro.slice(1, 4));
     if (prendido) for (let x = 6; x < 19; x++) if (bayer(x, 18) > 0) p.p(x, 18, PAL.fuego[2]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -328,7 +328,7 @@ function barrilSpr() {
     for (const y of [5, 12, 20]) for (let x = 2; x < 21; x++) if (p.g(x, y)) { p.p(x, y, PAL.hierro[2]); if (p.g(x, y + 1)) p.p(x, y + 1, PAL.hierro[1]); }
     p.bola(11, 4, 6.5, 2.2, PAL.tierra.slice(2), { luz: [-0.3, -0.9, 0.3] });
     p.sello(7, 12, [".ggg.", "g.g.g", ".ggg."], { g: PAL.baba[4] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -338,7 +338,7 @@ function bloqueSpr() {
     p.caja(1, 5, 22, 20, PAL.hierro, { vertical: 0.6 }); p.caja(1, 1, 22, 5, PAL.hierro.slice(2), { vertical: 0.9 });
     for (const [x, y] of [[3, 8], [19, 8], [3, 21], [19, 21]]) { p.p(x, y, PAL.hierro[4]); p.p(x + 1, y + 1, PAL.hierro[0]); }
     p.rect(1, 5, 22, 1, PAL.hierro[4]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -369,7 +369,7 @@ function corazonSpr(tipo /* rojo, medio, espora, esporaMedio, vacio */, chico = 
       p.p(x + 1, y + 1, c);
     } });
     if (!vacio) { p.p(2, 2, "#fff0ec"); if (!chico) p.p(3, 2, R[4]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -378,7 +378,7 @@ function monedaSpr(k, valor = 1) {
     const R = valor === 5 ? PAL.hueso : PAL.oro, p = new Pix(11, 11), w = [4, 3, 1.4, 3][k];
     p.bola(5.5, 5.5, w, 4.4, R.slice(1), { trama: 0.5 });
     if (w > 2) { p.rect(5, 3, 1, 5, R[1]); p.p(4, 3, R[4]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -390,7 +390,7 @@ function bombaSpr(tamano = 1, prendida = false, k = 0) {
     p.linea(8, 3, 10, 1, PAL.crema[2]);
     if (prendida) { p.p(10 + (k % 2), 0, PAL.fuego[4]); p.p(11, 1, PAL.fuego[3]); p.p(9, 0, k % 2 ? PAL.fuego[2] : null); }
     p.p(5, 8, "#bfbfe0");
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -399,7 +399,7 @@ function llaveSpr() {
     const p = new Pix(8, 14);
     p.sello(0, 0, [".hhh.", "h...h", "h...h", ".hhh.", "..h..", "..h..", "..hh.", "..h..", "..hh.", "..h.."], { h: PAL.hueso[3] });
     p.p(1, 1, PAL.hueso[4]); p.p(2, 4, PAL.hueso[2]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -411,7 +411,7 @@ function cofreSpr(dorado, abierto) {
     else { p.bola(10, 7, 9, 4.5, madera, { filtro: (x, y) => y <= 7, luz: [-0.4, -0.9, 0.3] }); }
     for (const x of [4, 15]) p.caja(x, abierto ? 7 : 3, 2, abierto ? 9 : 13, herraje);
     if (!abierto) p.sello(8, 7, ["kkkk", "kOOk", "kOOk"], { k: PAL.tinta, O: dorado ? PAL.hueso[4] : PAL.oro[3] });
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -425,7 +425,7 @@ function capsulaSpr(i) {
       p.p(x + 1, y + 1, sh > 0 ? mezclar(c, "#ffffff", sh) : sh < 0 ? mezclar(c, "#000000", -sh) : c);
     }
     p.p(3, 2, "#ffffff");
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -436,7 +436,7 @@ function pedestalSpr() {
     p.bola(11, 4, 9, 3, PAL.piedra.slice(2), { luz: [-0.3, -0.9, 0.3] });
     p.rect(2, 15, 18, 2, PAL.piedra[1]);
     for (let y = 6; y < 15; y += 3) p.p(5 + (y % 2), y, PAL.piedra[1]);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -446,7 +446,7 @@ function trampillaSpr(abierta) {
     p.bola(14, 14, 12, 11, ["#010101", "#050404", "#0b0908"], { trama: 0.4 });
     for (let a = 0; a < 16; a++) { const an = a / 16 * TAU, x = 14 + Math.cos(an) * 12, y = 14 + Math.sin(an) * 11; p.p(x, y, PAL.tierra[a % 2 ? 2 : 3]); }
     if (!abierta) { p.caja(4, 6, 20, 16, PAL.tierra.slice(1, 5), { vertical: 0.4 }); for (let y = 8; y < 22; y += 4) p.linea(4, y, 23, y, PAL.tierra[1]); }
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
@@ -465,7 +465,7 @@ function corazonHudSpr(tipo) {
       p.p(x + 1, y + 1, c);
     } });
     if (!vacio) { p.p(2, 2, "#ffffff"); p.p(3, 2, R[3]); p.p(2, 3, R[3]); }
-    p.contorno(PAL.tinta, true);
+    p.contorno(AUTO, true);
     return p.canvas();
   });
 }
@@ -478,7 +478,7 @@ function calaveraJefeSpr() {
     for (const x of [6, 9]) p.rect(x, 11, 1, 3, "#3a3432");
     for (const x of [4, 9]) { p.rect(x, 5, 3, 3, PAL.tinta); p.p(x, 5, "#3a3432"); }
     p.p(7, 9, PAL.tinta); p.p(8, 9, PAL.tinta);
-    p.contorno(PAL.tinta, true);
+    p.contorno(AUTO, true);
     return p.canvas();
   });
 }

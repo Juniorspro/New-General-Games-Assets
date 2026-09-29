@@ -53,7 +53,7 @@ function iconoSpr(id) {
   return hornear(`icono${id}`, () => {
     const p = new Pix(18, 18);
     (ICONOS[id] || ICONOS.dadoViejo)(p);
-    p.contorno(PAL.tinta);
+    p.contorno(AUTO);
     return p.canvas();
   });
 }
