@@ -29,8 +29,29 @@ function espejado(c) {
 }
 
 // ── las lágrimas de Shumio: cada objeto les agrega una bandera y todas se combinan ──
-const COLOR_POR_BANDERA = [["ipecac", "veneno"], ["hemo", "sangre"], ["fuego", "fuego"], ["espectral", "tinta"], ["buscadora", "violeta"], ["divino", "oro"], ["sangre", "sangre"]];
-function colorLagrima(j) { for (const [k, c] of COLOR_POR_BANDERA) if (j.f[k]) return c; return "espora"; }
+function colorLagrima(j) { for (const [k, c] of FONDO_LAGRIMA) if (j.f[k]) return c; return "espora"; }
+/** Cómo se VE la lágrima (como en el original, cada objeto la cambia): el color de fondo lo dan
+ *  los objetos que se tienen; la lágrima que "sale" con un efecto al azar (veneno, piedra, miedo…)
+ *  toma el color de ese efecto. Además: forma (flecha, carámbano), estela (fuego, humo), aura
+ *  (cabeza divina, líquido, chispas) y transparencia (la Ouija). Colores medidos en la wiki. */
+const FONDO_LAGRIMA = [["fuego", "llama"], ["urano", "urano"], ["carbon", "carbon"], ["hemo", "hemo"], ["ipecac", "veneno"], ["x23", "sagrado"], ["divino", "sagrado"], ["buscadora", "violeta"], ["choco", "choco"], ["sangre", "sangre"], ["belial", "sangre"], ["parasito", "parasito"], ["liquido", "liquido"], ["piscis", "piscis"], ["jacob", "electrica"], ["atractor", "blanco"], ["almendra", "almendra"], ["soja", "soja"], ["atraviesa", "cupido"], ["perfume", "perfume"], ["espectral", "ouija"]];
+function aspectoLagrima(j, l) {
+  const f = j.f;
+  let color = "espora";
+  for (const [k, c] of FONDO_LAGRIMA) if (f[k]) { color = c; break; }
+  if (l.veneno && !l.ipecac) color = "resfrio";
+  else if (l.piedra) color = "rosa";
+  else if (l.miedo) color = f.perfume ? "perfume" : "oscura";
+  else if (l.hielo) color = "blanco";
+  else if (l.pegajosa) color = "gris";
+  else if (l.tipo === "santa") color = "sagrado";
+  return {
+    color, forma: f.urano ? "carambano" : f.atraviesa && l.tipo === "lagrima" ? "flecha" : null,
+    estela: f.fuego ? "fuego" : l.miedo && !f.perfume ? "humo" : null,
+    aura: f.divino ? "divino" : f.liquido ? "liquido" : f.jacob ? "chispas" : l.tipo === "santa" ? "santa" : null,
+    alfa: f.espectral || f.orbita ? 0.62 : 1,
+  };
+}
 /** Crea una lágrima de Shumio (o de un familiar que copia sus lágrimas) con todas sus banderas. */
 function lagrima(j, x, y, ang, kv = 1, o = {}) {
   const f = j.f, L = j.suerte, vel = 3.3 * j.velLag * kv;
@@ -59,6 +80,7 @@ function lagrima(j, x, y, ang, kv = 1, o = {}) {
     veneno: (f.veneno && A.si(chance.veneno(L))) || !!f.ipecac, hielo: f.lento && A.si(chance.lento(L)), fuego: !!f.fuego, miedo: f.miedo && A.si(chance.miedo(L)), piedra: f.piedra && A.si(chance.piedra(L)),
     urano: !!f.urano, empuje: (f.piscis ? 2.2 : 1) * (f.gusanoChato ? 1.5 : 1), gen: o.gen ?? 0, hija: !!o.hija, golpeo: false, tocados: null, dist: 0,
   };
+  l.look = aspectoLagrima(j, l);
   // la leche de almendra: cada lágrima sale con un gusano (o goma, o espejo) al azar
   if (f.almendra && !o.hija) { const k = A.uno(["onda", "espiral", "gancho", "pulso", "chato", "rebote", "boomerang"]); l[k] = true; if (k === "onda" || k === "espiral" || k === "gancho") l.espectral = true; }
   if (l.orbita) { l.ang = Math.atan2(y - j.y, x - j.x) + (A.f() - 0.5) * 0.3; l.R = 8; l.dirOrb = ang; }
@@ -69,7 +91,7 @@ function lagrima(j, x, y, ang, kv = 1, o = {}) {
 function hija(l, ang, factorDano, factorVida, o = {}) {
   const j = J.jug, vel = Math.hypot(l.vx, l.vy) || 3;
   const h = lagrima(j, l.x, l.y, ang, (o.kv ?? 1) * vel / (3.3 * j.velLag), { danoFijo: l.dano * factorDano, vida: Math.max(8, (l.vidaMax - l.t) * factorVida), hija: true, gen: (l.gen || 0) + 1, tipo: o.tipo || "lagrima", tam: o.tam ?? 0.65, color: l.color });
-  h.parasito = !!o.parasito; h.z = Math.max(8, l.z); h.tocados = l.tocados ? new Set(l.tocados) : null;
+  h.parasito = !!o.parasito; h.z = Math.max(8, l.z); if (l.look) h.look = l.look; h.tocados = l.tocados ? new Set(l.tocados) : null;
   return h;
 }
 
@@ -384,17 +406,42 @@ function dibujarBabas(g) {
 function dibujarLagrima(g, l) {
   const sh = sombra(Math.max(2, l.r - 1), Math.max(1, Math.round(l.r / 2)));
   g.drawImage(sh, Math.round(l.x - sh.width / 2), Math.round(l.y - sh.height / 2 + 2));
-  const X = l.x, Y = l.y - l.z;
+  const X = l.x, Y = l.y - l.z, ang = Math.atan2(l.vy, l.vx), lk = l.look || { color: l.color, alfa: 1 };
   if (l.tipo === "cuchillo" || l.tipo === "aguja" || l.tipo === "hueso" || l.tipo === "diente") {
     const s = l.tipo === "cuchillo" ? cuchilloSpr() : proyectilSpr(l.tipo);
-    g.save(); g.translate(Math.round(X), Math.round(Y)); g.rotate(Math.atan2(l.vy, l.vx) + (l.tipo === "hueso" ? l.t * 0.3 : 0)); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore();
+    g.save(); g.translate(Math.round(X), Math.round(Y)); g.rotate(ang + (l.tipo === "hueso" ? l.t * 0.3 : 0)); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore();
     return;
   }
   if (l.tipo === "moneda") { const s = monedaSpr(Math.floor(l.t / 4) % 4); g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2)); return; }
-  let s = lagrimaSpr(l.r, l.veneno ? "veneno" : l.hielo ? "hielo" : l.fuego ? "fuego" : l.piedra ? "hueso" : l.miedo ? "tinta" : l.tipo === "santa" ? "hielo" : l.color);
-  if (l.chato) { const w = Math.round(s.width * 1.5); g.drawImage(s, Math.round(X - w / 2), Math.round(Y - s.height / 2), w, s.height); }
-  else g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2));
-  if (l.tipo === "santa" || l.divino) { g.globalAlpha = 0.35; g.drawImage(aro(l.r + 4, "rgba(255,250,210,0.35)", "rgba(255,240,170,0.7)"), Math.round(X - l.r - 4), Math.round(Y - l.r - 4)); g.globalAlpha = 1; }
+  const v = Math.hypot(l.vx, l.vy) || 1, ux = -l.vx / v, uy = -l.vy / v;
+  // la estela: llama (mente de fuego) o humo oscuro (materia oscura), detrás de la lágrima
+  if (lk.estela) for (let k = 4; k >= 1; k--) {
+    const d = k * l.r * 0.9, rr = l.r * (1 - k * 0.17);
+    g.globalAlpha = (lk.estela === "fuego" ? 0.55 : 0.4) * (1 - k / 5);
+    g.fillStyle = lk.estela === "fuego" ? (k > 2 ? "#e0501a" : "#ffa040") : "#0c0c10";
+    g.beginPath(); g.arc(X + ux * d, Y + uy * d, Math.max(1, rr), 0, TAU); g.fill();
+  }
+  g.globalAlpha = 1;
+  // el aura (cabeza divina: un halo dorado grande; líquido: brillo verde; chispas; luz santa)
+  if (lk.aura) {
+    const R = lk.aura === "divino" ? l.r + 10 : l.r + 4, col = { divino: "rgba(200,180,110,", liquido: "rgba(90,230,90,", chispas: "rgba(160,230,255,", santa: "rgba(255,250,210," }[lk.aura];
+    const gr = g.createRadialGradient(X, Y, l.r * 0.5, X, Y, R);
+    gr.addColorStop(0, col + (lk.aura === "divino" ? "0.45)" : "0.5)")); gr.addColorStop(1, col + "0)");
+    g.fillStyle = gr; g.beginPath(); g.arc(X, Y, R, 0, TAU); g.fill();
+    if (lk.aura === "chispas" && (l.t & 3) === 0) { g.strokeStyle = "rgba(210,245,255,0.9)"; g.lineWidth = 1; g.beginPath(); const a = V.f() * TAU; g.moveTo(X + Math.cos(a) * l.r, Y + Math.sin(a) * l.r); g.lineTo(X + Math.cos(a) * (l.r + 4) + (V.f() - 0.5) * 3, Y + Math.sin(a) * (l.r + 4) + (V.f() - 0.5) * 3); g.stroke(); }
+  }
+  // el ojo muerto: brillan más rojas cuanto más aciertos seguidos
+  if (J.jug && J.jug.f.ojoMuerto && J.jug.ojoMuerto > 0) { g.fillStyle = `rgba(255,40,30,${0.12 * J.jug.ojoMuerto})`; g.beginPath(); g.arc(X, Y, l.r + 3, 0, TAU); g.fill(); }
+  g.globalAlpha = lk.alfa ?? 1;
+  if (lk.forma) {
+    const s = lagrimaFormaSpr(lk.forma, l.r, lk.color);
+    g.save(); g.translate(Math.round(X), Math.round(Y)); g.rotate(ang); g.drawImage(s, -s.width * 0.62, -s.height / 2); g.restore();
+  } else {
+    const s = lagrimaSpr(l.r, lk.color);
+    if (l.chato) { const w = Math.round(s.width * 1.5); g.drawImage(s, Math.round(X - w / 2), Math.round(Y - s.height / 2), w, s.height); }
+    else g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2));
+  }
+  g.globalAlpha = 1;
 }
 function dibujarBala(g, b) {
   const s = lagrimaSpr(b.r + 1, b.color);

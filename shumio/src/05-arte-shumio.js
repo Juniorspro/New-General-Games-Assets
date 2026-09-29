@@ -113,7 +113,37 @@ const COLOR_LAGRIMA = {
   espora: PAL.espora, sangre: PAL.sangre, veneno: ["#0f200c", "#255a1c", "#44922c", "#86d04a", "#d8ff9a"],
   violeta: PAL.violeta, hielo: PAL.hielo, fuego: PAL.fuego, oro: PAL.oro, hueso: PAL.hueso, enemigo: ["#1a0306", "#4a0a10", "#8e1a1e", "#d0392f", "#ff8b6a"],
   moho: PAL.baba, tinta: ["#050305", "#1a1320", "#2f2638", "#4d4260", "#7a6c90"],
+  // los colores de las lágrimas de los objetos, tomados de las imágenes de la wiki (sus "tears")
+  ouija: ["#1a2228", "#4a5a62", "#7a9aa4", "#a8c4cc", "#e0f0f4"], sagrado: ["#1a2a2e", "#8ab8bc", "#b8dcdc", "#d8ecec", "#ffffff"],
+  carbon: ["#050508", "#141820", "#1e2430", "#2e3644", "#5a6270"], hemo: ["#2a0204", "#9a0a10", "#e01a1a", "#ff4a3a", "#ffffff"],
+  choco: ["#120806", "#3a1c12", "#5a2e1e", "#7a4630", "#a8704e"], rosa: ["#200408", "#6a1022", "#a01e3c", "#c83a58", "#f08aa0"],
+  perfume: ["#2a2a06", "#8a8a2a", "#c8d468", "#e0ec90", "#fffff0"], oscura: ["#000000", "#0a0a0e", "#141418", "#26262c", "#4a4a54"],
+  llama: ["#3a0c04", "#c04010", "#f07a2a", "#ffb060", "#ffffff"], resfrio: ["#0a2018", "#2a6a4a", "#4a9a70", "#7ac8a0", "#c8f0dc"],
+  liquido: ["#0a2a0a", "#2a8a2a", "#5ad05a", "#a0ff90", "#ffffff"], gris: ["#0a0a0a", "#3a3a3a", "#5a5a5a", "#8a8a8a", "#d0d0d0"],
+  parasito: ["#200c04", "#6a3010", "#a0582a", "#c0784a", "#f0b080"], blanco: ["#101010", "#4a4a4a", "#9a9a9a", "#d8d8d8", "#ffffff"],
+  urano: ["#0a1a30", "#4a70b8", "#8ab0f0", "#c0d8ff", "#ffffff"], piscis: ["#0a1a3a", "#1a4a8a", "#3a7ad0", "#7ab0f0", "#e0f0ff"],
+  soja: ["#40403a", "#a8a8a0", "#d8d8d0", "#f0f0e8", "#ffffff"], almendra: ["#3a2a1a", "#a88a6a", "#d8c0a0", "#f0e0c8", "#fffaf0"],
+  electrica: ["#062a3a", "#1a7ab0", "#5ac8f0", "#b0f0ff", "#ffffff"], cupido: ["#0a0a14", "#5a7ad0", "#9ab8f8", "#c8dcff", "#ffffff"],
 };
+/** Una lágrima con forma (la flecha de Cupido, el carámbano de Urano), mirando a la derecha: se rota al dibujar. */
+function lagrimaFormaSpr(forma, r, color) {
+  r = lim(Math.round(r), 2, 10);
+  return hornear(`lagForma${forma}${color}${r}`, () => {
+    const R = COLOR_LAGRIMA[color] || PAL.espora, L = forma === "carambano" ? r * 4 + 2 : r * 3 + 2, H = r * 2 + 3, p = new Pix(L, H), c = H / 2;
+    for (let x = 0; x < L; x++) for (let y = 0; y < H; y++) {
+      const u = x / (L - 1);
+      // carámbano: gordo atrás y en punta adelante; flecha: cuerpo redondo con la punta triangular
+      const ancho = forma === "carambano" ? r * (1 - u) * 1.1 + 0.3 : u < 0.6 ? r * Math.sqrt(1 - Math.pow((u - 0.3) / 0.32, 2)) : r * 1.1 * (1 - (u - 0.6) / 0.4);
+      const d = Math.abs(y + 0.5 - c);
+      if (!(ancho > 0) || d > ancho) continue;
+      const l = 1 - (y + 0.5 - (c - ancho)) / (2 * ancho + 0.01);
+      p.p(x, y, R[lim(Math.round(1 + l * 2.6), 1, 4)]);
+    }
+    p.p(Math.round(L * 0.35), Math.round(c - r * 0.45), R[4]);
+    p.contorno(R[0]);
+    return p.canvas();
+  });
+}
 /** Una lágrima de radio r (2..9) y color. Con un brillo arriba a la izquierda y el contorno oscuro. */
 function lagrimaSpr(r, color = "espora") {
   r = lim(Math.round(r), 2, 10);

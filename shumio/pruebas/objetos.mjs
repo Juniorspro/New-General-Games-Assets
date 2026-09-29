@@ -63,3 +63,26 @@ const sinDano = resultados.filter((r) => r.antes > 0 && r.despues >= r.antes && 
 console.log(sinDano.length ? "SIN DAÑO: " + sinDano.map((r) => r.combo.join("+")).join(" | ") : "todas hacen daño");
 console.log(errores.length ? "ERRORES:\n" + [...new Set(errores)].join("\n") : "sin errores");
 await nav.close();
+
+// los corazones negros: al romperse uno entero, 40 a todos los enemigos (80 con la página perdida)
+{
+  const { nav, pag, errores } = await abrir({ tactil: false });
+  const r = await pag.evaluate(() => {
+    const S = window.__SH, out = {};
+    for (const pagina of [false, true]) {
+      S.nueva(7); S.sala("normal"); const J = S.juego(), j = J.jug;
+      if (pagina) S.dar("paginaPerdida");
+      darNegras(j, 2); darEsporas(j, 1);
+      for (const e of J.enemigos) { e.vida = e.max = 500; }
+      const antes = J.enemigos.map((e) => e.vida);
+      herirJugador(j, 1, "prueba"); j.inv = 0; herirJugador(j, 2, "prueba");
+      out[pagina ? "conPagina" : "sinPagina"] = { almas: j.almas.join(""), dano: antes.map((v, i) => +(v - J.enemigos[i].vida).toFixed(1)) };
+    }
+    return out;
+  });
+  console.log("corazón negro:", JSON.stringify(r));
+  const ok = r.sinPagina.dano.every((d) => d >= 40) && r.conPagina.dano.every((d) => d >= 80);
+  console.log(ok ? "el corazón negro explota como en el original" : "EL CORAZÓN NEGRO NO EXPLOTA BIEN");
+  console.log(errores.length ? "ERRORES:\n" + errores.join("\n") : "sin errores");
+  await nav.close();
+}

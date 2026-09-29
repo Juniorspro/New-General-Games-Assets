@@ -105,8 +105,11 @@ const cxP = lienzo.getContext("2d", { alpha: false });
 const cvM = document.createElement("canvas");
 const cxM = cvM.getContext("2d", { alpha: false });
 const PANT = { W: 444, H: 200, PX: 3.6, k: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0, girado: false, cssW: 0 };
-const VISTA_H = 200;    // lo que se ve de alto (el original: la sala llena la pantalla, muros cortados)
-const ANCHO_MIN = 330;  // y de ancho, como mínimo (en pantallas angostas manda el ancho)
+// Medido en el video: en el original entran enteros los dos muros (arriba y abajo, con sus puertas)
+// y el piso ocupa ~74 % del alto; la barra del jefe va sobre el muro de abajo (~95 % del alto).
+// La sala mide 224 de alto: con 228 entra toda, con un filito de margen.
+const VISTA_H = SALA_H + 4;
+const ANCHO_MIN = SALA_W + 8;  // y de ancho, como mínimo: nunca se corta la sala por los costados
 const cvK = document.createElement("canvas"), cxK = cvK.getContext("2d", { alpha: false });
 
 function medir() {
@@ -125,8 +128,8 @@ function medir() {
   PANT.cssW = cw;
   const dw = Math.round(cw * dpr), dh = Math.round(ch * dpr);
   PANT.vertical = false;
-  // la cámara, como en el original: la sala llena el alto de la pantalla (se ven ~200 px de juego;
-  // los muros de arriba y abajo quedan un poco cortados) y el HUD va encima de la pared
+  // la cámara, como en el original: la sala entera llena el alto de la pantalla y el HUD va encima
+  // de la pared y del margen de los costados
   let PX = dh / VISTA_H;
   if (dw / PX < ANCHO_MIN) PX = dw / ANCHO_MIN;
   if (dw === PANT.dw && dh === PANT.dh && Math.abs(PX - PANT.PX) < 1e-6 && lienzo.width === dw) return;
@@ -157,7 +160,15 @@ function aMundo(clientX, clientY) {
 
 // ── pantalla completa (y, si el navegador deja, la orientación trabada en horizontal) ──
 function enPantallaCompleta() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+// El navegador sólo deja poner pantalla completa (y hacer sonar el audio) DENTRO de un gesto del
+// usuario, y con el dedo el gesto cuenta recién al LEVANTARLO (pointerup/touchend), no al apoyarlo.
+// Si se pide fuera de un gesto (el menú corre en el bucle del juego), queda pendiente y se cumple
+// en el próximo gesto (02-entrada).
+let _completaPendiente = null;
+function gestoActivo() { const u = navigator.userActivation; return !u || u.isActive; }
 function pantallaCompleta(activar = true) {
+  if (!gestoActivo()) { _completaPendiente = activar; return; }
+  _completaPendiente = null;
   try {
     if (activar && !enPantallaCompleta()) {
       const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -213,7 +224,7 @@ addEventListener("keydown", (e) => {
   if (e.code === "Enter" || e.code === "Space") FLANCO.aceptar = true;
   if (e.code === "KeyM") FLANCO.mapa = true;
   if (e.code === "KeyF") pantallaCompleta(!enPantallaCompleta());
-  audioDespertar();
+  alGesto(null);
 });
 addEventListener("keyup", (e) => { const k = TECLAS[e.code]; if (k) IN.teclas.delete(k); });
 addEventListener("blur", () => { IN.teclas.clear(); STICKS.mover = STICKS.tirar = null; dedos.clear(); });
@@ -223,14 +234,19 @@ function botonEn(x, y) {
   return null;
 }
 let _primerToque = true;
+/** Lo que necesita un gesto de verdad (sonido, pantalla completa): se hace al levantar el dedo o
+ *  al hacer clic, que es cuando el navegador lo cuenta como gesto (en Android el pointerdown no). */
+function alGesto(e) {
+  audioDespertar();
+  if (_completaPendiente != null) pantallaCompleta(_completaPendiente);
+  else if (e && e.pointerType && e.pointerType !== "mouse" && _primerToque && !enPantallaCompleta()) pantallaCompleta(true);
+  if (e && e.pointerType && e.pointerType !== "mouse" && enPantallaCompleta()) _primerToque = false;
+}
+for (const ev of ["pointerup", "touchend", "click"]) addEventListener(ev, alGesto, { passive: true });
 lienzo.addEventListener("pointerdown", (e) => {
   e.preventDefault();
-  audioDespertar();
-  if (e.pointerType !== "mouse") {
-    IN.usaTactil = true;
-    // en el teléfono, el primer toque pone la pantalla completa (y traba la horizontal si se puede)
-    if (_primerToque) { _primerToque = false; pantallaCompleta(true); }
-  }
+  audioDespertar();   // por si el navegador ya lo deja (con mouse sí cuenta)
+  if (e.pointerType !== "mouse") IN.usaTactil = true;
   const p = aMundo(e.clientX, e.clientY);
   const d = { id: e.pointerId, x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), que: null };
   const b = enJuego() ? botonEn(p.x, p.y) : null;
@@ -334,7 +350,7 @@ function curvaSat(k) {
 }
 
 function audioDespertar() {
-  if (AC) { if (AC.state === "suspended") AC.resume(); return; }
+  if (AC) { if (AC.state !== "running" && AC.state !== "closed") AC.resume().catch(() => {}); return; }
   try {
     armarAudio(new (window.AudioContext || window.webkitAudioContext)());
     Musica.arrancar();
@@ -516,6 +532,8 @@ const SFX = {
   // el rayo: un rugido de sangre (ruido que baja + voz grave saturada)
   rayo: () => { _ruido({ dur: 0.75, vol: 0.3, f: 2600, f2: 260, tipo: "lowpass", eco: 0.4 }); _voz({ f: 62, f2: 50, dur: 0.7, vol: 0.2, vocal: "a", raspa: 1.2, eco: 0.2, ataque: 0.01, aire: 0.5 }); },
   laser: () => { _tono({ f: 1300, f2: 380, dur: 0.12, tipo: "sawtooth", vol: 0.05, filtro: 2800, q: 4 }); _ruido({ dur: 0.07, vol: 0.05, f: 5000, tipo: "highpass" }); },
+  // el corazón negro que se rompe: un golpe grave y un coro oscuro (el Necronomicón)
+  negro: () => { BAT.bombo(0, 0.5, EFX); [0, 1, 6].forEach((s, i) => _voz({ f: midiF(38 + s), dur: 1.2, vol: 0.12, vocal: "o", cuando: i * 0.03, ataque: 0.02, ecoLargo: 0.6, raspa: 0.8 })); _ruido({ dur: 0.8, vol: 0.2, f: 900, f2: 120, tipo: "lowpass", ecoLargo: 0.4 }); },
   santa: () => { _voz({ f: midiF(76), dur: 0.7, vol: 0.06, vocal: "a", ecoLargo: 0.6, ataque: 0.03 }); _metal({ f: 1568, dur: 0.9, vol: 0.05, ecoLargo: 0.4 }); },
 };
 
@@ -938,7 +956,37 @@ const COLOR_LAGRIMA = {
   espora: PAL.espora, sangre: PAL.sangre, veneno: ["#0f200c", "#255a1c", "#44922c", "#86d04a", "#d8ff9a"],
   violeta: PAL.violeta, hielo: PAL.hielo, fuego: PAL.fuego, oro: PAL.oro, hueso: PAL.hueso, enemigo: ["#1a0306", "#4a0a10", "#8e1a1e", "#d0392f", "#ff8b6a"],
   moho: PAL.baba, tinta: ["#050305", "#1a1320", "#2f2638", "#4d4260", "#7a6c90"],
+  // los colores de las lágrimas de los objetos, tomados de las imágenes de la wiki (sus "tears")
+  ouija: ["#1a2228", "#4a5a62", "#7a9aa4", "#a8c4cc", "#e0f0f4"], sagrado: ["#1a2a2e", "#8ab8bc", "#b8dcdc", "#d8ecec", "#ffffff"],
+  carbon: ["#050508", "#141820", "#1e2430", "#2e3644", "#5a6270"], hemo: ["#2a0204", "#9a0a10", "#e01a1a", "#ff4a3a", "#ffffff"],
+  choco: ["#120806", "#3a1c12", "#5a2e1e", "#7a4630", "#a8704e"], rosa: ["#200408", "#6a1022", "#a01e3c", "#c83a58", "#f08aa0"],
+  perfume: ["#2a2a06", "#8a8a2a", "#c8d468", "#e0ec90", "#fffff0"], oscura: ["#000000", "#0a0a0e", "#141418", "#26262c", "#4a4a54"],
+  llama: ["#3a0c04", "#c04010", "#f07a2a", "#ffb060", "#ffffff"], resfrio: ["#0a2018", "#2a6a4a", "#4a9a70", "#7ac8a0", "#c8f0dc"],
+  liquido: ["#0a2a0a", "#2a8a2a", "#5ad05a", "#a0ff90", "#ffffff"], gris: ["#0a0a0a", "#3a3a3a", "#5a5a5a", "#8a8a8a", "#d0d0d0"],
+  parasito: ["#200c04", "#6a3010", "#a0582a", "#c0784a", "#f0b080"], blanco: ["#101010", "#4a4a4a", "#9a9a9a", "#d8d8d8", "#ffffff"],
+  urano: ["#0a1a30", "#4a70b8", "#8ab0f0", "#c0d8ff", "#ffffff"], piscis: ["#0a1a3a", "#1a4a8a", "#3a7ad0", "#7ab0f0", "#e0f0ff"],
+  soja: ["#40403a", "#a8a8a0", "#d8d8d0", "#f0f0e8", "#ffffff"], almendra: ["#3a2a1a", "#a88a6a", "#d8c0a0", "#f0e0c8", "#fffaf0"],
+  electrica: ["#062a3a", "#1a7ab0", "#5ac8f0", "#b0f0ff", "#ffffff"], cupido: ["#0a0a14", "#5a7ad0", "#9ab8f8", "#c8dcff", "#ffffff"],
 };
+/** Una lágrima con forma (la flecha de Cupido, el carámbano de Urano), mirando a la derecha: se rota al dibujar. */
+function lagrimaFormaSpr(forma, r, color) {
+  r = lim(Math.round(r), 2, 10);
+  return hornear(`lagForma${forma}${color}${r}`, () => {
+    const R = COLOR_LAGRIMA[color] || PAL.espora, L = forma === "carambano" ? r * 4 + 2 : r * 3 + 2, H = r * 2 + 3, p = new Pix(L, H), c = H / 2;
+    for (let x = 0; x < L; x++) for (let y = 0; y < H; y++) {
+      const u = x / (L - 1);
+      // carámbano: gordo atrás y en punta adelante; flecha: cuerpo redondo con la punta triangular
+      const ancho = forma === "carambano" ? r * (1 - u) * 1.1 + 0.3 : u < 0.6 ? r * Math.sqrt(1 - Math.pow((u - 0.3) / 0.32, 2)) : r * 1.1 * (1 - (u - 0.6) / 0.4);
+      const d = Math.abs(y + 0.5 - c);
+      if (!(ancho > 0) || d > ancho) continue;
+      const l = 1 - (y + 0.5 - (c - ancho)) / (2 * ancho + 0.01);
+      p.p(x, y, R[lim(Math.round(1 + l * 2.6), 1, 4)]);
+    }
+    p.p(Math.round(L * 0.35), Math.round(c - r * 0.45), R[4]);
+    p.contorno(R[0]);
+    return p.canvas();
+  });
+}
 /** Una lágrima de radio r (2..9) y color. Con un brillo arriba a la izquierda y el contorno oscuro. */
 function lagrimaSpr(r, color = "espora") {
   r = lim(Math.round(r), 2, 10);
@@ -1301,7 +1349,7 @@ function barrilSpr() {
     return p.canvas();
   });
 }
-function bloqueSpr() {
+function bloquePiedraSpr() {
   return hornear("bloque", () => {
     const p = new Pix(24, 26);
     p.caja(1, 5, 22, 20, PAL.hierro, { vertical: 0.6 }); p.caja(1, 1, 22, 5, PAL.hierro.slice(2), { vertical: 0.9 });
@@ -1329,7 +1377,7 @@ function corazonSpr(tipo /* rojo, medio, espora, esporaMedio, vacio */, chico = 
   return hornear(`cor${tipo}${chico}`, () => {
     const forma = chico ? [".xx.xx.", "xxxxxxx", "xxxxxxx", ".xxxxx.", "..xxx..", "...x..."] : [".xxx.xxx.", "xxxxxxxxx", "xxxxxxxxx", "xxxxxxxxx", ".xxxxxxx.", "..xxxxx..", "...xxx...", "....x...."];
     const w = forma[0].length, h = forma.length, p = new Pix(w + 2, h + 2);
-    const R = tipo.startsWith("espora") ? PAL.azul : PAL.sangre;
+    const R = tipo.startsWith("espora") ? PAL.azul : tipo.startsWith("negro") ? ["#080000", "#262626", "#333333", "#434343", "#8a8a8a"] : PAL.sangre;   // gris oscuro, no negro (medido en el original)
     const medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
     forma.forEach((f, y) => { for (let x = 0; x < w; x++) if (f[x] === "x") {
       const l = 1 - (y / h) * 0.9 - (x / w) * 0.25;
@@ -1432,8 +1480,8 @@ function trampillaSpr(abierta) {
 function corazonHudSpr(tipo) {
   return hornear(`corHud${tipo}`, () => {
     const forma = [".####.####.", "###########", "###########", "###########", ".#########.", "..#######..", "...#####...", "....###....", ".....#....."];
-    const p = new Pix(13, 11), esp = tipo.startsWith("espora"), medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
-    const R = esp ? ["#1c3a8c", "#2c5ad8", "#4a86ff", "#bcd6ff"] : ["#8a0a10", "#d01018", "#f02a30", "#ffb0b0"];
+    const p = new Pix(13, 11), esp = tipo.startsWith("espora"), negro = tipo.startsWith("negro"), medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
+    const R = negro ? ["#262626", "#333333", "#434343", "#cecece"] : esp ? ["#1c3a8c", "#2c5ad8", "#4a86ff", "#bcd6ff"] : ["#8a0a10", "#d01018", "#f02a30", "#ffb0b0"];
     forma.forEach((f, y) => { for (let x = 0; x < 11; x++) {
       if (f[x] !== "#") continue;
       let c = vacio ? "#2a1418" : y >= 6 ? R[0] : y >= 4 ? R[1] : R[2];
@@ -3550,7 +3598,8 @@ function sortearMaldicion(n) {
 function nuevoJugador() {
   const j = {
     x: cx(6), y: cy(3), r: 5, vx: 0, vy: 0, z: 0,
-    cont: 6, vida: 6, esporas: 0,               // en medios corazones
+    cont: 6, vida: 6,                            // en medios corazones
+    almas: [],                                   // los de espora y los negros, de a medio: "e" o "n" (van al final de la barra)
     monedas: 0, bombas: 1, llaves: 0,
     // lo que suman las cápsulas y los pactos (lo de los objetos se recalcula siempre desde la lista)
     extra: { dano: 0, plano: 0, lag: 0, fr: 0, vel: 0, alc: 0, velLag: 0, suerte: 0 },
@@ -3559,8 +3608,25 @@ function nuevoJugador() {
     danoSala: 0, salaF: [], escudo: 0, sostiene: null, tSostiene: 0, muerto: false, tMuerte: 0, golpesPiso: 0, golpesJefe: 0,
     carga: 0, cargando: false, ojoMuerto: 0, fallos: 0, disparos: 0,
   };
+  // "esporas" sigue siendo el total de medios corazones de alma (espora + negros): al bajarlo se
+  // pierden desde el final, como en el original, y si se rompe un corazón negro entero, explota.
+  Object.defineProperty(j, "esporas", {
+    get() { return this.almas.length; },
+    set(v) {
+      v = Math.max(0, Math.round(v));
+      while (this.almas.length > v) { const i = this.almas.length - 1, t = this.almas.pop(); if (t === "n" && i % 2 === 0) romperNegro(this); }
+      while (this.almas.length < v) this.almas.push("e");
+    },
+  });
   recalcular(j);
   return j;
+}
+/** Un corazón negro que se rompe: el Necronomicón, 40 a todos (80 con la página perdida; wiki). */
+function romperNegro(j) {
+  if (!J || !J.enemigos) return;
+  const dano = j.f && j.f.pagina ? 80 : 40;
+  J.destello = Math.max(J.destello, 6); temblar(8); SFX.negro();
+  for (const e of J.enemigos.slice()) danarEnemigo(e, dano);
 }
 
 // ── las cuentas (las del original, pasadas a 60 Hz). No se tocan a mano: cada objeto DECLARA lo
@@ -3652,6 +3718,16 @@ const chance = {
 
 function vidaTotal(j) { return j.vida + j.esporas; }
 function curar(j, medios) { const antes = j.vida; j.vida = Math.min(j.cont, j.vida + medios); return j.vida > antes; }
+/** Corazones negros: se suman al final; si ya no hay lugar, convierten los de espora de arriba (wiki). */
+function darNegras(j, medios) {
+  const tope = 24 - j.cont;
+  let dio = false;
+  for (let k = 0; k < medios; k++) {
+    if (j.almas.length < tope) { j.almas.push("n"); dio = true; continue; }
+    const i = j.almas.lastIndexOf("e"); if (i < 0) break; j.almas[i] = "n"; dio = true;
+  }
+  return dio;
+}
 function darEsporas(j, medios) { const tope = 24 - j.cont; if (j.esporas >= tope) return false; j.esporas = Math.min(tope, j.esporas + medios); return true; }
 function sumarContenedor(j, n) { j.cont = lim(j.cont + n * 2, 0, 24); j.esporas = Math.min(j.esporas, 24 - j.cont); j.vida = Math.min(j.vida, j.cont); }
 
@@ -4252,8 +4328,29 @@ function espejado(c) {
 }
 
 // ── las lágrimas de Shumio: cada objeto les agrega una bandera y todas se combinan ──
-const COLOR_POR_BANDERA = [["ipecac", "veneno"], ["hemo", "sangre"], ["fuego", "fuego"], ["espectral", "tinta"], ["buscadora", "violeta"], ["divino", "oro"], ["sangre", "sangre"]];
-function colorLagrima(j) { for (const [k, c] of COLOR_POR_BANDERA) if (j.f[k]) return c; return "espora"; }
+function colorLagrima(j) { for (const [k, c] of FONDO_LAGRIMA) if (j.f[k]) return c; return "espora"; }
+/** Cómo se VE la lágrima (como en el original, cada objeto la cambia): el color de fondo lo dan
+ *  los objetos que se tienen; la lágrima que "sale" con un efecto al azar (veneno, piedra, miedo…)
+ *  toma el color de ese efecto. Además: forma (flecha, carámbano), estela (fuego, humo), aura
+ *  (cabeza divina, líquido, chispas) y transparencia (la Ouija). Colores medidos en la wiki. */
+const FONDO_LAGRIMA = [["fuego", "llama"], ["urano", "urano"], ["carbon", "carbon"], ["hemo", "hemo"], ["ipecac", "veneno"], ["x23", "sagrado"], ["divino", "sagrado"], ["buscadora", "violeta"], ["choco", "choco"], ["sangre", "sangre"], ["belial", "sangre"], ["parasito", "parasito"], ["liquido", "liquido"], ["piscis", "piscis"], ["jacob", "electrica"], ["atractor", "blanco"], ["almendra", "almendra"], ["soja", "soja"], ["atraviesa", "cupido"], ["perfume", "perfume"], ["espectral", "ouija"]];
+function aspectoLagrima(j, l) {
+  const f = j.f;
+  let color = "espora";
+  for (const [k, c] of FONDO_LAGRIMA) if (f[k]) { color = c; break; }
+  if (l.veneno && !l.ipecac) color = "resfrio";
+  else if (l.piedra) color = "rosa";
+  else if (l.miedo) color = f.perfume ? "perfume" : "oscura";
+  else if (l.hielo) color = "blanco";
+  else if (l.pegajosa) color = "gris";
+  else if (l.tipo === "santa") color = "sagrado";
+  return {
+    color, forma: f.urano ? "carambano" : f.atraviesa && l.tipo === "lagrima" ? "flecha" : null,
+    estela: f.fuego ? "fuego" : l.miedo && !f.perfume ? "humo" : null,
+    aura: f.divino ? "divino" : f.liquido ? "liquido" : f.jacob ? "chispas" : l.tipo === "santa" ? "santa" : null,
+    alfa: f.espectral || f.orbita ? 0.62 : 1,
+  };
+}
 /** Crea una lágrima de Shumio (o de un familiar que copia sus lágrimas) con todas sus banderas. */
 function lagrima(j, x, y, ang, kv = 1, o = {}) {
   const f = j.f, L = j.suerte, vel = 3.3 * j.velLag * kv;
@@ -4282,6 +4379,7 @@ function lagrima(j, x, y, ang, kv = 1, o = {}) {
     veneno: (f.veneno && A.si(chance.veneno(L))) || !!f.ipecac, hielo: f.lento && A.si(chance.lento(L)), fuego: !!f.fuego, miedo: f.miedo && A.si(chance.miedo(L)), piedra: f.piedra && A.si(chance.piedra(L)),
     urano: !!f.urano, empuje: (f.piscis ? 2.2 : 1) * (f.gusanoChato ? 1.5 : 1), gen: o.gen ?? 0, hija: !!o.hija, golpeo: false, tocados: null, dist: 0,
   };
+  l.look = aspectoLagrima(j, l);
   // la leche de almendra: cada lágrima sale con un gusano (o goma, o espejo) al azar
   if (f.almendra && !o.hija) { const k = A.uno(["onda", "espiral", "gancho", "pulso", "chato", "rebote", "boomerang"]); l[k] = true; if (k === "onda" || k === "espiral" || k === "gancho") l.espectral = true; }
   if (l.orbita) { l.ang = Math.atan2(y - j.y, x - j.x) + (A.f() - 0.5) * 0.3; l.R = 8; l.dirOrb = ang; }
@@ -4292,7 +4390,7 @@ function lagrima(j, x, y, ang, kv = 1, o = {}) {
 function hija(l, ang, factorDano, factorVida, o = {}) {
   const j = J.jug, vel = Math.hypot(l.vx, l.vy) || 3;
   const h = lagrima(j, l.x, l.y, ang, (o.kv ?? 1) * vel / (3.3 * j.velLag), { danoFijo: l.dano * factorDano, vida: Math.max(8, (l.vidaMax - l.t) * factorVida), hija: true, gen: (l.gen || 0) + 1, tipo: o.tipo || "lagrima", tam: o.tam ?? 0.65, color: l.color });
-  h.parasito = !!o.parasito; h.z = Math.max(8, l.z); h.tocados = l.tocados ? new Set(l.tocados) : null;
+  h.parasito = !!o.parasito; h.z = Math.max(8, l.z); if (l.look) h.look = l.look; h.tocados = l.tocados ? new Set(l.tocados) : null;
   return h;
 }
 
@@ -4607,17 +4705,42 @@ function dibujarBabas(g) {
 function dibujarLagrima(g, l) {
   const sh = sombra(Math.max(2, l.r - 1), Math.max(1, Math.round(l.r / 2)));
   g.drawImage(sh, Math.round(l.x - sh.width / 2), Math.round(l.y - sh.height / 2 + 2));
-  const X = l.x, Y = l.y - l.z;
+  const X = l.x, Y = l.y - l.z, ang = Math.atan2(l.vy, l.vx), lk = l.look || { color: l.color, alfa: 1 };
   if (l.tipo === "cuchillo" || l.tipo === "aguja" || l.tipo === "hueso" || l.tipo === "diente") {
     const s = l.tipo === "cuchillo" ? cuchilloSpr() : proyectilSpr(l.tipo);
-    g.save(); g.translate(Math.round(X), Math.round(Y)); g.rotate(Math.atan2(l.vy, l.vx) + (l.tipo === "hueso" ? l.t * 0.3 : 0)); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore();
+    g.save(); g.translate(Math.round(X), Math.round(Y)); g.rotate(ang + (l.tipo === "hueso" ? l.t * 0.3 : 0)); g.drawImage(s, -s.width / 2, -s.height / 2); g.restore();
     return;
   }
   if (l.tipo === "moneda") { const s = monedaSpr(Math.floor(l.t / 4) % 4); g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2)); return; }
-  let s = lagrimaSpr(l.r, l.veneno ? "veneno" : l.hielo ? "hielo" : l.fuego ? "fuego" : l.piedra ? "hueso" : l.miedo ? "tinta" : l.tipo === "santa" ? "hielo" : l.color);
-  if (l.chato) { const w = Math.round(s.width * 1.5); g.drawImage(s, Math.round(X - w / 2), Math.round(Y - s.height / 2), w, s.height); }
-  else g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2));
-  if (l.tipo === "santa" || l.divino) { g.globalAlpha = 0.35; g.drawImage(aro(l.r + 4, "rgba(255,250,210,0.35)", "rgba(255,240,170,0.7)"), Math.round(X - l.r - 4), Math.round(Y - l.r - 4)); g.globalAlpha = 1; }
+  const v = Math.hypot(l.vx, l.vy) || 1, ux = -l.vx / v, uy = -l.vy / v;
+  // la estela: llama (mente de fuego) o humo oscuro (materia oscura), detrás de la lágrima
+  if (lk.estela) for (let k = 4; k >= 1; k--) {
+    const d = k * l.r * 0.9, rr = l.r * (1 - k * 0.17);
+    g.globalAlpha = (lk.estela === "fuego" ? 0.55 : 0.4) * (1 - k / 5);
+    g.fillStyle = lk.estela === "fuego" ? (k > 2 ? "#e0501a" : "#ffa040") : "#0c0c10";
+    g.beginPath(); g.arc(X + ux * d, Y + uy * d, Math.max(1, rr), 0, TAU); g.fill();
+  }
+  g.globalAlpha = 1;
+  // el aura (cabeza divina: un halo dorado grande; líquido: brillo verde; chispas; luz santa)
+  if (lk.aura) {
+    const R = lk.aura === "divino" ? l.r + 10 : l.r + 4, col = { divino: "rgba(200,180,110,", liquido: "rgba(90,230,90,", chispas: "rgba(160,230,255,", santa: "rgba(255,250,210," }[lk.aura];
+    const gr = g.createRadialGradient(X, Y, l.r * 0.5, X, Y, R);
+    gr.addColorStop(0, col + (lk.aura === "divino" ? "0.45)" : "0.5)")); gr.addColorStop(1, col + "0)");
+    g.fillStyle = gr; g.beginPath(); g.arc(X, Y, R, 0, TAU); g.fill();
+    if (lk.aura === "chispas" && (l.t & 3) === 0) { g.strokeStyle = "rgba(210,245,255,0.9)"; g.lineWidth = 1; g.beginPath(); const a = V.f() * TAU; g.moveTo(X + Math.cos(a) * l.r, Y + Math.sin(a) * l.r); g.lineTo(X + Math.cos(a) * (l.r + 4) + (V.f() - 0.5) * 3, Y + Math.sin(a) * (l.r + 4) + (V.f() - 0.5) * 3); g.stroke(); }
+  }
+  // el ojo muerto: brillan más rojas cuanto más aciertos seguidos
+  if (J.jug && J.jug.f.ojoMuerto && J.jug.ojoMuerto > 0) { g.fillStyle = `rgba(255,40,30,${0.12 * J.jug.ojoMuerto})`; g.beginPath(); g.arc(X, Y, l.r + 3, 0, TAU); g.fill(); }
+  g.globalAlpha = lk.alfa ?? 1;
+  if (lk.forma) {
+    const s = lagrimaFormaSpr(lk.forma, l.r, lk.color);
+    g.save(); g.translate(Math.round(X), Math.round(Y)); g.rotate(ang); g.drawImage(s, -s.width * 0.62, -s.height / 2); g.restore();
+  } else {
+    const s = lagrimaSpr(l.r, lk.color);
+    if (l.chato) { const w = Math.round(s.width * 1.5); g.drawImage(s, Math.round(X - w / 2), Math.round(Y - s.height / 2), w, s.height); }
+    else g.drawImage(s, Math.round(X - s.width / 2), Math.round(Y - s.height / 2));
+  }
+  g.globalAlpha = 1;
 }
 function dibujarBala(g, b) {
   const s = lagrimaSpr(b.r + 1, b.color);
@@ -5184,8 +5307,8 @@ const OBJETOS = {
   pactoSangre: { nombre: "PACTO DE SANGRE", lema: "DAÑO POR UNO Y MEDIO", calidad: 4, pools: ["pacto"], tags: ["demonio"], st: { mult: 1.5 }, f: ["sangre"] },
   cuerno: { nombre: "CUERNO", lema: "DAÑO MUCHO ARRIBA", calidad: 3, pools: ["pacto"], tags: ["demonio"], st: { dano: 2 } },
   pentagrama: { nombre: "PENTAGRAMA", lema: "DAÑO ARRIBA", calidad: 3, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 1 }, f: ["pentagrama"] },
-  marca: { nombre: "LA MARCA", lema: "DAÑO Y VELOCIDAD", calidad: 2, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 1, vel: 0.2 }, alTomar: (j) => darEsporas(j, 2) },
-  elPacto: { nombre: "EL PACTO", lema: "DAÑO Y LÁGRIMAS", calidad: 3, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 0.5, lag: 0.7 }, alTomar: (j) => darEsporas(j, 4) },
+  marca: { nombre: "LA MARCA", lema: "DAÑO Y VELOCIDAD", calidad: 2, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 1, vel: 0.2 }, alTomar: (j) => darNegras(j, 2) },
+  elPacto: { nombre: "EL PACTO", lema: "DAÑO Y LÁGRIMAS", calidad: 3, pools: ["pacto", "rojo"], tags: ["demonio"], st: { dano: 0.5, lag: 0.7 }, alTomar: (j) => darNegras(j, 4) },
   sangreMartir: { nombre: "SANGRE DEL MÁRTIR", lema: "DAÑO ARRIBA", calidad: 2, pools: ["tesoro", "jefe"], st: { dano: 1 } },
   aureola: { nombre: "LA AUREOLA", lema: "TODO ARRIBA", calidad: 3, pools: ["tesoro", "secreta"], tags: ["angel"], st: { dano: 0.3, lag: 0.2, vel: 0.3, alc: 0.25 }, alTomar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
   rosario: { nombre: "ROSARIO", lema: "FE Y LÁGRIMAS", calidad: 2, pools: ["tesoro", "tienda"], tags: ["angel"], st: { lag: 0.5 }, alTomar: (j) => darEsporas(j, 6) },
@@ -5234,7 +5357,7 @@ const OBJETOS = {
   chispa: { nombre: "CHISPA", lema: "LÁGRIMAS QUE QUEMAN", calidad: 2, pools: ["tesoro"], f: ["fuego", "estalla"] },
   materiaOscura: { nombre: "MATERIA OSCURA", lema: "DAÑO Y MIEDO", calidad: 2, pools: ["pacto", "tesoro"], st: { dano: 1 }, f: ["miedo"] },
   lentesAbuela: { nombre: "LENTES DE LA ABUELA", lema: "MIRADA DE PIEDRA", calidad: 1, pools: ["tesoro"], tags: ["madre"], st: { alc: 1.5 }, f: ["piedra"] },
-  perfumeAbuela: { nombre: "PERFUME DE LA ABUELA", lema: "LÁGRIMAS Y MIEDO", calidad: 1, pools: ["tesoro"], tags: ["madre"], st: { lag: 0.5 }, f: ["miedo"] },
+  perfumeAbuela: { nombre: "PERFUME DE LA ABUELA", lema: "LÁGRIMAS Y MIEDO", calidad: 1, pools: ["tesoro"], tags: ["madre"], st: { lag: 0.5 }, f: ["miedo", "perfume"] },
   labialAbuela: { nombre: "LABIAL DE LA ABUELA", lema: "ALCANCE Y AMOR", calidad: 1, pools: ["tesoro"], tags: ["madre"], st: { alc: 2 }, alTomar: (j) => soltarPremio(j.x, j.y + 12, "corazon") },
   tacosAbuela: { nombre: "TACOS DE LA ABUELA", lema: "PISOTONES", calidad: 1, pools: ["tesoro"], tags: ["madre"], f: ["tacos"] },
   liquido: { nombre: "LÍQUIDO MISTERIOSO", lema: "LÁGRIMAS QUE DEJAN BABA", calidad: 2, pools: ["tesoro"], f: ["liquido"] },
@@ -5319,7 +5442,7 @@ const BARATIJAS = {
 const TRANSFORMACIONES = {
   hongo: { nombre: "¡HONGAZO!", lema: "Más hongo que nunca", alTransformar: (j) => { sumarContenedor(j, 1); curar(j, 2); } },
   angel: { nombre: "¡SERAFÍN!", lema: "Alas y fe", f: ["vuela"], alTransformar: (j) => darEsporas(j, 6) },
-  demonio: { nombre: "¡LEVIATÁN!", lema: "Alas oscuras", f: ["vuela"], alTransformar: (j) => darEsporas(j, 4) },
+  demonio: { nombre: "¡LEVIATÁN!", lema: "Alas oscuras", f: ["vuela"], alTransformar: (j) => darNegras(j, 4) },
   gato: { nombre: "¡MISHI!", lema: "Nueve vidas de moscas", f: ["vuela", "guppy"] },
   mosca: { nombre: "¡BELCEBÚ!", lema: "El señor de las moscas", f: ["vuela", "belcebu"] },
   podrido: { nombre: "¡PODRIDO!", lema: "Dejás baba venenosa", f: ["bob", "inmuneVeneno"] },
@@ -5479,7 +5602,8 @@ function cargarActivo(n = 1) {
 
 // ── los recogibles ──
 function recogible(t, x, y, sub) {
-  if (t === "corazon" && !sub) sub = A.pesos([["rojo", 6], ["medio", 3], ["espora", 1]]);
+  // la tabla de la wiki (Repentance): rojo 40 %, medio 40 %, espora 6,7 %, negro 0,5 %
+  if (t === "corazon" && !sub) sub = A.pesos([["rojo", 40], ["medio", 40], ["espora", 6.73], ["negro", 0.5]]);
   if (t === "moneda" && !sub) sub = A.si(0.1) ? 5 : 1;
   if (t === "capsula" && sub == null) sub = A.ent(0, COLORES_CAPSULA.length - 1);
   if (t === "cofre" && !sub) { const n = J.piso ? J.piso.n : 1; sub = A.pesos([["normal", 62], ["dorado", n >= 2 ? 22 : 14], ["piedra", 7], ["pinchos", 7], ["rojo", n >= 2 ? 5 : 2]]); }
@@ -5542,7 +5666,8 @@ function tomar(c) {
   }
   switch (c.t) {
     case "corazon": {
-      if (c.sub === "espora" || c.sub === "esporaMedio") { if (!darEsporas(j, c.sub === "espora" ? 2 : 1)) return false; }
+      if (c.sub === "negro") { if (!darNegras(j, 2)) return false; }
+      else if (c.sub === "espora" || c.sub === "esporaMedio") { if (!darEsporas(j, c.sub === "espora" ? 2 : 1)) return false; }
       else if (!curar(j, c.sub === "rojo" ? 2 : 1)) return false;
       SFX.corazon(); return true;
     }
@@ -5606,7 +5731,7 @@ function abrirCofre(c) {
 }
 function puedeUsar(c) {
   const j = J.jug;
-  if (c.t === "corazon") return c.sub.startsWith("espora") ? j.esporas < 24 - j.cont : j.vida < j.cont;
+  if (c.t === "corazon") return c.sub === "negro" ? j.almas.includes("e") || j.esporas < 24 - j.cont : c.sub.startsWith("espora") ? j.esporas < 24 - j.cont : j.vida < j.cont;
   return true;
 }
 
@@ -5898,7 +6023,7 @@ function dibujarHud(g) {
   }
   const lista = [];
   for (let i = 0; i < j.cont; i += 2) lista.push(j.vida >= i + 2 ? "rojo" : j.vida === i + 1 ? "medio" : "vacio");
-  for (let i = 0; i < j.esporas; i += 2) lista.push(j.esporas >= i + 2 ? "espora" : "esporaMedio");
+  for (let i = 0; i < j.esporas; i += 2) { const t = j.almas[i] === "n" ? "negro" : "espora"; lista.push(j.esporas >= i + 2 ? t : t + "Medio"); }
   const late = vidaTotal(j) <= 2 && !j.muerto && ((J.t >> 4) & 1);
   if (J.maldicion === "desconocido") {   // no se ve la vida: un corazón vacío con un signo
     g.drawImage(corazonHudSpr("vacio"), hx, 3); g.drawImage(subtituloSpr("?"), hx + 14, 3);
@@ -6342,7 +6467,7 @@ function dibujarObstaculo(g, o, c, f) {
     case "matas": s = matasSpr(o.vida, o.dorada ? 1 : 0); break;
     case "brasero": s = braseroSpr((J.t >> 3) & 3, o.prendido); break;
     case "barril": s = barrilSpr(); break;
-    case "bloque": s = bloqueSpr(); break;
+    case "bloque": s = bloquePiedraSpr(); break;
     default: return;
   }
   g.drawImage(s, Math.round(x - s.width / 2), yb - s.height);
@@ -6787,7 +6912,7 @@ window.__SH.hojaDe = (grupo) => {
     const dibujar = (s, x, y) => g.drawImage(s, Math.round(x - s.width / 2), Math.round(y - s.height));
     for (const [tipo, est, dir] of [["normal", 0, 0], ["tesoro", 4, 1], ["jefe", 0, 3], ["tienda", 5, 2]]) { const [x, y] = lugarPuerta(dir); g.drawImage(puertaRotada(tipo, est, dir), x, y); }
     const en = (c0, f0) => [cx(c0), cy(f0) + T / 2];
-    for (const [c0, f0, s] of [[1, 1, rocaSpr(0)], [2, 1, rocaSpr(1)], [1, 2, rocaSpr(2)], [10, 1, matasSpr(4)], [11, 1, matasSpr(3)], [11, 2, matasSpr(2)], [10, 5, braseroSpr(1, true)], [3, 5, bloqueSpr()], [4, 5, barrilSpr()], [8, 5, rocaSpr(0, true)]]) { const [x, y] = en(c0, f0); dibujar(s, x, y + 1); }
+    for (const [c0, f0, s] of [[1, 1, rocaSpr(0)], [2, 1, rocaSpr(1)], [1, 2, rocaSpr(2)], [10, 1, matasSpr(4)], [11, 1, matasSpr(3)], [11, 2, matasSpr(2)], [10, 5, braseroSpr(1, true)], [3, 5, bloquePiedraSpr()], [4, 5, barrilSpr()], [8, 5, rocaSpr(0, true)]]) { const [x, y] = en(c0, f0); dibujar(s, x, y + 1); }
     for (const [c0, f0] of [[6, 1], [7, 1]]) g.drawImage(pozoSpr(false, c0 === 7, c0 === 6, true), IX0 + c0 * T, IY0 + f0 * T);
     g.drawImage(pinchosSpr(true), IX0 + 5 * T, IY0 + 5 * T);
     const s = spritesShumio();
@@ -6818,6 +6943,26 @@ Object.assign(window.__SH, {
   tactil: (v) => { IN.usaTactil = v; },
   vs: () => { if (J.vsPendiente) empezarVs(); },
   paso: () => paso(), dibujar: () => dibujar(),
+  /** La hoja de las lágrimas: la de cada objeto (con su efecto forzado si es al azar), sobre el piso. */
+  hojaLagrimas: (ids) => {
+    const cols = 6, cw = 62, ch = 44, filas = Math.ceil(ids.length / cols), c = lienzoNuevo(cols * cw, filas * ch), g = c.getContext("2d");
+    const piso = hornearFondo("sotano", 3);
+    for (let y = 0; y < c.height; y += 150) for (let x = 0; x < c.width; x += 300) g.drawImage(piso, IX0 + 20, IY0 + 10, 300, 150, x, y, 300, 150);
+    const PROC = { esporasToxicas: "veneno", lentesAbuela: "piedra", materiaOscura: "miedo", perfumeAbuela: "miedo", picadura: "hielo", pegajosa: "pegajosa", luzSanta: "santa", amorDuro: "diente", eutanasia: "aguja" };
+    ids.forEach((id, i) => {
+      nuevaPartida(5); const j = J.jug; if (id !== "base") window.__SH.dar(id);
+      const x = (i % cols) * cw + cw / 2, y = Math.floor(i / cols) * ch + 16;
+      const l = lagrima(j, x - 6, y + 14, 0, 1); l.z = 14; l.vx = 3; l.vy = 0; l.t = 3;
+      const k = PROC[id]; if (k === "santa" || k === "diente" || k === "aguja") l.tipo = k; else if (k) l[k] = true;
+      if (k) l.look = aspectoLagrima(j, l);
+      dibujarLagrima(g, l);
+      const n = etiquetaSpr(id === "base" ? "SIN NADA" : (OBJETOS[id] || BARATIJAS[id]).nombre.slice(0, 13), "#fff");
+      g.drawImage(n, Math.round(x - n.width / 2), y + 20);
+    });
+    J.lagrimas.length = 0;
+    const z = 3, o = lienzoNuevo(c.width * z, c.height * z), go = o.getContext("2d"); go.imageSmoothingEnabled = false; go.drawImage(c, 0, 0, o.width, o.height);
+    return o.toDataURL();
+  },
   /** Graba una muestra de audio sin parlantes (OfflineAudioContext) y la devuelve como WAV en base64.
    *  tipo "musica": n compases de una pista (con o sin la capa pesada); "sfx": una lista de efectos. */
   audioMuestra: async (tipo, que, segs = 12, pesada = true) => {

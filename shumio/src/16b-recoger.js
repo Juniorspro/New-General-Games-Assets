@@ -9,7 +9,8 @@
 
 // ── los recogibles ──
 function recogible(t, x, y, sub) {
-  if (t === "corazon" && !sub) sub = A.pesos([["rojo", 6], ["medio", 3], ["espora", 1]]);
+  // la tabla de la wiki (Repentance): rojo 40 %, medio 40 %, espora 6,7 %, negro 0,5 %
+  if (t === "corazon" && !sub) sub = A.pesos([["rojo", 40], ["medio", 40], ["espora", 6.73], ["negro", 0.5]]);
   if (t === "moneda" && !sub) sub = A.si(0.1) ? 5 : 1;
   if (t === "capsula" && sub == null) sub = A.ent(0, COLORES_CAPSULA.length - 1);
   if (t === "cofre" && !sub) { const n = J.piso ? J.piso.n : 1; sub = A.pesos([["normal", 62], ["dorado", n >= 2 ? 22 : 14], ["piedra", 7], ["pinchos", 7], ["rojo", n >= 2 ? 5 : 2]]); }
@@ -72,7 +73,8 @@ function tomar(c) {
   }
   switch (c.t) {
     case "corazon": {
-      if (c.sub === "espora" || c.sub === "esporaMedio") { if (!darEsporas(j, c.sub === "espora" ? 2 : 1)) return false; }
+      if (c.sub === "negro") { if (!darNegras(j, 2)) return false; }
+      else if (c.sub === "espora" || c.sub === "esporaMedio") { if (!darEsporas(j, c.sub === "espora" ? 2 : 1)) return false; }
       else if (!curar(j, c.sub === "rojo" ? 2 : 1)) return false;
       SFX.corazon(); return true;
     }
@@ -136,7 +138,7 @@ function abrirCofre(c) {
 }
 function puedeUsar(c) {
   const j = J.jug;
-  if (c.t === "corazon") return c.sub.startsWith("espora") ? j.esporas < 24 - j.cont : j.vida < j.cont;
+  if (c.t === "corazon") return c.sub === "negro" ? j.almas.includes("e") || j.esporas < 24 - j.cont : c.sub.startsWith("espora") ? j.esporas < 24 - j.cont : j.vida < j.cont;
   return true;
 }
 

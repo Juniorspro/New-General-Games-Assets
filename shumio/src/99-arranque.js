@@ -45,7 +45,7 @@ window.__SH.hojaDe = (grupo) => {
     const dibujar = (s, x, y) => g.drawImage(s, Math.round(x - s.width / 2), Math.round(y - s.height));
     for (const [tipo, est, dir] of [["normal", 0, 0], ["tesoro", 4, 1], ["jefe", 0, 3], ["tienda", 5, 2]]) { const [x, y] = lugarPuerta(dir); g.drawImage(puertaRotada(tipo, est, dir), x, y); }
     const en = (c0, f0) => [cx(c0), cy(f0) + T / 2];
-    for (const [c0, f0, s] of [[1, 1, rocaSpr(0)], [2, 1, rocaSpr(1)], [1, 2, rocaSpr(2)], [10, 1, matasSpr(4)], [11, 1, matasSpr(3)], [11, 2, matasSpr(2)], [10, 5, braseroSpr(1, true)], [3, 5, bloqueSpr()], [4, 5, barrilSpr()], [8, 5, rocaSpr(0, true)]]) { const [x, y] = en(c0, f0); dibujar(s, x, y + 1); }
+    for (const [c0, f0, s] of [[1, 1, rocaSpr(0)], [2, 1, rocaSpr(1)], [1, 2, rocaSpr(2)], [10, 1, matasSpr(4)], [11, 1, matasSpr(3)], [11, 2, matasSpr(2)], [10, 5, braseroSpr(1, true)], [3, 5, bloquePiedraSpr()], [4, 5, barrilSpr()], [8, 5, rocaSpr(0, true)]]) { const [x, y] = en(c0, f0); dibujar(s, x, y + 1); }
     for (const [c0, f0] of [[6, 1], [7, 1]]) g.drawImage(pozoSpr(false, c0 === 7, c0 === 6, true), IX0 + c0 * T, IY0 + f0 * T);
     g.drawImage(pinchosSpr(true), IX0 + 5 * T, IY0 + 5 * T);
     const s = spritesShumio();
@@ -76,6 +76,26 @@ Object.assign(window.__SH, {
   tactil: (v) => { IN.usaTactil = v; },
   vs: () => { if (J.vsPendiente) empezarVs(); },
   paso: () => paso(), dibujar: () => dibujar(),
+  /** La hoja de las lágrimas: la de cada objeto (con su efecto forzado si es al azar), sobre el piso. */
+  hojaLagrimas: (ids) => {
+    const cols = 6, cw = 62, ch = 44, filas = Math.ceil(ids.length / cols), c = lienzoNuevo(cols * cw, filas * ch), g = c.getContext("2d");
+    const piso = hornearFondo("sotano", 3);
+    for (let y = 0; y < c.height; y += 150) for (let x = 0; x < c.width; x += 300) g.drawImage(piso, IX0 + 20, IY0 + 10, 300, 150, x, y, 300, 150);
+    const PROC = { esporasToxicas: "veneno", lentesAbuela: "piedra", materiaOscura: "miedo", perfumeAbuela: "miedo", picadura: "hielo", pegajosa: "pegajosa", luzSanta: "santa", amorDuro: "diente", eutanasia: "aguja" };
+    ids.forEach((id, i) => {
+      nuevaPartida(5); const j = J.jug; if (id !== "base") window.__SH.dar(id);
+      const x = (i % cols) * cw + cw / 2, y = Math.floor(i / cols) * ch + 16;
+      const l = lagrima(j, x - 6, y + 14, 0, 1); l.z = 14; l.vx = 3; l.vy = 0; l.t = 3;
+      const k = PROC[id]; if (k === "santa" || k === "diente" || k === "aguja") l.tipo = k; else if (k) l[k] = true;
+      if (k) l.look = aspectoLagrima(j, l);
+      dibujarLagrima(g, l);
+      const n = etiquetaSpr(id === "base" ? "SIN NADA" : (OBJETOS[id] || BARATIJAS[id]).nombre.slice(0, 13), "#fff");
+      g.drawImage(n, Math.round(x - n.width / 2), y + 20);
+    });
+    J.lagrimas.length = 0;
+    const z = 3, o = lienzoNuevo(c.width * z, c.height * z), go = o.getContext("2d"); go.imageSmoothingEnabled = false; go.drawImage(c, 0, 0, o.width, o.height);
+    return o.toDataURL();
+  },
   /** Graba una muestra de audio sin parlantes (OfflineAudioContext) y la devuelve como WAV en base64.
    *  tipo "musica": n compases de una pista (con o sin la capa pesada); "sfx": una lista de efectos. */
   audioMuestra: async (tipo, que, segs = 12, pesada = true) => {

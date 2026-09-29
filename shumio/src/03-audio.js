@@ -40,7 +40,7 @@ function curvaSat(k) {
 }
 
 function audioDespertar() {
-  if (AC) { if (AC.state === "suspended") AC.resume(); return; }
+  if (AC) { if (AC.state !== "running" && AC.state !== "closed") AC.resume().catch(() => {}); return; }
   try {
     armarAudio(new (window.AudioContext || window.webkitAudioContext)());
     Musica.arrancar();
@@ -222,6 +222,8 @@ const SFX = {
   // el rayo: un rugido de sangre (ruido que baja + voz grave saturada)
   rayo: () => { _ruido({ dur: 0.75, vol: 0.3, f: 2600, f2: 260, tipo: "lowpass", eco: 0.4 }); _voz({ f: 62, f2: 50, dur: 0.7, vol: 0.2, vocal: "a", raspa: 1.2, eco: 0.2, ataque: 0.01, aire: 0.5 }); },
   laser: () => { _tono({ f: 1300, f2: 380, dur: 0.12, tipo: "sawtooth", vol: 0.05, filtro: 2800, q: 4 }); _ruido({ dur: 0.07, vol: 0.05, f: 5000, tipo: "highpass" }); },
+  // el corazón negro que se rompe: un golpe grave y un coro oscuro (el Necronomicón)
+  negro: () => { BAT.bombo(0, 0.5, EFX); [0, 1, 6].forEach((s, i) => _voz({ f: midiF(38 + s), dur: 1.2, vol: 0.12, vocal: "o", cuando: i * 0.03, ataque: 0.02, ecoLargo: 0.6, raspa: 0.8 })); _ruido({ dur: 0.8, vol: 0.2, f: 900, f2: 120, tipo: "lowpass", ecoLargo: 0.4 }); },
   santa: () => { _voz({ f: midiF(76), dur: 0.7, vol: 0.06, vocal: "a", ecoLargo: 0.6, ataque: 0.03 }); _metal({ f: 1568, dur: 0.9, vol: 0.05, ecoLargo: 0.4 }); },
 };
 

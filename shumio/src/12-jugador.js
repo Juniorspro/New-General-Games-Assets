@@ -8,7 +8,8 @@
 function nuevoJugador() {
   const j = {
     x: cx(6), y: cy(3), r: 5, vx: 0, vy: 0, z: 0,
-    cont: 6, vida: 6, esporas: 0,               // en medios corazones
+    cont: 6, vida: 6,                            // en medios corazones
+    almas: [],                                   // los de espora y los negros, de a medio: "e" o "n" (van al final de la barra)
     monedas: 0, bombas: 1, llaves: 0,
     // lo que suman las cápsulas y los pactos (lo de los objetos se recalcula siempre desde la lista)
     extra: { dano: 0, plano: 0, lag: 0, fr: 0, vel: 0, alc: 0, velLag: 0, suerte: 0 },
@@ -17,8 +18,25 @@ function nuevoJugador() {
     danoSala: 0, salaF: [], escudo: 0, sostiene: null, tSostiene: 0, muerto: false, tMuerte: 0, golpesPiso: 0, golpesJefe: 0,
     carga: 0, cargando: false, ojoMuerto: 0, fallos: 0, disparos: 0,
   };
+  // "esporas" sigue siendo el total de medios corazones de alma (espora + negros): al bajarlo se
+  // pierden desde el final, como en el original, y si se rompe un corazón negro entero, explota.
+  Object.defineProperty(j, "esporas", {
+    get() { return this.almas.length; },
+    set(v) {
+      v = Math.max(0, Math.round(v));
+      while (this.almas.length > v) { const i = this.almas.length - 1, t = this.almas.pop(); if (t === "n" && i % 2 === 0) romperNegro(this); }
+      while (this.almas.length < v) this.almas.push("e");
+    },
+  });
   recalcular(j);
   return j;
+}
+/** Un corazón negro que se rompe: el Necronomicón, 40 a todos (80 con la página perdida; wiki). */
+function romperNegro(j) {
+  if (!J || !J.enemigos) return;
+  const dano = j.f && j.f.pagina ? 80 : 40;
+  J.destello = Math.max(J.destello, 6); temblar(8); SFX.negro();
+  for (const e of J.enemigos.slice()) danarEnemigo(e, dano);
 }
 
 // ── las cuentas (las del original, pasadas a 60 Hz). No se tocan a mano: cada objeto DECLARA lo
@@ -110,6 +128,16 @@ const chance = {
 
 function vidaTotal(j) { return j.vida + j.esporas; }
 function curar(j, medios) { const antes = j.vida; j.vida = Math.min(j.cont, j.vida + medios); return j.vida > antes; }
+/** Corazones negros: se suman al final; si ya no hay lugar, convierten los de espora de arriba (wiki). */
+function darNegras(j, medios) {
+  const tope = 24 - j.cont;
+  let dio = false;
+  for (let k = 0; k < medios; k++) {
+    if (j.almas.length < tope) { j.almas.push("n"); dio = true; continue; }
+    const i = j.almas.lastIndexOf("e"); if (i < 0) break; j.almas[i] = "n"; dio = true;
+  }
+  return dio;
+}
 function darEsporas(j, medios) { const tope = 24 - j.cont; if (j.esporas >= tope) return false; j.esporas = Math.min(tope, j.esporas + medios); return true; }
 function sumarContenedor(j, n) { j.cont = lim(j.cont + n * 2, 0, 24); j.esporas = Math.min(j.esporas, 24 - j.cont); j.vida = Math.min(j.vida, j.cont); }
 

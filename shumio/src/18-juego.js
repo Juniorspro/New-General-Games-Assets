@@ -259,7 +259,7 @@ function dibujarObstaculo(g, o, c, f) {
     case "matas": s = matasSpr(o.vida, o.dorada ? 1 : 0); break;
     case "brasero": s = braseroSpr((J.t >> 3) & 3, o.prendido); break;
     case "barril": s = barrilSpr(); break;
-    case "bloque": s = bloqueSpr(); break;
+    case "bloque": s = bloquePiedraSpr(); break;
     default: return;
   }
   g.drawImage(s, Math.round(x - s.width / 2), yb - s.height);

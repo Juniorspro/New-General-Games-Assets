@@ -11,8 +11,11 @@ const cxP = lienzo.getContext("2d", { alpha: false });
 const cvM = document.createElement("canvas");
 const cxM = cvM.getContext("2d", { alpha: false });
 const PANT = { W: 444, H: 200, PX: 3.6, k: 3, dw: 1600, dh: 720, ox: 0, oy: 0, vertical: false, salaX: 0, salaY: 0, girado: false, cssW: 0 };
-const VISTA_H = 200;    // lo que se ve de alto (el original: la sala llena la pantalla, muros cortados)
-const ANCHO_MIN = 330;  // y de ancho, como mínimo (en pantallas angostas manda el ancho)
+// Medido en el video: en el original entran enteros los dos muros (arriba y abajo, con sus puertas)
+// y el piso ocupa ~74 % del alto; la barra del jefe va sobre el muro de abajo (~95 % del alto).
+// La sala mide 224 de alto: con 228 entra toda, con un filito de margen.
+const VISTA_H = SALA_H + 4;
+const ANCHO_MIN = SALA_W + 8;  // y de ancho, como mínimo: nunca se corta la sala por los costados
 const cvK = document.createElement("canvas"), cxK = cvK.getContext("2d", { alpha: false });
 
 function medir() {
@@ -31,8 +34,8 @@ function medir() {
   PANT.cssW = cw;
   const dw = Math.round(cw * dpr), dh = Math.round(ch * dpr);
   PANT.vertical = false;
-  // la cámara, como en el original: la sala llena el alto de la pantalla (se ven ~200 px de juego;
-  // los muros de arriba y abajo quedan un poco cortados) y el HUD va encima de la pared
+  // la cámara, como en el original: la sala entera llena el alto de la pantalla y el HUD va encima
+  // de la pared y del margen de los costados
   let PX = dh / VISTA_H;
   if (dw / PX < ANCHO_MIN) PX = dw / ANCHO_MIN;
   if (dw === PANT.dw && dh === PANT.dh && Math.abs(PX - PANT.PX) < 1e-6 && lienzo.width === dw) return;
@@ -63,7 +66,15 @@ function aMundo(clientX, clientY) {
 
 // ── pantalla completa (y, si el navegador deja, la orientación trabada en horizontal) ──
 function enPantallaCompleta() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+// El navegador sólo deja poner pantalla completa (y hacer sonar el audio) DENTRO de un gesto del
+// usuario, y con el dedo el gesto cuenta recién al LEVANTARLO (pointerup/touchend), no al apoyarlo.
+// Si se pide fuera de un gesto (el menú corre en el bucle del juego), queda pendiente y se cumple
+// en el próximo gesto (02-entrada).
+let _completaPendiente = null;
+function gestoActivo() { const u = navigator.userActivation; return !u || u.isActive; }
 function pantallaCompleta(activar = true) {
+  if (!gestoActivo()) { _completaPendiente = activar; return; }
+  _completaPendiente = null;
   try {
     if (activar && !enPantallaCompleta()) {
       const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen;

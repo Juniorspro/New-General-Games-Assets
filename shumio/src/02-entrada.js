@@ -34,7 +34,7 @@ addEventListener("keydown", (e) => {
   if (e.code === "Enter" || e.code === "Space") FLANCO.aceptar = true;
   if (e.code === "KeyM") FLANCO.mapa = true;
   if (e.code === "KeyF") pantallaCompleta(!enPantallaCompleta());
-  audioDespertar();
+  alGesto(null);
 });
 addEventListener("keyup", (e) => { const k = TECLAS[e.code]; if (k) IN.teclas.delete(k); });
 addEventListener("blur", () => { IN.teclas.clear(); STICKS.mover = STICKS.tirar = null; dedos.clear(); });
@@ -44,14 +44,19 @@ function botonEn(x, y) {
   return null;
 }
 let _primerToque = true;
+/** Lo que necesita un gesto de verdad (sonido, pantalla completa): se hace al levantar el dedo o
+ *  al hacer clic, que es cuando el navegador lo cuenta como gesto (en Android el pointerdown no). */
+function alGesto(e) {
+  audioDespertar();
+  if (_completaPendiente != null) pantallaCompleta(_completaPendiente);
+  else if (e && e.pointerType && e.pointerType !== "mouse" && _primerToque && !enPantallaCompleta()) pantallaCompleta(true);
+  if (e && e.pointerType && e.pointerType !== "mouse" && enPantallaCompleta()) _primerToque = false;
+}
+for (const ev of ["pointerup", "touchend", "click"]) addEventListener(ev, alGesto, { passive: true });
 lienzo.addEventListener("pointerdown", (e) => {
   e.preventDefault();
-  audioDespertar();
-  if (e.pointerType !== "mouse") {
-    IN.usaTactil = true;
-    // en el teléfono, el primer toque pone la pantalla completa (y traba la horizontal si se puede)
-    if (_primerToque) { _primerToque = false; pantallaCompleta(true); }
-  }
+  audioDespertar();   // por si el navegador ya lo deja (con mouse sí cuenta)
+  if (e.pointerType !== "mouse") IN.usaTactil = true;
   const p = aMundo(e.clientX, e.clientY);
   const d = { id: e.pointerId, x0: p.x, y0: p.y, x: p.x, y: p.y, t0: performance.now(), que: null };
   const b = enJuego() ? botonEn(p.x, p.y) : null;

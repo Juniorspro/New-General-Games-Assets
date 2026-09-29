@@ -332,7 +332,7 @@ function barrilSpr() {
     return p.canvas();
   });
 }
-function bloqueSpr() {
+function bloquePiedraSpr() {
   return hornear("bloque", () => {
     const p = new Pix(24, 26);
     p.caja(1, 5, 22, 20, PAL.hierro, { vertical: 0.6 }); p.caja(1, 1, 22, 5, PAL.hierro.slice(2), { vertical: 0.9 });
@@ -360,7 +360,7 @@ function corazonSpr(tipo /* rojo, medio, espora, esporaMedio, vacio */, chico = 
   return hornear(`cor${tipo}${chico}`, () => {
     const forma = chico ? [".xx.xx.", "xxxxxxx", "xxxxxxx", ".xxxxx.", "..xxx..", "...x..."] : [".xxx.xxx.", "xxxxxxxxx", "xxxxxxxxx", "xxxxxxxxx", ".xxxxxxx.", "..xxxxx..", "...xxx...", "....x...."];
     const w = forma[0].length, h = forma.length, p = new Pix(w + 2, h + 2);
-    const R = tipo.startsWith("espora") ? PAL.azul : PAL.sangre;
+    const R = tipo.startsWith("espora") ? PAL.azul : tipo.startsWith("negro") ? ["#080000", "#262626", "#333333", "#434343", "#8a8a8a"] : PAL.sangre;   // gris oscuro, no negro (medido en el original)
     const medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
     forma.forEach((f, y) => { for (let x = 0; x < w; x++) if (f[x] === "x") {
       const l = 1 - (y / h) * 0.9 - (x / w) * 0.25;
@@ -463,8 +463,8 @@ function trampillaSpr(abierta) {
 function corazonHudSpr(tipo) {
   return hornear(`corHud${tipo}`, () => {
     const forma = [".####.####.", "###########", "###########", "###########", ".#########.", "..#######..", "...#####...", "....###....", ".....#....."];
-    const p = new Pix(13, 11), esp = tipo.startsWith("espora"), medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
-    const R = esp ? ["#1c3a8c", "#2c5ad8", "#4a86ff", "#bcd6ff"] : ["#8a0a10", "#d01018", "#f02a30", "#ffb0b0"];
+    const p = new Pix(13, 11), esp = tipo.startsWith("espora"), negro = tipo.startsWith("negro"), medio = tipo.endsWith("edio"), vacio = tipo === "vacio";
+    const R = negro ? ["#262626", "#333333", "#434343", "#cecece"] : esp ? ["#1c3a8c", "#2c5ad8", "#4a86ff", "#bcd6ff"] : ["#8a0a10", "#d01018", "#f02a30", "#ffb0b0"];
     forma.forEach((f, y) => { for (let x = 0; x < 11; x++) {
       if (f[x] !== "#") continue;
       let c = vacio ? "#2a1418" : y >= 6 ? R[0] : y >= 4 ? R[1] : R[2];

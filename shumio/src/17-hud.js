@@ -66,7 +66,7 @@ function dibujarHud(g) {
   }
   const lista = [];
   for (let i = 0; i < j.cont; i += 2) lista.push(j.vida >= i + 2 ? "rojo" : j.vida === i + 1 ? "medio" : "vacio");
-  for (let i = 0; i < j.esporas; i += 2) lista.push(j.esporas >= i + 2 ? "espora" : "esporaMedio");
+  for (let i = 0; i < j.esporas; i += 2) { const t = j.almas[i] === "n" ? "negro" : "espora"; lista.push(j.esporas >= i + 2 ? t : t + "Medio"); }
   const late = vidaTotal(j) <= 2 && !j.muerto && ((J.t >> 4) & 1);
   if (J.maldicion === "desconocido") {   // no se ve la vida: un corazón vacío con un signo
     g.drawImage(corazonHudSpr("vacio"), hx, 3); g.drawImage(subtituloSpr("?"), hx + 14, 3);
