@@ -194,9 +194,9 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .viaje p { font-size: 22px; font-weight: 900; color: var(--azul2); margin-top: 30px; }
 
 /* el probador */
-.probador { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, calc(100 * var(--vw))); background: #fff; border-left: 3px solid var(--gris2); display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(40, 60, 80, 0.12); animation: entraDer 0.35s ease both; }
+.probador:not(.vista) { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, calc(100 * var(--vw))); background: #fff; border-left: 3px solid var(--gris2); display: flex; flex-direction: column; box-shadow: -10px 0 30px rgba(40, 60, 80, 0.12); animation: entraDer 0.35s ease both; }
 @keyframes entraDer { from { transform: translateX(40px); opacity: 0; } }
-html.angosta .probador { top: 48%; width: calc(100 * var(--vw)); border-left: 0; border-top: 3px solid var(--gris2); border-radius: 26px 26px 0 0; animation-name: entraAbajo; }
+html.angosta .probador:not(.vista) { top: 48%; width: calc(100 * var(--vw)); border-left: 0; border-top: 3px solid var(--gris2); border-radius: 26px 26px 0 0; animation-name: entraAbajo; }
 @keyframes entraAbajo { from { transform: translateY(40px); opacity: 0; } }
 .pestanas { display: flex; overflow-x: auto; gap: 4px; padding: 10px; border-bottom: 3px solid var(--gris2); background: #f7f8f9; touch-action: pan-x; scrollbar-width: none; }
 .pestanas button { flex: none; border: 3px solid transparent; background: #fff; border-radius: 14px; padding: 6px 10px; font-weight: 800; font-size: 14px; color: var(--tinta2); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
@@ -572,7 +572,7 @@ html.b460 .pk-est i { font-size: 40px; } html.b460 .pk-cifras b { font-size: 18p
 @keyframes notiTiempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 html.a560 .noti { padding-top: 4px; padding-bottom: 5px; font-size: 11.5px; } html.a560 .noti-ico { width: 24px; height: 24px; font-size: 14px; }
 /* el tutorial: una pista chiquita arriba a la izquierda, debajo de los orbes (antes flotaba grande en el medio) */
-.tuto { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 66px); max-width: min(250px, calc(34 * var(--vw))); box-sizing: border-box;
+.tuto { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 116px); max-width: min(250px, calc(34 * var(--vw))); box-sizing: border-box;
   padding: 5px 10px 6px 30px; border-radius: 9px; background: rgba(255, 255, 255, 0.78); border: 1px solid rgba(30, 60, 95, 0.25); color: #2c3a46; font: 700 12px/1.3 var(--letra);
   box-shadow: 0 2px 8px rgba(0, 40, 80, 0.15); pointer-events: none; animation: tutoEntra 0.35s ease both; }
 @keyframes tutoEntra { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
@@ -1159,3 +1159,46 @@ html.b460 .obra-h { padding: 4px 9px; font-size: 11px; } html.b460 .obra-h[data-
 html.b460 .cel-tab span { display: none; } html.b460 .cel-tab i { font-size: 13px; }
 html.b460 .cel-widget .cel-nota { display: none; }
 html.b460 .cel-reloj { font-size: 28px; }
+
+/* (vuelta 48) el 💎 de arriba se toca (su grupo no toma toques, para no tapar la cámara, y los heredaba) */
+.hud .arriba-izq > button { pointer-events: auto; }
+
+/* (vuelta 48) el menú principal en el celu acostado (390 de alto): los canales en 6 columnas y 2 filas, así entra
+   todo arriba de la barra de abajo; y "▶ Jugar" no se aplasta */
+.jugar-grande { flex-shrink: 0; }
+html.b460 .canales { grid-template-columns: repeat(6, 1fr); width: min(860px, calc(94 * var(--vw))); gap: 8px; }
+html.b460 .jugar-grande { padding: 9px 44px; font-size: 21px; margin-bottom: 9px; }
+html.b460 .canal .nombre { font-size: 12px; padding: 4px 7px; }
+html.b460 .menu { padding-top: 10px; }
+/* el título del canal abierto, legible sobre cualquier fondo (el de Mi casa es blanco) */
+.canal-abierto .titulo-canal { padding: 4px 20px; border-radius: 999px; background: rgba(10, 60, 110, 0.32); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+/* (vuelta 48) el consejo de los primeros pasos, abajo de las pastillas (tapaba el 💎); el cartel del modo foto */
+.foto-ayuda { position: fixed; left: 50%; top: max(14px, env(safe-area-inset-top)); transform: translateX(-50%); padding: 8px 18px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); box-shadow: var(--sombra); font: 800 14px var(--letra); color: var(--tinta); pointer-events: none !important; animation: apareceC 0.3s both; white-space: nowrap; }
+/* (vuelta 48) la tienda de joyas entra en el celu acostado (antes los "Comprar" quedaban cortados abajo) */
+html.b460 .tienda-joyas { gap: 7px; }
+html.b460 .tj-saldo { font-size: 22px; gap: 6px; } html.b460 .tj-saldo > span:first-child { font-size: 13px; }
+html.b460 .tj-anuncio { padding: 6px 12px; border-radius: 16px; gap: 8px; } html.b460 .tj-anuncio .tj-tele { font-size: 22px; } html.b460 .tj-anuncio b { font-size: 14px; } html.b460 .tj-anuncio small { font-size: 11.5px; }
+html.b460 .tienda-joyas h3 { font-size: 12px; margin: 0; }
+html.b460 .tj-paquete { padding: 9px 4px 7px; gap: 1px; border-radius: 16px; } html.b460 .tj-paquete b { font-size: 17px; }
+html.b460 .tj-paquete small { font-size: 10px; min-height: 0; line-height: 1.2; } html.b460 .tj-paquete .tj-precio { margin-top: 2px; padding: 3px 10px; font-size: 12px; }
+html.b460 .tj-nota { font-size: 10.5px; }
+/* los gestos: el nombre entero (en la compu "Voltereta" o "Aplaudir" no entraban en su botón) */
+.gestos .boton { white-space: normal; line-height: 1.15; overflow-wrap: anywhere; font-size: 15px; padding-left: 4px; padding-right: 4px; }
+html.b460 .gestos .boton { font-size: 13px; }
+/* (vuelta 48) la cabeza del probador: el título cede lugar y los saldos entran (el 💎 se salía por la derecha) */
+.probador:not(.vista) .cabeza { gap: 8px; }
+.probador:not(.vista) .cabeza h2 { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; }
+.probador .saldos { flex-shrink: 0; } .probador .saldos .pildora { padding: 5px 10px; font-size: 15px; }
+/* (vuelta 48) los resultados del parkour, el tiro y el runner entran en el celu acostado (antes, "Volver" y
+   "Duplicar" quedaban abajo del borde): estrellas más chicas y las cifras en una fila */
+html.b460 .pk-est { margin: -6px 0 2px; gap: 6px; } html.b460 .pk-est i { font-size: 30px; }
+html.b460 .pk-cifras { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 5px; margin-bottom: 6px; }
+html.b460 .pk-cifras div { padding: 4px 5px; border-radius: 12px; } html.b460 .pk-cifras small { font-size: 10.5px; } html.b460 .pk-cifras b { font-size: 16px; }
+html.b460 .pk-record { font-size: 14px; margin-bottom: 5px; }
+html.b460 .pk-resultado .fila { gap: 6px; } html.b460 .pk-resultado .fila .boton { min-width: 0; padding: 7px 13px; font-size: 14px; }
+/* las miniaturas de los niveles, enteras (el nombre va dibujado adentro y se cortaba de los costados) */
+.pk-carta img { aspect-ratio: 16 / 10; }
+/* la cruz de los avisos, que se pueda tocar */
+.noti-x { min-width: 24px; min-height: 24px; font-size: 12px !important; }
+/* (vuelta 48) las tarjetas angostas del menú en el celu acostado: el ícono y el logo más chicos, sin pisar el nombre */
+html.b460 .vista.icono { font-size: 30px; } html.b460 .vista.salas small { display: none; } html.b460 .vista.salas b { font-size: 26px; }

@@ -653,7 +653,9 @@ async function iniciar() {
     else if (n === 5) UI.mapa(dibujarMapa);
   }
   function foto() {
-    if (!modoFoto) { modoFoto = true; UI.hud.classList.add('oculto'); ent.mostrarDedos(false); UI.avisar(t('foto_ayuda')); document.addEventListener('pointerdown', fotoToque, { once: true }); return; }
+    /* (vuelta 48: el aviso va afuera del HUD, que se esconde; antes no se veía nunca) */
+    if (!modoFoto) { modoFoto = true; UI.hud.classList.add('oculto'); ent.mostrarDedos(false); UI.ayudaFoto(t(ent.tactil ? 'foto_ayuda_dedo' : 'foto_ayuda')); document.addEventListener('pointerdown', fotoToque, { once: true }); return; }
+    UI.ayudaFoto(null);
     motor.dibujar(0);
     const a = document.createElement('a'); a.download = 'aeroplaza-' + Date.now() + '.png'; a.href = motor.lienzo.toDataURL('image/png'); a.click();
     modoFoto = false; UI.hud.classList.remove('oculto'); ent.mostrarDedos(true); UI.avisar(t('foto_lista'), 'bien'); J.sfx('guino');

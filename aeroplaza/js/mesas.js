@@ -422,7 +422,14 @@ export class Mesas {
     p.querySelector('[data-a=levantarse]').textContent = t('mesa_levantarse');
     p.querySelector('[data-a=otra]').onclick = (e) => { e.stopPropagation(); const M2 = this.lista[this.mia?.i]; if (M2) { M2.fin = null; this.nuevaPartida(M2, true); J.sfx('entra'); } };
     p.querySelector('[data-a=levantarse]').onclick = (e) => { e.stopPropagation(); this.levantar(J); J.levantarse?.(); };
-    const aUV = (e) => { const r = cv.getBoundingClientRect(); /* (con el celu parado todo va girado: se mide en el lienzo sin girar) */ const x = e.offsetX ?? (e.clientX - r.left), y = e.offsetY ?? (e.clientY - r.top); return [x / cv.clientWidth, y / cv.clientHeight]; };
+    /* (con el celu parado todo va girado: se mide en el lienzo sin girar. Vuelta 48: el tablero se dibuja entero y
+       centrado adentro de la caja (object-fit: contain); antes se dividía por toda la caja y en el celu, más ancha
+       que alta, el toque caía una columna al costado) */
+    const aUV = (e) => {
+      const r = cv.getBoundingClientRect(), x = e.offsetX ?? (e.clientX - r.left), y = e.offsetY ?? (e.clientY - r.top);
+      const cw = cv.clientWidth, ch = cv.clientHeight, s = Math.min(cw / cv.width, ch / cv.height), dw = cv.width * s, dh = cv.height * s;
+      return [(x - (cw - dw) / 2) / dw, (y - (ch - dh) / 2) / dh];
+    };
     cv.addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); const [u, v] = aUV(e); this.toque(u, v); });
     cv.addEventListener('pointermove', (e) => { const M2 = this.lista[this.mia?.i]; if (!M2) return; const [u, v] = aUV(e); const h = tocar(M2.juego, M2.S, u, v, { yo: this.mia.silla }); if (h !== this.hover) { this.hover = h; this.pintarPanel(); } });
     this.pintarPanel();

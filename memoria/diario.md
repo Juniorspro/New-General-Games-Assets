@@ -4,6 +4,12 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
 (qué quedó y qué falta), no el relato. Quedan las ~8 más nuevas; las viejas pasan a
 [diario-viejo](diario-viejo.md), que no hace falta leer (lo que quedó está en cada nota).
 
+- **29/09/2026, de tarde, decimoquinta vez · `claude/fijate-iszyer`:**
+  - Pidió: el HTML; construir en la casa y mejores decoraciones; arreglar minijuegos y menús; el celu parado; guardar
+    botones en el celu.
+  - Quedó ([aeroplaza-48](aeroplaza-48.md)): el modo construir (54 piezas), el celu parado, los botones en el celu y
+    los arreglos del recorrido (`arreglos.mjs` 19/19). Publicada la n 5; se mandó el HTML con canciones.
+  - Falta: que diga si en su celu la construcción con los dedos va cómoda.
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".
   - Quedó ([aeroplaza-47](aeroplaza-47.md)): la APK 45 solo buscaba al arrancar de cero. La 46 busca al volver y cada
@@ -46,10 +52,4 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Quedó ([aeroplaza-42](aeroplaza-42.md)): la mira no aprieta y se apaga con manos; pantallas a 1,45-1,9 m; la
     0,5x con ARCore en pausa (la cabeza del giroscopio alineado). `espacio.mjs` 32/32, `ancha.mjs` 17/17.
   - Falta: probar la 0,5x en el celu (qué camino elige, si la foto cae derecha, si ARCore retoma al volver a 1x).
-- **27/09/2026, de noche, séptima vez · `claude/fijate-iszyer`:**
-  - Pidió: "se me cierra la app al entrar al ARCore" (sin logcat).
-  - Quedó ([aeroplaza-41](aeroplaza-41.md)): los sensores de la cabeza a 200 Hz en su hilo y fuera del arranque; el
-    arranque fallido suelta la cámara; la WebView caída se rearma; al abrir, un aviso fijo dice por qué se cerró la vez
-    pasada. `choque.mjs` 22/22.
-  - Falta: que lo abra en el celu; si se cierra de nuevo, la captura del aviso 💥.
-- **Antes (22/09 a 27/09, 55 sesiones):** en [diario-viejo](diario-viejo.md).
+- **Antes (22/09 a 27/09, 56 sesiones):** en [diario-viejo](diario-viejo.md).

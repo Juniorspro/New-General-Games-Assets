@@ -319,6 +319,11 @@ export const UI = {
     const barra = $('.noti-t', d); barra.style.animation = 'none'; void barra.offsetWidth; barra.style.animation = ''; barra.style.setProperty('--dur', dur + 'ms');
   },
   cerrarNoti(d) { if (!d.isConnected || d.classList.contains('sale')) return; clearTimeout(d._t); d.classList.add('sale'); setTimeout(() => d.remove(), 280); },
+  /* (vuelta 48) el cartel del modo foto: afuera del HUD (que en el modo foto se esconde); null lo saca */
+  ayudaFoto(texto) {
+    this.raiz.querySelector('.foto-ayuda')?.remove();
+    if (texto) { const d = el('<div class="foto-ayuda">📷 <span></span></div>'); d.lastChild.textContent = texto; this.poner(d); }
+  },
   /* el aviso de siempre: si empieza con un emoji, ese es el ícono */
   avisar(texto, tipo = '') {
     this.historial = [...(this.historial || []), texto].slice(-30);   // (para las pruebas)
@@ -571,7 +576,7 @@ export const UI = {
     const c = $('.cuerpo', v);
     if (typeof cuerpo === 'string') c.innerHTML = cuerpo; else c.appendChild(cuerpo);
     /* ojo: se agregó en captura, así que se saca en captura (si no, queda enganchado y se come el Escape de la pausa) */
-    const cerrar = () => { if (!v.isConnected) return; v.remove(); if (this.ventanaAbierta === v) this.ventanaAbierta = null; removeEventListener('keydown', tecla, true); alCerrar && alCerrar(); };
+    const cerrar = () => { if (!v.isConnected) return; v.remove(); if (this.ventanaAbierta === v) this.ventanaAbierta = null; removeEventListener('keydown', tecla, true); if (!v._callada) alCerrar && alCerrar(); };
     const tecla = (e) => { if (e.code === 'Escape' && !e.target.closest('input')) { e.preventDefault(); e.stopPropagation(); cerrar(); } };
     addEventListener('keydown', tecla, true);
     $('[data-a=x]', v).onclick = cerrar;
@@ -580,7 +585,8 @@ export const UI = {
     this.ventanaAbierta = v;
     return v;
   },
-  cerrarVentana() { if (this.ventanaAbierta) this.ventanaAbierta.cerrar(); },
+  /* callada: sin su alCerrar (vuelta 48: el editor de dedos cerraba Controles y eso volvía a abrir la pausa, que lo tapaba) */
+  cerrarVentana(callada = false) { const v = this.ventanaAbierta; if (!v) return; if (callada) v._callada = true; v.cerrar(); },
   pausa() {
     const J = this.J;
     const cuerpo = el(`<div class="pausa-menu">
@@ -682,7 +688,7 @@ export const UI = {
       ['mando', '🎮', t('ctl_mando'), (p) => txt(p, t('ctl_mando_txt'))],
       ['dedos', '✋', t('ctl_dedos'), (p) => {
         const editar = el(`<button class="boton primario chico">${t('ctl_editar')}</button>`);
-        editar.onclick = () => { this.cerrarVentana(); this.editorDedos(volver); };
+        editar.onclick = () => { this.cerrarVentana(true); this.editorDedos(volver); };
         p.appendChild(this.fila(t('ctl_botones'), editar));
         p.appendChild(this.fila(t('ctl_palanca'), this.segmentos([['fija', t('ctl_fija')], ['flotante', t('ctl_flotante')]], C.palanca, (v) => { C.palanca = v; J.guardarControles(); })));
         p.appendChild(this.fila(t('ctl_zurdo'), this.segmentos([[false, t('no')], [true, t('si')]], C.zurdo, (v) => { C.zurdo = v; J.ent.ubicarDedos(); J.guardarControles(); })));
@@ -798,8 +804,11 @@ export const UI = {
       grilla.innerHTML = ''; if (extra) grilla.appendChild(extra);
       for (const b of items) grilla.appendChild(b);
       const cols = Math.max(1, getComputedStyle(grilla).gridTemplateColumns.split(' ').length);
-      const alto = items[0] ? items[0].offsetHeight + 10 : 90, libre = grilla.clientHeight - 24 - (extra ? extra.offsetHeight + 10 : 0);
-      const filas = Math.max(1, Math.floor((libre + 10) / alto)), por = filas * cols, n = Math.max(1, Math.ceil(items.length / por));
+      /* (vuelta 48: con el relleno y el espacio de verdad de la grilla; antes se restaban 24 px de más y en el celu
+         acostado entraba una sola fila sobre un hueco vacío) */
+      const cs = getComputedStyle(grilla), pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0), gap = parseFloat(cs.rowGap) || 10;
+      const alto = items[0] ? items[0].offsetHeight + gap : 90, libre = grilla.clientHeight - pad - (extra ? extra.offsetHeight + gap : 0);
+      const filas = Math.max(1, Math.floor((libre + gap) / alto)), por = filas * cols, n = Math.max(1, Math.ceil(items.length / por));
       pag = Math.max(0, Math.min(n - 1, pag));
       items.forEach((b, i) => { if (i < pag * por || i >= (pag + 1) * por) b.remove(); });
       paginas.classList.toggle('una', n <= 1);
