@@ -206,7 +206,8 @@ export class Enemigos {
     }
     const noche = J.noche;
     if (cerca('cangrejo', 50) < (noche > 0.6 ? 4 : 2)) this.aparecerPlaya();
-    if (noche > 0.68 && cerca('esqueleto', 60) < 4) this.aparecerNoche();
+    // la primera noche, más tranquila: todavía estás armando tu primera espada
+    if (noche > 0.68 && cerca('esqueleto', 60) < (J.dia <= 1 ? 2 : 4)) this.aparecerNoche();
   }
 
   lugarLibre(x, z) {
@@ -407,8 +408,9 @@ export class Enemigos {
     const ang = e.tipo === 'cangrejo' ? e.yaw + Math.sin(e.t * 1.3 + e.fase) * 0.9 : e.yaw;
     const nx = e.p.x + Math.sin(ang) * vel * dt, nz = e.p.z + Math.cos(ang) * vel * dt;
     if (!T.vuela && e.p.y > -30) {
+      // al agua honda no; pero si un empujón lo metió, que pueda salir
       const h = J.mundo.terreno.altura(nx, nz);
-      if (h < (e.tipo === 'cangrejo' ? -0.7 : -0.35)) return;   // al agua honda no
+      if (h < (e.tipo === 'cangrejo' ? -0.7 : -0.35) && h < J.mundo.terreno.altura(e.p.x, e.p.z)) return;
     }
     e.p.x = nx; e.p.z = nz;
   }

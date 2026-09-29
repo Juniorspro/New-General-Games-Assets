@@ -324,17 +324,25 @@ export class Historia {
     ];
   }
 
+  // El objetivo de ahora es el que sigue al más adelantado que ya se cumplió:
+  // si llegaste al faro sin haber cocinado, lo de cocinar queda atrás (si no,
+  // la guía se traba en algo que ya no importa).
   revisar() {
     const J = this.J, L = this.objetivos();
     if (!this.visitoFaro && Math.hypot(J.jugador.p.x - this.faro.pos.x, J.jugador.p.z - this.faro.pos.z) < 16) this.visitoFaro = true;
-    let i = J.objetivoI || 0;
-    while (i < L.length - 1 && L[i][2]()) {
-      J.hud.noti('✓ ' + t(L[i][1]), null, 'obj' + i);
+    let i = Math.max(0, Math.min(J.objetivoI || 0, L.length - 1));
+    let lejos = -1;
+    for (let k = L.length - 2; k >= i; k--) if (L[k][2]()) { lejos = k; break; }
+    const antes = L[i][0];
+    let tildes = 0;
+    while (i < L.length - 1 && (i <= lejos || L[i][2]())) {
+      // de a pocos: al cargar una partida vieja no se llena la pantalla de tildes
+      if (tildes < 3 && L[i][2]()) { J.hud.noti('✓ ' + t(L[i][1]), null, 'obj' + i); tildes++; }
       i++;
-      if (L[i][0] !== L[i - 1][0]) this.anunciarCapitulo(L[i][0]);
     }
     J.objetivoI = i;
     this.capitulo = L[i][0];
+    if (this.capitulo !== antes) this.anunciarCapitulo(this.capitulo);
     J.hud.objetivo(t(L[i][1]), t('cap.titulo', { n: this.capitulo, nombre: t('cap.' + this.capitulo) }));
   }
 

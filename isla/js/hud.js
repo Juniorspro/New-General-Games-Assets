@@ -112,7 +112,7 @@ export class Hud {
   // lo que está escrito en el HTML de las capas
   textos() {
     $('cartaCerrar').textContent = t('carta.cerrar');
-    $('mapaAyuda').textContent = t('mapa.ayuda');
+    $('mapaAyuda').textContent = t(this.J.entrada.tactil ? 'carta.cerrar' : 'mapa.ayuda');
     this.elJefeNombre.textContent = t('jefe.nombre');
   }
 
@@ -265,6 +265,8 @@ export class Hud {
     const e = J.enemigos && J.enemigos.jefe;
     const peleando = e && e.estado !== 'paseo' && e.estado !== 'muerto' && e.p.distanceTo(J.jugador.p) < 24;
     this.elJefe.classList.toggle('oculto', !peleando);
+    // la barra del jefe va donde está el objetivo en el teléfono (y el objetivo ya es él)
+    this.elObjetivo.classList.toggle('bajoJefe', !!peleando);
     if (peleando) this.elJefeVida.style.width = `${Math.max(0, (e.vida / e.T.vida) * 100)}%`;
   }
 

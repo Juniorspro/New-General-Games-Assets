@@ -14,3 +14,10 @@
 - Hecho: talar, minar de a pedazos, pala, guadaña, pesca, construir, mina con faroles, estrellas de noche, guardado, colección y objetivos.
 - Hecho: el menú que se mece y vuela a los carteles.
 - Falta: medir en un teléfono, tienda, revisar otras semillas en pantalla.
+
+## 29/09/2026 (noche) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido: "los mismos gráficos del juego original, mejoralo, giralo 90°, un propósito, más mecánicas, mejores vistas, mejores armas".
+- Hecho (commit e363836): nubes 3D, reflejo en el agua, palmeras y matas como en los videos, noche más oscura, y el teléfono parado juega acostado.
+- Hecho: la historia del faro en seis capítulos con final, cuatro enemigos y el guardián, seis armas y dos petos, fogata, cocina, cocos que se plantan, mercader, tesoro, mapa, tercera persona, gaviotas, luciérnagas y peces. → [isla](isla.md)
+- Medido: 60/60 tres veces + 6/6; archivo único de 1138 KB.
+- Falta: medir en un teléfono de verdad; mirar otras semillas en pantalla.

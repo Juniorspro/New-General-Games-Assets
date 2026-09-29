@@ -33,7 +33,9 @@ const AYUDAS = `
   const tener = (id, n = 1) => J.inv.agregar(id, n);
   const elegir = (id) => { J.acciones.sel = J.inv.ranuras.findIndex((r) => r && r.id === id); };
   const cerca = (lista) => lista.slice().sort((a, b) => Math.hypot(a.x - J.jugador.p.x, a.z - J.jugador.p.z) - Math.hypot(b.x - J.jugador.p.x, b.z - J.jugador.p.z));
-  const jugar = () => { J.empezar(false); pasos(50, 1 / 20); };
+  // sin capturar el puntero: en Chromium sin pantalla la captura llega o se
+  // suelta fuera de turno y el juego se pausa solo en medio de una prueba
+  const jugar = () => { J.entrada.pedirCaptura = () => {}; J.empezar(false); pasos(50, 1 / 20); };
 `;
 const correr = (pg, cuerpo) => pg.evaluate(`(async () => { ${AYUDAS} ${cuerpo} })()`);
 
@@ -170,6 +172,223 @@ r = await correr(pg, `
 ch('de noche cae una estrella y queda en el piso', r.cae === 1 && r.suelo);
 await pg.close();
 
+// ── pelear ─────────────────────────────────────────────────────────────────
+// Más ayudas: apretar el clic unos cuadros, el clic derecho y una tecla.
+const PELEA = `
+  const E = J.entrada;
+  const apretar = (n) => { for (let i = 0; i < n; i++) { E.botones.izq = true; if (i === 0) E.botonesRecien.izq = true; I.paso(1 / 30, false); } E.botones.izq = false; };
+  const der = () => { E.botonesRecien.der = true; I.paso(1 / 30, false); };
+  const tecla = (c) => { E.recien.add(c); I.paso(1 / 30, false); };
+  const ir = (x, z, y) => { J.jugador.ponerEn(V(x, y ?? J.fisica.suelo(x, z, 60), z), J.jugador.yaw); J.jugador.v.set(0, 0, 0); };
+  const adelante = (d) => { const p = J.jugador.p, a = J.jugador.yaw; return V(p.x - Math.sin(a) * d, J.fisica.suelo(p.x - Math.sin(a) * d, p.z - Math.cos(a) * d, p.y + 5), p.z - Math.cos(a) * d); };
+  // Un lugar en tierra con 10 m despejados adelante (sin agua, rocas ni
+  // troncos en el medio): recorre una grilla fija, así cada corrida es igual.
+  const despejado = (largo = 10, desnivel = 1.5) => {
+    const T = J.mundo.terreno;
+    for (let gx = -60; gx <= 60; gx += 6) for (let gz = -60; gz <= 60; gz += 6) for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2, h0 = T.altura(gx, gz);
+      let libre = h0 > 0.5 && h0 < 6;
+      for (let u = 0; u <= largo && libre; u += 0.5) {
+        const x = gx - Math.sin(a) * u, z = gz - Math.cos(a) * u, h = T.altura(x, z);
+        if (h < 0.5 || Math.abs(h - h0) > desnivel || J.mundo.dentroDePiso(x, z, 1)) libre = false;
+        else if (J.mundo.obstaculos(x, z, 0.8).some((o) => Math.hypot(o.x - x, o.z - z) < o.r + 0.8)) libre = false;
+      }
+      if (libre) { ir(gx, gz); J.jugador.yaw = a; J.jugador.pitch = 0; return true; }
+    }
+    return false;
+  };
+`;
+const pelea = (pg, cuerpo) => correr(pg, PELEA + cuerpo);
+console.log('── pelear');
+pg = await abrir('nueva&idioma=es');
+r = await pelea(pg, `
+  jugar(); J.enemigos.limpiar(false); J.enemigos.tPoblar = 1e9;
+  tener('espadaPiedra'); elegir('espadaPiedra'); pasos(12);
+  const q = adelante(1.8), c = J.enemigos.crear('cangrejo', q.x, q.y, q.z);
+  J.jugador.pitch = -0.35;
+  let golpes = 0;
+  while (c.estado !== 'muerto' && golpes < 6) { apretar(16); golpes++; }
+  pasos(30);
+  return { golpes, muerto: c.estado === 'muerto' || !J.enemigos.lista.includes(c), carne: J.objetos.lista.some((o) => o.id === 'carneCangrejo'), vencidos: J.stats.enemigos || 0, numeros: document.querySelectorAll('#numeros .numero').length };`);
+ch('la espada mata a un cangrejo en dos golpes', r.muerto && r.golpes <= 3, `${r.golpes} espadazos (6 de daño contra 10 de vida)`);
+ch('suelta su carne, suma a la cuenta y salta el número', r.carne && r.vencidos === 1 && r.numeros > 0);
+r = await pelea(pg, `
+  J.enemigos.limpiar(false); J.cielo.hora = 0.95; pasos(5);
+  despejado(); pasos(2);
+  J.jugador.vida = 100; J.combate.invulnerable = 0;
+  const q = adelante(4), e = J.enemigos.crear('esqueleto', q.x, q.y, q.z);
+  let t = 0; while (J.jugador.vida >= 100 && t < 240) { pasos(1); t++; }
+  const vio = e.estado !== 'paseo';
+  // el daño con y sin peto (sin invulnerabilidad entre uno y otro)
+  J.jugador.vida = 100; J.combate.invulnerable = 0; J.armadura = null; J.combate.danarJugador(12, e.p); const sin = 100 - J.jugador.vida;
+  J.jugador.vida = 100; J.combate.invulnerable = 0; J.armadura = 'petoHierro'; J.combate.danarJugador(12, e.p); const con = 100 - J.jugador.vida;
+  J.armadura = null; J.jugador.vida = 100;
+  // al amanecer se quema
+  J.cielo.hora = 0.3; pasos(8);
+  let q2 = 0; while (J.enemigos.lista.includes(e) && q2 < 150) { pasos(1); q2++; }
+  return { vio, t: t / 30, sin, con, quemado: !J.enemigos.lista.includes(e), q2: q2 / 30 };`);
+ch('de noche el esqueleto te ve, viene y te pega', r.vio && r.t < 8, `el primer golpe a los ${r.t.toFixed(1)} s`);
+ch('el peto de hierro baja el daño', r.sin === 12 && r.con === 7, `${r.sin} sin peto, ${r.con} con`);
+ch('al amanecer los esqueletos se queman', r.quemado, `${r.q2.toFixed(1)} s de sol`);
+r = await pelea(pg, `
+  J.enemigos.limpiar(false);
+  // plano: una loma en el medio frena la flecha
+  despejado(10, 0.4); pasos(2);
+  tener('arco'); tener('flecha', 5); elegir('arco'); pasos(12);
+  const q = adelante(9), c = J.enemigos.crear('cangrejo', q.x, q.y, q.z);
+  c.T = { ...c.T, vel: 0 };
+  mirar(c.p.x, c.p.y + 0.5, c.p.z); J.jugador.pitch += 0.05;
+  for (let i = 0; i < 30; i++) { E.botones.izq = true; I.paso(1 / 30, false); }
+  const carga = J.combate.carga;
+  E.botones.izq = false; I.paso(1 / 30, false);
+  pasos(40);
+  return { carga, flechas: J.inv.contar('flecha'), muerto: c.estado === 'muerto' || !J.enemigos.lista.includes(c) };`);
+ch('el arco se tensa y la flecha voltea a un cangrejo a 9 m', r.carga > 0.99 && r.muerto && r.flechas === 4, `tensado ${Math.round(r.carga * 100)} %, quedan ${r.flechas} flechas`);
+r = await pelea(pg, `
+  J.enemigos.limpiar(false); J.enemigos.tPoblar = 1e9;
+  tener('fogata'); elegir('fogata'); pasos(12); J.jugador.pitch = -0.6; pasos(2); der(); pasos(2);
+  const f = J.bloques.fogatas[0];
+  if (!f) return { sin: true };
+  J.cielo.hora = 0.95; pasos(5);
+  // alrededor de la fogata: cien intentos de aparecer, ninguno a menos de 15 m
+  let cercanos = 0;
+  for (let i = 0; i < 100; i++) { J.enemigos.aparecerNoche(); J.enemigos.aparecerPlaya(); }
+  for (const e of J.enemigos.lista) if (Math.hypot(e.p.x - f.x - 0.5, e.p.z - f.z - 0.5) < 15) cercanos++;
+  const total = J.enemigos.lista.length;
+  J.enemigos.limpiar(false);
+  ir(f.x + 0.5 + 1.6, f.z + 0.5); mirar(f.x + 0.5, f.y + 0.3, f.z + 0.5);
+  tener('carneCangrejo', 2); elegir('carneCangrejo'); pasos(12); der(); pasos(2);
+  J.cielo.hora = 0.3;
+  return { total, cercanos, asado: J.inv.contar('cangrejoAsado'), carne: J.inv.contar('carneCangrejo') };`);
+ch('la fogata espanta: nada aparece a menos de 15 m', !r.sin && r.total > 5 && r.cercanos === 0, r.sin ? 'no se puso' : `${r.total} aparecieron, ${r.cercanos} cerca`);
+ch('en la fogata se cocina (clic derecho)', r.asado === 1 && r.carne === 1);
+await pg.close();
+
+pg = await abrir('nueva&idioma=es');
+r = await pelea(pg, `
+  jugar();
+  const S = J.mina.salaJefe;
+  J.ponerBajo(true); ir(S.x, S.z, -60);
+  J.enemigos.tPoblar = 0; pasos(3);
+  const g = J.enemigos.jefe;
+  if (!g) return { sinJefe: true };
+  tener('espadaAmatista'); elegir('espadaAmatista'); pasos(12);
+  ir(g.p.x + 2.6, g.p.z, g.p.y);
+  let k = 0, enojo = null;
+  while (g.estado !== 'muerto' && k < 120) { J.jugador.vida = 100; mirar(g.p.x, g.p.y + 1.6, g.p.z); apretar(12); k++; if (g.enojado && enojo === null && g.vida < g.T.vida * 0.5) enojo = Math.round(g.vida); }
+  pasos(30);
+  return { k, vencido: J.enemigos.jefeVencido, corazon: J.objetos.lista.some((o) => o.id === 'corazonCristal'), enojo, barra: J.hud.elJefe };`);
+ch('el guardián espera en la sala más honda de la mina', !r.sinJefe);
+ch('se lo vence y suelta el corazón de cristal', r.vencido && r.corazon, `${r.k} tandas de espadazos`);
+await pg.close();
+
+// ── la historia: botella, faro, barco, final ───────────────────────────────
+console.log('── la historia');
+pg = await abrir('nueva&idioma=es');
+r = await pelea(pg, `
+  jugar();
+  const cap = J.historia.capitulo, cartel = document.getElementById('cartel').textContent;
+  const botella = J.objetos.lista.find((o) => o.id === 'botella');
+  const aBarco = botella ? botella.g.position.distanceTo(J.historia.posNaufragio) : 99;
+  tener('botella'); elegir('botella'); pasos(12); der();
+  const abierta = !document.getElementById('carta').classList.contains('oculto'), estado = J.estado;
+  document.getElementById('carta').dispatchEvent(new PointerEvent('pointerdown'));
+  return { cap, cartel, aBarco, abierta, estado, despues: J.estado, carta: J.historia.carta };`);
+ch('se arranca en el capítulo 1 con su cartel', r.cap === 1 && r.cartel.startsWith('Capítulo 1'), r.cartel.slice(0, 30));
+ch('la botella de la primera carta está junto al barco roto', r.aBarco < 7, `a ${r.aBarco.toFixed(1)} m`);
+ch('clic derecho la lee; un toque la cierra', r.abierta && r.estado === 'ventana' && r.despues === 'jugando' && r.carta === 1);
+r = await pelea(pg, `
+  const H = J.historia, F = H.faro;
+  ir(F.puerta.x, F.puerta.z); mirar(F.pos.x, F.pos.y + 2, F.pos.z); pasos(3);
+  tener('madera', 20); tener('hierro', 4); tener('cuarzo', 3); tener('oro', 1); tener('corazonCristal', 1); tener('estrella', 1);
+  J.cielo.hora = 0.5; pasos(2);
+  tecla('KeyE');
+  const tab = J.hud.abierta, boton = (i) => [...document.querySelectorAll('#vCuerpo .receta button')][i];
+  boton(0).click(); boton(1).click(); boton(2).click();
+  const deDia = F.etapa, trabado = boton(3).disabled;
+  J.hud.cerrar(); J.cielo.hora = 0.9; pasos(5); tecla('KeyE'); boton(3).click(); J.hud.cerrar();
+  return { tab, deDia, trabado, etapa: F.etapa, barco: H.estadoBarco, sobra: ['madera', 'hierro', 'cuarzo', 'oro', 'corazonCristal', 'estrella'].map((id) => J.inv.contar(id)).join('') };`);
+ch('E en la puerta del faro abre sus arreglos', r.tab === 'faro');
+ch('tres arreglos de día; la luz, solo de noche', r.deDia === 3 && r.trabado && r.etapa === 4, `etapa ${r.deDia} de día, ${r.etapa} de noche`);
+ch('cada arreglo gasta lo que pide', r.sobra === '000000');
+r = await pelea(pg, `
+  const H = J.historia;
+  J.cielo.hora = 0.3; pasos(3);
+  const viene = H.estadoBarco;
+  let s = 0; while (H.estadoBarco === 'viene' && s < 120) { pasos(10, 1 / 5); s++; }
+  if (!H.barco) return { viene, sinBarco: true, hora: J.cielo.hora, estado: J.estado, bajo: J.bajo, etapa: H.faro.etapa };
+  const b = H.barco.position;
+  ir(J.mundo.muelle.punta.x, J.mundo.muelle.punta.z); mirar(b.x, b.y + 2, b.z); pasos(3);
+  tecla('KeyE');
+  const fin = !document.getElementById('final').classList.contains('oculto');
+  document.getElementById('finalSeguir').click(); pasos(3);
+  return { viene, llego: H.estadoBarco, segundos: s * 2, fin, rescatado: H.rescatado, estado: J.estado, cap: H.capitulo };`);
+ch('al amanecer viene un barco y amarra en el muelle', r.viene === 'viene' && r.llego === 'llego', r.sinBarco ? JSON.stringify(r) : `${r.segundos} s de viaje`);
+ch('subir al barco es el final; después se sigue jugando', r.fin && r.rescatado && r.estado === 'jugando' && r.cap === 6);
+await pg.close();
+
+// ── el resto: mercader, tesoro, plantar, mapa, tercera persona ─────────────
+console.log('── mercader, tesoro, plantar, mapa, vistas');
+pg = await abrir('nueva&idioma=es');
+r = await pelea(pg, `
+  jugar();
+  const M = J.mercader;
+  J.cielo.hora = 0.5; pasos(2);
+  const dia1 = M.grupo.visible;
+  J.dia = 2; pasos(2);
+  let mejor = null;
+  for (const q of J.mundo.pisos) for (let x = q.x0 + 0.3; x < q.x1; x += 0.4) for (let z = q.z0 + 0.3; z < q.z1; z += 0.4) { const d = Math.hypot(x - M.pos.x, z - M.pos.z); if (!mejor || d < mejor.d) mejor = { x, z, d, y: q.y }; }
+  ir(mejor.x, mejor.z, mejor.y + 0.01); mirar(M.pos.x, 1.2, M.pos.z); pasos(3);
+  tener('rubi', 2);
+  tecla('KeyE');
+  const tab = J.hud.abierta;
+  J.mercader.vender(J.inv, J.inv.ranuras.findIndex((r) => r && r.id === 'rubi'), false);
+  const plata = J.plata;
+  J.plata = 5000; J.hud.render();
+  const b = [...document.querySelectorAll('#vCuerpo .recetas .receta')].find((d) => d.textContent.includes('tesoro'));
+  if (b) b.querySelector('button').click();
+  J.hud.cerrar();
+  return { dia1, dia2: M.grupo.visible, tab, plata, precio: Math.round(ITEMS_RUBI * 0.8), mapa: J.inv.contar('mapaTesoro'), resto: J.plata };`.replace('ITEMS_RUBI', '2800'));
+ch('el mercader no viene el primer día; desde el segundo, sí', !r.dia1 && r.dia2);
+ch('compra al 80 % y vende el mapa del tesoro', r.tab === 'tienda' && r.plata === r.precio && r.mapa === 1 && r.resto === 3800, `un rubí: ${r.plata}`);
+r = await pelea(pg, `
+  const T = J.mapa.tesoro;
+  tener('pala'); tener('piedra', 20); elegir('pala'); pasos(12);
+  ir(T.x + 3, T.z); J.acciones.pincel = 1;
+  const cruz = J.mapa.cruz.visible;
+  let k = 0; while (!T.encontrado && k < 40) { mirar(T.x, J.mundo.terreno.altura(T.x, T.z), T.z); apretar(10); k++; }
+  pasos(20);
+  return { cruz, encontrado: T.encontrado, oro: J.objetos.lista.filter((o) => o.id === 'oro').length, segundos: k / 3 };`);
+ch('con el mapa, la X aparece y la pala saca el cofre', r.cruz && r.encontrado && r.oro >= 1, `${r.segundos.toFixed(1)} s de cavar`);
+r = await pelea(pg, `
+  const T = J.mundo.terreno, P = J.mundo.veg.palmeras.filter((q) => q.viva);
+  let lugar = null;
+  for (let i = 0; i < 4000 && !lugar; i++) {
+    const x = (Math.random() * 2 - 1) * 80, z = (Math.random() * 2 - 1) * 80, h = T.altura(x, z);
+    if (h < 1 || h > 6 || T.pasto(x, z) < 0.5 || P.some((q) => Math.hypot(q.x - x, q.z - z) < 6) || J.mundo.dentroDePiso(x, z, 3)) continue;
+    lugar = { x, z };
+  }
+  ir(lugar.x, lugar.z + 3); mirar(lugar.x, T.altura(lugar.x, lugar.z), lugar.z);
+  tener('coco', 2); elegir('coco'); pasos(12); der();
+  const p = J.mundo.veg.palmeras.find((q) => q.reserva && q.viva);
+  if (!p) return { sin: true };
+  const chica = p.copa.y - p.y;
+  for (let i = 0; i < 120; i++) J.mundo.veg.crecer(5);
+  return { chica, grande: p.copa.y - p.y, cocos: p.cocosQuedan, coco: J.inv.contar('coco'), plantadas: J.mundo.veg.plantadas().length };`);
+ch('un coco se planta y crece hasta ser palmera con cocos', !r.sin && r.grande > r.chica * 3 && r.cocos > 0 && r.coco === 1, r.sin ? 'no se plantó' : `${r.chica.toFixed(1)} m → ${r.grande.toFixed(1)} m`);
+r = await pelea(pg, `
+  tecla('KeyM');
+  const mapa = !document.getElementById('mapa').classList.contains('oculto'), estado = J.estado;
+  document.getElementById('mapa').dispatchEvent(new PointerEvent('pointerdown'));
+  const cerrado = document.getElementById('mapa').classList.contains('oculto') && J.estado === 'jugando';
+  tecla('KeyV'); pasos(3);
+  const tercera = { on: J.terceraPersona, d: J.camara.position.distanceTo(J.ojos), visible: J.personaje.grupo.visible };
+  tecla('KeyV'); pasos(3);
+  return { mapa, estado, cerrado, tercera, primera: J.camara.position.distanceTo(J.ojos), visible: J.personaje.grupo.visible };`);
+ch('M abre el mapa (suelta el puntero) y un toque lo cierra', r.mapa && r.estado === 'ventana' && r.cerrado);
+ch('V pasa a tercera persona: la cámara atrás y el náufrago a la vista', r.tercera.on && r.tercera.d > 2 && r.tercera.visible && r.primera < 0.01 && !r.visible, `${r.tercera.d.toFixed(1)} m detrás`);
+await pg.close();
+
 // ── guardar y cargar ───────────────────────────────────────────────────────
 console.log('── guardar y cargar');
 pg = await abrir('nueva&idioma=es');
@@ -180,6 +399,9 @@ r = await correr(pg, `
   J.bloques.poner('cofre', x, 1, z); J.bloques.cofres.get(x + ',1,' + z).agregar('rubi', 3);
   J.mundo.terreno.pincel(J.jugador.p.x + 4, J.jugador.p.z, 2, 1.5, 'subir'); J.mundo.terreno.actualizar();
   tener('picoHierro'); J.dia = 4; J.cielo.hora = 0.6;
+  // lo de la historia: plata, peto, faro, el guardián y una palmera plantada
+  J.plata = 1234; J.armadura = 'petoCaparazon'; J.historia.faro.ponerEtapa(2); J.historia.carta = 2; J.enemigos.jefeVencido = true;
+  J.mundo.veg.plantar(J.jugador.p.x + 6, J.mundo.terreno.altura(J.jugador.p.x + 6, J.jugador.p.z + 6), J.jugador.p.z + 6, 0.5);
   I.guardar();
   return { palmera: P.id, tam: localStorage.getItem('isla_v1').length };`);
 const guardado = r;
@@ -189,16 +411,41 @@ await pg.waitForFunction(() => window.__isla && window.__isla.listo, null, { tim
 r = await correr(pg, `
   return { taladas: J.mundo.veg.palmeras.filter((p) => !p.viva).map((p) => p.id), rubi: [...J.bloques.cofres.values()].map((c) => c.contar('rubi'))[0],
     pico: J.inv.contar('picoHierro'), dia: J.dia, hora: J.cielo.hora, cambios: J.mundo.terreno.diferencias().a.length / 2,
+    plata: J.plata, peto: J.armadura, etapa: J.historia.faro.etapa, carta: J.historia.carta, jefe: J.enemigos.jefeVencido,
+    plantadas: J.mundo.veg.plantadas(),
     opciones: [...document.querySelectorAll('#opciones button')].map((b) => b.textContent) };`);
 ch('se guarda poco', guardado.tam < 20000, `${(guardado.tam / 1024).toFixed(1)} KB`);
 ch('vuelve la palmera talada', r.taladas.includes(guardado.palmera));
 ch('vuelve el cofre con lo de adentro', r.rubi === 3);
 ch('vuelven el inventario, el día y la hora', r.pico === 1 && r.dia === 4 && Math.abs(r.hora - 0.6) < 0.01);
 ch('vuelve la forma del terreno', r.cambios > 5, `${r.cambios} vértices cambiados`);
+ch('vuelven la plata, el peto, el faro, las cartas y el guardián vencido', r.plata === 1234 && r.peto === 'petoCaparazon' && r.etapa === 2 && r.carta === 2 && r.jefe);
+ch('vuelve la palmera plantada, a medio crecer', r.plantadas.length === 1 && Math.abs(r.plantadas[0][2] - 0.5) < 0.01);
 r = await correr(pg, `J.menu.abrir('jugar'); return [...document.querySelectorAll('#opciones button')].map((b) => b.textContent);`);
 ch('con partida guardada, JUGAR ofrece continuar', r[0] === 'CONTINUAR', r.join(' · '));
 await correr(pg, `I.borrar();`);
 await pg.close();
+
+// ── el teléfono parado: la app se juega acostada ──────────────────────────
+console.log('── el teléfono parado');
+{
+  const ctxM = await nav.newContext({ viewport: { width: 412, height: 892 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  const pm = await ctxM.newPage();
+  pm.on('pageerror', (e) => errores.push(e.message));
+  await pm.goto(URL + 'nueva&idioma=es');
+  await pm.waitForFunction(() => window.__isla && window.__isla.listo, null, { timeout: 90000 });
+  r = await pm.evaluate(`(async () => { ${AYUDAS}
+    J.empezar(false); pasos(50, 1 / 20);
+    const app = document.getElementById('app').getBoundingClientRect(), barra = document.getElementById('barra').getBoundingClientRect();
+    const lienzo = J.renderer.getDrawingBufferSize(new THREE.Vector2());
+    return { girada: document.documentElement.classList.contains('girada'), app: [app.width, app.height], ancho: lienzo.x > lienzo.y,
+      // girada 90° (horario): la barra de abajo de la app queda contra el borde izquierdo del teléfono
+      barraIzquierda: barra.right < innerWidth * 0.2, dedos: !document.getElementById('dedos').classList.contains('oculto') };
+  })()`);
+  ch('parado, la app se gira y se juega acostada', r.girada && r.app[0] === 412 && r.app[1] === 892 && r.ancho, `lienzo apaisado: ${r.ancho}`);
+  ch('la barra y los dedos quedan del lado que corresponde', r.barraIzquierda && r.dedos, JSON.stringify({ izq: r.barraIzquierda, dedos: r.dedos }));
+  await ctxM.close();
+}
 
 // ── rendimiento (SwiftShader: lo dibujado no representa una placa de video) ──
 console.log('── números');

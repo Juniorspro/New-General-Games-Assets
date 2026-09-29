@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 29/09/2026 (la isla).
+Última puesta al día: 29/09/2026 (la isla: historia, enemigos, girada).
 Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 
 ## Reglas que no se discuten
@@ -24,7 +24,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | [juegos-2d-pixel](juegos-2d-pixel.md) | 2D pixel art: escala entera, personajes por piezas, combate, niveles |
 | [aeroplaza](aeroplaza.md) | look Frutiger Aero / Wii, avatar y animación por código, música en bucle, VR, manos, multijugador |
 | [probar](probar.md) | vas a probar en Chromium, medir, capturar o tocar como un dedo |
-| [isla](isla.md) | pixel art en 3D, el menú que se mece con carteles en el mundo, guardar contra la semilla |
+| [isla](isla.md) | pixel art en 3D, el menú que se mece, reflejo y nubes, jugar acostado en el teléfono, enemigos y golpes que se sienten, historia en capítulos |
 | [diario](diario.md) | querés saber qué se hizo en cada sesión y qué quedó pendiente |
 
 ## Los documentos largos (no se leen enteros: la nota dice qué sección)
@@ -47,7 +47,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | `pozo/` | pistas de 35-38 s, menú animado | `pozo/README.md` |
 | `pique/`, `pique2d/`, `pique3d/` | un corredor con niveles que se validan solos, en 2D, pixel art y 3D | `LEEME.md` de cada uno |
 | `perro/` | CAMPO: perro 3D en tercera persona sobre pasto | `perro/README.md` |
-| `isla/` | LA ISLA: supervivencia pixel 3D (la de @vfx843) con el menú de @brutu_scripts en la playa | `isla/README.md`, [isla](isla.md) |
+| `isla/` | LA ISLA: supervivencia pixel 3D (la de @vfx843) con la historia del faro, enemigos y el menú de @brutu_scripts en la playa | `isla/README.md`, [isla](isla.md) |
 | `dimension-n/` | Dimensión Ñ: caída vertical con ragdolls de Verlet | `dimension-n/README.md` |
 | `telarana/` | juego de un botón: colgarse de un hilo por una ciudad | `telarana/LEEME.md` |
 | `flores/` | diez páginas sueltas para el día de las flores amarillas | — |

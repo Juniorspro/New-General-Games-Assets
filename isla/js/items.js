@@ -66,7 +66,7 @@ export const ITEMS = {
   espadaHierro: T('Espada de hierro', 'herramienta', 2, 600, { pila: 1, herr: 'espada', poder: 2, dano: 10, alcance: 2.7, ritmo: 0.38 }),
   espadaAmatista: T('Espada de amatista', 'herramienta', 4, 8000, { pila: 1, herr: 'espada', poder: 3, dano: 16, alcance: 2.9, ritmo: 0.32, desc: 'Corta dejando un rastro violeta.' }),
   lanza: T('Lanza', 'herramienta', 1, 60, { pila: 1, herr: 'lanza', poder: 1, dano: 7, alcance: 3.7, ritmo: 0.55, desc: 'Llega más lejos que una espada.' }),
-  arco: T('Arco', 'herramienta', 2, 300, { pila: 1, herr: 'arco', poder: 1, dano: 9, ritmo: 0.3, desc: 'Mantené apretado para tensar. Usa flechas.' }),
+  arco: T('Arco', 'herramienta', 2, 300, { pila: 1, herr: 'arco', poder: 1, dano: 11, ritmo: 0.3, desc: 'Mantené apretado para tensar. Usa flechas.' }),
   flecha: T('Flecha', 'material', 1, 6),
   // ── defensa: se pone con clic derecho ──
   petoCaparazon: T('Peto de caparazón', 'armadura', 2, 250, { pila: 1, defensa: 0.25, color: 0xe0643a }),

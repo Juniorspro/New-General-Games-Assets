@@ -90,7 +90,7 @@ export class Combate {
     m.position.copy(J.ojos).addScaledVector(d, 0.5).add({ x: 0, y: -0.1, z: 0 });
     J.escena.add(m);
     const v = d.clone().multiplyScalar(16 + 26 * carga);
-    this.flechas.push({ m, v, t: 0, clavada: 0, dano: Math.round((it ? it.dano : 9) * (0.45 + 0.55 * carga)) });
+    this.flechas.push({ m, v, t: 0, clavada: 0, dano: Math.round((it ? it.dano : 11) * (0.45 + 0.55 * carga)) });
     J.son.sfx('arco');
     J.son.sfx('flecha');
   }

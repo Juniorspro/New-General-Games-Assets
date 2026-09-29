@@ -11,6 +11,7 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 - Dibuja por procesador: aeroplaza hizo 22-46 cuadros en 8 s a 892×412. Los cuadros por segundo de acá no dicen nada de un teléfono y no se informan como si dijeran. → `GUIA-JUEGOS.md § 9`
 - Sí valen: errores de consola, triángulos y llamadas (`renderer.info`, con `autoReset = false` si hay post), capturas.
 - Trampa: desde la página, todo pedido HTTPS falla con `ERR_CERT_AUTHORITY_INVALID` (Chromium no confía en el CA del proxy). Para probar "sin red" a propósito: `page.route(/^https?:/, r => r.abort())`.
+- Trampa: la captura del puntero (`requestPointerLock`) llega o se suelta fuera de turno cuando la prueba abre y cierra ventanas en un mismo `evaluate`, y el juego se pausa solo. En las pruebas, `entrada.pedirCaptura = () => {}` (la isla, 29/09/2026).
 
 ## Esperar tiempo de juego, no de reloj
 - Si el juego se puede pausar y expone su paso, avanzarlo a mano: aeroplaza con `?pausa` y `window.__A.paso(1/60)` N veces. Así se midieron caminar 3,34 m/s y correr 6,89 m/s.
@@ -30,4 +31,6 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 - Encuadres (la toma de un menú, la pose de la mano): capturar 6 u 8 variantes chicas en una hoja y elegir mirando; la isla eligió así su toma del menú y la pose de cada herramienta (29/09/2026).
 - En animaciones, capturar el cuadro pico. → 2D § 3.4
 - Un resultado raro suele ser la prueba y no el código; una sonda que escribe lo que mide aprueba cualquier cosa. → 3D § 9, 2D § 12
+- Lo que se pone "adelante" del jugador en una prueba puede caer en el agua o detrás de una loma: buscar el lugar en una grilla fija (repetible), no al azar. → `isla/pruebas/juego.mjs › despejado`
+- Una prueba que un día falla y otro no se corre tres veces antes de dar por bueno el arreglo (la isla, 60/60 tres veces, 29/09/2026).
 - Rendimiento: 200 cuadros de calentamiento + 300 de medición, contra el commit anterior en el mismo banco (`git show HEAD:archivo`). → 2D § 11
