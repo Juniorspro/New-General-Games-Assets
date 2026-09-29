@@ -1,15 +1,15 @@
 {
- "n": 4,
- "fecha": "2026-09-28",
- "notas": "Ahora se ve la versión abajo del menú.",
+ "n": 5,
+ "fecha": "2026-09-29",
+ "notas": "Construí tu casa (📱 › Construir): paredes, pisos, escaleras y 54 piezas. El celu va parado y guarda los botones que no usás. Arreglos en menús y minijuegos.",
  "apkMin": 1,
  "apk": {
   "codigo": 46
  },
  "html": {
-  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/b20fd2d672cf069a2ca71b694b63bd42525418d0/aeroplaza/aeroplaza.html",
-  "sha256": "c98ba57549fa3353a7c5b0556e519d1180b5a685e6313db16452f2c223d0b4e1",
-  "bytes": 3343390
+  "url": "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/c41403c3cf1f924c96382cd27891c1a499cbbff3/aeroplaza/aeroplaza.html",
+  "sha256": "5f918e18f0de0f6f9eb879c61da8178715c43483cf97e286d42713595c4fa4e8",
+  "bytes": 3394724
  },
  "fuentes": [
   "https://raw.githubusercontent.com/Juniorspro/New-General-Games-Assets/refs/heads/claude/fijate-iszyer/aeroplaza/actualizacion.json"

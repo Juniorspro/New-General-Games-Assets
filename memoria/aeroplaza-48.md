@@ -82,3 +82,8 @@ Archivos: `js/reinos/casa-piezas.js` (nuevo), `casa.js`, `ui.js › obra` y `mai
 - `pruebas/botones.mjs` (8): el HUD de entrada, Ajustes, las apps nuevas, la voz y el celu parado.
 - `pruebas/arreglos.mjs` (19): cada bug del recorrido, medido igual (844 × 390 con dedos, toques de verdad por CDP).
 - `pruebas/celu.mjs`: 16 apps.
+- Con los botones guardados cambiaron dos viejas: `avisos.mjs` pone todos en la pantalla antes de medir qué esconde el
+  parkour, y `flujo.mjs` llega al estilo por 📱 › Estilo. Ojo: cerrar la ventana de una app vuelve al celu (`volver`),
+  así que la prueba tiene que cerrar el celu para seguir jugando (si no, la E no habla).
+- Tanda entera: 44/44 (avisos y flujo, arreglados después). Publicada la n 5 (commit c41403c, APK 46: no hizo falta
+  una nueva).
