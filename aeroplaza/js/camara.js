@@ -90,8 +90,8 @@ export class Camara {
   actualizarPlano(dt) {
     const P = this.plano, cp = Math.cos(this.pitch);
     const desde = new THREE.Vector3(P.centro.x + Math.sin(this.yaw) * cp * P.dist, P.centro.y + Math.sin(this.pitch) * P.dist, P.centro.z + Math.cos(this.yaw) * cp * P.dist);
-    /* (se llega suave desde donde estaba la cámara, y después sigue rápido a la palanca) */
-    const s = 1 - Math.exp(-dt * 7);
+    /* (se llega suave desde donde estaba la cámara, y después va justo donde se la lleva) */
+    const s = P.firme ? 1 : 1 - Math.exp(-dt * 7);   // (vuelta 49: firme, así el piso queda pegado al dedo)
     this.pos.lerp(desde, s); this.mira.lerp(P.centro, s);
     this.cam.position.copy(this.pos); this.cam.lookAt(this.mira);
     this.inicial = true;   // (al salir, la de siempre arranca en su lugar, sin barrer la isla)

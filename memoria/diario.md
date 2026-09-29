@@ -8,8 +8,10 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Pidió: el HTML; construir en la casa y mejores decoraciones; arreglar minijuegos y menús; el celu parado; guardar
     botones en el celu.
   - Quedó ([aeroplaza-48](aeroplaza-48.md)): el modo construir (54 piezas), el celu parado, los botones en el celu y
-    los arreglos del recorrido (`arreglos.mjs` 19/19). Publicada la n 5 y la página (v48); el HTML con canciones se mandó al final (el envío de archivos dio 500 un rato).
-  - Falta: que diga si en su celu la construcción con los dedos va cómoda.
+    los arreglos del recorrido (`arreglos.mjs` 19/19). La n 5, la página v48 y el HTML (el envío dio 500 un rato).
+  - Después pidió "arreglá la construcción, como Sims Mobile, que sea cómoda". Quedó ([aeroplaza-49](aeroplaza-49.md)):
+    `obra.js` (tocar, arrastrar, la barrita, cuartos, miniaturas 3D, paredes cortadas); `casa.mjs` 35/35.
+  - Falta: que diga cómo le queda en su celu.
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".
   - Quedó ([aeroplaza-47](aeroplaza-47.md)): la APK 45 solo buscaba al arrancar de cero. La 46 busca al volver y cada

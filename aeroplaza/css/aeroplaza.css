@@ -1113,46 +1113,65 @@ html.b460 .pausa-menu [data-a=menu] { grid-column: span 2 !important; }
 html.b460 .cel-chip { padding: 5px 7px; font-size: 11px; } html.b460 .cel-chip i { font-size: 14px; }
 
 /* ============================================================================
-   (vuelta 48) CONSTRUIR LA CASA (ui.js › obra): abajo, un panel de vidrio con
-   las pestañas (obra, muebles, deco), las piezas en una tira que se desliza,
-   los colores y las herramientas; arriba, qué hacer ahora. La cámara va desde
-   arriba (camara.js › plano) y los dedos del juego se esconden.
+   (vuelta 49) CONSTRUIR COMO EN SIMS MOBILE (obra.js): arriba, deshacer,
+   rehacer, la cuenta, girar la vista, las paredes y Listo; debajo, qué hacer
+   ahora. Sobre lo elegido, la barrita (girar, color, copiar, quitar, listo).
+   Abajo, el catálogo por pestañas con miniaturas 3D. El HUD se esconde.
    ========================================================================== */
-.obra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; pointer-events: none !important; }
-.obra-ayuda { margin-bottom: 6px; padding: 5px 13px; border-radius: 999px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--sombra); font: 800 12px/1.3 var(--letra); color: var(--tinta); max-width: calc(92 * var(--vw)); text-align: center; }
-.obra-panel { pointer-events: auto; width: min(920px, calc(100 * var(--vw))); box-sizing: border-box; display: flex; flex-direction: column; gap: 5px; padding: 7px 10px max(8px, env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; border: 3px solid var(--gris2); border-bottom: 0; background: linear-gradient(rgba(255, 255, 255, 0.96), rgba(238, 245, 249, 0.96)); box-shadow: 0 -6px 22px rgba(40, 60, 80, 0.16); animation: entraAbajoObra 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
-@keyframes entraAbajoObra { from { transform: translateY(100%); } to { transform: none; } }
-.obra-arriba { display: flex; align-items: center; gap: 8px; }
-.obra-tabs { display: flex; gap: 4px; flex-shrink: 0; }
-.obra-arriba .obra-colores { flex: 1; min-width: 0; }
-.obra-tabs button { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 12px; border: 2px solid transparent; background: #eef3f6; font: 800 13px var(--letra); color: var(--tinta2); }
-.obra-tabs button.si { background: #fff; border-color: var(--azul); color: var(--azul2); box-shadow: 0 1px 4px rgba(20, 70, 110, 0.15); }
-.obra-tabs i, .obra-h i { font-style: normal; }
-.obra-cuenta { font: 900 12px var(--letra); color: var(--tinta2); padding: 3px 9px; border-radius: 999px; background: #eef3f6; }
-.obra-items { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 4px; touch-action: pan-x; scrollbar-width: thin; }
-.obra-item { position: relative; flex: 0 0 auto; width: 64px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 2px; border-radius: 14px; border: 2px solid var(--gris2); background: linear-gradient(#ffffff, #f4f7f9); }
-.obra-item i { font-style: normal; font-size: 24px; line-height: 1; }
-.obra-item small { font: 800 9.5px/1.1 var(--letra); color: var(--tinta2); max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.obra-item.si { border-color: var(--azul); background: linear-gradient(#f0fbff, #d6f3ff); box-shadow: 0 0 0 3px rgba(52, 190, 240, 0.25); }
-.obra-item:active { transform: scale(0.93); }
-.obra-colores { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 3px; }
-.obra-color { flex: 0 0 auto; width: 24px; height: 24px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px var(--gris2); }
-.obra-color.si { box-shadow: 0 0 0 3px var(--azul); transform: scale(1.12); }
-.obra-color.orig { background: conic-gradient(#ff6fb0, #ffe14a, #56e05a, #39d6ff, #9b7bff, #ff6fb0); color: #fff; font: 900 12px/20px var(--letra); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
-.obra-herr { display: flex; gap: 5px; align-items: center; overflow-x: auto; padding-bottom: 1px; }
-.obra-h { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; padding: 6px 11px; border-radius: 999px; border: 2px solid var(--gris2); background: linear-gradient(#ffffff, #f0f3f5); font: 800 12.5px var(--letra); color: var(--tinta); }
-.obra-h.si { border-color: var(--azul); color: var(--azul2); background: linear-gradient(#f0fbff, #d6f3ff); }
-.obra-h.apagado { opacity: 0.5; } .obra-h:disabled { opacity: 0.35; } .obra-h[hidden] { display: none; }
-.obra-sep { flex: 0 0 auto; width: 2px; height: 22px; border-radius: 2px; background: var(--gris2); }
-.obra-listo { margin-left: auto; flex: 0 0 auto; }
-.hud.construyendo .hotbar, .hud.construyendo .chat, .hud.construyendo .aviso-accion, .hud.construyendo .panel-misiones, .hud.construyendo .tuto { display: none !important; }
+.ob { position: fixed; inset: 0; z-index: 6; pointer-events: none !important; font-family: var(--letra); }
+.ob-arriba { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 10px; right: 10px; display: flex; align-items: center; gap: 6px; }
+.ob-arriba > *, .ob-barra, .ob-colores, .ob-cajon, .ob-pista .ob-x { pointer-events: auto; }
+.ob-hueco { flex: 1; }
+.ob-b { height: 40px; min-width: 40px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 999px; border: 2px solid #fff; background: linear-gradient(#ffffff, #e6f3fa); box-shadow: var(--sombra); font: 900 18px/1 var(--letra); color: var(--tinta); }
+.ob-b:disabled { opacity: 0.4; } .ob-b:active, .ob-barra button:active, .ob-carta:active, .ob-tab:active { transform: scale(0.93); }
+.ob-vista i { font-style: normal; color: var(--azul2); } .ob-vista span { font-size: 12.5px; font-weight: 800; }
+.ob-cuenta { padding: 6px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); box-shadow: var(--sombra); font: 900 12.5px var(--letra); color: var(--tinta2); }
+.ob-listo { height: 40px; flex: 0 0 auto; }
+.ob-pista { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 48px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; width: max-content; max-width: calc(100% - 24px); box-sizing: border-box; padding: 5px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.92); box-shadow: var(--sombra); font: 800 12.5px/1.25 var(--letra); color: var(--tinta); text-align: center; transition: background 0.2s, color 0.2s; }
+.ob-pista .ob-x { display: none; flex: 0 0 auto; width: 28px; height: 28px; margin-right: -8px; border-radius: 50%; border: 0; background: var(--azul); color: #fff; font: 900 13px var(--letra); }
+.ob-pista.con-herr .ob-x { display: block; }
+.ob-pista.mal { background: #ffe8ec; color: #c0283f; }
+.ob-barra { position: absolute; left: 0; top: 0; display: flex; gap: 3px; padding: 4px; border-radius: 999px; border: 2px solid #fff; background: linear-gradient(rgba(255, 255, 255, 0.97), rgba(230, 243, 250, 0.97)); box-shadow: 0 6px 18px rgba(20, 60, 90, 0.28); opacity: 0; visibility: hidden; transition: opacity 0.15s; will-change: transform; }
+.ob-barra.abierta { opacity: 1; visibility: visible; }
+.ob-barra button { width: 42px; height: 42px; padding: 0; border-radius: 50%; border: 0; background: transparent; font: 900 19px/1 var(--letra); color: var(--tinta); }
+.ob-barra [data-a=quitar] { color: #e0344f; }
+.ob-barra [data-a=ok] { background: linear-gradient(#6ee88a, #2fbf55); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+.ob-colores { position: absolute; left: 0; top: 0; display: flex; flex-wrap: wrap; gap: 5px; width: 262px; padding: 7px; box-sizing: border-box; border-radius: 16px; background: rgba(255, 255, 255, 0.97); box-shadow: 0 6px 18px rgba(20, 60, 90, 0.25); opacity: 0; visibility: hidden; }
+.ob-colores.abierto { opacity: 1; visibility: visible; }
+.ob-color { width: 25px; height: 25px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px var(--gris2); }
+.ob-color.si { box-shadow: 0 0 0 3px var(--azul); transform: scale(1.1); }
+.ob-color.orig { background: conic-gradient(#ff6fb0, #ffe14a, #56e05a, #39d6ff, #9b7bff, #ff6fb0); color: #fff; font: 900 12px/21px var(--letra); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4); }
+.ob-cajon { position: absolute; left: 0; right: 0; bottom: 0; margin: 0 auto; width: min(980px, 100%); box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 6px 10px max(8px, env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; border: 3px solid var(--gris2); border-bottom: 0; background: linear-gradient(rgba(255, 255, 255, 0.96), rgba(236, 245, 250, 0.96)); box-shadow: 0 -6px 22px rgba(40, 60, 80, 0.16); transition: opacity 0.2s; animation: entraAbajoObra 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+.ob.arrastrando .ob-cajon { opacity: 0.6; }
+@keyframes entraAbajoObra { from { transform: translateY(110%); } }
+.ob-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+.ob-tab { flex: 0 0 auto; display: flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 12px; border: 2px solid transparent; background: #eef3f6; font: 800 12.5px var(--letra); color: var(--tinta2); }
+.ob-tab i { font-style: normal; font-size: 16px; line-height: 1; }
+.ob-tab.si { background: #fff; border-color: var(--azul); color: var(--azul2); box-shadow: 0 1px 4px rgba(20, 70, 110, 0.15); }
+.ob-cerrar { margin-left: auto; }
+.ob-items { display: flex; gap: 7px; overflow-x: auto; padding: 1px 1px 3px; touch-action: pan-x; scrollbar-width: thin; }
+.ob-cajon.cerrado .ob-items { display: none; }
+.ob-carta { position: relative; flex: 0 0 auto; width: 76px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 3px 5px; border-radius: 15px; border: 2px solid var(--gris2); background: linear-gradient(#ffffff, #f2f7fa); touch-action: pan-x; }
+.ob-mini { width: 64px; height: 56px; border-radius: 11px; background: #eaf6ff center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 28px; line-height: 1; }
+.ob-carta small { font: 800 10px/1.1 var(--letra); color: var(--tinta2); max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ob-carta.si { border-color: var(--azul); background: linear-gradient(#f0fbff, #d6f3ff); box-shadow: 0 0 0 3px rgba(52, 190, 240, 0.25); }
+.ob-herr { position: absolute; top: 1px; right: 1px; width: 21px; height: 21px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); font: normal 11px/21px var(--letra); text-align: center; }
+.hud.construyendo > :not(.notis) { display: none !important; }
+.hud.construyendo .notis { top: calc(max(8px, env(safe-area-inset-top)) + 84px); }
 #dedos.en-obra .dedo-boton, #dedos.en-obra .dedo-palanca { display: none !important; }
-html.b460 .obra-panel { gap: 3px; padding-top: 5px; border-radius: 18px 18px 0 0; }
-html.b460 .obra-ayuda { font-size: 10.5px; padding: 3px 10px; margin-bottom: 4px; }
-html.b460 .obra-tabs button { padding: 3px 9px; font-size: 11.5px; }
-html.b460 .obra-item { width: 52px; height: 46px; border-radius: 11px; } html.b460 .obra-item i { font-size: 19px; } html.b460 .obra-item small { font-size: 8.5px; max-width: 48px; }
-html.b460 .obra-color { width: 19px; height: 19px; } html.b460 .obra-color.orig { line-height: 15px; font-size: 10px; }
-html.b460 .obra-h { padding: 4px 9px; font-size: 11px; } html.b460 .obra-h[data-a] span { display: none; }
+html.b460 .ob-arriba { top: max(5px, env(safe-area-inset-top)); gap: 5px; }
+html.b460 .ob-b, html.b460 .ob-listo { height: 34px; min-width: 34px; padding: 0 8px; font-size: 16px; }
+html.b460 .ob-vista span { display: none; }
+html.b460 .ob-cuenta { padding: 4px 9px; font-size: 11px; }
+html.b460 .ob-pista { top: calc(max(5px, env(safe-area-inset-top)) + 40px); font-size: 10.5px; padding: 3px 11px; }
+html.b460 .ob-pista .ob-x { width: 22px; height: 22px; font-size: 11px; margin-right: -6px; }
+html.b460 .ob-cajon { gap: 4px; padding: 4px 8px max(5px, env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
+html.b460 .ob-tab { padding: 3px 8px; } html.b460 .ob-tab span { display: none; } html.b460 .ob-tab.si span { display: inline; font-size: 11px; }
+html.b460 .ob-carta { width: 60px; padding: 3px 2px; border-radius: 12px; }
+html.b460 .ob-mini { width: 52px; height: 42px; font-size: 22px; border-radius: 9px; }
+html.b460 .ob-carta small { font-size: 8.5px; max-width: 56px; }
+html.b460 .ob-barra button { width: 38px; height: 38px; font-size: 17px; }
+html.b460 .ob-colores { width: 232px; gap: 4px; padding: 6px; } html.b460 .ob-color { width: 22px; height: 22px; }
 .cel-tab { display: flex; align-items: center; justify-content: center; gap: 3px; }
 .cel-tab i { font-style: normal; font-size: 12px; }
 .cel-tab-n { font: 900 11px var(--letra); }

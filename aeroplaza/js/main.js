@@ -17,7 +17,8 @@ import { crearAurora } from './reinos/aurora.js';
 import { crearJardin } from './reinos/jardin.js';
 import { crearTienda } from './reinos/tienda.js';
 import { crearCasa, MAX_COSAS } from './reinos/casa.js';
-import { PIEZAS } from './reinos/casa-piezas.js';
+import { crearObra } from './obra.js';
+import { PIEZAS, TABS, CATALOGO } from './reinos/casa-piezas.js';
 import { crearParkour, NIVELES, formatoTiempo } from './reinos/parkour.js';
 import { crearInterior } from './reinos/interior.js';
 import { crearTiro, TIRO } from './reinos/tiro.js';
@@ -896,95 +897,17 @@ async function iniciar() {
     }
     UI.estadoTren(null);
   }
-  /* (vuelta 48) CONSTRUIR LA CASA: la cámara pasa al plano (camara.js › plano). Un toque en el piso pone lo elegido,
-     o mueve, pinta o quita lo que se toca; con el mouse, lo que se pone sigue al puntero. Un dedo gira la cámara, dos
-     la mueven y la acercan (entrada.js › modoObra); la palanca, las flechas o WASD también la mueven. "📍 Acá" pone en
-     el medio de la pantalla, sin apuntar. Todo se deshace, y se guarda y se publica con cada cambio */
-  const _rc = new THREE.Raycaster(), _ndc = new THREE.Vector2();
-  function pisoBajo(px, py) {
-    _ndc.set(px / Pantalla.w * 2 - 1, -(py / Pantalla.h) * 2 + 1); _rc.setFromCamera(_ndc, motor.camara);
-    const r = _rc.ray; if (r.direction.y > -1e-3) return null;
-    const corte = (y) => { const tt = (y - r.origin.y) / r.direction.y; return { x: r.origin.x + r.direction.x * tt, z: r.origin.z + r.direction.z * tt }; };
-    /* (arriba de una tarima se corta a su altura, si no el toque cae corrido) */
-    const p = corte(1.4), y = reino.alturaEn ? reino.alturaEn(p.x, p.z) : 0;
-    return y > 0 ? corte(1.4 + y) : p;
-  }
+  /* (vuelta 48) CONSTRUIR LA CASA; (vuelta 49) como en Sims Mobile: tocar, arrastrar, dibujar paredes y cuartos
+     (obra.js). Acá solo se entra y se sale; la cámara pasa al plano (camara.js › plano) */
   function empezarConstruir() {
     if (construyendo || reino?.id !== 'casa' || reino.dueño) return;
     if (vr.activo) { UI.avisar(t('ob_sin_vr'), 'azul'); return; }
     UI.cerrarVentana(); J.celu?.cerrar();
-    const C = construyendo = { k: null, giro: 0, herr: 'poner', color: null, cargado: null, antes: null, historial: [], punto: null };
-    cam.plano = { centro: new THREE.Vector3(yo.p.x * 0.5, 1.4, yo.p.z * 0.5), dist: 16 }; cam.pitch = 1.0;
-    UI.hud?.classList.add('construyendo'); ent.modoObra = true; ent.capa.classList.add('en-obra');
-    const estado = () => ({ n: G.casa.length, max: MAX_COSAS, techos: reino.techosVisibles, deshacer: C.historial.length, k: C.k, herr: C.herr });
-    const guardarCasa = () => { reino.rehacer(G.casa, true); red.publicarCasa(G.casa); Guardado.guardar(); };
-    const fantasma = () => reino.ponerFantasma(C.herr === 'poner' ? C.k : C.herr === 'mover' ? C.cargado?.k : null, C.herr === 'mover' ? C.cargado?.c : C.color || undefined);
-    const soltarCargado = () => { if (!C.cargado) return; G.casa.splice(Math.min(C.antes.i, G.casa.length), 0, C.cargado); C.cargado = null; C.antes = null; reino.rehacer(G.casa, true); };
-    const tocarEn = (x, z) => { hacer(x, z); C.panel.pintar(estado()); };
-    const hacer = (x, z) => {
-      const herr = C.herr;
-      if (herr === 'poner' || (herr === 'mover' && C.cargado)) {
-        const k = herr === 'poner' ? C.k : C.cargado.k;
-        if (!k) { UI.avisar(t('ob_ayuda_elegi'), 'azul'); return; }
-        if (herr === 'poner' && G.casa.length >= MAX_COSAS) { UI.avisar(t('ob_lleno', { n: MAX_COSAS }), 'error'); return; }
-        const l = reino.lugarPara(k, x, z, C.giro); if (!l.dentro) { UI.avisar(t('ob_fuera'), 'azul'); return; }
-        const m = herr === 'poner' ? { k } : C.cargado;
-        m.x = l.x; m.z = l.z; m.r = +l.r.toFixed(3); if (l.y > 0) m.y = +l.y.toFixed(2); else delete m.y;
-        if (herr === 'poner') { if (C.color) m.c = C.color; C.historial.push({ tipo: 'poner', m }); }
-        else { C.historial.push({ tipo: 'mover', m, antes: C.antes }); C.cargado = null; C.antes = null; }
-        G.casa.push(m); guardarCasa(); fantasma(); J.sfx('elegir'); ent.vibrar(12); G.visto.construyo = true;
-      } else {
-        const m = reino.cosaEn(x, z); if (!m) { J.sfx('mover'); return; }
-        if (herr === 'mover') { C.cargado = m; C.antes = { x: m.x, z: m.z, r: m.r, y: m.y, i: G.casa.indexOf(m) }; C.giro = m.r || 0; G.casa = G.casa.filter((q) => q !== m); reino.rehacer(G.casa, true); fantasma(); J.sfx('pop'); }
-        else if (herr === 'pintar') { C.historial.push({ tipo: 'pintar', m, c: m.c }); if (C.color) m.c = C.color; else delete m.c; guardarCasa(); J.sfx('elegir'); }
-        else if (herr === 'quitar') { const i = G.casa.indexOf(m); G.casa.splice(i, 1); C.historial.push({ tipo: 'quitar', m, i }); guardarCasa(); J.sfx('pop'); ent.vibrar(20); }
-      }
-      if (C.historial.length > 80) C.historial.shift();
-    };
-    const deshacer = () => {
-      soltarCargado();
-      const h = C.historial.pop(); if (!h) return;
-      if (h.tipo === 'poner') G.casa = G.casa.filter((q) => q !== h.m);
-      else if (h.tipo === 'quitar') G.casa.splice(Math.min(h.i, G.casa.length), 0, h.m);
-      else if (h.tipo === 'pintar') { if (h.c) h.m.c = h.c; else delete h.m.c; }
-      else if (h.tipo === 'mover') { h.m.x = h.antes.x; h.m.z = h.antes.z; h.m.r = h.antes.r; if (h.antes.y) h.m.y = h.antes.y; else delete h.m.y; }
-      guardarCasa(); fantasma(); J.sfx('pop'); C.panel.pintar(estado());
-    };
-    C.tocarEn = tocarEn;
-    C.panel = UI.obra({
-      alElegir: (k) => { soltarCargado(); C.k = k; C.herr = 'poner'; if (PIEZAS[k]?.cat === 'obra') C.giro = Math.round(C.giro / (Math.PI / 2)) * (Math.PI / 2); fantasma(); C.panel.pintar(estado()); },
-      alColor: (c) => { C.color = c; fantasma(); },
-      alHerr: (h) => { soltarCargado(); C.herr = h; fantasma(); reino.marcar(null); C.panel.pintar(estado()); },
-      alGirar: () => { const k = C.herr === 'mover' ? C.cargado?.k : C.k; C.giro += PIEZAS[k]?.cat === 'obra' || PIEZAS[k]?.paso ? Math.PI / 2 : Math.PI / 4; J.sfx('mover'); },
-      alDeshacer: deshacer,
-      alTechos: () => { reino.verTechos(!reino.techosVisibles); C.panel.pintar(estado()); },
-      alPonerAca: () => tocarEn(cam.plano.centro.x, cam.plano.centro.z),
-      alListo: () => terminarConstruir(),
-    });
-    C.soltar = soltarCargado;
-    C.panel.pintar(estado());
-    /* los toques: con el dedo, entrada.js; con el mouse, acá (y el puntero lleva lo que se pone) */
-    ent.alTocar = (x, y) => { const p = pisoBajo(x, y); if (p) { C.punto = p; tocarEn(p.x, p.z); } };
-    C.raton = (e) => {
-      if (e.pointerType !== 'mouse' || !(e.target === motor.lienzo || e.target.closest?.('#dedos'))) return;
-      const q = Pantalla.aJuego(e.clientX, e.clientY);
-      if (e.type === 'pointermove') { C.punto = pisoBajo(q.x, q.y); return; }
-      if (e.type === 'pointerdown') { C.abajo = { x: q.x, y: q.y, t: performance.now() }; return; }
-      if (e.type === 'pointerup' && C.abajo && Math.hypot(q.x - C.abajo.x, q.y - C.abajo.y) < 6 && performance.now() - C.abajo.t < 500) { const p = pisoBajo(q.x, q.y); if (p) tocarEn(p.x, p.z); }
-      C.abajo = null;
-    };
-    for (const n of ['pointermove', 'pointerdown', 'pointerup']) addEventListener(n, C.raton, true);
-    UI.avisar('🔨 ' + t('ob_hola'), 'azul');
+    construyendo = crearObra({ motor, cam, ent, reino, G, J, UI, red, Guardado, alListo: () => terminarConstruir() });
   }
   function terminarConstruir() {
     const C = construyendo; if (!C) return;
-    C.soltar(); C.panel.cerrar();
-    for (const n of ['pointermove', 'pointerdown', 'pointerup']) removeEventListener(n, C.raton, true);
-    ent.alTocar = null; ent.modoObra = false; ent.capa.classList.remove('en-obra');
-    UI.hud?.classList.remove('construyendo');
-    if (reino?.ponerFantasma) { reino.ponerFantasma(null); reino.marcar(null); reino.verTechos(true); reino.rehacer(G.casa); }
-    cam.plano = null; construyendo = null;
-    red.publicarCasa(G.casa); Guardado.ya();
+    construyendo = null; C.cerrar();
     if (G.casa.length) UI.avisar('🏡 ' + t('ob_guardada', { n: G.casa.length }), 'bien');
   }
   J.construir = () => empezarConstruir();
@@ -1063,20 +986,8 @@ async function iniciar() {
     }
     if (vr.activo) vr.caminaMano = sinArcoVR() && !reino.tiro && manos.activa && manos.manos.some((M) => M.visible && M.alfa > 0.5 && M.pellizca && !M.anulado && !M.apunta);
     if (vr.activo) { vr.enTiro = !!reino.tiro; if (E.pausa) { vr.salir(); E.pausa = false; } else vr.entrada(E, dt, !!accionCerca); }
-    /* (vuelta 48) construyendo: la palanca, las flechas, WASD y dos dedos mueven la cámara del plano, no al muñeco; el
-       fantasma va donde está el puntero (o el medio de la pantalla); Escape termina */
-    if (construyendo && cam.plano) {
-      const C = construyendo, P = cam.plano, sy = Math.sin(cam.yaw), cy = Math.cos(cam.yaw);
-      const rx = cy, rz = -sy, fx = -sy, fz = -cy, v = P.dist * 0.8 * dt, k = P.dist * 1.25 / Pantalla.h, pan = ent.panObra;
-      const mx = E.x * v - pan.dx * k, mz = -E.z * v + pan.dy * k;
-      if (mx || mz) { P.centro.x += rx * mx + fx * mz; P.centro.z += rz * mx + fz * mz; C.punto = null; const L = Math.hypot(P.centro.x, P.centro.z); if (L > 10) { P.centro.x *= 10 / L; P.centro.z *= 10 / L; } }
-      pan.dx = 0; pan.dy = 0;
-      E.x = 0; E.z = 0; E.salta = false; E.sostiene = false; E.accion = false; E.dispara = false; E.corre = false; E.baja = false; E.chat = false; E.hot = 0;
-      const pt = C.punto || P.centro, kk = C.herr === 'poner' ? C.k : C.herr === 'mover' ? C.cargado?.k : null;
-      if (kk) { reino.moverFantasmaA(reino.lugarPara(kk, pt.x, pt.z, C.giro)); reino.marcar(null); }
-      else { reino.moverFantasmaA(null); reino.marcar(C.herr !== 'poner' ? reino.cosaEn(pt.x, pt.z) : null); }
-      if (E.pausa && !UI.ventanaAbierta) { terminarConstruir(); E.pausa = false; }
-    }
+    /* (vuelta 48) construyendo: la palanca, las flechas y WASD mueven la vista, no al muñeco (obra.js › actualizar) */
+    if (construyendo && cam.plano) construyendo.actualizar(dt, E);
     if (E.pausa && !UI.ventanaAbierta && !probador && !enDialogo) { J.pausar(!pausado); }
     /* (vuelta 46) el celu: la M o Select en el mando (si no hay otra ventana abierta) */
     if (E.celu && enJuego && !probador && !enDialogo && !modoFoto && !vr.activo && (celu.abierto || (!UI.ventanaAbierta && !pausado))) celu.alternar();
@@ -1375,7 +1286,7 @@ async function iniciar() {
        ese instante); real: lo que pasó de verdad desde el cuadro anterior (para ver si se llega) */
     /* el visor: su origen en los pies del muñeco, girado con el rumbo del VR */
     if (visor.activo) visor.ponerOrigen(yo.p, vr.base);
-    if (dibujar && !congela) { if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt, (manos.activa && manos.algo) || ventanasMundo.hayAlgo ? (ojo) => manos.dibujarOjo(motor.r, ojo) : null); else motor.dibujar(dt); }
+    if (dibujar && !congela) { construyendo?.antesDeDibujar(); if (vr.activo) vr.dibujar(motor, dt, J.dtReal || dt, (manos.activa && manos.algo) || ventanasMundo.hayAlgo ? (ojo) => manos.dibujarOjo(motor.r, ojo) : null); else motor.dibujar(dt); }
     delirio.cuadro(dt, reino, motor.camara, dibujar, dibujar && !congela);
   }
 
@@ -1395,7 +1306,7 @@ async function iniciar() {
     if (hecho) { tuto.paso++; tuto.t = 0; J.sfx('aviso'); if (tuto.paso >= pasos.length) { UI.tuto(null); tuto = null; G.visto.tuto = true; Guardado.guardar(); } }
   }
 
-  window.__A = { textos: { t, ponerIdioma }, amigos, celu, Llave, leerVentana, get construyendo() { return construyendo; }, casaInicial: CASA_INICIAL, ent, espejo, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
+  window.__A = { textos: { t, ponerIdioma }, amigos, celu, Llave, leerVentana, get construyendo() { return construyendo; }, casaInicial: CASA_INICIAL, piezas: { PIEZAS, TABS, CATALOGO }, ent, espejo, visor, VisorXR, ManosCamara, Nativo, manos, espacio, ventanasMundo, lentesMod: { curva, inversa }, get camManos() { return camManos; }, prenderManos, vr, get estudio() { return estudio; }, regalo: () => regaloDelDia(J, UI), efx, estelario, delirio, detalle, Sonido, Modelos, Construir, Pantalla, motor, cielo, get reino() { return reino; }, get yo() { return yo; }, get cerca() { return accionCerca; }, voz, timbre, cuerpoFP, cam, cache, red, remotos, G, J, UI, paso, THREE, empezarJuego, viajar: (id, o) => viajar(id, o), entrarReino, interactuar: (o) => interactuar(o) };
   /* (vuelta 45) en la APK: las canciones sueltas y los avisos de las actualizaciones */
   cancionesDeLaApp(() => { if (J._pedida != null) { Sonido.actual = null; J.musica(J._pedida); } });
   avisosDeActualizacion(UI);
