@@ -69,3 +69,9 @@
 - Quedaron las 6 (Morfi, Cripta Neón, Víbora.io, Globo Libre, La Isla, Bomb Runner Simulator), 1024×1536, mandadas como archivos. 7 imágenes, 567 créditos. El armador quedó en `herramientas/portadas/`; las imágenes no se suben al repo.
 - Falta: si quiere, subirlas como portada de cada juego en Rezona (no se tocó su perfil).
 
+## 30/09/2026 (Grumo) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido (con una captura de Level Devil en Google Play): "hacete un juego 2D entero, completo, normal, vertical, agradable, animaciones stop motion, intro".
+- Quedó `grumo/`: GRUMO, original del género (se le dijo): plataformas de plastilina a 12 cuadros por segundo; el animador mueve el set y su mano entra a llevarse la puerta; cada muerte es una toma con claqueta. 20 escenas (taller y cocina), camarín de colores y sombreros, 3 idiomas, intro de plastilina de JXSTUDIOS. → [grumo](grumo.md)
+- Se quejó de que tardaba ("te pedí un juego simple"): se cortó en 20 escenas en vez de 30 y se entregó.
+- Medido: las 20 se pueden ganar (resolvedor); prueba de humo en Chromium 9/9 sin errores con servidor y con el archivo único de 258 KB sin red. Página: `claude.ai/artifact/JqKib3w9uS1tR6JSxJJYZe`.
+- Falta: jugarlo en un teléfono de verdad; el set de noche tiene fondo y música pero no escenas. Siguen sin respuesta: rehacer las intros de Víbora y la isla en su estilo, y borrar la página vieja repetida de Cripta.

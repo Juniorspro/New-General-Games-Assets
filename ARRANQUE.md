@@ -47,6 +47,7 @@ y aborta lo que venga detrás con `&&`: corrélo solo.
 | `vibora/` | **Víbora.io** (HTML, contra bots) — ver `vibora/README.md` |
 | `globo/` | **Globo Libre** (HTML, con física propia) — ver `globo/README.md` |
 | `morfi/` | **Morfi** (HTML, de cartón y papel, física de hilos propia) — ver `morfi/README.md` |
+| `grumo/` | **Grumo** (HTML, plataformas de plastilina en stop motion, trampas como datos y un resolvedor) — ver `grumo/README.md` |
 | `guias/` | cómo hacer juegos que se vean bien (3D, 2D pixel art, aeroplaza) |
 | `memoria/` | lo que ya se sabe, en notas cortas: se entra por `memoria/INDICE.md` |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, portadas de los juegos, audio |

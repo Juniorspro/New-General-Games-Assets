@@ -449,7 +449,8 @@ export function dibujarNivel(g, p, cam, { mundo, cuadro, hervor = cuadro, resort
   // la puerta (con patas si se escapa caminando)
   const pu = p.puerta;
   if (!pu.oculta) {
-    const abierta = p.estado === 'gano' ? clamp(p.tFin / 0.25, 0, 1) * (1 - clamp((p.tFin - 0.75) / 0.2, 0, 1)) : 0;
+    const e = p.T - pu.escupe;   // escupiendo una albóndiga: se entreabre y se cierra
+    const abierta = p.estado === 'gano' ? clamp(p.tFin / 0.25, 0, 1) * (1 - clamp((p.tFin - 0.75) / 0.2, 0, 1)) : e < 0.34 ? Math.sin((Math.PI * e) / 0.34) * 0.6 : 0;
     const c = puertaSprite(ts, abierta);
     let x = ox + (pu.x - 0.46) * ts - c.ox, y = oy + (pu.y - 1.5) * ts - c.oy;
     if (pu.patas) { y -= ts * 0.22; patas(g, ox + pu.x * ts, oy + pu.y * ts - ts * 0.22, ts, cuadro); }
@@ -470,7 +471,7 @@ export function dibujarNotas(g, p, cam, tr, cuadro) {
   const { ts } = cam;
   for (const n of p.notas) {
     const edad = p.T - n.desde, k = clamp(edad / 0.17, 0, 1), sale = clamp((n.hasta - p.T) / 0.2, 0, 1);
-    const x = cam.x + (n.en ? n.en[0] : COLS / 2) * ts, y = cam.y + (n.en ? n.en[1] : 2.2) * ts;
+    const x = cam.x + (n.pos ? n.pos[0] : COLS / 2) * ts, y = cam.y + (n.pos ? n.pos[1] : 2.2) * ts;
     const texto = tr(n.texto), fs = Math.round(ts * 0.36);
     g.save();
     g.font = `700 ${fs}px "Segoe Print", "Bradley Hand", "Comic Sans MS", "Chalkboard SE", cursive`;

@@ -178,6 +178,8 @@ export function crearSonido(ajustes) {
     cruje: () => { const t = ctx.currentTime; for (let k = 0; k < 5; k++) soplo({ dur: 0.03, vol: 0.08, tipo: 'bandpass', f0: 1800 - k * 150, q: 2, t: t + k * 0.04 }); },
     desarma: () => { const t = ctx.currentTime; soplo({ dur: 0.3, vol: 0.2, tipo: 'lowpass', f0: 2000, f1: 300, t }); for (let k = 0; k < 4; k++) squish(t + k * 0.05, 0.6, 0.8); },
     bola: () => { const t = ctx.currentTime; soplo({ dur: 0.6, vol: 0.08, tipo: 'bandpass', f0: 180, q: 1.2, t }); tono({ onda: 'sine', f0: 90, dur: 0.5, vol: 0.06, t }); },
+    // la albóndiga contra la pared: un ¡plaf! más chico que el de Grumo
+    aplasta: () => { const t = ctx.currentTime; soplo({ dur: 0.16, vol: 0.2, tipo: 'lowpass', f0: 1800, f1: 200, t }); squish(t + 0.02, 0.7, 1.1); tono({ onda: 'sine', f0: 160, f1: 60, dur: 0.14, vol: 0.14, t }); },
     // la puerta: rechina (un serrucho con la nota que tiembla) o camina de puntitas
     puerta: ({ patas, salta } = {}) => {
       const t = ctx.currentTime;

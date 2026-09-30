@@ -103,6 +103,39 @@ export function jugar(p, j, ruido = null) {
     cambios.push([p.pasos, dir, salto ? 1 : 0]);
   };
   const durP = Math.round(j.dur / PASO);
+  if (j.tipo === 'bola') {
+    // esperar mirando la bola que viene: cuando está a `dist`, saltar
+    poner(0, false);
+    const cerca = () => p.bolas.some((b) => Math.abs(b.x - p.j.x) < j.dist && Math.abs(b.y - (p.j.y - 0.35)) < 1.2 && (b.x - p.j.x) * b.vx < 0);
+    for (let k = 0; k < 4 / PASO && p.estado === 'juego' && !cerca(); k++) p.paso();
+    tarda();
+    if (p.estado !== 'juego' || !p.j.suelo) return p.estado === 'muerto' ? null : cambios;
+    j = { ...j, tipo: 'salta' };
+  }
+  if (j.tipo === 'alerta') {
+    // quieto hasta que salta una trampa (se ve: algo tiembla, se mueve, aparece) y ahí saltar
+    // cuenta también la que saltó recién (se la vio saltar mientras terminaba lo anterior)
+    const desde = p.t - 0.3, salto = () => p.trampas.some((t) => t.hecha && t.t >= desde);
+    poner(0, false);
+    for (let k = 0; k < 5 / PASO && p.estado === 'juego' && !salto(); k++) p.paso();
+    tarda();
+    if (p.estado !== 'juego' || !p.j.suelo) return p.estado === 'muerto' ? null : cambios;
+    j = { ...j, tipo: 'salta' };
+  }
+  if (j.tipo === 'resorte') {
+    // caminar hasta x (arriba del resorte), dejarse tirar y, en lo más alto, ir para d
+    const d0 = Math.sign(j.x - p.j.x) || 1;
+    poner(d0, false);
+    for (let k = 0; k < 4 / PASO && p.estado === 'juego' && (j.x - p.j.x) * d0 > 0.05; k++) p.paso();
+    // quieto hasta que el resorte lo tira; apenas sube, ya empuja para d (contra
+    // el borde del techo no importa: lo frena y sigue cuando pasa)
+    poner(0, false);
+    for (let k = 0; k < 4 / PASO && p.estado === 'juego' && p.j.vy > -8; k++) p.paso();
+    tarda();
+    poner(j.d, false);
+    while (p.estado === 'juego' && (!p.j.suelo || p.j.agarrado) && p.pasos - t0 < MAX_JUGADA * 2) p.paso();
+    return p.estado === 'muerto' ? null : cambios;
+  }
   if (j.tipo === 'hasta') {
     // caminar hasta x (mirando) y soltar
     const d = Math.sign(j.x - p.j.x) || 1;
@@ -265,13 +298,19 @@ export function comoPersona(def, jugadas, { n = 100, reaccion = 0.06, error = 0.
 
 // las jugadas del guion de una escena, escritas cortas en niveles.js:
 // ['hasta', x] · ['camina', d, s] · ['espera', s] · ['calma'] ·
-// ['salta', d, s, d en el aire, cuándo cambia] · ['borde', d, s, …]
+// ['salta', d, s, d en el aire, cuándo cambia] · ['borde', d, s, …] ·
+// ['bola', distancia, d, s] (saltar la bola que viene cuando está así de cerca) ·
+// ['alerta', d, s, …] (quieto hasta que salta una trampa, y ahí saltar) ·
+// ['resorte', x, d] (ir al resorte en x, rebotar y en lo más alto ir para d)
 export function deGuion(g) {
   return g.map(([tipo, a, b, c, e]) => {
     if (tipo === 'hasta') return { tipo, x: a, d: 0, dur: 0 };
     if (tipo === 'calma') return { tipo, d: 0, dur: 0.1 };
     if (tipo === 'espera') return { tipo, d: 0, dur: a };
     if (tipo === 'camina') return { tipo, d: a, dur: b };
+    if (tipo === 'bola') return { tipo, dist: a, d: b, dur: c, d1: e ?? b, cambio: 9 };
+    if (tipo === 'alerta') return { tipo, d: a, dur: b, d1: c ?? a, cambio: e ?? 9 };
+    if (tipo === 'resorte') return { tipo, x: a, d: b, dur: 0 };
     return { tipo, d: a, dur: b, d1: c ?? a, cambio: e ?? 9 };
   });
 }

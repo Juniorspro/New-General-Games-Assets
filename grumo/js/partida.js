@@ -92,7 +92,7 @@ function armarGrupos(def, m) {
     return {
       id, tipo: d.tipo || 'bloque', dir: d.dir || 'arriba', celdas, c0, f0, c1, f1,
       ox: 0, oy: 0, visible: !d.oculto, k: d.oculto ? 0 : 1,
-      falso: !!d.falso, golpe: !!d.golpe, fragil: d.fragil || 0, blanda: d.blanda || 0, vaiven: d.vaiven || null,
+      falso: !!d.falso, golpe: !!d.golpe, fragil: d.fragil || 0, blanda: d.blanda || 0, hunde: d.hunde || 0.07, vaiven: d.vaiven || null,
       mov: null, cae: null, tiembla: -1, pisado: -1, hundido: 0, muestra: 0,
     };
   });
@@ -116,7 +116,7 @@ export class Partida {
     this.trampas = (def.trampas || []).map((tr, i) => ({ i, id: tr.id ?? i, si: tr.si || {}, hace: tr.hace || [], una: tr.una !== false, hecha: false, t: -1 }));
     this.agenda = [];
     const [px, py] = this.m.puerta;
-    this.puerta = { x: px, y: py, mov: null, ocupada: 0, oculta: !!def.puertaOculta, patas: false, salto: -9 };
+    this.puerta = { x: px, y: py, mov: null, ocupada: 0, oculta: !!def.puertaOculta, patas: !!def.puertaVaiven, salto: -9, escupe: -9, vaiven: def.puertaVaiven ? { ...def.puertaVaiven, base: [px, py] } : null };
     this.falsas = (def.falsas || []).map(([c, f]) => ({ x: c + 0.5, y: f + 1, golpe: -9 }));
     this.manos = []; this.bolas = []; this.notas = [];
     this.oscuro = -1;                    // hasta cuándo está apagada la luz
@@ -248,7 +248,11 @@ export class Partida {
       if (piso.tipo === 'resorte') {
         j.vy = -FIS.resorte; j.saltando = false; j.coyote = 0;
         this.evento('resorte', { x: j.x, y: j.y, g: piso.g ? piso.g.id : null });
-      } else { j.vy = 0; j.suelo = true; j.sobre = piso.g ? piso.g.id : 'fijo'; }
+      } else {
+        j.vy = 0; j.suelo = true; j.sobre = piso.g ? piso.g.id : 'fijo';
+        // la plastilina frágil empieza a crujir apenas se la pisa (aunque sea un instante)
+        if (piso.g && piso.g.fragil && piso.g.pisado < 0) { piso.g.pisado = this.T; this.evento('cruje', { g: piso.g.id }); }
+      }
     }
     if (techo) {
       j.y = techo.y + ALTO; if (j.vy < 0) j.vy = 0; j.saltando = false;
@@ -358,7 +362,7 @@ export class Partida {
       for (const a of tr.hace) {
         this.agenda.push({ t: this.t + (a.en || 0), a });
         // si algo se va a llevar la puerta, desde ya no se puede entrar
-        if (a.que === 'puerta' || (a.que === 'mano' && a.agarra === 'puerta')) this.puerta.ocupada++;
+        if (a.que === 'puerta' || (a.que === 'mano' && a.agarra === 'puerta') || (a.que === 'bola' && a.sale === 'puerta')) this.puerta.ocupada++;
       }
       this.evento('trampa', { i: tr.i });
     }
@@ -371,6 +375,7 @@ export class Partida {
     return [(g.c0 + g.c1) / 2 + g.ox, (g.f0 + g.f1) / 2 + g.oy];
   }
 
+  // `a.en`: cuántos segundos después de saltar la trampa; `a.pos`: dónde (bolas y notas)
   ejecutar(a, T) {
     const g = a.g ? this.g[a.g] : null;
     if (a.g && !g) throw new Error(`${this.def.id}: no hay grupo ${a.g}`);
@@ -385,11 +390,13 @@ export class Partida {
       case 'mover': {
         const hasta = a.hasta ? [...a.hasta] : [g.ox + (a.a?.[0] || 0), g.oy + (a.a?.[1] || 0)];
         g.mov = { desde: [g.ox, g.oy], hasta, t0: T, dur: a.t ?? 0.3, curva: a.curva || 'suave' };
-        g.cae = null;
+        g.cae = null; g.vaiven = null;
         this.evento('mueve', { g: g.id, rapido: (a.t ?? 0.3) < 0.2 });
         break;
       }
-      case 'caer': g.cae = { v: a.v || 0 }; g.mov = null; this.evento('cae', { g: g.id }); break;
+      case 'caer': g.cae = { v: a.v || 0 }; g.mov = null; g.vaiven = null; this.evento('cae', { g: g.id }); break;
+      case 'vaiven': g.vaiven = { a: a.a, t: a.t ?? 2, fase: a.fase || 0, t0: T, base: [g.ox, g.oy] }; g.mov = null; this.evento('mueve', { g: g.id }); break;
+      case 'parar': g.vaiven = null; g.mov = null; this.evento('mueve', { g: g.id, rapido: true }); break;
       case 'mostrar':
         if (g.visible) break;
         g.visible = true; g.k = g.tipo === 'pinches' ? 0.34 : 1; g.muestra = T;
@@ -409,9 +416,18 @@ export class Partida {
         break;
       }
       case 'mano': this.manos.push(this.nuevaMano(a, T)); break;
-      case 'bola': this.bolas.push({ x: a.en[0], y: a.en[1], vx: a.vx ?? 3, vy: 0, r: 0.38, giro: 0, nace: T }); this.evento('bola'); break;
+      case 'bola': {
+        // `sale: 'puerta'`: la escupe la puerta (que se entreabre) y, mientras le
+        // quedan bolas por escupir, está cerrada
+        const p = this.puerta, deLaPuerta = a.sale === 'puerta';
+        const [x, y] = deLaPuerta ? [p.x - 0.5, p.y - 0.38] : a.pos;
+        this.bolas.push({ x, y, vx: a.vx ?? 3, vy: 0, r: 0.38, giro: 0, nace: T });
+        if (deLaPuerta) { p.escupe = T; p.ocupada = Math.max(0, p.ocupada - 1); }
+        this.evento('bola', { puerta: deLaPuerta });
+        break;
+      }
       case 'luz': this.oscuro = T + (a.t ?? 2); this.evento('luz'); break;
-      case 'nota': this.notas.push({ texto: a.texto, desde: T, hasta: T + (a.t ?? 2.5), en: a.en || null }); this.evento('nota'); break;
+      case 'nota': this.notas.push({ texto: a.texto, desde: T, hasta: T + (a.t ?? 2.5), pos: a.pos || null }); this.evento('nota'); break;
       case 'corte': this.corte = this.tick; this.evento('corte'); break;
       case 'temblor': this.temblor = T + (a.t ?? 0.4); this.evento('temblor'); break;
       default: throw new Error(`${this.def.id}: no sé hacer '${a.que}'`);
@@ -518,11 +534,13 @@ export class Partida {
     for (const g of this.grupos) {
       if (g.tipo === 'pinches' && g.visible && g.k < 1) g.k = Math.min(1, g.k + 0.33);
       if (g.vaiven) {
-        const v = g.vaiven, k = (1 - Math.cos(2 * Math.PI * (T / v.t + (v.fase || 0)))) / 2;
-        this.moverGrupo(g, v.a[0] * k - g.ox, v.a[1] * k - g.oy);
+        const v = g.vaiven, k = (1 - Math.cos(2 * Math.PI * ((T - (v.t0 || 0)) / v.t + (v.fase || 0)))) / 2;
+        const bx = v.base ? v.base[0] : 0, by = v.base ? v.base[1] : 0;
+        this.moverGrupo(g, bx + v.a[0] * k - g.ox, by + v.a[1] * k - g.oy);
       }
       if (g.mov) {
-        const u = clamp((T - g.mov.t0) / g.mov.dur, 0, 1), e = CURVAS[g.mov.curva](u);
+        // t: 0 es un salto en un cuadro (el "corte" de cámara: entre foto y foto)
+        const u = g.mov.dur > 0 ? clamp((T - g.mov.t0) / g.mov.dur, 0, 1) : 1, e = CURVAS[g.mov.curva](u);
         const nx = lerp(g.mov.desde[0], g.mov.hasta[0], e), ny = lerp(g.mov.desde[1], g.mov.hasta[1], e);
         if (u >= 1) g.mov = null;
         this.moverGrupo(g, nx - g.ox, ny - g.oy);
@@ -534,20 +552,24 @@ export class Partida {
       }
       const pisa = this.estado === 'juego' && j.suelo && j.sobre === g.id;
       if (g.fragil && g.visible) {
-        if (pisa && g.pisado < 0) { g.pisado = T; this.evento('cruje', { g: g.id }); }
+        if (pisa && g.pisado < 0) { g.pisado = T; this.evento('cruje', { g: g.id }); }  // (si llegó de costado, sin caer)
         if (g.pisado >= 0 && T - g.pisado >= g.fragil) { g.visible = false; this.evento('desarma', { g: g.id }); }
       }
       if (g.blanda && g.visible) {
         // la plastilina blanda se hunde mientras la pisan y vuelve despacio
-        if (pisa && g.hundido < g.blanda) { const d = Math.min(0.07, g.blanda - g.hundido); g.hundido += d; this.moverGrupo(g, 0, d); }
+        if (pisa && g.hundido < g.blanda) { const d = Math.min(g.hunde, g.blanda - g.hundido); g.hundido += d; this.moverGrupo(g, 0, d); }
         else if (!pisa && g.hundido > 0) { const d = Math.min(0.035, g.hundido); g.hundido -= d; this.moverGrupo(g, 0, -d); }
       }
     }
     const p = this.puerta;
+    if (p.vaiven && !p.mov) {
+      const v = p.vaiven, k = (1 - Math.cos(2 * Math.PI * (T / v.t + (v.fase || 0)))) / 2;
+      p.x = v.base[0] + v.a[0] * k; p.y = v.base[1] + v.a[1] * k;
+    }
     if (p.mov) {
       const u = clamp((T - p.mov.t0) / p.mov.dur, 0, 1), e = p.mov.patas ? u : suave(u);
       p.x = lerp(p.mov.desde[0], p.mov.hasta[0], e); p.y = lerp(p.mov.desde[1], p.mov.hasta[1], e);
-      if (u >= 1) { p.mov = null; p.patas = false; p.ocupada = Math.max(0, p.ocupada - 1); }
+      if (u >= 1) { p.mov = null; p.patas = !!p.vaiven; p.ocupada = Math.max(0, p.ocupada - 1); }
     }
     this.manos = this.manos.filter((m) => this.cuadroMano(m, T));
     if (this.bolas.length) this.cuadroBolas();
@@ -560,7 +582,12 @@ export class Partida {
       for (let k = 0; k < n; k++) {
         b.vy = Math.min(12, b.vy + 30 * dt);
         b.x += b.vx * dt;
-        if (b.x - b.r < 0 || b.x + b.r > COLS || this.bolaChoca(b, false) !== null) { b.x -= b.vx * dt; b.vx = -b.vx; }
+        // contra una pared se aplasta (es plastilina blanda): si rebotara volvería
+        // por la espalda y la escena sería un malabar, no una broma
+        if (b.x - b.r < 0 || b.x + b.r > COLS || this.bolaChoca(b, false) !== null) {
+          b.x -= b.vx * dt; b.fuera = true;
+          this.evento('aplasta', { x: b.x + Math.sign(b.vx) * b.r, y: b.y }); break;
+        }
         const y0 = b.y;
         b.y += b.vy * dt;
         const piso = this.bolaChoca(b, b.vy > 0, y0);
@@ -568,7 +595,7 @@ export class Partida {
         b.giro += (b.vx * dt) / b.r;
       }
     }
-    this.bolas = this.bolas.filter((b) => b.y - b.r < FILAS + 1);
+    this.bolas = this.bolas.filter((b) => !b.fuera && b.y - b.r < FILAS + 1);
   }
   // null si no choca; si cae, la altura del piso donde se apoya
   bolaChoca(b, cayendo, y0 = b.y) {
@@ -632,7 +659,7 @@ export class Partida {
     c.g = Object.fromEntries(c.grupos.map((g) => [g.id, g]));
     c.trampas = this.trampas.map((t) => ({ ...t }));
     c.agenda = this.agenda.map((x) => ({ ...x }));
-    c.puerta = { ...this.puerta, mov: this.puerta.mov && { ...this.puerta.mov } };
+    c.puerta = { ...this.puerta, mov: this.puerta.mov && { ...this.puerta.mov } };   // (vaiven y base no cambian: se comparten)
     c.falsas = this.falsas.map((f) => ({ ...f }));
     c.manos = this.manos.map((m) => ({ ...m, punto: [...m.punto] }));
     c.bolas = this.bolas.map((b) => ({ ...b }));
@@ -652,10 +679,11 @@ export class Partida {
       if (g.cae) s += 'c' + q(g.cae.v);
       if (g.pisado >= 0 && g.visible) s += 'p' + q(T - g.pisado);
       if (g.tiembla > T) s += 't' + q(g.tiembla - T);
-      if (g.vaiven) s += 'v' + Math.floor((((T / g.vaiven.t + (g.vaiven.fase || 0)) % 1) + 1) % 1 * 24);
+      if (g.vaiven) s += 'v' + Math.floor(((((T - (g.vaiven.t0 || 0)) / g.vaiven.t + (g.vaiven.fase || 0)) % 1) + 1) % 1 * 24);
     }
     const p = this.puerta;
-    if (p.mov || p.ocupada || p.oculta) s += `|p${q(p.x)},${q(p.y)},${p.ocupada}${p.oculta ? 'o' : ''}`;
+    if (p.mov || p.ocupada || p.oculta || p.vaiven) s += `|p${q(p.x)},${q(p.y)},${p.ocupada}${p.oculta ? 'o' : ''}`;
+    if (p.vaiven) s += 'v' + Math.floor((((T / p.vaiven.t + (p.vaiven.fase || 0)) % 1) + 1) % 1 * 24);
     for (const m of this.manos) s += `|m${m.fase}${q(T - m.t0)}`;
     for (const b of this.bolas) s += `|b${Math.round(b.x * 4)},${Math.round(b.y * 4)},${Math.sign(b.vx)}`;
     if (this.agenda.length) s += '|a' + this.agenda.map((x) => q(x.t - T)).join(',');

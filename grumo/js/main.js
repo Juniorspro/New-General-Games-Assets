@@ -374,6 +374,7 @@ function evento(ev) {
     case 'desarma': { sonido.tocar('desarma'); const gr = p.g[ev.g]; if (gr) efectos.migas((gr.c0 + gr.c1) / 2 + gr.ox, (gr.f0 + gr.f1) / 2 + gr.oy, 16, [bloque], { vel: 4, arriba: 2 }); break; }
     case 'puerta': sonido.tocar('puerta', ev); break;
     case 'bola': sonido.tocar('bola'); break;
+    case 'aplasta': { sonido.tocar('aplasta'); const M = MUNDOS[mundoDe(nivelI)]; efectos.migas(ev.x, ev.y, 10, [M.bola, M.bola, M.bola2], { vel: 3.5, arriba: 2.5 }); vibrar(10); break; }
     case 'luz': sonido.tocar('luz'); break;
     case 'nota': sonido.tocar('nota'); break;
     case 'corte': sonido.tocar('corte'); corteHasta = t + 1 / 12; break;

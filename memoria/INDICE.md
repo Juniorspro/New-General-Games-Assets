@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 30/09/2026 (Morfi, de cartón y papel, con su intro de papel).
+Última puesta al día: 30/09/2026 (Grumo, plataformas de plastilina en stop motion).
 Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 
 ## Reglas que no se discuten
@@ -17,6 +17,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 - Pidió limpiar el repo porque "come tokens" (30/09/2026): no volver a llenarlo de builds, binarios ni proyectos que no use.
 - Sus juegos son de **JXSTUDIOS** y arrancan con su intro (30/09/2026): sola, sin tocar nada; **en el estilo de cada juego** (la de pixel art en el juego pixel le gustó; no siempre negro y cromo); y después del logo, **elegir el idioma** (la primera vez). → [cripta](cripta.md), [vibora](vibora.md), [isla](isla.md), [globo](globo.md), [morfi](morfi.md)
 - Cuando pasa capturas de un juego ajeno, se hace uno original del mismo género, de JXSTUDIOS, y se le dice (30/09/2026).
+- Quiere juegos **simples y terminados**, rápido: con Grumo se quejó "te pedí un juego simple" porque se validaba cada nivel durante horas (30/09/2026). Alcanza con que cada nivel se pueda ganar y una prueba de humo; el ajuste fino, si lo pide. → [grumo](grumo.md)
 
 ## Las notas
 | nota | abrila cuando… |
@@ -31,6 +32,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | [vibora](vibora.md) | juego .io de víboras: cuerpo en anillo, comida en grilla, bots, teléfono acostado, trampas de pausa y de dedos |
 | [globo](globo.md) | física propia 2D (Box2D-lite: pilas, dormir por islas, molinete, péndulo), medir la dificultad con un piloto, la intro de colores |
 | [morfi](morfi.md) | hilos con Verlet (la correa, el hilo liviano, el pedazo cortado que no tira), diseñar niveles poniendo al personaje donde más perdona, el look de papel, la intro de papel |
+| [grumo](grumo.md) | plataformas con trampas (tipo Level Devil): mundo a 12 fps y física a 120, trampas como datos, zonas de disparo, bolas que escupe la puerta, el resolvedor por jugadas |
 | [diario](diario.md) | querés saber qué se hizo en cada sesión y qué quedó pendiente |
 
 ## Los documentos largos (no se leen enteros: la nota dice qué sección)
@@ -49,6 +51,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | `vibora/` | VÍBORA.IO: víboras que comen y crecen contra bots, sin red (27 pieles, 5 fondos, 3 idiomas); se juega con `vibora-en-un-archivo.html` | `vibora/README.md`, [vibora](vibora.md) |
 | `globo/` | GLOBO LIBRE: el globo sube y el escudo aparta todo (30 niveles, infinito, tienda, 3 idiomas, física propia); se juega con `globo-en-un-archivo.html` | `globo/README.md`, [globo](globo.md) |
 | `morfi/` | MORFI: cortar el hilo para que el caramelo caiga en la caja con hambre (30 niveles en tres cajas, tienda, 3 idiomas, física de hilos propia); se juega con `morfi-en-un-archivo.html` | `morfi/README.md`, [morfi](morfi.md) |
+| `grumo/` | GRUMO: plataformas de plastilina en stop motion, el animador hace trampa (20 escenas en dos sets, camarín, 3 idiomas); se juega con `grumo-en-un-archivo.html` | `grumo/README.md`, [grumo](grumo.md) |
 | `bomba/` | BOMB RUNNER SIMULATOR (el de Roblox, a medio hacer): correr con una bomba, explotar, mascotas y renacer | `bomba/README.md` |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona (`rz.py`, `estado.json`), portadas de los juegos (`portadas/`), audio | `ARRANQUE.md § 4`, [juegos](juegos.md) › Portadas |
 | `edificio/` | torre de oficinas armada por script en Blender + visor three.js | — |
