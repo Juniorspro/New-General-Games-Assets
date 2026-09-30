@@ -7,10 +7,6 @@ __pycache__/
 *.keystore
 *.jks
 
-# el directorio desde el que se despliega a Pages: se arma copiando docs/paginas
-/sitio/
-.wrangler/
-
 # el token de Mint: nunca al repo (igual vive en ~/.mint, pero por las dudas)
 .mint/
 

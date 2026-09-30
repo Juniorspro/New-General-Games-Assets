@@ -7,8 +7,8 @@ el repo entero otra vez. No instala nada: es una red de notas cortas en
 ## Por qué ahorra
 
 Leer cuesta tokens, y lo leído llena el contexto. En este repo, arrancar
-leyendo `ARRANQUE.md` y `ESTADO.md` son ~10 mil tokens, y `estado.json` de
-Rezona otros ~17 mil. Con la memoria se lee el índice (~1.300) y la nota del
+leyendo los documentos largos eran ~10 mil tokens, y `estado.json` de Rezona
+otros ~17 mil. Con la memoria se lee el índice (~1.300) y la nota del
 tema (~500 a 1.500): **de 5 a 10 veces menos por tarea.** Son números
 aproximados, contados como caracteres ÷ 3,5.
 

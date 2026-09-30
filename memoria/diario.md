@@ -27,3 +27,8 @@
 - Referencias: búsquedas web y miniaturas de YouTube (los videos no bajan). Estilo: el noob con la bomba negra, números enormes con borde, ruleta, mascotas dorada ×2,5 y arcoíris ×6, zonas x2-x50 por renacimientos.
 - Quedó en `bomba/` la base (motor, cielos, materiales, texturas, avatar con poses, equipo). Se paró a pedido: todavía no se juega. → `bomba/README.md`
 - Falta: todo lo de `bomba/README.md § Lo que falta`.
+
+## 30/09/2026 (tarde) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido: "hacé una limpieza del repositorio, hay muchas cosas innecesarias que comen tokens; dejá los de Roblox" (está haciendo un juego en Roblox Studio).
+- Borrado (elegido por quien pide): los juegos HTML viejos, isla incluida, y los sitios con lo de IBLO (`frutiger-aero/`, `docs/`, `iblo-eventos/`, `electro-silver/`, `modelos-cdn/`, `herramientas/iblo/`, los scripts de despliegue, el workflow de Supabase y `ESTADO.md`). De ~290 MB a 22 MB. Todo sigue en `fbffdfb`.
+- Quedaron `bomba/`, `guias/`, `herramientas/`, `edificio/`, `bot-whatsapp/`, `Prompts/` y la memoria. `ARRANQUE.md` y `README.md` se reescribieron cortos.

@@ -1,69 +1,33 @@
 # New General Games Assets
 
-Continuación de `Juniorspro/General-Assets-Games`. Acá está **el código y la
-documentación**: los sitios que andan, las herramientas y los proyectos 3D.
+Juegos y herramientas. Ahora mismo lo principal es **Bomb Runner Simulator**
+(`bomba/`), el juego de Roblox que se está haciendo en Roblox Studio.
 
-> **Empezá por acá:** [`ARRANQUE.md`](ARRANQUE.md) dice **cómo se trabaja**
-> (la máquina, las trampas ya pagadas, cómo se despliega). [`ESTADO.md`](ESTADO.md)
-> dice **qué hay construido** (cada página, cada endpoint, cada tabla).
-> Una persona nueva debería leer los dos, en ese orden. Una sesión de Claude
-> Code arranca por [`memoria/INDICE.md`](memoria/INDICE.md) (lo dice
-> [`CLAUDE.md`](CLAUDE.md)), que apunta a la sección justa de cada documento;
-> cómo se mantiene esa memoria está en [`MEMORIA.md`](MEMORIA.md).
+> Una sesión de Claude Code arranca por [`memoria/INDICE.md`](memoria/INDICE.md)
+> (lo dice [`CLAUDE.md`](CLAUDE.md)); cómo se mantiene esa memoria está en
+> [`MEMORIA.md`](MEMORIA.md). Cómo se trabaja en la máquina: [`ARRANQUE.md`](ARRANQUE.md).
 
 ## Qué hay
 
-| carpeta | qué es | dónde vive |
-|---|---|---|
-| `frutiger-aero/` | un escritorio estilo Windows Vista en el navegador: cuentas, muro social, zona de donantes, tienda de apps | frutiger-aero-86q.pages.dev |
-| `docs/paginas/` | **IBLO Eventos** — sitio de una productora, con panel de administración | iblo-eventos.pages.dev |
-| `docs/biblioteca/` | la galería / biblioteca | — |
-| `electro-silver/` | sitio de Electro Silver (Presidencia Roca, Chaco) | electro-silver.pages.dev |
-| `telarana/` | juego de un botón: colgarse de un hilo y recorrer una ciudad | — |
-| `isla/` | **La Isla** — supervivencia en una isla pixelada en 3D (talar, minar, pescar, construir, la mina), con menú que se mece y vuela a carteles; en un solo HTML y en es/en/pt | `isla/isla-en-un-archivo.html` |
-| `edificio/` | una torre de oficinas armada por script en Blender + visor three.js | — |
-| `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |
-| `iblo-eventos/` | material de IBLO: imágenes, publicaciones, investigación | — |
-| `modelos-cdn/` | modelos GLB de IBLO, con el hash en el nombre | — |
-| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, IBLO | — |
-| `Prompts/` | colecciones de prompts (finanzas, diseño web, skills de UI) | — |
-| `guias/` | cómo hacer juegos que se vean bien: 3D con Rezona, 2D pixel art y la receta de AEROPLAZA | — |
-| `memoria/` | lo que ya se sabe, en notas cortas para que cada sesión no relea el repo | — |
+| carpeta | qué es |
+|---|---|
+| `bomba/` | Bomb Runner Simulator: correr con una bomba, explotar, mascotas y renacer (a medio hacer) |
+| `guias/` | cómo hacer juegos que se vean bien: 3D con Rezona, 2D pixel art y la receta de AEROPLAZA |
+| `memoria/` | lo que ya se sabe, en notas cortas para que cada sesión no relea el repo |
+| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, audio |
+| `edificio/` | una torre de oficinas armada por script en Blender + visor three.js |
+| `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables |
+| `Prompts/` | colecciones de prompts (finanzas, diseño web, skills de UI) |
 
-## Desplegar
-
-```bash
-export CLOUDFLARE_API_TOKEN=$(cat /root/.cloudflare-iblo)
-
-# Frutiger Aero — el --branch main no es opcional: sin él va a vista previa
-cd frutiger-aero && npx wrangler pages deploy --branch main
-
-# IBLO — arma, despliega y verifica en un comando
-./desplegar-iblo.sh
-```
-
-Las trampas de cada uno están explicadas en `ARRANQUE.md`, con el motivo.
+Lo que se sacó el 30/09/2026 (los juegos HTML viejos, entre ellos La Isla, y
+el código de Frutiger Aero, IBLO Eventos y Electro Silver) queda en el
+historial: `git checkout fbffdfb -- <carpeta>` lo trae de vuelta.
 
 ## Las reglas
 
-Ninguna es una preferencia: cada una viene de un bug que pasó.
-
-- **Ningún secreto entra al repo.** Nunca. Después de cada commit:
+- **Ningún secreto entra al repo.** Después de cada commit,
   `git grep -nI "cfat_\|-----BEGIN"` tiene que volver vacío.
-- **Los comentarios explican POR QUÉ, no qué.** Son la memoria del proyecto.
+- **Los comentarios explican POR QUÉ, no qué.**
 - **Medí antes de afirmar.** "Anda" sin un número al lado no vale.
-- **La pantalla no decide nada.** Toda puerta se pregunta en el servidor.
-- **Decir lo que no se sabe.** "No lo conoce" no se pinta de verde.
+- **Decir lo que no se sabe.**
 - **Todo en castellano rioplatense**, código y comentarios incluidos.
-
-## Lo que quedó afuera de este repo
-
-Del repo viejo **no** se trajo el material pesado, que sigue estando allá:
-
-| qué | tamaño | por qué |
-|---|---|---|
-| 93 binarios sueltos en la raíz: texturas PBR, modelos GLB, ROMs, mp3 | 487 MB | assets, no código |
-| `splat-ciudad/` — nube de puntos de una ciudad | 139 MB | idem |
-
-Si hacen falta, se traen: están en
-`Juniorspro/General-Assets-Games`, rama `claude/patron-2-93yeb9`.

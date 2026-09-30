@@ -1,0 +1,4 @@
+# Lo que las búsquedas (ripgrep, y con él Claude Code) no tienen que leer:
+# three.js entero son más de 600 KB de texto por copia y no se edita nunca.
+**/vendor/
+*.min.js

@@ -5,10 +5,10 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 | si el juego es… | receta | referencia |
 |---|---|---|
 | 2D de acción, pixel art, vertical | [juegos-2d-pixel](juegos-2d-pixel.md) | ElTipo (no está acá) |
-| 3D que tiene que parecer real (bosque, exploración) | [juegos-3d](juegos-3d.md) | `bosque/` (no está acá); `pique3d/`, `perro/` |
+| 3D que tiene que parecer real (bosque, exploración) | [juegos-3d](juegos-3d.md) | `bosque/` (no está acá); `pique3d/`, `perro/` (en el historial) |
 | 3D estilizado, brillante, social, todo por código | [aeroplaza](aeroplaza.md) | aeroplaza (no está acá; la guía sí) |
 
-## Cómo está armado un juego en este repo (visto en `enjambre/`, 29/09/2026)
+## Cómo se armaban los juegos HTML (visto en `enjambre/` e `isla/`, 29/09/2026; borrados el 30/09, en el historial: `git show fbffdfb:<ruta>`)
 - Carpeta propia con `index.html` + `js/` (módulos ES) + `css/` + `README.md` + `pruebas/`.
 - `empaquetar.py` arma `<juego>-en-un-archivo.html`: un módulo ES desde `file://` lo bloquea CORS, y diez archivos sueltos no se mandan por mensaje. El orden de la lista de módulos importa. → `enjambre/empaquetar.py` (docstring)
 - Mejor sacar ese orden de los `import` (orden topológico) que escribirlo a mano. → `isla/empaquetar.py` (29/09/2026)
@@ -28,17 +28,14 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 - `localStorage` en `try`, defaults fusionados con lo guardado, lo que llega por red validado.
 - Sondas de prueba (`window.__X`), un parámetro para entrar directo a la escena y otro para pausar y avanzar a mano.
 
-## Juegos de este repo que ya enseñan algo
-| juego | la lección | dónde |
-|---|---|---|
-| `enjambre/` | simulación sin dibujo ni audio para que robots jueguen 64 partidas y balanceen | `enjambre/README.md § Por qué hay un simulador aparte` |
-| `ritmo/` | la melodía ES la carta: sin mp3, sin desfase, validada en Node | `ritmo/README.md § La carta no se deduce de la música` |
-| `ritmo/` | escala menor y 4 progresiones fijas: "una progresión al azar suena a nada" | `ritmo/js/compositor.js` (comentarios de arriba) |
-| `perro/` | esqueleto propio por regiones de vértices cuando el rig generado no trae los clips | `guias/GUIA-JUEGOS.md § 4.3` |
-| `isla/` | pixel art en 3D por texel de mundo; menú que se mece y vuela a carteles en el mundo (el que pidió para los juegos nuevos) | [isla](isla.md) |
-| `pique2d/` | sprites generados y el bug de los lugares inaccesibles | `pique2d/LEEME.md` (sin leer) |
-| `dimension-n/` | caída vertical con ragdolls de Verlet | `dimension-n/README.md` (sin leer) |
-| `espejo/` | 40 puzzles de luz resueltos por una máquina | `espejo/README.md` (sin leer) |
+## Juegos que ya enseñaron algo (borrados el 30/09/2026; el código sigue en `git show fbffdfb:<ruta>`)
+| juego | la lección |
+|---|---|
+| `enjambre/` | simulación sin dibujo ni audio para que robots jueguen 64 partidas y balanceen |
+| `ritmo/` | la melodía ES la carta; escala menor y 4 progresiones fijas: "una progresión al azar suena a nada" |
+| `perro/` | esqueleto propio por regiones de vértices cuando el rig generado no trae los clips (`guias/GUIA-JUEGOS.md § 4.3`) |
+| `isla/` | pixel art en 3D por texel de mundo; el menú que se mece y vuela a carteles (el que pidió para los juegos nuevos) → [isla](isla.md) |
+| `dimension-n/` | caída vertical con ragdolls de Verlet |
 
 ## Música: lo que se sabe
 - Mejor grabada (Rezona `kind: music`, "seamless loop") que compuesta nota por nota. → [juegos-3d](juegos-3d.md)

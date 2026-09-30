@@ -1,6 +1,6 @@
 # Juegos 3D que se ven bien (three.js + Rezona)
 Fuente: `guias/GUIA-JUEGOS.md` (837 líneas; abrí solo la sección). Ver también: [juegos](juegos.md), [aeroplaza](aeroplaza.md), [probar](probar.md).
-El ejemplo que cita, `bosque/`, NO está en este repo (buscado el 29/09/2026); `pique3d/`, `perro/`, `enjambre/` y `herramientas/rezona/` sí.
+El ejemplo que cita, `bosque/`, NO está en este repo; `pique3d/`, `perro/` y `enjambre/` se borraron el 30/09/2026 (en el historial, `fbffdfb`); `herramientas/rezona/` sigue.
 
 ## Lo que más rinde, en orden
 - Luz antes que polígonos: una hora del día y un sol que manda; el ambiente nunca suma más que el sol sobre el suelo (si no, sale plano y lechoso). → § 0
@@ -40,7 +40,7 @@ El ejemplo que cita, `bosque/`, NO está en este repo (buscado el 29/09/2026); `
 
 ## Sonido
 - Rezona: `kind: music` 30-60 s terminado en "seamless loop, consistent energy, no fade out"; efectos `kind: sound` de hasta 2 s. → § 7
-- La guía dice no componer música nota por nota en código. `ritmo/` la compone desde una escala menor y 4 progresiones fijas ("una progresión al azar suena a nada"); aeroplaza tiene un motor con acordes de 9/11/13, pero su versión "con canciones" lo apaga (`soloGrabadas = true`) y suena con 7 MP3 en bucle (ver [aeroplaza](aeroplaza.md)). → § 7
+- La guía dice no componer música nota por nota en código. `ritmo/` (borrado, en el historial) la componía desde una escala menor y 4 progresiones fijas ("una progresión al azar suena a nada"); aeroplaza tiene un motor con acordes de 9/11/13, pero su versión "con canciones" lo apaga (`soloGrabadas = true`) y suena con 7 MP3 en bucle (ver [aeroplaza](aeroplaza.md)). → § 7
 - Cada sonido se busca por nombre y, si falta, se sintetiza: lo generado pisa a lo sintetizado sin tocar código. → § 7
 
 ## Entregar
