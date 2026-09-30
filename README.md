@@ -22,6 +22,7 @@ documentación**: los sitios que andan, las herramientas y los proyectos 3D.
 | `mundo-ar/xrslam/` | XRSLAM (SLAM visual-inercial de código abierto, Apache-2.0) compilado a WebAssembly, con arreglos propios y calibración automática: 6DoF en metros dentro de una página o un WebView | `mundo-ar/xrslam/construir.sh web` |
 | `tajo/` | juego de ritmo 3D: cortás bloques al ritmo dibujando el tajo con el dedo (dragón de neón, 3 canciones propias, "tu canción") | se arma con `python3 tajo/empaquetar.py` |
 | `noche/` | **Noche Carmesí**: un "survivors" en vertical (homenaje a Vampire Survivors): 11 cazadores, 11 armas con sus 11 evoluciones, 16 pasivos, tienda de mejoras, 2 escenarios con oleadas minuto a minuto, cofres, braseros y la Parca a los 30:00. Español/inglés. Un solo HTML | `noche/index.html` (se arma con `node noche/construir.mjs`) |
+| `abyssfall/` | **ABYSSFALL**: caer por un pozo con botas-cañón, en vertical (homenaje a Downwell). Disparás hacia abajo para frenar, pisás lo blanco, le tirás a lo rojo, combos, Gem High, 7 armas, 16 mejoras, salas con tienda/arma/veta, 4 zonas + el jefe, 7 paletas y 4 estilos. Letra de píxel gorda propia. Un solo HTML | `abyssfall/index.html` (`node abyssfall/construir.mjs`) |
 | `edificio/` | una torre de oficinas armada por script en Blender + visor three.js | — |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |
 | `iblo-eventos/` | material de IBLO: imágenes, publicaciones, investigación | — |

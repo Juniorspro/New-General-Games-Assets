@@ -1,0 +1,2152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ABYSSFALL</title>
+<!--
+  ABYSSFALL — caer por un pozo sin fondo con botas-cañón: saltás, disparás para abajo para frenar la
+  caída, pisás a los bichos y juntás gemas. Tres colores, pixel art y sonido hechos por código.
+  Un solo archivo, sin red. El código vive en abyssfall/src/*.js; este archivo lo arma `node construir.mjs`.
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  canvas { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<canvas id="lienzo"></canvas>
+<script>
+'use strict';
+
+// ══════════ 00-base.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// ABYSSFALL · la base: cuentas, azar con semilla, lo que se guarda, el idioma y las paletas.
+// Todo el juego se dibuja con TRES colores lógicos (fondo, tinta, acento): cambiar de paleta es
+// cambiar esos tres y rehornear los sprites. Así se ve siempre coherente, como el género pide.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const lim = (x, a, b) => (x < a ? a : x > b ? b : x);
+const lerp = (a, b, t) => a + (b - a) * t;
+const TAU = Math.PI * 2;
+const CUADRO = 1000 / 60;
+const sig = (x) => (x < 0 ? -1 : x > 0 ? 1 : 0);
+
+/** mulberry32: la misma semilla, el mismo pozo. */
+function mulberry(a) {
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// el azar del MUNDO (con semilla) y el VISUAL (chispas): separados, así una prueba da siempre lo mismo
+let rnd = mulberry(1);
+const A = {
+  f: () => rnd(), ent: (a, b) => a + Math.floor(rnd() * (b - a + 1)), uno: (arr) => arr[Math.floor(rnd() * arr.length)], si: (p) => rnd() < p,
+  mezclar(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; },
+};
+const V = { f: Math.random, ent: (a, b) => a + Math.floor(Math.random() * (b - a + 1)), uno: (arr) => arr[Math.floor(Math.random() * arr.length)] };
+
+// ── lo que se guarda: gemas del banco, paletas, estilos, récords, opciones ──
+const CLAVE = "abyssfall-v1";
+const BASE_G = () => ({ banco: 0, totalGemas: 0, paleta: "clasica", estilo: "normal", estilos: { normal: 1 }, record: { prof: 0, gemas: 0, combo: 0 }, partidas: 0, ganadas: 0,
+  op: { musica: 0.8, efectos: 0.9, temblor: 1, idioma: null } });
+let G = BASE_G();
+try { const s = JSON.parse(localStorage.getItem(CLAVE) || "null"); if (s) G = Object.assign(BASE_G(), s, { op: Object.assign(BASE_G().op, s.op || {}), record: Object.assign(BASE_G().record, s.record || {}) }); } catch (e) { /* modo privado */ }
+function guardar() { try { localStorage.setItem(CLAVE, JSON.stringify(G)); } catch (e) { /* idem */ } }
+
+// ── idioma: inglés por defecto (el título es inglés); el español a un toque ──
+let IDIOMA = G.op.idioma || "en";
+const L = (t) => (t == null ? "" : typeof t === "string" ? t : t[IDIOMA] ?? t.en);
+function cambiarIdioma() { IDIOMA = IDIOMA === "es" ? "en" : "es"; G.op.idioma = IDIOMA; guardar(); }
+
+// ── las paletas: [fondo, tinta, acento]; se desbloquean con las gemas juntadas en total ──
+const PALETAS = {
+  clasica: { n: "CLASSIC", c: ["#000000", "#ffffff", "#ee1133"], precio: 0 },
+  hueso: { n: "BONE", c: ["#140e0c", "#f2e8d4", "#d8a33a"], precio: 800 },
+  musgo: { n: "MOSS", c: ["#08140c", "#d6f2c0", "#46c04a"], precio: 1600 },
+  abismo: { n: "ABYSS", c: ["#050818", "#cfe4ff", "#3a8cff"], precio: 2600 },
+  brasa: { n: "EMBER", c: ["#1a0703", "#ffe2c4", "#ff6a14"], precio: 3800 },
+  orquidea: { n: "ORCHID", c: ["#120818", "#f6e4ff", "#d63cc8"], precio: 5200 },
+  vacio: { n: "VOID", c: ["#f4f0ea", "#101010", "#ee1133"], precio: 7000 },
+};
+let PALA = PALETAS[G.paleta] || PALETAS.clasica;
+let [C_FONDO, C_TINTA, C_ACENTO] = PALA.c;
+function ponerPaleta(k) {
+  G.paleta = k; PALA = PALETAS[k]; [C_FONDO, C_TINTA, C_ACENTO] = PALA.c; guardar();
+  for (const key of Object.keys(SPR)) delete SPR[key];        // se rehornea todo con los colores nuevos
+}
+
+// ══════════ 01-pantalla.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LA PANTALLA: todo (mundo, HUD y letras, que también son de píxeles) se dibuja chico, a ~180 px
+// de ancho, y se agranda a escala ENTERA (guía 2D § 2). Vertical: en el teléfono parado ocupa todo;
+// en una pantalla acostada queda una columna al centro con el fondo de la paleta.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const lienzo = document.getElementById("lienzo");
+const cxP = lienzo.getContext("2d", { alpha: false });
+const cvM = document.createElement("canvas");
+const g = cvM.getContext("2d");
+let W = 180, H = 400, PX = 4, DPR = 1, OFX = 0;
+const ANCHO_OBJ = 180;
+
+function medir() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const fw = Math.round((lienzo.clientWidth || innerWidth) * DPR), fh = Math.round((lienzo.clientHeight || innerHeight) * DPR);
+  if (lienzo.width !== fw || lienzo.height !== fh) { lienzo.width = fw; lienzo.height = fh; }
+  const col = Math.min(fw, Math.round(fh * 0.6));
+  PX = Math.max(2, Math.round(col / ANCHO_OBJ));
+  const nw = Math.ceil(Math.min(fw, col * 1.02) / PX), nh = Math.ceil(fh / PX);
+  OFX = Math.floor((fw - nw * PX) / 2);
+  if (nw !== W || nh !== H || cvM.width !== nw) { W = nw; H = nh; cvM.width = W; cvM.height = H; }
+  g.imageSmoothingEnabled = false; cxP.imageSmoothingEnabled = false;
+}
+new ResizeObserver(medir).observe(lienzo);
+addEventListener("resize", medir);
+medir();
+
+function volcar() {
+  if (OFX > 0) { cxP.fillStyle = C_FONDO; cxP.fillRect(0, 0, lienzo.width, lienzo.height); cxP.fillStyle = C_ACENTO; cxP.fillRect(OFX - 3, 0, 2, lienzo.height); cxP.fillRect(OFX + W * PX + 1, 0, 2, lienzo.height); }
+  cxP.drawImage(cvM, 0, 0, W, H, OFX, 0, W * PX, H * PX);
+}
+function aJuego(clientX, clientY) {
+  const r = lienzo.getBoundingClientRect();
+  return { x: ((clientX - r.left) * DPR - OFX) / PX, y: ((clientY - r.top) * DPR) / PX };
+}
+function pedirCompleta() {
+  const d = document.documentElement;
+  try { if (!document.fullscreenElement && d.requestFullscreen) d.requestFullscreen({ navigationUI: "hide" }).then(() => { try { screen.orientation.lock("portrait").catch(() => {}); } catch (e) {} }).catch(() => {}); } catch (e) {}
+}
+
+// ══════════ 02-entrada.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LA ENTRADA. En el teléfono, como el original en celular: el pulgar izquierdo va y viene
+// (mitad izquierda: primer cuarto ◀, segundo cuarto ▶) y el derecho salta / dispara (mitad derecha).
+// Multitoque de verdad: cada dedo se sigue por su pointerId, así se puede correr y disparar a la vez.
+// En la PC: flechas o A/D para moverse; Espacio, Z o flecha arriba para saltar y disparar.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const IN = { izq: false, der: false, salto: false, teclas: new Set(), dedos: new Map(), toques: [], tactil: false };
+const EDGE = new Set();          // flancos de un cuadro: se consumen al FINAL (guía 2D § 1)
+const TECLA = { ArrowLeft: "izq", KeyA: "izq", ArrowRight: "der", KeyD: "der", Space: "salto", KeyZ: "salto", ArrowUp: "salto", KeyW: "salto", KeyK: "salto",
+  ArrowDown: "aba", KeyS: "aba", Enter: "ok", NumpadEnter: "ok", Escape: "atras", KeyP: "pausa", Backspace: "atras" };
+
+addEventListener("keydown", (e) => { const k = TECLA[e.code]; if (!e.repeat) EDGE.add("k:" + e.code); if (k) { if (!e.repeat) EDGE.add(k); IN.teclas.add(k); e.preventDefault(); } alGesto(); });
+addEventListener("keyup", (e) => { const k = TECLA[e.code]; if (k) IN.teclas.delete(k); });
+addEventListener("blur", () => { IN.teclas.clear(); IN.dedos.clear(); });
+
+/** Qué botón es un punto de la pantalla (en píxeles del juego). */
+function zonaDe(p) { if (p.y < 44) return null; return p.x < W * 0.25 ? "izq" : p.x < W * 0.5 ? "der" : "salto"; }
+lienzo.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  if (e.pointerType !== "mouse") IN.tactil = true;
+  const p = aJuego(e.clientX, e.clientY), z = zonaDe(p);
+  IN.dedos.set(e.pointerId, { x0: p.x, y0: p.y, x: p.x, y: p.y, t: performance.now(), zona: z });
+  if (z === "salto") EDGE.add("salto");
+  if (e.pointerType === "mouse") alGesto();          // con mouse, el pointerdown sí es gesto
+  try { lienzo.setPointerCapture(e.pointerId); } catch (er) {}
+}, { passive: false });
+lienzo.addEventListener("pointermove", (e) => {
+  const d = IN.dedos.get(e.pointerId); if (!d) return;
+  const p = aJuego(e.clientX, e.clientY); d.x = p.x; d.y = p.y;
+  // el pulgar izquierdo puede deslizarse entre ◀ y ▶ sin levantar el dedo
+  if (d.zona === "izq" || d.zona === "der") d.zona = p.x < W * 0.25 ? "izq" : p.x < W * 0.5 ? "der" : d.zona;
+});
+function soltar(e) {
+  const d = IN.dedos.get(e.pointerId);
+  if (d) { if (Math.hypot(d.x - d.x0, d.y - d.y0) < 8 && performance.now() - d.t < 600) IN.toques.push({ x: d.x, y: d.y }); IN.dedos.delete(e.pointerId); }
+  alGesto();
+}
+lienzo.addEventListener("pointerup", soltar);
+lienzo.addEventListener("pointercancel", (e) => IN.dedos.delete(e.pointerId));
+// en Android el pointerdown de un dedo NO es gesto para el navegador: touchend y click sí (memoria/juegos.md)
+lienzo.addEventListener("touchend", alGesto, { passive: true });
+lienzo.addEventListener("click", alGesto);
+lienzo.addEventListener("contextmenu", (e) => e.preventDefault());
+
+let _completaPendiente = false;
+function alGesto() { audioDespertar(); if (_completaPendiente) { _completaPendiente = false; pedirCompleta(); } }
+
+/** El estado de los botones de este cuadro (teclado + dedos). */
+function leerEntrada() {
+  let izq = IN.teclas.has("izq"), der = IN.teclas.has("der"), salto = IN.teclas.has("salto");
+  for (const d of IN.dedos.values()) { if (d.zona === "izq") izq = true; if (d.zona === "der") der = true; if (d.zona === "salto") salto = true; }
+  IN.izq = izq && !der; IN.der = der && !izq; IN.salto = salto;
+  return IN;
+}
+const recien = (k) => EDGE.has(k);
+function finCuadroEntrada() { EDGE.clear(); IN.toques.length = 0; }
+
+// ══════════ 03-audio.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL SONIDO, HORNEADO (lección de Shumio y Noche Carmesí, memoria/juegos.md): sintetizar en vivo no
+// entra en tiempo real en el teléfono del usuario. Cada efecto se renderiza UNA vez con
+// OfflineAudioContext (mono, 24 kHz) y los temas se arman con un banco de notas sumado en JS.
+// En vivo sólo se tocan buffers. El contexto se crea SÓLO en un gesto de verdad.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SR = 24000;
+const AU = { ctx: null, master: null, mus: null, sfx: null, buf: {}, listo: false, horneando: false, tema: null, fuente: null, ultimo: {}, voces: 0 };
+
+function audioDespertar() {
+  try {
+    if (!AU.ctx) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return;
+      try { AU.ctx = new C({ sampleRate: SR, latencyHint: "playback" }); } catch (e) { AU.ctx = new C(); }
+      AU.master = AU.ctx.createGain(); AU.master.connect(AU.ctx.destination);
+      AU.mus = AU.ctx.createGain(); AU.mus.connect(AU.master);
+      AU.sfx = AU.ctx.createGain(); AU.sfx.connect(AU.master);
+      volumenes();
+      // un buffer vacío tocado en el gesto destraba la salida en los WebView viejos
+      const b = AU.ctx.createBuffer(1, 1, AU.ctx.sampleRate), s = AU.ctx.createBufferSource(); s.buffer = b; s.connect(AU.master); s.start();
+      hornearTodo();
+    }
+    if (AU.ctx.state !== "running") AU.ctx.resume().catch(() => {});
+  } catch (e) { /* sin audio: se juega igual */ }
+}
+function volumenes() { if (!AU.ctx) return; AU.mus.gain.value = G.op.musica * 0.55; AU.sfx.gain.value = G.op.efectos * 0.8; }
+
+// ── la caja de herramientas offline: cada receta arma su grafo sobre un OfflineAudioContext ──
+function _ruidoBuf(c, seg) { const b = c.createBuffer(1, Math.ceil(seg * c.sampleRate), c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; }
+/** Una envolvente ADSR simple sobre un gain. */
+function env(gn, t, a, d, s, r, dur, pico = 1) {
+  const p = gn.gain; p.setValueAtTime(0.0001, t); p.linearRampToValueAtTime(pico, t + a);
+  p.exponentialRampToValueAtTime(Math.max(0.0002, pico * s), t + a + d);
+  p.setValueAtTime(Math.max(0.0002, pico * s), t + Math.max(a + d, dur)); p.exponentialRampToValueAtTime(0.0001, t + Math.max(a + d, dur) + r);
+  return t + Math.max(a + d, dur) + r;
+}
+function osc(c, tipo, f, t, fin, dest, f2, tf) {
+  const o = c.createOscillator(); o.type = tipo; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + (tf || (fin - t)));
+  o.connect(dest); o.start(t); o.stop(fin + 0.02); return o;
+}
+function ruido(c, t, fin, dest, tipo = "bandpass", f = 1000, q = 1, f2) {
+  const s = c.createBufferSource(); s.buffer = c.__ruido || (c.__ruido = _ruidoBuf(c, 2)); s.loop = true;
+  const fl = c.createBiquadFilter(); fl.type = tipo; fl.frequency.setValueAtTime(f, t); fl.Q.value = q;
+  if (f2) fl.frequency.exponentialRampToValueAtTime(f2, fin);
+  s.connect(fl); fl.connect(dest); s.start(t); s.stop(fin + 0.02); return fl;
+}
+function gan(c, dest, v = 1) { const x = c.createGain(); x.gain.value = v; x.connect(dest); return x; }
+/** La sala: una respuesta al impulso de ruido que se apaga (catedral chica). */
+function sala(c, dest, seg = 1.6, mezcla = 0.3) {
+  const cv = c.createConvolver(), n = Math.ceil(seg * c.sampleRate), b = c.createBuffer(2, n, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = b.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3.2); }
+  cv.buffer = b; const seco = gan(c, dest, 1), hum = gan(c, dest, mezcla); cv.connect(hum);
+  const ent = c.createGain(); ent.connect(seco); ent.connect(cv); return ent;
+}
+const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+// ── los efectos: [duración, receta(c, salida)] ──
+const RECETAS = {
+  // el disparo de las botas: un chirrido cuadrado que cae (corto: se dispara mucho)
+  tiro: [0.1, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.05, 0.3, 0.03, 0.02, 0.4); osc(c, "square", 880, 0, 0.09, gan(c, x, 0.5), 220); ruido(c, 0, 0.05, gan(c, x, 0.4), "highpass", 3000); }],
+  tiroGordo: [0.16, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.08, 0.3, 0.05, 0.02, 0.5); osc(c, "square", 520, 0, 0.14, gan(c, x, 0.5), 110); ruido(c, 0, 0.1, gan(c, x, 0.5), "bandpass", 1400, 1, 300); }],
+  laser: [0.3, (c, o) => { const x = gan(c, sala(c, o, 0.6, 0.2)); env(x, 0, 0.002, 0.2, 0.4, 0.08, 0.1, 0.35); osc(c, "sawtooth", 1600, 0, 0.28, x, 300); osc(c, "square", 2400, 0, 0.2, gan(c, x, 0.3), 600); }],
+  pisoton: [0.18, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.1, 0.2, 0.05, 0.02, 0.6); osc(c, "square", 200, 0, 0.16, gan(c, x, 0.5), 520); osc(c, "sine", 90, 0, 0.12, x, 45); }],
+  muere: [0.22, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.12, 0.2, 0.08, 0.02, 0.5); ruido(c, 0, 0.2, x, "lowpass", 3000, 1, 200); osc(c, "square", 400, 0, 0.18, gan(c, x, 0.3), 60); }],
+  golpe: [0.07, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.04, 0.2, 0.02, 0.01, 0.4); ruido(c, 0, 0.06, x, "bandpass", 2400, 1.5); }],
+  bloque: [0.25, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.12, 0.25, 0.1, 0.02, 0.55); ruido(c, 0, 0.24, x, "lowpass", 1800, 0.8, 250); osc(c, "square", 160, 0, 0.1, gan(c, x, 0.3), 70); }],
+  // la gema: dos senos brillantes; el tono sube con la racha (se toca con playbackRate)
+  gema: [0.14, (c, o) => { const x = gan(c, o); env(x, 0, 0.002, 0.06, 0.35, 0.06, 0.02, 0.4); osc(c, "square", 1760, 0, 0.12, gan(c, x, 0.25)); osc(c, "sine", 2637, 0.02, 0.14, x); }],
+  salto: [0.14, (c, o) => { const x = gan(c, o); env(x, 0, 0.002, 0.08, 0.2, 0.03, 0.02, 0.35); osc(c, "square", 300, 0, 0.13, gan(c, x, 0.5), 720); }],
+  aterriza: [0.08, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.05, 0.1, 0.02, 0.01, 0.35); ruido(c, 0, 0.07, x, "lowpass", 900); }],
+  recarga: [0.2, (c, o) => { const x = gan(c, o); env(x, 0, 0.002, 0.1, 0.3, 0.06, 0.03, 0.25); [880, 1320].forEach((f, i) => osc(c, "square", f, i * 0.05, i * 0.05 + 0.08, gan(c, x, 0.4))); }],
+  vacio: [0.12, (c, o) => { const x = gan(c, o); env(x, 0, 0.002, 0.06, 0.2, 0.03, 0.02, 0.3); osc(c, "square", 140, 0, 0.1, gan(c, x, 0.5)); }],
+  dolor: [0.45, (c, o) => { const x = gan(c, o); env(x, 0, 0.002, 0.25, 0.3, 0.15, 0.05, 0.7); osc(c, "sawtooth", 330, 0, 0.4, x, 55); ruido(c, 0, 0.2, gan(c, x, 0.6), "lowpass", 2000, 1, 300); }],
+  corazon: [0.6, (c, o) => { const x = gan(c, sala(c, o, 1, 0.3)); [72, 76, 79, 84].forEach((m, i) => { const y = gan(c, x); env(y, i * 0.07, 0.003, 0.12, 0.3, 0.2, 0.03, 0.3); osc(c, "square", mtof(m), i * 0.07, i * 0.07 + 0.3, gan(c, y, 0.4)); }); }],
+  combo: [0.5, (c, o) => { const x = gan(c, sala(c, o, 1, 0.3)); [67, 71, 74, 79, 83].forEach((m, i) => { const y = gan(c, x); env(y, i * 0.05, 0.002, 0.08, 0.3, 0.15, 0.02, 0.25); osc(c, "square", mtof(m + 12), i * 0.05, i * 0.05 + 0.25, gan(c, y, 0.4)); }); }],
+  gemHigh: [1.2, (c, o) => { const x = gan(c, sala(c, o, 1.4, 0.4)); for (let i = 0; i < 10; i++) { const y = gan(c, x); env(y, i * 0.05, 0.002, 0.1, 0.4, 0.2, 0.02, 0.18); osc(c, "square", mtof(72 + [0, 4, 7, 12, 16, 19, 24, 28, 31, 36][i]), i * 0.05, i * 0.05 + 0.4, gan(c, y, 0.5)); } }],
+  puerta: [0.7, (c, o) => { const x = gan(c, sala(c, o, 1.2, 0.4)); env(x, 0, 0.1, 0.3, 0.5, 0.3, 0.2, 0.4); osc(c, "sine", 220, 0, 0.7, x, 880); osc(c, "triangle", 330, 0, 0.7, gan(c, x, 0.3), 1320); }],
+  comprar: [0.5, (c, o) => { const x = gan(c, sala(c, o, 1, 0.3)); [1568, 2093, 2637].forEach((f, i) => { const y = gan(c, x); env(y, i * 0.06, 0.002, 0.1, 0.3, 0.2, 0.02, 0.3); osc(c, "square", f, i * 0.06, i * 0.06 + 0.3, gan(c, y, 0.35)); }); }],
+  elegir: [0.7, (c, o) => { const x = gan(c, sala(c, o, 1.2, 0.35)); [79, 84, 88, 91].forEach((m, i) => { const y = gan(c, x); env(y, i * 0.06, 0.003, 0.1, 0.3, 0.35, 0.03, 0.28); osc(c, "square", mtof(m), i * 0.06, 0.65, gan(c, y, 0.4)); osc(c, "triangle", mtof(m - 12), i * 0.06, 0.65, y); }); }],
+  clic: [0.06, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.03, 0.1, 0.02, 0.005, 0.35); osc(c, "square", 1200, 0, 0.05, gan(c, x, 0.35), 800); }],
+  mover: [0.05, (c, o) => { const x = gan(c, o); env(x, 0, 0.001, 0.025, 0.1, 0.02, 0.005, 0.2); osc(c, "square", 700, 0, 0.04, gan(c, x, 0.4)); }],
+  no: [0.2, (c, o) => { const x = gan(c, o); env(x, 0, 0.002, 0.1, 0.4, 0.05, 0.08, 0.35); osc(c, "square", 160, 0, 0.18, gan(c, x, 0.5)); osc(c, "square", 151, 0, 0.18, gan(c, x, 0.5)); }],
+  jefe: [1.8, (c, o) => { const x = gan(c, sala(c, o, 1.8, 0.4)); env(x, 0, 0.02, 0.4, 0.6, 0.9, 0.3, 0.6); for (const m of [28, 35, 40]) osc(c, "sawtooth", mtof(m), 0, 1.6, gan(c, x, 0.3)); ruido(c, 0, 1.4, gan(c, x, 0.5), "lowpass", 400); }],
+  explota: [0.6, (c, o) => { const x = gan(c, sala(c, o, 1, 0.3)); env(x, 0, 0.001, 0.2, 0.3, 0.3, 0.05, 0.8); ruido(c, 0, 0.55, x, "lowpass", 2500, 0.7, 120); osc(c, "sine", 110, 0, 0.4, gan(c, x, 0.6), 30); }],
+  morir: [2.2, (c, o) => { const x = gan(c, sala(c, o, 2, 0.45)); [64, 61, 57, 52, 45].forEach((m, i) => { const y = gan(c, x); env(y, i * 0.22, 0.01, 0.2, 0.5, 0.5, 0.2, 0.3); osc(c, "square", mtof(m), i * 0.22, i * 0.22 + 0.9, gan(c, y, 0.3)); osc(c, "triangle", mtof(m - 12), i * 0.22, i * 0.22 + 0.9, y); }); }],
+};
+
+// ── la música: tracker de texto. Cada ficha es un paso (corchea): "A4" nota, "." sigue, "-" silencio ──
+function pistas(txt, desde = 0) {
+  const out = []; let paso = desde, ult = null;
+  for (const f of txt.trim().split(/\s+/)) {
+    if (f === "|") continue;
+    if (f === ".") { if (ult) ult.len++; }
+    else if (f === "-") ult = null;
+    else { const m = /^([A-G])(#|b)?(-?\d)$/.exec(f); if (m) { const n = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === "#" ? 1 : m[2] === "b" ? -1 : 0) + (+m[3] + 1) * 12; ult = { paso, m: n, len: 1 }; out.push(ult); } }
+    paso++;
+  }
+  return out;
+}
+const INSTR = {
+  // el bajo: sierra con filtro que se abre al golpe (rock gótico, no chiptune)
+  bajo(c, o, t, f, d) { const x = gan(c, o), fl = c.createBiquadFilter(); fl.type = "lowpass"; fl.Q.value = 3; fl.frequency.setValueAtTime(1600, t); fl.frequency.exponentialRampToValueAtTime(300, t + d); fl.connect(x); env(x, t, 0.005, 0.1, 0.6, 0.05, d, 0.5); osc(c, "sawtooth", f, t, t + d + 0.06, fl); osc(c, "square", f / 2, t, t + d + 0.06, gan(c, fl, 0.4)); },
+  // órgano de tubos: senos en armónicos (como tirar los registros)
+  organo(c, o, t, f, d) { const x = gan(c, o); env(x, t, 0.02, 0.1, 0.8, 0.12, d, 0.12); for (const [k, v] of [[1, 1], [2, 0.6], [3, 0.3], [4, 0.35], [8, 0.12]]) osc(c, "sine", f * k, t, t + d + 0.14, gan(c, x, v)); },
+  // clavicémbalo: pulso filtrado con caída rápida (la cuerda pellizcada)
+  clave(c, o, t, f, d) { const x = gan(c, o), fl = c.createBiquadFilter(); fl.type = "highpass"; fl.frequency.value = 300; fl.connect(x); env(x, t, 0.002, 0.18, 0.15, 0.1, Math.min(d, 0.12), 0.16); osc(c, "square", f, t, t + d + 0.3, fl); osc(c, "sawtooth", f * 2.003, t, t + d + 0.3, gan(c, fl, 0.3)); },
+  // la voz principal: dos sierras desafinadas, filtro y vibrato (un "violín" de sintetizador)
+  lead(c, o, t, f, d) {
+    const x = gan(c, o), fl = c.createBiquadFilter(); fl.type = "lowpass"; fl.Q.value = 1.5; fl.frequency.setValueAtTime(900, t); fl.frequency.linearRampToValueAtTime(2600, t + 0.06); fl.frequency.exponentialRampToValueAtTime(1400, t + d + 0.1); fl.connect(x);
+    env(x, t, 0.015, 0.15, 0.7, 0.14, d, 0.11);
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 5.5; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * 0.012, t + Math.min(0.35, d)); lfo.connect(lg); lfo.start(t); lfo.stop(t + d + 0.2);
+    for (const k of [0.997, 1.004]) { const o2 = osc(c, "sawtooth", f * k, t, t + d + 0.2, fl); lg.connect(o2.frequency); }
+  },
+  coro(c, o, t, f, d) { const x = gan(c, o), fl = c.createBiquadFilter(); fl.type = "lowpass"; fl.frequency.value = 1100; fl.connect(x); env(x, t, 0.35, 0.3, 0.8, 0.5, d, 0.06); for (const k of [0.995, 1, 1.006]) osc(c, "sawtooth", f * k, t, t + d + 0.55, fl); },
+  bombo(c, o, t) { const x = gan(c, o); env(x, t, 0.001, 0.14, 0.01, 0.05, 0.02, 0.9); osc(c, "sine", 140, t, t + 0.2, x, 42, 0.12); },
+  caja(c, o, t) { const x = gan(c, o); env(x, t, 0.001, 0.1, 0.05, 0.08, 0.02, 0.45); ruido(c, t, t + 0.2, x, "bandpass", 1800, 0.8); osc(c, "triangle", 210, t, t + 0.1, gan(c, x, 0.6), 150); },
+  plato(c, o, t) { const x = gan(c, o); env(x, t, 0.001, 0.03, 0.05, 0.02, 0.01, 0.12); ruido(c, t, t + 0.06, x, "highpass", 7000); },
+};
+// Los temas NO se renderizan enteros (medido: 5,2 s para 26 s de música en un Xeon = 5× el tiempo
+// real; en el teléfono no llega). Cada nota distinta (instrumento + altura + largo) se hornea UNA vez,
+// y el tema se arma sumando esas notas en JS; la sala es una reverb de peines (Freeverb chico), también en JS.
+const NOTAS = new Map();
+async function notaBuf(nom, m, largo) {
+  const clave = `${nom}|${m}|${largo.toFixed(3)}`;
+  if (NOTAS.has(clave)) return NOTAS.get(clave);
+  const dur = largo + (nom === "coro" ? 0.7 : 0.45), c = new OfflineAudioContext(1, Math.ceil(dur * SR), SR), o = c.createGain(); o.connect(c.destination);
+  if (m == null) INSTR[nom](c, o, 0); else INSTR[nom](c, o, 0, mtof(m), largo);
+  const p = c.startRendering().then((b) => b.getChannelData(0));
+  NOTAS.set(clave, p);
+  return p;
+}
+function reverbJS(x, mezcla) {
+  // 4 peines en paralelo + 2 pasatodo (los retardos de Freeverb llevados a 24 kHz)
+  const n = x.length, out = new Float32Array(n);
+  for (const d of [607, 646, 695, 738]) {
+    const buf = new Float32Array(d); let i = 0, filt = 0;
+    for (let k = 0; k < n; k++) { const y = buf[i]; filt = y * 0.75 + filt * 0.25; buf[i] = x[k] + filt * 0.8; out[k] += y * 0.25; if (++i >= d) i = 0; }
+  }
+  for (const d of [302, 240]) {
+    const buf = new Float32Array(d); let i = 0;
+    for (let k = 0; k < n; k++) { const b = buf[i], v = out[k]; buf[i] = v + b * 0.5; out[k] = b - v; if (++i >= d) i = 0; }
+  }
+  for (let k = 0; k < n; k++) x[k] += out[k] * mezcla;
+}
+async function hornearTema(nombre, tm) {
+  const paso = 60 / tm.bpm / 2, dur = tm.pasos * paso, N = Math.ceil((dur + (tm.cola ?? 2.5)) * SR);
+  const humedo = new Float32Array(N), seco = new Float32Array(N), trabajos = [];
+  for (const [ins, txt] of Object.entries(tm.voces)) {
+    const [nom0, vol = 1] = ins.split("*"), nom = nom0.replace(/\d$/, ""), dest = nom === "bajo" ? seco : humedo;
+    for (const n of pistas(txt)) trabajos.push([notaBuf(nom, n.m, Math.round(n.len * paso * 0.92 * 1000) / 1000), Math.floor(n.paso * paso * SR), +vol, dest]);
+  }
+  for (const [ins, txt] of Object.entries(tm.bat || {})) {
+    const v = ins === "plato" ? 0.7 : 1;
+    [...txt.replace(/\s|\|/g, "")].forEach((ch, i) => { if (ch === "x") trabajos.push([notaBuf(ins, null, 0.2), Math.floor(i * paso * SR), v, seco]); });
+  }
+  for (const [p, desde, vol, dest] of trabajos) { const d = await p; for (let i = 0, j = desde; i < d.length && j < N; i++, j++) dest[j] += d[i] * vol; }
+  reverbJS(humedo, 0.35);
+  for (let i = 0; i < N; i++) seco[i] += humedo[i];
+  // todos los temas al mismo pico (0,85): nada satura y ninguno queda bajito
+  let pico = 0; for (let i = 0; i < N; i++) { const a = Math.abs(seco[i]); if (a > pico) pico = a; }
+  const k = pico > 0 ? 0.85 / pico : 1;
+  const largo = tm.loop ? Math.floor(dur * SR) : N, out = AU.ctx.createBuffer(1, largo, SR), od = out.getChannelData(0);
+  // en bucle: la cola se suma al principio, así el bucle no corta
+  for (let i = 0; i < N; i++) od[tm.loop ? i % largo : i] += seco[i] * k;
+  AU.buf["tema:" + nombre] = out;
+}
+// los temas: energía de pozo (bajo que empuja, arpegio de "clave", batería) en Re y La menor
+const TEMAS = {
+  titulo: { bpm: 96, pasos: 64, loop: true, voces: {
+    "coro*1.1": "D3 . . . . . . . Bb2 . . . . . . . C3 . . . . . . . A2 . . . . . . . D3 . . . . . . . Bb2 . . . . . . . G2 . . . A2 . . . . . . . . . . .",
+    "clave*0.8": "D5 A4 F4 A4 D5 A4 F4 A4 D5 Bb4 F4 Bb4 D5 Bb4 F4 Bb4 E5 C5 G4 C5 E5 C5 G4 C5 E5 C#5 A4 C#5 E5 C#5 A4 C#5 D5 A4 F4 A4 D5 A4 F4 A4 D5 Bb4 F4 Bb4 D5 Bb4 F4 Bb4 D5 Bb4 G4 Bb4 E5 C#5 A4 C#5 E5 C#5 A4 C#5 A5 - - -",
+    "lead*0.7": "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - A5 . . . F5 . . . G5 . . . D5 . . . E5 . . . C5 . . . C#5 . . . . . . . . . . .",
+  } },
+  pozo: { bpm: 152, pasos: 128, loop: true, voces: {
+    "bajo": "A2 A2 A3 A2 A2 A3 A2 G2 | A2 A2 A3 A2 C3 C3 B2 G2 | F2 F2 F3 F2 F2 F3 F2 E2 | E2 E2 E3 E2 G#2 G#2 B2 E2 | A2 A2 A3 A2 A2 A3 A2 G2 | A2 A2 A3 A2 C3 C3 B2 G2 | F2 F2 F3 F2 G2 G2 G3 G2 | E2 E2 E3 E2 E2 E3 G#2 B2 | D3 D3 D2 D3 D3 D2 D3 C3 | Bb2 Bb2 Bb1 Bb2 Bb2 Bb1 Bb2 A2 | G2 G2 G1 G2 A2 A2 A1 A2 | A2 A2 A1 A2 C#3 C#3 E3 A2 | D3 D3 D2 D3 F3 F3 E3 D3 | Bb2 Bb2 Bb1 Bb2 C3 C3 C2 C3 | A2 A2 A1 A2 A2 A1 A2 A2 | E2 E2 E3 E2 G#2 G#2 B2 E2",
+    "clave*0.6": "A4 E5 A5 E5 C6 E5 A5 E5 | A4 E5 A5 E5 C6 E5 B5 G5 | F4 C5 F5 C5 A5 C5 F5 C5 | E4 B4 E5 B4 G#5 B4 E5 B4 | A4 E5 A5 E5 C6 E5 A5 E5 | A4 E5 A5 E5 C6 E5 B5 G5 | F4 C5 F5 C5 G4 D5 G5 D5 | E4 B4 E5 B4 G#5 B4 E5 B4 | D5 A5 D6 A5 F5 A5 D6 A5 | Bb4 F5 Bb5 F5 D5 F5 Bb5 F5 | G4 D5 G5 D5 A4 E5 A5 E5 | A4 E5 A5 E5 C#5 E5 A5 E5 | D5 A5 D6 A5 F5 A5 E6 A5 | Bb4 F5 Bb5 F5 C5 G5 C6 G5 | A4 E5 A5 E5 C6 E5 A5 E5 | E4 B4 E5 B4 G#5 B4 E5 B4",
+    "lead": "- - - - - - - - | - - - - - - - - | - - - - - - - - | - - - - - - - - | A5 . . . C6 . E6 . | D6 . C6 . B5 . G5 . | A5 . . . F5 . G5 . | G#5 . . . . . E5 . | D6 . . . F6 . . . | D6 . C6 . Bb5 . A5 . | G5 . . . A5 . . . | C#6 . . . E6 . . . | F6 . E6 . D6 . A5 . | Bb5 . A5 . G5 . E5 . | A5 . . . . . . . | G#5 . . . B5 . . .",
+  }, bat: { bombo: "x...x..xx...x...".repeat(8), caja: "....x.......x...".repeat(8), plato: "x.x.x.x.x.x.x.xx".repeat(8) } },
+  profundo: { bpm: 144, pasos: 128, loop: true, voces: {
+    "bajo": "D2 . D3 D2 D2 D3 D2 C2 | D2 . D3 D2 F2 F2 E2 C2 | Bb1 . Bb2 Bb1 Bb1 Bb2 Bb1 A1 | A1 . A2 A1 C#2 C#2 E2 A1 | D2 . D3 D2 D2 D3 D2 C2 | D2 . D3 D2 F2 F2 E2 C2 | G1 . G2 G1 A1 . A2 A1 | A1 . A2 A1 C#2 E2 G2 A2 | D2 . D3 D2 D2 D3 D2 C2 | Bb1 . Bb2 Bb1 Bb1 Bb2 Bb1 A1 | C2 . C3 C2 C2 C3 C2 Bb1 | A1 . A2 A1 C#2 C#2 E2 A1 | Bb1 . Bb2 Bb1 C2 . C3 C2 | A1 . A2 A1 A1 A2 A1 A1 | D2 . D3 D2 G1 . G2 G1 | A1 . A2 A1 C#2 E2 G2 A2",
+    "organo*0.7": "D4 . . . . . . . | D4 . . . . . . . | Bb3 . . . . . . . | A3 . . . . . . . | D4 . . . . . . . | D4 . . . . . . . | G3 . . . A3 . . . | A3 . . . . . . . | D4 . . . . . . . | Bb3 . . . . . . . | C4 . . . . . . . | A3 . . . . . . . | Bb3 . . . C4 . . . | A3 . . . . . . . | D4 . . . G3 . . . | A3 . . . . . . .",
+    "lead": "- - - - - - - - | - - - - - - - - | - - - - - - - - | - - - - - - - - | D6 . . . A5 . D6 . | F6 . E6 . D6 . C6 . | Bb5 . . . D6 . . . | C#6 . . . . . A5 . | D6 . . . F6 . A6 . | G6 . F6 . E6 . D6 . | E6 . . . C6 . . . | A5 . . . . . . . | Bb5 . A5 . G5 . A5 . | C#6 . . . E6 . . . | F6 . E6 . D6 . A5 . | A5 . . . C#6 . E6 .",
+    "clave*0.45": "D5 A4 F4 A4 D5 A4 F4 A4 | D5 A4 F4 A4 D5 A4 F4 A4 | D5 Bb4 F4 Bb4 D5 Bb4 F4 Bb4 | E5 C#5 A4 C#5 E5 C#5 A4 C#5 | D5 A4 F4 A4 D5 A4 F4 A4 | D5 A4 F4 A4 D5 A4 F4 A4 | D5 Bb4 G4 Bb4 E5 C#5 A4 C#5 | E5 C#5 A4 C#5 E5 C#5 A4 C#5 | D5 A4 F4 A4 D5 A4 F4 A4 | D5 Bb4 F4 Bb4 D5 Bb4 F4 Bb4 | E5 C5 G4 C5 E5 C5 G4 C5 | E5 C#5 A4 C#5 E5 C#5 A4 C#5 | D5 Bb4 F4 Bb4 E5 C5 G4 C5 | E5 C#5 A4 C#5 E5 C#5 A4 C#5 | F5 D5 A4 D5 D5 Bb4 G4 Bb4 | E5 C#5 A4 C#5 A5 E5 C#5 A4",
+  }, bat: { bombo: "x..x..x.x..x..x.".repeat(8), caja: "....x.......x..x".repeat(8), plato: "..x...x...x...x.".repeat(8) } },
+  jefe: { bpm: 168, pasos: 64, loop: true, voces: {
+    "bajo": "E2 E2 E3 E2 F2 F2 F3 F2 | E2 E2 E3 E2 G2 G2 F2 E2 | C2 C2 C3 C2 D2 D2 D3 D2 | B1 B1 B2 B1 D#2 D#2 F#2 B1 | E2 E2 E3 E2 F2 F2 F3 F2 | E2 E2 E3 E2 G2 G2 F2 E2 | C2 C2 C3 C2 D2 D2 D3 D2 | B1 B1 B2 B1 B1 B2 D#3 F#3",
+    "lead": "E5 . B5 . E6 . D6 C6 | B5 . . . G5 . F5 . | E5 . . . C6 . B5 . | D#6 . . . F#5 . . . | E6 . D6 . C6 . B5 . | C6 . B5 . A5 . G5 . | A5 . B5 . C6 . D6 . | D#6 . . . . . . .",
+    "clave*0.5": "E4 B4 E5 B4 F4 C5 F5 C5 | E4 B4 E5 B4 G4 D5 G5 D5 | C4 G4 C5 G4 D4 A4 D5 A4 | B3 F#4 B4 F#4 D#4 F#4 B4 F#4 | E4 B4 E5 B4 F4 C5 F5 C5 | E4 B4 E5 B4 G4 D5 G5 D5 | C4 G4 C5 G4 D4 A4 D5 A4 | B3 F#4 B4 F#4 D#5 F#5 B5 F#5",
+  }, bat: { bombo: "x.x.x.x.x.x.x.x.".repeat(4), caja: "....x.......x.xx".repeat(4), plato: "xxxxxxxxxxxxxxxx".repeat(4) } },
+  tienda: { bpm: 88, pasos: 64, loop: true, voces: {
+    "clave*0.7": "C5 E5 G5 E5 C5 E5 G5 E5 A4 C5 E5 C5 A4 C5 E5 C5 F4 A4 C5 A4 F4 A4 C5 A4 G4 B4 D5 B4 G4 B4 D5 B4 C5 E5 G5 E5 C5 E5 G5 E5 A4 C5 E5 C5 A4 C5 E5 C5 F4 A4 C5 A4 G4 B4 D5 B4 C5 - - - - - - -",
+    "coro*0.9": "C4 . . . . . . . A3 . . . . . . . F3 . . . . . . . G3 . . . . . . . C4 . . . . . . . A3 . . . . . . . F3 . . . G3 . . . C4 . . . . . . .",
+  } },
+  fin: { bpm: 70, pasos: 32, cola: 3, voces: {
+    "organo": "A3 . . . . . . . F3 . . . . . . . D3 . . . E3 . . . A2 . . . . . . .",
+    "coro*1.2": "E4 . . . C4 . . . A3 . . . . . . . F3 . . . G#3 . . . A3 . . . . . . .",
+  } },
+};
+
+async function hornearSonido(nombre, [dur, receta]) {
+  const c = new OfflineAudioContext(1, Math.ceil(dur * SR), SR), o = c.createGain(); o.connect(c.destination);
+  receta(c, o);
+  AU.buf[nombre] = await c.startRendering();
+}
+async function hornearTodo() {
+  if (AU.horneando) return; AU.horneando = true;
+  const t0 = performance.now();
+  // los efectos primero (son cortos); los temas después, en el orden en que se necesitan
+  try {
+    const efectos = Object.entries(RECETAS);
+    for (let i = 0; i < efectos.length; i += 6) await Promise.all(efectos.slice(i, i + 6).map(([k, r]) => hornearSonido(k, r)));
+    AU.listo = true;
+    for (const k of ["titulo", "pozo", "tienda", "profundo", "jefe", "fin"]) { await hornearTema(k, TEMAS[k]); if (AU.pedido === k) tocarTema(k); }
+  } catch (e) { AU.error = String(e); }
+  AU.msHorneo = Math.round(performance.now() - t0);
+}
+
+/** Toca un efecto. Los que se repiten mucho (gemas, golpes) tienen un mínimo entre dos. */
+const SEPARA = { gema: 0.03, golpe: 0.04, muere: 0.04, tiro: 0.03, bloque: 0.04, aterriza: 0.08, vacio: 0.1 };
+function sfx(nombre, vol = 1, tono = 1) {
+  const c = AU.ctx, b = AU.buf[nombre];
+  if (!c || !b || c.state !== "running") return;
+  const t = c.currentTime;
+  if (SEPARA[nombre] && t - (AU.ultimo[nombre] || 0) < SEPARA[nombre]) return;
+  if (AU.voces > 24) return;          // tope de voces: con 300 enemigos, que no se sature
+  AU.ultimo[nombre] = t;
+  const s = c.createBufferSource(), x = c.createGain(); s.buffer = b; s.playbackRate.value = tono * (1 + (Math.random() - 0.5) * 0.06); x.gain.value = vol;
+  s.connect(x); x.connect(AU.sfx); AU.voces++; s.onended = () => { AU.voces--; x.disconnect(); }; s.start();
+}
+/** Cambia de tema con un fundido corto; si todavía se está horneando, queda pedido. */
+function tocarTema(nombre, { bucle = true } = {}) {
+  AU.pedido = nombre;
+  const c = AU.ctx; if (!c) return;
+  if (AU.tema === nombre && AU.fuente) return;
+  const b = AU.buf["tema:" + nombre];
+  if (AU.fuente) { const f = AU.fuente; try { f.g.gain.setTargetAtTime(0, c.currentTime, 0.15); f.s.stop(c.currentTime + 0.8); } catch (e) {} AU.fuente = null; }
+  AU.tema = null;
+  if (!b) return;
+  const s = c.createBufferSource(), x = c.createGain(); s.buffer = b; s.loop = bucle && !!TEMAS[nombre].loop;
+  x.gain.setValueAtTime(0, c.currentTime); x.gain.linearRampToValueAtTime(1, c.currentTime + 0.3);
+  s.connect(x); x.connect(AU.mus); s.start(); AU.fuente = { s, g: x }; AU.tema = nombre;
+  if (!s.loop) s.onended = () => { if (AU.fuente && AU.fuente.s === s) { AU.fuente = null; AU.tema = null; if (AU.despues) { const d = AU.despues; AU.despues = null; tocarTema(d); } } };
+}
+function pararTema() { AU.pedido = null; tocarTema("__nada"); }
+
+// ══════════ 04-pintor.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL PINTOR: todo el arte sale de acá, dibujado por código a escala 1 (un píxel = un píxel).
+// Volúmenes sombreados con rampas cortas de una paleta limitada (luz de arriba a la izquierda,
+// borde oscuro, tramado Bayer en los cambios de tono), contorno oscuro de 1 px, y los detalles
+// (ojos, bocas, manchas, grietas) puestos a mano con sellos de texto. Nada de antialias.
+// Cada sprite se hornea UNA vez en un canvas chico y se cachea.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => v / 16 - 0.47);
+const bayer = (x, y) => BAYER[(y & 3) * 4 + (x & 3)];
+// El original se ve "dibujado", no retro: tonos planos con bordes limpios, sin tramado. El tramado
+// queda apagado en los volúmenes (bola, caja); sólo lo usan, a propósito, algunas texturas.
+const SIN_TRAMA = 0;
+// El contorno de los dibujos: no es negro, es el mismo color del objeto bien oscuro (como el gris
+// oscuro de las vasijas del original). Se pide con AUTO; las letras siguen con negro.
+const AUTO = "auto";
+
+// La paleta: pocos colores, apagados, que conversan entre sí (lo que da unidad).
+const PAL = {
+  tinta: "#120a0e",          // el contorno de todo (no negro puro)
+  piel: ["#4a302f", "#7d5752", "#b8908a", "#dfbfb2", "#f6e4da"],
+  hongo: ["#2c0b10", "#5e161b", "#962824", "#c9442f", "#e9735a"],
+  crema: ["#6e6150", "#a89a82", "#d9ccb2", "#f1e8d6"],
+  musgo: ["#141c12", "#243320", "#3a5130", "#58734a", "#83a068"],
+  espora: ["#133034", "#2e6a6a", "#5ea8a0", "#a8e2d4", "#effff9"],
+  piedra: ["#15181a", "#262c2c", "#3a4240", "#566058", "#7b8577", "#a2ab9a"],
+  tierra: ["#170f0b", "#2c1d14", "#48301f", "#6b4a31", "#8f6a48", "#b58f67"],
+  sangre: ["#2a0508", "#5c0c12", "#98161c", "#cf2b2b", "#f25a4a"],
+  baba: ["#1b1d0a", "#3f4414", "#6b7020", "#9ea235", "#d0d06a"],
+  oro: ["#3a2408", "#6e4a10", "#b07e1c", "#e0b43a", "#fbe58a"],
+  hueso: ["#3b342c", "#6f6456", "#a99a86", "#d8cdb9", "#f5efe3"],
+  violeta: ["#1d0f2c", "#3a1f56", "#5e3589", "#8c5cc0", "#c19ae8"],
+  hielo: ["#0f2436", "#1f4d6e", "#3f82a8", "#7fbfdc", "#d2f1ff"],
+  fuego: ["#3a0c04", "#8a2206", "#d65410", "#f59a26", "#ffe07a"],
+  hierro: ["#0e1012", "#23272b", "#3d444a", "#5f686e", "#8d979b"],
+  azul: ["#0d1530", "#1c2e62", "#2f4f9c", "#5480d4", "#9cc0f4"],
+};
+
+function lienzoNuevo(w, h) { const c = document.createElement("canvas"); c.width = Math.max(1, w); c.height = Math.max(1, h); return c; }
+
+class Pix {
+  constructor(w, h) { this.w = w; this.h = h; this.d = new Array(w * h).fill(null); }
+  dentro(x, y) { return x >= 0 && y >= 0 && x < this.w && y < this.h; }
+  p(x, y, c) { x = Math.floor(x); y = Math.floor(y); if (c && this.dentro(x, y)) this.d[y * this.w + x] = c; return this; }
+  g(x, y) { x = Math.floor(x); y = Math.floor(y); return this.dentro(x, y) ? this.d[y * this.w + x] : null; }
+  borrar(x, y) { if (this.dentro(x, y)) this.d[y * this.w + x] = null; }
+  /** Un volumen elíptico sombreado. rampa: de oscuro a claro. filtro(x, y) → false para no pintar ese píxel. */
+  bola(cx, cy, rx, ry, rampa, o = {}) {
+    const L = o.luz || [-0.52, -0.62, 0.58], n = rampa.length, bajar = o.bajar ?? 0.18, trama = SIN_TRAMA * (o.trama ?? 0.9);
+    for (let y = Math.floor(cy - ry - 1); y <= cy + ry + 1; y++) for (let x = Math.floor(cx - rx - 1); x <= cx + rx + 1; x++) {
+      const nx = (x + 0.5 - cx) / rx, ny = (y + 0.5 - cy) / ry, r2 = nx * nx + ny * ny;
+      if (r2 > 1 || (o.filtro && !o.filtro(x, y))) continue;
+      const nz = Math.sqrt(1 - r2);
+      // lambert con L apuntando HACIA la luz (x<0 izquierda, y<0 arriba). Medido: con el signo cambiado
+      // las esferas quedaban iluminadas desde ABAJO a la derecha y las cabezas parecían dadas vuelta.
+      let l = nx * L[0] + ny * L[1] + nz * L[2];
+      l = l * 0.5 + 0.5 - bajar * r2 * r2;                  // el borde, más oscuro (como el original)
+      // degradé continuo entre los tonos de la rampa (se ve pintado, no escalonado); o.plano: a tonos
+      if (o.plano) { const i = Math.floor(l * n + bayer(x, y) * trama); this.p(x, y, rampa[lim(i + (o.corrimiento || 0), 0, n - 1)]); continue; }
+      const f = lim(l * n - 0.5 + (o.corrimiento || 0), 0, n - 1), i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      this.p(x, y, i0 === i1 ? rampa[i0] : mezclarCache(rampa[i0], rampa[i1], Math.round((f - i0) * 6) / 6));
+    }
+    return this;
+  }
+  /** Un rectángulo sombreado de arriba (claro) a abajo (oscuro). */
+  caja(x0, y0, w, h, rampa, o = {}) {
+    const n = rampa.length;
+    for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
+      const t = 1 - (y - y0 + 0.5) / h, u = 1 - (x - x0 + 0.5) / w;
+      const l = (o.vertical ?? 0.75) * t + (1 - (o.vertical ?? 0.75)) * u;
+      if (o.plano) { this.p(x, y, rampa[lim(Math.floor(l * n), 0, n - 1)]); continue; }
+      const f = lim(l * n - 0.5, 0, n - 1), i0 = Math.floor(f), i1 = Math.min(n - 1, i0 + 1);
+      this.p(x, y, i0 === i1 ? rampa[i0] : mezclarCache(rampa[i0], rampa[i1], Math.round((f - i0) * 6) / 6));
+    }
+    return this;
+  }
+  rect(x0, y0, w, h, c) { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) this.p(x, y, c); return this; }
+  linea(x0, y0, x1, y1, c) {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (let i = 0; i <= n; i++) this.p(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), c);
+    return this;
+  }
+  /** Un sello de texto: cada letra es un color de la paleta (espacio o '.' = nada). */
+  sello(x0, y0, filas, pal) {
+    filas.forEach((f, y) => { for (let x = 0; x < f.length; x++) { const k = f[x]; if (k !== "." && k !== " " && pal[k]) this.p(x0 + x, y0 + y, pal[k]); } });
+    return this;
+  }
+  /** Contorno por fuera de lo pintado (4 vecinos; con esquinas = 8). */
+  contorno(c = PAL.tinta, esquinas = false) {
+    const lleno = this.d.map((v) => v !== null), w = this.w, orig = this.d.slice();
+    for (let y = 0; y < this.h; y++) for (let x = 0; x < w; x++) {
+      if (lleno[y * w + x]) continue;
+      const v = (dx, dy) => { const X = x + dx, Y = y + dy; return X >= 0 && Y >= 0 && X < w && Y < this.h && lleno[Y * w + X]; };
+      const toca = v(1, 0) || v(-1, 0) || v(0, 1) || v(0, -1) || (esquinas && (v(1, 1) || v(-1, 1) || v(1, -1) || v(-1, -1)));
+      if (!toca) continue;
+      if (c !== AUTO) { this.d[y * w + x] = c; continue; }
+      // AUTO: el promedio de los vecinos pintados, llevado casi a negro (con su tinte)
+      let r = 0, g = 0, b = 0, n = 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (v(dx, dy)) { const q = rgba(orig[(y + dy) * w + x + dx]); r += q[0]; g += q[1]; b += q[2]; n++; }
+      if (!n) { r = 40; g = 30; b = 34; n = 1; }
+      this.d[y * w + x] = hex(r / n * 0.3 + 10, g / n * 0.26 + 6, b / n * 0.28 + 8);
+    }
+    return this;
+  }
+  /** Oscurece los píxeles del borde de lo pintado (un "contorno interior" de color). */
+  bordeInterior(mapa) {
+    const lleno = this.d.map((v) => v !== null), w = this.w, cambios = [];
+    for (let y = 0; y < this.h; y++) for (let x = 0; x < w; x++) {
+      if (!lleno[y * w + x]) continue;
+      const v = (dx, dy) => { const X = x + dx, Y = y + dy; return X >= 0 && Y >= 0 && X < w && Y < this.h && lleno[Y * w + X]; };
+      if (!v(1, 0) || !v(-1, 0) || !v(0, 1) || !v(0, -1)) { const c = this.d[y * w + x], n = mapa[c]; if (n) cambios.push([x, y, n]); }
+    }
+    for (const [x, y, c] of cambios) this.p(x, y, c);
+    return this;
+  }
+  espejo() { const q = new Pix(this.w, this.h); for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) q.d[y * this.w + (this.w - 1 - x)] = this.d[y * this.w + x]; return q; }
+  copiar() { const q = new Pix(this.w, this.h); q.d = this.d.slice(); return q; }
+  pegar(o, dx, dy) { for (let y = 0; y < o.h; y++) for (let x = 0; x < o.w; x++) { const c = o.d[y * o.w + x]; if (c) this.p(x + dx, y + dy, c); } return this; }
+  /** Tiñe todo (para el blanco del golpe, o un campeón). */
+  tenido(fn) { const q = this.copiar(); q.d = q.d.map((c) => (c ? fn(c) : c)); return q; }
+  canvas() {
+    const c = lienzoNuevo(this.w, this.h), g = c.getContext("2d"), im = g.createImageData(this.w, this.h);
+    for (let i = 0; i < this.d.length; i++) {
+      const col = this.d[i];
+      if (!col) continue;
+      const [r, gg, b, a] = rgba(col);
+      im.data[i * 4] = r; im.data[i * 4 + 1] = gg; im.data[i * 4 + 2] = b; im.data[i * 4 + 3] = a;
+    }
+    g.putImageData(im, 0, 0);
+    return c;
+  }
+}
+
+const _rgba = new Map();
+function rgba(col) {
+  let v = _rgba.get(col);
+  if (v) return v;
+  if (col[0] === "#") {
+    const n = parseInt(col.slice(1, 7), 16);
+    v = [(n >> 16) & 255, (n >> 8) & 255, n & 255, col.length > 7 ? parseInt(col.slice(7, 9), 16) : 255];
+  } else { const m = col.match(/[\d.]+/g).map(Number); v = [m[0], m[1], m[2], Math.round((m[3] ?? 1) * 255)]; }
+  _rgba.set(col, v);
+  return v;
+}
+function hex(r, g, b) { return "#" + [r, g, b].map((x) => lim(Math.round(x), 0, 255).toString(16).padStart(2, "0")).join(""); }
+const _mezclas = new Map();
+function mezclarCache(a, b, t) { const k = a + b + t; let v = _mezclas.get(k); if (!v) { v = mezclar(a, b, t); _mezclas.set(k, v); } return v; }
+function mezclar(a, b, t) { const A = rgba(a), B = rgba(b); return hex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
+/** Una rampa nueva desde un color base (para campeones y ítems). */
+function rampaDe(base, n = 5) { const out = []; for (let i = 0; i < n; i++) { const t = i / (n - 1); out.push(t < 0.5 ? mezclar("#0b0709", base, 0.25 + t * 1.5) : mezclar(base, "#fff6ea", (t - 0.5) * 0.9)); } return out; }
+
+// ── la caché de sprites ──
+const SPR = {};
+function hornear(clave, fn) { if (!SPR[clave]) SPR[clave] = fn(); return SPR[clave]; }
+/** El mismo sprite todo blanco (el destello de cuando le pegan). */
+const _blancos = new WeakMap();
+function blanco(c) {
+  let b = _blancos.get(c);
+  if (b) return b;
+  b = lienzoNuevo(c.width, c.height);
+  const g = b.getContext("2d"); g.drawImage(c, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = "#fff4f0"; g.fillRect(0, 0, b.width, b.height);
+  _blancos.set(c, b);
+  return b;
+}
+const _rojos = new WeakMap();
+function rojizo(c) {
+  let b = _rojos.get(c);
+  if (b) return b;
+  b = lienzoNuevo(c.width, c.height);
+  const g = b.getContext("2d"); g.drawImage(c, 0, 0); g.globalCompositeOperation = "source-atop"; g.fillStyle = "rgba(220,30,30,0.55)"; g.fillRect(0, 0, b.width, b.height);
+  _rojos.set(c, b);
+  return b;
+}
+
+/** La sombra en el piso: una elipse de píxeles duros, semitransparente. */
+function sombra(rx, ry) {
+  return hornear(`sombra${rx}x${ry}`, () => {
+    const p = new Pix(rx * 2 + 1, ry * 2 + 1);
+    for (let y = 0; y < p.h; y++) for (let x = 0; x < p.w; x++) {
+      const nx = (x + 0.5 - p.w / 2) / (rx + 0.5), ny = (y + 0.5 - p.h / 2) / (ry + 0.5), r = nx * nx + ny * ny;
+      if (r <= 1) p.p(x, y, r < 0.45 ? "rgba(4,2,6,0.46)" : "rgba(4,2,6,0.30)");
+    }
+    return p.canvas();
+  });
+}
+
+// ══════════ 05-fuente.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LA LETRA. Medida en las capturas del original que mandó el usuario ("GEM HIGH", "4/5", "1592",
+// "01:38.98"): mayúsculas de píxel GORDAS, palos de 2 px, 7 de alto y ~6 de ancho, esquinas cortadas,
+// tinta con una sombra del color de acento pegada abajo, y el borde del color de fondo para que se
+// lea encima de cualquier cosa. Dibujada acá desde cero (nada de la letra de las guías).
+// Cada texto se hornea una vez por paleta.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const LETRA = {
+  A: [".####.", "##..##", "##..##", "######", "##..##", "##..##", "##..##"],
+  B: ["#####.", "##..##", "##..##", "#####.", "##..##", "##..##", "#####."],
+  C: [".####.", "##..##", "##....", "##....", "##....", "##..##", ".####."],
+  D: ["#####.", "##..##", "##..##", "##..##", "##..##", "##..##", "#####."],
+  E: ["######", "##....", "##....", "#####.", "##....", "##....", "######"],
+  F: ["######", "##....", "##....", "#####.", "##....", "##....", "##...."],
+  G: [".####.", "##..##", "##....", "##.###", "##..##", "##..##", ".#####"],
+  H: ["##..##", "##..##", "##..##", "######", "##..##", "##..##", "##..##"],
+  I: ["####", ".##.", ".##.", ".##.", ".##.", ".##.", "####"],
+  J: ["....##", "....##", "....##", "....##", "##..##", "##..##", ".####."],
+  K: ["##..##", "##.##.", "####..", "###...", "####..", "##.##.", "##..##"],
+  L: ["##....", "##....", "##....", "##....", "##....", "##....", "######"],
+  M: ["##...##", "###.###", "#######", "##.#.##", "##...##", "##...##", "##...##"],
+  N: ["##..##", "###.##", "######", "##.###", "##..##", "##..##", "##..##"],
+  O: [".####.", "##..##", "##..##", "##..##", "##..##", "##..##", ".####."],
+  P: ["#####.", "##..##", "##..##", "#####.", "##....", "##....", "##...."],
+  Q: [".####.", "##..##", "##..##", "##..##", "##.###", "##..##", ".###.#"],
+  R: ["#####.", "##..##", "##..##", "#####.", "####..", "##.##.", "##..##"],
+  S: [".#####", "##....", "##....", ".####.", "....##", "....##", "#####."],
+  T: ["######", "..##..", "..##..", "..##..", "..##..", "..##..", "..##.."],
+  U: ["##..##", "##..##", "##..##", "##..##", "##..##", "##..##", ".####."],
+  V: ["##..##", "##..##", "##..##", "##..##", "##..##", ".####.", "..##.."],
+  W: ["##...##", "##...##", "##...##", "##.#.##", "#######", "###.###", "##...##"],
+  X: ["##..##", "##..##", ".####.", "..##..", ".####.", "##..##", "##..##"],
+  Y: ["##..##", "##..##", "##..##", ".####.", "..##..", "..##..", "..##.."],
+  Z: ["######", "....##", "...##.", "..##..", ".##...", "##....", "######"],
+  0: [".####.", "##..##", "##.###", "######", "###.##", "##..##", ".####."],
+  1: ["..##..", ".###..", "..##..", "..##..", "..##..", "..##..", ".####."],
+  2: [".####.", "##..##", "....##", "..###.", ".##...", "##....", "######"],
+  3: [".####.", "##..##", "....##", "..###.", "....##", "##..##", ".####."],
+  4: ["...##.", "..###.", ".####.", "##.##.", "######", "...##.", "...##."],
+  5: ["######", "##....", "#####.", "....##", "....##", "##..##", ".####."],
+  6: [".####.", "##....", "#####.", "##..##", "##..##", "##..##", ".####."],
+  7: ["######", "....##", "...##.", "..##..", "..##..", "..##..", "..##.."],
+  8: [".####.", "##..##", "##..##", ".####.", "##..##", "##..##", ".####."],
+  9: [".####.", "##..##", "##..##", ".#####", "....##", "....##", ".####."],
+  " ": ["...", "...", "...", "...", "...", "...", "..."],
+  ".": ["..", "..", "..", "..", "..", "##", "##"],
+  "·": ["..", "..", "..", "##", "##", "..", ".."],
+  ",": ["..", "..", "..", "..", "##", "##", ".#"],
+  ":": ["..", "##", "##", "..", "##", "##", ".."],
+  "!": ["##", "##", "##", "##", "##", "..", "##"],
+  "¡": ["##", "..", "##", "##", "##", "##", "##"],
+  "?": [".####.", "##..##", "....##", "..###.", "..##..", "......", "..##.."],
+  "¿": ["..##..", "......", "..##..", ".###..", "##....", "##..##", ".####."],
+  "-": ["....", "....", "....", "####", "....", "....", "...."],
+  "+": ["......", "..##..", "..##..", "######", "..##..", "..##..", "......"],
+  "/": ["....##", "....##", "...##.", "..##..", ".##...", "##....", "##...."],
+  "%": ["##..##", "##.##.", "...##.", "..##..", ".##...", ".##.##", "##..##"],
+  "'": ["##", "##", ".#", "..", "..", "..", ".."],
+  "(": [".##", "##.", "##.", "##.", "##.", "##.", ".##"],
+  ")": ["##.", ".##", ".##", ".##", ".##", ".##", "##."],
+  "x": ["......", "......", "##..##", ".####.", "..##..", ".####.", "##..##"],
+  "<": ["...##", "..##.", ".##..", "##...", ".##..", "..##.", "...##"],
+  ">": ["##...", ".##..", "..##.", "...##", "..##.", ".##..", "##..."],
+  "=": ["......", "......", "######", "......", "######", "......", "......"],
+  "♥": [".##.##.", "#######", "#######", "#######", ".#####.", "..###..", "...#..."],
+  "◆": ["...#...", "..###..", ".#####.", "#######", ".#####.", "..###..", "...#..."],
+};
+// tildes y Ñ: la marca va en las dos filas de aire de arriba
+const MARCA = { "Á": ["A", "´"], "É": ["E", "´"], "Í": ["I", "´"], "Ó": ["O", "´"], "Ú": ["U", "´"], "Ñ": ["N", "~"], "Ü": ["U", "¨"] };
+const ALTO_L = 7, AIRE = 2;
+const anchoGlifo = (ch) => (LETRA[MARCA[ch] ? MARCA[ch][0] : ch] || LETRA["?"])[0].length;
+function anchoTexto(str, esc = 1) { str = String(str).toUpperCase(); let w = 0; for (const ch of str) w += anchoGlifo(ch) + 1; return Math.max(0, w - 1) * esc; }
+
+/** Hornea un texto: tinta, sombra de acento 1 px abajo y borde del color de fondo. */
+function textoSpr(str, color = "tinta", sombra = true) {
+  str = String(str).toUpperCase();
+  return hornear(`t|${str}|${color}|${sombra}`, () => {
+    const w = anchoTexto(str), c = lienzoNuevo(w + 2, ALTO_L + AIRE + 3), q = c.getContext("2d");
+    const tinta = color === "acento" ? C_ACENTO : color === "fondo" ? C_FONDO : C_TINTA;
+    const sombraC = color === "acento" ? C_TINTA : C_ACENTO;
+    const pintar = (dx, dy, col) => {
+      q.fillStyle = col; let x = 1;
+      for (const ch of str) {
+        const m = MARCA[ch], gl = LETRA[m ? m[0] : ch] || LETRA["?"];
+        gl.forEach((f, y) => { for (let i = 0; i < f.length; i++) if (f[i] === "#") q.fillRect(x + i + dx, 1 + AIRE + y + dy, 1, 1); });
+        if (m) {
+          const cxm = x + Math.floor(gl[0].length / 2) + dx, y0 = 1 + dy;
+          if (m[1] === "´") { q.fillRect(cxm, y0, 2, 1); q.fillRect(cxm - 1, y0 + 1, 2, 1); }
+          if (m[1] === "~") { q.fillRect(cxm - 2, y0 + 1, 2, 1); q.fillRect(cxm, y0, 2, 1); }
+          if (m[1] === "¨") { q.fillRect(cxm - 2, y0, 1, 1); q.fillRect(cxm + 1, y0, 1, 1); }
+        }
+        x += gl[0].length + 1;
+      }
+    };
+    // el borde del color de fondo (8 vecinos) primero, después la sombra y encima la tinta
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1], [0, 2], [1, 2], [-1, 2]]) pintar(dx, dy, C_FONDO);
+    if (sombra) pintar(0, 1, sombraC);
+    pintar(0, 0, tinta);
+    return c;
+  });
+}
+/** Dibuja un texto. o: {al: "izq"|"der"|"centro", escala (entera), color, sombra, alfa} → ancho */
+function texto(str, x, y, o = {}) {
+  const s = textoSpr(str, o.color || "tinta", o.sombra ?? true), e = o.escala || 1, w = s.width * e;
+  const X = o.al === "izq" ? x - e : o.al === "der" ? x - w + e : x - Math.floor(w / 2);
+  if (o.alfa != null) g.globalAlpha = o.alfa;
+  g.drawImage(s, Math.round(X), Math.round(y - (AIRE + 1) * e), w, s.height * e);
+  if (o.alfa != null) g.globalAlpha = 1;
+  return w;
+}
+/** Corta un texto en renglones que entren en `ancho`. */
+function renglones(str, ancho, esc = 1) {
+  const out = []; let r = "";
+  for (const pal of String(str).split(" ")) { const pr = r ? r + " " + pal : pal; if (anchoTexto(pr, esc) > ancho && r) { out.push(r); r = pal; } else r = pr; }
+  if (r) out.push(r);
+  return out;
+}
+function parrafo(str, x, y, ancho, o = {}) {
+  const rs = renglones(L(str), ancho, o.escala || 1), paso = o.paso || 10 * (o.escala || 1);
+  rs.forEach((r, i) => texto(r, x, y + i * paso, o));
+  return rs.length * paso;
+}
+
+// ══════════ 06-arte.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL ARTE, A TRES COLORES. Cada sprite es un sello: '#' tinta, 'r' acento, 'o' fondo (ojos, huecos),
+// '.' nada. Siluetas chicas y claras (el género se lee por la forma y por el ROJO: lo rojo no se
+// pisa). Se hornean con la paleta activa; al cambiar de paleta se rehornea todo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function selloSpr(clave, filas, izq = false) {
+  return hornear(`s|${clave}|${izq}`, () => {
+    const w = Math.max(...filas.map((f) => f.length)), c = lienzoNuevo(w, filas.length), q = c.getContext("2d");
+    filas.forEach((f, y) => { for (let x = 0; x < f.length; x++) { const k = f[izq ? w - 1 - x : x] || "."; if (k === ".") continue; q.fillStyle = k === "#" ? C_TINTA : k === "r" ? C_ACENTO : C_FONDO; q.fillRect(x, y, 1, 1); } });
+    return c;
+  });
+}
+
+// ── el protagonista (9×12, mira a la derecha) ──
+const HEROE = {
+  quieto: ["...####..", "..######.", "..####o#.", "..######.", "...####..", "..######.", ".#.####.#", "...####..", "...#..#..", "..rr.rr..", "..rr.rr..", ".rrr.rrr."],
+  corre1: ["...####..", "..######.", "..####o#.", "..######.", "...####..", "..######.", ".#.####..", "...####.#", "..##..#..", ".rr...rr.", ".rr...rr.", "rrr...rrr"],
+  corre2: ["...####..", "..######.", "..####o#.", "..######.", "...####..", "..######.", "..#####..", ".#.####.#", "...####..", "...rrr...", "...rrr...", "..rrrr..."],
+  sube: ["...####..", "..######.", "..####o#.", "..######.", "...####..", ".########", "#..####..", "...####..", "..##..##.", "..rr..rr.", "..rr..rr.", "........."],
+  cae: ["#..####.#", "#.######.", "#.####o#.", ".#######.", "...####..", "..######.", "...####..", "...####..", "..##..##.", ".rr....rr", ".rr....rr", "rrr....rr"],
+  dispara: ["#..####.#", "#.######.", "#.####o#.", ".#######.", "...####..", "..######.", "...####..", "...####..", "...####..", "...rrrr..", "..rrrrrr.", "..rr..rr."],
+};
+function heroeSpr(pose, izq) { return selloSpr("h" + pose, HEROE[pose] || HEROE.quieto, izq); }
+
+// ── enemigos: dos cuadros; los "r" (rojos) no se pisan ──
+const BICHOS = {
+  murcielago: [["#.......#", "##.....##", "###.#.###", ".#######.", "..#o#o#..", "...###...", "....#...."], ["...#.#...", "..#####..", ".#######.", "###o#o###", "##.###.##", "#...#...#", "........."]],
+  murcielagoR: [["r.......r", "rr.....rr", "rrr.r.rrr", ".rrrrrrr.", "..roror..", "...rrr...", "....r...."], ["...r.r...", "..rrrrr..", ".rrrrrrr.", "rrrorrorr", "rr.rrr.rr", "r...r...r", "........."]],
+  caracol: [["...####...", "..######..", ".###..###.", ".##.##.##.", ".###..###o", "##########", "#########."], ["...####...", "..######..", ".###..###.", ".##.##.##.", ".###..###.", "#########o", ".#########"]],
+  erizo: [["r.r.r.r.r.", ".rrrrrrrr.", "rrrrrrrrrr", ".rrorrorr.", "rrrrrrrrrr", ".rrrrrrrr.", "r.r..r..r."], [".r.r.r.r.r", ".rrrrrrrr.", "rrrrrrrrrr", ".rrorrorr.", "rrrrrrrrrr", ".rrrrrrrr.", ".r..r..r.r"]],
+  medusa: [["..####..", ".######.", "##o##o##", "########", "#.#..#.#", "#.#..#.#", ".#....#."], ["..####..", ".######.", "##o##o##", "########", ".#.##.#.", "#..##..#", "#......#"]],
+  rana: [["..##..##.", ".#o####o#", ".########", "##..##..#", "#########", ".#.....#.", "##.....##"], ["..##..##.", ".#o####o#", ".########", "##..##..#", "#########", "#.......#", "........."]],
+  calavera: [["..rrrrr..", ".rrrrrrr.", "rrorrrorr", "rrorrrorr", ".rrrrrrr.", "..r.r.r..", "..rrrrr.."], ["..rrrrr..", ".rrrrrrr.", "rrorrrorr", "rrorrrorr", ".rrrrrrr.", "..rrrrr..", "...r.r..."]],
+  arana: [["....#....", "....#....", "..#####..", "#.#o#o#.#", ".#######.", "#.#####.#", ".#.#.#.#."], ["....#....", "....#....", "..#####..", ".##o#o##.", "#.#####.#", ".#######.", "#..#.#..#"]],
+  calamar: [["...##...", "..####..", ".######.", "##o##o##", ".######.", ".#.##.#.", "#..##..#", "#.#..#.#"], ["...##...", "..####..", ".######.", "##o##o##", ".######.", "..####..", ".#.##.#.", ".#.##.#."]],
+  pez: [["...rrrr..r", ".rrrrrrrrr", "rorrrrrrr.", "rrrrrrrrrr", ".rrrrrr..r"], ["...rrrr...", ".rrrrrrr.r", "rorrrrrrrr", "rrrrrrrr.r", ".rrrrrr..."]],
+  gota: [["...##...", "..####..", ".######.", "##o##o##", "########", ".######."], ["........", "...##...", ".######.", "##o##o##", "########", "########"]],
+};
+function bichoSpr(tipo, cuadro, izq) { const b = BICHOS[tipo]; return selloSpr(`b${tipo}${cuadro}`, b[cuadro % b.length], izq); }
+
+
+// los que faltan (los rojos no se pisan: el color ES la regla)
+const rojo = (filas) => filas.map((f) => f.replace(/#/g, "r"));
+Object.assign(BICHOS, {
+  gusano: [["..........", "...####...", "..######..", ".#o######.", "##########"], ["..........", "..........", ".#######..", "#o#########".slice(0, 10), "##########"]],
+  tortuga: [["...#####...", "..##.#.##..", ".#########.", "##########.", "#o#########", ".##..##..#.", ".##..##..#."], ["...#####...", "..##.#.##..", ".#########.", "##########.", "#o#########", "..##..##.#.", "..##..##.#."]],
+  aranaR: BICHOS.arana.map(rojo),
+  ojo: [["..rrrrr..", ".rrrrrrr.", "rrr###rrr", "rr##o##rr", "rr##o##rr", "rrr###rrr", ".rrrrrrr.", "..rrrrr..", "...r.r..."], ["..rrrrr..", ".rrrrrrr.", "rrr###rrr", "rr#o###rr", "rr#o###rr", "rrr###rrr", ".rrrrrrr.", "..rrrrr..", "..r...r.."]],
+  fantasma: [["..#####..", ".#######.", "##o###o##", "##o###o##", "#########", "####o####", "#########", "#########", "##.###.##", "#...#...#"], ["..#####..", ".#######.", "##o###o##", "##o###o##", "#########", "####o####", "#########", "#########", "#.###.###", "...#...#."]],
+  calaveraB: [[".######.", "########", "#oo##oo#", "#oo##oo#", "########", ".#.##.#.", ".######."], [".######.", "########", "#oo##oo#", "#oo##oo#", "########", ".######.", ".#.##.#."]],
+  esqueleto: [["..####..", ".######.", ".#o##o#.", ".######.", "..#..#..", "########", "#.####.#", "..####..", "..#..#..", "..#..#..", ".##..##."], ["..####..", ".######.", ".#o##o#.", ".######.", "..#..#..", "#.####.#", "########", "..####..", "..#..#..", ".#....#.", "##....##"]],
+  espectro: [["..rrrrr..", ".rrrrrrr.", "rrorrrorr", "rrrrrrrrr", "rrrrrrrrr", "rr.rrr.rr", "r...r...r"], ["..rrrrr..", ".rrrrrrr.", "rrorrrorr", "rrrrrrrrr", "rrrrrrrrr", "r.rrr.rrr", "..r...r.."]],
+  medusaR: BICHOS.medusa.map(rojo),
+  cosaV: [["...r...", "..rrr..", "..rrr..", ".rrrrr.", ".rr#rr.", "rrrrrrr", "rrrrrrr", ".rrrrr.", "..rrr.."], ["..rrr..", ".rrrrr.", "rrrrrrr", "rrrrrrr", ".rr#rr.", ".rrrrr.", "..rrr..", "..rrr..", "...r..."]],
+  cosaO: [["..rrrr..", ".rrrrrr.", "rrr##rrr", "rr#oo#rr", "rr#oo#rr", "rrr##rrr", ".rrrrrr.", "..rrrr.."], ["..rrrr..", ".rr##rr.", "rr#rr#rr", "rr#oo#rr", "rr#oo#rr", "rr#rr#rr", ".rr##rr.", "..rrrr.."]],
+  cosaD: [["rrr......", "r#r......", "rrrr.....", "...rr....", "....rr...", ".....rrrr", "......r#r", "......rrr"], ["......rrr", "......r#r", ".....rrrr", "....rr...", "...rr....", "rrrr.....", "r#r......", "rrr......"]],
+  hueso: [["r...rr", ".r..rr", "..rr..", "..rr..", "rr..r.", "rr...r"], ["rr...r", "rr..r.", "..rr..", "..rr..", ".r..rr", "r...rr"]],
+  bola: [[".rrr.", "rr#rr", "r###r", "rr#rr", ".rrr."], [".rrr.", "rrrrr", "rr#rr", "rrrrr", ".rrr."]],
+  diente: [["rrrrrrr", "rrrrrrr", ".rrrrr.", ".rr#rr.", "..rrr..", "..rrr..", "...r...", "...r...", "......."]],
+  hongo: [["..####..", ".##oo##.", "########", "#o####o#", "..####..", "..#..#..", ".######."]],
+  vela: [["...r...", "..rrr..", "...r...", "..###..", "..#.#..", "..###..", "..###..", ".#####."]],
+  vasija: [["..####..", "...##...", ".######.", "##.##.##", "########", "##.##.##", ".######."]],
+  farol: [["...#...", "..###..", ".#####.", "##r#r##", "#rrrrr#", "##r#r##", ".#####.", "...#..."]],
+});
+
+// ── gemas: rombo rojo con brillo de tinta (la chica vale 2, la grande 10) ──
+function gemaSpr(grande) {
+  return grande ? selloSpr("gemaG", ["...r...", "..r#r..", ".rr#rr.", "rrrrrrr", ".rrrrr.", "..rrr..", "...r..."]) : selloSpr("gema", ["..r..", ".r#r.", "rrrrr", ".rrr.", "..r.."]);
+}
+function corazonSpr() { return selloSpr("cor", [".rr.rr.", "rrrrrrr", "r#rrrrr", "rrrrrrr", ".rrrrr.", "..rrr..", "...r..."]); }
+function cargaSpr() { return selloSpr("carga", ["..###..", "#######", "#rrrrr#", "#rrrrr#", "#rrrrr#", "#rrrrr#", "#######"]); }
+/** La cápsula de un módulo de arma: burbuja de tinta con la letra adentro. */
+function capsulaSpr(letra) {
+  return hornear(`caps|${letra}`, () => {
+    const c = lienzoNuevo(15, 17), q = c.getContext("2d");
+    q.fillStyle = C_TINTA; q.beginPath(); q.arc(7.5, 8.5, 7.5, 0, TAU); q.fill();
+    q.fillStyle = C_FONDO; q.beginPath(); q.arc(7.5, 8.5, 6, 0, TAU); q.fill();
+    q.drawImage(textoSpr(letra, "acento"), 2, 1);
+    return c;
+  });
+}
+
+// ── las baldosas (16×16) ──
+const T = 16;
+/** La roca: tinta con motas de fondo; los bordes que dan al vacío se muerden (se ve rugosa, de cueva). */
+function rocaSpr(bordes, v) {
+  return hornear(`roca|${bordes}|${v}`, () => {
+    const c = lienzoNuevo(T, T), q = c.getContext("2d"), r = mulberry(100 + v * 31 + bordes * 7);
+    q.fillStyle = C_TINTA; q.fillRect(0, 0, T, T);
+    q.fillStyle = C_FONDO;
+    // motas: huequitos de 1 y 2 px (la textura de piedra de las capturas)
+    // pocas motas y agrupadas (con muchas sueltas parecía estática de televisor)
+    for (let i = 0; i < 4; i++) { const x = 1 + Math.floor(r() * (T - 3)), y = 1 + Math.floor(r() * (T - 3)); q.fillRect(x, y, 2, 1); if (r() < 0.5) q.fillRect(x + 1, y + 1, 1, 1); }
+    if (r() < 0.5) { const x = 3 + Math.floor(r() * 9), y = 3 + Math.floor(r() * 9); q.fillRect(x, y, 3, 2); q.fillRect(x + 1, y + 2, 1, 1); }
+    // mordidas en los lados abiertos: bit 1 arriba, 2 derecha, 4 abajo, 8 izquierda
+    const morder = (lado) => { for (let i = 0; i < T; i++) { const d = r() < 0.45 ? 1 : r() < 0.2 ? 2 : 0; for (let k = 0; k < d; k++) { if (lado === 1) q.fillRect(i, k, 1, 1); if (lado === 4) q.fillRect(i, T - 1 - k, 1, 1); if (lado === 2) q.fillRect(T - 1 - k, i, 1, 1); if (lado === 8) q.fillRect(k, i, 1, 1); } } };
+    for (const b of [1, 2, 4, 8]) if (bordes & b) morder(b);
+    return c;
+  });
+}
+/** El bloque que se rompe: cuadrado con reja; el rojo trae gemas adentro. */
+function bloqueSpr(tipo) {
+  return hornear(`blq|${tipo}`, () => {
+    const c = lienzoNuevo(T, T), q = c.getContext("2d"), col = tipo === "gema" ? C_ACENTO : C_TINTA;
+    q.fillStyle = col; q.fillRect(0, 0, T, T); q.fillStyle = C_FONDO; q.fillRect(1, 1, T - 2, T - 2);
+    q.fillStyle = col; q.fillRect(2, 2, T - 4, T - 4); q.fillStyle = C_FONDO;
+    for (let y = 3; y < T - 3; y++) for (let x = 3; x < T - 3; x++) if ((x + y) % 4 === 0 || (x - y + 16) % 4 === 0) q.fillRect(x, y, 1, 1);
+    if (tipo === "gema") { q.fillStyle = C_TINTA; q.fillRect(7, 5, 2, 1); q.fillRect(6, 6, 4, 1); q.fillRect(5, 7, 6, 2); q.fillRect(6, 9, 4, 1); q.fillRect(7, 10, 2, 1); }
+    return c;
+  });
+}
+function plataformaSpr() {
+  return hornear("plat", () => { const c = lienzoNuevo(T, 6), q = c.getContext("2d"); q.fillStyle = C_TINTA; q.fillRect(0, 0, T, 3); q.fillStyle = C_FONDO; for (let x = 1; x < T; x += 4) q.fillRect(x, 1, 2, 1); q.fillStyle = C_TINTA; q.fillRect(2, 3, 1, 3); q.fillRect(T - 3, 3, 1, 3); return c; });
+}
+function pinchesSpr() {
+  return hornear("pinches", () => { const c = lienzoNuevo(T, T), q = c.getContext("2d"); q.fillStyle = C_ACENTO; for (let k = 0; k < 4; k++) for (let y = 0; y < 8; y++) { const w = Math.floor((y + 1) / 2); q.fillRect(k * 4 + 2 - w, 8 + y, w * 2, 1); } q.fillRect(0, 14, T, 2); return c; });
+}
+
+// ── íconos de mejoras y de la tienda (9×9) ──
+const ICONOS = {
+  manzana: ["....#....", "...#.....", ".rrrrrr..", "rr#rrrrr.", "r#rrrrrrr", "rrrrrrrrr", "rrrrrrrr.", ".rrrrrr..", "..rr.rr.."],
+  agua: ["...###...", "...#.#...", "..#####..", ".#rrrrr#.", ".#rrrrr#.", ".#r#rrr#.", ".#rrrrr#.", ".#rrrrr#.", "..#####.."],
+  bomba: [".....r#..", "....#....", "..####...", ".######..", "##o#####.", "#o######.", "########.", ".######..", "..####..."],
+  cohete: ["....#....", "...###...", "..##o##..", "..#####..", "..#####..", ".#######.", "#..###..#", "...r.r...", "..r.r.r.."],
+  vela: ["....r....", "...rrr...", "....r....", "...###...", "...#.#...", "...###...", "...###...", "..#####..", ".#######."],
+  dron: ["#.......#", ".#.....#.", "..#####..", ".##o#o##.", ".#######.", "..#####..", "...r.r...", "..r...r..", "........."],
+  iman: ["rr.....rr", "rr.....rr", "##.....##", "##.....##", "##.....##", "##.....##", ".##...##.", "..#####..", "...###..."],
+  pila: ["...###...", ".#######.", ".#rrrrr#.", ".#rrrrr#.", ".#rr#rr#.", ".#rrrrr#.", ".#rrrrr#.", ".#rrrrr#.", ".#######."],
+  pila2: ["..#...#..", "#########", "#rrr#rrr#", "#rrr#rrr#", "#r#r#r#r#", "#rrr#rrr#", "#rrr#rrr#", "#rrr#rrr#", "#########"],
+  fiebre: ["...r.....", "..rrr....", ".rr#rr...", "rrrrrrr..", ".rrrrr.#.", "..rrr..##", "...r...##", "......###", ".....####"],
+  pochoclo: ["..#.#.#..", ".#######.", "..#####..", ".r.r.r.r.", ".r.r.r.r.", ".rrrrrrr.", ".r.r.r.r.", ".rrrrrrr.", "..rrrrr.."],
+  polvora: [".....r...", "....#....", ".#######.", ".#.#.#.#.", ".#######.", ".#.#.#.#.", ".#######.", ".#.#.#.#.", ".#######."],
+  globo: ["..rr.rr..", ".rrrrrrr.", ".r#rrrrr.", ".rrrrrrr.", "..rrrrr..", "...rrr...", "....#....", "....#....", "...#....."],
+  tenedor: ["#.#.#..#.", "#.#.#.##.", "#####.##.", ".###..##.", "..#...##.", "..#....#.", "..#....#.", "..#....#.", "..#....#."],
+  mira: ["....r....", "....r....", "..#####..", ".#..r..#.", "rr.rrr.rr", ".#..r..#.", "..#####..", "....r....", "....r...."],
+  tarjeta: ["#########", "#rrrrrrr#", "#########", "#.......#", "#.##.##.#", "#.......#", "#.####..#", "#.......#", "#########"],
+  mochila: ["..#####..", ".#######.", ".##r#r##.", ".#######.", ".##r#r##.", ".#######.", "..#.#.#..", "..r.r.r..", ".r.r.r.r."],
+  pan: ["..#####..", ".#######.", "#########", "#.#.#.#.#", "#########", "#########", ".#######.", ".........", "........."],
+  guiso: [".#..#..#.", "..#..#...", ".#..#..#.", "#########", "#rrrrrrr#", "#rrrrrrr#", ".#rrrrr#.", "..#####..", "........."],
+  soda: ["...##....", "...##....", "..####...", "..#rr#...", "..#rr#...", "..####...", "..#rr#...", "..#rr#...", "..####..."],
+  aji: [".....##..", "....#....", "...rrr...", "..rrrr...", "..rr#r...", ".rrrrr...", ".rrrr....", "rrrr.....", "rr......."],
+};
+function iconoSpr(k) { return selloSpr("ico" + k, ICONOS[k] || ICONOS.pan); }
+
+// ══════════ 07-nivel.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL POZO. Una grilla de 12 columnas × N filas de 16 px. Paredes rugosas que se angostan y se
+// ensanchan (caminata al azar, siempre con 6 o más de hueco), salientes de roca o de bloques,
+// grupos de bloques que se rompen (los rojos traen gemas), plataformas que se pasan desde abajo,
+// pinches en las zonas hondas y 2–3 salas laterales con su burbuja. Abajo el fondo está abierto:
+// al caer por ahí se pasa al nivel siguiente. Todo sale de la semilla (el mismo número, el mismo pozo).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const COLS = 12, VACIO = 0, ROCA = 1, BLOQUE = 2, BGEMA = 3, PLAT = 4, PINCHE = 5;
+const solida = (c) => c === ROCA || c === BLOQUE || c === BGEMA || c === PINCHE;
+const rompible = (c) => c === BLOQUE || c === BGEMA;
+
+function generarNivel(zona, nivel, semilla, opciones = {}) {
+  rnd = mulberry(semilla);
+  const Z = ZONAS[zona], filas = 110 + zona * 12 + nivel * 10, t = new Uint8Array(filas * COLS);
+  const N = { zona, nivel, filas, t, puertas: [], bichos: [], adornos: [], salida: filas * T };
+  const pon = (x, y, c) => { if (x >= 0 && x < COLS && y >= 0 && y < filas) t[y * COLS + x] = c; };
+  const en = (x, y) => (x < 0 || x >= COLS ? ROCA : y < 0 || y >= filas ? VACIO : t[y * COLS + x]);
+  N.en = en; N.pon = pon;
+  // 1) las paredes: grosor de 1 a 3 por lado, que cambia de a poco
+  const izq = new Uint8Array(filas), der = new Uint8Array(filas);
+  let l = 1, r = 1;
+  for (let y = 0; y < filas; y++) {
+    if (y > 8 && A.si(0.22)) { if (A.si(0.5)) l = lim(l + (A.si(0.5) ? 1 : -1), 1, 3); else r = lim(r + (A.si(0.5) ? 1 : -1), 1, 3); }
+    while (COLS - l - r < 6) { if (l > r) l--; else r--; }
+    izq[y] = l; der[y] = r;
+    for (let x = 0; x < l; x++) pon(x, y, ROCA);
+    for (let x = COLS - r; x < COLS; x++) pon(x, y, ROCA);
+  }
+  N.izq = izq; N.der = der;
+  // 2) el arranque: un piso arriba con un agujero (se empieza parado y se cae por ahí)
+  const hueco = A.si(0.5) ? izq[6] + 1 : COLS - der[6] - 4;
+  for (let x = izq[6]; x < COLS - der[6]; x++) if (x < hueco || x > hueco + 2) pon(x, 6, ROCA);
+  N.inicio = { x: (hueco > COLS / 2 ? izq[6] + 1.5 : COLS - der[6] - 1.5) * T, y: 6 * T - 1 };
+  // 3) lo de adentro, fila por fila (dejando siempre un paso de 3 en la roca)
+  const libres = (y) => { let n = 0, mejor = 0; for (let x = 0; x < COLS; x++) { if (en(x, y) === VACIO || rompible(en(x, y)) || en(x, y) === PLAT) { n++; mejor = Math.max(mejor, n); } else n = 0; } return mejor; };
+  let y = 12;
+  while (y < filas - 10) {
+    const a = izq[y], b = COLS - der[y], ancho = b - a, tirada = A.f();
+    if (tirada < 0.34) {                                   // saliente desde una pared
+      const lado = A.si(0.5), largo = A.ent(2, Math.max(2, ancho - 4)), grueso = A.si(0.3) ? 2 : 1, mat = A.si(Z.bloques * 0.55) ? BLOQUE : ROCA;
+      for (let k = 0; k < largo; k++) for (let g2 = 0; g2 < grueso; g2++) pon(lado ? a + k : b - 1 - k, y + g2, mat);
+      if (mat === ROCA && Z.pinches && A.si(Z.pinches)) for (let k = 0; k < largo; k++) if (A.si(0.7)) pon(lado ? a + k : b - 1 - k, y - 1, PINCHE);
+    } else if (tirada < 0.34 + 0.34 * Z.bloques) {         // un grupo de bloques que se rompen
+      const w = A.ent(1, 3), h = A.ent(1, 2), x0 = A.ent(a, Math.max(a, b - w));
+      for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) pon(x0 + i, y + j, A.si(0.12) ? BGEMA : BLOQUE);
+      if (A.si(0.2)) pon(x0 + Math.floor(w / 2), y + h, ROCA);
+    } else if (tirada < 0.34 + 0.34 * Z.bloques + 0.3 * Z.plataformas) {   // plataformas
+      const w = A.ent(2, 3), x0 = A.ent(a, Math.max(a, b - w));
+      for (let i = 0; i < w; i++) pon(x0 + i, y, PLAT);
+    } else if (Z.pinches > 0.4 && A.si(0.5)) {             // el limbo: islas de pinches
+      const w = A.ent(2, 4), x0 = A.ent(a, Math.max(a, b - w));
+      for (let i = 0; i < w; i++) { pon(x0 + i, y + 1, ROCA); pon(x0 + i, y, PINCHE); }
+    }
+    // si esta fila quedó cerrada con roca, se abre un paso de 3
+    for (const yy of [y, y + 1]) if (libres(yy) < 3) { const x0 = A.ent(izq[yy], COLS - der[yy] - 3); for (let i = 0; i < 3; i++) pon(x0 + i, yy, VACIO); }
+    y += A.ent(3, 6);
+  }
+  // 4) las salas laterales: un hueco en la pared con piso, marcado por una burbuja
+  const nSalas = 2 + (opciones.tienda ? 1 : 0);
+  const tipos = opciones.soloArmas ? ["modulo", "modulo", "modulo"] : A.mezclar(["tienda", "veta", "modulo", A.uno(["veta", "modulo", "tienda"])]);
+  if (opciones.tienda && !tipos.slice(0, nSalas).includes("tienda")) tipos[0] = "tienda";
+  for (let i = 0; i < nSalas; i++) {
+    const fy = Math.floor(22 + (filas - 40) * (i + 0.5 + (A.f() - 0.5) * 0.4) / nSalas), lado = A.si(0.5) ? -1 : 1;
+    const grosor = lado < 0 ? izq[fy] : der[fy];
+    for (let k = 0; k < grosor + 1; k++) { const x = lado < 0 ? k : COLS - 1 - k; pon(x, fy, VACIO); pon(x, fy - 1, VACIO); pon(x, fy + 1, ROCA); pon(x, fy - 2, ROCA); }
+    // un escalón de piso delante de la entrada, para poder pararse
+    pon(lado < 0 ? grosor + 1 : COLS - grosor - 2, fy + 1, ROCA);
+    N.puertas.push({ fila: fy, lado, tipo: tipos[i], x: lado < 0 ? 0 : COLS * T, y: fy * T + T, usada: false });
+  }
+  // 5) los bichos: una tanda cada 6 filas, más densa en los niveles de más abajo
+  const densidad = 0.95 + nivel * 0.3 + zona * 0.15;
+  const sobrePiso = (x, y2) => en(x, y2) === VACIO && en(x, y2 - 1) === VACIO && (solida(en(x, y2 + 1)) || en(x, y2 + 1) === PLAT);
+  const bajoTecho = (x, y2) => en(x, y2) === VACIO && solida(en(x, y2 - 1));
+  for (let banda = 14; banda < filas - 8; banda += 6) {
+    let n = Math.floor(densidad + A.f());
+    for (let k = 0; k < n; k++) {
+      const tipo = A.uno(Z.bichos), d = BICHOS_D[tipo];
+      for (let intento = 0; intento < 14; intento++) {
+        const x = A.ent(1, COLS - 2), yy = banda + A.ent(0, 5);
+        const camina = ["patrulla", "salta", "tira", "rebota"].includes(d.mueve), cuelga = d.mueve === "colgado";
+        if (camina ? sobrePiso(x, yy) : cuelga ? bajoTecho(x, yy) : en(x, yy) === VACIO) {
+          N.bichos.push({ tipo, x: x * T + T / 2, y: cuelga ? yy * T + d.h : camina ? (yy + 1) * T : yy * T + T / 2 });
+          break;
+        }
+      }
+    }
+  }
+  // 6) los adornos que se pisan (recargan sin cortar el combo)
+  for (let yy = 16; yy < filas - 8; yy += A.ent(9, 16)) {
+    for (let intento = 0; intento < 10; intento++) {
+      const x = A.ent(1, COLS - 2);
+      if (Z.adorno === "farol" ? en(x, yy) === VACIO : sobrePiso(x, yy)) { N.adornos.push({ tipo: Z.adorno, x: x * T + T / 2, y: Z.adorno === "farol" ? yy * T + 8 : (yy + 1) * T }); break; }
+    }
+  }
+  return N;
+}
+
+/** Un nivel chico (sala lateral): paredes, piso, y lo que tiene adentro lo pone quien lo llama. */
+function generarSala(tipo, ladoEntrada) {
+  // la sala llena la pantalla entera (cámara fija arriba) y el piso queda arriba de los pulgares
+  const filas = Math.max(16, Math.ceil(H / T) + 1), piso = filas - 7, t = new Uint8Array(filas * COLS);
+  const N = { sala: tipo, filas, t, puertas: [], bichos: [], adornos: [], ladoEntrada, piso };
+  const pon = (x, y, c) => { if (x >= 0 && x < COLS && y >= 0 && y < filas) t[y * COLS + x] = c; };
+  N.en = (x, y) => (x < 0 || x >= COLS ? ROCA : y < 0 ? ROCA : y >= filas ? ROCA : t[y * COLS + x]); N.pon = pon;
+  for (let x = 0; x < COLS; x++) { pon(x, 0, ROCA); pon(x, 1, ROCA); pon(x, 2, ROCA); for (let y = piso; y < filas; y++) pon(x, y, ROCA); }
+  for (let y = 0; y < filas; y++) { pon(0, y, ROCA); pon(COLS - 1, y, ROCA); }
+  // la entrada, del lado por donde se vino (a la altura del piso)
+  const xe = ladoEntrada < 0 ? COLS - 1 : 0;
+  pon(xe, piso - 1, VACIO); pon(xe, piso - 2, VACIO);
+  N.salidaX = xe;
+  if (tipo === "veta") for (let x = 3; x < 9; x++) for (let y = piso - 7; y < piso - 3; y++) if ((x + y) % 3 !== 0) pon(x, y, BGEMA);
+  return N;
+}
+
+// ══════════ 08-datos.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS DATOS. Las reglas y los números salen de la wiki del género que homenajeamos (downwell
+// fandom, leída por su API el 30/09/2026): 4 de vida, 8 cargas que se recargan al pisar suelo o
+// un bicho, lo BLANCO se pisa y lo ROJO no, combos de 8/15/25, gema chica 2 y grande 10, "gem high"
+// con 100 gemas seguidas, módulos de arma con su costo por disparo, 3 mejoras a elegir por nivel,
+// tiendas con precios que suben 200 por zona. Las velocidades en píxeles no están en ninguna parte:
+// van medidas a ojo contra el video (se ajustan acá). Los nombres y el arte son propios.
+// Unidad de daño: 1 = un disparo de la ametralladora; la vida de los bichos va en esos disparos.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const FIS = {
+  corre: 96, acel: 1000, frena: 1400, acelAire: 760, grav: 1000, caidaMax: 330,
+  salto: 318, rebote: 268, reboteAlto: 338, invul: 1.6, alcance: 112, velBala: 520,
+};
+
+// ── los módulos de arma: costo por disparo, balas, dispersión, daño, cadencia, si levantan como un salto ──
+const ARMAS = {
+  metra: { letra: "M", n: { en: "MACHINE GUN", es: "AMETRALLADORA" }, costo: 1, balas: 1, abre: 0, dano: 1, cad: 0.085, alza: 0, d: { en: "Steady stream of shots.", es: "Una lluvia de tiros." } },
+  loca: { letra: "N", n: { en: "WILD GUN", es: "ARMA LOCA" }, costo: 1, balas: 1, abre: 0.5, dano: 0.9, cad: 0.07, alza: 0, sesgo: 1, d: { en: "Fast, angled toward where you move.", es: "Rápida, apunta hacia donde vas." } },
+  puno: { letra: "P", n: { en: "PUNCHER", es: "PUÑETAZO" }, costo: 2, balas: 3, abre: 0, junto: 3, dano: 0.8, cad: 0.16, alza: 0, d: { en: "Three shots side by side.", es: "Tres tiros juntos, en fila." } },
+  triple: { letra: "T", n: { en: "TRIPLE", es: "TRIPLE" }, costo: 2, balas: 3, abre: 0.32, dano: 0.6, cad: 0.14, alza: 0, d: { en: "A spread of three.", es: "Tres tiros abiertos." } },
+  rafaga: { letra: "B", n: { en: "BURST", es: "RÁFAGA" }, costo: 3, balas: 3, abre: 0, dano: 0.8, cad: 0.3, rafaga: 0.05, alza: 0, d: { en: "Quick three-shot volley.", es: "Tres tiros al hilo." } },
+  laser: { letra: "L", n: { en: "LASER", es: "LÁSER" }, costo: 4, balas: 1, abre: 0, dano: 2.8, cad: 0.36, alza: 1, rayo: 1, d: { en: "Long beam, pierces enemies and blocks. Lifts like a jump.", es: "Rayo largo que atraviesa. Levanta como un salto." } },
+  escopeta: { letra: "S", n: { en: "SHOTGUN", es: "ESCOPETA" }, costo: 5, balas: 7, abre: 1.1, dano: 0.7, cad: 0.34, alza: 1, perfora: 1, corto: 0.6, d: { en: "Wide close blast that pierces. Lifts like a jump.", es: "Abanico corto que atraviesa. Levanta como un salto." } },
+};
+
+// ── las mejoras entre niveles (se elige 1 de 3) ──
+const MEJORAS = {
+  manzana: { n: { en: "RED APPLE", es: "MANZANA ROJA" }, d: { en: "Heal 4 HP.", es: "Curás 4 de vida." }, ico: "manzana", repite: 1 },
+  juventud: { n: { en: "SPRING WATER", es: "AGUA DE VERTIENTE" }, d: { en: "+1 max HP and one more choice from now on.", es: "+1 de vida máxima y una opción más de ahora en más." }, ico: "agua" },
+  estallido: { n: { en: "STOMP BLAST", es: "PISOTÓN BOMBA" }, d: { en: "Stomping makes a blast around you.", es: "Al pisar, una explosión alrededor." }, ico: "bomba" },
+  cohete: { n: { en: "ROCKET HEELS", es: "TACOS COHETE" }, d: { en: "Higher jump from the ground, with a blast underfoot.", es: "Saltás más alto desde el piso, con una explosión abajo." }, ico: "cohete" },
+  vela: { n: { en: "WAX CANDLE", es: "VELA DE CERA" }, d: { en: "Longer invincibility after a hit.", es: "Más tiempo invencible después de un golpe." }, ico: "vela" },
+  dron: { n: { en: "BUDDY DRONE", es: "DRON AMIGO" }, d: { en: "A little drone fires with you.", es: "Un dron chiquito dispara con vos." }, ico: "dron" },
+  iman: { n: { en: "GEM MAGNET", es: "IMÁN DE GEMAS" }, d: { en: "Pick up gems from further away.", es: "Juntás gemas desde más lejos." }, ico: "iman" },
+  pila: { n: { en: "GEM BATTERY", es: "PILA DE GEMAS" }, d: { en: "Gems recharge your gunboots.", es: "Las gemas recargan las botas." }, ico: "pila" },
+  fiebre: { n: { en: "GEM FEVER", es: "FIEBRE DE GEMAS" }, d: { en: "GEM HIGH lasts much longer.", es: "El GEM HIGH dura mucho más." }, ico: "fiebre" },
+  pochoclo: { n: { en: "POPPING GEMS", es: "GEMAS POCHOCLO" }, d: { en: "Every gem you grab fires a shot upward.", es: "Cada gema que agarrás tira un tiro para arriba." }, ico: "pochoclo" },
+  polvora: { n: { en: "POWDER BLOCKS", es: "BLOQUES DE PÓLVORA" }, d: { en: "Broken blocks break their neighbors.", es: "Los bloques rotos rompen a sus vecinos." }, ico: "polvora" },
+  globo: { n: { en: "HEART BALLOON", es: "GLOBO CORAZÓN" }, d: { en: "You fall slower. Pops on a hit and blasts.", es: "Caés más lento. Si te pegan, revienta y explota." }, ico: "globo" },
+  tenedor: { n: { en: "FORK AND KNIFE", es: "TENEDOR Y CUCHILLO" }, d: { en: "Eat what you stomp. 10 bites = +1 HP.", es: "Comés lo que pisás. 10 bocados = +1 de vida." }, ico: "tenedor" },
+  mira: { n: { en: "LASER SIGHT", es: "MIRA LÁSER" }, d: { en: "Aim line and longer range.", es: "Línea de mira y más alcance." }, ico: "mira" },
+  tarjeta: { n: { en: "VIP CARD", es: "TARJETA VIP" }, d: { en: "A shop in every level, 10% off.", es: "Una tienda en cada nivel, 10% menos." }, ico: "tarjeta" },
+  mochila: { n: { en: "JETPACK", es: "MOCHILA COHETE" }, d: { en: "Out of charge? Hold fire to hover a while.", es: "¿Sin carga? Mantené disparo para flotar un rato." }, ico: "mochila" },
+};
+
+// ── la tienda: 3 cosas al azar; precio base + 200 por zona (wiki) ──
+const TIENDA = {
+  pan: { n: { en: "BREAD", es: "PAN" }, d: { en: "+1 HP", es: "+1 vida" }, precio: 300, vida: 1, ico: "pan" },
+  guiso: { n: { en: "STEW", es: "GUISO" }, d: { en: "+2 HP", es: "+2 vida" }, precio: 500, vida: 2, ico: "guiso" },
+  pila1: { n: { en: "CELL", es: "PILA" }, d: { en: "+1 charge", es: "+1 carga" }, precio: 150, carga: 1, ico: "pila" },
+  pila2: { n: { en: "POWER CELL", es: "PILA DOBLE" }, d: { en: "+2 charge", es: "+2 carga" }, precio: 250, carga: 2, ico: "pila2" },
+  soda: { n: { en: "FIZZY SODA", es: "GASEOSA" }, d: { en: "+1 HP +1 charge", es: "+1 vida +1 carga" }, precio: 400, vida: 1, carga: 1, ico: "soda" },
+  aji: { n: { en: "HOT PEPPER", es: "AJÍ PICANTE" }, d: { en: "+1 max HP", es: "+1 vida máxima" }, precio: 1000, max: 1, ico: "aji" },
+};
+
+// ── los estilos (se desbloquean con las gemas de todas las partidas) ──
+const ESTILOS = {
+  normal: { n: { en: "STANDARD", es: "NORMAL" }, d: { en: "The usual way down.", es: "La bajada de siempre." }, precio: 0 },
+  pesado: { n: { en: "BOULDER", es: "PIEDRA" }, d: { en: "6 HP, faster, weaker stomp bounce, one less upgrade choice.", es: "6 de vida, más rápido, rebota menos, una opción menos." }, precio: 3000, vida: 6, opciones: -1 },
+  pluma: { n: { en: "FEATHER", es: "PLUMA" }, d: { en: "You always fall slowly.", es: "Siempre caés despacio." }, precio: 7000, flota: 1 },
+  cazador: { n: { en: "SCAVENGER", es: "CARROÑERO" }, d: { en: "Side rooms only hold guns. Shops are rare.", es: "Las salas sólo tienen armas. Casi no hay tiendas." }, precio: 12000, soloArmas: 1 },
+};
+
+// ── las zonas: 3 niveles cada una, después el Abismo con el jefe ──
+const ZONAS = [
+  { k: "hueco", n: { en: "HOLLOW", es: "HUECO" }, bichos: ["burbuja", "murcielago", "rana", "gusano", "tortuga", "arana", "caracol", "ojo"], bloques: 0.9, plataformas: 0.35, pinches: 0, tema: "pozo", adorno: "hongo" },
+  { k: "osario", n: { en: "OSSUARY", es: "OSARIO" }, bichos: ["fantasma", "calaveraS", "calaveraV", "esqueleto", "espectro", "murcielago", "gusano"], bloques: 0.7, plataformas: 0.5, pinches: 0.18, tema: "pozo", adorno: "vela" },
+  { k: "hundido", n: { en: "SUNKEN", es: "HUNDIDO" }, bichos: ["medusa", "calamar", "piranha", "tortugaN", "burbuja"], bloques: 0.6, plataformas: 0.3, pinches: 0.1, tema: "profundo", adorno: "vasija" },
+  { k: "limbo", n: { en: "LIMBO", es: "LIMBO" }, bichos: ["cosaV", "cosaO", "cosaD", "espectro", "ojo"], bloques: 0.08, plataformas: 0.15, pinches: 0.6, tema: "profundo", adorno: "farol" },
+];
+
+// ── los bichos: vida (en tiros de ametralladora), gemas, si se pisan (blanco) o no (rojo), comportamiento ──
+const BICHOS_D = {
+  burbuja: { vida: 3, gemas: 6, pisa: 1, spr: "gota", w: 8, h: 7, mueve: "persigueLento", vel: 22 },
+  murcielago: { vida: 2, gemas: 12, pisa: 1, spr: "murcielago", w: 9, h: 7, mueve: "colgado", vel: 70 },
+  rana: { vida: 4, gemas: 20, pisa: 1, spr: "rana", w: 9, h: 7, mueve: "salta", vel: 60 },
+  gusano: { vida: 1, gemas: 6, pisa: 1, spr: "gusano", w: 10, h: 7, mueve: "patrulla", vel: 18, bajo: 1 },
+  tortuga: { vida: 99, gemas: 14, pisa: 1, spr: "tortuga", w: 11, h: 7, mueve: "patrulla", vel: 14, blindado: 1 },
+  arana: { vida: 1, gemas: 6, pisa: 0, spr: "aranaR", w: 9, h: 7, mueve: "patrulla", vel: 55 },
+  caracol: { vida: 3, gemas: 24, pisa: 0, spr: "erizo", w: 10, h: 7, mueve: "patrulla", vel: 10 },
+  ojo: { vida: 4, gemas: 20, pisa: 0, spr: "ojo", w: 9, h: 9, mueve: "circula", vel: 40 },
+  fantasma: { vida: 4, gemas: 20, pisa: 1, spr: "fantasma", w: 9, h: 9, mueve: "persigue", vel: 34, atraviesa: 1, sube: 1 },
+  calaveraS: { vida: 1, gemas: 4, pisa: 1, spr: "calaveraB", w: 8, h: 7, mueve: "rebota", vel: 50 },
+  calaveraV: { vida: 2, gemas: 20, pisa: 1, spr: "calaveraB", w: 8, h: 7, mueve: "vaga", vel: 26, enoja: 1 },
+  esqueleto: { vida: 5, gemas: 10, pisa: 1, spr: "esqueleto", w: 8, h: 11, mueve: "tira", vel: 0 },
+  espectro: { vida: 2, gemas: 8, pisa: 0, spr: "espectro", w: 9, h: 7, mueve: "ondea", vel: 30, atraviesa: 1 },
+  medusa: { vida: 3, gemas: 6, pisa: 0, spr: "medusaR", w: 8, h: 7, mueve: "zigzag", vel: 30, atraviesa: 1 },
+  calamar: { vida: 1, gemas: 10, pisa: 1, spr: "calamar", w: 8, h: 8, mueve: "calamar", vel: 70, atraviesa: 1 },
+  piranha: { vida: 2, gemas: 14, pisa: 0, spr: "pez", w: 10, h: 5, mueve: "persigue", vel: 62 },
+  tortugaN: { vida: 99, gemas: 14, pisa: 1, spr: "tortuga", w: 11, h: 7, mueve: "nada", vel: 22, blindado: 1 },
+  cosaV: { vida: 3, gemas: 10, pisa: 0, spr: "cosaV", w: 7, h: 9, mueve: "vertical", vel: 60, atraviesa: 1 },
+  cosaO: { vida: 3, gemas: 10, pisa: 0, spr: "cosaO", w: 8, h: 8, mueve: "orbita", vel: 2.4, atraviesa: 1 },
+  cosaD: { vida: 3, gemas: 10, pisa: 0, spr: "cosaD", w: 9, h: 9, mueve: "diagonal", vel: 50 },
+  hueso: { vida: 1, gemas: 0, pisa: 0, spr: "hueso", w: 6, h: 6, mueve: "proyectil", vel: 0, sinCombo: 1 },
+  bola: { vida: 1, gemas: 0, pisa: 0, spr: "bola", w: 5, h: 5, mueve: "proyectil", vel: 0, sinCombo: 1 },
+  diente: { vida: 99, gemas: 0, pisa: 0, spr: "diente", w: 7, h: 9, mueve: "proyectil", vel: 0, sinCombo: 1, blindado: 1 },
+};
+
+// ── textos ──
+const TX = {
+  tocar: { en: "TAP TO START", es: "TOCÁ PARA EMPEZAR" }, tecla: { en: "PRESS JUMP", es: "APRETÁ SALTAR" },
+  jugar: { en: "PLAY", es: "JUGAR" }, estilo: { en: "STYLE", es: "ESTILO" }, paleta: { en: "PALETTE", es: "PALETA" }, opciones: { en: "OPTIONS", es: "OPCIONES" },
+  seguir: { en: "RESUME", es: "SEGUIR" }, reintentar: { en: "RETRY", es: "REINTENTAR" }, salir: { en: "QUIT", es: "SALIR" }, pausa: { en: "PAUSED", es: "PAUSA" },
+  volver: { en: "BACK", es: "VOLVER" }, elegir: { en: "PICK ONE", es: "ELEGÍ UNA" }, bloqueado: { en: "LOCKED", es: "BLOQUEADO" },
+  gemHigh: { en: "GEM HIGH", es: "GEM HIGH" }, gemFiebre: { en: "GEM FEVER", es: "GEM FEVER" }, combo: { en: "COMBO", es: "COMBO" }, premio: { en: "COMBO REWARD!", es: "¡PREMIO DE COMBO!" },
+  pobre: { en: "TOO POOR!", es: "¡NO TE ALCANZA!" }, gracias: { en: "THANKS!", es: "¡GRACIAS!" }, tienda: { en: "SHOP", es: "TIENDA" }, veta: { en: "GEM VEIN", es: "VETA DE GEMAS" },
+  modulo: { en: "GUN MODULE", es: "MÓDULO DE ARMA" }, muerto: { en: "YOU DIED", es: "TE MORISTE" }, ganaste: { en: "YOU REACHED THE BOTTOM", es: "LLEGASTE AL FONDO" },
+  prof: { en: "DEPTH", es: "PROFUNDIDAD" }, gemas: { en: "GEMS", es: "GEMAS" }, bichos: { en: "KILLS", es: "BICHOS" }, maxCombo: { en: "MAX COMBO", es: "COMBO MÁX." }, tiempo: { en: "TIME", es: "TIEMPO" },
+  totalGemas: { en: "TOTAL GEMS", es: "GEMAS TOTALES" }, nuevo: { en: "NEW!", es: "¡NUEVO!" }, desbloqueado: { en: "UNLOCKED", es: "DESBLOQUEADO" },
+  musica: { en: "MUSIC", es: "MÚSICA" }, efectos: { en: "SOUNDS", es: "EFECTOS" }, temblor: { en: "SHAKE", es: "TEMBLOR" }, idioma: { en: "LANGUAGE: ENGLISH", es: "IDIOMA: ESPAÑOL" },
+  completa: { en: "FULLSCREEN", es: "PANTALLA COMPLETA" }, si: { en: "ON", es: "SÍ" }, no: { en: "OFF", es: "NO" },
+  abismo: { en: "ABYSS", es: "ABISMO" }, jefe: { en: "THE MAW", es: "LA FAUCE" }, otraVez: { en: "AGAIN", es: "OTRA VEZ" }, menu: { en: "MENU", es: "MENÚ" },
+  ayuda1: { en: "LEFT THUMB: MOVE", es: "PULGAR IZQ.: MOVERSE" }, ayuda2: { en: "RIGHT THUMB: JUMP / SHOOT", es: "PULGAR DER.: SALTAR / DISPARAR" },
+  ayudaPC: { en: "ARROWS: MOVE · SPACE: JUMP, AND SHOOT IN THE AIR", es: "FLECHAS: MOVERSE · ESPACIO: SALTAR, Y EN EL AIRE DISPARAR" },
+  stompa: { en: "STOMP WHITE · SHOOT RED", es: "PISÁ LO BLANCO · TIRALE A LO ROJO" }, sin: { en: "EMPTY", es: "VACÍO" },
+};
+
+// ══════════ 09-jugador.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL QUE CAE. Un solo botón: en el piso salta; en el aire dispara las botas hacia abajo (cada tiro
+// frena la caída y gasta carga). La carga se llena al tocar piso o al pisar algo. Pisar lo blanco lo
+// mata y rebota; pisar lo rojo duele. Los bichos que mueren en el aire suman combo; al aterrizar se
+// cobra: 8+ = 100 gemas, 15+ = además +1 carga máxima, 25+ = además +1 de vida (wiki).
+// Posición: x = centro, y = pies.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let J = null;
+
+function nuevoJugador(estilo) {
+  const E = ESTILOS[estilo] || ESTILOS.normal;
+  const vida = E.vida || 4;
+  return { x: 0, y: 0, vx: 0, vy: 0, w: 7, h: 11, suelo: false, coyote: 0, izq: false, vida, vidaMax: vida, desborde: 0, carga: 8, cargaMax: 8,
+    inv: 0, cadT: 0, rafaga: [], anim: 0, pose: "quieto", combo: 0, medidor: 0, gemHigh: false, bocados: 0, combustible: 5, globo: false, disparoT: 0, muerto: false };
+}
+
+/** Todo lo del jugador en un paso. Devuelve "salida" si cayó por el fondo del nivel. */
+function pasoJugador(dt) {
+  const j = J.jug, N = J.N, M = J.mejoras, E = ESTILOS[G.estilo] || ESTILOS.normal;
+  const inp = leerEntrada();
+  // correr (el estilo piedra acelera más)
+  const dir = (inp.der ? 1 : 0) - (inp.izq ? 1 : 0), maxV = FIS.corre * (E.vida ? 1.1 : 1);
+  const acel = j.suelo ? (dir ? FIS.acel * (E.vida ? 1.4 : 1) : FIS.frena) : FIS.acelAire;
+  const obj = dir * maxV;
+  j.vx += lim(obj - j.vx, -acel * dt, acel * dt);
+  if (dir) j.izq = dir < 0;
+  // saltar o disparar: el mismo botón
+  j.cadT -= dt; j.disparoT -= dt;
+  if (j.suelo) j.coyote = 0.08; else j.coyote -= dt;
+  if (recien("salto") && j.coyote > 0) {
+    j.vy = -FIS.salto * (M.cohete ? 1.3 : 1); j.suelo = false; j.coyote = 0; sfx("salto", 0.6);
+    if (M.cohete) explosion(j.x, j.y + 2, 26, 2, true);
+  } else if (inp.salto && !j.suelo && j.coyote <= 0) {
+    // disparar pide apretar EN el aire: si se salta (o se rebota) con el botón apretado, no se gasta
+    // la carga sola; manteniéndolo apretado después de apretarlo en el aire, tira en automático
+    if (recien("salto")) j.armado = true;
+    if (j.armado && j.carga > 0 && j.cadT <= 0) disparar();
+    else if (j.carga <= 0 && M.mochila && j.combustible > 0) { j.vy = Math.min(j.vy, 25); j.combustible -= dt; if (J.cuadro % 3 === 0) particula(j.x + V.f() * 4 - 2, j.y, 0, 60, 0.25, "acento"); }
+    else if (j.carga <= 0 && recien("salto")) sfx("vacio", 0.5);
+  }
+  if (!inp.salto || j.suelo) j.armado = false;
+  // la ráfaga pendiente
+  for (let i = j.rafaga.length - 1; i >= 0; i--) { if ((j.rafaga[i] -= dt) <= 0) { j.rafaga.splice(i, 1); tiro(0, 0); } }
+  // gravedad (la pluma y el globo caen más lento)
+  const flota = E.flota || (M.globo && j.globo) ? 0.55 : 1;
+  j.vy = Math.min(j.vy + FIS.grav * dt * flota, FIS.caidaMax * flota);
+  const antesSuelo = j.suelo, vyAntes = j.vy;
+  const c = moverCaja(j, j.vx * dt, j.vy * dt, N);
+  if (c.pared) j.vx = 0;
+  if (c.techo) { j.vy = Math.max(0, j.vy); const tx = Math.floor(j.x / T), ty = Math.floor((j.y - j.h - 1) / T); if (rompible(N.en(tx, ty))) romper(tx, ty); }   // cabezazo
+  j.suelo = c.suelo;
+  if (c.suelo) {
+    j.vy = 0;
+    if (!antesSuelo) {
+      aterrizar(vyAntes);
+      // los pinches: duelen al caer encima, y rebotan
+      if (c.pincha) { herir(); j.vy = -FIS.rebote; j.suelo = false; }
+    }
+  }
+  // pisotones y choques con los bichos
+  for (const b of J.bichos) {
+    if (b.muerto || !solapa(j, b)) continue;
+    const arriba = vyAntes > 0 && j.y - vyAntes * dt <= b.y - b.h + 5;
+    if (arriba && b.d.pisa && !b.enojado && !(b.d.mueve === "calamar" && b.baja)) pisotear(b);
+    else if (arriba && b.d.blindado && b.d.pisa) pisotear(b);
+    else herir();
+  }
+  for (const a of J.adornos) if (!a.roto && solapa(j, a) && vyAntes > 0) { a.roto = true; rebote(); soltarGemas(a.x, a.y - 4, 4); particulas(a.x, a.y - 4, 8, "tinta"); sfx("pisoton", 0.5); }
+  // gemas: imán corto (más con el imán de gemas)
+  const radio = M.iman ? 46 : 14;
+  for (let i = J.gemas.length - 1; i >= 0; i--) {
+    const gm = J.gemas[i], dx = j.x - gm.x, dy = j.y - 5 - gm.y, d = Math.hypot(dx, dy);
+    if (d < radio) { gm.x += dx / (d || 1) * 260 * dt; gm.y += dy / (d || 1) * 260 * dt; }
+    if (d < 7) { J.gemas.splice(i, 1); juntarGema(gm.v); }
+  }
+  // el Gem High: 100 gemas seguidas llenan el medidor; se va vaciando (más lento con la fiebre)
+  if (j.gemHigh) { j.medidor -= (M.fiebre ? 4 : 9) * dt; if (j.medidor <= 0) { j.gemHigh = false; j.medidor = 0; } }
+  else j.medidor = Math.max(0, j.medidor - 22 * dt);
+  if (j.inv > 0) j.inv -= dt;
+  // la pose del dibujo
+  j.anim += dt * (Math.abs(j.vx) > 10 ? 10 : 2);
+  j.pose = j.suelo ? (Math.abs(j.vx) > 10 ? (Math.floor(j.anim) % 2 ? "corre1" : "corre2") : "quieto") : j.disparoT > 0 ? "dispara" : j.vy < 0 ? "sube" : "cae";
+  // salas laterales y fondo del nivel
+  if (!J.sala) {
+    for (const p of N.puertas) if (!p.usada && Math.abs(j.y - p.y) < 20 && (p.lado < 0 ? j.x < 10 : j.x > COLS * T - 10)) { entrarSala(p); return; }
+    if (j.y > N.filas * T + 24) return "salida";
+  } else if (N.salidaX === 0 ? j.x < 6 : j.x > COLS * T - 6) { salirSala(); return; }
+  return null;
+}
+
+function aterrizar(vy) {
+  const j = J.jug;
+  if (vy > 120) { particulas(j.x, j.y, 4, "tinta", 40); sfx("aterriza", 0.5); }
+  if (j.carga < j.cargaMax) { j.carga = j.cargaMax; sfx("recarga", 0.35); }
+  j.combustible = 5;
+  cobrarCombo();
+}
+function rebote() {
+  const j = J.jug, E = ESTILOS[G.estilo] || ESTILOS.normal;
+  j.vy = -(IN.salto ? FIS.reboteAlto : FIS.rebote) * (E.vida ? 0.85 : 1);
+  j.carga = j.cargaMax; j.combustible = 5; j.armado = false;
+}
+function pisotear(b) {
+  rebote();
+  sfx("pisoton", 0.8);
+  if (J.mejoras.estallido) explosion(b.x, b.y - 4, 30, 2, true);
+  if (J.mejoras.tenedor) { J.jug.bocados++; if (J.jug.bocados >= 10) { J.jug.bocados = 0; curar(1); cartel("OMNOMNOM!", 1.2); } }
+  matarBicho(b, true);
+}
+function cobrarCombo() {
+  const j = J.jug, n = j.combo;
+  if (n >= 8) {
+    // los premios no se suman: 100 gemas; +1 carga máx. desde 15; +1 de vida desde 25 (wiki)
+    J.gemasPartida += 100; J.gemasJuntadas += 100;
+    let txt = "+100";
+    if (n >= 15) { j.cargaMax++; txt += " +1 CHARGE"; }
+    if (n >= 25) { curar(1); txt += " +1 HP"; }
+    cartel(L(TX.premio), 1.8, `${n} ${L(TX.combo)} · ${txt}`);
+    sfx("combo");
+  }
+  J.maxCombo = Math.max(J.maxCombo, n);
+  j.combo = 0;
+}
+function juntarGema(v) {
+  const j = J.jug;
+  J.gemasPartida += v; J.gemasJuntadas += v;
+  j.medidor = Math.min(100, j.medidor + v);
+  if (!j.gemHigh && j.medidor >= 100) { j.gemHigh = true; sfx("gemHigh"); J.bannerGH = 2; }
+  if (J.mejoras.pila && V.f() < 0.25 && j.carga < j.cargaMax) j.carga++;
+  if (J.mejoras.pochoclo) J.balas.push({ x: j.x, y: j.y - 12, vx: 0, vy: -300, vida: 0.4, dano: 1, w: 3, h: 6, arriba: true });
+  sfx("gema", 0.4, 1 + Math.min(0.8, J.rachaGemas * 0.03));
+  J.rachaGemas++; J.rachaT = 0.5;
+}
+function curar(n) {
+  const j = J.jug;
+  j.vida += n;
+  // lo que sobra llena el desborde; 4 de desborde = +1 de vida máxima (wiki)
+  if (j.vida > j.vidaMax) { j.desborde += j.vida - j.vidaMax; j.vida = j.vidaMax; while (j.desborde >= 4) { j.desborde -= 4; j.vidaMax++; j.vida++; } }
+  sfx("corazon", 0.6);
+}
+function herir() {
+  const j = J.jug;
+  if (j.inv > 0 || j.muerto) return;
+  if (J.mejoras.globo && j.globo) { j.globo = false; explosion(j.x, j.y - 14, 34, 3, true); j.inv = 0.6; return; }
+  j.vida--; j.inv = FIS.invul * (J.mejoras.vela ? 1.8 : 1);
+  j.vy = Math.min(j.vy, -170);
+  temblor(6); J.flash = 0.15;
+  sfx("dolor", 0.8);
+  if (j.vida <= 0) { j.muerto = true; J.finT = 0; sfx("morir"); pararTema(); }
+}
+
+// ── el disparo de las botas ──
+function disparar() {
+  const j = J.jug, A2 = ARMAS[J.arma];
+  j.carga = Math.max(0, j.carga - A2.costo);
+  j.cadT = A2.cad * (j.gemHigh && J.arma === "metra" ? 0.8 : 1);
+  j.disparoT = 0.12;
+  // cada tiro frena la caída; el láser y la escopeta levantan como un salto (wiki)
+  if (A2.alza) j.vy = -FIS.salto * 0.8;
+  else j.vy = Math.max(-95, Math.min(j.vy, 0) - 45);
+  if (A2.rafaga) { tiro(0, 0); j.rafaga.push(A2.rafaga, A2.rafaga * 2); }
+  else if (A2.rayo) rayoLaser();
+  else for (let i = 0; i < A2.balas; i++) {
+    const off = A2.junto ? (i - 1) * 3 : 0;
+    let ang = A2.balas > 1 ? (i / (A2.balas - 1) - 0.5) * A2.abre * 2 : 0;
+    if (A2.sesgo) ang = (j.vx > 10 ? 0.5 : j.vx < -10 ? -0.5 : 0) + (V.f() - 0.5) * 0.25;
+    if (A2.perfora) ang += (V.f() - 0.5) * 0.12;
+    tiro(ang, off);
+  }
+  if (J.mejoras.dron) J.balas.push(balaNueva(J.dron.x, J.dron.y + 4, 0, 1));
+  sfx(A2.rayo ? "laser" : A2.alza ? "tiroGordo" : "tiro", 0.5);
+  particula(j.x, j.y + 2, 0, 80, 0.12, "acento");
+}
+function balaNueva(x, y, ang, escala = 1) {
+  const j = J.jug, A2 = ARMAS[J.arma], alto = j.gemHigh ? 1.4 : 1, rango = FIS.alcance * alto * (J.mejoras.mira ? 1.3 : 1) * (A2.corto || 1);
+  const v = FIS.velBala;
+  return { x, y, vx: Math.sin(ang) * v, vy: Math.cos(ang) * v, vida: rango / v, dano: A2.dano * (j.gemHigh ? 1.6 : 1) * escala, w: j.gemHigh ? 5 : 3, h: j.gemHigh ? 10 : 7, perfora: A2.perfora, rojo: j.gemHigh };
+}
+function tiro(ang, off) { const j = J.jug; J.balas.push(balaNueva(j.x + off, j.y + 2, ang)); }
+function rayoLaser() {
+  // el láser: una columna larga que atraviesa bichos y bloques, y se corta en la roca
+  const j = J.jug, N = J.N, x = j.x, largo = 200 * (j.gemHigh ? 1.3 : 1), dano = ARMAS.laser.dano * (j.gemHigh ? 1.25 : 1);
+  let fin = j.y + largo;
+  for (let y = j.y; y < j.y + largo; y += 4) { const c = N.en(Math.floor(x / T), Math.floor(y / T)); if (c === ROCA) { fin = y; break; } if (rompible(c)) romper(Math.floor(x / T), Math.floor(y / T)); }
+  for (const b of J.bichos) if (!b.muerto && Math.abs(b.x - x) < b.w / 2 + 3 && b.y > j.y && b.y - b.h < fin) danarBicho(b, dano);
+  J.efectos.push({ tipo: "laser", x, y0: j.y, y1: fin, t: 0.15, t0: 0.15 });
+}
+
+/** Mueve una caja contra la grilla, eje por eje. Devuelve {suelo, techo, pared, pincha}. */
+function moverCaja(o, dx, dy, N) {
+  const r = { suelo: false, techo: false, pared: false, pincha: false }, hw = o.w / 2;
+  // eje x
+  o.x += dx;
+  {
+    const y0 = Math.floor((o.y - o.h + 1) / T), y1 = Math.floor((o.y - 1) / T);
+    if (dx > 0) { const cx = Math.floor((o.x + hw) / T); for (let cy = y0; cy <= y1; cy++) if (solida(N.en(cx, cy))) { o.x = cx * T - hw - 0.01; r.pared = true; break; } }
+    else if (dx < 0) { const cx = Math.floor((o.x - hw) / T); for (let cy = y0; cy <= y1; cy++) if (solida(N.en(cx, cy))) { o.x = (cx + 1) * T + hw + 0.01; r.pared = true; break; } }
+  }
+  // eje y
+  const antes = o.y;
+  o.y += dy;
+  {
+    const x0 = Math.floor((o.x - hw + 0.5) / T), x1 = Math.floor((o.x + hw - 0.5) / T);
+    if (dy > 0) {
+      const cy = Math.floor(o.y / T);
+      for (let cx = x0; cx <= x1; cx++) {
+        const c = N.en(cx, cy);
+        if (solida(c) || (c === PLAT && antes <= cy * T + 0.5)) { o.y = cy * T; r.suelo = true; if (c === PINCHE) r.pincha = true; }
+      }
+    } else if (dy < 0) {
+      const cy = Math.floor((o.y - o.h) / T);
+      for (let cx = x0; cx <= x1; cx++) if (solida(N.en(cx, cy))) { o.y = (cy + 1) * T + o.h + 0.01; r.techo = true; }
+    }
+    // parado quieto encima: seguir en el piso
+    if (dy === 0 || (!r.suelo && dy >= 0)) { const cy = Math.floor((o.y + 0.5) / T); for (let cx = x0; cx <= x1; cx++) { const c = N.en(cx, cy); if ((solida(c) || c === PLAT) && Math.abs(o.y - cy * T) < 0.6) r.suelo = true; } }
+  }
+  return r;
+}
+const solapa = (a, b) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 - 1 && a.y > b.y - b.h + 1 && a.y - a.h < b.y - 1;
+
+// ══════════ 10-mundo.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LO QUE SE MUEVE EN EL POZO: bichos (cada uno con su manera), tiros, gemas, bloques que se
+// rompen, explosiones, partículas y temblor. Sólo se actualiza lo que está cerca de la cámara
+// (un pozo tiene 60+ bichos y el teléfono no tiene por qué pensar en los de abajo de todo).
+// ─────────────────────────────────────────────────────────────────────────────
+
+function crearBicho(tipo, x, y, extra) {
+  const d = BICHOS_D[tipo];
+  const b = { tipo, d, x, y, w: d.w, h: d.h, vx: 0, vy: 0, vida: d.vida, t: V.f() * 3, flash: 0, muerto: false, izq: V.f() < 0.5, dir: V.f() < 0.5 ? -1 : 1, ...extra };
+  if (d.mueve === "orbita") { b.cx = x; b.cy = y; b.ang = V.f() * TAU; }
+  if (d.mueve === "vertical") b.vy = (V.f() < 0.5 ? -1 : 1) * d.vel;
+  if (d.mueve === "diagonal") { b.vx = d.vel * (V.f() < 0.5 ? -1 : 1); b.vy = d.vel * (V.f() < 0.5 ? -1 : 1); }
+  J.bichos.push(b);
+  return b;
+}
+
+function pasoBichos(dt) {
+  const j = J.jug, N = J.N, arriba = J.camY - 60, abajo = J.camY + H + 80;
+  for (const b of J.bichos) {
+    if (b.muerto) continue;
+    if (b.y < arriba - 200 || b.y > abajo) { if (b.d.mueve !== "proyectil") continue; }
+    b.t += dt; if (b.flash > 0) b.flash -= dt;
+    const d = b.d, dx = j.x - b.x, dy = (j.y - 5) - (b.y - b.h / 2), dist = Math.hypot(dx, dy) || 1;
+    switch (d.mueve) {
+      case "persigueLento": { const v = d.vel * Math.min(2.2, 1 + b.t * 0.08); b.vx = lerp(b.vx, dx / dist * v, 0.03); b.vy = lerp(b.vy, dy / dist * v, 0.03); mover(b, dt, true); break; }
+      case "colgado": {
+        // cuelga del techo hasta que pasás cerca; después se tira encima tuyo
+        if (!b.suelto) { if (Math.abs(dx) < 70 && dy > -20 && dy < 110) { b.suelto = true; sfx("golpe", 0.3); } break; }
+        b.vx = lerp(b.vx, dx / dist * d.vel, 0.08); b.vy = lerp(b.vy, dy / dist * d.vel, 0.08); mover(b, dt, true); break;
+      }
+      case "salta": {
+        b.vy += FIS.grav * dt * 0.8; const c = moverCaja(b, b.vx * dt, b.vy * dt, N);
+        if (c.suelo) { b.vx = 0; b.vy = 0; b.carga = (b.carga || 0) + dt; if (b.carga > 1.4 && Math.abs(dx) < 110 && Math.abs(dy) < 120) { b.carga = 0; b.vy = -270; b.vx = sig(dx) * d.vel; b.izq = dx < 0; } }
+        break;
+      }
+      case "patrulla": case "nada": {
+        if (d.mueve === "nada") { b.vx = b.dir * d.vel; const c = moverCaja(b, b.vx * dt, 0, N); if (c.pared) b.dir *= -1; b.y += Math.sin(b.t * 2) * 0.15; }
+        else {
+          if (b.parar > 0) { b.parar -= dt; break; }
+          const nx = b.x + b.dir * (b.w / 2 + 1), bajoPie = N.en(Math.floor(nx / T), Math.floor((b.y + 1) / T));
+          if (!(solida(bajoPie) || bajoPie === PLAT)) b.dir *= -1;
+          const c = moverCaja(b, b.dir * d.vel * dt, 0, N); if (c.pared) b.dir *= -1;
+          if (d.blindado && V.f() < 0.004) b.parar = 0.8 + V.f();            // la tortuga se frena de vez en cuando
+        }
+        b.izq = b.dir < 0; break;
+      }
+      case "circula": { const a = b.t * 2.2; b.vx = lerp(b.vx, dx / dist * d.vel + Math.cos(a) * 45, 0.05); b.vy = lerp(b.vy, dy / dist * d.vel + Math.sin(a) * 45, 0.05); mover(b, dt, true); break; }
+      case "persigue": {
+        if (d.sube && !b.visto) { if (dist < 150) b.visto = true; else break; }
+        b.vx = lerp(b.vx, dx / dist * d.vel, 0.04); b.vy = lerp(b.vy, dy / dist * d.vel, 0.04); mover(b, dt, !d.atraviesa); b.izq = dx < 0; break;
+      }
+      case "rebota": { b.vy += FIS.grav * dt * 0.7; const c = moverCaja(b, b.vx * dt, b.vy * dt, N); if (c.suelo) { b.vy = -160 - V.f() * 60; b.vx = sig(dx) * d.vel * (0.5 + V.f()); } if (c.pared) b.vx *= -1; break; }
+      case "vaga": { const v = b.enojado ? 58 : d.vel; if (b.enojado) { b.vx = lerp(b.vx, dx / dist * v, 0.06); b.vy = lerp(b.vy, dy / dist * v, 0.06); } else { b.vx = Math.cos(b.t * 0.7) * v; b.vy = Math.sin(b.t * 1.1) * v * 0.6; } mover(b, dt, true); break; }
+      case "tira": {
+        b.izq = dx < 0;
+        if (Math.abs(dy) < 130 && Math.abs(dx) < 120) { b.carga = (b.carga || 0) + dt; if (b.carga > 2.4) { b.carga = 0; const h = crearBicho("hueso", b.x, b.y - 8); h.vx = dx * 0.9; h.vy = -200; h.grav = 1; } }
+        break;
+      }
+      case "ondea": { b.x += b.dir * d.vel * dt; b.y += Math.sin(b.t * 3) * 0.6; if (b.x < 20 || b.x > COLS * T - 20) b.dir *= -1; break; }
+      case "zigzag": { const f = b.t % 2.2; if (f < 1.5) { b.x += Math.sin(b.t * 5) * 1.1; b.y -= d.vel * dt; } if (b.y < J.camY - 30) b.y = J.camY + H + 20; break; }
+      case "calamar": {
+        if (!b.baja) { b.y -= d.vel * 0.6 * dt; if (dy > 0 && Math.abs(dx) < 60) { b.baja = true; } }
+        else { b.y += d.vel * 1.8 * dt; if (b.y > J.camY + H + 30) { b.baja = false; } }
+        b.x += lim(dx, -1, 1) * 0.4; break;
+      }
+      case "vertical": { b.y += b.vy * dt; if (Math.abs(b.y - (b.y0 ?? (b.y0 = b.y))) > 90) b.vy *= -1; break; }
+      case "orbita": { b.ang += d.vel * dt; b.x = b.cx + Math.cos(b.ang) * 26; b.y = b.cy + Math.sin(b.ang) * 26; break; }
+      case "diagonal": { const c = moverCaja(b, b.vx * dt, b.vy * dt, N); if (c.pared) b.vx *= -1; if (c.suelo || c.techo) b.vy *= -1; break; }
+      case "proyectil": {
+        if (b.grav) b.vy += FIS.grav * dt * 0.6;
+        b.x += b.vx * dt; b.y += b.vy * dt;
+        if (b.t > 5 || solida(N.en(Math.floor(b.x / T), Math.floor(b.y / T))) && b.tipo !== "diente") b.muerto = true;
+        if (b.tipo === "diente" && b.y > J.camY + H + 20) b.muerto = true;
+        break;
+      }
+    }
+  }
+  for (let i = J.bichos.length - 1; i >= 0; i--) if (J.bichos[i].muerto) J.bichos.splice(i, 1);
+}
+/** Movimiento libre de los voladores (chocan con la roca si `choca`). */
+function mover(b, dt, choca) {
+  if (!choca) { b.x += b.vx * dt; b.y += b.vy * dt; }
+  else { const c = moverCaja(b, b.vx * dt, b.vy * dt, J.N); if (c.pared) b.vx *= -0.8; if (c.suelo || c.techo) b.vy *= -0.8; }
+  b.x = lim(b.x, 8, COLS * T - 8);
+}
+
+function danarBicho(b, dano) {
+  if (b.muerto) return;
+  if (b.d.blindado) { sfx("golpe", 0.3); chispa(b.x, b.y - b.h); return; }       // la tortuga no se deja: hay que pisarla
+  b.vida -= dano; b.flash = 0.08;
+  if (b.d.enoja && !b.enojado) b.enojado = true;
+  sfx("golpe", 0.35);
+  if (b.vida <= 0) matarBicho(b, false);
+}
+function matarBicho(b, pisado) {
+  if (b.muerto) return;
+  b.muerto = true;
+  particulas(b.x, b.y - b.h / 2, 10, b.d.pisa ? "tinta" : "acento", 90);
+  sfx("muere", 0.5);
+  if (b.d.gemas) soltarGemas(b.x, b.y - b.h / 2, b.d.gemas);
+  if (!b.d.sinCombo) {
+    J.kills++;
+    if (!J.jug.suelo) { J.jug.combo++; J.efectos.push({ tipo: "combo", n: J.jug.combo, x: J.jug.x, y: J.jug.y - 18, t: 0.8, t0: 0.8 }); }
+  }
+}
+/** Las gemas saltan del lugar: grandes de 10 y chicas de 2. */
+function soltarGemas(x, y, valor) {
+  const grandes = Math.floor(valor / 10), chicas = Math.ceil((valor % 10) / 2);
+  for (let i = 0; i < grandes + chicas; i++) {
+    const a = V.f() * TAU, v = 40 + V.f() * 80;
+    J.gemas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 40, v: i < grandes ? 10 : 2, t: 9 + V.f() * 3, grande: i < grandes });
+  }
+}
+function pasoGemas(dt) {
+  for (let i = J.gemas.length - 1; i >= 0; i--) {
+    const gm = J.gemas[i];
+    gm.vx *= 1 - 3 * dt; gm.vy = gm.vy * (1 - 3 * dt) + 30 * dt;
+    gm.x += gm.vx * dt; gm.y += gm.vy * dt; gm.x = lim(gm.x, 6, COLS * T - 6);
+    if ((gm.t -= dt) <= 0) J.gemas.splice(i, 1);
+  }
+}
+
+// ── bloques ──
+function romper(cx, cy) {
+  const N = J.N, c = N.en(cx, cy);
+  if (!rompible(c)) return;
+  N.pon(cx, cy, VACIO);
+  const x = cx * T + T / 2, y = cy * T + T / 2;
+  particulas(x, y, 8, c === BGEMA ? "acento" : "tinta", 70);
+  sfx("bloque", 0.45);
+  if (c === BGEMA) soltarGemas(x, y, 10); else if (V.f() < 0.12) soltarGemas(x, y, 2);
+  // bloques de pólvora: se rompen los de al lado, en cadena
+  if (J.mejoras.polvora) for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (rompible(N.en(cx + a, cy + b))) J.cadena.push({ cx: cx + a, cy: cy + b, t: 0.07 });
+}
+function explosion(x, y, r, dano, amiga) {
+  J.efectos.push({ tipo: "onda", x, y, r, t: 0.3, t0: 0.3 });
+  particulas(x, y, 14, "acento", 120);
+  for (const b of J.bichos) if (!b.muerto && Math.hypot(b.x - x, b.y - b.h / 2 - y) < r + b.w / 2) { if (b.d.blindado) matarBicho(b, false); else danarBicho(b, dano); }
+  const N = J.N;
+  for (let cy = Math.floor((y - r) / T); cy <= Math.floor((y + r) / T); cy++) for (let cx = Math.floor((x - r) / T); cx <= Math.floor((x + r) / T); cx++) if (Math.hypot(cx * T + 8 - x, cy * T + 8 - y) < r + 4) romper(cx, cy);
+  temblor(4); sfx("explota", 0.6);
+}
+
+// ── los tiros ──
+function pasoBalas(dt) {
+  const N = J.N;
+  for (let i = J.balas.length - 1; i >= 0; i--) {
+    const q = J.balas[i];
+    q.x += q.vx * dt; q.y += q.vy * dt; q.vida -= dt;
+    let muere = q.vida <= 0;
+    const cx = Math.floor(q.x / T), cy = Math.floor((q.y + (q.arriba ? 0 : q.h / 2)) / T), c = N.en(cx, cy);
+    if (!muere && rompible(c)) { romper(cx, cy); if (!q.perfora) muere = true; }
+    else if (!muere && solida(c)) { muere = true; chispa(q.x, q.y); }
+    if (!muere) for (const b of J.bichos) {
+      if (b.muerto || (q.golpe && q.golpe.has(b))) continue;
+      if (Math.abs(b.x - q.x) < b.w / 2 + q.w / 2 && q.y + q.h / 2 > b.y - b.h && q.y - q.h / 2 < b.y) {
+        danarBicho(b, q.dano);
+        if (q.perfora) { (q.golpe || (q.golpe = new Set())).add(b); } else { muere = true; break; }
+      }
+    }
+    if (muere) J.balas.splice(i, 1);
+  }
+  for (let i = J.cadena.length - 1; i >= 0; i--) { const k = J.cadena[i]; if ((k.t -= dt) <= 0) { J.cadena.splice(i, 1); romper(k.cx, k.cy); } }
+}
+
+// ── efectos ──
+function particula(x, y, vx, vy, t, color) { if (J.efectos.length < 260) J.efectos.push({ tipo: "p", x, y, vx, vy, t, t0: t, color }); }
+function particulas(x, y, n, color, v = 60) { for (let i = 0; i < n; i++) { const a = V.f() * TAU, s = v * (0.3 + V.f() * 0.7); particula(x, y, Math.cos(a) * s, Math.sin(a) * s - 20, 0.3 + V.f() * 0.3, color); } }
+function chispa(x, y) { for (let i = 0; i < 3; i++) particula(x, y, (V.f() - 0.5) * 80, -V.f() * 60, 0.15, "tinta"); }
+function temblor(n) { if (G.op.temblor) J.temblor = Math.max(J.temblor, n); }
+function cartel(txt, t = 1.5, sub = null) { J.cartel = { txt, sub, t, t0: t }; }
+function pasoEfectos(dt) {
+  for (let i = J.efectos.length - 1; i >= 0; i--) { const f = J.efectos[i]; f.t -= dt; if (f.tipo === "p") { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 160 * dt; } else if (f.tipo === "combo") f.y -= 14 * dt; if (f.t <= 0) J.efectos.splice(i, 1); }
+  if (J.temblor > 0) J.temblor = Math.max(0, J.temblor - 30 * dt);
+  if (J.cartel && (J.cartel.t -= dt) <= 0) J.cartel = null;
+  if (J.rachaT > 0 && (J.rachaT -= dt) <= 0) J.rachaGemas = 0;
+}
+
+// ══════════ 11-salas.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LAS SALAS LATERALES ("burbujas": afuera el tiempo se para). Tres clases, como en el original:
+// una veta de gemas, un módulo de arma (con una cápsula de +1 vida o +2 carga) o una tienda con tres
+// cosas al azar (precio base + 200 por zona; la tarjeta VIP descuenta 10%). Se compra tocando la cosa.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function entrarSala(p) {
+  const j = J.jug;
+  p.usada = true;
+  J.salaDe = { N: J.N, x: j.x, y: j.y, bichos: J.bichos, gemas: J.gemas, adornos: J.adornos, puerta: p };
+  const N = generarSala(p.tipo, p.lado);
+  J.N = N; J.bichos = []; J.gemas = []; J.adornos = []; J.balas = [];
+  J.sala = { tipo: p.tipo, cosas: [] };
+  // entrás por el costado y aparecés parado en el piso de la sala
+  j.x = p.lado < 0 ? (COLS - 1.5) * T : 1.5 * T; j.y = N.piso * T; j.vx = 0; j.vy = 0;
+  const xs = [3.5, 6, 8.5].map((c) => c * T), piso = N.piso * T;
+  J.camY = 0;
+  if (p.tipo === "tienda") {
+    const zona = J.zona, desc = J.mejoras.tarjeta ? 0.9 : 1;
+    // las cosas flotan a la altura de un salto: se compra SALTANDO hacia ellas (caminando por abajo no)
+    A.mezclar(Object.keys(TIENDA)).slice(0, 3).forEach((k, i) => J.sala.cosas.push({ k, x: xs[i], y: piso - 30, precio: Math.round((TIENDA[k].precio + zona * 200) * desc / 10) * 10, vendido: false }));
+  } else if (p.tipo === "modulo") {
+    const libres = Object.keys(ARMAS).filter((k) => k !== J.arma && k !== "metra");
+    J.sala.cosas.push({ k: A.uno(libres), x: 6 * T, y: piso - 34, modulo: true, bonus: A.si(0.5) ? "vida" : "carga" });
+  }
+  J.cartel = null;
+  tocarTema("tienda");
+  sfx("puerta");
+}
+function salirSala() {
+  const s = J.salaDe, j = J.jug;
+  J.N = s.N; J.bichos = s.bichos; J.gemas = s.gemas; J.adornos = s.adornos; J.balas = [];
+  J.sala = null; J.salaDe = null;
+  j.x = s.puerta.lado < 0 ? 1.4 * T + 8 : (COLS - 1.4) * T - 8; j.y = s.puerta.y; j.vx = 0; j.vy = 0;
+  // correrlo hasta el borde de la pared para que no quede adentro de la roca
+  while (solida(J.N.en(Math.floor(j.x / T), Math.floor((j.y - 4) / T))) && j.x > 8 && j.x < COLS * T - 8) j.x += s.puerta.lado < 0 ? 4 : -4;
+  tocarTema(ZONAS[J.zona] ? ZONAS[J.zona].tema : "jefe");
+  sfx("puerta");
+}
+function pasoSala(dt) {
+  const j = J.jug;
+  for (const c of J.sala.cosas) {
+    // se toca con la cabeza o el cuerpo (la caja del jugador contra la cosa)
+    if (c.vendido || Math.abs(j.x - c.x) > 8 || j.y - j.h > c.y + 6 || j.y < c.y - 6) { c.cerca = false; continue; }
+    if (c.cerca) continue;
+    c.cerca = true;
+    if (c.modulo) {
+      J.arma = c.k; c.vendido = true;
+      if (c.bonus === "vida") curar(1); else { j.cargaMax += 2; j.carga = j.cargaMax; }
+      cartel(L(ARMAS[c.k].n), 2, L(ARMAS[c.k].d)); sfx("elegir");
+    } else {
+      const d = TIENDA[c.k];
+      if (J.gemasPartida < c.precio) { cartel(L(TX.pobre), 1.2); sfx("no"); continue; }
+      J.gemasPartida -= c.precio; c.vendido = true;
+      if (d.vida) curar(d.vida);
+      if (d.carga) { j.cargaMax += d.carga; j.carga = j.cargaMax; }
+      if (d.max) { j.vidaMax += d.max; j.vida += d.max; }
+      cartel(L(TX.gracias), 1.2, L(d.n)); sfx("comprar");
+    }
+  }
+}
+function dibujarSala(cy) {
+  const s = J.sala, t = performance.now() / 1000;
+  const titulo = s.tipo === "tienda" ? L(TX.tienda) : s.tipo === "veta" ? L(TX.veta) : L(TX.modulo);
+  texto(titulo, W / 2, 4 * T - cy, { escala: 2 });
+  if (s.tipo === "tienda") {
+    // el vendedor, detrás del mostrador
+    const v = selloSpr("vendedor", ["..#####..", ".#######.", ".##o#o##.", ".#######.", "..#.#.#..", "#########", "#.#####.#", "#########"]);
+    const py = (J.N.piso - 5.2) * T - cy;
+    g.drawImage(v, Math.round(W / 2 - v.width / 2), Math.round(py - 30));
+    g.fillStyle = C_TINTA; g.fillRect(W / 2 - 22, Math.round(py - 22), 44, 2);
+  }
+  // lo que dice la cosa más cercana (una sola a la vez: los tres textos juntos no entran)
+  const j = J.jug; let cerca = null, md = 40;
+  for (const c of s.cosas) if (!c.vendido && !c.modulo && Math.abs(c.x - j.x) < md) { md = Math.abs(c.x - j.x); cerca = c; }
+  if (cerca) { texto(L(TIENDA[cerca.k].n), W / 2, 6 * T - cy); texto(L(TIENDA[cerca.k].d), W / 2, 6 * T + 11 - cy, { color: "acento" }); }
+  for (const c of s.cosas) {
+    if (c.vendido) continue;
+    const Y = Math.round(c.y - cy + Math.sin(t * 3 + c.x) * 1.5);
+    if (c.modulo) {
+      const cap = capsulaSpr(ARMAS[c.k].letra); g.drawImage(cap, Math.round(c.x - cap.width / 2), Y - 8);
+      const b = c.bonus === "vida" ? corazonSpr() : cargaSpr(); g.drawImage(b, Math.round(c.x - b.width / 2), Y + 12);
+      texto(L(ARMAS[c.k].n), W / 2, Y - 22);
+    } else {
+      const ic = iconoSpr(TIENDA[c.k].ico); g.drawImage(ic, Math.round(c.x - ic.width / 2), Y - 4);
+      texto(String(c.precio), c.x, Y + 9, { color: J.gemasPartida >= c.precio ? "tinta" : "acento" });
+    }
+  }
+}
+
+// ── EL JEFE: La Fauce, en el fondo del Abismo ──
+// Un ojo gigante rojo (no se pisa) que se abre y se cierra: abierto se le puede pegar, cerrado es
+// inmune. Tira tres bolas (la del medio apuntada a vos), llama murciélagos y le caen dientes del techo.
+function crearJefe(N) {
+  J.jefe = { x: COLS * T / 2, y: (N.filas - 4) * T, vida: 70, max: 70, t: 0, abierto: false, ciclo: 0, disparoT: 2, dienteT: 1.5, llamaT: 7, flash: 0, muerto: false, muerteT: 0 };
+}
+function pasoJefe(dt) {
+  const B = J.jefe, j = J.jug;
+  if (!B) return;
+  if (B.muerto) { B.muerteT += dt; if (J.cuadro % 4 === 0) { explosion(B.x + (V.f() - 0.5) * 60, B.y - 20 + (V.f() - 0.5) * 40, 16, 0, true); } if (B.muerteT > 2.5 && !J.ganado) { J.ganado = true; J.finT = 0; } return; }
+  B.t += dt; B.ciclo += dt; if (B.flash > 0) B.flash -= dt;
+  // se abre 2,6 s y se cierra 3 s
+  const periodo = 5.6, f = B.ciclo % periodo; B.abierto = f < 2.6;
+  B.x = COLS * T / 2 + Math.sin(B.t * 0.6) * 38;
+  if ((B.disparoT -= dt) <= 0) {
+    B.disparoT = B.vida < B.max / 2 ? 1.5 : 2.2;
+    const ang = Math.atan2(j.y - 6 - (B.y - 30), j.x - B.x);
+    for (const k of [-0.4, 0, 0.4]) { const b = crearBicho("bola", B.x, B.y - 34); b.vx = Math.cos(ang + k) * 95; b.vy = Math.sin(ang + k) * 95; }
+    sfx("tiroGordo", 0.5);
+  }
+  if ((B.dienteT -= dt) <= 0) { B.dienteT = 1.1 + V.f() * 0.8; const d = crearBicho("diente", 2 * T + V.f() * (COLS - 4) * T, J.camY - 10); d.vy = 120; }
+  if ((B.llamaT -= dt) <= 0) { B.llamaT = 8; for (const s of [-1, 1]) { const m = crearBicho("murcielago", B.x + s * 40, B.y - 50); m.suelto = true; } }
+  // tocar al jefe duele (es rojo)
+  if (Math.abs(j.x - B.x) < 30 && j.y > B.y - 50 && j.y - j.h < B.y) herir();
+  // los tiros que le dan al ojo abierto
+  for (let i = J.balas.length - 1; i >= 0; i--) {
+    const q = J.balas[i];
+    if (Math.abs(q.x - B.x) < 30 && q.y > B.y - 52 && q.y < B.y) {
+      J.balas.splice(i, 1);
+      if (B.abierto && Math.abs(q.x - B.x) < 12) { B.vida -= q.dano; B.flash = 0.08; sfx("golpe", 0.5); if (B.vida <= 0) { B.muerto = true; sfx("jefe"); temblor(10); for (const b of J.bichos) b.muerto = true; } }
+      else chispa(q.x, q.y);
+    }
+  }
+}
+function dibujarJefe(cy) {
+  const B = J.jefe; if (!B || (B.muerto && B.muerteT > 2.4)) return;
+  const x = Math.round(B.x), y = Math.round(B.y - cy), t = B.t;
+  // el cuerpo: una masa roja con dientes, que respira
+  const R = 30 + Math.sin(t * 2) * 1.5;
+  g.fillStyle = C_FONDO; g.beginPath(); g.arc(x, y - 22, R + 2, Math.PI, 0); g.fill();
+  g.fillStyle = B.flash > 0 ? C_TINTA : C_ACENTO; g.beginPath(); g.arc(x, y - 22, R, Math.PI, 0); g.fill(); g.fillRect(x - R, y - 22, R * 2, 22);
+  g.fillStyle = C_FONDO; for (let k = -3; k <= 3; k++) { g.beginPath(); g.moveTo(x + k * 8 - 4, y); g.lineTo(x + k * 8, y - 8); g.lineTo(x + k * 8 + 4, y); g.fill(); }
+  // el ojo
+  if (B.abierto) {
+    g.fillStyle = C_TINTA; g.beginPath(); g.ellipse(x, y - 30, 13, 9, 0, 0, TAU); g.fill();
+    const j = J.jug, a = Math.atan2(j.y - (B.y - 30), j.x - x);
+    g.fillStyle = C_FONDO; g.beginPath(); g.arc(x + Math.cos(a) * 5, y - 30 + Math.sin(a) * 3, 4.5, 0, TAU); g.fill();
+  } else { g.fillStyle = C_FONDO; g.fillRect(x - 13, y - 31, 26, 2); for (let k = -2; k <= 2; k++) g.fillRect(x + k * 5, y - 29, 1, 3); }
+  // la barra de vida del jefe, abajo de todo
+  const bw = W - 40, k = lim(B.vida / B.max, 0, 1);
+  g.fillStyle = C_FONDO; g.fillRect(19, H - 17, bw + 2, 8); g.fillStyle = C_TINTA; g.fillRect(20, H - 16, bw, 6); g.fillStyle = C_FONDO; g.fillRect(21, H - 15, bw - 2, 4); g.fillStyle = C_ACENTO; g.fillRect(21, H - 15, Math.round((bw - 2) * k), 4);
+  texto(L(TX.jefe), W / 2, H - 29);
+}
+
+// ══════════ 12-juego.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LA PARTIDA: 4 zonas de 3 niveles y el Abismo con el jefe. Entre nivel y nivel se elige una mejora.
+// El paso es fijo a 60 Hz; el dibujo ordena: roca, burbujas, adornos, gemas, bichos, tiros, el que
+// cae, efectos y el HUD como el de celular del original.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function nuevaPartida(semilla = (Math.random() * 1e9) | 0) {
+  J = { semilla, zona: 0, nivel: 0, jug: nuevoJugador(G.estilo), mejoras: {}, arma: "metra", gemasPartida: 0, gemasJuntadas: 0, kills: 0, maxCombo: 0,
+    t: 0, cuadro: 0, bichos: [], balas: [], gemas: [], efectos: [], adornos: [], cadena: [], camY: 0, temblor: 0, cartel: null, fase: "juego",
+    rachaGemas: 0, rachaT: 0, bannerGH: 0, flash: 0, finT: 0, sala: null, salaDe: null, jefe: null, ganado: false, dron: { x: 0, y: 0 }, extraOpciones: 0, pausa: false, ayudaT: 6 };
+  G.partidas++; guardar();
+  empezarNivel();
+}
+function nombreNivel() { return J.zona < 4 ? `${L(ZONAS[J.zona].n)}-${J.nivel + 1}` : L(TX.abismo); }
+function empezarNivel() {
+  const E = ESTILOS[G.estilo] || ESTILOS.normal, semilla = J.semilla + J.zona * 17 + J.nivel * 5;
+  const N = J.zona < 4 ? generarNivel(J.zona, J.nivel, semilla, { tienda: J.mejoras.tarjeta, soloArmas: E.soloArmas }) : generarAbismo(semilla);
+  J.N = N; J.bichos = []; J.gemas = []; J.balas = []; J.cadena = []; J.jefe = null;
+  for (const b of N.bichos) crearBicho(b.tipo, b.x, b.y);
+  J.adornos = N.adornos.map((a) => ({ ...a, w: 8, h: 8, roto: false }));
+  const j = J.jug;
+  j.x = N.inicio.x; j.y = N.inicio.y; j.vx = 0; j.vy = 0; j.carga = j.cargaMax; j.globo = !!J.mejoras.globo; j.combo = 0;
+  J.camY = j.y - H * 0.35;
+  if (J.zona >= 4) crearJefe(N);
+  cartel(nombreNivel(), 2.4);
+  tocarTema(J.zona < 4 ? ZONAS[J.zona].tema : "jefe");
+  if (J.zona >= 4) sfx("jefe", 0.7);
+}
+/** El Abismo: una sala alta con repisas a los costados y el jefe en el fondo; una tienda arriba. */
+function generarAbismo(semilla) {
+  rnd = mulberry(semilla);
+  const filas = 44, t = new Uint8Array(filas * COLS), N = { zona: 4, nivel: 0, filas, t, puertas: [], bichos: [], adornos: [], abismo: true };
+  const pon = (x, y, c) => { if (x >= 0 && x < COLS && y >= 0 && y < filas) t[y * COLS + x] = c; };
+  N.en = (x, y) => (x < 0 || x >= COLS ? ROCA : y < 0 ? VACIO : y >= filas ? ROCA : t[y * COLS + x]); N.pon = pon;
+  for (let y = 0; y < filas; y++) { pon(0, y, ROCA); pon(COLS - 1, y, ROCA); }
+  for (let x = 1; x < COLS - 1; x++) { pon(x, filas - 1, ROCA); pon(x, filas - 2, ROCA); if (x < 4 || x > 7) pon(x, 6, ROCA); }
+  // la pared de bloques antes del jefe (wiki: una pared de rompibles) y repisas para respirar
+  for (let x = 1; x < COLS - 1; x++) for (let y = 12; y < 14; y++) pon(x, y, BLOQUE);
+  for (const [x0, y0] of [[1, 20], [8, 24], [1, 29], [8, 33]]) for (let i = 0; i < 3; i++) pon(x0 + i, y0, PLAT);
+  N.inicio = { x: 2 * T, y: 6 * T - 1 };
+  // la tienda asegurada, a la derecha de arriba
+  pon(COLS - 1, 4, VACIO); pon(COLS - 1, 5, VACIO);
+  N.puertas.push({ fila: 5, lado: 1, tipo: "tienda", x: COLS * T, y: 6 * T, usada: false });
+  return N;
+}
+
+function pasoJuego(dt) {
+  if (J.pausa) return;
+  if (J.fase === "mejora" || J.fase === "fin") return;
+  J.t += dt; J.cuadro++;
+  const j = J.jug;
+  if (j.muerto || J.ganado) { J.finT += dt; pasoEfectos(dt); if (J.finT > 1.8) terminarPartida(); return; }
+  const r = pasoJugador(dt);
+  if (r === "salida") { terminarNivel(); return; }
+  if (J.sala) pasoSala(dt);
+  pasoBichos(dt); pasoBalas(dt); pasoGemas(dt); pasoEfectos(dt); pasoJefe(dt);
+  // el dron sigue al jugador flotando a un costado
+  if (J.mejoras.dron) { const d = J.dron, ox = j.x + (j.izq ? 12 : -12), oy = j.y - 20 + Math.sin(J.t * 3) * 2; d.x = lerp(d.x || ox, ox, 0.15); d.y = lerp(d.y || oy, oy, 0.15); }
+  if (J.flash > 0) J.flash -= dt;
+  if (J.bannerGH > 0) J.bannerGH -= dt;
+  if (J.ayudaT > 0) J.ayudaT -= dt;
+  // la cámara: el que cae arriba de la mitad (se ve lo que viene), sin pasarse de los bordes
+  if (J.sala) { J.camY = 0; return; }
+  const obj = j.y - H * (j.vy > 60 ? 0.3 : 0.4), maxY = J.N.filas * T - H + (J.N.abismo || J.sala ? 0 : 40);
+  J.camY = lerp(J.camY, lim(obj, -20, Math.max(-20, maxY)), 0.14);
+}
+function terminarNivel() {
+  const j = J.jug;
+  cobrarCombo();
+  if (J.zona >= 4) return;
+  // las mejoras: 3 al azar (+1 con el agua de vertiente, −1 con el estilo piedra)
+  const E = ESTILOS[G.estilo] || ESTILOS.normal, n = 3 + J.extraOpciones + (E.opciones || 0);
+  const pool = Object.keys(MEJORAS).filter((k) => !J.mejoras[k] || MEJORAS[k].repite);
+  J.opciones = A.mezclar(pool).slice(0, n);
+  J.fase = "mejora"; UI.foco = 0; UI.pantallaFoco = null;
+  sfx("elegir");
+}
+function elegirMejora(k) {
+  const j = J.jug;
+  J.mejoras[k] = true;
+  if (k === "manzana") { curar(4); J.mejoras.manzana = false; }
+  if (k === "juventud") { j.vidaMax++; j.vida++; J.extraOpciones++; }
+  if (k === "globo") j.globo = true;
+  sfx("comprar");
+  J.nivel++; if (J.nivel > 2) { J.nivel = 0; J.zona++; }
+  J.fase = "juego";
+  empezarNivel();
+}
+function terminarPartida() {
+  if (J.fase === "fin") return;
+  J.fase = "fin"; UI.pantallaFoco = null;
+  const antes = G.totalGemas;
+  G.totalGemas += J.gemasJuntadas;
+  const prof = J.zona * 3 + J.nivel + 1;
+  G.record.prof = Math.max(G.record.prof, J.ganado ? 13 : prof); G.record.gemas = Math.max(G.record.gemas, J.gemasJuntadas); G.record.combo = Math.max(G.record.combo, J.maxCombo);
+  if (J.ganado) G.ganadas++;
+  // lo que se destrabó con esta partida
+  J.nuevos = [];
+  for (const [k, p] of Object.entries(PALETAS)) if (p.precio > antes && p.precio <= G.totalGemas) J.nuevos.push(p.n);
+  for (const [k, e] of Object.entries(ESTILOS)) if (e.precio > antes && e.precio <= G.totalGemas) J.nuevos.push(L(e.n));
+  guardar();
+  tocarTema(J.ganado ? "titulo" : "fin", { bucle: !!J.ganado });
+}
+
+// ── el dibujo ──
+function dibujarJuego() {
+  const j = J.jug, N = J.N;
+  g.fillStyle = C_FONDO; g.fillRect(0, 0, W, H);
+  const sx = J.temblor ? Math.round((V.f() - 0.5) * J.temblor) : 0, sy = J.temblor ? Math.round((V.f() - 0.5) * J.temblor) : 0;
+  const cx = Math.round((COLS * T - W) / 2) - sx, cy = Math.round(J.camY) - sy;
+  // motas del fondo lejano (se mueven a la mitad: dan profundidad sin ensuciar)
+  g.fillStyle = C_TINTA; g.globalAlpha = 0.18;
+  for (let i = 0; i < 26; i++) { const y = ((i * 97 - cy * 0.5) % (H + 20) + H + 20) % (H + 20) - 10, x = (i * 53) % W; g.fillRect(x, Math.round(y), 1, 1); }
+  g.globalAlpha = 1;
+  // la roca y los bloques visibles
+  const f0 = Math.floor(cy / T) - 1, f1 = Math.floor((cy + H) / T) + 1;
+  for (let fy = f0; fy <= f1; fy++) for (let fx = 0; fx < COLS; fx++) {
+    const c = N.en(fx, fy); if (!c) continue;
+    const X = fx * T - cx, Y = fy * T - cy;
+    if (c === ROCA) {
+      const vacio = (a, b) => { const k = N.en(fx + a, fy + b); return !(k === ROCA || rompible(k) || k === PINCHE); };
+      const bordes = (vacio(0, -1) ? 1 : 0) | (vacio(1, 0) ? 2 : 0) | (vacio(0, 1) ? 4 : 0) | (vacio(-1, 0) ? 8 : 0);
+      g.drawImage(rocaSpr(bordes, (fx * 7 + fy * 13) & 3), X, Y);
+    } else if (c === BLOQUE) g.drawImage(bloqueSpr("n"), X, Y);
+    else if (c === BGEMA) g.drawImage(bloqueSpr("gema"), X, Y);
+    else if (c === PLAT) g.drawImage(plataformaSpr(), X, Y);
+    else if (c === PINCHE) g.drawImage(pinchesSpr(), X, Y);
+  }
+  // las burbujas de las salas laterales (y el cartel de tienda)
+  if (!J.sala) for (const p of N.puertas) {
+    if (p.usada) continue;
+    const X = (p.lado < 0 ? 10 : COLS * T - 10) - cx, Y = p.y - 16 - cy;
+    if (Y < -30 || Y > H + 30) continue;
+    g.strokeStyle = C_TINTA; g.lineWidth = 1; g.setLineDash([2, 2]); g.beginPath(); g.arc(X, Y, 18 + Math.sin(J.t * 3) * 1, 0, TAU); g.stroke(); g.setLineDash([]);
+    if (p.tipo === "tienda") { const sx2 = lim(X, 18, W - 18); g.fillStyle = C_FONDO; g.fillRect(sx2 - 14, Y - 33, 28, 11); g.strokeStyle = C_TINTA; g.strokeRect(sx2 - 13.5, Y - 32.5, 27, 10); texto("SHOP", sx2, Y - 31); }
+  }
+  if (J.sala) dibujarSala(cy);
+  // adornos, gemas
+  for (const a of J.adornos) if (!a.roto) { const s = bichoSpr(a.tipo, 0, false); g.drawImage(s, Math.round(a.x - s.width / 2 - cx), Math.round(a.y - s.height - cy + (a.tipo === "farol" ? Math.sin(J.t * 2 + a.x) * 2 : 0))); }
+  for (const gm of J.gemas) { if (gm.t < 2 && J.cuadro % 6 < 3) continue; const s = gemaSpr(gm.grande); g.drawImage(s, Math.round(gm.x - s.width / 2 - cx), Math.round(gm.y - s.height / 2 - cy)); }
+  // bichos
+  for (const b of J.bichos) {
+    const Y = b.y - cy; if (Y < -30 || Y > H + 30) continue;
+    const spr = b.enojado ? "calavera" : b.d.spr, s = bichoSpr(spr, Math.floor(b.t * 5), !b.izq);
+    if (b.flash > 0) { g.globalAlpha = 0.5; }
+    g.drawImage(s, Math.round(b.x - s.width / 2 - cx), Math.round(b.y - s.height - cy));
+    g.globalAlpha = 1;
+  }
+  dibujarJefe(cy);
+  // los tiros
+  for (const q of J.balas) { g.fillStyle = q.rojo ? C_ACENTO : C_TINTA; g.fillRect(Math.round(q.x - q.w / 2 - cx), Math.round(q.y - q.h / 2 - cy), q.w, q.h); if (!q.rojo) { g.fillStyle = C_ACENTO; g.fillRect(Math.round(q.x - 0.5 - cx), Math.round(q.y - q.h / 2 - cy), 1, 2); } }
+  // la mira láser
+  if (J.mejoras.mira && !j.suelo && !J.sala) { g.fillStyle = C_ACENTO; for (let y = 4; y < FIS.alcance * 1.3; y += 4) g.fillRect(Math.round(j.x - cx), Math.round(j.y + y - cy), 1, 2); }
+  // el que cae (parpadea mientras es invencible) y su globo y su dron
+  if (!(j.inv > 0 && J.cuadro % 8 < 4) && !j.muerto) {
+    const s = heroeSpr(j.pose, j.izq);
+    g.drawImage(s, Math.round(j.x - s.width / 2 - cx), Math.round(j.y - s.height - cy));
+  }
+  if (j.globo) { const s = corazonSpr(); g.drawImage(s, Math.round(j.x - 3 - cx), Math.round(j.y - 26 - cy)); g.fillStyle = C_TINTA; g.fillRect(Math.round(j.x - cx), Math.round(j.y - 19 - cy), 1, 7); }
+  if (J.mejoras.dron) { const s = iconoSpr("dron"); g.drawImage(s, Math.round(J.dron.x - 4 - cx), Math.round(J.dron.y - 4 - cy)); }
+  // efectos
+  for (const f of J.efectos) {
+    const k = f.t / f.t0;
+    if (f.tipo === "p") { g.fillStyle = f.color === "acento" ? C_ACENTO : C_TINTA; g.fillRect(Math.round(f.x - cx), Math.round(f.y - cy), k > 0.5 ? 2 : 1, k > 0.5 ? 2 : 1); }
+    else if (f.tipo === "onda") { g.strokeStyle = C_ACENTO; g.lineWidth = 2; g.beginPath(); g.arc(f.x - cx, f.y - cy, f.r * (1.2 - k * 0.6), 0, TAU); g.stroke(); }
+    else if (f.tipo === "laser") { g.fillStyle = C_TINTA; g.fillRect(Math.round(f.x - 2 - cx), Math.round(f.y0 - cy), 4, Math.round(f.y1 - f.y0)); g.fillStyle = C_ACENTO; g.fillRect(Math.round(f.x - cx), Math.round(f.y0 - cy), 1, Math.round(f.y1 - f.y0)); }
+    else if (f.tipo === "combo") texto(String(f.n), f.x - cx, f.y - cy, { color: f.n >= 8 ? "acento" : "tinta", alfa: Math.min(1, k * 3) });
+  }
+  if (J.flash > 0) { g.fillStyle = C_ACENTO; g.globalAlpha = J.flash * 2; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+  dibujarHUD();
+}
+
+function dibujarHUD() {
+  const j = J.jug;
+  // vida: barra roja con "x/y" (como el original en celular) y el desborde de 4 casillas abajo
+  const hw = 72;
+  g.fillStyle = C_FONDO; g.fillRect(2, 2, hw + 2, 17);
+  g.fillStyle = C_TINTA; g.fillRect(3, 3, hw, 11); g.fillStyle = C_FONDO; g.fillRect(4, 4, hw - 2, 9);
+  g.fillStyle = C_ACENTO; g.fillRect(5, 5, Math.round((hw - 4) * lim(j.vida / j.vidaMax, 0, 1)), 7);
+  texto(`${Math.max(0, j.vida)}/${j.vidaMax}`, 3 + hw / 2, 5);
+  g.fillStyle = C_TINTA; g.fillRect(3, 15, hw, 4); g.fillStyle = C_FONDO; g.fillRect(4, 16, hw - 2, 2);
+  for (let i = 0; i < 4; i++) { if (i < j.desborde) { g.fillStyle = C_TINTA; g.fillRect(5 + i * ((hw - 4) / 4), 16, (hw - 4) / 4 - 2, 2); } g.fillStyle = C_ACENTO; if (i) g.fillRect(4 + i * ((hw - 4) / 4), 15, 1, 4); }
+  // gemas: el número, el rombo grande y la línea del medidor del GEM HIGH
+  texto(String(J.gemasPartida), W - 16, 5, { al: "der" });
+  const gg = gemaSpr(true); g.drawImage(gg, W - 12, 4);
+  g.fillStyle = C_ACENTO; const ml = Math.round(66 * j.medidor / 100); g.fillRect(W - 14 - ml, 15, ml, 2);
+  // la pausa (arriba al centro)
+  g.fillStyle = C_TINTA; g.fillRect(W / 2 + 1, 5, 2, 7); g.fillRect(W / 2 + 5, 5, 2, 7);
+  // la carga: la píldora roja con el número y las pastillas (agrupadas según lo que gasta el arma)
+  const yb = 22, costo = ARMAS[J.arma].costo;
+  g.fillStyle = C_ACENTO; g.fillRect(3, yb, 24, 10); g.fillStyle = C_FONDO; g.fillRect(3, yb, 1, 1); g.fillRect(26, yb, 1, 1); g.fillRect(3, yb + 9, 1, 1); g.fillRect(26, yb + 9, 1, 1);
+  texto(String(j.carga), 15, yb + 2);
+  g.fillStyle = C_ACENTO; g.fillRect(29, yb, W - 32, 10); g.fillStyle = C_FONDO; g.fillRect(30, yb + 1, W - 34, 8);
+  const n = j.cargaMax, grupos = Math.ceil(n / costo), hueco = 1, ancho = W - 36, pw = Math.max(1, Math.min(10, Math.floor((ancho - grupos * hueco) / n)));
+  let x = 32;
+  for (let i = 0; i < n; i++) { if (i && i % costo === 0) x += hueco + 1; g.fillStyle = i < j.carga ? C_TINTA : C_FONDO; g.fillRect(x, yb + 2, pw - 1, 6); if (i >= j.carga) { g.fillStyle = C_ACENTO; g.fillRect(x, yb + 7, pw - 1, 1); } x += pw; }
+  // GEM HIGH: la franja con el nombre, arriba del pozo
+  if (j.gemHigh) {
+    const y = 36, parpadeo = J.bannerGH > 0 && J.cuadro % 8 < 4;
+    if (!parpadeo) { g.fillStyle = C_TINTA; g.fillRect(8, y + 3, W - 16, 3); g.fillStyle = C_ACENTO; g.fillRect(8, y + 6, W - 16, 1); g.fillRect(6, y + 3, 2, 3); g.fillRect(W - 8, y + 3, 2, 3); g.fillStyle = C_FONDO; g.fillRect(W / 2 - 34, y, 68, 10); texto(L(J.mejoras.fiebre ? TX.gemFiebre : TX.gemHigh), W / 2, y + 1); }
+  }
+  // las mejoras que tenés, en fila abajo
+  let ix = 3;
+  for (const k of Object.keys(J.mejoras)) if (J.mejoras[k]) { g.drawImage(iconoSpr(MEJORAS[k].ico), ix, H - 12); ix += 11; }
+  // el nombre del nivel y los carteles
+  if (J.cartel) {
+    const k = J.cartel.t / J.cartel.t0, a = Math.min(1, J.cartel.t * 3);
+    texto(J.cartel.txt, W / 2, Math.round(H * 0.28), { escala: J.cartel.sub ? 1 : 2, alfa: a });
+    if (J.cartel.sub) parrafo(J.cartel.sub, W / 2, Math.round(H * 0.28) + 13, W - 20, { alfa: a });
+  }
+  // la ayuda de los controles (los primeros segundos)
+  if (J.ayudaT > 0 && J.zona === 0 && J.nivel === 0 && !J.sala) {
+    const a = Math.min(1, J.ayudaT);
+    if (IN.tactil) {
+      g.globalAlpha = 0.25 * a; g.fillStyle = C_TINTA; g.fillRect(0, H - 70, W / 4 - 1, 70); g.fillRect(W / 4 + 1, H - 70, W / 4 - 2, 70); g.fillRect(W / 2 + 1, H - 70, W / 2 - 1, 70); g.globalAlpha = 1;
+      texto("<", W / 8, H - 40, { escala: 2, alfa: a }); texto(">", W * 3 / 8, H - 40, { escala: 2, alfa: a }); texto(IDIOMA === "es" ? "SALTO" : "JUMP", W * 3 / 4, H - 44, { alfa: a }); texto(IDIOMA === "es" ? "DISPARO" : "SHOOT", W * 3 / 4, H - 32, { alfa: a });
+    } else parrafo(TX.ayudaPC, W / 2, H - 46, W - 16, { alfa: a });
+    parrafo(TX.stompa, W / 2, H - 92, W - 16, { alfa: a, color: "acento" });
+  }
+}
+
+// ══════════ 13-menus.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS MENÚS Y EL LOGO. Botones de tinta sobre fondo; el elegido, lleno de acento (como el original:
+// menús de texto gordo, sin adornos que distraigan). Se manejan con el dedo, el mouse o flechas+Enter.
+// El logo: "ABYSS" y "FALL" en la letra gorda ×3, escalonados, con la franja de acento arriba de
+// cada letra, un relieve hacia abajo y líneas de velocidad (se lee "caída" antes de leer la palabra).
+// ─────────────────────────────────────────────────────────────────────────────
+
+let PANT = "titulo";
+const UI = { items: [], foco: 0, pantallaFoco: null };
+function uiEmpezar(p) { if (UI.pantallaFoco !== p) { UI.pantallaFoco = p; UI.foco = 0; } UI.items = []; }
+function boton(x, y, w, h, etiqueta, accion, o = {}) {
+  const i = UI.items.length, foco = UI.foco === i;
+  UI.items.push({ x, y, w, h, accion, apagado: o.apagado });
+  g.fillStyle = foco ? C_ACENTO : C_FONDO; g.fillRect(x, y, w, h);
+  g.fillStyle = foco ? C_ACENTO : C_TINTA; g.fillRect(x, y, w, 1); g.fillRect(x, y + h - 1, w, 1); g.fillRect(x, y, 1, h); g.fillRect(x + w - 1, y, 1, h);
+  if (etiqueta) texto(L(etiqueta), x + w / 2, y + Math.round(h / 2) - 3, { alfa: o.apagado ? 0.45 : 1, sombra: !foco });
+  return foco;
+}
+function uiProcesar(atras) {
+  const it = UI.items;
+  for (const t of IN.toques) for (let i = it.length - 1; i >= 0; i--) { const b = it[i]; if (t.x >= b.x && t.x < b.x + b.w && t.y >= b.y && t.y < b.y + b.h) { UI.foco = i; IN.toques.length = 0; if (b.apagado) sfx("no"); else { sfx("clic"); b.accion(); } return; } }
+  if (it.length) {
+    if (recien("k:ArrowDown") || recien("k:KeyS")) { UI.foco = (UI.foco + 1) % it.length; sfx("mover"); }
+    if (recien("k:ArrowUp") || recien("k:KeyW")) { UI.foco = (UI.foco - 1 + it.length) % it.length; sfx("mover"); }
+    UI.foco = lim(UI.foco, 0, it.length - 1);
+    if (recien("ok") || recien("k:Space") || recien("k:KeyZ")) { const b = it[UI.foco]; if (b.apagado) sfx("no"); else { sfx("clic"); b.accion(); } return; }
+  }
+  if (atras && recien("atras")) { sfx("clic"); atras(); }
+}
+function irA(p) { PANT = p; UI.pantallaFoco = null; }
+
+// ── el logo ──
+function logoSpr() {
+  return hornear("logo", () => {
+    const E = 3, palabras = [["ABYSS", 0, 0], ["FALL", 0, 0]];
+    const a1 = anchoTexto("ABYSS") * E, a2 = anchoTexto("FALL") * E, WL = Math.max(a1, a2 + 22) + 12, HL = 7 * E * 2 + 30;
+    palabras[0][1] = 6; palabras[0][2] = 6; palabras[1][1] = WL - 6 - a2; palabras[1][2] = 6 + 7 * E + 8;
+    const c = lienzoNuevo(WL, HL), q = c.getContext("2d"), m = new Uint8Array(WL * HL);
+    for (const [pal, x0, y0] of palabras) {
+      let x = x0;
+      for (const ch of pal) {
+        const gl = LETRA[ch];
+        gl.forEach((f, y) => { for (let i = 0; i < f.length; i++) if (f[i] === "#") for (let a = 0; a < E; a++) for (let b = 0; b < E; b++) m[(y0 + y * E + b) * WL + x + i * E + a] = y < 3 ? 2 : 1; });
+        x += (gl[0].length + 1) * E;
+      }
+    }
+    const en = (x, y) => x >= 0 && y >= 0 && x < WL && y < HL && m[y * WL + x];
+    // líneas de velocidad por detrás (la caída)
+    q.fillStyle = C_TINTA; const r = mulberry(5);
+    for (let i = 0; i < 18; i++) { const x = Math.floor(r() * WL), y = Math.floor(r() * HL * 0.7), l = 6 + Math.floor(r() * 16); q.globalAlpha = 0.35; q.fillRect(x, y, 1, l); }
+    q.globalAlpha = 1;
+    // el borde de fondo, el relieve de acento (3 px abajo) y la cara con la franja de arriba
+    for (let y = 0; y < HL; y++) for (let x = 0; x < WL; x++) {
+      if (en(x, y)) continue;
+      if (en(x, y - 1) || en(x, y - 2) || en(x, y - 3)) { q.fillStyle = C_ACENTO; q.fillRect(x, y, 1, 1); }
+    }
+    for (let y = 0; y < HL; y++) for (let x = 0; x < WL; x++) {
+      if (!en(x, y)) continue;
+      q.fillStyle = m[y * WL + x] === 2 ? C_ACENTO : C_TINTA; q.fillRect(x, y, 1, 1);
+      if (m[y * WL + x] === 2 && y % 3 === 1) { q.fillStyle = C_TINTA; q.fillRect(x, y, 1, 1); }      // rayado en la franja
+    }
+    // el borde del color de fondo alrededor de todo
+    const out = lienzoNuevo(WL + 2, HL + 2), o2 = out.getContext("2d");
+    for (const [dx, dy] of [[0, 1], [2, 1], [1, 0], [1, 2]]) { o2.globalCompositeOperation = "source-over"; const t2 = lienzoNuevo(WL, HL), q2 = t2.getContext("2d"); q2.drawImage(c, 0, 0); q2.globalCompositeOperation = "source-in"; q2.fillStyle = C_FONDO; q2.fillRect(0, 0, WL, HL); o2.drawImage(t2, dx, dy); }
+    o2.drawImage(c, 1, 1);
+    return out;
+  });
+}
+function dibujarLogo(y) {
+  const s = logoSpr(), x = Math.round(W / 2 - s.width / 2);
+  g.drawImage(s, x, y);
+  // el que cae, entre las dos palabras
+  const h = heroeSpr(Math.floor(performance.now() / 150) % 2 ? "cae" : "dispara", false);
+  g.drawImage(h, x + 10, y + 30 + Math.round(Math.sin(performance.now() / 300) * 2));
+  return y + s.height;
+}
+
+// ── el fondo de los menús: un pozo que cae para siempre ──
+const _fondo = { y: 0, cosas: Array.from({ length: 10 }, () => ({ x: 20 + Math.random() * 140, y: Math.random() * 500, t: Math.random() < 0.3 ? "gema" : "blq" })) };
+function dibujarFondoMenu() {
+  g.fillStyle = C_FONDO; g.fillRect(0, 0, W, H);
+  _fondo.y += 1.2;
+  const f0 = Math.floor(_fondo.y / T);
+  for (let fy = f0 - 1; fy < f0 + Math.ceil(H / T) + 2; fy++) {
+    const Y = Math.round(fy * T - _fondo.y), l = 1 + ((fy * 7919) >>> 3) % 2, r = 1 + ((fy * 104729) >>> 4) % 2;
+    for (let x = 0; x < l; x++) g.drawImage(rocaSpr(2, fy & 3), x * T - 6, Y);
+    for (let x = 0; x < r; x++) g.drawImage(rocaSpr(8, (fy + 1) & 3), W - (x + 1) * T + 6, Y);
+  }
+  for (const c of _fondo.cosas) { c.y -= 0.9; if (c.y < -20) { c.y = H + 20; c.x = 24 + Math.random() * (W - 48); } g.drawImage(c.t === "gema" ? gemaSpr(true) : bloqueSpr("n"), Math.round(c.x), Math.round(c.y)); }
+}
+
+function pantallaTitulo() {
+  dibujarFondoMenu();
+  const fin = dibujarLogo(Math.round(H * 0.16));
+  if (Math.floor(performance.now() / 500) % 2) texto(L(IN.tactil || matchMedia("(pointer: coarse)").matches ? TX.tocar : TX.tecla), W / 2, Math.max(fin + 40, Math.round(H * 0.58)));
+  texto(`${L(TX.totalGemas)} ${G.totalGemas}`, W / 2, H - 22, { alfa: 0.8 });
+  // sólo al LEVANTAR el dedo (el toque) o con una tecla: si avanzara al apoyarlo, al soltarlo ese
+  // mismo toque caía sobre el botón del menú que queda debajo (cambiaba el idioma sin querer)
+  if (IN.toques.length || recien("k:Space") || recien("ok") || recien("k:KeyZ")) { IN.toques.length = 0; irA("menu"); sfx("elegir"); tocarTema("titulo"); }
+}
+function pantallaMenu() {
+  dibujarFondoMenu();
+  const fin = dibujarLogo(24);
+  uiEmpezar("menu");
+  const bw = 120, x = Math.round(W / 2 - bw / 2); let y = Math.max(fin + 20, Math.round(H * 0.38));
+  boton(x, y, bw, 18, TX.jugar, () => { nuevaPartida(); irA("juego"); }); y += 24;
+  boton(x, y, bw, 18, `${L(TX.estilo)}: ${L(ESTILOS[G.estilo].n)}`, () => irA("estilos")); y += 24;
+  boton(x, y, bw, 18, `${L(TX.paleta)}: ${PALA.n}`, () => irA("paletas")); y += 24;
+  boton(x, y, bw, 18, TX.opciones, () => irA("opciones")); y += 24;
+  boton(x, y, bw, 18, TX.idioma, () => cambiarIdioma());
+  texto(`${L(TX.totalGemas)} ${G.totalGemas}`, W / 2, H - 34);
+  if (G.record.prof) texto(`${L(TX.prof)} ${G.record.prof} · ${L(TX.maxCombo)} ${G.record.combo}`, W / 2, H - 22, { alfa: 0.7 });
+  uiProcesar(() => irA("titulo"));
+}
+function pantallaEstilos() {
+  dibujarFondoMenu();
+  texto(L(TX.estilo), W / 2, 12, { escala: 2 });
+  uiEmpezar("estilos");
+  let y = 40;
+  for (const [k, e] of Object.entries(ESTILOS)) {
+    const abierto = G.totalGemas >= e.precio;
+    boton(8, y, W - 16, 44, "", () => { if (abierto) { G.estilo = k; guardar(); sfx("elegir"); } }, { apagado: !abierto });
+    texto((G.estilo === k ? "> " : "") + L(e.n), W / 2, y + 5, { color: G.estilo === k ? "acento" : "tinta" });
+    if (abierto) parrafo(e.d, W / 2, y + 17, W - 30, { paso: 9 });
+    else texto(`${L(TX.bloqueado)} · ${e.precio}`, W / 2, y + 22, { alfa: 0.6 });
+    y += 50;
+  }
+  boton(Math.round(W / 2 - 50), y + 6, 100, 18, TX.volver, () => irA("menu"));
+  uiProcesar(() => irA("menu"));
+}
+function pantallaPaletas() {
+  dibujarFondoMenu();
+  texto(L(TX.paleta), W / 2, 12, { escala: 2 });
+  uiEmpezar("paletas");
+  let y = 38;
+  for (const [k, p] of Object.entries(PALETAS)) {
+    const abierto = G.totalGemas >= p.precio;
+    boton(10, y, W - 20, 22, "", () => { if (abierto) { ponerPaleta(k); sfx("elegir"); } }, { apagado: !abierto });
+    p.c.forEach((col, i) => { g.fillStyle = "#808080"; g.fillRect(15 + i * 11, y + 5, 11, 12); g.fillStyle = col; g.fillRect(16 + i * 11, y + 6, 9, 10); });
+    texto(abierto ? (G.paleta === k ? "> " : "") + p.n : `${L(TX.bloqueado)} ${p.precio}`, 55, y + 8, { al: "izq", alfa: abierto ? 1 : 0.6 });
+    y += 26;
+  }
+  boton(Math.round(W / 2 - 50), y + 6, 100, 18, TX.volver, () => irA("menu"));
+  uiProcesar(() => irA("menu"));
+}
+function pantallaOpciones() {
+  dibujarFondoMenu();
+  texto(L(TX.opciones), W / 2, 12, { escala: 2 });
+  uiEmpezar("opciones");
+  const x = 18, w = W - 36; let y = 44;
+  const vol = (k) => { G.op[k] = G.op[k] >= 1 ? 0 : Math.round((G.op[k] + 0.2) * 10) / 10; volumenes(); guardar(); if (k === "efectos") sfx("gema"); };
+  boton(x, y, w, 18, `${L(TX.musica)}: ${Math.round(G.op.musica * 100)}%`, () => vol("musica")); y += 24;
+  boton(x, y, w, 18, `${L(TX.efectos)}: ${Math.round(G.op.efectos * 100)}%`, () => vol("efectos")); y += 24;
+  boton(x, y, w, 18, `${L(TX.temblor)}: ${L(G.op.temblor ? TX.si : TX.no)}`, () => { G.op.temblor = G.op.temblor ? 0 : 1; guardar(); }); y += 24;
+  boton(x, y, w, 18, TX.idioma, () => cambiarIdioma()); y += 24;
+  boton(x, y, w, 18, TX.completa, () => { _completaPendiente = true; }); y += 32;
+  boton(Math.round(W / 2 - 50), y, 100, 18, TX.volver, () => irA("menu"));
+  uiProcesar(() => irA("menu"));
+}
+
+// ── dentro de la partida ──
+function pantallaPausa() {
+  g.fillStyle = C_FONDO; g.globalAlpha = 0.82; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+  texto(L(TX.pausa), W / 2, Math.round(H * 0.2), { escala: 2 });
+  texto(nombreNivel(), W / 2, Math.round(H * 0.2) + 20, { color: "acento" });
+  uiEmpezar("pausa");
+  const bw = 110, x = Math.round(W / 2 - bw / 2); let y = Math.round(H * 0.34);
+  boton(x, y, bw, 18, TX.seguir, () => { J.pausa = false; }); y += 24;
+  boton(x, y, bw, 18, TX.reintentar, () => { J.pausa = false; nuevaPartida(); }); y += 24;
+  boton(x, y, bw, 18, `${L(TX.musica)}: ${Math.round(G.op.musica * 100)}%`, () => { G.op.musica = G.op.musica >= 1 ? 0 : Math.round((G.op.musica + 0.2) * 10) / 10; volumenes(); guardar(); }); y += 24;
+  boton(x, y, bw, 18, TX.idioma, () => cambiarIdioma()); y += 24;
+  boton(x, y, bw, 18, TX.salir, () => { J.pausa = false; J.jug.muerto = true; terminarPartida(); });
+  texto(`${L(ARMAS[J.arma].n)}`, W / 2, y + 34, { alfa: 0.8 });
+  uiProcesar(() => { J.pausa = false; });
+}
+function pantallaMejora() {
+  g.fillStyle = C_FONDO; g.globalAlpha = 0.9; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+  texto(nombreNivel(), W / 2, 20, { color: "acento" });
+  texto(L(TX.elegir), W / 2, 34, { escala: 2 });
+  uiEmpezar("mejora" + J.zona + J.nivel);
+  let y = 62;
+  for (const k of J.opciones) {
+    const M2 = MEJORAS[k], foco = boton(8, y, W - 16, 46, "", () => elegirMejora(k));
+    const ic = iconoSpr(M2.ico); g.fillStyle = C_FONDO; g.fillRect(13, y + 7, 20, 20); g.drawImage(ic, 14, y + 8, 18, 18);
+    texto(L(M2.n), 38, y + 6, { al: "izq", sombra: !foco });
+    renglones(L(M2.d), W - 56).slice(0, 3).forEach((r, i) => texto(r, 38, y + 17 + i * 9, { al: "izq", sombra: !foco }));
+    y += 52;
+  }
+  texto(`${L(TX.gemas)} ${J.gemasPartida}`, W / 2, H - 20);
+  uiProcesar(null);
+}
+function pantallaFin() {
+  g.fillStyle = C_FONDO; g.globalAlpha = 0.92; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+  const y0 = Math.round(H * 0.12);
+  parrafo(J.ganado ? TX.ganaste : TX.muerto, W / 2, y0, W - 20, { escala: 2, paso: 18 });
+  const filas = [[TX.prof, J.ganado ? L(TX.abismo) : nombreNivel()], [TX.gemas, J.gemasJuntadas], [TX.bichos, J.kills], [TX.maxCombo, J.maxCombo], [TX.tiempo, reloj(J.t)], [TX.totalGemas, G.totalGemas]];
+  let y = y0 + 52;
+  for (const [k, v] of filas) { texto(L(k), 16, y, { al: "izq" }); texto(String(v), W - 16, y, { al: "der", color: "acento" }); y += 14; }
+  if (J.nuevos && J.nuevos.length) { y += 4; texto(L(TX.desbloqueado), W / 2, y, { color: "acento" }); y += 12; for (const n of J.nuevos) { texto(n, W / 2, y); y += 11; } }
+  uiEmpezar("fin");
+  const bw = 100, x = Math.round(W / 2 - bw / 2); y = Math.max(y + 12, Math.round(H * 0.66));
+  boton(x, y, bw, 18, TX.otraVez, () => { nuevaPartida(); }); y += 24;
+  boton(x, y, bw, 18, TX.menu, () => { irA("menu"); tocarTema("titulo"); });
+  uiProcesar(null);
+}
+const reloj = (s) => { s = Math.floor(s); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+
+// ══════════ 99-arranque.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// EL ARRANQUE: bucle a paso fijo (60 Hz), la pausa, y las sondas del banco de pruebas (window.__AB).
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PANTALLAS = { titulo: pantallaTitulo, menu: pantallaMenu, estilos: pantallaEstilos, paletas: pantallaPaletas, opciones: pantallaOpciones };
+let _acum = 0, _ultimo = 0, _n = 0;
+_completaPendiente = matchMedia("(pointer: coarse)").matches;
+
+function cuadro() {
+  if (PANT === "juego" && J) {
+    dibujarJuego();
+    if (J.fase === "mejora") pantallaMejora();
+    else if (J.fase === "fin") pantallaFin();
+    else if (J.pausa) pantallaPausa();
+    else {
+      // la pausa: el ícono de arriba al centro, o Esc / P
+      if (recien("atras") || recien("pausa") || IN.toques.some((t) => t.y < 20 && Math.abs(t.x - W / 2 - 4) < 14)) { J.pausa = true; UI.pantallaFoco = null; sfx("clic"); }
+    }
+  } else PANTALLAS[PANT]();
+  volcar();
+  finCuadroEntrada();
+}
+function bucle(ts) {
+  requestAnimationFrame(bucle);
+  const dt = Math.min(100, ts - (_ultimo || ts)); _ultimo = ts; _acum += dt;
+  if (++_n % 15 === 0) medir();
+  let pasos = 0;
+  while (_acum >= CUADRO && pasos < 4) { _acum -= CUADRO; pasos++; if (PANT === "juego" && J) { pasoJuego(1 / 60); if (pasos === 1) EDGE.forEach((k) => { if (k === "salto") EDGE.delete(k); }); } }
+  if (pasos === 4) _acum = 0;
+  cuadro();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { if (PANT === "juego" && J && J.fase === "juego") J.pausa = true; if (AU.ctx) AU.ctx.suspend().catch(() => {}); }
+  else if (AU.ctx) AU.ctx.resume().catch(() => {});
+});
+
+window.__AB = {
+  get J() { return J; }, get PANT() { return PANT; }, G: () => G,
+  nueva(semilla = 7) { nuevaPartida(semilla); PANT = "juego"; return true; },
+  paso(n = 1, o = {}) { for (let i = 0; i < n; i++) { IN.teclas.clear(); if (o.izq) IN.teclas.add("izq"); if (o.der) IN.teclas.add("der"); if (o.salto) IN.teclas.add("salto"); if (o.press) EDGE.add("salto"); pasoJuego(1 / 60); finCuadroEntrada(); } IN.teclas.clear(); },
+  dibujar() { cuadro(); }, ir(p) { irA(p); cuadro(); },
+  nivel(z, n) { J.zona = z; J.nivel = n; empezarNivel(); },
+  listo: true,
+};
+requestAnimationFrame(bucle);
+
+</script>
+</body>
+</html>
