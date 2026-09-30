@@ -30,6 +30,9 @@ export class UI {
     /* el telón, cerrado de entrada */
     this.telonEl = $('div', 'telon cerrado', raiz, '<div class="ala izq"></div><div class="ala der"></div><div class="cenefa"></div>');
     this.hojaEl = $('div', 'pasahoja', raiz);
+    /* con el teléfono parado, abajo del escenario: la bandeja de cartón donde van los dedos
+       (tocarla también pasa las charlas). La hoja de estilos la muestra solo en html.vertical */
+    this.bandejaEl = $('div', 'bandeja', raiz, '<i class="tira"></i><i class="costura"></i><i class="sello">KUNTUR</i><i class="boleto-impreso">TREN A LAS NUBES · SALTA–JUJUY</i>');
     this.tactil = null;
     addEventListener('keydown', (e) => { if (e.code === 'Tab' && this.foco) e.preventDefault(); });
   }
@@ -104,7 +107,7 @@ export class UI {
     this.limpiar();
     const c = $('div', 'idioma', this.capa);
     $('div', 'cinta', c, 'KUNTUR');
-    $('div', 'elegi', c, IDIOMAS.map(([l]) => esc(TEXTOS[l].ui.elegi)).join(' <span>·</span> '));
+    $('div', 'elegi', c, IDIOMAS.map(([l]) => `<i>${esc(TEXTOS[l].ui.elegi)}</i>`).join(' <span>·</span> '));
     const tags = $('div', 'tags', c);
     const items = IDIOMAS.map(([l, nombre], i) => {
       const b = $('button', 'tag', tags, `<span class="ojal"></span><b>${esc(TEXTOS[l].ui.saludo)}</b><i>${esc(nombre)}</i>`);
@@ -154,7 +157,9 @@ export class UI {
     $('h2', '', c, esc(tr('capitulos')));
     const lugar = $('div', 'lugar', c);
     const plano = $('div', 'plano', c);
-    const W = 100, pos = lista.map((_, i) => [8 + i * (84 / (lista.length - 1)), i % 2 ? 30 : 68]);
+    /* parado, el recorrido baja por el mapa en zigzag (de costado las paradas no entraban) */
+    const W = 100, V = Pantalla.vertical;
+    const pos = lista.map((_, i) => V ? [i % 2 ? 70 : 30, 7 + i * (86 / (lista.length - 1))] : [8 + i * (84 / (lista.length - 1)), i % 2 ? 30 : 68]);
     const svg = `<svg viewBox="0 0 ${W} 100" preserveAspectRatio="none"><path d="M${pos.map((p) => p.join(' ')).join(' L')}" /></svg>`;
     plano.innerHTML = svg;
     const items = lista.map(([id, n, nombre], i) => {
@@ -232,7 +237,7 @@ export class UI {
     const cartel = $('div', 'cartel quieto', c, `<small>${esc(o.capitulo)}</small><b>${esc(tr('pausa'))}</b><em>${esc(tr('coplasDe', o.coplas, o.total))}</em>`);
     cartel.style.setProperty('--col', '#6a2f9a');
     const bs = $('div', 'boletos', c);
-    const items = o.opciones.map(([k, txt], i) => { const b = $('button', 'boleto', bs, `<span class="sombra"></span><span class="papel"></span><span class="num">Nº ${String(88 + i * 11).padStart(4, '0')}</span><span class="txt">${esc(txt)}</span><span class="sello">KUNTUR</span>`); b.style.setProperty('--col', PALETA[(i * 2 + 1) % PALETA.length]); b.style.setProperty('--d', `${i * 0.05}s`); return b; });
+    const items = o.opciones.map(([k, txt], i) => { const b = $('button', 'boleto', bs, `<span class="sombra"></span><span class="papel"></span><span class="num">Nº ${String(88 + i * 11).padStart(4, '0')}</span><span class="txt">${esc(txt)}</span><span class="sello">KUNTUR</span>`); b.style.setProperty('--col', PALETA[(i * 2 + 1) % PALETA.length]); b.style.setProperty('--d', `${i * 0.05}s`); b.dataset.k = k; return b; });
     this.lista(items, { i: 0, elegir: (i) => o.elegir(o.opciones[i][0]), volver: () => o.elegir('continuar') });
   }
 
@@ -285,8 +290,9 @@ export class UI {
     G.completar = () => { G.t = 999; G.escribir(0); };
     G.poner = (x, y) => {
       const w = g.offsetWidth, h = g.offsetHeight;
-      const W = Pantalla.w, H = Pantalla.h;
-      const lado = W * 0.075 + 8, arriba = Math.max(64, H * 0.1);
+      /* adentro de la vista (parado, arriba de la bandeja) y fuera del telón y la cenefa */
+      const V = Pantalla.vista, W = V.w, H = V.h;
+      const lado = Pantalla.vertical ? 14 : W * 0.075 + 8, arriba = Pantalla.vertical ? 52 + Pantalla.seguro.arr : Math.max(64, H * 0.1);
       const X = Math.max(lado, Math.min(W - w - lado, x - w * 0.35)), Y = Math.max(arriba, Math.min(H - h - 12, y - h - 26));
       g.style.transform = `translate(${X}px,${Y}px)`;
       g.style.setProperty('--cola', `${Math.max(18, Math.min(w - 26, x - X))}px`);
@@ -356,8 +362,11 @@ export class UI {
 
   /* ---------------- los controles de dedo ----------------
      A (las opciones guardadas): { modo, alfa, vib, pos: { k: {x, y} en fracción
-     de la pantalla }, tam: { k: escala } } con k = pal, salto, accion, pausa.
-     Sin posición guardada, cada uno va a su lugar de siempre, adentro del telón. */
+     de la pantalla }, posV: { k: {x, y} en fracción de la bandeja }, tam: { k: escala } }
+     con k = pal, salto, accion, pausa. pos es para acostado y posV para parado: cada
+     orientación se acomoda aparte y una no le desarma la otra.
+     Sin posición guardada, cada uno va a su lugar de siempre, adentro del telón (acostado)
+     o en la bandeja (parado). */
   controlesTactiles(alPausa, A) {
     if (this.tactil) return;
     this.A = A;
@@ -379,16 +388,24 @@ export class UI {
   }
   verTactil(v) { if (this.tactil) this.tactil.classList.toggle('ve', v); }
 
-  /* el marco del teatrito: lo que tapan el telón abierto y la cenefa */
+  /* el marco del teatrito: acostado, lo que no tapan el telón abierto y la cenefa; parado, la
+     bandeja (menos la tira tejida de arriba y la rayita de inicio del sistema) */
   marco() {
-    const w = Pantalla.w, h = Pantalla.h;
+    const w = Pantalla.w, h = Pantalla.h, B = Pantalla.bandeja;
+    if (B) return { w, h, izq: 10, der: w - 10, arr: B.y + 30, aba: h - Pantalla.seguro.aba - 6, vertical: true };
     return { w, h, izq: w * 0.067, der: w - w * 0.067, arr: Math.max(56, h * 0.09), aba: h };
   }
+  /* un punto del marco guardado en fracción: acostado de la pantalla, parado de la bandeja */
+  aFraccion(M, x, y) { return M.vertical ? { x: (x - M.izq) / (M.der - M.izq), y: (y - M.arr) / (M.aba - M.arr) } : { x: x / M.w, y: y / M.h }; }
+  deFraccion(M, f) { return M.vertical ? [M.izq + f.x * (M.der - M.izq), M.arr + f.y * (M.aba - M.arr)] : [f.x * M.w, f.y * M.h]; }
+  posiciones() { return Pantalla.vertical ? this.A.posV : this.A.pos; }
   /* dónde va el centro de cada control, en px del juego, siempre adentro del marco */
   centro(k) {
-    const M = this.marco(), A = this.A, s = TAM_CTL[k] * A.tam[k];
-    const def = { pal: [M.izq + 66, M.h - 126], salto: [M.der - 56, M.h - 72], accion: [M.der - 142, M.h - 116], pausa: [M.der - 33, M.arr + 27] }[k];
-    let x = A.pos[k] ? A.pos[k].x * M.w : def[0], y = A.pos[k] ? A.pos[k].y * M.h : def[1];
+    const M = this.marco(), A = this.A, P = this.posiciones();
+    /* parado hay lugar de sobra en la bandeja: los controles, un poco más grandes */
+    const s = TAM_CTL[k] * A.tam[k] * (M.vertical && k !== 'pausa' ? 1.2 : 1);
+    const def = M.vertical ? this.deFraccion(M, DEF_V[k]) : { pal: [M.izq + 66, M.h - 126], salto: [M.der - 56, M.h - 72], accion: [M.der - 142, M.h - 116], pausa: [M.der - 33, M.arr + 27] }[k];
+    let [x, y] = P[k] ? this.deFraccion(M, P[k]) : def;
     const entre = (v, a, b) => (a > b ? (a + b) / 2 : Math.max(a, Math.min(b, v)));
     x = entre(x, M.izq + s / 2 + 2, M.der - s / 2 - 2); y = entre(y, M.arr + s / 2, M.aba - s / 2 - 4);
     return { x, y, s };
@@ -406,7 +423,7 @@ export class UI {
     /* la palanca flotante escucha toda la mitad de su lado; la fija y la cruz, un poco más que su dibujo */
     const c = this.centro('pal'), r = c.s / 2, z = C.zona.style;
     let zx, zy, zw, zh;
-    if (A.modo === 'flotante') { zx = c.x < M.w / 2 ? 0 : M.w / 2; zy = M.arr; zw = M.w / 2; zh = M.h - M.arr; }
+    if (A.modo === 'flotante') { zx = c.x < M.w / 2 ? 0 : M.w / 2; zy = M.arr; zw = M.w / 2; zh = (M.vertical ? M.aba + 6 : M.h) - M.arr; }
     else { zw = zh = r * 3.2; zx = c.x - zw / 2; zy = c.y - zh / 2; }
     Object.assign(z, { left: zx + 'px', top: zy + 'px', width: zw + 'px', height: zh + 'px' });
     Object.assign(C.pal.style, { width: r * 2 + 'px', height: r * 2 + 'px' });
@@ -450,7 +467,7 @@ export class UI {
         this.A.tam[this.sel] = Math.round(Math.max(0.6, Math.min(1.8, pinza.s0 * Math.hypot(a.x - b.x, a.y - b.y) / pinza.d0)) * 20) / 20;
         this.acomodar(); this.pintarBarra();
       } else if (mov && e.pointerId === mov.id) {
-        this.A.pos[this.sel] = { x: (q.x + mov.dx) / M.w, y: (q.y + mov.dy) / M.h };
+        this.posiciones()[this.sel] = this.aFraccion(M, q.x + mov.dx, q.y + mov.dy);
         this.barraEd.classList.add('lejos');
         this.acomodar();
       }
@@ -462,7 +479,7 @@ export class UI {
       if (mov && mov.id === e.pointerId) {
         /* queda guardado donde se ve (ya metido adentro del marco) */
         const c = this.centro(this.sel), M = this.marco();
-        this.A.pos[this.sel] = { x: c.x / M.w, y: c.y / M.h };
+        this.posiciones()[this.sel] = this.aFraccion(M, c.x, c.y);
         mov = null;
       }
       if (this.barraEd) this.barraEd.classList.remove('lejos');
@@ -513,8 +530,9 @@ export class UI {
       else if (k === 'alfa') A.alfa = Math.round(Math.max(0.2, Math.min(1, A.alfa + d * 0.1)) * 10) / 10;
       else if (k === 'modo') A.modo = MODOS[(MODOS.indexOf(A.modo) + (d || 1) + 3) % 3];
       else if (k === 'vib') { A.vib = !A.vib; Entrada.vibrar = A.vib; Entrada.zumbar(30); }
-      else if (k === 'espejo') for (const n of Object.keys(TAM_CTL)) { const c = this.centro(n); A.pos[n] = { x: 1 - c.x / M.w, y: c.y / M.h }; }
-      else if (k === 'reset') { A.pos = {}; A.tam = { pal: 1, salto: 1, accion: 1, pausa: 1 }; A.modo = 'flotante'; A.alfa = 0.85; }
+      else if (k === 'espejo') { const P = this.posiciones(); for (const n of Object.keys(TAM_CTL)) { const c = this.centro(n), f = this.aFraccion(M, c.x, c.y); P[n] = { x: 1 - f.x, y: f.y }; } }
+      /* restablecer: las posiciones de esta orientación (la otra queda como estaba) y lo demás */
+      else if (k === 'reset') { if (Pantalla.vertical) A.posV = {}; else A.pos = {}; A.tam = { pal: 1, salto: 1, accion: 1, pausa: 1 }; A.modo = 'flotante'; A.alfa = 0.85; }
       else if (k === 'listo') { salir(); return; }
       this.acomodar(); this.pintarBarra();
       if (alCambio) alCambio();
@@ -533,4 +551,7 @@ export class UI {
 
 /* el tamaño de cada control a escala 1 (la palanca, de diámetro) y cómo se llama */
 const TAM_CTL = { pal: 88, salto: 76, accion: 64, pausa: 46 };
+/* parado, el lugar de fábrica en la bandeja (en fracción): la palanca a la izquierda, los botones
+   a la derecha como en un mando, y la pausa arriba en la esquina, lejos de los pulgares */
+const DEF_V = { pal: { x: 0.24, y: 0.55 }, salto: { x: 0.83, y: 0.64 }, accion: { x: 0.6, y: 0.37 }, pausa: { x: 0.94, y: 0.08 } };
 const NOMBRE_CTL = { pal: 'cCaminar', salto: 'cSaltar', accion: 'cMano', pausa: 'cPausa' };

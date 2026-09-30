@@ -12,8 +12,10 @@ export const PARA_ABRIR = 1500;
 
 export const CONTROLES_BASE = () => ({
   modo: 'pedales', tam: 1, alfa: 0.9, lado: 'normal', vibrar: true,
-  /* dónde van, en fracción de la pantalla (el centro de cada pedal) */
+  /* dónde van, en fracción de la pantalla (el centro de cada pedal): acostado (pos) y con el teléfono parado (posV).
+     Parado van abajo, uno en cada esquina, por encima de la rayita del iPhone */
   pos: { freno: { x: 0.1, y: 0.8 }, gas: { x: 0.9, y: 0.78 } },
+  posV: { freno: { x: 0.24, y: 0.87 }, gas: { x: 0.84, y: 0.865 } },
 });
 const NUEVA = () => ({
   v: 1, idioma: null, monedas: 0, vehiculo: 'chata',
@@ -21,7 +23,7 @@ const NUEVA = () => ({
   mejoras: Object.fromEntries(ORDEN_VEHICULOS.map((v) => [v, Object.fromEntries(MEJORAS.map((m) => [m, 0]))])),
   abiertos: { puna: true }, record: {}, llego: {}, picadas: {}, tramo: 'puna',
   vista: { intro: false, fin: false, tuto: false },
-  opciones: { musica: 0.7, motor: 0.85, efectos: 0.9, radio: true, calidad: 'alta', giro: 'auto', estilo: 'folk' },
+  opciones: { musica: 0.7, motor: 0.85, efectos: 0.9, radio: true, calidad: 'alta', giro: 'auto', parado: 'vertical', estilo: 'folk' },
   controles: CONTROLES_BASE(),
   cuenta: { viajes: 0, metros: 0, vueltas: 0 },
 });

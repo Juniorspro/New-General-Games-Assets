@@ -62,7 +62,7 @@ await pag.waitForSelector('#menu', { timeout: 20000 });
 await tocar('#menu .botones button:nth-child(4)');
 await pag.waitForSelector('#ajustes', { timeout: 20000 });
 await esperar(700); await foto('12-ajustes');
-await tocar('#ajustes .fila:nth-child(10) button');
+await tocar('#ajustes .filaControles button');
 await pag.waitForSelector('#controles', { timeout: 20000 });
 await esperar(700); await foto('13-controles');
 await tocar('#controles .barraBotones button:nth-child(3)');

@@ -28,7 +28,7 @@ async function arrancar() {
   cargar();
   const nav = (navigator.language || 'es').slice(0, 2);
   ponerIdioma(P.idioma || (nav === 'pt' ? 'pt' : nav === 'en' ? 'en' : 'es'));
-  Pantalla.giro = P.opciones.giro; Pantalla.calidad = P.opciones.calidad;
+  Pantalla.giro = P.opciones.giro; Pantalla.parado = P.opciones.parado; Pantalla.calidad = P.opciones.calidad;
   Pantalla.iniciar();
   Pantalla.alCambiar.push(medir);
   UI.Polvo.iniciar();
@@ -93,6 +93,7 @@ function irAjustes() {
     idioma: (i) => { P.idioma = i; ponerIdioma(i); guardar(); irAjustes(); },
     calidad: (c) => { Pantalla.ponerCalidad(c); },
     giro: (g) => { Pantalla.ponerGiro(g); },
+    parado: (p) => { Pantalla.ponerParado(p); },
     estilo: (e) => { Sonido.estilo = e; const m = Sonido.modoMusica; Sonido.modoMusica = null; Sonido.musica(m); },
     controles: () => irControles(),
     borrar: () => { borrar(); demo = null; UI.Polvo.pasar(() => irIdioma()); },
@@ -272,7 +273,15 @@ function semaforo(n) {
 function tutorial() {
   const el = document.getElementById('hud');
   const cartel = (txt, estilo, simbolo) => { const c = UI.h('div', { class: 'tutoCartel', style: estilo }, UI.h('div', { class: 'rombo' }, UI.h('span', { text: simbolo })), UI.h('p', { text: txt })); el.append(c); setTimeout(() => c.remove(), 6500); };
-  if (esTactil()) {
+  if (esTactil() && Pantalla.vertical) {
+    /* parado: cada cartel justo arriba de su pedal, sin pisarse entre ellos ni tapar el auto */
+    const junto = (n) => {
+      const r = Controles.el[n].getBoundingClientRect(), an = Pantalla.W * 0.48;
+      return { left: Math.max(6, Math.min(Pantalla.W - an - 6, r.left + r.width / 2 - an / 2)) + 'px', bottom: Math.max(0, Pantalla.H - r.top + 10) + 'px', width: an + 'px', maxWidth: 'none' };
+    };
+    cartel(t('tutoGas'), junto('gas'), '→');
+    cartel(t('tutoFreno'), junto('freno'), '←');
+  } else if (esTactil()) {
     const pg = P.controles.pos.gas, pf = P.controles.pos.freno;
     cartel(t('tutoGas'), { left: `calc(${pg.x * 100}% - 130px)`, top: `calc(${pg.y * 100}% - 260px)` }, '→');
     cartel(t('tutoFreno'), { left: `calc(${pf.x * 100}% - 60px)`, top: `calc(${pf.y * 100}% - 260px)` }, '←');
@@ -285,6 +294,8 @@ function tutorial() {
 let antes = performance.now();
 function bucle(ahora) {
   const dt = Math.min(0.1, (ahora - antes) / 1000); antes = ahora;
+  /* con el teléfono parado, en el menú el auto va más arriba (abajo están los carteles); manejando, en el tercio de abajo */
+  dib.alturaAuto = estado === 'viaje' || estado === 'resultado' || estado === 'controles' ? 0.6 : 0.46;
   try {
     if (estado === 'viaje' && viaje) {
       if (!pausado) {
@@ -310,5 +321,5 @@ function bucle(ahora) {
 }
 
 /* para las pruebas (pruebas/navegador.mjs) */
-window.__r40 = { P, terminar: (c) => viaje && viaje.terminar(c), get viaje() { return viaje; }, get demo() { return demo; }, get estado() { return estado; }, empezar, irMapa, irGomeria, irMenu, alternarPausa, Sonido, dib };
+window.__r40 = { P, terminar: (c) => viaje && viaje.terminar(c), get viaje() { return viaje; }, get demo() { return demo; }, get estado() { return estado; }, empezar, irMapa, irGomeria, irMenu, irAjustes, irPicadas, alternarPausa, Sonido, dib, Pantalla, Controles, idioma: (i) => { P.idioma = i; ponerIdioma(i); } };
 arrancar();

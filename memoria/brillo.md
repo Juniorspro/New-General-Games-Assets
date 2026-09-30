@@ -19,11 +19,10 @@ que hace falta para tocarlo sin romperlo.
   Para probar un mundo:
   - `d.partida = {...}; d.jugar(id, null)`;
   - para teletransportar: `d.N.m.p.x = ..`.
-- Los scripts de las pruebas en Chromium estaban en el scratchpad, que se
-  borra. Si se rehacen:
-  - pasar las charlas con Enter;
-  - para el teléfono, tocar por CDP (`Input.dispatchTouchEvent`), con 390x844
-    y `isMobile`.
+- La prueba del teléfono está en el repo: `node brillo/pruebas/vertical.mjs
+  [--rapido]` (parado en 3 tamaños, acostado, con dedos por CDP; unos 12 min,
+  capturas en `pruebas/salida/`, que no se commitea). Las charlas se pasan
+  tocando; con teclado, con Enter.
 
 ## Cómo está hecho
 
@@ -130,6 +129,28 @@ que hace falta para tocarlo sin romperlo.
   - `trailer/audio.js` los trae con `fetch`.
 - **Las gotas:** pidió "pup, no tiring". Ahora suenan como un seno que sube de
   300 a 720 Hz en 50 ms (`sonido.js › pup`), en vez de la campanita.
+
+## Celular parado: vertical (30/09)
+
+- Táctil y parado (`Pantalla.vertical`): arriba el juego a lo ancho, 416 de
+  alto (la Colina y el Plano entran enteros) y 288–416 de ancho; abajo la
+  consola de vidrio con los dedos. En 390x844: 320x416, el juego en el 60 %.
+  Más no: con el alto fijo, cada punto de más le saca ancho (66 % daba 291).
+- Acostado y escritorio quedan igual: la prueba compara con lo medido antes.
+- Los menús usan toda la pantalla y `--u` es el 1 % del ancho (mismas letras
+  que acostado). La charla y el mensaje de Mora van en la consola, con fotos
+  como en el Messenger; si no entra una línea se van las viejas (`recortar`).
+- Cámara parada: 21 % del ancho adelante, baja si Nick cae rápido y en las
+  charlas va al medio de los dos (`Nivel.foco`); el zoom baja hasta 1×.
+- Dedos parados en `posV`/`tamV`, aparte de `pos`/`tam`. `opc.giro`:
+  'vertical' de fábrica o los giros de antes; `v < 3` con 'auto' pasa a
+  'vertical'. Parado, `acostar()` no traba de costado.
+- **Trampas:** textos separados por `<span>` ocultos en un flex en columna se
+  juntan en un solo ítem (cada uno en su `<em>`); el aro que gira de la
+  burbuja del idioma da un `scrollWidth` falso; en SwiftShader la calidad
+  auto baja sola (fijá 'alta' para medir); un toque por CDP a veces se pierde
+  (la prueba repite y avisa); la pausa abre en `pointerdown` y su click cae
+  después en la ventana (el botón no puede quedar sobre una píldora).
 
 ## El tráiler y el rendimiento
 

@@ -61,6 +61,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#2f8fe8;touch-action
 .idioma{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(4*var(--u))}
 .idioma .elegi{padding:calc(1*var(--u)) calc(3*var(--u));border-radius:999px;font-size:clamp(13px,calc(3*var(--u)),22px);font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,50,120,.7);background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.6);animation:aparece .8s both}
 .idioma .elegi span{opacity:.6;margin:0 .3em}
+.idioma .elegi em{font-style:normal}
 .burbujas{display:flex;gap:calc(6*var(--u));align-items:center}
 .burbujaIdioma{position:relative;width:calc(30*var(--u));height:calc(30*var(--u));border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-shadow:0 1px 2px rgba(0,40,100,.8),0 0 8px rgba(0,60,140,.5);
   background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.95) 0 7%,rgba(255,255,255,.2) 16%,transparent 30%),radial-gradient(circle at 50% 50%,rgba(170,225,255,.12) 55%,hsla(var(--h),90%,75%,.55) 68%,rgba(255,255,255,.85) 72%,rgba(120,200,255,.3) 74%,transparent 75%);
@@ -280,3 +281,83 @@ html.bajita .acomoda small{display:none}
 .tactil *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .tactil .aro,.tactil .bSalto,.tactil .bZumbido,.tactil .bPausa{background-color:rgba(120,190,245,.18)}
 html.calidadBaja *{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+
+/* ================= el celular parado: el juego arriba y la consola abajo =================
+   Pantalla pone html.vertical y las medidas: --cy (dónde empieza la consola), --cw y --ch
+   (su tamaño, sin la barrita del sistema) y --abajo (lo que tapa esa barrita). La interfaz
+   se mide con el ancho (--u = 1 % del ancho): en el mismo teléfono, acostado o parado, las
+   letras y los botones quedan del mismo tamaño. Los menús usan toda la pantalla. */
+.consola{display:none}
+html.vertical{--u:min(var(--vw),calc(var(--vh) * .5));--cons1:#86d6ff;--cons2:#3aa6f1;--cons3:#1d88e0;--cons4:#0f60bf;--consLuz:rgba(140,255,170,.6)}
+/* la consola toma el ánimo de cada mundo (la Colina, y el título, van con el azul de arriba) */
+html.vertical[data-mundo=arrecife]{--cons1:#86ecf2;--cons2:#28bad8;--cons3:#1690c4;--cons4:#0a5a96;--consLuz:rgba(255,160,215,.42)}
+html.vertical[data-mundo=ciudad]{--cons1:#a8f2ff;--cons2:#45c4ef;--cons3:#1c92d6;--cons4:#0c5fae;--consLuz:rgba(170,255,250,.5)}
+html.vertical[data-mundo=cielo]{--cons1:#c2ecff;--cons2:#72c8fb;--cons3:#41a3ee;--cons4:#1f78d4;--consLuz:rgba(255,200,245,.45)}
+html.vertical[data-mundo=aurora]{--cons1:#4d72c4;--cons2:#23408f;--cons3:#132a68;--cons4:#08133c;--consLuz:rgba(90,255,190,.55)}
+html.vertical[data-mundo=plano]{--cons1:#dde2e8;--cons2:#aab3bd;--cons3:#86909d;--cons4:#5b6572;--consLuz:rgba(255,255,255,.28)}
+html.vertical .consola{display:block;position:absolute;left:0;right:0;top:var(--cy);bottom:0;z-index:4;pointer-events:none;overflow:hidden;
+  background:radial-gradient(ellipse 120% 50% at 50% 112%,var(--consLuz),transparent 72%),
+    linear-gradient(180deg,var(--cons1) 0%,var(--cons2) 20%,var(--cons3) 58%,var(--cons4) 100%);
+  box-shadow:0 -1px 0 rgba(255,255,255,.95),0 -3px 0 rgba(90,200,255,.85),0 -4px 0 rgba(10,70,150,.45),0 -6px 12px rgba(20,90,190,.3)}
+/* el brillo curvo de arriba, como el vidrio de las ventanas */
+.consola .lustre{position:absolute;left:-18%;right:-18%;top:-64%;height:100%;border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(255,255,255,.22) 72%,rgba(255,255,255,.08));box-shadow:0 1px 0 rgba(255,255,255,.45)}
+/* dos cintas de luz que cruzan (lo más Frutiger Aero que hay) */
+.consola .cinta{position:absolute;left:-30%;width:160%;height:90%;border-radius:50%;border-top:2px solid rgba(255,255,255,.6);box-shadow:inset 0 calc(2*var(--u)) calc(5*var(--u)) rgba(200,255,235,.28)}
+.consola .cinta.a{top:48%;rotate:-7deg}
+.consola .cinta.b{top:62%;rotate:5deg;border-top-color:rgba(190,255,200,.55)}
+.consola .marca{position:absolute;left:50%;bottom:calc(var(--abajo) + 2.4*var(--u));translate:-50% 0;font:800 clamp(11px,calc(3*var(--u)),20px)/1 var(--letra);letter-spacing:.32em;color:rgba(255,255,255,.55);text-shadow:0 1px 0 rgba(0,60,140,.35),0 0 8px rgba(255,255,255,.5)}
+.consola .burbujitas i{position:absolute;left:var(--x);bottom:-10%;width:calc(var(--t)*var(--u));aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,#fff 0 9%,rgba(255,255,255,.25) 20%,transparent 32%),radial-gradient(circle,rgba(210,245,255,.15) 55%,rgba(255,255,255,.8) 70%,rgba(140,215,255,.4) 74%,transparent 76%);
+  animation:subeConsola var(--v) var(--d) linear infinite;will-change:transform}
+@keyframes subeConsola{0%{transform:translateY(0);opacity:0}12%{opacity:.9}85%{opacity:.7}100%{transform:translateY(-44vh);opacity:0}}
+html.calidadBaja .consola .burbujitas{display:none}
+/* lo que tapaba el juego va a toda la pantalla; los dedos, a la consola */
+html.vertical .capa,html.vertical .ola,html.vertical .narra,html.vertical .creditos{left:0;top:0;width:100%;height:100%}
+html.vertical .tactil{left:0;top:var(--cy);width:var(--cw);height:var(--ch)}
+/* el idioma: las tres burbujas en zigzag, una arriba de la otra */
+html.vertical .idioma{gap:calc(3*var(--u))}
+html.vertical .idioma .elegi{display:flex;flex-direction:column;align-items:center;gap:2px;padding:calc(1.4*var(--u)) calc(5*var(--u));border-radius:calc(4*var(--u));text-align:center}
+html.vertical .idioma .elegi span{display:none}
+html.vertical .burbujas{flex-direction:column;gap:calc(1.5*var(--u))}
+html.vertical .burbujaIdioma{width:calc(34*var(--u));height:calc(34*var(--u))}
+html.vertical .burbujaIdioma:nth-child(odd){left:calc(-12*var(--u))}
+html.vertical .burbujaIdioma:nth-child(2){left:calc(12*var(--u))}
+/* el título: el logo sobre el juego y el menú en la consola */
+html.vertical .logo{top:calc(var(--ly) + var(--lh) * .15)}
+html.vertical .lema{top:calc(var(--ly) + var(--lh) * .15 + clamp(46px,calc(19*var(--u)),150px) * 1.5)}
+html.vertical .menu{bottom:auto;top:calc(var(--cy) + var(--ch) / 2);translate:-50% -50%;max-width:calc(100% - 6*var(--u))}
+html.vertical .menu .pildora{min-width:calc(56*var(--u))}
+/* las ventanas: más angostas que la pantalla y con las grillas en menos columnas */
+html.vertical .ventana{width:calc(100% - 6*var(--u));max-height:calc(100% - 8*var(--u))}
+html.vertical .ventana.inicio{width:calc(78*var(--u))}
+html.vertical .iconos{grid-template-columns:repeat(2,1fr)}
+html.vertical .icono img{width:calc(14*var(--u))}
+html.vertical .emoticones{grid-template-columns:repeat(4,1fr)}
+html.vertical .emo img{width:calc(10*var(--u))}
+html.vertical .fila{gap:calc(2*var(--u));padding:calc(1.4*var(--u)) calc(2.4*var(--u))}
+html.vertical .fila .n{text-align:left}
+html.vertical .fila .v b{min-width:0;white-space:nowrap}
+html.vertical .pausa .pildora{min-width:calc(56*var(--u))}
+/* la charla y el mensaje de Mora: en la consola (los dedos no se ven mientras se charla),
+   con las líneas pegadas abajo como en el chat; las viejas se van por arriba */
+html.vertical .chat,html.vertical .chat.arriba{left:calc(2.5*var(--u));right:calc(2.5*var(--u));width:auto;translate:none;top:calc(var(--cy) + 3*var(--u));bottom:calc(var(--abajo) + 3*var(--u));display:flex;flex-direction:column}
+html.vertical .chat .lineas{flex:1;min-height:0;overflow:hidden;padding-right:calc(21*var(--u))}
+html.vertical .chat .escribe{padding-bottom:calc(3.4*var(--u))}
+/* parado sobra alto: las fotos de los dos, como en el Messenger (la del otro arriba, la de Nick abajo) */
+.chat .fotos{display:none}
+html.vertical .chat .fotos{display:flex;flex-direction:column;justify-content:space-between;position:absolute;right:calc(2.4*var(--u));top:calc(12.5*var(--u));bottom:calc(6.5*var(--u))}
+.chat .fotos i{display:flex;align-items:flex-end;justify-content:center;width:calc(17*var(--u));height:calc(17*var(--u));border-radius:calc(1.8*var(--u));overflow:hidden;
+  background:radial-gradient(circle at 50% 120%,rgba(140,255,170,.55),transparent 60%),linear-gradient(180deg,#ffffff,#d9f3ff 50%,#b8e6ff 51%,#e6f7ff);
+  box-shadow:0 0 0 2px #fff,0 0 0 3px rgba(20,90,170,.45),0 calc(.6*var(--u)) calc(1.6*var(--u)) rgba(0,40,110,.3);transition:box-shadow .25s,scale .25s}
+.chat .fotos img{width:78%;image-rendering:pixelated;margin-bottom:6%}
+.chat .fotos .mia:only-child{margin-top:auto}
+.chat.hablaSuya .fotos .suya,.chat.hablaMia .fotos .mia{scale:1.06;box-shadow:0 0 0 2px #fff,0 0 0 3px #3cae1d,0 0 calc(3*var(--u)) rgba(150,255,110,.8)}
+html.vertical .mensaje{top:calc(var(--cy) + 3*var(--u));width:calc(100% - 5*var(--u))}
+/* los avisos, abajo a la derecha del juego (justo arriba de la consola) */
+html.vertical .avisos,html.vertical #ui.conDedos .avisos{right:calc(2.5*var(--u));bottom:calc(100% - var(--cy) + 2.5*var(--u));max-width:calc(100% - 5*var(--u))}
+html.vertical .narra .hoja{width:calc(100% - 8*var(--u));padding:calc(5*var(--u)) calc(6*var(--u))}
+html.vertical .creditos .rollo{max-width:calc(100% - 6*var(--u));padding:calc(5*var(--u)) calc(5*var(--u))}
+html.vertical .creditos .todos{flex-wrap:wrap}
+/* el editor de los dedos: la barra va arriba, sobre el juego, y deja la consola libre */
+html.vertical .acomoda{top:auto;bottom:calc(100% + 2.5*var(--u));width:calc(100% - 5*var(--u))}
+.acomoda .nota{color:#1560b8;font-weight:600}

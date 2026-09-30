@@ -47,8 +47,15 @@ export class Dibujo {
     this.W = 1; this.H = 1; this.cam = { x: 0, y: 0, esc: 40 };
     this.t = 0; this.R = null; this.parts = []; this.textos = []; this.sacudon = 0;
     this.patrones = {}; this.clima = [];
+    /* con el teléfono parado: en qué fracción del alto va el auto (la cámara lo lee; el menú lo sube) */
+    this.vertical = false; this.alturaAuto = 0.6; this.alturaSuave = 0.6;
   }
-  medir(W, H) { this.W = this.c.width = Math.max(2, Math.round(W)); this.H = this.c.height = Math.max(2, Math.round(H)); this.clima = []; }
+  medir(W, H) {
+    this.W = this.c.width = Math.max(2, Math.round(W)); this.H = this.c.height = Math.max(2, Math.round(H)); this.clima = [];
+    this.vertical = this.H > this.W * 1.05;
+    /* parado, los fondos pintados van en una franja con forma de pantalla acostada (ver fondos) */
+    this.franja = this.vertical ? Math.min(this.H, this.W * 1.45) : this.H;
+  }
 
   ponerTramo(R) {
     this.R = R; this.V = VISTA[R.id]; this.sem = sembrar(R); this.parts.length = 0; this.textos.length = 0; this.clima = [];
@@ -57,7 +64,7 @@ export class Dibujo {
     this.colorBajo = `rgb(${F.bajoMedio.join(',')})`;
     this.colorSuelo = F.suelo;
     /* el color del cielo arriba de la imagen, para cuando la cámara sube mucho */
-    this.cieloArriba = '#6aa6d8';
+    this.cieloArriba = '#6aa6d8'; this.cieloRGB = '106,166,216'; this.cenit = '#3f6fa8';
     const im = IMG['lejos-' + R.id];
     if (ok('lejos-' + R.id)) {
       try {
@@ -65,7 +72,9 @@ export class Dibujo {
         const g = cv.getContext('2d'); g.drawImage(im, 0, 0, im.naturalWidth, 8, 0, 0, 32, 4);
         const d = g.getImageData(0, 0, 32, 4).data; let r = 0, gg = 0, b = 0;
         for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; }
-        const n = d.length / 4; this.cieloArriba = `rgb(${r / n | 0},${gg / n | 0},${b / n | 0})`;
+        const n = d.length / 4; this.cieloRGB = `${r / n | 0},${gg / n | 0},${b / n | 0}`; this.cieloArriba = `rgb(${this.cieloRGB})`;
+        /* el cenit (para el cielo alto del teléfono parado): el mismo cielo, más hondo y más azul */
+        this.cenit = `rgb(${r / n * 0.55 + 14 | 0},${gg / n * 0.6 + 26 | 0},${b / n * 0.7 + 52 | 0})`;
       } catch (_) {}
     }
   }
@@ -87,6 +96,7 @@ export class Dibujo {
     /* la altura de referencia de los fondos sigue a la cámara despacito: en un salto los fondos
        se mueven (paralaje) pero en una subida larga no se van de la pantalla */
     this.camY0 += (this.cam.y - this.camY0) * Math.min(1, dt * 0.25);
+    this.alturaSuave += (this.alturaAuto - this.alturaSuave) * Math.min(1, dt * 3);
     x.setTransform(1, 0, 0, 1, 0, 0);
     /* el sacudón (golpes, aterrizajes) */
     let ox = 0, oy = 0;
@@ -110,23 +120,39 @@ export class Dibujo {
   fondos() {
     const x = this.x, W = this.W, H = this.H, R = this.R, e = this.cam.esc;
     x.fillStyle = this.cieloArriba; x.fillRect(0, 0, W, H);
+    /* acostado, los fondos ocupan la pantalla (B = H desde y0 = 0). Parado, van en una franja B más baja que
+       la pantalla, puesta donde anda el auto (como acostado: el auto al 60% de la franja), así los cerros
+       quedan detrás de la ruta y no se estiran; arriba de la franja el cielo sigue en degradé hasta el cenit */
+    const B = this.franja, y0 = this.vertical ? H * this.alturaSuave - B * 0.6 : 0;
     const lej = IMG['lejos-' + R.id];
     /* la imagen de lejos cubre el alto de la pantalla; se repite espejada, así no hay costura */
     if (ok('lejos-' + R.id)) {
-      const alto = H * 1.08, ancho = alto * lej.naturalWidth / lej.naturalHeight;
-      const base = H * 1.02 + Math.max(-H * 0.2, Math.min(H * 0.25, (this.cam.y - this.camY0) * e * 0.035));
+      const alto = B * 1.08, ancho = alto * lej.naturalWidth / lej.naturalHeight;
+      const base = y0 + B * 1.02 + Math.max(-B * 0.2, Math.min(B * 0.25, (this.cam.y - this.camY0) * e * 0.035));
       const des = this.cam.x * e * 0.03;
       this.tira(lej, des, base - alto, ancho, alto);
+      if (this.vertical) this.cieloAlto(base - alto, alto);
     }
     const med = IMG['medio-' + R.id], F = MEDIDAS.fondos[R.id];
     if (ok('medio-' + R.id)) {
       /* la franja del medio, más chica que la de lejos: así se sigue viendo la cordillera */
-      const k = H / 768 * Math.min(0.82, 330 / F.medio[1]), ancho = F.medio[0] * k, alto = F.medio[1] * k;
-      const base = H * 1.04 + Math.max(-H * 0.3, Math.min(H * 0.4, (this.cam.y - this.camY0) * e * 0.12));
+      const k = B / 768 * Math.min(0.82, 330 / F.medio[1]), ancho = F.medio[0] * k, alto = F.medio[1] * k;
+      const base = y0 + B * 1.04 + Math.max(-B * 0.3, Math.min(B * 0.4, (this.cam.y - this.camY0) * e * 0.12));
       const des = this.cam.x * e * 0.18;
       this.tira(med, des, base - alto, ancho, alto);
       x.fillStyle = this.colorBajo; x.fillRect(0, base - 2, W, H - base + 4);
     }
+  }
+  /* el cielo de arriba de la imagen de lejos (teléfono parado): del cenit al color del borde de la imagen,
+     que se funde en el mismo degradé (así no se ve el corte, ni en las que tienen cerros hasta arriba) */
+  cieloAlto(arriba, alto) {
+    const x = this.x, fin = arriba + alto * 0.16;
+    if (fin <= 0) return;
+    /* el cenit puro queda media imagen más arriba (casi siempre fuera de la pantalla): así el degradé es largo */
+    const y0 = arriba - alto * 0.55, f = (arriba - y0) / (fin - y0), c = this.cieloRGB;
+    const g = x.createLinearGradient(0, y0, 0, fin);
+    g.addColorStop(0, this.cenit); g.addColorStop(f, `rgb(${c})`); g.addColorStop(f + (1 - f) * 0.45, `rgba(${c},0.55)`); g.addColorStop(1, `rgba(${c},0)`);
+    x.fillStyle = g; x.fillRect(0, 0, this.W, fin);
   }
   /* una imagen repetida de costado, espejada cada vez (así los bordes siempre calzan) */
   tira(im, des, y, ancho, alto) {
@@ -503,25 +529,26 @@ export class Dibujo {
 
   /* ------------------------------------------------ el clima: viento, nieve, motas y brillos */
   climaDibujar(dt) {
-    const x = this.x, W = this.W, H = this.H, V = this.V, e = this.cam.esc;
+    /* los tamaños van con el lado corto (acostado es el alto; parado, el ancho: si no, la nieve serían platos) */
+    const x = this.x, W = this.W, H = this.H, V = this.V, e = this.cam.esc, L = Math.min(W, H);
     const n = V.clima === 'nieve' ? 90 : V.clima === 'viento' ? 26 : V.clima === 'brillo' ? 14 : 30;
     while (this.clima.length < n) this.clima.push({ x: Math.random() * W, y: Math.random() * H, v: 0.4 + Math.random(), f: Math.random() * 6 });
     const dx = this.ultCamX === undefined ? 0 : (this.cam.x - this.ultCamX) * e; this.ultCamX = this.cam.x;
     for (const q of this.clima) {
       q.f += dt;
       if (V.clima === 'nieve') {
-        q.x += (-40 * q.v - dx * 0.6) * dt * (W / 900) + Math.sin(q.f) * 0.3; q.y += 70 * q.v * dt * (H / 500);
-        x.fillStyle = `rgba(255,255,255,${0.5 + q.v * 0.3})`; x.beginPath(); x.arc(q.x, q.y, (1.2 + q.v * 1.8) * (H / 500), 0, 6.3); x.fill();
+        q.x += (-40 * q.v - dx * 0.6) * dt * (W / 900) + Math.sin(q.f) * 0.3; q.y += 70 * q.v * dt * (L / 500);
+        x.fillStyle = `rgba(255,255,255,${0.5 + q.v * 0.3})`; x.beginPath(); x.arc(q.x, q.y, (1.2 + q.v * 1.8) * (L / 500), 0, 6.3); x.fill();
       } else if (V.clima === 'viento') {
         q.x -= (700 * q.v) * dt * (W / 900) + dx * 0.8; q.y += Math.sin(q.f * 2) * 0.4;
-        x.strokeStyle = `rgba(255,255,255,${0.12 + q.v * 0.12})`; x.lineWidth = 1.5 * (H / 500);
+        x.strokeStyle = `rgba(255,255,255,${0.12 + q.v * 0.12})`; x.lineWidth = 1.5 * (L / 500);
         x.beginPath(); x.moveTo(q.x, q.y); x.quadraticCurveTo(q.x + 60 * q.v, q.y - 6, q.x + 140 * q.v, q.y + 2); x.stroke();
       } else if (V.clima === 'brillo') {
         q.x -= dx * 0.9;
-        const b = Math.max(0, Math.sin(q.f * 2.2)); if (b > 0.2) { x.fillStyle = `rgba(255,255,255,${b * 0.7})`; const r = 3 * b * (H / 500); x.fillRect(q.x - r, q.y - 0.5, r * 2, 1); x.fillRect(q.x - 0.5, q.y - r, 1, r * 2); }
+        const b = Math.max(0, Math.sin(q.f * 2.2)); if (b > 0.2) { x.fillStyle = `rgba(255,255,255,${b * 0.7})`; const r = 3 * b * (L / 500); x.fillRect(q.x - r, q.y - 0.5, r * 2, 1); x.fillRect(q.x - 0.5, q.y - r, 1, r * 2); }
       } else {
         q.x += -10 * dt + Math.sin(q.f * 0.7) * 0.2 - dx * 0.5; q.y += Math.cos(q.f * 0.9) * 0.25 - 4 * dt;
-        x.fillStyle = rgba(V.polvo, 0.35); x.beginPath(); x.arc(q.x, q.y, 1.4 * (H / 500) * q.v, 0, 6.3); x.fill();
+        x.fillStyle = rgba(V.polvo, 0.35); x.beginPath(); x.arc(q.x, q.y, 1.4 * (L / 500) * q.v, 0, 6.3); x.fill();
       }
       if (q.x < -160) { q.x = W + Math.random() * 60; q.y = Math.random() * H; }
       if (q.x > W + 170) { q.x = -Math.random() * 60; q.y = Math.random() * H; }
@@ -531,7 +558,7 @@ export class Dibujo {
     /* el aire de la Patagonia es más gris; la nieve, más fría */
     if (V.clima === 'nieve') { x.fillStyle = 'rgba(200,220,245,0.08)'; x.fillRect(0, 0, W, H); }
     /* una viñeta suave */
-    const g = x.createRadialGradient(W / 2, H * 0.45, H * 0.35, W / 2, H * 0.5, Math.max(W, H) * 0.75);
+    const g = x.createRadialGradient(W / 2, H * 0.45, L * 0.35, W / 2, H * 0.5, Math.max(W, H) * 0.75);
     g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(20,10,0,0.28)');
     x.fillStyle = g; x.fillRect(0, 0, W, H);
   }
@@ -539,18 +566,25 @@ export class Dibujo {
   /* ------------------------------------------------ los cartelitos que suben (trucos, monedas) */
   cartel(texto, xw, yw, color = '#fff', grande = false) { this.textos.push({ texto, x: xw, y: yw, vida: 0, color, grande }); }
   cartelitos(dt) {
-    const x = this.x, e = this.cam.esc, H = this.H;
+    const x = this.x, e = this.cam.esc, H = Math.min(this.W, this.H);
     for (let i = this.textos.length - 1; i >= 0; i--) {
       const q = this.textos[i];
       q.vida += dt;
       const dura = q.grande ? 1.9 : 1.1;
       if (q.vida > dura) { this.textos.splice(i, 1); continue; }
       const f = q.vida / dura, sube = q.vida * (q.grande ? 1.0 : 1.6);
-      const px = this.sx(q.x), py = this.sy(q.y + sube);
+      let px = this.sx(q.x); const py = this.sy(q.y + sube);
       const esc = q.grande ? Math.min(1, q.vida * 6) * (1 + 0.15 * Math.max(0, 1 - q.vida * 4)) : 1;
       const tam = (q.grande ? 0.052 : 0.036) * H * esc;
       x.save(); x.globalAlpha = f > 0.75 ? (1 - f) / 0.25 : 1;
       x.font = `900 ${tam}px Overpass, sans-serif`; x.textAlign = 'center'; x.lineJoin = 'round';
+      /* parado la pantalla es angosta: un combo largo se achica hasta entrar y no se sale por los costados */
+      if (this.vertical) {
+        const an = x.measureText(q.texto).width, cabe = this.W * 0.92;
+        if (an > cabe) { x.font = `900 ${tam * cabe / an}px Overpass, sans-serif`; }
+        const medio = Math.min(an, cabe) / 2 + this.W * 0.04;
+        px = Math.max(medio, Math.min(this.W - medio, px));
+      }
       x.lineWidth = tam * 0.22; x.strokeStyle = 'rgba(20,14,8,0.85)'; x.strokeText(q.texto, px, py);
       x.fillStyle = q.color; x.fillText(q.texto, px, py);
       x.restore();

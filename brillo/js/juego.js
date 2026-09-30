@@ -48,7 +48,9 @@ export class Nivel {
     this.agua = [];
     for (let y = 0; y < m.H; y++) { let a = -1; for (let x = 0; x <= m.W; x++) { const es = x < m.W && m.tiles[y * m.W + x] === B.AGUA; if (es && a < 0) a = x; if (!es && a >= 0) { this.agua.push({ x0: a, x1: x, y, sup: y === 0 || m.tiles[(y - 1) * m.W + a] !== B.AGUA }); a = -1; } } }
     this.npcs = (N.npcs || []).map((v) => ({ ...v, anim: 'quieto', f: 0, habla: false, visible: v.visible !== false }));
-    this.cam = { x: 0, y: 0 }; this.mira = 0;
+    this.cam = { x: 0, y: 0 }; this.mira = 0; this.miraY = 0;
+    /* el tamaño de la vista, si se sabe (así la cámara arranca en su lugar) */
+    this.w = o.w; this.h = o.h;
     this.burbujas = new BurbujasAmbiente(N.burbujas ?? 34, 11);
     this.pasto = pastoFrente(900, 5, N.mundo);
     this.fx = new Destellos();
@@ -98,17 +100,25 @@ export class Nivel {
     for (let i = 0; i < 6; i++) this.trozos.push({ x: tx * T + 4 + (i % 3) * 4, y: ty * T + 4 + Math.floor(i / 3) * 6, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 80, t: 0, col: ['#ff82ba', '#6fd845', '#55a5fb', '#ffdb2e', '#a67bfb', '#4fd8f2'][i] });
   }
 
-  /* ---------------- la cámara ---------------- */
+  /* ---------------- la cámara ----------------
+     Acostado mira 46 px para adelante. Parado (la vista es más alta que ancha)
+     el cuadro es angosto: mira un 21 % del ancho para adelante y, si Nick cae
+     rápido, baja un poco para que se vea dónde va a caer. foco = el medio de
+     una charla (lo pone el director, solo parado); encuadre, el de la historia */
   camara(dt, ya) {
     const p = this.m.p, m = this.m;
-    const w = this.w || 640, h = this.h || 360;
-    this.mira += ((Math.abs(p.vx) > 0.6 ? p.dir * 46 : this.mira * 0.9 / 46 * 46) - this.mira) * (ya ? 1 : suave(0.965, dt));
-    let tx = p.x - w / 2 + this.mira, ty = p.y - h * 0.6;
+    const w = this.w || 640, h = this.h || 360, parado = h > w;
+    const adelante = parado ? Math.round(w * 0.21) : 46;
+    this.mira += ((Math.abs(p.vx) > 0.6 ? p.dir * adelante : this.mira * 0.9 / adelante * adelante) - this.mira) * (ya ? 1 : suave(0.965, dt));
+    const cae = parado && !p.enSuelo && !p.enAgua && !p.flotando && !p.enBurbuja && p.vy > 4 ? h * 0.12 : 0;
+    this.miraY += (cae - this.miraY) * (ya ? 1 : suave(0.95, dt));
+    let tx = p.x - w / 2 + this.mira, ty = p.y - h * 0.6 + this.miraY;
     if (this.encuadre) { tx = this.encuadre.x - w / 2; ty = this.encuadre.y - h / 2; }
+    else if (this.foco) { tx = this.foco.x - w / 2; ty = this.foco.y - h / 2; }
     tx = Math.max(0, Math.min(m.W * T - w, tx));
     ty = Math.max(0, Math.min(m.H * T - h, ty));
     if (m.H * T < h) ty = (m.H * T - h) / 2;
-    const k = ya ? 1 : suave(this.encuadre ? 0.95 : 0.88, dt);
+    const k = ya ? 1 : suave(this.encuadre || this.foco ? 0.95 : 0.88, dt);
     this.cam.x += (tx - this.cam.x) * k;
     this.cam.y += (ty - this.cam.y) * (ya ? 1 : suave(0.92, dt));
   }

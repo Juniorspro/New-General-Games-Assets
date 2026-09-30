@@ -14,7 +14,11 @@ Una entrada por sesión, la última arriba. Va lo que otra sesión necesita sabe
   - Después: hacer juegos en Roblox Studio. En la nube no se puede entrar a Studio (el inicio rápido exige la
     misma red); se instaló Claude Code en su PC con el MCP de Studio ([roblox](roblox.md)). `TRASPASO-ROBLOX.md`
     para la sesión de la PC.
-  - Falta: que diga cómo le queda la construcción en su celu; el primer juego de Roblox (desde la sesión de su PC).
+  - 30/09: BRILLO, KUNTUR y RUTA 40 en vertical de verdad (sin girar; el giro queda como opción) y el tirón del
+    arranque de KUNTUR (shaders compilados con el telón cerrado). Pruebas `vertical.mjs` de los tres, todas bien.
+    Pidió no usar ayudantes: gastan muchos tokens. Hacerlo en la sesión.
+  - Falta: que diga cómo le quedan en su celu la construcción y los tres juegos parados; el primer juego de Roblox
+    (desde la sesión de su PC).
 - **28/09/2026, de noche, decimocuarta vez · `claude/fijate-iszyer`:**
   - Dijo: "no le llegan las actualizaciones".
   - Quedó ([aeroplaza-47](aeroplaza-47.md)): la APK 45 solo buscaba al arrancar de cero. La 46 busca al volver y cada

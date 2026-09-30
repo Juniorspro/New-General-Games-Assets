@@ -30,6 +30,7 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 - **No instalar nada aparte sin que lo pida.** El 22/09 se deshizo una red
   neuronal instalada para esta memoria: quería notas, no un programa.
 - **Cuida los tokens:** nada de leer `.md` del repo "por las dudas".
+- **Sin ayudantes (subagentes):** "hacelo vos, gastás muchos tokens" (30/09). Todo en la misma sesión, de a una cosa.
 - Quiere calidad visual alta ("goty", "AAA"), con números detrás.
 - **En todo juego, antes del menú, se elige idioma: español, inglés o
   portugués**, siempre, y con todo traducido (menús, historia, diálogos).
@@ -61,12 +62,12 @@ mantiene: `MEMORIA.md`. Última puesta al día: 28/09/2026 (las vueltas de AEROP
 | [higgsfield](higgsfield.md) | generar con Higgsfield: modelos, costos, lo que anduvo |
 | [juegos](juegos.md) | tocar un juego del repo o hacer uno nuevo |
 | [roblox](roblox.md) | hacer juegos en Roblox Studio: el MCP en su PC con Remote Control (`TRASPASO-ROBLOX.md`), lo que no anduvo en la nube |
-| [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el resolvedor y sus trampas |
-| [brillo](brillo.md) | BRILLO: armarlo, probarlo, el resolvedor de plataformas, las canciones grabadas y sus trampas |
+| [kuntur](kuntur.md) | KUNTUR: armarlo, probarlo, el celular parado (vertical con bandeja), el tirón del arranque (el ensayo con el telón cerrado), el resolvedor y sus trampas |
+| [brillo](brillo.md) | BRILLO: armarlo, probarlo, el celular parado (vertical con consola), el resolvedor de plataformas, las canciones grabadas y sus trampas |
 | [brillo-rendimiento](brillo-rendimiento.md) | BRILLO: qué lo hacía lento, la cámara más cerca, las cinemáticas de charla y la calidad automática |
 | [brillo-trailer](brillo-trailer.md) | el tráiler de TikTok de BRILLO: tomas con reloj propio, Remotion, la música y sus trampas |
 | [videos](videos.md) | videos de TikTok relatados (LUZ MALA, KUNTUR): tomas, voz, subtítulos, memes, montaje en Remotion |
-| [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el arte de Rezona y sus trampas |
+| [ruta40](ruta40.md) | RUTA 40: la física del auto, el bot de los tramos, el celular parado (vertical), el arte de Rezona y sus trampas |
 | [aeroplaza](aeroplaza.md) | AEROPLAZA, lo general: el 3D social Frutiger Aero (multijugador MQTT, la isla y los reinos, parkour, interiores), cómo se arma y se prueba, las trampas de three |
 | [aeroplaza-vueltas](aeroplaza-vueltas.md) | AEROPLAZA vuelta por vuelta (de la 8.ª a la 48.ª: VR, manos, APK, ARCore, tu espacio, el mando VR Box, las actualizaciones, el celu con amigos, construir la casa como en Sims Mobile): qué nota abrir para cada cosa |
 | [jxstudios](jxstudios.md) | la página de JXStudios (el estudio de quien pide): `jxstudios/`, en 3 idiomas, con los juegos, AEROPLAZA web y la APK; se sube a Cloudflare Pages con `jxstudios/desplegar.sh` y la llave del entorno (`CLOUDFLARE_API_TOKEN`) |

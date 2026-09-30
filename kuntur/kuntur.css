@@ -308,3 +308,71 @@ html.bajita .acomoda small{font-size:11px}
 html.bajita .chip{min-height:30px;font-size:12px;padding:3px 9px}
 html.bajita .chip.par button{width:30px;height:30px}
 html.bajita .nota{font-size:13px;padding:8px 16px 8px 20px;bottom:10px}
+
+/* ================= el teléfono parado (html.vertical) =================
+   Arriba el escenario (la vista del diorama, --vista de alto) con su telón y su cenefa más
+   finitos; abajo la bandeja de cartón (--bandeja) con una tira de aguayo, donde van los dedos.
+   Acostado y en la compu nada de esto se aplica. */
+.bandeja{display:none}
+html.vertical .bandeja{display:block;position:fixed;left:0;right:0;bottom:0;height:var(--bandeja);z-index:19;pointer-events:auto;
+  background:
+    repeating-linear-gradient(90deg,rgba(90,55,25,.11) 0 2px,rgba(255,236,204,.07) 2px 5px,rgba(90,55,25,.05) 5px 7px),
+    radial-gradient(ellipse at 50% 0,rgba(255,226,170,.28),transparent 70%),
+    var(--grano),
+    linear-gradient(#c99b64,#ad7c4c 55%,#8f6239);
+  background-blend-mode:normal,normal,multiply,normal;
+  box-shadow:inset 0 16px 18px -10px rgba(40,20,10,.6),inset 0 -3px 0 rgba(0,0,0,.18)}
+/* la tira tejida que hace de borde del escenario, con sus flecos */
+.bandeja .tira{position:absolute;left:0;right:0;top:0;height:22px;
+  background:
+    conic-gradient(from 45deg,#f2b632 25%,#c0282e 0 50%,#f2b632 0 75%,#c0282e 0) 0 6px/12px 10px repeat-x,
+    linear-gradient(#1f8f6c 0 3px,#f7f3ea 3px 5px,#6a2f9a 5px 6px,transparent 6px 16px,#6a2f9a 16px 17px,#f7f3ea 17px 19px,#1f8f6c 19px 22px),
+    #b8242a;
+  box-shadow:0 2px 0 rgba(247,243,234,.55),0 5px 6px rgba(40,20,10,.35)}
+.bandeja .tira::after{content:'';position:absolute;left:0;right:0;top:100%;height:9px;background:repeating-linear-gradient(90deg,#f2b632 0 2px,transparent 2px 5px,#c0282e 5px 7px,transparent 7px 10px);-webkit-mask:linear-gradient(#000,transparent);mask:linear-gradient(#000 30%,transparent)}
+/* una costura alrededor, como la de una caja de cartón cosida a mano, y lo impreso en el cartón */
+.bandeja .costura{position:absolute;left:9px;right:9px;top:38px;bottom:calc(var(--seguroAba) + 9px);border:2px dashed rgba(70,40,18,.3);border-radius:12px}
+.bandeja .sello{position:absolute;left:50%;bottom:calc(var(--seguroAba) + 30px);translate:-50% 0;font:normal 15px var(--gorda);letter-spacing:.55em;padding-left:.55em;color:rgba(70,35,15,.26);white-space:nowrap}
+.bandeja .boleto-impreso{position:absolute;left:50%;bottom:calc(var(--seguroAba) + 16px);translate:-50% 0;font:bold 9px/1 'Courier New',monospace;letter-spacing:.14em;color:rgba(70,35,15,.3);white-space:nowrap}
+
+/* el telón tapa solo el escenario, y abierto queda recogido bien angosto */
+html.vertical .telon{bottom:var(--bandeja)}
+html.vertical .telon .izq{transform:scaleX(.06) skewY(1.5deg)}
+html.vertical .telon .der{transform:scaleX(.06) skewY(-1.5deg)}
+html.vertical .telon.cerrado .izq,html.vertical .telon.cerrado .der{transform:none}
+html.vertical .telon .cenefa{height:calc(44px + var(--seguroArr))}
+html.vertical .pasahoja{bottom:var(--bandeja)}
+
+/* el idioma: los cartelitos cuelgan en el escenario */
+html.vertical .idioma{bottom:var(--bandeja)}
+html.vertical .idioma .cinta{margin-top:calc(var(--seguroArr) + 70px)}
+html.vertical .idioma .elegi{max-width:calc(100% - 28px);line-height:1.45}
+html.vertical .idioma .elegi i{display:block}
+html.vertical .idioma .elegi span{display:none}
+html.vertical .tag{width:calc(29 * var(--vw));max-width:150px;padding:24px 8px 16px}
+
+/* el título: el logo arriba, Killa en el medio y los boletos sobre la bandeja, como en la boletería */
+html.vertical{--logo:clamp(44px,calc(15 * var(--vw)),84px)}
+html.vertical .logo{top:calc(var(--seguroArr) + 60px);font-size:var(--logo)}
+html.vertical .lema{top:calc(var(--seguroArr) + 66px + var(--logo) * 1.15);max-width:calc(100% - 36px);font-size:14px}
+html.vertical .titulo .boletos{bottom:calc(var(--seguroAba) + 16px);width:min(330px,calc(100% - 44px));gap:7px}
+html.vertical .boleto{min-height:46px}
+
+/* los paneles: el mapa baja en zigzag, el cuaderno va de a una hoja arriba de la otra */
+html.vertical .panel{max-height:calc(100% - var(--seguroArr) - var(--seguroAba) - 40px);padding:18px 16px}
+html.vertical .plano{height:calc(48 * var(--vh))}
+html.vertical .pagina{min-height:calc(20 * var(--vh));padding:14px 16px 12px 42px;font-size:15px;line-height:1.75}
+html.vertical .tablero{width:calc(100% - 28px)}
+html.vertical .fila{padding:11px 14px;font-size:15px}
+html.vertical .fila .v b{min-width:4.5em}
+
+/* lo del juego, adentro del escenario: debajo de la cenefa y arriba de la bandeja */
+html.vertical .contador{top:calc(var(--seguroArr) + 54px);left:14px}
+html.vertical .aviso{top:calc(var(--seguroArr) + 56px);max-width:calc(100% - 28px);text-align:center}
+html.vertical .cartel{top:calc(var(--seguroArr) + 70px)}
+/* (el de la pausa va en la columna, sin corrimiento: si no, bajaba 70 px y tapaba el primer boleto) */
+html.vertical .cartel.quieto{top:auto}
+html.vertical .coplaCard{top:calc(var(--seguroArr) + 66px)}
+html.vertical .nota{bottom:calc(var(--bandeja) + 14px)}
+html.vertical .globo{max-width:min(340px,calc(84 * var(--vw)))}
+html.vertical .acomoda{top:calc(var(--seguroArr) + 54px);width:calc(100% - 24px)}

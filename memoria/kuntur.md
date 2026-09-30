@@ -112,18 +112,42 @@ HTML: `kuntur/kuntur.html` (830 KB). Es la vara para el próximo juego. Ver tamb
     (`alCine`) y apaga las charlas con vecinos (`sinVecinos`); si no, las
     caminatas de las escenas desfasan las soluciones grabadas.
 
-## Celular parado: se gira 90°
+## Celular parado: vertical (30/09) y el giro como opción
 
-- `js/pantalla.js`: si el alto > ancho en un dispositivo táctil, `#app` va con
-  `translateX(innerWidth) rotate(90deg)` y el juego usa el ancho y alto
-  lógicos (`Pantalla.w/h`). El CSS no usa vw/vh: usa `calc(N * var(--vw))`
-  (también los negativos), que `Pantalla` actualiza.
-- El toque se pasa con `Pantalla.aJuego` (x = clientY, y = innerWidth −
-  clientX) y `caja(el)` suma los offsets hasta `#app`.
-- Clases en `html`: `girado`, `angosta`, `bajita` (alto < 520: menús apretados,
-  `--corto`). Al elegir idioma prueba pantalla completa y `orientation.lock`.
-- Los controles de dedo quedan adentro del marco del teatrito (`ui.marco()`:
-  6,7 % de cada costado y la cenefa): si no, el telón los tapaba.
+- **Opciones › Teléfono parado** (`op.parado`, `Pantalla.giro`): 'vertical' de fábrica, o los giros de antes
+  ('auto', 'normal', 'reves'). El que ya tenía un giro elegido a mano lo conserva.
+- **Vertical** (`html.vertical`):
+  - arriba la vista del diorama, en el 64 % del alto; abajo la bandeja de cartón con los dedos. Se ubican con
+    `Pantalla.vista` y `Pantalla.bandeja`, en px de la pantalla;
+  - el telón y el pasahoja terminan donde empieza la bandeja;
+  - la cámara va con `fov` 44° (con 30° tenía que irse lejísimos y el papel se aplanaba);
+  - la portada encuadra a Killa al medio (`encuadrePortada`).
+- **Girado:** como antes. `#app` va con `translateX(innerWidth) rotate(90deg)` y el juego usa el tamaño lógico
+  (`Pantalla.w/h`, `--vw`); el toque, con `Pantalla.aJuego`.
+- Los dedos parados se guardan en `tactil.posV`, aparte de `pos`: acomodar uno no mueve el otro.
+- **Trampas:**
+  - `html.vertical .cartel{top…}` también le pegaba al cartel quieto de la pausa, que es `position: relative`:
+    bajaba 70 px y tapaba el primer boleto. Va `html.vertical .cartel.quieto{top:auto}`;
+  - los boletos de la pausa llevan `data-k`, como los del título, para las pruebas.
+- `node kuntur/pruebas/vertical.mjs` (62 comprobaciones): parado en 3 tamaños, acostado, girado, el editor de dedos
+  y caminar y saltar con toques por CDP. Las capturas van a `pruebas/salida/` y no se commitean.
+
+## El tirón del arranque (30/09)
+
+- **Qué era, medido con `pruebas/arranque.mjs`:** la primera vez de cada cosa, ya con el telón abierto.
+  - Compilar los shaders al dibujar por primera vez cada material: 1,6 s en el menú y 11,6 s en el prólogo, en
+    SwiftShader.
+  - Subir a la placa las hojas de papel.
+  - Además, cada capítulo con otra cantidad de luces de punto recompilaba todo: three arma un programa por
+    cantidad de luces.
+- **El arreglo** (`escena.js › ensayar`), con el telón cerrado:
+  1. `compileAsync` de todo (o `compile` si no hay `KHR_parallel_shader_compile`), con el render target del
+     posproceso puesto: el programa cambia según adónde se dibuja;
+  2. las texturas se suben de a pocas por cuadro;
+  3. una pasada con todo a la vista, para las sombras y el posproceso.
+- Queda siempre una luz de punto apagada (`relleno`), así la cantidad de luces no cambia entre capítulos.
+- Lo viejo sale de la escena, pero se libera recién después del ensayo del nuevo.
+- **Después:** 0 shaders compilados en el menú y en el prólogo; la tarea más larga del prólogo bajó de 10 s a 0,23 s.
 
 ## Controles de dedo (personalizables)
 

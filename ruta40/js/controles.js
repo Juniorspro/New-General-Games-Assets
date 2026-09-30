@@ -5,10 +5,13 @@
    agrandar, hacer transparentes y cambiar de lado) o las mitades de la
    pantalla (izquierda frena, derecha acelera). Todo se guarda en la partida.
    Los pedales son elementos del DOM y no del lienzo: así el navegador se
-   encarga de los toques aunque #app esté girado 90°.
+   encarga de los toques aunque #app esté girado 90°. Con el teléfono parado
+   (vertical) cada pedal tiene su propio lugar (posV) y su tamaño sale del
+   ancho: los dos tienen que entrar abajo, uno en cada esquina.
    ========================================================================== */
 import { Pantalla } from './pantalla.js';
 import { url } from './arte.js';
+import { CONTROLES_BASE } from './partida.js';
 
 const TECLAS_GAS = new Set(['ArrowRight', 'KeyD', 'KeyW', 'ArrowUp']);
 const TECLAS_FRENO = new Set(['ArrowLeft', 'KeyA', 'KeyS', 'ArrowDown']);
@@ -51,13 +54,21 @@ export const Controles = {
     this.aplicar();
   },
   soltarTodo() { this.dedos.gas.clear(); this.dedos.freno.clear(); this.mitad.clear(); this.pintar(); },
+  /* los lugares de los pedales para cómo está la pantalla ahora (una partida vieja no trae los de parado) */
+  lugares() {
+    const c = this.cfg;
+    if (!Pantalla.vertical) return c.pos;
+    if (!c.posV) c.posV = CONTROLES_BASE().posV;
+    return c.posV;
+  },
   /* ------------------------------------------------ poner cada pedal donde dice la partida */
   aplicar() {
     const c = this.cfg; if (!c || !this.el) return;
-    const H = Pantalla.H, W = Pantalla.W;
-    const alto = Math.max(90, Math.min(H * 0.36, 260)) * c.tam;
+    const H = Pantalla.H, W = Pantalla.W, lug = this.lugares();
+    /* parado manda el ancho, con un tope para que ni al máximo se pisen (freno + gas = 559/300 del alto) */
+    const alto = Pantalla.vertical ? Math.min(W * 0.5, Math.max(90, Math.min(H * 0.2, W * 0.38)) * c.tam) : Math.max(90, Math.min(H * 0.36, 260)) * c.tam;
     for (const n of ['freno', 'gas']) {
-      const d = this.el[n], p = c.pos[n];
+      const d = this.el[n], p = lug[n];
       const ancho = alto * (n === 'gas' ? 216 : 343) / 300;
       d.style.width = ancho + 'px'; d.style.height = alto + 'px';
       d.style.left = (p.x * W - ancho / 2) + 'px'; d.style.top = (p.y * H - alto / 2) + 'px';
@@ -71,7 +82,7 @@ export const Controles = {
     e.preventDefault();
     try { this.el[n].setPointerCapture(e.pointerId); } catch (_) {}
     if (this.editando) {
-      const q = Pantalla.aCaja(e.clientX, e.clientY), p = this.cfg.pos[n];
+      const q = Pantalla.aCaja(e.clientX, e.clientY), p = this.lugares()[n];
       this.arrastre = { n, id: e.pointerId, dx: q.x - p.x * Pantalla.W, dy: q.y - p.y * Pantalla.H };
       this.el[n].classList.add('agarrado');
       return;
@@ -85,7 +96,7 @@ export const Controles = {
   mover(n, e) {
     const a = this.arrastre; if (!a || a.id !== e.pointerId) return;
     const q = Pantalla.aCaja(e.clientX, e.clientY);
-    this.cfg.pos[a.n] = { x: Math.max(0.04, Math.min(0.96, (q.x - a.dx) / Pantalla.W)), y: Math.max(0.1, Math.min(0.94, (q.y - a.dy) / Pantalla.H)) };
+    this.lugares()[a.n] = { x: Math.max(0.04, Math.min(0.96, (q.x - a.dx) / Pantalla.W)), y: Math.max(0.1, Math.min(0.94, (q.y - a.dy) / Pantalla.H)) };
     this.aplicar();
   },
   pintar() {
@@ -113,5 +124,10 @@ export const Controles = {
   },
   /* ------------------------------------------------ el editor */
   editar(si, alCambiar) { this.editando = si; this.alCambiar = alCambiar; this.cont.classList.toggle('editando', si); this.aplicar(); },
-  cambiarLado() { const p = this.cfg.pos; [p.freno, p.gas] = [{ ...p.gas }, { ...p.freno }]; this.cfg.lado = this.cfg.lado === 'cambiado' ? 'normal' : 'cambiado'; this.aplicar(); },
+  /* acostado se intercambian; parado cada uno se espeja, así el freno (que es más ancho) no se sale por el costado */
+  cambiarLado() {
+    const p = this.cfg.pos; [p.freno, p.gas] = [{ ...p.gas }, { ...p.freno }];
+    const v = this.cfg.posV; if (v) for (const n of ['freno', 'gas']) v[n] = { x: 1 - v[n].x, y: v[n].y };
+    this.cfg.lado = this.cfg.lado === 'cambiado' ? 'normal' : 'cambiado'; this.aplicar();
+  },
 };

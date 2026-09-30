@@ -16,10 +16,16 @@ import { TREN_VAGONES } from './mapas.js';
 
 /* cada dibujo se imprime una sola vez */
 const cacheTex = new Map();
+/* lo que pide el capítulo mientras se arma: el ensayo lo sube a la placa antes de levantar el
+   telón (si no, cada cuadro de animación se subía la primera vez que se veía, en pleno juego) */
+let pedidas = null;
+export function anotarTexturas(si) { pedidas = si ? new Set() : null; return pedidas; }
 export function texDe(nombre, fn, arg) {
   const k = nombre + ':' + arg;
   if (!cacheTex.has(k)) { const L = fn(arg); cacheTex.set(k, { tex: textoRecorte(L, { k: 6 }), L }); }
-  return cacheTex.get(k);
+  const r = cacheTex.get(k);
+  if (pedidas) pedidas.add(r.tex);
+  return r;
 }
 /* un recorte parado: ancho en metros según los píxeles del dibujo */
 export function recorte(nombre, fn, arg, mpx) {
@@ -73,7 +79,10 @@ export class Escenario {
     h.userData.pop = { t: -1, listo: false, giro: h.rotation.y };
     h.rotation.x = -Math.PI / 2;
     h.visible = false;
-    if (D && D.anim) h.userData.anim = { nombre: ch, fn: D.fn, n: D.anim, lento: D.lento || 0.3, fase: hash(Math.round(h.position.x), 1, 2) * 5 };
+    if (D && D.anim) {
+      h.userData.anim = { nombre: ch, fn: D.fn, n: D.anim, lento: D.lento || 0.3, fase: hash(Math.round(h.position.x), 1, 2) * 5 };
+      for (let f = 0; f < D.anim; f++) texDe(ch, D.fn, f);    // todos sus cuadros ya impresos
+    }
     this.g.add(h);
     this.cosas.push(h);
     return h;
@@ -156,6 +165,7 @@ export class Escenario {
     /* palancas y trabas (adonde vuela Apu) */
     for (const l of m.palancas) {
       const h = l.tipo === 'palanca' ? recorte('pl', DECOR.palanca, 0, 0.045) : recorte('tr', DECOR.traba, 0, 0.05);
+      if (l.tipo === 'palanca') texDe('pl', DECOR.palanca, 1);
       h.position.set(l.x, l.tipo === 'palanca' ? l.y : l.y - 0.4, 0.15);
       this.g.add(h);
       this.palancas.push({ l, h });
@@ -170,6 +180,7 @@ export class Escenario {
     /* apachetas */
     for (const a of m.apachetas) {
       const h = recorte('ap', DECOR.apacheta, 0, 0.04);
+      texDe('ap', DECOR.apacheta, 1);
       h.position.set(a.x, a.y, -0.7);
       this.parar(h, null, 'A');
       this.apachetas.push({ a, h, prendida: false, t: 0 });
@@ -177,6 +188,7 @@ export class Escenario {
     /* coplas: cintitas tejidas que flotan */
     for (const c of m.coplas) {
       const h = recorte('cp', DECOR.copla, 0, 0.035);
+      texDe('cp', DECOR.copla, 1); texDe('cp', DECOR.copla, 2);
       h.position.set(c.x, c.y - 0.4, 0.05);
       h.castShadow = true;
       this.g.add(h);

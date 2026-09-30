@@ -41,7 +41,10 @@ const VOZ = { nick: 1250, mora: 1700, tito: 950, plano: 520, dorado: 1100, lila:
 const SIN_ZOOM = new URLSearchParams(location.search).has('sinzoom');
 
 const PARTIDA_NUEVA = () => ({ mundo: ORDEN[0], en: null, juntadas: [], rotos: {}, habil: {}, hechos: [] });
-const OPCIONES = () => ({ v: 2, musica: 7, efectos: 8, estilo: 'aero', calidad: 'auto', calidadAuto: 'alta', giro: 'auto', tactil: TACTIL_INICIAL() });
+const OPCIONES = () => ({ v: 3, musica: 7, efectos: 8, estilo: 'aero', calidad: 'auto', calidadAuto: 'alta', giro: 'vertical', tactil: TACTIL_INICIAL() });
+/* con el teléfono parado: vertical (lo nuevo, 30/09) o acostado como antes, para un lado o el otro */
+const GIROS = ['vertical', 'auto', 'normal', 'reves'];
+const NOMBRE_GIRO = { vertical: 'giroVertical', auto: 'giroAuto', normal: 'giroNormal', reves: 'giroReves' };
 const NIVELES_CALIDAD = ['alta', 'media', 'baja'];
 
 /* todos los guiños del juego en orden (mundo por mundo, de izquierda a
@@ -62,6 +65,9 @@ export class Director {
     const guardadas = leer(OPC) || {};
     /* las opciones de antes del 24/09 decían 'alta' a mano: pasan a 'auto', que mide el teléfono */
     if (!guardadas.v) { guardadas.v = 2; guardadas.calidad = 'auto'; }
+    /* antes del 30/09 el giro 'auto' era lo que venía de fábrica, no una elección: pasa a vertical */
+    if (guardadas.v < 3) { guardadas.v = 3; if (!guardadas.giro || guardadas.giro === 'auto') guardadas.giro = 'vertical'; }
+    if (!GIROS.includes(guardadas.giro)) guardadas.giro = 'vertical';
     this.opc = Object.assign(OPCIONES(), guardadas);
     this.opc.tactil = Object.assign(TACTIL_INICIAL(), this.opc.tactil || {});
     this.partida = leer(GUARDA);
@@ -105,7 +111,7 @@ export class Director {
     this._cuadro = (ts) => this.cuadro(ts);
     requestAnimationFrame(this._cuadro);
     this.idioma();
-    window.__brillo = this; window.__Sonido = Sonido;
+    window.__brillo = this; window.__Sonido = Sonido; window.__Pantalla = Pantalla;
   }
 
   /* ---------------- el bucle ---------------- */
@@ -153,7 +159,7 @@ export class Director {
     if (SIN_ZOOM || !N || this.estado !== 'jugando') return;
     const p = N.m.p;
     let v = N.npcs.find((x) => x.visible && (x.orig || x.id) === otro) || N.actores.find((a) => a.visible !== false && a.quien === otro) || null;
-    if (v && Math.abs(v.x - p.x) > Pantalla.w * 0.8) v = null;     // lejos: solo Nick
+    if (v && Math.abs(v.x - p.x) > Pantalla.w * (Pantalla.vertical ? 0.85 : 0.8)) v = null;     // lejos: solo Nick
     C.con = v; C.arriba = arriba; C.meta = 1;
     /* se miran */
     if (v && !p.muerto) { p.dir = v.x >= p.x ? 1 : -1; if ('mira' in v) v.mira = p.x >= v.x ? 1 : -1; }
@@ -161,18 +167,22 @@ export class Director {
   vistaCine(dt, w, h) {
     const C = this.cine;
     C.k += (C.meta - C.k) * (1 - Math.exp(-dt * (C.meta ? 4.5 : 6)));
-    if (!C.meta && C.k < 0.003) { C.k = 0; return { vista: null, barras: 0 }; }
     const N = this.N;
+    /* parado, el cuadro es angosto: la cámara misma va al medio de los dos (se sigue
+       cada cuadro, por si alguno se mueve), así entran aunque el zoom no se acerque */
+    if (N) N.foco = Pantalla.vertical && C.meta && C.con ? { x: (N.m.p.x + C.con.x) / 2, y: (N.m.p.y + C.con.y) / 2 - 16 } : null;
+    if (!C.meta && C.k < 0.003) { C.k = 0; return { vista: null, barras: 0 }; }
     if (!N) return { vista: null, barras: 0 };
     const e = C.k * C.k * (3 - 2 * C.k), p = N.m.p;
     let fx = p.x, fy = p.y - 16, zMax = 1.35;
     if (C.con) {
       const d = Math.abs(C.con.x - p.x);
       fx = (p.x + C.con.x) / 2; fy = (p.y + C.con.y) / 2 - 16;
-      zMax = Math.max(1.2, Math.min(1.55, (w * 0.72) / (d + 40)));   // que entren los dos
+      zMax = Math.max(Pantalla.vertical ? 1 : 1.2, Math.min(1.55, (w * 0.72) / (d + 40)));   // que entren los dos
     }
     const z = 1 + (zMax - 1) * e, s = N.aPantalla(fx, fy);
-    const ty = C.arriba ? 0.64 : 0.38;
+    /* parado, la ventana de la charla va en la consola: el juego queda libre y se centra */
+    const ty = Pantalla.vertical ? 0.5 : C.arriba ? 0.64 : 0.38;
     const cx = Math.min(1 - 0.5 / z, Math.max(0.5 / z, s.x / w));
     const cy = Math.min(1 - 0.5 / z, Math.max(0.5 / z, s.y / h - (ty - 0.5) / z));
     return { vista: { x: cx, y: cy, z }, barras: 0.085 * e };
@@ -240,7 +250,7 @@ export class Director {
   }
   /* la colina de fondo, con la cámara paseando despacito */
   fondoTitulo() {
-    this.N = new Nivel(ORDEN[0]);
+    this.N = new Nivel(ORDEN[0], { w: Pantalla.w, h: Pantalla.h });
     this.N.quieto = true; this.paseo = true;
   }
   hayPartida() { const P = this.partida; return !!(P && (P.en || P.hechos.length || P.juntadas.length || P.mundo !== ORDEN[0])); }
@@ -250,6 +260,7 @@ export class Director {
     this.verTactil(); this.ui.verHud(false);
     if (conOla) { await this.ui.olaTapa(); if (vez !== this.vez) return; }
     this.quitarEscena();
+    delete document.documentElement.dataset.mundo;
     if (!this.paseo) this.fondoTitulo();
     Sonido.musica('titulo'); Sonido.agua(false);
     if (conOla || this.ui.ola.classList.contains('tapa')) this.ui.olaDestapa();
@@ -288,7 +299,7 @@ export class Director {
   }
   async creditos(final) {
     this.ui.limpiar(); this.ui.verHud(false);
-    if (final) { this.fondoTitulo(); }
+    if (final) { this.fondoTitulo(); delete document.documentElement.dataset.mundo; }
     Sonido.musica('creditos');
     await this.ui.creditos(TX().creditos);
     if (final) this.titulo(true);
@@ -309,7 +320,7 @@ export class Director {
     ];
     if (document.documentElement.requestFullscreen) filas.push({ nombre: () => tr('pantalla'), valor: () => tr(document.fullscreenElement ? 'si' : 'no'), cambiar: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else Pantalla.acostar(); } catch (_) {} } });
     if (esTactil()) {
-      filas.push({ nombre: () => tr('giro'), valor: () => tr(O.giro), cambiar: (d) => { O.giro = ciclo(['auto', 'normal', 'reves'], O.giro, d); Pantalla.ponerGiro(O.giro); this.guardarOpc(); } });
+      filas.push({ nombre: () => tr('giro'), valor: () => tr(NOMBRE_GIRO[O.giro]), cambiar: (d) => { O.giro = ciclo(GIROS, O.giro, d); Pantalla.ponerGiro(O.giro); this.guardarOpc(); } });
     }
     filas.push({ nombre: () => tr('tactiles'), valor: () => tr('acomodar') + ' ›', abrir: () => { Sonido.sfx('elegir'); this.editarTactil(() => this.menuOpciones(volver)); } });
     this.ui.opciones(filas, () => { Sonido.sfx('elegir'); volver(); }, { tactil: Entrada.fuente === 'toque' });
@@ -393,10 +404,11 @@ export class Director {
     if (vez !== this.vez) return;
     this.quitarEscena();
     const retomado = !!en || P.hechos.includes(id);
-    const N = this.N = new Nivel(id, { habil: P.habil, en, juntadas: P.juntadas, rotos: (P.rotos || {})[id] || [] });
+    const N = this.N = new Nivel(id, { habil: P.habil, en, juntadas: P.juntadas, rotos: (P.rotos || {})[id] || [], w: Pantalla.w, h: Pantalla.h });
     for (const v of N.npcs) v.orig = v.id;
     N.alEvento = (e) => this.evento(e, vez);
     this.paseo = false; this.mundo = id;
+    document.documentElement.dataset.mundo = id;
     P.mundo = id; if (!en) P.en = null;
     this.guardar();
     this.combo = { k: 0, t: -9 };

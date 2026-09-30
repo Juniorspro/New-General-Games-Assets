@@ -97,3 +97,25 @@ o "Pruebas", según haga falta). Acá va lo que cuesta volver a averiguar.
   pedales a la vez.
 - Si pide más: más vehículos, carreras en línea contra fantasmas grabados, o
   un modo "desafío" diario.
+
+## Celular parado: vertical (30/09)
+
+- **Ajustes › Celular parado** (`O.parado`): 'vertical' de fábrica, o 'girar' (todo `#app` a 90°, como antes, con
+  su giro auto/normal/al revés).
+- **Vertical** (`.vertical`):
+  - el lienzo es la pantalla entera;
+  - el auto va más abajo y a la izquierda, con más ruta adelante;
+  - los fondos pintados van en una franja con forma de pantalla acostada, detrás de la ruta, así no se estiran.
+    Arriba sigue el cielo en degradé hasta el cenit;
+  - los pedales van grandes abajo y el HUD arriba;
+  - el mapa baja de La Quiaca al glaciar (`lineaV`) con la postal abajo;
+  - los tamaños van con el lado corto (si no, la nieve eran platos).
+- **Trampas:**
+  - el zoom lento de la portada (`kenburns`) agrandaba la foto 4 px más allá del borde, y `#app` medía de más:
+    `#idioma{overflow:hidden}`;
+  - la postal entra con `translateY(40%)` y gira: medida a media animación, parecía cortada. La prueba termina
+    las animaciones antes de medir.
+- `node ruta40/pruebas/vertical.mjs` (38 comprobaciones):
+  - parado en 3 tamaños y 3 idiomas, y manejo con toques de verdad;
+  - acostado y en la compu, compara las medidas de antes.
+  - Las capturas van a `pruebas/salida/` (en `.gitignore`).

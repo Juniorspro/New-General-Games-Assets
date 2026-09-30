@@ -9,8 +9,8 @@ import * as THREE from 'three';
 import { crearMundo, pasarKilla, revivir, empezarEn, DT, NADA, B, baldosa, vigasEn } from './fisica.js';
 import { biomaEn } from './biomas.js';
 import { armarCarton, armarTeatrito, armarColgantes, pasarColgantes } from './papel.js';
-import { Escenario } from './escenario.js';
-import { KillaPapel } from './actores.js';
+import { Escenario, anotarTexturas } from './escenario.js';
+import { KillaPapel, texturasDeKilla } from './actores.js';
 import { Apu, Vecino, Puma, VientoBlanco, Farol, Animal, Volador, pisoBajo } from './figuras.js';
 import { LUGAR_ANIMAL } from './escenario.js';
 import { DECOR } from './elenco.js';
@@ -32,6 +32,8 @@ export class Capitulo {
   constructor(E, cielo, id, o) {
     o = o || {};
     this.E = E; this.cielo = cielo; this.id = id; this.o = o;
+    /* las hojas que se imprimen o se piden mientras se arma (ver texturas()) */
+    this.pedidas = anotarTexturas(true);
     const nivel = this.nivel = NIVEL[id];
     const m = this.m = crearMundo(nivel, { habil: o.habil, coplas: o.coplas });
     if (o.en) empezarEn(m, o.en, o.en.id);
@@ -74,8 +76,11 @@ export class Capitulo {
     this.caida = 0;            // el golpe al aterrizar (para el aplastado)
     this.saltoRecien = false;
     this.rayo = 0; this.proxRayo = 3;
+    anotarTexturas(false);
     this.pasarCamara(1, true);
   }
+  /* todo lo que puede llegar a verse en el capítulo, para subirlo antes de que se vea */
+  texturas() { return [...this.pedidas, ...texturasDeKilla()]; }
   kBioma() {
     const n = this.nivel, p = this.m ? this.m.p : null;
     if (n.bioma !== 'nevado' || !p) return 0;
@@ -153,18 +158,26 @@ export class Capitulo {
     const m = this.m, p = m.p, c = this.cam;
     let tx, ty, ancho;
     const persigue = m.perseguidor && m.perseguidor.activo;
-    if (this.encuadre) { tx = this.encuadre.x; ty = this.encuadre.y; ancho = this.encuadre.ancho; }
-    else {
+    /* con el teléfono parado la vista es angosta y alta: se ve un 70 % del ancho de siempre (si
+       no, Killa queda chiquita), la cámara mira más adelante (para ver el próximo salto) y Killa
+       va más abajo del medio, que lo que importa (repisas, saltos, Apu) está arriba. En las
+       escenas el encuadre se achica menos, así entran los dos que hablan */
+    const V = Pantalla.vertical;
+    if (this.encuadre) {
+      tx = this.encuadre.x; ty = this.encuadre.y; ancho = this.encuadre.ancho;
+      if (V) { ancho = Math.max(8, ancho * 0.8); if (this.encuadre.auto) ty += ancho / this.E.aspecto * 0.1; }
+    } else {
       c.mira += ((p.dir || 1) - c.mira) * suave(0.2, dt);
-      tx = p.x + c.mira * (persigue ? 3.2 : 2.2);
-      ty = p.y + 1.2;
+      tx = p.x + c.mira * (persigue ? (V ? 2.6 : 3.2) : (V ? 3.3 : 2.2));
       ancho = persigue ? 25 : this.nivel.id === 'nevado' && p.x > 100 ? 23 : 21;
+      if (V) ancho *= 0.69;
+      ty = p.y + 1.2 + (V ? ancho / this.E.aspecto * 0.12 : 0);
       /* en lo alto, no seguir cada saltito: solo si se aleja o pisa */
       const dy = ty - c.y;
       if (!p.enSuelo && Math.abs(dy) < 2.2 && p.estado === 'normal') ty = c.y + dy * 0.15;
     }
-    /* con el teléfono parado se ve menos de ancho (si no, Killa queda chiquita) */
-    if (this.E.aspecto < 1) ancho = Math.max(9, ancho * Math.pow(this.E.aspecto, 0.7));
+    /* una ventana parada en la compu: se ve menos de ancho (si no, Killa queda chiquita) */
+    if (!V && this.E.aspecto < 1) ancho = Math.max(9, ancho * Math.pow(this.E.aspecto, 0.7));
     this.anchoMeta = ancho;
     this.ancho += (this.anchoMeta - this.ancho) * suave(0.08, dt);
     const alto = this.ancho / this.E.aspecto;
@@ -256,8 +269,8 @@ export class Capitulo {
 
   /* dónde está algo en la pantalla (para los globitos de charla) */
   aPantalla(v) {
-    const q = v.clone().project(this.E.camara);
-    return { x: (q.x * 0.5 + 0.5) * Pantalla.w, y: (-q.y * 0.5 + 0.5) * Pantalla.h, adelante: q.z < 1 };
+    const q = v.clone().project(this.E.camara), V = Pantalla.vista;
+    return { x: V.x + (q.x * 0.5 + 0.5) * V.w, y: V.y + (-q.y * 0.5 + 0.5) * V.h, adelante: q.z < 1 };
   }
   cabezaDe(quien) {
     const p = this.m.p;
@@ -267,15 +280,21 @@ export class Capitulo {
     return v ? v.cabeza() : new THREE.Vector3(p.x, p.y + 2, 0);
   }
 
-  destruir() {
+  /* sacarlo de la escena sin liberar nada todavía: así los programas que comparte con el
+     capítulo que viene siguen vivos hasta que el nuevo los tome (si no, se borraban y se
+     compilaban de nuevo) */
+  sacar() {
     this.E.escena.remove(this.g);
+    this.E.u.uFrio.value = 0; this.E.u.uFlash.value = 0; this.E.u.uBarras.value = 0;
+    this.cielo.u.uRayo.value = 0;
+  }
+  destruir() {
+    if (this.g.parent) this.sacar();
     this.g.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
       if (o.material) for (const mt of [].concat(o.material)) { if (mt.map && mt.map.userData.w == null) mt.map.dispose(); mt.dispose(); }
       if (o.customDepthMaterial) o.customDepthMaterial.dispose();
       if (o.isInstancedMesh) o.dispose();
     });
-    this.E.u.uFrio.value = 0; this.E.u.uFlash.value = 0; this.E.u.uBarras.value = 0;
-    this.cielo.u.uRayo.value = 0;
   }
 }

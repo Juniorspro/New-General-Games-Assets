@@ -75,6 +75,8 @@ button.cartel:disabled { filter: grayscale(.8) brightness(.7); cursor: default; 
 .velo { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 40%, rgba(20,12,4,.1), rgba(20,12,4,.65)); pointer-events: none; }
 .fondoImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .kenburns { animation: kb 26s ease-in-out infinite alternate; }
+/* (el zoom lento agranda la foto unos píxeles más allá del borde: se corta en su pantalla, así no hay ancho de más) */
+#idioma { overflow: hidden; }
 @keyframes kb { from { transform: scale(1.02) translate(0, 0); } to { transform: scale(1.12) translate(-2%, 1%); } }
 
 /* la carga */
@@ -172,6 +174,9 @@ input[type=range]::-moz-range-thumb { width: calc(28 * var(--u)); height: calc(2
 .carril::after { content: ''; position: absolute; left: 4%; right: 4%; top: 50%; height: calc(2 * var(--u)); background: repeating-linear-gradient(90deg, rgba(255,255,255,.7) 0 calc(12 * var(--u)), transparent 0 calc(22 * var(--u))); pointer-events: none; transform: translateY(-50%); }
 .barraBotones { display: flex; gap: calc(12 * var(--u)); justify-content: center; margin-top: calc(14 * var(--u)); flex-wrap: wrap; }
 #controles { align-items: flex-start; padding-top: calc(14 * var(--u)); }
+/* la pantalla del editor ocupa todo pero no agarra los toques: si no, tapaba los pedales y no se podían arrastrar */
+#ui > #controles { pointer-events: none; }
+#controles .tablero { pointer-events: auto; }
 #controles .tablero { width: min(70%, calc(560 * var(--u))); padding: calc(12 * var(--u)) calc(18 * var(--u)); }
 #controles .tablero .fila { padding: calc(4 * var(--u)) 0; grid-template-columns: calc(150 * var(--u)) 1fr; }
 #controles .ayuda { font-size: calc(13 * var(--u)); font-weight: 700; color: #555; margin: 0 0 calc(6 * var(--u)); }
@@ -278,3 +283,99 @@ input[type=range]::-moz-range-thumb { width: calc(28 * var(--u)); height: calc(2
 .volver { position: absolute; left: calc(16 * var(--u)); top: calc(14 * var(--u)); z-index: 5; }
 /* la versión chiquita, para teléfonos acostados */
 .bajita #menu .marca h1 { font-size: calc(64 * var(--u)); }
+
+/* ------------------------------------------------------------------ el teléfono parado (.vertical)
+   Se juega parado de verdad, sin girar nada: acá solo se reacomoda lo que en lo angosto no entra.
+   Acostado y en el monitor no cambia nada (todo va debajo de .vertical). --arriba es el lugar de la
+   muesca y la hora; abajo, la rayita del iPhone (los pedales ya la esquivan). */
+#mapa .lineaV { display: none; }
+.fila.apagada { opacity: .45; }
+.vertical { --arriba: env(safe-area-inset-top, 0px); --abajo: env(safe-area-inset-bottom, 0px); }
+
+/* el HUD: arriba la nafta y la plata con el PARE; abajo de eso el mojón, con los dos relojes a los costados
+   como un tablero; el medio y la parte de abajo quedan para el auto, la ruta y los pedales */
+.vertical #hud .nafta { left: calc(12 * var(--u)); top: calc(14 * var(--u) + var(--arriba)); }
+.vertical #hud .tanque { width: calc(150 * var(--u)); }
+.vertical #hud .derecha { right: calc(10 * var(--u)); top: calc(10 * var(--u) + var(--arriba)); gap: calc(10 * var(--u)); }
+.vertical #hud .distancia { top: calc(72 * var(--u) + var(--arriba)); }
+.vertical #hud .progreso { width: calc(230 * var(--u)); }
+.vertical #hud .relojes { left: calc(8 * var(--u)); right: calc(8 * var(--u)); bottom: auto; top: calc(66 * var(--u) + var(--arriba)); transform: none; justify-content: space-between; }
+.vertical #hud .reloj { width: calc(72 * var(--u)); height: calc(72 * var(--u)); }
+.vertical #hud .reloj b { font-size: calc(14 * var(--u)); }
+.vertical #hud .puesto { left: calc(14 * var(--u)); top: calc(4 * var(--u) + var(--arriba)); }
+.vertical #hud .anuncio { top: 30%; width: 94%; font-size: calc(38 * var(--u)); white-space: normal; line-height: 1.05; }
+.vertical #hud .semaforo { top: 36%; }
+.vertical .tutoCartel p { font-size: calc(16 * var(--u)); }
+
+/* la carga y el idioma */
+.vertical #carga .ruta { width: 78%; }
+.vertical #idioma .carteles .cartel { min-width: calc(330 * var(--u)); }
+
+/* el menú: la marca arriba, el auto del demo en el medio y los carteles abajo, al alcance del pulgar */
+.vertical #menu { flex-direction: column; justify-content: space-between; align-items: center; padding: calc(64 * var(--u) + var(--arriba)) 0 calc(34 * var(--u) + var(--abajo)); }
+.vertical #menu .velo { background: linear-gradient(180deg, rgba(20,10,4,.5), rgba(20,10,4,.04) 34%, rgba(20,10,4,.04) 50%, rgba(20,10,4,.45)) !important; }
+.vertical #menu .marca { align-items: center; text-align: center; align-self: center; }
+.vertical #menu .marca h1 { font-size: calc(84 * var(--u)); }
+.vertical #menu .marca p { font-size: calc(19 * var(--u)); }
+.vertical #menu .botones { align-self: center; gap: calc(13 * var(--u)); }
+.vertical #menu .botones .cartel { min-width: calc(330 * var(--u)); }
+.vertical #menu .botones .cartel.grande { font-size: calc(38 * var(--u)); }
+.vertical .plata { top: calc(14 * var(--u) + var(--arriba)); right: calc(14 * var(--u)); }
+
+/* el mapa: la ruta baja por la pantalla, de La Quiaca al glaciar, y la postal abajo */
+.vertical #mapa .lineaH { display: none; }
+.vertical #mapa .lineaV { display: block; }
+.vertical #mapa .arriba { padding-top: calc(14 * var(--u) + var(--arriba)); }
+.vertical #mapa h2 { font-size: calc(30 * var(--u)); }
+.vertical #mapa .camino { position: relative; top: auto; left: auto; right: auto; width: 100%; height: auto; flex: 1 1 auto; min-height: 0; margin: calc(44 * var(--u)) 0 calc(46 * var(--u)); }
+.vertical .parada { left: var(--xv) !important; top: var(--yv) !important; }
+.vertical .parada .foto { width: calc(80 * var(--u)); height: calc(80 * var(--u)); }
+.vertical .parada .nombre { font-size: calc(14 * var(--u)); }
+.vertical .postal { position: relative; left: auto; bottom: auto; flex: none; transform: rotate(-1deg); width: calc(100% - 28 * var(--u)); margin: 0 auto calc(14 * var(--u) + var(--abajo)); grid-template-columns: calc(118 * var(--u)) 1fr; gap: calc(10 * var(--u)) calc(14 * var(--u)); animation-name: postalV; }
+@keyframes postalV { from { transform: translateY(40%) rotate(4deg); opacity: 0; } }
+.vertical .postal .img { height: calc(118 * var(--u)); align-self: start; }
+.vertical .postal p { font-size: calc(15 * var(--u)); }
+.vertical .postal .acciones { grid-column: 1 / -1; flex-direction: row; }
+.vertical .postal .acciones .cartel { flex: 1 1 0; min-width: 0; }
+.vertical .postal .acciones .cartel.grande { font-size: calc(30 * var(--u)); }
+.vertical .postal .sello { right: calc(-6 * var(--u)); }
+
+/* la gomería: la patente arriba, el vehículo en el medio con las flechas y las mejoras abajo */
+.vertical #gomeria .izq { top: calc(14 * var(--u) + var(--arriba)); left: calc(14 * var(--u)); }
+.vertical #gomeria .plataVeh { left: 50%; top: calc(66 * var(--u) + var(--arriba)); width: calc(100% - 24 * var(--u)); }
+.vertical #gomeria .desc { max-width: none; }
+.vertical #gomeria canvas.vitrina { width: 100%; top: calc(150 * var(--u) + var(--arriba)); height: 31%; }
+.vertical #gomeria .flechas { width: 100%; top: calc(150 * var(--u) + var(--arriba) + 31% * .5); bottom: auto; transform: translateY(-20%); padding: 0 calc(8 * var(--u)); }
+.vertical #gomeria .chevron { width: calc(56 * var(--u)); height: calc(76 * var(--u)); }
+.vertical #gomeria .panel { top: auto; left: 0; width: 100%; height: calc(100% - 150 * var(--u) - var(--arriba) - 31%); background: linear-gradient(180deg, rgba(20,14,8,.4), rgba(20,14,8,.9) calc(16 * var(--u))); padding: calc(14 * var(--u)) calc(14 * var(--u)) calc(12 * var(--u) + var(--abajo)); gap: calc(8 * var(--u)); }
+.vertical .mejora { padding: calc(7 * var(--u)) calc(10 * var(--u)) calc(7 * var(--u)) calc(14 * var(--u)); }
+.vertical #gomeria .tutoCartel { left: 50% !important; top: 38% !important; }
+
+/* ajustes, controles y picadas: el tablero a lo ancho, la etiqueta más angosta */
+.vertical .tablero { width: calc(100% - 24 * var(--u)); padding: calc(18 * var(--u)) calc(18 * var(--u)); max-height: calc(100% - 28 * var(--u) - var(--arriba) - var(--abajo)); }
+.vertical .fila { grid-template-columns: calc(128 * var(--u)) 1fr; gap: calc(10 * var(--u)); font-size: calc(17 * var(--u)); }
+.vertical .opcion { font-size: calc(15 * var(--u)); padding: calc(10 * var(--u)) calc(14 * var(--u)) calc(8 * var(--u)); }
+.vertical #controles { padding-top: calc(12 * var(--u) + var(--arriba)); }
+.vertical #controles .tablero { width: calc(100% - 24 * var(--u)); }
+.vertical #controles .tablero .fila { grid-template-columns: calc(118 * var(--u)) 1fr; }
+.vertical .carreras { grid-template-columns: 1fr; gap: calc(10 * var(--u)); }
+.vertical .carrera { display: grid; grid-template-columns: 1fr auto; gap: calc(4 * var(--u)) calc(12 * var(--u)); align-items: center; }
+.vertical .carrera > * { grid-column: 1; }
+.vertical .carrera h3 { grid-column: 1 / -1; }
+.vertical .carrera > .cartel { grid-column: 2; grid-row: 2 / span 4; align-self: center; }
+
+/* pausa y resultado: una columna, los botones uno abajo del otro */
+.vertical #pausa .barraBotones { flex-direction: column; align-items: stretch; width: min(78%, calc(420 * var(--u))); }
+.vertical #resultado { flex-direction: column; gap: calc(14 * var(--u)); padding: var(--arriba) 0 var(--abajo); }
+.vertical #resultado .causa .rombo { width: calc(150 * var(--u)); height: calc(150 * var(--u)); font-size: calc(52 * var(--u)); }
+.vertical #resultado .causa h2 { font-size: calc(34 * var(--u)); max-width: 92vw; }
+.vertical #resultado .cuentas { min-width: calc(360 * var(--u)); margin-top: calc(18 * var(--u)); }
+.vertical #resultado .sello { top: calc(-26 * var(--u)); right: calc(-22 * var(--u)); }
+.vertical #resultado .botonesRes { align-items: stretch; }
+.vertical #resultado .botonesRes > div > .cartel { flex: 1 1 0; }
+
+/* la historia: el cuadro más alto (el dibujo se recorta al medio) */
+.vertical #historia .cuadro { width: calc(100% - 36 * var(--u)); aspect-ratio: 4/5; max-height: 58%; }
+.vertical #historia .cuadro img { height: 58%; left: 4%; }
+.vertical #historia p { width: calc(100% - 44 * var(--u)); font-size: calc(24 * var(--u)); }
+.vertical #historia .saltar { top: calc(14 * var(--u) + var(--arriba)); }

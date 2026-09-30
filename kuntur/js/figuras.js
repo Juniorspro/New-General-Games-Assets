@@ -26,6 +26,9 @@ function hojaDe(nombre, fn, arg, mpx, o) {
   h.userData.u = u; h.userData.mpx = mpx;
   return h;
 }
+/* los gestos de cualquier vecino, y los que hace uno solo (su tarea y lo suyo en las escenas) */
+const COMUNES = ['quieto', 'habla', 'camina', 'saluda', 'senala', 'asiente', 'abraza'];
+const PROPIAS = { abuela: ['teje'], rosa: ['acomoda'], ceferino: ['pica', 'seca'], tomas: ['palea', 'da'] };
 /* el suelo que hay debajo de (x, y): para los que caminan sin física */
 export function pisoBajo(m, x, y) {
   const tx = Math.floor(x);
@@ -62,9 +65,10 @@ export class Vecino {
     this.meta = null;            // adónde camina: { x, vel, listo }
     this.forzado = null;         // para dónde mira en una escena
     this.cerca = false; this.saludo = 0; this.tLejos = 0;
-    /* se imprimen todos sus cuadros de una vez, así no traba al cambiar */
+    /* se imprimen todos sus cuadros de una vez, así no traba al cambiar: los de todos y los suyos
+       (antes también las tareas de los otros, que nunca hace: ~14 hojas de más por vecino) */
     for (const [n, [c]] of Object.entries(ANIM_GENTE)) {
-      if (id === 'coquena' ? !['quieto', 'habla', 'saluda', 'flota', 'baston'].includes(n) : ['flota', 'baston'].includes(n)) continue;
+      if (id === 'coquena' ? !['quieto', 'habla', 'saluda', 'flota', 'baston'].includes(n) : !(COMUNES.includes(n) || (PROPIAS[id] || []).includes(n))) continue;
       for (let f = 0; f < c; f++) texDe(id, this.fn, n + ':' + f);
     }
   }
@@ -235,6 +239,7 @@ export class Apu {
     }
     /* el pichón */
     this.pichon = hojaDe('apuP', APU.pichon, 0, 0.034);
+    texDe('apuP', APU.pichon, 1); texDe('apuP', APU.pichon, 2);
     this.piv.add(this.pichon);
     /* el cóndor: cuerpo y dos alas colgadas del hombro */
     const k = this.k = 0.026 + edad * 0.032;
@@ -456,6 +461,7 @@ export class Apu {
 export class Puma {
   constructor(padre) {
     this.hoja = hojaDe('puma', ANIMALES.puma, 0, 0.05, { ox: -0.3 });
+    for (let f = 1; f < 4; f++) texDe('puma', ANIMALES.puma, f);
     this.piv = new THREE.Group(); this.piv.add(this.hoja);
     this.raiz = new THREE.Group(); this.raiz.add(this.piv); padre.add(this.raiz);
     this.raiz.visible = false; this.y = 0; this.vy = 0; this.fase = 0; this.f = -1; this.yaw = 0; this.dir = 1; this.huye = 0;
@@ -538,6 +544,7 @@ export class VientoBlanco {
 export class Farol {
   constructor(padre, sinLuz) {
     this.hoja = hojaDe('farol', DECOR.farol, 0, 0.03);
+    texDe('farol', DECOR.farol, 1);
     this.raiz = new THREE.Group(); this.raiz.add(this.hoja); padre.add(this.raiz);
     this.luz = sinLuz ? { intensity: 0 } : new THREE.PointLight('#ffc070', 2.4, 10, 1.2);
     if (!sinLuz) { this.luz.position.set(0, 0.3, 1.5); this.raiz.add(this.luz); }

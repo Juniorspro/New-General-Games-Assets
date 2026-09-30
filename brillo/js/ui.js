@@ -9,6 +9,10 @@
      alguien iniciaba sesión.
    - Mundos, guiños, opciones y pausa son ventanas con su barra y su X.
    - Las transiciones son una ola de burbujas que tapa y destapa.
+   - Con el celular parado, abajo del juego va la consola: un panel de vidrio
+     con su brillo curvo, dos cintas de luz y burbujitas que suben. Ahí van
+     los dedos, la charla y el mensaje de Mora; los menús usan toda la
+     pantalla (lo de "parado" está en brillo.css, con html.vertical).
    Todo se maneja con teclado, mando, mouse o dedos.
    ========================================================================== */
 import { TX, tr, IDIOMAS, TEXTOS, MUNDOS, EMO } from './textos.js';
@@ -35,6 +39,9 @@ export class UI {
   constructor(raiz) {
     this.r = raiz;
     this.foco = null;
+    /* la consola (acostado no se ve): las burbujitas suben con transform, que no repinta nada */
+    const burbujitas = Array.from({ length: 7 }, (_, i) => `<i style="--x:${[8, 22, 37, 52, 64, 79, 92][i]}%;--t:${[7, 4, 9, 5, 6, 3.5, 8][i]};--d:${-i * 1.9}s;--v:${11 + (i % 3) * 3}s"></i>`).join('');
+    this.consola = $('div', 'consola', raiz, `<i class="lustre"></i><i class="cinta a"></i><i class="cinta b"></i><b class="marca">BRILLO</b><span class="burbujitas">${burbujitas}</span>`);
     this.capa = $('div', 'capa', raiz);
     this.ola = $('div', 'ola', raiz);
     for (let i = 0; i < 34; i++) { const b = $('i', '', this.ola); b.style.setProperty('--x', `${(i * 37) % 100}%`); b.style.setProperty('--t', `${14 + (i * 13) % 26}`); b.style.setProperty('--d', `${(i % 9) * 0.035}s`); }
@@ -83,7 +90,7 @@ export class UI {
   idioma(actual, alElegir) {
     this.limpiar();
     const c = $('div', 'idioma', this.capa);
-    $('div', 'elegi', c, IDIOMAS.map(([l]) => esc(TEXTOS[l].ui.elegi)).join(' <span>·</span> '));
+    $('div', 'elegi', c, IDIOMAS.map(([l]) => `<em>${esc(TEXTOS[l].ui.elegi)}</em>`).join(' <span>·</span> '));
     const fila = $('div', 'burbujas', c);
     let elegido = false;
     const items = IDIOMAS.map(([l, nombre], i) => {
@@ -188,9 +195,13 @@ export class UI {
   charla(conQuien, o = {}) {
     if (this.chat) this.chat.remove();
     const nick = TX().nicks[conQuien] || TX().nombres[conQuien] || conQuien;
-    const c = this.chat = $('div', 'chat' + (o.arriba ? ' arriba' : ''), this.r, `<div class="barra"><img src="${avatar(conQuien)}"><span><b>${esc(TX().nombres[conQuien] || conQuien)}</b><small>${esc(nick)}</small></span><i class="x"></i></div><div class="lineas"></div><div class="escribe"></div><div class="toca">${esc(tr('tocar'))} ▸</div>`);
+    const fotos = `<div class="fotos">${conQuien !== 'nick' ? `<i class="suya"><img src="${avatar(conQuien)}"></i>` : ''}<i class="mia"><img src="${avatar('nick')}"></i></div>`;
+    const c = this.chat = $('div', 'chat' + (o.arriba ? ' arriba' : ''), this.r, `<div class="barra"><img src="${avatar(conQuien)}"><span><b>${esc(TX().nombres[conQuien] || conQuien)}</b><small>${esc(nick)}</small></span><i class="x"></i></div><div class="lineas"></div><div class="escribe"></div><div class="toca">${esc(tr('tocar'))} ▸</div>${fotos}`);
     requestAnimationFrame(() => c.classList.add('ve'));
     const lineas = c.querySelector('.lineas'), escribe = c.querySelector('.escribe');
+    /* parado, la ventana tiene alto fijo (la consola): si la línea nueva no entra, se van las
+       viejas por arriba. Acostado no hace falta (la ventana crece) y ni se mide */
+    const recortar = () => { if (!document.documentElement.classList.contains('vertical')) return; while (lineas.children.length > 1 && lineas.scrollHeight > lineas.clientHeight + 1) lineas.removeChild(lineas.firstChild); };
     const R = {
       /* una línea: primero "está escribiendo…", después el texto letra por letra */
       linea: (quien, texto) => {
@@ -198,8 +209,9 @@ export class UI {
         escribe.textContent = tr('escribiendo', nombre);
         const l = $('div', 'linea ' + (quien === 'nick' ? 'mia' : 'suya') + (quien === 'plano' ? ' plana' : ''), lineas, `<img src="${avatar(quien)}"><div><b>${esc(tr('dice', nombre))}</b><p></p></div>`);
         while (lineas.children.length > 3) lineas.removeChild(lineas.firstChild);
+        c.classList.toggle('hablaMia', quien === 'nick'); c.classList.toggle('hablaSuya', quien !== 'nick');
         const p = l.querySelector('p');
-        R.listo = false; R.t = -0.35; R.texto = texto; R.p = p; R.escribe = escribe;
+        R.listo = false; R.t = -0.35; R.texto = texto; R.p = p; R.escribe = escribe; R.n = -1;
         return l;
       },
       pasar(dt) {
@@ -208,11 +220,11 @@ export class UI {
         if (R.t < 0) return;
         R.escribe.textContent = '';
         const n = Math.min(R.texto.length, Math.floor(R.t * 55));
-        R.p.textContent = R.texto.slice(0, n);
+        if (n !== R.n) { R.n = n; R.p.textContent = R.texto.slice(0, n); recortar(); }
         if (n >= R.texto.length) R.completar();
         else if (this.alLetra && Math.floor(R.t * 55) % 3 === 0) this.alLetra();
       },
-      completar() { if (!R.p) return; R.p.innerHTML = conCaritas(R.texto); R.listo = true; R.escribe.textContent = ''; },
+      completar() { if (!R.p) return; R.p.innerHTML = conCaritas(R.texto); R.listo = true; R.escribe.textContent = ''; recortar(); },
       cerrar() { c.classList.remove('ve'); c.classList.add('sale'); setTimeout(() => c.remove(), 400); if (this.chat === c) this.chat = null; },
     };
     return R;

@@ -24,6 +24,9 @@ function texturasKilla() {
   return r;
 }
 
+/* todas sus hojas (para subirlas a la placa en el ensayo, antes de que se vean) */
+export function texturasDeKilla() { return Object.values(texturasKilla()).flatMap((fr) => fr.map((f) => f.tex)); }
+
 export class KillaPapel {
   constructor(padre) {
     this.T = texturasKilla();

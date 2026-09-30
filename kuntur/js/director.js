@@ -34,9 +34,12 @@ export class Director {
     this.op = Object.assign({ musica: 7, efectos: 8, calidad: tactil ? 'baja' : 'media', temblor: true }, leer(CLAVE_OP, {}));
     /* los controles de dedo, como los dejó acomodados el jugador */
     const TA = this.op.tactil || {};
-    this.op.tactil = { modo: 'flotante', alfa: 0.85, vib: true, ...TA, pos: { ...(TA.pos || {}) }, tam: { pal: 1, salto: 1, accion: 1, pausa: 1, ...(TA.tam || {}) } };
+    this.op.tactil = { modo: 'flotante', alfa: 0.85, vib: true, ...TA, pos: { ...(TA.pos || {}) }, posV: { ...(TA.posV || {}) }, tam: { pal: 1, salto: 1, accion: 1, pausa: 1, ...(TA.tam || {}) } };
     Entrada.vibrar = this.op.tactil.vib;
-    Pantalla.giro = this.op.giro || 'auto'; Pantalla.sensor();
+    /* con el teléfono parado ahora se juega parado; el que ya había elegido girarlo a mano
+       ('normal' o 'al revés') lo sigue teniendo así */
+    if (!this.op.parado) this.op.parado = this.op.giro === 'normal' || this.op.giro === 'reves' ? this.op.giro : 'vertical';
+    Pantalla.giro = this.op.parado; Pantalla.sensor();
     this.hayDedos = tactil || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.partida = leer(CLAVE, null);
     const calURL = new URLSearchParams(location.search).get('cal');
@@ -87,26 +90,38 @@ export class Director {
       await this.listaPortada;
       this.titulo(true);
     });
-    /* la portada se arma atrás del telón, mientras se elige */
+    /* la portada se arma y se ensaya atrás del telón, mientras se elige */
     this.listaPortada = dormir(60).then(() => this.armarPortada());
   }
+  /* devuelve la promesa del ensayo: el telón no se abre hasta que esté todo listo */
   armarPortada() {
-    if (this.portada) return;
+    if (this.portada) return this.portada.listo;
     const P = this.portada = new Capitulo(this.E, this.cielo, 'portada', { temblor: false });
     P.quieta = true;
     const p = P.m.p; p.dir = 1;
-    P.encuadre = { x: p.x + 2.5, y: p.y + 2.2, ancho: 17, libre: true };
+    P.encuadre = this.encuadrePortada(P);
     P.pasarCamara(1, true);
     P.apu.orbitar(p.x + 0.5, p.y + 4.2, 4.2);
     P.clima.fuerza = 0.6;
     P.tGesto = 3;
+    P.cuadro(0.016);
+    /* la primera vez se ensaya la escena entera (el cielo también); después, lo del capítulo */
+    const todo = !this.ensayado; this.ensayado = true;
+    P.listo = this.E.ensayar(todo ? this.E.escena : P.g, P.texturas());
+    return P.listo;
+  }
+  /* acostado, Killa a la izquierda (el logo arriba y los boletos a la derecha); parado, al medio,
+     entre el logo y los boletos */
+  encuadrePortada(P) {
+    const p = P.m.p;
+    return Pantalla.vertical ? { x: p.x + 0.6, y: p.y + 3.1, ancho: 12, libre: true } : { x: p.x + 2.5, y: p.y + 2.2, ancho: 17, libre: true };
   }
   async titulo(abrir) {
     this.estado = 'titulo';
     this.pausado = false; this.hablando = false;
     this.ui.verTactil(false);
     this.ui.sinEtiquetas();
-    if (!this.portada) { this.armarPortada(); }
+    if (!this.portada) await this.armarPortada();
     Sonido.musica('titulo'); Sonido.ambientar(null);
     const P = this.partida, hay = P && P.cap && !P.terminado;
     const ops = [];
@@ -155,8 +170,8 @@ export class Director {
       { nombre: () => tr('temblor'), valor: () => tr(o.temblor ? 'si' : 'no'), cambiar: () => { o.temblor = !o.temblor; } },
       { nombre: () => tr('pantalla'), valor: () => tr(document.fullscreenElement ? 'si' : 'no'), cambiar: () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (_) {} } },
     ];
-    const GIROS = ['auto', 'normal', 'reves'];
-    if (this.hayDedos) filas.push({ nombre: () => tr('giro'), valor: () => tr(Pantalla.giro), cambiar: (d) => { o.giro = GIROS[(GIROS.indexOf(Pantalla.giro) + d + 3) % 3]; Pantalla.ponerGiro(o.giro); } });
+    const GIROS = ['vertical', 'auto', 'normal', 'reves'], NOMBRE_GIRO = { vertical: 'giroV', auto: 'giroA', normal: 'giroN', reves: 'giroR' };
+    if (this.hayDedos) filas.push({ nombre: () => tr('giro'), valor: () => tr(NOMBRE_GIRO[Pantalla.giro]), cambiar: (d) => { o.parado = GIROS[(GIROS.indexOf(Pantalla.giro) + d + 4) % 4]; Pantalla.ponerGiro(o.parado); } });
     if (this.hayDedos) filas.push({ nombre: () => tr('tactiles'), valor: () => tr('acomodar'), abrir: () => { escribir(CLAVE_OP, this.op); this.editarTactil(alVolver); } });
     this.ui.opciones(filas, () => { escribir(CLAVE_OP, this.op); if (this.cap) this.cap.o.temblor = o.temblor; alVolver(); });
   }
@@ -178,8 +193,10 @@ export class Director {
     await this.ui.telon(true);
     await dormir(40);
     this.cerrarGlobos();
-    if (this.portada) { this.portada.destruir(); this.portada = null; }
-    if (this.cap) { this.cap.destruir(); this.cap = null; }
+    /* lo de antes sale de la escena, pero se libera recién después del ensayo del nuevo */
+    const viejos = [this.portada, this.cap].filter(Boolean);
+    for (const v of viejos) v.sacar();
+    this.portada = null; this.cap = null;
     this.esperas = []; this.condiciones = []; this.escuchas = [];
     this.terminando = false; this.finEsperando = false; this.hablados = {}; this.ayudadas = new Set(); this.ultEmpuja = 0;
     this.pausado = false; this.hablando = false; this.zonasEnCurso = {}; this.vidas = 0;
@@ -192,7 +209,11 @@ export class Director {
     this.reanudado = !!en;
     const c = this.cap;
     c.quieta = true;
-    c.cuadro(0.016); c.dibujar();
+    c.cuadro(0.016);
+    await this.E.ensayar(c.g, c.texturas());
+    for (const v of viejos) v.destruir();
+    if (this.cap !== c) return;
+    c.dibujar();
     Sonido.musica(H.musica); Sonido.ambientar(H.ambiente);
     this.estado = 'juego';
     this.ui.verTactil(Entrada.fuente === 'toque');
@@ -249,10 +270,12 @@ export class Director {
       await this.ui.narrar(T().charlas.final || [], { final: true });
       Sonido.sfx('telon');
       await this.ui.telon(true);
-      if (this.cap) { this.cap.destruir(); this.cap = null; }
+      const c = this.cap; this.cap = null;
+      if (c) c.sacar();
       this.estado = 'creditos';
+      const lista = this.armarPortada().then(() => { if (c) c.destruir(); });
       await this.ui.creditos(T().creditos);
-      this.armarPortada();
+      await lista;
       this.titulo(true);
     }
   }
@@ -284,9 +307,11 @@ export class Director {
     this.cerrarGlobos();
     Sonido.sfx('telon');
     await this.ui.telon(true);
-    if (this.cap) { this.cap.destruir(); this.cap = null; }
+    const c = this.cap; this.cap = null;
+    if (c) c.sacar();
     this.ui.limpiar();
-    this.armarPortada();
+    await this.armarPortada();
+    if (c) c.destruir();
     this.titulo(true);
   }
 

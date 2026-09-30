@@ -106,21 +106,54 @@ export const Sonido = {
     this.maestro.connect(c.destination);
     this.bMusica = c.createGain(); this.bMusica.gain.value = this.vMusica * 0.55; this.bMusica.connect(this.maestro);
     this.bEfectos = c.createGain(); this.bEfectos.gain.value = this.vEfectos; this.bEfectos.connect(this.maestro);
-    /* la reverb: una sala de piedra hecha con ruido que se apaga */
-    const n = c.sampleRate * 2.6, ir = c.createBuffer(2, n, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.6); }
-    this.rev = c.createConvolver(); this.rev.buffer = ir;
+    /* la reverb: una sala de piedra hecha con ruido que se apaga. Se calcula de fondo, en
+       tandas (junto con el contexto frenaba el toque que elige el idioma: ~0,1 s en la compu y
+       más en el teléfono); mientras tanto los convolvers sin respuesta no suenan */
+    const n = Math.round(c.sampleRate * 2.6), ir = c.createBuffer(2, n, c.sampleRate);
+    this.rev = c.createConvolver();
     this.revIn = c.createGain(); this.revIn.gain.value = 0.35; this.revIn.connect(this.rev); this.rev.connect(this.bMusica);
-    this.revFx = c.createConvolver(); this.revFx.buffer = ir;
+    this.revFx = c.createConvolver();
     this.revInFx = c.createGain(); this.revInFx.gain.value = 0.35; this.revInFx.connect(this.revFx); this.revFx.connect(this.bEfectos);
+    const d0 = ir.getChannelData(0), d1 = ir.getChannelData(1);
+    let i = 0;
+    this.deFondo(() => { const fin = Math.min(n, i + 12000); for (; i < fin; i++) { const k = Math.pow(1 - i / n, 2.6); d0[i] = (Math.random() * 2 - 1) * k; d1[i] = (Math.random() * 2 - 1) * k; } return i >= n; });
+    this.deFondo(() => { this.rev.buffer = ir; });
+    this.deFondo(() => { this.revFx.buffer = ir; });
     /* en el iPhone el audio se suspende solo (una llamada, otra app): cualquier toque lo despierta */
     const despertar = () => { if (c.state !== 'running') c.resume(); };
     addEventListener('pointerdown', despertar, true); addEventListener('keydown', despertar, true);
     this.ruido = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
     const d = this.ruido.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     this.cuerdas = new Map();
+    /* las cuerdas del charango de todos los temas, de fondo: calculada en el momento, cada nota
+       nueva costaba ~2 ms, y un rasgueo con acordes nuevos traía diez juntas */
+    this.preparar();
     if (this.pendiente) { const p = this.pendiente; this.pendiente = null; this.musica(p); }
     if (this.ambPend) { const a = this.ambPend; this.ambPend = null; this.ambientar(a); }
+  },
+  /* lo que no apura se hace de a poquito: tandas de ~4 ms entre cuadro y cuadro. Una tarea que
+     devuelve false sigue en la cola (le queda por hacer) */
+  deFondo(fn) {
+    (this.cola = this.cola || []).push(fn);
+    if (!this.tCola) this.tCola = setTimeout(() => this.pasarCola(), 0);
+  },
+  pasarCola() {
+    this.tCola = null;
+    const t0 = performance.now();
+    while (this.cola.length && performance.now() - t0 < 4) { if (this.cola[0]() !== false) this.cola.shift(); }
+    if (this.cola.length) this.tCola = setTimeout(() => this.pasarCola(), 16);
+  },
+  /* las notas de charango de un tema (o de todos, el del título primero) */
+  preparar(nombre) {
+    const nombres = nombre ? [nombre] : ['titulo', ...Object.keys(TEMA).filter((k) => k !== 'titulo')];
+    const vistas = new Set();
+    for (const k of nombres) {
+      const P = TEMA[k] && TEMA[k].pistas;
+      if (!P) continue;
+      const acordes = [...(P.rasgueo || []).map((r) => r[1]), ...(P.arpegio || [])];
+      for (const a of acordes) (ACORDES[a] || ACORDES.Am).map(nm).forEach((m, i) => { vistas.add(m); if (P.rasgueo && i === 4) vistas.add(m - 12); });
+    }
+    for (const m of vistas) this.deFondo(() => { this.cuerda(m); });
   },
   volumenes(m, e) {
     this.vMusica = m; this.vEfectos = e;

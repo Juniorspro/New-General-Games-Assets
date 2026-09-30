@@ -55,6 +55,7 @@ const ES = {
   // ajustes
   a_titulo: 'Ajustes', a_musica: 'Música', a_motor: 'Motor', a_efectos: 'Efectos', a_radio: 'Radio en la ruta', a_idioma: 'Idioma',
   a_controles: 'Controles', a_vibrar: 'Vibrar', a_calidad: 'Calidad', a_alta: 'Alta', a_media: 'Media', a_baja: 'Baja',
+  a_parado: 'Celular parado', a_vertical: 'Vertical', a_deCostado: 'Girar de costado',
   a_giro: 'Pantalla girada', a_auto: 'Automática', a_normal: 'Normal', a_reves: 'Al revés', a_borrar: 'Borrar la partida', a_borrarSeguro: '¿Seguro? Se pierde todo.',
   a_estilo: 'Música', a_estiloFolk: 'Folclore', a_estilo16: '16 bits',
   // los controles
@@ -107,6 +108,7 @@ const EN = {
   pc_rivales: 'Rivals', pc_ganada: 'Won', pc_correr: 'RACE',
   a_titulo: 'Settings', a_musica: 'Music', a_motor: 'Engine', a_efectos: 'Effects', a_radio: 'Radio while driving', a_idioma: 'Language',
   a_controles: 'Controls', a_vibrar: 'Vibration', a_calidad: 'Quality', a_alta: 'High', a_media: 'Medium', a_baja: 'Low',
+  a_parado: 'Upright phone', a_vertical: 'Portrait', a_deCostado: 'Rotate sideways',
   a_giro: 'Rotated screen', a_auto: 'Automatic', a_normal: 'Normal', a_reves: 'Upside down', a_borrar: 'Erase save', a_borrarSeguro: 'Sure? Everything will be lost.',
   a_estilo: 'Music', a_estiloFolk: 'Folk', a_estilo16: '16-bit',
   c_titulo: 'Controls', c_ayuda: 'Drag the pedals wherever feels comfortable', c_tam: 'Size', c_alfa: 'Opacity',
@@ -158,6 +160,7 @@ const PT = {
   pc_rivales: 'Rivais', pc_ganada: 'Vencida', pc_correr: 'CORRER',
   a_titulo: 'Ajustes', a_musica: 'Música', a_motor: 'Motor', a_efectos: 'Efeitos', a_radio: 'Rádio na estrada', a_idioma: 'Idioma',
   a_controles: 'Controles', a_vibrar: 'Vibrar', a_calidad: 'Qualidade', a_alta: 'Alta', a_media: 'Média', a_baja: 'Baixa',
+  a_parado: 'Celular em pé', a_vertical: 'Vertical', a_deCostado: 'Girar de lado',
   a_giro: 'Tela girada', a_auto: 'Automática', a_normal: 'Normal', a_reves: 'Invertida', a_borrar: 'Apagar o progresso', a_borrarSeguro: 'Certeza? Tudo será perdido.',
   a_estilo: 'Música', a_estiloFolk: 'Folclore', a_estilo16: '16 bits',
   c_titulo: 'Controles', c_ayuda: 'Arraste os pedais para onde ficar confortável', c_tam: 'Tamanho', c_alfa: 'Transparência',

@@ -39,10 +39,15 @@ En cada orbe te espera un mensaje sin conexión de Mora.
 - Hay 18 **guiños** escondidos, tres por mundo. Cada uno destapa un emoticón.
 - Las **sesiones** (la pantallita verde) guardan la partida.
 
-**En el teléfono** arranca con los dedos. Parado, el juego se gira 90°. Los
-controles se acomodan en *Opciones → Controles de dedo*: se puede mover y
-agrandar cada uno, cambiar la opacidad, elegir el tipo de joystick
-(flotante, fijo o cruz), espejarlos para zurdos y elegir si vibra.
+**En el teléfono** arranca con los dedos. Parado se juega en vertical: el
+juego arriba, a lo ancho, y abajo una consola de vidrio con los controles,
+así los dedos no tapan nada (ahí va también la ventana de la charla). Quien
+prefiera jugar acostado con el celular parado lo elige en *Opciones →
+Celular parado* (de costado, para un lado o el otro). Los controles se
+acomodan en *Opciones → Controles de dedo*: se puede mover y agrandar cada
+uno, cambiar la opacidad, elegir el tipo de joystick (flotante, fijo o
+cruz), espejarlos para zurdos y elegir si vibra. Parado y acostado se
+acomodan y se guardan por separado.
 
 ## Armar y probar
 
@@ -50,6 +55,7 @@ agrandar cada uno, cambiar la opacidad, elegir el tipo de joystick
 node brillo/herramientas/armar.mjs           # arma brillo.html (minificado)
 node brillo/herramientas/armar.mjs --dev     # sin minificar, para leer errores
 node --max-old-space-size=6144 brillo/pruebas/recorrido.mjs [mundo] [--guardar]
+node brillo/pruebas/vertical.mjs [--rapido]  # el celular parado, con dedos por CDP; capturas en pruebas/salida/
 ```
 
 El recorrido usa la física de verdad y un resolvedor A\* para comprobar

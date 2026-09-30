@@ -86,7 +86,7 @@ export class Viaje {
     asentar(A, this.R.S, 0.6);
     this.iMon = 0; this.mojon = this.R.mojones.filter((m) => m.x < x).length; this.avance = x; this.tAvance = this.t;
     guardarPrev(A);
-    this.cam.x = x + 3; this.cam.y = A.y + 1;
+    this.cam.x = x + 3; this.cam.y = A.y + 1; this.cam.parada = false;
   }
   get estado() { return { autos: this.autos, yo: this.yo, tomados: this.tomados, record: this.record, meta: this.meta, textoMeta: this.modo === 'picada' ? t('pc_meta') : t('llegada').replace(/[¡!]/g, '') }; }
   get metros() { return Math.max(0, this.yo.x - 4); }
@@ -293,17 +293,47 @@ export class Viaje {
     const A = this.yo, p = A.dib || A, c = this.cam;
     const v = Math.hypot(A.vx, A.vy);
     const alto = Math.max(0, p.y - this.R.alto(p.x));
+    /* con el teléfono parado la pantalla es angosta: ahí manda cuánto se ve de ancho (ver camaraParada) */
+    if (dib.vertical) { this.camaraParada(dib, dt, quieta, v, alto); return; }
+    /* si recién se acostó el teléfono, el zoom de parado no sirve: se salta al de acostado */
+    const saltar = c.parada; c.parada = false;
     /* cuánto se ve de alto (m): más con velocidad y con altura */
     /* en un teléfono acostado (poco alto) se acerca un poco, para que el auto no quede chiquito */
     const base = dib.H / (dib.dprCss || 1) < 500 ? 11 : 12.5;
     const quiero = base + Math.min(7, v * 0.28) + Math.min(9, alto * 0.45);
     /* se aleja rápido y se acerca despacio (si no, marea) */
-    const k = Math.min(1, dt * (quiero > c.alto ? 2.2 : 1.2));
+    const k = saltar ? 1 : Math.min(1, dt * (quiero > c.alto ? 2.2 : 1.2));
     c.alto += (quiero - c.alto) * k;
     const mira = Math.max(-2, Math.min(6.5, A.vx * 0.42));
     const tx = p.x + mira + A.def.largo * 0.1, ty = p.y + 0.6 - Math.min(3, alto * 0.25);
     const kx = quieta ? 1 : Math.min(1, dt * 6), ky = quieta ? 1 : Math.min(1, dt * 4.5);
     c.x += (tx - c.x) * kx; c.y += (ty - c.y) * ky;
+    dib.cam.x = c.x; dib.cam.y = c.y; dib.cam.esc = dib.H / c.alto;
+  }
+  /* parado: el auto va en el tercio de abajo, a la izquierda, y adelante se ve la ruta que viene.
+     El zoom sale del ancho: acostado se ven ~24 m de ancho; parado, 14 m quieto (el auto ocupa un tercio
+     de la pantalla y se lee bien) y hasta 22 m rápido, más volando. Lo que sobra de alto es cielo y cerros.
+     dib.alturaAuto dice en qué fracción de la pantalla va el auto (en el menú va más arriba). */
+  camaraParada(dib, dt, quieta, v, alto) {
+    const A = this.yo, p = A.dib || A, c = this.cam, R = this.R, ar = dib.H / dib.W;
+    const ancho = 14 + (A.def.largo - 5) * 0.5 + Math.min(8, v * 0.36) + Math.min(6, alto * 0.35);
+    const quiero = ancho * ar;
+    /* recién parado (o el primer cuadro del viaje): sin zoom de entrada, que marea */
+    const k = !c.parada ? 1 : Math.min(1, dt * (quiero > c.alto ? 2.2 : 1.2));
+    c.alto += (quiero - c.alto) * k;
+    const visto = c.alto / ar;
+    /* el auto se corre para atrás cuanto más rápido va (del 40% al 22% del ancho); en marcha atrás, al medio */
+    const fx = 0.4 - Math.max(-0.1, Math.min(0.18, A.vx * 0.013));
+    /* si adelante la ruta baja, la cámara baja un poco (el auto sube en la pantalla) y se ve el pozo; si sube, al revés */
+    const x1 = p.x + visto * (1 - fx);
+    const adelante = (R.alto(x1 - visto * 0.35) + R.alto(x1 - visto * 0.15)) / 2 - R.alto(p.x);
+    const fy = dib.alturaAuto || 0.6;
+    const tx = p.x + (0.5 - fx) * visto;
+    const ty = p.y + (fy - 0.5) * c.alto + Math.max(-0.12 * c.alto, Math.min(0.08 * c.alto, adelante * 0.35)) - Math.min(4, alto * 0.3);
+    const salto = quieta || !c.parada;
+    const kx = salto ? 1 : Math.min(1, dt * 6), ky = salto ? 1 : Math.min(1, dt * 4.5);
+    c.x += (tx - c.x) * kx; c.y += (ty - c.y) * ky;
+    c.parada = true;
     dib.cam.x = c.x; dib.cam.y = c.y; dib.cam.esc = dib.H / c.alto;
   }
 }

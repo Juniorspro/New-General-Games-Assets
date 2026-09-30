@@ -10,6 +10,7 @@ import { VEHICULOS, ORDEN_VEHICULOS, MEJORAS, NIVEL_MAX, precioMejora } from './
 import { TRAMOS } from './ruta.js';
 import { Sonido } from './sonido.js';
 import { picada } from './juego.js';
+import { esTactil } from './pantalla.js';
 
 const UI = () => document.getElementById('ui');
 export function h(tag, props = {}, ...hijos) {
@@ -141,13 +142,19 @@ export function pantallaMenu(o) {
 export function pantallaMapa(o) {
   const cam = h('div', { class: 'camino' });
   const pts = TRAMOS.map((T, i) => ({ x: 7 + i * (86 / (TRAMOS.length - 1)), y: i % 2 ? 66 : 34 }));
+  /* con el teléfono parado la ruta baja de arriba (La Quiaca) hacia abajo (el glaciar), como en el mapa de verdad */
+  const ptsV = TRAMOS.map((T, i) => ({ x: i % 2 ? 72 : 28, y: 8 + i * (84 / (TRAMOS.length - 1)) }));
   /* la ruta: una curva por las paradas (Catmull-Rom a Bézier) */
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-    d += ` C ${p1.x + (p2.x - p0.x) / 6} ${p1.y + (p2.y - p0.y) / 6}, ${p2.x - (p3.x - p1.x) / 6} ${p2.y - (p3.y - p1.y) / 6}, ${p2.x} ${p2.y}`;
-  }
-  cam.append(h('div', { html: `<svg class="linea" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="#6b5b48" stroke-width="7" vector-effect="non-scaling-stroke" stroke-linecap="round" style="stroke-width:calc(22 * var(--u))"/><path d="${d}" fill="none" stroke="#3b3b3b" stroke-linecap="round" vector-effect="non-scaling-stroke" style="stroke-width:calc(16 * var(--u))"/><path d="${d}" fill="none" stroke="#f5c400" stroke-dasharray="6 8" vector-effect="non-scaling-stroke" style="stroke-width:calc(2.5 * var(--u))"/></svg>`, style: { position: 'absolute', inset: 0 } }));
+  const curva = (pts) => {
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+      d += ` C ${p1.x + (p2.x - p0.x) / 6} ${p1.y + (p2.y - p0.y) / 6}, ${p2.x - (p3.x - p1.x) / 6} ${p2.y - (p3.y - p1.y) / 6}, ${p2.x} ${p2.y}`;
+    }
+    return d;
+  };
+  /* las dos rutas van dibujadas y el CSS muestra la que va (así girar el teléfono no obliga a rearmar la pantalla) */
+  for (const [d, clase] of [[curva(pts), 'lineaH'], [curva(ptsV), 'lineaV']]) cam.append(h('div', { class: clase, html: `<svg class="linea" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="#6b5b48" stroke-width="7" vector-effect="non-scaling-stroke" stroke-linecap="round" style="stroke-width:calc(22 * var(--u))"/><path d="${d}" fill="none" stroke="#3b3b3b" stroke-linecap="round" vector-effect="non-scaling-stroke" style="stroke-width:calc(16 * var(--u))"/><path d="${d}" fill="none" stroke="#f5c400" stroke-dasharray="6 8" vector-effect="non-scaling-stroke" style="stroke-width:calc(2.5 * var(--u))"/></svg>`, style: { position: 'absolute', inset: 0 } }));
   let postal = null;
   const paradas = TRAMOS.map((T, i) => {
     const abierto = !!P.abiertos[T.id], rec = P.record[T.id];
@@ -155,6 +162,7 @@ export function pantallaMapa(o) {
     const el = h('button', { class: 'parada', style: { left: pts[i].x + '%', top: pts[i].y + '%' }, onclick: () => { Sonido.efecto('clic'); elegir(T.id); } },
       foto, h('span', { class: 'cartel marron chico sinBulones nombre', text: t('t_' + T.id) }), h('span', { class: 'rec', text: rec ? `${t('record')}: ${num(rec)} m` : '' }));
     el.dataset.id = T.id;
+    el.style.setProperty('--xv', ptsV[i].x + '%'); el.style.setProperty('--yv', ptsV[i].y + '%');
     cam.append(el);
     return el;
   });
@@ -297,6 +305,7 @@ export function pantallaAjustes(o) {
     const pintar = (v) => { cont.innerHTML = ''; for (const [k, txt] of lista) cont.append(h('button', { class: 'opcion' + (k === v ? ' si' : ''), text: txt, onclick: () => { Sonido.efecto('clic'); alElegir(k); pintar(k); guardar(); } })); };
     pintar(valor); return cont;
   };
+  const filaGiro = h('div', { class: 'fila' + (esTactil() && O.parado === 'vertical' ? ' apagada' : '') }, h('span', { text: t('a_giro') }), opciones([['auto', t('a_auto')], ['normal', t('a_normal')], ['reves', t('a_reves')]], O.giro, (v) => { O.giro = v; o.giro(v); }));
   const el = h('div', { class: 'pantalla oscuro', id: 'ajustes' },
     h('div', { class: 'tablero cae' },
       h('h2', {}, h('span', { text: t('a_titulo') })),
@@ -307,8 +316,10 @@ export function pantallaAjustes(o) {
       h('div', { class: 'fila' }, h('span', { text: t('a_estilo') }), opciones([['folk', t('a_estiloFolk')], ['16bits', t('a_estilo16')]], O.estilo, (v) => { O.estilo = v; o.estilo(v); })),
       h('div', { class: 'fila' }, h('span', { text: t('a_idioma') }), opciones([['es', 'Español'], ['en', 'English'], ['pt', 'Português']], idioma(), (v) => o.idioma(v))),
       h('div', { class: 'fila' }, h('span', { text: t('a_calidad') }), opciones([['alta', t('a_alta')], ['media', t('a_media')], ['baja', t('a_baja')]], O.calidad, (v) => { O.calidad = v; o.calidad(v); })),
-      h('div', { class: 'fila' }, h('span', { text: t('a_giro') }), opciones([['auto', t('a_auto')], ['normal', t('a_normal')], ['reves', t('a_reves')]], O.giro, (v) => { O.giro = v; o.giro(v); })),
-      h('div', { class: 'fila' }, h('span', { text: t('a_controles') }), h('div', {}, boton('azul chico', t('a_controles'), o.controles))),
+      /* en un teléfono: qué hacer con el teléfono parado (jugar vertical o girar todo), y para qué lado se gira */
+      esTactil() ? h('div', { class: 'fila' }, h('span', { text: t('a_parado') }), opciones([['vertical', t('a_vertical')], ['girar', t('a_deCostado')]], O.parado, (v) => { O.parado = v; o.parado(v); filaGiro.classList.toggle('apagada', v === 'vertical'); })) : null,
+      filaGiro,
+      h('div', { class: 'fila filaControles' }, h('span', { text: t('a_controles') }), h('div', {}, boton('azul chico', t('a_controles'), o.controles))),
       h('div', { class: 'fila' }, h('span', { text: t('a_borrar') }), h('div', {}, boton('rojo chico', t('a_borrar'), (e) => { const b = e.currentTarget; if (b.dataset.seguro) { o.borrar(); } else { b.dataset.seguro = '1'; b.textContent = t('a_borrarSeguro'); } }))),
       h('div', { class: 'barraBotones' }, boton('', t('listo'), o.volver))));
   return mostrar(el);
