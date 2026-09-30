@@ -88,11 +88,15 @@ function dibujarJuego() {
   }
   for (const a of J.armas) if (a.libros && a.libros.pos) { const s = proySpr(a.k === "visperas" ? "visperas" : "libro"); for (const [x, y] of a.libros.pos) g.drawImage(s, Math.round(x - cx - s.width / 2), Math.round(y - cy - s.height / 2)); }
   dibujarEfectos(cx, cy);
-  if (G.op.numeros) dibujarNumeros(cx, cy);
   vineta(J.E.suelo === "tumbas" ? 0.7 : 0.45);
   if (frio) { g.fillStyle = "rgba(80,150,255,0.14)"; g.fillRect(0, 0, W, H); }
   if (J.destello > 0 && G.op.destellos) { g.fillStyle = `rgba(255,255,255,${Math.min(0.6, J.destello)})`; g.fillRect(0, 0, W, H); }
   if (j.golpe > 0) { g.fillStyle = `rgba(200,0,0,${j.golpe * 0.6})`; g.fillRect(0, 0, W, H); }
+}
+/** La pasada de interfaz (a la resolución de la pantalla): números de daño, HUD, carteles y ventanas. */
+function dibujarUIJuego() {
+  const cx = Math.round(J.cam.x), cy = Math.round(J.cam.y);
+  if (G.op.numeros) dibujarNumeros(cx, cy);
   dibujarHUD();
   if (!J.modal && !J.pausa) dibujarPalo();
   if (J.fin) {
@@ -105,7 +109,7 @@ function dibujarJuego() {
   else if (J.modal && J.modal.tipo === "cofre") dibujarModalCofre();
 }
 function dibujarCazador(cx, cy) {
-  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? Math.floor(j.paso) % 2 : 0, j.izq);
+  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? 1 + Math.floor(j.paso) % 2 : 0, j.izq);
   const X = Math.round(j.x - cx - s.width / 2), Y = Math.round(j.y - cy - s.height + 2);
   g.drawImage(sombra(5, 2), Math.round(j.x - cx - 5), Math.round(j.y - cy - 1));
   // parpadeo mientras es invulnerable (después de un golpe)

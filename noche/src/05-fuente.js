@@ -1,5 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// LA LETRA: una fuente de píxeles propia con mayúsculas (5×7, la de Shumio), minúsculas con
+// LA LETRA. Medido en capturas del original (wiki, pantalla de subir de nivel): el texto es una
+// máquina de escribir con remates (tipo Courier) en negrita, blanca con contorno negro, nítida a la
+// resolución de la pantalla. Acá: Courier Prime Bold (OFL), embebida, dibujada en la pasada de
+// interfaz y cacheada por texto. La letra de píxeles de abajo queda sólo para el logo:
+// una fuente de píxeles propia con mayúsculas (5×7, la de Shumio), minúsculas con
 // ascendentes y descendentes, tildes, Ñ y signos. Cada texto se hornea UNA vez (degradé por fila,
 // contorno negro) y se cachea: dibujar cientos de números por cuadro sale casi gratis.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,7 +56,7 @@ function glifo(ch) {
   return (_glifo[ch] = { w: Math.max(...filas.map((f) => f.length)), filas });
 }
 function anchoLetra(ch) { const m = MARCAS[ch]; return glifo(m ? m[0] : ch).w; }
-function anchoTexto(str) { let w = 0; for (const ch of str) w += anchoLetra(ch) + 1; return Math.max(0, w - 1); }
+function anchoPixel(str) { let w = 0; for (const ch of str) w += anchoLetra(ch) + 1; return Math.max(0, w - 1); }
 
 /** Degradés por fila, de arriba a abajo (11 filas). Todos con la misma luz: claro arriba. */
 function _grad(a, b) { const out = []; for (let i = 0; i < ALTO_LETRA; i++) out.push(mezclar(a, b, lim((i - 2) / 8, 0, 1))); return out; }
@@ -66,7 +70,7 @@ function textoSpr(str, o = {}) {
   str = String(str);
   const grad = o.grad || "blanco", cont = o.contorno ?? "#000000", som = o.sombra ?? 1;
   return hornear(`tx|${str}|${grad}|${cont}|${som}`, () => {
-    const w = anchoTexto(str), p = new Pix(w + 2, ALTO_LETRA + 2), gr = GRADIENTES[grad] || GRADIENTES.blanco;
+    const w = anchoPixel(str), p = new Pix(w + 2, ALTO_LETRA + 2), gr = GRADIENTES[grad] || GRADIENTES.blanco;
     let x = 1;
     for (const ch of str) {
       const m = MARCAS[ch], base = m ? m[0] : ch, gl = glifo(base), may = !MINUS[base];
@@ -89,8 +93,8 @@ function textoSpr(str, o = {}) {
     return c;
   });
 }
-/** Dibuja un texto. o: {al: "izq"|"der"|"centro", escala, grad, alfa} → devuelve el ancho dibujado */
-function texto(str, x, y, o = {}) {
+/** El logo (letra de píxeles propia, gótica). o: {al, escala, grad, alfa} */
+function textoPixel(str, x, y, o = {}) {
   const s = textoSpr(str, o), e = o.escala || 1, w = s.width * e;
   const X = o.al === "izq" ? x : o.al === "der" ? x - w : x - Math.floor(w / 2);
   if (o.alfa != null) g.globalAlpha = o.alfa;
@@ -120,3 +124,48 @@ function numeroSpr(str, color = "#ffffff") {
 }
 /** 12345 → "12.3k" (el original usa prefijos para cifras grandes). */
 const corto = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? (n / 1e3).toFixed(1) + "k" : String(Math.round(n)));
+
+// ── el texto de la interfaz: Courier Prime Bold ──
+const FAM = "NocheMono", FAM_CSS = `${FAM}, "Courier Prime", "Courier New", Courier, monospace`;
+const TAM_LETRA = 8;                 // en píxeles del mundo (×PX en la pantalla): 12 px CSS en un teléfono
+let FUENTE_OK = false;
+const _txt = new Map(), _med = document.createElement("canvas").getContext("2d");
+(async () => {
+  try {
+    const bin = Uint8Array.from(atob(FUENTE_B64), (c) => c.charCodeAt(0));
+    const f = new FontFace(FAM, bin.buffer, { weight: "700" });
+    await f.load(); document.fonts.add(f); FUENTE_OK = true; _txt.clear();
+  } catch (e) { /* queda la monoespaciada del sistema */ }
+})();
+const COLORES = { blanco: ["#ffffff"], amarillo: ["#fff04a"], oro: ["#fff4c0", "#f0b030"], rojo: ["#ffa090", "#e8301c"], azul: ["#e4e8ff"], gris: ["#b8b8c2"], verde: ["#90ff7a"], violeta: ["#dcb8ff"], negro: ["#141414"] };
+const fuenteCSS = (tam) => `700 ${tam}px ${FAM_CSS}`;
+function anchoTexto(str, escala = 1) { _med.font = fuenteCSS(TAM_LETRA * escala * 4); return _med.measureText(String(str)).width / 4; }
+const encaje = (v) => Math.round(v * PX) / PX;
+/** Hornea un texto a la resolución de la pantalla (PX por píxel del mundo), con contorno negro. */
+function textoHD(str, tam, grad, contorno) {
+  const k = `${str}|${tam}|${grad}|${contorno}|${PX}|${FUENTE_OK}`;
+  let c = _txt.get(k); if (c) return c;
+  if (_txt.size > 2500) _txt.clear();
+  const s = PX, px = tam * s, w = Math.ceil(anchoTexto(str, tam / TAM_LETRA) * s + px * 0.4 + 4), h = Math.ceil(px * 1.4 + 4);
+  c = lienzoNuevo(w, h); const q = c.getContext("2d");
+  q.font = fuenteCSS(px); q.textBaseline = "middle"; q.lineJoin = "round";
+  const x = Math.ceil(px * 0.2) + 2, y = Math.round(h / 2);
+  if (contorno) { q.lineWidth = Math.max(2, s * 1.2 * Math.min(1.6, tam / TAM_LETRA)); q.strokeStyle = contorno; q.strokeText(str, x, y); }
+  const cols = grad && grad[0] === "#" ? [grad] : COLORES[grad] || COLORES.blanco;
+  if (cols.length > 1) { const gr = q.createLinearGradient(0, y - px * 0.4, 0, y + px * 0.4); gr.addColorStop(0, cols[0]); gr.addColorStop(1, cols[1]); q.fillStyle = gr; } else q.fillStyle = cols[0];
+  q.fillText(str, x, y);
+  c.ox = x / s; c.s = s;
+  _txt.set(k, c); return c;
+}
+/** Dibuja un texto de interfaz. o: {al: "izq"|"der"|"centro", escala, grad (nombre o #color), alfa, contorno} → ancho */
+function texto(str, x, y, o = {}) {
+  str = String(str);
+  const esc = o.escala || 1, c = textoHD(str, TAM_LETRA * esc, o.grad || "blanco", o.contorno === 0 ? 0 : o.contorno || "#000000");
+  const w = anchoTexto(str, esc), X = o.al === "izq" ? x : o.al === "der" ? x - w : x - w / 2;
+  // la línea media del texto cae donde caía la de la letra vieja (fila 6 de 11): no se corre ningún menú
+  const Y = y + 6 * esc - c.height / c.s / 2;
+  if (o.alfa != null) g.globalAlpha = o.alfa;
+  g.drawImage(c, encaje(X - c.ox), encaje(Y), c.width / c.s, c.height / c.s);
+  if (o.alfa != null) g.globalAlpha = 1;
+  return w;
+}

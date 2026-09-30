@@ -5,23 +5,23 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 function dibujarHUD() {
-  // barra de experiencia
+  // barra de experiencia: celeste sobre azul noche con marco, como en las capturas del original
   const bh = 9;
   g.fillStyle = "#000"; g.fillRect(0, 0, W, bh + 1);
-  g.fillStyle = "#0e1030"; g.fillRect(1, 1, W - 2, bh - 1);
+  g.fillStyle = "#0a1a3a"; g.fillRect(1, 1, W - 2, bh - 1);
   const k = lim(J.xp / J.xpSig, 0, 1), fw = Math.round((W - 2) * k);
-  if (fw > 0) { g.fillStyle = "#2a58e8"; g.fillRect(1, 1, fw, bh - 1); g.fillStyle = "#7aa0ff"; g.fillRect(1, 1, fw, 2); g.fillStyle = "#1a3490"; g.fillRect(1, bh - 2, fw, 1); }
-  texto(`LV ${J.nivel}`, W - 3, -1, { al: "der", grad: "blanco" });
+  if (fw > 0) { g.fillStyle = "#1aa8ee"; g.fillRect(1, 1, fw, bh - 1); g.fillStyle = "#8ae4ff"; g.fillRect(1, 1, fw, 2); g.fillStyle = "#0a70b0"; g.fillRect(1, bh - 2, fw, 1); }
+  texto(`LV ${J.nivel}`, W - 3, -1, { al: "der" });
   // armas y pasivos
   J.armas.forEach((a, i) => marcoIcono(2 + i * 15, bh + 3, a.k, a.nivel, a.nivel >= maxNivel(a.k)));
   J.pasivos.forEach((p, i) => marcoIcono(2 + i * 15, bh + 18, p.k, p.nivel, p.nivel >= maxNivel(p.k)));
-  // el reloj
-  texto(reloj(J.t), Math.round((94 + W - 48) / 2), bh + 3, { escala: 2, grad: J.t >= J.duracion ? "rojo" : "blanco" });
+  // el reloj, centrado en la pantalla (los íconos terminan a los 92 px y el oro empieza a W-50)
+  texto(reloj(J.t), W / 2, bh + 2, { escala: 1.8, grad: J.t >= J.duracion ? "rojo" : "blanco" });
   // pausa, oro y enemigos
   uiEmpezar("hud");
   boton(W - 17, bh + 3, 15, 15, "", () => { J.pausa = true; UI.pantallaFoco = null; sfx("clic"); }, { estilo: "oscuro", sinFoco: true });
   g.fillStyle = "#f0f0f0"; g.fillRect(W - 12, bh + 7, 2, 7); g.fillRect(W - 8, bh + 7, 2, 7);
-  texto(String(J.oro), W - 30, bh + 3, { al: "der", grad: "amarillo" });
+  texto(String(J.oro), W - 30, bh + 3, { al: "der" });
   g.drawImage(recogibleSpr("moneda"), W - 28, bh + 5);
   texto(String(J.kills), W - 30, bh + 16, { al: "der" });
   g.drawImage(calaveraChica(), W - 28, bh + 17);
@@ -57,7 +57,7 @@ function dibujarPausa() {
   g.fillStyle = "rgba(4,4,16,0.78)"; g.fillRect(0, 0, W, H);
   const x0 = 8, w = W - 16, y0 = 30, h = Math.min(H - 50, 400);
   panel(x0, y0, w, h, "oscuro");
-  texto(L(TX.pausa), W / 2, y0 + 6, { grad: "oro", escala: 2 });
+  texto(L(TX.pausa), W / 2, y0 + 6, { escala: 2 });
   let y = y0 + 34;
   texto(L(TX.armas), x0 + 8, y, { al: "izq", grad: "amarillo" }); y += 12;
   J.armas.forEach((a, i) => { marcoIcono(x0 + 8 + i * 34, y, a.k, a.nivel, a.nivel >= maxNivel(a.k)); texto(esEvo(a.k) ? "" : String(a.nivel), x0 + 25 + i * 34, y + 2, { al: "izq", grad: a.nivel >= maxNivel(a.k) ? "amarillo" : "blanco" }); });

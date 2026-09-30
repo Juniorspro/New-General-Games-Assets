@@ -22,59 +22,7 @@ function sello(filas, pal = PS, contorno = AUTO) {
   return p;
 }
 
-// ── los cazadores: una plantilla de 12×18 que se pinta con los colores de cada uno ──
-const CAZADOR = [
-  "....HHHH....", "...HhhhhH...", "..HhhhhhhH..", "..HhsssshH..", "..Hhssesse..", "...hsssss...", "....SsSs....",
-  "..KccccccK..", ".KcccgcccCK.", ".KccccccCcs.", ".KCcccccCK..", "..CgggggC...", "..CcccccC...", "..CCcccCC...",
-];
-const PIERNAS_A = ["...pp..pp...", "...pp..pp...", "..bbb..bbb.."];
-const PIERNAS_B = ["....pp.pp...", "...pp...pp..", "..bbb...bbb."];
-function cazadorSpr(clave, cuadro, izq) {
-  return hornear(`caz|${clave}|${cuadro}|${izq}`, () => {
-    const pj = PERSONAJES[clave], [C, c, p, s] = pj.pal;
-    const pal = { ...PS, H: mezclar(pj.pelo, "#000000", 0.45), h: pj.pelo, s, S: mezclar(s, "#6a3a2a", 0.35), e: "#1a1016", c, C, K: mezclar(C, "#000000", 0.3), g: "#e0b040", p, b: "#2a1a14" };
-    let px = sello(CAZADOR.concat(cuadro ? PIERNAS_B : PIERNAS_A), pal);
-    if (izq) px = px.espejo();
-    return px.canvas();
-  });
-}
-
-// ── enemigos ──
-const ENE_SPR = {
-  murcielago: { a: ["e............e", "ee..........ee", "eee..dddd..eee", ".eeeddrdrdeee.", "..eeddddddee..", ".....dddd.....", "......dd......"],
-    b: [".....dddd.....", "....ddrdrd....", "..eedddddddd..", ".eeeeddddeeee.", "eee...dd...eee", "ee..........ee", "e............e"], pal: { e: "#3a1a3a", d: "#6a3a5a", r: "#ff3030" } },
-  zombi: { c: ["....GGGG.....", "...GggggG....", "...ggrgrg....", "...gggggG....", "....gGgG.....", "..BBBBBB.....", ".BBvBBBBgggg.", ".BBBBBvBBGGG.", ".BvBBBBBB....", "..BBBvBB.....", "..BBBBBB.....", "..vvvvvv....."],
-    a: ["..vv..vv.....", "..vv..vv.....", "..GG...GG....", ".GGG...GGG..."], b: ["...vv.vv.....", "...vv.vv.....", "...GG.GG.....", "..GGG.GGG...."], pal: { g: "#9ab070", G: "#5a7a3a", B: "#5a6a8a", v: "#343c54", r: "#e03020" } },
-  esqueleto: { c: ["...wwww.....", "..wwwwww....", "..wddwdd....", "..wwwwww....", "...wlwl.....", "....ww......", "..wwwwww....", ".w.wlwlw.w..", ".w.wwwww.w..", "...wlwlw....", "....ww......", "...wwww....."],
-    a: ["...w..w.....", "...w..w.....", "..ww..ww...."], b: ["....ww......", "...w..w.....", "..ww...ww..."], pal: { w: "#e8e2d0", l: "#a8a290", d: "#2a1a20" } },
-  fantasma: { c: ["....wwww....", "..wwwwwwww..", ".wwwwwwwwww.", ".wweewwweew.", ".wwwwwwwwww.", ".wwwwweewwb.", "wwwwwwwwwwbb", "wwwwwwwwwwbb", "wwwwwwwwwbbb"],
-    a: ["wwwwwwwwwbb.", ".wwbwwbwwbb.", ".w..ww..wb.."], b: ["wwwwwwwwwbb.", "..wwbwwbwwb.", "..w..ww..w.."], pal: { w: "#dce8ff", b: "#8aa0d0", e: "#1a2040" }, alfa: 0.82 },
-  barro: { c: [".....tttt.....", "...ttTTTTtt...", "..tTTTTTTTTt..", "..TTyTTTyTTT..", "..TTTTTTTTTx..", ".tTTTxxxTTTTx.", "tTTTTTTTTTTTTx", "tTTTTTTTTTTTxx", ".TTTTTTTTTTTx.", "..TTTTTTTTTx..", "..TTTTTTTTxx..", "..xTTTxxTTx..."],
-    a: ["..TTx..TTx....", "..TTx...TTx...", "..xxx...xxx..."], b: ["...TTx.TTx....", "...TTx.TTx....", "..xxx..xxx...."], pal: { t: "#8aa060", T: "#5a7040", x: "#34401e", y: "#f0e040" } },
-  lobizon: { c: ["..d.....d.....", "..dm...dm.....", "..dmmmmmm.....", "..mmrmmrmd....", "...mmmmmmmwd..", "...mmmmmmmmm..", "....dmmmm.....", "..ddmmmmmmd...", ".dmmmmlllmmd..", ".dmmmllllmmd..", ".mmmmllllmmmw.", ".wm.mlllmm.w..", "...mmmmmmm....", "...dmmmmmd...."],
-    a: ["...mm...mm....", "...mm...mm....", "..dmm...dmm...", "..ww.....ww..."], b: ["....mm.mm.....", "....mm.mm.....", "...dmm.dmm....", "...ww..ww....."], pal: { m: "#7a6a64", d: "#3e322e", l: "#b0a098", r: "#ff3020", w: "#f0e8e0" } },
-  mantis: { c: ["......gg........", ".....gggg.......", ".....grgr.......", "......gg........", "..l...GG...l....", ".ll..gggg..ll...", "ll..ggGGgg..ll..", "l..gggGGggg..l..", "...ggGGGGgg.....", "....ggGGgg......", ".....gGGg.......", ".....gGGg.......", "....ggGGgg......", ".....GGGG......."],
-    a: ["....G....G......", "...G......G.....", "..G........G...."], b: ["....G...G.......", "....G...G.......", "...G.....G......"], pal: { g: "#8ad050", G: "#3a8a2a", l: "#e0f0c0", r: "#ff4020" } },
-  momia: { c: ["....tttt.....", "...ttTttt....", "...trttrt....", "...tTtttT....", "....tttt.....", "..tttTtttt...", ".ttTttttTtttt", ".tttttTtt.ttt", ".tTttttttT...", "..ttTttttt...", "..tttttTtt...", "..tTtttttt..."],
-    a: ["..ttt..ttt...", "..tTt..tTt...", "..ttt..ttt..."], b: ["...ttt.ttt...", "...tTt.tTt...", "..ttt...ttt.."], pal: { t: "#e0d0a8", T: "#8a7a58", r: "#ff5020" } },
-  flor: { c: ["...pp..pp...", "..pPPppPPp..", ".pPPPppPPPp.", "pPPyyqqyyPPp", "pPPyqeeqyPPp", ".pPyqeeqyPp.", "..pPyyyyPp..", "...pPPPPp...", "....pGGp...."],
-    a: [".gg..GG..gg.", "ggGG.GG.GGgg", ".gGGGGGGGGg.", "...gGGGGg...", "....GGGG...."], b: ["..gg.GG.gg..", ".gGGGGGGGGg.", "gGGGGGGGGGGg", "...gGGGGg...", "....GGGG...."], pal: { p: "#ff90c8", P: "#d03890", y: "#ffe060", q: "#801030", e: "#300008", g: "#70c050", G: "#2a7a2a" } },
-  parca: { c: ["..............ll", "...........llll.", ".........lll....", "....ddd.T.......", "...deeedT.......", "..deewwedT......", "..dewdwdeT......", "..deewwedT......", "..deeeeeeT......", ".deeeeeeeTd.....", ".deeweeeeeTd....", "deeeeeeeeeTed...", "deeeeeeeeeeTd...", "deeeeeeeeeeTd...", ".deeeeeeeeeeT..."],
-    a: [".deeeeeeeeeeeT..", "..deeeeeeeeed...", "..deedeedeed...."], b: [".deeeeeeeeeeeT..", "..deeeeeeeeed...", "...deedeedeed..."], pal: { e: "#16101c", d: "#3a3048", w: "#f0ece0", l: "#d0d8e8", T: "#6a4a2a" } },
-};
-/** El sprite de un enemigo: cuadro 0/1, mirando a la izquierda o no, con su tinte. */
-function enemigoSpr(spr, cuadro, izq, tinte) {
-  return hornear(`ene|${spr}|${cuadro}|${izq}|${tinte || ""}`, () => {
-    const d = ENE_SPR[spr], pal = { ...PS, ...d.pal };
-    if (tinte) for (const k in d.pal) pal[k] = mezclar(d.pal[k], tinte, 0.55);
-    let px = sello(d.c ? d.c.concat(cuadro ? d.b : d.a) : (cuadro ? d.b : d.a), pal);
-    // los sellos miran a la derecha; el original da vuelta el sprite según hacia dónde camina
-    if (izq) px = px.espejo();
-    const c = px.canvas();
-    if (d.alfa) { const q = lienzoNuevo(c.width, c.height), x = q.getContext("2d"); x.globalAlpha = d.alfa; x.drawImage(c, 0, 0); return q; }
-    return c;
-  });
-}
+// (los cazadores y los enemigos se arman por piezas en 06b-cuerpos.js)
 const _azules = new WeakMap();
 /** Congelado (el reloj): el sprite teñido de azul hielo, como el original. */
 function azulado(c) {

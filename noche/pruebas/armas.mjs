@@ -42,5 +42,6 @@ await pag.evaluate(() => {
 await foto("multitud");
 const m = await pag.evaluate(() => { const t = performance.now(); for (let i = 0; i < 120; i++) { J.pendientes = 0; pasoJuego(1 / 60); } const paso = (performance.now() - t) / 120; const t2 = performance.now(); for (let i = 0; i < 30; i++) window.__NC.dibujar(); return { ene: J.enemigos.length, proys: J.proys.length, paso: +paso.toFixed(2), dibujo: +((performance.now() - t2) / 30).toFixed(2) }; });
 console.log("multitud:", JSON.stringify(m));
+await pag.evaluate(() => { J.pausa = true; window.__NC.dibujar(); }); await foto("pausa");
 console.log(errores.length ? "ERRORES:\n" + [...new Set(errores)].slice(0, 20).join("\n") : "sin errores");
 await nav.close();

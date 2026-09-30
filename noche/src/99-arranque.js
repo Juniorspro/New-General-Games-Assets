@@ -9,12 +9,10 @@ let _acum = 0, _ultimo = 0, _cuadros = 0;
 _completaPendiente = matchMedia("(pointer: coarse)").matches;
 
 function cuadro() {
-  if (PANT === "juego") {
-    dibujarJuego();
-  } else {
-    PANTALLAS[PANT]();
-  }
-  volcar();
+  empezarCuadro();
+  if (PANT === "juego") { dibujarJuego(); aPantalla(true); dibujarUIJuego(); }
+  else { aPantalla(false); PANTALLAS[PANT](); }
+  terminarCuadro();
   finCuadroEntrada();
 }
 function bucle(ts) {

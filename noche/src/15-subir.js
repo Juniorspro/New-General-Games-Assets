@@ -110,47 +110,49 @@ function pasoModal(dt) {
 
 // ── dibujo ──
 function dibujarModalNivel() {
+  // como la pantalla del original: panel pizarra, "Level Up!" grande, tarjetas grises con el ícono
+  // en su cajita, el nombre, "New!" en amarillo y la descripción en blanco; abajo Reroll/Skip/Banish
   const m = J.modal;
-  g.fillStyle = "rgba(4,4,16,0.72)"; g.fillRect(0, 0, W, H);
-  const n = m.ops.length, alto = 48, sep = 4, bot = (J.rerolls || J.saltos || J.destierros) ? 26 : 0;
-  const total = 50 + n * (alto + sep) + bot + 6, x0 = 6, w = W - 12, y0 = Math.max(24, Math.round((H - total) / 2));
+  g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(0, 0, W, H);
+  const n = m.ops.length, alto = 50, sep = 4, bot = (J.rerolls || J.saltos || J.destierros) ? 36 : 0;
+  const total = 58 + n * (alto + sep) + bot + 8, x0 = 6, w = W - 12, y0 = Math.max(24, Math.round((H - total) / 2));
   panel(x0, y0, w, total, "oscuro");
-  texto(L(TX.subiste), W / 2, y0 + 6, { grad: "oro", escala: 1 });
+  texto(L(TX.subiste), W / 2, y0 + 6, { escala: 2 });
   // lo que ya tenés, en chiquito (para decidir mirando el armado)
   let ix = x0 + 8;
-  for (const a of J.armas) { marcoIcono(ix, y0 + 20, a.k, a.nivel, a.nivel >= maxNivel(a.k)); ix += 15; }
-  ix = x0 + 8 + 6 * 15 + 6;
-  for (const p of J.pasivos) { if (ix > x0 + w - 20) break; marcoIcono(ix, y0 + 20, p.k, p.nivel, p.nivel >= maxNivel(p.k)); ix += 15; }
+  for (const a of J.armas) { marcoIcono(ix, y0 + 32, a.k, a.nivel, a.nivel >= maxNivel(a.k)); ix += 15; }
+  ix = W - 8 - Math.max(1, J.pasivos.length) * 15;
+  for (const p of J.pasivos) { marcoIcono(ix, y0 + 32, p.k, p.nivel, p.nivel >= maxNivel(p.k)); ix += 15; }
   uiEmpezar("nivel" + J.nivel + (m.desterrar ? "d" : "") + m.ops.length);
-  let y = y0 + 40;
+  let y = y0 + 50;
   for (const op of m.ops) {
-    const f = boton(x0 + 6, y, w - 12, alto, "", () => elegirOpcion(op), { estilo: m.desterrar ? "rojo" : "tarjeta" });
+    const f = boton(x0 + 6, y, w - 12, alto, "", () => elegirOpcion(op), { estilo: m.desterrar ? "rojo" : UI.foco === UI.items.length ? "elegida" : "tarjeta", sinFoco: true });
     const ik = op.tipo === "oro" ? "oro" : op.tipo === "pollo" ? "pollo" : op.k;
-    g.fillStyle = "#06081a"; g.fillRect(x0 + 12, y + 9, 30, 30);
-    g.fillStyle = f ? "#ffe070" : "#5a78d8"; g.fillRect(x0 + 12, y + 9, 30, 1); g.fillRect(x0 + 12, y + 38, 30, 1); g.fillRect(x0 + 12, y + 9, 1, 30); g.fillRect(x0 + 41, y + 9, 1, 30);
-    g.drawImage(iconoSpr(ik), x0 + 13, y + 10, 28, 28);
+    g.fillStyle = "#101018"; g.fillRect(x0 + 11, y + 5, 30, 30);
+    g.fillStyle = "#c09050"; g.fillRect(x0 + 11, y + 5, 30, 1); g.fillRect(x0 + 11, y + 34, 30, 1); g.fillRect(x0 + 11, y + 5, 1, 30); g.fillRect(x0 + 40, y + 5, 1, 30);
+    g.drawImage(iconoSpr(ik), x0 + 12, y + 6, 28, 28);
     const nombre = op.tipo === "oro" ? L(TX.oroPollo) : op.tipo === "pollo" ? L(TX.polloOp) : nombreDe(op.k);
-    texto(nombre, x0 + 48, y + 5, { al: "izq", grad: "blanco" });
+    texto(nombre, x0 + 47, y + 4, { al: "izq" });
     if (op.tipo === "arma" || op.tipo === "pasivo") {
-      if (op.nivel === 1) texto(L(TX.nuevo), x0 + w - 12, y + 5, { al: "der", grad: "amarillo" });
-      else texto(`${L(TX.nivel)} ${op.nivel}`, x0 + w - 12, y + 5, { al: "der", grad: "gris" });
-    }
+      if (op.nivel === 1) texto(L(TX.nuevo), x0 + w - 12, y + 4, { al: "der", grad: "amarillo" });
+      else texto(`${L(TX.nivel)} ${op.nivel}`, x0 + w - 12, y + 4, { al: "der" });
+    } else texto(L(TX.nuevo), x0 + w - 12, y + 4, { al: "der", grad: "amarillo" });
     const desc = op.tipo === "oro" ? L(TX.oroOp) : op.tipo === "pollo" ? L(TX.curarOp) : textoNivel(op.k, op.nivel);
-    renglones(desc, w - 64).slice(0, 3).forEach((r, i) => texto(r, x0 + 48, y + 18 + i * 9, { al: "izq", grad: "azul", sombra: 0 }));
+    renglones(desc, w - 62).slice(0, 3).forEach((r, i) => texto(r, x0 + 47, y + 17 + i * 10, { al: "izq" }));
     y += alto + sep;
   }
   if (bot) {
-    const bw = Math.floor((w - 20) / 3);
-    if (J.rerolls) boton(x0 + 6, y + 2, bw, 20, `${L(TX.reroll)} ${J.rerolls}`, () => { J.rerolls--; m.ops = generarOpciones(); sfx("mover"); }, { estilo: "verde" });
-    if (J.saltos) boton(x0 + 10 + bw, y + 2, bw, 20, `${L(TX.saltar)} ${J.saltos}`, () => { J.saltos--; siguienteModal(); }, { estilo: "azul" });
-    if (J.destierros) boton(x0 + 14 + bw * 2, y + 2, bw, 20, `${L(TX.desterrar)} ${J.destierros}`, () => { m.desterrar = !m.desterrar; }, { estilo: "rojo" });
+    const bw = Math.floor((w - 20) / 3), izq = IDIOMA === "es" ? "quedan" : "left";
+    if (J.rerolls) boton(x0 + 6, y + 2, bw, 32, L(TX.reroll), () => { J.rerolls--; m.ops = generarOpciones(); sfx("mover"); }, { estilo: "azul", sub: `${J.rerolls} ${izq}` });
+    if (J.saltos) boton(x0 + 10 + bw, y + 2, bw, 32, L(TX.saltar), () => { J.saltos--; siguienteModal(); }, { estilo: "rojo", sub: `${J.saltos} ${izq}` });
+    if (J.destierros) boton(x0 + 14 + bw * 2, y + 2, bw, 32, L(TX.desterrar), () => { m.desterrar = !m.desterrar; }, { estilo: "rojo", sub: `${J.destierros} ${izq}` });
   }
   uiProcesar(null);
 }
 function dibujarModalCofre() {
   const m = J.modal, cxx = W / 2, cyy = Math.round(H * 0.4);
   g.fillStyle = "rgba(4,2,12,0.8)"; g.fillRect(0, 0, W, H);
-  texto(L(TX.cofre), W / 2, cyy - 110, { grad: "oro" });
+  texto(L(TX.cofre), W / 2, cyy - 116, { escala: 1.7 });
   const abierto = m.fase !== "cerrado", tt = m.fase === "abriendo" ? m.t : m.fase === "listo" ? 9 : 0;
   if (abierto) {
     // los rayos de colores que giran detrás del cofre abierto
@@ -184,8 +186,8 @@ function dibujarModalCofre() {
       else if (it.nivel) texto(`${L(TX.nivel)} ${it.nivel}`, W / 2 + ancho / 2 - 5, y + 3, { al: "der", grad: "gris" });
     });
     const oroV = m.fase === "listo" ? m.oro : Math.round(m.oro * Math.min(1, m.t / (1 + m.items.length * 0.45)));
-    texto(`+${oroV}`, W / 2 + 6, cyy - 90, { grad: "amarillo" });
-    g.drawImage(recogibleSpr("moneda"), W / 2 - anchoTexto(`+${oroV}`) / 2 - 8, cyy - 88);
+    texto(`+${oroV}`, W / 2 + 6, cyy - 92, { grad: "amarillo", escala: 1.5 });
+    g.drawImage(recogibleSpr("moneda"), Math.round(W / 2 - anchoTexto(`+${oroV}`, 1.5) / 2 - 8), cyy - 88);
     if (m.fase === "listo") boton(W / 2 - 50, Math.min(H - 34, y0 + m.items.length * 22 + 8), 100, 26, TX.listo, () => { J.modal = null; J.efectos = J.efectos.filter((f) => f.tipo !== "monedaMenu"); if (J.pendientes > 0) abrirModalNivel(); }, { estilo: "azul" });
     else if (IN.toques.length) { m.fase = "listo"; IN.toques.length = 0; }
   }

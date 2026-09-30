@@ -3,7 +3,9 @@
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 const dir = new URL("./src/", import.meta.url);
 const partes = readdirSync(dir).filter((f) => f.endsWith(".js")).sort();
-let codigo = "";
+// la letra (Courier Prime Bold, OFL, recortada a lo que se usa) va adentro, en base64: cero red
+const fuente = readFileSync(new URL("./fuentes/CourierPrime-Bold-sub.woff", import.meta.url)).toString("base64");
+let codigo = `'use strict';\nconst FUENTE_B64 = "${fuente}";\n`;
 for (const f of partes) codigo += `\n// ══════════ ${f} ══════════\n` + readFileSync(new URL(f, dir), "utf8");
 if (codigo.includes("</script")) throw new Error("hay un </script adentro del código");
 // todo va en un solo <script>: dos funciones con el mismo nombre en archivos distintos se pisan en

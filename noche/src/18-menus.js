@@ -35,8 +35,8 @@ function dibujarFondoMenu(oscuro) {
   if (oscuro) { g.fillStyle = `rgba(4,2,10,${oscuro})`; g.fillRect(0, 0, W, H); }
 }
 function titulo(y, esc = 3) {
-  texto("NOCHE", W / 2, y, { escala: esc, grad: "rojo" });
-  texto("CARMESÍ", W / 2, y + 11 * esc + 2, { escala: esc, grad: "oro" });
+  textoPixel("NOCHE", W / 2, y, { escala: esc, grad: "rojo" });
+  textoPixel("CARMESÍ", W / 2, y + 11 * esc + 2, { escala: esc, grad: "oro" });
 }
 function oroArriba() {
   panel(W - 86, 4, 82, 18, "oscuro");
@@ -71,7 +71,7 @@ function pantallaMenu() {
 function pantallaPersonajes() {
   dibujarFondoMenu(0.6);
   oroArriba();
-  texto(L(TX.elegirPj), 8, 7, { al: "izq", grad: "oro" });
+  texto(L(TX.elegirPj), 8, 6, { al: "izq", escala: 1.3 });
   uiEmpezar("personajes");
   const claves = Object.keys(PERSONAJES), cols = 4, cw = Math.floor((W - 12) / cols), ch = 46, y0 = 28;
   claves.forEach((k, i) => {
@@ -105,7 +105,7 @@ function escenarioAbierto(k) { const E = ESCENARIOS[k]; return !E.abre || (G.rec
 function pantallaEscenarios() {
   dibujarFondoMenu(0.6);
   oroArriba();
-  texto(L(TX.elegirEsc), 8, 7, { al: "izq", grad: "oro" });
+  texto(L(TX.elegirEsc), 8, 6, { al: "izq", escala: 1.3 });
   uiEmpezar("escenarios");
   let y = 30;
   for (const [k, E] of Object.entries(ESCENARIOS)) {
@@ -139,7 +139,7 @@ function empezarPartida() {
 function pantallaMejoras() {
   dibujarFondoMenu(0.65);
   oroArriba();
-  texto(L(TX.mejoras), 8, 7, { al: "izq", grad: "oro" });
+  texto(L(TX.mejoras), 8, 6, { al: "izq", escala: 1.3 });
   uiEmpezar("mejoras");
   const cols = 5, cw = Math.floor((W - 12) / cols), ch = 40, y0 = 28;
   MEJORAS.forEach((m, i) => {
@@ -165,7 +165,7 @@ function pantallaMejoras() {
 
 function pantallaOpciones() {
   dibujarFondoMenu(0.65);
-  texto(L(TX.opciones), W / 2, 12, { grad: "oro", escala: 2 });
+  texto(L(TX.opciones), W / 2, 12, { escala: 2 });
   uiEmpezar("opciones");
   const bw = W - 40, x = 20; let y = 50;
   const vol = (k) => { G.op[k] = G.op[k] >= 1 ? 0 : Math.round((G.op[k] + 0.2) * 10) / 10; volumenes(); guardar(); if (k === "efectos") sfx("gema"); };
@@ -187,10 +187,12 @@ function pantallaResultados() {
   texto(L(R.ganaste ? TX.sobreviviste : TX.moriste), W / 2, 8, { escala: 2, grad: R.ganaste ? "oro" : "rojo" });
   let y = 36;
   panel(x0, y, w, 96, "oscuro");
-  const s = cazadorSpr(R.pj, 0, false); g.drawImage(s, x0 + 8, y + 10, s.width * 2, s.height * 2);
-  texto(`${PERSONAJES[R.pj].n} · ${L(ESCENARIOS[R.esc].n)}`, x0 + 40, y + 6, { al: "izq", grad: "oro" });
+  // el cazador en su cajita, y los datos a la derecha (sin taparse)
+  const s = cazadorSpr(R.pj, 0, false);
+  g.fillStyle = "#101018"; g.fillRect(x0 + 7, y + 20, 48, 68); g.drawImage(s, x0 + 9, y + 22, s.width * 2, s.height * 2);
+  texto(`${PERSONAJES[R.pj].n} · ${L(ESCENARIOS[R.esc].n)}`, x0 + 8, y + 5, { al: "izq", grad: "oro" });
   const filas = [[TX.tiempo, reloj(R.t)], [TX.oroGanado, String(R.oro)], [TX.nivelAlc, String(R.nivel)], [TX.muertos, String(R.kills)]];
-  filas.forEach(([k, v], i) => { texto(L(k), x0 + 40, y + 22 + i * 16, { al: "izq", grad: "gris" }); texto(v, x0 + w - 8, y + 22 + i * 16, { al: "der", grad: i === 1 ? "amarillo" : "blanco" }); });
+  filas.forEach(([k, v], i) => { texto(L(k), x0 + 62, y + 22 + i * 16, { al: "izq", grad: "gris" }); texto(v, x0 + w - 8, y + 22 + i * 16, { al: "der", grad: i === 1 ? "amarillo" : "blanco" }); });
   y += 102;
   // la tabla de daño por arma (el mayor daño y el mayor DPS, en amarillo, como el original)
   const filasA = R.armas, mayorD = Math.max(1, ...filasA.map((a) => a.dano)), mayorP = Math.max(0.01, ...filasA.map((a) => a.dano / Math.max(1, a.tiempo)));

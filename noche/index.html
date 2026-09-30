@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
@@ -19,6 +19,8 @@
 <body>
 <canvas id="lienzo"></canvas>
 <script>
+'use strict';
+const FUENTE_B64 = "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";
 
 // ══════════ 00-base.js ══════════
 'use strict';
@@ -64,7 +66,8 @@ function guardar() { try { localStorage.setItem(CLAVE_GUARDADO, JSON.stringify(G
 cargar();
 
 // ── idioma: todo el texto del juego es {es, en}; L() elige al dibujar (así cambiar de idioma no reinicia nada) ──
-let IDIOMA = G.op.idioma || (/^es/i.test(navigator.language || "es") ? "es" : "en");
+// el idioma por defecto es el inglés (pedido): el español queda a un toque en el menú y la pausa
+let IDIOMA = G.op.idioma || "en";
 const L = (t) => (t == null ? "" : typeof t === "string" ? t : t[IDIOMA] ?? t.es);
 function cambiarIdioma() { IDIOMA = IDIOMA === "es" ? "en" : "es"; G.op.idioma = IDIOMA; guardar(); }
 
@@ -81,7 +84,12 @@ const reloj = (seg) => { seg = Math.max(0, Math.floor(seg)); return String(Math.
 const lienzo = document.getElementById("lienzo");
 const cxP = lienzo.getContext("2d", { alpha: false });
 const cvM = document.createElement("canvas");
-const g = cvM.getContext("2d");          // TODO se dibuja acá, a escala 1
+const gM = cvM.getContext("2d");
+// Dos pasadas por cuadro: el MUNDO (pixel art) se dibuja chico en gM y se agranda a escala entera;
+// después la INTERFAZ (HUD, menús, textos) se dibuja directo en la pantalla con la misma escala
+// puesta como transformación: los sprites salen igual de pixelados, pero las letras se dibujan a la
+// resolución real, nítidas, como en el original. `g` apunta a la pasada en curso.
+let g = gM;
 let W = 240, H = 480, PX = 3, DPR = 1, OFX = 0, ANCHO_COL = 0;
 const ANCHO_OBJ = 240;                    // lo que se ve de mundo a lo ancho, como el original en vertical
 
@@ -96,7 +104,7 @@ function medir() {
   const nw = Math.ceil(ANCHO_COL / PX), nh = Math.ceil(fh / PX);
   OFX = Math.floor((fw - nw * PX) / 2);
   if (nw !== W || nh !== H || cvM.width !== nw) { W = nw; H = nh; cvM.width = W; cvM.height = H; }
-  g.imageSmoothingEnabled = false; cxP.imageSmoothingEnabled = false;
+  gM.imageSmoothingEnabled = false; cxP.imageSmoothingEnabled = false;
 }
 // el lienzo medido una sola vez, antes del layout, deja el juego aplastado (guía 2D § 2): observar y revisar
 new ResizeObserver(medir).observe(lienzo);
@@ -104,20 +112,32 @@ addEventListener("resize", medir);
 medir();
 
 let _marco = null;
-/** Pasa el lienzo chico a la pantalla; a los costados (pantalla acostada), un marco oscuro con viñeta. */
-function volcar() {
+/** Empieza el cuadro: el marco de los costados (pantalla acostada) y el mundo a la pasada chica. */
+function empezarCuadro() {
+  cxP.setTransform(1, 0, 0, 1, 0, 0);
   if (OFX > 0) {
     if (!_marco || _marco.w !== lienzo.width || _marco.h !== lienzo.height) {
       const c = document.createElement("canvas"); c.width = lienzo.width; c.height = lienzo.height;
       const q = c.getContext("2d"), gr = q.createRadialGradient(c.width / 2, c.height / 2, c.height * 0.2, c.width / 2, c.height / 2, c.width * 0.7);
       gr.addColorStop(0, "#1a0d18"); gr.addColorStop(1, "#040306"); q.fillStyle = gr; q.fillRect(0, 0, c.width, c.height);
+      q.fillStyle = "#6a4a2a"; q.fillRect(OFX - 2, 0, 2, c.height); q.fillRect(OFX + W * PX, 0, 2, c.height);
       _marco = { c, w: c.width, h: c.height };
     }
     cxP.drawImage(_marco.c, 0, 0);
   }
-  cxP.drawImage(cvM, 0, 0, W, H, OFX, 0, W * PX, H * PX);
-  if (OFX > 0) { cxP.fillStyle = "#6a4a2a"; cxP.fillRect(OFX - 2, 0, 2, lienzo.height); cxP.fillRect(OFX + W * PX, 0, 2, lienzo.height); }
+  g = gM;
 }
+/** Pasa el mundo chico a la pantalla y deja `g` en la pasada de interfaz (escala PX, recortada a la columna). */
+function aPantalla(conMundo) {
+  cxP.setTransform(1, 0, 0, 1, 0, 0);
+  if (conMundo) cxP.drawImage(cvM, 0, 0, W, H, OFX, 0, W * PX, H * PX);
+  cxP.save();
+  cxP.beginPath(); cxP.rect(OFX, 0, W * PX, H * PX); cxP.clip();
+  cxP.setTransform(PX, 0, 0, PX, OFX, 0);
+  cxP.imageSmoothingEnabled = false;
+  g = cxP;
+}
+function terminarCuadro() { if (g === cxP) cxP.restore(); g = gM; }
 /** De un punto de la pantalla (px CSS) al lienzo chico. */
 function aJuego(clientX, clientY) {
   const r = lienzo.getBoundingClientRect();
@@ -655,7 +675,11 @@ function sombra(rx, ry) {
 
 // ══════════ 05-fuente.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
-// LA LETRA: una fuente de píxeles propia con mayúsculas (5×7, la de Shumio), minúsculas con
+// LA LETRA. Medido en capturas del original (wiki, pantalla de subir de nivel): el texto es una
+// máquina de escribir con remates (tipo Courier) en negrita, blanca con contorno negro, nítida a la
+// resolución de la pantalla. Acá: Courier Prime Bold (OFL), embebida, dibujada en la pasada de
+// interfaz y cacheada por texto. La letra de píxeles de abajo queda sólo para el logo:
+// una fuente de píxeles propia con mayúsculas (5×7, la de Shumio), minúsculas con
 // ascendentes y descendentes, tildes, Ñ y signos. Cada texto se hornea UNA vez (degradé por fila,
 // contorno negro) y se cachea: dibujar cientos de números por cuadro sale casi gratis.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -708,7 +732,7 @@ function glifo(ch) {
   return (_glifo[ch] = { w: Math.max(...filas.map((f) => f.length)), filas });
 }
 function anchoLetra(ch) { const m = MARCAS[ch]; return glifo(m ? m[0] : ch).w; }
-function anchoTexto(str) { let w = 0; for (const ch of str) w += anchoLetra(ch) + 1; return Math.max(0, w - 1); }
+function anchoPixel(str) { let w = 0; for (const ch of str) w += anchoLetra(ch) + 1; return Math.max(0, w - 1); }
 
 /** Degradés por fila, de arriba a abajo (11 filas). Todos con la misma luz: claro arriba. */
 function _grad(a, b) { const out = []; for (let i = 0; i < ALTO_LETRA; i++) out.push(mezclar(a, b, lim((i - 2) / 8, 0, 1))); return out; }
@@ -722,7 +746,7 @@ function textoSpr(str, o = {}) {
   str = String(str);
   const grad = o.grad || "blanco", cont = o.contorno ?? "#000000", som = o.sombra ?? 1;
   return hornear(`tx|${str}|${grad}|${cont}|${som}`, () => {
-    const w = anchoTexto(str), p = new Pix(w + 2, ALTO_LETRA + 2), gr = GRADIENTES[grad] || GRADIENTES.blanco;
+    const w = anchoPixel(str), p = new Pix(w + 2, ALTO_LETRA + 2), gr = GRADIENTES[grad] || GRADIENTES.blanco;
     let x = 1;
     for (const ch of str) {
       const m = MARCAS[ch], base = m ? m[0] : ch, gl = glifo(base), may = !MINUS[base];
@@ -745,8 +769,8 @@ function textoSpr(str, o = {}) {
     return c;
   });
 }
-/** Dibuja un texto. o: {al: "izq"|"der"|"centro", escala, grad, alfa} → devuelve el ancho dibujado */
-function texto(str, x, y, o = {}) {
+/** El logo (letra de píxeles propia, gótica). o: {al, escala, grad, alfa} */
+function textoPixel(str, x, y, o = {}) {
   const s = textoSpr(str, o), e = o.escala || 1, w = s.width * e;
   const X = o.al === "izq" ? x : o.al === "der" ? x - w : x - Math.floor(w / 2);
   if (o.alfa != null) g.globalAlpha = o.alfa;
@@ -777,6 +801,51 @@ function numeroSpr(str, color = "#ffffff") {
 /** 12345 → "12.3k" (el original usa prefijos para cifras grandes). */
 const corto = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e4 ? (n / 1e3).toFixed(1) + "k" : String(Math.round(n)));
 
+// ── el texto de la interfaz: Courier Prime Bold ──
+const FAM = "NocheMono", FAM_CSS = `${FAM}, "Courier Prime", "Courier New", Courier, monospace`;
+const TAM_LETRA = 8;                 // en píxeles del mundo (×PX en la pantalla): 12 px CSS en un teléfono
+let FUENTE_OK = false;
+const _txt = new Map(), _med = document.createElement("canvas").getContext("2d");
+(async () => {
+  try {
+    const bin = Uint8Array.from(atob(FUENTE_B64), (c) => c.charCodeAt(0));
+    const f = new FontFace(FAM, bin.buffer, { weight: "700" });
+    await f.load(); document.fonts.add(f); FUENTE_OK = true; _txt.clear();
+  } catch (e) { /* queda la monoespaciada del sistema */ }
+})();
+const COLORES = { blanco: ["#ffffff"], amarillo: ["#fff04a"], oro: ["#fff4c0", "#f0b030"], rojo: ["#ffa090", "#e8301c"], azul: ["#e4e8ff"], gris: ["#b8b8c2"], verde: ["#90ff7a"], violeta: ["#dcb8ff"], negro: ["#141414"] };
+const fuenteCSS = (tam) => `700 ${tam}px ${FAM_CSS}`;
+function anchoTexto(str, escala = 1) { _med.font = fuenteCSS(TAM_LETRA * escala * 4); return _med.measureText(String(str)).width / 4; }
+const encaje = (v) => Math.round(v * PX) / PX;
+/** Hornea un texto a la resolución de la pantalla (PX por píxel del mundo), con contorno negro. */
+function textoHD(str, tam, grad, contorno) {
+  const k = `${str}|${tam}|${grad}|${contorno}|${PX}|${FUENTE_OK}`;
+  let c = _txt.get(k); if (c) return c;
+  if (_txt.size > 2500) _txt.clear();
+  const s = PX, px = tam * s, w = Math.ceil(anchoTexto(str, tam / TAM_LETRA) * s + px * 0.4 + 4), h = Math.ceil(px * 1.4 + 4);
+  c = lienzoNuevo(w, h); const q = c.getContext("2d");
+  q.font = fuenteCSS(px); q.textBaseline = "middle"; q.lineJoin = "round";
+  const x = Math.ceil(px * 0.2) + 2, y = Math.round(h / 2);
+  if (contorno) { q.lineWidth = Math.max(2, s * 1.2 * Math.min(1.6, tam / TAM_LETRA)); q.strokeStyle = contorno; q.strokeText(str, x, y); }
+  const cols = grad && grad[0] === "#" ? [grad] : COLORES[grad] || COLORES.blanco;
+  if (cols.length > 1) { const gr = q.createLinearGradient(0, y - px * 0.4, 0, y + px * 0.4); gr.addColorStop(0, cols[0]); gr.addColorStop(1, cols[1]); q.fillStyle = gr; } else q.fillStyle = cols[0];
+  q.fillText(str, x, y);
+  c.ox = x / s; c.s = s;
+  _txt.set(k, c); return c;
+}
+/** Dibuja un texto de interfaz. o: {al: "izq"|"der"|"centro", escala, grad (nombre o #color), alfa, contorno} → ancho */
+function texto(str, x, y, o = {}) {
+  str = String(str);
+  const esc = o.escala || 1, c = textoHD(str, TAM_LETRA * esc, o.grad || "blanco", o.contorno === 0 ? 0 : o.contorno || "#000000");
+  const w = anchoTexto(str, esc), X = o.al === "izq" ? x : o.al === "der" ? x - w : x - w / 2;
+  // la línea media del texto cae donde caía la de la letra vieja (fila 6 de 11): no se corre ningún menú
+  const Y = y + 6 * esc - c.height / c.s / 2;
+  if (o.alfa != null) g.globalAlpha = o.alfa;
+  g.drawImage(c, encaje(X - c.ox), encaje(Y), c.width / c.s, c.height / c.s);
+  if (o.alfa != null) g.globalAlpha = 1;
+  return w;
+}
+
 // ══════════ 06-arte.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
 // EL ARTE: cazadores, enemigos, recogibles y proyectiles, en píxeles, dibujados por código.
@@ -802,59 +871,7 @@ function sello(filas, pal = PS, contorno = AUTO) {
   return p;
 }
 
-// ── los cazadores: una plantilla de 12×18 que se pinta con los colores de cada uno ──
-const CAZADOR = [
-  "....HHHH....", "...HhhhhH...", "..HhhhhhhH..", "..HhsssshH..", "..Hhssesse..", "...hsssss...", "....SsSs....",
-  "..KccccccK..", ".KcccgcccCK.", ".KccccccCcs.", ".KCcccccCK..", "..CgggggC...", "..CcccccC...", "..CCcccCC...",
-];
-const PIERNAS_A = ["...pp..pp...", "...pp..pp...", "..bbb..bbb.."];
-const PIERNAS_B = ["....pp.pp...", "...pp...pp..", "..bbb...bbb."];
-function cazadorSpr(clave, cuadro, izq) {
-  return hornear(`caz|${clave}|${cuadro}|${izq}`, () => {
-    const pj = PERSONAJES[clave], [C, c, p, s] = pj.pal;
-    const pal = { ...PS, H: mezclar(pj.pelo, "#000000", 0.45), h: pj.pelo, s, S: mezclar(s, "#6a3a2a", 0.35), e: "#1a1016", c, C, K: mezclar(C, "#000000", 0.3), g: "#e0b040", p, b: "#2a1a14" };
-    let px = sello(CAZADOR.concat(cuadro ? PIERNAS_B : PIERNAS_A), pal);
-    if (izq) px = px.espejo();
-    return px.canvas();
-  });
-}
-
-// ── enemigos ──
-const ENE_SPR = {
-  murcielago: { a: ["e............e", "ee..........ee", "eee..dddd..eee", ".eeeddrdrdeee.", "..eeddddddee..", ".....dddd.....", "......dd......"],
-    b: [".....dddd.....", "....ddrdrd....", "..eedddddddd..", ".eeeeddddeeee.", "eee...dd...eee", "ee..........ee", "e............e"], pal: { e: "#3a1a3a", d: "#6a3a5a", r: "#ff3030" } },
-  zombi: { c: ["....GGGG.....", "...GggggG....", "...ggrgrg....", "...gggggG....", "....gGgG.....", "..BBBBBB.....", ".BBvBBBBgggg.", ".BBBBBvBBGGG.", ".BvBBBBBB....", "..BBBvBB.....", "..BBBBBB.....", "..vvvvvv....."],
-    a: ["..vv..vv.....", "..vv..vv.....", "..GG...GG....", ".GGG...GGG..."], b: ["...vv.vv.....", "...vv.vv.....", "...GG.GG.....", "..GGG.GGG...."], pal: { g: "#9ab070", G: "#5a7a3a", B: "#5a6a8a", v: "#343c54", r: "#e03020" } },
-  esqueleto: { c: ["...wwww.....", "..wwwwww....", "..wddwdd....", "..wwwwww....", "...wlwl.....", "....ww......", "..wwwwww....", ".w.wlwlw.w..", ".w.wwwww.w..", "...wlwlw....", "....ww......", "...wwww....."],
-    a: ["...w..w.....", "...w..w.....", "..ww..ww...."], b: ["....ww......", "...w..w.....", "..ww...ww..."], pal: { w: "#e8e2d0", l: "#a8a290", d: "#2a1a20" } },
-  fantasma: { c: ["....wwww....", "..wwwwwwww..", ".wwwwwwwwww.", ".wweewwweew.", ".wwwwwwwwww.", ".wwwwweewwb.", "wwwwwwwwwwbb", "wwwwwwwwwwbb", "wwwwwwwwwbbb"],
-    a: ["wwwwwwwwwbb.", ".wwbwwbwwbb.", ".w..ww..wb.."], b: ["wwwwwwwwwbb.", "..wwbwwbwwb.", "..w..ww..w.."], pal: { w: "#dce8ff", b: "#8aa0d0", e: "#1a2040" }, alfa: 0.82 },
-  barro: { c: [".....tttt.....", "...ttTTTTtt...", "..tTTTTTTTTt..", "..TTyTTTyTTT..", "..TTTTTTTTTx..", ".tTTTxxxTTTTx.", "tTTTTTTTTTTTTx", "tTTTTTTTTTTTxx", ".TTTTTTTTTTTx.", "..TTTTTTTTTx..", "..TTTTTTTTxx..", "..xTTTxxTTx..."],
-    a: ["..TTx..TTx....", "..TTx...TTx...", "..xxx...xxx..."], b: ["...TTx.TTx....", "...TTx.TTx....", "..xxx..xxx...."], pal: { t: "#8aa060", T: "#5a7040", x: "#34401e", y: "#f0e040" } },
-  lobizon: { c: ["..d.....d.....", "..dm...dm.....", "..dmmmmmm.....", "..mmrmmrmd....", "...mmmmmmmwd..", "...mmmmmmmmm..", "....dmmmm.....", "..ddmmmmmmd...", ".dmmmmlllmmd..", ".dmmmllllmmd..", ".mmmmllllmmmw.", ".wm.mlllmm.w..", "...mmmmmmm....", "...dmmmmmd...."],
-    a: ["...mm...mm....", "...mm...mm....", "..dmm...dmm...", "..ww.....ww..."], b: ["....mm.mm.....", "....mm.mm.....", "...dmm.dmm....", "...ww..ww....."], pal: { m: "#7a6a64", d: "#3e322e", l: "#b0a098", r: "#ff3020", w: "#f0e8e0" } },
-  mantis: { c: ["......gg........", ".....gggg.......", ".....grgr.......", "......gg........", "..l...GG...l....", ".ll..gggg..ll...", "ll..ggGGgg..ll..", "l..gggGGggg..l..", "...ggGGGGgg.....", "....ggGGgg......", ".....gGGg.......", ".....gGGg.......", "....ggGGgg......", ".....GGGG......."],
-    a: ["....G....G......", "...G......G.....", "..G........G...."], b: ["....G...G.......", "....G...G.......", "...G.....G......"], pal: { g: "#8ad050", G: "#3a8a2a", l: "#e0f0c0", r: "#ff4020" } },
-  momia: { c: ["....tttt.....", "...ttTttt....", "...trttrt....", "...tTtttT....", "....tttt.....", "..tttTtttt...", ".ttTttttTtttt", ".tttttTtt.ttt", ".tTttttttT...", "..ttTttttt...", "..tttttTtt...", "..tTtttttt..."],
-    a: ["..ttt..ttt...", "..tTt..tTt...", "..ttt..ttt..."], b: ["...ttt.ttt...", "...tTt.tTt...", "..ttt...ttt.."], pal: { t: "#e0d0a8", T: "#8a7a58", r: "#ff5020" } },
-  flor: { c: ["...pp..pp...", "..pPPppPPp..", ".pPPPppPPPp.", "pPPyyqqyyPPp", "pPPyqeeqyPPp", ".pPyqeeqyPp.", "..pPyyyyPp..", "...pPPPPp...", "....pGGp...."],
-    a: [".gg..GG..gg.", "ggGG.GG.GGgg", ".gGGGGGGGGg.", "...gGGGGg...", "....GGGG...."], b: ["..gg.GG.gg..", ".gGGGGGGGGg.", "gGGGGGGGGGGg", "...gGGGGg...", "....GGGG...."], pal: { p: "#ff90c8", P: "#d03890", y: "#ffe060", q: "#801030", e: "#300008", g: "#70c050", G: "#2a7a2a" } },
-  parca: { c: ["..............ll", "...........llll.", ".........lll....", "....ddd.T.......", "...deeedT.......", "..deewwedT......", "..dewdwdeT......", "..deewwedT......", "..deeeeeeT......", ".deeeeeeeTd.....", ".deeweeeeeTd....", "deeeeeeeeeTed...", "deeeeeeeeeeTd...", "deeeeeeeeeeTd...", ".deeeeeeeeeeT..."],
-    a: [".deeeeeeeeeeeT..", "..deeeeeeeeed...", "..deedeedeed...."], b: [".deeeeeeeeeeeT..", "..deeeeeeeeed...", "...deedeedeed..."], pal: { e: "#16101c", d: "#3a3048", w: "#f0ece0", l: "#d0d8e8", T: "#6a4a2a" } },
-};
-/** El sprite de un enemigo: cuadro 0/1, mirando a la izquierda o no, con su tinte. */
-function enemigoSpr(spr, cuadro, izq, tinte) {
-  return hornear(`ene|${spr}|${cuadro}|${izq}|${tinte || ""}`, () => {
-    const d = ENE_SPR[spr], pal = { ...PS, ...d.pal };
-    if (tinte) for (const k in d.pal) pal[k] = mezclar(d.pal[k], tinte, 0.55);
-    let px = sello(d.c ? d.c.concat(cuadro ? d.b : d.a) : (cuadro ? d.b : d.a), pal);
-    // los sellos miran a la derecha; el original da vuelta el sprite según hacia dónde camina
-    if (izq) px = px.espejo();
-    const c = px.canvas();
-    if (d.alfa) { const q = lienzoNuevo(c.width, c.height), x = q.getContext("2d"); x.globalAlpha = d.alfa; x.drawImage(c, 0, 0); return q; }
-    return c;
-  });
-}
+// (los cazadores y los enemigos se arman por piezas en 06b-cuerpos.js)
 const _azules = new WeakMap();
 /** Congelado (el reloj): el sprite teñido de azul hielo, como el original. */
 function azulado(c) {
@@ -941,6 +958,248 @@ const PROY = {
   sinmanana: () => hornear("runaN", () => sello(["...c...", "..cwc..", ".cwBwc.", "cwBBBwc", ".cwBwc.", "..cwc..", "...c..."], PS).canvas()),
 };
 function proySpr(k) { return (PROY[k] || PROY.varita)(); }
+
+// ══════════ 06b-cuerpos.js ══════════
+// ─────────────────────────────────────────────────────────────────────────────
+// LOS CUERPOS, POR PIEZAS. Los sellos tipeados a mano salían chuecos (filas corridas, brazos que no
+// empalman). Acá cada personaje y cada enemigo se arma con volúmenes sombreados (bola, caja,
+// triángulos) sobre un esqueleto fijo con coordenadas medidas: cabeza, cuello, torso, capa, brazos
+// que se balancean y piernas en 3 poses (quieto y dos pasos). Simétrico donde tiene que serlo,
+// con la luz siempre de arriba a la izquierda y el contorno oscuro teñido (AUTO).
+// Todo mira a la derecha; el espejo lo da vuelta.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const R4 = (c) => rampaDe(c, 4);
+/** Un triángulo lleno (para alas, capas, sombreros, hojas). */
+function tri(p, ax, ay, bx, by, cx, cy, col) {
+  const x0 = Math.floor(Math.min(ax, bx, cx)), x1 = Math.ceil(Math.max(ax, bx, cx)), y0 = Math.floor(Math.min(ay, by, cy)), y1 = Math.ceil(Math.max(ay, by, cy));
+  const ar = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+  if (!ar) return;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const px = x + 0.5, py = y + 0.5;
+    const w0 = ((bx - px) * (cy - py) - (by - py) * (cx - px)) / ar, w1 = ((cx - px) * (ay - py) - (cy - py) * (ax - px)) / ar, w2 = 1 - w0 - w1;
+    if (w0 >= 0 && w1 >= 0 && w2 >= 0) p.p(x, y, typeof col === "function" ? col(x, y) : col);
+  }
+}
+
+// ── la figura humana (22×32, pies en y=30) ──
+// o: {piel, pelo, peinado, ropa, pantalon, botas, capa, sombrero, barba, ojos, zombi, vendas, sotana, cinto}
+function humano(o, f) {
+  const p = new Pix(22, 32), Y = 2;          // Y: aire arriba para sombreros
+  const piel = R4(o.piel), ropa = R4(o.ropa), pant = R4(o.pantalon || "#3a2a24"), bota = R4(o.botas || "#2a1c16");
+  const paso = f === 1 ? 1 : f === 2 ? -1 : 0, bob = f ? 0 : 0, ag = o.encorvado ? 1 : 0;
+  // la capa, atrás de todo, con el ruedo que se mece al caminar
+  if (o.capa) {
+    const cp = R4(o.capa), sway = paso;
+    tri(p, 6, Y + 12, 16, Y + 12, 3 - sway, Y + 26, cp[1]); tri(p, 16, Y + 12, 3 - sway, Y + 26, 15 - sway, Y + 26, cp[1]);
+    tri(p, 7, Y + 13, 5 - sway, Y + 25, 9, Y + 25, cp[0]);
+    for (let x = 3; x <= 15; x += 3) p.borrar(x - sway, Y + 26);
+  }
+  // piernas: la de atrás (más oscura) y la de adelante
+  const pierna = (x, alto, rampa, tono) => { p.caja(x, Y + 20, 3, alto, rampa, { vertical: 0.3 }); p.caja(x, Y + 20 + alto - 2, 4, 2, bota); if (tono) p.rect(x, Y + 20, 1, alto - 2, rampa[0]); };
+  if (!o.sotana) { pierna(8 - paso, f === 2 ? 7 : 8, pant, 1); pierna(12 + paso, f === 1 ? 7 : 8, pant, 0); }
+  else { p.caja(6, Y + 20, 11, 7, ropa, { vertical: 0.4 }); p.rect(8 - paso, Y + 27, 4, 2, bota[1]); p.rect(12 + paso, Y + 27, 4, 2, bota[2]); }
+  // brazo de atrás
+  const brazo = (x, y, rampa, adelante) => {
+    if (adelante) { p.caja(x, y, 6, 2, rampa, { vertical: 0.6 }); p.rect(x + 6, y, 2, 2, piel[2]); return; }
+    p.caja(x, y, 2, 6, rampa, { vertical: 0.2 }); p.rect(x, y + 6, 2, 2, piel[2]);
+  };
+  if (o.zombi) brazo(13 + ag, Y + 16, R4(mezclar(o.ropa, "#000000", 0.35)), true);
+  else brazo(6 + paso, Y + 14, R4(mezclar(o.ropa, "#000000", 0.35)), false);
+  // torso, cinto y cuello
+  p.caja(7, Y + 13, 9, 8, ropa, { vertical: 0.55 });
+  p.rect(7, Y + 13, 9, 1, ropa[3]);
+  if (o.cinto !== 0) { p.rect(7, Y + 19, 9, 1, o.cinto || "#2a1a10"); p.p(11, Y + 19, "#e0b040"); }
+  if (o.vendas) for (let y = Y + 13; y < Y + 28; y += 2) for (let x = 6; x < 17; x++) if (p.g(x, y) && (x + y) % 5 === 0) p.p(x, y, mezclar(o.ropa, "#3a2a18", 0.45));
+  if (o.harapos) for (const x of [8, 11, 14]) { p.borrar(x, Y + 20); p.p(x + 1, Y + 20, ropa[0]); }
+  p.rect(10 + ag, Y + 12, 3, 1, piel[1]);
+  // cabeza (redonda, 9×10) con la luz arriba a la izquierda
+  const hx = 11.5 + ag, hy = Y + 7.5 + ag * 0.5;
+  p.bola(hx, hy, 4.6, 4.9, piel);
+  // pelo
+  if (o.pelo && o.peinado !== "calvo") {
+    const pe = R4(o.pelo);
+    if (o.peinado === "capucha") {
+      const cap = R4(o.capucha || o.pelo);
+      p.bola(hx - 0.5, hy - 0.5, 5.8, 6, cap);
+      for (let y = Math.floor(hy - 3); y <= hy + 3; y++) for (let x = Math.floor(hx); x <= hx + 5; x++) if ((x - hx - 1.2) ** 2 / 14 + (y - hy - 0.5) ** 2 / 12 < 1) p.p(x, y, piel[x > hx + 3 ? 2 : 1]);
+    } else {
+      p.bola(hx - 0.7, hy - 2.2, 5, 3.4, pe, { filtro: (x, y) => y <= hy - 1 });
+      for (let x = Math.floor(hx) ; x <= hx + 3; x++) p.p(x, Math.floor(hy - 2), pe[1]);
+      p.caja(Math.floor(hx - 5), Math.floor(hy - 3), 3, 6, pe);
+      if (o.peinado === "largo") p.caja(Math.floor(hx - 5), Math.floor(hy - 1), 3, 10, pe, { vertical: 0.2 });
+      if (o.peinado === "cola") p.bola(hx - 6, hy + 2, 1.8, 3.6, pe);
+      if (o.peinado === "moño") p.bola(hx - 2, hy - 5.8, 2.4, 2, pe);
+      if (o.peinado === "pelado") for (const x of [0, 2, 4]) p.p(Math.floor(hx - 3 + x), Math.floor(hy - 5), pe[1]);
+    }
+  }
+  // cara: ojos, boca, barba
+  const ex = Math.floor(hx + 1), ey = Math.floor(hy);
+  const ojo = o.ojos || "#1a1016";
+  p.p(ex, ey, ojo); p.p(ex, ey + 1, ojo); p.p(ex + 2, ey, ojo); p.p(ex + 2, ey + 1, ojo);
+  if (!o.ojos) { p.p(ex, ey - 1, piel[3]); }
+  p.p(ex + 2, ey + 3, piel[0]);
+  if (o.barba) { const b = R4(o.barba); p.caja(Math.floor(hx - 1), Math.floor(hy + 2), 6, 4, b); p.p(ex + 2, ey + 3, b[0]); }
+  // sombreros
+  if (o.sombrero === "bruja") { const s = R4(o.somCol || "#2a2a5a"); p.rect(4, Y + 2, 15, 2, s[1]); p.rect(4, Y + 3, 15, 1, s[0]); tri(p, 7, Y + 2, 16, Y + 2, 10, Y - 6, s[2]); tri(p, 10, Y - 6, 7, Y + 2, 9, Y + 2, s[1]); }
+  if (o.sombrero === "corona") { const c = ["#8a5a10", "#e0a020", "#ffe070"]; p.rect(8, Y + 2, 8, 2, c[1]); for (const x of [8, 11, 15]) { p.p(x, Y + 1, c[2]); p.p(x, Y, c[2]); } p.p(12, Y + 2, "#ff4050"); }
+  if (o.sombrero === "boina") { const s = R4(o.somCol || "#6a1a2a"); p.bola(11, Y + 3, 6, 2.4, s); }
+  if (o.sombrero === "tricornio") { const s = R4(o.somCol || "#2a1a14"); p.rect(4, Y + 3, 15, 2, s[1]); p.bola(11.5, Y + 2, 4.6, 2.6, s); p.p(4, Y + 2, s[2]); p.p(18, Y + 2, s[2]); }
+  // brazo de adelante (tapa el torso)
+  if (o.zombi) brazo(12 + ag, Y + 14, ropa, true);
+  else brazo(15 - paso, Y + 14, ropa, false);
+  if (o.arma === "baston") { p.linea(18 - paso, Y + 6, 18 - paso, Y + 29, "#6a4a2a"); p.p(18 - paso, Y + 5, "#ffe070"); }
+  p.contorno(AUTO, true);
+  return p;
+}
+
+// cómo es cada cazador (los colores de ropa salen de PERSONAJES.pal)
+const LOOK = {
+  antonia: { peinado: "largo", capa: "#8a1414" },
+  isolda: { peinado: "largo", sombrero: "bruja", somCol: "#2a3a8a" },
+  pascuala: { peinado: "cola" },
+  gaspar: { peinado: "corto", barba: "#1a1410", capa: "#2a3a1a" },
+  arcadio: { peinado: "corto", capa: "#5a2a0a", arma: "baston" },
+  perla: { peinado: "moño" },
+  lamia: { peinado: "capucha", capucha: "#8a8a98" },
+  poli: { peinado: "calvo", barba: "#e8e8e8" },
+  clementina: { peinado: "capucha", capucha: "#f0f0f4" },
+  domingo: { peinado: "corto", sotana: 1, cinto: "#c8a050" },
+  kiro: { peinado: "cola", sombrero: "boina", somCol: "#0a4a3a" },
+};
+function cazadorSpr(clave, cuadro, izq) {
+  return hornear(`caz2|${clave}|${cuadro}|${izq}`, () => {
+    const pj = PERSONAJES[clave], [, c, pa, s] = pj.pal;
+    let px = humano({ piel: s, pelo: pj.pelo, ropa: c, pantalon: pa, botas: "#2a1a14", ...LOOK[clave] }, cuadro);
+    if (izq) px = px.espejo();
+    return px.canvas();
+  });
+}
+
+// ── los enemigos ──
+const CUERPOS = {
+  zombi: (f) => humano({ piel: "#8aa860", pelo: "#3a4a2a", peinado: "pelado", ropa: "#4e5e80", pantalon: "#343c54", botas: "#5a6a3a", ojos: "#ff3020", zombi: 1, encorvado: 1, harapos: 1, cinto: 0 }, f ? 1 + (f % 2) : 1),
+  momia: (f) => humano({ piel: "#dccca4", pelo: null, peinado: "calvo", ropa: "#d4c49a", pantalon: "#c8b88e", botas: "#b0a078", ojos: "#ffb020", zombi: 1, vendas: 1, cinto: 0 }, f ? 1 + (f % 2) : 1),
+  esqueleto(f) {
+    const p = new Pix(22, 32), Y = 2, hu = ["#6a6456", "#a8a290", "#dcd6c4", "#f6f2e6"], paso = f ? 1 : -1;
+    // piernas (huesos finos) y pelvis
+    p.rect(9 - paso, Y + 20, 2, 8, hu[1]); p.rect(12 + paso, Y + 20, 2, 8, hu[2]); p.rect(9 - paso, Y + 27, 3, 1, hu[1]); p.rect(12 + paso, Y + 27, 3, 1, hu[2]);
+    p.caja(8, Y + 18, 7, 3, hu);
+    // columna y costillas
+    p.rect(11, Y + 12, 1, 7, hu[2]);
+    for (let k = 0; k < 3; k++) p.caja(8, Y + 13 + k * 2, 7, 1, hu);
+    // brazos
+    p.rect(6 + paso, Y + 13, 2, 6, hu[1]); p.rect(15 - paso, Y + 13, 2, 6, hu[2]);
+    // calavera
+    p.bola(11.5, Y + 7.5, 4.5, 4.6, hu);
+    p.rect(12, Y + 7, 2, 2, "#1a1016"); p.rect(15, Y + 7, 1, 2, "#1a1016"); p.rect(13, Y + 11, 3, 1, hu[0]); p.p(14, Y + 11, "#1a1016");
+    p.contorno(AUTO, true);
+    return p;
+  },
+  lobizon(f) {
+    const p = humano({ piel: "#7a6a64", pelo: null, peinado: "calvo", ropa: "#6a5a54", pantalon: "#5a4a44", botas: "#3a2e2a", encorvado: 1, cinto: 0 }, f ? 1 + (f % 2) : 1), Y = 2;
+    const pe = ["#2e2420", "#5a4a44", "#8a7a70", "#b8a898"];
+    // la cabeza de lobo encima de la humana: hocico, orejas, ojo rojo, colmillo
+    p.bola(12.5, Y + 8.5, 5, 4.6, pe);
+    p.caja(15, Y + 9, 5, 3, pe); p.p(20, Y + 9, "#1a1016");
+    tri(p, 9, Y + 5, 12, Y + 4, 9.5, Y - 0.5, pe[1]); tri(p, 12, Y + 4, 15, Y + 5, 13, Y - 0.5, pe[2]);
+    p.p(15, Y + 7, "#ff3020"); p.p(16, Y + 7, "#ff8060"); p.p(18, Y + 12, "#ffffff");
+    p.caja(9, Y + 14, 5, 5, ["#8a7a70", "#b0a098", "#d0c4b8", "#e8e0d8"]);
+    p.p(8, Y + 22, "#ffffff"); p.p(17, Y + 22, "#ffffff");
+    p.contorno(AUTO, true);
+    return p;
+  },
+  barro(f) {
+    const p = new Pix(24, 30), bar = ["#34401e", "#5a7040", "#7a9050", "#9ab070"], sq = f ? 1 : 0;
+    p.bola(12, 18 + sq, 9 + sq, 9 - sq, bar);
+    p.bola(13, 8 + sq, 5.5, 5, bar);
+    p.bola(4 - sq, 17, 2.6, 4, bar); p.bola(20 + sq, 16, 2.6, 4, bar);
+    for (const x of [6, 11, 17]) { p.rect(x, 26, 2, 2 + ((x + f) % 2), bar[1]); }
+    p.rect(14, 7 + sq, 2, 2, "#f0e040"); p.rect(17, 7 + sq, 2, 2, "#f0e040"); p.rect(14, 11 + sq, 4, 1, bar[0]);
+    p.contorno(AUTO, true);
+    return p;
+  },
+  fantasma(f) {
+    const p = new Pix(20, 24), bl = ["#6a7aa8", "#a8b8e0", "#d8e4ff", "#f4f8ff"];
+    p.bola(10, 9, 7.5, 7.5, bl);
+    p.caja(3, 9, 15, 9, bl, { vertical: 0.2 });
+    for (let x = 3; x < 18; x++) { const ola = Math.round(Math.sin((x + f * 2.5) * 0.9) * 1.5); for (let y = 18; y < 20 + ola; y++) p.p(x, y, bl[1]); }
+    p.bola(4, 13, 2, 1.6, bl); p.bola(17, 12, 2, 1.6, bl);
+    p.rect(11, 8, 2, 3, "#1a2040"); p.rect(15, 8, 2, 3, "#1a2040"); p.rect(12, 13, 3, 2, "#1a2040");
+    p.contorno(AUTO, true);
+    return p;
+  },
+  murcielago(f) {
+    const p = new Pix(22, 14), cu = ["#2a1224", "#4a2240", "#6a3a5a", "#8a5a7a"], ala = ["#3a1a34", "#5a2a4c"];
+    if (!f) {       // alas arriba
+      tri(p, 9, 7, 1, 1, 4, 9, ala[0]); tri(p, 9, 7, 4, 9, 7, 10, ala[1]);
+      tri(p, 13, 7, 21, 1, 18, 9, ala[1]); tri(p, 13, 7, 18, 9, 15, 10, ala[0]);
+    } else {        // alas abajo
+      tri(p, 9, 6, 1, 11, 6, 12, ala[0]); tri(p, 13, 6, 21, 11, 16, 12, ala[1]);
+    }
+    p.bola(11, 7.5, 3, 3.5, cu); p.bola(11, 3.8, 2.4, 2.2, cu);
+    tri(p, 9, 3, 10, 1.5, 9, -0.5, cu[2]); tri(p, 12, 1.5, 13, 3, 13, -0.5, cu[2]);
+    p.p(10, 4, "#ff3030"); p.p(12, 4, "#ff3030");
+    p.contorno(AUTO, true);
+    return p;
+  },
+  mantis(f) {
+    const p = new Pix(26, 30), v = ["#1e4a1a", "#3a8a2a", "#6ac040", "#a8e070"], paso = f ? 1 : -1;
+    // patas finas
+    for (const [x0, dx] of [[9, -3], [12, 2], [14, 4]]) { p.linea(x0, 19, x0 + dx + paso, 25, v[1]); p.linea(x0 + dx + paso, 25, x0 + dx + paso, 28, v[1]); }
+    // abdomen, tórax, cabeza triangular con ojos grandes
+    p.bola(8, 18, 4.6, 6.5, v);
+    p.caja(11, 10, 3, 10, v);
+    tri(p, 12, 5, 20, 6, 15, 11, v[2]); p.p(18, 6, "#ff4020"); p.p(14, 6, "#ff4020");
+    p.linea(15, 4, 17, 0, v[2]); p.linea(13, 5, 12, 1, v[2]);
+    // las guadañas
+    p.linea(13, 12, 18 + paso, 14, v[2]); p.linea(18 + paso, 14, 21 + paso, 7, "#e8ffd0"); p.linea(19 + paso, 14, 22 + paso, 8, v[3]);
+    p.linea(12, 14, 16 - paso, 17, v[1]); p.linea(16 - paso, 17, 19 - paso, 11, "#d0f0b0");
+    p.contorno(AUTO, true);
+    return p;
+  },
+  flor(f) {
+    const p = new Pix(22, 26), ve = ["#1a5a1a", "#2a8a2a", "#5ac048", "#90e070"], pe = ["#801a50", "#d03890", "#ff70b8", "#ffb0d8"];
+    p.rect(10, 13, 2, 11, ve[1]); p.rect(11, 13, 1, 11, ve[2]);
+    tri(p, 10, 19, 2, 15 + f, 6, 21, ve[2]); tri(p, 12, 19, 20, 15 - f, 16, 21, ve[1]);
+    p.bola(11, 24.5, 5, 1.6, ve);
+    for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + f * 0.2; p.bola(11 + Math.cos(a) * 5.2, 8 + Math.sin(a) * 4.6, 2.8, 2.6, pe); }
+    p.bola(11, 8, 3.6, 3.4, ["#6a0a20", "#a01a30", "#e0c040", "#ffe070"]);
+    if (f) { p.rect(9, 8, 5, 2, "#300008"); p.p(10, 8, "#ffffff"); p.p(12, 9, "#ffffff"); }
+    else p.rect(9, 9, 5, 1, "#300008");
+    p.contorno(AUTO, true);
+    return p;
+  },
+  parca(f) {
+    const p = new Pix(28, 34), ro = ["#0c0812", "#1e1628", "#342a44", "#4a3e5c"], hu = ["#8a8478", "#c8c2b0", "#eeeae0", "#ffffff"];
+    // la guadaña atrás: palo y hoja curva
+    p.linea(21, 3, 18, 33, "#6a4a2a"); p.linea(22, 3, 19, 33, "#8a6a3a");
+    // la túnica (trapecio) con el ruedo rasgado que flota
+    tri(p, 9, 8, 18, 8, 3, 30, ro[1]); tri(p, 18, 8, 3, 30, 21, 30, ro[1]); tri(p, 9, 10, 4, 29, 10, 29, ro[0]);
+    for (let x = 3; x <= 21; x += 3) p.borrar(x + (f ? 1 : 0), 30);
+    // capucha y calavera
+    p.bola(13, 8, 6, 6.4, ro);
+    p.bola(14.5, 9, 3.2, 3.4, hu);
+    p.rect(14, 8, 1, 2, "#0a0610"); p.rect(16, 8, 1, 2, "#0a0610"); p.rect(14, 11, 3, 1, hu[0]);
+    // la mano huesuda en el palo, y la hoja curva por encima de la capucha (si va antes, la tapa)
+    p.rect(18, 15, 3, 2, hu[1]);
+    p.linea(21, 0, 22, 3, "#8a6a3a");
+    for (let k = 0; k <= 16; k++) { const a = k / 16, x = 21 - a * 16, y = 1 + Math.sin(a * Math.PI) * -1 + a * a * 5; p.p(x, y, hu[3]); p.p(x, y + 1, hu[1]); if (k < 12) p.p(x, y + 2, hu[0]); }
+    p.contorno(AUTO, true);
+    return p;
+  },
+};
+/** El sprite de un enemigo: cuadro 0/1, mirando a la izquierda o no, con su tinte. */
+function enemigoSpr(spr, cuadro, izq, tinte) {
+  return hornear(`ene2|${spr}|${cuadro}|${izq}|${tinte || ""}`, () => {
+    let px = CUERPOS[spr](cuadro);
+    if (tinte) px = px.tenido((c) => mezclar(c, tinte, 0.5));
+    if (izq) px = px.espejo();
+    const c = px.canvas();
+    if (spr === "fantasma") { const q = lienzoNuevo(c.width, c.height), x = q.getContext("2d"); x.globalAlpha = 0.85; x.drawImage(c, 0, 0); return q; }
+    return c;
+  });
+}
 
 // ══════════ 07-iconos.js ══════════
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2001,23 +2260,21 @@ function dibujarEfectos(cx, cy) {
   }
 }
 function dibujarNumeros(cx, cy) {
-  for (const n of J.numeros) {
-    const s = numeroSpr(n.txt, n.col);
-    g.globalAlpha = Math.min(1, n.t * 4);
-    g.drawImage(s, Math.round(n.x - cx - s.width / 2), Math.round(n.y - cy));
-  }
-  g.globalAlpha = 1;
+  // el original: números blancos (amarillos los críticos) con contorno, chicos
+  for (const n of J.numeros) texto(n.txt, n.x - cx, n.y - cy - 4, { escala: 0.8, grad: n.col, alfa: Math.min(1, n.t * 4) });
 }
-
 // ── el kit de interfaz ──
 const UI = { items: [], foco: 0, pantallaFoco: null };
+// Colores medidos en las capturas del original: el panel de subir de nivel es violeta pizarra liso
+// con un filete dorado; las tarjetas, grises; los botones, azul (Reroll) y rojo (Skip/Banish).
 const ESTILOS = {
-  azul: { a: "#2a3a8a", b: "#101848", borde: "#e0a020", luz: "#ffe28a", sombra: "#6a4a10" },
-  oscuro: { a: "#1a1e3a", b: "#0a0c1c", borde: "#8a6a30", luz: "#c8a050", sombra: "#3a2a10" },
-  rojo: { a: "#8a1a1a", b: "#3a0808", borde: "#e0a020", luz: "#ffe28a", sombra: "#6a4a10" },
-  verde: { a: "#1a6a2a", b: "#083a10", borde: "#e0a020", luz: "#ffe28a", sombra: "#6a4a10" },
-  gris: { a: "#3a3a44", b: "#1a1a22", borde: "#6a6a78", luz: "#9a9aa8", sombra: "#2a2a30" },
-  tarjeta: { a: "#233070", b: "#141c4a", borde: "#5a78d8", luz: "#9ab8ff", sombra: "#0a1030" },
+  azul: { a: "#4a66f0", b: "#2a3cc0", borde: "#e8b860", luz: "#fff0b8", sombra: "#7a5020", brillo: 1 },
+  rojo: { a: "#f25a3c", b: "#c42818", borde: "#e8b860", luz: "#fff0b8", sombra: "#7a5020", brillo: 1 },
+  verde: { a: "#44b04a", b: "#22782a", borde: "#e8b860", luz: "#fff0b8", sombra: "#7a5020", brillo: 1 },
+  gris: { a: "#6a6a74", b: "#4a4a54", borde: "#9a9aa4", luz: "#c8c8d0", sombra: "#2a2a30", brillo: 1 },
+  oscuro: { a: "#4d4f84", b: "#45477a", borde: "#caa262", luz: "#f4dca0", sombra: "#7a5a2a" },
+  tarjeta: { a: "#8e8e8e", b: "#848484", borde: "#c09050", luz: "#ecc88c", sombra: "#6a4a20" },
+  elegida: { a: "#a8a8a8", b: "#9a9a9a", borde: "#ffe070", luz: "#fff6c8", sombra: "#8a6a20" },
 };
 /** Un panel horneado: degradé vertical, borde dorado con luz arriba y sombra abajo, esquinas cortadas. */
 function panelSpr(w, h, estilo = "azul") {
@@ -2030,7 +2287,9 @@ function panelSpr(w, h, estilo = "azul") {
     q.fillStyle = E.luz; q.fillRect(2, 1, w - 4, 1);
     q.fillStyle = E.sombra; q.fillRect(2, h - 2, w - 4, 1);
     q.fillStyle = gr; q.fillRect(3, 3, w - 6, h - 6);
-    q.fillStyle = "rgba(255,255,255,0.08)"; q.fillRect(3, 3, w - 6, Math.floor((h - 6) / 2));
+    if (E.brillo) { q.fillStyle = "rgba(255,255,255,0.12)"; q.fillRect(3, 3, w - 6, Math.floor((h - 6) / 2)); }
+    // los remaches dorados de las esquinas (el panel del original los tiene)
+    q.fillStyle = E.luz; for (const [x, y] of [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2]]) q.fillRect(x, y, 1, 1);
     return c;
   });
 }
@@ -2044,7 +2303,11 @@ function boton(x, y, w, h, etiqueta, accion, o = {}) {
     const t = (performance.now() / 400) % 1;
     g.strokeStyle = `rgba(255,255,255,${0.55 + 0.45 * Math.sin(t * TAU)})`; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   }
-  if (etiqueta != null && etiqueta !== "") texto(L(etiqueta), x + w / 2 + (o.dx || 0), y + Math.round(h / 2) - 7, { grad: o.apagado ? "gris" : o.grad || "blanco" });
+  if (etiqueta != null && etiqueta !== "") {
+    const esc = o.escala || (h >= 22 ? 1.3 : 1);
+    if (o.sub != null) { texto(L(etiqueta), x + w / 2, y + h / 2 - 11 * esc / 2 - 4, { grad: o.apagado ? "gris" : o.grad || "blanco", escala: esc }); texto(L(o.sub), x + w / 2, y + h / 2 + 1, { escala: 0.9, grad: o.apagado ? "gris" : "blanco" }); }
+    else texto(L(etiqueta), x + w / 2 + (o.dx || 0), y + h / 2 - 6 * esc, { grad: o.apagado ? "gris" : o.grad || "blanco", escala: esc });
+  }
   return foco;
 }
 /** Corre las acciones de este cuadro: toque/click → el botón tocado; teclas → mover foco / aceptar. */
@@ -2186,47 +2449,49 @@ function pasoModal(dt) {
 
 // ── dibujo ──
 function dibujarModalNivel() {
+  // como la pantalla del original: panel pizarra, "Level Up!" grande, tarjetas grises con el ícono
+  // en su cajita, el nombre, "New!" en amarillo y la descripción en blanco; abajo Reroll/Skip/Banish
   const m = J.modal;
-  g.fillStyle = "rgba(4,4,16,0.72)"; g.fillRect(0, 0, W, H);
-  const n = m.ops.length, alto = 48, sep = 4, bot = (J.rerolls || J.saltos || J.destierros) ? 26 : 0;
-  const total = 50 + n * (alto + sep) + bot + 6, x0 = 6, w = W - 12, y0 = Math.max(24, Math.round((H - total) / 2));
+  g.fillStyle = "rgba(0,0,0,0.55)"; g.fillRect(0, 0, W, H);
+  const n = m.ops.length, alto = 50, sep = 4, bot = (J.rerolls || J.saltos || J.destierros) ? 36 : 0;
+  const total = 58 + n * (alto + sep) + bot + 8, x0 = 6, w = W - 12, y0 = Math.max(24, Math.round((H - total) / 2));
   panel(x0, y0, w, total, "oscuro");
-  texto(L(TX.subiste), W / 2, y0 + 6, { grad: "oro", escala: 1 });
+  texto(L(TX.subiste), W / 2, y0 + 6, { escala: 2 });
   // lo que ya tenés, en chiquito (para decidir mirando el armado)
   let ix = x0 + 8;
-  for (const a of J.armas) { marcoIcono(ix, y0 + 20, a.k, a.nivel, a.nivel >= maxNivel(a.k)); ix += 15; }
-  ix = x0 + 8 + 6 * 15 + 6;
-  for (const p of J.pasivos) { if (ix > x0 + w - 20) break; marcoIcono(ix, y0 + 20, p.k, p.nivel, p.nivel >= maxNivel(p.k)); ix += 15; }
+  for (const a of J.armas) { marcoIcono(ix, y0 + 32, a.k, a.nivel, a.nivel >= maxNivel(a.k)); ix += 15; }
+  ix = W - 8 - Math.max(1, J.pasivos.length) * 15;
+  for (const p of J.pasivos) { marcoIcono(ix, y0 + 32, p.k, p.nivel, p.nivel >= maxNivel(p.k)); ix += 15; }
   uiEmpezar("nivel" + J.nivel + (m.desterrar ? "d" : "") + m.ops.length);
-  let y = y0 + 40;
+  let y = y0 + 50;
   for (const op of m.ops) {
-    const f = boton(x0 + 6, y, w - 12, alto, "", () => elegirOpcion(op), { estilo: m.desterrar ? "rojo" : "tarjeta" });
+    const f = boton(x0 + 6, y, w - 12, alto, "", () => elegirOpcion(op), { estilo: m.desterrar ? "rojo" : UI.foco === UI.items.length ? "elegida" : "tarjeta", sinFoco: true });
     const ik = op.tipo === "oro" ? "oro" : op.tipo === "pollo" ? "pollo" : op.k;
-    g.fillStyle = "#06081a"; g.fillRect(x0 + 12, y + 9, 30, 30);
-    g.fillStyle = f ? "#ffe070" : "#5a78d8"; g.fillRect(x0 + 12, y + 9, 30, 1); g.fillRect(x0 + 12, y + 38, 30, 1); g.fillRect(x0 + 12, y + 9, 1, 30); g.fillRect(x0 + 41, y + 9, 1, 30);
-    g.drawImage(iconoSpr(ik), x0 + 13, y + 10, 28, 28);
+    g.fillStyle = "#101018"; g.fillRect(x0 + 11, y + 5, 30, 30);
+    g.fillStyle = "#c09050"; g.fillRect(x0 + 11, y + 5, 30, 1); g.fillRect(x0 + 11, y + 34, 30, 1); g.fillRect(x0 + 11, y + 5, 1, 30); g.fillRect(x0 + 40, y + 5, 1, 30);
+    g.drawImage(iconoSpr(ik), x0 + 12, y + 6, 28, 28);
     const nombre = op.tipo === "oro" ? L(TX.oroPollo) : op.tipo === "pollo" ? L(TX.polloOp) : nombreDe(op.k);
-    texto(nombre, x0 + 48, y + 5, { al: "izq", grad: "blanco" });
+    texto(nombre, x0 + 47, y + 4, { al: "izq" });
     if (op.tipo === "arma" || op.tipo === "pasivo") {
-      if (op.nivel === 1) texto(L(TX.nuevo), x0 + w - 12, y + 5, { al: "der", grad: "amarillo" });
-      else texto(`${L(TX.nivel)} ${op.nivel}`, x0 + w - 12, y + 5, { al: "der", grad: "gris" });
-    }
+      if (op.nivel === 1) texto(L(TX.nuevo), x0 + w - 12, y + 4, { al: "der", grad: "amarillo" });
+      else texto(`${L(TX.nivel)} ${op.nivel}`, x0 + w - 12, y + 4, { al: "der" });
+    } else texto(L(TX.nuevo), x0 + w - 12, y + 4, { al: "der", grad: "amarillo" });
     const desc = op.tipo === "oro" ? L(TX.oroOp) : op.tipo === "pollo" ? L(TX.curarOp) : textoNivel(op.k, op.nivel);
-    renglones(desc, w - 64).slice(0, 3).forEach((r, i) => texto(r, x0 + 48, y + 18 + i * 9, { al: "izq", grad: "azul", sombra: 0 }));
+    renglones(desc, w - 62).slice(0, 3).forEach((r, i) => texto(r, x0 + 47, y + 17 + i * 10, { al: "izq" }));
     y += alto + sep;
   }
   if (bot) {
-    const bw = Math.floor((w - 20) / 3);
-    if (J.rerolls) boton(x0 + 6, y + 2, bw, 20, `${L(TX.reroll)} ${J.rerolls}`, () => { J.rerolls--; m.ops = generarOpciones(); sfx("mover"); }, { estilo: "verde" });
-    if (J.saltos) boton(x0 + 10 + bw, y + 2, bw, 20, `${L(TX.saltar)} ${J.saltos}`, () => { J.saltos--; siguienteModal(); }, { estilo: "azul" });
-    if (J.destierros) boton(x0 + 14 + bw * 2, y + 2, bw, 20, `${L(TX.desterrar)} ${J.destierros}`, () => { m.desterrar = !m.desterrar; }, { estilo: "rojo" });
+    const bw = Math.floor((w - 20) / 3), izq = IDIOMA === "es" ? "quedan" : "left";
+    if (J.rerolls) boton(x0 + 6, y + 2, bw, 32, L(TX.reroll), () => { J.rerolls--; m.ops = generarOpciones(); sfx("mover"); }, { estilo: "azul", sub: `${J.rerolls} ${izq}` });
+    if (J.saltos) boton(x0 + 10 + bw, y + 2, bw, 32, L(TX.saltar), () => { J.saltos--; siguienteModal(); }, { estilo: "rojo", sub: `${J.saltos} ${izq}` });
+    if (J.destierros) boton(x0 + 14 + bw * 2, y + 2, bw, 32, L(TX.desterrar), () => { m.desterrar = !m.desterrar; }, { estilo: "rojo", sub: `${J.destierros} ${izq}` });
   }
   uiProcesar(null);
 }
 function dibujarModalCofre() {
   const m = J.modal, cxx = W / 2, cyy = Math.round(H * 0.4);
   g.fillStyle = "rgba(4,2,12,0.8)"; g.fillRect(0, 0, W, H);
-  texto(L(TX.cofre), W / 2, cyy - 110, { grad: "oro" });
+  texto(L(TX.cofre), W / 2, cyy - 116, { escala: 1.7 });
   const abierto = m.fase !== "cerrado", tt = m.fase === "abriendo" ? m.t : m.fase === "listo" ? 9 : 0;
   if (abierto) {
     // los rayos de colores que giran detrás del cofre abierto
@@ -2260,8 +2525,8 @@ function dibujarModalCofre() {
       else if (it.nivel) texto(`${L(TX.nivel)} ${it.nivel}`, W / 2 + ancho / 2 - 5, y + 3, { al: "der", grad: "gris" });
     });
     const oroV = m.fase === "listo" ? m.oro : Math.round(m.oro * Math.min(1, m.t / (1 + m.items.length * 0.45)));
-    texto(`+${oroV}`, W / 2 + 6, cyy - 90, { grad: "amarillo" });
-    g.drawImage(recogibleSpr("moneda"), W / 2 - anchoTexto(`+${oroV}`) / 2 - 8, cyy - 88);
+    texto(`+${oroV}`, W / 2 + 6, cyy - 92, { grad: "amarillo", escala: 1.5 });
+    g.drawImage(recogibleSpr("moneda"), Math.round(W / 2 - anchoTexto(`+${oroV}`, 1.5) / 2 - 8), cyy - 88);
     if (m.fase === "listo") boton(W / 2 - 50, Math.min(H - 34, y0 + m.items.length * 22 + 8), 100, 26, TX.listo, () => { J.modal = null; J.efectos = J.efectos.filter((f) => f.tipo !== "monedaMenu"); if (J.pendientes > 0) abrirModalNivel(); }, { estilo: "azul" });
     else if (IN.toques.length) { m.fase = "listo"; IN.toques.length = 0; }
   }
@@ -2276,23 +2541,23 @@ function dibujarModalCofre() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function dibujarHUD() {
-  // barra de experiencia
+  // barra de experiencia: celeste sobre azul noche con marco, como en las capturas del original
   const bh = 9;
   g.fillStyle = "#000"; g.fillRect(0, 0, W, bh + 1);
-  g.fillStyle = "#0e1030"; g.fillRect(1, 1, W - 2, bh - 1);
+  g.fillStyle = "#0a1a3a"; g.fillRect(1, 1, W - 2, bh - 1);
   const k = lim(J.xp / J.xpSig, 0, 1), fw = Math.round((W - 2) * k);
-  if (fw > 0) { g.fillStyle = "#2a58e8"; g.fillRect(1, 1, fw, bh - 1); g.fillStyle = "#7aa0ff"; g.fillRect(1, 1, fw, 2); g.fillStyle = "#1a3490"; g.fillRect(1, bh - 2, fw, 1); }
-  texto(`LV ${J.nivel}`, W - 3, -1, { al: "der", grad: "blanco" });
+  if (fw > 0) { g.fillStyle = "#1aa8ee"; g.fillRect(1, 1, fw, bh - 1); g.fillStyle = "#8ae4ff"; g.fillRect(1, 1, fw, 2); g.fillStyle = "#0a70b0"; g.fillRect(1, bh - 2, fw, 1); }
+  texto(`LV ${J.nivel}`, W - 3, -1, { al: "der" });
   // armas y pasivos
   J.armas.forEach((a, i) => marcoIcono(2 + i * 15, bh + 3, a.k, a.nivel, a.nivel >= maxNivel(a.k)));
   J.pasivos.forEach((p, i) => marcoIcono(2 + i * 15, bh + 18, p.k, p.nivel, p.nivel >= maxNivel(p.k)));
-  // el reloj
-  texto(reloj(J.t), Math.round((94 + W - 48) / 2), bh + 3, { escala: 2, grad: J.t >= J.duracion ? "rojo" : "blanco" });
+  // el reloj, centrado en la pantalla (los íconos terminan a los 92 px y el oro empieza a W-50)
+  texto(reloj(J.t), W / 2, bh + 2, { escala: 1.8, grad: J.t >= J.duracion ? "rojo" : "blanco" });
   // pausa, oro y enemigos
   uiEmpezar("hud");
   boton(W - 17, bh + 3, 15, 15, "", () => { J.pausa = true; UI.pantallaFoco = null; sfx("clic"); }, { estilo: "oscuro", sinFoco: true });
   g.fillStyle = "#f0f0f0"; g.fillRect(W - 12, bh + 7, 2, 7); g.fillRect(W - 8, bh + 7, 2, 7);
-  texto(String(J.oro), W - 30, bh + 3, { al: "der", grad: "amarillo" });
+  texto(String(J.oro), W - 30, bh + 3, { al: "der" });
   g.drawImage(recogibleSpr("moneda"), W - 28, bh + 5);
   texto(String(J.kills), W - 30, bh + 16, { al: "der" });
   g.drawImage(calaveraChica(), W - 28, bh + 17);
@@ -2328,7 +2593,7 @@ function dibujarPausa() {
   g.fillStyle = "rgba(4,4,16,0.78)"; g.fillRect(0, 0, W, H);
   const x0 = 8, w = W - 16, y0 = 30, h = Math.min(H - 50, 400);
   panel(x0, y0, w, h, "oscuro");
-  texto(L(TX.pausa), W / 2, y0 + 6, { grad: "oro", escala: 2 });
+  texto(L(TX.pausa), W / 2, y0 + 6, { escala: 2 });
   let y = y0 + 34;
   texto(L(TX.armas), x0 + 8, y, { al: "izq", grad: "amarillo" }); y += 12;
   J.armas.forEach((a, i) => { marcoIcono(x0 + 8 + i * 34, y, a.k, a.nivel, a.nivel >= maxNivel(a.k)); texto(esEvo(a.k) ? "" : String(a.nivel), x0 + 25 + i * 34, y + 2, { al: "izq", grad: a.nivel >= maxNivel(a.k) ? "amarillo" : "blanco" }); });
@@ -2449,11 +2714,15 @@ function dibujarJuego() {
   }
   for (const a of J.armas) if (a.libros && a.libros.pos) { const s = proySpr(a.k === "visperas" ? "visperas" : "libro"); for (const [x, y] of a.libros.pos) g.drawImage(s, Math.round(x - cx - s.width / 2), Math.round(y - cy - s.height / 2)); }
   dibujarEfectos(cx, cy);
-  if (G.op.numeros) dibujarNumeros(cx, cy);
   vineta(J.E.suelo === "tumbas" ? 0.7 : 0.45);
   if (frio) { g.fillStyle = "rgba(80,150,255,0.14)"; g.fillRect(0, 0, W, H); }
   if (J.destello > 0 && G.op.destellos) { g.fillStyle = `rgba(255,255,255,${Math.min(0.6, J.destello)})`; g.fillRect(0, 0, W, H); }
   if (j.golpe > 0) { g.fillStyle = `rgba(200,0,0,${j.golpe * 0.6})`; g.fillRect(0, 0, W, H); }
+}
+/** La pasada de interfaz (a la resolución de la pantalla): números de daño, HUD, carteles y ventanas. */
+function dibujarUIJuego() {
+  const cx = Math.round(J.cam.x), cy = Math.round(J.cam.y);
+  if (G.op.numeros) dibujarNumeros(cx, cy);
   dibujarHUD();
   if (!J.modal && !J.pausa) dibujarPalo();
   if (J.fin) {
@@ -2466,7 +2735,7 @@ function dibujarJuego() {
   else if (J.modal && J.modal.tipo === "cofre") dibujarModalCofre();
 }
 function dibujarCazador(cx, cy) {
-  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? Math.floor(j.paso) % 2 : 0, j.izq);
+  const j = J.jug, s = cazadorSpr(J.pj, j.moviendo ? 1 + Math.floor(j.paso) % 2 : 0, j.izq);
   const X = Math.round(j.x - cx - s.width / 2), Y = Math.round(j.y - cy - s.height + 2);
   g.drawImage(sombra(5, 2), Math.round(j.x - cx - 5), Math.round(j.y - cy - 1));
   // parpadeo mientras es invulnerable (después de un golpe)
@@ -2531,8 +2800,8 @@ function dibujarFondoMenu(oscuro) {
   if (oscuro) { g.fillStyle = `rgba(4,2,10,${oscuro})`; g.fillRect(0, 0, W, H); }
 }
 function titulo(y, esc = 3) {
-  texto("NOCHE", W / 2, y, { escala: esc, grad: "rojo" });
-  texto("CARMESÍ", W / 2, y + 11 * esc + 2, { escala: esc, grad: "oro" });
+  textoPixel("NOCHE", W / 2, y, { escala: esc, grad: "rojo" });
+  textoPixel("CARMESÍ", W / 2, y + 11 * esc + 2, { escala: esc, grad: "oro" });
 }
 function oroArriba() {
   panel(W - 86, 4, 82, 18, "oscuro");
@@ -2567,7 +2836,7 @@ function pantallaMenu() {
 function pantallaPersonajes() {
   dibujarFondoMenu(0.6);
   oroArriba();
-  texto(L(TX.elegirPj), 8, 7, { al: "izq", grad: "oro" });
+  texto(L(TX.elegirPj), 8, 6, { al: "izq", escala: 1.3 });
   uiEmpezar("personajes");
   const claves = Object.keys(PERSONAJES), cols = 4, cw = Math.floor((W - 12) / cols), ch = 46, y0 = 28;
   claves.forEach((k, i) => {
@@ -2601,7 +2870,7 @@ function escenarioAbierto(k) { const E = ESCENARIOS[k]; return !E.abre || (G.rec
 function pantallaEscenarios() {
   dibujarFondoMenu(0.6);
   oroArriba();
-  texto(L(TX.elegirEsc), 8, 7, { al: "izq", grad: "oro" });
+  texto(L(TX.elegirEsc), 8, 6, { al: "izq", escala: 1.3 });
   uiEmpezar("escenarios");
   let y = 30;
   for (const [k, E] of Object.entries(ESCENARIOS)) {
@@ -2635,7 +2904,7 @@ function empezarPartida() {
 function pantallaMejoras() {
   dibujarFondoMenu(0.65);
   oroArriba();
-  texto(L(TX.mejoras), 8, 7, { al: "izq", grad: "oro" });
+  texto(L(TX.mejoras), 8, 6, { al: "izq", escala: 1.3 });
   uiEmpezar("mejoras");
   const cols = 5, cw = Math.floor((W - 12) / cols), ch = 40, y0 = 28;
   MEJORAS.forEach((m, i) => {
@@ -2661,7 +2930,7 @@ function pantallaMejoras() {
 
 function pantallaOpciones() {
   dibujarFondoMenu(0.65);
-  texto(L(TX.opciones), W / 2, 12, { grad: "oro", escala: 2 });
+  texto(L(TX.opciones), W / 2, 12, { escala: 2 });
   uiEmpezar("opciones");
   const bw = W - 40, x = 20; let y = 50;
   const vol = (k) => { G.op[k] = G.op[k] >= 1 ? 0 : Math.round((G.op[k] + 0.2) * 10) / 10; volumenes(); guardar(); if (k === "efectos") sfx("gema"); };
@@ -2683,10 +2952,12 @@ function pantallaResultados() {
   texto(L(R.ganaste ? TX.sobreviviste : TX.moriste), W / 2, 8, { escala: 2, grad: R.ganaste ? "oro" : "rojo" });
   let y = 36;
   panel(x0, y, w, 96, "oscuro");
-  const s = cazadorSpr(R.pj, 0, false); g.drawImage(s, x0 + 8, y + 10, s.width * 2, s.height * 2);
-  texto(`${PERSONAJES[R.pj].n} · ${L(ESCENARIOS[R.esc].n)}`, x0 + 40, y + 6, { al: "izq", grad: "oro" });
+  // el cazador en su cajita, y los datos a la derecha (sin taparse)
+  const s = cazadorSpr(R.pj, 0, false);
+  g.fillStyle = "#101018"; g.fillRect(x0 + 7, y + 20, 48, 68); g.drawImage(s, x0 + 9, y + 22, s.width * 2, s.height * 2);
+  texto(`${PERSONAJES[R.pj].n} · ${L(ESCENARIOS[R.esc].n)}`, x0 + 8, y + 5, { al: "izq", grad: "oro" });
   const filas = [[TX.tiempo, reloj(R.t)], [TX.oroGanado, String(R.oro)], [TX.nivelAlc, String(R.nivel)], [TX.muertos, String(R.kills)]];
-  filas.forEach(([k, v], i) => { texto(L(k), x0 + 40, y + 22 + i * 16, { al: "izq", grad: "gris" }); texto(v, x0 + w - 8, y + 22 + i * 16, { al: "der", grad: i === 1 ? "amarillo" : "blanco" }); });
+  filas.forEach(([k, v], i) => { texto(L(k), x0 + 62, y + 22 + i * 16, { al: "izq", grad: "gris" }); texto(v, x0 + w - 8, y + 22 + i * 16, { al: "der", grad: i === 1 ? "amarillo" : "blanco" }); });
   y += 102;
   // la tabla de daño por arma (el mayor daño y el mayor DPS, en amarillo, como el original)
   const filasA = R.armas, mayorD = Math.max(1, ...filasA.map((a) => a.dano)), mayorP = Math.max(0.01, ...filasA.map((a) => a.dano / Math.max(1, a.tiempo)));
@@ -2720,12 +2991,10 @@ let _acum = 0, _ultimo = 0, _cuadros = 0;
 _completaPendiente = matchMedia("(pointer: coarse)").matches;
 
 function cuadro() {
-  if (PANT === "juego") {
-    dibujarJuego();
-  } else {
-    PANTALLAS[PANT]();
-  }
-  volcar();
+  empezarCuadro();
+  if (PANT === "juego") { dibujarJuego(); aPantalla(true); dibujarUIJuego(); }
+  else { aPantalla(false); PANTALLAS[PANT](); }
+  terminarCuadro();
   finCuadroEntrada();
 }
 function bucle(ts) {

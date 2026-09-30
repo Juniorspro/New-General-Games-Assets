@@ -32,23 +32,21 @@ function dibujarEfectos(cx, cy) {
   }
 }
 function dibujarNumeros(cx, cy) {
-  for (const n of J.numeros) {
-    const s = numeroSpr(n.txt, n.col);
-    g.globalAlpha = Math.min(1, n.t * 4);
-    g.drawImage(s, Math.round(n.x - cx - s.width / 2), Math.round(n.y - cy));
-  }
-  g.globalAlpha = 1;
+  // el original: números blancos (amarillos los críticos) con contorno, chicos
+  for (const n of J.numeros) texto(n.txt, n.x - cx, n.y - cy - 4, { escala: 0.8, grad: n.col, alfa: Math.min(1, n.t * 4) });
 }
-
 // ── el kit de interfaz ──
 const UI = { items: [], foco: 0, pantallaFoco: null };
+// Colores medidos en las capturas del original: el panel de subir de nivel es violeta pizarra liso
+// con un filete dorado; las tarjetas, grises; los botones, azul (Reroll) y rojo (Skip/Banish).
 const ESTILOS = {
-  azul: { a: "#2a3a8a", b: "#101848", borde: "#e0a020", luz: "#ffe28a", sombra: "#6a4a10" },
-  oscuro: { a: "#1a1e3a", b: "#0a0c1c", borde: "#8a6a30", luz: "#c8a050", sombra: "#3a2a10" },
-  rojo: { a: "#8a1a1a", b: "#3a0808", borde: "#e0a020", luz: "#ffe28a", sombra: "#6a4a10" },
-  verde: { a: "#1a6a2a", b: "#083a10", borde: "#e0a020", luz: "#ffe28a", sombra: "#6a4a10" },
-  gris: { a: "#3a3a44", b: "#1a1a22", borde: "#6a6a78", luz: "#9a9aa8", sombra: "#2a2a30" },
-  tarjeta: { a: "#233070", b: "#141c4a", borde: "#5a78d8", luz: "#9ab8ff", sombra: "#0a1030" },
+  azul: { a: "#4a66f0", b: "#2a3cc0", borde: "#e8b860", luz: "#fff0b8", sombra: "#7a5020", brillo: 1 },
+  rojo: { a: "#f25a3c", b: "#c42818", borde: "#e8b860", luz: "#fff0b8", sombra: "#7a5020", brillo: 1 },
+  verde: { a: "#44b04a", b: "#22782a", borde: "#e8b860", luz: "#fff0b8", sombra: "#7a5020", brillo: 1 },
+  gris: { a: "#6a6a74", b: "#4a4a54", borde: "#9a9aa4", luz: "#c8c8d0", sombra: "#2a2a30", brillo: 1 },
+  oscuro: { a: "#4d4f84", b: "#45477a", borde: "#caa262", luz: "#f4dca0", sombra: "#7a5a2a" },
+  tarjeta: { a: "#8e8e8e", b: "#848484", borde: "#c09050", luz: "#ecc88c", sombra: "#6a4a20" },
+  elegida: { a: "#a8a8a8", b: "#9a9a9a", borde: "#ffe070", luz: "#fff6c8", sombra: "#8a6a20" },
 };
 /** Un panel horneado: degradé vertical, borde dorado con luz arriba y sombra abajo, esquinas cortadas. */
 function panelSpr(w, h, estilo = "azul") {
@@ -61,7 +59,9 @@ function panelSpr(w, h, estilo = "azul") {
     q.fillStyle = E.luz; q.fillRect(2, 1, w - 4, 1);
     q.fillStyle = E.sombra; q.fillRect(2, h - 2, w - 4, 1);
     q.fillStyle = gr; q.fillRect(3, 3, w - 6, h - 6);
-    q.fillStyle = "rgba(255,255,255,0.08)"; q.fillRect(3, 3, w - 6, Math.floor((h - 6) / 2));
+    if (E.brillo) { q.fillStyle = "rgba(255,255,255,0.12)"; q.fillRect(3, 3, w - 6, Math.floor((h - 6) / 2)); }
+    // los remaches dorados de las esquinas (el panel del original los tiene)
+    q.fillStyle = E.luz; for (const [x, y] of [[1, 1], [w - 2, 1], [1, h - 2], [w - 2, h - 2]]) q.fillRect(x, y, 1, 1);
     return c;
   });
 }
@@ -75,7 +75,11 @@ function boton(x, y, w, h, etiqueta, accion, o = {}) {
     const t = (performance.now() / 400) % 1;
     g.strokeStyle = `rgba(255,255,255,${0.55 + 0.45 * Math.sin(t * TAU)})`; g.lineWidth = 1; g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
   }
-  if (etiqueta != null && etiqueta !== "") texto(L(etiqueta), x + w / 2 + (o.dx || 0), y + Math.round(h / 2) - 7, { grad: o.apagado ? "gris" : o.grad || "blanco" });
+  if (etiqueta != null && etiqueta !== "") {
+    const esc = o.escala || (h >= 22 ? 1.3 : 1);
+    if (o.sub != null) { texto(L(etiqueta), x + w / 2, y + h / 2 - 11 * esc / 2 - 4, { grad: o.apagado ? "gris" : o.grad || "blanco", escala: esc }); texto(L(o.sub), x + w / 2, y + h / 2 + 1, { escala: 0.9, grad: o.apagado ? "gris" : "blanco" }); }
+    else texto(L(etiqueta), x + w / 2 + (o.dx || 0), y + h / 2 - 6 * esc, { grad: o.apagado ? "gris" : o.grad || "blanco", escala: esc });
+  }
   return foco;
 }
 /** Corre las acciones de este cuadro: toque/click → el botón tocado; teclas → mover foco / aceptar. */

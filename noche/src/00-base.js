@@ -41,7 +41,8 @@ function guardar() { try { localStorage.setItem(CLAVE_GUARDADO, JSON.stringify(G
 cargar();
 
 // ── idioma: todo el texto del juego es {es, en}; L() elige al dibujar (así cambiar de idioma no reinicia nada) ──
-let IDIOMA = G.op.idioma || (/^es/i.test(navigator.language || "es") ? "es" : "en");
+// el idioma por defecto es el inglés (pedido): el español queda a un toque en el menú y la pausa
+let IDIOMA = G.op.idioma || "en";
 const L = (t) => (t == null ? "" : typeof t === "string" ? t : t[IDIOMA] ?? t.es);
 function cambiarIdioma() { IDIOMA = IDIOMA === "es" ? "en" : "es"; G.op.idioma = IDIOMA; guardar(); }
 
