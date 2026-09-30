@@ -26,3 +26,9 @@ El juego está en `cripta/` (README con "Lo medido"). Pedido: "recrear a la perf
 - Botones que se rearman (comprar, cambiar idioma) repetían la entrada y no se podían tocar 0,4 s: la botonera guarda el reloj por id. → `ui.js › Botonera.agregar`
 - En la partida, la navegación de botones con flechas se comía las flechas de mover a Lu: botonera sin teclado.
 - `getImageData` al morir trabó 15 ms un paso (espera a la placa): los píxeles se leen una vez por sprite. → `juego.js › pixeles`
+
+## Entregarlo
+- Además del archivo único, se publicó como página privada de Claude (artifact) para jugarlo desde el teléfono (30/09/2026). Para actualizarla: `Artifact` con `action: list`, leerla y republicar con su `url`.
+- La versión de página es el archivo único sin `<!doctype>/<html>/<head>/<body>` (la página pone el esqueleto), con `<title>` primero, colores como variables en `:root` (un solo tema oscuro, `color-scheme: dark`), `html, body { height: 100% }` y 16 px de margen a los costados: la escala entera se sigue calculando sola con el ancho que queda.
+- "Reducir movimiento" del teléfono: sacudida a un cuarto y sin destellos. → `cripta/js/efectos.js`
+

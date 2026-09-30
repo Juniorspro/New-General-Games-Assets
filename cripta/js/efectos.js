@@ -3,6 +3,10 @@
 // chico); el que dibuja pasa la cámara.
 import { texto } from './fuente.js';
 
+// Con "reducir movimiento" pedido en el teléfono: la sacudida baja a un
+// cuarto y no hay destellos de pantalla (el resto del juego es movimiento).
+const calmo = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 export class Efectos {
   constructor() {
     this.parts = [];
@@ -33,9 +37,9 @@ export class Efectos {
 
   flotante(x, y, txt, col = '#fff', { vida = 0.8, sube = 14 } = {}) { this.textos.push({ x, y, txt, col, vida, t: 0, sube }); }
 
-  sacudir(n) { this.sacudida = Math.max(this.sacudida, n); }
+  sacudir(n) { this.sacudida = Math.max(this.sacudida, calmo ? n * 0.25 : n); }
 
-  destellar(color, vida = 0.12) { this.flash = { color, vida, total: vida }; }
+  destellar(color, vida = 0.12) { if (!calmo) this.flash = { color, vida, total: vida }; }
 
   pasar(dt) {
     for (const p of this.parts) {
