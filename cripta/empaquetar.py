@@ -114,6 +114,11 @@ def orden_topologico(fuentes):
 
 def main():
     fuentes = {p.stem: p.read_text(encoding="utf-8") for p in sorted((AQUI / "js").glob("*.js"))}
+    # el nombre del archivo pasa a ser `M_<nombre>`: con un guion no es un
+    # nombre de JavaScript y el archivo único no arranca (pasó con logo-jxs.js)
+    malos = [n for n in fuentes if not n.isidentifier()]
+    if malos:
+        raise SystemExit(f"nombres de módulo que no sirven (solo letras, números y _): {', '.join(malos)}")
     entrada = fuentes.pop(ENTRADA)
     orden = orden_topologico(fuentes)
 

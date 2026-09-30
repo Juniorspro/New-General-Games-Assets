@@ -70,6 +70,8 @@ const T = {
   comprado: ['¡LISTO!', 'DONE!', 'PRONTO!'],
   total: ['TOTAL', 'TOTAL', 'TOTAL'],
   finJuego: ['¡LA CRIPTA ES TUYA!', 'YOU BEAT THE CRYPT!', 'A CRIPTA É SUA!'],
+  tocaEntrar: ['TOCÁ PARA ENTRAR', 'TAP TO ENTER', 'TOQUE PARA ENTRAR'],
+  presenta: ['PRESENTA', 'PRESENTS', 'APRESENTA'],
   // los carteles del principio de cada nivel que trae algo nuevo
   aviso_deslizar: ['DESLIZÁ PARA VOLAR\nLU FRENA EN LA PARED', 'SWIPE TO FLY\nLU STOPS AT WALLS', 'DESLIZE PARA VOAR\nLU PARA NA PAREDE'],
   aviso_estrellas: ['BUSCÁ LAS 3 ESTRELLAS\nEN LOS RINCONES', 'FIND THE 3 STARS\nIN THE CORNERS', 'ACHE AS 3 ESTRELAS\nNOS CANTOS'],

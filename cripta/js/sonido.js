@@ -271,6 +271,25 @@ export function crearSonido(ajustes) {
     }
     lavaGan.gain.setTargetAtTime(Math.max(0, Math.min(1, cerca)) * 0.35, ctx.currentTime, 0.2);
   };
+  // La música de la intro de JXSTUDIOS, agendada entera con el reloj del
+  // audio para que cada golpe caiga con su cuadro (intro.js › T_*): el
+  // corte (soplido), el metal que se escribe (cuatro zumbidos), el golpe
+  // (bombo grave + campana de metal: parciales que no son armónicos), el
+  // brillo (arpegio), las letras (tics) y un acorde que queda sonando.
+  s.jingleJXS = () => {
+    if (!ctx || !(ajustes.sonido || ajustes.musica)) return null;
+    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
+    const t0 = ctx.currentTime + 0.03, tg = t0 + 0.88;
+    soplo({ dur: 0.2, vol: 0.12, f0: 700, f1: 5200, q: 1.2, t: t0, destino: bus });
+    [0.3, 0.38, 0.46, 0.54].forEach((d, k) => tono({ onda: pulso12, f0: 240 + k * 70, f1: 1300 + k * 240, dur: 0.16, vol: 0.045, t: t0 + d, destino: bus }));
+    tono({ onda: 'sine', f0: 115, f1: 30, dur: 0.95, vol: 0.55, t: tg, destino: bus });
+    for (const [fr, v, d] of [[523, 0.08, 1.3], [1247, 0.05, 1], [2011, 0.035, 0.75], [3150, 0.025, 0.5], [4430, 0.015, 0.35]]) tono({ onda: 'sine', f0: fr, dur: d, vol: v, t: tg, destino: bus });
+    soplo({ dur: 0.4, vol: 0.25, tipo: 'lowpass', f0: 4200, f1: 260, t: tg, destino: bus });
+    ['C6', 'E6', 'G6', 'B6', 'D7', 'G7'].forEach((n, k) => tono({ onda: 'triangle', f0: f(n), dur: 0.28, vol: 0.05, t: tg + 0.07 + k * 0.035, destino: bus }));
+    for (let k = 0; k < 9; k++) tono({ onda: pulso25, f0: 1320 + (k % 3) * 110, dur: 0.022, vol: 0.04, t: t0 + 1.02 + k * 0.04, destino: bus });
+    for (const n of ['C3', 'G3', 'E4', 'B4', 'D5']) tono({ onda: 'triangle', f0: f(n), dur: 1.35, vol: 0.05, t: t0 + 1.1, ataque: 0.25, destino: bus });
+    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) };
+  };
   s.activo = () => !!ctx && ctx.state === 'running';
   return s;
 }

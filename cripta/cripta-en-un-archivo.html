@@ -512,6 +512,8 @@ const T = {
   comprado: ['¡LISTO!', 'DONE!', 'PRONTO!'],
   total: ['TOTAL', 'TOTAL', 'TOTAL'],
   finJuego: ['¡LA CRIPTA ES TUYA!', 'YOU BEAT THE CRYPT!', 'A CRIPTA É SUA!'],
+  tocaEntrar: ['TOCÁ PARA ENTRAR', 'TAP TO ENTER', 'TOQUE PARA ENTRAR'],
+  presenta: ['PRESENTA', 'PRESENTS', 'APRESENTA'],
   // los carteles del principio de cada nivel que trae algo nuevo
   aviso_deslizar: ['DESLIZÁ PARA VOLAR\nLU FRENA EN LA PARED', 'SWIPE TO FLY\nLU STOPS AT WALLS', 'DESLIZE PARA VOAR\nLU PARA NA PAREDE'],
   aviso_estrellas: ['BUSCÁ LAS 3 ESTRELLAS\nEN LOS RINCONES', 'FIND THE 3 STARS\nIN THE CORNERS', 'ACHE AS 3 ESTRELAS\nNOS CANTOS'],
@@ -1162,6 +1164,203 @@ function dificultadTorre(alto) {
 return { Torre, dificultadTorre };
 })();
 
+/* ── logojxs ── */
+const M_logojxs = (() => {
+// El logo de JXSTUDIOS, calcado de la imagen que mandó quien pide
+// (30/09/2026): el monograma JXS son cuatro trazos de metal del mismo
+// ancho, en paralelo de a dos (entre línea y línea, el doble del grosor):
+//   - la J de adentro (barra, palo y gancho);
+//   - la S de adentro;
+//   - A: la barra de arriba de la J que baja en diagonal (el "\" de la X) y
+//     abraza la S por abajo;
+//   - B: el gancho de abajo de la J que sube en diagonal (el "/" de la X,
+//     que pasa POR ENCIMA del "\") y abraza la S por arriba.
+// Coordenadas en una caja de 350 × 172. El mismo dibujo sirve para la
+// versión de píxeles (se rasteriza chico), la 2D suave (se traza) y la 3D
+// (se muestrea la línea y se engorda a los costados).
+const CAJA = { w: 350, h: 172 };
+const GROSOR = 14.5;
+
+const TRAZOS = [
+  // A va abajo en el cruce: se dibuja primero
+  { id: 'A', capa: 0, d: [['M', 40, 19], ['L', 114, 19], ['L', 176, 101], ['C', 194, 128, 222, 168, 268, 169], ['C', 310, 170, 342, 152, 342, 122]] },
+  { id: 'J', capa: 0, d: [['M', 40, 43], ['L', 98, 43], ['L', 98, 116], ['C', 98, 148, 44, 158, 36, 124]] },
+  { id: 'S', capa: 0, d: [['M', 312, 66], ['C', 306, 46, 288, 36, 266, 36], ['C', 242, 36, 226, 48, 226, 63], ['C', 226, 80, 248, 86, 272, 92], ['C', 302, 99, 320, 108, 320, 126], ['C', 320, 142, 300, 148, 272, 148], ['C', 246, 148, 226, 138, 216, 118]] },
+  { id: 'B', capa: 1, d: [['M', 10, 130], ['C', 18, 158, 50, 168, 86, 166], ['C', 108, 165, 122, 158, 134, 142], ['L', 200, 46], ['C', 216, 24, 244, 12, 272, 12], ['C', 310, 12, 340, 30, 340, 62]] },
+];
+
+// Un trazo como Path2D, escalado y corrido.
+function camino2d(t, esc = 1, ox = 0, oy = 0) {
+  const p = new Path2D();
+  for (const [op, ...n] of t.d) {
+    const q = n.map((v, i) => (i % 2 ? oy + v * esc : ox + v * esc));
+    if (op === 'M') p.moveTo(q[0], q[1]);
+    else if (op === 'L') p.lineTo(q[0], q[1]);
+    else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
+  }
+  return p;
+}
+
+// Puntos a lo largo del trazo, más o menos parejos (para la 3D, para animar
+// el dibujo de la línea y para medir el largo).
+function muestrear(t, cada = 3) {
+  const pts = [];
+  let x = 0, y = 0;
+  for (const [op, ...n] of t.d) {
+    if (op === 'M') { x = n[0]; y = n[1]; pts.push([x, y]); continue; }
+    if (op === 'L') {
+      const [x1, y1] = n, largo = Math.hypot(x1 - x, y1 - y), k = Math.max(1, Math.ceil(largo / cada));
+      for (let i = 1; i <= k; i++) pts.push([x + ((x1 - x) * i) / k, y + ((y1 - y) * i) / k]);
+      x = x1; y = y1; continue;
+    }
+    const [c1x, c1y, c2x, c2y, x1, y1] = n;
+    const aprox = Math.hypot(c1x - x, c1y - y) + Math.hypot(c2x - c1x, c2y - c1y) + Math.hypot(x1 - c2x, y1 - c2y);
+    const k = Math.max(2, Math.ceil(aprox / cada));
+    for (let i = 1; i <= k; i++) {
+      const s = i / k, r = 1 - s;
+      pts.push([r * r * r * x + 3 * r * r * s * c1x + 3 * r * s * s * c2x + s * s * s * x1, r * r * r * y + 3 * r * r * s * c1y + 3 * r * s * s * c2y + s * s * s * y1]);
+    }
+    x = x1; y = y1;
+  }
+  return pts;
+}
+
+function largo(t) {
+  const p = muestrear(t, 2);
+  let l = 0;
+  for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+  return l;
+}
+
+// El monograma dibujado en 2D con su metal, en un lienzo aparte (así el
+// reflejo, que se pinta "arriba de lo dibujado", toca solo el metal):
+// sombra, borde oscuro (que en el cruce hace de hueco y deja ver que B pasa
+// por encima), el cuerpo con un degradé de cromo y el filo de luz.
+// `avance` (0 a 1) dibuja cada trazo hasta ahí: el metal "se escribe".
+// `brillo` (0 a 1) pasa una franja de luz de izquierda a derecha.
+function monograma(ancho, { avance = 1, brillo = -1, sombra = true, lienzo = null } = {}) {
+  const esc = ancho / CAJA.w, gro = GROSOR * esc, alto = Math.ceil(CAJA.h * esc);
+  const m = Math.ceil(10 * esc) + 2;
+  const c = lienzo || document.createElement('canvas');
+  c.width = Math.ceil(ancho) + 2 * m; c.height = alto + 2 * m;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  const crom = g.createLinearGradient(0, m, 0, m + alto);
+  crom.addColorStop(0, '#fbfbfd'); crom.addColorStop(0.35, '#c9ccd4'); crom.addColorStop(0.55, '#8a8f99');
+  crom.addColorStop(0.7, '#d9dce3'); crom.addColorStop(1, '#6f747e');
+  g.lineCap = 'butt'; g.lineJoin = 'round';
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, m, m), l = largo(t) * esc;
+    const trazo = (a, estilo, dx = 0, dy = 0) => {
+      g.save();
+      g.translate(dx, dy);
+      if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+      g.lineWidth = a; g.strokeStyle = estilo; g.stroke(p);
+      g.restore();
+    };
+    // cara plana con bisel (como el logo): el borde que abre el hueco del
+    // cruce, el bisel gris y la cara de cromo
+    if (sombra) trazo(gro + 2 * esc, 'rgba(0,0,0,0.6)', 3 * esc, 5 * esc);
+    trazo(gro + 5 * esc, '#050607');
+    trazo(gro, '#5b5f68');
+    trazo(gro * 0.74, crom);
+  }
+  if (brillo >= 0 && brillo <= 1) {
+    g.globalCompositeOperation = 'source-atop';
+    const bx = m + (brillo * 1.6 - 0.3) * ancho;
+    const f = g.createLinearGradient(bx - ancho * 0.12, 0, bx + ancho * 0.12, 0);
+    f.addColorStop(0, 'rgba(255,255,255,0)'); f.addColorStop(0.5, 'rgba(255,255,255,0.85)'); f.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = f; g.fillRect(0, 0, c.width, c.height);
+    g.globalCompositeOperation = 'source-over';
+  }
+  c.margen = m;
+  return c;
+}
+
+// La palabra "JXStudios" en metal, con la letra del sistema (sans gruesa):
+// se mide y se escala para que ocupe justo `ancho`.
+function palabra(ancho, { color = null } = {}) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  const fuente = (px) => `600 ${px}px "Montserrat", "Poppins", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`;
+  g.font = fuente(100);
+  const w100 = g.measureText('JXStudios').width || 400;
+  const px = Math.max(8, (ancho / w100) * 100);
+  c.width = Math.ceil(ancho + px * 0.2); c.height = Math.ceil(px * 1.35);
+  g.font = fuente(px); g.textBaseline = 'alphabetic';
+  const base = Math.round(px * 1.02), x = Math.round(px * 0.1);
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillText('JXStudios', x + px * 0.03, base + px * 0.05);
+  const crom = g.createLinearGradient(0, base - px * 0.75, 0, base);
+  crom.addColorStop(0, '#ffffff'); crom.addColorStop(0.5, '#d2d5dc'); crom.addColorStop(0.62, '#9aa0aa'); crom.addColorStop(1, '#e7e9ee');
+  g.fillStyle = color || crom; g.fillText('JXStudios', x, base);
+  return c;
+}
+
+// El monograma en píxeles: se traza chico (con el hueco del cruce), se
+// separa metal de borde por color y se vuelve a pintar a mano en escalones
+// de cromo (claro arriba, oscuro al medio, claro abajo) con bisel.
+function monogramaPixel(anchoPx, { avance = 1 } = {}) {
+  const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
+  const c = document.createElement('canvas');
+  c.width = ancho; c.height = alto;
+  const g = c.getContext('2d');
+  for (const capa of [0, 1]) for (const t of TRAZOS) {
+    if (t.capa !== capa) continue;
+    const p = camino2d(t, esc, 2, 2), l = largo(t) * esc;
+    g.save();
+    if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]);
+    g.lineCap = 'butt';
+    g.lineWidth = GROSOR * esc + 2.2; g.strokeStyle = '#ff0000'; g.stroke(p);
+    g.lineWidth = GROSOR * esc; g.strokeStyle = '#00ff00'; g.stroke(p);
+    g.restore();
+  }
+  const img = g.getImageData(0, 0, ancho, alto), d = img.data;
+  const metal = new Uint8Array(ancho * alto), borde = new Uint8Array(ancho * alto);
+  for (let i = 0; i < ancho * alto; i++) {
+    if (d[i * 4 + 3] < 90) continue;
+    if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1;
+  }
+  const ESCALON = ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
+  for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+    const i = y * ancho + x, k = i * 4;
+    if (metal[i]) {
+      const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho];
+      const izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
+      let col = ESCALON[Math.min(ESCALON.length - 1, Math.floor(((y - 2) / (alto - 4)) * ESCALON.length))];
+      if (!arriba || !izq) col = '#ffffff';            // el filo que da a la luz
+      else if (!abajo || !der) col = '#5b5f68';        // el bisel en sombra
+      const n = parseInt(col.slice(1), 16);
+      d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
+    } else if (borde[i]) { d[k] = 5; d[k + 1] = 6; d[k + 2] = 8; d[k + 3] = 255; }
+    else d[k + 3] = 0;
+  }
+  g.putImageData(img, 0, 0);
+  c.mascara = metal;       // para pasarle el brillo solo por el metal
+  c.esc = esc;             // para ubicar puntas de trazo en pantalla
+  return c;
+}
+
+// Dónde va la punta de cada trazo cuando está escrito hasta `avance`
+// (coordenadas de la caja del logo).
+const cacheMuestras = new Map();
+function puntas(avance) {
+  const out = [];
+  for (const t of TRAZOS) {
+    if (!cacheMuestras.has(t.id)) {
+      const p = muestrear(t, 2), acum = [0];
+      for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+      cacheMuestras.set(t.id, { p, acum });
+    }
+    const { p, acum } = cacheMuestras.get(t.id), meta = acum[acum.length - 1] * avance;
+    let i = 1;
+    while (i < acum.length - 1 && acum[i] < meta) i++;
+    out.push(p[i]);
+  }
+  return out;
+}
+return { CAJA, GROSOR, TRAZOS, camino2d, muestrear, largo, monograma, palabra, monogramaPixel, puntas };
+})();
+
 /* ── paleta ── */
 const M_paleta = (() => {
 // La paleta: pocos colores y todos elegidos. El fondo casi negro con un tinte
@@ -1203,6 +1402,185 @@ const MUNDOS_COLOR = [
   { borde: '#8ff08a', claro: '#3fb94a', relleno: '#123a1d', sombra: '#0a2111', luz: '#10301a', detalle: '#1f5a2c' },   // la torre (infinito)
 ];
 return { P, MUNDOS_COLOR };
+})();
+
+/* ── intro ── */
+const M_intro = (() => {
+// La intro de JXSTUDIOS, en pixel art y rápida (dos segundos): un corte de
+// luz abre la fibra de carbono, el monograma se escribe en metal con
+// chispas en la punta, golpe (destello, sacudida, chispazo), una franja de
+// brillo lo cruza y "JXSTUDIOS" se tipea abajo. Música y golpes van
+// agendados con el reloj del audio (sonido.js › jingleJXS), así caen justo.
+//
+// Antes va una puerta ("tocá para entrar"): el teléfono no deja sonar nada
+// hasta que se lo toca, y una intro muda no es la intro. Un toque durante la
+// intro la saltea.
+const { P } = M_paleta;
+const { texto, anchoTexto } = M_fuente;
+const { monogramaPixel, puntas } = M_logojxs;
+const { salidaAtras, clamp } = M_util;
+const T_CORTE = 0.12, T_ABRE = 0.42, T_TRAZA0 = 0.3, T_TRAZA1 = 0.86, T_GOLPE = 0.88;
+const T_BRILLO = [0.95, 1.35], T_LETRAS = 1.02, T_FIN = 2.1;
+
+// La fibra de carbono de a píxel: sarga 2×2 en dos grises, con una reja de
+// metal a 45° alrededor del rombo del centro (como en el logo).
+function fondoCarbono(W, H, cx, cy, rombo) {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const sarga = ((x >> 1) + (y >> 1)) % 4 < 2;
+    const luz = 1 - Math.min(1, Math.hypot(x - cx, y - cy) / Math.max(W, H));
+    const v = (sarga ? 24 : 16) + Math.round(luz * 10);
+    g.fillStyle = `rgb(${v},${v + 1},${v + 3})`;
+    g.fillRect(x, y, 1, 1);
+  }
+  // la reja: líneas a ±45° cada 22 px, afuera del rombo
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    // afuera del rombo: |dx| + |dy| (con u y v la cuenta daba un cuadrado)
+    if (Math.abs(x - cx) + Math.abs(y - cy) < rombo + 2) continue;
+    const u = x - cx + (y - cy), v = x - cx - (y - cy);
+    const eu = ((u % 22) + 22) % 22, ev = ((v % 22) + 22) % 22;
+    if (eu < 2 || ev < 2) { g.fillStyle = eu === 0 || ev === 0 ? '#7a7e88' : '#44474f'; g.fillRect(x, y, 1, 1); }
+  }
+  // el borde del rombo, en metal
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const d = Math.abs(x - cx) + Math.abs(y - cy) - rombo;
+    if (d >= 0 && d < 3) { g.fillStyle = d < 1 ? '#9aa0aa' : '#4d5058'; g.fillRect(x, y, 1, 1); }
+  }
+  return c;
+}
+
+class Puerta {
+  constructor(app, siguiente) {
+    this.app = app; this.siguiente = siguiente; this.t = 0; this.nombre = 'puerta';
+    this.fondo = null; this.cambio = -1;
+  }
+  pasar(dt) {
+    this.t += dt;
+    const e = this.app.entrada;
+    if (e.cola.some((ev) => ev.tipo === 'bajar' || ev.tipo === 'confirmar' || ev.tipo === 'tocar')) {
+      this.app.sonido.despertar();
+      this.app.escena = new IntroJXS(this.app, this.siguiente);
+    }
+  }
+  dibujar(g, W, H) {
+    if (this.cambio !== this.app.cambio || !this.fondo) { this.fondo = fondoCarbono(W, H, W >> 1, Math.round(H * 0.45), Math.min(W, H) * 0.42); this.cambio = this.app.cambio; }
+    g.drawImage(this.fondo, 0, 0);
+    g.fillStyle = 'rgba(5,4,11,0.55)'; g.fillRect(0, 0, W, H);
+    texto(g, 'JXSTUDIOS', W / 2, Math.round(H * 0.45) - 5, '#c9ccd4', { alinear: 'centro', sombra: P.negro });
+    if (((this.t * 2) | 0) % 2 === 0) texto(g, this.app.tr('tocaEntrar'), W / 2, Math.round(H * 0.45) + 16, P.blanco, { alinear: 'centro', borde: P.negro });
+  }
+}
+
+class IntroJXS {
+  constructor(app, siguiente) {
+    this.app = app; this.siguiente = siguiente; this.t = 0; this.nombre = 'intro';
+    this.chispas = []; this.sacudida = 0; this.cambio = -1;
+    this.golpeado = false; this.letras = 0; this.saliendo = false;
+    this.musica = app.sonido.jingleJXS?.() || null;
+    this.cache = { avance: -1, c: null };
+  }
+
+  armar(W, H) {
+    this.cx = W >> 1; this.cy = Math.round(H * 0.42);
+    this.ancho = Math.round(Math.min(W * 0.66, H * 0.9, 120));
+    this.fondo = fondoCarbono(W, H, this.cx, this.cy, Math.min(W, H) * 0.44);
+    this.cambio = this.app.cambio;
+  }
+
+  pasar(dt) {
+    const app = this.app;
+    this.t += dt;
+    // un toque (después del primer instante) saltea
+    if (this.t > 0.35 && !this.saliendo && app.entrada.cola.some((ev) => ev.tipo === 'bajar' || ev.tipo === 'confirmar')) {
+      this.musica?.cortar();
+      this.terminar();
+      return;
+    }
+    // las chispas en la punta de cada trazo mientras se escribe
+    if (this.t > T_TRAZA0 && this.t < T_TRAZA1 && this.puntas) {
+      for (const [x, y] of this.puntas) for (let k = 0; k < 2; k++) {
+        const a = Math.random() * Math.PI * 2, v = 20 + Math.random() * 50;
+        this.chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, t: 0, vida: 0.25 + Math.random() * 0.2, col: Math.random() < 0.5 ? '#ffffff' : '#ffd27a' });
+      }
+    }
+    if (!this.golpeado && this.t >= T_GOLPE) {
+      this.golpeado = true;
+      this.sacudida = 4;
+      app.vibrar([30, 20, 40]);
+      for (let k = 0; k < 70; k++) {
+        const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 120;
+        this.chispas.push({ x: this.cx + (Math.random() - 0.5) * this.ancho, y: this.cy + (Math.random() - 0.5) * this.ancho * 0.4, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, t: 0, vida: 0.5 + Math.random() * 0.5, col: ['#ffffff', '#ffd27a', '#c9ccd4', '#7ad7ff'][k % 4] });
+      }
+    }
+    const letras = clamp(Math.floor((this.t - T_LETRAS) / 0.04) + 1, 0, 9);
+    this.letras = letras;
+    for (const c of this.chispas) { c.t += dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 120 * dt; c.vx *= 0.96; }
+    this.chispas = this.chispas.filter((c) => c.t < c.vida);
+    this.sacudida *= Math.pow(0.84, dt * 60);
+    if (this.t >= T_FIN && !this.saliendo) this.terminar();
+  }
+
+  terminar() {
+    this.saliendo = true;
+    this.app.ir(this.siguiente);
+  }
+
+  dibujar(g, W, H) {
+    if (this.cambio !== this.app.cambio) this.armar(W, H);
+    const t = this.t, cx = this.cx, cy = this.cy;
+    g.fillStyle = P.negro; g.fillRect(0, 0, W, H);
+    const s = Math.round(this.sacudida), sx = s ? Math.round((Math.random() * 2 - 1) * s) : 0, sy = s ? Math.round((Math.random() * 2 - 1) * s) : 0;
+    // el corte de luz y la fibra que se abre desde la raya
+    if (t < T_CORTE) {
+      const k = t / T_CORTE, w = Math.round(W * k);
+      g.fillStyle = P.blanco; g.fillRect(Math.round(cx - w / 2), cy, w, 1);
+      return;
+    }
+    const abre = clamp((t - T_CORTE) / (T_ABRE - T_CORTE), 0, 1), alto = Math.round((Math.max(cy, H - cy) + 4) * salidaAtras(abre));
+    g.save();
+    g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip();
+    g.drawImage(this.fondo, sx, sy);
+    g.restore();
+    if (abre < 1) { g.fillStyle = '#d9dce3'; g.fillRect(0, cy - alto, W, 1); g.fillRect(0, cy + alto - 1, W, 1); }
+    // el monograma que se escribe (se vuelve a trazar mientras avanza)
+    const avance = clamp((t - T_TRAZA0) / (T_TRAZA1 - T_TRAZA0), 0, 1);
+    if (avance > 0) {
+      const a = Math.round(avance * 40) / 40;
+      if (this.cache.avance !== a) this.cache = { avance: a, c: monogramaPixel(this.ancho, { avance: a }) };
+      const m = this.cache.c;
+      const x0 = Math.round(cx - m.width / 2) + sx, y0 = Math.round(cy - m.height / 2) + sy;
+      // las puntas donde se está escribiendo (ahí salen las chispas)
+      this.puntas = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + 2 + px * m.esc, y0 + 2 + py * m.esc]) : null;
+      g.drawImage(m, x0, y0);
+      // el golpe: un destello de dos cuadros
+      if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
+      // la franja de brillo: una diagonal blanca que recorre solo el metal
+      if (t > T_BRILLO[0] && t < T_BRILLO[1]) {
+        const k = (t - T_BRILLO[0]) / (T_BRILLO[1] - T_BRILLO[0]), bx = Math.round(-10 + k * (m.width + 20));
+        g.fillStyle = 'rgba(255,255,255,0.6)';
+        for (let y = 0; y < m.height; y++) for (let dx = -2; dx <= 2; dx++) {
+          const px = bx + dx - Math.round(y * 0.5);
+          if (px >= 0 && px < m.width && m.mascara[y * m.width + px]) g.fillRect(x0 + px, y0 + y, 1, 1);
+        }
+      }
+    }
+    // JXSTUDIOS, tipeado de a una letra
+    if (this.letras > 0) {
+      const esc = W >= 200 ? 2 : 1, palabra = 'JXSTUDIOS', ancho = anchoTexto(palabra, esc);
+      const x = Math.round(cx - ancho / 2), y = Math.round(cy + this.ancho * 0.29 + 4);
+      texto(g, palabra.slice(0, this.letras), x + sx, y + sy, '#e4e6ec', { esc, sombra: '#3d4048' });
+      if (this.letras < 9 && ((t * 20) | 0) % 2) { g.fillStyle = P.blanco; g.fillRect(x + anchoTexto(palabra.slice(0, this.letras), esc) + esc, y + 2 * esc, esc, 7 * esc); }
+      if (t > T_LETRAS + 0.5) texto(g, this.app.tr('presenta'), cx, y + 12 * esc, '#8d88ad', { alinear: 'centro' });
+    }
+    for (const c of this.chispas) {
+      if (c.t > c.vida * 0.7 && ((c.t * 30) | 0) % 2) continue;
+      g.fillStyle = c.col; g.fillRect(Math.round(c.x), Math.round(c.y), 1, 1);
+    }
+  }
+}
+return { Puerta, IntroJXS };
 })();
 
 /* ── nivel ── */
@@ -6038,6 +6416,25 @@ function crearSonido(ajustes) {
     }
     lavaGan.gain.setTargetAtTime(Math.max(0, Math.min(1, cerca)) * 0.35, ctx.currentTime, 0.2);
   };
+  // La música de la intro de JXSTUDIOS, agendada entera con el reloj del
+  // audio para que cada golpe caiga con su cuadro (intro.js › T_*): el
+  // corte (soplido), el metal que se escribe (cuatro zumbidos), el golpe
+  // (bombo grave + campana de metal: parciales que no son armónicos), el
+  // brillo (arpegio), las letras (tics) y un acorde que queda sonando.
+  s.jingleJXS = () => {
+    if (!ctx || !(ajustes.sonido || ajustes.musica)) return null;
+    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
+    const t0 = ctx.currentTime + 0.03, tg = t0 + 0.88;
+    soplo({ dur: 0.2, vol: 0.12, f0: 700, f1: 5200, q: 1.2, t: t0, destino: bus });
+    [0.3, 0.38, 0.46, 0.54].forEach((d, k) => tono({ onda: pulso12, f0: 240 + k * 70, f1: 1300 + k * 240, dur: 0.16, vol: 0.045, t: t0 + d, destino: bus }));
+    tono({ onda: 'sine', f0: 115, f1: 30, dur: 0.95, vol: 0.55, t: tg, destino: bus });
+    for (const [fr, v, d] of [[523, 0.08, 1.3], [1247, 0.05, 1], [2011, 0.035, 0.75], [3150, 0.025, 0.5], [4430, 0.015, 0.35]]) tono({ onda: 'sine', f0: fr, dur: d, vol: v, t: tg, destino: bus });
+    soplo({ dur: 0.4, vol: 0.25, tipo: 'lowpass', f0: 4200, f1: 260, t: tg, destino: bus });
+    ['C6', 'E6', 'G6', 'B6', 'D7', 'G7'].forEach((n, k) => tono({ onda: 'triangle', f0: f(n), dur: 0.28, vol: 0.05, t: tg + 0.07 + k * 0.035, destino: bus }));
+    for (let k = 0; k < 9; k++) tono({ onda: pulso25, f0: 1320 + (k % 3) * 110, dur: 0.022, vol: 0.04, t: t0 + 1.02 + k * 0.04, destino: bus });
+    for (const n of ['C3', 'G3', 'E4', 'B4', 'D5']) tono({ onda: 'triangle', f0: f(n), dur: 1.35, vol: 0.05, t: t0 + 1.1, ataque: 0.25, destino: bus });
+    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) };
+  };
   s.activo = () => !!ctx && ctx.state === 'running';
   return s;
 }
@@ -6055,13 +6452,15 @@ return { crearSonido, NOMBRES_SFX, CANCIONES, midi };
 //
 // Para probar: ?directo=nivel:4 (o torre, mapa, tienda, ajustes) entra
 // directo; ?pausa no avanza solo (se avanza con __C.pasos); ?limpio arranca
-// sin lo guardado; ?idioma=en fuerza el idioma.
+// sin lo guardado; ?idioma=en fuerza el idioma. Con ?directo o ?pausa no hay
+// intro (salvo que se pida con ?intro); ?sinintro la saca siempre.
 const { crearPantalla } = M_pantalla;
 const { crearEntrada } = M_entrada;
 const { crearSonido } = M_sonido;
 const { crearIdioma } = M_idioma;
 const { cargar, guardar, borrar, base } = M_guardado;
 const { Portada, Mapa, Juego, Tienda, Ajustes } = M_pantallas;
+const { Puerta } = M_intro;
 const { iris } = M_ui;
 const { NIVELES } = M_niveles;
 const { leer } = M_reglas;
@@ -6156,7 +6555,9 @@ function escenaDirecta() {
   if (d === 'ajustes') return new Ajustes(app);
   return new Portada(app);
 }
-app.escena = escenaDirecta();
+// Primero la puerta ("tocá para entrar", que habilita el sonido) y la intro de JXSTUDIOS.
+const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+app.escena = conIntro ? new Puerta(app, escenaDirecta) : escenaDirecta();
 
 // si la pestaña se esconde: pausa y silencio
 document.addEventListener('visibilitychange', () => {

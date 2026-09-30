@@ -73,6 +73,30 @@ await prueba('arranca sin errores en la portada', async () => {
   await pg.close();
 });
 
+await prueba('la intro de JXSTUDIOS: puerta, dos segundos y la portada; un toque la saltea', async () => {
+  const pg = await pagina({ q: 'intro&limpio&idioma=es' });
+  const r = await pg.evaluate(() => {
+    const C = window.__C, entrar = () => { C.app.entrada.cola.push({ tipo: 'bajar', x: 10, y: 10 }); C.pasos(1); };
+    C.pasos(10);
+    const puerta = C.escena;
+    entrar();
+    const intro = C.escena;
+    C.pasos(150, true);
+    return { puerta, intro, despues: C.escena };
+  });
+  afirmar(r.puerta === 'puerta' && r.intro === 'intro' && r.despues === 'portada', JSON.stringify(r));
+  await pg.goto(`${BASE}?pausa&intro&limpio`);
+  await pg.waitForFunction(() => window.listo);
+  const s = await pg.evaluate(() => {
+    const C = window.__C, toque = () => C.app.entrada.cola.push({ tipo: 'bajar', x: 10, y: 10 });
+    C.pasos(5); toque(); C.pasos(30); toque(); C.pasos(45);
+    return C.escena;
+  });
+  afirmar(s === 'portada', 'saltear la intro: ' + s);
+  await sinErrores(pg);
+  await pg.close();
+});
+
 await prueba('de la portada al mapa y al primer nivel, tocando', async () => {
   const pg = await pagina({ q: 'limpio&idioma=es' });
   await pg.evaluate(() => { window.__C.pasos(60); window.__C.boton('jugar'); window.__C.pasos(80, true); });

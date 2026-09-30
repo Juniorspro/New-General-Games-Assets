@@ -10,6 +10,11 @@ sube, poderes), no el personaje, el nombre, el logo ni los niveles de ese
 juego. Todo el dibujo, la letra, los niveles, la música y los sonidos están
 hechos con código acá.
 
+Arranca con la intro de **JXSTUDIOS**: "tocá para entrar" (el teléfono no deja
+sonar nada antes de un toque) y dos segundos de pixel art con música: el
+monograma JXS se escribe en cromo sobre fibra de carbono, golpea, brilla y se
+tipea el nombre. Un toque la saltea. → `js/intro.js`, `js/logojxs.js`
+
 **Para jugar:** abrir `cripta-en-un-archivo.html` (anda sin red, con doble
 clic o mandándolo al teléfono). Deslizar el dedo, o las flechas / WASD.
 Enter elige, Escape o P pausa.
@@ -17,10 +22,10 @@ Enter elige, Escape o P pausa.
 ## Lo medido (30/09/2026)
 | qué | cuánto |
 |---|---|
-| Pruebas sin navegador (`pruebas/niveles.mjs`) | 4017 comprobaciones, todas bien |
-| Pruebas en Chromium (`pruebas/juego.mjs`) | 17 de 17 |
+| Pruebas sin navegador (`pruebas/niveles.mjs`) | 4089 comprobaciones, todas bien |
+| Pruebas en Chromium (`pruebas/juego.mjs`) | 18 de 18 |
 | Archivo único desde `file://` sin red (`pruebas/un-archivo.mjs`) | abre y se gana el 1-1 |
-| Peso del archivo único | 255 KB (20 módulos, sin binarios) |
+| Peso del archivo único | 275 KB (22 módulos, sin binarios) |
 | Niveles | 30: 5 hechos a mano, 25 armados con la torre; todos se ganan, con las 3 estrellas, todas las monedas y todas las chispas alcanzables y sin lugares sin salida |
 | Torre | 300 semillas × 260 filas resueltas: 0 sin camino, 0 lugares sin salida |
 | Un paso de simulación | 0,011 ms (Chromium por procesador; del teléfono no dice nada) |

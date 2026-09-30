@@ -5,13 +5,15 @@
 //
 // Para probar: ?directo=nivel:4 (o torre, mapa, tienda, ajustes) entra
 // directo; ?pausa no avanza solo (se avanza con __C.pasos); ?limpio arranca
-// sin lo guardado; ?idioma=en fuerza el idioma.
+// sin lo guardado; ?idioma=en fuerza el idioma. Con ?directo o ?pausa no hay
+// intro (salvo que se pida con ?intro); ?sinintro la saca siempre.
 import { crearPantalla } from './pantalla.js';
 import { crearEntrada } from './entrada.js';
 import { crearSonido } from './sonido.js';
 import { crearIdioma } from './idioma.js';
 import { cargar, guardar, borrar, base } from './guardado.js';
 import { Portada, Mapa, Juego, Tienda, Ajustes } from './pantallas.js';
+import { Puerta } from './intro.js';
 import { iris } from './ui.js';
 import { NIVELES } from './niveles.js';
 import { leer } from './reglas.js';
@@ -107,7 +109,9 @@ function escenaDirecta() {
   if (d === 'ajustes') return new Ajustes(app);
   return new Portada(app);
 }
-app.escena = escenaDirecta();
+// Primero la puerta ("tocá para entrar", que habilita el sonido) y la intro de JXSTUDIOS.
+const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
+app.escena = conIntro ? new Puerta(app, escenaDirecta) : escenaDirecta();
 
 // si la pestaña se esconde: pausa y silencio
 document.addEventListener('visibilitychange', () => {
