@@ -1,0 +1,10 @@
+/* Todo se dibuja en el lienzo: acá solo se lo estira a la pantalla entera y
+   se le saca al navegador lo que estorba con el dedo (zoom, selección, el
+   rebote del scroll). */
+html, body { margin: 0; height: 100%; background: #05040b; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; }
+#juego {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent; outline: none;
+}

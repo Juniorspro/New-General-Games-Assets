@@ -32,3 +32,10 @@
 - Pedido: "hacé una limpieza del repositorio, hay muchas cosas innecesarias que comen tokens; dejá los de Roblox" (está haciendo un juego en Roblox Studio).
 - Borrado (elegido por quien pide): los juegos HTML viejos, isla incluida, y los sitios con lo de IBLO (`frutiger-aero/`, `docs/`, `iblo-eventos/`, `electro-silver/`, `modelos-cdn/`, `herramientas/iblo/`, los scripts de despliegue, el workflow de Supabase y `ESTADO.md`). De ~290 MB a 22 MB. Todo sigue en `fbffdfb`.
 - Quedaron `bomba/`, `guias/`, `herramientas/`, `edificio/`, `bot-whatsapp/`, `Prompts/` y la memoria. `ARRANQUE.md` y `README.md` se reescribieron cortos.
+
+## 30/09/2026 (noche) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido (con una captura de Tomb of the Mask en Google Play): "recrealo a la perfección, investigá, hacé los menús, animaciones, gráficos, motions, pixel art completo".
+- Quedó `cripta/`: CRIPTA NEÓN, original del mismo género (se le dijo que no se copia el personaje ni los niveles). 30 niveles en tres mundos, torre infinita con lava, 8 pieles, 4 poderes con mejoras, música y efectos por código, es/en/pt, guardado. → [cripta](cripta.md)
+- Medido: 3963 comprobaciones sin navegador, 17/17 en Chromium, archivo único de 245 KB que abre sin red.
+- Falta: probarlo en un teléfono de verdad (lo de Chromium no dice nada de los cuadros por segundo del teléfono).
+

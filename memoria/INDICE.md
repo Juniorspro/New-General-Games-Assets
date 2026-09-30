@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 30/09/2026 (limpieza del repo: quedó bomba/ y las herramientas).
+Última puesta al día: 30/09/2026 (Cripta Neón, el juego de laberinto en pixel art).
 Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 
 ## Reglas que no se discuten
@@ -25,6 +25,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | [aeroplaza](aeroplaza.md) | look Frutiger Aero / Wii, avatar y animación por código, música en bucle |
 | [probar](probar.md) | vas a probar en Chromium, medir, capturar o tocar como un dedo |
 | [isla](isla.md) | el menú que se mece (el que quiere para los juegos nuevos) y otras lecciones de La Isla, que está en el historial |
+| [cripta](cripta.md) | laberinto que se desliza: resolvedor, generar por construcción sin trampas, paredes de neón, el menú que se mece en 2D |
 | [diario](diario.md) | querés saber qué se hizo en cada sesión y qué quedó pendiente |
 
 ## Los documentos largos (no se leen enteros: la nota dice qué sección)
@@ -38,6 +39,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 ## Qué hay en cada carpeta
 | carpeta | qué es | detalle en |
 |---|---|---|
+| `cripta/` | CRIPTA NEÓN: laberinto que se desliza en pixel art (30 niveles, torre infinita, tienda, 3 idiomas); se juega con `cripta-en-un-archivo.html` | `cripta/README.md`, [cripta](cripta.md) |
 | `bomba/` | BOMB RUNNER SIMULATOR (el de Roblox, a medio hacer): correr con una bomba, explotar, mascotas y renacer | `bomba/README.md` |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona (`rz.py`, `estado.json`), audio | `ARRANQUE.md § 4` |
 | `edificio/` | torre de oficinas armada por script en Blender + visor three.js | — |

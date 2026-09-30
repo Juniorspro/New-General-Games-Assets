@@ -1,6 +1,6 @@
 # Juegos 2D pixel art (estilo Dan The Man)
 Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md` (488 líneas; abrí solo la sección). Ver también: [juegos](juegos.md), [probar](probar.md).
-La referencia que cita (`juegos-pc/ElTipo.html`, `herramientas/kit_enemigos*.py`, `herramientas/calco_protagonista.py`) NO está en este repo (buscado el 29/09/2026).
+La referencia que cita (`juegos-pc/ElTipo.html`, `herramientas/kit_enemigos*.py`, `herramientas/calco_protagonista.py`) NO está en este repo (buscado el 29/09/2026). El 2D pixel que SÍ está: `cripta/` → [cripta](cripta.md).
 
 ## Reglas que mandan
 - Un archivo, cero red: canvas 2D, WebAudio y sprites como grillas de texto en el código. → § 0
