@@ -80,7 +80,7 @@ function pasoJugador(dt) {
   if (j.inv > 0) j.inv -= dt;
   // la pose del dibujo
   j.anim += dt * (Math.abs(j.vx) > 10 ? 10 : 2);
-  j.pose = j.suelo ? (Math.abs(j.vx) > 10 ? (Math.floor(j.anim) % 2 ? "corre1" : "corre2") : "quieto") : j.disparoT > 0 ? "dispara" : j.vy < 0 ? "sube" : "cae";
+  j.pose = j.suelo ? (Math.abs(j.vx) > 10 ? ["corre1", "corre2", "corre3", "corre2"][Math.floor(j.anim) % 4] : "quieto") : j.disparoT > 0 ? "dispara" : j.vy < 0 ? "sube" : "cae";
   // salas laterales y fondo del nivel
   if (!J.sala) {
     for (const p of N.puertas) if (!p.usada && Math.abs(j.y - p.y) < 20 && (p.lado < 0 ? j.x < 10 : j.x > COLS * T - 10)) { entrarSala(p); return; }
