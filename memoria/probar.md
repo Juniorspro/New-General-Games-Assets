@@ -24,6 +24,7 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 - Toques reales por CDP (`Input.dispatchTouchEvent` con varios `touchPoints`); los eventos sintéticos no traen `changedTouches`. → 2D § 12
 - Soltar un solo dedo: `touchEnd` con ESE punto (mismo `id`) suelta solo ese; `touchEnd` vacío suelta todos; un `touchMove` sin el dedo no lo suelta (30/09/2026). → `vibora/pruebas/juego.mjs`
 - Para "tocá la pantalla para seguir": `page.touchscreen.tap(x, y)` con `hasTouch: true`.
+- Cada `Input.dispatchTouchEvent` tarda ~250 ms acá (30/09/2026): lo que dura menos que eso (el rastro del dedo de Morfi, 0,22 s) no llega a la captura; se mira metiendo el estado a mano. → [morfi](morfi.md)
 - Teléfono parado 412×892 y acostado 892×412 (`isMobile: true`, `deviceScaleFactor: 1` para que no tarde).
 - El bot que aprieta teclas tiene que soltarlas: sin flanco, el salto nunca sale. → 2D § 12
 

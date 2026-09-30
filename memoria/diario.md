@@ -57,3 +57,8 @@
 - Medido: 31 comprobaciones sin navegador, 17/17 en Chromium, archivo único de 163 KB que abre sin red. Sin tocar no se gana ningún nivel; el piloto automático gana 9 de 30.
 - Falta: jugarlo en un teléfono de verdad (la dificultad de los últimos niveles está medida con un piloto, no con una persona), y si quiere, las intros de Víbora y la isla en el estilo de cada juego.
 
+## 30/09/2026 (Morfi) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido (con dos capturas de Cut the Rope en Google Play): "haz otro juego sobre este, recrealo al 10, tipo de cartón, paper, GOTY; buenos modelos y animaciones". También pidió de nuevo el HTML de la isla: se le mandó.
+- Quedó `morfi/`: MORFI, original del género (se le dijo): Morfi es una caja de cartón que come caramelos; 30 niveles en tres cajas (cartón, cuaderno, papel de regalo) con clips, globos, abanicos, chinches, sobres, gomitas y alfileres que se mueven; tienda de 8 Morfis y 7 caramelos; intro de JXSTUDIOS de papel; el menú con el cartel que se hamaca y un caramelo que se corta ahí mismo. → [morfi](morfi.md)
+- Medido: 344 comprobaciones sin navegador, 20/20 en Chromium, archivo único de 192 KB que abre sin red. Cada nivel se gana con su solución guardada, ninguno sin tocar; margen promedio 99 %.
+- Falta: jugarlo en un teléfono de verdad (la dificultad está medida con tiempos vecinos, no con una persona). Siguen sin respuesta: rehacer las intros de Víbora y la isla en su estilo, y borrar la página vieja repetida de Cripta.

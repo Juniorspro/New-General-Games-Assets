@@ -42,6 +42,10 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 - Trampa: después de que la conversación se resume, publicar el mismo archivo crea OTRA página. Para actualizar la vieja: `read` con su `url` (sin `path`: con `path` la guarda pero no cuenta como leída); trae solo el principio y guarda el resto en un archivo. Después, publicar con esa `url`. Cripta quedó repetida la primera vez (30/09/2026).
 - Las páginas publicadas: Globo Libre `…/8wbmLxhdGiBbf4mtwsJKfR`, Víbora.io `…/TAVP1DJMsS6hF3W7gfNWZg`, Cripta Neón `…/T1PGRxSYXXGYAU3g7w3y9C` (la vieja repetida es `…/7CNiZDnZJjKrDEr5DPpQvU`), La Isla `…/PXbogbznmFXVjJwP7ZGnbc` (todas `claude.ai/artifact/`).
 
+## Niveles con física (Morfi, 30/09/2026)
+- Si la física no depende del personaje, se lo pone donde más perdona: se juegan cientos de tiempos al azar y se cuenta por dónde pasa el caramelo. Después, los tiempos de mayor margen y las estrellas donde pasan los caminos vecinos. → [morfi](morfi.md)
+- Cada nivel se prueba con su solución guardada, sin tocar, sin cada acción y mirando que use todo lo del tablero. → `morfi/pruebas/logica.mjs`
+
 ## Física y dificultad (Globo Libre, 30/09/2026)
 - Física 2D propia en vez de una librería (el repo es público y el juego va en un archivo): el método de Box2D-lite anda, pero hay que probar pilas quietas y que MÁS vueltas asienten mejor. → [globo](globo.md)
 - La dificultad se mide con tres jugadores de prueba: nadie tocando (tiene que perder), el control estacionado y un piloto automático (tiene que poder). → `globo/pruebas/piloto.mjs`

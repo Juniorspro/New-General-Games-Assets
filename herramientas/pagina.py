@@ -19,6 +19,7 @@ AGREGADOS = {
     'vibora': 'html { color-scheme: dark; }',
     'isla': 'html { color-scheme: light; }',
     'globo': 'html { color-scheme: light; background: #5fb8ff; }',
+    'morfi': 'html { color-scheme: light; background: #c99a5f; }',
 }
 
 if len(sys.argv) != 3 or sys.argv[1] not in AGREGADOS:

@@ -16,6 +16,7 @@ Juegos y herramientas. Ahora mismo lo principal es **Bomb Runner Simulator**
 | `cripta/` | CRIPTA NEÓN, de JXSTUDIOS: laberinto que se desliza en pixel art; se juega con `cripta-en-un-archivo.html` |
 | `vibora/` | VÍBORA.IO, de JXSTUDIOS: víboras que comen y crecen contra bots, sin red; se juega con `vibora-en-un-archivo.html` |
 | `globo/` | GLOBO LIBRE, de JXSTUDIOS: el globo sube y el escudo aparta todo lo que cae (30 niveles e infinito); se juega con `globo-en-un-archivo.html` |
+| `morfi/` | MORFI, de JXSTUDIOS: cortá el hilo para que el caramelo caiga en la caja de cartón con hambre (30 niveles de papel en tres cajas); se juega con `morfi-en-un-archivo.html` |
 | `guias/` | cómo hacer juegos que se vean bien: 3D con Rezona, 2D pixel art y la receta de AEROPLAZA |
 | `memoria/` | lo que ya se sabe, en notas cortas para que cada sesión no relea el repo |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, audio |

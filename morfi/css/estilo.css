@@ -1,0 +1,193 @@
+/* El juego se dibuja en el lienzo; los menús son HTML encima. De papel, como
+   el juego: botones que son etiquetas de papel de colores con una costura
+   de puntos, un poco torcidas y con sombra suave (pegadas arriba del
+   cartón), sin bordes negros ni brillos de vidrio. */
+:root {
+  --tinta: #3b2a1a;
+  --blanco: #ffffff;
+  --crema: #fbf8f1;
+  --kraft: #c99a5f; --kraft-osc: #9d7243;
+  --rojo: #e8423a; --rojo-osc: #b8322b;
+  --azul: #3f7fd1; --azul-osc: #2f62a6;
+  --verde: #58b368; --verde-osc: #3f8a4d;
+  --amarillo: #f5c542; --amarillo-osc: #c99a1c;
+  --rosa: #ff6f9a; --oro: #ffd84a;
+  --sombra: 0 3px 0 rgba(59, 42, 26, 0.35), 0 8px 14px rgba(59, 42, 26, 0.28);
+  color-scheme: light;
+}
+html, body { margin: 0; height: 100%; background: #c99a5f; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--tinta); }
+#juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+#sonda { position: absolute; top: env(safe-area-inset-top, 0px); left: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.pantalla {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.6vh, 14px);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box;
+  pointer-events: auto; text-align: center;
+}
+/* en el menú, lo que no es botón deja pasar el dedo al lienzo (ahí se corta el caramelo del menú) */
+.pantalla.pasante { pointer-events: none; }
+.pantalla.pasante button, .pantalla.pasante .bolsa { pointer-events: auto; }
+.pantalla.oculto, .oculto { display: none !important; }
+.velo { background: rgba(59, 42, 26, 0.42); }
+h2 { margin: 0; font-size: clamp(24px, 4.4vh, 34px); font-weight: 900; color: var(--blanco); letter-spacing: 0.02em; text-shadow: 0 3px 0 var(--tinta); }
+h2.grande { font-size: clamp(30px, 6vh, 46px); }
+/* un título en una tira de papel con cinta */
+h2.tira {
+  color: var(--tinta); text-shadow: none; background: var(--crema); padding: 8px 26px 10px; transform: rotate(-1.5deg); box-shadow: var(--sombra); position: relative;
+}
+h2.tira::before { content: ""; position: absolute; top: -9px; left: 50%; width: 64px; height: 18px; margin-left: -32px; background: rgba(250, 240, 200, 0.8); transform: rotate(3deg); }
+
+.boton {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 10px; font-weight: 900; letter-spacing: 0.03em; text-align: center;
+  color: #fff; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.45); position: relative;
+  outline: 2px dashed rgba(255, 255, 255, 0.55); outline-offset: -7px;
+  background-image: linear-gradient(170deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.06));
+  box-shadow: var(--sombra); transform: rotate(-1deg);
+  transition: transform 0.06s ease, box-shadow 0.06s ease; -webkit-tap-highlight-color: transparent; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.boton:nth-child(even) { transform: rotate(1deg); }
+.boton:active { transform: translateY(3px) rotate(-1deg); box-shadow: 0 1px 0 rgba(59, 42, 26, 0.35), 0 3px 6px rgba(59, 42, 26, 0.25); }
+.boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.boton.principal { min-width: min(72vw, 290px); padding: 13px 28px 14px; font-size: clamp(22px, 3.8vh, 30px); background-color: var(--rojo); }
+.boton.principal small { font-size: 0.48em; font-weight: 800; opacity: 0.95; letter-spacing: 0.04em; margin-top: 2px; }
+.boton.chico { min-width: min(34vw, 138px); padding: 11px 14px; font-size: clamp(14px, 2.3vh, 18px); background-color: var(--kraft-osc); }
+.boton.azul { background-color: var(--azul); }
+.boton.verde { background-color: var(--verde); }
+.boton.amarillo { background-color: var(--amarillo); color: var(--tinta); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); outline-color: rgba(59, 42, 26, 0.3); }
+.boton.kraft { background-color: var(--kraft-osc); }
+.boton.apagado { filter: grayscale(0.7) brightness(0.92); }
+.fila { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.titulo-idioma { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 6px; }
+.titulo-idioma small { font-size: clamp(13px, 2vh, 16px); font-weight: 800; color: var(--blanco); opacity: 0.92; text-shadow: 0 2px 0 var(--tinta); letter-spacing: 0.01em; }
+
+/* el menú y la elección de idioma: el cartel y Morfi los dibuja el lienzo arriba; los botones van abajo */
+#menu, #idiomas { justify-content: flex-end; padding-bottom: max(40px, env(safe-area-inset-bottom)); }
+.botonera { display: flex; flex-direction: column; align-items: center; gap: clamp(9px, 1.5vh, 14px); }
+.bolsa {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; display: flex; align-items: center; gap: 6px;
+  background: var(--crema); border-radius: 8px; padding: 5px 12px 5px 7px; font-weight: 900; font-size: 18px; box-shadow: var(--sombra); transform: rotate(2deg);
+}
+.bolsa.izq { right: auto; left: 14px; transform: rotate(-2deg); }
+.estrellita { color: var(--amarillo); font-size: 20px; line-height: 1; text-shadow: 0 1px 0 var(--amarillo-osc); }
+.moneda { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #ffe98a 0 40%, #f5c542 42% 100%); box-shadow: inset 0 -3px 0 #c99a1c; display: inline-block; }
+.dato { margin: 0; font-weight: 900; color: var(--tinta); font-size: clamp(15px, 2.4vh, 19px); }
+.dato:empty { display: none; }
+.dato.oro { color: #b07a0a; }
+.dato.nuevo { color: var(--verde-osc); }
+.firma { position: absolute; bottom: max(12px, env(safe-area-inset-bottom)); margin: 0; font-size: 12px; letter-spacing: 0.2em; color: var(--crema); font-weight: 900; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.5); }
+
+/* las tres cajas */
+.lista-cajas { display: flex; flex-direction: column; gap: 14px; width: min(88vw, 380px); }
+.caja {
+  all: unset; cursor: pointer; box-sizing: border-box; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; text-align: left;
+  color: #fff; box-shadow: var(--sombra); outline: 2px dashed rgba(255, 255, 255, 0.55); outline-offset: -8px; position: relative;
+  background-image: linear-gradient(170deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.08));
+}
+.caja:nth-child(1) { transform: rotate(-1.2deg); } .caja:nth-child(2) { transform: rotate(1deg); } .caja:nth-child(3) { transform: rotate(-0.6deg); }
+.caja:active { transform: translateY(3px); }
+.caja-carton { background-color: #b7864f; }
+.caja-cuaderno { background-color: #5f96cf; }
+.caja-regalo { background-color: #d95f7a; }
+.caja.cerrada { filter: grayscale(0.55) brightness(0.85); cursor: default; }
+.nombre-caja { font-size: clamp(20px, 3.2vh, 26px); font-weight: 900; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.45); }
+.dato-caja { font-size: 15px; font-weight: 800; opacity: 0.95; }
+
+/* los diez niveles de una caja: papelitos cuadrados */
+.grilla { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; width: min(92vw, 420px); padding: 6px; box-sizing: border-box; }
+.nivelB {
+  all: unset; cursor: pointer; aspect-ratio: 1; border-radius: 6px; background: var(--crema); box-shadow: var(--sombra); position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--tinta);
+}
+.nivelB:nth-child(odd) { transform: rotate(-2deg); } .nivelB:nth-child(even) { transform: rotate(1.5deg); }
+.nivelB::before { content: ""; position: absolute; top: -6px; left: 50%; width: 26px; height: 11px; margin-left: -13px; background: rgba(250, 240, 200, 0.85); transform: rotate(-4deg); }
+.nivelB .num { font-weight: 900; font-size: clamp(18px, 3vh, 24px); }
+.nivelB .est { font-size: 12px; letter-spacing: 1px; color: #d49a0c; min-height: 14px; }
+.nivelB.cerrado { background: #e8dcc4; color: #a08f78; cursor: default; }
+.nivelB:active { transform: translateY(2px); }
+.nivelB:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.grilla.caja-cuaderno .nivelB:not(.cerrado) { background: repeating-linear-gradient(#fbf8f1 0 14px, #d7e6f5 14px 15px); }
+.grilla.caja-regalo .nivelB:not(.cerrado) { background: #ffe3ec; }
+
+/* la tienda */
+#tienda { justify-content: space-between; padding-top: max(62px, env(safe-area-inset-top)); }
+.pestanas { display: flex; gap: 6px; background: var(--crema); border-radius: 10px; padding: 5px; box-shadow: var(--sombra); transform: rotate(-1deg); }
+.pestana { all: unset; cursor: pointer; padding: 8px 16px; border-radius: 7px; font-weight: 900; font-size: clamp(14px, 2.2vh, 17px); color: var(--tinta); }
+.pestana.elegida { background: var(--azul); color: #fff; text-shadow: 0 2px 0 rgba(59, 42, 26, 0.35); }
+.flechas { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 520px); flex: 1; }
+.flechas .hueco { flex: 1; }
+.flecha {
+  all: unset; cursor: pointer; width: 56px; height: 56px; border-radius: 50%; font-size: 40px; line-height: 50px; text-align: center; font-weight: 900; color: #fff;
+  background: var(--azul); box-shadow: var(--sombra); box-sizing: border-box; outline: 2px dashed rgba(255, 255, 255, 0.5); outline-offset: -6px;
+}
+.flecha:active { transform: translateY(3px); }
+.nombre { margin: 0; font-size: clamp(22px, 3.6vh, 28px); font-weight: 900; color: var(--blanco); text-shadow: 0 3px 0 var(--tinta); }
+.aviso { margin: 0; min-height: 1.2em; font-weight: 800; color: var(--blanco); text-shadow: 0 2px 0 var(--tinta); }
+
+.lista { display: grid; gap: 8px; width: min(92vw, 440px); background: var(--crema); box-shadow: var(--sombra); padding: 14px; border-radius: 6px; box-sizing: border-box; transform: rotate(0.6deg); }
+.lista .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
+.lista .ops { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.opcion { all: unset; cursor: pointer; padding: 6px 11px; border-radius: 7px; font-weight: 900; font-size: 13px; color: var(--tinta); }
+.opcion.elegida { background: var(--azul); color: #fff; }
+.opcion.peligro { color: var(--rojo); }
+
+/* la tarjeta de la pausa y del final: papel blanco con cinta */
+.tarjeta {
+  display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.5vh, 13px); background: var(--crema); padding: 26px 22px 22px; border-radius: 4px;
+  box-shadow: 0 4px 0 rgba(59, 42, 26, 0.3), 0 16px 30px rgba(59, 42, 26, 0.35); transform: rotate(-1.2deg); position: relative; width: min(86vw, 360px); box-sizing: border-box;
+  animation: cae 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.tarjeta::before { content: ""; position: absolute; top: -12px; left: 50%; width: 90px; height: 24px; margin-left: -45px; background: rgba(250, 240, 200, 0.85); transform: rotate(-3deg); }
+.tarjeta h2 { color: var(--rojo); text-shadow: 0 3px 0 rgba(59, 42, 26, 0.25); }
+/* adentro de la tarjeta (que ya está torcida) los botones van derechos: torcidos dos veces se pisaban */
+.tarjeta .boton, .tarjeta .boton:nth-child(even) { transform: none; }
+.tarjeta .boton:active { transform: translateY(3px); }
+@keyframes cae { from { transform: translateY(-40px) rotate(-6deg); opacity: 0; } }
+.estrellas-gano { display: flex; gap: 6px; font-size: clamp(48px, 9vh, 64px); line-height: 1; }
+.estrellas-gano span { color: rgba(59, 42, 26, 0.16); display: inline-block; }
+.estrellas-gano span:nth-child(2) { transform: translateY(-10px); }
+.estrellas-gano span.llena { color: var(--amarillo); text-shadow: 0 3px 0 var(--amarillo-osc), 0 6px 10px rgba(59, 42, 26, 0.25); }
+.estrellas-gano span.pega { animation: pega 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.estrellas-gano span.pega:nth-child(1) { animation-delay: 0.35s; }
+.estrellas-gano span.pega:nth-child(2) { animation-delay: 0.65s; }
+.estrellas-gano span.pega:nth-child(3) { animation-delay: 0.95s; }
+@keyframes pega { from { transform: scale(2.4) rotate(-40deg); opacity: 0; } }
+.estrellas-gano span.pega:nth-child(2) { animation-name: pega2; }
+@keyframes pega2 { from { transform: translateY(-10px) scale(2.4) rotate(40deg); opacity: 0; } to { transform: translateY(-10px); } }
+
+/* pausa y reiniciar, arriba a la izquierda mientras se juega: botones redondos de papel */
+.redondo {
+  all: unset; position: absolute; top: max(10px, env(safe-area-inset-top)); width: 44px; height: 44px; border-radius: 50%; pointer-events: auto; cursor: pointer;
+  background: var(--crema); box-shadow: var(--sombra); display: flex; align-items: center; justify-content: center; box-sizing: border-box; color: var(--tinta);
+}
+.arriba-izq { left: 12px; }
+.arriba-izq2 { left: 64px; }
+.redondo .barras { display: flex; gap: 5px; }
+.redondo .barras span { width: 6px; height: 16px; background: var(--tinta); border-radius: 2px; }
+.redondo .vuelta { font-size: 26px; font-weight: 900; line-height: 1; }
+.redondo:active { transform: translateY(2px); }
+
+/* más ancha que alta (el teléfono acostado, la compu): los botones abajo a la
+   derecha; arriba de ellos cuelga el cartel y a la izquierda está Morfi (los
+   dibuja el lienzo). Es la misma cuenta que main.js › acostado (W > H × 1,2). */
+@media (min-aspect-ratio: 6/5) {
+  #menu, #idiomas { align-items: flex-end; justify-content: flex-end; padding-right: max(24px, env(safe-area-inset-right)); padding-bottom: max(26px, env(safe-area-inset-bottom)); }
+  .botonera { width: min(44vw, 520px); }
+  #idiomas .boton.principal { min-width: 0; width: 100%; }
+  .firma { right: max(24px, env(safe-area-inset-right)); width: min(44vw, 520px); }
+}
+/* acostado y bajo: todo más apretado */
+@media (orientation: landscape) and (max-height: 560px) {
+  .boton.principal { min-width: min(40vw, 280px); padding: 9px 20px; }
+  .grilla { grid-template-columns: repeat(10, 1fr); width: min(86vw, 720px); gap: 8px; }
+  .lista-cajas { flex-direction: row; width: min(94vw, 760px); }
+  .caja { flex: 1; }
+  #tienda { padding-top: max(12px, env(safe-area-inset-top)); gap: 6px; }
+  .flechas { width: min(70vw, 520px); }
+  .boton.chico { padding: 7px 12px; }
+  .tarjeta { padding: 16px 20px; gap: 6px; }
+  .estrellas-gano { font-size: 44px; }
+}
+@media (max-width: 360px) { .boton.chico { min-width: 40vw; padding: 10px 8px; } }
+@media (prefers-reduced-motion: reduce) { .boton, .tarjeta, .estrellas-gano span.pega { transition: none; animation: none; } }
