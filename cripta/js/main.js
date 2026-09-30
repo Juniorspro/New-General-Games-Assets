@@ -13,7 +13,7 @@ import { crearSonido } from './sonido.js';
 import { crearIdioma } from './idioma.js';
 import { cargar, guardar, borrar, base } from './guardado.js';
 import { Portada, Mapa, Juego, Tienda, Ajustes } from './pantallas.js';
-import { Puerta } from './intro.js';
+import { Espera } from './intro.js';
 import { iris } from './ui.js';
 import { NIVELES } from './niveles.js';
 import { leer } from './reglas.js';
@@ -47,7 +47,8 @@ const app = {
   transicion: null,
   guardar: () => guardar(datos),
   vibrar: (patron) => {
-    if (!datos.ajustes.vibrar || !navigator.vibrate) return;
+    // antes del primer toque el navegador no deja (y lo avisa en la consola)
+    if (!datos.ajustes.vibrar || !navigator.vibrate || navigator.userActivation?.hasBeenActive === false) return;
     try { navigator.vibrate(patron); } catch { /* hay navegadores que no dejan */ }
   },
   // Borra el progreso pero no los ajustes (idioma, sonido): eso es del teléfono.
@@ -109,9 +110,9 @@ function escenaDirecta() {
   if (d === 'ajustes') return new Ajustes(app);
   return new Portada(app);
 }
-// Primero la puerta ("tocá para entrar", que habilita el sonido) y la intro de JXSTUDIOS.
+// Primero la intro de JXSTUDIOS, que arranca sola (intro.js › Espera).
 const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
-app.escena = conIntro ? new Puerta(app, escenaDirecta) : escenaDirecta();
+app.escena = conIntro ? new Espera(app, escenaDirecta) : escenaDirecta();
 
 // si la pestaña se esconde: pausa y silencio
 document.addEventListener('visibilitychange', () => {

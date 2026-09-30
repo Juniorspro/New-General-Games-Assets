@@ -1,5 +1,5 @@
 // El archivo único: que abra desde el disco (file://), sin red y sin errores;
-// que la intro llegue al menú y que se pueda jugar un rato.
+// que la intro arranque sola y llegue al menú, y que se pueda jugar un rato.
 //   python3 vibora/empaquetar.py && node vibora/pruebas/un-archivo.mjs
 const { chromium } = await import('/opt/node22/lib/node_modules/playwright/index.mjs');
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -16,7 +16,8 @@ pg.on('pageerror', (e) => errores.push(String(e.stack || e).slice(0, 400)));
 pg.on('console', (m) => { if (m.type() === 'error') errores.push(m.text().slice(0, 300)); });
 await pg.goto(pathToFileURL(ruta).href + '?pausa&limpio&intro');
 await pg.waitForFunction(() => window.listo, null, { timeout: 20000 });
-await pg.click('#bEntrar');
+// la intro arranca sola (sin permiso de sonar, muda)
+await pg.waitForFunction(() => window.__V.estado === 'intro', null, { timeout: 5000 });
 const r = await pg.evaluate(() => {
   const V = window.__V, intro = V.estado;
   V.pasos(200, true);

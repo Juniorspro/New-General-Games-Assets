@@ -25,3 +25,4 @@ El juego está en `vibora/` (README con "Lo medido"). Pedido: "portear" slither.
 - Enter en el botón enfocado llega dos veces (la tecla y el clic que dispara): `entrar()` mira el estado antes.
 - Los ángulos se comparan con la diferencia envuelta (`atan2(sen d, cos d)`): la víbora nace mirando para cualquier lado y, con el ángulo entre −π y π, una prueba de "dobló a la izquierda" falló la vez que cruzó −π.
 - El servidor de prueba (`http.server` en el 8123) se muere solo de vez en cuando: si TODAS las pruebas dicen `ERR_CONNECTION_REFUSED`, es eso; se levanta con `nohup`.
+- Las tres intros arrancan solas (30/09/2026): hasta 0,3 s en negro a que arranque el audio; `navigator.vibrate` antes del primer toque se bloquea y avisa en la consola, así que se mira `navigator.userActivation.hasBeenActive`. → `vibora/js/main.js › esperarAudio`

@@ -175,7 +175,8 @@ export class Sonido {
   // brillo (arpegio), un acorde grande que queda y el soplido del empujón
   // hasta el blanco. Mientras suena, las olas se callan.
   jingleJXS() {
-    if (!this.ctx || this.ctx.state === 'closed') return null;
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!this.ctx || this.ctx.state !== 'running') return null;
     const c = this.ctx, ahora = c.currentTime;
     const bus = c.createGain(); bus.gain.value = Math.max(0.4, this.vol.efectos, this.vol.musica); bus.connect(this.comp);
     this.bAmb.gain.setTargetAtTime(0, ahora, 0.05);

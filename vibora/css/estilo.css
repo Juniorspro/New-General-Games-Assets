@@ -27,9 +27,6 @@ body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe 
 .velo { background: rgba(5, 6, 12, 0.55); backdrop-filter: blur(2px); }
 h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-spacing: 0.02em; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
 
-.entrar { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px; }
-.entrar .jx { font-weight: 700; letter-spacing: 0.32em; font-size: clamp(16px, 3vh, 22px); color: #c9ccd4; }
-.pulsa { font-size: clamp(14px, 2.4vh, 18px); color: var(--tenue); animation: late 1.2s ease-in-out infinite; }
 @keyframes late { 50% { opacity: 0.25; } }
 
 #logo { width: min(92vw, 560px); height: auto; aspect-ratio: 5 / 1.35; }
@@ -111,4 +108,4 @@ h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-sp
   #tConsejo { grid-area: consejo; }
 }
 
-@media (prefers-reduced-motion: reduce) { .pulsa, .record { animation: none; } .boton { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .record { animation: none; } .boton { transition: none; } }

@@ -9,7 +9,8 @@
 //   1,45  un brillo cruza el metal en diagonal; suben "JXStudios" y "presenta";
 //   2,5   la cámara se mete en el logo y todo se va a blanco: la playa aparece
 //         desde el blanco (main.js).
-// Antes del toque es la puerta: la placa en penumbra con una luz que pasa.
+// Arranca sola (main.js espera un instante a que arranque el audio): hasta
+// entonces, negro.
 // Usa el renderer del juego con escena y cámara propias y a resolución
 // completa: el juego dibuja pixelado a propósito, el logo no. La música es
 // sonido.js › jingleJXS, con estos mismos tiempos. Un toque la saltea.
@@ -132,8 +133,7 @@ function materialCromo(ambiente, u) {
 export class IntroJXS {
   constructor({ renderer, son, presenta = 'presenta', vibrar = () => {}, alTerminar }) {
     Object.assign(this, { renderer, son, vibrar, alTerminar });
-    this.t = -1;                  // menos que cero: la puerta, esperando el toque
-    this.reloj = 0;               // corre también en la puerta
+    this.t = -1;                  // menos que cero: todavía no empezó
     this.golpeado = false; this.terminado = false; this.musica = null;
     this.escena = new THREE.Scene();
     this.camara = new THREE.PerspectiveCamera(35, 16 / 9, 0.05, 80);
@@ -146,6 +146,7 @@ export class IntroJXS {
     this.armarTextos(presenta);
     this.armarChispas();
     this.armarCapa();
+    this.compilar();
   }
 
   // ── lo que refleja el cromo: un estudio de fotos con cajas de luz ────────
@@ -178,7 +179,7 @@ export class IntroJXS {
     this.ambiental = new THREE.AmbientLight(0xffffff, 0);
     this.clave = new THREE.DirectionalLight(0xffffff, 0); this.clave.position.set(-3, 5, 6);
     this.punta = new THREE.PointLight(0xa8d8ff, 0, 3.2, 2);          // sigue a la lapicera
-    this.pasa = new THREE.PointLight(0xfff0dc, 0, 5, 2);             // la que cruza la placa en la puerta y en el brillo
+    this.pasa = new THREE.PointLight(0xfff0dc, 0, 5, 2);             // la que cruza el metal con el brillo
     this.escena.add(this.ambiental, this.clave, this.punta, this.pasa);
   }
 
@@ -329,7 +330,6 @@ export class IntroJXS {
 
   actualizar(dt) {
     if (this.terminado) return;
-    this.reloj += dt;
     if (this.t < 0) return;
     this.t += dt;
     const t = this.t;
@@ -373,7 +373,7 @@ export class IntroJXS {
 
   // ── la pose de cada cosa en este instante ─────────────────────────────────
   poner(aspecto) {
-    const t = Math.max(0, this.t), puerta = this.t < 0, c = this.camara;
+    const t = Math.max(0, this.t), c = this.camara;
     // la cámara: que entren el rombo y el logo con aire, parado o acostado
     c.aspect = aspecto;
     const tanV = Math.tan(THREE.MathUtils.degToRad(c.fov / 2));
@@ -384,31 +384,27 @@ export class IntroJXS {
     let giro = lerp(0.5, 0, llega), alza = lerp(0.22, 0.04, llega), dist = d * lerp(1.35, 1, llega);
     if (t > T.golpe) giro -= 0.05 * suave(tramo(t, T.golpe, T.empuje));    // nunca queda quieta del todo
     dist *= 1 - 0.8 * tramo(t, T.empuje, T.fin) ** 2.2;
-    if (puerta) { giro = Math.sin(this.reloj * 0.35) * 0.1; alza = 0.06; dist = d * 1.08; }
     c.position.set(Math.sin(giro) * Math.cos(alza) * dist, Math.sin(alza) * dist, Math.cos(giro) * Math.cos(alza) * dist);
     const sac = t > T.golpe && t < T.golpe + 0.45 ? (1 - (t - T.golpe) / 0.45) ** 2 * 0.07 : 0;
     if (sac) c.position.add(this._v.set((Math.random() - 0.5) * sac, (Math.random() - 0.5) * sac, 0));
-    c.lookAt(0, puerta ? 0 : -0.2 * llega, 0);
+    c.lookAt(0, -0.2 * llega, 0);
     c.updateProjectionMatrix();
     // lookAt no rehace las matrices: sin esto, project() de abajo usaría la pose vieja
     c.updateMatrixWorld();
 
-    // las luces: en la puerta, penumbra y una luz que pasa; después se prende todo
-    const luz = puerta ? 0 : salida(tramo(t, 0.28, 0.95));
+    // las luces: de la penumbra a todo prendido
+    const luz = salida(tramo(t, 0.28, 0.95));
     this.ambiental.intensity = 0.12 + 0.3 * luz;
     this.clave.intensity = 0.25 + 2.1 * luz;
     this.matPlaca.envMapIntensity = 0.12 + 0.45 * luz;
     this.matBarra.envMapIntensity = this.matMarco.envMapIntensity = 0.15 + 0.95 * luz;
-    if (puerta) { this.pasa.intensity = 5; this.pasa.position.set(Math.sin(this.reloj * 0.6) * 4, 1.2, 0.6); }
-    else {
-      const b = tramo(t, T.brillo[0], T.brillo[1]);
-      this.pasa.intensity = b > 0 && b < 1 ? 7 * Math.sin(b * Math.PI) : 0;
-      this.pasa.position.set(lerp(-3.5, 3.5, b), Y_LOGO + lerp(1.2, -0.6, b), 0.8);
-    }
+    const b = tramo(t, T.brillo[0], T.brillo[1]);
+    this.pasa.intensity = b > 0 && b < 1 ? 7 * Math.sin(b * Math.PI) : 0;
+    this.pasa.position.set(lerp(-3.5, 3.5, b), Y_LOGO + lerp(1.2, -0.6, b), 0.8);
 
     // las barras entran a lo largo, de a una, desde afuera
     for (const { b, sb, k, lado } of this.barras) {
-      const e = puerta ? 0 : salida(tramo(t, T.entra[0] + Math.abs(k) * 0.012, T.entra[1] + Math.abs(k) * 0.012));
+      const e = salida(tramo(t, T.entra[0] + Math.abs(k) * 0.012, T.entra[1] + Math.abs(k) * 0.012));
       b.position.x = sb.position.x = (1 - e) * 26 * (k % 2 ? 1 : -1) * lado;
       b.visible = sb.visible = e > 0;
     }
@@ -450,13 +446,13 @@ export class IntroJXS {
     this.presenta.material.opacity = tramo(t, T.presenta, T.presenta + 0.35) * 0.9;
 
     // la capa de arriba: la raya y el párpado, el destello y el blanco
-    const yc = puerta ? 0 : this._v.set(0, Y_LOGO, 0).project(c).y;
-    const abre = puerta ? 1 : t < T.raya ? 0 : salida(tramo(t, T.raya, T.abre));
+    const yc = this._v.set(0, Y_LOGO, 0).project(c).y;
+    const abre = t < T.raya ? 0 : salida(tramo(t, T.raya, T.abre));
     const alto = abre * 2.2;
     this.cortinaA.visible = this.cortinaB.visible = abre < 1;
     this.cortinaA.scale.y = Math.max(0.0001, (1 - (yc + alto)) / 2); this.cortinaA.position.y = (1 + yc + alto) / 2;
     this.cortinaB.scale.y = Math.max(0.0001, (yc - alto + 1) / 2); this.cortinaB.position.y = (yc - alto - 1) / 2;
-    const r = puerta ? 0 : 1 - tramo(t, T.raya, T.abre);
+    const r = 1 - tramo(t, T.raya, T.abre);
     this.raya.material.opacity = r;
     this.raya.scale.set(salida(tramo(t, 0, T.raya * 0.8)) * 1.1 + 0.001, 0.07, 1);
     this.raya.position.y = yc;
@@ -464,28 +460,42 @@ export class IntroJXS {
     this.blanco.material.opacity = tramo(t, T.empuje + 0.15, T.fin) ** 1.6;
   }
 
-  dibujar(w, h) {
+  // El estado del renderer de la intro (tono ACES, recorte, fondo negro),
+  // solo mientras dura `fn`: el juego dibuja con el suyo.
+  conEstado(fn) {
     const r = this.renderer;
-    this.poner(w / h);
     const antes = { tm: r.toneMapping, exp: r.toneMappingExposure, clip: r.localClippingEnabled, color: r.getClearColor(new THREE.Color()), alfa: r.getClearAlpha() };
     r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05; r.localClippingEnabled = true;
     r.setClearColor(0x000000, 1);
-    if (!this.compilado) {
-      // todo compilado de una vez en la puerta (con este mismo estado del
-      // renderer): si no, lo que aparece por primera vez (las puntas, los
-      // halos, las ondas del golpe) traba un cuadro justo cuando se luce
-      this.compilado = true;
+    try { fn(r); } finally {
+      r.toneMapping = antes.tm; r.toneMappingExposure = antes.exp; r.localClippingEnabled = antes.clip;
+      r.setClearColor(antes.color, antes.alfa);
+    }
+  }
+
+  // Todo compilado de una vez al armarla, con el mismo estado del renderer
+  // (tono y recorte son parte de la clave del programa): si no, lo que
+  // aparece por primera vez (las puntas, los halos, las ondas del golpe)
+  // traba un cuadro justo cuando se luce.
+  compilar() {
+    this.conEstado((r) => {
       const ocultos = [];
       this.escena.traverse((o) => { if (!o.visible) { ocultos.push(o); o.visible = true; } });
       r.compile(this.escena, this.camara);
+      r.compile(this.capa, this.camCapa);
       for (const o of ocultos) o.visible = false;
-    }
-    r.clear();
-    r.render(this.escena, this.camara);
-    r.clearDepth();
-    r.render(this.capa, this.camCapa);
-    r.toneMapping = antes.tm; r.toneMappingExposure = antes.exp; r.localClippingEnabled = antes.clip;
-    r.setClearColor(antes.color, antes.alfa);
+    });
+  }
+
+  dibujar(w, h) {
+    this.conEstado((r) => {
+      r.clear();
+      if (this.t < 0) return;                  // todavía no empezó: negro
+      this.poner(w / h);
+      r.render(this.escena, this.camara);
+      r.clearDepth();
+      r.render(this.capa, this.camCapa);
+    });
   }
 
   // Todo lo de la intro sale de la memoria de la placa de video.

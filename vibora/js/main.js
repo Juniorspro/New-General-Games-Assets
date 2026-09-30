@@ -18,7 +18,7 @@ import { crearSonido } from './sonido.js';
 import { crearIdioma, IDIOMAS } from './idioma.js';
 import { cargar, guardar, base } from './guardado.js';
 import { PIELES, pielPorId, abierta } from './pieles.js';
-import { Intro, fondoJX } from './intro.js';
+import { Intro } from './intro.js';
 import { acercar, clamp } from './util.js';
 
 const PASO = 1 / 60;
@@ -35,7 +35,8 @@ const sonido = crearSonido(datos.ajustes);
 const entrada = crearEntrada(lienzo);
 const tactil = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 const guardarTodo = () => guardar(datos);
-const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate) try { navigator.vibrate(p); } catch { /* no deja */ } };
+// antes del primer toque el navegador no deja vibrar (y lo avisa en la consola)
+const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) try { navigator.vibrate(p); } catch { /* no deja */ } };
 
 // ── la pantalla: resolución de verdad, con tope según la calidad ──────────
 let W = 0, H = 0, dpr = 1, dprTope = 2;
@@ -52,7 +53,7 @@ addEventListener('resize', medir);
 // ── el mundo y la cámara ───────────────────────────────────────────────────
 let mundo = nuevoMundo();
 function nuevoMundo() { return new Mundo({ semilla: ((Date.now() / 1000) | 0) & 0xffffff, bots: BOTS[datos.nivelBots], nivelBots: datos.nivelBots }); }
-let mia = null, seguida = null, estado = 'puerta', intro = null, preview = null, muerteT = 0, avisos = [], hitoN = 0, t = 0, sonarRecord = false;
+let mia = null, seguida = null, estado = 'espera', intro = null, preview = null, muerteT = 0, avisos = [], hitoN = 0, t = 0, sonarRecord = false;
 const cam = { x: 0, y: 0, zoom: 1 };
 
 function camara(dt) {
@@ -75,7 +76,6 @@ function mostrar(id) { for (const s of document.querySelectorAll('.pantalla')) s
 
 function textos() {
   document.documentElement.lang = tr.actual();
-  $('tEntrar').textContent = tr('tocaEntrar');
   $('apodo').placeholder = tr('apodo');
   $('bJugar').textContent = tr('jugar');
   $('bPiel').textContent = tr('piel'); $('bFondo').textContent = tr('fondo'); $('bAjustes').textContent = tr('ajustes');
@@ -95,11 +95,24 @@ function boton(id, fn) { $(id).addEventListener('click', () => { sonido.tocar('b
 
 // ── el ir y venir ──────────────────────────────────────────────────────────
 function entrar() {
-  // Enter en el botón enfocado llega dos veces (la tecla y el clic que dispara)
-  if (estado !== 'puerta') return;
+  if (estado !== 'espera') return;
   sonido.despertar();
   estado = 'intro'; mostrar(null);
   intro = new Intro({ sonido, vibrar, alTerminar: aMenu });
+}
+// La intro arranca sola, sin tocar nada. Antes, hasta 0,3 s en negro a que
+// arranque el audio: sin un toque casi nunca arranca y la intro va muda (el
+// primer toque la saltea y ya prende el sonido); si arranca, la música va en
+// fase con el dibujo.
+function esperarAudio() {
+  sonido.despertar();
+  const desde = performance.now();
+  const mirar = () => {
+    if (estado !== 'espera') return;
+    if (sonido.activo() || performance.now() - desde > 300) entrar();
+    else requestAnimationFrame(mirar);
+  };
+  requestAnimationFrame(mirar);
 }
 function aMenu() {
   estado = 'menu'; mia = null; preview = null;
@@ -203,7 +216,6 @@ function armarAjustes() {
   fila(tr('idioma'), IDIOMAS.map((l) => [l, l.toUpperCase()]), tr.actual(), (v) => { a.idioma = v; tr.poner(v); });
 }
 
-$('bEntrar').addEventListener('click', entrar);
 boton('bJugar', jugar);
 $('apodo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { sonido.tocar('boton'); jugar(); } });
 boton('bPiel', () => elegir('piel'));
@@ -222,8 +234,7 @@ boton('bMenu', aMenu);
 addEventListener('pointerdown', () => sonido.despertar(), { capture: true });
 addEventListener('keydown', (ev) => {
   sonido.despertar();
-  if (estado === 'puerta' && (ev.code === 'Enter' || ev.code === 'Space')) entrar();
-  else if (estado === 'intro') intro?.saltear();
+  if (estado === 'intro') intro?.saltear();
   else if (estado === 'elegir' && ev.code === 'ArrowLeft') moverElegir(-1);
   else if (estado === 'elegir' && ev.code === 'ArrowRight') moverElegir(1);
   // la pausa se maneja acá y no en entrada.js: si no, la misma tecla que la
@@ -240,7 +251,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pausa
 // ── el paso de simulación ──────────────────────────────────────────────────
 function paso(dt) {
   t += dt;
-  if (estado === 'puerta') return;
+  if (estado === 'espera') return;
   if (estado === 'intro') { intro.pasar(dt, W, H); return; }
   if (estado === 'pausa') return;
   if (estado === 'elegir' && preview) {
@@ -286,7 +297,7 @@ function paso(dt) {
 const calidad = () => (dpr >= 1.5 ? 2 : 1);
 function dibujar() {
   g.setTransform(1, 0, 0, 1, 0, 0);
-  if (estado === 'puerta') { fondoJX(g, W, H, t, { zoom: 1 + Math.sin(t) * 0.01 }); return; }
+  if (estado === 'espera') { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); return; }
   if (estado === 'intro') { intro.dibujar(g, W, H); return; }
   if (estado === 'elegir' && preview) {
     pintarFondo(g, preview.fondo, cam, W, H);
@@ -342,7 +353,7 @@ function cuadro(ahora) {
 
 textos();
 const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
-if (conIntro) mostrar('puerta');
+if (conIntro) { mostrar(null); esperarAudio(); }
 else { aMenu(); if (q.get('directo') === 'juego') jugar(); }
 requestAnimationFrame(cuadro);
 

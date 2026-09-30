@@ -27,9 +27,9 @@ Se borró el 30/09/2026 y volvió ese mismo día (`git checkout fbffdfb -- isla`
 - El monograma: los 4 trazos de `logojxs.js` muestreados cada 4 unidades, `CatmullRomCurve3` y `TubeGeometry` (18.864 triángulos); se escribe con `setDrawRange` por tramo. La B va 16 cm adelante: el cruce de la X se ve sin cortar nada.
 - El cromo: `MeshStandardMaterial` metálico con reflejos de un "estudio" (cajas de luz con color > 1 pasadas por `PMREMGenerator.fromScene` una vez). Con `onBeforeCompile`: lo recién escrito brilla según `uv.x` del tubo y un brillo cruza en diagonal según la posición en el mundo.
 - La ventana en rombo de la reja: 4 planos de recorte con `clipIntersection = true` (recorta solo donde recortan los cuatro: adentro).
-- Sin audio antes de un toque: la puerta; la música del menú recién arranca al terminar (si no, se pisaba con la de la intro).
+- Arranca sola (lo pidió quien pide: "sin tener que tocarla", 30/09/2026). Sin un toque el audio casi nunca arranca: hasta 0,3 s en negro esperándolo; si no llega, va muda y el primer toque la saltea y prende el sonido. El jingle se agenda solo con el audio corriendo: suspendido, sonaría tarde y fuera de fase. La música del menú recién arranca al terminar (si no, se pisaba con la de la intro). → `isla/js/main.js › empezarIntro`
 - La playa aparece desde un blanco que se saca DESPUÉS de dibujarla una vez: el primer cuadro compila los shaders del mundo y traba.
 
 ## Trampas pagadas en la intro (30/09/2026)
 - `camera.lookAt` no rehace `matrixWorld`: `project()` usaba la pose del cuadro anterior y la raya de luz salía abajo de la pantalla. `updateMatrixWorld()` después del `lookAt`.
-- three.js compila un material recién cuando el objeto se ve por primera vez: las ondas del golpe trababan justo en el golpe. `renderer.compile` en la puerta, con todo visible y el mismo estado del renderer (tono y recorte son parte de la clave del programa).
+- three.js compila un material recién cuando el objeto se ve por primera vez: las ondas del golpe trababan justo en el golpe. `renderer.compile` al armarla, con todo visible y el mismo estado del renderer (tono y recorte son parte de la clave del programa).

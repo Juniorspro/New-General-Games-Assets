@@ -10,10 +10,12 @@ sube, poderes), no el personaje, el nombre, el logo ni los niveles de ese
 juego. Todo el dibujo, la letra, los niveles, la música y los sonidos están
 hechos con código acá.
 
-Arranca con la intro de **JXSTUDIOS**: "tocá para entrar" (el teléfono no deja
-sonar nada antes de un toque) y dos segundos de pixel art con música: el
-monograma JXS se escribe en cromo sobre fibra de carbono, golpea, brilla y se
-tipea el nombre. Un toque la saltea. → `js/intro.js`, `js/logojxs.js`
+Arranca sola con la intro de **JXSTUDIOS**, dos segundos de pixel art con
+música: el monograma JXS se escribe en cromo sobre fibra de carbono, golpea,
+brilla y se tipea el nombre. Sobre el sonido: el navegador casi nunca deja sonar antes de un toque: se espera un instante
+en negro a que arranque el audio y, si arranca, la música va en fase; si no,
+va muda y el primer toque la saltea y prende el sonido. Un
+toque la saltea. → `js/intro.js`, `js/logojxs.js`
 
 **Para jugar:** abrir `cripta-en-un-archivo.html` (anda sin red, con doble
 clic o mandándolo al teléfono). Deslizar el dedo, o las flechas / WASD.
@@ -22,7 +24,7 @@ Enter elige, Escape o P pausa.
 ## Lo medido (30/09/2026)
 | qué | cuánto |
 |---|---|
-| Pruebas sin navegador (`pruebas/niveles.mjs`) | 4089 comprobaciones, todas bien |
+| Pruebas sin navegador (`pruebas/niveles.mjs`) | 4043 comprobaciones, todas bien |
 | Pruebas en Chromium (`pruebas/juego.mjs`) | 18 de 18 |
 | Archivo único desde `file://` sin red (`pruebas/un-archivo.mjs`) | abre y se gana el 1-1 |
 | Peso del archivo único | 275 KB (22 módulos, sin binarios) |

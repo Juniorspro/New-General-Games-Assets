@@ -12,16 +12,18 @@ pieles, ni los dibujos. El logo VÍBORA.IO, las 27 pieles, los 5 fondos, la
 música y los sonidos están hechos con código acá. Se juega sin red, contra
 bots que corren en el mismo teléfono: no hay partidas en línea.
 
-Arranca con la intro de **JXSTUDIOS** en 2D (dos segundos y medio):
-- "Tocá para entrar": el teléfono no deja sonar nada antes de un toque.
+Arranca sola con la intro de **JXSTUDIOS** en 2D (dos segundos y medio):
 - Una raya de luz abre la fibra de carbono y la reja de metal entra desde los
   costados.
 - El monograma JXS se escribe con luz: cuatro puntas que tiran chispas.
 - Golpea con destello, onda y sacudida, y un brillo cruza el metal.
 - Sube la palabra JXStudios y un empujón hacia adelante da paso al menú.
 
-La música va agendada con el mismo reloj que la animación, y un toque la
-saltea. → `js/intro.js`, `js/logojxs.js`, `js/sonido.js › jingleJXS`
+La música va agendada con el mismo reloj que la animación. Sobre el sonido:
+el navegador casi nunca deja sonar antes de un toque: se espera un instante
+en negro a que arranque el audio y, si arranca, la música va en fase; si no,
+va muda y el primer toque la saltea y prende el sonido. Un toque la saltea. → `js/intro.js`,
+`js/logojxs.js`, `js/sonido.js › jingleJXS`, `js/main.js › esperarAudio`
 
 **Para jugar:** abrir `vibora-en-un-archivo.html`. Anda sin red, con doble
 clic o mandándolo al teléfono.
@@ -33,8 +35,8 @@ clic o mandándolo al teléfono.
 ## Lo medido (30/09/2026)
 | qué | cuánto |
 |---|---|
-| Pruebas sin navegador (`pruebas/logica.mjs`) | 152 comprobaciones, todas bien |
-| Pruebas en Chromium (`pruebas/juego.mjs`) | 15 de 15: clics, teclas y dedos de verdad (CDP) |
+| Pruebas sin navegador (`pruebas/logica.mjs`) | 151 comprobaciones, todas bien |
+| Pruebas en Chromium (`pruebas/juego.mjs`) | 15 de 16: clics, teclas y dedos de verdad (CDP). Falla la nueva "sin permiso de sonar" por la prueba, no por el juego: Playwright cuenta cada `evaluate` como un gesto y el audio arranca después; queda por arreglar |
 | Archivo único desde `file://` sin red (`pruebas/un-archivo.mjs`) | abre, la intro llega al menú y se juega |
 | Peso del archivo único | 113 KB (16 módulos, sin binarios) |
 | 90 s con 22 bots picantes, 3 semillas | 0,1 ms por paso de simulación; unas 110 muertes, ninguna contra el borde; la más larga llega a 1600–3400 |

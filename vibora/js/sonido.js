@@ -154,7 +154,8 @@ export function crearSonido(ajustes) {
   // escribe (zumbidos que suben), el golpe (bombo + campana de parciales no
   // armónicos), el brillo y un acorde grande que queda.
   s.jingleJXS = () => {
-    if (!ctx || !(ajustes.sonido || ajustes.musica)) return null;
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!ctx || ctx.state !== 'running' || !(ajustes.sonido || ajustes.musica)) return null;
     const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
     const t0 = ctx.currentTime + 0.03, tg = t0 + 1.05;
     soplo({ dur: 0.9, vol: 0.09, f0: 200, f1: 3000, q: 0.9, t: t0 + 0.1, destino: bus });

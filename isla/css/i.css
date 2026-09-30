@@ -30,17 +30,11 @@ html.girada #app { transform-origin: 0 0; transform: rotate(90deg) translateY(-1
 
 #velo { position: fixed; inset: 0; z-index: 30; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; }
 #velo.on { opacity: 1; }
-/* la intro de JXSTUDIOS: la puerta (el audio no suena sin un toque) y el blanco
-   del final, que se va solo cuando la playa ya está dibujada */
-#intro { position: fixed; inset: 0; z-index: 42; }
-#introEntrar { all: unset; position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-#introEntrar b { font: 700 clamp(16px, calc(var(--vh, 1vh) * 3.2), 24px) system-ui, sans-serif; letter-spacing: .34em; color: #c9ccd4; text-shadow: 0 2px 8px #000; }
-#introToca { font: 600 clamp(13px, calc(var(--vh, 1vh) * 2.6), 18px) system-ui, sans-serif; color: rgba(244, 247, 255, .7); animation: introLate 1.2s ease-in-out infinite; }
-#intro.corriendo #introEntrar { display: none; }
-@keyframes introLate { 50% { opacity: .25; } }
+/* la intro de JXSTUDIOS: la capa que ataja los toques (saltean la intro) y el
+   blanco del final, que se va solo cuando la playa ya está dibujada */
+#intro { position: fixed; inset: 0; z-index: 42; -webkit-tap-highlight-color: transparent; }
 #blanco { position: fixed; inset: 0; z-index: 44; background: #fff; opacity: 0; pointer-events: none; transition: opacity .6s ease-out; }
 #blanco.on { opacity: 1; transition: none; }
-@media (prefers-reduced-motion: reduce) { #introToca { animation: none; } }
 
 /* ── HUD ── */
 #hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; }

@@ -73,20 +73,22 @@ await prueba('arranca sin errores en la portada', async () => {
   await pg.close();
 });
 
-await prueba('la intro de JXSTUDIOS: puerta, dos segundos y la portada; un toque la saltea', async () => {
+await prueba('la intro de JXSTUDIOS arranca sola (sin tocar), dura dos segundos y deja en la portada; un toque la saltea', async () => {
   const pg = await pagina({ q: 'intro&limpio&idioma=es' });
+  // espera en negro hasta 0,3 s a que arranque el audio (acá, sin toque, no arranca)
+  const antes = await pg.evaluate(() => window.__C.escena);
+  await pg.waitForTimeout(400);
   const r = await pg.evaluate(() => {
-    const C = window.__C, entrar = () => { C.app.entrada.cola.push({ tipo: 'bajar', x: 10, y: 10 }); C.pasos(1); };
-    C.pasos(10);
-    const puerta = C.escena;
-    entrar();
-    const intro = C.escena;
+    const C = window.__C;
+    C.pasos(1);
+    const intro = C.escena, musica = !!C.app.escena.musica;
     C.pasos(150, true);
-    return { puerta, intro, despues: C.escena };
+    return { intro, musica, despues: C.escena };
   });
-  afirmar(r.puerta === 'puerta' && r.intro === 'intro' && r.despues === 'portada', JSON.stringify(r));
+  afirmar(antes === 'espera' && r.intro === 'intro' && !r.musica && r.despues === 'portada', JSON.stringify({ antes, ...r }));
   await pg.goto(`${BASE}?pausa&intro&limpio`);
   await pg.waitForFunction(() => window.listo);
+  await pg.waitForTimeout(400);
   const s = await pg.evaluate(() => {
     const C = window.__C, toque = () => C.app.entrada.cola.push({ tipo: 'bajar', x: 10, y: 10 });
     C.pasos(5); toque(); C.pasos(30); toque(); C.pasos(45);

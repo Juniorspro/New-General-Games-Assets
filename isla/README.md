@@ -14,9 +14,7 @@ apagado y ningún barco se acerca. Hay que arreglarlo, bajar hasta la sala más
 honda de la mina a quitarle el corazón de cristal al guardián, encenderlo con
 una estrella caída y esperar el barco. De noche salen esqueletos piratas.
 
-Arranca con la **intro de JXSTUDIOS en 3D** (tres segundos, con su música):
-- La puerta es "tocá para entrar", porque el teléfono no deja sonar nada antes
-  de un toque.
+Arranca sola con la **intro de JXSTUDIOS en 3D** (tres segundos, con su música):
 - Una raya de luz se abre en lo negro, se prende la placa de fibra de carbono,
   entran las barras de la reja de metal y la cámara gira desde un costado.
 - El monograma JXS se escribe en cromo: cuatro tubos que crecen con una luz y
@@ -26,7 +24,10 @@ Arranca con la **intro de JXSTUDIOS en 3D** (tres segundos, con su música):
 - Suben "JXStudios" y "presenta", y la cámara se mete en el logo hasta el
   blanco, del que aparece la playa.
 
-Un toque la saltea. → `js/intro.js`, `js/logojxs.js`, `js/sonido.js › jingleJXS`
+Sobre el sonido: el navegador casi nunca deja sonar antes de un toque: se espera un instante
+en negro a que arranque el audio y, si arranca, la música va en fase; si no,
+va muda y el primer toque la saltea y prende el sonido. Un toque la saltea.
+→ `js/intro.js`, `js/logojxs.js`, `js/sonido.js › jingleJXS`, `js/main.js › empezarIntro`
 
     python3 -m http.server 8123          # desde la raíz del repo, y abrir http://127.0.0.1:8123/isla/
     sh pruebas/correr.sh                 # 66 + 7 comprobaciones
@@ -50,7 +51,7 @@ una imagen ni un audio de archivo. En español, inglés y portugués.
 | en la mina | 66.606 triángulos, 24 llamadas |
 | partida guardada | 4,2 KB en `localStorage` (solo lo que cambió contra la semilla) |
 | archivo único | 1182 KB: 41 módulos + three.js r160, ningún archivo suelto (la intro de JXSTUDIOS suma 44 KB) |
-| la intro de JXSTUDIOS | 3 s; 4 tubos de cromo (18.864 triángulos), 800 chispas, reflejos de un estudio armado con PMREM una sola vez; todo se compila en la puerta y se libera al terminar |
+| la intro de JXSTUDIOS | 3 s; 4 tubos de cromo (18.864 triángulos), 800 chispas, reflejos de un estudio armado con PMREM una sola vez; todo se compila al armarla y se libera al terminar |
 | la pelea | una espada de piedra voltea un cangrejo en 2 golpes; un esqueleto de noche pega a los 1,4 s de verte; el peto de hierro baja un golpe de 12 a 7 |
 | el guardián | 320 de vida: con la espada de amatista, unas 20 tandas de espadazos |
 | la fogata | de 187 intentos de aparecer de noche, ninguno a menos de 15 m |

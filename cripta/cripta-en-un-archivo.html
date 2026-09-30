@@ -512,7 +512,6 @@ const T = {
   comprado: ['¡LISTO!', 'DONE!', 'PRONTO!'],
   total: ['TOTAL', 'TOTAL', 'TOTAL'],
   finJuego: ['¡LA CRIPTA ES TUYA!', 'YOU BEAT THE CRYPT!', 'A CRIPTA É SUA!'],
-  tocaEntrar: ['TOCÁ PARA ENTRAR', 'TAP TO ENTER', 'TOQUE PARA ENTRAR'],
   presenta: ['PRESENTA', 'PRESENTS', 'APRESENTA'],
   // los carteles del principio de cada nivel que trae algo nuevo
   aviso_deslizar: ['DESLIZÁ PARA VOLAR\nLU FRENA EN LA PARED', 'SWIPE TO FLY\nLU STOPS AT WALLS', 'DESLIZE PARA VOAR\nLU PARA NA PAREDE'],
@@ -1412,9 +1411,11 @@ const M_intro = (() => {
 // brillo lo cruza y "JXSTUDIOS" se tipea abajo. Música y golpes van
 // agendados con el reloj del audio (sonido.js › jingleJXS), así caen justo.
 //
-// Antes va una puerta ("tocá para entrar"): el teléfono no deja sonar nada
-// hasta que se lo toca, y una intro muda no es la intro. Un toque durante la
-// intro la saltea.
+// Arranca sola, sin tocar nada (lo pidió quien pide, 30/09/2026). El
+// navegador casi nunca deja sonar antes de un toque: se espera un instante
+// en negro a que el audio arranque y, si arrancó, la música va en fase con
+// el dibujo; si no, la intro va muda y el primer toque la saltea (ese toque
+// ya prende el sonido para el resto).
 const { P } = M_paleta;
 const { texto, anchoTexto } = M_fuente;
 const { monogramaPixel, puntas } = M_logojxs;
@@ -1451,26 +1452,18 @@ function fondoCarbono(W, H, cx, cy, rombo) {
   return c;
 }
 
-class Puerta {
+// El instante en negro antes de la intro: hasta 0,3 s para que el audio
+// arranque (sin un toque casi nunca arranca), así la música no empieza tarde.
+class Espera {
   constructor(app, siguiente) {
-    this.app = app; this.siguiente = siguiente; this.t = 0; this.nombre = 'puerta';
-    this.fondo = null; this.cambio = -1;
+    this.app = app; this.siguiente = siguiente; this.nombre = 'espera';
+    this.desde = performance.now();
+    app.sonido.despertar();
   }
-  pasar(dt) {
-    this.t += dt;
-    const e = this.app.entrada;
-    if (e.cola.some((ev) => ev.tipo === 'bajar' || ev.tipo === 'confirmar' || ev.tipo === 'tocar')) {
-      this.app.sonido.despertar();
-      this.app.escena = new IntroJXS(this.app, this.siguiente);
-    }
+  pasar() {
+    if (this.app.sonido.activo() || performance.now() - this.desde > 300) this.app.escena = new IntroJXS(this.app, this.siguiente);
   }
-  dibujar(g, W, H) {
-    if (this.cambio !== this.app.cambio || !this.fondo) { this.fondo = fondoCarbono(W, H, W >> 1, Math.round(H * 0.45), Math.min(W, H) * 0.42); this.cambio = this.app.cambio; }
-    g.drawImage(this.fondo, 0, 0);
-    g.fillStyle = 'rgba(5,4,11,0.55)'; g.fillRect(0, 0, W, H);
-    texto(g, 'JXSTUDIOS', W / 2, Math.round(H * 0.45) - 5, '#c9ccd4', { alinear: 'centro', sombra: P.negro });
-    if (((this.t * 2) | 0) % 2 === 0) texto(g, this.app.tr('tocaEntrar'), W / 2, Math.round(H * 0.45) + 16, P.blanco, { alinear: 'centro', borde: P.negro });
-  }
+  dibujar(g, W, H) { g.fillStyle = P.negro; g.fillRect(0, 0, W, H); }
 }
 
 class IntroJXS {
@@ -1580,7 +1573,7 @@ class IntroJXS {
     }
   }
 }
-return { Puerta, IntroJXS };
+return { Espera, IntroJXS };
 })();
 
 /* ── nivel ── */
@@ -6422,7 +6415,8 @@ function crearSonido(ajustes) {
   // (bombo grave + campana de metal: parciales que no son armónicos), el
   // brillo (arpegio), las letras (tics) y un acorde que queda sonando.
   s.jingleJXS = () => {
-    if (!ctx || !(ajustes.sonido || ajustes.musica)) return null;
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!ctx || ctx.state !== 'running' || !(ajustes.sonido || ajustes.musica)) return null;
     const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
     const t0 = ctx.currentTime + 0.03, tg = t0 + 0.88;
     soplo({ dur: 0.2, vol: 0.12, f0: 700, f1: 5200, q: 1.2, t: t0, destino: bus });
@@ -6460,7 +6454,7 @@ const { crearSonido } = M_sonido;
 const { crearIdioma } = M_idioma;
 const { cargar, guardar, borrar, base } = M_guardado;
 const { Portada, Mapa, Juego, Tienda, Ajustes } = M_pantallas;
-const { Puerta } = M_intro;
+const { Espera } = M_intro;
 const { iris } = M_ui;
 const { NIVELES } = M_niveles;
 const { leer } = M_reglas;
@@ -6493,7 +6487,8 @@ const app = {
   transicion: null,
   guardar: () => guardar(datos),
   vibrar: (patron) => {
-    if (!datos.ajustes.vibrar || !navigator.vibrate) return;
+    // antes del primer toque el navegador no deja (y lo avisa en la consola)
+    if (!datos.ajustes.vibrar || !navigator.vibrate || navigator.userActivation?.hasBeenActive === false) return;
     try { navigator.vibrate(patron); } catch { /* hay navegadores que no dejan */ }
   },
   // Borra el progreso pero no los ajustes (idioma, sonido): eso es del teléfono.
@@ -6555,9 +6550,9 @@ function escenaDirecta() {
   if (d === 'ajustes') return new Ajustes(app);
   return new Portada(app);
 }
-// Primero la puerta ("tocá para entrar", que habilita el sonido) y la intro de JXSTUDIOS.
+// Primero la intro de JXSTUDIOS, que arranca sola (intro.js › Espera).
 const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
-app.escena = conIntro ? new Puerta(app, escenaDirecta) : escenaDirecta();
+app.escena = conIntro ? new Espera(app, escenaDirecta) : escenaDirecta();
 
 // si la pestaña se esconde: pausa y silencio
 document.addEventListener('visibilitychange', () => {

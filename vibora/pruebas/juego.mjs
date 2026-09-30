@@ -66,12 +66,11 @@ await prueba('arranca en el menú, con bots jugando atrás y el logo dibujado', 
   return `${r.bots} bots, ${r.comida} bolitas, logo ${(r.logo * 100) | 0}% del lienzo`;
 });
 
-await prueba('la puerta, la intro de JXSTUDIOS con su música y el menú; un toque la saltea', async () => {
+await prueba('la intro de JXSTUDIOS arranca sola, con su música, y deja en el menú; un toque la saltea', async () => {
   const pg = await pagina({ q: 'intro&idioma=es' });
-  afirmar(await V(pg, 'V.estado') === 'puerta' && await visible(pg, 'puerta'), 'no arrancó en la puerta');
-  await captura(pg, 'puerta');
-  await pg.click('#bEntrar');
-  afirmar(await V(pg, 'V.estado') === 'intro', 'el botón no abrió la intro');
+  // sin tocar nada: la espera en negro dura lo que tarda en arrancar el audio
+  // (este Chromium tiene permiso de sonar sin un toque)
+  await pg.waitForFunction(() => window.__V.estado === 'intro', null, { timeout: 3000 });
   afirmar(await V(pg, 'V.sonido.activo() && !!V.intro.musica'), 'la música de la intro no arrancó');
   // a mitad del trazo, el golpe, la palabra
   const brillo = [];
@@ -91,8 +90,7 @@ await prueba('la puerta, la intro de JXSTUDIOS con su música y el menú; un toq
   // saltearla: el toque de apuro (antes de 0,35 s) no cuenta, el de después sí
   await pg.goto(`${BASE}?pausa&intro&idioma=es`);
   await pg.waitForFunction(() => window.listo);
-  await pg.keyboard.press('Enter');
-  afirmar(await V(pg, 'V.estado') === 'intro', 'Enter no abrió la intro');
+  await pg.waitForFunction(() => window.__V.estado === 'intro', null, { timeout: 3000 });
   await pasos(pg, 10); await pg.mouse.click(200, 400);
   afirmar(await V(pg, 'V.estado') === 'intro', 'el toque de apuro la salteó');
   await pasos(pg, 20); await pg.mouse.click(200, 400); await pasos(pg, 25);
@@ -100,6 +98,33 @@ await prueba('la puerta, la intro de JXSTUDIOS con su música y el menú; un toq
   await sinErrores(pg);
   await cerrar(pg);
   return 'brillo ' + brillo.map((b) => b.toFixed(0)).join(' / ');
+});
+
+await prueba('sin permiso de sonar (lo normal antes de un toque): arranca igual, muda, y el primer toque la saltea y prende el sonido', async () => {
+  const nav2 = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const ctx = await nav2.newContext({ viewport: { width: 412, height: 892 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+  const pg = await ctx.newPage();
+  const err = [];
+  pg.on('pageerror', (e) => err.push(String(e).slice(0, 300)));
+  pg.on('console', (m) => { if (m.type() === 'error') err.push(m.text().slice(0, 300)); });
+  await pg.goto(`${BASE}?pausa&intro&idioma=es`);
+  await pg.waitForFunction(() => window.listo);
+  const t0 = Date.now();
+  await pg.waitForFunction(() => window.__V.estado === 'intro', null, { timeout: 3000 });
+  const espera = Date.now() - t0;
+  const r1 = await pg.evaluate(() => ({ activo: window.__V.sonido.activo(), musica: !!window.__V.intro.musica }));
+  await pg.evaluate(() => window.__V.pasos(30));
+  await pg.touchscreen.tap(200, 400);
+  await pg.evaluate(() => window.__V.pasos(25));
+  const activo = await pg.waitForFunction(() => window.__V.sonido.activo(), null, { timeout: 3000 }).then(() => true).catch(() => false);
+  const r2 = await pg.evaluate(() => ({ estado: window.__V.estado, errores: window.__V.sonido.errores }));
+  await nav2.close();
+  // (Playwright cuenta cada evaluate como un gesto, así que después el audio puede
+  // arrancar solo: lo que importa es que la intro no lo esperó y no agendó la música tarde)
+  afirmar(!r1.musica && espera < 1500, 'sin permiso tendría que arrancar muda y enseguida: ' + JSON.stringify({ ...r1, espera }));
+  afirmar(r2.estado === 'menu' && activo, 'el toque: ' + JSON.stringify({ ...r2, activo }));
+  afirmar(!err.length && !r2.errores.length, 'errores: ' + [...err, ...r2.errores].join(' | '));
+  return `esperó ${espera} ms en negro y arrancó muda`;
 });
 
 await prueba('con el mouse: nace, dobla hacia donde apunta y mantener apretado es turbo', async () => {

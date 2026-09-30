@@ -277,7 +277,8 @@ export function crearSonido(ajustes) {
   // (bombo grave + campana de metal: parciales que no son armónicos), el
   // brillo (arpegio), las letras (tics) y un acorde que queda sonando.
   s.jingleJXS = () => {
-    if (!ctx || !(ajustes.sonido || ajustes.musica)) return null;
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!ctx || ctx.state !== 'running' || !(ajustes.sonido || ajustes.musica)) return null;
     const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
     const t0 = ctx.currentTime + 0.03, tg = t0 + 0.88;
     soplo({ dur: 0.2, vol: 0.12, f0: 700, f1: 5200, q: 1.2, t: t0, destino: bus });

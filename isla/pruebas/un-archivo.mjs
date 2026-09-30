@@ -37,15 +37,16 @@ if (cargo) {
 await pg.goto('file://' + ARCH + '?pausa&intro&idioma=pt');
 const cargo2 = await pg.waitForFunction(() => window.__isla && window.__isla.listo, null, { timeout: 90000 }).then(() => true).catch(() => false);
 if (cargo2) {
-  await pg.tap('#introEntrar');
-  const ri = await pg.evaluate(() => {
-    const I = window.__isla, J = I.J, empezo = !!J.intro && J.intro.t === 0;
+  // arranca sola (acá sin permiso de sonar: muda, después de 0,3 s en negro)
+  const empezo = await pg.waitForFunction(() => window.__isla.J.intro && window.__isla.J.intro.t >= 0, null, { timeout: 5000 }).then(() => true).catch(() => false);
+  const ri = await pg.evaluate((empezo) => {
+    const I = window.__isla, J = I.J, muda = !!J.intro && !J.intro.musica;
     for (let i = 0; i < 80; i++) I.paso(1 / 60, false);
     I.paso(1 / 60, true);
     for (let i = 0; i < 120; i++) I.paso(1 / 60, false);
-    return { empezo, estado: J.estado };
-  });
-  ch('la intro de JXSTUDIOS corre y deja en el menú', ri.empezo && ri.estado === 'menu', JSON.stringify(ri));
+    return { empezo, muda, estado: J.estado };
+  }, empezo);
+  ch('la intro de JXSTUDIOS arranca sola, muda sin permiso de sonar, y deja en el menú', ri.empezo && ri.muda && ri.estado === 'menu', JSON.stringify(ri));
 } else ch('la intro de JXSTUDIOS corre y deja en el menú', false, 'no cargó');
 ch('sin errores de JavaScript', err.length === 0, err.slice(0, 3).join(' | '));
 console.log(`\n  ${ok}/${ok + mal}`);

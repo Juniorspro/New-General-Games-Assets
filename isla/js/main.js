@@ -638,12 +638,13 @@ J.cambiarIdioma = (c) => {
 etiquetar();
 
 // ── la intro de JXSTUDIOS ──────────────────────────────────────────────────
-// La puerta ("tocá para entrar": el audio no arranca sin un toque), tres
-// segundos en 3D y la playa, que aparece desde el blanco. Un toque o una
-// tecla la saltean. → intro.js
+// Arranca sola: tres segundos en 3D y la playa, que aparece desde el blanco.
+// Antes, hasta 0,3 s en negro a que arranque el audio: sin un toque casi
+// nunca arranca y la intro va muda (el primer toque la saltea y ya prende el
+// sonido); si arranca, la música va en fase. Un toque o una tecla la
+// saltean. → intro.js
 function empezarIntro(despues) {
   const capa = document.getElementById('intro'), blanco = document.getElementById('blanco');
-  document.getElementById('introToca').textContent = t('intro.entrar');
   capa.classList.remove('oculto');
   lienzo.style.imageRendering = 'auto';
   J.estado = 'intro';
@@ -660,13 +661,16 @@ function empezarIntro(despues) {
       J.revelar = true;
     },
   });
-  const arrancar = () => { if (intro.t < 0) { son.iniciar(); intro.empezar(); capa.classList.add('corriendo'); } };
-  document.getElementById('introEntrar').addEventListener('click', arrancar);
-  capa.addEventListener('pointerdown', () => { if (intro.t >= 0) intro.saltear(); });
-  addEventListener('keydown', (ev) => {
-    if (J.estado !== 'intro') return;
-    if (intro.t < 0) { if (ev.code === 'Enter' || ev.code === 'Space') arrancar(); } else intro.saltear();
-  });
+  son.iniciar();
+  const desde = performance.now();
+  const mirar = () => {
+    if (J.intro !== intro || intro.t >= 0) return;
+    if ((son.ctx && son.ctx.state === 'running') || performance.now() - desde > 300) intro.empezar();
+    else requestAnimationFrame(mirar);
+  };
+  requestAnimationFrame(mirar);
+  capa.addEventListener('pointerdown', () => intro.saltear());
+  addEventListener('keydown', () => { if (J.estado === 'intro') intro.saltear(); });
 }
 
 // ── arranque ───────────────────────────────────────────────────────────────

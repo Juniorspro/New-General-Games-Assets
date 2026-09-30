@@ -42,7 +42,6 @@ const T = {
   consejo: ['Arrastrá el dedo para doblar · el rayo o un segundo dedo es turbo', 'Drag to turn · the bolt or a second finger boosts', 'Arraste para virar · o raio ou um segundo dedo é turbo'],
   consejoPc: ['El mouse apunta · clic o espacio es turbo · P pausa', 'Aim with the mouse · click or space to boost · P pauses', 'O mouse aponta · clique ou espaço é turbo · P pausa'],
   hito: ['¡Largo {n}!', 'Length {n}!', 'Tamanho {n}!'],
-  tocaEntrar: ['Tocá para entrar', 'Tap to enter', 'Toque para entrar'],
   presenta: ['presenta', 'presents', 'apresenta'],
   creditos: ['Un juego de JXSTUDIOS', 'A JXSTUDIOS game', 'Um jogo da JXSTUDIOS'],
   piel_lima: ['Lima', 'Lime', 'Limão'], piel_coral: ['Coral', 'Coral', 'Coral'], piel_uva: ['Uva', 'Grape', 'Uva'],

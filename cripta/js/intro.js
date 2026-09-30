@@ -4,9 +4,11 @@
 // brillo lo cruza y "JXSTUDIOS" se tipea abajo. Música y golpes van
 // agendados con el reloj del audio (sonido.js › jingleJXS), así caen justo.
 //
-// Antes va una puerta ("tocá para entrar"): el teléfono no deja sonar nada
-// hasta que se lo toca, y una intro muda no es la intro. Un toque durante la
-// intro la saltea.
+// Arranca sola, sin tocar nada (lo pidió quien pide, 30/09/2026). El
+// navegador casi nunca deja sonar antes de un toque: se espera un instante
+// en negro a que el audio arranque y, si arrancó, la música va en fase con
+// el dibujo; si no, la intro va muda y el primer toque la saltea (ese toque
+// ya prende el sonido para el resto).
 import { P } from './paleta.js';
 import { texto, anchoTexto } from './fuente.js';
 import { monogramaPixel, puntas } from './logojxs.js';
@@ -44,26 +46,18 @@ function fondoCarbono(W, H, cx, cy, rombo) {
   return c;
 }
 
-export class Puerta {
+// El instante en negro antes de la intro: hasta 0,3 s para que el audio
+// arranque (sin un toque casi nunca arranca), así la música no empieza tarde.
+export class Espera {
   constructor(app, siguiente) {
-    this.app = app; this.siguiente = siguiente; this.t = 0; this.nombre = 'puerta';
-    this.fondo = null; this.cambio = -1;
+    this.app = app; this.siguiente = siguiente; this.nombre = 'espera';
+    this.desde = performance.now();
+    app.sonido.despertar();
   }
-  pasar(dt) {
-    this.t += dt;
-    const e = this.app.entrada;
-    if (e.cola.some((ev) => ev.tipo === 'bajar' || ev.tipo === 'confirmar' || ev.tipo === 'tocar')) {
-      this.app.sonido.despertar();
-      this.app.escena = new IntroJXS(this.app, this.siguiente);
-    }
+  pasar() {
+    if (this.app.sonido.activo() || performance.now() - this.desde > 300) this.app.escena = new IntroJXS(this.app, this.siguiente);
   }
-  dibujar(g, W, H) {
-    if (this.cambio !== this.app.cambio || !this.fondo) { this.fondo = fondoCarbono(W, H, W >> 1, Math.round(H * 0.45), Math.min(W, H) * 0.42); this.cambio = this.app.cambio; }
-    g.drawImage(this.fondo, 0, 0);
-    g.fillStyle = 'rgba(5,4,11,0.55)'; g.fillRect(0, 0, W, H);
-    texto(g, 'JXSTUDIOS', W / 2, Math.round(H * 0.45) - 5, '#c9ccd4', { alinear: 'centro', sombra: P.negro });
-    if (((this.t * 2) | 0) % 2 === 0) texto(g, this.app.tr('tocaEntrar'), W / 2, Math.round(H * 0.45) + 16, P.blanco, { alinear: 'centro', borde: P.negro });
-  }
+  dibujar(g, W, H) { g.fillStyle = P.negro; g.fillRect(0, 0, W, H); }
 }
 
 export class IntroJXS {

@@ -36,9 +36,6 @@ body { position: fixed; inset: 0; font-family: system-ui, -apple-system, "Segoe 
 .velo { background: rgba(5, 6, 12, 0.55); backdrop-filter: blur(2px); }
 h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-spacing: 0.02em; text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45); }
 
-.entrar { all: unset; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px; }
-.entrar .jx { font-weight: 700; letter-spacing: 0.32em; font-size: clamp(16px, 3vh, 22px); color: #c9ccd4; }
-.pulsa { font-size: clamp(14px, 2.4vh, 18px); color: var(--tenue); animation: late 1.2s ease-in-out infinite; }
 @keyframes late { 50% { opacity: 0.25; } }
 
 #logo { width: min(92vw, 560px); height: auto; aspect-ratio: 5 / 1.35; }
@@ -120,17 +117,13 @@ h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-sp
   #tConsejo { grid-area: consejo; }
 }
 
-@media (prefers-reduced-motion: reduce) { .pulsa, .record { animation: none; } .boton { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .record { animation: none; } .boton { transition: none; } }
 
 </style>
 </head>
 <body>
 <canvas id="juego" aria-label="Víbora.io"></canvas>
 <div id="ui">
-  <section id="puerta" class="pantalla">
-    <button id="bEntrar" class="entrar"><span class="jx">JXSTUDIOS</span><span id="tEntrar" class="pulsa"></span></button>
-  </section>
-
   <section id="menu" class="pantalla oculto">
     <canvas id="logo" aria-hidden="true"></canvas>
     <input id="apodo" maxlength="16" autocomplete="off" spellcheck="false" enterkeyhint="go">
@@ -934,7 +927,6 @@ const T = {
   consejo: ['Arrastrá el dedo para doblar · el rayo o un segundo dedo es turbo', 'Drag to turn · the bolt or a second finger boosts', 'Arraste para virar · o raio ou um segundo dedo é turbo'],
   consejoPc: ['El mouse apunta · clic o espacio es turbo · P pausa', 'Aim with the mouse · click or space to boost · P pauses', 'O mouse aponta · clique ou espaço é turbo · P pausa'],
   hito: ['¡Largo {n}!', 'Length {n}!', 'Tamanho {n}!'],
-  tocaEntrar: ['Tocá para entrar', 'Tap to enter', 'Toque para entrar'],
   presenta: ['presenta', 'presents', 'apresenta'],
   creditos: ['Un juego de JXSTUDIOS', 'A JXSTUDIOS game', 'Um jogo da JXSTUDIOS'],
   piel_lima: ['Lima', 'Lime', 'Limão'], piel_coral: ['Coral', 'Coral', 'Coral'], piel_uva: ['Uva', 'Grape', 'Uva'],
@@ -1177,8 +1169,8 @@ const M_intro = (() => {
 // metal entra desde los costados, el monograma se escribe con luz (cuatro
 // puntas que dejan chispas), golpe con destello y onda, brillo que cruza el
 // metal, la palabra JXStudios sube, y un empujón hacia adelante que da paso
-// al juego. La música sale de sonido.js › jingleJXS, agendada con el mismo
-// reloj; un toque la saltea.
+// al juego. Arranca sola (main.js › esperarAudio). La música sale de
+// sonido.js › jingleJXS, agendada con el mismo reloj; un toque la saltea.
 const { monograma, palabra, puntas, CAJA } = M_logojxs;
 const { clamp, salida, salidaAtras } = M_util;
 const T = { raya: 0.16, abre: 0.5, traza: [0.15, 1.0], golpe: 1.05, brillo: [1.15, 1.7], palabra: 1.2, fin: 2.5, salto: 0.35 };
@@ -1341,7 +1333,7 @@ class Intro {
     g.restore();
   }
 }
-return { fondoJX, Intro };
+return { Intro };
 })();
 
 /* ── logo ── */
@@ -1883,7 +1875,8 @@ function crearSonido(ajustes) {
   // escribe (zumbidos que suben), el golpe (bombo + campana de parciales no
   // armónicos), el brillo y un acorde grande que queda.
   s.jingleJXS = () => {
-    if (!ctx || !(ajustes.sonido || ajustes.musica)) return null;
+    // con el audio suspendido (sin un toque) se agendaría y sonaría tarde, fuera de fase
+    if (!ctx || ctx.state !== 'running' || !(ajustes.sonido || ajustes.musica)) return null;
     const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(maestro);
     const t0 = ctx.currentTime + 0.03, tg = t0 + 1.05;
     soplo({ dur: 0.9, vol: 0.09, f0: 200, f1: 3000, q: 0.9, t: t0 + 0.1, destino: bus });
@@ -1923,7 +1916,7 @@ const { crearSonido } = M_sonido;
 const { crearIdioma, IDIOMAS } = M_idioma;
 const { cargar, guardar, base } = M_guardado;
 const { PIELES, pielPorId, abierta } = M_pieles;
-const { Intro, fondoJX } = M_intro;
+const { Intro } = M_intro;
 const { acercar, clamp } = M_util;
 const PASO = 1 / 60;
 const BOTS = [10, 18, 26];
@@ -1939,7 +1932,8 @@ const sonido = crearSonido(datos.ajustes);
 const entrada = crearEntrada(lienzo);
 const tactil = window.matchMedia?.('(pointer: coarse)').matches ?? false;
 const guardarTodo = () => guardar(datos);
-const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate) try { navigator.vibrate(p); } catch { /* no deja */ } };
+// antes del primer toque el navegador no deja vibrar (y lo avisa en la consola)
+const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) try { navigator.vibrate(p); } catch { /* no deja */ } };
 
 // ── la pantalla: resolución de verdad, con tope según la calidad ──────────
 let W = 0, H = 0, dpr = 1, dprTope = 2;
@@ -1956,7 +1950,7 @@ addEventListener('resize', medir);
 // ── el mundo y la cámara ───────────────────────────────────────────────────
 let mundo = nuevoMundo();
 function nuevoMundo() { return new Mundo({ semilla: ((Date.now() / 1000) | 0) & 0xffffff, bots: BOTS[datos.nivelBots], nivelBots: datos.nivelBots }); }
-let mia = null, seguida = null, estado = 'puerta', intro = null, preview = null, muerteT = 0, avisos = [], hitoN = 0, t = 0, sonarRecord = false;
+let mia = null, seguida = null, estado = 'espera', intro = null, preview = null, muerteT = 0, avisos = [], hitoN = 0, t = 0, sonarRecord = false;
 const cam = { x: 0, y: 0, zoom: 1 };
 
 function camara(dt) {
@@ -1979,7 +1973,6 @@ function mostrar(id) { for (const s of document.querySelectorAll('.pantalla')) s
 
 function textos() {
   document.documentElement.lang = tr.actual();
-  $('tEntrar').textContent = tr('tocaEntrar');
   $('apodo').placeholder = tr('apodo');
   $('bJugar').textContent = tr('jugar');
   $('bPiel').textContent = tr('piel'); $('bFondo').textContent = tr('fondo'); $('bAjustes').textContent = tr('ajustes');
@@ -1999,11 +1992,24 @@ function boton(id, fn) { $(id).addEventListener('click', () => { sonido.tocar('b
 
 // ── el ir y venir ──────────────────────────────────────────────────────────
 function entrar() {
-  // Enter en el botón enfocado llega dos veces (la tecla y el clic que dispara)
-  if (estado !== 'puerta') return;
+  if (estado !== 'espera') return;
   sonido.despertar();
   estado = 'intro'; mostrar(null);
   intro = new Intro({ sonido, vibrar, alTerminar: aMenu });
+}
+// La intro arranca sola, sin tocar nada. Antes, hasta 0,3 s en negro a que
+// arranque el audio: sin un toque casi nunca arranca y la intro va muda (el
+// primer toque la saltea y ya prende el sonido); si arranca, la música va en
+// fase con el dibujo.
+function esperarAudio() {
+  sonido.despertar();
+  const desde = performance.now();
+  const mirar = () => {
+    if (estado !== 'espera') return;
+    if (sonido.activo() || performance.now() - desde > 300) entrar();
+    else requestAnimationFrame(mirar);
+  };
+  requestAnimationFrame(mirar);
 }
 function aMenu() {
   estado = 'menu'; mia = null; preview = null;
@@ -2107,7 +2113,6 @@ function armarAjustes() {
   fila(tr('idioma'), IDIOMAS.map((l) => [l, l.toUpperCase()]), tr.actual(), (v) => { a.idioma = v; tr.poner(v); });
 }
 
-$('bEntrar').addEventListener('click', entrar);
 boton('bJugar', jugar);
 $('apodo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { sonido.tocar('boton'); jugar(); } });
 boton('bPiel', () => elegir('piel'));
@@ -2126,8 +2131,7 @@ boton('bMenu', aMenu);
 addEventListener('pointerdown', () => sonido.despertar(), { capture: true });
 addEventListener('keydown', (ev) => {
   sonido.despertar();
-  if (estado === 'puerta' && (ev.code === 'Enter' || ev.code === 'Space')) entrar();
-  else if (estado === 'intro') intro?.saltear();
+  if (estado === 'intro') intro?.saltear();
   else if (estado === 'elegir' && ev.code === 'ArrowLeft') moverElegir(-1);
   else if (estado === 'elegir' && ev.code === 'ArrowRight') moverElegir(1);
   // la pausa se maneja acá y no en entrada.js: si no, la misma tecla que la
@@ -2144,7 +2148,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pausa
 // ── el paso de simulación ──────────────────────────────────────────────────
 function paso(dt) {
   t += dt;
-  if (estado === 'puerta') return;
+  if (estado === 'espera') return;
   if (estado === 'intro') { intro.pasar(dt, W, H); return; }
   if (estado === 'pausa') return;
   if (estado === 'elegir' && preview) {
@@ -2190,7 +2194,7 @@ function paso(dt) {
 const calidad = () => (dpr >= 1.5 ? 2 : 1);
 function dibujar() {
   g.setTransform(1, 0, 0, 1, 0, 0);
-  if (estado === 'puerta') { fondoJX(g, W, H, t, { zoom: 1 + Math.sin(t) * 0.01 }); return; }
+  if (estado === 'espera') { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); return; }
   if (estado === 'intro') { intro.dibujar(g, W, H); return; }
   if (estado === 'elegir' && preview) {
     pintarFondo(g, preview.fondo, cam, W, H);
@@ -2246,7 +2250,7 @@ function cuadro(ahora) {
 
 textos();
 const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
-if (conIntro) mostrar('puerta');
+if (conIntro) { mostrar(null); esperarAudio(); }
 else { aMenu(); if (q.get('directo') === 'juego') jugar(); }
 requestAnimationFrame(cuadro);
 

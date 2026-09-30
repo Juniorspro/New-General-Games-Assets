@@ -450,35 +450,33 @@ console.log('── el teléfono parado');
 // ── la intro de JXSTUDIOS (con ?intro: sin eso, las pruebas la saltean) ─────
 console.log('── la intro de JXSTUDIOS');
 pg = await abrir('intro&nueva&idioma=es');
-r = await pg.evaluate(() => ({ estado: window.__isla.J.estado, puerta: !document.getElementById('intro').classList.contains('oculto'), texto: document.getElementById('introToca').textContent, musica: window.__isla.J.son.temaActual || null }));
-ch('arranca en la puerta ("tocá para entrar"), sin la música del menú', r.estado === 'intro' && r.puerta && r.texto === 'Tocá para entrar' && !r.musica, JSON.stringify(r));
-await pg.click('#introEntrar');
+// arranca sola: hasta 0,3 s en negro a que arranque el audio (este Chromium tiene permiso de sonar)
+const arranco = await pg.waitForFunction(() => window.__isla.J.intro && window.__isla.J.intro.t >= 0, null, { timeout: 3000 }).then(() => true).catch(() => false);
+r = await pg.evaluate(() => ({ estado: window.__isla.J.estado, capa: !document.getElementById('intro').classList.contains('oculto'), boton: !!document.querySelector('#intro button'), musica: window.__isla.J.son.temaActual || null }));
+ch('arranca sola, sin puerta ni botón, y sin la música del menú encima', arranco && r.estado === 'intro' && r.capa && !r.boton && !r.musica, JSON.stringify({ arranco, ...r }));
 r = await correr(pg, `
   const intro = J.intro, suena = !!intro.musica && J.son.ctx && J.son.ctx.state === 'running';
   const avanzar = (n) => { for (let i = 0; i < n; i++) I.paso(1 / 60, false); };
   avanzar(48); const medio = intro.trazos.map((z) => z.avance);
-  I.paso(1 / 60, true);                       // un cuadro dibujado: que compile el cromo
+  I.paso(1 / 60, true);
   avanzar(50); const golpeado = intro.golpeado, completo = intro.trazos.every((z) => z.avance === 1);
   avanzar(40); I.paso(1 / 60, true); const palabra = intro.palabra.material.opacity;
   avanzar(60);
   return { suena, medio, golpeado, completo, palabra, estado: J.estado, menu: J.menu.modo, liberada: J.intro === null, pr: J.renderer.getPixelRatio(), tema: J.son.temaActual };`);
-ch('el toque arranca la música de la intro', r.suena);
+ch('con permiso de sonar, la música de la intro va desde el principio', r.suena);
 ch('a los 0,8 s los cuatro trazos están a medio escribir', r.medio.every((a) => a > 0.05 && a < 0.95), r.medio.map((a) => a.toFixed(2)).join(' '));
 ch('después del golpe: el monograma completo y la palabra a la vista', r.golpeado && r.completo && r.palabra > 0.9, JSON.stringify({ golpeado: r.golpeado, completo: r.completo, palabra: r.palabra }));
 ch('a los 3 s queda la playa con su música, pixelada otra vez y sin la intro en memoria', r.estado === 'menu' && r.menu === 'principal' && r.liberada && r.pr <= 1 && r.tema === 'menu', JSON.stringify(r));
 await pg.close();
 pg = await abrir('intro&nueva&idioma=en');
-await pg.keyboard.press('Enter');
-r = await correr(pg, `
-  const t0 = J.intro && J.intro.t;
-  for (let i = 0; i < 10; i++) I.paso(1 / 60, false);
-  return { t0, texto: document.getElementById('introToca').textContent };`);
+await pg.waitForFunction(() => window.__isla.J.intro && window.__isla.J.intro.t >= 0, null, { timeout: 3000 });
+await correr(pg, 'for (let i = 0; i < 10; i++) I.paso(1 / 60, false);');
 await pg.mouse.click(480, 270);
 const apurado = await pg.evaluate(() => window.__isla.J.estado);
 await correr(pg, 'for (let i = 0; i < 20; i++) I.paso(1 / 60, false);');
 await pg.mouse.click(480, 270);
 const salteada = await correr(pg, 'for (let i = 0; i < 6; i++) I.paso(1 / 60, false); return J.estado;');
-ch('Enter la arranca; un toque de apuro no la corta y uno después sí', r.t0 === 0 && apurado === 'intro' && salteada === 'menu' && r.texto === 'Tap to enter', JSON.stringify({ ...r, apurado, salteada }));
+ch('un toque de apuro no la corta y uno después sí', apurado === 'intro' && salteada === 'menu', JSON.stringify({ apurado, salteada }));
 await pg.close();
 
 // ── rendimiento (SwiftShader: lo dibujado no representa una placa de video) ──

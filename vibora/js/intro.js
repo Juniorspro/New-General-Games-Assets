@@ -3,8 +3,8 @@
 // metal entra desde los costados, el monograma se escribe con luz (cuatro
 // puntas que dejan chispas), golpe con destello y onda, brillo que cruza el
 // metal, la palabra JXStudios sube, y un empujón hacia adelante que da paso
-// al juego. La música sale de sonido.js › jingleJXS, agendada con el mismo
-// reloj; un toque la saltea.
+// al juego. Arranca sola (main.js › esperarAudio). La música sale de
+// sonido.js › jingleJXS, agendada con el mismo reloj; un toque la saltea.
 import { monograma, palabra, puntas, CAJA } from './logojxs.js';
 import { clamp, salida, salidaAtras } from './util.js';
 
@@ -25,7 +25,7 @@ function patronCarbono(g) {
 }
 
 // El fondo: carbono con un rombo al centro y la reja de metal alrededor.
-export function fondoJX(g, W, H, t, { entra = 1, zoom = 1 } = {}) {
+function fondoJX(g, W, H, t, { entra = 1, zoom = 1 } = {}) {
   g.fillStyle = '#050506'; g.fillRect(0, 0, W, H);
   g.save();
   g.translate(W / 2, H / 2); g.scale(zoom, zoom); g.translate(-W / 2, -H / 2);
