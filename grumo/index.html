@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#6b4a30">
+<meta name="description" content="Grumo, de JXSTUDIOS: un grumo de plastilina que solo quiere llegar a la puerta. El animador hace trampa.">
+<title>Grumo</title>
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<canvas id="juego" aria-label="Grumo"></canvas>
+<!-- las sondas miden la muesca y la barra de abajo del teléfono (main.js › medirTodo) -->
+<div id="sonda" aria-hidden="true"></div>
+<div id="sondaAbajo" aria-hidden="true"></div>
+<div id="ui">
+  <!-- la primera vez, después del logo: el idioma (el título va en los tres) -->
+  <section id="idiomas" class="pantalla pasante oculto">
+    <div id="idiomasBotones" class="botonera">
+      <h2 class="titulo-idioma">Elegí tu idioma<small lang="en">Choose your language</small><small lang="pt">Escolha seu idioma</small></h2>
+      <button id="bIdioma_es" class="boton principal" lang="es">Español</button>
+      <button id="bIdioma_en" class="boton principal azul" lang="en">English</button>
+      <button id="bIdioma_pt" class="boton principal verde" lang="pt">Português</button>
+    </div>
+  </section>
+
+  <section id="menu" class="pantalla pasante oculto">
+    <div class="bolsa"><span class="bolita" aria-hidden="true"></span><span id="tMonedas">0</span></div>
+    <div class="bolsa izq"><span class="claquetita" aria-hidden="true"></span><span id="tTomasMenu">0</span></div>
+    <div id="botonera" class="botonera">
+      <button id="bJugar" class="boton principal"><span id="tJugar"></span><small id="tNivelJugar"></small></button>
+      <div class="fila">
+        <button id="bEscenas" class="boton chico azul"></button>
+        <button id="bCamarin" class="boton chico amarillo"></button>
+      </div>
+      <button id="bAjustes" class="boton chico madera"></button>
+    </div>
+    <p id="tFirma" class="firma"></p>
+  </section>
+
+  <section id="escenas" class="pantalla oculto">
+    <div class="bolsa"><span class="bolita" aria-hidden="true"></span><span id="tMonedasEscenas">0</span></div>
+    <h2 id="tEscenas" class="tira"></h2>
+    <div id="listaSets" class="lista-sets"></div>
+    <button id="bVolverEscenas" class="boton chico madera"></button>
+  </section>
+
+  <section id="niveles" class="pantalla oculto">
+    <h2 id="tNiveles" class="tira"></h2>
+    <div id="grillaNiveles" class="grilla"></div>
+    <button id="bVolverNiveles" class="boton chico madera"></button>
+  </section>
+
+  <section id="camarin" class="pantalla oculto">
+    <div class="bolsa"><span class="bolita" aria-hidden="true"></span><span id="tMonedasCamarin">0</span></div>
+    <div class="pestanas" role="tablist">
+      <button id="bPestPieles" class="pestana" role="tab"></button>
+      <button id="bPestSombreros" class="pestana" role="tab"></button>
+    </div>
+    <div class="flechas">
+      <button id="bAnterior" class="flecha" aria-label="anterior">‹</button>
+      <div class="hueco"></div>
+      <button id="bSiguiente" class="flecha" aria-label="siguiente">›</button>
+    </div>
+    <p id="tNombre" class="nombre"></p>
+    <p id="tAviso" class="aviso"></p>
+    <button id="bComprar" class="boton principal"></button>
+    <button id="bVolverCamarin" class="boton chico madera"></button>
+  </section>
+
+  <section id="ajustes" class="pantalla oculto">
+    <h2 id="tAjustes" class="tira"></h2>
+    <div id="listaAjustes" class="lista"></div>
+    <button id="bCerrarAjustes" class="boton principal"></button>
+  </section>
+
+  <button id="bPausa" class="redondo arriba-izq oculto" aria-label="pausa"><span class="barras"><span></span><span></span></span></button>
+
+  <section id="pausa" class="pantalla velo oculto">
+    <div class="tarjeta">
+      <h2 id="tPausa"></h2>
+      <button id="bSeguir" class="boton principal"></button>
+      <button id="bReiniciarPausa" class="boton chico azul"></button>
+      <button id="bSalirPausa" class="boton chico madera"></button>
+    </div>
+  </section>
+
+  <section id="gano" class="pantalla velo oculto">
+    <div class="tarjeta">
+      <h2 id="tGano" class="grande"></h2>
+      <p id="tGanoTomas" class="dato"></p>
+      <p id="tGanoMonedas" class="dato oro"></p>
+      <p id="tGanoAviso" class="dato nuevo"></p>
+      <button id="bSiguienteNivel" class="boton principal"></button>
+      <div class="fila">
+        <button id="bOtraVez" class="boton chico azul"></button>
+        <button id="bMenuGano" class="boton chico madera"></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="final" class="pantalla pasante oculto">
+    <div class="tarjeta final">
+      <h2 id="tFinTitulo" class="grande"></h2>
+      <p id="tFinTexto" class="dato"></p>
+      <p id="tFinTomas" class="dato oro"></p>
+      <button id="bFinSeguir" class="boton principal"></button>
+    </div>
+  </section>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

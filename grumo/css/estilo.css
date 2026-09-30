@@ -1,0 +1,209 @@
+/* El juego se dibuja en el lienzo; los menús son HTML encima. De
+   plastilina, como el juego: botones que son pedazos amasados (las puntas
+   desparejas, el labio de luz arriba, la panza en sombra, las huellas
+   digitales encima) y que se aplastan cuando se los toca. Las huellas son
+   una imagen que arma main.js al arrancar (--huellas). */
+:root {
+  --tinta: #3a2616;
+  --crema: #f6ecd8;
+  --madera: #8a5a36; --madera-osc: #5e3b22;
+  --rojo: #e4553f; --naranja: #f28a2e; --amarillo: #f2c230; --verde: #48b06f; --azul: #4f95e8; --rosa: #f394bd; --violeta: #9d78de;
+  --letra: ui-rounded, "Arial Rounded MT Bold", "Nunito", "Varela Round", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sombra: 0 6px 0 rgba(40, 20, 5, 0.35), 0 10px 18px rgba(20, 10, 0, 0.35);
+  color-scheme: dark;
+}
+html, body { margin: 0; height: 100%; background: #6b4a30; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; font-family: var(--letra); color: var(--tinta); }
+#juego { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+#sonda, #sondaAbajo { position: absolute; left: 0; width: 0; height: 0; visibility: hidden; pointer-events: none; }
+#sonda { top: env(safe-area-inset-top, 0px); }
+#sondaAbajo { bottom: env(safe-area-inset-bottom, 0px); }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.pantalla {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 1.6vh, 14px);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); box-sizing: border-box;
+  pointer-events: auto; text-align: center;
+}
+/* en el menú, lo que no es botón deja pasar el dedo al lienzo (se empujan las letras y se hace saltar a Grumo) */
+.pantalla.pasante { pointer-events: none; }
+.pantalla.pasante button, .pantalla.pasante .bolsa, .pantalla.pasante .tarjeta { pointer-events: auto; }
+.pantalla.oculto, .oculto { display: none !important; }
+.velo { background: rgba(30, 16, 6, 0.5); }
+h2 { margin: 0; font-size: clamp(24px, 4.4vh, 34px); font-weight: 900; color: #fff; letter-spacing: 0.02em; text-shadow: 0 3px 0 var(--tinta); }
+h2.grande { font-size: clamp(30px, 6vh, 44px); }
+
+/* la plastilina en CSS: color, huellas, el labio de luz y la panza en sombra */
+.plasti {
+  background-color: var(--c, var(--rojo));
+  background-image: var(--huellas, none), radial-gradient(130% 95% at 28% 18%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 55%), linear-gradient(rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.14));
+  background-size: 140px 140px, 100% 100%, 100% 100%;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.32), inset 0 -6px 0 rgba(0, 0, 0, 0.16), inset 5px 0 8px rgba(255, 255, 255, 0.1), inset -5px 0 8px rgba(0, 0, 0, 0.1), var(--sombra);
+}
+h2.tira {
+  --c: var(--crema); color: var(--tinta); text-shadow: none; padding: 8px 26px 10px; transform: rotate(-1.5deg);
+  border-radius: 20px 16px 22px 14px / 16px 22px 14px 20px;
+  background-color: var(--c);
+  background-image: var(--huellas, none), radial-gradient(130% 95% at 28% 18%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%);
+  background-size: 140px 140px, 100% 100%;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.5), inset 0 -5px 0 rgba(0, 0, 0, 0.1), var(--sombra);
+}
+
+.boton {
+  all: unset; cursor: pointer; box-sizing: border-box; font-weight: 900; letter-spacing: 0.03em; text-align: center; position: relative;
+  color: #fff; text-shadow: 0 2px 0 rgba(40, 20, 5, 0.35);
+  border-radius: 30px 24px 32px 22px / 24px 32px 22px 30px;
+  --c: var(--rojo);
+  background-color: var(--c);
+  background-image: var(--huellas, none), radial-gradient(130% 95% at 28% 18%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 55%), linear-gradient(rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.14));
+  background-size: 140px 140px, 100% 100%, 100% 100%;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.32), inset 0 -6px 0 rgba(0, 0, 0, 0.16), inset 5px 0 8px rgba(255, 255, 255, 0.1), inset -5px 0 8px rgba(0, 0, 0, 0.1), var(--sombra);
+  transform: rotate(-1deg);
+  transition: transform 0.07s ease, box-shadow 0.07s ease; -webkit-tap-highlight-color: transparent; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.boton:nth-child(even) { transform: rotate(1deg); border-radius: 24px 32px 22px 30px / 30px 22px 32px 24px; }
+/* se aplasta: es plastilina */
+.boton:active { transform: translateY(4px) scale(1.03, 0.93); box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.16), 0 2px 0 rgba(40, 20, 5, 0.35), 0 4px 8px rgba(20, 10, 0, 0.3); }
+.boton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.boton.principal { min-width: min(72vw, 290px); padding: 14px 28px 15px; font-size: clamp(22px, 3.8vh, 30px); --c: var(--rojo); }
+.boton.principal small { font-size: 0.46em; font-weight: 800; opacity: 0.95; letter-spacing: 0.04em; margin-top: 3px; }
+.boton.chico { min-width: min(36vw, 146px); padding: 12px 14px; font-size: clamp(14px, 2.3vh, 18px); --c: var(--madera); }
+.boton.azul { --c: var(--azul); }
+.boton.verde { --c: var(--verde); }
+.boton.amarillo { --c: var(--amarillo); color: var(--tinta); text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); }
+.boton.madera { --c: var(--madera); }
+.boton.apagado { filter: grayscale(0.7) brightness(0.9); }
+.fila { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.titulo-idioma { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 6px; }
+.titulo-idioma small { font-size: clamp(13px, 2vh, 16px); font-weight: 800; color: #fff; opacity: 0.92; text-shadow: 0 2px 0 var(--tinta); letter-spacing: 0.01em; }
+
+/* el menú y el idioma: el set lo dibuja el lienzo arriba; los botones van abajo, sobre la mesa */
+#menu, #idiomas { justify-content: flex-end; padding-bottom: max(34px, env(safe-area-inset-bottom)); }
+.botonera { display: flex; flex-direction: column; align-items: center; gap: clamp(9px, 1.5vh, 14px); }
+.bolsa {
+  position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; display: flex; align-items: center; gap: 7px;
+  --c: var(--crema); background-color: var(--c); border-radius: 18px 14px 20px 12px / 14px 20px 12px 18px; padding: 6px 13px 6px 8px; font-weight: 900; font-size: 18px; transform: rotate(2deg);
+  background-image: var(--huellas, none); background-size: 140px 140px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -4px 0 rgba(0, 0, 0, 0.1), var(--sombra);
+}
+.bolsa.izq { right: auto; left: 14px; transform: rotate(-2deg); }
+.bolita { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff4c8 0 16%, #f2a64a 20% 62%, #c96d1c 100%); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); display: inline-block; }
+.claquetita { width: 22px; height: 18px; display: inline-block; background: linear-gradient(#26262b 0 32%, transparent 32%), repeating-linear-gradient(120deg, #26262b 0 4px, #f4f1ea 4px 8px) top / 100% 32% no-repeat, #26262b; border-radius: 3px; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+.dato { margin: 0; font-weight: 900; color: var(--tinta); font-size: clamp(15px, 2.4vh, 19px); }
+.dato:empty { display: none; }
+.dato.oro { color: #b3610c; }
+.dato.nuevo { color: #2f7d4c; }
+.firma { position: absolute; bottom: max(10px, env(safe-area-inset-bottom)); margin: 0; font-size: 11px; letter-spacing: 0.2em; color: rgba(255, 240, 220, 0.8); font-weight: 900; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+
+/* los tres sets */
+.lista-sets { display: flex; flex-direction: column; gap: 14px; width: min(88vw, 380px); }
+.set {
+  all: unset; cursor: pointer; box-sizing: border-box; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; text-align: left; color: #fff; position: relative;
+  border-radius: 26px 20px 28px 18px / 20px 28px 18px 26px;
+  background-color: var(--c);
+  background-image: var(--huellas, none), radial-gradient(130% 95% at 28% 18%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 55%), linear-gradient(rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.16));
+  background-size: 140px 140px, 100% 100%, 100% 100%;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.3), inset 0 -6px 0 rgba(0, 0, 0, 0.16), var(--sombra);
+}
+.set:nth-child(1) { transform: rotate(-1.2deg); } .set:nth-child(2) { transform: rotate(1deg); } .set:nth-child(3) { transform: rotate(-0.6deg); }
+.set:active { transform: translateY(3px) scale(1.01, 0.96); }
+.set-taller { --c: #45a574; } .set-cocina { --c: #5f8fd6; } .set-noche { --c: #9b5fa8; }
+.set.cerrado { filter: grayscale(0.6) brightness(0.8); cursor: default; }
+.nombre-set { font-size: clamp(20px, 3.2vh, 26px); font-weight: 900; text-shadow: 0 2px 0 rgba(40, 20, 5, 0.4); }
+.dato-set { font-size: 15px; font-weight: 800; opacity: 0.95; }
+
+/* las diez escenas de un set: cuadraditos de plastilina */
+.grilla { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; width: min(92vw, 420px); padding: 6px; box-sizing: border-box; }
+.nivelB {
+  all: unset; cursor: pointer; aspect-ratio: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; color: var(--tinta);
+  border-radius: 18px 14px 20px 12px / 14px 20px 12px 18px; --c: var(--crema);
+  background-color: var(--c); background-image: var(--huellas, none), radial-gradient(130% 95% at 28% 18%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%);
+  background-size: 140px 140px, 100% 100%;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.5), inset 0 -5px 0 rgba(0, 0, 0, 0.1), var(--sombra);
+}
+.nivelB:nth-child(odd) { transform: rotate(-2deg); } .nivelB:nth-child(even) { transform: rotate(1.5deg); }
+.nivelB .num { font-weight: 900; font-size: clamp(18px, 3vh, 24px); }
+.nivelB .est { font-size: 11px; font-weight: 800; color: #8a6a48; min-height: 13px; }
+.nivelB.hecho { --c: #fff4d0; }
+.nivelB.unica .est { color: #c0780e; }
+.nivelB.cerrado { --c: #b9a78e; color: #7d6a55; cursor: default; }
+.nivelB:active { transform: translateY(2px) scale(1.02, 0.95); }
+.nivelB:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* el camarín */
+#camarin { justify-content: space-between; padding-top: max(62px, env(safe-area-inset-top)); }
+.pestanas { display: flex; gap: 6px; --c: var(--crema); background-color: var(--c); background-image: var(--huellas, none); background-size: 140px 140px; border-radius: 18px; padding: 5px; box-shadow: var(--sombra); transform: rotate(-1deg); }
+.pestana { all: unset; cursor: pointer; padding: 8px 16px; border-radius: 14px; font-weight: 900; font-size: clamp(14px, 2.2vh, 17px); color: var(--tinta); }
+.pestana.elegida { background: var(--azul); color: #fff; text-shadow: 0 2px 0 rgba(40, 20, 5, 0.3); }
+.flechas { display: flex; align-items: center; justify-content: space-between; width: min(96vw, 520px); flex: 1; }
+.flechas .hueco { flex: 1; }
+.flecha {
+  all: unset; cursor: pointer; width: 58px; height: 56px; font-size: 40px; line-height: 50px; text-align: center; font-weight: 900; color: #fff; box-sizing: border-box;
+  border-radius: 30px 26px 30px 24px / 26px 30px 24px 30px; --c: var(--azul); background-color: var(--c);
+  background-image: var(--huellas, none), radial-gradient(130% 95% at 28% 18%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 55%);
+  background-size: 140px 140px, 100% 100%;
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.32), inset 0 -6px 0 rgba(0, 0, 0, 0.16), var(--sombra);
+}
+.flecha:active { transform: translateY(3px) scale(1.04, 0.92); }
+.nombre { margin: 0; font-size: clamp(22px, 3.6vh, 28px); font-weight: 900; color: #fff; text-shadow: 0 3px 0 var(--tinta); }
+.aviso { margin: 0; min-height: 1.2em; font-weight: 800; color: #fff; text-shadow: 0 2px 0 var(--tinta); }
+
+.lista { display: grid; gap: 8px; width: min(92vw, 440px); --c: var(--crema); background-color: var(--c); background-image: var(--huellas, none); background-size: 140px 140px; box-shadow: var(--sombra); padding: 14px; border-radius: 22px 18px 24px 16px / 18px 24px 16px 22px; box-sizing: border-box; transform: rotate(0.6deg); }
+.lista .item { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
+.lista .ops { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.opcion { all: unset; cursor: pointer; padding: 6px 11px; border-radius: 12px; font-weight: 900; font-size: 13px; color: var(--tinta); }
+.opcion.elegida { background: var(--azul); color: #fff; }
+.opcion.peligro { color: var(--rojo); }
+
+/* la tarjeta de la pausa y del final: una placa de plastilina crema */
+.tarjeta {
+  display: flex; flex-direction: column; align-items: center; gap: clamp(8px, 1.5vh, 13px); padding: 26px 22px 22px; position: relative; width: min(86vw, 360px); box-sizing: border-box;
+  --c: var(--crema); background-color: var(--c); border-radius: 30px 24px 34px 22px / 24px 34px 22px 30px;
+  background-image: var(--huellas, none), radial-gradient(130% 95% at 28% 18%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 55%), linear-gradient(rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, 0.08));
+  background-size: 140px 140px, 100% 100%, 100% 100%;
+  box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.55), inset 0 -8px 0 rgba(0, 0, 0, 0.08), 0 8px 0 rgba(40, 20, 5, 0.3), 0 18px 30px rgba(20, 10, 0, 0.4);
+  transform: rotate(-1.2deg);
+  animation: cae 0.33s steps(4, end);
+}
+.tarjeta h2 { color: var(--rojo); text-shadow: 0 3px 0 rgba(40, 20, 5, 0.22); }
+/* adentro de la tarjeta (que ya está torcida) los botones van derechos: torcidos dos veces se pisaban */
+.tarjeta .boton, .tarjeta .boton:nth-child(even) { transform: none; }
+.tarjeta .boton:active { transform: translateY(3px) scale(1.02, 0.94); }
+/* entra de a cuadros (stop motion): steps y no una curva suave */
+@keyframes cae { 0% { transform: translateY(-60px) rotate(-7deg) scale(1.1, 0.9); opacity: 0; } 50% { transform: translateY(8px) rotate(1deg) scale(1.06, 0.92); opacity: 1; } }
+.tarjeta.final { width: min(88vw, 400px); }
+
+/* pausa mientras se juega: un botón redondo de plastilina arriba a la izquierda */
+.redondo {
+  all: unset; position: absolute; top: max(10px, env(safe-area-inset-top)); width: 46px; height: 46px; pointer-events: auto; cursor: pointer; box-sizing: border-box; color: var(--tinta);
+  display: flex; align-items: center; justify-content: center; border-radius: 24px 22px 25px 21px / 22px 25px 21px 24px;
+  --c: var(--crema); background-color: var(--c); background-image: var(--huellas, none); background-size: 140px 140px;
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.5), inset 0 -4px 0 rgba(0, 0, 0, 0.1), var(--sombra);
+}
+.arriba-izq { left: 12px; }
+.redondo .barras { display: flex; gap: 5px; }
+.redondo .barras span { width: 6px; height: 16px; background: var(--tinta); border-radius: 3px; }
+.redondo:active { transform: translateY(2px) scale(1.04, 0.94); }
+
+/* más ancha que alta (el teléfono acostado, la compu): los botones del menú a
+   la derecha; a la izquierda, el set (lo dibuja el lienzo). Es la misma
+   cuenta que main.js › acostado (W > H × 1,1). */
+@media (min-aspect-ratio: 11/10) {
+  #menu, #idiomas { align-items: flex-end; justify-content: center; padding-right: max(24px, env(safe-area-inset-right)); padding-bottom: max(26px, env(safe-area-inset-bottom)); }
+  .botonera { width: min(40vw, 460px); }
+  #idiomas .boton.principal, #menu .boton.principal { min-width: 0; width: 100%; }
+  .firma { right: max(24px, env(safe-area-inset-right)); width: min(40vw, 460px); }
+}
+/* acostado y bajo: todo más apretado */
+@media (orientation: landscape) and (max-height: 560px) {
+  .boton.principal { padding: 9px 20px; }
+  .grilla { grid-template-columns: repeat(10, 1fr); width: min(86vw, 720px); gap: 8px; }
+  .lista-sets { flex-direction: row; width: min(94vw, 760px); }
+  .set { flex: 1; }
+  #camarin { padding-top: max(12px, env(safe-area-inset-top)); gap: 6px; }
+  .flechas { width: min(70vw, 520px); }
+  .boton.chico { padding: 8px 12px; }
+  .tarjeta { padding: 16px 20px; gap: 6px; }
+}
+@media (max-width: 360px) { .boton.chico { min-width: 40vw; padding: 10px 8px; } }
+@media (prefers-reduced-motion: reduce) { .boton, .tarjeta { transition: none; animation: none; } }
