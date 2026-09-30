@@ -49,7 +49,7 @@ y aborta lo que venga detrás con `&&`: corrélo solo.
 | `morfi/` | **Morfi** (HTML, de cartón y papel, física de hilos propia) — ver `morfi/README.md` |
 | `guias/` | cómo hacer juegos que se vean bien (3D, 2D pixel art, aeroplaza) |
 | `memoria/` | lo que ya se sabe, en notas cortas: se entra por `memoria/INDICE.md` |
-| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, audio |
+| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, portadas de los juegos, audio |
 | `edificio/` | torre de oficinas armada por script en Blender + visor three.js |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables |
 | `Prompts/` | colecciones de prompts |

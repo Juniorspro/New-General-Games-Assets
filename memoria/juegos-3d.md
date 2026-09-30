@@ -17,6 +17,10 @@ El ejemplo que cita, `bosque/`, NO está en este repo; `pique3d/`, `perro/` y `e
 
 ## Rezona
 - Antes de una tanda, una imagen de prueba; el 22/09/2026 daba `CREDIT_RESERVE_FAILED` con créditos de sobra → plan B (§ 8), sin reintentar en bucle. → § 1
+- En el contenedor la sesión se abre con `npx rezona@latest login --no-browser`: imprime un link con código, quien pide lo abre y lo aprueba, y la clave (`rz_live_…`) queda en `~/.rezona/credentials.json`, nunca en el repo ni en el chat (30/09/2026).
+- Sin el MCP cargado en la sesión, se le habla por stdio: `herramientas/rezona/rz.py call <herramienta> '<json>'`; `fetch_generated_asset` con `dir` y una carpeta `.rezona/` vacía adentro alcanza (30/09/2026).
+- Tamaños medidos (30/09/2026): `1024x1536` da 896×1200 (3:4) y `864x1536` da 768×1376 (9:16); unos 81 créditos por imagen.
+- Pedir "dejá lugar para un logo en la esquina" hace que dibuje un rectángulo liso ahí; mejor "Keep the top quarter calm and uncluttered". Texto y logo, siempre por código encima. → `herramientas/portadas/`
 - Vale el `output_path` de la RESPUESTA; `size` respeta proporción, no número; `transparent: true`; el modelo por defecto saca solo PNG. → § 1
 - Frase de estilo idéntica al final de cada pedido; escala en metros; una sola hora del día. → § 2
 - Forma del pedido: tipo de toma + sujeto concreto + luz + negaciones ("no text, no watermark"). → § 3

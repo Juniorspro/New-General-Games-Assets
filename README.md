@@ -19,7 +19,7 @@ Juegos y herramientas. Ahora mismo lo principal es **Bomb Runner Simulator**
 | `morfi/` | MORFI, de JXSTUDIOS: cortá el hilo para que el caramelo caiga en la caja de cartón con hambre (30 niveles de papel en tres cajas); se juega con `morfi-en-un-archivo.html` |
 | `guias/` | cómo hacer juegos que se vean bien: 3D con Rezona, 2D pixel art y la receta de AEROPLAZA |
 | `memoria/` | lo que ya se sabe, en notas cortas para que cada sesión no relea el repo |
-| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, audio |
+| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona, portadas de los juegos, audio |
 | `edificio/` | una torre de oficinas armada por script en Blender + visor three.js |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables |
 | `Prompts/` | colecciones de prompts (finanzas, diseño web, skills de UI) |

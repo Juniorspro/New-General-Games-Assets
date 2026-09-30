@@ -50,7 +50,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | `globo/` | GLOBO LIBRE: el globo sube y el escudo aparta todo (30 niveles, infinito, tienda, 3 idiomas, física propia); se juega con `globo-en-un-archivo.html` | `globo/README.md`, [globo](globo.md) |
 | `morfi/` | MORFI: cortar el hilo para que el caramelo caiga en la caja con hambre (30 niveles en tres cajas, tienda, 3 idiomas, física de hilos propia); se juega con `morfi-en-un-archivo.html` | `morfi/README.md`, [morfi](morfi.md) |
 | `bomba/` | BOMB RUNNER SIMULATOR (el de Roblox, a medio hacer): correr con una bomba, explotar, mascotas y renacer | `bomba/README.md` |
-| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona (`rz.py`, `estado.json`), audio | `ARRANQUE.md § 4` |
+| `herramientas/` | Blender sin GPU, Neko, Mint, Rezona (`rz.py`, `estado.json`), portadas de los juegos (`portadas/`), audio | `ARRANQUE.md § 4`, [juegos](juegos.md) › Portadas |
 | `edificio/` | torre de oficinas armada por script en Blender + visor three.js | — |
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables | — |
 | `Prompts/` | colecciones de prompts | — |

@@ -62,3 +62,10 @@
 - Quedó `morfi/`: MORFI, original del género (se le dijo): Morfi es una caja de cartón que come caramelos; 30 niveles en tres cajas (cartón, cuaderno, papel de regalo) con clips, globos, abanicos, chinches, sobres, gomitas y alfileres que se mueven; tienda de 8 Morfis y 7 caramelos; intro de JXSTUDIOS de papel; el menú con el cartel que se hamaca y un caramelo que se corta ahí mismo. → [morfi](morfi.md)
 - Medido: 344 comprobaciones sin navegador, 20/20 en Chromium, archivo único de 192 KB que abre sin red. Cada nivel se gana con su solución guardada, ninguno sin tocar; margen promedio 99 %.
 - Falta: jugarlo en un teléfono de verdad (la dificultad está medida con tiempos vecinos, no con una persona). Siguen sin respuesta: rehacer las intros de Víbora y la isla en su estilo, y borrar la página vieja repetida de Cripta.
+
+## 30/09/2026 (portadas) · rama `ccr-6f24de5d-v3vxtu`
+- Pedido: "GENERAME con Rezona lab, 6 portadas de los 6 juegos que hicimos recién, que queden bien y tengan mi logo por alguna parte visible siempre en su estilo o sea del juego". Se tomaron los 6 del repo (se le dijo).
+- Rezona no estaba conectado en la sesión: se abrió con `login --no-browser` (aprobó el link que imprime) y se le habló por `rz.py`. Proyecto nuevo "Portadas JXSTUDIOS".
+- Quedaron las 6 (Morfi, Cripta Neón, Víbora.io, Globo Libre, La Isla, Bomb Runner Simulator), 1024×1536, mandadas como archivos. 7 imágenes, 567 créditos. El armador quedó en `herramientas/portadas/`; las imágenes no se suben al repo.
+- Falta: si quiere, subirlas como portada de cada juego en Rezona (no se tocó su perfil).
+

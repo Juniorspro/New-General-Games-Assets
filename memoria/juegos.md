@@ -42,6 +42,11 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 - Trampa: después de que la conversación se resume, publicar el mismo archivo crea OTRA página. Para actualizar la vieja: `read` con su `url` (sin `path`: con `path` la guarda pero no cuenta como leída); trae solo el principio y guarda el resto en un archivo. Después, publicar con esa `url`. Cripta quedó repetida la primera vez (30/09/2026).
 - Las páginas publicadas: Morfi `…/9iqvqec7DrWovm8ovxj4cE`, Globo Libre `…/8wbmLxhdGiBbf4mtwsJKfR`, Víbora.io `…/TAVP1DJMsS6hF3W7gfNWZg`, Cripta Neón `…/T1PGRxSYXXGYAU3g7w3y9C` (la vieja repetida es `…/7CNiZDnZJjKrDEr5DPpQvU`), La Isla `…/PXbogbznmFXVjJwP7ZGnbc` (todas `claude.ai/artifact/`).
 
+## Portadas (30/09/2026)
+- Pedido: 6 portadas de los 6 juegos con su logo visible, en el estilo de cada juego (con una captura de su perfil en Rezona: tarjetas verticales). Salieron 1024×1536 (2:3).
+- La ilustración la hace Rezona Lab sin texto; el título y el logo JXS se dibujan encima con el código del juego (el cartel del menú de Morfi, Globo y Cripta; el logo de Víbora) y el logo en su estilo: recortes de papel, píxel con neón, cromo, plano con borde, calcomanía. Los generadores deforman los logos. → `herramientas/portadas/` (`generar.py`, `componer.mjs`, `pedidos.json`)
+- El Morfi que salió en 9:16 tenía la boca en el frente (en el juego la boca son las tapas): se usó el de 3:4, fiel, con el cartel colgado desde arriba del cuadro para no tapar el caramelo.
+
 ## Niveles con física (Morfi, 30/09/2026)
 - Si la física no depende del personaje, se lo pone donde más perdona: se juegan cientos de tiempos al azar y se cuenta por dónde pasa el caramelo. Después, los tiempos de mayor margen y las estrellas donde pasan los caminos vecinos. → [morfi](morfi.md)
 - Cada nivel se prueba con su solución guardada, sin tocar, sin cada acción y mirando que use todo lo del tablero. → `morfi/pruebas/logica.mjs`
