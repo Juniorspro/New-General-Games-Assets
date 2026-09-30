@@ -81,3 +81,7 @@ Fuente: `ARRANQUE.md § 1` y `§ 7`. Ver también: [desplegar](desplegar.md),
 - Ejemplos listos: `bosque/pruebas/ver.mjs` (capturas desde lugares fijos),
   `cintas.mjs` (la partida entera) y `un-archivo.mjs` (el HTML único por
   `file://`). Frutiger Aero: [sitios](sitios.md).
+
+- **Mandar archivos al celu** (SendUserFile): hasta 30 MiB cada uno. Lo más grande va en varios zips de menos de
+  28 MiB, cada uno completo por su cuenta: repartir los archivos en tachos, no `zip -s`, que en el celu no se une.
+  Los `node_modules` y las capturas de las pruebas quedan afuera.
