@@ -134,7 +134,9 @@ await prueba('el teclado: flechas doblan, espacio es turbo, P pausa y P sigue', 
   const a0 = await V(pg, 'V.mia.ang');
   await pg.keyboard.down('ArrowLeft'); await pasos(pg, 20); await pg.keyboard.up('ArrowLeft');
   const a1 = await V(pg, 'V.mia.ang');
-  afirmar(a1 < a0 - 0.5, 'la flecha izquierda no dobló: ' + a0.toFixed(2) + ' → ' + a1.toFixed(2));
+  // el ángulo va de −π a π: la diferencia se mide dando la vuelta (nace mirando para cualquier lado)
+  const giro = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
+  afirmar(giro < -0.5, 'la flecha izquierda no dobló: ' + a0.toFixed(2) + ' → ' + a1.toFixed(2));
   await pg.evaluate(() => { window.__V.mia.masa = 60; });
   await pg.keyboard.down('Space'); await pasos(pg, 30);
   afirmar(await V(pg, 'V.mia.turbo'), 'el espacio no da turbo');

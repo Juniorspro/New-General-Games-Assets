@@ -37,6 +37,10 @@ Lo que junta las tres guías de `guias/` y lo que se ve en los juegos de este re
 | `isla/` | pixel art en 3D por texel de mundo; el menú que se mece y vuela a carteles (el que pidió para los juegos nuevos) → [isla](isla.md) |
 | `dimension-n/` | caída vertical con ragdolls de Verlet |
 
+## Publicar un juego como página (30/09/2026)
+- `python3 herramientas/pagina.py <juego> <carpeta>` pasa el archivo único a página publicable: sin doctype/html/head/body, con el `<title>` arriba (la publicación pone el esqueleto).
+- Trampa: después de que la conversación se resume, publicar el mismo archivo crea OTRA página. Para actualizar la vieja hay que pasar su `url` y leerla antes (leerla entera trae toda la página a la conversación). Cripta quedó repetida así.
+
 ## Música: lo que se sabe
 - Mejor grabada (Rezona `kind: music`, "seamless loop") que compuesta nota por nota. → [juegos-3d](juegos-3d.md)
 - Si va en código: desde tablas de acordes/escalas y progresiones fijas, con voicing plegado y scheduler con lookahead. → `guias/GUIA-AEROPLAZA.md § 11.2`

@@ -659,7 +659,7 @@ const FUENTE = (px, peso = 700) => `${peso} ${Math.round(px)}px system-ui, -appl
 const miles = (n) => Math.floor(n).toLocaleString('es-AR');
 
 function dibujarHud(g, W, H, { mundo, mia, esc = 1, tr, avisos = [], tabla = null, turboBoton = null, pausa = null, joystick = null }) {
-  const m = 10 * esc;
+  const m = 16 * esc;             // el mismo margen de 16 px que los menús
   // ── la tabla ──
   const top = tabla || mundo.tabla();
   const filas = top.slice(0, 10), puesto = mia ? top.indexOf(mia) + 1 : 0;

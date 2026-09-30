@@ -23,3 +23,5 @@ El juego está en `vibora/` (README con "Lo medido"). Pedido: "portear" slither.
 ## Trampas pagadas (30/09/2026)
 - La P que sacaba la pausa la volvía a poner: `entrada.js` marcaba la pausa en su keydown, que corre después del de `main.js`. Ahora la pausa por teclado la maneja solo `main.js`, con `!ev.repeat`.
 - Enter en el botón enfocado llega dos veces (la tecla y el clic que dispara): `entrar()` mira el estado antes.
+- Los ángulos se comparan con la diferencia envuelta (`atan2(sen d, cos d)`): la víbora nace mirando para cualquier lado y, con el ángulo entre −π y π, una prueba de "dobló a la izquierda" falló la vez que cruzó −π.
+- El servidor de prueba (`http.server` en el 8123) se muere solo de vez en cuando: si TODAS las pruebas dicen `ERR_CONNECTION_REFUSED`, es eso; se levanta con `nohup`.
