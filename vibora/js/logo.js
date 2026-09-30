@@ -25,6 +25,15 @@ function caminoLetra(ch, x, y, k) {
   return p;
 }
 
+let lienzoFranjas = null;
+function franjas() {
+  if (lienzoFranjas) return lienzoFranjas;
+  const c = document.createElement('canvas'); c.width = 24; c.height = 24;
+  const f = c.getContext('2d');
+  f.fillStyle = '#8cff3a'; f.fillRect(0, 0, 24, 24); f.fillStyle = '#58c91c'; f.fillRect(0, 0, 12, 24);
+  return (lienzoFranjas = c);
+}
+
 // Dibuja "VÍBORA.IO" centrado en (cx, cy) con alto de letra `alto`.
 // `t` mueve las franjas y hace latir el punto (una comida que brilla).
 export function dibujarLogo(g, cx, cy, alto, t = 0) {
@@ -42,11 +51,9 @@ export function dibujarLogo(g, cx, cy, alto, t = 0) {
   };
   pasada(gro + 12 * k, 'rgba(0,0,0,0.45)', 7 * k);   // sombra
   pasada(gro + 9 * k, '#0b2410');                     // borde
-  // el cuerpo con franjas que corren (el patrón se mueve con t)
-  const fr = document.createElement('canvas'); fr.width = 24; fr.height = 24;
-  const f = fr.getContext('2d');
-  f.fillStyle = '#8cff3a'; f.fillRect(0, 0, 24, 24); f.fillStyle = '#58c91c'; f.fillRect(0, 0, 12, 24);
-  const patron = g.createPattern(fr, 'repeat');
+  // el cuerpo con franjas que corren (el patrón se mueve con t); el lienzo
+  // de las franjas se hace una vez, no en cada cuadro del menú
+  const patron = g.createPattern(franjas(), 'repeat');
   patron.setTransform(new DOMMatrix([k * 1.6, k * 1.6, -k * 1.6, k * 1.6, t * 30 * k, 0]));
   pasada(gro, patron);
   pasada(gro * 0.32, 'rgba(255,255,255,0.55)', -gro * 0.22);     // brillo

@@ -4,11 +4,10 @@
 // brillo lo cruza y "JXSTUDIOS" se tipea abajo. Música y golpes van
 // agendados con el reloj del audio (sonido.js › jingleJXS), así caen justo.
 //
-// Arranca sola, sin tocar nada (lo pidió quien pide, 30/09/2026). El
-// navegador casi nunca deja sonar antes de un toque: se espera un instante
-// en negro a que el audio arranque y, si arrancó, la música va en fase con
-// el dibujo; si no, la intro va muda y el primer toque la saltea (ese toque
-// ya prende el sonido para el resto).
+// Arranca apenas abre, sin tocar nada (lo pidió quien pide, 30/09/2026). El
+// navegador casi nunca deja sonar antes de un toque: si deja, el audio nace
+// andando y la música va en fase con el dibujo; si no, nace suspendido y la
+// intro va muda (el primer toque la saltea y ya prende el sonido).
 import { P } from './paleta.js';
 import { texto, anchoTexto } from './fuente.js';
 import { monogramaPixel, puntas } from './logojxs.js';
@@ -44,20 +43,6 @@ function fondoCarbono(W, H, cx, cy, rombo) {
     if (d >= 0 && d < 3) { g.fillStyle = d < 1 ? '#9aa0aa' : '#4d5058'; g.fillRect(x, y, 1, 1); }
   }
   return c;
-}
-
-// El instante en negro antes de la intro: hasta 0,3 s para que el audio
-// arranque (sin un toque casi nunca arranca), así la música no empieza tarde.
-export class Espera {
-  constructor(app, siguiente) {
-    this.app = app; this.siguiente = siguiente; this.nombre = 'espera';
-    this.desde = performance.now();
-    app.sonido.despertar();
-  }
-  pasar() {
-    if (this.app.sonido.activo() || performance.now() - this.desde > 300) this.app.escena = new IntroJXS(this.app, this.siguiente);
-  }
-  dibujar(g, W, H) { g.fillStyle = P.negro; g.fillRect(0, 0, W, H); }
 }
 
 export class IntroJXS {

@@ -31,10 +31,14 @@ html.girada #app { transform-origin: 0 0; transform: rotate(90deg) translateY(-1
 #lienzo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 .oculto { display: none !important; }
 
+/* lo que se ve mientras carga el código: negro con JXSTUDIOS, como la intro
+   que viene enseguida ("cargando" aparece solo si tarda) */
 #precarga { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  background: linear-gradient(#2a78ec, #9fd8ff 70%, #f3e2bb 70.5%); font-weight: 800; letter-spacing: .04em; }
-#precarga b { font: 900 italic 48px var(--gorda); text-shadow: 0 4px 0 #1b4f9e; }
-#precarga small { max-width: 420px; text-align: center; opacity: 0; transition: opacity 1s; color: #10366e; font-weight: 700; }
+  background: #000; color: #c9ccd4; font: 700 15px system-ui, sans-serif; }
+#precarga b { font: 700 22px system-ui, sans-serif; letter-spacing: .34em; }
+#precarga span { color: #7d8494; opacity: 0; animation: precargaTarda .4s ease-out 1.2s forwards; }
+@keyframes precargaTarda { to { opacity: 1; } }
+#precarga small { max-width: 420px; padding: 0 16px; text-align: center; opacity: 0; transition: opacity 1s; color: #9aa3b5; font-weight: 700; }
 .sinjs { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: #fff; color: #222; font: 700 20px system-ui; text-align: center; padding: 24px; }
 
 #velo { position: fixed; inset: 0; z-index: 30; background: #000; opacity: 0; pointer-events: none; transition: opacity .35s; }
@@ -44,6 +48,9 @@ html.girada #app { transform-origin: 0 0; transform: rotate(90deg) translateY(-1
 #intro { position: fixed; inset: 0; z-index: 42; -webkit-tap-highlight-color: transparent; }
 #blanco { position: fixed; inset: 0; z-index: 44; background: #fff; opacity: 0; pointer-events: none; transition: opacity .6s ease-out; }
 #blanco.on { opacity: 1; transition: none; }
+/* mientras se arma la isla, detrás del blanco del final de la intro */
+#blanco::after { content: attr(data-texto); position: absolute; left: 0; right: 0; bottom: 14%; text-align: center; font: 700 15px system-ui, sans-serif; letter-spacing: .06em; color: #8a93a6; opacity: 0; }
+#blanco.cargando::after { opacity: 1; }
 
 /* ── HUD ── */
 #hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
@@ -225,14 +232,14 @@ html.chata body.tactil #pinceles { left: 50%; right: auto; top: calc(max(10px, e
 </head>
 <body>
 <!-- lo primero que se ve, sin JavaScript -->
-<div id="precarga"><b>LA ISLA</b><span>Cargando la isla…</span><small id="precargaAyuda">¿Sigue acá? Abrilo con Chrome, Safari, Edge o Firefox (no desde una vista previa).</small></div>
+<div id="precarga"><b>JXSTUDIOS</b><span>Cargando la isla…</span><small id="precargaAyuda">¿Sigue acá? Abrilo con Chrome, Safari, Edge o Firefox (no desde una vista previa).</small></div>
 <noscript><div class="sinjs">La Isla necesita JavaScript · The Island needs JavaScript · A Ilha precisa de JavaScript</div></noscript>
 <script>
 // antes de que cargue el juego: la carga ya en el idioma de la persona
 try { var l = JSON.parse(localStorage.getItem('isla_ajustes') || '{}').idioma || (navigator.language || 'es').slice(0, 2),
-  T = { en: ['THE ISLAND', 'Loading the island…', 'Still here? Open it with Chrome, Safari, Edge or Firefox (not from a preview).'],
-        pt: ['A ILHA', 'Carregando a ilha…', 'Ainda aqui? Abra no Chrome, Safari, Edge ou Firefox (não por uma pré-visualização).'] }[l];
-  if (T) { var p = document.getElementById('precarga').children; for (var i = 0; i < 3; i++) p[i].textContent = T[i]; } } catch (e) {}
+  T = { en: ['Loading the island…', 'Still here? Open it with Chrome, Safari, Edge or Firefox (not from a preview).'],
+        pt: ['Carregando a ilha…', 'Ainda aqui? Abra no Chrome, Safari, Edge ou Firefox (não por uma pré-visualização).'] }[l];
+  if (T) { var p = document.getElementById('precarga').children; for (var i = 0; i < 2; i++) p[i + 1].textContent = T[i]; } } catch (e) {}
 setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.style.opacity=1;},7000);
 </script>
 
@@ -827,7 +834,7 @@ const T = {
     'menu.deNuevo1': '¿DE', 'menu.deNuevo2': 'NUEVO?', 'menu.siBorrar': 'SÍ, BORRAR LA ISLA', 'menu.no': '← NO',
     'menu.pausa': 'PAUSA', 'menu.salir': 'SALIR AL MENÚ',
     'menu.pie': 'JXSTUDIOS · La isla de @vfx843, rehecha en HTML · Menú al estilo de @brutu_scripts',
-    'intro.presenta': 'presenta',
+    'intro.presenta': 'presenta', 'intro.cargando': 'Armando la isla…',
     'menu.pieBorrar': 'Se borra lo guardado: el terreno, lo construido y lo juntado.',
     'menu.pieCartel': 'Tocá los botones del cartel',
     'menu.pieGuarda': 'La isla se guarda sola',
@@ -926,7 +933,7 @@ const T = {
     'menu.deNuevo1': 'START', 'menu.deNuevo2': 'OVER?', 'menu.siBorrar': 'YES, ERASE THE ISLAND', 'menu.no': '← NO',
     'menu.pausa': 'PAUSED', 'menu.salir': 'QUIT TO MENU',
     'menu.pie': "JXSTUDIOS · @vfx843's island, remade in HTML · Menu in the style of @brutu_scripts",
-    'intro.presenta': 'presents',
+    'intro.presenta': 'presents', 'intro.cargando': 'Building the island…',
     'menu.pieBorrar': 'Everything saved is erased: the terrain, what you built and what you collected.',
     'menu.pieCartel': 'Press the buttons on the sign',
     'menu.pieGuarda': 'The island saves itself',
@@ -1047,7 +1054,7 @@ const T = {
     'menu.deNuevo1': 'COMEÇAR', 'menu.deNuevo2': 'DE NOVO?', 'menu.siBorrar': 'SIM, APAGAR A ILHA', 'menu.no': '← NÃO',
     'menu.pausa': 'PAUSA', 'menu.salir': 'SAIR PARA O MENU',
     'menu.pie': 'JXSTUDIOS · A ilha de @vfx843, refeita em HTML · Menu no estilo de @brutu_scripts',
-    'intro.presenta': 'apresenta',
+    'intro.presenta': 'apresenta', 'intro.cargando': 'Montando a ilha…',
     'menu.pieBorrar': 'Tudo o que foi salvo é apagado: o terreno, o que você construiu e o que juntou.',
     'menu.pieCartel': 'Toque nos botões da placa',
     'menu.pieGuarda': 'A ilha se salva sozinha',
@@ -7004,8 +7011,7 @@ const M_intro = (() => {
 //   1,45  un brillo cruza el metal en diagonal; suben "JXStudios" y "presenta";
 //   2,5   la cámara se mete en el logo y todo se va a blanco: la playa aparece
 //         desde el blanco (main.js).
-// Arranca sola (main.js espera un instante a que arranque el audio): hasta
-// entonces, negro.
+// Sale apenas carga la página, antes de armar la isla (main.js › correrIntro).
 // Usa el renderer del juego con escena y cámara propias y a resolución
 // completa: el juego dibuja pixelado a propósito, el logo no. La música es
 // sonido.js › jingleJXS, con estos mismos tiempos. Un toque la saltea.
@@ -9912,7 +9918,7 @@ return { Sonido };
 })();
 
 /* ── main ── */
-(() => {
+(async () => {
 // La Isla — el arranque y el bucle. Arma la isla desde la semilla, carga lo
 // guardado, conecta cada parte y reparte cada cuadro entre el menú, el juego,
 // la ventana de inventario y la pausa. También el final: el barco que viene a
@@ -10002,6 +10008,18 @@ function medir() {
 addEventListener('resize', medir);
 medir();
 
+// ── la intro de JXSTUDIOS, antes que nada ──────────────────────────────────
+// Sale apenas carga la página, sin tocar nada. La isla tarda un par de
+// segundos en armarse y traba la página mientras tanto: se arma recién
+// cuando la intro termina en blanco, y la playa aparece desde ese blanco.
+// ?directo (o volver de "isla nueva") no tiene intro; las pruebas (?pausa,
+// ?cam, ?sinintro) tampoco, salvo con ?intro. → correrIntro, intro.js
+const son = new Sonido();
+let directo = url.has('directo');
+try { if (sessionStorage.getItem('isla_directo')) { directo = true; sessionStorage.removeItem('isla_directo'); } } catch { /* nada */ }
+const conIntro = !directo && (url.has('intro') || !(url.has('pausa') || url.has('cam') || url.has('sinintro')));
+if (conIntro) await correrIntro();
+
 // ── el mundo ────────────────────────────────────────────────────────────────
 const nueva = url.has('nueva');
 const partida = nueva ? null : leerPartida();
@@ -10044,7 +10062,6 @@ const fisica = {
   bloques: { empujar: (p, r, a, e) => { bloques.empujar(p, r, a, e); if (J.bajo) mina.empujar(p, r); } },
 };
 const objetos = new Objetos(escena, fisica, part, luces);
-const son = new Sonido();
 const mano = new Mano(escenaMano);
 const pesca = new Pesca(escena, fisica, part, son);
 const jugador = new Jugador(fisica);
@@ -10446,9 +10463,7 @@ function paso(dt, dibujar = true) {
     if (f.t >= f.espera) { fundidos.splice(i, 1); f.fn(); if (!fundidos.length) velo.classList.remove('on'); }
   }
 
-  if (J.estado === 'intro') {
-    J.intro.actualizar(dt);
-  } else if (J.estado === 'libre') {
+  if (J.estado === 'libre') {
     // cámara fija de las pruebas (?cam=x,y,z&mira=x,y,z): el mundo corre igual
     mundoComun(dt, camara.position);
   } else if (J.estado === 'menu' || J.estado === 'carga') {
@@ -10510,15 +10525,7 @@ function paso(dt, dibujar = true) {
     cielo.enlazarSombra();
   }
 
-  if (dibujar && J.estado === 'intro') {
-    // la intro va a resolución completa (el juego, pixelado): se vuelve a
-    // poner en cada cuadro porque medir() la pisa si la pantalla gira
-    const pr = Math.min(2, Math.max(1.5, devicePixelRatio || 1));
-    if (renderer.getPixelRatio() !== pr) renderer.setPixelRatio(pr);
-    renderer.getSize(_tam);
-    if (_tam.x !== pantalla.w || _tam.y !== pantalla.h) renderer.setSize(pantalla.w, pantalla.h, false);
-    J.intro.dibujar(pantalla.w, pantalla.h);
-  } else if (dibujar) {
+  if (dibujar) {
     // el reflejo del agua primero (si la cámara está bajo el agua, no hace falta)
     if (!J.bajo && camara.position.y > J.nivelAgua + 0.05) reflejo.dibujar(renderer, escena, camara, cielo.domo, J.nivelAgua);
     else mundo.agua.material.uniforms.uHayReflejo.value = 0;
@@ -10529,7 +10536,7 @@ function paso(dt, dibujar = true) {
       renderer.render(escenaMano, camara);
     }
     // el blanco de la intro se va recién con la playa ya dibujada
-    if (J.revelar) { J.revelar = false; document.getElementById('blanco').classList.remove('on'); }
+    if (J.revelar) { J.revelar = false; document.getElementById('blanco').classList.remove('on', 'cargando'); }
   }
   entrada.finCuadro();
 }
@@ -10551,40 +10558,58 @@ J.cambiarIdioma = (c) => {
 };
 etiquetar();
 
-// ── la intro de JXSTUDIOS ──────────────────────────────────────────────────
-// Arranca sola: tres segundos en 3D y la playa, que aparece desde el blanco.
-// Antes, hasta 0,3 s en negro a que arranque el audio: sin un toque casi
-// nunca arranca y la intro va muda (el primer toque la saltea y ya prende el
-// sonido); si arranca, la música va en fase. Un toque o una tecla la
-// saltean. → intro.js
-function empezarIntro(despues) {
-  const capa = document.getElementById('intro'), blanco = document.getElementById('blanco');
-  capa.classList.remove('oculto');
-  lienzo.style.imageRendering = 'auto';
-  J.estado = 'intro';
-  const intro = J.intro = new IntroJXS({
-    renderer, son, presenta: t('intro.presenta'),
-    alTerminar: () => {
-      blanco.classList.add('on');
-      capa.classList.add('oculto');
-      intro.liberar(); J.intro = null;
-      lienzo.style.imageRendering = '';
-      medir();                          // vuelve la resolución pixelada del juego
-      son.musica('menu');
-      despues();
-      J.revelar = true;
-    },
+// ── la intro de JXSTUDIOS, con su propio bucle ────────────────────────────
+// Corre antes de que exista el juego (ni J ni su bucle): se resuelve cuando
+// terminó en blanco. El audio se crea ya: si el navegador deja sonar sin un
+// toque, nace andando y la intro trae su música; si no (lo normal), va muda
+// y el primer toque la saltea y prende el sonido. Con ?pausa no corre sola:
+// las pruebas la avanzan con window.__intro.paso(dt, dibujar).
+function correrIntro() {
+  return new Promise((listo) => {
+    document.getElementById('precarga')?.remove();
+    const capa = document.getElementById('intro'), blanco = document.getElementById('blanco');
+    blanco.dataset.texto = t('intro.cargando');
+    capa.classList.remove('oculto');
+    lienzo.style.imageRendering = 'auto';
+    son.iniciar();
+    const intro = new IntroJXS({
+      renderer, son, presenta: t('intro.presenta'),
+      alTerminar: () => {
+        blanco.classList.add('on', 'cargando');
+        capa.classList.add('oculto');
+        intro.liberar();
+        lienzo.style.imageRendering = '';
+        medir();                        // vuelve la resolución pixelada del juego
+        window.__intro = null;
+        // dos cuadros: que el blanco y el "armando la isla" se pinten antes
+        // de que armarla trabe la página
+        requestAnimationFrame(() => requestAnimationFrame(() => listo()));
+      },
+    });
+    intro.empezar();
+    const _t = new THREE.Vector2();
+    const paso = (dt, dibujar = true) => {
+      intro.actualizar(dt);
+      if (!dibujar || intro.terminado) return;
+      // a resolución completa: se vuelve a poner porque medir() la pisa si la pantalla gira
+      const pr = Math.min(2, Math.max(1.5, devicePixelRatio || 1));
+      if (renderer.getPixelRatio() !== pr) renderer.setPixelRatio(pr);
+      renderer.getSize(_t);
+      if (_t.x !== pantalla.w || _t.y !== pantalla.h) renderer.setSize(pantalla.w, pantalla.h, false);
+      intro.dibujar(pantalla.w, pantalla.h);
+    };
+    let ultimo = performance.now();
+    const bucle = (ahora) => {
+      if (intro.terminado) return;
+      requestAnimationFrame(bucle);
+      paso(Math.max(0, Math.min(0.05, (ahora - ultimo) / 1000)));
+      ultimo = ahora;
+    };
+    if (!url.has('pausa')) requestAnimationFrame(bucle);
+    capa.addEventListener('pointerdown', () => { son.iniciar(); intro.saltear(); });
+    addEventListener('keydown', () => { son.iniciar(); if (!intro.terminado) intro.saltear(); });
+    window.__intro = { intro, paso };
   });
-  son.iniciar();
-  const desde = performance.now();
-  const mirar = () => {
-    if (J.intro !== intro || intro.t >= 0) return;
-    if ((son.ctx && son.ctx.state === 'running') || performance.now() - desde > 300) intro.empezar();
-    else requestAnimationFrame(mirar);
-  };
-  requestAnimationFrame(mirar);
-  capa.addEventListener('pointerdown', () => intro.saltear());
-  addEventListener('keydown', () => { if (J.estado === 'intro') intro.saltear(); });
 }
 
 // ── arranque ───────────────────────────────────────────────────────────────
@@ -10600,12 +10625,7 @@ addEventListener('resize', () => {
   }
 });
 J.aplicarAjustes(false);
-// ?directo (o volver de "isla nueva") entra derecho a jugar, sin intro
-let directo = url.has('directo');
-try { if (sessionStorage.getItem('isla_directo')) { directo = true; sessionStorage.removeItem('isla_directo'); } } catch { /* nada */ }
-// la intro de JXSTUDIOS: siempre, salvo en las pruebas (?pausa o ?cam) si no piden ?intro
-const conIntro = !directo && (url.has('intro') || !(url.has('pausa') || url.has('cam') || url.has('sinintro')));
-if (!conIntro) son.musica('menu');
+son.musica('menu');
 
 if (partida) {
   if (!aplicarPartida(J, partida)) nuevaPartida();
@@ -10614,9 +10634,11 @@ if (partida) {
 ponerBajo(false);
 
 // la primera vez se elige el idioma, sobre la misma playa del menú
-const abrirMenu = () => { J.estado = 'menu'; J.menu.abrir(idiomaElegido || directo ? 'principal' : 'idioma'); };
-if (conIntro) empezarIntro(abrirMenu);
-else { abrirMenu(); if (directo) J.empezar(false); }
+J.estado = 'menu';
+J.menu.abrir(idiomaElegido || directo ? 'principal' : 'idioma');
+if (directo) J.empezar(false);
+// después de la intro, el blanco se saca recién con la playa dibujada (paso)
+if (conIntro) J.revelar = true;
 
 if (url.has('hora')) cielo.hora = +url.get('hora');
 if (url.has('cam')) {
@@ -10626,7 +10648,7 @@ if (url.has('cam')) {
   camara.position.set(...v('cam'));
   if (url.has('mira')) camara.lookAt(...v('mira'));
 }
-document.getElementById('precarga').remove();
+document.getElementById('precarga')?.remove();
 
 let ultimo = performance.now();
 function bucle(ahora) {

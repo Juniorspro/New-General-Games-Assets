@@ -13,7 +13,7 @@ import { crearSonido } from './sonido.js';
 import { crearIdioma } from './idioma.js';
 import { cargar, guardar, borrar, base } from './guardado.js';
 import { Portada, Mapa, Juego, Tienda, Ajustes } from './pantallas.js';
-import { Espera } from './intro.js';
+import { IntroJXS } from './intro.js';
 import { iris } from './ui.js';
 import { NIVELES } from './niveles.js';
 import { leer } from './reglas.js';
@@ -110,9 +110,11 @@ function escenaDirecta() {
   if (d === 'ajustes') return new Ajustes(app);
   return new Portada(app);
 }
-// Primero la intro de JXSTUDIOS, que arranca sola (intro.js › Espera).
+// Primero la intro de JXSTUDIOS, desde el primer cuadro (el audio se crea
+// ya: si el navegador deja sonar, nace andando y la intro trae su música).
 const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
-app.escena = conIntro ? new Espera(app, escenaDirecta) : escenaDirecta();
+if (conIntro) sonido.despertar();
+app.escena = conIntro ? new IntroJXS(app, escenaDirecta) : escenaDirecta();
 
 // si la pestaña se esconde: pausa y silencio
 document.addEventListener('visibilitychange', () => {

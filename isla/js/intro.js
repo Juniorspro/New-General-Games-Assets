@@ -9,8 +9,7 @@
 //   1,45  un brillo cruza el metal en diagonal; suben "JXStudios" y "presenta";
 //   2,5   la cámara se mete en el logo y todo se va a blanco: la playa aparece
 //         desde el blanco (main.js).
-// Arranca sola (main.js espera un instante a que arranque el audio): hasta
-// entonces, negro.
+// Sale apenas carga la página, antes de armar la isla (main.js › correrIntro).
 // Usa el renderer del juego con escena y cámara propias y a resolución
 // completa: el juego dibuja pixelado a propósito, el logo no. La música es
 // sonido.js › jingleJXS, con estos mismos tiempos. Un toque la saltea.

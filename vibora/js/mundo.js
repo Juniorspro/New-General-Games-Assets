@@ -135,7 +135,8 @@ export class Mundo {
     this.esperando = this.esperando.filter((e) => { if (this.t < e.cuando) return true; this.nacerBot(); return false; });
     const vivos = this.viboras.filter((v) => v.viva && v.bot).length + this.esperando.length;
     for (let k = vivos; k < this.cantidadBots; k++) this.esperando.push({ cuando: this.t + 1 + this.r() * 3 });
-    let reponer = Math.min(8, this.comidaMeta - this.cantidadComida);
+    // hasta 480 bolitas por segundo (por segundo y no por paso: los pasos varían)
+    let reponer = Math.min(Math.max(1, Math.round(480 * dt)), this.comidaMeta - this.cantidadComida);
     while (reponer-- > 0) this.comidaSuelta();
     // las muertas se sacan de la lista (después de avisar)
     if (this.viboras.some((v) => !v.viva)) this.viboras = this.viboras.filter((v) => v.viva);

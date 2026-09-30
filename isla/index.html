@@ -10,14 +10,14 @@
 </head>
 <body>
 <!-- lo primero que se ve, sin JavaScript -->
-<div id="precarga"><b>LA ISLA</b><span>Cargando la isla…</span><small id="precargaAyuda">¿Sigue acá? Abrilo con Chrome, Safari, Edge o Firefox (no desde una vista previa).</small></div>
+<div id="precarga"><b>JXSTUDIOS</b><span>Cargando la isla…</span><small id="precargaAyuda">¿Sigue acá? Abrilo con Chrome, Safari, Edge o Firefox (no desde una vista previa).</small></div>
 <noscript><div class="sinjs">La Isla necesita JavaScript · The Island needs JavaScript · A Ilha precisa de JavaScript</div></noscript>
 <script>
 // antes de que cargue el juego: la carga ya en el idioma de la persona
 try { var l = JSON.parse(localStorage.getItem('isla_ajustes') || '{}').idioma || (navigator.language || 'es').slice(0, 2),
-  T = { en: ['THE ISLAND', 'Loading the island…', 'Still here? Open it with Chrome, Safari, Edge or Firefox (not from a preview).'],
-        pt: ['A ILHA', 'Carregando a ilha…', 'Ainda aqui? Abra no Chrome, Safari, Edge ou Firefox (não por uma pré-visualização).'] }[l];
-  if (T) { var p = document.getElementById('precarga').children; for (var i = 0; i < 3; i++) p[i].textContent = T[i]; } } catch (e) {}
+  T = { en: ['Loading the island…', 'Still here? Open it with Chrome, Safari, Edge or Firefox (not from a preview).'],
+        pt: ['Carregando a ilha…', 'Ainda aqui? Abra no Chrome, Safari, Edge ou Firefox (não por uma pré-visualização).'] }[l];
+  if (T) { var p = document.getElementById('precarga').children; for (var i = 0; i < 2; i++) p[i + 1].textContent = T[i]; } } catch (e) {}
 setTimeout(function(){var a=document.getElementById('precargaAyuda');if(a)a.style.opacity=1;},7000);
 </script>
 

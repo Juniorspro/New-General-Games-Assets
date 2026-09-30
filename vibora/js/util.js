@@ -24,3 +24,10 @@ export function difAng(a, b) {
 }
 export const salida = (t) => 1 - (1 - t) * (1 - t);
 export const salidaAtras = (t) => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
+// El tiempo real de un cuadro partido en pasos de a lo sumo `max`: [cuántos,
+// de cuánto]. Con pasos fijos de 1/60 y una pantalla de 90 o 120 Hz, uno de
+// cada dos o tres cuadros quedaba sin moverse y la víbora iba a tirones.
+export function trozos(dtReal, max) {
+  const n = Math.max(1, Math.ceil(dtReal / max - 1e-9));
+  return [n, dtReal / n];
+}

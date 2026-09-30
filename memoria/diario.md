@@ -47,3 +47,5 @@
 - Medido: 152 comprobaciones sin navegador, 15/15 en Chromium, archivo único de 113 KB que abre sin red.
 - La isla volvió al árbol (desde `fbffdfb`) con su intro 3D de JXSTUDIOS: tubos de cromo que se escriben, reja, golpe, brillo y la playa desde el blanco. 66/66 y 7/7; archivo único de 1182 KB. → [isla](isla.md)
 - Falta: probar las tres intros y los juegos en un teléfono de verdad (Chromium sin placa no dice nada de los cuadros por segundo).
+- Después pidió: "que inicien la cinemática sin tener que tocarla", "dame los HTML directos pa descargar" y "el de serpiente se laguea".
+- Quedó: las tres intros desde el primer cuadro, sin puerta (el sonido suena solo si el navegador deja; si no, va muda). La isla muestra la intro antes de armarse. Víbora avanza cada cuadro su tiempo real (a 90/120 Hz iba a tirones) y pinta un 32 % menos en el teléfono. Los tres HTML se mandaron como archivos. → [vibora](vibora.md), [isla](isla.md)

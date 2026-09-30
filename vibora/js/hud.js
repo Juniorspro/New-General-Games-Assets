@@ -4,6 +4,11 @@
 const FUENTE = (px, peso = 700) => `${peso} ${Math.round(px)}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`;
 const miles = (n) => Math.floor(n).toLocaleString('es-AR');
 
+// La tabla son unos treinta textos: se escriben en un lienzo aparte cuatro
+// veces por segundo y cada cuadro solo se copia (escribir texto por cuadro es
+// de lo más caro en el teléfono). Lo mismo "tu largo", cuando cambia.
+const tablaC = { c: null, hasta: 0, clave: '' }, largoC = { c: null, clave: '' };
+
 export function dibujarHud(g, W, H, { mundo, mia, esc = 1, tr, avisos = [], tabla = null, turboBoton = null, pausa = null, joystick = null }) {
   const m = 16 * esc;             // el mismo margen de 16 px que los menús
   // ── la tabla ──
@@ -12,27 +17,44 @@ export function dibujarHud(g, W, H, { mundo, mia, esc = 1, tr, avisos = [], tabl
   const fs = 12.5 * esc, alto = fs * 1.35;
   const anchoT = Math.min(W * 0.46, 190 * esc), x0 = W - anchoT - m, y0 = m;
   const n = filas.length + (mia && puesto > 10 ? 1 : 0);
-  g.fillStyle = 'rgba(8,10,18,0.55)';
-  redondo(g, x0, y0, anchoT, alto * (n + 1.4), 8 * esc); g.fill();
-  g.font = FUENTE(fs, 800); g.textBaseline = 'middle'; g.textAlign = 'left';
-  g.fillStyle = '#ffd35c'; g.fillText(tr('tabla'), x0 + 10 * esc, y0 + alto * 0.8);
-  const fila = (i, v, y, destacar) => {
-    g.font = FUENTE(fs * 0.92, destacar ? 800 : 600);
-    g.fillStyle = destacar ? '#ffffff' : 'rgba(255,255,255,0.72)';
-    // el puesto alineado a la derecha: "#10" no se pega al nombre
-    g.textAlign = 'right'; g.fillText(`#${i}`, x0 + 34 * esc, y);
-    g.textAlign = 'left'; g.fillText(recortar(g, v.nombre, anchoT - 96 * esc), x0 + 40 * esc, y);
-    g.textAlign = 'right'; g.fillText(miles(v.masa), x0 + anchoT - 10 * esc, y);
-  };
-  filas.forEach((v, k) => fila(k + 1, v, y0 + alto * (k + 1.8), v === mia));
-  if (mia && puesto > 10) fila(puesto, mia, y0 + alto * (filas.length + 1.8), true);
+  const ahora = performance.now(), clave = `${Math.round(anchoT)}|${esc}|${n}|${tr('tabla')}`;
+  if (!tablaC.c || ahora >= tablaC.hasta || tablaC.clave !== clave) {
+    tablaC.clave = clave; tablaC.hasta = ahora + 250;
+    const c = tablaC.c || (tablaC.c = document.createElement('canvas'));
+    c.width = Math.ceil(anchoT); c.height = Math.ceil(alto * (n + 1.4));
+    const q = c.getContext('2d');
+    q.fillStyle = 'rgba(8,10,18,0.55)';
+    redondo(q, 0, 0, anchoT, alto * (n + 1.4), 8 * esc); q.fill();
+    q.font = FUENTE(fs, 800); q.textBaseline = 'middle'; q.textAlign = 'left';
+    q.fillStyle = '#ffd35c'; q.fillText(tr('tabla'), 10 * esc, alto * 0.8);
+    const fila = (i, v, y, destacar) => {
+      q.font = FUENTE(fs * 0.92, destacar ? 800 : 600);
+      q.fillStyle = destacar ? '#ffffff' : 'rgba(255,255,255,0.72)';
+      // el puesto alineado a la derecha: "#10" no se pega al nombre
+      q.textAlign = 'right'; q.fillText(`#${i}`, 34 * esc, y);
+      q.textAlign = 'left'; q.fillText(recortar(q, v.nombre, anchoT - 96 * esc), 40 * esc, y);
+      q.textAlign = 'right'; q.fillText(miles(v.masa), anchoT - 10 * esc, y);
+    };
+    filas.forEach((v, k) => fila(k + 1, v, alto * (k + 1.8), v === mia));
+    if (mia && puesto > 10) fila(puesto, mia, alto * (filas.length + 1.8), true);
+  }
+  g.drawImage(tablaC.c, Math.round(x0), Math.round(y0));
   // ── tu largo y tu puesto ──
   if (mia) {
-    g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-    g.font = FUENTE(22 * esc, 900);
-    sombreado(g, `${tr('largo')}: ${miles(mia.masa)}`, m + 4 * esc, H - m - 22 * esc, '#ffffff');
-    g.font = FUENTE(13 * esc, 700);
-    sombreado(g, tr('puesto', { n: puesto, de: top.length }), m + 4 * esc, H - m - 4 * esc, 'rgba(255,255,255,0.75)');
+    const largo = `${tr('largo')}: ${miles(mia.masa)}`, suPuesto = tr('puesto', { n: puesto, de: top.length });
+    const clave = `${esc}|${largo}|${suPuesto}`;
+    if (!largoC.c || largoC.clave !== clave) {
+      largoC.clave = clave;
+      const c = largoC.c || (largoC.c = document.createElement('canvas'));
+      c.width = Math.ceil(Math.min(W, 420 * esc)); c.height = Math.ceil(46 * esc);
+      const q = c.getContext('2d');
+      q.textAlign = 'left'; q.textBaseline = 'alphabetic';
+      q.font = FUENTE(22 * esc, 900);
+      sombreado(q, largo, 4 * esc, 24 * esc, '#ffffff');
+      q.font = FUENTE(13 * esc, 700);
+      sombreado(q, suPuesto, 4 * esc, 42 * esc, 'rgba(255,255,255,0.75)');
+    }
+    g.drawImage(largoC.c, Math.round(m), Math.round(H - m - 46 * esc));
   }
   // ── el minimapa ──
   const rm = 44 * esc, cx = W - m - rm, cy = H - m - rm;

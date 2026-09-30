@@ -1,8 +1,9 @@
 // Víbora.io, de JXSTUDIOS: el arranque, las pantallas y el bucle.
 //
 // El mundo corre siempre (en el menú, los bots juegan atrás y la cámara sigue
-// a una); al tocar JUGAR, tu víbora nace en ese mismo mundo. La simulación va
-// a 60 pasos fijos por segundo y se dibuja una vez por cuadro.
+// a una); al tocar JUGAR, tu víbora nace en ese mismo mundo. Cada cuadro la
+// simulación avanza lo que tardó el cuadro, en pasos de a lo sumo 1/60 s, y
+// se dibuja una vez.
 //
 // Para probar: ?sinintro (directo al menú), ?directo=juego, ?pausa (no avanza
 // solo: __V.pasos(n); también saltea la intro, salvo con ?intro), ?limpio (sin
@@ -19,7 +20,7 @@ import { crearIdioma, IDIOMAS } from './idioma.js';
 import { cargar, guardar, base } from './guardado.js';
 import { PIELES, pielPorId, abierta } from './pieles.js';
 import { Intro } from './intro.js';
-import { acercar, clamp } from './util.js';
+import { acercar, clamp, trozos } from './util.js';
 
 const PASO = 1 / 60;
 const BOTS = [10, 18, 26];
@@ -39,7 +40,8 @@ const guardarTodo = () => guardar(datos);
 const vibrar = (p) => { if (datos.ajustes.vibrar && navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) try { navigator.vibrate(p); } catch { /* no deja */ } };
 
 // ── la pantalla: resolución de verdad, con tope según la calidad ──────────
-let W = 0, H = 0, dpr = 1, dprTope = 2;
+// en el teléfono, 1,5 de densidad: se ve nítido y pinta la mitad de píxeles que a 2
+let W = 0, H = 0, dpr = 1, dprTope = tactil ? 1.5 : 2;
 function medir() {
   const tope = datos.ajustes.calidad === 'baja' ? 1 : datos.ajustes.calidad === 'alta' ? 2.5 : dprTope;
   dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, tope));
@@ -99,20 +101,6 @@ function entrar() {
   sonido.despertar();
   estado = 'intro'; mostrar(null);
   intro = new Intro({ sonido, vibrar, alTerminar: aMenu });
-}
-// La intro arranca sola, sin tocar nada. Antes, hasta 0,3 s en negro a que
-// arranque el audio: sin un toque casi nunca arranca y la intro va muda (el
-// primer toque la saltea y ya prende el sonido); si arranca, la música va en
-// fase con el dibujo.
-function esperarAudio() {
-  sonido.despertar();
-  const desde = performance.now();
-  const mirar = () => {
-    if (estado !== 'espera') return;
-    if (sonido.activo() || performance.now() - desde > 300) entrar();
-    else requestAnimationFrame(mirar);
-  };
-  requestAnimationFrame(mirar);
 }
 function aMenu() {
   estado = 'menu'; mia = null; preview = null;
@@ -331,7 +319,7 @@ function dibujarLogoMenu() {
 }
 
 // ── el bucle, con calidad que se ajusta sola ──────────────────────────────
-let acumulado = 0, ultimo = performance.now(), lento = 0;
+let ultimo = performance.now(), lento = 0;
 const manual = q.has('pausa');
 function cuadro(ahora) {
   requestAnimationFrame(cuadro);
@@ -340,20 +328,23 @@ function cuadro(ahora) {
   // si los cuadros tardan mucho seguido, se baja la resolución (medio punto por vez)
   if (datos.ajustes.calidad === 'auto' && (estado === 'juego' || estado === 'menu')) {
     lento = dtReal > 0.026 ? lento + 1 : Math.max(0, lento - 1);
-    if (lento > 90 && dprTope > 1) { dprTope = Math.max(1, dprTope - 0.5); lento = 0; medir(); }
+    if (lento > 45 && dprTope > 1) { dprTope = Math.max(1, dprTope - 0.25); lento = 0; medir(); }
   }
   if (!manual) {
-    acumulado += dtReal;
-    let n = 0;
-    while (acumulado >= PASO && n < 4) { paso(PASO); acumulado -= PASO; n++; }
-    if (n === 4) acumulado = 0;
+    // cada cuadro avanza lo que tardó de verdad, en pasos de a lo sumo 1/60 s
+    const [n, d] = trozos(dtReal, PASO);
+    for (let k = 0; k < n; k++) paso(d);
   }
   dibujar();
 }
 
 textos();
 const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
-if (conIntro) { mostrar(null); esperarAudio(); }
+// La intro arranca apenas abre, sin tocar nada. El sonido se decide en el
+// acto: si el navegador deja sonar sin un toque, el audio nace andando y la
+// música va en fase; si no (lo normal), nace suspendido y la intro va muda:
+// el primer toque la saltea y prende el sonido.
+if (conIntro) { mostrar(null); entrar(); }
 else { aMenu(); if (q.get('directo') === 'juego') jugar(); }
 requestAnimationFrame(cuadro);
 

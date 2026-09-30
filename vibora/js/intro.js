@@ -3,7 +3,7 @@
 // metal entra desde los costados, el monograma se escribe con luz (cuatro
 // puntas que dejan chispas), golpe con destello y onda, brillo que cruza el
 // metal, la palabra JXStudios sube, y un empujón hacia adelante que da paso
-// al juego. Arranca sola (main.js › esperarAudio). La música sale de
+// al juego. Arranca apenas abre la página (main.js). La música sale de
 // sonido.js › jingleJXS, agendada con el mismo reloj; un toque la saltea.
 import { monograma, palabra, puntas, CAJA } from './logojxs.js';
 import { clamp, salida, salidaAtras } from './util.js';

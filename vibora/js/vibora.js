@@ -62,9 +62,10 @@ export class Vibora {
       this.empujar(lx, ly);
       dx = this.x - lx; dy = this.y - ly; dist = Math.hypot(dx, dy);
     }
-    // la cola se acorta de a poco (si no, al gastar turbo pega un salto)
+    // la cola se acorta de a poco, 240 puntos por segundo (si no, al gastar
+    // turbo pega un salto); por segundo y no por paso: los pasos varían
     const quiero = Math.min(CAP, Math.ceil(this.largo() / PASO));
-    if (this.n > quiero) this.n = Math.max(quiero, this.n - 4);
+    if (this.n > quiero) this.n = Math.max(quiero, this.n - Math.max(1, Math.round(240 * dt)));
     if (this.goteo >= 1.5 && soltar) {
       const k = this.n - 1, j = this.i(k);
       soltar(this.px[j], this.py[j], this.goteo * 0.8, colorDe(this.piel, Math.floor(k / this.salto())));

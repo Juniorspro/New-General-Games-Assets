@@ -7,6 +7,7 @@ import { PIELES } from '../js/pieles.js';
 import { TABLA, IDIOMAS } from '../js/idioma.js';
 import { CANCIONES } from '../js/sonido.js';
 import { FONDOS } from '../js/fondos.js';
+import { trozos } from '../js/util.js';
 
 let fallas = 0, total = 0;
 const ok = (c, m) => { total++; if (!c) { fallas++; console.log('  FALLA:', m); } };
@@ -78,6 +79,26 @@ console.log('turbo y comida');
   ok(Math.abs(v.masa - 15) < 0.01 && m.cantidadComida === 0, 'come lo de adelante (5 de masa): ' + v.masa);
   ok(v.n > n0, 'el cuerpo se estiró: ' + n0 + ' → ' + v.n);
   ok(salto <= 2, 'en el paso que come crece a lo sumo lo que avanzó: ' + salto + ' puntos');
+}
+
+console.log('pasos que siguen al cuadro (60, 90 o 120 Hz)');
+{
+  const P = 1 / 60;
+  for (const [dt, n] of [[1 / 120, 1], [1 / 90, 1], [1 / 60, 1], [1 / 30, 2], [0.1, 6]]) {
+    const [k, d] = trozos(dt, P);
+    ok(k === n && Math.abs(k * d - dt) < 1e-9 && d <= P + 1e-12, `trozos(${dt.toFixed(4)}): ${k} de ${d.toFixed(4)}`);
+  }
+  // un segundo a 60 y a 120 pasos: el mismo camino, el mismo largo y la cola que se acorta igual
+  const a = new Vibora({ id: 1, nombre: 'a', piel, x: 0, y: 0, ang: 0, masa: 300 }), b = new Vibora({ id: 2, nombre: 'b', piel, x: 0, y: 0, ang: 0, masa: 300 });
+  a.masa = b.masa = 100;
+  for (let k = 0; k < 60; k++) a.pasar(1 / 60);
+  for (let k = 0; k < 120; k++) b.pasar(1 / 120);
+  ok(Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.n - b.n) <= 1, `60 y 120 Hz: x ${a.x.toFixed(2)} y ${b.x.toFixed(2)}, cola ${a.n} y ${b.n}`);
+  const m60 = new Mundo({ semilla: 5, bots: 0, comida: 900 }), m120 = new Mundo({ semilla: 5, bots: 0, comida: 900 });
+  m60.comidaMeta = m120.comidaMeta = 1500;
+  for (let k = 0; k < 30; k++) m60.pasar(1 / 60);
+  for (let k = 0; k < 60; k++) m120.pasar(1 / 120);
+  ok(m60.cantidadComida === m120.cantidadComida, `la comida se repone igual: ${m60.cantidadComida} y ${m120.cantidadComida}`);
 }
 
 console.log('simulación larga con bots');

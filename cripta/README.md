@@ -10,11 +10,12 @@ sube, poderes), no el personaje, el nombre, el logo ni los niveles de ese
 juego. Todo el dibujo, la letra, los niveles, la música y los sonidos están
 hechos con código acá.
 
-Arranca sola con la intro de **JXSTUDIOS**, dos segundos de pixel art con
+Arranca con la intro de **JXSTUDIOS** desde el primer cuadro, sin tocar nada:
+dos segundos de pixel art con
 música: el monograma JXS se escribe en cromo sobre fibra de carbono, golpea,
-brilla y se tipea el nombre. Sobre el sonido: el navegador casi nunca deja sonar antes de un toque: se espera un instante
-en negro a que arranque el audio y, si arranca, la música va en fase; si no,
-va muda y el primer toque la saltea y prende el sonido. Un
+brilla y se tipea el nombre. Sobre el sonido: si el navegador deja sonar sin un toque (casi nunca), el audio nace andando
+y la música va en fase con el dibujo; si no, la intro va muda y el primer
+toque la saltea y prende el sonido. Un
 toque la saltea. → `js/intro.js`, `js/logojxs.js`
 
 **Para jugar:** abrir `cripta-en-un-archivo.html` (anda sin red, con doble

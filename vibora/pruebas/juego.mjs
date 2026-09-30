@@ -66,11 +66,10 @@ await prueba('arranca en el menú, con bots jugando atrás y el logo dibujado', 
   return `${r.bots} bots, ${r.comida} bolitas, logo ${(r.logo * 100) | 0}% del lienzo`;
 });
 
-await prueba('la intro de JXSTUDIOS arranca sola, con su música, y deja en el menú; un toque la saltea', async () => {
+await prueba('la intro de JXSTUDIOS está desde el primer cuadro, con su música, y deja en el menú; un toque la saltea', async () => {
   const pg = await pagina({ q: 'intro&idioma=es' });
-  // sin tocar nada: la espera en negro dura lo que tarda en arrancar el audio
-  // (este Chromium tiene permiso de sonar sin un toque)
-  await pg.waitForFunction(() => window.__V.estado === 'intro', null, { timeout: 3000 });
+  // sin tocar nada, desde el primer cuadro (este Chromium tiene permiso de sonar)
+  afirmar(await V(pg, 'V.estado') === 'intro', 'la intro no estaba desde el principio: ' + await V(pg, 'V.estado'));
   afirmar(await V(pg, 'V.sonido.activo() && !!V.intro.musica'), 'la música de la intro no arrancó');
   // a mitad del trazo, el golpe, la palabra
   const brillo = [];
@@ -124,7 +123,7 @@ await prueba('sin permiso de sonar (lo normal antes de un toque): arranca igual,
   afirmar(!r1.musica && espera < 1500, 'sin permiso tendría que arrancar muda y enseguida: ' + JSON.stringify({ ...r1, espera }));
   afirmar(r2.estado === 'menu' && activo, 'el toque: ' + JSON.stringify({ ...r2, activo }));
   afirmar(!err.length && !r2.errores.length, 'errores: ' + [...err, ...r2.errores].join(' | '));
-  return `esperó ${espera} ms en negro y arrancó muda`;
+  return `arrancó muda a los ${espera} ms de cargar`;
 });
 
 await prueba('con el mouse: nace, dobla hacia donde apunta y mantener apretado es turbo', async () => {

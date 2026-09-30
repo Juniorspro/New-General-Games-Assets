@@ -33,21 +33,22 @@ if (cargo) {
   ch('se entra a jugar', r.estado === 'jugando');
   ch('en un teléfono aparecen los controles de dedo', r.dedos);
 }
-// la intro de JXSTUDIOS también viaja en el archivo único
+// la intro de JXSTUDIOS también viaja en el archivo único: sale antes que
+// nada (sin permiso de sonar, muda) y después se arma la isla
 await pg.goto('file://' + ARCH + '?pausa&intro&idioma=pt');
-const cargo2 = await pg.waitForFunction(() => window.__isla && window.__isla.listo, null, { timeout: 90000 }).then(() => true).catch(() => false);
-if (cargo2) {
-  // arranca sola (acá sin permiso de sonar: muda, después de 0,3 s en negro)
-  const empezo = await pg.waitForFunction(() => window.__isla.J.intro && window.__isla.J.intro.t >= 0, null, { timeout: 5000 }).then(() => true).catch(() => false);
-  const ri = await pg.evaluate((empezo) => {
-    const I = window.__isla, J = I.J, muda = !!J.intro && !J.intro.musica;
-    for (let i = 0; i < 80; i++) I.paso(1 / 60, false);
-    I.paso(1 / 60, true);
-    for (let i = 0; i < 120; i++) I.paso(1 / 60, false);
-    return { empezo, muda, estado: J.estado };
-  }, empezo);
-  ch('la intro de JXSTUDIOS arranca sola, muda sin permiso de sonar, y deja en el menú', ri.empezo && ri.muda && ri.estado === 'menu', JSON.stringify(ri));
-} else ch('la intro de JXSTUDIOS corre y deja en el menú', false, 'no cargó');
+const hayIntro = await pg.waitForFunction(() => window.__intro, null, { timeout: 90000 }).then(() => true).catch(() => false);
+if (hayIntro) {
+  const ri = await pg.evaluate(() => {
+    const { intro, paso } = window.__intro, empezo = intro.t === 0, muda = !intro.musica, antes = !window.__isla;
+    for (let i = 0; i < 80; i++) paso(1 / 60, false);
+    paso(1 / 60, true);
+    for (let i = 0; i < 120 && window.__intro; i++) paso(1 / 60, false);
+    return { empezo, muda, antes, terminada: intro.terminado };
+  });
+  const isla = await pg.waitForFunction(() => window.__isla && window.__isla.listo, null, { timeout: 90000 }).then(() => true).catch(() => false);
+  const estado = isla ? await pg.evaluate(() => window.__isla.J.estado) : null;
+  ch('la intro de JXSTUDIOS sale antes que la isla, muda sin permiso de sonar, y deja en el menú', ri.empezo && ri.muda && ri.antes && ri.terminada && estado === 'menu', JSON.stringify({ ...ri, estado }));
+} else ch('la intro de JXSTUDIOS sale antes que la isla, muda sin permiso de sonar, y deja en el menú', false, 'no apareció');
 ch('sin errores de JavaScript', err.length === 0, err.slice(0, 3).join(' | '));
 console.log(`\n  ${ok}/${ok + mal}`);
 await nav.close();

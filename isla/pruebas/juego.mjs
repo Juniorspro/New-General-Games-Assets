@@ -362,14 +362,20 @@ r = await pelea(pg, `
 ch('con el mapa, la X aparece y la pala saca el cofre', r.cruz && r.encontrado && r.oro >= 1, `${r.segundos.toFixed(1)} s de cavar`);
 r = await pelea(pg, `
   const T = J.mundo.terreno, P = J.mundo.veg.palmeras.filter((q) => q.viva);
+  // el lugar: el primero de una grilla fija donde el mismo juego deja plantar
+  // (J.acciones.lugarPlantar). Al azar, 1 de cada 25 caía donde la mira daba
+  // en otra cosa y no plantaba (30/09/2026)
   let lugar = null;
-  for (let i = 0; i < 4000 && !lugar; i++) {
-    const x = (Math.random() * 2 - 1) * 80, z = (Math.random() * 2 - 1) * 80, h = T.altura(x, z);
-    if (h < 1 || h > 6 || T.pasto(x, z) < 0.5 || P.some((q) => Math.hypot(q.x - x, q.z - z) < 6) || J.mundo.dentroDePiso(x, z, 3)) continue;
-    lugar = { x, z };
+  tener('coco', 2); elegir('coco');
+  for (let gx = -60; gx <= 60 && !lugar; gx += 3) for (let gz = -60; gz <= 60 && !lugar; gz += 3) {
+    const h = T.altura(gx, gz);
+    if (h < 1 || h > 6 || T.pasto(gx, gz) < 0.5 || P.some((q) => Math.hypot(q.x - gx, q.z - gz) < 6) || J.mundo.dentroDePiso(gx, gz, 3)) continue;
+    ir(gx, gz + 3); mirar(gx, T.altura(gx, gz), gz); pasos(2);
+    const ap = J.acciones.ap, base = ap && ap.sub !== undefined ? ap.sub : ap;
+    if (J.acciones.lugarPlantar(base)) lugar = { x: gx, z: gz };
   }
-  ir(lugar.x, lugar.z + 3); mirar(lugar.x, T.altura(lugar.x, lugar.z), lugar.z);
-  tener('coco', 2); elegir('coco'); pasos(12); der();
+  if (!lugar) return { sin: true };
+  pasos(10); der();
   const p = J.mundo.veg.palmeras.find((q) => q.reserva && q.viva);
   if (!p) return { sin: true };
   const chica = p.copa.y - p.y;
@@ -449,34 +455,50 @@ console.log('── el teléfono parado');
 
 // ── la intro de JXSTUDIOS (con ?intro: sin eso, las pruebas la saltean) ─────
 console.log('── la intro de JXSTUDIOS');
-pg = await abrir('intro&nueva&idioma=es');
-// arranca sola: hasta 0,3 s en negro a que arranque el audio (este Chromium tiene permiso de sonar)
-const arranco = await pg.waitForFunction(() => window.__isla.J.intro && window.__isla.J.intro.t >= 0, null, { timeout: 3000 }).then(() => true).catch(() => false);
-r = await pg.evaluate(() => ({ estado: window.__isla.J.estado, capa: !document.getElementById('intro').classList.contains('oculto'), boton: !!document.querySelector('#intro button'), musica: window.__isla.J.son.temaActual || null }));
-ch('arranca sola, sin puerta ni botón, y sin la música del menú encima', arranco && r.estado === 'intro' && r.capa && !r.boton && !r.musica, JSON.stringify({ arranco, ...r }));
-r = await correr(pg, `
-  const intro = J.intro, suena = !!intro.musica && J.son.ctx && J.son.ctx.state === 'running';
-  const avanzar = (n) => { for (let i = 0; i < n; i++) I.paso(1 / 60, false); };
+// La intro corre antes de que exista la isla (y su sonda window.__isla): se
+// avanza con window.__intro.paso(dt, dibujar) y después se espera la isla.
+async function abrirIntro(q) {
+  const pg = await ctx.newPage();
+  pg.on('pageerror', (e) => errores.push(e.message));
+  pg.on('console', (m) => { if (m.type() === 'error') errores.push('consola: ' + m.text().slice(0, 200)); });
+  await pg.goto(URL + q);
+  await pg.waitForFunction(() => window.__intro, null, { timeout: 90000 });
+  return pg;
+}
+pg = await abrirIntro('intro&nueva&idioma=es');
+r = await pg.evaluate(() => ({ t: window.__intro.intro.t, musica: !!window.__intro.intro.musica, precarga: !!document.getElementById('precarga'), capa: !document.getElementById('intro').classList.contains('oculto'), isla: !!window.__isla, boton: !!document.querySelector('#intro button') }));
+ch('la intro sale antes que nada: sin tocar, sin la carga y antes de armar la isla', r.t === 0 && !r.precarga && r.capa && !r.isla && !r.boton, JSON.stringify(r));
+ch('con permiso de sonar, la música de la intro va desde el principio', r.musica);
+r = await pg.evaluate(() => {
+  const { intro, paso } = window.__intro;
+  const avanzar = (n) => { for (let i = 0; i < n; i++) paso(1 / 60, false); };
   avanzar(48); const medio = intro.trazos.map((z) => z.avance);
-  I.paso(1 / 60, true);
+  paso(1 / 60, true);
   avanzar(50); const golpeado = intro.golpeado, completo = intro.trazos.every((z) => z.avance === 1);
-  avanzar(40); I.paso(1 / 60, true); const palabra = intro.palabra.material.opacity;
+  avanzar(40); paso(1 / 60, true); const palabra = intro.palabra.material.opacity;
   avanzar(60);
-  return { suena, medio, golpeado, completo, palabra, estado: J.estado, menu: J.menu.modo, liberada: J.intro === null, pr: J.renderer.getPixelRatio(), tema: J.son.temaActual };`);
-ch('con permiso de sonar, la música de la intro va desde el principio', r.suena);
+  return { medio, golpeado, completo, palabra, terminada: intro.terminado, blanco: document.getElementById('blanco').className, texto: document.getElementById('blanco').dataset.texto };
+});
 ch('a los 0,8 s los cuatro trazos están a medio escribir', r.medio.every((a) => a > 0.05 && a < 0.95), r.medio.map((a) => a.toFixed(2)).join(' '));
 ch('después del golpe: el monograma completo y la palabra a la vista', r.golpeado && r.completo && r.palabra > 0.9, JSON.stringify({ golpeado: r.golpeado, completo: r.completo, palabra: r.palabra }));
-ch('a los 3 s queda la playa con su música, pixelada otra vez y sin la intro en memoria', r.estado === 'menu' && r.menu === 'principal' && r.liberada && r.pr <= 1 && r.tema === 'menu', JSON.stringify(r));
+ch('termina en blanco con "Armando la isla…" mientras se arma', r.terminada && r.blanco.includes('on') && r.blanco.includes('cargando') && r.texto === 'Armando la isla…', JSON.stringify(r));
+await pg.waitForFunction(() => window.__isla && window.__isla.listo, null, { timeout: 90000 });
+r = await correr(pg, `
+  const antes = document.getElementById('blanco').className;
+  I.paso(1 / 30, true);
+  return { antes, despues: document.getElementById('blanco').className, estado: J.estado, menu: J.menu.modo, pr: J.renderer.getPixelRatio(), tema: J.son.temaActual, intro: !!window.__intro };`);
+ch('después, la playa con su música, pixelada, y el blanco se va recién con la playa dibujada', r.antes.includes('on') && !r.despues.includes('on') && r.estado === 'menu' && r.menu === 'principal' && r.pr <= 1 && r.tema === 'menu' && !r.intro, JSON.stringify(r));
 await pg.close();
-pg = await abrir('intro&nueva&idioma=en');
-await pg.waitForFunction(() => window.__isla.J.intro && window.__isla.J.intro.t >= 0, null, { timeout: 3000 });
-await correr(pg, 'for (let i = 0; i < 10; i++) I.paso(1 / 60, false);');
+pg = await abrirIntro('intro&nueva&idioma=en');
+await pg.evaluate(() => { for (let i = 0; i < 10; i++) window.__intro.paso(1 / 60, false); });
 await pg.mouse.click(480, 270);
-const apurado = await pg.evaluate(() => window.__isla.J.estado);
-await correr(pg, 'for (let i = 0; i < 20; i++) I.paso(1 / 60, false);');
+const apurado = await pg.evaluate(() => { window.__intro.paso(1 / 60, false); return window.__intro.intro.terminado; });
+await pg.evaluate(() => { for (let i = 0; i < 20; i++) window.__intro.paso(1 / 60, false); });
 await pg.mouse.click(480, 270);
-const salteada = await correr(pg, 'for (let i = 0; i < 6; i++) I.paso(1 / 60, false); return J.estado;');
-ch('un toque de apuro no la corta y uno después sí', apurado === 'intro' && salteada === 'menu', JSON.stringify({ apurado, salteada }));
+const salteada = await pg.evaluate(() => { const I = window.__intro; for (let i = 0; i < 6 && window.__intro; i++) I.paso(1 / 60, false); return I.intro.terminado; });
+await pg.waitForFunction(() => window.__isla && window.__isla.listo, null, { timeout: 90000 });
+const estado = await pg.evaluate(() => window.__isla.J.estado);
+ch('un toque de apuro no la corta y uno después sí; después, la playa', !apurado && salteada && estado === 'menu', JSON.stringify({ apurado, salteada, estado }));
 await pg.close();
 
 // ── rendimiento (SwiftShader: lo dibujado no representa una placa de video) ──

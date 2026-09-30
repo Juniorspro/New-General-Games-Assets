@@ -14,7 +14,9 @@ apagado y ningún barco se acerca. Hay que arreglarlo, bajar hasta la sala más
 honda de la mina a quitarle el corazón de cristal al guardián, encenderlo con
 una estrella caída y esperar el barco. De noche salen esqueletos piratas.
 
-Arranca sola con la **intro de JXSTUDIOS en 3D** (tres segundos, con su música):
+Arranca con la **intro de JXSTUDIOS en 3D** apenas carga la página, sin tocar nada
+y antes de armar la isla, que se arma detrás del blanco del final ("Armando la
+isla…") y aparece desde ahí. Tres segundos, con su música:
 - Una raya de luz se abre en lo negro, se prende la placa de fibra de carbono,
   entran las barras de la reja de metal y la cámara gira desde un costado.
 - El monograma JXS se escribe en cromo: cuatro tubos que crecen con una luz y
@@ -24,14 +26,14 @@ Arranca sola con la **intro de JXSTUDIOS en 3D** (tres segundos, con su música)
 - Suben "JXStudios" y "presenta", y la cámara se mete en el logo hasta el
   blanco, del que aparece la playa.
 
-Sobre el sonido: el navegador casi nunca deja sonar antes de un toque: se espera un instante
-en negro a que arranque el audio y, si arranca, la música va en fase; si no,
-va muda y el primer toque la saltea y prende el sonido. Un toque la saltea.
-→ `js/intro.js`, `js/logojxs.js`, `js/sonido.js › jingleJXS`, `js/main.js › empezarIntro`
+Sobre el sonido: si el navegador deja sonar sin un toque (casi nunca), el audio nace andando
+y la música va en fase con el dibujo; si no, la intro va muda y el primer
+toque la saltea y prende el sonido. Un toque la saltea.
+→ `js/intro.js`, `js/logojxs.js`, `js/sonido.js › jingleJXS`, `js/main.js › correrIntro`
 
     python3 -m http.server 8123          # desde la raíz del repo, y abrir http://127.0.0.1:8123/isla/
-    sh pruebas/correr.sh                 # 66 + 7 comprobaciones
-    python3 empaquetar.py                # arma isla-en-un-archivo.html (1182 KB, abre con doble clic)
+    sh pruebas/correr.sh                 # 67 + 7 comprobaciones
+    python3 empaquetar.py                # arma isla-en-un-archivo.html (1183 KB, abre con doble clic)
 
 Texturas, modelos, íconos, música y sonidos salen todos del código: no hay ni
 una imagen ni un audio de archivo. En español, inglés y portugués.
@@ -44,13 +46,13 @@ una imagen ni un audio de archivo. En español, inglés y portugués.
 
 | qué | cuánto |
 |---|---|
-| comprobaciones | **66/66** en `pruebas/juego.mjs` y **7/7** en `pruebas/un-archivo.mjs` (30/09/2026, una corrida: las 60 de antes, más 6 de la intro y 1 de la intro en el archivo único) |
+| comprobaciones | **67/67** en `pruebas/juego.mjs` y **7/7** en `pruebas/un-archivo.mjs` (30/09/2026: las 60 de antes, más 7 de la intro y 1 de la intro en el archivo único) |
 | carga hasta la sonda | 590-807 ms (módulos) · 798 ms (archivo único, desde `file://`) |
 | lógica de un cuadro, sin dibujar | **0,26-0,32 ms** (el presupuesto de 60 cuadros es 16,7 ms) |
 | en la playa | 804.528 triángulos, 219 llamadas de dibujo (con el reflejo del agua, que dibuja de nuevo palmeras, choza y nubes) |
 | en la mina | 66.606 triángulos, 24 llamadas |
 | partida guardada | 4,2 KB en `localStorage` (solo lo que cambió contra la semilla) |
-| archivo único | 1182 KB: 41 módulos + three.js r160, ningún archivo suelto (la intro de JXSTUDIOS suma 44 KB) |
+| archivo único | 1183 KB: 41 módulos + three.js r160, ningún archivo suelto (la intro de JXSTUDIOS suma 45 KB) |
 | la intro de JXSTUDIOS | 3 s; 4 tubos de cromo (18.864 triángulos), 800 chispas, reflejos de un estudio armado con PMREM una sola vez; todo se compila al armarla y se libera al terminar |
 | la pelea | una espada de piedra voltea un cangrejo en 2 golpes; un esqueleto de noche pega a los 1,4 s de verte; el peto de hierro baja un golpe de 12 a 7 |
 | el guardián | 320 de vida: con la espada de amatista, unas 20 tandas de espadazos |

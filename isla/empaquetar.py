@@ -126,7 +126,8 @@ def main():
     partes += [envolver(n, fuentes[n]) for n in orden]
     ent = reescribir_imports(entrada)
     ent = re.sub(r'^export\s+', "", ent, flags=re.M)
-    partes.append(f"/* ── {ENTRADA} ── */\n(() => {{\n{ent}\n}})();\n")
+    # async: main.js espera la intro de JXSTUDIOS con un await arriba de todo
+    partes.append(f"/* ── {ENTRADA} ── */\n(async () => {{\n{ent}\n}})();\n")
     js = "\n".join(partes)
 
     # La comprobación tampoco va anclada (ver perro/empaquetar.py).

@@ -12,7 +12,8 @@ pieles, ni los dibujos. El logo VÍBORA.IO, las 27 pieles, los 5 fondos, la
 música y los sonidos están hechos con código acá. Se juega sin red, contra
 bots que corren en el mismo teléfono: no hay partidas en línea.
 
-Arranca sola con la intro de **JXSTUDIOS** en 2D (dos segundos y medio):
+Arranca con la intro de **JXSTUDIOS** en 2D desde el primer cuadro, sin tocar nada
+(dos segundos y medio):
 - Una raya de luz abre la fibra de carbono y la reja de metal entra desde los
   costados.
 - El monograma JXS se escribe con luz: cuatro puntas que tiran chispas.
@@ -20,10 +21,10 @@ Arranca sola con la intro de **JXSTUDIOS** en 2D (dos segundos y medio):
 - Sube la palabra JXStudios y un empujón hacia adelante da paso al menú.
 
 La música va agendada con el mismo reloj que la animación. Sobre el sonido:
-el navegador casi nunca deja sonar antes de un toque: se espera un instante
-en negro a que arranque el audio y, si arranca, la música va en fase; si no,
-va muda y el primer toque la saltea y prende el sonido. Un toque la saltea. → `js/intro.js`,
-`js/logojxs.js`, `js/sonido.js › jingleJXS`, `js/main.js › esperarAudio`
+si el navegador deja sonar sin un toque (casi nunca), el audio nace andando
+y la música va en fase con el dibujo; si no, la intro va muda y el primer
+toque la saltea y prende el sonido. Un toque la saltea. → `js/intro.js`,
+`js/logojxs.js`, `js/sonido.js › jingleJXS`
 
 **Para jugar:** abrir `vibora-en-un-archivo.html`. Anda sin red, con doble
 clic o mandándolo al teléfono.
@@ -35,12 +36,12 @@ clic o mandándolo al teléfono.
 ## Lo medido (30/09/2026)
 | qué | cuánto |
 |---|---|
-| Pruebas sin navegador (`pruebas/logica.mjs`) | 151 comprobaciones, todas bien |
-| Pruebas en Chromium (`pruebas/juego.mjs`) | 15 de 16: clics, teclas y dedos de verdad (CDP). Falla la nueva "sin permiso de sonar" por la prueba, no por el juego: Playwright cuenta cada `evaluate` como un gesto y el audio arranca después; queda por arreglar |
+| Pruebas sin navegador (`pruebas/logica.mjs`) | 158 comprobaciones, todas bien (con los pasos a 60, 90 y 120 Hz) |
+| Pruebas en Chromium (`pruebas/juego.mjs`) | 16 de 16: clics, teclas y dedos de verdad (CDP), y la intro con y sin permiso de sonar |
 | Archivo único desde `file://` sin red (`pruebas/un-archivo.mjs`) | abre, la intro llega al menú y se juega |
-| Peso del archivo único | 113 KB (16 módulos, sin binarios) |
+| Peso del archivo único | 116 KB (16 módulos, sin binarios) |
 | 90 s con 22 bots picantes, 3 semillas | 0,1 ms por paso de simulación; unas 110 muertes, ninguna contra el borde; la más larga llega a 1600–3400 |
-| Un cuadro pintado por procesador, 26 bots | 3,6 ms a 412×892 y 9,4 ms a 824×1784 (Chromium sin GPU en el servidor: del teléfono no dice nada) |
+| Un cuadro pintado por procesador, 26 bots | 2,4 ms a 412×892 y 6,3 ms a 618×1338, la densidad de 1,5 del teléfono (antes 2,9 y 9,3 a 824×1784; Chromium sin GPU en el servidor: del teléfono no dice nada) |
 | Pantallas probadas | 412×892, 360×640, 320×568, 892×412 y 1280×720: nada se sale ni se pisa |
 
 ## Qué tiene
@@ -82,7 +83,7 @@ clic o mandándolo al teléfono.
 | `js/intro.js`, `js/logojxs.js` | La intro de JXSTUDIOS. El monograma son 4 trazos vectoriales, los mismos que usa Cripta Neón. |
 | `js/sonido.js` | La música por pasos, con agenda adelantada, y los efectos. |
 | `js/idioma.js`, `js/guardado.js`, `js/pieles.js` | Los textos en tres idiomas, lo guardado (validado campo por campo) y las pieles. |
-| `js/main.js` | Las pantallas, la cámara, el bucle de 60 pasos fijos por segundo y la calidad automática. |
+| `js/main.js` | Las pantallas, la cámara, el bucle (cada cuadro avanza su tiempo real en pasos de a lo sumo 1/60 s: parejo a 60, 90 o 120 Hz) y la calidad automática. |
 | `empaquetar.py` | Arma el archivo único. |
 
 ## Probar
