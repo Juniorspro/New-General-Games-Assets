@@ -42,6 +42,7 @@ y aborta lo que venga detrás con `&&`: corrélo solo.
 | carpeta | qué es |
 |---|---|
 | `bomba/` | **Bomb Runner Simulator** (el de Roblox), a medio hacer — ver `bomba/README.md` |
+| `isla/` | **La Isla** (HTML, three.js) — ver `isla/README.md` |
 | `cripta/` | **Cripta Neón** (HTML, pixel art) — ver `cripta/README.md` |
 | `vibora/` | **Víbora.io** (HTML, contra bots) — ver `vibora/README.md` |
 | `guias/` | cómo hacer juegos que se vean bien (3D, 2D pixel art, aeroplaza) |

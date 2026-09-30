@@ -38,6 +38,8 @@ El ejemplo que cita, `bosque/`, NO está en este repo; `pique3d/`, `perro/` y `e
 - Cámara: se acerca instantánea ante un choque y se aleja lenta; campo horizontal fijo de 78°; joystick donde cae el pulgar, cada dedo por `pointerId`. → § 6.8
 - El menú tiene que entrar en 360 px de alto (teléfono acostado). → § 6.8
 
+- Un logo en 3D sin modelos: trazos 2D muestreados → `TubeGeometry` metálico con reflejos de PMREM; `setDrawRange` lo escribe y `onBeforeCompile` le suma brillos. → [isla](isla.md) § La intro 3D
+
 ## Sonido
 - Rezona: `kind: music` 30-60 s terminado en "seamless loop, consistent energy, no fade out"; efectos `kind: sound` de hasta 2 s. → § 7
 - La guía dice no componer música nota por nota en código. `ritmo/` (borrado, en el historial) la componía desde una escala menor y 4 progresiones fijas ("una progresión al azar suena a nada"); aeroplaza tiene un motor con acordes de 9/11/13, pero su versión "con canciones" lo apaga (`soloGrabadas = true`) y suena con 7 MP3 en bucle (ver [aeroplaza](aeroplaza.md)). → § 7

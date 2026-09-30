@@ -24,7 +24,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | [juegos-2d-pixel](juegos-2d-pixel.md) | 2D pixel art: escala entera, personajes por piezas, combate, niveles |
 | [aeroplaza](aeroplaza.md) | look Frutiger Aero / Wii, avatar y animación por código, música en bucle |
 | [probar](probar.md) | vas a probar en Chromium, medir, capturar o tocar como un dedo |
-| [isla](isla.md) | el menú que se mece (el que quiere para los juegos nuevos) y otras lecciones de La Isla, que está en el historial |
+| [isla](isla.md) | el menú que se mece (el que quiere para los juegos nuevos), la intro 3D de JXSTUDIOS (logo en tubos de cromo) y otras lecciones de La Isla |
 | [cripta](cripta.md) | laberinto que se desliza: resolvedor, generar por construcción sin trampas, paredes de neón, el menú que se mece en 2D |
 | [vibora](vibora.md) | juego .io de víboras: cuerpo en anillo, comida en grilla, bots, teléfono acostado, trampas de pausa y de dedos |
 | [diario](diario.md) | querés saber qué se hizo en cada sesión y qué quedó pendiente |
@@ -41,6 +41,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | carpeta | qué es | detalle en |
 |---|---|---|
 | `cripta/` | CRIPTA NEÓN: laberinto que se desliza en pixel art (30 niveles, torre infinita, tienda, 3 idiomas); se juega con `cripta-en-un-archivo.html` | `cripta/README.md`, [cripta](cripta.md) |
+| `isla/` | LA ISLA: supervivencia en una isla pixelada en 3D (three.js), con la intro 3D de JXSTUDIOS; se juega con `isla-en-un-archivo.html` | `isla/README.md`, [isla](isla.md) |
 | `vibora/` | VÍBORA.IO: víboras que comen y crecen contra bots, sin red (27 pieles, 5 fondos, 3 idiomas); se juega con `vibora-en-un-archivo.html` | `vibora/README.md`, [vibora](vibora.md) |
 | `bomba/` | BOMB RUNNER SIMULATOR (el de Roblox, a medio hacer): correr con una bomba, explotar, mascotas y renacer | `bomba/README.md` |
 | `herramientas/` | Blender sin GPU, Neko, Mint, Rezona (`rz.py`, `estado.json`), audio | `ARRANQUE.md § 4` |
@@ -50,4 +51,4 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | `guias/` | las guías largas para hacer juegos | [juegos](juegos.md) |
 | `memoria/` | esta memoria | `MEMORIA.md` |
 
-Borrado el 30/09/2026 y recuperable con `git checkout fbffdfb -- <carpeta>`: los juegos HTML (`isla/`, `enjambre/`, `ritmo/`, `espejo/`, `garfio/`, `paraguas/`, `pozo/`, `pique*/`, `perro/`, `dimension-n/`, `telarana/`, `flores/`), `frutiger-aero/`, `docs/` (IBLO Eventos), `iblo-eventos/`, `electro-silver/`, `modelos-cdn/` y `ESTADO.md`. Los sitios siguen publicados en Cloudflare.
+Borrado el 30/09/2026 y recuperable con `git checkout fbffdfb -- <carpeta>`: los juegos HTML (`enjambre/`, `ritmo/`, `espejo/`, `garfio/`, `paraguas/`, `pozo/`, `pique*/`, `perro/`, `dimension-n/`, `telarana/`, `flores/`), `frutiger-aero/`, `docs/` (IBLO Eventos), `iblo-eventos/`, `electro-silver/`, `modelos-cdn/` y `ESTADO.md`. Los sitios siguen publicados en Cloudflare.

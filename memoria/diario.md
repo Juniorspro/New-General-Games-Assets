@@ -45,4 +45,5 @@
 - Cripta Neón: intro en pixel art con su música (commit 101f6ae). → [cripta](cripta.md)
 - Quedó `vibora/`: VÍBORA.IO, original del género (no se copian nombre, logo ni dibujos; sin red, contra bots), con su intro 2D de JXSTUDIOS. → [vibora](vibora.md)
 - Medido: 152 comprobaciones sin navegador, 15/15 en Chromium, archivo único de 113 KB que abre sin red.
-- Sigue: la intro 3D de la isla (hay que traerla de `fbffdfb`); probar todo en un teléfono de verdad.
+- La isla volvió al árbol (desde `fbffdfb`) con su intro 3D de JXSTUDIOS: tubos de cromo que se escriben, reja, golpe, brillo y la playa desde el blanco. 66/66 y 7/7; archivo único de 1182 KB. → [isla](isla.md)
+- Falta: probar las tres intros y los juegos en un teléfono de verdad (Chromium sin placa no dice nada de los cuadros por segundo).

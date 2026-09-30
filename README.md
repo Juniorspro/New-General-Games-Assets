@@ -12,6 +12,7 @@ Juegos y herramientas. Ahora mismo lo principal es **Bomb Runner Simulator**
 | carpeta | qué es |
 |---|---|
 | `bomba/` | Bomb Runner Simulator: correr con una bomba, explotar, mascotas y renacer (a medio hacer) |
+| `isla/` | LA ISLA: supervivencia en una isla pixelada en 3D, con la intro 3D de JXSTUDIOS; se juega con `isla-en-un-archivo.html` |
 | `cripta/` | CRIPTA NEÓN, de JXSTUDIOS: laberinto que se desliza en pixel art; se juega con `cripta-en-un-archivo.html` |
 | `vibora/` | VÍBORA.IO, de JXSTUDIOS: víboras que comen y crecen contra bots, sin red; se juega con `vibora-en-un-archivo.html` |
 | `guias/` | cómo hacer juegos que se vean bien: 3D con Rezona, 2D pixel art y la receta de AEROPLAZA |
@@ -21,9 +22,10 @@ Juegos y herramientas. Ahora mismo lo principal es **Bomb Runner Simulator**
 | `bot-whatsapp/` | motor de comandos con dos proveedores intercambiables |
 | `Prompts/` | colecciones de prompts (finanzas, diseño web, skills de UI) |
 
-Lo que se sacó el 30/09/2026 (los juegos HTML viejos, entre ellos La Isla, y
-el código de Frutiger Aero, IBLO Eventos y Electro Silver) queda en el
-historial: `git checkout fbffdfb -- <carpeta>` lo trae de vuelta.
+Lo que se sacó el 30/09/2026 (los juegos HTML viejos y el código de Frutiger
+Aero, IBLO Eventos y Electro Silver) queda en el historial:
+`git checkout fbffdfb -- <carpeta>` lo trae de vuelta. La Isla volvió ese mismo
+día, para ponerle la intro de JXSTUDIOS.
 
 ## Las reglas
 
