@@ -1,0 +1,5 @@
+PixulBrush — Mercyssh (https://mercyssh.itch.io)
+Licencia que trae la fuente (tabla "name", campo 13): "You have the permission to use this font in
+personal projects for free, and commercial projects with accreditation".
+Es la letra de SNKRX. Se usa con crédito (pantalla de créditos del juego y este archivo).
+PixulBrush-es.ttf = la misma con tildes, eñe, ¿ ¡ ü y < > · * [ ] agregados por acentos.py.
