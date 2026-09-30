@@ -21,3 +21,9 @@
 - Hecho: la historia del faro en seis capítulos con final, cuatro enemigos y el guardián, seis armas y dos petos, fogata, cocina, cocos que se plantan, mercader, tesoro, mapa, tercera persona, gaviotas, luciérnagas y peces. → [isla](isla.md)
 - Medido: 60/60 tres veces + 6/6; archivo único de 1138 KB.
 - Falta: medir en un teléfono de verdad; mirar otras semillas en pantalla.
+
+## 30/09/2026 · rama `ccr-6f24de5d-v3vxtu`
+- Pedido: "hazme uno en HTML completito, buenos modelos y animaciones, busca referencias a full", con el documento de diseño de "Bomb Runner Simulator" (Roblox).
+- Referencias: búsquedas web y miniaturas de YouTube (los videos no bajan). Estilo: el noob con la bomba negra, números enormes con borde, ruleta, mascotas dorada ×2,5 y arcoíris ×6, zonas x2-x50 por renacimientos.
+- Quedó en `bomba/` la base (motor, cielos, materiales, texturas, avatar con poses, equipo). Se paró a pedido: todavía no se juega. → `bomba/README.md`
+- Falta: todo lo de `bomba/README.md § Lo que falta`.

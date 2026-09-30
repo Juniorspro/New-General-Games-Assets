@@ -1,5 +1,5 @@
 # Memoria — el índice
-Última puesta al día: 29/09/2026 (la isla: historia, enemigos, girada).
+Última puesta al día: 30/09/2026 (bomba/ empezado).
 Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 
 ## Reglas que no se discuten
@@ -47,6 +47,7 @@ Es lo único que se lee al arrancar. Cómo se usa y se mantiene: `MEMORIA.md`.
 | `pozo/` | pistas de 35-38 s, menú animado | `pozo/README.md` |
 | `pique/`, `pique2d/`, `pique3d/` | un corredor con niveles que se validan solos, en 2D, pixel art y 3D | `LEEME.md` de cada uno |
 | `perro/` | CAMPO: perro 3D en tercera persona sobre pasto | `perro/README.md` |
+| `bomba/` | BOMB RUNNER SIMULATOR (a medio hacer): correr con una bomba, explotar, mascotas y renacer | `bomba/README.md` |
 | `isla/` | LA ISLA: supervivencia pixel 3D (la de @vfx843) con la historia del faro, enemigos y el menú de @brutu_scripts en la playa | `isla/README.md`, [isla](isla.md) |
 | `dimension-n/` | Dimensión Ñ: caída vertical con ragdolls de Verlet | `dimension-n/README.md` |
 | `telarana/` | juego de un botón: colgarse de un hilo por una ciudad | `telarana/LEEME.md` |

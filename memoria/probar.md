@@ -28,6 +28,7 @@ Fuente: `guias/GUIA_JUEGOS_2D_PIXEL.md § 12`, `guias/GUIA-JUEGOS.md § 9`, y lo
 
 ## Mirar
 - Muchas capturas se miran juntas en una hoja de contacto (Pillow) y una sola vez.
+- Referencias de YouTube: `yt-dlp` busca (`ytsearch8:…`) pero bajar el video o sus storyboards da 403 y pide iniciar sesión; las miniaturas (`i.ytimg.com/vi/ID/hqdefault.jpg`) sí bajan (30/09/2026).
 - Encuadres (la toma de un menú, la pose de la mano): capturar 6 u 8 variantes chicas en una hoja y elegir mirando; la isla eligió así su toma del menú y la pose de cada herramienta (29/09/2026).
 - En animaciones, capturar el cuadro pico. → 2D § 3.4
 - Un resultado raro suele ser la prueba y no el código; una sonda que escribe lo que mide aprueba cualquier cosa. → 3D § 9, 2D § 12
