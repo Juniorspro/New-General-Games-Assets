@@ -39,6 +39,8 @@ h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-sp
 @keyframes late { 50% { opacity: 0.25; } }
 
 #logo { width: min(92vw, 560px); height: auto; aspect-ratio: 5 / 1.35; }
+.titulo-idioma { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 8px; }
+.titulo-idioma small { font-size: clamp(13px, 2vh, 16px); font-weight: 700; color: var(--tenue); letter-spacing: 0.01em; text-shadow: none; }
 #apodo {
   width: min(78vw, 330px); box-sizing: border-box; padding: 12px 18px; border-radius: 999px; border: 2px solid rgba(140, 255, 58, 0.55);
   background: rgba(10, 20, 14, 0.75); color: var(--tinta); font: 700 18px system-ui, sans-serif; text-align: center; outline: none;
@@ -124,6 +126,14 @@ h2 { margin: 0; font-size: clamp(22px, 4.2vh, 34px); font-weight: 900; letter-sp
 <body>
 <canvas id="juego" aria-label="Víbora.io"></canvas>
 <div id="ui">
+  <!-- la primera vez, después del logo: el idioma (el título va en los tres) -->
+  <section id="idiomas" class="pantalla oculto velo">
+    <h2 class="titulo-idioma">Elegí tu idioma<small lang="en">Choose your language</small><small lang="pt">Escolha seu idioma</small></h2>
+    <button id="bIdioma_es" class="boton principal" lang="es">Español</button>
+    <button id="bIdioma_en" class="boton principal" lang="en">English</button>
+    <button id="bIdioma_pt" class="boton principal" lang="pt">Português</button>
+  </section>
+
   <section id="menu" class="pantalla oculto">
     <canvas id="logo" aria-hidden="true"></canvas>
     <input id="apodo" maxlength="16" autocomplete="off" spellcheck="false" enterkeyhint="go">
@@ -2061,7 +2071,13 @@ function entrar() {
   if (estado !== 'espera') return;
   sonido.despertar();
   estado = 'intro'; mostrar(null);
-  intro = new Intro({ sonido, vibrar, alTerminar: aMenu });
+  // después del logo, la primera vez, elegir el idioma (?idioma= ya lo trae elegido)
+  intro = new Intro({ sonido, vibrar, alTerminar: () => (datos.ajustes.idioma ? aMenu() : elegirIdioma()) });
+}
+function elegirIdioma() {
+  estado = 'idiomas'; mostrar('idiomas');
+  sonido.musica('menu');
+  setTimeout(() => $('bIdioma_' + tr.actual())?.focus(), 50);
 }
 function aMenu() {
   estado = 'menu'; mia = null; preview = null;
@@ -2165,6 +2181,7 @@ function armarAjustes() {
   fila(tr('idioma'), IDIOMAS.map((l) => [l, l.toUpperCase()]), tr.actual(), (v) => { a.idioma = v; tr.poner(v); });
 }
 
+for (const l of IDIOMAS) boton('bIdioma_' + l, () => { datos.ajustes.idioma = l; tr.poner(l); guardarTodo(); aMenu(); });
 boton('bJugar', jugar);
 $('apodo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { sonido.tocar('boton'); jugar(); } });
 boton('bPiel', () => elegir('piel'));
@@ -2254,9 +2271,9 @@ function dibujar() {
     return;
   }
   dibujarArena(g, mundo, cam, W, H, { fondoId: datos.fondo, calidad: calidad(), destacada: mia, nombres: datos.ajustes.nombres, esc: dpr });
-  if (estado === 'menu' || estado === 'ajustes') {
+  if (estado === 'menu' || estado === 'ajustes' || estado === 'idiomas') {
     g.fillStyle = 'rgba(5,6,12,0.45)'; g.fillRect(0, 0, W, H);
-    dibujarLogoMenu();
+    if (estado !== 'idiomas') dibujarLogoMenu();
     return;
   }
   const botones = estado === 'juego' && tactil;
@@ -2314,7 +2331,7 @@ window.__V = {
   get estado() { return estado; }, get mundo() { return mundo; }, get mia() { return mia; }, get datos() { return datos; }, get cam() { return cam; },
   get avisos() { return avisos; }, get intro() { return intro; }, get preview() { return preview; },
   pasos(n, dib = false) { for (let k = 0; k < n; k++) paso(PASO); if (dib) dibujar(); },
-  dibujar, entrar, jugar, aMenu, pausar, seguir, elegir, moverElegir, listoElegir, entrada, sonido, tr,
+  dibujar, entrar, jugar, aMenu, pausar, seguir, elegir, moverElegir, listoElegir, elegirIdioma, entrada, sonido, tr,
   matar() { if (mia && mia.viva) mundo.morir(mia, null); },
   get W() { return W; }, get H() { return H; }, get dpr() { return dpr; },
 };

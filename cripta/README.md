@@ -18,6 +18,9 @@ y la música va en fase con el dibujo; si no, la intro va muda y el primer
 toque la saltea y prende el sonido. Un
 toque la saltea. → `js/intro.js`, `js/logojxs.js`
 
+Después del logo, la primera vez, se elige el idioma (español, inglés o
+portugués); después se cambia en Ajustes.
+
 **Para jugar:** abrir `cripta-en-un-archivo.html` (anda sin red, con doble
 clic o mandándolo al teléfono). Deslizar el dedo, o las flechas / WASD.
 Enter elige, Escape o P pausa.
@@ -28,7 +31,7 @@ Enter elige, Escape o P pausa.
 | Pruebas sin navegador (`pruebas/niveles.mjs`) | 4043 comprobaciones, todas bien |
 | Pruebas en Chromium (`pruebas/juego.mjs`) | 18 de 18 |
 | Archivo único desde `file://` sin red (`pruebas/un-archivo.mjs`) | abre y se gana el 1-1 |
-| Peso del archivo único | 275 KB (22 módulos, sin binarios) |
+| Peso del archivo único | 277 KB (22 módulos, sin binarios) |
 | Niveles | 30: 5 hechos a mano, 25 armados con la torre; todos se ganan, con las 3 estrellas, todas las monedas y todas las chispas alcanzables y sin lugares sin salida |
 | Torre | 300 semillas × 260 filas resueltas: 0 sin camino, 0 lugares sin salida |
 | Un paso de simulación | 0,011 ms (Chromium por procesador; del teléfono no dice nada) |

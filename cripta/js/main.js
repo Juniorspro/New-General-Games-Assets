@@ -12,7 +12,7 @@ import { crearEntrada } from './entrada.js';
 import { crearSonido } from './sonido.js';
 import { crearIdioma } from './idioma.js';
 import { cargar, guardar, borrar, base } from './guardado.js';
-import { Portada, Mapa, Juego, Tienda, Ajustes } from './pantallas.js';
+import { Portada, Mapa, Juego, Tienda, Ajustes, ElegirIdioma } from './pantallas.js';
 import { IntroJXS } from './intro.js';
 import { iris } from './ui.js';
 import { NIVELES } from './niveles.js';
@@ -114,7 +114,9 @@ function escenaDirecta() {
 // ya: si el navegador deja sonar, nace andando y la intro trae su música).
 const conIntro = q.has('intro') || !(q.has('directo') || q.has('pausa') || q.has('sinintro'));
 if (conIntro) sonido.despertar();
-app.escena = conIntro ? new IntroJXS(app, escenaDirecta) : escenaDirecta();
+// después del logo, la primera vez, elegir el idioma (?idioma= ya lo trae elegido)
+const despuesDelLogo = () => (datos.ajustes.idioma ? escenaDirecta() : new ElegirIdioma(app, escenaDirecta));
+app.escena = conIntro ? new IntroJXS(app, despuesDelLogo) : escenaDirecta();
 
 // si la pestaña se esconde: pausa y silencio
 document.addEventListener('visibilitychange', () => {

@@ -21,7 +21,10 @@ await pg.waitForFunction(() => window.__V.estado === 'intro', null, { timeout: 5
 const r = await pg.evaluate(() => {
   const V = window.__V, intro = V.estado;
   V.pasos(200, true);
-  const menu = V.estado;
+  // sin idioma elegido, después del logo se elige
+  const idiomas = V.estado;
+  document.getElementById('bIdioma_es').click();
+  const menu = idiomas === 'idiomas' ? V.estado : 'no pidió idioma: ' + idiomas;
   V.jugar();
   let masa = 0;
   for (let k = 0; k < 600; k++) { V.pasos(1); if (k % 10 === 0) V.dibujar(); if (V.mia.viva) masa = Math.max(masa, V.mia.masa); }

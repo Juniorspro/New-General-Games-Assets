@@ -100,7 +100,13 @@ function entrar() {
   if (estado !== 'espera') return;
   sonido.despertar();
   estado = 'intro'; mostrar(null);
-  intro = new Intro({ sonido, vibrar, alTerminar: aMenu });
+  // después del logo, la primera vez, elegir el idioma (?idioma= ya lo trae elegido)
+  intro = new Intro({ sonido, vibrar, alTerminar: () => (datos.ajustes.idioma ? aMenu() : elegirIdioma()) });
+}
+function elegirIdioma() {
+  estado = 'idiomas'; mostrar('idiomas');
+  sonido.musica('menu');
+  setTimeout(() => $('bIdioma_' + tr.actual())?.focus(), 50);
 }
 function aMenu() {
   estado = 'menu'; mia = null; preview = null;
@@ -204,6 +210,7 @@ function armarAjustes() {
   fila(tr('idioma'), IDIOMAS.map((l) => [l, l.toUpperCase()]), tr.actual(), (v) => { a.idioma = v; tr.poner(v); });
 }
 
+for (const l of IDIOMAS) boton('bIdioma_' + l, () => { datos.ajustes.idioma = l; tr.poner(l); guardarTodo(); aMenu(); });
 boton('bJugar', jugar);
 $('apodo').addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { sonido.tocar('boton'); jugar(); } });
 boton('bPiel', () => elegir('piel'));
@@ -293,9 +300,9 @@ function dibujar() {
     return;
   }
   dibujarArena(g, mundo, cam, W, H, { fondoId: datos.fondo, calidad: calidad(), destacada: mia, nombres: datos.ajustes.nombres, esc: dpr });
-  if (estado === 'menu' || estado === 'ajustes') {
+  if (estado === 'menu' || estado === 'ajustes' || estado === 'idiomas') {
     g.fillStyle = 'rgba(5,6,12,0.45)'; g.fillRect(0, 0, W, H);
-    dibujarLogoMenu();
+    if (estado !== 'idiomas') dibujarLogoMenu();
     return;
   }
   const botones = estado === 'juego' && tactil;
@@ -353,7 +360,7 @@ window.__V = {
   get estado() { return estado; }, get mundo() { return mundo; }, get mia() { return mia; }, get datos() { return datos; }, get cam() { return cam; },
   get avisos() { return avisos; }, get intro() { return intro; }, get preview() { return preview; },
   pasos(n, dib = false) { for (let k = 0; k < n; k++) paso(PASO); if (dib) dibujar(); },
-  dibujar, entrar, jugar, aMenu, pausar, seguir, elegir, moverElegir, listoElegir, entrada, sonido, tr,
+  dibujar, entrar, jugar, aMenu, pausar, seguir, elegir, moverElegir, listoElegir, elegirIdioma, entrada, sonido, tr,
   matar() { if (mia && mia.viva) mundo.morir(mia, null); },
   get W() { return W; }, get H() { return H; }, get dpr() { return dpr; },
 };

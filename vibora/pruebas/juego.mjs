@@ -126,6 +126,24 @@ await prueba('sin permiso de sonar (lo normal antes de un toque): arranca igual,
   return `arrancó muda a los ${espera} ms de cargar`;
 });
 
+await prueba('después del logo, la primera vez, se elige el idioma; la segunda ya no', async () => {
+  const pg = await pagina({ q: 'intro' });
+  await pasos(pg, 200);
+  const r1 = await V(pg, 'V.estado');
+  afirmar(r1 === 'idiomas' && await visible(pg, 'idiomas'), 'después del logo: ' + r1);
+  await captura(pg, 'idiomas');
+  await pg.click('#bIdioma_pt');
+  const r2 = await pg.evaluate(() => ({ estado: window.__V.estado, jugar: document.getElementById('bJugar').textContent, guardado: JSON.parse(localStorage.getItem('vibora-io-1')).ajustes.idioma }));
+  afirmar(r2.estado === 'menu' && r2.jugar === 'JOGAR' && r2.guardado === 'pt', JSON.stringify(r2));
+  await pg.goto(`${BASE}?pausa&intro`);
+  await pg.waitForFunction(() => window.listo);
+  await pasos(pg, 200);
+  const r3 = await V(pg, 'V.estado');
+  afirmar(r3 === 'menu', 'con el idioma ya elegido tendría que ir al menú: ' + r3);
+  await sinErrores(pg);
+  await cerrar(pg);
+});
+
 await prueba('con el mouse: nace, dobla hacia donde apunta y mantener apretado es turbo', async () => {
   const pg = await pagina({ q: 'idioma=es' });
   await pg.fill('#apodo', 'Probador');
@@ -347,10 +365,11 @@ await prueba('entra en cinco pantallas: nada se sale ni se pisa', async () => {
   for (const [w, h] of [[412, 892], [360, 640], [320, 568], [892, 412], [1280, 720]]) {
     const pg = await pagina({ w, h, q: 'idioma=es' });
     await pg.evaluate(() => { window.__V.datos.mejor = 12345; window.__V.aMenu(); });
-    for (const pantalla of ['menu', 'muerte', 'elegir', 'ajustes']) {
+    for (const pantalla of ['menu', 'muerte', 'elegir', 'ajustes', 'idiomas']) {
       if (pantalla === 'muerte') await pg.evaluate(() => { const V = window.__V; V.jugar(); V.mia.masa = 23456; V.matar(); V.pasos(70); });
       if (pantalla === 'elegir') await pg.evaluate(() => { window.__V.aMenu(); window.__V.elegir('piel'); });
       if (pantalla === 'ajustes') await pg.evaluate(() => { window.__V.aMenu(); document.getElementById('bAjustes').click(); });
+      if (pantalla === 'idiomas') await pg.evaluate(() => { window.__V.aMenu(); window.__V.elegirIdioma(); });
       await pasos(pg, 2);
       const r = await pg.evaluate((id) => {
         const cajas = [...document.querySelectorAll(`#${id} button, #${id} input, #${id} canvas, #${id} p, #${id} h2, #${id} .item`)]

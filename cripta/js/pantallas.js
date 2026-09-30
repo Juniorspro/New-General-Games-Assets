@@ -48,6 +48,54 @@ function crearDemo(app) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// La primera vez, después de la intro: elegir el idioma (después se cambia en
+// Ajustes). El título va en los tres a la vez: todavía no se sabe cuál lee.
+const NOMBRE_IDIOMA = { es: 'ESPAÑOL', en: 'ENGLISH', pt: 'PORTUGUÊS' };
+const TITULO_IDIOMA = ['ELEGÍ EL IDIOMA', 'CHOOSE YOUR LANGUAGE', 'ESCOLHA O IDIOMA'];
+export class ElegirIdioma {
+  constructor(app, siguiente) {
+    this.app = app; this.siguiente = siguiente; this.t = 0; this.nombre = 'idioma';
+    this.fondo = new FondoMenu();
+    this.botones = new Botonera(app.sonido);
+    this.cambio = -1;
+  }
+
+  armar() {
+    const { W, H } = this.app, b = this.botones;
+    b.vaciar();
+    const w = Math.min(112, W - 28), h = 20, x = Math.round(W / 2 - w / 2);
+    this.y0 = Math.round(H / 2 - 12);
+    IDIOMAS.forEach((l, k) => b.agregar({ id: 'elegir_' + l, texto: NOMBRE_IDIOMA[l], x, y: this.y0 + k * (h + 9), w, h, retraso: 0.12 + k * 0.08, color: MUNDOS_COLOR[k].borde, accion: (bt) => this.elegir(l, bt) }));
+    this.cambio = this.app.cambio;
+  }
+
+  elegir(l, bt) {
+    const app = this.app;
+    app.datos.ajustes.idioma = l; app.tr.poner(l); app.guardar();
+    app.ir(this.siguiente, bt);
+  }
+
+  pasar(dt) {
+    const app = this.app;
+    if (this.cambio !== app.cambio) this.armar();
+    this.t += dt;
+    this.fondo.pasar(dt, app.entrada, app.W, app.H);
+    this.botones.pasar(dt);
+    this.botones.manejar(app.entrada);
+  }
+
+  dibujar(g, W, H) {
+    this.fondo.dibujar(g, W, H, 1);
+    const y = this.y0 - 46;
+    TITULO_IDIOMA.forEach((txt, k) => texto(g, txt, W / 2, y + k * 11, k === 0 ? P.blanco : P.gris, { alinear: 'centro', sombra: P.negro }));
+    this.botones.dibujar(g);
+    // Lu va y viene arriba del título, como en los créditos
+    const lx = W / 2 + Math.sin(this.t * 0.8) * (W * 0.3);
+    luVolando(g, this.app.datos.piel, lx, y - 20, this.t, { mira: Math.cos(this.t * 0.8) > 0 ? 'der' : 'izq' });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 export class Portada {
   constructor(app) {
     this.app = app; this.t = 0; this.nombre = 'portada';

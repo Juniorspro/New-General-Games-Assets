@@ -82,14 +82,19 @@ await prueba('la intro de JXSTUDIOS está desde el primer cuadro (sin tocar), du
     return { intro, musica, despues: C.escena };
   });
   afirmar(r.intro === 'intro' && !r.musica && r.despues === 'portada', JSON.stringify(r));
+  // sin idioma elegido: saltearla lleva a elegir el idioma, y elegirlo a la portada
   await pg.goto(`${BASE}?pausa&intro&limpio`);
   await pg.waitForFunction(() => window.listo);
   const s = await pg.evaluate(() => {
     const C = window.__C, toque = () => C.app.entrada.cola.push({ tipo: 'bajar', x: 10, y: 10 });
     C.pasos(5); toque(); C.pasos(30); toque(); C.pasos(45);
-    return C.escena;
+    const escena = C.escena;
+    C.pasos(40, true);
+    C.boton('elegir_pt'); C.pasos(60);
+    return { escena, despues: C.escena, idioma: C.app.tr.actual(), guardado: JSON.parse(localStorage.getItem('cripta-neon-1')).ajustes.idioma, jugar: C.app.tr('jugar') };
   });
-  afirmar(s === 'portada', 'saltear la intro: ' + s);
+  afirmar(s.escena === 'idioma' && s.despues === 'portada' && s.idioma === 'pt' && s.guardado === 'pt' && s.jugar === 'JOGAR', 'saltear la intro y elegir el idioma: ' + JSON.stringify(s));
+  await captura(pg, 'idioma');
   await sinErrores(pg);
   await pg.close();
 });

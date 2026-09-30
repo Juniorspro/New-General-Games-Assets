@@ -26,6 +26,9 @@ y la música va en fase con el dibujo; si no, la intro va muda y el primer
 toque la saltea y prende el sonido. Un toque la saltea. → `js/intro.js`,
 `js/logojxs.js`, `js/sonido.js › jingleJXS`
 
+Después del logo, la primera vez, se elige el idioma (español, inglés o
+portugués); después se cambia en Ajustes.
+
 **Para jugar:** abrir `vibora-en-un-archivo.html`. Anda sin red, con doble
 clic o mandándolo al teléfono.
 - **Con el dedo:** la víbora va hacia donde apoyás; en Ajustes se puede
@@ -37,9 +40,9 @@ clic o mandándolo al teléfono.
 | qué | cuánto |
 |---|---|
 | Pruebas sin navegador (`pruebas/logica.mjs`) | 158 comprobaciones, todas bien (con los pasos a 60, 90 y 120 Hz) |
-| Pruebas en Chromium (`pruebas/juego.mjs`) | 16 de 16: clics, teclas y dedos de verdad (CDP), y la intro con y sin permiso de sonar |
+| Pruebas en Chromium (`pruebas/juego.mjs`) | 17 de 17: clics, teclas y dedos de verdad (CDP), la intro con y sin permiso de sonar y la elección de idioma |
 | Archivo único desde `file://` sin red (`pruebas/un-archivo.mjs`) | abre, la intro llega al menú y se juega |
-| Peso del archivo único | 116 KB (16 módulos, sin binarios) |
+| Peso del archivo único | 117 KB (16 módulos, sin binarios) |
 | 90 s con 22 bots picantes, 3 semillas | 0,1 ms por paso de simulación; unas 110 muertes, ninguna contra el borde; la más larga llega a 1600–3400 |
 | Un cuadro pintado por procesador, 26 bots | 2,4 ms a 412×892 y 6,3 ms a 618×1338, la densidad de 1,5 del teléfono (antes 2,9 y 9,3 a 824×1784; Chromium sin GPU en el servidor: del teléfono no dice nada) |
 | Pantallas probadas | 412×892, 360×640, 320×568, 892×412 y 1280×720: nada se sale ni se pisa |

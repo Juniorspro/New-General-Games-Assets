@@ -31,4 +31,4 @@ El juego está en `cripta/` (README con "Lo medido"). Pedido: "recrear a la perf
 - Además del archivo único, se publicó como página privada de Claude (artifact) para jugarlo desde el teléfono (30/09/2026). Para actualizarla: `Artifact` con `action: list`, leerla y republicar con su `url`.
 - La versión de página es el archivo único sin `<!doctype>/<html>/<head>/<body>` (la página pone el esqueleto), con `<title>` primero, colores como variables en `:root` (un solo tema oscuro, `color-scheme: dark`), `html, body { height: 100% }` y 16 px de margen a los costados: la escala entera se sigue calculando sola con el ancho que queda.
 - "Reducir movimiento" del teléfono: sacudida a un cuarto y sin destellos. → `cripta/js/efectos.js`
-
+- Después del logo, la primera vez (idioma sin elegir), la escena `ElegirIdioma`: título en los tres idiomas a la vez y tres botones; `?idioma=` la saltea (30/09/2026). → `cripta/js/pantallas.js › ElegirIdioma`

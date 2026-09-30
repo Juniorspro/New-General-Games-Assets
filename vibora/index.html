@@ -11,6 +11,14 @@
 <body>
 <canvas id="juego" aria-label="Víbora.io"></canvas>
 <div id="ui">
+  <!-- la primera vez, después del logo: el idioma (el título va en los tres) -->
+  <section id="idiomas" class="pantalla oculto velo">
+    <h2 class="titulo-idioma">Elegí tu idioma<small lang="en">Choose your language</small><small lang="pt">Escolha seu idioma</small></h2>
+    <button id="bIdioma_es" class="boton principal" lang="es">Español</button>
+    <button id="bIdioma_en" class="boton principal" lang="en">English</button>
+    <button id="bIdioma_pt" class="boton principal" lang="pt">Português</button>
+  </section>
+
   <section id="menu" class="pantalla oculto">
     <canvas id="logo" aria-hidden="true"></canvas>
     <input id="apodo" maxlength="16" autocomplete="off" spellcheck="false" enterkeyhint="go">
